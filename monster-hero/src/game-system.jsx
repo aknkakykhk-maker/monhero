@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a93dedcb954b75e5
+// generated-sha256: 369e992a3bd76c26
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -58349,38 +58349,6 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const setChosen = sel && sets.length ? (sel.set && sets.includes(sel.set) ? sel.set : sets.includes(setAlone) ? setAlone : sets.length === 1 ? sets[0] : null) : null;
   const setPending = !!(sel && monChosen !== undefined && sets.length > 1 && !setChosen);
   const finalOpts = byMon.filter((o) => JSON.stringify(o.hand) === setChosen);
-  // 組み合わせの窓(2026-10-29 社長・案B): 技を押して組が2つ以上あれば、まんなかに組ごとの札の並び・ダメージ・ガッツを出し、行を押して選ぶ。
-  //   組が1つだけなら窓は出さない(押す回数2回)。練習試合は今までどおり手札の上のボタン。
-  //   数は、その組で当てた後の場をルールで作って数える(相手が守る前のダメージ。82 の cardGuardPreview / 当たった数)
-  const comboOpen = mode === 'attack' && !tutorial && !replay && !!sel && monChosen !== undefined && sets.length > 1 && !sel.set;
-  const comboPreview = (s0) => {
-    const os = byMon.filter((o) => JSON.stringify(o.hand) === s0).slice(0, 6);
-    const cards = JSON.parse(s0).map((i) => cardOf(db, me.hand[i]));
-    const main = cards.find((c) => c && !cardHasEff(c, 'attach') && cardIsAttackKind(c.kind)) || cards[0];
-    const dmgs = []; let guts = null;
-    os.forEach((o) => {
-      const nx = cardApplyAction(db, st, o);
-      if (!nx) return;
-      if (guts === null) guts = me.guts.length - nx.players[CARD_ME].guts.length;
-      const pv = nx.pending ? cardGuardPreview(db, nx) : null;
-      const hit = (nx.events || []).filter((e) => e.t === 'hit' && e.p !== CARD_ME).map((e) => e.dmg);
-      const d = pv ? pv.before : hit.length ? Math.max(...hit) : null;
-      if (Number.isFinite(d)) dmgs.push(d);
-    });
-    const lo = dmgs.length ? Math.min(...dmgs) : null; const hi = dmgs.length ? Math.max(...dmgs) : null;
-    const dmg = lo === null ? '' : `${main && cardHasEff(main, 'area') ? '全体に' : ''}${lo === hi ? lo : `${lo}〜${hi}`}`;
-    return { dmg, guts: guts === null ? null : Math.max(0, guts) };
-  };
-  const chosenPv = mode === 'attack' && setChosen && sets.length > 1 && !tutorial ? comboPreview(setChosen) : null;
-  // 行を押したら、その組を選ぶ。指で運んで置いたあとに窓が出たとき(sel.drop)は、置いた先へそのまま出す
-  const pickCombo = (s0) => {
-    Audio_.fgSe.tap();
-    const drop = sel && sel.drop;
-    setSel({ ...sel, mon: monChosen, set: s0, drop: undefined });
-    if (!drop) return;
-    const o = byMon.find((x) => JSON.stringify(x.hand) === s0 && (!x.target || `${x.target.p}-${x.target.m}` === drop));
-    if (o) dropUse(o, true);
-  };
   const needTarget = finalOpts.some((o) => o.target);
 
   // ---- 技を使う前・ターン終了の確かめ(オプション。既定は確かめない) ----
@@ -58474,24 +58442,14 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     const os = attackOpts.filter((o) => o.hand.includes(i));
     const c = cardOf(db, me.hand[i]);
     if (!os.length) {
-      setHint(attackWhyShort(i) || '');
+      setHint(!c ? '' : cardIsGuardKind(c.kind) ? '回避・防御は、相手に攻撃されたときに使います'
+        : !c.ready ? 'このカードは準備中です'
+        : c.guts > me.guts.length ? `ガッツが足りません(あと${c.guts - me.guts.length})` : 'いまは使えません(使える子がいない・もう攻撃した など)');
       setSel(null);
       return;
     }
     setSel({ hand: i });
     setHint('');
-  };
-  // 攻撃の番に使えない札の理由を短い言葉で(守りの番の cardGuardWhyShort とそろえる。2026-10-29 社長「『この子は〜』みたいな書き方はおかしい」)
-  const attackWhyShort = (i) => {
-    const c = cardOf(db, me.hand[i]);
-    if (!c || attackOpts.some((o) => o.hand.includes(i))) return null;
-    if (!c.ready) return '準備中';
-    if (cardIsGuardKind(c.kind)) return '守りの番に使う';
-    if (c.user !== 'any' && c.user !== 'breeder' && !me.mons.some((m) => !m.ko && cardUsableBy(c, m))) return cardUserLabel(db, c);
-    if (c.guts > me.guts.length) return `ガッツ不足(あと${c.guts - me.guts.length})`;
-    if (cardHasEff(c, 'attach')) return '付ける技がない';
-    if (cardHasEff(c, 'requires')) return 'いっしょに出す札がない';
-    return '今は使えない';
   };
   const tapMon = (p, m) => {
     if (mode === 'guard' && sel) {
@@ -58538,10 +58496,6 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (attackOpts.some((x) => mo(x) === mo(o) && x.hand.length === 1 && x.hand[0] === i)) return true;
     return new Set(attackOpts.filter((x) => mo(x) === mo(o) && x.hand.includes(i)).map((x) => cardHandNameKey(me.hand, x.hand))).size <= 1;
   };
-  const cardDropNameSets = (o, i) => {
-    const mo = (x) => (x.mon === undefined ? -1 : x.mon);
-    return new Set(attackOpts.filter((x) => mo(x) === mo(o) && x.hand.includes(i)).map((x) => cardHandNameKey(me.hand, x.hand))).size;
-  };
   const dropTargetsOf = (i) => {
     const out = {};
     if (mode === 'attack') {
@@ -58555,11 +58509,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         //   1枚では出せない札(付ける札・組で出す札)は、いちばん枚数の多い組み合わせ(前からの既定)。2026-10-27 部長と決めた
         const alone = (x) => !chosen && x.hand.length === 1 && x.hand[0] === i;
         // 1枚では出せない札は、名前の違う組み合わせが2つ以上あれば、運んでも出さない(画面で組み合わせを選んでから。タップとそろえる。案C)
-        //   2026-10-29 案B: 1枚では出せない札で、名前の違う組が2つ以上あれば、置いた先を覚えて組み合わせの窓を出す(タップと同じ窓で選ぶ)。
-        //   1枚で出せる技は、運んだらその1枚だけで出す(#4196 の決め。窓のいちばん上の行と同じ)
-        if (!chosen && !tutorial && !cardDropComboOk(o, i) && cardDropNameSets(o, i) > 1) { keys.forEach((k) => { if (!out[k]) out[k] = { ask: true, hand: [i], mon: o.mon, key: k }; }); return; }
         if (!chosen && !alone(o) && !cardDropComboOk(o, i)) return;
-        keys.forEach((k) => { if (!out[k] || out[k].ask || (!alone(out[k]) && (alone(o) || o.hand.length > out[k].hand.length))) out[k] = o; });
+        keys.forEach((k) => { if (!out[k] || (!alone(out[k]) && (alone(o) || o.hand.length > out[k].hand.length))) out[k] = o; });
       });
     }
     // 隠れる(移す先 to がある守り)は、移す先の味方が置き先(タップで移す先を選ぶのとそろえる。前は狙われた子へ置くと、移す先を選べなかった。2026-10-27 総点検)
@@ -58595,17 +58546,11 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   };
   // 運んで出した手でも、タップと同じく「選ぶ」段を飛ばさない(2026-10-27 総点検。前は最初の候補のまま出ていた)
   //   使う子が2体以上 … 使う子を選ぶ案内 / ショットガンの割り振り・合体の2体 … 選ぶ画面 / 変形 … 空中・地上のボタン(その札を選んだ形にする)
-  const dropUse = (t, picked) => {
+  const dropUse = (t) => {
     const monKey = (o) => (o.mon === undefined ? -1 : o.mon);
-    // 組を選ぶ窓を出す(使える子が2体以上なら、先に使う子を選んでもらう。思った子と違う子で出ないように)
-    if (t.ask) {
-      const us = [...new Set(attackOpts.filter((o) => o.hand.includes(t.hand[0])).map(monKey))];
-      if (us.length > 1) { setSel({ hand: t.hand[0] }); setHint('使う子をタップしてください'); return; }
-      setSel({ hand: t.hand[0], ...(t.mon !== undefined ? { mon: t.mon } : {}), drop: t.key }); setHint(''); return;
-    }
     // 使える子が2体以上いる札を、使う子を選ばずに運んだら、出さずにその札を選んだ形で止める(社長の答え・ソランド判断 案B。思った子と違う子で出ないように)
     const users = [...new Set(attackOpts.filter((o) => o.hand[0] === t.hand[0]).map(monKey))];
-    if (!picked && users.length > 1 && !(sel && t.hand.includes(sel.hand) && monChosen !== undefined)) { setSel({ hand: t.hand[0] }); setHint('使う子をタップしてください'); return; }
+    if (users.length > 1 && !(sel && t.hand.includes(sel.hand) && monChosen !== undefined)) { setSel({ hand: t.hand[0] }); setHint('使う子をタップしてください'); return; }
     const same = attackOpts.filter((o) => JSON.stringify(o.hand) === JSON.stringify(t.hand) && monKey(o) === monKey(t));
     if (t.split || t.fuse) { setSplitAsk(same.filter((o) => o.split || o.fuse)); return; }
     if (t.form) { setSel({ hand: t.hand[0], mon: monKey(t), set: JSON.stringify(t.hand) }); setHint('空中か地上かを選んでください'); return; }
@@ -58816,10 +58761,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* ショットガン: 割り振りを選ぶ窓 / 変形・トランスフォーム: 空中か地上かを選んで使う */}
       {useBtn && finalOpts.some((o) => o.split || o.fuse) ? <button type="button" data-card-split-open className={`${btn} mh-button-primary`} onClick={() => setSplitAsk(finalOpts)}>{finalOpts.some((o) => o.fuse) ? '合体の組を選ぶ' : '割り振りを選ぶ'}</button>
         : useBtn && finalOpts.some((o) => o.form) ? ['air', 'ground'].map((f) => { const o = finalOpts.find((x) => x.form === f); return o ? <button key={f} type="button" data-card-form={f} className={`${btn} mh-button-primary`} onClick={() => askUse(o)}>{f === 'air' ? '空中にして使う' : '地上にして使う'}</button> : null; })
-        : useBtn ? <button type="button" className={`${btn} mh-button-primary`} onClick={() => askUse(finalOpts[0])}>{chosenPv && (chosenPv.dmg || chosenPv.guts !== null) ? <span data-card-use-pv className="block leading-tight">使う<span className="block text-[11px] font-bold text-amber-100">{[chosenPv.dmg, chosenPv.guts !== null ? `ガッツ${chosenPv.guts}` : ''].filter(Boolean).join('・')}</span></span> : '使う'}</button> : null}
-      {/* 組み合わせの窓で選んだあとは「組を変える」(窓をもう一度出す。案B)。攻撃をおわるのは、選びを外してから */}
-      {chosenPv && sel && sel.set ? <button type="button" data-card-combo-change className={`${btn} border border-white/20 bg-slate-800`} onClick={() => { Audio_.fgSe.tap(); setSel({ hand: sel.hand, mon: monChosen }); }}>組を変える</button>
-        : <button type="button" disabled={tutOff('end')} className={`${btn} border border-violet-300/60 bg-violet-900${tutBtn('end')}`} onClick={() => step({ type: 'endAttacks' })}>攻撃おわり → ガッツへ</button>}
+        : useBtn ? <button type="button" className={`${btn} mh-button-primary`} onClick={() => askUse(finalOpts[0])}>使う</button> : null}
+      <button type="button" disabled={tutOff('end')} className={`${btn} border border-violet-300/60 bg-violet-900${tutBtn('end')}`} onClick={() => step({ type: 'endAttacks' })}>攻撃おわり → ガッツへ</button>
     </>);
   })();
   // 黄色の案内は1行に収まる短い文に(長くて2行になり、手札を押し下げていた。2026-10-26 改良の案 E・カゲあつくん 8)。運ぶ操作の話はヘルプへ
@@ -59018,7 +58961,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         <div data-card-guard-why className={`mx-auto mb-1 max-w-[94%] shrink-0 text-center ${tiny ? 'truncate whitespace-nowrap text-[10px]' : 'text-[11px]'} font-bold leading-snug text-slate-300`} style={tiny ? undefined : JA_WRAP_STYLE}>{cardGuardBlockReasons(db, st).join(' / ')}</div>
       )}
       {!guide && !tutorial && hint && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap(hint)}</div>}
-      {mode === 'attack' && (tutorial || replay) && sel && monChosen !== undefined && sets.length > 1 && (
+      {mode === 'attack' && sel && monChosen !== undefined && sets.length > 1 && (
         <div className="mb-1 flex shrink-0 flex-wrap justify-center gap-1 px-2">
           {/* 押した札は省いて、付ける札だけを「＋◯◯」で出す。少ない組から並べ、1行に収める(320×568 で2行に折れて「使う」が画面の下で切れた。2026-10-28 案C) */}
           {sets.slice().reverse().map((s) => <button key={s} type="button" data-card-set={s} onClick={() => setSel({ ...sel, mon: monChosen, set: s })} className={`whitespace-nowrap rounded-lg border font-black ${tiny ? 'px-1.5 py-0.5 text-[11px]' : 'px-2 py-1 text-[12px]'} ${s === setChosen ? 'border-amber-300 bg-amber-500/25' : 'border-white/20 bg-slate-800'}`}>{JSON.parse(s).filter((i) => i !== sel.hand).length ? JSON.parse(s).filter((i) => i !== sel.hand).map((i) => `＋${cardOf(db, me.hand[i]).name}`).join('') : `${cardOf(db, me.hand[sel.hand]).name}だけ`}</button>)}
@@ -59040,7 +58983,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           const on = handUsable(i);
           const up = (sel && sel.hand === i) || picks.includes(i) || (setChosen && JSON.parse(setChosen).includes(i));
           // 守りの番: 使えない回避・防御の札に、理由を短く重ねる(「ガッツ不足」「ナーガ専用」など。案C)
-          const why = tutorial || on ? null : mode === 'guard' ? cardGuardWhyShort(db, st, c) : mode === 'attack' && myTurn && !sel ? ((w) => (w === '今は使えない' ? null : w))(attackWhyShort(i)) : null;
+          const why = mode === 'guard' && !tutorial && !on ? cardGuardWhyShort(db, st, c) : null;
           return (
             <div key={`${no}-${i}`} data-card-hand-card={i} data-card-press onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${wide ? 'max-w-[72px]' : handTiny ? (boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]') : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${replay && boardFit >= 4 ? '!max-w-[38px]' : ''} ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? (why ? 'relative [&>*:not([data-card-why])]:opacity-45' : 'opacity-45') : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
               <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} draggable={false} style={{ WebkitUserDrag: 'none' }} className={`w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`}/>
@@ -59279,29 +59222,6 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
                 </button>
               ))}
             </div>
-          </div>
-        </div>
-      )}
-      {comboOpen && (
-        <div data-card-combo-sheet className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 px-4" onClick={() => { setSel(null); setHint(''); }}>
-          <div className="max-h-[80vh] w-full max-w-[340px] overflow-y-auto rounded-2xl border-2 border-sky-300 bg-slate-900 p-3 text-center shadow-[0_8px_24px_#000]" onClick={(e) => e.stopPropagation()}>
-            <div className="text-[14px] font-black text-white">どの組み合わせで出す？</div>
-            {sets.slice().reverse().map((s0) => {
-              const idx = JSON.parse(s0);
-              const add = idx.filter((i) => i !== sel.hand);
-              const pv = comboPreview(s0);
-              const title = add.length ? add.map((i) => `＋${(cardOf(db, me.hand[i]) || {}).name || ''}`).join('') : `「${(cardOf(db, me.hand[sel.hand]) || {}).name || ''}」だけ`;
-              return (
-                <button key={s0} type="button" data-card-set={s0} onClick={() => pickCombo(s0)} className="mt-2 flex w-full items-center gap-2 rounded-xl border-2 border-white/25 bg-slate-800 p-1.5 text-left active:scale-[.98]">
-                  <span className="flex shrink-0 pl-1.5">{idx.map((i) => { const c = cardOf(db, me.hand[i]); return <img key={i} src={CARD_IMG(c ? c.img : me.hand[i])} alt="" className="-ml-1.5 w-[30px] rounded-[3px] shadow-[0_1px_3px_#000]"/>; })}</span>
-                  <span className="min-w-0 flex-1 leading-snug">
-                    <span className="block text-[13px] font-black text-white" style={JA_WRAP_STYLE}>{title}</span>
-                    <span data-card-combo-pv className="block text-[12px] font-bold text-amber-200">{[pv.dmg ? `${pv.dmg}ダメージ` : '', pv.guts !== null ? `ガッツ${pv.guts}` : ''].filter(Boolean).join(' / ')}</span>
-                  </span>
-                </button>
-              );
-            })}
-            <div className="mt-2 text-[11px] font-bold text-slate-300">窓の外を押すとやめる</div>
           </div>
         </div>
       )}
@@ -59988,7 +59908,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const usedMons = log && log.decks[0] ? log.decks[0].monsters : ((st && st.players && st.players[CARD_ME] && st.players[CARD_ME].mons) || []).map((m) => m.no);
       const detailEntry = game.demo ? null : await cardRecordDetailEntry(fresh.record, (d) => cardRecordDetailAfter(d, { who: game.who, level: game.level, outcome, turns: facts.ownTurns,
         deck: usedDeck ? { id: usedDeck.id, name: usedDeck.name } : null, mons: usedMons, moves: cardRecordMovesOf(db, replayRec), today: cardTodayJst() }));
-      const ok = await persist({ point: save.point + reward.total, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked }, fresh.raw, detailEntry ? [...openExtra, detailEntry] : openExtra);
+      // MFバトルカードのレベル(96。公開前はデバッグの人だけ)。同じ取引で書く。みんなのデッキ・借りたデッキも、選んだ強さで数える
+      const levelGain = !game.demo && typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: game.level, outcome, debug }) : { entries: [] };
+      const ok = await persist({ point: save.point + reward.total, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked }, fresh.raw, [...openExtra, ...(detailEntry ? [detailEntry] : []), ...levelGain.entries]);
       if (ok && openExtra.length) { openIdRef.current = null; openRef.current = null; }
       // 借りたデッキで戦った: 表へ「借りて使った」(試合の番号ごとに1回だけ数えられる。貸した人の次の日の報酬になる)
       if (ok && game.rented && typeof cardShareReportUse === 'function') {
@@ -60196,8 +60118,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const win = r.outcome === 'win';
       const bonus = r.reward === 'win' && base.point > 0 && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
       const got = { ...base, point: base.point + bonus, bonus };
+      // MFバトルカードのレベル(96)。途中で部屋を出た試合(left)は数えない
+      const levelGain = typeof cardLevelEntries === 'function' && (r.reward === 'win' || r.reward === 'lose') ? await cardLevelEntries({ kind: 'pvp', outcome: r.reward, debug }) : { entries: [] };
       const ok = await persist({ point: save.point + got.point, daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0 },
-        record: { ...record, pvp: { win: record.pvp.win + (win ? 1 : 0), lose: record.pvp.lose + (win ? 0 : 1) } } }, fresh.raw);
+        record: { ...record, pvp: { win: record.pvp.win + (win ? 1 : 0), lose: record.pvp.lose + (win ? 0 : 1) } } }, fresh.raw, levelGain.entries);
       let quick = null;
       if (ok && got.loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(got.loops); } catch (_) { quick = null; } }
       if (ok && quick) await persist({ daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0, quickLoops: (daily.quickLoops || 0) + got.loops } }, { daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0 } },
@@ -65802,6 +65726,151 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
       )}
     </div>
   );
+};
+
+// ---- part: 96-card-tactics.jsx ----
+// ==================== 戦術カード(持ち物・枠)と MFバトルカードのレベル・戦術カードのガチャ ====================
+// 2026-10-29 社長: 戦術カードはガンビット型(中身は 82-card-tactics-core)。ガチャ(1回300ビートPで8枚。パックと同じ)で集め、
+//   MFバトルカード用のレベル(上限なし・全員 Lv1 から)で枠が開く。
+// ★保存は新しいキーだけ(mh_card_tactics_v1・mh_card_level_v1)。今のキーには触らない。
+//   どちらも CARD_SAVE_KEYS には入れない(デバッグの「記録を消す」で、ビートPで引いたカードやレベルを消さないように)
+// 公開の印: cardTacticsOpen()。false のあいだは経験値も入れない(公開のときに全員 Lv1 から)。デバッグの人は見える・入る
+const CARD_TACTICS_KEY = 'mh_card_tactics_v1';
+const CARD_LEVEL_KEY = 'mh_card_level_v1';
+const cardTacticsOpen = () => false;
+
+// ---- レベル ----
+// 次のレベルまでに要る経験値(2026-10-29 社長「20+3×Lv」・上限なし)。差し替えるのはここだけ
+const cardLevelNeed = (lv) => 20 + 3 * lv;
+// 1試合の経験値(助手と対戦・みんなのデッキは選んだ強さで。マルチは多め)。投了・切断・練習は 0。その日はじめての勝ちは +30
+const CARD_LEVEL_XP = Object.freeze({
+  easy: { win: 20, lose: 8 }, normal: { win: 30, lose: 12 }, hard: { win: 40, lose: 16 }, expert: { win: 50, lose: 20 }, master: { win: 60, lose: 24 },
+  pvp: { win: 100, lose: 40 }, firstWin: 30,
+});
+// 枠が開くレベル(2026-10-29 社長の決め・ツナグ案)。{ base(基本カード), breeder(ブリーダーの行), mon(モンスター1体ごとの行) }
+const CARD_LEVEL_FRAMES = Object.freeze([
+  { at: 1, base: 1, breeder: 1, mon: 2 }, { at: 5, mon: 3 }, { at: 10, base: 2 }, { at: 15, breeder: 2, mon: 4 },
+  { at: 20, breeder: 3 }, { at: 25, mon: 5 }, { at: 30, base: 3 },
+]);
+const cardLevelFrames = (lv) => CARD_LEVEL_FRAMES.filter((x) => lv >= x.at).reduce((a, x) => ({ ...a, ...Object.fromEntries(Object.entries(x).filter(([k]) => k !== 'at')) }), {});
+// 次に開く枠(画面に「次は Lv◯ で…」と出す)。無ければ null
+const cardLevelNextFrame = (lv) => CARD_LEVEL_FRAMES.find((x) => x.at > lv) || null;
+// 引く券をもらうレベル: Lv3・Lv10、Lv20 から先は5レベルごと(上限なし)。1枚 = ガチャ1回(8枚)。ビートPには換えられない
+const cardLevelTicketAt = (lv) => lv === 3 || lv === 10 || (lv >= 20 && lv % 5 === 0);
+// 壊れた経験値(数でない・無限・負)は0として数える(ブリーダーレベルと同じ守り方。ループが止まらなくならない)
+const cardLevelSafeXp = (xp) => { const n = Number(xp); return Number.isFinite(n) ? Math.min(Math.max(0, Math.floor(n)), Number.MAX_SAFE_INTEGER) : 0; };
+const cardLevelInfo = (xp) => {
+  let left = cardLevelSafeXp(xp), level = 1;
+  for (;;) { const need = cardLevelNeed(level); if (left < need) return { level, into: left, need }; left -= need; level += 1; }
+};
+// { v:1, xp, day(その日はじめての勝ちを数えた日 JST), dayWin, got:[引く券を配ったレベル] }
+const cardNormalizeLevel = (raw) => {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const got = Array.isArray(r.got) ? [...new Set(r.got.filter((n) => Number.isInteger(n) && n > 1))].sort((a, b) => a - b) : [];
+  return { v: 1, xp: cardLevelSafeXp(r.xp), day: typeof r.day === 'string' ? r.day.slice(0, 10) : '', dayWin: r.dayWin === true, got };
+};
+// kind … 'cpu'(助手と対戦・みんなのデッキ。level は選んだ強さ)/ 'pvp'
+const cardLevelXpOf = ({ kind, level, outcome }) => {
+  if (outcome !== 'win' && outcome !== 'lose') return 0;
+  const t = kind === 'pvp' ? CARD_LEVEL_XP.pvp : CARD_LEVEL_XP[level];
+  return t ? t[outcome] : 0;
+};
+// 経験値を足した次の値と、新しくもらう引く券の数
+const cardLevelAfter = (prev, { kind, level, outcome, today }) => {
+  const cur = cardNormalizeLevel(prev);
+  const lv0 = cardLevelInfo(cur.xp).level;
+  let add = cardLevelXpOf({ kind, level, outcome });
+  if (!add) return { next: cur, tickets: 0, add: 0, from: lv0, to: lv0 };
+  const sameDay = cur.day === today;
+  if (outcome === 'win' && !(sameDay && cur.dayWin)) add += CARD_LEVEL_XP.firstWin;
+  const xp = cardLevelSafeXp(cur.xp + add);
+  const to = cardLevelInfo(xp).level;
+  const got = [...cur.got];
+  let tickets = 0;
+  for (let lv = 2; lv <= to; lv++) if (cardLevelTicketAt(lv) && !got.includes(lv)) { got.push(lv); tickets += 1; }
+  return { next: { ...cur, xp, day: today, dayWin: (sameDay && cur.dayWin) || outcome === 'win', got }, tickets, add, from: lv0, to };
+};
+
+// ---- 持ち物と枠 ----
+// { v:1, own:{ カードid: 枚数 }, frames(82 の cardTacticNormalizeFrames の形), shards(かけら), tickets(引く券), pulls(引いた回数), dry(SR が出ないまま引いた回数) }
+// はじめに配る10枚(CARD_TACTIC_START)は、保存に無くても持っている扱い(配る書き込みが要らない)。知らないカードidは消さずに残す
+const cardTacticsInt = (n, max = 1e9) => (Number.isFinite(Number(n)) ? Math.min(max, Math.max(0, Math.floor(Number(n)))) : 0);
+const cardNormalizeTactics = (raw) => {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const own = {};
+  if (r.own && typeof r.own === 'object' && !Array.isArray(r.own)) Object.entries(r.own).forEach(([id, n]) => { const k = cardTacticsInt(n, 999); if (id && id.length <= 64 && k > 0) own[id] = k; });
+  return { v: 1, own, frames: cardTacticNormalizeFrames(r.frames), shards: cardTacticsInt(r.shards), tickets: cardTacticsInt(r.tickets), pulls: cardTacticsInt(r.pulls), dry: cardTacticsInt(r.dry, 99) };
+};
+const cardTacticsOwns = (t, id) => CARD_TACTIC_START.includes(id) || ((t && t.own && t.own[id]) || 0) > 0;
+// 戦いに使う枠: 持っていないカード・開いていない枠は外す(保存の値はそのまま。レベルが上がれば戻る)
+const cardTacticsFramesForBattle = (t, lv) => {
+  const f = cardTacticNormalizeFrames(t && t.frames);
+  const n = cardLevelFrames(lv);
+  const owns = (id) => cardTacticsOwns(t, id);
+  const rows = (list, max) => list.filter((r) => owns(r.c) && owns(r.a)).slice(0, max);
+  return { base: f.base.map((id, i) => (id && i < n.base && owns(id) ? id : null)), breeder: rows(f.breeder, n.breeder), mons: f.mons.map((list) => rows(list, n.mon)) };
+};
+
+// ---- ガチャ(1回300ビートPで8枚・5回まとめて1,350。N70%・R25%・SR5%)・かけら・引く券 ----
+// パック(89)にそろえる: SR が出ないまま7回引いたら、8回目の最後の1枚は SR(天井)。はじめに配る10枚は出ない。
+// だぶりは「かけら」1個(ビートPには戻さない)。かけら10個で、まだ持っていないカードを1枚えらべる
+const CARD_TACTICS_PULL = Object.freeze({ n: 8, price: 300, bundle: Object.freeze({ n: 5, price: 1350 }), pityAt: 7 });
+const CARD_TACTICS_RATE = Object.freeze([['N', 0.7], ['R', 0.25], ['SR', 0.05]]);
+const CARD_TACTICS_SHARD_COST = 10;
+const cardTacticsPool = (r) => CARD_TACTIC_CARDS.filter((c) => c.r === r && !c.start);
+const cardTacticsPrice = (count) => (count === CARD_TACTICS_PULL.bundle.n ? CARD_TACTICS_PULL.bundle.price : CARD_TACTICS_PULL.price * count);
+// 1回(8枚)引く。t は cardNormalizeTactics の形。{ next, cards:[{ id, r, dup, isNew }] }
+const cardTacticsPullOnce = (t, rand = Math.random) => {
+  let cur = t;
+  const cards = [];
+  const pity = cur.dry >= CARD_TACTICS_PULL.pityAt;
+  for (let k = 0; k < CARD_TACTICS_PULL.n; k++) {
+    let r = 'N';
+    if (pity && k === CARD_TACTICS_PULL.n - 1) r = 'SR';
+    else { const x = rand(); let acc = 0; for (const [q, p] of CARD_TACTICS_RATE) { acc += p; if (x < acc) { r = q; break; } } }
+    const pool = cardTacticsPool(r);
+    const card = pool[Math.min(pool.length - 1, Math.floor(rand() * pool.length))];
+    const dup = cardTacticsOwns(cur, card.id);
+    cur = { ...cur, own: { ...cur.own, [card.id]: Math.min(999, (cur.own[card.id] || 0) + 1) }, shards: cur.shards + (dup ? 1 : 0) };
+    cards.push({ id: card.id, r: card.r, dup });
+  }
+  const sr = cards.some((c) => c.r === 'SR');
+  return { next: { ...cur, pulls: cur.pulls + 1, dry: sr ? 0 : cur.dry + 1 }, cards };
+};
+// count 回引く。payWith … 'point'(ビートP)か 'ticket'(引く券。1枚=1回)。足りなければ null
+const cardTacticsPull = (t, count, { payWith = 'point', point = 0 } = {}, rand = Math.random) => {
+  if (!Number.isInteger(count) || count < 1) return null;
+  const cost = payWith === 'ticket' ? 0 : cardTacticsPrice(count);
+  if (payWith === 'ticket' ? t.tickets < count : point < cost) return null;
+  let cur = payWith === 'ticket' ? { ...t, tickets: t.tickets - count } : t;
+  const packs = [];
+  for (let i = 0; i < count; i++) { const one = cardTacticsPullOnce(cur, rand); cur = one.next; packs.push(one.cards); }
+  return { next: cur, packs, cost };
+};
+// かけらで1枚えらぶ(持っていないカードだけ)。できなければ null
+const cardTacticsExchange = (t, id) => {
+  const c = cardTacticOf(id);
+  if (!c || cardTacticsOwns(t, id) || t.shards < CARD_TACTICS_SHARD_COST) return null;
+  return { ...t, own: { ...t.own, [id]: 1 }, shards: t.shards - CARD_TACTICS_SHARD_COST };
+};
+
+// ---- 保存(画面から呼ぶ) ----
+const cardTacticsLoad = async () => {
+  let rawT = null, rawL = null;
+  try { [rawT, rawL] = await Promise.all([storeGet(CARD_TACTICS_KEY, null), storeGet(CARD_LEVEL_KEY, null)]); } catch (_) { /* 読めなければ空 */ }
+  const level = cardNormalizeLevel(rawL);
+  return { tactics: cardNormalizeTactics(rawT), level, info: cardLevelInfo(level.xp), rawT, rawL };
+};
+// 1試合ぶんの経験値の保存の項目(84 の結果の取引に足す)。経験値を入れない人(公開前・デバッグでない)は空
+const cardLevelEntries = async ({ kind, level, outcome, debug = false }) => {
+  if (!cardTacticsOpen() && !debug) return { entries: [], gain: null };
+  let rawL = null, rawT = null;
+  try { [rawL, rawT] = await Promise.all([storeGet(CARD_LEVEL_KEY, null), storeGet(CARD_TACTICS_KEY, null)]); } catch (_) { return { entries: [], gain: null }; }
+  const gain = cardLevelAfter(rawL, { kind, level, outcome, today: typeof cardTodayJst === 'function' ? cardTodayJst() : '' });
+  if (!gain.add) return { entries: [], gain };
+  const entries = [{ key: CARD_LEVEL_KEY, before: rawL, next: gain.next }];
+  if (gain.tickets) { const t = cardNormalizeTactics(rawT); entries.push({ key: CARD_TACTICS_KEY, before: rawT, next: { ...t, tickets: t.tickets + gain.tickets } }); }
+  return { entries, gain };
 };
 
 // ---- part: 81-debug-trials.jsx ----
