@@ -34,7 +34,7 @@ const e=G('ETERNAL_SETTING'),rules=G('eternalStageRules');
 const shellRate=G('extremeEnemyShellRate'),shellAmount=G('extremeEnemyShellAmount'),pierceRate=G('extremeEnemyPierceRate');
 const split=G('splitShellDamage'),afterHit=G('enemyAfterHit'),mark=G('markShellAbsorbedHits'),pierce=G('applyEnemyPierce');
 
-check('基本設定',e.id==='ETERNAL'&&e.japanese==='エターナル'&&e.available&&e.debugAvailable&&e.power>=200&&e.power<=220
+check('基本設定',e.id==='ETERNAL'&&e.japanese==='エターナル'&&e.available&&e.debugAvailable&&e.power===300
   &&e.score===20&&e.xp===120&&e.gold===100&&e.psyche===190&&e.unlockRequirement==='HELHEIM');
 check('IDと動的キー',e.recordId==='ETERNAL'&&e.rankingId==='ExtremeETERNAL'
   &&G('extremeBestScoreKey')('ETERNAL')==='mh_extreme_hs_ETERNAL'&&G('extremeClearCountKey')('ETERNAL')==='mh_extreme_clears_ETERNAL'
