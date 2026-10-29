@@ -1341,6 +1341,15 @@ function RhythmMultiAwayBar({ hidden = false, busy = false, onReturn = null }) {
   const others = view ? view.members.filter((m) => !m.cpu && m.id !== view.selfId) : [];
   const othersKey = others.map((m) => m.id).join(',');
   const shown = !!view && !hidden && !view.full;
+  // フレンドの「いまの場所」を「部屋で待ち中」にする(2026-10-29 マルチ部ツナグくんの friendsSetRoomWaiting)。
+  // 選曲が始まった・部屋を出たら戻す。カードの部屋も同じ口を使うので、ビートが立てたときだけ下ろす
+  const roomWaiting = !!view && !view.full && (view.room ? view.room.phase : 'matching') === 'matching';
+  const roomWaitingSetRef = React.useRef(false);
+  React.useEffect(() => {
+    if (typeof friendsSetRoomWaiting !== 'function') return;
+    if (roomWaiting) { friendsSetRoomWaiting(true); roomWaitingSetRef.current = true; }
+    else if (roomWaitingSetRef.current) { friendsSetRoomWaiting(false); roomWaitingSetRef.current = false; }
+  }, [roomWaiting]);
   React.useEffect(() => {
     if (!shown) { seenRef.current = null; setArrived(''); return; }
     if (!seenRef.current) { seenRef.current = new Set(others.map((m) => m.id)); return; }
