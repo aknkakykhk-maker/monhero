@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 968ec7e6bd1beda1
+// source-sha256: 17c6c63a3f51ded6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -111297,7 +111297,7 @@ const cardShareNormalizeTactics = (v, deck = null) => {
     tilt[t.id] = n === -1 || n === 1 ? n : 0;
   });
   const inDeck = deck && Array.isArray(deck.cards) ? new Set(deck.cards) : null;
-  const aces = [...new Set((Array.isArray(r.aces) ? r.aces : []).filter(x => typeof x === 'string' && /^[0-9]{3}$/.test(x) && (!inDeck || inDeck.has(x))))].slice(0, CARD_SHARE_ACES_MAX);
+  const aces = [...new Set((Array.isArray(r.aces) ? r.aces : []).filter(x => typeof x === 'string' && /^[A-Z]?[0-9]{3}$/.test(x) && (!inDeck || inDeck.has(x))))].slice(0, CARD_SHARE_ACES_MAX);
   const name = typeof r.name === 'string' ? r.name.slice(0, 20) : '';
   const f = r.f && typeof r.f === 'object' && !Array.isArray(r.f) && typeof cardTacticPackFrames === 'function' ? cardTacticPackFrames(cardTacticUnpackFrames(r.f)) : null;
   return {
@@ -111468,10 +111468,10 @@ const cardShareBadReason = (db, deck, tactics) => {
   });
   const over = Object.keys(count).find(n => count[n] > 3);
   if (over) return `「${(db && cardOf(db, over) || {}).name || over}」が4枚以上あります`;
-  const oldMons = mons.filter(n => !/^C-[0-9]{3}$/.test(String(n)));
-  const oldCards = [...new Set(cards.filter(n => !/^[0-9]{3}$/.test(String(n))))];
+  const oldMons = mons.filter(n => !/^C-[0-9]{3}[A-Z]{0,2}$/.test(String(n)));
+  const oldCards = [...new Set(cards.filter(n => !/^[A-Z]?[0-9]{3}$/.test(String(n))))];
   const names = [...oldMons.map(n => `${(db && cardMonsterOf(db, n) || {}).name || ''}(${n})`), ...oldCards.map(n => (db && cardOf(db, n) || {}).name || n)];
-  if (names.length) return `「${names.slice(0, 3).join('」「')}」${names.length > 3 ? 'など' : ''}を、まだ登録で受け付けていません。直るまでお待ちください`;
+  if (names.length) return `「${names.slice(0, 3).join('」「')}」${names.length > 3 ? 'など' : ''}の番号を、登録で受け付けていません`;
   return 'サーバが受け付けませんでした';
 };
 const cardShareRegister = async ({

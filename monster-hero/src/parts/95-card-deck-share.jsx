@@ -33,7 +33,7 @@ const cardShareNormalizeTactics = (v, deck = null) => {
   const tilt = {};
   CARD_SHARE_TILTS.forEach((t) => { const n = r.tilt && r.tilt[t.id]; tilt[t.id] = n === -1 || n === 1 ? n : 0; });
   const inDeck = deck && Array.isArray(deck.cards) ? new Set(deck.cards) : null;
-  const aces = [...new Set((Array.isArray(r.aces) ? r.aces : []).filter((x) => typeof x === 'string' && /^[0-9]{3}$/.test(x) && (!inDeck || inDeck.has(x))))].slice(0, CARD_SHARE_ACES_MAX);
+  const aces = [...new Set((Array.isArray(r.aces) ? r.aces : []).filter((x) => typeof x === 'string' && /^[A-Z]?[0-9]{3}$/.test(x) && (!inDeck || inDeck.has(x))))].slice(0, CARD_SHARE_ACES_MAX);
   const name = typeof r.name === 'string' ? r.name.slice(0, 20) : '';
   // f … 戦術カードの枠(82-card-tactics-core の短い形。2026-10-29 社長)。無い登録(前の形)は、くせと傾きで打つ
   const f = r.f && typeof r.f === 'object' && !Array.isArray(r.f) && typeof cardTacticPackFrames === 'function' ? cardTacticPackFrames(cardTacticUnpackFrames(r.f)) : null;
@@ -130,8 +130,8 @@ const cardShareFetchMine = async (ownerId) => {
 };
 // 登録・登録し直し。返り値: 'ok' | 'locked'(鍵がちがう) | 'bad' | 'nokey' | 'off'(表が無い・通信できない)
 // サーバが 'bad' を返したときの理由(2026-10-30 社長「このデッキは登録できませんでした」で登録できない → 理由を出す)。
-//   サーバ(card_deck_register)と同じ決まりで、送る前の中身を確かめる。はじめのサーバはモンスターを C-数字3桁・カードを数字3桁だけ通していた
-//   (色ちがい C-029S・場のカード F115 などが通らない)。サーバを広げたあとは、ここに当たらず、ほかの理由か「サーバが受け付けませんでした」
+//   サーバ(card_deck_register)と同じ決まりで、送る前の中身を確かめる。はじめのサーバはモンスターを C-数字3桁・カードを数字3桁だけ通していて、
+//   色ちがい C-029S・場のカード F115 などが通らなかった。2026-10-30 にサーバを C-数字3桁+英字2つまで・英字1つ+数字3桁へ広げたので、ここも同じ形
 const cardShareBadReason = (db, deck, tactics) => {
   const d = deck || {};
   const mons = Array.isArray(d.monsters) ? d.monsters.slice(0, 3) : [];
@@ -143,10 +143,10 @@ const cardShareBadReason = (db, deck, tactics) => {
   cards.forEach((n) => { count[n] = (count[n] || 0) + 1; });
   const over = Object.keys(count).find((n) => count[n] > 3);
   if (over) return `「${((db && cardOf(db, over)) || {}).name || over}」が4枚以上あります`;
-  const oldMons = mons.filter((n) => !/^C-[0-9]{3}$/.test(String(n)));
-  const oldCards = [...new Set(cards.filter((n) => !/^[0-9]{3}$/.test(String(n))))];
+  const oldMons = mons.filter((n) => !/^C-[0-9]{3}[A-Z]{0,2}$/.test(String(n)));
+  const oldCards = [...new Set(cards.filter((n) => !/^[A-Z]?[0-9]{3}$/.test(String(n))))];
   const names = [...oldMons.map((n) => `${((db && cardMonsterOf(db, n)) || {}).name || ''}(${n})`), ...oldCards.map((n) => ((db && cardOf(db, n)) || {}).name || n)];
-  if (names.length) return `「${names.slice(0, 3).join('」「')}」${names.length > 3 ? 'など' : ''}を、まだ登録で受け付けていません。直るまでお待ちください`;
+  if (names.length) return `「${names.slice(0, 3).join('」「')}」${names.length > 3 ? 'など' : ''}の番号を、登録で受け付けていません`;
   return 'サーバが受け付けませんでした';
 };
 const cardShareRegister = async ({ ownerId, name, icon, frame, deck, tactics }) => {
