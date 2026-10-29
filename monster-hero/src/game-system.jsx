@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 59c6499b3cd36c52
+// generated-sha256: 2b533fbfbea54202
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -48206,16 +48206,24 @@ function RhythmMultiAwayBar({ hidden = false, busy = false, onReturn = null }) {
   const hot = !!arrived || phase !== 'matching';
   if (busy && !hot) return null;
   const text = arrived ? `${arrived}さんが来ました` : phase !== 'matching' ? '対戦が始まります' : `部屋で待っています(${view.members.length}/${RHYTHM_MULTI_ROOM_MAX}人)`;
-  const leave = () => { if (window.confirm('ルームを出ますか?')) RHYTHM_MULTI.leave(); };
+  return <MultiAwayBar text={text} hot={hot} busy={busy} onReturn={onReturn} onLeave={() => RHYTHM_MULTI.leave()} game="beat" />;
+}
+
+// 部屋を開いたままほかの画面にいるあいだの、画面の上の帯(見た目だけ。モンヒロビートとMFバトルカードで共通・2026-10-29 マルチ部ツナグくんと決めた)。
+// 部屋の様子は呼ぶ側が読んで、文と「目立たせるか」だけを渡す。
+//   text: 帯の文 / hot: 人が来た・始まるなど、すぐ戻ってほしいとき / busy: バトルの最中など、ここから画面を移れない所(「対戦へ」を出さない)
+//   onReturn: 部屋へ戻る / onLeave: 部屋を出る(押したら先に確かめる) / icon: 文の頭の絵文字 / game: data 属性に載せるだけ(検査で見分ける用)
+function MultiAwayBar({ text, hot = false, busy = false, onReturn = null, onLeave = null, icon = '🎵', game = '' }) {
+  const leave = () => { if (onLeave && window.confirm('ルームを出ますか?')) onLeave(); };
   return (
-    <div data-rhythm-multi-away-bar={hot ? 'hot' : 'wait'} className="pointer-events-none fixed inset-x-0 top-0 z-[1000] flex justify-center px-2 pt-[max(env(safe-area-inset-top),6px)]">
+    <div data-multi-away-bar={hot ? 'hot' : 'wait'} data-multi-away-game={game} className="pointer-events-none fixed inset-x-0 top-0 z-[1000] flex justify-center px-2 pt-[max(env(safe-area-inset-top),6px)]">
       <div className={`pointer-events-auto flex w-full max-w-[420px] items-center gap-2 rounded-2xl border px-3 py-1.5 text-white shadow-lg ${hot ? 'border-amber-200/80 bg-fuchsia-800/95' : 'border-cyan-300/50 bg-slate-900/95'}`}>
-        <span className={`min-w-0 flex-1 text-[12px] font-black leading-snug ${hot ? 'animate-pulse' : ''}`} style={JA_WRAP_STYLE}>🎵 {jaWrap(text)}</span>
+        <span className={`min-w-0 flex-1 text-[12px] font-black leading-snug ${hot ? 'animate-pulse' : ''}`} style={JA_WRAP_STYLE}>{icon ? `${icon} ` : ''}{jaWrap(text)}</span>
         {busy ? <small className="shrink-0 text-[10px] font-bold text-amber-100">終わったら戻れます</small>
-          : <button data-rhythm-multi-away-return type="button" onClick={() => onReturn && onReturn()}
+          : <button data-multi-away-return type="button" onClick={() => onReturn && onReturn()}
             className={`min-h-[40px] shrink-0 rounded-xl px-3 text-[12px] font-black ${hot ? 'bg-amber-300 text-slate-950' : 'bg-cyan-400 text-slate-950'}`}>{hot ? '対戦へ' : '戻る'}</button>}
-        <button data-rhythm-multi-away-leave type="button" aria-label="ルームを出る" onClick={leave}
-          className="min-h-[40px] min-w-[36px] shrink-0 rounded-xl bg-slate-700 text-[13px] font-black">✕</button>
+        {onLeave && <button data-multi-away-leave type="button" aria-label="ルームを出る" onClick={leave}
+          className="min-h-[40px] min-w-[36px] shrink-0 rounded-xl bg-slate-700 text-[13px] font-black">✕</button>}
       </div>
     </div>
   );

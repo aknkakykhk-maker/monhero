@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b0bcae7e8e35a1b5
+// source-sha256: c7c973573bde4f39
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -79605,26 +79605,45 @@ function RhythmMultiAwayBar({
   const hot = !!arrived || phase !== 'matching';
   if (busy && !hot) return null;
   const text = arrived ? `${arrived}さんが来ました` : phase !== 'matching' ? '対戦が始まります' : `部屋で待っています(${view.members.length}/${RHYTHM_MULTI_ROOM_MAX}人)`;
+  return React.createElement(MultiAwayBar, {
+    text: text,
+    hot: hot,
+    busy: busy,
+    onReturn: onReturn,
+    onLeave: () => RHYTHM_MULTI.leave(),
+    game: "beat"
+  });
+}
+function MultiAwayBar({
+  text,
+  hot = false,
+  busy = false,
+  onReturn = null,
+  onLeave = null,
+  icon = '🎵',
+  game = ''
+}) {
   const leave = () => {
-    if (window.confirm('ルームを出ますか?')) RHYTHM_MULTI.leave();
+    if (onLeave && window.confirm('ルームを出ますか?')) onLeave();
   };
   return React.createElement("div", {
-    "data-rhythm-multi-away-bar": hot ? 'hot' : 'wait',
+    "data-multi-away-bar": hot ? 'hot' : 'wait',
+    "data-multi-away-game": game,
     className: "pointer-events-none fixed inset-x-0 top-0 z-[1000] flex justify-center px-2 pt-[max(env(safe-area-inset-top),6px)]"
   }, React.createElement("div", {
     className: `pointer-events-auto flex w-full max-w-[420px] items-center gap-2 rounded-2xl border px-3 py-1.5 text-white shadow-lg ${hot ? 'border-amber-200/80 bg-fuchsia-800/95' : 'border-cyan-300/50 bg-slate-900/95'}`
   }, React.createElement("span", {
     className: `min-w-0 flex-1 text-[12px] font-black leading-snug ${hot ? 'animate-pulse' : ''}`,
     style: JA_WRAP_STYLE
-  }, "🎵 ", jaWrap(text)), busy ? React.createElement("small", {
+  }, icon ? `${icon} ` : '', jaWrap(text)), busy ? React.createElement("small", {
     className: "shrink-0 text-[10px] font-bold text-amber-100"
   }, "終わったら戻れます") : React.createElement("button", {
-    "data-rhythm-multi-away-return": true,
+    "data-multi-away-return": true,
     type: "button",
     onClick: () => onReturn && onReturn(),
     className: `min-h-[40px] shrink-0 rounded-xl px-3 text-[12px] font-black ${hot ? 'bg-amber-300 text-slate-950' : 'bg-cyan-400 text-slate-950'}`
-  }, hot ? '対戦へ' : '戻る'), React.createElement("button", {
-    "data-rhythm-multi-away-leave": true,
+  }, hot ? '対戦へ' : '戻る'), onLeave && React.createElement("button", {
+    "data-multi-away-leave": true,
     type: "button",
     "aria-label": "ルームを出る",
     onClick: leave,
