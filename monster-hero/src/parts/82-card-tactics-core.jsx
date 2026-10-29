@@ -158,6 +158,38 @@ const cardTacticFilled = (frames) => {
   return f.base.filter(Boolean).length + f.breeder.filter((x) => x.on).length + f.mons.reduce((a, rows) => a + rows.filter((x) => x.on).length, 0);
 };
 
+// ---- 賢さ(2026-10-29 社長の物差し)----
+// 基本カードの枚数が上限、ON の行の数でそこまで上がる。1枚 … EASY/NORMAL/HARD、2枚 … NORMAL/HARD/EXPERT、3枚 … HARD/EXPERT/MASTER
+//   行 0〜3 / 4〜9 / 10以上。基本カードも行も無ければ 'random'(出せる手からランダム)。基本カード無しで行だけなら EASY
+const CARD_TACTIC_SMART = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
+const cardTacticSmartLevel = (frames) => {
+  const f = cardTacticNormalizeFrames(frames);
+  const base = f.base.filter(Boolean).length;
+  const rows = f.breeder.filter((x) => x.on).length + f.mons.reduce((a, r) => a + r.filter((x) => x.on).length, 0);
+  if (!base && !rows) return 'random';
+  if (!base) return 'easy';
+  return CARD_TACTIC_SMART[(base - 1) + (rows >= 10 ? 2 : rows >= 4 ? 1 : 0)];
+};
+// みんなのデッキの登録に載せる短い形(表の tactics は 2000 バイトまで)。{ b:[基本], r:[[c,a,on,sp?]], m:[[[…]]×3] }
+const cardTacticPackFrames = (frames) => {
+  const f = cardTacticNormalizeFrames(frames);
+  const row = (x) => (x.sp ? [x.c, x.a, x.on ? 1 : 0, x.sp] : [x.c, x.a, x.on ? 1 : 0]);
+  return { b: f.base, r: f.breeder.map(row), m: f.mons.map((rows) => rows.map(row)) };
+};
+const cardTacticUnpackFrames = (v) => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  const row = (x) => (Array.isArray(x) ? { c: x[0], a: x[1], on: x[2] !== 0, ...(typeof x[3] === 'string' ? { sp: x[3] } : {}) } : null);
+  return cardTacticNormalizeFrames({ base: r.b, breeder: (Array.isArray(r.r) ? r.r : []).map(row), mons: (Array.isArray(r.m) ? r.m : []).map((rows) => (Array.isArray(rows) ? rows.map(row) : [])) });
+};
+// 何も入れていないデッキ(賢さ 'random'): 出せる手からランダム(社長「設定しないとめちゃくちゃ弱い」)
+const cardTacticRandomAct = (db, st, policy, rand = Math.random) => {
+  if (st.pending) return rand() < 0.5 ? { type: 'pass' } : cardAiChooseGuard(db, st, policy, rand, { force: true, only: () => rand() < 0.5 });
+  if (st.phase === 'guts') { const hand = st.players[st.active].hand; return { type: 'guts', hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, cardAiGutsCap(st.players[st.active])) }; }
+  const opts = cardAiAttackChoices(db, st, policy);
+  if (!opts.length || rand() < 0.2) return { type: 'endAttacks' };
+  return cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
+};
+
 // ---- 基本カードの型 → くせ ----
 // メインはそのまま、サブは倍率の上げ下げを3分の1ずつ効かせる(2026-10-29 社長「メイン1+サブ2」・ツナグ案)。上限は ×2・下限は ×0.3
 //   慎重型 … ほかの型の効きを半分に(サブなら6分の1減らす)/ 臨機応変型・持久型 … メインならいつも、サブなら3回に1回の番
@@ -474,6 +506,7 @@ const cardTacticDecide = (db, st, policy) => {
   if (st.winner !== null) return null;
   const phase = st.pending ? 'guard' : st.phase === 'guts' ? 'guts' : st.phase === 'main' ? 'attack' : null;
   if (!phase) return null;
+  if (policy.gambitRandom && cardTacticSmartLevel(frames) === 'random') return { act: cardTacticRandomAct(db, st, policy) };
   const p = phase === 'guard' ? st.pending.defender : st.active;
   const habit = cardTacticHabitOf(frames.base, st, p);
   const knobs = cardTacticKnobsOf(frames.base, st, p);
