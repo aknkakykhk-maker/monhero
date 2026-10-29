@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e69859228369b89d
+// generated-sha256: f5463efd6b78ae5d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -65921,7 +65921,7 @@ const CardTacticFace = ({ card, owned = true, count = 0, onClick = null, small =
   const Tag = onClick ? 'button' : 'div';
   return (
     <Tag type={onClick ? 'button' : undefined} data-card-tactic={card.id} data-card-tactic-owned={owned ? '1' : '0'} onClick={onClick || undefined}
-      className={`relative flex flex-col rounded-xl border-2 p-1.5 text-left ${owned ? 'border-white/60' : 'border-white/15 opacity-40 grayscale'} ${small ? 'min-h-[78px]' : 'min-h-[104px]'} ${onClick ? 'active:scale-[.97]' : ''}`}
+      className={`relative flex flex-col rounded-xl border-2 p-1.5 text-left ${owned ? 'border-white/60' : 'border-white/15 opacity-40 grayscale'} ${small ? 'min-h-[78px]' : 'min-h-[106px]'} ${onClick ? 'active:scale-[.97]' : ''}`}
       style={{ background: st.bg }}>
       <span className="flex items-center gap-1">
         <span className="rounded px-1 text-[10px] font-black text-white" style={{ background: CARD_TACTIC_RARE_COLOR[card.r] }}>{card.r}</span>
