@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 714abe0b9351e86b
+// source-sha256: 9180b8a42914a0af
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -57534,6 +57534,10 @@ const DexStatusTag = ({
     className: `inline-flex items-center rounded-full border px-1.5 py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${DEX_STATUS_STYLE[def.id]}`
   }, def.label);
 };
+const dexListScrollMemo = {
+  filter: null,
+  top: 0
+};
 function MonsterDexScreen({
   dexLineageFilter,
   unlockedMonsterIds,
@@ -57557,7 +57561,10 @@ function MonsterDexScreen({
   }, React.createElement(ScreenHead, {
     title: "モンスター図鑑",
     accent: "text-amber-300",
-    onBack: onBackToManagement,
+    onBack: () => {
+      dexListScrollMemo.top = 0;
+      onBackToManagement();
+    },
     backLabel: "M/B管理へ戻る"
   }), React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-2"
@@ -57596,7 +57603,13 @@ function MonsterDexScreen({
       el.style.width = `${Math.max(0, el.parentElement.clientWidth - el.previousElementSibling.offsetWidth - 6)}px`;
     }
   })), React.createElement("div", {
-    className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto`
+    "data-dex-list": true,
+    className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto`,
+    ref: el => {
+      if (!el || el.dataset.dexScrollRestored) return;
+      el.dataset.dexScrollRestored = '1';
+      if (dexListScrollMemo.filter === dexLineageFilter && dexListScrollMemo.top > 0) el.scrollTop = dexListScrollMemo.top;
+    }
   }, sections.map(section => React.createElement("section", {
     key: section.id,
     "data-dex-section": section.id,
@@ -57626,7 +57639,12 @@ function MonsterDexScreen({
       "data-dex-entry": true,
       "data-dex-entry-status": section.id,
       "aria-label": `${mon.name}の図鑑を見る`,
-      onClick: () => onOpenDetail(mon.id),
+      onClick: e => {
+        const list = e.currentTarget.closest('[data-dex-list]');
+        dexListScrollMemo.filter = dexLineageFilter;
+        dexListScrollMemo.top = list ? list.scrollTop : 0;
+        onOpenDetail(mon.id);
+      },
       className: `w-full min-h-[124px] rounded-2xl border ${section.id === 'draft' ? 'border-dashed border-fuchsia-300/30' : 'border-white/10'} bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none`
     }, React.createElement(DexMonsterIcon, {
       src: iconSrc
@@ -71007,7 +71025,8 @@ function AiCopyBody({
 }
 function AiCopyLifeBar({
   hp,
-  maxHp
+  maxHp,
+  narrow = false
 }) {
   if (!Number.isFinite(Number(hp)) || !(Number(maxHp) > 0)) return null;
   const now = Math.max(0, Math.floor(Number(hp))),
@@ -71018,7 +71037,7 @@ function AiCopyLifeBar({
   }, React.createElement("span", {
     className: "flex h-[11px] items-center justify-between gap-1 leading-none"
   }, React.createElement("span", {
-    className: "shrink-0 whitespace-nowrap text-[8px] font-black text-pink-300 max-[359px]:hidden"
+    className: `shrink-0 whitespace-nowrap text-[8px] font-black text-pink-300 max-[359px]:hidden${narrow && String(max).length >= 4 ? ' hidden' : ''}`
   }, "ライフ"), React.createElement("span", {
     className: "font-mono leading-none whitespace-nowrap"
   }, React.createElement("span", {
@@ -71044,7 +71063,8 @@ function TacticsAiCopyColumn({
   standing,
   layout,
   onOpen,
-  hatePct = null
+  hatePct = null,
+  compact = false
 }) {
   if (!copy) return null;
   const land = layout === 'landscape';
@@ -71070,7 +71090,7 @@ function TacticsAiCopyColumn({
         onOpen();
       }
     } : undefined,
-    className: `relative min-w-0 rounded-xl border border-emerald-400/60 bg-emerald-950/55 text-emerald-50 ${canOpen ? 'cursor-pointer' : ''} ${land ? 'flex h-[46px] w-full items-center gap-2 px-2' : 'flex h-full w-[72px] max-[359px]:w-[60px] shrink-0 flex-col items-center justify-between gap-0.5 px-1 max-[359px]:px-0.5 py-1'}`
+    className: `relative min-w-0 rounded-xl border border-emerald-400/60 bg-emerald-950/55 text-emerald-50 ${canOpen ? 'cursor-pointer' : ''} ${land ? 'flex h-[46px] w-full items-center gap-2 px-2' : `flex h-full w-[72px] max-[359px]:w-[60px] shrink-0 flex-col items-center justify-between ${compact ? 'gap-0 py-0.5' : 'gap-0.5 py-1'} px-1 max-[359px]:px-0.5`}`
   }, skill && React.createElement("span", {
     "data-tactics-ai-copy-skill": true,
     className: `absolute z-[90] max-w-[140px] truncate rounded-lg border border-red-200 bg-red-700 px-2 py-0.5 text-[11px] font-black text-white shadow-[0_2px_10px_rgba(0,0,0,.7)] ${land ? 'left-1/2 -top-3 -translate-x-1/2' : 'right-1 top-1/3'}`
@@ -71078,7 +71098,7 @@ function TacticsAiCopyColumn({
     className: `flex min-w-0 items-center gap-1 ${land ? 'w-[92px] shrink-0' : 'w-full flex-col'}`
   }, React.createElement(AiCopyFace, {
     src: src,
-    size: land ? 20 : 22
+    size: land ? 20 : compact ? 18 : 22
   }), React.createElement("span", {
     className: `min-w-0 overflow-hidden whitespace-nowrap font-black leading-tight text-emerald-200 [container-type:inline-size] ${land ? 'flex-1' : 'w-full text-center'}`
   }, React.createElement("span", {
@@ -71091,12 +71111,13 @@ function TacticsAiCopyColumn({
     phase: phase,
     hit: hit,
     anim: anim,
-    size: land ? 40 : 46
+    size: land ? 40 : compact ? 32 : 46
   }), React.createElement("span", {
     className: `flex min-w-0 flex-col gap-0.5 ${land ? 'w-[96px] shrink-0' : 'w-full'}`
   }, React.createElement(AiCopyLifeBar, {
     hp: copy.hp,
-    maxHp: copy.maxHp
+    maxHp: copy.maxHp,
+    narrow: !land
   }), React.createElement(AiCopyGutsMeter, {
     guts: copy.guts,
     maxGuts: copy.maxGuts
@@ -73540,6 +73561,11 @@ function BattleScreen({
       baseId: s?.id,
       image: img
     }) : img;
+    const slotSoulStage = (() => {
+      if (!s || !s.masuId || ecoBattleView || liteBattleView || fxLoad === 'LIGHT' || fxLoad === 'MINIMAL' || !Array.isArray(battleSoulMasus)) return 0;
+      const m = battleSoulMasus.find(x => x && (x.id === s.masuId || x.masuId === s.masuId));
+      return m ? normalizeSoulRankStage(normalizeMasuProgression(m).soulRankStage) : 0;
+    })();
     const themedAttack = isAnimating ? themedAttackKindOf(attackAnim, s?.id) : null;
     const slotArtBox = {
       width: tacticsNewLayout ? '58px' : '64px',
@@ -73604,7 +73630,8 @@ function BattleScreen({
       layout: "landscape"
     })), React.createElement(AiCopyLifeBar, {
       hp: tCopy.hp,
-      maxHp: tCopy.maxHp
+      maxHp: tCopy.maxHp,
+      narrow: classicAiCopyLandscape()
     }), React.createElement(AiCopyGutsMeter, {
       guts: tCopy.guts,
       maxGuts: tCopy.maxGuts
@@ -74131,7 +74158,7 @@ function BattleScreen({
       "data-slot-circle": true
     }), React.createElement("div", {
       "data-tactics-attack-image": tacticsNewLayout ? i : undefined,
-      className: "relative flex items-center justify-center",
+      className: `relative flex items-center justify-center${slotSoulStage > 0 ? ' mh-reincarnate-stack' : ''}`,
       style: {
         ...(s ? slotArtBox : {}),
         ...(isAnimating && tacticsNewLayout && !pandoraArt ? {
@@ -74143,7 +74170,10 @@ function BattleScreen({
           zIndex: 9999
         } : {})
       }
-    }, pandoraArt ? pandoraArt : s?.imgUrl ? isAnimating && s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? React.createElement(PandoraDualThunder, {
+    }, slotSoulStage > 0 && React.createElement(SoulRankAura, {
+      soulRankStage: slotSoulStage,
+      className: `is-battle${fxLoad === 'STANDARD' ? ' is-still' : ''}`
+    }), pandoraArt ? pandoraArt : s?.imgUrl ? isAnimating && s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? React.createElement(PandoraDualThunder, {
       image: React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
@@ -74345,7 +74375,8 @@ function BattleScreen({
     return React.createElement(React.Fragment, null, React.createElement("div", {
       className: `flex shrink-0 ${tacticsNewLayout ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
     }, React.createElement(TacticsAiCopyColumn, _extends({}, props, {
-      layout: "portrait"
+      layout: "portrait",
+      compact: !tacticsNewLayout && classicAiCopyLandscape()
     }))), tacticsNewLayout && React.createElement("div", {
       className: "hidden shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:block"
     }, React.createElement(TacticsAiCopyColumn, _extends({}, props, {
@@ -88936,15 +88967,19 @@ const cardAiChooseGuts = (db, st, policy) => {
   const keep = no => {
     const c = cardOf(db, no);
     if (!c) return -9;
-    const usable = c.user === 'breeder' || me.mons.some(m => cardUsableBy(c, m));
+    const usable = c.user === 'breeder' || me.mons.some(m => !m.ko && cardUsableBy(c, m));
     if (!usable) return -10;
     if (cardIsGuardKind(c.kind)) return 2 * habit.keepGuard - c.guts * 0.2;
     return (c.damage || 1) * 0.5 - Math.max(0, c.guts - (me.guts.length + 2)) * 0.8;
   };
-  const order = me.hand.map((no, i) => ({
+  const ks = me.hand.map((no, i) => ({
     i,
-    k: keep(no)
-  })).sort((a, b) => a.k - b.k);
+    k: keep(no),
+    g: cardIsGuardKind((cardOf(db, no) || {}).kind)
+  }));
+  const guardKeep = ks.filter(x => x.g && x.k > -9).sort((a, b) => b.k - a.k)[0];
+  if (guardKeep) guardKeep.k += 3 + habit.keepGuard;
+  const order = ks.sort((a, b) => a.k - b.k);
   const pick = [];
   order.forEach(o => {
     if (o.k <= -9) pick.push(o.i);
@@ -92825,6 +92860,10 @@ const CardStatusSheet = ({
 }), React.createElement("div", {
   className: "mt-2 text-right text-[10px] font-bold text-slate-400"
 }, "タップで閉じる")));
+const cardBigHeight = n => {
+  const k = Math.max(1, n || 1);
+  return `min(${k > 1 ? 30 : 38}vh, 300px, calc((100vw - ${32 + 6 * (k - 1)}px) / ${k} * 1.4))`;
+};
 const cardHandNameKey = (hand, idx) => idx.map(i => hand[i]).sort().join(',');
 const cardLogText = l => !l ? '' : Number.isFinite(l.from) && Number.isFinite(l.to) ? `${l.text}(${l.from} → ${l.to})` : l.text;
 const cardGuardShort = c => {
@@ -95618,7 +95657,7 @@ const CardBattleBoard = ({
       alt: c.name,
       className: `rounded-[8px] border-[3px] ${bigCard.side === 'me' ? 'border-amber-300' : 'border-rose-400'} object-cover shadow-[0_8px_24px_rgba(0,0,0,.7)]`,
       style: {
-        height: `min(${bigCard.cards.length > 1 ? 30 : 38}vh, 300px)`,
+        height: cardBigHeight(bigCard.cards.length),
         aspectRatio: '5 / 7'
       }
     }) : null;
@@ -145089,6 +145128,9 @@ const createAnimationStyle = () => {
     [data-tactics-look][data-fx-level="STANDARD"] :is([data-slot-ring], [data-card-shine], [data-enemy-ring])::before,
     [data-tactics-look][data-fx-level="STANDARD"] :is([data-slot-index], [data-card-gem], [data-enemy-hpbar])::after,
     [data-tactics-look][data-fx-level="STANDARD"] [data-slot-circle] { animation: none !important; }
+    /* バトルの枠の魂格オーラ(SoulRankAura is-battle)。大きさは枠の絵に合わせて小さめ。標準では動きを止める(2026-10-29) */
+    .mh-reincarnate-aura.is-battle{inset:-24%}
+    .mh-reincarnate-aura.is-battle.is-still, .mh-reincarnate-aura.is-battle.is-still *, .mh-reincarnate-aura.is-battle.is-still *::before, .mh-reincarnate-aura.is-battle.is-still *::after { animation: none !important; }
     [data-tactics-look]:is([data-fx-level="LIGHT"], [data-fx-level="MINIMAL"]) * { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
     /* 最軽量は、次の行動の札・狙われている枠の点滅(animate-pulse)も止め、何も動き続けない画面にする */
     [data-tactics-look][data-fx-level="MINIMAL"] .animate-pulse { animation: none !important; }

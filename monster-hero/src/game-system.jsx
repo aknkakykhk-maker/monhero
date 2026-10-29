@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cc7600e94f60620f
+// generated-sha256: 42e95a3e3fa6c64c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -36033,6 +36033,10 @@ const DexStatusTag = ({ status, size = 'sm', announced = false }) => {
   return <span data-dex-status-tag={def.id} className={`inline-flex items-center rounded-full border px-1.5 py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${DEX_STATUS_STYLE[def.id]}`}>{def.label}</span>;
 };
 
+// 図鑑の一覧のスクロールの位置(2026-10-29 社長「モンスターを開いて戻ると、一覧のいちばん上まで戻される」)。
+// 詳細を開くと一覧は作り直されるので、画面の外で覚えておき、戻ったらそこへ戻す。保存はしない(読み込み直すと上から)。
+// 覚えるのは札を押した瞬間。絞り込みが替わっていたとき・M/B管理へ戻ったときは上から
+const dexListScrollMemo = { filter: null, top: 0 };
 function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineage, onOpenDetail, onBackToManagement }) {
       const monsters=dexMonsterList();
       const unlockedCount=monsters.filter(mon=>unlockedMonsterIds.includes(mon.id)).length;
@@ -36044,7 +36048,7 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
       const chipClass=(on)=>`shrink-0 snap-start min-h-[44px] px-3 rounded-xl border text-[11px] font-black whitespace-nowrap active:scale-95 ${on?'bg-amber-600 border-amber-300 text-white':'bg-slate-900 border-white/10 text-amber-200/80'}`;
       return (
       <div data-mh-screen className={SCREEN_SHELL_CLASS}>
-        <ScreenHead title="モンスター図鑑" accent="text-amber-300" onBack={onBackToManagement} backLabel="M/B管理へ戻る"/>
+        <ScreenHead title="モンスター図鑑" accent="text-amber-300" onBack={()=>{ dexListScrollMemo.top=0; onBackToManagement(); }} backLabel="M/B管理へ戻る"/>
         <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="monsterDex" compact/></div>
         <div data-dex-count className="shrink-0 w-full max-w-md mx-auto mb-2 rounded-2xl border border-amber-500/60 bg-gradient-to-r from-amber-950/70 to-orange-950/50 px-3 py-2 flex items-center justify-between gap-2">
           <span className="text-[10px] font-black text-amber-300 shrink-0">図鑑登録数</span>
@@ -36063,7 +36067,9 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
           <span aria-hidden="true" className="shrink-0" ref={el=>{ if(!el||!el.parentElement||!el.previousElementSibling) return;
             el.style.width=`${Math.max(0, el.parentElement.clientWidth-el.previousElementSibling.offsetWidth-6)}px`; }}/>
         </div>
-        <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto`}>
+        <div data-dex-list className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto`}
+          ref={el=>{ if(!el||el.dataset.dexScrollRestored) return; el.dataset.dexScrollRestored='1';
+            if(dexListScrollMemo.filter===dexLineageFilter&&dexListScrollMemo.top>0) el.scrollTop=dexListScrollMemo.top; }}>
           {sections.map(section=>(
             <section key={section.id} data-dex-section={section.id} className="pb-3">
               {/* 区切りの見出し。数は「この区切りの数 / いま並んでいる全員」 */}
@@ -36079,7 +36085,8 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
                   const category=unlocked?monsterCategoryOf(mon.id):null;
                   return (
                     <button key={mon.id} type="button" data-dex-entry data-dex-entry-status={section.id} aria-label={`${mon.name}の図鑑を見る`}
-                      onClick={()=>onOpenDetail(mon.id)}
+                      onClick={e=>{ const list=e.currentTarget.closest('[data-dex-list]');
+                        dexListScrollMemo.filter=dexLineageFilter; dexListScrollMemo.top=list?list.scrollTop:0; onOpenDetail(mon.id); }}
                       className={`w-full min-h-[124px] rounded-2xl border ${section.id==='draft'?'border-dashed border-fuchsia-300/30':'border-white/10'} bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none`}>
                       {/* 血統チップと同じ理由。丸く切り抜くと円の外側へかかる部分が切れるので、
                           少し縮めて中央へ置き、全身が円の中へ収まるようにする */}
@@ -42624,13 +42631,14 @@ function AiCopyBody({ src, phase = 'idle', hit = false, anim = null, size = 44 }
     </span>
   );
 }
-function AiCopyLifeBar({ hp, maxHp }) {
+function AiCopyLifeBar({ hp, maxHp, narrow = false }) {
   if (!Number.isFinite(Number(hp)) || !(Number(maxHp) > 0)) return null;
   const now = Math.max(0, Math.floor(Number(hp))), max = Math.floor(Number(maxHp));
   return (
     <span data-ai-copy-life={`${now}/${max}`} className="block w-full min-w-0">
       <span className="flex h-[11px] items-center justify-between gap-1 leading-none">
-        <span className="shrink-0 whitespace-nowrap text-[8px] font-black text-pink-300 max-[359px]:hidden">ライフ</span>
+        {/* 細い所(5列目の縦・幅320)で4桁のライフになると「ライフ」の字と数字が収まらないので、字を外して数と棒だけにする(2026-10-29 見回り) */}
+        <span className={`shrink-0 whitespace-nowrap text-[8px] font-black text-pink-300 max-[359px]:hidden${narrow && String(max).length >= 4 ? ' hidden' : ''}`}>ライフ</span>
         <span className="font-mono leading-none whitespace-nowrap"><span className="text-[11px] font-black text-white">{now}</span><span className="text-[8px] text-slate-400">/{max}</span></span>
       </span>
       <span className="mt-px block h-[3px] overflow-hidden rounded-full bg-black/60">
@@ -42640,9 +42648,10 @@ function AiCopyLifeBar({ hp, maxHp }) {
   );
 }
 // タクティクス/レイドの5列目。縦=盤の右の列(layout 'portrait')、横向きの背の低い画面=盤の下の帯(layout 'landscape')
-function TacticsAiCopyColumn({ copy, src, phase, hit, anim, skill, standing, layout, onOpen, hatePct = null }) {
+function TacticsAiCopyColumn({ copy, src, phase, hit, anim, skill, standing, layout, onOpen, hatePct = null, compact = false }) {
   if (!copy) return null;
   const land = layout === 'landscape';
+  // compact … タクティクス旧の横向き(背の低い画面)。盤の高さ(約152px)に収まるよう、絵と顔を小さくし間を詰める(2026-10-29 見回り)
   const name = tacticsAiCopyName(copy);
   const canOpen = typeof onOpen === 'function' && phase !== 'vanish';
   const next = standing ? <SorashidoNextCardBadge card={copy.nextCard || null} layout={land ? 'landscape' : 'portrait'} turnsLeft={copy.turnsLeft}/>
@@ -42651,17 +42660,17 @@ function TacticsAiCopyColumn({ copy, src, phase, hit, anim, skill, standing, lay
     <div data-tactics-ai-copy-column={layout} data-ai-copy-phase={phase} role={canOpen ? 'button' : undefined} tabIndex={canOpen ? 0 : undefined}
       aria-label={`${name}${canOpen ? '。押すと手札を見る' : ''}`} onClick={canOpen ? onOpen : undefined}
       onKeyDown={canOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } } : undefined}
-      className={`relative min-w-0 rounded-xl border border-emerald-400/60 bg-emerald-950/55 text-emerald-50 ${canOpen ? 'cursor-pointer' : ''} ${land ? 'flex h-[46px] w-full items-center gap-2 px-2' : 'flex h-full w-[72px] max-[359px]:w-[60px] shrink-0 flex-col items-center justify-between gap-0.5 px-1 max-[359px]:px-0.5 py-1'}`}>
+      className={`relative min-w-0 rounded-xl border border-emerald-400/60 bg-emerald-950/55 text-emerald-50 ${canOpen ? 'cursor-pointer' : ''} ${land ? 'flex h-[46px] w-full items-center gap-2 px-2' : `flex h-full w-[72px] max-[359px]:w-[60px] shrink-0 flex-col items-center justify-between ${compact ? 'gap-0 py-0.5' : 'gap-0.5 py-1'} px-1 max-[359px]:px-0.5`}`}>
       {skill && <span data-tactics-ai-copy-skill className={`absolute z-[90] max-w-[140px] truncate rounded-lg border border-red-200 bg-red-700 px-2 py-0.5 text-[11px] font-black text-white shadow-[0_2px_10px_rgba(0,0,0,.7)] ${land ? 'left-1/2 -top-3 -translate-x-1/2' : 'right-1 top-1/3'}`}>{skill}</span>}
       <span className={`flex min-w-0 items-center gap-1 ${land ? 'w-[92px] shrink-0' : 'w-full flex-col'}`}>
-        <AiCopyFace src={src} size={land ? 20 : 22}/>
+        <AiCopyFace src={src} size={land ? 20 : compact ? 18 : 22}/>
         <span className={`min-w-0 overflow-hidden whitespace-nowrap font-black leading-tight text-emerald-200 [container-type:inline-size] ${land ? 'flex-1' : 'w-full text-center'}`}>
           <span className="block" style={{ fontSize: `min(10px, calc(100cqw / ${[...name].length + 0.3}))` }}>{name}</span>
         </span>
       </span>
-      <AiCopyBody src={src} phase={phase} hit={hit} anim={anim} size={land ? 40 : 46}/>
+      <AiCopyBody src={src} phase={phase} hit={hit} anim={anim} size={land ? 40 : compact ? 32 : 46}/>
       <span className={`flex min-w-0 flex-col gap-0.5 ${land ? 'w-[96px] shrink-0' : 'w-full'}`}>
-        <AiCopyLifeBar hp={copy.hp} maxHp={copy.maxHp}/>
+        <AiCopyLifeBar hp={copy.hp} maxHp={copy.maxHp} narrow={!land}/>
         <AiCopyGutsMeter guts={copy.guts} maxGuts={copy.maxGuts}/>
       </span>
       {Number.isInteger(hatePct) && <span data-tactics-ai-copy-hate={hatePct} className="shrink-0 whitespace-nowrap text-[9px] font-black tabular-nums text-rose-200">狙われ {hatePct}%</span>}
@@ -44232,6 +44241,12 @@ function BattleScreen({
               // 待機中の動き(翼の羽ばたき・しっぽ・花の揺れ・全体の浮き沈みなど。MonsterIdleArt)。
               // 軽量表示と、設定の「待機中の動き：止める」では今までどおり1枚の絵
               const slotArt = (img) => (!ecoBattleView&&!idleMotionOff ? <MonsterIdleArt baseId={s?.id} image={img}/> : img);
+              // この枠の子の魂格の段階(1〜5)。枠の子とは masuId で結ぶ。出さない設定のときは 0
+              const slotSoulStage=(()=>{
+                if(!s||!s.masuId||ecoBattleView||liteBattleView||fxLoad==='LIGHT'||fxLoad==='MINIMAL'||!Array.isArray(battleSoulMasus)) return 0;
+                const m=battleSoulMasus.find(x=>x&&(x.id===s.masuId||x.masuId===s.masuId));
+                return m?normalizeSoulRankStage(normalizeMasuProgression(m).soulRankStage):0;
+              })();
               // 体当たりだった初期モンスターは、種族ごとの攻撃(ThemedAttackMotion)で見せる。枠は飛ばさない
               const themedAttack = isAnimating ? themedAttackKindOf(attackAnim, s?.id) : null;
               const slotArtBox = {width:tacticsNewLayout?'58px':'64px', height:tacticsNewLayout?'58px':'64px', flexShrink:0};
@@ -44295,7 +44310,7 @@ function BattleScreen({
                   <div data-tactics-ai-copy-next={i} className="flex min-w-0 justify-center">
                     <SorashidoNextCardBadge card={tCopyOut?tCopy.nextCard:null} turnsLeft={null} layout="landscape"/>
                   </div>
-                  <AiCopyLifeBar hp={tCopy.hp} maxHp={tCopy.maxHp}/>
+                  <AiCopyLifeBar hp={tCopy.hp} maxHp={tCopy.maxHp} narrow={classicAiCopyLandscape()}/>
                   <AiCopyGutsMeter guts={tCopy.guts} maxGuts={tCopy.maxGuts}/>
                 </div>}
                 {/* 押すとコピーの手札の窓(BattleScreen の copyHandOpen)。枠のボタンへは伝えない */}
@@ -44573,7 +44588,7 @@ function BattleScreen({
                       大きくなって飛び、名前の行を隠していた。古い盤面は今までどおり枠ごと動かす */}
                   {/* 足元の魔法陣(新しい盤面の飾り)。絵と一緒に跳ねないよう、動く絵の外に置く */}
                   {tacticsNewLayout&&s&&<span aria-hidden="true" data-slot-circle/>}
-                  <div data-tactics-attack-image={tacticsNewLayout?i:undefined} className="relative flex items-center justify-center" style={{...(s?slotArtBox:{}),...(isAnimating&&tacticsNewLayout&&!pandoraArt?{zIndex:9999,animation:themedAttack?undefined:attackMotionAnimation(attackAnim),...attackAimStyle}:{}),...(pandoraArt&&isAnimating?{zIndex:9999}:{})}}>{pandoraArt?pandoraArt:s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
+                  <div data-tactics-attack-image={tacticsNewLayout?i:undefined} className={`relative flex items-center justify-center${slotSoulStage>0?' mh-reincarnate-stack':''}`} style={{...(s?slotArtBox:{}),...(isAnimating&&tacticsNewLayout&&!pandoraArt?{zIndex:9999,animation:themedAttack?undefined:attackMotionAnimation(attackAnim),...attackAimStyle}:{}),...(pandoraArt&&isAnimating?{zIndex:9999}:{})}}>{/* 魂格オーラ(一覧・詳細・HOMEと同じ部品)を、バトルでも絵の後ろに小さく出す(2026-10-29 社長「魂格オーラがバトルに反映されてない」)。軽め・最軽量・省エネ表示では出さず、標準では動きを止める(is-still) */}{slotSoulStage>0&&<SoulRankAura soulRankStage={slotSoulStage} className={`is-battle${fxLoad==='STANDARD'?' is-still':''}`}/>}{pandoraArt?pandoraArt:s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
                     ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="object-contain drop-shadow-md"/>}/>
                     :isAnimating&&attackAnim.motion==='arkHolyRain'
                       ?<ArkHolyRainMotion
@@ -44678,7 +44693,7 @@ function BattleScreen({
             const props={copy:c,src:aiCopySrcOf(c,slots),phase,hit,anim:attackAnim,skill,standing:standing||phase==='vanish',onOpen:aiCopy?()=>setCopyHandOpen(true):null,hatePct:hc&&Number.isInteger(hc.copy)?hc.copy:null};
             return (<>
               {/* タクティクス旧は枠が縦に長く盤の高さからはみ出すので、横向きでも盤の右に置く(下に置くと距離の札に重なった) */}
-              <div className={`flex shrink-0 ${tacticsNewLayout?'[@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}><TacticsAiCopyColumn {...props} layout="portrait"/></div>
+              <div className={`flex shrink-0 ${tacticsNewLayout?'[@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}><TacticsAiCopyColumn {...props} layout="portrait" compact={!tacticsNewLayout&&classicAiCopyLandscape()}/></div>
               {tacticsNewLayout&&<div className="hidden shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:block"><TacticsAiCopyColumn {...props} layout="landscape"/></div>}
             </>);
           })()}
@@ -53912,12 +53927,17 @@ const cardAiChooseGuts = (db, st, policy) => {
   const keep = (no) => {
     const c = cardOf(db, no);
     if (!c) return -9;
-    const usable = c.user === 'breeder' || me.mons.some((m) => cardUsableBy(c, m));
+    const usable = c.user === 'breeder' || me.mons.some((m) => !m.ko && cardUsableBy(c, m)); // 倒れた子しか使えない札は使えない
     if (!usable) return -10;
     if (cardIsGuardKind(c.kind)) return 2 * habit.keepGuard - c.guts * 0.2;
     return (c.damage || 1) * 0.5 - Math.max(0, c.guts - (me.guts.length + 2)) * 0.8;
   };
-  const order = me.hand.map((no, i) => ({ i, k: keep(no) })).sort((a, b) => a.k - b.k);
+  const ks = me.hand.map((no, i) => ({ i, k: keep(no), g: cardIsGuardKind((cardOf(db, no) || {}).kind) }));
+  // 守りの札を1枚は手元に残す(2026-10-29 社長「ガード軽視が目立つ」: 守りの札を全部ガッツにして、次の相手の番に守れない)
+  //   いちばん残したい守りの札を、攻めの札より後(ガッツにしない側)へ回す
+  const guardKeep = ks.filter((x) => x.g && x.k > -9).sort((a, b) => b.k - a.k)[0];
+  if (guardKeep) guardKeep.k += 3 + habit.keepGuard;
+  const order = ks.sort((a, b) => a.k - b.k);
   const pick = [];
   order.forEach((o) => { if (o.k <= -9) pick.push(o.i); });
   for (const o of order) { if (pick.length >= Math.max(need, pick.length) || me.hand.length - pick.length <= 1) break; if (!pick.includes(o.i)) pick.push(o.i); }
@@ -56413,6 +56433,13 @@ const CardStatusSheet = ({ name, list, onClose }) => (
     </div>
   </div>
 );
+// 出すカードの大写し1枚の高さ。何枚も同時に出すときは、横に並べて画面の幅に収まる高さまで小さくする
+//   (前は高さだけで決めていて、3枚以上だと 390×844 で横にはみ出して切れた。2026-10-29 社長「カードを3枚以上使うと画面が切れる」)。
+//   幅 = 画面の幅 − 左右の余白(32px) − すき間(6px×(n−1)) を n で割る。高さはその 7/5 倍
+const cardBigHeight = (n) => {
+  const k = Math.max(1, n || 1);
+  return `min(${k > 1 ? 30 : 38}vh, 300px, calc((100vw - ${32 + 6 * (k - 1)}px) / ${k} * 1.4))`;
+};
 // 手札の番号の並びを、カードの名前(番号)の並びにする(同じ名前の組み合わせを1つにまとめる)
 const cardHandNameKey = (hand, idx) => idx.map((i) => hand[i]).sort().join(',');
 // 記録の1行の文。守り・回避で減った当たりは「(5 → 2)」を添える(82 が from・to を持たせる。古い記録には無いので、そのままの文)
@@ -58139,7 +58166,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {bigCard && (
         <div key={bigCard.key} data-card-big={bigCard.side} onClick={finishBig} className="mh-card-big absolute inset-x-0 top-1/2 z-[55] flex -translate-y-1/2 flex-col items-center gap-1.5 px-4">
           <div className="flex items-end justify-center gap-1.5">
-            {bigCard.cards.map((no, i) => { const c = cardOf(db, no); return c ? <img key={i} src={CARD_IMG(c.img, 'l')} alt={c.name} className={`rounded-[8px] border-[3px] ${bigCard.side === 'me' ? 'border-amber-300' : 'border-rose-400'} object-cover shadow-[0_8px_24px_rgba(0,0,0,.7)]`} style={{ height: `min(${bigCard.cards.length > 1 ? 30 : 38}vh, 300px)`, aspectRatio: '5 / 7' }}/> : null; })}
+            {bigCard.cards.map((no, i) => { const c = cardOf(db, no); return c ? <img key={i} src={CARD_IMG(c.img, 'l')} alt={c.name} className={`rounded-[8px] border-[3px] ${bigCard.side === 'me' ? 'border-amber-300' : 'border-rose-400'} object-cover shadow-[0_8px_24px_rgba(0,0,0,.7)]`} style={{ height: cardBigHeight(bigCard.cards.length), aspectRatio: '5 / 7' }}/> : null; })}
           </div>
           <div data-card-fit className="max-w-full rounded-xl border border-rose-300/60 bg-black/80 px-3 py-1 text-center text-[14px] font-black leading-snug text-white" style={JA_WRAP_STYLE}>
             {!watch && <span className={`mr-1 rounded px-1 text-[11px] ${bigCard.side === 'me' ? 'bg-amber-300 text-slate-950' : 'bg-rose-500'}`}>{bigCard.side === 'me' ? '自分' : '相手'}</span>}{bigCard.who}「{bigCard.cards.map((n) => (cardOf(db, n) || {}).name).join('＋')}」
@@ -90916,6 +90943,9 @@ const createAnimationStyle = () => {
     [data-tactics-look][data-fx-level="STANDARD"] :is([data-slot-ring], [data-card-shine], [data-enemy-ring])::before,
     [data-tactics-look][data-fx-level="STANDARD"] :is([data-slot-index], [data-card-gem], [data-enemy-hpbar])::after,
     [data-tactics-look][data-fx-level="STANDARD"] [data-slot-circle] { animation: none !important; }
+    /* バトルの枠の魂格オーラ(SoulRankAura is-battle)。大きさは枠の絵に合わせて小さめ。標準では動きを止める(2026-10-29) */
+    .mh-reincarnate-aura.is-battle{inset:-24%}
+    .mh-reincarnate-aura.is-battle.is-still, .mh-reincarnate-aura.is-battle.is-still *, .mh-reincarnate-aura.is-battle.is-still *::before, .mh-reincarnate-aura.is-battle.is-still *::after { animation: none !important; }
     [data-tactics-look]:is([data-fx-level="LIGHT"], [data-fx-level="MINIMAL"]) * { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
     /* 最軽量は、次の行動の札・狙われている枠の点滅(animate-pulse)も止め、何も動き続けない画面にする */
     [data-tactics-look][data-fx-level="MINIMAL"] .animate-pulse { animation: none !important; }
