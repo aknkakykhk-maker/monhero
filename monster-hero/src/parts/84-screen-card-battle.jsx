@@ -2827,7 +2827,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     onNavigate('CARD_BATTLE');
   };
   if (!db) return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="MFバトルカード" onBack={onExit}/><ScreenEmpty emoji="🃏" lines={['カードのデータを読み込めませんでした']}/></div>;
-  // プロフィールの登録デッキ(95 の CardShareProfileDeck)からの頼み: そのデッキと戦う / デッキ登録を開く。読み込みが済んでから1回だけ
+  // プロフィールの登録デッキ(95 の CardShareDeckTile・CardShareDeckActions)からの頼み: そのデッキと戦う / デッキ登録を開く。読み込みが済んでから1回だけ
   const startBattleRef = useRef(null);
   useEffect(() => {
     if (!save || !save.starter || screen !== 'CARD_TOP' || typeof cardShareIntentTake !== 'function') return; // スターターを受け取る前は、頼みを残しておく
@@ -3119,11 +3119,15 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       </div>
     );
   }
-  if (view === 'tactics' && typeof CardTacticsScreen === 'function') {
-    // 戻り先: みんなのデッキの「戦術カードを組む」から来たら、みんなのデッキへ戻る
-    // ビートPを払うときは、戦術カードの保存と同じ取引で(persist はビートPを書く直前に読み直して差だけを足す)
-    return <CardTacticsScreen db={db} decks={save.decks} point={save.point} onBack={() => { if (tacticsBack === 'exit') { setTacticsBack('mode'); setView('top'); onExit(); return; } setView(tacticsBack); setTacticsBack('mode'); }}
-      share={typeof CardDeckShare === 'function' ? { collection: save.collection, frame: (rank && rank.profile && rank.profile.frame) || null, unlocked: save.unlocked, debug } : null}
+  // デッキ登録(98。2026-10-29 社長「やりづらい」→ 1 デッキ → 2 戦い方 → 3 登録 の1本道)。戻り先: プロフィールから来たら MFバトルカードを閉じる
+  const tacticsBackTo = () => { if (tacticsBack === 'exit') { setTacticsBack('mode'); setView('top'); onExit(); return; } setView(tacticsBack); setTacticsBack('mode'); };
+  if (view === 'tactics' && typeof CardDeckRegister === 'function') {
+    return <CardDeckRegister db={db} decks={save.decks} collection={save.collection} frame={(rank && rank.profile && rank.profile.frame) || null} onBack={tacticsBackTo}
+      onOpenList={typeof CardTacticsScreen === 'function' ? () => setView('tacticsList') : null} onOpenMarket={onOpenMarket ? () => { setNotice(''); onOpenMarket(); } : null}/>;
+  }
+  // 持っている戦術カードの一覧(97)。引くのはマーケットの「戦術カード」
+  if (view === 'tacticsList' && typeof CardTacticsScreen === 'function') {
+    return <CardTacticsScreen db={db} decks={save.decks} point={save.point} onBack={() => setView('tactics')} listOnly
       onPay={async (cost, entries) => (save.point >= cost ? persist({ point: save.point - cost }, {}, entries) : false)}/>;
   }
   if (view === 'share' && typeof CardDeckShare === 'function') {

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 00f7b2acee51567f
+// generated-sha256: a787f75afaa36089
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10089,6 +10089,89 @@ const reconcileMonthlyMissionCompletions = (value,now=Date.now()) => {
   return state;
 };
 
+// ---- part: 18-player-rank.jsx ----
+// ==================== プレイヤーのランク(ビートランク・カードランク共通)と、ビートランクの経験値 ====================
+// 2026-10-29 社長: モンヒロビートに「ビートランク」(上限なし・全員ランク1から)。MFバトルカードのレベルも「カードランク」に改め、対の名前にする。
+//   ランクの計算(次のランクまで 20+3×ランク)は2つで同じなので、ここに1か所だけ置く(マルチ部ツナグくんと決めた)。
+//   カードは 96-card-tactics.jsx の cardLevelInfo がこれを呼ぶ形に寄せる。
+// ★マスモンの「ビートLv」(rhythmBuddyLevelInfo)とは別物。画面でも「Lv」の字を使わず「ランク」と書いて取り違えないようにする。
+// 保存は新しいキー mh_rhythm_rank_v1 だけ(既存の記録やランキングには触らない)。読むときは normalizeBeatRank を必ず通す。
+// ここは純粋な計算だけ(保存・日付・画面は呼ぶ側)。
+
+// 次のランクまでに要る経験値。差し替えるのはここだけ(サーバの player_rank_of も同じ式)
+const playerRankNeed = (rank) => 20 + 3 * rank;
+// 壊れた経験値(数でない・無限・負)は0として数える。ループが止まらなくならないよう上限も切る
+const playerRankSafeXp = (xp) => { const n = Number(xp); return Number.isFinite(n) ? Math.min(Math.max(0, Math.floor(n)), Number.MAX_SAFE_INTEGER) : 0; };
+// 経験値の合計 → { rank(今のランク), into(今のランクの中で、たまった分), need(次のランクまでに要る分) }
+const playerRankInfo = (xp) => {
+  let left = playerRankSafeXp(xp), rank = 1;
+  for (;;) { const need = playerRankNeed(rank); if (left < need) return { rank, into: left, need }; left -= need; rank += 1; }
+};
+
+// ---- ビートランク ----
+const BEAT_RANK_KEY = 'mh_rhythm_rank_v1';
+// 1曲の経験値(2026-10-29 社長。HELL は「劇的に上げる」で 60)。最後まで遊んだときの値
+const BEAT_RANK_XP = Object.freeze({ EASY: 6, NORMAL: 8, HARD: 10, EXPERT: 14, MASTER: 18, HELL: 60 });
+// 途中でライフが尽きた(失敗)ときは3分の1(端数は四捨五入)。フルコンボ +4、全部 MARVELOUS は +8(フルコンボの +4 と重ねない)。
+// みんなで対戦は1曲ぶん(上乗せ込み)を1.5倍(端数は四捨五入)。その日はじめての1曲は、そのあとに +30
+const BEAT_RANK_BONUS = Object.freeze({ failDivisor: 3, fullCombo: 4, allMarvelous: 8, multiScale: 1.5, dayFirst: 30 });
+// ごほうび(2026-10-29 社長が作り直し。前の「ランク3・10・20、そのあと5ごとにビートP 300」はやめた)
+//   ランクが1つ上がるたび: ビートP「そのランク×100」+セッション券1枚
+//   5ランクごと(5・10・15…): さらにビートP「そのランク×200」+セッション券「そのランクと同じ枚数」
+//   例: ランク5に上がると ビートP 500+1,000・セッション券 1枚+5枚
+// 毎ランクのビートPの式はカードランクも同じ(playerRankBeatPointsFor)。券の種類はそれぞれ
+const playerRankBeatPointsFor = (rank) => {
+  const r = Math.max(0, Math.floor(Number(rank) || 0));
+  return r < 2 ? 0 : r * 100 + (r % 5 === 0 ? r * 200 : 0);
+};
+const beatRankTicketsFor = (rank) => {
+  const r = Math.max(0, Math.floor(Number(rank) || 0));
+  return r < 2 ? 0 : 1 + (r % 5 === 0 ? r : 0);
+};
+// そのランクに上がったときにもらえる物を、一目で分かる文に(「ビートP 1,300・セッション券 1枚」)
+const beatRankRewardText = (rank) => `ビートP ${playerRankBeatPointsFor(rank).toLocaleString()}・セッション券 ${beatRankTicketsFor(rank).toLocaleString()}枚`;
+
+// { v:1, xp(経験値の合計), day(その日はじめての1曲を数えた日 JST 'YYYY-MM-DD'), dayFirst(その日の +30 を数えたか),
+//   got(ごほうびを配り終えたいちばん上のランク), k(全国ランキングへ書くときの持ち主の鍵。端末で作る) }
+const normalizeBeatRank = (raw) => {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const gotRaw = Array.isArray(r.got) ? Math.max(1, ...r.got.filter((n) => Number.isInteger(n))) : Number(r.got);
+  const got = Number.isFinite(gotRaw) ? Math.max(1, Math.floor(gotRaw)) : 1;
+  const k = typeof r.k === 'string' && /^[A-Za-z0-9_-]{24,128}$/.test(r.k) ? r.k : '';
+  return { v: 1, xp: playerRankSafeXp(r.xp), day: typeof r.day === 'string' ? r.day.slice(0, 10) : '', dayFirst: r.dayFirst === true, got, k };
+};
+
+// 1曲ぶんの経験値と内わけ(その日はじめての +30 は入れない)。経験値の入らない難易度なら { xp:0 }
+const beatRankPlayXp = ({ difficultyId, cleared = true, fullCombo = false, allMarvelous = false, multi = false }) => {
+  const base = BEAT_RANK_XP[difficultyId];
+  if (!base) return { xp: 0, parts: [] };
+  const parts = [];
+  let xp = cleared ? base : Math.round(base / BEAT_RANK_BONUS.failDivisor);
+  parts.push({ label: cleared ? difficultyId : `${difficultyId}(ライフが尽きた)`, xp });
+  if (cleared && allMarvelous) { xp += BEAT_RANK_BONUS.allMarvelous; parts.push({ label: '全部 MARVELOUS', xp: BEAT_RANK_BONUS.allMarvelous }); }
+  else if (cleared && fullCombo) { xp += BEAT_RANK_BONUS.fullCombo; parts.push({ label: 'フルコンボ', xp: BEAT_RANK_BONUS.fullCombo }); }
+  if (multi) { const scaled = Math.round(xp * BEAT_RANK_BONUS.multiScale); parts.push({ label: 'みんなで対戦 ×1.5', xp: scaled - xp }); xp = scaled; }
+  return { xp, parts };
+};
+
+// 経験値を足した次の値と、新しくもらうごほうび。today は日本時間の 'YYYY-MM-DD'(呼ぶ側が渡す)
+// 返り値: { next, add, parts, from, to, tickets, beatPoints }
+const beatRankAfter = (prev, { difficultyId, cleared, fullCombo, allMarvelous, multi, today }) => {
+  const cur = normalizeBeatRank(prev);
+  const from = playerRankInfo(cur.xp).rank;
+  const play = beatRankPlayXp({ difficultyId, cleared, fullCombo, allMarvelous, multi });
+  if (!play.xp) return { next: cur, add: 0, parts: [], from, to: from, tickets: 0, beatPoints: 0 };
+  const day = typeof today === 'string' ? today.slice(0, 10) : '';
+  const first = !!day && !(cur.day === day && cur.dayFirst);
+  const parts = first ? [...play.parts, { label: 'その日はじめての1曲', xp: BEAT_RANK_BONUS.dayFirst }] : play.parts;
+  const add = play.xp + (first ? BEAT_RANK_BONUS.dayFirst : 0);
+  const xp = playerRankSafeXp(cur.xp + add);
+  const to = playerRankInfo(xp).rank;
+  let tickets = 0, beatPoints = 0;
+  for (let r = Math.max(cur.got + 1, 2); r <= to; r++) { tickets += beatRankTicketsFor(r); beatPoints += playerRankBeatPointsFor(r); }
+  return { next: { ...cur, xp, day: day || cur.day, dayFirst: first || (cur.day === day && cur.dayFirst), got: Math.max(cur.got, to) }, add, parts, from, to, tickets, beatPoints };
+};
+
 // ---- part: 18-points-and-auto.jsx ----
 // 強化ポイント1つあたりのステータス上昇量。ライフだけ他より大きく上がる(バランス調整中の暫定値)
 const STAT_POINT_GAIN = { hp: 10, atk: 3, def: 3, guts: 3 };
@@ -17317,7 +17400,8 @@ const SB_HEADERS = { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' 
 //   並べた表だけを通す(差し替えていない表への書き込みは、引き続き止める)
 // rpc は集計を読むもの(rhythm_week_score_totals など)なので通すが、表へ書く rpc はここに並べて同じく止める
 // (2026-10-27 カード部: マルチの強さの点数 card_battle_pvp_report が、検査のブラウザから本物へ届きうる形だった)
-const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report']);
+// ビートランク・カードランクの行を書く関数(2026-10-29)も、表へ書くのでここで止める
+const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report', 'rhythm_beat_rank_put', 'card_rank_put']);
 const sbAutomationWriteBlocked = (url, method) => {
   try {
     if (typeof navigator === 'undefined' || navigator.webdriver !== true) return false;
@@ -22972,7 +23056,7 @@ const RhythmLineAdjustPanel=({adjust,onBump,isLandscape})=>{
     </div>
   </div>;
 };
-const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null})=>{
+const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,beatRankAward=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null})=>{
   // 判定ラインの位置の合わせ(lineAdjust)は、練習と同じ扱い(ライフを減らさない・記録を送らない)。練習の説明の帯は出さない
   const tutorialProp=tutorial;tutorial=tutorial||!!lineAdjust;
   // 合わせている間の地上の判定ラインの高さ(保存はまだ・親が持つ)。null なら設定のまま
@@ -25094,6 +25178,9 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   <small className="mt-1 block text-[10px] font-black text-amber-200">{result.allMarvelous?'すべてMARVELOUS。文句なしの完璧です':result.allExcellent?'すべてEXCELLENT以上。ほぼ完璧です':'一度もコンボを切らずに完走しました'}</small>
 </div>}
 <div className="my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300">{result.fullCombo&&<span>FULL COMBO</span>}{result.allExcellent&&<span>ALL EXCELLENT</span>}{result.allMarvelous&&<span>ALL MARVELOUS</span>}</div>{/* クイック∞周回を裏で回していたときだけ。曲の長さぶんが周回クリア扱いで入る */}
+{/* ビートランク(2026-10-29 社長)。この1曲でたまった経験値と、ランクが上がったときのごほうび。横向きでも縦持ちでも、ここに1か所だけ出す。
+    裏のクイック周回の「経験値」(マスモンの経験値)と取り違えないよう、札に「🎵 ビートランク」と書く(PlayerRankGain) */}
+<PlayerRankGain kind="beat" award={beatRankAward} next={beatRankAward?`ランク${playerRankInfo(beatRankAward.xp).rank+1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank+1)}`:''}/>
 {/* 裏で∞周回していたのに失敗したとき。1周も入らないので、その理由をここで言う
     (2026-09-12・ユーザー指示「失敗しても入るようにすると放置で稼げるようになるから失敗は0にして」)。
     ★裏で周回していない人にはそもそも出ない(quickRunAwardがnullのまま) */}
@@ -33160,6 +33247,99 @@ const sbUpsertRhythmBuddyRanks = async (rows) => {
   }
 };
 
+// ---- part: 39-beat-rank-api.jsx ----
+// ==================== ビートランク・カードランクの全国ランキングの通信層(2026-10-29) ====================
+// 表は rhythm_beat_ranks(ビートランク)と card_ranks(カードランク)。どちらも1人1行・breeder_id・同じ列(マルチ部ツナグくんと決めた)。
+// 表へは直接書かず、持ち主の鍵を確かめる関数 *_rank_put だけで書く(ログインが無いので、みんなのデッキと同じ「持ち主の鍵」の形)。
+//   鍵: ビートは mh_rhythm_rank_v1 の k(端末で作る)/ カードは mh_card_deck_owner_key_v1(デッキ登録の鍵をそのまま使う)
+// 既存の rankings などには一切書かない。表や関数がまだ無い環境でも壊れない(無いと分かったら以後アクセスしない)。
+// SQL: docs/sql/rhythm-beat-rank/RHYTHM_BEAT_RANK_APPLY.sql
+const PLAYER_RANK_TABLES = Object.freeze({
+  beat: { table: 'rhythm_beat_ranks', put: 'rhythm_beat_rank_put', place: 'rhythm_beat_rank_place' },
+  card: { table: 'card_ranks', put: 'card_rank_put', place: 'card_rank_place' },
+});
+const PLAYER_RANK_SELECT = 'breeder_id,user_name,icon,profile_frame,rank,xp_total,updated_at';
+const PLAYER_RANK_SHOW_LIMIT = 100;
+
+const _playerRanksUnavailable = { beat: false, card: false };
+const playerRanksUnavailable = (kind) => !!_playerRanksUnavailable[kind];
+// 表が無い(PGRST205)・関数が無い(PGRST202)。権限や通信の失敗と取り違えない
+const playerRankMissing = (status, body) => status === 404 && /PGRST20[25]|Could not find the (table|function)|does not exist/i.test(String(body || ''));
+
+// 端末で作る持ち主の鍵(24〜128字・英数字と _-)
+const beatRankNewKey = () => {
+  const a = globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+  const b = globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
+  return `${a}${b}`.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 96);
+};
+
+const playerRankEntryFromRow = (row) => ({
+  breederId: typeof row.breeder_id === 'string' ? row.breeder_id : '',
+  name: typeof row.user_name === 'string' && row.user_name ? row.user_name.slice(0, 40) : 'ブリーダー',
+  icon: row.icon ?? null,
+  profileFrame: row.profile_frame ?? null,
+  rank: Math.max(1, Math.floor(Number(row.rank) || 1)),
+  xp: playerRankSafeXp(row.xp_total),
+});
+
+const playerRankTimed = async (url, init) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try { return await fetch(url, { ...init, signal: controller.signal }); } finally { clearTimeout(timer); }
+};
+
+// 上位100人(ランクの高い順・同じなら経験値の合計の多い順)。表が無ければ null
+const sbFetchPlayerRanks = async (kind) => {
+  const t = PLAYER_RANK_TABLES[kind];
+  if (!t || _playerRanksUnavailable[kind]) return null;
+  const url = `${SUPABASE_URL}/rest/v1/${t.table}?select=${PLAYER_RANK_SELECT}`
+    + `&order=rank.desc,xp_total.desc,updated_at.asc&limit=${PLAYER_RANK_SHOW_LIMIT}`;
+  const res = await playerRankTimed(url, { headers: SB_HEADERS, cache: 'no-store' });
+  const body = await res.text();
+  if (!res.ok) {
+    if (playerRankMissing(res.status, body)) { _playerRanksUnavailable[kind] = true; return null; }
+    throw new Error(`${t.table} ${res.status}: ${body || res.statusText}`);
+  }
+  const rows = JSON.parse(body || '[]');
+  return (Array.isArray(rows) ? rows : []).map(playerRankEntryFromRow);
+};
+
+// 自分の行と順位。行が無ければ null
+const sbFetchPlayerRankMine = async (kind, breederId) => {
+  const t = PLAYER_RANK_TABLES[kind];
+  if (!t || _playerRanksUnavailable[kind] || typeof breederId !== 'string' || !breederId) return null;
+  const rowRes = await playerRankTimed(`${SUPABASE_URL}/rest/v1/${t.table}?select=${PLAYER_RANK_SELECT}&breeder_id=eq.${encodeURIComponent(breederId)}`,
+    { headers: SB_HEADERS, cache: 'no-store' });
+  const rowBody = await rowRes.text();
+  if (!rowRes.ok) { if (playerRankMissing(rowRes.status, rowBody)) _playerRanksUnavailable[kind] = true; return null; }
+  const rows = JSON.parse(rowBody || '[]');
+  if (!Array.isArray(rows) || !rows[0]) return null;
+  const placeRes = await playerRankTimed(`${SUPABASE_URL}/rest/v1/rpc/${t.place}`,
+    { method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_id: breederId }) });
+  const placeBody = await placeRes.text();
+  const place = placeRes.ok ? Number(JSON.parse(placeBody || 'null')) : NaN;
+  return { ...playerRankEntryFromRow(rows[0]), place: Number.isFinite(place) && place > 0 ? Math.floor(place) : null };
+};
+
+// 自分の行を書く。返り値: 'ok' | 'bad' | 'locked' | null(表が無い・送れなかった)
+const sbPutPlayerRank = async (kind, { breederId, key, name, icon, profileFrame, xp }) => {
+  const t = PLAYER_RANK_TABLES[kind];
+  if (!t || _playerRanksUnavailable[kind] || typeof breederId !== 'string' || !breederId || typeof key !== 'string' || !key) return null;
+  const res = await playerRankTimed(`${SUPABASE_URL}/rest/v1/rpc/${t.put}`, {
+    method: 'POST', headers: SB_HEADERS,
+    body: JSON.stringify({ p_id: breederId, p_key: key, p_name: String(name || '名無しのブリーダー').slice(0, 40), p_icon: icon ?? null,
+      p_frame: profileFrame ?? null, p_xp: playerRankSafeXp(xp) }),
+  });
+  const body = await res.text();
+  if (!res.ok) { if (playerRankMissing(res.status, body)) _playerRanksUnavailable[kind] = true; return null; }
+  try { const v = JSON.parse(body); return typeof v === 'string' ? v : null; } catch (_) { return null; }
+};
+
+// ビートランクの呼び名(画面はこちらを呼ぶ)
+const sbFetchBeatRanks = () => sbFetchPlayerRanks('beat');
+const sbFetchBeatRankMine = (breederId) => sbFetchPlayerRankMine('beat', breederId);
+const sbPutBeatRank = (row) => sbPutPlayerRank('beat', row);
+
 // ---- part: 40-screen-effects.jsx ----
 // ==== 画面ライフサイクル: タイマー・リスナーの登録簿(useScreenEffects) ====
 //
@@ -34369,6 +34549,225 @@ const PickerCheckMark = () => (
   <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-slate-950 shadow"><Check size={12}/></span>
 );
 
+// ---- part: 43-player-rank-ui.jsx ----
+// ==================== プレイヤーのランクの見せ方(ビートランク・カードランク共通) ====================
+// 2026-10-29 社長: ビートランクとカードランクは対の名前。札・棒・ランクアップの演出・ランキングの行の見せ方をそろえる
+// (マルチ部ツナグくんと決めた。カードの画面はこれを使う形に差し替える)。計算は 18-player-rank.jsx の playerRankInfo。
+// ★マスモンの「ビートLv」と取り違えないよう、「Lv」の字は使わず「ランク」と数字で書く。色もマスモン(緑)と分ける
+const PLAYER_RANK_KINDS = Object.freeze({
+  beat: { label: 'ビートランク', icon: '🎵', pill: 'bg-cyan-700 text-cyan-50', accent: 'text-cyan-200', bar: 'from-cyan-400 to-fuchsia-300', border: 'border-cyan-300/50', panel: 'bg-slate-900/85' },
+  card: { label: 'カードランク', icon: '🃏', pill: 'bg-amber-700 text-amber-50', accent: 'text-amber-200', bar: 'from-emerald-400 to-amber-300', border: 'border-amber-300/50', panel: 'bg-slate-900/85' },
+});
+const playerRankKind = (kind) => PLAYER_RANK_KINDS[kind] || PLAYER_RANK_KINDS.beat;
+
+// ランクの帯(2026-10-29 社長「なんかださくない？」→ ブリーダーレベルの札を手本に、ゲームらしいバッジへ。マルチ部ツナグくんの見本どおり)。
+// 1〜9 ブロンズ・10〜19 シルバー・20〜29 ゴールド・30〜49 アメジスト・50〜 レインボー
+const playerRankTier = (rank) => {
+  const r = Math.max(1, Math.floor(Number(rank) || 1));
+  if (r >= 50) return { t: 5, name: 'レインボー' };
+  if (r >= 30) return { t: 4, name: 'アメジスト' };
+  if (r >= 20) return { t: 3, name: 'ゴールド' };
+  if (r >= 10) return { t: 2, name: 'シルバー' };
+  return { t: 1, name: 'ブロンズ' };
+};
+// 六角の盾(外側=縁の色・内側=面の色)・上半分の光沢・白い大きな数字と濃い縁取り・帯の色の光。
+// ::before/::after と変数を使うので Tailwind ではなく CSS のまま持ち、最初に描いたときに1回だけ <head> へ入れる
+const PLAYER_RANK_BADGE_CSS = `
+.mh-prb{display:inline-flex;align-items:center;gap:6px}
+.mh-prb-shield{position:relative;width:52px;height:58px;flex:none;filter:drop-shadow(0 3px 0 rgba(0,0,0,.45)) drop-shadow(0 0 10px var(--prb-glow))}
+.mh-prb-shield::before{content:"";position:absolute;inset:0;clip-path:polygon(50% 0,100% 18%,100% 70%,50% 100%,0 70%,0 18%);background:var(--prb-rim)}
+.mh-prb-shield::after{content:"";position:absolute;inset:3px;clip-path:polygon(50% 0,100% 18%,100% 70%,50% 100%,0 70%,0 18%);background:var(--prb-face)}
+.mh-prb-gloss{position:absolute;inset:3px 3px 50% 3px;z-index:2;clip-path:polygon(50% 0,100% 18%,100% 100%,0 100%,0 18%);background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.05))}
+.mh-prb-num{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;padding-top:3px;font-weight:900;font-size:26px;color:#fff;-webkit-text-stroke:5px var(--prb-ink);paint-order:stroke fill;letter-spacing:-.04em;line-height:1}
+.mh-prb-num.mh-prb-w3{font-size:20px}
+.mh-prb-tag{display:flex;flex-direction:column;line-height:1.05}
+.mh-prb-kind{white-space:nowrap;font-size:10px;font-weight:900;color:var(--prb-label);letter-spacing:.08em}
+.mh-prb-name{white-space:nowrap;font-size:14px;font-weight:900;color:#fff;-webkit-text-stroke:3px var(--prb-ink);paint-order:stroke fill}
+.mh-prb.mh-prb-s .mh-prb-shield{width:32px;height:36px}.mh-prb.mh-prb-s .mh-prb-shield::after{inset:2px}
+.mh-prb.mh-prb-s .mh-prb-num{font-size:16px;-webkit-text-stroke:3.5px var(--prb-ink)}.mh-prb.mh-prb-s .mh-prb-num.mh-prb-w3{font-size:12px}
+.mh-prb.mh-prb-s .mh-prb-name{font-size:12px}.mh-prb.mh-prb-s .mh-prb-kind{display:none}
+.mh-prb-t1{--prb-rim:linear-gradient(160deg,#fde2c4,#9a4b1c 55%,#5a250b);--prb-face:linear-gradient(160deg,#e08a4a,#8a3f12);--prb-ink:#3b1406;--prb-glow:rgba(234,138,74,.55);--prb-label:#fbbf8a}
+.mh-prb-t2{--prb-rim:linear-gradient(160deg,#ffffff,#94a3b8 55%,#475569);--prb-face:linear-gradient(160deg,#cbd5e1,#64748b);--prb-ink:#1e293b;--prb-glow:rgba(203,213,225,.6);--prb-label:#e2e8f0}
+.mh-prb-t3{--prb-rim:linear-gradient(160deg,#fff7c2,#f59e0b 55%,#92400e);--prb-face:linear-gradient(160deg,#fcd34d,#d97706);--prb-ink:#5b2a03;--prb-glow:rgba(251,191,36,.7);--prb-label:#fde68a}
+.mh-prb-t4{--prb-rim:linear-gradient(160deg,#f5d0fe,#a21caf 55%,#4a044e);--prb-face:linear-gradient(160deg,#c084fc,#6d28d9);--prb-ink:#2e1065;--prb-glow:rgba(192,132,252,.75);--prb-label:#f0abfc}
+.mh-prb-t5{--prb-rim:conic-gradient(from 0deg,#f43f5e,#f59e0b,#84cc16,#06b6d4,#8b5cf6,#f43f5e);--prb-face:linear-gradient(160deg,#1e1b4b,#0f172a);--prb-ink:#000;--prb-glow:rgba(255,255,255,.8);--prb-label:#fff}
+`;
+const ensurePlayerRankBadgeCss = () => {
+  try {
+    if (typeof document === 'undefined' || document.getElementById('mh-player-rank-badge-css')) return;
+    const el = document.createElement('style');
+    el.id = 'mh-player-rank-badge-css';
+    el.textContent = PLAYER_RANK_BADGE_CSS;
+    document.head.appendChild(el);
+  } catch (_) { /* 入れられなくても数字は読める */ }
+};
+
+// ランクの札(バッジ)。size: 'lg'(大きい盾+帯の名前+種類の名前)/ 'sm'(小さい盾+種類の名前)。showName=false で盾だけ(ランキングの行)
+function PlayerRankBadge({ kind = 'beat', rank = 1, size = 'lg', showName = true }) {
+  ensurePlayerRankBadgeCss();
+  const k = playerRankKind(kind);
+  const r = Math.max(1, Math.floor(Number(rank) || 1));
+  const tier = playerRankTier(r);
+  const text = r.toLocaleString();
+  return (
+    <span data-player-rank-badge={kind} data-player-rank-tier={tier.t} aria-label={`${k.label} ${r}`}
+      className={`mh-prb mh-prb-t${tier.t}${size === 'sm' ? ' mh-prb-s' : ''}`}>
+      <span className="mh-prb-shield" aria-hidden="true"><span className="mh-prb-gloss"/><b data-player-rank-value className={`mh-prb-num${text.length >= 3 ? ' mh-prb-w3' : ''}`}>{text}</b></span>
+      {showName && <span className="mh-prb-tag" aria-hidden="true"><span className="mh-prb-kind">{tier.name}</span><span className="mh-prb-name">{k.label}</span></span>}
+    </span>
+  );
+}
+
+// 次のランクまでの棒。info は playerRankInfo の { rank, into, need }
+function PlayerRankGauge({ kind = 'beat', info, note = '' }) {
+  const k = playerRankKind(kind);
+  const into = Math.max(0, Number(info && info.into) || 0), need = Math.max(1, Number(info && info.need) || 1);
+  return (
+    <div data-player-rank-gauge={kind}>
+      <div className="h-2 overflow-hidden rounded-full bg-slate-700" role="progressbar" aria-label="次のランクまで" aria-valuemin={0} aria-valuemax={need} aria-valuenow={into}>
+        <i className={`block h-full rounded-full bg-gradient-to-r ${k.bar}`} style={{ width: `${Math.min(100, Math.round((into / need) * 100))}%` }}/>
+      </div>
+      <div className="mt-0.5 flex justify-between gap-2 text-[10px] font-bold text-slate-300">
+        <span className="tabular-nums">{`${into.toLocaleString()} / ${need.toLocaleString()}`}</span>
+        <span className="min-w-0 text-right" style={JA_WRAP_STYLE}>{jaWrap(note || `次まで ${(need - into).toLocaleString()}`)}</span>
+      </div>
+    </div>
+  );
+}
+
+// 画面の上に置くまとめ(モードえらびなど): 札と棒と、ひとこと
+function PlayerRankPanel({ kind = 'beat', xp = 0, note = '', sub = '' }) {
+  const k = playerRankKind(kind);
+  const info = playerRankInfo(xp);
+  return (
+    <section data-player-rank-panel={kind} className={`rounded-2xl border px-3 py-2 ${k.border} ${k.panel}`}>
+      <div className="flex items-center gap-2">
+        <PlayerRankBadge kind={kind} rank={info.rank} size="lg"/>
+        <small className="ml-auto shrink-0 text-[11px] font-black text-slate-200 tabular-nums">{`次まで ${(info.need - info.into).toLocaleString()}`}</small>
+      </div>
+      <div className="mt-1.5"><PlayerRankGauge kind={kind} info={info} note={note || ' '}/></div>
+      {sub && <p className="mt-1 text-[10px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(sub)}</p>}
+    </section>
+  );
+}
+
+// 上の帯に入れる細い1行(2026-10-29 社長「立ち絵が小さくなるのはだめ」→ 上の帯に横長で薄く)。小さいバッジ・細い棒・次まで。
+// 次のごほうびは帯には入れない(社長「トップに要らなければ詳しい所だけ」。ヘルプと曲の結果で見せる)
+function PlayerRankStrip({ kind = 'beat', xp = 0 }) {
+  const k = playerRankKind(kind);
+  const info = playerRankInfo(xp);
+  return (
+    <div data-player-rank-strip={kind} className="flex min-w-0 items-center gap-1.5">
+      <PlayerRankBadge kind={kind} rank={info.rank} size="sm"/>
+      <div className="h-1.5 min-w-[40px] flex-1 overflow-hidden rounded-full bg-slate-700/80" role="progressbar" aria-label="次のランクまで" aria-valuemin={0} aria-valuemax={info.need} aria-valuenow={info.into}>
+        <i className={`block h-full rounded-full bg-gradient-to-r ${k.bar}`} style={{ width: `${Math.min(100, Math.round((info.into / info.need) * 100))}%` }}/>
+      </div>
+      <small className="shrink-0 whitespace-nowrap text-[9px] font-black text-slate-300 tabular-nums">{`次まで ${(info.need - info.into).toLocaleString()}`}</small>
+    </div>
+  );
+}
+
+// ランクが上がったときの演出。gains は [{ icon, text }](もらった物。カードは引く券・枠が増える知らせなど)
+function PlayerRankUp({ kind = 'beat', from = 1, to = 1, gains = [] }) {
+  if (!(to > from)) return null;
+  return (
+    <div data-player-rank-up={kind} className="rounded-2xl border-2 border-fuchsia-300 bg-gradient-to-b from-violet-700/80 to-indigo-950/90 px-3 py-2 text-center">
+      <small className="block text-[10px] font-black tracking-[.2em] text-fuchsia-100">RANK UP!</small>
+      <div className="mt-0.5 flex items-center justify-center gap-2">
+        <PlayerRankBadge kind={kind} rank={from} size="sm" showName={false}/>
+        <span aria-hidden="true" className="font-black text-fuchsia-200">→</span>
+        <PlayerRankBadge kind={kind} rank={to} size="lg"/>
+      </div>
+      {gains.length > 0 && <ul data-player-rank-up-gains className="mt-1.5 flex flex-wrap justify-center gap-1.5">
+        {gains.map((g, i) => <li key={i} className="rounded-lg border border-fuchsia-200/40 bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-amber-100">
+          {g.icon && <span aria-hidden="true">{g.icon} </span>}<span style={JA_WRAP_STYLE}>{jaWrap(String(g.text || ''))}</span>
+        </li>)}
+      </ul>}
+    </div>
+  );
+}
+
+// 1回ぶんの結果に出す札: 「経験値 +26(ランク12→13)」・内わけ・棒・上がったら演出。
+// award: { add, parts:[{label,xp}], from, to, xp(足したあとの合計), gains:[{icon,text}] }。next は次のごほうびの文(「ランク20で ビートP 300」)
+function PlayerRankGain({ kind = 'beat', award, next = '' }) {
+  if (!award || !(award.add > 0)) return null;
+  const k = playerRankKind(kind);
+  const info = playerRankInfo(award.xp);
+  const up = award.to > award.from;
+  return (
+    <section data-player-rank-gain={kind} className={`my-3 space-y-1.5 rounded-2xl border p-3 text-left ${k.border} ${k.panel}`}>
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${k.pill}`}><span aria-hidden="true">{k.icon} </span>{k.label}</span>
+        <b data-player-rank-gain-add className={`text-[15px] font-black ${k.accent}`}>{`経験値 +${award.add.toLocaleString()}`}</b>
+        <span className="text-[12px] font-black text-white tabular-nums">{up ? `(ランク${award.from}→${award.to})` : `(ランク${info.rank})`}</span>
+      </div>
+      {Array.isArray(award.parts) && award.parts.length > 0 && <p data-player-rank-gain-parts className="text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>
+        {jaWrap(award.parts.map((p) => `${p.label} ${p.xp >= 0 ? '+' : ''}${p.xp}`).join(' ・ '))}
+      </p>}
+      <PlayerRankGauge kind={kind} info={info}/>
+      {next && <p data-player-rank-gain-next className="text-[10px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(`次は ${next}`)}</p>}
+      {up && <PlayerRankUp kind={kind} from={award.from} to={award.to} gains={award.gains || []}/>}
+    </section>
+  );
+}
+
+// ランキングの1行。place は順位(無ければ「—」)。icon は呼ぶ側が描いたアイコン(rankingBreederIcon など)
+function PlayerRankRow({ kind = 'beat', place = null, icon = null, name = '', rank = 1, xp = 0, mine = false }) {
+  const k = playerRankKind(kind);
+  return (
+    <li data-player-rank-row={kind} data-player-rank-mine={mine ? 'true' : undefined}
+      className={`flex items-center gap-2 rounded-xl border px-2 py-1.5 ${mine ? `border-2 ${k.border} bg-cyan-950/50` : 'border-white/10 bg-slate-900/80'}`}>
+      <b className={`w-9 shrink-0 text-center text-sm font-black tabular-nums ${place === 1 ? 'text-amber-300' : 'text-slate-200'}`}>{place ? place.toLocaleString() : '—'}</b>
+      {icon}
+      <span className="min-w-0 flex-1 truncate text-xs font-black text-white">{name}{mine ? '(あなた)' : ''}</span>
+      <span className="flex shrink-0 flex-col items-end gap-0.5">
+        <PlayerRankBadge kind={kind} rank={rank} size="sm" showName={false}/>
+        <small className="block text-[9px] font-bold text-slate-400 tabular-nums">{`経験値 ${playerRankSafeXp(xp).toLocaleString()}`}</small>
+      </span>
+    </li>
+  );
+}
+
+// ランキングのタブの中身: 上位100人と、自分の行(100人に入っていなければ下に順位つきで)。
+// 読み込みは呼ぶ側が渡す(ビートは sbFetchBeatRanks・sbFetchBeatRankMine。カードも同じ形で渡す)。
+//   fetchTop() → [{ breederId, name, icon, profileFrame, rank, xp }] | null(表がまだ無い)
+//   fetchMine() → { …同じ, place } | null
+// renderIcon(entry) は行のアイコン(全国ランキングと同じ rankingBreederIcon)。reloadKey が変わると読み直す
+function PlayerRankBoard({ kind = 'beat', fetchTop, fetchMine, renderIcon = null, selfBreederId = '', selfXp = 0, reloadKey = 0 }) {
+  const [board, setBoard] = React.useState({ status: 'loading', top: [], mine: null });
+  React.useEffect(() => {
+    let alive = true;
+    setBoard((b) => ({ ...b, status: b.top.length ? 'ready' : 'loading' }));
+    (async () => {
+      try {
+        const [top, mine] = await Promise.all([fetchTop ? fetchTop() : null, fetchMine ? fetchMine().catch(() => null) : null]);
+        if (!alive) return;
+        if (top === null) { setBoard({ status: 'closed', top: [], mine: null }); return; }
+        setBoard({ status: 'ready', top, mine });
+      } catch (_) { if (alive) setBoard((b) => ({ ...b, status: b.top.length ? 'ready' : 'error' })); }
+    })();
+    return () => { alive = false; };
+  }, [reloadKey]);
+  const label = playerRankKind(kind).label;
+  const iconOf = (e) => (renderIcon ? renderIcon({ icon: e.icon, profileFrame: e.profileFrame, userName: e.name, breederId: e.breederId }) : null);
+  if (board.status === 'loading') return <p data-player-rank-board="loading" className="px-3 py-6 text-center text-xs font-black text-slate-400">読み込んでいます…</p>;
+  if (board.status === 'closed') return <p data-player-rank-board="closed" className="px-3 py-6 text-center text-xs font-black text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`${label}のランキングは準備中です。`)}</p>;
+  if (board.status === 'error') return <p data-player-rank-board="error" className="px-3 py-6 text-center text-xs font-black text-rose-300" style={JA_WRAP_STYLE}>{jaWrap('ランキングを読み込めませんでした。電波のよいところで「更新」を押してください。')}</p>;
+  const selfId = selfBreederId || (board.mine && board.mine.breederId) || '';
+  const inTop = !!selfId && board.top.some((e) => e.breederId === selfId);
+  return (
+    <div data-player-rank-board={kind} className="space-y-2 px-3 py-2">
+      <p className="text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ランクの高い順。同じランクなら、経験値の合計が多い順です(上位100人とあなた)。')}</p>
+      {board.top.length === 0
+        ? <p className="py-4 text-center text-xs font-black text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('まだだれも載っていません。曲を遊ぶと、ここに載ります。')}</p>
+        : <ol className="space-y-1.5">{board.top.map((e, i) => <PlayerRankRow key={e.breederId || i} kind={kind} place={i + 1} icon={iconOf(e)} name={e.name} rank={e.rank} xp={e.xp} mine={!!selfId && e.breederId === selfId}/>)}</ol>}
+      {!inTop && (board.mine
+        ? <ol className="border-t border-white/10 pt-2"><PlayerRankRow kind={kind} place={board.mine.place} icon={iconOf(board.mine)} name={board.mine.name} rank={board.mine.rank} xp={board.mine.xp} mine/></ol>
+        : selfXp > 0 && <p className="border-t border-white/10 pt-2 text-center text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('あなたの記録は、次に曲を遊んだときに載ります。')}</p>)}
+    </div>
+  );
+}
+
 // ---- part: 50-error-boundary.jsx ----
 // ==== 画面のエラー境界 ====
 // React 18 は描画中に例外が1つ出るとルートごと外してしまい、画面が真っ白のまま何も押せなくなる
@@ -35127,7 +35526,7 @@ function BreederMarketScreen({
   const SECTION_TABS = {
     breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},...(hasDiscIconCards?[{key:'disc',label:'円盤石アイコン'}]:[]),...(breederFrameItems.length?[{key:'frame',label:'フレーム'}]:[])] },
     exchange:{ color:'#059669', tabs:[{key:'psyche',label:'プシュケー'},{key:'proof',label:'勇者の証'}] },
-    card:{ color:'#ea580c', tabs:[{key:'pack',label:'パック'},{key:'starter',label:'スターター'},{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'}] },
+    card:{ color:'#ea580c', tabs:[{key:'pack',label:'パック'},{key:'tactics',label:'戦術カード'},{key:'starter',label:'スターター'},{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'}] },
     event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer=>offer.available!==false)?[{key:'icon',label:'アイコン'}]:[]),{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
   };
   const activeSectionTab = (section) => {
@@ -35148,10 +35547,12 @@ function BreederMarketScreen({
   const renderSectionTabs = (section, scroll=false) => {
     const items=SECTION_TABS[section].tabs.map(tab=>({id:tab.key,label:tab.label,color:SECTION_TABS[section].color}));
     const value=activeSectionTab(section);
-    if(!scroll||items.length<6) return <ScreenTabs value={value} onChange={(key)=>selectSectionTab(section,key)} items={items}/>;
-    return <div role="tablist" data-market-tabs-scroll={section} className="mb-2 flex shrink-0 gap-2 overflow-x-auto pb-0.5">
+    // カード売り場は5つ(戦術カードが増えた)で等分すると「戦術カー/ド」「スター/ター」と言葉の途中で折れるので、5つから1行にして詰める(2026-10-29)
+    const tight=section==='card';
+    if(!scroll||items.length<(tight?5:6)) return <ScreenTabs value={value} onChange={(key)=>selectSectionTab(section,key)} items={items}/>;
+    return <div role="tablist" data-market-tabs-scroll={section} className={`mb-2 flex shrink-0 overflow-x-auto pb-0.5 ${tight?'gap-1.5':'gap-2'}`}>
       {items.map(tab=>{const on=tab.id===value;return <button key={tab.id} type="button" role="tab" aria-selected={on} onClick={()=>selectSectionTab(section,tab.id)}
-        className={`mh-tab relative min-h-[44px] min-w-[68px] shrink-0 rounded-xl px-2.5 text-[11px] font-black leading-tight active:scale-95 ${on?'text-white':'border border-white/10 bg-slate-900 text-slate-400'}`}
+        className={`mh-tab relative min-h-[44px] shrink-0 rounded-xl text-[11px] ${tight?'min-w-[56px] flex-auto whitespace-nowrap px-1.5':'min-w-[68px] px-2.5'} font-black leading-tight active:scale-95 ${on?'text-white':'border border-white/10 bg-slate-900 text-slate-400'}`}
         style={on?{background:tab.color}:undefined}>{tab.label}</button>;})}
     </div>;
   };
@@ -35332,9 +35733,11 @@ function BreederMarketScreen({
         const tab=activeSectionTab('card');
         const cp=cardShop.point;
         return <>
-          {renderSectionTabs('card')}
+          {renderSectionTabs('card', true)}
           <div className={SCREEN_LIST_CLASS} data-card-shop data-card-shop-tab={tab}>
             {tab==='pack'&&<CardShopPacks db={CARD_BATTLE_DATA} point={cp} busy={busy||cardShop.busy} collection={cardShop.collection} onBuyPack={cardShop.onBuyPack} gacha={cardShop.gacha} catalogs={cardShop.catalogs} onExchangeCatalog={cardShop.onExchangeCatalog} onUseCatalog={cardShop.onUseCatalog}/>}
+            {/* 戦術カードのパック(97 の CardTacticsShop・2026-10-29 社長「戦術カードはマーケットで買えるようにして」) */}
+            {tab==='tactics'&&typeof CardTacticsShop==='function'&&<CardTacticsShop point={cp} busy={busy||cardShop.busy} onBuy={cardShop.onBuyTactics} onExchange={cardShop.onExchangeTactics}/>}
             {tab==='starter'&&<CardShopStarters db={CARD_BATTLE_DATA} point={cp} collection={cardShop.collection} busy={busy||cardShop.busy} starter={cardShop.starter} shop={cardShop.shop} onBuyStarter={cardShop.onBuyStarter}/>}
             {/* 円盤石・アシストカードは、ビートP交換所と同じ物を同じ値段(1,500)で並べる(社長 台帳 #3405)。一覧はビートP交換所のものをそのまま引く */}
             {(tab==='disc'||tab==='assist')&&<div className={MARKET_GRID_CLASS}>
@@ -35646,7 +36049,7 @@ const AssistantBondRewardList = ({ who, level, breederIcon, resolveIconUrl, onCl
   );
 };
 function ProfileScreen({
-  onCardShareGo = null, // 自分の登録デッキ(95 の CardShareProfileDeck)の「デッキ登録で直す」→ MFバトルカードへ(60-app)
+  onCardShareGo = null, // 見せる札の「バトルカードのデッキ」(95 の CardShareDeckTile)を押したとき → デッキ登録の画面へ(60-app)
   activeAssistant, assistantBond, assistantBondLevelNow, assistantBonds, assistantCallStyle, attemptCounts,
   breederIcon, breederLevel, breederName, breederPoints, extremeBestScores, extremeClearCounts,
   finishOnboarding, gold, highScores, isEventReplayUnlocked, modeRecordFor, onboarded,
@@ -35734,13 +36137,10 @@ function ProfileScreen({
               </div>
             </div>
           </div>
-          {/* ② 設定のタイル。入口が散らばらないよう、アイコン・フレーム・ひとこと・好きなモンスターを同じ形でまとめる。
+          {/* ② 着せかえのタイル(アイコン・フレーム・図鑑・着替え)。ひとことと好きなモンスターは、下の「見せる札」へ移した(2026-10-29 案B)。
               増えても、ここへ同じ形で足していく */}
           {(()=>{
             const frameName=(profileFrameById(normalizeProfileFrameId(profileFrameId))||{}).name||'フレームなし';
-            const base=favoriteMasu?ALL_PLAYER_MONSTERS[favoriteMasu.baseId]:null;
-            const face=base?friendsFaceIconOf(favoriteMasu.baseId):null;
-            const showFriendTiles=onboarded&&!onboardingPreview&&friendsEnabled;
             // 幅360未満は、余白と絵を詰めて値の字を1段小さくし、「書いていません」「えらびなおす」が言葉の途中で折れずに入るようにする(2026-10-21)
             const tile='flex min-h-[56px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-2 text-left active:scale-95 max-[359px]:gap-1.5 max-[359px]:px-2';
             return (
@@ -35768,21 +36168,33 @@ function ProfileScreen({
                   <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">着替え</small><b className="block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white">{wornCostume?wornCostume.name:'元の服'}</b></span>
                 </button>
               )}
-              {showFriendTiles&&(
-                <button type="button" data-profile-message onClick={onOpenMessageEditor} className={tile}>
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">💬</span>
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{profileMessage||<>まだ<wbr/>書いていません</>}</b></span>
-                </button>
-              )}
-              {showFriendTiles&&(
-                <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className={tile}>
-                  {face?<ProfileAvatar src={face.src} id={face.id} className="h-8 w-8 shrink-0 max-[359px]:h-6 max-[359px]:w-6"/>:<span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">💗</span>}
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300" style={JA_LABEL_STYLE}>{jaWrap('好きなモンスター')}</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:<>まだ<wbr/>選んでいません</>}</b></span>
-                </button>
-              )}
             </div>);
           })()}
         </div>
+        {/* ①-2 見せる札(2026-10-29 社長が案Bを選んだ)。フレンドにも同じ形で見える物を、名刺のすぐ下に並べる。
+            ひとことは名刺の下の1行、好きなモンスターとバトルカードのデッキは同じ形の札で横に2枚(デッキの札は 95 の CardShareDeckTile) */}
+        {onboarded&&!onboardingPreview&&friendsEnabled&&(()=>{
+          const base=favoriteMasu?ALL_PLAYER_MONSTERS[favoriteMasu.baseId]:null;
+          const face=base?friendsFaceIconOf(favoriteMasu.baseId):null;
+          return (
+          <section className="mb-3" data-profile-showcase>
+            <button type="button" data-profile-message onClick={onOpenMessageEditor} className="mb-2 flex w-full min-h-[44px] items-center gap-2 rounded-xl border border-pink-400/30 bg-black/30 px-3 py-2 text-left active:scale-[.98]">
+              <span className="text-lg" aria-hidden="true">💬</span>
+              <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block break-words text-[12px] font-black leading-snug text-white" style={JA_LABEL_STYLE}>{profileMessage?`「${profileMessage}」`:<>まだ<wbr/>書いていません</>}</b></span>
+              <Edit3 size={13} className="shrink-0 text-slate-400"/>
+            </button>
+            <div className="mb-1"><ScreenSectionLabel>見せる札（フレンドにもこう見えます）</ScreenSectionLabel></div>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className="flex min-h-[132px] flex-col items-start gap-1 rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2 text-left active:scale-[.98]">
+                <small className="text-[10px] font-black text-amber-300" style={JA_LABEL_STYLE}>{jaWrap('好きなモンスター')}</small>
+                {face?<ProfileAvatar src={face.src} id={face.id} className="h-14 w-14 shrink-0"/>:<span className="flex h-14 w-14 items-center justify-center text-3xl" aria-hidden="true">💗</span>}
+                <b className="block w-full break-words text-[13px] font-black leading-tight text-white">{base?base.name:<>まだ<wbr/>選んでいません</>}</b>
+                {base&&<small className="text-[10px] font-black text-pink-300">絆Lv.{masuBondLevelInfo(favoriteMasu).level}</small>}
+              </button>
+              {typeof CardShareDeckTile==='function'&&<CardShareDeckTile mode="self" onOpen={()=>{ if(typeof onCardShareGo==='function') onCardShareGo({ kind:'register' }); }}/>}
+            </div>
+          </section>);
+        })()}
         {/* ③ 持ちもの。ダイヤ・ブリーダーP・プレイ時間を1行に。プレイ時間は下の「くわしい記録」を開くと、今日・遊んだ日・いちばん長かった日・数え始めた日が出る
             (これまで数えていなかったので、既存のプレイヤーは0から始まる。いつからの記録かが分からないと短すぎると誤解される) */}
         <div className="mb-3 grid grid-cols-3 gap-2" data-profile-stats>
@@ -35949,12 +36361,13 @@ function ProfileScreen({
             const best=highestModeScore(scores,ids);
             return best>0?`最高スコア ${best.toLocaleString()} pt`:'未記録';
           };
-          return <>{typeof CardShareProfileDeck === 'function' && <CardShareProfileDeck self onGo={onCardShareGo}/>}<section className="mb-4" data-profile-battle-records>
+          return <><section className="mb-4" data-profile-battle-records>
             <ScreenSectionLabel>バトル記録</ScreenSectionLabel>
             <ScreenLead>モードをタップすると詳しい記録を確認できます</ScreenLead>
             {!selected?(
-              <div className="grid grid-cols-2 gap-2">
-                {modes.map(mode=>{const species=isSpeciesChallengeMode(mode.id);return <button key={mode.id} type="button" data-profile-mode={mode.id} onClick={()=>species?onOpenSpeciesRecords(mode.id):onSelectBattleMode(mode.id)} className={`w-full min-h-[72px] rounded-2xl border bg-slate-900/70 px-2.5 py-2.5 text-left active:scale-[.98] ${species?'col-span-2':''}`} style={{borderColor:`${mode.color}66`}}>
+              <div className="flex flex-col gap-1.5">
+                {/* 1モード1行(2026-10-29 案B)。押すと今までどおり詳しい記録が開く */}
+                {modes.map(mode=>{const species=isSpeciesChallengeMode(mode.id);return <button key={mode.id} type="button" data-profile-mode={mode.id} onClick={()=>species?onOpenSpeciesRecords(mode.id):onSelectBattleMode(mode.id)} className="w-full min-h-[52px] rounded-xl border bg-slate-900/70 px-2.5 py-2 text-left active:scale-[.98]" style={{borderColor:`${mode.color}66`}}>
                   <span className="flex items-center gap-1.5"><span className="text-xl" aria-hidden="true">{mode.emoji}</span><span className="min-w-0 flex-1"><b className="block whitespace-nowrap text-[12px] text-white">{mode.label}</b><small className="block text-[11px] font-black" style={{color:mode.color}}>{representativeFor(mode)}</small>{species&&<><small className="block truncate text-[10px] font-black text-cyan-100">最高記録: {speciesSummary.bestScore>0?`${speciesChallengeSpeciesName(speciesSummary.bestSpeciesId)} / ${speciesDifficultyLabel(speciesSummary.bestDifficultyId)}`:'記録なし'}</small><small className="block text-[10px] font-black text-emerald-300">クリア: {speciesSummary.clearedCount} / {speciesSummary.totalCount}</small></>}</span></span>
                 </button>})}
               </div>
@@ -37192,6 +37605,7 @@ function RhythmRankingScreen({
   rhythmRankingTab, rhythmTotalRanking,
   rhythmRankingPending=null, onResendRhythmRankingPending=null,
   setRhythmEventDivision, setRhythmRankingDetail, setRhythmRankingTab,
+  beatRankXp=0,
 }) {
       // イベント詳細(告知画像と報酬の表)を開いているか。
       // 一覧の上へ積むとランキングが画面の外へ押し出されるので、別に開く形にした
@@ -37242,7 +37656,10 @@ function RhythmRankingScreen({
       // イベントのタブを開いていて中身が無いとき(今回が未開催・前回がまだ無い)は、
       // 曲別の一覧へ落ちないようにする。文言だけを出す
       const totalTabOpen=totalTab&&!boardTab&&!eventTabOpen;
-      const songTab=!totalTabOpen&&!boardTab&&!eventTabOpen;
+      // ビートランクのタブ(2026-10-29 社長)。ランク順(同じなら経験値の合計順)・上位100人とあなた
+      const beatRankTabOpen=rhythmRankingTab==='beatRank'&&!boardTab&&!eventTabOpen;
+      const [beatRankReload,setBeatRankReload]=useState(0);
+      const songTab=!totalTabOpen&&!boardTab&&!eventTabOpen&&!beatRankTabOpen;
       const boards=rhythmEventRanking||{};
       const event=(boardKind&&boards[boardKind])||{status:'idle',window:null,event:null,boards:{}};
       const eventDefinition=event.event||null;
@@ -37306,6 +37723,7 @@ function RhythmRankingScreen({
         // ★開催していないあいだもタブを出す(2026-09-14・ユーザー依頼「イベントタブを常設」)。
         //   中で「今回／前回」を切り替える。どちらも無いときは、その旨の文言を出す
         ...(eventReleased?[{id:'event',label:'イベント'}]:[]),
+        {id:'beatRank',label:'ビートランク'},
       ];
       // ★タブも部門も、押すたびに取り直す(2026-09-11・ユーザー指摘「総合だけ反映が遅い」)。
       //   「初めて開いたときだけ」にしていたため、一度見た部門は古い順位のまま残っていた。
@@ -37342,6 +37760,7 @@ function RhythmRankingScreen({
       const refresh=()=>{
         if(boardTab)loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,eventDivisionId);
         else if(totalTabOpen)loadRhythmTotalRanking&&loadRhythmTotalRanking();
+        else if(beatRankTabOpen)setBeatRankReload(n=>n+1);
         else loadRhythmRanking(song,rhythmRanking.difficultyId||'ALL');
       };
       // ランク(S/SS/…)を決める点数。回数ボーナス込みの点だと満点を超えてしまうので、
@@ -37418,10 +37837,10 @@ function RhythmRankingScreen({
           <button aria-label="更新" data-rhythm-ranking-refresh onClick={refresh} className="ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200">更新</button>
         </header>
         {/* タブ。押したときに初めて取りにいく。公開前はタブごと出さない */}
-        {rankingTabs.length>1&&<div data-rhythm-ranking-tabs className="flex shrink-0 gap-1 border-b border-white/10 bg-slate-950/95 px-3 pb-2 pt-1">
+        {rankingTabs.length>1&&<div data-rhythm-ranking-tabs className="flex shrink-0 gap-1 overflow-x-auto border-b border-white/10 bg-slate-950/95 px-3 pb-2 pt-1">
           {rankingTabs.map(tab=>(
             <button key={tab.id} data-rhythm-ranking-tab={tab.id} onClick={()=>openTab(tab.id)}
-              className={`min-h-[44px] flex-1 rounded-xl border px-2 text-[11px] font-black ${rhythmRankingTab===tab.id?'border-amber-300/60 bg-amber-500/15 text-amber-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
+              className={`min-h-[44px] min-w-fit flex-1 whitespace-nowrap rounded-xl border px-2 text-[11px] font-black ${rhythmRankingTab===tab.id?'border-amber-300/60 bg-amber-500/15 text-amber-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
               {tab.label}
             </button>
           ))}
@@ -37446,6 +37865,8 @@ function RhythmRankingScreen({
               ・横画面の案内(RhythmLandscapeHint)  … 曲えらび・遊びかたの側にある
               ・タブごとの説明文                   … ヘルプの「全国ランキング」にある
               ・みゅあの吹き出し                   … 曲えらび(イベント開催中)にある */}
+          {beatRankTabOpen&&<PlayerRankBoard kind="beat" fetchTop={sbFetchBeatRanks} fetchMine={async()=>sbFetchBeatRankMine(await ensureBreederId())}
+            renderIcon={rankingBreederIcon} selfXp={beatRankXp} reloadKey={beatRankReload}/>}
           {totalTabOpen&&(<>
             {total.status==='loading'&&<p data-rhythm-total-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
             {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
@@ -46631,7 +47052,7 @@ const friendsDayText = (day) => {
 // requestCount … 届いている申請の件数(あれば最初に「申請」のタブを開く)
 // onIncomingCount … 読み込み直したあと、届いている申請の数を知らせる(HOME・プロフィールのバッジを合わせるため)
 // onOpenMonsterDetail … 好きなモンスターの詳細を開く(ランキングの詳細と同じ画面)
-// onCardShareGo … フレンドの登録デッキ(95 の CardShareProfileDeck)から MFバトルカードへ移る(60-app)
+// onCardShareGo … フレンドのデッキの札の「このデッキと戦う」(95 の CardShareDeckActions)から MFバトルカードへ移る(60-app)
 function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack, onTargetHandled, onIncomingCount, onOpenMonsterDetail, onCardShareGo = null }) {
   const [tab, setTab] = React.useState(Number(requestCount) > 0 ? 'requests' : 'friends');
   const [phase, setPhase] = React.useState('loading');   // loading / ready / notready / noid / error
@@ -46881,6 +47302,17 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
             const fav = sum && sum.favorite ? sum.favorite : null;
             const favBase = fav ? ALL_PLAYER_MONSTERS[fav.monsterId] : null;
             const favFace = favBase ? friendsFaceIconOf(fav.monsterId) : null;
+            // 記録の「たたみ」の見出し。押した行だけ開き、もう一度押すと閉じる
+            const fold = (id, label) => (
+              <button type="button" data-friend-fold={id} aria-expanded={profileTab === id} onClick={() => setProfileTab(profileTab === id ? '' : id)}
+                className={`mt-2 flex w-full min-h-[48px] items-center gap-2 rounded-xl border px-3 text-left active:scale-[.98] ${profileTab === id ? 'border-amber-400/70 bg-amber-950/30' : 'border-white/10 bg-slate-900/60'}`}>
+                <b className="min-w-0 flex-1 text-[13px] font-black text-white">{label}</b>
+                <span className="shrink-0 text-[12px] font-black text-amber-300" aria-hidden="true">{profileTab === id ? '▲' : '▼'}</span>
+              </button>);
+            const recordsMissing = (
+              <div className={`${SCREEN_PANEL_FLAT_CLASS} mt-2`} data-friend-records-missing>
+                <p className="text-[11px] font-bold leading-relaxed text-slate-400">この人の記録のまとめは、まだ見られません。相手がゲームを開き直すと出ます。</p>
+              </div>);
             const stat = (label, value, sub, color) => (
               <div className="min-w-0"><dt className="text-[9px] font-bold text-slate-400">{label}</dt>
                 <dd className={`truncate text-sm font-black ${color}`}>{value}</dd>
@@ -46904,11 +47336,30 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                     className="max-w-full truncate rounded-full border border-amber-400/40 bg-amber-950/30 px-3 py-1 text-[11px] font-black text-amber-200 active:scale-95">📝 {notes[selected.otherId] || 'メモを書く（自分だけに見えます）'}</button>
                 )}
               </div>
-              <ScreenTabs className="mt-3" value={profileTab} onChange={setProfileTab} items={[
-                { id: 'overview', label: '概要' }, { id: 'battle', label: 'バトル' }, { id: 'songs', label: '曲のベスト' }, { id: 'collection', label: '集めたもの' }]}/>
+              {/* 見せる札(2026-10-29 社長が案Bを選んだ)。自分のプロフィールと同じ形で、好きなモンスターとバトルカードのデッキを横に2枚。
+                  デッキの札(95 の CardShareDeckTile)は、札の下に「このデッキと戦う」「借りる」を持つ。登録していない人は出さない */}
+              <div className="mt-3 mb-1"><ScreenSectionLabel>見せる札</ScreenSectionLabel></div>
+              <div className="grid grid-cols-2 gap-2 items-start">
+                <div data-friend-favorite className="flex min-h-[132px] flex-col items-start gap-1 rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2">
+                  <small className="text-[10px] font-black text-amber-300">好きなモンスター</small>
+                  {!favBase && <p className="text-[11px] font-bold text-slate-400">まだ選んでいません</p>}
+                  {favBase && (<>
+                    {favFace ? <ProfileAvatar src={favFace.src} id={favFace.id} className="h-14 w-14 shrink-0"/> : <span className="flex h-14 w-14 shrink-0 items-center justify-center text-3xl">❓</span>}
+                    <b className="block w-full break-words text-[13px] font-black leading-tight text-white">{fav.name || favBase.name}</b>
+                    <small className="block text-[10px] font-bold text-pink-300">絆Lv.{Number(fav.bondLevel) || '—'}{fav.power ? `　総合力 ${Number(fav.power).toLocaleString()}` : ''}</small>
+                    {fav.detail && typeof onOpenMonsterDetail === 'function' && (
+                      <button type="button" data-friend-favorite-detail onClick={() => onOpenMonsterDetail({ baseId: fav.monsterId, monsterId: fav.monsterId, name: fav.name || favBase.name, bondLevel: Number(fav.bondLevel) || 0, detail: fav.detail, colors: Array.isArray(fav.colors) ? fav.colors : [] })}
+                        className={`${btn} mt-auto w-full px-3 border-indigo-400/60 bg-indigo-500/20 text-indigo-100`}>詳細 ›</button>
+                    )}
+                  </>)}
+                </div>
+                {typeof CardShareDeckTile === 'function' && <CardShareDeckTile mode="friend" breederId={selected.otherId}/>}
+              </div>
+              {/* 札の下(2枚並びの外・全幅)に「このデッキと戦う」「借りる」。登録していない人は出ない(95 の CardShareDeckActions) */}
+              {typeof CardShareDeckActions === 'function' && <div className="mt-2"><CardShareDeckActions breederId={selected.otherId} onGo={onCardShareGo}/></div>}
+              {/* 記録は1行ずつにたたむ(2026-10-29 案B。前はタブ4つ)。押した行だけ開く。もう一度押すと閉じる */}
+              {fold('overview', '遊んだ記録')}
               {profileTab === 'overview' && (<>
-              {typeof CardShareProfileDeck === 'function' && <div className="mt-2"><CardShareProfileDeck ownerId={selected.otherId} onGo={onCardShareGo}/></div>}
-              <div className="mt-1"><ScreenSectionLabel>遊んだ記録</ScreenSectionLabel></div>
               <div className={`${SCREEN_PANEL_FLAT_CLASS} mt-1`}>
                 {!sum && <p className="text-[11px] font-bold text-slate-400">この人はまだ記録を公開していません（ゲームを開き直すと出ます）</p>}
                 {sum && (
@@ -46932,27 +47383,9 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                   </dl>
                 )}
               </div>
-              <div className="mt-3"><ScreenSectionLabel>好きなモンスター</ScreenSectionLabel></div>
-              <div data-friend-favorite className={`${SCREEN_PANEL_FLAT_CLASS} mt-1 flex items-center gap-3`}>
-                {!favBase && <p className="text-[11px] font-bold text-slate-400">まだ選んでいません</p>}
-                {favBase && (<>
-                  {favFace ? <ProfileAvatar src={favFace.src} id={favFace.id} className="h-14 w-14 shrink-0"/> : <span className="flex h-14 w-14 shrink-0 items-center justify-center text-3xl">❓</span>}
-                  <div className="min-w-0 flex-1">
-                    <b className="block truncate text-sm font-black text-white">{fav.name || favBase.name}</b>
-                    <small className="block text-[10px] font-bold text-pink-300">絆Lv.{Number(fav.bondLevel) || '—'}{fav.power ? `　総合力 ${Number(fav.power).toLocaleString()}` : ''}</small>
-                  </div>
-                  {fav.detail && typeof onOpenMonsterDetail === 'function' && (
-                    <button type="button" data-friend-favorite-detail onClick={() => onOpenMonsterDetail({ baseId: fav.monsterId, monsterId: fav.monsterId, name: fav.name || favBase.name, bondLevel: Number(fav.bondLevel) || 0, detail: fav.detail, colors: Array.isArray(fav.colors) ? fav.colors : [] })}
-                      className={`${btn} shrink-0 px-3 border-indigo-400/60 bg-indigo-500/20 text-indigo-100`}>詳細 ›</button>
-                  )}
-                </>)}
-              </div>
               </>)}
-              {profileTab !== 'overview' && !(sum && sum.records) && (
-                <div className={`${SCREEN_PANEL_FLAT_CLASS} mt-2`} data-friend-records-missing>
-                  <p className="text-[11px] font-bold leading-relaxed text-slate-400">この人の記録のまとめは、まだ見られません。相手がゲームを開き直すと出ます。</p>
-                </div>
-              )}
+              {fold('battle', 'バトル')}
+              {profileTab === 'battle' && !(sum && sum.records) && recordsMissing}
               {profileTab === 'battle' && sum && sum.records && (() => {
                 const labels = friendsBattleModeLabels();
                 const rows = sum.records.battle.filter((e) => labels[e.id]);
@@ -46970,6 +47403,8 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                     <p className="px-1 text-[10px] font-bold text-slate-500">モード別の、いちばん良い記録です。</p>
                   </div>);
               })()}
+              {fold('songs', '曲のベスト')}
+              {profileTab === 'songs' && !(sum && sum.records) && recordsMissing}
               {profileTab === 'songs' && sum && sum.records && (() => {
                 const flagText = ['', 'フルコンボ', 'オールエクセレント', 'オールマーベラス'];
                 const cmp = friendsCompareScores(sum.records.rhythm.songs, myBest);
@@ -47005,6 +47440,8 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                     <p className="px-1 text-[10px] font-bold text-slate-500">曲ごとに、相手が遊んだいちばん上の難易度の記録です。自分の同じ難易度の記録と比べています。</p>
                   </div>);
               })()}
+              {fold('collection', '集めたもの')}
+              {profileTab === 'collection' && !(sum && sum.records) && recordsMissing}
               {profileTab === 'collection' && sum && sum.records && (() => {
                 const c = sum.records.collection;
                 const cell = (label, value, color) => (
@@ -49639,6 +50076,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300">MONBEAT ・ SELECT MODE</small>
             <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider">モードえらび</b>
             {ms.beatPointText && <small data-rhythm-beat-point-balance className="block truncate text-[9px] font-black text-violet-200/90">{ms.beatPointText}</small>}
+            {/* ビートランク(2026-10-29 社長)。立ち絵を小さくしないよう、上の帯に細い1行で出す(ボタンの列には置かない) */}
+            {Number.isFinite(ms.beatRankXp) && <div className="mt-0.5"><PlayerRankStrip kind="beat" xp={ms.beatRankXp}/></div>}
           </div>
           {quickRunInfo && <RhythmQuickRunPill info={quickRunInfo} onRestart={onRestartQuickRun} onResume={onResumeQuickRun} widthClass="max-w-[42%]" />}
           <RhythmOrientationButton/>
@@ -60079,7 +60518,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     onNavigate('CARD_BATTLE');
   };
   if (!db) return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="MFバトルカード" onBack={onExit}/><ScreenEmpty emoji="🃏" lines={['カードのデータを読み込めませんでした']}/></div>;
-  // プロフィールの登録デッキ(95 の CardShareProfileDeck)からの頼み: そのデッキと戦う / デッキ登録を開く。読み込みが済んでから1回だけ
+  // プロフィールの登録デッキ(95 の CardShareDeckTile・CardShareDeckActions)からの頼み: そのデッキと戦う / デッキ登録を開く。読み込みが済んでから1回だけ
   const startBattleRef = useRef(null);
   useEffect(() => {
     if (!save || !save.starter || screen !== 'CARD_TOP' || typeof cardShareIntentTake !== 'function') return; // スターターを受け取る前は、頼みを残しておく
@@ -60371,11 +60810,15 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       </div>
     );
   }
-  if (view === 'tactics' && typeof CardTacticsScreen === 'function') {
-    // 戻り先: みんなのデッキの「戦術カードを組む」から来たら、みんなのデッキへ戻る
-    // ビートPを払うときは、戦術カードの保存と同じ取引で(persist はビートPを書く直前に読み直して差だけを足す)
-    return <CardTacticsScreen db={db} decks={save.decks} point={save.point} onBack={() => { if (tacticsBack === 'exit') { setTacticsBack('mode'); setView('top'); onExit(); return; } setView(tacticsBack); setTacticsBack('mode'); }}
-      share={typeof CardDeckShare === 'function' ? { collection: save.collection, frame: (rank && rank.profile && rank.profile.frame) || null, unlocked: save.unlocked, debug } : null}
+  // デッキ登録(98。2026-10-29 社長「やりづらい」→ 1 デッキ → 2 戦い方 → 3 登録 の1本道)。戻り先: プロフィールから来たら MFバトルカードを閉じる
+  const tacticsBackTo = () => { if (tacticsBack === 'exit') { setTacticsBack('mode'); setView('top'); onExit(); return; } setView(tacticsBack); setTacticsBack('mode'); };
+  if (view === 'tactics' && typeof CardDeckRegister === 'function') {
+    return <CardDeckRegister db={db} decks={save.decks} collection={save.collection} frame={(rank && rank.profile && rank.profile.frame) || null} onBack={tacticsBackTo}
+      onOpenList={typeof CardTacticsScreen === 'function' ? () => setView('tacticsList') : null} onOpenMarket={onOpenMarket ? () => { setNotice(''); onOpenMarket(); } : null}/>;
+  }
+  // 持っている戦術カードの一覧(97)。引くのはマーケットの「戦術カード」
+  if (view === 'tacticsList' && typeof CardTacticsScreen === 'function') {
+    return <CardTacticsScreen db={db} decks={save.decks} point={save.point} onBack={() => setView('tactics')} listOnly
       onPay={async (cost, entries) => (save.point >= cost ? persist({ point: save.point - cost }, {}, entries) : false)}/>;
   }
   if (view === 'share' && typeof CardDeckShare === 'function') {
@@ -61023,6 +61466,9 @@ const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemov
 const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor = null }) => {
   const [deck, setDeck] = useState(() => ({ ...deck0, monsters: deck0.monsters.slice(), cards: deck0.cards.slice() }));
   const [view, setView] = useState(deck0.monsters.length < 3 ? 'mon' : 'all');
+  // 縦の画面は、上のデッキの箱を1行の帯にたたむ(押すと開いて名前・3体を直せる)。カードの並ぶ所を広く(2026-10-29 社長・案B)。
+  //   3体そろっていない新しいデッキは、はじめから開いておく
+  const [boxOpen, setBoxOpen] = useState(deck0.monsters.length < 3);
   // 絞り込みの列: 「モンスター」「デッキ」「技など全部」(先頭の3つ)を選んだときは列を左はしへ戻し、種類の札を選んだときはその札が見える所まで動かす
   //   (右はしで切れた札を押すと列が右へ流れ、左はしの「モンスター 3/3」が「ター 3/3」と切れて見えた。2026-10-26 2回目の見回り)
   //   ★scrollIntoView は使わない(縦にも動く。viewport-height-check)。列の横の位置だけを動かす
@@ -61123,6 +61569,16 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
           {/* 横の画面は、名前〜絞り込みだけを動かし(スクロール)、「保存する」「やめる」は列の下に止めておく(667×375 で保存が画面の外に出ていた。2026-10-29 見回り) */}
           <div className="contents landscape:flex landscape:min-h-0 landscape:flex-1 landscape:flex-col landscape:overflow-y-auto">
           <div className={`${SCREEN_PANEL_FLAT_CLASS} shrink-0 space-y-1.5`}>
+            {!land && (
+              <button type="button" data-card-deck-bar={boxOpen ? 'open' : 'closed'} onClick={() => { Audio_.fgSe.tap(); setBoxOpen((v) => !v); }} aria-expanded={boxOpen}
+                className="flex w-full items-center gap-1.5 text-left active:scale-[.99]">
+                <span className="min-w-0 flex-1 truncate text-[14px] font-black text-white">{boxOpen ? <span className="text-[12px] text-slate-300">名前と3体をなおす</span> : <>{(deck.name || '').trim() || 'デッキ'} <span className="text-[11px] text-slate-400">✎</span></>}</span>
+                {!boxOpen && deck.monsters.map((no) => { const m = cardMonsterOf(db, no); return m ? <img key={no} src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="h-[30px] rounded-[3px] shadow"/> : null; })}
+                {!boxOpen && <span className={`shrink-0 text-[15px] font-black ${deck.cards.length === CARD_BATTLE_DECK_SIZE ? 'text-emerald-300' : 'text-white'}`}>{deck.cards.length}<span className="text-[11px] text-slate-400">/{CARD_BATTLE_DECK_SIZE}</span></span>}
+                <span aria-hidden="true" className="shrink-0 text-[12px] text-slate-400">{boxOpen ? '▴' : '▾'}</span>
+              </button>
+            )}
+            <div className={!land && !boxOpen ? 'hidden' : 'space-y-1.5'}>
             <input data-card-deck-name value={deck.name} maxLength={20} onChange={(e) => setDeck((d) => ({ ...d, name: e.target.value }))} className="w-full rounded-lg border border-white/20 bg-slate-950 px-2 py-1.5 text-[14px] font-black text-white landscape:py-1 landscape:text-[13px]" aria-label="デッキの名前"/>
             <div className="flex items-end gap-1.5">
               {[0, 1, 2].map((i) => {
@@ -61138,6 +61594,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
                 <div data-card-deck-ready={ready ? 'ok' : 'ng'} className={`text-[11px] font-black ${ready ? 'text-emerald-300' : 'text-amber-200'}`}>{ready ? '対戦に使えます' : 'まだ対戦に使えません'}</div>
               </div>
             </div>
+            </div>
             {!ready && <div data-card-deck-problems className="text-[11px] font-bold leading-snug text-rose-300" style={JA_WRAP_STYLE}>{[...rules, ...own].slice(0, 2).join(' / ')}</div>}
             {unusableCount > 0 && <button type="button" data-card-deck-dead={unusableCount} onClick={() => { Audio_.fgSe.tap(); setView('deck'); setNotice(''); }} className="block w-full text-left text-[11px] font-bold leading-snug text-amber-200 underline decoration-dotted" style={JA_WRAP_STYLE}>{jaWrap(`3体のどの子も使えないカードが${unusableCount}枚入っています(混血の子は、守りのカードはサブの種族のものだけ使えます。押すと先頭に並べます)`)}</button>}
             {notice && <div data-card-deck-notice className="text-[12px] font-black text-amber-200" style={JA_LABEL_STYLE}>{jaWrap(notice)}</div>}
@@ -61145,10 +61602,11 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
           {/* 絞り込みは1列(縦は横に流す・横の画面は折り返す) */}
           {/* 縦の画面では右端をぼかして、横に続きがあると分かるようにする(端で札が半分に切れて、壊れて見えた。2026-10-26 見回り) */}
           <div ref={chipsRow} data-card-deck-chips className="mh-scroll relative mt-1.5 flex shrink-0 gap-1 overflow-x-auto pb-1 pr-6 landscape:flex-wrap landscape:overflow-visible landscape:pr-0" style={land ? undefined : { WebkitMaskImage: 'linear-gradient(to right, #000 82%, transparent)', maskImage: 'linear-gradient(to right, #000 82%, transparent)' }}>
-            {CARD_DECK_VIEWS.map((f) => <button key={f.id} type="button" data-card-deck-filter={f.id} onClick={() => { setView(f.id); setNotice(''); }} className={chip(view === f.id)}>{f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキ ${deck.cards.length}枚+${deck.monsters.length}体` : f.label}</button>)}
-            {canAsk && <button type="button" data-card-deck-ask onClick={() => { void consult(); }} className={chip(false)}>💬 {advisor.name}に相談</button>}
+            {/* よく使う「使える子だけ」「並び」を先頭へ(右はしで見えなかった。2026-10-29 社長・案B) */}
             <button type="button" data-card-deck-usable onClick={() => setUsableOnly((v) => !v)} className={chip(usableOnly)}>{usableOnly ? '✓ ' : ''}使える子だけ</button>
             <button type="button" data-card-deck-sort={sort} onClick={() => setSort((s) => CARD_DECK_SORTS[(CARD_DECK_SORTS.findIndex((x) => x.id === s) + 1) % CARD_DECK_SORTS.length].id)} className={chip(false)}>並び: {sortLabel} ▾</button>
+            {CARD_DECK_VIEWS.map((f) => <button key={f.id} type="button" data-card-deck-filter={f.id} onClick={() => { setView(f.id); setNotice(''); }} className={chip(view === f.id)}>{f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキ ${deck.cards.length}枚+${deck.monsters.length}体` : f.label}</button>)}
+            {canAsk && <button type="button" data-card-deck-ask onClick={() => { void consult(); }} className={chip(false)}>💬 {advisor.name}に相談</button>}
           </div>
           </div>
           {land && footer}
@@ -66191,72 +66649,6 @@ const cardShareVisible = () => {
 let _cardShareIntent = null;
 const cardShareIntentSet = (v) => { _cardShareIntent = v || null; };
 const cardShareIntentTake = () => { const v = _cardShareIntent; _cardShareIntent = null; return v; };
-// ownerId … その人のブリーダーid / self … 自分のプロフィール / onGo(intent) … MFバトルカードへ移る(60-app)
-const CardShareProfileDeck = ({ ownerId, self = false, onGo = null }) => {
-  const [entry, setEntry] = useState(undefined);
-  const [open, setOpen] = useState(false);
-  const [msg, setMsg] = useState('');
-  const visible = cardShareVisible();
-  useEffect(() => {
-    if (!visible) { setEntry(null); return undefined; }
-    let alive = true;
-    void (async () => {
-      const id = typeof ownerId === 'string' && ownerId ? ownerId : self && typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
-      if (typeof id !== 'string' || !id) { if (alive) setEntry(null); return; }
-      const r = await cardShareFetchMine(id).catch(() => null);
-      if (alive) setEntry(r || null);
-    })();
-    return () => { alive = false; };
-  }, [ownerId, visible]);
-  if (!visible || !entry) return null;
-  const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
-  const t = cardShareNormalizeTactics(entry.tactics);
-  const f = t.f ? cardTacticUnpackFrames(t.f) : null;
-  const rowText = (r) => `${(cardTacticOf(r.c) || {}).name || '?'} ▶ ${(cardTacticOf(r.a) || {}).name || '?'}${r.on ? '' : '(休み)'}`;
-  const monName = (i) => ((db && cardMonsterOf(db, entry.deck.monsters[i])) || {}).name || ['左の子', '真ん中の子', '右の子'][i];
-  const rent = async () => {
-    if (typeof cardRentedDeckSet !== 'function') return;
-    setMsg((await cardRentedDeckSet(entry)) ? 'このデッキを借りました。フリー対戦の前のデッキ選びで使えます' : 'この端末に保存できなかったため、借りられませんでした');
-  };
-  return (
-    <section data-profile-card-deck={self ? 'self' : 'friend'} className="mb-4 rounded-2xl border border-amber-300/50 bg-slate-900/80 p-3">
-      <div className="text-[12px] font-black text-amber-200">🃏 MFバトルカードの登録デッキ</div>
-      <div className="mt-2 flex items-center gap-2">
-        <span className="flex shrink-0 gap-0.5">{[0, 1, 2].map((i) => { const m = db && cardMonsterOf(db, entry.deck.monsters[i]); return m ? <img key={i} src={CARD_IMG(m.img)} alt={m.name} className="h-[52px] w-[37px] rounded-[4px] object-cover"/> : <span key={i} className="block h-[52px] w-[37px] rounded-[4px] bg-slate-700"/>; })}</span>
-        <span className="min-w-0 flex-1">
-          <b className="block truncate text-[14px] font-black text-white">{t.name || 'デッキ'}</b>
-          <small className="block text-[11px] font-black text-amber-200">{`賢さ ${cardShareSmartText(t)}`}</small>
-          <small className="block text-[11px] font-bold text-sky-100 tabular-nums">{entry.battles ? `戦われた ${entry.battles}回・デッキの勝ち ${Math.round((entry.deckWins / entry.battles) * 100)}%` : 'まだ戦われていません'}</small>
-        </span>
-      </div>
-      {f && (
-        <div className="mt-2 text-[12px] font-bold leading-relaxed text-slate-200" style={JA_WRAP_STYLE}>
-          <div>{`基本カード: ${f.base.filter(Boolean).map((id) => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`}</div>
-          <div>{`セットした戦術カード: ${cardShareRowsCount(f)}枚`}</div>
-          {t.aces.length > 0 && <div>{`切り札: ${t.aces.map((no) => ((db && cardOf(db, no)) || {}).name || no).join('・')}`}</div>}
-          <button type="button" data-profile-card-deck-rows onClick={() => setOpen((x) => !x)} className="mt-1 text-[11px] font-black text-slate-300">{open ? '▲ セットした戦術カードをとじる' : '▼ セットした戦術カードを見る'}</button>
-          {open && (
-            <div className="mt-1 space-y-1 rounded-lg bg-black/30 p-2 text-[11px]">
-              {[...f.mons.map((rows, i) => [monName(i), rows]), ['ブリーダー', f.breeder]].map(([label, rows]) => (
-                <div key={label}><b className="text-amber-100">{label}</b>{rows.length ? rows.map((r, j) => <div key={j}>{`${j + 1}. ${rowText(r)}`}</div>) : <div className="text-slate-400">(なし)</div>}</div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-      {msg && <p data-profile-card-deck-msg className="mt-2 rounded-lg bg-slate-950 p-1.5 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{msg}</p>}
-      <div className="mt-2 flex gap-2">
-        {self ? (
-          onGo && <button type="button" data-profile-card-deck-edit onClick={() => { Audio_.fgSe.tap(); onGo({ kind: 'register' }); }} className="mh-button mh-button-primary min-h-[40px] flex-1 rounded-xl text-[13px] font-black">デッキ登録で直す</button>
-        ) : (<>
-          {onGo && <button type="button" data-profile-card-deck-fight onClick={() => { Audio_.fgSe.tap(); onGo({ kind: 'fight', entry }); }} className="mh-button mh-button-primary min-h-[40px] flex-1 rounded-xl text-[13px] font-black">このデッキと戦う</button>}
-          <button type="button" data-profile-card-deck-rent onClick={() => { Audio_.fgSe.tap(); void rent(); }} className="min-h-[40px] flex-1 rounded-xl border border-emerald-300/60 bg-slate-950 text-[13px] font-black text-emerald-200">借りる</button>
-        </>)}
-      </div>
-    </section>
-  );
-};
-
 // ==================== プロフィールの「見せる札」: バトルカードのデッキ(2026-10-29 社長・プロフィールの整理 案B・開発部クラフトくんと分担) ====================
 // 好きなモンスターの札と横に並べる。外枠はクラフトくんの好きなモンスターの札とそろえる(rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2・幅は親まかせ)。
 //   mode="self"   … 札だけ。未登録は「登録していません」。押すと onOpen(デッキ登録の画面へ。60-app の onCardShareGo({ kind:'register' }))
@@ -66559,16 +66951,16 @@ const CardTacticFace = ({ card, owned = true, count = 0, onClick = null, small =
   const Tag = onClick ? 'button' : 'div';
   return (
     <Tag type={onClick ? 'button' : undefined} data-card-tactic={card.id} data-card-tactic-owned={owned ? '1' : '0'} onClick={onClick || undefined}
-      className={`relative flex flex-col rounded-xl border-2 p-1.5 text-left ${owned ? 'border-white/60' : 'border-white/15 opacity-40 grayscale'} ${small ? 'min-h-[78px]' : 'min-h-[106px]'} ${onClick ? 'active:scale-[.97]' : ''}`}
+      className={`relative flex flex-col rounded-xl border-2 p-1.5 text-left ${owned ? 'border-white/60' : 'border-white/15 opacity-40 grayscale'} ${small ? 'min-h-[86px]' : 'min-h-[106px]'} ${onClick ? 'active:scale-[.97]' : ''}`}
       style={{ background: st.bg }}>
       <span className="flex items-center gap-1">
-        <span className="rounded px-1 text-[10px] font-black text-white" style={{ background: CARD_TACTIC_RARE_COLOR[card.r] }}>{card.r}</span>
-        {!small && <span className="whitespace-nowrap text-[10px] font-bold text-white/70">{st.label}</span>}
+        <span className="rounded px-1 text-[11px] font-black text-white" style={{ background: CARD_TACTIC_RARE_COLOR[card.r] }}>{card.r}</span>
+        {!small && <span className="whitespace-nowrap text-[11px] font-bold text-white/80">{st.label}</span>}
         {count > 1 && <span className="ml-auto text-[10px] font-black text-amber-200">×{count}</span>}
         {mark && <span className="ml-auto rounded bg-emerald-500 px-1 text-[10px] font-black text-white">{mark}</span>}
       </span>
-      <b className={`mt-1 block font-black leading-tight text-white ${small ? 'text-[11px]' : 'text-[13px]'}`} style={JA_WRAP_STYLE}>{card.name}</b>
-      {!small && <small className="mt-0.5 block text-[10px] leading-snug text-white/80" style={JA_WRAP_STYLE}>{card.desc}</small>}
+      <b className={`mt-1 block font-black leading-tight text-white ${small ? 'text-[12.5px]' : 'text-[14px]'}`} style={JA_WRAP_STYLE}>{card.name}</b>
+      {!small && <small className="mt-0.5 block text-[11.5px] font-bold leading-snug text-white/90" style={JA_WRAP_STYLE}>{card.desc}</small>}
     </Tag>
   );
 };
@@ -66705,8 +67097,8 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
               return (
                 <button key={i} type="button" data-card-tactic-open-card={i} data-card-tactic-open-flipped={open ? '1' : '0'} onClick={() => flip(i)} className="relative">
                   {open && card ? <CardTacticFace card={card} small mark={c.dup ? '' : 'NEW'}/> : (
-                    <span className={`flex min-h-[78px] items-center justify-center rounded-xl border-2 border-white/50 text-[22px] ${c.r === 'SR' ? 'animate-pulse shadow-[0_0_14px_#f59e0b]' : ''}`}
-                      style={{ background: 'linear-gradient(160deg,#334155,#0f172a)' }}>🧠</span>
+                    <span data-card-tactic-back className={`block h-[86px] overflow-hidden rounded-xl border-2 border-white/50 bg-slate-900 ${c.r === 'SR' ? 'animate-pulse shadow-[0_0_14px_#f59e0b]' : ''}`}>
+                      <img src={CARD_BACK_IMG()} alt="" draggable={false} className="h-full w-full object-cover"/></span>
                   )}
                   {open && c.dup && <span className="absolute bottom-0.5 right-0.5 rounded bg-slate-900/80 px-1 text-[9px] font-black text-amber-200">かけら+1</span>}
                 </button>
@@ -66733,10 +67125,11 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
 // ---- 戦術カードの画面 ----
 // onPay(cost, entries) … ビートPを払って entries(戦術カードの保存)を1つの取引で書く(84 の persist)。成功なら true
 // share … デッキ登録の「登録」タブに出す 95 の CardDeckShare の props(collection・frame・unlocked・debug)。あれば題は「デッキ登録」(2026-10-29 社長の作り直し)
-const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null }) => {
+// listOnly … 持っている戦術カードの一覧だけ(98 のデッキ登録の右上から。引くのはマーケット・2026-10-29 社長)
+const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, listOnly = false }) => {
   const [data, setData] = useState(null);   // cardTacticsLoad の中身
-  const [tab, setTab] = useState(share ? 'register' : 'build');   // register(デッキ登録だけ) / build / pull / list
-  const screenTitle = share ? 'デッキ登録' : '戦術カード';
+  const [tab, setTab] = useState(listOnly ? 'list' : share ? 'register' : 'build');   // register(デッキ登録だけ) / build / pull / list
+  const screenTitle = listOnly ? '持っている戦術カード' : share ? 'デッキ登録' : '戦術カード';
   const [frame, setFrame] = useState('base'); // base / breeder / 0 / 1 / 2
   const [pick, setPick] = useState(null);     // { cat, title, onPick, allowNone }
   const [opening, setOpening] = useState(null);
@@ -66816,7 +67209,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null }
           {nextF && <p className="mt-1 text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{`次は Lv${nextF.at} で${[nextF.base ? `基本${nextF.base}枚目` : '', nextF.breeder ? `ブリーダーに${nextF.breeder}枚目` : '', nextF.mon ? `各モンスターに${nextF.mon}枚目` : ''].filter(Boolean).join('・')}が開く`}</p>}
         </div>
         <div className="flex gap-1">
-          {[...(share ? [['register', '登録']] : []), ['build', '組む'], ['pull', '引く'], ['list', `持っている ${ownCount}/${CARD_TACTIC_CARDS.length}`]].map(([k, l]) => (
+          {!listOnly && [...(share ? [['register', '登録']] : []), ['build', '組む'], ['list', `持っている ${ownCount}/${CARD_TACTIC_CARDS.length}`]].map(([k, l]) => (
             <button key={k} type="button" data-card-tactics-tab={k} onClick={() => { Audio_.fgSe.tap(); setTab(k); }}
               className={`flex-1 rounded-xl border-2 py-1.5 text-[12px] font-black ${tab === k ? 'border-amber-300 bg-amber-900/50 text-amber-100' : 'border-slate-700 bg-slate-900 text-slate-300'}`}>{l}</button>
           ))}
@@ -66923,6 +67316,388 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null }
 const CARD_FRAME_MAX_TEXT = (kind, n) => {
   const nx = CARD_LEVEL_FRAMES.find((x) => (kind === 'breeder' ? x.breeder : x.mon) > n);
   return nx ? `${(kind === 'breeder' ? nx.breeder : nx.mon)}枚目は Lv${nx.at} で開く` : '';
+};
+
+// ==================== マーケットの「戦術カード」(2026-10-29 社長「戦術カードはマーケットで買えるようにして」) ====================
+// 55 の MFバトルカードの売り場のタブ。1回300ビートPで8枚・5回まとめて1,350・引く券・かけらで1枚。開け方は 87 のパックと同じ(CardTacticPackOpen)
+// onBuy(count, payWith) / onExchange(id) … 60-app の buyTacticsPacks / exchangeTacticsShard(ビートPと持ち物を1つの取引で書く)
+const CardTacticsShop = ({ point = 0, busy = false, onBuy, onExchange }) => {
+  const [t, setT] = useState(null);
+  const [opening, setOpening] = useState(null);
+  const [picking, setPicking] = useState(false);
+  const [msg, setMsg] = useState('');
+  useEffect(() => { void cardTacticsLoad().then((d) => setT(d.tactics)); }, []);
+  if (!t) return <p className="text-[13px] font-bold text-slate-300">読み込み中…</p>;
+  const buy = async (count, payWith) => {
+    if (busy || !onBuy) return;
+    setMsg('');
+    const r = await onBuy(count, payWith);
+    if (r && r.ok) { setT(r.tactics); setOpening(r.packs); return; }
+    setMsg(r && r.reason === 'tickets' ? '引く券が足りません' : r && r.reason === 'points' ? 'ビートPが足りません' : '保存できませんでした。ビートPは変わっていません');
+  };
+  const exchange = async (id) => {
+    setPicking(false);
+    const r = onExchange ? await onExchange(id) : null;
+    if (r && r.ok) { setT(r.tactics); setOpening([[{ id, r: (cardTacticOf(id) || {}).r || 'N', dup: false }]]); } else setMsg('かけらが足りません');
+  };
+  const owned = CARD_TACTIC_CARDS.filter((c) => cardTacticsOwns(t, c.id)).length;
+  return (
+    <div data-card-tactics-shop className="space-y-2 pb-2">
+      <div className="rounded-2xl border-2 border-amber-500/60 bg-gradient-to-br from-orange-900 via-amber-800 to-indigo-950 p-3">
+        <div className="flex items-center gap-3">
+          <span className="text-[44px] leading-none">🧠</span>
+          <span className="min-w-0 flex-1"><b className="block text-[17px] font-black text-white">戦術カードパック</b>
+            <small className="block text-[11px] font-bold text-amber-100" style={JA_WRAP_STYLE}>1パック8枚。デッキ登録で、登録したデッキの戦い方に使います</small></span>
+        </div>
+        <div className="mt-2 text-[11px] font-bold leading-relaxed text-amber-50" style={JA_WRAP_STYLE}>
+          N 70%・R 25%・SR 5%。SR が出ないまま7パック開けると、8パック目の最後の1枚は SR。だぶったカードは「かけら」になり、10個でまだ持っていないカードを1枚えらべます。
+        </div>
+        <div className="mt-1.5 flex flex-wrap gap-x-3 text-[12px] font-black text-amber-200"><span>{`持っている ${owned}/${CARD_TACTIC_CARDS.length}`}</span><span data-card-tactics-tickets>{`引く券 ${t.tickets}枚`}</span><span data-card-tactics-shards>{`かけら ${t.shards}個`}</span></div>
+      </div>
+      {msg && <p data-card-tactics-shop-msg className="rounded-xl bg-amber-500/15 p-2 text-[12px] font-bold text-amber-100">{msg}</p>}
+      <button type="button" data-card-tactics-buy="1" disabled={busy || point < cardTacticsPrice(1)} onClick={() => { Audio_.fgSe.tap(); void buy(1, 'point'); }} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40">1パック 300ビートP</button>
+      <button type="button" data-card-tactics-buy="5" disabled={busy || point < cardTacticsPrice(5)} onClick={() => { Audio_.fgSe.tap(); void buy(5, 'point'); }} className="mh-button min-h-[52px] w-full rounded-2xl font-black text-white disabled:opacity-40">5パック 1,350ビートP(150おトク)</button>
+      <button type="button" data-card-tactics-ticket disabled={busy || t.tickets < 1} onClick={() => { Audio_.fgSe.tap(); void buy(1, 'ticket'); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black text-white disabled:opacity-40">{`引く券で1パック(のこり${t.tickets}枚)`}</button>
+      <button type="button" data-card-tactics-exchange disabled={t.shards < CARD_TACTICS_SHARD_COST} onClick={() => { Audio_.fgSe.tap(); setPicking(true); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black text-white disabled:opacity-40">{`かけらで1枚えらぶ(${t.shards}/${CARD_TACTICS_SHARD_COST})`}</button>
+      <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>引く券は、バトルカードのレベルが上がるともらえます。</p>
+      {picking && (
+        <div data-card-tactic-picker="missing" className="fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3">
+          <ScreenHead title="かけら10個で1枚えらぶ" accent="text-amber-200" onBack={() => setPicking(false)}/>
+          <div className="grid min-h-0 flex-1 grid-cols-3 content-start gap-1.5 overflow-y-auto pb-3">
+            {CARD_TACTIC_CARDS.filter((c) => !cardTacticsOwns(t, c.id)).map((c) => <CardTacticFace key={c.id} card={c} small onClick={() => { Audio_.fgSe.tap(); void exchange(c.id); }}/>)}
+          </div>
+        </div>
+      )}
+      {opening && <div className="fixed inset-0 z-[85] flex flex-col bg-slate-950"><CardTacticPackOpen packs={opening} onDone={() => setOpening(null)}/></div>}
+    </div>
+  );
+};
+
+// ---- part: 98-card-deck-register.jsx ----
+// ==================== 画面: デッキ登録(1 デッキ → 2 戦い方 → 3 登録) ====================
+// 2026-10-29 社長「デッキ登録めちゃくちゃやりづらい」→ 作り直し(案A+案Bの札)。
+//   1本道: 1 デッキをえらぶ → 2 戦い方をえらぶ(おすすめをえらぶと、持っている戦術カードから3体それぞれに自動でセット)→ 3 確かめて登録
+//   自分で細かく決めるときは、3体を縦に並べ、「倒せる相手を倒しに行く」のような組み合わせの札を1枚でえらぶ(こまかく作りたい人は「自分で組み合わせる」)
+//   組み直したら、そのまま登録の手順に乗る(組んだだけで登録に反映されない落とし穴をなくす)
+// 保存: 戦術カードの持ち物・セットは mh_card_tactics_v1(96)、登録は表 card_deck_entries(95)。新しいキーは無い
+// 戦術カードを引くのはマーケット(55 の「戦術カード」)。持っているカードの一覧は 97 の CardTacticsScreen(右上のボタン)
+
+// おすすめの戦い方。基本カードは持っている物の先頭、セットは持っている物だけを、開いている枚数まで入れる
+const CARD_REG_STYLES = Object.freeze([
+  { id: 'attack', icon: '⚔️', name: 'どんどん攻める', desc: '倒せる相手から倒す・ガッツがたまったら大技・ピンチのときだけ守る', base: ['tAttack', 'tRush', 'tBalance'],
+    mons: [['ko', 'atk'], ['myGuts.5', 'cost.大技(4以上)'], ['foeLife.50', 'atk'], ['myGuts.3', 'cost.大技(4以上)'], ['selfLife.30', 'guardDie'], ['foeLife.30', 'atk'], ['any', 'atk'], ['incoming.7', 'guard'], ['turnLe.3', 'atk']], breeder: [['any', 'save'], ['foeAlive.3', 'fieldCard']] },
+  { id: 'guard', icon: '🛡️', name: '守りを固める', desc: '守り札を残して堅く守り、相手が弱ったら倒しに行く', base: ['tGuard', 'tSteady', 'tBalance'],
+    mons: [['selfLife.50', 'guard'], ['ko', 'atk'], ['any', 'guard'], ['incoming.5', 'guard'], ['foeLife.50', 'atk'], ['foeLife.30', 'atk'], ['myGuts.3', 'cost.大技(4以上)'], ['selfLife.30', 'guardDie']], breeder: [['any', 'keepGuard'], ['any', 'save']] },
+  { id: 'save', icon: '🔋', name: 'ためて大技', desc: 'はじめはガッツをため、たまったら大技で一気に削る', base: ['tSave', 'tBig', 'tBalance'],
+    mons: [['myGuts.5', 'cost.大技(4以上)'], ['myGuts.3', 'cost.大技(4以上)'], ['ko', 'atk'], ['selfLife.30', 'guardDie'], ['foeLife.50', 'atk'], ['any', 'guard']], breeder: [['turnLe.3', 'save'], ['any', 'save']] },
+  { id: 'disrupt', icon: '🌀', name: '相手を崩す', desc: '相手の手札とガッツを減らしてから攻める', base: ['tDisrupt', 'tJam', 'tBalance'],
+    mons: [['foeHandGe.4', 'disrupt.手札を捨てさせる'], ['foeGutsGe.4', 'disrupt.ガッツを減らす'], ['ko', 'atk'], ['foeLife.50', 'atk'], ['myGuts.3', 'cost.大技(4以上)'], ['any', 'atk']], breeder: [['any', 'save']] },
+]);
+// 組み合わせの札(条件と行動を1枚にした物)。where … 'mon'(3体の枠)/ 'breeder'(ブリーダーの枠)
+const CARD_REG_COMBOS = Object.freeze([
+  { sec: 'おすすめ', icon: '🗡️', name: '倒せる相手を倒しに行く', c: 'ko', a: 'atk', where: 'mon' },
+  { sec: 'おすすめ', icon: '💥', name: 'ためたら大技', c: 'myGuts.5', a: 'cost.大技(4以上)', where: 'mon' },
+  { sec: 'おすすめ', icon: '🛡️', name: 'ピンチなら守る', c: 'selfLife.30', a: 'guard', where: 'mon' },
+  { sec: 'おすすめ', icon: '🌊', name: '3体いたら全体攻撃', c: 'foeAlive.3', a: 'reach.全体攻撃', where: 'mon' },
+  { sec: '攻める', icon: '⚔️', name: '弱った子を狙う', c: 'foeLife.50', a: 'atk', where: 'mon' },
+  { sec: '攻める', icon: '🎯', name: '最後の1体を倒す', c: 'foeAlive.1', a: 'atk', where: 'mon' },
+  { sec: '攻める', icon: '💨', name: 'はじめから攻める', c: 'turnLe.3', a: 'atk', where: 'mon' },
+  { sec: '攻める', icon: '🔥', name: '弱った子に大技', c: 'foeLife.30', a: 'cost.大技(4以上)', where: 'mon' },
+  { sec: '攻める', icon: '✨', name: '回避されない技で攻める', c: 'any', a: 'eff.回避されない', where: 'mon' },
+  { sec: '守る', icon: '🧱', name: '大きい攻撃だけ守る', c: 'any', a: 'guardOver.5', where: 'mon' },
+  { sec: '守る', icon: '🙏', name: '倒されそうなときだけ守る', c: 'any', a: 'guardDie', where: 'mon' },
+  { sec: '守る', icon: '💨', name: '守るときは回避を先に', c: 'any', a: 'guardFirst.回避', where: 'mon' },
+  { sec: '守る', icon: '🧊', name: '守るときは防御を先に', c: 'any', a: 'guardFirst.防御', where: 'mon' },
+  { sec: '崩す', icon: '🃏', name: '手札の多い相手を崩す', c: 'foeHandGe.4', a: 'disrupt.手札を捨てさせる', where: 'mon' },
+  { sec: '崩す', icon: '🔻', name: 'ガッツの多い相手を崩す', c: 'foeGutsGe.4', a: 'disrupt.ガッツを減らす', where: 'mon' },
+  { sec: 'ブリーダー', icon: '🔋', name: 'ガッツをためる', c: 'any', a: 'save', where: 'breeder' },
+  { sec: 'ブリーダー', icon: '⏳', name: 'はじめのうちはためる', c: 'turnLe.3', a: 'save', where: 'breeder' },
+  { sec: 'ブリーダー', icon: '🛡️', name: '守り札はガッツにしない', c: 'any', a: 'keepGuard', where: 'breeder' },
+  { sec: 'ブリーダー', icon: '🌐', name: '相手が3体なら全体カード', c: 'foeAlive.3', a: 'fieldCard', where: 'breeder' },
+  { sec: 'ブリーダー', icon: '💚', name: 'ピンチなら回復', c: 'myLife.50', a: 'bEff.回復する', where: 'breeder' },
+]);
+// 1枚を1文で(「倒せる相手 なら → 攻める」)。組み合わせの札にある物はその名前
+const cardRegRowText = (row) => {
+  const combo = CARD_REG_COMBOS.find((x) => x.c === row.c && x.a === row.a);
+  if (combo) return `${combo.icon} ${combo.name}`;
+  const c = cardTacticOf(row.c), a = cardTacticOf(row.a);
+  if (row.c === 'any') return `いつでも → ${a ? a.name : '?'}`;
+  return `${c ? c.name : '?'} なら → ${a ? a.name : '?'}`;
+};
+// おすすめの戦い方を、持っているカード・開いている枚数で入れる。
+//   3体に同じカードを入れると賢さに1枚としか数えない(82 の cardTacticUncounted)ので、候補を上から順に3体へ配る(左・真ん中・右・左…)。
+//   候補が足りなければ、同じ物を重ねずに空けておく
+const cardRegApplyStyle = (style, tactics, open) => {
+  const owns = (id) => cardTacticsOwns(tactics, id);
+  const cands = (list) => list.filter(([c, a]) => owns(c) && owns(a)).map(([c, a]) => ({ c, a, on: true }));
+  const monC = cands(style.mons);
+  const mons = [[], [], []];
+  for (let j = 0; j < open.mon; j++) for (let i = 0; i < 3; i++) { const x = monC[j * 3 + i]; if (x) mons[i].push(x); }
+  const base = style.base.find(owns) || 'tBalance';
+  return cardTacticNormalizeFrames({ base: [base, null, null], breeder: cands(style.breeder).slice(0, open.breeder), mons });
+};
+// 切り札「おまかせ」: デッキの攻撃の技からダメージの大きい3種類
+const cardRegAutoAces = (db, deck) => {
+  const seen = new Set();
+  return (deck ? deck.cards : []).map((no) => cardOf(db, no)).filter((c) => c && cardIsAttackKind(c.kind) && !seen.has(c.no) && seen.add(c.no))
+    .sort((x, y) => (y.damage || 0) - (x.damage || 0)).slice(0, CARD_SHARE_ACES_MAX).map((c) => c.no);
+};
+
+const CardRegSteps = ({ step }) => (
+  <div data-card-reg-steps className="mb-2 flex gap-1">
+    {[['deck', '1 デッキ'], ['style', '2 戦い方'], ['confirm', '3 登録']].map(([k, l], i) => {
+      const idx = ['deck', 'style', 'confirm'].indexOf(step === 'custom' ? 'style' : step);
+      return <span key={k} className={`flex-1 rounded-full py-1 text-center text-[12px] font-black ${i === idx ? 'bg-amber-400 text-slate-950' : i < idx ? 'bg-emerald-800 text-emerald-100' : 'bg-slate-800 text-slate-400'}`}>{l}</span>;
+    })}
+  </div>
+);
+const CardRegThumbs = ({ db, deck, h = 48 }) => (
+  <span className="flex shrink-0">{[0, 1, 2].map((i) => { const m = deck && cardMonsterOf(db, deck.monsters[i]); return m ? <img key={i} src={CARD_IMG(m.img)} alt={m.name} style={{ height: h, width: Math.round(h * 0.71) }} className={`rounded-[5px] border border-white/70 object-cover ${i ? '-ml-2' : ''}`}/> : <span key={i} style={{ height: h, width: Math.round(h * 0.71) }} className={`block rounded-[5px] bg-slate-700 ${i ? '-ml-2' : ''}`}/>; })}</span>
+);
+
+// 組み合わせの札をえらぶ窓。where … 'mon' / 'breeder'
+const CardRegComboSheet = ({ tactics, where, title, onPick, onCustom, onClose }) => {
+  const list = CARD_REG_COMBOS.filter((x) => x.where === where);
+  const secs = [...new Set(list.map((x) => x.sec))];
+  return (
+    <div data-card-reg-combos={where} className="fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3">
+      <ScreenHead title={title} accent="text-amber-200" onBack={onClose}/>
+      <div className="min-h-0 flex-1 overflow-y-auto pb-2">
+        {secs.map((s) => (
+          <div key={s} className="mb-2">
+            <p className="mb-1 text-[12px] font-black text-amber-200">{s}</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {list.filter((x) => x.sec === s).map((x) => {
+                const ok = cardTacticsOwns(tactics, x.c) && cardTacticsOwns(tactics, x.a);
+                return (
+                  <button key={x.name} type="button" data-card-reg-combo={x.name} disabled={!ok} onClick={() => { Audio_.fgSe.tap(); onPick({ c: x.c, a: x.a, on: true }); }}
+                    className={`rounded-xl border-2 p-2 text-left ${ok ? 'border-slate-600 bg-slate-800 active:scale-[.97]' : 'border-slate-800 bg-slate-900 opacity-50'}`}>
+                    <span className="block text-[20px] leading-none">{x.icon}</span>
+                    <b className="mt-1 block text-[13px] font-black leading-tight text-white" style={JA_WRAP_STYLE}>{x.name}</b>
+                    <small className="block text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{ok ? `${(cardTacticOf(x.c) || {}).name} ▶ ${(cardTacticOf(x.a) || {}).name}` : 'まだ持っていない戦術カードがいります(マーケットで引けます)'}</small>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+      <button type="button" data-card-reg-custom onClick={() => { Audio_.fgSe.tap(); onCustom(); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black">自分で組み合わせる(条件と行動を別々にえらぶ)</button>
+    </div>
+  );
+};
+
+// onOpenList … 持っている戦術カードの一覧(97)/ onOpenMarket … マーケットの戦術カード
+const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenList = null, onOpenMarket = null }) => {
+  const [step, setStep] = useState('deck');
+  const [data, setData] = useState(null);       // cardTacticsLoad
+  const [mine, setMine] = useState(undefined);  // 登録中(cardShareFetchMine)
+  const [selfId, setSelfId] = useState(null);
+  const [profile, setProfile] = useState({ name: 'ブリーダー', icon: '🙂' });
+  const [deckId, setDeckId] = useState(null);
+  const [draft, setDraft] = useState(null);     // 戦い方(枠の形)
+  const [styleId, setStyleId] = useState(null);
+  const [aces, setAces] = useState('auto');     // 'auto' か カード番号の配列
+  const [sheet, setSheet] = useState(null);     // { where, k }
+  const [custom, setCustom] = useState(null);   // { k, c? } 自分で組み合わせる
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const list = (decks && decks.decks) || [];
+  const issuesOf = (d) => (d ? [...cardDeckProblems(db, d), ...cardDeckOwnProblems(db, d, collection || {})] : ['デッキがありません']);
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const d = await cardTacticsLoad();
+      const [name, icon] = await Promise.all([storeGet('mh_breeder_name', 'ブリーダー', false), storeGet('mh_breeder_icon', '🙂', false)]).catch(() => ['ブリーダー', '🙂']);
+      const id = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+      const row = typeof id === 'string' ? await cardShareFetchMine(id).catch(() => null) : null;
+      if (!alive) return;
+      setData(d); setSelfId(typeof id === 'string' ? id : null); setMine(row || null);
+      setProfile({ name: typeof name === 'string' && name ? name : 'ブリーダー', icon: typeof icon === 'string' && icon ? icon : '🙂' });
+      const same = row ? list.find((x) => JSON.stringify(x.monsters) === JSON.stringify(row.deck.monsters) && JSON.stringify(x.cards) === JSON.stringify(row.deck.cards)) : null;
+      setDeckId((same || list.find((x) => issuesOf(x).length === 0) || list[0] || {}).id || null);
+      setDraft(cardTacticNormalizeFrames(d.tactics.frames));
+      const t = row ? cardShareNormalizeTactics(row.tactics) : null;
+      if (t && t.aces.length) setAces(t.aces);
+    })();
+    return () => { alive = false; };
+  }, []);
+  if (!data || mine === undefined || !draft) return <div data-mh-screen data-card-reg className={SCREEN_SHELL_CLASS}><ScreenHead title="デッキ登録" accent="text-amber-200" onBack={onBack}/><p className="text-[13px] font-bold text-slate-300">読み込み中…</p></div>;
+  const lv = data.info.level;
+  const open = cardLevelFrames(lv);
+  const tactics = data.tactics;
+  const deck = list.find((x) => x.id === deckId) || null;
+  const monName = (i) => ((deck && cardMonsterOf(db, deck.monsters[i])) || {}).name || ['左の子', '真ん中の子', '右の子'][i];
+  const battle = cardTacticsFramesForBattle({ ...tactics, frames: draft }, lv);
+  const smartLv = cardTacticSmartLevel(battle);
+  const smartText = cardShareSmartText({ f: cardTacticPackFrames(battle) });
+  const uncounted = cardTacticUncounted(battle);
+  const acesNow = aces === 'auto' ? cardRegAutoAces(db, deck) : aces;
+  const setRows = (k, rows) => setDraft((f) => (k === 'breeder' ? { ...f, breeder: rows } : { ...f, mons: f.mons.map((r, i) => (i === k ? rows : r)) }));
+  const rowsOf = (k) => (k === 'breeder' ? draft.breeder : draft.mons[k]);
+  const maxOf = (k) => (k === 'breeder' ? open.breeder : open.mon);
+  const register = async () => {
+    if (!deck || issuesOf(deck).length || !selfId || busy) return;
+    setBusy(true); setMsg('');
+    try {
+      // 戦い方は持ち物(mh_card_tactics_v1)にも残す(次に開いたとき・プロフィール)。読み直した値に、セットだけを書く
+      const fresh = await cardTacticsLoad();
+      const nextT = { ...fresh.tactics, frames: cardTacticNormalizeFrames(draft) };
+      await saveStoredValuesOrRollback([{ key: CARD_TACTICS_KEY, before: fresh.rawT, next: nextT }], storeGet, storeSet);
+      const f = cardTacticPackFrames(cardTacticsFramesForBattle(nextT, lv));
+      const r = await cardShareRegister({ ownerId: selfId, name: profile.name, icon: profile.icon, frame, deck,
+        tactics: { name: deck.name, habit: cardShareMainHabit(cardTacticUnpackFrames(f), 'kyuko'), aces: acesNow, f } });
+      if (r === 'ok') { setMine(await cardShareFetchMine(selfId)); setMsg('登録しました。ほかのブリーダーが、フリー対戦でこのデッキと戦えます'); setStep('done'); }
+      else setMsg(r === 'locked' ? 'この端末では登録を書きかえられません(登録した端末で操作してください)' : r === 'bad' ? 'このデッキは登録できませんでした' : r === 'nokey' ? 'この端末に保存できなかったため、登録できませんでした' : '通信できませんでした。もう一度お試しください');
+    } finally { setBusy(false); }
+  };
+  const unregister = async () => {
+    if (!selfId || busy) return;
+    setBusy(true);
+    const r = await cardShareUnregister(selfId);
+    if (r === 'ok' || r === 'none') { setMine(null); setMsg('登録をやめました'); }
+    setBusy(false);
+  };
+  const footer = (left, right) => <div className={`${SCREEN_FOOTER_CLASS} flex gap-2`}>{left}{right}</div>;
+  const back = (to) => <button type="button" data-card-reg-back onClick={() => { Audio_.fgSe.tap(); setStep(to); }} className="mh-button min-h-[52px] flex-1 rounded-2xl font-black">戻る</button>;
+  const headRight = onOpenList ? <button type="button" data-card-reg-list onClick={() => { Audio_.fgSe.tap(); onOpenList(); }} className="rounded-lg border border-white/20 px-2 py-1 text-[11px] font-black text-slate-200">持っている<br/>戦術カード</button> : null;
+  const mineBox = mine ? (
+    <div data-card-reg-mine className={`${SCREEN_PANEL_CLASS} mb-2 flex items-center gap-2 py-2`}>
+      <CardRegThumbs db={db} deck={mine.deck} h={36}/>
+      <span className="min-w-0 flex-1 text-[12px] font-bold text-slate-200"><b className="block truncate text-white">{`登録中: ${cardShareNormalizeTactics(mine.tactics).name || 'デッキ'}`}</b>{`賢さ ${cardShareSmartText(mine.tactics)}・戦われた ${mine.battles}回`}</span>
+      <button type="button" data-card-reg-unregister disabled={busy} onClick={() => { Audio_.fgSe.tap(); void unregister(); }} className="shrink-0 rounded-lg border border-white/15 px-2 py-1 text-[11px] font-black text-slate-300">やめる</button>
+    </div>
+  ) : null;
+  return (
+    <div data-mh-screen data-card-reg data-card-reg-step={step} className={SCREEN_SHELL_CLASS}>
+      <ScreenHead title={step === 'custom' ? '戦い方を決める' : 'デッキ登録'} accent="text-amber-200" onBack={step === 'custom' ? () => setStep('style') : onBack} right={headRight}
+        note={step === 'custom' ? '上から順に見て、当てはまった物を使います' : `バトルカード Lv${lv}`}/>
+      <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-2`}>
+        {step !== 'custom' && step !== 'done' && <CardRegSteps step={step}/>}
+        {msg && step !== 'done' && <p data-card-reg-msg className="rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
+        {step === 'deck' && (<>
+          {mineBox}
+          <p className="text-[16px] font-black text-white">登録するデッキをえらんでください</p>
+          {list.map((d) => {
+            const why = issuesOf(d);
+            return (
+              <button key={d.id} type="button" data-card-reg-deck={d.id} disabled={why.length > 0} onClick={() => { Audio_.fgSe.tap(); setDeckId(d.id); }}
+                className={`flex w-full items-center gap-3 rounded-2xl border-2 p-2 text-left ${deckId === d.id ? 'border-amber-300 bg-amber-950/30' : 'border-slate-700 bg-slate-900'} ${why.length ? 'opacity-50' : ''}`}>
+                <CardRegThumbs db={db} deck={d}/>
+                <span className="min-w-0 flex-1"><b className="block truncate text-[14px] font-black text-white">{d.name}</b>
+                  <small className={`block text-[11px] font-bold ${why.length ? 'text-rose-200' : 'text-slate-400'}`} style={JA_WRAP_STYLE}>{why.length ? why[0] : d.monsters.map((no) => (cardMonsterOf(db, no) || {}).name).join('・')}</small></span>
+              </button>
+            );
+          })}
+          {!list.length && <p className="text-[13px] font-bold text-slate-300">デッキがありません。デッキ編成で組んでください</p>}
+        </>)}
+        {step === 'style' && (<>
+          <p className="text-[16px] font-black text-white">どんな戦い方にしますか?</p>
+          {CARD_REG_STYLES.map((s, i) => (
+            <button key={s.id} type="button" data-card-reg-style={s.id} onClick={() => { Audio_.fgSe.tap(); setStyleId(s.id); setDraft(cardRegApplyStyle(s, tactics, open)); }}
+              className={`flex w-full items-center gap-3 rounded-2xl border-2 p-3 text-left ${styleId === s.id ? 'border-amber-300 bg-amber-950/40' : 'border-slate-700 bg-slate-900'}`}>
+              <span className="w-10 text-center text-[28px]">{s.icon}</span>
+              <span className="min-w-0 flex-1"><b className="block text-[15px] font-black text-white">{s.name}{i === 0 && <span className="ml-1.5 rounded bg-emerald-600 px-1.5 text-[10px]">おすすめ</span>}</b>
+                <small className="block text-[11px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{s.desc}</small></span>
+            </button>
+          ))}
+          <button type="button" data-card-reg-style="custom" onClick={() => { Audio_.fgSe.tap(); setStyleId('custom'); setStep('custom'); }}
+            className="flex w-full items-center gap-3 rounded-2xl border-2 border-dashed border-slate-500 bg-slate-900 p-3 text-left">
+            <span className="w-10 text-center text-[28px]">✏️</span>
+            <span className="min-w-0 flex-1"><b className="block text-[15px] font-black text-white">自分で細かく決める</b><small className="block text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>3体それぞれに、戦術カードを1枚ずつセットします(今のセットから直せます)</small></span>
+          </button>
+          <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>えらぶと、持っている戦術カードから、その戦い方に合う物を3体それぞれに自動でセットします。次の画面で中身を見られます。</p>
+        </>)}
+        {step === 'custom' && (<>
+          <div className={`${SCREEN_PANEL_CLASS} py-2`}>
+            <div className="text-[12px] font-black text-amber-200">基本の型</div>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {CARD_TACTIC_CARDS.filter((c) => c.cat === 'base' && cardTacticsOwns(tactics, c.id)).map((c) => (
+                <button key={c.id} type="button" data-card-reg-base={c.id} onClick={() => { Audio_.fgSe.tap(); setDraft((f) => ({ ...f, base: [c.id, ...f.base.slice(1)] })); }}
+                  className={`rounded-lg px-2 py-1 text-[12px] font-black ${draft.base[0] === c.id ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`}>{c.name}</button>
+              ))}
+            </div>
+            <small className="mt-1 block text-[10px] font-bold text-slate-400">どのカードにも当てはまらない場面は、この型で打ちます</small>
+          </div>
+          {[0, 1, 2, 'breeder'].map((k) => {
+            const rows = rowsOf(k);
+            const max = maxOf(k);
+            const label = k === 'breeder' ? 'ブリーダー(ガッツ・ブリーダーのカード)' : monName(k);
+            return (
+              <div key={k} data-card-reg-frame={k} className="rounded-2xl border-2 border-slate-700 bg-slate-900 p-2">
+                <div className="flex items-center gap-2">
+                  {k !== 'breeder' && deck && cardMonsterOf(db, deck.monsters[k]) && <img src={CARD_IMG(cardMonsterOf(db, deck.monsters[k]).img)} alt="" className="h-[52px] w-[37px] rounded-[5px] object-cover"/>}
+                  <span><b className="block text-[14px] font-black text-white">{label}</b><small className="text-[11px] font-bold text-slate-400">{rows.length < max ? `あと${max - rows.length}枚セットできます` : `${max}枚セットしています`}</small></span>
+                </div>
+                {rows.map((r, i) => {
+                  const why = (k === 'breeder' ? uncounted.breeder : uncounted.mons[k])[i];
+                  return (
+                    <div key={i} data-card-reg-row={i} className="mt-1.5 rounded-xl bg-slate-800 px-2 py-1.5">
+                      <div className="flex items-center gap-1.5 text-[13px] font-black text-white">
+                        <span className="min-w-0 flex-1" style={JA_WRAP_STYLE}>{cardRegRowText(r)}</span>
+                        <button type="button" aria-label="上へ" disabled={i === 0} onClick={() => { const a = rows.slice(); [a[i - 1], a[i]] = [a[i], a[i - 1]]; setRows(k, a); }} className="px-1 text-[11px] text-slate-300 disabled:opacity-20">▲</button>
+                        <button type="button" aria-label="外す" data-card-reg-row-remove onClick={() => { Audio_.fgSe.tap(); setRows(k, rows.filter((_, j) => j !== i)); }} className="px-1 text-[14px] text-slate-400">✕</button>
+                      </div>
+                      {why && <small className="block text-[10px] font-bold text-slate-400">{`賢さに数えない(${why})`}</small>}
+                    </div>
+                  );
+                })}
+                {rows.length < max ? (
+                  <button type="button" data-card-reg-add={k} onClick={() => { Audio_.fgSe.tap(); setSheet({ where: k === 'breeder' ? 'breeder' : 'mon', k }); }}
+                    className="mt-1.5 w-full rounded-xl border-2 border-dashed border-slate-500 py-2 text-[12px] font-black text-slate-200">＋ 戦術カードをセット</button>
+                ) : (CARD_FRAME_MAX_TEXT(k === 'breeder' ? 'breeder' : 'mon', max) && <small className="mt-1 block text-center text-[10px] font-bold text-slate-400">{CARD_FRAME_MAX_TEXT(k === 'breeder' ? 'breeder' : 'mon', max)}</small>)}
+              </div>
+            );
+          })}
+        </>)}
+        {step === 'confirm' && (<>
+          <p className="text-[16px] font-black text-white">この内容で登録します</p>
+          <div data-card-reg-summary className={`${SCREEN_PANEL_CLASS} space-y-1 py-2 text-[12px] font-bold leading-relaxed text-slate-200`} style={JA_WRAP_STYLE}>
+            <div className="flex items-center gap-2"><CardRegThumbs db={db} deck={deck} h={36}/><b className="text-[14px] text-white">{deck ? deck.name : '—'}</b></div>
+            <div><b className="text-amber-200">戦い方</b> {styleId && styleId !== 'custom' ? (CARD_REG_STYLES.find((s) => s.id === styleId) || {}).name : '自分で決めた戦い方'}{` (基本の型: ${(cardTacticOf(battle.base[0]) || {}).name || 'なし'})`}</div>
+            {[0, 1, 2].map((i) => <div key={i}>{`・${monName(i)}: ${battle.mons[i].length ? battle.mons[i].map(cardRegRowText).join(' / ') : 'なし'}`}</div>)}
+            <div>{`・ブリーダー: ${battle.breeder.length ? battle.breeder.map(cardRegRowText).join(' / ') : 'なし'}`}</div>
+            <button type="button" data-card-reg-edit onClick={() => { Audio_.fgSe.tap(); setStep('custom'); }} className="text-[12px] font-black text-sky-300">▶ 3体それぞれを直す</button>
+          </div>
+          <div data-card-reg-smart={smartLv} className={`${SCREEN_PANEL_CLASS} py-2`}>
+            <div className="flex items-center gap-2 text-[13px] font-black text-white">賢さ <span className="text-amber-200">{smartText}</span></div>
+            <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-700"><i className="block h-full bg-gradient-to-r from-emerald-400 to-amber-300" style={{ width: `${(['random', 'easy', 'normal', 'hard', 'expert', 'master'].indexOf(smartLv) / 5) * 100}%` }}/></div>
+            <small className="mt-1 block text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>賢さは、ほかのブリーダーがこのデッキと戦うときの相手の強さです。ちゃんと効く戦術カードが多いほど上がります。</small>
+          </div>
+          <div data-card-reg-aces className={`${SCREEN_PANEL_CLASS} py-2`}>
+            <div className="flex items-center gap-2 text-[13px] font-black text-white">切り札 <span className="text-[12px] text-amber-200">{aces === 'auto' ? 'おまかせ' : '自分でえらぶ'}</span>
+              <button type="button" data-card-reg-aces-toggle onClick={() => setAces((a) => (a === 'auto' ? cardRegAutoAces(db, deck) : 'auto'))} className="ml-auto text-[12px] font-black text-sky-300">{aces === 'auto' ? '変える ›' : 'おまかせに戻す'}</button></div>
+            <small className="block text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{`出せるときに優先して使うカード: ${acesNow.map((no) => (cardOf(db, no) || {}).name).filter(Boolean).join('・') || 'なし'}`}</small>
+            {aces !== 'auto' && (
+              <div className="mt-1 flex max-h-[24vh] flex-wrap gap-1 overflow-y-auto">
+                {[...new Set(deck ? deck.cards : [])].map((no) => { const on = aces.includes(no); return (
+                  <button key={no} type="button" data-card-reg-ace={no} onClick={() => setAces((a) => (on ? a.filter((x) => x !== no) : a.length >= CARD_SHARE_ACES_MAX ? a : [...a, no]))}
+                    className={`rounded-lg px-2 py-0.5 text-[11px] font-black ${on ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`}>{(cardOf(db, no) || {}).name || no}</button>); })}
+              </div>
+            )}
+          </div>
+          <p className="px-1 text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>登録できるのは1組だけです。登録し直すと前の登録と入れかわります。登録した端末でだけ、書きかえ・やめる・報酬の受け取りができます。</p>
+        </>)}
+        {step === 'done' && (<>
+          {mineBox}
+          <p className="rounded-2xl border border-emerald-300/50 bg-emerald-950/40 p-3 text-[14px] font-black text-emerald-100" style={JA_WRAP_STYLE}>登録しました!ほかのブリーダーが、フリー対戦の「ほかのブリーダー」でこのデッキと戦えます。戦われると、次の日に報酬のビートPが届きます。</p>
+          {onOpenMarket && <button type="button" data-card-reg-market onClick={() => { Audio_.fgSe.tap(); onOpenMarket(); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black">戦術カードを引く(マーケット)</button>}
+        </>)}
+      </div>
+      {step === 'deck' && footer(null, <button type="button" data-card-reg-next disabled={!deck || issuesOf(deck).length > 0} onClick={() => { Audio_.fgSe.tap(); setStep('style'); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black disabled:opacity-40">次へ(戦い方をえらぶ)</button>)}
+      {step === 'style' && footer(back('deck'), <button type="button" data-card-reg-next disabled={!styleId} onClick={() => { Audio_.fgSe.tap(); setStep('confirm'); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black disabled:opacity-40">次へ</button>)}
+      {step === 'custom' && footer(null, <button type="button" data-card-reg-next onClick={() => { Audio_.fgSe.tap(); setStep('confirm'); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black">決める(登録の確かめへ)</button>)}
+      {step === 'confirm' && footer(back(styleId === 'custom' ? 'custom' : 'style'), <button type="button" data-card-reg-register disabled={busy || !deck || !selfId} onClick={() => { Audio_.fgSe.tap(); void register(); }} className="mh-button mh-button-primary min-h-[52px] flex-[2] rounded-2xl font-black disabled:opacity-40">{mine ? 'この内容で登録し直す' : 'このデッキを登録する'}</button>)}
+      {step === 'done' && footer(null, <button type="button" onClick={() => { Audio_.fgSe.tap(); onBack(); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black">とじる</button>)}
+      {sheet && <CardRegComboSheet tactics={tactics} where={sheet.where} title={sheet.where === 'breeder' ? 'ブリーダーの戦い方' : `${monName(sheet.k)}の戦い方`}
+        onClose={() => setSheet(null)} onPick={(row) => { setRows(sheet.k, [...rowsOf(sheet.k), row].slice(0, maxOf(sheet.k))); setSheet(null); }}
+        onCustom={() => { setCustom({ k: sheet.k, where: sheet.where }); setSheet(null); }}/>}
+      {custom && !custom.c && <CardTacticPicker db={db} tactics={tactics} cat="cond" title="条件(〜なら)をえらぶ" hideSecs={custom.where === 'breeder' ? ['この子', '守るとき'] : []}
+        onClose={() => setCustom(null)} onPick={(id, sp) => { if (!id) return; setCustom((x) => ({ ...x, c: id, sp })); }}/>}
+      {custom && custom.c && <CardTacticPicker db={db} tactics={tactics} cat={custom.where === 'breeder' ? 'breeder' : 'monster'} title="行動(→ 〜する)をえらぶ"
+        onClose={() => setCustom(null)} onPick={(id) => { if (!id) return; setRows(custom.k, [...rowsOf(custom.k), { c: custom.c, a: id, on: true, ...(custom.sp ? { sp: custom.sp } : {}) }].slice(0, maxOf(custom.k))); setCustom(null); }}/>}
+    </div>
+  );
 };
 
 // ---- part: 81-debug-trials.jsx ----
@@ -67290,6 +68065,9 @@ function MonsterHeroGame() {
     // 前に選んだ難易度を引き継ぐ(2026-10-11)。保存値が無い・壊れている・公開していない難易度なら '' のまま(EASY から)。
     // このセッションの中ですでに選んでいれば、そちらを優先する
     const lastDifficulty=normalizeRhythmLastDifficulty(await storeGet(RHYTHM_LAST_DIFFICULTY_KEY,'',false));
+    // ビートランク(2026-10-29)。表を足す前に遊んだ人の分も、開いたときに全国ランキングへそろえる(1回の起動で1回だけ)
+    {const savedRank=normalizeBeatRank(await storeGet(BEAT_RANK_KEY,null,false));setBeatRank(savedRank);
+     if(!beatRankSyncedRef.current&&savedRank.xp>0){beatRankSyncedRef.current=true;void syncBeatRankToServer(savedRank);}}
     if(lastDifficulty)setRhythmSelectedDifficultyId(prev=>prev||lastDifficulty);
     // どこから入っても、まずモードえらび(2026-10-03・ユーザー指示「モンビーを始めたときにまずモード選択画面」)。
     // ソロはそこから曲えらび(RHYTHM_DEMO_HOME)へ進む
@@ -67688,7 +68466,7 @@ function MonsterHeroGame() {
   // 選ばれたまま来ても normalizeRankingDifficulty を落とさないよう、通常の難易度へ寄せる
   const rankingViewKey = rankingDifficultyKey(
     Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, rankingViewDiff) ? rankingViewDiff : BATTLE_DEFAULT_DIFFICULTY);
-  const [rankingKind, setRankingKind] = useState('score'); // 'score' | 'breeder' | 'bond'
+  const [rankingKind, setRankingKind] = useState('score'); // 'score' | 'breeder' | 'bond' | 'beatRank' | 'cardRank'(ビートランク・カードランクは 2026-10-29)
   const [bondRankMonFilter, setBondRankMonFilter] = useState('all'); // 絆レベルランキングのモンスター種別フィルタ
   // 総合力ランキングのモンスター種別フィルタ。絆Lvランキングと同じ「すべて＋種族別」の並び。
   // 元になる一覧(bond_levels の正本 ＋ rankings の編成)は絆Lvとまったく同じものを使うので、
@@ -69180,6 +69958,44 @@ function MonsterHeroGame() {
     return true;
   };
   // 使ったセッション券を1枚返す(人が来て、呼んだマスモンが席をゆずったとき)
+  // ビートランクの行を全国ランキングへ書く(持ち主の鍵 k で)。表がまだ無い・送れないときは何もしない(遊びは止めない)
+  const syncBeatRankToServer = async (saved) => {
+    try {
+      const cur = normalizeBeatRank(saved);
+      if (!cur.k || cur.xp <= 0) return;
+      const breederId = await ensureBreederId();
+      if (!breederId) return;
+      await sbPutBeatRank({ breederId, key: cur.k, name: breederName, icon: breederIcon,
+        profileFrame: typeof rankingProfileFrameValue === 'function' ? rankingProfileFrameValue(profileFrameId) : null, xp: cur.xp });
+    } catch (_) { /* 送れなくても、端末の記録はそのまま */ }
+  };
+  // 最後まで遊んだ1曲ぶんの経験値を足し、ランクが上がったらごほうびを配る(セッション券・ビートP)。
+  // 呼ぶのは曲の終わり(onComplete)の、ソロ・みんなで対戦・レイドで、アシストモードでないときだけ(練習・お手本・途中でやめた曲は0)
+  const grantBeatRankForResult = async (result, play) => {
+    try {
+      const raw = await storeGet(BEAT_RANK_KEY, null, false);
+      const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+      const gain = beatRankAfter(raw, { difficultyId: play && play.difficulty && play.difficulty.id, cleared: result?.cleared !== false,
+        fullCombo: result?.fullCombo === true, allMarvelous: result?.allMarvelous === true, multi: play && play.from === 'multi', today });
+      if (!gain.add) return;
+      const next = { ...gain.next, k: gain.next.k || beatRankNewKey() };
+      await storeSet(BEAT_RANK_KEY, next, false);
+      setBeatRank(next);
+      if (gain.tickets > 0) {
+        const nextItems = { ...ownedItemsRef.current, [RHYTHM_BUDDY_TICKET_ITEM_ID]: ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TICKET_ITEM_ID) + gain.tickets };
+        ownedItemsRef.current = nextItems;
+        setOwnedItems(nextItems);
+        await storeSet('mh_owned_items', nextItems, false);
+      }
+      if (gain.beatPoints > 0 && typeof addRhythmEventPoints === 'function') await addRhythmEventPoints(gain.beatPoints);
+      const gains = [
+        ...(gain.tickets > 0 ? [{ icon: '🎶', text: `セッション券 ×${gain.tickets}` }] : []),
+        ...(gain.beatPoints > 0 ? [{ icon: '🎟️', text: `ビートP ${gain.beatPoints.toLocaleString()}` }] : []),
+      ];
+      setBeatRankAward({ add: gain.add, parts: gain.parts, from: gain.from, to: gain.to, xp: next.xp, gains });
+      void syncBeatRankToServer(next);
+    } catch (_) { /* 経験値が書けなくても、曲の記録の保存は止めない */ }
+  };
   const refundBuddyTicket = async () => {
     const nextItems = { ...ownedItemsRef.current, [RHYTHM_BUDDY_TICKET_ITEM_ID]: ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TICKET_ITEM_ID) + 1 };
     ownedItemsRef.current = nextItems;
@@ -71745,6 +72561,11 @@ function MonsterHeroGame() {
   // 直前の演奏で何周ぶん入ったか。帯へ1回だけ出す(保存しない)。
   // 演奏から抜けた直後の effect からも見るので、同期の控え(ref)も持つ
   const [rhythmPlayRunAwardState, setRhythmPlayRunAwardState] = useState(null);
+  // ビートランク(2026-10-29 社長)。保存は mh_rhythm_rank_v1(読むときは normalizeBeatRank を通す)。
+  // beatRankAward は、いま見ている曲の結果に出す「経験値 +◯(ランク◯→◯)」。曲を始めるたびに空にする
+  const [beatRank, setBeatRank] = useState(() => normalizeBeatRank(null));
+  const [beatRankAward, setBeatRankAward] = useState(null);
+  const beatRankSyncedRef = useRef(false);
   const rhythmPlayRunAwardRef = useRef(null);
   const rhythmPlayRunAward = rhythmPlayRunAwardState;
   const setRhythmPlayRunAward = (next) => { rhythmPlayRunAwardRef.current = next; setRhythmPlayRunAwardState(next); };
@@ -72748,7 +73569,7 @@ function MonsterHeroGame() {
   //   (2026-09-07・ユーザー提案)。追いつきが残るのは、途中でやめたときだけ。
   //   その場合はいまの周がそのまま続いているので、止まっていたぶんを取り戻すのが正しい。
   useEffect(() => {
-    if (gameState === 'RHYTHM_PLAY') { rhythmPlayStartedAtRef.current = Date.now(); setRhythmPlayRunAward(null); stopCatchUp(); return; }
+    if (gameState === 'RHYTHM_PLAY') { rhythmPlayStartedAtRef.current = Date.now(); setRhythmPlayRunAward(null); stopCatchUp(); setBeatRankAward(null); return; }
     const startedAt = rhythmPlayStartedAtRef.current;
     rhythmPlayStartedAtRef.current = 0;
     if (!startedAt) return;
@@ -75824,6 +76645,41 @@ function MonsterHeroGame() {
       setMarketExchangeError('保存できませんでした。ビートPは変わっていません。');
       return { ok:false, reason:'save' };
     } finally { marketPurchaseProcessingRef.current = false; }
+  };
+  // 戦術カードのパック(96。2026-10-29 社長「戦術カードはマーケットで買えるようにして」)。1回300ビートPで8枚・5回1,350・引く券・かけらで1枚。
+  //   ビートPと戦術カードの持ち物(mh_card_tactics_v1)を1つの取引で書く(バトルカードのパックと同じく、読み直して確かめてから)
+  const buyTacticsPacks = async (count, payWith = 'point') => {
+    if (marketPurchaseProcessingRef.current || typeof cardTacticsPull !== 'function') return { ok:false, reason:'busy' };
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const res = await cardShopTry(() => Promise.all([storeGet(CARD_TACTICS_KEY, null), storeGet(CARD_POINT_STORE_KEY, 0, false)]), ([rawT, rawPoint]) => {
+        const point = cardNormalizePoint(rawPoint);
+        const r = cardTacticsPull(cardNormalizeTactics(rawT), count, { payWith, point }, Math.random);
+        if (!r) return { fail: payWith === 'ticket' ? 'tickets' : 'points' };
+        return { r, point: point - r.cost, entries: [{ key: CARD_TACTICS_KEY, before: rawT, next: r.next }, ...(r.cost ? [{ key: CARD_POINT_STORE_KEY, before: rawPoint, next: point - r.cost }] : [])] };
+      });
+      if (res.fail === 'points') { void loadCardShop(); setMarketExchangeError('ビートPが足りません。'); return { ok:false, reason:'points' }; }
+      if (res.fail === 'tickets') return { ok:false, reason:'tickets' };
+      if (res.fail) { setMarketExchangeError('保存できませんでした。ビートPは変わっていません。'); return { ok:false, reason:'save' }; }
+      setCardShopState((cur) => ({ ...(cur || {}), point: res.point }));
+      setRhythmEventPoints(res.point);
+      return { ok:true, packs: res.r.packs, tactics: res.r.next };
+    } catch {
+      setMarketExchangeError('保存できませんでした。ビートPは変わっていません。');
+      return { ok:false, reason:'save' };
+    } finally { marketPurchaseProcessingRef.current = false; }
+  };
+  const exchangeTacticsShard = async (id) => {
+    if (marketPurchaseProcessingRef.current || typeof cardTacticsExchange !== 'function') return { ok:false, reason:'busy' };
+    marketPurchaseProcessingRef.current = true;
+    try {
+      const res = await cardShopTry(() => storeGet(CARD_TACTICS_KEY, null), (rawT) => {
+        const next = cardTacticsExchange(cardNormalizeTactics(rawT), id);
+        return next ? { next, entries: [{ key: CARD_TACTICS_KEY, before: rawT, next }] } : { fail: 'shards' };
+      });
+      return res.fail ? { ok:false, reason:res.fail } : { ok:true, tactics: res.next };
+    } catch { return { ok:false, reason:'save' }; } finally { marketPurchaseProcessingRef.current = false; }
   };
   // ガチャポイント500でバトルカードカタログ1冊(2026-10-27 社長)。パックと同じく、読み直して確かめてから保存する(押しっぱなし・ほかのタブでも二重にならない)
   const exchangeCardCatalog = async () => {
@@ -85936,10 +86792,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   モードのタブを出さないぶん、それぞれに余裕を持たせている */}
               <div className="shrink-0 w-full mb-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"><AssistantBubble scene="ranking" compact/></div>
               <div className="grid grid-cols-3 gap-1.5 mb-2 shrink-0">{[{k:'score',label:'スコア'},{k:'breeder',label:'ブリーダーLv'},{k:'bond',label:'絆Lv'}].map(t=><button key={t.k} onClick={()=>{setRankingKind(t.k);if(t.k==='score')loadRankings(rankingViewKey);else {if(t.k==='bond')setBondRankMonFilter('all');loadRankings(null,true,false,t.k);}}} className={`min-h-[38px] rounded-xl text-[10px] font-black border-2 active:scale-95 ${rankingKind===t.k?'bg-indigo-600 border-indigo-300':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div>
+              {/* ビートランク・カードランクのタブ(2026-10-29)。5つを1行に詰めると320幅で字が切れるので、2段目に並べる */}
+              <div className="grid grid-cols-2 gap-1.5 mb-2 shrink-0">{[{k:'beatRank',label:'ビートランク'},{k:'cardRank',label:'カードランク'}].map(t=><button key={t.k} data-player-rank-tab={t.k} onClick={()=>setRankingKind(t.k)} className={`min-h-[38px] rounded-xl text-[10px] font-black border-2 active:scale-95 ${rankingKind===t.k?'bg-indigo-600 border-indigo-300':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div>
               {/* 一覧そのものは共通の描画へ寄せている。既存の「バトル」から見るスコアはチャレンジのぶん */}
               {rankingKind==='score'&&renderScoreRankingBody(BATTLE_MODE_CHALLENGE)}
               {rankingKind==='breeder'&&renderBreederRankingBody()}
               {rankingKind==='bond'&&renderBondRankingBody()}
+              {/* ビートランク・カードランク(2026-10-29 社長「ランキングは両方」)。中身は共通の PlayerRankBoard(43)。
+                  ランク順(同じなら経験値の合計順)・上位100人とあなた。表は rhythm_beat_ranks・card_ranks */}
+              {(rankingKind==='beatRank'||rankingKind==='cardRank')&&<div className="min-h-0 flex-1 overflow-y-auto">
+                <PlayerRankBoard key={rankingKind} kind={rankingKind==='beatRank'?'beat':'card'}
+                  fetchTop={()=>sbFetchPlayerRanks(rankingKind==='beatRank'?'beat':'card')}
+                  fetchMine={async()=>sbFetchPlayerRankMine(rankingKind==='beatRank'?'beat':'card',await ensureBreederId())}
+                  renderIcon={rankingBreederIcon} selfXp={rankingKind==='beatRank'?beatRank.xp:0}/>
+              </div>}
             </div>}
             </div>
           </div>
@@ -86925,7 +87791,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         })()}
 
         {raidDamageFx&&((gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='raid')||gameState==='RAID_JACK_DEBUG')&&<RaidJackDamageFx key={raidDamageFx.key} fx={raidDamageFx} onDone={()=>setRaidDamageFx(null)}/>}
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward} onComplete={async(result,merged)=>{
           // デバッグ画面の試作曲(RHYTHM_PROTO_SONGS)は、何も残さない。周回の報酬・経験値・自己ベスト・クリア回数・
           // 実績・全国ランキングのどれにも入れない(CLAUDE.md ⑦。試作は公開しない曲なので、記録に混ぜない)
           if(rhythmPlay.from==='proto')return;
@@ -86994,6 +87860,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // アシストモード(2026-09-24・バンドリ！アワーノーツから取り入れた遊び方)のプレイは、
           // 自己ベストにも全国ランキングにも残さない(CLAUDE.md ⑦「ランキング対象外の遊び方は送信しないだけでなく自己ベストも上書きしない」)
           if(result?.assist===true)return;
+          // ビートランクの経験値(2026-10-29)。ソロ・みんなで対戦・レイドを最後まで遊んだときだけ(ここは最後まで遊んだときしか通らない)
+          if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')await grantBeatRankForResult(result,rhythmPlay);
           // 通算クリア回数を数える(スエゾービートのフレームの条件)。ライフを残して終えたときだけ。
           // 練習・アシストモードは上で除いてある。数えられなくても記録の保存は止めない
           if(result?.cleared!==false){ try{ setRhythmClearTotal(await addRhythmClearTotal()); }catch{} }
@@ -87050,7 +87918,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             // 画面(gameState)は移さず、対戦の画面の上へ重ねる。画面を移すと、ライブ開始の合図を受ける側が外れて取り逃す
             open:(song)=>{loadRhythmRanking(song);},
             render:(onClose)=>(
-              <RhythmRankingScreen
+              <RhythmRankingScreen beatRankXp={beatRank.xp}
                 loadRhythmEventRanking={loadRhythmEventRanking}
                 loadRhythmRanking={loadRhythmRanking}
                 loadRhythmTotalRanking={loadRhythmTotalRanking}
@@ -87080,6 +87948,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOptions:()=>{setRhythmOptionsBack('RHYTHM_MODE_SELECT');setGameState('RHYTHM_OPTIONS');},
             monsterCount:rhythmMonsterSlots.length, monsterMax:RHYTHM_MONSTER_SLOT_MAX,
             monsterFaces:rhythmMonsterSlots.slice(0,RHYTHM_MONSTER_SLOT_MAX).map(masu=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];return {id:masu.id,src:base?(base.faceIconUrl||base.iconUrl):''};}),
+            // ビートランク(2026-10-29)。モードえらびの上に、今のランクと次までの棒を出す
+            beatRankXp:beatRank.xp,
             assistant:rhythmModeAssistant,
             showArt:rhythmSettings.modeSelectArt!==false, showComment:rhythmSettings.modeSelectComment!==false,
             onToggleAssistant:async(key)=>{const saved=await saveRhythmSettings({...rhythmSettings,[key]:rhythmSettings[key]===false});setRhythmSettings(saved);},
@@ -87205,7 +88075,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             高い難易度で挑むほど上位に近づく(§3.5・RHYTHM_MODE.md参照)。
             自分のスコアはいちばん高い1件だけが載る(rhythmRankingDedupeByUser)。 */}
         {gameState==='RHYTHM_RANKING'&&(
-          <RhythmRankingScreen
+          <RhythmRankingScreen beatRankXp={beatRank.xp}
             loadRhythmEventRanking={loadRhythmEventRanking}
             loadRhythmRanking={loadRhythmRanking}
             loadRhythmTotalRanking={loadRhythmTotalRanking}
@@ -87892,7 +88762,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             eventPoints={rhythmEventPoints}
             onExchangeEventPoints={exchangeRhythmEventPoints}
             onOpenUpcomingDetail={setUpcomingMonsterDetail}
-            cardShop={cardMarketEntry&&cardShopState?{ ...cardShopState, busy:false, onBuyPack:buyCardPacks, onBuyStarter:buyCardStarter, onExchange:exchangeCardPoints, onExchangeCatalog:exchangeCardCatalog, onUseCatalog:spendCardCatalog }:null}
+            cardShop={cardMarketEntry&&cardShopState?{ ...cardShopState, busy:false, onBuyPack:buyCardPacks, onBuyStarter:buyCardStarter, onExchange:exchangeCardPoints, onExchangeCatalog:exchangeCardCatalog, onUseCatalog:spendCardCatalog, onBuyTactics:buyTacticsPacks, onExchangeTactics:exchangeTacticsShard }:null}
             initialSection={cardMarketEntry?'card':null}
           />
         )}

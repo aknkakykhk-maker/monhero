@@ -119,7 +119,8 @@ check('この曲のランキングの取得は変えていない',
   // 既定(全難易度)は今までと同じキーの組。難易度を1つ選んだときだけ、そのキー1つにする(2026-10-13)
   &&app.includes("const keys = diff === 'ALL' ? rhythmRankingCombinedMembers(song.songId)"));
 check('この曲の一覧は総合タブでは出さない',
-  screen.includes('const songTab=!totalTabOpen&&!boardTab&&!eventTabOpen;')
+  // ビートランクのタブ(2026-10-29)でも曲別の一覧は出さないので、その条件が付いた形も同じ意味として通す
+  (screen.includes('const songTab=!totalTabOpen&&!boardTab&&!eventTabOpen;')||screen.includes('const songTab=!totalTabOpen&&!boardTab&&!eventTabOpen&&!beatRankTabOpen;'))
   &&screen.includes("{songTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length>0&&"));
 
 // --- 公開フラグ(機能と案内をまとめて出し入れする) ---

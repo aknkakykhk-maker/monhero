@@ -221,8 +221,10 @@ const serve = (flagOn) => new Promise(resolve => {
       result.noteLabel = await page.evaluate(() => [...document.querySelectorAll('[data-friend-note-label]')].map(e => e.innerText).join('|'));
       await page.evaluate(() => document.querySelector('[data-friend-row="other-friend"]').click());
       await page.waitForSelector('[data-friends-profile]', { timeout: 5000 });
+      // 2026-10-29 案B: 記録はタブから「押すと開く1行ずつ」(data-friend-fold)になった。開いていなければ押して開く
+      const FOLD_ID = { 'バトル': 'battle', '曲のベスト': 'songs', '集めたもの': 'collection', '概要': 'overview' };
       const tabText = async (label, selector) => {
-        await page.evaluate((l) => [...document.querySelectorAll('[role=tab]')].find(t => (t.innerText || '').trim() === l)?.click(), label);
+        await page.evaluate((id) => { const b = document.querySelector(`[data-friend-fold="${id}"]`); if (b && b.getAttribute('aria-expanded') !== 'true') b.click(); }, FOLD_ID[label]);
         await page.waitForTimeout(250);
         return page.evaluate((sel) => (document.querySelector(sel) || {}).innerText || '', selector);
       };
@@ -233,7 +235,7 @@ const serve = (flagOn) => new Promise(resolve => {
       result.versusRow = await page.evaluate(() => (document.querySelector('[data-friend-versus-row]') || {}).innerText || '');
       result.collectionTab = await tabText('集めたもの', '[data-friend-collection]');
       await shot('4b-collection');
-      await page.evaluate(() => [...document.querySelectorAll('[role=tab]')].find(t => (t.innerText || '').trim() === '概要')?.click());
+      await page.evaluate(() => { const b = document.querySelector('[data-friend-fold="overview"]'); if (b && b.getAttribute('aria-expanded') !== 'true') b.click(); });
       await page.waitForTimeout(250);
       result.favoriteDetailButton = await page.evaluate(() => !!document.querySelector('[data-friend-favorite-detail]'));
       // 自分の「見せる情報」が、起動してしばらくすると送られている(最初の送信は3秒以上あと)

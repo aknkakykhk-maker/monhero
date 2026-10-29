@@ -19,7 +19,8 @@ const SB_HEADERS = { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' 
 //   並べた表だけを通す(差し替えていない表への書き込みは、引き続き止める)
 // rpc は集計を読むもの(rhythm_week_score_totals など)なので通すが、表へ書く rpc はここに並べて同じく止める
 // (2026-10-27 カード部: マルチの強さの点数 card_battle_pvp_report が、検査のブラウザから本物へ届きうる形だった)
-const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report']);
+// ビートランク・カードランクの行を書く関数(2026-10-29)も、表へ書くのでここで止める
+const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report', 'rhythm_beat_rank_put', 'card_rank_put']);
 const sbAutomationWriteBlocked = (url, method) => {
   try {
     if (typeof navigator === 'undefined' || navigator.webdriver !== true) return false;
