@@ -303,6 +303,17 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
             const fav = sum && sum.favorite ? sum.favorite : null;
             const favBase = fav ? ALL_PLAYER_MONSTERS[fav.monsterId] : null;
             const favFace = favBase ? friendsFaceIconOf(fav.monsterId) : null;
+            // 記録の「たたみ」の見出し。押した行だけ開き、もう一度押すと閉じる
+            const fold = (id, label) => (
+              <button type="button" data-friend-fold={id} aria-expanded={profileTab === id} onClick={() => setProfileTab(profileTab === id ? '' : id)}
+                className={`mt-2 flex w-full min-h-[48px] items-center gap-2 rounded-xl border px-3 text-left active:scale-[.98] ${profileTab === id ? 'border-amber-400/70 bg-amber-950/30' : 'border-white/10 bg-slate-900/60'}`}>
+                <b className="min-w-0 flex-1 text-[13px] font-black text-white">{label}</b>
+                <span className="shrink-0 text-[12px] font-black text-amber-300" aria-hidden="true">{profileTab === id ? '▲' : '▼'}</span>
+              </button>);
+            const recordsMissing = (
+              <div className={`${SCREEN_PANEL_FLAT_CLASS} mt-2`} data-friend-records-missing>
+                <p className="text-[11px] font-bold leading-relaxed text-slate-400">この人の記録のまとめは、まだ見られません。相手がゲームを開き直すと出ます。</p>
+              </div>);
             const stat = (label, value, sub, color) => (
               <div className="min-w-0"><dt className="text-[9px] font-bold text-slate-400">{label}</dt>
                 <dd className={`truncate text-sm font-black ${color}`}>{value}</dd>
@@ -326,11 +337,30 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                     className="max-w-full truncate rounded-full border border-amber-400/40 bg-amber-950/30 px-3 py-1 text-[11px] font-black text-amber-200 active:scale-95">📝 {notes[selected.otherId] || 'メモを書く（自分だけに見えます）'}</button>
                 )}
               </div>
-              <ScreenTabs className="mt-3" value={profileTab} onChange={setProfileTab} items={[
-                { id: 'overview', label: '概要' }, { id: 'battle', label: 'バトル' }, { id: 'songs', label: '曲のベスト' }, { id: 'collection', label: '集めたもの' }]}/>
+              {/* 見せる札(2026-10-29 社長が案Bを選んだ)。自分のプロフィールと同じ形で、好きなモンスターとバトルカードのデッキを横に2枚。
+                  デッキの札(95 の CardShareDeckTile)は、札の下に「このデッキと戦う」「借りる」を持つ。登録していない人は出さない */}
+              <div className="mt-3 mb-1"><ScreenSectionLabel>見せる札</ScreenSectionLabel></div>
+              <div className="grid grid-cols-2 gap-2 items-start">
+                <div data-friend-favorite className="flex min-h-[132px] flex-col items-start gap-1 rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2">
+                  <small className="text-[10px] font-black text-amber-300">好きなモンスター</small>
+                  {!favBase && <p className="text-[11px] font-bold text-slate-400">まだ選んでいません</p>}
+                  {favBase && (<>
+                    {favFace ? <ProfileAvatar src={favFace.src} id={favFace.id} className="h-14 w-14 shrink-0"/> : <span className="flex h-14 w-14 shrink-0 items-center justify-center text-3xl">❓</span>}
+                    <b className="block w-full break-words text-[13px] font-black leading-tight text-white">{fav.name || favBase.name}</b>
+                    <small className="block text-[10px] font-bold text-pink-300">絆Lv.{Number(fav.bondLevel) || '—'}{fav.power ? `　総合力 ${Number(fav.power).toLocaleString()}` : ''}</small>
+                    {fav.detail && typeof onOpenMonsterDetail === 'function' && (
+                      <button type="button" data-friend-favorite-detail onClick={() => onOpenMonsterDetail({ baseId: fav.monsterId, monsterId: fav.monsterId, name: fav.name || favBase.name, bondLevel: Number(fav.bondLevel) || 0, detail: fav.detail, colors: Array.isArray(fav.colors) ? fav.colors : [] })}
+                        className={`${btn} mt-auto w-full px-3 border-indigo-400/60 bg-indigo-500/20 text-indigo-100`}>詳細 ›</button>
+                    )}
+                  </>)}
+                </div>
+                {typeof CardShareDeckTile === 'function' && <CardShareDeckTile mode="friend" breederId={selected.otherId} onGo={onCardShareGo}/>}
+              </div>
+              {/* デッキの札(95)が入るまでは、今までの大きい欄を札の下に出す */}
+              {typeof CardShareDeckTile !== 'function' && typeof CardShareProfileDeck === 'function' && <div className="mt-2"><CardShareProfileDeck ownerId={selected.otherId} onGo={onCardShareGo}/></div>}
+              {/* 記録は1行ずつにたたむ(2026-10-29 案B。前はタブ4つ)。押した行だけ開く。もう一度押すと閉じる */}
+              {fold('overview', '遊んだ記録')}
               {profileTab === 'overview' && (<>
-              {typeof CardShareProfileDeck === 'function' && <div className="mt-2"><CardShareProfileDeck ownerId={selected.otherId} onGo={onCardShareGo}/></div>}
-              <div className="mt-1"><ScreenSectionLabel>遊んだ記録</ScreenSectionLabel></div>
               <div className={`${SCREEN_PANEL_FLAT_CLASS} mt-1`}>
                 {!sum && <p className="text-[11px] font-bold text-slate-400">この人はまだ記録を公開していません（ゲームを開き直すと出ます）</p>}
                 {sum && (
@@ -354,27 +384,9 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                   </dl>
                 )}
               </div>
-              <div className="mt-3"><ScreenSectionLabel>好きなモンスター</ScreenSectionLabel></div>
-              <div data-friend-favorite className={`${SCREEN_PANEL_FLAT_CLASS} mt-1 flex items-center gap-3`}>
-                {!favBase && <p className="text-[11px] font-bold text-slate-400">まだ選んでいません</p>}
-                {favBase && (<>
-                  {favFace ? <ProfileAvatar src={favFace.src} id={favFace.id} className="h-14 w-14 shrink-0"/> : <span className="flex h-14 w-14 shrink-0 items-center justify-center text-3xl">❓</span>}
-                  <div className="min-w-0 flex-1">
-                    <b className="block truncate text-sm font-black text-white">{fav.name || favBase.name}</b>
-                    <small className="block text-[10px] font-bold text-pink-300">絆Lv.{Number(fav.bondLevel) || '—'}{fav.power ? `　総合力 ${Number(fav.power).toLocaleString()}` : ''}</small>
-                  </div>
-                  {fav.detail && typeof onOpenMonsterDetail === 'function' && (
-                    <button type="button" data-friend-favorite-detail onClick={() => onOpenMonsterDetail({ baseId: fav.monsterId, monsterId: fav.monsterId, name: fav.name || favBase.name, bondLevel: Number(fav.bondLevel) || 0, detail: fav.detail, colors: Array.isArray(fav.colors) ? fav.colors : [] })}
-                      className={`${btn} shrink-0 px-3 border-indigo-400/60 bg-indigo-500/20 text-indigo-100`}>詳細 ›</button>
-                  )}
-                </>)}
-              </div>
               </>)}
-              {profileTab !== 'overview' && !(sum && sum.records) && (
-                <div className={`${SCREEN_PANEL_FLAT_CLASS} mt-2`} data-friend-records-missing>
-                  <p className="text-[11px] font-bold leading-relaxed text-slate-400">この人の記録のまとめは、まだ見られません。相手がゲームを開き直すと出ます。</p>
-                </div>
-              )}
+              {fold('battle', 'バトル')}
+              {profileTab === 'battle' && !(sum && sum.records) && recordsMissing}
               {profileTab === 'battle' && sum && sum.records && (() => {
                 const labels = friendsBattleModeLabels();
                 const rows = sum.records.battle.filter((e) => labels[e.id]);
@@ -392,6 +404,8 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                     <p className="px-1 text-[10px] font-bold text-slate-500">モード別の、いちばん良い記録です。</p>
                   </div>);
               })()}
+              {fold('songs', '曲のベスト')}
+              {profileTab === 'songs' && !(sum && sum.records) && recordsMissing}
               {profileTab === 'songs' && sum && sum.records && (() => {
                 const flagText = ['', 'フルコンボ', 'オールエクセレント', 'オールマーベラス'];
                 const cmp = friendsCompareScores(sum.records.rhythm.songs, myBest);
@@ -427,6 +441,8 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                     <p className="px-1 text-[10px] font-bold text-slate-500">曲ごとに、相手が遊んだいちばん上の難易度の記録です。自分の同じ難易度の記録と比べています。</p>
                   </div>);
               })()}
+              {fold('collection', '集めたもの')}
+              {profileTab === 'collection' && !(sum && sum.records) && recordsMissing}
               {profileTab === 'collection' && sum && sum.records && (() => {
                 const c = sum.records.collection;
                 const cell = (label, value, color) => (

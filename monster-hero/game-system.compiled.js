@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d8ef4163956cb6a5
+// source-sha256: 9781072028d3b273
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -57059,9 +57059,6 @@ function ProfileScreen({
     className: "mt-0.5 text-[10px] text-slate-400 font-mono"
   }, breederLevel.xpIntoLevel.toLocaleString(), " / ", breederLevel.xpForNext.toLocaleString(), " XP")))), (() => {
     const frameName = (profileFrameById(normalizeProfileFrameId(profileFrameId)) || {}).name || 'フレームなし';
-    const base = favoriteMasu ? ALL_PLAYER_MONSTERS[favoriteMasu.baseId] : null;
-    const face = base ? friendsFaceIconOf(favoriteMasu.baseId) : null;
-    const showFriendTiles = onboarded && !onboardingPreview && friendsEnabled;
     const tile = 'flex min-h-[56px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-2 text-left active:scale-95 max-[359px]:gap-1.5 max-[359px]:px-2';
     return React.createElement("div", {
       className: "mt-3 grid grid-cols-2 gap-2",
@@ -57124,43 +57121,65 @@ function ProfileScreen({
       className: "block text-[10px] font-black text-pink-300"
     }, "着替え"), React.createElement("b", {
       className: "block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white"
-    }, wornCostume ? wornCostume.name : '元の服'))), showFriendTiles && React.createElement("button", {
+    }, wornCostume ? wornCostume.name : '元の服'))));
+  })()), onboarded && !onboardingPreview && friendsEnabled && (() => {
+    const base = favoriteMasu ? ALL_PLAYER_MONSTERS[favoriteMasu.baseId] : null;
+    const face = base ? friendsFaceIconOf(favoriteMasu.baseId) : null;
+    const hasDeckTile = typeof CardShareDeckTile === 'function';
+    return React.createElement("section", {
+      className: "mb-3",
+      "data-profile-showcase": true
+    }, React.createElement("button", {
       type: "button",
       "data-profile-message": true,
       onClick: onOpenMessageEditor,
-      className: tile
+      className: "mb-2 flex w-full min-h-[44px] items-center gap-2 rounded-xl border border-pink-400/30 bg-black/30 px-3 py-2 text-left active:scale-[.98]"
     }, React.createElement("span", {
-      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base",
+      className: "text-lg",
       "aria-hidden": "true"
     }, "💬"), React.createElement("span", {
       className: "min-w-0 flex-1"
     }, React.createElement("small", {
       className: "block text-[10px] font-black text-pink-300"
     }, "ひとこと"), React.createElement("b", {
-      className: "block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white",
+      className: "block break-words text-[12px] font-black leading-snug text-white",
       style: JA_LABEL_STYLE
-    }, profileMessage || React.createElement(React.Fragment, null, "まだ", React.createElement("wbr", null), "書いていません")))), showFriendTiles && React.createElement("button", {
+    }, profileMessage ? `「${profileMessage}」` : React.createElement(React.Fragment, null, "まだ", React.createElement("wbr", null), "書いていません"))), React.createElement(Edit3, {
+      size: 13,
+      className: "shrink-0 text-slate-400"
+    })), React.createElement("div", {
+      className: "mb-1"
+    }, React.createElement(ScreenSectionLabel, null, "見せる札（フレンドにもこう見えます）")), React.createElement("div", {
+      className: "grid grid-cols-2 gap-2"
+    }, React.createElement("button", {
       type: "button",
       "data-profile-favorite-masu": true,
       onClick: onOpenFavoritePicker,
-      className: tile
-    }, face ? React.createElement(ProfileAvatar, {
+      className: "flex min-h-[132px] flex-col items-start gap-1 rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2 text-left active:scale-[.98]"
+    }, React.createElement("small", {
+      className: "text-[10px] font-black text-amber-300",
+      style: JA_LABEL_STYLE
+    }, jaWrap('好きなモンスター')), face ? React.createElement(ProfileAvatar, {
       src: face.src,
       id: face.id,
-      className: "h-8 w-8 shrink-0 max-[359px]:h-6 max-[359px]:w-6"
+      className: "h-14 w-14 shrink-0"
     }) : React.createElement("span", {
-      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base",
+      className: "flex h-14 w-14 items-center justify-center text-3xl",
       "aria-hidden": "true"
-    }, "💗"), React.createElement("span", {
-      className: "min-w-0 flex-1"
-    }, React.createElement("small", {
-      className: "block text-[10px] font-black text-pink-300",
-      style: JA_LABEL_STYLE
-    }, jaWrap('好きなモンスター')), React.createElement("b", {
-      className: "block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white",
-      style: JA_LABEL_STYLE
-    }, base ? `${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）` : React.createElement(React.Fragment, null, "まだ", React.createElement("wbr", null), "選んでいません")))));
-  })()), React.createElement("div", {
+    }, "💗"), React.createElement("b", {
+      className: "block w-full break-words text-[13px] font-black leading-tight text-white"
+    }, base ? base.name : React.createElement(React.Fragment, null, "まだ", React.createElement("wbr", null), "選んでいません")), base && React.createElement("small", {
+      className: "text-[10px] font-black text-pink-300"
+    }, "絆Lv.", masuBondLevelInfo(favoriteMasu).level)), hasDeckTile && React.createElement(CardShareDeckTile, {
+      mode: "self",
+      onOpen: onCardShareGo
+    })), !hasDeckTile && typeof CardShareProfileDeck === 'function' && React.createElement("div", {
+      className: "mt-2"
+    }, React.createElement(CardShareProfileDeck, {
+      self: true,
+      onGo: onCardShareGo
+    })));
+  })(), React.createElement("div", {
     className: "mb-3 grid grid-cols-3 gap-2",
     "data-profile-stats": true
   }, React.createElement("div", {
@@ -57416,14 +57435,11 @@ function ProfileScreen({
       const best = highestModeScore(scores, ids);
       return best > 0 ? `最高スコア ${best.toLocaleString()} pt` : '未記録';
     };
-    return React.createElement(React.Fragment, null, typeof CardShareProfileDeck === 'function' && React.createElement(CardShareProfileDeck, {
-      self: true,
-      onGo: onCardShareGo
-    }), React.createElement("section", {
+    return React.createElement(React.Fragment, null, React.createElement("section", {
       className: "mb-4",
       "data-profile-battle-records": true
     }, React.createElement(ScreenSectionLabel, null, "バトル記録"), React.createElement(ScreenLead, null, "モードをタップすると詳しい記録を確認できます"), !selected ? React.createElement("div", {
-      className: "grid grid-cols-2 gap-2"
+      className: "flex flex-col gap-1.5"
     }, modes.map(mode => {
       const species = isSpeciesChallengeMode(mode.id);
       return React.createElement("button", {
@@ -57431,7 +57447,7 @@ function ProfileScreen({
         type: "button",
         "data-profile-mode": mode.id,
         onClick: () => species ? onOpenSpeciesRecords(mode.id) : onSelectBattleMode(mode.id),
-        className: `w-full min-h-[72px] rounded-2xl border bg-slate-900/70 px-2.5 py-2.5 text-left active:scale-[.98] ${species ? 'col-span-2' : ''}`,
+        className: "w-full min-h-[52px] rounded-xl border bg-slate-900/70 px-2.5 py-2 text-left active:scale-[.98]",
         style: {
           borderColor: `${mode.color}66`
         }
@@ -77870,6 +77886,24 @@ function FriendsScreen({
       const fav = sum && sum.favorite ? sum.favorite : null;
       const favBase = fav ? ALL_PLAYER_MONSTERS[fav.monsterId] : null;
       const favFace = favBase ? friendsFaceIconOf(fav.monsterId) : null;
+      const fold = (id, label) => React.createElement("button", {
+        type: "button",
+        "data-friend-fold": id,
+        "aria-expanded": profileTab === id,
+        onClick: () => setProfileTab(profileTab === id ? '' : id),
+        className: `mt-2 flex w-full min-h-[48px] items-center gap-2 rounded-xl border px-3 text-left active:scale-[.98] ${profileTab === id ? 'border-amber-400/70 bg-amber-950/30' : 'border-white/10 bg-slate-900/60'}`
+      }, React.createElement("b", {
+        className: "min-w-0 flex-1 text-[13px] font-black text-white"
+      }, label), React.createElement("span", {
+        className: "shrink-0 text-[12px] font-black text-amber-300",
+        "aria-hidden": "true"
+      }, profileTab === id ? '▲' : '▼'));
+      const recordsMissing = React.createElement("div", {
+        className: `${SCREEN_PANEL_FLAT_CLASS} mt-2`,
+        "data-friend-records-missing": true
+      }, React.createElement("p", {
+        className: "text-[11px] font-bold leading-relaxed text-slate-400"
+      }, "この人の記録のまとめは、まだ見られません。相手がゲームを開き直すと出ます。"));
       const stat = (label, value, sub, color) => React.createElement("div", {
         className: "min-w-0"
       }, React.createElement("dt", {
@@ -77924,31 +77958,49 @@ function FriendsScreen({
           text: notes[selected.otherId] || ''
         }),
         className: "max-w-full truncate rounded-full border border-amber-400/40 bg-amber-950/30 px-3 py-1 text-[11px] font-black text-amber-200 active:scale-95"
-      }, "📝 ", notes[selected.otherId] || 'メモを書く（自分だけに見えます）')), React.createElement(ScreenTabs, {
-        className: "mt-3",
-        value: profileTab,
-        onChange: setProfileTab,
-        items: [{
-          id: 'overview',
-          label: '概要'
-        }, {
-          id: 'battle',
-          label: 'バトル'
-        }, {
-          id: 'songs',
-          label: '曲のベスト'
-        }, {
-          id: 'collection',
-          label: '集めたもの'
-        }]
-      }), profileTab === 'overview' && React.createElement(React.Fragment, null, typeof CardShareProfileDeck === 'function' && React.createElement("div", {
+      }, "📝 ", notes[selected.otherId] || 'メモを書く（自分だけに見えます）')), React.createElement("div", {
+        className: "mt-3 mb-1"
+      }, React.createElement(ScreenSectionLabel, null, "見せる札")), React.createElement("div", {
+        className: "grid grid-cols-2 gap-2 items-start"
+      }, React.createElement("div", {
+        "data-friend-favorite": true,
+        className: "flex min-h-[132px] flex-col items-start gap-1 rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2"
+      }, React.createElement("small", {
+        className: "text-[10px] font-black text-amber-300"
+      }, "好きなモンスター"), !favBase && React.createElement("p", {
+        className: "text-[11px] font-bold text-slate-400"
+      }, "まだ選んでいません"), favBase && React.createElement(React.Fragment, null, favFace ? React.createElement(ProfileAvatar, {
+        src: favFace.src,
+        id: favFace.id,
+        className: "h-14 w-14 shrink-0"
+      }) : React.createElement("span", {
+        className: "flex h-14 w-14 shrink-0 items-center justify-center text-3xl"
+      }, "❓"), React.createElement("b", {
+        className: "block w-full break-words text-[13px] font-black leading-tight text-white"
+      }, fav.name || favBase.name), React.createElement("small", {
+        className: "block text-[10px] font-bold text-pink-300"
+      }, "絆Lv.", Number(fav.bondLevel) || '—', fav.power ? `　総合力 ${Number(fav.power).toLocaleString()}` : ''), fav.detail && typeof onOpenMonsterDetail === 'function' && React.createElement("button", {
+        type: "button",
+        "data-friend-favorite-detail": true,
+        onClick: () => onOpenMonsterDetail({
+          baseId: fav.monsterId,
+          monsterId: fav.monsterId,
+          name: fav.name || favBase.name,
+          bondLevel: Number(fav.bondLevel) || 0,
+          detail: fav.detail,
+          colors: Array.isArray(fav.colors) ? fav.colors : []
+        }),
+        className: `${btn} mt-auto w-full px-3 border-indigo-400/60 bg-indigo-500/20 text-indigo-100`
+      }, "詳細 ›"))), typeof CardShareDeckTile === 'function' && React.createElement(CardShareDeckTile, {
+        mode: "friend",
+        breederId: selected.otherId,
+        onGo: onCardShareGo
+      })), typeof CardShareDeckTile !== 'function' && typeof CardShareProfileDeck === 'function' && React.createElement("div", {
         className: "mt-2"
       }, React.createElement(CardShareProfileDeck, {
         ownerId: selected.otherId,
         onGo: onCardShareGo
-      })), React.createElement("div", {
-        className: "mt-1"
-      }, React.createElement(ScreenSectionLabel, null, "遊んだ記録")), React.createElement("div", {
+      })), fold('overview', '遊んだ記録'), profileTab === 'overview' && React.createElement(React.Fragment, null, React.createElement("div", {
         className: `${SCREEN_PANEL_FLAT_CLASS} mt-1`
       }, !sum && React.createElement("p", {
         className: "text-[11px] font-bold text-slate-400"
@@ -77976,43 +78028,7 @@ function FriendsScreen({
         className: "text-[9px] font-bold text-slate-400"
       }, "遊んだ曲数"), React.createElement("dd", {
         className: "text-sm font-black text-pink-200"
-      }, entry.songCount, "曲")))), React.createElement("div", {
-        className: "mt-3"
-      }, React.createElement(ScreenSectionLabel, null, "好きなモンスター")), React.createElement("div", {
-        "data-friend-favorite": true,
-        className: `${SCREEN_PANEL_FLAT_CLASS} mt-1 flex items-center gap-3`
-      }, !favBase && React.createElement("p", {
-        className: "text-[11px] font-bold text-slate-400"
-      }, "まだ選んでいません"), favBase && React.createElement(React.Fragment, null, favFace ? React.createElement(ProfileAvatar, {
-        src: favFace.src,
-        id: favFace.id,
-        className: "h-14 w-14 shrink-0"
-      }) : React.createElement("span", {
-        className: "flex h-14 w-14 shrink-0 items-center justify-center text-3xl"
-      }, "❓"), React.createElement("div", {
-        className: "min-w-0 flex-1"
-      }, React.createElement("b", {
-        className: "block truncate text-sm font-black text-white"
-      }, fav.name || favBase.name), React.createElement("small", {
-        className: "block text-[10px] font-bold text-pink-300"
-      }, "絆Lv.", Number(fav.bondLevel) || '—', fav.power ? `　総合力 ${Number(fav.power).toLocaleString()}` : '')), fav.detail && typeof onOpenMonsterDetail === 'function' && React.createElement("button", {
-        type: "button",
-        "data-friend-favorite-detail": true,
-        onClick: () => onOpenMonsterDetail({
-          baseId: fav.monsterId,
-          monsterId: fav.monsterId,
-          name: fav.name || favBase.name,
-          bondLevel: Number(fav.bondLevel) || 0,
-          detail: fav.detail,
-          colors: Array.isArray(fav.colors) ? fav.colors : []
-        }),
-        className: `${btn} shrink-0 px-3 border-indigo-400/60 bg-indigo-500/20 text-indigo-100`
-      }, "詳細 ›")))), profileTab !== 'overview' && !(sum && sum.records) && React.createElement("div", {
-        className: `${SCREEN_PANEL_FLAT_CLASS} mt-2`,
-        "data-friend-records-missing": true
-      }, React.createElement("p", {
-        className: "text-[11px] font-bold leading-relaxed text-slate-400"
-      }, "この人の記録のまとめは、まだ見られません。相手がゲームを開き直すと出ます。")), profileTab === 'battle' && sum && sum.records && (() => {
+      }, entry.songCount, "曲"))))), fold('battle', 'バトル'), profileTab === 'battle' && !(sum && sum.records) && recordsMissing, profileTab === 'battle' && sum && sum.records && (() => {
         const labels = friendsBattleModeLabels();
         const rows = sum.records.battle.filter(e => labels[e.id]);
         return React.createElement("div", {
@@ -78035,7 +78051,7 @@ function FriendsScreen({
         }, e.k === 'w' ? `WAVE ${e.v.toLocaleString()}` : `${e.v.toLocaleString()} pt`))), React.createElement("p", {
           className: "px-1 text-[10px] font-bold text-slate-500"
         }, "モード別の、いちばん良い記録です。"));
-      })(), profileTab === 'songs' && sum && sum.records && (() => {
+      })(), fold('songs', '曲のベスト'), profileTab === 'songs' && !(sum && sum.records) && recordsMissing, profileTab === 'songs' && sum && sum.records && (() => {
         const flagText = ['', 'フルコンボ', 'オールエクセレント', 'オールマーベラス'];
         const cmp = friendsCompareScores(sum.records.rhythm.songs, myBest);
         const songs = cmp.map(e => ({
@@ -78096,7 +78112,7 @@ function FriendsScreen({
         }, e.result === 'none' ? 'まだ遊んでいません' : e.result === 'win' ? `自分 ${e.mine.toLocaleString()}　勝ち +${e.diff.toLocaleString()}` : e.result === 'lose' ? `自分 ${e.mine.toLocaleString()}　あと${(-e.diff).toLocaleString()}点` : `自分 ${e.mine.toLocaleString()}　同点`)))), React.createElement("p", {
           className: "px-1 text-[10px] font-bold text-slate-500"
         }, "曲ごとに、相手が遊んだいちばん上の難易度の記録です。自分の同じ難易度の記録と比べています。"));
-      })(), profileTab === 'collection' && sum && sum.records && (() => {
+      })(), fold('collection', '集めたもの'), profileTab === 'collection' && !(sum && sum.records) && recordsMissing, profileTab === 'collection' && sum && sum.records && (() => {
         const c = sum.records.collection;
         const cell = (label, value, color) => React.createElement("div", {
           className: `${SCREEN_PANEL_FLAT_CLASS} text-center`
