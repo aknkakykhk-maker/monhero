@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fc17b73b2e7de421
+// generated-sha256: 4d7ad188da2a224d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -66779,6 +66779,9 @@ function MonsterHeroGame() {
     resetSweetStack(); // メロディー・クロミーのスタックもランごと(WAVEでは消さない)
   resetKusabi(); resetDreamPain(); // 楔・ドリームペインは敵に付くのでWAVEでも消すが、ランの片付けでも念のため
   resetKyubi(); // 九尾四相(相・煉獄・陽炎)はランのあいだ持つ
+  // ★トリックスタートの積みは「WAVEの番号が変わったら0から」なので、前のランがWAVE 1で終わり次のランもWAVE 1から始まると
+  //   前のランの積みが残っていた(別の子が同じ枠に立つと、その子に乗っていた。2026-10-29 社長の報告)。ランの始めに必ず消す
+  resetTrickStart();
   resetOrihime(); // 天河の契り(相方・逢瀬)もランのあいだ持つ
   resetReikon(); // 霊魂(キュービ・オリヒメの固有技)の残り
   };
