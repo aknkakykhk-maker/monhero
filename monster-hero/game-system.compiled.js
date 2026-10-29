@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 68b0aa3d1ca80cc3
+// source-sha256: d734f9e39a63d371
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -98802,6 +98802,8 @@ const CardBattleScreen = ({
     who: 'mua',
     level: 'easy'
   });
+  const shareForm = debug || typeof cardShareOpen === 'function' && cardShareOpen();
+  const [foeTab, setFoeTab] = useState('assistant');
   const [startLevel, setStartLevel] = useState('last');
   const lastLevelRead = useRef(false);
   useEffect(() => {
@@ -99792,9 +99794,9 @@ const CardBattleScreen = ({
       className: "text-3xl leading-none"
     }, "⚔️"), React.createElement("span", null, React.createElement("b", {
       className: "block text-[22px] font-black italic leading-tight"
-    }, "助手と対戦"), React.createElement("small", {
+    }, shareForm ? 'フリー対戦' : '助手と対戦'), React.createElement("small", {
       className: "block text-[11px] font-black text-slate-900/80"
-    }, "助手のみんなと戦う・強さは5段"))), React.createElement("span", {
+    }, shareForm ? '助手や、ほかのブリーダーのデッキと戦う' : '助手のみんなと戦う・強さは5段'))), React.createElement("span", {
       "aria-hidden": "true",
       className: "relative flex -space-x-2"
     }, assistantsUnlockedFrom(seenStoryIds).filter(x => CARD_AI_HABITS[x.id]).map(x => React.createElement("img", {
@@ -99831,29 +99833,7 @@ const CardBattleScreen = ({
       className: "block text-[11px] font-black text-slate-900/80"
     }, "ブリーダーどうしで戦う"))), !cardPvpOpen() && React.createElement("span", {
       className: "relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white"
-    }, debug ? 'つくっている途中(デバッグ)' : '準備中')), typeof CardDeckShare === 'function' && (debug || cardShareOpen()) && React.createElement("button", {
-      type: "button",
-      "data-card-mode-share": true,
-      onClick: () => {
-        Audio_.fgSe.tap();
-        setView('share');
-      },
-      className: "mhms-card mhms-in flex min-h-[110px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-emerald-200 via-emerald-400 to-teal-600 px-4 py-3 text-left text-slate-950 active:scale-[.98]"
-    }, React.createElement("span", {
-      "aria-hidden": "true",
-      className: "mhms-mark"
-    }, "DECKS"), React.createElement("span", {
-      className: "relative flex items-center gap-2"
-    }, React.createElement("span", {
-      "aria-hidden": "true",
-      className: "text-3xl leading-none"
-    }, "🗂️"), React.createElement("span", null, React.createElement("b", {
-      className: "block text-[22px] font-black italic leading-tight"
-    }, "みんなのデッキ"), React.createElement("small", {
-      className: "block text-[11px] font-black text-slate-900/80"
-    }, "デッキを登録する・ほかの人のデッキと戦う"))), !cardShareOpen() && React.createElement("span", {
-      className: "relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white"
-    }, "つくっている途中(デバッグ)")), typeof CardTacticsScreen === 'function' && (debug || cardTacticsOpen()) && React.createElement("button", {
+    }, debug ? 'つくっている途中(デバッグ)' : '準備中')), typeof CardTacticsScreen === 'function' && shareForm && React.createElement("button", {
       type: "button",
       "data-card-mode-tactics": true,
       onClick: () => {
@@ -99865,16 +99845,16 @@ const CardBattleScreen = ({
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "mhms-mark"
-    }, "TACTICS"), React.createElement("span", {
+    }, "DECKS"), React.createElement("span", {
       className: "relative flex items-center gap-2"
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "text-3xl leading-none"
-    }, "🧠"), React.createElement("span", null, React.createElement("b", {
+    }, "🗂️"), React.createElement("span", null, React.createElement("b", {
       className: "block text-[22px] font-black italic leading-tight"
-    }, "戦術カード"), React.createElement("small", {
+    }, "デッキ登録"), React.createElement("small", {
       className: "block text-[11px] font-black text-slate-900/80"
-    }, "デッキの戦い方を組む・カードを引く"))), !cardTacticsOpen() && React.createElement("span", {
+    }, "デッキを登録する・戦術カードを組む・引く"))), !cardShareOpen() && React.createElement("span", {
       className: "relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white"
     }, "つくっている途中(デバッグ)"))));
   }
@@ -99887,6 +99867,12 @@ const CardBattleScreen = ({
         setView(tacticsBack);
         setTacticsBack('mode');
       },
+      share: typeof CardDeckShare === 'function' ? {
+        collection: save.collection,
+        frame: rank && rank.profile && rank.profile.frame || null,
+        unlocked: save.unlocked,
+        debug
+      } : null,
       onPay: async (cost, entries) => save.point >= cost ? persist({
         point: save.point - cost
       }, {}, entries) : false
@@ -100066,6 +100052,41 @@ const CardBattleScreen = ({
       }
     });
   }
+  const foeTabs = shareForm ? React.createElement("div", {
+    "data-card-foe-tabs": true,
+    className: "mb-2 flex shrink-0 gap-1.5",
+    role: "tablist"
+  }, [['assistant', '助手'], ['breeder', 'ほかのブリーダー']].map(([id, label]) => React.createElement("button", {
+    key: id,
+    type: "button",
+    role: "tab",
+    "aria-selected": foeTab === id,
+    "data-card-foe-tab": id,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setFoeTab(id);
+    },
+    className: `flex-1 rounded-xl py-2 text-[13px] font-black ${foeTab === id ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`
+  }, label))) : null;
+  if (view === 'foe' && shareForm && foeTab === 'breeder' && typeof CardDeckShare === 'function') {
+    return React.createElement(CardDeckShare, {
+      db: db,
+      decks: save.decks,
+      collection: save.collection,
+      frame: rank && rank.profile && rank.profile.frame || null,
+      onBack: () => setView('mode'),
+      unlocked: save.unlocked,
+      debug: debug,
+      part: "fight",
+      title: "フリー対戦",
+      headExtra: foeTabs,
+      onFight: (e, lv) => startBattle({
+        who: e.tactics.habit,
+        level: lv,
+        share: e
+      })
+    });
+  }
   if (view === 'foe') {
     const a = allAssistants.find(x => x.id === foe.who) || foes[0];
     const line = a ? cardPickLine(a.id, 'challenge', null, () => 0.0) : null;
@@ -100074,11 +100095,11 @@ const CardBattleScreen = ({
       "data-card-top": "foe",
       className: SCREEN_SHELL_CLASS
     }, React.createElement(ScreenHead, {
-      title: "助手と対戦",
+      title: shareForm ? 'フリー対戦' : '助手と対戦',
       accent: "text-amber-200",
       onBack: () => setView('mode'),
       note: "相手の助手と強さをえらびます"
-    }), React.createElement("div", {
+    }), foeTabs, React.createElement("div", {
       className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
     }, React.createElement("div", {
       "data-card-foe-grid": foes.length >= 7 ? 7 : 6,
@@ -110390,9 +110411,13 @@ const CardDeckShare = ({
   unlocked = null,
   debug = false,
   onFight = null,
-  onOpenTactics = null
+  onOpenTactics = null,
+  part = 'all',
+  title = 'みんなのデッキ',
+  headExtra = null,
+  embedded = false
 }) => {
-  const [tab, setTab] = useState(onFight ? 'fight' : 'mine');
+  const [tab, setTab] = useState(part === 'mine' ? 'mine' : onFight ? 'fight' : 'mine');
   const [foes, setFoes] = useState(null);
   const [tacticsSave, setTacticsSave] = useState(null);
   useEffect(() => {
@@ -110563,7 +110588,7 @@ const CardDeckShare = ({
       Audio_.fgSe.tap();
       if (onFight) onFight(e, cardShareFightLevel(e.tactics));
     }
-  }, "戦う"), React.createElement("button", {
+  }, "戦う"), part !== 'fight' && React.createElement("button", {
     type: "button",
     "data-card-share-rent": e.ownerId,
     disabled: busy || rented && rented.ownerId === e.ownerId && rented.version === e.version,
@@ -110583,24 +110608,25 @@ const CardDeckShare = ({
   }, rows.map(foeRow)) : React.createElement("p", {
     className: "mt-1 text-[12px] font-bold text-slate-400"
   }, key === 'friends' ? 'デッキを登録しているフレンドはいません' : 'まだだれも登録していません'));
-  return React.createElement("div", {
-    "data-mh-screen": true,
-    "data-card-share": true,
-    className: SCREEN_SHELL_CLASS
-  }, React.createElement(ScreenHead, {
-    title: "みんなのデッキ",
-    accent: "text-amber-200",
-    onBack: onBack,
-    note: "自分のデッキを1組登録すると、ほかのブリーダーが戦えます"
-  }), React.createElement("div", {
-    className: `${SCREEN_LIST_CLASS} space-y-3 pb-4`
+  const registerButton = React.createElement("button", {
+    type: "button",
+    "data-card-share-register": true,
+    disabled: busy || !picked || issues.length > 0 || !selfId,
+    className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      void register();
+    }
+  }, mine ? 'このデッキで登録し直す' : 'このデッキを登録する');
+  const body = React.createElement("div", {
+    className: embedded ? 'space-y-3 pb-2' : `${SCREEN_LIST_CLASS} space-y-3 pb-4`
   }, mine === undefined && React.createElement("p", {
     className: "text-[13px] font-bold text-slate-300"
   }, "読み込み中…"), mine !== undefined && off && React.createElement("p", {
     "data-card-share-off": true,
     className: "rounded-xl border border-amber-300/40 bg-amber-500/10 p-3 text-[13px] font-bold text-amber-100",
     style: JA_WRAP_STYLE
-  }, jaWrap('いまは準備中です。しばらくしてから、もう一度開いてください')), mine !== undefined && !off && onFight && React.createElement("div", {
+  }, jaWrap('いまは準備中です。しばらくしてから、もう一度開いてください')), mine !== undefined && !off && onFight && part === 'all' && React.createElement("div", {
     className: "flex gap-1.5",
     role: "tablist"
   }, [['fight', '戦う'], ['mine', '自分のデッキを登録']].map(([id, label]) => React.createElement("button", {
@@ -110622,7 +110648,7 @@ const CardDeckShare = ({
   }, jaWrap('相手の強さは、登録した人が入れた戦術カードで決まります(賢さ)。もらえるビートPは、その賢さの助手と対戦と同じです')), fightIssues.length > 0 && React.createElement("p", {
     className: "mt-1 text-[12px] font-bold text-rose-200",
     style: JA_WRAP_STYLE
-  }, jaWrap(`使うデッキ: ${fightIssues[0]}`))), rented && React.createElement("div", {
+  }, jaWrap(`使うデッキ: ${fightIssues[0]}`))), rented && part !== 'fight' && React.createElement("div", {
     "data-card-share-rented": true,
     className: `${SCREEN_PANEL_CLASS} flex items-center gap-2`
   }, React.createElement("span", {
@@ -110736,18 +110762,24 @@ const CardDeckShare = ({
     "data-card-share-msg": true,
     className: "rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100",
     style: JA_WRAP_STYLE
-  }, jaWrap(msg)))), mine !== undefined && !off && tab === 'mine' && React.createElement("div", {
+  }, jaWrap(msg))), embedded && mine !== undefined && !off && tab === 'mine' && registerButton);
+  if (embedded) return React.createElement("div", {
+    "data-card-share": true,
+    "data-card-share-part": part
+  }, body);
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-card-share": true,
+    "data-card-share-part": part,
+    className: SCREEN_SHELL_CLASS
+  }, React.createElement(ScreenHead, {
+    title: title,
+    accent: "text-amber-200",
+    onBack: onBack,
+    note: part === 'fight' ? 'だれと戦うかをえらびます' : '自分のデッキを1組登録すると、ほかのブリーダーが戦えます'
+  }), headExtra, body, mine !== undefined && !off && tab === 'mine' && React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
-  }, React.createElement("button", {
-    type: "button",
-    "data-card-share-register": true,
-    disabled: busy || !picked || issues.length > 0 || !selfId,
-    className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40",
-    onClick: () => {
-      Audio_.fgSe.tap();
-      void register();
-    }
-  }, mine ? 'このデッキで登録し直す' : 'このデッキを登録する')));
+  }, registerButton));
 };
 const CARD_TACTICS_KEY = 'mh_card_tactics_v1';
 const CARD_LEVEL_KEY = 'mh_card_level_v1';
@@ -111503,10 +111535,12 @@ const CardTacticsScreen = ({
   decks,
   point = 0,
   onPay,
-  onBack
+  onBack,
+  share = null
 }) => {
   const [data, setData] = useState(null);
-  const [tab, setTab] = useState('build');
+  const [tab, setTab] = useState(share ? 'register' : 'build');
+  const screenTitle = share ? 'デッキ登録' : '戦術カード';
   const [frame, setFrame] = useState('base');
   const [pick, setPick] = useState(null);
   const [opening, setOpening] = useState(null);
@@ -111525,7 +111559,7 @@ const CardTacticsScreen = ({
     "data-card-tactics": true,
     className: SCREEN_SHELL_CLASS
   }, React.createElement(ScreenHead, {
-    title: "戦術カード",
+    title: screenTitle,
     accent: "text-amber-200",
     onBack: onBack
   }));
@@ -111684,10 +111718,10 @@ const CardTacticsScreen = ({
     "data-card-tactics": true,
     className: SCREEN_SHELL_CLASS
   }, React.createElement(ScreenHead, {
-    title: "戦術カード",
+    title: screenTitle,
     accent: "text-amber-200",
     onBack: onBack,
-    note: cardTacticsOpen() ? '' : 'つくっている途中(デバッグ)'
+    note: (share ? cardShareOpen() : cardTacticsOpen()) ? '' : 'つくっている途中(デバッグ)'
   }), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-2 pb-2`
   }, React.createElement("div", {
@@ -111711,7 +111745,7 @@ const CardTacticsScreen = ({
     style: JA_WRAP_STYLE
   }, `次は Lv${nextF.at} で${[nextF.base ? `基本${nextF.base}枚目` : '', nextF.breeder ? `ブリーダー${nextF.breeder}行目` : '', nextF.mon ? `各モンスター${nextF.mon}行目` : ''].filter(Boolean).join('・')}が開く`)), React.createElement("div", {
     className: "flex gap-1"
-  }, [['build', '組む'], ['pull', '引く'], ['list', `持っている ${ownCount}/${CARD_TACTIC_CARDS.length}`]].map(([k, l]) => React.createElement("button", {
+  }, [...(share ? [['register', '登録']] : []), ['build', '組む'], ['pull', '引く'], ['list', `持っている ${ownCount}/${CARD_TACTIC_CARDS.length}`]].map(([k, l]) => React.createElement("button", {
     key: k,
     type: "button",
     "data-card-tactics-tab": k,
@@ -111723,7 +111757,18 @@ const CardTacticsScreen = ({
   }, l))), notice && React.createElement("p", {
     "data-card-tactics-notice": true,
     className: "rounded-lg bg-amber-500/15 p-1.5 text-[12px] font-bold text-amber-100"
-  }, notice), tab === 'build' && React.createElement("div", {
+  }, notice), tab === 'register' && share && React.createElement(CardDeckShare, {
+    key: `reg-${t.frames && JSON.stringify(t.frames).length || 0}`,
+    db: db,
+    decks: decks,
+    collection: share.collection,
+    frame: share.frame,
+    unlocked: share.unlocked,
+    debug: share.debug,
+    part: "mine",
+    embedded: true,
+    onOpenTactics: () => setTab('build')
+  }), tab === 'build' && React.createElement("div", {
     "data-card-tactics-build": true,
     className: "space-y-1.5"
   }, React.createElement("div", {

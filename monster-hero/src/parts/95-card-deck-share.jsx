@@ -217,8 +217,12 @@ const cardRentedDeckSet = async (entry) => {
 // db … カードの表 / decks … 自分のデッキ(cardNormalizeDecks の形)/ collection … 持っているカード / frame … プロフィールのフレーム / onBack … 対戦えらびへ
 // unlocked … 助手と対戦で開いた強さ(cardLevelOpen)/ debug … デバッグから入った(強さを全部選べる)/ onFight(entry, level) … 登録デッキと戦う(84 の startBattle へ)
 // onOpenTactics … 戦術カードの画面へ(97。84 が開く)
-const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked = null, debug = false, onFight = null, onOpenTactics = null }) => {
-  const [tab, setTab] = useState(onFight ? 'fight' : 'mine');
+// part … 'all'(戦う+登録のタブ)/ 'fight'(フリー対戦の「ほかのブリーダー」タブ・2026-10-29 社長の作り直し)/ 'mine'(デッキ登録の「登録」タブ)
+//   title・headExtra … part='fight' のときの見出しと、見出しの下に出すもの(84 の「助手/ほかのブリーダー」のタブ)
+//   embedded … 外の画面(97 のデッキ登録)の中に入れる。殻と見出しを出さず、登録のボタンは中に置く
+//   借りるのは対戦前のデッキを選ぶ画面(87)へ移したので、part='fight' では「借りる」を出さない
+const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked = null, debug = false, onFight = null, onOpenTactics = null, part = 'all', title = 'みんなのデッキ', headExtra = null, embedded = false }) => {
+  const [tab, setTab] = useState(part === 'mine' ? 'mine' : onFight ? 'fight' : 'mine');
   const [foes, setFoes] = useState(null);             // { picks, friends, popular } … 戦う相手の3つの並び
   // 戦術カード(96・97): 登録するときに載せる枠(レベルで開いている枠・持っているカードだけ)
   const [tacticsSave, setTacticsSave] = useState(null);
@@ -316,8 +320,8 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
       <span className="flex shrink-0 flex-col gap-1">
         <button type="button" data-card-share-fight={e.ownerId} disabled={!onFight || fightIssues.length > 0} className="mh-button mh-button-primary min-h-[36px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
           onClick={() => { Audio_.fgSe.tap(); if (onFight) onFight(e, cardShareFightLevel(e.tactics)); }}>戦う</button>
-        <button type="button" data-card-share-rent={e.ownerId} disabled={busy || (rented && rented.ownerId === e.ownerId && rented.version === e.version)} className="min-h-[30px] rounded-lg border border-emerald-300/50 bg-slate-900 px-2 text-[11px] font-black text-emerald-100 disabled:opacity-50"
-          onClick={() => { Audio_.fgSe.tap(); void rent(e); }}>{rented && rented.ownerId === e.ownerId && rented.version === e.version ? '借りています' : '借りる'}</button>
+        {part !== 'fight' && <button type="button" data-card-share-rent={e.ownerId} disabled={busy || (rented && rented.ownerId === e.ownerId && rented.version === e.version)} className="min-h-[30px] rounded-lg border border-emerald-300/50 bg-slate-900 px-2 text-[11px] font-black text-emerald-100 disabled:opacity-50"
+          onClick={() => { Audio_.fgSe.tap(); void rent(e); }}>{rented && rented.ownerId === e.ownerId && rented.version === e.version ? '借りています' : '借りる'}</button>}
       </span>
     </li>
   );
@@ -327,13 +331,14 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
       {rows.length ? <ul className="mt-1 space-y-1">{rows.map(foeRow)}</ul> : <p className="mt-1 text-[12px] font-bold text-slate-400">{key === 'friends' ? 'デッキを登録しているフレンドはいません' : 'まだだれも登録していません'}</p>}
     </div>
   );
-  return (
-    <div data-mh-screen data-card-share className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title="みんなのデッキ" accent="text-amber-200" onBack={onBack} note="自分のデッキを1組登録すると、ほかのブリーダーが戦えます"/>
-      <div className={`${SCREEN_LIST_CLASS} space-y-3 pb-4`}>
+  const registerButton = (
+    <button type="button" data-card-share-register disabled={busy || !picked || issues.length > 0 || !selfId} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40" onClick={() => { Audio_.fgSe.tap(); void register(); }}>{mine ? 'このデッキで登録し直す' : 'このデッキを登録する'}</button>
+  );
+  const body = (
+      <div className={embedded ? 'space-y-3 pb-2' : `${SCREEN_LIST_CLASS} space-y-3 pb-4`}>
         {mine === undefined && <p className="text-[13px] font-bold text-slate-300">読み込み中…</p>}
         {mine !== undefined && off && <p data-card-share-off className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-3 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('いまは準備中です。しばらくしてから、もう一度開いてください')}</p>}
-        {mine !== undefined && !off && onFight && (
+        {mine !== undefined && !off && onFight && part === 'all' && (
           <div className="flex gap-1.5" role="tablist">
             {[['fight', '戦う'], ['mine', '自分のデッキを登録']].map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={tab === id} data-card-share-tab={id} className={`flex-1 ${chip(tab === id)} py-2`} onClick={() => { Audio_.fgSe.tap(); setTab(id); }}>{label}</button>)}
           </div>
@@ -343,7 +348,7 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
             <div className="text-[12px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('相手の強さは、登録した人が入れた戦術カードで決まります(賢さ)。もらえるビートPは、その賢さの助手と対戦と同じです')}</div>
             {fightIssues.length > 0 && <p className="mt-1 text-[12px] font-bold text-rose-200" style={JA_WRAP_STYLE}>{jaWrap(`使うデッキ: ${fightIssues[0]}`)}</p>}
           </div>
-          {rented && (
+          {rented && part !== 'fight' && (
             <div data-card-share-rented className={`${SCREEN_PANEL_CLASS} flex items-center gap-2`}>
               <span className="min-w-0 flex-1 text-[12px] font-bold text-emerald-100" style={JA_WRAP_STYLE}>{jaWrap(`借りているデッキ: ${rented.name}さんの「${rented.deckName || 'デッキ'}」(助手と対戦のデッキ選びで使えます。マルチ対戦では使えません)`)}</span>
               <button type="button" data-card-share-giveback disabled={busy} className="shrink-0 rounded-lg border border-white/15 bg-slate-900 px-2 py-1 text-[11px] font-black text-slate-200 disabled:opacity-50" onClick={() => { Audio_.fgSe.tap(); void giveBack(); }}>返す</button>
@@ -392,12 +397,16 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
           <p className="px-1 text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('登録できるのは1組だけです。登録し直すと、前の登録と入れかわります。登録した端末でだけ、書きかえ・やめる・報酬の受け取りができます(端末を変えるときは、バックアップで引き継げます)')}</p>
           {msg && <p data-card-share-msg className="rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
         </>)}
+        {embedded && mine !== undefined && !off && tab === 'mine' && registerButton}
       </div>
-      {mine !== undefined && !off && tab === 'mine' && (
-        <div className={SCREEN_FOOTER_CLASS}>
-          <button type="button" data-card-share-register disabled={busy || !picked || issues.length > 0 || !selfId} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40" onClick={() => { Audio_.fgSe.tap(); void register(); }}>{mine ? 'このデッキで登録し直す' : 'このデッキを登録する'}</button>
-        </div>
-      )}
+  );
+  if (embedded) return <div data-card-share data-card-share-part={part}>{body}</div>;
+  return (
+    <div data-mh-screen data-card-share data-card-share-part={part} className={SCREEN_SHELL_CLASS}>
+      <ScreenHead title={title} accent="text-amber-200" onBack={onBack} note={part === 'fight' ? 'だれと戦うかをえらびます' : '自分のデッキを1組登録すると、ほかのブリーダーが戦えます'}/>
+      {headExtra}
+      {body}
+      {mine !== undefined && !off && tab === 'mine' && <div className={SCREEN_FOOTER_CLASS}>{registerButton}</div>}
     </div>
   );
 };
