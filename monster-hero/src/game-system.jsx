@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0952ae0e00b62039
+// generated-sha256: 61570424ff53a81e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -42354,21 +42354,28 @@ const EX_EFFECT_TONE = {
   debuff: 'bg-red-900/90 ring-red-300/80 text-red-50',
   stack: 'bg-violet-900/90 ring-violet-300/80 text-violet-50',
 };
-const ExEffectChips = ({ items, max = 3, className = '' }) => {
+// compact … 新しい盤(横長の枠)。いままでのマーク×数と同じ所(絵の左下・幅40%まで)に、下から上へ積む
+const ExEffectChips = ({ items, max = 3, compact = false, className = '' }) => {
   const list = Array.isArray(items) ? items.filter(Boolean) : [];
   if (!list.length) return null;
-  const shown = list.slice(0, max);
+  // 新しい盤(横長の枠)は高さが足りないので2つまで(上の段の「狙」・予測ダメージに届かないように)。残りは「+N」を1つ目の横に添える
+  const limit = compact ? Math.min(max, 2) : max;
+  const shown = list.slice(0, limit);
+  const more = list.length - shown.length;
+  const chip = (e) => (
+    <span key={e.key} data-ex-effect={e.key} data-ex-effect-kind={e.kind}
+      className={`flex min-w-0 ${compact ? 'max-w-full text-[8px]' : 'max-w-[96px] text-[9px]'} items-center gap-[2px] rounded-md px-1 py-px font-black leading-tight whitespace-nowrap ring-1 ${EX_EFFECT_TONE[e.kind] || EX_EFFECT_TONE.buff}`}>
+      <span className="shrink-0">{exEffectIconOf(e)}</span>
+      <span className="min-w-0 truncate">{e.name}</span>
+      {exEffectAmountText(e) && <span className="shrink-0 tabular-nums opacity-90">{exEffectAmountText(e)}</span>}
+    </span>
+  );
+  const moreChip = more > 0 ? <span data-ex-effect-more className="shrink-0 rounded-md bg-black/70 px-1 text-[9px] font-black leading-tight text-slate-100">+{more}</span> : null;
   return (
-    <div data-ex-effect-chips={list.length} className={`pointer-events-none flex flex-col items-start gap-[2px] ${className}`}>
-      {shown.map((e) => (
-        <span key={e.key} data-ex-effect={e.key} data-ex-effect-kind={e.kind}
-          className={`flex max-w-[96px] items-center gap-[2px] rounded-md px-1 py-px text-[9px] font-black leading-tight whitespace-nowrap ring-1 ${EX_EFFECT_TONE[e.kind] || EX_EFFECT_TONE.buff}`}>
-          <span className="shrink-0">{exEffectIconOf(e)}</span>
-          <span className="min-w-0 truncate">{e.name}</span>
-          {exEffectAmountText(e) && <span className="shrink-0 tabular-nums opacity-90">{exEffectAmountText(e)}</span>}
-        </span>
-      ))}
-      {list.length > max && <span data-ex-effect-more className="rounded-md bg-black/70 px-1 text-[9px] font-black leading-tight text-slate-100">+{list.length - max}</span>}
+    <div data-ex-effect-chips={list.length} className={`pointer-events-none flex ${compact ? 'flex-col-reverse' : 'flex-col'} items-start gap-[2px] ${className}`}>
+      {compact
+        ? shown.map((e, k) => (k === 0 && moreChip ? <span key={e.key} className="flex max-w-full min-w-0 items-center gap-[2px]">{chip(e)}{moreChip}</span> : chip(e)))
+        : <>{shown.map(chip)}{moreChip}</>}
     </div>
   );
 };
@@ -44386,7 +44393,7 @@ function BattleScreen({
                   style={{'--ex-c1':battleCutinThemeOf(tacticsExCutin).c1,'--ex-c2':battleCutinThemeOf(tacticsExCutin).c2,...(tacticsExCutin.ms?{animationDuration:`${tacticsExCutin.ms}ms`}:{})}}><i/><i/></span>}
                 {/* ★貯まった数(クッキー・黒音符など)を「マーク×数」で常に出す(2026-10-12 社長の依頼)。タクティクスの枠は絵の左下、ほかのモードの縦長の枠は名前の帯のすぐ下(下の端は間合いの札がある) */}
                 {/* ★クラシックなど縦長の枠は、下の縦積みの欄(data-tactics-slot-marks)の先頭へ入れる(予測ダメージ・置いたカードと重ならない。2026-10-13) */}
-                {tacticsNewLayout&&slotExEffects&&<ExEffectChips items={slotExEffects} className="absolute left-1 top-[40px] z-[45] [@media(orientation:landscape)_and_(max-height:520px)]:top-[34px]"/>}
+                {tacticsNewLayout&&slotExEffects&&<ExEffectChips items={slotExEffects} compact className="absolute left-[2px] bottom-[22px] z-[62] max-w-[calc(40%-2px)]"/>}
                 {tacticsNewLayout&&!slotExEffects&&<BattleStackMarks counts={allyStackCounts[i]} side="ally" full={SWEET_STACK_MAX} className="mh-stack-marks-ally"/>}
                 {/* モンスターごとの演出(ゴーストの分身・スネグーラチカのプレゼント・剣士モッチーの型)。タクティクスの枠だけ・軽量表示では出さない */}
                 {tacticsNewLayout&&!ecoBattleView&&!liteBattleView&&typeof tacticsSlotCountersAt==='function'&&<BattleMonsterFx fx={debugStackMarks&&debugStackMarks.fx&&debugStackMarks.fx[i]?debugStackMarks.fx[i]:tacticsSlotCountersAt(i)} imgSrc={s?.imgUrl} monId={s?.id} stacks={allyStackCounts[i]} calm={battleFx.idleMotion==='OFF'}/>}

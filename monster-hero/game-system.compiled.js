@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cff5ed927a46373c
+// source-sha256: 3419ca4807eb3149
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -70511,29 +70511,37 @@ const EX_EFFECT_TONE = {
 const ExEffectChips = ({
   items,
   max = 3,
+  compact = false,
   className = ''
 }) => {
   const list = Array.isArray(items) ? items.filter(Boolean) : [];
   if (!list.length) return null;
-  const shown = list.slice(0, max);
-  return React.createElement("div", {
-    "data-ex-effect-chips": list.length,
-    className: `pointer-events-none flex flex-col items-start gap-[2px] ${className}`
-  }, shown.map(e => React.createElement("span", {
+  const limit = compact ? Math.min(max, 2) : max;
+  const shown = list.slice(0, limit);
+  const more = list.length - shown.length;
+  const chip = e => React.createElement("span", {
     key: e.key,
     "data-ex-effect": e.key,
     "data-ex-effect-kind": e.kind,
-    className: `flex max-w-[96px] items-center gap-[2px] rounded-md px-1 py-px text-[9px] font-black leading-tight whitespace-nowrap ring-1 ${EX_EFFECT_TONE[e.kind] || EX_EFFECT_TONE.buff}`
+    className: `flex min-w-0 ${compact ? 'max-w-full text-[8px]' : 'max-w-[96px] text-[9px]'} items-center gap-[2px] rounded-md px-1 py-px font-black leading-tight whitespace-nowrap ring-1 ${EX_EFFECT_TONE[e.kind] || EX_EFFECT_TONE.buff}`
   }, React.createElement("span", {
     className: "shrink-0"
   }, exEffectIconOf(e)), React.createElement("span", {
     className: "min-w-0 truncate"
   }, e.name), exEffectAmountText(e) && React.createElement("span", {
     className: "shrink-0 tabular-nums opacity-90"
-  }, exEffectAmountText(e)))), list.length > max && React.createElement("span", {
+  }, exEffectAmountText(e)));
+  const moreChip = more > 0 ? React.createElement("span", {
     "data-ex-effect-more": true,
-    className: "rounded-md bg-black/70 px-1 text-[9px] font-black leading-tight text-slate-100"
-  }, "+", list.length - max));
+    className: "shrink-0 rounded-md bg-black/70 px-1 text-[9px] font-black leading-tight text-slate-100"
+  }, "+", more) : null;
+  return React.createElement("div", {
+    "data-ex-effect-chips": list.length,
+    className: `pointer-events-none flex ${compact ? 'flex-col-reverse' : 'flex-col'} items-start gap-[2px] ${className}`
+  }, compact ? shown.map((e, k) => k === 0 && moreChip ? React.createElement("span", {
+    key: e.key,
+    className: "flex max-w-full min-w-0 items-center gap-[2px]"
+  }, chip(e), moreChip) : chip(e)) : React.createElement(React.Fragment, null, shown.map(chip), moreChip));
 };
 const BattleUnitDetailBody = ({
   side,
@@ -73797,7 +73805,8 @@ function BattleScreen({
       }
     }, React.createElement("i", null), React.createElement("i", null)), tacticsNewLayout && slotExEffects && React.createElement(ExEffectChips, {
       items: slotExEffects,
-      className: "absolute left-1 top-[40px] z-[45] [@media(orientation:landscape)_and_(max-height:520px)]:top-[34px]"
+      compact: true,
+      className: "absolute left-[2px] bottom-[22px] z-[62] max-w-[calc(40%-2px)]"
     }), tacticsNewLayout && !slotExEffects && React.createElement(BattleStackMarks, {
       counts: allyStackCounts[i],
       side: "ally",
