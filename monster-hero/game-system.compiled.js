@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 72e458ee90dea96e
+// source-sha256: 85dbd76a3fcadd21
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -70804,7 +70804,7 @@ const ExEffectChips = ({
     key: e.key,
     "data-ex-effect": e.key,
     "data-ex-effect-kind": e.kind,
-    className: `flex min-w-0 ${compact ? 'max-w-full text-[8px]' : 'max-w-[96px] text-[9px]'} items-center gap-[2px] rounded-md px-1 py-px font-black leading-tight whitespace-nowrap ring-1 ${EX_EFFECT_TONE[e.kind] || EX_EFFECT_TONE.buff}`
+    className: `flex min-w-0 ${compact ? 'max-w-full text-[8px]' : 'max-w-full text-[9px]'} items-center gap-[2px] rounded-md px-1 py-px font-black leading-tight whitespace-nowrap ring-1 ${EX_EFFECT_TONE[e.kind] || EX_EFFECT_TONE.buff}`
   }, React.createElement("span", {
     className: "shrink-0"
   }, exEffectIconOf(e)), React.createElement("span", {
@@ -70898,7 +70898,7 @@ const BattleUnitDetailBody = ({
   }, stat('hp', 'ライフ', 'text-pink-400', `${status.hp.toLocaleString()} / ${status.maxHp.toLocaleString()}`, status.baseMaxHp !== status.maxHp ? `元の上限 ${status.baseMaxHp.toLocaleString()}` : ''), stat('guts', 'ガッツ', 'text-amber-400', `${status.guts.toLocaleString()} / ${status.maxGuts.toLocaleString()}`, status.baseMaxGuts !== status.maxGuts ? `元の上限 ${status.baseMaxGuts.toLocaleString()}` : ''), statOf('atk', 'ちから', 'text-red-400', status.atk), statOf('def', '丈夫さ', 'text-emerald-400', status.def)), React.createElement("div", {
     "data-unit-stat": "apt",
     className: "mt-1 text-[10px] font-black text-cyan-300"
-  }, "この枠の間合い適性 ", apt >= 0 ? '+' : '', apt, "%"), status.tactics ? React.createElement(React.Fragment, null, list('own', 'この子にかかっている効果', [...(hasEx ? exRows : markRows), ...lineRows, ...own.map(chipRow)]), list('team', '味方全員にかかっている効果', team.map(chipRow))) : list('team', 'かかっている効果(パーティ全体)', [...markRows, ...lineRows, ...own.map(chipRow), ...team.map(chipRow)]));
+  }, "この枠の間合い適性 ", apt >= 0 ? '+' : '', apt, "%"), status.tactics ? React.createElement(React.Fragment, null, list('own', 'この子にかかっている効果', [...(hasEx ? exRows : markRows), ...lineRows, ...own.map(chipRow)]), list('team', '味方全員にかかっている効果', team.map(chipRow))) : list('team', 'かかっている効果(パーティ全体)', hasEx ? [...exRows, ...lineRows] : [...markRows, ...lineRows, ...own.map(chipRow), ...team.map(chipRow)]));
 };
 const BattleUnitDetailPanel = ({
   side,
@@ -71847,6 +71847,12 @@ function BattleScreen({
     });
     return out;
   })();
+  const slotEffectsOf = i => {
+    if (!Array.isArray(slots) || !slots[i]) return null;
+    if (typeof tacticsExEffectsAt === 'function') return tacticsExEffectsAt(i, allyStackCounts[i]) || [];
+    if (!Array.isArray(tacticsUnits) && typeof classicEffectsFromChips === 'function') return classicEffectsFromChips(battleBuffChips(), i, allyStackCounts[i]) || [];
+    return null;
+  };
   const [enemyDebuffOpen, setEnemyDebuffOpen] = useState(false);
   const raidGrowthOn = runMode === BATTLE_MODE_RAID_JACK_A;
   const raidGrowth = raidGrowthOn ? raidJackGrowthAt(turnCount) : null;
@@ -73798,7 +73804,7 @@ function BattleScreen({
       baseId: s?.id,
       image: img
     }) : img;
-    const slotExEffects = s && typeof tacticsExEffectsAt === 'function' ? tacticsExEffectsAt(i, allyStackCounts[i]) || [] : null;
+    const slotExEffects = s ? slotEffectsOf(i) : null;
     const slotSoulStage = (() => {
       if (!s || !s.masuId || ecoBattleView || liteBattleView || fxLoad === 'LIGHT' || fxLoad === 'MINIMAL' || !Array.isArray(battleSoulMasus)) return 0;
       const m = battleSoulMasus.find(x => x && (x.id === s.masuId || x.masuId === s.masuId));
@@ -74290,6 +74296,7 @@ function BattleScreen({
       className: `${tacticsNewLayout ? `absolute left-full w-[150%] overflow-hidden items-stretch justify-start px-1.5 ${slotAimHit || previewDmg > 0 || previewGuard > 0 ? 'top-[15px] h-[calc(100%-46px)]' : 'top-px h-[calc(100%-31px)]'}` : 'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`
     }, !tacticsNewLayout && slotExEffects && React.createElement(ExEffectChips, {
       items: slotExEffects,
+      max: 2,
       className: "w-full"
     }), !tacticsNewLayout && !slotExEffects && React.createElement(BattleStackMarks, {
       counts: allyStackCounts[i],
@@ -75040,7 +75047,7 @@ function BattleScreen({
     status: battleUnitStatusOf(exPanel.slot),
     chips: battleBuffChips(),
     marks: allyStackCounts[exPanel.slot],
-    exEffects: typeof tacticsExEffectsAt === 'function' ? tacticsExEffectsAt(exPanel.slot, allyStackCounts[exPanel.slot]) || [] : null
+    exEffects: slotEffectsOf(exPanel.slot)
   }), React.createElement("button", {
     type: "button",
     "data-tactics-ex-close": true,
@@ -75208,7 +75215,7 @@ function BattleScreen({
     status: typeof battleUnitStatusOf === 'function' ? battleUnitStatusOf(unitDetail.slot) : null,
     chips: battleBuffChips(),
     marks: allyStackCounts[unitDetail.slot],
-    exEffects: typeof tacticsExEffectsAt === 'function' ? tacticsExEffectsAt(unitDetail.slot, allyStackCounts[unitDetail.slot]) || [] : null,
+    exEffects: slotEffectsOf(unitDetail.slot),
     onClose: () => setUnitDetail(null)
   })), showBattleMenu && ReactDOM.createPortal(React.createElement("div", {
     className: "fixed inset-0 z-[70000] flex items-start justify-end bg-black/70 p-2",
