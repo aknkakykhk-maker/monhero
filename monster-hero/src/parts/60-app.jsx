@@ -254,6 +254,9 @@ function MonsterHeroGame() {
     // 前に選んだ難易度を引き継ぐ(2026-10-11)。保存値が無い・壊れている・公開していない難易度なら '' のまま(EASY から)。
     // このセッションの中ですでに選んでいれば、そちらを優先する
     const lastDifficulty=normalizeRhythmLastDifficulty(await storeGet(RHYTHM_LAST_DIFFICULTY_KEY,'',false));
+    // ビートランク(2026-10-29)。表を足す前に遊んだ人の分も、開いたときに全国ランキングへそろえる(1回の起動で1回だけ)
+    {const savedRank=normalizeBeatRank(await storeGet(BEAT_RANK_KEY,null,false));setBeatRank(savedRank);
+     if(!beatRankSyncedRef.current&&savedRank.xp>0){beatRankSyncedRef.current=true;void syncBeatRankToServer(savedRank);}}
     if(lastDifficulty)setRhythmSelectedDifficultyId(prev=>prev||lastDifficulty);
     // どこから入っても、まずモードえらび(2026-10-03・ユーザー指示「モンビーを始めたときにまずモード選択画面」)。
     // ソロはそこから曲えらび(RHYTHM_DEMO_HOME)へ進む
@@ -2144,6 +2147,44 @@ function MonsterHeroGame() {
     return true;
   };
   // 使ったセッション券を1枚返す(人が来て、呼んだマスモンが席をゆずったとき)
+  // ビートランクの行を全国ランキングへ書く(持ち主の鍵 k で)。表がまだ無い・送れないときは何もしない(遊びは止めない)
+  const syncBeatRankToServer = async (saved) => {
+    try {
+      const cur = normalizeBeatRank(saved);
+      if (!cur.k || cur.xp <= 0) return;
+      const breederId = await ensureBreederId();
+      if (!breederId) return;
+      await sbPutBeatRank({ breederId, key: cur.k, name: breederName, icon: breederIcon,
+        profileFrame: typeof rankingProfileFrameValue === 'function' ? rankingProfileFrameValue(profileFrameId) : null, xp: cur.xp });
+    } catch (_) { /* 送れなくても、端末の記録はそのまま */ }
+  };
+  // 最後まで遊んだ1曲ぶんの経験値を足し、ランクが上がったらごほうびを配る(セッション券・ビートP)。
+  // 呼ぶのは曲の終わり(onComplete)の、ソロ・みんなで対戦・レイドで、アシストモードでないときだけ(練習・お手本・途中でやめた曲は0)
+  const grantBeatRankForResult = async (result, play) => {
+    try {
+      const raw = await storeGet(BEAT_RANK_KEY, null, false);
+      const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+      const gain = beatRankAfter(raw, { difficultyId: play && play.difficulty && play.difficulty.id, cleared: result?.cleared !== false,
+        fullCombo: result?.fullCombo === true, allMarvelous: result?.allMarvelous === true, multi: play && play.from === 'multi', today });
+      if (!gain.add) return;
+      const next = { ...gain.next, k: gain.next.k || beatRankNewKey() };
+      await storeSet(BEAT_RANK_KEY, next, false);
+      setBeatRank(next);
+      if (gain.tickets > 0) {
+        const nextItems = { ...ownedItemsRef.current, [RHYTHM_BUDDY_TICKET_ITEM_ID]: ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TICKET_ITEM_ID) + gain.tickets };
+        ownedItemsRef.current = nextItems;
+        setOwnedItems(nextItems);
+        await storeSet('mh_owned_items', nextItems, false);
+      }
+      if (gain.beatPoints > 0 && typeof addRhythmEventPoints === 'function') await addRhythmEventPoints(gain.beatPoints);
+      const gains = [
+        ...(gain.tickets > 0 ? [{ icon: '🎶', text: `セッション券 ×${gain.tickets}` }] : []),
+        ...(gain.beatPoints > 0 ? [{ icon: '🎟️', text: `ビートP ${gain.beatPoints.toLocaleString()}` }] : []),
+      ];
+      setBeatRankAward({ add: gain.add, parts: gain.parts, from: gain.from, to: gain.to, xp: next.xp, gains });
+      void syncBeatRankToServer(next);
+    } catch (_) { /* 経験値が書けなくても、曲の記録の保存は止めない */ }
+  };
   const refundBuddyTicket = async () => {
     const nextItems = { ...ownedItemsRef.current, [RHYTHM_BUDDY_TICKET_ITEM_ID]: ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TICKET_ITEM_ID) + 1 };
     ownedItemsRef.current = nextItems;
@@ -4709,6 +4750,11 @@ function MonsterHeroGame() {
   // 直前の演奏で何周ぶん入ったか。帯へ1回だけ出す(保存しない)。
   // 演奏から抜けた直後の effect からも見るので、同期の控え(ref)も持つ
   const [rhythmPlayRunAwardState, setRhythmPlayRunAwardState] = useState(null);
+  // ビートランク(2026-10-29 社長)。保存は mh_rhythm_rank_v1(読むときは normalizeBeatRank を通す)。
+  // beatRankAward は、いま見ている曲の結果に出す「経験値 +◯(ランク◯→◯)」。曲を始めるたびに空にする
+  const [beatRank, setBeatRank] = useState(() => normalizeBeatRank(null));
+  const [beatRankAward, setBeatRankAward] = useState(null);
+  const beatRankSyncedRef = useRef(false);
   const rhythmPlayRunAwardRef = useRef(null);
   const rhythmPlayRunAward = rhythmPlayRunAwardState;
   const setRhythmPlayRunAward = (next) => { rhythmPlayRunAwardRef.current = next; setRhythmPlayRunAwardState(next); };
@@ -5712,7 +5758,7 @@ function MonsterHeroGame() {
   //   (2026-09-07・ユーザー提案)。追いつきが残るのは、途中でやめたときだけ。
   //   その場合はいまの周がそのまま続いているので、止まっていたぶんを取り戻すのが正しい。
   useEffect(() => {
-    if (gameState === 'RHYTHM_PLAY') { rhythmPlayStartedAtRef.current = Date.now(); setRhythmPlayRunAward(null); stopCatchUp(); return; }
+    if (gameState === 'RHYTHM_PLAY') { rhythmPlayStartedAtRef.current = Date.now(); setRhythmPlayRunAward(null); setBeatRankAward(null); stopCatchUp(); return; }
     const startedAt = rhythmPlayStartedAtRef.current;
     rhythmPlayStartedAtRef.current = 0;
     if (!startedAt) return;
@@ -19889,7 +19935,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         })()}
 
         {raidDamageFx&&((gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='raid')||gameState==='RAID_JACK_DEBUG')&&<RaidJackDamageFx key={raidDamageFx.key} fx={raidDamageFx} onDone={()=>setRaidDamageFx(null)}/>}
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward} onComplete={async(result,merged)=>{
           // デバッグ画面の試作曲(RHYTHM_PROTO_SONGS)は、何も残さない。周回の報酬・経験値・自己ベスト・クリア回数・
           // 実績・全国ランキングのどれにも入れない(CLAUDE.md ⑦。試作は公開しない曲なので、記録に混ぜない)
           if(rhythmPlay.from==='proto')return;
@@ -19958,6 +20004,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // アシストモード(2026-09-24・バンドリ！アワーノーツから取り入れた遊び方)のプレイは、
           // 自己ベストにも全国ランキングにも残さない(CLAUDE.md ⑦「ランキング対象外の遊び方は送信しないだけでなく自己ベストも上書きしない」)
           if(result?.assist===true)return;
+          // ビートランクの経験値(2026-10-29)。ソロ・みんなで対戦・レイドを最後まで遊んだときだけ(ここは最後まで遊んだときしか通らない)
+          if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')await grantBeatRankForResult(result,rhythmPlay);
           // 通算クリア回数を数える(スエゾービートのフレームの条件)。ライフを残して終えたときだけ。
           // 練習・アシストモードは上で除いてある。数えられなくても記録の保存は止めない
           if(result?.cleared!==false){ try{ setRhythmClearTotal(await addRhythmClearTotal()); }catch{} }
@@ -20014,7 +20062,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             // 画面(gameState)は移さず、対戦の画面の上へ重ねる。画面を移すと、ライブ開始の合図を受ける側が外れて取り逃す
             open:(song)=>{loadRhythmRanking(song);},
             render:(onClose)=>(
-              <RhythmRankingScreen
+              <RhythmRankingScreen beatRankXp={beatRank.xp}
                 loadRhythmEventRanking={loadRhythmEventRanking}
                 loadRhythmRanking={loadRhythmRanking}
                 loadRhythmTotalRanking={loadRhythmTotalRanking}
@@ -20044,6 +20092,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOptions:()=>{setRhythmOptionsBack('RHYTHM_MODE_SELECT');setGameState('RHYTHM_OPTIONS');},
             monsterCount:rhythmMonsterSlots.length, monsterMax:RHYTHM_MONSTER_SLOT_MAX,
             monsterFaces:rhythmMonsterSlots.slice(0,RHYTHM_MONSTER_SLOT_MAX).map(masu=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];return {id:masu.id,src:base?(base.faceIconUrl||base.iconUrl):''};}),
+            // ビートランク(2026-10-29)。モードえらびの上に、今のランクと次までの棒を出す
+            beatRankXp:beatRank.xp,
             assistant:rhythmModeAssistant,
             showArt:rhythmSettings.modeSelectArt!==false, showComment:rhythmSettings.modeSelectComment!==false,
             onToggleAssistant:async(key)=>{const saved=await saveRhythmSettings({...rhythmSettings,[key]:rhythmSettings[key]===false});setRhythmSettings(saved);},
@@ -20169,7 +20219,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             高い難易度で挑むほど上位に近づく(§3.5・RHYTHM_MODE.md参照)。
             自分のスコアはいちばん高い1件だけが載る(rhythmRankingDedupeByUser)。 */}
         {gameState==='RHYTHM_RANKING'&&(
-          <RhythmRankingScreen
+          <RhythmRankingScreen beatRankXp={beatRank.xp}
             loadRhythmEventRanking={loadRhythmEventRanking}
             loadRhythmRanking={loadRhythmRanking}
             loadRhythmTotalRanking={loadRhythmTotalRanking}

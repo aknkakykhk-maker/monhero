@@ -2349,6 +2349,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         <div className={`relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${ms.showArt && ms.assistant ? '' : 'portrait:justify-center'}`}>
           <ModeSelectAssistantPanel assistant={ms.assistant} showArt={ms.showArt} showComment={ms.showComment} onToggle={ms.onToggleAssistant} />
           <div className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2">
+            {/* ビートランク(2026-10-29 社長): 今のランクと次までの棒。曲を遊ぶとたまり、上がるたびにセッション券(下のひとこと) */}
+            {Number.isFinite(ms.beatRankXp) && <PlayerRankPanel kind="beat" xp={ms.beatRankXp}
+              note={`ランク${beatRankNextBeatPointsRank(playerRankInfo(ms.beatRankXp).rank)}で ビートP ${BEAT_RANK_BEAT_POINTS}`}
+              sub="曲を遊ぶとたまります。ランクが上がるたびにセッション券を1枚もらえます。"/>}
             {!(ms.assistant && (ms.showArt || ms.showComment)) && assistToggles('justify-end', true)}
             {friendsOn && friendInvites.length > 0 && (
               <section data-rhythm-multi-friend-invites className={`${card} space-y-2 border-pink-400/60`}>

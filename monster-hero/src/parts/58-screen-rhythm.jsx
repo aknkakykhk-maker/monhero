@@ -659,6 +659,7 @@ function RhythmRankingScreen({
   rhythmRankingTab, rhythmTotalRanking,
   rhythmRankingPending=null, onResendRhythmRankingPending=null,
   setRhythmEventDivision, setRhythmRankingDetail, setRhythmRankingTab,
+  beatRankXp=0,
 }) {
       // イベント詳細(告知画像と報酬の表)を開いているか。
       // 一覧の上へ積むとランキングが画面の外へ押し出されるので、別に開く形にした
@@ -709,7 +710,10 @@ function RhythmRankingScreen({
       // イベントのタブを開いていて中身が無いとき(今回が未開催・前回がまだ無い)は、
       // 曲別の一覧へ落ちないようにする。文言だけを出す
       const totalTabOpen=totalTab&&!boardTab&&!eventTabOpen;
-      const songTab=!totalTabOpen&&!boardTab&&!eventTabOpen;
+      // ビートランクのタブ(2026-10-29 社長)。ランク順(同じなら経験値の合計順)・上位100人とあなた
+      const beatRankTabOpen=rhythmRankingTab==='beatRank'&&!boardTab&&!eventTabOpen;
+      const [beatRankReload,setBeatRankReload]=useState(0);
+      const songTab=!totalTabOpen&&!boardTab&&!eventTabOpen&&!beatRankTabOpen;
       const boards=rhythmEventRanking||{};
       const event=(boardKind&&boards[boardKind])||{status:'idle',window:null,event:null,boards:{}};
       const eventDefinition=event.event||null;
@@ -773,6 +777,7 @@ function RhythmRankingScreen({
         // ★開催していないあいだもタブを出す(2026-09-14・ユーザー依頼「イベントタブを常設」)。
         //   中で「今回／前回」を切り替える。どちらも無いときは、その旨の文言を出す
         ...(eventReleased?[{id:'event',label:'イベント'}]:[]),
+        {id:'beatRank',label:'ビートランク'},
       ];
       // ★タブも部門も、押すたびに取り直す(2026-09-11・ユーザー指摘「総合だけ反映が遅い」)。
       //   「初めて開いたときだけ」にしていたため、一度見た部門は古い順位のまま残っていた。
@@ -809,6 +814,7 @@ function RhythmRankingScreen({
       const refresh=()=>{
         if(boardTab)loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,eventDivisionId);
         else if(totalTabOpen)loadRhythmTotalRanking&&loadRhythmTotalRanking();
+        else if(beatRankTabOpen)setBeatRankReload(n=>n+1);
         else loadRhythmRanking(song,rhythmRanking.difficultyId||'ALL');
       };
       // ランク(S/SS/…)を決める点数。回数ボーナス込みの点だと満点を超えてしまうので、
@@ -885,10 +891,10 @@ function RhythmRankingScreen({
           <button aria-label="更新" data-rhythm-ranking-refresh onClick={refresh} className="ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200">更新</button>
         </header>
         {/* タブ。押したときに初めて取りにいく。公開前はタブごと出さない */}
-        {rankingTabs.length>1&&<div data-rhythm-ranking-tabs className="flex shrink-0 gap-1 border-b border-white/10 bg-slate-950/95 px-3 pb-2 pt-1">
+        {rankingTabs.length>1&&<div data-rhythm-ranking-tabs className="flex shrink-0 gap-1 overflow-x-auto border-b border-white/10 bg-slate-950/95 px-3 pb-2 pt-1">
           {rankingTabs.map(tab=>(
             <button key={tab.id} data-rhythm-ranking-tab={tab.id} onClick={()=>openTab(tab.id)}
-              className={`min-h-[44px] flex-1 rounded-xl border px-2 text-[11px] font-black ${rhythmRankingTab===tab.id?'border-amber-300/60 bg-amber-500/15 text-amber-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
+              className={`min-h-[44px] min-w-fit flex-1 whitespace-nowrap rounded-xl border px-2 text-[11px] font-black ${rhythmRankingTab===tab.id?'border-amber-300/60 bg-amber-500/15 text-amber-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
               {tab.label}
             </button>
           ))}
@@ -913,6 +919,8 @@ function RhythmRankingScreen({
               ・横画面の案内(RhythmLandscapeHint)  … 曲えらび・遊びかたの側にある
               ・タブごとの説明文                   … ヘルプの「全国ランキング」にある
               ・みゅあの吹き出し                   … 曲えらび(イベント開催中)にある */}
+          {beatRankTabOpen&&<PlayerRankBoard kind="beat" fetchTop={sbFetchBeatRanks} fetchMine={async()=>sbFetchBeatRankMine(await ensureBreederId())}
+            renderIcon={rankingBreederIcon} selfXp={beatRankXp} reloadKey={beatRankReload}/>}
           {totalTabOpen&&(<>
             {total.status==='loading'&&<p data-rhythm-total-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
             {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}

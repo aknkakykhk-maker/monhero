@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 00f7b2acee51567f
+// generated-sha256: a5a64082ce57e8f8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10089,6 +10089,83 @@ const reconcileMonthlyMissionCompletions = (value,now=Date.now()) => {
   return state;
 };
 
+// ---- part: 18-player-rank.jsx ----
+// ==================== プレイヤーのランク(ビートランク・カードランク共通)と、ビートランクの経験値 ====================
+// 2026-10-29 社長: モンヒロビートに「ビートランク」(上限なし・全員ランク1から)。MFバトルカードのレベルも「カードランク」に改め、対の名前にする。
+//   ランクの計算(次のランクまで 20+3×ランク)は2つで同じなので、ここに1か所だけ置く(マルチ部ツナグくんと決めた)。
+//   カードは 96-card-tactics.jsx の cardLevelInfo がこれを呼ぶ形に寄せる。
+// ★マスモンの「ビートLv」(rhythmBuddyLevelInfo)とは別物。画面でも「Lv」の字を使わず「ランク」と書いて取り違えないようにする。
+// 保存は新しいキー mh_rhythm_rank_v1 だけ(既存の記録やランキングには触らない)。読むときは normalizeBeatRank を必ず通す。
+// ここは純粋な計算だけ(保存・日付・画面は呼ぶ側)。
+
+// 次のランクまでに要る経験値。差し替えるのはここだけ(サーバの player_rank_of も同じ式)
+const playerRankNeed = (rank) => 20 + 3 * rank;
+// 壊れた経験値(数でない・無限・負)は0として数える。ループが止まらなくならないよう上限も切る
+const playerRankSafeXp = (xp) => { const n = Number(xp); return Number.isFinite(n) ? Math.min(Math.max(0, Math.floor(n)), Number.MAX_SAFE_INTEGER) : 0; };
+// 経験値の合計 → { rank(今のランク), into(今のランクの中で、たまった分), need(次のランクまでに要る分) }
+const playerRankInfo = (xp) => {
+  let left = playerRankSafeXp(xp), rank = 1;
+  for (;;) { const need = playerRankNeed(rank); if (left < need) return { rank, into: left, need }; left -= need; rank += 1; }
+};
+
+// ---- ビートランク ----
+const BEAT_RANK_KEY = 'mh_rhythm_rank_v1';
+// 1曲の経験値(2026-10-29 社長。HELL は「劇的に上げる」で 60)。最後まで遊んだときの値
+const BEAT_RANK_XP = Object.freeze({ EASY: 6, NORMAL: 8, HARD: 10, EXPERT: 14, MASTER: 18, HELL: 60 });
+// 途中でライフが尽きた(失敗)ときは3分の1(端数は四捨五入)。フルコンボ +4、全部 MARVELOUS は +8(フルコンボの +4 と重ねない)。
+// みんなで対戦は1曲ぶん(上乗せ込み)を1.5倍(端数は四捨五入)。その日はじめての1曲は、そのあとに +30
+const BEAT_RANK_BONUS = Object.freeze({ failDivisor: 3, fullCombo: 4, allMarvelous: 8, multiScale: 1.5, dayFirst: 30 });
+// ごほうび: ランクが1つ上がるたびにセッション券1枚。加えて、ランク3・10・20、そのあと5ランクごとにビートP 300
+const BEAT_RANK_TICKETS_PER_RANK = 1;
+const BEAT_RANK_BEAT_POINTS = 300;
+const beatRankBeatPointsAt = (rank) => rank === 3 || rank === 10 || (rank >= 20 && rank % 5 === 0);
+// 次にビートPがもらえるランク(画面の「ランク15で ビートP 300」)
+const beatRankNextBeatPointsRank = (rank) => { let r = Math.max(1, Math.floor(Number(rank) || 1)) + 1; while (!beatRankBeatPointsAt(r)) r += 1; return r; };
+
+// { v:1, xp(経験値の合計), day(その日はじめての1曲を数えた日 JST 'YYYY-MM-DD'), dayFirst(その日の +30 を数えたか),
+//   got(ごほうびを配り終えたいちばん上のランク), k(全国ランキングへ書くときの持ち主の鍵。端末で作る) }
+const normalizeBeatRank = (raw) => {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const gotRaw = Array.isArray(r.got) ? Math.max(1, ...r.got.filter((n) => Number.isInteger(n))) : Number(r.got);
+  const got = Number.isFinite(gotRaw) ? Math.max(1, Math.floor(gotRaw)) : 1;
+  const k = typeof r.k === 'string' && /^[A-Za-z0-9_-]{24,128}$/.test(r.k) ? r.k : '';
+  return { v: 1, xp: playerRankSafeXp(r.xp), day: typeof r.day === 'string' ? r.day.slice(0, 10) : '', dayFirst: r.dayFirst === true, got, k };
+};
+
+// 1曲ぶんの経験値と内わけ(その日はじめての +30 は入れない)。経験値の入らない難易度なら { xp:0 }
+const beatRankPlayXp = ({ difficultyId, cleared = true, fullCombo = false, allMarvelous = false, multi = false }) => {
+  const base = BEAT_RANK_XP[difficultyId];
+  if (!base) return { xp: 0, parts: [] };
+  const parts = [];
+  let xp = cleared ? base : Math.round(base / BEAT_RANK_BONUS.failDivisor);
+  parts.push({ label: cleared ? difficultyId : `${difficultyId}(ライフが尽きた)`, xp });
+  if (cleared && allMarvelous) { xp += BEAT_RANK_BONUS.allMarvelous; parts.push({ label: '全部 MARVELOUS', xp: BEAT_RANK_BONUS.allMarvelous }); }
+  else if (cleared && fullCombo) { xp += BEAT_RANK_BONUS.fullCombo; parts.push({ label: 'フルコンボ', xp: BEAT_RANK_BONUS.fullCombo }); }
+  if (multi) { const scaled = Math.round(xp * BEAT_RANK_BONUS.multiScale); parts.push({ label: 'みんなで対戦 ×1.5', xp: scaled - xp }); xp = scaled; }
+  return { xp, parts };
+};
+
+// 経験値を足した次の値と、新しくもらうごほうび。today は日本時間の 'YYYY-MM-DD'(呼ぶ側が渡す)
+// 返り値: { next, add, parts, from, to, tickets, beatPoints }
+const beatRankAfter = (prev, { difficultyId, cleared, fullCombo, allMarvelous, multi, today }) => {
+  const cur = normalizeBeatRank(prev);
+  const from = playerRankInfo(cur.xp).rank;
+  const play = beatRankPlayXp({ difficultyId, cleared, fullCombo, allMarvelous, multi });
+  if (!play.xp) return { next: cur, add: 0, parts: [], from, to: from, tickets: 0, beatPoints: 0 };
+  const day = typeof today === 'string' ? today.slice(0, 10) : '';
+  const first = !!day && !(cur.day === day && cur.dayFirst);
+  const parts = first ? [...play.parts, { label: 'その日はじめての1曲', xp: BEAT_RANK_BONUS.dayFirst }] : play.parts;
+  const add = play.xp + (first ? BEAT_RANK_BONUS.dayFirst : 0);
+  const xp = playerRankSafeXp(cur.xp + add);
+  const to = playerRankInfo(xp).rank;
+  let tickets = 0, beatPoints = 0;
+  for (let r = Math.max(cur.got + 1, 2); r <= to; r++) {
+    tickets += BEAT_RANK_TICKETS_PER_RANK;
+    if (beatRankBeatPointsAt(r)) beatPoints += BEAT_RANK_BEAT_POINTS;
+  }
+  return { next: { ...cur, xp, day: day || cur.day, dayFirst: first || (cur.day === day && cur.dayFirst), got: Math.max(cur.got, to) }, add, parts, from, to, tickets, beatPoints };
+};
+
 // ---- part: 18-points-and-auto.jsx ----
 // 強化ポイント1つあたりのステータス上昇量。ライフだけ他より大きく上がる(バランス調整中の暫定値)
 const STAT_POINT_GAIN = { hp: 10, atk: 3, def: 3, guts: 3 };
@@ -17317,7 +17394,8 @@ const SB_HEADERS = { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' 
 //   並べた表だけを通す(差し替えていない表への書き込みは、引き続き止める)
 // rpc は集計を読むもの(rhythm_week_score_totals など)なので通すが、表へ書く rpc はここに並べて同じく止める
 // (2026-10-27 カード部: マルチの強さの点数 card_battle_pvp_report が、検査のブラウザから本物へ届きうる形だった)
-const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report']);
+// ビートランク・カードランクの行を書く関数(2026-10-29)も、表へ書くのでここで止める
+const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report', 'rhythm_beat_rank_put', 'card_rank_put']);
 const sbAutomationWriteBlocked = (url, method) => {
   try {
     if (typeof navigator === 'undefined' || navigator.webdriver !== true) return false;
@@ -22972,7 +23050,7 @@ const RhythmLineAdjustPanel=({adjust,onBump,isLandscape})=>{
     </div>
   </div>;
 };
-const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null})=>{
+const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,beatRankAward=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null})=>{
   // 判定ラインの位置の合わせ(lineAdjust)は、練習と同じ扱い(ライフを減らさない・記録を送らない)。練習の説明の帯は出さない
   const tutorialProp=tutorial;tutorial=tutorial||!!lineAdjust;
   // 合わせている間の地上の判定ラインの高さ(保存はまだ・親が持つ)。null なら設定のまま
@@ -25094,6 +25172,9 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   <small className="mt-1 block text-[10px] font-black text-amber-200">{result.allMarvelous?'すべてMARVELOUS。文句なしの完璧です':result.allExcellent?'すべてEXCELLENT以上。ほぼ完璧です':'一度もコンボを切らずに完走しました'}</small>
 </div>}
 <div className="my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300">{result.fullCombo&&<span>FULL COMBO</span>}{result.allExcellent&&<span>ALL EXCELLENT</span>}{result.allMarvelous&&<span>ALL MARVELOUS</span>}</div>{/* クイック∞周回を裏で回していたときだけ。曲の長さぶんが周回クリア扱いで入る */}
+{/* ビートランク(2026-10-29 社長)。この1曲でたまった経験値と、ランクが上がったときのごほうび。横向きでも縦持ちでも、ここに1か所だけ出す。
+    裏のクイック周回の「経験値」(マスモンの経験値)と取り違えないよう、札に「🎵 ビートランク」と書く(PlayerRankGain) */}
+<PlayerRankGain kind="beat" award={beatRankAward}/>
 {/* 裏で∞周回していたのに失敗したとき。1周も入らないので、その理由をここで言う
     (2026-09-12・ユーザー指示「失敗しても入るようにすると放置で稼げるようになるから失敗は0にして」)。
     ★裏で周回していない人にはそもそも出ない(quickRunAwardがnullのまま) */}
@@ -33160,6 +33241,87 @@ const sbUpsertRhythmBuddyRanks = async (rows) => {
   }
 };
 
+// ---- part: 39-beat-rank-api.jsx ----
+// ==================== ビートランク(モンヒロビート)の全国ランキングの通信層(2026-10-29) ====================
+// 表 rhythm_beat_ranks(1人1行・breeder_id)。表へは直接書かず、持ち主の鍵を確かめる関数 rhythm_beat_rank_put だけで書く
+// (ログインが無いので、みんなのデッキと同じ「持ち主の鍵」の形。鍵は mh_rhythm_rank_v1 の k に端末で作る)。
+// 既存の rankings などには一切書かない。表や関数がまだ無い環境でも壊れない(無いと分かったら以後アクセスしない)。
+// SQL: docs/sql/rhythm-beat-rank/RHYTHM_BEAT_RANK_APPLY.sql(カードランクの card_ranks も同じ形)
+const BEAT_RANK_TABLE = 'rhythm_beat_ranks';
+const BEAT_RANK_SELECT = 'breeder_id,user_name,icon,profile_frame,rank,xp_total,updated_at';
+const BEAT_RANK_SHOW_LIMIT = 100;
+
+let _beatRanksUnavailable = false;
+const beatRanksUnavailable = () => _beatRanksUnavailable;
+// 表が無い(PGRST205)・関数が無い(PGRST202)。権限や通信の失敗と取り違えない
+const beatRankMissing = (status, body) => status === 404 && /PGRST20[25]|Could not find the (table|function)|does not exist/i.test(String(body || ''));
+
+// 端末で作る持ち主の鍵(24〜128字・英数字と _-)
+const beatRankNewKey = () => {
+  const a = globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+  const b = globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
+  return `${a}${b}`.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 96);
+};
+
+const beatRankEntryFromRow = (row) => ({
+  breederId: typeof row.breeder_id === 'string' ? row.breeder_id : '',
+  name: typeof row.user_name === 'string' && row.user_name ? row.user_name.slice(0, 40) : 'ブリーダー',
+  icon: row.icon ?? null,
+  profileFrame: row.profile_frame ?? null,
+  rank: Math.max(1, Math.floor(Number(row.rank) || 1)),
+  xp: playerRankSafeXp(row.xp_total),
+});
+
+const beatRankTimed = async (url, init) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try { return await fetch(url, { ...init, signal: controller.signal }); } finally { clearTimeout(timer); }
+};
+
+// 上位100人。表が無ければ null
+const sbFetchBeatRanks = async () => {
+  if (_beatRanksUnavailable) return null;
+  const url = `${SUPABASE_URL}/rest/v1/${BEAT_RANK_TABLE}?select=${BEAT_RANK_SELECT}`
+    + `&order=rank.desc,xp_total.desc,updated_at.asc&limit=${BEAT_RANK_SHOW_LIMIT}`;
+  const res = await beatRankTimed(url, { headers: SB_HEADERS, cache: 'no-store' });
+  const body = await res.text();
+  if (!res.ok) {
+    if (beatRankMissing(res.status, body)) { _beatRanksUnavailable = true; return null; }
+    throw new Error(`rhythm_beat_ranks ${res.status}: ${body || res.statusText}`);
+  }
+  const rows = JSON.parse(body || '[]');
+  return (Array.isArray(rows) ? rows : []).map(beatRankEntryFromRow);
+};
+
+// 自分の行と順位。行が無ければ null
+const sbFetchBeatRankMine = async (breederId) => {
+  if (_beatRanksUnavailable || typeof breederId !== 'string' || !breederId) return null;
+  const rowRes = await beatRankTimed(`${SUPABASE_URL}/rest/v1/${BEAT_RANK_TABLE}?select=${BEAT_RANK_SELECT}&breeder_id=eq.${encodeURIComponent(breederId)}`,
+    { headers: SB_HEADERS, cache: 'no-store' });
+  const rowBody = await rowRes.text();
+  if (!rowRes.ok) { if (beatRankMissing(rowRes.status, rowBody)) _beatRanksUnavailable = true; return null; }
+  const rows = JSON.parse(rowBody || '[]');
+  if (!Array.isArray(rows) || !rows[0]) return null;
+  const placeRes = await beatRankTimed(`${SUPABASE_URL}/rest/v1/rpc/rhythm_beat_rank_place`,
+    { method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_id: breederId }) });
+  const placeBody = await placeRes.text();
+  const place = placeRes.ok ? Number(JSON.parse(placeBody || 'null')) : NaN;
+  return { ...beatRankEntryFromRow(rows[0]), place: Number.isFinite(place) && place > 0 ? Math.floor(place) : null };
+};
+
+// 自分の行を書く。返り値: 'ok' | 'bad' | 'locked' | null(表が無い・送れなかった)
+const sbPutBeatRank = async ({ breederId, key, name, icon, profileFrame, xp }) => {
+  if (_beatRanksUnavailable || typeof breederId !== 'string' || !breederId || typeof key !== 'string' || !key) return null;
+  const res = await beatRankTimed(`${SUPABASE_URL}/rest/v1/rpc/rhythm_beat_rank_put`, {
+    method: 'POST', headers: SB_HEADERS,
+    body: JSON.stringify({ p_id: breederId, p_key: key, p_name: String(name || '名無しのブリーダー').slice(0, 40), p_icon: icon ?? null,
+      p_frame: profileFrame ?? null, p_xp: playerRankSafeXp(xp) }),
+  });
+  const body = await res.text();
+  if (!res.ok) { if (beatRankMissing(res.status, body)) _beatRanksUnavailable = true; return null; }
+  try { const v = JSON.parse(body); return typeof v === 'string' ? v : null; } catch (_) { return null; }
+};
+
 // ---- part: 40-screen-effects.jsx ----
 // ==== 画面ライフサイクル: タイマー・リスナーの登録簿(useScreenEffects) ====
 //
@@ -34368,6 +34530,163 @@ const PickerGroupLabel = ({ children, count = null }) => (
 const PickerCheckMark = () => (
   <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-slate-950 shadow"><Check size={12}/></span>
 );
+
+// ---- part: 43-player-rank-ui.jsx ----
+// ==================== プレイヤーのランクの見せ方(ビートランク・カードランク共通) ====================
+// 2026-10-29 社長: ビートランクとカードランクは対の名前。札・棒・ランクアップの演出・ランキングの行の見せ方をそろえる
+// (マルチ部ツナグくんと決めた。カードの画面はこれを使う形に差し替える)。計算は 18-player-rank.jsx の playerRankInfo。
+// ★マスモンの「ビートLv」と取り違えないよう、「Lv」の字は使わず「ランク」と数字で書く。色もマスモン(緑)と分ける
+const PLAYER_RANK_KINDS = Object.freeze({
+  beat: { label: 'ビートランク', icon: '🎵', pill: 'bg-cyan-700 text-cyan-50', accent: 'text-cyan-200', bar: 'from-cyan-400 to-fuchsia-300', border: 'border-cyan-300/50', panel: 'bg-slate-900/85' },
+  card: { label: 'カードランク', icon: '🃏', pill: 'bg-amber-700 text-amber-50', accent: 'text-amber-200', bar: 'from-emerald-400 to-amber-300', border: 'border-amber-300/50', panel: 'bg-slate-900/85' },
+});
+const playerRankKind = (kind) => PLAYER_RANK_KINDS[kind] || PLAYER_RANK_KINDS.beat;
+
+// 札「🎵 ビートランク 12」。size: 'sm'(行の中)/ 'md' / 'lg'(上のまとめ)
+function PlayerRankBadge({ kind = 'beat', rank = 1, size = 'md' }) {
+  const k = playerRankKind(kind);
+  const num = size === 'lg' ? 'text-[28px]' : size === 'sm' ? 'text-[13px]' : 'text-[18px]';
+  const pill = size === 'sm' ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-0.5 text-[11px]';
+  return (
+    <span data-player-rank-badge={kind} className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+      <span className={`inline-flex items-center gap-1 rounded-full font-black ${pill} ${k.pill}`}><span aria-hidden="true">{k.icon}</span>{k.label}</span>
+      <b data-player-rank-value className={`font-black leading-none tabular-nums text-white ${num}`}>{Math.max(1, Math.floor(Number(rank) || 1)).toLocaleString()}</b>
+    </span>
+  );
+}
+
+// 次のランクまでの棒。info は playerRankInfo の { rank, into, need }
+function PlayerRankGauge({ kind = 'beat', info, note = '' }) {
+  const k = playerRankKind(kind);
+  const into = Math.max(0, Number(info && info.into) || 0), need = Math.max(1, Number(info && info.need) || 1);
+  return (
+    <div data-player-rank-gauge={kind}>
+      <div className="h-2 overflow-hidden rounded-full bg-slate-700" role="progressbar" aria-label="次のランクまで" aria-valuemin={0} aria-valuemax={need} aria-valuenow={into}>
+        <i className={`block h-full rounded-full bg-gradient-to-r ${k.bar}`} style={{ width: `${Math.min(100, Math.round((into / need) * 100))}%` }}/>
+      </div>
+      <div className="mt-0.5 flex justify-between gap-2 text-[10px] font-bold text-slate-300">
+        <span className="tabular-nums">{`${into.toLocaleString()} / ${need.toLocaleString()}`}</span>
+        <span className="min-w-0 text-right" style={JA_WRAP_STYLE}>{jaWrap(note || `次まで ${(need - into).toLocaleString()}`)}</span>
+      </div>
+    </div>
+  );
+}
+
+// 画面の上に置くまとめ(モードえらびなど): 札と棒と、ひとこと
+function PlayerRankPanel({ kind = 'beat', xp = 0, note = '', sub = '' }) {
+  const k = playerRankKind(kind);
+  const info = playerRankInfo(xp);
+  return (
+    <section data-player-rank-panel={kind} className={`rounded-2xl border px-3 py-2 ${k.border} ${k.panel}`}>
+      <div className="flex items-center gap-2">
+        <PlayerRankBadge kind={kind} rank={info.rank} size="lg"/>
+        <small className="ml-auto shrink-0 text-[11px] font-black text-slate-200 tabular-nums">{`次まで ${(info.need - info.into).toLocaleString()}`}</small>
+      </div>
+      <div className="mt-1.5"><PlayerRankGauge kind={kind} info={info} note={note || ' '}/></div>
+      {sub && <p className="mt-1 text-[10px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(sub)}</p>}
+    </section>
+  );
+}
+
+// ランクが上がったときの演出。gains は [{ icon, text }](もらった物。カードは引く券・枠が増える知らせなど)
+function PlayerRankUp({ kind = 'beat', from = 1, to = 1, gains = [] }) {
+  if (!(to > from)) return null;
+  return (
+    <div data-player-rank-up={kind} className="rounded-2xl border-2 border-fuchsia-300 bg-gradient-to-b from-violet-700/80 to-indigo-950/90 px-3 py-2 text-center">
+      <small className="block text-[10px] font-black tracking-[.2em] text-fuchsia-100">RANK UP!</small>
+      <div className="mt-0.5 flex items-center justify-center gap-2">
+        <PlayerRankBadge kind={kind} rank={from} size="sm"/>
+        <span aria-hidden="true" className="font-black text-fuchsia-200">→</span>
+        <b className="text-[26px] font-black leading-none text-white tabular-nums">{to.toLocaleString()}</b>
+      </div>
+      {gains.length > 0 && <ul data-player-rank-up-gains className="mt-1.5 flex flex-wrap justify-center gap-1.5">
+        {gains.map((g, i) => <li key={i} className="rounded-lg border border-fuchsia-200/40 bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-amber-100">
+          {g.icon && <span aria-hidden="true">{g.icon} </span>}<span style={JA_WRAP_STYLE}>{jaWrap(String(g.text || ''))}</span>
+        </li>)}
+      </ul>}
+    </div>
+  );
+}
+
+// 1回ぶんの結果に出す札: 「経験値 +26(ランク12→13)」・内わけ・棒・上がったら演出。
+// award: { add, parts:[{label,xp}], from, to, xp(足したあとの合計), gains:[{icon,text}] }
+function PlayerRankGain({ kind = 'beat', award }) {
+  if (!award || !(award.add > 0)) return null;
+  const k = playerRankKind(kind);
+  const info = playerRankInfo(award.xp);
+  const up = award.to > award.from;
+  return (
+    <section data-player-rank-gain={kind} className={`my-3 space-y-1.5 rounded-2xl border p-3 text-left ${k.border} ${k.panel}`}>
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${k.pill}`}><span aria-hidden="true">{k.icon} </span>{k.label}</span>
+        <b data-player-rank-gain-add className={`text-[15px] font-black ${k.accent}`}>{`経験値 +${award.add.toLocaleString()}`}</b>
+        <span className="text-[12px] font-black text-white tabular-nums">{up ? `(ランク${award.from}→${award.to})` : `(ランク${info.rank})`}</span>
+      </div>
+      {Array.isArray(award.parts) && award.parts.length > 0 && <p data-player-rank-gain-parts className="text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>
+        {jaWrap(award.parts.map((p) => `${p.label} ${p.xp >= 0 ? '+' : ''}${p.xp}`).join(' ・ '))}
+      </p>}
+      <PlayerRankGauge kind={kind} info={info}/>
+      {up && <PlayerRankUp kind={kind} from={award.from} to={award.to} gains={award.gains || []}/>}
+    </section>
+  );
+}
+
+// ランキングの1行。place は順位(無ければ「—」)。icon は呼ぶ側が描いたアイコン(rankingBreederIcon など)
+function PlayerRankRow({ kind = 'beat', place = null, icon = null, name = '', rank = 1, xp = 0, mine = false }) {
+  const k = playerRankKind(kind);
+  return (
+    <li data-player-rank-row={kind} data-player-rank-mine={mine ? 'true' : undefined}
+      className={`flex items-center gap-2 rounded-xl border px-2 py-1.5 ${mine ? `border-2 ${k.border} bg-cyan-950/50` : 'border-white/10 bg-slate-900/80'}`}>
+      <b className={`w-9 shrink-0 text-center text-sm font-black tabular-nums ${place === 1 ? 'text-amber-300' : 'text-slate-200'}`}>{place ? place.toLocaleString() : '—'}</b>
+      {icon}
+      <span className="min-w-0 flex-1 truncate text-xs font-black text-white">{name}{mine ? '(あなた)' : ''}</span>
+      <span className="shrink-0 text-right">
+        <b className={`block text-sm font-black leading-tight ${k.accent}`}>{`ランク ${Math.max(1, Math.floor(Number(rank) || 1)).toLocaleString()}`}</b>
+        <small className="block text-[9px] font-bold text-slate-400 tabular-nums">{`経験値 ${playerRankSafeXp(xp).toLocaleString()}`}</small>
+      </span>
+    </li>
+  );
+}
+
+// ランキングのタブの中身: 上位100人と、自分の行(100人に入っていなければ下に順位つきで)。
+// 読み込みは呼ぶ側が渡す(ビートは sbFetchBeatRanks・sbFetchBeatRankMine。カードも同じ形で渡す)。
+//   fetchTop() → [{ breederId, name, icon, profileFrame, rank, xp }] | null(表がまだ無い)
+//   fetchMine() → { …同じ, place } | null
+// renderIcon(entry) は行のアイコン(全国ランキングと同じ rankingBreederIcon)。reloadKey が変わると読み直す
+function PlayerRankBoard({ kind = 'beat', fetchTop, fetchMine, renderIcon = null, selfBreederId = '', selfXp = 0, reloadKey = 0 }) {
+  const [board, setBoard] = React.useState({ status: 'loading', top: [], mine: null });
+  React.useEffect(() => {
+    let alive = true;
+    setBoard((b) => ({ ...b, status: b.top.length ? 'ready' : 'loading' }));
+    (async () => {
+      try {
+        const [top, mine] = await Promise.all([fetchTop ? fetchTop() : null, fetchMine ? fetchMine().catch(() => null) : null]);
+        if (!alive) return;
+        if (top === null) { setBoard({ status: 'closed', top: [], mine: null }); return; }
+        setBoard({ status: 'ready', top, mine });
+      } catch (_) { if (alive) setBoard((b) => ({ ...b, status: b.top.length ? 'ready' : 'error' })); }
+    })();
+    return () => { alive = false; };
+  }, [reloadKey]);
+  const label = playerRankKind(kind).label;
+  const iconOf = (e) => (renderIcon ? renderIcon({ icon: e.icon, profileFrame: e.profileFrame, userName: e.name, breederId: e.breederId }) : null);
+  if (board.status === 'loading') return <p data-player-rank-board="loading" className="px-3 py-6 text-center text-xs font-black text-slate-400">読み込んでいます…</p>;
+  if (board.status === 'closed') return <p data-player-rank-board="closed" className="px-3 py-6 text-center text-xs font-black text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`${label}のランキングは準備中です。`)}</p>;
+  if (board.status === 'error') return <p data-player-rank-board="error" className="px-3 py-6 text-center text-xs font-black text-rose-300" style={JA_WRAP_STYLE}>{jaWrap('ランキングを読み込めませんでした。電波のよいところで「更新」を押してください。')}</p>;
+  const selfId = selfBreederId || (board.mine && board.mine.breederId) || '';
+  const inTop = !!selfId && board.top.some((e) => e.breederId === selfId);
+  return (
+    <div data-player-rank-board={kind} className="space-y-2 px-3 py-2">
+      <p className="text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ランクの高い順。同じランクなら、経験値の合計が多い順です(上位100人とあなた)。')}</p>
+      {board.top.length === 0
+        ? <p className="py-4 text-center text-xs font-black text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('まだだれも載っていません。曲を遊ぶと、ここに載ります。')}</p>
+        : <ol className="space-y-1.5">{board.top.map((e, i) => <PlayerRankRow key={e.breederId || i} kind={kind} place={i + 1} icon={iconOf(e)} name={e.name} rank={e.rank} xp={e.xp} mine={!!selfId && e.breederId === selfId}/>)}</ol>}
+      {!inTop && (board.mine
+        ? <ol className="border-t border-white/10 pt-2"><PlayerRankRow kind={kind} place={board.mine.place} icon={iconOf(board.mine)} name={board.mine.name} rank={board.mine.rank} xp={board.mine.xp} mine/></ol>
+        : selfXp > 0 && <p className="border-t border-white/10 pt-2 text-center text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('あなたの記録は、次に曲を遊んだときに載ります。')}</p>)}
+    </div>
+  );
+}
 
 // ---- part: 50-error-boundary.jsx ----
 // ==== 画面のエラー境界 ====
@@ -37192,6 +37511,7 @@ function RhythmRankingScreen({
   rhythmRankingTab, rhythmTotalRanking,
   rhythmRankingPending=null, onResendRhythmRankingPending=null,
   setRhythmEventDivision, setRhythmRankingDetail, setRhythmRankingTab,
+  beatRankXp=0,
 }) {
       // イベント詳細(告知画像と報酬の表)を開いているか。
       // 一覧の上へ積むとランキングが画面の外へ押し出されるので、別に開く形にした
@@ -37242,7 +37562,10 @@ function RhythmRankingScreen({
       // イベントのタブを開いていて中身が無いとき(今回が未開催・前回がまだ無い)は、
       // 曲別の一覧へ落ちないようにする。文言だけを出す
       const totalTabOpen=totalTab&&!boardTab&&!eventTabOpen;
-      const songTab=!totalTabOpen&&!boardTab&&!eventTabOpen;
+      // ビートランクのタブ(2026-10-29 社長)。ランク順(同じなら経験値の合計順)・上位100人とあなた
+      const beatRankTabOpen=rhythmRankingTab==='beatRank'&&!boardTab&&!eventTabOpen;
+      const [beatRankReload,setBeatRankReload]=useState(0);
+      const songTab=!totalTabOpen&&!boardTab&&!eventTabOpen&&!beatRankTabOpen;
       const boards=rhythmEventRanking||{};
       const event=(boardKind&&boards[boardKind])||{status:'idle',window:null,event:null,boards:{}};
       const eventDefinition=event.event||null;
@@ -37306,6 +37629,7 @@ function RhythmRankingScreen({
         // ★開催していないあいだもタブを出す(2026-09-14・ユーザー依頼「イベントタブを常設」)。
         //   中で「今回／前回」を切り替える。どちらも無いときは、その旨の文言を出す
         ...(eventReleased?[{id:'event',label:'イベント'}]:[]),
+        {id:'beatRank',label:'ビートランク'},
       ];
       // ★タブも部門も、押すたびに取り直す(2026-09-11・ユーザー指摘「総合だけ反映が遅い」)。
       //   「初めて開いたときだけ」にしていたため、一度見た部門は古い順位のまま残っていた。
@@ -37342,6 +37666,7 @@ function RhythmRankingScreen({
       const refresh=()=>{
         if(boardTab)loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,eventDivisionId);
         else if(totalTabOpen)loadRhythmTotalRanking&&loadRhythmTotalRanking();
+        else if(beatRankTabOpen)setBeatRankReload(n=>n+1);
         else loadRhythmRanking(song,rhythmRanking.difficultyId||'ALL');
       };
       // ランク(S/SS/…)を決める点数。回数ボーナス込みの点だと満点を超えてしまうので、
@@ -37418,10 +37743,10 @@ function RhythmRankingScreen({
           <button aria-label="更新" data-rhythm-ranking-refresh onClick={refresh} className="ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200">更新</button>
         </header>
         {/* タブ。押したときに初めて取りにいく。公開前はタブごと出さない */}
-        {rankingTabs.length>1&&<div data-rhythm-ranking-tabs className="flex shrink-0 gap-1 border-b border-white/10 bg-slate-950/95 px-3 pb-2 pt-1">
+        {rankingTabs.length>1&&<div data-rhythm-ranking-tabs className="flex shrink-0 gap-1 overflow-x-auto border-b border-white/10 bg-slate-950/95 px-3 pb-2 pt-1">
           {rankingTabs.map(tab=>(
             <button key={tab.id} data-rhythm-ranking-tab={tab.id} onClick={()=>openTab(tab.id)}
-              className={`min-h-[44px] flex-1 rounded-xl border px-2 text-[11px] font-black ${rhythmRankingTab===tab.id?'border-amber-300/60 bg-amber-500/15 text-amber-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
+              className={`min-h-[44px] min-w-fit flex-1 whitespace-nowrap rounded-xl border px-2 text-[11px] font-black ${rhythmRankingTab===tab.id?'border-amber-300/60 bg-amber-500/15 text-amber-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
               {tab.label}
             </button>
           ))}
@@ -37446,6 +37771,8 @@ function RhythmRankingScreen({
               ・横画面の案内(RhythmLandscapeHint)  … 曲えらび・遊びかたの側にある
               ・タブごとの説明文                   … ヘルプの「全国ランキング」にある
               ・みゅあの吹き出し                   … 曲えらび(イベント開催中)にある */}
+          {beatRankTabOpen&&<PlayerRankBoard kind="beat" fetchTop={sbFetchBeatRanks} fetchMine={async()=>sbFetchBeatRankMine(await ensureBreederId())}
+            renderIcon={rankingBreederIcon} selfXp={beatRankXp} reloadKey={beatRankReload}/>}
           {totalTabOpen&&(<>
             {total.status==='loading'&&<p data-rhythm-total-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
             {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
@@ -49649,6 +49976,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         <div className={`relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${ms.showArt && ms.assistant ? '' : 'portrait:justify-center'}`}>
           <ModeSelectAssistantPanel assistant={ms.assistant} showArt={ms.showArt} showComment={ms.showComment} onToggle={ms.onToggleAssistant} />
           <div className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2">
+            {/* ビートランク(2026-10-29 社長): 今のランクと次までの棒。曲を遊ぶとたまり、上がるたびにセッション券(下のひとこと) */}
+            {Number.isFinite(ms.beatRankXp) && <PlayerRankPanel kind="beat" xp={ms.beatRankXp}
+              note={`ランク${beatRankNextBeatPointsRank(playerRankInfo(ms.beatRankXp).rank)}で ビートP ${BEAT_RANK_BEAT_POINTS}`}
+              sub="曲を遊ぶとたまります。ランクが上がるたびにセッション券を1枚もらえます。"/>}
             {!(ms.assistant && (ms.showArt || ms.showComment)) && assistToggles('justify-end', true)}
             {friendsOn && friendInvites.length > 0 && (
               <section data-rhythm-multi-friend-invites className={`${card} space-y-2 border-pink-400/60`}>
@@ -67290,6 +67621,9 @@ function MonsterHeroGame() {
     // 前に選んだ難易度を引き継ぐ(2026-10-11)。保存値が無い・壊れている・公開していない難易度なら '' のまま(EASY から)。
     // このセッションの中ですでに選んでいれば、そちらを優先する
     const lastDifficulty=normalizeRhythmLastDifficulty(await storeGet(RHYTHM_LAST_DIFFICULTY_KEY,'',false));
+    // ビートランク(2026-10-29)。表を足す前に遊んだ人の分も、開いたときに全国ランキングへそろえる(1回の起動で1回だけ)
+    {const savedRank=normalizeBeatRank(await storeGet(BEAT_RANK_KEY,null,false));setBeatRank(savedRank);
+     if(!beatRankSyncedRef.current&&savedRank.xp>0){beatRankSyncedRef.current=true;void syncBeatRankToServer(savedRank);}}
     if(lastDifficulty)setRhythmSelectedDifficultyId(prev=>prev||lastDifficulty);
     // どこから入っても、まずモードえらび(2026-10-03・ユーザー指示「モンビーを始めたときにまずモード選択画面」)。
     // ソロはそこから曲えらび(RHYTHM_DEMO_HOME)へ進む
@@ -69180,6 +69514,44 @@ function MonsterHeroGame() {
     return true;
   };
   // 使ったセッション券を1枚返す(人が来て、呼んだマスモンが席をゆずったとき)
+  // ビートランクの行を全国ランキングへ書く(持ち主の鍵 k で)。表がまだ無い・送れないときは何もしない(遊びは止めない)
+  const syncBeatRankToServer = async (saved) => {
+    try {
+      const cur = normalizeBeatRank(saved);
+      if (!cur.k || cur.xp <= 0) return;
+      const breederId = await ensureBreederId();
+      if (!breederId) return;
+      await sbPutBeatRank({ breederId, key: cur.k, name: breederName, icon: breederIcon,
+        profileFrame: typeof rankingProfileFrameValue === 'function' ? rankingProfileFrameValue(profileFrameId) : null, xp: cur.xp });
+    } catch (_) { /* 送れなくても、端末の記録はそのまま */ }
+  };
+  // 最後まで遊んだ1曲ぶんの経験値を足し、ランクが上がったらごほうびを配る(セッション券・ビートP)。
+  // 呼ぶのは曲の終わり(onComplete)の、ソロ・みんなで対戦・レイドで、アシストモードでないときだけ(練習・お手本・途中でやめた曲は0)
+  const grantBeatRankForResult = async (result, play) => {
+    try {
+      const raw = await storeGet(BEAT_RANK_KEY, null, false);
+      const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+      const gain = beatRankAfter(raw, { difficultyId: play && play.difficulty && play.difficulty.id, cleared: result?.cleared !== false,
+        fullCombo: result?.fullCombo === true, allMarvelous: result?.allMarvelous === true, multi: play && play.from === 'multi', today });
+      if (!gain.add) return;
+      const next = { ...gain.next, k: gain.next.k || beatRankNewKey() };
+      await storeSet(BEAT_RANK_KEY, next, false);
+      setBeatRank(next);
+      if (gain.tickets > 0) {
+        const nextItems = { ...ownedItemsRef.current, [RHYTHM_BUDDY_TICKET_ITEM_ID]: ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TICKET_ITEM_ID) + gain.tickets };
+        ownedItemsRef.current = nextItems;
+        setOwnedItems(nextItems);
+        await storeSet('mh_owned_items', nextItems, false);
+      }
+      if (gain.beatPoints > 0 && typeof addRhythmEventPoints === 'function') await addRhythmEventPoints(gain.beatPoints);
+      const gains = [
+        ...(gain.tickets > 0 ? [{ icon: '🎶', text: `セッション券 ×${gain.tickets}` }] : []),
+        ...(gain.beatPoints > 0 ? [{ icon: '🎟️', text: `ビートP ${gain.beatPoints.toLocaleString()}` }] : []),
+      ];
+      setBeatRankAward({ add: gain.add, parts: gain.parts, from: gain.from, to: gain.to, xp: next.xp, gains });
+      void syncBeatRankToServer(next);
+    } catch (_) { /* 経験値が書けなくても、曲の記録の保存は止めない */ }
+  };
   const refundBuddyTicket = async () => {
     const nextItems = { ...ownedItemsRef.current, [RHYTHM_BUDDY_TICKET_ITEM_ID]: ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TICKET_ITEM_ID) + 1 };
     ownedItemsRef.current = nextItems;
@@ -71745,6 +72117,11 @@ function MonsterHeroGame() {
   // 直前の演奏で何周ぶん入ったか。帯へ1回だけ出す(保存しない)。
   // 演奏から抜けた直後の effect からも見るので、同期の控え(ref)も持つ
   const [rhythmPlayRunAwardState, setRhythmPlayRunAwardState] = useState(null);
+  // ビートランク(2026-10-29 社長)。保存は mh_rhythm_rank_v1(読むときは normalizeBeatRank を通す)。
+  // beatRankAward は、いま見ている曲の結果に出す「経験値 +◯(ランク◯→◯)」。曲を始めるたびに空にする
+  const [beatRank, setBeatRank] = useState(() => normalizeBeatRank(null));
+  const [beatRankAward, setBeatRankAward] = useState(null);
+  const beatRankSyncedRef = useRef(false);
   const rhythmPlayRunAwardRef = useRef(null);
   const rhythmPlayRunAward = rhythmPlayRunAwardState;
   const setRhythmPlayRunAward = (next) => { rhythmPlayRunAwardRef.current = next; setRhythmPlayRunAwardState(next); };
@@ -72748,7 +73125,7 @@ function MonsterHeroGame() {
   //   (2026-09-07・ユーザー提案)。追いつきが残るのは、途中でやめたときだけ。
   //   その場合はいまの周がそのまま続いているので、止まっていたぶんを取り戻すのが正しい。
   useEffect(() => {
-    if (gameState === 'RHYTHM_PLAY') { rhythmPlayStartedAtRef.current = Date.now(); setRhythmPlayRunAward(null); stopCatchUp(); return; }
+    if (gameState === 'RHYTHM_PLAY') { rhythmPlayStartedAtRef.current = Date.now(); setRhythmPlayRunAward(null); setBeatRankAward(null); stopCatchUp(); return; }
     const startedAt = rhythmPlayStartedAtRef.current;
     rhythmPlayStartedAtRef.current = 0;
     if (!startedAt) return;
@@ -86925,7 +87302,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         })()}
 
         {raidDamageFx&&((gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='raid')||gameState==='RAID_JACK_DEBUG')&&<RaidJackDamageFx key={raidDamageFx.key} fx={raidDamageFx} onDone={()=>setRaidDamageFx(null)}/>}
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward} onComplete={async(result,merged)=>{
           // デバッグ画面の試作曲(RHYTHM_PROTO_SONGS)は、何も残さない。周回の報酬・経験値・自己ベスト・クリア回数・
           // 実績・全国ランキングのどれにも入れない(CLAUDE.md ⑦。試作は公開しない曲なので、記録に混ぜない)
           if(rhythmPlay.from==='proto')return;
@@ -86994,6 +87371,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // アシストモード(2026-09-24・バンドリ！アワーノーツから取り入れた遊び方)のプレイは、
           // 自己ベストにも全国ランキングにも残さない(CLAUDE.md ⑦「ランキング対象外の遊び方は送信しないだけでなく自己ベストも上書きしない」)
           if(result?.assist===true)return;
+          // ビートランクの経験値(2026-10-29)。ソロ・みんなで対戦・レイドを最後まで遊んだときだけ(ここは最後まで遊んだときしか通らない)
+          if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')await grantBeatRankForResult(result,rhythmPlay);
           // 通算クリア回数を数える(スエゾービートのフレームの条件)。ライフを残して終えたときだけ。
           // 練習・アシストモードは上で除いてある。数えられなくても記録の保存は止めない
           if(result?.cleared!==false){ try{ setRhythmClearTotal(await addRhythmClearTotal()); }catch{} }
@@ -87050,7 +87429,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             // 画面(gameState)は移さず、対戦の画面の上へ重ねる。画面を移すと、ライブ開始の合図を受ける側が外れて取り逃す
             open:(song)=>{loadRhythmRanking(song);},
             render:(onClose)=>(
-              <RhythmRankingScreen
+              <RhythmRankingScreen beatRankXp={beatRank.xp}
                 loadRhythmEventRanking={loadRhythmEventRanking}
                 loadRhythmRanking={loadRhythmRanking}
                 loadRhythmTotalRanking={loadRhythmTotalRanking}
@@ -87080,6 +87459,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOptions:()=>{setRhythmOptionsBack('RHYTHM_MODE_SELECT');setGameState('RHYTHM_OPTIONS');},
             monsterCount:rhythmMonsterSlots.length, monsterMax:RHYTHM_MONSTER_SLOT_MAX,
             monsterFaces:rhythmMonsterSlots.slice(0,RHYTHM_MONSTER_SLOT_MAX).map(masu=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];return {id:masu.id,src:base?(base.faceIconUrl||base.iconUrl):''};}),
+            // ビートランク(2026-10-29)。モードえらびの上に、今のランクと次までの棒を出す
+            beatRankXp:beatRank.xp,
             assistant:rhythmModeAssistant,
             showArt:rhythmSettings.modeSelectArt!==false, showComment:rhythmSettings.modeSelectComment!==false,
             onToggleAssistant:async(key)=>{const saved=await saveRhythmSettings({...rhythmSettings,[key]:rhythmSettings[key]===false});setRhythmSettings(saved);},
@@ -87205,7 +87586,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             高い難易度で挑むほど上位に近づく(§3.5・RHYTHM_MODE.md参照)。
             自分のスコアはいちばん高い1件だけが載る(rhythmRankingDedupeByUser)。 */}
         {gameState==='RHYTHM_RANKING'&&(
-          <RhythmRankingScreen
+          <RhythmRankingScreen beatRankXp={beatRank.xp}
             loadRhythmEventRanking={loadRhythmEventRanking}
             loadRhythmRanking={loadRhythmRanking}
             loadRhythmTotalRanking={loadRhythmTotalRanking}
