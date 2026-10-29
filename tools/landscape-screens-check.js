@@ -140,7 +140,7 @@ const TEMPLE_LINKS=(()=>{const app=fs.readFileSync(path.join(ROOT,'monster-hero/
       await page.click(open);await measureCard(name);await backTop();}
     await page.click('[data-card-cpu]');await measureCard('対戦の選び方');
     await page.click('[data-card-mode-assistant]');await page.waitForSelector('[data-card-foe]',{timeout:8000}).catch(()=>{});await measureCard('助手と対戦(相手えらび)','[data-card-level]');
-    await page.click('[data-card-start]');await page.waitForSelector('[data-card-battle]',{timeout:20000}).catch(()=>{});await page.waitForTimeout(1200);await dismiss(page);
+    await page.click('[data-card-start]');await page.click('[data-card-deck-pick-go]');await page.waitForSelector('[data-card-battle]',{timeout:20000}).catch(()=>{});await page.waitForTimeout(1200);await dismiss(page);
     await measureCard('助手と対戦(対戦の盤)');
     await page.click('[data-card-quit]');await page.waitForTimeout(300);await page.getByRole('button',{name:'投了する'}).click();
     await page.waitForSelector('[data-card-top="result"]',{timeout:15000}).catch(()=>{});await measureCard('対戦の結果');
