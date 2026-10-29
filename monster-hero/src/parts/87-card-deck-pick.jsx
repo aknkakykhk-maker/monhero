@@ -17,20 +17,48 @@ const cardDeckPickChoices = (db, decks, collection, opts = {}) => {
 };
 
 // allowRented … 借りたデッキも並べる(助手と対戦のとき。マルチでは並べない)
-const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', note = '', onPick, onBack, allowRented = false }) => {
+// rentTab … 「自分のデッキ/借りたデッキ」のタブにし、借りたデッキのタブで借りる・返すをする(2026-10-29 社長の作り直し「借りるのは対戦前のデッキを選ぶ画面のタブで」)。
+//   公開の印(cardShareOpen)までは、デバッグの人だけ(84 が決める)。借りられるのは1組・マルチでは使えない、は今のまま
+const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', note = '', onPick, onBack, allowRented = false, rentTab = false }) => {
   const [rented, setRented] = useState(null);
+  const [tab, setTab] = useState('own'); // own / rent
+  const [cands, setCands] = useState(null); // 借りるデッキの候補(おすすめ・よく戦われている)
+  const [rentMsg, setRentMsg] = useState('');
+  const [rentBusy, setRentBusy] = useState(false);
   useEffect(() => {
     if (!allowRented || typeof cardRentedDeckGet !== 'function') return undefined;
     let alive = true;
     void cardRentedDeckGet().then((r) => { if (alive) setRented(r); });
     return () => { alive = false; };
   }, [allowRented]);
-  const choices = cardDeckPickChoices(db, decks, collection, { rented: allowRented ? rented : null });
+  const loadCands = async () => {
+    setCands(null);
+    const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+    const [fresh, popular] = await Promise.all([cardShareFetchList({ sort: 'new', limit: 40 }), cardShareFetchList({ sort: 'popular', limit: 10 })]);
+    setCands({ picks: cardSharePickSome(fresh, selfId, 3), popular: popular.filter((e) => e.ownerId !== selfId) });
+  };
+  useEffect(() => { if (rentTab && allowRented && tab === 'rent' && cands === null && typeof cardShareFetchList === 'function') void loadCands(); }, [tab]);
+  const rentIt = async (e) => {
+    if (rentBusy) return;
+    setRentBusy(true); setRentMsg('');
+    if (await cardRentedDeckSet(e)) { const r = await cardRentedDeckGet(); setRented(r); setSel('rented'); setRentMsg(`${e.name}さんのデッキを借りました`); }
+    else setRentMsg('この端末に保存できなかったため、借りられませんでした');
+    setRentBusy(false);
+  };
+  const giveBack = async () => {
+    if (rentBusy) return;
+    setRentBusy(true);
+    if (await cardRentedDeckSet(null)) { setRented(null); setRentMsg('借りていたデッキを返しました'); }
+    setRentBusy(false);
+  };
+  const choices0 = cardDeckPickChoices(db, decks, collection, { rented: allowRented ? rented : null });
+  // タブの形: 自分のデッキのタブには自分のデッキだけ、借りたデッキのタブには借りたデッキだけ
+  const choices = rentTab && allowRented ? choices0.filter((c) => (tab === 'rent' ? c.kind === 'rent' : c.kind !== 'rent')) : choices0;
   const usable = (c) => c && c.why.length === 0;
-  const first = choices.find((c) => c.id === decks.active && usable(c)) || choices.find(usable) || null;
+  const first = choices0.find((c) => c.id === decks.active && usable(c)) || choices0.find(usable) || null;
   const [sel, setSel] = useState(first ? first.id : null);
   const [busy, setBusy] = useState(false);
-  const chosen = choices.find((c) => c.id === sel && usable(c)) || null;
+  const chosen = choices0.find((c) => c.id === sel && usable(c)) || null;
   const go = async () => {
     if (!chosen || busy) return;
     Audio_.fgSe.tap();
@@ -41,7 +69,15 @@ const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', 
     <div data-mh-screen data-card-deck-pick className={SCREEN_SHELL_CLASS}>
       <ScreenHead title={title} accent="text-amber-200" onBack={onBack}/>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-2`}>
-        {note && <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{note}</p>}
+        {rentTab && allowRented && (
+          <div data-card-deck-pick-tabs className="flex gap-1.5" role="tablist">
+            {[['own', '自分のデッキ'], ['rent', '借りたデッキ']].map(([id, label]) => (
+              <button key={id} type="button" role="tab" aria-selected={tab === id} data-card-deck-pick-tab={id} onClick={() => { Audio_.fgSe.tap(); setTab(id); }}
+                className={`flex-1 rounded-xl py-2 text-[13px] font-black ${tab === id ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`}>{label}</button>
+            ))}
+          </div>
+        )}
+        {note && tab === 'own' && <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{note}</p>}
         {choices.map((c) => {
           const on = c.id === sel;
           const ok = usable(c);
@@ -59,7 +95,37 @@ const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', 
             </button>
           );
         })}
-        {!first && <p data-card-deck-pick-none className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>対戦に使えるデッキがありません。デッキ編成で組んでください</p>}
+        {rentTab && allowRented && tab === 'rent' && (<>
+          {rented ? (
+            <button type="button" data-card-deck-pick-giveback disabled={rentBusy} onClick={() => { Audio_.fgSe.tap(); void giveBack(); }}
+              className="w-full rounded-xl border border-emerald-300/50 bg-slate-900 py-1.5 text-[12px] font-black text-emerald-200 disabled:opacity-50">借りているデッキを返す</button>
+          ) : <p className="text-[12px] font-bold text-slate-300">いま借りているデッキはありません。下から1組借りられます(マルチ対戦では使えません)</p>}
+          {rentMsg && <p data-card-deck-pick-rent-msg className="rounded-xl bg-slate-900 p-2 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{rentMsg}</p>}
+          <div data-card-deck-pick-rent-list className={SCREEN_PANEL_CLASS}>
+            <div className="text-[12px] font-bold text-slate-400">借りるデッキをさがす</div>
+            {cands === null ? <p className="mt-1 text-[12px] font-bold text-slate-300">読み込み中…</p> : (
+              [['おすすめ', cands.picks], ['よく戦われている', cands.popular]].map(([label, rows]) => (
+                <div key={label} className="mt-1.5">
+                  <div className="text-[11px] font-black text-amber-200">{label}</div>
+                  {rows.length ? rows.map((e) => (
+                    <div key={`${label}-${e.ownerId}`} data-card-deck-pick-cand={e.ownerId} className="mt-1 flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5">
+                      {typeof CardPvpAvatar === 'function' && <CardPvpAvatar icon={e.icon} frame={e.frame} className="h-8 w-8"/>}
+                      <span className="min-w-0 flex-1">
+                        <b className="block truncate text-[13px] font-black text-white">{e.name}</b>
+                        <small className="block truncate text-[11px] font-bold text-slate-300">{e.tactics.name || 'デッキ'}</small>
+                        {typeof cardShareSmartText === 'function' && <small className="block text-[10px] font-black text-amber-200">{`賢さ ${cardShareSmartText(e.tactics)}`}</small>}
+                      </span>
+                      <button type="button" data-card-deck-pick-rent={e.ownerId} disabled={rentBusy || (rented && rented.ownerId === e.ownerId && rented.version === e.version)} onClick={() => { Audio_.fgSe.tap(); void rentIt(e); }}
+                        className="mh-button mh-button-primary min-h-[34px] shrink-0 rounded-lg px-3 text-[12px] font-black disabled:opacity-50">{rented && rented.ownerId === e.ownerId && rented.version === e.version ? '借りています' : '借りる'}</button>
+                    </div>
+                  )) : <p className="mt-1 text-[12px] font-bold text-slate-400">まだだれも登録していません</p>}
+                </div>
+              ))
+            )}
+            <button type="button" data-card-deck-pick-rent-reload className="mt-2 w-full rounded-xl border border-white/15 bg-slate-900 py-1.5 text-[12px] font-black text-slate-200" onClick={() => { Audio_.fgSe.tap(); void loadCands(); }}>ほかの人をさがす</button>
+          </div>
+        </>)}
+        {!first && tab === 'own' && <p data-card-deck-pick-none className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>対戦に使えるデッキがありません。デッキ編成で組んでください</p>}
       </div>
       <div className={SCREEN_FOOTER_CLASS}>
         <button type="button" data-card-deck-pick-go disabled={!chosen || busy} onClick={() => { void go(); }}
