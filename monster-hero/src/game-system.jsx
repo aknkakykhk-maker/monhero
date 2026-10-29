@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a787f75afaa36089
+// generated-sha256: 2886a7c3da85a930
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10155,7 +10155,7 @@ const beatRankPlayXp = ({ difficultyId, cleared = true, fullCombo = false, allMa
 };
 
 // 経験値を足した次の値と、新しくもらうごほうび。today は日本時間の 'YYYY-MM-DD'(呼ぶ側が渡す)
-// 返り値: { next, add, parts, from, to, tickets, beatPoints }
+// 返り値: { next, add, parts, from, to, tickets, beatPoints, bonusTickets, bonusPoints }(bonus* は5ランクごとのおまけの分。tickets・beatPoints に含む)
 const beatRankAfter = (prev, { difficultyId, cleared, fullCombo, allMarvelous, multi, today }) => {
   const cur = normalizeBeatRank(prev);
   const from = playerRankInfo(cur.xp).rank;
@@ -10167,9 +10167,12 @@ const beatRankAfter = (prev, { difficultyId, cleared, fullCombo, allMarvelous, m
   const add = play.xp + (first ? BEAT_RANK_BONUS.dayFirst : 0);
   const xp = playerRankSafeXp(cur.xp + add);
   const to = playerRankInfo(xp).rank;
-  let tickets = 0, beatPoints = 0;
-  for (let r = Math.max(cur.got + 1, 2); r <= to; r++) { tickets += beatRankTicketsFor(r); beatPoints += playerRankBeatPointsFor(r); }
-  return { next: { ...cur, xp, day: day || cur.day, dayFirst: first || (cur.day === day && cur.dayFirst), got: Math.max(cur.got, to) }, add, parts, from, to, tickets, beatPoints };
+  let tickets = 0, beatPoints = 0, bonusTickets = 0, bonusPoints = 0;
+  for (let r = Math.max(cur.got + 1, 2); r <= to; r++) {
+    tickets += beatRankTicketsFor(r); beatPoints += playerRankBeatPointsFor(r);
+    if (r % 5 === 0) { bonusTickets += r; bonusPoints += r * 200; }
+  }
+  return { next: { ...cur, xp, day: day || cur.day, dayFirst: first || (cur.day === day && cur.dayFirst), got: Math.max(cur.got, to) }, add, parts, from, to, tickets, beatPoints, bonusTickets, bonusPoints };
 };
 
 // ---- part: 18-points-and-auto.jsx ----
@@ -34768,6 +34771,156 @@ function PlayerRankBoard({ kind = 'beat', fetchTop, fetchMine, renderIcon = null
   );
 }
 
+// ==== ランクが上がった瞬間の、画面いっぱいの演出(2026-10-29 社長「この演出で」・見本 claude.ai/artifact/RxkPuST5JAV2JkyAQmB3GX) ====
+// ビートランク(曲の結果)とカードランク(対戦の結果)で同じ演出を使う。
+//   1. 前のランクの盾が震えて割れ、新しい数字の盾が飛び出す(光の輪・紙吹雪・「RANK UP!」)
+//   2. 帯が変わる(シルバー→ゴールドなど)ときは、画面が白く光り、光線が回り、紙吹雪を多めに、「◯◯に昇格!」の帯
+//   3. もらった物(gains: [{ icon, text, note?, bonus? }])が1つずつ右から飛び込む(bonus は5ランクごとのおまけの光)
+// 押すと先へ進む(演出中 → 最後の状態 → 閉じる)。長くても4秒ほど。一度に何ランクも上がっても演出は1回(to のランクで)。
+// 効果音: 割れる crit → 出る levelUp(帯が変わるときは勝利のジングル)→ もらった物が入るたび trainingReward
+const PLAYER_RANK_UP_FX_CSS = `
+.mh-prfx{position:fixed;inset:0;z-index:95000;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 38%,rgba(64,24,120,.92),rgba(8,4,20,.94) 70%);cursor:pointer;user-select:none;overflow:hidden}
+.mh-prfx-stage{position:relative;width:min(100%,420px);height:100%}
+.mh-prfx-center{position:absolute;left:50%;top:36%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:10px}
+.mh-prfx-big .mh-prb-shield{width:96px;height:107px}
+.mh-prfx-big .mh-prb-shield::after{inset:5px}
+.mh-prfx-big .mh-prb-num{font-size:46px;-webkit-text-stroke:8px var(--prb-ink)}
+.mh-prfx-big .mh-prb-num.mh-prb-w3{font-size:34px}
+.mh-prfx-title{font-weight:900;font-size:32px;color:#fff;-webkit-text-stroke:6px #4c1d95;paint-order:stroke fill;letter-spacing:.04em}
+.mh-prfx-kind{font-weight:900;font-size:15px;color:#fff;-webkit-text-stroke:3px #1e293b;paint-order:stroke fill}
+.mh-prfx-slot{position:relative;width:96px;height:107px}
+.mh-prfx-half{position:absolute;inset:0}
+.mh-prfx-half.l{clip-path:polygon(0 0,52% 0,44% 100%,0 100%)}
+.mh-prfx-half.r{clip-path:polygon(52% 0,100% 0,100% 100%,44% 100%)}
+.mh-prfx-new{position:absolute;inset:0}
+.mh-prfx-ring{position:absolute;left:50%;top:36%;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:4px solid rgba(255,255,255,.9);opacity:0}
+.mh-prfx-conf{position:absolute;left:50%;top:36%;width:8px;height:12px;border-radius:2px;opacity:0}
+.mh-prfx-rays{position:absolute;left:50%;top:36%;width:560px;height:560px;margin:-280px 0 0 -280px;border-radius:50%;opacity:0;background:repeating-conic-gradient(from 0deg,var(--prfx-ray) 0 8deg,transparent 8deg 24deg);-webkit-mask:radial-gradient(circle,#000 25%,transparent 68%);mask:radial-gradient(circle,#000 25%,transparent 68%)}
+.mh-prfx-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.mh-prfx-band{position:absolute;left:0;right:0;top:56%;text-align:center;padding:10px 0;font-weight:900;font-size:20px;color:#fff;-webkit-text-stroke:4px rgba(0,0,0,.6);paint-order:stroke fill;opacity:0;background:linear-gradient(90deg,transparent,var(--prfx-band),transparent)}
+.mh-prfx-gains{position:absolute;left:16px;right:16px;top:58%;display:flex;flex-direction:column;gap:8px}
+.mh-prfx-band ~ .mh-prfx-gains{top:66%}
+.mh-prfx-gain{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:14px;background:rgba(15,10,35,.88);border:1px solid rgba(253,224,71,.45);opacity:0}
+.mh-prfx-gain.bonus{border-color:#f0abfc;box-shadow:0 0 18px rgba(240,171,252,.45)}
+.mh-prfx-gain b{font-size:18px;font-weight:900;color:#fef08a;font-variant-numeric:tabular-nums}
+.mh-prfx-gain small{display:block;font-size:10px;font-weight:700;color:#cbd5e1}
+.mh-prfx-gain .ico{font-size:24px}
+.mh-prfx-hint{position:absolute;left:0;right:0;bottom:calc(14px + var(--mh-sa-bottom,0px));text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,.6)}
+.mh-prfx.play .mh-prfx-half .mh-prb{animation:mhPrfxShake .5s ease-in-out}
+.mh-prfx.play .mh-prfx-half.l{animation:mhPrfxSplitL .45s ease-in .5s forwards}
+.mh-prfx.play .mh-prfx-half.r{animation:mhPrfxSplitR .45s ease-in .5s forwards}
+.mh-prfx.play .mh-prfx-new{animation:mhPrfxPop .5s cubic-bezier(.2,1.6,.4,1) .75s both}
+.mh-prfx.play .mh-prfx-ring{animation:mhPrfxRing .7s ease-out .75s both}
+.mh-prfx.play .mh-prfx-title{animation:mhPrfxDrop .45s cubic-bezier(.2,1.4,.4,1) .9s both}
+.mh-prfx.play .mh-prfx-kind{animation:mhPrfxFade .3s ease-out 1.1s both}
+.mh-prfx.play .mh-prfx-conf{animation:mhPrfxConf 1.2s ease-out var(--d) both}
+.mh-prfx.play .mh-prfx-flash{animation:mhPrfxFlash .5s ease-out .7s both}
+.mh-prfx.play .mh-prfx-rays{animation:mhPrfxRays 2.4s ease-out .75s both}
+.mh-prfx.play .mh-prfx-band{animation:mhPrfxBand .5s ease-out 1.3s both}
+.mh-prfx.play .mh-prfx-gain{animation:mhPrfxFly .45s cubic-bezier(.2,1.3,.4,1) var(--d) both}
+.mh-prfx.done *{animation:none!important}
+.mh-prfx.done .mh-prfx-half,.mh-prfx.done .mh-prfx-conf,.mh-prfx.done .mh-prfx-ring,.mh-prfx.done .mh-prfx-flash{display:none}
+.mh-prfx.done .mh-prfx-new,.mh-prfx.done .mh-prfx-title,.mh-prfx.done .mh-prfx-kind,.mh-prfx.done .mh-prfx-gain,.mh-prfx.done .mh-prfx-band{opacity:1;transform:none}
+.mh-prfx.done .mh-prfx-rays{opacity:.9}
+@keyframes mhPrfxShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px) rotate(-3deg)}40%{transform:translateX(6px) rotate(3deg)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+@keyframes mhPrfxSplitL{to{transform:translate(-60px,40px) rotate(-25deg);opacity:0}}
+@keyframes mhPrfxSplitR{to{transform:translate(60px,40px) rotate(25deg);opacity:0}}
+@keyframes mhPrfxPop{from{transform:scale(.2);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes mhPrfxRing{from{transform:scale(.4);opacity:1}to{transform:scale(2.6);opacity:0}}
+@keyframes mhPrfxDrop{from{transform:translateY(-30px) scale(1.4);opacity:0}to{transform:none;opacity:1}}
+@keyframes mhPrfxFade{from{opacity:0}to{opacity:1}}
+@keyframes mhPrfxConf{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--x),var(--y)) rotate(var(--r))}}
+@keyframes mhPrfxFlash{0%{opacity:.9}100%{opacity:0}}
+@keyframes mhPrfxRays{0%{opacity:0;transform:rotate(0) scale(.6)}30%{opacity:1}100%{opacity:.9;transform:rotate(60deg) scale(1)}}
+@keyframes mhPrfxBand{from{opacity:0;transform:scaleX(.2)}to{opacity:1;transform:none}}
+@keyframes mhPrfxFly{from{opacity:0;transform:translateX(80px) scale(.8)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.mh-prfx.play *{animation-duration:.01s!important;animation-delay:0s!important}}
+`;
+const ensurePlayerRankUpFxCss = () => {
+  try {
+    if (typeof document === 'undefined' || document.getElementById('mh-player-rank-up-fx-css')) return;
+    const el = document.createElement('style');
+    el.id = 'mh-player-rank-up-fx-css';
+    el.textContent = PLAYER_RANK_UP_FX_CSS;
+    document.head.appendChild(el);
+  } catch (_) { /* 入れられなくても、ランクともらった物の文字は読める */ }
+};
+// 帯ごとの光線と帯の色
+const PLAYER_RANK_UP_TIER_FX = Object.freeze({
+  1: { ray: 'rgba(234,138,74,.3)', band: 'rgba(154,75,28,.85)' },
+  2: { ray: 'rgba(226,232,240,.3)', band: 'rgba(100,116,139,.85)' },
+  3: { ray: 'rgba(253,224,71,.32)', band: 'rgba(217,119,6,.85)' },
+  4: { ray: 'rgba(192,132,252,.34)', band: 'rgba(109,40,217,.85)' },
+  5: { ray: 'rgba(255,255,255,.3)', band: 'rgba(79,70,229,.85)' },
+});
+const PLAYER_RANK_UP_CONFETTI = ['#fde047', '#f0abfc', '#22d3ee', '#f472b6', '#a3e635', '#fff'];
+
+function PlayerRankUpFx({ kind = 'beat', from = 1, to = 1, gains = [], onClose = null }) {
+  ensurePlayerRankBadgeCss();
+  ensurePlayerRankUpFxCss();
+  const [stage, setStage] = React.useState('play');
+  const tierFrom = playerRankTier(from), tierTo = playerRankTier(to);
+  const tierUp = tierTo.t !== tierFrom.t;
+  const fx = PLAYER_RANK_UP_TIER_FX[tierTo.t] || PLAYER_RANK_UP_TIER_FX[1];
+  // 紙吹雪は最初に1回だけ散らばり方を決める(描き直しで飛び直さないように)
+  const confetti = React.useMemo(() => Array.from({ length: tierUp ? 48 : 18 }, (_, i) => {
+    const a = Math.random() * Math.PI * 2, d = 60 + Math.random() * 130;
+    return { x: `${Math.cos(a) * d}px`, y: `${Math.sin(a) * d + 120}px`, r: `${Math.random() * 720 - 360}deg`, d: `${0.75 + Math.random() * 0.3}s`, c: PLAYER_RANK_UP_CONFETTI[i % PLAYER_RANK_UP_CONFETTI.length] };
+  }), []);
+  const list = Array.isArray(gains) ? gains : [];
+  const gainStart = tierUp ? 1.8 : 1.3;
+  React.useEffect(() => {
+    const se = (name) => { try { if (typeof Audio_ !== 'undefined' && Audio_.se && typeof Audio_.se[name] === 'function') Audio_.se[name](); } catch (_) { /* 音が出なくても演出は続ける */ } };
+    const timers = [
+      setTimeout(() => se('crit'), 500),
+      setTimeout(() => { if (tierUp && typeof Audio_ !== 'undefined' && typeof Audio_.playJingle === 'function') { try { Audio_.playJingle('victory'); } catch (_) {} } else se('levelUp'); }, 750),
+      ...list.map((_, i) => setTimeout(() => se('trainingReward'), (gainStart + i * 0.35) * 1000 + 150)),
+      setTimeout(() => setStage((s) => (s === 'play' ? 'done' : s)), (gainStart + list.length * 0.35 + 0.6) * 1000),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, []);
+  // 押すと先へ: 演出中 → 最後の状態 → 閉じる
+  const next = () => { if (stage === 'play') setStage('done'); else if (onClose) onClose(); };
+  const k = playerRankKind(kind);
+  const shield = (rank, cls = '') => (
+    <span className={`mh-prb mh-prfx-big mh-prb-t${playerRankTier(rank).t} ${cls}`}>
+      <span className="mh-prb-shield"><span className="mh-prb-gloss"/><b className={`mh-prb-num${String(rank).length >= 3 ? ' mh-prb-w3' : ''}`}>{rank}</b></span>
+    </span>
+  );
+  return (
+    <div data-player-rank-up-fx={kind} data-player-rank-up-fx-stage={stage} className={`mh-prfx ${stage}`} role="dialog" aria-modal="true"
+      aria-label={`${k.label}が${to}に上がりました`} tabIndex={0} onClick={next}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') { e.preventDefault(); next(); } }}
+      style={{ '--prfx-ray': fx.ray, '--prfx-band': fx.band }}>
+      <div className="mh-prfx-stage">
+        {tierUp && <div className="mh-prfx-rays" aria-hidden="true"/>}
+        <div className="mh-prfx-ring" aria-hidden="true"/>
+        <div className="mh-prfx-center">
+          <div className="mh-prfx-slot">
+            <div className="mh-prfx-half l" aria-hidden="true">{shield(from)}</div>
+            <div className="mh-prfx-half r" aria-hidden="true">{shield(from)}</div>
+            <div className="mh-prfx-new">{shield(to)}</div>
+          </div>
+          <div className="mh-prfx-title">RANK UP!</div>
+          <div className="mh-prfx-kind">{k.label}</div>
+        </div>
+        {tierUp && <div className="mh-prfx-band">{`${tierTo.name}に昇格!`}</div>}
+        {list.length > 0 && <ul className="mh-prfx-gains" aria-label="もらった物">
+          {list.map((g, i) => (
+            <li key={i} className={`mh-prfx-gain${g.bonus ? ' bonus' : ''}`} style={{ '--d': `${gainStart + i * 0.35}s` }}>
+              {g.icon && <span className="ico" aria-hidden="true">{g.icon}</span>}
+              <span className="min-w-0"><b>{String(g.text || '')}</b>{g.note && <small style={JA_WRAP_STYLE}>{jaWrap(String(g.note))}</small>}</span>
+            </li>
+          ))}
+        </ul>}
+        {confetti.map((c, i) => <span key={i} className="mh-prfx-conf" aria-hidden="true" style={{ '--x': c.x, '--y': c.y, '--r': c.r, '--d': c.d, background: c.c }}/>)}
+        {tierUp && <div className="mh-prfx-flash" aria-hidden="true"/>}
+        <div className="mh-prfx-hint">{stage === 'play' ? '押すと先へ' : '押すと閉じる'}</div>
+      </div>
+    </div>
+  );
+}
+
 // ---- part: 50-error-boundary.jsx ----
 // ==== 画面のエラー境界 ====
 // React 18 は描画中に例外が1つ出るとルートごと外してしまい、画面が真っ白のまま何も押せなくなる
@@ -35686,12 +35839,12 @@ function BreederMarketScreen({
       </div>}
 
       {marketSection&&<>
-        <MarketBalanceBar balances={
+        {/* カード売り場の所持ビートPは、タブの下へ(パックのタブはガチャポイントと同じ帯。2026-10-29 社長 案B) */}
+        {marketSection!=='card'&&<MarketBalanceBar balances={
           marketSection==='diamond'?[{currency:'diamond',value:gold}]
           :marketSection==='breeder'?[{currency:'breederPoint',value:breederPoints}]
           :marketSection==='exchange'?[{currency:'psyche',value:psycheHave},{currency:'heroProofShard',value:shardHave},{currency:'heroProof',value:proofHave}]
-          :marketSection==='card'?[{currency:'cardPoint',value:cardShop?cardShop.point:0}]
-          :[{currency:'beatPoint',value:safeEventPoints}]}/>
+          :[{currency:'beatPoint',value:safeEventPoints}]}/>}
         {marketExchangeError&&!sheet&&<MarketNotice>{marketExchangeError}</MarketNotice>}
       </>}
 
@@ -35734,8 +35887,12 @@ function BreederMarketScreen({
         const cp=cardShop.point;
         return <>
           {renderSectionTabs('card', true)}
+          {/* 一覧(mh-scroll)の外に置くので、横の画面では左の列(タブの下)に入る */}
+          {tab==='pack'&&cardShop.onExchangeCatalog&&typeof CardShopGachaBand==='function'
+            ?<CardShopGachaBand db={CARD_BATTLE_DATA} point={cp} gacha={cardShop.gacha} catalogs={cardShop.catalogs} collection={cardShop.collection} busy={busy||cardShop.busy} onExchangeCatalog={cardShop.onExchangeCatalog} onUseCatalog={cardShop.onUseCatalog}/>
+            :<MarketBalanceBar balances={[{currency:'cardPoint',value:cp}]}/>}
           <div className={SCREEN_LIST_CLASS} data-card-shop data-card-shop-tab={tab}>
-            {tab==='pack'&&<CardShopPacks db={CARD_BATTLE_DATA} point={cp} busy={busy||cardShop.busy} collection={cardShop.collection} onBuyPack={cardShop.onBuyPack} gacha={cardShop.gacha} catalogs={cardShop.catalogs} onExchangeCatalog={cardShop.onExchangeCatalog} onUseCatalog={cardShop.onUseCatalog}/>}
+            {tab==='pack'&&<CardShopPacks db={CARD_BATTLE_DATA} point={cp} busy={busy||cardShop.busy} collection={cardShop.collection} onBuyPack={cardShop.onBuyPack}/>}
             {/* 戦術カードのパック(97 の CardTacticsShop・2026-10-29 社長「戦術カードはマーケットで買えるようにして」) */}
             {tab==='tactics'&&typeof CardTacticsShop==='function'&&<CardTacticsShop point={cp} busy={busy||cardShop.busy} onBuy={cardShop.onBuyTactics} onExchange={cardShop.onExchangeTactics}/>}
             {tab==='starter'&&<CardShopStarters db={CARD_BATTLE_DATA} point={cp} collection={cardShop.collection} busy={busy||cardShop.busy} starter={cardShop.starter} shop={cardShop.shop} onBuyStarter={cardShop.onBuyStarter}/>}
@@ -37605,7 +37762,6 @@ function RhythmRankingScreen({
   rhythmRankingTab, rhythmTotalRanking,
   rhythmRankingPending=null, onResendRhythmRankingPending=null,
   setRhythmEventDivision, setRhythmRankingDetail, setRhythmRankingTab,
-  beatRankXp=0,
 }) {
       // イベント詳細(告知画像と報酬の表)を開いているか。
       // 一覧の上へ積むとランキングが画面の外へ押し出されるので、別に開く形にした
@@ -37656,10 +37812,7 @@ function RhythmRankingScreen({
       // イベントのタブを開いていて中身が無いとき(今回が未開催・前回がまだ無い)は、
       // 曲別の一覧へ落ちないようにする。文言だけを出す
       const totalTabOpen=totalTab&&!boardTab&&!eventTabOpen;
-      // ビートランクのタブ(2026-10-29 社長)。ランク順(同じなら経験値の合計順)・上位100人とあなた
-      const beatRankTabOpen=rhythmRankingTab==='beatRank'&&!boardTab&&!eventTabOpen;
-      const [beatRankReload,setBeatRankReload]=useState(0);
-      const songTab=!totalTabOpen&&!boardTab&&!eventTabOpen&&!beatRankTabOpen;
+      const songTab=!totalTabOpen&&!boardTab&&!eventTabOpen;
       const boards=rhythmEventRanking||{};
       const event=(boardKind&&boards[boardKind])||{status:'idle',window:null,event:null,boards:{}};
       const eventDefinition=event.event||null;
@@ -37723,7 +37876,6 @@ function RhythmRankingScreen({
         // ★開催していないあいだもタブを出す(2026-09-14・ユーザー依頼「イベントタブを常設」)。
         //   中で「今回／前回」を切り替える。どちらも無いときは、その旨の文言を出す
         ...(eventReleased?[{id:'event',label:'イベント'}]:[]),
-        {id:'beatRank',label:'ビートランク'},
       ];
       // ★タブも部門も、押すたびに取り直す(2026-09-11・ユーザー指摘「総合だけ反映が遅い」)。
       //   「初めて開いたときだけ」にしていたため、一度見た部門は古い順位のまま残っていた。
@@ -37760,7 +37912,6 @@ function RhythmRankingScreen({
       const refresh=()=>{
         if(boardTab)loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,eventDivisionId);
         else if(totalTabOpen)loadRhythmTotalRanking&&loadRhythmTotalRanking();
-        else if(beatRankTabOpen)setBeatRankReload(n=>n+1);
         else loadRhythmRanking(song,rhythmRanking.difficultyId||'ALL');
       };
       // ランク(S/SS/…)を決める点数。回数ボーナス込みの点だと満点を超えてしまうので、
@@ -37865,8 +38016,6 @@ function RhythmRankingScreen({
               ・横画面の案内(RhythmLandscapeHint)  … 曲えらび・遊びかたの側にある
               ・タブごとの説明文                   … ヘルプの「全国ランキング」にある
               ・みゅあの吹き出し                   … 曲えらび(イベント開催中)にある */}
-          {beatRankTabOpen&&<PlayerRankBoard kind="beat" fetchTop={sbFetchBeatRanks} fetchMine={async()=>sbFetchBeatRankMine(await ensureBreederId())}
-            renderIcon={rankingBreederIcon} selfXp={beatRankXp} reloadKey={beatRankReload}/>}
           {totalTabOpen&&(<>
             {total.status==='loading'&&<p data-rhythm-total-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
             {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
@@ -50214,13 +50363,31 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             <div className="flex min-h-0 flex-1 flex-col">
               {rankHubTab === 'national'
                 ? (rankingSupport ? rankingSupport.render(() => setRankHubOpen(false)) : null)
+                : rankHubTab === 'beatRank'
+                ? (
+                  // ビートランク(2026-10-29 社長「ビートランクは下のタブのほうがいい」)。中身は共通の PlayerRankBoard(43)
+                  <div data-rhythm-beat-rank-ranking className="flex min-h-0 flex-1 flex-col" style={{ paddingTop: 'var(--mh-sa-top)' }}>
+                    <div className="flex shrink-0 items-center gap-2 px-3 pt-2">
+                      <button type="button" aria-label="戻る" onClick={() => setRankHubOpen(false)} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300">←</button>
+                      <div className="min-w-0 flex-1 leading-tight">
+                        <b className="block truncate text-base font-black text-cyan-100">🎵 ビートランク</b>
+                        <small className="block text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('モンヒロビートを遊ぶほど上がる、あなた自身のランクの順位です')}</small>
+                      </div>
+                    </div>
+                    <div className="min-h-0 flex-1 overflow-y-auto">
+                      <PlayerRankBoard kind="beat" fetchTop={sbFetchBeatRanks} fetchMine={async () => sbFetchBeatRankMine(await ensureBreederId())}
+                        renderIcon={rankingSupport && rankingSupport.breederIcon} selfXp={Number(ms.beatRankXp) || 0} />
+                    </div>
+                  </div>
+                )
                 : <RhythmBuddyRankingBoard renderBreederIcon={rankingSupport && rankingSupport.breederIcon} selfName={myProfile().name} onClose={() => setRankHubOpen(false)} friendIds={friendsOn ? (roster || []).map((f) => f.otherId) : null} />}
             </div>
             <div data-rhythm-mode-ranking-tabs className="flex shrink-0 gap-2 border-t border-white/10 bg-slate-900 px-3 pt-2" style={{ paddingBottom: 'calc(0.5rem + var(--mh-sa-bottom))' }}>
-              {/* 320幅で「マスモンランキ／ング」と言葉の途中で折れていた。細い端末では字を11pxにして1行に収める(2026-10-26) */}
-              {[['national', '🏆 全国ランキング'], ['buddy', '🎶 マスモンランキング']].map(([id, label]) => (
+              {/* 320幅で「マスモンランキ／ング」と言葉の途中で折れていた。細い端末では字を11pxにして1行に収める(2026-10-26)。
+                  ビートランクを3つ目に足した(2026-10-29)ので、入らないときは言葉の切れ目(全国／ランキング・マスモン／ランキング)でだけ2行に分ける */}
+              {[['national', '🏆', ['全国', 'ランキング']], ['buddy', '🎶', ['マスモン', 'ランキング']], ['beatRank', '🎵', ['ビートランク']]].map(([id, icon, words]) => (
                 <button key={id} type="button" data-rhythm-mode-ranking-tab={id} onClick={() => setRankHubTab(id)}
-                  className={`min-h-[44px] min-w-0 flex-1 whitespace-nowrap rounded-xl border px-1.5 text-[11px] font-black min-[360px]:px-2 min-[360px]:text-[12px] ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`}>{label}</button>
+                  className={`min-h-[44px] min-w-0 flex-1 rounded-xl border px-1 text-[11px] font-black leading-tight min-[360px]:px-2 min-[360px]:text-[12px] ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`}><span className="inline-flex flex-wrap items-center justify-center gap-x-1"><span aria-hidden="true">{icon}</span>{words.map((w) => <span key={w} className="whitespace-nowrap">{w}</span>)}</span></button>
               ))}
             </div>
           </div>
@@ -62257,25 +62424,45 @@ const CardStarterContents = ({ db, kit, collection, onClose }) => {
 const cardPackSpeciesLabel = (db, pack) => pack.species.map((sp) => (Object.values(db.monsters).find((m) => m.species === sp && !m.variant) || {}).name || sp).join('・');
 // ---- ガチャポイントの帯とバトルカードカタログ(2026-10-27 社長 案A「パックの上に帯」) ----
 // 帯: たまっている数をそのまま出す(上限は無い)。目盛りは次の1冊までの進み具合(730 なら 230 / 500)
-const CardGachaPanel = ({ gacha = 0, catalogs = 0, busy, onExchange, onOpenCatalog }) => {
+// 2026-10-29 社長 案B「ビートPも同じ帯に」: 上の段に所持ビートP、下の段にガチャポイントを1行で。説明の文は ? で開く。
+//   売り場の一覧の外(タブのすぐ下)に置くので、横の画面では左の列に入る(55 の card の欄)
+const CardGachaPanel = ({ point = 0, gacha = 0, catalogs = 0, busy, onExchange, onOpenCatalog }) => {
   const g = cardNormalizeGacha(gacha);
   const prog = cardGachaProgress(g);
+  const [help, setHelp] = useState(false);
   return (
-    <div data-card-gacha className="rounded-2xl border-2 border-amber-300/70 p-3 text-white" style={{ background: 'linear-gradient(135deg,#3b2a05ee,#1e1b4bee)' }}>
-      <div className="flex items-baseline gap-1 text-[13px] font-black text-amber-200">
-        <span>🎫 ガチャポイント</span>
-        <span data-card-gacha-point={g} className="ml-auto text-[16px] text-white">{g.toLocaleString()}</span>
+    <div data-card-gacha className="mb-2 shrink-0 rounded-2xl border-2 border-amber-300/70 px-2.5 py-1.5 text-white" style={{ background: 'linear-gradient(135deg,#2e1065ee,#1e1b4bee)' }}>
+      <div data-card-gacha-beatp className="flex items-baseline gap-1 border-b border-white/15 pb-1 text-[12px] font-black text-violet-200">
+        <span className="whitespace-nowrap">🎟️ 所持ビートP</span>
+        <span className="ml-auto font-mono text-[16px] text-white">{Math.max(0, Math.floor(Number(point) || 0)).toLocaleString()}</span>
       </div>
-      <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-950" aria-hidden="true"><i className="block h-full rounded-full" style={{ width: `${(prog / CARD_CATALOG_COST) * 100}%`, background: 'linear-gradient(90deg,#fbbf24,#f472b6)' }}/></div>
-      <div className="mt-1 flex text-[10.5px] font-bold text-slate-200" style={JA_WRAP_STYLE}>
-        <span className="min-w-0 flex-1">{jaWrap(`ブースターパック1つで +${CARD_GACHA_PER_PACK}。${CARD_CATALOG_COST}で「バトルカードカタログ」1冊と交換できます`)}</span>
-        <span className="shrink-0 pl-1 tabular-nums text-amber-100">次の1冊まで {prog} / {CARD_CATALOG_COST}</span>
+      <div className="mt-1 flex items-center gap-1.5">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-1 text-[12px] font-black text-amber-200">
+            <span className="whitespace-nowrap">🎫 ガチャP</span>
+            <span data-card-gacha-point={g} className="text-[14px] text-white">{g.toLocaleString()}</span>
+            <span className="ml-auto whitespace-nowrap text-[10px] tabular-nums text-amber-100" aria-label={`次の1冊まで ${prog} / ${CARD_CATALOG_COST}`}>{prog} / {CARD_CATALOG_COST}</span>
+          </div>
+          <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-slate-950" aria-hidden="true"><i className="block h-full rounded-full" style={{ width: `${(prog / CARD_CATALOG_COST) * 100}%`, background: 'linear-gradient(90deg,#fbbf24,#f472b6)' }}/></div>
+        </div>
+        <button type="button" data-card-gacha-exchange aria-label={`カタログと交換(${CARD_CATALOG_COST})`} disabled={busy || g < CARD_CATALOG_COST} onClick={onExchange} className="mh-button min-h-[36px] shrink-0 whitespace-nowrap rounded-xl bg-amber-500 px-2 text-[11px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40">交換</button>
+        <button type="button" data-card-gacha-catalog aria-label={`カタログを使う(${catalogs}冊)`} disabled={busy || catalogs < 1} onClick={onOpenCatalog} className="mh-button min-h-[36px] shrink-0 whitespace-nowrap rounded-xl bg-sky-400 px-2 text-[11px] font-black text-slate-950 active:scale-[.98] disabled:opacity-40">📖{catalogs}冊</button>
+        <button type="button" data-card-gacha-help aria-expanded={help} aria-label="ガチャポイントの説明" onClick={() => setHelp((v) => !v)} className="mh-button flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/40 text-[12px] font-black text-white">?</button>
       </div>
-      <div className="mt-2 grid grid-cols-2 gap-1.5">
-        <button type="button" data-card-gacha-exchange disabled={busy || g < CARD_CATALOG_COST} onClick={onExchange} className="mh-button min-h-[42px] rounded-xl bg-amber-500 px-1 text-[12px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40"><span className="inline-block whitespace-nowrap">カタログと交換</span><span className="inline-block whitespace-nowrap">({CARD_CATALOG_COST})</span></button>
-        <button type="button" data-card-gacha-catalog disabled={busy || catalogs < 1} onClick={onOpenCatalog} className="mh-button min-h-[42px] rounded-xl bg-sky-400 px-1 text-[12px] font-black text-slate-950 active:scale-[.98] disabled:opacity-40"><span className="inline-block whitespace-nowrap">📖 カタログを使う</span><span className="inline-block whitespace-nowrap">({catalogs}冊)</span></button>
-      </div>
+      {help && <div data-card-gacha-help-text className="mt-1 text-[10.5px] font-bold text-slate-200" style={JA_WRAP_STYLE}>{jaWrap(`ブースターパック1つで +${CARD_GACHA_PER_PACK}。${CARD_CATALOG_COST}たまると「バトルカードカタログ」1冊と交換できます(右の数は次の1冊まで)。カタログを使うと、好きなカードを1枚もらえます`)}</div>}
     </div>
+  );
+};
+// パックのタブの帯(交換の確かめ・カタログを使う画面も持つ)。55 の card の欄が、タブのすぐ下に置く
+const CardShopGachaBand = ({ db, point = 0, gacha = 0, catalogs = 0, collection = null, busy, onExchangeCatalog, onUseCatalog }) => {
+  const [gachaConfirm, setGachaConfirm] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  return (
+    <>
+      <CardGachaPanel point={point} gacha={gacha} catalogs={catalogs} busy={busy} onExchange={() => setGachaConfirm(true)} onOpenCatalog={() => setCatalogOpen(true)}/>
+      {gachaConfirm && <ConfirmSheet title="バトルカードカタログと交換しますか？" message={`ガチャポイント ${CARD_CATALOG_COST} を使います(いま ${cardNormalizeGacha(gacha).toLocaleString()})`} confirmLabel="交換する" onCancel={() => setGachaConfirm(false)} onConfirm={() => { setGachaConfirm(false); void onExchangeCatalog(); }}/>}
+      {catalogOpen && <CardCatalogSheet db={db} catalogs={catalogs} collection={collection} busy={busy} onUse={onUseCatalog} onClose={() => setCatalogOpen(false)}/>}
+    </>
   );
 };
 // カタログを使う画面: 第1〜8弾を切り替え、カードを押して選び、「『◯◯』をもらう」で1枚もらう(確かめを1回はさむ)。
@@ -62344,14 +62531,11 @@ const CardCatalogSheet = ({ db, catalogs, collection, busy, onUse, onClose }) =>
     </>
   );
 };
-const CardShopPacks = ({ db, point, busy, collection = null, onBuyPack, gacha = 0, catalogs = 0, onExchangeCatalog, onUseCatalog }) => {
+const CardShopPacks = ({ db, point, busy, collection = null, onBuyPack }) => {
   const [sheet, setSheet] = useState(null);   // { kind:'contents'|'rates', pack }
   const [confirm, setConfirm] = useState(null);
-  const [gachaConfirm, setGachaConfirm] = useState(false);
-  const [catalogOpen, setCatalogOpen] = useState(false);
   return (
     <div data-card-shop-packs className="space-y-2 pb-2">
-      {onExchangeCatalog && <CardGachaPanel gacha={gacha} catalogs={catalogs} busy={busy} onExchange={() => setGachaConfirm(true)} onOpenCatalog={() => setCatalogOpen(true)}/>}
       {CARD_PACKS.map((pack) => (
         <div key={pack.id} data-card-shop-pack={pack.id} className={SCREEN_PANEL_CLASS} style={{ borderColor: `${pack.color}88` }}>
           <div className="flex items-center gap-2">
@@ -62374,8 +62558,6 @@ const CardShopPacks = ({ db, point, busy, collection = null, onBuyPack, gacha = 
       ))}
       {sheet && sheet.kind === 'contents' && <CardPackContents db={db} pack={sheet.pack} collection={collection} onClose={() => setSheet(null)}/>}
       {sheet && sheet.kind === 'rates' && <CardPackRateSheet db={db} pack={sheet.pack} collection={collection} onClose={() => setSheet(null)}/>}
-      {gachaConfirm && <ConfirmSheet title="バトルカードカタログと交換しますか？" message={`ガチャポイント ${CARD_CATALOG_COST} を使います(いま ${cardNormalizeGacha(gacha).toLocaleString()})`} confirmLabel="交換する" onCancel={() => setGachaConfirm(false)} onConfirm={() => { setGachaConfirm(false); void onExchangeCatalog(); }}/>}
-      {catalogOpen && <CardCatalogSheet db={db} catalogs={catalogs} collection={collection} busy={busy} onUse={onUseCatalog} onClose={() => setCatalogOpen(false)}/>}
       {confirm && <ConfirmSheet title={`${confirm.pack.name}を${confirm.count}パック買いますか？`} message={`ビートP ${cardPackPrice(confirm.pack, confirm.count).toLocaleString()} を使います(いま ${point.toLocaleString()})`} confirmLabel="買って開ける" onCancel={() => setConfirm(null)} onConfirm={() => { const c = confirm; setConfirm(null); void onBuyPack(c.pack.id, c.count); }}/>}
     </div>
   );
@@ -69992,7 +70174,17 @@ function MonsterHeroGame() {
         ...(gain.tickets > 0 ? [{ icon: '🎶', text: `セッション券 ×${gain.tickets}` }] : []),
         ...(gain.beatPoints > 0 ? [{ icon: '🎟️', text: `ビートP ${gain.beatPoints.toLocaleString()}` }] : []),
       ];
+      // 画面いっぱいの演出に並べる、もらった物(ふつうの分 → 5ランクごとのおまけ の順。おまけは光で分ける)
+      const basePoints = gain.beatPoints - gain.bonusPoints, baseTickets = gain.tickets - gain.bonusTickets;
+      const fxGains = [
+        ...(basePoints > 0 ? [{ icon: '🎟️', text: `ビートP ${basePoints.toLocaleString()}`, note: '上がったランク ×100' }] : []),
+        ...(gain.bonusPoints > 0 ? [{ icon: '🎟️', text: `ビートP ${gain.bonusPoints.toLocaleString()}`, note: '5ランクごとのおまけ(ランク ×200)', bonus: true }] : []),
+        ...(baseTickets > 0 ? [{ icon: '🎶', text: `セッション券 ${baseTickets}枚`, note: 'ランクが上がるたびに1枚' }] : []),
+        ...(gain.bonusTickets > 0 ? [{ icon: '🎶', text: `セッション券 ${gain.bonusTickets}枚`, note: '5ランクごとのおまけ(ランクと同じ枚数)', bonus: true }] : []),
+      ];
       setBeatRankAward({ add: gain.add, parts: gain.parts, from: gain.from, to: gain.to, xp: next.xp, gains });
+      // ランクが上がったら、画面いっぱいの演出を出す(2026-10-29 社長「この演出で」)。押すと先へ・閉じる
+      if (gain.to > gain.from) setBeatRankFx({ from: gain.from, to: gain.to, gains: fxGains });
       void syncBeatRankToServer(next);
     } catch (_) { /* 経験値が書けなくても、曲の記録の保存は止めない */ }
   };
@@ -72566,6 +72758,8 @@ function MonsterHeroGame() {
   const [beatRank, setBeatRank] = useState(() => normalizeBeatRank(null));
   const [beatRankAward, setBeatRankAward] = useState(null);
   const beatRankSyncedRef = useRef(false);
+  // ランクが上がった瞬間の画面いっぱいの演出(PlayerRankUpFx)。{ from, to, gains } / null
+  const [beatRankFx, setBeatRankFx] = useState(null);
   const rhythmPlayRunAwardRef = useRef(null);
   const rhythmPlayRunAward = rhythmPlayRunAwardState;
   const setRhythmPlayRunAward = (next) => { rhythmPlayRunAwardRef.current = next; setRhythmPlayRunAwardState(next); };
@@ -73569,7 +73763,7 @@ function MonsterHeroGame() {
   //   (2026-09-07・ユーザー提案)。追いつきが残るのは、途中でやめたときだけ。
   //   その場合はいまの周がそのまま続いているので、止まっていたぶんを取り戻すのが正しい。
   useEffect(() => {
-    if (gameState === 'RHYTHM_PLAY') { rhythmPlayStartedAtRef.current = Date.now(); setRhythmPlayRunAward(null); stopCatchUp(); setBeatRankAward(null); return; }
+    if (gameState === 'RHYTHM_PLAY') { rhythmPlayStartedAtRef.current = Date.now(); setRhythmPlayRunAward(null); stopCatchUp(); setBeatRankAward(null); setBeatRankFx(null); return; }
     const startedAt = rhythmPlayStartedAtRef.current;
     rhythmPlayStartedAtRef.current = 0;
     if (!startedAt) return;
@@ -87791,6 +87985,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         })()}
 
         {raidDamageFx&&((gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='raid')||gameState==='RAID_JACK_DEBUG')&&<RaidJackDamageFx key={raidDamageFx.key} fx={raidDamageFx} onDone={()=>setRaidDamageFx(null)}/>}
+        {beatRankFx&&gameState==='RHYTHM_PLAY'&&<PlayerRankUpFx kind="beat" from={beatRankFx.from} to={beatRankFx.to} gains={beatRankFx.gains} onClose={()=>setBeatRankFx(null)}/>}
         {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward} onComplete={async(result,merged)=>{
           // デバッグ画面の試作曲(RHYTHM_PROTO_SONGS)は、何も残さない。周回の報酬・経験値・自己ベスト・クリア回数・
           // 実績・全国ランキングのどれにも入れない(CLAUDE.md ⑦。試作は公開しない曲なので、記録に混ぜない)
@@ -87918,7 +88113,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             // 画面(gameState)は移さず、対戦の画面の上へ重ねる。画面を移すと、ライブ開始の合図を受ける側が外れて取り逃す
             open:(song)=>{loadRhythmRanking(song);},
             render:(onClose)=>(
-              <RhythmRankingScreen beatRankXp={beatRank.xp}
+              <RhythmRankingScreen
                 loadRhythmEventRanking={loadRhythmEventRanking}
                 loadRhythmRanking={loadRhythmRanking}
                 loadRhythmTotalRanking={loadRhythmTotalRanking}
@@ -88075,7 +88270,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             高い難易度で挑むほど上位に近づく(§3.5・RHYTHM_MODE.md参照)。
             自分のスコアはいちばん高い1件だけが載る(rhythmRankingDedupeByUser)。 */}
         {gameState==='RHYTHM_RANKING'&&(
-          <RhythmRankingScreen beatRankXp={beatRank.xp}
+          <RhythmRankingScreen
             loadRhythmEventRanking={loadRhythmEventRanking}
             loadRhythmRanking={loadRhythmRanking}
             loadRhythmTotalRanking={loadRhythmTotalRanking}
