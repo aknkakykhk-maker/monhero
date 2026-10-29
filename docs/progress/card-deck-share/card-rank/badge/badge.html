@@ -1,0 +1,16 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="badge.css">
+<style>body{margin:0;width:390px;background:linear-gradient(180deg,#1e1033,#0b0717);color:#fff;font-family:"Hiragino Sans","Noto Sans JP",sans-serif;padding:16px;box-sizing:border-box}
+h2{font-size:15px;margin:4px 0 10px;color:#fde68a}.row{display:flex;align-items:center;justify-content:space-around;padding:8px 10px;margin-bottom:8px;border-radius:12px;background:rgba(255,255,255,.06)}
+small{font-size:11px;color:#cbd5e1;font-weight:700}</style>
+<h2>ランクの札(大)— ランク帯で色が変わる</h2>
+<div id="big"></div>
+<h2 style="margin-top:14px">小さい札(帯・ランキングの行に)</h2>
+<div class="row" id="small" style="justify-content:flex-start;gap:14px;flex-wrap:wrap"></div>
+<script>
+const tier=(r)=>r>=50?5:r>=30?4:r>=20?3:r>=10?2:1;
+const names=['','ブロンズ','シルバー','ゴールド','アメジスト','レインボー'];
+const b=(r,kind,size)=>`<span class="prb ${size||''} t${tier(r)}"><span class="prb-shield"><span class="prb-gloss"></span><span class="prb-num ${String(r).length>=3?'w3':''}">${r}</span></span><span class="prb-tag"><span class="prb-kind">${names[tier(r)]}</span><span class="prb-name">${kind}</span></span></span>`;
+const rows=[[7,'1〜9'],[12,'10〜19'],[24,'20〜29'],[38,'30〜49'],[120,'50〜']];
+document.getElementById('big').innerHTML=rows.map(([r,t])=>`<div class="row">${b(r,'カードランク')}${b(r,'ビートランク')}</div><div style="margin:-4px 0 8px 10px;font-size:11px;font-weight:700;color:#cbd5e1">${names[tier(r)]} … ランク${t}</div>`).join('');
+document.getElementById('small').innerHTML=rows.map(([r])=>b(r,'カードランク','s')).join('');
+</script>

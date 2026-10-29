@@ -1,0 +1,18 @@
+.prb{display:inline-flex;align-items:center;gap:6px;font-family:"Hiragino Sans","Noto Sans JP",sans-serif}
+.prb-shield{position:relative;width:52px;height:58px;flex:none;filter:drop-shadow(0 3px 0 rgba(0,0,0,.45)) drop-shadow(0 0 10px var(--glow))}
+.prb-shield::before{content:"";position:absolute;inset:0;clip-path:polygon(50% 0,100% 18%,100% 70%,50% 100%,0 70%,0 18%);background:var(--rim)}
+.prb-shield::after{content:"";position:absolute;inset:3px;clip-path:polygon(50% 0,100% 18%,100% 70%,50% 100%,0 70%,0 18%);background:var(--face)}
+.prb-gloss{position:absolute;inset:3px 3px 50% 3px;z-index:2;clip-path:polygon(50% 0,100% 18%,100% 100%,0 100%,0 18%);background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.05))}
+.prb-num{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;padding-top:3px;font-weight:900;font-size:26px;color:#fff;-webkit-text-stroke:5px var(--ink);paint-order:stroke fill;letter-spacing:-.04em;line-height:1}
+.prb-num.w3{font-size:20px}
+.prb-tag{display:flex;flex-direction:column;line-height:1.05}
+.prb-kind{white-space:nowrap;font-size:10px;font-weight:900;color:var(--label);letter-spacing:.08em}
+.prb-name{white-space:nowrap;font-size:14px;font-weight:900;color:#fff;-webkit-text-stroke:3px var(--ink);paint-order:stroke fill}
+.prb.s .prb-shield{width:32px;height:36px}.prb.s .prb-shield::after{inset:2px}.prb.s .prb-num{font-size:16px;-webkit-text-stroke:3.5px var(--ink)}.prb.s .prb-num.w3{font-size:12px}
+.prb.s .prb-name{font-size:12px}.prb.s .prb-kind{display:none}
+/* ランク帯 */
+.t1{--rim:linear-gradient(160deg,#fde2c4,#9a4b1c 55%,#5a250b);--face:linear-gradient(160deg,#e08a4a,#8a3f12);--ink:#3b1406;--glow:rgba(234,138,74,.55);--label:#fbbf8a}
+.t2{--rim:linear-gradient(160deg,#ffffff,#94a3b8 55%,#475569);--face:linear-gradient(160deg,#cbd5e1,#64748b);--ink:#1e293b;--glow:rgba(203,213,225,.6);--label:#e2e8f0}
+.t3{--rim:linear-gradient(160deg,#fff7c2,#f59e0b 55%,#92400e);--face:linear-gradient(160deg,#fcd34d,#d97706);--ink:#5b2a03;--glow:rgba(251,191,36,.7);--label:#fde68a}
+.t4{--rim:linear-gradient(160deg,#f5d0fe,#a21caf 55%,#4a044e);--face:linear-gradient(160deg,#c084fc,#6d28d9);--ink:#2e1065;--glow:rgba(192,132,252,.75);--label:#f0abfc}
+.t5{--rim:conic-gradient(from 0deg,#f43f5e,#f59e0b,#84cc16,#06b6d4,#8b5cf6,#f43f5e);--face:linear-gradient(160deg,#1e1b4b,#0f172a);--ink:#000;--glow:rgba(255,255,255,.8);--label:#fff}
