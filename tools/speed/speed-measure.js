@@ -285,7 +285,7 @@ async function measureCard(browser, seconds = 25) {
   await page.locator('[data-card-mode-assistant]').click();
   await page.locator('[data-card-foe]').first().waitFor({ timeout: 20000 });
   await page.locator('[data-card-foe]').first().click();
-  await page.locator('[data-card-start]').click();
+  await page.locator('[data-card-start]').click(); await page.locator('[data-card-deck-pick-go]').click(); // 対戦の前のデッキ選び(前に使ったデッキが選ばれている)
   await page.locator('[data-card-battle]').waitFor({ timeout: 60000 });
   await page.evaluate(() => {
     window.__speedFrames = []; window.__speedLong = []; let last = performance.now();

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3c1309af96b60d56
+// generated-sha256: 08a817cb1b614efe
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -54675,6 +54675,7 @@ const CARD_SAVE_KEYS = Object.freeze({
   settings: 'mh_card_settings_v1',    // 演出の速さ・守れないときの自動パス(normalizeCardSettings)
   gacha: 'mh_card_gacha_points_v1',   // ガチャポイント(ブースターパック1つで +10・上限なし。89 の cardNormalizeGacha。2026-10-27 社長)
   catalogs: 'mh_card_catalogs_v1',    // 持っているバトルカードカタログの冊数(ガチャポイント500で1冊。89 の cardExchangeCatalog / cardUseCatalog)
+  weeklyReward: 'mh_card_weekly_reward_v1', // 受け取った週間報酬の週の一覧 ['card_weekly_2026-11-02', …](90 の cardWeeksAwaitingReward。壊れているときは何も配らない)
   aiTalk: 'mh_card_ai_talk_v1',       // 助手のおしゃべり(AI)の入/切 { on }(無ければ入。83-card-battle-talk-ai.jsx の cardNormalizeAiTalk)
 });
 // カードで使う・もらうポイントはビートP(2026-10-26 社長「ビートPを廃止してビートポイントにして」)。
@@ -58848,7 +58849,21 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   useEffect(() => { if (view !== 'options') { stopBgmPreview(); setPlCopy(null); } }, [view]);
   useEffect(() => () => stopBgmPreview(), []);
   // ほかの画面の招待の知らせで「参加する」を押してきたら、マルチの入口を開く(入口が合言葉の部屋へ入る。91 の CARD_PVP_JOIN)
-  useEffect(() => { const go = (c) => { if (c) setView('pvp'); }; go(CARD_PVP_JOIN.peek()); return CARD_PVP_JOIN.on(go); }, []);
+  //   入る前にデッキを選ぶ画面を挟む(2026-10-29 社長 案C)。知らせの番号は CARD_PVP_JOIN に残っていて、入口を開いたときに入口が拾う
+  useEffect(() => { const go = (c) => { if (c) { setDeckPick({ next: 'pvp' }); setView('deckPick'); } }; go(CARD_PVP_JOIN.peek()); return CARD_PVP_JOIN.on(go); }, []);
+  // 対戦の前のデッキ選び(87-card-deck-pick.jsx)。next … 'cpu'(助手と対戦。pick は相手と難易度) / 'pvp'(マルチの入口へ)
+  const [deckPick, setDeckPick] = useState(null);
+  // マルチの試合のあと、部屋を出て入口へ戻るとき(over → idle)も、入口の前にデッキ選びを挟む。「もう1戦」は同じ部屋・同じデッキのまま
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  useEffect(() => {
+    if (typeof CARD_PVP === 'undefined') return undefined;
+    let prev = CARD_PVP.get().phase;
+    return CARD_PVP.subscribe((r) => {
+      if (prev === 'over' && r.phase === 'idle' && viewRef.current === 'pvp') { setDeckPick({ next: 'pvp' }); setView('deckPick'); }
+      prev = r.phase;
+    });
+  }, []);
   const [kitPick, setKitPick] = useState(null);
   const [kitView, setKitView] = useState(null); // スターター選びで「中身を見る」を開いているキット
   const [starterOpen, setStarterOpen] = useState(null); // はじめのスターターを開ける画面に渡す並び(cardStarterOpenResult)
@@ -59029,6 +59044,53 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     return () => clearInterval(t);
   }, [save ? 1 : 0, screen]);
 
+  // ---- 週間報酬(2026-10-29 社長。90 の cardWeeksAwaitingReward)。トップを開いたとき、終わった週の分を調べて帯を出す ----
+  //   ランキングに数える人(rank.send)だけ。受け取りは、受け取った週の一覧を読み直して確かめてから、ビートP・ガチャポイントと同じ取引で保存する
+  const [weekly, setWeekly] = useState([]); // [{ id, key, point, place, wins }]
+  const [weeklyBusy, setWeeklyBusy] = useState(false);
+  const weeklyChecked = useRef(false);
+  useEffect(() => {
+    if (!save || !db || debug || !(rank && rank.send) || screen !== 'CARD_TOP' || weeklyChecked.current) return;
+    weeklyChecked.current = true;
+    void (async () => {
+      try {
+        const claims = cardNormalizeWeeklyClaims(await storeGet(CARD_SAVE_KEYS.weeklyReward, null));
+        const weeks = cardWeeksAwaitingReward(Date.now(), claims);
+        if (!weeks.length) return;
+        const breederId = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
+        if (!breederId) return;
+        const list = [];
+        for (const w of weeks) {
+          const st = await cardWeekStanding(w.key, breederId); // 読めなかったら例外(今回は出さない。次に開いたときにもう一度)
+          list.push({ id: w.id, key: w.key, ...cardWeeklyRewardOf({ place: st.place, wins: st.wins }) });
+        }
+        // もらえる物が無い週は、受け取ったものとして覚える(次から問い合わせない)
+        const empty = list.filter((x) => !x.point).map((x) => x.id);
+        if (empty.length) {
+          const raw = await storeGet(CARD_SAVE_KEYS.weeklyReward, null);
+          const now = cardNormalizeWeeklyClaims(raw);
+          if (now) await saveStoredValuesOrRollback([{ key: CARD_SAVE_KEYS.weeklyReward, before: raw, next: [...now, ...empty.filter((id) => !now.includes(id))].slice(-30) }], storeGet, storeSet);
+        }
+        setWeekly(list.filter((x) => x.point));
+      } catch (_) { /* 通信できないときは出さない */ }
+    })();
+  }, [save ? 1 : 0, screen, rank && rank.send ? 1 : 0]);
+  const claimWeekly = async (w) => {
+    if (weeklyBusy) return;
+    setWeeklyBusy(true);
+    try {
+      const raw = await storeGet(CARD_SAVE_KEYS.weeklyReward, null);
+      const claims = cardNormalizeWeeklyClaims(raw);
+      if (!claims || claims.includes(w.id)) { setWeekly((l) => l.filter((x) => x.id !== w.id)); return; } // もう受け取った(ほかのタブなど)・保存が壊れている
+      const ok = await persist({ point: save.point + w.point }, {}, [
+        { key: CARD_SAVE_KEYS.weeklyReward, before: raw, next: [...claims, w.id].slice(-30) },
+      ]);
+      if (!ok) { setNotice('保存できませんでした。もう一度お試しください'); return; }
+      setWeekly((l) => l.filter((x) => x.id !== w.id));
+      setNotice(`週間報酬を受け取りました(ビートP +${w.point.toLocaleString()})`);
+    } finally { setWeeklyBusy(false); }
+  };
+
   // 過去の対戦を見る(93-card-replay.jsx)。id … 試合の番号。back … とじたあとに戻る画面(view)
   const openReplay = async (id, back = 'top') => {
     const rec = await cardReplayGet(id);
@@ -59147,6 +59209,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const foes = (debug ? allAssistants.filter((a) => cardFoeReleased(a.id)) : assistantsUnlockedFrom(seenStoryIds)).filter((a) => CARD_AI_HABITS[a.id]);
   const activeDeck = save.decks.decks.find((d) => d.id === save.decks.active) || save.decks.decks[0] || null;
   const deckIssues = activeDeck ? [...cardDeckProblems(db, activeDeck), ...cardDeckOwnProblems(db, activeDeck, save.collection)] : ['デッキがありません'];
+  // 使えるデッキが1つでもあれば「対戦する」を押せる(どれで戦うかは次のデッキ選びで決める)
+  const deckUsable = cardDeckPickChoices(db, save.decks, save.collection).some((c) => c.why.length === 0);
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
   // 対戦開始の画面に出す、こちらの名前と、場の3体(0=こちら・1=相手)
   const myName = (rank && rank.profile && rank.profile.name) || 'あなた';
@@ -59163,8 +59227,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     onBgm && onBgm(CARD_AI_BGM.mua); // 練習試合は、みゅあの曲(#3634 の前と同じ)
     onNavigate('CARD_BATTLE');
   };
-  const startBattle = (pick = foe) => {
-    if (!activeDeck || deckIssues.length) { setNotice(deckIssues.join('・')); return; }
+  const startBattle = (pick = foe, deck = activeDeck) => {
+    const issues = deck ? [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)] : ['デッキがありません'];
+    if (!deck || issues.length) { setNotice(issues.join('・')); return; }
+    const activeDeck = deck; // 下は選んだデッキで組む(デッキ選びで書き換えた active は、この描画ではまだ古いので受け取った物を使う)
     // 毎試合、好きなモンスター ベスト4から3体を選んで組み直す(MASTER はこちらのデッキも見る)
     const cpuDeck = cardAiBuildDeck(db, pick.who, pick.level, Math.random, { playerDeck: activeDeck });
     const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
@@ -59248,7 +59314,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <span aria-hidden="true" className="relative flex -space-x-2">{assistantsUnlockedFrom(seenStoryIds).filter((x) => CARD_AI_HABITS[x.id]).map((x) => <img key={x.id} src={assistantFaceImage(x, 'normal')} alt="" className="h-10 w-10 rounded-full border-2 border-white/80 bg-slate-900 object-cover object-top shadow"/>)}</span>
           </button>
           {/* マルチ対戦(91-card-battle-multi.jsx)。MFバトルカードの公開の印と同じ日に開く(cardPvpOpen・社長 案A)。それまではデバッグ設定から入ったときだけ押せる */}
-          <button type="button" data-card-mode-multi disabled={!(debug || cardPvpOpen())} onClick={() => { Audio_.fgSe.tap(); setView('pvp'); }} className="mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50" style={{ animationDelay: '60ms' }}>
+          <button type="button" data-card-mode-multi disabled={!(debug || cardPvpOpen())} onClick={() => { Audio_.fgSe.tap(); setDeckPick({ next: 'pvp' }); setView('deckPick'); }} className="mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50" style={{ animationDelay: '60ms' }}>
             <span aria-hidden="true" className="mhms-mark">MULTI</span>
             <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🎮</span><span><b className="block text-[22px] font-black italic leading-tight">マルチ対戦</b><small className="block text-[11px] font-black text-slate-900/80">ブリーダーどうしで戦う</small></span></span>
             {!cardPvpOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">{debug ? 'つくっている途中(デバッグ)' : '準備中'}</span>}
@@ -59257,6 +59323,26 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       </div>
     );
   }
+  // ---- 対戦の前のデッキ選び(助手と対戦・マルチ。練習試合には出さない) ----
+  if (view === 'deckPick' && deckPick) {
+    const toPvp = deckPick.next === 'pvp';
+    return <CardDeckPick db={db} decks={save.decks} collection={save.collection}
+      note={toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います'}
+      onBack={() => { setDeckPick(null); setView(toPvp ? 'mode' : 'foe'); }}
+      onPick={async (c) => {
+        const deck = save.decks.decks.find((d) => d.id === c.id);
+        if (!deck) return;
+        if (save.decks.active !== deck.id) {
+          const ok = await persist({ decks: { ...save.decks, active: deck.id } });
+          if (!ok) { setNotice('保存できませんでした'); return; }
+        }
+        const next = deckPick;
+        setDeckPick(null);
+        if (next.next === 'pvp') { setView('pvp'); return; }
+        startBattle(next.pick, deck);
+      }}/>;
+  }
+
   if (view === 'pvp') {
     // 報酬(区切り2・台帳 #119 の対人戦。1日の上限なし): ビートP・その日の数・記録(pvp の勝ち負け)・クイック周回
     // その日はじめての勝ちの +50 は、助手と対戦と同じ印(daily.firstWin)を使う。どちらで勝っても合わせて1日1回(2026-10-26 社長)
@@ -59361,7 +59447,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             </div>
             {deckIssues.length > 0 && <div className="mt-0.5 text-[12px] font-bold text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(deckIssues.join('・'))}</div>}
           </div>
-          <button type="button" data-card-start className={`${btn} mh-button-primary`} disabled={!a || deckIssues.length > 0} onClick={() => startBattle(foe)}>対戦する</button>
+          <button type="button" data-card-start className={`${btn} mh-button-primary`} disabled={!a || !deckUsable} onClick={() => { Audio_.fgSe.tap(); setDeckPick({ next: 'cpu', pick: foe }); setView('deckPick'); }}>対戦する</button>
         </div>
       </div>
     );
@@ -59466,7 +59552,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         </div>
         <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2`}>
           {result.replay && <button type="button" data-card-result-replay className={`${btn} mh-button-secondary col-span-2 border border-sky-300/40 bg-slate-800`} onClick={() => { Audio_.fgSe.tap(); void openReplay(result.replay, 'result'); }}>この対戦を見る</button>}
-          <button type="button" className={`${btn} mh-button-primary`} onClick={() => { const again = { who: result.who, level: result.level }; setFoe(again); startBattle(again); }}>もう一度</button>
+          <button type="button" className={`${btn} mh-button-primary`} onClick={() => { const again = { who: result.who, level: result.level }; setFoe(again); setDeckPick({ next: 'cpu', pick: again }); setView('deckPick'); }}>もう一度</button>
           <button type="button" className={`${btn} mh-button-secondary border border-white/20 bg-slate-800`} onClick={() => setView('foe')}>相手をえらぶ</button>
         </div>
       </div>
@@ -59708,6 +59794,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             </button>
           )}
           {/* 横の背の低い画面(高さ420まで)では1行に縮める(2行だと下のボタンが画面の外へ押し出される。667×375 の点検) */}
+          {weekly.map((w) => (
+            <CardRewardBand key={w.id} tag="weekly" busy={weeklyBusy} onClaim={() => { void claimWeekly(w); }}
+              title={`${w.key.slice(5).replace('-', '/')}からの週の週間報酬`}
+              lines={[`MASTER の勝ち数 ${w.wins}勝・${w.place}位`, `ビートP +${w.point.toLocaleString()}`]}/>
+          ))}
           {notice && <p data-card-top-notice className={`text-[12px] font-bold text-amber-200 [@media(orientation:landscape)_and_(max-height:420px)]:truncate [@media(orientation:landscape)_and_(max-height:420px)]:text-[11px] [@media(orientation:landscape)_and_(max-height:420px)]:leading-snug`} style={JA_LABEL_STYLE} title={notice}>{jaWrap(notice)}</p>}
           <div data-card-top-cards className="grid grid-cols-2 gap-2">
             {bigCards.map((c, idx) => (
@@ -60750,6 +60841,62 @@ const CardShopStarters = ({ db, point, busy, starter, shop, collection = null, o
   );
 };
 
+// ---- part: 87-card-deck-pick.jsx ----
+// ==================== 対戦の前のデッキ選び ====================
+// 2026-10-29 社長(案C): 助手と対戦・マルチ対戦の前に、使うデッキを選ぶ画面を1枚挟む。練習試合には挟まない。
+//   前に使ったデッキ(mh_card_decks_v1 の active)がはじめから選ばれていて、そのまま「対戦へ」を押せば1手で始まる。
+//   選んだデッキは active を書き換えるだけ(保存の形は変えない。書くのは 84 の CardBattleScreen)。
+//   使えないデッキ(枚数が足りない・持っていないカードがある など)は、理由を出して選べないようにする。
+// 選べるデッキの一覧は cardDeckPickChoices の1か所で作る。借りたデッキ(レンタル)は、ここに kind の違う行を足せば並ぶ
+const cardDeckPickChoices = (db, decks, collection) => ((decks && decks.decks) || []).map((d) => ({
+  id: d.id, kind: 'own', name: d.name, monsters: d.monsters, count: d.cards.length,
+  why: [...cardDeckProblems(db, d), ...cardDeckOwnProblems(db, d, collection || {})],
+}));
+
+const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', note = '', onPick, onBack }) => {
+  const choices = cardDeckPickChoices(db, decks, collection);
+  const usable = (c) => c && c.why.length === 0;
+  const first = choices.find((c) => c.id === decks.active && usable(c)) || choices.find(usable) || null;
+  const [sel, setSel] = useState(first ? first.id : null);
+  const [busy, setBusy] = useState(false);
+  const chosen = choices.find((c) => c.id === sel && usable(c)) || null;
+  const go = async () => {
+    if (!chosen || busy) return;
+    Audio_.fgSe.tap();
+    setBusy(true);
+    try { await onPick(chosen); } finally { setBusy(false); }
+  };
+  return (
+    <div data-mh-screen data-card-deck-pick className={SCREEN_SHELL_CLASS}>
+      <ScreenHead title={title} accent="text-amber-200" onBack={onBack}/>
+      <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-2`}>
+        {note && <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{note}</p>}
+        {choices.map((c) => {
+          const on = c.id === sel;
+          const ok = usable(c);
+          return (
+            <button key={c.id} type="button" data-card-deck-pick-row={c.id} data-card-deck-pick-on={on ? '1' : undefined} disabled={!ok}
+              onClick={() => { Audio_.fgSe.tap(); setSel(c.id); }}
+              className={`${SCREEN_PANEL_CLASS} flex w-full items-center gap-2 text-left active:scale-[.99] ${on ? '!border-amber-300 ring-2 ring-amber-300/70' : ''} ${ok ? '' : 'opacity-60'}`}>
+              <span className="flex shrink-0 gap-0.5">{[0, 1, 2].map((i) => { const m = cardMonsterOf(db, c.monsters[i]); return m ? <img key={i} src={CARD_IMG(m.img)} alt={m.name} className="h-[52px] w-[37px] rounded-[4px] object-cover"/> : <span key={i} className="block h-[52px] w-[37px] rounded-[4px] border border-dashed border-white/20"/>; })}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[14px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{on ? '★ ' : ''}{jaWrap(c.name)}</span>
+                <span className={`block text-[11px] font-bold ${ok ? 'text-emerald-300' : 'text-amber-200'}`}>{`${c.count}/${CARD_BATTLE_DECK_SIZE}枚`}</span>
+                {!ok && <span data-card-deck-pick-why={c.id} className="block text-[11px] font-bold leading-snug text-amber-200" style={JA_WRAP_STYLE}>{c.why.join('・')}</span>}
+              </span>
+            </button>
+          );
+        })}
+        {!first && <p data-card-deck-pick-none className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>対戦に使えるデッキがありません。デッキ編成で組んでください</p>}
+      </div>
+      <div className={SCREEN_FOOTER_CLASS}>
+        <button type="button" data-card-deck-pick-go disabled={!chosen || busy} onClick={() => { void go(); }}
+          className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40">対戦へ</button>
+      </div>
+    </div>
+  );
+};
+
 // ---- part: 90-card-rank.jsx ----
 // ==================== MFバトルカードのランキング(社長 台帳 #3513) ====================
 // 競うもの: 助手と対戦の勝ち数(難易度ごと・今週と通算)/ 連勝の数 / カード図鑑の集めた数 / マルチ対戦の強さ(マルチができてから。いまは「準備中」の札だけ)
@@ -60899,12 +61046,95 @@ const cardRankSync = async (db, { record, collection, profile }) => {
     const sign = JSON.stringify(row);
     if ((await storeGet(CARD_SAVE_KEYS.rankSync, null)) === sign) return true;
     const ok = await sbUpsertCardRank(row);
-    if (ok) { await storeSet(CARD_SAVE_KEYS.rankSync, sign); cardRankCache.clear(); }
+    // 週ごとの記録(card_battle_week_v1)にも、同じ週の勝ち数を送る(週間報酬の順位を、週が終わったあとに数えるため)。
+    //   送れなかったときは「送った印」を残さず、次の対戦のあとにもう一度送る
+    const weekOk = ok && row.breeder_id ? await cardWeekRowSync(row) : true;
+    if (ok && weekOk) { await storeSet(CARD_SAVE_KEYS.rankSync, sign); cardRankCache.clear(); }
     return ok;
   } catch (err) {
     console.error('[ranking] card_battle_ranks sync failed:', err && err.message ? err.message : err);
     return false;
   }
+};
+
+// ==================== 週間報酬(2026-10-29 社長) ====================
+// ・部門は MASTER の週の勝ち数だけ(社長「難易度はマスターのみ」)
+// ・1〜10位に、ビートP (11−順位)×100(1位 1,000 … 10位 100)だけ(社長「ガチャポイントはなし。ビートポイントは1位で1000で、そこから100ずつ下がる」)
+// ・参加報酬はなし
+// ・終わった週の分を、2週間のうちに、カードのトップの帯で受け取る(モンヒロビートの週間報酬と同じ)
+// ・順位は、週ごとの記録の表 card_battle_week_v1(週+人で1行)で「自分より勝ち数が多い人の数+1」(いまのランキングと同じ数え方・同じ数は同じ順位)
+// ・受け取った週は mh_card_weekly_reward_v1 に覚える。保存が壊れているときは何も配らない(二重に配らないため)
+// ・CARD_WEEKLY_REWARD_FROM_MS より前に始まった週は配らない(表を足したのが 2026-10-29 で、その週の記録はそろっていない)
+const CARD_WEEK_TABLE = 'card_battle_week_v1';
+let _cardWeekUnavailable = false;
+const CARD_WEEKLY_REWARD_RANKS = 10;
+const CARD_WEEKLY_POINT_PER_PLACE = 100;
+const CARD_WEEKLY_REWARD_FROM_MS = Date.UTC(2026, 10, 1, 20, 0, 0); // 2026-11-02 05:00 JST(表を足したあとの、はじめから記録がそろう週)
+const CARD_WEEK_MS = 7 * 24 * 3600 * 1000;
+const CARD_WEEKLY_CLAIM_MS = 14 * 24 * 3600 * 1000;
+const cardWeeklyRewardForPlace = (place) => {
+  const p = Number(place);
+  if (!Number.isInteger(p) || p < 1 || p > CARD_WEEKLY_REWARD_RANKS) return null;
+  const n = CARD_WEEKLY_REWARD_RANKS + 1 - p;
+  return { point: n * CARD_WEEKLY_POINT_PER_PLACE };
+};
+// 受け取った週の一覧。配列でない(壊れている)ときは null(=何も配らない)。無いときは []
+const cardNormalizeWeeklyClaims = (v) => (v === null || v === undefined ? [] : Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x) : null);
+const cardWeekStartMs = (now) => Date.parse(`${cardWeekKeyJst(now)}T${String(CARD_WEEK_START_HOUR_JST).padStart(2, '0')}:00:00+09:00`);
+const cardWeeklyClaimId = (weekKey) => `card_weekly_${weekKey}`;
+// 終わっていて、まだ受け取っておらず、受け取りの期限の中にある週(先に終わった週から)
+const cardWeeksAwaitingReward = (nowMs, claims) => {
+  if (!Array.isArray(claims)) return [];
+  const now = Number(nowMs) || 0;
+  const thisStart = cardWeekStartMs(now);
+  const out = [];
+  for (let back = 2; back >= 1; back--) {
+    const startMs = thisStart - back * CARD_WEEK_MS;
+    const endMs = startMs + CARD_WEEK_MS;
+    if (startMs < CARD_WEEKLY_REWARD_FROM_MS || now < endMs || now >= endMs + CARD_WEEKLY_CLAIM_MS) continue;
+    const key = cardWeekKeyJst(startMs);
+    const id = cardWeeklyClaimId(key);
+    if (!claims.includes(id)) out.push({ id, key, startMs, endMs });
+  }
+  return out;
+};
+// 週ごとの記録へ1行(週+人で上書き)。表がまだ無いときは送らない(true を返して、ランキングの送りは止めない)
+const cardWeekRowSync = async (row) => {
+  if (_cardWeekUnavailable) return true;
+  try {
+    const weekRow = { week_key: row.week_key, breeder_id: row.breeder_id, user_name: row.user_name, icon: row.icon ?? null, ...(row.profile_frame ? { profile_frame: row.profile_frame } : {}) };
+    CARD_LEVEL_ORDER.forEach((lv) => { weekRow[`week_wins_${lv}`] = row[`week_wins_${lv}`] || 0; });
+    const r = await sbUpsertCardRankTo(CARD_WEEK_TABLE, 'week_key,breeder_id', weekRow);
+    if (r === null) { _cardWeekUnavailable = true; return true; }
+    return !!r;
+  } catch (err) {
+    console.error('[ranking] card_battle_week_v1 sync failed:', err && err.message ? err.message : err);
+    return false;
+  }
+};
+// 終わった週の自分の MASTER の勝ち数と順位。{ wins, place(10位までの順位。それより下・0勝は null) }。読めなかったら例外
+const cardWeekStanding = async (weekKey, breederId) => {
+  const get = async (q) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${CARD_WEEK_TABLE}?${q}`, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
+      if (!res.ok) throw new Error(`${CARD_WEEK_TABLE} ${res.status}`);
+      return await res.json();
+    } finally { clearTimeout(timer); }
+  };
+  const key = encodeURIComponent(weekKey);
+  const mine = await get(`select=week_wins_master&week_key=eq.${key}&breeder_id=eq.${encodeURIComponent(breederId)}&limit=1`);
+  const wins = Array.isArray(mine) && mine[0] ? Math.max(0, Math.floor(Number(mine[0].week_wins_master) || 0)) : 0;
+  if (!(wins > 0)) return { wins: 0, place: null };
+  const better = await get(`select=breeder_id&week_key=eq.${key}&week_wins_master=gt.${wins}&limit=${CARD_WEEKLY_REWARD_RANKS}`);
+  const n = Array.isArray(better) ? better.length : CARD_WEEKLY_REWARD_RANKS;
+  return { wins, place: n < CARD_WEEKLY_REWARD_RANKS ? n + 1 : null };
+};
+// 受け取れる中身。{ point, place, wins } / 10位より下・0勝のときは point が 0
+const cardWeeklyRewardOf = ({ place, wins }) => {
+  const byPlace = cardWeeklyRewardForPlace(place) || { point: 0 };
+  return { point: byPlace.point, place: place || null, wins };
 };
 
 // 同じ数は同じ順位(5・5・3 → 1位・1位・3位)。entries は多い順に並んでいる(2026-10-26 社長「全部入れる」の改善)
@@ -61060,6 +61290,19 @@ const CARD_RANK_KINDS = Object.freeze([
   { id: 'dex', label: '図鑑', emoji: '📖' }, { id: 'multi', label: 'マルチ', emoji: '🎮' },
 ]);
 // syncArgs … 送れていない記録を送るための材料({ db, collection, profile })。開いたときに、送れていなければ自動で送る(モンヒロビートのランキングと同じ考え)
+// 受け取りの帯(週間報酬・デッキの報酬など、カードのトップで受け取るものをそろえて出す部品)。
+//   title … 「先週の週間報酬」 / lines … 中身の行(文字) / onClaim … 「受け取る」 / busy … 押している間
+const CardRewardBand = ({ tag, title, lines, onClaim, busy }) => (
+  <div data-card-reward-band={tag} className="mhms-glass mhms-in flex w-full min-w-0 items-center gap-2 rounded-xl border border-amber-300/70 px-2.5 py-2" style={{ background: 'linear-gradient(135deg,#3b2a05dd,#1e1b4bdd)' }}>
+    <span aria-hidden="true" className="shrink-0 text-2xl leading-none">🏆</span>
+    <div className="min-w-0 flex-1">
+      <b className="block text-[12px] font-black text-amber-200">{title}</b>
+      {lines.map((t, i) => <span key={i} className="block text-[11px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}>{jaWrap(t)}</span>)}
+    </div>
+    <button type="button" data-card-reward-claim={tag} disabled={busy} onClick={onClaim} className="mh-button min-h-[40px] shrink-0 rounded-xl bg-amber-400 px-3 text-[12px] font-black text-stone-900 active:scale-95 disabled:opacity-50">受け取る</button>
+  </div>
+);
+
 const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', record = null, dex = null, sendOn = false, syncArgs = null }) => {
   const [kind, setKind] = useState('wins');
   const [period, setPeriod] = useState('week');

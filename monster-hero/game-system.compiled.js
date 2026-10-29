@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2d28a4793befc3d1
+// source-sha256: 6b1d5f98c58bc9d7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -90043,6 +90043,7 @@ const CARD_SAVE_KEYS = Object.freeze({
   settings: 'mh_card_settings_v1',
   gacha: 'mh_card_gacha_points_v1',
   catalogs: 'mh_card_catalogs_v1',
+  weeklyReward: 'mh_card_weekly_reward_v1',
   aiTalk: 'mh_card_ai_talk_v1'
 });
 const CARD_POINT_STORE_KEY = typeof RHYTHM_EVENT_POINTS_KEY !== 'undefined' ? RHYTHM_EVENT_POINTS_KEY : 'mh_rhythm_event_points_v1';
@@ -96850,10 +96851,31 @@ const CardBattleScreen = ({
   useEffect(() => () => stopBgmPreview(), []);
   useEffect(() => {
     const go = c => {
-      if (c) setView('pvp');
+      if (c) {
+        setDeckPick({
+          next: 'pvp'
+        });
+        setView('deckPick');
+      }
     };
     go(CARD_PVP_JOIN.peek());
     return CARD_PVP_JOIN.on(go);
+  }, []);
+  const [deckPick, setDeckPick] = useState(null);
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  useEffect(() => {
+    if (typeof CARD_PVP === 'undefined') return undefined;
+    let prev = CARD_PVP.get().phase;
+    return CARD_PVP.subscribe(r => {
+      if (prev === 'over' && r.phase === 'idle' && viewRef.current === 'pvp') {
+        setDeckPick({
+          next: 'pvp'
+        });
+        setView('deckPick');
+      }
+      prev = r.phase;
+    });
   }, []);
   const [kitPick, setKitPick] = useState(null);
   const [kitView, setKitView] = useState(null);
@@ -97149,6 +97171,72 @@ const CardBattleScreen = ({
     }, CARD_CPU_OPEN_STALE_MS);
     return () => clearInterval(t);
   }, [save ? 1 : 0, screen]);
+  const [weekly, setWeekly] = useState([]);
+  const [weeklyBusy, setWeeklyBusy] = useState(false);
+  const weeklyChecked = useRef(false);
+  useEffect(() => {
+    if (!save || !db || debug || !(rank && rank.send) || screen !== 'CARD_TOP' || weeklyChecked.current) return;
+    weeklyChecked.current = true;
+    void (async () => {
+      try {
+        const claims = cardNormalizeWeeklyClaims(await storeGet(CARD_SAVE_KEYS.weeklyReward, null));
+        const weeks = cardWeeksAwaitingReward(Date.now(), claims);
+        if (!weeks.length) return;
+        const breederId = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
+        if (!breederId) return;
+        const list = [];
+        for (const w of weeks) {
+          const st = await cardWeekStanding(w.key, breederId);
+          list.push({
+            id: w.id,
+            key: w.key,
+            ...cardWeeklyRewardOf({
+              place: st.place,
+              wins: st.wins
+            })
+          });
+        }
+        const empty = list.filter(x => !x.point).map(x => x.id);
+        if (empty.length) {
+          const raw = await storeGet(CARD_SAVE_KEYS.weeklyReward, null);
+          const now = cardNormalizeWeeklyClaims(raw);
+          if (now) await saveStoredValuesOrRollback([{
+            key: CARD_SAVE_KEYS.weeklyReward,
+            before: raw,
+            next: [...now, ...empty.filter(id => !now.includes(id))].slice(-30)
+          }], storeGet, storeSet);
+        }
+        setWeekly(list.filter(x => x.point));
+      } catch (_) {}
+    })();
+  }, [save ? 1 : 0, screen, rank && rank.send ? 1 : 0]);
+  const claimWeekly = async w => {
+    if (weeklyBusy) return;
+    setWeeklyBusy(true);
+    try {
+      const raw = await storeGet(CARD_SAVE_KEYS.weeklyReward, null);
+      const claims = cardNormalizeWeeklyClaims(raw);
+      if (!claims || claims.includes(w.id)) {
+        setWeekly(l => l.filter(x => x.id !== w.id));
+        return;
+      }
+      const ok = await persist({
+        point: save.point + w.point
+      }, {}, [{
+        key: CARD_SAVE_KEYS.weeklyReward,
+        before: raw,
+        next: [...claims, w.id].slice(-30)
+      }]);
+      if (!ok) {
+        setNotice('保存できませんでした。もう一度お試しください');
+        return;
+      }
+      setWeekly(l => l.filter(x => x.id !== w.id));
+      setNotice(`週間報酬を受け取りました(ビートP +${w.point.toLocaleString()})`);
+    } finally {
+      setWeeklyBusy(false);
+    }
+  };
   const openReplay = async (id, back = 'top') => {
     const rec = await cardReplayGet(id);
     const g = rec && db ? cardReplayGameOf(db, rec) : null;
@@ -97398,6 +97486,7 @@ const CardBattleScreen = ({
   const foes = (debug ? allAssistants.filter(a => cardFoeReleased(a.id)) : assistantsUnlockedFrom(seenStoryIds)).filter(a => CARD_AI_HABITS[a.id]);
   const activeDeck = save.decks.decks.find(d => d.id === save.decks.active) || save.decks.decks[0] || null;
   const deckIssues = activeDeck ? [...cardDeckProblems(db, activeDeck), ...cardDeckOwnProblems(db, activeDeck, save.collection)] : ['デッキがありません'];
+  const deckUsable = cardDeckPickChoices(db, save.decks, save.collection).some(c => c.why.length === 0);
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
   const myName = rank && rank.profile && rank.profile.name || 'あなた';
   const vsMons = (st, side) => (st && st.players && st.players[side] && st.players[side].mons || []).map(m => m.no);
@@ -97429,11 +97518,13 @@ const CardBattleScreen = ({
     onBgm && onBgm(CARD_AI_BGM.mua);
     onNavigate('CARD_BATTLE');
   };
-  const startBattle = (pick = foe) => {
-    if (!activeDeck || deckIssues.length) {
-      setNotice(deckIssues.join('・'));
+  const startBattle = (pick = foe, deck = activeDeck) => {
+    const issues = deck ? [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)] : ['デッキがありません'];
+    if (!deck || issues.length) {
+      setNotice(issues.join('・'));
       return;
     }
+    const activeDeck = deck;
     const cpuDeck = cardAiBuildDeck(db, pick.who, pick.level, Math.random, {
       playerDeck: activeDeck
     });
@@ -97641,7 +97732,10 @@ const CardBattleScreen = ({
       disabled: !(debug || cardPvpOpen()),
       onClick: () => {
         Audio_.fgSe.tap();
-        setView('pvp');
+        setDeckPick({
+          next: 'pvp'
+        });
+        setView('deckPick');
       },
       className: "mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50",
       style: {
@@ -97662,6 +97756,42 @@ const CardBattleScreen = ({
     }, "ブリーダーどうしで戦う"))), !cardPvpOpen() && React.createElement("span", {
       className: "relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white"
     }, debug ? 'つくっている途中(デバッグ)' : '準備中'))));
+  }
+  if (view === 'deckPick' && deckPick) {
+    const toPvp = deckPick.next === 'pvp';
+    return React.createElement(CardDeckPick, {
+      db: db,
+      decks: save.decks,
+      collection: save.collection,
+      note: toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います',
+      onBack: () => {
+        setDeckPick(null);
+        setView(toPvp ? 'mode' : 'foe');
+      },
+      onPick: async c => {
+        const deck = save.decks.decks.find(d => d.id === c.id);
+        if (!deck) return;
+        if (save.decks.active !== deck.id) {
+          const ok = await persist({
+            decks: {
+              ...save.decks,
+              active: deck.id
+            }
+          });
+          if (!ok) {
+            setNotice('保存できませんでした');
+            return;
+          }
+        }
+        const next = deckPick;
+        setDeckPick(null);
+        if (next.next === 'pvp') {
+          setView('pvp');
+          return;
+        }
+        startBattle(next.pick, deck);
+      }
+    });
   }
   if (view === 'pvp') {
     const pvpReward = async r => {
@@ -97901,8 +98031,15 @@ const CardBattleScreen = ({
       type: "button",
       "data-card-start": true,
       className: `${btn} mh-button-primary`,
-      disabled: !a || deckIssues.length > 0,
-      onClick: () => startBattle(foe)
+      disabled: !a || !deckUsable,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        setDeckPick({
+          next: 'cpu',
+          pick: foe
+        });
+        setView('deckPick');
+      }
     }, "対戦する")));
   }
   if (view === 'deckEdit' && editDeck) {
@@ -98161,7 +98298,11 @@ const CardBattleScreen = ({
           level: result.level
         };
         setFoe(again);
-        startBattle(again);
+        setDeckPick({
+          next: 'cpu',
+          pick: again
+        });
+        setView('deckPick');
       }
     }, "もう一度"), React.createElement("button", {
       type: "button",
@@ -98707,7 +98848,16 @@ const CardBattleScreen = ({
       alt: "",
       className: "h-8 w-6 [@media(orientation:landscape)_and_(max-height:360px)]:h-6 [@media(orientation:landscape)_and_(max-height:360px)]:w-[18px] rounded-[3px] border border-white/40 object-cover"
     }) : null;
-  }))), notice && React.createElement("p", {
+  }))), weekly.map(w => React.createElement(CardRewardBand, {
+    key: w.id,
+    tag: "weekly",
+    busy: weeklyBusy,
+    onClaim: () => {
+      void claimWeekly(w);
+    },
+    title: `${w.key.slice(5).replace('-', '/')}からの週の週間報酬`,
+    lines: [`MASTER の勝ち数 ${w.wins}勝・${w.place}位`, `ビートP +${w.point.toLocaleString()}`]
+  })), notice && React.createElement("p", {
     "data-card-top-notice": true,
     className: `text-[12px] font-bold text-amber-200 [@media(orientation:landscape)_and_(max-height:420px)]:truncate [@media(orientation:landscape)_and_(max-height:420px)]:text-[11px] [@media(orientation:landscape)_and_(max-height:420px)]:leading-snug`,
     style: JA_LABEL_STYLE,
@@ -101009,6 +101159,107 @@ const CardShopStarters = ({
     }
   }));
 };
+const cardDeckPickChoices = (db, decks, collection) => (decks && decks.decks || []).map(d => ({
+  id: d.id,
+  kind: 'own',
+  name: d.name,
+  monsters: d.monsters,
+  count: d.cards.length,
+  why: [...cardDeckProblems(db, d), ...cardDeckOwnProblems(db, d, collection || {})]
+}));
+const CardDeckPick = ({
+  db,
+  decks,
+  collection,
+  title = 'デッキをえらぶ',
+  note = '',
+  onPick,
+  onBack
+}) => {
+  const choices = cardDeckPickChoices(db, decks, collection);
+  const usable = c => c && c.why.length === 0;
+  const first = choices.find(c => c.id === decks.active && usable(c)) || choices.find(usable) || null;
+  const [sel, setSel] = useState(first ? first.id : null);
+  const [busy, setBusy] = useState(false);
+  const chosen = choices.find(c => c.id === sel && usable(c)) || null;
+  const go = async () => {
+    if (!chosen || busy) return;
+    Audio_.fgSe.tap();
+    setBusy(true);
+    try {
+      await onPick(chosen);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-card-deck-pick": true,
+    className: SCREEN_SHELL_CLASS
+  }, React.createElement(ScreenHead, {
+    title: title,
+    accent: "text-amber-200",
+    onBack: onBack
+  }), React.createElement("div", {
+    className: `${SCREEN_LIST_CLASS} space-y-2 pb-2`
+  }, note && React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, note), choices.map(c => {
+    const on = c.id === sel;
+    const ok = usable(c);
+    return React.createElement("button", {
+      key: c.id,
+      type: "button",
+      "data-card-deck-pick-row": c.id,
+      "data-card-deck-pick-on": on ? '1' : undefined,
+      disabled: !ok,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        setSel(c.id);
+      },
+      className: `${SCREEN_PANEL_CLASS} flex w-full items-center gap-2 text-left active:scale-[.99] ${on ? '!border-amber-300 ring-2 ring-amber-300/70' : ''} ${ok ? '' : 'opacity-60'}`
+    }, React.createElement("span", {
+      className: "flex shrink-0 gap-0.5"
+    }, [0, 1, 2].map(i => {
+      const m = cardMonsterOf(db, c.monsters[i]);
+      return m ? React.createElement("img", {
+        key: i,
+        src: CARD_IMG(m.img),
+        alt: m.name,
+        className: "h-[52px] w-[37px] rounded-[4px] object-cover"
+      }) : React.createElement("span", {
+        key: i,
+        className: "block h-[52px] w-[37px] rounded-[4px] border border-dashed border-white/20"
+      });
+    })), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("span", {
+      className: "block text-[14px] font-black leading-tight text-white",
+      style: JA_LABEL_STYLE
+    }, on ? '★ ' : '', jaWrap(c.name)), React.createElement("span", {
+      className: `block text-[11px] font-bold ${ok ? 'text-emerald-300' : 'text-amber-200'}`
+    }, `${c.count}/${CARD_BATTLE_DECK_SIZE}枚`), !ok && React.createElement("span", {
+      "data-card-deck-pick-why": c.id,
+      className: "block text-[11px] font-bold leading-snug text-amber-200",
+      style: JA_WRAP_STYLE
+    }, c.why.join('・'))));
+  }), !first && React.createElement("p", {
+    "data-card-deck-pick-none": true,
+    className: "rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100",
+    style: JA_WRAP_STYLE
+  }, "対戦に使えるデッキがありません。デッキ編成で組んでください")), React.createElement("div", {
+    className: SCREEN_FOOTER_CLASS
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-deck-pick-go": true,
+    disabled: !chosen || busy,
+    onClick: () => {
+      void go();
+    },
+    className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40"
+  }, "対戦へ")));
+};
 const CARD_RANK_TABLE = 'card_battle_ranks';
 const CARD_RANK_TABLE_V2 = 'card_battle_ranks_v2';
 const CARD_RANK_SELECT = 'user_name,breeder_id,icon,profile_frame,week_key,' + CARD_LEVEL_ORDER.map(lv => `wins_${lv},week_wins_${lv}`).join(',') + ',best_streak,current_streak,dex_count,dex_total,updated_at';
@@ -101167,7 +101418,8 @@ const cardRankSync = async (db, {
     const sign = JSON.stringify(row);
     if ((await storeGet(CARD_SAVE_KEYS.rankSync, null)) === sign) return true;
     const ok = await sbUpsertCardRank(row);
-    if (ok) {
+    const weekOk = ok && row.breeder_id ? await cardWeekRowSync(row) : true;
+    if (ok && weekOk) {
       await storeSet(CARD_SAVE_KEYS.rankSync, sign);
       cardRankCache.clear();
     }
@@ -101176,6 +101428,113 @@ const cardRankSync = async (db, {
     console.error('[ranking] card_battle_ranks sync failed:', err && err.message ? err.message : err);
     return false;
   }
+};
+const CARD_WEEK_TABLE = 'card_battle_week_v1';
+let _cardWeekUnavailable = false;
+const CARD_WEEKLY_REWARD_RANKS = 10;
+const CARD_WEEKLY_POINT_PER_PLACE = 100;
+const CARD_WEEKLY_REWARD_FROM_MS = Date.UTC(2026, 10, 1, 20, 0, 0);
+const CARD_WEEK_MS = 7 * 24 * 3600 * 1000;
+const CARD_WEEKLY_CLAIM_MS = 14 * 24 * 3600 * 1000;
+const cardWeeklyRewardForPlace = place => {
+  const p = Number(place);
+  if (!Number.isInteger(p) || p < 1 || p > CARD_WEEKLY_REWARD_RANKS) return null;
+  const n = CARD_WEEKLY_REWARD_RANKS + 1 - p;
+  return {
+    point: n * CARD_WEEKLY_POINT_PER_PLACE
+  };
+};
+const cardNormalizeWeeklyClaims = v => v === null || v === undefined ? [] : Array.isArray(v) ? v.filter(x => typeof x === 'string' && x) : null;
+const cardWeekStartMs = now => Date.parse(`${cardWeekKeyJst(now)}T${String(CARD_WEEK_START_HOUR_JST).padStart(2, '0')}:00:00+09:00`);
+const cardWeeklyClaimId = weekKey => `card_weekly_${weekKey}`;
+const cardWeeksAwaitingReward = (nowMs, claims) => {
+  if (!Array.isArray(claims)) return [];
+  const now = Number(nowMs) || 0;
+  const thisStart = cardWeekStartMs(now);
+  const out = [];
+  for (let back = 2; back >= 1; back--) {
+    const startMs = thisStart - back * CARD_WEEK_MS;
+    const endMs = startMs + CARD_WEEK_MS;
+    if (startMs < CARD_WEEKLY_REWARD_FROM_MS || now < endMs || now >= endMs + CARD_WEEKLY_CLAIM_MS) continue;
+    const key = cardWeekKeyJst(startMs);
+    const id = cardWeeklyClaimId(key);
+    if (!claims.includes(id)) out.push({
+      id,
+      key,
+      startMs,
+      endMs
+    });
+  }
+  return out;
+};
+const cardWeekRowSync = async row => {
+  if (_cardWeekUnavailable) return true;
+  try {
+    const weekRow = {
+      week_key: row.week_key,
+      breeder_id: row.breeder_id,
+      user_name: row.user_name,
+      icon: row.icon ?? null,
+      ...(row.profile_frame ? {
+        profile_frame: row.profile_frame
+      } : {})
+    };
+    CARD_LEVEL_ORDER.forEach(lv => {
+      weekRow[`week_wins_${lv}`] = row[`week_wins_${lv}`] || 0;
+    });
+    const r = await sbUpsertCardRankTo(CARD_WEEK_TABLE, 'week_key,breeder_id', weekRow);
+    if (r === null) {
+      _cardWeekUnavailable = true;
+      return true;
+    }
+    return !!r;
+  } catch (err) {
+    console.error('[ranking] card_battle_week_v1 sync failed:', err && err.message ? err.message : err);
+    return false;
+  }
+};
+const cardWeekStanding = async (weekKey, breederId) => {
+  const get = async q => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${CARD_WEEK_TABLE}?${q}`, {
+        headers: SB_HEADERS,
+        cache: 'no-store',
+        signal: controller.signal
+      });
+      if (!res.ok) throw new Error(`${CARD_WEEK_TABLE} ${res.status}`);
+      return await res.json();
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  const key = encodeURIComponent(weekKey);
+  const mine = await get(`select=week_wins_master&week_key=eq.${key}&breeder_id=eq.${encodeURIComponent(breederId)}&limit=1`);
+  const wins = Array.isArray(mine) && mine[0] ? Math.max(0, Math.floor(Number(mine[0].week_wins_master) || 0)) : 0;
+  if (!(wins > 0)) return {
+    wins: 0,
+    place: null
+  };
+  const better = await get(`select=breeder_id&week_key=eq.${key}&week_wins_master=gt.${wins}&limit=${CARD_WEEKLY_REWARD_RANKS}`);
+  const n = Array.isArray(better) ? better.length : CARD_WEEKLY_REWARD_RANKS;
+  return {
+    wins,
+    place: n < CARD_WEEKLY_REWARD_RANKS ? n + 1 : null
+  };
+};
+const cardWeeklyRewardOf = ({
+  place,
+  wins
+}) => {
+  const byPlace = cardWeeklyRewardForPlace(place) || {
+    point: 0
+  };
+  return {
+    point: byPlace.point,
+    place: place || null,
+    wins
+  };
 };
 const cardRankPlaces = (entries, valueOf) => {
   let place = 0;
@@ -101441,6 +101800,36 @@ const CARD_RANK_KINDS = Object.freeze([{
   label: 'マルチ',
   emoji: '🎮'
 }]);
+const CardRewardBand = ({
+  tag,
+  title,
+  lines,
+  onClaim,
+  busy
+}) => React.createElement("div", {
+  "data-card-reward-band": tag,
+  className: "mhms-glass mhms-in flex w-full min-w-0 items-center gap-2 rounded-xl border border-amber-300/70 px-2.5 py-2",
+  style: {
+    background: 'linear-gradient(135deg,#3b2a05dd,#1e1b4bdd)'
+  }
+}, React.createElement("span", {
+  "aria-hidden": "true",
+  className: "shrink-0 text-2xl leading-none"
+}, "🏆"), React.createElement("div", {
+  className: "min-w-0 flex-1"
+}, React.createElement("b", {
+  className: "block text-[12px] font-black text-amber-200"
+}, title), lines.map((t, i) => React.createElement("span", {
+  key: i,
+  className: "block text-[11px] font-bold leading-snug text-slate-100",
+  style: JA_WRAP_STYLE
+}, jaWrap(t)))), React.createElement("button", {
+  type: "button",
+  "data-card-reward-claim": tag,
+  disabled: busy,
+  onClick: onClaim,
+  className: "mh-button min-h-[40px] shrink-0 rounded-xl bg-amber-400 px-3 text-[12px] font-black text-stone-900 active:scale-95 disabled:opacity-50"
+}, "受け取る"));
 const CardRankingBoard = ({
   onBack,
   renderBreederIcon = null,
