@@ -12936,13 +12936,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     //   10WAVEぶんが溜まり、そのあとに始めたタクティクスのWAVE1へそのまま乗る
     //   (2026-09-22の再発。片付け漏れと、この積みっぱなしの両方が原因)
     if(isTacticsMode(runMode)){
-      // ETERNALは1WAVEの20ターン制限が無いので、全体の残り(200−合計)を20ターン換算にして渡す(上限は同じ+20%)
-      const catchUpRemainingTurns=battleCatchUpRemainingTurns(turnCount,newTotalTurnCount,specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty));
-      tacticsJoinCatchUpRef.current=addTacticsJoinCatchUp(tacticsJoinCatchUpRef.current,catchUpRemainingTurns);
-      tacticsJoinCatchUpTurnsRef.current+=Math.max(0,Number(catchUpRemainingTurns)||0);
+      tacticsJoinCatchUpRef.current=addTacticsJoinCatchUp(tacticsJoinCatchUpRef.current,remainingTurns);
+      tacticsJoinCatchUpTurnsRef.current+=Math.max(0,Number(remainingTurns)||0);
       // ★間合いのボーナス側も同じように積む。こちらは残りターン10でベース値どおりになり、
       //   速く抜ければベース値より上、手間取ればベース値より下になる(2026-09-21 ユーザー指示)
-      tacticsJoinDistCatchUpRef.current=addTacticsJoinDistCatchUp(tacticsJoinDistCatchUpRef.current,catchUpRemainingTurns);
+      tacticsJoinDistCatchUpRef.current=addTacticsJoinDistCatchUp(tacticsJoinDistCatchUpRef.current,remainingTurns);
     }
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     const distanceBreakThreshold=pendingUltimateDistanceBreak(newTotalTurnCount,ultimateDistanceBreakLevelsRef.current,wave,specialRuleDifficulty);
@@ -13756,7 +13754,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // レイドバトル専用: ターンが進むたびに味方全員が強くなり、自動回復の割合も上がる
       if(raidJackRunRef.current.kind==='a'&&nextTurn>=2&&nextTurn!==turnCount) raidJackTurnGrowth(nextTurn);
       if(raidJackRunRef.current.kind==='a'&&RAID_JACK_LEVEL_UP_TURNS.includes(nextTurn)&&nextTurn!==turnCount) raidJackLevelUp(nextTurn);
-    } else if(battleTurnLimitExceeded(nextTurn,totalTurnCountRef.current,specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty))){ if(tacticsWipe()===null) setHp(0); } // ETERNALは全体200ターン、ほかは1WAVE 20ターン
+    } else if(nextTurn>20){ if(tacticsWipe()===null) setHp(0); }
     setIsBusy(false);
   };
 

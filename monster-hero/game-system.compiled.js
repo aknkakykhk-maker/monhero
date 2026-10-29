@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 82d47bad60bbbe4a
+// source-sha256: 0cbbe8bf23260811
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -15621,14 +15621,12 @@ const helheimUnderworldRules = waveNumber => {
     allyMaxHpRate: 1 - level * 0.05
   });
 };
-const ETERNAL_RUN_TURN_LIMIT = 200;
 const eternalStageRules = waveNumber => {
   const base = helheimUnderworldRules(waveNumber);
   return Object.freeze({
     ...base,
     shellRate: 0.5,
-    pierceRate: Number((0.30 + (base.level - 1) * 0.05).toFixed(2)),
-    runTurnLimit: ETERNAL_RUN_TURN_LIMIT
+    pierceRate: Number((0.30 + (base.level - 1) * 0.05).toFixed(2))
   });
 };
 const EXTREME_WAVE_STAGES = Object.freeze({
@@ -15801,33 +15799,6 @@ const markShellAbsorbedHits = (hits, startShell) => {
   }
   return total;
 };
-const BATTLE_WAVE_TURN_LIMIT = 20;
-const extremeRunTurnLimit = difficultyId => {
-  const limit = Number(extremeWaveStageRules(difficultyId, 1)?.runTurnLimit);
-  return Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 0;
-};
-const battleTurnLimitExceeded = (nextTurn, completedTurns, difficultyId) => {
-  const runLimit = extremeRunTurnLimit(difficultyId);
-  const turn = Math.max(0, Number(nextTurn) || 0);
-  return runLimit > 0 ? Math.max(0, Number(completedTurns) || 0) + turn > runLimit : turn > BATTLE_WAVE_TURN_LIMIT;
-};
-const battleTurnView = (turnCount, completedTurns, difficultyId) => {
-  const runLimit = extremeRunTurnLimit(difficultyId);
-  const turn = Math.max(0, Number(turnCount) || 0);
-  return runLimit > 0 ? {
-    now: Math.max(0, Number(completedTurns) || 0) + turn,
-    limit: runLimit
-  } : {
-    now: turn,
-    limit: BATTLE_WAVE_TURN_LIMIT
-  };
-};
-const battleCatchUpRemainingTurns = (turnCount, totalAfterWave, difficultyId) => {
-  const runLimit = extremeRunTurnLimit(difficultyId);
-  if (!(runLimit > 0)) return Math.max(0, BATTLE_WAVE_TURN_LIMIT + 1 - (Number(turnCount) || 0));
-  const left = Math.max(0, runLimit - Math.max(0, Number(totalAfterWave) || 0));
-  return Math.min(BATTLE_WAVE_TURN_LIMIT, left * BATTLE_WAVE_TURN_LIMIT / runLimit);
-};
 const extremeEnemyPierceRate = (difficultyId, waveNumber = 1) => {
   const rate = Number(extremeWaveStageRules(difficultyId, waveNumber)?.pierceRate);
   return Number.isFinite(rate) && rate > 0 ? Math.min(1, rate) : 0;
@@ -15924,7 +15895,7 @@ const extremeRuleDetailGroups = (difficultyId, quick = false) => {
     push('冥府', [['進行', '2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'], ['敵ライフ/攻撃力', '冥府Lvごと +30% / +60% / +90% / +120% / +150%'], ['味方の最大ライフ', '冥府Lvごと -5%（Lv5で-25%）'], ['Lv3', '消費ガッツ 200%→225%'], ['Lv4', '＋補正 30%→20%・−補正 300%→350%'], ['Lv5', '与ダメ低下 -2.0pt/T・最低10%']]);
     push('敵の強さ', [adjust.lifeRate > 1 && ['敵ライフ', `すべての敵が${adjust.lifeRate}倍`], durahan && ['デュラハン', `ライフ・攻撃力が さらに${durahan.lifeRate}倍`]]);
     push('距離強化', [['WAVEごとに薄れる', 'WAVE1で10%、1WAVEごとに1%ずつ下がり、WAVE10で1%']]);
-    if (difficultyId === ETERNAL_SETTING.id) push('殻と貫き', [['殻', 'WAVEの始めに、敵が最大ライフ50%ぶんの殻をまとう。殻を割るまで敵のライフは減らない'], ['殻と距離強化', '殻に当てたダメージは、距離強化(間合いのボーナス)に数えない'], ['貫き', '敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）'], ['ターン制限', '1WAVEのターン制限は無く、全体で200ターンまで戦える（合計が200を超えると負け）']]);
+    if (difficultyId === ETERNAL_SETTING.id) push('殻と貫き', [['殻', 'WAVEの始めに、敵が最大ライフ50%ぶんの殻をまとう。殻を割るまで敵のライフは減らない'], ['殻と距離強化', '殻に当てたダメージは、距離強化(間合いのボーナス)に数えない'], ['貫き', '敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）']]);
   }
   push('カード', [rules.assistCardEffect != null && ['アシストカード効果', specialRulePercent(rules.assistCardEffect)]]);
   push('補正', [rules.waveEnhancement != null && ['WAVE後強化', specialRulePercent(rules.waveEnhancement)], rules.positiveModifier != null && ['＋補正', specialRulePercent(rules.positiveModifier)], rules.negativeModifier != null && ['－補正', specialRulePercent(rules.negativeModifier)], rules.distanceEnhancement != null && ['距離強化', specialRulePercent(rules.distanceEnhancement)]]);
@@ -72438,10 +72409,7 @@ function BattleScreen({
     size: 7
   }), "TURN"), React.createElement("span", {
     className: "mt-0.5 text-[10px] font-mono"
-  }, (() => {
-    const v = battleTurnView(turnCount, totalTurnCount, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty));
-    return `${v.now}/${v.limit}`;
-  })())), !isQuickMode(runMode) && React.createElement("div", {
+  }, turnCount, "/20")), !isQuickMode(runMode) && React.createElement("div", {
     "data-battle-score": true,
     className: "flex min-w-[64px] flex-col items-end justify-center whitespace-nowrap font-mono font-black text-amber-500"
   }, React.createElement("span", {
@@ -123656,10 +123624,9 @@ function MonsterHeroGame() {
     setTotalTurnCount(newTotalTurnCount);
     totalTurnCountRef.current = newTotalTurnCount;
     if (isTacticsMode(runMode)) {
-      const catchUpRemainingTurns = battleCatchUpRemainingTurns(turnCount, newTotalTurnCount, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty));
-      tacticsJoinCatchUpRef.current = addTacticsJoinCatchUp(tacticsJoinCatchUpRef.current, catchUpRemainingTurns);
-      tacticsJoinCatchUpTurnsRef.current += Math.max(0, Number(catchUpRemainingTurns) || 0);
-      tacticsJoinDistCatchUpRef.current = addTacticsJoinDistCatchUp(tacticsJoinDistCatchUpRef.current, catchUpRemainingTurns);
+      tacticsJoinCatchUpRef.current = addTacticsJoinCatchUp(tacticsJoinCatchUpRef.current, remainingTurns);
+      tacticsJoinCatchUpTurnsRef.current += Math.max(0, Number(remainingTurns) || 0);
+      tacticsJoinDistCatchUpRef.current = addTacticsJoinDistCatchUp(tacticsJoinDistCatchUpRef.current, remainingTurns);
     }
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
     const distanceBreakThreshold = pendingUltimateDistanceBreak(newTotalTurnCount, ultimateDistanceBreakLevelsRef.current, wave, specialRuleDifficulty);
@@ -124499,7 +124466,7 @@ function MonsterHeroGame() {
       }
       if (raidJackRunRef.current.kind === 'a' && nextTurn >= 2 && nextTurn !== turnCount) raidJackTurnGrowth(nextTurn);
       if (raidJackRunRef.current.kind === 'a' && RAID_JACK_LEVEL_UP_TURNS.includes(nextTurn) && nextTurn !== turnCount) raidJackLevelUp(nextTurn);
-    } else if (battleTurnLimitExceeded(nextTurn, totalTurnCountRef.current, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty))) {
+    } else if (nextTurn > 20) {
       if (tacticsWipe() === null) setHp(0);
     }
     setIsBusy(false);
