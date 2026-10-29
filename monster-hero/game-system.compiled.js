@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e1eca73571e50ded
+// source-sha256: cb2bce1204070a45
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91938,6 +91938,60 @@ const cardTacticFilled = frames => {
   const f = cardTacticNormalizeFrames(frames);
   return f.base.filter(Boolean).length + f.breeder.filter(x => x.on).length + f.mons.reduce((a, rows) => a + rows.filter(x => x.on).length, 0);
 };
+const CARD_TACTIC_SMART = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
+const cardTacticSmartLevel = frames => {
+  const f = cardTacticNormalizeFrames(frames);
+  const base = f.base.filter(Boolean).length;
+  const rows = f.breeder.filter(x => x.on).length + f.mons.reduce((a, r) => a + r.filter(x => x.on).length, 0);
+  if (!base && !rows) return 'random';
+  if (!base) return 'easy';
+  return CARD_TACTIC_SMART[base - 1 + (rows >= 10 ? 2 : rows >= 4 ? 1 : 0)];
+};
+const cardTacticPackFrames = frames => {
+  const f = cardTacticNormalizeFrames(frames);
+  const row = x => x.sp ? [x.c, x.a, x.on ? 1 : 0, x.sp] : [x.c, x.a, x.on ? 1 : 0];
+  return {
+    b: f.base,
+    r: f.breeder.map(row),
+    m: f.mons.map(rows => rows.map(row))
+  };
+};
+const cardTacticUnpackFrames = v => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  const row = x => Array.isArray(x) ? {
+    c: x[0],
+    a: x[1],
+    on: x[2] !== 0,
+    ...(typeof x[3] === 'string' ? {
+      sp: x[3]
+    } : {})
+  } : null;
+  return cardTacticNormalizeFrames({
+    base: r.b,
+    breeder: (Array.isArray(r.r) ? r.r : []).map(row),
+    mons: (Array.isArray(r.m) ? r.m : []).map(rows => Array.isArray(rows) ? rows.map(row) : [])
+  });
+};
+const cardTacticRandomAct = (db, st, policy, rand = Math.random) => {
+  if (st.pending) return rand() < 0.5 ? {
+    type: 'pass'
+  } : cardAiChooseGuard(db, st, policy, rand, {
+    force: true,
+    only: () => rand() < 0.5
+  });
+  if (st.phase === 'guts') {
+    const hand = st.players[st.active].hand;
+    return {
+      type: 'guts',
+      hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, cardAiGutsCap(st.players[st.active]))
+    };
+  }
+  const opts = cardAiAttackChoices(db, st, policy);
+  if (!opts.length || rand() < 0.2) return {
+    type: 'endAttacks'
+  };
+  return cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
+};
 const CARD_TACTIC_DIMS = Object.freeze(['attack', 'keepGuard', 'saveGuts', 'big', 'disrupt', 'area', 'finish']);
 const CARD_TACTIC_SUB_W = 1 / 3;
 const cardTacticPresetOf = card => {
@@ -92489,6 +92543,9 @@ const cardTacticDecide = (db, st, policy) => {
   if (st.winner !== null) return null;
   const phase = st.pending ? 'guard' : st.phase === 'guts' ? 'guts' : st.phase === 'main' ? 'attack' : null;
   if (!phase) return null;
+  if (policy.gambitRandom && cardTacticSmartLevel(frames) === 'random') return {
+    act: cardTacticRandomAct(db, st, policy)
+  };
   const p = phase === 'guard' ? st.pending.defender : st.active;
   const habit = cardTacticHabitOf(frames.base, st, p);
   const knobs = cardTacticKnobsOf(frames.base, st, p);
@@ -98580,6 +98637,7 @@ const CardBattleScreen = ({
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
+  const [tacticsBack, setTacticsBack] = useState('mode');
   const [plWho, setPlWho] = useState(null);
   const [plCopy, setPlCopy] = useState(null);
   const bgmPreviewRef = useRef(bgmPreview);
@@ -99136,10 +99194,18 @@ const CardBattleScreen = ({
           const fresh = await freshCardSave();
           const reward = cardCpuReward(fresh.daily, game.level, outcome, facts);
           const loops = cardCpuLoops(game.level, outcome, facts);
+          const levelGain = typeof cardLevelEntries === 'function' ? await cardLevelEntries({
+            kind: 'cpu',
+            level: game.level,
+            outcome,
+            debug
+          }) : {
+            entries: []
+          };
           const ok = await persist({
             point: save.point + reward.total,
             daily: reward.daily
-          }, fresh.raw);
+          }, fresh.raw, levelGain.entries);
           let quick = null;
           if (ok && loops > 0 && onQuickLoops) {
             try {
@@ -99678,6 +99744,7 @@ const CardBattleScreen = ({
       "data-card-mode-tactics": true,
       onClick: () => {
         Audio_.fgSe.tap();
+        setTacticsBack('mode');
         setView('tactics');
       },
       className: "mhms-card mhms-in flex min-h-[96px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-amber-200 via-amber-400 to-orange-600 px-4 py-3 text-left text-slate-950 active:scale-[.98]"
@@ -99702,7 +99769,10 @@ const CardBattleScreen = ({
       db: db,
       decks: save.decks,
       point: save.point,
-      onBack: () => setView('mode'),
+      onBack: () => {
+        setView(tacticsBack);
+        setTacticsBack('mode');
+      },
       onPay: async (cost, entries) => save.point >= cost ? persist({
         point: save.point - cost
       }, {}, entries) : false
@@ -99721,7 +99791,11 @@ const CardBattleScreen = ({
         who: e.tactics.habit,
         level: lv,
         share: e
-      })
+      }),
+      onOpenTactics: typeof CardTacticsScreen === 'function' && (debug || cardTacticsOpen()) ? () => {
+        setTacticsBack('share');
+        setView('tactics');
+      } : null
     });
   }
   if (view === 'deckPick' && deckPick) {
@@ -109880,15 +109954,51 @@ const cardShareNormalizeTactics = (v, deck = null) => {
   const inDeck = deck && Array.isArray(deck.cards) ? new Set(deck.cards) : null;
   const aces = [...new Set((Array.isArray(r.aces) ? r.aces : []).filter(x => typeof x === 'string' && /^[0-9]{3}$/.test(x) && (!inDeck || inDeck.has(x))))].slice(0, CARD_SHARE_ACES_MAX);
   const name = typeof r.name === 'string' ? r.name.slice(0, 20) : '';
+  const f = r.f && typeof r.f === 'object' && !Array.isArray(r.f) && typeof cardTacticPackFrames === 'function' ? cardTacticPackFrames(cardTacticUnpackFrames(r.f)) : null;
   return {
     habit,
     tilt,
     aces,
-    name
+    name,
+    ...(f ? {
+      f
+    } : {})
   };
+};
+const cardShareSmartLevel = tactics => {
+  const t = cardShareNormalizeTactics(tactics);
+  return t.f && typeof cardTacticSmartLevel === 'function' ? cardTacticSmartLevel(cardTacticUnpackFrames(t.f)) : 'normal';
+};
+const cardShareRowsCount = frames => frames.breeder.filter(x => x.on).length + frames.mons.reduce((a, r) => a + r.filter(x => x.on).length, 0);
+const cardShareSmartText = tactics => {
+  const t = cardShareNormalizeTactics(tactics);
+  const lv = cardShareSmartLevel(t);
+  const label = lv === 'random' ? 'でたらめ' : `${typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv] || lv.toUpperCase()} 相当`;
+  if (!t.f) return label;
+  const f = cardTacticUnpackFrames(t.f);
+  return `${label}(基本${f.base.filter(Boolean).length}・行${cardShareRowsCount(f)})`;
+};
+const cardShareMainHabit = (frames, fallback = 'kyuko') => {
+  const c = frames && typeof cardTacticOf === 'function' ? cardTacticOf(frames.base[0]) : null;
+  const g = c && typeof CARD_TACTIC_GROUPS !== 'undefined' ? CARD_TACTIC_GROUPS.find(x => x.id === c.g) : null;
+  return g && g.habit || fallback || 'kyuko';
+};
+const cardShareFightLevel = tactics => {
+  const lv = cardShareSmartLevel(tactics);
+  return lv === 'random' ? 'easy' : lv;
 };
 const cardSharePolicy = (tactics, levelId, opts = {}) => {
   const t = cardShareNormalizeTactics(tactics);
+  if (t.f) {
+    const frames = cardTacticUnpackFrames(t.f);
+    const base = cardAiPolicy(t.habit, cardShareFightLevel(t), opts);
+    return {
+      ...base,
+      gambit: frames,
+      gambitRandom: true,
+      aces: t.aces.slice()
+    };
+  }
   const base = cardAiPolicy(t.habit, levelId, opts);
   const habit = {
     ...base.habit
@@ -110159,11 +110269,16 @@ const CardDeckShare = ({
   onBack,
   unlocked = null,
   debug = false,
-  onFight = null
+  onFight = null,
+  onOpenTactics = null
 }) => {
   const [tab, setTab] = useState(onFight ? 'fight' : 'mine');
   const [foes, setFoes] = useState(null);
-  const [level, setLevel] = useState('normal');
+  const [tacticsSave, setTacticsSave] = useState(null);
+  useEffect(() => {
+    if (typeof cardTacticsLoad === 'function') void cardTacticsLoad().then(setTacticsSave).catch(() => {});
+  }, []);
+  const framesNow = tacticsSave && typeof cardTacticsFramesForBattle === 'function' ? cardTacticsFramesForBattle(tacticsSave.tactics, tacticsSave.info.level) : null;
   const [rented, setRented] = useState(null);
   useEffect(() => {
     void cardRentedDeckGet().then(setRented);
@@ -110226,17 +110341,9 @@ const CardDeckShare = ({
       alive = false;
     };
   }, []);
-  const habits = Object.keys(CARD_AI_HABITS).filter(id => cardFoeReleased(id));
   const habitName = id => (typeof ASSISTANTS !== 'undefined' && ASSISTANTS.find(a => a.id === id) || {}).name || id;
   const uniqueCards = picked ? [...new Set(picked.cards)] : [];
   const cardName = no => (cardOf(db, no) || {}).name || no;
-  const setTilt = (id, n) => setTactics(t => ({
-    ...t,
-    tilt: {
-      ...t.tilt,
-      [id]: n
-    }
-  }));
   const toggleAce = no => setTactics(t => t.aces.includes(no) ? {
     ...t,
     aces: t.aces.filter(x => x !== no)
@@ -110257,7 +110364,11 @@ const CardDeckShare = ({
       deck: picked,
       tactics: {
         ...cardShareNormalizeTactics(tactics, picked),
-        name: picked.name
+        name: picked.name,
+        habit: cardShareMainHabit(framesNow, tactics.habit),
+        ...(framesNow ? {
+          f: cardTacticPackFrames(framesNow)
+        } : {})
       }
     });
     if (r === 'ok') {
@@ -110301,7 +110412,6 @@ const CardDeckShare = ({
   useEffect(() => {
     if (tab === 'fight' && selfId && !off && foes === null) void loadFoes();
   }, [tab, selfId, off]);
-  const levels = CARD_LEVEL_ORDER.filter(lv => debug || cardLevelOpen(unlocked, lv));
   const fightIssues = issuesOf(list.find(d => d.id === (decks && decks.active)) || list[0] || null);
   const foeRow = e => React.createElement("li", {
     key: e.ownerId,
@@ -110318,6 +110428,9 @@ const CardDeckShare = ({
   }, e.name), React.createElement("small", {
     className: "block truncate text-[11px] font-bold text-slate-300"
   }, e.tactics.name || 'デッキ', "・", e.deck.monsters.map(no => (cardMonsterOf(db, no) || {}).name || no).join('・')), React.createElement("small", {
+    "data-card-share-smart": cardShareSmartLevel(e.tactics),
+    className: "block text-[10px] font-black text-amber-200"
+  }, `賢さ ${cardShareSmartText(e.tactics)}`), React.createElement("small", {
     className: "block text-[10px] font-bold text-sky-200 tabular-nums"
   }, e.battles ? `戦われた ${e.battles}回・デッキの勝ち ${Math.round(e.deckWins / e.battles * 100)}%` : 'まだ戦われていません')), React.createElement("span", {
     className: "flex shrink-0 flex-col gap-1"
@@ -110328,7 +110441,7 @@ const CardDeckShare = ({
     className: "mh-button mh-button-primary min-h-[36px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
     onClick: () => {
       Audio_.fgSe.tap();
-      if (onFight) onFight(e, level);
+      if (onFight) onFight(e, cardShareFightLevel(e.tactics));
     }
   }, "戦う"), React.createElement("button", {
     type: "button",
@@ -110384,16 +110497,9 @@ const CardDeckShare = ({
   }, label))), mine !== undefined && !off && tab === 'fight' && React.createElement(React.Fragment, null, React.createElement("div", {
     className: SCREEN_PANEL_CLASS
   }, React.createElement("div", {
-    className: "text-[12px] font-bold text-slate-400"
-  }, "強さ(読みの深さ。もらえるビートPは助手と対戦と同じ)"), React.createElement("div", {
-    className: "mt-1 flex flex-wrap gap-1.5"
-  }, levels.map(lv => React.createElement("button", {
-    key: lv,
-    type: "button",
-    "data-card-share-level": lv,
-    className: chip(level === lv),
-    onClick: () => setLevel(lv)
-  }, typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv] || lv.toUpperCase()))), fightIssues.length > 0 && React.createElement("p", {
+    className: "text-[12px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('相手の強さは、登録した人が入れた戦術カードで決まります(賢さ)。もらえるビートPは、その賢さの助手と対戦と同じです')), fightIssues.length > 0 && React.createElement("p", {
     className: "mt-1 text-[12px] font-bold text-rose-200",
     style: JA_WRAP_STYLE
   }, jaWrap(`使うデッキ: ${fightIssues[0]}`))), rented && React.createElement("div", {
@@ -110432,8 +110538,8 @@ const CardDeckShare = ({
   }, "登録中のデッキ"), mine ? React.createElement(React.Fragment, null, React.createElement("div", {
     className: "text-[15px] font-black text-white"
   }, mine.tactics.name || 'デッキ', React.createElement("small", {
-    className: "ml-2 text-[11px] text-slate-300"
-  }, habitName(mine.tactics.habit), "の打ち方")), React.createElement("p", {
+    className: "ml-2 text-[11px] text-amber-200"
+  }, `賢さ ${cardShareSmartText(mine.tactics)}`)), React.createElement("p", {
     "data-card-share-counts": true,
     className: "mt-1 text-[12px] font-bold text-sky-100 tabular-nums"
   }, "戦われた ", mine.battles, "回・そのうち勝った ", mine.deckWins, "回・借りられた ", mine.rents, "回"), React.createElement("button", {
@@ -110472,35 +110578,27 @@ const CardDeckShare = ({
   }, React.createElement("div", {
     className: "text-[12px] font-bold text-slate-400"
   }, "戦い方(コンピューターが、この打ち方であなたのデッキを動かします)"), React.createElement("div", {
-    className: "mt-1 text-[12px] font-bold text-slate-300"
-  }, "土台の打ち方"), React.createElement("div", {
-    className: "mt-1 flex flex-wrap gap-1.5"
-  }, habits.map(id => React.createElement("button", {
-    key: id,
+    "data-card-share-tactics": true,
+    className: "mt-1 rounded-lg bg-black/30 p-2 text-[12px] font-bold text-slate-200",
+    style: JA_WRAP_STYLE
+  }, framesNow ? React.createElement(React.Fragment, null, React.createElement("div", null, `基本カード: ${framesNow.base.filter(Boolean).map(id => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`), React.createElement("div", null, `行: ${cardShareRowsCount(framesNow)}`), React.createElement("div", {
+    className: "text-amber-200"
+  }, `賢さ: ${cardShareSmartText({
+    f: cardTacticPackFrames(framesNow)
+  })}`), cardShareSmartLevel({
+    f: cardTacticPackFrames(framesNow)
+  }) === 'random' && React.createElement("div", {
+    "data-card-share-tactics-empty": true,
+    className: "text-rose-200"
+  }, jaWrap('戦術カードが入っていません。このままだと、出せる手からでたらめに打ちます'))) : React.createElement("div", null, "読み込み中…"), onOpenTactics && React.createElement("button", {
     type: "button",
-    "data-card-share-habit": id,
-    className: chip(tactics.habit === id),
+    "data-card-share-open-tactics": true,
+    className: "mt-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-[12px] font-black text-slate-950",
     onClick: () => {
       Audio_.fgSe.tap();
-      setTactics(t => ({
-        ...t,
-        habit: id
-      }));
+      onOpenTactics();
     }
-  }, habitName(id)))), React.createElement("div", {
-    className: "mt-2 space-y-1"
-  }, CARD_SHARE_TILTS.map(x => React.createElement("div", {
-    key: x.id,
-    "data-card-share-tilt": x.id,
-    className: "flex items-center gap-2"
-  }, React.createElement("span", {
-    className: "w-[6.5em] shrink-0 text-[12px] font-bold text-slate-200"
-  }, x.label), [[-1, '控えめ'], [0, 'ふつう'], [1, '強め']].map(([n, label]) => React.createElement("button", {
-    key: n,
-    type: "button",
-    className: chip(tactics.tilt[x.id] === n),
-    onClick: () => setTilt(x.id, n)
-  }, label))))), React.createElement("div", {
+  }, "戦術カードを組む")), React.createElement("div", {
     className: "mt-2 text-[12px] font-bold text-slate-300"
   }, "切り札(出せるときは優先して使う・", CARD_SHARE_ACES_MAX, "枚まで)"), React.createElement("div", {
     "data-card-share-aces": true,

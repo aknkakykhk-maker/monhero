@@ -2459,6 +2459,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
+  const [tacticsBack, setTacticsBack] = useState('mode'); // 戦術カードの画面から戻る先(97。みんなのデッキから来たら share)
   // オプションの「助手と対戦」の曲の並び: 直している助手と、全員へ写すときの下書き({ list, confirm })
   const [plWho, setPlWho] = useState(null);
   const [plCopy, setPlCopy] = useState(null);
@@ -2803,7 +2804,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         const fresh = await freshCardSave();
         const reward = cardCpuReward(fresh.daily, game.level, outcome, facts);
         const loops = cardCpuLoops(game.level, outcome, facts);
-        const ok = await persist({ point: save.point + reward.total, daily: reward.daily }, fresh.raw);
+        // MFバトルカードのレベル(96): 相手のデッキの賢さ(game.level)で数える
+        const levelGain = typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: game.level, outcome, debug }) : { entries: [] };
+        const ok = await persist({ point: save.point + reward.total, daily: reward.daily }, fresh.raw, levelGain.entries);
         let quick = null;
         if (ok && loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(loops); } catch (_) { quick = null; } }
         if (ok && quick) await persist({ daily: { ...reward.daily, quickLoops: (reward.daily.quickLoops || 0) + loops } }, { daily: reward.daily });
@@ -3023,7 +3026,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           )}
           {/* 戦術カード(96・97。2026-10-29 社長)。公開の印(cardTacticsOpen)までは、デバッグ設定から入ったときだけ出す */}
           {typeof CardTacticsScreen === 'function' && (debug || cardTacticsOpen()) && (
-            <button type="button" data-card-mode-tactics onClick={() => { Audio_.fgSe.tap(); setView('tactics'); }} className="mhms-card mhms-in flex min-h-[96px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-amber-200 via-amber-400 to-orange-600 px-4 py-3 text-left text-slate-950 active:scale-[.98]">
+            <button type="button" data-card-mode-tactics onClick={() => { Audio_.fgSe.tap(); setTacticsBack('mode'); setView('tactics'); }} className="mhms-card mhms-in flex min-h-[96px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-amber-200 via-amber-400 to-orange-600 px-4 py-3 text-left text-slate-950 active:scale-[.98]">
               <span aria-hidden="true" className="mhms-mark">TACTICS</span>
               <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🧠</span><span><b className="block text-[22px] font-black italic leading-tight">戦術カード</b><small className="block text-[11px] font-black text-slate-900/80">デッキの戦い方を組む・カードを引く</small></span></span>
               {!cardTacticsOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">つくっている途中(デバッグ)</span>}
@@ -3034,13 +3037,15 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     );
   }
   if (view === 'tactics' && typeof CardTacticsScreen === 'function') {
+    // 戻り先: みんなのデッキの「戦術カードを組む」から来たら、みんなのデッキへ戻る
     // ビートPを払うときは、戦術カードの保存と同じ取引で(persist はビートPを書く直前に読み直して差だけを足す)
-    return <CardTacticsScreen db={db} decks={save.decks} point={save.point} onBack={() => setView('mode')}
+    return <CardTacticsScreen db={db} decks={save.decks} point={save.point} onBack={() => { setView(tacticsBack); setTacticsBack('mode'); }}
       onPay={async (cost, entries) => (save.point >= cost ? persist({ point: save.point - cost }, {}, entries) : false)}/>;
   }
   if (view === 'share' && typeof CardDeckShare === 'function') {
     return <CardDeckShare db={db} decks={save.decks} collection={save.collection} frame={(rank && rank.profile && rank.profile.frame) || null} onBack={() => setView('mode')}
-      unlocked={save.unlocked} debug={debug} onFight={(e, lv) => startBattle({ who: e.tactics.habit, level: lv, share: e })}/>;
+      unlocked={save.unlocked} debug={debug} onFight={(e, lv) => startBattle({ who: e.tactics.habit, level: lv, share: e })}
+      onOpenTactics={typeof CardTacticsScreen === 'function' && (debug || cardTacticsOpen()) ? () => { setTacticsBack('share'); setView('tactics'); } : null}/>;
   }
   // ---- 対戦の前のデッキ選び(助手と対戦・マルチ。練習試合には出さない) ----
   if (view === 'deckPick' && deckPick) {

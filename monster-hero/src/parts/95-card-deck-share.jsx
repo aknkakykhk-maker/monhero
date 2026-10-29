@@ -35,11 +35,40 @@ const cardShareNormalizeTactics = (v, deck = null) => {
   const inDeck = deck && Array.isArray(deck.cards) ? new Set(deck.cards) : null;
   const aces = [...new Set((Array.isArray(r.aces) ? r.aces : []).filter((x) => typeof x === 'string' && /^[0-9]{3}$/.test(x) && (!inDeck || inDeck.has(x))))].slice(0, CARD_SHARE_ACES_MAX);
   const name = typeof r.name === 'string' ? r.name.slice(0, 20) : '';
-  return { habit, tilt, aces, name };
+  // f … 戦術カードの枠(82-card-tactics-core の短い形。2026-10-29 社長)。無い登録(前の形)は、くせと傾きで打つ
+  const f = r.f && typeof r.f === 'object' && !Array.isArray(r.f) && typeof cardTacticPackFrames === 'function' ? cardTacticPackFrames(cardTacticUnpackFrames(r.f)) : null;
+  return { habit, tilt, aces, name, ...(f ? { f } : {}) };
 };
-// 戦い方から、助手の打ち方(cardAiPolicy の形)を作る。強さは戦う人が選ぶ
+// 登録デッキの賢さ(戦術カードの枠から。2026-10-29 社長「デッキ側で決まる・戦う人は選ばない」)。前の形の登録は NORMAL
+//   'random' … 何も入れていない(出せる手からランダム)。報酬と経験値は EASY で数える
+const cardShareSmartLevel = (tactics) => {
+  const t = cardShareNormalizeTactics(tactics);
+  return t.f && typeof cardTacticSmartLevel === 'function' ? cardTacticSmartLevel(cardTacticUnpackFrames(t.f)) : 'normal';
+};
+const cardShareRowsCount = (frames) => frames.breeder.filter((x) => x.on).length + frames.mons.reduce((a, r) => a + r.filter((x) => x.on).length, 0);
+const cardShareSmartText = (tactics) => {
+  const t = cardShareNormalizeTactics(tactics);
+  const lv = cardShareSmartLevel(t);
+  const label = lv === 'random' ? 'でたらめ' : `${(typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv]) || lv.toUpperCase()} 相当`;
+  if (!t.f) return label;
+  const f = cardTacticUnpackFrames(t.f);
+  return `${label}(基本${f.base.filter(Boolean).length}・行${cardShareRowsCount(f)})`;
+};
+// 土台のくせ(メインの基本カードが助手の型ならその助手。前の形の登録や画面の名前に使う)
+const cardShareMainHabit = (frames, fallback = 'kyuko') => {
+  const c = frames && typeof cardTacticOf === 'function' ? cardTacticOf(frames.base[0]) : null;
+  const g = c && typeof CARD_TACTIC_GROUPS !== 'undefined' ? CARD_TACTIC_GROUPS.find((x) => x.id === c.g) : null;
+  return (g && g.habit) || fallback || 'kyuko';
+};
+const cardShareFightLevel = (tactics) => { const lv = cardShareSmartLevel(tactics); return lv === 'random' ? 'easy' : lv; };
+// 戦い方から、助手の打ち方(cardAiPolicy の形)を作る。戦術カードの枠があれば、その枠で打つ(強さは枠の賢さ)
 const cardSharePolicy = (tactics, levelId, opts = {}) => {
   const t = cardShareNormalizeTactics(tactics);
+  if (t.f) {
+    const frames = cardTacticUnpackFrames(t.f);
+    const base = cardAiPolicy(t.habit, cardShareFightLevel(t), opts);
+    return { ...base, gambit: frames, gambitRandom: true, aces: t.aces.slice() };
+  }
   const base = cardAiPolicy(t.habit, levelId, opts);
   const habit = { ...base.habit };
   CARD_SHARE_TILTS.forEach((x) => { if (Number.isFinite(habit[x.id])) habit[x.id] = habit[x.id] * CARD_SHARE_TILT_MUL[t.tilt[x.id]]; });
@@ -187,10 +216,14 @@ const cardRentedDeckSet = async (entry) => {
 // ---- 画面: みんなのデッキ(区切り② 登録・③ 戦う・④ 借りる) ----
 // db … カードの表 / decks … 自分のデッキ(cardNormalizeDecks の形)/ collection … 持っているカード / frame … プロフィールのフレーム / onBack … 対戦えらびへ
 // unlocked … 助手と対戦で開いた強さ(cardLevelOpen)/ debug … デバッグから入った(強さを全部選べる)/ onFight(entry, level) … 登録デッキと戦う(84 の startBattle へ)
-const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked = null, debug = false, onFight = null }) => {
+// onOpenTactics … 戦術カードの画面へ(97。84 が開く)
+const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked = null, debug = false, onFight = null, onOpenTactics = null }) => {
   const [tab, setTab] = useState(onFight ? 'fight' : 'mine');
   const [foes, setFoes] = useState(null);             // { picks, friends, popular } … 戦う相手の3つの並び
-  const [level, setLevel] = useState('normal');
+  // 戦術カード(96・97): 登録するときに載せる枠(レベルで開いている枠・持っているカードだけ)
+  const [tacticsSave, setTacticsSave] = useState(null);
+  useEffect(() => { if (typeof cardTacticsLoad === 'function') void cardTacticsLoad().then(setTacticsSave).catch(() => {}); }, []);
+  const framesNow = tacticsSave && typeof cardTacticsFramesForBattle === 'function' ? cardTacticsFramesForBattle(tacticsSave.tactics, tacticsSave.info.level) : null;
   const [rented, setRented] = useState(null);         // 借りているデッキ(cardRentedDeckGet)
   useEffect(() => { void cardRentedDeckGet().then(setRented); }, []);
   const rent = async (e) => {
@@ -238,17 +271,15 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
     })();
     return () => { alive = false; };
   }, []);
-  const habits = Object.keys(CARD_AI_HABITS).filter((id) => cardFoeReleased(id));
   const habitName = (id) => ((typeof ASSISTANTS !== 'undefined' && ASSISTANTS.find((a) => a.id === id)) || {}).name || id;
   const uniqueCards = picked ? [...new Set(picked.cards)] : [];
   const cardName = (no) => ((cardOf(db, no) || {}).name) || no;
-  const setTilt = (id, n) => setTactics((t) => ({ ...t, tilt: { ...t.tilt, [id]: n } }));
   const toggleAce = (no) => setTactics((t) => (t.aces.includes(no) ? { ...t, aces: t.aces.filter((x) => x !== no) } : t.aces.length >= CARD_SHARE_ACES_MAX ? t : { ...t, aces: [...t.aces, no] }));
   const issues = issuesOf(picked);
   const register = async () => {
     if (!picked || issues.length || !selfId || busy) return;
     setBusy(true); setMsg('');
-    const r = await cardShareRegister({ ownerId: selfId, name: profile.name, icon: profile.icon, frame, deck: picked, tactics: { ...cardShareNormalizeTactics(tactics, picked), name: picked.name } });
+    const r = await cardShareRegister({ ownerId: selfId, name: profile.name, icon: profile.icon, frame, deck: picked, tactics: { ...cardShareNormalizeTactics(tactics, picked), name: picked.name, habit: cardShareMainHabit(framesNow, tactics.habit), ...(framesNow ? { f: cardTacticPackFrames(framesNow) } : {}) } });
     if (r === 'ok') { setMine(await cardShareFetchMine(selfId)); setMsg('登録しました。ほかのブリーダーが、このデッキと戦えます'); }
     else setMsg(r === 'locked' ? 'この端末では登録を書きかえられません(登録した端末で操作してください)' : r === 'bad' ? 'このデッキは登録できませんでした' : r === 'nokey' ? 'この端末に保存できなかったため、登録できませんでした' : '通信できませんでした。電波のよい所で、もう一度お試しください');
     setBusy(false);
@@ -272,7 +303,6 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
     setFoes({ picks: cardSharePickSome(fresh, selfId, 3), friends: friends.filter((e) => e.ownerId !== selfId), popular: popular.filter((e) => e.ownerId !== selfId) });
   };
   useEffect(() => { if (tab === 'fight' && selfId && !off && foes === null) void loadFoes(); }, [tab, selfId, off]);
-  const levels = CARD_LEVEL_ORDER.filter((lv) => debug || cardLevelOpen(unlocked, lv));
   const fightIssues = issuesOf(list.find((d) => d.id === (decks && decks.active)) || list[0] || null);
   const foeRow = (e) => (
     <li key={e.ownerId} data-card-share-foe={e.ownerId} className="flex items-center gap-2 rounded-xl bg-black/30 px-2 py-2">
@@ -280,11 +310,12 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
       <span className="min-w-0 flex-1">
         <b className="block truncate text-[13px] font-black text-white">{e.name}</b>
         <small className="block truncate text-[11px] font-bold text-slate-300">{e.tactics.name || 'デッキ'}・{e.deck.monsters.map((no) => ((cardMonsterOf(db, no) || {}).name) || no).join('・')}</small>
+        <small data-card-share-smart={cardShareSmartLevel(e.tactics)} className="block text-[10px] font-black text-amber-200">{`賢さ ${cardShareSmartText(e.tactics)}`}</small>
         <small className="block text-[10px] font-bold text-sky-200 tabular-nums">{e.battles ? `戦われた ${e.battles}回・デッキの勝ち ${Math.round((e.deckWins / e.battles) * 100)}%` : 'まだ戦われていません'}</small>
       </span>
       <span className="flex shrink-0 flex-col gap-1">
         <button type="button" data-card-share-fight={e.ownerId} disabled={!onFight || fightIssues.length > 0} className="mh-button mh-button-primary min-h-[36px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
-          onClick={() => { Audio_.fgSe.tap(); if (onFight) onFight(e, level); }}>戦う</button>
+          onClick={() => { Audio_.fgSe.tap(); if (onFight) onFight(e, cardShareFightLevel(e.tactics)); }}>戦う</button>
         <button type="button" data-card-share-rent={e.ownerId} disabled={busy || (rented && rented.ownerId === e.ownerId && rented.version === e.version)} className="min-h-[30px] rounded-lg border border-emerald-300/50 bg-slate-900 px-2 text-[11px] font-black text-emerald-100 disabled:opacity-50"
           onClick={() => { Audio_.fgSe.tap(); void rent(e); }}>{rented && rented.ownerId === e.ownerId && rented.version === e.version ? '借りています' : '借りる'}</button>
       </span>
@@ -309,8 +340,7 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
         )}
         {mine !== undefined && !off && tab === 'fight' && (<>
           <div className={SCREEN_PANEL_CLASS}>
-            <div className="text-[12px] font-bold text-slate-400">強さ(読みの深さ。もらえるビートPは助手と対戦と同じ)</div>
-            <div className="mt-1 flex flex-wrap gap-1.5">{levels.map((lv) => <button key={lv} type="button" data-card-share-level={lv} className={chip(level === lv)} onClick={() => setLevel(lv)}>{(typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv]) || lv.toUpperCase()}</button>)}</div>
+            <div className="text-[12px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('相手の強さは、登録した人が入れた戦術カードで決まります(賢さ)。もらえるビートPは、その賢さの助手と対戦と同じです')}</div>
             {fightIssues.length > 0 && <p className="mt-1 text-[12px] font-bold text-rose-200" style={JA_WRAP_STYLE}>{jaWrap(`使うデッキ: ${fightIssues[0]}`)}</p>}
           </div>
           {rented && (
@@ -331,7 +361,7 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
           <div data-card-share-mine className={SCREEN_PANEL_CLASS}>
             <div className="text-[12px] font-bold text-slate-400">登録中のデッキ</div>
             {mine ? (<>
-              <div className="text-[15px] font-black text-white">{mine.tactics.name || 'デッキ'}<small className="ml-2 text-[11px] text-slate-300">{habitName(mine.tactics.habit)}の打ち方</small></div>
+              <div className="text-[15px] font-black text-white">{mine.tactics.name || 'デッキ'}<small className="ml-2 text-[11px] text-amber-200">{`賢さ ${cardShareSmartText(mine.tactics)}`}</small></div>
               <p data-card-share-counts className="mt-1 text-[12px] font-bold text-sky-100 tabular-nums">戦われた {mine.battles}回・そのうち勝った {mine.deckWins}回・借りられた {mine.rents}回</p>
               <button type="button" data-card-share-unregister disabled={busy} className="mt-2 rounded-lg border border-white/15 bg-slate-900 px-3 py-1.5 text-[12px] font-black text-slate-200 disabled:opacity-50" onClick={() => { Audio_.fgSe.tap(); void unregister(); }}>登録をやめる</button>
             </>) : <p className="text-[13px] font-bold text-slate-300">まだ登録していません</p>}
@@ -345,17 +375,14 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
           </div>
           <div className={SCREEN_PANEL_CLASS}>
             <div className="text-[12px] font-bold text-slate-400">戦い方(コンピューターが、この打ち方であなたのデッキを動かします)</div>
-            <div className="mt-1 text-[12px] font-bold text-slate-300">土台の打ち方</div>
-            <div className="mt-1 flex flex-wrap gap-1.5">
-              {habits.map((id) => <button key={id} type="button" data-card-share-habit={id} className={chip(tactics.habit === id)} onClick={() => { Audio_.fgSe.tap(); setTactics((t) => ({ ...t, habit: id })); }}>{habitName(id)}</button>)}
-            </div>
-            <div className="mt-2 space-y-1">
-              {CARD_SHARE_TILTS.map((x) => (
-                <div key={x.id} data-card-share-tilt={x.id} className="flex items-center gap-2">
-                  <span className="w-[6.5em] shrink-0 text-[12px] font-bold text-slate-200">{x.label}</span>
-                  {[[-1, '控えめ'], [0, 'ふつう'], [1, '強め']].map(([n, label]) => <button key={n} type="button" className={chip(tactics.tilt[x.id] === n)} onClick={() => setTilt(x.id, n)}>{label}</button>)}
-                </div>
-              ))}
+            <div data-card-share-tactics className="mt-1 rounded-lg bg-black/30 p-2 text-[12px] font-bold text-slate-200" style={JA_WRAP_STYLE}>
+              {framesNow ? (<>
+                <div>{`基本カード: ${framesNow.base.filter(Boolean).map((id) => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`}</div>
+                <div>{`行: ${cardShareRowsCount(framesNow)}`}</div>
+                <div className="text-amber-200">{`賢さ: ${cardShareSmartText({ f: cardTacticPackFrames(framesNow) })}`}</div>
+                {cardShareSmartLevel({ f: cardTacticPackFrames(framesNow) }) === 'random' && <div data-card-share-tactics-empty className="text-rose-200">{jaWrap('戦術カードが入っていません。このままだと、出せる手からでたらめに打ちます')}</div>}
+              </>) : <div>読み込み中…</div>}
+              {onOpenTactics && <button type="button" data-card-share-open-tactics className="mt-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-[12px] font-black text-slate-950" onClick={() => { Audio_.fgSe.tap(); onOpenTactics(); }}>戦術カードを組む</button>}
             </div>
             <div className="mt-2 text-[12px] font-bold text-slate-300">切り札(出せるときは優先して使う・{CARD_SHARE_ACES_MAX}枚まで)</div>
             <div data-card-share-aces className="mt-1 flex max-h-[30vh] flex-wrap gap-1.5 overflow-y-auto">

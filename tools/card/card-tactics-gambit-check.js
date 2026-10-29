@@ -8,6 +8,7 @@
 //   C. 枠が無いときは今と同じ手(助手と対戦・マルチの助手は変わらない)
 //   D. 上から優先: 当たった行の手をする。当たらない・場面が違う・出せる手が無い行は飛ばす。OFF の行は飛ばす。モンスターの枠はその子の手だけ
 //   H. 基本カード: メインはそのまま・サブは3分の1。メインだけで助手の型と同じくせ。慎重型は効きを半分に
+//   J. 賢さ(基本の枚数が上限・行の数で上がる)・みんなのデッキに載せる短い形(行き来できる・いちばん長くても2000バイトに収まる)・何も入れていないとランダム
 //   I. 増やしたカード: この子の条件・守るときの条件・立ち回り・ブリーダーのカードを温存・基本カードの細かいくせ(速攻・一点集中・手札温存・守り方)
 //   E. 標的: 「相手のライフ◯%以下」▶「攻める」は、その子を攻める
 //   F. 守り: 守らない・ダメージ◯以上だけ守る・倒されるときだけ守る / ガッツ: ◯枚だけ置く・守り札を残す
@@ -20,7 +21,7 @@ const GAME = path.resolve(__dirname, '..', '..', 'monster-hero');
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
 const src = (f) => fs.readFileSync(path.join(GAME, f), 'utf8');
 vm.runInContext(`${src('data/card-battle-cards.js')}\n;\n${src('src/parts/82-card-battle-core.jsx')}\n;\n${src('src/parts/82-card-tactics-core.jsx')}\n;\n`
-  + 'this.E = { cardTacticKnobsOf, CARD_BATTLE_DATA, CARD_AI_HABITS, CARD_TACTIC_CARDS, CARD_TACTIC_START, CARD_TACTIC_GROUPS, cardTacticNormalizeFrames, cardTacticHabitOf, cardTacticFilled, cardTacticDecide, cardTacticCond, cardTacticOf, cardCreateGame, cardApplyAction, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardOther, cardGuardOptions };', ctx);
+  + 'this.E = { cardTacticSmartLevel, cardTacticPackFrames, cardTacticUnpackFrames, cardTacticKnobsOf, CARD_BATTLE_DATA, CARD_AI_HABITS, CARD_TACTIC_CARDS, CARD_TACTIC_START, CARD_TACTIC_GROUPS, cardTacticNormalizeFrames, cardTacticHabitOf, cardTacticFilled, cardTacticDecide, cardTacticCond, cardTacticOf, cardCreateGame, cardApplyAction, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardOther, cardGuardOptions };', ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 const VERBOSE = process.argv.includes('--verbose');
@@ -241,6 +242,29 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
   const focus = E.cardAiChooseAction(db, st, P({ base: ['tFocus', null, null] }), zero);
   check('I 一点集中型はいちばん弱った子を狙う', focus && focus.type === 'attack' && focus.target && focus.target.m === 2, J(focus));
   check('I サブのくせは3回に1回の番だけ', JSON.stringify(E.cardTacticKnobsOf(['tBalance', 'tRush', null], { ...st, turn: 1, first: 0 }, 0)) === '{}', J(E.cardTacticKnobsOf(['tBalance', 'tRush', null], { ...st, turn: 1, first: 0 }, 0)));
+}
+
+// ---- J ----
+{
+  const rows = (n) => Array.from({ length: n }, () => ({ c: 'any', a: 'atk' }));
+  const F = (base, n) => ({ base, mons: [rows(Math.min(5, n)), rows(Math.min(5, Math.max(0, n - 5))), rows(Math.max(0, n - 10))] });
+  const L = (base, n) => E.cardTacticSmartLevel(F(base, n));
+  check('J 何も無ければ random・行だけなら EASY', L([], 0) === 'random' && L([], 3) === 'easy');
+  check('J 基本1枚: 0〜3行 EASY・4〜9 NORMAL・10〜 HARD', L(['tBalance'], 3) === 'easy' && L(['tBalance'], 4) === 'normal' && L(['tBalance'], 12) === 'hard');
+  check('J 基本2枚: NORMAL〜EXPERT', L(['tBalance', 'tBig'], 0) === 'normal' && L(['tBalance', 'tBig'], 10) === 'expert');
+  check('J 基本3枚: HARD〜MASTER', L(['tBalance', 'tBig', 'tArea'], 0) === 'hard' && L(['tBalance', 'tBig', 'tArea'], 15) === 'master');
+  // いちばん長い名前のカードで、全部の枠を埋めたとき
+  const longest = (cat) => E.CARD_TACTIC_CARDS.filter((c) => c.cat === cat).sort((a, b) => Buffer.byteLength(b.id) - Buffer.byteLength(a.id))[0].id;
+  const row = (cat) => ({ c: 'species', a: longest(cat), sp: 'colorpandora', on: false });
+  const full = { base: ['tComeback', 'tComeback', 'tComeback'], breeder: [0, 1, 2].map(() => row('breeder')), mons: [0, 1, 2].map(() => [0, 1, 2, 3, 4].map(() => row('monster'))) };
+  const packed = E.cardTacticPackFrames(full);
+  const bytes = Buffer.byteLength(JSON.stringify({ name: 'あいうえおかきくけこさしすせそたちつてと', habit: 'sorashido', tilt: { attack: 0, keepGuard: 0, saveGuts: 0, big: 0, disrupt: 0, area: 0, finish: 0 }, aces: ['111', '222', '333'], f: packed }));
+  check('J いちばん長くても表の上限 2000 バイトに収まる', bytes <= 2000, bytes);
+  check('J 短い形は行き来できる', JSON.stringify(E.cardTacticUnpackFrames(packed)) === JSON.stringify(E.cardTacticNormalizeFrames(full)));
+  const st = scene();
+  let moved = 0;
+  for (let i = 0; i < 20; i++) { const a = E.cardAiChooseAction(db, st, { ...E.cardAiPolicy('kyuko', 'master'), gambit: {}, gambitRandom: true }, Math.random); if (a && (a.type === 'attack' || a.type === 'endAttacks')) moved++; }
+  check('J 何も入れていないデッキはランダムに打つ(できる手を返す)', moved === 20, moved);
 }
 
 console.log(`card-tactics-gambit-check: ${passed} OK / ${fails.length} NG`);
