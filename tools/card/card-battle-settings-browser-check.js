@@ -119,7 +119,7 @@ const EXTREME = { motion: 'OFF', shake: 'OFF', damageNum: 'OFF', think: 'FAST2',
     await page.click('[data-card-mode-assistant]');
     await page.waitForSelector('[data-card-foe="mua"]', { timeout: 8000 });
     await page.click('[data-card-foe="mua"]');
-    await page.click('[data-card-start]');
+    await page.click('[data-card-start]'); await page.click('[data-card-deck-pick-go]'); // 対戦の前のデッキ選び(前に使ったデッキが選ばれている)
     await page.waitForSelector('[data-card-battle]', { timeout: 20000 });
     await page.waitForTimeout(800);
 
