@@ -1364,7 +1364,7 @@ const HELP_CATEGORIES = [
         id:'card-cpu', emoji:'🤖', title:'助手と対戦', releaseFlag:'cardBattle', group:'対戦',
         assistant:'助手それぞれに戦い方のくせがあるんだ。何回か戦うと分かってくるはずだよ', expression:'happy',
         blocks:[
-          {t:'p',text:'トップ画面の「対戦」→「助手と対戦」で、相手の助手と強さを選んで戦います。強さは EASY・NORMAL・HARD・EXPERT・MASTER の5段で、強いほど勝ったときのビートPが増えます。'},
+          {t:'p',text:'トップ画面の「対戦」→「助手と対戦」で、相手の助手と強さを選んで戦います。強さは EASY・NORMAL・HARD・EXPERT・MASTER の5段で、強いほど勝ったときのビートPが増えます。前に選んだ強さは覚えていて、次に開いたときもそこから選べます。オプションの『助手と対戦の最初の強さ』で、いつも同じ強さから始めることもできます。'},
           {t:'kv',rows:[
             ['みゅあ','とにかく攻める'],
             ['ももすけ','相手の手札とガッツをいじる'],
