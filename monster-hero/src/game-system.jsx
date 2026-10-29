@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 61570424ff53a81e
+// generated-sha256: 6cd22b53d04a5467
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -28641,6 +28641,76 @@ const listTacticsStackItems = (counts, { keepZero = ['cookie', 'note'] } = {}) =
   }, []);
 };
 
+// ---- 本編(5つの遊び)とタクティクスの EX 以外: 強化の札(71 の battleBuffChips)・敵の弱化(60 の enemyDebuffs)を同じ形に直す ----
+// 2026-10-29 社長「効果の札を本編にも足す」。本編には EX が無いので、固有技・アシカ・勇者特性・ブリーダーの教えで付く物は
+// いまの強化の札(chip)がすべて数え上げている。それを読んで並べ直すだけ(効き目は変えない)。
+//   chip … { key, label, value, short, owner(その子だけに効く札の枠・全員なら null) } / debuff … { key, label, value, short, note }
+//   札の種類を足したら、下の表にも足す(tools/battle/battle-effects-check.js が見張る)
+// turns … 'now'(このターンだけ) / 'next'(次のターン) / 'run'(ランのあいだ・WAVE をまたぐ) / 'wave'(この WAVE)
+const CLASSIC_CHIP_VIEW = Object.freeze({
+  atk:          { icon: '⚔️', turns: 'run' },  dmgCut:     { icon: '🛡️', turns: 'run' },  def:        { icon: '🛡️', turns: 'run' },
+  muaHp:        { icon: '❤️', turns: 'run' },  muaGuts:    { icon: '⚡', turns: 'run' },  critRate:   { icon: '🎯', turns: 'run' },
+  critDmg:      { icon: '💥', turns: 'run' },  combo:      { icon: '💫', turns: 'run' },  globalCombo:{ icon: '💫', turns: 'run' },
+  kikiCard:     { icon: '🃏', turns: 'count' }, kyukoCut:  { icon: '🎼', turns: 'count' }, kenshi:    { icon: '💥', turns: 'run', stack: 'kenshi' },
+  autoHp:       { icon: '💚', turns: 'run' },  autoGuts:   { icon: '⚡', turns: 'run' },  poltz:      { icon: '🌿', turns: 'run' },
+  trick:        { icon: '🎃', turns: 'wave', stack: ['trickAtk', 'trickDef', 'trickRegen'] }, sweet: { icon: '🍪', turns: 'run', stack: ['cookie', 'note'] },
+  bow:          { icon: '🎀', turns: 'run', stack: 'bow' }, fate: { icon: '🪙', turns: 'run', stack: ['fateCombo', 'fateAtk'] },
+  fateCoinGuts: { icon: '🪙', turns: 'run', kind: 'debuff' },
+  meloso:       { icon: '💖', turns: 'next' }, boost:      { icon: '✨', turns: 'now' },  critFix:    { icon: '🎯', turns: 'now' },
+  zeroGuts:     { icon: '⭐', turns: 'now' },  reflectNext:{ icon: '🔁', turns: 'next' }, reflectNow: { icon: '🔁', turns: 'now' },
+  takenNext:    { icon: '🛡️', turns: 'next' }, takenNow:  { icon: '🛡️', turns: 'now' },
+  costNext:     { icon: '⚡', turns: 'next', kind: 'debuff' }, costNow: { icon: '⚡', turns: 'now', kind: 'debuff' },
+});
+const CLASSIC_DEBUFF_VIEW = Object.freeze({
+  ice: 'wave', confuse: 'count', aquaPrison: 'count', aquaFreeze: 'count', aquaFinale: 'count', nightmare: 'count', psycho: 'count',
+  fateAtkDown: 'count', fateTakenUp: 'count', stun: 'next', atkDown: 'wave', taken: 'wave', roar: 'wave',
+});
+// 札の key は「種類+枠」(trick0・sweetparty など)のことがあるので、表の種類へ戻す
+const classicChipKindOf = (key) => {
+  const k = String(key || '');
+  if (CLASSIC_CHIP_VIEW[k]) return k;
+  return ['trick', 'sweet', 'bow', 'fate'].find((p) => k.startsWith(p) && !CLASSIC_CHIP_VIEW[k]) || null;
+};
+const classicPctOf = (text) => { const m = String(text || '').match(/([+\-−]?)(\d+)%/); return m ? Number(m[2]) * (m[1] === '-' || m[1] === '−' ? -1 : 1) : null; };
+const classicTurnsLeftOf = (text, turns) => {
+  const m = String(text || '').match(/残り(\d+)T/);
+  if (m) return Number(m[1]);
+  return turns === 'now' || turns === 'next' ? 1 : turns === 'wave' ? 'wave' : null;
+};
+// 枠ごとの一覧(本編)。chips は battleBuffChips() の戻り値。stackCounts を渡すと、札に無い溜まる物を kind:'stack' で足す
+const classicEffectsFromChips = (chips, slot = null, stackCounts = null) => {
+  const out = [], covered = new Set();
+  (Array.isArray(chips) ? chips : []).forEach((c) => {
+    if (!c) return;
+    const owner = Number.isInteger(c.owner) ? c.owner : null;
+    if (owner != null && Number.isInteger(slot) && owner !== slot) return;
+    const kind = classicChipKindOf(c.key), v = kind ? CLASSIC_CHIP_VIEW[kind] : null;
+    if (!v) return;
+    [].concat(v.stack || []).forEach((s) => covered.add(s));
+    const text = [c.value, c.short].filter(Boolean).join(' ');
+    out.push({ key: `chip:${c.key}`, name: c.label || '', icon: v.icon, kind: v.kind || 'buff', pct: classicPctOf(c.value),
+      fromName: '', fromSlot: owner, turnsLeft: classicTurnsLeftOf(text, v.turns), allAllies: owner == null,
+      note: `${c.value || ''}${v.turns === 'next' ? '(次のターン)' : v.turns === 'now' ? '(このターン)' : v.turns === 'run' ? '(このランのあいだ)' : ''}` });
+  });
+  const counts = Object.fromEntries(Object.entries(stackCounts && typeof stackCounts === 'object' ? stackCounts : {}).filter(([k]) => !covered.has(k)));
+  return [...out, ...listTacticsStackItems(counts, { keepZero: [] })];
+};
+// 敵の一覧(本編もタクティクスも)。debuffs は 60 の enemyDebuffs。stackCounts は enemyStackCounts(弱化の一覧と同じ物は出さない)
+//   withoutEx … タクティクスで true にすると、EX から付く弱化(listTacticsExEnemyEffects が出す物)を外す(二重に出さない)
+const CLASSIC_DEBUFF_FROM_EX = Object.freeze(['psycho', 'aquaPrison', 'aquaFreeze', 'aquaFinale', 'nightmare']);
+const classicEnemyEffectsFromDebuffs = (debuffs, stackCounts = null, { withoutEx = false } = {}) => {
+  const out = [];
+  (Array.isArray(debuffs) ? debuffs : []).forEach((d) => {
+    if (!d || !CLASSIC_DEBUFF_VIEW[d.key] || (withoutEx && CLASSIC_DEBUFF_FROM_EX.includes(d.key))) return;
+    const turns = CLASSIC_DEBUFF_VIEW[d.key];
+    out.push({ key: `debuff:${d.key}`, name: d.label || '', icon: d.mark || '', kind: 'debuff', pct: classicPctOf(d.value),
+      fromName: '', fromSlot: null, turnsLeft: classicTurnsLeftOf(`${d.value || ''} ${d.short || ''}`, turns), allAllies: false, note: d.note || d.value || '' });
+  });
+  const covered = new Set(['aquaPrison', 'aquaFreeze', 'roar'].filter((k) => out.some((x) => x.key === `debuff:${k}`)));
+  const counts = Object.fromEntries(Object.entries(stackCounts && typeof stackCounts === 'object' ? stackCounts : {}).filter(([k]) => !covered.has(k)));
+  return [...out, ...listTacticsStackItems(counts, { keepZero: [] })];
+};
+
 // ---- part: 33-rhythm-buddy.jsx ----
 // ===== 相棒(モンヒロビートのマルチに呼べる、自分のマスモン)の計算 =====
 // 仕様の正本: docs/spec/RHYTHM_BUDDY.md(2026-10-07・ユーザーと決めた)
@@ -31233,9 +31303,14 @@ const FRIEND_PLACE_TEXT = Object.freeze({
   // MFバトルカード(2026-10-27 社長「対戦中だけ分ける」・台帳 #235)。表の place には入れられない値なので、
   //   表へは 'other' を送り、細かい場所は records.pl に載せる(FRIEND_SUB_PLACES・friendsPlaceFromRow)。古い版の人には「ログイン中」と出る
   card: 'MFバトルカードで遊び中', cardBattle: 'MFバトルカードで対戦中',
+  // マルチの部屋で相手を待っている(2026-10-29 社長「相手がいま何をしているかが見えると誘いやすい」。カード部・ビート部の共通・friendsSetRoomWaiting)
+  room: '部屋で待ち中',
 });
 // 表(friend_profiles.place)の決まり(check)に無い場所。表へは 'other' で送り、records.pl に本当の場所を載せる
-const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle']);
+const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room']);
+// マルチの部屋で相手を待っているあいだ真(モンヒロビート・MFバトルカードの部屋が立てる)。次にフレンドへ知らせるとき、場所を「部屋で待ち中」にする
+let _friendsRoomWaiting = false;
+const friendsSetRoomWaiting = (on) => { _friendsRoomWaiting = !!on; };
 // 受け取った行の場所。place が 'other' で records.pl があれば、そちら
 const friendsPlaceFromRow = (place, records) => {
   if (place === 'other' && records && FRIEND_SUB_PLACES.includes(records.pl)) return records.pl;
@@ -31245,6 +31320,7 @@ const FRIEND_HEARTBEAT_MS = 2 * 60 * 1000;   // 開いているあいだ、こ�
 const FRIEND_PUBLISH_MIN_MS = 15 * 1000;     // 場所や中身が変わっても、これより短い間隔では送らない
 // 画面(gameState)から、見せる場所の大分類へ。細かい画面名や曲名は見せない
 const friendsPlaceOfScreen = (gameState) => {
+  if (_friendsRoomWaiting) return 'room';
   const name = typeof gameState === 'string' ? gameState : '';
   if (name === 'HOME') return 'home';
   if (name === 'CARD_BATTLE') return 'cardBattle';
@@ -31261,6 +31337,30 @@ const friendsPresenceText = (place, updatedAtMs, nowMs) => {
   const online = Number.isFinite(updatedAtMs) && updatedAtMs > 0 && nowMs - updatedAtMs < FRIENDS_ONLINE_MS;
   if (online) return { online: true, text: FRIEND_PLACE_TEXT[place] || FRIEND_PLACE_TEXT.other };
   return { online: false, text: friendsLastSeenText(updatedAtMs, nowMs) };
+};
+// 招待の行に出す「フレンドの今」(2026-10-29 社長「招待の画面で、相手がいま何をしているか・ログインしているかが見えると誘いやすい」)。
+//   カード部(91)とビート部(77)の共通。friend_profiles を ids でまとめて読む。読めない人は入れない(行は名前だけになる)
+//   返り値: { [id]: { online, text, at } } … online は5分以内に知らせが来ているか・text は「モンヒロビートで遊び中」「3時間前」など・at はその時刻
+const friendsPresenceFor = async (ids) => {
+  let rows = {};
+  try { rows = await sbFetchFriendSummaries(ids); } catch (_) { rows = {}; }
+  const now = Date.now();
+  const out = {};
+  Object.entries(rows && typeof rows === 'object' ? rows : {}).forEach(([id, r]) => {
+    if (!r) return;
+    const at = Number.isFinite(r.updatedAt) ? r.updatedAt : 0;
+    const p = friendsPresenceText(r.place, at, now);
+    out[id] = { online: p.online, text: p.text, at };
+  });
+  return out;
+};
+// 招待の行の並べ方: ログイン中を上、その中は新しく来た順(様子が分からない人は下。並びは崩さない)
+const friendsPresenceSort = (list, presence, idOf = (x) => (x ? x.otherId : '')) => {
+  const p = presence && typeof presence === 'object' ? presence : {};
+  return (Array.isArray(list) ? list : []).map((x, i) => [x, i]).sort(([a, ia], [b, ib]) => {
+    const pa = p[idOf(a)] || null, pb = p[idOf(b)] || null;
+    return (Number(!!(pb && pb.online)) - Number(!!(pa && pa.online))) || ((pb ? pb.at : 0) - (pa ? pa.at : 0)) || (ia - ib);
+  }).map(([x]) => x);
 };
 // プレイ時間(ミリ秒)を「◯時間◯分」の文へ(プロフィールの表示と同じ書き方)
 const friendsPlaytimeText = (seconds) => {
@@ -36003,6 +36103,10 @@ const DexStatusTag = ({ status, size = 'sm', announced = false }) => {
   return <span data-dex-status-tag={def.id} className={`inline-flex items-center rounded-full border px-1.5 py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${DEX_STATUS_STYLE[def.id]}`}>{def.label}</span>;
 };
 
+// 図鑑の一覧のスクロールの位置(2026-10-29 社長「モンスターを開いて戻ると、一覧のいちばん上まで戻される」)。
+// 詳細を開くと一覧は作り直されるので、画面の外で覚えておき、戻ったらそこへ戻す。保存はしない(読み込み直すと上から)。
+// 覚えるのは札を押した瞬間。絞り込みが替わっていたとき・M/B管理へ戻ったときは上から
+const dexListScrollMemo = { filter: null, top: 0 };
 function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineage, onOpenDetail, onBackToManagement }) {
       const monsters=dexMonsterList();
       const unlockedCount=monsters.filter(mon=>unlockedMonsterIds.includes(mon.id)).length;
@@ -36014,7 +36118,7 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
       const chipClass=(on)=>`shrink-0 snap-start min-h-[44px] px-3 rounded-xl border text-[11px] font-black whitespace-nowrap active:scale-95 ${on?'bg-amber-600 border-amber-300 text-white':'bg-slate-900 border-white/10 text-amber-200/80'}`;
       return (
       <div data-mh-screen className={SCREEN_SHELL_CLASS}>
-        <ScreenHead title="モンスター図鑑" accent="text-amber-300" onBack={onBackToManagement} backLabel="M/B管理へ戻る"/>
+        <ScreenHead title="モンスター図鑑" accent="text-amber-300" onBack={()=>{ dexListScrollMemo.top=0; onBackToManagement(); }} backLabel="M/B管理へ戻る"/>
         <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="monsterDex" compact/></div>
         <div data-dex-count className="shrink-0 w-full max-w-md mx-auto mb-2 rounded-2xl border border-amber-500/60 bg-gradient-to-r from-amber-950/70 to-orange-950/50 px-3 py-2 flex items-center justify-between gap-2">
           <span className="text-[10px] font-black text-amber-300 shrink-0">図鑑登録数</span>
@@ -36033,7 +36137,9 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
           <span aria-hidden="true" className="shrink-0" ref={el=>{ if(!el||!el.parentElement||!el.previousElementSibling) return;
             el.style.width=`${Math.max(0, el.parentElement.clientWidth-el.previousElementSibling.offsetWidth-6)}px`; }}/>
         </div>
-        <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto`}>
+        <div data-dex-list className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto`}
+          ref={el=>{ if(!el||el.dataset.dexScrollRestored) return; el.dataset.dexScrollRestored='1';
+            if(dexListScrollMemo.filter===dexLineageFilter&&dexListScrollMemo.top>0) el.scrollTop=dexListScrollMemo.top; }}>
           {sections.map(section=>(
             <section key={section.id} data-dex-section={section.id} className="pb-3">
               {/* 区切りの見出し。数は「この区切りの数 / いま並んでいる全員」 */}
@@ -36049,7 +36155,8 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
                   const category=unlocked?monsterCategoryOf(mon.id):null;
                   return (
                     <button key={mon.id} type="button" data-dex-entry data-dex-entry-status={section.id} aria-label={`${mon.name}の図鑑を見る`}
-                      onClick={()=>onOpenDetail(mon.id)}
+                      onClick={e=>{ const list=e.currentTarget.closest('[data-dex-list]');
+                        dexListScrollMemo.filter=dexLineageFilter; dexListScrollMemo.top=list?list.scrollTop:0; onOpenDetail(mon.id); }}
                       className={`w-full min-h-[124px] rounded-2xl border ${section.id==='draft'?'border-dashed border-fuchsia-300/30':'border-white/10'} bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none`}>
                       {/* 血統チップと同じ理由。丸く切り抜くと円の外側へかかる部分が切れるので、
                           少し縮めて中央へ置き、全身が円の中へ収まるようにする */}
@@ -42650,13 +42757,14 @@ function AiCopyBody({ src, phase = 'idle', hit = false, anim = null, size = 44 }
     </span>
   );
 }
-function AiCopyLifeBar({ hp, maxHp }) {
+function AiCopyLifeBar({ hp, maxHp, narrow = false }) {
   if (!Number.isFinite(Number(hp)) || !(Number(maxHp) > 0)) return null;
   const now = Math.max(0, Math.floor(Number(hp))), max = Math.floor(Number(maxHp));
   return (
     <span data-ai-copy-life={`${now}/${max}`} className="block w-full min-w-0">
       <span className="flex h-[11px] items-center justify-between gap-1 leading-none">
-        <span className="shrink-0 whitespace-nowrap text-[8px] font-black text-pink-300 max-[359px]:hidden">ライフ</span>
+        {/* 細い所(5列目の縦・幅320)で4桁のライフになると「ライフ」の字と数字が収まらないので、字を外して数と棒だけにする(2026-10-29 見回り) */}
+        <span className={`shrink-0 whitespace-nowrap text-[8px] font-black text-pink-300 max-[359px]:hidden${narrow && String(max).length >= 4 ? ' hidden' : ''}`}>ライフ</span>
         <span className="font-mono leading-none whitespace-nowrap"><span className="text-[11px] font-black text-white">{now}</span><span className="text-[8px] text-slate-400">/{max}</span></span>
       </span>
       <span className="mt-px block h-[3px] overflow-hidden rounded-full bg-black/60">
@@ -42666,9 +42774,10 @@ function AiCopyLifeBar({ hp, maxHp }) {
   );
 }
 // タクティクス/レイドの5列目。縦=盤の右の列(layout 'portrait')、横向きの背の低い画面=盤の下の帯(layout 'landscape')
-function TacticsAiCopyColumn({ copy, src, phase, hit, anim, skill, standing, layout, onOpen, hatePct = null }) {
+function TacticsAiCopyColumn({ copy, src, phase, hit, anim, skill, standing, layout, onOpen, hatePct = null, compact = false }) {
   if (!copy) return null;
   const land = layout === 'landscape';
+  // compact … タクティクス旧の横向き(背の低い画面)。盤の高さ(約152px)に収まるよう、絵と顔を小さくし間を詰める(2026-10-29 見回り)
   const name = tacticsAiCopyName(copy);
   const canOpen = typeof onOpen === 'function' && phase !== 'vanish';
   const next = standing ? <SorashidoNextCardBadge card={copy.nextCard || null} layout={land ? 'landscape' : 'portrait'} turnsLeft={copy.turnsLeft}/>
@@ -42677,17 +42786,17 @@ function TacticsAiCopyColumn({ copy, src, phase, hit, anim, skill, standing, lay
     <div data-tactics-ai-copy-column={layout} data-ai-copy-phase={phase} role={canOpen ? 'button' : undefined} tabIndex={canOpen ? 0 : undefined}
       aria-label={`${name}${canOpen ? '。押すと手札を見る' : ''}`} onClick={canOpen ? onOpen : undefined}
       onKeyDown={canOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } } : undefined}
-      className={`relative min-w-0 rounded-xl border border-emerald-400/60 bg-emerald-950/55 text-emerald-50 ${canOpen ? 'cursor-pointer' : ''} ${land ? 'flex h-[46px] w-full items-center gap-2 px-2' : 'flex h-full w-[72px] max-[359px]:w-[60px] shrink-0 flex-col items-center justify-between gap-0.5 px-1 max-[359px]:px-0.5 py-1'}`}>
+      className={`relative min-w-0 rounded-xl border border-emerald-400/60 bg-emerald-950/55 text-emerald-50 ${canOpen ? 'cursor-pointer' : ''} ${land ? 'flex h-[46px] w-full items-center gap-2 px-2' : `flex h-full w-[72px] max-[359px]:w-[60px] shrink-0 flex-col items-center justify-between ${compact ? 'gap-0 py-0.5' : 'gap-0.5 py-1'} px-1 max-[359px]:px-0.5`}`}>
       {skill && <span data-tactics-ai-copy-skill className={`absolute z-[90] max-w-[140px] truncate rounded-lg border border-red-200 bg-red-700 px-2 py-0.5 text-[11px] font-black text-white shadow-[0_2px_10px_rgba(0,0,0,.7)] ${land ? 'left-1/2 -top-3 -translate-x-1/2' : 'right-1 top-1/3'}`}>{skill}</span>}
       <span className={`flex min-w-0 items-center gap-1 ${land ? 'w-[92px] shrink-0' : 'w-full flex-col'}`}>
-        <AiCopyFace src={src} size={land ? 20 : 22}/>
+        <AiCopyFace src={src} size={land ? 20 : compact ? 18 : 22}/>
         <span className={`min-w-0 overflow-hidden whitespace-nowrap font-black leading-tight text-emerald-200 [container-type:inline-size] ${land ? 'flex-1' : 'w-full text-center'}`}>
           <span className="block" style={{ fontSize: `min(10px, calc(100cqw / ${[...name].length + 0.3}))` }}>{name}</span>
         </span>
       </span>
-      <AiCopyBody src={src} phase={phase} hit={hit} anim={anim} size={land ? 40 : 46}/>
+      <AiCopyBody src={src} phase={phase} hit={hit} anim={anim} size={land ? 40 : compact ? 32 : 46}/>
       <span className={`flex min-w-0 flex-col gap-0.5 ${land ? 'w-[96px] shrink-0' : 'w-full'}`}>
-        <AiCopyLifeBar hp={copy.hp} maxHp={copy.maxHp}/>
+        <AiCopyLifeBar hp={copy.hp} maxHp={copy.maxHp} narrow={!land}/>
         <AiCopyGutsMeter guts={copy.guts} maxGuts={copy.maxGuts}/>
       </span>
       {Number.isInteger(hatePct) && <span data-tactics-ai-copy-hate={hatePct} className="shrink-0 whitespace-nowrap text-[9px] font-black tabular-nums text-rose-200">狙われ {hatePct}%</span>}
@@ -44260,6 +44369,12 @@ function BattleScreen({
               const slotArt = (img) => (!ecoBattleView&&!idleMotionOff ? <MonsterIdleArt baseId={s?.id} image={img}/> : img);
               // この枠に効いているEXの効果と溜まる物(タクティクス/レイドだけ。ほかの遊びでは null で、いままでのマーク×数を出す)
               const slotExEffects=s&&typeof tacticsExEffectsAt==='function'?(tacticsExEffectsAt(i,allyStackCounts[i])||[]):null;
+              // この枠の子の魂格の段階(1〜5)。枠の子とは masuId で結ぶ。出さない設定のときは 0
+              const slotSoulStage=(()=>{
+                if(!s||!s.masuId||ecoBattleView||liteBattleView||fxLoad==='LIGHT'||fxLoad==='MINIMAL'||!Array.isArray(battleSoulMasus)) return 0;
+                const m=battleSoulMasus.find(x=>x&&(x.id===s.masuId||x.masuId===s.masuId));
+                return m?normalizeSoulRankStage(normalizeMasuProgression(m).soulRankStage):0;
+              })();
               // 体当たりだった初期モンスターは、種族ごとの攻撃(ThemedAttackMotion)で見せる。枠は飛ばさない
               const themedAttack = isAnimating ? themedAttackKindOf(attackAnim, s?.id) : null;
               const slotArtBox = {width:tacticsNewLayout?'58px':'64px', height:tacticsNewLayout?'58px':'64px', flexShrink:0};
@@ -44323,7 +44438,7 @@ function BattleScreen({
                   <div data-tactics-ai-copy-next={i} className="flex min-w-0 justify-center">
                     <SorashidoNextCardBadge card={tCopyOut?tCopy.nextCard:null} turnsLeft={null} layout="landscape"/>
                   </div>
-                  <AiCopyLifeBar hp={tCopy.hp} maxHp={tCopy.maxHp}/>
+                  <AiCopyLifeBar hp={tCopy.hp} maxHp={tCopy.maxHp} narrow={classicAiCopyLandscape()}/>
                   <AiCopyGutsMeter guts={tCopy.guts} maxGuts={tCopy.maxGuts}/>
                 </div>}
                 {/* 押すとコピーの手札の窓(BattleScreen の copyHandOpen)。枠のボタンへは伝えない */}
@@ -44603,7 +44718,7 @@ function BattleScreen({
                       大きくなって飛び、名前の行を隠していた。古い盤面は今までどおり枠ごと動かす */}
                   {/* 足元の魔法陣(新しい盤面の飾り)。絵と一緒に跳ねないよう、動く絵の外に置く */}
                   {tacticsNewLayout&&s&&<span aria-hidden="true" data-slot-circle/>}
-                  <div data-tactics-attack-image={tacticsNewLayout?i:undefined} className="relative flex items-center justify-center" style={{...(s?slotArtBox:{}),...(isAnimating&&tacticsNewLayout&&!pandoraArt?{zIndex:9999,animation:themedAttack?undefined:attackMotionAnimation(attackAnim),...attackAimStyle}:{}),...(pandoraArt&&isAnimating?{zIndex:9999}:{})}}>{pandoraArt?pandoraArt:s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
+                  <div data-tactics-attack-image={tacticsNewLayout?i:undefined} className={`relative flex items-center justify-center${slotSoulStage>0?' mh-reincarnate-stack':''}`} style={{...(s?slotArtBox:{}),...(isAnimating&&tacticsNewLayout&&!pandoraArt?{zIndex:9999,animation:themedAttack?undefined:attackMotionAnimation(attackAnim),...attackAimStyle}:{}),...(pandoraArt&&isAnimating?{zIndex:9999}:{})}}>{/* 魂格オーラ(一覧・詳細・HOMEと同じ部品)を、バトルでも絵の後ろに小さく出す(2026-10-29 社長「魂格オーラがバトルに反映されてない」)。軽め・最軽量・省エネ表示では出さず、標準では動きを止める(is-still) */}{slotSoulStage>0&&<SoulRankAura soulRankStage={slotSoulStage} className={`is-battle${fxLoad==='STANDARD'?' is-still':''}`}/>}{pandoraArt?pandoraArt:s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
                     ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="object-contain drop-shadow-md"/>}/>
                     :isAnimating&&attackAnim.motion==='arkHolyRain'
                       ?<ArkHolyRainMotion
@@ -44708,7 +44823,7 @@ function BattleScreen({
             const props={copy:c,src:aiCopySrcOf(c,slots),phase,hit,anim:attackAnim,skill,standing:standing||phase==='vanish',onOpen:aiCopy?()=>setCopyHandOpen(true):null,hatePct:hc&&Number.isInteger(hc.copy)?hc.copy:null};
             return (<>
               {/* タクティクス旧は枠が縦に長く盤の高さからはみ出すので、横向きでも盤の右に置く(下に置くと距離の札に重なった) */}
-              <div className={`flex shrink-0 ${tacticsNewLayout?'[@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}><TacticsAiCopyColumn {...props} layout="portrait"/></div>
+              <div className={`flex shrink-0 ${tacticsNewLayout?'[@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}><TacticsAiCopyColumn {...props} layout="portrait" compact={!tacticsNewLayout&&classicAiCopyLandscape()}/></div>
               {tacticsNewLayout&&<div className="hidden shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:block"><TacticsAiCopyColumn {...props} layout="landscape"/></div>}
             </>);
           })()}
@@ -46376,6 +46491,13 @@ function MonsterCheckDebugScreen({
 // ・タイマーは持たない(結果の文は次の操作まで出したままにする)
 // ・フレンドを増やす入口は2つ。①フレンドコードの入力(この画面) ②ランキングの名前から(60-app 側のシート)
 //   どちらも sbSendFriendRequest を通る。申請の状態の判断はそこだけが持つ
+// 招待の行に置く小さな印(カード部 91・ビート部 77 の共通。中身は 34 の friendsPresenceFor。34 は検査がふつうの JS として読むので、画面の部品はここに置く): 緑の点+いまの場所(ログイン中)/灰色の点+最後に来た時刻。info が無いときは何も出さない
+const FriendPresenceTag = ({ info, className = '' }) => (info ? (
+  <small data-friend-presence={info.online ? 'on' : 'off'} className={`flex min-w-0 items-center gap-1 text-[10px] font-bold ${info.online ? 'text-emerald-200' : 'text-slate-400'} ${className}`}>
+    <i aria-hidden="true" className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${info.online ? 'bg-emerald-400' : 'bg-slate-500'}`}/>
+    <span className="truncate">{info.text}</span>
+  </small>
+) : null);
 const FRIENDS_RESULT_TEXT = Object.freeze({
   sent: ['フレンド申請を送りました。承認されるとフレンドになります', 'ok'],
   accepted: ['フレンドになりました!', 'ok'],
@@ -48405,6 +48527,64 @@ function RhythmMultiAloneHint({ alone, onLeave }) {
   );
 }
 
+// 招待の部屋を開いたまま、ほかの画面へ出ているあいだ、画面の上に出す帯
+// (2026-10-29 社長「招待で部屋を作っている間は、何もできないのが不便」・案A「ほかの画面へ行っても部屋を閉じない。相手が来たら上に帯」)。
+// 部屋(RHYTHM_MULTI)は画面の外に1つだけあるので、画面を移っても抜けない。ここは様子を聞いて知らせるだけ。
+// hidden: 対戦の画面・モードえらび・演奏中など、部屋がもう見えている所では出さない
+// busy: バトルの最中など、ここから画面を移ると途中のものが宙に浮く所。人が来たときだけ知らせ、「対戦へ」は出さない
+function RhythmMultiAwayBar({ hidden = false, busy = false, onReturn = null }) {
+  const [view, setView] = React.useState(() => RHYTHM_MULTI.view());
+  React.useEffect(() => RHYTHM_MULTI.subscribe(() => setView(RHYTHM_MULTI.view())), []);
+  // 帯を出し始めたときにいた人。この人たちは「来ました」と言わない
+  const seenRef = React.useRef(null);
+  const [arrived, setArrived] = React.useState('');
+  const others = view ? view.members.filter((m) => !m.cpu && m.id !== view.selfId) : [];
+  const othersKey = others.map((m) => m.id).join(',');
+  const shown = !!view && !hidden && !view.full;
+  // フレンドの「いまの場所」を「部屋で待ち中」にする(2026-10-29 マルチ部ツナグくんの friendsSetRoomWaiting)。
+  // 選曲が始まった・部屋を出たら戻す。カードの部屋も同じ口を使うので、ビートが立てたときだけ下ろす
+  const roomWaiting = !!view && !view.full && (view.room ? view.room.phase : 'matching') === 'matching';
+  const roomWaitingSetRef = React.useRef(false);
+  React.useEffect(() => {
+    if (typeof friendsSetRoomWaiting !== 'function') return;
+    if (roomWaiting) { friendsSetRoomWaiting(true); roomWaitingSetRef.current = true; }
+    else if (roomWaitingSetRef.current) { friendsSetRoomWaiting(false); roomWaitingSetRef.current = false; }
+  }, [roomWaiting]);
+  React.useEffect(() => {
+    if (!shown) { seenRef.current = null; setArrived(''); return; }
+    if (!seenRef.current) { seenRef.current = new Set(others.map((m) => m.id)); return; }
+    const fresh = others.find((m) => !seenRef.current.has(m.id));
+    others.forEach((m) => seenRef.current.add(m.id));
+    if (fresh) setArrived(rhythmMultiText(fresh.name, 20) || 'メンバー');
+  }, [othersKey, shown]);
+  if (!shown) return null;
+  const phase = view.room ? view.room.phase : 'matching';
+  const hot = !!arrived || phase !== 'matching';
+  if (busy && !hot) return null;
+  const text = arrived ? `${arrived}さんが来ました` : phase !== 'matching' ? '対戦が始まります' : `部屋で待っています(${view.members.length}/${RHYTHM_MULTI_ROOM_MAX}人)`;
+  return <MultiAwayBar text={text} hot={hot} busy={busy} onReturn={onReturn} onLeave={() => RHYTHM_MULTI.leave()} game="beat" />;
+}
+
+// 部屋を開いたままほかの画面にいるあいだの、画面の上の帯(見た目だけ。モンヒロビートとMFバトルカードで共通・2026-10-29 マルチ部ツナグくんと決めた)。
+// 部屋の様子は呼ぶ側が読んで、文と「目立たせるか」だけを渡す。
+//   text: 帯の文 / hot: 人が来た・始まるなど、すぐ戻ってほしいとき / busy: バトルの最中など、ここから画面を移れない所(「対戦へ」を出さない)
+//   onReturn: 部屋へ戻る / onLeave: 部屋を出る(押したら先に確かめる) / icon: 文の頭の絵文字 / game: data 属性に載せるだけ(検査で見分ける用)
+function MultiAwayBar({ text, hot = false, busy = false, onReturn = null, onLeave = null, icon = '🎵', game = '' }) {
+  const leave = () => { if (onLeave && window.confirm('ルームを出ますか?')) onLeave(); };
+  return (
+    <div data-multi-away-bar={hot ? 'hot' : 'wait'} data-multi-away-game={game} className="pointer-events-none fixed inset-x-0 top-0 z-[1000] flex justify-center px-2 pt-[max(env(safe-area-inset-top),6px)]">
+      <div className={`pointer-events-auto flex w-full max-w-[420px] items-center gap-2 rounded-2xl border px-3 py-1.5 text-white shadow-lg ${hot ? 'border-amber-200/80 bg-fuchsia-800/95' : 'border-cyan-300/50 bg-slate-900/95'}`}>
+        <span className={`min-w-0 flex-1 text-[12px] font-black leading-snug ${hot ? 'animate-pulse' : ''}`} style={JA_WRAP_STYLE}>{icon ? `${icon} ` : ''}{jaWrap(text)}</span>
+        {busy ? <small className="shrink-0 text-[10px] font-bold text-amber-100">終わったら戻れます</small>
+          : <button data-multi-away-return type="button" onClick={() => onReturn && onReturn()}
+            className={`min-h-[40px] shrink-0 rounded-xl px-3 text-[12px] font-black ${hot ? 'bg-amber-300 text-slate-950' : 'bg-cyan-400 text-slate-950'}`}>{hot ? '対戦へ' : '戻る'}</button>}
+        {onLeave && <button data-multi-away-leave type="button" aria-label="ルームを出る" onClick={leave}
+          className="min-h-[40px] min-w-[36px] shrink-0 rounded-xl bg-slate-700 text-[13px] font-black">✕</button>}
+      </div>
+    </div>
+  );
+}
+
 // 結果が出たら、対戦の記録へ1回ぶん足す(同じ回は2度数えない)
 function RhythmMultiRecordSaver({ entry }) {
   React.useEffect(() => {
@@ -48879,7 +49059,7 @@ function RhythmQuickRunPill({ info, onRestart = null, onResume = null, widthClas
     </small>
   );
 }
-function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null }) {
+function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null, onStepAway = null }) {
   const view = useRhythmMultiView();
   useModeSelectStageCss();
   const difficultyIds = difficultyList.map((d) => d.id);
@@ -49045,6 +49225,16 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   const [invitePanel, setInvitePanel] = React.useState(false);
   const [invitedIds, setInvitedIds] = React.useState({});
   const [inviteMessage, setInviteMessage] = React.useState('');
+  // 招待の行に出すフレンドの今(34 の friendsPresenceFor・75 の FriendPresenceTag。2026-10-29 社長「相手がいま何をしているかが見えると誘いやすい」)
+  const [presence, setPresence] = React.useState({});
+  React.useEffect(() => {
+    if (!invitePanel || !roster || !roster.length || typeof friendsPresenceFor !== 'function') return undefined;
+    let alive = true;
+    const load = () => { void friendsPresenceFor(roster.map((f) => f.otherId)).then((p) => { if (alive) setPresence(p || {}); }); };
+    load();
+    const t = setInterval(load, 60000);
+    return () => { alive = false; clearInterval(t); };
+  }, [invitePanel, roster]);
   const loadRoster = React.useCallback(async (id) => {
     try { setRoster(await sbFetchFriendRoster(id)); } catch (_) { setRoster([]); }
   }, []);
@@ -49573,11 +49763,12 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                       {roster !== null && roster.length === 0 && (
                         <p className="text-[11px] font-bold leading-relaxed text-slate-400">まだフレンドがいません。プロフィールの「フレンド」から、フレンドコードで申請できます。</p>
                       )}
-                      {(roster || []).map((friend) => (
+                      {(typeof friendsPresenceSort === 'function' ? friendsPresenceSort(roster || [], presence) : (roster || [])).map((friend) => (
                         <div key={friend.otherId} data-rhythm-multi-friend-row className="flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5">
                           <span className="min-w-0 flex-1">
                             <b className="block truncate text-sm font-black">{friend.userName}</b>
-                            <small className="block truncate text-[10px] font-bold text-slate-400">{friendsLastSeenText(friend.lastSeenAt, Date.now())}</small>
+                            {presence[friend.otherId] && typeof FriendPresenceTag === 'function' ? <FriendPresenceTag info={presence[friend.otherId]}/>
+                              : <small className="block truncate text-[10px] font-bold text-slate-400">{friendsLastSeenText(friend.lastSeenAt, Date.now())}</small>}
                           </span>
                           <button data-rhythm-multi-friend-send type="button" disabled={!!invitedIds[friend.otherId]} onClick={() => inviteFriend(friend.otherId)}
                             className={`${btn} shrink-0 text-xs ${invitedIds[friend.otherId] ? 'bg-slate-700' : 'bg-pink-700'}`}>{invitedIds[friend.otherId] ? '招待ずみ' : '招待する'}</button>
@@ -49591,6 +49782,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               )}
                 {buddyBumped && <p data-rhythm-buddy-bumped className="text-[11px] font-black leading-snug text-amber-200">人が入ってきたので、呼んだマスモンは席をゆずって帰りました(使った回数・券は戻りました)</p>}
                 {buddyCallButton()}
+                {/* 招待の部屋は、開いたままほかの画面へ出られる(2026-10-29 社長・案A)。相手が来たら上の帯(RhythmMultiAwayBar)で知らせる */}
+                {view && !publicRoom && !view.full && onStepAway && <button data-rhythm-multi-step-away type="button" className={`${btn} w-full bg-cyan-800`} style={JA_WRAP_STYLE} onClick={onStepAway}>{jaWrap('部屋はそのままで、ほかの画面へ')}</button>}
                 <button data-rhythm-multi-leave type="button" className={`${btn} w-full bg-slate-700`} onClick={leaveRoomAfterTap}>{view ? 'ルームを出る' : 'やめる'}</button>
                 {message && <p className="text-[12px] font-black text-rose-300">{message}</p>}
               </div>
@@ -56430,6 +56623,13 @@ const CardStatusSheet = ({ name, list, onClose }) => (
     </div>
   </div>
 );
+// 出すカードの大写し1枚の高さ。何枚も同時に出すときは、横に並べて画面の幅に収まる高さまで小さくする
+//   (前は高さだけで決めていて、3枚以上だと 390×844 で横にはみ出して切れた。2026-10-29 社長「カードを3枚以上使うと画面が切れる」)。
+//   幅 = 画面の幅 − 左右の余白(32px) − すき間(6px×(n−1)) を n で割る。高さはその 7/5 倍
+const cardBigHeight = (n) => {
+  const k = Math.max(1, n || 1);
+  return `min(${k > 1 ? 30 : 38}vh, 300px, calc((100vw - ${32 + 6 * (k - 1)}px) / ${k} * 1.4))`;
+};
 // 手札の番号の並びを、カードの名前(番号)の並びにする(同じ名前の組み合わせを1つにまとめる)
 const cardHandNameKey = (hand, idx) => idx.map((i) => hand[i]).sort().join(',');
 // 記録の1行の文。守り・回避で減った当たりは「(5 → 2)」を添える(82 が from・to を持たせる。古い記録には無いので、そのままの文)
@@ -58156,7 +58356,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {bigCard && (
         <div key={bigCard.key} data-card-big={bigCard.side} onClick={finishBig} className="mh-card-big absolute inset-x-0 top-1/2 z-[55] flex -translate-y-1/2 flex-col items-center gap-1.5 px-4">
           <div className="flex items-end justify-center gap-1.5">
-            {bigCard.cards.map((no, i) => { const c = cardOf(db, no); return c ? <img key={i} src={CARD_IMG(c.img, 'l')} alt={c.name} className={`rounded-[8px] border-[3px] ${bigCard.side === 'me' ? 'border-amber-300' : 'border-rose-400'} object-cover shadow-[0_8px_24px_rgba(0,0,0,.7)]`} style={{ height: `min(${bigCard.cards.length > 1 ? 30 : 38}vh, 300px)`, aspectRatio: '5 / 7' }}/> : null; })}
+            {bigCard.cards.map((no, i) => { const c = cardOf(db, no); return c ? <img key={i} src={CARD_IMG(c.img, 'l')} alt={c.name} className={`rounded-[8px] border-[3px] ${bigCard.side === 'me' ? 'border-amber-300' : 'border-rose-400'} object-cover shadow-[0_8px_24px_rgba(0,0,0,.7)]`} style={{ height: cardBigHeight(bigCard.cards.length), aspectRatio: '5 / 7' }}/> : null; })}
           </div>
           <div data-card-fit className="max-w-full rounded-xl border border-rose-300/60 bg-black/80 px-3 py-1 text-center text-[14px] font-black leading-snug text-white" style={JA_WRAP_STYLE}>
             {!watch && <span className={`mr-1 rounded px-1 text-[11px] ${bigCard.side === 'me' ? 'bg-amber-300 text-slate-950' : 'bg-rose-500'}`}>{bigCard.side === 'me' ? '自分' : '相手'}</span>}{bigCard.who}「{bigCard.cards.map((n) => (cardOf(db, n) || {}).name).join('＋')}」
@@ -60265,11 +60465,14 @@ const CardShopGrid = ({ db, rows, collection, onTap }) => (
     {rows.map(({ no, count, rarity }) => {
       // collection が false のときは「未取得」を出さない(はじめのスターター選び・開けたあとの一覧。まだ何も持っていないので全部に付いてしまう)
       const missing = collection !== false && !((collection || {})[no] > 0);
+      // 今いくつ持っているか(2026-10-29 社長。読むだけ)。持っているカードの右上に「所持◯」
+      const owned = collection ? Math.max(0, Math.floor(Number(collection[no]) || 0)) : 0;
       return (
         <button key={no} type="button" data-card-shop-item={no} data-card-shop-missing={missing ? '1' : undefined} onClick={() => onTap(no)} className="relative flex flex-col items-center rounded-lg bg-white/5 p-0.5 text-center active:scale-95">
           <span className="relative block w-full">
             <img src={cardShopImg(db, no)} alt={cardShopName(db, no)} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
             {missing && <span data-card-shop-missing-badge className="absolute left-0.5 top-0.5 rounded-md bg-rose-600 px-1 text-[9px] font-black text-white shadow">未取得</span>}
+            {owned > 0 && <span data-card-shop-owned={owned} className="absolute right-0.5 top-0.5 rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950 shadow">所持{owned}</span>}
             {rarity && rarity !== 'normal' && <span className="absolute bottom-0.5 left-0.5 rounded-md bg-amber-300 px-1 text-[9px] font-black text-slate-950">{CARD_RARITY_LABEL[rarity]}</span>}
             {count > 1 && <span className="absolute bottom-0.5 right-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-white">×{count}</span>}
           </span>
@@ -61923,7 +62126,11 @@ const CARD_PVP = (() => {
     game: null, startMsg: null, foeInMatch: false, mySeq: 0, outbox: [], theirSeq: 0, inbox: {}, history: [], result: null, foeOpen: null, error: '', broken: '',
     offline: false, timeouts: 0, autoActing: false, chatAt: 0, mode: 'private', seekAt: 0, seekers: {}, lobbyCount: 0, joining: '', joinAt: 0, ownCode: '', reported: '', pick: false, notice: '', // pick … 入口の一覧から選んで入った / notice … 入口に出す一言
     round: 0, again: null, foeAgain: null, foeGone: false }); // もう1戦: round … いまの試合の回 / again … 自分が押した次の回 { rd, seed, salt, seal } / foeAgain … 相手が押した次の回 { rd, seal }
-  const emit = () => listeners.forEach((fn) => { try { fn(s); } catch (_) { /* 画面の都合で落ちても部屋は続ける */ } });
+  const emit = () => {
+    // 部屋で相手を待っているあいだは、フレンドに「部屋で待ち中」と知らせる(34 の friendsSetRoomWaiting。2026-10-29 社長)
+    if (typeof friendsSetRoomWaiting === 'function') friendsSetRoomWaiting(!!s && (s.phase === 'connecting' || s.phase === 'waiting'));
+    listeners.forEach((fn) => { try { fn(s); } catch (_) { /* 画面の都合で落ちても部屋は続ける */ } });
+  };
   const set = (patch) => { s = { ...s, ...patch }; emit(); };
   const send = (payload) => { if (socket && alive) socket.send({ ...payload, from: s.me.id }); };
   const isHost = () => !!(s.foe && (s.me.at < s.foe.at || (s.me.at === s.foe.at && s.me.id < s.foe.id)));
@@ -62327,6 +62534,16 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   const [roster, setRoster] = useState(null);
   const [invites, setInvites] = useState([]);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [presence, setPresence] = useState({}); // 招待の行に出すフレンドの今(34 の friendsPresenceFor。2026-10-29 社長)
+  // 招待の名簿を開いているあいだだけ読む(1分ごとに読み直す。フレンドの知らせは2分ごとに来る)
+  useEffect(() => {
+    if (!inviteOpen || !roster || !roster.length || typeof friendsPresenceFor !== 'function') return undefined;
+    let alive = true;
+    const load = () => { void friendsPresenceFor(roster.map((f) => f.otherId)).then((p) => { if (alive) setPresence(p || {}); }); };
+    load();
+    const t = setInterval(load, 60000);
+    return () => { alive = false; clearInterval(t); };
+  }, [inviteOpen, roster]);
   const [invited, setInvited] = useState({});
   const [inviteNext, setInviteNext] = useState('');   // 入口で選んだ相手。部屋ができて合言葉が出たら送る
   const [sentRows, setSentRows] = useState({});       // 送った招待の、表の今のようす(断られたかを見る)
@@ -62546,9 +62763,10 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
               {roster.length === 0
                 ? <p className="p-2 text-[13px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('まだフレンドがいません。HOME左上のプロフィールの「フレンド」から、フレンドコードで申請できます')}</p>
                 : <ul data-card-pvp-roster className="max-h-[40vh] space-y-1 overflow-y-auto">
-                  {roster.slice(0, 30).map((f) => (
-                    <li key={f.otherId} className="flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5">
-                      <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-white">{f.userName}</span>
+                  {(typeof friendsPresenceSort === 'function' ? friendsPresenceSort(roster.slice(0, 30), presence) : roster.slice(0, 30)).map((f) => (
+                    <li key={f.otherId} data-card-pvp-roster-row className="flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5">
+                      <span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-bold text-white">{f.userName}</span>
+                        {typeof FriendPresenceTag === 'function' && <FriendPresenceTag info={presence[f.otherId]}/>}</span>
                       <button type="button" data-card-pvp-invite-to={f.otherId} disabled={!ready || !profileReady} className="mh-button mh-button-primary min-h-[40px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
                         onClick={() => { Audio_.fgSe.tap(); setInviteNext(f.otherId); void CARD_PVP.create(profile, deck); }}>招待する</button>
                     </li>
@@ -64326,7 +64544,16 @@ function MonsterHeroGame() {
   const [dailyMasuAdvice, setDailyMasuAdvice] = useState(null); // null / { debugCount:null|number, eligible:boolean }
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(()=>normalizeRhythmBestRecords(null));
-  const [rhythmPlay,setRhythmPlay]=useState(null);
+  const [rhythmPlay,setRhythmPlayState]=useState(null);
+  // 招待の部屋を開いたままほかの画面へ出られる(2026-10-29・案A)ので、部屋にいるまま対戦でない曲を始めるときは、先に部屋を抜けるかを聞く
+  // (部屋の中の曲と、ひとりの曲を同時には鳴らせない)。曲を始める入口が多いので、ここ1か所で見る
+  const setRhythmPlay=(next)=>{
+    if(next&&typeof next==='object'&&next.from!=='multi'&&typeof RHYTHM_MULTI!=='undefined'&&RHYTHM_MULTI.view()){
+      if(!window.confirm('みんなで対戦の部屋で待っています。部屋を出てから遊びますか?'))return;
+      RHYTHM_MULTI.leave();
+    }
+    setRhythmPlayState(next);
+  };
   // モンスターノーツ用のマスモン設定(最大4体)。保存するのは個体IDの並びだけ
   const [rhythmMonsterSlotIds,setRhythmMonsterSlotIds]=useState([]);
   // マスモン一覧を出す設定シート。閉じているあいだは一覧を組み立てない
@@ -84150,6 +84377,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* モードえらび(RHYTHM_MODE_SELECT)と対戦(RHYTHM_MULTI)は同じ部品で描く。部屋に入る処理(フリーマッチ・
             ルーム作成・入室・フレンドの招待)はモードえらびの画面に並べ、入れたら RHYTHM_MULTI へ移る。
             key で分けて、画面が変わったら部品の中の状態を作り直す */}
+        {/* 招待の部屋を開いたまま、ほかの画面にいるあいだの帯(2026-10-29・案A)。部屋が見えている所(対戦の画面・モードえらび・演奏中)では出さない。
+            バトルの最中は画面を移ると途中のものが宙に浮くので、人が来たときだけ知らせる */}
+        <RhythmMultiAwayBar hidden={gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT'||!!rhythmPlay}
+          busy={['BATTLE','WAVE_RESULT','CHAMPION','BATTLE_TUTORIAL','CARD_BATTLE','RPG_DEBUG_BATTLE','DEBUG_BATTLE_SETUP'].includes(gameState)}
+          onReturn={()=>{void openRhythmDemo({to:'RHYTHM_MULTI'});}} />
         {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} masuMons={masuMons} masuPicker={{entries:unifiedMonsterEntriesSingleType.filter(e=>e.type==='masu'),renderSortFilterBar:renderMonsterSortFilterBar,renderCardBody:renderMonsterCardBody,cardClass:MONSTER_CARD_CLASS,cardStyle:MONSTER_CARD_STYLE}} buddyTickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseBuddyTicket={consumeBuddyTicket} onRefundBuddyTicket={refundBuddyTicket} onOpenMasuBeat={()=>openMasuBeat(gameState)} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_PLAY_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
           onUserGesture={()=>{/* 全画面と画面ロック防止は、指で押した直後しか許されない。準備完了を押したこの場で頼んでおく(ひとりのときの「決定」と同じ) */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();}}
           multiLook={rhythmSettings.multiLook||'LIGHT'}
@@ -84163,6 +84395,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           onResumeQuickRun={()=>resumeQuickRunFromRhythm()}
           onBack={gameState==='RHYTHM_MODE_SELECT'?exitRhythmSongSelect:()=>setGameState('RHYTHM_MODE_SELECT')}
           onRoomEntered={()=>setGameState('RHYTHM_MULTI')}
+          onStepAway={exitRhythmSongSelect}
           rankingSupport={{
             breederIcon:rankingBreederIcon,
             // 部屋の中から全国ランキングを見る(2026-10-04・ユーザー指示「マルチ中にもランキングボタンいれて」)。
@@ -90918,6 +91151,9 @@ const createAnimationStyle = () => {
     [data-tactics-look][data-fx-level="STANDARD"] :is([data-slot-ring], [data-card-shine], [data-enemy-ring])::before,
     [data-tactics-look][data-fx-level="STANDARD"] :is([data-slot-index], [data-card-gem], [data-enemy-hpbar])::after,
     [data-tactics-look][data-fx-level="STANDARD"] [data-slot-circle] { animation: none !important; }
+    /* バトルの枠の魂格オーラ(SoulRankAura is-battle)。大きさは枠の絵に合わせて小さめ。標準では動きを止める(2026-10-29) */
+    .mh-reincarnate-aura.is-battle{inset:-24%}
+    .mh-reincarnate-aura.is-battle.is-still, .mh-reincarnate-aura.is-battle.is-still *, .mh-reincarnate-aura.is-battle.is-still *::before, .mh-reincarnate-aura.is-battle.is-still *::after { animation: none !important; }
     [data-tactics-look]:is([data-fx-level="LIGHT"], [data-fx-level="MINIMAL"]) * { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
     /* 最軽量は、次の行動の札・狙われている枠の点滅(animate-pulse)も止め、何も動き続けない画面にする */
     [data-tactics-look][data-fx-level="MINIMAL"] .animate-pulse { animation: none !important; }
