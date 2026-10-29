@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cd210565c6dd2f97
+// generated-sha256: 00f7b2acee51567f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -65813,14 +65813,15 @@ const cardShareSmartLevel = (tactics) => {
   const t = cardShareNormalizeTactics(tactics);
   return t.f && typeof cardTacticSmartLevel === 'function' ? cardTacticSmartLevel(cardTacticUnpackFrames(t.f)) : 'normal';
 };
-const cardShareRowsCount = (frames) => frames.breeder.filter((x) => x.on).length + frames.mons.reduce((a, r) => a + r.filter((x) => x.on).length, 0);
+// 賢さに数える戦術カードの枚数(場面が合わない・同じもの・ほとんど当たらないものは数えない。82 の cardTacticCountedRows)
+const cardShareRowsCount = (frames) => cardTacticCountedRows(frames);
 const cardShareSmartText = (tactics) => {
   const t = cardShareNormalizeTactics(tactics);
   const lv = cardShareSmartLevel(t);
   const label = lv === 'random' ? 'でたらめ' : `${(typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv]) || lv.toUpperCase()} 相当`;
   if (!t.f) return label;
   const f = cardTacticUnpackFrames(t.f);
-  return `${label}(基本${f.base.filter(Boolean).length}・行${cardShareRowsCount(f)})`;
+  return `${label}(基本${f.base.filter(Boolean).length}・戦術カード${cardShareRowsCount(f)}枚)`;
 };
 // 土台のくせ(メインの基本カードが助手の型ならその助手。前の形の登録や画面の名前に使う)
 const cardShareMainHabit = (frames, fallback = 'kyuko') => {
@@ -66151,7 +66152,7 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
             <div data-card-share-tactics className="mt-1 rounded-lg bg-black/30 p-2 text-[12px] font-bold text-slate-200" style={JA_WRAP_STYLE}>
               {framesNow ? (<>
                 <div>{`基本カード: ${framesNow.base.filter(Boolean).map((id) => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`}</div>
-                <div>{`行: ${cardShareRowsCount(framesNow)}`}</div>
+                <div>{`セットした戦術カード: ${cardShareRowsCount(framesNow)}枚`}</div>
                 <div className="text-amber-200">{`賢さ: ${cardShareSmartText({ f: cardTacticPackFrames(framesNow) })}`}</div>
                 {cardShareSmartLevel({ f: cardTacticPackFrames(framesNow) }) === 'random' && <div data-card-share-tactics-empty className="text-rose-200">{jaWrap('戦術カードが入っていません。このままだと、出せる手からでたらめに打ちます')}</div>}
               </>) : <div>読み込み中…</div>}
@@ -66231,9 +66232,9 @@ const CardShareProfileDeck = ({ ownerId, self = false, onGo = null }) => {
       {f && (
         <div className="mt-2 text-[12px] font-bold leading-relaxed text-slate-200" style={JA_WRAP_STYLE}>
           <div>{`基本カード: ${f.base.filter(Boolean).map((id) => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`}</div>
-          <div>{`行: ${cardShareRowsCount(f)}`}</div>
+          <div>{`セットした戦術カード: ${cardShareRowsCount(f)}枚`}</div>
           {t.aces.length > 0 && <div>{`切り札: ${t.aces.map((no) => ((db && cardOf(db, no)) || {}).name || no).join('・')}`}</div>}
-          <button type="button" data-profile-card-deck-rows onClick={() => setOpen((x) => !x)} className="mt-1 text-[11px] font-black text-slate-300">{open ? '▲ 戦術カードの行をとじる' : '▼ 戦術カードの行を見る'}</button>
+          <button type="button" data-profile-card-deck-rows onClick={() => setOpen((x) => !x)} className="mt-1 text-[11px] font-black text-slate-300">{open ? '▲ セットした戦術カードをとじる' : '▼ セットした戦術カードを見る'}</button>
           {open && (
             <div className="mt-1 space-y-1 rounded-lg bg-black/30 p-2 text-[11px]">
               {[...f.mons.map((rows, i) => [monName(i), rows]), ['ブリーダー', f.breeder]].map(([label, rows]) => (
@@ -66613,7 +66614,9 @@ const CardTacticPicker = ({ db, tactics, cat, title, onPick, onClose, allowNone 
 };
 
 // 1行
-const CardTacticRow = ({ db, row, i, n, onChange, onMove, onRemove, onPickC, onPickA }) => (
+// why … 賢さに数えないときの理由(82-card-tactics-core の cardTacticCountDetail。2026-10-29 社長「ちゃんと効くカードだけ数える」)。数えるときは ''
+const CardTacticRow = ({ db, row, i, n, onChange, onMove, onRemove, onPickC, onPickA, why = '' }) => (
+  <div>
   <div data-card-tactic-row={i} className={`flex items-center gap-1 rounded-xl border-2 border-slate-700 bg-slate-900 p-1 ${row.on ? '' : 'opacity-50'}`}>
     <b className="w-4 text-center text-[12px] text-amber-200">{i + 1}</b>
     <button type="button" data-card-tactic-row-on={row.on ? '1' : '0'} onClick={() => { Audio_.fgSe.tap(); onChange({ ...row, on: !row.on }); }}
@@ -66626,6 +66629,8 @@ const CardTacticRow = ({ db, row, i, n, onChange, onMove, onRemove, onPickC, onP
       <button type="button" aria-label="下へ" disabled={i >= n - 1} onClick={() => onMove(1)} className="px-1 text-[11px] leading-none text-slate-300 disabled:opacity-20">▼</button>
     </span>
     <button type="button" aria-label="外す" data-card-tactic-row-remove onClick={onRemove} className="px-1 text-[13px] font-black text-slate-400">×</button>
+  </div>
+  {why && <p data-card-tactic-row-why={i} className="px-6 pt-0.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{`賢さに数えない(${why})`}</p>}
   </div>
 );
 
@@ -66756,6 +66761,9 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null }
     setData({ ...fresh, tactics: next, rawT: next });
   };
   const f = t.frames;
+  // 賢さに数えないセットの理由(82-card-tactics-core の cardTacticUncounted。ルールくん 2026-10-29「ちゃんと効く戦術カードだけ数える」)
+  const uncounted = cardTacticUncounted(f);
+  const whyOf = (k, i) => { const list = k === 'breeder' ? uncounted.breeder : uncounted.mons[k]; return (list && list[i]) || ''; };
   const rowsOf = (k) => (k === 'breeder' ? f.breeder : f.mons[k]);
   const setRows = (k, rows) => saveFrames(k === 'breeder' ? { ...f, breeder: rows } : { ...f, mons: f.mons.map((r, i) => (i === k ? rows : r)) });
   const maxOf = (k) => (k === 'breeder' ? open.breeder : open.mon);
@@ -66796,8 +66804,8 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null }
     })();
   };
   const ownCount = CARD_TACTIC_CARDS.filter((c) => cardTacticsOwns(t, c.id)).length;
-  const frameTabs = [{ k: 'base', label: '基本', icon: '⭐', sub: `${f.base.filter(Boolean).length}/${open.base}` }, { k: 'breeder', label: 'ブリーダー', icon: '🧑', sub: `${f.breeder.length}/${open.breeder}行` },
-    ...[0, 1, 2].map((i) => ({ k: i, label: (monOf(i) || {}).name || ['左の子', '真ん中の子', '右の子'][i], mon: monOf(i), sub: `${f.mons[i].length}/${open.mon}行` }))];
+  const frameTabs = [{ k: 'base', label: '基本', icon: '⭐', sub: `${f.base.filter(Boolean).length}/${open.base}` }, { k: 'breeder', label: 'ブリーダー', icon: '🧑', sub: `${f.breeder.length}/${open.breeder}枚` },
+    ...[0, 1, 2].map((i) => ({ k: i, label: (monOf(i) || {}).name || ['左の子', '真ん中の子', '右の子'][i], mon: monOf(i), sub: `${f.mons[i].length}/${open.mon}枚` }))];
   return (
     <div data-mh-screen data-card-tactics className={SCREEN_SHELL_CLASS}>
       <ScreenHead title={screenTitle} accent="text-amber-200" onBack={onBack} note={(share ? cardShareOpen() : cardTacticsOpen()) ? '' : 'つくっている途中(デバッグ)'}/>
@@ -66805,7 +66813,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null }
         <div data-card-tactics-level className={`${SCREEN_PANEL_CLASS} py-2`}>
           <div className="flex items-baseline gap-2"><b className="text-[18px] font-black text-amber-200">バトルカード Lv{lv}</b><small className="text-[11px] font-bold text-slate-300">{`次まで ${data.info.need - data.info.into}`}</small></div>
           <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-700"><i className="block h-full bg-gradient-to-r from-emerald-400 to-amber-300" style={{ width: `${Math.round((data.info.into / data.info.need) * 100)}%` }}/></div>
-          {nextF && <p className="mt-1 text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{`次は Lv${nextF.at} で${[nextF.base ? `基本${nextF.base}枚目` : '', nextF.breeder ? `ブリーダー${nextF.breeder}行目` : '', nextF.mon ? `各モンスター${nextF.mon}行目` : ''].filter(Boolean).join('・')}が開く`}</p>}
+          {nextF && <p className="mt-1 text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{`次は Lv${nextF.at} で${[nextF.base ? `基本${nextF.base}枚目` : '', nextF.breeder ? `ブリーダーに${nextF.breeder}枚目` : '', nextF.mon ? `各モンスターに${nextF.mon}枚目` : ''].filter(Boolean).join('・')}が開く`}</p>}
         </div>
         <div className="flex gap-1">
           {[...(share ? [['register', '登録']] : []), ['build', '組む'], ['pull', '引く'], ['list', `持っている ${ownCount}/${CARD_TACTIC_CARDS.length}`]].map(([k, l]) => (
@@ -66843,7 +66851,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null }
                       className={`flex w-full items-center gap-2 rounded-xl border-2 p-2 text-left ${locked ? 'border-dashed border-slate-600 bg-slate-900 text-slate-400' : i === 0 ? 'border-amber-200 bg-gradient-to-r from-orange-900 to-amber-700' : 'border-slate-300 bg-gradient-to-r from-slate-700 to-slate-600'}`}>
                       <span className="text-[11px] font-black text-white/80">{i === 0 ? 'メイン' : `サブ${i}`}</span>
                       <span className="min-w-0 flex-1"><b className="block text-[14px] font-black text-white">{locked ? `Lv${at} で開く` : c ? c.name : '(なし)'}</b>
-                        {!locked && <small className="block text-[10px] text-white/80" style={JA_WRAP_STYLE}>{c ? c.desc : i === 0 ? 'どの行にも当たらない場面は、この型で打つ' : '型を3分の1だけ足す'}</small>}</span>
+                        {!locked && <small className="block text-[10px] text-white/80" style={JA_WRAP_STYLE}>{c ? c.desc : i === 0 ? 'セットした戦術カードのどれにも当たらない場面は、この型で打つ' : '型を3分の1だけ足す'}</small>}</span>
                     </button>
                   );
                 })}
@@ -66856,21 +66864,21 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null }
                     onChange={(nr) => { void setRows(frame, all.map((x, j) => (j === i ? nr : x))); }}
                     onMove={(d) => { const a = all.slice(); const j = i + d; if (j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; Audio_.fgSe.tap(); void setRows(frame, a); }}
                     onRemove={() => { Audio_.fgSe.tap(); void setRows(frame, all.filter((_, j) => j !== i)); }}
-                    onPickC={() => editRow(frame, i, 'c')} onPickA={() => editRow(frame, i, 'a')}/>
+                    onPickC={() => editRow(frame, i, 'c')} onPickA={() => editRow(frame, i, 'a')} why={whyOf(frame, i)}/>
                 ))}
                 {rowsOf(frame).length < maxOf(frame) && (
-                  <button type="button" data-card-tactics-add onClick={() => { Audio_.fgSe.tap(); addRow(frame); }} className="w-full rounded-xl border-2 border-dashed border-slate-500 py-2 text-[12px] font-black text-slate-200">＋ 行を足す</button>
+                  <button type="button" data-card-tactics-add onClick={() => { Audio_.fgSe.tap(); addRow(frame); }} className="w-full rounded-xl border-2 border-dashed border-slate-500 py-2 text-[12px] font-black text-slate-200">＋ 戦術カードをセットする</button>
                 )}
                 {(frame === 'breeder' ? CARD_FRAME_MAX_TEXT('breeder', open.breeder) : CARD_FRAME_MAX_TEXT('mon', open.mon)) && (
                   <p className="text-center text-[11px] font-bold text-slate-400">{frame === 'breeder' ? CARD_FRAME_MAX_TEXT('breeder', open.breeder) : CARD_FRAME_MAX_TEXT('mon', open.mon)}</p>
                 )}
                 <div className="flex gap-1.5 pt-1">
-                  {frame !== 'breeder' && <button type="button" data-card-tactics-copy onClick={() => { Audio_.fgSe.tap(); void saveFrames({ ...f, mons: [0, 1, 2].map(() => f.mons[frame].slice()) }); setNotice('この子の行を、ほかの2体にも写しました'); }}
-                    className="mh-button min-h-[44px] flex-1 rounded-xl text-[11px] font-black">この子の行を<br/>ほかの2体にも写す</button>}
+                  {frame !== 'breeder' && <button type="button" data-card-tactics-copy onClick={() => { Audio_.fgSe.tap(); void saveFrames({ ...f, mons: [0, 1, 2].map(() => f.mons[frame].slice()) }); setNotice('この子の戦術カードを、ほかの2体にも写しました'); }}
+                    className="mh-button min-h-[44px] flex-1 rounded-xl text-[11px] font-black">この子の戦術カードを<br/>ほかの2体にも写す</button>}
                   <button type="button" data-card-tactics-auto onClick={() => { Audio_.fgSe.tap(); void setRows(frame, cardTacticAutoFill(t, rowsOf(frame), catOf(frame), maxOf(frame))); }}
-                    className="mh-button mh-button-primary min-h-[44px] flex-1 rounded-xl text-[11px] font-black">おまかせで<br/>あいている行を埋める</button>
+                    className="mh-button mh-button-primary min-h-[44px] flex-1 rounded-xl text-[11px] font-black">おまかせで<br/>あいている所に入れる</button>
                 </div>
-                <p className="text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{frame === 'breeder' ? '攻撃の番は、モンスターの枠のあとに見ます。ガッツの番はここだけを見ます。' : '上の行から見て、当たった行の手をこの子が出します。守るときは、この子が狙われたときに見ます。'}</p>
+                <p className="text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{frame === 'breeder' ? '攻撃の番は、モンスターの枠のあとに見ます。ガッツの番はここだけを見ます。' : '上にセットした戦術カードから順に見て、条件に当たったカードの手をこの子が出します。守るときは、この子が狙われたときに見ます。'}</p>
               </div>
             )}
           </div>
@@ -66914,7 +66922,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null }
 // 開いていない行の案内(「5行目は Lv25 で開く」)
 const CARD_FRAME_MAX_TEXT = (kind, n) => {
   const nx = CARD_LEVEL_FRAMES.find((x) => (kind === 'breeder' ? x.breeder : x.mon) > n);
-  return nx ? `${(kind === 'breeder' ? nx.breeder : nx.mon)}行目は Lv${nx.at} で開く` : '';
+  return nx ? `${(kind === 'breeder' ? nx.breeder : nx.mon)}枚目は Lv${nx.at} で開く` : '';
 };
 
 // ---- part: 81-debug-trials.jsx ----
