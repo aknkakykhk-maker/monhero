@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e9c6646db289691d
+// source-sha256: 2cbf5e7c070b3081
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8730,6 +8730,70 @@ const Audio_ = (() => {
           sp.dispose();
         } catch (e) {}
       }, 1200);
+    },
+    rankFanfare: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const v = new Tone.PolySynth(Tone.Synth, {
+        oscillator: {
+          type: 'square'
+        },
+        envelope: {
+          attack: 0.01,
+          decay: 0.15,
+          sustain: 0.35,
+          release: 0.35
+        },
+        volume: -18
+      }).connect(reverb);
+      [[0, 'G4', '16n'], [0.1, 'C5', '16n'], [0.2, 'E5', '16n']].forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt));
+      v.triggerAttackRelease(['C5', 'E5', 'G5', 'C6'], '4n', t + 0.32);
+      setTimeout(() => {
+        try {
+          v.dispose();
+        } catch (e) {}
+      }, 1600);
+    },
+    rankFanfareGrand: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const v = new Tone.PolySynth(Tone.Synth, {
+        oscillator: {
+          type: 'square'
+        },
+        envelope: {
+          attack: 0.01,
+          decay: 0.2,
+          sustain: 0.4,
+          release: 0.6
+        },
+        volume: -18
+      }).connect(reverb);
+      [[0, 'C5', '16n'], [0.09, 'C5', '16n'], [0.18, 'C5', '16n'], [0.3, 'G4', '8n'], [0.48, 'A4', '8n'], [0.66, 'B4', '8n']].forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt));
+      v.triggerAttackRelease(['C5', 'E5', 'G5', 'C6'], '2n', t + 0.84);
+      const bell = new Tone.Synth({
+        oscillator: {
+          type: 'sine'
+        },
+        envelope: {
+          attack: 0.005,
+          decay: 0.4,
+          sustain: 0.1,
+          release: 0.8
+        },
+        volume: -14
+      }).connect(reverb);
+      [[0.84, 'C7'], [0.96, 'G6'], [1.08, 'E7']].forEach(([tt, n]) => bell.triggerAttackRelease(n, '8n', t + tt));
+      setTimeout(() => {
+        try {
+          v.dispose();
+          bell.dispose();
+        } catch (e) {}
+      }, 3000);
     },
     fusion: async () => {
       if (!enabled) return;
@@ -55582,16 +55646,11 @@ function PlayerRankUpFx({
   React.useEffect(() => {
     const se = name => {
       try {
-        if (typeof Audio_ !== 'undefined' && Audio_.se && typeof Audio_.se[name] === 'function') Audio_.se[name]();
+        const bank = typeof Audio_ !== 'undefined' ? Audio_.fgSe || Audio_.se : null;
+        if (bank && typeof bank[name] === 'function') bank[name]();
       } catch (_) {}
     };
-    const timers = [setTimeout(() => se('crit'), 500), setTimeout(() => {
-      if (tierUp && typeof Audio_ !== 'undefined' && typeof Audio_.playJingle === 'function') {
-        try {
-          Audio_.playJingle('victory');
-        } catch (_) {}
-      } else se('levelUp');
-    }, 750), ...list.map((_, i) => setTimeout(() => se('trainingReward'), (gainStart + i * 0.35) * 1000 + 150)), setTimeout(() => setStage(s => s === 'play' ? 'done' : s), (gainStart + list.length * 0.35 + 0.6) * 1000)];
+    const timers = [setTimeout(() => se('crit'), 500), setTimeout(() => se(tierUp ? 'rankFanfareGrand' : 'rankFanfare'), 750), ...list.map((_, i) => setTimeout(() => se('trainingReward'), (gainStart + i * 0.35) * 1000 + 150)), setTimeout(() => setStage(s => s === 'play' ? 'done' : s), (gainStart + list.length * 0.35 + 0.6) * 1000)];
     return () => timers.forEach(clearTimeout);
   }, []);
   const next = () => {
@@ -121100,8 +121159,8 @@ function MonsterHeroGame() {
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);else if (key) Audio_.playBGM(key);else Audio_.stopBGM();
   }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm]);
   useEffect(() => {
-    Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen ? 0 : seVolume);
-  }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen]);
+    Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen && !beatRankFx ? 0 : seVolume);
+  }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, beatRankFx]);
   useEffect(() => {
     if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen);
   }, [cardScreenOpen]);
