@@ -146,7 +146,7 @@ const GUARD_MS = 950;
       await page.locator('[data-card-mode-assistant]').click();
       await page.locator('[data-card-foe="mua"]').click(); await sleep(200);
       await page.locator('[data-card-level="easy"]').click().catch(() => {});
-      await page.locator('[data-card-start]').click();
+      await page.locator('[data-card-start]').click(); await page.locator('[data-card-deck-pick-go]').click(); // 対戦の前のデッキ選び(前に使ったデッキが選ばれている)
       for (let i = 0; i < 40 && !(await page.locator('[data-card-battle]').count()); i++) { if (i > 6) await page.mouse.click(195, 420); await sleep(300); }
     };
     // 対戦を抜ける: 読み込み直して MFバトルカードへ入り直す(途中の対戦は、次に開いたとき投了として数えられる)
