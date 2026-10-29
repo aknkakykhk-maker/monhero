@@ -301,11 +301,13 @@ function BreederMarketScreen({
           {/* 一覧(mh-scroll)の外に置くので、横の画面では左の列(タブの下)に入る */}
           {tab==='pack'&&cardShop.onExchangeCatalog&&typeof CardShopGachaBand==='function'
             ?<CardShopGachaBand db={CARD_BATTLE_DATA} point={cp} gacha={cardShop.gacha} catalogs={cardShop.catalogs} collection={cardShop.collection} busy={busy||cardShop.busy} onExchangeCatalog={cardShop.onExchangeCatalog} onUseCatalog={cardShop.onUseCatalog}/>
-            :<MarketBalanceBar balances={[{currency:'cardPoint',value:cp}]}/>}
+            :tab==='tactics'&&typeof CardTacticsBand==='function'
+              ?<CardTacticsBand point={cp} busy={busy||cardShop.busy} onBuy={cardShop.onBuyTactics} onExchange={cardShop.onExchangeTactics}/>
+              :<MarketBalanceBar balances={[{currency:'cardPoint',value:cp}]}/>}
           <div className={SCREEN_LIST_CLASS} data-card-shop data-card-shop-tab={tab}>
             {tab==='pack'&&<CardShopPacks db={CARD_BATTLE_DATA} point={cp} busy={busy||cardShop.busy} collection={cardShop.collection} onBuyPack={cardShop.onBuyPack}/>}
             {/* 戦術カードのパック(97 の CardTacticsShop・2026-10-29 社長「戦術カードはマーケットで買えるようにして」) */}
-            {tab==='tactics'&&typeof CardTacticsShop==='function'&&<CardTacticsShop point={cp} busy={busy||cardShop.busy} onBuy={cardShop.onBuyTactics} onExchange={cardShop.onExchangeTactics}/>}
+            {tab==='tactics'&&typeof CardTacticsShop==='function'&&<CardTacticsShop point={cp} busy={busy||cardShop.busy} onBuy={cardShop.onBuyTactics}/>}
             {tab==='starter'&&<CardShopStarters db={CARD_BATTLE_DATA} point={cp} collection={cardShop.collection} busy={busy||cardShop.busy} starter={cardShop.starter} shop={cardShop.shop} onBuyStarter={cardShop.onBuyStarter}/>}
             {/* 円盤石・アシストカードは、ビートP交換所と同じ物を同じ値段(1,500)で並べる(社長 台帳 #3405)。一覧はビートP交換所のものをそのまま引く */}
             {(tab==='disc'||tab==='assist')&&<div className={MARKET_GRID_CLASS}>

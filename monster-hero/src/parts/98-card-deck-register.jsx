@@ -172,7 +172,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
       const r = await cardShareRegister({ ownerId: selfId, name: profile.name, icon: profile.icon, frame, deck,
         tactics: { name: deck.name, habit: cardShareMainHabit(cardTacticUnpackFrames(f), 'kyuko'), aces: acesNow, f } });
       if (r === 'ok') { setMine(await cardShareFetchMine(selfId)); setMsg('登録しました。ほかのブリーダーが、フリー対戦でこのデッキと戦えます'); setStep('done'); }
-      else setMsg(r === 'locked' ? 'この端末では登録を書きかえられません(登録した端末で操作してください)' : r === 'bad' ? 'このデッキは登録できませんでした' : r === 'nokey' ? 'この端末に保存できなかったため、登録できませんでした' : '通信できませんでした。もう一度お試しください');
+      else setMsg(r === 'locked' ? 'この端末では登録を書きかえられません(登録した端末で操作してください)' : r === 'bad' ? `このデッキは登録できませんでした(${cardShareBadReason(db, deck, { aces: acesNow, f })})` : r === 'nokey' ? 'この端末に保存できなかったため、登録できませんでした' : '通信できませんでした。もう一度お試しください');
     } finally { setBusy(false); }
   };
   const unregister = async () => {
