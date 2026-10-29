@@ -556,12 +556,15 @@ const rhythmEventGiftRewards=(prize)=>{
     if(found)found.amount+=n;
     else totals.set(key,itemId?{type,itemId,amount:n}:{type,amount:n});
   };
+  // 週間のビートP(2026-10-29)。配り始めた週より前の週には付けない(rhythmWeeklyBeatPointActive)
+  const beatPointOn=typeof rhythmWeeklyBeatPointActive==='function'&&rhythmWeeklyBeatPointActive(prize&&prize.event);
   const addReward=(reward)=>{
     if(!reward)return;
     const item=rhythmEventRewardItem(reward);
     if(item)add(GIFT_ITEM_REWARD_TYPE,item.id,reward.count);
     add('rainbowPsyche',null,reward.psyche);
     add('diamond',null,reward.gold);
+    if(beatPointOn)add('beatPoint',null,reward.beatPoint);
   };
   (Array.isArray(prize&&prize.prizes)?prize.prizes:[]).forEach(entry=>addReward(entry&&entry.reward));
   // 参加報酬。勇者の証片(count)と勇者の証(heroProof)は別のアイテムなので分けて足す
@@ -571,6 +574,7 @@ const rhythmEventGiftRewards=(prize)=>{
     if(join.heroProof>0&&typeof HERO_PROOF_ITEM!=='undefined')add(GIFT_ITEM_REWARD_TYPE,HERO_PROOF_ITEM.id,join.heroProof);
     add('rainbowPsyche',null,join.psyche);
     add('diamond',null,join.gold);
+    if(beatPointOn)add('beatPoint',null,join.beatPoint);
   }
   return [...totals.values()];
 };
@@ -583,6 +587,7 @@ const rhythmEventParticipationText=(reward)=>{
   if(reward.heroProof>0)parts.push(`${HERO_PROOF_ITEM.emoji} ${HERO_PROOF_ITEM.name}×${reward.heroProof.toLocaleString()}`);
   if(reward.gold>0)parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
   if(reward.psyche>0)parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
+  if(reward.beatPoint>0)parts.push(`🎵 ビートP×${reward.beatPoint.toLocaleString()}`);
   return parts.join(' ／ ');
 };
 // 「🍇 超越の実（スエゾー種）×5 ／ 虹のプシュケー×1,000」のような1行。
@@ -595,5 +600,15 @@ const rhythmEventRewardText=(reward)=>{
   if(reward.psyche>0)parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
   // 週間の順位報酬にはダイヤも付く(イベントの順位報酬には無いので、ある時だけ出す)
   if(reward.gold>0)parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
+  // 週間の順位報酬のビートP(2026-10-29)
+  if(reward.beatPoint>0)parts.push(`🎵 ビートP×${reward.beatPoint.toLocaleString()}`);
   return parts.join(' ／ ');
+};
+// スコアの数字を、置ける幅(いちばん近い container の 100cqw)に収める字の大きさ。入るときは maxPx のまま、入らないときだけ小さくする。
+// 太字の数字はおよそ 0.62 字ぶん・「,」は 0.3 字ぶん(iPhone の標準書体・ヒラギノ)。少し余らせる。
+// 100万点(7桁「1,050,000」)を超えると、320幅の結果の画面で数字がはみ出していた(2026-10-29 部長テンポくん)
+const rhythmScoreFitSize=(text,maxPx,minPx)=>{
+  let em=0;
+  for(const ch of String(text??''))em+=/[0-9]/.test(ch)?.62:ch===','||ch==='.'?.3:.62;
+  return `clamp(${minPx}px, calc(100cqw / ${Math.max(1,em*1.06).toFixed(2)}), ${maxPx}px)`;
 };

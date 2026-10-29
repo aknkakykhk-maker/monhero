@@ -130,7 +130,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       const m = await mode();
       if (m === 'attack' && (await page.locator('[data-card-hand-card]:not(.opacity-45)').count())) break;
       if (m === 'setup') await page.locator('[data-card-footer] button').first().click().catch(() => {});
-      else if (m === 'guard') await page.getByRole('button', { name: /^守らない$/ }).click().catch(() => {});
+      else if (m === 'guard') await page.getByRole('button', { name: /^守らない/ }).click().catch(() => {});
       else if (m === 'attack') await page.getByRole('button', { name: /攻撃おわり/ }).click().catch(() => {});
       else if (m === 'guts') await page.locator('[data-card-footer] button').first().click().catch(() => {});
       await sleep(400);

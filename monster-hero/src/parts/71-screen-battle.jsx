@@ -866,11 +866,61 @@ const BattleStackMarks = ({ counts, side, full = 0, className = '' }) => {
     </div>
   );
 };
+// ★EXの効果の札(2026-10-29 社長が「ア+イ」に決めた・溜まる物も同じ札で「楔とか溜まってくやつもわかるように」)。
+//   items … tacticsExEffectsAt(枠, マーク×数) の要素({ key, name, icon, kind:'buff'|'debuff'|'stack', turnsLeft, count, max, … }・34-tactics-ex-effects.jsx)。
+//   強化=緑・弱化=赤・溜まる物=紫で色を分け、3つまで並べて4つ目からは「+N」。くわしく(何%・誰のEX)は枠を押した詳細の窓に出す。
+//   いままでの「マーク×数」(BattleStackMarks)もこの札にまとめる(タクティクス/レイドだけ。二重に出さない)。動きは無いので軽め・最軽量でもそのまま出す
+const exEffectIconOf = (e) => {
+  if (e && e.icon) return e.icon;
+  const kind = e && typeof e.key === 'string' && e.key.startsWith('stack:') ? e.key.slice(6) : null;
+  const m = kind && typeof BATTLE_STACK_MARKS !== 'undefined' ? BATTLE_STACK_MARKS[kind] : null;
+  return m && m.img ? <img src={m.img} alt="" className="inline h-3 w-3 object-contain align-[-2px]" draggable={false}/> : '';
+};
+const exEffectAmountText = (e, long = false) => {
+  if (!e) return '';
+  if (e.kind === 'stack' && Number.isFinite(Number(e.count)) && !(e.turnsLeft != null && e.max == null && Number(e.count) === Number(e.turnsLeft))) {
+    const c = Math.max(0, Math.floor(Number(e.count)));
+    return Number(e.max) > 0 ? `${c}/${Math.floor(Number(e.max))}` : `×${c}`;
+  }
+  if (e.turnsLeft === 'wave') return long ? 'このWAVE' : 'WAVE中';
+  if (Number.isFinite(Number(e.turnsLeft))) return long ? `あと${e.turnsLeft}ターン` : `あと${e.turnsLeft}`;
+  return '';
+};
+const EX_EFFECT_TONE = {
+  buff: 'bg-emerald-900/90 ring-emerald-300/80 text-emerald-50',
+  debuff: 'bg-red-900/90 ring-red-300/80 text-red-50',
+  stack: 'bg-violet-900/90 ring-violet-300/80 text-violet-50',
+};
+// compact … 新しい盤(横長の枠)。いままでのマーク×数と同じ所(絵の左下・幅40%まで)に、下から上へ積む
+const ExEffectChips = ({ items, max = 3, compact = false, className = '' }) => {
+  const list = Array.isArray(items) ? items.filter(Boolean) : [];
+  if (!list.length) return null;
+  // 新しい盤(横長の枠)は高さが足りないので2つまで(上の段の「狙」・予測ダメージに届かないように)。残りは「+N」を1つ目の横に添える
+  const limit = compact ? Math.min(max, 2) : max;
+  const shown = list.slice(0, limit);
+  const more = list.length - shown.length;
+  const chip = (e) => (
+    <span key={e.key} data-ex-effect={e.key} data-ex-effect-kind={e.kind}
+      className={`flex min-w-0 ${compact ? 'max-w-full text-[8px]' : 'max-w-[96px] text-[9px]'} items-center gap-[2px] rounded-md px-1 py-px font-black leading-tight whitespace-nowrap ring-1 ${EX_EFFECT_TONE[e.kind] || EX_EFFECT_TONE.buff}`}>
+      <span className="shrink-0">{exEffectIconOf(e)}</span>
+      <span className="min-w-0 truncate">{e.name}</span>
+      {exEffectAmountText(e) && <span className="shrink-0 tabular-nums opacity-90">{exEffectAmountText(e)}</span>}
+    </span>
+  );
+  const moreChip = more > 0 ? <span data-ex-effect-more className="shrink-0 rounded-md bg-black/70 px-1 text-[9px] font-black leading-tight text-slate-100">+{more}</span> : null;
+  return (
+    <div data-ex-effect-chips={list.length} className={`pointer-events-none flex ${compact ? 'flex-col-reverse' : 'flex-col'} items-start gap-[2px] ${className}`}>
+      {compact
+        ? shown.map((e, k) => (k === 0 && moreChip ? <span key={e.key} className="flex max-w-full min-w-0 items-center gap-[2px]">{chip(e)}{moreChip}</span> : chip(e)))
+        : <>{shown.map(chip)}{moreChip}</>}
+    </div>
+  );
+};
 // ★バトル中にモンスターを押したときの「能力・かかっている効果」(2026-10-13 社長の依頼
 //   「モンスターをタップすると能力含め詳細バフも見れるようにして」)。味方も敵も同じ形で出す。
 //   値はすべて渡されたものをそのまま出す(味方: battleUnitStatusOf・強化の札・マーク×数、敵: battleEnemyStatus・enemyDebuffs)。
 //   side … 'ally' | 'enemy'。chips … 強化の札(battleBuffChips の戻り値)。marks … マーク×数の数({ kind: 数 })
-const BattleUnitDetailBody = ({ side, status, chips = [], marks = null, debuffs = [] }) => {
+const BattleUnitDetailBody = ({ side, status, chips = [], marks = null, debuffs = [], exEffects = null }) => {
   if (!status) return null;
   const stat = (key, label, cls, value, sub) => (
     <div data-unit-stat={key} className="min-w-0 rounded-lg bg-black/40 px-2 py-1">
@@ -913,7 +963,13 @@ const BattleUnitDetailBody = ({ side, status, chips = [], marks = null, debuffs 
     it.unit === 'T' ? `あと${it.count}ターン` : `×${it.count}`, ''));
   const own = (chips || []).filter((c) => c.owner === status.slot);
   const team = (chips || []).filter((c) => c.owner == null);
-  const lineRows = (status.lines || []).map((l) => row(l.key, null, l.label, l.value, l.note));
+  // EXの効果の一覧(タクティクス/レイド)。名前・中身(何%)・誰のEX・あとNターン(溜まる物は 今/上限)を1行ずつ。
+  //   これを出すときは、同じものを出していた「マーク×数」の行とEXの1行(status.lines の ex)は出さない(二重にしない)
+  const hasEx = Array.isArray(exEffects);
+  const exRows = hasEx ? exEffects.filter(Boolean).map((e) => row(`exfx-${e.key}`, exEffectIconOf(e), e.name, exEffectAmountText(e, true),
+    [e.note, e.fromName ? `${e.fromName}のEX${e.allAllies ? '(味方全員)' : ''}` : ''].filter(Boolean).join('・'),
+    e.kind === 'stack' ? 'border-violet-300/50 bg-violet-950/50' : e.kind === 'debuff' ? 'border-red-300/50 bg-red-950/50' : 'border-emerald-300/50 bg-emerald-950/50')) : [];
+  const lineRows = (status.lines || []).filter((l) => !(hasEx && l.key === 'ex')).map((l) => row(l.key, null, l.label, l.value, l.note));
   const chipRow = (c) => row(c.key, c.mark, c.label, c.value, '', c.tone);
   const apt = status.aptPct;
   return (
@@ -926,13 +982,13 @@ const BattleUnitDetailBody = ({ side, status, chips = [], marks = null, debuffs 
       </div>
       <div data-unit-stat="apt" className="mt-1 text-[10px] font-black text-cyan-300">この枠の間合い適性 {apt >= 0 ? '+' : ''}{apt}%</div>
       {status.tactics
-        ? <>{list('own', 'この子にかかっている効果', [...markRows, ...lineRows, ...own.map(chipRow)])}{list('team', '味方全員にかかっている効果', team.map(chipRow))}</>
+        ? <>{list('own', 'この子にかかっている効果', [...(hasEx ? exRows : markRows), ...lineRows, ...own.map(chipRow)])}{list('team', '味方全員にかかっている効果', team.map(chipRow))}</>
         : list('team', 'かかっている効果(パーティ全体)', [...markRows, ...lineRows, ...own.map(chipRow), ...team.map(chipRow)])}
     </div>
   );
 };
 // 詳細の窓(タクティクス以外の味方・敵)。タクティクスの味方は EX の窓の「能力・効果」の切り替えで同じ中身を出す
-const BattleUnitDetailPanel = ({ side, status, chips, marks, debuffs, onClose }) => {
+const BattleUnitDetailPanel = ({ side, status, chips, marks, debuffs, exEffects = null, onClose }) => {
   if (!status) return null;
   return ReactDOM.createPortal((
     <div data-battle-unit-detail={side === 'enemy' ? 'enemy' : status.slot} role="dialog" aria-modal="true" aria-label={`${status.name}の詳細`}
@@ -946,7 +1002,7 @@ const BattleUnitDetailPanel = ({ side, status, chips, marks, debuffs, onClose })
           </div>
         </div>
         {status.downed && <p className="mt-1 text-[11px] font-black text-emerald-300">ダウン中(ライフが上限まで戻ると立ち上がります)</p>}
-        <div className="mt-2"><BattleUnitDetailBody side={side} status={status} chips={chips} marks={marks} debuffs={debuffs} /></div>
+        <div className="mt-2"><BattleUnitDetailBody side={side} status={status} chips={chips} marks={marks} debuffs={debuffs} exEffects={exEffects} /></div>
         <button type="button" data-battle-unit-detail-close onClick={onClose} className="mt-3 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[13px] font-black text-slate-200 active:scale-95">閉じる</button>
       </div>
     </div>
@@ -1064,17 +1120,24 @@ const CLASSIC_AI_COPY_CSS = `
 [data-ai-copy-row] > .grid{flex:1 1 0;min-width:0;width:auto}
 [data-ai-copy-cell]{width:62px;flex:0 0 62px;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:2px;padding:3px 3px;border-radius:12px;border:1px solid rgba(52,211,153,.6);background:rgba(2,44,34,.55);position:relative}
 [data-ai-copy-cell] [data-ai-copy-head]{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;min-width:0}
+[data-ai-copy-cell] [data-ai-copy-face]{margin-bottom:3px}
 [data-ai-copy-cell] [data-ai-copy-name]{width:100%;min-width:0;text-align:center;font-size:9px;line-height:10px;font-weight:900;color:#a7f3d0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:keep-all;overflow-wrap:anywhere}
+/* コピーが出ると4枠が細くなる(320 幅で約52px)。枠の中の札が枠からはみ出さない・字が切れないように、コピーがいるあいだだけ小さくする
+   (2026-10-29 見回り: 距離補正の札「-10.0%」が枠の外へ、ガードの札が「ガ…」に切れていた) */
+[data-ai-copy-row] [data-dist-chip]{font-size:9px;padding:1px 2px;gap:0;right:1px;max-width:calc(100% - 2px)}
+[data-ai-copy-row] [data-dist-chip] svg{display:none}
+[data-ai-copy-row] [data-tactics-slot-marks] > div{padding-left:1px;padding-right:1px}
+[data-ai-copy-row] [data-tactics-slot-marks] > div > span:first-child{display:none}
+/* 横向き(背の低い画面): 縦と同じく4枠の右に細い5列目として置く。列の下に段を足すと、そのぶん敵の段が縮んで敵の絵が見えなくなる
+   (2026-10-29 見回り 667×375)。枠の高さ(112px)に収まるよう、絵・字を小さくする */
 @media (orientation: landscape) and (max-height: 520px){
-  [data-ai-copy-row]{flex-direction:column;gap:3px}
-  [data-ai-copy-row] > .grid{flex:0 0 auto;width:100%}
-  [data-ai-copy-cell]{width:100%;flex:0 0 30px;height:30px;flex-direction:row;justify-content:flex-start;gap:6px;padding:0 6px;border-radius:8px;overflow:visible}
-  [data-ai-copy-cell] [data-ai-copy-head]{width:auto;flex:0 0 auto;flex-direction:row;gap:4px}
-  [data-ai-copy-cell] [data-ai-copy-name]{width:auto;flex:0 1 auto;max-width:110px;text-align:left;-webkit-line-clamp:1}
-  [data-ai-copy-cell] [data-ai-copy-art]{flex:0 0 26px;width:26px;height:26px}
-  [data-ai-copy-cell] [data-ai-copy-guts]{flex:0 0 92px;width:92px}
-  [data-ai-copy-cell] [data-sorashido-next]{flex-direction:row;gap:6px;width:auto;flex:1 1 0;padding:0 6px;border-radius:6px}
-  [data-ai-copy-cell] [data-sorashido-next] > b{-webkit-line-clamp:1}
+  [data-ai-copy-cell]{width:64px;flex:0 0 64px;gap:0;padding:1px 2px;border-radius:10px}
+  [data-ai-copy-cell] [data-ai-copy-head]{gap:0}
+  [data-ai-copy-cell] [data-ai-copy-face]{margin-bottom:2px}
+  [data-ai-copy-cell] [data-ai-copy-name]{font-size:8px;line-height:9px}
+  [data-ai-copy-cell] [data-sorashido-next]{padding:1px 2px;border-radius:6px}
+  [data-ai-copy-cell] [data-sorashido-next] > b{-webkit-line-clamp:2;font-size:8px;line-height:9px}
+  [data-ai-copy-cell] [data-sorashido-next] > small{display:none}
 }`;
 // 演出の段階。60 から aiCopy.fx('appear'|'thinking'|'vanish')が来ればそれを使い、無ければ fallback(出る前 appear・出たら idle)
 const aiCopyViewPhase = (copy, fallback) => (copy && ['appear', 'thinking', 'vanish'].includes(copy.fx) ? copy.fx : fallback);
@@ -1124,13 +1187,14 @@ function AiCopyBody({ src, phase = 'idle', hit = false, anim = null, size = 44 }
     </span>
   );
 }
-function AiCopyLifeBar({ hp, maxHp }) {
+function AiCopyLifeBar({ hp, maxHp, narrow = false }) {
   if (!Number.isFinite(Number(hp)) || !(Number(maxHp) > 0)) return null;
   const now = Math.max(0, Math.floor(Number(hp))), max = Math.floor(Number(maxHp));
   return (
     <span data-ai-copy-life={`${now}/${max}`} className="block w-full min-w-0">
       <span className="flex h-[11px] items-center justify-between gap-1 leading-none">
-        <span className="shrink-0 whitespace-nowrap text-[8px] font-black text-pink-300 max-[359px]:hidden">ライフ</span>
+        {/* 細い所(5列目の縦・幅320)で4桁のライフになると「ライフ」の字と数字が収まらないので、字を外して数と棒だけにする(2026-10-29 見回り) */}
+        <span className={`shrink-0 whitespace-nowrap text-[8px] font-black text-pink-300 max-[359px]:hidden${narrow && String(max).length >= 4 ? ' hidden' : ''}`}>ライフ</span>
         <span className="font-mono leading-none whitespace-nowrap"><span className="text-[11px] font-black text-white">{now}</span><span className="text-[8px] text-slate-400">/{max}</span></span>
       </span>
       <span className="mt-px block h-[3px] overflow-hidden rounded-full bg-black/60">
@@ -1140,9 +1204,10 @@ function AiCopyLifeBar({ hp, maxHp }) {
   );
 }
 // タクティクス/レイドの5列目。縦=盤の右の列(layout 'portrait')、横向きの背の低い画面=盤の下の帯(layout 'landscape')
-function TacticsAiCopyColumn({ copy, src, phase, hit, anim, skill, standing, layout, onOpen, hatePct = null }) {
+function TacticsAiCopyColumn({ copy, src, phase, hit, anim, skill, standing, layout, onOpen, hatePct = null, compact = false }) {
   if (!copy) return null;
   const land = layout === 'landscape';
+  // compact … タクティクス旧の横向き(背の低い画面)。盤の高さ(約152px)に収まるよう、絵と顔を小さくし間を詰める(2026-10-29 見回り)
   const name = tacticsAiCopyName(copy);
   const canOpen = typeof onOpen === 'function' && phase !== 'vanish';
   const next = standing ? <SorashidoNextCardBadge card={copy.nextCard || null} layout={land ? 'landscape' : 'portrait'} turnsLeft={copy.turnsLeft}/>
@@ -1151,17 +1216,17 @@ function TacticsAiCopyColumn({ copy, src, phase, hit, anim, skill, standing, lay
     <div data-tactics-ai-copy-column={layout} data-ai-copy-phase={phase} role={canOpen ? 'button' : undefined} tabIndex={canOpen ? 0 : undefined}
       aria-label={`${name}${canOpen ? '。押すと手札を見る' : ''}`} onClick={canOpen ? onOpen : undefined}
       onKeyDown={canOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } } : undefined}
-      className={`relative min-w-0 rounded-xl border border-emerald-400/60 bg-emerald-950/55 text-emerald-50 ${canOpen ? 'cursor-pointer' : ''} ${land ? 'flex h-[46px] w-full items-center gap-2 px-2' : 'flex h-full w-[72px] max-[359px]:w-[60px] shrink-0 flex-col items-center justify-between gap-0.5 px-1 max-[359px]:px-0.5 py-1'}`}>
+      className={`relative min-w-0 rounded-xl border border-emerald-400/60 bg-emerald-950/55 text-emerald-50 ${canOpen ? 'cursor-pointer' : ''} ${land ? 'flex h-[46px] w-full items-center gap-2 px-2' : `flex h-full w-[72px] max-[359px]:w-[60px] shrink-0 flex-col items-center justify-between ${compact ? 'gap-0 py-0.5' : 'gap-0.5 py-1'} px-1 max-[359px]:px-0.5`}`}>
       {skill && <span data-tactics-ai-copy-skill className={`absolute z-[90] max-w-[140px] truncate rounded-lg border border-red-200 bg-red-700 px-2 py-0.5 text-[11px] font-black text-white shadow-[0_2px_10px_rgba(0,0,0,.7)] ${land ? 'left-1/2 -top-3 -translate-x-1/2' : 'right-1 top-1/3'}`}>{skill}</span>}
       <span className={`flex min-w-0 items-center gap-1 ${land ? 'w-[92px] shrink-0' : 'w-full flex-col'}`}>
-        <AiCopyFace src={src} size={land ? 20 : 22}/>
+        <AiCopyFace src={src} size={land ? 20 : compact ? 18 : 22}/>
         <span className={`min-w-0 overflow-hidden whitespace-nowrap font-black leading-tight text-emerald-200 [container-type:inline-size] ${land ? 'flex-1' : 'w-full text-center'}`}>
           <span className="block" style={{ fontSize: `min(10px, calc(100cqw / ${[...name].length + 0.3}))` }}>{name}</span>
         </span>
       </span>
-      <AiCopyBody src={src} phase={phase} hit={hit} anim={anim} size={land ? 40 : 46}/>
+      <AiCopyBody src={src} phase={phase} hit={hit} anim={anim} size={land ? 40 : compact ? 32 : 46}/>
       <span className={`flex min-w-0 flex-col gap-0.5 ${land ? 'w-[96px] shrink-0' : 'w-full'}`}>
-        <AiCopyLifeBar hp={copy.hp} maxHp={copy.maxHp}/>
+        <AiCopyLifeBar hp={copy.hp} maxHp={copy.maxHp} narrow={!land}/>
         <AiCopyGutsMeter guts={copy.guts} maxGuts={copy.maxGuts}/>
       </span>
       {Number.isInteger(hatePct) && <span data-tactics-ai-copy-hate={hatePct} className="shrink-0 whitespace-nowrap text-[9px] font-black tabular-nums text-rose-200">狙われ {hatePct}%</span>}
@@ -1196,8 +1261,8 @@ function ClassicAiCopyCell({ copy, turnCount, onOpen, mon = null, hitAnim = null
       role={canOpen ? 'button' : undefined} tabIndex={canOpen ? 0 : undefined} style={canOpen ? { cursor: 'pointer' } : undefined}
       onClick={canOpen ? onOpen : undefined} onKeyDown={canOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } } : undefined}>
       <style>{CLASSIC_AI_COPY_CSS}</style>
-      <span data-ai-copy-head><AiCopyFace src={mon} size={20}/><span data-ai-copy-name>{copy.name || '仲間'}<wbr/>のコピー</span></span>
-      {mon ? <AiCopyBody src={mon} phase={phase} hit={!!hitAnim} anim={hitAnim} size={layout === 'landscape' ? 26 : 40}/>
+      <span data-ai-copy-head><AiCopyFace src={mon} size={layout === 'landscape' ? 16 : 20}/><span data-ai-copy-name>{copy.name || '仲間'}<wbr/>のコピー</span></span>
+      {mon ? <AiCopyBody src={mon} phase={phase} hit={!!hitAnim} anim={hitAnim} size={layout === 'landscape' ? 24 : 40}/>
         : <SorashidoCopyFx phase={phase}><img src={SORASHIDO_FACE_ICON} alt="" aria-hidden="true" className="h-7 w-7 rounded-full object-cover bg-black/30" draggable="false"/></SorashidoCopyFx>}
       {out
         ? <><AiCopyGutsMeter guts={guts} maxGuts={maxGuts}/>
@@ -1229,7 +1294,7 @@ function BattleScreen({
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, enemyDebuffs, battleUnitStatusOf, battleEnemyStatus, enemyStackCounts, debugStackMarks, tacticsSlotCountersAt, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
-  tacticsExInfo, activateTacticsEx, tacticsExCutin, hamCounterFx, skipHamCounterFx, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot, tacticsHate, tacticsHateOn, aiCopy, aiCopyHitting = false,
+  tacticsExInfo, activateTacticsEx, tacticsExCutin, hamCounterFx, skipHamCounterFx, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot, tacticsHate, tacticsHateOn, aiCopy, tacticsExEffectsAt, tacticsExEnemyEffects, aiCopyHitting = false,
   tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, kyubiOrihimeStackMarks, sweetStackView, bowStackView, fateWheelView, tacticsShields, enemyConfuseTurns, luckBanners,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
@@ -2732,6 +2797,14 @@ function BattleScreen({
               // 待機中の動き(翼の羽ばたき・しっぽ・花の揺れ・全体の浮き沈みなど。MonsterIdleArt)。
               // 軽量表示と、設定の「待機中の動き：止める」では今までどおり1枚の絵
               const slotArt = (img) => (!ecoBattleView&&!idleMotionOff ? <MonsterIdleArt baseId={s?.id} image={img}/> : img);
+              // この枠に効いているEXの効果と溜まる物(タクティクス/レイドだけ。ほかの遊びでは null で、いままでのマーク×数を出す)
+              const slotExEffects=s&&typeof tacticsExEffectsAt==='function'?(tacticsExEffectsAt(i,allyStackCounts[i])||[]):null;
+              // この枠の子の魂格の段階(1〜5)。枠の子とは masuId で結ぶ。出さない設定のときは 0
+              const slotSoulStage=(()=>{
+                if(!s||!s.masuId||ecoBattleView||liteBattleView||fxLoad==='LIGHT'||fxLoad==='MINIMAL'||!Array.isArray(battleSoulMasus)) return 0;
+                const m=battleSoulMasus.find(x=>x&&(x.id===s.masuId||x.masuId===s.masuId));
+                return m?normalizeSoulRankStage(normalizeMasuProgression(m).soulRankStage):0;
+              })();
               // 体当たりだった初期モンスターは、種族ごとの攻撃(ThemedAttackMotion)で見せる。枠は飛ばさない
               const themedAttack = isAnimating ? themedAttackKindOf(attackAnim, s?.id) : null;
               const slotArtBox = {width:tacticsNewLayout?'58px':'64px', height:tacticsNewLayout?'58px':'64px', flexShrink:0};
@@ -2795,7 +2868,7 @@ function BattleScreen({
                   <div data-tactics-ai-copy-next={i} className="flex min-w-0 justify-center">
                     <SorashidoNextCardBadge card={tCopyOut?tCopy.nextCard:null} turnsLeft={null} layout="landscape"/>
                   </div>
-                  <AiCopyLifeBar hp={tCopy.hp} maxHp={tCopy.maxHp}/>
+                  <AiCopyLifeBar hp={tCopy.hp} maxHp={tCopy.maxHp} narrow={classicAiCopyLandscape()}/>
                   <AiCopyGutsMeter guts={tCopy.guts} maxGuts={tCopy.maxGuts}/>
                 </div>}
                 {/* 押すとコピーの手札の窓(BattleScreen の copyHandOpen)。枠のボタンへは伝えない */}
@@ -2865,7 +2938,8 @@ function BattleScreen({
                   style={{'--ex-c1':battleCutinThemeOf(tacticsExCutin).c1,'--ex-c2':battleCutinThemeOf(tacticsExCutin).c2,...(tacticsExCutin.ms?{animationDuration:`${tacticsExCutin.ms}ms`}:{})}}><i/><i/></span>}
                 {/* ★貯まった数(クッキー・黒音符など)を「マーク×数」で常に出す(2026-10-12 社長の依頼)。タクティクスの枠は絵の左下、ほかのモードの縦長の枠は名前の帯のすぐ下(下の端は間合いの札がある) */}
                 {/* ★クラシックなど縦長の枠は、下の縦積みの欄(data-tactics-slot-marks)の先頭へ入れる(予測ダメージ・置いたカードと重ならない。2026-10-13) */}
-                {tacticsNewLayout&&<BattleStackMarks counts={allyStackCounts[i]} side="ally" full={SWEET_STACK_MAX} className="mh-stack-marks-ally"/>}
+                {tacticsNewLayout&&slotExEffects&&<ExEffectChips items={slotExEffects} compact className="absolute left-[2px] bottom-[22px] z-[62] max-w-[calc(40%-2px)]"/>}
+                {tacticsNewLayout&&!slotExEffects&&<BattleStackMarks counts={allyStackCounts[i]} side="ally" full={SWEET_STACK_MAX} className="mh-stack-marks-ally"/>}
                 {/* モンスターごとの演出(ゴーストの分身・スネグーラチカのプレゼント・剣士モッチーの型)。タクティクスの枠だけ・軽量表示では出さない */}
                 {tacticsNewLayout&&!ecoBattleView&&!liteBattleView&&typeof tacticsSlotCountersAt==='function'&&<BattleMonsterFx fx={debugStackMarks&&debugStackMarks.fx&&debugStackMarks.fx[i]?debugStackMarks.fx[i]:tacticsSlotCountersAt(i)} imgSrc={s?.imgUrl} monId={s?.id} stacks={allyStackCounts[i]} calm={battleFx.idleMotion==='OFF'}/>}
                 {slotHitKind&&(()=>{
@@ -3004,13 +3078,14 @@ function BattleScreen({
                         覆ってよいのは絵だけ、という切り分けにしている */}
                   {/* ★EXスキルの札も同じ縦積みの先頭に入れる。名前の行へ入れると名前が切れる
                       (2026-09-23 ユーザー指摘「名前が切れてる」)。二刀流／片手持ちのような「いまの状態」をここで出す */}
-                  {(slotAssignedCards.length>0||previewDmg>0||previewGuard>0||slotAimHit||slotExInfo||(!tacticsNewLayout&&battleStackMarkItems(allyStackCounts[i]).length>0))&&(
+                  {(slotAssignedCards.length>0||previewDmg>0||previewGuard>0||slotAimHit||slotExInfo||(!tacticsNewLayout&&(slotExEffects?slotExEffects.length>0:battleStackMarkItems(allyStackCounts[i]).length>0)))&&(
                     <div data-tactics-slot-marks className={`${tacticsNewLayout?`absolute left-full w-[150%] overflow-hidden items-stretch justify-start px-1.5 ${(slotAimHit||previewDmg>0||previewGuard>0)?'top-[15px] h-[calc(100%-46px)]':'top-px h-[calc(100%-31px)]'}`:'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`}>
                       {/* ★置いたカードは2列×3段(2026-09-24 ユーザー指示「ダメージ予測を1番上に置いて、その下に2列3段」
                           「カード×4とかは確かにいらない」)。ガードやアシストカードを足すと1体に5枚まで置けるので、
                           1枚1段ではライフ・ガッツの行まで届いていた。高さはライフの行の上までに切ってある。
                           🎯は枠の横幅をまるごと使う上の段(data-tactics-slot-top-row)へ出す */}
-                      {!tacticsNewLayout&&<BattleStackMarks counts={allyStackCounts[i]} side="ally" full={SWEET_STACK_MAX} className="mh-stack-marks-flow"/>}
+                      {!tacticsNewLayout&&slotExEffects&&<ExEffectChips items={slotExEffects} className="w-full"/>}
+                      {!tacticsNewLayout&&!slotExEffects&&<BattleStackMarks counts={allyStackCounts[i]} side="ally" full={SWEET_STACK_MAX} className="mh-stack-marks-flow"/>}
                       {!tacticsNewLayout&&slotExInfo&&(<div data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text}
                         className={`flex max-w-full items-center gap-0.5 rounded px-1 py-0.5 leading-none shadow ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>
                         <span style={{fontSize:'7px'}} className="shrink-0 font-black">EX{slotExInfo.badge.text==='EX'&&slotExInfo.badge.uses!=null?`×${slotExInfo.badge.uses}`:''}</span>
@@ -3067,13 +3142,13 @@ function BattleScreen({
                     </div>
                   )}
                   {/* 距離補正は0%でも出す(「補正が無い」ことも情報なので、枠ごとに常に見えるようにする) */}
-                  {(()=>{const totalBonus=distTotalBonus(i); return(<div className={`absolute bottom-0.5 right-0.5 text-[11px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus>0?'text-cyan-300 border-cyan-400/30':totalBonus<0?'text-red-300 border-red-400/30':'text-slate-300 border-white/20'}`}><Sword size={5}/>{totalBonus>0?'+':''}{(totalBonus*100).toFixed(1)}%</div>);})()}
+                  {(()=>{const totalBonus=distTotalBonus(i); return(<div data-dist-chip className={`absolute bottom-0.5 right-0.5 text-[11px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus>0?'text-cyan-300 border-cyan-400/30':totalBonus<0?'text-red-300 border-red-400/30':'text-slate-300 border-white/20'}`}><Sword size={5}/>{totalBonus>0?'+':''}{(totalBonus*100).toFixed(1)}%</div>);})()}
                   {/* ★新しい盤面では攻撃モーションを**絵だけ**に掛ける(2026-09-24 ユーザー選択「攻撃時に札を跳ねさせない」)。
                       それまでは絵のある左の列ごと動かしていたので、距離補正の札や置いたカードの札まで
                       大きくなって飛び、名前の行を隠していた。古い盤面は今までどおり枠ごと動かす */}
                   {/* 足元の魔法陣(新しい盤面の飾り)。絵と一緒に跳ねないよう、動く絵の外に置く */}
                   {tacticsNewLayout&&s&&<span aria-hidden="true" data-slot-circle/>}
-                  <div data-tactics-attack-image={tacticsNewLayout?i:undefined} className="relative flex items-center justify-center" style={{...(s?slotArtBox:{}),...(isAnimating&&tacticsNewLayout&&!pandoraArt?{zIndex:9999,animation:themedAttack?undefined:attackMotionAnimation(attackAnim),...attackAimStyle}:{}),...(pandoraArt&&isAnimating?{zIndex:9999}:{})}}>{pandoraArt?pandoraArt:s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
+                  <div data-tactics-attack-image={tacticsNewLayout?i:undefined} className={`relative flex items-center justify-center${slotSoulStage>0?' mh-reincarnate-stack':''}`} style={{...(s?slotArtBox:{}),...(isAnimating&&tacticsNewLayout&&!pandoraArt?{zIndex:9999,animation:themedAttack?undefined:attackMotionAnimation(attackAnim),...attackAimStyle}:{}),...(pandoraArt&&isAnimating?{zIndex:9999}:{})}}>{/* 魂格オーラ(一覧・詳細・HOMEと同じ部品)を、バトルでも絵の後ろに小さく出す(2026-10-29 社長「魂格オーラがバトルに反映されてない」)。軽め・最軽量・省エネ表示では出さず、標準では動きを止める(is-still) */}{slotSoulStage>0&&<SoulRankAura soulRankStage={slotSoulStage} className={`is-battle${fxLoad==='STANDARD'?' is-still':''}`}/>}{pandoraArt?pandoraArt:s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
                     ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="object-contain drop-shadow-md"/>}/>
                     :isAnimating&&attackAnim.motion==='arkHolyRain'
                       ?<ArkHolyRainMotion
@@ -3178,7 +3253,7 @@ function BattleScreen({
             const props={copy:c,src:aiCopySrcOf(c,slots),phase,hit,anim:attackAnim,skill,standing:standing||phase==='vanish',onOpen:aiCopy?()=>setCopyHandOpen(true):null,hatePct:hc&&Number.isInteger(hc.copy)?hc.copy:null};
             return (<>
               {/* タクティクス旧は枠が縦に長く盤の高さからはみ出すので、横向きでも盤の右に置く(下に置くと距離の札に重なった) */}
-              <div className={`flex shrink-0 ${tacticsNewLayout?'[@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}><TacticsAiCopyColumn {...props} layout="portrait"/></div>
+              <div className={`flex shrink-0 ${tacticsNewLayout?'[@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}><TacticsAiCopyColumn {...props} layout="portrait" compact={!tacticsNewLayout&&classicAiCopyLandscape()}/></div>
               {tacticsNewLayout&&<div className="hidden shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:block"><TacticsAiCopyColumn {...props} layout="landscape"/></div>}
             </>);
           })()}
@@ -3388,7 +3463,7 @@ function BattleScreen({
               {exTab==='status'?(
                 <div data-tactics-unit-detail={exPanel.slot}>
                   <div className="mb-2 break-words text-[16px] font-black leading-tight">{exPanel.monName}</div>
-                  {typeof battleUnitStatusOf==='function'&&<BattleUnitDetailBody side="ally" status={battleUnitStatusOf(exPanel.slot)} chips={battleBuffChips()} marks={allyStackCounts[exPanel.slot]}/>}
+                  {typeof battleUnitStatusOf==='function'&&<BattleUnitDetailBody side="ally" status={battleUnitStatusOf(exPanel.slot)} chips={battleBuffChips()} marks={allyStackCounts[exPanel.slot]} exEffects={typeof tacticsExEffectsAt==='function'?(tacticsExEffectsAt(exPanel.slot,allyStackCounts[exPanel.slot])||[]):null}/>}
                   <button type="button" data-tactics-ex-close onClick={()=>setExPanelSlot(null)} className="mt-3 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[13px] font-black text-slate-200 active:scale-95">閉じる</button>
                 </div>
               ):(<>
@@ -3461,7 +3536,7 @@ function BattleScreen({
         ), document.body)}
         {unitDetail&&(unitDetail.side==='enemy'
           ? <BattleUnitDetailPanel side="enemy" status={typeof battleEnemyStatus==='function'?battleEnemyStatus():null} debuffs={enemyDebuffs} onClose={()=>setUnitDetail(null)}/>
-          : <BattleUnitDetailPanel side="ally" status={typeof battleUnitStatusOf==='function'?battleUnitStatusOf(unitDetail.slot):null} chips={battleBuffChips()} marks={allyStackCounts[unitDetail.slot]} onClose={()=>setUnitDetail(null)}/>)}
+          : <BattleUnitDetailPanel side="ally" status={typeof battleUnitStatusOf==='function'?battleUnitStatusOf(unitDetail.slot):null} chips={battleBuffChips()} marks={allyStackCounts[unitDetail.slot]} exEffects={typeof tacticsExEffectsAt==='function'?(tacticsExEffectsAt(unitDetail.slot,allyStackCounts[unitDetail.slot])||[]):null} onClose={()=>setUnitDetail(null)}/>)}
         {showBattleMenu&&ReactDOM.createPortal((
           <div className="fixed inset-0 z-[70000] flex items-start justify-end bg-black/70 p-2" onClick={()=>setShowBattleMenu(false)}>
             <div data-battle-menu className="mt-11 flex w-[190px] flex-col gap-1.5 rounded-2xl border border-white/20 bg-slate-900 p-2 shadow-2xl" onClick={e=>e.stopPropagation()}>

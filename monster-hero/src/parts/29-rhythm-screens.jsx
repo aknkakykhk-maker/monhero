@@ -1074,7 +1074,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                     const markId=rhythmAchievementMarkId(playable,playable?rhythmBestRecord(bestRecords,entry.songId,item.id):null);
                     const mark=RHYTHM_ACHIEVEMENT_MARKS[markId];
                     return <i key={item.id} {...(main?{'data-rhythm-achievement':markId}:{})} title={`${item.id}: ${mark.label}`}
-                      className="block h-2 w-2 rotate-45 rounded-[1px] [@container(max-width:250px)]:hidden" style={mark.style}/>;
+                      className="block h-2 w-2 rotate-45 rounded-[1px] [@container(max-width:300px)]:hidden" style={mark.style}/>;
                   })}
                   {/* 「いま選んでいる難易度」での自己ベストのランクを、行のまま見せる。
                       それまでは「5難易度」とだけ出ていて、どの曲をどこまで遊んだかは
@@ -1088,14 +1088,15 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                     return <small {...(main?{'data-rhythm-song-row-rank':played?rank:''}:{})}
                       className="ml-1 flex min-w-0 items-baseline gap-1 text-[9px] font-bold text-slate-400">
                       {/* 行が狭いとき(横持ちで絵を回したiPhoneなど)は、難易度の名前から先に外してスコアを切らさない
-                          (2026-09-26・ユーザー報告「スコアの文字が切れてる」)。さらに狭ければ達成の印も外す */}
+                          (2026-09-26・ユーザー報告「スコアの文字が切れてる」)。さらに狭ければ達成の印も外す。
+                          スコアは「…」で切らない。7桁(100万点〜)が入るよう、行が300px以下なら◆の列を、380px以下なら「イベント対象」の字を外して「🏆」だけにする(2026-10-29) */}
                       {rowId&&<span className={`shrink-0 font-black [@container(max-width:350px)]:hidden ${rhythmDifficultyTextColor(rowId)}`}>{rowId}</span>}
                       {(()=>{const tier=played?rhythmDetailAchieveTier(record):null;
                         return tier?<span {...(main?{'data-rhythm-song-row-achieve':tier.id}:{})} data-rhythm-achieve-tone={tier.id} title={tier.label}
                           className="shrink-0 rounded px-1 py-px text-[8px] font-black italic leading-none [@container(max-width:350px)]:hidden">{tier.id==='FULL_COMBO'?'FC':tier.id==='ALL_EXCELLENT'?'AE':'AM'}</span>:null;})()}
                       {played
                         ?<><b className={`text-[12px] font-black leading-none ${RHYTHM_RANK_COLORS[rank]||'text-slate-300'}`}>{rank}</b>
-                          <span className="truncate tabular-nums text-slate-300">{record.bestScore.toLocaleString()}</span></>
+                          <span className="shrink-0 whitespace-nowrap tabular-nums text-slate-300">{record.bestScore.toLocaleString()}</span></>
                         :<span className="truncate">未プレイ</span>}
                     </small>;
                   })()}
@@ -1104,7 +1105,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                     className="ml-1 shrink-0 rounded-md border border-sky-300/40 bg-sky-500/10 px-1 py-0.5 text-[9px] font-black leading-none text-sky-200">{row.versions}つの版</small>}
                   {favoriteIds.has(entry.songId)&&<small {...(main?{'data-rhythm-song-row-favorite':''}:{})} aria-label="お気に入り" className="ml-auto shrink-0 text-[12px] leading-none text-rose-300">♥</small>}
                   {eventSong&&<small {...(main?{'data-rhythm-song-event':entry.songId}:{})}
-                    className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-black text-amber-200">🏆 イベント対象</small>}
+                    className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-black text-amber-200">🏆<span className="[@container(max-width:380px)]:hidden"> イベント対象</span></small>}
                 </span>
               </span>
             </button>

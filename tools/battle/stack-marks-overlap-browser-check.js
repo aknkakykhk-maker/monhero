@@ -316,8 +316,9 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     const overlaps = (i) => page.evaluate((slot) => {
       const box = document.querySelector(`button[data-slot-index="${slot}"]`);
       if (!box) return { marks: 0, hits: ['枠が無い'] };
-      const marks = [...box.querySelectorAll('[data-stack-mark]')];
-      const wrap = box.querySelector('[data-stack-marks]');
+      // ★2026-10-29: タクティクス/レイドでは溜まる物もEXの効果の札(data-ex-effect・ExEffectChips)にまとめた。どちらの形でも同じように測る
+      const marks = [...box.querySelectorAll('[data-stack-mark], [data-ex-effect], [data-ex-effect-more]')];
+      const wrap = box.querySelector('[data-stack-marks]') || box.querySelector('[data-ex-effect-chips]');
       const vis = (el) => { const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.opacity !== '0'; };
       const others = [...box.querySelectorAll('*')].filter((el) => el.children.length === 0 && (el.textContent || '').trim()
         && !(wrap && wrap.contains(el)) && !el.closest('[aria-hidden="true"], [data-decoration]') && vis(el));
@@ -326,8 +327,8 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       const br = box.getBoundingClientRect();
       marks.forEach((m) => {
         const r = m.getBoundingClientRect();
-        if (r.left < br.left - 0.5 || r.right > br.right + 0.5 || r.top < br.top - 0.5 || r.bottom > br.bottom + 0.5) hits.push(`${m.getAttribute('data-stack-mark')}が枠の外`);
-        others.forEach((o) => { if (hit(r, o.getBoundingClientRect())) hits.push(`${m.getAttribute('data-stack-mark')}×「${o.textContent.trim().slice(0, 12)}」`); });
+        if (r.left < br.left - 0.5 || r.right > br.right + 0.5 || r.top < br.top - 0.5 || r.bottom > br.bottom + 0.5) hits.push(`${m.getAttribute('data-stack-mark') || m.getAttribute('data-ex-effect')}が枠の外`);
+        others.forEach((o) => { if (hit(r, o.getBoundingClientRect())) hits.push(`${m.getAttribute('data-stack-mark') || m.getAttribute('data-ex-effect')}×「${o.textContent.trim().slice(0, 12)}」`); });
       });
       for (let a = 0; a < marks.length; a += 1) for (let b = a + 1; b < marks.length; b += 1) if (hit(marks[a].getBoundingClientRect(), marks[b].getBoundingClientRect())) hits.push('マークどうし');
       return { marks: marks.length, preview: !!box.querySelector('[data-tactics-damage-preview]'), hits };
@@ -353,7 +354,8 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
         await longPreview();
         await page.waitForTimeout(100);
         const o = await overlaps(slot);
-        check(`${label} ${name}: マーク4つと7桁の予測ダメージが重ならない`, o.marks === 4 && o.preview && o.hits.length === 0, `マーク${o.marks} 予測${o.preview ? 'あり' : 'なし'} ${o.hits.slice(0, 4).join(' / ')}`);
+        // タクティクスの新しい盤は EX の効果の札(2つまで+「+N」=3つ)、クラシックはマーク×数の4つ
+        check(`${label} ${name}: マーク4つと7桁の予測ダメージが重ならない`, (o.marks === 4 || (label === 'tactics' && o.marks === 3)) && o.preview && o.hits.length === 0, `マーク${o.marks} 予測${o.preview ? 'あり' : 'なし'} ${o.hits.slice(0, 4).join(' / ')}`);
         if (shotDir && (name === '390' || name === 'fold' || name === 'landscape')) {
           const el = page.locator(`button[data-slot-index="${slot}"]`);
           await el.screenshot({ path: `${shotDir}/${label}-${name}-slot.png` }).catch(() => {});

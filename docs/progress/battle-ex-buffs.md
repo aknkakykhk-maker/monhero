@@ -69,3 +69,92 @@
 - 枠の印: `60-app.jsx` の `tacticsSlotCountersAt`、印の絵柄 `22-enemy-and-bond-entries.jsx` の `BATTLE_STACK_MARKS`・`BATTLE_MONSTER_FX`
 - 詳細の窓: `60-app.jsx` の `battleUnitStatusOf`(味方)・`enemyDebuffs`(敵)
 - レイドの定義: `60-app.jsx` の `raidExDefOf`
+
+## 溜まる物(勇者特性・固有技・EX で積み上がる物)
+
+2026-10-29 追記(社長「楔とか効果が溜まってくやつもわかるようにして。表示されるやつされないやつがある」)。
+共通の「マーク×数」(`22-enemy-and-bond-entries.jsx` の `BATTLE_STACK_MARKS`、71 の `allyStackCounts`・60 の `enemyStackCounts`。ズカンくんの持ち場)に**載っている物**と**載っていない物**に分けた。
+「WAVE で消えるか」は、コードで確かめきれなかったものを「未確認」とした。
+
+### いま「マーク×数」に載っている物
+
+| 名前(マーク・種類) | 誰に付くか | いくつ・上限 | 1つあたりの効き目 | WAVE で消えるか | 出所(数を作る所) |
+| --- | --- | --- | --- | --- | --- |
+| クッキー🍪(cookie) | メロディーの枠(特性の持ち主・0個でも出す) | 上限10(`SWEET_STACK_MAX`) | EX「メロディボックス」で配ると1つにつき回復5%・ガッツ4%・与ダメ+2%・被ダメ−2% | 未確認 | `sweetStackView` |
+| 黒音符🎵(note) | クロミーの枠(0個でも出す) | 上限10 | EX「メロディ・キー」で1つにつき与ダメ+4%・会心率+3%・敵の被ダメ+2% | 未確認 | `sweetStackView` |
+| 旋律🎀(bow) | メロディ・ボゥを使った子 | — | 未確認 | 未確認 | `bowStackView` |
+| トリック💪🛡️💚(trickAtk/Def/Regen) | ゴースト・スプーキー(勇者特性) | — | ちから+20%・丈夫さ+20%・回復+5% | 未確認 | `trickStartView` |
+| 運命🎲🪙(fateCombo/fateAtk) | 運命のコイン・運命の輪の子 | — | 連撃・ちから | ランの終わりまで残る | `permaBuffs.fateStacks` |
+| 連撃パワー💥(kenshi) | 剣士モッチー | 上限3(`KENSHI_COMBO_POWER_MAX`) | 永久追加連撃 | ランの終わりまで残る | `permaBuffs.kenshiComboPower` |
+| EX の残りターン⏳(exTurns) | EX を使った子 | ターン数 | — | 消える | `tacticsSlotCountersAt` |
+| 完全回避👻(avoid) | ゴースト(EX) | 2 | 攻撃を1回かわす | 消える | `tacticsSlotCountersAt` |
+| 根性🔥(konjo) | 生命の泉の対象の子 | 1 | ライフ0の攻撃を1回ライフ1で踏ん張る | 消える | `tacticsSlotCountersAt` |
+| 煉獄♨️(rengoku) | キュービ(九尾四相) | 上限10 | 1つにつき+5% | 未確認 | `kyubiOrihimeStackMarks` |
+| 陽炎🌫️(kagero) | キュービ(九尾四相) | 0か1 | 完全回避(使ったら3ターン待ち) | 未確認 | `kyubiOrihimeStackMarks` |
+| 狐火🦊(kitsunebi) | キュービ(九尾幻灯) | 上限5 | 与ダメ+4%・被ダメ−3%(EX の3ターンのあいだ) | バトルの終わりまで残る | `kyubiOrihimeStackMarks` |
+| 逢瀬🎐(ouse) | オリヒメ(天河の契り) | 上限5/8/12(段) | 星合の刻で使う | 未確認 | `kyubiOrihimeStackMarks` |
+| 星合の刻🌌(hoshiai) | オリヒメ | 残りターン | — | 消える | `kyubiOrihimeStackMarks` |
+| 霊魂🕯️(reikon) | キュービ・オリヒメ(固有技) | 残りターン(3) | 味方の回避+10% | 未確認 | `kyubiOrihimeStackMarks` |
+| 敵: 楔🔻(kusabi) | 敵(イルミネ・ドリーミィが付ける) | 上限6(ジエンド中12) | 回避アップ・ドリームペインが強くなる | 未確認 | `enemyStackCounts` |
+| 敵: ドリームペイン💤(dreamPain) | 敵 | 残りターン(3) | 敵の被ダメ+40%+楔1つごとに+40% | 消える | `enemyStackCounts` |
+| 敵: 水牢💧・氷結❄️(aquaPrison/aquaFreeze) | 敵(ウンディーネ種) | 3でフィナーレ | 1つにつき敵の与ダメ−10%/被ダメ+10% | 消える | `enemyStackCounts` |
+| 敵: 咆哮📢(roar) | 敵(自分にかける) | 上限2 | 敵の攻撃アップ(元に戻らない) | WAVE ごと | `enemyStackCounts` |
+
+### いま「マーク×数」に載っていない物(どこにも数が出ないか、絵の演出だけ)
+
+| 名前 | 誰に付くか | いくつ・上限 | 1つあたりの効き目 | いまの出方 |
+| --- | --- | --- | --- | --- |
+| 中二病の固有技の重ね(`chuuniUniqueStack`) | アーク・イブリース(勇者特性) | — | 固有技の威力+10%・消費ガッツ+10% | **どこにも出ない** |
+| 中二病の被ダメ半減の残り(`chuuniDmgCutUses`) | アーク・イブリース | WAVE ごとに2回 | 被ダメ50%カット | **どこにも出ない** |
+| カウンター(ハムボクシング) | ハム(EX) | 最大3 | 与ダメ×2×カウンター | 🥊の数の絵だけ(軽量表示・超省エネでは出ない) |
+| 回避した数(血踊) | ザン(EX) | — | 回避するたびに連撃+10% | 赤い残像の絵だけ |
+| 雷のため(雷狼影) | ライガー(EX) | 最大5 | ためたあと雷纏 | ⚡の絵だけ |
+| ボルテージ(オン・ステージ！) | ミーア(EX)・全員に効く | 最大10 | 1段階ごとに与ダメ+3%・回復+5% など | スポットライトの明るさだけ |
+| 絶氷の楔の残り | 敵 | 残りターン | 敵が間合いを動けない | 敵の弱化一覧(❄️)には出るが「マーク×数」には無い |
+
+## 本編(5つの遊び)の強化・弱化(EX の無い遊び)
+
+2026-10-29 追記(社長「効果の札を本編にも足す」)。本編の強化は、71 の `battleBuffChips`(強化の札)がすべて数え上げている。
+データの部品 `classicEffectsFromChips`・`classicEnemyEffectsFromDebuffs`(`34-tactics-ex-effects.jsx`)が、それを #4206 と同じ形に直す。
+札の種類を足したら `CLASSIC_CHIP_VIEW` にも足す(`tools/battle/battle-effects-check.js` が見張る)。
+
+### 味方(強化の札)
+
+| 札(key) | 画面の名前 | 誰に付くか | 続く長さ | 出所 |
+| --- | --- | --- | --- | --- |
+| atk | 攻撃力 | 全員 | ランのあいだ | 教え・トレーニング・みゅあ |
+| dmgCut | 被ダメ | 全員 | ランのあいだ | 教え |
+| def | 丈夫さ | 全員 | ランのあいだ | 教え |
+| muaHp・muaGuts | ライフ・ガッツ | 全員 | ランのあいだ | みゅあ |
+| critRate・critDmg | クリ率・クリダメ | 全員 | ランのあいだ | 教え |
+| combo・globalCombo | 連撃・全体連撃 | 全員 | ランのあいだ | 教え |
+| kikiCard | カード上限 | 全員 | 残りターン(きき) | アシカ「きき」 |
+| kyukoCut | 被ダメ | 全員(タクティクスは使った子) | 残りターン | アシカ「きゅうこの譜面」 |
+| kenshi | 連撃パワー | 剣士モッチー | ランのあいだ(上限3) | 勇者特性 |
+| autoHp・autoGuts | ライフ回復・ガッツ回復 | 全員 | ランのあいだ | いまの自動回復の率 |
+| poltz | ポルツ | 全員 | 残り回数 | アシカ「ポルツ」 |
+| trick | トリック | 持ち主(本編はパーティ) | この WAVE | ゴースト・スプーキーの勇者特性 |
+| sweet | クッキー・黒音符 | 持ち主 | ランのあいだ(上限10) | メロディー・クロミーの勇者特性 |
+| bow | 旋律 | 使った子 | ランのあいだ | クロミーの固有技 |
+| fate・fateCoinGuts | 運命・運命のコイン消費(弱化) | 使った子 | ランのあいだ | 運命のコイン・運命の輪 |
+| meloso | 次ターン全回復 | 全員 | 次のターン | メロソ |
+| boost | Boost | 全員 | このターン | カード |
+| critFix | 会心予約 | 全員 | このターン | カード |
+| zeroGuts | 0消費中 | 全員 | このターン | カード |
+| reflectNext・reflectNow | 次反射・反射待機 | 全員 | 次のターン・このターン | カード |
+| takenNext・takenNow | 次T被ダメ・被ダメ | 全員 | 次のターン・このターン | カード |
+| costNext・costNow | 次ターン消費ガッツ・消費ガッツ(弱化) | 全員 | 次のターン・このターン | カード |
+
+### 敵(弱化の一覧 `enemyDebuffs`)
+
+| 種類(key) | 名前 | 続く長さ |
+| --- | --- | --- |
+| ice | 絶氷の楔 | 残りターン |
+| confuse | 乱心 | 残りターン |
+| aquaPrison・aquaFreeze・aquaFinale | 水牢・氷結・アクアフィナーレ(タクティクスの EX) | 残りターン |
+| nightmare | 悪夢全開(タクティクスの EX) | 残りターン |
+| psycho | サイコロックオン(タクティクスの EX) | 残りターン |
+| fateAtkDown・fateTakenUp | 運命の輪(敵の与ダメ・被ダメ) | 残りターン |
+| stun | スタン | 次の敵の番 |
+| atkDown・taken | 敵のちから低下・敵の被ダメ上昇 | この WAVE |
+| roar | 咆哮 | この WAVE(上限2) |
