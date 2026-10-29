@@ -1028,6 +1028,9 @@ function MonsterHeroGame() {
     resetSweetStack(); // メロディー・クロミーのスタックもランごと(WAVEでは消さない)
   resetKusabi(); resetDreamPain(); // 楔・ドリームペインは敵に付くのでWAVEでも消すが、ランの片付けでも念のため
   resetKyubi(); // 九尾四相(相・煉獄・陽炎)はランのあいだ持つ
+  // ★トリックスタートの積みは「WAVEの番号が変わったら0から」なので、前のランがWAVE 1で終わり次のランもWAVE 1から始まると
+  //   前のランの積みが残っていた(別の子が同じ枠に立つと、その子に乗っていた。2026-10-29 社長の報告)。ランの始めに必ず消す
+  resetTrickStart();
   resetOrihime(); // 天河の契り(相方・逢瀬)もランのあいだ持つ
   resetReikon(); // 霊魂(キュービ・オリヒメの固有技)の残り
   };
