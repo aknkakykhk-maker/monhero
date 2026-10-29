@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 69b1d6c647cec8a4
+// source-sha256: 5a316b064e3cea13
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -46057,6 +46057,349 @@ const classicAiCopyRegenGuts = (aiCopy, rate) => {
     guts: Math.min(max, Math.max(0, aiCopySafeNum(aiCopy.guts)) + add)
   };
 };
+const tacticsExPct = v => Number.isFinite(Number(v)) && Number(v) !== 0 ? Math.round(Number(v) * 100) : null;
+const TACTICS_EX_EFFECT_VIEW = Object.freeze({
+  coverAll: {
+    icon: '🛡️',
+    to: 'others',
+    note: () => '敵の攻撃をモノリスが代わりに受ける'
+  },
+  statBoost: {
+    icon: '💪',
+    to: 'self',
+    pct: d => tacticsExPct(d.rates ? Math.max(...Object.values(d.rates)) : d.statRate),
+    note: d => d.rates ? `力・ガッツ+${tacticsExPct(d.rates.atk)}%・丈夫さ・ライフ+${tacticsExPct(d.rates.def)}%・自動回復アップ` : `全ステータス+${tacticsExPct(d.statRate)}%・自動回復+${tacticsExPct(d.regenRate)}%`
+  },
+  distMatch: {
+    icon: '🌸',
+    to: 'self',
+    note: () => '距離補正×1.7・同じ距離は完全回避'
+  },
+  dodgeCombo: {
+    icon: '🩸',
+    to: 'self',
+    note: d => `同じ距離は完全回避・回避するたびに連撃+${tacticsExPct(d.dodgeComboRate)}%`
+  },
+  multiBuff: {
+    icon: '✨',
+    to: 'self',
+    pct: d => tacticsExPct(d.dmgRate),
+    note: d => [d.dmgRate ? `与ダメ+${tacticsExPct(d.dmgRate)}%` : '', d.selfTakenRate ? `被ダメ−${tacticsExPct(d.selfTakenRate)}%` : '', d.rates && d.rates.def ? `丈夫さ+${tacticsExPct(d.rates.def)}%` : '', d.critRateRate ? '会心アップ' : '', d.distMult ? `距離補正×${d.distMult}` : '', d.uniqueCrit ? '固有技は必ず会心' : '', d.extraCombos ? `連撃${tacticsExPct(d.extraCombos.rate)}%×${d.extraCombos.count}` : ''].filter(Boolean).join('・')
+  },
+  stage: {
+    icon: '🎤',
+    to: 'all',
+    note: () => 'カード+1・ボルテージが上がるほど全員の与ダメ・回復アップ'
+  },
+  present: {
+    icon: '🎁',
+    to: 'all',
+    note: () => '全員のガッツ回復とランダムな贈り物'
+  },
+  lifeSpring: {
+    icon: '⛲',
+    to: 'target',
+    note: d => `ライフ上限+${tacticsExPct(d.lifeSpring && d.lifeSpring.maxUpRate)}%・根性・与ダメアップ`
+  },
+  timeStop: {
+    icon: '⏱️',
+    to: 'self',
+    note: () => 'このターン、敵は動かない・味方の強化を写す'
+  },
+  pandoraBox: {
+    icon: '📦',
+    to: 'self',
+    note: () => '毎ターン固有技・悪魔の連撃と天使の回復'
+  },
+  thunder: {
+    icon: '⚡',
+    to: 'self',
+    note: d => `雷をためて雷纏・与ダメ+${tacticsExPct(d.thunder && d.thunder.dmg)}%・回避アップ`
+  },
+  partyBoost: {
+    icon: '🌱',
+    to: 'all',
+    pct: d => tacticsExPct(d.partyBoost && d.partyBoost.statRate),
+    note: d => `力・丈夫さ+${tacticsExPct(d.partyBoost && d.partyBoost.statRate)}%・自動回復+${tacticsExPct(d.partyBoost && d.partyBoost.hpRegen)}%`
+  },
+  damageBack: {
+    icon: '🌫️',
+    to: 'all',
+    pct: d => tacticsExPct(d.damageBack && d.damageBack.hpRate),
+    note: d => `受けたダメージの${tacticsExPct(d.damageBack && d.damageBack.hpRate)}%がライフに戻る`
+  },
+  psychoLock: {
+    icon: '🎯',
+    to: 'enemy',
+    note: () => '敵の距離を固定・敵の与ダメダウン・被ダメアップ(敵の一覧で出す)'
+  },
+  counter: {
+    icon: '🥊',
+    to: 'self',
+    note: () => '狙われたターンに攻撃するとカウンター(与ダメ×2×カウンター)'
+  },
+  allIn: {
+    icon: '👊',
+    to: 'self',
+    note: () => '丈夫さが0になり、その50%が力へ'
+  },
+  weaponChange: {
+    icon: '🗡️',
+    to: 'self',
+    note: () => '戦い方を切り替えた'
+  },
+  partyGuard: {
+    icon: '🍃',
+    to: 'all',
+    pct: d => tacticsExPct(d.partyTakenRate),
+    note: d => `被ダメ−${tacticsExPct(d.partyTakenRate)}%・毎ターン全員ライフ${tacticsExPct(d.partyRegenRate)}%回復`
+  },
+  comboBurst: {
+    icon: '🍬',
+    to: 'self',
+    note: d => `連撃${tacticsExPct(d.extraCombos && d.extraCombos.rate)}%×${d.extraCombos && d.extraCombos.count}`
+  },
+  avoidCharge: {
+    icon: '👻',
+    to: 'self',
+    note: () => '完全回避・残っているあいだ会心確定と連撃'
+  },
+  kitsunebi: {
+    icon: '🦊',
+    to: 'self',
+    note: () => '狐火1つにつき与ダメ+4%・被ダメ−3%'
+  },
+  hoshiai: {
+    icon: '🌌',
+    to: 'self',
+    note: () => '相方と続けて攻撃'
+  },
+  kogare: {
+    icon: '🌠',
+    to: 'self',
+    note: () => '攻撃が当たると25%で敵が「意味不明」'
+  },
+  trickConfuse: {
+    icon: '🌀',
+    to: 'all',
+    pct: d => tacticsExPct(d.partyStatRate),
+    note: d => `全員の力・丈夫さ+${tacticsExPct(d.partyStatRate)}%`
+  },
+  cookieBox: {
+    icon: '🍪',
+    to: 'all',
+    note: () => '全員の与ダメアップ・被ダメダウン(配ったクッキーの数で決まる)'
+  },
+  nightmareKey: {
+    icon: '🗝️',
+    to: 'self',
+    note: () => '与ダメ・会心率アップ(使った黒音符の数で決まる)'
+  },
+  kusabiDouble: {
+    icon: '🔻',
+    to: 'self',
+    note: d => `楔が1回で2つ・上限12・ヘイト−${d.hateDown || 0}`
+  },
+  millefeuille: {
+    icon: '🥞',
+    to: 'all',
+    pct: d => tacticsExPct(d.millefeuille && d.millefeuille.statBase),
+    note: d => `シールドのある子は全ステータス+${tacticsExPct(d.millefeuille && d.millefeuille.statBase)}%(楔1つごとに+${tacticsExPct(d.millefeuille && d.millefeuille.statPer)}%)`
+  }
+});
+const tacticsExTurnsLeftOf = rm => !rm ? null : rm.kind === 'turns' ? Math.max(1, tacticsSafeInt(rm.turns, 1)) : rm.kind === 'wave' ? 'wave' : rm.kind === 'turn' ? 1 : null;
+const listTacticsExEffectsAt = (state, units, slot, now, {
+  defOf = null,
+  nameOf = null
+} = {}) => {
+  const list = Array.isArray(units) ? units : [];
+  if (!Number.isInteger(slot) || !list[slot]) return [];
+  const effects = normalizeTacticsExState(state).effects;
+  const out = [];
+  list.forEach((u, j) => {
+    if (!u) return;
+    const eff = tacticsExActiveEffect(state, j, u.id, now);
+    const view = eff ? TACTICS_EX_EFFECT_VIEW[eff] : null;
+    const def = view && typeof defOf === 'function' ? defOf(u.id, j) : null;
+    if (!view || !def) return;
+    const hits = view.to === 'self' ? j === slot : view.to === 'all' ? true : view.to === 'others' ? j !== slot : view.to === 'target' ? effects[j] && effects[j].target === slot : false;
+    if (!hits) return;
+    out.push({
+      key: `${eff}@${j}`,
+      name: def.name || '',
+      icon: view.icon,
+      kind: 'buff',
+      pct: view.pct ? view.pct(def) : null,
+      fromName: typeof nameOf === 'function' ? nameOf(j) || '' : '',
+      fromSlot: j,
+      turnsLeft: tacticsExTurnsLeftOf(tacticsExRemainOf(def, state, j, u.id, now)),
+      allAllies: view.to === 'all',
+      note: view.note ? view.note(def) : ''
+    });
+  });
+  return out.sort((a, b) => (a.fromSlot === slot ? -1 : 0) - (b.fromSlot === slot ? -1 : 0) || a.fromSlot - b.fromSlot);
+};
+const listTacticsExEnemyEffects = (state, units, now, {
+  defOf = null,
+  nameOf = null
+} = {}) => {
+  const list = Array.isArray(units) ? units : [];
+  const out = [];
+  const nameAt = j => typeof nameOf === 'function' && Number.isInteger(j) ? nameOf(j) || '' : '';
+  const slotOfEffect = kind => list.findIndex((u, j) => u && tacticsExActiveEffect(state, j, u.id, now) === kind);
+  const item = o => out.push({
+    kind: 'debuff',
+    pct: null,
+    fromName: '',
+    fromSlot: null,
+    turnsLeft: null,
+    allAllies: false,
+    note: '',
+    ...o
+  });
+  const psycho = tacticsExPsychoLockOf(state, now);
+  if (psycho && psycho.active) {
+    const j = slotOfEffect('psychoLock');
+    item({
+      key: `psychoLock@${j}`,
+      name: 'サイコロックオン',
+      icon: '🎯',
+      pct: tacticsExPct(psycho.enemyTakenBonus),
+      fromName: nameAt(j),
+      fromSlot: j >= 0 ? j : null,
+      turnsLeft: psycho.turnsLeft > 0 ? psycho.turnsLeft : null,
+      note: `間合いを動けない・与ダメ−${tacticsExPct(1 - psycho.enemyDmgMult) || 0}%・被ダメ+${tacticsExPct(psycho.enemyTakenBonus) || 0}%`
+    });
+  }
+  const aqua = tacticsExAquaOf(state, list, now);
+  if (aqua && aqua.active && aqua.stacks > 0 && (aqua.route === 'prison' || aqua.route === 'freeze')) {
+    item({
+      key: `aqua${aqua.route}@${aqua.slot}`,
+      name: aqua.route === 'prison' ? '水牢' : '氷結',
+      icon: aqua.route === 'prison' ? '💧' : '❄️',
+      fromName: nameAt(aqua.slot),
+      fromSlot: Number.isInteger(aqua.slot) ? aqua.slot : null,
+      turnsLeft: aqua.turnsLeft > 0 ? aqua.turnsLeft : null,
+      note: `${aqua.stacks}つ・${aqua.route === 'prison' ? '敵の与ダメダウン' : '敵の被ダメアップ'}`
+    });
+  }
+  if (aqua && aqua.active && aqua.finale) item({
+    key: `aquaFinale@${aqua.slot}`,
+    name: 'アクアフィナーレ',
+    icon: '🌊',
+    fromName: nameAt(aqua.slot),
+    fromSlot: Number.isInteger(aqua.slot) ? aqua.slot : null,
+    note: '敵の被ダメが大きく上がる'
+  });
+  const nm = tacticsExNightmareEnemyOf(state, list, now);
+  if (nm && nm.enemyTaken > 0) {
+    const j = slotOfEffect('nightmareKey');
+    item({
+      key: `nightmareKey@${j}`,
+      name: '悪夢全開',
+      icon: '🗝️',
+      pct: tacticsExPct(nm.enemyTaken),
+      fromName: nameAt(j),
+      fromSlot: j >= 0 ? j : null,
+      turnsLeft: nm.turnsLeft > 0 ? nm.turnsLeft : null,
+      note: `敵の被ダメ+${tacticsExPct(nm.enemyTaken)}%`
+    });
+  }
+  [['kogare', '焦がれ待つ天ノ河', '🌠', '味方の攻撃が当たると25%で「意味不明」(1ターン2回まで)'], ['timeStop', '悠久の刻', '⏱️', 'このターン、敵は動けない']].forEach(([kind, name, icon, note]) => {
+    const j = slotOfEffect(kind);
+    if (j < 0) return;
+    const def = typeof defOf === 'function' ? defOf(list[j].id, j) : null;
+    item({
+      key: `${kind}@${j}`,
+      name,
+      icon,
+      fromName: nameAt(j),
+      fromSlot: j,
+      turnsLeft: tacticsExTurnsLeftOf(def ? tacticsExRemainOf(def, state, j, list[j].id, now) : null),
+      note
+    });
+  });
+  return out;
+};
+const TACTICS_STACK_EXTRA = Object.freeze({
+  chuuni: {
+    mark: '😈',
+    label: '中二病の固有技の重ね',
+    note: '固有技の威力+10%・消費ガッツ+10%(1つにつき)'
+  },
+  chuuniCut: {
+    mark: '🛡️',
+    label: '被ダメ半減の残り',
+    note: 'このWAVEのあいだ、被ダメ50%カットをあと何回使えるか'
+  },
+  counter: {
+    mark: '🥊',
+    label: 'カウンター',
+    note: '狙われたターンに攻撃すると、与ダメ×2×カウンター'
+  },
+  dodges: {
+    mark: '🩸',
+    label: '回避した数',
+    note: '回避するたびに連撃が増える'
+  },
+  thunder: {
+    mark: '⚡',
+    label: '雷',
+    note: 'ためたあと雷纏で強化'
+  },
+  voltage: {
+    mark: '🎤',
+    label: 'ボルテージ',
+    note: '1段階ごとに全員の与ダメ・回復アップ'
+  }
+});
+const tacticsStackMaxOf = kind => {
+  const n = name => typeof globalThis !== 'undefined' && Number.isFinite(globalThis[name]) ? globalThis[name] : null;
+  const table = {
+    cookie: typeof SWEET_STACK_MAX !== 'undefined' ? SWEET_STACK_MAX : n('SWEET_STACK_MAX'),
+    note: typeof SWEET_STACK_MAX !== 'undefined' ? SWEET_STACK_MAX : n('SWEET_STACK_MAX'),
+    kenshi: typeof KENSHI_COMBO_POWER_MAX !== 'undefined' ? KENSHI_COMBO_POWER_MAX : null,
+    rengoku: typeof KYUBI_RENGOKU_MAX !== 'undefined' ? KYUBI_RENGOKU_MAX : null,
+    kitsunebi: typeof KITSUNEBI_MAX !== 'undefined' ? KITSUNEBI_MAX : null,
+    roar: typeof TACTICS_ROAR_MAX_STACKS !== 'undefined' ? TACTICS_ROAR_MAX_STACKS : null,
+    kagero: 1,
+    konjo: 1,
+    avoid: 2,
+    counter: 3,
+    thunder: 5,
+    voltage: 10,
+    chuuniCut: 2
+  };
+  return Number.isFinite(table[kind]) ? table[kind] : null;
+};
+const listTacticsStackItems = (counts, {
+  keepZero = ['cookie', 'note']
+} = {}) => {
+  const marks = typeof BATTLE_STACK_MARKS !== 'undefined' ? BATTLE_STACK_MARKS : {};
+  return Object.entries(counts && typeof counts === 'object' ? counts : {}).reduce((out, [kind, raw]) => {
+    if (kind === 'exTurns') return out;
+    const count = Math.max(0, Math.floor(Number(raw) || 0));
+    if (count <= 0 && !keepZero.includes(kind)) return out;
+    const m = marks[kind] || TACTICS_STACK_EXTRA[kind];
+    if (!m) return out;
+    const isTurns = m.unit === 'T';
+    out.push({
+      key: `stack:${kind}`,
+      name: m.label || kind,
+      icon: m.mark || '',
+      kind: 'stack',
+      count,
+      max: isTurns ? null : tacticsStackMaxOf(kind),
+      turnsLeft: isTurns ? count : null,
+      pct: null,
+      fromName: '',
+      fromSlot: null,
+      allAllies: false,
+      note: TACTICS_STACK_EXTRA[kind] && TACTICS_STACK_EXTRA[kind].note || ''
+    });
+    return out;
+  }, []);
+};
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
 const RHYTHM_BUDDY_TICKET_ITEM_ID = 'session_ticket';
 const RHYTHM_BUDDY_SEEN_KEY = 'mh_rhythm_buddy_seen_v1';
@@ -70958,6 +71301,8 @@ function BattleScreen({
   tacticsHate,
   tacticsHateOn,
   aiCopy,
+  tacticsExEffectsAt,
+  tacticsExEnemyEffects,
   aiCopyHitting = false,
   tacticsExIntroVisible,
   dismissTacticsExIntro,
@@ -120597,6 +120942,36 @@ function MonsterHeroGame() {
     const live = tacticsExLiveRef.current;
     return live.enabled && Number.isInteger(slotIdx) ? tacticsExAvoidLeftOf(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, live.now) : 0;
   };
+  const tacticsExEffectsAt = (slotIdx, stackCounts = null) => {
+    if (!(tacticsExEnabled && Array.isArray(tacticsUnits))) return [];
+    const ex = listTacticsExEffectsAt(tacticsExState, tacticsUnits, slotIdx, tacticsExNow, {
+      defOf: monId => raidExDefOf(monId),
+      nameOf: battleActorName
+    });
+    const unit = tacticsUnits[slotIdx];
+    const c = unit ? tacticsSlotCountersAt(slotIdx) || {} : {};
+    const chuuni = unit && (unit.id === 'Ark' || unit.id === 'Iblis');
+    const extra = {
+      ...(chuuni ? {
+        chuuni: getPermaBuff('chuuniUniqueStack'),
+        chuuniCut: Math.max(0, 2 - getWaveBuff('chuuniDmgCutUses'))
+      } : {}),
+      counter: c.counter,
+      dodges: c.dodges,
+      thunder: c.thunder && c.thunder.phase === 'charge' ? c.thunder.charge : 0,
+      voltage: c.voltage && c.voltage.value
+    };
+    return [...ex, ...listTacticsStackItems({
+      ...(stackCounts || {}),
+      ...extra
+    })];
+  };
+  const tacticsExEnemyEffects = tacticsExEnabled && Array.isArray(tacticsUnits) ? [...listTacticsExEnemyEffects(tacticsExState, tacticsUnits, tacticsExNow, {
+    defOf: monId => raidExDefOf(monId),
+    nameOf: battleActorName
+  }), ...listTacticsStackItems(enemyStackCounts, {
+    keepZero: []
+  })] : [];
   const tacticsSlotCountersAt = slotIdx => {
     if (!tacticsExEnabled || !Number.isInteger(slotIdx) || !Array.isArray(tacticsUnits)) return {};
     const unit = tacticsUnits[slotIdx];
@@ -138685,6 +139060,8 @@ function MonsterHeroGame() {
       enemyStackCounts: enemyStackCounts,
       debugStackMarks: debugStackMarks,
       tacticsSlotCountersAt: isTacticsMode(runMode) ? tacticsSlotCountersAt : null,
+      tacticsExEffectsAt: isTacticsMode(runMode) ? tacticsExEffectsAt : null,
+      tacticsExEnemyEffects: isTacticsMode(runMode) ? tacticsExEnemyEffects : [],
       discardCards: discardCards,
       actionUsed: actionUsed,
       tacticsSlotFx: tacticsSlotFx,
