@@ -21,7 +21,7 @@ const GAME = path.resolve(__dirname, '..', '..', 'monster-hero');
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
 const src = (f) => fs.readFileSync(path.join(GAME, f), 'utf8');
 vm.runInContext(`${src('data/card-battle-cards.js')}\n;\n${src('src/parts/82-card-battle-core.jsx')}\n;\n${src('src/parts/82-card-tactics-core.jsx')}\n;\n`
-  + 'this.E = { cardTacticSmartLevel, cardTacticPackFrames, cardTacticUnpackFrames, cardTacticKnobsOf, CARD_BATTLE_DATA, CARD_AI_HABITS, CARD_TACTIC_CARDS, CARD_TACTIC_START, CARD_TACTIC_GROUPS, cardTacticNormalizeFrames, cardTacticHabitOf, cardTacticFilled, cardTacticDecide, cardTacticCond, cardTacticOf, cardCreateGame, cardApplyAction, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardOther, cardGuardOptions, CARD_AI_TACTIC_BASE };', ctx);
+  + 'this.E = { cardTacticSmartLevel, cardTacticUncounted, cardTacticPackFrames, cardTacticUnpackFrames, cardTacticKnobsOf, CARD_BATTLE_DATA, CARD_AI_HABITS, CARD_TACTIC_CARDS, CARD_TACTIC_START, CARD_TACTIC_GROUPS, cardTacticNormalizeFrames, cardTacticHabitOf, cardTacticFilled, cardTacticDecide, cardTacticCond, cardTacticOf, cardCreateGame, cardApplyAction, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardOther, cardGuardOptions, CARD_AI_TACTIC_BASE };', ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 const VERBOSE = process.argv.includes('--verbose');
@@ -246,9 +246,12 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
 
 // ---- J ----
 {
-  const rows = (n) => Array.from({ length: n }, () => ({ c: 'any', a: 'atk' }));
+  // 別々の条件のセット(同じものは1つと数えるので、ちがう条件を並べる)。n 番目から始める
+  const CONDS = ['any', 'ko', 'lowest', 'highest', 'strongest', 'attacker', 'leader', 'foeLife.90', 'foeLife.80', 'foeLife.70', 'foeLife.60', 'foeLife.50', 'foeLife.40', 'foeLife.30', 'foeLife.20'];
+  let ci = 0;
+  const rows = (n) => Array.from({ length: n }, () => ({ c: CONDS[(ci++) % CONDS.length], a: 'atk' }));
   const F = (base, n) => ({ base, mons: [rows(Math.min(5, n)), rows(Math.min(5, Math.max(0, n - 5))), rows(Math.max(0, n - 10))] });
-  const L = (base, n) => E.cardTacticSmartLevel(F(base, n));
+  const L = (base, n) => { ci = 0; return E.cardTacticSmartLevel(F(base, n)); };
   check('J 何も無ければ random・行だけなら EASY', L([], 0) === 'random' && L([], 3) === 'easy');
   check('J 基本1枚: 0〜3行 EASY・4〜9 NORMAL・10〜 HARD', L(['tBalance'], 3) === 'easy' && L(['tBalance'], 4) === 'normal' && L(['tBalance'], 12) === 'hard');
   check('J 基本2枚: NORMAL〜EXPERT', L(['tBalance', 'tBig'], 0) === 'normal' && L(['tBalance', 'tBig'], 10) === 'expert');
@@ -265,6 +268,24 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
   let moved = 0;
   for (let i = 0; i < 20; i++) { const a = E.cardAiChooseAction(db, st, { ...E.cardAiPolicy('kyuko', 'master', { noTactics: true }), gambit: {}, gambitRandom: true }, Math.random); if (a && (a.type === 'attack' || a.type === 'endAttacks')) moved++; }
   check('J 何も入れていないデッキはランダムに打つ(できる手を返す)', moved === 20, moved);
+}
+
+// ---- L. 賢さに数えないセット(2026-10-29 社長 案A「ちゃんと効くカードだけ数える」) ----
+{
+  const B3 = ['tBalance', 'tFinish', 'tSteady'];
+  const lv = (mons, breeder = []) => E.cardTacticSmartLevel({ base: B3, breeder, mons });
+  const same = Array.from({ length: 4 }, () => ({ c: 'ko', a: 'atk' }));
+  check('L 同じセットを3体の枠に何個入れても1つと数える(MASTER にならない)', lv([same, same, same]) === 'hard');
+  const rare = [{ c: 'turnGe.15', a: 'guard' }, { c: 'myLife.10', a: 'atk' }, { c: 'foeLife.10', a: 'atk' }, { c: 'foeStun', a: 'atk' }];
+  check('L ほとんど当たらない条件は数えない', lv([rare, rare.map((r) => ({ ...r, a: 'kind.ちから' })), rare.map((r) => ({ ...r, a: 'kind.かしこさ' }))]) === 'hard');
+  const mis = [{ c: 'incoming.3', a: 'atk' }, { c: 'incomingKo', a: 'kind.ちから' }, { c: 'incoming.5', a: 'cost.大技(4以上)' }, { c: 'incoming.7', a: 'atk' }];
+  check('L 守るときの条件を攻める手と組んだセットは数えない', lv([mis, [], []]) === 'hard');
+  check('L ブリーダーの枠の「この子の◯◯」は数えない', E.cardTacticUncounted({ base: B3, breeder: [{ c: 'selfLife.50', a: 'save' }], mons: [[], [], []] }).breeder[0] === '場面が合わない');
+  const good = [{ c: 'incomingKo', a: 'guard' }, { c: 'myGuts.5', a: 'cost.大技(4以上)' }, { c: 'foeAlive.3', a: 'reach.全体攻撃' }, { c: 'foeHandGe.4', a: 'disrupt.手札を捨てさせる' }];
+  check('L 意味のあるセット4つは EXPERT 相当', lv([good, [], []]) === 'expert');
+  const u = E.cardTacticUncounted({ base: B3, breeder: [], mons: [[{ c: 'ko', a: 'atk' }], [{ c: 'ko', a: 'atk' }], [{ c: 'turnGe.15', a: 'atk' }]] });
+  check('L 数えない理由が付く(同じもの・ほとんど当たらない)', u.mons[0][0] === null && u.mons[1][0] === '同じものが入っている' && u.mons[2][0] === 'ほとんど当たらない', JSON.stringify(u));
+  check('L 数えないセットだけでも、でたらめにはしない', E.cardTacticSmartLevel({ base: [], breeder: [], mons: [[{ c: 'turnGe.15', a: 'atk' }], [], []] }) === 'easy');
 }
 
 // ---- K. 助手と対戦の基本カード(2026-10-29 社長: EXPERT は2枚・MASTER は3枚。メインは今の型のまま) ----
