@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a8dd473f1ee3c304
+// source-sha256: c1491f467e7b7c01
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -55025,25 +55025,90 @@ const PLAYER_RANK_KINDS = Object.freeze({
   }
 });
 const playerRankKind = kind => PLAYER_RANK_KINDS[kind] || PLAYER_RANK_KINDS.beat;
+const playerRankTier = rank => {
+  const r = Math.max(1, Math.floor(Number(rank) || 1));
+  if (r >= 50) return {
+    t: 5,
+    name: 'レインボー'
+  };
+  if (r >= 30) return {
+    t: 4,
+    name: 'アメジスト'
+  };
+  if (r >= 20) return {
+    t: 3,
+    name: 'ゴールド'
+  };
+  if (r >= 10) return {
+    t: 2,
+    name: 'シルバー'
+  };
+  return {
+    t: 1,
+    name: 'ブロンズ'
+  };
+};
+const PLAYER_RANK_BADGE_CSS = `
+.mh-prb{display:inline-flex;align-items:center;gap:6px}
+.mh-prb-shield{position:relative;width:52px;height:58px;flex:none;filter:drop-shadow(0 3px 0 rgba(0,0,0,.45)) drop-shadow(0 0 10px var(--prb-glow))}
+.mh-prb-shield::before{content:"";position:absolute;inset:0;clip-path:polygon(50% 0,100% 18%,100% 70%,50% 100%,0 70%,0 18%);background:var(--prb-rim)}
+.mh-prb-shield::after{content:"";position:absolute;inset:3px;clip-path:polygon(50% 0,100% 18%,100% 70%,50% 100%,0 70%,0 18%);background:var(--prb-face)}
+.mh-prb-gloss{position:absolute;inset:3px 3px 50% 3px;z-index:2;clip-path:polygon(50% 0,100% 18%,100% 100%,0 100%,0 18%);background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.05))}
+.mh-prb-num{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;padding-top:3px;font-weight:900;font-size:26px;color:#fff;-webkit-text-stroke:5px var(--prb-ink);paint-order:stroke fill;letter-spacing:-.04em;line-height:1}
+.mh-prb-num.mh-prb-w3{font-size:20px}
+.mh-prb-tag{display:flex;flex-direction:column;line-height:1.05}
+.mh-prb-kind{white-space:nowrap;font-size:10px;font-weight:900;color:var(--prb-label);letter-spacing:.08em}
+.mh-prb-name{white-space:nowrap;font-size:14px;font-weight:900;color:#fff;-webkit-text-stroke:3px var(--prb-ink);paint-order:stroke fill}
+.mh-prb.mh-prb-s .mh-prb-shield{width:32px;height:36px}.mh-prb.mh-prb-s .mh-prb-shield::after{inset:2px}
+.mh-prb.mh-prb-s .mh-prb-num{font-size:16px;-webkit-text-stroke:3.5px var(--prb-ink)}.mh-prb.mh-prb-s .mh-prb-num.mh-prb-w3{font-size:12px}
+.mh-prb.mh-prb-s .mh-prb-name{font-size:12px}.mh-prb.mh-prb-s .mh-prb-kind{display:none}
+.mh-prb-t1{--prb-rim:linear-gradient(160deg,#fde2c4,#9a4b1c 55%,#5a250b);--prb-face:linear-gradient(160deg,#e08a4a,#8a3f12);--prb-ink:#3b1406;--prb-glow:rgba(234,138,74,.55);--prb-label:#fbbf8a}
+.mh-prb-t2{--prb-rim:linear-gradient(160deg,#ffffff,#94a3b8 55%,#475569);--prb-face:linear-gradient(160deg,#cbd5e1,#64748b);--prb-ink:#1e293b;--prb-glow:rgba(203,213,225,.6);--prb-label:#e2e8f0}
+.mh-prb-t3{--prb-rim:linear-gradient(160deg,#fff7c2,#f59e0b 55%,#92400e);--prb-face:linear-gradient(160deg,#fcd34d,#d97706);--prb-ink:#5b2a03;--prb-glow:rgba(251,191,36,.7);--prb-label:#fde68a}
+.mh-prb-t4{--prb-rim:linear-gradient(160deg,#f5d0fe,#a21caf 55%,#4a044e);--prb-face:linear-gradient(160deg,#c084fc,#6d28d9);--prb-ink:#2e1065;--prb-glow:rgba(192,132,252,.75);--prb-label:#f0abfc}
+.mh-prb-t5{--prb-rim:conic-gradient(from 0deg,#f43f5e,#f59e0b,#84cc16,#06b6d4,#8b5cf6,#f43f5e);--prb-face:linear-gradient(160deg,#1e1b4b,#0f172a);--prb-ink:#000;--prb-glow:rgba(255,255,255,.8);--prb-label:#fff}
+`;
+const ensurePlayerRankBadgeCss = () => {
+  try {
+    if (typeof document === 'undefined' || document.getElementById('mh-player-rank-badge-css')) return;
+    const el = document.createElement('style');
+    el.id = 'mh-player-rank-badge-css';
+    el.textContent = PLAYER_RANK_BADGE_CSS;
+    document.head.appendChild(el);
+  } catch (_) {}
+};
 function PlayerRankBadge({
   kind = 'beat',
   rank = 1,
-  size = 'md'
+  size = 'lg',
+  showName = true
 }) {
+  ensurePlayerRankBadgeCss();
   const k = playerRankKind(kind);
-  const num = size === 'lg' ? 'text-[28px]' : size === 'sm' ? 'text-[13px]' : 'text-[18px]';
-  const pill = size === 'sm' ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-0.5 text-[11px]';
+  const r = Math.max(1, Math.floor(Number(rank) || 1));
+  const tier = playerRankTier(r);
+  const text = r.toLocaleString();
   return React.createElement("span", {
     "data-player-rank-badge": kind,
-    className: "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
+    "data-player-rank-tier": tier.t,
+    "aria-label": `${k.label} ${r}`,
+    className: `mh-prb mh-prb-t${tier.t}${size === 'sm' ? ' mh-prb-s' : ''}`
   }, React.createElement("span", {
-    className: `inline-flex items-center gap-1 rounded-full font-black ${pill} ${k.pill}`
-  }, React.createElement("span", {
+    className: "mh-prb-shield",
     "aria-hidden": "true"
-  }, k.icon), k.label), React.createElement("b", {
+  }, React.createElement("span", {
+    className: "mh-prb-gloss"
+  }), React.createElement("b", {
     "data-player-rank-value": true,
-    className: `font-black leading-none tabular-nums text-white ${num}`
-  }, Math.max(1, Math.floor(Number(rank) || 1)).toLocaleString()));
+    className: `mh-prb-num${text.length >= 3 ? ' mh-prb-w3' : ''}`
+  }, text)), showName && React.createElement("span", {
+    className: "mh-prb-tag",
+    "aria-hidden": "true"
+  }, React.createElement("span", {
+    className: "mh-prb-kind"
+  }, tier.name), React.createElement("span", {
+    className: "mh-prb-name"
+  }, k.label)));
 }
 function PlayerRankGauge({
   kind = 'beat',
@@ -55152,13 +55217,16 @@ function PlayerRankUp({
   }, React.createElement(PlayerRankBadge, {
     kind: kind,
     rank: from,
-    size: "sm"
+    size: "sm",
+    showName: false
   }), React.createElement("span", {
     "aria-hidden": "true",
     className: "font-black text-fuchsia-200"
-  }, "→"), React.createElement("b", {
-    className: "text-[26px] font-black leading-none text-white tabular-nums"
-  }, to.toLocaleString())), gains.length > 0 && React.createElement("ul", {
+  }, "→"), React.createElement(PlayerRankBadge, {
+    kind: kind,
+    rank: to,
+    size: "lg"
+  })), gains.length > 0 && React.createElement("ul", {
     "data-player-rank-up-gains": true,
     className: "mt-1.5 flex flex-wrap justify-center gap-1.5"
   }, gains.map((g, i) => React.createElement("li", {
@@ -55230,10 +55298,13 @@ function PlayerRankRow({
   }, place ? place.toLocaleString() : '—'), icon, React.createElement("span", {
     className: "min-w-0 flex-1 truncate text-xs font-black text-white"
   }, name, mine ? '(あなた)' : ''), React.createElement("span", {
-    className: "shrink-0 text-right"
-  }, React.createElement("b", {
-    className: `block text-sm font-black leading-tight ${k.accent}`
-  }, `ランク ${Math.max(1, Math.floor(Number(rank) || 1)).toLocaleString()}`), React.createElement("small", {
+    className: "flex shrink-0 flex-col items-end gap-0.5"
+  }, React.createElement(PlayerRankBadge, {
+    kind: kind,
+    rank: rank,
+    size: "sm",
+    showName: false
+  }), React.createElement("small", {
     className: "block text-[9px] font-bold text-slate-400 tabular-nums"
   }, `経験値 ${playerRankSafeXp(xp).toLocaleString()}`)));
 }

@@ -8,15 +8,60 @@ const PLAYER_RANK_KINDS = Object.freeze({
 });
 const playerRankKind = (kind) => PLAYER_RANK_KINDS[kind] || PLAYER_RANK_KINDS.beat;
 
-// 札「🎵 ビートランク 12」。size: 'sm'(行の中)/ 'md' / 'lg'(上のまとめ)
-function PlayerRankBadge({ kind = 'beat', rank = 1, size = 'md' }) {
+// ランクの帯(2026-10-29 社長「なんかださくない？」→ ブリーダーレベルの札を手本に、ゲームらしいバッジへ。マルチ部ツナグくんの見本どおり)。
+// 1〜9 ブロンズ・10〜19 シルバー・20〜29 ゴールド・30〜49 アメジスト・50〜 レインボー
+const playerRankTier = (rank) => {
+  const r = Math.max(1, Math.floor(Number(rank) || 1));
+  if (r >= 50) return { t: 5, name: 'レインボー' };
+  if (r >= 30) return { t: 4, name: 'アメジスト' };
+  if (r >= 20) return { t: 3, name: 'ゴールド' };
+  if (r >= 10) return { t: 2, name: 'シルバー' };
+  return { t: 1, name: 'ブロンズ' };
+};
+// 六角の盾(外側=縁の色・内側=面の色)・上半分の光沢・白い大きな数字と濃い縁取り・帯の色の光。
+// ::before/::after と変数を使うので Tailwind ではなく CSS のまま持ち、最初に描いたときに1回だけ <head> へ入れる
+const PLAYER_RANK_BADGE_CSS = `
+.mh-prb{display:inline-flex;align-items:center;gap:6px}
+.mh-prb-shield{position:relative;width:52px;height:58px;flex:none;filter:drop-shadow(0 3px 0 rgba(0,0,0,.45)) drop-shadow(0 0 10px var(--prb-glow))}
+.mh-prb-shield::before{content:"";position:absolute;inset:0;clip-path:polygon(50% 0,100% 18%,100% 70%,50% 100%,0 70%,0 18%);background:var(--prb-rim)}
+.mh-prb-shield::after{content:"";position:absolute;inset:3px;clip-path:polygon(50% 0,100% 18%,100% 70%,50% 100%,0 70%,0 18%);background:var(--prb-face)}
+.mh-prb-gloss{position:absolute;inset:3px 3px 50% 3px;z-index:2;clip-path:polygon(50% 0,100% 18%,100% 100%,0 100%,0 18%);background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.05))}
+.mh-prb-num{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;padding-top:3px;font-weight:900;font-size:26px;color:#fff;-webkit-text-stroke:5px var(--prb-ink);paint-order:stroke fill;letter-spacing:-.04em;line-height:1}
+.mh-prb-num.mh-prb-w3{font-size:20px}
+.mh-prb-tag{display:flex;flex-direction:column;line-height:1.05}
+.mh-prb-kind{white-space:nowrap;font-size:10px;font-weight:900;color:var(--prb-label);letter-spacing:.08em}
+.mh-prb-name{white-space:nowrap;font-size:14px;font-weight:900;color:#fff;-webkit-text-stroke:3px var(--prb-ink);paint-order:stroke fill}
+.mh-prb.mh-prb-s .mh-prb-shield{width:32px;height:36px}.mh-prb.mh-prb-s .mh-prb-shield::after{inset:2px}
+.mh-prb.mh-prb-s .mh-prb-num{font-size:16px;-webkit-text-stroke:3.5px var(--prb-ink)}.mh-prb.mh-prb-s .mh-prb-num.mh-prb-w3{font-size:12px}
+.mh-prb.mh-prb-s .mh-prb-name{font-size:12px}.mh-prb.mh-prb-s .mh-prb-kind{display:none}
+.mh-prb-t1{--prb-rim:linear-gradient(160deg,#fde2c4,#9a4b1c 55%,#5a250b);--prb-face:linear-gradient(160deg,#e08a4a,#8a3f12);--prb-ink:#3b1406;--prb-glow:rgba(234,138,74,.55);--prb-label:#fbbf8a}
+.mh-prb-t2{--prb-rim:linear-gradient(160deg,#ffffff,#94a3b8 55%,#475569);--prb-face:linear-gradient(160deg,#cbd5e1,#64748b);--prb-ink:#1e293b;--prb-glow:rgba(203,213,225,.6);--prb-label:#e2e8f0}
+.mh-prb-t3{--prb-rim:linear-gradient(160deg,#fff7c2,#f59e0b 55%,#92400e);--prb-face:linear-gradient(160deg,#fcd34d,#d97706);--prb-ink:#5b2a03;--prb-glow:rgba(251,191,36,.7);--prb-label:#fde68a}
+.mh-prb-t4{--prb-rim:linear-gradient(160deg,#f5d0fe,#a21caf 55%,#4a044e);--prb-face:linear-gradient(160deg,#c084fc,#6d28d9);--prb-ink:#2e1065;--prb-glow:rgba(192,132,252,.75);--prb-label:#f0abfc}
+.mh-prb-t5{--prb-rim:conic-gradient(from 0deg,#f43f5e,#f59e0b,#84cc16,#06b6d4,#8b5cf6,#f43f5e);--prb-face:linear-gradient(160deg,#1e1b4b,#0f172a);--prb-ink:#000;--prb-glow:rgba(255,255,255,.8);--prb-label:#fff}
+`;
+const ensurePlayerRankBadgeCss = () => {
+  try {
+    if (typeof document === 'undefined' || document.getElementById('mh-player-rank-badge-css')) return;
+    const el = document.createElement('style');
+    el.id = 'mh-player-rank-badge-css';
+    el.textContent = PLAYER_RANK_BADGE_CSS;
+    document.head.appendChild(el);
+  } catch (_) { /* 入れられなくても数字は読める */ }
+};
+
+// ランクの札(バッジ)。size: 'lg'(大きい盾+帯の名前+種類の名前)/ 'sm'(小さい盾+種類の名前)。showName=false で盾だけ(ランキングの行)
+function PlayerRankBadge({ kind = 'beat', rank = 1, size = 'lg', showName = true }) {
+  ensurePlayerRankBadgeCss();
   const k = playerRankKind(kind);
-  const num = size === 'lg' ? 'text-[28px]' : size === 'sm' ? 'text-[13px]' : 'text-[18px]';
-  const pill = size === 'sm' ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-0.5 text-[11px]';
+  const r = Math.max(1, Math.floor(Number(rank) || 1));
+  const tier = playerRankTier(r);
+  const text = r.toLocaleString();
   return (
-    <span data-player-rank-badge={kind} className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
-      <span className={`inline-flex items-center gap-1 rounded-full font-black ${pill} ${k.pill}`}><span aria-hidden="true">{k.icon}</span>{k.label}</span>
-      <b data-player-rank-value className={`font-black leading-none tabular-nums text-white ${num}`}>{Math.max(1, Math.floor(Number(rank) || 1)).toLocaleString()}</b>
+    <span data-player-rank-badge={kind} data-player-rank-tier={tier.t} aria-label={`${k.label} ${r}`}
+      className={`mh-prb mh-prb-t${tier.t}${size === 'sm' ? ' mh-prb-s' : ''}`}>
+      <span className="mh-prb-shield" aria-hidden="true"><span className="mh-prb-gloss"/><b data-player-rank-value className={`mh-prb-num${text.length >= 3 ? ' mh-prb-w3' : ''}`}>{text}</b></span>
+      {showName && <span className="mh-prb-tag" aria-hidden="true"><span className="mh-prb-kind">{tier.name}</span><span className="mh-prb-name">{k.label}</span></span>}
     </span>
   );
 }
@@ -77,9 +122,9 @@ function PlayerRankUp({ kind = 'beat', from = 1, to = 1, gains = [] }) {
     <div data-player-rank-up={kind} className="rounded-2xl border-2 border-fuchsia-300 bg-gradient-to-b from-violet-700/80 to-indigo-950/90 px-3 py-2 text-center">
       <small className="block text-[10px] font-black tracking-[.2em] text-fuchsia-100">RANK UP!</small>
       <div className="mt-0.5 flex items-center justify-center gap-2">
-        <PlayerRankBadge kind={kind} rank={from} size="sm"/>
+        <PlayerRankBadge kind={kind} rank={from} size="sm" showName={false}/>
         <span aria-hidden="true" className="font-black text-fuchsia-200">→</span>
-        <b className="text-[26px] font-black leading-none text-white tabular-nums">{to.toLocaleString()}</b>
+        <PlayerRankBadge kind={kind} rank={to} size="lg"/>
       </div>
       {gains.length > 0 && <ul data-player-rank-up-gains className="mt-1.5 flex flex-wrap justify-center gap-1.5">
         {gains.map((g, i) => <li key={i} className="rounded-lg border border-fuchsia-200/40 bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-amber-100">
@@ -123,8 +168,8 @@ function PlayerRankRow({ kind = 'beat', place = null, icon = null, name = '', ra
       <b className={`w-9 shrink-0 text-center text-sm font-black tabular-nums ${place === 1 ? 'text-amber-300' : 'text-slate-200'}`}>{place ? place.toLocaleString() : '—'}</b>
       {icon}
       <span className="min-w-0 flex-1 truncate text-xs font-black text-white">{name}{mine ? '(あなた)' : ''}</span>
-      <span className="shrink-0 text-right">
-        <b className={`block text-sm font-black leading-tight ${k.accent}`}>{`ランク ${Math.max(1, Math.floor(Number(rank) || 1)).toLocaleString()}`}</b>
+      <span className="flex shrink-0 flex-col items-end gap-0.5">
+        <PlayerRankBadge kind={kind} rank={rank} size="sm" showName={false}/>
         <small className="block text-[9px] font-bold text-slate-400 tabular-nums">{`経験値 ${playerRankSafeXp(xp).toLocaleString()}`}</small>
       </span>
     </li>
