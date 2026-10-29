@@ -5160,6 +5160,7 @@ function MonsterHeroGame() {
   const [cardTeaserOpen, setCardTeaserOpen] = useState(false);
   // MFバトルカードへどこから入ったか('debug' … デバッグ設定から / 'home' … HOME の入口・公開のお話のあと)。戻るボタンの行き先と、デバッグの道具を出すかに使う
   const [cardOrigin, setCardOrigin] = useState('home');
+  const cardOriginBackRef = useRef(null); // MFバトルカードを閉じたときの戻り先(プロフィール・フレンドの「バトルカードのデッキ」から来たとき)
   // MFバトルカードの「マーケットへ」から入ったときだけ、マーケットに「MFバトルカード」の売り場を出す(デバッグ専用のあいだ。区切り2)
   const [cardMarketEntry, setCardMarketEntryRaw] = useState(false);
   // ★控え(冒頭の cardMarketEntryRef)も同時に入れる。setGameState('BREEDER_MARKET') がすぐあとに読むので、描画を待たない
@@ -10145,6 +10146,7 @@ function MonsterHeroGame() {
   const cardExitingRunRef = useRef(false);
   const exitCardBattle = async () => {
     const toDebug = cardOrigin === 'debug';
+    if (cardOrigin === 'profile' || cardOrigin === 'friends') cardOriginBackRef.current = cardOrigin === 'profile' ? 'PROFILE' : 'FRIENDS';
     setCardBgm(null); setCardOrigin('home');
     if (runStageRef.current != null) {
       if (cardExitingRunRef.current) return;
@@ -10155,7 +10157,9 @@ function MonsterHeroGame() {
       if (toDebug) setGameState('DEBUG_SETTINGS');
       return;
     }
-    setGameState(toDebug ? 'DEBUG_SETTINGS' : 'HOME');
+    // プロフィール・フレンドの「バトルカードのデッキ」から来たときは、そこへ戻る(95 の CardShareDeckTile。2026-10-29 プロフィールの整理)
+    const back = cardOriginBackRef.current; cardOriginBackRef.current = null;
+    setGameState(toDebug ? 'DEBUG_SETTINGS' : back || 'HOME');
   };
   const awardCardQuickLoops = async (loops) => {
     if (!(loops > 0)) return null;
@@ -20752,7 +20756,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* PROFILE */}
         {gameState==='PROFILE'&&(
           <ProfileScreen
-            onCardShareGo={(intent)=>{if(typeof cardShareIntentSet==='function')cardShareIntentSet(intent);setCardOrigin(cardBattleDebugHome&&!(typeof cardShareOpen==='function'&&cardShareOpen())?'debug':'home');setGameState('CARD_TOP');}}
+            onCardShareGo={(intent)=>{if(typeof cardShareIntentSet==='function')cardShareIntentSet(intent);setCardOrigin('profile');setGameState('CARD_TOP');}}
             activeAssistant={activeAssistant}
             assistantBond={assistantBond}
             assistantBondLevelNow={assistantBondLevelNow}
@@ -20825,7 +20829,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onIncomingCount={(count)=>setFriendRequestInfo(prev=>prev.count===count?prev:({...prev,count}))}
             onOpenMonsterDetail={setRankingMonsterDetail}
             onBack={()=>setGameState('PROFILE')}
-            onCardShareGo={(intent)=>{if(typeof cardShareIntentSet==='function')cardShareIntentSet(intent);setCardOrigin(cardBattleDebugHome&&!(typeof cardShareOpen==='function'&&cardShareOpen())?'debug':'home');setGameState('CARD_TOP');}}
+            onCardShareGo={(intent)=>{if(typeof cardShareIntentSet==='function')cardShareIntentSet(intent);setCardOrigin('friends');setGameState('CARD_TOP');}}
           />
         )}
 
