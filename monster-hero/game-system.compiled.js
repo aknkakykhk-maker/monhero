@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c67f070b9d29e5fe
+// source-sha256: 168220e4f16362ef
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -101769,7 +101769,7 @@ const CardDeckEditor = ({
   };
   const chip = on => `shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
   const footer = React.createElement("div", {
-    className: `${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2 ${land ? 'mt-auto' : ''}`
+    className: `${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2 ${land ? 'shrink-0' : ''}`
   }, React.createElement("button", {
     type: "button",
     "data-card-deck-save": true,
@@ -101818,7 +101818,9 @@ const CardDeckEditor = ({
   }), React.createElement("div", {
     className: "flex min-h-0 flex-1 flex-col landscape:flex-row landscape:gap-2"
   }, React.createElement("div", {
-    className: "flex shrink-0 flex-col landscape:min-h-0 landscape:w-[36%] landscape:max-w-[340px] landscape:overflow-y-auto"
+    className: "flex shrink-0 flex-col landscape:min-h-0 landscape:w-[36%] landscape:max-w-[340px]"
+  }, React.createElement("div", {
+    className: "contents landscape:flex landscape:min-h-0 landscape:flex-1 landscape:flex-col landscape:overflow-y-auto"
   }, React.createElement("div", {
     className: `${SCREEN_PANEL_FLAT_CLASS} shrink-0 space-y-1.5`
   }, React.createElement("input", {
@@ -101926,7 +101928,7 @@ const CardDeckEditor = ({
     "data-card-deck-sort": sort,
     onClick: () => setSort(s => CARD_DECK_SORTS[(CARD_DECK_SORTS.findIndex(x => x.id === s) + 1) % CARD_DECK_SORTS.length].id),
     className: chip(false)
-  }, "並び: ", sortLabel, " ▾")), land && footer), React.createElement("div", {
+  }, "並び: ", sortLabel, " ▾"))), land && footer), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} pb-2 landscape:flex-1`
   }, view === 'mon' && React.createElement("p", {
     className: "mb-1 text-[11px] font-bold text-slate-400",
@@ -103238,13 +103240,21 @@ const CardGachaPanel = ({
     disabled: busy || g < CARD_CATALOG_COST,
     onClick: onExchange,
     className: "mh-button min-h-[42px] rounded-xl bg-amber-500 px-1 text-[12px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40"
-  }, "カタログと交換(", CARD_CATALOG_COST, ")"), React.createElement("button", {
+  }, React.createElement("span", {
+    className: "inline-block whitespace-nowrap"
+  }, "カタログと交換"), React.createElement("span", {
+    className: "inline-block whitespace-nowrap"
+  }, "(", CARD_CATALOG_COST, ")")), React.createElement("button", {
     type: "button",
     "data-card-gacha-catalog": true,
     disabled: busy || catalogs < 1,
     onClick: onOpenCatalog,
     className: "mh-button min-h-[42px] rounded-xl bg-sky-400 px-1 text-[12px] font-black text-slate-950 active:scale-[.98] disabled:opacity-40"
-  }, "📖 カタログを使う(", catalogs, "冊)")));
+  }, React.createElement("span", {
+    className: "inline-block whitespace-nowrap"
+  }, "📖 カタログを使う"), React.createElement("span", {
+    className: "inline-block whitespace-nowrap"
+  }, "(", catalogs, "冊)"))));
 };
 const CardCatalogSheet = ({
   db,

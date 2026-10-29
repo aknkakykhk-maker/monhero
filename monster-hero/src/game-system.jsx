@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6f37758e815c384b
+// generated-sha256: 8a40290c04004c4c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -61092,7 +61092,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
   };
   const chip = (on) => `shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
   const footer = (
-    <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2 ${land ? 'mt-auto' : ''}`}>
+    <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2 ${land ? 'shrink-0' : ''}`}>
       <button type="button" data-card-deck-save className={`mh-button mh-button-primary ${land ? 'min-h-[44px]' : 'min-h-[52px]'} rounded-2xl font-black active:scale-[.98]`} onClick={() => { Audio_.fgSe.tap(); onSave({ ...deck, name: (deck.name || '').trim() || 'デッキ' }); }}>保存する</button>
       <button type="button" className={`mh-button mh-button-secondary ${land ? 'min-h-[44px]' : 'min-h-[52px]'} rounded-2xl border border-white/20 bg-slate-800 font-black active:scale-[.98]`} onClick={() => (changed ? setLeave(true) : onCancel())}>やめる</button>
     </div>
@@ -61110,7 +61110,9 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
       <ScreenHead title="デッキを組む" accent="text-amber-200" onBack={() => (changed ? setLeave(true) : onCancel())}/>
       {/* 横の画面は左右に分ける: 左に名前・モンスター・枚数・絞り込み・保存、右を全部カードの一覧にする */}
       <div className="flex min-h-0 flex-1 flex-col landscape:flex-row landscape:gap-2">
-        <div className="flex shrink-0 flex-col landscape:min-h-0 landscape:w-[36%] landscape:max-w-[340px] landscape:overflow-y-auto">
+        <div className="flex shrink-0 flex-col landscape:min-h-0 landscape:w-[36%] landscape:max-w-[340px]">
+          {/* 横の画面は、名前〜絞り込みだけを動かし(スクロール)、「保存する」「やめる」は列の下に止めておく(667×375 で保存が画面の外に出ていた。2026-10-29 見回り) */}
+          <div className="contents landscape:flex landscape:min-h-0 landscape:flex-1 landscape:flex-col landscape:overflow-y-auto">
           <div className={`${SCREEN_PANEL_FLAT_CLASS} shrink-0 space-y-1.5`}>
             <input data-card-deck-name value={deck.name} maxLength={20} onChange={(e) => setDeck((d) => ({ ...d, name: e.target.value }))} className="w-full rounded-lg border border-white/20 bg-slate-950 px-2 py-1.5 text-[14px] font-black text-white landscape:py-1 landscape:text-[13px]" aria-label="デッキの名前"/>
             <div className="flex items-end gap-1.5">
@@ -61138,6 +61140,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
             {canAsk && <button type="button" data-card-deck-ask onClick={() => { void consult(); }} className={chip(false)}>💬 {advisor.name}に相談</button>}
             <button type="button" data-card-deck-usable onClick={() => setUsableOnly((v) => !v)} className={chip(usableOnly)}>{usableOnly ? '✓ ' : ''}使える子だけ</button>
             <button type="button" data-card-deck-sort={sort} onClick={() => setSort((s) => CARD_DECK_SORTS[(CARD_DECK_SORTS.findIndex((x) => x.id === s) + 1) % CARD_DECK_SORTS.length].id)} className={chip(false)}>並び: {sortLabel} ▾</button>
+          </div>
           </div>
           {land && footer}
         </div>
@@ -61771,8 +61774,8 @@ const CardGachaPanel = ({ gacha = 0, catalogs = 0, busy, onExchange, onOpenCatal
         <span className="shrink-0 pl-1 tabular-nums text-amber-100">次の1冊まで {prog} / {CARD_CATALOG_COST}</span>
       </div>
       <div className="mt-2 grid grid-cols-2 gap-1.5">
-        <button type="button" data-card-gacha-exchange disabled={busy || g < CARD_CATALOG_COST} onClick={onExchange} className="mh-button min-h-[42px] rounded-xl bg-amber-500 px-1 text-[12px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40">カタログと交換({CARD_CATALOG_COST})</button>
-        <button type="button" data-card-gacha-catalog disabled={busy || catalogs < 1} onClick={onOpenCatalog} className="mh-button min-h-[42px] rounded-xl bg-sky-400 px-1 text-[12px] font-black text-slate-950 active:scale-[.98] disabled:opacity-40">📖 カタログを使う({catalogs}冊)</button>
+        <button type="button" data-card-gacha-exchange disabled={busy || g < CARD_CATALOG_COST} onClick={onExchange} className="mh-button min-h-[42px] rounded-xl bg-amber-500 px-1 text-[12px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40"><span className="inline-block whitespace-nowrap">カタログと交換</span><span className="inline-block whitespace-nowrap">({CARD_CATALOG_COST})</span></button>
+        <button type="button" data-card-gacha-catalog disabled={busy || catalogs < 1} onClick={onOpenCatalog} className="mh-button min-h-[42px] rounded-xl bg-sky-400 px-1 text-[12px] font-black text-slate-950 active:scale-[.98] disabled:opacity-40"><span className="inline-block whitespace-nowrap">📖 カタログを使う</span><span className="inline-block whitespace-nowrap">({catalogs}冊)</span></button>
       </div>
     </div>
   );
