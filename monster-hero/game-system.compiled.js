@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 209dee2ee5b7dd2e
+// source-sha256: 8819bec60684f3c2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114069,11 +114069,35 @@ const CardRankDetail = ({
     className: "mh-button mt-3 min-h-[44px] w-full rounded-xl text-[14px] font-black"
   }, "とじる")));
 };
+const cardRankFxGains = gain => {
+  let bonusPoint = 0;
+  for (let r = gain.from + 1; r <= gain.to; r++) if (r % 5 === 0) bonusPoint += r * 200;
+  bonusPoint = Math.min(bonusPoint, gain.points || 0);
+  const basePoint = Math.max(0, (gain.points || 0) - bonusPoint);
+  const frames = CARD_LEVEL_FRAMES.filter(f => f.at > gain.from && f.at <= gain.to).length;
+  return [...(basePoint ? [{
+    icon: '💰',
+    text: `ビートP ${basePoint.toLocaleString()}`
+  }] : []), ...(bonusPoint ? [{
+    icon: '💰',
+    text: `ビートP ${bonusPoint.toLocaleString()}`,
+    note: '5ランクごとのおまけ',
+    bonus: true
+  }] : []), ...(gain.tickets ? [{
+    icon: '🎟️',
+    text: `カードパック券 ${gain.tickets}枚`,
+    note: '5ランクごとのおまけ',
+    bonus: true
+  }] : []), ...(frames ? [{
+    icon: '🧠',
+    text: '戦術カードを置ける所が増えた'
+  }] : [])];
+};
 const CardRankResult = ({
   gain
 }) => {
   const up = !!(gain && gain.to > gain.from);
-  const [overlay, setOverlay] = useState(up);
+  const [fx, setFx] = useState(up);
   if (!gain || !(gain.add > 0)) return null;
   const award = {
     add: gain.add,
@@ -114083,73 +114107,17 @@ const CardRankResult = ({
     xp: gain.xp,
     gains: gain.gains || []
   };
-  const tier0 = playerRankTier(gain.from),
-    tier1 = playerRankTier(gain.to);
   return React.createElement(React.Fragment, null, React.createElement(PlayerRankGain, {
     kind: "card",
     award: award,
     next: `ランク${gain.to + 1}で ${cardRankRewardText(gain.to + 1)}`
-  }), up && overlay && React.createElement("div", {
-    "data-card-rank-up-overlay": true,
-    role: "dialog",
-    "aria-modal": "true",
-    "aria-label": "ランクアップ",
-    className: "fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4",
-    onClick: () => setOverlay(false)
-  }, React.createElement("div", {
-    className: "w-full max-w-[320px] rounded-2xl border-2 border-amber-200/80 bg-gradient-to-b from-violet-800 to-indigo-950 p-4 text-center text-white shadow-[0_0_30px_rgba(251,191,36,.45)]",
-    onClick: e => e.stopPropagation()
-  }, React.createElement("b", {
-    className: "block text-[22px] font-black tracking-[.12em] text-white",
-    style: {
-      WebkitTextStroke: '4px #1e1b4b',
-      paintOrder: 'stroke fill'
-    }
-  }, "RANK UP!"), React.createElement("small", {
-    className: "mt-1 block text-[12px] font-black text-slate-200"
-  }, "カードランク"), React.createElement("div", {
-    className: "mt-2 flex items-center justify-center gap-3"
-  }, React.createElement("span", {
-    className: "opacity-60"
-  }, React.createElement(PlayerRankBadge, {
+  }), up && fx && typeof PlayerRankUpFx === 'function' && React.createElement(PlayerRankUpFx, {
     kind: "card",
-    rank: gain.from,
-    size: "sm",
-    showName: false
-  })), React.createElement("span", {
-    "aria-hidden": "true",
-    className: "text-[22px] font-black text-amber-300"
-  }, "▶"), React.createElement("span", {
-    className: "origin-center scale-125"
-  }, React.createElement(PlayerRankBadge, {
-    kind: "card",
-    rank: gain.to,
-    size: "lg",
-    showName: false
-  }))), tier1.t !== tier0.t && React.createElement("p", {
-    "data-card-rank-up-tier": true,
-    className: "mt-3 text-[14px] font-black text-amber-100"
-  }, `${tier1.name}になりました!`), award.gains.length > 0 && React.createElement("div", {
-    className: "mt-3 rounded-xl bg-black/35 px-3 py-2 text-left"
-  }, React.createElement("small", {
-    className: "block text-[11px] font-black text-slate-300"
-  }, "もらった物"), React.createElement("ul", {
-    "data-card-rank-up-gains": true,
-    className: "mt-0.5 space-y-0.5 text-[13px] font-black"
-  }, award.gains.map((g, i) => React.createElement("li", {
-    key: i,
-    style: JA_WRAP_STYLE
-  }, React.createElement("span", {
-    "aria-hidden": "true"
-  }, g.icon, " "), g.text)))), React.createElement("button", {
-    type: "button",
-    "data-card-rank-up-ok": true,
-    onClick: () => {
-      Audio_.fgSe.tap();
-      setOverlay(false);
-    },
-    className: "mh-button mh-button-primary mt-3 min-h-[44px] w-full rounded-xl text-[15px] font-black"
-  }, "OK"))));
+    from: gain.from,
+    to: gain.to,
+    gains: cardRankFxGains(gain),
+    onClose: () => setFx(false)
+  }));
 };
 const CARD_REG_STYLES = Object.freeze([{
   id: 'attack',

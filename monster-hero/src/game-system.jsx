@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a46781b8ccdb1610
+// generated-sha256: ed1082e2db3972da
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67666,34 +67666,29 @@ const CardRankDetail = ({ xp = 0, onClose }) => {
     </div>
   );
 };
-// 対戦の結果: 経験値の札と、ランクが上がったときの知らせ(帯が変わったら「シルバーになりました!」)
+// 対戦の結果: 経験値の札と、ランクが上がったときの演出(43 の PlayerRankUpFx。ビートランクと同じ。帯が変わると自動で豪華になる)。
+//   一度に何ランク上がっても、上がった先のランクで1回だけ出し、もらった物をまとめて渡す。5ランクごとのおまけは bonus(桃色の光)
+const cardRankFxGains = (gain) => {
+  let bonusPoint = 0;
+  for (let r = gain.from + 1; r <= gain.to; r++) if (r % 5 === 0) bonusPoint += r * 200;
+  bonusPoint = Math.min(bonusPoint, gain.points || 0);
+  const basePoint = Math.max(0, (gain.points || 0) - bonusPoint);
+  const frames = CARD_LEVEL_FRAMES.filter((f) => f.at > gain.from && f.at <= gain.to).length;
+  return [
+    ...(basePoint ? [{ icon: '💰', text: `ビートP ${basePoint.toLocaleString()}` }] : []),
+    ...(bonusPoint ? [{ icon: '💰', text: `ビートP ${bonusPoint.toLocaleString()}`, note: '5ランクごとのおまけ', bonus: true }] : []),
+    ...(gain.tickets ? [{ icon: '🎟️', text: `カードパック券 ${gain.tickets}枚`, note: '5ランクごとのおまけ', bonus: true }] : []),
+    ...(frames ? [{ icon: '🧠', text: '戦術カードを置ける所が増えた' }] : []),
+  ];
+};
 const CardRankResult = ({ gain }) => {
   const up = !!(gain && gain.to > gain.from);
-  const [overlay, setOverlay] = useState(up);
+  const [fx, setFx] = useState(up);
   if (!gain || !(gain.add > 0)) return null;
   const award = { add: gain.add, parts: gain.parts || [], from: gain.from, to: gain.to, xp: gain.xp, gains: gain.gains || [] };
-  const tier0 = playerRankTier(gain.from), tier1 = playerRankTier(gain.to);
   return (<>
     <PlayerRankGain kind="card" award={award} next={`ランク${gain.to + 1}で ${cardRankRewardText(gain.to + 1)}`}/>
-    {up && overlay && (
-      <div data-card-rank-up-overlay role="dialog" aria-modal="true" aria-label="ランクアップ" className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4" onClick={() => setOverlay(false)}>
-        <div className="w-full max-w-[320px] rounded-2xl border-2 border-amber-200/80 bg-gradient-to-b from-violet-800 to-indigo-950 p-4 text-center text-white shadow-[0_0_30px_rgba(251,191,36,.45)]" onClick={(e) => e.stopPropagation()}>
-          <b className="block text-[22px] font-black tracking-[.12em] text-white" style={{ WebkitTextStroke: '4px #1e1b4b', paintOrder: 'stroke fill' }}>RANK UP!</b>
-          <small className="mt-1 block text-[12px] font-black text-slate-200">カードランク</small>
-          <div className="mt-2 flex items-center justify-center gap-3">
-            <span className="opacity-60"><PlayerRankBadge kind="card" rank={gain.from} size="sm" showName={false}/></span>
-            <span aria-hidden="true" className="text-[22px] font-black text-amber-300">▶</span>
-            <span className="origin-center scale-125"><PlayerRankBadge kind="card" rank={gain.to} size="lg" showName={false}/></span>
-          </div>
-          {tier1.t !== tier0.t && <p data-card-rank-up-tier className="mt-3 text-[14px] font-black text-amber-100">{`${tier1.name}になりました!`}</p>}
-          {award.gains.length > 0 && <div className="mt-3 rounded-xl bg-black/35 px-3 py-2 text-left">
-            <small className="block text-[11px] font-black text-slate-300">もらった物</small>
-            <ul data-card-rank-up-gains className="mt-0.5 space-y-0.5 text-[13px] font-black">{award.gains.map((g, i) => <li key={i} style={JA_WRAP_STYLE}><span aria-hidden="true">{g.icon} </span>{g.text}</li>)}</ul>
-          </div>}
-          <button type="button" data-card-rank-up-ok onClick={() => { Audio_.fgSe.tap(); setOverlay(false); }} className="mh-button mh-button-primary mt-3 min-h-[44px] w-full rounded-xl text-[15px] font-black">OK</button>
-        </div>
-      </div>
-    )}
+    {up && fx && typeof PlayerRankUpFx === 'function' && <PlayerRankUpFx kind="card" from={gain.from} to={gain.to} gains={cardRankFxGains(gain)} onClose={() => setFx(false)}/>}
   </>);
 };
 
