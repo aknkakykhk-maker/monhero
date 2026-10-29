@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c471562095cc3461
+// source-sha256: f8a306d96a06d9cc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -111583,7 +111583,7 @@ const cardShareNormalizeTactics = (v, deck = null) => {
     tilt[t.id] = n === -1 || n === 1 ? n : 0;
   });
   const inDeck = deck && Array.isArray(deck.cards) ? new Set(deck.cards) : null;
-  const aces = [...new Set((Array.isArray(r.aces) ? r.aces : []).filter(x => typeof x === 'string' && /^[0-9]{3}$/.test(x) && (!inDeck || inDeck.has(x))))].slice(0, CARD_SHARE_ACES_MAX);
+  const aces = [...new Set((Array.isArray(r.aces) ? r.aces : []).filter(x => typeof x === 'string' && /^[A-Z]?[0-9]{3}$/.test(x) && (!inDeck || inDeck.has(x))))].slice(0, CARD_SHARE_ACES_MAX);
   const name = typeof r.name === 'string' ? r.name.slice(0, 20) : '';
   const f = r.f && typeof r.f === 'object' && !Array.isArray(r.f) && typeof cardTacticPackFrames === 'function' ? cardTacticPackFrames(cardTacticUnpackFrames(r.f)) : null;
   return {
@@ -111740,6 +111740,25 @@ const cardShareFetchMine = async ownerId => {
   } catch (_) {
     return null;
   }
+};
+const cardShareBadReason = (db, deck, tactics) => {
+  const d = deck || {};
+  const mons = Array.isArray(d.monsters) ? d.monsters.slice(0, 3) : [];
+  const cards = Array.isArray(d.cards) ? d.cards.slice(0, 50) : [];
+  const packed = cardShareNormalizeTactics(tactics, d);
+  if (new TextEncoder().encode(JSON.stringify(packed)).length > 2000) return '戦術カードの中身が大きすぎます';
+  if (cards.length !== 50) return 'デッキが50枚ではありません';
+  const count = {};
+  cards.forEach(n => {
+    count[n] = (count[n] || 0) + 1;
+  });
+  const over = Object.keys(count).find(n => count[n] > 3);
+  if (over) return `「${(db && cardOf(db, over) || {}).name || over}」が4枚以上あります`;
+  const oldMons = mons.filter(n => !/^C-[0-9]{3}[A-Z]{0,2}$/.test(String(n)));
+  const oldCards = [...new Set(cards.filter(n => !/^[A-Z]?[0-9]{3}$/.test(String(n))))];
+  const names = [...oldMons.map(n => `${(db && cardMonsterOf(db, n) || {}).name || ''}(${n})`), ...oldCards.map(n => (db && cardOf(db, n) || {}).name || n)];
+  if (names.length) return `「${names.slice(0, 3).join('」「')}」${names.length > 3 ? 'など' : ''}の番号を、登録で受け付けていません`;
+  return 'サーバが受け付けませんでした';
 };
 const cardShareRegister = async ({
   ownerId,
@@ -112015,7 +112034,7 @@ const CardDeckShare = ({
     if (r === 'ok') {
       setMine(await cardShareFetchMine(selfId));
       setMsg('登録しました。ほかのブリーダーが、このデッキと戦えます');
-    } else setMsg(r === 'locked' ? 'この端末では登録を書きかえられません(登録した端末で操作してください)' : r === 'bad' ? 'このデッキは登録できませんでした' : r === 'nokey' ? 'この端末に保存できなかったため、登録できませんでした' : '通信できませんでした。電波のよい所で、もう一度お試しください');
+    } else setMsg(r === 'locked' ? 'この端末では登録を書きかえられません(登録した端末で操作してください)' : r === 'bad' ? `このデッキは登録できませんでした(${cardShareBadReason(db, picked, tactics)})` : r === 'nokey' ? 'この端末に保存できなかったため、登録できませんでした' : '通信できませんでした。電波のよい所で、もう一度お試しください');
     setBusy(false);
   };
   const unregister = async () => {
@@ -114276,7 +114295,10 @@ const CardDeckRegister = ({
         setMine(await cardShareFetchMine(selfId));
         setMsg('登録しました。ほかのブリーダーが、フリー対戦でこのデッキと戦えます');
         setStep('done');
-      } else setMsg(r === 'locked' ? 'この端末では登録を書きかえられません(登録した端末で操作してください)' : r === 'bad' ? 'このデッキは登録できませんでした' : r === 'nokey' ? 'この端末に保存できなかったため、登録できませんでした' : '通信できませんでした。もう一度お試しください');
+      } else setMsg(r === 'locked' ? 'この端末では登録を書きかえられません(登録した端末で操作してください)' : r === 'bad' ? `このデッキは登録できませんでした(${cardShareBadReason(db, deck, {
+        aces: acesNow,
+        f
+      })})` : r === 'nokey' ? 'この端末に保存できなかったため、登録できませんでした' : '通信できませんでした。もう一度お試しください');
     } finally {
       setBusy(false);
     }
