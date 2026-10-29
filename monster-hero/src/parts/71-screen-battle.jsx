@@ -1236,7 +1236,7 @@ function BattleScreen({
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, enemyDebuffs, battleUnitStatusOf, battleEnemyStatus, enemyStackCounts, debugStackMarks, tacticsSlotCountersAt, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
-  tacticsExInfo, activateTacticsEx, tacticsExCutin, hamCounterFx, skipHamCounterFx, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot, tacticsHate, tacticsHateOn, aiCopy, aiCopyHitting = false,
+  tacticsExInfo, activateTacticsEx, tacticsExCutin, hamCounterFx, skipHamCounterFx, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot, tacticsHate, tacticsHateOn, aiCopy, tacticsExEffectsAt, tacticsExEnemyEffects, aiCopyHitting = false,
   tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, kyubiOrihimeStackMarks, sweetStackView, bowStackView, fateWheelView, tacticsShields, enemyConfuseTurns, luckBanners,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
