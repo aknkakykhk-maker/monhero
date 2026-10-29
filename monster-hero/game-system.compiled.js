@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a66a3944b7db31bc
+// source-sha256: 47df65f5734f89ec
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -56676,7 +56676,8 @@ function BreederMarketScreen({
       color: SECTION_TABS[section].color
     }));
     const value = activeSectionTab(section);
-    if (!scroll || items.length < 6) return React.createElement(ScreenTabs, {
+    const tight = section === 'card';
+    if (!scroll || items.length < (tight ? 5 : 6)) return React.createElement(ScreenTabs, {
       value: value,
       onChange: key => selectSectionTab(section, key),
       items: items
@@ -56684,7 +56685,7 @@ function BreederMarketScreen({
     return React.createElement("div", {
       role: "tablist",
       "data-market-tabs-scroll": section,
-      className: "mb-2 flex shrink-0 gap-2 overflow-x-auto pb-0.5"
+      className: `mb-2 flex shrink-0 overflow-x-auto pb-0.5 ${tight ? 'gap-1.5' : 'gap-2'}`
     }, items.map(tab => {
       const on = tab.id === value;
       return React.createElement("button", {
@@ -56693,7 +56694,7 @@ function BreederMarketScreen({
         role: "tab",
         "aria-selected": on,
         onClick: () => selectSectionTab(section, tab.id),
-        className: `mh-tab relative min-h-[44px] min-w-[68px] shrink-0 rounded-xl px-2.5 text-[11px] font-black leading-tight active:scale-95 ${on ? 'text-white' : 'border border-white/10 bg-slate-900 text-slate-400'}`,
+        className: `mh-tab relative min-h-[44px] shrink-0 rounded-xl text-[11px] ${tight ? 'min-w-[56px] flex-auto whitespace-nowrap px-1.5' : 'min-w-[68px] px-2.5'} font-black leading-tight active:scale-95 ${on ? 'text-white' : 'border border-white/10 bg-slate-900 text-slate-400'}`,
         style: on ? {
           background: tab.color
         } : undefined
@@ -57044,7 +57045,7 @@ function BreederMarketScreen({
   })()))), marketSection === 'card' && cardShop && (() => {
     const tab = activeSectionTab('card');
     const cp = cardShop.point;
-    return React.createElement(React.Fragment, null, renderSectionTabs('card'), React.createElement("div", {
+    return React.createElement(React.Fragment, null, renderSectionTabs('card', true), React.createElement("div", {
       className: SCREEN_LIST_CLASS,
       "data-card-shop": true,
       "data-card-shop-tab": tab
