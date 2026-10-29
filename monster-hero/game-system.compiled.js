@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a94edbbe737cc19b
+// source-sha256: 161323380ba4ba11
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -17174,7 +17174,7 @@ const helpDataRows = id => {
         length: RHYTHM_WEEKLY_REWARD_RANKS
       }, (_, index) => {
         const reward = rhythmWeeklyRewardForRank(index + 1);
-        return [`${index + 1}位`, `${HERO_PROOF_SHARD_ITEM.emoji} ${HERO_PROOF_SHARD_ITEM.name}×${reward.count}` + ` ／ 💗 虹のプシュケー×${reward.psyche.toLocaleString()}` + ` ／ 💎 ダイヤ×${reward.gold.toLocaleString()}`];
+        return [`${index + 1}位`, `${HERO_PROOF_SHARD_ITEM.emoji} ${HERO_PROOF_SHARD_ITEM.name}×${reward.count}` + ` ／ 💗 虹のプシュケー×${reward.psyche.toLocaleString()}` + ` ／ 💎 ダイヤ×${reward.gold.toLocaleString()}` + ` ／ 🎵 ビートP×${reward.beatPoint.toLocaleString()}`];
       });
     case 'rhythmEventPlayBonus':
       return (typeof rhythmScoredDifficultyIds === 'function' ? rhythmScoredDifficultyIds() : RHYTHM_DEMO_DIFFICULTY_IDS).map(id => [RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name || id, rhythmEventPlayBonusPercentText(id)]);
@@ -32251,12 +32251,14 @@ const rhythmEventGiftRewards = prize => {
       amount: n
     });
   };
+  const beatPointOn = typeof rhythmWeeklyBeatPointActive === 'function' && rhythmWeeklyBeatPointActive(prize && prize.event);
   const addReward = reward => {
     if (!reward) return;
     const item = rhythmEventRewardItem(reward);
     if (item) add(GIFT_ITEM_REWARD_TYPE, item.id, reward.count);
     add('rainbowPsyche', null, reward.psyche);
     add('diamond', null, reward.gold);
+    if (beatPointOn) add('beatPoint', null, reward.beatPoint);
   };
   (Array.isArray(prize && prize.prizes) ? prize.prizes : []).forEach(entry => addReward(entry && entry.reward));
   const join = prize && prize.participation;
@@ -32265,6 +32267,7 @@ const rhythmEventGiftRewards = prize => {
     if (join.heroProof > 0 && typeof HERO_PROOF_ITEM !== 'undefined') add(GIFT_ITEM_REWARD_TYPE, HERO_PROOF_ITEM.id, join.heroProof);
     add('rainbowPsyche', null, join.psyche);
     add('diamond', null, join.gold);
+    if (beatPointOn) add('beatPoint', null, join.beatPoint);
   }
   return [...totals.values()];
 };
@@ -32275,6 +32278,7 @@ const rhythmEventParticipationText = reward => {
   if (reward.heroProof > 0) parts.push(`${HERO_PROOF_ITEM.emoji} ${HERO_PROOF_ITEM.name}×${reward.heroProof.toLocaleString()}`);
   if (reward.gold > 0) parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
   if (reward.psyche > 0) parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
+  if (reward.beatPoint > 0) parts.push(`🎵 ビートP×${reward.beatPoint.toLocaleString()}`);
   return parts.join(' ／ ');
 };
 const rhythmEventRewardText = reward => {
@@ -32284,6 +32288,7 @@ const rhythmEventRewardText = reward => {
   if (item && reward.count > 0) parts.push(`${item.emoji} ${item.name}×${reward.count}`);
   if (reward.psyche > 0) parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
   if (reward.gold > 0) parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
+  if (reward.beatPoint > 0) parts.push(`🎵 ビートP×${reward.beatPoint.toLocaleString()}`);
   return parts.join(' ／ ');
 };
 const RHYTHM_OPTION_TABS = Object.freeze([['live', '演奏'], ['display', '表示'], ['volume', '音'], ['system', '軽さ・演出']]);
@@ -95895,6 +95900,23 @@ const CardQuickRunDetail = ({
   }, "閉じる")));
 };
 const CARD_CPU_OPEN_KEY = 'mh_card_cpu_open_v1';
+const CARD_LAST_LEVEL_KEY = 'mh_card_last_level_v1';
+const CARD_START_LEVEL_KEY = 'mh_card_start_level_v1';
+const cardNormalizeStartLevel = v => typeof v === 'string' && (v === 'last' || CARD_LEVEL_ORDER.includes(v)) ? v : 'last';
+const cardStartLevelOf = (pref, last, isOpen) => {
+  const want = pref === 'last' ? typeof last === 'string' && CARD_LEVEL_ORDER.includes(last) ? last : 'easy' : pref;
+  if (isOpen(want)) return want;
+  const i = CARD_LEVEL_ORDER.indexOf(want);
+  const open = CARD_LEVEL_ORDER.filter(isOpen).sort((a, b) => Math.abs(CARD_LEVEL_ORDER.indexOf(a) - i) - Math.abs(CARD_LEVEL_ORDER.indexOf(b) - i) || CARD_LEVEL_ORDER.indexOf(a) - CARD_LEVEL_ORDER.indexOf(b));
+  return open[0] || 'easy';
+};
+const CARD_START_LEVEL_OPTIONS = Object.freeze([{
+  id: 'last',
+  label: '前に選んだもの'
+}, ...CARD_LEVEL_ORDER.map(lv => ({
+  id: lv,
+  label: null
+}))]);
 const CARD_CPU_OPEN_BEAT_MS = 5000;
 const CARD_CPU_OPEN_STALE_MS = 15000;
 const cardNormalizeCpuOpen = v => {
@@ -95964,6 +95986,20 @@ const CardBattleScreen = ({
     who: 'mua',
     level: 'easy'
   });
+  const [startLevel, setStartLevel] = useState('last');
+  const lastLevelRead = useRef(false);
+  useEffect(() => {
+    if (!save || lastLevelRead.current) return;
+    lastLevelRead.current = true;
+    Promise.all([storeGet(CARD_START_LEVEL_KEY, null), storeGet(CARD_LAST_LEVEL_KEY, null)]).then(([pref, last]) => {
+      const p = cardNormalizeStartLevel(pref);
+      setStartLevel(p);
+      setFoe(f => ({
+        ...f,
+        level: cardStartLevelOf(p, last, lv => cardLevelOpen(save.unlocked, lv) || debug)
+      }));
+    }).catch(() => {});
+  }, [save]);
   const [game, setGame] = useState(null);
   const [result, setResult] = useState(null);
   const [notice, setNotice] = useState('');
@@ -96932,6 +96968,7 @@ const CardBattleScreen = ({
             ...f,
             level: lv
           }));
+          void storeSet(CARD_LAST_LEVEL_KEY, lv);
         },
         className: `min-h-[52px] rounded-xl border-2 text-[11px] font-black ${foe.level === lv ? 'border-amber-300 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-slate-900 text-slate-200'} disabled:opacity-35`
       }, CARD_LEVEL_LABEL[lv], React.createElement("span", {
@@ -97478,6 +97515,34 @@ const CardBattleScreen = ({
       className: "mt-1 text-[10px] font-bold leading-snug text-amber-200",
       style: JA_WRAP_STYLE
     }, jaWrap('AUTO設定で、勇者モン・配置距離・難易度の3つを決めると使えます')));
+    const startLevelPanel = React.createElement("div", {
+      "data-card-setting": "startLevel",
+      className: "mt-2.5 border-t border-white/10 pt-2.5"
+    }, React.createElement("b", {
+      className: "block text-[12px] font-black text-slate-200"
+    }, "助手と対戦の最初の強さ"), React.createElement("p", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+      style: JA_WRAP_STYLE
+    }, cardJaWrap('相手えらびを開いたときに、はじめに選ばれている強さです。まだ開いていない強さのときは、開いている中でいちばん近い強さになります。')), React.createElement("div", {
+      className: "mt-2 grid grid-cols-3 gap-1.5"
+    }, CARD_START_LEVEL_OPTIONS.map(o => React.createElement("button", {
+      key: o.id,
+      type: "button",
+      "data-card-start-level": o.id,
+      "aria-pressed": startLevel === o.id,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        setStartLevel(o.id);
+        void storeSet(CARD_START_LEVEL_KEY, o.id);
+        void storeGet(CARD_LAST_LEVEL_KEY, null).then(last => setFoe(f => ({
+          ...f,
+          level: cardStartLevelOf(o.id, last, lv => cardLevelOpen(save.unlocked, lv) || debug)
+        }))).catch(() => {});
+      },
+      className: `flex min-h-[44px] items-center justify-center rounded-xl px-0.5 text-[11px] font-black leading-tight active:scale-95 ${startLevel === o.id ? 'border border-amber-300 bg-amber-500/30 text-amber-50' : 'border border-white/15 bg-slate-900/75 text-slate-200'}`
+    }, React.createElement("span", {
+      style: JA_LABEL_STYLE
+    }, o.label ? jaWrap(o.label) : CARD_LEVEL_LABEL[o.id])))));
     return React.createElement("div", {
       "data-mh-screen": true,
       "data-card-options": true,
@@ -97587,7 +97652,7 @@ const CardBattleScreen = ({
       }, o.label), React.createElement("small", {
         className: "mt-0.5 block text-center text-[9px] font-bold leading-tight opacity-80"
       }, o.note)))));
-    }), g.title === '自動' && quickAutoPanel)))));
+    }), g.title === '自動' && quickAutoPanel, g.title === '助手' && startLevelPanel)))));
   }
   if (view === 'ranking') {
     return React.createElement(CardRankingBoard, {
