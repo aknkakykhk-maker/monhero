@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2886a7c3da85a930
+// generated-sha256: 773560c1dfe2c4be
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -58387,7 +58387,8 @@ const CardFoeStyle = ({ db, who, level }) => {
 
 // ---- 詳しい画面(大きな絵・名前・種類・ガッツ・使える子・番号・文)。どこをタップしても閉じる ----
 // dexInfo … 図鑑から開いたときだけ { pack: '第2弾パック', have: 3 }。入っている弾と持っている枚数を出す(2026-10-29 社長・図鑑 案B)
-const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexInfo = null }) => {
+// nav … 図鑑から開いたときだけ { pos: '3 / 59', onPrev, onNext }。絵の左右の ◀ ▶ で となりのカードへ送る(端では押せない)
+const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexInfo = null, nav = null }) => {
   const dexLine = dexInfo ? (
     <div data-card-detail-dex className="mt-1.5 flex flex-wrap gap-1.5 text-[12px] font-bold">
       <span className="rounded-md bg-violet-900 px-2 py-0.5">{dexInfo.pack}</span>
@@ -58396,9 +58397,19 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
   ) : null;
   const c = cardOf(db, no);
   const m = c ? null : cardMonsterOf(db, no);
+  const navBtn = (dir, fn) => <button type="button" data-card-detail-nav={dir} aria-label={dir === 'prev' ? '前のカード' : '次のカード'} disabled={!fn} onClick={(e) => { e.stopPropagation(); if (fn) { Audio_.fgSe.tap(); fn(); } }} className="mh-button flex h-12 w-11 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-slate-800 text-[18px] font-black text-white active:scale-95 disabled:opacity-25">{dir === 'prev' ? '◀' : '▶'}</button>;
   return (
     <div data-card-detail onClick={onClose} className="fixed inset-0 flex flex-col items-center justify-center gap-3 overflow-y-auto px-4 py-6" style={{ zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.94)' }} role="dialog" aria-label="カードの詳しい画面">
-      <img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(78vw,300px)] rounded-xl shadow-2xl"/>
+      {nav ? (
+        <div data-card-detail-navrow className="flex w-full max-w-sm flex-col items-center gap-1">
+          <div className="flex w-full items-center justify-center gap-2">
+            {navBtn('prev', nav.onPrev)}
+            <img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(62vw,280px)] min-w-0 rounded-xl shadow-2xl landscape:h-[32vh] landscape:w-auto"/>
+            {navBtn('next', nav.onNext)}
+          </div>
+          <span data-card-detail-pos className="text-[12px] font-bold text-slate-400">{nav.pos}</span>
+        </div>
+      ) : <img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(78vw,300px)] rounded-xl shadow-2xl"/>}
       {c && (
         <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100">
           <div className="text-lg font-black">{c.name}</div>
@@ -61824,6 +61835,7 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
   const col = collection || {};
   const full = decks.decks.length >= CARD_DECK_MAX;
   const btn = 'mh-button min-h-[40px] rounded-xl text-[12px] font-black active:scale-[.98] disabled:opacity-40';
+  const newDeck = () => { Audio_.fgSe.tap(); onEdit({ id: cardNewDeckId(decks.decks, Date.now()), name: `デッキ${decks.decks.length + 1}`, monsters: [], cards: [] }); };
   return (
     <div data-mh-screen data-card-deck-list className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="デッキ編成" accent="text-amber-200" onBack={onBack}/>
@@ -61843,7 +61855,9 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
                 </div>
               </div>
               <div className="mt-2 grid grid-cols-4 gap-1">
-                <button type="button" data-card-deck-use={d.id} disabled={on || !ready} className={`${btn} ${on ? 'bg-amber-300 text-slate-950' : 'border border-amber-300/50 bg-amber-900/40 text-amber-100'}`} onClick={() => { Audio_.fgSe.tap(); onActive(d.id); }}>{on ? '使用中' : '使う'}</button>
+                {/* 使っているデッキは押せないボタンに見えたので、ボタンではなく札にする(2026-10-29 社長) */}
+                {on ? <span data-card-deck-using={d.id} className="flex min-h-[40px] items-center justify-center rounded-xl bg-amber-300/15 text-[12px] font-black text-amber-200 ring-1 ring-inset ring-amber-300/60">★ 使用中</span>
+                  : <button type="button" data-card-deck-use={d.id} disabled={!ready} className={`${btn} border border-amber-300/50 bg-amber-900/40 text-amber-100`} onClick={() => { Audio_.fgSe.tap(); onActive(d.id); }}>使う</button>}
                 <button type="button" data-card-deck-open={d.id} className={`${btn} mh-button-primary`} onClick={() => { Audio_.fgSe.tap(); onEdit(d); }}>組む</button>
                 <button type="button" data-card-deck-copy={d.id} disabled={full} className={`${btn} border border-white/20 bg-slate-800`} onClick={() => { Audio_.fgSe.tap(); onPut({ ...d, id: cardNewDeckId(decks.decks, Date.now()), name: `${d.name}のコピー`.slice(0, 20), monsters: d.monsters.slice(), cards: d.cards.slice() }); }}>コピー</button>
                 <button type="button" data-card-deck-del={d.id} disabled={decks.decks.length <= 1} className={`${btn} border border-rose-300/40 bg-rose-950/50 text-rose-100`} onClick={() => setConfirmDel(d)}>消す</button>
@@ -61851,9 +61865,15 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
             </div>
           );
         })}
+        {/* 空き枠(あと何個作れるか)。デッキが1つだと真ん中が大きく空いていた(2026-10-29 社長)。押すと新しいデッキを作る */}
+        {Array.from({ length: Math.max(0, CARD_DECK_MAX - decks.decks.length) }, (_, i) => (
+          <button key={`slot${i}`} type="button" data-card-deck-slot={i} onClick={newDeck} className="mh-button flex min-h-[64px] w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-white/15 text-[13px] font-black text-slate-400 active:scale-[.99]">
+            <span className="text-[18px]">＋</span>あいている枠({decks.decks.length + i + 1}つ目)
+          </button>
+        ))}
       </div>
       <div className={SCREEN_FOOTER_CLASS}>
-        <button type="button" data-card-deck-new disabled={full} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40" onClick={() => { Audio_.fgSe.tap(); onEdit({ id: cardNewDeckId(decks.decks, Date.now()), name: `デッキ${decks.decks.length + 1}`, monsters: [], cards: [] }); }}>{full ? `デッキは${CARD_DECK_MAX}つまでです` : '新しいデッキを作る'}</button>
+        <button type="button" data-card-deck-new disabled={full} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40" onClick={newDeck}>{full ? `デッキは${CARD_DECK_MAX}つまでです` : '新しいデッキを作る'}</button>
       </div>
       {confirmDel && <ConfirmSheet title={`「${confirmDel.name}」を消しますか？`} message="デッキだけを消します(カードは消えません)" confirmLabel="消す" danger onCancel={() => setConfirmDel(null)} onConfirm={() => { const id = confirmDel.id; setConfirmDel(null); onRemove(id); }}/>}
     </div>
@@ -61923,6 +61943,18 @@ const CardDex = ({ db, collection, onBack }) => {
   const list = curTab.list;
   const shown = list.filter((no) => (show === 'have' ? col[no] > 0 : show === 'miss' ? !(col[no] > 0) : true));
   const haveIn = (arr) => arr.filter((no) => col[no] > 0).length;
+  // 弾ごとの見出しでまとめる(血統別・種類別)。一覧の並びと、詳しい画面の ◀ ▶ の送る順を同じにする
+  const dexKeyOf = (no) => packMap[no] || '';
+  const dexKeyOrder = (k) => (k === 'hybrid' ? 900 : k ? Number(k) : 999);
+  const dexKeys = mode === 'pack' ? [''] : [...new Set(shown.map(dexKeyOf))].sort((a, b) => dexKeyOrder(a) - dexKeyOrder(b));
+  const navOrder = mode === 'pack' ? shown : dexKeys.flatMap((k) => shown.filter((no) => dexKeyOf(no) === k));
+  const navAt = detail ? navOrder.indexOf(detail) : -1;
+  // 詳しい画面で となりのカードへ送る(2026-10-29 社長「◀ ▶ を足して」)。いまの見かた・タブ・全部/持っている/まだ の並びで送る
+  const detailNav = navAt >= 0 && navOrder.length > 1 ? {
+    pos: `${navAt + 1} / ${navOrder.length}`,
+    onPrev: navAt > 0 ? () => setDetail(navOrder[navAt - 1]) : null,
+    onNext: navAt < navOrder.length - 1 ? () => setDetail(navOrder[navAt + 1]) : null,
+  } : null;
   const chip = (on) => `shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
   const unit = curTab.label || CARD_DEX_UNIT[mode];   // 選んでいるタブの名前(「第1弾 1/59」)。2026-10-26 カゲあつくんの通しの点検
   // 選んでいる札を見える所へ(見かたを替えたとき、前の見かたの横の位置が残って選んだ札が隠れていた)
@@ -61961,12 +61993,9 @@ const CardDex = ({ db, collection, onBack }) => {
           <div className="space-y-2">
             {/* 血統別・種類別は、弾ごとの見出し(「第2弾パック 8/16」)でまとめる。パック別は弾がひとつなので見出しを出さない(2026-10-29 社長・案B) */}
             {(() => {
-              const keyOf = (no) => packMap[no] || '';
-              const order = (k) => (k === 'hybrid' ? 900 : k ? Number(k) : 999);
-              const keys = mode === 'pack' ? [''] : [...new Set(shown.map(keyOf))].sort((a, b) => order(a) - order(b));
-              return keys.map((k) => {
-                const part = mode === 'pack' ? shown : shown.filter((no) => keyOf(no) === k);
-                const inTab = mode === 'pack' ? list : list.filter((no) => keyOf(no) === k);
+              return dexKeys.map((k) => {
+                const part = mode === 'pack' ? shown : shown.filter((no) => dexKeyOf(no) === k);
+                const inTab = mode === 'pack' ? list : list.filter((no) => dexKeyOf(no) === k);
                 return (
                   <section key={k || 'all'} data-card-dex-group={k || undefined}>
                     {mode !== 'pack' && <div data-card-dex-head={k} className={`mb-1 flex items-center rounded-lg px-2 py-0.5 text-[12px] font-black text-white ${CARD_DEX_PACK_TONE[k] || 'bg-slate-600'}`}>{cardDexPackLabel(k)}<span className="ml-auto text-[11px]">{haveIn(inTab)}/{inTab.length}</span></div>}
@@ -61996,7 +62025,7 @@ const CardDex = ({ db, collection, onBack }) => {
           </div>
         ) : <ScreenEmpty emoji="🃏" lines={[show === 'have' ? `${unit}のカードはまだ持っていません` : `${unit}は全部集まっています`]}/>}
       </div>
-      {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)} dexInfo={{ pack: cardDexPackLabel(packMap[detail]), have: col[detail] || 0 }}/>}
+      {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)} dexInfo={{ pack: cardDexPackLabel(packMap[detail]), have: col[detail] || 0 }} nav={detailNav}/>}
     </div>
   );
 };

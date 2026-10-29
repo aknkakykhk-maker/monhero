@@ -529,7 +529,8 @@ const CardFoeStyle = ({ db, who, level }) => {
 
 // ---- 詳しい画面(大きな絵・名前・種類・ガッツ・使える子・番号・文)。どこをタップしても閉じる ----
 // dexInfo … 図鑑から開いたときだけ { pack: '第2弾パック', have: 3 }。入っている弾と持っている枚数を出す(2026-10-29 社長・図鑑 案B)
-const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexInfo = null }) => {
+// nav … 図鑑から開いたときだけ { pos: '3 / 59', onPrev, onNext }。絵の左右の ◀ ▶ で となりのカードへ送る(端では押せない)
+const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexInfo = null, nav = null }) => {
   const dexLine = dexInfo ? (
     <div data-card-detail-dex className="mt-1.5 flex flex-wrap gap-1.5 text-[12px] font-bold">
       <span className="rounded-md bg-violet-900 px-2 py-0.5">{dexInfo.pack}</span>
@@ -538,9 +539,19 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
   ) : null;
   const c = cardOf(db, no);
   const m = c ? null : cardMonsterOf(db, no);
+  const navBtn = (dir, fn) => <button type="button" data-card-detail-nav={dir} aria-label={dir === 'prev' ? '前のカード' : '次のカード'} disabled={!fn} onClick={(e) => { e.stopPropagation(); if (fn) { Audio_.fgSe.tap(); fn(); } }} className="mh-button flex h-12 w-11 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-slate-800 text-[18px] font-black text-white active:scale-95 disabled:opacity-25">{dir === 'prev' ? '◀' : '▶'}</button>;
   return (
     <div data-card-detail onClick={onClose} className="fixed inset-0 flex flex-col items-center justify-center gap-3 overflow-y-auto px-4 py-6" style={{ zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.94)' }} role="dialog" aria-label="カードの詳しい画面">
-      <img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(78vw,300px)] rounded-xl shadow-2xl"/>
+      {nav ? (
+        <div data-card-detail-navrow className="flex w-full max-w-sm flex-col items-center gap-1">
+          <div className="flex w-full items-center justify-center gap-2">
+            {navBtn('prev', nav.onPrev)}
+            <img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(62vw,280px)] min-w-0 rounded-xl shadow-2xl landscape:h-[32vh] landscape:w-auto"/>
+            {navBtn('next', nav.onNext)}
+          </div>
+          <span data-card-detail-pos className="text-[12px] font-bold text-slate-400">{nav.pos}</span>
+        </div>
+      ) : <img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(78vw,300px)] rounded-xl shadow-2xl"/>}
       {c && (
         <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100">
           <div className="text-lg font-black">{c.name}</div>
