@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ed759b5e502cd2fa
+// generated-sha256: 9c4ee8ee28b23a5c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -53919,7 +53919,8 @@ const cardAiPolicy = (habitId, levelId, opts = {}) => {
   const out = { habit, level: { ...level, sloppy: Math.max(0, Math.min(0.9, (level.sloppy || 0) * tune + add)) }, playerRole: !!(opts && opts.playerRole) };
   // 助手と対戦の EXPERT・MASTER は、戦術カードの基本カードを2枚・3枚持つ(82-card-tactics-core の CARD_AI_TACTIC_BASE)。プレイヤー役は持たない
   const gambit = !out.playerRole && !(opts && opts.noTactics) && typeof cardAiTacticGambit === 'function' ? cardAiTacticGambit(habitId, levelId) : null;
-  return gambit ? { ...out, gambit, gambitKeepMain: true } : out;
+  const when = gambit && typeof CARD_AI_TACTIC_WHEN !== 'undefined' ? CARD_AI_TACTIC_WHEN[habitId] || null : null;
+  return gambit ? { ...out, gambit, gambitKeepMain: true, gambitWhen: when } : out;
 };
 
 // その場で使うくせの値。ふつうは policy.habit のまま。flex(あつ)の子だけ、自分(p)から見た場で型を1つ選び、その向きを 1.6 にする(2026-10-29 社長)
@@ -55528,8 +55529,10 @@ const cardTacticPresetOf = (card) => {
   return {};
 };
 // mainHabit … 助手の EXPERT・MASTER(cardAiPolicy の gambitKeepMain): メインの型は今のくせ(強さごとの調整ずみ)をそのまま使い、サブだけを足す
-const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null) => {
-  const list = (Array.isArray(base) ? base : []).map((id, i) => ({ c: cardTacticOf(id), w: i === 0 ? 1 : CARD_TACTIC_SUB_W, main: i === 0 })).filter((x) => x.c && x.c.cat === 'base');
+//   when … 助手の EXPERT・MASTER: サブごとの「効く場面」(CARD_AI_TACTIC_WHEN の名前)。その場面では、サブを3分の1でなく丸ごと効かせる
+const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null, when = null) => {
+  const subW = (i) => (st && Array.isArray(when) && typeof when[i] === 'string' && typeof cardAiTacticWhenHit === 'function' && cardAiTacticWhenHit(when[i], st, p) ? 1 : CARD_TACTIC_SUB_W);
+  const list = (Array.isArray(base) ? base : []).map((id, i) => ({ c: cardTacticOf(id), w: i === 0 ? 1 : subW(i), main: i === 0 })).filter((x) => x.c && x.c.cat === 'base');
   if (!list.length) return null;
   const h = Object.fromEntries(CARD_TACTIC_DIMS.map((d) => [d, mainHabit && Number.isFinite(mainHabit[d]) ? mainHabit[d] : 1]));
   if (mainHabit && mainHabit.flex) h.flex = true;
@@ -55839,7 +55842,7 @@ const cardTacticDecide = (db, st, policy) => {
   if (!phase) return null;
   if (policy.gambitRandom && cardTacticSmartLevel(frames) === 'random') return { act: cardTacticRandomAct(db, st, policy) };
   const p = phase === 'guard' ? st.pending.defender : st.active;
-  const habit = cardTacticHabitOf(frames.base, st, p, policy.gambitKeepMain ? policy.habit : null);
+  const habit = cardTacticHabitOf(frames.base, st, p, policy.gambitKeepMain ? policy.habit : null, policy.gambitWhen || null);
   const knobs = cardTacticKnobsOf(frames.base, st, p, !!policy.gambitKeepMain);
   const pol = habit ? { ...policy, habit } : policy;
   let scored = null;
@@ -55891,11 +55894,48 @@ const CARD_AI_TACTIC_BASE = Object.freeze({
   sorashido: ['tMill', 'tDisrupt', 'tGuard'],
 });
 const CARD_AI_TACTIC_COUNT = Object.freeze({ expert: 2, master: 3 });
+// 2枚目・3枚目が丸ごと効く場面(2026-10-29 社長 案B「型が混ざったことが、遊ぶ人に分かる程度に」)。ほかの場面では3分の1
+const CARD_AI_TACTIC_WHEN = Object.freeze({
+  mua: [null, 'foeLow', 'gutsFull'],         // 弱った子がいれば仕留め・ガッツが多ければ大技
+  momosuke: [null, 'lowLife', 'ahead'],      // 押されたら崩しながら守る・勝っていたら慎重に
+  kiki: [null, 'gutsFull', null],            // ガッツが多ければ大技(堅実型は3分の1のまま。押されたときに丸ごと効かせると MASTER 42→39%)
+  kyuko: [null, 'behind', 'foeLow'],         // 負けていたら慎重に・弱った子がいれば仕留め
+  dra: [null, 'lowLife', 'foeDeckLow'],      // 押されたら堅く・相手の山札が減ったら持久戦
+  atsu: [null, 'foeFull', 'lowLife'],        // 相手が3体そろっていれば全体・押されたら堅く
+  sorashido: [null, 'foeHandFull', 'lowLife'], // 相手の手札が多ければ崩す・押されたら守る
+});
+const cardAiTacticWhenHit = (name, st, p) => {
+  const me = st.players[p], op = st.players[cardOther(p)];
+  const alive = (pl) => pl.mons.filter((m) => !m.ko);
+  const life = (pl) => alive(pl).reduce((a, m) => a + Math.max(0, m.life), 0), max = (pl) => pl.mons.reduce((a, m) => a + m.max, 0);
+  const kos = (pl) => pl.mons.filter((m) => m.ko).length;
+  if (name === 'foeLow') return alive(op).some((m) => m.life * 10 <= m.max * 3);
+  if (name === 'gutsFull') return me.guts.length >= 5;
+  if (name === 'lowLife') return life(me) * 2 <= max(me);
+  if (name === 'ahead') return kos(op) > kos(me);
+  if (name === 'behind') return kos(me) > kos(op);
+  if (name === 'foeDeckLow') return op.deck.length <= 15;
+  if (name === 'foeFull') return alive(op).length >= 3;
+  if (name === 'foeHandFull') return op.hand.length >= 4;
+  return false;
+};
+// 2枚目・3枚目の型を、はっきり見える手にする行(3体の枠どれにも入れる。EXPERT は2枚目の行・MASTER は3枚目の行も)。
+//   行は上から見て、当たったら(その手が出せれば)その手を出す。出せなければ、ふだんの打ち方
+const CARD_AI_TACTIC_ROWS = Object.freeze({
+  mua: [[{ c: 'myGuts.5', a: 'cost.大技(4以上)' }], [{ c: 'foeAlive.1', a: 'cost.大技(4以上)' }]],
+  momosuke: [[{ c: 'foeHandGe.4', a: 'disrupt.手札を捨てさせる' }], [{ c: 'incomingKo', a: 'guard' }]],
+  kiki: [[{ c: 'myGuts.7', a: 'cost.大技(4以上)' }], [{ c: 'incomingKo', a: 'guard' }]],
+  kyuko: [[{ c: 'koDiff.負け', a: 'guard' }], [{ c: 'ko', a: 'atk' }]],
+  dra: [[{ c: 'incoming.3', a: 'guard' }], [{ c: 'foeDeck.5', a: 'disrupt.山札を削る' }]],
+  atsu: [[{ c: 'foeAlive.3', a: 'reach.全体攻撃' }], [{ c: 'myLife.50', a: 'guard' }]],
+  sorashido: [[{ c: 'foeDeck.20', a: 'disrupt.山札を削る' }], [{ c: 'incoming.5', a: 'guard' }]],
+});
 const cardAiTacticGambit = (who, levelId) => {
   const n = CARD_AI_TACTIC_COUNT[levelId];
   const list = CARD_AI_TACTIC_BASE[who];
   if (!n || !list) return null;
-  return { base: [0, 1, 2].map((i) => (i < n ? list[i] || null : null)), breeder: [], mons: [[], [], []] };
+  const rows = (CARD_AI_TACTIC_ROWS[who] || []).slice(0, n - 1).flat().map((r) => ({ ...r, on: true }));
+  return { base: [0, 1, 2].map((i) => (i < n ? list[i] || null : null)), breeder: [], mons: [rows, rows, rows] };
 };
 
 // ---- part: 83-card-battle-lines.jsx ----
