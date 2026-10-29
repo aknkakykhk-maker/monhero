@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 31b2edb6003cb1e1
+// source-sha256: cb684ea13fc2d5d5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -89011,7 +89011,7 @@ const cardAiPolicy = (habitId, levelId, opts = {}) => {
   const blend = (CARD_AI_HABIT_BLEND[levelId] || {})[habitId];
   const habit = blend === undefined ? base : Object.fromEntries(Object.entries(base).map(([k, v]) => [k, typeof v === 'number' ? 1 + (v - 1) * blend : v]));
   const add = ((CARD_AI_PLAY_TUNE[habitId] || {})[levelId] || 0) + (opts && opts.sameBlood ? (CARD_AI_SAME_BLOOD_PLAY[habitId] || {})[levelId] || 0 : 0);
-  return {
+  const out = {
     habit,
     level: {
       ...level,
@@ -89019,6 +89019,12 @@ const cardAiPolicy = (habitId, levelId, opts = {}) => {
     },
     playerRole: !!(opts && opts.playerRole)
   };
+  const gambit = !out.playerRole && !(opts && opts.noTactics) && typeof cardAiTacticGambit === 'function' ? cardAiTacticGambit(habitId, levelId) : null;
+  return gambit ? {
+    ...out,
+    gambit,
+    gambitKeepMain: true
+  } : out;
 };
 const CARD_AI_FLEX_HIGH = 1.6;
 const cardAiFlexMode = (db, st, p) => {
@@ -92004,17 +92010,22 @@ const cardTacticPresetOf = card => {
   };
   return {};
 };
-const cardTacticHabitOf = (base, st = null, p = 0) => {
+const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null) => {
   const list = (Array.isArray(base) ? base : []).map((id, i) => ({
     c: cardTacticOf(id),
-    w: i === 0 ? 1 : CARD_TACTIC_SUB_W
+    w: i === 0 ? 1 : CARD_TACTIC_SUB_W,
+    main: i === 0
   })).filter(x => x.c && x.c.cat === 'base');
   if (!list.length) return null;
-  const h = Object.fromEntries(CARD_TACTIC_DIMS.map(d => [d, 1]));
+  const h = Object.fromEntries(CARD_TACTIC_DIMS.map(d => [d, mainHabit && Number.isFinite(mainHabit[d]) ? mainHabit[d] : 1]));
+  if (mainHabit && mainHabit.flex) h.flex = true;
+  if (mainHabit && mainHabit.mill) h.mill = mainHabit.mill;
   list.forEach(({
     c,
-    w
+    w,
+    main
   }) => {
+    if (mainHabit && main) return;
     const pre = cardTacticPresetOf(c);
     CARD_TACTIC_DIMS.forEach(d => {
       if (Number.isFinite(pre[d])) h[d] *= 1 + (pre[d] - 1) * w;
@@ -92028,7 +92039,7 @@ const cardTacticHabitOf = (base, st = null, p = 0) => {
   const some = g => list.some(x => x.c.g === g && (x.w === 1 || turn % 3 === 0));
   if (some('tFlex')) h.flex = true;
   const mill = list.filter(x => x.c.g === 'tMill').reduce((a, x) => a + x.w, 0);
-  if (mill) h.mill = Math.min(1, mill);
+  if (mill) h.mill = Math.min(1, Math.max(h.mill || 0, mill));
   const back = list.find(x => x.c.g === 'tComeback');
   if (back && st) {
     const me = st.players[p],
@@ -92049,12 +92060,12 @@ const cardTacticHabitOf = (base, st = null, p = 0) => {
   }
   return h;
 };
-const cardTacticKnobsOf = (base, st = null, p = 0) => {
+const cardTacticKnobsOf = (base, st = null, p = 0, skipMain = false) => {
   const turn = st ? cardTacticOwnTurn(st, p) : 0;
   const out = {};
   (Array.isArray(base) ? base : []).forEach((id, i) => {
     const c = cardTacticOf(id);
-    if (!c || c.cat !== 'base' || i > 0 && turn % 3 !== 0) return;
+    if (!c || c.cat !== 'base' || i > 0 && turn % 3 !== 0 || i === 0 && skipMain) return;
     const g = CARD_TACTIC_GROUPS.find(x => x.id === c.g) || {};
     Object.assign(out, g.knob || {});
   });
@@ -92547,8 +92558,8 @@ const cardTacticDecide = (db, st, policy) => {
     act: cardTacticRandomAct(db, st, policy)
   };
   const p = phase === 'guard' ? st.pending.defender : st.active;
-  const habit = cardTacticHabitOf(frames.base, st, p);
-  const knobs = cardTacticKnobsOf(frames.base, st, p);
+  const habit = cardTacticHabitOf(frames.base, st, p, policy.gambitKeepMain ? policy.habit : null);
+  const knobs = cardTacticKnobsOf(frames.base, st, p, !!policy.gambitKeepMain);
   const pol = habit ? {
     ...policy,
     habit
@@ -92654,6 +92665,29 @@ const cardTacticDecide = (db, st, policy) => {
   return habit ? {
     policy: pol
   } : null;
+};
+const CARD_AI_TACTIC_BASE = Object.freeze({
+  mua: ['tAttack', 'tFinish', 'tBig'],
+  momosuke: ['tDisrupt', 'tJam', 'tCalm'],
+  kiki: ['tSave', 'tBig', 'tSteady'],
+  kyuko: ['tBalance', 'tCalm', 'tFinish'],
+  dra: ['tGuard', 'tSteady', 'tMill'],
+  atsu: ['tFlex', 'tArea', 'tSteady'],
+  sorashido: ['tMill', 'tDisrupt', 'tGuard']
+});
+const CARD_AI_TACTIC_COUNT = Object.freeze({
+  expert: 2,
+  master: 3
+});
+const cardAiTacticGambit = (who, levelId) => {
+  const n = CARD_AI_TACTIC_COUNT[levelId];
+  const list = CARD_AI_TACTIC_BASE[who];
+  if (!n || !list) return null;
+  return {
+    base: [0, 1, 2].map(i => i < n ? list[i] || null : null),
+    breeder: [],
+    mons: [[], [], []]
+  };
 };
 const CARD_LINE_SCENES = Object.freeze(['challenge', 'start', 'big', 'bigHit', 'guardMine', 'guardTheirs', 'myKo', 'theirKo', 'lastMine', 'lastTheirs', 'deckMine', 'deckTheirs', 'win', 'lose']);
 const CARD_LINE_FACE = Object.freeze({
@@ -96683,7 +96717,9 @@ const CardBattleBoard = ({
     if (cf.kind === 'end' && (st.phase !== 'guts' || cardDeciderOf(st) !== CARD_ME || st.pending)) return;
     step(cf.act);
   };
-  const gutsAdvisor = useMemo(() => cardAiPolicy('kyuko', 'master'), []);
+  const gutsAdvisor = useMemo(() => cardAiPolicy('kyuko', 'master', {
+    noTactics: true
+  }), []);
   const gutsPickKey = settings.gutsPick === 'ON' && mode === 'guts' && myTurn && !tutorial && !game.demo ? `${st.turn}` : '';
   useEffect(() => {
     if (!gutsPickKey) return;
@@ -109999,7 +110035,10 @@ const cardSharePolicy = (tactics, levelId, opts = {}) => {
   const t = cardShareNormalizeTactics(tactics);
   if (t.f) {
     const frames = cardTacticUnpackFrames(t.f);
-    const base = cardAiPolicy(t.habit, cardShareFightLevel(t), opts);
+    const base = cardAiPolicy(t.habit, cardShareFightLevel(t), {
+      ...opts,
+      noTactics: true
+    });
     return {
       ...base,
       gambit: frames,
@@ -110007,7 +110046,10 @@ const cardSharePolicy = (tactics, levelId, opts = {}) => {
       aces: t.aces.slice()
     };
   }
-  const base = cardAiPolicy(t.habit, levelId, opts);
+  const base = cardAiPolicy(t.habit, levelId, {
+    ...opts,
+    noTactics: true
+  });
   const habit = {
     ...base.habit
   };

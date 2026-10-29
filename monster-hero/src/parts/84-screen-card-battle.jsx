@@ -1351,7 +1351,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     step(cf.act);
   };
   // ガッツにするカードのおすすめ(オプション): 自分のガッツの番になったら、思考(いちばん強い段・迷いなし)が選ぶカードを先に選んでおく。選び直せる
-  const gutsAdvisor = useMemo(() => cardAiPolicy('kyuko', 'master'), []);
+  const gutsAdvisor = useMemo(() => cardAiPolicy('kyuko', 'master', { noTactics: true }), []);
   const gutsPickKey = settings.gutsPick === 'ON' && mode === 'guts' && myTurn && !tutorial && !game.demo ? `${st.turn}` : '';
   useEffect(() => {
     if (!gutsPickKey) return;
