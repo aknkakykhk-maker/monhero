@@ -1149,8 +1149,8 @@ const buildSoulTraitRespec = (masu, ownedItems) => {
   return { ok:true, refundedPoints, refundedCrystals, nextMasu:{ ...rest, soulTraitLevels:{} }, ownedItems:nextItems };
 };
 const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
-  extreme:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3 }),
-  speciesChallenge:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3 }),
+  extreme:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4 }),
+  speciesChallenge:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4 }),
   pro:Object.freeze({ Master:1, GrandMaster:2, Hell:3, Legend:4 }),
 });
 const heroProofClearReward = ({

@@ -47,7 +47,7 @@ check('敵の行動中に、古い enemy.hp を読んでいる箇所が無い',
 // RAGNAROKの不死(死者の再起)で起き上がったときは、この値へ復活後のライフを入れ直すので
 // const ではなく let。「1か所で出して使い回す」という肝心なところは変わっていない
 check('このターンに削ったぶんを1か所で出して使い回す(撃破判定と敵の行動でずれない)',
-  has('let enemyHpAfterOurAttacks=Math.max(0,(enemy?.hp??0)-totalDmg);')
+  has('let enemyHpAfterOurAttacks=Math.max(0,(enemy?.hp??0)-(totalDmg-shellAbsorbedTotal));') // 殻(ETERNAL)が受けたぶんはライフへ通らない
     && has('resolveEnemyDefeat({remainingHp:enemyHpAfterOurAttacks,damage:totalDmg,distDamage:attackDistDamage})')
     && has('executedIntent,hpBeforeEnemyAttack,enemyHpAfterOurAttacks);'));
 // 起き上がったあとも同じ値を使い回す(0のままだと、反射でHP0の敵をもう一度倒すことになる)
@@ -61,8 +61,9 @@ check('緊急回復から敵が動くときは、AIコピーが当てたあと�
 // こちらの攻撃は関数型更新のまま(絶対値で書き戻すと同じ不具合が起きる)。
 // ★敵がいない瞬間に prev を掘ると画面が落ちるので prev? の番をしている。
 //   数だけでなく「絶対値で書き戻していないか」も見る
+// 殻(ETERNAL)を先に削るため、ライフを減らすのは enemyAfterHit を通す関数型更新
 check('こちらの攻撃は関数型更新でライフを減らす',
-  (source.match(/setEnemy\(prev=>prev\?\{\.\.\.prev,hp:Math\.max\(0,prev\.hp-/g) || []).length === 2
+  (source.match(/setEnemy\(prev=>enemyAfterHit\(prev,/g) || []).length === 2
     && !/setEnemy\(\{\.\.\.enemy,hp:/.test(source));
 
 // ---- 実際に動かして、敵が回復しないことを確かめる ----

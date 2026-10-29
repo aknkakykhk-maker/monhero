@@ -53,6 +53,9 @@ const makeIncoming = (deps) => new Function('d', `
   ${lifeSourceSrc}
   ${trickStartSrc}
   const trickStartStacksAt = d.trickStartStacksAt || (() => null);
+  // 貫き(ETERNAL)は本体の式をそのまま持ち込む。既存モードの検査では率0(丈夫さで減らした値のまま)
+  const applyEnemyPierce = ${slice('const applyEnemyPierce = ', '\n')};
+  const enemyPierceRate = d.enemyPierceRate ?? 0;
   // 運命の輪(スプーキー)の弱体は既定で無し(敵の与ダメそのまま)
   const fateWheelRef = d.fateWheelRef || { current: null };
   // 新モードの1体ぶんは tacticsBattleUnit で読む(EXスキルの上乗せはここでは無いものとして盤面の値を返す)
