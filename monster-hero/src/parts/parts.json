@@ -318,6 +318,11 @@
       "pure": true
     },
     {
+      "file": "82-card-tactics-core.jsx",
+      "role": "MFバトルカードの戦術カード(ガンビット型)の中身。246枚の表(CARD_TACTIC_CARDS。条件・基本・ブリーダー・モンスター)・枠(基本メイン1+サブ2・ブリーダー・モンスターごと)・条件を見る・行動の手を選ぶ・枠を順に見る(cardTacticDecide)。82 の cardAiChooseAction が policy.gambit を持つときだけ呼ぶ",
+      "pure": true
+    },
+    {
       "file": "83-card-battle-lines.jsx",
       "role": "MFバトルカードの相手の助手のひとこと(6人×14場面の台詞・表情・場面の選び方)",
       "pure": true
@@ -358,6 +363,10 @@
       "role": "画面: MFバトルカードのデッキ編成(デッキの一覧・組む画面)・カード図鑑・ルールの画面。決まりは 82 の cardDeckProblems・cardDeckAddReason。保存は 84 の CardBattleScreen が入れる"
     },
     {
+      "file": "87-card-deck-pick.jsx",
+      "role": "画面: MFバトルカードの対戦の前のデッキ選び(助手と対戦・マルチの前に1枚挟む)。選べる一覧は cardDeckPickChoices の1か所(借りたデッキを足す口)。保存は 84 が mh_card_decks_v1 の active を書き換えるだけ"
+    },
+    {
       "file": "90-card-rank.jsx",
       "role": "MFバトルカードのランキング(台帳 #3513)。新しい表 card_battle_ranks の読み書きと、ランキングの画面。送るのは公開後のふつうの対戦の勝ちだけ(SQL: docs/sql/card-battle-ranks/)"
     },
@@ -376,6 +385,18 @@
     {
       "file": "94-card-spectate.jsx",
       "role": "MFバトルカードのマルチ対戦の観戦。観戦の通り道(mhc-watch-<試合>・Broadcast だけ)・対戦中の一覧(mhc-live)・両方の手札を仮の札にした場で手をなぞる計算・観戦の画面。手札・山札・封は流さない。保存は無し"
+    },
+    {
+      "file": "95-card-deck-share.jsx",
+      "role": "MFバトルカードのみんなのデッキ(デッキ登録の対戦・デッキのレンタル)。表 card_deck_entries などとの通信・持ち主の鍵(mh_card_deck_owner_key_v1)・戦い方(助手の打ち方に乗せる)・登録の画面"
+    },
+    {
+      "file": "96-card-tactics.jsx",
+      "role": "MFバトルカードの戦術カードの持ち物・枠(mh_card_tactics_v1)・MFバトルカードのレベル(mh_card_level_v1。式・強さ別の経験値・枠の開き・引く券)・戦術カードのガチャ(1回300ビートPで8枚・まとめ買い・天井・かけら)。84 の結果の取引に cardLevelEntries を足す"
+    },
+    {
+      "file": "97-card-tactics-screen.jsx",
+      "role": "画面: MFバトルカードの戦術カード(組む … 基本・ブリーダー・モンスターごとの枠/引く … パックと同じ開け方・まとめ買い・引く券・かけら/持っている)。入口は 84 のトップ(公開前はデバッグだけ)。ビートPの支払いは 84 の persist"
     },
     {
       "file": "81-debug-trials.jsx",

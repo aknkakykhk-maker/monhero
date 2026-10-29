@@ -99,7 +99,7 @@ check('消費ガッツ・与ダメ・適性は段階の有無で分岐する',so
 check('撃破処理の前に不死を判定し撃破ロックを立てない',(()=>{const at=source.indexOf('const revived=extremeRevivedEnemyStats(enemy,revivalDifficulty,wave,enemyRevivalUsedRef.current);');
   const lock=source.indexOf('enemyDefeatResolvedRef.current = true;',at);
   return at>0&&lock>at&&source.slice(at,lock).includes('return false;');})());
-check('起き上がったライフを敵の行動へ渡す',source.includes('let enemyHpAfterOurAttacks=Math.max(0,(enemy?.hp??0)-totalDmg);')
+check('起き上がったライフを敵の行動へ渡す',source.includes('let enemyHpAfterOurAttacks=Math.max(0,(enemy?.hp??0)-(totalDmg-shellAbsorbedTotal));')
   &&source.includes('if (enemyRevivedHpRef.current!=null) enemyHpAfterOurAttacks=enemyRevivedHpRef.current;'));
 check('WAVEごとに不死の回数を数え直す',source.includes('enemyRevivalUsedRef.current=0; setEnemyRevivalUsed(0); enemyRevivedHpRef.current=null; setEnemyRevivalReveal(null);'));
 // 末尾の「;」まで含めると、停止条件を1つ足すたびにここが落ちる

@@ -119,7 +119,7 @@ const EXTREME = { motion: 'OFF', shake: 'OFF', damageNum: 'OFF', think: 'FAST2',
     await page.click('[data-card-mode-assistant]');
     await page.waitForSelector('[data-card-foe="mua"]', { timeout: 8000 });
     await page.click('[data-card-foe="mua"]');
-    await page.click('[data-card-start]');
+    await page.click('[data-card-start]'); await page.click('[data-card-deck-pick-go]'); // 対戦の前のデッキ選び(前に使ったデッキが選ばれている)
     await page.waitForSelector('[data-card-battle]', { timeout: 20000 });
     await page.waitForTimeout(800);
 
@@ -206,9 +206,11 @@ const EXTREME = { motion: 'OFF', shake: 'OFF', damageNum: 'OFF', think: 'FAST2',
       }
       if (mode === 'guts') {
         await page.waitForTimeout(300);
-        const label = (await page.locator('[data-card-footer] button').first().innerText().catch(() => '')) || '';
+        // ガッツの段の下のボタンは、先頭に「← 攻撃に戻る」が出ることがある(2026-10-27)。ターン終了のボタンを押す
+        const endBtn = page.locator('[data-card-footer] button').filter({ hasText: /ターン終了$/ }).first();
+        const label = (await endBtn.innerText().catch(() => '')) || '';
         if (gutsPicked === null) gutsPicked = /枚をガッツにして/.test(label);
-        await page.locator('[data-card-footer] button').first().click();
+        await endBtn.click();
         await page.waitForTimeout(250);
         const sheet = await has('[data-confirm-sheet]');
         if (sheet && endOk === null && SHOT) await shot('confirm-end');

@@ -354,8 +354,8 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
         await longPreview();
         await page.waitForTimeout(100);
         const o = await overlaps(slot);
-        // タクティクスの新しい盤は EX の効果の札(2つまで+「+N」=3つ)、クラシックはマーク×数の4つ
-        check(`${label} ${name}: マーク4つと7桁の予測ダメージが重ならない`, (o.marks === 4 || (label === 'tactics' && o.marks === 3)) && o.preview && o.hits.length === 0, `マーク${o.marks} 予測${o.preview ? 'あり' : 'なし'} ${o.hits.slice(0, 4).join(' / ')}`);
+        // 効果の札(2つまで+「+N」=3つ。本編も 2026-10-29 から同じ札)、効果の札が無いときはマーク×数の4つ
+        check(`${label} ${name}: マーク4つと7桁の予測ダメージが重ならない`, (o.marks === 4 || o.marks === 3) && o.preview && o.hits.length === 0, `マーク${o.marks} 予測${o.preview ? 'あり' : 'なし'} ${o.hits.slice(0, 4).join(' / ')}`);
         if (shotDir && (name === '390' || name === 'fold' || name === 'landscape')) {
           const el = page.locator(`button[data-slot-index="${slot}"]`);
           await el.screenshot({ path: `${shotDir}/${label}-${name}-slot.png` }).catch(() => {});

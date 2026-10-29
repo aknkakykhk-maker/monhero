@@ -81,7 +81,7 @@ const serve = () => new Promise((resolve) => {
   await page.locator('[data-card-top="foe"]').waitFor({ timeout: 10000 });
   await page.locator('[data-card-foe="mua"]').click();
   await page.locator('[data-card-level="normal"]').click();
-  await page.locator('[data-card-start]').click();
+  await page.locator('[data-card-start]').click(); await page.locator('[data-card-deck-pick-go]').click(); // 対戦の前のデッキ選び(前に使ったデッキが選ばれている)
   await page.locator('[data-card-top="result"]').waitFor({ timeout: 30000 });
   const after = await page.evaluate(() => ({ unlocked: JSON.parse(localStorage.getItem('mh_card_cpu_unlocked_v1')), rec: JSON.parse(localStorage.getItem('mh_card_record_v1')) }));
   console.log('-- 解放:', JSON.stringify(after.unlocked));

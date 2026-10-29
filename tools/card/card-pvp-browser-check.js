@@ -191,7 +191,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.locator('[data-card-cpu]').first().click({ timeout: 20000 });
       await page.locator('[data-card-mode-multi]').waitFor({ timeout: 10000 });
       const disabled = await page.locator('[data-card-mode-multi]').isDisabled();
-      await page.locator('[data-card-mode-multi]').click();
+      await page.locator('[data-card-mode-multi]').click(); await page.locator('[data-card-deck-pick-go]').click(); // マルチの入口の前のデッキ選び
       await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
       return !disabled;
     };
@@ -385,7 +385,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑫ もう1戦の報酬も出る', reward12);
     // ⑦ だれとでも: 2台とも部屋を出て、受付から出会う
     const reportsBefore = reports.length;
-    for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
+    for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-deck-pick-go], [data-card-pvp="idle"]').first().waitFor({ timeout: 10000 }); if (await page.locator('[data-card-deck-pick-go]').count()) await page.locator('[data-card-deck-pick-go]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
     await A.locator('[data-card-pvp-free]').click();
     await A.locator('[data-card-pvp-seek]').waitFor({ timeout: 10000 });
     const waitingA = await A.locator('[data-card-pvp-waiting]').innerText();
@@ -423,7 +423,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       JSON.stringify((histA || []).map((x) => [x.match, x.outcome, x.verify, x.foeDeck && x.foeDeck.cards.length, x.rating])));
     const deltaA = histA && histA[0].rating ? histA[0].rating.after - histA[0].rating.before : null;
     check('⑬ だれとでもの試合に、強さの点数の増減が書かれる(勝ち +48・負け -48。点数の表は偽物)', deltaA === (histA && histA[0].outcome === 'win' ? 48 : -48), JSON.stringify(histA && histA[0].rating));
-    for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
+    for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-deck-pick-go], [data-card-pvp="idle"]').first().waitFor({ timeout: 10000 }); if (await page.locator('[data-card-deck-pick-go]').count()) await page.locator('[data-card-deck-pick-go]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
     await A.locator('[data-card-pvp-history-open]').click();
     await A.locator('[data-card-pvp-history="list"]').waitFor({ timeout: 10000 });
     const rowsText = await A.locator('[data-card-pvp-history-row]').allInnerTexts();
@@ -457,7 +457,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     });
     check('⑯ 古い版の人(名前もアイコンも無い)は一覧に出さない(だれとでもで組むために、受け取ってはおく)', oldSeen.kept && oldSeen.rows === 0, JSON.stringify(oldSeen));
     await B.waitForTimeout(6500); // 古い版の知らせが古くなってから(だれとでもで、そちらへ組みに行かないように)
-    await A.locator('[data-card-pvp-leave]').click(); await A.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
+    await A.locator('[data-card-pvp-leave]').click(); await A.locator('[data-card-deck-pick-go], [data-card-pvp="idle"]').first().waitFor({ timeout: 10000 }); if (await A.locator('[data-card-deck-pick-go]').count()) await A.locator('[data-card-deck-pick-go]').click(); await A.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
     await A.locator('[data-card-pvp-free]').click();
     const seen16 = await B.locator('[data-card-pvp-seeker]').first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
     const rowText = seen16 ? await B.locator('[data-card-pvp-seeker]').first().innerText() : '';
@@ -475,7 +475,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       const back19 = await A.evaluate(() => { const v = window.__mhCardPvpBackDone; window.__mhCardPvpAutoBack = 0; return v; });
       const ver19 = [await waitVerify(A), await waitVerify(B)];
       check('⑲ ガッツの段で「攻撃に戻る」を打っても、相手と同じ場のまま最後まで戦え、試合のあとの確かめも2台とも合う', back19 === 1 && ver19[0] === 'ok' && ver19[1] === 'ok', `戻った ${back19}回・確かめ ${ver19.join(' / ')}`);
-      for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
+      for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-deck-pick-go], [data-card-pvp="idle"]').first().waitFor({ timeout: 10000 }); if (await page.locator('[data-card-deck-pick-go]').count()) await page.locator('[data-card-deck-pick-go]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
     }
     // ⑱ ルールの版(2026-10-27 社長 ①): 版がちがう人どうしは組まない。古い版・別の版の相手は手元で作れないので、偽の中継から知らせを流し込む
     {
@@ -494,7 +494,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       const updText = updSeen ? await A.locator('[data-mh-screen]').first().innerText().catch(() => '') : '';
       await shot(A, 'pvp-18-update');
       check('⑱ 合言葉の部屋に、版を送らない古い版の人が来たら組まずに「ゲームを更新してください」', updSeen && /ゲームを更新してください/.test(updText) && !(await A.locator('[data-card-battle]').count()));
-      await A.locator('[data-card-pvp-leave]').click(); await A.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
+      await A.locator('[data-card-pvp-leave]').click(); await A.locator('[data-card-deck-pick-go], [data-card-pvp="idle"]').first().waitFor({ timeout: 10000 }); if (await A.locator('[data-card-deck-pick-go]').count()) await A.locator('[data-card-deck-pick-go]').click(); await A.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
       await A.locator('[data-card-pvp-free]').click();
       await A.locator('[data-card-pvp="waiting"]').waitFor({ timeout: 10000 });
       const freeState = await A.evaluate(async () => {
@@ -503,7 +503,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         const r = CARD_PVP.get(); return { phase: r.phase, foe: !!r.foe };
       });
       check('⑱ だれとでもで古い版の人が部屋に来ても組まず、そのまま待ち続ける', freeState.phase === 'waiting' && !freeState.foe, JSON.stringify(freeState));
-      await A.locator('[data-card-pvp-leave]').click(); await A.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
+      await A.locator('[data-card-pvp-leave]').click(); await A.locator('[data-card-deck-pick-go], [data-card-pvp="idle"]').first().waitFor({ timeout: 10000 }); if (await A.locator('[data-card-deck-pick-go]').count()) await A.locator('[data-card-deck-pick-go]').click(); await A.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
       await B.waitForTimeout(6500); // 別の版の「待っています」が古くなってから
     }
     // ⑧ フレンドを招待(2026-10-26 社長「マルチ対戦でフレンド招待もいれて」): 入口でフレンドを選ぶ → 部屋を作って招待を送る
@@ -530,7 +530,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     // ⑩ 送った側が「もう一度」→ 知らせの「参加する」で、カードのマルチの入口へ移って同じ部屋に入り、対戦が始まる
     await A.locator('[data-card-pvp-invite-to="friend-x"]').click();
     const again = await B.locator(`[data-card-pvp-notice="${code3}"]`).waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
-    if (again) await B.locator('[data-card-pvp-notice-accept]').click();
+    // 知らせから入るときも、入口の前にデッキ選びが出る(2026-10-29 社長 案C)。前に使ったデッキのまま「対戦へ」
+    if (again) { await B.locator('[data-card-pvp-notice-accept]').click(); await B.locator('[data-card-deck-pick-go]').click({ timeout: 20000 }).catch(() => {}); }
     const metInvite = await Promise.all([A.locator('[data-card-battle]').waitFor({ timeout: 30000 }), B.locator('[data-card-battle]').waitFor({ timeout: 30000 })]).then(() => true).catch(() => false);
     check('⑩ もう一度送ると知らせがまた出て、「参加する」で同じ部屋に入り、対戦が始まる', again && metInvite);
     // ⑪ 時間切れ: 送って3分たつと「時間切れ」(表の時刻はそのまま)・断られた形は「断られました」。古い版の相手(時刻を書かない招待)も、届く側は同じに読む
@@ -553,7 +554,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       livePages.push(A);
     };
     const newPrivateMatch = async () => {
-      for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
+      for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-deck-pick-go], [data-card-pvp="idle"]').first().waitFor({ timeout: 10000 }); if (await page.locator('[data-card-deck-pick-go]').count()) await page.locator('[data-card-deck-pick-go]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
       await A.locator('[data-card-pvp-create]').click();
       await A.locator('[data-card-pvp="waiting"]').waitFor({ timeout: 10000 });
       const code = (await A.locator('[data-card-pvp-room]').innerText()).trim();

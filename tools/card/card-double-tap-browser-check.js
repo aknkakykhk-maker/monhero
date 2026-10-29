@@ -122,21 +122,22 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-card-mode-assistant]').click();
     await page.locator('[data-card-foe="mua"]').click(); await sleep(200);
     await page.locator('[data-card-level="easy"]').click().catch(() => {});
-    await page.locator('[data-card-start]').click();
+    await page.locator('[data-card-start]').click(); await page.locator('[data-card-deck-pick-go]').click(); // 対戦の前のデッキ選び(前に使ったデッキが選ばれている)
     for (let i = 0; i < 40 && !(await page.locator('[data-card-battle]').count()); i++) { if (i > 6) await page.mouse.click(195, 420); await sleep(300); }
     const mode = () => page.locator('[data-card-battle]').getAttribute('data-card-mode').catch(() => null);
     // 自分の攻撃の番まで進める(始める前のガッツ・相手の番は待つ・守りは「守らない」)
     for (let i = 0; i < 120; i++) {
       const m = await mode();
-      if (m === 'attack' && (await page.locator('[data-card-hand-card]:not(.opacity-45)').count())) break;
+      if (m === 'attack' && (await page.locator('[data-card-hand-card]:not([class*="opacity-45"])').count())) break;
       if (m === 'setup') await page.locator('[data-card-footer] button').first().click().catch(() => {});
       else if (m === 'guard') await page.getByRole('button', { name: /^守らない/ }).click().catch(() => {});
       else if (m === 'attack') await page.getByRole('button', { name: /攻撃おわり/ }).click().catch(() => {});
-      else if (m === 'guts') await page.locator('[data-card-footer] button').first().click().catch(() => {});
+      // ガッツの段の下のボタンは、先頭に「← 攻撃に戻る」が出ることがある(2026-10-27)。先頭を押すと攻撃の番へ戻り、行き来したまま時間切れになっていた
+      else if (m === 'guts') await page.locator('[data-card-footer] button').filter({ hasText: /ターン終了$/ }).first().click().catch(() => {});
       await sleep(400);
     }
     check('自分の攻撃の番(使える技がある)まで進む', (await mode()) === 'attack');
-    const usable = page.locator('[data-card-hand-card]:not(.opacity-45)').first();
+    const usable = page.locator('[data-card-hand-card]:not([class*="opacity-45"])').first();
     const raised = () => page.evaluate(() => [...document.querySelectorAll('[data-card-hand-card] img')].some((im) => /outline-amber-300/.test(im.className)));
     await doubleTap(usable);
     check('① 手札を2回続けてタップすると、詳しい画面が出る', await detailOpen());
@@ -144,8 +145,10 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('① 1回目で選んだ技は、選ばれたまま残らない', !(await raised()));
     await usable.click(); await sleep(600);
     check('② 手札を1回タップすると、技が選ばれるだけ(詳しい画面は出ない)', (await raised()) && !(await detailOpen()));
-    // 狙える相手(赤い輪)。使う子を選ぶ段なら、黄色い輪の子を先に押す
-    for (let i = 0; i < 3 && !(await page.locator('[data-card-mon^="1-"].ring-rose-400').count()); i++) {
+    // 狙える相手(赤い輪)。使う子を選ぶ段なら、黄色い輪の子を先に押す。組み合わせの窓(2026-10-29 案B)が出たら、いちばん上の行(少ない組)を選ぶ
+    for (let i = 0; i < 4 && !(await page.locator('[data-card-mon^="1-"].ring-rose-400').count()); i++) {
+      const row = page.locator('[data-card-combo-sheet] [data-card-set]').first();
+      if (await row.count()) { await row.click(); await sleep(600); continue; }
       const u = page.locator('[data-card-mon^="0-"].ring-amber-300').first();
       if (await u.count()) { await u.click(); await sleep(600); } else break;
     }
@@ -158,6 +161,13 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       await target.click(); await sleep(1500);
       check('③④ 狙える相手を1回タップすると、待たずに技が出る(手札が減る)', (await page.locator('[data-card-hand-card]').count()) < hand0 || (await page.locator('[data-card-battle]').innerText()) !== discard0, `${hand0} → ${await page.locator('[data-card-hand-card]').count()}`);
     } else check('③ 狙える相手が出る', false, '赤い輪の相手が見つからない');
+    // 技を出した直後は大写し・当たりの動き・相手の守りの番が続く。自分の操作に戻ってから(大写しが消えて攻撃かガッツの段)2回タップする
+    for (let i = 0; i < 40; i++) {
+      const m = await mode();
+      if ((m === 'attack' || m === 'guts') && !(await page.locator('[data-card-big]').count())) break;
+      await sleep(250);
+    }
+    await sleep(400);
     const opp = page.locator('[data-card-mon^="1-"]').first();
     await doubleTap(opp);
     check('③ 相手のモンスターを2回続けてタップすると、詳しい画面が出る', await detailOpen());
