@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 17d7d484af2910c9
+// source-sha256: bc2b4dd85e2cf967
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -97474,7 +97474,7 @@ const CardBattleScreen = ({
         const fresh = await freshCardSave();
         const reward = cardCpuReward(fresh.daily, game.level, outcome, facts);
         const loops = cardCpuLoops(game.level, outcome, facts);
-        const rankable = !!(rank && rank.send) && !debug && !game.rented;
+        const rankable = !!(rank && rank.send) && !debug;
         const nextRecord = cardRecordAfter(fresh.record, {
           who: game.who,
           level: game.level,
@@ -97736,7 +97736,7 @@ const CardBattleScreen = ({
       id: `${seed}`,
       who: pick.who,
       level: pick.level,
-      rankable: !!(rank && rank.send) && !debug && !rented,
+      rankable: !!(rank && rank.send) && !debug,
       at: Date.now(),
       beat: Date.now(),
       facts: cardResultFacts(st, CARD_ME)
