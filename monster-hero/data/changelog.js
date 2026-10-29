@@ -35,6 +35,12 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-30 08:18", type:'update', title:'ランクが上がったときに、お祝いの演出が出るようになりました', status:'new', group:'rhythm',
+    items:[
+      'ビートランクが上がると、画面いっぱいの演出のあとに、もらったビートPとセッション券が並びます。ブロンズ→シルバーのように盾の色が変わるときは、さらに豪華になります。画面を押すと先へ進めます。',
+    ],
+  },
+  {
     date: "2026-10-30 07:45", type:'content', title:'遊ぶほど上がる「ビートランク」ができました', status:'new', group:'rhythm',
     assistantNotice:{ id:'update_notice_beat_rank_v1', type:'content' },
     items:[
