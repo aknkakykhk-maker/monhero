@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c6647bde78537ac3
+// generated-sha256: 26a0cda8f3dcaf57
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -58345,6 +58345,9 @@ const CardQuickRunDetail = ({ quickRun, autoReady, autoDifficulty, todayLoops = 
 // 次に開いたとき、印が残っていて beat(対戦の画面が生きていた時刻)が古ければ、投了と同じ計算で数え、同じ取引で印を消す(二重に数えない)。
 // beat が新しいあいだは、ほかのタブで対戦中とみて数えない
 const CARD_CPU_OPEN_KEY = 'mh_card_cpu_open_v1';
+// 助手と対戦で前に選んだ難易度(2026-10-29 社長「最初の位置をイージーではなく前に選んだものに」)。'easy'〜'master' の文字だけ。
+// 無い・壊れている・まだ開いていない難易度なら、今までどおりイージー
+const CARD_LAST_LEVEL_KEY = 'mh_card_last_level_v1';
 const CARD_CPU_OPEN_BEAT_MS = 5000;
 const CARD_CPU_OPEN_STALE_MS = 15000;
 const cardNormalizeCpuOpen = (v) => {
@@ -58373,6 +58376,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const [kitView, setKitView] = useState(null); // スターター選びで「中身を見る」を開いているキット
   const [starterOpen, setStarterOpen] = useState(null); // はじめのスターターを開ける画面に渡す並び(cardStarterOpenResult)
   const [foe, setFoe] = useState({ who: 'mua', level: 'easy' });
+  const lastLevelRead = useRef(false);
+  useEffect(() => {
+    if (!save || lastLevelRead.current) return;
+    lastLevelRead.current = true;
+    storeGet(CARD_LAST_LEVEL_KEY, null).then((lv) => {
+      if (typeof lv === 'string' && CARD_LEVEL_ORDER.includes(lv) && (cardLevelOpen(save.unlocked, lv) || debug)) setFoe((f) => ({ ...f, level: lv }));
+    }).catch(() => {});
+  }, [save]);
   const [game, setGame] = useState(null);
   const [result, setResult] = useState(null);
   const [notice, setNotice] = useState('');
@@ -58834,7 +58845,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             {CARD_LEVEL_ORDER.map((lv) => {
               const open = cardLevelOpen(save.unlocked, lv) || debug;
               return (
-                <button key={lv} type="button" data-card-level={lv} disabled={!open} onClick={() => { Audio_.fgSe.tap(); setFoe((f) => ({ ...f, level: lv })); }} className={`min-h-[52px] rounded-xl border-2 text-[11px] font-black ${foe.level === lv ? 'border-amber-300 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-slate-900 text-slate-200'} disabled:opacity-35`}>
+                <button key={lv} type="button" data-card-level={lv} disabled={!open} onClick={() => { Audio_.fgSe.tap(); setFoe((f) => ({ ...f, level: lv })); void storeSet(CARD_LAST_LEVEL_KEY, lv); }} className={`min-h-[52px] rounded-xl border-2 text-[11px] font-black ${foe.level === lv ? 'border-amber-300 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-slate-900 text-slate-200'} disabled:opacity-35`}>
                   {CARD_LEVEL_LABEL[lv]}<span className="block text-[10px] text-amber-200">{open ? `勝ち${CARD_AI_LEVELS[lv].point}` : '🔒'}</span>
                 </button>
               );

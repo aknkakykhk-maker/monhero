@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 33c126dd37109fd5
+// source-sha256: 63b5eabcc6d87a31
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -95891,6 +95891,7 @@ const CardQuickRunDetail = ({
   }, "閉じる")));
 };
 const CARD_CPU_OPEN_KEY = 'mh_card_cpu_open_v1';
+const CARD_LAST_LEVEL_KEY = 'mh_card_last_level_v1';
 const CARD_CPU_OPEN_BEAT_MS = 5000;
 const CARD_CPU_OPEN_STALE_MS = 15000;
 const cardNormalizeCpuOpen = v => {
@@ -95960,6 +95961,17 @@ const CardBattleScreen = ({
     who: 'mua',
     level: 'easy'
   });
+  const lastLevelRead = useRef(false);
+  useEffect(() => {
+    if (!save || lastLevelRead.current) return;
+    lastLevelRead.current = true;
+    storeGet(CARD_LAST_LEVEL_KEY, null).then(lv => {
+      if (typeof lv === 'string' && CARD_LEVEL_ORDER.includes(lv) && (cardLevelOpen(save.unlocked, lv) || debug)) setFoe(f => ({
+        ...f,
+        level: lv
+      }));
+    }).catch(() => {});
+  }, [save]);
   const [game, setGame] = useState(null);
   const [result, setResult] = useState(null);
   const [notice, setNotice] = useState('');
@@ -96928,6 +96940,7 @@ const CardBattleScreen = ({
             ...f,
             level: lv
           }));
+          void storeSet(CARD_LAST_LEVEL_KEY, lv);
         },
         className: `min-h-[52px] rounded-xl border-2 text-[11px] font-black ${foe.level === lv ? 'border-amber-300 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-slate-900 text-slate-200'} disabled:opacity-35`
       }, CARD_LEVEL_LABEL[lv], React.createElement("span", {
