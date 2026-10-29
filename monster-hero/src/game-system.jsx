@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: acaf468fa6f932cd
+// generated-sha256: 2be90988586877bc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -55898,11 +55898,123 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   { id: 'ace', cat: 'breeder', sec: '特別', phase: 'attack', name: '切り札を出す', tiers: [['', 'SR']], desc: '登録した切り札を、手にあれば先に出す' },
   { id: 'holdBreeder', cat: 'breeder', sec: '流れ', phase: 'attack', name: 'ブリーダーのカードを温存する', tiers: [['', 'N']], desc: 'この番はブリーダーのカードを出さない(当たればそれ以外で打つ)' },
 ]);
+// 名前と効果の文(2026-10-30 社長「そもそも戦術カードの効果がわからない。カード名と効果を明確化して」→ 246枚の一覧に「この形で」)。
+//   効果は、このファイルの判定(cardTacticCond・cardTacticAttackFits・cardTacticRowAct・cardTacticHabitOf/KnobsOf)の動きどおりに書く。
+//   判定を変えたら、ここの文も必ず合わせる。カードの id(保存に書く)は変えない。種類ごとに (段) => [名前, 効果]
+const CARD_TACTIC_TEXT = Object.freeze({
+// ---- 条件(〜なら) ----
+any:()=>['いつでも','いつでも当てはまる。組み合わせた手を、出せるときはいつも出す'],
+ko:()=>['倒せる相手がいる','手札の攻撃の技(特殊技は除く)で、いまのガッツで出せて、ダメージが残りライフ以上になる相手の子がいるとき。その子を狙う'],
+lowest:()=>['ライフがいちばん少ない相手','相手の場で、残りライフ(数)がいちばん少ない子を狙う'],
+highest:()=>['ライフがいちばん多い相手','相手の場で、残りライフ(数)がいちばん多い子を狙う'],
+strongest:()=>['攻撃がいちばん強い相手','相手の子のうち、その子が使える技の最大ダメージがいちばん大きい子を狙う(手札は見ない)'],
+attacker:()=>['前の番に攻撃してきた相手','直前の相手の番に攻撃してきた相手の子を狙う'],
+leader:()=>['相手のリーダー','相手が1体目(左)に置いた子が残っていれば、その子を狙う'],
+type:(v)=>[`${v}の相手`,`いま${v}にいる相手の子を狙う`],
+blood:(v)=>[`${v}の相手`,`${v}のモンスターの相手を狙う`],
+species:()=>['決めた種族の相手','組むときに選んだ種族の相手の子(混血はもとの種族でも当たる)を狙う'],
+foeLife:(v)=>[`相手のライフ${v}%以下`,`残りライフが最大の${v}%以下になっている相手の子がいるとき。その子を狙う`],
+myLife:(v)=>[`味方のライフ${v}%以下`,`残りライフが最大の${v}%以下の自分の子がいるとき。守る手と組むと、その子が狙われたときだけ守る`],
+myGuts:(v)=>[`自分のガッツ${v}以上`,`自分のガッツが${v}以上のとき`],
+foeGutsLe:(v)=>[`相手のガッツ${v}以下`,`相手のガッツが${v}以下のとき`],
+foeGutsGe:(v)=>[`相手のガッツ${v}以上`,`相手のガッツが${v}以上のとき(大技に備える)`],
+myHand:(v)=>[`自分の手札${v}枚以上`,`自分の手札が${v}枚以上のとき`],
+foeHandGe:(v)=>[`相手の手札${v}枚以上`,`相手の手札が${v}枚以上のとき`],
+foeHandLe:(v)=>[`相手の手札${v}枚以下`,`相手の手札が${v}枚以下のとき`],
+myDeck:(v)=>[`自分の山札${v}枚以下`,`自分の山札の残りが${v}枚以下のとき`],
+foeDeck:(v)=>[`相手の山札${v}枚以下`,`相手の山札の残りが${v}枚以下のとき`],
+guardN:(v)=>[`手札に守り札${v}枚以上`,`手札に回避・防御の札が合わせて${v}枚以上あるとき`],
+guardKind:(v)=>[`手札に${v}の札がある`,`手札に${v}の札が1枚以上あるとき`],
+bigInHand:()=>['手札に大技がある','手札に、払うガッツが4以上の攻撃の札があるとき'],
+areaInHand:()=>['手札に全体攻撃がある','手札に、相手の全員に当たる攻撃の札があるとき'],
+breederInHand:()=>['手札にブリーダーのカードがある','手札にブリーダーのカードが1枚以上あるとき'],
+turnLe:(v)=>[`自分の${v}番目の番まで`,`自分の番が${v}回目までのとき(自分のはじめの番が1回目)`],
+turnGe:(v)=>[`自分の${v}番目の番から`,`自分の番が${v}回目以降のとき`],
+myAlive:(v)=>[`味方が残り${v}体`,`倒れていない自分の子がちょうど${v}体のとき`],
+foeAlive:(v)=>[`相手が残り${v}体`,`倒れていない相手の子がちょうど${v}体のとき`],
+koDiff:(v)=>[v==='勝っ'?'倒した数で勝っている':'倒した数で負けている',v==='勝っ'?'倒した相手の数が、倒された味方の数より多いとき':'倒された味方の数が、倒した相手の数より多いとき'],
+foeStun:()=>['攻撃できない相手','封じられていて、次の相手の番に攻撃できない相手の子を狙う'],
+myStun:()=>['攻撃できない味方がいる','封じられて攻撃できない自分の子がいるとき'],
+foeCharge:()=>['溜めている相手','溜め技を使って、次の技のダメージが何倍にもなる相手の子を狙う'],
+foeAir:()=>['空中に上がった相手','もとは地上・水中なのに、いま空中になっている相手の子を狙う'],
+field:(v)=>[`場に${v}全体カードがある`,`場に、${v==='自分の'?'自分':'相手'}が出した全体カードが残っているとき`],
+foeBig:()=>['相手が大技を撃てそう','相手のガッツが4以上で手札があり、相手の子が使える大技(払うガッツ4以上)をいまのガッツ+1で払えるとき'],
+myHandLe:(v)=>[`自分の手札${v}枚以下`,`自分の手札が${v}枚以下のとき`],
+breederN:()=>['手札にブリーダーのカード2枚以上','手札にブリーダーのカードが2枚以上あるとき'],
+breederUnused:()=>['この番まだブリーダーのカードを出していない','この番に、まだブリーダーのカードを出していないとき'],
+myGutsLe:(v)=>[`自分のガッツ${v}以下`,`自分のガッツが${v}以下のとき`],
+myDiscard:(v)=>[`自分の捨て札${v}枚以上`,`自分の捨て札が${v}枚以上のとき`],
+myKo:()=>['倒れた味方がいる','自分の子が1体でも倒れているとき'],
+noField:()=>['場に全体カードが無い','どちらの全体カードも場に無いとき'],
+selfLife:(v)=>[`この子のライフ${v}%以下`,`このカードを入れた子の残りライフが最大の${v}%以下のとき(モンスターの手に入れたときだけ当たる)`],
+selfFresh:()=>['この子がこの番まだ攻撃していない','このカードを入れた子が、この番にまだ攻撃していないとき(モンスターの手だけ)'],
+selfType:(v)=>[`この子がいま${v}`,`このカードを入れた子が、いま${v}にいるとき(モンスターの手だけ)`],
+selfStun:()=>['この子が攻撃できない','このカードを入れた子が封じられて攻撃できないとき(モンスターの手だけ)'],
+selfAdv:()=>['この子が得意な相手','このカードを入れた子が出せる手札の技に、相手の特徴(地上・空中・水中)でダメージが倍になるものがあるとき。その相手を狙う(モンスターの手だけ)'],
+incoming:(v)=>[`受けるダメージ${v}以上`,`攻撃を受けたとき、受けるダメージの見込みが${v}以上なら(守るときだけ見る)`],
+incomingKo:()=>['受けると倒れる','攻撃を受けたとき、守らないと倒れるなら(守るときだけ見る)'],
+incomingArea:()=>['全体攻撃を受けた','受けた攻撃が、全員に当たる攻撃なら(守るときだけ見る)'],
+// ---- 基本カード(どの手にも当てはまらないときの打ち方) ----
+tBalance:()=>['バランス型','攻め・守り・ガッツ・大技・崩し・全体を同じくらいに見て、損得のいちばん良い手を打つ。とどめだけ少し優先'],
+tAttack:()=>['攻め型','攻撃を多めに出し(1.5倍重く)、ガッツはためず守り札も残さない。守るのは、受けると倒れるときだけ'],
+tGuard:()=>['守り型','守り札を残す(1.5倍重く)・攻撃は控えめ(0.7倍)。攻撃を受けたら、守れるときはいつも守る'],
+tSave:()=>['溜め型','ガッツを多めにためて(1.6倍)、大技を優先する(1.8倍)'],
+tDisrupt:()=>['崩し型','相手の手札・山札・ガッツを減らす札を優先する(1.8倍)'],
+tBig:()=>['大技型','ダメージの大きい技を優先する(1.6倍)'],
+tArea:()=>['全体型','全員に当たる攻撃・全体カードを優先する(1.6倍)。相手が1体だけのときは全体攻撃を出さない'],
+tFinish:()=>['仕留め型','あと少しで倒せる相手への攻撃を優先する(1.6倍)'],
+tRush:()=>['速攻型','攻撃を多めに(1.6倍)・大技は控えめ(0.7倍)。払うガッツが2以上の技は出さない。守るときもガッツ1以下の守り札だけ使う'],
+tSteady:()=>['堅実型','守り札とガッツを残し(1.3倍)、攻撃は控えめ(0.8倍)。自分も傷つく技は出さない'],
+tJam:()=>['かく乱守り型','崩す札(1.3倍)と、守り札を残すこと(1.3倍)を両方重くする'],
+tCalm:()=>['慎重型','いっしょに入れた基本カードの重みを半分に弱めて、極端な打ち方をしない'],
+tFlex:()=>['臨機応変型','番ごとに場を見て、とどめ・全体攻撃・守り・攻めのどれか1つを強くする'],
+tMill:()=>['持久型','相手の山札を削る・相手に引かせる・ガッツを山札へ戻す札を重くして、相手の山札切れで勝ちを狙う'],
+tReckless:()=>['捨て身型','守り札を残さず(0.5倍)、とどめを優先(1.3倍)。受けると倒れるとき以外は守らない'],
+tHand:()=>['手札温存型','出したあとに手札が2枚以上残る手だけを出す。ガッツの番も手札を2枚残して置く'],
+tDeck:()=>['山札節約型','カードを引く・山札からガッツへ・手札を引き直す・相手に引かせる札は出さない'],
+tFocus:()=>['一点集中型','ライフの割合がいちばん低い相手への攻撃を優先して、倒れるまで同じ子を狙う'],
+tSpread:()=>['分散型','全体攻撃を重くし(1.4倍)、ライフがいちばん多い相手への攻撃を優先する'],
+tComeback:()=>['逆転型','倒された数で負けている、または味方のライフの合計が半分以下なら捨て身(守り0.5倍・とどめ・大技・全体1.3倍)。それ以外は堅く(守り・ガッツ1.2倍)'],
+// ---- モンスターカード(この子の手) ----
+atk:()=>['いちばん得な攻撃','この子が出せる攻撃のうち、点数(ダメージ・とどめ・ガッツの損得)がいちばん高い手を出す'],
+kind:(v)=>[`${v}の技で攻撃`,`この子の${v}の技のうち、点数がいちばん高い手を出す`],
+cost:(v)=>{const n=v.startsWith('軽い')?'0〜1':v.startsWith('中')?'2〜3':'4以上';const nm=v.startsWith('軽い')?'軽い技':v.startsWith('中')?'中くらいの技':'大技';return [`${nm}で攻撃`,`この子の技のうち、払うガッツが${n}の技で、点数がいちばん高い手を出す`];},
+reach:(v)=>[v==='全体攻撃'?'全体攻撃で攻撃':'1体だけに攻撃',v==='全体攻撃'?'この子の、相手の全員に当たる技のうち、点数がいちばん高い手を出す':'この子の、1体だけに当てる技のうち、点数がいちばん高い手を出す'],
+eff:(v)=>{const d={回避されない:'相手が回避できない技',攻撃できなくする:'当たると相手を攻撃できなくする技',ガッツを減らす:'当たると相手のガッツを減らす技',吸い取る:'相手のライフを吸い取って回復する技','2回攻撃':'もう1回攻撃できるようになる技',防御で減らない:'防御されてもダメージが減らない技',回避されても半分:'回避されても半分のダメージが入る技',種族に強い:'特定の特徴の相手に倍のダメージの技',ダメージを割り振る:'ダメージを相手の何体かに割り振る技','2枚同時':'2枚組でいっしょに出す技',手札に戻る:'当たると手札に戻ってくる技',カード投げ:'カードを投げてダメージを足す技'}[v];return [`「${v}」の技で攻撃`,`この子の、${d}のうち、点数がいちばん高い手を出す`];},
+attach:()=>['付ける札といっしょに攻撃','技に付ける札をいっしょに出す手のうち、点数がいちばん高い手を出す'],
+attachKind:(v)=>[`付ける札(${v})といっしょに攻撃`,`「${v}」付ける札をいっしょに出す手のうち、点数がいちばん高い手を出す`],
+spe:(v)=>{const d={味方を回復:'味方のライフを回復する',引く:'カードを引く',空中になる:'空中に上がる',安全になる:'次の攻撃を受けなくなる',まゆと羽化:'まゆになる・羽化する',のりうつる:'相手にのりうつる'}[v];return [`特殊技で${d}`,`この子の特殊技のうち、${d}技を出す`];},
+stance:(v)=>({この子から攻める:['この子が攻める','当てはまったら、この子の攻撃で点数がいちばん高い手を出す'],この子は攻撃しない:['この子は攻撃しない','当てはまったら、この番はこの子に攻撃させない(このあとの手・基本カードの打ち方でも出さない)'],ライフの多い子が先に:['いちばん元気なら攻める','この子が味方でいちばんライフが多いときだけ、この子の攻撃で点数がいちばん高い手を出す'],ライフの少ない子は温存:['いちばん弱っていたら休む','味方が2体以上いて、この子のライフがいちばん少ないとき、この番は攻撃させない'],攻撃は1回だけ:['攻撃は1回だけ','この番にまだ攻撃していなければ攻撃する。1回攻撃したら、この番はもう攻撃させない'],何回でも攻める:['何回でも攻める','点数が少し低い手でも攻撃を出して、この子の攻撃を続ける']})[v],
+disrupt:(v)=>({手札を捨てさせる:['相手の手札を捨てさせる','相手の手札を捨てさせる・山札の下へ戻す札を含む手を出す'],山札を削る:['相手の山札を削る','相手の山札を削る札を含む手を出す'],ガッツを減らす:['相手のガッツを減らす','相手のガッツを減らす・0にする札を含む手を出す'],番を飛ばす:['相手の番を飛ばす','相手の次の番を飛ばす札を含む手を出す']})[v],
+guard:()=>['守る','この子が攻撃を受けたら、手札の守り札でいちばん良い守り方をする'],
+guardFirst:(v)=>[`${v}で守る`,`この子が攻撃を受けたら、${v==='回避'||v==='防御'?v+'の札':'「'+v+'」の札'}だけで守る(無ければ次の手を見る)`],
+guardOver:(v)=>[`ダメージ${v}以上だけ守る`,`この子が攻撃を受けたとき、受けるダメージの見込みが${v}より小さければ守らずに受ける。${v}以上なら守る`],
+guardDie:()=>['倒れるときだけ守る','この子が攻撃を受けたとき、受けても倒れなければ守らずに受ける。倒れるときだけ守る'],
+cover:()=>['かばう札で守る','この子が攻撃を受けたら、かばう・身代わりの札で守る'],
+noGuard:()=>['守らない','この子が攻撃を受けても、守り札を使わずに受ける(札を残す)'],
+charge:()=>['溜め技を使う','次の技のダメージを何倍にする札(溜め・怒り・次の番の技を倍)を含む手を出す'],
+chargeKind:(v)=>[`溜め(${v})を使う`,`「${v}」の溜めの札を含む手を出す`],
+// ---- ブリーダーカード ----
+bEff:(v)=>{const d={回復する:'味方を回復する',倒れた子を戻す:'倒れた子を場に戻す',攻撃できないを消す:'味方の「攻撃できない」を消す',相手を攻撃できなくする:'相手の子を攻撃できなくする',相手のガッツを減らす:'相手のガッツを減らす',両方のガッツを0にする:'両方のガッツを0にする',山札からガッツへ:'山札からガッツを増やす',カードを引く:'カードを引く',捨て札から拾う:'捨て札からカードを拾う',手札を引き直す:'手札を引き直す',もう1回攻撃させる:'味方にもう1回攻撃させる',合体する:'モンスターを合体させる',付ける札をただにする:'付ける札の払うガッツを0にする',守りを名指しで封じる:'相手の守りを名指しで封じる',捨て札を山札に戻す:'ガッツを山札に戻して切り直す',小さく攻撃する:'ダメージのあるブリーダーのカードで攻撃する'}[v];return [`ブリーダー: ${d}`,`手札のブリーダーのカードのうち、${d}カードを出す`];},
+fieldCard:()=>['全体カードを出す','手札の全体カード(場に残るカード)を出す'],
+fieldKind:(v)=>[`全体カード: ${v}`,`手札の全体カードのうち、「${v}」の全体カードを場に出す`],
+save:()=>['ガッツを多めにためる','ガッツの番に、ふだんより多くの手札をガッツに置く'],
+gutsN:(v)=>[`ガッツを${v}枚置く`,`ガッツの番に、手札から${v}枚だけガッツに置く`],
+keepGuard:()=>['守り札は置かない','ガッツの番に、回避・防御の札はガッツに置かない'],
+gutsOrder:(v)=>[v==='重い札'?'重い札からガッツに置く':'使えない札からガッツに置く',v==='重い札'?'ガッツの番に置く枚数はふだんどおり。払うガッツの大きい札から先に置く':'ガッツの番に置く枚数はふだんどおり。場の子が使えない札から先に置く'],
+stop:()=>['この番の攻撃をやめる','当てはまったら、この番の攻撃をここで終える'],
+ace:()=>['切り札を出す','登録で選んだ切り札が手札にあれば、それを含む手を先に出す'],
+holdBreeder:()=>['ブリーダーのカードを温存','当てはまったら、この番はブリーダーのカード(全体カードも)を出さない。ほかの手はそのまま'],
+});
+const cardTacticTextOf = (g, v) => {
+  const t = CARD_TACTIC_TEXT[g.id] ? CARD_TACTIC_TEXT[g.id](v) : null;
+  return t ? { name: t[0], desc: t[1] } : { name: v === '' ? g.name : g.name.replace('◯', String(v)), desc: g.desc };
+};
 // カードのid は「種類.段」(段の無いカードは種類だけ)。保存(mh_card_tactics_v1)にこのまま書くので、変えない
 const cardTacticCardId = (g, v) => (v === '' ? g.id : `${g.id}.${v}`);
 const CARD_TACTIC_CARDS = Object.freeze(CARD_TACTIC_GROUPS.flatMap((g) => g.tiers.map(([v, r]) => Object.freeze({
   id: cardTacticCardId(g, v), g: g.id, cat: g.cat, sec: g.sec, phase: g.phase || null, v,
-  name: v === '' ? g.name : g.name.replace('◯', String(v)), r, start: (g.start || []).includes(v), desc: g.desc,
+  ...cardTacticTextOf(g, v), r, start: (g.start || []).includes(v),
 }))));
 const CARD_TACTIC_BY_ID = Object.freeze(Object.fromEntries(CARD_TACTIC_CARDS.map((c) => [c.id, c])));
 const CARD_TACTIC_START = Object.freeze(CARD_TACTIC_CARDS.filter((c) => c.start).map((c) => c.id));
@@ -66966,6 +67078,28 @@ const cardTacticRowName = (db, row, which) => {
   return c.name;
 };
 
+// カードの全文(2026-10-30 社長「表に入りきらない時は、押すと全文」)。区分・見る場面・レア・名前・効果
+const CARD_TACTIC_PHASE_TEXT = Object.freeze({ attack: '攻撃の番に見る', guard: '攻撃を受けたときに見る', guts: 'ガッツの番に見る' });
+const CARD_TACTIC_CAT_TEXT = Object.freeze({ cond: '条件カード(〜なら)。行動カードと組にしてセットする', base: '基本カード。どの組にも当てはまらないときの打ち方', breeder: 'ブリーダーカード(ブリーダーの手)。条件カードと組にしてセットする', monster: 'モンスターカード(その子の手)。条件カードと組にしてセットする' });
+const CardTacticDetail = ({ card, onClose }) => {
+  if (!card) return null;
+  const st = CARD_TACTIC_CAT_STYLE[card.cat] || CARD_TACTIC_CAT_STYLE.cond;
+  return (
+    <div data-card-tactic-detail={card.id} role="dialog" aria-modal="true" aria-label={card.name} onClick={onClose} className="fixed inset-0 z-[96] flex items-center justify-center bg-black/70 p-4">
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-[340px] rounded-2xl border-2 border-white/70 p-4 text-white" style={{ background: st.bg }}>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="rounded px-1.5 text-[13px] font-black" style={{ background: CARD_TACTIC_RARE_COLOR[card.r] }}>{card.r}</span>
+          <span className="rounded bg-black/35 px-1.5 text-[13px] font-black">{st.label}</span>
+          {card.phase && <span className="rounded bg-black/25 px-1.5 text-[12px] font-bold">{CARD_TACTIC_PHASE_TEXT[card.phase]}</span>}
+        </div>
+        <b className="mt-2 block text-[21px] font-black leading-tight" style={JA_WRAP_STYLE}>{card.name}</b>
+        <p className="mt-2 text-[15px] font-bold leading-relaxed" style={JA_WRAP_STYLE}>{jaWrap(card.desc)}</p>
+        <p className="mt-2 text-[11px] font-bold text-white/80" style={JA_WRAP_STYLE}>{jaWrap(CARD_TACTIC_CAT_TEXT[card.cat] || '')}</p>
+        <button type="button" data-card-tactic-detail-close onClick={() => { Audio_.fgSe.tap(); onClose && onClose(); }} className="mh-button mt-3 min-h-[44px] w-full rounded-xl bg-black/40 text-[14px] font-black">とじる</button>
+      </div>
+    </div>
+  );
+};
 // カード1枚の顔
 const CardTacticFace = ({ card, owned = true, count = 0, onClick = null, small = false, mark = '' }) => {
   const st = CARD_TACTIC_CAT_STYLE[card.cat] || CARD_TACTIC_CAT_STYLE.cond;
@@ -66976,12 +67110,13 @@ const CardTacticFace = ({ card, owned = true, count = 0, onClick = null, small =
       style={{ background: st.bg }}>
       <span className="flex items-center gap-1">
         <span className="rounded px-1 text-[11px] font-black text-white" style={{ background: CARD_TACTIC_RARE_COLOR[card.r] }}>{card.r}</span>
-        {!small && <span className="whitespace-nowrap text-[11px] font-bold text-white/80">{st.label}</span>}
+        <span data-card-tactic-cat={card.cat} className="whitespace-nowrap rounded bg-black/30 px-1 text-[10px] font-black text-white">{st.label}</span>
         {count > 1 && <span className="ml-auto text-[10px] font-black text-amber-200">×{count}</span>}
         {mark && <span className="ml-auto rounded bg-emerald-500 px-1 text-[10px] font-black text-white">{mark}</span>}
       </span>
       <b className={`mt-1 block font-black leading-tight text-white ${small ? 'text-[12.5px]' : 'text-[14px]'}`} style={JA_WRAP_STYLE}>{card.name}</b>
-      {!small && <small className="mt-0.5 block text-[11.5px] font-bold leading-snug text-white/90" style={JA_WRAP_STYLE}>{card.desc}</small>}
+      {/* 小さい札は効果を3行まで(全文は押した先の CardTacticDetail) */}
+      <small className={`mt-0.5 block font-bold leading-snug text-white/90 ${small ? 'line-clamp-3 text-[10px]' : 'text-[11.5px]'}`} style={JA_WRAP_STYLE}>{card.desc}</small>
     </Tag>
   );
 };
@@ -67109,6 +67244,7 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
   const [flipped, setFlipped] = useState([]);
   const [spot, setSpot] = useState(null);
   const [flash, setFlash] = useState(0);
+  const [detail, setDetail] = useState(null); // めくったカードを押すと全文
   const timers = useRef([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const listRef = useRef(null);
@@ -67169,7 +67305,7 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
               const sr = c.r === 'SR';
               return (
                 <div key={`${pi}-${i}`} className="mh-pack-deal flex flex-col items-center" style={{ animationDelay: `${i * 70}ms` }}>
-                  <button type="button" data-card-tactic-open-card={i} data-card-tactic-open-flipped={on ? '1' : '0'} onClick={() => flip(i)} className="mh-pack-card relative w-full active:scale-95">
+                  <button type="button" data-card-tactic-open-card={i} data-card-tactic-open-flipped={on ? '1' : '0'} onClick={() => (on ? setDetail(card) : flip(i))} className="mh-pack-card relative w-full active:scale-95">
                     <div className={`mh-pack-card-in aspect-[5/7] w-full ${on ? 'flipped' : ''}`}>
                       <div data-card-tactic-back className={`mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${sr && !on ? 'mh-pack-kira-back' : ''}`}>
                         <img src={CARD_BACK_IMG()} alt="" draggable={false} className="absolute inset-0 h-full w-full rounded-[5px] object-cover"/>
@@ -67195,6 +67331,7 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
           </div>
         )}
       </div>
+      {detail && <CardTacticDetail card={detail} onClose={() => setDetail(null)}/>}
       {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-whiteout"/>}
       {flash > 0 && spot && <div key={flash} aria-hidden="true" className="mh-pack-flash"/>}
       {spotCard && (
@@ -67222,6 +67359,7 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
 // listOnly … 持っている戦術カードの一覧だけ(98 のデッキ登録の右上から。引くのはマーケット・2026-10-29 社長)
 const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, listOnly = false }) => {
   const [data, setData] = useState(null);   // cardTacticsLoad の中身
+  const [detailCard, setDetailCard] = useState(null); // 押したカードの全文
   const [tab, setTab] = useState(listOnly ? 'list' : share ? 'register' : 'build');   // register(デッキ登録だけ) / build / pull / list
   const screenTitle = listOnly ? '持っている戦術カード' : share ? 'デッキ登録' : '戦術カード';
   const [frame, setFrame] = useState('base'); // base / breeder / 0 / 1 / 2
@@ -67383,12 +67521,13 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
               className="mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40">{`かけらで1枚えらぶ(${t.shards}/${CARD_TACTICS_SHARD_COST})`}</button>
           </div>
         )}
+        {detailCard && <CardTacticDetail card={detailCard} onClose={() => setDetailCard(null)}/>}
         {tab === 'list' && (
           <div data-card-tactics-list className="space-y-2">
             {['base', 'breeder', 'monster', 'cond'].map((cat) => (
               <div key={cat}>
                 <p className="mb-1 text-[12px] font-black text-amber-200">{`${CARD_TACTIC_CAT_STYLE[cat].label}カード ${CARD_TACTIC_CARDS.filter((c) => c.cat === cat && cardTacticsOwns(t, c.id)).length}/${CARD_TACTIC_CARDS.filter((c) => c.cat === cat).length}`}</p>
-                <div className="grid grid-cols-3 gap-1.5">{CARD_TACTIC_CARDS.filter((c) => c.cat === cat).map((c) => <CardTacticFace key={c.id} card={c} small owned={cardTacticsOwns(t, c.id)} count={t.own[c.id] || 0}/>)}</div>
+                <div className="grid grid-cols-3 gap-1.5">{CARD_TACTIC_CARDS.filter((c) => c.cat === cat).map((c) => <CardTacticFace key={c.id} card={c} small owned={cardTacticsOwns(t, c.id)} count={t.own[c.id] || 0} onClick={() => { Audio_.fgSe.tap(); setDetailCard(c); }}/>)}</div>
               </div>
             ))}
           </div>
@@ -67488,20 +67627,24 @@ const CardTacticPackOverlay = ({ packs, onDone }) => (
   </div>
 );
 // 中身を見る: 全部の戦術カード(持っていない物に「未取得」)
-const CardTacticPackContents = ({ t, onClose }) => (
+const CardTacticPackContents = ({ t, onClose }) => {
+  const [detail, setDetail] = useState(null);
+  return (<>
   <CardShopSheet title="戦術カードパックの中身" onClose={onClose} tag="tactics-contents">
     <p className="mb-1 text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(`全${CARD_TACTIC_CARDS.length}枚(はじめに持っている${CARD_TACTIC_START.length}枚は出ません)`)}</p>
     {['SR', 'R', 'N'].map((r) => (
       <div key={r}>
         <CardShopHead>{`${r}(${CARD_TACTIC_CARDS.filter((c) => c.r === r && !c.start).length}枚)`}</CardShopHead>
         <div className="grid grid-cols-3 gap-1.5">{CARD_TACTIC_CARDS.filter((c) => c.r === r && !c.start).map((c) => (
-          <div key={c.id} className="relative"><CardTacticFace card={c} small owned={cardTacticsOwns(t, c.id)}/>
+          <div key={c.id} className="relative"><CardTacticFace card={c} small owned={cardTacticsOwns(t, c.id)} onClick={() => { Audio_.fgSe.tap(); setDetail(c); }}/>
             {!cardTacticsOwns(t, c.id) && <span className="absolute right-0.5 top-0.5 rounded-md bg-rose-600 px-1 text-[9px] font-black text-white">未取得</span>}</div>
         ))}</div>
       </div>
     ))}
   </CardShopSheet>
-);
+  {detail && <CardTacticDetail card={detail} onClose={() => setDetail(null)}/>}
+  </>);
+};
 // 提供割合(前は売り場に書いていた説明の長文はここ)
 const CardTacticPackRates = ({ onClose }) => (
   <CardShopSheet title="戦術カードパックの提供割合" onClose={onClose} tag="tactics-rates">

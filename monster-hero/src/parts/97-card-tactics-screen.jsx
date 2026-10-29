@@ -26,6 +26,28 @@ const cardTacticRowName = (db, row, which) => {
   return c.name;
 };
 
+// カードの全文(2026-10-30 社長「表に入りきらない時は、押すと全文」)。区分・見る場面・レア・名前・効果
+const CARD_TACTIC_PHASE_TEXT = Object.freeze({ attack: '攻撃の番に見る', guard: '攻撃を受けたときに見る', guts: 'ガッツの番に見る' });
+const CARD_TACTIC_CAT_TEXT = Object.freeze({ cond: '条件カード(〜なら)。行動カードと組にしてセットする', base: '基本カード。どの組にも当てはまらないときの打ち方', breeder: 'ブリーダーカード(ブリーダーの手)。条件カードと組にしてセットする', monster: 'モンスターカード(その子の手)。条件カードと組にしてセットする' });
+const CardTacticDetail = ({ card, onClose }) => {
+  if (!card) return null;
+  const st = CARD_TACTIC_CAT_STYLE[card.cat] || CARD_TACTIC_CAT_STYLE.cond;
+  return (
+    <div data-card-tactic-detail={card.id} role="dialog" aria-modal="true" aria-label={card.name} onClick={onClose} className="fixed inset-0 z-[96] flex items-center justify-center bg-black/70 p-4">
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-[340px] rounded-2xl border-2 border-white/70 p-4 text-white" style={{ background: st.bg }}>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="rounded px-1.5 text-[13px] font-black" style={{ background: CARD_TACTIC_RARE_COLOR[card.r] }}>{card.r}</span>
+          <span className="rounded bg-black/35 px-1.5 text-[13px] font-black">{st.label}</span>
+          {card.phase && <span className="rounded bg-black/25 px-1.5 text-[12px] font-bold">{CARD_TACTIC_PHASE_TEXT[card.phase]}</span>}
+        </div>
+        <b className="mt-2 block text-[21px] font-black leading-tight" style={JA_WRAP_STYLE}>{card.name}</b>
+        <p className="mt-2 text-[15px] font-bold leading-relaxed" style={JA_WRAP_STYLE}>{jaWrap(card.desc)}</p>
+        <p className="mt-2 text-[11px] font-bold text-white/80" style={JA_WRAP_STYLE}>{jaWrap(CARD_TACTIC_CAT_TEXT[card.cat] || '')}</p>
+        <button type="button" data-card-tactic-detail-close onClick={() => { Audio_.fgSe.tap(); onClose && onClose(); }} className="mh-button mt-3 min-h-[44px] w-full rounded-xl bg-black/40 text-[14px] font-black">とじる</button>
+      </div>
+    </div>
+  );
+};
 // カード1枚の顔
 const CardTacticFace = ({ card, owned = true, count = 0, onClick = null, small = false, mark = '' }) => {
   const st = CARD_TACTIC_CAT_STYLE[card.cat] || CARD_TACTIC_CAT_STYLE.cond;
@@ -36,12 +58,13 @@ const CardTacticFace = ({ card, owned = true, count = 0, onClick = null, small =
       style={{ background: st.bg }}>
       <span className="flex items-center gap-1">
         <span className="rounded px-1 text-[11px] font-black text-white" style={{ background: CARD_TACTIC_RARE_COLOR[card.r] }}>{card.r}</span>
-        {!small && <span className="whitespace-nowrap text-[11px] font-bold text-white/80">{st.label}</span>}
+        <span data-card-tactic-cat={card.cat} className="whitespace-nowrap rounded bg-black/30 px-1 text-[10px] font-black text-white">{st.label}</span>
         {count > 1 && <span className="ml-auto text-[10px] font-black text-amber-200">×{count}</span>}
         {mark && <span className="ml-auto rounded bg-emerald-500 px-1 text-[10px] font-black text-white">{mark}</span>}
       </span>
       <b className={`mt-1 block font-black leading-tight text-white ${small ? 'text-[12.5px]' : 'text-[14px]'}`} style={JA_WRAP_STYLE}>{card.name}</b>
-      {!small && <small className="mt-0.5 block text-[11.5px] font-bold leading-snug text-white/90" style={JA_WRAP_STYLE}>{card.desc}</small>}
+      {/* 小さい札は効果を3行まで(全文は押した先の CardTacticDetail) */}
+      <small className={`mt-0.5 block font-bold leading-snug text-white/90 ${small ? 'line-clamp-3 text-[10px]' : 'text-[11.5px]'}`} style={JA_WRAP_STYLE}>{card.desc}</small>
     </Tag>
   );
 };
@@ -169,6 +192,7 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
   const [flipped, setFlipped] = useState([]);
   const [spot, setSpot] = useState(null);
   const [flash, setFlash] = useState(0);
+  const [detail, setDetail] = useState(null); // めくったカードを押すと全文
   const timers = useRef([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const listRef = useRef(null);
@@ -229,7 +253,7 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
               const sr = c.r === 'SR';
               return (
                 <div key={`${pi}-${i}`} className="mh-pack-deal flex flex-col items-center" style={{ animationDelay: `${i * 70}ms` }}>
-                  <button type="button" data-card-tactic-open-card={i} data-card-tactic-open-flipped={on ? '1' : '0'} onClick={() => flip(i)} className="mh-pack-card relative w-full active:scale-95">
+                  <button type="button" data-card-tactic-open-card={i} data-card-tactic-open-flipped={on ? '1' : '0'} onClick={() => (on ? setDetail(card) : flip(i))} className="mh-pack-card relative w-full active:scale-95">
                     <div className={`mh-pack-card-in aspect-[5/7] w-full ${on ? 'flipped' : ''}`}>
                       <div data-card-tactic-back className={`mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${sr && !on ? 'mh-pack-kira-back' : ''}`}>
                         <img src={CARD_BACK_IMG()} alt="" draggable={false} className="absolute inset-0 h-full w-full rounded-[5px] object-cover"/>
@@ -255,6 +279,7 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
           </div>
         )}
       </div>
+      {detail && <CardTacticDetail card={detail} onClose={() => setDetail(null)}/>}
       {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-whiteout"/>}
       {flash > 0 && spot && <div key={flash} aria-hidden="true" className="mh-pack-flash"/>}
       {spotCard && (
@@ -282,6 +307,7 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
 // listOnly … 持っている戦術カードの一覧だけ(98 のデッキ登録の右上から。引くのはマーケット・2026-10-29 社長)
 const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, listOnly = false }) => {
   const [data, setData] = useState(null);   // cardTacticsLoad の中身
+  const [detailCard, setDetailCard] = useState(null); // 押したカードの全文
   const [tab, setTab] = useState(listOnly ? 'list' : share ? 'register' : 'build');   // register(デッキ登録だけ) / build / pull / list
   const screenTitle = listOnly ? '持っている戦術カード' : share ? 'デッキ登録' : '戦術カード';
   const [frame, setFrame] = useState('base'); // base / breeder / 0 / 1 / 2
@@ -443,12 +469,13 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
               className="mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40">{`かけらで1枚えらぶ(${t.shards}/${CARD_TACTICS_SHARD_COST})`}</button>
           </div>
         )}
+        {detailCard && <CardTacticDetail card={detailCard} onClose={() => setDetailCard(null)}/>}
         {tab === 'list' && (
           <div data-card-tactics-list className="space-y-2">
             {['base', 'breeder', 'monster', 'cond'].map((cat) => (
               <div key={cat}>
                 <p className="mb-1 text-[12px] font-black text-amber-200">{`${CARD_TACTIC_CAT_STYLE[cat].label}カード ${CARD_TACTIC_CARDS.filter((c) => c.cat === cat && cardTacticsOwns(t, c.id)).length}/${CARD_TACTIC_CARDS.filter((c) => c.cat === cat).length}`}</p>
-                <div className="grid grid-cols-3 gap-1.5">{CARD_TACTIC_CARDS.filter((c) => c.cat === cat).map((c) => <CardTacticFace key={c.id} card={c} small owned={cardTacticsOwns(t, c.id)} count={t.own[c.id] || 0}/>)}</div>
+                <div className="grid grid-cols-3 gap-1.5">{CARD_TACTIC_CARDS.filter((c) => c.cat === cat).map((c) => <CardTacticFace key={c.id} card={c} small owned={cardTacticsOwns(t, c.id)} count={t.own[c.id] || 0} onClick={() => { Audio_.fgSe.tap(); setDetailCard(c); }}/>)}</div>
               </div>
             ))}
           </div>
@@ -548,20 +575,24 @@ const CardTacticPackOverlay = ({ packs, onDone }) => (
   </div>
 );
 // 中身を見る: 全部の戦術カード(持っていない物に「未取得」)
-const CardTacticPackContents = ({ t, onClose }) => (
+const CardTacticPackContents = ({ t, onClose }) => {
+  const [detail, setDetail] = useState(null);
+  return (<>
   <CardShopSheet title="戦術カードパックの中身" onClose={onClose} tag="tactics-contents">
     <p className="mb-1 text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(`全${CARD_TACTIC_CARDS.length}枚(はじめに持っている${CARD_TACTIC_START.length}枚は出ません)`)}</p>
     {['SR', 'R', 'N'].map((r) => (
       <div key={r}>
         <CardShopHead>{`${r}(${CARD_TACTIC_CARDS.filter((c) => c.r === r && !c.start).length}枚)`}</CardShopHead>
         <div className="grid grid-cols-3 gap-1.5">{CARD_TACTIC_CARDS.filter((c) => c.r === r && !c.start).map((c) => (
-          <div key={c.id} className="relative"><CardTacticFace card={c} small owned={cardTacticsOwns(t, c.id)}/>
+          <div key={c.id} className="relative"><CardTacticFace card={c} small owned={cardTacticsOwns(t, c.id)} onClick={() => { Audio_.fgSe.tap(); setDetail(c); }}/>
             {!cardTacticsOwns(t, c.id) && <span className="absolute right-0.5 top-0.5 rounded-md bg-rose-600 px-1 text-[9px] font-black text-white">未取得</span>}</div>
         ))}</div>
       </div>
     ))}
   </CardShopSheet>
-);
+  {detail && <CardTacticDetail card={detail} onClose={() => setDetail(null)}/>}
+  </>);
+};
 // 提供割合(前は売り場に書いていた説明の長文はここ)
 const CardTacticPackRates = ({ onClose }) => (
   <CardShopSheet title="戦術カードパックの提供割合" onClose={onClose} tag="tactics-rates">
