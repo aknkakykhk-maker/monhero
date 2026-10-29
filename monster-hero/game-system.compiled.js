@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c889cd17d6720513
+// source-sha256: bffe6cf134030196
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -88772,7 +88772,8 @@ const CARD_AI_HABITS = Object.freeze({
     big: 0.9,
     disrupt: 1.5,
     area: 1.0,
-    finish: 1.3
+    finish: 1.3,
+    mill: 1
   }
 });
 const cardFoeReleased = who => typeof assistantReleased !== 'function' || assistantReleased(who);
@@ -88925,7 +88926,7 @@ const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}, atkMon = 
   const frac = unseen.filter(fits).length / unseen.length;
   return Math.min(0.8, 1 - Math.pow(1 - frac, opp.hand.length));
 };
-const cardAiScoreField = (db, st, p, card, cost) => {
+const cardAiScoreField = (db, st, p, card, cost, habit = null) => {
   const me = st.players[p],
     op = st.players[cardOther(p)];
   const mine = [...me.hand, ...me.deck, ...me.discard].map(n => cardOf(db, n)).filter(Boolean);
@@ -88942,7 +88943,7 @@ const cardAiScoreField = (db, st, p, card, cost) => {
       const hit = c => ['pow', 'int'].includes(c.kind) && Number.isFinite(c.damage) && (e.max !== undefined ? c.damage <= e.max : c.damage >= e.min);
       v += (share(theirs, hit, 0.3) - share(mine, hit, 0.3)) * 4;
     }
-    if (e.t === 'fieldMill') v += me.deck.length > op.deck.length + 5 ? 1 : -1.5;
+    if (e.t === 'fieldMill') v += (me.deck.length > op.deck.length + 5 ? 1 : -1.5) + (habit && habit.mill ? (me.deck.length >= op.deck.length ? 2 : 0.5) * habit.mill : 0);
     if (e.t === 'fieldPurePride') v += (alive(op).filter(m => !cardIsPureMon(m)).length - alive(me).filter(m => !cardIsPureMon(m)).length) * 0.6;
     if (e.t === 'fieldBanKind') v += (share(theirs, c => e.kinds.includes(c.kind), 0.2) - share(mine, c => e.kinds.includes(c.kind), 0.2)) * 4;
     if (e.t === 'fieldType') v += (alive(me).filter(m => m.type === e.type).length - alive(op).filter(m => m.type === e.type).length) * 0.2;
@@ -88961,7 +88962,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
   const main = cardOf(db, me.hand[opt.hand[0]]);
   const cost = cardActionCost(db, st, p, me.hand, opt.hand);
   let score = 0;
-  if (main.kind === 'fld') return cardAiScoreField(db, st, p, main, cost);
+  if (main.kind === 'fld') return cardAiScoreField(db, st, p, main, cost, habit);
   if (main.kind === 'spe') {
     (main.effects || []).forEach(e => {
       if (e.t === 'heal' && opt.target) {
@@ -89016,6 +89017,13 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'oppGutsLoss') score += Math.min(e.n, oppP.guts.length) * 0.8 * habit.disrupt;
       if (e.t === 'refresh') score += me.hand.filter((_, i) => !opt.hand.includes(i)).map(n => cardOf(db, n)).filter(c => c && c.user !== 'breeder' && c.user !== 'any' && !me.mons.some(m => !m.ko && cardUsableBy(c, m))).length * 0.6 - 0.4;
       if (e.t === 'millOpp') score += oppP.deck.length <= e.n ? 3 : 0.5;
+      if (habit.mill) {
+        const ahead = me.deck.length >= oppP.deck.length;
+        const near = 1 + Math.max(0, 20 - oppP.deck.length) / 10;
+        if (e.t === 'millOpp' && ahead) score += Math.min(e.n, oppP.deck.length) * 0.6 * near * habit.mill;
+        if (e.t === 'oppDraw' && ahead) score += Math.min(e.n, oppP.deck.length) * 0.4 * near * habit.mill;
+        if (e.t === 'gutsToDeckShuffle' && me.deck.length < oppP.deck.length + 3) score += me.guts.length * 0.3 * habit.mill;
+      }
       if (e.t === 'discardBothHands') score += (oppP.hand.length - (me.hand.length - opt.hand.length)) * 0.6;
       const mine = opt.mon >= 0 ? me.mons[opt.mon] : null;
       const tmon = opt.target ? st.players[opt.target.p].mons[opt.target.m] : null;
@@ -89527,7 +89535,8 @@ const CARD_AI_DECKS = Object.freeze({
     prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード']
   },
   sorashido: {
-    monsters: ['C-008', 'C-001', 'C-003']
+    monsters: ['C-008', 'C-001', 'C-003'],
+    prefer: ['大混乱', '時間稼ぎ', '大鎌', 'ハテナマーク', 'ニャーにゃー']
   }
 });
 const CARD_AI_FAVORITE = Object.freeze({
@@ -89571,7 +89580,7 @@ const cardAiTeamValue = (db, who, team, m, maxWave, levelId = null) => {
   const guard = mine.filter(c => cardIsGuardKind(c.kind) && sharedBy(c)).length;
   const sameType = team.length >= 2 && team.every(t => t.type === m.type) ? 1 : 0;
   const sameBlood = team.filter(t => cardAiBloodOf(t) === cardAiBloodOf(m)).length;
-  return fresh + (m.life || 0) * 0.3 + CARD_AI_TEAM.atk * atk + CARD_AI_TEAM.guard * guard - CARD_AI_TEAM.type * sameType - CARD_AI_TEAM.blood * sameBlood;
+  return fresh + (m.life || 0) * 0.3 + cardAiMillMonBonus(habit, m) + CARD_AI_TEAM.atk * atk + CARD_AI_TEAM.guard * guard - CARD_AI_TEAM.type * sameType - CARD_AI_TEAM.blood * sameBlood;
 };
 const CARD_AI_BUILD = Object.freeze({
   easy: {
@@ -89710,6 +89719,12 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'form') v += 0.1;
       if (e.t === 'peekPick') v += 0.8 * habit.disrupt;
       if (e.t === 'rush' || e.t === 'gutsZeroBoth' || e.t === 'oppHandToDeckBottom' || e.t === 'oppGutsLoss' || e.t === 'millOpp' || e.t === 'discardBothHands' || e.t === 'refresh') v += 0.3;
+      if (habit.mill) {
+        if (e.t === 'millOpp') v += e.n * 0.6 * habit.mill;
+        if (e.t === 'oppDraw') v += e.n * 0.4 * habit.mill;
+        if (e.t === 'oppGutsLoss') v += e.n * 0.6 * habit.mill;
+        if (e.t === 'gutsToDeckShuffle') v += 1.6 * habit.mill;
+      }
       if (e.t === 'lastWish' || e.t === 'deckToGuts' || e.t === 'gutsToDeckShuffle' || e.t === 'selfHurt') v -= 0.3;
     });
     if (cardHasEff(card, 'useWhenAllies')) v *= 0.4;
@@ -89726,7 +89741,7 @@ const cardAiCardValue = (card, habit) => {
   if (eff('halfOnEvade') || eff('noEvade')) dmg *= 1.3;
   if (eff('area')) dmg *= 1.6 * habit.area;
   const gl = cardEff(card, 'gutsLossOnHit');
-  if (gl) dmg += (gl.n === 'all' ? 2 : gl.n) * 0.7 * habit.disrupt;
+  if (gl) dmg += (gl.n === 'all' ? 2 : gl.n) * 0.7 * habit.disrupt * (1 + (habit.mill || 0));
   if (eff('stunOnHit')) dmg += 1;
   const sh = cardEff(card, 'selfDamageIfHit') || cardEff(card, 'selfDamage');
   if (sh) dmg -= sh.n * 0.8;
@@ -89773,8 +89788,11 @@ const cardAiMonScore = (db, who, m, maxWave, levelId = null) => {
     ...m,
     ko: false
   })).map(c => cardAiCardValue(c, habit));
-  return vals.sort((x, y) => y - x).slice(0, 10).reduce((x, v) => x + v, 0) + (m.life || 0) * 0.3;
+  return vals.sort((x, y) => y - x).slice(0, 10).reduce((x, v) => x + v, 0) + (m.life || 0) * 0.3 + cardAiMillMonBonus(habit, m);
 };
+const CARD_AI_MILL_BLOODS = Object.freeze(['joker', 'jell', 'mew']);
+const CARD_AI_MILL_MON_BONUS = 6;
+const cardAiMillMonBonus = (habit, m) => habit && habit.mill && m && CARD_AI_MILL_BLOODS.includes(cardAiBloodOf(m)) ? CARD_AI_MILL_MON_BONUS * habit.mill : 0;
 const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
   const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
   const favs = cardAiFavoriteCandidates(db, who).map(no => cardMonsterOf(db, no));

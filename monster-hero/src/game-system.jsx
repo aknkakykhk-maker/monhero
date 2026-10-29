@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5a6dda2f630b5408
+// generated-sha256: fd07c7265922f76b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -53736,7 +53736,8 @@ const CARD_AI_HABITS = Object.freeze({
   dra:      { attack: 0.7, keepGuard: 1.5, saveGuts: 1.0, big: 0.6, disrupt: 0.8, area: 0.8, finish: 0.8 },
   // あつ: 臨機応変(2026-10-29 社長「頭も良く、ゴリ押しもできる。型がいちばん多い子」)。土台は全部ふつうで、場を見て型を切り替える(cardAiHabitNow)
   atsu:     { attack: 1.0, keepGuard: 1.0, saveGuts: 1.0, big: 1.0, disrupt: 1.0, area: 1.0, finish: 1.0, flex: true },
-  sorashido: { attack: 1.1, keepGuard: 0.9, saveGuts: 1.0, big: 0.9, disrupt: 1.5, area: 1.0, finish: 1.3 },   // 相手の手を崩す(2026-10-27 ルールくんの S2。好きな子ハムで5段×450試合を測った)
+  // ソラシド: 計算して山札切れを狙う(2026-10-29 社長「山札やガッツを削って山札勝ちを狙いやすい」)。mill … 山札を削る・引かせる・ガッツを削る札の重み
+  sorashido: { attack: 1.1, keepGuard: 0.9, saveGuts: 1.0, big: 0.9, disrupt: 1.5, area: 1.0, finish: 1.3, mill: 1 },   // 相手の手を崩す(2026-10-27 ルールくんの S2。好きな子ハムで5段×450試合を測った)
 });
 // 公開の印(RELEASE_FLAGS・data/assistants.js の ASSISTANT_RELEASE_FLAGS)が立つまで、カードの相手えらび・マルチ・観戦・記録・曲の並びに出さない(2026-10-27。ソラシド)。
 //   カードだけの一覧は作らず、助手の一覧と同じ assistantReleased で見る。デバッグからも出さない
@@ -53829,7 +53830,7 @@ const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}, atkMon = 
 
 // 攻撃の1手に点を付ける
 // 全体カードを出すかの見積もり(両方に効くので、自分に得な向きのときだけ点が上がる)。見るのは自分のカードと、相手の見えている札(捨て札・場)だけ
-const cardAiScoreField = (db, st, p, card, cost) => {
+const cardAiScoreField = (db, st, p, card, cost, habit = null) => {
   const me = st.players[p], op = st.players[cardOther(p)];
   const mine = [...me.hand, ...me.deck, ...me.discard].map((n) => cardOf(db, n)).filter(Boolean);
   const theirs = op.discard.map((n) => cardOf(db, n)).filter(Boolean);
@@ -53845,7 +53846,7 @@ const cardAiScoreField = (db, st, p, card, cost) => {
       const hit = (c) => ['pow', 'int'].includes(c.kind) && Number.isFinite(c.damage) && (e.max !== undefined ? c.damage <= e.max : c.damage >= e.min);
       v += (share(theirs, hit, 0.3) - share(mine, hit, 0.3)) * 4;
     }
-    if (e.t === 'fieldMill') v += me.deck.length > op.deck.length + 5 ? 1 : -1.5;
+    if (e.t === 'fieldMill') v += (me.deck.length > op.deck.length + 5 ? 1 : -1.5) + (habit && habit.mill ? (me.deck.length >= op.deck.length ? 2 : 0.5) * habit.mill : 0);
     if (e.t === 'fieldPurePride') v += (alive(op).filter((m) => !cardIsPureMon(m)).length - alive(me).filter((m) => !cardIsPureMon(m)).length) * 0.6;
     if (e.t === 'fieldBanKind') v += (share(theirs, (c) => e.kinds.includes(c.kind), 0.2) - share(mine, (c) => e.kinds.includes(c.kind), 0.2)) * 4;
     if (e.t === 'fieldType') v += (alive(me).filter((m) => m.type === e.type).length - alive(op).filter((m) => m.type === e.type).length) * 0.2;
@@ -53862,7 +53863,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
   const main = cardOf(db, me.hand[opt.hand[0]]);
   const cost = cardActionCost(db, st, p, me.hand, opt.hand);
   let score = 0;
-  if (main.kind === 'fld') return cardAiScoreField(db, st, p, main, cost);
+  if (main.kind === 'fld') return cardAiScoreField(db, st, p, main, cost, habit);
   if (main.kind === 'spe') {
     (main.effects || []).forEach((e) => {
       if (e.t === 'heal' && opt.target) { const m = me.mons[opt.target.m]; score += Math.min(e.n, m.max - m.life) * 1.1; }
@@ -53898,6 +53899,14 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'oppGutsLoss') score += Math.min(e.n, oppP.guts.length) * 0.8 * habit.disrupt;
       if (e.t === 'refresh') score += me.hand.filter((_, i) => !opt.hand.includes(i)).map((n) => cardOf(db, n)).filter((c) => c && c.user !== 'breeder' && c.user !== 'any' && !me.mons.some((m) => !m.ko && cardUsableBy(c, m))).length * 0.6 - 0.4;
       if (e.t === 'millOpp') score += oppP.deck.length <= e.n ? 3 : 0.5;
+      // 山札切れを狙う子(mill): 相手の山札が少ないほど、削る・引かせる手を高く見る(自分の山札のほうが多いときだけ)。自分の山札は長持ちさせる
+      if (habit.mill) {
+        const ahead = me.deck.length >= oppP.deck.length;
+        const near = 1 + Math.max(0, 20 - oppP.deck.length) / 10;
+        if (e.t === 'millOpp' && ahead) score += Math.min(e.n, oppP.deck.length) * 0.6 * near * habit.mill;
+        if (e.t === 'oppDraw' && ahead) score += Math.min(e.n, oppP.deck.length) * 0.4 * near * habit.mill;
+        if (e.t === 'gutsToDeckShuffle' && me.deck.length < oppP.deck.length + 3) score += me.guts.length * 0.3 * habit.mill;
+      }
       if (e.t === 'discardBothHands') score += (oppP.hand.length - (me.hand.length - opt.hand.length)) * 0.6;
       // 区切り3: もう1回・何枚でも・攻撃できない・縛り・番を飛ばす
       const mine = opt.mon >= 0 ? me.mons[opt.mon] : null;
@@ -54278,7 +54287,7 @@ const CARD_AI_DECKS = Object.freeze({
   dra:      { kit: 'powerful' },
   kyuko:    { monsters: ['C-007', 'C-005', 'C-009'] },  // ナーガ・ピクシー・モッチー
   atsu:     { monsters: ['C-003', 'C-001', 'C-002'], prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード'] },  // ゴーレム・ライガー・ガリ。全体攻撃を集める
-  sorashido: { monsters: ['C-008', 'C-001', 'C-003'] },  // ハム・ライガー・ゴーレム(ルールくんが測った試合でいちばん多かった3体。3体は好きな子ハムから毎試合選ぶ)。prefer はまだ無い
+  sorashido: { monsters: ['C-008', 'C-001', 'C-003'], prefer: ['大混乱', '時間稼ぎ', '大鎌', 'ハテナマーク', 'ニャーにゃー'] },  // 山札とガッツを削る札(その3体で使えるものだけ入る)  // ハム・ライガー・ゴーレム(ルールくんが測った試合でいちばん多かった3体。3体は好きな子ハムから毎試合選ぶ)。prefer はまだ無い
 });
 // 助手の好きなモンスター(1体。2026-10-25 社長「1体だけ好きなモンスターを決めて、あとは好みのバランスでデッキ組む」)。
 // 名前ではなく主血統(種族)で決める(「モッチーだけどジェントル使うとかはあり」)。その種族の通常・キラ・別絵キラと、
@@ -54313,7 +54322,7 @@ const cardAiTeamValue = (db, who, team, m, maxWave, levelId = null) => {
   const guard = mine.filter((c) => cardIsGuardKind(c.kind) && sharedBy(c)).length;
   const sameType = team.length >= 2 && team.every((t) => t.type === m.type) ? 1 : 0;
   const sameBlood = team.filter((t) => cardAiBloodOf(t) === cardAiBloodOf(m)).length;
-  return fresh + (m.life || 0) * 0.3 + CARD_AI_TEAM.atk * atk + CARD_AI_TEAM.guard * guard - CARD_AI_TEAM.type * sameType - CARD_AI_TEAM.blood * sameBlood;
+  return fresh + (m.life || 0) * 0.3 + cardAiMillMonBonus(habit, m) + CARD_AI_TEAM.atk * atk + CARD_AI_TEAM.guard * guard - CARD_AI_TEAM.type * sameType - CARD_AI_TEAM.blood * sameBlood;
 };
 const CARD_AI_BUILD = Object.freeze({
   easy:   { maxWave: 1, noise: 1.6, temp: 3.0, stray: 0.3 },              // 好きな子優先の気分屋・組み方は雑
@@ -54402,6 +54411,13 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'form') v += 0.1;
       if (e.t === 'peekPick') v += 0.8 * habit.disrupt;
       if (e.t === 'rush' || e.t === 'gutsZeroBoth' || e.t === 'oppHandToDeckBottom' || e.t === 'oppGutsLoss' || e.t === 'millOpp' || e.t === 'discardBothHands' || e.t === 'refresh') v += 0.3;
+      // 山札切れを狙う子(mill): 相手の山札を削る・引かせる・ガッツを削る・自分の山札を長持ちさせる札を高く見る(その札を使える子も3体に選ばれやすくなる)
+      if (habit.mill) {
+        if (e.t === 'millOpp') v += e.n * 0.6 * habit.mill;
+        if (e.t === 'oppDraw') v += e.n * 0.4 * habit.mill;
+        if (e.t === 'oppGutsLoss') v += e.n * 0.6 * habit.mill;
+        if (e.t === 'gutsToDeckShuffle') v += 1.6 * habit.mill;
+      }
       if (e.t === 'lastWish' || e.t === 'deckToGuts' || e.t === 'gutsToDeckShuffle' || e.t === 'selfHurt') v -= 0.3;
     });
     if (cardHasEff(card, 'useWhenAllies')) v *= 0.4;
@@ -54416,7 +54432,7 @@ const cardAiCardValue = (card, habit) => {
   if (eff('returnOnHit')) dmg += 0.8;
   if (eff('halfOnEvade') || eff('noEvade')) dmg *= 1.3;
   if (eff('area')) dmg *= 1.6 * habit.area;
-  const gl = cardEff(card, 'gutsLossOnHit'); if (gl) dmg += (gl.n === 'all' ? 2 : gl.n) * 0.7 * habit.disrupt;
+  const gl = cardEff(card, 'gutsLossOnHit'); if (gl) dmg += (gl.n === 'all' ? 2 : gl.n) * 0.7 * habit.disrupt * (1 + (habit.mill || 0));
   if (eff('stunOnHit')) dmg += 1;
   const sh = cardEff(card, 'selfDamageIfHit') || cardEff(card, 'selfDamage'); if (sh) dmg -= sh.n * 0.8;
   const cost = card.guts + 1.5;
@@ -54455,8 +54471,12 @@ const cardAiMonWave = (db, m, card) => {
 const cardAiMonScore = (db, who, m, maxWave, levelId = null) => {
   const habit = cardAiDeckHabit(who, levelId);
   const vals = Object.values(db.cards).filter((c) => c.ready && c.user !== 'any' && c.user !== 'breeder' && c.wave <= Math.max(maxWave, cardAiMonWave(db, m, c)) && cardUsableBy(c, { ...m, ko: false })).map((c) => cardAiCardValue(c, habit));
-  return vals.sort((x, y) => y - x).slice(0, 10).reduce((x, v) => x + v, 0) + (m.life || 0) * 0.3;
+  return vals.sort((x, y) => y - x).slice(0, 10).reduce((x, v) => x + v, 0) + (m.life || 0) * 0.3 + cardAiMillMonBonus(habit, m);
 };
+// 山札切れを狙う子(ソラシド)は、山札やガッツを削れる種族(ジョーカー・ゲル・ニャー)を3体に選びやすくする(2026-10-29 社長「ランダム性はあれど、選ばれやすい重み」)
+const CARD_AI_MILL_BLOODS = Object.freeze(['joker', 'jell', 'mew']);
+const CARD_AI_MILL_MON_BONUS = 6;
+const cardAiMillMonBonus = (habit, m) => (habit && habit.mill && m && CARD_AI_MILL_BLOODS.includes(cardAiBloodOf(m)) ? CARD_AI_MILL_MON_BONUS * habit.mill : 0);
 // 毎試合の3体: 好きな子1体(候補から少しずつ変える)+ 型に合うバランスで2体。強さごとの決めは CARD_AI_BUILD
 //   MASTER は、相手(プレイヤー)のデッキに全体攻撃が多ければライフの多い子、回避が多ければ回避されない技を持つ子を選ぶ
 const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
