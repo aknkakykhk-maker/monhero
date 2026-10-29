@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 33b7fef3cf8e7f13
+// source-sha256: c2b12590cc2e226b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -32291,6 +32291,11 @@ const rhythmEventRewardText = reward => {
   if (reward.beatPoint > 0) parts.push(`🎵 ビートP×${reward.beatPoint.toLocaleString()}`);
   return parts.join(' ／ ');
 };
+const rhythmScoreFitSize = (text, maxPx, minPx) => {
+  let em = 0;
+  for (const ch of String(text ?? '')) em += /[0-9]/.test(ch) ? .62 : ch === ',' || ch === '.' ? .3 : .62;
+  return `clamp(${minPx}px, calc(100cqw / ${Math.max(1, em * 1.06).toFixed(2)}), ${maxPx}px)`;
+};
 const RHYTHM_OPTION_TABS = Object.freeze([['live', '演奏'], ['display', '表示'], ['volume', '音'], ['system', '軽さ・演出']]);
 const RhythmOptions = ({
   value,
@@ -33808,7 +33813,7 @@ const RhythmSongSelect = ({
         'data-rhythm-achievement': markId
       } : {}, {
         title: `${item.id}: ${mark.label}`,
-        className: "block h-2 w-2 rotate-45 rounded-[1px] [@container(max-width:250px)]:hidden",
+        className: "block h-2 w-2 rotate-45 rounded-[1px] [@container(max-width:300px)]:hidden",
         style: mark.style
       }));
     }), (() => {
@@ -33834,7 +33839,7 @@ const RhythmSongSelect = ({
       })(), played ? React.createElement(React.Fragment, null, React.createElement("b", {
         className: `text-[12px] font-black leading-none ${RHYTHM_RANK_COLORS[rank] || 'text-slate-300'}`
       }, rank), React.createElement("span", {
-        className: "truncate tabular-nums text-slate-300"
+        className: "shrink-0 whitespace-nowrap tabular-nums text-slate-300"
       }, record.bestScore.toLocaleString())) : React.createElement("span", {
         className: "truncate"
       }, "未プレイ"));
@@ -33851,7 +33856,9 @@ const RhythmSongSelect = ({
       'data-rhythm-song-event': entry.songId
     } : {}, {
       className: "ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-black text-amber-200"
-    }), "🏆 イベント対象")))));
+    }), "🏆", React.createElement("span", {
+      className: "[@container(max-width:380px)]:hidden"
+    }, " イベント対象"))))));
   }))))), React.createElement("aside", {
     "data-rhythm-song-detail": true,
     className: "shrink-0 border-t border-sky-300/20 bg-gradient-to-b from-blue-950/95 to-slate-950/95 px-3 py-2 landscape:w-[44%] landscape:max-w-[440px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-2",
@@ -36589,7 +36596,7 @@ const RhythmHudScore = ({
     "data-rhythm-score": true,
     className: "mt-0.5 block font-black leading-none tabular-nums landscape:mt-0",
     style: {
-      fontSize: 'min(18px,4.6cqw)',
+      fontSize: score >= 1000000 ? 'min(18px,4cqw)' : 'min(18px,4.6cqw)',
       textShadow: '0 1px 6px rgba(2,6,23,.96)'
     }
   }, score.toLocaleString()), React.createElement("small", {
@@ -41012,9 +41019,14 @@ const RhythmTapTest = ({
       "data-rhythm-record-gain": true,
       className: "whitespace-nowrap rounded-full border border-lime-300/70 bg-lime-400/15 px-2 py-0.5 text-[10px] font-black leading-none tabular-nums text-lime-200"
     }, "+", (view.score - result.previousBestScore).toLocaleString())), React.createElement("div", {
+      className: "[container-type:inline-size] [--mh-result-score-max:42px] [@container(min-width:680px)]:[--mh-result-score-max:38px]"
+    }, React.createElement("div", {
       "data-rhythm-result-score": true,
-      className: "text-[42px] font-black leading-none tabular-nums [@container(min-width:680px)]:text-[38px]"
-    }, view.score.toLocaleString()), result.isNewRecord && Number(result.previousBestScore) > 0 && React.createElement("small", {
+      className: "font-black leading-none tabular-nums",
+      style: {
+        fontSize: `min(var(--mh-result-score-max), ${rhythmScoreFitSize(Math.max(Number(view.score) || 0, Number(result.score) || 0).toLocaleString(), 42, 22)})`
+      }
+    }, view.score.toLocaleString())), result.isNewRecord && Number(result.previousBestScore) > 0 && React.createElement("small", {
       "data-rhythm-record-prev": true,
       className: "mt-0.5 block text-[10px] font-bold tabular-nums text-amber-200/90"
     }, "前回のベスト ", Number(result.previousBestScore).toLocaleString()), tutorialProp && React.createElement("p", {
@@ -46399,6 +46411,222 @@ const listTacticsStackItems = (counts, {
     });
     return out;
   }, []);
+};
+const CLASSIC_CHIP_VIEW = Object.freeze({
+  atk: {
+    icon: '⚔️',
+    turns: 'run'
+  },
+  dmgCut: {
+    icon: '🛡️',
+    turns: 'run'
+  },
+  def: {
+    icon: '🛡️',
+    turns: 'run'
+  },
+  muaHp: {
+    icon: '❤️',
+    turns: 'run'
+  },
+  muaGuts: {
+    icon: '⚡',
+    turns: 'run'
+  },
+  critRate: {
+    icon: '🎯',
+    turns: 'run'
+  },
+  critDmg: {
+    icon: '💥',
+    turns: 'run'
+  },
+  combo: {
+    icon: '💫',
+    turns: 'run'
+  },
+  globalCombo: {
+    icon: '💫',
+    turns: 'run'
+  },
+  kikiCard: {
+    icon: '🃏',
+    turns: 'count'
+  },
+  kyukoCut: {
+    icon: '🎼',
+    turns: 'count'
+  },
+  kenshi: {
+    icon: '💥',
+    turns: 'run',
+    stack: 'kenshi'
+  },
+  autoHp: {
+    icon: '💚',
+    turns: 'run'
+  },
+  autoGuts: {
+    icon: '⚡',
+    turns: 'run'
+  },
+  poltz: {
+    icon: '🌿',
+    turns: 'run'
+  },
+  trick: {
+    icon: '🎃',
+    turns: 'wave',
+    stack: ['trickAtk', 'trickDef', 'trickRegen']
+  },
+  sweet: {
+    icon: '🍪',
+    turns: 'run',
+    stack: ['cookie', 'note']
+  },
+  bow: {
+    icon: '🎀',
+    turns: 'run',
+    stack: 'bow'
+  },
+  fate: {
+    icon: '🪙',
+    turns: 'run',
+    stack: ['fateCombo', 'fateAtk']
+  },
+  fateCoinGuts: {
+    icon: '🪙',
+    turns: 'run',
+    kind: 'debuff'
+  },
+  meloso: {
+    icon: '💖',
+    turns: 'next'
+  },
+  boost: {
+    icon: '✨',
+    turns: 'now'
+  },
+  critFix: {
+    icon: '🎯',
+    turns: 'now'
+  },
+  zeroGuts: {
+    icon: '⭐',
+    turns: 'now'
+  },
+  reflectNext: {
+    icon: '🔁',
+    turns: 'next'
+  },
+  reflectNow: {
+    icon: '🔁',
+    turns: 'now'
+  },
+  takenNext: {
+    icon: '🛡️',
+    turns: 'next'
+  },
+  takenNow: {
+    icon: '🛡️',
+    turns: 'now'
+  },
+  costNext: {
+    icon: '⚡',
+    turns: 'next',
+    kind: 'debuff'
+  },
+  costNow: {
+    icon: '⚡',
+    turns: 'now',
+    kind: 'debuff'
+  }
+});
+const CLASSIC_DEBUFF_VIEW = Object.freeze({
+  ice: 'wave',
+  confuse: 'count',
+  aquaPrison: 'count',
+  aquaFreeze: 'count',
+  aquaFinale: 'count',
+  nightmare: 'count',
+  psycho: 'count',
+  fateAtkDown: 'count',
+  fateTakenUp: 'count',
+  stun: 'next',
+  atkDown: 'wave',
+  taken: 'wave',
+  roar: 'wave'
+});
+const classicChipKindOf = key => {
+  const k = String(key || '');
+  if (CLASSIC_CHIP_VIEW[k]) return k;
+  return ['trick', 'sweet', 'bow', 'fate'].find(p => k.startsWith(p) && !CLASSIC_CHIP_VIEW[k]) || null;
+};
+const classicPctOf = text => {
+  const m = String(text || '').match(/([+\-−]?)(\d+)%/);
+  return m ? Number(m[2]) * (m[1] === '-' || m[1] === '−' ? -1 : 1) : null;
+};
+const classicTurnsLeftOf = (text, turns) => {
+  const m = String(text || '').match(/残り(\d+)T/);
+  if (m) return Number(m[1]);
+  return turns === 'now' || turns === 'next' ? 1 : turns === 'wave' ? 'wave' : null;
+};
+const classicEffectsFromChips = (chips, slot = null, stackCounts = null) => {
+  const out = [],
+    covered = new Set();
+  (Array.isArray(chips) ? chips : []).forEach(c => {
+    if (!c) return;
+    const owner = Number.isInteger(c.owner) ? c.owner : null;
+    if (owner != null && Number.isInteger(slot) && owner !== slot) return;
+    const kind = classicChipKindOf(c.key),
+      v = kind ? CLASSIC_CHIP_VIEW[kind] : null;
+    if (!v) return;
+    [].concat(v.stack || []).forEach(s => covered.add(s));
+    const text = [c.value, c.short].filter(Boolean).join(' ');
+    out.push({
+      key: `chip:${c.key}`,
+      name: c.label || '',
+      icon: v.icon,
+      kind: v.kind || 'buff',
+      pct: classicPctOf(c.value),
+      fromName: '',
+      fromSlot: owner,
+      turnsLeft: classicTurnsLeftOf(text, v.turns),
+      allAllies: owner == null,
+      note: `${c.value || ''}${v.turns === 'next' ? '(次のターン)' : v.turns === 'now' ? '(このターン)' : v.turns === 'run' ? '(このランのあいだ)' : ''}`
+    });
+  });
+  const counts = Object.fromEntries(Object.entries(stackCounts && typeof stackCounts === 'object' ? stackCounts : {}).filter(([k]) => !covered.has(k)));
+  return [...out, ...listTacticsStackItems(counts, {
+    keepZero: []
+  })];
+};
+const CLASSIC_DEBUFF_FROM_EX = Object.freeze(['psycho', 'aquaPrison', 'aquaFreeze', 'aquaFinale', 'nightmare']);
+const classicEnemyEffectsFromDebuffs = (debuffs, stackCounts = null, {
+  withoutEx = false
+} = {}) => {
+  const out = [];
+  (Array.isArray(debuffs) ? debuffs : []).forEach(d => {
+    if (!d || !CLASSIC_DEBUFF_VIEW[d.key] || withoutEx && CLASSIC_DEBUFF_FROM_EX.includes(d.key)) return;
+    const turns = CLASSIC_DEBUFF_VIEW[d.key];
+    out.push({
+      key: `debuff:${d.key}`,
+      name: d.label || '',
+      icon: d.mark || '',
+      kind: 'debuff',
+      pct: classicPctOf(d.value),
+      fromName: '',
+      fromSlot: null,
+      turnsLeft: classicTurnsLeftOf(`${d.value || ''} ${d.short || ''}`, turns),
+      allAllies: false,
+      note: d.note || d.value || ''
+    });
+  });
+  const covered = new Set(['aquaPrison', 'aquaFreeze', 'roar'].filter(k => out.some(x => x.key === `debuff:${k}`)));
+  const counts = Object.fromEntries(Object.entries(stackCounts && typeof stackCounts === 'object' ? stackCounts : {}).filter(([k]) => !covered.has(k)));
+  return [...out, ...listTacticsStackItems(counts, {
+    keepZero: []
+  })];
 };
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
 const RHYTHM_BUDDY_TICKET_ITEM_ID = 'session_ticket';
@@ -70535,12 +70763,74 @@ const BattleStackMarks = ({
     "aria-hidden": "true"
   }, it.mark), React.createElement("b", null, it.unit === 'T' ? `${it.count}T` : `×${it.count}`))));
 };
+const exEffectIconOf = e => {
+  if (e && e.icon) return e.icon;
+  const kind = e && typeof e.key === 'string' && e.key.startsWith('stack:') ? e.key.slice(6) : null;
+  const m = kind && typeof BATTLE_STACK_MARKS !== 'undefined' ? BATTLE_STACK_MARKS[kind] : null;
+  return m && m.img ? React.createElement("img", {
+    src: m.img,
+    alt: "",
+    className: "inline h-3 w-3 object-contain align-[-2px]",
+    draggable: false
+  }) : '';
+};
+const exEffectAmountText = (e, long = false) => {
+  if (!e) return '';
+  if (e.kind === 'stack' && Number.isFinite(Number(e.count)) && !(e.turnsLeft != null && e.max == null && Number(e.count) === Number(e.turnsLeft))) {
+    const c = Math.max(0, Math.floor(Number(e.count)));
+    return Number(e.max) > 0 ? `${c}/${Math.floor(Number(e.max))}` : `×${c}`;
+  }
+  if (e.turnsLeft === 'wave') return long ? 'このWAVE' : 'WAVE中';
+  if (Number.isFinite(Number(e.turnsLeft))) return long ? `あと${e.turnsLeft}ターン` : `あと${e.turnsLeft}`;
+  return '';
+};
+const EX_EFFECT_TONE = {
+  buff: 'bg-emerald-900/90 ring-emerald-300/80 text-emerald-50',
+  debuff: 'bg-red-900/90 ring-red-300/80 text-red-50',
+  stack: 'bg-violet-900/90 ring-violet-300/80 text-violet-50'
+};
+const ExEffectChips = ({
+  items,
+  max = 3,
+  compact = false,
+  className = ''
+}) => {
+  const list = Array.isArray(items) ? items.filter(Boolean) : [];
+  if (!list.length) return null;
+  const limit = compact ? Math.min(max, 2) : max;
+  const shown = list.slice(0, limit);
+  const more = list.length - shown.length;
+  const chip = e => React.createElement("span", {
+    key: e.key,
+    "data-ex-effect": e.key,
+    "data-ex-effect-kind": e.kind,
+    className: `flex min-w-0 ${compact ? 'max-w-full text-[8px]' : 'max-w-[96px] text-[9px]'} items-center gap-[2px] rounded-md px-1 py-px font-black leading-tight whitespace-nowrap ring-1 ${EX_EFFECT_TONE[e.kind] || EX_EFFECT_TONE.buff}`
+  }, React.createElement("span", {
+    className: "shrink-0"
+  }, exEffectIconOf(e)), React.createElement("span", {
+    className: "min-w-0 truncate"
+  }, e.name), exEffectAmountText(e) && React.createElement("span", {
+    className: "shrink-0 tabular-nums opacity-90"
+  }, exEffectAmountText(e)));
+  const moreChip = more > 0 ? React.createElement("span", {
+    "data-ex-effect-more": true,
+    className: "shrink-0 rounded-md bg-black/70 px-1 text-[9px] font-black leading-tight text-slate-100"
+  }, "+", more) : null;
+  return React.createElement("div", {
+    "data-ex-effect-chips": list.length,
+    className: `pointer-events-none flex ${compact ? 'flex-col-reverse' : 'flex-col'} items-start gap-[2px] ${className}`
+  }, compact ? shown.map((e, k) => k === 0 && moreChip ? React.createElement("span", {
+    key: e.key,
+    className: "flex max-w-full min-w-0 items-center gap-[2px]"
+  }, chip(e), moreChip) : chip(e)) : React.createElement(React.Fragment, null, shown.map(chip), moreChip));
+};
 const BattleUnitDetailBody = ({
   side,
   status,
   chips = [],
   marks = null,
-  debuffs = []
+  debuffs = [],
+  exEffects = null
 }) => {
   if (!status) return null;
   const stat = (key, label, cls, value, sub) => React.createElement("div", {
@@ -70596,7 +70886,9 @@ const BattleUnitDetailBody = ({
   }) : it.mark, it.label, it.unit === 'T' ? `あと${it.count}ターン` : `×${it.count}`, ''));
   const own = (chips || []).filter(c => c.owner === status.slot);
   const team = (chips || []).filter(c => c.owner == null);
-  const lineRows = (status.lines || []).map(l => row(l.key, null, l.label, l.value, l.note));
+  const hasEx = Array.isArray(exEffects);
+  const exRows = hasEx ? exEffects.filter(Boolean).map(e => row(`exfx-${e.key}`, exEffectIconOf(e), e.name, exEffectAmountText(e, true), [e.note, e.fromName ? `${e.fromName}のEX${e.allAllies ? '(味方全員)' : ''}` : ''].filter(Boolean).join('・'), e.kind === 'stack' ? 'border-violet-300/50 bg-violet-950/50' : e.kind === 'debuff' ? 'border-red-300/50 bg-red-950/50' : 'border-emerald-300/50 bg-emerald-950/50')) : [];
+  const lineRows = (status.lines || []).filter(l => !(hasEx && l.key === 'ex')).map(l => row(l.key, null, l.label, l.value, l.note));
   const chipRow = c => row(c.key, c.mark, c.label, c.value, '', c.tone);
   const apt = status.aptPct;
   return React.createElement("div", {
@@ -70606,7 +70898,7 @@ const BattleUnitDetailBody = ({
   }, stat('hp', 'ライフ', 'text-pink-400', `${status.hp.toLocaleString()} / ${status.maxHp.toLocaleString()}`, status.baseMaxHp !== status.maxHp ? `元の上限 ${status.baseMaxHp.toLocaleString()}` : ''), stat('guts', 'ガッツ', 'text-amber-400', `${status.guts.toLocaleString()} / ${status.maxGuts.toLocaleString()}`, status.baseMaxGuts !== status.maxGuts ? `元の上限 ${status.baseMaxGuts.toLocaleString()}` : ''), statOf('atk', 'ちから', 'text-red-400', status.atk), statOf('def', '丈夫さ', 'text-emerald-400', status.def)), React.createElement("div", {
     "data-unit-stat": "apt",
     className: "mt-1 text-[10px] font-black text-cyan-300"
-  }, "この枠の間合い適性 ", apt >= 0 ? '+' : '', apt, "%"), status.tactics ? React.createElement(React.Fragment, null, list('own', 'この子にかかっている効果', [...markRows, ...lineRows, ...own.map(chipRow)]), list('team', '味方全員にかかっている効果', team.map(chipRow))) : list('team', 'かかっている効果(パーティ全体)', [...markRows, ...lineRows, ...own.map(chipRow), ...team.map(chipRow)]));
+  }, "この枠の間合い適性 ", apt >= 0 ? '+' : '', apt, "%"), status.tactics ? React.createElement(React.Fragment, null, list('own', 'この子にかかっている効果', [...(hasEx ? exRows : markRows), ...lineRows, ...own.map(chipRow)]), list('team', '味方全員にかかっている効果', team.map(chipRow))) : list('team', 'かかっている効果(パーティ全体)', [...markRows, ...lineRows, ...own.map(chipRow), ...team.map(chipRow)]));
 };
 const BattleUnitDetailPanel = ({
   side,
@@ -70614,6 +70906,7 @@ const BattleUnitDetailPanel = ({
   chips,
   marks,
   debuffs,
+  exEffects = null,
   onClose
 }) => {
   if (!status) return null;
@@ -70656,7 +70949,8 @@ const BattleUnitDetailPanel = ({
     status: status,
     chips: chips,
     marks: marks,
-    debuffs: debuffs
+    debuffs: debuffs,
+    exEffects: exEffects
   })), React.createElement("button", {
     type: "button",
     "data-battle-unit-detail-close": true,
@@ -70906,30 +71200,6 @@ const kindOfTacticsSlotFx = fx => {
   if (fx.guard) return 'guard';
   return null;
 };
-const CLASSIC_AI_COPY_CSS = `
-[data-ai-copy-row]{display:flex;width:100%;gap:6px;align-items:stretch}
-[data-ai-copy-row] > .grid{flex:1 1 0;min-width:0;width:auto}
-[data-ai-copy-cell]{width:62px;flex:0 0 62px;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:2px;padding:3px 3px;border-radius:12px;border:1px solid rgba(52,211,153,.6);background:rgba(2,44,34,.55);position:relative}
-[data-ai-copy-cell] [data-ai-copy-head]{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;min-width:0}
-[data-ai-copy-cell] [data-ai-copy-face]{margin-bottom:3px}
-[data-ai-copy-cell] [data-ai-copy-name]{width:100%;min-width:0;text-align:center;font-size:9px;line-height:10px;font-weight:900;color:#a7f3d0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:keep-all;overflow-wrap:anywhere}
-/* コピーが出ると4枠が細くなる(320 幅で約52px)。枠の中の札が枠からはみ出さない・字が切れないように、コピーがいるあいだだけ小さくする
-   (2026-10-29 見回り: 距離補正の札「-10.0%」が枠の外へ、ガードの札が「ガ…」に切れていた) */
-[data-ai-copy-row] [data-dist-chip]{font-size:9px;padding:1px 2px;gap:0;right:1px;max-width:calc(100% - 2px)}
-[data-ai-copy-row] [data-dist-chip] svg{display:none}
-[data-ai-copy-row] [data-tactics-slot-marks] > div{padding-left:1px;padding-right:1px}
-[data-ai-copy-row] [data-tactics-slot-marks] > div > span:first-child{display:none}
-/* 横向き(背の低い画面): 縦と同じく4枠の右に細い5列目として置く。列の下に段を足すと、そのぶん敵の段が縮んで敵の絵が見えなくなる
-   (2026-10-29 見回り 667×375)。枠の高さ(112px)に収まるよう、絵・字を小さくする */
-@media (orientation: landscape) and (max-height: 520px){
-  [data-ai-copy-cell]{width:64px;flex:0 0 64px;gap:0;padding:1px 2px;border-radius:10px}
-  [data-ai-copy-cell] [data-ai-copy-head]{gap:0}
-  [data-ai-copy-cell] [data-ai-copy-face]{margin-bottom:2px}
-  [data-ai-copy-cell] [data-ai-copy-name]{font-size:8px;line-height:9px}
-  [data-ai-copy-cell] [data-sorashido-next]{padding:1px 2px;border-radius:6px}
-  [data-ai-copy-cell] [data-sorashido-next] > b{-webkit-line-clamp:2;font-size:8px;line-height:9px}
-  [data-ai-copy-cell] [data-sorashido-next] > small{display:none}
-}`;
 const aiCopyViewPhase = (copy, fallback) => copy && ['appear', 'thinking', 'vanish'].includes(copy.fx) ? copy.fx : fallback;
 const classicAiCopyLandscape = () => {
   try {
@@ -71053,7 +71323,7 @@ function AiCopyLifeBar({
     }
   })));
 }
-function TacticsAiCopyColumn({
+function AiCopyFloat({
   copy,
   src,
   phase,
@@ -71061,71 +71331,81 @@ function TacticsAiCopyColumn({
   anim,
   skill,
   standing,
-  layout,
   onOpen,
   hatePct = null,
-  compact = false
+  lift = false
 }) {
   if (!copy) return null;
-  const land = layout === 'landscape';
   const name = tacticsAiCopyName(copy);
+  const short = classicAiCopyLandscape() || typeof window !== 'undefined' && window.innerHeight <= 640;
   const canOpen = typeof onOpen === 'function' && phase !== 'vanish';
   const next = standing ? React.createElement(SorashidoNextCardBadge, {
     card: copy.nextCard || null,
-    layout: land ? 'landscape' : 'portrait',
-    turnsLeft: copy.turnsLeft
+    layout: "landscape",
+    turnsLeft: short ? null : copy.turnsLeft
   }) : React.createElement("span", {
     className: "text-center text-[9px] font-black leading-tight text-emerald-300"
   }, "次のターンから");
   return React.createElement("div", {
-    "data-tactics-ai-copy-column": layout,
+    "data-ai-copy-float": short ? 'short' : 'tall',
     "data-ai-copy-phase": phase,
     role: canOpen ? 'button' : undefined,
     tabIndex: canOpen ? 0 : undefined,
     "aria-label": `${name}${canOpen ? '。押すと手札を見る' : ''}`,
-    onClick: canOpen ? onOpen : undefined,
+    onClick: canOpen ? e => {
+      e.stopPropagation();
+      onOpen();
+    } : undefined,
     onKeyDown: canOpen ? e => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         onOpen();
       }
     } : undefined,
-    className: `relative min-w-0 rounded-xl border border-emerald-400/60 bg-emerald-950/55 text-emerald-50 ${canOpen ? 'cursor-pointer' : ''} ${land ? 'flex h-[46px] w-full items-center gap-2 px-2' : `flex h-full w-[72px] max-[359px]:w-[60px] shrink-0 flex-col items-center justify-between ${compact ? 'gap-0 py-0.5' : 'gap-0.5 py-1'} px-1 max-[359px]:px-0.5`}`
+    className: `absolute z-[24] rounded-xl border border-emerald-400/70 bg-emerald-950/85 text-emerald-50 shadow-[0_4px_14px_rgba(0,0,0,.55)] ${canOpen ? 'cursor-pointer active:scale-[.98]' : ''} ${short ? `left-2 ${lift ? 'bottom-[46px]' : 'bottom-1'} flex w-[min(236px,calc(50%-8px))] items-center gap-1.5 px-1.5 py-1` : 'left-2 top-1/2 flex w-[124px] -translate-y-1/2 flex-col gap-0.5 px-1.5 py-1'}`
   }, skill && React.createElement("span", {
-    "data-tactics-ai-copy-skill": true,
-    className: `absolute z-[90] max-w-[140px] truncate rounded-lg border border-red-200 bg-red-700 px-2 py-0.5 text-[11px] font-black text-white shadow-[0_2px_10px_rgba(0,0,0,.7)] ${land ? 'left-1/2 -top-3 -translate-x-1/2' : 'right-1 top-1/3'}`
+    "data-ai-copy-float-skill": true,
+    className: "absolute -top-3 left-1/2 z-[30] max-w-[120px] -translate-x-1/2 truncate rounded-lg border border-red-200 bg-red-700 px-2 py-0.5 text-[11px] font-black text-white shadow-[0_2px_10px_rgba(0,0,0,.7)]"
   }, skill), React.createElement("span", {
-    className: `flex min-w-0 items-center gap-1 ${land ? 'w-[92px] shrink-0' : 'w-full flex-col'}`
+    className: `flex min-w-0 items-center gap-1 ${short ? 'w-[64px] shrink-0 flex-col' : 'w-full'}`
   }, React.createElement(AiCopyFace, {
     src: src,
-    size: land ? 20 : compact ? 18 : 22
+    size: short ? 18 : 22
   }), React.createElement("span", {
-    className: `min-w-0 overflow-hidden whitespace-nowrap font-black leading-tight text-emerald-200 [container-type:inline-size] ${land ? 'flex-1' : 'w-full text-center'}`
+    className: `min-w-0 overflow-hidden whitespace-nowrap font-black leading-tight text-emerald-200 [container-type:inline-size] ${short ? 'w-full text-center' : 'flex-1'}`
   }, React.createElement("span", {
     className: "block",
     style: {
       fontSize: `min(10px, calc(100cqw / ${[...name].length + 0.3}))`
     }
-  }, name))), React.createElement(AiCopyBody, {
+  }, name))), short ? React.createElement(AiCopyBody, {
     src: src,
     phase: phase,
     hit: hit,
     anim: anim,
-    size: land ? 40 : compact ? 32 : 46
-  }), React.createElement("span", {
-    className: `flex min-w-0 flex-col gap-0.5 ${land ? 'w-[96px] shrink-0' : 'w-full'}`
+    size: 32
+  }) : React.createElement("span", {
+    className: "flex justify-center"
+  }, React.createElement(AiCopyBody, {
+    src: src,
+    phase: phase,
+    hit: hit,
+    anim: anim,
+    size: 44
+  })), React.createElement("span", {
+    className: `flex min-w-0 flex-col gap-0.5 ${short ? 'w-[64px] shrink-0' : 'w-full'}`
   }, React.createElement(AiCopyLifeBar, {
     hp: copy.hp,
     maxHp: copy.maxHp,
-    narrow: !land
+    narrow: short
   }), React.createElement(AiCopyGutsMeter, {
     guts: copy.guts,
     maxGuts: copy.maxGuts
-  })), Number.isInteger(hatePct) && React.createElement("span", {
-    "data-tactics-ai-copy-hate": hatePct,
-    className: "shrink-0 whitespace-nowrap text-[9px] font-black tabular-nums text-rose-200"
-  }, "狙われ ", hatePct, "%"), React.createElement("span", {
-    className: land ? 'min-w-0 flex-1' : 'flex w-full min-w-0 justify-center max-[359px]:[&>*]:max-w-full max-[359px]:[&>*]:w-full'
+  }), Number.isInteger(hatePct) && React.createElement("span", {
+    "data-ai-copy-float-hate": hatePct,
+    className: "whitespace-nowrap text-[9px] font-black tabular-nums text-rose-200"
+  }, "狙われ ", hatePct, "%")), React.createElement("span", {
+    className: short ? 'min-w-0 flex-1' : 'flex w-full min-w-0 justify-center'
   }, next));
 }
 function AiCopyGutsMeter({
@@ -71152,68 +71432,6 @@ function AiCopyGutsMeter({
       width: `${pct}%`
     }
   })));
-}
-function ClassicAiCopyCell({
-  copy,
-  turnCount,
-  onOpen,
-  mon = null,
-  hitAnim = null
-}) {
-  if (!copy) return null;
-  const phase = aiCopyViewPhase(copy, isAiCopyOut(copy, turnCount) ? 'idle' : 'appear');
-  const out = phase === 'vanish' || isAiCopyOut(copy, turnCount);
-  const canOpen = typeof onOpen === 'function' && phase !== 'vanish';
-  const layout = classicAiCopyLandscape() ? 'landscape' : 'portrait';
-  const guts = Math.max(0, Math.floor(Number(copy.guts) || 0)),
-    maxGuts = Math.max(0, Math.floor(Number(copy.maxGuts) || 0));
-  return React.createElement("div", {
-    "data-ai-copy-cell": out ? 'out' : 'waiting',
-    "data-ai-copy-phase": phase,
-    "aria-label": `${tacticsAiCopyName(copy)}(5人目の味方)${canOpen ? '。押すと手札を見る' : ''}`,
-    role: canOpen ? 'button' : undefined,
-    tabIndex: canOpen ? 0 : undefined,
-    style: canOpen ? {
-      cursor: 'pointer'
-    } : undefined,
-    onClick: canOpen ? onOpen : undefined,
-    onKeyDown: canOpen ? e => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        onOpen();
-      }
-    } : undefined
-  }, React.createElement("style", null, CLASSIC_AI_COPY_CSS), React.createElement("span", {
-    "data-ai-copy-head": true
-  }, React.createElement(AiCopyFace, {
-    src: mon,
-    size: layout === 'landscape' ? 16 : 20
-  }), React.createElement("span", {
-    "data-ai-copy-name": true
-  }, copy.name || '仲間', React.createElement("wbr", null), "のコピー")), mon ? React.createElement(AiCopyBody, {
-    src: mon,
-    phase: phase,
-    hit: !!hitAnim,
-    anim: hitAnim,
-    size: layout === 'landscape' ? 24 : 40
-  }) : React.createElement(SorashidoCopyFx, {
-    phase: phase
-  }, React.createElement("img", {
-    src: SORASHIDO_FACE_ICON,
-    alt: "",
-    "aria-hidden": "true",
-    className: "h-7 w-7 rounded-full object-cover bg-black/30",
-    draggable: "false"
-  })), out ? React.createElement(React.Fragment, null, React.createElement(AiCopyGutsMeter, {
-    guts: guts,
-    maxGuts: maxGuts
-  }), React.createElement(SorashidoNextCardBadge, {
-    card: copy.nextCard || null,
-    layout: layout,
-    turnsLeft: copy.turnsLeft
-  })) : React.createElement("span", {
-    className: "text-center text-[9px] font-black leading-tight text-emerald-300"
-  }, "次のターン", React.createElement("br", null), "から"));
 }
 function BattleScreen({
   battleOverlayOpen = false,
@@ -71687,6 +71905,7 @@ function BattleScreen({
   const shownAiCopy = aiCopy || copyGhost;
   const tacticsCopyOutside = !!(Array.isArray(tacticsUnits) && shownAiCopy && (normalizeBattleScreenStyle(battleScreenStyle) !== 'TACTICS_NEW' || shownAiCopy.stacked || Array.isArray(slots) && slots.length > 0 && slots.every(Boolean)));
   const classicAiCopy = !Array.isArray(tacticsUnits) ? shownAiCopy || null : null;
+  const copyFloat = classicAiCopy || (tacticsCopyOutside ? shownAiCopy : null);
   const battleFx = normalizeBattleFxSettings(battleFxSettings);
   const fxLoad = battleFx.load;
   const fxRestEnabled = battleFx.restPause === 'ON';
@@ -72471,7 +72690,27 @@ function BattleScreen({
     className: "text-red-300"
   }), React.createElement("span", {
     className: "text-[10px] font-black leading-none text-white [@media(max-height:640px)]:sr-only"
-  }, "解析")), battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && React.createElement("button", {
+  }, "解析")), copyFloat && (() => {
+    const c = copyFloat;
+    const tactics = Array.isArray(tacticsUnits);
+    const standing = tactics ? !!aiCopy && isTacticsAiCopyStanding(aiCopy) && aiCopy.spawnTurn <= turnCount : isAiCopyOut(c, turnCount);
+    const phase = aiCopyViewPhase(c, standing ? 'idle' : 'appear');
+    const hit = !!(aiCopy && !ecoBattleView && attackAnim && (tactics ? attackAnim.aiCopy : aiCopyHitting));
+    const skill = aiCopy && slotSkill && slotSkill.aiCopy ? slotSkill.name : null;
+    const hc = tactics && standing && tacticsHateOn && Array.isArray(tacticsHate) ? tacticsTargetChancesWithCopy(tacticsUnits, tacticsHate, TACTICS_TARGET_LOW_HP_BIAS, aiCopy) : null;
+    return React.createElement(AiCopyFloat, {
+      copy: c,
+      src: aiCopySrcOf(c, slots),
+      phase: phase,
+      hit: hit,
+      anim: attackAnim,
+      skill: skill,
+      standing: standing || phase === 'vanish',
+      onOpen: aiCopy ? () => setCopyHandOpen(true) : null,
+      hatePct: hc && Number.isInteger(hc.copy) ? hc.copy : null,
+      lift: battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0)
+    });
+  })(), battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && React.createElement("button", {
     "data-soul-battle-effects-button": true,
     type: "button",
     onClick: () => setShowSoulBattleEffects(true),
@@ -72623,7 +72862,7 @@ function BattleScreen({
     className: "mh-enemy-move-hint"
   }, React.createElement("span", {
     "aria-hidden": "true"
-  }, "🏃"), React.createElement("span", null, RANGE_LABELS[enemyNextIntent.targetDist], "距離に移動しようとしている…？"))), document.body), !tacticsNewLayout && React.createElement(React.Fragment, null, slotSkill && ReactDOM.createPortal(slotSkill.aiCopy && tacticsCopyOutside ? null : React.createElement("div", {
+  }, "🏃"), React.createElement("span", null, RANGE_LABELS[enemyNextIntent.targetDist], "距離に移動しようとしている…？"))), document.body), !tacticsNewLayout && React.createElement(React.Fragment, null, slotSkill && ReactDOM.createPortal(slotSkill.aiCopy && copyFloat ? null : React.createElement("div", {
     className: "fixed -translate-x-1/2 pointer-events-none whitespace-nowrap",
     style: {
       left: `${12.5 + slotSkill.slotIndex * 25}%`,
@@ -73433,12 +73672,10 @@ function BattleScreen({
       backgroundColor: 'rgba(2,6,23,0.8)'
     }
   }, p.text))))), React.createElement("div", {
-    "data-ai-copy-row": classicAiCopy && !tacticsNewLayout ? '' : undefined,
-    "data-tactics-ai-copy-row": tacticsCopyOutside ? '' : undefined,
-    className: classicAiCopy && !tacticsNewLayout ? '' : tacticsCopyOutside ? tacticsNewLayout ? 'flex w-full items-stretch gap-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:flex-col [@media(orientation:landscape)_and_(max-height:520px)]:gap-1' : 'flex w-full items-stretch gap-1.5' : 'contents'
+    className: "contents"
   }, React.createElement("div", {
     "data-tactics-debug-layout": tacticsNewLayout ? '2x2' : undefined,
-    className: `grid ${tacticsNewLayout ? 'grid-cols-2 grid-rows-2 gap-1.5' : 'grid-cols-4 gap-2'} w-full relative ${tacticsCopyOutside ? tacticsNewLayout ? 'min-w-0 flex-1 [@media(orientation:landscape)_and_(max-height:520px)]:flex-none' : 'min-w-0 flex-1' : 'shrink-0'}${battleTutorialSpotClass('battleSlots')}`,
+    className: `grid ${tacticsNewLayout ? 'grid-cols-2 grid-rows-2 gap-1.5' : 'grid-cols-4 gap-2'} w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`,
     style: {
       height: tacticsNewLayout ? 'clamp(196px,23dvh,214px)' : 'clamp(152px,18dvh,168px)'
     }
@@ -73561,6 +73798,7 @@ function BattleScreen({
       baseId: s?.id,
       image: img
     }) : img;
+    const slotExEffects = s && typeof tacticsExEffectsAt === 'function' ? tacticsExEffectsAt(i, allyStackCounts[i]) || [] : null;
     const slotSoulStage = (() => {
       if (!s || !s.masuId || ecoBattleView || liteBattleView || fxLoad === 'LIGHT' || fxLoad === 'MINIMAL' || !Array.isArray(battleSoulMasus)) return 0;
       const m = battleSoulMasus.find(x => x && (x.id === s.masuId || x.masuId === s.masuId));
@@ -73798,7 +74036,11 @@ function BattleScreen({
           animationDuration: `${tacticsExCutin.ms}ms`
         } : {})
       }
-    }, React.createElement("i", null), React.createElement("i", null)), tacticsNewLayout && React.createElement(BattleStackMarks, {
+    }, React.createElement("i", null), React.createElement("i", null)), tacticsNewLayout && slotExEffects && React.createElement(ExEffectChips, {
+      items: slotExEffects,
+      compact: true,
+      className: "absolute left-[2px] bottom-[22px] z-[62] max-w-[calc(40%-2px)]"
+    }), tacticsNewLayout && !slotExEffects && React.createElement(BattleStackMarks, {
       counts: allyStackCounts[i],
       side: "ally",
       full: SWEET_STACK_MAX,
@@ -73910,7 +74152,7 @@ function BattleScreen({
         }, "💤 +", f.revive)));
       })();
       if (!tacticsNewLayout) return slotFxEl;
-      const skillHere = slotSkill && slotSkill.slotIndex === i && !(slotSkill.aiCopy && tacticsCopyOutside) ? slotSkill : null;
+      const skillHere = slotSkill && slotSkill.slotIndex === i && !(slotSkill.aiCopy && copyFloat) ? slotSkill : null;
       const ownPopups = popups.filter(p => p.slot === i && p.side !== 'enemy').slice(skillHere || slotFxEl ? -1 : -2);
       if (!slotFxEl && !skillHere && !ownPopups.length) return null;
       return React.createElement("div", {
@@ -74043,10 +74285,13 @@ function BattleScreen({
           fontSize: '7px'
         }
       }, "🛡 ", slotRushGuard ? '連撃ガード' : '全体', " ", gv);
-    })(), (slotAssignedCards.length > 0 || previewDmg > 0 || previewGuard > 0 || slotAimHit || slotExInfo || !tacticsNewLayout && battleStackMarkItems(allyStackCounts[i]).length > 0) && React.createElement("div", {
+    })(), (slotAssignedCards.length > 0 || previewDmg > 0 || previewGuard > 0 || slotAimHit || slotExInfo || !tacticsNewLayout && (slotExEffects ? slotExEffects.length > 0 : battleStackMarkItems(allyStackCounts[i]).length > 0)) && React.createElement("div", {
       "data-tactics-slot-marks": true,
       className: `${tacticsNewLayout ? `absolute left-full w-[150%] overflow-hidden items-stretch justify-start px-1.5 ${slotAimHit || previewDmg > 0 || previewGuard > 0 ? 'top-[15px] h-[calc(100%-46px)]' : 'top-px h-[calc(100%-31px)]'}` : 'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`
-    }, !tacticsNewLayout && React.createElement(BattleStackMarks, {
+    }, !tacticsNewLayout && slotExEffects && React.createElement(ExEffectChips, {
+      items: slotExEffects,
+      className: "w-full"
+    }), !tacticsNewLayout && !slotExEffects && React.createElement(BattleStackMarks, {
       counts: allyStackCounts[i],
       side: "ally",
       full: SWEET_STACK_MAX,
@@ -74287,7 +74532,7 @@ function BattleScreen({
         "data-tactics-hp": `${tacticsUnit.hp}/${tacticsUnit.maxHp}`,
         "data-tactics-guts": `${tacticsUnit.guts}/${tacticsUnit.maxGuts}`,
         "data-tactics-downed": tacticsUnit.downed ? 'true' : 'false',
-        className: `${tacticsNewLayout ? `absolute right-0 bottom-[3px] w-[60%] min-w-0 border-l flex flex-col justify-end py-px px-2 gap-0 backdrop-blur-sm${tacticsCopyOutside ? ' max-[359px]:px-1 max-[359px]:w-[66%]' : ''}` : 'shrink-0 border-t px-1'} z-20 border-white/[.06] bg-[linear-gradient(90deg,rgba(8,15,31,.86),rgba(15,23,42,.72))]${battleTutorialSpotClass('tacticsParty')}`
+        className: `${tacticsNewLayout ? `absolute right-0 bottom-[3px] w-[60%] min-w-0 border-l flex flex-col justify-end py-px px-2 gap-0 backdrop-blur-sm` : 'shrink-0 border-t px-1'} z-20 border-white/[.06] bg-[linear-gradient(90deg,rgba(8,15,31,.86),rgba(15,23,42,.72))]${battleTutorialSpotClass('tacticsParty')}`
       }, React.createElement("div", {
         className: "flex h-[10px] items-center justify-between leading-none"
       }, React.createElement("span", {
@@ -74348,41 +74593,7 @@ function BattleScreen({
     }, React.createElement("span", {
       className: "text-[10px] font-black uppercase tracking-tighter leading-none"
     }, RANGE_LABELS[i], "距離")));
-  })), classicAiCopy && !tacticsNewLayout && React.createElement(ClassicAiCopyCell, {
-    copy: classicAiCopy,
-    turnCount: turnCount,
-    onOpen: () => setCopyHandOpen(true),
-    mon: slots[classicAiCopy.srcSlot] || null,
-    hitAnim: !ecoBattleView && attackAnim && aiCopyHitting ? attackAnim : null
-  }), tacticsCopyOutside && (() => {
-    const c = shownAiCopy;
-    const standing = !!aiCopy && isTacticsAiCopyStanding(aiCopy) && aiCopy.spawnTurn <= turnCount;
-    const phase = aiCopyViewPhase(c, standing ? 'idle' : 'appear');
-    const hit = !!(aiCopy && !ecoBattleView && attackAnim && attackAnim.aiCopy);
-    const skill = aiCopy && slotSkill && slotSkill.aiCopy ? slotSkill.name : null;
-    const hc = standing && tacticsHateOn && Array.isArray(tacticsHate) ? tacticsTargetChancesWithCopy(tacticsUnits, tacticsHate, TACTICS_TARGET_LOW_HP_BIAS, aiCopy) : null;
-    const props = {
-      copy: c,
-      src: aiCopySrcOf(c, slots),
-      phase,
-      hit,
-      anim: attackAnim,
-      skill,
-      standing: standing || phase === 'vanish',
-      onOpen: aiCopy ? () => setCopyHandOpen(true) : null,
-      hatePct: hc && Number.isInteger(hc.copy) ? hc.copy : null
-    };
-    return React.createElement(React.Fragment, null, React.createElement("div", {
-      className: `flex shrink-0 ${tacticsNewLayout ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
-    }, React.createElement(TacticsAiCopyColumn, _extends({}, props, {
-      layout: "portrait",
-      compact: !tacticsNewLayout && classicAiCopyLandscape()
-    }))), tacticsNewLayout && React.createElement("div", {
-      className: "hidden shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:block"
-    }, React.createElement(TacticsAiCopyColumn, _extends({}, props, {
-      layout: "landscape"
-    }))));
-  })(), aiCopy && copyHandOpen && typeof document !== 'undefined' && ReactDOM.createPortal(React.createElement(SorashidoCopyHandSheet, {
+  })), aiCopy && copyHandOpen && typeof document !== 'undefined' && ReactDOM.createPortal(React.createElement(SorashidoCopyHandSheet, {
     open: true,
     copyName: aiCopy.name || '仲間',
     turnsLeft: aiCopy.turnsLeft,
@@ -74828,7 +75039,8 @@ function BattleScreen({
     side: "ally",
     status: battleUnitStatusOf(exPanel.slot),
     chips: battleBuffChips(),
-    marks: allyStackCounts[exPanel.slot]
+    marks: allyStackCounts[exPanel.slot],
+    exEffects: typeof tacticsExEffectsAt === 'function' ? tacticsExEffectsAt(exPanel.slot, allyStackCounts[exPanel.slot]) || [] : null
   }), React.createElement("button", {
     type: "button",
     "data-tactics-ex-close": true,
@@ -74996,6 +75208,7 @@ function BattleScreen({
     status: typeof battleUnitStatusOf === 'function' ? battleUnitStatusOf(unitDetail.slot) : null,
     chips: battleBuffChips(),
     marks: allyStackCounts[unitDetail.slot],
+    exEffects: typeof tacticsExEffectsAt === 'function' ? tacticsExEffectsAt(unitDetail.slot, allyStackCounts[unitDetail.slot]) || [] : null,
     onClose: () => setUnitDetail(null)
   })), showBattleMenu && ReactDOM.createPortal(React.createElement("div", {
     className: "fixed inset-0 z-[70000] flex items-start justify-end bg-black/70 p-2",
@@ -80010,6 +80223,94 @@ function RhythmMultiAloneHint({
     className: "mt-1 block min-h-[36px] w-full rounded-lg bg-slate-700 text-[11px] font-black"
   }, "モードえらびへ戻る"));
 }
+function RhythmMultiAwayBar({
+  hidden = false,
+  busy = false,
+  onReturn = null
+}) {
+  const [view, setView] = React.useState(() => RHYTHM_MULTI.view());
+  React.useEffect(() => RHYTHM_MULTI.subscribe(() => setView(RHYTHM_MULTI.view())), []);
+  const seenRef = React.useRef(null);
+  const [arrived, setArrived] = React.useState('');
+  const others = view ? view.members.filter(m => !m.cpu && m.id !== view.selfId) : [];
+  const othersKey = others.map(m => m.id).join(',');
+  const shown = !!view && !hidden && !view.full;
+  const roomWaiting = !!view && !view.full && (view.room ? view.room.phase : 'matching') === 'matching';
+  const roomWaitingSetRef = React.useRef(false);
+  React.useEffect(() => {
+    if (typeof friendsSetRoomWaiting !== 'function') return;
+    if (roomWaiting) {
+      friendsSetRoomWaiting(true);
+      roomWaitingSetRef.current = true;
+    } else if (roomWaitingSetRef.current) {
+      friendsSetRoomWaiting(false);
+      roomWaitingSetRef.current = false;
+    }
+  }, [roomWaiting]);
+  React.useEffect(() => {
+    if (!shown) {
+      seenRef.current = null;
+      setArrived('');
+      return;
+    }
+    if (!seenRef.current) {
+      seenRef.current = new Set(others.map(m => m.id));
+      return;
+    }
+    const fresh = others.find(m => !seenRef.current.has(m.id));
+    others.forEach(m => seenRef.current.add(m.id));
+    if (fresh) setArrived(rhythmMultiText(fresh.name, 20) || 'メンバー');
+  }, [othersKey, shown]);
+  if (!shown) return null;
+  const phase = view.room ? view.room.phase : 'matching';
+  const hot = !!arrived || phase !== 'matching';
+  if (busy && !hot) return null;
+  const text = arrived ? `${arrived}さんが来ました` : phase !== 'matching' ? '対戦が始まります' : `部屋で待っています(${view.members.length}/${RHYTHM_MULTI_ROOM_MAX}人)`;
+  return React.createElement(MultiAwayBar, {
+    text: text,
+    hot: hot,
+    busy: busy,
+    onReturn: onReturn,
+    onLeave: () => RHYTHM_MULTI.leave(),
+    game: "beat"
+  });
+}
+function MultiAwayBar({
+  text,
+  hot = false,
+  busy = false,
+  onReturn = null,
+  onLeave = null,
+  icon = '🎵',
+  game = ''
+}) {
+  const leave = () => {
+    if (onLeave && window.confirm('ルームを出ますか?')) onLeave();
+  };
+  return React.createElement("div", {
+    "data-multi-away-bar": hot ? 'hot' : 'wait',
+    "data-multi-away-game": game,
+    className: "pointer-events-none fixed inset-x-0 top-0 z-[1000] flex justify-center px-2 pt-[max(env(safe-area-inset-top),6px)]"
+  }, React.createElement("div", {
+    className: `pointer-events-auto flex w-full max-w-[420px] items-center gap-2 rounded-2xl border px-3 py-1.5 text-white shadow-lg ${hot ? 'border-amber-200/80 bg-fuchsia-800/95' : 'border-cyan-300/50 bg-slate-900/95'}`
+  }, React.createElement("span", {
+    className: `min-w-0 flex-1 text-[12px] font-black leading-snug ${hot ? 'animate-pulse' : ''}`,
+    style: JA_WRAP_STYLE
+  }, icon ? `${icon} ` : '', jaWrap(text)), busy ? React.createElement("small", {
+    className: "shrink-0 text-[10px] font-bold text-amber-100"
+  }, "終わったら戻れます") : React.createElement("button", {
+    "data-multi-away-return": true,
+    type: "button",
+    onClick: () => onReturn && onReturn(),
+    className: `min-h-[40px] shrink-0 rounded-xl px-3 text-[12px] font-black ${hot ? 'bg-amber-300 text-slate-950' : 'bg-cyan-400 text-slate-950'}`
+  }, hot ? '対戦へ' : '戻る'), onLeave && React.createElement("button", {
+    "data-multi-away-leave": true,
+    type: "button",
+    "aria-label": "ルームを出る",
+    onClick: leave,
+    className: "min-h-[40px] min-w-[36px] shrink-0 rounded-xl bg-slate-700 text-[13px] font-black"
+  }, "✕")));
+}
 function RhythmMultiRecordSaver({
   entry
 }) {
@@ -80828,7 +81129,8 @@ function RhythmMultiScreen({
   buddyTickets = 0,
   onUseBuddyTicket = null,
   onRefundBuddyTicket = null,
-  onOpenMasuBeat = null
+  onOpenMasuBeat = null,
+  onStepAway = null
 }) {
   const view = useRhythmMultiView();
   useModeSelectStageCss();
@@ -81983,7 +82285,13 @@ function RhythmMultiScreen({
     }, "招待は3分のあいだ届きます。相手がマルチの入口をひらくと「参加する」が出ます。"))), buddyBumped && React.createElement("p", {
       "data-rhythm-buddy-bumped": true,
       className: "text-[11px] font-black leading-snug text-amber-200"
-    }, "人が入ってきたので、呼んだマスモンは席をゆずって帰りました(使った回数・券は戻りました)"), buddyCallButton(), React.createElement("button", {
+    }, "人が入ってきたので、呼んだマスモンは席をゆずって帰りました(使った回数・券は戻りました)"), buddyCallButton(), view && !publicRoom && !view.full && onStepAway && React.createElement("button", {
+      "data-rhythm-multi-step-away": true,
+      type: "button",
+      className: `${btn} w-full bg-cyan-800`,
+      style: JA_WRAP_STYLE,
+      onClick: onStepAway
+    }, jaWrap('部屋はそのままで、ほかの画面へ')), React.createElement("button", {
       "data-rhythm-multi-leave": true,
       type: "button",
       className: `${btn} w-full bg-slate-700`,
@@ -92959,9 +93267,9 @@ const cardUserLabel = (db, c) => {
   const m = Object.values(db.monsters).find(x => x.species === c.user && !x.variant);
   return m ? `${m.name}専用` : c.user;
 };
-const cardGuardBlockReasons = (db, st) => {
-  const pd = st.pending;
-  if (!pd) return [];
+const cardGuardWhyShort = (db, st, c) => {
+  const pd = st && st.pending;
+  if (!pd || !c || !cardIsGuardKind(c.kind)) return null;
   const q = pd.defender;
   const me = st.players[q];
   const t = pd.targets[pd.ti];
@@ -92971,15 +93279,31 @@ const cardGuardBlockReasons = (db, st) => {
     pow: 'ちから技',
     int: 'かしこさ技'
   };
-  const out = [];
+  const ev = cardEff(c, 'evade');
+  const re = cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll') || cardEff(c, 'reflect');
+  if (!c.ready) return '準備中';
+  if ((st.forbid[q] || []).includes(c.kind)) return c.kind === 'dge' ? '今は回避できない' : '今は防御できない';
+  if (c.guts > me.guts.length) return `ガッツ不足(あと${c.guts - me.guts.length})`;
+  if (cardHasEff(c, 'cover')) return '味方をかばう札';
+  if (target && t.p === q && !cardUsableBy(c, target)) return cardUserLabel(db, c);
+  if (ev && cardHasEff(atk, 'noEvade')) return 'この技は回避できない';
+  if (ev && !ev.kinds.includes(atk.kind)) return `${ev.kinds.map(k => kindName[k] || k).join('・')}だけ`;
+  if (ev && ev.minGuts && pd.cost < ev.minGuts) return `ガッツ${ev.minGuts}以上の技だけ`;
+  if (re && !re.kinds.includes(atk.kind)) return `${re.kinds.map(k => kindName[k] || k).join('・')}だけ`;
+  if (!cardEff(c, 'reflect') && (cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll')) && (cardHasEff(atk, 'noBlockReduce') || (pd.flags || {}).attachNoBlockReduce)) return 'この技は防げない';
+  return null;
+};
+const cardGuardBlockReasons = (db, st) => {
+  const pd = st.pending;
+  if (!pd) return [];
+  const me = st.players[pd.defender];
   const guards = me.hand.map(no => cardOf(db, no)).filter(c => c && cardIsGuardKind(c.kind));
-  if (!guards.length) return ['手札に回避・防御のカードがありません'];
+  if (!guards.length) return ['回避・防御のカードなし'];
+  const out = [];
   guards.forEach(c => {
-    const ev = cardEff(c, 'evade');
-    const re = cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll') || cardEff(c, 'reflect');
-    let why = null;
-    if (!c.ready) why = `「${c.name}」は準備中`;else if ((st.forbid[q] || []).includes(c.kind)) why = `このターンは${c.kind === 'dge' ? '回避' : '防御'}を使えません`;else if (c.guts > me.guts.length) why = `「${c.name}」はガッツが足りません(あと${c.guts - me.guts.length})`;else if (cardHasEff(c, 'cover')) why = `「${c.name}」は味方が狙われたときに、別の子が使います`;else if (target && t.p === q && !cardUsableBy(c, target)) why = `「${c.name}」は${target.name}が使えるカードではありません`;else if (ev && cardHasEff(atk, 'noEvade')) why = `「${atk.name}」は回避できません`;else if (ev && !ev.kinds.includes(atk.kind)) why = `「${c.name}」は${ev.kinds.map(k => kindName[k] || k).join('・')}にしか使えません`;else if (ev && ev.minGuts && pd.cost < ev.minGuts) why = `「${c.name}」はガッツ${ev.minGuts}以上の技にしか使えません`;else if (re && !re.kinds.includes(atk.kind)) why = `「${c.name}」は${re.kinds.map(k => kindName[k] || k).join('・')}にしか使えません`;else if (!cardEff(c, 'reflect') && (cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll')) && (cardHasEff(atk, 'noBlockReduce') || (pd.flags || {}).attachNoBlockReduce)) why = `この攻撃は防御でダメージを減らせません`;
-    if (why && !out.includes(why)) out.push(why);
+    const why = cardGuardWhyShort(db, st, c);
+    const line = why ? `「${c.name}」${why}` : null;
+    if (line && !out.includes(line)) out.push(line);
   });
   return out.slice(0, 2);
 };
@@ -94472,11 +94796,13 @@ const CardBattleBoard = ({
   const [bindAsk, setBindAsk] = useState(null);
   const [splitAsk, setSplitAsk] = useState(null);
   const [tossAsk, setTossAsk] = useState(null);
+  const [guardAsk, setGuardAsk] = useState(null);
   useEffect(() => {
     setConfirm(null);
     setBindAsk(null);
     setSplitAsk(null);
     setTossAsk(null);
+    setGuardAsk(null);
   }, [st]);
   const bindCancel = () => {
     setBindAsk(null);
@@ -94517,6 +94843,33 @@ const CardBattleBoard = ({
       act,
       label: act.hand && act.hand.length ? `${act.hand.length}枚をガッツにして、ターンを終わりますか？` : 'ガッツにしないで、ターンを終わりますか？'
     });
+  };
+  const askGuard = o => {
+    if (tutorial) {
+      step(o);
+      return;
+    }
+    const nx = cardApplyAction(db, st, o);
+    if (!nx) return;
+    const c = cardOf(db, me.hand[o.hand]);
+    const pv = nx.pending ? cardGuardPreview(db, nx) : null;
+    const who = o.to !== undefined ? `ねらいが${me.mons[o.to].name}に移る` : pv && pv.after === null && o.mon !== undefined ? `${me.mons[o.mon].name}が受ける` : '';
+    Audio_.fgSe.tap();
+    setGuardAsk({
+      act: o,
+      name: c ? c.name : '',
+      before: pv ? pv.before : null,
+      after: pv ? pv.after : null,
+      guts: nx.players[CARD_ME].guts.length,
+      who
+    });
+  };
+  const guardYes = () => {
+    const ga = guardAsk;
+    setGuardAsk(null);
+    if (!ga || cardDeciderOf(st) !== CARD_ME || !st.pending) return;
+    if (!cardGuardOptions(db, st).some(o => JSON.stringify(o) === JSON.stringify(ga.act))) return;
+    step(ga.act);
   };
   const confirmYes = () => {
     const cf = confirm;
@@ -94571,7 +94924,7 @@ const CardBattleBoard = ({
       }
       const picks2 = [...new Set(os.map(o => o.to !== undefined ? `t${o.to}` : `m${o.mon}`))];
       if (picks2.length === 1) {
-        step(os[0]);
+        askGuard(os[0]);
         return;
       }
       setSel({
@@ -94601,7 +94954,7 @@ const CardBattleBoard = ({
   const tapMon = (p, m) => {
     if (mode === 'guard' && sel) {
       const o = guardOpts.find(x => x.hand === sel.hand && p === CARD_ME && (x.to !== undefined ? x.to === m : x.mon === m));
-      if (o) step(o);
+      if (o) askGuard(o);
       return;
     }
     if (mode !== 'attack' || !sel) return;
@@ -95043,7 +95396,12 @@ const CardBattleBoard = ({
       onClick: () => step({
         type: 'pass'
       })
-    }, tutorial && st.pending && st.pending.evaded ? 'これで守る' : guardUsed ? guardPv.after !== null ? `これで受ける(${guardPv.after}ダメージ)` : 'これで受ける' : '守らない');
+    }, tutorial && st.pending && st.pending.evaded ? 'これで守る' : guardUsed ? guardPv.after !== null ? `これで受ける(${guardPv.after}ダメージ)` : 'これで受ける' : guardPv && guardPv.before !== null && !tutorial ? React.createElement("span", {
+      "data-card-pass-dmg": true,
+      className: "block leading-tight"
+    }, "守らない", React.createElement("span", {
+      className: "block text-[11px] font-bold text-rose-200"
+    }, `${guardPv.before}ダメージを受ける`)) : '守らない');
     if (mode === 'guts') return React.createElement(React.Fragment, null, myTurn && !tutorial && !replay && cardCanBackToAttack(st) && React.createElement("button", {
       type: "button",
       "data-card-back-attack": true,
@@ -95537,6 +95895,7 @@ const CardBattleBoard = ({
     const c = cardOf(db, no);
     const on = handUsable(i);
     const up = sel && sel.hand === i || picks.includes(i) || setChosen && JSON.parse(setChosen).includes(i);
+    const why = mode === 'guard' && !tutorial && !on ? cardGuardWhyShort(db, st, c) : null;
     return React.createElement("div", {
       key: `${no}-${i}`,
       "data-card-hand-card": i,
@@ -95549,7 +95908,7 @@ const CardBattleBoard = ({
         WebkitUserSelect: 'none',
         userSelect: 'none'
       },
-      className: `flex w-[19%] ${wide ? 'max-w-[72px]' : handTiny ? boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]' : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${replay && boardFit >= 4 ? '!max-w-[38px]' : ''} ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`,
+      className: `flex w-[19%] ${wide ? 'max-w-[72px]' : handTiny ? boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]' : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${replay && boardFit >= 4 ? '!max-w-[38px]' : ''} ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? why ? 'relative [&>*:not([data-card-why])]:opacity-45' : 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`,
       "data-card-tutor-focus": tutorial && tutFocus.hand.includes(i) ? true : undefined
     }, React.createElement("img", {
       src: CARD_IMG(c ? c.img : no),
@@ -95559,7 +95918,11 @@ const CardBattleBoard = ({
         WebkitUserDrag: 'none'
       },
       className: `w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`
-    }), !(replay && boardFit >= 3) && React.createElement("div", {
+    }), why && React.createElement("span", {
+      "data-card-why": true,
+      className: `pointer-events-none absolute left-1/2 top-[22%] z-[2] max-w-[110%] -translate-x-1/2 rounded-md border border-rose-300/80 bg-rose-950/95 px-1 py-px text-center ${handTiny ? 'text-[9px]' : 'text-[10px]'} font-black leading-tight text-rose-100 shadow-[0_2px_4px_#000]`,
+      style: JA_WRAP_STYLE
+    }, why), !(replay && boardFit >= 3) && React.createElement("div", {
       className: `mt-0.5 w-full rounded-md bg-black/60 ${handTiny ? 'py-px' : 'py-0.5'} text-center leading-tight`
     }, React.createElement(CardNameFit, {
       name: c ? c.name : no,
@@ -96005,7 +96368,42 @@ const CardBattleBoard = ({
     className: "block text-[14px] font-black text-white"
   }, c ? c.name : 'カード'), c && React.createElement("span", {
     className: "block text-[11px] font-bold text-slate-300"
-  }, `ガッツ${c.guts}${c.damage !== null && c.damage !== undefined ? `・ダメージ${c.damage}` : ''}`))))))), confirm && React.createElement(ConfirmSheet, {
+  }, `ガッツ${c.guts}${c.damage !== null && c.damage !== undefined ? `・ダメージ${c.damage}` : ''}`))))))), guardAsk && React.createElement("div", {
+    "data-card-guard-ask": true,
+    className: "fixed inset-0 z-[80] flex items-center justify-center bg-black/45 px-4",
+    onClick: () => setGuardAsk(null)
+  }, React.createElement("div", {
+    className: "w-full max-w-[320px] rounded-2xl border-2 border-sky-300 bg-slate-900 p-3 text-center shadow-[0_8px_24px_#000]",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "text-[14px] font-black text-white",
+    style: JA_WRAP_STYLE
+  }, `「${guardAsk.name}」を使うと`), guardAsk.after !== null && guardAsk.before !== null ? React.createElement("div", {
+    "data-card-guard-ask-dmg": true,
+    className: "mt-1 text-[13px] font-bold text-slate-200"
+  }, "受けるダメージ ", React.createElement("span", {
+    className: "text-[18px] font-black text-rose-300 line-through decoration-2"
+  }, guardAsk.before), " → ", React.createElement("span", {
+    className: "text-[24px] font-black text-amber-200"
+  }, guardAsk.after)) : guardAsk.who ? React.createElement("div", {
+    "data-card-guard-ask-dmg": true,
+    className: "mt-1 text-[15px] font-black text-amber-200",
+    style: JA_WRAP_STYLE
+  }, guardAsk.who) : null, React.createElement("div", {
+    className: "mt-0.5 text-[12px] font-bold text-amber-100"
+  }, `(ガッツ のこり${guardAsk.guts})`), React.createElement("div", {
+    className: "mt-3 flex gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-guard-ask-yes": true,
+    className: "mh-button mh-button-primary min-h-[44px] flex-1 rounded-xl text-[14px] font-black",
+    onClick: guardYes
+  }, "これで守る"), React.createElement("button", {
+    type: "button",
+    "data-card-guard-ask-no": true,
+    className: "mh-button min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-[14px] font-black",
+    onClick: () => setGuardAsk(null)
+  }, "やめる")))), confirm && React.createElement(ConfirmSheet, {
     title: confirm.label,
     message: confirm.kind === 'use' ? 'オプションで確かめないようにもできます' : '',
     confirmLabel: confirm.kind === 'use' ? '使う' : '終わる',
@@ -96458,10 +96856,31 @@ const CardBattleScreen = ({
   useEffect(() => () => stopBgmPreview(), []);
   useEffect(() => {
     const go = c => {
-      if (c) setView('pvp');
+      if (c) {
+        setDeckPick({
+          next: 'pvp'
+        });
+        setView('deckPick');
+      }
     };
     go(CARD_PVP_JOIN.peek());
     return CARD_PVP_JOIN.on(go);
+  }, []);
+  const [deckPick, setDeckPick] = useState(null);
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  useEffect(() => {
+    if (typeof CARD_PVP === 'undefined') return undefined;
+    let prev = CARD_PVP.get().phase;
+    return CARD_PVP.subscribe(r => {
+      if (prev === 'over' && r.phase === 'idle' && viewRef.current === 'pvp') {
+        setDeckPick({
+          next: 'pvp'
+        });
+        setView('deckPick');
+      }
+      prev = r.phase;
+    });
   }, []);
   const [kitPick, setKitPick] = useState(null);
   const [kitView, setKitView] = useState(null);
@@ -97060,6 +97479,7 @@ const CardBattleScreen = ({
   const foes = (debug ? allAssistants.filter(a => cardFoeReleased(a.id)) : assistantsUnlockedFrom(seenStoryIds)).filter(a => CARD_AI_HABITS[a.id]);
   const activeDeck = save.decks.decks.find(d => d.id === save.decks.active) || save.decks.decks[0] || null;
   const deckIssues = activeDeck ? [...cardDeckProblems(db, activeDeck), ...cardDeckOwnProblems(db, activeDeck, save.collection)] : ['デッキがありません'];
+  const deckUsable = cardDeckPickChoices(db, save.decks, save.collection).some(c => c.why.length === 0);
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
   const myName = rank && rank.profile && rank.profile.name || 'あなた';
   const vsMons = (st, side) => (st && st.players && st.players[side] && st.players[side].mons || []).map(m => m.no);
@@ -97091,11 +97511,13 @@ const CardBattleScreen = ({
     onBgm && onBgm(CARD_AI_BGM.mua);
     onNavigate('CARD_BATTLE');
   };
-  const startBattle = (pick = foe) => {
-    if (!activeDeck || deckIssues.length) {
-      setNotice(deckIssues.join('・'));
+  const startBattle = (pick = foe, deck = activeDeck) => {
+    const issues = deck ? [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)] : ['デッキがありません'];
+    if (!deck || issues.length) {
+      setNotice(issues.join('・'));
       return;
     }
+    const activeDeck = deck;
     const share = pick.share || null;
     const cpuDeck = share ? {
       monsters: share.deck.monsters.slice(),
@@ -97327,7 +97749,10 @@ const CardBattleScreen = ({
       disabled: !(debug || cardPvpOpen()),
       onClick: () => {
         Audio_.fgSe.tap();
-        setView('pvp');
+        setDeckPick({
+          next: 'pvp'
+        });
+        setView('deckPick');
       },
       className: "mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50",
       style: {
@@ -97385,6 +97810,42 @@ const CardBattleScreen = ({
         level: lv,
         share: e
       })
+    });
+  }
+  if (view === 'deckPick' && deckPick) {
+    const toPvp = deckPick.next === 'pvp';
+    return React.createElement(CardDeckPick, {
+      db: db,
+      decks: save.decks,
+      collection: save.collection,
+      note: toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います',
+      onBack: () => {
+        setDeckPick(null);
+        setView(toPvp ? 'mode' : 'foe');
+      },
+      onPick: async c => {
+        const deck = save.decks.decks.find(d => d.id === c.id);
+        if (!deck) return;
+        if (save.decks.active !== deck.id) {
+          const ok = await persist({
+            decks: {
+              ...save.decks,
+              active: deck.id
+            }
+          });
+          if (!ok) {
+            setNotice('保存できませんでした');
+            return;
+          }
+        }
+        const next = deckPick;
+        setDeckPick(null);
+        if (next.next === 'pvp') {
+          setView('pvp');
+          return;
+        }
+        startBattle(next.pick, deck);
+      }
     });
   }
   if (view === 'pvp') {
@@ -97625,8 +98086,15 @@ const CardBattleScreen = ({
       type: "button",
       "data-card-start": true,
       className: `${btn} mh-button-primary`,
-      disabled: !a || deckIssues.length > 0,
-      onClick: () => startBattle(foe)
+      disabled: !a || !deckUsable,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        setDeckPick({
+          next: 'cpu',
+          pick: foe
+        });
+        setView('deckPick');
+      }
     }, "対戦する")));
   }
   if (view === 'deckEdit' && editDeck) {
@@ -97896,7 +98364,11 @@ const CardBattleScreen = ({
           level: result.level
         };
         setFoe(again);
-        startBattle(again);
+        setDeckPick({
+          next: 'cpu',
+          pick: again
+        });
+        setView('deckPick');
       }
     }, "もう一度"), React.createElement("button", {
       type: "button",
@@ -100142,6 +100614,7 @@ const CardShopGrid = ({
   rarity
 }) => {
   const missing = collection !== false && !((collection || {})[no] > 0);
+  const owned = collection ? Math.max(0, Math.floor(Number(collection[no]) || 0)) : 0;
   return React.createElement("button", {
     key: no,
     type: "button",
@@ -100158,7 +100631,10 @@ const CardShopGrid = ({
   }), missing && React.createElement("span", {
     "data-card-shop-missing-badge": true,
     className: "absolute left-0.5 top-0.5 rounded-md bg-rose-600 px-1 text-[9px] font-black text-white shadow"
-  }, "未取得"), rarity && rarity !== 'normal' && React.createElement("span", {
+  }, "未取得"), owned > 0 && React.createElement("span", {
+    "data-card-shop-owned": owned,
+    className: "absolute right-0.5 top-0.5 rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950 shadow"
+  }, "所持", owned), rarity && rarity !== 'normal' && React.createElement("span", {
     className: "absolute bottom-0.5 left-0.5 rounded-md bg-amber-300 px-1 text-[9px] font-black text-slate-950"
   }, CARD_RARITY_LABEL[rarity]), count > 1 && React.createElement("span", {
     className: "absolute bottom-0.5 right-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-white"
@@ -100739,6 +101215,107 @@ const CardShopStarters = ({
       if (r && r.ok) setDone(`「${k.name}」を買いました。デッキ編成に1つ増えています${r.dupPoint > 0 ? `(だぶったカードはビートP +${r.dupPoint})` : ''}`);
     }
   }));
+};
+const cardDeckPickChoices = (db, decks, collection) => (decks && decks.decks || []).map(d => ({
+  id: d.id,
+  kind: 'own',
+  name: d.name,
+  monsters: d.monsters,
+  count: d.cards.length,
+  why: [...cardDeckProblems(db, d), ...cardDeckOwnProblems(db, d, collection || {})]
+}));
+const CardDeckPick = ({
+  db,
+  decks,
+  collection,
+  title = 'デッキをえらぶ',
+  note = '',
+  onPick,
+  onBack
+}) => {
+  const choices = cardDeckPickChoices(db, decks, collection);
+  const usable = c => c && c.why.length === 0;
+  const first = choices.find(c => c.id === decks.active && usable(c)) || choices.find(usable) || null;
+  const [sel, setSel] = useState(first ? first.id : null);
+  const [busy, setBusy] = useState(false);
+  const chosen = choices.find(c => c.id === sel && usable(c)) || null;
+  const go = async () => {
+    if (!chosen || busy) return;
+    Audio_.fgSe.tap();
+    setBusy(true);
+    try {
+      await onPick(chosen);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-card-deck-pick": true,
+    className: SCREEN_SHELL_CLASS
+  }, React.createElement(ScreenHead, {
+    title: title,
+    accent: "text-amber-200",
+    onBack: onBack
+  }), React.createElement("div", {
+    className: `${SCREEN_LIST_CLASS} space-y-2 pb-2`
+  }, note && React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, note), choices.map(c => {
+    const on = c.id === sel;
+    const ok = usable(c);
+    return React.createElement("button", {
+      key: c.id,
+      type: "button",
+      "data-card-deck-pick-row": c.id,
+      "data-card-deck-pick-on": on ? '1' : undefined,
+      disabled: !ok,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        setSel(c.id);
+      },
+      className: `${SCREEN_PANEL_CLASS} flex w-full items-center gap-2 text-left active:scale-[.99] ${on ? '!border-amber-300 ring-2 ring-amber-300/70' : ''} ${ok ? '' : 'opacity-60'}`
+    }, React.createElement("span", {
+      className: "flex shrink-0 gap-0.5"
+    }, [0, 1, 2].map(i => {
+      const m = cardMonsterOf(db, c.monsters[i]);
+      return m ? React.createElement("img", {
+        key: i,
+        src: CARD_IMG(m.img),
+        alt: m.name,
+        className: "h-[52px] w-[37px] rounded-[4px] object-cover"
+      }) : React.createElement("span", {
+        key: i,
+        className: "block h-[52px] w-[37px] rounded-[4px] border border-dashed border-white/20"
+      });
+    })), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("span", {
+      className: "block text-[14px] font-black leading-tight text-white",
+      style: JA_LABEL_STYLE
+    }, on ? '★ ' : '', jaWrap(c.name)), React.createElement("span", {
+      className: `block text-[11px] font-bold ${ok ? 'text-emerald-300' : 'text-amber-200'}`
+    }, `${c.count}/${CARD_BATTLE_DECK_SIZE}枚`), !ok && React.createElement("span", {
+      "data-card-deck-pick-why": c.id,
+      className: "block text-[11px] font-bold leading-snug text-amber-200",
+      style: JA_WRAP_STYLE
+    }, c.why.join('・'))));
+  }), !first && React.createElement("p", {
+    "data-card-deck-pick-none": true,
+    className: "rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100",
+    style: JA_WRAP_STYLE
+  }, "対戦に使えるデッキがありません。デッキ編成で組んでください")), React.createElement("div", {
+    className: SCREEN_FOOTER_CLASS
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-deck-pick-go": true,
+    disabled: !chosen || busy,
+    onClick: () => {
+      void go();
+    },
+    className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40"
+  }, "対戦へ")));
 };
 const CARD_RANK_TABLE = 'card_battle_ranks';
 const CARD_RANK_TABLE_V2 = 'card_battle_ranks_v2';
@@ -108042,7 +108619,14 @@ function MonsterHeroGame() {
   const [dailyMasuAdvice, setDailyMasuAdvice] = useState(null);
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(() => normalizeRhythmBestRecords(null));
-  const [rhythmPlay, setRhythmPlay] = useState(null);
+  const [rhythmPlay, setRhythmPlayState] = useState(null);
+  const setRhythmPlay = next => {
+    if (next && typeof next === 'object' && next.from !== 'multi' && typeof RHYTHM_MULTI !== 'undefined' && RHYTHM_MULTI.view()) {
+      if (!window.confirm('みんなで対戦の部屋で待っています。部屋を出てから遊びますか?')) return;
+      RHYTHM_MULTI.leave();
+    }
+    setRhythmPlayState(next);
+  };
   const [rhythmMonsterSlotIds, setRhythmMonsterSlotIds] = useState([]);
   const [rhythmMonsterPickerOpen, setRhythmMonsterPickerOpen] = useState(false);
   const [rhythmMonsterMessage, setRhythmMonsterMessage] = useState('');
@@ -134591,6 +135175,14 @@ function MonsterHeroGame() {
         setRhythmPlay(null);
         setGameState('RHYTHM_OPTIONS');
       }
+    }), React.createElement(RhythmMultiAwayBar, {
+      hidden: gameState === 'RHYTHM_MULTI' || gameState === 'RHYTHM_MODE_SELECT' || !!rhythmPlay,
+      busy: ['BATTLE', 'WAVE_RESULT', 'CHAMPION', 'BATTLE_TUTORIAL', 'CARD_BATTLE', 'RPG_DEBUG_BATTLE', 'DEBUG_BATTLE_SETUP'].includes(gameState),
+      onReturn: () => {
+        void openRhythmDemo({
+          to: 'RHYTHM_MULTI'
+        });
+      }
     }), (gameState === 'RHYTHM_MULTI' || gameState === 'RHYTHM_MODE_SELECT') && React.createElement(RhythmMultiScreen, {
       key: gameState,
       profile: {
@@ -134643,6 +135235,7 @@ function MonsterHeroGame() {
       onResumeQuickRun: () => resumeQuickRunFromRhythm(),
       onBack: gameState === 'RHYTHM_MODE_SELECT' ? exitRhythmSongSelect : () => setGameState('RHYTHM_MODE_SELECT'),
       onRoomEntered: () => setGameState('RHYTHM_MULTI'),
+      onStepAway: exitRhythmSongSelect,
       rankingSupport: {
         breederIcon: rankingBreederIcon,
         open: song => {

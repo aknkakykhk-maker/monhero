@@ -228,7 +228,7 @@ const seed = () => {
     await page.waitForSelector('[data-card-foe]', { timeout: 10000 }).catch(() => {});
     await click('[data-card-foe="mua"]');
     await page.waitForTimeout(300);
-    await click('[data-card-start]');
+    await click('[data-card-start]'); await click('[data-card-deck-pick-go]'); // 対戦の前のデッキ選び
     await page.waitForSelector('[data-card-battle]', { timeout: 20000 }).catch(() => {});
     await page.waitForTimeout(800);
     await dismissOverlays();

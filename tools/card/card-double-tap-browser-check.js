@@ -122,7 +122,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-card-mode-assistant]').click();
     await page.locator('[data-card-foe="mua"]').click(); await sleep(200);
     await page.locator('[data-card-level="easy"]').click().catch(() => {});
-    await page.locator('[data-card-start]').click();
+    await page.locator('[data-card-start]').click(); await page.locator('[data-card-deck-pick-go]').click(); // 対戦の前のデッキ選び(前に使ったデッキが選ばれている)
     for (let i = 0; i < 40 && !(await page.locator('[data-card-battle]').count()); i++) { if (i > 6) await page.mouse.click(195, 420); await sleep(300); }
     const mode = () => page.locator('[data-card-battle]').getAttribute('data-card-mode').catch(() => null);
     // 自分の攻撃の番まで進める(始める前のガッツ・相手の番は待つ・守りは「守らない」)
@@ -130,7 +130,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       const m = await mode();
       if (m === 'attack' && (await page.locator('[data-card-hand-card]:not(.opacity-45)').count())) break;
       if (m === 'setup') await page.locator('[data-card-footer] button').first().click().catch(() => {});
-      else if (m === 'guard') await page.getByRole('button', { name: /^守らない$/ }).click().catch(() => {});
+      else if (m === 'guard') await page.getByRole('button', { name: /^守らない/ }).click().catch(() => {});
       else if (m === 'attack') await page.getByRole('button', { name: /攻撃おわり/ }).click().catch(() => {});
       else if (m === 'guts') await page.locator('[data-card-footer] button').first().click().catch(() => {});
       await sleep(400);
