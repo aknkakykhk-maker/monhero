@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 913d5e03a1c45949
+// source-sha256: 33b7fef3cf8e7f13
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -102997,8 +102997,13 @@ const CARD_PVP = (() => {
     foeAgain: null,
     foeGone: false
   });
+  let roomWaitSet = false;
   const emit = () => {
-    if (typeof friendsSetRoomWaiting === 'function') friendsSetRoomWaiting(!!s && (s.phase === 'connecting' || s.phase === 'waiting'));
+    const waitingNow = !!s && (s.phase === 'connecting' || s.phase === 'waiting');
+    if (typeof friendsSetRoomWaiting === 'function' && waitingNow !== roomWaitSet) {
+      friendsSetRoomWaiting(waitingNow);
+      roomWaitSet = waitingNow;
+    }
     listeners.forEach(fn => {
       try {
         fn(s);

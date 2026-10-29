@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e15829b8c2d72f9d
+// generated-sha256: 11a5cad3bdbcffb2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -61982,9 +61982,12 @@ const CARD_PVP = (() => {
     game: null, startMsg: null, foeInMatch: false, mySeq: 0, outbox: [], theirSeq: 0, inbox: {}, history: [], result: null, foeOpen: null, error: '', broken: '',
     offline: false, timeouts: 0, autoActing: false, chatAt: 0, mode: 'private', seekAt: 0, seekers: {}, lobbyCount: 0, joining: '', joinAt: 0, ownCode: '', reported: '', pick: false, notice: '', // pick … 入口の一覧から選んで入った / notice … 入口に出す一言
     round: 0, again: null, foeAgain: null, foeGone: false }); // もう1戦: round … いまの試合の回 / again … 自分が押した次の回 { rd, seed, salt, seal } / foeAgain … 相手が押した次の回 { rd, seal }
+  let roomWaitSet = false; // カードの部屋が「部屋で待ち中」の印を立てているか
   const emit = () => {
     // 部屋で相手を待っているあいだは、フレンドに「部屋で待ち中」と知らせる(34 の friendsSetRoomWaiting。2026-10-29 社長)
-    if (typeof friendsSetRoomWaiting === 'function') friendsSetRoomWaiting(!!s && (s.phase === 'connecting' || s.phase === 'waiting'));
+    //   ビートの部屋も同じ印を使うので、下ろすのはカードが立てたときだけ(2026-10-29 リバースくんと合わせた)
+    const waitingNow = !!s && (s.phase === 'connecting' || s.phase === 'waiting');
+    if (typeof friendsSetRoomWaiting === 'function' && waitingNow !== roomWaitSet) { friendsSetRoomWaiting(waitingNow); roomWaitSet = waitingNow; }
     listeners.forEach((fn) => { try { fn(s); } catch (_) { /* 画面の都合で落ちても部屋は続ける */ } });
   };
   const set = (patch) => { s = { ...s, ...patch }; emit(); };
