@@ -185,6 +185,20 @@ grant execute on function public.card_deck_use(text, text, text, text, boolean, 
 grant execute on function public.card_deck_claim(text, text) to anon, authenticated;
 grant execute on function public.card_deck_today() to anon, authenticated;
 
+-- ---- 足し(2026-10-29・区切り⑤): 受け取った報酬の一覧を読む(本人の鍵が要る・読むだけ) ----
+-- 端末は「サーバで受け取った日」のうち、まだ端末に足していない日だけをビートPに足す(端末の保存に失敗しても、次に開いたときに足し直せる)
+create or replace function public.card_deck_rewards_of(p_owner text, p_key text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare cur public.card_deck_entries;
+begin
+  select * into cur from public.card_deck_entries where owner_id = p_owner;
+  if not found or p_key is null or cur.key_hash <> md5(p_key) then return '[]'::jsonb; end if;
+  return coalesce((select jsonb_agg(jsonb_build_object('day', r.day, 'amount', r.amount, 'uses', r.uses) order by r.day desc)
+    from (select day, amount, uses from public.card_deck_rewards where owner_id = p_owner and day >= public.card_deck_today() - 60 order by day desc limit 60) r), '[]'::jsonb);
+end $$;
+revoke all on function public.card_deck_rewards_of(text, text) from public;
+grant execute on function public.card_deck_rewards_of(text, text) to anon, authenticated;
+
 -- ---- 流したあとの確かめ(読むだけ) ----
 select c.relname as 表, case when c.relrowsecurity then '有効' else '無効(要確認)' end as rls
   from pg_class c where c.oid in ('public.card_deck_entries'::regclass, 'public.card_deck_uses'::regclass, 'public.card_deck_rewards'::regclass);

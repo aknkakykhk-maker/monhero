@@ -53,7 +53,7 @@ check('② 練習試合には挟まない', tutorial.length > 0 && !/deckPick|se
 const view = p84.slice(p84.indexOf("if (view === 'deckPick' && deckPick)"), p84.indexOf("if (view === 'pvp') {"));
 check('③ 選んだら active だけを書き換える(保存の形は変えない)', /persist\(\{ decks: \{ \.\.\.save\.decks, active: deck\.id \} \}\)/.test(view));
 check('③ 保存できなかったら始めない', /if \(!ok\) \{ setNotice\('保存できませんでした'\); return; \}/.test(view));
-check('③ 助手と対戦は選んだデッキで始める', /startBattle\(next\.pick, deck\)/.test(view) && /const startBattle = \(pick = foe, deck = activeDeck\) =>/.test(p84));
+check('③ 助手と対戦は選んだデッキで始める', /startBattle\(next\.pick, deck\)/.test(view) && /const startBattle = \(pick = foe, deck = activeDeck(, opts = \{\})?\) =>/.test(p84));
 check('③ 戻るは、助手と対戦なら相手えらび・マルチならモードえらび', /setView\(toPvp \? 'mode' : 'foe'\)/.test(view));
 
 if (failed) { console.log(`\nNG ${failed} 件`); process.exit(1); }
