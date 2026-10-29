@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 47df65f5734f89ec
+// source-sha256: ad178c0821c27dd1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -56969,7 +56969,7 @@ function BreederMarketScreen({
   }, jaWrap(section.hint)), React.createElement("span", {
     "aria-hidden": "true",
     className: `absolute bottom-3 right-3 text-xl font-black ${section.arrow}`
-  }, "›"))))), marketSection && React.createElement(React.Fragment, null, React.createElement(MarketBalanceBar, {
+  }, "›"))))), marketSection && React.createElement(React.Fragment, null, marketSection !== 'card' && React.createElement(MarketBalanceBar, {
     balances: marketSection === 'diamond' ? [{
       currency: 'diamond',
       value: gold
@@ -56985,9 +56985,6 @@ function BreederMarketScreen({
     }, {
       currency: 'heroProof',
       value: proofHave
-    }] : marketSection === 'card' ? [{
-      currency: 'cardPoint',
-      value: cardShop ? cardShop.point : 0
     }] : [{
       currency: 'beatPoint',
       value: safeEventPoints
@@ -57045,7 +57042,21 @@ function BreederMarketScreen({
   })()))), marketSection === 'card' && cardShop && (() => {
     const tab = activeSectionTab('card');
     const cp = cardShop.point;
-    return React.createElement(React.Fragment, null, renderSectionTabs('card', true), React.createElement("div", {
+    return React.createElement(React.Fragment, null, renderSectionTabs('card', true), tab === 'pack' && cardShop.onExchangeCatalog && typeof CardShopGachaBand === 'function' ? React.createElement(CardShopGachaBand, {
+      db: CARD_BATTLE_DATA,
+      point: cp,
+      gacha: cardShop.gacha,
+      catalogs: cardShop.catalogs,
+      collection: cardShop.collection,
+      busy: busy || cardShop.busy,
+      onExchangeCatalog: cardShop.onExchangeCatalog,
+      onUseCatalog: cardShop.onUseCatalog
+    }) : React.createElement(MarketBalanceBar, {
+      balances: [{
+        currency: 'cardPoint',
+        value: cp
+      }]
+    }), React.createElement("div", {
       className: SCREEN_LIST_CLASS,
       "data-card-shop": true,
       "data-card-shop-tab": tab
@@ -57054,11 +57065,7 @@ function BreederMarketScreen({
       point: cp,
       busy: busy || cardShop.busy,
       collection: cardShop.collection,
-      onBuyPack: cardShop.onBuyPack,
-      gacha: cardShop.gacha,
-      catalogs: cardShop.catalogs,
-      onExchangeCatalog: cardShop.onExchangeCatalog,
-      onUseCatalog: cardShop.onUseCatalog
+      onBuyPack: cardShop.onBuyPack
     }), tab === 'tactics' && typeof CardTacticsShop === 'function' && React.createElement(CardTacticsShop, {
       point: cp,
       busy: busy || cardShop.busy,
@@ -104048,6 +104055,7 @@ const CardStarterContents = ({
 };
 const cardPackSpeciesLabel = (db, pack) => pack.species.map(sp => (Object.values(db.monsters).find(m => m.species === sp && !m.variant) || {}).name || sp).join('・');
 const CardGachaPanel = ({
+  point = 0,
   gacha = 0,
   catalogs = 0,
   busy,
@@ -104056,19 +104064,36 @@ const CardGachaPanel = ({
 }) => {
   const g = cardNormalizeGacha(gacha);
   const prog = cardGachaProgress(g);
+  const [help, setHelp] = useState(false);
   return React.createElement("div", {
     "data-card-gacha": true,
-    className: "rounded-2xl border-2 border-amber-300/70 p-3 text-white",
+    className: "mb-2 shrink-0 rounded-2xl border-2 border-amber-300/70 px-2.5 py-1.5 text-white",
     style: {
-      background: 'linear-gradient(135deg,#3b2a05ee,#1e1b4bee)'
+      background: 'linear-gradient(135deg,#2e1065ee,#1e1b4bee)'
     }
   }, React.createElement("div", {
-    className: "flex items-baseline gap-1 text-[13px] font-black text-amber-200"
-  }, React.createElement("span", null, "🎫 ガチャポイント"), React.createElement("span", {
+    "data-card-gacha-beatp": true,
+    className: "flex items-baseline gap-1 border-b border-white/15 pb-1 text-[12px] font-black text-violet-200"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "🎟️ 所持ビートP"), React.createElement("span", {
+    className: "ml-auto font-mono text-[16px] text-white"
+  }, Math.max(0, Math.floor(Number(point) || 0)).toLocaleString())), React.createElement("div", {
+    className: "mt-1 flex items-center gap-1.5"
+  }, React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("div", {
+    className: "flex items-baseline gap-1 text-[12px] font-black text-amber-200"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "🎫 ガチャP"), React.createElement("span", {
     "data-card-gacha-point": g,
-    className: "ml-auto text-[16px] text-white"
-  }, g.toLocaleString())), React.createElement("div", {
-    className: "mt-1.5 h-2 overflow-hidden rounded-full bg-slate-950",
+    className: "text-[14px] text-white"
+  }, g.toLocaleString()), React.createElement("span", {
+    className: "ml-auto whitespace-nowrap text-[10px] tabular-nums text-amber-100",
+    "aria-label": `次の1冊まで ${prog} / ${CARD_CATALOG_COST}`
+  }, prog, " / ", CARD_CATALOG_COST)), React.createElement("div", {
+    className: "mt-0.5 h-1.5 overflow-hidden rounded-full bg-slate-950",
     "aria-hidden": "true"
   }, React.createElement("i", {
     className: "block h-full rounded-full",
@@ -104076,36 +104101,69 @@ const CardGachaPanel = ({
       width: `${prog / CARD_CATALOG_COST * 100}%`,
       background: 'linear-gradient(90deg,#fbbf24,#f472b6)'
     }
-  })), React.createElement("div", {
-    className: "mt-1 flex text-[10.5px] font-bold text-slate-200",
-    style: JA_WRAP_STYLE
-  }, React.createElement("span", {
-    className: "min-w-0 flex-1"
-  }, jaWrap(`ブースターパック1つで +${CARD_GACHA_PER_PACK}。${CARD_CATALOG_COST}で「バトルカードカタログ」1冊と交換できます`)), React.createElement("span", {
-    className: "shrink-0 pl-1 tabular-nums text-amber-100"
-  }, "次の1冊まで ", prog, " / ", CARD_CATALOG_COST)), React.createElement("div", {
-    className: "mt-2 grid grid-cols-2 gap-1.5"
-  }, React.createElement("button", {
+  }))), React.createElement("button", {
     type: "button",
     "data-card-gacha-exchange": true,
+    "aria-label": `カタログと交換(${CARD_CATALOG_COST})`,
     disabled: busy || g < CARD_CATALOG_COST,
     onClick: onExchange,
-    className: "mh-button min-h-[42px] rounded-xl bg-amber-500 px-1 text-[12px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40"
-  }, React.createElement("span", {
-    className: "inline-block whitespace-nowrap"
-  }, "カタログと交換"), React.createElement("span", {
-    className: "inline-block whitespace-nowrap"
-  }, "(", CARD_CATALOG_COST, ")")), React.createElement("button", {
+    className: "mh-button min-h-[36px] shrink-0 whitespace-nowrap rounded-xl bg-amber-500 px-2 text-[11px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40"
+  }, "交換"), React.createElement("button", {
     type: "button",
     "data-card-gacha-catalog": true,
+    "aria-label": `カタログを使う(${catalogs}冊)`,
     disabled: busy || catalogs < 1,
     onClick: onOpenCatalog,
-    className: "mh-button min-h-[42px] rounded-xl bg-sky-400 px-1 text-[12px] font-black text-slate-950 active:scale-[.98] disabled:opacity-40"
-  }, React.createElement("span", {
-    className: "inline-block whitespace-nowrap"
-  }, "📖 カタログを使う"), React.createElement("span", {
-    className: "inline-block whitespace-nowrap"
-  }, "(", catalogs, "冊)"))));
+    className: "mh-button min-h-[36px] shrink-0 whitespace-nowrap rounded-xl bg-sky-400 px-2 text-[11px] font-black text-slate-950 active:scale-[.98] disabled:opacity-40"
+  }, "📖", catalogs, "冊"), React.createElement("button", {
+    type: "button",
+    "data-card-gacha-help": true,
+    "aria-expanded": help,
+    "aria-label": "ガチャポイントの説明",
+    onClick: () => setHelp(v => !v),
+    className: "mh-button flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/40 text-[12px] font-black text-white"
+  }, "?")), help && React.createElement("div", {
+    "data-card-gacha-help-text": true,
+    className: "mt-1 text-[10.5px] font-bold text-slate-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`ブースターパック1つで +${CARD_GACHA_PER_PACK}。${CARD_CATALOG_COST}たまると「バトルカードカタログ」1冊と交換できます(右の数は次の1冊まで)。カタログを使うと、好きなカードを1枚もらえます`)));
+};
+const CardShopGachaBand = ({
+  db,
+  point = 0,
+  gacha = 0,
+  catalogs = 0,
+  collection = null,
+  busy,
+  onExchangeCatalog,
+  onUseCatalog
+}) => {
+  const [gachaConfirm, setGachaConfirm] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  return React.createElement(React.Fragment, null, React.createElement(CardGachaPanel, {
+    point: point,
+    gacha: gacha,
+    catalogs: catalogs,
+    busy: busy,
+    onExchange: () => setGachaConfirm(true),
+    onOpenCatalog: () => setCatalogOpen(true)
+  }), gachaConfirm && React.createElement(ConfirmSheet, {
+    title: "バトルカードカタログと交換しますか？",
+    message: `ガチャポイント ${CARD_CATALOG_COST} を使います(いま ${cardNormalizeGacha(gacha).toLocaleString()})`,
+    confirmLabel: "交換する",
+    onCancel: () => setGachaConfirm(false),
+    onConfirm: () => {
+      setGachaConfirm(false);
+      void onExchangeCatalog();
+    }
+  }), catalogOpen && React.createElement(CardCatalogSheet, {
+    db: db,
+    catalogs: catalogs,
+    collection: collection,
+    busy: busy,
+    onUse: onUseCatalog,
+    onClose: () => setCatalogOpen(false)
+  }));
 };
 const CardCatalogSheet = ({
   db,
@@ -104253,26 +104311,14 @@ const CardShopPacks = ({
   point,
   busy,
   collection = null,
-  onBuyPack,
-  gacha = 0,
-  catalogs = 0,
-  onExchangeCatalog,
-  onUseCatalog
+  onBuyPack
 }) => {
   const [sheet, setSheet] = useState(null);
   const [confirm, setConfirm] = useState(null);
-  const [gachaConfirm, setGachaConfirm] = useState(false);
-  const [catalogOpen, setCatalogOpen] = useState(false);
   return React.createElement("div", {
     "data-card-shop-packs": true,
     className: "space-y-2 pb-2"
-  }, onExchangeCatalog && React.createElement(CardGachaPanel, {
-    gacha: gacha,
-    catalogs: catalogs,
-    busy: busy,
-    onExchange: () => setGachaConfirm(true),
-    onOpenCatalog: () => setCatalogOpen(true)
-  }), CARD_PACKS.map(pack => React.createElement("div", {
+  }, CARD_PACKS.map(pack => React.createElement("div", {
     key: pack.id,
     "data-card-shop-pack": pack.id,
     className: SCREEN_PANEL_CLASS,
@@ -104346,22 +104392,6 @@ const CardShopPacks = ({
     pack: sheet.pack,
     collection: collection,
     onClose: () => setSheet(null)
-  }), gachaConfirm && React.createElement(ConfirmSheet, {
-    title: "バトルカードカタログと交換しますか？",
-    message: `ガチャポイント ${CARD_CATALOG_COST} を使います(いま ${cardNormalizeGacha(gacha).toLocaleString()})`,
-    confirmLabel: "交換する",
-    onCancel: () => setGachaConfirm(false),
-    onConfirm: () => {
-      setGachaConfirm(false);
-      void onExchangeCatalog();
-    }
-  }), catalogOpen && React.createElement(CardCatalogSheet, {
-    db: db,
-    catalogs: catalogs,
-    collection: collection,
-    busy: busy,
-    onUse: onUseCatalog,
-    onClose: () => setCatalogOpen(false)
   }), confirm && React.createElement(ConfirmSheet, {
     title: `${confirm.pack.name}を${confirm.count}パック買いますか？`,
     message: `ビートP ${cardPackPrice(confirm.pack, confirm.count).toLocaleString()} を使います(いま ${point.toLocaleString()})`,
