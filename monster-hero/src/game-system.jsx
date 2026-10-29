@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 20b119c11ecf2da3
+// generated-sha256: 8e96717a72f6560c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10810,10 +10810,10 @@ const RAGNAROK_SETTING = Object.freeze({ id:'RAGNAROK', label:'RAGNAROK', japane
 // 敵生成側は難易度名ではなく extremeEnemyStatAdjust だけを見る。
 const HELHEIM_SETTING = Object.freeze({ id:'HELHEIM', label:'HELHEIM', japanese:'ヘルヘイム', available:true, debugAvailable:true, power:230, score:20, xp:100, gold:80, psyche:160, waveCount:10, unlockRequirement:'RAGNAROK', rankingId:'ExtremeHELHEIM', recordId:'HELHEIM', description:'冥府が2WAVEごとに深まり、味方の最大ライフが削れていく。ボスは何度でも起き上がり、距離強化もWAVEごとに薄れていく、極限チャレンジの最奥の難易度。', cardDescription:'2WAVEごとに冥府が深まる。敵のライフは10倍で、距離強化はWAVEごとに薄れ、ボスは何度も蘇る。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 3:1, 5:2, 7:2, 9:1, 10:4 }), hpRate:0.5, atkBoostPerRevival:0.6 }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
 // ETERNALはHELHEIMの次の極限難易度(2026-10-29 社長の決定)。冥府・ボス復活・敵ライフ10倍・デュラハンの上乗せはHELHEIMのまま引き継ぎ、
-// 「殻」(WAVEの始めに敵が最大ライフ50%の盾をまとう。殻に当てた分は距離適性ボーナスに数えない)と
+// 「シールド」(WAVEの始めに敵が最大ライフ50%の盾をまとう。シールドに当てた分は距離適性ボーナスに数えない)と
 // 「貫き」(敵の攻撃の30%〜50%が丈夫さを無視する)を足す。試合を長引かせ、丈夫さの効きすぎを抑えるためのルール。
 // 与ダメ低下は合計ターンで数えるまま(最低10%)。敵の強さ220は、今のHELHEIMクリア編成の約2倍の火力が届く目安で決めた
-const ETERNAL_SETTING = Object.freeze({ id:'ETERNAL', label:'ETERNAL', japanese:'エターナル', available:true, debugAvailable:true, power:220, score:20, xp:120, gold:100, psyche:190, waveCount:10, unlockRequirement:'HELHEIM', rankingId:'ExtremeETERNAL', recordId:'ETERNAL', description:'冥府の上に、敵が殻をまとい、攻撃の一部が丈夫さを貫いてくる。戦いは長く続き、ターンとともに重くなる、極限チャレンジの最奥の難易度。', cardDescription:'WAVEの始めに敵が最大ライフ50%の殻をまとい、攻撃の30〜50%が丈夫さを貫く。冥府・ボス復活・敵ライフ10倍はヘルヘイムのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 3:1, 5:2, 7:2, 9:1, 10:4 }), hpRate:0.5, atkBoostPerRevival:0.6 }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
+const ETERNAL_SETTING = Object.freeze({ id:'ETERNAL', label:'ETERNAL', japanese:'エターナル', available:true, debugAvailable:true, power:220, score:20, xp:120, gold:100, psyche:190, waveCount:10, unlockRequirement:'HELHEIM', rankingId:'ExtremeETERNAL', recordId:'ETERNAL', description:'冥府の上に、敵がシールドをまとい、攻撃の一部が丈夫さを貫いてくる。戦いは長く続き、ターンとともに重くなる、極限チャレンジの最奥の難易度。', cardDescription:'WAVEの始めに敵が最大ライフ50%のシールドをまとい、攻撃の30〜50%が丈夫さを貫く。冥府・ボス復活・敵ライフ10倍はヘルヘイムのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 3:1, 5:2, 7:2, 9:1, 10:4 }), hpRate:0.5, atkBoostPerRevival:0.6 }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
 const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES,GOD_SETTING,RAGNAROK_SETTING,HELHEIM_SETTING,ETERNAL_SETTING]);
 // 極限チャレンジの難易度カラー。カード構造は共通のまま、上位ほど発光を少しずつ強める。
 // 常時アニメーションは使わず、iPhone縦画面でも視認性と軽さを優先する。
@@ -10891,8 +10891,8 @@ const helheimUnderworldRules = (waveNumber) => {
     allyMaxHpRate:1-level*0.05,
   });
 };
-// ETERNALの段階ルール。冥府(helheimUnderworldRules)をそのまま使い、殻と貫きを足す。
-//   shellRate … WAVEの始めに敵がまとう殻(最大ライフに対する割合)。殻に当てた分は距離適性ボーナスに数えない
+// ETERNALの段階ルール。冥府(helheimUnderworldRules)をそのまま使い、シールドと貫きを足す。
+//   shellRate … WAVEの始めに敵がまとうシールド(最大ライフに対する割合)。シールドに当てた分は距離適性ボーナスに数えない
 //   pierceRate … 敵の攻撃のうち、丈夫さを無視して通る割合(Lv1 30% → Lv5 50%)
 const eternalStageRules = (waveNumber) => {
   const base=helheimUnderworldRules(waveNumber);
@@ -10984,8 +10984,8 @@ const extremeAllyMaxHpRate = (difficultyId,waveNumber=1) => {
   const rate=Number(extremeWaveStageRules(difficultyId,waveNumber)?.allyMaxHpRate);
   return Number.isFinite(rate)&&rate>0 ? Math.min(1,rate) : 1;
 };
-// 殻(ETERNAL)。WAVEのはじめに、敵の最大ライフにこの率を掛けたぶんの殻をまとう。
-// 段階の表が shellRate を持たない難易度では0(殻なし)が返り、既存の難易度は変わらない。
+// シールド(ETERNAL)。WAVEのはじめに、敵の最大ライフにこの率を掛けたぶんのシールドをまとう。
+// 段階の表が shellRate を持たない難易度では0(シールドなし)が返り、既存の難易度は変わらない。
 const extremeEnemyShellRate = (difficultyId,waveNumber=1) => {
   const rate=Number(extremeWaveStageRules(difficultyId,waveNumber)?.shellRate);
   return Number.isFinite(rate)&&rate>0 ? Math.min(1,rate) : 0;
@@ -10994,14 +10994,14 @@ const extremeEnemyShellAmount = (maxHp,difficultyId,waveNumber=1) => {
   const hp=Number(maxHp);
   return Number.isFinite(hp)&&hp>0 ? Math.floor(hp*extremeEnemyShellRate(difficultyId,waveNumber)) : 0;
 };
-// 殻はライフより先に削れる。1撃ぶんのダメージを「殻が受けたぶん」と「ライフへ通ったぶん」に分ける
+// シールドはライフより先に削れる。1撃ぶんのダメージを「シールドが受けたぶん」と「ライフへ通ったぶん」に分ける
 const splitShellDamage = (shell,damage) => {
   const s=Math.max(0,Number(shell)||0), d=Math.max(0,Number(damage)||0);
   const absorbed=Math.min(s,d);
   return { absorbed, through:d-absorbed, shellLeft:s-absorbed };
 };
-// 敵へ1撃を当てたあとの敵。殻があれば先に殻を削り、残りをライフから引く。
-// 殻を持たない敵では、これまでの「ライフ−ダメージ(0で止める)」と同じ結果になる
+// 敵へ1撃を当てたあとの敵。シールドがあれば先にシールドを削り、残りをライフから引く。
+// シールドを持たない敵では、これまでの「ライフ−ダメージ(0で止める)」と同じ結果になる
 const enemyAfterHit = (enemy,damage) => {
   if (!enemy) return enemy;
   const shell=Number(enemy.shell)||0;
@@ -11009,7 +11009,7 @@ const enemyAfterHit = (enemy,damage) => {
   const sp=splitShellDamage(shell,damage);
   return { ...enemy, shell:sp.shellLeft, hp:Math.max(0,enemy.hp-sp.through) };
 };
-// 1ターンぶんのヒットを順に殻へ当て、各ヒットに shellAbsorbed(殻が受けたぶん)を書き込む。殻が受けた合計を返す
+// 1ターンぶんのヒットを順にシールドへ当て、各ヒットに shellAbsorbed(シールドが受けたぶん)を書き込む。シールドが受けた合計を返す
 const markShellAbsorbedHits = (hits,startShell) => {
   let left=Math.max(0,Number(startShell)||0), total=0;
   for (const h of (Array.isArray(hits)?hits:[])) {
@@ -11138,7 +11138,7 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     ['Lv4','＋補正 35%→25%・−補正 250%→300%'],
     ['Lv5','与ダメ低下 -1.75pt/T・最低15%'],
   ]);
-  // ETERNALは冥府(HELHEIM)をそのまま引き継ぐので、同じ説明に殻と貫きを足す
+  // ETERNALは冥府(HELHEIM)をそのまま引き継ぐので、同じ説明にシールドと貫きを足す
   if(difficultyId===HELHEIM_SETTING.id||difficultyId===ETERNAL_SETTING.id){
     const adjust=rules.enemyAdjust||{};
     const durahan=adjust.byEnemy?.Durahan;
@@ -11156,9 +11156,9 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     ]);
     push('距離強化',[
       ['WAVEごとに薄れる','WAVE1で10%、1WAVEごとに1%ずつ下がり、WAVE10で1%'],
-    ]);    if(difficultyId===ETERNAL_SETTING.id) push('殻と貫き',[
-      ['殻','WAVEの始めに、敵が最大ライフ50%ぶんの殻をまとう。殻を割るまで敵のライフは減らない'],
-      ['殻と距離強化','殻に当てたダメージは、距離強化(間合いのボーナス)に数えない'],
+    ]);    if(difficultyId===ETERNAL_SETTING.id) push('シールドと貫き',[
+      ['シールド','WAVEの始めに、敵が最大ライフ50%ぶんのシールドをまとう。シールドを割るまで敵のライフは減らない'],
+      ['シールドと距離強化','シールドに当てたダメージは、距離強化(間合いのボーナス)に数えない'],
       ['貫き','敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）'],
     ]);
   }
@@ -67582,7 +67582,7 @@ function MonsterHeroGame() {
     setAttackAnim(null); setSlotSkill(null);
     addPopup(`${h.dmg}`, 'enemy', 'text-sky-200 drop-shadow-[0_0_20px_rgba(125,211,252,0.9)] text-5xl font-black animate-bounce',
       `🤖 ${h.actorName}の ${h.skillName} → 敵に ${h.dmg.toLocaleString()} ダメージ`);
-    setEnemy(prev => enemyAfterHit(prev, h.dmg)); // 殻(ETERNAL)があれば先に殻が受ける
+    setEnemy(prev => enemyAfterHit(prev, h.dmg)); // シールド(ETERNAL)があれば先にシールドが受ける
     await battleWait(550);
   };
   // カードを使わないターン(「ターンを進める」・緊急回復)のコピーの1手。敵へ当てて、倒したかを返す
@@ -67591,7 +67591,7 @@ function MonsterHeroGame() {
     const startHp = enemy?.hp ?? 0;
     const ca = runTacticsAiCopyAction(enemyDist);
     if (!(ca.total > 0)) return { defeated: false, enemyHp: startHp };
-    const shellAbsorbed = markShellAbsorbedHits(ca.hits, enemy?.shell); // 殻(ETERNAL)が受けたぶんはライフへ通らない
+    const shellAbsorbed = markShellAbsorbedHits(ca.hits, enemy?.shell); // シールド(ETERNAL)が受けたぶんはライフへ通らない
     for (const h of ca.hits) await playAiCopyHit(h);
     setCurrentWaveDamage(p => p + ca.total); raidJackDamageRef.current += Number(ca.total) || 0;
     const remaining = Math.max(0, startHp - (ca.total - shellAbsorbed));
@@ -77585,8 +77585,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // short … 名前の横の簡易表示に添える短い字(残りターンなど)。value … 詳細の中の言い方。note … 詳細の説明
     const add = (key, mark, label, value, tone, note, short = '') => list.push({ key, mark, label, value, tone, note, short });
     if (!enemy) return list;
-    // 殻(ETERNAL)。ライフより先に削れる。殻を削ったぶんは距離強化の加点に入らない
-    if (Number(enemy.shell) > 0) add('shell', '🛡️', '殻', `${Math.floor(enemy.shell).toLocaleString()}`, 'text-pink-200 border-pink-400/60', 'ライフより先に削れる。殻を削ったぶんは距離強化の加点に入らない', `${Math.floor(enemy.shell).toLocaleString()}`);
+    // シールド(ETERNAL)。ライフより先に削れる。シールドを削ったぶんは距離強化の加点に入らない
+    if (Number(enemy.shell) > 0) add('shell', '🛡️', 'シールド', `${Math.floor(enemy.shell).toLocaleString()}`, 'text-pink-200 border-pink-400/60', 'ライフより先に削れる。シールドを削ったぶんは距離強化の加点に入らない', `${Math.floor(enemy.shell).toLocaleString()}`);
     if (iceLockTurns > 0) add('ice', '❄️', '絶氷の楔', iceLockPreparing ? '準備' : `残り${iceLockTurns}T`, 'text-cyan-200 border-cyan-400/60', iceLockPreparing ? '次のターンから、敵は間合いを動けず、与えるダメージが30%下がる' : '敵は間合いを動けず、与えるダメージが30%下がる', iceLockPreparing ? '準備' : `${iceLockTurns}T`);
     if (enemyConfuseTurns > 0) add('confuse', '🌀', '乱心', `残り${enemyConfuseTurns}T`, 'text-violet-200 border-violet-400/60', '毎ターン50%で、敵は意味不明になって動けない', `${enemyConfuseTurns}T`);
     const psycho = isTacticsMode(runMode) ? tacticsExPsychoLockOf(tacticsExState, { wave, turn: turnCount }) : null;
@@ -80404,8 +80404,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       }
       commitAiCopy({...copy, picks:[], nextCard:null});
     }
-    // 殻(ETERNAL)。ヒットを順に殻へ当て、殻が受けたぶんを数える。殻が受けたぶんはライフへ通らず、
-    // 距離強化の加点にも入れない(2026-10-29 社長の決め)。殻を持たない敵では0
+    // シールド(ETERNAL)。ヒットを順にシールドへ当て、シールドが受けたぶんを数える。シールドが受けたぶんはライフへ通らず、
+    // 距離強化の加点にも入れない(2026-10-29 社長の決め)。シールドを持たない敵では0
     const shellAbsorbedTotal=markShellAbsorbedHits(attackHits,enemy?.shell);
     if (totalDmg>0) {
       if(totalDmg>0){
@@ -81431,8 +81431,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if (Number.isFinite(Number(scenario.enemyAtk))) { newEnemy.atk=Math.max(0,Math.floor(scenario.enemyAtk)); }
       battleScenarioIntentIndexRef.current=0;
     }
-    // 殻(ETERNAL)。WAVEのはじめに最大ライフの率ぶんをまとう(冥府Lvが上がるのもWAVEの変わり目なので、ここで足りる)。
-    // 殻を持たない難易度・ジャック戦・練習の台本では0のまま(既存の敵は何も変わらない)
+    // シールド(ETERNAL)。WAVEのはじめに最大ライフの率ぶんをまとう(冥府Lvが上がるのもWAVEの変わり目なので、ここで足りる)。
+    // シールドを持たない難易度・ジャック戦・練習の台本では0のまま(既存の敵は何も変わらない)
     const shell=raidRun||scenario?0:extremeEnemyShellAmount(newEnemy.maxHp,specialRuleDifficulty,w);
     if (shell>0) { newEnemy.shell=shell; newEnemy.maxShell=shell; }
     enemyDefeatResolvedRef.current=false;

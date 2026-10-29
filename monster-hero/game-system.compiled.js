@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3b979a66346a3886
+// source-sha256: 0ef6a2278837b96d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -15425,8 +15425,8 @@ const ETERNAL_SETTING = Object.freeze({
   unlockRequirement: 'HELHEIM',
   rankingId: 'ExtremeETERNAL',
   recordId: 'ETERNAL',
-  description: '冥府の上に、敵が殻をまとい、攻撃の一部が丈夫さを貫いてくる。戦いは長く続き、ターンとともに重くなる、極限チャレンジの最奥の難易度。',
-  cardDescription: 'WAVEの始めに敵が最大ライフ50%の殻をまとい、攻撃の30〜50%が丈夫さを貫く。冥府・ボス復活・敵ライフ10倍はヘルヘイムのまま。',
+  description: '冥府の上に、敵がシールドをまとい、攻撃の一部が丈夫さを貫いてくる。戦いは長く続き、ターンとともに重くなる、極限チャレンジの最奥の難易度。',
+  cardDescription: 'WAVEの始めに敵が最大ライフ50%のシールドをまとい、攻撃の30〜50%が丈夫さを貫く。冥府・ボス復活・敵ライフ10倍はヘルヘイムのまま。',
   specialRules: Object.freeze({
     assistCardEffect: 0.30,
     positiveModifier: 0.30,
@@ -15895,7 +15895,7 @@ const extremeRuleDetailGroups = (difficultyId, quick = false) => {
     push('冥府', [['進行', '2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'], ['敵ライフ/攻撃力', '冥府Lvごと +30% / +60% / +90% / +120% / +150%'], ['味方の最大ライフ', '冥府Lvごと -5%（Lv5で-25%）'], ['Lv3', '消費ガッツ 200%→225%'], ['Lv4', '＋補正 30%→20%・−補正 300%→350%'], ['Lv5', '与ダメ低下 -2.0pt/T・最低10%']]);
     push('敵の強さ', [adjust.lifeRate > 1 && ['敵ライフ', `すべての敵が${adjust.lifeRate}倍`], durahan && ['デュラハン', `ライフ・攻撃力が さらに${durahan.lifeRate}倍`]]);
     push('距離強化', [['WAVEごとに薄れる', 'WAVE1で10%、1WAVEごとに1%ずつ下がり、WAVE10で1%']]);
-    if (difficultyId === ETERNAL_SETTING.id) push('殻と貫き', [['殻', 'WAVEの始めに、敵が最大ライフ50%ぶんの殻をまとう。殻を割るまで敵のライフは減らない'], ['殻と距離強化', '殻に当てたダメージは、距離強化(間合いのボーナス)に数えない'], ['貫き', '敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）']]);
+    if (difficultyId === ETERNAL_SETTING.id) push('シールドと貫き', [['シールド', 'WAVEの始めに、敵が最大ライフ50%ぶんのシールドをまとう。シールドを割るまで敵のライフは減らない'], ['シールドと距離強化', 'シールドに当てたダメージは、距離強化(間合いのボーナス)に数えない'], ['貫き', '敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）']]);
   }
   push('カード', [rules.assistCardEffect != null && ['アシストカード効果', specialRulePercent(rules.assistCardEffect)]]);
   push('補正', [rules.waveEnhancement != null && ['WAVE後強化', specialRulePercent(rules.waveEnhancement)], rules.positiveModifier != null && ['＋補正', specialRulePercent(rules.positiveModifier)], rules.negativeModifier != null && ['－補正', specialRulePercent(rules.negativeModifier)], rules.distanceEnhancement != null && ['距離強化', specialRulePercent(rules.distanceEnhancement)]]);
@@ -123769,7 +123769,7 @@ function MonsterHeroGame() {
       short
     });
     if (!enemy) return list;
-    if (Number(enemy.shell) > 0) add('shell', '🛡️', '殻', `${Math.floor(enemy.shell).toLocaleString()}`, 'text-pink-200 border-pink-400/60', 'ライフより先に削れる。殻を削ったぶんは距離強化の加点に入らない', `${Math.floor(enemy.shell).toLocaleString()}`);
+    if (Number(enemy.shell) > 0) add('shell', '🛡️', 'シールド', `${Math.floor(enemy.shell).toLocaleString()}`, 'text-pink-200 border-pink-400/60', 'ライフより先に削れる。シールドを削ったぶんは距離強化の加点に入らない', `${Math.floor(enemy.shell).toLocaleString()}`);
     if (iceLockTurns > 0) add('ice', '❄️', '絶氷の楔', iceLockPreparing ? '準備' : `残り${iceLockTurns}T`, 'text-cyan-200 border-cyan-400/60', iceLockPreparing ? '次のターンから、敵は間合いを動けず、与えるダメージが30%下がる' : '敵は間合いを動けず、与えるダメージが30%下がる', iceLockPreparing ? '準備' : `${iceLockTurns}T`);
     if (enemyConfuseTurns > 0) add('confuse', '🌀', '乱心', `残り${enemyConfuseTurns}T`, 'text-violet-200 border-violet-400/60', '毎ターン50%で、敵は意味不明になって動けない', `${enemyConfuseTurns}T`);
     const psycho = isTacticsMode(runMode) ? tacticsExPsychoLockOf(tacticsExState, {
