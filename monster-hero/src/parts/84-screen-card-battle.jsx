@@ -528,7 +528,14 @@ const CardFoeStyle = ({ db, who, level }) => {
 };
 
 // ---- 詳しい画面(大きな絵・名前・種類・ガッツ・使える子・番号・文)。どこをタップしても閉じる ----
-const CardDetailModal = ({ db, no, onClose, status = null, statusName = '' }) => {
+// dexInfo … 図鑑から開いたときだけ { pack: '第2弾パック', have: 3 }。入っている弾と持っている枚数を出す(2026-10-29 社長・図鑑 案B)
+const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexInfo = null }) => {
+  const dexLine = dexInfo ? (
+    <div data-card-detail-dex className="mt-1.5 flex flex-wrap gap-1.5 text-[12px] font-bold">
+      <span className="rounded-md bg-violet-900 px-2 py-0.5">{dexInfo.pack}</span>
+      <span className={`rounded-md px-2 py-0.5 ${dexInfo.have > 0 ? 'bg-emerald-900' : 'bg-slate-700'}`}>{dexInfo.have > 0 ? `持っている${dexInfo.have}枚` : 'まだ持っていない'}</span>
+    </div>
+  ) : null;
   const c = cardOf(db, no);
   const m = c ? null : cardMonsterOf(db, no);
   return (
@@ -544,6 +551,7 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '' }) =>
             <span className="rounded-md bg-slate-700 px-2 py-0.5">{cardUserLabel(db, c)}</span>
             <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{c.no}</span>
           </div>
+          {dexLine}
           {c.text && <p className="mt-2 text-[14px] font-bold leading-relaxed">{c.text}</p>}
           {c.note && <p data-card-detail-note className="mt-1.5 text-[12px] font-bold leading-relaxed text-sky-200" style={JA_LABEL_STYLE}>{jaWrap(c.note)}</p>}
           {!c.ready && <p className="mt-2 text-[12px] font-bold text-amber-300" style={JA_LABEL_STYLE}>{jaWrap('このカードは準備中です(まだデッキに入れられません)')}</p>}
@@ -557,6 +565,7 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '' }) =>
             <span className="rounded-md bg-sky-900 px-2 py-0.5">{CARD_TYPE_LABEL[m.type]}</span>
             <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{m.no}</span>
           </div>
+          {dexLine}
           {m.dexOnly && <p data-card-dex-only className="mt-2 text-[12px] font-bold text-amber-300" style={JA_LABEL_STYLE}>{jaWrap('まだ手に入らないカードです(パックには入っていません)')}</p>}
         </div>
       )}
