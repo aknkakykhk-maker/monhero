@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 230ed3c9da207af1
+// source-sha256: 5d9e385ae2d4f31a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -46399,6 +46399,222 @@ const listTacticsStackItems = (counts, {
     });
     return out;
   }, []);
+};
+const CLASSIC_CHIP_VIEW = Object.freeze({
+  atk: {
+    icon: '⚔️',
+    turns: 'run'
+  },
+  dmgCut: {
+    icon: '🛡️',
+    turns: 'run'
+  },
+  def: {
+    icon: '🛡️',
+    turns: 'run'
+  },
+  muaHp: {
+    icon: '❤️',
+    turns: 'run'
+  },
+  muaGuts: {
+    icon: '⚡',
+    turns: 'run'
+  },
+  critRate: {
+    icon: '🎯',
+    turns: 'run'
+  },
+  critDmg: {
+    icon: '💥',
+    turns: 'run'
+  },
+  combo: {
+    icon: '💫',
+    turns: 'run'
+  },
+  globalCombo: {
+    icon: '💫',
+    turns: 'run'
+  },
+  kikiCard: {
+    icon: '🃏',
+    turns: 'count'
+  },
+  kyukoCut: {
+    icon: '🎼',
+    turns: 'count'
+  },
+  kenshi: {
+    icon: '💥',
+    turns: 'run',
+    stack: 'kenshi'
+  },
+  autoHp: {
+    icon: '💚',
+    turns: 'run'
+  },
+  autoGuts: {
+    icon: '⚡',
+    turns: 'run'
+  },
+  poltz: {
+    icon: '🌿',
+    turns: 'run'
+  },
+  trick: {
+    icon: '🎃',
+    turns: 'wave',
+    stack: ['trickAtk', 'trickDef', 'trickRegen']
+  },
+  sweet: {
+    icon: '🍪',
+    turns: 'run',
+    stack: ['cookie', 'note']
+  },
+  bow: {
+    icon: '🎀',
+    turns: 'run',
+    stack: 'bow'
+  },
+  fate: {
+    icon: '🪙',
+    turns: 'run',
+    stack: ['fateCombo', 'fateAtk']
+  },
+  fateCoinGuts: {
+    icon: '🪙',
+    turns: 'run',
+    kind: 'debuff'
+  },
+  meloso: {
+    icon: '💖',
+    turns: 'next'
+  },
+  boost: {
+    icon: '✨',
+    turns: 'now'
+  },
+  critFix: {
+    icon: '🎯',
+    turns: 'now'
+  },
+  zeroGuts: {
+    icon: '⭐',
+    turns: 'now'
+  },
+  reflectNext: {
+    icon: '🔁',
+    turns: 'next'
+  },
+  reflectNow: {
+    icon: '🔁',
+    turns: 'now'
+  },
+  takenNext: {
+    icon: '🛡️',
+    turns: 'next'
+  },
+  takenNow: {
+    icon: '🛡️',
+    turns: 'now'
+  },
+  costNext: {
+    icon: '⚡',
+    turns: 'next',
+    kind: 'debuff'
+  },
+  costNow: {
+    icon: '⚡',
+    turns: 'now',
+    kind: 'debuff'
+  }
+});
+const CLASSIC_DEBUFF_VIEW = Object.freeze({
+  ice: 'wave',
+  confuse: 'count',
+  aquaPrison: 'count',
+  aquaFreeze: 'count',
+  aquaFinale: 'count',
+  nightmare: 'count',
+  psycho: 'count',
+  fateAtkDown: 'count',
+  fateTakenUp: 'count',
+  stun: 'next',
+  atkDown: 'wave',
+  taken: 'wave',
+  roar: 'wave'
+});
+const classicChipKindOf = key => {
+  const k = String(key || '');
+  if (CLASSIC_CHIP_VIEW[k]) return k;
+  return ['trick', 'sweet', 'bow', 'fate'].find(p => k.startsWith(p) && !CLASSIC_CHIP_VIEW[k]) || null;
+};
+const classicPctOf = text => {
+  const m = String(text || '').match(/([+\-−]?)(\d+)%/);
+  return m ? Number(m[2]) * (m[1] === '-' || m[1] === '−' ? -1 : 1) : null;
+};
+const classicTurnsLeftOf = (text, turns) => {
+  const m = String(text || '').match(/残り(\d+)T/);
+  if (m) return Number(m[1]);
+  return turns === 'now' || turns === 'next' ? 1 : turns === 'wave' ? 'wave' : null;
+};
+const classicEffectsFromChips = (chips, slot = null, stackCounts = null) => {
+  const out = [],
+    covered = new Set();
+  (Array.isArray(chips) ? chips : []).forEach(c => {
+    if (!c) return;
+    const owner = Number.isInteger(c.owner) ? c.owner : null;
+    if (owner != null && Number.isInteger(slot) && owner !== slot) return;
+    const kind = classicChipKindOf(c.key),
+      v = kind ? CLASSIC_CHIP_VIEW[kind] : null;
+    if (!v) return;
+    [].concat(v.stack || []).forEach(s => covered.add(s));
+    const text = [c.value, c.short].filter(Boolean).join(' ');
+    out.push({
+      key: `chip:${c.key}`,
+      name: c.label || '',
+      icon: v.icon,
+      kind: v.kind || 'buff',
+      pct: classicPctOf(c.value),
+      fromName: '',
+      fromSlot: owner,
+      turnsLeft: classicTurnsLeftOf(text, v.turns),
+      allAllies: owner == null,
+      note: `${c.value || ''}${v.turns === 'next' ? '(次のターン)' : v.turns === 'now' ? '(このターン)' : v.turns === 'run' ? '(このランのあいだ)' : ''}`
+    });
+  });
+  const counts = Object.fromEntries(Object.entries(stackCounts && typeof stackCounts === 'object' ? stackCounts : {}).filter(([k]) => !covered.has(k)));
+  return [...out, ...listTacticsStackItems(counts, {
+    keepZero: []
+  })];
+};
+const CLASSIC_DEBUFF_FROM_EX = Object.freeze(['psycho', 'aquaPrison', 'aquaFreeze', 'aquaFinale', 'nightmare']);
+const classicEnemyEffectsFromDebuffs = (debuffs, stackCounts = null, {
+  withoutEx = false
+} = {}) => {
+  const out = [];
+  (Array.isArray(debuffs) ? debuffs : []).forEach(d => {
+    if (!d || !CLASSIC_DEBUFF_VIEW[d.key] || withoutEx && CLASSIC_DEBUFF_FROM_EX.includes(d.key)) return;
+    const turns = CLASSIC_DEBUFF_VIEW[d.key];
+    out.push({
+      key: `debuff:${d.key}`,
+      name: d.label || '',
+      icon: d.mark || '',
+      kind: 'debuff',
+      pct: classicPctOf(d.value),
+      fromName: '',
+      fromSlot: null,
+      turnsLeft: classicTurnsLeftOf(`${d.value || ''} ${d.short || ''}`, turns),
+      allAllies: false,
+      note: d.note || d.value || ''
+    });
+  });
+  const covered = new Set(['aquaPrison', 'aquaFreeze', 'roar'].filter(k => out.some(x => x.key === `debuff:${k}`)));
+  const counts = Object.fromEntries(Object.entries(stackCounts && typeof stackCounts === 'object' ? stackCounts : {}).filter(([k]) => !covered.has(k)));
+  return [...out, ...listTacticsStackItems(counts, {
+    keepZero: []
+  })];
 };
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
 const RHYTHM_BUDDY_TICKET_ITEM_ID = 'session_ticket';

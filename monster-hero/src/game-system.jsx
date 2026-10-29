@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c01fb44718007fc2
+// generated-sha256: 0ca07d2ccd2cba5e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -28639,6 +28639,76 @@ const listTacticsStackItems = (counts, { keepZero = ['cookie', 'note'] } = {}) =
       turnsLeft: isTurns ? count : null, pct: null, fromName: '', fromSlot: null, allAllies: false, note: (TACTICS_STACK_EXTRA[kind] && TACTICS_STACK_EXTRA[kind].note) || '' });
     return out;
   }, []);
+};
+
+// ---- 本編(5つの遊び)とタクティクスの EX 以外: 強化の札(71 の battleBuffChips)・敵の弱化(60 の enemyDebuffs)を同じ形に直す ----
+// 2026-10-29 社長「効果の札を本編にも足す」。本編には EX が無いので、固有技・アシカ・勇者特性・ブリーダーの教えで付く物は
+// いまの強化の札(chip)がすべて数え上げている。それを読んで並べ直すだけ(効き目は変えない)。
+//   chip … { key, label, value, short, owner(その子だけに効く札の枠・全員なら null) } / debuff … { key, label, value, short, note }
+//   札の種類を足したら、下の表にも足す(tools/battle/battle-effects-check.js が見張る)
+// turns … 'now'(このターンだけ) / 'next'(次のターン) / 'run'(ランのあいだ・WAVE をまたぐ) / 'wave'(この WAVE)
+const CLASSIC_CHIP_VIEW = Object.freeze({
+  atk:          { icon: '⚔️', turns: 'run' },  dmgCut:     { icon: '🛡️', turns: 'run' },  def:        { icon: '🛡️', turns: 'run' },
+  muaHp:        { icon: '❤️', turns: 'run' },  muaGuts:    { icon: '⚡', turns: 'run' },  critRate:   { icon: '🎯', turns: 'run' },
+  critDmg:      { icon: '💥', turns: 'run' },  combo:      { icon: '💫', turns: 'run' },  globalCombo:{ icon: '💫', turns: 'run' },
+  kikiCard:     { icon: '🃏', turns: 'count' }, kyukoCut:  { icon: '🎼', turns: 'count' }, kenshi:    { icon: '💥', turns: 'run', stack: 'kenshi' },
+  autoHp:       { icon: '💚', turns: 'run' },  autoGuts:   { icon: '⚡', turns: 'run' },  poltz:      { icon: '🌿', turns: 'run' },
+  trick:        { icon: '🎃', turns: 'wave', stack: ['trickAtk', 'trickDef', 'trickRegen'] }, sweet: { icon: '🍪', turns: 'run', stack: ['cookie', 'note'] },
+  bow:          { icon: '🎀', turns: 'run', stack: 'bow' }, fate: { icon: '🪙', turns: 'run', stack: ['fateCombo', 'fateAtk'] },
+  fateCoinGuts: { icon: '🪙', turns: 'run', kind: 'debuff' },
+  meloso:       { icon: '💖', turns: 'next' }, boost:      { icon: '✨', turns: 'now' },  critFix:    { icon: '🎯', turns: 'now' },
+  zeroGuts:     { icon: '⭐', turns: 'now' },  reflectNext:{ icon: '🔁', turns: 'next' }, reflectNow: { icon: '🔁', turns: 'now' },
+  takenNext:    { icon: '🛡️', turns: 'next' }, takenNow:  { icon: '🛡️', turns: 'now' },
+  costNext:     { icon: '⚡', turns: 'next', kind: 'debuff' }, costNow: { icon: '⚡', turns: 'now', kind: 'debuff' },
+});
+const CLASSIC_DEBUFF_VIEW = Object.freeze({
+  ice: 'wave', confuse: 'count', aquaPrison: 'count', aquaFreeze: 'count', aquaFinale: 'count', nightmare: 'count', psycho: 'count',
+  fateAtkDown: 'count', fateTakenUp: 'count', stun: 'next', atkDown: 'wave', taken: 'wave', roar: 'wave',
+});
+// 札の key は「種類+枠」(trick0・sweetparty など)のことがあるので、表の種類へ戻す
+const classicChipKindOf = (key) => {
+  const k = String(key || '');
+  if (CLASSIC_CHIP_VIEW[k]) return k;
+  return ['trick', 'sweet', 'bow', 'fate'].find((p) => k.startsWith(p) && !CLASSIC_CHIP_VIEW[k]) || null;
+};
+const classicPctOf = (text) => { const m = String(text || '').match(/([+\-−]?)(\d+)%/); return m ? Number(m[2]) * (m[1] === '-' || m[1] === '−' ? -1 : 1) : null; };
+const classicTurnsLeftOf = (text, turns) => {
+  const m = String(text || '').match(/残り(\d+)T/);
+  if (m) return Number(m[1]);
+  return turns === 'now' || turns === 'next' ? 1 : turns === 'wave' ? 'wave' : null;
+};
+// 枠ごとの一覧(本編)。chips は battleBuffChips() の戻り値。stackCounts を渡すと、札に無い溜まる物を kind:'stack' で足す
+const classicEffectsFromChips = (chips, slot = null, stackCounts = null) => {
+  const out = [], covered = new Set();
+  (Array.isArray(chips) ? chips : []).forEach((c) => {
+    if (!c) return;
+    const owner = Number.isInteger(c.owner) ? c.owner : null;
+    if (owner != null && Number.isInteger(slot) && owner !== slot) return;
+    const kind = classicChipKindOf(c.key), v = kind ? CLASSIC_CHIP_VIEW[kind] : null;
+    if (!v) return;
+    [].concat(v.stack || []).forEach((s) => covered.add(s));
+    const text = [c.value, c.short].filter(Boolean).join(' ');
+    out.push({ key: `chip:${c.key}`, name: c.label || '', icon: v.icon, kind: v.kind || 'buff', pct: classicPctOf(c.value),
+      fromName: '', fromSlot: owner, turnsLeft: classicTurnsLeftOf(text, v.turns), allAllies: owner == null,
+      note: `${c.value || ''}${v.turns === 'next' ? '(次のターン)' : v.turns === 'now' ? '(このターン)' : v.turns === 'run' ? '(このランのあいだ)' : ''}` });
+  });
+  const counts = Object.fromEntries(Object.entries(stackCounts && typeof stackCounts === 'object' ? stackCounts : {}).filter(([k]) => !covered.has(k)));
+  return [...out, ...listTacticsStackItems(counts, { keepZero: [] })];
+};
+// 敵の一覧(本編もタクティクスも)。debuffs は 60 の enemyDebuffs。stackCounts は enemyStackCounts(弱化の一覧と同じ物は出さない)
+//   withoutEx … タクティクスで true にすると、EX から付く弱化(listTacticsExEnemyEffects が出す物)を外す(二重に出さない)
+const CLASSIC_DEBUFF_FROM_EX = Object.freeze(['psycho', 'aquaPrison', 'aquaFreeze', 'aquaFinale', 'nightmare']);
+const classicEnemyEffectsFromDebuffs = (debuffs, stackCounts = null, { withoutEx = false } = {}) => {
+  const out = [];
+  (Array.isArray(debuffs) ? debuffs : []).forEach((d) => {
+    if (!d || !CLASSIC_DEBUFF_VIEW[d.key] || (withoutEx && CLASSIC_DEBUFF_FROM_EX.includes(d.key))) return;
+    const turns = CLASSIC_DEBUFF_VIEW[d.key];
+    out.push({ key: `debuff:${d.key}`, name: d.label || '', icon: d.mark || '', kind: 'debuff', pct: classicPctOf(d.value),
+      fromName: '', fromSlot: null, turnsLeft: classicTurnsLeftOf(`${d.value || ''} ${d.short || ''}`, turns), allAllies: false, note: d.note || d.value || '' });
+  });
+  const covered = new Set(['aquaPrison', 'aquaFreeze', 'roar'].filter((k) => out.some((x) => x.key === `debuff:${k}`)));
+  const counts = Object.fromEntries(Object.entries(stackCounts && typeof stackCounts === 'object' ? stackCounts : {}).filter(([k]) => !covered.has(k)));
+  return [...out, ...listTacticsStackItems(counts, { keepZero: [] })];
 };
 
 // ---- part: 33-rhythm-buddy.jsx ----
