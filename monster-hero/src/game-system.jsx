@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d8dba0fb6af95897
+// generated-sha256: 4145559e8e8c394e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57484,7 +57484,7 @@ const cardHitResultOf = (f) => {
 const CardHitResult = ({ f, tiny = false }) => {
   const r = cardHitResultOf(f);
   if (!r) return null;
-  if (r.kind === 'none') return <span data-card-hit-result="none" className="mh-card-guard-result pointer-events-none absolute left-1/2 top-[58%] z-[51] -translate-x-1/2 whitespace-nowrap rounded-full bg-black/70 px-1.5 text-[10px] font-bold text-slate-200">守らなかった</span>;
+  if (r.kind === 'none') return <span data-card-hit-result="none" className={`mh-card-guard-result pointer-events-none absolute left-1/2 ${tiny ? 'top-[62%] text-[9px]' : 'top-[82%] text-[10px]'} z-[51] -translate-x-1/2 whitespace-nowrap rounded-full bg-black/70 px-1.5 font-bold text-slate-200`}>守らなかった</span>;
   return (
     <span data-card-hit-result={r.kind} className={`mh-card-guard-result pointer-events-none absolute left-1/2 top-[-6px] z-[51] -translate-x-1/2 whitespace-nowrap rounded-xl border-2 bg-slate-950/85 px-1.5 text-center font-black leading-tight ${r.kind === 'evade' ? 'border-sky-300 text-sky-100' : 'border-amber-300 text-amber-100'} ${tiny ? 'text-[11px]' : 'text-[13px]'}`}>
       {r.kind === 'evade' ? '💨 回避！' : '🛡 防御！'}<br/><span className="text-rose-300 line-through decoration-2">{r.before}</span> → <span className={`${tiny ? 'text-[15px]' : 'text-[18px]'} text-white`}>{r.after}</span>
@@ -57905,7 +57905,8 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   // 横画面は、まんなかが空いていたので、絵を大きくする(2026-10-27 ソランドくん「場のモンスターの絵と場のカードが小さい」)。
   //   高さは画面の高さから決める(40〜64px。844×390 で 64px・667×375 で 56px ほど。上下の帯とまんなかの 64px を引いた残りを2段で分ける)
   const wideArtH = 'clamp(40px, calc((var(--mh-vh, 100svh) - 262px) / 2), 64px)';
-  const artSize = wide ? 'max-w-[88px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
+  // 自分の場は、まんなか(1行の実況)で空いた分だけ立ち姿を大きくする(2026-10-29 社長・⑤ 案A。立ち絵の攻撃の動きが映えるように)
+  const artSize = wide ? 'max-w-[88px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : opp ? 'max-h-[78px] max-w-[96px]' : 'max-h-[106px] max-w-[126px]';
   const imgEl = art
     ? <img src={art} alt="" style={wide ? { maxHeight: wideArtH } : undefined} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''}`}/>
     : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`}/>;
@@ -57913,7 +57914,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   // calm … オプションの「画面の揺れ: 揺らさない」。受けたときは揺らさずに光るだけ
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? (calm ? 'mh-card-hit-calm' : 'mh-card-hit') : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = (
-    <div data-card-art={`${p}-${m}`} className={`relative flex ${wide ? '' : tiny ? 'h-[44px]' : compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`}
+    <div data-card-art={`${p}-${m}`} className={`relative flex ${wide ? '' : tiny ? 'h-[44px]' : compact ? 'h-[56px]' : opp ? 'h-[78px]' : 'h-[106px]'} w-full items-end justify-center`}
       style={{ ...(wide ? { height: wideArtH } : null), ...(mv && mv.type === 'attack' ? { '--atk-dx': `${mv.dx}px`, '--atk-dy': `${mv.dy}px`, zIndex: 40 } : null) }}>
       {mv && mv.type === 'attack' && mv.kind
         ? <SkillFxMotion key={mv.key} kind={mv.kind} image={imgEl}/>
@@ -57929,7 +57930,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
       {guardTag && <span data-card-guard-tag className={`pointer-events-none absolute left-1/2 top-0 z-[45] -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-black shadow ${/回避/.test(guardTag) ? 'bg-sky-300 text-slate-950 shadow-[0_0_12px_rgba(125,211,252,.8)]' : 'bg-amber-400 text-slate-950 shadow-[0_0_12px_rgba(245,158,11,.8)]'}`}>{/回避/.test(guardTag) ? '💨' : '🛡'} {guardTag}</span>}
       {mon.ko && <span className="absolute bottom-2 rounded bg-black/70 px-1.5 text-[12px] font-black text-slate-300">KO</span>}
       {fx.map((f) => (
-        <span key={f.key} data-card-dmg-num={f.dmg > 0 ? f.dmg : undefined} className={`pointer-events-none absolute top-0 z-[50] font-black ${f.dmg > 0 ? `mh-card-dmg-pop ${tiny ? 'text-[34px]' : 'text-[42px]'} leading-none text-rose-500` : 'text-[30px] text-sky-200'}`} style={{ WebkitTextStroke: f.dmg > 0 ? '2px #fff' : '1px #0369a1', textShadow: f.dmg > 0 ? '0 4px 0 #7f1d1d, 0 0 18px rgba(239,68,68,.8)' : '0 0 10px rgba(248,113,113,.8)' }}>
+        <span key={f.key} data-card-dmg-num={f.dmg > 0 ? f.dmg : undefined} className={`pointer-events-none absolute ${tiny ? 'top-0' : 'top-[26%]'} z-[50] font-black ${f.dmg > 0 ? `mh-card-dmg-pop ${tiny ? 'text-[28px]' : 'text-[42px]'} leading-none text-rose-500` : 'text-[30px] text-sky-200'}`} style={{ WebkitTextStroke: f.dmg > 0 ? '2px #fff' : '1px #0369a1', textShadow: f.dmg > 0 ? '0 4px 0 #7f1d1d, 0 0 18px rgba(239,68,68,.8)' : '0 0 10px rgba(248,113,113,.8)' }}>
           {f.dmg > 0 ? `−${f.dmg}` : f.heal ? `＋${f.heal}` : 'ミス'}
         </span>
       ))}
@@ -59156,7 +59157,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         {strip(CARD_ME)}
       </div>
       </div>
-      <div data-card-side className={wide ? 'flex min-h-0 w-[42%] max-w-[420px] shrink-0 flex-col justify-end overflow-y-auto border-l border-white/10 bg-black/20' : 'contents'}>
+      <div data-card-side className={wide ? 'flex min-h-0 w-[42%] max-w-[420px] shrink-0 flex-col justify-center overflow-y-auto border-l border-white/10 bg-black/20' : 'contents'}>
         {/* 練習試合: ドラの説明の窓(横の画面)。右の列の手札のすぐ上に、中身の高さぶん場所を取って出す。縦の画面は自分のモンスターの列の上(tutorBox) */}
       {wide && tutorBox}
       {wide && replayFoeHand}
