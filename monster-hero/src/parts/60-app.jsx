@@ -2181,7 +2181,17 @@ function MonsterHeroGame() {
         ...(gain.tickets > 0 ? [{ icon: '🎶', text: `セッション券 ×${gain.tickets}` }] : []),
         ...(gain.beatPoints > 0 ? [{ icon: '🎟️', text: `ビートP ${gain.beatPoints.toLocaleString()}` }] : []),
       ];
+      // 画面いっぱいの演出に並べる、もらった物(ふつうの分 → 5ランクごとのおまけ の順。おまけは光で分ける)
+      const basePoints = gain.beatPoints - gain.bonusPoints, baseTickets = gain.tickets - gain.bonusTickets;
+      const fxGains = [
+        ...(basePoints > 0 ? [{ icon: '🎟️', text: `ビートP ${basePoints.toLocaleString()}`, note: '上がったランク ×100' }] : []),
+        ...(gain.bonusPoints > 0 ? [{ icon: '🎟️', text: `ビートP ${gain.bonusPoints.toLocaleString()}`, note: '5ランクごとのおまけ(ランク ×200)', bonus: true }] : []),
+        ...(baseTickets > 0 ? [{ icon: '🎶', text: `セッション券 ${baseTickets}枚`, note: 'ランクが上がるたびに1枚' }] : []),
+        ...(gain.bonusTickets > 0 ? [{ icon: '🎶', text: `セッション券 ${gain.bonusTickets}枚`, note: '5ランクごとのおまけ(ランクと同じ枚数)', bonus: true }] : []),
+      ];
       setBeatRankAward({ add: gain.add, parts: gain.parts, from: gain.from, to: gain.to, xp: next.xp, gains });
+      // ランクが上がったら、画面いっぱいの演出を出す(2026-10-29 社長「この演出で」)。押すと先へ・閉じる
+      if (gain.to > gain.from) setBeatRankFx({ from: gain.from, to: gain.to, gains: fxGains });
       void syncBeatRankToServer(next);
     } catch (_) { /* 経験値が書けなくても、曲の記録の保存は止めない */ }
   };
@@ -4755,6 +4765,8 @@ function MonsterHeroGame() {
   const [beatRank, setBeatRank] = useState(() => normalizeBeatRank(null));
   const [beatRankAward, setBeatRankAward] = useState(null);
   const beatRankSyncedRef = useRef(false);
+  // ランクが上がった瞬間の画面いっぱいの演出(PlayerRankUpFx)。{ from, to, gains } / null
+  const [beatRankFx, setBeatRankFx] = useState(null);
   const rhythmPlayRunAwardRef = useRef(null);
   const rhythmPlayRunAward = rhythmPlayRunAwardState;
   const setRhythmPlayRunAward = (next) => { rhythmPlayRunAwardRef.current = next; setRhythmPlayRunAwardState(next); };
@@ -5758,7 +5770,7 @@ function MonsterHeroGame() {
   //   (2026-09-07・ユーザー提案)。追いつきが残るのは、途中でやめたときだけ。
   //   その場合はいまの周がそのまま続いているので、止まっていたぶんを取り戻すのが正しい。
   useEffect(() => {
-    if (gameState === 'RHYTHM_PLAY') { rhythmPlayStartedAtRef.current = Date.now(); setRhythmPlayRunAward(null); stopCatchUp(); setBeatRankAward(null); return; }
+    if (gameState === 'RHYTHM_PLAY') { rhythmPlayStartedAtRef.current = Date.now(); setRhythmPlayRunAward(null); stopCatchUp(); setBeatRankAward(null); setBeatRankFx(null); return; }
     const startedAt = rhythmPlayStartedAtRef.current;
     rhythmPlayStartedAtRef.current = 0;
     if (!startedAt) return;
@@ -6047,6 +6059,14 @@ function MonsterHeroGame() {
   // 曲の試聴・演奏と重なると邪魔になるため(超省エネと同じ考え方)。
   // 音量の保存値そのものは変えないので、モンビーを出れば元の音量へ戻る
   useEffect(() => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen) ? 0 : seVolume); }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen]);
+  // モンヒロビートの画面は上で効果音の音量を0にしている(裏の周回のバトルの音を消すため)。ランクアップの演出(beatRankFx)を出している間だけは、
+  // 効果音の音量設定どおりに戻して鳴らし、閉じたら上と同じ決まりに戻す(2026-10-29 社長「ファンファーレもなかった」。0のままだと演出の音が鳴らなかった)。
+  // 超省エネのあいだは今までどおり鳴らさない
+  useEffect(() => {
+    if (!beatRankFx || (ultraEcoSession && !cardScreenOpen)) return undefined;
+    Audio_.setSeVolume(seVolume);
+    return () => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen) ? 0 : seVolume); };
+  }, [beatRankFx, seVolume]);
   // MFバトルカードにいるあいだは、裏の周回のバトルの効果音だけを止める(docs/spec/CARD_BATTLE.md 5-3「音」)。
   // カードも同じ効果音を使うので、上の音量(0)では止めない。カードの画面は Audio_.fgSe から鳴らすので、この印を受けない。
   // 超省エネの「効果音を0にする」も、カードの画面にいるあいだは外す(カードの音まで消えるため)。音量の保存値は変えない
@@ -19980,6 +20000,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         })()}
 
         {raidDamageFx&&((gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='raid')||gameState==='RAID_JACK_DEBUG')&&<RaidJackDamageFx key={raidDamageFx.key} fx={raidDamageFx} onDone={()=>setRaidDamageFx(null)}/>}
+        {beatRankFx&&gameState==='RHYTHM_PLAY'&&<PlayerRankUpFx kind="beat" from={beatRankFx.from} to={beatRankFx.to} gains={beatRankFx.gains} onClose={()=>setBeatRankFx(null)}/>}
         {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward} onComplete={async(result,merged)=>{
           // デバッグ画面の試作曲(RHYTHM_PROTO_SONGS)は、何も残さない。周回の報酬・経験値・自己ベスト・クリア回数・
           // 実績・全国ランキングのどれにも入れない(CLAUDE.md ⑦。試作は公開しない曲なので、記録に混ぜない)

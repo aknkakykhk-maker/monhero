@@ -63,7 +63,7 @@ const beatRankPlayXp = ({ difficultyId, cleared = true, fullCombo = false, allMa
 };
 
 // 経験値を足した次の値と、新しくもらうごほうび。today は日本時間の 'YYYY-MM-DD'(呼ぶ側が渡す)
-// 返り値: { next, add, parts, from, to, tickets, beatPoints }
+// 返り値: { next, add, parts, from, to, tickets, beatPoints, bonusTickets, bonusPoints }(bonus* は5ランクごとのおまけの分。tickets・beatPoints に含む)
 const beatRankAfter = (prev, { difficultyId, cleared, fullCombo, allMarvelous, multi, today }) => {
   const cur = normalizeBeatRank(prev);
   const from = playerRankInfo(cur.xp).rank;
@@ -75,7 +75,10 @@ const beatRankAfter = (prev, { difficultyId, cleared, fullCombo, allMarvelous, m
   const add = play.xp + (first ? BEAT_RANK_BONUS.dayFirst : 0);
   const xp = playerRankSafeXp(cur.xp + add);
   const to = playerRankInfo(xp).rank;
-  let tickets = 0, beatPoints = 0;
-  for (let r = Math.max(cur.got + 1, 2); r <= to; r++) { tickets += beatRankTicketsFor(r); beatPoints += playerRankBeatPointsFor(r); }
-  return { next: { ...cur, xp, day: day || cur.day, dayFirst: first || (cur.day === day && cur.dayFirst), got: Math.max(cur.got, to) }, add, parts, from, to, tickets, beatPoints };
+  let tickets = 0, beatPoints = 0, bonusTickets = 0, bonusPoints = 0;
+  for (let r = Math.max(cur.got + 1, 2); r <= to; r++) {
+    tickets += beatRankTicketsFor(r); beatPoints += playerRankBeatPointsFor(r);
+    if (r % 5 === 0) { bonusTickets += r; bonusPoints += r * 200; }
+  }
+  return { next: { ...cur, xp, day: day || cur.day, dayFirst: first || (cur.day === day && cur.dayFirst), got: Math.max(cur.got, to) }, add, parts, from, to, tickets, beatPoints, bonusTickets, bonusPoints };
 };
