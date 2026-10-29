@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 34919e421d580bfd
+// source-sha256: cff5ed927a46373c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -70482,12 +70482,66 @@ const BattleStackMarks = ({
     "aria-hidden": "true"
   }, it.mark), React.createElement("b", null, it.unit === 'T' ? `${it.count}T` : `×${it.count}`))));
 };
+const exEffectIconOf = e => {
+  if (e && e.icon) return e.icon;
+  const kind = e && typeof e.key === 'string' && e.key.startsWith('stack:') ? e.key.slice(6) : null;
+  const m = kind && typeof BATTLE_STACK_MARKS !== 'undefined' ? BATTLE_STACK_MARKS[kind] : null;
+  return m && m.img ? React.createElement("img", {
+    src: m.img,
+    alt: "",
+    className: "inline h-3 w-3 object-contain align-[-2px]",
+    draggable: false
+  }) : '';
+};
+const exEffectAmountText = (e, long = false) => {
+  if (!e) return '';
+  if (e.kind === 'stack' && Number.isFinite(Number(e.count)) && !(e.turnsLeft != null && e.max == null && Number(e.count) === Number(e.turnsLeft))) {
+    const c = Math.max(0, Math.floor(Number(e.count)));
+    return Number(e.max) > 0 ? `${c}/${Math.floor(Number(e.max))}` : `×${c}`;
+  }
+  if (e.turnsLeft === 'wave') return long ? 'このWAVE' : 'WAVE中';
+  if (Number.isFinite(Number(e.turnsLeft))) return long ? `あと${e.turnsLeft}ターン` : `あと${e.turnsLeft}`;
+  return '';
+};
+const EX_EFFECT_TONE = {
+  buff: 'bg-emerald-900/90 ring-emerald-300/80 text-emerald-50',
+  debuff: 'bg-red-900/90 ring-red-300/80 text-red-50',
+  stack: 'bg-violet-900/90 ring-violet-300/80 text-violet-50'
+};
+const ExEffectChips = ({
+  items,
+  max = 3,
+  className = ''
+}) => {
+  const list = Array.isArray(items) ? items.filter(Boolean) : [];
+  if (!list.length) return null;
+  const shown = list.slice(0, max);
+  return React.createElement("div", {
+    "data-ex-effect-chips": list.length,
+    className: `pointer-events-none flex flex-col items-start gap-[2px] ${className}`
+  }, shown.map(e => React.createElement("span", {
+    key: e.key,
+    "data-ex-effect": e.key,
+    "data-ex-effect-kind": e.kind,
+    className: `flex max-w-[96px] items-center gap-[2px] rounded-md px-1 py-px text-[9px] font-black leading-tight whitespace-nowrap ring-1 ${EX_EFFECT_TONE[e.kind] || EX_EFFECT_TONE.buff}`
+  }, React.createElement("span", {
+    className: "shrink-0"
+  }, exEffectIconOf(e)), React.createElement("span", {
+    className: "min-w-0 truncate"
+  }, e.name), exEffectAmountText(e) && React.createElement("span", {
+    className: "shrink-0 tabular-nums opacity-90"
+  }, exEffectAmountText(e)))), list.length > max && React.createElement("span", {
+    "data-ex-effect-more": true,
+    className: "rounded-md bg-black/70 px-1 text-[9px] font-black leading-tight text-slate-100"
+  }, "+", list.length - max));
+};
 const BattleUnitDetailBody = ({
   side,
   status,
   chips = [],
   marks = null,
-  debuffs = []
+  debuffs = [],
+  exEffects = null
 }) => {
   if (!status) return null;
   const stat = (key, label, cls, value, sub) => React.createElement("div", {
@@ -70543,7 +70597,9 @@ const BattleUnitDetailBody = ({
   }) : it.mark, it.label, it.unit === 'T' ? `あと${it.count}ターン` : `×${it.count}`, ''));
   const own = (chips || []).filter(c => c.owner === status.slot);
   const team = (chips || []).filter(c => c.owner == null);
-  const lineRows = (status.lines || []).map(l => row(l.key, null, l.label, l.value, l.note));
+  const hasEx = Array.isArray(exEffects);
+  const exRows = hasEx ? exEffects.filter(Boolean).map(e => row(`exfx-${e.key}`, exEffectIconOf(e), e.name, exEffectAmountText(e, true), [e.note, e.fromName ? `${e.fromName}のEX${e.allAllies ? '(味方全員)' : ''}` : ''].filter(Boolean).join('・'), e.kind === 'stack' ? 'border-violet-300/50 bg-violet-950/50' : e.kind === 'debuff' ? 'border-red-300/50 bg-red-950/50' : 'border-emerald-300/50 bg-emerald-950/50')) : [];
+  const lineRows = (status.lines || []).filter(l => !(hasEx && l.key === 'ex')).map(l => row(l.key, null, l.label, l.value, l.note));
   const chipRow = c => row(c.key, c.mark, c.label, c.value, '', c.tone);
   const apt = status.aptPct;
   return React.createElement("div", {
@@ -70553,7 +70609,7 @@ const BattleUnitDetailBody = ({
   }, stat('hp', 'ライフ', 'text-pink-400', `${status.hp.toLocaleString()} / ${status.maxHp.toLocaleString()}`, status.baseMaxHp !== status.maxHp ? `元の上限 ${status.baseMaxHp.toLocaleString()}` : ''), stat('guts', 'ガッツ', 'text-amber-400', `${status.guts.toLocaleString()} / ${status.maxGuts.toLocaleString()}`, status.baseMaxGuts !== status.maxGuts ? `元の上限 ${status.baseMaxGuts.toLocaleString()}` : ''), statOf('atk', 'ちから', 'text-red-400', status.atk), statOf('def', '丈夫さ', 'text-emerald-400', status.def)), React.createElement("div", {
     "data-unit-stat": "apt",
     className: "mt-1 text-[10px] font-black text-cyan-300"
-  }, "この枠の間合い適性 ", apt >= 0 ? '+' : '', apt, "%"), status.tactics ? React.createElement(React.Fragment, null, list('own', 'この子にかかっている効果', [...markRows, ...lineRows, ...own.map(chipRow)]), list('team', '味方全員にかかっている効果', team.map(chipRow))) : list('team', 'かかっている効果(パーティ全体)', [...markRows, ...lineRows, ...own.map(chipRow), ...team.map(chipRow)]));
+  }, "この枠の間合い適性 ", apt >= 0 ? '+' : '', apt, "%"), status.tactics ? React.createElement(React.Fragment, null, list('own', 'この子にかかっている効果', [...(hasEx ? exRows : markRows), ...lineRows, ...own.map(chipRow)]), list('team', '味方全員にかかっている効果', team.map(chipRow))) : list('team', 'かかっている効果(パーティ全体)', [...markRows, ...lineRows, ...own.map(chipRow), ...team.map(chipRow)]));
 };
 const BattleUnitDetailPanel = ({
   side,
@@ -70561,6 +70617,7 @@ const BattleUnitDetailPanel = ({
   chips,
   marks,
   debuffs,
+  exEffects = null,
   onClose
 }) => {
   if (!status) return null;
@@ -70603,7 +70660,8 @@ const BattleUnitDetailPanel = ({
     status: status,
     chips: chips,
     marks: marks,
-    debuffs: debuffs
+    debuffs: debuffs,
+    exEffects: exEffects
   })), React.createElement("button", {
     type: "button",
     "data-battle-unit-detail-close": true,
@@ -73505,6 +73563,7 @@ function BattleScreen({
       baseId: s?.id,
       image: img
     }) : img;
+    const slotExEffects = s && typeof tacticsExEffectsAt === 'function' ? tacticsExEffectsAt(i, allyStackCounts[i]) || [] : null;
     const themedAttack = isAnimating ? themedAttackKindOf(attackAnim, s?.id) : null;
     const slotArtBox = {
       width: tacticsNewLayout ? '58px' : '64px',
@@ -73736,7 +73795,10 @@ function BattleScreen({
           animationDuration: `${tacticsExCutin.ms}ms`
         } : {})
       }
-    }, React.createElement("i", null), React.createElement("i", null)), tacticsNewLayout && React.createElement(BattleStackMarks, {
+    }, React.createElement("i", null), React.createElement("i", null)), tacticsNewLayout && slotExEffects && React.createElement(ExEffectChips, {
+      items: slotExEffects,
+      className: "absolute left-1 top-[40px] z-[45] [@media(orientation:landscape)_and_(max-height:520px)]:top-[34px]"
+    }), tacticsNewLayout && !slotExEffects && React.createElement(BattleStackMarks, {
       counts: allyStackCounts[i],
       side: "ally",
       full: SWEET_STACK_MAX,
@@ -73981,10 +74043,13 @@ function BattleScreen({
           fontSize: '7px'
         }
       }, "🛡 ", slotRushGuard ? '連撃ガード' : '全体', " ", gv);
-    })(), (slotAssignedCards.length > 0 || previewDmg > 0 || previewGuard > 0 || slotAimHit || slotExInfo || !tacticsNewLayout && battleStackMarkItems(allyStackCounts[i]).length > 0) && React.createElement("div", {
+    })(), (slotAssignedCards.length > 0 || previewDmg > 0 || previewGuard > 0 || slotAimHit || slotExInfo || !tacticsNewLayout && (slotExEffects ? slotExEffects.length > 0 : battleStackMarkItems(allyStackCounts[i]).length > 0)) && React.createElement("div", {
       "data-tactics-slot-marks": true,
       className: `${tacticsNewLayout ? `absolute left-full w-[150%] overflow-hidden items-stretch justify-start px-1.5 ${slotAimHit || previewDmg > 0 || previewGuard > 0 ? 'top-[15px] h-[calc(100%-46px)]' : 'top-px h-[calc(100%-31px)]'}` : 'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`
-    }, !tacticsNewLayout && React.createElement(BattleStackMarks, {
+    }, !tacticsNewLayout && slotExEffects && React.createElement(ExEffectChips, {
+      items: slotExEffects,
+      className: "w-full"
+    }), !tacticsNewLayout && !slotExEffects && React.createElement(BattleStackMarks, {
       counts: allyStackCounts[i],
       side: "ally",
       full: SWEET_STACK_MAX,
@@ -74762,7 +74827,8 @@ function BattleScreen({
     side: "ally",
     status: battleUnitStatusOf(exPanel.slot),
     chips: battleBuffChips(),
-    marks: allyStackCounts[exPanel.slot]
+    marks: allyStackCounts[exPanel.slot],
+    exEffects: typeof tacticsExEffectsAt === 'function' ? tacticsExEffectsAt(exPanel.slot, allyStackCounts[exPanel.slot]) || [] : null
   }), React.createElement("button", {
     type: "button",
     "data-tactics-ex-close": true,
@@ -74930,6 +74996,7 @@ function BattleScreen({
     status: typeof battleUnitStatusOf === 'function' ? battleUnitStatusOf(unitDetail.slot) : null,
     chips: battleBuffChips(),
     marks: allyStackCounts[unitDetail.slot],
+    exEffects: typeof tacticsExEffectsAt === 'function' ? tacticsExEffectsAt(unitDetail.slot, allyStackCounts[unitDetail.slot]) || [] : null,
     onClose: () => setUnitDetail(null)
   })), showBattleMenu && ReactDOM.createPortal(React.createElement("div", {
     className: "fixed inset-0 z-[70000] flex items-start justify-end bg-black/70 p-2",
