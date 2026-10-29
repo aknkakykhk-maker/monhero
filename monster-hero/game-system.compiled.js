@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bb88f7e749e302df
+// source-sha256: 35ae799bc3c92708
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -97678,7 +97678,7 @@ const CardBattleBoard = ({
     ref: stageRef,
     "data-card-stage": true,
     "data-card-stage-fit": stageFit,
-    className: `relative flex ${boardFit >= 1 ? 'min-h-[40px]' : 'min-h-[64px]'} flex-1 flex-col items-center ${bubbleChip ? 'justify-end' : 'justify-center'} ${wide ? 'gap-1 py-0.5' : 'gap-1.5 py-1'} overflow-hidden px-3`,
+    className: `relative flex ${boardFit >= 1 ? 'min-h-[40px]' : 'min-h-[64px]'} flex-1 flex-col items-center ${bubbleChip ? 'justify-end pt-[28px]' : 'justify-center'} ${wide ? 'gap-1 pb-0.5' : 'gap-1.5 pb-1'} ${bubbleChip ? '' : wide ? 'pt-0.5' : 'pt-1'} overflow-hidden px-3`,
     style: {
       justifyContent: 'safe center'
     }
@@ -97726,7 +97726,7 @@ const CardBattleBoard = ({
   }), React.createElement("span", {
     "data-card-vs-mark": true,
     className: "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none text-[56px] font-black italic leading-none text-white/[.06]"
-  }, "VS")), breederFx && React.createElement("div", {
+  }, "VS")), breederFx && !guardAtk && React.createElement("div", {
     key: breederFx.key,
     "data-card-breeder-fx": breederFx.p === CARD_ME ? 'me' : 'foe',
     "aria-hidden": "true",
@@ -97816,7 +97816,7 @@ const CardBattleBoard = ({
       whiteSpace: 'nowrap',
       fontSize: `clamp(9px, ${(84 / ([...cardLogText(liveLine)].length + (action ? 3 : 0) + liveCards.length * 2)).toFixed(1)}vw, 12px)`
     } : undefined,
-    className: `min-w-0 ${(tiny || wide) && [...cardLogText(liveLine)].length <= 30 ? '' : 'line-clamp-2'} ${liveLine.kind === 'ko' ? 'text-rose-300 font-black' : liveLine.kind === 'hit' && /ダメージ/.test(liveLine.text) ? 'text-rose-100' : ''}`
+    className: `min-w-0 ${liveCards.length ? 'text-left' : ''} ${(tiny || wide) && [...cardLogText(liveLine)].length <= 30 ? '' : 'line-clamp-2'} ${liveLine.kind === 'ko' ? 'text-rose-300 font-black' : liveLine.kind === 'hit' && /ダメージ/.test(liveLine.text) ? 'text-rose-100' : ''}`
   }, action && !endFx && !turnBanner && React.createElement("span", {
     "data-card-action": true,
     "data-card-action-side": action.side,
@@ -97902,7 +97902,7 @@ const CardBattleBoard = ({
     style: JA_LABEL_STYLE
   }, jaWrap('「これで守る」を押してください')), mode === 'guard' && !guardOpts.length && !(tutorial && st.pending && st.pending.evaded) && React.createElement("div", {
     "data-card-guard-why": true,
-    className: `mx-auto mb-1 max-w-[94%] shrink-0 text-center ${tiny ? 'truncate whitespace-nowrap text-[10px]' : 'text-[11px]'} font-bold leading-snug text-slate-300`,
+    className: `mx-auto mb-1 max-w-[94%] shrink-0 rounded-lg border border-white/15 bg-slate-800/90 px-2 py-0.5 text-center ${tiny ? 'truncate whitespace-nowrap text-[10px]' : 'text-[11px]'} font-bold leading-snug text-slate-200`,
     style: tiny ? undefined : JA_WRAP_STYLE
   }, cardGuardBlockReasons(db, st).join(' / ')), !guide && !tutorial && hint && React.createElement("div", {
     className: "mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900",

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ebf4d74b170fd5f7
+// generated-sha256: 149c1edb36c017f6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -59049,7 +59049,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* まんなか: 技の動き(アクション)と、起きたことの記録(ログ)の場所。相手の場と自分の場をここで上下に分ける(社長 2026-10-24)
           ★次の区切りの技ごとの動きも、この data-card-stage の中で見せる */}
       {/* 入り切らないときも上から並べる(safe center)。吹き出しの上が切れないように */}
-      <div ref={stageRef} data-card-stage data-card-stage-fit={stageFit} className={`relative flex ${boardFit >= 1 ? 'min-h-[40px]' : 'min-h-[64px]'} flex-1 flex-col items-center ${bubbleChip ? 'justify-end' : 'justify-center'} ${wide ? 'gap-1 py-0.5' : 'gap-1.5 py-1'} overflow-hidden px-3`} style={{ justifyContent: 'safe center' }}>
+      <div ref={stageRef} data-card-stage data-card-stage-fit={stageFit} className={`relative flex ${boardFit >= 1 ? 'min-h-[40px]' : 'min-h-[64px]'} flex-1 flex-col items-center ${bubbleChip ? 'justify-end pt-[28px]' : 'justify-center'} ${wide ? 'gap-1 pb-0.5' : 'gap-1.5 pb-1'} ${bubbleChip ? '' : wide ? 'pt-0.5' : 'pt-1'} overflow-hidden px-3`} style={{ justifyContent: 'safe center' }}>
         {/* 案A: 番が替わったときの帯は、盤全体の真ん中へ移した(下の data-card-turn-banner。2026-10-26 ソラシドさん) */}
         {/* 相手の助手の吹き出し。出ているあいだは、まんなかの上に重ねて出す(場を押し下げない。2026-10-26 社長)。押すと次の台詞へ進む(練習試合は指の操作を下へ通す)。
             カードの大写しのあいだは隠す(大写しの両はしから字がはみ出して見えた。見回り2回目の新4。閉じればまた見える)
@@ -59073,7 +59073,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           <span data-card-vs-mark className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none text-[56px] font-black italic leading-none text-white/[.06]">VS</span>
         </div>
         {/* ブリーダーのカード: 使った側の助手・ブリーダーの顔を、まんなかの端に光らせて出す(相手は右上・自分は左下。設計書 5-4) */}
-        {breederFx && (
+        {/* 守りの番に受けている攻撃のカードを出しているあいだは出さない(横の画面で、カードの箱の右から顔がはみ出した。⑤ 見回り 6) */}
+        {breederFx && !guardAtk && (
           <div key={breederFx.key} data-card-breeder-fx={breederFx.p === CARD_ME ? 'me' : 'foe'} aria-hidden="true"
             className={`mh-card-breeder pointer-events-none absolute z-[3] grid h-[46px] w-[46px] place-items-center overflow-hidden rounded-2xl border-2 bg-black ${breederFx.p === CARD_ME ? 'bottom-1 left-2 border-amber-300' : 'right-2 top-1'}`}
             style={breederFx.p === CARD_ME ? undefined : { borderColor: who.accent }}>
@@ -59121,7 +59122,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
             <div className="flex items-center justify-center gap-1.5">
             {/* 使ったカードの小さい絵(カードゲームらしさを残す。2026-10-29 社長)。押すと詳しい画面 */}
             {liveCards.map((no, i) => { const c = cardOf(db, no); return c ? <img key={i} data-card-live-card={no} src={CARD_IMG(c.img)} alt={c.name} {...press(no, () => setDetail(no))} className={`${tiny || wide ? 'h-[24px]' : 'h-[34px]'} aspect-[5/7] shrink-0 rounded-[3px] object-cover shadow`}/> : null; })}
-            <div data-card-log-kind={liveLine.kind || undefined} style={(tiny || wide) && [...cardLogText(liveLine)].length <= 30 ? { whiteSpace: 'nowrap', fontSize: `clamp(9px, ${(84 / ([...cardLogText(liveLine)].length + (action ? 3 : 0) + liveCards.length * 2)).toFixed(1)}vw, 12px)` } : undefined} className={`min-w-0 ${(tiny || wide) && [...cardLogText(liveLine)].length <= 30 ? '' : 'line-clamp-2'} ${liveLine.kind === 'ko' ? 'text-rose-300 font-black' : liveLine.kind === 'hit' && /ダメージ/.test(liveLine.text) ? 'text-rose-100' : ''}`}>
+            <div data-card-log-kind={liveLine.kind || undefined} style={(tiny || wide) && [...cardLogText(liveLine)].length <= 30 ? { whiteSpace: 'nowrap', fontSize: `clamp(9px, ${(84 / ([...cardLogText(liveLine)].length + (action ? 3 : 0) + liveCards.length * 2)).toFixed(1)}vw, 12px)` } : undefined} className={`min-w-0 ${liveCards.length ? 'text-left' : ''} ${(tiny || wide) && [...cardLogText(liveLine)].length <= 30 ? '' : 'line-clamp-2'} ${liveLine.kind === 'ko' ? 'text-rose-300 font-black' : liveLine.kind === 'hit' && /ダメージ/.test(liveLine.text) ? 'text-rose-100' : ''}`}>
               {action && !endFx && !turnBanner && (
                 <span data-card-action data-card-action-side={action.side} className="mr-1.5 inline-block align-[1px]">
                   <span data-card-fit className={`whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-black ${action.side === 'foe' ? 'bg-rose-500 text-white' : 'bg-amber-300 text-slate-950'}`}>{action.side === 'foe' ? (watch ? who.name : '相手') : (watch ? meName : '自分')}</span>
@@ -59166,7 +59167,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* 練習試合で回避を選んだあと(あとは「これで守る」で決めるだけ)。前は「手札に回避・防御のカードがありません」と出て、次に押す所が分かりにくかった(2026-10-26 巡回 → 社長が文をOK) */}
       {mode === 'guard' && tutorial && st.pending && st.pending.evaded && <div data-card-tutor-guard-done className="mx-auto mb-1 shrink-0 rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap('「これで守る」を押してください')}</div>}
       {mode === 'guard' && !guardOpts.length && !(tutorial && st.pending && st.pending.evaded) && (
-        <div data-card-guard-why className={`mx-auto mb-1 max-w-[94%] shrink-0 text-center ${tiny ? 'truncate whitespace-nowrap text-[10px]' : 'text-[11px]'} font-bold leading-snug text-slate-300`} style={tiny ? undefined : JA_WRAP_STYLE}>{cardGuardBlockReasons(db, st).join(' / ')}</div>
+        <div data-card-guard-why className={`mx-auto mb-1 max-w-[94%] shrink-0 rounded-lg border border-white/15 bg-slate-800/90 px-2 py-0.5 text-center ${tiny ? 'truncate whitespace-nowrap text-[10px]' : 'text-[11px]'} font-bold leading-snug text-slate-200`} style={tiny ? undefined : JA_WRAP_STYLE}>{cardGuardBlockReasons(db, st).join(' / ')}</div>
       )}
       {!guide && !tutorial && hint && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap(hint)}</div>}
       {mode === 'attack' && sel && monChosen !== undefined && sets.length > 1 && (
