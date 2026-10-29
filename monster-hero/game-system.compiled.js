@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9649866e6e950bbe
+// source-sha256: e1cfe80a649f0469
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -89100,10 +89100,12 @@ const cardAiPolicy = (habitId, levelId, opts = {}) => {
     playerRole: !!(opts && opts.playerRole)
   };
   const gambit = !out.playerRole && !(opts && opts.noTactics) && typeof cardAiTacticGambit === 'function' ? cardAiTacticGambit(habitId, levelId) : null;
+  const when = gambit && typeof CARD_AI_TACTIC_WHEN !== 'undefined' ? CARD_AI_TACTIC_WHEN[habitId] || null : null;
   return gambit ? {
     ...out,
     gambit,
-    gambitKeepMain: true
+    gambitKeepMain: true,
+    gambitWhen: when
   } : out;
 };
 const CARD_AI_FLEX_HIGH = 1.6;
@@ -92090,10 +92092,11 @@ const cardTacticPresetOf = card => {
   };
   return {};
 };
-const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null) => {
+const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null, when = null) => {
+  const subW = i => st && Array.isArray(when) && typeof when[i] === 'string' && typeof cardAiTacticWhenHit === 'function' && cardAiTacticWhenHit(when[i], st, p) ? 1 : CARD_TACTIC_SUB_W;
   const list = (Array.isArray(base) ? base : []).map((id, i) => ({
     c: cardTacticOf(id),
-    w: i === 0 ? 1 : CARD_TACTIC_SUB_W,
+    w: i === 0 ? 1 : subW(i),
     main: i === 0
   })).filter(x => x.c && x.c.cat === 'base');
   if (!list.length) return null;
@@ -92638,7 +92641,7 @@ const cardTacticDecide = (db, st, policy) => {
     act: cardTacticRandomAct(db, st, policy)
   };
   const p = phase === 'guard' ? st.pending.defender : st.active;
-  const habit = cardTacticHabitOf(frames.base, st, p, policy.gambitKeepMain ? policy.habit : null);
+  const habit = cardTacticHabitOf(frames.base, st, p, policy.gambitKeepMain ? policy.habit : null, policy.gambitWhen || null);
   const knobs = cardTacticKnobsOf(frames.base, st, p, !!policy.gambitKeepMain);
   const pol = habit ? {
     ...policy,
@@ -92759,14 +92762,95 @@ const CARD_AI_TACTIC_COUNT = Object.freeze({
   expert: 2,
   master: 3
 });
+const CARD_AI_TACTIC_WHEN = Object.freeze({
+  mua: [null, 'foeLow', 'gutsFull'],
+  momosuke: [null, 'lowLife', 'ahead'],
+  kiki: [null, 'gutsFull', null],
+  kyuko: [null, 'behind', 'foeLow'],
+  dra: [null, 'lowLife', 'foeDeckLow'],
+  atsu: [null, 'foeFull', 'lowLife'],
+  sorashido: [null, 'foeHandFull', 'lowLife']
+});
+const cardAiTacticWhenHit = (name, st, p) => {
+  const me = st.players[p],
+    op = st.players[cardOther(p)];
+  const alive = pl => pl.mons.filter(m => !m.ko);
+  const life = pl => alive(pl).reduce((a, m) => a + Math.max(0, m.life), 0),
+    max = pl => pl.mons.reduce((a, m) => a + m.max, 0);
+  const kos = pl => pl.mons.filter(m => m.ko).length;
+  if (name === 'foeLow') return alive(op).some(m => m.life * 10 <= m.max * 3);
+  if (name === 'gutsFull') return me.guts.length >= 5;
+  if (name === 'lowLife') return life(me) * 2 <= max(me);
+  if (name === 'ahead') return kos(op) > kos(me);
+  if (name === 'behind') return kos(me) > kos(op);
+  if (name === 'foeDeckLow') return op.deck.length <= 15;
+  if (name === 'foeFull') return alive(op).length >= 3;
+  if (name === 'foeHandFull') return op.hand.length >= 4;
+  return false;
+};
+const CARD_AI_TACTIC_ROWS = Object.freeze({
+  mua: [[{
+    c: 'myGuts.5',
+    a: 'cost.大技(4以上)'
+  }], [{
+    c: 'foeAlive.1',
+    a: 'cost.大技(4以上)'
+  }]],
+  momosuke: [[{
+    c: 'foeHandGe.4',
+    a: 'disrupt.手札を捨てさせる'
+  }], [{
+    c: 'incomingKo',
+    a: 'guard'
+  }]],
+  kiki: [[{
+    c: 'myGuts.7',
+    a: 'cost.大技(4以上)'
+  }], [{
+    c: 'incomingKo',
+    a: 'guard'
+  }]],
+  kyuko: [[{
+    c: 'koDiff.負け',
+    a: 'guard'
+  }], [{
+    c: 'ko',
+    a: 'atk'
+  }]],
+  dra: [[{
+    c: 'incoming.3',
+    a: 'guard'
+  }], [{
+    c: 'foeDeck.5',
+    a: 'disrupt.山札を削る'
+  }]],
+  atsu: [[{
+    c: 'foeAlive.3',
+    a: 'reach.全体攻撃'
+  }], [{
+    c: 'myLife.50',
+    a: 'guard'
+  }]],
+  sorashido: [[{
+    c: 'foeDeck.20',
+    a: 'disrupt.山札を削る'
+  }], [{
+    c: 'incoming.5',
+    a: 'guard'
+  }]]
+});
 const cardAiTacticGambit = (who, levelId) => {
   const n = CARD_AI_TACTIC_COUNT[levelId];
   const list = CARD_AI_TACTIC_BASE[who];
   if (!n || !list) return null;
+  const rows = (CARD_AI_TACTIC_ROWS[who] || []).slice(0, n - 1).flat().map(r => ({
+    ...r,
+    on: true
+  }));
   return {
     base: [0, 1, 2].map(i => i < n ? list[i] || null : null),
     breeder: [],
-    mons: [[], [], []]
+    mons: [rows, rows, rows]
   };
 };
 const CARD_LINE_SCENES = Object.freeze(['challenge', 'start', 'big', 'bigHit', 'guardMine', 'guardTheirs', 'myKo', 'theirKo', 'lastMine', 'lastTheirs', 'deckMine', 'deckTheirs', 'win', 'lose']);
