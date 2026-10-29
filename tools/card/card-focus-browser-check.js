@@ -152,6 +152,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('B 緊急回避(0ガッツ)は押しても守れない(「このカードでは守れません」)', stillGuard && hint.includes('このカードでは守れません'), JSON.stringify(lit));
     const life2 = await lifeOf(page, '0-0');
     await page.locator('[data-card-hand-card="1"]').click();
+    await page.locator('[data-card-guard-ask-yes]').click({ timeout: 3000 }).catch(() => {}); // 予告の窓で「これで守る」(2026-10-29 案C)
     let life3 = life2;
     for (let i = 0; i < 40; i++) { await page.waitForTimeout(250); life3 = await lifeOf(page, '0-0'); if (life3 !== life2) break; }
     const atkB = await page.evaluate(() => window.__mhFocusAtk);
