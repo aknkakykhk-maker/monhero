@@ -2823,7 +2823,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     if (!save || !save.starter || screen !== 'CARD_TOP' || typeof cardShareIntentTake !== 'function') return; // スターターを受け取る前は、頼みを残しておく
     const it = cardShareIntentTake();
     if (!it) return;
-    if (it.kind === 'register' && typeof CardTacticsScreen === 'function') { setTacticsBack('mode'); setView('tactics'); return; }
+    // プロフィールの「バトルカードのデッキ」から: デッキ登録を開き、戻るとそのままプロフィールへ(MFバトルカードを閉じる)
+    if (it.kind === 'register' && typeof CardTacticsScreen === 'function') { setTacticsBack('exit'); setView('tactics'); return; }
     if (it.kind === 'fight' && it.entry && startBattleRef.current && typeof cardShareFightLevel === 'function') startBattleRef.current({ who: it.entry.tactics.habit, level: cardShareFightLevel(it.entry.tactics), share: it.entry });
   }, [!!save, !!(save && save.starter), screen]);
   if (!save) return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="MFバトルカード" onBack={onExit}/><ScreenEmpty emoji="⏳" lines={['読み込み中…']}/></div>;
@@ -3111,7 +3112,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   if (view === 'tactics' && typeof CardTacticsScreen === 'function') {
     // 戻り先: みんなのデッキの「戦術カードを組む」から来たら、みんなのデッキへ戻る
     // ビートPを払うときは、戦術カードの保存と同じ取引で(persist はビートPを書く直前に読み直して差だけを足す)
-    return <CardTacticsScreen db={db} decks={save.decks} point={save.point} onBack={() => { setView(tacticsBack); setTacticsBack('mode'); }}
+    return <CardTacticsScreen db={db} decks={save.decks} point={save.point} onBack={() => { if (tacticsBack === 'exit') { setTacticsBack('mode'); setView('top'); onExit(); return; } setView(tacticsBack); setTacticsBack('mode'); }}
       share={typeof CardDeckShare === 'function' ? { collection: save.collection, frame: (rank && rank.profile && rank.profile.frame) || null, unlocked: save.unlocked, debug } : null}
       onPay={async (cost, entries) => (save.point >= cost ? persist({ point: save.point - cost }, {}, entries) : false)}/>;
   }

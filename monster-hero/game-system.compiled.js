@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d8ef4163956cb6a5
+// source-sha256: d4ec97fb3876ecaa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99389,7 +99389,7 @@ const CardBattleScreen = ({
     const it = cardShareIntentTake();
     if (!it) return;
     if (it.kind === 'register' && typeof CardTacticsScreen === 'function') {
-      setTacticsBack('mode');
+      setTacticsBack('exit');
       setView('tactics');
       return;
     }
@@ -100054,6 +100054,12 @@ const CardBattleScreen = ({
       decks: save.decks,
       point: save.point,
       onBack: () => {
+        if (tacticsBack === 'exit') {
+          setTacticsBack('mode');
+          setView('top');
+          onExit();
+          return;
+        }
         setView(tacticsBack);
         setTacticsBack('mode');
       },
@@ -111232,6 +111238,214 @@ const CardShareProfileDeck = ({
     className: "min-h-[40px] flex-1 rounded-xl border border-emerald-300/60 bg-slate-950 text-[13px] font-black text-emerald-200"
   }, "借りる"))));
 };
+const useCardShareEntry = (breederId, self = false) => {
+  const [state, setState] = useState({
+    loading: true,
+    entry: null
+  });
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const id = typeof breederId === 'string' && breederId ? breederId : self && typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+      if (typeof id !== 'string' || !id) {
+        if (alive) setState({
+          loading: false,
+          entry: null
+        });
+        return;
+      }
+      const r = await cardShareFetchMine(id).catch(() => null);
+      if (alive) setState({
+        loading: false,
+        entry: r || null
+      });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [breederId, self]);
+  return state;
+};
+const CARD_SHARE_TILE_CLASS = 'rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2';
+const CardShareDeckThumbs = ({
+  entry
+}) => {
+  const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
+  return React.createElement("span", {
+    className: "flex"
+  }, [0, 1, 2].map(i => {
+    const m = db && entry && cardMonsterOf(db, entry.deck.monsters[i]);
+    return m ? React.createElement("img", {
+      key: i,
+      src: CARD_IMG(m.img),
+      alt: m.name,
+      className: `h-[46px] w-[33px] rounded-[4px] border border-white/70 object-cover shadow ${i ? '-ml-2' : ''}`
+    }) : React.createElement("span", {
+      key: i,
+      className: `block h-[46px] w-[33px] rounded-[4px] bg-slate-700 ${i ? '-ml-2' : ''}`
+    });
+  }));
+};
+const CardShareDeckDetail = ({
+  entry,
+  onClose
+}) => {
+  const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
+  const t = cardShareNormalizeTactics(entry.tactics);
+  const f = t.f ? cardTacticUnpackFrames(t.f) : null;
+  const monName = i => (db && cardMonsterOf(db, entry.deck.monsters[i]) || {}).name || ['左の子', '真ん中の子', '右の子'][i];
+  const rowText = r => `${(cardTacticOf(r.c) || {}).name || '?'} ▶ ${(cardTacticOf(r.a) || {}).name || '?'}${r.on ? '' : '(休み)'}`;
+  return React.createElement("div", {
+    "data-card-share-deck-detail": true,
+    className: "fixed inset-0 z-[90] flex items-end justify-center bg-black/60 p-3 sm:items-center",
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "max-h-[80vh] w-full max-w-[420px] overflow-y-auto rounded-2xl border-2 border-amber-600/60 bg-slate-950 p-3",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement(CardShareDeckThumbs, {
+    entry: entry
+  }), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("b", {
+    className: "block truncate text-[15px] font-black text-white"
+  }, t.name || 'デッキ'), React.createElement("small", {
+    className: "block text-[11px] font-black text-amber-200"
+  }, `賢さ ${cardShareSmartText(t)}`))), React.createElement("div", {
+    className: "mt-2 text-[12px] font-bold leading-relaxed text-slate-200",
+    style: JA_WRAP_STYLE
+  }, React.createElement("div", null, `3体: ${[0, 1, 2].map(monName).join('・')}`), f && React.createElement("div", null, `基本カード: ${f.base.filter(Boolean).map(id => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`), t.aces.length > 0 && React.createElement("div", null, `切り札: ${t.aces.map(no => (db && cardOf(db, no) || {}).name || no).join('・')}`)), f && React.createElement("div", {
+    className: "mt-2 space-y-1 rounded-lg bg-black/30 p-2 text-[11px] text-slate-200"
+  }, React.createElement("b", {
+    className: "block text-[12px] text-amber-200"
+  }, "セットした戦術カード"), [...f.mons.map((rows, i) => [monName(i), rows]), ['ブリーダー', f.breeder]].map(([label, rows]) => React.createElement("div", {
+    key: label
+  }, React.createElement("b", {
+    className: "text-amber-100"
+  }, label), rows.length ? rows.map((r, j) => React.createElement("div", {
+    key: j
+  }, `${j + 1}. ${rowText(r)}`)) : React.createElement("div", {
+    className: "text-slate-400"
+  }, "(なし)")))), React.createElement("button", {
+    type: "button",
+    "data-card-share-deck-detail-close": true,
+    onClick: onClose,
+    className: "mt-3 w-full rounded-xl bg-slate-800 py-2 text-[13px] font-black text-white"
+  }, "とじる")));
+};
+const CardShareDeckTile = ({
+  mode = 'self',
+  breederId = null,
+  onOpen = null
+}) => {
+  const self = mode === 'self';
+  const {
+    loading,
+    entry
+  } = useCardShareEntry(breederId, self);
+  const [detail, setDetail] = useState(false);
+  if (!self && (loading || !entry)) return null;
+  const t = entry ? cardShareNormalizeTactics(entry.tactics) : null;
+  const head = React.createElement("small", {
+    className: "block text-[10px] font-black text-amber-300"
+  }, "バトルカードのデッキ");
+  const tile = self ? React.createElement("button", {
+    type: "button",
+    "data-profile-show": "card-deck",
+    "data-card-share-tile": "self",
+    onClick: () => {
+      if (onOpen) {
+        Audio_.fgSe.tap();
+        onOpen();
+      }
+    },
+    className: `${CARD_SHARE_TILE_CLASS} block w-full text-left active:scale-[.98]`
+  }, head, loading ? React.createElement("span", {
+    className: "mt-2 block text-[12px] font-bold text-slate-400"
+  }, "読み込み中…") : entry ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "mt-1.5 block"
+  }, React.createElement(CardShareDeckThumbs, {
+    entry: entry
+  })), React.createElement("b", {
+    className: "mt-1 block truncate text-[14px] font-black text-white"
+  }, t.name || 'デッキ'), React.createElement("small", {
+    className: "block text-[11px] font-black text-pink-300"
+  }, cardShareSmartText(t).split('(')[0])) : React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "mt-2 block text-[13px] font-black text-slate-300"
+  }, "登録していません"), React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, "押すとデッキ登録へ"))) : React.createElement("div", {
+    "data-profile-show": "card-deck",
+    "data-card-share-tile": "friend",
+    className: CARD_SHARE_TILE_CLASS
+  }, head, React.createElement("span", {
+    className: "mt-1.5 block"
+  }, React.createElement(CardShareDeckThumbs, {
+    entry: entry
+  })), React.createElement("b", {
+    className: "mt-1 block truncate text-[14px] font-black text-white"
+  }, t.name || 'デッキ'), React.createElement("small", {
+    className: "block text-[11px] font-black text-pink-300"
+  }, cardShareSmartText(t).split('(')[0]), React.createElement("button", {
+    type: "button",
+    "data-card-share-tile-detail": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setDetail(true);
+    },
+    className: "mt-0.5 text-[11px] font-black text-pink-200"
+  }, `${entry.battles}戦 ${entry.deckWins}勝 詳細 ›`));
+  if (self) return tile;
+  return React.createElement("div", {
+    "data-card-share-tile-wrap": true
+  }, tile, detail && React.createElement(CardShareDeckDetail, {
+    entry: entry,
+    onClose: () => setDetail(false)
+  }));
+};
+const CardShareDeckActions = ({
+  breederId,
+  onGo = null
+}) => {
+  const {
+    entry
+  } = useCardShareEntry(breederId, false);
+  const [msg, setMsg] = useState('');
+  if (!entry) return null;
+  const rent = async () => {
+    if (typeof cardRentedDeckSet !== 'function') return;
+    setMsg((await cardRentedDeckSet(entry)) ? 'このデッキを借りました。フリー対戦の前のデッキ選びで使えます' : 'この端末に保存できなかったため、借りられませんでした');
+  };
+  return React.createElement("div", {
+    "data-card-share-tile-actions": true
+  }, React.createElement("div", {
+    className: "flex gap-2"
+  }, onGo && React.createElement("button", {
+    type: "button",
+    "data-card-share-tile-fight": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      onGo({
+        kind: 'fight',
+        entry
+      });
+    },
+    className: "mh-button mh-button-primary min-h-[44px] flex-1 rounded-xl text-[13px] font-black"
+  }, "このデッキと戦う"), React.createElement("button", {
+    type: "button",
+    "data-card-share-tile-rent": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      void rent();
+    },
+    className: "min-h-[44px] flex-1 rounded-xl border-2 border-amber-600/60 bg-indigo-950/50 text-[13px] font-black text-white"
+  }, "借りる")), msg && React.createElement("p", {
+    "data-card-share-tile-msg": true,
+    className: "mt-1.5 rounded-lg bg-slate-950 p-1.5 text-[12px] font-bold text-amber-100",
+    style: JA_WRAP_STYLE
+  }, msg));
+};
 const CARD_TACTICS_KEY = 'mh_card_tactics_v1';
 const CARD_LEVEL_KEY = 'mh_card_level_v1';
 const cardTacticsOpen = () => true;
@@ -117919,6 +118133,7 @@ function MonsterHeroGame() {
   const [cardQuickAutoStart, setCardQuickAutoStart] = useState(false);
   const [cardTeaserOpen, setCardTeaserOpen] = useState(false);
   const [cardOrigin, setCardOrigin] = useState('home');
+  const cardOriginBackRef = useRef(null);
   const [cardMarketEntry, setCardMarketEntryRaw] = useState(false);
   const setCardMarketEntry = next => {
     cardMarketEntryRef.current = next === true;
@@ -124125,6 +124340,7 @@ function MonsterHeroGame() {
   const cardExitingRunRef = useRef(false);
   const exitCardBattle = async () => {
     const toDebug = cardOrigin === 'debug';
+    if (cardOrigin === 'profile' || cardOrigin === 'friends') cardOriginBackRef.current = cardOrigin === 'profile' ? 'PROFILE' : 'FRIENDS';
     setCardBgm(null);
     setCardOrigin('home');
     if (runStageRef.current != null) {
@@ -124140,7 +124356,9 @@ function MonsterHeroGame() {
       if (toDebug) setGameState('DEBUG_SETTINGS');
       return;
     }
-    setGameState(toDebug ? 'DEBUG_SETTINGS' : 'HOME');
+    const back = cardOriginBackRef.current;
+    cardOriginBackRef.current = null;
+    setGameState(toDebug ? 'DEBUG_SETTINGS' : back || 'HOME');
   };
   const awardCardQuickLoops = async loops => {
     if (!(loops > 0)) return null;
@@ -141577,7 +141795,7 @@ function MonsterHeroGame() {
     }, "3人とも最初から選べます。仲良し度は助手ごとに別々に貯まるので、あとで変えても消えません。"))), gameState === 'PROFILE' && React.createElement(ProfileScreen, {
       onCardShareGo: intent => {
         if (typeof cardShareIntentSet === 'function') cardShareIntentSet(intent);
-        setCardOrigin(cardBattleDebugHome && !(typeof cardShareOpen === 'function' && cardShareOpen()) ? 'debug' : 'home');
+        setCardOrigin('profile');
         setGameState('CARD_TOP');
       },
       activeAssistant: activeAssistant,
@@ -141672,7 +141890,7 @@ function MonsterHeroGame() {
       onBack: () => setGameState('PROFILE'),
       onCardShareGo: intent => {
         if (typeof cardShareIntentSet === 'function') cardShareIntentSet(intent);
-        setCardOrigin(cardBattleDebugHome && !(typeof cardShareOpen === 'function' && cardShareOpen()) ? 'debug' : 'home');
+        setCardOrigin('friends');
         setGameState('CARD_TOP');
       }
     }), gameState === 'BREEDER_MARKET' && React.createElement(BreederMarketScreen, {
