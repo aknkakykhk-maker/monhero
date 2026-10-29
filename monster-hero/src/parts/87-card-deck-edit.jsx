@@ -855,25 +855,45 @@ const CardStarterContents = ({ db, kit, collection, onClose }) => {
 const cardPackSpeciesLabel = (db, pack) => pack.species.map((sp) => (Object.values(db.monsters).find((m) => m.species === sp && !m.variant) || {}).name || sp).join('・');
 // ---- ガチャポイントの帯とバトルカードカタログ(2026-10-27 社長 案A「パックの上に帯」) ----
 // 帯: たまっている数をそのまま出す(上限は無い)。目盛りは次の1冊までの進み具合(730 なら 230 / 500)
-const CardGachaPanel = ({ gacha = 0, catalogs = 0, busy, onExchange, onOpenCatalog }) => {
+// 2026-10-29 社長 案B「ビートPも同じ帯に」: 上の段に所持ビートP、下の段にガチャポイントを1行で。説明の文は ? で開く。
+//   売り場の一覧の外(タブのすぐ下)に置くので、横の画面では左の列に入る(55 の card の欄)
+const CardGachaPanel = ({ point = 0, gacha = 0, catalogs = 0, busy, onExchange, onOpenCatalog }) => {
   const g = cardNormalizeGacha(gacha);
   const prog = cardGachaProgress(g);
+  const [help, setHelp] = useState(false);
   return (
-    <div data-card-gacha className="rounded-2xl border-2 border-amber-300/70 p-3 text-white" style={{ background: 'linear-gradient(135deg,#3b2a05ee,#1e1b4bee)' }}>
-      <div className="flex items-baseline gap-1 text-[13px] font-black text-amber-200">
-        <span>🎫 ガチャポイント</span>
-        <span data-card-gacha-point={g} className="ml-auto text-[16px] text-white">{g.toLocaleString()}</span>
+    <div data-card-gacha className="mb-2 shrink-0 rounded-2xl border-2 border-amber-300/70 px-2.5 py-1.5 text-white" style={{ background: 'linear-gradient(135deg,#2e1065ee,#1e1b4bee)' }}>
+      <div data-card-gacha-beatp className="flex items-baseline gap-1 border-b border-white/15 pb-1 text-[12px] font-black text-violet-200">
+        <span className="whitespace-nowrap">🎟️ 所持ビートP</span>
+        <span className="ml-auto font-mono text-[16px] text-white">{Math.max(0, Math.floor(Number(point) || 0)).toLocaleString()}</span>
       </div>
-      <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-950" aria-hidden="true"><i className="block h-full rounded-full" style={{ width: `${(prog / CARD_CATALOG_COST) * 100}%`, background: 'linear-gradient(90deg,#fbbf24,#f472b6)' }}/></div>
-      <div className="mt-1 flex text-[10.5px] font-bold text-slate-200" style={JA_WRAP_STYLE}>
-        <span className="min-w-0 flex-1">{jaWrap(`ブースターパック1つで +${CARD_GACHA_PER_PACK}。${CARD_CATALOG_COST}で「バトルカードカタログ」1冊と交換できます`)}</span>
-        <span className="shrink-0 pl-1 tabular-nums text-amber-100">次の1冊まで {prog} / {CARD_CATALOG_COST}</span>
+      <div className="mt-1 flex items-center gap-1.5">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-1 text-[12px] font-black text-amber-200">
+            <span className="whitespace-nowrap">🎫 ガチャP</span>
+            <span data-card-gacha-point={g} className="text-[14px] text-white">{g.toLocaleString()}</span>
+            <span className="ml-auto whitespace-nowrap text-[10px] tabular-nums text-amber-100" aria-label={`次の1冊まで ${prog} / ${CARD_CATALOG_COST}`}>{prog} / {CARD_CATALOG_COST}</span>
+          </div>
+          <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-slate-950" aria-hidden="true"><i className="block h-full rounded-full" style={{ width: `${(prog / CARD_CATALOG_COST) * 100}%`, background: 'linear-gradient(90deg,#fbbf24,#f472b6)' }}/></div>
+        </div>
+        <button type="button" data-card-gacha-exchange aria-label={`カタログと交換(${CARD_CATALOG_COST})`} disabled={busy || g < CARD_CATALOG_COST} onClick={onExchange} className="mh-button min-h-[36px] shrink-0 whitespace-nowrap rounded-xl bg-amber-500 px-2 text-[11px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40">交換</button>
+        <button type="button" data-card-gacha-catalog aria-label={`カタログを使う(${catalogs}冊)`} disabled={busy || catalogs < 1} onClick={onOpenCatalog} className="mh-button min-h-[36px] shrink-0 whitespace-nowrap rounded-xl bg-sky-400 px-2 text-[11px] font-black text-slate-950 active:scale-[.98] disabled:opacity-40">📖{catalogs}冊</button>
+        <button type="button" data-card-gacha-help aria-expanded={help} aria-label="ガチャポイントの説明" onClick={() => setHelp((v) => !v)} className="mh-button flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/40 text-[12px] font-black text-white">?</button>
       </div>
-      <div className="mt-2 grid grid-cols-2 gap-1.5">
-        <button type="button" data-card-gacha-exchange disabled={busy || g < CARD_CATALOG_COST} onClick={onExchange} className="mh-button min-h-[42px] rounded-xl bg-amber-500 px-1 text-[12px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40"><span className="inline-block whitespace-nowrap">カタログと交換</span><span className="inline-block whitespace-nowrap">({CARD_CATALOG_COST})</span></button>
-        <button type="button" data-card-gacha-catalog disabled={busy || catalogs < 1} onClick={onOpenCatalog} className="mh-button min-h-[42px] rounded-xl bg-sky-400 px-1 text-[12px] font-black text-slate-950 active:scale-[.98] disabled:opacity-40"><span className="inline-block whitespace-nowrap">📖 カタログを使う</span><span className="inline-block whitespace-nowrap">({catalogs}冊)</span></button>
-      </div>
+      {help && <div data-card-gacha-help-text className="mt-1 text-[10.5px] font-bold text-slate-200" style={JA_WRAP_STYLE}>{jaWrap(`ブースターパック1つで +${CARD_GACHA_PER_PACK}。${CARD_CATALOG_COST}たまると「バトルカードカタログ」1冊と交換できます(右の数は次の1冊まで)。カタログを使うと、好きなカードを1枚もらえます`)}</div>}
     </div>
+  );
+};
+// パックのタブの帯(交換の確かめ・カタログを使う画面も持つ)。55 の card の欄が、タブのすぐ下に置く
+const CardShopGachaBand = ({ db, point = 0, gacha = 0, catalogs = 0, collection = null, busy, onExchangeCatalog, onUseCatalog }) => {
+  const [gachaConfirm, setGachaConfirm] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  return (
+    <>
+      <CardGachaPanel point={point} gacha={gacha} catalogs={catalogs} busy={busy} onExchange={() => setGachaConfirm(true)} onOpenCatalog={() => setCatalogOpen(true)}/>
+      {gachaConfirm && <ConfirmSheet title="バトルカードカタログと交換しますか？" message={`ガチャポイント ${CARD_CATALOG_COST} を使います(いま ${cardNormalizeGacha(gacha).toLocaleString()})`} confirmLabel="交換する" onCancel={() => setGachaConfirm(false)} onConfirm={() => { setGachaConfirm(false); void onExchangeCatalog(); }}/>}
+      {catalogOpen && <CardCatalogSheet db={db} catalogs={catalogs} collection={collection} busy={busy} onUse={onUseCatalog} onClose={() => setCatalogOpen(false)}/>}
+    </>
   );
 };
 // カタログを使う画面: 第1〜8弾を切り替え、カードを押して選び、「『◯◯』をもらう」で1枚もらう(確かめを1回はさむ)。
@@ -942,18 +962,15 @@ const CardCatalogSheet = ({ db, catalogs, collection, busy, onUse, onClose }) =>
     </>
   );
 };
-const CardShopPacks = ({ db, point, busy, collection = null, onBuyPack, gacha = 0, catalogs = 0, onExchangeCatalog, onUseCatalog }) => {
+const CardShopPacks = ({ db, point, busy, collection = null, onBuyPack }) => {
   const [sheet, setSheet] = useState(null);   // { kind:'contents'|'rates', pack }
   const [confirm, setConfirm] = useState(null);
-  const [gachaConfirm, setGachaConfirm] = useState(false);
-  const [catalogOpen, setCatalogOpen] = useState(false);
   // カードパック券(96 の tickets。カードランクのごほうび)。1枚でどの弾も1パック。開けて戻ると読み直す(この部品は作り直される)
   const [tickets, setTickets] = useState(0);
   useEffect(() => { if (typeof cardTacticsLoad === 'function') void cardTacticsLoad().then((d) => setTickets(d.tactics.tickets)).catch(() => {}); }, []);
   return (
     <div data-card-shop-packs className="space-y-2 pb-2">
       {tickets > 0 && <p data-card-shop-tickets className="rounded-xl border border-amber-300/50 bg-amber-500/10 px-2.5 py-1.5 text-[12px] font-black text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(`🎟️ カードパック券 ${tickets}枚。1枚で、どの弾も1パック開けられます(戦術カードのパックにも使えます)`)}</p>}
-      {onExchangeCatalog && <CardGachaPanel gacha={gacha} catalogs={catalogs} busy={busy} onExchange={() => setGachaConfirm(true)} onOpenCatalog={() => setCatalogOpen(true)}/>}
       {CARD_PACKS.map((pack) => (
         <div key={pack.id} data-card-shop-pack={pack.id} className={SCREEN_PANEL_CLASS} style={{ borderColor: `${pack.color}88` }}>
           <div className="flex items-center gap-2">
@@ -977,8 +994,6 @@ const CardShopPacks = ({ db, point, busy, collection = null, onBuyPack, gacha = 
       ))}
       {sheet && sheet.kind === 'contents' && <CardPackContents db={db} pack={sheet.pack} collection={collection} onClose={() => setSheet(null)}/>}
       {sheet && sheet.kind === 'rates' && <CardPackRateSheet db={db} pack={sheet.pack} collection={collection} onClose={() => setSheet(null)}/>}
-      {gachaConfirm && <ConfirmSheet title="バトルカードカタログと交換しますか？" message={`ガチャポイント ${CARD_CATALOG_COST} を使います(いま ${cardNormalizeGacha(gacha).toLocaleString()})`} confirmLabel="交換する" onCancel={() => setGachaConfirm(false)} onConfirm={() => { setGachaConfirm(false); void onExchangeCatalog(); }}/>}
-      {catalogOpen && <CardCatalogSheet db={db} catalogs={catalogs} collection={collection} busy={busy} onUse={onUseCatalog} onClose={() => setCatalogOpen(false)}/>}
       {confirm && <ConfirmSheet title={confirm.ticket ? `${confirm.pack.name}を1パック開けますか？` : `${confirm.pack.name}を${confirm.count}パック買いますか？`} message={confirm.ticket ? `カードパック券を1枚使います(いま ${tickets}枚)` : `ビートP ${cardPackPrice(confirm.pack, confirm.count).toLocaleString()} を使います(いま ${point.toLocaleString()})`} confirmLabel={confirm.ticket ? '券で開ける' : '買って開ける'} onCancel={() => setConfirm(null)} onConfirm={() => { const c = confirm; setConfirm(null); void onBuyPack(c.pack.id, c.count, c.ticket ? 'ticket' : 'point'); }}/>}
     </div>
   );

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 517c0cccc246f068
+// source-sha256: 209dee2ee5b7dd2e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -14470,10 +14470,16 @@ const beatRankAfter = (prev, {
   const xp = playerRankSafeXp(cur.xp + add);
   const to = playerRankInfo(xp).rank;
   let tickets = 0,
-    beatPoints = 0;
+    beatPoints = 0,
+    bonusTickets = 0,
+    bonusPoints = 0;
   for (let r = Math.max(cur.got + 1, 2); r <= to; r++) {
     tickets += beatRankTicketsFor(r);
     beatPoints += playerRankBeatPointsFor(r);
+    if (r % 5 === 0) {
+      bonusTickets += r;
+      bonusPoints += r * 200;
+    }
   }
   return {
     next: {
@@ -14488,7 +14494,9 @@ const beatRankAfter = (prev, {
     from,
     to,
     tickets,
-    beatPoints
+    beatPoints,
+    bonusTickets,
+    bonusPoints
   };
 };
 const STAT_POINT_GAIN = {
@@ -55435,6 +55443,232 @@ function PlayerRankBoard({
     style: JA_WRAP_STYLE
   }, jaWrap(`あなたの記録は、次に${kind === 'card' ? 'ランクが上がった' : '曲を遊んだ'}ときに載ります。`))));
 }
+const PLAYER_RANK_UP_FX_CSS = `
+.mh-prfx{position:fixed;inset:0;z-index:95000;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 38%,rgba(64,24,120,.92),rgba(8,4,20,.94) 70%);cursor:pointer;user-select:none;overflow:hidden}
+.mh-prfx-stage{position:relative;width:min(100%,420px);height:100%}
+.mh-prfx-center{position:absolute;left:50%;top:36%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:10px}
+.mh-prfx-big .mh-prb-shield{width:96px;height:107px}
+.mh-prfx-big .mh-prb-shield::after{inset:5px}
+.mh-prfx-big .mh-prb-num{font-size:46px;-webkit-text-stroke:8px var(--prb-ink)}
+.mh-prfx-big .mh-prb-num.mh-prb-w3{font-size:34px}
+.mh-prfx-title{font-weight:900;font-size:32px;color:#fff;-webkit-text-stroke:6px #4c1d95;paint-order:stroke fill;letter-spacing:.04em}
+.mh-prfx-kind{font-weight:900;font-size:15px;color:#fff;-webkit-text-stroke:3px #1e293b;paint-order:stroke fill}
+.mh-prfx-slot{position:relative;width:96px;height:107px}
+.mh-prfx-half{position:absolute;inset:0}
+.mh-prfx-half.l{clip-path:polygon(0 0,52% 0,44% 100%,0 100%)}
+.mh-prfx-half.r{clip-path:polygon(52% 0,100% 0,100% 100%,44% 100%)}
+.mh-prfx-new{position:absolute;inset:0}
+.mh-prfx-ring{position:absolute;left:50%;top:36%;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:4px solid rgba(255,255,255,.9);opacity:0}
+.mh-prfx-conf{position:absolute;left:50%;top:36%;width:8px;height:12px;border-radius:2px;opacity:0}
+.mh-prfx-rays{position:absolute;left:50%;top:36%;width:560px;height:560px;margin:-280px 0 0 -280px;border-radius:50%;opacity:0;background:repeating-conic-gradient(from 0deg,var(--prfx-ray) 0 8deg,transparent 8deg 24deg);-webkit-mask:radial-gradient(circle,#000 25%,transparent 68%);mask:radial-gradient(circle,#000 25%,transparent 68%)}
+.mh-prfx-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.mh-prfx-band{position:absolute;left:0;right:0;top:56%;text-align:center;padding:10px 0;font-weight:900;font-size:20px;color:#fff;-webkit-text-stroke:4px rgba(0,0,0,.6);paint-order:stroke fill;opacity:0;background:linear-gradient(90deg,transparent,var(--prfx-band),transparent)}
+.mh-prfx-gains{position:absolute;left:16px;right:16px;top:58%;display:flex;flex-direction:column;gap:8px}
+.mh-prfx-band ~ .mh-prfx-gains{top:66%}
+.mh-prfx-gain{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:14px;background:rgba(15,10,35,.88);border:1px solid rgba(253,224,71,.45);opacity:0}
+.mh-prfx-gain.bonus{border-color:#f0abfc;box-shadow:0 0 18px rgba(240,171,252,.45)}
+.mh-prfx-gain b{font-size:18px;font-weight:900;color:#fef08a;font-variant-numeric:tabular-nums}
+.mh-prfx-gain small{display:block;font-size:10px;font-weight:700;color:#cbd5e1}
+.mh-prfx-gain .ico{font-size:24px}
+.mh-prfx-hint{position:absolute;left:0;right:0;bottom:calc(14px + var(--mh-sa-bottom,0px));text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,.6)}
+.mh-prfx.play .mh-prfx-half .mh-prb{animation:mhPrfxShake .5s ease-in-out}
+.mh-prfx.play .mh-prfx-half.l{animation:mhPrfxSplitL .45s ease-in .5s forwards}
+.mh-prfx.play .mh-prfx-half.r{animation:mhPrfxSplitR .45s ease-in .5s forwards}
+.mh-prfx.play .mh-prfx-new{animation:mhPrfxPop .5s cubic-bezier(.2,1.6,.4,1) .75s both}
+.mh-prfx.play .mh-prfx-ring{animation:mhPrfxRing .7s ease-out .75s both}
+.mh-prfx.play .mh-prfx-title{animation:mhPrfxDrop .45s cubic-bezier(.2,1.4,.4,1) .9s both}
+.mh-prfx.play .mh-prfx-kind{animation:mhPrfxFade .3s ease-out 1.1s both}
+.mh-prfx.play .mh-prfx-conf{animation:mhPrfxConf 1.2s ease-out var(--d) both}
+.mh-prfx.play .mh-prfx-flash{animation:mhPrfxFlash .5s ease-out .7s both}
+.mh-prfx.play .mh-prfx-rays{animation:mhPrfxRays 2.4s ease-out .75s both}
+.mh-prfx.play .mh-prfx-band{animation:mhPrfxBand .5s ease-out 1.3s both}
+.mh-prfx.play .mh-prfx-gain{animation:mhPrfxFly .45s cubic-bezier(.2,1.3,.4,1) var(--d) both}
+.mh-prfx.done *{animation:none!important}
+.mh-prfx.done .mh-prfx-half,.mh-prfx.done .mh-prfx-conf,.mh-prfx.done .mh-prfx-ring,.mh-prfx.done .mh-prfx-flash{display:none}
+.mh-prfx.done .mh-prfx-new,.mh-prfx.done .mh-prfx-title,.mh-prfx.done .mh-prfx-kind,.mh-prfx.done .mh-prfx-gain,.mh-prfx.done .mh-prfx-band{opacity:1;transform:none}
+.mh-prfx.done .mh-prfx-rays{opacity:.9}
+@keyframes mhPrfxShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px) rotate(-3deg)}40%{transform:translateX(6px) rotate(3deg)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+@keyframes mhPrfxSplitL{to{transform:translate(-60px,40px) rotate(-25deg);opacity:0}}
+@keyframes mhPrfxSplitR{to{transform:translate(60px,40px) rotate(25deg);opacity:0}}
+@keyframes mhPrfxPop{from{transform:scale(.2);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes mhPrfxRing{from{transform:scale(.4);opacity:1}to{transform:scale(2.6);opacity:0}}
+@keyframes mhPrfxDrop{from{transform:translateY(-30px) scale(1.4);opacity:0}to{transform:none;opacity:1}}
+@keyframes mhPrfxFade{from{opacity:0}to{opacity:1}}
+@keyframes mhPrfxConf{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--x),var(--y)) rotate(var(--r))}}
+@keyframes mhPrfxFlash{0%{opacity:.9}100%{opacity:0}}
+@keyframes mhPrfxRays{0%{opacity:0;transform:rotate(0) scale(.6)}30%{opacity:1}100%{opacity:.9;transform:rotate(60deg) scale(1)}}
+@keyframes mhPrfxBand{from{opacity:0;transform:scaleX(.2)}to{opacity:1;transform:none}}
+@keyframes mhPrfxFly{from{opacity:0;transform:translateX(80px) scale(.8)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.mh-prfx.play *{animation-duration:.01s!important;animation-delay:0s!important}}
+`;
+const ensurePlayerRankUpFxCss = () => {
+  try {
+    if (typeof document === 'undefined' || document.getElementById('mh-player-rank-up-fx-css')) return;
+    const el = document.createElement('style');
+    el.id = 'mh-player-rank-up-fx-css';
+    el.textContent = PLAYER_RANK_UP_FX_CSS;
+    document.head.appendChild(el);
+  } catch (_) {}
+};
+const PLAYER_RANK_UP_TIER_FX = Object.freeze({
+  1: {
+    ray: 'rgba(234,138,74,.3)',
+    band: 'rgba(154,75,28,.85)'
+  },
+  2: {
+    ray: 'rgba(226,232,240,.3)',
+    band: 'rgba(100,116,139,.85)'
+  },
+  3: {
+    ray: 'rgba(253,224,71,.32)',
+    band: 'rgba(217,119,6,.85)'
+  },
+  4: {
+    ray: 'rgba(192,132,252,.34)',
+    band: 'rgba(109,40,217,.85)'
+  },
+  5: {
+    ray: 'rgba(255,255,255,.3)',
+    band: 'rgba(79,70,229,.85)'
+  }
+});
+const PLAYER_RANK_UP_CONFETTI = ['#fde047', '#f0abfc', '#22d3ee', '#f472b6', '#a3e635', '#fff'];
+function PlayerRankUpFx({
+  kind = 'beat',
+  from = 1,
+  to = 1,
+  gains = [],
+  onClose = null
+}) {
+  ensurePlayerRankBadgeCss();
+  ensurePlayerRankUpFxCss();
+  const [stage, setStage] = React.useState('play');
+  const tierFrom = playerRankTier(from),
+    tierTo = playerRankTier(to);
+  const tierUp = tierTo.t !== tierFrom.t;
+  const fx = PLAYER_RANK_UP_TIER_FX[tierTo.t] || PLAYER_RANK_UP_TIER_FX[1];
+  const confetti = React.useMemo(() => Array.from({
+    length: tierUp ? 48 : 18
+  }, (_, i) => {
+    const a = Math.random() * Math.PI * 2,
+      d = 60 + Math.random() * 130;
+    return {
+      x: `${Math.cos(a) * d}px`,
+      y: `${Math.sin(a) * d + 120}px`,
+      r: `${Math.random() * 720 - 360}deg`,
+      d: `${0.75 + Math.random() * 0.3}s`,
+      c: PLAYER_RANK_UP_CONFETTI[i % PLAYER_RANK_UP_CONFETTI.length]
+    };
+  }), []);
+  const list = Array.isArray(gains) ? gains : [];
+  const gainStart = tierUp ? 1.8 : 1.3;
+  React.useEffect(() => {
+    const se = name => {
+      try {
+        if (typeof Audio_ !== 'undefined' && Audio_.se && typeof Audio_.se[name] === 'function') Audio_.se[name]();
+      } catch (_) {}
+    };
+    const timers = [setTimeout(() => se('crit'), 500), setTimeout(() => {
+      if (tierUp && typeof Audio_ !== 'undefined' && typeof Audio_.playJingle === 'function') {
+        try {
+          Audio_.playJingle('victory');
+        } catch (_) {}
+      } else se('levelUp');
+    }, 750), ...list.map((_, i) => setTimeout(() => se('trainingReward'), (gainStart + i * 0.35) * 1000 + 150)), setTimeout(() => setStage(s => s === 'play' ? 'done' : s), (gainStart + list.length * 0.35 + 0.6) * 1000)];
+    return () => timers.forEach(clearTimeout);
+  }, []);
+  const next = () => {
+    if (stage === 'play') setStage('done');else if (onClose) onClose();
+  };
+  const k = playerRankKind(kind);
+  const shield = (rank, cls = '') => React.createElement("span", {
+    className: `mh-prb mh-prfx-big mh-prb-t${playerRankTier(rank).t} ${cls}`
+  }, React.createElement("span", {
+    className: "mh-prb-shield"
+  }, React.createElement("span", {
+    className: "mh-prb-gloss"
+  }), React.createElement("b", {
+    className: `mh-prb-num${String(rank).length >= 3 ? ' mh-prb-w3' : ''}`
+  }, rank)));
+  return React.createElement("div", {
+    "data-player-rank-up-fx": kind,
+    "data-player-rank-up-fx-stage": stage,
+    className: `mh-prfx ${stage}`,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": `${k.label}が${to}に上がりました`,
+    tabIndex: 0,
+    onClick: next,
+    onKeyDown: e => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
+        e.preventDefault();
+        next();
+      }
+    },
+    style: {
+      '--prfx-ray': fx.ray,
+      '--prfx-band': fx.band
+    }
+  }, React.createElement("div", {
+    className: "mh-prfx-stage"
+  }, tierUp && React.createElement("div", {
+    className: "mh-prfx-rays",
+    "aria-hidden": "true"
+  }), React.createElement("div", {
+    className: "mh-prfx-ring",
+    "aria-hidden": "true"
+  }), React.createElement("div", {
+    className: "mh-prfx-center"
+  }, React.createElement("div", {
+    className: "mh-prfx-slot"
+  }, React.createElement("div", {
+    className: "mh-prfx-half l",
+    "aria-hidden": "true"
+  }, shield(from)), React.createElement("div", {
+    className: "mh-prfx-half r",
+    "aria-hidden": "true"
+  }, shield(from)), React.createElement("div", {
+    className: "mh-prfx-new"
+  }, shield(to))), React.createElement("div", {
+    className: "mh-prfx-title"
+  }, "RANK UP!"), React.createElement("div", {
+    className: "mh-prfx-kind"
+  }, k.label)), tierUp && React.createElement("div", {
+    className: "mh-prfx-band"
+  }, `${tierTo.name}に昇格!`), list.length > 0 && React.createElement("ul", {
+    className: "mh-prfx-gains",
+    "aria-label": "もらった物"
+  }, list.map((g, i) => React.createElement("li", {
+    key: i,
+    className: `mh-prfx-gain${g.bonus ? ' bonus' : ''}`,
+    style: {
+      '--d': `${gainStart + i * 0.35}s`
+    }
+  }, g.icon && React.createElement("span", {
+    className: "ico",
+    "aria-hidden": "true"
+  }, g.icon), React.createElement("span", {
+    className: "min-w-0"
+  }, React.createElement("b", null, String(g.text || '')), g.note && React.createElement("small", {
+    style: JA_WRAP_STYLE
+  }, jaWrap(String(g.note))))))), confetti.map((c, i) => React.createElement("span", {
+    key: i,
+    className: "mh-prfx-conf",
+    "aria-hidden": "true",
+    style: {
+      '--x': c.x,
+      '--y': c.y,
+      '--r': c.r,
+      '--d': c.d,
+      background: c.c
+    }
+  })), tierUp && React.createElement("div", {
+    className: "mh-prfx-flash",
+    "aria-hidden": "true"
+  }), React.createElement("div", {
+    className: "mh-prfx-hint"
+  }, stage === 'play' ? '押すと先へ' : '押すと閉じる')));
+}
 class MhErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -56969,7 +57203,7 @@ function BreederMarketScreen({
   }, jaWrap(section.hint)), React.createElement("span", {
     "aria-hidden": "true",
     className: `absolute bottom-3 right-3 text-xl font-black ${section.arrow}`
-  }, "›"))))), marketSection && React.createElement(React.Fragment, null, React.createElement(MarketBalanceBar, {
+  }, "›"))))), marketSection && React.createElement(React.Fragment, null, marketSection !== 'card' && React.createElement(MarketBalanceBar, {
     balances: marketSection === 'diamond' ? [{
       currency: 'diamond',
       value: gold
@@ -56985,9 +57219,6 @@ function BreederMarketScreen({
     }, {
       currency: 'heroProof',
       value: proofHave
-    }] : marketSection === 'card' ? [{
-      currency: 'cardPoint',
-      value: cardShop ? cardShop.point : 0
     }] : [{
       currency: 'beatPoint',
       value: safeEventPoints
@@ -57045,7 +57276,21 @@ function BreederMarketScreen({
   })()))), marketSection === 'card' && cardShop && (() => {
     const tab = activeSectionTab('card');
     const cp = cardShop.point;
-    return React.createElement(React.Fragment, null, renderSectionTabs('card', true), React.createElement("div", {
+    return React.createElement(React.Fragment, null, renderSectionTabs('card', true), tab === 'pack' && cardShop.onExchangeCatalog && typeof CardShopGachaBand === 'function' ? React.createElement(CardShopGachaBand, {
+      db: CARD_BATTLE_DATA,
+      point: cp,
+      gacha: cardShop.gacha,
+      catalogs: cardShop.catalogs,
+      collection: cardShop.collection,
+      busy: busy || cardShop.busy,
+      onExchangeCatalog: cardShop.onExchangeCatalog,
+      onUseCatalog: cardShop.onUseCatalog
+    }) : React.createElement(MarketBalanceBar, {
+      balances: [{
+        currency: 'cardPoint',
+        value: cp
+      }]
+    }), React.createElement("div", {
       className: SCREEN_LIST_CLASS,
       "data-card-shop": true,
       "data-card-shop-tab": tab
@@ -57054,11 +57299,7 @@ function BreederMarketScreen({
       point: cp,
       busy: busy || cardShop.busy,
       collection: cardShop.collection,
-      onBuyPack: cardShop.onBuyPack,
-      gacha: cardShop.gacha,
-      catalogs: cardShop.catalogs,
-      onExchangeCatalog: cardShop.onExchangeCatalog,
-      onUseCatalog: cardShop.onUseCatalog
+      onBuyPack: cardShop.onBuyPack
     }), tab === 'tactics' && typeof CardTacticsShop === 'function' && React.createElement(CardTacticsShop, {
       point: cp,
       busy: busy || cardShop.busy,
@@ -60163,8 +60404,7 @@ function RhythmRankingScreen({
   onResendRhythmRankingPending = null,
   setRhythmEventDivision,
   setRhythmRankingDetail,
-  setRhythmRankingTab,
-  beatRankXp = 0
+  setRhythmRankingTab
 }) {
   const [eventDetailOpen, setEventDetailOpen] = useState(false);
   const song = RHYTHM_SONGS.find(entry => entry.songId === rhythmRanking.songId) || rhythmDemoSong(RHYTHM_SONGS);
@@ -60186,9 +60426,7 @@ function RhythmRankingScreen({
   const boardKind = rhythmRankingTab === 'weekly' ? 'weekly' : eventTabOpen ? eventPhase === 'prev' ? prevEventEntry ? 'prevEvent' : null : limitedEvent ? 'limited' : null : null;
   const boardTab = eventReleased && !!boardKind;
   const totalTabOpen = totalTab && !boardTab && !eventTabOpen;
-  const beatRankTabOpen = rhythmRankingTab === 'beatRank' && !boardTab && !eventTabOpen;
-  const [beatRankReload, setBeatRankReload] = useState(0);
-  const songTab = !totalTabOpen && !boardTab && !eventTabOpen && !beatRankTabOpen;
+  const songTab = !totalTabOpen && !boardTab && !eventTabOpen;
   const boards = rhythmEventRanking || {};
   const event = boardKind && boards[boardKind] || {
     status: 'idle',
@@ -60252,10 +60490,7 @@ function RhythmRankingScreen({
   }] : []), ...(eventReleased ? [{
     id: 'event',
     label: 'イベント'
-  }] : []), {
-    id: 'beatRank',
-    label: 'ビートランク'
-  }];
+  }] : [])];
   const openTab = tab => {
     setRhythmRankingTab(tab);
     if (tab === 'total') loadRhythmTotalRanking && loadRhythmTotalRanking();
@@ -60281,7 +60516,7 @@ function RhythmRankingScreen({
     loadRhythmEventRanking && loadRhythmEventRanking(boardKind, divisionId);
   };
   const refresh = () => {
-    if (boardTab) loadRhythmEventRanking && loadRhythmEventRanking(boardKind, eventDivisionId);else if (totalTabOpen) loadRhythmTotalRanking && loadRhythmTotalRanking();else if (beatRankTabOpen) setBeatRankReload(n => n + 1);else loadRhythmRanking(song, rhythmRanking.difficultyId || 'ALL');
+    if (boardTab) loadRhythmEventRanking && loadRhythmEventRanking(boardKind, eventDivisionId);else if (totalTabOpen) loadRhythmTotalRanking && loadRhythmTotalRanking();else loadRhythmRanking(song, rhythmRanking.difficultyId || 'ALL');
   };
   const eventRankScore = entry => entry && entry.baseScore !== null && entry.baseScore !== undefined ? entry.baseScore : entry?.score || 0;
   const totalRow = (entry, rank, mine) => React.createElement("div", {
@@ -60405,14 +60640,7 @@ function RhythmRankingScreen({
     style: {
       paddingBottom: 'calc(1.5rem + var(--mh-sa-bottom))'
     }
-  }, beatRankTabOpen && React.createElement(PlayerRankBoard, {
-    kind: "beat",
-    fetchTop: sbFetchBeatRanks,
-    fetchMine: async () => sbFetchBeatRankMine(await ensureBreederId()),
-    renderIcon: rankingBreederIcon,
-    selfXp: beatRankXp,
-    reloadKey: beatRankReload
-  }), totalTabOpen && React.createElement(React.Fragment, null, total.status === 'loading' && React.createElement("p", {
+  }, totalTabOpen && React.createElement(React.Fragment, null, total.status === 'loading' && React.createElement("p", {
     "data-rhythm-total-loading": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "読み込み中…"), total.status === 'notReady' && React.createElement("p", {
@@ -83078,7 +83306,35 @@ function RhythmMultiScreen({
       className: "absolute inset-0 z-[88000] flex min-h-0 flex-col bg-slate-950"
     }, React.createElement("div", {
       className: "flex min-h-0 flex-1 flex-col"
-    }, rankHubTab === 'national' ? rankingSupport ? rankingSupport.render(() => setRankHubOpen(false)) : null : React.createElement(RhythmBuddyRankingBoard, {
+    }, rankHubTab === 'national' ? rankingSupport ? rankingSupport.render(() => setRankHubOpen(false)) : null : rankHubTab === 'beatRank' ? React.createElement("div", {
+      "data-rhythm-beat-rank-ranking": true,
+      className: "flex min-h-0 flex-1 flex-col",
+      style: {
+        paddingTop: 'var(--mh-sa-top)'
+      }
+    }, React.createElement("div", {
+      className: "flex shrink-0 items-center gap-2 px-3 pt-2"
+    }, React.createElement("button", {
+      type: "button",
+      "aria-label": "戻る",
+      onClick: () => setRankHubOpen(false),
+      className: "min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300"
+    }, "←"), React.createElement("div", {
+      className: "min-w-0 flex-1 leading-tight"
+    }, React.createElement("b", {
+      className: "block truncate text-base font-black text-cyan-100"
+    }, "🎵 ビートランク"), React.createElement("small", {
+      className: "block text-[10px] font-bold text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap('モンヒロビートを遊ぶほど上がる、あなた自身のランクの順位です')))), React.createElement("div", {
+      className: "min-h-0 flex-1 overflow-y-auto"
+    }, React.createElement(PlayerRankBoard, {
+      kind: "beat",
+      fetchTop: sbFetchBeatRanks,
+      fetchMine: async () => sbFetchBeatRankMine(await ensureBreederId()),
+      renderIcon: rankingSupport && rankingSupport.breederIcon,
+      selfXp: Number(ms.beatRankXp) || 0
+    }))) : React.createElement(RhythmBuddyRankingBoard, {
       renderBreederIcon: rankingSupport && rankingSupport.breederIcon,
       selfName: myProfile().name,
       onClose: () => setRankHubOpen(false),
@@ -83089,13 +83345,20 @@ function RhythmMultiScreen({
       style: {
         paddingBottom: 'calc(0.5rem + var(--mh-sa-bottom))'
       }
-    }, [['national', '🏆 全国ランキング'], ['buddy', '🎶 マスモンランキング']].map(([id, label]) => React.createElement("button", {
+    }, [['national', '🏆', ['全国', 'ランキング']], ['buddy', '🎶', ['マスモン', 'ランキング']], ['beatRank', '🎵', ['ビートランク']]].map(([id, icon, words]) => React.createElement("button", {
       key: id,
       type: "button",
       "data-rhythm-mode-ranking-tab": id,
       onClick: () => setRankHubTab(id),
-      className: `min-h-[44px] min-w-0 flex-1 whitespace-nowrap rounded-xl border px-1.5 text-[11px] font-black min-[360px]:px-2 min-[360px]:text-[12px] ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`
-    }, label)))));
+      className: `min-h-[44px] min-w-0 flex-1 rounded-xl border px-1 text-[11px] font-black leading-tight min-[360px]:px-2 min-[360px]:text-[12px] ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`
+    }, React.createElement("span", {
+      className: "inline-flex flex-wrap items-center justify-center gap-x-1"
+    }, React.createElement("span", {
+      "aria-hidden": "true"
+    }, icon), words.map(w => React.createElement("span", {
+      key: w,
+      className: "whitespace-nowrap"
+    }, w))))))));
   }
   if (!view && !searching) return React.createElement("main", {
     "data-rhythm-multi": true,
@@ -104087,6 +104350,7 @@ const CardStarterContents = ({
 };
 const cardPackSpeciesLabel = (db, pack) => pack.species.map(sp => (Object.values(db.monsters).find(m => m.species === sp && !m.variant) || {}).name || sp).join('・');
 const CardGachaPanel = ({
+  point = 0,
   gacha = 0,
   catalogs = 0,
   busy,
@@ -104095,19 +104359,36 @@ const CardGachaPanel = ({
 }) => {
   const g = cardNormalizeGacha(gacha);
   const prog = cardGachaProgress(g);
+  const [help, setHelp] = useState(false);
   return React.createElement("div", {
     "data-card-gacha": true,
-    className: "rounded-2xl border-2 border-amber-300/70 p-3 text-white",
+    className: "mb-2 shrink-0 rounded-2xl border-2 border-amber-300/70 px-2.5 py-1.5 text-white",
     style: {
-      background: 'linear-gradient(135deg,#3b2a05ee,#1e1b4bee)'
+      background: 'linear-gradient(135deg,#2e1065ee,#1e1b4bee)'
     }
   }, React.createElement("div", {
-    className: "flex items-baseline gap-1 text-[13px] font-black text-amber-200"
-  }, React.createElement("span", null, "🎫 ガチャポイント"), React.createElement("span", {
+    "data-card-gacha-beatp": true,
+    className: "flex items-baseline gap-1 border-b border-white/15 pb-1 text-[12px] font-black text-violet-200"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "🎟️ 所持ビートP"), React.createElement("span", {
+    className: "ml-auto font-mono text-[16px] text-white"
+  }, Math.max(0, Math.floor(Number(point) || 0)).toLocaleString())), React.createElement("div", {
+    className: "mt-1 flex items-center gap-1.5"
+  }, React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("div", {
+    className: "flex items-baseline gap-1 text-[12px] font-black text-amber-200"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "🎫 ガチャP"), React.createElement("span", {
     "data-card-gacha-point": g,
-    className: "ml-auto text-[16px] text-white"
-  }, g.toLocaleString())), React.createElement("div", {
-    className: "mt-1.5 h-2 overflow-hidden rounded-full bg-slate-950",
+    className: "text-[14px] text-white"
+  }, g.toLocaleString()), React.createElement("span", {
+    className: "ml-auto whitespace-nowrap text-[10px] tabular-nums text-amber-100",
+    "aria-label": `次の1冊まで ${prog} / ${CARD_CATALOG_COST}`
+  }, prog, " / ", CARD_CATALOG_COST)), React.createElement("div", {
+    className: "mt-0.5 h-1.5 overflow-hidden rounded-full bg-slate-950",
     "aria-hidden": "true"
   }, React.createElement("i", {
     className: "block h-full rounded-full",
@@ -104115,36 +104396,69 @@ const CardGachaPanel = ({
       width: `${prog / CARD_CATALOG_COST * 100}%`,
       background: 'linear-gradient(90deg,#fbbf24,#f472b6)'
     }
-  })), React.createElement("div", {
-    className: "mt-1 flex text-[10.5px] font-bold text-slate-200",
-    style: JA_WRAP_STYLE
-  }, React.createElement("span", {
-    className: "min-w-0 flex-1"
-  }, jaWrap(`ブースターパック1つで +${CARD_GACHA_PER_PACK}。${CARD_CATALOG_COST}で「バトルカードカタログ」1冊と交換できます`)), React.createElement("span", {
-    className: "shrink-0 pl-1 tabular-nums text-amber-100"
-  }, "次の1冊まで ", prog, " / ", CARD_CATALOG_COST)), React.createElement("div", {
-    className: "mt-2 grid grid-cols-2 gap-1.5"
-  }, React.createElement("button", {
+  }))), React.createElement("button", {
     type: "button",
     "data-card-gacha-exchange": true,
+    "aria-label": `カタログと交換(${CARD_CATALOG_COST})`,
     disabled: busy || g < CARD_CATALOG_COST,
     onClick: onExchange,
-    className: "mh-button min-h-[42px] rounded-xl bg-amber-500 px-1 text-[12px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40"
-  }, React.createElement("span", {
-    className: "inline-block whitespace-nowrap"
-  }, "カタログと交換"), React.createElement("span", {
-    className: "inline-block whitespace-nowrap"
-  }, "(", CARD_CATALOG_COST, ")")), React.createElement("button", {
+    className: "mh-button min-h-[36px] shrink-0 whitespace-nowrap rounded-xl bg-amber-500 px-2 text-[11px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40"
+  }, "交換"), React.createElement("button", {
     type: "button",
     "data-card-gacha-catalog": true,
+    "aria-label": `カタログを使う(${catalogs}冊)`,
     disabled: busy || catalogs < 1,
     onClick: onOpenCatalog,
-    className: "mh-button min-h-[42px] rounded-xl bg-sky-400 px-1 text-[12px] font-black text-slate-950 active:scale-[.98] disabled:opacity-40"
-  }, React.createElement("span", {
-    className: "inline-block whitespace-nowrap"
-  }, "📖 カタログを使う"), React.createElement("span", {
-    className: "inline-block whitespace-nowrap"
-  }, "(", catalogs, "冊)"))));
+    className: "mh-button min-h-[36px] shrink-0 whitespace-nowrap rounded-xl bg-sky-400 px-2 text-[11px] font-black text-slate-950 active:scale-[.98] disabled:opacity-40"
+  }, "📖", catalogs, "冊"), React.createElement("button", {
+    type: "button",
+    "data-card-gacha-help": true,
+    "aria-expanded": help,
+    "aria-label": "ガチャポイントの説明",
+    onClick: () => setHelp(v => !v),
+    className: "mh-button flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/40 text-[12px] font-black text-white"
+  }, "?")), help && React.createElement("div", {
+    "data-card-gacha-help-text": true,
+    className: "mt-1 text-[10.5px] font-bold text-slate-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`ブースターパック1つで +${CARD_GACHA_PER_PACK}。${CARD_CATALOG_COST}たまると「バトルカードカタログ」1冊と交換できます(右の数は次の1冊まで)。カタログを使うと、好きなカードを1枚もらえます`)));
+};
+const CardShopGachaBand = ({
+  db,
+  point = 0,
+  gacha = 0,
+  catalogs = 0,
+  collection = null,
+  busy,
+  onExchangeCatalog,
+  onUseCatalog
+}) => {
+  const [gachaConfirm, setGachaConfirm] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  return React.createElement(React.Fragment, null, React.createElement(CardGachaPanel, {
+    point: point,
+    gacha: gacha,
+    catalogs: catalogs,
+    busy: busy,
+    onExchange: () => setGachaConfirm(true),
+    onOpenCatalog: () => setCatalogOpen(true)
+  }), gachaConfirm && React.createElement(ConfirmSheet, {
+    title: "バトルカードカタログと交換しますか？",
+    message: `ガチャポイント ${CARD_CATALOG_COST} を使います(いま ${cardNormalizeGacha(gacha).toLocaleString()})`,
+    confirmLabel: "交換する",
+    onCancel: () => setGachaConfirm(false),
+    onConfirm: () => {
+      setGachaConfirm(false);
+      void onExchangeCatalog();
+    }
+  }), catalogOpen && React.createElement(CardCatalogSheet, {
+    db: db,
+    catalogs: catalogs,
+    collection: collection,
+    busy: busy,
+    onUse: onUseCatalog,
+    onClose: () => setCatalogOpen(false)
+  }));
 };
 const CardCatalogSheet = ({
   db,
@@ -104292,16 +104606,10 @@ const CardShopPacks = ({
   point,
   busy,
   collection = null,
-  onBuyPack,
-  gacha = 0,
-  catalogs = 0,
-  onExchangeCatalog,
-  onUseCatalog
+  onBuyPack
 }) => {
   const [sheet, setSheet] = useState(null);
   const [confirm, setConfirm] = useState(null);
-  const [gachaConfirm, setGachaConfirm] = useState(false);
-  const [catalogOpen, setCatalogOpen] = useState(false);
   const [tickets, setTickets] = useState(0);
   useEffect(() => {
     if (typeof cardTacticsLoad === 'function') void cardTacticsLoad().then(d => setTickets(d.tactics.tickets)).catch(() => {});
@@ -104313,13 +104621,7 @@ const CardShopPacks = ({
     "data-card-shop-tickets": true,
     className: "rounded-xl border border-amber-300/50 bg-amber-500/10 px-2.5 py-1.5 text-[12px] font-black text-amber-100",
     style: JA_WRAP_STYLE
-  }, jaWrap(`🎟️ カードパック券 ${tickets}枚。1枚で、どの弾も1パック開けられます(戦術カードのパックにも使えます)`)), onExchangeCatalog && React.createElement(CardGachaPanel, {
-    gacha: gacha,
-    catalogs: catalogs,
-    busy: busy,
-    onExchange: () => setGachaConfirm(true),
-    onOpenCatalog: () => setCatalogOpen(true)
-  }), CARD_PACKS.map(pack => React.createElement("div", {
+  }, jaWrap(`🎟️ カードパック券 ${tickets}枚。1枚で、どの弾も1パック開けられます(戦術カードのパックにも使えます)`)), CARD_PACKS.map(pack => React.createElement("div", {
     key: pack.id,
     "data-card-shop-pack": pack.id,
     className: SCREEN_PANEL_CLASS,
@@ -104403,22 +104705,6 @@ const CardShopPacks = ({
     pack: sheet.pack,
     collection: collection,
     onClose: () => setSheet(null)
-  }), gachaConfirm && React.createElement(ConfirmSheet, {
-    title: "バトルカードカタログと交換しますか？",
-    message: `ガチャポイント ${CARD_CATALOG_COST} を使います(いま ${cardNormalizeGacha(gacha).toLocaleString()})`,
-    confirmLabel: "交換する",
-    onCancel: () => setGachaConfirm(false),
-    onConfirm: () => {
-      setGachaConfirm(false);
-      void onExchangeCatalog();
-    }
-  }), catalogOpen && React.createElement(CardCatalogSheet, {
-    db: db,
-    catalogs: catalogs,
-    collection: collection,
-    busy: busy,
-    onUse: onUseCatalog,
-    onClose: () => setCatalogOpen(false)
   }), confirm && React.createElement(ConfirmSheet, {
     title: confirm.ticket ? `${confirm.pack.name}を1パック開けますか？` : `${confirm.pack.name}を${confirm.count}パック買いますか？`,
     message: confirm.ticket ? `カードパック券を1枚使います(いま ${tickets}枚)` : `ビートP ${cardPackPrice(confirm.pack, confirm.count).toLocaleString()} を使います(いま ${point.toLocaleString()})`,
@@ -117186,6 +117472,27 @@ function MonsterHeroGame() {
         icon: '🎟️',
         text: `ビートP ${gain.beatPoints.toLocaleString()}`
       }] : [])];
+      const basePoints = gain.beatPoints - gain.bonusPoints,
+        baseTickets = gain.tickets - gain.bonusTickets;
+      const fxGains = [...(basePoints > 0 ? [{
+        icon: '🎟️',
+        text: `ビートP ${basePoints.toLocaleString()}`,
+        note: '上がったランク ×100'
+      }] : []), ...(gain.bonusPoints > 0 ? [{
+        icon: '🎟️',
+        text: `ビートP ${gain.bonusPoints.toLocaleString()}`,
+        note: '5ランクごとのおまけ(ランク ×200)',
+        bonus: true
+      }] : []), ...(baseTickets > 0 ? [{
+        icon: '🎶',
+        text: `セッション券 ${baseTickets}枚`,
+        note: 'ランクが上がるたびに1枚'
+      }] : []), ...(gain.bonusTickets > 0 ? [{
+        icon: '🎶',
+        text: `セッション券 ${gain.bonusTickets}枚`,
+        note: '5ランクごとのおまけ(ランクと同じ枚数)',
+        bonus: true
+      }] : [])];
       setBeatRankAward({
         add: gain.add,
         parts: gain.parts,
@@ -117193,6 +117500,11 @@ function MonsterHeroGame() {
         to: gain.to,
         xp: next.xp,
         gains
+      });
+      if (gain.to > gain.from) setBeatRankFx({
+        from: gain.from,
+        to: gain.to,
+        gains: fxGains
       });
       void syncBeatRankToServer(next);
     } catch (_) {}
@@ -119893,6 +120205,7 @@ function MonsterHeroGame() {
   const [beatRank, setBeatRank] = useState(() => normalizeBeatRank(null));
   const [beatRankAward, setBeatRankAward] = useState(null);
   const beatRankSyncedRef = useRef(false);
+  const [beatRankFx, setBeatRankFx] = useState(null);
   const rhythmPlayRunAwardRef = useRef(null);
   const rhythmPlayRunAward = rhythmPlayRunAwardState;
   const setRhythmPlayRunAward = next => {
@@ -120767,6 +121080,7 @@ function MonsterHeroGame() {
       setRhythmPlayRunAward(null);
       stopCatchUp();
       setBeatRankAward(null);
+      setBeatRankFx(null);
       return;
     }
     const startedAt = rhythmPlayStartedAtRef.current;
@@ -141702,6 +142016,12 @@ function MonsterHeroGame() {
       key: raidDamageFx.key,
       fx: raidDamageFx,
       onDone: () => setRaidDamageFx(null)
+    }), beatRankFx && gameState === 'RHYTHM_PLAY' && React.createElement(PlayerRankUpFx, {
+      kind: "beat",
+      from: beatRankFx.from,
+      to: beatRankFx.to,
+      gains: beatRankFx.gains,
+      onClose: () => setBeatRankFx(null)
     }), gameState === 'RHYTHM_PLAY' && rhythmPlay && React.createElement(RhythmTapTest, {
       key: rhythmPlay.from === 'lineAdjust' && rhythmLineAdjust ? `line-adjust-${rhythmLineAdjust.key}` : undefined,
       raidPlay: rhythmPlay.from === 'raid',
@@ -141899,7 +142219,6 @@ function MonsterHeroGame() {
           loadRhythmRanking(song);
         },
         render: onClose => React.createElement(RhythmRankingScreen, {
-          beatRankXp: beatRank.xp,
           loadRhythmEventRanking: loadRhythmEventRanking,
           loadRhythmRanking: loadRhythmRanking,
           loadRhythmTotalRanking: loadRhythmTotalRanking,
@@ -142111,7 +142430,6 @@ function MonsterHeroGame() {
       setRhythmMonsterMessage: setRhythmMonsterMessage,
       setRhythmMonsterPickerOpen: setRhythmMonsterPickerOpen
     }), gameState === 'RHYTHM_RANKING' && React.createElement(RhythmRankingScreen, {
-      beatRankXp: beatRank.xp,
       loadRhythmEventRanking: loadRhythmEventRanking,
       loadRhythmRanking: loadRhythmRanking,
       loadRhythmTotalRanking: loadRhythmTotalRanking,
