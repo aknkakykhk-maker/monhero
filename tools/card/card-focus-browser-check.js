@@ -134,7 +134,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, 'focus-attack.png') }); }
     const user = page.locator('[data-card-mon].ring-amber-300').first();
     if (await user.count()) { await user.click(); await page.waitForTimeout(150); }
-    // 集中を付ける組を選ぶ(#4196 から、押した技は1枚だけが先に選ばれる。付けないと、助手が残した緊急回避でよけられる)
+    // 集中を付ける組を選ぶ(#4196 から、押した技は1枚だけが先に選ばれる。付けないと、助手が残した緊急回避でよけられる)。組み合わせの窓(2026-10-29 案B)の行も同じ印
     const focusSet = page.locator('[data-card-set]').filter({ hasText: '集中' }).first();
     if (await focusSet.count()) { await focusSet.click(); await page.waitForTimeout(200); }
     await page.locator('[data-card-mon="1-0"]').click();
