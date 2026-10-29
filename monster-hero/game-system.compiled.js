@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f3bfd50732a393f5
+// source-sha256: 95167eec77926a2a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -71200,30 +71200,6 @@ const kindOfTacticsSlotFx = fx => {
   if (fx.guard) return 'guard';
   return null;
 };
-const CLASSIC_AI_COPY_CSS = `
-[data-ai-copy-row]{display:flex;width:100%;gap:6px;align-items:stretch}
-[data-ai-copy-row] > .grid{flex:1 1 0;min-width:0;width:auto}
-[data-ai-copy-cell]{width:62px;flex:0 0 62px;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:2px;padding:3px 3px;border-radius:12px;border:1px solid rgba(52,211,153,.6);background:rgba(2,44,34,.55);position:relative}
-[data-ai-copy-cell] [data-ai-copy-head]{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;min-width:0}
-[data-ai-copy-cell] [data-ai-copy-face]{margin-bottom:3px}
-[data-ai-copy-cell] [data-ai-copy-name]{width:100%;min-width:0;text-align:center;font-size:9px;line-height:10px;font-weight:900;color:#a7f3d0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:keep-all;overflow-wrap:anywhere}
-/* コピーが出ると4枠が細くなる(320 幅で約52px)。枠の中の札が枠からはみ出さない・字が切れないように、コピーがいるあいだだけ小さくする
-   (2026-10-29 見回り: 距離補正の札「-10.0%」が枠の外へ、ガードの札が「ガ…」に切れていた) */
-[data-ai-copy-row] [data-dist-chip]{font-size:9px;padding:1px 2px;gap:0;right:1px;max-width:calc(100% - 2px)}
-[data-ai-copy-row] [data-dist-chip] svg{display:none}
-[data-ai-copy-row] [data-tactics-slot-marks] > div{padding-left:1px;padding-right:1px}
-[data-ai-copy-row] [data-tactics-slot-marks] > div > span:first-child{display:none}
-/* 横向き(背の低い画面): 縦と同じく4枠の右に細い5列目として置く。列の下に段を足すと、そのぶん敵の段が縮んで敵の絵が見えなくなる
-   (2026-10-29 見回り 667×375)。枠の高さ(112px)に収まるよう、絵・字を小さくする */
-@media (orientation: landscape) and (max-height: 520px){
-  [data-ai-copy-cell]{width:64px;flex:0 0 64px;gap:0;padding:1px 2px;border-radius:10px}
-  [data-ai-copy-cell] [data-ai-copy-head]{gap:0}
-  [data-ai-copy-cell] [data-ai-copy-face]{margin-bottom:2px}
-  [data-ai-copy-cell] [data-ai-copy-name]{font-size:8px;line-height:9px}
-  [data-ai-copy-cell] [data-sorashido-next]{padding:1px 2px;border-radius:6px}
-  [data-ai-copy-cell] [data-sorashido-next] > b{-webkit-line-clamp:2;font-size:8px;line-height:9px}
-  [data-ai-copy-cell] [data-sorashido-next] > small{display:none}
-}`;
 const aiCopyViewPhase = (copy, fallback) => copy && ['appear', 'thinking', 'vanish'].includes(copy.fx) ? copy.fx : fallback;
 const classicAiCopyLandscape = () => {
   try {
@@ -71347,7 +71323,7 @@ function AiCopyLifeBar({
     }
   })));
 }
-function TacticsAiCopyColumn({
+function AiCopyFloat({
   copy,
   src,
   phase,
@@ -71355,71 +71331,81 @@ function TacticsAiCopyColumn({
   anim,
   skill,
   standing,
-  layout,
   onOpen,
   hatePct = null,
-  compact = false
+  lift = false
 }) {
   if (!copy) return null;
-  const land = layout === 'landscape';
   const name = tacticsAiCopyName(copy);
+  const short = classicAiCopyLandscape() || typeof window !== 'undefined' && window.innerHeight <= 640;
   const canOpen = typeof onOpen === 'function' && phase !== 'vanish';
   const next = standing ? React.createElement(SorashidoNextCardBadge, {
     card: copy.nextCard || null,
-    layout: land ? 'landscape' : 'portrait',
-    turnsLeft: copy.turnsLeft
+    layout: "landscape",
+    turnsLeft: short ? null : copy.turnsLeft
   }) : React.createElement("span", {
     className: "text-center text-[9px] font-black leading-tight text-emerald-300"
   }, "次のターンから");
   return React.createElement("div", {
-    "data-tactics-ai-copy-column": layout,
+    "data-ai-copy-float": short ? 'short' : 'tall',
     "data-ai-copy-phase": phase,
     role: canOpen ? 'button' : undefined,
     tabIndex: canOpen ? 0 : undefined,
     "aria-label": `${name}${canOpen ? '。押すと手札を見る' : ''}`,
-    onClick: canOpen ? onOpen : undefined,
+    onClick: canOpen ? e => {
+      e.stopPropagation();
+      onOpen();
+    } : undefined,
     onKeyDown: canOpen ? e => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         onOpen();
       }
     } : undefined,
-    className: `relative min-w-0 rounded-xl border border-emerald-400/60 bg-emerald-950/55 text-emerald-50 ${canOpen ? 'cursor-pointer' : ''} ${land ? 'flex h-[46px] w-full items-center gap-2 px-2' : `flex h-full w-[72px] max-[359px]:w-[60px] shrink-0 flex-col items-center justify-between ${compact ? 'gap-0 py-0.5' : 'gap-0.5 py-1'} px-1 max-[359px]:px-0.5`}`
+    className: `absolute z-[24] rounded-xl border border-emerald-400/70 bg-emerald-950/85 text-emerald-50 shadow-[0_4px_14px_rgba(0,0,0,.55)] ${canOpen ? 'cursor-pointer active:scale-[.98]' : ''} ${short ? `left-2 ${lift ? 'bottom-[46px]' : 'bottom-1'} flex w-[min(236px,calc(50%-8px))] items-center gap-1.5 px-1.5 py-1` : 'left-2 top-1/2 flex w-[124px] -translate-y-1/2 flex-col gap-0.5 px-1.5 py-1'}`
   }, skill && React.createElement("span", {
-    "data-tactics-ai-copy-skill": true,
-    className: `absolute z-[90] max-w-[140px] truncate rounded-lg border border-red-200 bg-red-700 px-2 py-0.5 text-[11px] font-black text-white shadow-[0_2px_10px_rgba(0,0,0,.7)] ${land ? 'left-1/2 -top-3 -translate-x-1/2' : 'right-1 top-1/3'}`
+    "data-ai-copy-float-skill": true,
+    className: "absolute -top-3 left-1/2 z-[30] max-w-[120px] -translate-x-1/2 truncate rounded-lg border border-red-200 bg-red-700 px-2 py-0.5 text-[11px] font-black text-white shadow-[0_2px_10px_rgba(0,0,0,.7)]"
   }, skill), React.createElement("span", {
-    className: `flex min-w-0 items-center gap-1 ${land ? 'w-[92px] shrink-0' : 'w-full flex-col'}`
+    className: `flex min-w-0 items-center gap-1 ${short ? 'w-[64px] shrink-0 flex-col' : 'w-full'}`
   }, React.createElement(AiCopyFace, {
     src: src,
-    size: land ? 20 : compact ? 18 : 22
+    size: short ? 18 : 22
   }), React.createElement("span", {
-    className: `min-w-0 overflow-hidden whitespace-nowrap font-black leading-tight text-emerald-200 [container-type:inline-size] ${land ? 'flex-1' : 'w-full text-center'}`
+    className: `min-w-0 overflow-hidden whitespace-nowrap font-black leading-tight text-emerald-200 [container-type:inline-size] ${short ? 'w-full text-center' : 'flex-1'}`
   }, React.createElement("span", {
     className: "block",
     style: {
       fontSize: `min(10px, calc(100cqw / ${[...name].length + 0.3}))`
     }
-  }, name))), React.createElement(AiCopyBody, {
+  }, name))), short ? React.createElement(AiCopyBody, {
     src: src,
     phase: phase,
     hit: hit,
     anim: anim,
-    size: land ? 40 : compact ? 32 : 46
-  }), React.createElement("span", {
-    className: `flex min-w-0 flex-col gap-0.5 ${land ? 'w-[96px] shrink-0' : 'w-full'}`
+    size: 32
+  }) : React.createElement("span", {
+    className: "flex justify-center"
+  }, React.createElement(AiCopyBody, {
+    src: src,
+    phase: phase,
+    hit: hit,
+    anim: anim,
+    size: 44
+  })), React.createElement("span", {
+    className: `flex min-w-0 flex-col gap-0.5 ${short ? 'w-[64px] shrink-0' : 'w-full'}`
   }, React.createElement(AiCopyLifeBar, {
     hp: copy.hp,
     maxHp: copy.maxHp,
-    narrow: !land
+    narrow: short
   }), React.createElement(AiCopyGutsMeter, {
     guts: copy.guts,
     maxGuts: copy.maxGuts
-  })), Number.isInteger(hatePct) && React.createElement("span", {
-    "data-tactics-ai-copy-hate": hatePct,
-    className: "shrink-0 whitespace-nowrap text-[9px] font-black tabular-nums text-rose-200"
-  }, "狙われ ", hatePct, "%"), React.createElement("span", {
-    className: land ? 'min-w-0 flex-1' : 'flex w-full min-w-0 justify-center max-[359px]:[&>*]:max-w-full max-[359px]:[&>*]:w-full'
+  }), Number.isInteger(hatePct) && React.createElement("span", {
+    "data-ai-copy-float-hate": hatePct,
+    className: "whitespace-nowrap text-[9px] font-black tabular-nums text-rose-200"
+  }, "狙われ ", hatePct, "%")), React.createElement("span", {
+    className: short ? 'min-w-0 flex-1' : 'flex w-full min-w-0 justify-center'
   }, next));
 }
 function AiCopyGutsMeter({
@@ -71446,68 +71432,6 @@ function AiCopyGutsMeter({
       width: `${pct}%`
     }
   })));
-}
-function ClassicAiCopyCell({
-  copy,
-  turnCount,
-  onOpen,
-  mon = null,
-  hitAnim = null
-}) {
-  if (!copy) return null;
-  const phase = aiCopyViewPhase(copy, isAiCopyOut(copy, turnCount) ? 'idle' : 'appear');
-  const out = phase === 'vanish' || isAiCopyOut(copy, turnCount);
-  const canOpen = typeof onOpen === 'function' && phase !== 'vanish';
-  const layout = classicAiCopyLandscape() ? 'landscape' : 'portrait';
-  const guts = Math.max(0, Math.floor(Number(copy.guts) || 0)),
-    maxGuts = Math.max(0, Math.floor(Number(copy.maxGuts) || 0));
-  return React.createElement("div", {
-    "data-ai-copy-cell": out ? 'out' : 'waiting',
-    "data-ai-copy-phase": phase,
-    "aria-label": `${tacticsAiCopyName(copy)}(5人目の味方)${canOpen ? '。押すと手札を見る' : ''}`,
-    role: canOpen ? 'button' : undefined,
-    tabIndex: canOpen ? 0 : undefined,
-    style: canOpen ? {
-      cursor: 'pointer'
-    } : undefined,
-    onClick: canOpen ? onOpen : undefined,
-    onKeyDown: canOpen ? e => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        onOpen();
-      }
-    } : undefined
-  }, React.createElement("style", null, CLASSIC_AI_COPY_CSS), React.createElement("span", {
-    "data-ai-copy-head": true
-  }, React.createElement(AiCopyFace, {
-    src: mon,
-    size: layout === 'landscape' ? 16 : 20
-  }), React.createElement("span", {
-    "data-ai-copy-name": true
-  }, copy.name || '仲間', React.createElement("wbr", null), "のコピー")), mon ? React.createElement(AiCopyBody, {
-    src: mon,
-    phase: phase,
-    hit: !!hitAnim,
-    anim: hitAnim,
-    size: layout === 'landscape' ? 24 : 40
-  }) : React.createElement(SorashidoCopyFx, {
-    phase: phase
-  }, React.createElement("img", {
-    src: SORASHIDO_FACE_ICON,
-    alt: "",
-    "aria-hidden": "true",
-    className: "h-7 w-7 rounded-full object-cover bg-black/30",
-    draggable: "false"
-  })), out ? React.createElement(React.Fragment, null, React.createElement(AiCopyGutsMeter, {
-    guts: guts,
-    maxGuts: maxGuts
-  }), React.createElement(SorashidoNextCardBadge, {
-    card: copy.nextCard || null,
-    layout: layout,
-    turnsLeft: copy.turnsLeft
-  })) : React.createElement("span", {
-    className: "text-center text-[9px] font-black leading-tight text-emerald-300"
-  }, "次のターン", React.createElement("br", null), "から"));
 }
 function BattleScreen({
   battleOverlayOpen = false,
@@ -71981,6 +71905,7 @@ function BattleScreen({
   const shownAiCopy = aiCopy || copyGhost;
   const tacticsCopyOutside = !!(Array.isArray(tacticsUnits) && shownAiCopy && (normalizeBattleScreenStyle(battleScreenStyle) !== 'TACTICS_NEW' || shownAiCopy.stacked || Array.isArray(slots) && slots.length > 0 && slots.every(Boolean)));
   const classicAiCopy = !Array.isArray(tacticsUnits) ? shownAiCopy || null : null;
+  const copyFloat = classicAiCopy || (tacticsCopyOutside ? shownAiCopy : null);
   const battleFx = normalizeBattleFxSettings(battleFxSettings);
   const fxLoad = battleFx.load;
   const fxRestEnabled = battleFx.restPause === 'ON';
@@ -72765,7 +72690,27 @@ function BattleScreen({
     className: "text-red-300"
   }), React.createElement("span", {
     className: "text-[10px] font-black leading-none text-white [@media(max-height:640px)]:sr-only"
-  }, "解析")), battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && React.createElement("button", {
+  }, "解析")), copyFloat && (() => {
+    const c = copyFloat;
+    const tactics = Array.isArray(tacticsUnits);
+    const standing = tactics ? !!aiCopy && isTacticsAiCopyStanding(aiCopy) && aiCopy.spawnTurn <= turnCount : isAiCopyOut(c, turnCount);
+    const phase = aiCopyViewPhase(c, standing ? 'idle' : 'appear');
+    const hit = !!(aiCopy && !ecoBattleView && attackAnim && (tactics ? attackAnim.aiCopy : aiCopyHitting));
+    const skill = aiCopy && slotSkill && slotSkill.aiCopy ? slotSkill.name : null;
+    const hc = tactics && standing && tacticsHateOn && Array.isArray(tacticsHate) ? tacticsTargetChancesWithCopy(tacticsUnits, tacticsHate, TACTICS_TARGET_LOW_HP_BIAS, aiCopy) : null;
+    return React.createElement(AiCopyFloat, {
+      copy: c,
+      src: aiCopySrcOf(c, slots),
+      phase: phase,
+      hit: hit,
+      anim: attackAnim,
+      skill: skill,
+      standing: standing || phase === 'vanish',
+      onOpen: aiCopy ? () => setCopyHandOpen(true) : null,
+      hatePct: hc && Number.isInteger(hc.copy) ? hc.copy : null,
+      lift: battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0)
+    });
+  })(), battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && React.createElement("button", {
     "data-soul-battle-effects-button": true,
     type: "button",
     onClick: () => setShowSoulBattleEffects(true),
@@ -72917,7 +72862,7 @@ function BattleScreen({
     className: "mh-enemy-move-hint"
   }, React.createElement("span", {
     "aria-hidden": "true"
-  }, "🏃"), React.createElement("span", null, RANGE_LABELS[enemyNextIntent.targetDist], "距離に移動しようとしている…？"))), document.body), !tacticsNewLayout && React.createElement(React.Fragment, null, slotSkill && ReactDOM.createPortal(slotSkill.aiCopy && tacticsCopyOutside ? null : React.createElement("div", {
+  }, "🏃"), React.createElement("span", null, RANGE_LABELS[enemyNextIntent.targetDist], "距離に移動しようとしている…？"))), document.body), !tacticsNewLayout && React.createElement(React.Fragment, null, slotSkill && ReactDOM.createPortal(slotSkill.aiCopy && copyFloat ? null : React.createElement("div", {
     className: "fixed -translate-x-1/2 pointer-events-none whitespace-nowrap",
     style: {
       left: `${12.5 + slotSkill.slotIndex * 25}%`,
@@ -73727,12 +73672,10 @@ function BattleScreen({
       backgroundColor: 'rgba(2,6,23,0.8)'
     }
   }, p.text))))), React.createElement("div", {
-    "data-ai-copy-row": classicAiCopy && !tacticsNewLayout ? '' : undefined,
-    "data-tactics-ai-copy-row": tacticsCopyOutside ? '' : undefined,
-    className: classicAiCopy && !tacticsNewLayout ? '' : tacticsCopyOutside ? tacticsNewLayout ? 'flex w-full items-stretch gap-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:flex-col [@media(orientation:landscape)_and_(max-height:520px)]:gap-1' : 'flex w-full items-stretch gap-1.5' : 'contents'
+    className: "contents"
   }, React.createElement("div", {
     "data-tactics-debug-layout": tacticsNewLayout ? '2x2' : undefined,
-    className: `grid ${tacticsNewLayout ? 'grid-cols-2 grid-rows-2 gap-1.5' : 'grid-cols-4 gap-2'} w-full relative ${tacticsCopyOutside ? tacticsNewLayout ? 'min-w-0 flex-1 [@media(orientation:landscape)_and_(max-height:520px)]:flex-none' : 'min-w-0 flex-1' : 'shrink-0'}${battleTutorialSpotClass('battleSlots')}`,
+    className: `grid ${tacticsNewLayout ? 'grid-cols-2 grid-rows-2 gap-1.5' : 'grid-cols-4 gap-2'} w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`,
     style: {
       height: tacticsNewLayout ? 'clamp(196px,23dvh,214px)' : 'clamp(152px,18dvh,168px)'
     }
@@ -74209,7 +74152,7 @@ function BattleScreen({
         }, "💤 +", f.revive)));
       })();
       if (!tacticsNewLayout) return slotFxEl;
-      const skillHere = slotSkill && slotSkill.slotIndex === i && !(slotSkill.aiCopy && tacticsCopyOutside) ? slotSkill : null;
+      const skillHere = slotSkill && slotSkill.slotIndex === i && !(slotSkill.aiCopy && copyFloat) ? slotSkill : null;
       const ownPopups = popups.filter(p => p.slot === i && p.side !== 'enemy').slice(skillHere || slotFxEl ? -1 : -2);
       if (!slotFxEl && !skillHere && !ownPopups.length) return null;
       return React.createElement("div", {
@@ -74589,7 +74532,7 @@ function BattleScreen({
         "data-tactics-hp": `${tacticsUnit.hp}/${tacticsUnit.maxHp}`,
         "data-tactics-guts": `${tacticsUnit.guts}/${tacticsUnit.maxGuts}`,
         "data-tactics-downed": tacticsUnit.downed ? 'true' : 'false',
-        className: `${tacticsNewLayout ? `absolute right-0 bottom-[3px] w-[60%] min-w-0 border-l flex flex-col justify-end py-px px-2 gap-0 backdrop-blur-sm${tacticsCopyOutside ? ' max-[359px]:px-1 max-[359px]:w-[66%]' : ''}` : 'shrink-0 border-t px-1'} z-20 border-white/[.06] bg-[linear-gradient(90deg,rgba(8,15,31,.86),rgba(15,23,42,.72))]${battleTutorialSpotClass('tacticsParty')}`
+        className: `${tacticsNewLayout ? `absolute right-0 bottom-[3px] w-[60%] min-w-0 border-l flex flex-col justify-end py-px px-2 gap-0 backdrop-blur-sm` : 'shrink-0 border-t px-1'} z-20 border-white/[.06] bg-[linear-gradient(90deg,rgba(8,15,31,.86),rgba(15,23,42,.72))]${battleTutorialSpotClass('tacticsParty')}`
       }, React.createElement("div", {
         className: "flex h-[10px] items-center justify-between leading-none"
       }, React.createElement("span", {
@@ -74650,41 +74593,7 @@ function BattleScreen({
     }, React.createElement("span", {
       className: "text-[10px] font-black uppercase tracking-tighter leading-none"
     }, RANGE_LABELS[i], "距離")));
-  })), classicAiCopy && !tacticsNewLayout && React.createElement(ClassicAiCopyCell, {
-    copy: classicAiCopy,
-    turnCount: turnCount,
-    onOpen: () => setCopyHandOpen(true),
-    mon: slots[classicAiCopy.srcSlot] || null,
-    hitAnim: !ecoBattleView && attackAnim && aiCopyHitting ? attackAnim : null
-  }), tacticsCopyOutside && (() => {
-    const c = shownAiCopy;
-    const standing = !!aiCopy && isTacticsAiCopyStanding(aiCopy) && aiCopy.spawnTurn <= turnCount;
-    const phase = aiCopyViewPhase(c, standing ? 'idle' : 'appear');
-    const hit = !!(aiCopy && !ecoBattleView && attackAnim && attackAnim.aiCopy);
-    const skill = aiCopy && slotSkill && slotSkill.aiCopy ? slotSkill.name : null;
-    const hc = standing && tacticsHateOn && Array.isArray(tacticsHate) ? tacticsTargetChancesWithCopy(tacticsUnits, tacticsHate, TACTICS_TARGET_LOW_HP_BIAS, aiCopy) : null;
-    const props = {
-      copy: c,
-      src: aiCopySrcOf(c, slots),
-      phase,
-      hit,
-      anim: attackAnim,
-      skill,
-      standing: standing || phase === 'vanish',
-      onOpen: aiCopy ? () => setCopyHandOpen(true) : null,
-      hatePct: hc && Number.isInteger(hc.copy) ? hc.copy : null
-    };
-    return React.createElement(React.Fragment, null, React.createElement("div", {
-      className: `flex shrink-0 ${tacticsNewLayout ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
-    }, React.createElement(TacticsAiCopyColumn, _extends({}, props, {
-      layout: "portrait",
-      compact: !tacticsNewLayout && classicAiCopyLandscape()
-    }))), tacticsNewLayout && React.createElement("div", {
-      className: "hidden shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:block"
-    }, React.createElement(TacticsAiCopyColumn, _extends({}, props, {
-      layout: "landscape"
-    }))));
-  })(), aiCopy && copyHandOpen && typeof document !== 'undefined' && ReactDOM.createPortal(React.createElement(SorashidoCopyHandSheet, {
+  })), aiCopy && copyHandOpen && typeof document !== 'undefined' && ReactDOM.createPortal(React.createElement(SorashidoCopyHandSheet, {
     open: true,
     copyName: aiCopy.name || '仲間',
     turnsLeft: aiCopy.turnsLeft,
