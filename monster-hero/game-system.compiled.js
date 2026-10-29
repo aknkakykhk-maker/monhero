@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c1491f467e7b7c01
+// source-sha256: c3f397003f70d13e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -14367,14 +14367,15 @@ const BEAT_RANK_BONUS = Object.freeze({
   multiScale: 1.5,
   dayFirst: 30
 });
-const BEAT_RANK_TICKETS_PER_RANK = 1;
-const BEAT_RANK_BEAT_POINTS = 300;
-const beatRankBeatPointsAt = rank => rank === 3 || rank === 10 || rank >= 20 && rank % 5 === 0;
-const beatRankNextBeatPointsRank = rank => {
-  let r = Math.max(1, Math.floor(Number(rank) || 1)) + 1;
-  while (!beatRankBeatPointsAt(r)) r += 1;
-  return r;
+const playerRankBeatPointsFor = rank => {
+  const r = Math.max(0, Math.floor(Number(rank) || 0));
+  return r < 2 ? 0 : r * 100 + (r % 5 === 0 ? r * 200 : 0);
 };
+const beatRankTicketsFor = rank => {
+  const r = Math.max(0, Math.floor(Number(rank) || 0));
+  return r < 2 ? 0 : 1 + (r % 5 === 0 ? r : 0);
+};
+const beatRankRewardText = rank => `ビートP ${playerRankBeatPointsFor(rank).toLocaleString()}・セッション券 ${beatRankTicketsFor(rank).toLocaleString()}枚`;
 const normalizeBeatRank = raw => {
   const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const gotRaw = Array.isArray(r.got) ? Math.max(1, ...r.got.filter(n => Number.isInteger(n))) : Number(r.got);
@@ -14471,8 +14472,8 @@ const beatRankAfter = (prev, {
   let tickets = 0,
     beatPoints = 0;
   for (let r = Math.max(cur.got + 1, 2); r <= to; r++) {
-    tickets += BEAT_RANK_TICKETS_PER_RANK;
-    if (beatRankBeatPointsAt(r)) beatPoints += BEAT_RANK_BEAT_POINTS;
+    tickets += beatRankTicketsFor(r);
+    beatPoints += playerRankBeatPointsFor(r);
   }
   return {
     next: {
@@ -41536,7 +41537,7 @@ const RhythmTapTest = ({
     }, result.fullCombo && React.createElement("span", null, "FULL COMBO"), result.allExcellent && React.createElement("span", null, "ALL EXCELLENT"), result.allMarvelous && React.createElement("span", null, "ALL MARVELOUS")), React.createElement(PlayerRankGain, {
       kind: "beat",
       award: beatRankAward,
-      next: beatRankAward ? `ランク${beatRankNextBeatPointsRank(playerRankInfo(beatRankAward.xp).rank)}で ビートP ${BEAT_RANK_BEAT_POINTS}` : ''
+      next: beatRankAward ? `ランク${playerRankInfo(beatRankAward.xp).rank + 1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank + 1)}` : ''
     }), quickRunAward && quickRunAward.loops === 0 && quickRunAward.cleared === false && React.createElement("div", {
       "data-rhythm-result-quick-run-failed": true,
       className: "my-3 rounded-2xl border border-rose-400/50 bg-rose-950/30 p-3 text-left [@container(min-width:680px)]:hidden"
@@ -53194,18 +53195,32 @@ const sbUpsertRhythmBuddyRanks = async rows => {
     clearTimeout(timer);
   }
 };
-const BEAT_RANK_TABLE = 'rhythm_beat_ranks';
-const BEAT_RANK_SELECT = 'breeder_id,user_name,icon,profile_frame,rank,xp_total,updated_at';
-const BEAT_RANK_SHOW_LIMIT = 100;
-let _beatRanksUnavailable = false;
-const beatRanksUnavailable = () => _beatRanksUnavailable;
-const beatRankMissing = (status, body) => status === 404 && /PGRST20[25]|Could not find the (table|function)|does not exist/i.test(String(body || ''));
+const PLAYER_RANK_TABLES = Object.freeze({
+  beat: {
+    table: 'rhythm_beat_ranks',
+    put: 'rhythm_beat_rank_put',
+    place: 'rhythm_beat_rank_place'
+  },
+  card: {
+    table: 'card_ranks',
+    put: 'card_rank_put',
+    place: 'card_rank_place'
+  }
+});
+const PLAYER_RANK_SELECT = 'breeder_id,user_name,icon,profile_frame,rank,xp_total,updated_at';
+const PLAYER_RANK_SHOW_LIMIT = 100;
+const _playerRanksUnavailable = {
+  beat: false,
+  card: false
+};
+const playerRanksUnavailable = kind => !!_playerRanksUnavailable[kind];
+const playerRankMissing = (status, body) => status === 404 && /PGRST20[25]|Could not find the (table|function)|does not exist/i.test(String(body || ''));
 const beatRankNewKey = () => {
   const a = globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
   const b = globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
   return `${a}${b}`.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 96);
 };
-const beatRankEntryFromRow = row => ({
+const playerRankEntryFromRow = row => ({
   breederId: typeof row.breeder_id === 'string' ? row.breeder_id : '',
   name: typeof row.user_name === 'string' && row.user_name ? row.user_name.slice(0, 40) : 'ブリーダー',
   icon: row.icon ?? null,
@@ -53213,7 +53228,7 @@ const beatRankEntryFromRow = row => ({
   rank: Math.max(1, Math.floor(Number(row.rank) || 1)),
   xp: playerRankSafeXp(row.xp_total)
 });
-const beatRankTimed = async (url, init) => {
+const playerRankTimed = async (url, init) => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
@@ -53225,38 +53240,40 @@ const beatRankTimed = async (url, init) => {
     clearTimeout(timer);
   }
 };
-const sbFetchBeatRanks = async () => {
-  if (_beatRanksUnavailable) return null;
-  const url = `${SUPABASE_URL}/rest/v1/${BEAT_RANK_TABLE}?select=${BEAT_RANK_SELECT}` + `&order=rank.desc,xp_total.desc,updated_at.asc&limit=${BEAT_RANK_SHOW_LIMIT}`;
-  const res = await beatRankTimed(url, {
+const sbFetchPlayerRanks = async kind => {
+  const t = PLAYER_RANK_TABLES[kind];
+  if (!t || _playerRanksUnavailable[kind]) return null;
+  const url = `${SUPABASE_URL}/rest/v1/${t.table}?select=${PLAYER_RANK_SELECT}` + `&order=rank.desc,xp_total.desc,updated_at.asc&limit=${PLAYER_RANK_SHOW_LIMIT}`;
+  const res = await playerRankTimed(url, {
     headers: SB_HEADERS,
     cache: 'no-store'
   });
   const body = await res.text();
   if (!res.ok) {
-    if (beatRankMissing(res.status, body)) {
-      _beatRanksUnavailable = true;
+    if (playerRankMissing(res.status, body)) {
+      _playerRanksUnavailable[kind] = true;
       return null;
     }
-    throw new Error(`rhythm_beat_ranks ${res.status}: ${body || res.statusText}`);
+    throw new Error(`${t.table} ${res.status}: ${body || res.statusText}`);
   }
   const rows = JSON.parse(body || '[]');
-  return (Array.isArray(rows) ? rows : []).map(beatRankEntryFromRow);
+  return (Array.isArray(rows) ? rows : []).map(playerRankEntryFromRow);
 };
-const sbFetchBeatRankMine = async breederId => {
-  if (_beatRanksUnavailable || typeof breederId !== 'string' || !breederId) return null;
-  const rowRes = await beatRankTimed(`${SUPABASE_URL}/rest/v1/${BEAT_RANK_TABLE}?select=${BEAT_RANK_SELECT}&breeder_id=eq.${encodeURIComponent(breederId)}`, {
+const sbFetchPlayerRankMine = async (kind, breederId) => {
+  const t = PLAYER_RANK_TABLES[kind];
+  if (!t || _playerRanksUnavailable[kind] || typeof breederId !== 'string' || !breederId) return null;
+  const rowRes = await playerRankTimed(`${SUPABASE_URL}/rest/v1/${t.table}?select=${PLAYER_RANK_SELECT}&breeder_id=eq.${encodeURIComponent(breederId)}`, {
     headers: SB_HEADERS,
     cache: 'no-store'
   });
   const rowBody = await rowRes.text();
   if (!rowRes.ok) {
-    if (beatRankMissing(rowRes.status, rowBody)) _beatRanksUnavailable = true;
+    if (playerRankMissing(rowRes.status, rowBody)) _playerRanksUnavailable[kind] = true;
     return null;
   }
   const rows = JSON.parse(rowBody || '[]');
   if (!Array.isArray(rows) || !rows[0]) return null;
-  const placeRes = await beatRankTimed(`${SUPABASE_URL}/rest/v1/rpc/rhythm_beat_rank_place`, {
+  const placeRes = await playerRankTimed(`${SUPABASE_URL}/rest/v1/rpc/${t.place}`, {
     method: 'POST',
     headers: SB_HEADERS,
     body: JSON.stringify({
@@ -53266,11 +53283,11 @@ const sbFetchBeatRankMine = async breederId => {
   const placeBody = await placeRes.text();
   const place = placeRes.ok ? Number(JSON.parse(placeBody || 'null')) : NaN;
   return {
-    ...beatRankEntryFromRow(rows[0]),
+    ...playerRankEntryFromRow(rows[0]),
     place: Number.isFinite(place) && place > 0 ? Math.floor(place) : null
   };
 };
-const sbPutBeatRank = async ({
+const sbPutPlayerRank = async (kind, {
   breederId,
   key,
   name,
@@ -53278,8 +53295,9 @@ const sbPutBeatRank = async ({
   profileFrame,
   xp
 }) => {
-  if (_beatRanksUnavailable || typeof breederId !== 'string' || !breederId || typeof key !== 'string' || !key) return null;
-  const res = await beatRankTimed(`${SUPABASE_URL}/rest/v1/rpc/rhythm_beat_rank_put`, {
+  const t = PLAYER_RANK_TABLES[kind];
+  if (!t || _playerRanksUnavailable[kind] || typeof breederId !== 'string' || !breederId || typeof key !== 'string' || !key) return null;
+  const res = await playerRankTimed(`${SUPABASE_URL}/rest/v1/rpc/${t.put}`, {
     method: 'POST',
     headers: SB_HEADERS,
     body: JSON.stringify({
@@ -53293,7 +53311,7 @@ const sbPutBeatRank = async ({
   });
   const body = await res.text();
   if (!res.ok) {
-    if (beatRankMissing(res.status, body)) _beatRanksUnavailable = true;
+    if (playerRankMissing(res.status, body)) _playerRanksUnavailable[kind] = true;
     return null;
   }
   try {
@@ -53303,6 +53321,9 @@ const sbPutBeatRank = async ({
     return null;
   }
 };
+const sbFetchBeatRanks = () => sbFetchPlayerRanks('beat');
+const sbFetchBeatRankMine = breederId => sbFetchPlayerRankMine('beat', breederId);
+const sbPutBeatRank = row => sbPutPlayerRank('beat', row);
 const SCREEN_EFFECT_SCOPES = {
   SCREEN: 'screen',
   PROGRESS: 'progress'
@@ -137850,7 +137871,29 @@ function MonsterHeroGame() {
         }
       },
       className: `min-h-[38px] rounded-xl text-[10px] font-black border-2 active:scale-95 ${rankingKind === t.k ? 'bg-indigo-600 border-indigo-300' : 'bg-slate-900 border-white/10 text-slate-400'}`
-    }, t.label))), rankingKind === 'score' && renderScoreRankingBody(BATTLE_MODE_CHALLENGE), rankingKind === 'breeder' && renderBreederRankingBody(), rankingKind === 'bond' && renderBondRankingBody()))), gameState === 'BATTLE_SYSTEM_SELECT' && (() => {
+    }, t.label))), React.createElement("div", {
+      className: "grid grid-cols-2 gap-1.5 mb-2 shrink-0"
+    }, [{
+      k: 'beatRank',
+      label: 'ビートランク'
+    }, {
+      k: 'cardRank',
+      label: 'カードランク'
+    }].map(t => React.createElement("button", {
+      key: t.k,
+      "data-player-rank-tab": t.k,
+      onClick: () => setRankingKind(t.k),
+      className: `min-h-[38px] rounded-xl text-[10px] font-black border-2 active:scale-95 ${rankingKind === t.k ? 'bg-indigo-600 border-indigo-300' : 'bg-slate-900 border-white/10 text-slate-400'}`
+    }, t.label))), rankingKind === 'score' && renderScoreRankingBody(BATTLE_MODE_CHALLENGE), rankingKind === 'breeder' && renderBreederRankingBody(), rankingKind === 'bond' && renderBondRankingBody(), (rankingKind === 'beatRank' || rankingKind === 'cardRank') && React.createElement("div", {
+      className: "min-h-0 flex-1 overflow-y-auto"
+    }, React.createElement(PlayerRankBoard, {
+      key: rankingKind,
+      kind: rankingKind === 'beatRank' ? 'beat' : 'card',
+      fetchTop: () => sbFetchPlayerRanks(rankingKind === 'beatRank' ? 'beat' : 'card'),
+      fetchMine: async () => sbFetchPlayerRankMine(rankingKind === 'beatRank' ? 'beat' : 'card', await ensureBreederId()),
+      renderIcon: rankingBreederIcon,
+      selfXp: rankingKind === 'beatRank' ? beatRank.xp : 0
+    }))))), gameState === 'BATTLE_SYSTEM_SELECT' && (() => {
       const tutorialNeedsDebugSystems = !!battleTutorial && battleSystemComingSoon(battleTutorialSystem, {
         debugBattle: false
       });

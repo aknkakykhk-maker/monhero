@@ -655,7 +655,7 @@ function MonsterHeroGame() {
   // 選ばれたまま来ても normalizeRankingDifficulty を落とさないよう、通常の難易度へ寄せる
   const rankingViewKey = rankingDifficultyKey(
     Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, rankingViewDiff) ? rankingViewDiff : BATTLE_DEFAULT_DIFFICULTY);
-  const [rankingKind, setRankingKind] = useState('score'); // 'score' | 'breeder' | 'bond'
+  const [rankingKind, setRankingKind] = useState('score'); // 'score' | 'breeder' | 'bond' | 'beatRank' | 'cardRank'(ビートランク・カードランクは 2026-10-29)
   const [bondRankMonFilter, setBondRankMonFilter] = useState('all'); // 絆レベルランキングのモンスター種別フィルタ
   // 総合力ランキングのモンスター種別フィルタ。絆Lvランキングと同じ「すべて＋種族別」の並び。
   // 元になる一覧(bond_levels の正本 ＋ rankings の編成)は絆Lvとまったく同じものを使うので、
@@ -18946,10 +18946,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   モードのタブを出さないぶん、それぞれに余裕を持たせている */}
               <div className="shrink-0 w-full mb-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"><AssistantBubble scene="ranking" compact/></div>
               <div className="grid grid-cols-3 gap-1.5 mb-2 shrink-0">{[{k:'score',label:'スコア'},{k:'breeder',label:'ブリーダーLv'},{k:'bond',label:'絆Lv'}].map(t=><button key={t.k} onClick={()=>{setRankingKind(t.k);if(t.k==='score')loadRankings(rankingViewKey);else {if(t.k==='bond')setBondRankMonFilter('all');loadRankings(null,true,false,t.k);}}} className={`min-h-[38px] rounded-xl text-[10px] font-black border-2 active:scale-95 ${rankingKind===t.k?'bg-indigo-600 border-indigo-300':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div>
+              {/* ビートランク・カードランクのタブ(2026-10-29)。5つを1行に詰めると320幅で字が切れるので、2段目に並べる */}
+              <div className="grid grid-cols-2 gap-1.5 mb-2 shrink-0">{[{k:'beatRank',label:'ビートランク'},{k:'cardRank',label:'カードランク'}].map(t=><button key={t.k} data-player-rank-tab={t.k} onClick={()=>setRankingKind(t.k)} className={`min-h-[38px] rounded-xl text-[10px] font-black border-2 active:scale-95 ${rankingKind===t.k?'bg-indigo-600 border-indigo-300':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div>
               {/* 一覧そのものは共通の描画へ寄せている。既存の「バトル」から見るスコアはチャレンジのぶん */}
               {rankingKind==='score'&&renderScoreRankingBody(BATTLE_MODE_CHALLENGE)}
               {rankingKind==='breeder'&&renderBreederRankingBody()}
               {rankingKind==='bond'&&renderBondRankingBody()}
+              {/* ビートランク・カードランク(2026-10-29 社長「ランキングは両方」)。中身は共通の PlayerRankBoard(43)。
+                  ランク順(同じなら経験値の合計順)・上位100人とあなた。表は rhythm_beat_ranks・card_ranks */}
+              {(rankingKind==='beatRank'||rankingKind==='cardRank')&&<div className="min-h-0 flex-1 overflow-y-auto">
+                <PlayerRankBoard key={rankingKind} kind={rankingKind==='beatRank'?'beat':'card'}
+                  fetchTop={()=>sbFetchPlayerRanks(rankingKind==='beatRank'?'beat':'card')}
+                  fetchMine={async()=>sbFetchPlayerRankMine(rankingKind==='beatRank'?'beat':'card',await ensureBreederId())}
+                  renderIcon={rankingBreederIcon} selfXp={rankingKind==='beatRank'?beatRank.xp:0}/>
+              </div>}
             </div>}
             </div>
           </div>

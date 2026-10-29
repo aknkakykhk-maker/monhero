@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ef3b1b6e234fbb89
+// generated-sha256: 50e35d9b1fe028d9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10115,12 +10115,21 @@ const BEAT_RANK_XP = Object.freeze({ EASY: 6, NORMAL: 8, HARD: 10, EXPERT: 14, M
 // 途中でライフが尽きた(失敗)ときは3分の1(端数は四捨五入)。フルコンボ +4、全部 MARVELOUS は +8(フルコンボの +4 と重ねない)。
 // みんなで対戦は1曲ぶん(上乗せ込み)を1.5倍(端数は四捨五入)。その日はじめての1曲は、そのあとに +30
 const BEAT_RANK_BONUS = Object.freeze({ failDivisor: 3, fullCombo: 4, allMarvelous: 8, multiScale: 1.5, dayFirst: 30 });
-// ごほうび: ランクが1つ上がるたびにセッション券1枚。加えて、ランク3・10・20、そのあと5ランクごとにビートP 300
-const BEAT_RANK_TICKETS_PER_RANK = 1;
-const BEAT_RANK_BEAT_POINTS = 300;
-const beatRankBeatPointsAt = (rank) => rank === 3 || rank === 10 || (rank >= 20 && rank % 5 === 0);
-// 次にビートPがもらえるランク(画面の「ランク15で ビートP 300」)
-const beatRankNextBeatPointsRank = (rank) => { let r = Math.max(1, Math.floor(Number(rank) || 1)) + 1; while (!beatRankBeatPointsAt(r)) r += 1; return r; };
+// ごほうび(2026-10-29 社長が作り直し。前の「ランク3・10・20、そのあと5ごとにビートP 300」はやめた)
+//   ランクが1つ上がるたび: ビートP「そのランク×100」+セッション券1枚
+//   5ランクごと(5・10・15…): さらにビートP「そのランク×200」+セッション券「そのランクと同じ枚数」
+//   例: ランク5に上がると ビートP 500+1,000・セッション券 1枚+5枚
+// 毎ランクのビートPの式はカードランクも同じ(playerRankBeatPointsFor)。券の種類はそれぞれ
+const playerRankBeatPointsFor = (rank) => {
+  const r = Math.max(0, Math.floor(Number(rank) || 0));
+  return r < 2 ? 0 : r * 100 + (r % 5 === 0 ? r * 200 : 0);
+};
+const beatRankTicketsFor = (rank) => {
+  const r = Math.max(0, Math.floor(Number(rank) || 0));
+  return r < 2 ? 0 : 1 + (r % 5 === 0 ? r : 0);
+};
+// そのランクに上がったときにもらえる物を、一目で分かる文に(「ビートP 1,300・セッション券 1枚」)
+const beatRankRewardText = (rank) => `ビートP ${playerRankBeatPointsFor(rank).toLocaleString()}・セッション券 ${beatRankTicketsFor(rank).toLocaleString()}枚`;
 
 // { v:1, xp(経験値の合計), day(その日はじめての1曲を数えた日 JST 'YYYY-MM-DD'), dayFirst(その日の +30 を数えたか),
 //   got(ごほうびを配り終えたいちばん上のランク), k(全国ランキングへ書くときの持ち主の鍵。端末で作る) }
@@ -10159,10 +10168,7 @@ const beatRankAfter = (prev, { difficultyId, cleared, fullCombo, allMarvelous, m
   const xp = playerRankSafeXp(cur.xp + add);
   const to = playerRankInfo(xp).rank;
   let tickets = 0, beatPoints = 0;
-  for (let r = Math.max(cur.got + 1, 2); r <= to; r++) {
-    tickets += BEAT_RANK_TICKETS_PER_RANK;
-    if (beatRankBeatPointsAt(r)) beatPoints += BEAT_RANK_BEAT_POINTS;
-  }
+  for (let r = Math.max(cur.got + 1, 2); r <= to; r++) { tickets += beatRankTicketsFor(r); beatPoints += playerRankBeatPointsFor(r); }
   return { next: { ...cur, xp, day: day || cur.day, dayFirst: first || (cur.day === day && cur.dayFirst), got: Math.max(cur.got, to) }, add, parts, from, to, tickets, beatPoints };
 };
 
@@ -25174,7 +25180,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 <div className="my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300">{result.fullCombo&&<span>FULL COMBO</span>}{result.allExcellent&&<span>ALL EXCELLENT</span>}{result.allMarvelous&&<span>ALL MARVELOUS</span>}</div>{/* クイック∞周回を裏で回していたときだけ。曲の長さぶんが周回クリア扱いで入る */}
 {/* ビートランク(2026-10-29 社長)。この1曲でたまった経験値と、ランクが上がったときのごほうび。横向きでも縦持ちでも、ここに1か所だけ出す。
     裏のクイック周回の「経験値」(マスモンの経験値)と取り違えないよう、札に「🎵 ビートランク」と書く(PlayerRankGain) */}
-<PlayerRankGain kind="beat" award={beatRankAward} next={beatRankAward?`ランク${beatRankNextBeatPointsRank(playerRankInfo(beatRankAward.xp).rank)}で ビートP ${BEAT_RANK_BEAT_POINTS}`:''}/>
+<PlayerRankGain kind="beat" award={beatRankAward} next={beatRankAward?`ランク${playerRankInfo(beatRankAward.xp).rank+1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank+1)}`:''}/>
 {/* 裏で∞周回していたのに失敗したとき。1周も入らないので、その理由をここで言う
     (2026-09-12・ユーザー指示「失敗しても入るようにすると放置で稼げるようになるから失敗は0にして」)。
     ★裏で周回していない人にはそもそも出ない(quickRunAwardがnullのまま) */}
@@ -33242,19 +33248,23 @@ const sbUpsertRhythmBuddyRanks = async (rows) => {
 };
 
 // ---- part: 39-beat-rank-api.jsx ----
-// ==================== ビートランク(モンヒロビート)の全国ランキングの通信層(2026-10-29) ====================
-// 表 rhythm_beat_ranks(1人1行・breeder_id)。表へは直接書かず、持ち主の鍵を確かめる関数 rhythm_beat_rank_put だけで書く
-// (ログインが無いので、みんなのデッキと同じ「持ち主の鍵」の形。鍵は mh_rhythm_rank_v1 の k に端末で作る)。
+// ==================== ビートランク・カードランクの全国ランキングの通信層(2026-10-29) ====================
+// 表は rhythm_beat_ranks(ビートランク)と card_ranks(カードランク)。どちらも1人1行・breeder_id・同じ列(マルチ部ツナグくんと決めた)。
+// 表へは直接書かず、持ち主の鍵を確かめる関数 *_rank_put だけで書く(ログインが無いので、みんなのデッキと同じ「持ち主の鍵」の形)。
+//   鍵: ビートは mh_rhythm_rank_v1 の k(端末で作る)/ カードは mh_card_deck_owner_key_v1(デッキ登録の鍵をそのまま使う)
 // 既存の rankings などには一切書かない。表や関数がまだ無い環境でも壊れない(無いと分かったら以後アクセスしない)。
-// SQL: docs/sql/rhythm-beat-rank/RHYTHM_BEAT_RANK_APPLY.sql(カードランクの card_ranks も同じ形)
-const BEAT_RANK_TABLE = 'rhythm_beat_ranks';
-const BEAT_RANK_SELECT = 'breeder_id,user_name,icon,profile_frame,rank,xp_total,updated_at';
-const BEAT_RANK_SHOW_LIMIT = 100;
+// SQL: docs/sql/rhythm-beat-rank/RHYTHM_BEAT_RANK_APPLY.sql
+const PLAYER_RANK_TABLES = Object.freeze({
+  beat: { table: 'rhythm_beat_ranks', put: 'rhythm_beat_rank_put', place: 'rhythm_beat_rank_place' },
+  card: { table: 'card_ranks', put: 'card_rank_put', place: 'card_rank_place' },
+});
+const PLAYER_RANK_SELECT = 'breeder_id,user_name,icon,profile_frame,rank,xp_total,updated_at';
+const PLAYER_RANK_SHOW_LIMIT = 100;
 
-let _beatRanksUnavailable = false;
-const beatRanksUnavailable = () => _beatRanksUnavailable;
+const _playerRanksUnavailable = { beat: false, card: false };
+const playerRanksUnavailable = (kind) => !!_playerRanksUnavailable[kind];
 // 表が無い(PGRST205)・関数が無い(PGRST202)。権限や通信の失敗と取り違えない
-const beatRankMissing = (status, body) => status === 404 && /PGRST20[25]|Could not find the (table|function)|does not exist/i.test(String(body || ''));
+const playerRankMissing = (status, body) => status === 404 && /PGRST20[25]|Could not find the (table|function)|does not exist/i.test(String(body || ''));
 
 // 端末で作る持ち主の鍵(24〜128字・英数字と _-)
 const beatRankNewKey = () => {
@@ -33263,7 +33273,7 @@ const beatRankNewKey = () => {
   return `${a}${b}`.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 96);
 };
 
-const beatRankEntryFromRow = (row) => ({
+const playerRankEntryFromRow = (row) => ({
   breederId: typeof row.breeder_id === 'string' ? row.breeder_id : '',
   name: typeof row.user_name === 'string' && row.user_name ? row.user_name.slice(0, 40) : 'ブリーダー',
   icon: row.icon ?? null,
@@ -33272,55 +33282,63 @@ const beatRankEntryFromRow = (row) => ({
   xp: playerRankSafeXp(row.xp_total),
 });
 
-const beatRankTimed = async (url, init) => {
+const playerRankTimed = async (url, init) => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try { return await fetch(url, { ...init, signal: controller.signal }); } finally { clearTimeout(timer); }
 };
 
-// 上位100人。表が無ければ null
-const sbFetchBeatRanks = async () => {
-  if (_beatRanksUnavailable) return null;
-  const url = `${SUPABASE_URL}/rest/v1/${BEAT_RANK_TABLE}?select=${BEAT_RANK_SELECT}`
-    + `&order=rank.desc,xp_total.desc,updated_at.asc&limit=${BEAT_RANK_SHOW_LIMIT}`;
-  const res = await beatRankTimed(url, { headers: SB_HEADERS, cache: 'no-store' });
+// 上位100人(ランクの高い順・同じなら経験値の合計の多い順)。表が無ければ null
+const sbFetchPlayerRanks = async (kind) => {
+  const t = PLAYER_RANK_TABLES[kind];
+  if (!t || _playerRanksUnavailable[kind]) return null;
+  const url = `${SUPABASE_URL}/rest/v1/${t.table}?select=${PLAYER_RANK_SELECT}`
+    + `&order=rank.desc,xp_total.desc,updated_at.asc&limit=${PLAYER_RANK_SHOW_LIMIT}`;
+  const res = await playerRankTimed(url, { headers: SB_HEADERS, cache: 'no-store' });
   const body = await res.text();
   if (!res.ok) {
-    if (beatRankMissing(res.status, body)) { _beatRanksUnavailable = true; return null; }
-    throw new Error(`rhythm_beat_ranks ${res.status}: ${body || res.statusText}`);
+    if (playerRankMissing(res.status, body)) { _playerRanksUnavailable[kind] = true; return null; }
+    throw new Error(`${t.table} ${res.status}: ${body || res.statusText}`);
   }
   const rows = JSON.parse(body || '[]');
-  return (Array.isArray(rows) ? rows : []).map(beatRankEntryFromRow);
+  return (Array.isArray(rows) ? rows : []).map(playerRankEntryFromRow);
 };
 
 // 自分の行と順位。行が無ければ null
-const sbFetchBeatRankMine = async (breederId) => {
-  if (_beatRanksUnavailable || typeof breederId !== 'string' || !breederId) return null;
-  const rowRes = await beatRankTimed(`${SUPABASE_URL}/rest/v1/${BEAT_RANK_TABLE}?select=${BEAT_RANK_SELECT}&breeder_id=eq.${encodeURIComponent(breederId)}`,
+const sbFetchPlayerRankMine = async (kind, breederId) => {
+  const t = PLAYER_RANK_TABLES[kind];
+  if (!t || _playerRanksUnavailable[kind] || typeof breederId !== 'string' || !breederId) return null;
+  const rowRes = await playerRankTimed(`${SUPABASE_URL}/rest/v1/${t.table}?select=${PLAYER_RANK_SELECT}&breeder_id=eq.${encodeURIComponent(breederId)}`,
     { headers: SB_HEADERS, cache: 'no-store' });
   const rowBody = await rowRes.text();
-  if (!rowRes.ok) { if (beatRankMissing(rowRes.status, rowBody)) _beatRanksUnavailable = true; return null; }
+  if (!rowRes.ok) { if (playerRankMissing(rowRes.status, rowBody)) _playerRanksUnavailable[kind] = true; return null; }
   const rows = JSON.parse(rowBody || '[]');
   if (!Array.isArray(rows) || !rows[0]) return null;
-  const placeRes = await beatRankTimed(`${SUPABASE_URL}/rest/v1/rpc/rhythm_beat_rank_place`,
+  const placeRes = await playerRankTimed(`${SUPABASE_URL}/rest/v1/rpc/${t.place}`,
     { method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_id: breederId }) });
   const placeBody = await placeRes.text();
   const place = placeRes.ok ? Number(JSON.parse(placeBody || 'null')) : NaN;
-  return { ...beatRankEntryFromRow(rows[0]), place: Number.isFinite(place) && place > 0 ? Math.floor(place) : null };
+  return { ...playerRankEntryFromRow(rows[0]), place: Number.isFinite(place) && place > 0 ? Math.floor(place) : null };
 };
 
 // 自分の行を書く。返り値: 'ok' | 'bad' | 'locked' | null(表が無い・送れなかった)
-const sbPutBeatRank = async ({ breederId, key, name, icon, profileFrame, xp }) => {
-  if (_beatRanksUnavailable || typeof breederId !== 'string' || !breederId || typeof key !== 'string' || !key) return null;
-  const res = await beatRankTimed(`${SUPABASE_URL}/rest/v1/rpc/rhythm_beat_rank_put`, {
+const sbPutPlayerRank = async (kind, { breederId, key, name, icon, profileFrame, xp }) => {
+  const t = PLAYER_RANK_TABLES[kind];
+  if (!t || _playerRanksUnavailable[kind] || typeof breederId !== 'string' || !breederId || typeof key !== 'string' || !key) return null;
+  const res = await playerRankTimed(`${SUPABASE_URL}/rest/v1/rpc/${t.put}`, {
     method: 'POST', headers: SB_HEADERS,
     body: JSON.stringify({ p_id: breederId, p_key: key, p_name: String(name || '名無しのブリーダー').slice(0, 40), p_icon: icon ?? null,
       p_frame: profileFrame ?? null, p_xp: playerRankSafeXp(xp) }),
   });
   const body = await res.text();
-  if (!res.ok) { if (beatRankMissing(res.status, body)) _beatRanksUnavailable = true; return null; }
+  if (!res.ok) { if (playerRankMissing(res.status, body)) _playerRanksUnavailable[kind] = true; return null; }
   try { const v = JSON.parse(body); return typeof v === 'string' ? v : null; } catch (_) { return null; }
 };
+
+// ビートランクの呼び名(画面はこちらを呼ぶ)
+const sbFetchBeatRanks = () => sbFetchPlayerRanks('beat');
+const sbFetchBeatRankMine = (breederId) => sbFetchPlayerRankMine('beat', breederId);
+const sbPutBeatRank = (row) => sbPutPlayerRank('beat', row);
 
 // ---- part: 40-screen-effects.jsx ----
 // ==== 画面ライフサイクル: タイマー・リスナーの登録簿(useScreenEffects) ====
@@ -68082,7 +68100,7 @@ function MonsterHeroGame() {
   // 選ばれたまま来ても normalizeRankingDifficulty を落とさないよう、通常の難易度へ寄せる
   const rankingViewKey = rankingDifficultyKey(
     Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, rankingViewDiff) ? rankingViewDiff : BATTLE_DEFAULT_DIFFICULTY);
-  const [rankingKind, setRankingKind] = useState('score'); // 'score' | 'breeder' | 'bond'
+  const [rankingKind, setRankingKind] = useState('score'); // 'score' | 'breeder' | 'bond' | 'beatRank' | 'cardRank'(ビートランク・カードランクは 2026-10-29)
   const [bondRankMonFilter, setBondRankMonFilter] = useState('all'); // 絆レベルランキングのモンスター種別フィルタ
   // 総合力ランキングのモンスター種別フィルタ。絆Lvランキングと同じ「すべて＋種族別」の並び。
   // 元になる一覧(bond_levels の正本 ＋ rankings の編成)は絆Lvとまったく同じものを使うので、
@@ -86373,10 +86391,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   モードのタブを出さないぶん、それぞれに余裕を持たせている */}
               <div className="shrink-0 w-full mb-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"><AssistantBubble scene="ranking" compact/></div>
               <div className="grid grid-cols-3 gap-1.5 mb-2 shrink-0">{[{k:'score',label:'スコア'},{k:'breeder',label:'ブリーダーLv'},{k:'bond',label:'絆Lv'}].map(t=><button key={t.k} onClick={()=>{setRankingKind(t.k);if(t.k==='score')loadRankings(rankingViewKey);else {if(t.k==='bond')setBondRankMonFilter('all');loadRankings(null,true,false,t.k);}}} className={`min-h-[38px] rounded-xl text-[10px] font-black border-2 active:scale-95 ${rankingKind===t.k?'bg-indigo-600 border-indigo-300':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div>
+              {/* ビートランク・カードランクのタブ(2026-10-29)。5つを1行に詰めると320幅で字が切れるので、2段目に並べる */}
+              <div className="grid grid-cols-2 gap-1.5 mb-2 shrink-0">{[{k:'beatRank',label:'ビートランク'},{k:'cardRank',label:'カードランク'}].map(t=><button key={t.k} data-player-rank-tab={t.k} onClick={()=>setRankingKind(t.k)} className={`min-h-[38px] rounded-xl text-[10px] font-black border-2 active:scale-95 ${rankingKind===t.k?'bg-indigo-600 border-indigo-300':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div>
               {/* 一覧そのものは共通の描画へ寄せている。既存の「バトル」から見るスコアはチャレンジのぶん */}
               {rankingKind==='score'&&renderScoreRankingBody(BATTLE_MODE_CHALLENGE)}
               {rankingKind==='breeder'&&renderBreederRankingBody()}
               {rankingKind==='bond'&&renderBondRankingBody()}
+              {/* ビートランク・カードランク(2026-10-29 社長「ランキングは両方」)。中身は共通の PlayerRankBoard(43)。
+                  ランク順(同じなら経験値の合計順)・上位100人とあなた。表は rhythm_beat_ranks・card_ranks */}
+              {(rankingKind==='beatRank'||rankingKind==='cardRank')&&<div className="min-h-0 flex-1 overflow-y-auto">
+                <PlayerRankBoard key={rankingKind} kind={rankingKind==='beatRank'?'beat':'card'}
+                  fetchTop={()=>sbFetchPlayerRanks(rankingKind==='beatRank'?'beat':'card')}
+                  fetchMine={async()=>sbFetchPlayerRankMine(rankingKind==='beatRank'?'beat':'card',await ensureBreederId())}
+                  renderIcon={rankingBreederIcon} selfXp={rankingKind==='beatRank'?beatRank.xp:0}/>
+              </div>}
             </div>}
             </div>
           </div>

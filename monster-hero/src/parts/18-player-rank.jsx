@@ -23,12 +23,21 @@ const BEAT_RANK_XP = Object.freeze({ EASY: 6, NORMAL: 8, HARD: 10, EXPERT: 14, M
 // 途中でライフが尽きた(失敗)ときは3分の1(端数は四捨五入)。フルコンボ +4、全部 MARVELOUS は +8(フルコンボの +4 と重ねない)。
 // みんなで対戦は1曲ぶん(上乗せ込み)を1.5倍(端数は四捨五入)。その日はじめての1曲は、そのあとに +30
 const BEAT_RANK_BONUS = Object.freeze({ failDivisor: 3, fullCombo: 4, allMarvelous: 8, multiScale: 1.5, dayFirst: 30 });
-// ごほうび: ランクが1つ上がるたびにセッション券1枚。加えて、ランク3・10・20、そのあと5ランクごとにビートP 300
-const BEAT_RANK_TICKETS_PER_RANK = 1;
-const BEAT_RANK_BEAT_POINTS = 300;
-const beatRankBeatPointsAt = (rank) => rank === 3 || rank === 10 || (rank >= 20 && rank % 5 === 0);
-// 次にビートPがもらえるランク(画面の「ランク15で ビートP 300」)
-const beatRankNextBeatPointsRank = (rank) => { let r = Math.max(1, Math.floor(Number(rank) || 1)) + 1; while (!beatRankBeatPointsAt(r)) r += 1; return r; };
+// ごほうび(2026-10-29 社長が作り直し。前の「ランク3・10・20、そのあと5ごとにビートP 300」はやめた)
+//   ランクが1つ上がるたび: ビートP「そのランク×100」+セッション券1枚
+//   5ランクごと(5・10・15…): さらにビートP「そのランク×200」+セッション券「そのランクと同じ枚数」
+//   例: ランク5に上がると ビートP 500+1,000・セッション券 1枚+5枚
+// 毎ランクのビートPの式はカードランクも同じ(playerRankBeatPointsFor)。券の種類はそれぞれ
+const playerRankBeatPointsFor = (rank) => {
+  const r = Math.max(0, Math.floor(Number(rank) || 0));
+  return r < 2 ? 0 : r * 100 + (r % 5 === 0 ? r * 200 : 0);
+};
+const beatRankTicketsFor = (rank) => {
+  const r = Math.max(0, Math.floor(Number(rank) || 0));
+  return r < 2 ? 0 : 1 + (r % 5 === 0 ? r : 0);
+};
+// そのランクに上がったときにもらえる物を、一目で分かる文に(「ビートP 1,300・セッション券 1枚」)
+const beatRankRewardText = (rank) => `ビートP ${playerRankBeatPointsFor(rank).toLocaleString()}・セッション券 ${beatRankTicketsFor(rank).toLocaleString()}枚`;
 
 // { v:1, xp(経験値の合計), day(その日はじめての1曲を数えた日 JST 'YYYY-MM-DD'), dayFirst(その日の +30 を数えたか),
 //   got(ごほうびを配り終えたいちばん上のランク), k(全国ランキングへ書くときの持ち主の鍵。端末で作る) }
@@ -67,9 +76,6 @@ const beatRankAfter = (prev, { difficultyId, cleared, fullCombo, allMarvelous, m
   const xp = playerRankSafeXp(cur.xp + add);
   const to = playerRankInfo(xp).rank;
   let tickets = 0, beatPoints = 0;
-  for (let r = Math.max(cur.got + 1, 2); r <= to; r++) {
-    tickets += BEAT_RANK_TICKETS_PER_RANK;
-    if (beatRankBeatPointsAt(r)) beatPoints += BEAT_RANK_BEAT_POINTS;
-  }
+  for (let r = Math.max(cur.got + 1, 2); r <= to; r++) { tickets += beatRankTicketsFor(r); beatPoints += playerRankBeatPointsFor(r); }
   return { next: { ...cur, xp, day: day || cur.day, dayFirst: first || (cur.day === day && cur.dayFirst), got: Math.max(cur.got, to) }, add, parts, from, to, tickets, beatPoints };
 };

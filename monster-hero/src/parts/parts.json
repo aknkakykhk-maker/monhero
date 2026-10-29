@@ -183,7 +183,7 @@
     },
     {
       "file": "39-beat-rank-api.jsx",
-      "role": "ビートランクの全国ランキングの通信層(rhythm_beat_ranks・持ち主の鍵で書く rhythm_beat_rank_put)"
+      "role": "ビートランク・カードランクの全国ランキングの通信層(rhythm_beat_ranks・card_ranks。持ち主の鍵で書く *_rank_put)"
     },
     {
       "file": "40-screen-effects.jsx",
