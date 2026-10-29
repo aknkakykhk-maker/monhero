@@ -142,7 +142,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
   };
   const chip = (on) => `shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
   const footer = (
-    <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2 ${land ? 'mt-auto' : ''}`}>
+    <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2 ${land ? 'shrink-0' : ''}`}>
       <button type="button" data-card-deck-save className={`mh-button mh-button-primary ${land ? 'min-h-[44px]' : 'min-h-[52px]'} rounded-2xl font-black active:scale-[.98]`} onClick={() => { Audio_.fgSe.tap(); onSave({ ...deck, name: (deck.name || '').trim() || 'デッキ' }); }}>保存する</button>
       <button type="button" className={`mh-button mh-button-secondary ${land ? 'min-h-[44px]' : 'min-h-[52px]'} rounded-2xl border border-white/20 bg-slate-800 font-black active:scale-[.98]`} onClick={() => (changed ? setLeave(true) : onCancel())}>やめる</button>
     </div>
@@ -160,7 +160,9 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
       <ScreenHead title="デッキを組む" accent="text-amber-200" onBack={() => (changed ? setLeave(true) : onCancel())}/>
       {/* 横の画面は左右に分ける: 左に名前・モンスター・枚数・絞り込み・保存、右を全部カードの一覧にする */}
       <div className="flex min-h-0 flex-1 flex-col landscape:flex-row landscape:gap-2">
-        <div className="flex shrink-0 flex-col landscape:min-h-0 landscape:w-[36%] landscape:max-w-[340px] landscape:overflow-y-auto">
+        <div className="flex shrink-0 flex-col landscape:min-h-0 landscape:w-[36%] landscape:max-w-[340px]">
+          {/* 横の画面は、名前〜絞り込みだけを動かし(スクロール)、「保存する」「やめる」は列の下に止めておく(667×375 で保存が画面の外に出ていた。2026-10-29 見回り) */}
+          <div className="contents landscape:flex landscape:min-h-0 landscape:flex-1 landscape:flex-col landscape:overflow-y-auto">
           <div className={`${SCREEN_PANEL_FLAT_CLASS} shrink-0 space-y-1.5`}>
             <input data-card-deck-name value={deck.name} maxLength={20} onChange={(e) => setDeck((d) => ({ ...d, name: e.target.value }))} className="w-full rounded-lg border border-white/20 bg-slate-950 px-2 py-1.5 text-[14px] font-black text-white landscape:py-1 landscape:text-[13px]" aria-label="デッキの名前"/>
             <div className="flex items-end gap-1.5">
@@ -188,6 +190,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
             {canAsk && <button type="button" data-card-deck-ask onClick={() => { void consult(); }} className={chip(false)}>💬 {advisor.name}に相談</button>}
             <button type="button" data-card-deck-usable onClick={() => setUsableOnly((v) => !v)} className={chip(usableOnly)}>{usableOnly ? '✓ ' : ''}使える子だけ</button>
             <button type="button" data-card-deck-sort={sort} onClick={() => setSort((s) => CARD_DECK_SORTS[(CARD_DECK_SORTS.findIndex((x) => x.id === s) + 1) % CARD_DECK_SORTS.length].id)} className={chip(false)}>並び: {sortLabel} ▾</button>
+          </div>
           </div>
           {land && footer}
         </div>
@@ -309,6 +312,17 @@ const cardDexListOf = (db, mode, tab, all = cardDexAll(db)) => {
   if (mode === 'kind') return all.filter((no) => (tab === 'mon' ? !!cardMonsterOf(db, no) : !cardMonsterOf(db, no) && !!cardOf(db, no) && cardDeckFilterOk(cardOf(db, no), tab)));
   return cardDexList(db, tab);
 };
+// カードの番号 → 入っている弾(いちばん早い弾。どの弾にも入らない混血は 'hybrid')。
+//   血統別・種類別で「どの弾に入っているか」を見出しで出す・詳しい画面にも出す(2026-10-29 社長「血統別とかにしたときに、どの弾に入っているかを見れるように」・案B)
+const cardDexPackMap = (db) => {
+  const out = {};
+  CARD_PACKS.forEach((p) => { const a = cardPackAllCards(db, p); [...a.monsters, ...a.cards].forEach((no) => { if (!out[no]) out[no] = String(p.no); }); });
+  Object.values(db.monsters).forEach((m) => { if (String(m.wave) === 'hybrid' && !out[m.no]) out[m.no] = 'hybrid'; });
+  return out;
+};
+const cardDexPackLabel = (k) => (k === 'hybrid' ? '混血(パックには入らない)' : k ? `第${k}弾パック` : 'そのほか');
+// 見出しの色(弾ごと。混血・そのほかは灰)
+const CARD_DEX_PACK_TONE = Object.freeze({ 1: 'bg-amber-600', 2: 'bg-emerald-600', 3: 'bg-blue-600', 4: 'bg-purple-600', 5: 'bg-pink-600', 6: 'bg-red-600', 7: 'bg-teal-600', 8: 'bg-yellow-600' });
 const CARD_DEX_UNIT = Object.freeze({ pack: 'このパック', species: 'この血統', kind: 'この種類' });
 const CardDex = ({ db, collection, onBack }) => {
   const [mode, setMode] = useState('pack');
@@ -318,6 +332,7 @@ const CardDex = ({ db, collection, onBack }) => {
   const press = useCardLongPress((no) => setDetail(no));
   const col = collection || {};
   const all = useMemo(() => cardDexAll(db), [db]);
+  const packMap = useMemo(() => cardDexPackMap(db), [db]);
   const tabList = useMemo(() => cardDexTabsOf(db, mode).map((t) => ({ ...t, list: cardDexListOf(db, mode, t.id, all) })), [db, mode, all]);
   const tab = tabs[mode];
   const curTab = tabList.find((t) => t.id === tab) || tabList[0] || { list: [] };
@@ -340,14 +355,14 @@ const CardDex = ({ db, collection, onBack }) => {
   return (
     <div data-mh-screen data-card-dex className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="カード図鑑" accent="text-amber-200" onBack={onBack}/>
-      <div className={`${SCREEN_PANEL_FLAT_CLASS} mb-2 shrink-0 text-[12px] font-bold text-slate-300`}>
+      <div className="mb-1.5 shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-[12px] font-bold text-slate-300">
         集めた種類 <b data-card-dex-total className="text-[15px] text-amber-200">{haveIn(all)}</b> / {all.length}
         <span data-card-dex-part className="ml-2 text-slate-400">({unit} {haveIn(list)} / {list.length})</span>
       </div>
       <ScreenTabs value={mode} onChange={(m) => { setMode(m); }} items={CARD_DEX_MODES.map((t) => ({ id: t.id, label: t.label }))}/>
       {/* 見かたの中の札は1列で横に流す(横の画面でも折り返さない。血統別の24個を折り返すと左の列からはみ出し、下の「全部・持っている・まだ」が画面の外に出た)。札ごとに集めた数を出す
           ★mh-scroll を付けない。横画面では「mh-scroll の付いた子」を右の列いっぱいの一覧として置くので、札が一覧に重なって押せなくなった(2026-10-26 見回り) */}
-      <div key={mode} ref={tabRow} data-card-dex-tabs={mode} className="relative mb-1 flex shrink-0 gap-1 overflow-x-auto pb-1">
+      <div key={mode} ref={tabRow} data-card-dex-tabs={mode} className="relative mb-1 flex shrink-0 gap-1 overflow-x-auto pb-1 pr-6" style={{ WebkitMaskImage: 'linear-gradient(90deg,#000 85%,transparent)', maskImage: 'linear-gradient(90deg,#000 85%,transparent)' }}>
         {tabList.map((t) => (
           <button key={t.id} type="button" data-card-dex-tab={t.id} aria-pressed={t.id === tab} onClick={() => setTabs((v) => ({ ...v, [mode]: t.id }))} className={chip(t.id === tab)}>
             {t.label}<span className={`ml-1 text-[10px] ${t.id === tab ? 'text-slate-800' : 'text-slate-500'}`}>{haveIn(t.list)}/{t.list.length}</span>
@@ -359,26 +374,45 @@ const CardDex = ({ db, collection, onBack }) => {
       </div>
       <div className={`${SCREEN_LIST_CLASS} pb-2`}>
         {shown.length ? (
-          <div className="grid grid-cols-4 gap-1.5">
-            {shown.map((no) => {
+          <div className="space-y-2">
+            {/* 血統別・種類別は、弾ごとの見出し(「第2弾パック 8/16」)でまとめる。パック別は弾がひとつなので見出しを出さない(2026-10-29 社長・案B) */}
+            {(() => {
+              const keyOf = (no) => packMap[no] || '';
+              const order = (k) => (k === 'hybrid' ? 900 : k ? Number(k) : 999);
+              const keys = mode === 'pack' ? [''] : [...new Set(shown.map(keyOf))].sort((a, b) => order(a) - order(b));
+              return keys.map((k) => {
+                const part = mode === 'pack' ? shown : shown.filter((no) => keyOf(no) === k);
+                const inTab = mode === 'pack' ? list : list.filter((no) => keyOf(no) === k);
+                return (
+                  <section key={k || 'all'} data-card-dex-group={k || undefined}>
+                    {mode !== 'pack' && <div data-card-dex-head={k} className={`mb-1 flex items-center rounded-lg px-2 py-0.5 text-[12px] font-black text-white ${CARD_DEX_PACK_TONE[k] || 'bg-slate-600'}`}>{cardDexPackLabel(k)}<span className="ml-auto text-[11px]">{haveIn(inTab)}/{inTab.length}</span></div>}
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {part.map((no) => {
               const c = cardOf(db, no); const m = c ? null : cardMonsterOf(db, no);
               const have = col[no] || 0;
-              const name = c ? c.name : m ? `${m.name}${m.variant ? `(${m.variant})` : ''}` : no;
+              const name = c ? c.name : m ? m.name : no; // キラ・別絵キラは札で出す(名前が2〜3行になっていた)
+              const rare = m && m.variant ? (/別絵/.test(m.variant) ? '★別絵キラ' : /キラ/.test(m.variant) ? '★キラ' : m.variant) : '';
               return (
-                <button key={no} type="button" data-card-dex-tile={no} data-card-dex-have={have} {...press(no, () => setDetail(no))} className="relative flex flex-col items-center rounded-lg bg-white/5 p-0.5 text-center active:scale-95" style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
-                  <img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} loading="lazy" draggable={false} className={`aspect-[5/7] w-full rounded-[5px] object-cover ${have ? '' : 'opacity-30 grayscale'}`}/>
-                  {have > 0 && <span className="absolute right-0.5 top-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-white">×{have}</span>}
+                <button key={no} type="button" data-card-dex-tile={no} data-card-dex-have={have} {...press(no, () => setDetail(no))} className={`relative flex flex-col items-center rounded-lg bg-white/5 p-0.5 text-center active:scale-95 ${rare && /キラ/.test(rare) ? 'ring-2 ring-amber-300' : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
+                  <img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} loading="lazy" draggable={false} className={`aspect-[5/7] w-full rounded-[5px] object-cover ${have ? '' : 'brightness-[.45] saturate-[.6]'}`}/>
+                  {/* 持っている枚数(緑)/ まだ(灰)。どのカードにも出す */}
+                  <span data-card-dex-count={have} className={`absolute right-0.5 top-0.5 rounded-md px-1 text-[10px] font-black ${have > 0 ? 'bg-emerald-400 text-emerald-950' : 'bg-slate-700 text-slate-200'}`}>{have > 0 ? `×${have}` : 'まだ'}</span>
                   {c && !c.ready && <span className="absolute left-0.5 top-0.5 rounded-md bg-slate-600 px-1 text-[9px] font-black text-white">準備中</span>}
-                  {m && m.variant && <span className="absolute left-0.5 top-0.5 rounded-md bg-amber-400 px-1 text-[9px] font-black text-slate-950">{/キラ/.test(m.variant) ? 'キラ' : '別'}</span>}
+                  {rare && <span data-card-dex-rare className="absolute left-0.5 top-0.5 rounded-md bg-amber-400 px-1 text-[9px] font-black text-slate-950">{rare}</span>}
                   <CardNameFit name={name} className={`mt-0.5 font-bold leading-tight ${have ? 'text-slate-100' : 'text-slate-500'}`}/>
                   <span className="text-[9px] font-bold text-slate-500">No.{no}</span>
                 </button>
               );
-            })}
+                      })}
+                    </div>
+                  </section>
+                );
+              });
+            })()}
           </div>
         ) : <ScreenEmpty emoji="🃏" lines={[show === 'have' ? `${unit}のカードはまだ持っていません` : `${unit}は全部集まっています`]}/>}
       </div>
-      {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
+      {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)} dexInfo={{ pack: cardDexPackLabel(packMap[detail]), have: col[detail] || 0 }}/>}
     </div>
   );
 };
@@ -821,8 +855,8 @@ const CardGachaPanel = ({ gacha = 0, catalogs = 0, busy, onExchange, onOpenCatal
         <span className="shrink-0 pl-1 tabular-nums text-amber-100">次の1冊まで {prog} / {CARD_CATALOG_COST}</span>
       </div>
       <div className="mt-2 grid grid-cols-2 gap-1.5">
-        <button type="button" data-card-gacha-exchange disabled={busy || g < CARD_CATALOG_COST} onClick={onExchange} className="mh-button min-h-[42px] rounded-xl bg-amber-500 px-1 text-[12px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40">カタログと交換({CARD_CATALOG_COST})</button>
-        <button type="button" data-card-gacha-catalog disabled={busy || catalogs < 1} onClick={onOpenCatalog} className="mh-button min-h-[42px] rounded-xl bg-sky-400 px-1 text-[12px] font-black text-slate-950 active:scale-[.98] disabled:opacity-40">📖 カタログを使う({catalogs}冊)</button>
+        <button type="button" data-card-gacha-exchange disabled={busy || g < CARD_CATALOG_COST} onClick={onExchange} className="mh-button min-h-[42px] rounded-xl bg-amber-500 px-1 text-[12px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40"><span className="inline-block whitespace-nowrap">カタログと交換</span><span className="inline-block whitespace-nowrap">({CARD_CATALOG_COST})</span></button>
+        <button type="button" data-card-gacha-catalog disabled={busy || catalogs < 1} onClick={onOpenCatalog} className="mh-button min-h-[42px] rounded-xl bg-sky-400 px-1 text-[12px] font-black text-slate-950 active:scale-[.98] disabled:opacity-40"><span className="inline-block whitespace-nowrap">📖 カタログを使う</span><span className="inline-block whitespace-nowrap">({catalogs}冊)</span></button>
       </div>
     </div>
   );

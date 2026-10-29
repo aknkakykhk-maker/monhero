@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0baca0e6516c99f8
+// source-sha256: 8175c5682cd03942
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -95665,8 +95665,17 @@ const CardDetailModal = ({
   no,
   onClose,
   status = null,
-  statusName = ''
+  statusName = '',
+  dexInfo = null
 }) => {
+  const dexLine = dexInfo ? React.createElement("div", {
+    "data-card-detail-dex": true,
+    className: "mt-1.5 flex flex-wrap gap-1.5 text-[12px] font-bold"
+  }, React.createElement("span", {
+    className: "rounded-md bg-violet-900 px-2 py-0.5"
+  }, dexInfo.pack), React.createElement("span", {
+    className: `rounded-md px-2 py-0.5 ${dexInfo.have > 0 ? 'bg-emerald-900' : 'bg-slate-700'}`
+  }, dexInfo.have > 0 ? `持っている${dexInfo.have}枚` : 'まだ持っていない')) : null;
   const c = cardOf(db, no);
   const m = c ? null : cardMonsterOf(db, no);
   return React.createElement("div", {
@@ -95699,7 +95708,7 @@ const CardDetailModal = ({
     className: "rounded-md bg-slate-700 px-2 py-0.5"
   }, cardUserLabel(db, c)), React.createElement("span", {
     className: "rounded-md bg-slate-800 px-2 py-0.5 text-slate-400"
-  }, "No.", c.no)), c.text && React.createElement("p", {
+  }, "No.", c.no)), dexLine, c.text && React.createElement("p", {
     className: "mt-2 text-[14px] font-bold leading-relaxed"
   }, c.text), c.note && React.createElement("p", {
     "data-card-detail-note": true,
@@ -95720,7 +95729,7 @@ const CardDetailModal = ({
     className: "rounded-md bg-sky-900 px-2 py-0.5"
   }, CARD_TYPE_LABEL[m.type]), React.createElement("span", {
     className: "rounded-md bg-slate-800 px-2 py-0.5 text-slate-400"
-  }, "No.", m.no)), m.dexOnly && React.createElement("p", {
+  }, "No.", m.no)), dexLine, m.dexOnly && React.createElement("p", {
     "data-card-dex-only": true,
     className: "mt-2 text-[12px] font-bold text-amber-300",
     style: JA_LABEL_STYLE
@@ -101782,7 +101791,7 @@ const CardDeckEditor = ({
   };
   const chip = on => `shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
   const footer = React.createElement("div", {
-    className: `${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2 ${land ? 'mt-auto' : ''}`
+    className: `${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2 ${land ? 'shrink-0' : ''}`
   }, React.createElement("button", {
     type: "button",
     "data-card-deck-save": true,
@@ -101831,7 +101840,9 @@ const CardDeckEditor = ({
   }), React.createElement("div", {
     className: "flex min-h-0 flex-1 flex-col landscape:flex-row landscape:gap-2"
   }, React.createElement("div", {
-    className: "flex shrink-0 flex-col landscape:min-h-0 landscape:w-[36%] landscape:max-w-[340px] landscape:overflow-y-auto"
+    className: "flex shrink-0 flex-col landscape:min-h-0 landscape:w-[36%] landscape:max-w-[340px]"
+  }, React.createElement("div", {
+    className: "contents landscape:flex landscape:min-h-0 landscape:flex-1 landscape:flex-col landscape:overflow-y-auto"
   }, React.createElement("div", {
     className: `${SCREEN_PANEL_FLAT_CLASS} shrink-0 space-y-1.5`
   }, React.createElement("input", {
@@ -101939,7 +101950,7 @@ const CardDeckEditor = ({
     "data-card-deck-sort": sort,
     onClick: () => setSort(s => CARD_DECK_SORTS[(CARD_DECK_SORTS.findIndex(x => x.id === s) + 1) % CARD_DECK_SORTS.length].id),
     className: chip(false)
-  }, "並び: ", sortLabel, " ▾")), land && footer), React.createElement("div", {
+  }, "並び: ", sortLabel, " ▾"))), land && footer), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} pb-2 landscape:flex-1`
   }, view === 'mon' && React.createElement("p", {
     className: "mb-1 text-[11px] font-bold text-slate-400",
@@ -102200,6 +102211,30 @@ const cardDexListOf = (db, mode, tab, all = cardDexAll(db)) => {
   if (mode === 'kind') return all.filter(no => tab === 'mon' ? !!cardMonsterOf(db, no) : !cardMonsterOf(db, no) && !!cardOf(db, no) && cardDeckFilterOk(cardOf(db, no), tab));
   return cardDexList(db, tab);
 };
+const cardDexPackMap = db => {
+  const out = {};
+  CARD_PACKS.forEach(p => {
+    const a = cardPackAllCards(db, p);
+    [...a.monsters, ...a.cards].forEach(no => {
+      if (!out[no]) out[no] = String(p.no);
+    });
+  });
+  Object.values(db.monsters).forEach(m => {
+    if (String(m.wave) === 'hybrid' && !out[m.no]) out[m.no] = 'hybrid';
+  });
+  return out;
+};
+const cardDexPackLabel = k => k === 'hybrid' ? '混血(パックには入らない)' : k ? `第${k}弾パック` : 'そのほか';
+const CARD_DEX_PACK_TONE = Object.freeze({
+  1: 'bg-amber-600',
+  2: 'bg-emerald-600',
+  3: 'bg-blue-600',
+  4: 'bg-purple-600',
+  5: 'bg-pink-600',
+  6: 'bg-red-600',
+  7: 'bg-teal-600',
+  8: 'bg-yellow-600'
+});
 const CARD_DEX_UNIT = Object.freeze({
   pack: 'このパック',
   species: 'この血統',
@@ -102221,6 +102256,7 @@ const CardDex = ({
   const press = useCardLongPress(no => setDetail(no));
   const col = collection || {};
   const all = useMemo(() => cardDexAll(db), [db]);
+  const packMap = useMemo(() => cardDexPackMap(db), [db]);
   const tabList = useMemo(() => cardDexTabsOf(db, mode).map(t => ({
     ...t,
     list: cardDexListOf(db, mode, t.id, all)
@@ -102252,7 +102288,7 @@ const CardDex = ({
     accent: "text-amber-200",
     onBack: onBack
   }), React.createElement("div", {
-    className: `${SCREEN_PANEL_FLAT_CLASS} mb-2 shrink-0 text-[12px] font-bold text-slate-300`
+    className: "mb-1.5 shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-[12px] font-bold text-slate-300"
   }, "集めた種類 ", React.createElement("b", {
     "data-card-dex-total": true,
     className: "text-[15px] text-amber-200"
@@ -102272,7 +102308,11 @@ const CardDex = ({
     key: mode,
     ref: tabRow,
     "data-card-dex-tabs": mode,
-    className: "relative mb-1 flex shrink-0 gap-1 overflow-x-auto pb-1"
+    className: "relative mb-1 flex shrink-0 gap-1 overflow-x-auto pb-1 pr-6",
+    style: {
+      WebkitMaskImage: 'linear-gradient(90deg,#000 85%,transparent)',
+      maskImage: 'linear-gradient(90deg,#000 85%,transparent)'
+    }
   }, tabList.map(t => React.createElement("button", {
     key: t.id,
     type: "button",
@@ -102296,48 +102336,74 @@ const CardDex = ({
   }, label))), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} pb-2`
   }, shown.length ? React.createElement("div", {
-    className: "grid grid-cols-4 gap-1.5"
-  }, shown.map(no => {
-    const c = cardOf(db, no);
-    const m = c ? null : cardMonsterOf(db, no);
-    const have = col[no] || 0;
-    const name = c ? c.name : m ? `${m.name}${m.variant ? `(${m.variant})` : ''}` : no;
-    return React.createElement("button", _extends({
-      key: no,
-      type: "button",
-      "data-card-dex-tile": no,
-      "data-card-dex-have": have
-    }, press(no, () => setDetail(no)), {
-      className: "relative flex flex-col items-center rounded-lg bg-white/5 p-0.5 text-center active:scale-95",
-      style: {
-        WebkitUserSelect: 'none',
-        userSelect: 'none'
-      }
-    }), React.createElement("img", {
-      src: CARD_IMG(c ? c.img : m ? m.img : no),
-      alt: name,
-      loading: "lazy",
-      draggable: false,
-      className: `aspect-[5/7] w-full rounded-[5px] object-cover ${have ? '' : 'opacity-30 grayscale'}`
-    }), have > 0 && React.createElement("span", {
-      className: "absolute right-0.5 top-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-white"
-    }, "×", have), c && !c.ready && React.createElement("span", {
-      className: "absolute left-0.5 top-0.5 rounded-md bg-slate-600 px-1 text-[9px] font-black text-white"
-    }, "準備中"), m && m.variant && React.createElement("span", {
-      className: "absolute left-0.5 top-0.5 rounded-md bg-amber-400 px-1 text-[9px] font-black text-slate-950"
-    }, /キラ/.test(m.variant) ? 'キラ' : '別'), React.createElement(CardNameFit, {
-      name: name,
-      className: `mt-0.5 font-bold leading-tight ${have ? 'text-slate-100' : 'text-slate-500'}`
-    }), React.createElement("span", {
-      className: "text-[9px] font-bold text-slate-500"
-    }, "No.", no));
-  })) : React.createElement(ScreenEmpty, {
+    className: "space-y-2"
+  }, (() => {
+    const keyOf = no => packMap[no] || '';
+    const order = k => k === 'hybrid' ? 900 : k ? Number(k) : 999;
+    const keys = mode === 'pack' ? [''] : [...new Set(shown.map(keyOf))].sort((a, b) => order(a) - order(b));
+    return keys.map(k => {
+      const part = mode === 'pack' ? shown : shown.filter(no => keyOf(no) === k);
+      const inTab = mode === 'pack' ? list : list.filter(no => keyOf(no) === k);
+      return React.createElement("section", {
+        key: k || 'all',
+        "data-card-dex-group": k || undefined
+      }, mode !== 'pack' && React.createElement("div", {
+        "data-card-dex-head": k,
+        className: `mb-1 flex items-center rounded-lg px-2 py-0.5 text-[12px] font-black text-white ${CARD_DEX_PACK_TONE[k] || 'bg-slate-600'}`
+      }, cardDexPackLabel(k), React.createElement("span", {
+        className: "ml-auto text-[11px]"
+      }, haveIn(inTab), "/", inTab.length)), React.createElement("div", {
+        className: "grid grid-cols-4 gap-1.5"
+      }, part.map(no => {
+        const c = cardOf(db, no);
+        const m = c ? null : cardMonsterOf(db, no);
+        const have = col[no] || 0;
+        const name = c ? c.name : m ? m.name : no;
+        const rare = m && m.variant ? /別絵/.test(m.variant) ? '★別絵キラ' : /キラ/.test(m.variant) ? '★キラ' : m.variant : '';
+        return React.createElement("button", _extends({
+          key: no,
+          type: "button",
+          "data-card-dex-tile": no,
+          "data-card-dex-have": have
+        }, press(no, () => setDetail(no)), {
+          className: `relative flex flex-col items-center rounded-lg bg-white/5 p-0.5 text-center active:scale-95 ${rare && /キラ/.test(rare) ? 'ring-2 ring-amber-300' : ''}`,
+          style: {
+            WebkitUserSelect: 'none',
+            userSelect: 'none'
+          }
+        }), React.createElement("img", {
+          src: CARD_IMG(c ? c.img : m ? m.img : no),
+          alt: name,
+          loading: "lazy",
+          draggable: false,
+          className: `aspect-[5/7] w-full rounded-[5px] object-cover ${have ? '' : 'brightness-[.45] saturate-[.6]'}`
+        }), React.createElement("span", {
+          "data-card-dex-count": have,
+          className: `absolute right-0.5 top-0.5 rounded-md px-1 text-[10px] font-black ${have > 0 ? 'bg-emerald-400 text-emerald-950' : 'bg-slate-700 text-slate-200'}`
+        }, have > 0 ? `×${have}` : 'まだ'), c && !c.ready && React.createElement("span", {
+          className: "absolute left-0.5 top-0.5 rounded-md bg-slate-600 px-1 text-[9px] font-black text-white"
+        }, "準備中"), rare && React.createElement("span", {
+          "data-card-dex-rare": true,
+          className: "absolute left-0.5 top-0.5 rounded-md bg-amber-400 px-1 text-[9px] font-black text-slate-950"
+        }, rare), React.createElement(CardNameFit, {
+          name: name,
+          className: `mt-0.5 font-bold leading-tight ${have ? 'text-slate-100' : 'text-slate-500'}`
+        }), React.createElement("span", {
+          className: "text-[9px] font-bold text-slate-500"
+        }, "No.", no));
+      })));
+    });
+  })()) : React.createElement(ScreenEmpty, {
     emoji: "🃏",
     lines: [show === 'have' ? `${unit}のカードはまだ持っていません` : `${unit}は全部集まっています`]
   })), detail && React.createElement(CardDetailModal, {
     db: db,
     no: detail,
-    onClose: () => setDetail(null)
+    onClose: () => setDetail(null),
+    dexInfo: {
+      pack: cardDexPackLabel(packMap[detail]),
+      have: col[detail] || 0
+    }
   }));
 };
 const cardRuleLine = t => String(t).split(/(「[^」]*」|《[^》]*》)/).map((seg, i) => /^「/.test(seg) ? React.createElement("span", {
@@ -103251,13 +103317,21 @@ const CardGachaPanel = ({
     disabled: busy || g < CARD_CATALOG_COST,
     onClick: onExchange,
     className: "mh-button min-h-[42px] rounded-xl bg-amber-500 px-1 text-[12px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40"
-  }, "カタログと交換(", CARD_CATALOG_COST, ")"), React.createElement("button", {
+  }, React.createElement("span", {
+    className: "inline-block whitespace-nowrap"
+  }, "カタログと交換"), React.createElement("span", {
+    className: "inline-block whitespace-nowrap"
+  }, "(", CARD_CATALOG_COST, ")")), React.createElement("button", {
     type: "button",
     "data-card-gacha-catalog": true,
     disabled: busy || catalogs < 1,
     onClick: onOpenCatalog,
     className: "mh-button min-h-[42px] rounded-xl bg-sky-400 px-1 text-[12px] font-black text-slate-950 active:scale-[.98] disabled:opacity-40"
-  }, "📖 カタログを使う(", catalogs, "冊)")));
+  }, React.createElement("span", {
+    className: "inline-block whitespace-nowrap"
+  }, "📖 カタログを使う"), React.createElement("span", {
+    className: "inline-block whitespace-nowrap"
+  }, "(", catalogs, "冊)"))));
 };
 const CardCatalogSheet = ({
   db,
@@ -110466,14 +110540,14 @@ const cardShareSmartLevel = tactics => {
   const t = cardShareNormalizeTactics(tactics);
   return t.f && typeof cardTacticSmartLevel === 'function' ? cardTacticSmartLevel(cardTacticUnpackFrames(t.f)) : 'normal';
 };
-const cardShareRowsCount = frames => frames.breeder.filter(x => x.on).length + frames.mons.reduce((a, r) => a + r.filter(x => x.on).length, 0);
+const cardShareRowsCount = frames => cardTacticCountedRows(frames);
 const cardShareSmartText = tactics => {
   const t = cardShareNormalizeTactics(tactics);
   const lv = cardShareSmartLevel(t);
   const label = lv === 'random' ? 'でたらめ' : `${typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv] || lv.toUpperCase()} 相当`;
   if (!t.f) return label;
   const f = cardTacticUnpackFrames(t.f);
-  return `${label}(基本${f.base.filter(Boolean).length}・行${cardShareRowsCount(f)})`;
+  return `${label}(基本${f.base.filter(Boolean).length}・戦術カード${cardShareRowsCount(f)}枚)`;
 };
 const cardShareMainHabit = (frames, fallback = 'kyuko') => {
   const c = frames && typeof cardTacticOf === 'function' ? cardTacticOf(frames.base[0]) : null;
@@ -111089,7 +111163,7 @@ const CardDeckShare = ({
     "data-card-share-tactics": true,
     className: "mt-1 rounded-lg bg-black/30 p-2 text-[12px] font-bold text-slate-200",
     style: JA_WRAP_STYLE
-  }, framesNow ? React.createElement(React.Fragment, null, React.createElement("div", null, `基本カード: ${framesNow.base.filter(Boolean).map(id => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`), React.createElement("div", null, `行: ${cardShareRowsCount(framesNow)}`), React.createElement("div", {
+  }, framesNow ? React.createElement(React.Fragment, null, React.createElement("div", null, `基本カード: ${framesNow.base.filter(Boolean).map(id => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`), React.createElement("div", null, `セットした戦術カード: ${cardShareRowsCount(framesNow)}枚`), React.createElement("div", {
     className: "text-amber-200"
   }, `賢さ: ${cardShareSmartText({
     f: cardTacticPackFrames(framesNow)
@@ -111229,12 +111303,12 @@ const CardShareProfileDeck = ({
   }, entry.battles ? `戦われた ${entry.battles}回・デッキの勝ち ${Math.round(entry.deckWins / entry.battles * 100)}%` : 'まだ戦われていません'))), f && React.createElement("div", {
     className: "mt-2 text-[12px] font-bold leading-relaxed text-slate-200",
     style: JA_WRAP_STYLE
-  }, React.createElement("div", null, `基本カード: ${f.base.filter(Boolean).map(id => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`), React.createElement("div", null, `行: ${cardShareRowsCount(f)}`), t.aces.length > 0 && React.createElement("div", null, `切り札: ${t.aces.map(no => (db && cardOf(db, no) || {}).name || no).join('・')}`), React.createElement("button", {
+  }, React.createElement("div", null, `基本カード: ${f.base.filter(Boolean).map(id => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`), React.createElement("div", null, `セットした戦術カード: ${cardShareRowsCount(f)}枚`), t.aces.length > 0 && React.createElement("div", null, `切り札: ${t.aces.map(no => (db && cardOf(db, no) || {}).name || no).join('・')}`), React.createElement("button", {
     type: "button",
     "data-profile-card-deck-rows": true,
     onClick: () => setOpen(x => !x),
     className: "mt-1 text-[11px] font-black text-slate-300"
-  }, open ? '▲ 戦術カードの行をとじる' : '▼ 戦術カードの行を見る'), open && React.createElement("div", {
+  }, open ? '▲ セットした戦術カードをとじる' : '▼ セットした戦術カードを見る'), open && React.createElement("div", {
     className: "mt-1 space-y-1 rounded-lg bg-black/30 p-2 text-[11px]"
   }, [...f.mons.map((rows, i) => [monName(i), rows]), ['ブリーダー', f.breeder]].map(([label, rows]) => React.createElement("div", {
     key: label
@@ -111988,8 +112062,9 @@ const CardTacticRow = ({
   onMove,
   onRemove,
   onPickC,
-  onPickA
-}) => React.createElement("div", {
+  onPickA,
+  why = ''
+}) => React.createElement("div", null, React.createElement("div", {
   "data-card-tactic-row": i,
   className: `flex items-center gap-1 rounded-xl border-2 border-slate-700 bg-slate-900 p-1 ${row.on ? '' : 'opacity-50'}`
 }, React.createElement("b", {
@@ -112039,7 +112114,11 @@ const CardTacticRow = ({
   "data-card-tactic-row-remove": true,
   onClick: onRemove,
   className: "px-1 text-[13px] font-black text-slate-400"
-}, "×"));
+}, "×")), why && React.createElement("p", {
+  "data-card-tactic-row-why": i,
+  className: "px-6 pt-0.5 text-[10px] font-bold leading-snug text-slate-400",
+  style: JA_WRAP_STYLE
+}, `賢さに数えない(${why})`));
 const CARD_TACTIC_AUTO = Object.freeze({
   monster: [['ko', 'atk'], ['myLife.30', 'guardDie'], ['myGuts.5', 'cost.大技(4以上)'], ['foeLife.50', 'atk'], ['any', 'guard']],
   breeder: [['any', 'save'], ['foeAlive.3', 'fieldCard'], ['myKo', 'bEff.倒れた子を戻す']]
@@ -112303,6 +112382,11 @@ const CardTacticsScreen = ({
     });
   };
   const f = t.frames;
+  const uncounted = cardTacticUncounted(f);
+  const whyOf = (k, i) => {
+    const list = k === 'breeder' ? uncounted.breeder : uncounted.mons[k];
+    return list && list[i] || '';
+  };
   const rowsOf = k => k === 'breeder' ? f.breeder : f.mons[k];
   const setRows = (k, rows) => saveFrames(k === 'breeder' ? {
     ...f,
@@ -112414,12 +112498,12 @@ const CardTacticsScreen = ({
     k: 'breeder',
     label: 'ブリーダー',
     icon: '🧑',
-    sub: `${f.breeder.length}/${open.breeder}行`
+    sub: `${f.breeder.length}/${open.breeder}枚`
   }, ...[0, 1, 2].map(i => ({
     k: i,
     label: (monOf(i) || {}).name || ['左の子', '真ん中の子', '右の子'][i],
     mon: monOf(i),
-    sub: `${f.mons[i].length}/${open.mon}行`
+    sub: `${f.mons[i].length}/${open.mon}枚`
   }))];
   return React.createElement("div", {
     "data-mh-screen": true,
@@ -112451,7 +112535,7 @@ const CardTacticsScreen = ({
   })), nextF && React.createElement("p", {
     className: "mt-1 text-[11px] font-bold text-slate-300",
     style: JA_WRAP_STYLE
-  }, `次は Lv${nextF.at} で${[nextF.base ? `基本${nextF.base}枚目` : '', nextF.breeder ? `ブリーダー${nextF.breeder}行目` : '', nextF.mon ? `各モンスター${nextF.mon}行目` : ''].filter(Boolean).join('・')}が開く`)), React.createElement("div", {
+  }, `次は Lv${nextF.at} で${[nextF.base ? `基本${nextF.base}枚目` : '', nextF.breeder ? `ブリーダーに${nextF.breeder}枚目` : '', nextF.mon ? `各モンスターに${nextF.mon}枚目` : ''].filter(Boolean).join('・')}が開く`)), React.createElement("div", {
     className: "flex gap-1"
   }, [...(share ? [['register', '登録']] : []), ['build', '組む'], ['pull', '引く'], ['list', `持っている ${ownCount}/${CARD_TACTIC_CARDS.length}`]].map(([k, l]) => React.createElement("button", {
     key: k,
@@ -112533,7 +112617,7 @@ const CardTacticsScreen = ({
     }, locked ? `Lv${at} で開く` : c ? c.name : '(なし)'), !locked && React.createElement("small", {
       className: "block text-[10px] text-white/80",
       style: JA_WRAP_STYLE
-    }, c ? c.desc : i === 0 ? 'どの行にも当たらない場面は、この型で打つ' : '型を3分の1だけ足す')));
+    }, c ? c.desc : i === 0 ? 'セットした戦術カードのどれにも当たらない場面は、この型で打つ' : '型を3分の1だけ足す')));
   }), React.createElement("p", {
     className: "text-[11px] font-bold text-slate-400",
     style: JA_WRAP_STYLE
@@ -112561,7 +112645,8 @@ const CardTacticsScreen = ({
       void setRows(frame, all.filter((_, j) => j !== i));
     },
     onPickC: () => editRow(frame, i, 'c'),
-    onPickA: () => editRow(frame, i, 'a')
+    onPickA: () => editRow(frame, i, 'a'),
+    why: whyOf(frame, i)
   })), rowsOf(frame).length < maxOf(frame) && React.createElement("button", {
     type: "button",
     "data-card-tactics-add": true,
@@ -112570,7 +112655,7 @@ const CardTacticsScreen = ({
       addRow(frame);
     },
     className: "w-full rounded-xl border-2 border-dashed border-slate-500 py-2 text-[12px] font-black text-slate-200"
-  }, "＋ 行を足す"), (frame === 'breeder' ? CARD_FRAME_MAX_TEXT('breeder', open.breeder) : CARD_FRAME_MAX_TEXT('mon', open.mon)) && React.createElement("p", {
+  }, "＋ 戦術カードをセットする"), (frame === 'breeder' ? CARD_FRAME_MAX_TEXT('breeder', open.breeder) : CARD_FRAME_MAX_TEXT('mon', open.mon)) && React.createElement("p", {
     className: "text-center text-[11px] font-bold text-slate-400"
   }, frame === 'breeder' ? CARD_FRAME_MAX_TEXT('breeder', open.breeder) : CARD_FRAME_MAX_TEXT('mon', open.mon)), React.createElement("div", {
     className: "flex gap-1.5 pt-1"
@@ -112583,10 +112668,10 @@ const CardTacticsScreen = ({
         ...f,
         mons: [0, 1, 2].map(() => f.mons[frame].slice())
       });
-      setNotice('この子の行を、ほかの2体にも写しました');
+      setNotice('この子の戦術カードを、ほかの2体にも写しました');
     },
     className: "mh-button min-h-[44px] flex-1 rounded-xl text-[11px] font-black"
-  }, "この子の行を", React.createElement("br", null), "ほかの2体にも写す"), React.createElement("button", {
+  }, "この子の戦術カードを", React.createElement("br", null), "ほかの2体にも写す"), React.createElement("button", {
     type: "button",
     "data-card-tactics-auto": true,
     onClick: () => {
@@ -112594,10 +112679,10 @@ const CardTacticsScreen = ({
       void setRows(frame, cardTacticAutoFill(t, rowsOf(frame), catOf(frame), maxOf(frame)));
     },
     className: "mh-button mh-button-primary min-h-[44px] flex-1 rounded-xl text-[11px] font-black"
-  }, "おまかせで", React.createElement("br", null), "あいている行を埋める")), React.createElement("p", {
+  }, "おまかせで", React.createElement("br", null), "あいている所に入れる")), React.createElement("p", {
     className: "text-[11px] font-bold leading-snug text-slate-400",
     style: JA_WRAP_STYLE
-  }, frame === 'breeder' ? '攻撃の番は、モンスターの枠のあとに見ます。ガッツの番はここだけを見ます。' : '上の行から見て、当たった行の手をこの子が出します。守るときは、この子が狙われたときに見ます。'))), tab === 'pull' && React.createElement("div", {
+  }, frame === 'breeder' ? '攻撃の番は、モンスターの枠のあとに見ます。ガッツの番はここだけを見ます。' : '上にセットした戦術カードから順に見て、条件に当たったカードの手をこの子が出します。守るときは、この子が狙われたときに見ます。'))), tab === 'pull' && React.createElement("div", {
     "data-card-tactics-pull": true,
     className: "space-y-2"
   }, React.createElement("div", {
@@ -112690,7 +112775,7 @@ const CardTacticsScreen = ({
 };
 const CARD_FRAME_MAX_TEXT = (kind, n) => {
   const nx = CARD_LEVEL_FRAMES.find(x => (kind === 'breeder' ? x.breeder : x.mon) > n);
-  return nx ? `${kind === 'breeder' ? nx.breeder : nx.mon}行目は Lv${nx.at} で開く` : '';
+  return nx ? `${kind === 'breeder' ? nx.breeder : nx.mon}枚目は Lv${nx.at} で開く` : '';
 };
 const DEBUG_TRIALS = [{
   id: 'rhythm_mon_ab1',
