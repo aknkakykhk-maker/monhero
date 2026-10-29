@@ -528,9 +528,14 @@ const FRIEND_PLACE_TEXT = Object.freeze({
   // MFバトルカード(2026-10-27 社長「対戦中だけ分ける」・台帳 #235)。表の place には入れられない値なので、
   //   表へは 'other' を送り、細かい場所は records.pl に載せる(FRIEND_SUB_PLACES・friendsPlaceFromRow)。古い版の人には「ログイン中」と出る
   card: 'MFバトルカードで遊び中', cardBattle: 'MFバトルカードで対戦中',
+  // マルチの部屋で相手を待っている(2026-10-29 社長「相手がいま何をしているかが見えると誘いやすい」。カード部・ビート部の共通・friendsSetRoomWaiting)
+  room: '部屋で待ち中',
 });
 // 表(friend_profiles.place)の決まり(check)に無い場所。表へは 'other' で送り、records.pl に本当の場所を載せる
-const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle']);
+const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room']);
+// マルチの部屋で相手を待っているあいだ真(モンヒロビート・MFバトルカードの部屋が立てる)。次にフレンドへ知らせるとき、場所を「部屋で待ち中」にする
+let _friendsRoomWaiting = false;
+const friendsSetRoomWaiting = (on) => { _friendsRoomWaiting = !!on; };
 // 受け取った行の場所。place が 'other' で records.pl があれば、そちら
 const friendsPlaceFromRow = (place, records) => {
   if (place === 'other' && records && FRIEND_SUB_PLACES.includes(records.pl)) return records.pl;
@@ -540,6 +545,7 @@ const FRIEND_HEARTBEAT_MS = 2 * 60 * 1000;   // 開いているあいだ、こ�
 const FRIEND_PUBLISH_MIN_MS = 15 * 1000;     // 場所や中身が変わっても、これより短い間隔では送らない
 // 画面(gameState)から、見せる場所の大分類へ。細かい画面名や曲名は見せない
 const friendsPlaceOfScreen = (gameState) => {
+  if (_friendsRoomWaiting) return 'room';
   const name = typeof gameState === 'string' ? gameState : '';
   if (name === 'HOME') return 'home';
   if (name === 'CARD_BATTLE') return 'cardBattle';
@@ -557,6 +563,37 @@ const friendsPresenceText = (place, updatedAtMs, nowMs) => {
   if (online) return { online: true, text: FRIEND_PLACE_TEXT[place] || FRIEND_PLACE_TEXT.other };
   return { online: false, text: friendsLastSeenText(updatedAtMs, nowMs) };
 };
+// 招待の行に出す「フレンドの今」(2026-10-29 社長「招待の画面で、相手がいま何をしているか・ログインしているかが見えると誘いやすい」)。
+//   カード部(91)とビート部(77)の共通。friend_profiles を ids でまとめて読む。読めない人は入れない(行は名前だけになる)
+//   返り値: { [id]: { online, text, at } } … online は5分以内に知らせが来ているか・text は「モンヒロビートで遊び中」「3時間前」など・at はその時刻
+const friendsPresenceFor = async (ids) => {
+  let rows = {};
+  try { rows = await sbFetchFriendSummaries(ids); } catch (_) { rows = {}; }
+  const now = Date.now();
+  const out = {};
+  Object.entries(rows && typeof rows === 'object' ? rows : {}).forEach(([id, r]) => {
+    if (!r) return;
+    const at = Number.isFinite(r.updatedAt) ? r.updatedAt : 0;
+    const p = friendsPresenceText(r.place, at, now);
+    out[id] = { online: p.online, text: p.text, at };
+  });
+  return out;
+};
+// 招待の行の並べ方: ログイン中を上、その中は新しく来た順(様子が分からない人は下。並びは崩さない)
+const friendsPresenceSort = (list, presence, idOf = (x) => (x ? x.otherId : '')) => {
+  const p = presence && typeof presence === 'object' ? presence : {};
+  return (Array.isArray(list) ? list : []).map((x, i) => [x, i]).sort(([a, ia], [b, ib]) => {
+    const pa = p[idOf(a)] || null, pb = p[idOf(b)] || null;
+    return (Number(!!(pb && pb.online)) - Number(!!(pa && pa.online))) || ((pb ? pb.at : 0) - (pa ? pa.at : 0)) || (ia - ib);
+  }).map(([x]) => x);
+};
+// 招待の行に置く小さな印: 緑の点+いまの場所(ログイン中)/灰色の点+最後に来た時刻。info が無いときは何も出さない
+const FriendPresenceTag = ({ info, className = '' }) => (info ? (
+  <small data-friend-presence={info.online ? 'on' : 'off'} className={`flex min-w-0 items-center gap-1 text-[10px] font-bold ${info.online ? 'text-emerald-200' : 'text-slate-400'} ${className}`}>
+    <i aria-hidden="true" className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${info.online ? 'bg-emerald-400' : 'bg-slate-500'}`}/>
+    <span className="truncate">{info.text}</span>
+  </small>
+) : null);
 // プレイ時間(ミリ秒)を「◯時間◯分」の文へ(プロフィールの表示と同じ書き方)
 const friendsPlaytimeText = (seconds) => {
   const sec = Math.max(0, Math.floor(Number(seconds) || 0));
