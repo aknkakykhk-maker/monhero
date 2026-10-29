@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d987a1c65d58c27b
+// source-sha256: a826d93db0a4a22a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -46400,6 +46400,222 @@ const listTacticsStackItems = (counts, {
     return out;
   }, []);
 };
+const CLASSIC_CHIP_VIEW = Object.freeze({
+  atk: {
+    icon: '⚔️',
+    turns: 'run'
+  },
+  dmgCut: {
+    icon: '🛡️',
+    turns: 'run'
+  },
+  def: {
+    icon: '🛡️',
+    turns: 'run'
+  },
+  muaHp: {
+    icon: '❤️',
+    turns: 'run'
+  },
+  muaGuts: {
+    icon: '⚡',
+    turns: 'run'
+  },
+  critRate: {
+    icon: '🎯',
+    turns: 'run'
+  },
+  critDmg: {
+    icon: '💥',
+    turns: 'run'
+  },
+  combo: {
+    icon: '💫',
+    turns: 'run'
+  },
+  globalCombo: {
+    icon: '💫',
+    turns: 'run'
+  },
+  kikiCard: {
+    icon: '🃏',
+    turns: 'count'
+  },
+  kyukoCut: {
+    icon: '🎼',
+    turns: 'count'
+  },
+  kenshi: {
+    icon: '💥',
+    turns: 'run',
+    stack: 'kenshi'
+  },
+  autoHp: {
+    icon: '💚',
+    turns: 'run'
+  },
+  autoGuts: {
+    icon: '⚡',
+    turns: 'run'
+  },
+  poltz: {
+    icon: '🌿',
+    turns: 'run'
+  },
+  trick: {
+    icon: '🎃',
+    turns: 'wave',
+    stack: ['trickAtk', 'trickDef', 'trickRegen']
+  },
+  sweet: {
+    icon: '🍪',
+    turns: 'run',
+    stack: ['cookie', 'note']
+  },
+  bow: {
+    icon: '🎀',
+    turns: 'run',
+    stack: 'bow'
+  },
+  fate: {
+    icon: '🪙',
+    turns: 'run',
+    stack: ['fateCombo', 'fateAtk']
+  },
+  fateCoinGuts: {
+    icon: '🪙',
+    turns: 'run',
+    kind: 'debuff'
+  },
+  meloso: {
+    icon: '💖',
+    turns: 'next'
+  },
+  boost: {
+    icon: '✨',
+    turns: 'now'
+  },
+  critFix: {
+    icon: '🎯',
+    turns: 'now'
+  },
+  zeroGuts: {
+    icon: '⭐',
+    turns: 'now'
+  },
+  reflectNext: {
+    icon: '🔁',
+    turns: 'next'
+  },
+  reflectNow: {
+    icon: '🔁',
+    turns: 'now'
+  },
+  takenNext: {
+    icon: '🛡️',
+    turns: 'next'
+  },
+  takenNow: {
+    icon: '🛡️',
+    turns: 'now'
+  },
+  costNext: {
+    icon: '⚡',
+    turns: 'next',
+    kind: 'debuff'
+  },
+  costNow: {
+    icon: '⚡',
+    turns: 'now',
+    kind: 'debuff'
+  }
+});
+const CLASSIC_DEBUFF_VIEW = Object.freeze({
+  ice: 'wave',
+  confuse: 'count',
+  aquaPrison: 'count',
+  aquaFreeze: 'count',
+  aquaFinale: 'count',
+  nightmare: 'count',
+  psycho: 'count',
+  fateAtkDown: 'count',
+  fateTakenUp: 'count',
+  stun: 'next',
+  atkDown: 'wave',
+  taken: 'wave',
+  roar: 'wave'
+});
+const classicChipKindOf = key => {
+  const k = String(key || '');
+  if (CLASSIC_CHIP_VIEW[k]) return k;
+  return ['trick', 'sweet', 'bow', 'fate'].find(p => k.startsWith(p) && !CLASSIC_CHIP_VIEW[k]) || null;
+};
+const classicPctOf = text => {
+  const m = String(text || '').match(/([+\-−]?)(\d+)%/);
+  return m ? Number(m[2]) * (m[1] === '-' || m[1] === '−' ? -1 : 1) : null;
+};
+const classicTurnsLeftOf = (text, turns) => {
+  const m = String(text || '').match(/残り(\d+)T/);
+  if (m) return Number(m[1]);
+  return turns === 'now' || turns === 'next' ? 1 : turns === 'wave' ? 'wave' : null;
+};
+const classicEffectsFromChips = (chips, slot = null, stackCounts = null) => {
+  const out = [],
+    covered = new Set();
+  (Array.isArray(chips) ? chips : []).forEach(c => {
+    if (!c) return;
+    const owner = Number.isInteger(c.owner) ? c.owner : null;
+    if (owner != null && Number.isInteger(slot) && owner !== slot) return;
+    const kind = classicChipKindOf(c.key),
+      v = kind ? CLASSIC_CHIP_VIEW[kind] : null;
+    if (!v) return;
+    [].concat(v.stack || []).forEach(s => covered.add(s));
+    const text = [c.value, c.short].filter(Boolean).join(' ');
+    out.push({
+      key: `chip:${c.key}`,
+      name: c.label || '',
+      icon: v.icon,
+      kind: v.kind || 'buff',
+      pct: classicPctOf(c.value),
+      fromName: '',
+      fromSlot: owner,
+      turnsLeft: classicTurnsLeftOf(text, v.turns),
+      allAllies: owner == null,
+      note: `${c.value || ''}${v.turns === 'next' ? '(次のターン)' : v.turns === 'now' ? '(このターン)' : v.turns === 'run' ? '(このランのあいだ)' : ''}`
+    });
+  });
+  const counts = Object.fromEntries(Object.entries(stackCounts && typeof stackCounts === 'object' ? stackCounts : {}).filter(([k]) => !covered.has(k)));
+  return [...out, ...listTacticsStackItems(counts, {
+    keepZero: []
+  })];
+};
+const CLASSIC_DEBUFF_FROM_EX = Object.freeze(['psycho', 'aquaPrison', 'aquaFreeze', 'aquaFinale', 'nightmare']);
+const classicEnemyEffectsFromDebuffs = (debuffs, stackCounts = null, {
+  withoutEx = false
+} = {}) => {
+  const out = [];
+  (Array.isArray(debuffs) ? debuffs : []).forEach(d => {
+    if (!d || !CLASSIC_DEBUFF_VIEW[d.key] || withoutEx && CLASSIC_DEBUFF_FROM_EX.includes(d.key)) return;
+    const turns = CLASSIC_DEBUFF_VIEW[d.key];
+    out.push({
+      key: `debuff:${d.key}`,
+      name: d.label || '',
+      icon: d.mark || '',
+      kind: 'debuff',
+      pct: classicPctOf(d.value),
+      fromName: '',
+      fromSlot: null,
+      turnsLeft: classicTurnsLeftOf(`${d.value || ''} ${d.short || ''}`, turns),
+      allAllies: false,
+      note: d.note || d.value || ''
+    });
+  });
+  const covered = new Set(['aquaPrison', 'aquaFreeze', 'roar'].filter(k => out.some(x => x.key === `debuff:${k}`)));
+  const counts = Object.fromEntries(Object.entries(stackCounts && typeof stackCounts === 'object' ? stackCounts : {}).filter(([k]) => !covered.has(k)));
+  return [...out, ...listTacticsStackItems(counts, {
+    keepZero: []
+  })];
+};
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
 const RHYTHM_BUDDY_TICKET_ITEM_ID = 'session_ticket';
 const RHYTHM_BUDDY_SEEN_KEY = 'mh_rhythm_buddy_seen_v1';
@@ -50501,9 +50717,14 @@ const FRIEND_PLACE_TEXT = Object.freeze({
   market: 'マーケットを見ています',
   other: 'ログイン中',
   card: 'MFバトルカードで遊び中',
-  cardBattle: 'MFバトルカードで対戦中'
+  cardBattle: 'MFバトルカードで対戦中',
+  room: '部屋で待ち中'
 });
-const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle']);
+const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room']);
+let _friendsRoomWaiting = false;
+const friendsSetRoomWaiting = on => {
+  _friendsRoomWaiting = !!on;
+};
 const friendsPlaceFromRow = (place, records) => {
   if (place === 'other' && records && FRIEND_SUB_PLACES.includes(records.pl)) return records.pl;
   return Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, place) ? place : null;
@@ -50511,6 +50732,7 @@ const friendsPlaceFromRow = (place, records) => {
 const FRIEND_HEARTBEAT_MS = 2 * 60 * 1000;
 const FRIEND_PUBLISH_MIN_MS = 15 * 1000;
 const friendsPlaceOfScreen = gameState => {
+  if (_friendsRoomWaiting) return 'room';
   const name = typeof gameState === 'string' ? gameState : '';
   if (name === 'HOME') return 'home';
   if (name === 'CARD_BATTLE') return 'cardBattle';
@@ -50532,6 +50754,35 @@ const friendsPresenceText = (place, updatedAtMs, nowMs) => {
     online: false,
     text: friendsLastSeenText(updatedAtMs, nowMs)
   };
+};
+const friendsPresenceFor = async ids => {
+  let rows = {};
+  try {
+    rows = await sbFetchFriendSummaries(ids);
+  } catch (_) {
+    rows = {};
+  }
+  const now = Date.now();
+  const out = {};
+  Object.entries(rows && typeof rows === 'object' ? rows : {}).forEach(([id, r]) => {
+    if (!r) return;
+    const at = Number.isFinite(r.updatedAt) ? r.updatedAt : 0;
+    const p = friendsPresenceText(r.place, at, now);
+    out[id] = {
+      online: p.online,
+      text: p.text,
+      at
+    };
+  });
+  return out;
+};
+const friendsPresenceSort = (list, presence, idOf = x => x ? x.otherId : '') => {
+  const p = presence && typeof presence === 'object' ? presence : {};
+  return (Array.isArray(list) ? list : []).map((x, i) => [x, i]).sort(([a, ia], [b, ib]) => {
+    const pa = p[idOf(a)] || null,
+      pb = p[idOf(b)] || null;
+    return Number(!!(pb && pb.online)) - Number(!!(pa && pa.online)) || (pb ? pb.at : 0) - (pa ? pa.at : 0) || ia - ib;
+  }).map(([x]) => x);
 };
 const friendsPlaytimeText = seconds => {
   const sec = Math.max(0, Math.floor(Number(seconds) || 0));
@@ -57499,6 +57750,10 @@ const DexStatusTag = ({
     className: `inline-flex items-center rounded-full border px-1.5 py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${DEX_STATUS_STYLE[def.id]}`
   }, def.label);
 };
+const dexListScrollMemo = {
+  filter: null,
+  top: 0
+};
 function MonsterDexScreen({
   dexLineageFilter,
   unlockedMonsterIds,
@@ -57522,7 +57777,10 @@ function MonsterDexScreen({
   }, React.createElement(ScreenHead, {
     title: "モンスター図鑑",
     accent: "text-amber-300",
-    onBack: onBackToManagement,
+    onBack: () => {
+      dexListScrollMemo.top = 0;
+      onBackToManagement();
+    },
     backLabel: "M/B管理へ戻る"
   }), React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-2"
@@ -57561,7 +57819,13 @@ function MonsterDexScreen({
       el.style.width = `${Math.max(0, el.parentElement.clientWidth - el.previousElementSibling.offsetWidth - 6)}px`;
     }
   })), React.createElement("div", {
-    className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto`
+    "data-dex-list": true,
+    className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto`,
+    ref: el => {
+      if (!el || el.dataset.dexScrollRestored) return;
+      el.dataset.dexScrollRestored = '1';
+      if (dexListScrollMemo.filter === dexLineageFilter && dexListScrollMemo.top > 0) el.scrollTop = dexListScrollMemo.top;
+    }
   }, sections.map(section => React.createElement("section", {
     key: section.id,
     "data-dex-section": section.id,
@@ -57591,7 +57855,12 @@ function MonsterDexScreen({
       "data-dex-entry": true,
       "data-dex-entry-status": section.id,
       "aria-label": `${mon.name}の図鑑を見る`,
-      onClick: () => onOpenDetail(mon.id),
+      onClick: e => {
+        const list = e.currentTarget.closest('[data-dex-list]');
+        dexListScrollMemo.filter = dexLineageFilter;
+        dexListScrollMemo.top = list ? list.scrollTop : 0;
+        onOpenDetail(mon.id);
+      },
       className: `w-full min-h-[124px] rounded-2xl border ${section.id === 'draft' ? 'border-dashed border-fuchsia-300/30' : 'border-white/10'} bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none`
     }, React.createElement(DexMonsterIcon, {
       src: iconSrc
@@ -76976,6 +77245,18 @@ function MonsterCheckDebugScreen({
     className: "max-h-72 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-black/50 p-3 text-[9px] leading-relaxed text-cyan-200"
   }, JSON.stringify(mon, null, 2)))))));
 }
+const FriendPresenceTag = ({
+  info,
+  className = ''
+}) => info ? React.createElement("small", {
+  "data-friend-presence": info.online ? 'on' : 'off',
+  className: `flex min-w-0 items-center gap-1 text-[10px] font-bold ${info.online ? 'text-emerald-200' : 'text-slate-400'} ${className}`
+}, React.createElement("i", {
+  "aria-hidden": "true",
+  className: `inline-block h-1.5 w-1.5 shrink-0 rounded-full ${info.online ? 'bg-emerald-400' : 'bg-slate-500'}`
+}), React.createElement("span", {
+  className: "truncate"
+}, info.text)) : null;
 const FRIENDS_RESULT_TEXT = Object.freeze({
   sent: ['フレンド申請を送りました。承認されるとフレンドになります', 'ok'],
   accepted: ['フレンドになりました!', 'ok'],
@@ -79945,6 +80226,94 @@ function RhythmMultiAloneHint({
     className: "mt-1 block min-h-[36px] w-full rounded-lg bg-slate-700 text-[11px] font-black"
   }, "モードえらびへ戻る"));
 }
+function RhythmMultiAwayBar({
+  hidden = false,
+  busy = false,
+  onReturn = null
+}) {
+  const [view, setView] = React.useState(() => RHYTHM_MULTI.view());
+  React.useEffect(() => RHYTHM_MULTI.subscribe(() => setView(RHYTHM_MULTI.view())), []);
+  const seenRef = React.useRef(null);
+  const [arrived, setArrived] = React.useState('');
+  const others = view ? view.members.filter(m => !m.cpu && m.id !== view.selfId) : [];
+  const othersKey = others.map(m => m.id).join(',');
+  const shown = !!view && !hidden && !view.full;
+  const roomWaiting = !!view && !view.full && (view.room ? view.room.phase : 'matching') === 'matching';
+  const roomWaitingSetRef = React.useRef(false);
+  React.useEffect(() => {
+    if (typeof friendsSetRoomWaiting !== 'function') return;
+    if (roomWaiting) {
+      friendsSetRoomWaiting(true);
+      roomWaitingSetRef.current = true;
+    } else if (roomWaitingSetRef.current) {
+      friendsSetRoomWaiting(false);
+      roomWaitingSetRef.current = false;
+    }
+  }, [roomWaiting]);
+  React.useEffect(() => {
+    if (!shown) {
+      seenRef.current = null;
+      setArrived('');
+      return;
+    }
+    if (!seenRef.current) {
+      seenRef.current = new Set(others.map(m => m.id));
+      return;
+    }
+    const fresh = others.find(m => !seenRef.current.has(m.id));
+    others.forEach(m => seenRef.current.add(m.id));
+    if (fresh) setArrived(rhythmMultiText(fresh.name, 20) || 'メンバー');
+  }, [othersKey, shown]);
+  if (!shown) return null;
+  const phase = view.room ? view.room.phase : 'matching';
+  const hot = !!arrived || phase !== 'matching';
+  if (busy && !hot) return null;
+  const text = arrived ? `${arrived}さんが来ました` : phase !== 'matching' ? '対戦が始まります' : `部屋で待っています(${view.members.length}/${RHYTHM_MULTI_ROOM_MAX}人)`;
+  return React.createElement(MultiAwayBar, {
+    text: text,
+    hot: hot,
+    busy: busy,
+    onReturn: onReturn,
+    onLeave: () => RHYTHM_MULTI.leave(),
+    game: "beat"
+  });
+}
+function MultiAwayBar({
+  text,
+  hot = false,
+  busy = false,
+  onReturn = null,
+  onLeave = null,
+  icon = '🎵',
+  game = ''
+}) {
+  const leave = () => {
+    if (onLeave && window.confirm('ルームを出ますか?')) onLeave();
+  };
+  return React.createElement("div", {
+    "data-multi-away-bar": hot ? 'hot' : 'wait',
+    "data-multi-away-game": game,
+    className: "pointer-events-none fixed inset-x-0 top-0 z-[1000] flex justify-center px-2 pt-[max(env(safe-area-inset-top),6px)]"
+  }, React.createElement("div", {
+    className: `pointer-events-auto flex w-full max-w-[420px] items-center gap-2 rounded-2xl border px-3 py-1.5 text-white shadow-lg ${hot ? 'border-amber-200/80 bg-fuchsia-800/95' : 'border-cyan-300/50 bg-slate-900/95'}`
+  }, React.createElement("span", {
+    className: `min-w-0 flex-1 text-[12px] font-black leading-snug ${hot ? 'animate-pulse' : ''}`,
+    style: JA_WRAP_STYLE
+  }, icon ? `${icon} ` : '', jaWrap(text)), busy ? React.createElement("small", {
+    className: "shrink-0 text-[10px] font-bold text-amber-100"
+  }, "終わったら戻れます") : React.createElement("button", {
+    "data-multi-away-return": true,
+    type: "button",
+    onClick: () => onReturn && onReturn(),
+    className: `min-h-[40px] shrink-0 rounded-xl px-3 text-[12px] font-black ${hot ? 'bg-amber-300 text-slate-950' : 'bg-cyan-400 text-slate-950'}`
+  }, hot ? '対戦へ' : '戻る'), onLeave && React.createElement("button", {
+    "data-multi-away-leave": true,
+    type: "button",
+    "aria-label": "ルームを出る",
+    onClick: leave,
+    className: "min-h-[40px] min-w-[36px] shrink-0 rounded-xl bg-slate-700 text-[13px] font-black"
+  }, "✕")));
+}
 function RhythmMultiRecordSaver({
   entry
 }) {
@@ -80763,7 +81132,8 @@ function RhythmMultiScreen({
   buddyTickets = 0,
   onUseBuddyTicket = null,
   onRefundBuddyTicket = null,
-  onOpenMasuBeat = null
+  onOpenMasuBeat = null,
+  onStepAway = null
 }) {
   const view = useRhythmMultiView();
   useModeSelectStageCss();
@@ -80986,6 +81356,22 @@ function RhythmMultiScreen({
   const [invitePanel, setInvitePanel] = React.useState(false);
   const [invitedIds, setInvitedIds] = React.useState({});
   const [inviteMessage, setInviteMessage] = React.useState('');
+  const [presence, setPresence] = React.useState({});
+  React.useEffect(() => {
+    if (!invitePanel || !roster || !roster.length || typeof friendsPresenceFor !== 'function') return undefined;
+    let alive = true;
+    const load = () => {
+      void friendsPresenceFor(roster.map(f => f.otherId)).then(p => {
+        if (alive) setPresence(p || {});
+      });
+    };
+    load();
+    const t = setInterval(load, 60000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [invitePanel, roster]);
   const loadRoster = React.useCallback(async id => {
     try {
       setRoster(await sbFetchFriendRoster(id));
@@ -81876,7 +82262,7 @@ function RhythmMultiScreen({
       className: "text-[11px] font-bold text-slate-400"
     }, "フレンドを読み込んでいます…"), roster !== null && roster.length === 0 && React.createElement("p", {
       className: "text-[11px] font-bold leading-relaxed text-slate-400"
-    }, "まだフレンドがいません。プロフィールの「フレンド」から、フレンドコードで申請できます。"), (roster || []).map(friend => React.createElement("div", {
+    }, "まだフレンドがいません。プロフィールの「フレンド」から、フレンドコードで申請できます。"), (typeof friendsPresenceSort === 'function' ? friendsPresenceSort(roster || [], presence) : roster || []).map(friend => React.createElement("div", {
       key: friend.otherId,
       "data-rhythm-multi-friend-row": true,
       className: "flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5"
@@ -81884,7 +82270,9 @@ function RhythmMultiScreen({
       className: "min-w-0 flex-1"
     }, React.createElement("b", {
       className: "block truncate text-sm font-black"
-    }, friend.userName), React.createElement("small", {
+    }, friend.userName), presence[friend.otherId] && typeof FriendPresenceTag === 'function' ? React.createElement(FriendPresenceTag, {
+      info: presence[friend.otherId]
+    }) : React.createElement("small", {
       className: "block truncate text-[10px] font-bold text-slate-400"
     }, friendsLastSeenText(friend.lastSeenAt, Date.now()))), React.createElement("button", {
       "data-rhythm-multi-friend-send": true,
@@ -81900,7 +82288,13 @@ function RhythmMultiScreen({
     }, "招待は3分のあいだ届きます。相手がマルチの入口をひらくと「参加する」が出ます。"))), buddyBumped && React.createElement("p", {
       "data-rhythm-buddy-bumped": true,
       className: "text-[11px] font-black leading-snug text-amber-200"
-    }, "人が入ってきたので、呼んだマスモンは席をゆずって帰りました(使った回数・券は戻りました)"), buddyCallButton(), React.createElement("button", {
+    }, "人が入ってきたので、呼んだマスモンは席をゆずって帰りました(使った回数・券は戻りました)"), buddyCallButton(), view && !publicRoom && !view.full && onStepAway && React.createElement("button", {
+      "data-rhythm-multi-step-away": true,
+      type: "button",
+      className: `${btn} w-full bg-cyan-800`,
+      style: JA_WRAP_STYLE,
+      onClick: onStepAway
+    }, jaWrap('部屋はそのままで、ほかの画面へ')), React.createElement("button", {
       "data-rhythm-multi-leave": true,
       type: "button",
       className: `${btn} w-full bg-slate-700`,
@@ -92870,9 +93264,9 @@ const cardUserLabel = (db, c) => {
   const m = Object.values(db.monsters).find(x => x.species === c.user && !x.variant);
   return m ? `${m.name}専用` : c.user;
 };
-const cardGuardBlockReasons = (db, st) => {
-  const pd = st.pending;
-  if (!pd) return [];
+const cardGuardWhyShort = (db, st, c) => {
+  const pd = st && st.pending;
+  if (!pd || !c || !cardIsGuardKind(c.kind)) return null;
   const q = pd.defender;
   const me = st.players[q];
   const t = pd.targets[pd.ti];
@@ -92882,15 +93276,31 @@ const cardGuardBlockReasons = (db, st) => {
     pow: 'ちから技',
     int: 'かしこさ技'
   };
-  const out = [];
+  const ev = cardEff(c, 'evade');
+  const re = cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll') || cardEff(c, 'reflect');
+  if (!c.ready) return '準備中';
+  if ((st.forbid[q] || []).includes(c.kind)) return c.kind === 'dge' ? '今は回避できない' : '今は防御できない';
+  if (c.guts > me.guts.length) return `ガッツ不足(あと${c.guts - me.guts.length})`;
+  if (cardHasEff(c, 'cover')) return '味方をかばう札';
+  if (target && t.p === q && !cardUsableBy(c, target)) return cardUserLabel(db, c);
+  if (ev && cardHasEff(atk, 'noEvade')) return 'この技は回避できない';
+  if (ev && !ev.kinds.includes(atk.kind)) return `${ev.kinds.map(k => kindName[k] || k).join('・')}だけ`;
+  if (ev && ev.minGuts && pd.cost < ev.minGuts) return `ガッツ${ev.minGuts}以上の技だけ`;
+  if (re && !re.kinds.includes(atk.kind)) return `${re.kinds.map(k => kindName[k] || k).join('・')}だけ`;
+  if (!cardEff(c, 'reflect') && (cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll')) && (cardHasEff(atk, 'noBlockReduce') || (pd.flags || {}).attachNoBlockReduce)) return 'この技は防げない';
+  return null;
+};
+const cardGuardBlockReasons = (db, st) => {
+  const pd = st.pending;
+  if (!pd) return [];
+  const me = st.players[pd.defender];
   const guards = me.hand.map(no => cardOf(db, no)).filter(c => c && cardIsGuardKind(c.kind));
-  if (!guards.length) return ['手札に回避・防御のカードがありません'];
+  if (!guards.length) return ['回避・防御のカードなし'];
+  const out = [];
   guards.forEach(c => {
-    const ev = cardEff(c, 'evade');
-    const re = cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll') || cardEff(c, 'reflect');
-    let why = null;
-    if (!c.ready) why = `「${c.name}」は準備中`;else if ((st.forbid[q] || []).includes(c.kind)) why = `このターンは${c.kind === 'dge' ? '回避' : '防御'}を使えません`;else if (c.guts > me.guts.length) why = `「${c.name}」はガッツが足りません(あと${c.guts - me.guts.length})`;else if (cardHasEff(c, 'cover')) why = `「${c.name}」は味方が狙われたときに、別の子が使います`;else if (target && t.p === q && !cardUsableBy(c, target)) why = `「${c.name}」は${target.name}が使えるカードではありません`;else if (ev && cardHasEff(atk, 'noEvade')) why = `「${atk.name}」は回避できません`;else if (ev && !ev.kinds.includes(atk.kind)) why = `「${c.name}」は${ev.kinds.map(k => kindName[k] || k).join('・')}にしか使えません`;else if (ev && ev.minGuts && pd.cost < ev.minGuts) why = `「${c.name}」はガッツ${ev.minGuts}以上の技にしか使えません`;else if (re && !re.kinds.includes(atk.kind)) why = `「${c.name}」は${re.kinds.map(k => kindName[k] || k).join('・')}にしか使えません`;else if (!cardEff(c, 'reflect') && (cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll')) && (cardHasEff(atk, 'noBlockReduce') || (pd.flags || {}).attachNoBlockReduce)) why = `この攻撃は防御でダメージを減らせません`;
-    if (why && !out.includes(why)) out.push(why);
+    const why = cardGuardWhyShort(db, st, c);
+    const line = why ? `「${c.name}」${why}` : null;
+    if (line && !out.includes(line)) out.push(line);
   });
   return out.slice(0, 2);
 };
@@ -94376,11 +94786,13 @@ const CardBattleBoard = ({
   const [bindAsk, setBindAsk] = useState(null);
   const [splitAsk, setSplitAsk] = useState(null);
   const [tossAsk, setTossAsk] = useState(null);
+  const [guardAsk, setGuardAsk] = useState(null);
   useEffect(() => {
     setConfirm(null);
     setBindAsk(null);
     setSplitAsk(null);
     setTossAsk(null);
+    setGuardAsk(null);
   }, [st]);
   const bindCancel = () => {
     setBindAsk(null);
@@ -94421,6 +94833,33 @@ const CardBattleBoard = ({
       act,
       label: act.hand && act.hand.length ? `${act.hand.length}枚をガッツにして、ターンを終わりますか？` : 'ガッツにしないで、ターンを終わりますか？'
     });
+  };
+  const askGuard = o => {
+    if (tutorial) {
+      step(o);
+      return;
+    }
+    const nx = cardApplyAction(db, st, o);
+    if (!nx) return;
+    const c = cardOf(db, me.hand[o.hand]);
+    const pv = nx.pending ? cardGuardPreview(db, nx) : null;
+    const who = o.to !== undefined ? `ねらいが${me.mons[o.to].name}に移る` : pv && pv.after === null && o.mon !== undefined ? `${me.mons[o.mon].name}が受ける` : '';
+    Audio_.fgSe.tap();
+    setGuardAsk({
+      act: o,
+      name: c ? c.name : '',
+      before: pv ? pv.before : null,
+      after: pv ? pv.after : null,
+      guts: nx.players[CARD_ME].guts.length,
+      who
+    });
+  };
+  const guardYes = () => {
+    const ga = guardAsk;
+    setGuardAsk(null);
+    if (!ga || cardDeciderOf(st) !== CARD_ME || !st.pending) return;
+    if (!cardGuardOptions(db, st).some(o => JSON.stringify(o) === JSON.stringify(ga.act))) return;
+    step(ga.act);
   };
   const confirmYes = () => {
     const cf = confirm;
@@ -94475,7 +94914,7 @@ const CardBattleBoard = ({
       }
       const picks2 = [...new Set(os.map(o => o.to !== undefined ? `t${o.to}` : `m${o.mon}`))];
       if (picks2.length === 1) {
-        step(os[0]);
+        askGuard(os[0]);
         return;
       }
       setSel({
@@ -94505,7 +94944,7 @@ const CardBattleBoard = ({
   const tapMon = (p, m) => {
     if (mode === 'guard' && sel) {
       const o = guardOpts.find(x => x.hand === sel.hand && p === CARD_ME && (x.to !== undefined ? x.to === m : x.mon === m));
-      if (o) step(o);
+      if (o) askGuard(o);
       return;
     }
     if (mode !== 'attack' || !sel) return;
@@ -94947,7 +95386,12 @@ const CardBattleBoard = ({
       onClick: () => step({
         type: 'pass'
       })
-    }, tutorial && st.pending && st.pending.evaded ? 'これで守る' : guardUsed ? guardPv.after !== null ? `これで受ける(${guardPv.after}ダメージ)` : 'これで受ける' : '守らない');
+    }, tutorial && st.pending && st.pending.evaded ? 'これで守る' : guardUsed ? guardPv.after !== null ? `これで受ける(${guardPv.after}ダメージ)` : 'これで受ける' : guardPv && guardPv.before !== null && !tutorial ? React.createElement("span", {
+      "data-card-pass-dmg": true,
+      className: "block leading-tight"
+    }, "守らない", React.createElement("span", {
+      className: "block text-[11px] font-bold text-rose-200"
+    }, `${guardPv.before}ダメージを受ける`)) : '守らない');
     if (mode === 'guts') return React.createElement(React.Fragment, null, myTurn && !tutorial && !replay && cardCanBackToAttack(st) && React.createElement("button", {
       type: "button",
       "data-card-back-attack": true,
@@ -95441,6 +95885,7 @@ const CardBattleBoard = ({
     const c = cardOf(db, no);
     const on = handUsable(i);
     const up = sel && sel.hand === i || picks.includes(i) || setChosen && JSON.parse(setChosen).includes(i);
+    const why = mode === 'guard' && !tutorial && !on ? cardGuardWhyShort(db, st, c) : null;
     return React.createElement("div", {
       key: `${no}-${i}`,
       "data-card-hand-card": i,
@@ -95453,7 +95898,7 @@ const CardBattleBoard = ({
         WebkitUserSelect: 'none',
         userSelect: 'none'
       },
-      className: `flex w-[19%] ${wide ? 'max-w-[72px]' : handTiny ? boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]' : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${replay && boardFit >= 4 ? '!max-w-[38px]' : ''} ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`,
+      className: `flex w-[19%] ${wide ? 'max-w-[72px]' : handTiny ? boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]' : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${replay && boardFit >= 4 ? '!max-w-[38px]' : ''} ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? why ? 'relative [&>*:not([data-card-why])]:opacity-45' : 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`,
       "data-card-tutor-focus": tutorial && tutFocus.hand.includes(i) ? true : undefined
     }, React.createElement("img", {
       src: CARD_IMG(c ? c.img : no),
@@ -95463,7 +95908,11 @@ const CardBattleBoard = ({
         WebkitUserDrag: 'none'
       },
       className: `w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`
-    }), !(replay && boardFit >= 3) && React.createElement("div", {
+    }), why && React.createElement("span", {
+      "data-card-why": true,
+      className: `pointer-events-none absolute left-1/2 top-[22%] z-[2] max-w-[110%] -translate-x-1/2 rounded-md border border-rose-300/80 bg-rose-950/95 px-1 py-px text-center ${handTiny ? 'text-[9px]' : 'text-[10px]'} font-black leading-tight text-rose-100 shadow-[0_2px_4px_#000]`,
+      style: JA_WRAP_STYLE
+    }, why), !(replay && boardFit >= 3) && React.createElement("div", {
       className: `mt-0.5 w-full rounded-md bg-black/60 ${handTiny ? 'py-px' : 'py-0.5'} text-center leading-tight`
     }, React.createElement(CardNameFit, {
       name: c ? c.name : no,
@@ -95909,7 +96358,42 @@ const CardBattleBoard = ({
     className: "block text-[14px] font-black text-white"
   }, c ? c.name : 'カード'), c && React.createElement("span", {
     className: "block text-[11px] font-bold text-slate-300"
-  }, `ガッツ${c.guts}${c.damage !== null && c.damage !== undefined ? `・ダメージ${c.damage}` : ''}`))))))), confirm && React.createElement(ConfirmSheet, {
+  }, `ガッツ${c.guts}${c.damage !== null && c.damage !== undefined ? `・ダメージ${c.damage}` : ''}`))))))), guardAsk && React.createElement("div", {
+    "data-card-guard-ask": true,
+    className: "fixed inset-0 z-[80] flex items-center justify-center bg-black/45 px-4",
+    onClick: () => setGuardAsk(null)
+  }, React.createElement("div", {
+    className: "w-full max-w-[320px] rounded-2xl border-2 border-sky-300 bg-slate-900 p-3 text-center shadow-[0_8px_24px_#000]",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "text-[14px] font-black text-white",
+    style: JA_WRAP_STYLE
+  }, `「${guardAsk.name}」を使うと`), guardAsk.after !== null && guardAsk.before !== null ? React.createElement("div", {
+    "data-card-guard-ask-dmg": true,
+    className: "mt-1 text-[13px] font-bold text-slate-200"
+  }, "受けるダメージ ", React.createElement("span", {
+    className: "text-[18px] font-black text-rose-300 line-through decoration-2"
+  }, guardAsk.before), " → ", React.createElement("span", {
+    className: "text-[24px] font-black text-amber-200"
+  }, guardAsk.after)) : guardAsk.who ? React.createElement("div", {
+    "data-card-guard-ask-dmg": true,
+    className: "mt-1 text-[15px] font-black text-amber-200",
+    style: JA_WRAP_STYLE
+  }, guardAsk.who) : null, React.createElement("div", {
+    className: "mt-0.5 text-[12px] font-bold text-amber-100"
+  }, `(ガッツ のこり${guardAsk.guts})`), React.createElement("div", {
+    className: "mt-3 flex gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-guard-ask-yes": true,
+    className: "mh-button mh-button-primary min-h-[44px] flex-1 rounded-xl text-[14px] font-black",
+    onClick: guardYes
+  }, "これで守る"), React.createElement("button", {
+    type: "button",
+    "data-card-guard-ask-no": true,
+    className: "mh-button min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-[14px] font-black",
+    onClick: () => setGuardAsk(null)
+  }, "やめる")))), confirm && React.createElement(ConfirmSheet, {
     title: confirm.label,
     message: confirm.kind === 'use' ? 'オプションで確かめないようにもできます' : '',
     confirmLabel: confirm.kind === 'use' ? '使う' : '終わる',
@@ -99919,6 +100403,7 @@ const CardShopGrid = ({
   rarity
 }) => {
   const missing = collection !== false && !((collection || {})[no] > 0);
+  const owned = collection ? Math.max(0, Math.floor(Number(collection[no]) || 0)) : 0;
   return React.createElement("button", {
     key: no,
     type: "button",
@@ -99935,7 +100420,10 @@ const CardShopGrid = ({
   }), missing && React.createElement("span", {
     "data-card-shop-missing-badge": true,
     className: "absolute left-0.5 top-0.5 rounded-md bg-rose-600 px-1 text-[9px] font-black text-white shadow"
-  }, "未取得"), rarity && rarity !== 'normal' && React.createElement("span", {
+  }, "未取得"), owned > 0 && React.createElement("span", {
+    "data-card-shop-owned": owned,
+    className: "absolute right-0.5 top-0.5 rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950 shadow"
+  }, "所持", owned), rarity && rarity !== 'normal' && React.createElement("span", {
     className: "absolute bottom-0.5 left-0.5 rounded-md bg-amber-300 px-1 text-[9px] font-black text-slate-950"
   }, CARD_RARITY_LABEL[rarity]), count > 1 && React.createElement("span", {
     className: "absolute bottom-0.5 right-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-white"
@@ -102774,11 +103262,14 @@ const CARD_PVP = (() => {
     foeAgain: null,
     foeGone: false
   });
-  const emit = () => listeners.forEach(fn => {
-    try {
-      fn(s);
-    } catch (_) {}
-  });
+  const emit = () => {
+    if (typeof friendsSetRoomWaiting === 'function') friendsSetRoomWaiting(!!s && (s.phase === 'connecting' || s.phase === 'waiting'));
+    listeners.forEach(fn => {
+      try {
+        fn(s);
+      } catch (_) {}
+    });
+  };
   const set = patch => {
     s = {
       ...s,
@@ -103783,6 +104274,22 @@ const CardPvpLobby = ({
   const [roster, setRoster] = useState(null);
   const [invites, setInvites] = useState([]);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [presence, setPresence] = useState({});
+  useEffect(() => {
+    if (!inviteOpen || !roster || !roster.length || typeof friendsPresenceFor !== 'function') return undefined;
+    let alive = true;
+    const load = () => {
+      void friendsPresenceFor(roster.map(f => f.otherId)).then(p => {
+        if (alive) setPresence(p || {});
+      });
+    };
+    load();
+    const t = setInterval(load, 60000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [inviteOpen, roster]);
   const [invited, setInvited] = useState({});
   const [inviteNext, setInviteNext] = useState('');
   const [sentRows, setSentRows] = useState({});
@@ -104177,12 +104684,17 @@ const CardPvpLobby = ({
   }, jaWrap('まだフレンドがいません。HOME左上のプロフィールの「フレンド」から、フレンドコードで申請できます')) : React.createElement("ul", {
     "data-card-pvp-roster": true,
     className: "max-h-[40vh] space-y-1 overflow-y-auto"
-  }, roster.slice(0, 30).map(f => React.createElement("li", {
+  }, (typeof friendsPresenceSort === 'function' ? friendsPresenceSort(roster.slice(0, 30), presence) : roster.slice(0, 30)).map(f => React.createElement("li", {
     key: f.otherId,
+    "data-card-pvp-roster-row": true,
     className: "flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5"
   }, React.createElement("span", {
-    className: "min-w-0 flex-1 truncate text-[13px] font-bold text-white"
-  }, f.userName), React.createElement("button", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("span", {
+    className: "block truncate text-[13px] font-bold text-white"
+  }, f.userName), typeof FriendPresenceTag === 'function' && React.createElement(FriendPresenceTag, {
+    info: presence[f.otherId]
+  })), React.createElement("button", {
     type: "button",
     "data-card-pvp-invite-to": f.otherId,
     disabled: !ready || !profileReady,
@@ -107217,7 +107729,14 @@ function MonsterHeroGame() {
   const [dailyMasuAdvice, setDailyMasuAdvice] = useState(null);
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(() => normalizeRhythmBestRecords(null));
-  const [rhythmPlay, setRhythmPlay] = useState(null);
+  const [rhythmPlay, setRhythmPlayState] = useState(null);
+  const setRhythmPlay = next => {
+    if (next && typeof next === 'object' && next.from !== 'multi' && typeof RHYTHM_MULTI !== 'undefined' && RHYTHM_MULTI.view()) {
+      if (!window.confirm('みんなで対戦の部屋で待っています。部屋を出てから遊びますか?')) return;
+      RHYTHM_MULTI.leave();
+    }
+    setRhythmPlayState(next);
+  };
   const [rhythmMonsterSlotIds, setRhythmMonsterSlotIds] = useState([]);
   const [rhythmMonsterPickerOpen, setRhythmMonsterPickerOpen] = useState(false);
   const [rhythmMonsterMessage, setRhythmMonsterMessage] = useState('');
@@ -133766,6 +134285,14 @@ function MonsterHeroGame() {
         setRhythmPlay(null);
         setGameState('RHYTHM_OPTIONS');
       }
+    }), React.createElement(RhythmMultiAwayBar, {
+      hidden: gameState === 'RHYTHM_MULTI' || gameState === 'RHYTHM_MODE_SELECT' || !!rhythmPlay,
+      busy: ['BATTLE', 'WAVE_RESULT', 'CHAMPION', 'BATTLE_TUTORIAL', 'CARD_BATTLE', 'RPG_DEBUG_BATTLE', 'DEBUG_BATTLE_SETUP'].includes(gameState),
+      onReturn: () => {
+        void openRhythmDemo({
+          to: 'RHYTHM_MULTI'
+        });
+      }
     }), (gameState === 'RHYTHM_MULTI' || gameState === 'RHYTHM_MODE_SELECT') && React.createElement(RhythmMultiScreen, {
       key: gameState,
       profile: {
@@ -133818,6 +134345,7 @@ function MonsterHeroGame() {
       onResumeQuickRun: () => resumeQuickRunFromRhythm(),
       onBack: gameState === 'RHYTHM_MODE_SELECT' ? exitRhythmSongSelect : () => setGameState('RHYTHM_MODE_SELECT'),
       onRoomEntered: () => setGameState('RHYTHM_MULTI'),
+      onStepAway: exitRhythmSongSelect,
       rankingSupport: {
         breederIcon: rankingBreederIcon,
         open: song => {
