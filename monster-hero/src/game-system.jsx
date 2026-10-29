@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9677ba0e8d5047f4
+// generated-sha256: 0c0476f9fa1d6702
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -12138,7 +12138,8 @@ const helpDataRows = (id) => {
         return [`${index + 1}位`,
           `${HERO_PROOF_SHARD_ITEM.emoji} ${HERO_PROOF_SHARD_ITEM.name}×${reward.count}`
           + ` ／ 💗 虹のプシュケー×${reward.psyche.toLocaleString()}`
-          + ` ／ 💎 ダイヤ×${reward.gold.toLocaleString()}`];
+          + ` ／ 💎 ダイヤ×${reward.gold.toLocaleString()}`
+          + ` ／ 🎵 ビートP×${reward.beatPoint.toLocaleString()}`];
       });
     // イベントの回数ボーナス。難易度ごとの割合を実データから出す
     // (ヘルプへ手で書き写すと、割合を変えたときに古いままになる)
@@ -20246,12 +20247,15 @@ const rhythmEventGiftRewards=(prize)=>{
     if(found)found.amount+=n;
     else totals.set(key,itemId?{type,itemId,amount:n}:{type,amount:n});
   };
+  // 週間のビートP(2026-10-29)。配り始めた週より前の週には付けない(rhythmWeeklyBeatPointActive)
+  const beatPointOn=typeof rhythmWeeklyBeatPointActive==='function'&&rhythmWeeklyBeatPointActive(prize&&prize.event);
   const addReward=(reward)=>{
     if(!reward)return;
     const item=rhythmEventRewardItem(reward);
     if(item)add(GIFT_ITEM_REWARD_TYPE,item.id,reward.count);
     add('rainbowPsyche',null,reward.psyche);
     add('diamond',null,reward.gold);
+    if(beatPointOn)add('beatPoint',null,reward.beatPoint);
   };
   (Array.isArray(prize&&prize.prizes)?prize.prizes:[]).forEach(entry=>addReward(entry&&entry.reward));
   // 参加報酬。勇者の証片(count)と勇者の証(heroProof)は別のアイテムなので分けて足す
@@ -20261,6 +20265,7 @@ const rhythmEventGiftRewards=(prize)=>{
     if(join.heroProof>0&&typeof HERO_PROOF_ITEM!=='undefined')add(GIFT_ITEM_REWARD_TYPE,HERO_PROOF_ITEM.id,join.heroProof);
     add('rainbowPsyche',null,join.psyche);
     add('diamond',null,join.gold);
+    if(beatPointOn)add('beatPoint',null,join.beatPoint);
   }
   return [...totals.values()];
 };
@@ -20273,6 +20278,7 @@ const rhythmEventParticipationText=(reward)=>{
   if(reward.heroProof>0)parts.push(`${HERO_PROOF_ITEM.emoji} ${HERO_PROOF_ITEM.name}×${reward.heroProof.toLocaleString()}`);
   if(reward.gold>0)parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
   if(reward.psyche>0)parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
+  if(reward.beatPoint>0)parts.push(`🎵 ビートP×${reward.beatPoint.toLocaleString()}`);
   return parts.join(' ／ ');
 };
 // 「🍇 超越の実（スエゾー種）×5 ／ 虹のプシュケー×1,000」のような1行。
@@ -20285,6 +20291,8 @@ const rhythmEventRewardText=(reward)=>{
   if(reward.psyche>0)parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
   // 週間の順位報酬にはダイヤも付く(イベントの順位報酬には無いので、ある時だけ出す)
   if(reward.gold>0)parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
+  // 週間の順位報酬のビートP(2026-10-29)
+  if(reward.beatPoint>0)parts.push(`🎵 ビートP×${reward.beatPoint.toLocaleString()}`);
   return parts.join(' ／ ');
 };
 
@@ -28481,6 +28489,156 @@ const classicAiCopyRegenGuts = (aiCopy, rate) => {
   const max = Math.max(0, aiCopySafeNum(aiCopy.maxGuts));
   const add = Math.floor(max * Math.max(0, aiCopySafeNum(rate)));
   return { ...aiCopy, guts: Math.min(max, Math.max(0, aiCopySafeNum(aiCopy.guts)) + add) };
+};
+
+// ---- part: 34-tactics-ex-effects.jsx ----
+// ==== タクティクス(とレイド)の EX で、いま効いている強化・弱化の一覧(見せる用・読むだけ) ====
+// 2026-10-29 社長の決め「ア＋イ」(EX の効果を見やすく)。見た目は 71-screen-battle.jsx(レフェリーくん)、ここはデータだけ。
+// 効き目の計算は変えない。32-tactics-units.jsx の判定(tacticsExActiveEffect・tacticsExRemainOf ほか)を読んで並べるだけ。
+// 1つの要素の形(味方・敵とも同じ):
+//   { key, name, icon, kind:'buff'|'debuff', pct, fromName, fromSlot, turnsLeft, allAllies, note }
+//   key … `${effect}@${使った子の枠}`(同じ枠の一覧の中で一意) / name … 画面の短い呼び名(EX の名前) / icon … 絵文字1つ
+//   pct … 何%(数・無ければ null) / fromName・fromSlot … 誰の EX か / turnsLeft … 残りターンの数(このターンだけは 1)・
+//   WAVE のあいだは 'wave'・切り替えるまでは null / allAllies … 味方全員に効く EX か / note … 詳細の窓の1行
+// 一覧は docs/progress/battle-ex-buffs.md(31種)。表に無い effect は出さない(足したらここにも足す)
+const tacticsExPct = (v) => (Number.isFinite(Number(v)) && Number(v) !== 0 ? Math.round(Number(v) * 100) : null);
+// to … 'self'(使った子)/'all'(味方全員)/'others'(使った子以外の味方)/'target'(選ばれた子)/'enemy'(敵だけ。listTacticsExEnemyEffects で出す)
+// pct・note は def(TACTICS_EX_SKILLS の1つ)を受けて作る
+const TACTICS_EX_EFFECT_VIEW = Object.freeze({
+  coverAll:     { icon: '🛡️', to: 'others', note: () => '敵の攻撃をモノリスが代わりに受ける' },
+  statBoost:    { icon: '💪', to: 'self', pct: (d) => tacticsExPct(d.rates ? Math.max(...Object.values(d.rates)) : d.statRate),
+    note: (d) => d.rates ? `力・ガッツ+${tacticsExPct(d.rates.atk)}%・丈夫さ・ライフ+${tacticsExPct(d.rates.def)}%・自動回復アップ` : `全ステータス+${tacticsExPct(d.statRate)}%・自動回復+${tacticsExPct(d.regenRate)}%` },
+  distMatch:    { icon: '🌸', to: 'self', note: () => '距離補正×1.7・同じ距離は完全回避' },
+  dodgeCombo:   { icon: '🩸', to: 'self', note: (d) => `同じ距離は完全回避・回避するたびに連撃+${tacticsExPct(d.dodgeComboRate)}%` },
+  multiBuff:    { icon: '✨', to: 'self', pct: (d) => tacticsExPct(d.dmgRate),
+    note: (d) => [d.dmgRate ? `与ダメ+${tacticsExPct(d.dmgRate)}%` : '', d.selfTakenRate ? `被ダメ−${tacticsExPct(d.selfTakenRate)}%` : '',
+      d.rates && d.rates.def ? `丈夫さ+${tacticsExPct(d.rates.def)}%` : '', d.critRateRate ? '会心アップ' : '', d.distMult ? `距離補正×${d.distMult}` : '',
+      d.uniqueCrit ? '固有技は必ず会心' : '', d.extraCombos ? `連撃${tacticsExPct(d.extraCombos.rate)}%×${d.extraCombos.count}` : ''].filter(Boolean).join('・') },
+  stage:        { icon: '🎤', to: 'all', note: () => 'カード+1・ボルテージが上がるほど全員の与ダメ・回復アップ' },
+  present:      { icon: '🎁', to: 'all', note: () => '全員のガッツ回復とランダムな贈り物' },
+  lifeSpring:   { icon: '⛲', to: 'target', note: (d) => `ライフ上限+${tacticsExPct(d.lifeSpring && d.lifeSpring.maxUpRate)}%・根性・与ダメアップ` },
+  timeStop:     { icon: '⏱️', to: 'self', note: () => 'このターン、敵は動かない・味方の強化を写す' },
+  pandoraBox:   { icon: '📦', to: 'self', note: () => '毎ターン固有技・悪魔の連撃と天使の回復' },
+  thunder:      { icon: '⚡', to: 'self', note: (d) => `雷をためて雷纏・与ダメ+${tacticsExPct(d.thunder && d.thunder.dmg)}%・回避アップ` },
+  partyBoost:   { icon: '🌱', to: 'all', pct: (d) => tacticsExPct(d.partyBoost && d.partyBoost.statRate),
+    note: (d) => `力・丈夫さ+${tacticsExPct(d.partyBoost && d.partyBoost.statRate)}%・自動回復+${tacticsExPct(d.partyBoost && d.partyBoost.hpRegen)}%` },
+  damageBack:   { icon: '🌫️', to: 'all', pct: (d) => tacticsExPct(d.damageBack && d.damageBack.hpRate),
+    note: (d) => `受けたダメージの${tacticsExPct(d.damageBack && d.damageBack.hpRate)}%がライフに戻る` },
+  psychoLock:   { icon: '🎯', to: 'enemy', note: () => '敵の距離を固定・敵の与ダメダウン・被ダメアップ(敵の一覧で出す)' },
+  counter:      { icon: '🥊', to: 'self', note: () => '狙われたターンに攻撃するとカウンター(与ダメ×2×カウンター)' },
+  allIn:        { icon: '👊', to: 'self', note: () => '丈夫さが0になり、その50%が力へ' },
+  weaponChange: { icon: '🗡️', to: 'self', note: () => '戦い方を切り替えた' },
+  partyGuard:   { icon: '🍃', to: 'all', pct: (d) => tacticsExPct(d.partyTakenRate),
+    note: (d) => `被ダメ−${tacticsExPct(d.partyTakenRate)}%・毎ターン全員ライフ${tacticsExPct(d.partyRegenRate)}%回復` },
+  comboBurst:   { icon: '🍬', to: 'self', note: (d) => `連撃${tacticsExPct(d.extraCombos && d.extraCombos.rate)}%×${d.extraCombos && d.extraCombos.count}` },
+  avoidCharge:  { icon: '👻', to: 'self', note: () => '完全回避・残っているあいだ会心確定と連撃' },
+  kitsunebi:    { icon: '🦊', to: 'self', note: () => '狐火1つにつき与ダメ+4%・被ダメ−3%' },
+  hoshiai:      { icon: '🌌', to: 'self', note: () => '相方と続けて攻撃' },
+  kogare:       { icon: '🌠', to: 'self', note: () => '攻撃が当たると25%で敵が「意味不明」' },
+  trickConfuse: { icon: '🌀', to: 'all', pct: (d) => tacticsExPct(d.partyStatRate), note: (d) => `全員の力・丈夫さ+${tacticsExPct(d.partyStatRate)}%` },
+  cookieBox:    { icon: '🍪', to: 'all', note: () => '全員の与ダメアップ・被ダメダウン(配ったクッキーの数で決まる)' },
+  nightmareKey: { icon: '🗝️', to: 'self', note: () => '与ダメ・会心率アップ(使った黒音符の数で決まる)' },
+  kusabiDouble: { icon: '🔻', to: 'self', note: (d) => `楔が1回で2つ・上限12・ヘイト−${d.hateDown || 0}` },
+  millefeuille: { icon: '🥞', to: 'all', pct: (d) => tacticsExPct(d.millefeuille && d.millefeuille.statBase),
+    note: (d) => `シールドのある子は全ステータス+${tacticsExPct(d.millefeuille && d.millefeuille.statBase)}%(楔1つごとに+${tacticsExPct(d.millefeuille && d.millefeuille.statPer)}%)` },
+});
+const tacticsExTurnsLeftOf = (rm) => (!rm ? null : rm.kind === 'turns' ? Math.max(1, tacticsSafeInt(rm.turns, 1)) : rm.kind === 'wave' ? 'wave' : rm.kind === 'turn' ? 1 : null);
+// 枠ごとの一覧(味方)。defOf(monId, slot) は使う EX の定義(60 の raidExDefOf と同じもの)、nameOf(slot) は子の名前
+const listTacticsExEffectsAt = (state, units, slot, now, { defOf = null, nameOf = null } = {}) => {
+  const list = Array.isArray(units) ? units : [];
+  if (!Number.isInteger(slot) || !list[slot]) return [];
+  const effects = normalizeTacticsExState(state).effects;
+  const out = [];
+  list.forEach((u, j) => {
+    if (!u) return;
+    const eff = tacticsExActiveEffect(state, j, u.id, now);
+    const view = eff ? TACTICS_EX_EFFECT_VIEW[eff] : null;
+    const def = view && typeof defOf === 'function' ? defOf(u.id, j) : null;
+    if (!view || !def) return;
+    const hits = view.to === 'self' ? j === slot : view.to === 'all' ? true : view.to === 'others' ? j !== slot
+      : view.to === 'target' ? (effects[j] && effects[j].target === slot) : false;
+    if (!hits) return;
+    out.push({
+      key: `${eff}@${j}`, name: def.name || '', icon: view.icon, kind: 'buff',
+      pct: view.pct ? view.pct(def) : null, fromName: typeof nameOf === 'function' ? (nameOf(j) || '') : '', fromSlot: j,
+      turnsLeft: tacticsExTurnsLeftOf(tacticsExRemainOf(def, state, j, u.id, now)),
+      allAllies: view.to === 'all', note: view.note ? view.note(def) : '',
+    });
+  });
+  // 自分の EX が先、そのあとほかの子の EX(枠の順)
+  return out.sort((a, b) => (a.fromSlot === slot ? -1 : 0) - (b.fromSlot === slot ? -1 : 0) || a.fromSlot - b.fromSlot);
+};
+// 敵に付く EX の弱化の一覧。乱心(スプーキー)は EX の状態ではなく 60 の enemyConfuse で数えるので、ここには入れない(60 の enemyDebuffs にある)
+const listTacticsExEnemyEffects = (state, units, now, { defOf = null, nameOf = null } = {}) => {
+  const list = Array.isArray(units) ? units : [];
+  const out = [];
+  const nameAt = (j) => (typeof nameOf === 'function' && Number.isInteger(j) ? (nameOf(j) || '') : '');
+  const slotOfEffect = (kind) => list.findIndex((u, j) => u && tacticsExActiveEffect(state, j, u.id, now) === kind);
+  const item = (o) => out.push({ kind: 'debuff', pct: null, fromName: '', fromSlot: null, turnsLeft: null, allAllies: false, note: '', ...o });
+  const psycho = tacticsExPsychoLockOf(state, now);
+  if (psycho && psycho.active) { const j = slotOfEffect('psychoLock');
+    item({ key: `psychoLock@${j}`, name: 'サイコロックオン', icon: '🎯', pct: tacticsExPct(psycho.enemyTakenBonus), fromName: nameAt(j), fromSlot: j >= 0 ? j : null,
+      turnsLeft: psycho.turnsLeft > 0 ? psycho.turnsLeft : null, note: `間合いを動けない・与ダメ−${tacticsExPct(1 - psycho.enemyDmgMult) || 0}%・被ダメ+${tacticsExPct(psycho.enemyTakenBonus) || 0}%` }); }
+  const aqua = tacticsExAquaOf(state, list, now);
+  if (aqua && aqua.active && aqua.stacks > 0 && (aqua.route === 'prison' || aqua.route === 'freeze')) {
+    item({ key: `aqua${aqua.route}@${aqua.slot}`, name: aqua.route === 'prison' ? '水牢' : '氷結', icon: aqua.route === 'prison' ? '💧' : '❄️',
+      fromName: nameAt(aqua.slot), fromSlot: Number.isInteger(aqua.slot) ? aqua.slot : null, turnsLeft: aqua.turnsLeft > 0 ? aqua.turnsLeft : null,
+      note: `${aqua.stacks}つ・${aqua.route === 'prison' ? '敵の与ダメダウン' : '敵の被ダメアップ'}` }); }
+  if (aqua && aqua.active && aqua.finale) item({ key: `aquaFinale@${aqua.slot}`, name: 'アクアフィナーレ', icon: '🌊', fromName: nameAt(aqua.slot),
+    fromSlot: Number.isInteger(aqua.slot) ? aqua.slot : null, note: '敵の被ダメが大きく上がる' });
+  const nm = tacticsExNightmareEnemyOf(state, list, now);
+  if (nm && nm.enemyTaken > 0) { const j = slotOfEffect('nightmareKey');
+    item({ key: `nightmareKey@${j}`, name: '悪夢全開', icon: '🗝️', pct: tacticsExPct(nm.enemyTaken), fromName: nameAt(j), fromSlot: j >= 0 ? j : null,
+      turnsLeft: nm.turnsLeft > 0 ? nm.turnsLeft : null, note: `敵の被ダメ+${tacticsExPct(nm.enemyTaken)}%` }); }
+  // 敵の弱化一覧に出ていなかった2つ(2026-10-29)
+  [['kogare', '焦がれ待つ天ノ河', '🌠', '味方の攻撃が当たると25%で「意味不明」(1ターン2回まで)'], ['timeStop', '悠久の刻', '⏱️', 'このターン、敵は動けない']].forEach(([kind, name, icon, note]) => {
+    const j = slotOfEffect(kind); if (j < 0) return;
+    const def = typeof defOf === 'function' ? defOf(list[j].id, j) : null;
+    item({ key: `${kind}@${j}`, name, icon, fromName: nameAt(j), fromSlot: j, turnsLeft: tacticsExTurnsLeftOf(def ? tacticsExRemainOf(def, state, j, list[j].id, now) : null), note });
+  });
+  return out;
+};
+
+// ---- 溜まる物(勇者特性・固有技・EX で積み上がる物)も、同じ形の要素(kind:'stack')で返す(2026-10-29 社長「楔とか溜まってくやつもわかるように」) ----
+//   counts … { 種類: 数 }(71 の allyStackCounts[i]・60 の enemyStackCounts と同じ形)。名前と絵は BATTLE_STACK_MARKS(ズカンくんの持ち場)を読む
+//   要素は { key:`stack:${種類}`, name, icon, kind:'stack', count, max, turnsLeft(残りターンで数えるものだけ), pct:null, fromName:'', fromSlot:null, allAllies:false, note }
+//   「マーク×数」に無い物(中二病の重ね・カウンター・回避数・雷・ボルテージ)は、名前と絵をここで持つ
+const TACTICS_STACK_EXTRA = Object.freeze({
+  chuuni:      { mark: '😈', label: '中二病の固有技の重ね', note: '固有技の威力+10%・消費ガッツ+10%(1つにつき)' },
+  chuuniCut:   { mark: '🛡️', label: '被ダメ半減の残り', note: 'このWAVEのあいだ、被ダメ50%カットをあと何回使えるか' },
+  counter:     { mark: '🥊', label: 'カウンター', note: '狙われたターンに攻撃すると、与ダメ×2×カウンター' },
+  dodges:      { mark: '🩸', label: '回避した数', note: '回避するたびに連撃が増える' },
+  thunder:     { mark: '⚡', label: '雷', note: 'ためたあと雷纏で強化' },
+  voltage:     { mark: '🎤', label: 'ボルテージ', note: '1段階ごとに全員の与ダメ・回復アップ' },
+});
+// 上限(わかるものだけ)。定数は 22-enemy-and-bond-entries.jsx(読めないときは null)
+const tacticsStackMaxOf = (kind) => {
+  const n = (name) => (typeof globalThis !== 'undefined' && Number.isFinite(globalThis[name]) ? globalThis[name] : null);
+  const table = {
+    cookie: typeof SWEET_STACK_MAX !== 'undefined' ? SWEET_STACK_MAX : n('SWEET_STACK_MAX'),
+    note: typeof SWEET_STACK_MAX !== 'undefined' ? SWEET_STACK_MAX : n('SWEET_STACK_MAX'),
+    kenshi: typeof KENSHI_COMBO_POWER_MAX !== 'undefined' ? KENSHI_COMBO_POWER_MAX : null,
+    rengoku: typeof KYUBI_RENGOKU_MAX !== 'undefined' ? KYUBI_RENGOKU_MAX : null,
+    kitsunebi: typeof KITSUNEBI_MAX !== 'undefined' ? KITSUNEBI_MAX : null,
+    roar: typeof TACTICS_ROAR_MAX_STACKS !== 'undefined' ? TACTICS_ROAR_MAX_STACKS : null,
+    kagero: 1, konjo: 1, avoid: 2, counter: 3, thunder: 5, voltage: 10, chuuniCut: 2,
+  };
+  return Number.isFinite(table[kind]) ? table[kind] : null;
+};
+// 残りターンで数えるもの(BATTLE_STACK_MARKS の unit:'T')。exTurns は EX の要素の turnsLeft と同じなので出さない
+const listTacticsStackItems = (counts, { keepZero = ['cookie', 'note'] } = {}) => {
+  const marks = typeof BATTLE_STACK_MARKS !== 'undefined' ? BATTLE_STACK_MARKS : {};
+  return Object.entries(counts && typeof counts === 'object' ? counts : {}).reduce((out, [kind, raw]) => {
+    if (kind === 'exTurns') return out;
+    const count = Math.max(0, Math.floor(Number(raw) || 0));
+    if (count <= 0 && !keepZero.includes(kind)) return out;
+    const m = marks[kind] || TACTICS_STACK_EXTRA[kind];
+    if (!m) return out;
+    const isTurns = m.unit === 'T';
+    out.push({ key: `stack:${kind}`, name: m.label || kind, icon: m.mark || '', kind: 'stack', count, max: isTurns ? null : tacticsStackMaxOf(kind),
+      turnsLeft: isTurns ? count : null, pct: null, fromName: '', fromSlot: null, allAllies: false, note: (TACTICS_STACK_EXTRA[kind] && TACTICS_STACK_EXTRA[kind].note) || '' });
+    return out;
+  }, []);
 };
 
 // ---- part: 33-rhythm-buddy.jsx ----
@@ -42369,17 +42527,24 @@ const CLASSIC_AI_COPY_CSS = `
 [data-ai-copy-row] > .grid{flex:1 1 0;min-width:0;width:auto}
 [data-ai-copy-cell]{width:62px;flex:0 0 62px;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:2px;padding:3px 3px;border-radius:12px;border:1px solid rgba(52,211,153,.6);background:rgba(2,44,34,.55);position:relative}
 [data-ai-copy-cell] [data-ai-copy-head]{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;min-width:0}
+[data-ai-copy-cell] [data-ai-copy-face]{margin-bottom:3px}
 [data-ai-copy-cell] [data-ai-copy-name]{width:100%;min-width:0;text-align:center;font-size:9px;line-height:10px;font-weight:900;color:#a7f3d0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:keep-all;overflow-wrap:anywhere}
+/* コピーが出ると4枠が細くなる(320 幅で約52px)。枠の中の札が枠からはみ出さない・字が切れないように、コピーがいるあいだだけ小さくする
+   (2026-10-29 見回り: 距離補正の札「-10.0%」が枠の外へ、ガードの札が「ガ…」に切れていた) */
+[data-ai-copy-row] [data-dist-chip]{font-size:9px;padding:1px 2px;gap:0;right:1px;max-width:calc(100% - 2px)}
+[data-ai-copy-row] [data-dist-chip] svg{display:none}
+[data-ai-copy-row] [data-tactics-slot-marks] > div{padding-left:1px;padding-right:1px}
+[data-ai-copy-row] [data-tactics-slot-marks] > div > span:first-child{display:none}
+/* 横向き(背の低い画面): 縦と同じく4枠の右に細い5列目として置く。列の下に段を足すと、そのぶん敵の段が縮んで敵の絵が見えなくなる
+   (2026-10-29 見回り 667×375)。枠の高さ(112px)に収まるよう、絵・字を小さくする */
 @media (orientation: landscape) and (max-height: 520px){
-  [data-ai-copy-row]{flex-direction:column;gap:3px}
-  [data-ai-copy-row] > .grid{flex:0 0 auto;width:100%}
-  [data-ai-copy-cell]{width:100%;flex:0 0 30px;height:30px;flex-direction:row;justify-content:flex-start;gap:6px;padding:0 6px;border-radius:8px;overflow:visible}
-  [data-ai-copy-cell] [data-ai-copy-head]{width:auto;flex:0 0 auto;flex-direction:row;gap:4px}
-  [data-ai-copy-cell] [data-ai-copy-name]{width:auto;flex:0 1 auto;max-width:110px;text-align:left;-webkit-line-clamp:1}
-  [data-ai-copy-cell] [data-ai-copy-art]{flex:0 0 26px;width:26px;height:26px}
-  [data-ai-copy-cell] [data-ai-copy-guts]{flex:0 0 92px;width:92px}
-  [data-ai-copy-cell] [data-sorashido-next]{flex-direction:row;gap:6px;width:auto;flex:1 1 0;padding:0 6px;border-radius:6px}
-  [data-ai-copy-cell] [data-sorashido-next] > b{-webkit-line-clamp:1}
+  [data-ai-copy-cell]{width:64px;flex:0 0 64px;gap:0;padding:1px 2px;border-radius:10px}
+  [data-ai-copy-cell] [data-ai-copy-head]{gap:0}
+  [data-ai-copy-cell] [data-ai-copy-face]{margin-bottom:2px}
+  [data-ai-copy-cell] [data-ai-copy-name]{font-size:8px;line-height:9px}
+  [data-ai-copy-cell] [data-sorashido-next]{padding:1px 2px;border-radius:6px}
+  [data-ai-copy-cell] [data-sorashido-next] > b{-webkit-line-clamp:2;font-size:8px;line-height:9px}
+  [data-ai-copy-cell] [data-sorashido-next] > small{display:none}
 }`;
 // 演出の段階。60 から aiCopy.fx('appear'|'thinking'|'vanish')が来ればそれを使い、無ければ fallback(出る前 appear・出たら idle)
 const aiCopyViewPhase = (copy, fallback) => (copy && ['appear', 'thinking', 'vanish'].includes(copy.fx) ? copy.fx : fallback);
@@ -42501,8 +42666,8 @@ function ClassicAiCopyCell({ copy, turnCount, onOpen, mon = null, hitAnim = null
       role={canOpen ? 'button' : undefined} tabIndex={canOpen ? 0 : undefined} style={canOpen ? { cursor: 'pointer' } : undefined}
       onClick={canOpen ? onOpen : undefined} onKeyDown={canOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } } : undefined}>
       <style>{CLASSIC_AI_COPY_CSS}</style>
-      <span data-ai-copy-head><AiCopyFace src={mon} size={20}/><span data-ai-copy-name>{copy.name || '仲間'}<wbr/>のコピー</span></span>
-      {mon ? <AiCopyBody src={mon} phase={phase} hit={!!hitAnim} anim={hitAnim} size={layout === 'landscape' ? 26 : 40}/>
+      <span data-ai-copy-head><AiCopyFace src={mon} size={layout === 'landscape' ? 16 : 20}/><span data-ai-copy-name>{copy.name || '仲間'}<wbr/>のコピー</span></span>
+      {mon ? <AiCopyBody src={mon} phase={phase} hit={!!hitAnim} anim={hitAnim} size={layout === 'landscape' ? 24 : 40}/>
         : <SorashidoCopyFx phase={phase}><img src={SORASHIDO_FACE_ICON} alt="" aria-hidden="true" className="h-7 w-7 rounded-full object-cover bg-black/30" draggable="false"/></SorashidoCopyFx>}
       {out
         ? <><AiCopyGutsMeter guts={guts} maxGuts={maxGuts}/>
@@ -42534,7 +42699,7 @@ function BattleScreen({
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, enemyDebuffs, battleUnitStatusOf, battleEnemyStatus, enemyStackCounts, debugStackMarks, tacticsSlotCountersAt, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
-  tacticsExInfo, activateTacticsEx, tacticsExCutin, hamCounterFx, skipHamCounterFx, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot, tacticsHate, tacticsHateOn, aiCopy, aiCopyHitting = false,
+  tacticsExInfo, activateTacticsEx, tacticsExCutin, hamCounterFx, skipHamCounterFx, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot, tacticsHate, tacticsHateOn, aiCopy, tacticsExEffectsAt, tacticsExEnemyEffects, aiCopyHitting = false,
   tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, kyubiOrihimeStackMarks, sweetStackView, bowStackView, fateWheelView, tacticsShields, enemyConfuseTurns, luckBanners,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
@@ -44372,7 +44537,7 @@ function BattleScreen({
                     </div>
                   )}
                   {/* 距離補正は0%でも出す(「補正が無い」ことも情報なので、枠ごとに常に見えるようにする) */}
-                  {(()=>{const totalBonus=distTotalBonus(i); return(<div className={`absolute bottom-0.5 right-0.5 text-[11px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus>0?'text-cyan-300 border-cyan-400/30':totalBonus<0?'text-red-300 border-red-400/30':'text-slate-300 border-white/20'}`}><Sword size={5}/>{totalBonus>0?'+':''}{(totalBonus*100).toFixed(1)}%</div>);})()}
+                  {(()=>{const totalBonus=distTotalBonus(i); return(<div data-dist-chip className={`absolute bottom-0.5 right-0.5 text-[11px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus>0?'text-cyan-300 border-cyan-400/30':totalBonus<0?'text-red-300 border-red-400/30':'text-slate-300 border-white/20'}`}><Sword size={5}/>{totalBonus>0?'+':''}{(totalBonus*100).toFixed(1)}%</div>);})()}
                   {/* ★新しい盤面では攻撃モーションを**絵だけ**に掛ける(2026-09-24 ユーザー選択「攻撃時に札を跳ねさせない」)。
                       それまでは絵のある左の列ごと動かしていたので、距離補正の札や置いたカードの札まで
                       大きくなって飛び、名前の行を隠していた。古い盤面は今までどおり枠ごと動かす */}
@@ -56320,20 +56485,33 @@ if (typeof document !== 'undefined' && document.head && !document.getElementById
   el.textContent = '[data-card-press]{touch-action:manipulation}';
   document.head.appendChild(el);
 }
+// 長押し・タップを取り消す、指の動きの大きさ(px)。これより動いたらスワイプ(スクロール)とみなす
+const CARD_PRESS_MOVE_PX = 10;
 const useCardLongPress = (onLong, ms = 450) => {
   const timer = useRef(null);
   const fired = useRef(false);
   const last = useRef(null);    // 前のタップ { no, at }
+  // 指を下ろした位置。そこから動いたら(スクロールしようとしたスワイプ)、長押しもタップも取り消す。
+  //   動いても数え続けていたので、図鑑・デッキ作成でゆっくりスクロールすると詳しい画面が開いた(2026-10-29 社長)
+  const start = useRef(null);
+  const moved = useRef(false);
   useEffect(() => () => clearTimeout(timer.current), []);
   return (no, onTap, opt = {}) => ({
     'data-card-press': true,
-    onPointerDown: () => { fired.current = false; clearTimeout(timer.current); timer.current = setTimeout(() => { fired.current = true; last.current = null; onLong(no); }, ms); },
+    onPointerDown: (e) => { fired.current = false; moved.current = false; start.current = { x: e.clientX, y: e.clientY }; clearTimeout(timer.current); timer.current = setTimeout(() => { fired.current = true; last.current = null; onLong(no); }, ms); },
+    onPointerMove: (e) => {
+      const s0 = start.current;
+      if (!s0 || moved.current || Math.hypot(e.clientX - s0.x, e.clientY - s0.y) <= CARD_PRESS_MOVE_PX) return;
+      moved.current = true;
+      clearTimeout(timer.current);
+    },
     onPointerUp: () => clearTimeout(timer.current),
     onPointerLeave: () => clearTimeout(timer.current),
     onPointerCancel: () => clearTimeout(timer.current),
     onContextMenu: (e) => e.preventDefault(),
     onClick: (e) => {
       if (fired.current) { fired.current = false; return; }
+      if (moved.current) { moved.current = false; return; }   // スワイプのあとのタップは数えない
       const now = Date.now();
       if (opt.double !== false && last.current && last.current.no === no && now - last.current.at < CARD_DOUBLE_TAP_MS) {
         last.current = null;
@@ -58355,6 +58533,21 @@ const CardQuickRunDetail = ({ quickRun, autoReady, autoDifficulty, todayLoops = 
 // 次に開いたとき、印が残っていて beat(対戦の画面が生きていた時刻)が古ければ、投了と同じ計算で数え、同じ取引で印を消す(二重に数えない)。
 // beat が新しいあいだは、ほかのタブで対戦中とみて数えない
 const CARD_CPU_OPEN_KEY = 'mh_card_cpu_open_v1';
+// 助手と対戦で前に選んだ難易度(2026-10-29 社長「最初の位置をイージーではなく前に選んだものに」)。'easy'〜'master' の文字だけ。
+// 無い・壊れている・まだ開いていない難易度なら、今までどおりイージー
+const CARD_LAST_LEVEL_KEY = 'mh_card_last_level_v1';
+// 設定「助手と対戦の最初の強さ」(2026-10-29 社長「設定でいじれるように」)。'last'(前に選んだもの・既定)か 'easy'〜'master'。無い・壊れているときは 'last'
+const CARD_START_LEVEL_KEY = 'mh_card_start_level_v1';
+const cardNormalizeStartLevel = (v) => (typeof v === 'string' && (v === 'last' || CARD_LEVEL_ORDER.includes(v)) ? v : 'last');
+// 最初の強さを決める。pref … 設定 / last … 前に選んだもの / isOpen(lv) … 開いているか。開いていなければ開いている中でいちばん近い強さ(同じ近さなら弱いほう)、無ければ EASY
+const cardStartLevelOf = (pref, last, isOpen) => {
+  const want = pref === 'last' ? (typeof last === 'string' && CARD_LEVEL_ORDER.includes(last) ? last : 'easy') : pref;
+  if (isOpen(want)) return want;
+  const i = CARD_LEVEL_ORDER.indexOf(want);
+  const open = CARD_LEVEL_ORDER.filter(isOpen).sort((a, b) => (Math.abs(CARD_LEVEL_ORDER.indexOf(a) - i) - Math.abs(CARD_LEVEL_ORDER.indexOf(b) - i)) || (CARD_LEVEL_ORDER.indexOf(a) - CARD_LEVEL_ORDER.indexOf(b)));
+  return open[0] || 'easy';
+};
+const CARD_START_LEVEL_OPTIONS = Object.freeze([{ id: 'last', label: '前に選んだもの' }, ...CARD_LEVEL_ORDER.map((lv) => ({ id: lv, label: null }))]);
 const CARD_CPU_OPEN_BEAT_MS = 5000;
 const CARD_CPU_OPEN_STALE_MS = 15000;
 const cardNormalizeCpuOpen = (v) => {
@@ -58383,6 +58576,17 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const [kitView, setKitView] = useState(null); // スターター選びで「中身を見る」を開いているキット
   const [starterOpen, setStarterOpen] = useState(null); // はじめのスターターを開ける画面に渡す並び(cardStarterOpenResult)
   const [foe, setFoe] = useState({ who: 'mua', level: 'easy' });
+  const [startLevel, setStartLevel] = useState('last'); // 設定「助手と対戦の最初の強さ」
+  const lastLevelRead = useRef(false);
+  useEffect(() => {
+    if (!save || lastLevelRead.current) return;
+    lastLevelRead.current = true;
+    Promise.all([storeGet(CARD_START_LEVEL_KEY, null), storeGet(CARD_LAST_LEVEL_KEY, null)]).then(([pref, last]) => {
+      const p = cardNormalizeStartLevel(pref);
+      setStartLevel(p);
+      setFoe((f) => ({ ...f, level: cardStartLevelOf(p, last, (lv) => cardLevelOpen(save.unlocked, lv) || debug) }));
+    }).catch(() => {});
+  }, [save]);
   const [game, setGame] = useState(null);
   const [result, setResult] = useState(null);
   const [notice, setNotice] = useState('');
@@ -58882,7 +59086,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             {CARD_LEVEL_ORDER.map((lv) => {
               const open = cardLevelOpen(save.unlocked, lv) || debug;
               return (
-                <button key={lv} type="button" data-card-level={lv} disabled={!open} onClick={() => { Audio_.fgSe.tap(); setFoe((f) => ({ ...f, level: lv })); }} className={`min-h-[52px] rounded-xl border-2 text-[11px] font-black ${foe.level === lv ? 'border-amber-300 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-slate-900 text-slate-200'} disabled:opacity-35`}>
+                <button key={lv} type="button" data-card-level={lv} disabled={!open} onClick={() => { Audio_.fgSe.tap(); setFoe((f) => ({ ...f, level: lv })); void storeSet(CARD_LAST_LEVEL_KEY, lv); }} className={`min-h-[52px] rounded-xl border-2 text-[11px] font-black ${foe.level === lv ? 'border-amber-300 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-slate-900 text-slate-200'} disabled:opacity-35`}>
                   {CARD_LEVEL_LABEL[lv]}<span className="block text-[10px] text-amber-200">{open ? `勝ち${CARD_AI_LEVELS[lv].point}` : '🔒'}</span>
                 </button>
               );
@@ -59126,6 +59330,27 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             {!quickAutoReady && <p data-card-quick-auto-needs className="mt-1 text-[10px] font-bold leading-snug text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('AUTO設定で、勇者モン・配置距離・難易度の3つを決めると使えます')}</p>}
           </div>
     );
+    // 助手と対戦の最初の強さ(設定の「助手」の区切りに置く)。選んだらすぐ、いまの相手えらびの強さにも当てる
+    const startLevelPanel = (
+          <div data-card-setting="startLevel" className="mt-2.5 border-t border-white/10 pt-2.5">
+            <b className="block text-[12px] font-black text-slate-200">助手と対戦の最初の強さ</b>
+            <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{cardJaWrap('相手えらびを開いたときに、はじめに選ばれている強さです。まだ開いていない強さのときは、開いている中でいちばん近い強さになります。')}</p>
+            <div className="mt-2 grid grid-cols-3 gap-1.5">
+              {CARD_START_LEVEL_OPTIONS.map((o) => (
+                <button key={o.id} type="button" data-card-start-level={o.id} aria-pressed={startLevel === o.id}
+                  onClick={() => {
+                    Audio_.fgSe.tap();
+                    setStartLevel(o.id);
+                    void storeSet(CARD_START_LEVEL_KEY, o.id);
+                    void storeGet(CARD_LAST_LEVEL_KEY, null).then((last) => setFoe((f) => ({ ...f, level: cardStartLevelOf(o.id, last, (lv) => cardLevelOpen(save.unlocked, lv) || debug) }))).catch(() => {});
+                  }}
+                  className={`flex min-h-[44px] items-center justify-center rounded-xl px-0.5 text-[11px] font-black leading-tight active:scale-95 ${startLevel === o.id ? 'border border-amber-300 bg-amber-500/30 text-amber-50' : 'border border-white/15 bg-slate-900/75 text-slate-200'}`}>
+                  <span style={JA_LABEL_STYLE}>{o.label ? jaWrap(o.label) : CARD_LEVEL_LABEL[o.id]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+    );
     return (
       <div data-mh-screen data-card-options className={SCREEN_SHELL_CLASS}>
         <ScreenHead title="オプション" accent="text-amber-200" onBack={() => setView('top')} note="MFバトルカード"/>
@@ -59185,6 +59410,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 );
               })}
               {g.title === '自動' && quickAutoPanel}
+              {g.title === '助手' && startLevelPanel}
             </div>
             </React.Fragment>
           ))}
@@ -76470,6 +76696,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
   // ★枠ごとの「残りターン・残り回数」(2026-10-12 社長の追加依頼「オフリィアボイドとかexとかでも残り回数や残りターンのわかりやすい表示」)。
   //   { exTurns: EXの効果のあと何ターン(ターンで切れるものだけ), avoid: 完全回避の残り, konjo: 根性の残り }。タクティクス以外・効いていなければ空
+  // ★EX で、いま効いている強化・弱化の一覧(2026-10-29 社長「ア＋イ」・見た目は 71)。読むだけ。形は 34-tactics-ex-effects.jsx の冒頭
+  //   画面に出すものなので、tacticsSlotCountersAt と同じく描いている時点の state から読む
+  //   stackCounts … 71 の allyStackCounts[slotIdx](枠の「マーク×数」)。渡すと溜まる物も kind:'stack' で後ろに並ぶ。
+  //   「マーク×数」に無い物(中二病の重ね・被ダメ半減の残り・カウンター・回避した数・雷・ボルテージ)はここで数を足す
+  const tacticsExEffectsAt = (slotIdx, stackCounts = null) => {
+    if (!(tacticsExEnabled && Array.isArray(tacticsUnits))) return [];
+    const ex = listTacticsExEffectsAt(tacticsExState, tacticsUnits, slotIdx, tacticsExNow, { defOf: (monId) => raidExDefOf(monId), nameOf: battleActorName });
+    const unit = tacticsUnits[slotIdx];
+    const c = unit ? (tacticsSlotCountersAt(slotIdx) || {}) : {};
+    const chuuni = unit && (unit.id === 'Ark' || unit.id === 'Iblis');
+    const extra = {
+      ...(chuuni ? { chuuni: getPermaBuff('chuuniUniqueStack'), chuuniCut: Math.max(0, 2 - getWaveBuff('chuuniDmgCutUses')) } : {}),
+      counter: c.counter, dodges: c.dodges, thunder: c.thunder && c.thunder.phase === 'charge' ? c.thunder.charge : 0, voltage: c.voltage && c.voltage.value,
+    };
+    return [...ex, ...listTacticsStackItems({ ...(stackCounts || {}), ...extra })];
+  };
+  const tacticsExEnemyEffects = (tacticsExEnabled && Array.isArray(tacticsUnits))
+    ? [...listTacticsExEnemyEffects(tacticsExState, tacticsUnits, tacticsExNow, { defOf: (monId) => raidExDefOf(monId), nameOf: battleActorName }),
+      ...listTacticsStackItems(enemyStackCounts, { keepZero: [] })] : [];
   const tacticsSlotCountersAt = (slotIdx) => {
     // 画面に出すものなので、詳細パネル(tacticsExInfo)と同じく描いている時点の状態(ref ではなく state)から読む
     if(!tacticsExEnabled||!Number.isInteger(slotIdx)||!Array.isArray(tacticsUnits)) return {};
@@ -86649,7 +86894,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setShowQuitConfirm={setShowQuitConfirm} setShowSoulBattleEffects={setShowSoulBattleEffects}
             setSkillPicker={setSkillPicker} setSlotSettle={setSlotSettle} slotMaxUses={slotMaxUses}
             slotSettle={slotSettle} slotSkill={slotSkill} slotUniqueChoice={slotUniqueChoice} slots={slots}
-            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign} tacticsCardBlock={tacticsCardBlock} enemyDebuffs={enemyDebuffs} battleUnitStatusOf={battleUnitStatusOf} battleEnemyStatus={battleEnemyStatus} enemyStackCounts={enemyStackCounts} debugStackMarks={debugStackMarks} tacticsSlotCountersAt={isTacticsMode(runMode)?tacticsSlotCountersAt:null} discardCards={discardCards} actionUsed={actionUsed} tacticsSlotFx={tacticsSlotFx} tacticsCardGenre={cardGenreLabel} tacticsCardScope={cardScopeLabel}
+            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign} tacticsCardBlock={tacticsCardBlock} enemyDebuffs={enemyDebuffs} battleUnitStatusOf={battleUnitStatusOf} battleEnemyStatus={battleEnemyStatus} enemyStackCounts={enemyStackCounts} debugStackMarks={debugStackMarks} tacticsSlotCountersAt={isTacticsMode(runMode)?tacticsSlotCountersAt:null} tacticsExEffectsAt={isTacticsMode(runMode)?tacticsExEffectsAt:null} tacticsExEnemyEffects={isTacticsMode(runMode)?tacticsExEnemyEffects:[]} discardCards={discardCards} actionUsed={actionUsed} tacticsSlotFx={tacticsSlotFx} tacticsCardGenre={cardGenreLabel} tacticsCardScope={cardScopeLabel}
             soulBattleParty={soulBattleParty} soulCoordinationCardBonus={soulCoordinationCardBonus}
             suppressCardClickRef={suppressCardClickRef} teachingFx={teachingFx} totalTurnCount={totalTurnCount}
             turnCount={turnCount} ultimateDistanceBreakLevels={ultimateDistanceBreakLevels}
