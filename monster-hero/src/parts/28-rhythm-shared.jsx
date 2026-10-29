@@ -556,12 +556,15 @@ const rhythmEventGiftRewards=(prize)=>{
     if(found)found.amount+=n;
     else totals.set(key,itemId?{type,itemId,amount:n}:{type,amount:n});
   };
+  // 週間のビートP(2026-10-29)。配り始めた週より前の週には付けない(rhythmWeeklyBeatPointActive)
+  const beatPointOn=typeof rhythmWeeklyBeatPointActive==='function'&&rhythmWeeklyBeatPointActive(prize&&prize.event);
   const addReward=(reward)=>{
     if(!reward)return;
     const item=rhythmEventRewardItem(reward);
     if(item)add(GIFT_ITEM_REWARD_TYPE,item.id,reward.count);
     add('rainbowPsyche',null,reward.psyche);
     add('diamond',null,reward.gold);
+    if(beatPointOn)add('beatPoint',null,reward.beatPoint);
   };
   (Array.isArray(prize&&prize.prizes)?prize.prizes:[]).forEach(entry=>addReward(entry&&entry.reward));
   // 参加報酬。勇者の証片(count)と勇者の証(heroProof)は別のアイテムなので分けて足す
@@ -571,6 +574,7 @@ const rhythmEventGiftRewards=(prize)=>{
     if(join.heroProof>0&&typeof HERO_PROOF_ITEM!=='undefined')add(GIFT_ITEM_REWARD_TYPE,HERO_PROOF_ITEM.id,join.heroProof);
     add('rainbowPsyche',null,join.psyche);
     add('diamond',null,join.gold);
+    if(beatPointOn)add('beatPoint',null,join.beatPoint);
   }
   return [...totals.values()];
 };
@@ -583,6 +587,7 @@ const rhythmEventParticipationText=(reward)=>{
   if(reward.heroProof>0)parts.push(`${HERO_PROOF_ITEM.emoji} ${HERO_PROOF_ITEM.name}×${reward.heroProof.toLocaleString()}`);
   if(reward.gold>0)parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
   if(reward.psyche>0)parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
+  if(reward.beatPoint>0)parts.push(`🎵 ビートP×${reward.beatPoint.toLocaleString()}`);
   return parts.join(' ／ ');
 };
 // 「🍇 超越の実（スエゾー種）×5 ／ 虹のプシュケー×1,000」のような1行。
@@ -595,5 +600,7 @@ const rhythmEventRewardText=(reward)=>{
   if(reward.psyche>0)parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
   // 週間の順位報酬にはダイヤも付く(イベントの順位報酬には無いので、ある時だけ出す)
   if(reward.gold>0)parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
+  // 週間の順位報酬のビートP(2026-10-29)
+  if(reward.beatPoint>0)parts.push(`🎵 ビートP×${reward.beatPoint.toLocaleString()}`);
   return parts.join(' ／ ');
 };
