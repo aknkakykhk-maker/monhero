@@ -410,3 +410,80 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
     </div>
   );
 };
+
+// ==================== プロフィールの「MFバトルカードの登録デッキ」(2026-10-29 社長「設定してるデッキや戦術カードはプロフィールにリンクさせたい」) ====================
+// 自分のプロフィール(56)とフレンドのプロフィール(75)に出す。登録していない人には出さない。
+// 公開の印(cardShareOpen)までは、デバッグ設定の合言葉が合った端末(DEBUG_UNLOCK_KEY を読むだけ)にだけ出す
+const cardShareVisible = () => {
+  if (cardShareOpen()) return true;
+  try { return typeof DEBUG_UNLOCK_KEY !== 'undefined' && localStorage.getItem(DEBUG_UNLOCK_KEY) === '1'; } catch (_) { return false; }
+};
+// プロフィールから MFバトルカードへ渡す頼み(1回だけ読む)。{ kind:'fight', entry } … そのデッキと戦う / { kind:'register' } … デッキ登録を開く
+let _cardShareIntent = null;
+const cardShareIntentSet = (v) => { _cardShareIntent = v || null; };
+const cardShareIntentTake = () => { const v = _cardShareIntent; _cardShareIntent = null; return v; };
+// ownerId … その人のブリーダーid / self … 自分のプロフィール / onGo(intent) … MFバトルカードへ移る(60-app)
+const CardShareProfileDeck = ({ ownerId, self = false, onGo = null }) => {
+  const [entry, setEntry] = useState(undefined);
+  const [open, setOpen] = useState(false);
+  const [msg, setMsg] = useState('');
+  const visible = cardShareVisible();
+  useEffect(() => {
+    if (!visible) { setEntry(null); return undefined; }
+    let alive = true;
+    void (async () => {
+      const id = typeof ownerId === 'string' && ownerId ? ownerId : self && typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+      if (typeof id !== 'string' || !id) { if (alive) setEntry(null); return; }
+      const r = await cardShareFetchMine(id).catch(() => null);
+      if (alive) setEntry(r || null);
+    })();
+    return () => { alive = false; };
+  }, [ownerId, visible]);
+  if (!visible || !entry) return null;
+  const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
+  const t = cardShareNormalizeTactics(entry.tactics);
+  const f = t.f ? cardTacticUnpackFrames(t.f) : null;
+  const rowText = (r) => `${(cardTacticOf(r.c) || {}).name || '?'} ▶ ${(cardTacticOf(r.a) || {}).name || '?'}${r.on ? '' : '(休み)'}`;
+  const monName = (i) => ((db && cardMonsterOf(db, entry.deck.monsters[i])) || {}).name || ['左の子', '真ん中の子', '右の子'][i];
+  const rent = async () => {
+    if (typeof cardRentedDeckSet !== 'function') return;
+    setMsg((await cardRentedDeckSet(entry)) ? 'このデッキを借りました。フリー対戦の前のデッキ選びで使えます' : 'この端末に保存できなかったため、借りられませんでした');
+  };
+  return (
+    <section data-profile-card-deck={self ? 'self' : 'friend'} className="mb-4 rounded-2xl border border-amber-300/50 bg-slate-900/80 p-3">
+      <div className="text-[12px] font-black text-amber-200">🃏 MFバトルカードの登録デッキ</div>
+      <div className="mt-2 flex items-center gap-2">
+        <span className="flex shrink-0 gap-0.5">{[0, 1, 2].map((i) => { const m = db && cardMonsterOf(db, entry.deck.monsters[i]); return m ? <img key={i} src={CARD_IMG(m.img)} alt={m.name} className="h-[52px] w-[37px] rounded-[4px] object-cover"/> : <span key={i} className="block h-[52px] w-[37px] rounded-[4px] bg-slate-700"/>; })}</span>
+        <span className="min-w-0 flex-1">
+          <b className="block truncate text-[14px] font-black text-white">{t.name || 'デッキ'}</b>
+          <small className="block text-[11px] font-black text-amber-200">{`賢さ ${cardShareSmartText(t)}`}</small>
+          <small className="block text-[11px] font-bold text-sky-100 tabular-nums">{entry.battles ? `戦われた ${entry.battles}回・デッキの勝ち ${Math.round((entry.deckWins / entry.battles) * 100)}%` : 'まだ戦われていません'}</small>
+        </span>
+      </div>
+      {f && (
+        <div className="mt-2 text-[12px] font-bold leading-relaxed text-slate-200" style={JA_WRAP_STYLE}>
+          <div>{`基本カード: ${f.base.filter(Boolean).map((id) => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`}</div>
+          <div>{`行: ${cardShareRowsCount(f)}`}</div>
+          {t.aces.length > 0 && <div>{`切り札: ${t.aces.map((no) => ((db && cardOf(db, no)) || {}).name || no).join('・')}`}</div>}
+          <button type="button" data-profile-card-deck-rows onClick={() => setOpen((x) => !x)} className="mt-1 text-[11px] font-black text-slate-300">{open ? '▲ 戦術カードの行をとじる' : '▼ 戦術カードの行を見る'}</button>
+          {open && (
+            <div className="mt-1 space-y-1 rounded-lg bg-black/30 p-2 text-[11px]">
+              {[...f.mons.map((rows, i) => [monName(i), rows]), ['ブリーダー', f.breeder]].map(([label, rows]) => (
+                <div key={label}><b className="text-amber-100">{label}</b>{rows.length ? rows.map((r, j) => <div key={j}>{`${j + 1}. ${rowText(r)}`}</div>) : <div className="text-slate-400">(なし)</div>}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {msg && <p data-profile-card-deck-msg className="mt-2 rounded-lg bg-slate-950 p-1.5 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{msg}</p>}
+      <div className="mt-2 flex gap-2">
+        {self ? (
+          onGo && <button type="button" data-profile-card-deck-edit onClick={() => { Audio_.fgSe.tap(); onGo({ kind: 'register' }); }} className="mh-button mh-button-primary min-h-[40px] flex-1 rounded-xl text-[13px] font-black">デッキ登録で直す</button>
+        ) : (<>
+          {onGo && <button type="button" data-profile-card-deck-fight onClick={() => { Audio_.fgSe.tap(); onGo({ kind: 'fight', entry }); }} className="mh-button mh-button-primary min-h-[40px] flex-1 rounded-xl text-[13px] font-black">このデッキと戦う</button>}
+          <button type="button" data-profile-card-deck-rent onClick={() => { Audio_.fgSe.tap(); void rent(); }} className="min-h-[40px] flex-1 rounded-xl border border-emerald-300/60 bg-slate-950 text-[13px] font-black text-emerald-200">借りる</button>
+        </>)}
+      </div>
+    </section>
+  );
+};
