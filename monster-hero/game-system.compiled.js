@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 86afdb9fa7b7824b
+// source-sha256: 6530d1a49b09290f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -89399,7 +89399,7 @@ const cardAiEvadeAllCovers = (st, pd) => {
   const noHybrid = !!cardFieldEff(st, 'fieldPurePride') && atk && cardIsPureMon(atk) || !!(pd.flags || {}).attachNoEvadeHybrid;
   return pd.targets.slice(pd.ti + 1).filter(t => t.p !== pd.attacker && !(noHybrid && !cardIsPureMon(st.players[t.p].mons[t.m]))).length;
 };
-const cardAiChooseGuard = (db, st, policy, rand) => {
+const cardAiChooseGuard = (db, st, policy, rand, gopt = null) => {
   const pd = st.pending;
   const q = pd.defender;
   const me = st.players[q];
@@ -89416,7 +89416,7 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
   const passLoses = few && loseAfter({
     type: 'pass'
   });
-  const opts = cardGuardOptions(db, st).filter(o => !few || passLoses || !loseAfter(o));
+  const opts = cardGuardOptions(db, st).filter(o => (!few || passLoses || !loseAfter(o)) && (!gopt || !gopt.only || gopt.only(o)));
   if (!opts.length) return {
     type: 'pass'
   };
@@ -89453,12 +89453,12 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
       o
     };
   });
-  if (!best || best.v < 0.8 + rand() * 0.3) return {
+  if (!best || !(gopt && gopt.force) && best.v < 0.8 + rand() * 0.3) return {
     type: 'pass'
   };
   return best.o;
 };
-const cardAiChooseGuts = (db, st, policy) => {
+const cardAiChooseGuts = (db, st, policy, gopt = null) => {
   const p = st.active;
   const me = st.players[p];
   const habit = cardAiHabitNow(db, st, p, policy);
@@ -89488,6 +89488,12 @@ const cardAiChooseGuts = (db, st, policy) => {
   for (const o of order) {
     if (pick.length >= Math.max(need, pick.length) || me.hand.length - pick.length <= 1) break;
     if (!pick.includes(o.i)) pick.push(o.i);
+  }
+  if (gopt && Number.isInteger(gopt.count)) {
+    pick.splice(0, pick.length, ...order.map(o => o.i).slice(0, gopt.count));
+  }
+  if (gopt && gopt.keepGuards) {
+    for (let k = pick.length - 1; k >= 0; k--) if (cardIsGuardKind((cardOf(db, me.hand[pick[k]]) || {}).kind)) pick.splice(k, 1);
   }
   const gm = cardFieldEff(st, 'fieldGutsMax');
   return {
@@ -89580,6 +89586,15 @@ const cardAttachUseless = (db, st, o) => {
     return false;
   });
 };
+const cardAiAttackChoices = (db, st, policy) => {
+  const opts0 = cardAttackOptions(db, st).filter(o => !cardAiLosesBy(db, st, o, st.active, policy));
+  const useful = opts0.filter(o => !cardAttachUseless(db, st, o));
+  return useful.length ? useful : opts0;
+};
+const cardAiAttackScored = (db, st, opts, policy) => opts.map(o => ({
+  o,
+  s: cardAiScoreAttack(db, st, o, policy) + (cardAiAceHit(policy, st.players[st.active].hand, o.hand) ? 2 : 0)
+})).sort((a, b) => b.s - a.s);
 const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   if (st.pendingPray) {
     const use = cardPrayOptions(db, st).find(o => o.hand);
@@ -89631,6 +89646,11 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
     };
   }
   const sloppy = rand() < (policy.level.sloppy || 0);
+  if (!sloppy && policy.gambit && typeof cardTacticDecide === 'function') {
+    const tac = cardTacticDecide(db, st, policy);
+    if (tac && tac.act) return tac.act;
+    if (tac && tac.policy) policy = tac.policy;
+  }
   if (st.pending) return sloppy ? {
     type: 'pass'
   } : cardAiChooseGuard(db, st, policy, rand);
@@ -89643,19 +89663,14 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
       hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, Math.min(gm ? gm.n : 99, policy.playerRole ? 99 : cardAiGutsCap(st.players[st.active])))
     };
   }
-  const opts0 = cardAttackOptions(db, st).filter(o => !cardAiLosesBy(db, st, o, st.active, policy));
-  const useful = opts0.filter(o => !cardAttachUseless(db, st, o));
-  const opts = useful.length ? useful : opts0;
+  const opts = cardAiAttackChoices(db, st, policy);
   if (!opts.length) return {
     type: 'endAttacks'
   };
   if (sloppy) return rand() < 0.25 ? {
     type: 'endAttacks'
   } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
-  const scored = opts.map(o => ({
-    o,
-    s: cardAiScoreAttack(db, st, o, policy) + (cardAiAceHit(policy, st.players[st.active].hand, o.hand) ? 2 : 0)
-  })).sort((a, b) => b.s - a.s);
+  const scored = cardAiAttackScored(db, st, opts, policy);
   if (scored[0].s <= 0.3) return {
     type: 'endAttacks'
   };
@@ -91064,6 +91079,831 @@ const cardSimulate = (db, {
     } else st = next;
   }
   return st;
+};
+const CARD_TACTIC_LIFE = [90, 80, 70, 60, 50, 40, 30, 20, 10];
+const cardTacticFine = fine => v => fine.includes(v) ? 'R' : 'N';
+const CARD_TACTIC_GROUPS = Object.freeze([{
+  id: 'any',
+  cat: 'cond',
+  sec: '標的',
+  name: 'いつでも',
+  tiers: [['', 'N']],
+  start: [''],
+  desc: 'いつも当たる'
+}, {
+  id: 'ko',
+  cat: 'cond',
+  sec: '標的',
+  name: '倒せる相手',
+  tiers: [['', 'N']],
+  start: [''],
+  desc: '出せる技で倒せる相手を標的にする'
+}, {
+  id: 'lowest',
+  cat: 'cond',
+  sec: '標的',
+  name: 'いちばんライフの低い相手',
+  tiers: [['', 'N']],
+  desc: '残りライフがいちばん少ない子'
+}, {
+  id: 'highest',
+  cat: 'cond',
+  sec: '標的',
+  name: 'いちばんライフの高い相手',
+  tiers: [['', 'N']],
+  desc: '残りライフがいちばん多い子'
+}, {
+  id: 'strongest',
+  cat: 'cond',
+  sec: '標的',
+  name: 'いちばん攻撃の強い相手',
+  tiers: [['', 'R']],
+  desc: 'その子が使える技の最大ダメージで見積もる(手札は見ない)'
+}, {
+  id: 'attacker',
+  cat: 'cond',
+  sec: '標的',
+  name: '前の番に攻撃してきた相手',
+  tiers: [['', 'R']],
+  desc: '直前の相手の番に攻撃してきた子'
+}, {
+  id: 'leader',
+  cat: 'cond',
+  sec: '標的',
+  name: '相手のリーダー',
+  tiers: [['', 'R']],
+  desc: '相手が1体目に置いた子'
+}, {
+  id: 'type',
+  cat: 'cond',
+  sec: '標的',
+  name: '◯の相手',
+  tiers: [['地上', 'N'], ['空中', 'N'], ['水中', 'N']],
+  desc: 'その特徴の子'
+}, {
+  id: 'blood',
+  cat: 'cond',
+  sec: '標的',
+  name: '◯の相手',
+  tiers: [['純血', 'N'], ['混血', 'N']],
+  desc: 'その血の子'
+}, {
+  id: 'species',
+  cat: 'cond',
+  sec: '標的',
+  name: '種族を決めた相手',
+  tiers: [['', 'R']],
+  desc: '組むときに種族を1つ選ぶ(1枚で全種族)'
+}, {
+  id: 'foeLife',
+  cat: 'cond',
+  sec: 'ライフ',
+  name: '相手のライフ◯%以下',
+  tiers: CARD_TACTIC_LIFE.map(v => [v, cardTacticFine([80, 60, 40, 20])(v)]),
+  start: [50],
+  desc: 'その割合以下の相手の子を標的にする'
+}, {
+  id: 'myLife',
+  cat: 'cond',
+  sec: 'ライフ',
+  name: '自分のライフ◯%以下',
+  tiers: CARD_TACTIC_LIFE.map(v => [v, cardTacticFine([80, 60, 40, 20])(v)]),
+  desc: 'その割合以下の自分の子がいる(守る相手にする)'
+}, {
+  id: 'myGuts',
+  cat: 'cond',
+  sec: 'ガッツ',
+  name: '自分のガッツ◯以上',
+  tiers: [1, 2, 3, 4, 5, 6, 7].map(v => [v, cardTacticFine([2, 4, 6])(v)]),
+  start: [3],
+  desc: '自分のガッツがその数以上'
+}, {
+  id: 'foeGutsLe',
+  cat: 'cond',
+  sec: 'ガッツ',
+  name: '相手のガッツ◯以下',
+  tiers: [0, 1, 2, 3, 4].map(v => [v, cardTacticFine([1, 3])(v)]),
+  desc: '相手のガッツがその数以下'
+}, {
+  id: 'foeGutsGe',
+  cat: 'cond',
+  sec: 'ガッツ',
+  name: '相手のガッツ◯以上',
+  tiers: [3, 4, 5, 6, 7].map(v => [v, cardTacticFine([4, 6])(v)]),
+  desc: '相手のガッツがその数以上(大技に備える)'
+}, {
+  id: 'myHand',
+  cat: 'cond',
+  sec: '手札・山札',
+  name: '自分の手札◯枚以上',
+  tiers: [2, 3, 4, 5].map(v => [v, cardTacticFine([2, 4])(v)]),
+  desc: '自分の手札がその数以上'
+}, {
+  id: 'foeHandGe',
+  cat: 'cond',
+  sec: '手札・山札',
+  name: '相手の手札◯枚以上',
+  tiers: [2, 3, 4, 5].map(v => [v, cardTacticFine([2, 4])(v)]),
+  desc: '相手の手札がその数以上'
+}, {
+  id: 'foeHandLe',
+  cat: 'cond',
+  sec: '手札・山札',
+  name: '相手の手札◯枚以下',
+  tiers: [0, 1, 2].map(v => [v, cardTacticFine([1])(v)]),
+  desc: '相手の手札がその数以下'
+}, {
+  id: 'myDeck',
+  cat: 'cond',
+  sec: '手札・山札',
+  name: '自分の山札◯枚以下',
+  tiers: [30, 20, 10, 5].map(v => [v, cardTacticFine([20, 5])(v)]),
+  desc: '自分の山札がその数以下'
+}, {
+  id: 'foeDeck',
+  cat: 'cond',
+  sec: '手札・山札',
+  name: '相手の山札◯枚以下',
+  tiers: [30, 20, 10, 5].map(v => [v, cardTacticFine([20, 5])(v)]),
+  desc: '相手の山札がその数以下'
+}, {
+  id: 'guardN',
+  cat: 'cond',
+  sec: '手札の中身',
+  name: '手札に守り札◯枚以上',
+  tiers: [1, 2, 3].map(v => [v, cardTacticFine([3])(v)]),
+  desc: '回避・防御の札がその数以上'
+}, {
+  id: 'guardKind',
+  cat: 'cond',
+  sec: '手札の中身',
+  name: '手札に◯がある',
+  tiers: [['回避', 'N'], ['防御', 'N']],
+  desc: 'その種類の守り札がある'
+}, {
+  id: 'bigInHand',
+  cat: 'cond',
+  sec: '手札の中身',
+  name: '手札に大技がある',
+  tiers: [['', 'N']],
+  desc: 'ガッツ4以上の攻撃の札がある'
+}, {
+  id: 'areaInHand',
+  cat: 'cond',
+  sec: '手札の中身',
+  name: '手札に全体攻撃がある',
+  tiers: [['', 'R']],
+  desc: '全員に当たる技がある'
+}, {
+  id: 'breederInHand',
+  cat: 'cond',
+  sec: '手札の中身',
+  name: '手札にブリーダーのカードがある',
+  tiers: [['', 'N']],
+  desc: 'ブリーダーのカードがある'
+}, {
+  id: 'turnLe',
+  cat: 'cond',
+  sec: '番',
+  name: '◯番目まで',
+  tiers: [1, 2, 3, 5].map(v => [v, cardTacticFine([2])(v)]),
+  desc: '自分の番がその回数まで'
+}, {
+  id: 'turnGe',
+  cat: 'cond',
+  sec: '番',
+  name: '◯番目から',
+  tiers: [5, 8, 10, 15].map(v => [v, cardTacticFine([10])(v)]),
+  desc: '自分の番がその回数から'
+}, {
+  id: 'myAlive',
+  cat: 'cond',
+  sec: '場',
+  name: '自分の場が◯体',
+  tiers: [[1, 'R'], [2, 'N'], [3, 'N']],
+  desc: '自分の場に残っている数'
+}, {
+  id: 'foeAlive',
+  cat: 'cond',
+  sec: '場',
+  name: '相手の場が◯体',
+  tiers: [[1, 'R'], [2, 'N'], [3, 'N']],
+  desc: '相手の場に残っている数'
+}, {
+  id: 'koDiff',
+  cat: 'cond',
+  sec: '場',
+  name: '倒した数で◯ている',
+  tiers: [['勝っ', 'N'], ['負け', 'N']],
+  desc: '倒した数と倒された数をくらべる'
+}, {
+  id: 'foeStun',
+  cat: 'cond',
+  sec: '状態',
+  name: '攻撃できない相手',
+  tiers: [['', 'R']],
+  desc: '封じられて次の番に攻撃できない相手の子'
+}, {
+  id: 'myStun',
+  cat: 'cond',
+  sec: '状態',
+  name: '攻撃できない味方',
+  tiers: [['', 'N']],
+  desc: '封じられている自分の子がいる'
+}, {
+  id: 'foeCharge',
+  cat: 'cond',
+  sec: '状態',
+  name: '溜めている相手',
+  tiers: [['', 'R']],
+  desc: '次の技が何倍にもなる相手の子'
+}, {
+  id: 'foeAir',
+  cat: 'cond',
+  sec: '状態',
+  name: '空中に上がった相手',
+  tiers: [['', 'N']],
+  desc: 'いま空中になっている子(もとは地上・水中)'
+}, {
+  id: 'field',
+  cat: 'cond',
+  sec: '状態',
+  name: '場に◯全体カードがある',
+  tiers: [['自分の', 'N'], ['相手の', 'N']],
+  desc: 'だれが出した全体カードが場にあるか'
+}, {
+  id: 'foeBig',
+  cat: 'cond',
+  sec: '状態',
+  name: '相手が大技を構えている',
+  tiers: [['', 'SR']],
+  desc: '相手のガッツと使える技から、大技を撃てそうと見積もる'
+}, {
+  id: 'atk',
+  cat: 'act',
+  sec: '攻撃',
+  phase: 'attack',
+  name: '攻める',
+  tiers: [['', 'N']],
+  start: [''],
+  desc: '点数がいちばん高い攻撃'
+}, {
+  id: 'kind',
+  cat: 'act',
+  sec: '攻撃',
+  phase: 'attack',
+  name: '◯の技を出す',
+  tiers: [['ちから', 'N'], ['かしこさ', 'N'], ['特殊', 'N']],
+  desc: 'その種類の技を出す'
+}, {
+  id: 'cost',
+  cat: 'act',
+  sec: '攻撃',
+  phase: 'attack',
+  name: '◯を出す',
+  tiers: [['軽い技(ガッツ0〜1)', 'N'], ['中くらいの技(2〜3)', 'N'], ['大技(4以上)', 'N']],
+  start: ['大技(4以上)'],
+  desc: '払うガッツで選ぶ'
+}, {
+  id: 'reach',
+  cat: 'act',
+  sec: '攻撃',
+  phase: 'attack',
+  name: '◯を出す',
+  tiers: [['全体攻撃', 'R'], ['単体攻撃', 'N']],
+  desc: '全員に当たる技か、1体に当てる技か'
+}, {
+  id: 'eff',
+  cat: 'act',
+  sec: '攻撃',
+  phase: 'attack',
+  name: '「◯」の技を出す',
+  tiers: [['回避されない', 'N'], ['攻撃できなくする', 'R'], ['ガッツを減らす', 'N'], ['吸い取る', 'N'], ['2回攻撃', 'R']],
+  desc: 'その効き目のついた技を出す'
+}, {
+  id: 'attach',
+  cat: 'act',
+  sec: '攻撃',
+  phase: 'attack',
+  name: '付ける札を使う',
+  tiers: [['', 'R']],
+  desc: '技に付ける札をいっしょに出す'
+}, {
+  id: 'breeder',
+  cat: 'act',
+  sec: 'ブリーダー',
+  phase: 'attack',
+  name: 'ブリーダーのカード(◯)',
+  tiers: [['攻撃', 'N'], ['守り', 'N'], ['引く・手札', 'N'], ['回復', 'N']],
+  desc: 'その種類のブリーダーのカードを出す(守り … 攻撃できないを消す・倒れた子を戻す)'
+}, {
+  id: 'fieldCard',
+  cat: 'act',
+  sec: 'ブリーダー',
+  phase: 'attack',
+  name: '全体カードを出す',
+  tiers: [['', 'R']],
+  desc: '場に残る全体カードを出す'
+}, {
+  id: 'disrupt',
+  cat: 'act',
+  sec: '崩す',
+  phase: 'attack',
+  name: '崩し: ◯',
+  tiers: [['手札を捨てさせる', 'R'], ['山札を削る', 'R'], ['ガッツを減らす', 'R'], ['番を飛ばす', 'SR']],
+  desc: '相手の手を崩す札を出す'
+}, {
+  id: 'guard',
+  cat: 'act',
+  sec: '守り',
+  phase: 'guard',
+  name: '守る',
+  tiers: [['', 'N']],
+  start: [''],
+  desc: '攻撃を受けたら守り札で守る'
+}, {
+  id: 'guardFirst',
+  cat: 'act',
+  sec: '守り',
+  phase: 'guard',
+  name: '◯を先に使う',
+  tiers: [['回避', 'N'], ['防御', 'N']],
+  desc: '守るとき、その種類の札で守る'
+}, {
+  id: 'guardOver',
+  cat: 'act',
+  sec: '守り',
+  phase: 'guard',
+  name: 'ダメージ◯以上だけ守る',
+  tiers: [[3, 'N'], [5, 'N'], [7, 'R']],
+  desc: 'その数より小さい攻撃は守らない'
+}, {
+  id: 'guardDie',
+  cat: 'act',
+  sec: '守り',
+  phase: 'guard',
+  name: '倒されるときだけ守る',
+  tiers: [['', 'R']],
+  desc: '受けたら倒れるときだけ守る'
+}, {
+  id: 'cover',
+  cat: 'act',
+  sec: '守り',
+  phase: 'guard',
+  name: '味方をかばう',
+  tiers: [['', 'R']],
+  desc: 'かばう札で、味方への攻撃を受ける'
+}, {
+  id: 'noGuard',
+  cat: 'act',
+  sec: '守り',
+  phase: 'guard',
+  name: '守らない',
+  tiers: [['', 'R']],
+  desc: '守り札を使わず受ける(札を残す)'
+}, {
+  id: 'save',
+  cat: 'act',
+  sec: 'ガッツ',
+  phase: 'guts',
+  name: 'ガッツをためる',
+  tiers: [['', 'N']],
+  start: [''],
+  desc: '手札を多めにガッツへ回す'
+}, {
+  id: 'gutsN',
+  cat: 'act',
+  sec: 'ガッツ',
+  phase: 'guts',
+  name: 'ガッツを◯枚だけ置く',
+  tiers: [[0, 'N'], [1, 'N'], [2, 'N']],
+  desc: 'ガッツの番に置く数を決める'
+}, {
+  id: 'keepGuard',
+  cat: 'act',
+  sec: 'ガッツ',
+  phase: 'guts',
+  name: '守り札を残して置く',
+  tiers: [['', 'R']],
+  desc: '回避・防御はガッツにしない'
+}, {
+  id: 'stop',
+  cat: 'act',
+  sec: '流れ',
+  phase: 'attack',
+  name: '攻撃を止める',
+  tiers: [['', 'N']],
+  desc: 'この番の攻撃をここで終える'
+}, {
+  id: 'charge',
+  cat: 'act',
+  sec: '流れ',
+  phase: 'attack',
+  name: '溜め技を使う',
+  tiers: [['', 'R']],
+  desc: '次の技を何倍にする札を先に使う'
+}, {
+  id: 'ace',
+  cat: 'act',
+  sec: '特別',
+  phase: 'all',
+  name: '切り札を出す',
+  tiers: [['', 'SR']],
+  desc: '登録した切り札を、手にあれば先に出す'
+}, {
+  id: 'flex',
+  cat: 'act',
+  sec: '特別',
+  phase: 'all',
+  name: '臨機応変',
+  tiers: [['', 'SR']],
+  desc: '場を見て、とどめ・全体・守り・攻めを切り替える'
+}, {
+  id: 'mill',
+  cat: 'act',
+  sec: '特別',
+  phase: 'all',
+  name: '山札切れを待つ',
+  tiers: [['', 'SR']],
+  desc: '長引かせて、相手の山札切れで勝つ'
+}, {
+  id: 'reckless',
+  cat: 'act',
+  sec: '特別',
+  phase: 'all',
+  name: '捨て身',
+  tiers: [['', 'SR']],
+  desc: '守らずに受けて、そのぶん倒しに行く'
+}]);
+const cardTacticCardId = (g, v) => v === '' ? g.id : `${g.id}.${v}`;
+const CARD_TACTIC_CARDS = Object.freeze(CARD_TACTIC_GROUPS.flatMap(g => g.tiers.map(([v, r]) => Object.freeze({
+  id: cardTacticCardId(g, v),
+  g: g.id,
+  cat: g.cat,
+  sec: g.sec,
+  phase: g.phase || null,
+  v,
+  name: v === '' ? g.name : g.name.replace('◯', String(v)),
+  r,
+  start: (g.start || []).includes(v),
+  desc: g.desc
+}))));
+const CARD_TACTIC_BY_ID = Object.freeze(Object.fromEntries(CARD_TACTIC_CARDS.map(c => [c.id, c])));
+const CARD_TACTIC_START = Object.freeze(CARD_TACTIC_CARDS.filter(c => c.start).map(c => c.id));
+const cardTacticOf = id => typeof id === 'string' && Object.prototype.hasOwnProperty.call(CARD_TACTIC_BY_ID, id) ? CARD_TACTIC_BY_ID[id] : null;
+const CARD_TACTIC_ROWS_MAX = 5;
+const cardTacticNormalizeRows = raw => (Array.isArray(raw) ? raw : []).map(r => {
+  if (!r || typeof r !== 'object') return null;
+  const c = cardTacticOf(r.c),
+    a = cardTacticOf(r.a);
+  if (!c || !a || c.cat !== 'cond' || a.cat !== 'act') return null;
+  const row = {
+    c: c.id,
+    a: a.id,
+    on: r.on !== false
+  };
+  if (c.g === 'species') {
+    if (typeof r.sp !== 'string' || !r.sp) return null;
+    row.sp = r.sp.slice(0, 32);
+  }
+  return row;
+}).filter(Boolean).slice(0, CARD_TACTIC_ROWS_MAX);
+const cardTacticOwnTurn = (st, p) => Math.max(0, Math.floor((st.turn + (p === st.first ? 1 : 0)) / 2));
+const cardTacticAlive = pl => pl.mons.map((m, i) => m.ko ? -1 : i).filter(i => i >= 0);
+const cardTacticMaxDamage = (db, mon) => {
+  let best = 0;
+  Object.values(db && db.cards || {}).forEach(c => {
+    if (c && cardIsAttackKind(c.kind) && cardUsableBy(c, mon)) best = Math.max(best, c.damage || 0);
+  });
+  return best;
+};
+const cardTacticBigCost = 4;
+const cardTacticIsBig = (st, c) => !!c && cardIsAttackKind(c.kind) && cardFieldCostOf(st, c.guts || 0) >= cardTacticBigCost;
+const cardTacticCond = (db, st, p, card, row) => {
+  const me = st.players[p],
+    opp = st.players[cardOther(p)];
+  const foesAlive = cardTacticAlive(opp),
+    mineAlive = cardTacticAlive(me);
+  const hit = ok => ok ? {
+    foes: null,
+    mine: null
+  } : null;
+  const foes = list => list.length ? {
+    foes: list,
+    mine: null
+  } : null;
+  const mine = list => list.length ? {
+    foes: null,
+    mine: list
+  } : null;
+  const v = card.v;
+  const hand = me.hand.map(n => cardOf(db, n)).filter(Boolean);
+  const guts = me.guts.length;
+  switch (card.g) {
+    case 'any':
+      return hit(true);
+    case 'ko':
+      {
+        const ready = hand.filter(c => cardIsAttackKind(c.kind) && c.kind !== 'spe' && cardFieldCostOf(st, c.guts || 0) <= guts && me.mons.some(m => !m.ko && cardUsableBy(c, m)));
+        return foes(foesAlive.filter(j => ready.some(c => (c.damage || 0) >= opp.mons[j].life)));
+      }
+    case 'lowest':
+    case 'highest':
+      {
+        if (!foesAlive.length) return null;
+        const pickV = card.g === 'lowest' ? Math.min(...foesAlive.map(j => opp.mons[j].life)) : Math.max(...foesAlive.map(j => opp.mons[j].life));
+        return foes(foesAlive.filter(j => opp.mons[j].life === pickV));
+      }
+    case 'strongest':
+      {
+        if (!foesAlive.length) return null;
+        const dm = foesAlive.map(j => ({
+          j,
+          d: cardTacticMaxDamage(db, opp.mons[j])
+        }));
+        const top = Math.max(...dm.map(x => x.d));
+        return foes(dm.filter(x => x.d === top).map(x => x.j));
+      }
+    case 'attacker':
+      return foes(foesAlive.filter(j => (opp.mons[j].attacks || 0) > 0));
+    case 'leader':
+      return foes(foesAlive.filter(j => j === 0));
+    case 'type':
+      {
+        const t = {
+          地上: 'ground',
+          空中: 'air',
+          水中: 'water'
+        }[v];
+        return foes(foesAlive.filter(j => cardMonType(opp.mons[j], st.turn) === t));
+      }
+    case 'blood':
+      return foes(foesAlive.filter(j => v === '純血' ? cardIsPureMon(opp.mons[j]) : !cardIsPureMon(opp.mons[j])));
+    case 'species':
+      return foes(foesAlive.filter(j => row && row.sp && (opp.mons[j].species === row.sp || opp.mons[j].main === row.sp)));
+    case 'foeLife':
+      return foes(foesAlive.filter(j => opp.mons[j].life * 100 <= opp.mons[j].max * v));
+    case 'myLife':
+      return mine(mineAlive.filter(i => me.mons[i].life * 100 <= me.mons[i].max * v));
+    case 'myGuts':
+      return hit(guts >= v);
+    case 'foeGutsLe':
+      return hit(opp.guts.length <= v);
+    case 'foeGutsGe':
+      return hit(opp.guts.length >= v);
+    case 'myHand':
+      return hit(me.hand.length >= v);
+    case 'foeHandGe':
+      return hit(opp.hand.length >= v);
+    case 'foeHandLe':
+      return hit(opp.hand.length <= v);
+    case 'myDeck':
+      return hit(me.deck.length <= v);
+    case 'foeDeck':
+      return hit(opp.deck.length <= v);
+    case 'guardN':
+      return hit(hand.filter(c => cardIsGuardKind(c.kind)).length >= v);
+    case 'guardKind':
+      return hit(hand.some(c => c.kind === (v === '回避' ? 'dge' : 'blk')));
+    case 'bigInHand':
+      return hit(hand.some(c => cardTacticIsBig(st, c)));
+    case 'areaInHand':
+      return hit(hand.some(c => cardIsAttackKind(c.kind) && cardHasEff(c, 'area')));
+    case 'breederInHand':
+      return hit(hand.some(c => c.user === 'breeder'));
+    case 'turnLe':
+      return hit(cardTacticOwnTurn(st, p) <= v);
+    case 'turnGe':
+      return hit(cardTacticOwnTurn(st, p) >= v);
+    case 'myAlive':
+      return hit(mineAlive.length === v);
+    case 'foeAlive':
+      return hit(foesAlive.length === v);
+    case 'koDiff':
+      {
+        const took = opp.mons.filter(m => m.ko).length,
+          lost = me.mons.filter(m => m.ko).length;
+        return hit(v === '勝っ' ? took > lost : lost > took);
+      }
+    case 'foeStun':
+      return foes(foesAlive.filter(j => opp.mons[j].stunTurn > st.turn));
+    case 'myStun':
+      return mine(mineAlive.filter(i => me.mons[i].stunTurn >= st.turn));
+    case 'foeCharge':
+      return foes(foesAlive.filter(j => {
+        const m = opp.mons[j];
+        return !!m.charge || !!(m.mult && m.mult.turn > st.turn);
+      }));
+    case 'foeAir':
+      return foes(foesAlive.filter(j => {
+        const m = opp.mons[j];
+        return m.type !== 'air' && cardMonType(m, st.turn) === 'air';
+      }));
+    case 'field':
+      return hit(!!st.field && (v === '自分の' ? st.field.p === p : st.field.p !== p));
+    case 'foeBig':
+      {
+        const g = opp.guts.length;
+        if (g < cardTacticBigCost || !opp.hand.length) return null;
+        return hit(Object.values(db.cards || {}).some(c => cardTacticIsBig(st, c) && cardFieldCostOf(st, c.guts || 0) <= g + 1 && foesAlive.some(j => cardUsableBy(c, opp.mons[j]))));
+      }
+    default:
+      return null;
+  }
+};
+const CARD_TACTIC_EFF = Object.freeze({
+  回避されない: ['noEvade'],
+  攻撃できなくする: ['stunOnHit', 'stunTarget', 'stunAllEnemies'],
+  ガッツを減らす: ['gutsLossOnHit', 'oppGutsLoss'],
+  吸い取る: ['drain'],
+  '2回攻撃': ['extraAttack', 'extraAttackTarget', 'unlimitedAttacks']
+});
+const CARD_TACTIC_BREEDER = Object.freeze({
+  攻撃: c => (c.damage || 0) > 0 || ['stunTarget', 'oppGutsLoss', 'extraAttackTarget', 'gutsZeroBoth'].some(t => cardHasEff(c, t)),
+  守り: c => ['unstunTarget', 'revive'].some(t => cardHasEff(c, t)),
+  '引く・手札': c => ['draw', 'choose', 'refresh', 'rush', 'deckToGuts', 'gutsToDeckShuffle'].some(t => cardHasEff(c, t)),
+  回復: c => cardHasEff(c, 'heal')
+});
+const CARD_TACTIC_DISRUPT = Object.freeze({
+  手札を捨てさせる: ['discardOpp', 'peekPick', 'discardBothHands', 'oppHandToDeckBottom'],
+  山札を削る: ['millOpp', 'fieldMill'],
+  ガッツを減らす: ['oppGutsLoss', 'gutsLossOnHit', 'gutsZeroBoth'],
+  番を飛ばす: ['skipTurn']
+});
+const cardTacticAttackFits = (db, st, act, o) => {
+  const me = st.players[st.active];
+  const main = cardOf(db, me.hand[o.hand[0]]);
+  if (!main) return false;
+  const cards = o.hand.map(i => cardOf(db, me.hand[i])).filter(Boolean);
+  const v = act.v;
+  switch (act.g) {
+    case 'atk':
+      return o.type === 'attack' || o.type === 'breeder' && (main.damage || 0) > 0;
+    case 'kind':
+      return o.type === 'attack' && main.kind === {
+        ちから: 'pow',
+        かしこさ: 'int',
+        特殊: 'spe'
+      }[v];
+    case 'cost':
+      {
+        if (o.type !== 'attack') return false;
+        const g = cardActionCost(db, st, st.active, me.hand, o.hand);
+        return v.startsWith('軽い') ? g <= 1 : v.startsWith('中') ? g >= 2 && g <= 3 : g >= cardTacticBigCost;
+      }
+    case 'reach':
+      return o.type === 'attack' && (v === '全体攻撃' ? cardHasEff(main, 'area') : !cardHasEff(main, 'area'));
+    case 'eff':
+      return cards.some(c => (CARD_TACTIC_EFF[v] || []).some(t => cardHasEff(c, t)));
+    case 'attach':
+      return o.hand.length > 1 && cards.slice(1).some(c => cardHasEff(c, 'attach'));
+    case 'breeder':
+      return o.type === 'breeder' && main.kind !== 'fld' && !!CARD_TACTIC_BREEDER[v] && CARD_TACTIC_BREEDER[v](main);
+    case 'fieldCard':
+      return main.kind === 'fld';
+    case 'disrupt':
+      return cards.some(c => (CARD_TACTIC_DISRUPT[v] || []).some(t => cardHasEff(c, t)));
+    case 'charge':
+      return cards.some(c => ['charge', 'rage', 'nextTurnMult'].some(t => cardHasEff(c, t)));
+    default:
+      return false;
+  }
+};
+const cardTacticAimsAt = (st, o, foes) => {
+  if (!foes) return true;
+  const op = cardOther(st.active);
+  if (o.target && o.target.p === op) return foes.includes(o.target.m);
+  if (Array.isArray(o.split)) return foes.some(j => (o.split[j] || 0) > 0);
+  return !o.target;
+};
+const cardTacticStylePolicy = (policy, act) => {
+  const habit = {
+    ...(policy.habit || {})
+  };
+  if (act.g === 'flex') habit.flex = true;
+  if (act.g === 'mill') habit.mill = Math.max(habit.mill || 0, 1);
+  if (act.g === 'reckless') {
+    habit.keepGuard = (habit.keepGuard || 1) * 0.5;
+    habit.finish = (habit.finish || 1) * 1.3;
+  }
+  return {
+    ...policy,
+    habit
+  };
+};
+const cardTacticDecide = (db, st, policy) => {
+  const rows = cardTacticNormalizeRows(policy && policy.gambit).filter(r => r.on);
+  if (!rows.length || st.winner !== null) return null;
+  const phase = st.pending ? 'guard' : st.phase === 'guts' ? 'guts' : st.phase === 'main' ? 'attack' : null;
+  if (!phase) return null;
+  const p = phase === 'guard' ? st.pending.defender : st.active;
+  let attackScored = null;
+  const scoredAttacks = () => {
+    if (!attackScored) attackScored = cardAiAttackScored(db, st, cardAiAttackChoices(db, st, policy), policy);
+    return attackScored;
+  };
+  for (const row of rows) {
+    const act = cardTacticOf(row.a);
+    if (act.phase !== 'all' && act.phase !== phase) continue;
+    const aim = cardTacticCond(db, st, p, cardTacticOf(row.c), row);
+    if (!aim) continue;
+    if (act.phase === 'all') {
+      if (act.g === 'ace') {
+        const aces = Array.isArray(policy.aces) ? policy.aces : [];
+        if (!aces.length) continue;
+        if (phase === 'attack') {
+          const best = scoredAttacks().find(x => x.s > 0 && x.o.hand.some(i => aces.includes(st.players[p].hand[i])) && cardTacticAimsAt(st, x.o, aim.foes));
+          if (best) return {
+            act: cardAiFillBind(db, st, best.o, policy)
+          };
+          continue;
+        }
+        if (phase === 'guard') {
+          const g = cardAiChooseGuard(db, st, policy, () => 0, {
+            force: true,
+            only: o => aces.includes(st.players[p].hand[o.hand])
+          });
+          if (g.type !== 'pass') return {
+            act: g
+          };
+          continue;
+        }
+        continue;
+      }
+      return {
+        policy: cardTacticStylePolicy(policy, act)
+      };
+    }
+    if (phase === 'attack') {
+      if (act.g === 'stop') return {
+        act: {
+          type: 'endAttacks'
+        }
+      };
+      const best = scoredAttacks().find(x => x.s > 0 && cardTacticAttackFits(db, st, act, x.o) && cardTacticAimsAt(st, x.o, aim.foes));
+      if (best) return {
+        act: cardAiFillBind(db, st, best.o, policy)
+      };
+      continue;
+    }
+    if (phase === 'guard') {
+      const pd = st.pending;
+      const tgt = pd.targets[pd.ti];
+      if (aim.mine && !(tgt && tgt.p === p && aim.mine.includes(tgt.m))) continue;
+      const dmg = cardAiIncomingDamage(db, st);
+      const target = tgt ? st.players[tgt.p].mons[pd.cover !== null && pd.cover !== undefined ? pd.cover : tgt.m] : null;
+      const kindOf = o => (cardOf(db, st.players[p].hand[o.hand]) || {}).kind;
+      if (act.g === 'noGuard') return {
+        act: {
+          type: 'pass'
+        }
+      };
+      if (act.g === 'guardOver' && dmg < act.v) return {
+        act: {
+          type: 'pass'
+        }
+      };
+      if (act.g === 'guardDie' && !(target && target.life <= dmg)) return {
+        act: {
+          type: 'pass'
+        }
+      };
+      const only = act.g === 'guardFirst' ? o => kindOf(o) === (act.v === '回避' ? 'dge' : 'blk') : act.g === 'cover' ? o => {
+        const c = cardOf(db, st.players[p].hand[o.hand]);
+        return !!c && ['cover', 'shield', 'redirect'].some(t => cardHasEff(c, t));
+      } : null;
+      const g = cardAiChooseGuard(db, st, policy, () => 0, {
+        force: true,
+        only
+      });
+      if (g.type !== 'pass') return {
+        act: g
+      };
+      continue;
+    }
+    if (phase === 'guts') {
+      if (act.g === 'save') return {
+        act: cardAiChooseGuts(db, st, {
+          ...policy,
+          habit: {
+            ...(policy.habit || {}),
+            saveGuts: Math.max(1.6, (policy.habit || {}).saveGuts || 1)
+          }
+        })
+      };
+      if (act.g === 'gutsN') return {
+        act: cardAiChooseGuts(db, st, policy, {
+          count: act.v
+        })
+      };
+      if (act.g === 'keepGuard') return {
+        act: cardAiChooseGuts(db, st, policy, {
+          keepGuards: true
+        })
+      };
+    }
+  }
+  return null;
 };
 const CARD_LINE_SCENES = Object.freeze(['challenge', 'start', 'big', 'bigHit', 'guardMine', 'guardTheirs', 'myKo', 'theirKo', 'lastMine', 'lastTheirs', 'deckMine', 'deckTheirs', 'win', 'lose']);
 const CARD_LINE_FACE = Object.freeze({
