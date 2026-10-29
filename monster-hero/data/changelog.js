@@ -35,7 +35,7 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
-    date: "DATE_PLACEHOLDER", type:'update', group:'cardBattle', title:'対戦の画面の上の帯を見やすくしました', status:'new',
+    date: "2026-10-30 02:24", type:'update', group:'cardBattle', title:'対戦の画面の上の帯を見やすくしました', status:'new',
     items:[
       'まんなかの札に、ターン・どちらの番か・マルチ対戦の持ち時間をまとめました。どの番でも帯の高さが変わらず、盤が動きません',
       '「投了」を右端に離して、赤い縁にしました',
