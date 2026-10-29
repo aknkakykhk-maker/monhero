@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9282814461f2683d
+// generated-sha256: a99bacbe759b23f2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7654,6 +7654,36 @@ const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).bas
 // イルミネ・ドリーミィ(2026-10-22 公開)は足し忘れていて、マスモンの詳細の丸で上下が切られ「大きく・中心がずれて」見えていた(2026-10-26 社長の指摘)
 const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Melody', 'Kuromy', 'Illumine', 'Dreamy', 'Kyubi', 'Orihime']);
 const monsterArtFitStyle = (baseId, style) => (MONSTER_ART_CONTAIN_IDS.includes(baseId) ? { ...style, objectFit: 'contain' } : style);
+// ★同じ主血統の立ち絵の見た目の大きさをそろえる、表示の倍率(2026-10-29 社長「同血統は基本的に立ち絵はほぼ同じサイズに」・案A)。
+//   絵の画素は動かさない。その子の立ち絵(imgUrl)を「全体を収める」(contain)で出すときだけ、絵の要素を scale する
+//   (マスクは同じ要素・同じ箱の中にあるので一緒に動く。待機アニメの部品の軸は MonsterIdleArt が同じ式で動かす)。
+//   切り抜く丸いアイコン(cover)・顔アイコン・円盤石アイコン・小さい版(サムネ)は対象外(src か収め方が違う)。
+//   値は絵の不透明な部分を測って決めた(箱に対する高さ。仲間に合わせ、横に広い子は幅 0.98 で頭打ち):
+//   ピクシー 0.81→0.95(ミーア 0.94・パンドラ 0.96。中心が下にずれているので上へ ty)/ アーク 0.59→0.65(羽の幅で頭打ち)/
+//   プラント 0.72→0.78(花の幅で頭打ち)/ スネグーラチカ 0.89→0.97 / ザン 0.90→0.99
+//   ty は箱の高さに対する割合(負で上へ)
+const MONSTER_ART_SCALE = Object.freeze({
+  Pixie: Object.freeze({ scale: 1.17, ty: -0.049 }),
+  Ark: Object.freeze({ scale: 1.10, ty: 0 }),
+  Plant: Object.freeze({ scale: 1.08, ty: 0 }),
+  Snegurochka: Object.freeze({ scale: 1.09, ty: 0 }),
+  Zan: Object.freeze({ scale: 1.10, ty: 0 }),
+});
+const _artPathOf = (url) => (typeof url === 'string' ? url.split('?')[0] : '');
+// その絵に掛ける倍率(掛けないなら null)。src がその子の立ち絵で、収め方が contain のときだけ
+const monsterArtScaleOf = (baseId, src, className, style) => {
+  const def = baseId && Object.prototype.hasOwnProperty.call(MONSTER_ART_SCALE, baseId) ? MONSTER_ART_SCALE[baseId] : null;
+  if (!def) return null;
+  const mon = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS[baseId] : null;
+  if (!mon || !src || _artPathOf(src) !== _artPathOf(mon.imgUrl)) return null;
+  const fit = (style && style.objectFit) || (/(^|\s)object-contain(\s|$)/.test(className || '') ? 'contain' : '');
+  return fit === 'contain' ? def : null;
+};
+const monsterArtScaleTransform = (def, base) => {
+  if (!def) return base;
+  const own = `${def.ty ? `translateY(${(def.ty * 100).toFixed(1)}%) ` : ''}scale(${def.scale})`;
+  return base ? `${base} ${own}` : own;
+};
 // 技カードのアイコンのように、絵は出すのに baseId を持ち回れない場所がある。
 // そこだけ収め方が抜けていて、ウンディーネ・ヤオビクニの固有技カードで頭が切れていた。
 // 表を二重に持つと片方だけ直して食い違うので、上の MONSTER_ART_CONTAIN_IDS から
@@ -7760,7 +7790,10 @@ const _bakeDyedLayers = (key, src, layers) => {
   return promise;
 };
 const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawStyle, draggable, debugMaskPlacement = null }) => {
-  const style = monsterArtFitStyle(baseId, rawStyle);
+  const fitStyle = monsterArtFitStyle(baseId, rawStyle);
+  // 同じ血統の立ち絵の大きさをそろえる倍率(MONSTER_ART_SCALE)。マスクの位置合わせ(debugMaskPlacement)の画面では掛けない
+  const artScale = debugMaskPlacement ? null : monsterArtScaleOf(baseId, src, className, fitStyle);
+  const style = artScale ? { ...(fitStyle || {}), transform: monsterArtScaleTransform(artScale, fitStyle && fitStyle.transform) } : fitStyle;
   const maskSize = monsterArtMaskSize(className, style);
   const hues = MASU_COLOR_REGION_HUES[baseId];
   const [masks, setMasks] = useState(null);
@@ -7892,7 +7925,22 @@ const _drawContain = (ctx, img, size) => {
   const k = Math.min(size / w, size / h), dw = w * k, dh = h * k;
   ctx.drawImage(img, (size - dw) / 2, (size - dh) / 2, dw, dh);
 };
-const bakeDyedMonsterCanvas = async ({ baseId, src, masuColors }, size) => {
+// 焼いた絵にも、同じ血統の立ち絵の大きさをそろえる倍率を掛ける(DOM の contain と同じ見え方。モンスターノーツ)
+const bakeDyedMonsterCanvas = async (opts, size) => {
+  const out = await _bakeDyedMonsterCanvasRaw(opts, size);
+  const def = out && opts ? monsterArtScaleOf(opts.baseId, opts.src, 'object-contain', null) : null;
+  if (!def || typeof document === 'undefined') return out;
+  const scaled = document.createElement('canvas');
+  scaled.width = out.width; scaled.height = out.height;
+  const sctx = scaled.getContext('2d');
+  if (!sctx) return out;
+  sctx.imageSmoothingEnabled = true;
+  sctx.imageSmoothingQuality = 'high';
+  const w = out.width * def.scale, h = out.height * def.scale;
+  sctx.drawImage(out, (out.width - w) / 2, (out.height - h) / 2 + def.ty * out.height, w, h);
+  return scaled;
+};
+const _bakeDyedMonsterCanvasRaw = async ({ baseId, src, masuColors }, size) => {
   try {
     if (typeof document === 'undefined' || !src || !(size > 0)) return null;
     const px = Math.max(1, Math.round(size));
@@ -7970,6 +8018,8 @@ const MonsterArtFrame = ({ baseId, src, alt='', masuColors=null, className='', f
   // contain は inline style で指定する。className 側に object-cover が混ざっても
   // inline style が必ず勝つので、枠ごとに崩れることがない
   const fit = { width:'100%', height:'100%', objectFit:'contain', objectPosition:'center' };
+  // 素の <img> のときも、同じ血統の立ち絵の大きさをそろえる倍率を掛ける(DyedMonsterImage は中で掛ける)
+  const plainScale = Array.isArray(masuColors) ? null : monsterArtScaleOf(baseId, src, '', fit);
   return (
     <span
       className={`relative flex items-center justify-center overflow-hidden ${className}`}
@@ -7977,7 +8027,7 @@ const MonsterArtFrame = ({ baseId, src, alt='', masuColors=null, className='', f
     >
       {Array.isArray(masuColors)
         ? <DyedMonsterImage baseId={baseId} src={src} alt={alt} masuColors={masuColors} draggable={false} style={fit}/>
-        : <img src={src} alt={alt} draggable={false} style={fit}/>}
+        : <img src={src} alt={alt} draggable={false} style={plainScale ? { ...fit, transform: monsterArtScaleTransform(plainScale) } : fit}/>}
       {children}
     </span>
   );
@@ -16012,9 +16062,19 @@ const MonsterIdleArt = ({baseId, image, fill = false, own = false}) => {
   const className = String(image.props.className || '').split(/\s+/).filter(c => c && !/^drop-shadow/.test(c)).join(' ');
   const layer = (url, extra) => React.cloneElement(image, { alt: extra ? '' : image.props.alt, className,
     style:{ ...(image.props.style||{}), ...MONSTER_IDLE_MASK_STYLE(url), ...(extra||{}) } });
+  // 同じ血統の立ち絵の大きさをそろえる倍率(MONSTER_ART_SCALE)は、各層の絵(DyedMonsterImage)が同じだけ掛ける。
+  // 部品の回す軸(origin)は「倍率を掛ける前の絵」での位置なので、絵と同じ式で動かす(そうしないと部品が体から浮く)
+  const artScale = typeof monsterArtScaleOf === 'function' ? monsterArtScaleOf(baseId, image.props.src, image.props.className, monsterArtFitStyle(baseId, image.props.style)) : null;
+  const originOf = (origin) => {
+    if (!artScale) return origin;
+    const m = /^\s*(-?[\d.]+)%\s+(-?[\d.]+)%\s*$/.exec(String(origin || ''));
+    if (!m) return origin;
+    const x = 50 + artScale.scale * (Number(m[1]) - 50), y = 50 + artScale.scale * (Number(m[2]) - 50) + artScale.ty * 100;
+    return `${x.toFixed(2)}% ${y.toFixed(2)}%`;
+  };
   const partNode = (part, index) => (
     <span key={index} className={`mon-idle__part mon-idle__part--${part.anim} mon-idle__part--${part.layer}`} aria-hidden="true"
-      style={{ transformOrigin:part.origin, animationDuration:`${part.dur}ms`, animationDelay:`${part.delay}ms`, '--idle-amp':`${part.amp}deg`, '--idle-bob':`${part.amp}%` }}>
+      style={{ transformOrigin:originOf(part.origin), animationDuration:`${part.dur}ms`, animationDelay:`${part.delay}ms`, '--idle-amp':`${part.amp}deg`, '--idle-bob':`${part.amp}%` }}>
       {layer(part.mask, {display:'block'})}
     </span>
   );
