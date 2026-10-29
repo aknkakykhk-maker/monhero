@@ -1817,7 +1817,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       <div className={`flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`}>
         {(pvp || share) ? <span data-card-pvp-foe className={`block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`}><CardPvpAvatar icon={(pvp || share).icon} frame={(pvp || share).frame} className="h-full w-full"/></span>
           : <img src={assistantFaceImage(who, face)} alt={who.name} className={`${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} rounded-xl border-2 bg-black object-cover object-top`} style={{ borderColor: who.accent }}/>}
-        <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level] || '助手と対戦'}</small></div>
+        <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level] || 'フリー対戦'}</small></div>
         <div className="ml-auto">{strip(CARD_CPU)}</div>
       </div>
       {/* リプレイでは相手の手札も表で見せる(終わったあとなので。2026-10-27 社長)。押すと詳しい画面 */}
@@ -2463,7 +2463,7 @@ const CardQuickRunDetail = ({ quickRun, autoReady, autoDifficulty, todayLoops = 
           {row('今日バトルカードで足した周回', `${(todayLoops || 0).toLocaleString()}周ぶん`, 'text-sky-100')}
         </div>
         <p className="mt-2 text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(autoReady || quickRun
-          ? '助手と対戦・マルチで戦うと、その分がクイック周回として足されます。裏で回しているときは、いまの周回が進みます。'
+          ? 'フリー対戦・マルチで戦うと、その分がクイック周回として足されます。裏で回しているときは、いまの周回が進みます。'
           : 'AUTO設定で、勇者モン・配置距離・難易度の3つを決めると、戦った分がクイック周回として足されます。')}</p>
         <button type="button" data-card-quick-detail-close onClick={onClose} className="mh-button mt-3 min-h-[44px] w-full rounded-2xl border border-white/15 bg-slate-800 text-[14px] font-black text-white active:scale-[.98]">閉じる</button>
       </div>
@@ -2537,6 +2537,16 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   //   公開の印(cardShareOpen)までは、デバッグ設定から入った人だけ新しい形。ふつうの人は今のまま
   const shareForm = debug || (typeof cardShareOpen === 'function' && cardShareOpen());
   const [foeTab, setFoeTab] = useState('assistant'); // フリー対戦のタブ: assistant / breeder
+  // 公開のときの一度きりの案内(対戦の入口で助手が「フリー対戦」と「デッキ登録」を知らせる)。新しいキー mh_card_share_guide_seen_v1。読めなければ出さない
+  const CARD_SHARE_GUIDE_KEY = 'mh_card_share_guide_seen_v1';
+  const [shareGuide, setShareGuide] = useState(false);
+  useEffect(() => {
+    if (!shareForm) return undefined;
+    let alive = true;
+    storeGet(CARD_SHARE_GUIDE_KEY, null, false).then((v) => { if (alive && v !== true) setShareGuide(true); }).catch(() => {});
+    return () => { alive = false; };
+  }, [shareForm]);
+  const closeShareGuide = () => { Audio_.fgSe.tap(); setShareGuide(false); void storeSet(CARD_SHARE_GUIDE_KEY, true).catch(() => {}); };
   const [startLevel, setStartLevel] = useState('last'); // 設定「助手と対戦の最初の強さ」
   const lastLevelRead = useRef(false);
   useEffect(() => {
@@ -2793,7 +2803,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       ]);
       if (!ok) { setNotice('保存できませんでした。もう一度お試しください'); return; }
       setDeckRewards([]);
-      setNotice(`みんなのデッキの報酬を受け取りました(ビートP +${total.toLocaleString()})`);
+      setNotice(`デッキ登録の報酬を受け取りました(ビートP +${total.toLocaleString()})`);
     } finally { setDeckRewardBusy(false); }
   };
 
@@ -3061,6 +3071,16 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       <div data-mh-screen data-card-top="mode" className="mhms-stage relative flex h-full min-h-0 flex-1 flex-col overflow-hidden p-4 text-white">
         <RhythmModeSelectStage notes={false}/>
         <div className="relative z-10"><ScreenHead title="対戦" accent="text-amber-200" onBack={() => setView('top')} note="だれと戦うかをえらびます"/></div>
+        {shareGuide && topAssistant && (
+          <div data-card-share-guide className="relative z-10 mb-2 flex items-start gap-2 rounded-2xl border border-amber-300/60 bg-slate-950/85 p-2.5">
+            {topAssistant.image && <img src={topAssistant.image} alt="" aria-hidden="true" className="h-14 w-14 shrink-0 rounded-xl object-cover object-top"/>}
+            <span className="min-w-0 flex-1">
+              <b className="block text-[12px] font-black text-amber-200">{topAssistant.name}</b>
+              <span className="block text-[12px] font-bold leading-snug text-white" style={JA_WRAP_STYLE}>{jaWrap('「フリー対戦」では、助手のほかに、ほかのブリーダーが登録したデッキとも戦えるようになったよ。「デッキ登録」で自分のデッキを登録して、戦術カードで戦い方を組んでみてね!')}</span>
+              <button type="button" data-card-share-guide-close onClick={closeShareGuide} className="mt-1.5 rounded-lg bg-amber-400 px-3 py-1 text-[12px] font-black text-slate-950">わかった</button>
+            </span>
+          </div>
+        )}
         <div className={`${SCREEN_LIST_CLASS} relative z-[1] flex flex-col justify-center space-y-3 pb-4`}>
           <button type="button" data-card-mode-assistant className="mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-orange-200 via-orange-400 to-rose-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); setView('foe'); }}>
             {/* 札の透かしの英字は、トップ・モンヒロビートと同じ置き方(端で切れて見えるのも同じ作り) */}
@@ -3373,7 +3393,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const plCurName = ((plWhoList.find((a) => a.id === plCur) || {}).name) || '';
     const cpuPlaylistPanel = (
           <div data-card-playlist className="mt-3 border-t border-white/10 pt-2.5">
-            <b className="block text-[12px] font-black text-slate-200">助手と対戦</b>
+            <b className="block text-[12px] font-black text-slate-200">フリー対戦</b>
             <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手1人につき5曲まで選べます。対戦中は、選んだ曲を毎回ちがう順番で、続けて流します')}</p>
             <div className="mt-2 grid grid-cols-3 gap-1.5">
               {plWhoList.map((a) => (
@@ -3452,7 +3472,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     // 助手と対戦の最初の強さ(設定の「助手」の区切りに置く)。選んだらすぐ、いまの相手えらびの強さにも当てる
     const startLevelPanel = (
           <div data-card-setting="startLevel" className="mt-2.5 border-t border-white/10 pt-2.5">
-            <b className="block text-[12px] font-black text-slate-200">助手と対戦の最初の強さ</b>
+            <b className="block text-[12px] font-black text-slate-200">フリー対戦の最初の強さ</b>
             <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{cardJaWrap('相手えらびを開いたときに、はじめに選ばれている強さです。まだ開いていない強さのときは、開いている中でいちばん近い強さになります。')}</p>
             <div className="mt-2 grid grid-cols-3 gap-1.5">
               {CARD_START_LEVEL_OPTIONS.map((o) => (
@@ -3513,7 +3533,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 const cur = item.bool ? (save.settings[item.key] ? 'ON' : 'OFF') : save.settings[item.key];
                 return (
                   <div key={item.key} data-card-setting={item.key} className="mt-2.5 border-t border-white/10 pt-2.5">
-                    <b className="block text-[12px] font-black text-slate-200">{item.title}{item.only === 'cpu' && <small className="ml-1 text-[10px] font-bold text-slate-400">(助手と対戦)</small>}</b>
+                    <b className="block text-[12px] font-black text-slate-200">{item.title}{item.only === 'cpu' && <small className="ml-1 text-[10px] font-bold text-slate-400">(フリー対戦)</small>}</b>
                     <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{cardJaWrap(item.desc)}</p>
                     <div className={`mt-2 grid gap-1.5 ${item.options.length >= 5 ? 'grid-cols-5' : item.options.length === 4 ? 'grid-cols-4' : item.options.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
                       {item.options.map((o) => (
@@ -3551,7 +3571,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const assistShown = !!topAssistant && (assist.modeSelectArt || assist.modeSelectComment);
   const go = (v) => () => { Audio_.fgSe.tap(); setNotice(''); setView(v); };
   const bigCards = [
-    { key: 'cpu', attr: { 'data-card-cpu': '' }, label: '対戦', sub: '助手と対戦・マルチ対戦', mark: 'BATTLE', ico: '⚔️', grad: 'from-orange-200 via-orange-400 to-rose-500', disabled: !activeDeck, onClick: go('mode') },
+    { key: 'cpu', attr: { 'data-card-cpu': '' }, label: '対戦', sub: 'フリー対戦・マルチ対戦', mark: 'BATTLE', ico: '⚔️', grad: 'from-orange-200 via-orange-400 to-rose-500', disabled: !activeDeck, onClick: go('mode') },
     { key: 'decks', attr: { 'data-card-decks': '' }, label: 'デッキ編成', sub: 'デッキを組む・えらぶ', mark: 'DECK', ico: '🃏', grad: 'from-yellow-200 via-amber-300 to-orange-400', onClick: go('decks') },
     { key: 'market', attr: { 'data-card-market-open': '' }, label: 'マーケット', sub: 'パック・スターターキット', mark: 'MARKET', ico: '🛒', grad: 'from-sky-200 via-sky-400 to-blue-500', onClick: () => { Audio_.fgSe.tap(); setNotice(''); onOpenMarket && onOpenMarket(); } },
     { key: 'ranking', attr: { 'data-card-ranking-open': '' }, label: 'ランキング', sub: '勝ち数・連勝・図鑑', mark: 'RANKING', ico: '🏆', grad: 'from-lime-200 via-emerald-300 to-teal-500', onClick: go('ranking') },
@@ -3571,7 +3591,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <div className="min-w-0 flex-1 leading-none">
           <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300">MF BATTLE CARD ・ TOP</small>
           <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider">MFバトルカード</b>
-          <small className="block truncate text-[9px] font-black text-slate-300/90">{debug ? 'デバッグ専用(まだ公開していません)' : 'カードで助手と対戦しよう'}</small>
+          <small className="block truncate text-[9px] font-black text-slate-300/90">{debug ? 'デバッグ専用(まだ公開していません)' : 'カードで助手やブリーダーと対戦しよう'}</small>
         </div>
         <span data-card-point-pill className="shrink-0 rounded-full border border-amber-300/50 bg-slate-950/70 px-2.5 py-1 text-[11px] font-black text-amber-100"><span aria-hidden="true">🎟️</span> <span data-card-point>{save.point}</span></span>
       </header>
@@ -3595,7 +3615,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               lines={[`MASTER の勝ち数 ${w.wins}勝・${w.place}位`, `ビートP +${w.point.toLocaleString()}`]}/>
           ))}
           {deckRewards.length > 0 && (
-            <CardRewardBand tag="deck" busy={deckRewardBusy} onClaim={() => { void claimDeckRewards(); }} title="みんなのデッキの報酬"
+            <CardRewardBand tag="deck" busy={deckRewardBusy} onClaim={() => { void claimDeckRewards(); }} title="デッキ登録の報酬"
               lines={[`あなたのデッキが戦われた・借りられた ${deckRewards.reduce((a, r) => a + r.uses, 0)}回ぶん`, `ビートP +${deckRewards.reduce((a, r) => a + r.amount, 0).toLocaleString()}`]}/>
           )}
           {notice && <p data-card-top-notice className={`text-[12px] font-bold text-amber-200 [@media(orientation:landscape)_and_(max-height:420px)]:truncate [@media(orientation:landscape)_and_(max-height:420px)]:text-[11px] [@media(orientation:landscape)_and_(max-height:420px)]:leading-snug`} style={JA_LABEL_STYLE} title={notice}>{jaWrap(notice)}</p>}

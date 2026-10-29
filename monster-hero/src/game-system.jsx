@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ebf4d74b170fd5f7
+// generated-sha256: 088de350b8e5b445
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -12224,7 +12224,7 @@ const helpDataRows = (id) => {
       const label = (lv) => (typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv]) || lv.toUpperCase();
       // 負けは勝ちの 3/4(82 の cardLosePoint。2026-10-26)
       const lose = (lv) => (typeof cardLosePoint === 'function' ? cardLosePoint(CARD_AI_LEVELS[lv]) : 0);
-      const rows = CARD_LEVEL_ORDER.map(lv => [`助手と対戦 ${label(lv)}`, `勝ち ${CARD_AI_LEVELS[lv].point} ／ 負け ${lose(lv)}`]);
+      const rows = CARD_LEVEL_ORDER.map(lv => [`フリー対戦 ${label(lv)}`, `勝ち ${CARD_AI_LEVELS[lv].point} ／ 負け ${lose(lv)}`]);
       if (typeof CARD_PVP_REWARD !== 'undefined') { const x = CARD_PVP_REWARD.x || 1; rows.push(['マルチ対戦', `勝ち ${CARD_PVP_REWARD.win.point * x} ／ 負け ${CARD_PVP_REWARD.lose.point * x}`]); } // x … マルチだけの倍率(2026-10-27 社長 2倍)
       return rows;
     }
@@ -55095,13 +55095,13 @@ const CARD_SETTING_GROUPS = Object.freeze([
       options: [{ id: 'ON', label: '出す', note: '大きな数字' }, { id: 'OFF', label: '出さない', note: 'ライフだけ' }] },
   ] },
   { title: '速さ', items: [
-    { key: 'think', title: '相手が考える時間', only: 'cpu', desc: '助手と対戦で、相手の助手が技や守りを決めるまでの間です。マルチ対戦では相手が人なので変わりません。',
+    { key: 'think', title: '相手が考える時間', only: 'cpu', desc: 'フリー対戦で、相手の助手が技や守りを決めるまでの間です。マルチ対戦では相手が人なので変わりません。',
       options: [{ id: 'SLOW2', label: 'とても\nゆっくり', note: '×2' }, { id: 'SLOW', label: 'ゆっくり', note: '×1.5' }, { id: 'NORMAL', label: 'ふつう', note: '×1' }, { id: 'FAST', label: 'はやい', note: '×0.5' }, { id: 'FAST2', label: 'とても\nはやい', note: '×0.25' }] },
-    { key: 'resultWait', title: '結果までの間', only: 'cpu', desc: '助手と対戦で、勝ち負けが決まってから結果の画面に移るまでの間です。',
+    { key: 'resultWait', title: '結果までの間', only: 'cpu', desc: 'フリー対戦で、勝ち負けが決まってから結果の画面に移るまでの間です。',
       options: [{ id: 'NORMAL', label: 'ふつう', note: '約2秒' }, { id: 'SHORT', label: '短め', note: '約1秒' }, { id: 'QUICK', label: 'すぐ', note: '約0.5秒' }] },
   ] },
   { title: '助手', items: [
-    { key: 'bubble', title: '対戦中のひとこと', only: 'cpu', desc: '助手と対戦で、相手の助手がしゃべる吹き出しの多さです。「出さない」は、勝ち負けのときも出しません。',
+    { key: 'bubble', title: '対戦中のひとこと', only: 'cpu', desc: 'フリー対戦で、相手の助手がしゃべる吹き出しの多さです。「出さない」は、勝ち負けのときも出しません。',
       options: [{ id: 'MANY', label: '多め', note: '1ターン3回まで' }, { id: 'NORMAL', label: 'ふつう', note: '1ターン2回まで' }, { id: 'FEW', label: '少なめ', note: '1ターン1回まで' }, { id: 'OFF', label: '出さない', note: 'しゃべらない' }] },
   ] },
   { title: '操作', items: [
@@ -59034,7 +59034,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       <div className={`flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`}>
         {(pvp || share) ? <span data-card-pvp-foe className={`block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`}><CardPvpAvatar icon={(pvp || share).icon} frame={(pvp || share).frame} className="h-full w-full"/></span>
           : <img src={assistantFaceImage(who, face)} alt={who.name} className={`${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} rounded-xl border-2 bg-black object-cover object-top`} style={{ borderColor: who.accent }}/>}
-        <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level] || '助手と対戦'}</small></div>
+        <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level] || 'フリー対戦'}</small></div>
         <div className="ml-auto">{strip(CARD_CPU)}</div>
       </div>
       {/* リプレイでは相手の手札も表で見せる(終わったあとなので。2026-10-27 社長)。押すと詳しい画面 */}
@@ -59680,7 +59680,7 @@ const CardQuickRunDetail = ({ quickRun, autoReady, autoDifficulty, todayLoops = 
           {row('今日バトルカードで足した周回', `${(todayLoops || 0).toLocaleString()}周ぶん`, 'text-sky-100')}
         </div>
         <p className="mt-2 text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(autoReady || quickRun
-          ? '助手と対戦・マルチで戦うと、その分がクイック周回として足されます。裏で回しているときは、いまの周回が進みます。'
+          ? 'フリー対戦・マルチで戦うと、その分がクイック周回として足されます。裏で回しているときは、いまの周回が進みます。'
           : 'AUTO設定で、勇者モン・配置距離・難易度の3つを決めると、戦った分がクイック周回として足されます。')}</p>
         <button type="button" data-card-quick-detail-close onClick={onClose} className="mh-button mt-3 min-h-[44px] w-full rounded-2xl border border-white/15 bg-slate-800 text-[14px] font-black text-white active:scale-[.98]">閉じる</button>
       </div>
@@ -59754,6 +59754,16 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   //   公開の印(cardShareOpen)までは、デバッグ設定から入った人だけ新しい形。ふつうの人は今のまま
   const shareForm = debug || (typeof cardShareOpen === 'function' && cardShareOpen());
   const [foeTab, setFoeTab] = useState('assistant'); // フリー対戦のタブ: assistant / breeder
+  // 公開のときの一度きりの案内(対戦の入口で助手が「フリー対戦」と「デッキ登録」を知らせる)。新しいキー mh_card_share_guide_seen_v1。読めなければ出さない
+  const CARD_SHARE_GUIDE_KEY = 'mh_card_share_guide_seen_v1';
+  const [shareGuide, setShareGuide] = useState(false);
+  useEffect(() => {
+    if (!shareForm) return undefined;
+    let alive = true;
+    storeGet(CARD_SHARE_GUIDE_KEY, null, false).then((v) => { if (alive && v !== true) setShareGuide(true); }).catch(() => {});
+    return () => { alive = false; };
+  }, [shareForm]);
+  const closeShareGuide = () => { Audio_.fgSe.tap(); setShareGuide(false); void storeSet(CARD_SHARE_GUIDE_KEY, true).catch(() => {}); };
   const [startLevel, setStartLevel] = useState('last'); // 設定「助手と対戦の最初の強さ」
   const lastLevelRead = useRef(false);
   useEffect(() => {
@@ -60010,7 +60020,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       ]);
       if (!ok) { setNotice('保存できませんでした。もう一度お試しください'); return; }
       setDeckRewards([]);
-      setNotice(`みんなのデッキの報酬を受け取りました(ビートP +${total.toLocaleString()})`);
+      setNotice(`デッキ登録の報酬を受け取りました(ビートP +${total.toLocaleString()})`);
     } finally { setDeckRewardBusy(false); }
   };
 
@@ -60278,6 +60288,16 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       <div data-mh-screen data-card-top="mode" className="mhms-stage relative flex h-full min-h-0 flex-1 flex-col overflow-hidden p-4 text-white">
         <RhythmModeSelectStage notes={false}/>
         <div className="relative z-10"><ScreenHead title="対戦" accent="text-amber-200" onBack={() => setView('top')} note="だれと戦うかをえらびます"/></div>
+        {shareGuide && topAssistant && (
+          <div data-card-share-guide className="relative z-10 mb-2 flex items-start gap-2 rounded-2xl border border-amber-300/60 bg-slate-950/85 p-2.5">
+            {topAssistant.image && <img src={topAssistant.image} alt="" aria-hidden="true" className="h-14 w-14 shrink-0 rounded-xl object-cover object-top"/>}
+            <span className="min-w-0 flex-1">
+              <b className="block text-[12px] font-black text-amber-200">{topAssistant.name}</b>
+              <span className="block text-[12px] font-bold leading-snug text-white" style={JA_WRAP_STYLE}>{jaWrap('「フリー対戦」では、助手のほかに、ほかのブリーダーが登録したデッキとも戦えるようになったよ。「デッキ登録」で自分のデッキを登録して、戦術カードで戦い方を組んでみてね!')}</span>
+              <button type="button" data-card-share-guide-close onClick={closeShareGuide} className="mt-1.5 rounded-lg bg-amber-400 px-3 py-1 text-[12px] font-black text-slate-950">わかった</button>
+            </span>
+          </div>
+        )}
         <div className={`${SCREEN_LIST_CLASS} relative z-[1] flex flex-col justify-center space-y-3 pb-4`}>
           <button type="button" data-card-mode-assistant className="mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-orange-200 via-orange-400 to-rose-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); setView('foe'); }}>
             {/* 札の透かしの英字は、トップ・モンヒロビートと同じ置き方(端で切れて見えるのも同じ作り) */}
@@ -60590,7 +60610,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const plCurName = ((plWhoList.find((a) => a.id === plCur) || {}).name) || '';
     const cpuPlaylistPanel = (
           <div data-card-playlist className="mt-3 border-t border-white/10 pt-2.5">
-            <b className="block text-[12px] font-black text-slate-200">助手と対戦</b>
+            <b className="block text-[12px] font-black text-slate-200">フリー対戦</b>
             <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手1人につき5曲まで選べます。対戦中は、選んだ曲を毎回ちがう順番で、続けて流します')}</p>
             <div className="mt-2 grid grid-cols-3 gap-1.5">
               {plWhoList.map((a) => (
@@ -60669,7 +60689,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     // 助手と対戦の最初の強さ(設定の「助手」の区切りに置く)。選んだらすぐ、いまの相手えらびの強さにも当てる
     const startLevelPanel = (
           <div data-card-setting="startLevel" className="mt-2.5 border-t border-white/10 pt-2.5">
-            <b className="block text-[12px] font-black text-slate-200">助手と対戦の最初の強さ</b>
+            <b className="block text-[12px] font-black text-slate-200">フリー対戦の最初の強さ</b>
             <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{cardJaWrap('相手えらびを開いたときに、はじめに選ばれている強さです。まだ開いていない強さのときは、開いている中でいちばん近い強さになります。')}</p>
             <div className="mt-2 grid grid-cols-3 gap-1.5">
               {CARD_START_LEVEL_OPTIONS.map((o) => (
@@ -60730,7 +60750,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 const cur = item.bool ? (save.settings[item.key] ? 'ON' : 'OFF') : save.settings[item.key];
                 return (
                   <div key={item.key} data-card-setting={item.key} className="mt-2.5 border-t border-white/10 pt-2.5">
-                    <b className="block text-[12px] font-black text-slate-200">{item.title}{item.only === 'cpu' && <small className="ml-1 text-[10px] font-bold text-slate-400">(助手と対戦)</small>}</b>
+                    <b className="block text-[12px] font-black text-slate-200">{item.title}{item.only === 'cpu' && <small className="ml-1 text-[10px] font-bold text-slate-400">(フリー対戦)</small>}</b>
                     <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{cardJaWrap(item.desc)}</p>
                     <div className={`mt-2 grid gap-1.5 ${item.options.length >= 5 ? 'grid-cols-5' : item.options.length === 4 ? 'grid-cols-4' : item.options.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
                       {item.options.map((o) => (
@@ -60768,7 +60788,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const assistShown = !!topAssistant && (assist.modeSelectArt || assist.modeSelectComment);
   const go = (v) => () => { Audio_.fgSe.tap(); setNotice(''); setView(v); };
   const bigCards = [
-    { key: 'cpu', attr: { 'data-card-cpu': '' }, label: '対戦', sub: '助手と対戦・マルチ対戦', mark: 'BATTLE', ico: '⚔️', grad: 'from-orange-200 via-orange-400 to-rose-500', disabled: !activeDeck, onClick: go('mode') },
+    { key: 'cpu', attr: { 'data-card-cpu': '' }, label: '対戦', sub: 'フリー対戦・マルチ対戦', mark: 'BATTLE', ico: '⚔️', grad: 'from-orange-200 via-orange-400 to-rose-500', disabled: !activeDeck, onClick: go('mode') },
     { key: 'decks', attr: { 'data-card-decks': '' }, label: 'デッキ編成', sub: 'デッキを組む・えらぶ', mark: 'DECK', ico: '🃏', grad: 'from-yellow-200 via-amber-300 to-orange-400', onClick: go('decks') },
     { key: 'market', attr: { 'data-card-market-open': '' }, label: 'マーケット', sub: 'パック・スターターキット', mark: 'MARKET', ico: '🛒', grad: 'from-sky-200 via-sky-400 to-blue-500', onClick: () => { Audio_.fgSe.tap(); setNotice(''); onOpenMarket && onOpenMarket(); } },
     { key: 'ranking', attr: { 'data-card-ranking-open': '' }, label: 'ランキング', sub: '勝ち数・連勝・図鑑', mark: 'RANKING', ico: '🏆', grad: 'from-lime-200 via-emerald-300 to-teal-500', onClick: go('ranking') },
@@ -60788,7 +60808,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <div className="min-w-0 flex-1 leading-none">
           <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300">MF BATTLE CARD ・ TOP</small>
           <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider">MFバトルカード</b>
-          <small className="block truncate text-[9px] font-black text-slate-300/90">{debug ? 'デバッグ専用(まだ公開していません)' : 'カードで助手と対戦しよう'}</small>
+          <small className="block truncate text-[9px] font-black text-slate-300/90">{debug ? 'デバッグ専用(まだ公開していません)' : 'カードで助手やブリーダーと対戦しよう'}</small>
         </div>
         <span data-card-point-pill className="shrink-0 rounded-full border border-amber-300/50 bg-slate-950/70 px-2.5 py-1 text-[11px] font-black text-amber-100"><span aria-hidden="true">🎟️</span> <span data-card-point>{save.point}</span></span>
       </header>
@@ -60812,7 +60832,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               lines={[`MASTER の勝ち数 ${w.wins}勝・${w.place}位`, `ビートP +${w.point.toLocaleString()}`]}/>
           ))}
           {deckRewards.length > 0 && (
-            <CardRewardBand tag="deck" busy={deckRewardBusy} onClaim={() => { void claimDeckRewards(); }} title="みんなのデッキの報酬"
+            <CardRewardBand tag="deck" busy={deckRewardBusy} onClaim={() => { void claimDeckRewards(); }} title="デッキ登録の報酬"
               lines={[`あなたのデッキが戦われた・借りられた ${deckRewards.reduce((a, r) => a + r.uses, 0)}回ぶん`, `ビートP +${deckRewards.reduce((a, r) => a + r.amount, 0).toLocaleString()}`]}/>
           )}
           {notice && <p data-card-top-notice className={`text-[12px] font-bold text-amber-200 [@media(orientation:landscape)_and_(max-height:420px)]:truncate [@media(orientation:landscape)_and_(max-height:420px)]:text-[11px] [@media(orientation:landscape)_and_(max-height:420px)]:leading-snug`} style={JA_LABEL_STYLE} title={notice}>{jaWrap(notice)}</p>}
@@ -62342,7 +62362,7 @@ const CardBattleStatsPanel = ({ stats, who = 'self' }) => {
   return (
     <section data-card-stats={who} className={`${SCREEN_PANEL_FLAT_CLASS} mb-3`}>
       <b className="block text-[12px] font-black text-amber-100">MFバトルカードの戦績</b>
-      <small className="mb-2 block text-[9px] font-bold text-slate-400">助手と対戦の、強さごとの勝ち数</small>
+      <small className="mb-2 block text-[9px] font-bold text-slate-400">フリー対戦の、強さごとの勝ち数</small>
       <div className="grid grid-cols-5 gap-1 text-center">
         {CARD_LEVEL_ORDER.map((lv) => (
           <div key={lv} data-card-stats-level={lv} className={cell}>
@@ -62487,7 +62507,7 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
         <div className="mb-1.5 shrink-0 space-y-1.5">
           <div className="flex gap-1.5">
             {[['week', '今週'], ['total', '通算']].map(([id, label]) => <button key={id} type="button" data-card-ranking-period={id} onClick={() => setPeriod(id)} className={chip(period === id)}>{label}</button>)}
-            <small className="ml-auto self-center text-[10px] font-bold text-slate-400">{period === 'week' ? '月曜 5:00 から' : '助手と対戦で勝った数'}</small>
+            <small className="ml-auto self-center text-[10px] font-bold text-slate-400">{period === 'week' ? '月曜 5:00 から' : 'フリー対戦で勝った数'}</small>
           </div>
           {/* 5つを等分に並べる(横にすべらせる形だと、320幅で MASTER が画面の外・375幅で「MASTEF」と切れていた。2026-10-26 見回り #5) */}
           <div className="grid grid-cols-5 gap-1">
@@ -62751,7 +62771,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
           </button>
         )}
         <div className={`${SCREEN_PANEL_CLASS} grid grid-cols-2 gap-1.5 text-center`}>
-          {cell('助手と対戦', `${rec.cpu.win}勝 ${rec.cpu.lose + rec.cpu.surrender}敗`, '', 'side-cpu')}
+          {cell('フリー対戦', `${rec.cpu.win}勝 ${rec.cpu.lose + rec.cpu.surrender}敗`, '', 'side-cpu')}
           {cell('マルチ対戦', `${rec.pvp.win}勝 ${rec.pvp.lose}敗`, '', 'side-pvp')}
           {cell('いまの連勝', r.streak.now, '連勝', 'side-now')}
           {cell('最高の連勝', r.streak.best, '連勝', 'side-best')}
@@ -62768,7 +62788,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
           )}
           {/* 投了は負けに数える(カゲあつくんの確認)。保存の形(cpu.lose と cpu.surrender を別に持つ)はそのまま、見せるときに足す */}
           <div className={SCREEN_PANEL_CLASS}>
-            <div className="text-[12px] font-bold text-slate-400">助手と対戦</div>
+            <div className="text-[12px] font-bold text-slate-400">フリー対戦</div>
             <div data-card-record className="text-[16px] font-black text-white">{rec.cpu.win}勝 {rec.cpu.lose + rec.cpu.surrender}敗{rec.cpu.surrender ? `(うち投了${rec.cpu.surrender})` : ''}</div>
             <table data-card-record-levels className="mt-2 w-full text-[12px] font-bold">
               <thead><tr className="text-slate-400"><th className="py-1 text-left font-bold">難易度</th><th className="py-1 text-right font-bold">勝ち</th><th className="py-1 text-right font-bold">負け</th></tr></thead>
@@ -62778,7 +62798,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
             {CARD_LEVEL_ORDER.reduce((a, lv) => a + rec.byLevel.win[lv] + rec.byLevel.lose[lv], 0) !== rec.cpu.win + rec.cpu.lose + rec.cpu.surrender && <p data-card-record-levels-note className={small} style={JA_LABEL_STYLE}>{jaWrap('難易度別の数は、この表ができてからのぶんです')}</p>}
           </div>
           <div data-card-record-wins className={SCREEN_PANEL_CLASS}>
-            <div className="text-[12px] font-bold text-slate-400">勝ち方(助手と対戦)</div>
+            <div className="text-[12px] font-bold text-slate-400">勝ち方(フリー対戦)</div>
             <div className="mt-1 grid grid-cols-3 gap-1.5 text-center">
               {cell('勝つまでの平均', winAvg === null ? '—' : winAvg, '番')}
               {cell('いちばん早い勝ち', d.wins.fastest || '—', d.wins.fastest ? '番目' : '')}
@@ -62787,7 +62807,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
             <p className={small} style={JA_WRAP_STYLE}>{jaWrap('「番」は自分の番の数です。この記録ができてからのぶんです')}</p>
           </div>
           <div data-card-record-often className={SCREEN_PANEL_CLASS}>
-            <div className="text-[12px] font-bold text-slate-400">よく使う(助手と対戦)</div>
+            <div className="text-[12px] font-bold text-slate-400">よく使う(フリー対戦)</div>
             {row('デッキ', deckTop ? `${deckTop[1].name || 'デッキ'}(${deckTop[1].n}戦)` : 'まだありません', 'deck')}
             {row('モンスター', monTop.length ? monTop.map(([no, n]) => `${nameOf(no)}(${n}戦)`).join('・') : 'まだありません', 'mon')}
             {row('技', moveTop.length ? moveTop.map(([no, n]) => `${nameOf(no)}(${n}回)`).join('・') : 'まだありません', 'move')}
@@ -62800,7 +62820,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
               {cell('いまの連勝', r.streak.now, '連勝')}
               {cell('最高の連勝', r.streak.best, '連勝')}
             </div>
-            <p className={small} style={JA_WRAP_STYLE}>{jaWrap('ランキングに数えるのは、助手と対戦の勝ちと連勝です')}</p>
+            <p className={small} style={JA_WRAP_STYLE}>{jaWrap('ランキングに数えるのは、フリー対戦の勝ちと連勝です')}</p>
           </div>
           <div data-card-record-other className={SCREEN_PANEL_CLASS}>
             <div className="text-[12px] font-bold text-slate-400">ほか</div>
@@ -65085,7 +65105,7 @@ const CardReplayList = ({ onOpen, onBack }) => {
       <div className={`${SCREEN_LIST_CLASS} space-y-1.5 pb-4`}>
         {note && <p data-card-replay-note className="rounded-xl border border-amber-300/40 bg-amber-500/10 px-2 py-1.5 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{note}</p>}
         {!box && <div className="py-6 text-center text-[13px] font-bold text-slate-400">読み込み中…</div>}
-        {box && !box.list.length && <div data-card-replay-empty className="py-6 text-center text-[13px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('まだありません。助手と対戦かマルチ対戦を遊ぶと、ここに残ります')}</div>}
+        {box && !box.list.length && <div data-card-replay-empty className="py-6 text-center text-[13px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('まだありません。フリー対戦かマルチ対戦を遊ぶと、ここに残ります')}</div>}
         {box && box.list.map((r) => {
           const a = r.kind === 'cpu' && r.foe.who ? assistants.find((x) => x.id === r.foe.who) : null;
           const res = CARD_REPLAY_OUTCOME[r.outcome] || '';
@@ -65100,7 +65120,7 @@ const CardReplayList = ({ onOpen, onBack }) => {
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1.5">
                     <b className="truncate text-[13px] font-black text-white">{r.foe.name}</b>
-                    <small className={`shrink-0 rounded-md px-1 text-[10px] font-black ${r.kind === 'pvp' ? 'bg-sky-500/25 text-sky-100' : 'bg-amber-500/20 text-amber-100'}`}>{r.kind === 'pvp' ? 'マルチ' : '助手と対戦'}</small>
+                    <small className={`shrink-0 rounded-md px-1 text-[10px] font-black ${r.kind === 'pvp' ? 'bg-sky-500/25 text-sky-100' : 'bg-amber-500/20 text-amber-100'}`}>{r.kind === 'pvp' ? 'マルチ' : 'フリー対戦'}</small>
                   </span>
                   <span className="block text-[11px] font-bold text-slate-400">{cardReplayWhen(r.at)}{r.turn !== null ? `・${r.turn}番まで` : `・${r.acts.length}手`}</span>
                 </span>
@@ -65691,7 +65711,7 @@ const CARD_SHARE_ACES_MAX = 3;
 let _cardShareUnavailable = false; // 表がまだ無い(SQL 未適用)と分かったら、その回は読みに行かない
 
 // 公開の印。区切り⑤(報酬)まで入るまでは、デバッグ設定から入ったときだけ押せる
-const cardShareOpen = () => false;
+const cardShareOpen = () => true;
 
 // 戦い方をきれいにする(知らない項目は捨てる・無い人は既定で補う)。deck を渡すと、切り札はそのデッキに入っている札だけ残す
 const cardShareNormalizeTactics = (v, deck = null) => {
@@ -65888,7 +65908,7 @@ const cardRentedDeckSet = async (entry) => {
 //   title・headExtra … part='fight' のときの見出しと、見出しの下に出すもの(84 の「助手/ほかのブリーダー」のタブ)
 //   embedded … 外の画面(97 のデッキ登録)の中に入れる。殻と見出しを出さず、登録のボタンは中に置く
 //   借りるのは対戦前のデッキを選ぶ画面(87)へ移したので、part='fight' では「借りる」を出さない
-const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked = null, debug = false, onFight = null, onOpenTactics = null, part = 'all', title = 'みんなのデッキ', headExtra = null, embedded = false }) => {
+const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked = null, debug = false, onFight = null, onOpenTactics = null, part = 'all', title = 'デッキ登録', headExtra = null, embedded = false }) => {
   const [tab, setTab] = useState(part === 'mine' ? 'mine' : onFight ? 'fight' : 'mine');
   const [foes, setFoes] = useState(null);             // { picks, friends, popular } … 戦う相手の3つの並び
   // 戦術カード(96・97): 登録するときに載せる枠(レベルで開いている枠・持っているカードだけ)
@@ -65900,7 +65920,7 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
   const rent = async (e) => {
     if (busy) return;
     setBusy(true); setMsg('');
-    if (await cardRentedDeckSet(e)) { setRented(await cardRentedDeckGet()); setMsg(`${e.name}さんのデッキを借りました。助手と対戦のデッキ選びで使えます`); }
+    if (await cardRentedDeckSet(e)) { setRented(await cardRentedDeckGet()); setMsg(`${e.name}さんのデッキを借りました。フリー対戦のデッキ選びで使えます`); }
     else setMsg('この端末に保存できなかったため、借りられませんでした');
     setBusy(false);
   };
@@ -66017,7 +66037,7 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
           </div>
           {rented && part !== 'fight' && (
             <div data-card-share-rented className={`${SCREEN_PANEL_CLASS} flex items-center gap-2`}>
-              <span className="min-w-0 flex-1 text-[12px] font-bold text-emerald-100" style={JA_WRAP_STYLE}>{jaWrap(`借りているデッキ: ${rented.name}さんの「${rented.deckName || 'デッキ'}」(助手と対戦のデッキ選びで使えます。マルチ対戦では使えません)`)}</span>
+              <span className="min-w-0 flex-1 text-[12px] font-bold text-emerald-100" style={JA_WRAP_STYLE}>{jaWrap(`借りているデッキ: ${rented.name}さんの「${rented.deckName || 'デッキ'}」(フリー対戦のデッキ選びで使えます。マルチ対戦では使えません)`)}</span>
               <button type="button" data-card-share-giveback disabled={busy} className="shrink-0 rounded-lg border border-white/15 bg-slate-900 px-2 py-1 text-[11px] font-black text-slate-200 disabled:opacity-50" onClick={() => { Audio_.fgSe.tap(); void giveBack(); }}>返す</button>
             </div>
           )}
@@ -66164,7 +66184,7 @@ const CardShareProfileDeck = ({ ownerId, self = false, onGo = null }) => {
 // 公開の印: cardTacticsOpen()。false のあいだは経験値も入れない(公開のときに全員 Lv1 から)。デバッグの人は見える・入る
 const CARD_TACTICS_KEY = 'mh_card_tactics_v1';
 const CARD_LEVEL_KEY = 'mh_card_level_v1';
-const cardTacticsOpen = () => false;
+const cardTacticsOpen = () => true;
 
 // ---- レベル ----
 // 次のレベルまでに要る経験値(2026-10-29 社長「20+3×Lv」・上限なし)。差し替えるのはここだけ

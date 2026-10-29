@@ -6,7 +6,7 @@
 // 公開の印: cardTacticsOpen()。false のあいだは経験値も入れない(公開のときに全員 Lv1 から)。デバッグの人は見える・入る
 const CARD_TACTICS_KEY = 'mh_card_tactics_v1';
 const CARD_LEVEL_KEY = 'mh_card_level_v1';
-const cardTacticsOpen = () => false;
+const cardTacticsOpen = () => true;
 
 // ---- レベル ----
 // 次のレベルまでに要る経験値(2026-10-29 社長「20+3×Lv」・上限なし)。差し替えるのはここだけ

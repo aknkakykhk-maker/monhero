@@ -2375,13 +2375,13 @@ const CARD_SETTING_GROUPS = Object.freeze([
       options: [{ id: 'ON', label: '出す', note: '大きな数字' }, { id: 'OFF', label: '出さない', note: 'ライフだけ' }] },
   ] },
   { title: '速さ', items: [
-    { key: 'think', title: '相手が考える時間', only: 'cpu', desc: '助手と対戦で、相手の助手が技や守りを決めるまでの間です。マルチ対戦では相手が人なので変わりません。',
+    { key: 'think', title: '相手が考える時間', only: 'cpu', desc: 'フリー対戦で、相手の助手が技や守りを決めるまでの間です。マルチ対戦では相手が人なので変わりません。',
       options: [{ id: 'SLOW2', label: 'とても\nゆっくり', note: '×2' }, { id: 'SLOW', label: 'ゆっくり', note: '×1.5' }, { id: 'NORMAL', label: 'ふつう', note: '×1' }, { id: 'FAST', label: 'はやい', note: '×0.5' }, { id: 'FAST2', label: 'とても\nはやい', note: '×0.25' }] },
-    { key: 'resultWait', title: '結果までの間', only: 'cpu', desc: '助手と対戦で、勝ち負けが決まってから結果の画面に移るまでの間です。',
+    { key: 'resultWait', title: '結果までの間', only: 'cpu', desc: 'フリー対戦で、勝ち負けが決まってから結果の画面に移るまでの間です。',
       options: [{ id: 'NORMAL', label: 'ふつう', note: '約2秒' }, { id: 'SHORT', label: '短め', note: '約1秒' }, { id: 'QUICK', label: 'すぐ', note: '約0.5秒' }] },
   ] },
   { title: '助手', items: [
-    { key: 'bubble', title: '対戦中のひとこと', only: 'cpu', desc: '助手と対戦で、相手の助手がしゃべる吹き出しの多さです。「出さない」は、勝ち負けのときも出しません。',
+    { key: 'bubble', title: '対戦中のひとこと', only: 'cpu', desc: 'フリー対戦で、相手の助手がしゃべる吹き出しの多さです。「出さない」は、勝ち負けのときも出しません。',
       options: [{ id: 'MANY', label: '多め', note: '1ターン3回まで' }, { id: 'NORMAL', label: 'ふつう', note: '1ターン2回まで' }, { id: 'FEW', label: '少なめ', note: '1ターン1回まで' }, { id: 'OFF', label: '出さない', note: 'しゃべらない' }] },
   ] },
   { title: '操作', items: [
