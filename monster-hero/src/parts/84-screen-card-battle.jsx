@@ -2551,7 +2551,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
 
   // ---- 週間報酬(2026-10-29 社長。90 の cardWeeksAwaitingReward)。トップを開いたとき、終わった週の分を調べて帯を出す ----
   //   ランキングに数える人(rank.send)だけ。受け取りは、受け取った週の一覧を読み直して確かめてから、ビートP・ガチャポイントと同じ取引で保存する
-  const [weekly, setWeekly] = useState([]); // [{ id, key, gacha, point, place, wins, plays, join }]
+  const [weekly, setWeekly] = useState([]); // [{ id, key, point, place, wins }]
   const [weeklyBusy, setWeeklyBusy] = useState(false);
   const weeklyChecked = useRef(false);
   useEffect(() => {
@@ -2567,16 +2567,16 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         const list = [];
         for (const w of weeks) {
           const st = await cardWeekStanding(w.key, breederId); // 読めなかったら例外(今回は出さない。次に開いたときにもう一度)
-          list.push({ id: w.id, key: w.key, ...cardWeeklyRewardOf({ place: st.place, wins: st.wins, plays: cardWeekPlays(save.record, w.startMs, w.endMs) }) });
+          list.push({ id: w.id, key: w.key, ...cardWeeklyRewardOf({ place: st.place, wins: st.wins }) });
         }
         // もらえる物が無い週は、受け取ったものとして覚える(次から問い合わせない)
-        const empty = list.filter((x) => !x.gacha && !x.point).map((x) => x.id);
+        const empty = list.filter((x) => !x.point).map((x) => x.id);
         if (empty.length) {
           const raw = await storeGet(CARD_SAVE_KEYS.weeklyReward, null);
           const now = cardNormalizeWeeklyClaims(raw);
           if (now) await saveStoredValuesOrRollback([{ key: CARD_SAVE_KEYS.weeklyReward, before: raw, next: [...now, ...empty.filter((id) => !now.includes(id))].slice(-30) }], storeGet, storeSet);
         }
-        setWeekly(list.filter((x) => x.gacha || x.point));
+        setWeekly(list.filter((x) => x.point));
       } catch (_) { /* 通信できないときは出さない */ }
     })();
   }, [save ? 1 : 0, screen, rank && rank.send ? 1 : 0]);
@@ -2587,14 +2587,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const raw = await storeGet(CARD_SAVE_KEYS.weeklyReward, null);
       const claims = cardNormalizeWeeklyClaims(raw);
       if (!claims || claims.includes(w.id)) { setWeekly((l) => l.filter((x) => x.id !== w.id)); return; } // もう受け取った(ほかのタブなど)・保存が壊れている
-      const rawGacha = await storeGet(CARD_SAVE_KEYS.gacha, 0, false);
-      const ok = await persist(w.point > 0 ? { point: save.point + w.point } : {}, {}, [
-        { key: CARD_SAVE_KEYS.gacha, before: rawGacha, next: cardNormalizeGacha(rawGacha) + w.gacha },
+      const ok = await persist({ point: save.point + w.point }, {}, [
         { key: CARD_SAVE_KEYS.weeklyReward, before: raw, next: [...claims, w.id].slice(-30) },
       ]);
       if (!ok) { setNotice('保存できませんでした。もう一度お試しください'); return; }
       setWeekly((l) => l.filter((x) => x.id !== w.id));
-      setNotice(`週間報酬を受け取りました(${[w.gacha ? `ガチャポイント +${w.gacha}` : '', w.point ? `ビートP +${w.point.toLocaleString()}` : ''].filter(Boolean).join('・')})`);
+      setNotice(`週間報酬を受け取りました(ビートP +${w.point.toLocaleString()})`);
     } finally { setWeeklyBusy(false); }
   };
 
@@ -3258,10 +3256,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           {weekly.map((w) => (
             <CardRewardBand key={w.id} tag="weekly" busy={weeklyBusy} onClaim={() => { void claimWeekly(w); }}
               title={`${w.key.slice(5).replace('-', '/')}からの週の週間報酬`}
-              lines={[
-                w.place ? `MASTER の勝ち数 ${w.wins}勝・${w.place}位` : `MASTER の勝ち数 ${w.wins}勝`,
-                [w.gacha ? `ガチャポイント +${w.gacha}${w.join ? '(参加 +20 をふくむ)' : ''}` : '', w.point ? `ビートP +${w.point.toLocaleString()}` : ''].filter(Boolean).join('・'),
-              ]}/>
+              lines={[`MASTER の勝ち数 ${w.wins}勝・${w.place}位`, `ビートP +${w.point.toLocaleString()}`]}/>
           ))}
           {notice && <p data-card-top-notice className={`text-[12px] font-bold text-amber-200 [@media(orientation:landscape)_and_(max-height:420px)]:truncate [@media(orientation:landscape)_and_(max-height:420px)]:text-[11px] [@media(orientation:landscape)_and_(max-height:420px)]:leading-snug`} style={JA_LABEL_STYLE} title={notice}>{jaWrap(notice)}</p>}
           <div data-card-top-cards className="grid grid-cols-2 gap-2">

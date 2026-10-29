@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fc47c29b01ca2b82
+// source-sha256: 8e5539f065159fdd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -96255,12 +96255,11 @@ const CardBattleScreen = ({
             key: w.key,
             ...cardWeeklyRewardOf({
               place: st.place,
-              wins: st.wins,
-              plays: cardWeekPlays(save.record, w.startMs, w.endMs)
+              wins: st.wins
             })
           });
         }
-        const empty = list.filter(x => !x.gacha && !x.point).map(x => x.id);
+        const empty = list.filter(x => !x.point).map(x => x.id);
         if (empty.length) {
           const raw = await storeGet(CARD_SAVE_KEYS.weeklyReward, null);
           const now = cardNormalizeWeeklyClaims(raw);
@@ -96270,7 +96269,7 @@ const CardBattleScreen = ({
             next: [...now, ...empty.filter(id => !now.includes(id))].slice(-30)
           }], storeGet, storeSet);
         }
-        setWeekly(list.filter(x => x.gacha || x.point));
+        setWeekly(list.filter(x => x.point));
       } catch (_) {}
     })();
   }, [save ? 1 : 0, screen, rank && rank.send ? 1 : 0]);
@@ -96284,14 +96283,9 @@ const CardBattleScreen = ({
         setWeekly(l => l.filter(x => x.id !== w.id));
         return;
       }
-      const rawGacha = await storeGet(CARD_SAVE_KEYS.gacha, 0, false);
-      const ok = await persist(w.point > 0 ? {
+      const ok = await persist({
         point: save.point + w.point
-      } : {}, {}, [{
-        key: CARD_SAVE_KEYS.gacha,
-        before: rawGacha,
-        next: cardNormalizeGacha(rawGacha) + w.gacha
-      }, {
+      }, {}, [{
         key: CARD_SAVE_KEYS.weeklyReward,
         before: raw,
         next: [...claims, w.id].slice(-30)
@@ -96301,7 +96295,7 @@ const CardBattleScreen = ({
         return;
       }
       setWeekly(l => l.filter(x => x.id !== w.id));
-      setNotice(`週間報酬を受け取りました(${[w.gacha ? `ガチャポイント +${w.gacha}` : '', w.point ? `ビートP +${w.point.toLocaleString()}` : ''].filter(Boolean).join('・')})`);
+      setNotice(`週間報酬を受け取りました(ビートP +${w.point.toLocaleString()})`);
     } finally {
       setWeeklyBusy(false);
     }
@@ -97843,7 +97837,7 @@ const CardBattleScreen = ({
       void claimWeekly(w);
     },
     title: `${w.key.slice(5).replace('-', '/')}からの週の週間報酬`,
-    lines: [w.place ? `MASTER の勝ち数 ${w.wins}勝・${w.place}位` : `MASTER の勝ち数 ${w.wins}勝`, [w.gacha ? `ガチャポイント +${w.gacha}${w.join ? '(参加 +20 をふくむ)' : ''}` : '', w.point ? `ビートP +${w.point.toLocaleString()}` : ''].filter(Boolean).join('・')]
+    lines: [`MASTER の勝ち数 ${w.wins}勝・${w.place}位`, `ビートP +${w.point.toLocaleString()}`]
   })), notice && React.createElement("p", {
     "data-card-top-notice": true,
     className: `text-[12px] font-bold text-amber-200 [@media(orientation:landscape)_and_(max-height:420px)]:truncate [@media(orientation:landscape)_and_(max-height:420px)]:text-[11px] [@media(orientation:landscape)_and_(max-height:420px)]:leading-snug`,
@@ -100314,12 +100308,7 @@ const cardRankSync = async (db, {
 const CARD_WEEK_TABLE = 'card_battle_week_v1';
 let _cardWeekUnavailable = false;
 const CARD_WEEKLY_REWARD_RANKS = 10;
-const CARD_WEEKLY_GACHA_PER_PLACE = 50;
-const CARD_WEEKLY_POINT_PER_PLACE = 200;
-const CARD_WEEKLY_PARTICIPATION = Object.freeze({
-  plays: 3,
-  gacha: 20
-});
+const CARD_WEEKLY_POINT_PER_PLACE = 100;
 const CARD_WEEKLY_REWARD_FROM_MS = Date.UTC(2026, 10, 1, 20, 0, 0);
 const CARD_WEEK_MS = 7 * 24 * 3600 * 1000;
 const CARD_WEEKLY_CLAIM_MS = 14 * 24 * 3600 * 1000;
@@ -100328,7 +100317,6 @@ const cardWeeklyRewardForPlace = place => {
   if (!Number.isInteger(p) || p < 1 || p > CARD_WEEKLY_REWARD_RANKS) return null;
   const n = CARD_WEEKLY_REWARD_RANKS + 1 - p;
   return {
-    gacha: n * CARD_WEEKLY_GACHA_PER_PLACE,
     point: n * CARD_WEEKLY_POINT_PER_PLACE
   };
 };
@@ -100355,7 +100343,6 @@ const cardWeeksAwaitingReward = (nowMs, claims) => {
   }
   return out;
 };
-const cardWeekPlays = (record, startMs, endMs) => cardNormalizeRecord(record).recent.filter(r => Number(r.at) >= startMs && Number(r.at) < endMs).length;
 const cardWeekRowSync = async row => {
   if (_cardWeekUnavailable) return true;
   try {
@@ -100414,21 +100401,15 @@ const cardWeekStanding = async (weekKey, breederId) => {
 };
 const cardWeeklyRewardOf = ({
   place,
-  wins,
-  plays
+  wins
 }) => {
   const byPlace = cardWeeklyRewardForPlace(place) || {
-    gacha: 0,
     point: 0
   };
-  const join = plays >= CARD_WEEKLY_PARTICIPATION.plays ? CARD_WEEKLY_PARTICIPATION.gacha : 0;
   return {
-    gacha: byPlace.gacha + join,
     point: byPlace.point,
     place: place || null,
-    wins,
-    plays,
-    join: join > 0
+    wins
   };
 };
 const CardRewardBand = ({

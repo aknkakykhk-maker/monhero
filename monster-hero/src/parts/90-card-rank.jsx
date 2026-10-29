@@ -159,8 +159,8 @@ const cardRankSync = async (db, { record, collection, profile }) => {
 
 // ==================== 週間報酬(2026-10-29 社長) ====================
 // ・部門は MASTER の週の勝ち数だけ(社長「難易度はマスターのみ」)
-// ・1〜10位に、ガチャポイント (11−順位)×50(1位 500 … 10位 50)と、ビートP (11−順位)×200(1位 2,000 … 10位 200)
-// ・参加報酬: その週に助手と3回対戦で、ガチャポイント 20
+// ・1〜10位に、ビートP (11−順位)×100(1位 1,000 … 10位 100)だけ(社長「ガチャポイントはなし。ビートポイントは1位で1000で、そこから100ずつ下がる」)
+// ・参加報酬はなし
 // ・終わった週の分を、2週間のうちに、カードのトップの帯で受け取る(モンヒロビートの週間報酬と同じ)
 // ・順位は、週ごとの記録の表 card_battle_week_v1(週+人で1行)で「自分より勝ち数が多い人の数+1」(いまのランキングと同じ数え方・同じ数は同じ順位)
 // ・受け取った週は mh_card_weekly_reward_v1 に覚える。保存が壊れているときは何も配らない(二重に配らないため)
@@ -168,9 +168,7 @@ const cardRankSync = async (db, { record, collection, profile }) => {
 const CARD_WEEK_TABLE = 'card_battle_week_v1';
 let _cardWeekUnavailable = false;
 const CARD_WEEKLY_REWARD_RANKS = 10;
-const CARD_WEEKLY_GACHA_PER_PLACE = 50;
-const CARD_WEEKLY_POINT_PER_PLACE = 200;
-const CARD_WEEKLY_PARTICIPATION = Object.freeze({ plays: 3, gacha: 20 });
+const CARD_WEEKLY_POINT_PER_PLACE = 100;
 const CARD_WEEKLY_REWARD_FROM_MS = Date.UTC(2026, 10, 1, 20, 0, 0); // 2026-11-02 05:00 JST(表を足したあとの、はじめから記録がそろう週)
 const CARD_WEEK_MS = 7 * 24 * 3600 * 1000;
 const CARD_WEEKLY_CLAIM_MS = 14 * 24 * 3600 * 1000;
@@ -178,7 +176,7 @@ const cardWeeklyRewardForPlace = (place) => {
   const p = Number(place);
   if (!Number.isInteger(p) || p < 1 || p > CARD_WEEKLY_REWARD_RANKS) return null;
   const n = CARD_WEEKLY_REWARD_RANKS + 1 - p;
-  return { gacha: n * CARD_WEEKLY_GACHA_PER_PLACE, point: n * CARD_WEEKLY_POINT_PER_PLACE };
+  return { point: n * CARD_WEEKLY_POINT_PER_PLACE };
 };
 // 受け取った週の一覧。配列でない(壊れている)ときは null(=何も配らない)。無いときは []
 const cardNormalizeWeeklyClaims = (v) => (v === null || v === undefined ? [] : Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x) : null);
@@ -200,8 +198,6 @@ const cardWeeksAwaitingReward = (nowMs, claims) => {
   }
   return out;
 };
-// その週に助手と何回対戦したか(記録の「最近の対戦」(30件)から。投了も1回)
-const cardWeekPlays = (record, startMs, endMs) => cardNormalizeRecord(record).recent.filter((r) => Number(r.at) >= startMs && Number(r.at) < endMs).length;
 // 週ごとの記録へ1行(週+人で上書き)。表がまだ無いときは送らない(true を返して、ランキングの送りは止めない)
 const cardWeekRowSync = async (row) => {
   if (_cardWeekUnavailable) return true;
@@ -235,11 +231,10 @@ const cardWeekStanding = async (weekKey, breederId) => {
   const n = Array.isArray(better) ? better.length : CARD_WEEKLY_REWARD_RANKS;
   return { wins, place: n < CARD_WEEKLY_REWARD_RANKS ? n + 1 : null };
 };
-// 受け取れる中身。{ gacha, point, place, wins, plays } / 何も無いときは gacha も point も 0
-const cardWeeklyRewardOf = ({ place, wins, plays }) => {
-  const byPlace = cardWeeklyRewardForPlace(place) || { gacha: 0, point: 0 };
-  const join = plays >= CARD_WEEKLY_PARTICIPATION.plays ? CARD_WEEKLY_PARTICIPATION.gacha : 0;
-  return { gacha: byPlace.gacha + join, point: byPlace.point, place: place || null, wins, plays, join: join > 0 };
+// 受け取れる中身。{ point, place, wins } / 10位より下・0勝のときは point が 0
+const cardWeeklyRewardOf = ({ place, wins }) => {
+  const byPlace = cardWeeklyRewardForPlace(place) || { point: 0 };
+  return { point: byPlace.point, place: place || null, wins };
 };
 // 受け取りの帯(週間報酬・デッキの報酬など、カードのトップで受け取るものをそろえて出す部品)。
 //   title … 「先週の週間報酬」 / lines … 中身の行(文字) / onClaim … 「受け取る」 / busy … 押している間
