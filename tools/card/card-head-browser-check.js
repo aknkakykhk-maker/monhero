@@ -6,7 +6,7 @@
 //
 // 見ているもの(320×640・375×667・390×844・横向き 844×390)
 //   ① 上の帯の中のどの字も切れていない(はみ出し・…で切れる が無い)・帯が画面の中に収まる
-//   ② 難易度の札(EASY など)が出る
+//   ② 難易度(EASY など)が出る(2026-10-29 から助手の名前の下。上の帯には出さない)
 //   ③ 「投了」「記録」が押せる大きさ(高さ28px以上)で、ほかの物の下に隠れていない
 //   ④ 実行時エラーが無い
 const http = require('http');
@@ -131,12 +131,13 @@ const handNames = (page) => page.locator('[data-card-hand-card]').evaluateAll((e
           if (b.right > innerWidth + 0.5 || b.left < -0.5) cut.push(`外:${(el.innerText || el.tagName).slice(0, 16)}`);
         });
         const btn = (sel) => { const b = document.querySelector(sel); if (!b) return null; const q = b.getBoundingClientRect(); const hit = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2); return { h: Math.round(q.height), ok: !!hit && b.contains(hit) }; };
-        const lv = document.querySelector('[data-card-level-badge]');
+        // 難易度は、上の帯ではなく助手の名前の下に出す(2026-10-29 案B: 2か所に出ていた)
+        const lv = [...document.querySelectorAll('[data-card-battle] small')].find((x) => /EASY|NORMAL|HARD|EXPERT|MASTER/.test(x.innerText));
         return { inside: hr.left >= -0.5 && hr.right <= innerWidth + 0.5 && hr.top >= -0.5, cut: [...new Set(cut)], level: lv ? lv.innerText : '', quit: btn('[data-card-quit]'), log: btn('[data-card-log-open]'), text: head.innerText.replace(/\s+/g, ' ') };
       });
       if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, `head-${w}x${h}.png`), clip: { x: 0, y: 0, width: w, height: Math.min(h, 120) } }); }
       check(`① ${w}×${h}: 上の帯の字が切れない・画面に収まる`, r && r.inside && !r.cut.length, r ? `${r.text} ${r.cut.join(' / ')}` : 'なし');
-      check(`② ${w}×${h}: 難易度の札が出る`, r && /EASY|NORMAL|HARD|EXPERT|MASTER/.test(r.level), r && r.level);
+      check(`② ${w}×${h}: 難易度が出る(助手の名前の下)`, r && /EASY|NORMAL|HARD|EXPERT|MASTER/.test(r.level), r && r.level);
       check(`③ ${w}×${h}: 「投了」「記録」が押せる大きさで隠れていない`, r && r.quit && r.log && r.quit.ok && r.log.ok && r.quit.h >= 28 && r.log.h >= 28, JSON.stringify(r && { quit: r.quit, log: r.log }));
       await page.close();
     }
