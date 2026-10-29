@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 316097cdd730f92a
+// generated-sha256: 61d94de72d67a81c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -42527,17 +42527,24 @@ const CLASSIC_AI_COPY_CSS = `
 [data-ai-copy-row] > .grid{flex:1 1 0;min-width:0;width:auto}
 [data-ai-copy-cell]{width:62px;flex:0 0 62px;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:2px;padding:3px 3px;border-radius:12px;border:1px solid rgba(52,211,153,.6);background:rgba(2,44,34,.55);position:relative}
 [data-ai-copy-cell] [data-ai-copy-head]{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;min-width:0}
+[data-ai-copy-cell] [data-ai-copy-face]{margin-bottom:3px}
 [data-ai-copy-cell] [data-ai-copy-name]{width:100%;min-width:0;text-align:center;font-size:9px;line-height:10px;font-weight:900;color:#a7f3d0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:keep-all;overflow-wrap:anywhere}
+/* コピーが出ると4枠が細くなる(320 幅で約52px)。枠の中の札が枠からはみ出さない・字が切れないように、コピーがいるあいだだけ小さくする
+   (2026-10-29 見回り: 距離補正の札「-10.0%」が枠の外へ、ガードの札が「ガ…」に切れていた) */
+[data-ai-copy-row] [data-dist-chip]{font-size:9px;padding:1px 2px;gap:0;right:1px;max-width:calc(100% - 2px)}
+[data-ai-copy-row] [data-dist-chip] svg{display:none}
+[data-ai-copy-row] [data-tactics-slot-marks] > div{padding-left:1px;padding-right:1px}
+[data-ai-copy-row] [data-tactics-slot-marks] > div > span:first-child{display:none}
+/* 横向き(背の低い画面): 縦と同じく4枠の右に細い5列目として置く。列の下に段を足すと、そのぶん敵の段が縮んで敵の絵が見えなくなる
+   (2026-10-29 見回り 667×375)。枠の高さ(112px)に収まるよう、絵・字を小さくする */
 @media (orientation: landscape) and (max-height: 520px){
-  [data-ai-copy-row]{flex-direction:column;gap:3px}
-  [data-ai-copy-row] > .grid{flex:0 0 auto;width:100%}
-  [data-ai-copy-cell]{width:100%;flex:0 0 30px;height:30px;flex-direction:row;justify-content:flex-start;gap:6px;padding:0 6px;border-radius:8px;overflow:visible}
-  [data-ai-copy-cell] [data-ai-copy-head]{width:auto;flex:0 0 auto;flex-direction:row;gap:4px}
-  [data-ai-copy-cell] [data-ai-copy-name]{width:auto;flex:0 1 auto;max-width:110px;text-align:left;-webkit-line-clamp:1}
-  [data-ai-copy-cell] [data-ai-copy-art]{flex:0 0 26px;width:26px;height:26px}
-  [data-ai-copy-cell] [data-ai-copy-guts]{flex:0 0 92px;width:92px}
-  [data-ai-copy-cell] [data-sorashido-next]{flex-direction:row;gap:6px;width:auto;flex:1 1 0;padding:0 6px;border-radius:6px}
-  [data-ai-copy-cell] [data-sorashido-next] > b{-webkit-line-clamp:1}
+  [data-ai-copy-cell]{width:64px;flex:0 0 64px;gap:0;padding:1px 2px;border-radius:10px}
+  [data-ai-copy-cell] [data-ai-copy-head]{gap:0}
+  [data-ai-copy-cell] [data-ai-copy-face]{margin-bottom:2px}
+  [data-ai-copy-cell] [data-ai-copy-name]{font-size:8px;line-height:9px}
+  [data-ai-copy-cell] [data-sorashido-next]{padding:1px 2px;border-radius:6px}
+  [data-ai-copy-cell] [data-sorashido-next] > b{-webkit-line-clamp:2;font-size:8px;line-height:9px}
+  [data-ai-copy-cell] [data-sorashido-next] > small{display:none}
 }`;
 // 演出の段階。60 から aiCopy.fx('appear'|'thinking'|'vanish')が来ればそれを使い、無ければ fallback(出る前 appear・出たら idle)
 const aiCopyViewPhase = (copy, fallback) => (copy && ['appear', 'thinking', 'vanish'].includes(copy.fx) ? copy.fx : fallback);
@@ -42659,8 +42666,8 @@ function ClassicAiCopyCell({ copy, turnCount, onOpen, mon = null, hitAnim = null
       role={canOpen ? 'button' : undefined} tabIndex={canOpen ? 0 : undefined} style={canOpen ? { cursor: 'pointer' } : undefined}
       onClick={canOpen ? onOpen : undefined} onKeyDown={canOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } } : undefined}>
       <style>{CLASSIC_AI_COPY_CSS}</style>
-      <span data-ai-copy-head><AiCopyFace src={mon} size={20}/><span data-ai-copy-name>{copy.name || '仲間'}<wbr/>のコピー</span></span>
-      {mon ? <AiCopyBody src={mon} phase={phase} hit={!!hitAnim} anim={hitAnim} size={layout === 'landscape' ? 26 : 40}/>
+      <span data-ai-copy-head><AiCopyFace src={mon} size={layout === 'landscape' ? 16 : 20}/><span data-ai-copy-name>{copy.name || '仲間'}<wbr/>のコピー</span></span>
+      {mon ? <AiCopyBody src={mon} phase={phase} hit={!!hitAnim} anim={hitAnim} size={layout === 'landscape' ? 24 : 40}/>
         : <SorashidoCopyFx phase={phase}><img src={SORASHIDO_FACE_ICON} alt="" aria-hidden="true" className="h-7 w-7 rounded-full object-cover bg-black/30" draggable="false"/></SorashidoCopyFx>}
       {out
         ? <><AiCopyGutsMeter guts={guts} maxGuts={maxGuts}/>
@@ -44530,7 +44537,7 @@ function BattleScreen({
                     </div>
                   )}
                   {/* 距離補正は0%でも出す(「補正が無い」ことも情報なので、枠ごとに常に見えるようにする) */}
-                  {(()=>{const totalBonus=distTotalBonus(i); return(<div className={`absolute bottom-0.5 right-0.5 text-[11px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus>0?'text-cyan-300 border-cyan-400/30':totalBonus<0?'text-red-300 border-red-400/30':'text-slate-300 border-white/20'}`}><Sword size={5}/>{totalBonus>0?'+':''}{(totalBonus*100).toFixed(1)}%</div>);})()}
+                  {(()=>{const totalBonus=distTotalBonus(i); return(<div data-dist-chip className={`absolute bottom-0.5 right-0.5 text-[11px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus>0?'text-cyan-300 border-cyan-400/30':totalBonus<0?'text-red-300 border-red-400/30':'text-slate-300 border-white/20'}`}><Sword size={5}/>{totalBonus>0?'+':''}{(totalBonus*100).toFixed(1)}%</div>);})()}
                   {/* ★新しい盤面では攻撃モーションを**絵だけ**に掛ける(2026-09-24 ユーザー選択「攻撃時に札を跳ねさせない」)。
                       それまでは絵のある左の列ごと動かしていたので、距離補正の札や置いたカードの札まで
                       大きくなって飛び、名前の行を隠していた。古い盤面は今までどおり枠ごと動かす */}
@@ -53857,12 +53864,17 @@ const cardAiChooseGuts = (db, st, policy) => {
   const keep = (no) => {
     const c = cardOf(db, no);
     if (!c) return -9;
-    const usable = c.user === 'breeder' || me.mons.some((m) => cardUsableBy(c, m));
+    const usable = c.user === 'breeder' || me.mons.some((m) => !m.ko && cardUsableBy(c, m)); // 倒れた子しか使えない札は使えない
     if (!usable) return -10;
     if (cardIsGuardKind(c.kind)) return 2 * habit.keepGuard - c.guts * 0.2;
     return (c.damage || 1) * 0.5 - Math.max(0, c.guts - (me.guts.length + 2)) * 0.8;
   };
-  const order = me.hand.map((no, i) => ({ i, k: keep(no) })).sort((a, b) => a.k - b.k);
+  const ks = me.hand.map((no, i) => ({ i, k: keep(no), g: cardIsGuardKind((cardOf(db, no) || {}).kind) }));
+  // 守りの札を1枚は手元に残す(2026-10-29 社長「ガード軽視が目立つ」: 守りの札を全部ガッツにして、次の相手の番に守れない)
+  //   いちばん残したい守りの札を、攻めの札より後(ガッツにしない側)へ回す
+  const guardKeep = ks.filter((x) => x.g && x.k > -9).sort((a, b) => b.k - a.k)[0];
+  if (guardKeep) guardKeep.k += 3 + habit.keepGuard;
+  const order = ks.sort((a, b) => a.k - b.k);
   const pick = [];
   order.forEach((o) => { if (o.k <= -9) pick.push(o.i); });
   for (const o of order) { if (pick.length >= Math.max(need, pick.length) || me.hand.length - pick.length <= 1) break; if (!pick.includes(o.i)) pick.push(o.i); }
