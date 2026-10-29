@@ -65,4 +65,14 @@ check('本体: 殻が受けたぶんは距離強化に入れない',source.inclu
 check('本体: 被ダメに貫きを通す',source.includes('applyEnemyPierce(Math.max(30,(atkVal-defVal*0.5)*(1-defenseRate)),atkVal,enemyPierceRate)'));
 check('本体: 通常UIへ公開しHELHEIMクリアで解放',source.includes("setting.id==='ETERNAL'?eternalUnlocked:false")&&source.includes("'HELHEIMクリアで解放'"));
 check('勇者の証はETERNALで4個',/speciesChallenge:Object\.freeze\(\{ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4 \}\)/.test(source));
+const over=G('battleTurnLimitExceeded'),tview=G('battleTurnView'),catchUp=G('battleCatchUpRemainingTurns');
+check('ETERNALは全体200ターンまで、ほかは1WAVE20ターンのまま',G('extremeRunTurnLimit')('ETERNAL')===200&&G('extremeRunTurnLimit')('HELHEIM')===0
+  &&!over(30,170,'ETERNAL')&&over(31,170,'ETERNAL')&&!over(150,0,'ETERNAL')
+  &&!over(20,500,'HELHEIM')&&over(21,0,'HELHEIM')&&over(21,0,'Normal')&&!over(20,0,'Normal'));
+check('画面のTURNはETERNALだけ全体/200',(()=>{const a=tview(5,40,'ETERNAL'),b=tview(5,40,'HELHEIM');return a.now===45&&a.limit===200&&b.now===5&&b.limit===20;})());
+check('早く倒すボーナスはETERNALだけ全体の残りを20ターン換算(上限は同じ)',catchUp(1,0,'ETERNAL')===20&&catchUp(30,100,'ETERNAL')===10&&catchUp(5,250,'ETERNAL')===0
+  &&catchUp(1,999,'HELHEIM')===20&&catchUp(11,0,'Normal')===10);
+check('本体: ターン切れの判定と表示とボーナスが新しい関数を通る',source.includes('battleTurnLimitExceeded(nextTurn,totalTurnCountRef.current,')
+  &&source.includes('battleTurnView(turnCount,totalTurnCount,')&&source.includes('addTacticsJoinCatchUp(tacticsJoinCatchUpRef.current,catchUpRemainingTurns)'));
+check('本体: ランキングのターンは合計ターン',source.includes('const clearTurns=Number.isFinite(Number(totalTurnCountRef.current))'));
 process.exit(failed?1:0);

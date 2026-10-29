@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4d96b6a438152a42
+// generated-sha256: 7dd32aa77f46c674
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10894,9 +10894,11 @@ const helheimUnderworldRules = (waveNumber) => {
 // ETERNALの段階ルール。冥府(helheimUnderworldRules)をそのまま使い、殻と貫きを足す。
 //   shellRate … WAVEの始めに敵がまとう殻(最大ライフに対する割合)。殻に当てた分は距離適性ボーナスに数えない
 //   pierceRate … 敵の攻撃のうち、丈夫さを無視して通る割合(Lv1 30% → Lv5 50%)
+// ETERNALは1WAVEごとの20ターン制限をやめ、ラン全体の合計ターンで200までにする(2026-10-29 社長の決め)
+const ETERNAL_RUN_TURN_LIMIT = 200;
 const eternalStageRules = (waveNumber) => {
   const base=helheimUnderworldRules(waveNumber);
-  return Object.freeze({ ...base, shellRate:0.5, pierceRate:Number((0.30+(base.level-1)*0.05).toFixed(2)) });
+  return Object.freeze({ ...base, shellRate:0.5, pierceRate:Number((0.30+(base.level-1)*0.05).toFixed(2)), runTurnLimit:ETERNAL_RUN_TURN_LIMIT });
 };
 // 「WAVEで段階が動く難易度」の一覧。ここに1行足せば、実効倍率・与ダメ・BREAK・表示まで
 // すべて同じ経路を通るので、難易度名の分岐を各所へ書き足さなくてよい。
@@ -11018,6 +11020,33 @@ const markShellAbsorbedHits = (hits,startShell) => {
     left=sp.shellLeft; total+=sp.absorbed;
   }
   return total;
+};
+// ターン制限。段階の表が runTurnLimit を持つ難易度(ETERNAL)は「ラン全体の合計ターン」で数え、
+// 持たない難易度は今までどおり1WAVE 20ターン。completedTurns は前のWAVEまでの合計(与ダメ低下と同じ数)
+const BATTLE_WAVE_TURN_LIMIT = 20;
+const extremeRunTurnLimit = (difficultyId) => {
+  const limit=Number(extremeWaveStageRules(difficultyId,1)?.runTurnLimit);
+  return Number.isFinite(limit)&&limit>0 ? Math.floor(limit) : 0;
+};
+// これから始まるターン(nextTurn)が制限を超えているか(超えたら負け)
+const battleTurnLimitExceeded = (nextTurn,completedTurns,difficultyId) => {
+  const runLimit=extremeRunTurnLimit(difficultyId);
+  const turn=Math.max(0,Number(nextTurn)||0);
+  return runLimit>0 ? (Math.max(0,Number(completedTurns)||0)+turn)>runLimit : turn>BATTLE_WAVE_TURN_LIMIT;
+};
+// 画面の「TURN ◯/◯」。ETERNALはラン全体の数え(合計/200)、ほかは今までどおり(WAVEのターン/20)
+const battleTurnView = (turnCount,completedTurns,difficultyId) => {
+  const runLimit=extremeRunTurnLimit(difficultyId);
+  const turn=Math.max(0,Number(turnCount)||0);
+  return runLimit>0 ? { now:Math.max(0,Number(completedTurns)||0)+turn, limit:runLimit } : { now:turn, limit:BATTLE_WAVE_TURN_LIMIT };
+};
+// 早く倒すほど増えるボーナスに渡す「残りターン」。ほかの難易度は今までどおり 21−そのWAVEのターン。
+// ETERNALは全体の残り(制限−合計)を20ターン換算に縮めて渡す(残り200で20、上限は今と同じ+20%)
+const battleCatchUpRemainingTurns = (turnCount,totalAfterWave,difficultyId) => {
+  const runLimit=extremeRunTurnLimit(difficultyId);
+  if (!(runLimit>0)) return Math.max(0,BATTLE_WAVE_TURN_LIMIT+1-(Number(turnCount)||0));
+  const left=Math.max(0,runLimit-Math.max(0,Number(totalAfterWave)||0));
+  return Math.min(BATTLE_WAVE_TURN_LIMIT,left*BATTLE_WAVE_TURN_LIMIT/runLimit);
 };
 // 貫き(ETERNAL)。敵の攻撃のうちこの率ぶんは丈夫さを無視する。持たない難易度では0
 const extremeEnemyPierceRate = (difficultyId,waveNumber=1) => {
@@ -11156,10 +11185,12 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     ]);
     push('距離強化',[
       ['WAVEごとに薄れる','WAVE1で10%、1WAVEごとに1%ずつ下がり、WAVE10で1%'],
-    ]);    if(difficultyId===ETERNAL_SETTING.id) push('殻と貫き',[
+    ]);
+    if(difficultyId===ETERNAL_SETTING.id) push('殻と貫き',[
       ['殻','WAVEの始めに、敵が最大ライフ50%ぶんの殻をまとう。殻を割るまで敵のライフは減らない'],
       ['殻と距離強化','殻に当てたダメージは、距離強化(間合いのボーナス)に数えない'],
       ['貫き','敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）'],
+      ['ターン制限','1WAVEのターン制限は無く、全体で200ターンまで戦える（合計が200を超えると負け）'],
     ]);
   }
   push('カード',[
@@ -43451,7 +43482,7 @@ function BattleScreen({
         <header data-battle-header className="h-[5%] min-h-[40px] shrink-0 bg-slate-900 px-1.5 flex items-center border-b border-white/5 z-[6500] overflow-hidden">
           <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}{!isRaidJackMode(runMode)&&<span className={`text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>}{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない。389以下は「…」で切らず「/」のあとで2行に(320 で「Beg…」。2026-10-27 ジン) */}<span className="min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap max-[389px]:whitespace-normal max-[389px]:leading-tight" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{extremeRun?`極限チャレンジ / ${extremeDifficulty}`:isRaidJackMode(runMode)?<><span className="whitespace-nowrap">{battleModeInfo(runMode).short}</span> / <span className="whitespace-nowrap">{enemy?.name||''}</span></>:<>{battleModeInfo(runMode).short} / {QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</>}</span></div>
           <div data-battle-metrics className="shrink-0 flex items-center gap-1 px-1 leading-none">
-            <div data-battle-turn className="flex flex-col items-center justify-center whitespace-nowrap font-black text-blue-400"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Timer size={7}/>TURN</span><span className="mt-0.5 text-[10px] font-mono">{turnCount}/20</span></div>
+            <div data-battle-turn className="flex flex-col items-center justify-center whitespace-nowrap font-black text-blue-400"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Timer size={7}/>TURN</span><span className="mt-0.5 text-[10px] font-mono">{(()=>{const v=battleTurnView(turnCount,totalTurnCount,specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty));return `${v.now}/${v.limit}`;})()}</span></div>
             {!isQuickMode(runMode)&&<div data-battle-score className="flex min-w-[64px] flex-col items-end justify-center whitespace-nowrap font-mono font-black text-amber-500"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Award size={7}/>SCORE</span><span data-battle-score-value className="mt-0.5 text-[10px] tabular-nums">{score.toLocaleString()}</span></div>}
           </div>
           <div data-battle-controls className="flex shrink-0 items-center gap-0.5"><button type="button" disabled={!!battleTutorial||autoRepeat} onClick={cycleBattleSpeed} aria-label={battleTutorial?'バトルのれんしゅう中は1倍固定':autoRepeat?'∞周回中は4倍固定':`バトル速度、現在${battleSpeed}倍。タップで切り替え`} title={autoRepeat?'∞周回中は×4固定':undefined} className="mh-hit-expand-y relative shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:cursor-not-allowed disabled:opacity-60" style={{color:'#fef3c7',borderColor:'#f59e0b',backgroundColor:'rgba(120,53,15,.72)',boxShadow:'0 0 9px rgba(245,158,11,.35)'}}>×{battleSpeed}{autoRepeat&&<span className="ml-0.5 text-[10px]">固定</span>}</button><button data-battle-menu-button type="button" onClick={()=>setShowBattleMenu(true)} aria-label="設定（BGM・ヘルプ・あきらめる）" title="設定" className="mh-hit-expand-y relative shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-300 active:scale-90"><Settings size={15}/></button></div>
@@ -78037,11 +78068,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     //   10WAVEぶんが溜まり、そのあとに始めたタクティクスのWAVE1へそのまま乗る
     //   (2026-09-22の再発。片付け漏れと、この積みっぱなしの両方が原因)
     if(isTacticsMode(runMode)){
-      tacticsJoinCatchUpRef.current=addTacticsJoinCatchUp(tacticsJoinCatchUpRef.current,remainingTurns);
-      tacticsJoinCatchUpTurnsRef.current+=Math.max(0,Number(remainingTurns)||0);
+      // ETERNALは1WAVEの20ターン制限が無いので、全体の残り(200−合計)を20ターン換算にして渡す(上限は同じ+20%)
+      const catchUpRemainingTurns=battleCatchUpRemainingTurns(turnCount,newTotalTurnCount,specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty));
+      tacticsJoinCatchUpRef.current=addTacticsJoinCatchUp(tacticsJoinCatchUpRef.current,catchUpRemainingTurns);
+      tacticsJoinCatchUpTurnsRef.current+=Math.max(0,Number(catchUpRemainingTurns)||0);
       // ★間合いのボーナス側も同じように積む。こちらは残りターン10でベース値どおりになり、
       //   速く抜ければベース値より上、手間取ればベース値より下になる(2026-09-21 ユーザー指示)
-      tacticsJoinDistCatchUpRef.current=addTacticsJoinDistCatchUp(tacticsJoinDistCatchUpRef.current,remainingTurns);
+      tacticsJoinDistCatchUpRef.current=addTacticsJoinDistCatchUp(tacticsJoinDistCatchUpRef.current,catchUpRemainingTurns);
     }
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     const distanceBreakThreshold=pendingUltimateDistanceBreak(newTotalTurnCount,ultimateDistanceBreakLevelsRef.current,wave,specialRuleDifficulty);
@@ -78855,7 +78888,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // レイドバトル専用: ターンが進むたびに味方全員が強くなり、自動回復の割合も上がる
       if(raidJackRunRef.current.kind==='a'&&nextTurn>=2&&nextTurn!==turnCount) raidJackTurnGrowth(nextTurn);
       if(raidJackRunRef.current.kind==='a'&&RAID_JACK_LEVEL_UP_TURNS.includes(nextTurn)&&nextTurn!==turnCount) raidJackLevelUp(nextTurn);
-    } else if(nextTurn>20){ if(tacticsWipe()===null) setHp(0); }
+    } else if(battleTurnLimitExceeded(nextTurn,totalTurnCountRef.current,specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty))){ if(tacticsWipe()===null) setHp(0); } // ETERNALは全体200ターン、ほかは1WAVE 20ターン
     setIsBusy(false);
   };
 

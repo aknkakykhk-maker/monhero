@@ -520,9 +520,11 @@ const helheimUnderworldRules = (waveNumber) => {
 // ETERNALの段階ルール。冥府(helheimUnderworldRules)をそのまま使い、殻と貫きを足す。
 //   shellRate … WAVEの始めに敵がまとう殻(最大ライフに対する割合)。殻に当てた分は距離適性ボーナスに数えない
 //   pierceRate … 敵の攻撃のうち、丈夫さを無視して通る割合(Lv1 30% → Lv5 50%)
+// ETERNALは1WAVEごとの20ターン制限をやめ、ラン全体の合計ターンで200までにする(2026-10-29 社長の決め)
+const ETERNAL_RUN_TURN_LIMIT = 200;
 const eternalStageRules = (waveNumber) => {
   const base=helheimUnderworldRules(waveNumber);
-  return Object.freeze({ ...base, shellRate:0.5, pierceRate:Number((0.30+(base.level-1)*0.05).toFixed(2)) });
+  return Object.freeze({ ...base, shellRate:0.5, pierceRate:Number((0.30+(base.level-1)*0.05).toFixed(2)), runTurnLimit:ETERNAL_RUN_TURN_LIMIT });
 };
 // 「WAVEで段階が動く難易度」の一覧。ここに1行足せば、実効倍率・与ダメ・BREAK・表示まで
 // すべて同じ経路を通るので、難易度名の分岐を各所へ書き足さなくてよい。
@@ -644,6 +646,33 @@ const markShellAbsorbedHits = (hits,startShell) => {
     left=sp.shellLeft; total+=sp.absorbed;
   }
   return total;
+};
+// ターン制限。段階の表が runTurnLimit を持つ難易度(ETERNAL)は「ラン全体の合計ターン」で数え、
+// 持たない難易度は今までどおり1WAVE 20ターン。completedTurns は前のWAVEまでの合計(与ダメ低下と同じ数)
+const BATTLE_WAVE_TURN_LIMIT = 20;
+const extremeRunTurnLimit = (difficultyId) => {
+  const limit=Number(extremeWaveStageRules(difficultyId,1)?.runTurnLimit);
+  return Number.isFinite(limit)&&limit>0 ? Math.floor(limit) : 0;
+};
+// これから始まるターン(nextTurn)が制限を超えているか(超えたら負け)
+const battleTurnLimitExceeded = (nextTurn,completedTurns,difficultyId) => {
+  const runLimit=extremeRunTurnLimit(difficultyId);
+  const turn=Math.max(0,Number(nextTurn)||0);
+  return runLimit>0 ? (Math.max(0,Number(completedTurns)||0)+turn)>runLimit : turn>BATTLE_WAVE_TURN_LIMIT;
+};
+// 画面の「TURN ◯/◯」。ETERNALはラン全体の数え(合計/200)、ほかは今までどおり(WAVEのターン/20)
+const battleTurnView = (turnCount,completedTurns,difficultyId) => {
+  const runLimit=extremeRunTurnLimit(difficultyId);
+  const turn=Math.max(0,Number(turnCount)||0);
+  return runLimit>0 ? { now:Math.max(0,Number(completedTurns)||0)+turn, limit:runLimit } : { now:turn, limit:BATTLE_WAVE_TURN_LIMIT };
+};
+// 早く倒すほど増えるボーナスに渡す「残りターン」。ほかの難易度は今までどおり 21−そのWAVEのターン。
+// ETERNALは全体の残り(制限−合計)を20ターン換算に縮めて渡す(残り200で20、上限は今と同じ+20%)
+const battleCatchUpRemainingTurns = (turnCount,totalAfterWave,difficultyId) => {
+  const runLimit=extremeRunTurnLimit(difficultyId);
+  if (!(runLimit>0)) return Math.max(0,BATTLE_WAVE_TURN_LIMIT+1-(Number(turnCount)||0));
+  const left=Math.max(0,runLimit-Math.max(0,Number(totalAfterWave)||0));
+  return Math.min(BATTLE_WAVE_TURN_LIMIT,left*BATTLE_WAVE_TURN_LIMIT/runLimit);
 };
 // 貫き(ETERNAL)。敵の攻撃のうちこの率ぶんは丈夫さを無視する。持たない難易度では0
 const extremeEnemyPierceRate = (difficultyId,waveNumber=1) => {
@@ -782,10 +811,12 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     ]);
     push('距離強化',[
       ['WAVEごとに薄れる','WAVE1で10%、1WAVEごとに1%ずつ下がり、WAVE10で1%'],
-    ]);    if(difficultyId===ETERNAL_SETTING.id) push('殻と貫き',[
+    ]);
+    if(difficultyId===ETERNAL_SETTING.id) push('殻と貫き',[
       ['殻','WAVEの始めに、敵が最大ライフ50%ぶんの殻をまとう。殻を割るまで敵のライフは減らない'],
       ['殻と距離強化','殻に当てたダメージは、距離強化(間合いのボーナス)に数えない'],
       ['貫き','敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）'],
+      ['ターン制限','1WAVEのターン制限は無く、全体で200ターンまで戦える（合計が200を超えると負け）'],
     ]);
   }
   push('カード',[
