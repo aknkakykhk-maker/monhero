@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cb684ea13fc2d5d5
+// source-sha256: 68b0aa3d1ca80cc3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10534,6 +10534,42 @@ const monsterArtFitStyle = (baseId, style) => MONSTER_ART_CONTAIN_IDS.includes(b
   ...style,
   objectFit: 'contain'
 } : style;
+const MONSTER_ART_SCALE = Object.freeze({
+  Pixie: Object.freeze({
+    scale: 1.17,
+    ty: -0.049
+  }),
+  Ark: Object.freeze({
+    scale: 1.10,
+    ty: 0
+  }),
+  Plant: Object.freeze({
+    scale: 1.08,
+    ty: 0
+  }),
+  Snegurochka: Object.freeze({
+    scale: 1.09,
+    ty: 0
+  }),
+  Zan: Object.freeze({
+    scale: 1.10,
+    ty: 0
+  })
+});
+const _artPathOf = url => typeof url === 'string' ? url.split('?')[0] : '';
+const monsterArtScaleOf = (baseId, src, className, style) => {
+  const def = baseId && Object.prototype.hasOwnProperty.call(MONSTER_ART_SCALE, baseId) ? MONSTER_ART_SCALE[baseId] : null;
+  if (!def) return null;
+  const mon = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS[baseId] : null;
+  if (!mon || !src || _artPathOf(src) !== _artPathOf(mon.imgUrl)) return null;
+  const fit = style && style.objectFit || (/(^|\s)object-contain(\s|$)/.test(className || '') ? 'contain' : '');
+  return fit === 'contain' ? def : null;
+};
+const monsterArtScaleTransform = (def, base) => {
+  if (!def) return base;
+  const own = `${def.ty ? `translateY(${(def.ty * 100).toFixed(1)}%) ` : ''}scale(${def.scale})`;
+  return base ? `${base} ${own}` : own;
+};
 let _monsterArtContainUrls = null;
 const monsterArtUrlNeedsContain = url => {
   if (typeof url !== 'string' || !url) return false;
@@ -10643,10 +10679,15 @@ const DyedMonsterImage = ({
   masuColors,
   alt,
   className,
-  style: rawStyle,
+  style: givenStyle,
   draggable,
   debugMaskPlacement = null
 }) => {
+  const artScale = debugMaskPlacement ? null : monsterArtScaleOf(baseId, src, className, monsterArtFitStyle(baseId, givenStyle));
+  const rawStyle = artScale ? {
+    ...(givenStyle || {}),
+    transform: monsterArtScaleTransform(artScale, givenStyle && givenStyle.transform)
+  } : givenStyle;
   const style = monsterArtFitStyle(baseId, rawStyle);
   const maskSize = monsterArtMaskSize(className, style);
   const hues = MASU_COLOR_REGION_HUES[baseId];
@@ -10869,7 +10910,23 @@ const _drawContain = (ctx, img, size) => {
     dh = h * k;
   ctx.drawImage(img, (size - dw) / 2, (size - dh) / 2, dw, dh);
 };
-const bakeDyedMonsterCanvas = async ({
+const bakeDyedMonsterCanvas = async (opts, size) => {
+  const out = await _bakeDyedMonsterCanvasRaw(opts, size);
+  const def = out && opts ? monsterArtScaleOf(opts.baseId, opts.src, 'object-contain', null) : null;
+  if (!def || typeof document === 'undefined') return out;
+  const scaled = document.createElement('canvas');
+  scaled.width = out.width;
+  scaled.height = out.height;
+  const sctx = scaled.getContext('2d');
+  if (!sctx) return out;
+  sctx.imageSmoothingEnabled = true;
+  sctx.imageSmoothingQuality = 'high';
+  const w = out.width * def.scale,
+    h = out.height * def.scale;
+  sctx.drawImage(out, (out.width - w) / 2, (out.height - h) / 2 + def.ty * out.height, w, h);
+  return scaled;
+};
+const _bakeDyedMonsterCanvasRaw = async ({
   baseId,
   src,
   masuColors
@@ -10952,6 +11009,7 @@ const MonsterArtFrame = ({
     objectFit: 'contain',
     objectPosition: 'center'
   };
+  const plainScale = Array.isArray(masuColors) ? null : monsterArtScaleOf(baseId, src, '', fit);
   return React.createElement("span", {
     className: `relative flex items-center justify-center overflow-hidden ${className}`,
     style: {
@@ -10968,7 +11026,10 @@ const MonsterArtFrame = ({
     src: src,
     alt: alt,
     draggable: false,
-    style: fit
+    style: plainScale ? {
+      ...fit,
+      transform: monsterArtScaleTransform(plainScale)
+    } : fit
   }), children);
 };
 const DYE_REGION_LABELS = ['①', '②', '③', '④', '⑤', '⑥'];
@@ -26515,12 +26576,21 @@ const MonsterIdleArt = ({
       ...(extra || {})
     }
   });
+  const artScale = typeof monsterArtScaleOf === 'function' ? monsterArtScaleOf(baseId, image.props.src, image.props.className, monsterArtFitStyle(baseId, image.props.style)) : null;
+  const originOf = origin => {
+    if (!artScale) return origin;
+    const m = /^\s*(-?[\d.]+)%\s+(-?[\d.]+)%\s*$/.exec(String(origin || ''));
+    if (!m) return origin;
+    const x = 50 + artScale.scale * (Number(m[1]) - 50),
+      y = 50 + artScale.scale * (Number(m[2]) - 50) + artScale.ty * 100;
+    return `${x.toFixed(2)}% ${y.toFixed(2)}%`;
+  };
   const partNode = (part, index) => React.createElement("span", {
     key: index,
     className: `mon-idle__part mon-idle__part--${part.anim} mon-idle__part--${part.layer}`,
     "aria-hidden": "true",
     style: {
-      transformOrigin: part.origin,
+      transformOrigin: originOf(part.origin),
       animationDuration: `${part.dur}ms`,
       animationDelay: `${part.delay}ms`,
       '--idle-amp': `${part.amp}deg`,
