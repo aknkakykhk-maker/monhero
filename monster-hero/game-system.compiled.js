@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 261584f1101a2234
+// source-sha256: 5d9e385ae2d4f31a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -50717,9 +50717,14 @@ const FRIEND_PLACE_TEXT = Object.freeze({
   market: 'マーケットを見ています',
   other: 'ログイン中',
   card: 'MFバトルカードで遊び中',
-  cardBattle: 'MFバトルカードで対戦中'
+  cardBattle: 'MFバトルカードで対戦中',
+  room: '部屋で待ち中'
 });
-const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle']);
+const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room']);
+let _friendsRoomWaiting = false;
+const friendsSetRoomWaiting = on => {
+  _friendsRoomWaiting = !!on;
+};
 const friendsPlaceFromRow = (place, records) => {
   if (place === 'other' && records && FRIEND_SUB_PLACES.includes(records.pl)) return records.pl;
   return Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, place) ? place : null;
@@ -50727,6 +50732,7 @@ const friendsPlaceFromRow = (place, records) => {
 const FRIEND_HEARTBEAT_MS = 2 * 60 * 1000;
 const FRIEND_PUBLISH_MIN_MS = 15 * 1000;
 const friendsPlaceOfScreen = gameState => {
+  if (_friendsRoomWaiting) return 'room';
   const name = typeof gameState === 'string' ? gameState : '';
   if (name === 'HOME') return 'home';
   if (name === 'CARD_BATTLE') return 'cardBattle';
@@ -50748,6 +50754,35 @@ const friendsPresenceText = (place, updatedAtMs, nowMs) => {
     online: false,
     text: friendsLastSeenText(updatedAtMs, nowMs)
   };
+};
+const friendsPresenceFor = async ids => {
+  let rows = {};
+  try {
+    rows = await sbFetchFriendSummaries(ids);
+  } catch (_) {
+    rows = {};
+  }
+  const now = Date.now();
+  const out = {};
+  Object.entries(rows && typeof rows === 'object' ? rows : {}).forEach(([id, r]) => {
+    if (!r) return;
+    const at = Number.isFinite(r.updatedAt) ? r.updatedAt : 0;
+    const p = friendsPresenceText(r.place, at, now);
+    out[id] = {
+      online: p.online,
+      text: p.text,
+      at
+    };
+  });
+  return out;
+};
+const friendsPresenceSort = (list, presence, idOf = x => x ? x.otherId : '') => {
+  const p = presence && typeof presence === 'object' ? presence : {};
+  return (Array.isArray(list) ? list : []).map((x, i) => [x, i]).sort(([a, ia], [b, ib]) => {
+    const pa = p[idOf(a)] || null,
+      pb = p[idOf(b)] || null;
+    return Number(!!(pb && pb.online)) - Number(!!(pa && pa.online)) || (pb ? pb.at : 0) - (pa ? pa.at : 0) || ia - ib;
+  }).map(([x]) => x);
 };
 const friendsPlaytimeText = seconds => {
   const sec = Math.max(0, Math.floor(Number(seconds) || 0));
@@ -57715,6 +57750,10 @@ const DexStatusTag = ({
     className: `inline-flex items-center rounded-full border px-1.5 py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${DEX_STATUS_STYLE[def.id]}`
   }, def.label);
 };
+const dexListScrollMemo = {
+  filter: null,
+  top: 0
+};
 function MonsterDexScreen({
   dexLineageFilter,
   unlockedMonsterIds,
@@ -57738,7 +57777,10 @@ function MonsterDexScreen({
   }, React.createElement(ScreenHead, {
     title: "モンスター図鑑",
     accent: "text-amber-300",
-    onBack: onBackToManagement,
+    onBack: () => {
+      dexListScrollMemo.top = 0;
+      onBackToManagement();
+    },
     backLabel: "M/B管理へ戻る"
   }), React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-2"
@@ -57777,7 +57819,13 @@ function MonsterDexScreen({
       el.style.width = `${Math.max(0, el.parentElement.clientWidth - el.previousElementSibling.offsetWidth - 6)}px`;
     }
   })), React.createElement("div", {
-    className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto`
+    "data-dex-list": true,
+    className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto`,
+    ref: el => {
+      if (!el || el.dataset.dexScrollRestored) return;
+      el.dataset.dexScrollRestored = '1';
+      if (dexListScrollMemo.filter === dexLineageFilter && dexListScrollMemo.top > 0) el.scrollTop = dexListScrollMemo.top;
+    }
   }, sections.map(section => React.createElement("section", {
     key: section.id,
     "data-dex-section": section.id,
@@ -57807,7 +57855,12 @@ function MonsterDexScreen({
       "data-dex-entry": true,
       "data-dex-entry-status": section.id,
       "aria-label": `${mon.name}の図鑑を見る`,
-      onClick: () => onOpenDetail(mon.id),
+      onClick: e => {
+        const list = e.currentTarget.closest('[data-dex-list]');
+        dexListScrollMemo.filter = dexLineageFilter;
+        dexListScrollMemo.top = list ? list.scrollTop : 0;
+        onOpenDetail(mon.id);
+      },
       className: `w-full min-h-[124px] rounded-2xl border ${section.id === 'draft' ? 'border-dashed border-fuchsia-300/30' : 'border-white/10'} bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none`
     }, React.createElement(DexMonsterIcon, {
       src: iconSrc
@@ -77192,6 +77245,18 @@ function MonsterCheckDebugScreen({
     className: "max-h-72 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-black/50 p-3 text-[9px] leading-relaxed text-cyan-200"
   }, JSON.stringify(mon, null, 2)))))));
 }
+const FriendPresenceTag = ({
+  info,
+  className = ''
+}) => info ? React.createElement("small", {
+  "data-friend-presence": info.online ? 'on' : 'off',
+  className: `flex min-w-0 items-center gap-1 text-[10px] font-bold ${info.online ? 'text-emerald-200' : 'text-slate-400'} ${className}`
+}, React.createElement("i", {
+  "aria-hidden": "true",
+  className: `inline-block h-1.5 w-1.5 shrink-0 rounded-full ${info.online ? 'bg-emerald-400' : 'bg-slate-500'}`
+}), React.createElement("span", {
+  className: "truncate"
+}, info.text)) : null;
 const FRIENDS_RESULT_TEXT = Object.freeze({
   sent: ['フレンド申請を送りました。承認されるとフレンドになります', 'ok'],
   accepted: ['フレンドになりました!', 'ok'],
@@ -80161,6 +80226,94 @@ function RhythmMultiAloneHint({
     className: "mt-1 block min-h-[36px] w-full rounded-lg bg-slate-700 text-[11px] font-black"
   }, "モードえらびへ戻る"));
 }
+function RhythmMultiAwayBar({
+  hidden = false,
+  busy = false,
+  onReturn = null
+}) {
+  const [view, setView] = React.useState(() => RHYTHM_MULTI.view());
+  React.useEffect(() => RHYTHM_MULTI.subscribe(() => setView(RHYTHM_MULTI.view())), []);
+  const seenRef = React.useRef(null);
+  const [arrived, setArrived] = React.useState('');
+  const others = view ? view.members.filter(m => !m.cpu && m.id !== view.selfId) : [];
+  const othersKey = others.map(m => m.id).join(',');
+  const shown = !!view && !hidden && !view.full;
+  const roomWaiting = !!view && !view.full && (view.room ? view.room.phase : 'matching') === 'matching';
+  const roomWaitingSetRef = React.useRef(false);
+  React.useEffect(() => {
+    if (typeof friendsSetRoomWaiting !== 'function') return;
+    if (roomWaiting) {
+      friendsSetRoomWaiting(true);
+      roomWaitingSetRef.current = true;
+    } else if (roomWaitingSetRef.current) {
+      friendsSetRoomWaiting(false);
+      roomWaitingSetRef.current = false;
+    }
+  }, [roomWaiting]);
+  React.useEffect(() => {
+    if (!shown) {
+      seenRef.current = null;
+      setArrived('');
+      return;
+    }
+    if (!seenRef.current) {
+      seenRef.current = new Set(others.map(m => m.id));
+      return;
+    }
+    const fresh = others.find(m => !seenRef.current.has(m.id));
+    others.forEach(m => seenRef.current.add(m.id));
+    if (fresh) setArrived(rhythmMultiText(fresh.name, 20) || 'メンバー');
+  }, [othersKey, shown]);
+  if (!shown) return null;
+  const phase = view.room ? view.room.phase : 'matching';
+  const hot = !!arrived || phase !== 'matching';
+  if (busy && !hot) return null;
+  const text = arrived ? `${arrived}さんが来ました` : phase !== 'matching' ? '対戦が始まります' : `部屋で待っています(${view.members.length}/${RHYTHM_MULTI_ROOM_MAX}人)`;
+  return React.createElement(MultiAwayBar, {
+    text: text,
+    hot: hot,
+    busy: busy,
+    onReturn: onReturn,
+    onLeave: () => RHYTHM_MULTI.leave(),
+    game: "beat"
+  });
+}
+function MultiAwayBar({
+  text,
+  hot = false,
+  busy = false,
+  onReturn = null,
+  onLeave = null,
+  icon = '🎵',
+  game = ''
+}) {
+  const leave = () => {
+    if (onLeave && window.confirm('ルームを出ますか?')) onLeave();
+  };
+  return React.createElement("div", {
+    "data-multi-away-bar": hot ? 'hot' : 'wait',
+    "data-multi-away-game": game,
+    className: "pointer-events-none fixed inset-x-0 top-0 z-[1000] flex justify-center px-2 pt-[max(env(safe-area-inset-top),6px)]"
+  }, React.createElement("div", {
+    className: `pointer-events-auto flex w-full max-w-[420px] items-center gap-2 rounded-2xl border px-3 py-1.5 text-white shadow-lg ${hot ? 'border-amber-200/80 bg-fuchsia-800/95' : 'border-cyan-300/50 bg-slate-900/95'}`
+  }, React.createElement("span", {
+    className: `min-w-0 flex-1 text-[12px] font-black leading-snug ${hot ? 'animate-pulse' : ''}`,
+    style: JA_WRAP_STYLE
+  }, icon ? `${icon} ` : '', jaWrap(text)), busy ? React.createElement("small", {
+    className: "shrink-0 text-[10px] font-bold text-amber-100"
+  }, "終わったら戻れます") : React.createElement("button", {
+    "data-multi-away-return": true,
+    type: "button",
+    onClick: () => onReturn && onReturn(),
+    className: `min-h-[40px] shrink-0 rounded-xl px-3 text-[12px] font-black ${hot ? 'bg-amber-300 text-slate-950' : 'bg-cyan-400 text-slate-950'}`
+  }, hot ? '対戦へ' : '戻る'), onLeave && React.createElement("button", {
+    "data-multi-away-leave": true,
+    type: "button",
+    "aria-label": "ルームを出る",
+    onClick: leave,
+    className: "min-h-[40px] min-w-[36px] shrink-0 rounded-xl bg-slate-700 text-[13px] font-black"
+  }, "✕")));
+}
 function RhythmMultiRecordSaver({
   entry
 }) {
@@ -80979,7 +81132,8 @@ function RhythmMultiScreen({
   buddyTickets = 0,
   onUseBuddyTicket = null,
   onRefundBuddyTicket = null,
-  onOpenMasuBeat = null
+  onOpenMasuBeat = null,
+  onStepAway = null
 }) {
   const view = useRhythmMultiView();
   useModeSelectStageCss();
@@ -81202,6 +81356,22 @@ function RhythmMultiScreen({
   const [invitePanel, setInvitePanel] = React.useState(false);
   const [invitedIds, setInvitedIds] = React.useState({});
   const [inviteMessage, setInviteMessage] = React.useState('');
+  const [presence, setPresence] = React.useState({});
+  React.useEffect(() => {
+    if (!invitePanel || !roster || !roster.length || typeof friendsPresenceFor !== 'function') return undefined;
+    let alive = true;
+    const load = () => {
+      void friendsPresenceFor(roster.map(f => f.otherId)).then(p => {
+        if (alive) setPresence(p || {});
+      });
+    };
+    load();
+    const t = setInterval(load, 60000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [invitePanel, roster]);
   const loadRoster = React.useCallback(async id => {
     try {
       setRoster(await sbFetchFriendRoster(id));
@@ -82092,7 +82262,7 @@ function RhythmMultiScreen({
       className: "text-[11px] font-bold text-slate-400"
     }, "フレンドを読み込んでいます…"), roster !== null && roster.length === 0 && React.createElement("p", {
       className: "text-[11px] font-bold leading-relaxed text-slate-400"
-    }, "まだフレンドがいません。プロフィールの「フレンド」から、フレンドコードで申請できます。"), (roster || []).map(friend => React.createElement("div", {
+    }, "まだフレンドがいません。プロフィールの「フレンド」から、フレンドコードで申請できます。"), (typeof friendsPresenceSort === 'function' ? friendsPresenceSort(roster || [], presence) : roster || []).map(friend => React.createElement("div", {
       key: friend.otherId,
       "data-rhythm-multi-friend-row": true,
       className: "flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5"
@@ -82100,7 +82270,9 @@ function RhythmMultiScreen({
       className: "min-w-0 flex-1"
     }, React.createElement("b", {
       className: "block truncate text-sm font-black"
-    }, friend.userName), React.createElement("small", {
+    }, friend.userName), presence[friend.otherId] && typeof FriendPresenceTag === 'function' ? React.createElement(FriendPresenceTag, {
+      info: presence[friend.otherId]
+    }) : React.createElement("small", {
       className: "block truncate text-[10px] font-bold text-slate-400"
     }, friendsLastSeenText(friend.lastSeenAt, Date.now()))), React.createElement("button", {
       "data-rhythm-multi-friend-send": true,
@@ -82116,7 +82288,13 @@ function RhythmMultiScreen({
     }, "招待は3分のあいだ届きます。相手がマルチの入口をひらくと「参加する」が出ます。"))), buddyBumped && React.createElement("p", {
       "data-rhythm-buddy-bumped": true,
       className: "text-[11px] font-black leading-snug text-amber-200"
-    }, "人が入ってきたので、呼んだマスモンは席をゆずって帰りました(使った回数・券は戻りました)"), buddyCallButton(), React.createElement("button", {
+    }, "人が入ってきたので、呼んだマスモンは席をゆずって帰りました(使った回数・券は戻りました)"), buddyCallButton(), view && !publicRoom && !view.full && onStepAway && React.createElement("button", {
+      "data-rhythm-multi-step-away": true,
+      type: "button",
+      className: `${btn} w-full bg-cyan-800`,
+      style: JA_WRAP_STYLE,
+      onClick: onStepAway
+    }, jaWrap('部屋はそのままで、ほかの画面へ')), React.createElement("button", {
       "data-rhythm-multi-leave": true,
       type: "button",
       className: `${btn} w-full bg-slate-700`,
@@ -102990,11 +103168,14 @@ const CARD_PVP = (() => {
     foeAgain: null,
     foeGone: false
   });
-  const emit = () => listeners.forEach(fn => {
-    try {
-      fn(s);
-    } catch (_) {}
-  });
+  const emit = () => {
+    if (typeof friendsSetRoomWaiting === 'function') friendsSetRoomWaiting(!!s && (s.phase === 'connecting' || s.phase === 'waiting'));
+    listeners.forEach(fn => {
+      try {
+        fn(s);
+      } catch (_) {}
+    });
+  };
   const set = patch => {
     s = {
       ...s,
@@ -103999,6 +104180,22 @@ const CardPvpLobby = ({
   const [roster, setRoster] = useState(null);
   const [invites, setInvites] = useState([]);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [presence, setPresence] = useState({});
+  useEffect(() => {
+    if (!inviteOpen || !roster || !roster.length || typeof friendsPresenceFor !== 'function') return undefined;
+    let alive = true;
+    const load = () => {
+      void friendsPresenceFor(roster.map(f => f.otherId)).then(p => {
+        if (alive) setPresence(p || {});
+      });
+    };
+    load();
+    const t = setInterval(load, 60000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [inviteOpen, roster]);
   const [invited, setInvited] = useState({});
   const [inviteNext, setInviteNext] = useState('');
   const [sentRows, setSentRows] = useState({});
@@ -104393,12 +104590,17 @@ const CardPvpLobby = ({
   }, jaWrap('まだフレンドがいません。HOME左上のプロフィールの「フレンド」から、フレンドコードで申請できます')) : React.createElement("ul", {
     "data-card-pvp-roster": true,
     className: "max-h-[40vh] space-y-1 overflow-y-auto"
-  }, roster.slice(0, 30).map(f => React.createElement("li", {
+  }, (typeof friendsPresenceSort === 'function' ? friendsPresenceSort(roster.slice(0, 30), presence) : roster.slice(0, 30)).map(f => React.createElement("li", {
     key: f.otherId,
+    "data-card-pvp-roster-row": true,
     className: "flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5"
   }, React.createElement("span", {
-    className: "min-w-0 flex-1 truncate text-[13px] font-bold text-white"
-  }, f.userName), React.createElement("button", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("span", {
+    className: "block truncate text-[13px] font-bold text-white"
+  }, f.userName), typeof FriendPresenceTag === 'function' && React.createElement(FriendPresenceTag, {
+    info: presence[f.otherId]
+  })), React.createElement("button", {
     type: "button",
     "data-card-pvp-invite-to": f.otherId,
     disabled: !ready || !profileReady,
@@ -107433,7 +107635,14 @@ function MonsterHeroGame() {
   const [dailyMasuAdvice, setDailyMasuAdvice] = useState(null);
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(() => normalizeRhythmBestRecords(null));
-  const [rhythmPlay, setRhythmPlay] = useState(null);
+  const [rhythmPlay, setRhythmPlayState] = useState(null);
+  const setRhythmPlay = next => {
+    if (next && typeof next === 'object' && next.from !== 'multi' && typeof RHYTHM_MULTI !== 'undefined' && RHYTHM_MULTI.view()) {
+      if (!window.confirm('みんなで対戦の部屋で待っています。部屋を出てから遊びますか?')) return;
+      RHYTHM_MULTI.leave();
+    }
+    setRhythmPlayState(next);
+  };
   const [rhythmMonsterSlotIds, setRhythmMonsterSlotIds] = useState([]);
   const [rhythmMonsterPickerOpen, setRhythmMonsterPickerOpen] = useState(false);
   const [rhythmMonsterMessage, setRhythmMonsterMessage] = useState('');
@@ -133982,6 +134191,14 @@ function MonsterHeroGame() {
         setRhythmPlay(null);
         setGameState('RHYTHM_OPTIONS');
       }
+    }), React.createElement(RhythmMultiAwayBar, {
+      hidden: gameState === 'RHYTHM_MULTI' || gameState === 'RHYTHM_MODE_SELECT' || !!rhythmPlay,
+      busy: ['BATTLE', 'WAVE_RESULT', 'CHAMPION', 'BATTLE_TUTORIAL', 'CARD_BATTLE', 'RPG_DEBUG_BATTLE', 'DEBUG_BATTLE_SETUP'].includes(gameState),
+      onReturn: () => {
+        void openRhythmDemo({
+          to: 'RHYTHM_MULTI'
+        });
+      }
     }), (gameState === 'RHYTHM_MULTI' || gameState === 'RHYTHM_MODE_SELECT') && React.createElement(RhythmMultiScreen, {
       key: gameState,
       profile: {
@@ -134034,6 +134251,7 @@ function MonsterHeroGame() {
       onResumeQuickRun: () => resumeQuickRunFromRhythm(),
       onBack: gameState === 'RHYTHM_MODE_SELECT' ? exitRhythmSongSelect : () => setGameState('RHYTHM_MODE_SELECT'),
       onRoomEntered: () => setGameState('RHYTHM_MULTI'),
+      onStepAway: exitRhythmSongSelect,
       rankingSupport: {
         breederIcon: rankingBreederIcon,
         open: song => {
