@@ -62,7 +62,7 @@ score はどれも 20。極限の段階ルールは `EXTREME_WAVE_STAGES` に1�
 | ランキング | `rankingId:'ExtremeNIFLHEIM'`・`recordId:'NIFLHEIM'` を**新しく足す** | 既存の mh_* の鍵と Supabase の表(`rankings`)の形は変えない。新しい difficulty の値で行が増えるだけ |
 | 種族チャレンジ | 初クリアのごほうび(`SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS`)に `NIFLHEIM:120` | 新しい極限を足すと、種族チャレンジの段にも1つ増える作り(`SPECIES_CHALLENGE_DIFFICULTY_IDS`)。外したい場合はそこから抜く |
 
-作るときに足す所(見積もり): `19-difficulties-and-rules.jsx` に設定1つ・段階ルール1つ・ルール詳細の文・色(`EXTREME_DIFFICULTY_LOOKS`)。ランキングのタブは `isExtremeDifficultyId` で自動で極限側に入る。新しいルール(案A)の本体は 60-app.jsx の予告の出し方と手札の所。更新履歴・ヘルプも要る。
+作るときに足す所(見積もり): `19-difficulties-and-rules.jsx` に設定1つ・段階ルール1つ・ルール詳細の文・色(`EXTREME_DIFFICULTY_THEMES`)。ランキングのタブは `isExtremeDifficultyId` で自動で極限側に入る。新しいルール(案A)の本体は 60-app.jsx の予告の出し方と手札の所。更新履歴・ヘルプも要る。
 
 ## ④ ヘルヘイムのクリア者を読む SQL(読むだけ・SELECT のみ)
 
