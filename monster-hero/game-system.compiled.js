@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 85dbd76a3fcadd21
+// source-sha256: 3cb170a0c66f9873
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -89293,9 +89293,10 @@ const cardAiChooseGuts = (db, st, policy) => {
     if (cardIsGuardKind(c.kind)) return 2 * habit.keepGuard - c.guts * 0.2;
     return (c.damage || 1) * 0.5 - Math.max(0, c.guts - (me.guts.length + 2)) * 0.8;
   };
+  const aceKeep = no => policy && Array.isArray(policy.aces) && policy.aces.includes(no) ? 10 : 0;
   const ks = me.hand.map((no, i) => ({
     i,
-    k: keep(no),
+    k: keep(no) + aceKeep(no),
     g: cardIsGuardKind((cardOf(db, no) || {}).kind)
   }));
   const guardKeep = ks.filter(x => x.g && x.k > -9).sort((a, b) => b.k - a.k)[0];
@@ -97250,6 +97251,52 @@ const CardBattleScreen = ({
       setWeeklyBusy(false);
     }
   };
+  const [deckRewards, setDeckRewards] = useState([]);
+  const [deckRewardBusy, setDeckRewardBusy] = useState(false);
+  const deckRewardChecked = useRef(false);
+  useEffect(() => {
+    if (!save || !db || screen !== 'CARD_TOP' || deckRewardChecked.current || typeof cardSharePendingRewards !== 'function') return;
+    deckRewardChecked.current = true;
+    void (async () => {
+      try {
+        if (!(await cardShareOwnerKey(false))) return;
+        const id = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
+        const credited = cardShareNormalizeClaims(await storeGet(CARD_SHARE_REWARD_KEY, null));
+        if (!id || !credited) return;
+        setDeckRewards(await cardSharePendingRewards(id, credited));
+      } catch (_) {}
+    })();
+  }, [save ? 1 : 0, screen]);
+  const claimDeckRewards = async () => {
+    if (deckRewardBusy || !deckRewards.length) return;
+    setDeckRewardBusy(true);
+    try {
+      const raw = await storeGet(CARD_SHARE_REWARD_KEY, null);
+      const credited = cardShareNormalizeClaims(raw);
+      if (!credited) return;
+      const todo = deckRewards.filter(r => !credited.includes(r.day));
+      if (!todo.length) {
+        setDeckRewards([]);
+        return;
+      }
+      const total = todo.reduce((a, r) => a + r.amount, 0);
+      const ok = await persist({
+        point: save.point + total
+      }, {}, [{
+        key: CARD_SHARE_REWARD_KEY,
+        before: raw,
+        next: [...credited, ...todo.map(r => r.day)].slice(-60)
+      }]);
+      if (!ok) {
+        setNotice('保存できませんでした。もう一度お試しください');
+        return;
+      }
+      setDeckRewards([]);
+      setNotice(`みんなのデッキの報酬を受け取りました(ビートP +${total.toLocaleString()})`);
+    } finally {
+      setDeckRewardBusy(false);
+    }
+  };
   const openReplay = async (id, back = 'top') => {
     const rec = await cardReplayGet(id);
     const g = rec && db ? cardReplayGameOf(db, rec) : null;
@@ -97488,6 +97535,16 @@ const CardBattleScreen = ({
           openIdRef.current = null;
           openRef.current = null;
         }
+        if (ok && game.rented && typeof cardShareReportUse === 'function') {
+          const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+          if (typeof selfId === 'string') void cardShareReportUse({
+            match: `rent-${game.key}-${Date.now().toString(36)}`,
+            ownerId: game.rented.ownerId,
+            userId: selfId,
+            kind: 'rent',
+            version: game.rented.version
+          });
+        }
         if (ok && rankable) void cardRankSync(db, {
           record: nextRecord,
           collection: save.collection,
@@ -97585,8 +97642,9 @@ const CardBattleScreen = ({
     onBgm && onBgm(CARD_AI_BGM.mua);
     onNavigate('CARD_BATTLE');
   };
-  const startBattle = (pick = foe, deck = activeDeck) => {
-    const issues = deck ? [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)] : ['デッキがありません'];
+  const startBattle = (pick = foe, deck = activeDeck, opts = {}) => {
+    const rented = opts && opts.rented ? opts.rented : null;
+    const issues = deck ? rented ? cardDeckProblems(db, deck) : [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)] : ['デッキがありません'];
     if (!deck || issues.length) {
       setNotice(issues.join('・'));
       return;
@@ -97659,6 +97717,13 @@ const CardBattleScreen = ({
       cpuSameBlood: !!cpuDeck.sameBlood,
       ...(share ? {
         share
+      } : {}),
+      ...(rented ? {
+        rented: {
+          ownerId: rented.ownerId,
+          version: rented.version,
+          name: rented.owner
+        }
       } : {})
     });
     const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
@@ -97897,7 +97962,16 @@ const CardBattleScreen = ({
         setDeckPick(null);
         setView(toPvp ? 'mode' : 'foe');
       },
+      allowRented: !toPvp,
       onPick: async c => {
+        if (c.kind === 'rent') {
+          const next = deckPick;
+          setDeckPick(null);
+          if (next.next !== 'pvp') startBattle(next.pick, c.deck, {
+            rented: c
+          });
+          return;
+        }
         const deck = save.decks.decks.find(d => d.id === c.id);
         if (!deck) return;
         if (save.decks.active !== deck.id) {
@@ -98997,7 +99071,15 @@ const CardBattleScreen = ({
     },
     title: `${w.key.slice(5).replace('-', '/')}からの週の週間報酬`,
     lines: [`MASTER の勝ち数 ${w.wins}勝・${w.place}位`, `ビートP +${w.point.toLocaleString()}`]
-  })), notice && React.createElement("p", {
+  })), deckRewards.length > 0 && React.createElement(CardRewardBand, {
+    tag: "deck",
+    busy: deckRewardBusy,
+    onClaim: () => {
+      void claimDeckRewards();
+    },
+    title: "みんなのデッキの報酬",
+    lines: [`あなたのデッキが戦われた・借りられた ${deckRewards.reduce((a, r) => a + r.uses, 0)}回ぶん`, `ビートP +${deckRewards.reduce((a, r) => a + r.amount, 0).toLocaleString()}`]
+  }), notice && React.createElement("p", {
     "data-card-top-notice": true,
     className: `text-[12px] font-bold text-amber-200 [@media(orientation:landscape)_and_(max-height:420px)]:truncate [@media(orientation:landscape)_and_(max-height:420px)]:text-[11px] [@media(orientation:landscape)_and_(max-height:420px)]:leading-snug`,
     style: JA_LABEL_STYLE,
@@ -101299,14 +101381,32 @@ const CardShopStarters = ({
     }
   }));
 };
-const cardDeckPickChoices = (db, decks, collection) => (decks && decks.decks || []).map(d => ({
-  id: d.id,
-  kind: 'own',
-  name: d.name,
-  monsters: d.monsters,
-  count: d.cards.length,
-  why: [...cardDeckProblems(db, d), ...cardDeckOwnProblems(db, d, collection || {})]
-}));
+const cardDeckPickChoices = (db, decks, collection, opts = {}) => {
+  const own = (decks && decks.decks || []).map(d => ({
+    id: d.id,
+    kind: 'own',
+    name: d.name,
+    monsters: d.monsters,
+    count: d.cards.length,
+    why: [...cardDeckProblems(db, d), ...cardDeckOwnProblems(db, d, collection || {})]
+  }));
+  const r = opts && opts.rented;
+  if (!r || !r.deck) return own;
+  return [...own, {
+    id: 'rented',
+    kind: 'rent',
+    name: r.deckName || 'デッキ',
+    owner: r.name,
+    icon: r.icon || null,
+    frame: r.frame || null,
+    monsters: r.deck.monsters,
+    count: r.deck.cards.length,
+    deck: r.deck,
+    ownerId: r.ownerId,
+    version: r.version,
+    why: cardDeckProblems(db, r.deck)
+  }];
+};
 const CardDeckPick = ({
   db,
   decks,
@@ -101314,9 +101414,23 @@ const CardDeckPick = ({
   title = 'デッキをえらぶ',
   note = '',
   onPick,
-  onBack
+  onBack,
+  allowRented = false
 }) => {
-  const choices = cardDeckPickChoices(db, decks, collection);
+  const [rented, setRented] = useState(null);
+  useEffect(() => {
+    if (!allowRented || typeof cardRentedDeckGet !== 'function') return undefined;
+    let alive = true;
+    void cardRentedDeckGet().then(r => {
+      if (alive) setRented(r);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [allowRented]);
+  const choices = cardDeckPickChoices(db, decks, collection, {
+    rented: allowRented ? rented : null
+  });
   const usable = c => c && c.why.length === 0;
   const first = choices.find(c => c.id === decks.active && usable(c)) || choices.find(usable) || null;
   const [sel, setSel] = useState(first ? first.id : null);
@@ -101374,7 +101488,10 @@ const CardDeckPick = ({
       });
     })), React.createElement("span", {
       className: "min-w-0 flex-1"
-    }, React.createElement("span", {
+    }, c.kind === 'rent' && React.createElement("span", {
+      "data-card-deck-pick-rent": true,
+      className: "block text-[11px] font-black text-emerald-200"
+    }, `借りたデッキ(${c.owner || 'ブリーダー'}さんの)`), React.createElement("span", {
       className: "block text-[14px] font-black leading-tight text-white",
       style: JA_LABEL_STYLE
     }, on ? '★ ' : '', jaWrap(c.name)), React.createElement("span", {
@@ -107940,6 +108057,8 @@ const CardPvpWatchScreen = ({
 };
 const CARD_SHARE_KEY = 'mh_card_deck_owner_key_v1';
 const CARD_SHARE_TABLE = 'card_deck_entries';
+const CARD_RENTED_KEY = 'mh_card_rented_deck_v1';
+const CARD_SHARE_REWARD_KEY = 'mh_card_deck_reward_v1';
 const CARD_SHARE_TILTS = Object.freeze([{
   id: 'attack',
   label: '攻める'
@@ -108183,6 +108302,75 @@ const cardShareSameBlood = (db, deck) => {
   const ms = (deck && Array.isArray(deck.monsters) ? deck.monsters : []).map(no => cardMonsterOf(db, no)).filter(Boolean);
   return ms.length > 0 && ms.filter(m => cardAiBloodOf(m) === cardAiBloodOf(ms[0])).length >= 2;
 };
+const cardShareNormalizeClaims = v => {
+  if (v === null || v === undefined) return [];
+  if (!Array.isArray(v)) return null;
+  return v.filter(x => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x)).slice(-60);
+};
+const cardSharePendingRewards = async (ownerId, credited) => {
+  const key = await cardShareOwnerKey(false);
+  if (!key || typeof ownerId !== 'string' || !Array.isArray(credited)) return [];
+  await cardShareRpc('card_deck_claim', {
+    p_owner: ownerId,
+    p_key: key
+  });
+  const rows = await cardShareRpc('card_deck_rewards_of', {
+    p_owner: ownerId,
+    p_key: key
+  });
+  const done = new Set(credited);
+  return (Array.isArray(rows) ? rows : []).filter(r => r && typeof r.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.day) && Number.isInteger(r.amount) && r.amount > 0 && !done.has(r.day)).map(r => ({
+    day: r.day,
+    amount: Math.min(300, r.amount),
+    uses: Number.isInteger(r.uses) && r.uses > 0 ? r.uses : 0
+  }));
+};
+const cardRentedNormalize = v => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : null;
+  if (!r || typeof r.ownerId !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(r.ownerId)) return null;
+  const d = r.deck && typeof r.deck === 'object' ? r.deck : {};
+  const monsters = Array.isArray(d.monsters) ? d.monsters.filter(x => typeof x === 'string').slice(0, 3) : [];
+  const cards = Array.isArray(d.cards) ? d.cards.filter(x => typeof x === 'string').slice(0, 50) : [];
+  if (monsters.length !== 3 || cards.length !== 50) return null;
+  return {
+    ownerId: r.ownerId,
+    name: typeof r.name === 'string' && r.name ? r.name.slice(0, 40) : 'ブリーダー',
+    icon: typeof r.icon === 'string' ? r.icon : null,
+    frame: typeof r.frame === 'string' ? r.frame : null,
+    version: Number.isInteger(r.version) && r.version > 0 ? r.version : 1,
+    deckName: typeof r.deckName === 'string' ? r.deckName.slice(0, 20) : '',
+    deck: {
+      monsters,
+      cards
+    },
+    at: Number.isFinite(r.at) ? r.at : 0
+  };
+};
+const cardRentedDeckGet = async () => {
+  try {
+    return cardRentedNormalize(await storeGet(CARD_RENTED_KEY, null, false));
+  } catch (_) {
+    return null;
+  }
+};
+const cardRentedDeckSet = async entry => {
+  const next = entry ? cardRentedNormalize({
+    ownerId: entry.ownerId,
+    name: entry.name,
+    icon: entry.icon,
+    frame: entry.frame,
+    version: entry.version,
+    deckName: entry.tactics && entry.tactics.name,
+    deck: entry.deck,
+    at: Date.now()
+  }) : null;
+  if (entry && !next) return false;
+  try {
+    return !!(await storeSet(CARD_RENTED_KEY, next, false));
+  } catch (_) {
+    return false;
+  }
+};
 const CardDeckShare = ({
   db,
   decks,
@@ -108196,6 +108384,29 @@ const CardDeckShare = ({
   const [tab, setTab] = useState(onFight ? 'fight' : 'mine');
   const [foes, setFoes] = useState(null);
   const [level, setLevel] = useState('normal');
+  const [rented, setRented] = useState(null);
+  useEffect(() => {
+    void cardRentedDeckGet().then(setRented);
+  }, []);
+  const rent = async e => {
+    if (busy) return;
+    setBusy(true);
+    setMsg('');
+    if (await cardRentedDeckSet(e)) {
+      setRented(await cardRentedDeckGet());
+      setMsg(`${e.name}さんのデッキを借りました。助手と対戦のデッキ選びで使えます`);
+    } else setMsg('この端末に保存できなかったため、借りられませんでした');
+    setBusy(false);
+  };
+  const giveBack = async () => {
+    if (busy) return;
+    setBusy(true);
+    if (await cardRentedDeckSet(null)) {
+      setRented(null);
+      setMsg('借りていたデッキを返しました');
+    }
+    setBusy(false);
+  };
   const [selfId, setSelfId] = useState(null);
   const [mine, setMine] = useState(undefined);
   const [off, setOff] = useState(false);
@@ -108328,16 +108539,27 @@ const CardDeckShare = ({
     className: "block truncate text-[11px] font-bold text-slate-300"
   }, e.tactics.name || 'デッキ', "・", e.deck.monsters.map(no => (cardMonsterOf(db, no) || {}).name || no).join('・')), React.createElement("small", {
     className: "block text-[10px] font-bold text-sky-200 tabular-nums"
-  }, e.battles ? `戦われた ${e.battles}回・デッキの勝ち ${Math.round(e.deckWins / e.battles * 100)}%` : 'まだ戦われていません')), React.createElement("button", {
+  }, e.battles ? `戦われた ${e.battles}回・デッキの勝ち ${Math.round(e.deckWins / e.battles * 100)}%` : 'まだ戦われていません')), React.createElement("span", {
+    className: "flex shrink-0 flex-col gap-1"
+  }, React.createElement("button", {
     type: "button",
     "data-card-share-fight": e.ownerId,
     disabled: !onFight || fightIssues.length > 0,
-    className: "mh-button mh-button-primary min-h-[40px] shrink-0 rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
+    className: "mh-button mh-button-primary min-h-[36px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
     onClick: () => {
       Audio_.fgSe.tap();
       if (onFight) onFight(e, level);
     }
-  }, "戦う"));
+  }, "戦う"), React.createElement("button", {
+    type: "button",
+    "data-card-share-rent": e.ownerId,
+    disabled: busy || rented && rented.ownerId === e.ownerId && rented.version === e.version,
+    className: "min-h-[30px] rounded-lg border border-emerald-300/50 bg-slate-900 px-2 text-[11px] font-black text-emerald-100 disabled:opacity-50",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      void rent(e);
+    }
+  }, rented && rented.ownerId === e.ownerId && rented.version === e.version ? '借りています' : '借りる')));
   const foeList = (title, rows, key) => React.createElement("div", {
     className: SCREEN_PANEL_CLASS,
     "data-card-share-list": key
@@ -108394,7 +108616,25 @@ const CardDeckShare = ({
   }, typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv] || lv.toUpperCase()))), fightIssues.length > 0 && React.createElement("p", {
     className: "mt-1 text-[12px] font-bold text-rose-200",
     style: JA_WRAP_STYLE
-  }, jaWrap(`使うデッキ: ${fightIssues[0]}`))), foes === null ? React.createElement("p", {
+  }, jaWrap(`使うデッキ: ${fightIssues[0]}`))), rented && React.createElement("div", {
+    "data-card-share-rented": true,
+    className: `${SCREEN_PANEL_CLASS} flex items-center gap-2`
+  }, React.createElement("span", {
+    className: "min-w-0 flex-1 text-[12px] font-bold text-emerald-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`借りているデッキ: ${rented.name}さんの「${rented.deckName || 'デッキ'}」(助手と対戦のデッキ選びで使えます。マルチ対戦では使えません)`)), React.createElement("button", {
+    type: "button",
+    "data-card-share-giveback": true,
+    disabled: busy,
+    className: "shrink-0 rounded-lg border border-white/15 bg-slate-900 px-2 py-1 text-[11px] font-black text-slate-200 disabled:opacity-50",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      void giveBack();
+    }
+  }, "返す")), msg && tab === 'fight' && React.createElement("p", {
+    className: "rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(msg)), foes === null ? React.createElement("p", {
     className: "text-[13px] font-bold text-slate-300"
   }, "読み込み中…") : React.createElement(React.Fragment, null, foeList('おすすめ', foes.picks, 'picks'), React.createElement("button", {
     type: "button",
