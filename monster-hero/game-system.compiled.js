@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 38676e7f0cb9d342
+// source-sha256: c471562095cc3461
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -14470,10 +14470,16 @@ const beatRankAfter = (prev, {
   const xp = playerRankSafeXp(cur.xp + add);
   const to = playerRankInfo(xp).rank;
   let tickets = 0,
-    beatPoints = 0;
+    beatPoints = 0,
+    bonusTickets = 0,
+    bonusPoints = 0;
   for (let r = Math.max(cur.got + 1, 2); r <= to; r++) {
     tickets += beatRankTicketsFor(r);
     beatPoints += playerRankBeatPointsFor(r);
+    if (r % 5 === 0) {
+      bonusTickets += r;
+      bonusPoints += r * 200;
+    }
   }
   return {
     next: {
@@ -14488,7 +14494,9 @@ const beatRankAfter = (prev, {
     from,
     to,
     tickets,
-    beatPoints
+    beatPoints,
+    bonusTickets,
+    bonusPoints
   };
 };
 const STAT_POINT_GAIN = {
@@ -55434,6 +55442,232 @@ function PlayerRankBoard({
     className: "border-t border-white/10 pt-2 text-center text-[10px] font-bold text-slate-400",
     style: JA_WRAP_STYLE
   }, jaWrap('あなたの記録は、次に曲を遊んだときに載ります。'))));
+}
+const PLAYER_RANK_UP_FX_CSS = `
+.mh-prfx{position:fixed;inset:0;z-index:95000;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 38%,rgba(64,24,120,.92),rgba(8,4,20,.94) 70%);cursor:pointer;user-select:none;overflow:hidden}
+.mh-prfx-stage{position:relative;width:min(100%,420px);height:100%}
+.mh-prfx-center{position:absolute;left:50%;top:36%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:10px}
+.mh-prfx-big .mh-prb-shield{width:96px;height:107px}
+.mh-prfx-big .mh-prb-shield::after{inset:5px}
+.mh-prfx-big .mh-prb-num{font-size:46px;-webkit-text-stroke:8px var(--prb-ink)}
+.mh-prfx-big .mh-prb-num.mh-prb-w3{font-size:34px}
+.mh-prfx-title{font-weight:900;font-size:32px;color:#fff;-webkit-text-stroke:6px #4c1d95;paint-order:stroke fill;letter-spacing:.04em}
+.mh-prfx-kind{font-weight:900;font-size:15px;color:#fff;-webkit-text-stroke:3px #1e293b;paint-order:stroke fill}
+.mh-prfx-slot{position:relative;width:96px;height:107px}
+.mh-prfx-half{position:absolute;inset:0}
+.mh-prfx-half.l{clip-path:polygon(0 0,52% 0,44% 100%,0 100%)}
+.mh-prfx-half.r{clip-path:polygon(52% 0,100% 0,100% 100%,44% 100%)}
+.mh-prfx-new{position:absolute;inset:0}
+.mh-prfx-ring{position:absolute;left:50%;top:36%;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:4px solid rgba(255,255,255,.9);opacity:0}
+.mh-prfx-conf{position:absolute;left:50%;top:36%;width:8px;height:12px;border-radius:2px;opacity:0}
+.mh-prfx-rays{position:absolute;left:50%;top:36%;width:560px;height:560px;margin:-280px 0 0 -280px;border-radius:50%;opacity:0;background:repeating-conic-gradient(from 0deg,var(--prfx-ray) 0 8deg,transparent 8deg 24deg);-webkit-mask:radial-gradient(circle,#000 25%,transparent 68%);mask:radial-gradient(circle,#000 25%,transparent 68%)}
+.mh-prfx-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.mh-prfx-band{position:absolute;left:0;right:0;top:56%;text-align:center;padding:10px 0;font-weight:900;font-size:20px;color:#fff;-webkit-text-stroke:4px rgba(0,0,0,.6);paint-order:stroke fill;opacity:0;background:linear-gradient(90deg,transparent,var(--prfx-band),transparent)}
+.mh-prfx-gains{position:absolute;left:16px;right:16px;top:58%;display:flex;flex-direction:column;gap:8px}
+.mh-prfx-band ~ .mh-prfx-gains{top:66%}
+.mh-prfx-gain{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:14px;background:rgba(15,10,35,.88);border:1px solid rgba(253,224,71,.45);opacity:0}
+.mh-prfx-gain.bonus{border-color:#f0abfc;box-shadow:0 0 18px rgba(240,171,252,.45)}
+.mh-prfx-gain b{font-size:18px;font-weight:900;color:#fef08a;font-variant-numeric:tabular-nums}
+.mh-prfx-gain small{display:block;font-size:10px;font-weight:700;color:#cbd5e1}
+.mh-prfx-gain .ico{font-size:24px}
+.mh-prfx-hint{position:absolute;left:0;right:0;bottom:calc(14px + var(--mh-sa-bottom,0px));text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,.6)}
+.mh-prfx.play .mh-prfx-half .mh-prb{animation:mhPrfxShake .5s ease-in-out}
+.mh-prfx.play .mh-prfx-half.l{animation:mhPrfxSplitL .45s ease-in .5s forwards}
+.mh-prfx.play .mh-prfx-half.r{animation:mhPrfxSplitR .45s ease-in .5s forwards}
+.mh-prfx.play .mh-prfx-new{animation:mhPrfxPop .5s cubic-bezier(.2,1.6,.4,1) .75s both}
+.mh-prfx.play .mh-prfx-ring{animation:mhPrfxRing .7s ease-out .75s both}
+.mh-prfx.play .mh-prfx-title{animation:mhPrfxDrop .45s cubic-bezier(.2,1.4,.4,1) .9s both}
+.mh-prfx.play .mh-prfx-kind{animation:mhPrfxFade .3s ease-out 1.1s both}
+.mh-prfx.play .mh-prfx-conf{animation:mhPrfxConf 1.2s ease-out var(--d) both}
+.mh-prfx.play .mh-prfx-flash{animation:mhPrfxFlash .5s ease-out .7s both}
+.mh-prfx.play .mh-prfx-rays{animation:mhPrfxRays 2.4s ease-out .75s both}
+.mh-prfx.play .mh-prfx-band{animation:mhPrfxBand .5s ease-out 1.3s both}
+.mh-prfx.play .mh-prfx-gain{animation:mhPrfxFly .45s cubic-bezier(.2,1.3,.4,1) var(--d) both}
+.mh-prfx.done *{animation:none!important}
+.mh-prfx.done .mh-prfx-half,.mh-prfx.done .mh-prfx-conf,.mh-prfx.done .mh-prfx-ring,.mh-prfx.done .mh-prfx-flash{display:none}
+.mh-prfx.done .mh-prfx-new,.mh-prfx.done .mh-prfx-title,.mh-prfx.done .mh-prfx-kind,.mh-prfx.done .mh-prfx-gain,.mh-prfx.done .mh-prfx-band{opacity:1;transform:none}
+.mh-prfx.done .mh-prfx-rays{opacity:.9}
+@keyframes mhPrfxShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px) rotate(-3deg)}40%{transform:translateX(6px) rotate(3deg)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+@keyframes mhPrfxSplitL{to{transform:translate(-60px,40px) rotate(-25deg);opacity:0}}
+@keyframes mhPrfxSplitR{to{transform:translate(60px,40px) rotate(25deg);opacity:0}}
+@keyframes mhPrfxPop{from{transform:scale(.2);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes mhPrfxRing{from{transform:scale(.4);opacity:1}to{transform:scale(2.6);opacity:0}}
+@keyframes mhPrfxDrop{from{transform:translateY(-30px) scale(1.4);opacity:0}to{transform:none;opacity:1}}
+@keyframes mhPrfxFade{from{opacity:0}to{opacity:1}}
+@keyframes mhPrfxConf{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--x),var(--y)) rotate(var(--r))}}
+@keyframes mhPrfxFlash{0%{opacity:.9}100%{opacity:0}}
+@keyframes mhPrfxRays{0%{opacity:0;transform:rotate(0) scale(.6)}30%{opacity:1}100%{opacity:.9;transform:rotate(60deg) scale(1)}}
+@keyframes mhPrfxBand{from{opacity:0;transform:scaleX(.2)}to{opacity:1;transform:none}}
+@keyframes mhPrfxFly{from{opacity:0;transform:translateX(80px) scale(.8)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.mh-prfx.play *{animation-duration:.01s!important;animation-delay:0s!important}}
+`;
+const ensurePlayerRankUpFxCss = () => {
+  try {
+    if (typeof document === 'undefined' || document.getElementById('mh-player-rank-up-fx-css')) return;
+    const el = document.createElement('style');
+    el.id = 'mh-player-rank-up-fx-css';
+    el.textContent = PLAYER_RANK_UP_FX_CSS;
+    document.head.appendChild(el);
+  } catch (_) {}
+};
+const PLAYER_RANK_UP_TIER_FX = Object.freeze({
+  1: {
+    ray: 'rgba(234,138,74,.3)',
+    band: 'rgba(154,75,28,.85)'
+  },
+  2: {
+    ray: 'rgba(226,232,240,.3)',
+    band: 'rgba(100,116,139,.85)'
+  },
+  3: {
+    ray: 'rgba(253,224,71,.32)',
+    band: 'rgba(217,119,6,.85)'
+  },
+  4: {
+    ray: 'rgba(192,132,252,.34)',
+    band: 'rgba(109,40,217,.85)'
+  },
+  5: {
+    ray: 'rgba(255,255,255,.3)',
+    band: 'rgba(79,70,229,.85)'
+  }
+});
+const PLAYER_RANK_UP_CONFETTI = ['#fde047', '#f0abfc', '#22d3ee', '#f472b6', '#a3e635', '#fff'];
+function PlayerRankUpFx({
+  kind = 'beat',
+  from = 1,
+  to = 1,
+  gains = [],
+  onClose = null
+}) {
+  ensurePlayerRankBadgeCss();
+  ensurePlayerRankUpFxCss();
+  const [stage, setStage] = React.useState('play');
+  const tierFrom = playerRankTier(from),
+    tierTo = playerRankTier(to);
+  const tierUp = tierTo.t !== tierFrom.t;
+  const fx = PLAYER_RANK_UP_TIER_FX[tierTo.t] || PLAYER_RANK_UP_TIER_FX[1];
+  const confetti = React.useMemo(() => Array.from({
+    length: tierUp ? 48 : 18
+  }, (_, i) => {
+    const a = Math.random() * Math.PI * 2,
+      d = 60 + Math.random() * 130;
+    return {
+      x: `${Math.cos(a) * d}px`,
+      y: `${Math.sin(a) * d + 120}px`,
+      r: `${Math.random() * 720 - 360}deg`,
+      d: `${0.75 + Math.random() * 0.3}s`,
+      c: PLAYER_RANK_UP_CONFETTI[i % PLAYER_RANK_UP_CONFETTI.length]
+    };
+  }), []);
+  const list = Array.isArray(gains) ? gains : [];
+  const gainStart = tierUp ? 1.8 : 1.3;
+  React.useEffect(() => {
+    const se = name => {
+      try {
+        if (typeof Audio_ !== 'undefined' && Audio_.se && typeof Audio_.se[name] === 'function') Audio_.se[name]();
+      } catch (_) {}
+    };
+    const timers = [setTimeout(() => se('crit'), 500), setTimeout(() => {
+      if (tierUp && typeof Audio_ !== 'undefined' && typeof Audio_.playJingle === 'function') {
+        try {
+          Audio_.playJingle('victory');
+        } catch (_) {}
+      } else se('levelUp');
+    }, 750), ...list.map((_, i) => setTimeout(() => se('trainingReward'), (gainStart + i * 0.35) * 1000 + 150)), setTimeout(() => setStage(s => s === 'play' ? 'done' : s), (gainStart + list.length * 0.35 + 0.6) * 1000)];
+    return () => timers.forEach(clearTimeout);
+  }, []);
+  const next = () => {
+    if (stage === 'play') setStage('done');else if (onClose) onClose();
+  };
+  const k = playerRankKind(kind);
+  const shield = (rank, cls = '') => React.createElement("span", {
+    className: `mh-prb mh-prfx-big mh-prb-t${playerRankTier(rank).t} ${cls}`
+  }, React.createElement("span", {
+    className: "mh-prb-shield"
+  }, React.createElement("span", {
+    className: "mh-prb-gloss"
+  }), React.createElement("b", {
+    className: `mh-prb-num${String(rank).length >= 3 ? ' mh-prb-w3' : ''}`
+  }, rank)));
+  return React.createElement("div", {
+    "data-player-rank-up-fx": kind,
+    "data-player-rank-up-fx-stage": stage,
+    className: `mh-prfx ${stage}`,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": `${k.label}が${to}に上がりました`,
+    tabIndex: 0,
+    onClick: next,
+    onKeyDown: e => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
+        e.preventDefault();
+        next();
+      }
+    },
+    style: {
+      '--prfx-ray': fx.ray,
+      '--prfx-band': fx.band
+    }
+  }, React.createElement("div", {
+    className: "mh-prfx-stage"
+  }, tierUp && React.createElement("div", {
+    className: "mh-prfx-rays",
+    "aria-hidden": "true"
+  }), React.createElement("div", {
+    className: "mh-prfx-ring",
+    "aria-hidden": "true"
+  }), React.createElement("div", {
+    className: "mh-prfx-center"
+  }, React.createElement("div", {
+    className: "mh-prfx-slot"
+  }, React.createElement("div", {
+    className: "mh-prfx-half l",
+    "aria-hidden": "true"
+  }, shield(from)), React.createElement("div", {
+    className: "mh-prfx-half r",
+    "aria-hidden": "true"
+  }, shield(from)), React.createElement("div", {
+    className: "mh-prfx-new"
+  }, shield(to))), React.createElement("div", {
+    className: "mh-prfx-title"
+  }, "RANK UP!"), React.createElement("div", {
+    className: "mh-prfx-kind"
+  }, k.label)), tierUp && React.createElement("div", {
+    className: "mh-prfx-band"
+  }, `${tierTo.name}に昇格!`), list.length > 0 && React.createElement("ul", {
+    className: "mh-prfx-gains",
+    "aria-label": "もらった物"
+  }, list.map((g, i) => React.createElement("li", {
+    key: i,
+    className: `mh-prfx-gain${g.bonus ? ' bonus' : ''}`,
+    style: {
+      '--d': `${gainStart + i * 0.35}s`
+    }
+  }, g.icon && React.createElement("span", {
+    className: "ico",
+    "aria-hidden": "true"
+  }, g.icon), React.createElement("span", {
+    className: "min-w-0"
+  }, React.createElement("b", null, String(g.text || '')), g.note && React.createElement("small", {
+    style: JA_WRAP_STYLE
+  }, jaWrap(String(g.note))))))), confetti.map((c, i) => React.createElement("span", {
+    key: i,
+    className: "mh-prfx-conf",
+    "aria-hidden": "true",
+    style: {
+      '--x': c.x,
+      '--y': c.y,
+      '--r': c.r,
+      '--d': c.d,
+      background: c.c
+    }
+  })), tierUp && React.createElement("div", {
+    className: "mh-prfx-flash",
+    "aria-hidden": "true"
+  }), React.createElement("div", {
+    className: "mh-prfx-hint"
+  }, stage === 'play' ? '押すと先へ' : '押すと閉じる')));
 }
 class MhErrorBoundary extends React.Component {
   constructor(props) {
@@ -116931,6 +117165,27 @@ function MonsterHeroGame() {
         icon: '🎟️',
         text: `ビートP ${gain.beatPoints.toLocaleString()}`
       }] : [])];
+      const basePoints = gain.beatPoints - gain.bonusPoints,
+        baseTickets = gain.tickets - gain.bonusTickets;
+      const fxGains = [...(basePoints > 0 ? [{
+        icon: '🎟️',
+        text: `ビートP ${basePoints.toLocaleString()}`,
+        note: '上がったランク ×100'
+      }] : []), ...(gain.bonusPoints > 0 ? [{
+        icon: '🎟️',
+        text: `ビートP ${gain.bonusPoints.toLocaleString()}`,
+        note: '5ランクごとのおまけ(ランク ×200)',
+        bonus: true
+      }] : []), ...(baseTickets > 0 ? [{
+        icon: '🎶',
+        text: `セッション券 ${baseTickets}枚`,
+        note: 'ランクが上がるたびに1枚'
+      }] : []), ...(gain.bonusTickets > 0 ? [{
+        icon: '🎶',
+        text: `セッション券 ${gain.bonusTickets}枚`,
+        note: '5ランクごとのおまけ(ランクと同じ枚数)',
+        bonus: true
+      }] : [])];
       setBeatRankAward({
         add: gain.add,
         parts: gain.parts,
@@ -116938,6 +117193,11 @@ function MonsterHeroGame() {
         to: gain.to,
         xp: next.xp,
         gains
+      });
+      if (gain.to > gain.from) setBeatRankFx({
+        from: gain.from,
+        to: gain.to,
+        gains: fxGains
       });
       void syncBeatRankToServer(next);
     } catch (_) {}
@@ -119638,6 +119898,7 @@ function MonsterHeroGame() {
   const [beatRank, setBeatRank] = useState(() => normalizeBeatRank(null));
   const [beatRankAward, setBeatRankAward] = useState(null);
   const beatRankSyncedRef = useRef(false);
+  const [beatRankFx, setBeatRankFx] = useState(null);
   const rhythmPlayRunAwardRef = useRef(null);
   const rhythmPlayRunAward = rhythmPlayRunAwardState;
   const setRhythmPlayRunAward = next => {
@@ -120512,6 +120773,7 @@ function MonsterHeroGame() {
       setRhythmPlayRunAward(null);
       stopCatchUp();
       setBeatRankAward(null);
+      setBeatRankFx(null);
       return;
     }
     const startedAt = rhythmPlayStartedAtRef.current;
@@ -141417,6 +141679,12 @@ function MonsterHeroGame() {
       key: raidDamageFx.key,
       fx: raidDamageFx,
       onDone: () => setRaidDamageFx(null)
+    }), beatRankFx && gameState === 'RHYTHM_PLAY' && React.createElement(PlayerRankUpFx, {
+      kind: "beat",
+      from: beatRankFx.from,
+      to: beatRankFx.to,
+      gains: beatRankFx.gains,
+      onClose: () => setBeatRankFx(null)
     }), gameState === 'RHYTHM_PLAY' && rhythmPlay && React.createElement(RhythmTapTest, {
       key: rhythmPlay.from === 'lineAdjust' && rhythmLineAdjust ? `line-adjust-${rhythmLineAdjust.key}` : undefined,
       raidPlay: rhythmPlay.from === 'raid',
