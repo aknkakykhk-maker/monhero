@@ -37,8 +37,10 @@ check('② 部品 BattleStackMarks がある(img があれば絵、なければ�
 // ★2026-10-13: クラシックなど縦長の枠は、予測ダメージ・置いたカードと同じ縦積みの欄(data-tactics-slot-marks)の先頭へ移した
 //   (社長「極限チャレンジ/GOD で 💥×1 が予測ダメージと重なる」)。重ならないことは stack-marks-overlap-browser-check.js が幅4種で測る
 check('② 味方の枠に出している(タクティクスは絵の左下・ほかのモードは縦積みの欄の先頭)',
-  /\{tacticsNewLayout&&<BattleStackMarks counts=\{allyStackCounts\[i\]\} side="ally"[^>]*className="mh-stack-marks-ally"\/>\}/.test(battle)
-  && /\{!tacticsNewLayout&&<BattleStackMarks counts=\{allyStackCounts\[i\]\} side="ally"[^>]*className="mh-stack-marks-flow"\/>\}/.test(battle));
+  // ★2026-10-29: タクティクス/レイドでは EX の効果の札(ExEffectChips・溜まる物も同じ札)にまとめた。ほかの遊びは今までどおり BattleStackMarks
+  /\{tacticsNewLayout&&!slotExEffects&&<BattleStackMarks counts=\{allyStackCounts\[i\]\} side="ally"[^>]*className="mh-stack-marks-ally"\/>\}/.test(battle)
+  && /\{!tacticsNewLayout&&!slotExEffects&&<BattleStackMarks counts=\{allyStackCounts\[i\]\} side="ally"[^>]*className="mh-stack-marks-flow"\/>\}/.test(battle)
+  && /\{tacticsNewLayout&&slotExEffects&&<ExEffectChips items=\{slotExEffects\}/.test(battle));
 check('② 敵はライフの帯に出している(通常と超省エネの2か所)', (battle.match(/<BattleStackMarks counts=\{enemyStackCounts\} side="enemy"/g) || []).length === 2);
 check('② 超省エネの味方の欄にも出している', /data-ultra-ally-slots[\s\S]{0,700}<BattleStackMarks counts=\{allyStackCounts\[i\]\}/.test(battle));
 check('③ 味方の数は強化の札と同じ出どころから作る', ['sweetStackView', 'bowStackView', 'trickStartView', "getPermaBuff('fateStacks', null)", "getPermaBuff('kenshiComboPower')"].every((w) => battle.slice(battle.indexOf('const allyStackCounts = (() => {'), battle.indexOf('const allyStackCounts = (() => {') + 3000).includes(w)));

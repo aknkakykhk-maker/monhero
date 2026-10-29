@@ -135,7 +135,16 @@ function MonsterHeroGame() {
   const [dailyMasuAdvice, setDailyMasuAdvice] = useState(null); // null / { debugCount:null|number, eligible:boolean }
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(()=>normalizeRhythmBestRecords(null));
-  const [rhythmPlay,setRhythmPlay]=useState(null);
+  const [rhythmPlay,setRhythmPlayState]=useState(null);
+  // 招待の部屋を開いたままほかの画面へ出られる(2026-10-29・案A)ので、部屋にいるまま対戦でない曲を始めるときは、先に部屋を抜けるかを聞く
+  // (部屋の中の曲と、ひとりの曲を同時には鳴らせない)。曲を始める入口が多いので、ここ1か所で見る
+  const setRhythmPlay=(next)=>{
+    if(next&&typeof next==='object'&&next.from!=='multi'&&typeof RHYTHM_MULTI!=='undefined'&&RHYTHM_MULTI.view()){
+      if(!window.confirm('みんなで対戦の部屋で待っています。部屋を出てから遊びますか?'))return;
+      RHYTHM_MULTI.leave();
+    }
+    setRhythmPlayState(next);
+  };
   // モンスターノーツ用のマスモン設定(最大4体)。保存するのは個体IDの並びだけ
   const [rhythmMonsterSlotIds,setRhythmMonsterSlotIds]=useState([]);
   // マスモン一覧を出す設定シート。閉じているあいだは一覧を組み立てない
@@ -12210,6 +12219,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
   // ★枠ごとの「残りターン・残り回数」(2026-10-12 社長の追加依頼「オフリィアボイドとかexとかでも残り回数や残りターンのわかりやすい表示」)。
   //   { exTurns: EXの効果のあと何ターン(ターンで切れるものだけ), avoid: 完全回避の残り, konjo: 根性の残り }。タクティクス以外・効いていなければ空
+  // ★EX で、いま効いている強化・弱化の一覧(2026-10-29 社長「ア＋イ」・見た目は 71)。読むだけ。形は 34-tactics-ex-effects.jsx の冒頭
+  //   画面に出すものなので、tacticsSlotCountersAt と同じく描いている時点の state から読む
+  //   stackCounts … 71 の allyStackCounts[slotIdx](枠の「マーク×数」)。渡すと溜まる物も kind:'stack' で後ろに並ぶ。
+  //   「マーク×数」に無い物(中二病の重ね・被ダメ半減の残り・カウンター・回避した数・雷・ボルテージ)はここで数を足す
+  const tacticsExEffectsAt = (slotIdx, stackCounts = null) => {
+    if (!(tacticsExEnabled && Array.isArray(tacticsUnits))) return [];
+    const ex = listTacticsExEffectsAt(tacticsExState, tacticsUnits, slotIdx, tacticsExNow, { defOf: (monId) => raidExDefOf(monId), nameOf: battleActorName });
+    const unit = tacticsUnits[slotIdx];
+    const c = unit ? (tacticsSlotCountersAt(slotIdx) || {}) : {};
+    const chuuni = unit && (unit.id === 'Ark' || unit.id === 'Iblis');
+    const extra = {
+      ...(chuuni ? { chuuni: getPermaBuff('chuuniUniqueStack'), chuuniCut: Math.max(0, 2 - getWaveBuff('chuuniDmgCutUses')) } : {}),
+      counter: c.counter, dodges: c.dodges, thunder: c.thunder && c.thunder.phase === 'charge' ? c.thunder.charge : 0, voltage: c.voltage && c.voltage.value,
+    };
+    return [...ex, ...listTacticsStackItems({ ...(stackCounts || {}), ...extra })];
+  };
+  const tacticsExEnemyEffects = (tacticsExEnabled && Array.isArray(tacticsUnits))
+    ? [...listTacticsExEnemyEffects(tacticsExState, tacticsUnits, tacticsExNow, { defOf: (monId) => raidExDefOf(monId), nameOf: battleActorName }),
+      ...listTacticsStackItems(enemyStackCounts, { keepZero: [] })] : [];
   const tacticsSlotCountersAt = (slotIdx) => {
     // 画面に出すものなので、詳細パネル(tacticsExInfo)と同じく描いている時点の状態(ref ではなく state)から読む
     if(!tacticsExEnabled||!Number.isInteger(slotIdx)||!Array.isArray(tacticsUnits)) return {};
@@ -19940,6 +19968,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* モードえらび(RHYTHM_MODE_SELECT)と対戦(RHYTHM_MULTI)は同じ部品で描く。部屋に入る処理(フリーマッチ・
             ルーム作成・入室・フレンドの招待)はモードえらびの画面に並べ、入れたら RHYTHM_MULTI へ移る。
             key で分けて、画面が変わったら部品の中の状態を作り直す */}
+        {/* 招待の部屋を開いたまま、ほかの画面にいるあいだの帯(2026-10-29・案A)。部屋が見えている所(対戦の画面・モードえらび・演奏中)では出さない。
+            バトルの最中は画面を移ると途中のものが宙に浮くので、人が来たときだけ知らせる */}
+        <RhythmMultiAwayBar hidden={gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT'||!!rhythmPlay}
+          busy={['BATTLE','WAVE_RESULT','CHAMPION','BATTLE_TUTORIAL','CARD_BATTLE','RPG_DEBUG_BATTLE','DEBUG_BATTLE_SETUP'].includes(gameState)}
+          onReturn={()=>{void openRhythmDemo({to:'RHYTHM_MULTI'});}} />
         {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} masuMons={masuMons} masuPicker={{entries:unifiedMonsterEntriesSingleType.filter(e=>e.type==='masu'),renderSortFilterBar:renderMonsterSortFilterBar,renderCardBody:renderMonsterCardBody,cardClass:MONSTER_CARD_CLASS,cardStyle:MONSTER_CARD_STYLE}} buddyTickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseBuddyTicket={consumeBuddyTicket} onRefundBuddyTicket={refundBuddyTicket} onOpenMasuBeat={()=>openMasuBeat(gameState)} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_PLAY_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
           onUserGesture={()=>{/* 全画面と画面ロック防止は、指で押した直後しか許されない。準備完了を押したこの場で頼んでおく(ひとりのときの「決定」と同じ) */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();}}
           multiLook={rhythmSettings.multiLook||'LIGHT'}
@@ -19953,6 +19986,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           onResumeQuickRun={()=>resumeQuickRunFromRhythm()}
           onBack={gameState==='RHYTHM_MODE_SELECT'?exitRhythmSongSelect:()=>setGameState('RHYTHM_MODE_SELECT')}
           onRoomEntered={()=>setGameState('RHYTHM_MULTI')}
+          onStepAway={exitRhythmSongSelect}
           rankingSupport={{
             breederIcon:rankingBreederIcon,
             // 部屋の中から全国ランキングを見る(2026-10-04・ユーザー指示「マルチ中にもランキングボタンいれて」)。
@@ -22389,7 +22423,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setShowQuitConfirm={setShowQuitConfirm} setShowSoulBattleEffects={setShowSoulBattleEffects}
             setSkillPicker={setSkillPicker} setSlotSettle={setSlotSettle} slotMaxUses={slotMaxUses}
             slotSettle={slotSettle} slotSkill={slotSkill} slotUniqueChoice={slotUniqueChoice} slots={slots}
-            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign} tacticsCardBlock={tacticsCardBlock} enemyDebuffs={enemyDebuffs} battleUnitStatusOf={battleUnitStatusOf} battleEnemyStatus={battleEnemyStatus} enemyStackCounts={enemyStackCounts} debugStackMarks={debugStackMarks} tacticsSlotCountersAt={isTacticsMode(runMode)?tacticsSlotCountersAt:null} discardCards={discardCards} actionUsed={actionUsed} tacticsSlotFx={tacticsSlotFx} tacticsCardGenre={cardGenreLabel} tacticsCardScope={cardScopeLabel}
+            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign} tacticsCardBlock={tacticsCardBlock} enemyDebuffs={enemyDebuffs} battleUnitStatusOf={battleUnitStatusOf} battleEnemyStatus={battleEnemyStatus} enemyStackCounts={enemyStackCounts} debugStackMarks={debugStackMarks} tacticsSlotCountersAt={isTacticsMode(runMode)?tacticsSlotCountersAt:null} tacticsExEffectsAt={isTacticsMode(runMode)?tacticsExEffectsAt:null} tacticsExEnemyEffects={isTacticsMode(runMode)?tacticsExEnemyEffects:[]} discardCards={discardCards} actionUsed={actionUsed} tacticsSlotFx={tacticsSlotFx} tacticsCardGenre={cardGenreLabel} tacticsCardScope={cardScopeLabel}
             soulBattleParty={soulBattleParty} soulCoordinationCardBonus={soulCoordinationCardBonus}
             suppressCardClickRef={suppressCardClickRef} teachingFx={teachingFx} totalTurnCount={totalTurnCount}
             turnCount={turnCount} ultimateDistanceBreakLevels={ultimateDistanceBreakLevels}
