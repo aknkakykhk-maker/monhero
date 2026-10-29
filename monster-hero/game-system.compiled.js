@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 87f5115c8e111b9c
+// source-sha256: a7b4800201c17d6a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -88112,6 +88112,12 @@ const cardAiPolicy = (habitId, levelId, opts = {}) => {
     playerRole: !!(opts && opts.playerRole)
   };
 };
+const cardAiAceHit = (policy, hand, idxs) => {
+  const aces = policy && Array.isArray(policy.aces) ? policy.aces : null;
+  if (!aces || !aces.length || !Array.isArray(hand)) return false;
+  const list = Array.isArray(idxs) ? idxs : Number.isInteger(idxs) ? [idxs] : [];
+  return list.some(i => aces.includes(hand[i]));
+};
 const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}, atkMon = null) => {
   if (cardHasEff(card, 'noEvade') || card.kind === 'spe') return 0;
   if (flags.attachNoEvade || flags.attachNoGuard) return 0;
@@ -88491,7 +88497,7 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
     const saved = Math.min(dmg, target.life) - Math.min(after, target.life);
     const ko = target.life <= dmg && target.life > after ? 5 : 0;
     const lostAll = cardHasEff(c, 'selfGutsAll') ? me.guts.length - cost : 0;
-    const v = extra + saved * (0.6 + 0.4 * habit.keepGuard) + ko - (cost + lostAll) * 0.35 * habit.saveGuts + back * 0.6;
+    const v = extra + saved * (0.6 + 0.4 * habit.keepGuard) + ko - (cost + lostAll) * 0.35 * habit.saveGuts + back * 0.6 + (cardAiAceHit(policy, me.hand, o.hand) ? 1.5 : 0);
     if (!best || v > best.v) best = {
       v,
       o
@@ -88695,7 +88701,7 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
   const scored = opts.map(o => ({
     o,
-    s: cardAiScoreAttack(db, st, o, policy)
+    s: cardAiScoreAttack(db, st, o, policy) + (cardAiAceHit(policy, st.players[st.active].hand, o.hand) ? 2 : 0)
   })).sort((a, b) => b.s - a.s);
   if (scored[0].s <= 0.3) return {
     type: 'endAttacks'
