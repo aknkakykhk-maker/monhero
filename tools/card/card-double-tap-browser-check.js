@@ -132,7 +132,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       if (m === 'setup') await page.locator('[data-card-footer] button').first().click().catch(() => {});
       else if (m === 'guard') await page.getByRole('button', { name: /^守らない/ }).click().catch(() => {});
       else if (m === 'attack') await page.getByRole('button', { name: /攻撃おわり/ }).click().catch(() => {});
-      else if (m === 'guts') await page.locator('[data-card-footer] button').first().click().catch(() => {});
+      // ガッツの段の下のボタンは、先頭に「← 攻撃に戻る」が出ることがある(2026-10-27)。先頭を押すと攻撃の番へ戻り、行き来したまま時間切れになっていた
+      else if (m === 'guts') await page.locator('[data-card-footer] button').filter({ hasText: /ターン終了$/ }).first().click().catch(() => {});
       await sleep(400);
     }
     check('自分の攻撃の番(使える技がある)まで進む', (await mode()) === 'attack');
@@ -160,6 +161,13 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       await target.click(); await sleep(1500);
       check('③④ 狙える相手を1回タップすると、待たずに技が出る(手札が減る)', (await page.locator('[data-card-hand-card]').count()) < hand0 || (await page.locator('[data-card-battle]').innerText()) !== discard0, `${hand0} → ${await page.locator('[data-card-hand-card]').count()}`);
     } else check('③ 狙える相手が出る', false, '赤い輪の相手が見つからない');
+    // 技を出した直後は大写し・当たりの動き・相手の守りの番が続く。自分の操作に戻ってから(大写しが消えて攻撃かガッツの段)2回タップする
+    for (let i = 0; i < 40; i++) {
+      const m = await mode();
+      if ((m === 'attack' || m === 'guts') && !(await page.locator('[data-card-big]').count())) break;
+      await sleep(250);
+    }
+    await sleep(400);
     const opp = page.locator('[data-card-mon^="1-"]').first();
     await doubleTap(opp);
     check('③ 相手のモンスターを2回続けてタップすると、詳しい画面が出る', await detailOpen());
