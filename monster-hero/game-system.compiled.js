@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 81b04299c08e4b05
+// source-sha256: 386a52cf1bba740a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -70858,17 +70858,24 @@ const CLASSIC_AI_COPY_CSS = `
 [data-ai-copy-row] > .grid{flex:1 1 0;min-width:0;width:auto}
 [data-ai-copy-cell]{width:62px;flex:0 0 62px;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:2px;padding:3px 3px;border-radius:12px;border:1px solid rgba(52,211,153,.6);background:rgba(2,44,34,.55);position:relative}
 [data-ai-copy-cell] [data-ai-copy-head]{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;min-width:0}
+[data-ai-copy-cell] [data-ai-copy-face]{margin-bottom:3px}
 [data-ai-copy-cell] [data-ai-copy-name]{width:100%;min-width:0;text-align:center;font-size:9px;line-height:10px;font-weight:900;color:#a7f3d0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:keep-all;overflow-wrap:anywhere}
+/* コピーが出ると4枠が細くなる(320 幅で約52px)。枠の中の札が枠からはみ出さない・字が切れないように、コピーがいるあいだだけ小さくする
+   (2026-10-29 見回り: 距離補正の札「-10.0%」が枠の外へ、ガードの札が「ガ…」に切れていた) */
+[data-ai-copy-row] [data-dist-chip]{font-size:9px;padding:1px 2px;gap:0;right:1px;max-width:calc(100% - 2px)}
+[data-ai-copy-row] [data-dist-chip] svg{display:none}
+[data-ai-copy-row] [data-tactics-slot-marks] > div{padding-left:1px;padding-right:1px}
+[data-ai-copy-row] [data-tactics-slot-marks] > div > span:first-child{display:none}
+/* 横向き(背の低い画面): 縦と同じく4枠の右に細い5列目として置く。列の下に段を足すと、そのぶん敵の段が縮んで敵の絵が見えなくなる
+   (2026-10-29 見回り 667×375)。枠の高さ(112px)に収まるよう、絵・字を小さくする */
 @media (orientation: landscape) and (max-height: 520px){
-  [data-ai-copy-row]{flex-direction:column;gap:3px}
-  [data-ai-copy-row] > .grid{flex:0 0 auto;width:100%}
-  [data-ai-copy-cell]{width:100%;flex:0 0 30px;height:30px;flex-direction:row;justify-content:flex-start;gap:6px;padding:0 6px;border-radius:8px;overflow:visible}
-  [data-ai-copy-cell] [data-ai-copy-head]{width:auto;flex:0 0 auto;flex-direction:row;gap:4px}
-  [data-ai-copy-cell] [data-ai-copy-name]{width:auto;flex:0 1 auto;max-width:110px;text-align:left;-webkit-line-clamp:1}
-  [data-ai-copy-cell] [data-ai-copy-art]{flex:0 0 26px;width:26px;height:26px}
-  [data-ai-copy-cell] [data-ai-copy-guts]{flex:0 0 92px;width:92px}
-  [data-ai-copy-cell] [data-sorashido-next]{flex-direction:row;gap:6px;width:auto;flex:1 1 0;padding:0 6px;border-radius:6px}
-  [data-ai-copy-cell] [data-sorashido-next] > b{-webkit-line-clamp:1}
+  [data-ai-copy-cell]{width:64px;flex:0 0 64px;gap:0;padding:1px 2px;border-radius:10px}
+  [data-ai-copy-cell] [data-ai-copy-head]{gap:0}
+  [data-ai-copy-cell] [data-ai-copy-face]{margin-bottom:2px}
+  [data-ai-copy-cell] [data-ai-copy-name]{font-size:8px;line-height:9px}
+  [data-ai-copy-cell] [data-sorashido-next]{padding:1px 2px;border-radius:6px}
+  [data-ai-copy-cell] [data-sorashido-next] > b{-webkit-line-clamp:2;font-size:8px;line-height:9px}
+  [data-ai-copy-cell] [data-sorashido-next] > small{display:none}
 }`;
 const aiCopyViewPhase = (copy, fallback) => copy && ['appear', 'thinking', 'vanish'].includes(copy.fx) ? copy.fx : fallback;
 const classicAiCopyLandscape = () => {
@@ -71124,7 +71131,7 @@ function ClassicAiCopyCell({
     "data-ai-copy-head": true
   }, React.createElement(AiCopyFace, {
     src: mon,
-    size: 20
+    size: layout === 'landscape' ? 16 : 20
   }), React.createElement("span", {
     "data-ai-copy-name": true
   }, copy.name || '仲間', React.createElement("wbr", null), "のコピー")), mon ? React.createElement(AiCopyBody, {
@@ -71132,7 +71139,7 @@ function ClassicAiCopyCell({
     phase: phase,
     hit: !!hitAnim,
     anim: hitAnim,
-    size: layout === 'landscape' ? 26 : 40
+    size: layout === 'landscape' ? 24 : 40
   }) : React.createElement(SorashidoCopyFx, {
     phase: phase
   }, React.createElement("img", {
@@ -74079,6 +74086,7 @@ function BattleScreen({
     }, "⚡"))), (() => {
       const totalBonus = distTotalBonus(i);
       return React.createElement("div", {
+        "data-dist-chip": true,
         className: `absolute bottom-0.5 right-0.5 text-[11px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus > 0 ? 'text-cyan-300 border-cyan-400/30' : totalBonus < 0 ? 'text-red-300 border-red-400/30' : 'text-slate-300 border-white/20'}`
       }, React.createElement(Sword, {
         size: 5
