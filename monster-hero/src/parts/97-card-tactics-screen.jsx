@@ -201,9 +201,11 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
 
 // ---- 戦術カードの画面 ----
 // onPay(cost, entries) … ビートPを払って entries(戦術カードの保存)を1つの取引で書く(84 の persist)。成功なら true
-const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack }) => {
+// share … デッキ登録の「登録」タブに出す 95 の CardDeckShare の props(collection・frame・unlocked・debug)。あれば題は「デッキ登録」(2026-10-29 社長の作り直し)
+const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null }) => {
   const [data, setData] = useState(null);   // cardTacticsLoad の中身
-  const [tab, setTab] = useState('build');   // build / pull / list
+  const [tab, setTab] = useState(share ? 'register' : 'build');   // register(デッキ登録だけ) / build / pull / list
+  const screenTitle = share ? 'デッキ登録' : '戦術カード';
   const [frame, setFrame] = useState('base'); // base / breeder / 0 / 1 / 2
   const [pick, setPick] = useState(null);     // { cat, title, onPick, allowNone }
   const [opening, setOpening] = useState(null);
@@ -211,7 +213,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack }) => {
   const [notice, setNotice] = useState('');
   const reload = async () => { const d = await cardTacticsLoad(); setData(d); return d; };
   useEffect(() => { void reload(); }, []);
-  if (!data) return <div data-mh-screen data-card-tactics className={SCREEN_SHELL_CLASS}><ScreenHead title="戦術カード" accent="text-amber-200" onBack={onBack}/></div>;
+  if (!data) return <div data-mh-screen data-card-tactics className={SCREEN_SHELL_CLASS}><ScreenHead title={screenTitle} accent="text-amber-200" onBack={onBack}/></div>;
   if (opening) return <CardTacticPackOpen packs={opening} onDone={() => setOpening(null)}/>;
   const t = data.tactics;
   const lv = data.info.level;
@@ -272,7 +274,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack }) => {
     ...[0, 1, 2].map((i) => ({ k: i, label: (monOf(i) || {}).name || ['左の子', '真ん中の子', '右の子'][i], mon: monOf(i), sub: `${f.mons[i].length}/${open.mon}行` }))];
   return (
     <div data-mh-screen data-card-tactics className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title="戦術カード" accent="text-amber-200" onBack={onBack} note={cardTacticsOpen() ? '' : 'つくっている途中(デバッグ)'}/>
+      <ScreenHead title={screenTitle} accent="text-amber-200" onBack={onBack} note={(share ? cardShareOpen() : cardTacticsOpen()) ? '' : 'つくっている途中(デバッグ)'}/>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-2`}>
         <div data-card-tactics-level className={`${SCREEN_PANEL_CLASS} py-2`}>
           <div className="flex items-baseline gap-2"><b className="text-[18px] font-black text-amber-200">バトルカード Lv{lv}</b><small className="text-[11px] font-bold text-slate-300">{`次まで ${data.info.need - data.info.into}`}</small></div>
@@ -280,12 +282,17 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack }) => {
           {nextF && <p className="mt-1 text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{`次は Lv${nextF.at} で${[nextF.base ? `基本${nextF.base}枚目` : '', nextF.breeder ? `ブリーダー${nextF.breeder}行目` : '', nextF.mon ? `各モンスター${nextF.mon}行目` : ''].filter(Boolean).join('・')}が開く`}</p>}
         </div>
         <div className="flex gap-1">
-          {[['build', '組む'], ['pull', '引く'], ['list', `持っている ${ownCount}/${CARD_TACTIC_CARDS.length}`]].map(([k, l]) => (
+          {[...(share ? [['register', '登録']] : []), ['build', '組む'], ['pull', '引く'], ['list', `持っている ${ownCount}/${CARD_TACTIC_CARDS.length}`]].map(([k, l]) => (
             <button key={k} type="button" data-card-tactics-tab={k} onClick={() => { Audio_.fgSe.tap(); setTab(k); }}
               className={`flex-1 rounded-xl border-2 py-1.5 text-[12px] font-black ${tab === k ? 'border-amber-300 bg-amber-900/50 text-amber-100' : 'border-slate-700 bg-slate-900 text-slate-300'}`}>{l}</button>
           ))}
         </div>
         {notice && <p data-card-tactics-notice className="rounded-lg bg-amber-500/15 p-1.5 text-[12px] font-bold text-amber-100">{notice}</p>}
+        {tab === 'register' && share && (
+          // 登録したデッキの戦術カードは、レベルで開いている枠・持っているカードだけを載せる(95)。「組む」タブで直したら、登録し直す
+          <CardDeckShare key={`reg-${(t.frames && JSON.stringify(t.frames).length) || 0}`} db={db} decks={decks} collection={share.collection} frame={share.frame} unlocked={share.unlocked} debug={share.debug}
+            part="mine" embedded onOpenTactics={() => setTab('build')}/>
+        )}
         {tab === 'build' && (
           <div data-card-tactics-build className="space-y-1.5">
             <div className="flex gap-1">
