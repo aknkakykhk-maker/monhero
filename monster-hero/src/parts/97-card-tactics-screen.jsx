@@ -206,10 +206,11 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
 // ---- 戦術カードの画面 ----
 // onPay(cost, entries) … ビートPを払って entries(戦術カードの保存)を1つの取引で書く(84 の persist)。成功なら true
 // share … デッキ登録の「登録」タブに出す 95 の CardDeckShare の props(collection・frame・unlocked・debug)。あれば題は「デッキ登録」(2026-10-29 社長の作り直し)
-const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null }) => {
+// listOnly … 持っている戦術カードの一覧だけ(98 のデッキ登録の右上から。引くのはマーケット・2026-10-29 社長)
+const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, listOnly = false }) => {
   const [data, setData] = useState(null);   // cardTacticsLoad の中身
-  const [tab, setTab] = useState(share ? 'register' : 'build');   // register(デッキ登録だけ) / build / pull / list
-  const screenTitle = share ? 'デッキ登録' : '戦術カード';
+  const [tab, setTab] = useState(listOnly ? 'list' : share ? 'register' : 'build');   // register(デッキ登録だけ) / build / pull / list
+  const screenTitle = listOnly ? '持っている戦術カード' : share ? 'デッキ登録' : '戦術カード';
   const [frame, setFrame] = useState('base'); // base / breeder / 0 / 1 / 2
   const [pick, setPick] = useState(null);     // { cat, title, onPick, allowNone }
   const [opening, setOpening] = useState(null);
@@ -289,7 +290,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null }
           {nextF && <p className="mt-1 text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{`次は Lv${nextF.at} で${[nextF.base ? `基本${nextF.base}枚目` : '', nextF.breeder ? `ブリーダーに${nextF.breeder}枚目` : '', nextF.mon ? `各モンスターに${nextF.mon}枚目` : ''].filter(Boolean).join('・')}が開く`}</p>}
         </div>
         <div className="flex gap-1">
-          {[...(share ? [['register', '登録']] : []), ['build', '組む'], ['pull', '引く'], ['list', `持っている ${ownCount}/${CARD_TACTIC_CARDS.length}`]].map(([k, l]) => (
+          {!listOnly && [...(share ? [['register', '登録']] : []), ['build', '組む'], ['pull', '引く'], ['list', `持っている ${ownCount}/${CARD_TACTIC_CARDS.length}`]].map(([k, l]) => (
             <button key={k} type="button" data-card-tactics-tab={k} onClick={() => { Audio_.fgSe.tap(); setTab(k); }}
               className={`flex-1 rounded-xl border-2 py-1.5 text-[12px] font-black ${tab === k ? 'border-amber-300 bg-amber-900/50 text-amber-100' : 'border-slate-700 bg-slate-900 text-slate-300'}`}>{l}</button>
           ))}
