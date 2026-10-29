@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a4d0d6bb7b5e2c2e
+// generated-sha256: 8d9c32f13e0efd78
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -56377,6 +56377,13 @@ const CardStatusSheet = ({ name, list, onClose }) => (
     </div>
   </div>
 );
+// 出すカードの大写し1枚の高さ。何枚も同時に出すときは、横に並べて画面の幅に収まる高さまで小さくする
+//   (前は高さだけで決めていて、3枚以上だと 390×844 で横にはみ出して切れた。2026-10-29 社長「カードを3枚以上使うと画面が切れる」)。
+//   幅 = 画面の幅 − 左右の余白(32px) − すき間(6px×(n−1)) を n で割る。高さはその 7/5 倍
+const cardBigHeight = (n) => {
+  const k = Math.max(1, n || 1);
+  return `min(${k > 1 ? 30 : 38}vh, 300px, calc((100vw - ${32 + 6 * (k - 1)}px) / ${k} * 1.4))`;
+};
 // 手札の番号の並びを、カードの名前(番号)の並びにする(同じ名前の組み合わせを1つにまとめる)
 const cardHandNameKey = (hand, idx) => idx.map((i) => hand[i]).sort().join(',');
 // 記録の1行の文。守り・回避で減った当たりは「(5 → 2)」を添える(82 が from・to を持たせる。古い記録には無いので、そのままの文)
@@ -58103,7 +58110,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {bigCard && (
         <div key={bigCard.key} data-card-big={bigCard.side} onClick={finishBig} className="mh-card-big absolute inset-x-0 top-1/2 z-[55] flex -translate-y-1/2 flex-col items-center gap-1.5 px-4">
           <div className="flex items-end justify-center gap-1.5">
-            {bigCard.cards.map((no, i) => { const c = cardOf(db, no); return c ? <img key={i} src={CARD_IMG(c.img, 'l')} alt={c.name} className={`rounded-[8px] border-[3px] ${bigCard.side === 'me' ? 'border-amber-300' : 'border-rose-400'} object-cover shadow-[0_8px_24px_rgba(0,0,0,.7)]`} style={{ height: `min(${bigCard.cards.length > 1 ? 30 : 38}vh, 300px)`, aspectRatio: '5 / 7' }}/> : null; })}
+            {bigCard.cards.map((no, i) => { const c = cardOf(db, no); return c ? <img key={i} src={CARD_IMG(c.img, 'l')} alt={c.name} className={`rounded-[8px] border-[3px] ${bigCard.side === 'me' ? 'border-amber-300' : 'border-rose-400'} object-cover shadow-[0_8px_24px_rgba(0,0,0,.7)]`} style={{ height: cardBigHeight(bigCard.cards.length), aspectRatio: '5 / 7' }}/> : null; })}
           </div>
           <div data-card-fit className="max-w-full rounded-xl border border-rose-300/60 bg-black/80 px-3 py-1 text-center text-[14px] font-black leading-snug text-white" style={JA_WRAP_STYLE}>
             {!watch && <span className={`mr-1 rounded px-1 text-[11px] ${bigCard.side === 'me' ? 'bg-amber-300 text-slate-950' : 'bg-rose-500'}`}>{bigCard.side === 'me' ? '自分' : '相手'}</span>}{bigCard.who}「{bigCard.cards.map((n) => (cardOf(db, n) || {}).name).join('＋')}」
