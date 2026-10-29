@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 94b4ad54ef7709e8
+// source-sha256: aa430aa7f205942f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -101698,6 +101698,7 @@ const CardDeckEditor = ({
     cards: deck0.cards.slice()
   }));
   const [view, setView] = useState(deck0.monsters.length < 3 ? 'mon' : 'all');
+  const [boxOpen, setBoxOpen] = useState(deck0.monsters.length < 3);
   const chipsRow = useRef(null);
   useEffect(() => {
     try {
@@ -101863,6 +101864,39 @@ const CardDeckEditor = ({
     className: "contents landscape:flex landscape:min-h-0 landscape:flex-1 landscape:flex-col landscape:overflow-y-auto"
   }, React.createElement("div", {
     className: `${SCREEN_PANEL_FLAT_CLASS} shrink-0 space-y-1.5`
+  }, !land && React.createElement("button", {
+    type: "button",
+    "data-card-deck-bar": boxOpen ? 'open' : 'closed',
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setBoxOpen(v => !v);
+    },
+    "aria-expanded": boxOpen,
+    className: "flex w-full items-center gap-1.5 text-left active:scale-[.99]"
+  }, React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-[14px] font-black text-white"
+  }, boxOpen ? React.createElement("span", {
+    className: "text-[12px] text-slate-300"
+  }, "名前と3体をなおす") : React.createElement(React.Fragment, null, (deck.name || '').trim() || 'デッキ', " ", React.createElement("span", {
+    className: "text-[11px] text-slate-400"
+  }, "✎"))), !boxOpen && deck.monsters.map(no => {
+    const m = cardMonsterOf(db, no);
+    return m ? React.createElement("img", {
+      key: no,
+      src: CARD_IMG(m.img),
+      alt: m.name,
+      draggable: false,
+      className: "h-[30px] rounded-[3px] shadow"
+    }) : null;
+  }), !boxOpen && React.createElement("span", {
+    className: `shrink-0 text-[15px] font-black ${deck.cards.length === CARD_BATTLE_DECK_SIZE ? 'text-emerald-300' : 'text-white'}`
+  }, deck.cards.length, React.createElement("span", {
+    className: "text-[11px] text-slate-400"
+  }, "/", CARD_BATTLE_DECK_SIZE)), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "shrink-0 text-[12px] text-slate-400"
+  }, boxOpen ? '▴' : '▾')), React.createElement("div", {
+    className: !land && !boxOpen ? 'hidden' : 'space-y-1.5'
   }, React.createElement("input", {
     "data-card-deck-name": true,
     value: deck.name,
@@ -101916,7 +101950,7 @@ const CardDeckEditor = ({
   }, "/", CARD_BATTLE_DECK_SIZE, "枚")), React.createElement("div", {
     "data-card-deck-ready": ready ? 'ok' : 'ng',
     className: `text-[11px] font-black ${ready ? 'text-emerald-300' : 'text-amber-200'}`
-  }, ready ? '対戦に使えます' : 'まだ対戦に使えません'))), !ready && React.createElement("div", {
+  }, ready ? '対戦に使えます' : 'まだ対戦に使えません')))), !ready && React.createElement("div", {
     "data-card-deck-problems": true,
     className: "text-[11px] font-bold leading-snug text-rose-300",
     style: JA_WRAP_STYLE
@@ -101942,7 +101976,17 @@ const CardDeckEditor = ({
       WebkitMaskImage: 'linear-gradient(to right, #000 82%, transparent)',
       maskImage: 'linear-gradient(to right, #000 82%, transparent)'
     }
-  }, CARD_DECK_VIEWS.map(f => React.createElement("button", {
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-deck-usable": true,
+    onClick: () => setUsableOnly(v => !v),
+    className: chip(usableOnly)
+  }, usableOnly ? '✓ ' : '', "使える子だけ"), React.createElement("button", {
+    type: "button",
+    "data-card-deck-sort": sort,
+    onClick: () => setSort(s => CARD_DECK_SORTS[(CARD_DECK_SORTS.findIndex(x => x.id === s) + 1) % CARD_DECK_SORTS.length].id),
+    className: chip(false)
+  }, "並び: ", sortLabel, " ▾"), CARD_DECK_VIEWS.map(f => React.createElement("button", {
     key: f.id,
     type: "button",
     "data-card-deck-filter": f.id,
@@ -101958,17 +102002,7 @@ const CardDeckEditor = ({
       void consult();
     },
     className: chip(false)
-  }, "💬 ", advisor.name, "に相談"), React.createElement("button", {
-    type: "button",
-    "data-card-deck-usable": true,
-    onClick: () => setUsableOnly(v => !v),
-    className: chip(usableOnly)
-  }, usableOnly ? '✓ ' : '', "使える子だけ"), React.createElement("button", {
-    type: "button",
-    "data-card-deck-sort": sort,
-    onClick: () => setSort(s => CARD_DECK_SORTS[(CARD_DECK_SORTS.findIndex(x => x.id === s) + 1) % CARD_DECK_SORTS.length].id),
-    className: chip(false)
-  }, "並び: ", sortLabel, " ▾"))), land && footer), React.createElement("div", {
+  }, "💬 ", advisor.name, "に相談"))), land && footer), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} pb-2 landscape:flex-1`
   }, view === 'mon' && React.createElement("p", {
     className: "mb-1 text-[11px] font-bold text-slate-400",
