@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 70cf279bcd1bf832
+// source-sha256: f3bfd50732a393f5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -32291,6 +32291,11 @@ const rhythmEventRewardText = reward => {
   if (reward.beatPoint > 0) parts.push(`🎵 ビートP×${reward.beatPoint.toLocaleString()}`);
   return parts.join(' ／ ');
 };
+const rhythmScoreFitSize = (text, maxPx, minPx) => {
+  let em = 0;
+  for (const ch of String(text ?? '')) em += /[0-9]/.test(ch) ? .62 : ch === ',' || ch === '.' ? .3 : .62;
+  return `clamp(${minPx}px, calc(100cqw / ${Math.max(1, em * 1.06).toFixed(2)}), ${maxPx}px)`;
+};
 const RHYTHM_OPTION_TABS = Object.freeze([['live', '演奏'], ['display', '表示'], ['volume', '音'], ['system', '軽さ・演出']]);
 const RhythmOptions = ({
   value,
@@ -33808,7 +33813,7 @@ const RhythmSongSelect = ({
         'data-rhythm-achievement': markId
       } : {}, {
         title: `${item.id}: ${mark.label}`,
-        className: "block h-2 w-2 rotate-45 rounded-[1px] [@container(max-width:250px)]:hidden",
+        className: "block h-2 w-2 rotate-45 rounded-[1px] [@container(max-width:300px)]:hidden",
         style: mark.style
       }));
     }), (() => {
@@ -33834,7 +33839,7 @@ const RhythmSongSelect = ({
       })(), played ? React.createElement(React.Fragment, null, React.createElement("b", {
         className: `text-[12px] font-black leading-none ${RHYTHM_RANK_COLORS[rank] || 'text-slate-300'}`
       }, rank), React.createElement("span", {
-        className: "truncate tabular-nums text-slate-300"
+        className: "shrink-0 whitespace-nowrap tabular-nums text-slate-300"
       }, record.bestScore.toLocaleString())) : React.createElement("span", {
         className: "truncate"
       }, "未プレイ"));
@@ -33851,7 +33856,9 @@ const RhythmSongSelect = ({
       'data-rhythm-song-event': entry.songId
     } : {}, {
       className: "ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-black text-amber-200"
-    }), "🏆 イベント対象")))));
+    }), "🏆", React.createElement("span", {
+      className: "[@container(max-width:380px)]:hidden"
+    }, " イベント対象"))))));
   }))))), React.createElement("aside", {
     "data-rhythm-song-detail": true,
     className: "shrink-0 border-t border-sky-300/20 bg-gradient-to-b from-blue-950/95 to-slate-950/95 px-3 py-2 landscape:w-[44%] landscape:max-w-[440px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-2",
@@ -36589,7 +36596,7 @@ const RhythmHudScore = ({
     "data-rhythm-score": true,
     className: "mt-0.5 block font-black leading-none tabular-nums landscape:mt-0",
     style: {
-      fontSize: 'min(18px,4.6cqw)',
+      fontSize: score >= 1000000 ? 'min(18px,4cqw)' : 'min(18px,4.6cqw)',
       textShadow: '0 1px 6px rgba(2,6,23,.96)'
     }
   }, score.toLocaleString()), React.createElement("small", {
@@ -41012,9 +41019,14 @@ const RhythmTapTest = ({
       "data-rhythm-record-gain": true,
       className: "whitespace-nowrap rounded-full border border-lime-300/70 bg-lime-400/15 px-2 py-0.5 text-[10px] font-black leading-none tabular-nums text-lime-200"
     }, "+", (view.score - result.previousBestScore).toLocaleString())), React.createElement("div", {
+      className: "[container-type:inline-size] [--mh-result-score-max:42px] [@container(min-width:680px)]:[--mh-result-score-max:38px]"
+    }, React.createElement("div", {
       "data-rhythm-result-score": true,
-      className: "text-[42px] font-black leading-none tabular-nums [@container(min-width:680px)]:text-[38px]"
-    }, view.score.toLocaleString()), result.isNewRecord && Number(result.previousBestScore) > 0 && React.createElement("small", {
+      className: "font-black leading-none tabular-nums",
+      style: {
+        fontSize: `min(var(--mh-result-score-max), ${rhythmScoreFitSize(Math.max(Number(view.score) || 0, Number(result.score) || 0).toLocaleString(), 42, 22)})`
+      }
+    }, view.score.toLocaleString())), result.isNewRecord && Number(result.previousBestScore) > 0 && React.createElement("small", {
       "data-rhythm-record-prev": true,
       className: "mt-0.5 block text-[10px] font-bold tabular-nums text-amber-200/90"
     }, "前回のベスト ", Number(result.previousBestScore).toLocaleString()), tutorialProp && React.createElement("p", {
