@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e056e2d8f4946086
+// source-sha256: d19feeab2c025ed6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -95660,8 +95660,17 @@ const CardDetailModal = ({
   no,
   onClose,
   status = null,
-  statusName = ''
+  statusName = '',
+  dexInfo = null
 }) => {
+  const dexLine = dexInfo ? React.createElement("div", {
+    "data-card-detail-dex": true,
+    className: "mt-1.5 flex flex-wrap gap-1.5 text-[12px] font-bold"
+  }, React.createElement("span", {
+    className: "rounded-md bg-violet-900 px-2 py-0.5"
+  }, dexInfo.pack), React.createElement("span", {
+    className: `rounded-md px-2 py-0.5 ${dexInfo.have > 0 ? 'bg-emerald-900' : 'bg-slate-700'}`
+  }, dexInfo.have > 0 ? `持っている${dexInfo.have}枚` : 'まだ持っていない')) : null;
   const c = cardOf(db, no);
   const m = c ? null : cardMonsterOf(db, no);
   return React.createElement("div", {
@@ -95694,7 +95703,7 @@ const CardDetailModal = ({
     className: "rounded-md bg-slate-700 px-2 py-0.5"
   }, cardUserLabel(db, c)), React.createElement("span", {
     className: "rounded-md bg-slate-800 px-2 py-0.5 text-slate-400"
-  }, "No.", c.no)), c.text && React.createElement("p", {
+  }, "No.", c.no)), dexLine, c.text && React.createElement("p", {
     className: "mt-2 text-[14px] font-bold leading-relaxed"
   }, c.text), c.note && React.createElement("p", {
     "data-card-detail-note": true,
@@ -95715,7 +95724,7 @@ const CardDetailModal = ({
     className: "rounded-md bg-sky-900 px-2 py-0.5"
   }, CARD_TYPE_LABEL[m.type]), React.createElement("span", {
     className: "rounded-md bg-slate-800 px-2 py-0.5 text-slate-400"
-  }, "No.", m.no)), m.dexOnly && React.createElement("p", {
+  }, "No.", m.no)), dexLine, m.dexOnly && React.createElement("p", {
     "data-card-dex-only": true,
     className: "mt-2 text-[12px] font-bold text-amber-300",
     style: JA_LABEL_STYLE
@@ -102207,6 +102216,30 @@ const cardDexListOf = (db, mode, tab, all = cardDexAll(db)) => {
   if (mode === 'kind') return all.filter(no => tab === 'mon' ? !!cardMonsterOf(db, no) : !cardMonsterOf(db, no) && !!cardOf(db, no) && cardDeckFilterOk(cardOf(db, no), tab));
   return cardDexList(db, tab);
 };
+const cardDexPackMap = db => {
+  const out = {};
+  CARD_PACKS.forEach(p => {
+    const a = cardPackAllCards(db, p);
+    [...a.monsters, ...a.cards].forEach(no => {
+      if (!out[no]) out[no] = String(p.no);
+    });
+  });
+  Object.values(db.monsters).forEach(m => {
+    if (String(m.wave) === 'hybrid' && !out[m.no]) out[m.no] = 'hybrid';
+  });
+  return out;
+};
+const cardDexPackLabel = k => k === 'hybrid' ? '混血(パックには入らない)' : k ? `第${k}弾パック` : 'そのほか';
+const CARD_DEX_PACK_TONE = Object.freeze({
+  1: 'bg-amber-600',
+  2: 'bg-emerald-600',
+  3: 'bg-blue-600',
+  4: 'bg-purple-600',
+  5: 'bg-pink-600',
+  6: 'bg-red-600',
+  7: 'bg-teal-600',
+  8: 'bg-yellow-600'
+});
 const CARD_DEX_UNIT = Object.freeze({
   pack: 'このパック',
   species: 'この血統',
@@ -102228,6 +102261,7 @@ const CardDex = ({
   const press = useCardLongPress(no => setDetail(no));
   const col = collection || {};
   const all = useMemo(() => cardDexAll(db), [db]);
+  const packMap = useMemo(() => cardDexPackMap(db), [db]);
   const tabList = useMemo(() => cardDexTabsOf(db, mode).map(t => ({
     ...t,
     list: cardDexListOf(db, mode, t.id, all)
@@ -102259,7 +102293,7 @@ const CardDex = ({
     accent: "text-amber-200",
     onBack: onBack
   }), React.createElement("div", {
-    className: `${SCREEN_PANEL_FLAT_CLASS} mb-2 shrink-0 text-[12px] font-bold text-slate-300`
+    className: "mb-1.5 shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-[12px] font-bold text-slate-300"
   }, "集めた種類 ", React.createElement("b", {
     "data-card-dex-total": true,
     className: "text-[15px] text-amber-200"
@@ -102279,7 +102313,11 @@ const CardDex = ({
     key: mode,
     ref: tabRow,
     "data-card-dex-tabs": mode,
-    className: "relative mb-1 flex shrink-0 gap-1 overflow-x-auto pb-1"
+    className: "relative mb-1 flex shrink-0 gap-1 overflow-x-auto pb-1 pr-6",
+    style: {
+      WebkitMaskImage: 'linear-gradient(90deg,#000 85%,transparent)',
+      maskImage: 'linear-gradient(90deg,#000 85%,transparent)'
+    }
   }, tabList.map(t => React.createElement("button", {
     key: t.id,
     type: "button",
@@ -102303,48 +102341,74 @@ const CardDex = ({
   }, label))), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} pb-2`
   }, shown.length ? React.createElement("div", {
-    className: "grid grid-cols-4 gap-1.5"
-  }, shown.map(no => {
-    const c = cardOf(db, no);
-    const m = c ? null : cardMonsterOf(db, no);
-    const have = col[no] || 0;
-    const name = c ? c.name : m ? `${m.name}${m.variant ? `(${m.variant})` : ''}` : no;
-    return React.createElement("button", _extends({
-      key: no,
-      type: "button",
-      "data-card-dex-tile": no,
-      "data-card-dex-have": have
-    }, press(no, () => setDetail(no)), {
-      className: "relative flex flex-col items-center rounded-lg bg-white/5 p-0.5 text-center active:scale-95",
-      style: {
-        WebkitUserSelect: 'none',
-        userSelect: 'none'
-      }
-    }), React.createElement("img", {
-      src: CARD_IMG(c ? c.img : m ? m.img : no),
-      alt: name,
-      loading: "lazy",
-      draggable: false,
-      className: `aspect-[5/7] w-full rounded-[5px] object-cover ${have ? '' : 'opacity-30 grayscale'}`
-    }), have > 0 && React.createElement("span", {
-      className: "absolute right-0.5 top-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-white"
-    }, "×", have), c && !c.ready && React.createElement("span", {
-      className: "absolute left-0.5 top-0.5 rounded-md bg-slate-600 px-1 text-[9px] font-black text-white"
-    }, "準備中"), m && m.variant && React.createElement("span", {
-      className: "absolute left-0.5 top-0.5 rounded-md bg-amber-400 px-1 text-[9px] font-black text-slate-950"
-    }, /キラ/.test(m.variant) ? 'キラ' : '別'), React.createElement(CardNameFit, {
-      name: name,
-      className: `mt-0.5 font-bold leading-tight ${have ? 'text-slate-100' : 'text-slate-500'}`
-    }), React.createElement("span", {
-      className: "text-[9px] font-bold text-slate-500"
-    }, "No.", no));
-  })) : React.createElement(ScreenEmpty, {
+    className: "space-y-2"
+  }, (() => {
+    const keyOf = no => packMap[no] || '';
+    const order = k => k === 'hybrid' ? 900 : k ? Number(k) : 999;
+    const keys = mode === 'pack' ? [''] : [...new Set(shown.map(keyOf))].sort((a, b) => order(a) - order(b));
+    return keys.map(k => {
+      const part = mode === 'pack' ? shown : shown.filter(no => keyOf(no) === k);
+      const inTab = mode === 'pack' ? list : list.filter(no => keyOf(no) === k);
+      return React.createElement("section", {
+        key: k || 'all',
+        "data-card-dex-group": k || undefined
+      }, mode !== 'pack' && React.createElement("div", {
+        "data-card-dex-head": k,
+        className: `mb-1 flex items-center rounded-lg px-2 py-0.5 text-[12px] font-black text-white ${CARD_DEX_PACK_TONE[k] || 'bg-slate-600'}`
+      }, cardDexPackLabel(k), React.createElement("span", {
+        className: "ml-auto text-[11px]"
+      }, haveIn(inTab), "/", inTab.length)), React.createElement("div", {
+        className: "grid grid-cols-4 gap-1.5"
+      }, part.map(no => {
+        const c = cardOf(db, no);
+        const m = c ? null : cardMonsterOf(db, no);
+        const have = col[no] || 0;
+        const name = c ? c.name : m ? m.name : no;
+        const rare = m && m.variant ? /別絵/.test(m.variant) ? '★別絵キラ' : /キラ/.test(m.variant) ? '★キラ' : m.variant : '';
+        return React.createElement("button", _extends({
+          key: no,
+          type: "button",
+          "data-card-dex-tile": no,
+          "data-card-dex-have": have
+        }, press(no, () => setDetail(no)), {
+          className: `relative flex flex-col items-center rounded-lg bg-white/5 p-0.5 text-center active:scale-95 ${rare && /キラ/.test(rare) ? 'ring-2 ring-amber-300' : ''}`,
+          style: {
+            WebkitUserSelect: 'none',
+            userSelect: 'none'
+          }
+        }), React.createElement("img", {
+          src: CARD_IMG(c ? c.img : m ? m.img : no),
+          alt: name,
+          loading: "lazy",
+          draggable: false,
+          className: `aspect-[5/7] w-full rounded-[5px] object-cover ${have ? '' : 'brightness-[.45] saturate-[.6]'}`
+        }), React.createElement("span", {
+          "data-card-dex-count": have,
+          className: `absolute right-0.5 top-0.5 rounded-md px-1 text-[10px] font-black ${have > 0 ? 'bg-emerald-400 text-emerald-950' : 'bg-slate-700 text-slate-200'}`
+        }, have > 0 ? `×${have}` : 'まだ'), c && !c.ready && React.createElement("span", {
+          className: "absolute left-0.5 top-0.5 rounded-md bg-slate-600 px-1 text-[9px] font-black text-white"
+        }, "準備中"), rare && React.createElement("span", {
+          "data-card-dex-rare": true,
+          className: "absolute left-0.5 top-0.5 rounded-md bg-amber-400 px-1 text-[9px] font-black text-slate-950"
+        }, rare), React.createElement(CardNameFit, {
+          name: name,
+          className: `mt-0.5 font-bold leading-tight ${have ? 'text-slate-100' : 'text-slate-500'}`
+        }), React.createElement("span", {
+          className: "text-[9px] font-bold text-slate-500"
+        }, "No.", no));
+      })));
+    });
+  })()) : React.createElement(ScreenEmpty, {
     emoji: "🃏",
     lines: [show === 'have' ? `${unit}のカードはまだ持っていません` : `${unit}は全部集まっています`]
   })), detail && React.createElement(CardDetailModal, {
     db: db,
     no: detail,
-    onClose: () => setDetail(null)
+    onClose: () => setDetail(null),
+    dexInfo: {
+      pack: cardDexPackLabel(packMap[detail]),
+      have: col[detail] || 0
+    }
   }));
 };
 const cardRuleLine = t => String(t).split(/(「[^」]*」|《[^》]*》)/).map((seg, i) => /^「/.test(seg) ? React.createElement("span", {
