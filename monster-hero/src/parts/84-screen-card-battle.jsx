@@ -3021,9 +3021,22 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               {!cardShareOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">つくっている途中(デバッグ)</span>}
             </button>
           )}
+          {/* 戦術カード(96・97。2026-10-29 社長)。公開の印(cardTacticsOpen)までは、デバッグ設定から入ったときだけ出す */}
+          {typeof CardTacticsScreen === 'function' && (debug || cardTacticsOpen()) && (
+            <button type="button" data-card-mode-tactics onClick={() => { Audio_.fgSe.tap(); setView('tactics'); }} className="mhms-card mhms-in flex min-h-[96px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-amber-200 via-amber-400 to-orange-600 px-4 py-3 text-left text-slate-950 active:scale-[.98]">
+              <span aria-hidden="true" className="mhms-mark">TACTICS</span>
+              <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🧠</span><span><b className="block text-[22px] font-black italic leading-tight">戦術カード</b><small className="block text-[11px] font-black text-slate-900/80">デッキの戦い方を組む・カードを引く</small></span></span>
+              {!cardTacticsOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">つくっている途中(デバッグ)</span>}
+            </button>
+          )}
         </div>
       </div>
     );
+  }
+  if (view === 'tactics' && typeof CardTacticsScreen === 'function') {
+    // ビートPを払うときは、戦術カードの保存と同じ取引で(persist はビートPを書く直前に読み直して差だけを足す)
+    return <CardTacticsScreen db={db} decks={save.decks} point={save.point} onBack={() => setView('mode')}
+      onPay={async (cost, entries) => (save.point >= cost ? persist({ point: save.point - cost }, {}, entries) : false)}/>;
   }
   if (view === 'share' && typeof CardDeckShare === 'function') {
     return <CardDeckShare db={db} decks={save.decks} collection={save.collection} frame={(rank && rank.profile && rank.profile.frame) || null} onBack={() => setView('mode')}

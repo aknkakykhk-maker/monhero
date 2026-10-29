@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5e5809d89029ccb3
+// source-sha256: e1eca73571e50ded
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99673,7 +99673,40 @@ const CardBattleScreen = ({
       className: "block text-[11px] font-black text-slate-900/80"
     }, "デッキを登録する・ほかの人のデッキと戦う"))), !cardShareOpen() && React.createElement("span", {
       className: "relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white"
+    }, "つくっている途中(デバッグ)")), typeof CardTacticsScreen === 'function' && (debug || cardTacticsOpen()) && React.createElement("button", {
+      type: "button",
+      "data-card-mode-tactics": true,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        setView('tactics');
+      },
+      className: "mhms-card mhms-in flex min-h-[96px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-amber-200 via-amber-400 to-orange-600 px-4 py-3 text-left text-slate-950 active:scale-[.98]"
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      className: "mhms-mark"
+    }, "TACTICS"), React.createElement("span", {
+      className: "relative flex items-center gap-2"
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      className: "text-3xl leading-none"
+    }, "🧠"), React.createElement("span", null, React.createElement("b", {
+      className: "block text-[22px] font-black italic leading-tight"
+    }, "戦術カード"), React.createElement("small", {
+      className: "block text-[11px] font-black text-slate-900/80"
+    }, "デッキの戦い方を組む・カードを引く"))), !cardTacticsOpen() && React.createElement("span", {
+      className: "relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white"
     }, "つくっている途中(デバッグ)"))));
+  }
+  if (view === 'tactics' && typeof CardTacticsScreen === 'function') {
+    return React.createElement(CardTacticsScreen, {
+      db: db,
+      decks: save.decks,
+      point: save.point,
+      onBack: () => setView('mode'),
+      onPay: async (cost, entries) => save.point >= cost ? persist({
+        point: save.point - cost
+      }, {}, entries) : false
+    });
   }
   if (view === 'share' && typeof CardDeckShare === 'function') {
     return React.createElement(CardDeckShare, {
@@ -110829,6 +110862,864 @@ const cardLevelEntries = async ({
     entries,
     gain
   };
+};
+const CARD_TACTIC_CAT_STYLE = Object.freeze({
+  cond: {
+    label: '条件',
+    bg: 'linear-gradient(160deg,#1d4ed8,#1e3a8a)',
+    chip: 'bg-blue-700'
+  },
+  base: {
+    label: '基本',
+    bg: 'linear-gradient(160deg,#b45309,#7c2d12)',
+    chip: 'bg-amber-700'
+  },
+  breeder: {
+    label: 'ブリーダー',
+    bg: 'linear-gradient(160deg,#7e22ce,#4c1d95)',
+    chip: 'bg-purple-700'
+  },
+  monster: {
+    label: 'モンスター',
+    bg: 'linear-gradient(160deg,#b91c1c,#7f1d1d)',
+    chip: 'bg-red-700'
+  }
+});
+const CARD_TACTIC_RARE_COLOR = Object.freeze({
+  N: '#64748b',
+  R: '#2563eb',
+  SR: '#d97706'
+});
+const cardTacticSpeciesList = db => {
+  const seen = {};
+  Object.values(db && db.monsters || {}).forEach(m => {
+    if (m && m.species && !m.main && !m.variant && !seen[m.species]) seen[m.species] = m.name;
+  });
+  return Object.entries(seen).map(([id, name]) => ({
+    id,
+    name
+  })).sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+};
+const cardTacticRowName = (db, row, which) => {
+  const c = cardTacticOf(which === 'c' ? row.c : row.a);
+  if (!c) return '?';
+  if (which === 'c' && c.g === 'species') {
+    const sp = cardTacticSpeciesList(db).find(x => x.id === row.sp);
+    return `${sp ? sp.name : '?'}の相手`;
+  }
+  return c.name;
+};
+const CardTacticFace = ({
+  card,
+  owned = true,
+  count = 0,
+  onClick = null,
+  small = false,
+  mark = ''
+}) => {
+  const st = CARD_TACTIC_CAT_STYLE[card.cat] || CARD_TACTIC_CAT_STYLE.cond;
+  const Tag = onClick ? 'button' : 'div';
+  return React.createElement(Tag, {
+    type: onClick ? 'button' : undefined,
+    "data-card-tactic": card.id,
+    "data-card-tactic-owned": owned ? '1' : '0',
+    onClick: onClick || undefined,
+    className: `relative flex flex-col rounded-xl border-2 p-1.5 text-left ${owned ? 'border-white/60' : 'border-white/15 opacity-40 grayscale'} ${small ? 'min-h-[78px]' : 'min-h-[104px]'} ${onClick ? 'active:scale-[.97]' : ''}`,
+    style: {
+      background: st.bg
+    }
+  }, React.createElement("span", {
+    className: "flex items-center gap-1"
+  }, React.createElement("span", {
+    className: "rounded px-1 text-[10px] font-black text-white",
+    style: {
+      background: CARD_TACTIC_RARE_COLOR[card.r]
+    }
+  }, card.r), !small && React.createElement("span", {
+    className: "whitespace-nowrap text-[10px] font-bold text-white/70"
+  }, st.label), count > 1 && React.createElement("span", {
+    className: "ml-auto text-[10px] font-black text-amber-200"
+  }, "×", count), mark && React.createElement("span", {
+    className: "ml-auto rounded bg-emerald-500 px-1 text-[10px] font-black text-white"
+  }, mark)), React.createElement("b", {
+    className: `mt-1 block font-black leading-tight text-white ${small ? 'text-[11px]' : 'text-[13px]'}`,
+    style: JA_WRAP_STYLE
+  }, card.name), !small && React.createElement("small", {
+    className: "mt-0.5 block text-[10px] leading-snug text-white/80",
+    style: JA_WRAP_STYLE
+  }, card.desc));
+};
+const CardTacticPicker = ({
+  db,
+  tactics,
+  cat,
+  title,
+  onPick,
+  onClose,
+  allowNone = false,
+  hideSecs = []
+}) => {
+  const list = CARD_TACTIC_CARDS.filter(c => c.cat === cat && !hideSecs.includes(c.sec));
+  const secs = [...new Set(list.map(c => c.sec))];
+  const [sp, setSp] = useState(null);
+  if (sp) {
+    return React.createElement("div", {
+      "data-card-tactic-species": true,
+      className: "fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3"
+    }, React.createElement(ScreenHead, {
+      title: "種族をえらぶ",
+      accent: "text-amber-200",
+      onBack: () => setSp(null)
+    }), React.createElement("div", {
+      className: "grid min-h-0 flex-1 grid-cols-3 content-start gap-1.5 overflow-y-auto"
+    }, cardTacticSpeciesList(db).map(x => React.createElement("button", {
+      key: x.id,
+      type: "button",
+      "data-card-tactic-species-pick": x.id,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        onPick(sp, x.id);
+      },
+      className: "rounded-lg border border-white/20 bg-slate-800 px-1 py-2 text-[12px] font-black text-white active:scale-[.97]"
+    }, x.name))));
+  }
+  return React.createElement("div", {
+    "data-card-tactic-picker": cat,
+    className: "fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3"
+  }, React.createElement(ScreenHead, {
+    title: title,
+    accent: "text-amber-200",
+    onBack: onClose
+  }), React.createElement("div", {
+    className: "min-h-0 flex-1 overflow-y-auto pb-3"
+  }, allowNone && React.createElement("button", {
+    type: "button",
+    "data-card-tactic-pick-none": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      onPick(null);
+    },
+    className: "mb-2 w-full rounded-xl border border-white/25 bg-slate-800 py-2 text-[13px] font-black text-white"
+  }, "外す"), secs.map(s => React.createElement("div", {
+    key: s,
+    className: "mb-2"
+  }, React.createElement("p", {
+    className: "mb-1 text-[12px] font-black text-amber-200"
+  }, s), React.createElement("div", {
+    className: "grid grid-cols-3 gap-1.5"
+  }, list.filter(c => c.sec === s).map(c => {
+    const owned = cardTacticsOwns(tactics, c.id);
+    return React.createElement(CardTacticFace, {
+      key: c.id,
+      card: c,
+      owned: owned,
+      small: true,
+      onClick: owned ? () => {
+        Audio_.fgSe.tap();
+        if (c.g === 'species') setSp(c.id);else onPick(c.id);
+      } : null
+    });
+  }))))));
+};
+const CardTacticRow = ({
+  db,
+  row,
+  i,
+  n,
+  onChange,
+  onMove,
+  onRemove,
+  onPickC,
+  onPickA
+}) => React.createElement("div", {
+  "data-card-tactic-row": i,
+  className: `flex items-center gap-1 rounded-xl border-2 border-slate-700 bg-slate-900 p-1 ${row.on ? '' : 'opacity-50'}`
+}, React.createElement("b", {
+  className: "w-4 text-center text-[12px] text-amber-200"
+}, i + 1), React.createElement("button", {
+  type: "button",
+  "data-card-tactic-row-on": row.on ? '1' : '0',
+  onClick: () => {
+    Audio_.fgSe.tap();
+    onChange({
+      ...row,
+      on: !row.on
+    });
+  },
+  className: `rounded-md px-1.5 py-1 text-[10px] font-black text-white ${row.on ? 'bg-emerald-600' : 'bg-slate-600'}`
+}, row.on ? 'ON' : 'OFF'), React.createElement("button", {
+  type: "button",
+  "data-card-tactic-row-c": true,
+  onClick: onPickC,
+  className: "min-w-0 flex-1 rounded-lg bg-blue-700 px-1.5 py-1.5 text-left text-[11px] font-black leading-tight text-white",
+  style: JA_WRAP_STYLE
+}, cardTacticRowName(db, row, 'c')), React.createElement("span", {
+  className: "text-[10px] text-amber-300"
+}, "▶"), React.createElement("button", {
+  type: "button",
+  "data-card-tactic-row-a": true,
+  onClick: onPickA,
+  className: `min-w-0 flex-1 rounded-lg px-1.5 py-1.5 text-left text-[11px] font-black leading-tight text-white ${(CARD_TACTIC_CAT_STYLE[(cardTacticOf(row.a) || {}).cat] || {}).chip || 'bg-red-700'}`,
+  style: JA_WRAP_STYLE
+}, cardTacticRowName(db, row, 'a')), React.createElement("span", {
+  className: "flex flex-col"
+}, React.createElement("button", {
+  type: "button",
+  "aria-label": "上へ",
+  disabled: i === 0,
+  onClick: () => onMove(-1),
+  className: "px-1 text-[11px] leading-none text-slate-300 disabled:opacity-20"
+}, "▲"), React.createElement("button", {
+  type: "button",
+  "aria-label": "下へ",
+  disabled: i >= n - 1,
+  onClick: () => onMove(1),
+  className: "px-1 text-[11px] leading-none text-slate-300 disabled:opacity-20"
+}, "▼")), React.createElement("button", {
+  type: "button",
+  "aria-label": "外す",
+  "data-card-tactic-row-remove": true,
+  onClick: onRemove,
+  className: "px-1 text-[13px] font-black text-slate-400"
+}, "×"));
+const CARD_TACTIC_AUTO = Object.freeze({
+  monster: [['ko', 'atk'], ['myLife.30', 'guardDie'], ['myGuts.5', 'cost.大技(4以上)'], ['foeLife.50', 'atk'], ['any', 'guard']],
+  breeder: [['any', 'save'], ['foeAlive.3', 'fieldCard'], ['myKo', 'bEff.倒れた子を戻す']]
+});
+const cardTacticAutoFill = (t, rows, cat, max) => {
+  const out = rows.slice();
+  CARD_TACTIC_AUTO[cat].forEach(([c, a]) => {
+    if (out.length >= max) return;
+    if (!cardTacticsOwns(t, c) || !cardTacticsOwns(t, a) || out.some(r => r.c === c && r.a === a)) return;
+    out.push({
+      c,
+      a,
+      on: true
+    });
+  });
+  return out;
+};
+const CARD_TACTIC_TEAR_MS = 1150;
+const CARD_TACTIC_SPOT_MS = 1500;
+const CARD_TACTIC_SPOT_BACK_MS = 320;
+const CardTacticPackOpen = ({
+  packs,
+  onDone
+}) => {
+  const [pi, setPi] = useState(0);
+  const [phase, setPhase] = useState('closed');
+  const [flipped, setFlipped] = useState([]);
+  const [spot, setSpot] = useState(null);
+  const timers = useRef([]);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  const later = (fn, ms) => {
+    timers.current.push(setTimeout(fn, ms));
+  };
+  const se = name => {
+    try {
+      Audio_.fgSe[name]();
+    } catch (e) {}
+  };
+  const cards = packs[pi] || [];
+  const allOpen = flipped.length >= cards.length;
+  const last = pi >= packs.length - 1;
+  const tear = () => {
+    if (phase !== 'closed') return;
+    se('special');
+    setPhase('tearing');
+    later(() => se('crit'), 520);
+    later(() => setPhase('open'), CARD_TACTIC_TEAR_MS);
+  };
+  const spotOff = () => {
+    setSpot(sp => sp && !sp.leaving ? {
+      ...sp,
+      leaving: true
+    } : sp);
+    later(() => setSpot(null), CARD_TACTIC_SPOT_BACK_MS);
+  };
+  const reveal = i => {
+    se('card');
+    setFlipped(f => f.includes(i) ? f : [...f, i]);
+    if (cards[i] && cards[i].r === 'SR') {
+      later(() => {
+        setSpot({
+          i,
+          leaving: false
+        });
+        se('crit');
+        se('fusion');
+      }, 380);
+      later(spotOff, 380 + CARD_TACTIC_SPOT_MS);
+    }
+  };
+  const flip = i => {
+    if (flipped.includes(i) || phase !== 'open' || spot) return;
+    reveal(i);
+  };
+  const flipAll = () => {
+    if (spot) return;
+    let at = 0;
+    cards.map((_, i) => i).filter(i => !flipped.includes(i)).forEach(i => {
+      later(() => reveal(i), at);
+      at += cards[i].r === 'SR' ? 380 + CARD_TACTIC_SPOT_MS + CARD_TACTIC_SPOT_BACK_MS + 120 : 140;
+    });
+  };
+  const next = () => {
+    Audio_.fgSe.tap();
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+    setPi(x => x + 1);
+    setPhase('closed');
+    setFlipped([]);
+    setSpot(null);
+  };
+  const spotCard = spot ? cardTacticOf(cards[spot.i].id) : null;
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-card-tactic-open": true,
+    "data-card-tactic-open-phase": phase,
+    className: SCREEN_SHELL_CLASS
+  }, React.createElement(ScreenHead, {
+    title: "戦術カード",
+    accent: "text-amber-200",
+    note: packs.length > 1 ? `${pi + 1} / ${packs.length}回` : ''
+  }), React.createElement("div", {
+    className: `${SCREEN_LIST_CLASS} relative flex flex-col items-center justify-center overflow-hidden pb-2`
+  }, phase !== 'open' ? React.createElement("button", {
+    type: "button",
+    "data-card-tactic-pack": true,
+    onClick: tear,
+    "aria-label": "パックを開ける",
+    className: `relative h-[320px] w-[216px] overflow-hidden rounded-[14px] border-[3px] border-white/85 shadow-2xl ${phase === 'tearing' ? 'animate-pulse' : ''}`,
+    style: {
+      background: 'linear-gradient(165deg,#7c2d12 0%,#b45309 45%,#1e1b4b 100%)'
+    }
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "absolute inset-0 opacity-35",
+    style: {
+      background: 'repeating-conic-gradient(from 0deg at 50% 62%, rgba(255,255,255,.55) 0 6deg, transparent 6deg 18deg)'
+    }
+  }), phase === 'closed' && React.createElement("span", {
+    "aria-hidden": "true",
+    className: "absolute inset-x-0 top-0 h-[7%]",
+    style: {
+      background: 'repeating-linear-gradient(90deg, rgba(255,255,255,.9) 0 6px, rgba(255,255,255,.45) 6px 12px)'
+    }
+  }), phase === 'tearing' && React.createElement("span", {
+    "aria-hidden": "true",
+    className: "absolute inset-x-[30%] -top-4 bottom-0 bg-gradient-to-b from-white via-amber-100/80 to-transparent blur-md"
+  }), React.createElement("span", {
+    className: "absolute inset-x-0 top-[18%] block text-center text-[40px] font-black leading-none text-white",
+    style: {
+      WebkitTextStroke: '3px #111',
+      paintOrder: 'stroke fill'
+    }
+  }, "戦術"), React.createElement("span", {
+    className: "absolute inset-x-0 top-[34%] block text-center text-[15px] font-black tracking-wider text-white/90"
+  }, "MFバトルカード"), React.createElement("span", {
+    className: "absolute inset-x-0 top-[48%] block text-center text-[52px]"
+  }, "🧠"), React.createElement("span", {
+    className: "absolute inset-x-[18%] bottom-[3%] rounded-full bg-black/55 py-0.5 text-center text-[14px] font-black text-white"
+  }, "戦術カード 8枚"), phase === 'closed' && React.createElement("span", {
+    className: "absolute inset-x-0 bottom-[14%] block text-center text-[12px] font-black text-amber-100"
+  }, "タップで開ける")) : React.createElement("div", {
+    className: "grid w-full max-w-[420px] grid-cols-4 gap-1.5 px-1"
+  }, cards.map((c, i) => {
+    const card = cardTacticOf(c.id);
+    const open = flipped.includes(i);
+    return React.createElement("button", {
+      key: i,
+      type: "button",
+      "data-card-tactic-open-card": i,
+      "data-card-tactic-open-flipped": open ? '1' : '0',
+      onClick: () => flip(i),
+      className: "relative"
+    }, open && card ? React.createElement(CardTacticFace, {
+      card: card,
+      small: true,
+      mark: c.dup ? '' : 'NEW'
+    }) : React.createElement("span", {
+      className: `flex min-h-[78px] items-center justify-center rounded-xl border-2 border-white/50 text-[22px] ${c.r === 'SR' ? 'animate-pulse shadow-[0_0_14px_#f59e0b]' : ''}`,
+      style: {
+        background: 'linear-gradient(160deg,#334155,#0f172a)'
+      }
+    }, "🧠"), open && c.dup && React.createElement("span", {
+      className: "absolute bottom-0.5 right-0.5 rounded bg-slate-900/80 px-1 text-[9px] font-black text-amber-200"
+    }, "かけら+1"));
+  })), spotCard && React.createElement("button", {
+    type: "button",
+    "data-card-tactic-spot": true,
+    onClick: spotOff,
+    className: `absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 transition-opacity ${spot.leaving ? 'opacity-0' : 'opacity-100'}`
+  }, React.createElement("span", {
+    className: "mb-2 rounded-full bg-amber-500 px-3 py-0.5 text-[16px] font-black text-white"
+  }, "SR!"), React.createElement("span", {
+    className: "w-[200px]"
+  }, React.createElement(CardTacticFace, {
+    card: spotCard
+  })))), React.createElement("div", {
+    className: `${SCREEN_FOOTER_CLASS} flex gap-2`
+  }, phase === 'open' && !allOpen && React.createElement("button", {
+    type: "button",
+    "data-card-tactic-open-all": true,
+    onClick: flipAll,
+    className: "mh-button min-h-[48px] flex-1 rounded-2xl font-black"
+  }, "全部めくる"), phase === 'open' && allOpen && !last && React.createElement("button", {
+    type: "button",
+    "data-card-tactic-open-next": true,
+    onClick: next,
+    className: "mh-button mh-button-primary min-h-[48px] flex-1 rounded-2xl font-black"
+  }, "次へ"), phase === 'open' && allOpen && last && React.createElement("button", {
+    type: "button",
+    "data-card-tactic-open-done": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      onDone();
+    },
+    className: "mh-button mh-button-primary min-h-[48px] flex-1 rounded-2xl font-black"
+  }, "とじる")));
+};
+const CardTacticsScreen = ({
+  db,
+  decks,
+  point = 0,
+  onPay,
+  onBack
+}) => {
+  const [data, setData] = useState(null);
+  const [tab, setTab] = useState('build');
+  const [frame, setFrame] = useState('base');
+  const [pick, setPick] = useState(null);
+  const [opening, setOpening] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState('');
+  const reload = async () => {
+    const d = await cardTacticsLoad();
+    setData(d);
+    return d;
+  };
+  useEffect(() => {
+    void reload();
+  }, []);
+  if (!data) return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-card-tactics": true,
+    className: SCREEN_SHELL_CLASS
+  }, React.createElement(ScreenHead, {
+    title: "戦術カード",
+    accent: "text-amber-200",
+    onBack: onBack
+  }));
+  if (opening) return React.createElement(CardTacticPackOpen, {
+    packs: opening,
+    onDone: () => setOpening(null)
+  });
+  const t = data.tactics;
+  const lv = data.info.level;
+  const open = cardLevelFrames(lv);
+  const nextF = cardLevelNextFrame(lv);
+  const deck = (decks && decks.decks || []).find(d => d.id === (decks && decks.active)) || (decks && decks.decks || [])[0] || null;
+  const monOf = i => deck ? cardMonsterOf(db, deck.monsters[i]) : null;
+  const saveFrames = async frames => {
+    const fresh = await cardTacticsLoad();
+    const next = {
+      ...fresh.tactics,
+      frames: cardTacticNormalizeFrames(frames)
+    };
+    const ok = await saveStoredValuesOrRollback([{
+      key: CARD_TACTICS_KEY,
+      before: fresh.rawT,
+      next
+    }], storeGet, storeSet);
+    if (!ok) {
+      setNotice('保存できませんでした');
+      return;
+    }
+    setData({
+      ...fresh,
+      tactics: next,
+      rawT: next
+    });
+  };
+  const f = t.frames;
+  const rowsOf = k => k === 'breeder' ? f.breeder : f.mons[k];
+  const setRows = (k, rows) => saveFrames(k === 'breeder' ? {
+    ...f,
+    breeder: rows
+  } : {
+    ...f,
+    mons: f.mons.map((r, i) => i === k ? rows : r)
+  });
+  const maxOf = k => k === 'breeder' ? open.breeder : open.mon;
+  const catOf = k => k === 'breeder' ? 'breeder' : 'monster';
+  const editRow = (k, i, which) => {
+    const rows = rowsOf(k);
+    setPick({
+      cat: which === 'c' ? 'cond' : catOf(k),
+      hideSecs: which === 'c' && k === 'breeder' ? ['この子', '守るとき'] : [],
+      title: which === 'c' ? '条件カードをえらぶ' : `${CARD_TACTIC_CAT_STYLE[catOf(k)].label}カードをえらぶ`,
+      onPick: (id, sp) => {
+        setPick(null);
+        if (!id) return;
+        const r = {
+          ...rows[i],
+          [which]: id
+        };
+        if (which === 'c') {
+          if (sp) r.sp = sp;else delete r.sp;
+        }
+        void setRows(k, rows.map((x, j) => j === i ? r : x));
+      }
+    });
+  };
+  const addRow = k => {
+    const rows = rowsOf(k);
+    if (rows.length >= maxOf(k)) return;
+    void setRows(k, [...rows, {
+      c: 'any',
+      a: k === 'breeder' ? 'save' : 'atk',
+      on: true
+    }]);
+  };
+  const pay = async (count, payWith) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const fresh = await cardTacticsLoad();
+      const r = cardTacticsPull(fresh.tactics, count, {
+        payWith,
+        point
+      }, Math.random);
+      if (!r) {
+        setNotice(payWith === 'ticket' ? '引く券が足りません' : 'ビートPが足りません');
+        return;
+      }
+      Audio_.fgSe.tap();
+      const entries = [{
+        key: CARD_TACTICS_KEY,
+        before: fresh.rawT,
+        next: r.next
+      }];
+      const ok = await onPay(r.cost, entries);
+      if (!ok) {
+        setNotice('保存できませんでした');
+        return;
+      }
+      setData({
+        ...fresh,
+        tactics: r.next,
+        rawT: r.next
+      });
+      setOpening(r.packs);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const exchange = id => {
+    setPick(null);
+    void (async () => {
+      const fresh = await cardTacticsLoad();
+      const next = cardTacticsExchange(fresh.tactics, id);
+      if (!next) {
+        setNotice('かけらが足りません');
+        return;
+      }
+      const ok = await saveStoredValuesOrRollback([{
+        key: CARD_TACTICS_KEY,
+        before: fresh.rawT,
+        next
+      }], storeGet, storeSet);
+      if (ok) {
+        setData({
+          ...fresh,
+          tactics: next,
+          rawT: next
+        });
+        setOpening([[{
+          id,
+          r: (cardTacticOf(id) || {}).r || 'N',
+          dup: false
+        }]]);
+      } else setNotice('保存できませんでした');
+    })();
+  };
+  const ownCount = CARD_TACTIC_CARDS.filter(c => cardTacticsOwns(t, c.id)).length;
+  const frameTabs = [{
+    k: 'base',
+    label: '基本',
+    icon: '⭐',
+    sub: `${f.base.filter(Boolean).length}/${open.base}`
+  }, {
+    k: 'breeder',
+    label: 'ブリーダー',
+    icon: '🧑',
+    sub: `${f.breeder.length}/${open.breeder}行`
+  }, ...[0, 1, 2].map(i => ({
+    k: i,
+    label: (monOf(i) || {}).name || ['左の子', '真ん中の子', '右の子'][i],
+    mon: monOf(i),
+    sub: `${f.mons[i].length}/${open.mon}行`
+  }))];
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-card-tactics": true,
+    className: SCREEN_SHELL_CLASS
+  }, React.createElement(ScreenHead, {
+    title: "戦術カード",
+    accent: "text-amber-200",
+    onBack: onBack,
+    note: cardTacticsOpen() ? '' : 'つくっている途中(デバッグ)'
+  }), React.createElement("div", {
+    className: `${SCREEN_LIST_CLASS} space-y-2 pb-2`
+  }, React.createElement("div", {
+    "data-card-tactics-level": true,
+    className: `${SCREEN_PANEL_CLASS} py-2`
+  }, React.createElement("div", {
+    className: "flex items-baseline gap-2"
+  }, React.createElement("b", {
+    className: "text-[18px] font-black text-amber-200"
+  }, "バトルカード Lv", lv), React.createElement("small", {
+    className: "text-[11px] font-bold text-slate-300"
+  }, `次まで ${data.info.need - data.info.into}`)), React.createElement("div", {
+    className: "mt-1 h-2 overflow-hidden rounded-full bg-slate-700"
+  }, React.createElement("i", {
+    className: "block h-full bg-gradient-to-r from-emerald-400 to-amber-300",
+    style: {
+      width: `${Math.round(data.info.into / data.info.need * 100)}%`
+    }
+  })), nextF && React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold text-slate-300",
+    style: JA_WRAP_STYLE
+  }, `次は Lv${nextF.at} で${[nextF.base ? `基本${nextF.base}枚目` : '', nextF.breeder ? `ブリーダー${nextF.breeder}行目` : '', nextF.mon ? `各モンスター${nextF.mon}行目` : ''].filter(Boolean).join('・')}が開く`)), React.createElement("div", {
+    className: "flex gap-1"
+  }, [['build', '組む'], ['pull', '引く'], ['list', `持っている ${ownCount}/${CARD_TACTIC_CARDS.length}`]].map(([k, l]) => React.createElement("button", {
+    key: k,
+    type: "button",
+    "data-card-tactics-tab": k,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setTab(k);
+    },
+    className: `flex-1 rounded-xl border-2 py-1.5 text-[12px] font-black ${tab === k ? 'border-amber-300 bg-amber-900/50 text-amber-100' : 'border-slate-700 bg-slate-900 text-slate-300'}`
+  }, l))), notice && React.createElement("p", {
+    "data-card-tactics-notice": true,
+    className: "rounded-lg bg-amber-500/15 p-1.5 text-[12px] font-bold text-amber-100"
+  }, notice), tab === 'build' && React.createElement("div", {
+    "data-card-tactics-build": true,
+    className: "space-y-1.5"
+  }, React.createElement("div", {
+    className: "flex gap-1"
+  }, frameTabs.map(x => React.createElement("button", {
+    key: x.k,
+    type: "button",
+    "data-card-tactics-frame": x.k,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setFrame(x.k);
+    },
+    className: `min-w-0 flex-1 rounded-lg border-2 px-0.5 py-1 text-center ${frame === x.k ? 'border-amber-300 bg-amber-900/40' : 'border-slate-700 bg-slate-900'}`
+  }, x.mon ? React.createElement("img", {
+    src: CARD_IMG(x.mon.img),
+    alt: "",
+    className: "mx-auto h-[30px] w-[22px] rounded object-cover"
+  }) : React.createElement("span", {
+    className: "block text-[18px] leading-[30px]"
+  }, x.icon), React.createElement("span", {
+    className: "block truncate text-[10px] font-black text-white"
+  }, x.label), React.createElement("span", {
+    className: "block text-[9px] font-bold text-slate-400"
+  }, x.sub)))), frame === 'base' ? React.createElement("div", {
+    className: "space-y-1.5"
+  }, [0, 1, 2].map(i => {
+    const c = cardTacticOf(f.base[i]);
+    const locked = i >= open.base;
+    const at = (CARD_LEVEL_FRAMES.find(x => x.base === i + 1) || {}).at;
+    return React.createElement("button", {
+      key: i,
+      type: "button",
+      "data-card-tactics-base": i,
+      disabled: locked,
+      onClick: () => setPick({
+        cat: 'base',
+        title: i === 0 ? 'メインの基本カード' : `サブの基本カード(${i}枚目)`,
+        allowNone: true,
+        onPick: id => {
+          setPick(null);
+          void saveFrames({
+            ...f,
+            base: f.base.map((x, j) => j === i ? id : x)
+          });
+        }
+      }),
+      className: `flex w-full items-center gap-2 rounded-xl border-2 p-2 text-left ${locked ? 'border-dashed border-slate-600 bg-slate-900 text-slate-400' : i === 0 ? 'border-amber-200 bg-gradient-to-r from-orange-900 to-amber-700' : 'border-slate-300 bg-gradient-to-r from-slate-700 to-slate-600'}`
+    }, React.createElement("span", {
+      className: "text-[11px] font-black text-white/80"
+    }, i === 0 ? 'メイン' : `サブ${i}`), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      className: "block text-[14px] font-black text-white"
+    }, locked ? `Lv${at} で開く` : c ? c.name : '(なし)'), !locked && React.createElement("small", {
+      className: "block text-[10px] text-white/80",
+      style: JA_WRAP_STYLE
+    }, c ? c.desc : i === 0 ? 'どの行にも当たらない場面は、この型で打つ' : '型を3分の1だけ足す')));
+  }), React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, "メインはそのまま、サブは型を3分の1だけ足します。")) : React.createElement("div", {
+    className: "space-y-1"
+  }, rowsOf(frame).map((r, i, all) => React.createElement(CardTacticRow, {
+    key: i,
+    db: db,
+    row: r,
+    i: i,
+    n: all.length,
+    onChange: nr => {
+      void setRows(frame, all.map((x, j) => j === i ? nr : x));
+    },
+    onMove: d => {
+      const a = all.slice();
+      const j = i + d;
+      if (j < 0 || j >= a.length) return;
+      [a[i], a[j]] = [a[j], a[i]];
+      Audio_.fgSe.tap();
+      void setRows(frame, a);
+    },
+    onRemove: () => {
+      Audio_.fgSe.tap();
+      void setRows(frame, all.filter((_, j) => j !== i));
+    },
+    onPickC: () => editRow(frame, i, 'c'),
+    onPickA: () => editRow(frame, i, 'a')
+  })), rowsOf(frame).length < maxOf(frame) && React.createElement("button", {
+    type: "button",
+    "data-card-tactics-add": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      addRow(frame);
+    },
+    className: "w-full rounded-xl border-2 border-dashed border-slate-500 py-2 text-[12px] font-black text-slate-200"
+  }, "＋ 行を足す"), (frame === 'breeder' ? CARD_FRAME_MAX_TEXT('breeder', open.breeder) : CARD_FRAME_MAX_TEXT('mon', open.mon)) && React.createElement("p", {
+    className: "text-center text-[11px] font-bold text-slate-400"
+  }, frame === 'breeder' ? CARD_FRAME_MAX_TEXT('breeder', open.breeder) : CARD_FRAME_MAX_TEXT('mon', open.mon)), React.createElement("div", {
+    className: "flex gap-1.5 pt-1"
+  }, frame !== 'breeder' && React.createElement("button", {
+    type: "button",
+    "data-card-tactics-copy": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      void saveFrames({
+        ...f,
+        mons: [0, 1, 2].map(() => f.mons[frame].slice())
+      });
+      setNotice('この子の行を、ほかの2体にも写しました');
+    },
+    className: "mh-button min-h-[44px] flex-1 rounded-xl text-[11px] font-black"
+  }, "この子の行を", React.createElement("br", null), "ほかの2体にも写す"), React.createElement("button", {
+    type: "button",
+    "data-card-tactics-auto": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      void setRows(frame, cardTacticAutoFill(t, rowsOf(frame), catOf(frame), maxOf(frame)));
+    },
+    className: "mh-button mh-button-primary min-h-[44px] flex-1 rounded-xl text-[11px] font-black"
+  }, "おまかせで", React.createElement("br", null), "あいている行を埋める")), React.createElement("p", {
+    className: "text-[11px] font-bold leading-snug text-slate-400",
+    style: JA_WRAP_STYLE
+  }, frame === 'breeder' ? '攻撃の番は、モンスターの枠のあとに見ます。ガッツの番はここだけを見ます。' : '上の行から見て、当たった行の手をこの子が出します。守るときは、この子が狙われたときに見ます。'))), tab === 'pull' && React.createElement("div", {
+    "data-card-tactics-pull": true,
+    className: "space-y-2"
+  }, React.createElement("div", {
+    className: `${SCREEN_PANEL_CLASS} py-2 text-[12px] font-bold text-slate-200`,
+    style: JA_WRAP_STYLE
+  }, "1回で8枚(N 70%・R 25%・SR 5%)。SR が出ないまま7回引いたら、8回目の最後の1枚は SR。だぶったカードは「かけら」になり、10個でまだ持っていないカードを1枚えらべます。", React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-x-3 text-[12px] font-black text-amber-200"
+  }, React.createElement("span", {
+    "data-card-tactics-point": true
+  }, `ビートP ${point.toLocaleString()}`), React.createElement("span", {
+    "data-card-tactics-tickets": true
+  }, `引く券 ${t.tickets}枚`), React.createElement("span", {
+    "data-card-tactics-shards": true
+  }, `かけら ${t.shards}個`))), React.createElement("button", {
+    type: "button",
+    "data-card-tactics-buy": "1",
+    disabled: busy || point < cardTacticsPrice(1),
+    onClick: () => {
+      void pay(1, 'point');
+    },
+    className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40"
+  }, "1回引く(300ビートP)"), React.createElement("button", {
+    type: "button",
+    "data-card-tactics-buy": "5",
+    disabled: busy || point < cardTacticsPrice(5),
+    onClick: () => {
+      void pay(5, 'point');
+    },
+    className: "mh-button min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40"
+  }, "5回まとめて引く(1,350ビートP)"), React.createElement("button", {
+    type: "button",
+    "data-card-tactics-ticket": true,
+    disabled: busy || t.tickets < 1,
+    onClick: () => {
+      void pay(1, 'ticket');
+    },
+    className: "mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40"
+  }, `引く券で1回引く(のこり${t.tickets}枚)`), React.createElement("button", {
+    type: "button",
+    "data-card-tactics-exchange": true,
+    disabled: t.shards < CARD_TACTICS_SHARD_COST,
+    onClick: () => setPick({
+      cat: 'all-missing',
+      title: 'かけら10個で1枚えらぶ',
+      onPick: exchange
+    }),
+    className: "mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40"
+  }, `かけらで1枚えらぶ(${t.shards}/${CARD_TACTICS_SHARD_COST})`)), tab === 'list' && React.createElement("div", {
+    "data-card-tactics-list": true,
+    className: "space-y-2"
+  }, ['base', 'breeder', 'monster', 'cond'].map(cat => React.createElement("div", {
+    key: cat
+  }, React.createElement("p", {
+    className: "mb-1 text-[12px] font-black text-amber-200"
+  }, `${CARD_TACTIC_CAT_STYLE[cat].label}カード ${CARD_TACTIC_CARDS.filter(c => c.cat === cat && cardTacticsOwns(t, c.id)).length}/${CARD_TACTIC_CARDS.filter(c => c.cat === cat).length}`), React.createElement("div", {
+    className: "grid grid-cols-3 gap-1.5"
+  }, CARD_TACTIC_CARDS.filter(c => c.cat === cat).map(c => React.createElement(CardTacticFace, {
+    key: c.id,
+    card: c,
+    small: true,
+    owned: cardTacticsOwns(t, c.id),
+    count: t.own[c.id] || 0
+  }))))))), pick && pick.cat === 'all-missing' && React.createElement("div", {
+    "data-card-tactic-picker": "missing",
+    className: "fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3"
+  }, React.createElement(ScreenHead, {
+    title: pick.title,
+    accent: "text-amber-200",
+    onBack: () => setPick(null)
+  }), React.createElement("div", {
+    className: "grid min-h-0 flex-1 grid-cols-3 content-start gap-1.5 overflow-y-auto pb-3"
+  }, CARD_TACTIC_CARDS.filter(c => !cardTacticsOwns(t, c.id)).map(c => React.createElement(CardTacticFace, {
+    key: c.id,
+    card: c,
+    small: true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      pick.onPick(c.id);
+    }
+  })))), pick && pick.cat !== 'all-missing' && React.createElement(CardTacticPicker, {
+    db: db,
+    tactics: t,
+    cat: pick.cat,
+    title: pick.title,
+    allowNone: !!pick.allowNone,
+    hideSecs: pick.hideSecs || [],
+    onPick: pick.onPick,
+    onClose: () => setPick(null)
+  }));
+};
+const CARD_FRAME_MAX_TEXT = (kind, n) => {
+  const nx = CARD_LEVEL_FRAMES.find(x => (kind === 'breeder' ? x.breeder : x.mon) > n);
+  return nx ? `${kind === 'breeder' ? nx.breeder : nx.mon}行目は Lv${nx.at} で開く` : '';
 };
 const DEBUG_TRIALS = [{
   id: 'rhythm_mon_ab1',
