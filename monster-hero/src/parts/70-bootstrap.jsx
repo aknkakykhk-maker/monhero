@@ -2641,6 +2641,9 @@ const createAnimationStyle = () => {
     [data-tactics-look][data-fx-level="STANDARD"] :is([data-slot-ring], [data-card-shine], [data-enemy-ring])::before,
     [data-tactics-look][data-fx-level="STANDARD"] :is([data-slot-index], [data-card-gem], [data-enemy-hpbar])::after,
     [data-tactics-look][data-fx-level="STANDARD"] [data-slot-circle] { animation: none !important; }
+    /* バトルの枠の魂格オーラ(SoulRankAura is-battle)。大きさは枠の絵に合わせて小さめ。標準では動きを止める(2026-10-29) */
+    .mh-reincarnate-aura.is-battle{inset:-24%}
+    .mh-reincarnate-aura.is-battle.is-still, .mh-reincarnate-aura.is-battle.is-still *, .mh-reincarnate-aura.is-battle.is-still *::before, .mh-reincarnate-aura.is-battle.is-still *::after { animation: none !important; }
     [data-tactics-look]:is([data-fx-level="LIGHT"], [data-fx-level="MINIMAL"]) * { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
     /* 最軽量は、次の行動の札・狙われている枠の点滅(animate-pulse)も止め、何も動き続けない画面にする */
     [data-tactics-look][data-fx-level="MINIMAL"] .animate-pulse { animation: none !important; }

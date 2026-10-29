@@ -608,7 +608,11 @@ const CARD_PVP = (() => {
     game: null, startMsg: null, foeInMatch: false, mySeq: 0, outbox: [], theirSeq: 0, inbox: {}, history: [], result: null, foeOpen: null, error: '', broken: '',
     offline: false, timeouts: 0, autoActing: false, chatAt: 0, mode: 'private', seekAt: 0, seekers: {}, lobbyCount: 0, joining: '', joinAt: 0, ownCode: '', reported: '', pick: false, notice: '', // pick … 入口の一覧から選んで入った / notice … 入口に出す一言
     round: 0, again: null, foeAgain: null, foeGone: false }); // もう1戦: round … いまの試合の回 / again … 自分が押した次の回 { rd, seed, salt, seal } / foeAgain … 相手が押した次の回 { rd, seal }
-  const emit = () => listeners.forEach((fn) => { try { fn(s); } catch (_) { /* 画面の都合で落ちても部屋は続ける */ } });
+  const emit = () => {
+    // 部屋で相手を待っているあいだは、フレンドに「部屋で待ち中」と知らせる(34 の friendsSetRoomWaiting。2026-10-29 社長)
+    if (typeof friendsSetRoomWaiting === 'function') friendsSetRoomWaiting(!!s && (s.phase === 'connecting' || s.phase === 'waiting'));
+    listeners.forEach((fn) => { try { fn(s); } catch (_) { /* 画面の都合で落ちても部屋は続ける */ } });
+  };
   const set = (patch) => { s = { ...s, ...patch }; emit(); };
   const send = (payload) => { if (socket && alive) socket.send({ ...payload, from: s.me.id }); };
   const isHost = () => !!(s.foe && (s.me.at < s.foe.at || (s.me.at === s.foe.at && s.me.id < s.foe.id)));
@@ -1012,6 +1016,16 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   const [roster, setRoster] = useState(null);
   const [invites, setInvites] = useState([]);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [presence, setPresence] = useState({}); // 招待の行に出すフレンドの今(34 の friendsPresenceFor。2026-10-29 社長)
+  // 招待の名簿を開いているあいだだけ読む(1分ごとに読み直す。フレンドの知らせは2分ごとに来る)
+  useEffect(() => {
+    if (!inviteOpen || !roster || !roster.length || typeof friendsPresenceFor !== 'function') return undefined;
+    let alive = true;
+    const load = () => { void friendsPresenceFor(roster.map((f) => f.otherId)).then((p) => { if (alive) setPresence(p || {}); }); };
+    load();
+    const t = setInterval(load, 60000);
+    return () => { alive = false; clearInterval(t); };
+  }, [inviteOpen, roster]);
   const [invited, setInvited] = useState({});
   const [inviteNext, setInviteNext] = useState('');   // 入口で選んだ相手。部屋ができて合言葉が出たら送る
   const [sentRows, setSentRows] = useState({});       // 送った招待の、表の今のようす(断られたかを見る)
@@ -1231,9 +1245,10 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
               {roster.length === 0
                 ? <p className="p-2 text-[13px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('まだフレンドがいません。HOME左上のプロフィールの「フレンド」から、フレンドコードで申請できます')}</p>
                 : <ul data-card-pvp-roster className="max-h-[40vh] space-y-1 overflow-y-auto">
-                  {roster.slice(0, 30).map((f) => (
-                    <li key={f.otherId} className="flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5">
-                      <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-white">{f.userName}</span>
+                  {(typeof friendsPresenceSort === 'function' ? friendsPresenceSort(roster.slice(0, 30), presence) : roster.slice(0, 30)).map((f) => (
+                    <li key={f.otherId} data-card-pvp-roster-row className="flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5">
+                      <span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-bold text-white">{f.userName}</span>
+                        {typeof FriendPresenceTag === 'function' && <FriendPresenceTag info={presence[f.otherId]}/>}</span>
                       <button type="button" data-card-pvp-invite-to={f.otherId} disabled={!ready || !profileReady} className="mh-button mh-button-primary min-h-[40px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
                         onClick={() => { Audio_.fgSe.tap(); setInviteNext(f.otherId); void CARD_PVP.create(profile, deck); }}>招待する</button>
                     </li>

@@ -702,11 +702,14 @@ const CardShopGrid = ({ db, rows, collection, onTap }) => (
     {rows.map(({ no, count, rarity }) => {
       // collection が false のときは「未取得」を出さない(はじめのスターター選び・開けたあとの一覧。まだ何も持っていないので全部に付いてしまう)
       const missing = collection !== false && !((collection || {})[no] > 0);
+      // 今いくつ持っているか(2026-10-29 社長。読むだけ)。持っているカードの右上に「所持◯」
+      const owned = collection ? Math.max(0, Math.floor(Number(collection[no]) || 0)) : 0;
       return (
         <button key={no} type="button" data-card-shop-item={no} data-card-shop-missing={missing ? '1' : undefined} onClick={() => onTap(no)} className="relative flex flex-col items-center rounded-lg bg-white/5 p-0.5 text-center active:scale-95">
           <span className="relative block w-full">
             <img src={cardShopImg(db, no)} alt={cardShopName(db, no)} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
             {missing && <span data-card-shop-missing-badge className="absolute left-0.5 top-0.5 rounded-md bg-rose-600 px-1 text-[9px] font-black text-white shadow">未取得</span>}
+            {owned > 0 && <span data-card-shop-owned={owned} className="absolute right-0.5 top-0.5 rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950 shadow">所持{owned}</span>}
             {rarity && rarity !== 'normal' && <span className="absolute bottom-0.5 left-0.5 rounded-md bg-amber-300 px-1 text-[9px] font-black text-slate-950">{CARD_RARITY_LABEL[rarity]}</span>}
             {count > 1 && <span className="absolute bottom-0.5 right-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-white">×{count}</span>}
           </span>
