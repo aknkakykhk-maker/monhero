@@ -1151,7 +1151,8 @@ const CARD_AI_HABITS = Object.freeze({
   kiki:     { attack: 0.9, keepGuard: 0.7, saveGuts: 1.6, big: 1.8, disrupt: 0.5, area: 1.0, finish: 1.0 },
   kyuko:    { attack: 1.0, keepGuard: 1.0, saveGuts: 1.0, big: 1.0, disrupt: 1.0, area: 1.0, finish: 1.2 },
   dra:      { attack: 0.7, keepGuard: 1.5, saveGuts: 1.0, big: 0.6, disrupt: 0.8, area: 0.8, finish: 0.8 },
-  atsu:     { attack: 1.2, keepGuard: 0.6, saveGuts: 0.8, big: 1.0, disrupt: 0.8, area: 1.8, finish: 1.5 },
+  // あつ: 臨機応変(2026-10-29 社長「頭も良く、ゴリ押しもできる。型がいちばん多い子」)。土台は全部ふつうで、場を見て型を切り替える(cardAiHabitNow)
+  atsu:     { attack: 1.0, keepGuard: 1.0, saveGuts: 1.0, big: 1.0, disrupt: 1.0, area: 1.0, finish: 1.0, flex: true },
   sorashido: { attack: 1.1, keepGuard: 0.9, saveGuts: 1.0, big: 0.9, disrupt: 1.5, area: 1.0, finish: 1.3 },   // 相手の手を崩す(2026-10-27 ルールくんの S2。好きな子ハムで5段×450試合を測った)
 });
 // 公開の印(RELEASE_FLAGS・data/assistants.js の ASSISTANT_RELEASE_FLAGS)が立つまで、カードの相手えらび・マルチ・観戦・記録・曲の並びに出さない(2026-10-27。ソラシド)。
@@ -1178,7 +1179,7 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
   momosuke: { easy: 0.12, normal: 0.06, hard: 0, expert: 0.1, master: 0.05 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.165 → 0.14。混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 0.05
   kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: 0, master: 0.1 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.345 → 0.3。意味不明(277)・混血の直し(2026-10-27)のあと 0.1
   dra: { easy: -0.075, normal: -0.075, hard: 0.03, expert: -0.06, master: 0 },
-  atsu: { easy: -0.075, normal: -0.15, hard: -0.105, expert: -0.06, master: 0 },   // EXPERT は同じ血統(弱い)でも組むようになった(2026-10-26)ので 0.03 → 0
+  atsu: { easy: 0.05, normal: 0, hard: 0.02, expert: 0.06, master: 0 },   // 臨機応変(2026-10-29)で強くなった(NORMAL 55→69%・EASY 73%・EXPERT 69%)ので、各強さで雑さを足した(40戦で測った)   // EXPERT は同じ血統(弱い)でも組むようになった(2026-10-26)ので 0.03 → 0
 });
 // 同じ血統で組んだ試合だけの、カードの出し方の雑さの足し引き(2026-10-26。HARD から上でも同じ血統で組むようにしたぶん)。
 //   モッチーの仲間(みゅあ)は強く、ドラゴンの仲間(あつ)・グジラの仲間(ドラ)は弱かったので、その試合だけ戻す。MASTER は雑さがもう0なので強くはできない
@@ -1193,11 +1194,34 @@ const cardAiPolicy = (habitId, levelId, opts = {}) => {
   const tune = CARD_AI_TUNE[habitId] === undefined ? 1 : CARD_AI_TUNE[habitId];
   const base = CARD_AI_HABITS[habitId] || CARD_AI_HABITS.kyuko;
   const blend = (CARD_AI_HABIT_BLEND[levelId] || {})[habitId];
-  const habit = blend === undefined ? base : Object.fromEntries(Object.entries(base).map(([k, v]) => [k, 1 + (v - 1) * blend]));
+  const habit = blend === undefined ? base : Object.fromEntries(Object.entries(base).map(([k, v]) => [k, typeof v === 'number' ? 1 + (v - 1) * blend : v]));
   const add = (((CARD_AI_PLAY_TUNE[habitId] || {})[levelId]) || 0) + (opts && opts.sameBlood ? (((CARD_AI_SAME_BLOOD_PLAY[habitId] || {})[levelId]) || 0) : 0);
   // opts.playerRole … 勝率を測るときのプレイヤー役(tools/card の検査・道具だけが付ける)。山札切れを気にしない前の打ち方のまま
   //   (2026-10-27 ソランド判断: 人が相手のときと測り方をそろえるため。プレイヤー役まで山札切れを避けると、守り型のドラが EXPERT 34%・MASTER 36% に下がった)
   return { habit, level: { ...level, sloppy: Math.max(0, Math.min(0.9, (level.sloppy || 0) * tune + add)) }, playerRole: !!(opts && opts.playerRole) };
+};
+
+// その場で使うくせの値。ふつうは policy.habit のまま。flex(あつ)の子だけ、自分(p)から見た場で型を1つ選び、その向きを 1.6 にする(2026-10-29 社長)
+//   上から順に見て、最初に当たった型: とどめ(この番に倒せる相手がいる)→ 全体(相手が2体以上で、全体攻撃を出せる)→
+//   守り(倒された数で負けている・主力のライフが半分以下。守りとガッツを残す)→ ゴリ押し(攻める)
+const CARD_AI_FLEX_HIGH = 1.6;
+const cardAiFlexMode = (db, st, p) => {
+  const me = st.players[p], opp = st.players[cardOther(p)];
+  const mine = me.mons.filter((m) => !m.ko), foes = opp.mons.filter((m) => !m.ko);
+  const ready = me.hand.map((n) => cardOf(db, n)).filter((c) => c && cardIsAttackKind(c.kind) && c.kind !== 'spe' && cardFieldCostOf(st, c.guts || 0) <= me.guts.length && mine.some((m) => cardUsableBy(c, m)));
+  if (ready.some((c) => foes.some((t) => (c.damage || 0) >= t.life))) return 'finish';
+  if (foes.length >= 2 && ready.some((c) => cardHasEff(c, 'area'))) return 'area';
+  const lost = me.mons.filter((m) => m.ko).length, took = opp.mons.filter((m) => m.ko).length;
+  const top = mine.slice().sort((a, b) => b.max - a.max)[0];
+  if (lost > took || (top && top.life * 2 <= top.max)) return 'guard';
+  return 'attack';
+};
+const cardAiHabitNow = (db, st, p, policy) => {
+  const habit = policy.habit;
+  if (!habit || !habit.flex) return habit;
+  const mode = cardAiFlexMode(db, st, p);
+  if (mode === 'guard') return { ...habit, keepGuard: CARD_AI_FLEX_HIGH, saveGuts: CARD_AI_FLEX_HIGH };
+  return { ...habit, [mode]: CARD_AI_FLEX_HIGH };
 };
 
 // 相手が回避できそうな見込み(見えない手札は、残りの山札＋手札から平均で見積もる)
@@ -1250,7 +1274,8 @@ const cardAiScoreField = (db, st, p, card, cost) => {
 const cardAiScoreAttack = (db, st, opt, policy) => {
   const p = st.active;
   const me = st.players[p];
-  const { habit, level } = policy;
+  const { level } = policy;
+  const habit = cardAiHabitNow(db, st, p, policy);
   const main = cardOf(db, me.hand[opt.hand[0]]);
   const cost = cardActionCost(db, st, p, me.hand, opt.hand);
   let score = 0;
@@ -1462,7 +1487,7 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
   const pd = st.pending;
   const q = pd.defender;
   const me = st.players[q];
-  const { habit } = policy;
+  const habit = cardAiHabitNow(db, st, q, policy);
   // 生き残りが2体以下のときは、守りをためしに当てて「守らなければ負けないのに、守ると負ける」守り(肉を切らせて・かばう など)を外す
   const loseAfter = (a) => { try { const s = cardAiSettle(db, cardApplyAction(db, st, a)); return !!s && s.winner !== null && s.winner !== undefined && s.winner !== q; } catch (_) { return false; } };
   const few = me.mons.filter((m) => !m.ko).length <= 2;
@@ -1475,13 +1500,25 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
   // もう全部はね返した攻撃・とどめにならない技(加勢)も cardAiFinalDamage が見込む(前カード部長の見回り 2026-10-27 の2行を取り込んだ)
   const dmg = cardAiIncomingDamage(db, st);
   if (dmg <= 0) return { type: 'pass' };
+  // 守らないを選ぶこともある(2026-10-29 社長「場合によっては、ガードを残さない選択もあってよい」)。倒れる攻撃はいつもどおり守る
+  const dies = target.life <= dmg;
+  const guardsInHand = me.hand.filter((n) => cardIsGuardKind((cardOf(db, n) || {}).kind)).length;
+  // とどめ向きの子: 次の自分の番に倒せる相手がいて、守るとそのガッツが足りなくなるなら、倒れない攻撃は受ける
+  const opp = st.players[cardOther(q)];
+  const finisher = me.hand.map((n) => cardOf(db, n)).filter((c) => c && cardIsAttackKind(c.kind) && c.kind !== 'spe' && me.mons.some((m) => !m.ko && cardUsableBy(c, m)) && opp.mons.some((t) => !t.ko && (c.damage || 0) >= t.life));
+  const finishCost = finisher.length ? Math.min(...finisher.map((c) => cardFieldCostOf(st, c.guts || 0))) : null;
   let best = null;
   opts.forEach((o) => {
     const { after, extra, back, cost, c } = cardAiGuardEstimate(db, st, o, dmg);
     const saved = Math.min(dmg, target.life) - Math.min(after, target.life);
     const ko = target.life <= dmg && target.life > after ? 5 : 0;
     const lostAll = cardHasEff(c, 'selfGutsAll') ? me.guts.length - cost : 0; // 緊急回避: 残りのガッツも全部なくなる
-    const v = extra + saved * (0.6 + 0.4 * habit.keepGuard) + ko - (cost + lostAll) * 0.35 * habit.saveGuts + back * 0.6;
+    let v = extra + saved * (0.6 + 0.4 * habit.keepGuard) + ko - (cost + lostAll) * 0.35 * habit.saveGuts + back * 0.6;
+    // ガッツをためる子でも、ライフの半分以上を減らす攻撃は守る(2026-10-29 社長 案B: ききが払うガッツ2の守りを見送っていた)
+    if (!dies && habit.saveGuts >= 1.3 && Math.min(dmg, target.life) * 2 >= target.life && saved > 0) v += (cost + lostAll) * 0.35 * habit.saveGuts + 1;
+    if (!dies && finishCost !== null && habit.finish >= 1.3 && me.guts.length - cost - lostAll < finishCost && me.guts.length >= finishCost) v -= 2;
+    // 守りの札が最後の1枚の子(守り ふつう)は、倒れない小さい攻撃には取っておく
+    if (!dies && guardsInHand <= 1 && habit.keepGuard >= 0.55 && habit.keepGuard < 1.3 && Math.min(dmg, target.life) * 2 < target.life) v -= 0.8;
     if (!best || v > best.v) best = { v, o };
   });
   if (!best || best.v < 0.8 + rand() * 0.3) return { type: 'pass' };
@@ -1492,7 +1529,7 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
 const cardAiChooseGuts = (db, st, policy) => {
   const p = st.active;
   const me = st.players[p];
-  const { habit } = policy;
+  const habit = cardAiHabitNow(db, st, p, policy);
   const target = Math.round(3 + 1.6 * habit.saveGuts);
   const need = Math.max(0, target - me.guts.length);
   const keep = (no) => {
@@ -1506,6 +1543,8 @@ const cardAiChooseGuts = (db, st, policy) => {
   const ks = me.hand.map((no, i) => ({ i, k: keep(no), g: cardIsGuardKind((cardOf(db, no) || {}).kind) }));
   // 守りの札を1枚は手元に残す(2026-10-29 社長「ガード軽視が目立つ」: 守りの札を全部ガッツにして、次の相手の番に守れない)
   //   いちばん残したい守りの札を、攻めの札より後(ガッツにしない側)へ回す
+  //   守りを残すくせが低い子(みゅあ)も1枚は残す。残さないと NORMAL 62→50%・MASTER 48→35% に落ちた(2026-10-29 小さく測った)。
+  //   みゅあの「守らない」は、攻撃を受けたときの選び方(cardAiChooseGuard・守りを残すくせ 0.2)で出る
   const guardKeep = ks.filter((x) => x.g && x.k > -9).sort((a, b) => b.k - a.k)[0];
   if (guardKeep) guardKeep.k += 3 + habit.keepGuard;
   const order = ks.sort((a, b) => a.k - b.k);

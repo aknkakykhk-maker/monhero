@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cde8ba0f951a7e4e
+// source-sha256: c889cd17d6720513
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -88756,13 +88756,14 @@ const CARD_AI_HABITS = Object.freeze({
     finish: 0.8
   },
   atsu: {
-    attack: 1.2,
-    keepGuard: 0.6,
-    saveGuts: 0.8,
+    attack: 1.0,
+    keepGuard: 1.0,
+    saveGuts: 1.0,
     big: 1.0,
-    disrupt: 0.8,
-    area: 1.8,
-    finish: 1.5
+    disrupt: 1.0,
+    area: 1.0,
+    finish: 1.0,
+    flex: true
   },
   sorashido: {
     attack: 1.1,
@@ -88838,10 +88839,10 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
     master: 0
   },
   atsu: {
-    easy: -0.075,
-    normal: -0.15,
-    hard: -0.105,
-    expert: -0.06,
+    easy: 0.05,
+    normal: 0,
+    hard: 0.02,
+    expert: 0.06,
     master: 0
   }
 });
@@ -88863,7 +88864,7 @@ const cardAiPolicy = (habitId, levelId, opts = {}) => {
   const tune = CARD_AI_TUNE[habitId] === undefined ? 1 : CARD_AI_TUNE[habitId];
   const base = CARD_AI_HABITS[habitId] || CARD_AI_HABITS.kyuko;
   const blend = (CARD_AI_HABIT_BLEND[levelId] || {})[habitId];
-  const habit = blend === undefined ? base : Object.fromEntries(Object.entries(base).map(([k, v]) => [k, 1 + (v - 1) * blend]));
+  const habit = blend === undefined ? base : Object.fromEntries(Object.entries(base).map(([k, v]) => [k, typeof v === 'number' ? 1 + (v - 1) * blend : v]));
   const add = ((CARD_AI_PLAY_TUNE[habitId] || {})[levelId] || 0) + (opts && opts.sameBlood ? (CARD_AI_SAME_BLOOD_PLAY[habitId] || {})[levelId] || 0 : 0);
   return {
     habit,
@@ -88872,6 +88873,35 @@ const cardAiPolicy = (habitId, levelId, opts = {}) => {
       sloppy: Math.max(0, Math.min(0.9, (level.sloppy || 0) * tune + add))
     },
     playerRole: !!(opts && opts.playerRole)
+  };
+};
+const CARD_AI_FLEX_HIGH = 1.6;
+const cardAiFlexMode = (db, st, p) => {
+  const me = st.players[p],
+    opp = st.players[cardOther(p)];
+  const mine = me.mons.filter(m => !m.ko),
+    foes = opp.mons.filter(m => !m.ko);
+  const ready = me.hand.map(n => cardOf(db, n)).filter(c => c && cardIsAttackKind(c.kind) && c.kind !== 'spe' && cardFieldCostOf(st, c.guts || 0) <= me.guts.length && mine.some(m => cardUsableBy(c, m)));
+  if (ready.some(c => foes.some(t => (c.damage || 0) >= t.life))) return 'finish';
+  if (foes.length >= 2 && ready.some(c => cardHasEff(c, 'area'))) return 'area';
+  const lost = me.mons.filter(m => m.ko).length,
+    took = opp.mons.filter(m => m.ko).length;
+  const top = mine.slice().sort((a, b) => b.max - a.max)[0];
+  if (lost > took || top && top.life * 2 <= top.max) return 'guard';
+  return 'attack';
+};
+const cardAiHabitNow = (db, st, p, policy) => {
+  const habit = policy.habit;
+  if (!habit || !habit.flex) return habit;
+  const mode = cardAiFlexMode(db, st, p);
+  if (mode === 'guard') return {
+    ...habit,
+    keepGuard: CARD_AI_FLEX_HIGH,
+    saveGuts: CARD_AI_FLEX_HIGH
+  };
+  return {
+    ...habit,
+    [mode]: CARD_AI_FLEX_HIGH
   };
 };
 const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}, atkMon = null) => {
@@ -88925,9 +88955,9 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
   const p = st.active;
   const me = st.players[p];
   const {
-    habit,
     level
   } = policy;
+  const habit = cardAiHabitNow(db, st, p, policy);
   const main = cardOf(db, me.hand[opt.hand[0]]);
   const cost = cardActionCost(db, st, p, me.hand, opt.hand);
   let score = 0;
@@ -89215,9 +89245,7 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
   const pd = st.pending;
   const q = pd.defender;
   const me = st.players[q];
-  const {
-    habit
-  } = policy;
+  const habit = cardAiHabitNow(db, st, q, policy);
   const loseAfter = a => {
     try {
       const s = cardAiSettle(db, cardApplyAction(db, st, a));
@@ -89241,6 +89269,11 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
   if (dmg <= 0) return {
     type: 'pass'
   };
+  const dies = target.life <= dmg;
+  const guardsInHand = me.hand.filter(n => cardIsGuardKind((cardOf(db, n) || {}).kind)).length;
+  const opp = st.players[cardOther(q)];
+  const finisher = me.hand.map(n => cardOf(db, n)).filter(c => c && cardIsAttackKind(c.kind) && c.kind !== 'spe' && me.mons.some(m => !m.ko && cardUsableBy(c, m)) && opp.mons.some(t => !t.ko && (c.damage || 0) >= t.life));
+  const finishCost = finisher.length ? Math.min(...finisher.map(c => cardFieldCostOf(st, c.guts || 0))) : null;
   let best = null;
   opts.forEach(o => {
     const {
@@ -89253,7 +89286,10 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
     const saved = Math.min(dmg, target.life) - Math.min(after, target.life);
     const ko = target.life <= dmg && target.life > after ? 5 : 0;
     const lostAll = cardHasEff(c, 'selfGutsAll') ? me.guts.length - cost : 0;
-    const v = extra + saved * (0.6 + 0.4 * habit.keepGuard) + ko - (cost + lostAll) * 0.35 * habit.saveGuts + back * 0.6;
+    let v = extra + saved * (0.6 + 0.4 * habit.keepGuard) + ko - (cost + lostAll) * 0.35 * habit.saveGuts + back * 0.6;
+    if (!dies && habit.saveGuts >= 1.3 && Math.min(dmg, target.life) * 2 >= target.life && saved > 0) v += (cost + lostAll) * 0.35 * habit.saveGuts + 1;
+    if (!dies && finishCost !== null && habit.finish >= 1.3 && me.guts.length - cost - lostAll < finishCost && me.guts.length >= finishCost) v -= 2;
+    if (!dies && guardsInHand <= 1 && habit.keepGuard >= 0.55 && habit.keepGuard < 1.3 && Math.min(dmg, target.life) * 2 < target.life) v -= 0.8;
     if (!best || v > best.v) best = {
       v,
       o
@@ -89267,9 +89303,7 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
 const cardAiChooseGuts = (db, st, policy) => {
   const p = st.active;
   const me = st.players[p];
-  const {
-    habit
-  } = policy;
+  const habit = cardAiHabitNow(db, st, p, policy);
   const target = Math.round(3 + 1.6 * habit.saveGuts);
   const need = Math.max(0, target - me.guts.length);
   const keep = no => {
