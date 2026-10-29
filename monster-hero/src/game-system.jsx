@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 90c86c629a06acbc
+// generated-sha256: 43c9545c4f32fe4c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -35547,10 +35547,12 @@ function BreederMarketScreen({
   const renderSectionTabs = (section, scroll=false) => {
     const items=SECTION_TABS[section].tabs.map(tab=>({id:tab.key,label:tab.label,color:SECTION_TABS[section].color}));
     const value=activeSectionTab(section);
-    if(!scroll||items.length<6) return <ScreenTabs value={value} onChange={(key)=>selectSectionTab(section,key)} items={items}/>;
-    return <div role="tablist" data-market-tabs-scroll={section} className="mb-2 flex shrink-0 gap-2 overflow-x-auto pb-0.5">
+    // カード売り場は5つ(戦術カードが増えた)で等分すると「戦術カー/ド」「スター/ター」と言葉の途中で折れるので、5つから1行にして詰める(2026-10-29)
+    const tight=section==='card';
+    if(!scroll||items.length<(tight?5:6)) return <ScreenTabs value={value} onChange={(key)=>selectSectionTab(section,key)} items={items}/>;
+    return <div role="tablist" data-market-tabs-scroll={section} className={`mb-2 flex shrink-0 overflow-x-auto pb-0.5 ${tight?'gap-1.5':'gap-2'}`}>
       {items.map(tab=>{const on=tab.id===value;return <button key={tab.id} type="button" role="tab" aria-selected={on} onClick={()=>selectSectionTab(section,tab.id)}
-        className={`mh-tab relative min-h-[44px] min-w-[68px] shrink-0 rounded-xl px-2.5 text-[11px] font-black leading-tight active:scale-95 ${on?'text-white':'border border-white/10 bg-slate-900 text-slate-400'}`}
+        className={`mh-tab relative min-h-[44px] shrink-0 rounded-xl text-[11px] ${tight?'min-w-[56px] flex-auto whitespace-nowrap px-1.5':'min-w-[68px] px-2.5'} font-black leading-tight active:scale-95 ${on?'text-white':'border border-white/10 bg-slate-900 text-slate-400'}`}
         style={on?{background:tab.color}:undefined}>{tab.label}</button>;})}
     </div>;
   };
@@ -35731,7 +35733,7 @@ function BreederMarketScreen({
         const tab=activeSectionTab('card');
         const cp=cardShop.point;
         return <>
-          {renderSectionTabs('card')}
+          {renderSectionTabs('card', true)}
           <div className={SCREEN_LIST_CLASS} data-card-shop data-card-shop-tab={tab}>
             {tab==='pack'&&<CardShopPacks db={CARD_BATTLE_DATA} point={cp} busy={busy||cardShop.busy} collection={cardShop.collection} onBuyPack={cardShop.onBuyPack} gacha={cardShop.gacha} catalogs={cardShop.catalogs} onExchangeCatalog={cardShop.onExchangeCatalog} onUseCatalog={cardShop.onUseCatalog}/>}
             {/* 戦術カードのパック(97 の CardTacticsShop・2026-10-29 社長「戦術カードはマーケットで買えるようにして」) */}
@@ -73709,7 +73711,7 @@ function MonsterHeroGame() {
   //   (2026-09-07・ユーザー提案)。追いつきが残るのは、途中でやめたときだけ。
   //   その場合はいまの周がそのまま続いているので、止まっていたぶんを取り戻すのが正しい。
   useEffect(() => {
-    if (gameState === 'RHYTHM_PLAY') { rhythmPlayStartedAtRef.current = Date.now(); setRhythmPlayRunAward(null); setBeatRankAward(null); stopCatchUp(); return; }
+    if (gameState === 'RHYTHM_PLAY') { rhythmPlayStartedAtRef.current = Date.now(); setRhythmPlayRunAward(null); stopCatchUp(); setBeatRankAward(null); return; }
     const startedAt = rhythmPlayStartedAtRef.current;
     rhythmPlayStartedAtRef.current = 0;
     if (!startedAt) return;

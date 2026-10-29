@@ -542,7 +542,8 @@ check('この曲・総合のランキングは変えていない',
   &&supa.includes('const sbFetchRhythmRankings = async (difficultyKeys,')
   &&screen.includes("{id:'song',label:'この曲'},"));
 check('曲別の一覧は週間・イベントのタブでは出さない',
-  screen.includes('const songTab=!totalTabOpen&&!boardTab&&!eventTabOpen;')
+  // ビートランクのタブ(2026-10-29)でも曲別の一覧は出さないので、その条件が付いた形も同じ意味として通す
+  (screen.includes('const songTab=!totalTabOpen&&!boardTab&&!eventTabOpen;')||screen.includes('const songTab=!totalTabOpen&&!boardTab&&!eventTabOpen&&!beatRankTabOpen;'))
   &&screen.includes("{songTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length>0&&"));
 check('週間の結果を端末へ書き戻していない(自己ベストは触らない)',
   !app.includes('saveRhythmBestRecord(rhythmEventRanking')&&!app.includes('mh_rhythm_best_v1')||true);
