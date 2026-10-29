@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ETERNALの正式設定・殻(WAVEのはじめに最大ライフの50%)・貫き(冥府Lvで30〜50%)・HELHEIMから引き継ぐルールを、
+// ETERNALの正式設定・シールド(WAVEのはじめに最大ライフの50%)・貫き(冥府Lvで30〜50%)・HELHEIMから引き継ぐルールを、
 // 本体helperを切り出して検査する。helheim-rules-check.js と同じ作り。
 const fs=require('fs');
 const path=require('path');
@@ -47,20 +47,20 @@ check('クイックにETERNALを入れない',G('QUICK_EXTREME_SETTINGS').ETERNA
 check('HELHEIMのルール(冥府・不死・ライフ10倍・与ダメ低下)を引き継ぐ',
   [1,3,5,9,10].every(w=>{const a=rules(w),b=G('helheimUnderworldRules')(w);return a.level===b.level&&a.enemyMultiplier===b.enemyMultiplier&&a.allyMaxHpRate===b.allyMaxHpRate&&a.minimumDamageDealt===b.minimumDamageDealt;})
   &&G('extremeRevivalCount')('ETERNAL',10)===4&&G('extremeEnemyStatAdjust')('ETERNAL','Dino').lifeRate===10);
-check('殻は最大ライフの50%、ほかの難易度は0',near(shellRate('ETERNAL',1),0.5)&&near(shellRate('ETERNAL',10),0.5)
+check('シールドは最大ライフの50%、ほかの難易度は0',near(shellRate('ETERNAL',1),0.5)&&near(shellRate('ETERNAL',10),0.5)
   &&shellRate('HELHEIM',1)===0&&shellRate('GOD',1)===0&&shellRate('Normal',1)===0&&shellAmount(1001,'ETERNAL',3)===500&&shellAmount(1000,'HELHEIM',3)===0);
 check('貫きは冥府Lvで30%から5%ずつ上がり50%まで',[[1,.30],[3,.35],[5,.40],[7,.45],[9,.50],[10,.50]].every(([w,r])=>near(pierceRate('ETERNAL',w),r))
   &&pierceRate('HELHEIM',9)===0);
 check('貫きは丈夫さで減らした値と素の値を率で混ぜる',near(pierce(100,1000,0.5),550)&&pierce(100,1000,0)===100&&pierce(500,100,0.5)===500);
-check('殻が先に削れて残りがライフへ通る',(()=>{const s=split(300,500);return s.absorbed===300&&s.through===200&&s.shellLeft===0;})()
+check('シールドが先に削れて残りがライフへ通る',(()=>{const s=split(300,500);return s.absorbed===300&&s.through===200&&s.shellLeft===0;})()
   &&(()=>{const x=afterHit({hp:1000,shell:300},500);return x.hp===800&&x.shell===0;})()
   &&(()=>{const x=afterHit({hp:1000,shell:300},100);return x.hp===1000&&x.shell===200;})());
-check('殻の無い敵はこれまでどおり',(()=>{const x=afterHit({hp:100},150);return x.hp===0&&x.shell===undefined;})()&&afterHit(null,5)===null);
-check('1ターンのヒットへ殻が受けたぶんを書き込む',(()=>{const hits=[{dmg:200},{dmg:200},{dmg:200}];const t=mark(hits,300);return t===300&&hits[0].shellAbsorbed===200&&hits[1].shellAbsorbed===100&&hits[2].shellAbsorbed===0;})()
+check('シールドの無い敵はこれまでどおり',(()=>{const x=afterHit({hp:100},150);return x.hp===0&&x.shell===undefined;})()&&afterHit(null,5)===null);
+check('1ターンのヒットへシールドが受けたぶんを書き込む',(()=>{const hits=[{dmg:200},{dmg:200},{dmg:200}];const t=mark(hits,300);return t===300&&hits[0].shellAbsorbed===200&&hits[1].shellAbsorbed===100&&hits[2].shellAbsorbed===0;})()
   &&mark([{dmg:50}],undefined)===0);
-check('本体: WAVEのはじめに殻をまとい、ヒットは殻から削る',source.includes('extremeEnemyShellAmount(newEnemy.maxHp,specialRuleDifficulty,w)')
+check('本体: WAVEのはじめにシールドをまとい、ヒットはシールドから削る',source.includes('extremeEnemyShellAmount(newEnemy.maxHp,specialRuleDifficulty,w)')
   &&!source.includes('hp:Math.max(0,prev.hp-h.dmg)')&&!source.includes('hp:Math.max(0,prev.hp-hit.dmg)')&&!source.includes('hp: Math.max(0, prev.hp - h.dmg)'));
-check('本体: 殻が受けたぶんは距離強化に入れない',source.includes('turnDistDmg[si]+=h.dmg-(h.shellAbsorbed||0)')&&source.includes('attackDistDamage[si]+=h.dmg-(h.shellAbsorbed||0)')
+check('本体: シールドが受けたぶんは距離強化に入れない',source.includes('turnDistDmg[si]+=h.dmg-(h.shellAbsorbed||0)')&&source.includes('attackDistDamage[si]+=h.dmg-(h.shellAbsorbed||0)')
   &&source.includes('(enemy?.hp??0)-(totalDmg-shellAbsorbedTotal)'));
 check('本体: 被ダメに貫きを通す',source.includes('applyEnemyPierce(Math.max(30,(atkVal-defVal*0.5)*(1-defenseRate)),atkVal,enemyPierceRate)'));
 check('本体: 通常UIへ公開しHELHEIMクリアで解放',source.includes("setting.id==='ETERNAL'?eternalUnlocked:false")&&source.includes("'HELHEIMクリアで解放'"));

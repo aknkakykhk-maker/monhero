@@ -1885,7 +1885,7 @@ function MonsterHeroGame() {
     setAttackAnim(null); setSlotSkill(null);
     addPopup(`${h.dmg}`, 'enemy', 'text-sky-200 drop-shadow-[0_0_20px_rgba(125,211,252,0.9)] text-5xl font-black animate-bounce',
       `🤖 ${h.actorName}の ${h.skillName} → 敵に ${h.dmg.toLocaleString()} ダメージ`);
-    setEnemy(prev => enemyAfterHit(prev, h.dmg)); // 殻(ETERNAL)があれば先に殻が受ける
+    setEnemy(prev => enemyAfterHit(prev, h.dmg)); // シールド(ETERNAL)があれば先にシールドが受ける
     await battleWait(550);
   };
   // カードを使わないターン(「ターンを進める」・緊急回復)のコピーの1手。敵へ当てて、倒したかを返す
@@ -1894,7 +1894,7 @@ function MonsterHeroGame() {
     const startHp = enemy?.hp ?? 0;
     const ca = runTacticsAiCopyAction(enemyDist);
     if (!(ca.total > 0)) return { defeated: false, enemyHp: startHp };
-    const shellAbsorbed = markShellAbsorbedHits(ca.hits, enemy?.shell); // 殻(ETERNAL)が受けたぶんはライフへ通らない
+    const shellAbsorbed = markShellAbsorbedHits(ca.hits, enemy?.shell); // シールド(ETERNAL)が受けたぶんはライフへ通らない
     for (const h of ca.hits) await playAiCopyHit(h);
     setCurrentWaveDamage(p => p + ca.total); raidJackDamageRef.current += Number(ca.total) || 0;
     const remaining = Math.max(0, startHp - (ca.total - shellAbsorbed));
@@ -11888,8 +11888,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // short … 名前の横の簡易表示に添える短い字(残りターンなど)。value … 詳細の中の言い方。note … 詳細の説明
     const add = (key, mark, label, value, tone, note, short = '') => list.push({ key, mark, label, value, tone, note, short });
     if (!enemy) return list;
-    // 殻(ETERNAL)。ライフより先に削れる。殻を削ったぶんは距離強化の加点に入らない
-    if (Number(enemy.shell) > 0) add('shell', '🛡️', '殻', `${Math.floor(enemy.shell).toLocaleString()}`, 'text-pink-200 border-pink-400/60', 'ライフより先に削れる。殻を削ったぶんは距離強化の加点に入らない', `${Math.floor(enemy.shell).toLocaleString()}`);
+    // シールド(ETERNAL)。ライフより先に削れる。シールドを削ったぶんは距離強化の加点に入らない
+    if (Number(enemy.shell) > 0) add('shell', '🛡️', 'シールド', `${Math.floor(enemy.shell).toLocaleString()}`, 'text-pink-200 border-pink-400/60', 'ライフより先に削れる。シールドを削ったぶんは距離強化の加点に入らない', `${Math.floor(enemy.shell).toLocaleString()}`);
     if (iceLockTurns > 0) add('ice', '❄️', '絶氷の楔', iceLockPreparing ? '準備' : `残り${iceLockTurns}T`, 'text-cyan-200 border-cyan-400/60', iceLockPreparing ? '次のターンから、敵は間合いを動けず、与えるダメージが30%下がる' : '敵は間合いを動けず、与えるダメージが30%下がる', iceLockPreparing ? '準備' : `${iceLockTurns}T`);
     if (enemyConfuseTurns > 0) add('confuse', '🌀', '乱心', `残り${enemyConfuseTurns}T`, 'text-violet-200 border-violet-400/60', '毎ターン50%で、敵は意味不明になって動けない', `${enemyConfuseTurns}T`);
     const psycho = isTacticsMode(runMode) ? tacticsExPsychoLockOf(tacticsExState, { wave, turn: turnCount }) : null;
@@ -14707,8 +14707,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       }
       commitAiCopy({...copy, picks:[], nextCard:null});
     }
-    // 殻(ETERNAL)。ヒットを順に殻へ当て、殻が受けたぶんを数える。殻が受けたぶんはライフへ通らず、
-    // 距離強化の加点にも入れない(2026-10-29 社長の決め)。殻を持たない敵では0
+    // シールド(ETERNAL)。ヒットを順にシールドへ当て、シールドが受けたぶんを数える。シールドが受けたぶんはライフへ通らず、
+    // 距離強化の加点にも入れない(2026-10-29 社長の決め)。シールドを持たない敵では0
     const shellAbsorbedTotal=markShellAbsorbedHits(attackHits,enemy?.shell);
     if (totalDmg>0) {
       if(totalDmg>0){
@@ -15734,8 +15734,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if (Number.isFinite(Number(scenario.enemyAtk))) { newEnemy.atk=Math.max(0,Math.floor(scenario.enemyAtk)); }
       battleScenarioIntentIndexRef.current=0;
     }
-    // 殻(ETERNAL)。WAVEのはじめに最大ライフの率ぶんをまとう(冥府Lvが上がるのもWAVEの変わり目なので、ここで足りる)。
-    // 殻を持たない難易度・ジャック戦・練習の台本では0のまま(既存の敵は何も変わらない)
+    // シールド(ETERNAL)。WAVEのはじめに最大ライフの率ぶんをまとう(冥府Lvが上がるのもWAVEの変わり目なので、ここで足りる)。
+    // シールドを持たない難易度・ジャック戦・練習の台本では0のまま(既存の敵は何も変わらない)
     const shell=raidRun||scenario?0:extremeEnemyShellAmount(newEnemy.maxHp,specialRuleDifficulty,w);
     if (shell>0) { newEnemy.shell=shell; newEnemy.maxShell=shell; }
     enemyDefeatResolvedRef.current=false;
