@@ -236,18 +236,6 @@ const cardWeeklyRewardOf = ({ place, wins }) => {
   const byPlace = cardWeeklyRewardForPlace(place) || { point: 0 };
   return { point: byPlace.point, place: place || null, wins };
 };
-// 受け取りの帯(週間報酬・デッキの報酬など、カードのトップで受け取るものをそろえて出す部品)。
-//   title … 「先週の週間報酬」 / lines … 中身の行(文字) / onClaim … 「受け取る」 / busy … 押している間
-const CardRewardBand = ({ tag, title, lines, onClaim, busy }) => (
-  <div data-card-reward-band={tag} className="mhms-glass mhms-in flex w-full min-w-0 items-center gap-2 rounded-xl border border-amber-300/70 px-2.5 py-2" style={{ background: 'linear-gradient(135deg,#3b2a05dd,#1e1b4bdd)' }}>
-    <span aria-hidden="true" className="shrink-0 text-2xl leading-none">🏆</span>
-    <div className="min-w-0 flex-1">
-      <b className="block text-[12px] font-black text-amber-200">{title}</b>
-      {lines.map((t, i) => <span key={i} className="block text-[11px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}>{jaWrap(t)}</span>)}
-    </div>
-    <button type="button" data-card-reward-claim={tag} disabled={busy} onClick={onClaim} className="mh-button min-h-[40px] shrink-0 rounded-xl bg-amber-400 px-3 text-[12px] font-black text-stone-900 active:scale-95 disabled:opacity-50">受け取る</button>
-  </div>
-);
 
 // 同じ数は同じ順位(5・5・3 → 1位・1位・3位)。entries は多い順に並んでいる(2026-10-26 社長「全部入れる」の改善)
 const cardRankPlaces = (entries, valueOf) => {
@@ -402,6 +390,19 @@ const CARD_RANK_KINDS = Object.freeze([
   { id: 'dex', label: '図鑑', emoji: '📖' }, { id: 'multi', label: 'マルチ', emoji: '🎮' },
 ]);
 // syncArgs … 送れていない記録を送るための材料({ db, collection, profile })。開いたときに、送れていなければ自動で送る(モンヒロビートのランキングと同じ考え)
+// 受け取りの帯(週間報酬・デッキの報酬など、カードのトップで受け取るものをそろえて出す部品)。
+//   title … 「先週の週間報酬」 / lines … 中身の行(文字) / onClaim … 「受け取る」 / busy … 押している間
+const CardRewardBand = ({ tag, title, lines, onClaim, busy }) => (
+  <div data-card-reward-band={tag} className="mhms-glass mhms-in flex w-full min-w-0 items-center gap-2 rounded-xl border border-amber-300/70 px-2.5 py-2" style={{ background: 'linear-gradient(135deg,#3b2a05dd,#1e1b4bdd)' }}>
+    <span aria-hidden="true" className="shrink-0 text-2xl leading-none">🏆</span>
+    <div className="min-w-0 flex-1">
+      <b className="block text-[12px] font-black text-amber-200">{title}</b>
+      {lines.map((t, i) => <span key={i} className="block text-[11px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}>{jaWrap(t)}</span>)}
+    </div>
+    <button type="button" data-card-reward-claim={tag} disabled={busy} onClick={onClaim} className="mh-button min-h-[40px] shrink-0 rounded-xl bg-amber-400 px-3 text-[12px] font-black text-stone-900 active:scale-95 disabled:opacity-50">受け取る</button>
+  </div>
+);
+
 const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', record = null, dex = null, sendOn = false, syncArgs = null }) => {
   const [kind, setKind] = useState('wins');
   const [period, setPeriod] = useState('week');

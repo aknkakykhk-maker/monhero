@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5501d25e49aa8ab8
+// source-sha256: e82327dd86c1282d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -101445,36 +101445,6 @@ const cardWeeklyRewardOf = ({
     wins
   };
 };
-const CardRewardBand = ({
-  tag,
-  title,
-  lines,
-  onClaim,
-  busy
-}) => React.createElement("div", {
-  "data-card-reward-band": tag,
-  className: "mhms-glass mhms-in flex w-full min-w-0 items-center gap-2 rounded-xl border border-amber-300/70 px-2.5 py-2",
-  style: {
-    background: 'linear-gradient(135deg,#3b2a05dd,#1e1b4bdd)'
-  }
-}, React.createElement("span", {
-  "aria-hidden": "true",
-  className: "shrink-0 text-2xl leading-none"
-}, "🏆"), React.createElement("div", {
-  className: "min-w-0 flex-1"
-}, React.createElement("b", {
-  className: "block text-[12px] font-black text-amber-200"
-}, title), lines.map((t, i) => React.createElement("span", {
-  key: i,
-  className: "block text-[11px] font-bold leading-snug text-slate-100",
-  style: JA_WRAP_STYLE
-}, jaWrap(t)))), React.createElement("button", {
-  type: "button",
-  "data-card-reward-claim": tag,
-  disabled: busy,
-  onClick: onClaim,
-  className: "mh-button min-h-[40px] shrink-0 rounded-xl bg-amber-400 px-3 text-[12px] font-black text-stone-900 active:scale-95 disabled:opacity-50"
-}, "受け取る"));
 const cardRankPlaces = (entries, valueOf) => {
   let place = 0;
   let prev = null;
@@ -101739,6 +101709,36 @@ const CARD_RANK_KINDS = Object.freeze([{
   label: 'マルチ',
   emoji: '🎮'
 }]);
+const CardRewardBand = ({
+  tag,
+  title,
+  lines,
+  onClaim,
+  busy
+}) => React.createElement("div", {
+  "data-card-reward-band": tag,
+  className: "mhms-glass mhms-in flex w-full min-w-0 items-center gap-2 rounded-xl border border-amber-300/70 px-2.5 py-2",
+  style: {
+    background: 'linear-gradient(135deg,#3b2a05dd,#1e1b4bdd)'
+  }
+}, React.createElement("span", {
+  "aria-hidden": "true",
+  className: "shrink-0 text-2xl leading-none"
+}, "🏆"), React.createElement("div", {
+  className: "min-w-0 flex-1"
+}, React.createElement("b", {
+  className: "block text-[12px] font-black text-amber-200"
+}, title), lines.map((t, i) => React.createElement("span", {
+  key: i,
+  className: "block text-[11px] font-bold leading-snug text-slate-100",
+  style: JA_WRAP_STYLE
+}, jaWrap(t)))), React.createElement("button", {
+  type: "button",
+  "data-card-reward-claim": tag,
+  disabled: busy,
+  onClick: onClaim,
+  className: "mh-button min-h-[40px] shrink-0 rounded-xl bg-amber-400 px-3 text-[12px] font-black text-stone-900 active:scale-95 disabled:opacity-50"
+}, "受け取る"));
 const CardRankingBoard = ({
   onBack,
   renderBreederIcon = null,
