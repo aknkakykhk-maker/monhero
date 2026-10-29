@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6c86db80689b8644
+// source-sha256: 31b2edb6003cb1e1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -97317,10 +97317,48 @@ const CardBattleBoard = ({
     }
   }), React.createElement("div", {
     "data-card-head": true,
-    className: `flex ${compact ? 'min-h-[36px]' : 'min-h-[44px]'} shrink-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 bg-black/35 px-2 py-0.5`
-  }, React.createElement("div", {
-    className: "flex shrink-0 items-center gap-1.5"
-  }, !watch && React.createElement("button", {
+    className: `relative flex ${compact ? 'h-[36px]' : 'h-[44px]'} shrink-0 items-center gap-1.5 bg-black/35 px-2`
+  }, !tutorial && React.createElement("button", {
+    type: "button",
+    "data-card-log-open": true,
+    onClick: () => setLogSheet(true),
+    className: "shrink-0 rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200",
+    "aria-label": "ターンの記録を見る"
+  }, "記録"), pvpLive && React.createElement("span", {
+    className: "shrink-0"
+  }, React.createElement(CardPvpChat, null)), watch ? React.createElement("span", {
+    "data-card-watch-badge": true,
+    className: `shrink-0 whitespace-nowrap rounded-md border border-violet-300/60 bg-violet-500/20 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-violet-100`
+  }, "観戦", watchEyes ? ` 👀${watchEyes}` : '') : replay ? React.createElement("span", {
+    "data-card-replay-badge": true,
+    className: `shrink-0 whitespace-nowrap rounded-md border border-sky-300/60 bg-sky-500/20 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-sky-100`
+  }, "リプレイ") : tutorial ? React.createElement("span", {
+    "data-card-level-badge": "tutorial",
+    className: `shrink-0 whitespace-nowrap rounded-md border px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black tracking-wide ${CARD_LEVEL_TONE.tutorial || CARD_LEVEL_TONE.easy}`
+  }, "練習") : null, (() => {
+    const sig = pvpLive && (pvpClock.offline || pvpClock.foeQuietSec > 0);
+    const nameOf = (nm, fallback) => String(nm || '').length <= 6 ? `${nm}の番` : fallback;
+    const turnTxt = headSt.phase === 'setup' && replay ? 'はじまり' : headMe ? nameOf(meName, 'あなたの番') : nameOf(who.name, '相手の番');
+    const low = pvpLive && pvpClock.mine && pvpClock.left <= 10;
+    const tone = sig ? 'bg-amber-700/90 text-amber-100' : low ? 'bg-rose-500 text-white' : headMe ? 'bg-amber-300 text-slate-950' : 'bg-slate-500/25 text-slate-200';
+    return React.createElement("span", {
+      "data-card-head-turn": true,
+      "data-card-head-turn-me": headMe ? '1' : undefined,
+      "data-card-pvp-clock": pvpLive && !sig ? pvpClock.mine ? 'mine' : 'foe' : undefined,
+      "data-card-pvp-signal": sig ? '' : undefined,
+      className: `mx-auto min-w-0 max-w-[440px] flex-1 truncate whitespace-nowrap rounded-full px-2 py-1 text-center ${sig ? 'text-[11px]' : tiny ? 'text-[12px]' : 'text-[13px]'} font-black leading-tight tabular-nums ${tone}`
+    }, sig ? pvpClock.offline ? '電波が途切れています。つなぎ直しています…' : `相手の電波が途切れています(あと${pvpClock.foeQuietSec}秒)` : React.createElement(React.Fragment, null, !(headSt.phase === 'setup' && replay) && !(pvpLive && (tiny || headSt.active !== cardDeciderOf(headSt))) && React.createElement("span", {
+      className: "mr-1 text-[11px] font-bold opacity-75"
+    }, "ターン", Math.max(1, headSt.turn)), turnTxt, pvpLive && ` · ${headSt.active !== cardDeciderOf(headSt) ? pvpClock.mine ? '守り 残り' : '相手の守り' : pvpClock.mine ? '残り' : ''}${pvpClock.left}秒`, pvpLive && pvpClock.mine && pvpClock.timeouts > 0 && ` ⚠${pvpClock.timeouts}/${CARD_PVP_TIMEOUT_LOSE}`));
+  })(), quickRun && React.createElement("span", {
+    "data-card-battle-quick-run": quickRun.stopped ? 'stopped' : 'live',
+    "aria-label": quickRun.stopped ? '裏のクイック周回は止まっています' : `裏のクイック周回 ${quickRun.loops}周目`,
+    className: `shrink-0 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[10px] font-black ${quickRun.stopped ? 'border-rose-400/70 bg-rose-950/60 text-rose-200' : 'border-fuchsia-300/50 bg-slate-950/60 text-fuchsia-100'}`
+  }, "⚔ ", quickRun.loops, "周目"), pvpLive && pvpClock.eyes > 0 && React.createElement("span", {
+    "data-card-pvp-eyes": pvpClock.eyes,
+    "aria-label": `${pvpClock.eyes}人が観戦しています`,
+    className: "shrink-0 whitespace-nowrap rounded-full bg-violet-500/25 px-1.5 py-0.5 text-[11px] font-black text-violet-100 tabular-nums"
+  }, tiny ? `👀${pvpClock.eyes}` : `👀観戦${pvpClock.eyes}`), !watch && React.createElement("button", {
     type: "button",
     "data-card-quit": true,
     "data-card-replay-exit": replay ? '' : undefined,
@@ -97328,51 +97366,21 @@ const CardBattleBoard = ({
       outcome: 'replayExit',
       st
     }) : setQuit(true),
-    className: "rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200"
-  }, replay ? 'とじる' : tutorial ? '飛ばす' : '投了'), pvpLive && React.createElement(CardPvpChat, null), !tutorial && React.createElement("button", {
-    type: "button",
-    "data-card-log-open": true,
-    onClick: () => setLogSheet(true),
-    className: "rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200",
-    "aria-label": "ターンの記録を見る"
-  }, "記録")), watch ? React.createElement("span", {
-    "data-card-watch-badge": true,
-    className: `shrink-0 whitespace-nowrap rounded-md border border-violet-300/60 bg-violet-500/20 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-violet-100`
-  }, "観戦", watchEyes ? ` 👀${watchEyes}` : '') : replay ? React.createElement("span", {
-    "data-card-replay-badge": true,
-    className: `shrink-0 whitespace-nowrap rounded-md border border-sky-300/60 bg-sky-500/20 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-sky-100`
-  }, "リプレイ") : pvp ? React.createElement(CardPvpStatus, {
-    clock: pvpClock
-  }) : React.createElement("span", {
-    "data-card-level-badge": tutorial ? 'tutorial' : game.level,
-    className: `shrink-0 whitespace-nowrap rounded-md border px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black tracking-wide ${CARD_LEVEL_TONE[tutorial ? 'tutorial' : game.level] || CARD_LEVEL_TONE.easy}`
-  }, tutorial ? '練習' : CARD_LEVEL_LABEL[game.level] || ''), React.createElement("span", {
-    "data-card-head-right": true,
-    className: "flex min-w-[7.5em] flex-1 items-center justify-end gap-1.5"
-  }, quickRun && React.createElement("span", {
-    "data-card-battle-quick-run": quickRun.stopped ? 'stopped' : 'live',
-    "aria-label": quickRun.stopped ? '裏のクイック周回は止まっています' : `裏のクイック周回 ${quickRun.loops}周目`,
-    className: `shrink-0 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[10px] font-black ${quickRun.stopped ? 'border-rose-400/70 bg-rose-950/60 text-rose-200' : 'border-fuchsia-300/50 bg-slate-950/60 text-fuchsia-100'}`
-  }, "⚔ ", quickRun.loops, "周目"), React.createElement("span", {
-    "data-card-head-turn": true,
-    "data-card-head-turn-me": headMe ? '1' : undefined,
-    className: `min-w-0 text-right ${tiny ? 'text-[11px]' : 'text-[12px]'} font-bold leading-tight text-violet-200`,
-    style: JA_WRAP_STYLE
-  }, headSt.phase === 'setup' && replay ? React.createElement("span", {
-    className: "whitespace-nowrap"
-  }, "はじまり") : React.createElement(React.Fragment, null, React.createElement("span", {
-    className: "whitespace-nowrap"
-  }, "ターン ", Math.max(1, headSt.turn)), " ・ ", React.createElement("span", {
-    className: `inline-block max-w-full truncate whitespace-nowrap align-bottom ${headMe ? 'rounded-md bg-amber-300 px-1.5 py-0.5 font-black text-slate-950' : 'text-slate-400'}`
-  }, headMe ? `${meName}の番` : `${who.name}の番`))))), React.createElement("div", {
+    className: `shrink-0 rounded-lg border px-2 py-1 text-[12px] font-black ${replay || tutorial ? 'border-white/20 text-slate-200' : 'border-rose-400/80 text-rose-200'}`
+  }, replay ? 'とじる' : tutorial ? '飛ばす' : '投了'), pvpLive && React.createElement("span", {
+    "aria-hidden": "true",
+    "data-card-pvp-bar": true,
+    className: `pointer-events-none absolute bottom-0 left-0 h-[3px] transition-[width] duration-1000 ease-linear ${pvpClock.offline || pvpClock.foeQuietSec > 0 ? 'bg-amber-500' : pvpClock.mine ? 'bg-amber-300' : 'bg-slate-400/60'}`,
+    style: {
+      width: `${Math.max(0, Math.min(100, pvpClock.left * 1000 / Math.max(1, cardPvpLimitMs(st)) * 100))}%`
+    }
+  })), React.createElement("div", {
     "data-card-wide-row": true,
     className: wide ? 'flex min-h-0 flex-1 flex-row' : 'contents'
   }, React.createElement("div", {
     "data-card-field": true,
     className: wide ? 'flex min-h-0 min-w-0 flex-1 flex-col' : 'contents'
-  }, pvpLive && React.createElement(CardPvpSignal, {
-    clock: pvpClock
-  }), React.createElement("div", {
+  }, React.createElement("div", {
     className: `flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`
   }, pvp || share ? React.createElement("span", {
     "data-card-pvp-foe": true,
