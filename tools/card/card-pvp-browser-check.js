@@ -530,7 +530,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     // ⑩ 送った側が「もう一度」→ 知らせの「参加する」で、カードのマルチの入口へ移って同じ部屋に入り、対戦が始まる
     await A.locator('[data-card-pvp-invite-to="friend-x"]').click();
     const again = await B.locator(`[data-card-pvp-notice="${code3}"]`).waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
-    if (again) await B.locator('[data-card-pvp-notice-accept]').click();
+    // 知らせから入るときも、入口の前にデッキ選びが出る(2026-10-29 社長 案C)。前に使ったデッキのまま「対戦へ」
+    if (again) { await B.locator('[data-card-pvp-notice-accept]').click(); await B.locator('[data-card-deck-pick-go]').click({ timeout: 20000 }).catch(() => {}); }
     const metInvite = await Promise.all([A.locator('[data-card-battle]').waitFor({ timeout: 30000 }), B.locator('[data-card-battle]').waitFor({ timeout: 30000 })]).then(() => true).catch(() => false);
     check('⑩ もう一度送ると知らせがまた出て、「参加する」で同じ部屋に入り、対戦が始まる', again && metInvite);
     // ⑪ 時間切れ: 送って3分たつと「時間切れ」(表の時刻はそのまま)・断られた形は「断られました」。古い版の相手(時刻を書かない招待)も、届く側は同じに読む
