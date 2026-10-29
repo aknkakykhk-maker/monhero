@@ -2482,7 +2482,7 @@ addAssistantLinePack({
       { e:'wink', t:'いちばん奥の難易度。ルール詳細を読んで、覚悟ができたら行こ〜' },
     ],
     eternalDifficulty: [
-      { e:'surprise', t:'ETERNALはHELHEIMのさらに先…敵はWAVEのはじめに、ライフの半分ぶんの殻をまとってるの' },
+      { e:'surprise', t:'ETERNALの敵は、WAVEのはじめにライフの半分ぶんの殻をまとってるの' },
       { e:'troubled', t:'殻を削ったぶんは距離強化にならないし、敵の攻撃は一部が丈夫さを貫いてくるよ〜' },
       { e:'wink', t:'いちばんきたえたパーティで行こ〜。ルール詳細は先に読んでね' },
     ],
