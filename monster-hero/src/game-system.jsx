@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f99568e41d85f768
+// generated-sha256: a2408cb0122a948c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57711,6 +57711,38 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const setChosen = sel && sets.length ? (sel.set && sets.includes(sel.set) ? sel.set : sets.includes(setAlone) ? setAlone : sets.length === 1 ? sets[0] : null) : null;
   const setPending = !!(sel && monChosen !== undefined && sets.length > 1 && !setChosen);
   const finalOpts = byMon.filter((o) => JSON.stringify(o.hand) === setChosen);
+  // 組み合わせの窓(2026-10-29 社長・案B): 技を押して組が2つ以上あれば、まんなかに組ごとの札の並び・ダメージ・ガッツを出し、行を押して選ぶ。
+  //   組が1つだけなら窓は出さない(押す回数2回)。練習試合は今までどおり手札の上のボタン。
+  //   数は、その組で当てた後の場をルールで作って数える(相手が守る前のダメージ。82 の cardGuardPreview / 当たった数)
+  const comboOpen = mode === 'attack' && !tutorial && !replay && !!sel && monChosen !== undefined && sets.length > 1 && !sel.set;
+  const comboPreview = (s0) => {
+    const os = byMon.filter((o) => JSON.stringify(o.hand) === s0).slice(0, 6);
+    const cards = JSON.parse(s0).map((i) => cardOf(db, me.hand[i]));
+    const main = cards.find((c) => c && !cardHasEff(c, 'attach') && cardIsAttackKind(c.kind)) || cards[0];
+    const dmgs = []; let guts = null;
+    os.forEach((o) => {
+      const nx = cardApplyAction(db, st, o);
+      if (!nx) return;
+      if (guts === null) guts = me.guts.length - nx.players[CARD_ME].guts.length;
+      const pv = nx.pending ? cardGuardPreview(db, nx) : null;
+      const hit = (nx.events || []).filter((e) => e.t === 'hit' && e.p !== CARD_ME).map((e) => e.dmg);
+      const d = pv ? pv.before : hit.length ? Math.max(...hit) : null;
+      if (Number.isFinite(d)) dmgs.push(d);
+    });
+    const lo = dmgs.length ? Math.min(...dmgs) : null; const hi = dmgs.length ? Math.max(...dmgs) : null;
+    const dmg = lo === null ? '' : `${main && cardHasEff(main, 'area') ? '全体に' : ''}${lo === hi ? lo : `${lo}〜${hi}`}`;
+    return { dmg, guts: guts === null ? null : Math.max(0, guts) };
+  };
+  const chosenPv = mode === 'attack' && setChosen && sets.length > 1 && !tutorial ? comboPreview(setChosen) : null;
+  // 行を押したら、その組を選ぶ。指で運んで置いたあとに窓が出たとき(sel.drop)は、置いた先へそのまま出す
+  const pickCombo = (s0) => {
+    Audio_.fgSe.tap();
+    const drop = sel && sel.drop;
+    setSel({ ...sel, mon: monChosen, set: s0, drop: undefined });
+    if (!drop) return;
+    const o = byMon.find((x) => JSON.stringify(x.hand) === s0 && (!x.target || `${x.target.p}-${x.target.m}` === drop));
+    if (o) dropUse(o, true);
+  };
   const needTarget = finalOpts.some((o) => o.target);
 
   // ---- 技を使う前・ターン終了の確かめ(オプション。既定は確かめない) ----
@@ -57804,14 +57836,24 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     const os = attackOpts.filter((o) => o.hand.includes(i));
     const c = cardOf(db, me.hand[i]);
     if (!os.length) {
-      setHint(!c ? '' : cardIsGuardKind(c.kind) ? '回避・防御は、相手に攻撃されたときに使います'
-        : !c.ready ? 'このカードは準備中です'
-        : c.guts > me.guts.length ? `ガッツが足りません(あと${c.guts - me.guts.length})` : 'いまは使えません(使える子がいない・もう攻撃した など)');
+      setHint(attackWhyShort(i) || '');
       setSel(null);
       return;
     }
     setSel({ hand: i });
     setHint('');
+  };
+  // 攻撃の番に使えない札の理由を短い言葉で(守りの番の cardGuardWhyShort とそろえる。2026-10-29 社長「『この子は〜』みたいな書き方はおかしい」)
+  const attackWhyShort = (i) => {
+    const c = cardOf(db, me.hand[i]);
+    if (!c || attackOpts.some((o) => o.hand.includes(i))) return null;
+    if (!c.ready) return '準備中';
+    if (cardIsGuardKind(c.kind)) return '守りの番に使う';
+    if (c.user !== 'any' && c.user !== 'breeder' && !me.mons.some((m) => !m.ko && cardUsableBy(c, m))) return cardUserLabel(db, c);
+    if (c.guts > me.guts.length) return `ガッツ不足(あと${c.guts - me.guts.length})`;
+    if (cardHasEff(c, 'attach')) return '付ける技がない';
+    if (cardHasEff(c, 'requires')) return 'いっしょに出す札がない';
+    return '今は使えない';
   };
   const tapMon = (p, m) => {
     if (mode === 'guard' && sel) {
@@ -57858,6 +57900,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (attackOpts.some((x) => mo(x) === mo(o) && x.hand.length === 1 && x.hand[0] === i)) return true;
     return new Set(attackOpts.filter((x) => mo(x) === mo(o) && x.hand.includes(i)).map((x) => cardHandNameKey(me.hand, x.hand))).size <= 1;
   };
+  const cardDropNameSets = (o, i) => {
+    const mo = (x) => (x.mon === undefined ? -1 : x.mon);
+    return new Set(attackOpts.filter((x) => mo(x) === mo(o) && x.hand.includes(i)).map((x) => cardHandNameKey(me.hand, x.hand))).size;
+  };
   const dropTargetsOf = (i) => {
     const out = {};
     if (mode === 'attack') {
@@ -57871,8 +57917,11 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         //   1枚では出せない札(付ける札・組で出す札)は、いちばん枚数の多い組み合わせ(前からの既定)。2026-10-27 部長と決めた
         const alone = (x) => !chosen && x.hand.length === 1 && x.hand[0] === i;
         // 1枚では出せない札は、名前の違う組み合わせが2つ以上あれば、運んでも出さない(画面で組み合わせを選んでから。タップとそろえる。案C)
+        //   2026-10-29 案B: 1枚では出せない札で、名前の違う組が2つ以上あれば、置いた先を覚えて組み合わせの窓を出す(タップと同じ窓で選ぶ)。
+        //   1枚で出せる技は、運んだらその1枚だけで出す(#4196 の決め。窓のいちばん上の行と同じ)
+        if (!chosen && !tutorial && !cardDropComboOk(o, i) && cardDropNameSets(o, i) > 1) { keys.forEach((k) => { if (!out[k]) out[k] = { ask: true, hand: [i], mon: o.mon, key: k }; }); return; }
         if (!chosen && !alone(o) && !cardDropComboOk(o, i)) return;
-        keys.forEach((k) => { if (!out[k] || (!alone(out[k]) && (alone(o) || o.hand.length > out[k].hand.length))) out[k] = o; });
+        keys.forEach((k) => { if (!out[k] || out[k].ask || (!alone(out[k]) && (alone(o) || o.hand.length > out[k].hand.length))) out[k] = o; });
       });
     }
     // 隠れる(移す先 to がある守り)は、移す先の味方が置き先(タップで移す先を選ぶのとそろえる。前は狙われた子へ置くと、移す先を選べなかった。2026-10-27 総点検)
@@ -57908,11 +57957,17 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   };
   // 運んで出した手でも、タップと同じく「選ぶ」段を飛ばさない(2026-10-27 総点検。前は最初の候補のまま出ていた)
   //   使う子が2体以上 … 使う子を選ぶ案内 / ショットガンの割り振り・合体の2体 … 選ぶ画面 / 変形 … 空中・地上のボタン(その札を選んだ形にする)
-  const dropUse = (t) => {
+  const dropUse = (t, picked) => {
     const monKey = (o) => (o.mon === undefined ? -1 : o.mon);
+    // 組を選ぶ窓を出す(使える子が2体以上なら、先に使う子を選んでもらう。思った子と違う子で出ないように)
+    if (t.ask) {
+      const us = [...new Set(attackOpts.filter((o) => o.hand.includes(t.hand[0])).map(monKey))];
+      if (us.length > 1) { setSel({ hand: t.hand[0] }); setHint('使う子をタップしてください'); return; }
+      setSel({ hand: t.hand[0], ...(t.mon !== undefined ? { mon: t.mon } : {}), drop: t.key }); setHint(''); return;
+    }
     // 使える子が2体以上いる札を、使う子を選ばずに運んだら、出さずにその札を選んだ形で止める(社長の答え・ソランド判断 案B。思った子と違う子で出ないように)
     const users = [...new Set(attackOpts.filter((o) => o.hand[0] === t.hand[0]).map(monKey))];
-    if (users.length > 1 && !(sel && t.hand.includes(sel.hand) && monChosen !== undefined)) { setSel({ hand: t.hand[0] }); setHint('使う子をタップしてください'); return; }
+    if (!picked && users.length > 1 && !(sel && t.hand.includes(sel.hand) && monChosen !== undefined)) { setSel({ hand: t.hand[0] }); setHint('使う子をタップしてください'); return; }
     const same = attackOpts.filter((o) => JSON.stringify(o.hand) === JSON.stringify(t.hand) && monKey(o) === monKey(t));
     if (t.split || t.fuse) { setSplitAsk(same.filter((o) => o.split || o.fuse)); return; }
     if (t.form) { setSel({ hand: t.hand[0], mon: monKey(t), set: JSON.stringify(t.hand) }); setHint('空中か地上かを選んでください'); return; }
@@ -58123,8 +58178,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* ショットガン: 割り振りを選ぶ窓 / 変形・トランスフォーム: 空中か地上かを選んで使う */}
       {useBtn && finalOpts.some((o) => o.split || o.fuse) ? <button type="button" data-card-split-open className={`${btn} mh-button-primary`} onClick={() => setSplitAsk(finalOpts)}>{finalOpts.some((o) => o.fuse) ? '合体の組を選ぶ' : '割り振りを選ぶ'}</button>
         : useBtn && finalOpts.some((o) => o.form) ? ['air', 'ground'].map((f) => { const o = finalOpts.find((x) => x.form === f); return o ? <button key={f} type="button" data-card-form={f} className={`${btn} mh-button-primary`} onClick={() => askUse(o)}>{f === 'air' ? '空中にして使う' : '地上にして使う'}</button> : null; })
-        : useBtn ? <button type="button" className={`${btn} mh-button-primary`} onClick={() => askUse(finalOpts[0])}>使う</button> : null}
-      <button type="button" disabled={tutOff('end')} className={`${btn} border border-violet-300/60 bg-violet-900${tutBtn('end')}`} onClick={() => step({ type: 'endAttacks' })}>攻撃おわり → ガッツへ</button>
+        : useBtn ? <button type="button" className={`${btn} mh-button-primary`} onClick={() => askUse(finalOpts[0])}>{chosenPv && (chosenPv.dmg || chosenPv.guts !== null) ? <span data-card-use-pv className="block leading-tight">使う<span className="block text-[11px] font-bold text-amber-100">{[chosenPv.dmg, chosenPv.guts !== null ? `ガッツ${chosenPv.guts}` : ''].filter(Boolean).join('・')}</span></span> : '使う'}</button> : null}
+      {/* 組み合わせの窓で選んだあとは「組を変える」(窓をもう一度出す。案B)。攻撃をおわるのは、選びを外してから */}
+      {chosenPv && sel && sel.set ? <button type="button" data-card-combo-change className={`${btn} border border-white/20 bg-slate-800`} onClick={() => { Audio_.fgSe.tap(); setSel({ hand: sel.hand, mon: monChosen }); }}>組を変える</button>
+        : <button type="button" disabled={tutOff('end')} className={`${btn} border border-violet-300/60 bg-violet-900${tutBtn('end')}`} onClick={() => step({ type: 'endAttacks' })}>攻撃おわり → ガッツへ</button>}
     </>);
   })();
   // 黄色の案内は1行に収まる短い文に(長くて2行になり、手札を押し下げていた。2026-10-26 改良の案 E・カゲあつくん 8)。運ぶ操作の話はヘルプへ
@@ -58323,7 +58380,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         <div data-card-guard-why className={`mx-auto mb-1 max-w-[94%] shrink-0 text-center ${tiny ? 'truncate whitespace-nowrap text-[10px]' : 'text-[11px]'} font-bold leading-snug text-slate-300`} style={tiny ? undefined : JA_WRAP_STYLE}>{cardGuardBlockReasons(db, st).join(' / ')}</div>
       )}
       {!guide && !tutorial && hint && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap(hint)}</div>}
-      {mode === 'attack' && sel && monChosen !== undefined && sets.length > 1 && (
+      {mode === 'attack' && (tutorial || replay) && sel && monChosen !== undefined && sets.length > 1 && (
         <div className="mb-1 flex shrink-0 flex-wrap justify-center gap-1 px-2">
           {/* 押した札は省いて、付ける札だけを「＋◯◯」で出す。少ない組から並べ、1行に収める(320×568 で2行に折れて「使う」が画面の下で切れた。2026-10-28 案C) */}
           {sets.slice().reverse().map((s) => <button key={s} type="button" data-card-set={s} onClick={() => setSel({ ...sel, mon: monChosen, set: s })} className={`whitespace-nowrap rounded-lg border font-black ${tiny ? 'px-1.5 py-0.5 text-[11px]' : 'px-2 py-1 text-[12px]'} ${s === setChosen ? 'border-amber-300 bg-amber-500/25' : 'border-white/20 bg-slate-800'}`}>{JSON.parse(s).filter((i) => i !== sel.hand).length ? JSON.parse(s).filter((i) => i !== sel.hand).map((i) => `＋${cardOf(db, me.hand[i]).name}`).join('') : `${cardOf(db, me.hand[sel.hand]).name}だけ`}</button>)}
@@ -58345,7 +58402,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           const on = handUsable(i);
           const up = (sel && sel.hand === i) || picks.includes(i) || (setChosen && JSON.parse(setChosen).includes(i));
           // 守りの番: 使えない回避・防御の札に、理由を短く重ねる(「ガッツ不足」「ナーガ専用」など。案C)
-          const why = mode === 'guard' && !tutorial && !on ? cardGuardWhyShort(db, st, c) : null;
+          const why = tutorial || on ? null : mode === 'guard' ? cardGuardWhyShort(db, st, c) : mode === 'attack' && myTurn && !sel ? ((w) => (w === '今は使えない' ? null : w))(attackWhyShort(i)) : null;
           return (
             <div key={`${no}-${i}`} data-card-hand-card={i} data-card-press onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${wide ? 'max-w-[72px]' : handTiny ? (boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]') : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${replay && boardFit >= 4 ? '!max-w-[38px]' : ''} ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? (why ? 'relative [&>*:not([data-card-why])]:opacity-45' : 'opacity-45') : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
               <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} draggable={false} style={{ WebkitUserDrag: 'none' }} className={`w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`}/>
@@ -58584,6 +58641,29 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+      {comboOpen && (
+        <div data-card-combo-sheet className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 px-4" onClick={() => { setSel(null); setHint(''); }}>
+          <div className="max-h-[80vh] w-full max-w-[340px] overflow-y-auto rounded-2xl border-2 border-sky-300 bg-slate-900 p-3 text-center shadow-[0_8px_24px_#000]" onClick={(e) => e.stopPropagation()}>
+            <div className="text-[14px] font-black text-white">どの組み合わせで出す？</div>
+            {sets.slice().reverse().map((s0) => {
+              const idx = JSON.parse(s0);
+              const add = idx.filter((i) => i !== sel.hand);
+              const pv = comboPreview(s0);
+              const title = add.length ? add.map((i) => `＋${(cardOf(db, me.hand[i]) || {}).name || ''}`).join('') : `「${(cardOf(db, me.hand[sel.hand]) || {}).name || ''}」だけ`;
+              return (
+                <button key={s0} type="button" data-card-set={s0} onClick={() => pickCombo(s0)} className="mt-2 flex w-full items-center gap-2 rounded-xl border-2 border-white/25 bg-slate-800 p-1.5 text-left active:scale-[.98]">
+                  <span className="flex shrink-0 pl-1.5">{idx.map((i) => { const c = cardOf(db, me.hand[i]); return <img key={i} src={CARD_IMG(c ? c.img : me.hand[i])} alt="" className="-ml-1.5 w-[30px] rounded-[3px] shadow-[0_1px_3px_#000]"/>; })}</span>
+                  <span className="min-w-0 flex-1 leading-snug">
+                    <span className="block text-[13px] font-black text-white" style={JA_WRAP_STYLE}>{title}</span>
+                    <span data-card-combo-pv className="block text-[12px] font-bold text-amber-200">{[pv.dmg ? `${pv.dmg}ダメージ` : '', pv.guts !== null ? `ガッツ${pv.guts}` : ''].filter(Boolean).join(' / ')}</span>
+                  </span>
+                </button>
+              );
+            })}
+            <div className="mt-2 text-[11px] font-bold text-slate-300">窓の外を押すとやめる</div>
           </div>
         </div>
       )}

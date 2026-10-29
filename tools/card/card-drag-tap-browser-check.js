@@ -271,7 +271,7 @@ const sceneScript = (spec) => `(() => {
     n0 = await handCount(page);
     await page.locator('[data-card-mon="0-0"]').click();
     await settle(page, n0);
-    let fHand = await page.evaluate(() => [...document.querySelectorAll('[data-card-hand-card]')].map((e) => e.innerText.split('\n')[0]));
+    let fHand = await page.evaluate(() => [...document.querySelectorAll('[data-card-hand-card]')].map((e) => (e.querySelector('img') || {}).alt || ''));
     log = await lastLog(page);
     check('F タップ: そのまま味方を押すと、マンゴーだけが出る(ジョイのサポートは手札に残る)', (await handCount(page)) === n0 - 1 && fHand.includes('ジョイのサポート'), `${n0}→${await handCount(page)}枚・${log.slice(-100)}`);
     await page.close();
@@ -280,15 +280,16 @@ const sceneScript = (spec) => `(() => {
     n0 = await handCount(page);
     await mouseDrag(page, '[data-card-hand-card="0"]', '[data-card-mon="0-0"]');
     await settle(page, n0);
-    fHand = await page.evaluate(() => [...document.querySelectorAll('[data-card-hand-card]')].map((e) => e.innerText.split('\n')[0]));
+    fHand = await page.evaluate(() => [...document.querySelectorAll('[data-card-hand-card]')].map((e) => (e.querySelector('img') || {}).alt || ''));
     check('F 運ぶ: マンゴーを味方へ運ぶと、マンゴーだけが出る', (await handCount(page)) === n0 - 1 && fHand.includes('ジョイのサポート'), `${n0}→${await handCount(page)}枚`);
     await page.close();
     // 付けて意味のある組み合わせは、今までどおりボタンに出て選べる(突進(ガッツ3)にジョイのサポート → ガッツ0で出せる)
     page = await open({ mons: ['golem', 'tiger', 'pixie'], hand: ['114', '276', '100', '100', '100'] });
     await page.locator('[data-card-hand-card="0"]').click();
     await page.waitForTimeout(400);
-    const rSets = await page.locator('[data-card-set]').evaluateAll((els) => els.map((e) => `${e.getAttribute('data-card-set')}${/amber-300/.test(e.className) ? '*' : ''}`));
-    check('F 意味のある組み合わせ(突進＋ジョイのサポート)はボタンに出て、既定は突進1枚だけ', rSets.includes('[0,1]') && rSets.includes('[0]*'), rSets.join(' / '));
+    // 2026-10-29 案B: 組が2つ以上なら、まんなかの組み合わせの窓に行で出る(勝手に選ばない)。いちばん上は突進1枚だけ
+    const rSets = await page.locator('[data-card-combo-sheet] [data-card-set]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-set')));
+    check('F 意味のある組み合わせ(突進＋ジョイのサポート)は組み合わせの窓に出て、いちばん上は突進1枚だけ', rSets[0] === '[0]' && rSets.includes('[0,1]'), rSets.join(' / '));
     await page.close();
 
     // ---- G 攻撃に戻る(社長の答え 2026-10-27): ガッツの段で押すと攻撃の段へ戻る / 灼熱の地でダメージが出た番は出さない ----

@@ -134,6 +134,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, 'focus-attack.png') }); }
     const user = page.locator('[data-card-mon].ring-amber-300').first();
     if (await user.count()) { await user.click(); await page.waitForTimeout(150); }
+    // 組み合わせの窓(2026-10-29 案B)で「＋集中」の行を選ぶ
+    const focusRow = page.locator('[data-card-combo-sheet] [data-card-set]').filter({ hasText: '集中' }).first();
+    if (await focusRow.count()) { await focusRow.click(); await page.waitForTimeout(200); }
     await page.locator('[data-card-mon="1-0"]').click();
     let logText = '', life1 = life0;
     for (let i = 0; i < 40; i++) { await page.waitForTimeout(250); logText = await page.locator('[data-card-log]').innerText().catch(() => ''); life1 = await lifeOf(page, '1-0'); if (life1 !== life0 || /回避した/.test(logText)) break; }
