@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5d9e385ae2d4f31a
+// source-sha256: b94d932be510c27e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -100313,6 +100313,7 @@ const CardShopGrid = ({
   rarity
 }) => {
   const missing = collection !== false && !((collection || {})[no] > 0);
+  const owned = collection ? Math.max(0, Math.floor(Number(collection[no]) || 0)) : 0;
   return React.createElement("button", {
     key: no,
     type: "button",
@@ -100329,7 +100330,10 @@ const CardShopGrid = ({
   }), missing && React.createElement("span", {
     "data-card-shop-missing-badge": true,
     className: "absolute left-0.5 top-0.5 rounded-md bg-rose-600 px-1 text-[9px] font-black text-white shadow"
-  }, "未取得"), rarity && rarity !== 'normal' && React.createElement("span", {
+  }, "未取得"), owned > 0 && React.createElement("span", {
+    "data-card-shop-owned": owned,
+    className: "absolute right-0.5 top-0.5 rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950 shadow"
+  }, "所持", owned), rarity && rarity !== 'normal' && React.createElement("span", {
     className: "absolute bottom-0.5 left-0.5 rounded-md bg-amber-300 px-1 text-[9px] font-black text-slate-950"
   }, CARD_RARITY_LABEL[rarity]), count > 1 && React.createElement("span", {
     className: "absolute bottom-0.5 right-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-white"
