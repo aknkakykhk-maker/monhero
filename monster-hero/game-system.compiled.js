@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d734f9e39a63d371
+// source-sha256: 1735b75505aecfb1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99910,6 +99910,7 @@ const CardBattleScreen = ({
         setView(toPvp ? 'mode' : 'foe');
       },
       allowRented: !toPvp,
+      rentTab: shareForm && !toPvp,
       onPick: async c => {
         if (c.kind === 'rent') {
           const next = deckPick;
@@ -103404,9 +103405,14 @@ const CardDeckPick = ({
   note = '',
   onPick,
   onBack,
-  allowRented = false
+  allowRented = false,
+  rentTab = false
 }) => {
   const [rented, setRented] = useState(null);
+  const [tab, setTab] = useState('own');
+  const [cands, setCands] = useState(null);
+  const [rentMsg, setRentMsg] = useState('');
+  const [rentBusy, setRentBusy] = useState(false);
   useEffect(() => {
     if (!allowRented || typeof cardRentedDeckGet !== 'function') return undefined;
     let alive = true;
@@ -103417,14 +103423,54 @@ const CardDeckPick = ({
       alive = false;
     };
   }, [allowRented]);
-  const choices = cardDeckPickChoices(db, decks, collection, {
+  const loadCands = async () => {
+    setCands(null);
+    const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+    const [fresh, popular] = await Promise.all([cardShareFetchList({
+      sort: 'new',
+      limit: 40
+    }), cardShareFetchList({
+      sort: 'popular',
+      limit: 10
+    })]);
+    setCands({
+      picks: cardSharePickSome(fresh, selfId, 3),
+      popular: popular.filter(e => e.ownerId !== selfId)
+    });
+  };
+  useEffect(() => {
+    if (rentTab && allowRented && tab === 'rent' && cands === null && typeof cardShareFetchList === 'function') void loadCands();
+  }, [tab]);
+  const rentIt = async e => {
+    if (rentBusy) return;
+    setRentBusy(true);
+    setRentMsg('');
+    if (await cardRentedDeckSet(e)) {
+      const r = await cardRentedDeckGet();
+      setRented(r);
+      setSel('rented');
+      setRentMsg(`${e.name}さんのデッキを借りました`);
+    } else setRentMsg('この端末に保存できなかったため、借りられませんでした');
+    setRentBusy(false);
+  };
+  const giveBack = async () => {
+    if (rentBusy) return;
+    setRentBusy(true);
+    if (await cardRentedDeckSet(null)) {
+      setRented(null);
+      setRentMsg('借りていたデッキを返しました');
+    }
+    setRentBusy(false);
+  };
+  const choices0 = cardDeckPickChoices(db, decks, collection, {
     rented: allowRented ? rented : null
   });
+  const choices = rentTab && allowRented ? choices0.filter(c => tab === 'rent' ? c.kind === 'rent' : c.kind !== 'rent') : choices0;
   const usable = c => c && c.why.length === 0;
-  const first = choices.find(c => c.id === decks.active && usable(c)) || choices.find(usable) || null;
+  const first = choices0.find(c => c.id === decks.active && usable(c)) || choices0.find(usable) || null;
   const [sel, setSel] = useState(first ? first.id : null);
   const [busy, setBusy] = useState(false);
-  const chosen = choices.find(c => c.id === sel && usable(c)) || null;
+  const chosen = choices0.find(c => c.id === sel && usable(c)) || null;
   const go = async () => {
     if (!chosen || busy) return;
     Audio_.fgSe.tap();
@@ -103445,7 +103491,22 @@ const CardDeckPick = ({
     onBack: onBack
   }), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-2 pb-2`
-  }, note && React.createElement("p", {
+  }, rentTab && allowRented && React.createElement("div", {
+    "data-card-deck-pick-tabs": true,
+    className: "flex gap-1.5",
+    role: "tablist"
+  }, [['own', '自分のデッキ'], ['rent', '借りたデッキ']].map(([id, label]) => React.createElement("button", {
+    key: id,
+    type: "button",
+    role: "tab",
+    "aria-selected": tab === id,
+    "data-card-deck-pick-tab": id,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setTab(id);
+    },
+    className: `flex-1 rounded-xl py-2 text-[13px] font-black ${tab === id ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`
+  }, label))), note && tab === 'own' && React.createElement("p", {
     className: "text-[11px] font-bold text-slate-400",
     style: JA_WRAP_STYLE
   }, note), choices.map(c => {
@@ -103490,7 +103551,69 @@ const CardDeckPick = ({
       className: "block text-[11px] font-bold leading-snug text-amber-200",
       style: JA_WRAP_STYLE
     }, c.why.join('・'))));
-  }), !first && React.createElement("p", {
+  }), rentTab && allowRented && tab === 'rent' && React.createElement(React.Fragment, null, rented ? React.createElement("button", {
+    type: "button",
+    "data-card-deck-pick-giveback": true,
+    disabled: rentBusy,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      void giveBack();
+    },
+    className: "w-full rounded-xl border border-emerald-300/50 bg-slate-900 py-1.5 text-[12px] font-black text-emerald-200 disabled:opacity-50"
+  }, "借りているデッキを返す") : React.createElement("p", {
+    className: "text-[12px] font-bold text-slate-300"
+  }, "いま借りているデッキはありません。下から1組借りられます(マルチ対戦では使えません)"), rentMsg && React.createElement("p", {
+    "data-card-deck-pick-rent-msg": true,
+    className: "rounded-xl bg-slate-900 p-2 text-[12px] font-bold text-amber-100",
+    style: JA_WRAP_STYLE
+  }, rentMsg), React.createElement("div", {
+    "data-card-deck-pick-rent-list": true,
+    className: SCREEN_PANEL_CLASS
+  }, React.createElement("div", {
+    className: "text-[12px] font-bold text-slate-400"
+  }, "借りるデッキをさがす"), cands === null ? React.createElement("p", {
+    className: "mt-1 text-[12px] font-bold text-slate-300"
+  }, "読み込み中…") : [['おすすめ', cands.picks], ['よく戦われている', cands.popular]].map(([label, rows]) => React.createElement("div", {
+    key: label,
+    className: "mt-1.5"
+  }, React.createElement("div", {
+    className: "text-[11px] font-black text-amber-200"
+  }, label), rows.length ? rows.map(e => React.createElement("div", {
+    key: `${label}-${e.ownerId}`,
+    "data-card-deck-pick-cand": e.ownerId,
+    className: "mt-1 flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5"
+  }, typeof CardPvpAvatar === 'function' && React.createElement(CardPvpAvatar, {
+    icon: e.icon,
+    frame: e.frame,
+    className: "h-8 w-8"
+  }), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("b", {
+    className: "block truncate text-[13px] font-black text-white"
+  }, e.name), React.createElement("small", {
+    className: "block truncate text-[11px] font-bold text-slate-300"
+  }, e.tactics.name || 'デッキ'), typeof cardShareSmartText === 'function' && React.createElement("small", {
+    className: "block text-[10px] font-black text-amber-200"
+  }, `賢さ ${cardShareSmartText(e.tactics)}`)), React.createElement("button", {
+    type: "button",
+    "data-card-deck-pick-rent": e.ownerId,
+    disabled: rentBusy || rented && rented.ownerId === e.ownerId && rented.version === e.version,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      void rentIt(e);
+    },
+    className: "mh-button mh-button-primary min-h-[34px] shrink-0 rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
+  }, rented && rented.ownerId === e.ownerId && rented.version === e.version ? '借りています' : '借りる'))) : React.createElement("p", {
+    className: "mt-1 text-[12px] font-bold text-slate-400"
+  }, "まだだれも登録していません"))), React.createElement("button", {
+    type: "button",
+    "data-card-deck-pick-rent-reload": true,
+    className: "mt-2 w-full rounded-xl border border-white/15 bg-slate-900 py-1.5 text-[12px] font-black text-slate-200",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      void loadCands();
+    }
+  }, "ほかの人をさがす"))), !first && tab === 'own' && React.createElement("p", {
     "data-card-deck-pick-none": true,
     className: "rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100",
     style: JA_WRAP_STYLE
