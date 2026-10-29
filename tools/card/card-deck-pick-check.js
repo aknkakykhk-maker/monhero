@@ -36,7 +36,7 @@ check('① 枚数が足りないデッキは理由つき(選べない)', list[1]
 check('① 持っていないカードがあると理由つき', E.cardDeckPickChoices(db, decks, {})[0].why.length > 0);
 check('① 名前・3体・枚数・種類を持つ(借りたデッキは kind を変えて足す)', list[0].name === 'ぜんぶある' && list[0].monsters.length === 3 && list[0].count === full.cards.length && list[0].kind === 'own');
 check('① 壊れた値でも落ちない', Array.isArray(E.cardDeckPickChoices(db, null, null)) && E.cardDeckPickChoices(db, { decks: [] }, {}).length === 0);
-check('① 前に使ったデッキが使えないときは、使える最初のデッキを選んでおく', /choices\.find\(\(c\) => c\.id === decks\.active && usable\(c\)\) \|\| choices\.find\(usable\)/.test(pickSrc));
+check('① 前に使ったデッキが使えないときは、使える最初のデッキを選んでおく', /choices0?\.find\(\(c\) => c\.id === decks\.active && usable\(c\)\) \|\| choices0?\.find\(usable\)/.test(pickSrc));
 
 // ② 84 のつなぎ
 const opens = (src) => (src.match(/setDeckPick\(\{ next: '(cpu|pvp)'/g) || []).length;
