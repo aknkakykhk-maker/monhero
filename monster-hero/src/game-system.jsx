@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 00b7497d60aac197
+// generated-sha256: b0a444d7c9908610
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -55492,11 +55492,46 @@ const cardTacticFilled = (frames) => {
 // 基本カードの枚数が上限、ON の行の数でそこまで上がる。1枚 … EASY/NORMAL/HARD、2枚 … NORMAL/HARD/EXPERT、3枚 … HARD/EXPERT/MASTER
 //   行 0〜3 / 4〜9 / 10以上。基本カードも行も無ければ 'random'(出せる手からランダム)。基本カード無しで行だけなら EASY
 const CARD_TACTIC_SMART = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
+// ---- 賢さに数えないセット(2026-10-29 社長 案A「ちゃんと効くカードだけ数える」) ----
+//   ・場面が合わない … 守るときだけの条件(受けるダメージ・受けると倒れる・全体攻撃を受けた)を守り以外の手と組んだ /
+//                    「この子の◯◯」の条件をブリーダーの枠に入れた(その子がいないので当たらない)
+//   ・同じもの … 同じ条件と手(と種族)の組み合わせは、いくつセットしても1つと数える(3体の枠へのコピーも)
+//   ・ほとんど当たらない … 試合で当たる割合が2%に届かない条件(助手どうし42試合で測った。2026-10-29 ルールくん)。
+//                        全体カード・有利な相手のように、自分のデッキ次第で当たり方が変わる条件は入れない
+const CARD_TACTIC_GUARD_ONLY_CONDS = Object.freeze(['incoming', 'incomingKo', 'incomingArea']);
+const CARD_TACTIC_SELF_CONDS = Object.freeze(['selfLife', 'selfFresh', 'selfType', 'selfStun', 'selfAdv']);
+const CARD_TACTIC_RARE_CONDS = Object.freeze(['turnGe.15', 'myLife.10', 'foeLife.10', 'selfLife.10', 'selfStun', 'myStun', 'foeStun', 'foeCharge', 'foeAir', 'incomingArea']);
+// 枠ごとのセットに、数えない理由を付ける(数えるものは null)。{ breeder:[理由|null], mons:[[理由|null]×行]×3 }。組む画面の小さい文字にも使う
+const cardTacticUncounted = (frames) => {
+  const f = cardTacticNormalizeFrames(frames);
+  const seen = new Set();
+  const why = (row, where) => {
+    if (!row.on) return null;
+    const c = cardTacticOf(row.c), a = cardTacticOf(row.a);
+    if (!c || !a) return '場面が合わない';
+    if (CARD_TACTIC_GUARD_ONLY_CONDS.includes(c.g) && a.phase !== 'guard') return '場面が合わない';
+    if (where === 'breeder' && CARD_TACTIC_SELF_CONDS.includes(c.g)) return '場面が合わない';
+    if (CARD_TACTIC_RARE_CONDS.includes(c.id)) return 'ほとんど当たらない';
+    const key = `${row.c}|${row.a}|${row.sp || ''}`;
+    if (seen.has(key)) return '同じものが入っている';
+    seen.add(key);
+    return null;
+  };
+  return { breeder: f.breeder.map((r) => why(r, 'breeder')), mons: f.mons.map((rows) => rows.map((r) => why(r, 'mon'))) };
+};
+// 賢さに数えるセットの数(ON で、数えない理由が無いもの)
+const cardTacticCountedRows = (frames) => {
+  const f = cardTacticNormalizeFrames(frames);
+  const u = cardTacticUncounted(f);
+  return f.breeder.filter((r, i) => r.on && !u.breeder[i]).length + f.mons.reduce((a, rows, mi) => a + rows.filter((r, i) => r.on && !u.mons[mi][i]).length, 0);
+};
 const cardTacticSmartLevel = (frames) => {
   const f = cardTacticNormalizeFrames(frames);
   const base = f.base.filter(Boolean).length;
-  const rows = f.breeder.filter((x) => x.on).length + f.mons.reduce((a, r) => a + r.filter((x) => x.on).length, 0);
-  if (!base && !rows) return 'random';
+  const rows = cardTacticCountedRows(f);
+  // でたらめ(出せる手からランダム)は、何もセットしていないときだけ(数えないセットだけでも、でたらめにはしない)
+  const any = f.breeder.some((x) => x.on) || f.mons.some((r) => r.some((x) => x.on));
+  if (!base && !any) return 'random';
   if (!base) return 'easy';
   return CARD_TACTIC_SMART[(base - 1) + (rows >= 10 ? 2 : rows >= 4 ? 1 : 0)];
 };

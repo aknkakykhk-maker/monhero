@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ac4e7621c737c8eb
+// source-sha256: 3b2329c645d1fef7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -92027,11 +92027,41 @@ const cardTacticFilled = frames => {
   return f.base.filter(Boolean).length + f.breeder.filter(x => x.on).length + f.mons.reduce((a, rows) => a + rows.filter(x => x.on).length, 0);
 };
 const CARD_TACTIC_SMART = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
+const CARD_TACTIC_GUARD_ONLY_CONDS = Object.freeze(['incoming', 'incomingKo', 'incomingArea']);
+const CARD_TACTIC_SELF_CONDS = Object.freeze(['selfLife', 'selfFresh', 'selfType', 'selfStun', 'selfAdv']);
+const CARD_TACTIC_RARE_CONDS = Object.freeze(['turnGe.15', 'myLife.10', 'foeLife.10', 'selfLife.10', 'selfStun', 'myStun', 'foeStun', 'foeCharge', 'foeAir', 'incomingArea']);
+const cardTacticUncounted = frames => {
+  const f = cardTacticNormalizeFrames(frames);
+  const seen = new Set();
+  const why = (row, where) => {
+    if (!row.on) return null;
+    const c = cardTacticOf(row.c),
+      a = cardTacticOf(row.a);
+    if (!c || !a) return '場面が合わない';
+    if (CARD_TACTIC_GUARD_ONLY_CONDS.includes(c.g) && a.phase !== 'guard') return '場面が合わない';
+    if (where === 'breeder' && CARD_TACTIC_SELF_CONDS.includes(c.g)) return '場面が合わない';
+    if (CARD_TACTIC_RARE_CONDS.includes(c.id)) return 'ほとんど当たらない';
+    const key = `${row.c}|${row.a}|${row.sp || ''}`;
+    if (seen.has(key)) return '同じものが入っている';
+    seen.add(key);
+    return null;
+  };
+  return {
+    breeder: f.breeder.map(r => why(r, 'breeder')),
+    mons: f.mons.map(rows => rows.map(r => why(r, 'mon')))
+  };
+};
+const cardTacticCountedRows = frames => {
+  const f = cardTacticNormalizeFrames(frames);
+  const u = cardTacticUncounted(f);
+  return f.breeder.filter((r, i) => r.on && !u.breeder[i]).length + f.mons.reduce((a, rows, mi) => a + rows.filter((r, i) => r.on && !u.mons[mi][i]).length, 0);
+};
 const cardTacticSmartLevel = frames => {
   const f = cardTacticNormalizeFrames(frames);
   const base = f.base.filter(Boolean).length;
-  const rows = f.breeder.filter(x => x.on).length + f.mons.reduce((a, r) => a + r.filter(x => x.on).length, 0);
-  if (!base && !rows) return 'random';
+  const rows = cardTacticCountedRows(f);
+  const any = f.breeder.some(x => x.on) || f.mons.some(r => r.some(x => x.on));
+  if (!base && !any) return 'random';
   if (!base) return 'easy';
   return CARD_TACTIC_SMART[base - 1 + (rows >= 10 ? 2 : rows >= 4 ? 1 : 0)];
 };
