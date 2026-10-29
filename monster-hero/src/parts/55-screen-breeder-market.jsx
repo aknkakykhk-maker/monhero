@@ -250,12 +250,12 @@ function BreederMarketScreen({
       </div>}
 
       {marketSection&&<>
-        <MarketBalanceBar balances={
+        {/* カード売り場の所持ビートPは、タブの下へ(パックのタブはガチャポイントと同じ帯。2026-10-29 社長 案B) */}
+        {marketSection!=='card'&&<MarketBalanceBar balances={
           marketSection==='diamond'?[{currency:'diamond',value:gold}]
           :marketSection==='breeder'?[{currency:'breederPoint',value:breederPoints}]
           :marketSection==='exchange'?[{currency:'psyche',value:psycheHave},{currency:'heroProofShard',value:shardHave},{currency:'heroProof',value:proofHave}]
-          :marketSection==='card'?[{currency:'cardPoint',value:cardShop?cardShop.point:0}]
-          :[{currency:'beatPoint',value:safeEventPoints}]}/>
+          :[{currency:'beatPoint',value:safeEventPoints}]}/>}
         {marketExchangeError&&!sheet&&<MarketNotice>{marketExchangeError}</MarketNotice>}
       </>}
 
@@ -298,8 +298,12 @@ function BreederMarketScreen({
         const cp=cardShop.point;
         return <>
           {renderSectionTabs('card', true)}
+          {/* 一覧(mh-scroll)の外に置くので、横の画面では左の列(タブの下)に入る */}
+          {tab==='pack'&&cardShop.onExchangeCatalog&&typeof CardShopGachaBand==='function'
+            ?<CardShopGachaBand db={CARD_BATTLE_DATA} point={cp} gacha={cardShop.gacha} catalogs={cardShop.catalogs} collection={cardShop.collection} busy={busy||cardShop.busy} onExchangeCatalog={cardShop.onExchangeCatalog} onUseCatalog={cardShop.onUseCatalog}/>
+            :<MarketBalanceBar balances={[{currency:'cardPoint',value:cp}]}/>}
           <div className={SCREEN_LIST_CLASS} data-card-shop data-card-shop-tab={tab}>
-            {tab==='pack'&&<CardShopPacks db={CARD_BATTLE_DATA} point={cp} busy={busy||cardShop.busy} collection={cardShop.collection} onBuyPack={cardShop.onBuyPack} gacha={cardShop.gacha} catalogs={cardShop.catalogs} onExchangeCatalog={cardShop.onExchangeCatalog} onUseCatalog={cardShop.onUseCatalog}/>}
+            {tab==='pack'&&<CardShopPacks db={CARD_BATTLE_DATA} point={cp} busy={busy||cardShop.busy} collection={cardShop.collection} onBuyPack={cardShop.onBuyPack}/>}
             {/* 戦術カードのパック(97 の CardTacticsShop・2026-10-29 社長「戦術カードはマーケットで買えるようにして」) */}
             {tab==='tactics'&&typeof CardTacticsShop==='function'&&<CardTacticsShop point={cp} busy={busy||cardShop.busy} onBuy={cardShop.onBuyTactics} onExchange={cardShop.onExchangeTactics}/>}
             {tab==='starter'&&<CardShopStarters db={CARD_BATTLE_DATA} point={cp} collection={cardShop.collection} busy={busy||cardShop.busy} starter={cardShop.starter} shop={cardShop.shop} onBuyStarter={cardShop.onBuyStarter}/>}
