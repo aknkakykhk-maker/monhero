@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1f60e4634f3952f2
+// generated-sha256: aab8fc607b395230
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -35648,7 +35648,7 @@ const AssistantBondRewardList = ({ who, level, breederIcon, resolveIconUrl, onCl
   );
 };
 function ProfileScreen({
-  onCardShareGo = null, // 自分の登録デッキ(95 の CardShareProfileDeck)の「デッキ登録で直す」→ MFバトルカードへ(60-app)
+  onCardShareGo = null, // 見せる札の「バトルカードのデッキ」(95 の CardShareDeckTile)を押したとき → デッキ登録の画面へ(60-app)
   activeAssistant, assistantBond, assistantBondLevelNow, assistantBonds, assistantCallStyle, attemptCounts,
   breederIcon, breederLevel, breederName, breederPoints, extremeBestScores, extremeClearCounts,
   finishOnboarding, gold, highScores, isEventReplayUnlocked, modeRecordFor, onboarded,
@@ -35736,13 +35736,10 @@ function ProfileScreen({
               </div>
             </div>
           </div>
-          {/* ② 設定のタイル。入口が散らばらないよう、アイコン・フレーム・ひとこと・好きなモンスターを同じ形でまとめる。
+          {/* ② 着せかえのタイル(アイコン・フレーム・図鑑・着替え)。ひとことと好きなモンスターは、下の「見せる札」へ移した(2026-10-29 案B)。
               増えても、ここへ同じ形で足していく */}
           {(()=>{
             const frameName=(profileFrameById(normalizeProfileFrameId(profileFrameId))||{}).name||'フレームなし';
-            const base=favoriteMasu?ALL_PLAYER_MONSTERS[favoriteMasu.baseId]:null;
-            const face=base?friendsFaceIconOf(favoriteMasu.baseId):null;
-            const showFriendTiles=onboarded&&!onboardingPreview&&friendsEnabled;
             // 幅360未満は、余白と絵を詰めて値の字を1段小さくし、「書いていません」「えらびなおす」が言葉の途中で折れずに入るようにする(2026-10-21)
             const tile='flex min-h-[56px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-2 text-left active:scale-95 max-[359px]:gap-1.5 max-[359px]:px-2';
             return (
@@ -35770,21 +35767,33 @@ function ProfileScreen({
                   <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">着替え</small><b className="block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white">{wornCostume?wornCostume.name:'元の服'}</b></span>
                 </button>
               )}
-              {showFriendTiles&&(
-                <button type="button" data-profile-message onClick={onOpenMessageEditor} className={tile}>
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">💬</span>
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{profileMessage||<>まだ<wbr/>書いていません</>}</b></span>
-                </button>
-              )}
-              {showFriendTiles&&(
-                <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className={tile}>
-                  {face?<ProfileAvatar src={face.src} id={face.id} className="h-8 w-8 shrink-0 max-[359px]:h-6 max-[359px]:w-6"/>:<span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">💗</span>}
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300" style={JA_LABEL_STYLE}>{jaWrap('好きなモンスター')}</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:<>まだ<wbr/>選んでいません</>}</b></span>
-                </button>
-              )}
             </div>);
           })()}
         </div>
+        {/* ①-2 見せる札(2026-10-29 社長が案Bを選んだ)。フレンドにも同じ形で見える物を、名刺のすぐ下に並べる。
+            ひとことは名刺の下の1行、好きなモンスターとバトルカードのデッキは同じ形の札で横に2枚(デッキの札は 95 の CardShareDeckTile) */}
+        {onboarded&&!onboardingPreview&&friendsEnabled&&(()=>{
+          const base=favoriteMasu?ALL_PLAYER_MONSTERS[favoriteMasu.baseId]:null;
+          const face=base?friendsFaceIconOf(favoriteMasu.baseId):null;
+          return (
+          <section className="mb-3" data-profile-showcase>
+            <button type="button" data-profile-message onClick={onOpenMessageEditor} className="mb-2 flex w-full min-h-[44px] items-center gap-2 rounded-xl border border-pink-400/30 bg-black/30 px-3 py-2 text-left active:scale-[.98]">
+              <span className="text-lg" aria-hidden="true">💬</span>
+              <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block break-words text-[12px] font-black leading-snug text-white" style={JA_LABEL_STYLE}>{profileMessage?`「${profileMessage}」`:<>まだ<wbr/>書いていません</>}</b></span>
+              <Edit3 size={13} className="shrink-0 text-slate-400"/>
+            </button>
+            <div className="mb-1"><ScreenSectionLabel>見せる札（フレンドにもこう見えます）</ScreenSectionLabel></div>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className="flex min-h-[132px] flex-col items-start gap-1 rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2 text-left active:scale-[.98]">
+                <small className="text-[10px] font-black text-amber-300" style={JA_LABEL_STYLE}>{jaWrap('好きなモンスター')}</small>
+                {face?<ProfileAvatar src={face.src} id={face.id} className="h-14 w-14 shrink-0"/>:<span className="flex h-14 w-14 items-center justify-center text-3xl" aria-hidden="true">💗</span>}
+                <b className="block w-full break-words text-[13px] font-black leading-tight text-white">{base?base.name:<>まだ<wbr/>選んでいません</>}</b>
+                {base&&<small className="text-[10px] font-black text-pink-300">絆Lv.{masuBondLevelInfo(favoriteMasu).level}</small>}
+              </button>
+              {typeof CardShareDeckTile==='function'&&<CardShareDeckTile mode="self" onOpen={()=>{ if(typeof onCardShareGo==='function') onCardShareGo({ kind:'register' }); }}/>}
+            </div>
+          </section>);
+        })()}
         {/* ③ 持ちもの。ダイヤ・ブリーダーP・プレイ時間を1行に。プレイ時間は下の「くわしい記録」を開くと、今日・遊んだ日・いちばん長かった日・数え始めた日が出る
             (これまで数えていなかったので、既存のプレイヤーは0から始まる。いつからの記録かが分からないと短すぎると誤解される) */}
         <div className="mb-3 grid grid-cols-3 gap-2" data-profile-stats>
@@ -35951,12 +35960,13 @@ function ProfileScreen({
             const best=highestModeScore(scores,ids);
             return best>0?`最高スコア ${best.toLocaleString()} pt`:'未記録';
           };
-          return <>{typeof CardShareProfileDeck === 'function' && <CardShareProfileDeck self onGo={onCardShareGo}/>}<section className="mb-4" data-profile-battle-records>
+          return <><section className="mb-4" data-profile-battle-records>
             <ScreenSectionLabel>バトル記録</ScreenSectionLabel>
             <ScreenLead>モードをタップすると詳しい記録を確認できます</ScreenLead>
             {!selected?(
-              <div className="grid grid-cols-2 gap-2">
-                {modes.map(mode=>{const species=isSpeciesChallengeMode(mode.id);return <button key={mode.id} type="button" data-profile-mode={mode.id} onClick={()=>species?onOpenSpeciesRecords(mode.id):onSelectBattleMode(mode.id)} className={`w-full min-h-[72px] rounded-2xl border bg-slate-900/70 px-2.5 py-2.5 text-left active:scale-[.98] ${species?'col-span-2':''}`} style={{borderColor:`${mode.color}66`}}>
+              <div className="flex flex-col gap-1.5">
+                {/* 1モード1行(2026-10-29 案B)。押すと今までどおり詳しい記録が開く */}
+                {modes.map(mode=>{const species=isSpeciesChallengeMode(mode.id);return <button key={mode.id} type="button" data-profile-mode={mode.id} onClick={()=>species?onOpenSpeciesRecords(mode.id):onSelectBattleMode(mode.id)} className="w-full min-h-[52px] rounded-xl border bg-slate-900/70 px-2.5 py-2 text-left active:scale-[.98]" style={{borderColor:`${mode.color}66`}}>
                   <span className="flex items-center gap-1.5"><span className="text-xl" aria-hidden="true">{mode.emoji}</span><span className="min-w-0 flex-1"><b className="block whitespace-nowrap text-[12px] text-white">{mode.label}</b><small className="block text-[11px] font-black" style={{color:mode.color}}>{representativeFor(mode)}</small>{species&&<><small className="block truncate text-[10px] font-black text-cyan-100">最高記録: {speciesSummary.bestScore>0?`${speciesChallengeSpeciesName(speciesSummary.bestSpeciesId)} / ${speciesDifficultyLabel(speciesSummary.bestDifficultyId)}`:'記録なし'}</small><small className="block text-[10px] font-black text-emerald-300">クリア: {speciesSummary.clearedCount} / {speciesSummary.totalCount}</small></>}</span></span>
                 </button>})}
               </div>
@@ -46633,7 +46643,7 @@ const friendsDayText = (day) => {
 // requestCount … 届いている申請の件数(あれば最初に「申請」のタブを開く)
 // onIncomingCount … 読み込み直したあと、届いている申請の数を知らせる(HOME・プロフィールのバッジを合わせるため)
 // onOpenMonsterDetail … 好きなモンスターの詳細を開く(ランキングの詳細と同じ画面)
-// onCardShareGo … フレンドの登録デッキ(95 の CardShareProfileDeck)から MFバトルカードへ移る(60-app)
+// onCardShareGo … フレンドのデッキの札の「このデッキと戦う」(95 の CardShareDeckActions)から MFバトルカードへ移る(60-app)
 function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack, onTargetHandled, onIncomingCount, onOpenMonsterDetail, onCardShareGo = null }) {
   const [tab, setTab] = React.useState(Number(requestCount) > 0 ? 'requests' : 'friends');
   const [phase, setPhase] = React.useState('loading');   // loading / ready / notready / noid / error
@@ -46883,6 +46893,17 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
             const fav = sum && sum.favorite ? sum.favorite : null;
             const favBase = fav ? ALL_PLAYER_MONSTERS[fav.monsterId] : null;
             const favFace = favBase ? friendsFaceIconOf(fav.monsterId) : null;
+            // 記録の「たたみ」の見出し。押した行だけ開き、もう一度押すと閉じる
+            const fold = (id, label) => (
+              <button type="button" data-friend-fold={id} aria-expanded={profileTab === id} onClick={() => setProfileTab(profileTab === id ? '' : id)}
+                className={`mt-2 flex w-full min-h-[48px] items-center gap-2 rounded-xl border px-3 text-left active:scale-[.98] ${profileTab === id ? 'border-amber-400/70 bg-amber-950/30' : 'border-white/10 bg-slate-900/60'}`}>
+                <b className="min-w-0 flex-1 text-[13px] font-black text-white">{label}</b>
+                <span className="shrink-0 text-[12px] font-black text-amber-300" aria-hidden="true">{profileTab === id ? '▲' : '▼'}</span>
+              </button>);
+            const recordsMissing = (
+              <div className={`${SCREEN_PANEL_FLAT_CLASS} mt-2`} data-friend-records-missing>
+                <p className="text-[11px] font-bold leading-relaxed text-slate-400">この人の記録のまとめは、まだ見られません。相手がゲームを開き直すと出ます。</p>
+              </div>);
             const stat = (label, value, sub, color) => (
               <div className="min-w-0"><dt className="text-[9px] font-bold text-slate-400">{label}</dt>
                 <dd className={`truncate text-sm font-black ${color}`}>{value}</dd>
@@ -46906,11 +46927,30 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                     className="max-w-full truncate rounded-full border border-amber-400/40 bg-amber-950/30 px-3 py-1 text-[11px] font-black text-amber-200 active:scale-95">📝 {notes[selected.otherId] || 'メモを書く（自分だけに見えます）'}</button>
                 )}
               </div>
-              <ScreenTabs className="mt-3" value={profileTab} onChange={setProfileTab} items={[
-                { id: 'overview', label: '概要' }, { id: 'battle', label: 'バトル' }, { id: 'songs', label: '曲のベスト' }, { id: 'collection', label: '集めたもの' }]}/>
+              {/* 見せる札(2026-10-29 社長が案Bを選んだ)。自分のプロフィールと同じ形で、好きなモンスターとバトルカードのデッキを横に2枚。
+                  デッキの札(95 の CardShareDeckTile)は、札の下に「このデッキと戦う」「借りる」を持つ。登録していない人は出さない */}
+              <div className="mt-3 mb-1"><ScreenSectionLabel>見せる札</ScreenSectionLabel></div>
+              <div className="grid grid-cols-2 gap-2 items-start">
+                <div data-friend-favorite className="flex min-h-[132px] flex-col items-start gap-1 rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2">
+                  <small className="text-[10px] font-black text-amber-300">好きなモンスター</small>
+                  {!favBase && <p className="text-[11px] font-bold text-slate-400">まだ選んでいません</p>}
+                  {favBase && (<>
+                    {favFace ? <ProfileAvatar src={favFace.src} id={favFace.id} className="h-14 w-14 shrink-0"/> : <span className="flex h-14 w-14 shrink-0 items-center justify-center text-3xl">❓</span>}
+                    <b className="block w-full break-words text-[13px] font-black leading-tight text-white">{fav.name || favBase.name}</b>
+                    <small className="block text-[10px] font-bold text-pink-300">絆Lv.{Number(fav.bondLevel) || '—'}{fav.power ? `　総合力 ${Number(fav.power).toLocaleString()}` : ''}</small>
+                    {fav.detail && typeof onOpenMonsterDetail === 'function' && (
+                      <button type="button" data-friend-favorite-detail onClick={() => onOpenMonsterDetail({ baseId: fav.monsterId, monsterId: fav.monsterId, name: fav.name || favBase.name, bondLevel: Number(fav.bondLevel) || 0, detail: fav.detail, colors: Array.isArray(fav.colors) ? fav.colors : [] })}
+                        className={`${btn} mt-auto w-full px-3 border-indigo-400/60 bg-indigo-500/20 text-indigo-100`}>詳細 ›</button>
+                    )}
+                  </>)}
+                </div>
+                {typeof CardShareDeckTile === 'function' && <CardShareDeckTile mode="friend" breederId={selected.otherId}/>}
+              </div>
+              {/* 札の下(2枚並びの外・全幅)に「このデッキと戦う」「借りる」。登録していない人は出ない(95 の CardShareDeckActions) */}
+              {typeof CardShareDeckActions === 'function' && <div className="mt-2"><CardShareDeckActions breederId={selected.otherId} onGo={onCardShareGo}/></div>}
+              {/* 記録は1行ずつにたたむ(2026-10-29 案B。前はタブ4つ)。押した行だけ開く。もう一度押すと閉じる */}
+              {fold('overview', '遊んだ記録')}
               {profileTab === 'overview' && (<>
-              {typeof CardShareProfileDeck === 'function' && <div className="mt-2"><CardShareProfileDeck ownerId={selected.otherId} onGo={onCardShareGo}/></div>}
-              <div className="mt-1"><ScreenSectionLabel>遊んだ記録</ScreenSectionLabel></div>
               <div className={`${SCREEN_PANEL_FLAT_CLASS} mt-1`}>
                 {!sum && <p className="text-[11px] font-bold text-slate-400">この人はまだ記録を公開していません（ゲームを開き直すと出ます）</p>}
                 {sum && (
@@ -46934,27 +46974,9 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                   </dl>
                 )}
               </div>
-              <div className="mt-3"><ScreenSectionLabel>好きなモンスター</ScreenSectionLabel></div>
-              <div data-friend-favorite className={`${SCREEN_PANEL_FLAT_CLASS} mt-1 flex items-center gap-3`}>
-                {!favBase && <p className="text-[11px] font-bold text-slate-400">まだ選んでいません</p>}
-                {favBase && (<>
-                  {favFace ? <ProfileAvatar src={favFace.src} id={favFace.id} className="h-14 w-14 shrink-0"/> : <span className="flex h-14 w-14 shrink-0 items-center justify-center text-3xl">❓</span>}
-                  <div className="min-w-0 flex-1">
-                    <b className="block truncate text-sm font-black text-white">{fav.name || favBase.name}</b>
-                    <small className="block text-[10px] font-bold text-pink-300">絆Lv.{Number(fav.bondLevel) || '—'}{fav.power ? `　総合力 ${Number(fav.power).toLocaleString()}` : ''}</small>
-                  </div>
-                  {fav.detail && typeof onOpenMonsterDetail === 'function' && (
-                    <button type="button" data-friend-favorite-detail onClick={() => onOpenMonsterDetail({ baseId: fav.monsterId, monsterId: fav.monsterId, name: fav.name || favBase.name, bondLevel: Number(fav.bondLevel) || 0, detail: fav.detail, colors: Array.isArray(fav.colors) ? fav.colors : [] })}
-                      className={`${btn} shrink-0 px-3 border-indigo-400/60 bg-indigo-500/20 text-indigo-100`}>詳細 ›</button>
-                  )}
-                </>)}
-              </div>
               </>)}
-              {profileTab !== 'overview' && !(sum && sum.records) && (
-                <div className={`${SCREEN_PANEL_FLAT_CLASS} mt-2`} data-friend-records-missing>
-                  <p className="text-[11px] font-bold leading-relaxed text-slate-400">この人の記録のまとめは、まだ見られません。相手がゲームを開き直すと出ます。</p>
-                </div>
-              )}
+              {fold('battle', 'バトル')}
+              {profileTab === 'battle' && !(sum && sum.records) && recordsMissing}
               {profileTab === 'battle' && sum && sum.records && (() => {
                 const labels = friendsBattleModeLabels();
                 const rows = sum.records.battle.filter((e) => labels[e.id]);
@@ -46972,6 +46994,8 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                     <p className="px-1 text-[10px] font-bold text-slate-500">モード別の、いちばん良い記録です。</p>
                   </div>);
               })()}
+              {fold('songs', '曲のベスト')}
+              {profileTab === 'songs' && !(sum && sum.records) && recordsMissing}
               {profileTab === 'songs' && sum && sum.records && (() => {
                 const flagText = ['', 'フルコンボ', 'オールエクセレント', 'オールマーベラス'];
                 const cmp = friendsCompareScores(sum.records.rhythm.songs, myBest);
@@ -47007,6 +47031,8 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                     <p className="px-1 text-[10px] font-bold text-slate-500">曲ごとに、相手が遊んだいちばん上の難易度の記録です。自分の同じ難易度の記録と比べています。</p>
                   </div>);
               })()}
+              {fold('collection', '集めたもの')}
+              {profileTab === 'collection' && !(sum && sum.records) && recordsMissing}
               {profileTab === 'collection' && sum && sum.records && (() => {
                 const c = sum.records.collection;
                 const cell = (label, value, color) => (
