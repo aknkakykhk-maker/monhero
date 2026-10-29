@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 437aae0158a52760
+// generated-sha256: c5f11665e845c115
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -31134,13 +31134,6 @@ const friendsPresenceSort = (list, presence, idOf = (x) => (x ? x.otherId : ''))
     return (Number(!!(pb && pb.online)) - Number(!!(pa && pa.online))) || ((pb ? pb.at : 0) - (pa ? pa.at : 0)) || (ia - ib);
   }).map(([x]) => x);
 };
-// 招待の行に置く小さな印: 緑の点+いまの場所(ログイン中)/灰色の点+最後に来た時刻。info が無いときは何も出さない
-const FriendPresenceTag = ({ info, className = '' }) => (info ? (
-  <small data-friend-presence={info.online ? 'on' : 'off'} className={`flex min-w-0 items-center gap-1 text-[10px] font-bold ${info.online ? 'text-emerald-200' : 'text-slate-400'} ${className}`}>
-    <i aria-hidden="true" className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${info.online ? 'bg-emerald-400' : 'bg-slate-500'}`}/>
-    <span className="truncate">{info.text}</span>
-  </small>
-) : null);
 // プレイ時間(ミリ秒)を「◯時間◯分」の文へ(プロフィールの表示と同じ書き方)
 const friendsPlaytimeText = (seconds) => {
   const sec = Math.max(0, Math.floor(Number(seconds) || 0));
@@ -46188,6 +46181,13 @@ function MonsterCheckDebugScreen({
 // ・タイマーは持たない(結果の文は次の操作まで出したままにする)
 // ・フレンドを増やす入口は2つ。①フレンドコードの入力(この画面) ②ランキングの名前から(60-app 側のシート)
 //   どちらも sbSendFriendRequest を通る。申請の状態の判断はそこだけが持つ
+// 招待の行に置く小さな印(カード部 91・ビート部 77 の共通。中身は 34 の friendsPresenceFor。34 は検査がふつうの JS として読むので、画面の部品はここに置く): 緑の点+いまの場所(ログイン中)/灰色の点+最後に来た時刻。info が無いときは何も出さない
+const FriendPresenceTag = ({ info, className = '' }) => (info ? (
+  <small data-friend-presence={info.online ? 'on' : 'off'} className={`flex min-w-0 items-center gap-1 text-[10px] font-bold ${info.online ? 'text-emerald-200' : 'text-slate-400'} ${className}`}>
+    <i aria-hidden="true" className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${info.online ? 'bg-emerald-400' : 'bg-slate-500'}`}/>
+    <span className="truncate">{info.text}</span>
+  </small>
+) : null);
 const FRIENDS_RESULT_TEXT = Object.freeze({
   sent: ['フレンド申請を送りました。承認されるとフレンドになります', 'ok'],
   accepted: ['フレンドになりました!', 'ok'],

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e427e82f4ea694dd
+// source-sha256: 058d18a0c753a8de
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -50220,18 +50220,6 @@ const friendsPresenceSort = (list, presence, idOf = x => x ? x.otherId : '') => 
     return Number(!!(pb && pb.online)) - Number(!!(pa && pa.online)) || (pb ? pb.at : 0) - (pa ? pa.at : 0) || ia - ib;
   }).map(([x]) => x);
 };
-const FriendPresenceTag = ({
-  info,
-  className = ''
-}) => info ? React.createElement("small", {
-  "data-friend-presence": info.online ? 'on' : 'off',
-  className: `flex min-w-0 items-center gap-1 text-[10px] font-bold ${info.online ? 'text-emerald-200' : 'text-slate-400'} ${className}`
-}, React.createElement("i", {
-  "aria-hidden": "true",
-  className: `inline-block h-1.5 w-1.5 shrink-0 rounded-full ${info.online ? 'bg-emerald-400' : 'bg-slate-500'}`
-}), React.createElement("span", {
-  className: "truncate"
-}, info.text)) : null;
 const friendsPlaytimeText = seconds => {
   const sec = Math.max(0, Math.floor(Number(seconds) || 0));
   const hours = Math.floor(sec / 3600);
@@ -76652,6 +76640,18 @@ function MonsterCheckDebugScreen({
     className: "max-h-72 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-black/50 p-3 text-[9px] leading-relaxed text-cyan-200"
   }, JSON.stringify(mon, null, 2)))))));
 }
+const FriendPresenceTag = ({
+  info,
+  className = ''
+}) => info ? React.createElement("small", {
+  "data-friend-presence": info.online ? 'on' : 'off',
+  className: `flex min-w-0 items-center gap-1 text-[10px] font-bold ${info.online ? 'text-emerald-200' : 'text-slate-400'} ${className}`
+}, React.createElement("i", {
+  "aria-hidden": "true",
+  className: `inline-block h-1.5 w-1.5 shrink-0 rounded-full ${info.online ? 'bg-emerald-400' : 'bg-slate-500'}`
+}), React.createElement("span", {
+  className: "truncate"
+}, info.text)) : null;
 const FRIENDS_RESULT_TEXT = Object.freeze({
   sent: ['フレンド申請を送りました。承認されるとフレンドになります', 'ok'],
   accepted: ['フレンドになりました!', 'ok'],
