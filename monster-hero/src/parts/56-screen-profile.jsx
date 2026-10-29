@@ -118,7 +118,7 @@ const AssistantBondRewardList = ({ who, level, breederIcon, resolveIconUrl, onCl
   );
 };
 function ProfileScreen({
-  onCardShareGo = null, // 自分の登録デッキ(95 の CardShareProfileDeck)の「デッキ登録で直す」→ MFバトルカードへ(60-app)
+  onCardShareGo = null, // 見せる札の「バトルカードのデッキ」(95 の CardShareDeckTile)を押したとき → デッキ登録の画面へ(60-app)
   activeAssistant, assistantBond, assistantBondLevelNow, assistantBonds, assistantCallStyle, attemptCounts,
   breederIcon, breederLevel, breederName, breederPoints, extremeBestScores, extremeClearCounts,
   finishOnboarding, gold, highScores, isEventReplayUnlocked, modeRecordFor, onboarded,
@@ -245,7 +245,6 @@ function ProfileScreen({
         {onboarded&&!onboardingPreview&&friendsEnabled&&(()=>{
           const base=favoriteMasu?ALL_PLAYER_MONSTERS[favoriteMasu.baseId]:null;
           const face=base?friendsFaceIconOf(favoriteMasu.baseId):null;
-          const hasDeckTile=typeof CardShareDeckTile==='function';
           return (
           <section className="mb-3" data-profile-showcase>
             <button type="button" data-profile-message onClick={onOpenMessageEditor} className="mb-2 flex w-full min-h-[44px] items-center gap-2 rounded-xl border border-pink-400/30 bg-black/30 px-3 py-2 text-left active:scale-[.98]">
@@ -261,10 +260,8 @@ function ProfileScreen({
                 <b className="block w-full break-words text-[13px] font-black leading-tight text-white">{base?base.name:<>まだ<wbr/>選んでいません</>}</b>
                 {base&&<small className="text-[10px] font-black text-pink-300">絆Lv.{masuBondLevelInfo(favoriteMasu).level}</small>}
               </button>
-              {hasDeckTile&&<CardShareDeckTile mode="self" onOpen={()=>{ if(typeof onCardShareGo==='function') onCardShareGo({ kind:'register' }); }}/>}
+              {typeof CardShareDeckTile==='function'&&<CardShareDeckTile mode="self" onOpen={()=>{ if(typeof onCardShareGo==='function') onCardShareGo({ kind:'register' }); }}/>}
             </div>
-            {/* デッキの札(95)が入るまでは、今までの大きい欄を札の下に出す */}
-            {!hasDeckTile&&typeof CardShareProfileDeck==='function'&&<div className="mt-2"><CardShareProfileDeck self onGo={onCardShareGo}/></div>}
           </section>);
         })()}
         {/* ③ 持ちもの。ダイヤ・ブリーダーP・プレイ時間を1行に。プレイ時間は下の「くわしい記録」を開くと、今日・遊んだ日・いちばん長かった日・数え始めた日が出る

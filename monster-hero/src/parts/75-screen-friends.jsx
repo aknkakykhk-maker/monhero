@@ -53,7 +53,7 @@ const friendsDayText = (day) => {
 // requestCount … 届いている申請の件数(あれば最初に「申請」のタブを開く)
 // onIncomingCount … 読み込み直したあと、届いている申請の数を知らせる(HOME・プロフィールのバッジを合わせるため)
 // onOpenMonsterDetail … 好きなモンスターの詳細を開く(ランキングの詳細と同じ画面)
-// onCardShareGo … フレンドの登録デッキ(95 の CardShareProfileDeck)から MFバトルカードへ移る(60-app)
+// onCardShareGo … フレンドのデッキの札の「このデッキと戦う」(95 の CardShareDeckActions)から MFバトルカードへ移る(60-app)
 function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack, onTargetHandled, onIncomingCount, onOpenMonsterDetail, onCardShareGo = null }) {
   const [tab, setTab] = React.useState(Number(requestCount) > 0 ? 'requests' : 'friends');
   const [phase, setPhase] = React.useState('loading');   // loading / ready / notready / noid / error
@@ -358,8 +358,6 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
               </div>
               {/* 札の下(2枚並びの外・全幅)に「このデッキと戦う」「借りる」。登録していない人は出ない(95 の CardShareDeckActions) */}
               {typeof CardShareDeckActions === 'function' && <div className="mt-2"><CardShareDeckActions breederId={selected.otherId} onGo={onCardShareGo}/></div>}
-              {/* デッキの札(95)が入るまでは、今までの大きい欄を札の下に出す */}
-              {typeof CardShareDeckTile !== 'function' && typeof CardShareProfileDeck === 'function' && <div className="mt-2"><CardShareProfileDeck ownerId={selected.otherId} onGo={onCardShareGo}/></div>}
               {/* 記録は1行ずつにたたむ(2026-10-29 案B。前はタブ4つ)。押した行だけ開く。もう一度押すと閉じる */}
               {fold('overview', '遊んだ記録')}
               {profileTab === 'overview' && (<>

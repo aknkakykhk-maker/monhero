@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2f3a574fad673f70
+// generated-sha256: 91a132137c8ece41
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10862,8 +10862,8 @@ const HELHEIM_SETTING = Object.freeze({ id:'HELHEIM', label:'HELHEIM', japanese:
 // ETERNALはHELHEIMの次の極限難易度(2026-10-29 社長の決定)。冥府・ボス復活・敵ライフ10倍・デュラハンの上乗せはHELHEIMのまま引き継ぎ、
 // 「シールド」(WAVEの始めに敵が最大ライフ50%の盾をまとう。シールドに当てた分は距離適性ボーナスに数えない)と
 // 「貫き」(敵の攻撃の30%〜50%が丈夫さを無視する)を足す。試合を長引かせ、丈夫さの効きすぎを抑えるためのルール。
-// 与ダメ低下は合計ターンで数えるまま(最低10%)。敵の強さ220は、今のHELHEIMクリア編成の約2倍の火力が届く目安で決めた
-const ETERNAL_SETTING = Object.freeze({ id:'ETERNAL', label:'ETERNAL', japanese:'エターナル', available:true, debugAvailable:true, power:220, score:20, xp:120, gold:100, psyche:190, waveCount:10, unlockRequirement:'HELHEIM', rankingId:'ExtremeETERNAL', recordId:'ETERNAL', description:'冥府の上に、敵がシールドをまとい、攻撃の一部が丈夫さを貫いてくる。戦いは長く続き、ターンとともに重くなる、極限チャレンジの最奥の難易度。', cardDescription:'WAVEの始めに敵が最大ライフ50%のシールドをまとい、攻撃の30〜50%が丈夫さを貫く。冥府・ボス復活・敵ライフ10倍はヘルヘイムのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 3:1, 5:2, 7:2, 9:1, 10:4 }), hpRate:0.5, atkBoostPerRevival:0.6 }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
+// 与ダメ低下は合計ターンで数えるまま(最低10%)。敵の強さは300(2026-10-29 社長の指示「強度は300にして」。最初の案は今のHELHEIMクリア編成の約2倍の火力が届く目安の220だった)
+const ETERNAL_SETTING = Object.freeze({ id:'ETERNAL', label:'ETERNAL', japanese:'エターナル', available:true, debugAvailable:true, power:300, score:20, xp:120, gold:100, psyche:190, waveCount:10, unlockRequirement:'HELHEIM', rankingId:'ExtremeETERNAL', recordId:'ETERNAL', description:'冥府の上に、敵がシールドをまとい、攻撃の一部が丈夫さを貫いてくる。戦いは長く続き、ターンとともに重くなる、極限チャレンジの最奥の難易度。', cardDescription:'WAVEの始めに敵が最大ライフ50%のシールドをまとい、攻撃の30〜50%が丈夫さを貫く。冥府・ボス復活・敵ライフ10倍はヘルヘイムのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 3:1, 5:2, 7:2, 9:1, 10:4 }), hpRate:0.5, atkBoostPerRevival:0.6 }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
 const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES,GOD_SETTING,RAGNAROK_SETTING,HELHEIM_SETTING,ETERNAL_SETTING]);
 // 極限チャレンジの難易度カラー。カード構造は共通のまま、上位ほど発光を少しずつ強める。
 // 常時アニメーションは使わず、iPhone縦画面でも視認性と軽さを優先する。
@@ -35646,7 +35646,7 @@ const AssistantBondRewardList = ({ who, level, breederIcon, resolveIconUrl, onCl
   );
 };
 function ProfileScreen({
-  onCardShareGo = null, // 自分の登録デッキ(95 の CardShareProfileDeck)の「デッキ登録で直す」→ MFバトルカードへ(60-app)
+  onCardShareGo = null, // 見せる札の「バトルカードのデッキ」(95 の CardShareDeckTile)を押したとき → デッキ登録の画面へ(60-app)
   activeAssistant, assistantBond, assistantBondLevelNow, assistantBonds, assistantCallStyle, attemptCounts,
   breederIcon, breederLevel, breederName, breederPoints, extremeBestScores, extremeClearCounts,
   finishOnboarding, gold, highScores, isEventReplayUnlocked, modeRecordFor, onboarded,
@@ -35773,7 +35773,6 @@ function ProfileScreen({
         {onboarded&&!onboardingPreview&&friendsEnabled&&(()=>{
           const base=favoriteMasu?ALL_PLAYER_MONSTERS[favoriteMasu.baseId]:null;
           const face=base?friendsFaceIconOf(favoriteMasu.baseId):null;
-          const hasDeckTile=typeof CardShareDeckTile==='function';
           return (
           <section className="mb-3" data-profile-showcase>
             <button type="button" data-profile-message onClick={onOpenMessageEditor} className="mb-2 flex w-full min-h-[44px] items-center gap-2 rounded-xl border border-pink-400/30 bg-black/30 px-3 py-2 text-left active:scale-[.98]">
@@ -35789,10 +35788,8 @@ function ProfileScreen({
                 <b className="block w-full break-words text-[13px] font-black leading-tight text-white">{base?base.name:<>まだ<wbr/>選んでいません</>}</b>
                 {base&&<small className="text-[10px] font-black text-pink-300">絆Lv.{masuBondLevelInfo(favoriteMasu).level}</small>}
               </button>
-              {hasDeckTile&&<CardShareDeckTile mode="self" onOpen={onCardShareGo}/>}
+              {typeof CardShareDeckTile==='function'&&<CardShareDeckTile mode="self" onOpen={()=>{ if(typeof onCardShareGo==='function') onCardShareGo({ kind:'register' }); }}/>}
             </div>
-            {/* デッキの札(95)が入るまでは、今までの大きい欄を札の下に出す */}
-            {!hasDeckTile&&typeof CardShareProfileDeck==='function'&&<div className="mt-2"><CardShareProfileDeck self onGo={onCardShareGo}/></div>}
           </section>);
         })()}
         {/* ③ 持ちもの。ダイヤ・ブリーダーP・プレイ時間を1行に。プレイ時間は下の「くわしい記録」を開くと、今日・遊んだ日・いちばん長かった日・数え始めた日が出る
@@ -46644,7 +46641,7 @@ const friendsDayText = (day) => {
 // requestCount … 届いている申請の件数(あれば最初に「申請」のタブを開く)
 // onIncomingCount … 読み込み直したあと、届いている申請の数を知らせる(HOME・プロフィールのバッジを合わせるため)
 // onOpenMonsterDetail … 好きなモンスターの詳細を開く(ランキングの詳細と同じ画面)
-// onCardShareGo … フレンドの登録デッキ(95 の CardShareProfileDeck)から MFバトルカードへ移る(60-app)
+// onCardShareGo … フレンドのデッキの札の「このデッキと戦う」(95 の CardShareDeckActions)から MFバトルカードへ移る(60-app)
 function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack, onTargetHandled, onIncomingCount, onOpenMonsterDetail, onCardShareGo = null }) {
   const [tab, setTab] = React.useState(Number(requestCount) > 0 ? 'requests' : 'friends');
   const [phase, setPhase] = React.useState('loading');   // loading / ready / notready / noid / error
@@ -46945,10 +46942,10 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                     )}
                   </>)}
                 </div>
-                {typeof CardShareDeckTile === 'function' && <CardShareDeckTile mode="friend" breederId={selected.otherId} onGo={onCardShareGo}/>}
+                {typeof CardShareDeckTile === 'function' && <CardShareDeckTile mode="friend" breederId={selected.otherId}/>}
               </div>
-              {/* デッキの札(95)が入るまでは、今までの大きい欄を札の下に出す */}
-              {typeof CardShareDeckTile !== 'function' && typeof CardShareProfileDeck === 'function' && <div className="mt-2"><CardShareProfileDeck ownerId={selected.otherId} onGo={onCardShareGo}/></div>}
+              {/* 札の下(2枚並びの外・全幅)に「このデッキと戦う」「借りる」。登録していない人は出ない(95 の CardShareDeckActions) */}
+              {typeof CardShareDeckActions === 'function' && <div className="mt-2"><CardShareDeckActions breederId={selected.otherId} onGo={onCardShareGo}/></div>}
               {/* 記録は1行ずつにたたむ(2026-10-29 案B。前はタブ4つ)。押した行だけ開く。もう一度押すと閉じる */}
               {fold('overview', '遊んだ記録')}
               {profileTab === 'overview' && (<>
@@ -55521,11 +55518,46 @@ const cardTacticFilled = (frames) => {
 // 基本カードの枚数が上限、ON の行の数でそこまで上がる。1枚 … EASY/NORMAL/HARD、2枚 … NORMAL/HARD/EXPERT、3枚 … HARD/EXPERT/MASTER
 //   行 0〜3 / 4〜9 / 10以上。基本カードも行も無ければ 'random'(出せる手からランダム)。基本カード無しで行だけなら EASY
 const CARD_TACTIC_SMART = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
+// ---- 賢さに数えないセット(2026-10-29 社長 案A「ちゃんと効くカードだけ数える」) ----
+//   ・場面が合わない … 守るときだけの条件(受けるダメージ・受けると倒れる・全体攻撃を受けた)を守り以外の手と組んだ /
+//                    「この子の◯◯」の条件をブリーダーの枠に入れた(その子がいないので当たらない)
+//   ・同じもの … 同じ条件と手(と種族)の組み合わせは、いくつセットしても1つと数える(3体の枠へのコピーも)
+//   ・ほとんど当たらない … 試合で当たる割合が2%に届かない条件(助手どうし42試合で測った。2026-10-29 ルールくん)。
+//                        全体カード・有利な相手のように、自分のデッキ次第で当たり方が変わる条件は入れない
+const CARD_TACTIC_GUARD_ONLY_CONDS = Object.freeze(['incoming', 'incomingKo', 'incomingArea']);
+const CARD_TACTIC_SELF_CONDS = Object.freeze(['selfLife', 'selfFresh', 'selfType', 'selfStun', 'selfAdv']);
+const CARD_TACTIC_RARE_CONDS = Object.freeze(['turnGe.15', 'myLife.10', 'foeLife.10', 'selfLife.10', 'selfStun', 'myStun', 'foeStun', 'foeCharge', 'foeAir', 'incomingArea']);
+// 枠ごとのセットに、数えない理由を付ける(数えるものは null)。{ breeder:[理由|null], mons:[[理由|null]×行]×3 }。組む画面の小さい文字にも使う
+const cardTacticUncounted = (frames) => {
+  const f = cardTacticNormalizeFrames(frames);
+  const seen = new Set();
+  const why = (row, where) => {
+    if (!row.on) return null;
+    const c = cardTacticOf(row.c), a = cardTacticOf(row.a);
+    if (!c || !a) return '場面が合わない';
+    if (CARD_TACTIC_GUARD_ONLY_CONDS.includes(c.g) && a.phase !== 'guard') return '場面が合わない';
+    if (where === 'breeder' && CARD_TACTIC_SELF_CONDS.includes(c.g)) return '場面が合わない';
+    if (CARD_TACTIC_RARE_CONDS.includes(c.id)) return 'ほとんど当たらない';
+    const key = `${row.c}|${row.a}|${row.sp || ''}`;
+    if (seen.has(key)) return '同じものが入っている';
+    seen.add(key);
+    return null;
+  };
+  return { breeder: f.breeder.map((r) => why(r, 'breeder')), mons: f.mons.map((rows) => rows.map((r) => why(r, 'mon'))) };
+};
+// 賢さに数えるセットの数(ON で、数えない理由が無いもの)
+const cardTacticCountedRows = (frames) => {
+  const f = cardTacticNormalizeFrames(frames);
+  const u = cardTacticUncounted(f);
+  return f.breeder.filter((r, i) => r.on && !u.breeder[i]).length + f.mons.reduce((a, rows, mi) => a + rows.filter((r, i) => r.on && !u.mons[mi][i]).length, 0);
+};
 const cardTacticSmartLevel = (frames) => {
   const f = cardTacticNormalizeFrames(frames);
   const base = f.base.filter(Boolean).length;
-  const rows = f.breeder.filter((x) => x.on).length + f.mons.reduce((a, r) => a + r.filter((x) => x.on).length, 0);
-  if (!base && !rows) return 'random';
+  const rows = cardTacticCountedRows(f);
+  // でたらめ(出せる手からランダム)は、何もセットしていないときだけ(数えないセットだけでも、でたらめにはしない)
+  const any = f.breeder.some((x) => x.on) || f.mons.some((r) => r.some((x) => x.on));
+  if (!base && !any) return 'random';
   if (!base) return 'easy';
   return CARD_TACTIC_SMART[(base - 1) + (rows >= 10 ? 2 : rows >= 4 ? 1 : 0)];
 };
@@ -57513,7 +57545,7 @@ const cardHitResultOf = (f) => {
 const CardHitResult = ({ f, tiny = false }) => {
   const r = cardHitResultOf(f);
   if (!r) return null;
-  if (r.kind === 'none') return <span data-card-hit-result="none" className="mh-card-guard-result pointer-events-none absolute left-1/2 top-[58%] z-[51] -translate-x-1/2 whitespace-nowrap rounded-full bg-black/70 px-1.5 text-[10px] font-bold text-slate-200">守らなかった</span>;
+  if (r.kind === 'none') return <span data-card-hit-result="none" className={`mh-card-guard-result pointer-events-none absolute left-1/2 ${tiny ? 'top-[62%] text-[9px]' : 'top-[82%] text-[10px]'} z-[51] -translate-x-1/2 whitespace-nowrap rounded-full bg-black/70 px-1.5 font-bold text-slate-200`}>守らなかった</span>;
   return (
     <span data-card-hit-result={r.kind} className={`mh-card-guard-result pointer-events-none absolute left-1/2 top-[-6px] z-[51] -translate-x-1/2 whitespace-nowrap rounded-xl border-2 bg-slate-950/85 px-1.5 text-center font-black leading-tight ${r.kind === 'evade' ? 'border-sky-300 text-sky-100' : 'border-amber-300 text-amber-100'} ${tiny ? 'text-[11px]' : 'text-[13px]'}`}>
       {r.kind === 'evade' ? '💨 回避！' : '🛡 防御！'}<br/><span className="text-rose-300 line-through decoration-2">{r.before}</span> → <span className={`${tiny ? 'text-[15px]' : 'text-[18px]'} text-white`}>{r.after}</span>
@@ -57934,7 +57966,8 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   // 横画面は、まんなかが空いていたので、絵を大きくする(2026-10-27 ソランドくん「場のモンスターの絵と場のカードが小さい」)。
   //   高さは画面の高さから決める(40〜64px。844×390 で 64px・667×375 で 56px ほど。上下の帯とまんなかの 64px を引いた残りを2段で分ける)
   const wideArtH = 'clamp(40px, calc((var(--mh-vh, 100svh) - 262px) / 2), 64px)';
-  const artSize = wide ? 'max-w-[88px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
+  // 自分の場は、まんなか(1行の実況)で空いた分だけ立ち姿を大きくする(2026-10-29 社長・⑤ 案A。立ち絵の攻撃の動きが映えるように)
+  const artSize = wide ? 'max-w-[88px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : opp ? 'max-h-[78px] max-w-[96px]' : 'max-h-[106px] max-w-[126px]';
   const imgEl = art
     ? <img src={art} alt="" style={wide ? { maxHeight: wideArtH } : undefined} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''}`}/>
     : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`}/>;
@@ -57942,7 +57975,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   // calm … オプションの「画面の揺れ: 揺らさない」。受けたときは揺らさずに光るだけ
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? (calm ? 'mh-card-hit-calm' : 'mh-card-hit') : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = (
-    <div data-card-art={`${p}-${m}`} className={`relative flex ${wide ? '' : tiny ? 'h-[44px]' : compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`}
+    <div data-card-art={`${p}-${m}`} className={`relative flex ${wide ? '' : tiny ? 'h-[44px]' : compact ? 'h-[56px]' : opp ? 'h-[78px]' : 'h-[106px]'} w-full items-end justify-center`}
       style={{ ...(wide ? { height: wideArtH } : null), ...(mv && mv.type === 'attack' ? { '--atk-dx': `${mv.dx}px`, '--atk-dy': `${mv.dy}px`, zIndex: 40 } : null) }}>
       {mv && mv.type === 'attack' && mv.kind
         ? <SkillFxMotion key={mv.key} kind={mv.kind} image={imgEl}/>
@@ -57958,7 +57991,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
       {guardTag && <span data-card-guard-tag className={`pointer-events-none absolute left-1/2 top-0 z-[45] -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-black shadow ${/回避/.test(guardTag) ? 'bg-sky-300 text-slate-950 shadow-[0_0_12px_rgba(125,211,252,.8)]' : 'bg-amber-400 text-slate-950 shadow-[0_0_12px_rgba(245,158,11,.8)]'}`}>{/回避/.test(guardTag) ? '💨' : '🛡'} {guardTag}</span>}
       {mon.ko && <span className="absolute bottom-2 rounded bg-black/70 px-1.5 text-[12px] font-black text-slate-300">KO</span>}
       {fx.map((f) => (
-        <span key={f.key} data-card-dmg-num={f.dmg > 0 ? f.dmg : undefined} className={`pointer-events-none absolute top-0 z-[50] font-black ${f.dmg > 0 ? `mh-card-dmg-pop ${tiny ? 'text-[34px]' : 'text-[42px]'} leading-none text-rose-500` : 'text-[30px] text-sky-200'}`} style={{ WebkitTextStroke: f.dmg > 0 ? '2px #fff' : '1px #0369a1', textShadow: f.dmg > 0 ? '0 4px 0 #7f1d1d, 0 0 18px rgba(239,68,68,.8)' : '0 0 10px rgba(248,113,113,.8)' }}>
+        <span key={f.key} data-card-dmg-num={f.dmg > 0 ? f.dmg : undefined} className={`pointer-events-none absolute ${tiny ? 'top-0' : 'top-[26%]'} z-[50] font-black ${f.dmg > 0 ? `mh-card-dmg-pop ${tiny ? 'text-[28px]' : 'text-[42px]'} leading-none text-rose-500` : 'text-[30px] text-sky-200'}`} style={{ WebkitTextStroke: f.dmg > 0 ? '2px #fff' : '1px #0369a1', textShadow: f.dmg > 0 ? '0 4px 0 #7f1d1d, 0 0 18px rgba(239,68,68,.8)' : '0 0 10px rgba(248,113,113,.8)' }}>
           {f.dmg > 0 ? `−${f.dmg}` : f.heal ? `＋${f.heal}` : 'ミス'}
         </span>
       ))}
@@ -59185,7 +59218,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         {strip(CARD_ME)}
       </div>
       </div>
-      <div data-card-side className={wide ? 'flex min-h-0 w-[42%] max-w-[420px] shrink-0 flex-col justify-end overflow-y-auto border-l border-white/10 bg-black/20' : 'contents'}>
+      <div data-card-side className={wide ? 'flex min-h-0 w-[42%] max-w-[420px] shrink-0 flex-col justify-center overflow-y-auto border-l border-white/10 bg-black/20' : 'contents'}>
         {/* 練習試合: ドラの説明の窓(横の画面)。右の列の手札のすぐ上に、中身の高さぶん場所を取って出す。縦の画面は自分のモンスターの列の上(tutorBox) */}
       {wide && tutorBox}
       {wide && replayFoeHand}
@@ -60069,7 +60102,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     if (!save || !save.starter || screen !== 'CARD_TOP' || typeof cardShareIntentTake !== 'function') return; // スターターを受け取る前は、頼みを残しておく
     const it = cardShareIntentTake();
     if (!it) return;
-    if (it.kind === 'register' && typeof CardTacticsScreen === 'function') { setTacticsBack('mode'); setView('tactics'); return; }
+    // プロフィールの「バトルカードのデッキ」から: デッキ登録を開き、戻るとそのままプロフィールへ(MFバトルカードを閉じる)
+    if (it.kind === 'register' && typeof CardTacticsScreen === 'function') { setTacticsBack('exit'); setView('tactics'); return; }
     if (it.kind === 'fight' && it.entry && startBattleRef.current && typeof cardShareFightLevel === 'function') startBattleRef.current({ who: it.entry.tactics.habit, level: cardShareFightLevel(it.entry.tactics), share: it.entry });
   }, [!!save, !!(save && save.starter), screen]);
   if (!save) return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="MFバトルカード" onBack={onExit}/><ScreenEmpty emoji="⏳" lines={['読み込み中…']}/></div>;
@@ -60357,7 +60391,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   if (view === 'tactics' && typeof CardTacticsScreen === 'function') {
     // 戻り先: みんなのデッキの「戦術カードを組む」から来たら、みんなのデッキへ戻る
     // ビートPを払うときは、戦術カードの保存と同じ取引で(persist はビートPを書く直前に読み直して差だけを足す)
-    return <CardTacticsScreen db={db} decks={save.decks} point={save.point} onBack={() => { setView(tacticsBack); setTacticsBack('mode'); }}
+    return <CardTacticsScreen db={db} decks={save.decks} point={save.point} onBack={() => { if (tacticsBack === 'exit') { setTacticsBack('mode'); setView('top'); onExit(); return; } setView(tacticsBack); setTacticsBack('mode'); }}
       share={typeof CardDeckShare === 'function' ? { collection: save.collection, frame: (rank && rank.profile && rank.profile.frame) || null, unlocked: save.unlocked, debug } : null}
       onPay={async (cost, entries) => (save.point >= cost ? persist({ point: save.point - cost }, {}, entries) : false)}/>;
   }
@@ -66205,6 +66239,128 @@ const CardShareProfileDeck = ({ ownerId, self = false, onGo = null }) => {
   );
 };
 
+// ==================== プロフィールの「見せる札」: バトルカードのデッキ(2026-10-29 社長・プロフィールの整理 案B・開発部クラフトくんと分担) ====================
+// 好きなモンスターの札と横に並べる。外枠はクラフトくんの好きなモンスターの札とそろえる(rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2・幅は親まかせ)。
+//   mode="self"   … 札だけ。未登録は「登録していません」。押すと onOpen(デッキ登録の画面へ。60-app の onCardShareGo({ kind:'register' }))
+//   mode="friend" … 札だけ。未登録は null(欄ごと出さない)。「詳細 >」で中身の小さな窓
+//   <CardShareDeckActions breederId onGo/> … フレンドの札の下(2枚並びの外・全幅)の「このデッキと戦う」「借りる」。戦うは onGo({ kind:'fight', entry })。未登録は null
+// breederId が無いとき(自分)は、中で自分のブリーダーidを読む
+const useCardShareEntry = (breederId, self = false) => {
+  const [state, setState] = useState({ loading: true, entry: null });
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const id = typeof breederId === 'string' && breederId ? breederId : self && typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+      if (typeof id !== 'string' || !id) { if (alive) setState({ loading: false, entry: null }); return; }
+      const r = await cardShareFetchMine(id).catch(() => null);
+      if (alive) setState({ loading: false, entry: r || null });
+    })();
+    return () => { alive = false; };
+  }, [breederId, self]);
+  return state;
+};
+const CARD_SHARE_TILE_CLASS = 'rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2';
+// 3体のカード絵を少し重ねて並べる
+const CardShareDeckThumbs = ({ entry }) => {
+  const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
+  return (
+    <span className="flex">{[0, 1, 2].map((i) => {
+      const m = db && entry && cardMonsterOf(db, entry.deck.monsters[i]);
+      return m ? <img key={i} src={CARD_IMG(m.img)} alt={m.name} className={`h-[46px] w-[33px] rounded-[4px] border border-white/70 object-cover shadow ${i ? '-ml-2' : ''}`}/>
+        : <span key={i} className={`block h-[46px] w-[33px] rounded-[4px] bg-slate-700 ${i ? '-ml-2' : ''}`}/>;
+    })}</span>
+  );
+};
+// 中身の小さな窓(3体・基本カード・セットした戦術カード・切り札)
+const CardShareDeckDetail = ({ entry, onClose }) => {
+  const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
+  const t = cardShareNormalizeTactics(entry.tactics);
+  const f = t.f ? cardTacticUnpackFrames(t.f) : null;
+  const monName = (i) => ((db && cardMonsterOf(db, entry.deck.monsters[i])) || {}).name || ['左の子', '真ん中の子', '右の子'][i];
+  const rowText = (r) => `${(cardTacticOf(r.c) || {}).name || '?'} ▶ ${(cardTacticOf(r.a) || {}).name || '?'}${r.on ? '' : '(休み)'}`;
+  return (
+    <div data-card-share-deck-detail className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={onClose}>
+      <div className="max-h-[80vh] w-full max-w-[420px] overflow-y-auto rounded-2xl border-2 border-amber-600/60 bg-slate-950 p-3" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2">
+          <CardShareDeckThumbs entry={entry}/>
+          <span className="min-w-0 flex-1"><b className="block truncate text-[15px] font-black text-white">{t.name || 'デッキ'}</b><small className="block text-[11px] font-black text-amber-200">{`賢さ ${cardShareSmartText(t)}`}</small></span>
+        </div>
+        <div className="mt-2 text-[12px] font-bold leading-relaxed text-slate-200" style={JA_WRAP_STYLE}>
+          <div>{`3体: ${[0, 1, 2].map(monName).join('・')}`}</div>
+          {f && <div>{`基本カード: ${f.base.filter(Boolean).map((id) => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`}</div>}
+          {t.aces.length > 0 && <div>{`切り札: ${t.aces.map((no) => ((db && cardOf(db, no)) || {}).name || no).join('・')}`}</div>}
+        </div>
+        {f && (
+          <div className="mt-2 space-y-1 rounded-lg bg-black/30 p-2 text-[11px] text-slate-200">
+            <b className="block text-[12px] text-amber-200">セットした戦術カード</b>
+            {[...f.mons.map((rows, i) => [monName(i), rows]), ['ブリーダー', f.breeder]].map(([label, rows]) => (
+              <div key={label}><b className="text-amber-100">{label}</b>{rows.length ? rows.map((r, j) => <div key={j}>{`${j + 1}. ${rowText(r)}`}</div>) : <div className="text-slate-400">(なし)</div>}</div>
+            ))}
+          </div>
+        )}
+        <button type="button" data-card-share-deck-detail-close onClick={onClose} className="mt-3 w-full rounded-xl bg-slate-800 py-2 text-[13px] font-black text-white">とじる</button>
+      </div>
+    </div>
+  );
+};
+const CardShareDeckTile = ({ mode = 'self', breederId = null, onOpen = null }) => {
+  const self = mode === 'self';
+  const { loading, entry } = useCardShareEntry(breederId, self);
+  const [detail, setDetail] = useState(false);
+  if (!self && (loading || !entry)) return null;
+  const t = entry ? cardShareNormalizeTactics(entry.tactics) : null;
+  const head = <small className="block text-[10px] font-black text-amber-300">バトルカードのデッキ</small>;
+  const tile = self ? (
+    <button type="button" data-profile-show="card-deck" data-card-share-tile="self" onClick={() => { if (onOpen) { Audio_.fgSe.tap(); onOpen(); } }} className={`${CARD_SHARE_TILE_CLASS} block w-full text-left active:scale-[.98]`}>
+      {head}
+      {loading ? <span className="mt-2 block text-[12px] font-bold text-slate-400">読み込み中…</span> : entry ? (<>
+        <span className="mt-1.5 block"><CardShareDeckThumbs entry={entry}/></span>
+        <b className="mt-1 block truncate text-[14px] font-black text-white">{t.name || 'デッキ'}</b>
+        <small className="block text-[11px] font-black text-pink-300">{(cardShareSmartText(t).split('(')[0])}</small>
+      </>) : (<>
+        <span className="mt-2 block text-[13px] font-black text-slate-300">登録していません</span>
+        <small className="block text-[10px] font-bold text-slate-400">押すとデッキ登録へ</small>
+      </>)}
+    </button>
+  ) : (
+    <div data-profile-show="card-deck" data-card-share-tile="friend" className={CARD_SHARE_TILE_CLASS}>
+      {head}
+      <span className="mt-1.5 block"><CardShareDeckThumbs entry={entry}/></span>
+      <b className="mt-1 block truncate text-[14px] font-black text-white">{t.name || 'デッキ'}</b>
+      <small className="block text-[11px] font-black text-pink-300">{(cardShareSmartText(t).split('(')[0])}</small>
+      <button type="button" data-card-share-tile-detail onClick={() => { Audio_.fgSe.tap(); setDetail(true); }} className="mt-0.5 text-[11px] font-black text-pink-200">
+        {`${entry.battles}戦 ${entry.deckWins}勝 詳細 ›`}
+      </button>
+    </div>
+  );
+  if (self) return tile;
+  return (
+    <div data-card-share-tile-wrap>
+      {tile}
+      {detail && <CardShareDeckDetail entry={entry} onClose={() => setDetail(false)}/>}
+    </div>
+  );
+};
+// 札の下に出すボタン(フレンド)。横2枚並びの札の外、全幅に置けるように別の部品にする
+const CardShareDeckActions = ({ breederId, onGo = null }) => {
+  const { entry } = useCardShareEntry(breederId, false);
+  const [msg, setMsg] = useState('');
+  if (!entry) return null;
+  const rent = async () => {
+    if (typeof cardRentedDeckSet !== 'function') return;
+    setMsg((await cardRentedDeckSet(entry)) ? 'このデッキを借りました。フリー対戦の前のデッキ選びで使えます' : 'この端末に保存できなかったため、借りられませんでした');
+  };
+  return (
+    <div data-card-share-tile-actions>
+      <div className="flex gap-2">
+        {onGo && <button type="button" data-card-share-tile-fight onClick={() => { Audio_.fgSe.tap(); onGo({ kind: 'fight', entry }); }} className="mh-button mh-button-primary min-h-[44px] flex-1 rounded-xl text-[13px] font-black">このデッキと戦う</button>}
+        <button type="button" data-card-share-tile-rent onClick={() => { Audio_.fgSe.tap(); void rent(); }} className="min-h-[44px] flex-1 rounded-xl border-2 border-amber-600/60 bg-indigo-950/50 text-[13px] font-black text-white">借りる</button>
+      </div>
+      {msg && <p data-card-share-tile-msg className="mt-1.5 rounded-lg bg-slate-950 p-1.5 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{msg}</p>}
+    </div>
+  );
+};
+
 // ---- part: 96-card-tactics.jsx ----
 // ==================== 戦術カード(持ち物・枠)と MFバトルカードのレベル・戦術カードのガチャ ====================
 // 2026-10-29 社長: 戦術カードはガンビット型(中身は 82-card-tactics-core)。ガチャ(1回300ビートPで8枚。パックと同じ)で集め、
@@ -72015,6 +72171,7 @@ function MonsterHeroGame() {
   const [cardTeaserOpen, setCardTeaserOpen] = useState(false);
   // MFバトルカードへどこから入ったか('debug' … デバッグ設定から / 'home' … HOME の入口・公開のお話のあと)。戻るボタンの行き先と、デバッグの道具を出すかに使う
   const [cardOrigin, setCardOrigin] = useState('home');
+  const cardOriginBackRef = useRef(null); // MFバトルカードを閉じたときの戻り先(プロフィール・フレンドの「バトルカードのデッキ」から来たとき)
   // MFバトルカードの「マーケットへ」から入ったときだけ、マーケットに「MFバトルカード」の売り場を出す(デバッグ専用のあいだ。区切り2)
   const [cardMarketEntry, setCardMarketEntryRaw] = useState(false);
   // ★控え(冒頭の cardMarketEntryRef)も同時に入れる。setGameState('BREEDER_MARKET') がすぐあとに読むので、描画を待たない
@@ -77000,6 +77157,7 @@ function MonsterHeroGame() {
   const cardExitingRunRef = useRef(false);
   const exitCardBattle = async () => {
     const toDebug = cardOrigin === 'debug';
+    if (cardOrigin === 'profile' || cardOrigin === 'friends') cardOriginBackRef.current = cardOrigin === 'profile' ? 'PROFILE' : 'FRIENDS';
     setCardBgm(null); setCardOrigin('home');
     if (runStageRef.current != null) {
       if (cardExitingRunRef.current) return;
@@ -77010,7 +77168,9 @@ function MonsterHeroGame() {
       if (toDebug) setGameState('DEBUG_SETTINGS');
       return;
     }
-    setGameState(toDebug ? 'DEBUG_SETTINGS' : 'HOME');
+    // プロフィール・フレンドの「バトルカードのデッキ」から来たときは、そこへ戻る(95 の CardShareDeckTile。2026-10-29 プロフィールの整理)
+    const back = cardOriginBackRef.current; cardOriginBackRef.current = null;
+    setGameState(toDebug ? 'DEBUG_SETTINGS' : back || 'HOME');
   };
   const awardCardQuickLoops = async (loops) => {
     if (!(loops > 0)) return null;
@@ -87607,7 +87767,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* PROFILE */}
         {gameState==='PROFILE'&&(
           <ProfileScreen
-            onCardShareGo={(intent)=>{if(typeof cardShareIntentSet==='function')cardShareIntentSet(intent);setCardOrigin(cardBattleDebugHome&&!(typeof cardShareOpen==='function'&&cardShareOpen())?'debug':'home');setGameState('CARD_TOP');}}
+            onCardShareGo={(intent)=>{if(typeof cardShareIntentSet==='function')cardShareIntentSet(intent);setCardOrigin('profile');setGameState('CARD_TOP');}}
             activeAssistant={activeAssistant}
             assistantBond={assistantBond}
             assistantBondLevelNow={assistantBondLevelNow}
@@ -87680,7 +87840,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onIncomingCount={(count)=>setFriendRequestInfo(prev=>prev.count===count?prev:({...prev,count}))}
             onOpenMonsterDetail={setRankingMonsterDetail}
             onBack={()=>setGameState('PROFILE')}
-            onCardShareGo={(intent)=>{if(typeof cardShareIntentSet==='function')cardShareIntentSet(intent);setCardOrigin(cardBattleDebugHome&&!(typeof cardShareOpen==='function'&&cardShareOpen())?'debug':'home');setGameState('CARD_TOP');}}
+            onCardShareGo={(intent)=>{if(typeof cardShareIntentSet==='function')cardShareIntentSet(intent);setCardOrigin('friends');setGameState('CARD_TOP');}}
           />
         )}
 
