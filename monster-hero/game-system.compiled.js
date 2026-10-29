@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 058d18a0c753a8de
+// source-sha256: 92d8619c93b9e3d6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -80662,6 +80662,22 @@ function RhythmMultiScreen({
   const [invitePanel, setInvitePanel] = React.useState(false);
   const [invitedIds, setInvitedIds] = React.useState({});
   const [inviteMessage, setInviteMessage] = React.useState('');
+  const [presence, setPresence] = React.useState({});
+  React.useEffect(() => {
+    if (!invitePanel || !roster || !roster.length || typeof friendsPresenceFor !== 'function') return undefined;
+    let alive = true;
+    const load = () => {
+      void friendsPresenceFor(roster.map(f => f.otherId)).then(p => {
+        if (alive) setPresence(p || {});
+      });
+    };
+    load();
+    const t = setInterval(load, 60000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [invitePanel, roster]);
   const loadRoster = React.useCallback(async id => {
     try {
       setRoster(await sbFetchFriendRoster(id));
@@ -81552,7 +81568,7 @@ function RhythmMultiScreen({
       className: "text-[11px] font-bold text-slate-400"
     }, "フレンドを読み込んでいます…"), roster !== null && roster.length === 0 && React.createElement("p", {
       className: "text-[11px] font-bold leading-relaxed text-slate-400"
-    }, "まだフレンドがいません。プロフィールの「フレンド」から、フレンドコードで申請できます。"), (roster || []).map(friend => React.createElement("div", {
+    }, "まだフレンドがいません。プロフィールの「フレンド」から、フレンドコードで申請できます。"), (typeof friendsPresenceSort === 'function' ? friendsPresenceSort(roster || [], presence) : roster || []).map(friend => React.createElement("div", {
       key: friend.otherId,
       "data-rhythm-multi-friend-row": true,
       className: "flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5"
@@ -81560,7 +81576,9 @@ function RhythmMultiScreen({
       className: "min-w-0 flex-1"
     }, React.createElement("b", {
       className: "block truncate text-sm font-black"
-    }, friend.userName), React.createElement("small", {
+    }, friend.userName), presence[friend.otherId] && typeof FriendPresenceTag === 'function' ? React.createElement(FriendPresenceTag, {
+      info: presence[friend.otherId]
+    }) : React.createElement("small", {
       className: "block truncate text-[10px] font-bold text-slate-400"
     }, friendsLastSeenText(friend.lastSeenAt, Date.now()))), React.createElement("button", {
       "data-rhythm-multi-friend-send": true,

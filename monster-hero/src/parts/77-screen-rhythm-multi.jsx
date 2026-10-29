@@ -1967,6 +1967,16 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   const [invitePanel, setInvitePanel] = React.useState(false);
   const [invitedIds, setInvitedIds] = React.useState({});
   const [inviteMessage, setInviteMessage] = React.useState('');
+  // 招待の行に出すフレンドの今(34 の friendsPresenceFor・75 の FriendPresenceTag。2026-10-29 社長「相手がいま何をしているかが見えると誘いやすい」)
+  const [presence, setPresence] = React.useState({});
+  React.useEffect(() => {
+    if (!invitePanel || !roster || !roster.length || typeof friendsPresenceFor !== 'function') return undefined;
+    let alive = true;
+    const load = () => { void friendsPresenceFor(roster.map((f) => f.otherId)).then((p) => { if (alive) setPresence(p || {}); }); };
+    load();
+    const t = setInterval(load, 60000);
+    return () => { alive = false; clearInterval(t); };
+  }, [invitePanel, roster]);
   const loadRoster = React.useCallback(async (id) => {
     try { setRoster(await sbFetchFriendRoster(id)); } catch (_) { setRoster([]); }
   }, []);
@@ -2495,11 +2505,12 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                       {roster !== null && roster.length === 0 && (
                         <p className="text-[11px] font-bold leading-relaxed text-slate-400">まだフレンドがいません。プロフィールの「フレンド」から、フレンドコードで申請できます。</p>
                       )}
-                      {(roster || []).map((friend) => (
+                      {(typeof friendsPresenceSort === 'function' ? friendsPresenceSort(roster || [], presence) : (roster || [])).map((friend) => (
                         <div key={friend.otherId} data-rhythm-multi-friend-row className="flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5">
                           <span className="min-w-0 flex-1">
                             <b className="block truncate text-sm font-black">{friend.userName}</b>
-                            <small className="block truncate text-[10px] font-bold text-slate-400">{friendsLastSeenText(friend.lastSeenAt, Date.now())}</small>
+                            {presence[friend.otherId] && typeof FriendPresenceTag === 'function' ? <FriendPresenceTag info={presence[friend.otherId]}/>
+                              : <small className="block truncate text-[10px] font-bold text-slate-400">{friendsLastSeenText(friend.lastSeenAt, Date.now())}</small>}
                           </span>
                           <button data-rhythm-multi-friend-send type="button" disabled={!!invitedIds[friend.otherId]} onClick={() => inviteFriend(friend.otherId)}
                             className={`${btn} shrink-0 text-xs ${invitedIds[friend.otherId] ? 'bg-slate-700' : 'bg-pink-700'}`}>{invitedIds[friend.otherId] ? '招待ずみ' : '招待する'}</button>
