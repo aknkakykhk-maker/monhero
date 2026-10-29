@@ -129,7 +129,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-card-hand-card="0"]').click();
     await page.waitForTimeout(300);
     const setText = await page.locator('[data-card-battle]').innerText();
-    check('A 技を押すと「技+集中」が選べる', new RegExp(`${atk.name}\\s*[+＋]\\s*集中`).test(setText), (setText.match(/[^\n]*集中[^\n]*/) || [''])[0]);
+    // 組み合わせのボタンは、押した札を省いて付ける札だけ「＋集中」と出す(2026-10-28 #4196 案C)
+    check('A 技を押すと「技+集中」が選べる(ボタンは「＋集中」)', new RegExp(`(^|\\n|${atk.name})\\s*[+＋]\\s*集中`).test(setText), (setText.match(/[^\n]*集中[^\n]*/) || [''])[0]);
     if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, 'focus-attack.png') }); }
     const user = page.locator('[data-card-mon].ring-amber-300').first();
     if (await user.count()) { await user.click(); await page.waitForTimeout(150); }
