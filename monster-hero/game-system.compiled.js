@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c63bbe5bca7ee423
+// source-sha256: d987a1c65d58c27b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -92777,6 +92777,10 @@ const CardStatusSheet = ({
 }), React.createElement("div", {
   className: "mt-2 text-right text-[10px] font-bold text-slate-400"
 }, "タップで閉じる")));
+const cardBigHeight = n => {
+  const k = Math.max(1, n || 1);
+  return `min(${k > 1 ? 30 : 38}vh, 300px, calc((100vw - ${32 + 6 * (k - 1)}px) / ${k} * 1.4))`;
+};
 const cardHandNameKey = (hand, idx) => idx.map(i => hand[i]).sort().join(',');
 const cardLogText = l => !l ? '' : Number.isFinite(l.from) && Number.isFinite(l.to) ? `${l.text}(${l.from} → ${l.to})` : l.text;
 const cardGuardShort = c => {
@@ -95570,7 +95574,7 @@ const CardBattleBoard = ({
       alt: c.name,
       className: `rounded-[8px] border-[3px] ${bigCard.side === 'me' ? 'border-amber-300' : 'border-rose-400'} object-cover shadow-[0_8px_24px_rgba(0,0,0,.7)]`,
       style: {
-        height: `min(${bigCard.cards.length > 1 ? 30 : 38}vh, 300px)`,
+        height: cardBigHeight(bigCard.cards.length),
         aspectRatio: '5 / 7'
       }
     }) : null;
