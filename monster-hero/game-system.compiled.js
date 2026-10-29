@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 33c126dd37109fd5
+// source-sha256: b89e85633818f09e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -92525,21 +92525,35 @@ if (typeof document !== 'undefined' && document.head && !document.getElementById
   el.textContent = '[data-card-press]{touch-action:manipulation}';
   document.head.appendChild(el);
 }
+const CARD_PRESS_MOVE_PX = 10;
 const useCardLongPress = (onLong, ms = 450) => {
   const timer = useRef(null);
   const fired = useRef(false);
   const last = useRef(null);
+  const start = useRef(null);
+  const moved = useRef(false);
   useEffect(() => () => clearTimeout(timer.current), []);
   return (no, onTap, opt = {}) => ({
     'data-card-press': true,
-    onPointerDown: () => {
+    onPointerDown: e => {
       fired.current = false;
+      moved.current = false;
+      start.current = {
+        x: e.clientX,
+        y: e.clientY
+      };
       clearTimeout(timer.current);
       timer.current = setTimeout(() => {
         fired.current = true;
         last.current = null;
         onLong(no);
       }, ms);
+    },
+    onPointerMove: e => {
+      const s0 = start.current;
+      if (!s0 || moved.current || Math.hypot(e.clientX - s0.x, e.clientY - s0.y) <= CARD_PRESS_MOVE_PX) return;
+      moved.current = true;
+      clearTimeout(timer.current);
     },
     onPointerUp: () => clearTimeout(timer.current),
     onPointerLeave: () => clearTimeout(timer.current),
@@ -92548,6 +92562,10 @@ const useCardLongPress = (onLong, ms = 450) => {
     onClick: e => {
       if (fired.current) {
         fired.current = false;
+        return;
+      }
+      if (moved.current) {
+        moved.current = false;
         return;
       }
       const now = Date.now();

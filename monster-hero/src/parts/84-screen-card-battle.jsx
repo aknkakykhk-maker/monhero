@@ -323,20 +323,33 @@ if (typeof document !== 'undefined' && document.head && !document.getElementById
   el.textContent = '[data-card-press]{touch-action:manipulation}';
   document.head.appendChild(el);
 }
+// 長押し・タップを取り消す、指の動きの大きさ(px)。これより動いたらスワイプ(スクロール)とみなす
+const CARD_PRESS_MOVE_PX = 10;
 const useCardLongPress = (onLong, ms = 450) => {
   const timer = useRef(null);
   const fired = useRef(false);
   const last = useRef(null);    // 前のタップ { no, at }
+  // 指を下ろした位置。そこから動いたら(スクロールしようとしたスワイプ)、長押しもタップも取り消す。
+  //   動いても数え続けていたので、図鑑・デッキ作成でゆっくりスクロールすると詳しい画面が開いた(2026-10-29 社長)
+  const start = useRef(null);
+  const moved = useRef(false);
   useEffect(() => () => clearTimeout(timer.current), []);
   return (no, onTap, opt = {}) => ({
     'data-card-press': true,
-    onPointerDown: () => { fired.current = false; clearTimeout(timer.current); timer.current = setTimeout(() => { fired.current = true; last.current = null; onLong(no); }, ms); },
+    onPointerDown: (e) => { fired.current = false; moved.current = false; start.current = { x: e.clientX, y: e.clientY }; clearTimeout(timer.current); timer.current = setTimeout(() => { fired.current = true; last.current = null; onLong(no); }, ms); },
+    onPointerMove: (e) => {
+      const s0 = start.current;
+      if (!s0 || moved.current || Math.hypot(e.clientX - s0.x, e.clientY - s0.y) <= CARD_PRESS_MOVE_PX) return;
+      moved.current = true;
+      clearTimeout(timer.current);
+    },
     onPointerUp: () => clearTimeout(timer.current),
     onPointerLeave: () => clearTimeout(timer.current),
     onPointerCancel: () => clearTimeout(timer.current),
     onContextMenu: (e) => e.preventDefault(),
     onClick: (e) => {
       if (fired.current) { fired.current = false; return; }
+      if (moved.current) { moved.current = false; return; }   // スワイプのあとのタップは数えない
       const now = Date.now();
       if (opt.double !== false && last.current && last.current.no === no && now - last.current.at < CARD_DOUBLE_TAP_MS) {
         last.current = null;
