@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2c7d86d36477cd92
+// source-sha256: b5c2aa55112b193f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93600,12 +93600,22 @@ const CARD_FOE_STYLES = Object.freeze({
   balance: {
     label: 'バランス型',
     note: '場面に合わせて、まんべんなく戦う'
+  },
+  flex: {
+    label: '臨機応変型',
+    note: '場を見て、とどめ・全体攻撃・守りを切り替える'
+  },
+  mill: {
+    label: '山札切れ型',
+    note: '山札とガッツを削って、山札切れを狙う'
   }
 });
 const cardFoeStyle = who => {
   const h = CARD_AI_HABITS[who];
   if (!h) return null;
-  const [k, v] = Object.entries(h).sort((a, b) => b[1] - a[1])[0];
+  if (h.flex) return CARD_FOE_STYLES.flex;
+  if (h.mill) return CARD_FOE_STYLES.mill;
+  const [k, v] = Object.entries(h).filter(e => typeof e[1] === 'number').sort((a, b) => b[1] - a[1])[0];
   return v <= 1.2 ? CARD_FOE_STYLES.balance : CARD_FOE_STYLES[k] || CARD_FOE_STYLES.balance;
 };
 const CARD_CUTIN_SCENES = Object.freeze(['myKo', 'theirKo', 'lastMine', 'lastTheirs', 'deckMine', 'deckTheirs']);
