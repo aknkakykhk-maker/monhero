@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 86fd7e2ccd4fa801
+// source-sha256: e056e2d8f4946086
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -111897,28 +111897,28 @@ const CardTacticFace = ({
     "data-card-tactic": card.id,
     "data-card-tactic-owned": owned ? '1' : '0',
     onClick: onClick || undefined,
-    className: `relative flex flex-col rounded-xl border-2 p-1.5 text-left ${owned ? 'border-white/60' : 'border-white/15 opacity-40 grayscale'} ${small ? 'min-h-[78px]' : 'min-h-[106px]'} ${onClick ? 'active:scale-[.97]' : ''}`,
+    className: `relative flex flex-col rounded-xl border-2 p-1.5 text-left ${owned ? 'border-white/60' : 'border-white/15 opacity-40 grayscale'} ${small ? 'min-h-[86px]' : 'min-h-[106px]'} ${onClick ? 'active:scale-[.97]' : ''}`,
     style: {
       background: st.bg
     }
   }, React.createElement("span", {
     className: "flex items-center gap-1"
   }, React.createElement("span", {
-    className: "rounded px-1 text-[10px] font-black text-white",
+    className: "rounded px-1 text-[11px] font-black text-white",
     style: {
       background: CARD_TACTIC_RARE_COLOR[card.r]
     }
   }, card.r), !small && React.createElement("span", {
-    className: "whitespace-nowrap text-[10px] font-bold text-white/70"
+    className: "whitespace-nowrap text-[11px] font-bold text-white/80"
   }, st.label), count > 1 && React.createElement("span", {
     className: "ml-auto text-[10px] font-black text-amber-200"
   }, "×", count), mark && React.createElement("span", {
     className: "ml-auto rounded bg-emerald-500 px-1 text-[10px] font-black text-white"
   }, mark)), React.createElement("b", {
-    className: `mt-1 block font-black leading-tight text-white ${small ? 'text-[11px]' : 'text-[13px]'}`,
+    className: `mt-1 block font-black leading-tight text-white ${small ? 'text-[12.5px]' : 'text-[14px]'}`,
     style: JA_WRAP_STYLE
   }, card.name), !small && React.createElement("small", {
-    className: "mt-0.5 block text-[10px] leading-snug text-white/80",
+    className: "mt-0.5 block text-[11.5px] font-bold leading-snug text-white/90",
     style: JA_WRAP_STYLE
   }, card.desc));
 };
@@ -112218,11 +112218,14 @@ const CardTacticPackOpen = ({
       small: true,
       mark: c.dup ? '' : 'NEW'
     }) : React.createElement("span", {
-      className: `flex min-h-[78px] items-center justify-center rounded-xl border-2 border-white/50 text-[22px] ${c.r === 'SR' ? 'animate-pulse shadow-[0_0_14px_#f59e0b]' : ''}`,
-      style: {
-        background: 'linear-gradient(160deg,#334155,#0f172a)'
-      }
-    }, "🧠"), open && c.dup && React.createElement("span", {
+      "data-card-tactic-back": true,
+      className: `block h-[86px] overflow-hidden rounded-xl border-2 border-white/50 bg-slate-900 ${c.r === 'SR' ? 'animate-pulse shadow-[0_0_14px_#f59e0b]' : ''}`
+    }, React.createElement("img", {
+      src: CARD_BACK_IMG(),
+      alt: "",
+      draggable: false,
+      className: "h-full w-full object-cover"
+    })), open && c.dup && React.createElement("span", {
       className: "absolute bottom-0.5 right-0.5 rounded bg-slate-900/80 px-1 text-[9px] font-black text-amber-200"
     }, "かけら+1"));
   })), spotCard && React.createElement("button", {
