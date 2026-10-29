@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 47133399a0fc6077
+// generated-sha256: 98cde563a2b2aac7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -66930,9 +66930,9 @@ const CardTacticsShop = ({ point = 0, busy = false, onBuy, onExchange }) => {
       </div>
       {msg && <p data-card-tactics-shop-msg className="rounded-xl bg-amber-500/15 p-2 text-[12px] font-bold text-amber-100">{msg}</p>}
       <button type="button" data-card-tactics-buy="1" disabled={busy || point < cardTacticsPrice(1)} onClick={() => { Audio_.fgSe.tap(); void buy(1, 'point'); }} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40">1パック 300ビートP</button>
-      <button type="button" data-card-tactics-buy="5" disabled={busy || point < cardTacticsPrice(5)} onClick={() => { Audio_.fgSe.tap(); void buy(5, 'point'); }} className="mh-button min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40">5パック 1,350ビートP(150おトク)</button>
-      <button type="button" data-card-tactics-ticket disabled={busy || t.tickets < 1} onClick={() => { Audio_.fgSe.tap(); void buy(1, 'ticket'); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40">{`引く券で1パック(のこり${t.tickets}枚)`}</button>
-      <button type="button" data-card-tactics-exchange disabled={t.shards < CARD_TACTICS_SHARD_COST} onClick={() => { Audio_.fgSe.tap(); setPicking(true); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40">{`かけらで1枚えらぶ(${t.shards}/${CARD_TACTICS_SHARD_COST})`}</button>
+      <button type="button" data-card-tactics-buy="5" disabled={busy || point < cardTacticsPrice(5)} onClick={() => { Audio_.fgSe.tap(); void buy(5, 'point'); }} className="mh-button min-h-[52px] w-full rounded-2xl font-black text-white disabled:opacity-40">5パック 1,350ビートP(150おトク)</button>
+      <button type="button" data-card-tactics-ticket disabled={busy || t.tickets < 1} onClick={() => { Audio_.fgSe.tap(); void buy(1, 'ticket'); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black text-white disabled:opacity-40">{`引く券で1パック(のこり${t.tickets}枚)`}</button>
+      <button type="button" data-card-tactics-exchange disabled={t.shards < CARD_TACTICS_SHARD_COST} onClick={() => { Audio_.fgSe.tap(); setPicking(true); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black text-white disabled:opacity-40">{`かけらで1枚えらぶ(${t.shards}/${CARD_TACTICS_SHARD_COST})`}</button>
       <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>引く券は、バトルカードのレベルが上がるともらえます。</p>
       {picking && (
         <div data-card-tactic-picker="missing" className="fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3">

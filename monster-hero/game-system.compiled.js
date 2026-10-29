@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d68cf649af95751c
+// source-sha256: 86fd7e2ccd4fa801
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -112804,7 +112804,7 @@ const CardTacticsShop = ({
       Audio_.fgSe.tap();
       void buy(5, 'point');
     },
-    className: "mh-button min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40"
+    className: "mh-button min-h-[52px] w-full rounded-2xl font-black text-white disabled:opacity-40"
   }, "5パック 1,350ビートP(150おトク)"), React.createElement("button", {
     type: "button",
     "data-card-tactics-ticket": true,
@@ -112813,7 +112813,7 @@ const CardTacticsShop = ({
       Audio_.fgSe.tap();
       void buy(1, 'ticket');
     },
-    className: "mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40"
+    className: "mh-button min-h-[48px] w-full rounded-2xl font-black text-white disabled:opacity-40"
   }, `引く券で1パック(のこり${t.tickets}枚)`), React.createElement("button", {
     type: "button",
     "data-card-tactics-exchange": true,
@@ -112822,7 +112822,7 @@ const CardTacticsShop = ({
       Audio_.fgSe.tap();
       setPicking(true);
     },
-    className: "mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40"
+    className: "mh-button min-h-[48px] w-full rounded-2xl font-black text-white disabled:opacity-40"
   }, `かけらで1枚えらぶ(${t.shards}/${CARD_TACTICS_SHARD_COST})`), React.createElement("p", {
     className: "text-[11px] font-bold text-slate-400",
     style: JA_WRAP_STYLE
