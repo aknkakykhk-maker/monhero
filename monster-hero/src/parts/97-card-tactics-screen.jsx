@@ -258,7 +258,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
     try {
       const fresh = await cardTacticsLoad();
       const r = cardTacticsPull(fresh.tactics, count, { payWith, point }, Math.random);
-      if (!r) { setNotice(payWith === 'ticket' ? '引く券が足りません' : 'ビートPが足りません'); return; }
+      if (!r) { setNotice(payWith === 'ticket' ? 'カードパック券が足りません' : 'ビートPが足りません'); return; }
       Audio_.fgSe.tap();
       const entries = [{ key: CARD_TACTICS_KEY, before: fresh.rawT, next: r.next }];
       const ok = await onPay(r.cost, entries);
@@ -285,9 +285,9 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
       <ScreenHead title={screenTitle} accent="text-amber-200" onBack={onBack} note={(share ? cardShareOpen() : cardTacticsOpen()) ? '' : 'つくっている途中(デバッグ)'}/>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-2`}>
         <div data-card-tactics-level className={`${SCREEN_PANEL_CLASS} py-2`}>
-          <div className="flex items-baseline gap-2"><b className="text-[18px] font-black text-amber-200">バトルカード Lv{lv}</b><small className="text-[11px] font-bold text-slate-300">{`次まで ${data.info.need - data.info.into}`}</small></div>
-          <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-700"><i className="block h-full bg-gradient-to-r from-emerald-400 to-amber-300" style={{ width: `${Math.round((data.info.into / data.info.need) * 100)}%` }}/></div>
-          {nextF && <p className="mt-1 text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{`次は Lv${nextF.at} で${[nextF.base ? `基本${nextF.base}枚目` : '', nextF.breeder ? `ブリーダーに${nextF.breeder}枚目` : '', nextF.mon ? `各モンスターに${nextF.mon}枚目` : ''].filter(Boolean).join('・')}が開く`}</p>}
+          <PlayerRankBadge kind="card" rank={lv} size="sm"/>
+          <div className="mt-1"><PlayerRankGauge kind="card" info={{ rank: lv, into: data.info.into, need: data.info.need }}/></div>
+          {nextF && <p className="mt-1 text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{`次はランク${nextF.at}で${[nextF.base ? `基本${nextF.base}枚目` : '', nextF.breeder ? `ブリーダーに${nextF.breeder}枚目` : '', nextF.mon ? `各モンスターに${nextF.mon}枚目` : ''].filter(Boolean).join('・')}が開く`}</p>}
         </div>
         <div className="flex gap-1">
           {!listOnly && [...(share ? [['register', '登録']] : []), ['build', '組む'], ['list', `持っている ${ownCount}/${CARD_TACTIC_CARDS.length}`]].map(([k, l]) => (
@@ -324,7 +324,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
                       onClick={() => setPick({ cat: 'base', title: i === 0 ? 'メインの基本カード' : `サブの基本カード(${i}枚目)`, allowNone: true, onPick: (id) => { setPick(null); void saveFrames({ ...f, base: f.base.map((x, j) => (j === i ? id : x)) }); } })}
                       className={`flex w-full items-center gap-2 rounded-xl border-2 p-2 text-left ${locked ? 'border-dashed border-slate-600 bg-slate-900 text-slate-400' : i === 0 ? 'border-amber-200 bg-gradient-to-r from-orange-900 to-amber-700' : 'border-slate-300 bg-gradient-to-r from-slate-700 to-slate-600'}`}>
                       <span className="text-[11px] font-black text-white/80">{i === 0 ? 'メイン' : `サブ${i}`}</span>
-                      <span className="min-w-0 flex-1"><b className="block text-[14px] font-black text-white">{locked ? `Lv${at} で開く` : c ? c.name : '(なし)'}</b>
+                      <span className="min-w-0 flex-1"><b className="block text-[14px] font-black text-white">{locked ? `ランク${at}で開く` : c ? c.name : '(なし)'}</b>
                         {!locked && <small className="block text-[10px] text-white/80" style={JA_WRAP_STYLE}>{c ? c.desc : i === 0 ? 'セットした戦術カードのどれにも当たらない場面は、この型で打つ' : '型を3分の1だけ足す'}</small>}</span>
                     </button>
                   );
@@ -361,11 +361,11 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
           <div data-card-tactics-pull className="space-y-2">
             <div className={`${SCREEN_PANEL_CLASS} py-2 text-[12px] font-bold text-slate-200`} style={JA_WRAP_STYLE}>
               1回で8枚(N 70%・R 25%・SR 5%)。SR が出ないまま7回引いたら、8回目の最後の1枚は SR。だぶったカードは「かけら」になり、10個でまだ持っていないカードを1枚えらべます。
-              <div className="mt-1 flex flex-wrap gap-x-3 text-[12px] font-black text-amber-200"><span data-card-tactics-point>{`ビートP ${point.toLocaleString()}`}</span><span data-card-tactics-tickets>{`引く券 ${t.tickets}枚`}</span><span data-card-tactics-shards>{`かけら ${t.shards}個`}</span></div>
+              <div className="mt-1 flex flex-wrap gap-x-3 text-[12px] font-black text-amber-200"><span data-card-tactics-point>{`ビートP ${point.toLocaleString()}`}</span><span data-card-tactics-tickets>{`カードパック券 ${t.tickets}枚`}</span><span data-card-tactics-shards>{`かけら ${t.shards}個`}</span></div>
             </div>
             <button type="button" data-card-tactics-buy="1" disabled={busy || point < cardTacticsPrice(1)} onClick={() => { void pay(1, 'point'); }} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40">1回引く(300ビートP)</button>
             <button type="button" data-card-tactics-buy="5" disabled={busy || point < cardTacticsPrice(5)} onClick={() => { void pay(5, 'point'); }} className="mh-button min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40">5回まとめて引く(1,350ビートP)</button>
-            <button type="button" data-card-tactics-ticket disabled={busy || t.tickets < 1} onClick={() => { void pay(1, 'ticket'); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40">{`引く券で1回引く(のこり${t.tickets}枚)`}</button>
+            <button type="button" data-card-tactics-ticket disabled={busy || t.tickets < 1} onClick={() => { void pay(1, 'ticket'); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40">{`カードパック券で1回引く(のこり${t.tickets}枚)`}</button>
             <button type="button" data-card-tactics-exchange disabled={t.shards < CARD_TACTICS_SHARD_COST} onClick={() => setPick({ cat: 'all-missing', title: 'かけら10個で1枚えらぶ', onPick: exchange })}
               className="mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40">{`かけらで1枚えらぶ(${t.shards}/${CARD_TACTICS_SHARD_COST})`}</button>
           </div>
@@ -396,7 +396,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
 // 開いていない行の案内(「5行目は Lv25 で開く」)
 const CARD_FRAME_MAX_TEXT = (kind, n) => {
   const nx = CARD_LEVEL_FRAMES.find((x) => (kind === 'breeder' ? x.breeder : x.mon) > n);
-  return nx ? `${(kind === 'breeder' ? nx.breeder : nx.mon)}枚目は Lv${nx.at} で開く` : '';
+  return nx ? `${(kind === 'breeder' ? nx.breeder : nx.mon)}枚目はランク${nx.at}で開く` : '';
 };
 
 // ==================== マーケットの「戦術カード」(2026-10-29 社長「戦術カードはマーケットで買えるようにして」) ====================
@@ -414,7 +414,7 @@ const CardTacticsShop = ({ point = 0, busy = false, onBuy, onExchange }) => {
     setMsg('');
     const r = await onBuy(count, payWith);
     if (r && r.ok) { setT(r.tactics); setOpening(r.packs); return; }
-    setMsg(r && r.reason === 'tickets' ? '引く券が足りません' : r && r.reason === 'points' ? 'ビートPが足りません' : '保存できませんでした。ビートPは変わっていません');
+    setMsg(r && r.reason === 'tickets' ? 'カードパック券が足りません' : r && r.reason === 'points' ? 'ビートPが足りません' : '保存できませんでした。ビートPは変わっていません');
   };
   const exchange = async (id) => {
     setPicking(false);
@@ -433,14 +433,14 @@ const CardTacticsShop = ({ point = 0, busy = false, onBuy, onExchange }) => {
         <div className="mt-2 text-[11px] font-bold leading-relaxed text-amber-50" style={JA_WRAP_STYLE}>
           N 70%・R 25%・SR 5%。SR が出ないまま7パック開けると、8パック目の最後の1枚は SR。だぶったカードは「かけら」になり、10個でまだ持っていないカードを1枚えらべます。
         </div>
-        <div className="mt-1.5 flex flex-wrap gap-x-3 text-[12px] font-black text-amber-200"><span>{`持っている ${owned}/${CARD_TACTIC_CARDS.length}`}</span><span data-card-tactics-tickets>{`引く券 ${t.tickets}枚`}</span><span data-card-tactics-shards>{`かけら ${t.shards}個`}</span></div>
+        <div className="mt-1.5 flex flex-wrap gap-x-3 text-[12px] font-black text-amber-200"><span>{`持っている ${owned}/${CARD_TACTIC_CARDS.length}`}</span><span data-card-tactics-tickets>{`カードパック券 ${t.tickets}枚`}</span><span data-card-tactics-shards>{`かけら ${t.shards}個`}</span></div>
       </div>
       {msg && <p data-card-tactics-shop-msg className="rounded-xl bg-amber-500/15 p-2 text-[12px] font-bold text-amber-100">{msg}</p>}
       <button type="button" data-card-tactics-buy="1" disabled={busy || point < cardTacticsPrice(1)} onClick={() => { Audio_.fgSe.tap(); void buy(1, 'point'); }} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40">1パック 300ビートP</button>
       <button type="button" data-card-tactics-buy="5" disabled={busy || point < cardTacticsPrice(5)} onClick={() => { Audio_.fgSe.tap(); void buy(5, 'point'); }} className="mh-button min-h-[52px] w-full rounded-2xl font-black text-white disabled:opacity-40">5パック 1,350ビートP(150おトク)</button>
-      <button type="button" data-card-tactics-ticket disabled={busy || t.tickets < 1} onClick={() => { Audio_.fgSe.tap(); void buy(1, 'ticket'); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black text-white disabled:opacity-40">{`引く券で1パック(のこり${t.tickets}枚)`}</button>
+      <button type="button" data-card-tactics-ticket disabled={busy || t.tickets < 1} onClick={() => { Audio_.fgSe.tap(); void buy(1, 'ticket'); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black text-white disabled:opacity-40">{`カードパック券で1パック(のこり${t.tickets}枚)`}</button>
       <button type="button" data-card-tactics-exchange disabled={t.shards < CARD_TACTICS_SHARD_COST} onClick={() => { Audio_.fgSe.tap(); setPicking(true); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black text-white disabled:opacity-40">{`かけらで1枚えらぶ(${t.shards}/${CARD_TACTICS_SHARD_COST})`}</button>
-      <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>引く券は、バトルカードのレベルが上がるともらえます。</p>
+      <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>カードパック券は、カードランクが5上がるごとにもらえます。バトルカードのパックにも使えます。</p>
       {picking && (
         <div data-card-tactic-picker="missing" className="fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3">
           <ScreenHead title="かけら10個で1枚えらぶ" accent="text-amber-200" onBack={() => setPicking(false)}/>
@@ -452,4 +452,76 @@ const CardTacticsShop = ({ point = 0, busy = false, onBuy, onExchange }) => {
       {opening && <div className="fixed inset-0 z-[85] flex flex-col bg-slate-950"><CardTacticPackOpen packs={opening} onDone={() => setOpening(null)}/></div>}
     </div>
   );
+};
+
+// ==================== カードランクの見せ方(2026-10-29 社長「バトルカードのレベル表記が地味」→「カードランク」) ====================
+// 札・棒・ランクアップは 43 の共通の部品(ビートランクと同じ見た目)。ここはカードの中身(ごほうび・置ける所)を渡すだけ
+// 「これからもらえる物」: 次のランクから、ビートP・カードパック券・戦術カードを置ける所が増えるランクを並べる
+const cardRankUpcoming = (lv, n = 4) => {
+  const out = [];
+  for (let r = lv + 1; out.length < n && r <= lv + 50; r++) {
+    const g = cardRankRewardOf(r);
+    const frame = CARD_LEVEL_FRAMES.some((f) => f.at === r);
+    if (g.tickets || frame || r === lv + 1) out.push({ rank: r, text: `${cardRankRewardText(r)}${frame ? '・戦術カードを置ける所が増える' : ''}` });
+  }
+  return out;
+};
+// トップなどに置く小さい札(押すと詳しい所)
+const CardRankChip = ({ xp = 0, onOpen = null, showName = true, cls = '' }) => {
+  const info = cardLevelInfo(xp);
+  return (
+    <button type="button" data-card-rank-chip={info.level} aria-label={`カードランク ${info.level}。くわしく見る`} onClick={() => { Audio_.fgSe.tap(); onOpen && onOpen(); }}
+      className={`inline-flex shrink-0 items-center rounded-full border border-white/20 bg-slate-950/60 py-0.5 pl-1 pr-2.5 active:scale-95 ${cls}`}>
+      <PlayerRankBadge kind="card" rank={info.level} size="sm" showName={showName}/>
+    </button>
+  );
+};
+// 札を押した先: 大きい札・棒・これからもらえる物・経験値のたまり方
+const CardRankDetail = ({ xp = 0, onClose }) => {
+  const info = cardLevelInfo(xp);
+  const up = cardRankUpcoming(info.level);
+  return (
+    <div data-card-rank-detail role="dialog" aria-modal="true" aria-label="カードランク" className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4" onClick={onClose}>
+      <div className="w-full max-w-[340px] rounded-2xl border-2 border-amber-200/70 bg-gradient-to-b from-violet-950 to-slate-950 p-4 text-white" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-center"><PlayerRankBadge kind="card" rank={info.level} size="lg"/></div>
+        <div className="mt-3"><PlayerRankGauge kind="card" info={{ rank: info.level, into: info.into, need: info.need }} note={`次のランクまで あと${(info.need - info.into).toLocaleString()}`}/></div>
+        <b className="mt-3 block text-[13px] font-black text-amber-200">これからもらえる物</b>
+        <ul data-card-rank-upcoming className="mt-1 space-y-1 rounded-xl bg-black/35 px-2.5 py-2 text-[12px] font-bold leading-snug">
+          {up.map((u) => <li key={u.rank} style={JA_WRAP_STYLE}><b className="text-amber-100">{`ランク${u.rank}`}</b>{` … ${u.text}`}</li>)}
+        </ul>
+        <p className="mt-2 text-[11px] font-bold leading-relaxed text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('フリー対戦・マルチ対戦で戦うと経験値がたまります。強い相手ほど多く、マルチがいちばん多くたまります。その日はじめての勝ちは +30。投了・練習試合ではたまりません。')}</p>
+        <button type="button" data-card-rank-detail-close onClick={() => { Audio_.fgSe.tap(); onClose && onClose(); }} className="mh-button mt-3 min-h-[44px] w-full rounded-xl text-[14px] font-black">とじる</button>
+      </div>
+    </div>
+  );
+};
+// 対戦の結果: 経験値の札と、ランクが上がったときの知らせ(帯が変わったら「シルバーになりました!」)
+const CardRankResult = ({ gain }) => {
+  const up = !!(gain && gain.to > gain.from);
+  const [overlay, setOverlay] = useState(up);
+  if (!gain || !(gain.add > 0)) return null;
+  const award = { add: gain.add, parts: gain.parts || [], from: gain.from, to: gain.to, xp: gain.xp, gains: gain.gains || [] };
+  const tier0 = playerRankTier(gain.from), tier1 = playerRankTier(gain.to);
+  return (<>
+    <PlayerRankGain kind="card" award={award} next={`ランク${gain.to + 1}で ${cardRankRewardText(gain.to + 1)}`}/>
+    {up && overlay && (
+      <div data-card-rank-up-overlay role="dialog" aria-modal="true" aria-label="ランクアップ" className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4" onClick={() => setOverlay(false)}>
+        <div className="w-full max-w-[320px] rounded-2xl border-2 border-amber-200/80 bg-gradient-to-b from-violet-800 to-indigo-950 p-4 text-center text-white shadow-[0_0_30px_rgba(251,191,36,.45)]" onClick={(e) => e.stopPropagation()}>
+          <b className="block text-[22px] font-black tracking-[.12em] text-white" style={{ WebkitTextStroke: '4px #1e1b4b', paintOrder: 'stroke fill' }}>RANK UP!</b>
+          <small className="mt-1 block text-[12px] font-black text-slate-200">カードランク</small>
+          <div className="mt-2 flex items-center justify-center gap-3">
+            <span className="opacity-60"><PlayerRankBadge kind="card" rank={gain.from} size="sm" showName={false}/></span>
+            <span aria-hidden="true" className="text-[22px] font-black text-amber-300">▶</span>
+            <span className="origin-center scale-125"><PlayerRankBadge kind="card" rank={gain.to} size="lg" showName={false}/></span>
+          </div>
+          {tier1.t !== tier0.t && <p data-card-rank-up-tier className="mt-3 text-[14px] font-black text-amber-100">{`${tier1.name}になりました!`}</p>}
+          {award.gains.length > 0 && <div className="mt-3 rounded-xl bg-black/35 px-3 py-2 text-left">
+            <small className="block text-[11px] font-black text-slate-300">もらった物</small>
+            <ul data-card-rank-up-gains className="mt-0.5 space-y-0.5 text-[13px] font-black">{award.gains.map((g, i) => <li key={i} style={JA_WRAP_STYLE}><span aria-hidden="true">{g.icon} </span>{g.text}</li>)}</ul>
+          </div>}
+          <button type="button" data-card-rank-up-ok onClick={() => { Audio_.fgSe.tap(); setOverlay(false); }} className="mh-button mh-button-primary mt-3 min-h-[44px] w-full rounded-xl text-[15px] font-black">OK</button>
+        </div>
+      </div>
+    )}
+  </>);
 };

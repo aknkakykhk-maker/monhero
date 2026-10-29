@@ -947,8 +947,12 @@ const CardShopPacks = ({ db, point, busy, collection = null, onBuyPack, gacha = 
   const [confirm, setConfirm] = useState(null);
   const [gachaConfirm, setGachaConfirm] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
+  // カードパック券(96 の tickets。カードランクのごほうび)。1枚でどの弾も1パック。開けて戻ると読み直す(この部品は作り直される)
+  const [tickets, setTickets] = useState(0);
+  useEffect(() => { if (typeof cardTacticsLoad === 'function') void cardTacticsLoad().then((d) => setTickets(d.tactics.tickets)).catch(() => {}); }, []);
   return (
     <div data-card-shop-packs className="space-y-2 pb-2">
+      {tickets > 0 && <p data-card-shop-tickets className="rounded-xl border border-amber-300/50 bg-amber-500/10 px-2.5 py-1.5 text-[12px] font-black text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(`🎟️ カードパック券 ${tickets}枚。1枚で、どの弾も1パック開けられます(戦術カードのパックにも使えます)`)}</p>}
       {onExchangeCatalog && <CardGachaPanel gacha={gacha} catalogs={catalogs} busy={busy} onExchange={() => setGachaConfirm(true)} onOpenCatalog={() => setCatalogOpen(true)}/>}
       {CARD_PACKS.map((pack) => (
         <div key={pack.id} data-card-shop-pack={pack.id} className={SCREEN_PANEL_CLASS} style={{ borderColor: `${pack.color}88` }}>
@@ -967,6 +971,7 @@ const CardShopPacks = ({ db, point, busy, collection = null, onBuyPack, gacha = 
           <div className={`mt-2 grid gap-1.5 ${pack.bundle ? 'grid-cols-2' : 'grid-cols-1'}`}>
             <button type="button" data-card-shop-buy={`${pack.id}-1`} disabled={busy || point < pack.price} onClick={() => setConfirm({ pack, count: 1 })} className="mh-button min-h-[44px] rounded-xl bg-orange-500 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40">1パック {pack.price.toLocaleString()}</button>
             {pack.bundle && <button type="button" data-card-shop-buy={`${pack.id}-${pack.bundle.n}`} disabled={busy || point < pack.bundle.price} onClick={() => setConfirm({ pack, count: pack.bundle.n })} className="mh-button min-h-[44px] rounded-xl bg-orange-600 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40">{pack.bundle.n}パック {pack.bundle.price.toLocaleString()}<span className="block text-[9px] font-bold">({(pack.price * pack.bundle.n - pack.bundle.price).toLocaleString()}おトク)</span></button>}
+            {tickets > 0 && <button type="button" data-card-shop-ticket={pack.id} disabled={busy} onClick={() => setConfirm({ pack, count: 1, ticket: true })} className={`mh-button min-h-[40px] rounded-xl border border-amber-300/70 bg-slate-900 text-[12px] font-black text-amber-100 active:scale-[.98] disabled:opacity-40 ${pack.bundle ? 'col-span-2' : ''}`}>{`カードパック券で1パック(のこり${tickets}枚)`}</button>}
           </div>
         </div>
       ))}
@@ -974,7 +979,7 @@ const CardShopPacks = ({ db, point, busy, collection = null, onBuyPack, gacha = 
       {sheet && sheet.kind === 'rates' && <CardPackRateSheet db={db} pack={sheet.pack} collection={collection} onClose={() => setSheet(null)}/>}
       {gachaConfirm && <ConfirmSheet title="バトルカードカタログと交換しますか？" message={`ガチャポイント ${CARD_CATALOG_COST} を使います(いま ${cardNormalizeGacha(gacha).toLocaleString()})`} confirmLabel="交換する" onCancel={() => setGachaConfirm(false)} onConfirm={() => { setGachaConfirm(false); void onExchangeCatalog(); }}/>}
       {catalogOpen && <CardCatalogSheet db={db} catalogs={catalogs} collection={collection} busy={busy} onUse={onUseCatalog} onClose={() => setCatalogOpen(false)}/>}
-      {confirm && <ConfirmSheet title={`${confirm.pack.name}を${confirm.count}パック買いますか？`} message={`ビートP ${cardPackPrice(confirm.pack, confirm.count).toLocaleString()} を使います(いま ${point.toLocaleString()})`} confirmLabel="買って開ける" onCancel={() => setConfirm(null)} onConfirm={() => { const c = confirm; setConfirm(null); void onBuyPack(c.pack.id, c.count); }}/>}
+      {confirm && <ConfirmSheet title={confirm.ticket ? `${confirm.pack.name}を1パック開けますか？` : `${confirm.pack.name}を${confirm.count}パック買いますか？`} message={confirm.ticket ? `カードパック券を1枚使います(いま ${tickets}枚)` : `ビートP ${cardPackPrice(confirm.pack, confirm.count).toLocaleString()} を使います(いま ${point.toLocaleString()})`} confirmLabel={confirm.ticket ? '券で開ける' : '買って開ける'} onCancel={() => setConfirm(null)} onConfirm={() => { const c = confirm; setConfirm(null); void onBuyPack(c.pack.id, c.count, c.ticket ? 'ticket' : 'point'); }}/>}
     </div>
   );
 };

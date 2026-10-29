@@ -3,11 +3,12 @@
 //   node tools/card/card-tactics-level-check.js [--verbose]
 //
 // 見るもの
-//   A. レベル: 次のレベルまで 20+3×Lv・上限なし・壊れた経験値は0・強さ別の経験値・投了は0・その日はじめての勝ち +30(1日1回)
+//   A. カードランク: 次のランクまで 20+3×ランク(ビートランクと同じ式)・上限なし・壊れた経験値は0・
+//      強さ別の経験値(ビートと同じ物差し: 勝ち 6/8/10/14/18・マルチ60、負けは3分の1切り上げ)・投了は0・その日はじめての勝ち +30(1日1回)
 //   B. 枠: Lv1 基本1・ブリーダー1・各モンスター2 → Lv5・10・15・20・25・30 で開く
-//   C. 引く券: Lv3・Lv10・Lv20 から5レベルごと。二度は配らない
+//   C. ごほうび: 1つ上がるたびビートP ランク×100、5ランクごとにさらにランク×200+カードパック券1枚。一度に何ランク上がっても全部。二度は配らない・さかのぼらない
 //   D. 保存の形: 壊れた値・知らないカードid(残す)・はじめの10枚は持っている扱い・戦いに使う枠は持っていない/開いていない物を外す
-//   E. ガチャ: 1回8枚・5回で1,350・はじめの10枚は出ない・だぶりはかけら・天井(SRなし7回→8回目の最後はSR)・引く券で引く・かけらで1枚
+//   E. ガチャ: 1回8枚・5回で1,350・はじめの10枚は出ない・だぶりはかけら・天井(SRなし7回→8回目の最後はSR)・カードパック券で引く・かけらで1枚
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -15,8 +16,8 @@ const vm = require('vm');
 const GAME = path.resolve(__dirname, '..', '..', 'monster-hero');
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
 const src = (f) => fs.readFileSync(path.join(GAME, f), 'utf8');
-vm.runInContext(`${src('data/card-battle-cards.js')}\n;\n${src('src/parts/82-card-battle-core.jsx')}\n;\n${src('src/parts/82-card-tactics-core.jsx')}\n;\n${src('src/parts/96-card-tactics.jsx')}\n;\n`
-  + 'this.E = { CARD_TACTIC_CARDS, CARD_TACTIC_START, cardLevelInfo, cardLevelNeed, cardLevelFrames, cardLevelAfter, cardNormalizeLevel, cardNormalizeTactics, cardTacticsOwns, cardTacticsFramesForBattle, cardTacticsPull, cardTacticsPullOnce, cardTacticsExchange, cardTacticsPrice, cardLevelTicketAt };', ctx);
+vm.runInContext(`${src('src/parts/18-player-rank.jsx')}\n;\n${src('data/card-battle-cards.js')}\n;\n${src('src/parts/82-card-battle-core.jsx')}\n;\n${src('src/parts/82-card-tactics-core.jsx')}\n;\n${src('src/parts/96-card-tactics.jsx')}\n;\n`
+  + 'this.E = { CARD_TACTIC_CARDS, CARD_TACTIC_START, cardLevelInfo, cardLevelNeed, cardLevelFrames, cardLevelAfter, cardNormalizeLevel, cardNormalizeTactics, cardTacticsOwns, cardTacticsFramesForBattle, cardTacticsPull, cardTacticsPullOnce, cardTacticsExchange, cardTacticsPrice, cardRankRewardOf };', ctx);
 const E = ctx.E;
 const VERBOSE = process.argv.includes('--verbose');
 let passed = 0;
@@ -34,13 +35,15 @@ check('A 壊れた経験値は0', ['x', NaN, Infinity, -5, null].every((v) => E.
 {
   const t = '2026-10-30';
   const w = E.cardLevelAfter(null, { kind: 'cpu', level: 'master', outcome: 'win', today: t });
-  check('A MASTER の勝ち 60+その日はじめて30', w.add === 90, w.add);
+  check('A MASTER の勝ち 18+その日はじめて30', w.add === 48, w.add);
   const w2 = E.cardLevelAfter(w.next, { kind: 'cpu', level: 'easy', outcome: 'win', today: t });
-  check('A 同じ日の2勝目は +30 なし(EASY 20)', w2.add === 20, w2.add);
+  check('A 同じ日の2勝目は +30 なし(EASY 6)', w2.add === 6, w2.add);
   const w3 = E.cardLevelAfter(w2.next, { kind: 'cpu', level: 'easy', outcome: 'win', today: '2026-10-31' });
-  check('A 次の日はまた +30', w3.add === 50, w3.add);
-  check('A 負け(NORMAL 12)・マルチ(勝ち100 負け40)', E.cardLevelAfter(null, { kind: 'cpu', level: 'normal', outcome: 'lose', today: t }).add === 12
-    && E.cardLevelAfter(null, { kind: 'pvp', outcome: 'lose', today: t }).add === 40 && E.cardLevelAfter(w.next, { kind: 'pvp', outcome: 'win', today: t }).add === 100);
+  check('A 次の日はまた +30', w3.add === 36, w3.add);
+  const lose = (level) => E.cardLevelAfter(null, { kind: 'cpu', level, outcome: 'lose', today: t }).add;
+  check('A 負けは勝ちの3分の1(切り上げ)', J(['easy', 'normal', 'hard', 'expert', 'master'].map(lose)) === J([2, 3, 4, 5, 6]), J(['easy', 'normal', 'hard', 'expert', 'master'].map(lose)));
+  check('A マルチ(勝ち60 負け20)', E.cardLevelAfter(null, { kind: 'pvp', outcome: 'lose', today: t }).add === 20 && E.cardLevelAfter(w.next, { kind: 'pvp', outcome: 'win', today: t }).add === 60);
+  check('A 結果に出す内わけ', J(w.parts) === J([{ label: '勝ち', xp: 18 }, { label: 'その日はじめての勝ち', xp: 30 }]), J(w.parts));
   const s = E.cardLevelAfter(null, { kind: 'cpu', level: 'master', outcome: 'surrender', today: t });
   check('A 投了は0で書かない', s.add === 0 && s.next.xp === 0);
   check('A 負けではその日はじめての勝ちの印をつけない', E.cardLevelAfter(null, { kind: 'cpu', level: 'easy', outcome: 'lose', today: t }).next.dayWin === false);
@@ -59,12 +62,17 @@ check('A 壊れた経験値は0', ['x', NaN, Infinity, -5, null].every((v) => E.
 
 // ---- C ----
 {
-  const lvs = []; for (let lv = 2; lv <= 40; lv++) if (E.cardLevelTicketAt(lv)) lvs.push(lv);
-  check('C 引く券のレベル', J(lvs) === J([3, 10, 20, 25, 30, 35, 40]), J(lvs));
-  const g = E.cardLevelAfter({ xp: xpTo(21) - 5 }, { kind: 'pvp', outcome: 'win', today: 'x' });
-  check('C 一度に何レベル上がっても、届いた分を全部配る', g.tickets === 3 && J(g.next.got) === J([3, 10, 20]), `${g.tickets} ${J(g.next.got)}`);
-  const g2 = E.cardLevelAfter(g.next, { kind: 'pvp', outcome: 'win', today: 'x' });
-  check('C 二度は配らない', g2.tickets === 0, g2.tickets);
+  check('C ランク2で ビートP 200・券なし', J(E.cardRankRewardOf(2)) === J({ point: 200, tickets: 0 }), J(E.cardRankRewardOf(2)));
+  check('C ランク5で ビートP 500+1,000・券1枚', J(E.cardRankRewardOf(5)) === J({ point: 1500, tickets: 1 }), J(E.cardRankRewardOf(5)));
+  check('C ランク50で ビートP 5,000+10,000・券1枚', J(E.cardRankRewardOf(50)) === J({ point: 15000, tickets: 1 }), J(E.cardRankRewardOf(50)));
+  const g = E.cardLevelAfter({ xp: E.cardLevelNeed(1) - 1 }, { kind: 'pvp', outcome: 'win', today: 'x' });
+  // 22 + 90 = 112 → ランク5(23+26+29+32=110)
+  check('C 一度に何ランク上がっても、届いた分を全部配る', g.from === 1 && g.to === 5 && g.points === 200 + 300 + 400 + 1500 && g.tickets === 1 && J(g.next.got) === J([2, 3, 4, 5]), `${g.to} ${g.points} ${g.tickets} ${J(g.next.got)}`);
+  check('C もらった物の知らせ', g.gains.some((x) => x.text === 'ビートP 2,400') && g.gains.some((x) => x.text === 'カードパック券 ×1') && g.gains.some((x) => x.text.includes('置ける所が増えた')), J(g.gains));
+  const g2 = E.cardLevelAfter(g.next, { kind: 'pvp', outcome: 'lose', today: 'x' });
+  check('C 二度は配らない', g2.points === 0 && g2.tickets === 0, `${g2.points} ${g2.tickets}`);
+  const old = E.cardLevelAfter({ xp: xpTo(4) - 1, got: [3] }, { kind: 'cpu', level: 'easy', outcome: 'lose', today: 'x' });
+  check('C 前に上がったランクはさかのぼらない(以前の引く券の印 3 はそのまま)', old.to === 4 && old.points === 400 && J(old.next.got) === J([3, 4]), `${old.points} ${J(old.next.got)}`);
 }
 
 // ---- D ----
@@ -105,8 +113,8 @@ check('A 壊れた経験値は0', ['x', NaN, Infinity, -5, null].every((v) => E.
   const p8 = E.cardTacticsPullOnce(t, noSr);
   check('E 8回目の最後の1枚は SR・数え直し', p8.cards[7].r === 'SR' && p8.cards.slice(0, 7).every((c) => c.r !== 'SR') && p8.next.dry === 0, J(p8.cards.map((c) => c.r)));
   const tk = E.cardTacticsPull({ ...t0, tickets: 2 }, 2, { payWith: 'ticket' }, rand);
-  check('E 引く券で引く(1枚=1回8枚・ビートPは使わない)', tk && tk.next.tickets === 0 && tk.cost === 0 && tk.packs.length === 2);
-  check('E 引く券が足りなければ引けない', E.cardTacticsPull({ ...t0, tickets: 1 }, 2, { payWith: 'ticket' }, rand) === null);
+  check('E カードパック券で引く(1枚=1回8枚・ビートPは使わない)', tk && tk.next.tickets === 0 && tk.cost === 0 && tk.packs.length === 2);
+  check('E カードパック券が足りなければ引けない', E.cardTacticsPull({ ...t0, tickets: 1 }, 2, { payWith: 'ticket' }, rand) === null);
   const ex = E.cardTacticsExchange({ ...t0, shards: 10 }, 'tFlex');
   check('E かけら10個でまだ無いカードを1枚', ex && ex.own.tFlex === 1 && ex.shards === 0);
   check('E 持っているカード・かけら不足はえらべない', E.cardTacticsExchange({ ...t0, shards: 10 }, 'tBalance') === null && E.cardTacticsExchange({ ...t0, shards: 9 }, 'tFlex') === null);

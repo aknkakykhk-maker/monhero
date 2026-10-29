@@ -9,12 +9,14 @@ const CARD_LEVEL_KEY = 'mh_card_level_v1';
 const cardTacticsOpen = () => true;
 
 // ---- レベル ----
-// 次のレベルまでに要る経験値(2026-10-29 社長「20+3×Lv」・上限なし)。差し替えるのはここだけ
-const cardLevelNeed = (lv) => 20 + 3 * lv;
-// 1試合の経験値(助手と対戦・みんなのデッキは選んだ強さで。マルチは多め)。投了・切断・練習は 0。その日はじめての勝ちは +30
+// 2026-10-29 社長: 画面の名前は「カードランク」(モンヒロビートの「ビートランク」と対)。保存キー・中の名前(level)はそのまま。
+// 次のランクまでに要る経験値は、ビートランクと同じ式(18-player-rank の playerRankNeed。20+3×ランク・上限なし)
+const cardLevelNeed = (lv) => playerRankNeed(lv);
+// 1試合の経験値(2026-10-29 社長「経験値のベースをビートに合わせる。マルチはビートのヘルに」)。
+//   勝ち … ビートの難易度と同じ数。負け … 勝ちの3分の1(切り上げ)。投了・切断・練習は 0。その日はじめての勝ちは +30
 const CARD_LEVEL_XP = Object.freeze({
-  easy: { win: 20, lose: 8 }, normal: { win: 30, lose: 12 }, hard: { win: 40, lose: 16 }, expert: { win: 50, lose: 20 }, master: { win: 60, lose: 24 },
-  pvp: { win: 100, lose: 40 }, firstWin: 30,
+  easy: { win: 6, lose: 2 }, normal: { win: 8, lose: 3 }, hard: { win: 10, lose: 4 }, expert: { win: 14, lose: 5 }, master: { win: 18, lose: 6 },
+  pvp: { win: 60, lose: 20 }, firstWin: 30,
 });
 // 枠が開くレベル(2026-10-29 社長の決め・ツナグ案)。{ base(基本カード), breeder(ブリーダーの行), mon(モンスター1体ごとの行) }
 const CARD_LEVEL_FRAMES = Object.freeze([
@@ -24,15 +26,18 @@ const CARD_LEVEL_FRAMES = Object.freeze([
 const cardLevelFrames = (lv) => CARD_LEVEL_FRAMES.filter((x) => lv >= x.at).reduce((a, x) => ({ ...a, ...Object.fromEntries(Object.entries(x).filter(([k]) => k !== 'at')) }), {});
 // 次に開く枠(画面に「次は Lv◯ で…」と出す)。無ければ null
 const cardLevelNextFrame = (lv) => CARD_LEVEL_FRAMES.find((x) => x.at > lv) || null;
-// 引く券をもらうレベル: Lv3・Lv10、Lv20 から先は5レベルごと(上限なし)。1枚 = ガチャ1回(8枚)。ビートPには換えられない
-const cardLevelTicketAt = (lv) => lv === 3 || lv === 10 || (lv >= 20 && lv % 5 === 0);
+// ランクが上がったときのごほうび(2026-10-29 社長の作り直し。前の「Lv3・10・20から5ごとに引く券」はやめた)。
+//   1つ上がるたび ビートP「ランク×100」、5ランクごとに さらに ビートP「ランク×200」+カードパック券1枚
+//   ビートPの数はビートランクと同じ式(playerRankBeatPointsFor)。カードパック券は tactics の tickets に足す
+//   (バトルカードのパックにも戦術カードのパックにも使える券。以前の「引く券」もそのままこの券として使える)
+const CARD_RANK_PACK_TICKETS = 1;
+const cardRankRewardOf = (lv) => ({ point: playerRankBeatPointsFor(lv), tickets: lv % 5 === 0 ? CARD_RANK_PACK_TICKETS : 0 });
+const cardRankRewardText = (lv) => { const r = cardRankRewardOf(lv); return `ビートP ${r.point.toLocaleString()}${r.tickets ? `・カードパック券 ${r.tickets}枚` : ''}`; };
 // 壊れた経験値(数でない・無限・負)は0として数える(ブリーダーレベルと同じ守り方。ループが止まらなくならない)
 const cardLevelSafeXp = (xp) => { const n = Number(xp); return Number.isFinite(n) ? Math.min(Math.max(0, Math.floor(n)), Number.MAX_SAFE_INTEGER) : 0; };
-const cardLevelInfo = (xp) => {
-  let left = cardLevelSafeXp(xp), level = 1;
-  for (;;) { const need = cardLevelNeed(level); if (left < need) return { level, into: left, need }; left -= need; level += 1; }
-};
-// { v:1, xp, day(その日はじめての勝ちを数えた日 JST), dayWin, got:[引く券を配ったレベル] }
+const cardLevelInfo = (xp) => { const r = playerRankInfo(cardLevelSafeXp(xp)); return { level: r.rank, into: r.into, need: r.need }; };
+// { v:1, xp, day(その日はじめての勝ちを数えた日 JST), dayWin, got:[ごほうびを配ったランク] }
+//   got には、以前の「引く券」を配ったレベル(3 など)も入っている。同じランクのごほうびを2回配らないための印として続けて使う
 const cardNormalizeLevel = (raw) => {
   const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const got = Array.isArray(r.got) ? [...new Set(r.got.filter((n) => Number.isInteger(n) && n > 1))].sort((a, b) => a - b) : [];
@@ -44,24 +49,34 @@ const cardLevelXpOf = ({ kind, level, outcome }) => {
   const t = kind === 'pvp' ? CARD_LEVEL_XP.pvp : CARD_LEVEL_XP[level];
   return t ? t[outcome] : 0;
 };
-// 経験値を足した次の値と、新しくもらう引く券の数
+// 経験値を足した次の値と、新しくもらうごほうび(ビートP・カードパック券)。
+//   ごほうびは、この試合で上がったランク(from より上・to まで)の分だけ。前に上がったランクの分はさかのぼって配らない
+//   parts は結果に出す内わけ、gains はランクアップの演出に出す「もらった物」
 const cardLevelAfter = (prev, { kind, level, outcome, today }) => {
   const cur = cardNormalizeLevel(prev);
   const lv0 = cardLevelInfo(cur.xp).level;
-  let add = cardLevelXpOf({ kind, level, outcome });
-  if (!add) return { next: cur, tickets: 0, add: 0, from: lv0, to: lv0 };
+  const base = cardLevelXpOf({ kind, level, outcome });
+  if (!base) return { next: cur, tickets: 0, points: 0, add: 0, from: lv0, to: lv0, xp: cur.xp, parts: [], gains: [] };
   const sameDay = cur.day === today;
-  if (outcome === 'win' && !(sameDay && cur.dayWin)) add += CARD_LEVEL_XP.firstWin;
+  const first = outcome === 'win' && !(sameDay && cur.dayWin);
+  const add = base + (first ? CARD_LEVEL_XP.firstWin : 0);
+  const parts = [{ label: outcome === 'win' ? '勝ち' : '負け', xp: base }, ...(first ? [{ label: 'その日はじめての勝ち', xp: CARD_LEVEL_XP.firstWin }] : [])];
   const xp = cardLevelSafeXp(cur.xp + add);
   const to = cardLevelInfo(xp).level;
   const got = [...cur.got];
-  let tickets = 0;
-  for (let lv = 2; lv <= to; lv++) if (cardLevelTicketAt(lv) && !got.includes(lv)) { got.push(lv); tickets += 1; }
-  return { next: { ...cur, xp, day: today, dayWin: (sameDay && cur.dayWin) || outcome === 'win', got }, tickets, add, from: lv0, to };
+  let tickets = 0, points = 0;
+  for (let lv = lv0 + 1; lv <= to; lv++) {
+    if (got.includes(lv)) continue;
+    const r = cardRankRewardOf(lv);
+    got.push(lv); points += r.point; tickets += r.tickets;
+  }
+  const gains = [...(points ? [{ icon: '💰', text: `ビートP ${points.toLocaleString()}` }] : []), ...(tickets ? [{ icon: '🎟️', text: `カードパック券 ×${tickets}` }] : []),
+    ...CARD_LEVEL_FRAMES.filter((f) => f.at > lv0 && f.at <= to).map(() => ({ icon: '🧠', text: '戦術カードを置ける所が増えた' }))];
+  return { next: { ...cur, xp, day: today, dayWin: (sameDay && cur.dayWin) || outcome === 'win', got }, tickets, points, add, from: lv0, to, xp, parts, gains };
 };
 
 // ---- 持ち物と枠 ----
-// { v:1, own:{ カードid: 枚数 }, frames(82 の cardTacticNormalizeFrames の形), shards(かけら), tickets(引く券), pulls(引いた回数), dry(SR が出ないまま引いた回数) }
+// { v:1, own:{ カードid: 枚数 }, frames(82 の cardTacticNormalizeFrames の形), shards(かけら), tickets(カードパック券。以前の「引く券」), pulls(引いた回数), dry(SR が出ないまま引いた回数) }
 // はじめに配る10枚(CARD_TACTIC_START)は、保存に無くても持っている扱い(配る書き込みが要らない)。知らないカードidは消さずに残す
 const cardTacticsInt = (n, max = 1e9) => (Number.isFinite(Number(n)) ? Math.min(max, Math.max(0, Math.floor(Number(n)))) : 0);
 const cardNormalizeTactics = (raw) => {
@@ -80,7 +95,7 @@ const cardTacticsFramesForBattle = (t, lv) => {
   return { base: f.base.map((id, i) => (id && i < n.base && owns(id) ? id : null)), breeder: rows(f.breeder, n.breeder), mons: f.mons.map((list) => rows(list, n.mon)) };
 };
 
-// ---- ガチャ(1回300ビートPで8枚・5回まとめて1,350。N70%・R25%・SR5%)・かけら・引く券 ----
+// ---- ガチャ(1回300ビートPで8枚・5回まとめて1,350。N70%・R25%・SR5%)・かけら・カードパック券 ----
 // パック(89)にそろえる: SR が出ないまま7回引いたら、8回目の最後の1枚は SR(天井)。はじめに配る10枚は出ない。
 // だぶりは「かけら」1個(ビートPには戻さない)。かけら10個で、まだ持っていないカードを1枚えらべる
 const CARD_TACTICS_PULL = Object.freeze({ n: 8, price: 300, bundle: Object.freeze({ n: 5, price: 1350 }), pityAt: 7 });
@@ -106,7 +121,7 @@ const cardTacticsPullOnce = (t, rand = Math.random) => {
   const sr = cards.some((c) => c.r === 'SR');
   return { next: { ...cur, pulls: cur.pulls + 1, dry: sr ? 0 : cur.dry + 1 }, cards };
 };
-// count 回引く。payWith … 'point'(ビートP)か 'ticket'(引く券。1枚=1回)。足りなければ null
+// count 回引く。payWith … 'point'(ビートP)か 'ticket'(カードパック券。1枚=1回)。足りなければ null
 const cardTacticsPull = (t, count, { payWith = 'point', point = 0 } = {}, rand = Math.random) => {
   if (!Number.isInteger(count) || count < 1) return null;
   const cost = payWith === 'ticket' ? 0 : cardTacticsPrice(count);
@@ -140,4 +155,22 @@ const cardLevelEntries = async ({ kind, level, outcome, debug = false }) => {
   const entries = [{ key: CARD_LEVEL_KEY, before: rawL, next: gain.next }];
   if (gain.tickets) { const t = cardNormalizeTactics(rawT); entries.push({ key: CARD_TACTICS_KEY, before: rawT, next: { ...t, tickets: t.tickets + gain.tickets } }); }
   return { entries, gain };
+};
+
+// ---- カードランクのランキング(card_ranks。2026-10-29 社長「バトルカードのランクのランキングも」) ----
+// 書くのは card_rank_put だけ(39 の sbPutPlayerRank)。鍵はデッキ登録の「持ち主の鍵」(95 の mh_card_deck_owner_key_v1)をそのまま使う
+//   (新しい保存キーを増やさない)。送るのは経験値の合計だけで、ランクはサーバが数える。少ない値が来てもサーバは下げない。
+// 送るきっかけ: ランクが上がった試合のあと・MFバトルカードを開いたとき(1回)。経験値0の人は送らない。送れなくても遊びは止めない
+const cardRankPut = async (profile) => {
+  try {
+    if (typeof sbPutPlayerRank !== 'function' || typeof ensureBreederId !== 'function' || typeof cardShareOwnerKey !== 'function') return null;
+    const level = cardNormalizeLevel(await storeGet(CARD_LEVEL_KEY, null));
+    if (level.xp <= 0) return null;
+    const breederId = await ensureBreederId().catch(() => null);
+    if (typeof breederId !== 'string' || !breederId) return null;
+    const key = await cardShareOwnerKey(true);
+    if (!key) return null;
+    const p = profile || {};
+    return await sbPutPlayerRank('card', { breederId, key, name: p.name, icon: p.icon ?? null, profileFrame: p.frame ?? null, xp: level.xp });
+  } catch (_) { return null; }
 };

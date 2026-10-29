@@ -388,7 +388,11 @@ const CardBattleStatsFriend = ({ breederId }) => {
 const CARD_RANK_KINDS = Object.freeze([
   { id: 'wins', label: '勝ち数', emoji: '🏆' }, { id: 'streak', label: '連勝', emoji: '🔥' },
   { id: 'dex', label: '図鑑', emoji: '📖' }, { id: 'multi', label: 'マルチ', emoji: '🎮' },
+  // カードランク(2026-10-29 社長「ランキングは両方」= ここと全国ランキング)。中身は 43 の PlayerRankBoard(表 card_ranks)
+  { id: 'rank', label: 'ランク', emoji: '🃏' },
 ]);
+// 勝ち数・連勝・図鑑とは別の読み方をするタブ(上の「あなたの記録」・一覧はそれぞれの中で出す)
+const cardRankOwnTab = (kind) => kind === 'multi' || kind === 'rank';
 // syncArgs … 送れていない記録を送るための材料({ db, collection, profile })。開いたときに、送れていなければ自動で送る(モンヒロビートのランキングと同じ考え)
 // 受け取りの帯(週間報酬・デッキの報酬など、カードのトップで受け取るものをそろえて出す部品)。
 //   title … 「先週の週間報酬」 / lines … 中身の行(文字) / onClaim … 「受け取る」 / busy … 押している間
@@ -429,7 +433,7 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
   const cacheKey = kind === 'wins' ? `wins:${period}:${level}` : kind;
   useEffect(() => { let alive = true; if (typeof ensureBreederId === 'function') ensureBreederId().then((id) => { if (alive && typeof id === 'string') setSelfId(id); }).catch(() => {}); return () => { alive = false; }; }, []);
   useEffect(() => {
-    if (kind === 'multi') return undefined;
+    if (cardRankOwnTab(kind)) return undefined;
     let alive = true;
     const hit = cardRankCache.get(cacheKey);
     setState(hit ? { status: 'ready', entries: hit.entries } : { status: 'loading', entries: [] });
@@ -455,7 +459,7 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
   const listFull = state.entries.length >= CARD_RANK_FETCH_LIMIT && state.entries.filter((e) => !isMine(e)).every((e) => cardRankValue(e, q) > mineValue);
   const aboveKey = `${cacheKey}:${mineValue}:${retry}`;
   useEffect(() => {
-    if (kind === 'multi' || state.status !== 'ready' || !listFull || mineValue <= 0) return undefined;
+    if (cardRankOwnTab(kind) || state.status !== 'ready' || !listFull || mineValue <= 0) return undefined;
     let alive = true;
     sbCardRankAbove(q, mineValue, selfId).then((r) => { if (alive && r) setAbove({ key: aboveKey, ...r }); }).catch(() => {});
     return () => { alive = false; };
@@ -477,7 +481,7 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
           <button type="button" data-card-ranking-pending-send onClick={() => { Audio_.fgSe.tap(); void resend(true); }} className="min-h-[36px] shrink-0 rounded-lg bg-amber-400 px-3 text-[12px] font-black text-slate-950 active:scale-95">送る</button>
         </div>
       )}
-      <div className="mb-2 grid shrink-0 grid-cols-4 gap-1">
+      <div className="mb-2 grid shrink-0 grid-cols-5 gap-1">
         {CARD_RANK_KINDS.map((k) => (
           <button key={k.id} type="button" data-card-ranking-tab={k.id} aria-pressed={kind === k.id} onClick={() => { Audio_.fgSe.tap(); setKind(k.id); }}
             className={`min-h-[44px] rounded-xl border text-[11px] font-black ${kind === k.id ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/10 bg-slate-900/80 text-slate-300'}`}>
@@ -497,7 +501,7 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
           </div>
         </div>
       )}
-      {kind !== 'multi' && (
+      {!cardRankOwnTab(kind) && (
         <div data-card-ranking-mine className={`${SCREEN_PANEL_FLAT_CLASS} mb-1.5 flex shrink-0 items-center gap-2 text-[12px] font-bold`}>
           <span className="text-slate-300">あなたの記録</span>
           {/* 自分の順位(同じ数は同じ順位)。記録が無いときは出さない */}
@@ -505,7 +509,7 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
           <b className="ml-auto text-base font-black text-amber-200">{mineValue.toLocaleString()}<small className="ml-0.5 text-[10px] text-slate-400">{unit}</small></b>
         </div>
       )}
-      {kind !== 'multi' && !sendOn && <p data-card-ranking-preview className="mb-1.5 shrink-0 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('いまは見本です。ランキングへ送るのは、公開してからのふつうの対戦の記録だけです')}</p>}
+      {!cardRankOwnTab(kind) && !sendOn && <p data-card-ranking-preview className="mb-1.5 shrink-0 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('いまは見本です。ランキングへ送るのは、公開してからのふつうの対戦の記録だけです')}</p>}
       <div className={`${SCREEN_LIST_CLASS} space-y-1.5 pb-3`}>
         {/* 「準備中」はマルチ対戦を開ける(MFバトルカードの公開の印・91 の cardPvpOpen)まで */}
         {kind === 'multi' && !cardPvpOpen() && (
@@ -517,21 +521,27 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
           </div>
         )}
         {/* 勝つと上がる強さの点数の順(91-card-battle-multi.jsx・表 card_battle_pvp_ratings)。ほかのタブと同じ見た目(あなたの欄・メダル・同じ点数は同じ順位) */}
+        {kind === 'rank' && typeof PlayerRankBoard === 'function' && (
+          <div data-card-ranking-rank className="-mx-3">
+            <PlayerRankBoard kind="card" fetchTop={() => sbFetchPlayerRanks('card')} fetchMine={async () => (selfId ? sbFetchPlayerRankMine('card', selfId) : null)}
+              renderIcon={renderBreederIcon} selfBreederId={selfId} reloadKey={`${retry}:${selfId}`}/>
+          </div>
+        )}
         {kind === 'multi' && cardPvpOpen() && (
           <div data-card-ranking-multi>
             <CardPvpRankingList renderBreederIcon={renderBreederIcon} selfId={selfId} reloadKey={retry}/>
           </div>
         )}
-        {kind !== 'multi' && state.status === 'loading' && <p className="py-8 text-center text-sm font-bold text-slate-400">読み込み中…</p>}
-        {kind !== 'multi' && state.status === 'missing' && <p data-card-ranking-missing className="py-8 text-center text-sm font-bold text-amber-200">ランキングは準備中です</p>}
-        {kind !== 'multi' && state.status === 'error' && (
+        {!cardRankOwnTab(kind) && state.status === 'loading' && <p className="py-8 text-center text-sm font-bold text-slate-400">読み込み中…</p>}
+        {!cardRankOwnTab(kind) && state.status === 'missing' && <p data-card-ranking-missing className="py-8 text-center text-sm font-bold text-amber-200">ランキングは準備中です</p>}
+        {!cardRankOwnTab(kind) && state.status === 'error' && (
           <div className="py-8 text-center">
             <p className="text-sm font-bold text-amber-200">ランキングを読み込めませんでした</p>
             <button type="button" onClick={() => { cardRankCache.delete(cacheKey); setRetry((n) => n + 1); }} className="mt-2 min-h-[44px] rounded-xl bg-slate-800 px-4 text-sm font-black">もう一度読み込む</button>
           </div>
         )}
-        {kind !== 'multi' && state.status === 'ready' && shown.length === 0 && <p data-card-ranking-empty className="py-8 text-center text-sm font-bold text-slate-400">まだ記録がありません</p>}
-        {kind !== 'multi' && state.status === 'ready' && shown.map((e, i) => {
+        {!cardRankOwnTab(kind) && state.status === 'ready' && shown.length === 0 && <p data-card-ranking-empty className="py-8 text-center text-sm font-bold text-slate-400">まだ記録がありません</p>}
+        {!cardRankOwnTab(kind) && state.status === 'ready' && shown.map((e, i) => {
           const mine = isMine(e);
           const v = cardRankValue(e, q);
           return (

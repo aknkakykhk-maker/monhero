@@ -207,11 +207,11 @@ function PlayerRankBoard({ kind = 'beat', fetchTop, fetchMine, renderIcon = null
     <div data-player-rank-board={kind} className="space-y-2 px-3 py-2">
       <p className="text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ランクの高い順。同じランクなら、経験値の合計が多い順です(上位100人とあなた)。')}</p>
       {board.top.length === 0
-        ? <p className="py-4 text-center text-xs font-black text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('まだだれも載っていません。曲を遊ぶと、ここに載ります。')}</p>
+        ? <p className="py-4 text-center text-xs font-black text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`まだだれも載っていません。${kind === 'card' ? 'MFバトルカードで対戦する' : '曲を遊ぶ'}と、ここに載ります。`)}</p>
         : <ol className="space-y-1.5">{board.top.map((e, i) => <PlayerRankRow key={e.breederId || i} kind={kind} place={i + 1} icon={iconOf(e)} name={e.name} rank={e.rank} xp={e.xp} mine={!!selfId && e.breederId === selfId}/>)}</ol>}
       {!inTop && (board.mine
         ? <ol className="border-t border-white/10 pt-2"><PlayerRankRow kind={kind} place={board.mine.place} icon={iconOf(board.mine)} name={board.mine.name} rank={board.mine.rank} xp={board.mine.xp} mine/></ol>
-        : selfXp > 0 && <p className="border-t border-white/10 pt-2 text-center text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('あなたの記録は、次に曲を遊んだときに載ります。')}</p>)}
+        : selfXp > 0 && <p className="border-t border-white/10 pt-2 text-center text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`あなたの記録は、次に${kind === 'card' ? 'ランクが上がった' : '曲を遊んだ'}ときに載ります。`)}</p>)}
     </div>
   );
 }
