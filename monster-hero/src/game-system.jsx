@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 42e95a3e3fa6c64c
+// generated-sha256: c01fb44718007fc2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -48397,6 +48397,64 @@ function RhythmMultiAloneHint({ alone, onLeave }) {
   );
 }
 
+// 招待の部屋を開いたまま、ほかの画面へ出ているあいだ、画面の上に出す帯
+// (2026-10-29 社長「招待で部屋を作っている間は、何もできないのが不便」・案A「ほかの画面へ行っても部屋を閉じない。相手が来たら上に帯」)。
+// 部屋(RHYTHM_MULTI)は画面の外に1つだけあるので、画面を移っても抜けない。ここは様子を聞いて知らせるだけ。
+// hidden: 対戦の画面・モードえらび・演奏中など、部屋がもう見えている所では出さない
+// busy: バトルの最中など、ここから画面を移ると途中のものが宙に浮く所。人が来たときだけ知らせ、「対戦へ」は出さない
+function RhythmMultiAwayBar({ hidden = false, busy = false, onReturn = null }) {
+  const [view, setView] = React.useState(() => RHYTHM_MULTI.view());
+  React.useEffect(() => RHYTHM_MULTI.subscribe(() => setView(RHYTHM_MULTI.view())), []);
+  // 帯を出し始めたときにいた人。この人たちは「来ました」と言わない
+  const seenRef = React.useRef(null);
+  const [arrived, setArrived] = React.useState('');
+  const others = view ? view.members.filter((m) => !m.cpu && m.id !== view.selfId) : [];
+  const othersKey = others.map((m) => m.id).join(',');
+  const shown = !!view && !hidden && !view.full;
+  // フレンドの「いまの場所」を「部屋で待ち中」にする(2026-10-29 マルチ部ツナグくんの friendsSetRoomWaiting)。
+  // 選曲が始まった・部屋を出たら戻す。カードの部屋も同じ口を使うので、ビートが立てたときだけ下ろす
+  const roomWaiting = !!view && !view.full && (view.room ? view.room.phase : 'matching') === 'matching';
+  const roomWaitingSetRef = React.useRef(false);
+  React.useEffect(() => {
+    if (typeof friendsSetRoomWaiting !== 'function') return;
+    if (roomWaiting) { friendsSetRoomWaiting(true); roomWaitingSetRef.current = true; }
+    else if (roomWaitingSetRef.current) { friendsSetRoomWaiting(false); roomWaitingSetRef.current = false; }
+  }, [roomWaiting]);
+  React.useEffect(() => {
+    if (!shown) { seenRef.current = null; setArrived(''); return; }
+    if (!seenRef.current) { seenRef.current = new Set(others.map((m) => m.id)); return; }
+    const fresh = others.find((m) => !seenRef.current.has(m.id));
+    others.forEach((m) => seenRef.current.add(m.id));
+    if (fresh) setArrived(rhythmMultiText(fresh.name, 20) || 'メンバー');
+  }, [othersKey, shown]);
+  if (!shown) return null;
+  const phase = view.room ? view.room.phase : 'matching';
+  const hot = !!arrived || phase !== 'matching';
+  if (busy && !hot) return null;
+  const text = arrived ? `${arrived}さんが来ました` : phase !== 'matching' ? '対戦が始まります' : `部屋で待っています(${view.members.length}/${RHYTHM_MULTI_ROOM_MAX}人)`;
+  return <MultiAwayBar text={text} hot={hot} busy={busy} onReturn={onReturn} onLeave={() => RHYTHM_MULTI.leave()} game="beat" />;
+}
+
+// 部屋を開いたままほかの画面にいるあいだの、画面の上の帯(見た目だけ。モンヒロビートとMFバトルカードで共通・2026-10-29 マルチ部ツナグくんと決めた)。
+// 部屋の様子は呼ぶ側が読んで、文と「目立たせるか」だけを渡す。
+//   text: 帯の文 / hot: 人が来た・始まるなど、すぐ戻ってほしいとき / busy: バトルの最中など、ここから画面を移れない所(「対戦へ」を出さない)
+//   onReturn: 部屋へ戻る / onLeave: 部屋を出る(押したら先に確かめる) / icon: 文の頭の絵文字 / game: data 属性に載せるだけ(検査で見分ける用)
+function MultiAwayBar({ text, hot = false, busy = false, onReturn = null, onLeave = null, icon = '🎵', game = '' }) {
+  const leave = () => { if (onLeave && window.confirm('ルームを出ますか?')) onLeave(); };
+  return (
+    <div data-multi-away-bar={hot ? 'hot' : 'wait'} data-multi-away-game={game} className="pointer-events-none fixed inset-x-0 top-0 z-[1000] flex justify-center px-2 pt-[max(env(safe-area-inset-top),6px)]">
+      <div className={`pointer-events-auto flex w-full max-w-[420px] items-center gap-2 rounded-2xl border px-3 py-1.5 text-white shadow-lg ${hot ? 'border-amber-200/80 bg-fuchsia-800/95' : 'border-cyan-300/50 bg-slate-900/95'}`}>
+        <span className={`min-w-0 flex-1 text-[12px] font-black leading-snug ${hot ? 'animate-pulse' : ''}`} style={JA_WRAP_STYLE}>{icon ? `${icon} ` : ''}{jaWrap(text)}</span>
+        {busy ? <small className="shrink-0 text-[10px] font-bold text-amber-100">終わったら戻れます</small>
+          : <button data-multi-away-return type="button" onClick={() => onReturn && onReturn()}
+            className={`min-h-[40px] shrink-0 rounded-xl px-3 text-[12px] font-black ${hot ? 'bg-amber-300 text-slate-950' : 'bg-cyan-400 text-slate-950'}`}>{hot ? '対戦へ' : '戻る'}</button>}
+        {onLeave && <button data-multi-away-leave type="button" aria-label="ルームを出る" onClick={leave}
+          className="min-h-[40px] min-w-[36px] shrink-0 rounded-xl bg-slate-700 text-[13px] font-black">✕</button>}
+      </div>
+    </div>
+  );
+}
+
 // 結果が出たら、対戦の記録へ1回ぶん足す(同じ回は2度数えない)
 function RhythmMultiRecordSaver({ entry }) {
   React.useEffect(() => {
@@ -48871,7 +48929,7 @@ function RhythmQuickRunPill({ info, onRestart = null, onResume = null, widthClas
     </small>
   );
 }
-function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null }) {
+function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null, onStepAway = null }) {
   const view = useRhythmMultiView();
   useModeSelectStageCss();
   const difficultyIds = difficultyList.map((d) => d.id);
@@ -49594,6 +49652,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               )}
                 {buddyBumped && <p data-rhythm-buddy-bumped className="text-[11px] font-black leading-snug text-amber-200">人が入ってきたので、呼んだマスモンは席をゆずって帰りました(使った回数・券は戻りました)</p>}
                 {buddyCallButton()}
+                {/* 招待の部屋は、開いたままほかの画面へ出られる(2026-10-29 社長・案A)。相手が来たら上の帯(RhythmMultiAwayBar)で知らせる */}
+                {view && !publicRoom && !view.full && onStepAway && <button data-rhythm-multi-step-away type="button" className={`${btn} w-full bg-cyan-800`} style={JA_WRAP_STYLE} onClick={onStepAway}>{jaWrap('部屋はそのままで、ほかの画面へ')}</button>}
                 <button data-rhythm-multi-leave type="button" className={`${btn} w-full bg-slate-700`} onClick={leaveRoomAfterTap}>{view ? 'ルームを出る' : 'やめる'}</button>
                 {message && <p className="text-[12px] font-black text-rose-300">{message}</p>}
               </div>
@@ -64351,7 +64411,16 @@ function MonsterHeroGame() {
   const [dailyMasuAdvice, setDailyMasuAdvice] = useState(null); // null / { debugCount:null|number, eligible:boolean }
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(()=>normalizeRhythmBestRecords(null));
-  const [rhythmPlay,setRhythmPlay]=useState(null);
+  const [rhythmPlay,setRhythmPlayState]=useState(null);
+  // 招待の部屋を開いたままほかの画面へ出られる(2026-10-29・案A)ので、部屋にいるまま対戦でない曲を始めるときは、先に部屋を抜けるかを聞く
+  // (部屋の中の曲と、ひとりの曲を同時には鳴らせない)。曲を始める入口が多いので、ここ1か所で見る
+  const setRhythmPlay=(next)=>{
+    if(next&&typeof next==='object'&&next.from!=='multi'&&typeof RHYTHM_MULTI!=='undefined'&&RHYTHM_MULTI.view()){
+      if(!window.confirm('みんなで対戦の部屋で待っています。部屋を出てから遊びますか?'))return;
+      RHYTHM_MULTI.leave();
+    }
+    setRhythmPlayState(next);
+  };
   // モンスターノーツ用のマスモン設定(最大4体)。保存するのは個体IDの並びだけ
   const [rhythmMonsterSlotIds,setRhythmMonsterSlotIds]=useState([]);
   // マスモン一覧を出す設定シート。閉じているあいだは一覧を組み立てない
@@ -84175,6 +84244,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* モードえらび(RHYTHM_MODE_SELECT)と対戦(RHYTHM_MULTI)は同じ部品で描く。部屋に入る処理(フリーマッチ・
             ルーム作成・入室・フレンドの招待)はモードえらびの画面に並べ、入れたら RHYTHM_MULTI へ移る。
             key で分けて、画面が変わったら部品の中の状態を作り直す */}
+        {/* 招待の部屋を開いたまま、ほかの画面にいるあいだの帯(2026-10-29・案A)。部屋が見えている所(対戦の画面・モードえらび・演奏中)では出さない。
+            バトルの最中は画面を移ると途中のものが宙に浮くので、人が来たときだけ知らせる */}
+        <RhythmMultiAwayBar hidden={gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT'||!!rhythmPlay}
+          busy={['BATTLE','WAVE_RESULT','CHAMPION','BATTLE_TUTORIAL','CARD_BATTLE','RPG_DEBUG_BATTLE','DEBUG_BATTLE_SETUP'].includes(gameState)}
+          onReturn={()=>{void openRhythmDemo({to:'RHYTHM_MULTI'});}} />
         {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} masuMons={masuMons} masuPicker={{entries:unifiedMonsterEntriesSingleType.filter(e=>e.type==='masu'),renderSortFilterBar:renderMonsterSortFilterBar,renderCardBody:renderMonsterCardBody,cardClass:MONSTER_CARD_CLASS,cardStyle:MONSTER_CARD_STYLE}} buddyTickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseBuddyTicket={consumeBuddyTicket} onRefundBuddyTicket={refundBuddyTicket} onOpenMasuBeat={()=>openMasuBeat(gameState)} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_PLAY_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
           onUserGesture={()=>{/* 全画面と画面ロック防止は、指で押した直後しか許されない。準備完了を押したこの場で頼んでおく(ひとりのときの「決定」と同じ) */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();}}
           multiLook={rhythmSettings.multiLook||'LIGHT'}
@@ -84188,6 +84262,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           onResumeQuickRun={()=>resumeQuickRunFromRhythm()}
           onBack={gameState==='RHYTHM_MODE_SELECT'?exitRhythmSongSelect:()=>setGameState('RHYTHM_MODE_SELECT')}
           onRoomEntered={()=>setGameState('RHYTHM_MULTI')}
+          onStepAway={exitRhythmSongSelect}
           rankingSupport={{
             breederIcon:rankingBreederIcon,
             // 部屋の中から全国ランキングを見る(2026-10-04・ユーザー指示「マルチ中にもランキングボタンいれて」)。
