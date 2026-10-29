@@ -52,7 +52,7 @@ const cardShareSmartText = (tactics) => {
   const label = lv === 'random' ? 'でたらめ' : `${(typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv]) || lv.toUpperCase()} 相当`;
   if (!t.f) return label;
   const f = cardTacticUnpackFrames(t.f);
-  return `${label}(基本${f.base.filter(Boolean).length}・行${cardShareRowsCount(f)})`;
+  return `${label}(基本${f.base.filter(Boolean).length}・戦術カード${cardShareRowsCount(f)}枚)`;
 };
 // 土台のくせ(メインの基本カードが助手の型ならその助手。前の形の登録や画面の名前に使う)
 const cardShareMainHabit = (frames, fallback = 'kyuko') => {
@@ -383,7 +383,7 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
             <div data-card-share-tactics className="mt-1 rounded-lg bg-black/30 p-2 text-[12px] font-bold text-slate-200" style={JA_WRAP_STYLE}>
               {framesNow ? (<>
                 <div>{`基本カード: ${framesNow.base.filter(Boolean).map((id) => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`}</div>
-                <div>{`行: ${cardShareRowsCount(framesNow)}`}</div>
+                <div>{`セットした戦術カード: ${cardShareRowsCount(framesNow)}枚`}</div>
                 <div className="text-amber-200">{`賢さ: ${cardShareSmartText({ f: cardTacticPackFrames(framesNow) })}`}</div>
                 {cardShareSmartLevel({ f: cardTacticPackFrames(framesNow) }) === 'random' && <div data-card-share-tactics-empty className="text-rose-200">{jaWrap('戦術カードが入っていません。このままだと、出せる手からでたらめに打ちます')}</div>}
               </>) : <div>読み込み中…</div>}
@@ -463,9 +463,9 @@ const CardShareProfileDeck = ({ ownerId, self = false, onGo = null }) => {
       {f && (
         <div className="mt-2 text-[12px] font-bold leading-relaxed text-slate-200" style={JA_WRAP_STYLE}>
           <div>{`基本カード: ${f.base.filter(Boolean).map((id) => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`}</div>
-          <div>{`行: ${cardShareRowsCount(f)}`}</div>
+          <div>{`セットした戦術カード: ${cardShareRowsCount(f)}枚`}</div>
           {t.aces.length > 0 && <div>{`切り札: ${t.aces.map((no) => ((db && cardOf(db, no)) || {}).name || no).join('・')}`}</div>}
-          <button type="button" data-profile-card-deck-rows onClick={() => setOpen((x) => !x)} className="mt-1 text-[11px] font-black text-slate-300">{open ? '▲ 戦術カードの行をとじる' : '▼ 戦術カードの行を見る'}</button>
+          <button type="button" data-profile-card-deck-rows onClick={() => setOpen((x) => !x)} className="mt-1 text-[11px] font-black text-slate-300">{open ? '▲ セットした戦術カードをとじる' : '▼ セットした戦術カードを見る'}</button>
           {open && (
             <div className="mt-1 space-y-1 rounded-lg bg-black/30 p-2 text-[11px]">
               {[...f.mons.map((rows, i) => [monName(i), rows]), ['ブリーダー', f.breeder]].map(([label, rows]) => (
