@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 33c126dd37109fd5
+// source-sha256: 5bf88a8e1f674d37
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -17174,7 +17174,7 @@ const helpDataRows = id => {
         length: RHYTHM_WEEKLY_REWARD_RANKS
       }, (_, index) => {
         const reward = rhythmWeeklyRewardForRank(index + 1);
-        return [`${index + 1}位`, `${HERO_PROOF_SHARD_ITEM.emoji} ${HERO_PROOF_SHARD_ITEM.name}×${reward.count}` + ` ／ 💗 虹のプシュケー×${reward.psyche.toLocaleString()}` + ` ／ 💎 ダイヤ×${reward.gold.toLocaleString()}`];
+        return [`${index + 1}位`, `${HERO_PROOF_SHARD_ITEM.emoji} ${HERO_PROOF_SHARD_ITEM.name}×${reward.count}` + ` ／ 💗 虹のプシュケー×${reward.psyche.toLocaleString()}` + ` ／ 💎 ダイヤ×${reward.gold.toLocaleString()}` + ` ／ 🎵 ビートP×${reward.beatPoint.toLocaleString()}`];
       });
     case 'rhythmEventPlayBonus':
       return (typeof rhythmScoredDifficultyIds === 'function' ? rhythmScoredDifficultyIds() : RHYTHM_DEMO_DIFFICULTY_IDS).map(id => [RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name || id, rhythmEventPlayBonusPercentText(id)]);
@@ -32251,12 +32251,14 @@ const rhythmEventGiftRewards = prize => {
       amount: n
     });
   };
+  const beatPointOn = typeof rhythmWeeklyBeatPointActive === 'function' && rhythmWeeklyBeatPointActive(prize && prize.event);
   const addReward = reward => {
     if (!reward) return;
     const item = rhythmEventRewardItem(reward);
     if (item) add(GIFT_ITEM_REWARD_TYPE, item.id, reward.count);
     add('rainbowPsyche', null, reward.psyche);
     add('diamond', null, reward.gold);
+    if (beatPointOn) add('beatPoint', null, reward.beatPoint);
   };
   (Array.isArray(prize && prize.prizes) ? prize.prizes : []).forEach(entry => addReward(entry && entry.reward));
   const join = prize && prize.participation;
@@ -32265,6 +32267,7 @@ const rhythmEventGiftRewards = prize => {
     if (join.heroProof > 0 && typeof HERO_PROOF_ITEM !== 'undefined') add(GIFT_ITEM_REWARD_TYPE, HERO_PROOF_ITEM.id, join.heroProof);
     add('rainbowPsyche', null, join.psyche);
     add('diamond', null, join.gold);
+    if (beatPointOn) add('beatPoint', null, join.beatPoint);
   }
   return [...totals.values()];
 };
@@ -32275,6 +32278,7 @@ const rhythmEventParticipationText = reward => {
   if (reward.heroProof > 0) parts.push(`${HERO_PROOF_ITEM.emoji} ${HERO_PROOF_ITEM.name}×${reward.heroProof.toLocaleString()}`);
   if (reward.gold > 0) parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
   if (reward.psyche > 0) parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
+  if (reward.beatPoint > 0) parts.push(`🎵 ビートP×${reward.beatPoint.toLocaleString()}`);
   return parts.join(' ／ ');
 };
 const rhythmEventRewardText = reward => {
@@ -32284,6 +32288,7 @@ const rhythmEventRewardText = reward => {
   if (item && reward.count > 0) parts.push(`${item.emoji} ${item.name}×${reward.count}`);
   if (reward.psyche > 0) parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
   if (reward.gold > 0) parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
+  if (reward.beatPoint > 0) parts.push(`🎵 ビートP×${reward.beatPoint.toLocaleString()}`);
   return parts.join(' ／ ');
 };
 const RHYTHM_OPTION_TABS = Object.freeze([['live', '演奏'], ['display', '表示'], ['volume', '音'], ['system', '軽さ・演出']]);
