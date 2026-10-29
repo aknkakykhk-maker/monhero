@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: af15a27ce9e97329
+// source-sha256: 46c421382483acd7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -70990,7 +70990,8 @@ function AiCopyBody({
 }
 function AiCopyLifeBar({
   hp,
-  maxHp
+  maxHp,
+  narrow = false
 }) {
   if (!Number.isFinite(Number(hp)) || !(Number(maxHp) > 0)) return null;
   const now = Math.max(0, Math.floor(Number(hp))),
@@ -71001,7 +71002,7 @@ function AiCopyLifeBar({
   }, React.createElement("span", {
     className: "flex h-[11px] items-center justify-between gap-1 leading-none"
   }, React.createElement("span", {
-    className: "shrink-0 whitespace-nowrap text-[8px] font-black text-pink-300 max-[359px]:hidden"
+    className: `shrink-0 whitespace-nowrap text-[8px] font-black text-pink-300 max-[359px]:hidden${narrow && String(max).length >= 4 ? ' hidden' : ''}`
   }, "ライフ"), React.createElement("span", {
     className: "font-mono leading-none whitespace-nowrap"
   }, React.createElement("span", {
@@ -71027,7 +71028,8 @@ function TacticsAiCopyColumn({
   standing,
   layout,
   onOpen,
-  hatePct = null
+  hatePct = null,
+  compact = false
 }) {
   if (!copy) return null;
   const land = layout === 'landscape';
@@ -71053,7 +71055,7 @@ function TacticsAiCopyColumn({
         onOpen();
       }
     } : undefined,
-    className: `relative min-w-0 rounded-xl border border-emerald-400/60 bg-emerald-950/55 text-emerald-50 ${canOpen ? 'cursor-pointer' : ''} ${land ? 'flex h-[46px] w-full items-center gap-2 px-2' : 'flex h-full w-[72px] max-[359px]:w-[60px] shrink-0 flex-col items-center justify-between gap-0.5 px-1 max-[359px]:px-0.5 py-1'}`
+    className: `relative min-w-0 rounded-xl border border-emerald-400/60 bg-emerald-950/55 text-emerald-50 ${canOpen ? 'cursor-pointer' : ''} ${land ? 'flex h-[46px] w-full items-center gap-2 px-2' : `flex h-full w-[72px] max-[359px]:w-[60px] shrink-0 flex-col items-center justify-between ${compact ? 'gap-0 py-0.5' : 'gap-0.5 py-1'} px-1 max-[359px]:px-0.5`}`
   }, skill && React.createElement("span", {
     "data-tactics-ai-copy-skill": true,
     className: `absolute z-[90] max-w-[140px] truncate rounded-lg border border-red-200 bg-red-700 px-2 py-0.5 text-[11px] font-black text-white shadow-[0_2px_10px_rgba(0,0,0,.7)] ${land ? 'left-1/2 -top-3 -translate-x-1/2' : 'right-1 top-1/3'}`
@@ -71061,7 +71063,7 @@ function TacticsAiCopyColumn({
     className: `flex min-w-0 items-center gap-1 ${land ? 'w-[92px] shrink-0' : 'w-full flex-col'}`
   }, React.createElement(AiCopyFace, {
     src: src,
-    size: land ? 20 : 22
+    size: land ? 20 : compact ? 18 : 22
   }), React.createElement("span", {
     className: `min-w-0 overflow-hidden whitespace-nowrap font-black leading-tight text-emerald-200 [container-type:inline-size] ${land ? 'flex-1' : 'w-full text-center'}`
   }, React.createElement("span", {
@@ -71074,12 +71076,13 @@ function TacticsAiCopyColumn({
     phase: phase,
     hit: hit,
     anim: anim,
-    size: land ? 40 : 46
+    size: land ? 40 : compact ? 32 : 46
   }), React.createElement("span", {
     className: `flex min-w-0 flex-col gap-0.5 ${land ? 'w-[96px] shrink-0' : 'w-full'}`
   }, React.createElement(AiCopyLifeBar, {
     hp: copy.hp,
-    maxHp: copy.maxHp
+    maxHp: copy.maxHp,
+    narrow: !land
   }), React.createElement(AiCopyGutsMeter, {
     guts: copy.guts,
     maxGuts: copy.maxGuts
@@ -73523,6 +73526,11 @@ function BattleScreen({
       baseId: s?.id,
       image: img
     }) : img;
+    const slotSoulStage = (() => {
+      if (!s || !s.masuId || ecoBattleView || liteBattleView || fxLoad === 'LIGHT' || fxLoad === 'MINIMAL' || !Array.isArray(battleSoulMasus)) return 0;
+      const m = battleSoulMasus.find(x => x && (x.id === s.masuId || x.masuId === s.masuId));
+      return m ? normalizeSoulRankStage(normalizeMasuProgression(m).soulRankStage) : 0;
+    })();
     const themedAttack = isAnimating ? themedAttackKindOf(attackAnim, s?.id) : null;
     const slotArtBox = {
       width: tacticsNewLayout ? '58px' : '64px',
@@ -73587,7 +73595,8 @@ function BattleScreen({
       layout: "landscape"
     })), React.createElement(AiCopyLifeBar, {
       hp: tCopy.hp,
-      maxHp: tCopy.maxHp
+      maxHp: tCopy.maxHp,
+      narrow: classicAiCopyLandscape()
     }), React.createElement(AiCopyGutsMeter, {
       guts: tCopy.guts,
       maxGuts: tCopy.maxGuts
@@ -74114,7 +74123,7 @@ function BattleScreen({
       "data-slot-circle": true
     }), React.createElement("div", {
       "data-tactics-attack-image": tacticsNewLayout ? i : undefined,
-      className: "relative flex items-center justify-center",
+      className: `relative flex items-center justify-center${slotSoulStage > 0 ? ' mh-reincarnate-stack' : ''}`,
       style: {
         ...(s ? slotArtBox : {}),
         ...(isAnimating && tacticsNewLayout && !pandoraArt ? {
@@ -74126,7 +74135,10 @@ function BattleScreen({
           zIndex: 9999
         } : {})
       }
-    }, pandoraArt ? pandoraArt : s?.imgUrl ? isAnimating && s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? React.createElement(PandoraDualThunder, {
+    }, slotSoulStage > 0 && React.createElement(SoulRankAura, {
+      soulRankStage: slotSoulStage,
+      className: `is-battle${fxLoad === 'STANDARD' ? ' is-still' : ''}`
+    }), pandoraArt ? pandoraArt : s?.imgUrl ? isAnimating && s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? React.createElement(PandoraDualThunder, {
       image: React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
@@ -74328,7 +74340,8 @@ function BattleScreen({
     return React.createElement(React.Fragment, null, React.createElement("div", {
       className: `flex shrink-0 ${tacticsNewLayout ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
     }, React.createElement(TacticsAiCopyColumn, _extends({}, props, {
-      layout: "portrait"
+      layout: "portrait",
+      compact: !tacticsNewLayout && classicAiCopyLandscape()
     }))), tacticsNewLayout && React.createElement("div", {
       className: "hidden shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:block"
     }, React.createElement(TacticsAiCopyColumn, _extends({}, props, {
@@ -145026,6 +145039,9 @@ const createAnimationStyle = () => {
     [data-tactics-look][data-fx-level="STANDARD"] :is([data-slot-ring], [data-card-shine], [data-enemy-ring])::before,
     [data-tactics-look][data-fx-level="STANDARD"] :is([data-slot-index], [data-card-gem], [data-enemy-hpbar])::after,
     [data-tactics-look][data-fx-level="STANDARD"] [data-slot-circle] { animation: none !important; }
+    /* バトルの枠の魂格オーラ(SoulRankAura is-battle)。大きさは枠の絵に合わせて小さめ。標準では動きを止める(2026-10-29) */
+    .mh-reincarnate-aura.is-battle{inset:-24%}
+    .mh-reincarnate-aura.is-battle.is-still, .mh-reincarnate-aura.is-battle.is-still *, .mh-reincarnate-aura.is-battle.is-still *::before, .mh-reincarnate-aura.is-battle.is-still *::after { animation: none !important; }
     [data-tactics-look]:is([data-fx-level="LIGHT"], [data-fx-level="MINIMAL"]) * { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
     /* 最軽量は、次の行動の札・狙われている枠の点滅(animate-pulse)も止め、何も動き続けない画面にする */
     [data-tactics-look][data-fx-level="MINIMAL"] .animate-pulse { animation: none !important; }
