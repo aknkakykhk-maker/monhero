@@ -597,3 +597,11 @@ const rhythmEventRewardText=(reward)=>{
   if(reward.gold>0)parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
   return parts.join(' ／ ');
 };
+// スコアの数字を、置ける幅(いちばん近い container の 100cqw)に収める字の大きさ。入るときは maxPx のまま、入らないときだけ小さくする。
+// 太字の数字はおよそ 0.62 字ぶん・「,」は 0.3 字ぶん(iPhone の標準書体・ヒラギノ)。少し余らせる。
+// 100万点(7桁「1,050,000」)を超えると、320幅の結果の画面で数字がはみ出していた(2026-10-29 部長テンポくん)
+const rhythmScoreFitSize=(text,maxPx,minPx)=>{
+  let em=0;
+  for(const ch of String(text??''))em+=/[0-9]/.test(ch)?.62:ch===','||ch==='.'?.3:.62;
+  return `clamp(${minPx}px, calc(100cqw / ${Math.max(1,em*1.06).toFixed(2)}), ${maxPx}px)`;
+};

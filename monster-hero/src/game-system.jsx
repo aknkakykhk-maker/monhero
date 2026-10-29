@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c6647bde78537ac3
+// generated-sha256: 11c57b961dda34cf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -20287,6 +20287,14 @@ const rhythmEventRewardText=(reward)=>{
   if(reward.gold>0)parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
   return parts.join(' ／ ');
 };
+// スコアの数字を、置ける幅(いちばん近い container の 100cqw)に収める字の大きさ。入るときは maxPx のまま、入らないときだけ小さくする。
+// 太字の数字はおよそ 0.62 字ぶん・「,」は 0.3 字ぶん(iPhone の標準書体・ヒラギノ)。少し余らせる。
+// 100万点(7桁「1,050,000」)を超えると、320幅の結果の画面で数字がはみ出していた(2026-10-29 部長テンポくん)
+const rhythmScoreFitSize=(text,maxPx,minPx)=>{
+  let em=0;
+  for(const ch of String(text??''))em+=/[0-9]/.test(ch)?.62:ch===','||ch==='.'?.3:.62;
+  return `clamp(${minPx}px, calc(100cqw / ${Math.max(1,em*1.06).toFixed(2)}), ${maxPx}px)`;
+};
 
 // ---- part: 29-rhythm-screens.jsx ----
 // ============================================================================
@@ -21365,7 +21373,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                     const markId=rhythmAchievementMarkId(playable,playable?rhythmBestRecord(bestRecords,entry.songId,item.id):null);
                     const mark=RHYTHM_ACHIEVEMENT_MARKS[markId];
                     return <i key={item.id} {...(main?{'data-rhythm-achievement':markId}:{})} title={`${item.id}: ${mark.label}`}
-                      className="block h-2 w-2 rotate-45 rounded-[1px] [@container(max-width:250px)]:hidden" style={mark.style}/>;
+                      className="block h-2 w-2 rotate-45 rounded-[1px] [@container(max-width:300px)]:hidden" style={mark.style}/>;
                   })}
                   {/* 「いま選んでいる難易度」での自己ベストのランクを、行のまま見せる。
                       それまでは「5難易度」とだけ出ていて、どの曲をどこまで遊んだかは
@@ -21379,14 +21387,15 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                     return <small {...(main?{'data-rhythm-song-row-rank':played?rank:''}:{})}
                       className="ml-1 flex min-w-0 items-baseline gap-1 text-[9px] font-bold text-slate-400">
                       {/* 行が狭いとき(横持ちで絵を回したiPhoneなど)は、難易度の名前から先に外してスコアを切らさない
-                          (2026-09-26・ユーザー報告「スコアの文字が切れてる」)。さらに狭ければ達成の印も外す */}
+                          (2026-09-26・ユーザー報告「スコアの文字が切れてる」)。さらに狭ければ達成の印も外す。
+                          スコアは「…」で切らない。7桁(100万点〜)が入るよう、行が300px以下なら◆の列を、380px以下なら「イベント対象」の字を外して「🏆」だけにする(2026-10-29) */}
                       {rowId&&<span className={`shrink-0 font-black [@container(max-width:350px)]:hidden ${rhythmDifficultyTextColor(rowId)}`}>{rowId}</span>}
                       {(()=>{const tier=played?rhythmDetailAchieveTier(record):null;
                         return tier?<span {...(main?{'data-rhythm-song-row-achieve':tier.id}:{})} data-rhythm-achieve-tone={tier.id} title={tier.label}
                           className="shrink-0 rounded px-1 py-px text-[8px] font-black italic leading-none [@container(max-width:350px)]:hidden">{tier.id==='FULL_COMBO'?'FC':tier.id==='ALL_EXCELLENT'?'AE':'AM'}</span>:null;})()}
                       {played
                         ?<><b className={`text-[12px] font-black leading-none ${RHYTHM_RANK_COLORS[rank]||'text-slate-300'}`}>{rank}</b>
-                          <span className="truncate tabular-nums text-slate-300">{record.bestScore.toLocaleString()}</span></>
+                          <span className="shrink-0 whitespace-nowrap tabular-nums text-slate-300">{record.bestScore.toLocaleString()}</span></>
                         :<span className="truncate">未プレイ</span>}
                     </small>;
                   })()}
@@ -21395,7 +21404,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                     className="ml-1 shrink-0 rounded-md border border-sky-300/40 bg-sky-500/10 px-1 py-0.5 text-[9px] font-black leading-none text-sky-200">{row.versions}つの版</small>}
                   {favoriteIds.has(entry.songId)&&<small {...(main?{'data-rhythm-song-row-favorite':''}:{})} aria-label="お気に入り" className="ml-auto shrink-0 text-[12px] leading-none text-rose-300">♥</small>}
                   {eventSong&&<small {...(main?{'data-rhythm-song-event':entry.songId}:{})}
-                    className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-black text-amber-200">🏆 イベント対象</small>}
+                    className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-black text-amber-200">🏆<span className="[@container(max-width:380px)]:hidden"> イベント対象</span></small>}
                 </span>
               </span>
             </button>
@@ -22740,7 +22749,7 @@ const RhythmHudScore=({hud,maxScore,bestScore,rankFx=true})=>{const score=useRhy
       if(ring&&typeof ring.animate==='function')ring.animate([{opacity:1,transform:'scale(.8)'},{opacity:0,transform:'scale(2.4)'}],{duration:760,easing:'ease-out'});
       if(pop&&typeof pop.animate==='function'){pop.textContent=`${rank} RANK!`;pop.animate([{opacity:0,transform:'translateY(4px) scale(.7)'},{opacity:1,transform:'translateY(0) scale(1.1)',offset:.18},{opacity:1,transform:'translateY(0) scale(1)',offset:.75},{opacity:0,transform:'translateY(-6px) scale(1)'}],{duration:1500,easing:'ease-out'});}
     }catch(_){}},[rank,rankFx]);
-  return <div className="flex items-center gap-1.5"><div ref={rankBadgeRef} className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rank]}`} style={{boxShadow:'0 0 8px rgba(103,232,249,.35)'}}><b data-rhythm-rank className="text-sm font-black leading-none" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{rank}</b>{rankFx&&<><i ref={rankRingRef} data-rhythm-rank-ring aria-hidden="true" style={{position:'absolute',inset:-3,borderRadius:'9999px',border:'2px solid currentColor',boxShadow:'0 0 12px currentColor',opacity:0,pointerEvents:'none'}}/><b ref={rankPopRef} data-rhythm-rank-pop aria-hidden="true" style={{position:'absolute',left:-2,top:'100%',marginTop:2,zIndex:2,whiteSpace:'nowrap',fontSize:11,fontWeight:900,fontStyle:'italic',lineHeight:1,padding:'2px 6px',borderRadius:9999,background:'rgba(2,6,23,.88)',boxShadow:'0 0 10px currentColor',textShadow:'0 0 6px currentColor',opacity:0,pointerEvents:'none'}}/></>}</div><div className="min-w-0 landscape:min-w-0"><div className="flex items-center gap-0.5 landscape:hidden"><div data-rhythm-rank-gauge className="relative h-1.5 w-14 overflow-hidden rounded-full border border-white/25 bg-slate-950/80"><i aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300" style={{width:`${rhythmRankProgress(score)}%`}}/></div><b data-rhythm-rank-next className="shrink-0 text-[9px] font-black leading-none text-slate-300">{rankNextLabel}</b></div><b data-rhythm-score className="mt-0.5 block font-black leading-none tabular-nums landscape:mt-0" style={{fontSize:'min(18px,4.6cqw)',textShadow:'0 1px 6px rgba(2,6,23,.96)'}}>{score.toLocaleString()}</b><small className="mt-0.5 block text-[9px] font-bold leading-none text-slate-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>BEST {Number(bestScore||0).toLocaleString()}</small></div></div>;};
+  return <div className="flex items-center gap-1.5"><div ref={rankBadgeRef} className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rank]}`} style={{boxShadow:'0 0 8px rgba(103,232,249,.35)'}}><b data-rhythm-rank className="text-sm font-black leading-none" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{rank}</b>{rankFx&&<><i ref={rankRingRef} data-rhythm-rank-ring aria-hidden="true" style={{position:'absolute',inset:-3,borderRadius:'9999px',border:'2px solid currentColor',boxShadow:'0 0 12px currentColor',opacity:0,pointerEvents:'none'}}/><b ref={rankPopRef} data-rhythm-rank-pop aria-hidden="true" style={{position:'absolute',left:-2,top:'100%',marginTop:2,zIndex:2,whiteSpace:'nowrap',fontSize:11,fontWeight:900,fontStyle:'italic',lineHeight:1,padding:'2px 6px',borderRadius:9999,background:'rgba(2,6,23,.88)',boxShadow:'0 0 10px currentColor',textShadow:'0 0 6px currentColor',opacity:0,pointerEvents:'none'}}/></>}</div><div className="min-w-0 landscape:min-w-0"><div className="flex items-center gap-0.5 landscape:hidden"><div data-rhythm-rank-gauge className="relative h-1.5 w-14 overflow-hidden rounded-full border border-white/25 bg-slate-950/80"><i aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300" style={{width:`${rhythmRankProgress(score)}%`}}/></div><b data-rhythm-rank-next className="shrink-0 text-[9px] font-black leading-none text-slate-300">{rankNextLabel}</b></div><b data-rhythm-score className="mt-0.5 block font-black leading-none tabular-nums landscape:mt-0" style={{/* 100万点を超えると、320幅の左上(約74px)に「1,050,000」がぎりぎりなので少し小さく(2026-10-29) */fontSize:score>=1000000?'min(18px,4cqw)':'min(18px,4.6cqw)',textShadow:'0 1px 6px rgba(2,6,23,.96)'}}>{score.toLocaleString()}</b><small className="mt-0.5 block text-[9px] font-bold leading-none text-slate-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>BEST {Number(bestScore||0).toLocaleString()}</small></div></div>;};
 // フルコンボ・オールマーベラスが続いているか(comboStatus)。AM=ここまで全部MARVELOUS / FC=ここまでBAD・MISSなし / 空=切れた。アシストモードでは出さない
 const RhythmHudCombo=({hud,settings,assistOn,comboPosition,isLandscape,comboRef,comboRingRef})=>{const combo=useRhythmHudPick(hud,h=>h.combo),countsState=useRhythmHudPick(hud,h=>rhythmHudCountsState(h.counts));
   if(settings.comboDisplay===false||!(combo>0))return null;
@@ -24887,7 +24896,8 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     <div className="min-w-0 flex-1">
       {/* ハイスコア更新(2026-10-06): 札を大きくし、前より何点伸びたかと前回のBESTを添える。演出が重なるときは、それが引いてから札を弾ませる */}
       <div className="flex flex-wrap items-center gap-1.5"><small className="text-[11px] font-black italic tracking-[.25em] text-slate-300">SCORE</small>{result.isNewRecord&&<b data-rhythm-new-record style={{'--mh-record-badge-delay':result.recordFx?'3s':'.15s'}} className="whitespace-nowrap rounded-full bg-amber-400 px-2.5 py-0.5 text-[10px] font-black leading-none text-slate-950">✨ NEW RECORD</b>}{result.isNewRecord&&Number(result.previousBestScore)>0&&view.score>result.previousBestScore&&<b data-rhythm-record-gain className="whitespace-nowrap rounded-full border border-lime-300/70 bg-lime-400/15 px-2 py-0.5 text-[10px] font-black leading-none tabular-nums text-lime-200">+{(view.score-result.previousBestScore).toLocaleString()}</b>}</div>
-      <div data-rhythm-result-score className="text-[42px] font-black leading-none tabular-nums [@container(min-width:680px)]:text-[38px]">{view.score.toLocaleString()}</div>
+      {/* 7桁(100万点〜)でも、マスモンの絵の横の狭い幅(320幅で約166px)からはみ出さないよう、置ける幅で字を小さくする。横に広い画面の上限は38px(2026-10-29) */}
+      <div className="[container-type:inline-size] [--mh-result-score-max:42px] [@container(min-width:680px)]:[--mh-result-score-max:38px]"><div data-rhythm-result-score className="font-black leading-none tabular-nums" style={{fontSize:`min(var(--mh-result-score-max), ${rhythmScoreFitSize(Math.max(Number(view.score)||0,Number(result.score)||0).toLocaleString(),42,22)})`}}>{view.score.toLocaleString()}</div></div>
       {result.isNewRecord&&Number(result.previousBestScore)>0&&<small data-rhythm-record-prev className="mt-0.5 block text-[10px] font-bold tabular-nums text-amber-200/90">前回のベスト {Number(result.previousBestScore).toLocaleString()}</small>}
     {/* ===== クリアか失敗か(2026-09-12・ユーザー指示) =====
     「終了後にクリアか失敗かもわかるようにして / それによって経験値も変わるから」。
