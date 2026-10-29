@@ -4,13 +4,28 @@
 //   選んだデッキは active を書き換えるだけ(保存の形は変えない。書くのは 84 の CardBattleScreen)。
 //   使えないデッキ(枚数が足りない・持っていないカードがある など)は、理由を出して選べないようにする。
 // 選べるデッキの一覧は cardDeckPickChoices の1か所で作る。借りたデッキ(レンタル)は、ここに kind の違う行を足せば並ぶ
-const cardDeckPickChoices = (db, decks, collection) => ((decks && decks.decks) || []).map((d) => ({
-  id: d.id, kind: 'own', name: d.name, monsters: d.monsters, count: d.cards.length,
-  why: [...cardDeckProblems(db, d), ...cardDeckOwnProblems(db, d, collection || {})],
-}));
+// opts.rented … みんなのデッキ(95)で借りたデッキ(cardRentedDeckGet の形)。あれば末尾に1行。借り物なので、持っているかは見ない(マルチでは渡さない)
+const cardDeckPickChoices = (db, decks, collection, opts = {}) => {
+  const own = ((decks && decks.decks) || []).map((d) => ({
+    id: d.id, kind: 'own', name: d.name, monsters: d.monsters, count: d.cards.length,
+    why: [...cardDeckProblems(db, d), ...cardDeckOwnProblems(db, d, collection || {})],
+  }));
+  const r = opts && opts.rented;
+  if (!r || !r.deck) return own;
+  return [...own, { id: 'rented', kind: 'rent', name: r.deckName || 'デッキ', owner: r.name, icon: r.icon || null, frame: r.frame || null,
+    monsters: r.deck.monsters, count: r.deck.cards.length, deck: r.deck, ownerId: r.ownerId, version: r.version, why: cardDeckProblems(db, r.deck) }];
+};
 
-const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', note = '', onPick, onBack }) => {
-  const choices = cardDeckPickChoices(db, decks, collection);
+// allowRented … 借りたデッキも並べる(助手と対戦のとき。マルチでは並べない)
+const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', note = '', onPick, onBack, allowRented = false }) => {
+  const [rented, setRented] = useState(null);
+  useEffect(() => {
+    if (!allowRented || typeof cardRentedDeckGet !== 'function') return undefined;
+    let alive = true;
+    void cardRentedDeckGet().then((r) => { if (alive) setRented(r); });
+    return () => { alive = false; };
+  }, [allowRented]);
+  const choices = cardDeckPickChoices(db, decks, collection, { rented: allowRented ? rented : null });
   const usable = (c) => c && c.why.length === 0;
   const first = choices.find((c) => c.id === decks.active && usable(c)) || choices.find(usable) || null;
   const [sel, setSel] = useState(first ? first.id : null);
@@ -36,6 +51,7 @@ const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', 
               className={`${SCREEN_PANEL_CLASS} flex w-full items-center gap-2 text-left active:scale-[.99] ${on ? '!border-amber-300 ring-2 ring-amber-300/70' : ''} ${ok ? '' : 'opacity-60'}`}>
               <span className="flex shrink-0 gap-0.5">{[0, 1, 2].map((i) => { const m = cardMonsterOf(db, c.monsters[i]); return m ? <img key={i} src={CARD_IMG(m.img)} alt={m.name} className="h-[52px] w-[37px] rounded-[4px] object-cover"/> : <span key={i} className="block h-[52px] w-[37px] rounded-[4px] border border-dashed border-white/20"/>; })}</span>
               <span className="min-w-0 flex-1">
+                {c.kind === 'rent' && <span data-card-deck-pick-rent className="block text-[11px] font-black text-emerald-200">{`借りたデッキ(${c.owner || 'ブリーダー'}さんの)`}</span>}
                 <span className="block text-[14px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{on ? '★ ' : ''}{jaWrap(c.name)}</span>
                 <span className={`block text-[11px] font-bold ${ok ? 'text-emerald-300' : 'text-amber-200'}`}>{`${c.count}/${CARD_BATTLE_DECK_SIZE}枚`}</span>
                 {!ok && <span data-card-deck-pick-why={c.id} className="block text-[11px] font-bold leading-snug text-amber-200" style={JA_WRAP_STYLE}>{c.why.join('・')}</span>}

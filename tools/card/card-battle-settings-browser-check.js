@@ -206,9 +206,11 @@ const EXTREME = { motion: 'OFF', shake: 'OFF', damageNum: 'OFF', think: 'FAST2',
       }
       if (mode === 'guts') {
         await page.waitForTimeout(300);
-        const label = (await page.locator('[data-card-footer] button').first().innerText().catch(() => '')) || '';
+        // ガッツの段の下のボタンは、先頭に「← 攻撃に戻る」が出ることがある(2026-10-27)。ターン終了のボタンを押す
+        const endBtn = page.locator('[data-card-footer] button').filter({ hasText: /ターン終了$/ }).first();
+        const label = (await endBtn.innerText().catch(() => '')) || '';
         if (gutsPicked === null) gutsPicked = /枚をガッツにして/.test(label);
-        await page.locator('[data-card-footer] button').first().click();
+        await endBtn.click();
         await page.waitForTimeout(250);
         const sheet = await has('[data-confirm-sheet]');
         if (sheet && endOk === null && SHOT) await shot('confirm-end');
