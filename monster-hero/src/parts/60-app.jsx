@@ -12212,10 +12212,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   //   { exTurns: EXの効果のあと何ターン(ターンで切れるものだけ), avoid: 完全回避の残り, konjo: 根性の残り }。タクティクス以外・効いていなければ空
   // ★EX で、いま効いている強化・弱化の一覧(2026-10-29 社長「ア＋イ」・見た目は 71)。読むだけ。形は 34-tactics-ex-effects.jsx の冒頭
   //   画面に出すものなので、tacticsSlotCountersAt と同じく描いている時点の state から読む
-  const tacticsExEffectsAt = (slotIdx) => (tacticsExEnabled && Array.isArray(tacticsUnits))
-    ? listTacticsExEffectsAt(tacticsExState, tacticsUnits, slotIdx, tacticsExNow, { defOf: (monId) => raidExDefOf(monId), nameOf: battleActorName }) : [];
+  //   stackCounts … 71 の allyStackCounts[slotIdx](枠の「マーク×数」)。渡すと溜まる物も kind:'stack' で後ろに並ぶ。
+  //   「マーク×数」に無い物(中二病の重ね・被ダメ半減の残り・カウンター・回避した数・雷・ボルテージ)はここで数を足す
+  const tacticsExEffectsAt = (slotIdx, stackCounts = null) => {
+    if (!(tacticsExEnabled && Array.isArray(tacticsUnits))) return [];
+    const ex = listTacticsExEffectsAt(tacticsExState, tacticsUnits, slotIdx, tacticsExNow, { defOf: (monId) => raidExDefOf(monId), nameOf: battleActorName });
+    const unit = tacticsUnits[slotIdx];
+    const c = unit ? (tacticsSlotCountersAt(slotIdx) || {}) : {};
+    const chuuni = unit && (unit.id === 'Ark' || unit.id === 'Iblis');
+    const extra = {
+      ...(chuuni ? { chuuni: getPermaBuff('chuuniUniqueStack'), chuuniCut: Math.max(0, 2 - getWaveBuff('chuuniDmgCutUses')) } : {}),
+      counter: c.counter, dodges: c.dodges, thunder: c.thunder && c.thunder.phase === 'charge' ? c.thunder.charge : 0, voltage: c.voltage && c.voltage.value,
+    };
+    return [...ex, ...listTacticsStackItems({ ...(stackCounts || {}), ...extra })];
+  };
   const tacticsExEnemyEffects = (tacticsExEnabled && Array.isArray(tacticsUnits))
-    ? listTacticsExEnemyEffects(tacticsExState, tacticsUnits, tacticsExNow, { defOf: (monId) => raidExDefOf(monId), nameOf: battleActorName }) : [];
+    ? [...listTacticsExEnemyEffects(tacticsExState, tacticsUnits, tacticsExNow, { defOf: (monId) => raidExDefOf(monId), nameOf: battleActorName }),
+      ...listTacticsStackItems(enemyStackCounts, { keepZero: [] })] : [];
   const tacticsSlotCountersAt = (slotIdx) => {
     // 画面に出すものなので、詳細パネル(tacticsExInfo)と同じく描いている時点の状態(ref ではなく state)から読む
     if(!tacticsExEnabled||!Number.isInteger(slotIdx)||!Array.isArray(tacticsUnits)) return {};

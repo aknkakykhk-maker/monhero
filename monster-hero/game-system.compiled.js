@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a03a05f028da2e39
+// source-sha256: eea417529ea8fa2f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -46315,6 +46315,85 @@ const listTacticsExEnemyEffects = (state, units, now, {
     });
   });
   return out;
+};
+const TACTICS_STACK_EXTRA = Object.freeze({
+  chuuni: {
+    mark: '😈',
+    label: '中二病の固有技の重ね',
+    note: '固有技の威力+10%・消費ガッツ+10%(1つにつき)'
+  },
+  chuuniCut: {
+    mark: '🛡️',
+    label: '被ダメ半減の残り',
+    note: 'このWAVEのあいだ、被ダメ50%カットをあと何回使えるか'
+  },
+  counter: {
+    mark: '🥊',
+    label: 'カウンター',
+    note: '狙われたターンに攻撃すると、与ダメ×2×カウンター'
+  },
+  dodges: {
+    mark: '🩸',
+    label: '回避した数',
+    note: '回避するたびに連撃が増える'
+  },
+  thunder: {
+    mark: '⚡',
+    label: '雷',
+    note: 'ためたあと雷纏で強化'
+  },
+  voltage: {
+    mark: '🎤',
+    label: 'ボルテージ',
+    note: '1段階ごとに全員の与ダメ・回復アップ'
+  }
+});
+const tacticsStackMaxOf = kind => {
+  const n = name => typeof globalThis !== 'undefined' && Number.isFinite(globalThis[name]) ? globalThis[name] : null;
+  const table = {
+    cookie: typeof SWEET_STACK_MAX !== 'undefined' ? SWEET_STACK_MAX : n('SWEET_STACK_MAX'),
+    note: typeof SWEET_STACK_MAX !== 'undefined' ? SWEET_STACK_MAX : n('SWEET_STACK_MAX'),
+    kenshi: typeof KENSHI_COMBO_POWER_MAX !== 'undefined' ? KENSHI_COMBO_POWER_MAX : null,
+    rengoku: typeof KYUBI_RENGOKU_MAX !== 'undefined' ? KYUBI_RENGOKU_MAX : null,
+    kitsunebi: typeof KITSUNEBI_MAX !== 'undefined' ? KITSUNEBI_MAX : null,
+    roar: typeof TACTICS_ROAR_MAX_STACKS !== 'undefined' ? TACTICS_ROAR_MAX_STACKS : null,
+    kagero: 1,
+    konjo: 1,
+    avoid: 2,
+    counter: 3,
+    thunder: 5,
+    voltage: 10,
+    chuuniCut: 2
+  };
+  return Number.isFinite(table[kind]) ? table[kind] : null;
+};
+const listTacticsStackItems = (counts, {
+  keepZero = ['cookie', 'note']
+} = {}) => {
+  const marks = typeof BATTLE_STACK_MARKS !== 'undefined' ? BATTLE_STACK_MARKS : {};
+  return Object.entries(counts && typeof counts === 'object' ? counts : {}).reduce((out, [kind, raw]) => {
+    if (kind === 'exTurns') return out;
+    const count = Math.max(0, Math.floor(Number(raw) || 0));
+    if (count <= 0 && !keepZero.includes(kind)) return out;
+    const m = marks[kind] || TACTICS_STACK_EXTRA[kind];
+    if (!m) return out;
+    const isTurns = m.unit === 'T';
+    out.push({
+      key: `stack:${kind}`,
+      name: m.label || kind,
+      icon: m.mark || '',
+      kind: 'stack',
+      count,
+      max: isTurns ? null : tacticsStackMaxOf(kind),
+      turnsLeft: isTurns ? count : null,
+      pct: null,
+      fromName: '',
+      fromSlot: null,
+      allAllies: false,
+      note: TACTICS_STACK_EXTRA[kind] && TACTICS_STACK_EXTRA[kind].note || ''
+    });
+    return out;
+  }, []);
 };
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
 const RHYTHM_BUDDY_TICKET_ITEM_ID = 'session_ticket';
@@ -120798,14 +120877,36 @@ function MonsterHeroGame() {
     const live = tacticsExLiveRef.current;
     return live.enabled && Number.isInteger(slotIdx) ? tacticsExAvoidLeftOf(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, live.now) : 0;
   };
-  const tacticsExEffectsAt = slotIdx => tacticsExEnabled && Array.isArray(tacticsUnits) ? listTacticsExEffectsAt(tacticsExState, tacticsUnits, slotIdx, tacticsExNow, {
+  const tacticsExEffectsAt = (slotIdx, stackCounts = null) => {
+    if (!(tacticsExEnabled && Array.isArray(tacticsUnits))) return [];
+    const ex = listTacticsExEffectsAt(tacticsExState, tacticsUnits, slotIdx, tacticsExNow, {
+      defOf: monId => raidExDefOf(monId),
+      nameOf: battleActorName
+    });
+    const unit = tacticsUnits[slotIdx];
+    const c = unit ? tacticsSlotCountersAt(slotIdx) || {} : {};
+    const chuuni = unit && (unit.id === 'Ark' || unit.id === 'Iblis');
+    const extra = {
+      ...(chuuni ? {
+        chuuni: getPermaBuff('chuuniUniqueStack'),
+        chuuniCut: Math.max(0, 2 - getWaveBuff('chuuniDmgCutUses'))
+      } : {}),
+      counter: c.counter,
+      dodges: c.dodges,
+      thunder: c.thunder && c.thunder.phase === 'charge' ? c.thunder.charge : 0,
+      voltage: c.voltage && c.voltage.value
+    };
+    return [...ex, ...listTacticsStackItems({
+      ...(stackCounts || {}),
+      ...extra
+    })];
+  };
+  const tacticsExEnemyEffects = tacticsExEnabled && Array.isArray(tacticsUnits) ? [...listTacticsExEnemyEffects(tacticsExState, tacticsUnits, tacticsExNow, {
     defOf: monId => raidExDefOf(monId),
     nameOf: battleActorName
-  }) : [];
-  const tacticsExEnemyEffects = tacticsExEnabled && Array.isArray(tacticsUnits) ? listTacticsExEnemyEffects(tacticsExState, tacticsUnits, tacticsExNow, {
-    defOf: monId => raidExDefOf(monId),
-    nameOf: battleActorName
-  }) : [];
+  }), ...listTacticsStackItems(enemyStackCounts, {
+    keepZero: []
+  })] : [];
   const tacticsSlotCountersAt = slotIdx => {
     if (!tacticsExEnabled || !Number.isInteger(slotIdx) || !Array.isArray(tacticsUnits)) return {};
     const unit = tacticsUnits[slotIdx];

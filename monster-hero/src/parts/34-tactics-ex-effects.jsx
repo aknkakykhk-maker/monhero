@@ -104,3 +104,45 @@ const listTacticsExEnemyEffects = (state, units, now, { defOf = null, nameOf = n
   });
   return out;
 };
+
+// ---- 溜まる物(勇者特性・固有技・EX で積み上がる物)も、同じ形の要素(kind:'stack')で返す(2026-10-29 社長「楔とか溜まってくやつもわかるように」) ----
+//   counts … { 種類: 数 }(71 の allyStackCounts[i]・60 の enemyStackCounts と同じ形)。名前と絵は BATTLE_STACK_MARKS(ズカンくんの持ち場)を読む
+//   要素は { key:`stack:${種類}`, name, icon, kind:'stack', count, max, turnsLeft(残りターンで数えるものだけ), pct:null, fromName:'', fromSlot:null, allAllies:false, note }
+//   「マーク×数」に無い物(中二病の重ね・カウンター・回避数・雷・ボルテージ)は、名前と絵をここで持つ
+const TACTICS_STACK_EXTRA = Object.freeze({
+  chuuni:      { mark: '😈', label: '中二病の固有技の重ね', note: '固有技の威力+10%・消費ガッツ+10%(1つにつき)' },
+  chuuniCut:   { mark: '🛡️', label: '被ダメ半減の残り', note: 'このWAVEのあいだ、被ダメ50%カットをあと何回使えるか' },
+  counter:     { mark: '🥊', label: 'カウンター', note: '狙われたターンに攻撃すると、与ダメ×2×カウンター' },
+  dodges:      { mark: '🩸', label: '回避した数', note: '回避するたびに連撃が増える' },
+  thunder:     { mark: '⚡', label: '雷', note: 'ためたあと雷纏で強化' },
+  voltage:     { mark: '🎤', label: 'ボルテージ', note: '1段階ごとに全員の与ダメ・回復アップ' },
+});
+// 上限(わかるものだけ)。定数は 22-enemy-and-bond-entries.jsx(読めないときは null)
+const tacticsStackMaxOf = (kind) => {
+  const n = (name) => (typeof globalThis !== 'undefined' && Number.isFinite(globalThis[name]) ? globalThis[name] : null);
+  const table = {
+    cookie: typeof SWEET_STACK_MAX !== 'undefined' ? SWEET_STACK_MAX : n('SWEET_STACK_MAX'),
+    note: typeof SWEET_STACK_MAX !== 'undefined' ? SWEET_STACK_MAX : n('SWEET_STACK_MAX'),
+    kenshi: typeof KENSHI_COMBO_POWER_MAX !== 'undefined' ? KENSHI_COMBO_POWER_MAX : null,
+    rengoku: typeof KYUBI_RENGOKU_MAX !== 'undefined' ? KYUBI_RENGOKU_MAX : null,
+    kitsunebi: typeof KITSUNEBI_MAX !== 'undefined' ? KITSUNEBI_MAX : null,
+    roar: typeof TACTICS_ROAR_MAX_STACKS !== 'undefined' ? TACTICS_ROAR_MAX_STACKS : null,
+    kagero: 1, konjo: 1, avoid: 2, counter: 3, thunder: 5, voltage: 10, chuuniCut: 2,
+  };
+  return Number.isFinite(table[kind]) ? table[kind] : null;
+};
+// 残りターンで数えるもの(BATTLE_STACK_MARKS の unit:'T')。exTurns は EX の要素の turnsLeft と同じなので出さない
+const listTacticsStackItems = (counts, { keepZero = ['cookie', 'note'] } = {}) => {
+  const marks = typeof BATTLE_STACK_MARKS !== 'undefined' ? BATTLE_STACK_MARKS : {};
+  return Object.entries(counts && typeof counts === 'object' ? counts : {}).reduce((out, [kind, raw]) => {
+    if (kind === 'exTurns') return out;
+    const count = Math.max(0, Math.floor(Number(raw) || 0));
+    if (count <= 0 && !keepZero.includes(kind)) return out;
+    const m = marks[kind] || TACTICS_STACK_EXTRA[kind];
+    if (!m) return out;
+    const isTurns = m.unit === 'T';
+    out.push({ key: `stack:${kind}`, name: m.label || kind, icon: m.mark || '', kind: 'stack', count, max: isTurns ? null : tacticsStackMaxOf(kind),
+      turnsLeft: isTurns ? count : null, pct: null, fromName: '', fromSlot: null, allAllies: false, note: (TACTICS_STACK_EXTRA[kind] && TACTICS_STACK_EXTRA[kind].note) || '' });
+    return out;
+  }, []);
+};
