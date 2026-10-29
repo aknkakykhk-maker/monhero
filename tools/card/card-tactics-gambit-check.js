@@ -21,7 +21,7 @@ const GAME = path.resolve(__dirname, '..', '..', 'monster-hero');
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
 const src = (f) => fs.readFileSync(path.join(GAME, f), 'utf8');
 vm.runInContext(`${src('data/card-battle-cards.js')}\n;\n${src('src/parts/82-card-battle-core.jsx')}\n;\n${src('src/parts/82-card-tactics-core.jsx')}\n;\n`
-  + 'this.E = { cardTacticSmartLevel, cardTacticPackFrames, cardTacticUnpackFrames, cardTacticKnobsOf, CARD_BATTLE_DATA, CARD_AI_HABITS, CARD_TACTIC_CARDS, CARD_TACTIC_START, CARD_TACTIC_GROUPS, cardTacticNormalizeFrames, cardTacticHabitOf, cardTacticFilled, cardTacticDecide, cardTacticCond, cardTacticOf, cardCreateGame, cardApplyAction, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardOther, cardGuardOptions };', ctx);
+  + 'this.E = { cardTacticSmartLevel, cardTacticPackFrames, cardTacticUnpackFrames, cardTacticKnobsOf, CARD_BATTLE_DATA, CARD_AI_HABITS, CARD_TACTIC_CARDS, CARD_TACTIC_START, CARD_TACTIC_GROUPS, cardTacticNormalizeFrames, cardTacticHabitOf, cardTacticFilled, cardTacticDecide, cardTacticCond, cardTacticOf, cardCreateGame, cardApplyAction, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardOther, cardGuardOptions, CARD_AI_TACTIC_BASE };', ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 const VERBOSE = process.argv.includes('--verbose');
@@ -66,15 +66,15 @@ const scene = () => {
   st.players[1].mons.forEach((m) => { m.max = 20; m.life = 20; });
   return st;
 };
-const pol = (rows, extra = {}) => ({ ...E.cardAiPolicy('kyuko', 'master'), gambit: { mons: [rows, rows, rows], ...extra } });
-const polB = (breeder, extra = {}) => ({ ...E.cardAiPolicy('kyuko', 'master'), gambit: { breeder, ...extra } });
+const pol = (rows, extra = {}) => ({ ...E.cardAiPolicy('kyuko', 'master', { noTactics: true }), gambit: { mons: [rows, rows, rows], ...extra } });
+const polB = (breeder, extra = {}) => ({ ...E.cardAiPolicy('kyuko', 'master', { noTactics: true }), gambit: { breeder, ...extra } });
 const zero = () => 0;
 const targetOf = (a) => (a && a.target ? a.target.m : null);
 
 // ---- C ----
 {
   const st = scene();
-  const a0 = E.cardAiChooseAction(db, st, E.cardAiPolicy('kyuko', 'master'), zero);
+  const a0 = E.cardAiChooseAction(db, st, E.cardAiPolicy('kyuko', 'master', { noTactics: true }), zero);
   const a1 = E.cardAiChooseAction(db, st, pol([]), zero);
   const a2 = E.cardAiChooseAction(db, st, polB([{ c: 'turnGe.15', a: 'stop' }]), zero);
   check('C 並びが空なら今と同じ手', J(a0) === J(a1), `${J(a0)} / ${J(a1)}`);
@@ -93,10 +93,10 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
   const cannot = E.cardAiChooseAction(db, st, polB([{ c: 'any', a: 'fieldCard' }, { c: 'any', a: 'stop' }]), zero);
   check('D 出せる手が無い行(全体カード)は飛ばして次の行', cannot && cannot.type === 'endAttacks', J(cannot));
   const order = E.cardAiChooseAction(db, st, pol([{ c: 'myGuts.7', a: 'cost.軽い技(ガッツ0〜1)' }, { c: 'any', a: 'cost.大技(4以上)' }]), zero);
-  const only1 = E.cardAiChooseAction(db, st, { ...E.cardAiPolicy('kyuko', 'master'), gambit: { mons: [[], [{ c: 'any', a: 'atk' }], []] } }, zero);
-  const base0 = E.cardAiChooseAction(db, st, E.cardAiPolicy('kyuko', 'master'), zero);
+  const only1 = E.cardAiChooseAction(db, st, { ...E.cardAiPolicy('kyuko', 'master', { noTactics: true }), gambit: { mons: [[], [{ c: 'any', a: 'atk' }], []] } }, zero);
+  const base0 = E.cardAiChooseAction(db, st, E.cardAiPolicy('kyuko', 'master', { noTactics: true }), zero);
   check('D 真ん中の子(モッチーの技を使えない)の枠の「攻める」は飛ばす', J(only1) === J(base0), `${J(only1)} / ${J(base0)}`);
-  const big1 = E.cardAiChooseAction(db, st, { ...E.cardAiPolicy('kyuko', 'master'), gambit: { mons: [[{ c: 'any', a: 'cost.大技(4以上)' }], [], []] } }, zero);
+  const big1 = E.cardAiChooseAction(db, st, { ...E.cardAiPolicy('kyuko', 'master', { noTactics: true }), gambit: { mons: [[{ c: 'any', a: 'cost.大技(4以上)' }], [], []] } }, zero);
   check('D 左の子の枠の大技は、左の子が出す', big1 && big1.type === 'attack' && big1.mon === 0 && st.players[0].hand[big1.hand[0]] === '105', J(big1));
   check('D 上の行(当たらない)を飛ばし、下の行の大技を出す', order && order.type === 'attack' && st.players[0].hand[order.hand[0]] === '105', J(order));
 }
@@ -124,7 +124,7 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
     const guards = Object.values(db.cards).filter((c) => (c.kind === 'blk' || c.kind === 'dge') && c.user === 'any' && c.ready && (c.guts || 0) <= 2).map((c) => c.no);
     st.players[1].hand = guards.slice(0, 2);
     st.players[1].mons[0].life = dmgLife;
-    const opt = E.cardAiChooseAction(db, st, E.cardAiPolicy('kyuko', 'master'), zero);
+    const opt = E.cardAiChooseAction(db, st, E.cardAiPolicy('kyuko', 'master', { noTactics: true }), zero);
     st = E.cardApplyAction(db, st, { type: 'attack', mon: 0, hand: [st.players[0].hand.indexOf('100')], target: { p: 1, m: 0 } });
     return { st, guards, opt };
   };
@@ -223,7 +223,7 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
 
 // ---- I ----
 {
-  const P = (g) => ({ ...E.cardAiPolicy('kyuko', 'master'), gambit: g });
+  const P = (g) => ({ ...E.cardAiPolicy('kyuko', 'master', { noTactics: true }), gambit: g });
   let st = scene();
   st.players[0].mons[0].life = 1; // モッチー(左の子)のライフ少し
   const c1 = E.cardTacticCond(db, st, 0, E.cardTacticOf('selfLife.30'), null, { mi: 0, phase: 'attack' });
@@ -263,8 +263,24 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
   check('J 短い形は行き来できる', JSON.stringify(E.cardTacticUnpackFrames(packed)) === JSON.stringify(E.cardTacticNormalizeFrames(full)));
   const st = scene();
   let moved = 0;
-  for (let i = 0; i < 20; i++) { const a = E.cardAiChooseAction(db, st, { ...E.cardAiPolicy('kyuko', 'master'), gambit: {}, gambitRandom: true }, Math.random); if (a && (a.type === 'attack' || a.type === 'endAttacks')) moved++; }
+  for (let i = 0; i < 20; i++) { const a = E.cardAiChooseAction(db, st, { ...E.cardAiPolicy('kyuko', 'master', { noTactics: true }), gambit: {}, gambitRandom: true }, Math.random); if (a && (a.type === 'attack' || a.type === 'endAttacks')) moved++; }
   check('J 何も入れていないデッキはランダムに打つ(できる手を返す)', moved === 20, moved);
+}
+
+// ---- K. 助手と対戦の基本カード(2026-10-29 社長: EXPERT は2枚・MASTER は3枚。メインは今の型のまま) ----
+{
+  const who = Object.keys(E.CARD_AI_HABITS);
+  check('K 7人とも基本カードの並びがある', who.every((w) => Array.isArray(E.CARD_AI_TACTIC_BASE[w]) && E.CARD_AI_TACTIC_BASE[w].length === 3 && E.CARD_AI_TACTIC_BASE[w].every((id) => E.cardTacticOf(id) && E.cardTacticOf(id).cat === 'base')));
+  who.forEach((w) => {
+    const ex = E.cardAiPolicy(w, 'expert'), ma = E.cardAiPolicy(w, 'master');
+    check(`K ${w}: EXPERT は2枚・MASTER は3枚`, ex.gambit && ex.gambit.base.filter(Boolean).length === 2 && ma.gambit && ma.gambit.base.filter(Boolean).length === 3 && !ma.gambitRandom);
+    check(`K ${w}: HARD まではくせだけ(基本カードは持たない)`, ['easy', 'normal', 'hard'].every((lv) => !E.cardAiPolicy(w, lv).gambit));
+    check(`K ${w}: プレイヤー役は持たない`, !E.cardAiPolicy(w, 'master', { playerRole: true }).gambit);
+    // メインは今のくせのまま: 2枚目・3枚目が無ければ、くせは今の値と同じ
+    const h = E.cardTacticHabitOf([ma.gambit.base[0], null, null], null, 0, ma.habit);
+    check(`K ${w}: メインの型は今のくせ(強さごとの調整ずみ)のまま`, ['attack', 'keepGuard', 'saveGuts', 'big', 'disrupt', 'area', 'finish'].every((d) => Math.abs(h[d] - Math.min(2, Math.max(0.3, ma.habit[d]))) < 1e-9) && !!h.flex === !!ma.habit.flex);
+  });
+  check('K メインの細かいくせは足さない(攻め型の「倒れるときだけ守る」が助手に付かない)', !E.cardTacticKnobsOf(['tAttack', null, null], null, 0, true).guardDieOnly && E.cardTacticKnobsOf(['tAttack', null, null], null, 0, false).guardDieOnly === true);
 }
 
 console.log(`card-tactics-gambit-check: ${passed} OK / ${fails.length} NG`);

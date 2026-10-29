@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a5bc2473d8ca914d
+// source-sha256: 1c13fb9c7cdeb7f3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10534,6 +10534,42 @@ const monsterArtFitStyle = (baseId, style) => MONSTER_ART_CONTAIN_IDS.includes(b
   ...style,
   objectFit: 'contain'
 } : style;
+const MONSTER_ART_SCALE = Object.freeze({
+  Pixie: Object.freeze({
+    scale: 1.17,
+    ty: -0.049
+  }),
+  Ark: Object.freeze({
+    scale: 1.10,
+    ty: 0
+  }),
+  Plant: Object.freeze({
+    scale: 1.08,
+    ty: 0
+  }),
+  Snegurochka: Object.freeze({
+    scale: 1.09,
+    ty: 0
+  }),
+  Zan: Object.freeze({
+    scale: 1.10,
+    ty: 0
+  })
+});
+const _artPathOf = url => typeof url === 'string' ? url.split('?')[0] : '';
+const monsterArtScaleOf = (baseId, src, className, style) => {
+  const def = baseId && Object.prototype.hasOwnProperty.call(MONSTER_ART_SCALE, baseId) ? MONSTER_ART_SCALE[baseId] : null;
+  if (!def) return null;
+  const mon = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS[baseId] : null;
+  if (!mon || !src || _artPathOf(src) !== _artPathOf(mon.imgUrl)) return null;
+  const fit = style && style.objectFit || (/(^|\s)object-contain(\s|$)/.test(className || '') ? 'contain' : '');
+  return fit === 'contain' ? def : null;
+};
+const monsterArtScaleTransform = (def, base) => {
+  if (!def) return base;
+  const own = `${def.ty ? `translateY(${(def.ty * 100).toFixed(1)}%) ` : ''}scale(${def.scale})`;
+  return base ? `${base} ${own}` : own;
+};
 let _monsterArtContainUrls = null;
 const monsterArtUrlNeedsContain = url => {
   if (typeof url !== 'string' || !url) return false;
@@ -10643,10 +10679,15 @@ const DyedMonsterImage = ({
   masuColors,
   alt,
   className,
-  style: rawStyle,
+  style: givenStyle,
   draggable,
   debugMaskPlacement = null
 }) => {
+  const artScale = debugMaskPlacement ? null : monsterArtScaleOf(baseId, src, className, monsterArtFitStyle(baseId, givenStyle));
+  const rawStyle = artScale ? {
+    ...(givenStyle || {}),
+    transform: monsterArtScaleTransform(artScale, givenStyle && givenStyle.transform)
+  } : givenStyle;
   const style = monsterArtFitStyle(baseId, rawStyle);
   const maskSize = monsterArtMaskSize(className, style);
   const hues = MASU_COLOR_REGION_HUES[baseId];
@@ -10869,7 +10910,23 @@ const _drawContain = (ctx, img, size) => {
     dh = h * k;
   ctx.drawImage(img, (size - dw) / 2, (size - dh) / 2, dw, dh);
 };
-const bakeDyedMonsterCanvas = async ({
+const bakeDyedMonsterCanvas = async (opts, size) => {
+  const out = await _bakeDyedMonsterCanvasRaw(opts, size);
+  const def = out && opts ? monsterArtScaleOf(opts.baseId, opts.src, 'object-contain', null) : null;
+  if (!def || typeof document === 'undefined') return out;
+  const scaled = document.createElement('canvas');
+  scaled.width = out.width;
+  scaled.height = out.height;
+  const sctx = scaled.getContext('2d');
+  if (!sctx) return out;
+  sctx.imageSmoothingEnabled = true;
+  sctx.imageSmoothingQuality = 'high';
+  const w = out.width * def.scale,
+    h = out.height * def.scale;
+  sctx.drawImage(out, (out.width - w) / 2, (out.height - h) / 2 + def.ty * out.height, w, h);
+  return scaled;
+};
+const _bakeDyedMonsterCanvasRaw = async ({
   baseId,
   src,
   masuColors
@@ -10952,6 +11009,7 @@ const MonsterArtFrame = ({
     objectFit: 'contain',
     objectPosition: 'center'
   };
+  const plainScale = Array.isArray(masuColors) ? null : monsterArtScaleOf(baseId, src, '', fit);
   return React.createElement("span", {
     className: `relative flex items-center justify-center overflow-hidden ${className}`,
     style: {
@@ -10968,7 +11026,10 @@ const MonsterArtFrame = ({
     src: src,
     alt: alt,
     draggable: false,
-    style: fit
+    style: plainScale ? {
+      ...fit,
+      transform: monsterArtScaleTransform(plainScale)
+    } : fit
   }), children);
 };
 const DYE_REGION_LABELS = ['①', '②', '③', '④', '⑤', '⑥'];
@@ -26515,12 +26576,21 @@ const MonsterIdleArt = ({
       ...(extra || {})
     }
   });
+  const artScale = typeof monsterArtScaleOf === 'function' ? monsterArtScaleOf(baseId, image.props.src, image.props.className, monsterArtFitStyle(baseId, image.props.style)) : null;
+  const originOf = origin => {
+    if (!artScale) return origin;
+    const m = /^\s*(-?[\d.]+)%\s+(-?[\d.]+)%\s*$/.exec(String(origin || ''));
+    if (!m) return origin;
+    const x = 50 + artScale.scale * (Number(m[1]) - 50),
+      y = 50 + artScale.scale * (Number(m[2]) - 50) + artScale.ty * 100;
+    return `${x.toFixed(2)}% ${y.toFixed(2)}%`;
+  };
   const partNode = (part, index) => React.createElement("span", {
     key: index,
     className: `mon-idle__part mon-idle__part--${part.anim} mon-idle__part--${part.layer}`,
     "aria-hidden": "true",
     style: {
-      transformOrigin: part.origin,
+      transformOrigin: originOf(part.origin),
       animationDuration: `${part.dur}ms`,
       animationDelay: `${part.delay}ms`,
       '--idle-amp': `${part.amp}deg`,
@@ -89011,7 +89081,7 @@ const cardAiPolicy = (habitId, levelId, opts = {}) => {
   const blend = (CARD_AI_HABIT_BLEND[levelId] || {})[habitId];
   const habit = blend === undefined ? base : Object.fromEntries(Object.entries(base).map(([k, v]) => [k, typeof v === 'number' ? 1 + (v - 1) * blend : v]));
   const add = ((CARD_AI_PLAY_TUNE[habitId] || {})[levelId] || 0) + (opts && opts.sameBlood ? (CARD_AI_SAME_BLOOD_PLAY[habitId] || {})[levelId] || 0 : 0);
-  return {
+  const out = {
     habit,
     level: {
       ...level,
@@ -89019,6 +89089,12 @@ const cardAiPolicy = (habitId, levelId, opts = {}) => {
     },
     playerRole: !!(opts && opts.playerRole)
   };
+  const gambit = !out.playerRole && !(opts && opts.noTactics) && typeof cardAiTacticGambit === 'function' ? cardAiTacticGambit(habitId, levelId) : null;
+  return gambit ? {
+    ...out,
+    gambit,
+    gambitKeepMain: true
+  } : out;
 };
 const CARD_AI_FLEX_HIGH = 1.6;
 const cardAiFlexMode = (db, st, p) => {
@@ -92004,17 +92080,22 @@ const cardTacticPresetOf = card => {
   };
   return {};
 };
-const cardTacticHabitOf = (base, st = null, p = 0) => {
+const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null) => {
   const list = (Array.isArray(base) ? base : []).map((id, i) => ({
     c: cardTacticOf(id),
-    w: i === 0 ? 1 : CARD_TACTIC_SUB_W
+    w: i === 0 ? 1 : CARD_TACTIC_SUB_W,
+    main: i === 0
   })).filter(x => x.c && x.c.cat === 'base');
   if (!list.length) return null;
-  const h = Object.fromEntries(CARD_TACTIC_DIMS.map(d => [d, 1]));
+  const h = Object.fromEntries(CARD_TACTIC_DIMS.map(d => [d, mainHabit && Number.isFinite(mainHabit[d]) ? mainHabit[d] : 1]));
+  if (mainHabit && mainHabit.flex) h.flex = true;
+  if (mainHabit && mainHabit.mill) h.mill = mainHabit.mill;
   list.forEach(({
     c,
-    w
+    w,
+    main
   }) => {
+    if (mainHabit && main) return;
     const pre = cardTacticPresetOf(c);
     CARD_TACTIC_DIMS.forEach(d => {
       if (Number.isFinite(pre[d])) h[d] *= 1 + (pre[d] - 1) * w;
@@ -92028,7 +92109,7 @@ const cardTacticHabitOf = (base, st = null, p = 0) => {
   const some = g => list.some(x => x.c.g === g && (x.w === 1 || turn % 3 === 0));
   if (some('tFlex')) h.flex = true;
   const mill = list.filter(x => x.c.g === 'tMill').reduce((a, x) => a + x.w, 0);
-  if (mill) h.mill = Math.min(1, mill);
+  if (mill) h.mill = Math.min(1, Math.max(h.mill || 0, mill));
   const back = list.find(x => x.c.g === 'tComeback');
   if (back && st) {
     const me = st.players[p],
@@ -92049,12 +92130,12 @@ const cardTacticHabitOf = (base, st = null, p = 0) => {
   }
   return h;
 };
-const cardTacticKnobsOf = (base, st = null, p = 0) => {
+const cardTacticKnobsOf = (base, st = null, p = 0, skipMain = false) => {
   const turn = st ? cardTacticOwnTurn(st, p) : 0;
   const out = {};
   (Array.isArray(base) ? base : []).forEach((id, i) => {
     const c = cardTacticOf(id);
-    if (!c || c.cat !== 'base' || i > 0 && turn % 3 !== 0) return;
+    if (!c || c.cat !== 'base' || i > 0 && turn % 3 !== 0 || i === 0 && skipMain) return;
     const g = CARD_TACTIC_GROUPS.find(x => x.id === c.g) || {};
     Object.assign(out, g.knob || {});
   });
@@ -92547,8 +92628,8 @@ const cardTacticDecide = (db, st, policy) => {
     act: cardTacticRandomAct(db, st, policy)
   };
   const p = phase === 'guard' ? st.pending.defender : st.active;
-  const habit = cardTacticHabitOf(frames.base, st, p);
-  const knobs = cardTacticKnobsOf(frames.base, st, p);
+  const habit = cardTacticHabitOf(frames.base, st, p, policy.gambitKeepMain ? policy.habit : null);
+  const knobs = cardTacticKnobsOf(frames.base, st, p, !!policy.gambitKeepMain);
   const pol = habit ? {
     ...policy,
     habit
@@ -92654,6 +92735,29 @@ const cardTacticDecide = (db, st, policy) => {
   return habit ? {
     policy: pol
   } : null;
+};
+const CARD_AI_TACTIC_BASE = Object.freeze({
+  mua: ['tAttack', 'tFinish', 'tBig'],
+  momosuke: ['tDisrupt', 'tJam', 'tCalm'],
+  kiki: ['tSave', 'tBig', 'tSteady'],
+  kyuko: ['tBalance', 'tCalm', 'tFinish'],
+  dra: ['tGuard', 'tSteady', 'tMill'],
+  atsu: ['tFlex', 'tArea', 'tSteady'],
+  sorashido: ['tMill', 'tDisrupt', 'tGuard']
+});
+const CARD_AI_TACTIC_COUNT = Object.freeze({
+  expert: 2,
+  master: 3
+});
+const cardAiTacticGambit = (who, levelId) => {
+  const n = CARD_AI_TACTIC_COUNT[levelId];
+  const list = CARD_AI_TACTIC_BASE[who];
+  if (!n || !list) return null;
+  return {
+    base: [0, 1, 2].map(i => i < n ? list[i] || null : null),
+    breeder: [],
+    mons: [[], [], []]
+  };
 };
 const CARD_LINE_SCENES = Object.freeze(['challenge', 'start', 'big', 'bigHit', 'guardMine', 'guardTheirs', 'myKo', 'theirKo', 'lastMine', 'lastTheirs', 'deckMine', 'deckTheirs', 'win', 'lose']);
 const CARD_LINE_FACE = Object.freeze({
@@ -96687,7 +96791,9 @@ const CardBattleBoard = ({
     if (cf.kind === 'end' && (st.phase !== 'guts' || cardDeciderOf(st) !== CARD_ME || st.pending)) return;
     step(cf.act);
   };
-  const gutsAdvisor = useMemo(() => cardAiPolicy('kyuko', 'master'), []);
+  const gutsAdvisor = useMemo(() => cardAiPolicy('kyuko', 'master', {
+    noTactics: true
+  }), []);
   const gutsPickKey = settings.gutsPick === 'ON' && mode === 'guts' && myTurn && !tutorial && !game.demo ? `${st.turn}` : '';
   useEffect(() => {
     if (!gutsPickKey) return;
@@ -110026,7 +110132,10 @@ const cardSharePolicy = (tactics, levelId, opts = {}) => {
   const t = cardShareNormalizeTactics(tactics);
   if (t.f) {
     const frames = cardTacticUnpackFrames(t.f);
-    const base = cardAiPolicy(t.habit, cardShareFightLevel(t), opts);
+    const base = cardAiPolicy(t.habit, cardShareFightLevel(t), {
+      ...opts,
+      noTactics: true
+    });
     return {
       ...base,
       gambit: frames,
@@ -110034,7 +110143,10 @@ const cardSharePolicy = (tactics, levelId, opts = {}) => {
       aces: t.aces.slice()
     };
   }
-  const base = cardAiPolicy(t.habit, levelId, opts);
+  const base = cardAiPolicy(t.habit, levelId, {
+    ...opts,
+    noTactics: true
+  });
   const habit = {
     ...base.habit
   };

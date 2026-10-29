@@ -201,18 +201,21 @@ const cardTacticPresetOf = (card) => {
   if (g.mul) return { ...g.mul };
   return {};
 };
-const cardTacticHabitOf = (base, st = null, p = 0) => {
-  const list = (Array.isArray(base) ? base : []).map((id, i) => ({ c: cardTacticOf(id), w: i === 0 ? 1 : CARD_TACTIC_SUB_W })).filter((x) => x.c && x.c.cat === 'base');
+// mainHabit … 助手の EXPERT・MASTER(cardAiPolicy の gambitKeepMain): メインの型は今のくせ(強さごとの調整ずみ)をそのまま使い、サブだけを足す
+const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null) => {
+  const list = (Array.isArray(base) ? base : []).map((id, i) => ({ c: cardTacticOf(id), w: i === 0 ? 1 : CARD_TACTIC_SUB_W, main: i === 0 })).filter((x) => x.c && x.c.cat === 'base');
   if (!list.length) return null;
-  const h = Object.fromEntries(CARD_TACTIC_DIMS.map((d) => [d, 1]));
-  list.forEach(({ c, w }) => { const pre = cardTacticPresetOf(c); CARD_TACTIC_DIMS.forEach((d) => { if (Number.isFinite(pre[d])) h[d] *= 1 + (pre[d] - 1) * w; }); });
+  const h = Object.fromEntries(CARD_TACTIC_DIMS.map((d) => [d, mainHabit && Number.isFinite(mainHabit[d]) ? mainHabit[d] : 1]));
+  if (mainHabit && mainHabit.flex) h.flex = true;
+  if (mainHabit && mainHabit.mill) h.mill = mainHabit.mill;
+  list.forEach(({ c, w, main }) => { if (mainHabit && main) return; const pre = cardTacticPresetOf(c); CARD_TACTIC_DIMS.forEach((d) => { if (Number.isFinite(pre[d])) h[d] *= 1 + (pre[d] - 1) * w; }); });
   const calm = list.filter((x) => x.c.g === 'tCalm').reduce((a, x) => a * (1 - 0.5 * x.w), 1);
   CARD_TACTIC_DIMS.forEach((d) => { h[d] = Math.min(2, Math.max(0.3, 1 + (h[d] - 1) * calm)); });
   const turn = st ? cardTacticOwnTurn(st, p) : 0;
   const some = (g) => list.some((x) => x.c.g === g && (x.w === 1 || turn % 3 === 0));
   if (some('tFlex')) h.flex = true;
   const mill = list.filter((x) => x.c.g === 'tMill').reduce((a, x) => a + x.w, 0);
-  if (mill) h.mill = Math.min(1, mill);
+  if (mill) h.mill = Math.min(1, Math.max(h.mill || 0, mill));
   // 逆転型: 倒された数で負けている・ライフの合計が半分以下なら捨て身(守り×0.5・とどめ・大技・全体×1.3)、それまでは堅く(守り・ガッツ×1.2)
   const back = list.find((x) => x.c.g === 'tComeback');
   if (back && st) {
@@ -225,12 +228,14 @@ const cardTacticHabitOf = (base, st = null, p = 0) => {
   return h;
 };
 // 基本カードの細かいくせ(knob)。メインはいつも、サブは3回に1回の番(臨機応変型・持久型と同じ)
-const cardTacticKnobsOf = (base, st = null, p = 0) => {
+//   skipMain … 助手の EXPERT・MASTER: メインの型は今の打ち方のままなので、メインの細かいくせは足さない
+//   (足すと、みゅあ(攻め型: 倒れるときだけ守る)が MASTER 50→28%・ドラ(守り型: いつも守る)が EXPERT 53→39% に落ちた。2026-10-29 60戦で測った)
+const cardTacticKnobsOf = (base, st = null, p = 0, skipMain = false) => {
   const turn = st ? cardTacticOwnTurn(st, p) : 0;
   const out = {};
   (Array.isArray(base) ? base : []).forEach((id, i) => {
     const c = cardTacticOf(id);
-    if (!c || c.cat !== 'base' || (i > 0 && turn % 3 !== 0)) return;
+    if (!c || c.cat !== 'base' || (i > 0 && turn % 3 !== 0) || (i === 0 && skipMain)) return;
     const g = CARD_TACTIC_GROUPS.find((x) => x.id === c.g) || {};
     Object.assign(out, g.knob || {});
   });
@@ -508,8 +513,8 @@ const cardTacticDecide = (db, st, policy) => {
   if (!phase) return null;
   if (policy.gambitRandom && cardTacticSmartLevel(frames) === 'random') return { act: cardTacticRandomAct(db, st, policy) };
   const p = phase === 'guard' ? st.pending.defender : st.active;
-  const habit = cardTacticHabitOf(frames.base, st, p);
-  const knobs = cardTacticKnobsOf(frames.base, st, p);
+  const habit = cardTacticHabitOf(frames.base, st, p, policy.gambitKeepMain ? policy.habit : null);
+  const knobs = cardTacticKnobsOf(frames.base, st, p, !!policy.gambitKeepMain);
   const pol = habit ? { ...policy, habit } : policy;
   let scored = null;
   const ctx = { mi: null, skip: new Set(), noBreeder: false, scored: () => { if (!scored) scored = cardAiAttackScored(db, st, cardAiAttackChoices(db, st, pol), pol); return scored; } };
@@ -546,3 +551,24 @@ const cardTacticDecide = (db, st, policy) => {
   }
   return habit ? { policy: pol } : null;
 };
+
+// ---- 助手と対戦の基本カード(2026-10-29 社長: EASY〜HARD は1枚・EXPERT は2枚・MASTER は3枚。枚数が増えるほど型が混ざって賢くなる) ----
+//   メインはその助手の今の型(くせは今の値と強さごとの調整のまま。cardAiPolicy の gambitKeepMain)。2枚目・3枚目はツナグ案を、勝率を測って決めた
+//   EASY〜HARD は1枚(=今の型だけ)なので、今の打ち方のまま(gambit を持たせない)
+const CARD_AI_TACTIC_BASE = Object.freeze({
+  mua: ['tAttack', 'tFinish', 'tBig'],
+  momosuke: ['tDisrupt', 'tJam', 'tCalm'],
+  kiki: ['tSave', 'tBig', 'tSteady'],
+  kyuko: ['tBalance', 'tCalm', 'tFinish'],
+  dra: ['tGuard', 'tSteady', 'tMill'],
+  atsu: ['tFlex', 'tArea', 'tSteady'],
+  sorashido: ['tMill', 'tDisrupt', 'tGuard'],
+});
+const CARD_AI_TACTIC_COUNT = Object.freeze({ expert: 2, master: 3 });
+const cardAiTacticGambit = (who, levelId) => {
+  const n = CARD_AI_TACTIC_COUNT[levelId];
+  const list = CARD_AI_TACTIC_BASE[who];
+  if (!n || !list) return null;
+  return { base: [0, 1, 2].map((i) => (i < n ? list[i] || null : null)), breeder: [], mons: [[], [], []] };
+};
+

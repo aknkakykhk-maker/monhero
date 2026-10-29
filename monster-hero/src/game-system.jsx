@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d6cdf3c343d1be74
+// generated-sha256: 474715ebc8f77d29
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7654,6 +7654,36 @@ const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).bas
 // イルミネ・ドリーミィ(2026-10-22 公開)は足し忘れていて、マスモンの詳細の丸で上下が切られ「大きく・中心がずれて」見えていた(2026-10-26 社長の指摘)
 const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Melody', 'Kuromy', 'Illumine', 'Dreamy', 'Kyubi', 'Orihime']);
 const monsterArtFitStyle = (baseId, style) => (MONSTER_ART_CONTAIN_IDS.includes(baseId) ? { ...style, objectFit: 'contain' } : style);
+// ★同じ主血統の立ち絵の見た目の大きさをそろえる、表示の倍率(2026-10-29 社長「同血統は基本的に立ち絵はほぼ同じサイズに」・案A)。
+//   絵の画素は動かさない。その子の立ち絵(imgUrl)を「全体を収める」(contain)で出すときだけ、絵の要素を scale する
+//   (マスクは同じ要素・同じ箱の中にあるので一緒に動く。待機アニメの部品の軸は MonsterIdleArt が同じ式で動かす)。
+//   切り抜く丸いアイコン(cover)・顔アイコン・円盤石アイコン・小さい版(サムネ)は対象外(src か収め方が違う)。
+//   値は絵の不透明な部分を測って決めた(箱に対する高さ。仲間に合わせ、横に広い子は幅 0.98 で頭打ち):
+//   ピクシー 0.81→0.95(ミーア 0.94・パンドラ 0.96。中心が下にずれているので上へ ty)/ アーク 0.59→0.65(羽の幅で頭打ち)/
+//   プラント 0.72→0.78(花の幅で頭打ち)/ スネグーラチカ 0.89→0.97 / ザン 0.90→0.99
+//   ty は箱の高さに対する割合(負で上へ)
+const MONSTER_ART_SCALE = Object.freeze({
+  Pixie: Object.freeze({ scale: 1.17, ty: -0.049 }),
+  Ark: Object.freeze({ scale: 1.10, ty: 0 }),
+  Plant: Object.freeze({ scale: 1.08, ty: 0 }),
+  Snegurochka: Object.freeze({ scale: 1.09, ty: 0 }),
+  Zan: Object.freeze({ scale: 1.10, ty: 0 }),
+});
+const _artPathOf = (url) => (typeof url === 'string' ? url.split('?')[0] : '');
+// その絵に掛ける倍率(掛けないなら null)。src がその子の立ち絵で、収め方が contain のときだけ
+const monsterArtScaleOf = (baseId, src, className, style) => {
+  const def = baseId && Object.prototype.hasOwnProperty.call(MONSTER_ART_SCALE, baseId) ? MONSTER_ART_SCALE[baseId] : null;
+  if (!def) return null;
+  const mon = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS[baseId] : null;
+  if (!mon || !src || _artPathOf(src) !== _artPathOf(mon.imgUrl)) return null;
+  const fit = (style && style.objectFit) || (/(^|\s)object-contain(\s|$)/.test(className || '') ? 'contain' : '');
+  return fit === 'contain' ? def : null;
+};
+const monsterArtScaleTransform = (def, base) => {
+  if (!def) return base;
+  const own = `${def.ty ? `translateY(${(def.ty * 100).toFixed(1)}%) ` : ''}scale(${def.scale})`;
+  return base ? `${base} ${own}` : own;
+};
 // 技カードのアイコンのように、絵は出すのに baseId を持ち回れない場所がある。
 // そこだけ収め方が抜けていて、ウンディーネ・ヤオビクニの固有技カードで頭が切れていた。
 // 表を二重に持つと片方だけ直して食い違うので、上の MONSTER_ART_CONTAIN_IDS から
@@ -7759,7 +7789,10 @@ const _bakeDyedLayers = (key, src, layers) => {
   promise.then((url) => { if (!url && _dyedBakeCache.get(key) === promise) _dyedBakeCache.delete(key); });
   return promise;
 };
-const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawStyle, draggable, debugMaskPlacement = null }) => {
+const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: givenStyle, draggable, debugMaskPlacement = null }) => {
+  // 同じ血統の立ち絵の大きさをそろえる倍率(MONSTER_ART_SCALE)。マスクの位置合わせ(debugMaskPlacement)の画面では掛けない
+  const artScale = debugMaskPlacement ? null : monsterArtScaleOf(baseId, src, className, monsterArtFitStyle(baseId, givenStyle));
+  const rawStyle = artScale ? { ...(givenStyle || {}), transform: monsterArtScaleTransform(artScale, givenStyle && givenStyle.transform) } : givenStyle;
   const style = monsterArtFitStyle(baseId, rawStyle);
   const maskSize = monsterArtMaskSize(className, style);
   const hues = MASU_COLOR_REGION_HUES[baseId];
@@ -7892,7 +7925,22 @@ const _drawContain = (ctx, img, size) => {
   const k = Math.min(size / w, size / h), dw = w * k, dh = h * k;
   ctx.drawImage(img, (size - dw) / 2, (size - dh) / 2, dw, dh);
 };
-const bakeDyedMonsterCanvas = async ({ baseId, src, masuColors }, size) => {
+// 焼いた絵にも、同じ血統の立ち絵の大きさをそろえる倍率を掛ける(DOM の contain と同じ見え方。モンスターノーツ)
+const bakeDyedMonsterCanvas = async (opts, size) => {
+  const out = await _bakeDyedMonsterCanvasRaw(opts, size);
+  const def = out && opts ? monsterArtScaleOf(opts.baseId, opts.src, 'object-contain', null) : null;
+  if (!def || typeof document === 'undefined') return out;
+  const scaled = document.createElement('canvas');
+  scaled.width = out.width; scaled.height = out.height;
+  const sctx = scaled.getContext('2d');
+  if (!sctx) return out;
+  sctx.imageSmoothingEnabled = true;
+  sctx.imageSmoothingQuality = 'high';
+  const w = out.width * def.scale, h = out.height * def.scale;
+  sctx.drawImage(out, (out.width - w) / 2, (out.height - h) / 2 + def.ty * out.height, w, h);
+  return scaled;
+};
+const _bakeDyedMonsterCanvasRaw = async ({ baseId, src, masuColors }, size) => {
   try {
     if (typeof document === 'undefined' || !src || !(size > 0)) return null;
     const px = Math.max(1, Math.round(size));
@@ -7970,6 +8018,8 @@ const MonsterArtFrame = ({ baseId, src, alt='', masuColors=null, className='', f
   // contain は inline style で指定する。className 側に object-cover が混ざっても
   // inline style が必ず勝つので、枠ごとに崩れることがない
   const fit = { width:'100%', height:'100%', objectFit:'contain', objectPosition:'center' };
+  // 素の <img> のときも、同じ血統の立ち絵の大きさをそろえる倍率を掛ける(DyedMonsterImage は中で掛ける)
+  const plainScale = Array.isArray(masuColors) ? null : monsterArtScaleOf(baseId, src, '', fit);
   return (
     <span
       className={`relative flex items-center justify-center overflow-hidden ${className}`}
@@ -7977,7 +8027,7 @@ const MonsterArtFrame = ({ baseId, src, alt='', masuColors=null, className='', f
     >
       {Array.isArray(masuColors)
         ? <DyedMonsterImage baseId={baseId} src={src} alt={alt} masuColors={masuColors} draggable={false} style={fit}/>
-        : <img src={src} alt={alt} draggable={false} style={fit}/>}
+        : <img src={src} alt={alt} draggable={false} style={plainScale ? { ...fit, transform: monsterArtScaleTransform(plainScale) } : fit}/>}
       {children}
     </span>
   );
@@ -16012,9 +16062,19 @@ const MonsterIdleArt = ({baseId, image, fill = false, own = false}) => {
   const className = String(image.props.className || '').split(/\s+/).filter(c => c && !/^drop-shadow/.test(c)).join(' ');
   const layer = (url, extra) => React.cloneElement(image, { alt: extra ? '' : image.props.alt, className,
     style:{ ...(image.props.style||{}), ...MONSTER_IDLE_MASK_STYLE(url), ...(extra||{}) } });
+  // 同じ血統の立ち絵の大きさをそろえる倍率(MONSTER_ART_SCALE)は、各層の絵(DyedMonsterImage)が同じだけ掛ける。
+  // 部品の回す軸(origin)は「倍率を掛ける前の絵」での位置なので、絵と同じ式で動かす(そうしないと部品が体から浮く)
+  const artScale = typeof monsterArtScaleOf === 'function' ? monsterArtScaleOf(baseId, image.props.src, image.props.className, monsterArtFitStyle(baseId, image.props.style)) : null;
+  const originOf = (origin) => {
+    if (!artScale) return origin;
+    const m = /^\s*(-?[\d.]+)%\s+(-?[\d.]+)%\s*$/.exec(String(origin || ''));
+    if (!m) return origin;
+    const x = 50 + artScale.scale * (Number(m[1]) - 50), y = 50 + artScale.scale * (Number(m[2]) - 50) + artScale.ty * 100;
+    return `${x.toFixed(2)}% ${y.toFixed(2)}%`;
+  };
   const partNode = (part, index) => (
     <span key={index} className={`mon-idle__part mon-idle__part--${part.anim} mon-idle__part--${part.layer}`} aria-hidden="true"
-      style={{ transformOrigin:part.origin, animationDuration:`${part.dur}ms`, animationDelay:`${part.delay}ms`, '--idle-amp':`${part.amp}deg`, '--idle-bob':`${part.amp}%` }}>
+      style={{ transformOrigin:originOf(part.origin), animationDuration:`${part.dur}ms`, animationDelay:`${part.delay}ms`, '--idle-amp':`${part.amp}deg`, '--idle-bob':`${part.amp}%` }}>
       {layer(part.mask, {display:'block'})}
     </span>
   );
@@ -53856,7 +53916,10 @@ const cardAiPolicy = (habitId, levelId, opts = {}) => {
   const add = (((CARD_AI_PLAY_TUNE[habitId] || {})[levelId]) || 0) + (opts && opts.sameBlood ? (((CARD_AI_SAME_BLOOD_PLAY[habitId] || {})[levelId]) || 0) : 0);
   // opts.playerRole … 勝率を測るときのプレイヤー役(tools/card の検査・道具だけが付ける)。山札切れを気にしない前の打ち方のまま
   //   (2026-10-27 ソランド判断: 人が相手のときと測り方をそろえるため。プレイヤー役まで山札切れを避けると、守り型のドラが EXPERT 34%・MASTER 36% に下がった)
-  return { habit, level: { ...level, sloppy: Math.max(0, Math.min(0.9, (level.sloppy || 0) * tune + add)) }, playerRole: !!(opts && opts.playerRole) };
+  const out = { habit, level: { ...level, sloppy: Math.max(0, Math.min(0.9, (level.sloppy || 0) * tune + add)) }, playerRole: !!(opts && opts.playerRole) };
+  // 助手と対戦の EXPERT・MASTER は、戦術カードの基本カードを2枚・3枚持つ(82-card-tactics-core の CARD_AI_TACTIC_BASE)。プレイヤー役は持たない
+  const gambit = !out.playerRole && !(opts && opts.noTactics) && typeof cardAiTacticGambit === 'function' ? cardAiTacticGambit(habitId, levelId) : null;
+  return gambit ? { ...out, gambit, gambitKeepMain: true } : out;
 };
 
 // その場で使うくせの値。ふつうは policy.habit のまま。flex(あつ)の子だけ、自分(p)から見た場で型を1つ選び、その向きを 1.6 にする(2026-10-29 社長)
@@ -55464,18 +55527,21 @@ const cardTacticPresetOf = (card) => {
   if (g.mul) return { ...g.mul };
   return {};
 };
-const cardTacticHabitOf = (base, st = null, p = 0) => {
-  const list = (Array.isArray(base) ? base : []).map((id, i) => ({ c: cardTacticOf(id), w: i === 0 ? 1 : CARD_TACTIC_SUB_W })).filter((x) => x.c && x.c.cat === 'base');
+// mainHabit … 助手の EXPERT・MASTER(cardAiPolicy の gambitKeepMain): メインの型は今のくせ(強さごとの調整ずみ)をそのまま使い、サブだけを足す
+const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null) => {
+  const list = (Array.isArray(base) ? base : []).map((id, i) => ({ c: cardTacticOf(id), w: i === 0 ? 1 : CARD_TACTIC_SUB_W, main: i === 0 })).filter((x) => x.c && x.c.cat === 'base');
   if (!list.length) return null;
-  const h = Object.fromEntries(CARD_TACTIC_DIMS.map((d) => [d, 1]));
-  list.forEach(({ c, w }) => { const pre = cardTacticPresetOf(c); CARD_TACTIC_DIMS.forEach((d) => { if (Number.isFinite(pre[d])) h[d] *= 1 + (pre[d] - 1) * w; }); });
+  const h = Object.fromEntries(CARD_TACTIC_DIMS.map((d) => [d, mainHabit && Number.isFinite(mainHabit[d]) ? mainHabit[d] : 1]));
+  if (mainHabit && mainHabit.flex) h.flex = true;
+  if (mainHabit && mainHabit.mill) h.mill = mainHabit.mill;
+  list.forEach(({ c, w, main }) => { if (mainHabit && main) return; const pre = cardTacticPresetOf(c); CARD_TACTIC_DIMS.forEach((d) => { if (Number.isFinite(pre[d])) h[d] *= 1 + (pre[d] - 1) * w; }); });
   const calm = list.filter((x) => x.c.g === 'tCalm').reduce((a, x) => a * (1 - 0.5 * x.w), 1);
   CARD_TACTIC_DIMS.forEach((d) => { h[d] = Math.min(2, Math.max(0.3, 1 + (h[d] - 1) * calm)); });
   const turn = st ? cardTacticOwnTurn(st, p) : 0;
   const some = (g) => list.some((x) => x.c.g === g && (x.w === 1 || turn % 3 === 0));
   if (some('tFlex')) h.flex = true;
   const mill = list.filter((x) => x.c.g === 'tMill').reduce((a, x) => a + x.w, 0);
-  if (mill) h.mill = Math.min(1, mill);
+  if (mill) h.mill = Math.min(1, Math.max(h.mill || 0, mill));
   // 逆転型: 倒された数で負けている・ライフの合計が半分以下なら捨て身(守り×0.5・とどめ・大技・全体×1.3)、それまでは堅く(守り・ガッツ×1.2)
   const back = list.find((x) => x.c.g === 'tComeback');
   if (back && st) {
@@ -55488,12 +55554,14 @@ const cardTacticHabitOf = (base, st = null, p = 0) => {
   return h;
 };
 // 基本カードの細かいくせ(knob)。メインはいつも、サブは3回に1回の番(臨機応変型・持久型と同じ)
-const cardTacticKnobsOf = (base, st = null, p = 0) => {
+//   skipMain … 助手の EXPERT・MASTER: メインの型は今の打ち方のままなので、メインの細かいくせは足さない
+//   (足すと、みゅあ(攻め型: 倒れるときだけ守る)が MASTER 50→28%・ドラ(守り型: いつも守る)が EXPERT 53→39% に落ちた。2026-10-29 60戦で測った)
+const cardTacticKnobsOf = (base, st = null, p = 0, skipMain = false) => {
   const turn = st ? cardTacticOwnTurn(st, p) : 0;
   const out = {};
   (Array.isArray(base) ? base : []).forEach((id, i) => {
     const c = cardTacticOf(id);
-    if (!c || c.cat !== 'base' || (i > 0 && turn % 3 !== 0)) return;
+    if (!c || c.cat !== 'base' || (i > 0 && turn % 3 !== 0) || (i === 0 && skipMain)) return;
     const g = CARD_TACTIC_GROUPS.find((x) => x.id === c.g) || {};
     Object.assign(out, g.knob || {});
   });
@@ -55771,8 +55839,8 @@ const cardTacticDecide = (db, st, policy) => {
   if (!phase) return null;
   if (policy.gambitRandom && cardTacticSmartLevel(frames) === 'random') return { act: cardTacticRandomAct(db, st, policy) };
   const p = phase === 'guard' ? st.pending.defender : st.active;
-  const habit = cardTacticHabitOf(frames.base, st, p);
-  const knobs = cardTacticKnobsOf(frames.base, st, p);
+  const habit = cardTacticHabitOf(frames.base, st, p, policy.gambitKeepMain ? policy.habit : null);
+  const knobs = cardTacticKnobsOf(frames.base, st, p, !!policy.gambitKeepMain);
   const pol = habit ? { ...policy, habit } : policy;
   let scored = null;
   const ctx = { mi: null, skip: new Set(), noBreeder: false, scored: () => { if (!scored) scored = cardAiAttackScored(db, st, cardAiAttackChoices(db, st, pol), pol); return scored; } };
@@ -55808,6 +55876,26 @@ const cardTacticDecide = (db, st, policy) => {
     return { act: { ...g, hand: g.hand.slice(0, room) } };
   }
   return habit ? { policy: pol } : null;
+};
+
+// ---- 助手と対戦の基本カード(2026-10-29 社長: EASY〜HARD は1枚・EXPERT は2枚・MASTER は3枚。枚数が増えるほど型が混ざって賢くなる) ----
+//   メインはその助手の今の型(くせは今の値と強さごとの調整のまま。cardAiPolicy の gambitKeepMain)。2枚目・3枚目はツナグ案を、勝率を測って決めた
+//   EASY〜HARD は1枚(=今の型だけ)なので、今の打ち方のまま(gambit を持たせない)
+const CARD_AI_TACTIC_BASE = Object.freeze({
+  mua: ['tAttack', 'tFinish', 'tBig'],
+  momosuke: ['tDisrupt', 'tJam', 'tCalm'],
+  kiki: ['tSave', 'tBig', 'tSteady'],
+  kyuko: ['tBalance', 'tCalm', 'tFinish'],
+  dra: ['tGuard', 'tSteady', 'tMill'],
+  atsu: ['tFlex', 'tArea', 'tSteady'],
+  sorashido: ['tMill', 'tDisrupt', 'tGuard'],
+});
+const CARD_AI_TACTIC_COUNT = Object.freeze({ expert: 2, master: 3 });
+const cardAiTacticGambit = (who, levelId) => {
+  const n = CARD_AI_TACTIC_COUNT[levelId];
+  const list = CARD_AI_TACTIC_BASE[who];
+  if (!n || !list) return null;
+  return { base: [0, 1, 2].map((i) => (i < n ? list[i] || null : null)), breeder: [], mons: [[], [], []] };
 };
 
 // ---- part: 83-card-battle-lines.jsx ----
@@ -58440,7 +58528,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     step(cf.act);
   };
   // ガッツにするカードのおすすめ(オプション): 自分のガッツの番になったら、思考(いちばん強い段・迷いなし)が選ぶカードを先に選んでおく。選び直せる
-  const gutsAdvisor = useMemo(() => cardAiPolicy('kyuko', 'master'), []);
+  const gutsAdvisor = useMemo(() => cardAiPolicy('kyuko', 'master', { noTactics: true }), []);
   const gutsPickKey = settings.gutsPick === 'ON' && mode === 'guts' && myTurn && !tutorial && !game.demo ? `${st.turn}` : '';
   useEffect(() => {
     if (!gutsPickKey) return;
@@ -65511,10 +65599,10 @@ const cardSharePolicy = (tactics, levelId, opts = {}) => {
   const t = cardShareNormalizeTactics(tactics);
   if (t.f) {
     const frames = cardTacticUnpackFrames(t.f);
-    const base = cardAiPolicy(t.habit, cardShareFightLevel(t), opts);
+    const base = cardAiPolicy(t.habit, cardShareFightLevel(t), { ...opts, noTactics: true });
     return { ...base, gambit: frames, gambitRandom: true, aces: t.aces.slice() };
   }
-  const base = cardAiPolicy(t.habit, levelId, opts);
+  const base = cardAiPolicy(t.habit, levelId, { ...opts, noTactics: true });
   const habit = { ...base.habit };
   CARD_SHARE_TILTS.forEach((x) => { if (Number.isFinite(habit[x.id])) habit[x.id] = habit[x.id] * CARD_SHARE_TILT_MUL[t.tilt[x.id]]; });
   return { ...base, habit, aces: t.aces.slice() };
