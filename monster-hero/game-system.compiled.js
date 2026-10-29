@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ce97f93c209e507c
+// source-sha256: 766e4212b852bb7b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91339,6 +91339,111 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   tiers: [['', 'SR']],
   desc: '相手のガッツと使える技から、大技を撃てそうと見積もる'
 }, {
+  id: 'myHandLe',
+  cat: 'cond',
+  sec: 'ブリーダー向き',
+  name: '自分の手札◯枚以下',
+  tiers: [0, 1, 2].map(v => [v, 'N']),
+  desc: '自分の手札がその数以下'
+}, {
+  id: 'breederN',
+  cat: 'cond',
+  sec: 'ブリーダー向き',
+  name: '手札にブリーダーのカード2枚以上',
+  tiers: [['', 'R']],
+  desc: 'ブリーダーのカードが2枚以上ある'
+}, {
+  id: 'breederUnused',
+  cat: 'cond',
+  sec: 'ブリーダー向き',
+  name: 'この番まだブリーダーのカードを使っていない',
+  tiers: [['', 'N']],
+  desc: 'この番に、まだブリーダーのカードを出していない'
+}, {
+  id: 'myGutsLe',
+  cat: 'cond',
+  sec: 'ブリーダー向き',
+  name: '自分のガッツ◯以下',
+  tiers: [0, 1, 2, 3].map(v => [v, 'N']),
+  desc: '自分のガッツがその数以下'
+}, {
+  id: 'myDiscard',
+  cat: 'cond',
+  sec: 'ブリーダー向き',
+  name: '捨て札◯枚以上',
+  tiers: [[10, 'N'], [20, 'R']],
+  desc: '自分の捨て札がその数以上'
+}, {
+  id: 'myKo',
+  cat: 'cond',
+  sec: 'ブリーダー向き',
+  name: '倒れた味方がいる',
+  tiers: [['', 'N']],
+  desc: '自分の子が1体でも倒れている'
+}, {
+  id: 'noField',
+  cat: 'cond',
+  sec: 'ブリーダー向き',
+  name: '場に全体カードが無い',
+  tiers: [['', 'N']],
+  desc: 'どちらの全体カードも場に無い'
+}, {
+  id: 'selfLife',
+  cat: 'cond',
+  sec: 'この子',
+  name: 'この子のライフ◯%以下',
+  tiers: CARD_TACTIC_LIFE.map(v => [v, cardTacticFine([80, 60, 40, 20])(v)]),
+  desc: 'その枠の子のライフがその割合以下(モンスターの枠だけ)'
+}, {
+  id: 'selfFresh',
+  cat: 'cond',
+  sec: 'この子',
+  name: 'この子がまだ攻撃していない',
+  tiers: [['', 'N']],
+  desc: 'この番に、その枠の子がまだ攻撃していない'
+}, {
+  id: 'selfType',
+  cat: 'cond',
+  sec: 'この子',
+  name: 'この子が◯',
+  tiers: [['地上', 'N'], ['空中', 'N'], ['水中', 'N']],
+  desc: 'その枠の子のいまの特徴'
+}, {
+  id: 'selfStun',
+  cat: 'cond',
+  sec: 'この子',
+  name: 'この子が攻撃できない',
+  tiers: [['', 'N']],
+  desc: 'その枠の子が封じられている'
+}, {
+  id: 'selfAdv',
+  cat: 'cond',
+  sec: 'この子',
+  name: 'この子が有利な相手がいる',
+  tiers: [['', 'R']],
+  desc: 'その枠の子の手札の技が倍になる相手がいる(その相手を標的にする)'
+}, {
+  id: 'incoming',
+  cat: 'cond',
+  sec: '守るとき',
+  name: '受けるダメージ◯以上',
+  tiers: [[3, 'N'], [5, 'N'], [7, 'N'], [10, 'R']],
+  desc: '受ける攻撃の見込みがその数以上(守るときだけ)'
+}, {
+  id: 'incomingKo',
+  cat: 'cond',
+  sec: '守るとき',
+  name: '受けると倒れる',
+  tiers: [['', 'N']],
+  desc: '守らないと倒れる攻撃(守るときだけ)'
+}, {
+  id: 'incomingArea',
+  cat: 'cond',
+  sec: '守るとき',
+  name: '全体攻撃を受けた',
+  tiers: [['', 'R']],
+  desc: '全員に当たる攻撃を受けている(守るときだけ)'
+}, {
   id: 'tBalance',
   cat: 'base',
   sec: '基本',
@@ -91354,6 +91459,9 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   name: '攻め型',
   tiers: [['', 'N']],
   habit: 'mua',
+  knob: {
+    guardDieOnly: true
+  },
   desc: 'ためずに攻める(みゅあの型)'
 }, {
   id: 'tGuard',
@@ -91362,6 +91470,9 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   name: '守り型',
   tiers: [['', 'N']],
   habit: 'dra',
+  knob: {
+    guardAll: true
+  },
   desc: '守り札を残して堅く守る(ドラの型)'
 }, {
   id: 'tSave',
@@ -91398,6 +91509,9 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   mul: {
     area: 1.6
   },
+  knob: {
+    areaMin2: true
+  },
   desc: '全体攻撃・全体カードを選ぶ'
 }, {
   id: 'tFinish',
@@ -91419,6 +91533,9 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
     attack: 1.6,
     big: 0.7
   },
+  knob: {
+    light: true
+  },
   desc: '軽い技で手数を出す'
 }, {
   id: 'tSteady',
@@ -91430,6 +91547,9 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
     keepGuard: 1.3,
     saveGuts: 1.3,
     attack: 0.8
+  },
+  knob: {
+    safe: true
   },
   desc: '守りとガッツを残して、無理をしない'
 }, {
@@ -91477,7 +91597,63 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
     keepGuard: 0.5,
     finish: 1.3
   },
+  knob: {
+    noGuardUnlessFinish: true
+  },
   desc: '守らずに受けて、そのぶん倒しに行く'
+}, {
+  id: 'tHand',
+  cat: 'base',
+  sec: '基本',
+  name: '手札温存型',
+  tiers: [['', 'R']],
+  knob: {
+    keepHand: 2
+  },
+  desc: '手札を2枚以上残して、次の番に備える'
+}, {
+  id: 'tDeck',
+  cat: 'base',
+  sec: '基本',
+  name: '山札節約型',
+  tiers: [['', 'R']],
+  knob: {
+    noDraw: true
+  },
+  desc: '引く札・山札を減らす札を控え、山札を切らさない'
+}, {
+  id: 'tFocus',
+  cat: 'base',
+  sec: '基本',
+  name: '一点集中型',
+  tiers: [['', 'R']],
+  knob: {
+    focus: true
+  },
+  desc: '同じ相手を倒れるまで狙い続ける'
+}, {
+  id: 'tSpread',
+  cat: 'base',
+  sec: '基本',
+  name: '分散型',
+  tiers: [['', 'SR']],
+  mul: {
+    area: 1.4
+  },
+  knob: {
+    spread: true
+  },
+  desc: '全員を少しずつ削り、最後にまとめて倒す'
+}, {
+  id: 'tComeback',
+  cat: 'base',
+  sec: '基本',
+  name: '逆転型',
+  tiers: [['', 'SR']],
+  knob: {
+    comeback: true
+  },
+  desc: '勝っているあいだは堅く、負けたら捨て身で攻める'
 }, {
   id: 'atk',
   cat: 'monster',
@@ -91518,7 +91694,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   sec: '攻撃',
   phase: 'attack',
   name: '「◯」の技を出す',
-  tiers: [['回避されない', 'N'], ['攻撃できなくする', 'R'], ['ガッツを減らす', 'N'], ['吸い取る', 'N'], ['2回攻撃', 'R']],
+  tiers: [['回避されない', 'N'], ['攻撃できなくする', 'R'], ['ガッツを減らす', 'N'], ['吸い取る', 'N'], ['2回攻撃', 'R'], ['防御で減らない', 'N'], ['回避されても半分', 'N'], ['種族に強い', 'N'], ['ダメージを割り振る', 'R'], ['2枚同時', 'N'], ['手札に戻る', 'N'], ['カード投げ', 'SR']],
   desc: 'その効き目のついた技を出す'
 }, {
   id: 'attach',
@@ -91529,13 +91705,37 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   tiers: [['', 'R']],
   desc: '技に付ける札をいっしょに出す'
 }, {
-  id: 'breeder',
-  cat: 'breeder',
-  sec: 'ブリーダー',
+  id: 'attachKind',
+  cat: 'monster',
+  sec: '攻撃',
   phase: 'attack',
-  name: 'ブリーダーのカード(◯)',
-  tiers: [['攻撃', 'N'], ['守り', 'N'], ['引く・手札', 'N'], ['回復', 'N']],
-  desc: 'その種類のブリーダーのカードを出す(守り … 攻撃できないを消す・倒れた子を戻す)'
+  name: '付ける札: ◯',
+  tiers: [['ダメージを上げる', 'N'], ['回避させない', 'R'], ['ガッツを軽くする', 'N']],
+  desc: 'その効き目の付ける札を、技にいっしょに出す'
+}, {
+  id: 'spe',
+  cat: 'monster',
+  sec: '特殊技',
+  phase: 'attack',
+  name: '特殊技: ◯',
+  tiers: [['味方を回復', 'N'], ['引く', 'N'], ['空中になる', 'N'], ['安全になる', 'R'], ['まゆと羽化', 'R'], ['のりうつる', 'SR']],
+  desc: 'その効き目の特殊技を出す'
+}, {
+  id: 'stance',
+  cat: 'monster',
+  sec: '立ち回り',
+  phase: 'attack',
+  name: '立ち回り: ◯',
+  tiers: [['この子から攻める', 'N'], ['この子は攻撃しない', 'N'], ['ライフの多い子が先に', 'R'], ['ライフの少ない子は温存', 'R'], ['攻撃は1回だけ', 'N'], ['何回でも攻める', 'SR']],
+  desc: 'その子の前に出る・下がるを決める'
+}, {
+  id: 'bEff',
+  cat: 'breeder',
+  sec: 'ブリーダーのカード',
+  phase: 'attack',
+  name: 'ブリーダー: ◯',
+  tiers: [['回復する', 'N'], ['倒れた子を戻す', 'R'], ['攻撃できないを消す', 'N'], ['相手を攻撃できなくする', 'R'], ['相手のガッツを減らす', 'N'], ['両方のガッツを0にする', 'SR'], ['山札からガッツへ', 'N'], ['カードを引く', 'N'], ['捨て札から拾う', 'N'], ['手札を引き直す', 'N'], ['もう1回攻撃させる', 'R'], ['合体する', 'SR'], ['付ける札をただにする', 'N'], ['守りを名指しで封じる', 'R'], ['捨て札を山札に戻す', 'N'], ['小さく攻撃する', 'N']],
+  desc: 'その効き目のブリーダーのカードを出す'
 }, {
   id: 'fieldCard',
   cat: 'breeder',
@@ -91544,6 +91744,14 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   name: '全体カードを出す',
   tiers: [['', 'R']],
   desc: '場に残る全体カードを出す'
+}, {
+  id: 'fieldKind',
+  cat: 'breeder',
+  sec: '全体カード',
+  phase: 'attack',
+  name: '全体カード: ◯',
+  tiers: [['ダメージを足す', 'N'], ['払うガッツを変える', 'N'], ['大きいダメージを封じる', 'R'], ['山札を削る', 'N'], ['純血のプライド', 'N'], ['技の種類を封じる', 'SR'], ['持ちょうを変える', 'R'], ['じわじわ減らす', 'N'], ['ガッツの上限', 'N'], ['出すと引く', 'N']],
+  desc: 'その種類の全体カードを場に出す'
 }, {
   id: 'disrupt',
   cat: 'monster',
@@ -91567,7 +91775,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   sec: '守り',
   phase: 'guard',
   name: '◯を先に使う',
-  tiers: [['回避', 'N'], ['防御', 'N']],
+  tiers: [['回避', 'N'], ['防御', 'N'], ['はね返す守り', 'R'], ['半分にする守り', 'R']],
   desc: '守るとき、その種類の札で守る'
 }, {
   id: 'guardOver',
@@ -91575,7 +91783,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   sec: '守り',
   phase: 'guard',
   name: 'ダメージ◯以上だけ守る',
-  tiers: [[3, 'N'], [5, 'N'], [7, 'R']],
+  tiers: [[3, 'N'], [5, 'N'], [7, 'R'], [10, 'R']],
   desc: 'その数より小さい攻撃は守らない'
 }, {
   id: 'guardDie',
@@ -91616,7 +91824,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   sec: 'ガッツ',
   phase: 'guts',
   name: 'ガッツを◯枚だけ置く',
-  tiers: [[0, 'N'], [1, 'N'], [2, 'N']],
+  tiers: [[0, 'N'], [1, 'N'], [2, 'N'], [3, 'N']],
   desc: 'ガッツの番に置く数を決める'
 }, {
   id: 'keepGuard',
@@ -91627,12 +91835,21 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   tiers: [['', 'R']],
   desc: '回避・防御はガッツにしない'
 }, {
+  id: 'gutsOrder',
+  cat: 'breeder',
+  sec: 'ガッツ',
+  phase: 'guts',
+  name: '◯から置く',
+  tiers: [['重い札', 'N'], ['使えない札', 'N']],
+  desc: 'ガッツにする札の順を決める'
+}, {
   id: 'stop',
   cat: 'breeder',
   sec: '流れ',
   phase: 'attack',
   name: '攻撃を止める',
   tiers: [['', 'N']],
+  start: [''],
   desc: 'この番の攻撃をここで終える'
 }, {
   id: 'charge',
@@ -91643,6 +91860,14 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   tiers: [['', 'R']],
   desc: '次の技を何倍にする札を先に使う'
 }, {
+  id: 'chargeKind',
+  cat: 'monster',
+  sec: '流れ',
+  phase: 'attack',
+  name: '溜め: ◯',
+  tiers: [['怒り', 'R'], ['次の番の技を倍', 'R']],
+  desc: 'その溜めの札を先に使う'
+}, {
   id: 'ace',
   cat: 'breeder',
   sec: '特別',
@@ -91650,6 +91875,14 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   name: '切り札を出す',
   tiers: [['', 'SR']],
   desc: '登録した切り札を、手にあれば先に出す'
+}, {
+  id: 'holdBreeder',
+  cat: 'breeder',
+  sec: '流れ',
+  phase: 'attack',
+  name: 'ブリーダーのカードを温存する',
+  tiers: [['', 'N']],
+  desc: 'この番はブリーダーのカードを出さない(当たればそれ以外で打つ)'
 }]);
 const cardTacticCardId = (g, v) => v === '' ? g.id : `${g.id}.${v}`;
 const CARD_TACTIC_CARDS = Object.freeze(CARD_TACTIC_GROUPS.flatMap(g => g.tiers.map(([v, r]) => Object.freeze({
@@ -91742,7 +91975,36 @@ const cardTacticHabitOf = (base, st = null, p = 0) => {
   if (some('tFlex')) h.flex = true;
   const mill = list.filter(x => x.c.g === 'tMill').reduce((a, x) => a + x.w, 0);
   if (mill) h.mill = Math.min(1, mill);
+  const back = list.find(x => x.c.g === 'tComeback');
+  if (back && st) {
+    const me = st.players[p],
+      op = st.players[cardOther(p)];
+    const life = me.mons.reduce((a, m) => a + Math.max(0, m.life), 0),
+      max = me.mons.reduce((a, m) => a + m.max, 0);
+    const losing = me.mons.filter(m => m.ko).length > op.mons.filter(m => m.ko).length || life * 2 <= max;
+    const k = x => 1 + (x - 1) * back.w;
+    if (losing) {
+      h.keepGuard *= k(0.5);
+      h.finish *= k(1.3);
+      h.big *= k(1.3);
+      h.area *= k(1.3);
+    } else {
+      h.keepGuard *= k(1.2);
+      h.saveGuts *= k(1.2);
+    }
+  }
   return h;
+};
+const cardTacticKnobsOf = (base, st = null, p = 0) => {
+  const turn = st ? cardTacticOwnTurn(st, p) : 0;
+  const out = {};
+  (Array.isArray(base) ? base : []).forEach((id, i) => {
+    const c = cardTacticOf(id);
+    if (!c || c.cat !== 'base' || i > 0 && turn % 3 !== 0) return;
+    const g = CARD_TACTIC_GROUPS.find(x => x.id === c.g) || {};
+    Object.assign(out, g.knob || {});
+  });
+  return out;
 };
 const cardTacticOwnTurn = (st, p) => Math.max(0, Math.floor((st.turn + (p === st.first ? 1 : 0)) / 2));
 const cardTacticAlive = pl => pl.mons.map((m, i) => m.ko ? -1 : i).filter(i => i >= 0);
@@ -91755,7 +92017,7 @@ const cardTacticMaxDamage = (db, mon) => {
 };
 const cardTacticBigCost = 4;
 const cardTacticIsBig = (st, c) => !!c && cardIsAttackKind(c.kind) && cardFieldCostOf(st, c.guts || 0) >= cardTacticBigCost;
-const cardTacticCond = (db, st, p, card, row) => {
+const cardTacticCond = (db, st, p, card, row, fctx = {}) => {
   const me = st.players[p],
     opp = st.players[cardOther(p)];
   const foesAlive = cardTacticAlive(opp),
@@ -91883,6 +92145,52 @@ const cardTacticCond = (db, st, p, card, row) => {
         if (g < cardTacticBigCost || !opp.hand.length) return null;
         return hit(Object.values(db.cards || {}).some(c => cardTacticIsBig(st, c) && cardFieldCostOf(st, c.guts || 0) <= g + 1 && foesAlive.some(j => cardUsableBy(c, opp.mons[j]))));
       }
+    case 'myHandLe':
+      return hit(me.hand.length <= v);
+    case 'breederN':
+      return hit(hand.filter(c => c.user === 'breeder').length >= 2);
+    case 'breederUnused':
+      return hit(!me.breederUsed);
+    case 'myGutsLe':
+      return hit(guts <= v);
+    case 'myDiscard':
+      return hit(me.discard.length >= v);
+    case 'myKo':
+      return hit(me.mons.some(m => m.ko));
+    case 'noField':
+      return hit(!st.field);
+    case 'selfLife':
+    case 'selfFresh':
+    case 'selfType':
+    case 'selfStun':
+    case 'selfAdv':
+      {
+        const mi = fctx.mi;
+        const m = Number.isInteger(mi) ? me.mons[mi] : null;
+        if (!m || m.ko) return null;
+        if (card.g === 'selfLife') return hit(m.life * 100 <= m.max * v);
+        if (card.g === 'selfFresh') return hit(!(m.attacks > 0));
+        if (card.g === 'selfType') return hit(cardMonType(m, st.turn) === {
+          地上: 'ground',
+          空中: 'air',
+          水中: 'water'
+        }[v]);
+        if (card.g === 'selfStun') return hit(m.stunTurn >= st.turn);
+        return foes(foesAlive.filter(j => hand.some(c => cardUsableBy(c, m) && (c.effects || []).some(e => e && e.t === 'multVs' && e.type === cardMonType(opp.mons[j], st.turn)))));
+      }
+    case 'incoming':
+    case 'incomingKo':
+    case 'incomingArea':
+      {
+        if (!st.pending || st.pending.defender !== p) return null;
+        const dmg = cardAiIncomingDamage(db, st);
+        const pd = st.pending,
+          tgt = pd.targets[pd.ti];
+        const target = tgt ? st.players[tgt.p].mons[pd.cover !== null && pd.cover !== undefined ? pd.cover : tgt.m] : null;
+        if (card.g === 'incoming') return hit(dmg >= v);
+        if (card.g === 'incomingKo') return hit(!!target && target.life <= dmg);
+        return hit(cardHasEff(cardOf(db, pd.main), 'area'));
+      }
     default:
       return null;
   }
@@ -91892,13 +92200,64 @@ const CARD_TACTIC_EFF = Object.freeze({
   攻撃できなくする: ['stunOnHit', 'stunTarget', 'stunAllEnemies'],
   ガッツを減らす: ['gutsLossOnHit', 'oppGutsLoss'],
   吸い取る: ['drain'],
-  '2回攻撃': ['extraAttack', 'extraAttackTarget', 'unlimitedAttacks']
+  '2回攻撃': ['extraAttack', 'extraAttackTarget', 'unlimitedAttacks'],
+  防御で減らない: ['noBlockReduce'],
+  回避されても半分: ['halfOnEvade'],
+  種族に強い: ['multVs'],
+  ダメージを割り振る: ['split'],
+  '2枚同時': ['pair', 'combo', 'requires'],
+  手札に戻る: ['returnOnHit'],
+  カード投げ: ['tossBonus']
 });
-const CARD_TACTIC_BREEDER = Object.freeze({
-  攻撃: c => (c.damage || 0) > 0 || ['stunTarget', 'oppGutsLoss', 'extraAttackTarget', 'gutsZeroBoth'].some(t => cardHasEff(c, t)),
-  守り: c => ['unstunTarget', 'revive'].some(t => cardHasEff(c, t)),
-  '引く・手札': c => ['draw', 'choose', 'refresh', 'rush', 'deckToGuts', 'gutsToDeckShuffle'].some(t => cardHasEff(c, t)),
-  回復: c => cardHasEff(c, 'heal')
+const CARD_TACTIC_BEFF = Object.freeze({
+  回復する: ['heal'],
+  倒れた子を戻す: ['revive'],
+  攻撃できないを消す: ['unstunTarget'],
+  相手を攻撃できなくする: ['stunTarget'],
+  相手のガッツを減らす: ['oppGutsLoss'],
+  両方のガッツを0にする: ['gutsZeroBoth'],
+  山札からガッツへ: ['rush', 'deckToGuts'],
+  カードを引く: ['draw'],
+  捨て札から拾う: ['choose'],
+  手札を引き直す: ['refresh'],
+  もう1回攻撃させる: ['extraAttackTarget'],
+  合体する: ['fuse'],
+  付ける札をただにする: ['attachFree'],
+  守りを名指しで封じる: ['attachBind'],
+  捨て札を山札に戻す: ['gutsToDeckShuffle']
+});
+const CARD_TACTIC_FIELD = Object.freeze({
+  ダメージを足す: 'fieldDmg',
+  払うガッツを変える: 'fieldCost',
+  大きいダメージを封じる: 'fieldBanDmg',
+  山札を削る: 'fieldMill',
+  純血のプライド: 'fieldPurePride',
+  技の種類を封じる: 'fieldBanKind',
+  持ちょうを変える: 'fieldType',
+  じわじわ減らす: 'fieldBurn',
+  ガッツの上限: 'fieldGutsMax',
+  出すと引く: 'fieldDrawOnPlay'
+});
+const CARD_TACTIC_ATTACH = Object.freeze({
+  ダメージを上げる: ['attachMult', 'attachAdd'],
+  回避させない: ['attachNoEvade', 'attachNoGuard', 'attachNoBlockReduce'],
+  ガッツを軽くする: ['attachCost', 'attachCostHalf', 'attachFree']
+});
+const CARD_TACTIC_SPE = Object.freeze({
+  味方を回復: ['heal'],
+  引く: ['draw'],
+  空中になる: ['form', 'becomeAir'],
+  安全になる: ['safe'],
+  まゆと羽化: ['cocoon', 'emerge'],
+  のりうつる: ['possess']
+});
+const CARD_TACTIC_CHARGE = Object.freeze({
+  怒り: ['rage'],
+  次の番の技を倍: ['nextTurnMult']
+});
+const CARD_TACTIC_GUARD_EFF = Object.freeze({
+  はね返す守り: ['reflect'],
+  半分にする守り: ['reduceHalf']
 });
 const CARD_TACTIC_DISRUPT = Object.freeze({
   手札を捨てさせる: ['discardOpp', 'peekPick', 'discardBothHands', 'oppHandToDeckBottom'],
@@ -91933,10 +92292,22 @@ const cardTacticAttackFits = (db, st, act, o) => {
       return cards.some(c => (CARD_TACTIC_EFF[v] || []).some(t => cardHasEff(c, t)));
     case 'attach':
       return o.hand.length > 1 && cards.slice(1).some(c => cardHasEff(c, 'attach'));
-    case 'breeder':
-      return o.type === 'breeder' && main.kind !== 'fld' && !!CARD_TACTIC_BREEDER[v] && CARD_TACTIC_BREEDER[v](main);
+    case 'bEff':
+      {
+        const br = cards.filter(c => c.user === 'breeder' && c.kind !== 'fld');
+        if (v === '小さく攻撃する') return o.type === 'breeder' && (main.damage || 0) > 0;
+        return br.some(c => (CARD_TACTIC_BEFF[v] || []).some(t => cardHasEff(c, t)));
+      }
     case 'fieldCard':
       return main.kind === 'fld';
+    case 'fieldKind':
+      return main.kind === 'fld' && cardHasEff(main, CARD_TACTIC_FIELD[v]);
+    case 'attachKind':
+      return o.hand.length > 1 && cards.slice(1).some(c => (CARD_TACTIC_ATTACH[v] || []).some(t => cardHasEff(c, t)));
+    case 'spe':
+      return o.type === 'attack' && main.kind === 'spe' && (CARD_TACTIC_SPE[v] || []).some(t => cardHasEff(main, t));
+    case 'chargeKind':
+      return cards.some(c => (CARD_TACTIC_CHARGE[v] || []).some(t => cardHasEff(c, t)));
     case 'disrupt':
       return cards.some(c => (CARD_TACTIC_DISRUPT[v] || []).some(t => cardHasEff(c, t)));
     case 'charge':
@@ -91956,13 +92327,18 @@ const cardTacticRowAct = (db, st, policy, phase, row, aim, ctx) => {
   const act = cardTacticOf(row.a);
   const p = phase === 'guard' ? st.pending.defender : st.active;
   if (act.phase !== 'all' && act.phase !== phase) return null;
-  if (act.g === 'ace') {
-    const aces = Array.isArray(policy.aces) ? policy.aces : [];
-    if (!aces.length || phase !== 'attack') return null;
-    const best = ctx.scored().find(x => x.s > 0 && x.o.hand.some(i => aces.includes(st.players[p].hand[i])) && cardTacticAimsAt(st, x.o, aim.foes));
+  const me = st.players[p];
+  const usable = o => !(o.type === 'attack' && ctx.skip.has(o.mon)) && !(ctx.noBreeder && (o.type === 'breeder' || o.hand.some(i => (cardOf(db, me.hand[i]) || {}).user === 'breeder')));
+  const pickBest = (fits, floor = 0) => {
+    const best = ctx.scored().find(x => x.s > floor && usable(x.o) && fits(x.o) && cardTacticAimsAt(st, x.o, aim.foes));
     return best ? {
       act: cardAiFillBind(db, st, best.o, policy)
     } : null;
+  };
+  if (act.g === 'ace') {
+    const aces = Array.isArray(policy.aces) ? policy.aces : [];
+    if (!aces.length || phase !== 'attack') return null;
+    return pickBest(o => o.hand.some(i => aces.includes(me.hand[i])));
   }
   if (phase === 'attack') {
     if (act.g === 'stop') return {
@@ -91970,11 +92346,37 @@ const cardTacticRowAct = (db, st, policy, phase, row, aim, ctx) => {
         type: 'endAttacks'
       }
     };
-    const mine = o => ctx.mi === null ? o.type === 'breeder' || (cardOf(db, st.players[p].hand[o.hand[0]]) || {}).kind === 'fld' : o.type === 'attack' && o.mon === ctx.mi;
-    const best = ctx.scored().find(x => x.s > 0 && mine(x.o) && cardTacticAttackFits(db, st, act, x.o) && cardTacticAimsAt(st, x.o, aim.foes));
-    return best ? {
-      act: cardAiFillBind(db, st, best.o, policy)
-    } : null;
+    if (act.g === 'holdBreeder') {
+      ctx.noBreeder = true;
+      return null;
+    }
+    const mine = o => ctx.mi === null ? o.type === 'breeder' || (cardOf(db, me.hand[o.hand[0]]) || {}).kind === 'fld' || o.hand.some(i => (cardOf(db, me.hand[i]) || {}).user === 'breeder') : o.type === 'attack' && o.mon === ctx.mi;
+    if (act.g === 'stance') {
+      const mi = ctx.mi;
+      const m = Number.isInteger(mi) ? me.mons[mi] : null;
+      if (!m) return null;
+      const alive = me.mons.filter(x => !x.ko);
+      const v = act.v;
+      if (v === 'この子は攻撃しない') {
+        ctx.skip.add(mi);
+        return null;
+      }
+      if (v === 'ライフの少ない子は温存') {
+        if (alive.length > 1 && m.life === Math.min(...alive.map(x => x.life))) ctx.skip.add(mi);
+        return null;
+      }
+      if (v === '攻撃は1回だけ') {
+        if (m.attacks > 0) {
+          ctx.skip.add(mi);
+          return null;
+        }
+        return pickBest(mine);
+      }
+      if (v === 'ライフの多い子が先に') return m.life === Math.max(...alive.map(x => x.life)) ? pickBest(mine) : null;
+      if (v === '何回でも攻める') return pickBest(mine, -1);
+      return pickBest(mine);
+    }
+    return pickBest(o => mine(o) && cardTacticAttackFits(db, st, act, o));
   }
   if (phase === 'guard') {
     const pd = st.pending;
@@ -91982,7 +92384,7 @@ const cardTacticRowAct = (db, st, policy, phase, row, aim, ctx) => {
     if (aim.mine && !(tgt && tgt.p === p && aim.mine.includes(tgt.m))) return null;
     const dmg = cardAiIncomingDamage(db, st);
     const target = tgt ? st.players[tgt.p].mons[pd.cover !== null && pd.cover !== undefined ? pd.cover : tgt.m] : null;
-    const kindOf = o => (cardOf(db, st.players[p].hand[o.hand]) || {}).kind;
+    const cardOfOpt = o => cardOf(db, me.hand[o.hand]) || {};
     if (act.g === 'noGuard') return {
       act: {
         type: 'pass'
@@ -91998,10 +92400,7 @@ const cardTacticRowAct = (db, st, policy, phase, row, aim, ctx) => {
         type: 'pass'
       }
     };
-    const only = act.g === 'guardFirst' ? o => kindOf(o) === (act.v === '回避' ? 'dge' : 'blk') : act.g === 'cover' ? o => {
-      const c = cardOf(db, st.players[p].hand[o.hand]);
-      return !!c && ['cover', 'shield', 'redirect'].some(t => cardHasEff(c, t));
-    } : null;
+    const only = act.g === 'guardFirst' ? o => act.v === '回避' ? cardOfOpt(o).kind === 'dge' : act.v === '防御' ? cardOfOpt(o).kind === 'blk' : (CARD_TACTIC_GUARD_EFF[act.v] || []).some(t => cardHasEff(cardOfOpt(o), t)) : act.g === 'cover' ? o => ['cover', 'shield', 'redirect'].some(t => cardHasEff(cardOfOpt(o), t)) : null;
     const g = cardAiChooseGuard(db, st, policy, () => 0, {
       force: true,
       only
@@ -92030,8 +92429,60 @@ const cardTacticRowAct = (db, st, policy, phase, row, aim, ctx) => {
         keepGuards: true
       })
     };
+    if (act.g === 'gutsOrder') {
+      const n = cardAiChooseGuts(db, st, policy).hand.length;
+      const dead = c => !c || c.user !== 'breeder' && !me.mons.some(m => !m.ko && cardUsableBy(c, m));
+      const order = me.hand.map((no, i) => ({
+        i,
+        c: cardOf(db, no)
+      })).sort((x, y) => (act.v === '重い札' ? ((y.c || {}).guts || 0) - ((x.c || {}).guts || 0) : (dead(y.c) ? 1 : 0) - (dead(x.c) ? 1 : 0)) || x.i - y.i);
+      return {
+        act: {
+          type: 'guts',
+          hand: order.slice(0, n).map(x => x.i)
+        }
+      };
+    }
   }
   return null;
+};
+const cardTacticBaseAttack = (db, st, policy, knobs, ctx) => {
+  const p = st.active,
+    me = st.players[p],
+    opp = st.players[cardOther(p)];
+  const effs = o => o.hand.flatMap(i => ((cardOf(db, me.hand[i]) || {}).effects || []).map(e => e && e.t));
+  const foes = opp.mons.map((m, j) => ({
+    m,
+    j
+  })).filter(x => !x.m.ko);
+  const lowest = foes.length ? foes.slice().sort((a, b) => a.m.life / a.m.max - b.m.life / b.m.max)[0].j : -1;
+  const highest = foes.length ? foes.slice().sort((a, b) => b.m.life - a.m.life)[0].j : -1;
+  const list = ctx.scored().filter(x => {
+    const o = x.o;
+    if (o.type === 'attack' && ctx.skip.has(o.mon)) return false;
+    if (ctx.noBreeder && (o.type === 'breeder' || o.hand.some(i => (cardOf(db, me.hand[i]) || {}).user === 'breeder'))) return false;
+    const e = effs(o);
+    if (knobs.light && o.type === 'attack' && cardActionCost(db, st, p, me.hand, o.hand) > 1) return false;
+    if (knobs.safe && e.some(t => /^selfDamage|^attachSelfIfHit$|^selfHurt$/.test(t))) return false;
+    if (knobs.noDraw && e.some(t => ['draw', 'rush', 'deckToGuts', 'refresh', 'oppDraw'].includes(t))) return false;
+    if (knobs.keepHand && me.hand.length - o.hand.length < knobs.keepHand) return false;
+    if (knobs.areaMin2 && foes.length < 2 && e.includes('area')) return false;
+    return true;
+  }).map(x => {
+    const t = x.o.target && x.o.target.p !== p ? x.o.target.m : -1;
+    return {
+      ...x,
+      s: x.s + (knobs.focus && t === lowest ? 1.5 : 0) + (knobs.spread && t === highest ? 1 : 0)
+    };
+  }).sort((a, b) => b.s - a.s);
+  if (!list.length || list[0].s <= 0.3) return {
+    act: {
+      type: 'endAttacks'
+    }
+  };
+  return {
+    act: cardAiFillBind(db, st, list[0].o, policy)
+  };
 };
 const cardTacticDecide = (db, st, policy) => {
   const frames = cardTacticNormalizeFrames(policy && policy.gambit);
@@ -92040,6 +92491,7 @@ const cardTacticDecide = (db, st, policy) => {
   if (!phase) return null;
   const p = phase === 'guard' ? st.pending.defender : st.active;
   const habit = cardTacticHabitOf(frames.base, st, p);
+  const knobs = cardTacticKnobsOf(frames.base, st, p);
   const pol = habit ? {
     ...policy,
     habit
@@ -92047,6 +92499,8 @@ const cardTacticDecide = (db, st, policy) => {
   let scored = null;
   const ctx = {
     mi: null,
+    skip: new Set(),
+    noBreeder: false,
     scored: () => {
       if (!scored) scored = cardAiAttackScored(db, st, cardAiAttackChoices(db, st, pol), pol);
       return scored;
@@ -92078,12 +92532,67 @@ const cardTacticDecide = (db, st, policy) => {
     if (phase === 'attack' && fr.mi !== null && st.players[p].mons[fr.mi] && st.players[p].mons[fr.mi].ko) continue;
     for (const row of fr.rows) {
       if (!row.on) continue;
-      const aim = cardTacticCond(db, st, p, cardTacticOf(row.c), row);
+      const aim = cardTacticCond(db, st, p, cardTacticOf(row.c), row, {
+        mi: fr.mi,
+        phase
+      });
       if (!aim) continue;
       ctx.mi = fr.mi;
       const got = cardTacticRowAct(db, st, pol, phase, row, aim, ctx);
       if (got) return got;
     }
+  }
+  if (phase === 'attack' && (ctx.skip.size || ctx.noBreeder || ['light', 'safe', 'noDraw', 'keepHand', 'focus', 'spread', 'areaMin2'].some(k => knobs[k]))) return cardTacticBaseAttack(db, st, pol, knobs, ctx);
+  if (phase === 'guard') {
+    const pd = st.pending,
+      tgt = pd.targets[pd.ti];
+    const target = tgt ? st.players[tgt.p].mons[pd.cover !== null && pd.cover !== undefined ? pd.cover : tgt.m] : null;
+    const dies = !!target && target.life <= cardAiIncomingDamage(db, st);
+    if (knobs.noGuardUnlessFinish && !dies) return {
+      act: {
+        type: 'pass'
+      }
+    };
+    if (knobs.guardDieOnly) {
+      if (!dies) return {
+        act: {
+          type: 'pass'
+        }
+      };
+      const g = cardAiChooseGuard(db, st, pol, () => 0, {
+        force: true
+      });
+      return {
+        act: g
+      };
+    }
+    if (knobs.guardAll) {
+      const g = cardAiChooseGuard(db, st, pol, () => 0, {
+        force: true,
+        only: knobs.light ? o => ((cardOf(db, st.players[p].hand[o.hand]) || {}).guts || 0) <= 1 : null
+      });
+      if (g.type !== 'pass') return {
+        act: g
+      };
+    }
+    if (knobs.light) {
+      const g = cardAiChooseGuard(db, st, pol, () => 0.5, {
+        only: o => ((cardOf(db, st.players[p].hand[o.hand]) || {}).guts || 0) <= 1
+      });
+      return {
+        act: g
+      };
+    }
+  }
+  if (phase === 'guts' && knobs.keepHand) {
+    const g = cardAiChooseGuts(db, st, pol);
+    const room = Math.max(0, st.players[p].hand.length - knobs.keepHand);
+    return {
+      act: {
+        ...g,
+        hand: g.hand.slice(0, room)
+      }
+    };
   }
   return habit ? {
     policy: pol
@@ -96023,44 +96532,6 @@ const CardBattleBoard = ({
   const setChosen = sel && sets.length ? sel.set && sets.includes(sel.set) ? sel.set : sets.includes(setAlone) ? setAlone : sets.length === 1 ? sets[0] : null : null;
   const setPending = !!(sel && monChosen !== undefined && sets.length > 1 && !setChosen);
   const finalOpts = byMon.filter(o => JSON.stringify(o.hand) === setChosen);
-  const comboOpen = mode === 'attack' && !tutorial && !replay && !!sel && monChosen !== undefined && sets.length > 1 && !sel.set;
-  const comboPreview = s0 => {
-    const os = byMon.filter(o => JSON.stringify(o.hand) === s0).slice(0, 6);
-    const cards = JSON.parse(s0).map(i => cardOf(db, me.hand[i]));
-    const main = cards.find(c => c && !cardHasEff(c, 'attach') && cardIsAttackKind(c.kind)) || cards[0];
-    const dmgs = [];
-    let guts = null;
-    os.forEach(o => {
-      const nx = cardApplyAction(db, st, o);
-      if (!nx) return;
-      if (guts === null) guts = me.guts.length - nx.players[CARD_ME].guts.length;
-      const pv = nx.pending ? cardGuardPreview(db, nx) : null;
-      const hit = (nx.events || []).filter(e => e.t === 'hit' && e.p !== CARD_ME).map(e => e.dmg);
-      const d = pv ? pv.before : hit.length ? Math.max(...hit) : null;
-      if (Number.isFinite(d)) dmgs.push(d);
-    });
-    const lo = dmgs.length ? Math.min(...dmgs) : null;
-    const hi = dmgs.length ? Math.max(...dmgs) : null;
-    const dmg = lo === null ? '' : `${main && cardHasEff(main, 'area') ? '全体に' : ''}${lo === hi ? lo : `${lo}〜${hi}`}`;
-    return {
-      dmg,
-      guts: guts === null ? null : Math.max(0, guts)
-    };
-  };
-  const chosenPv = mode === 'attack' && setChosen && sets.length > 1 && !tutorial ? comboPreview(setChosen) : null;
-  const pickCombo = s0 => {
-    Audio_.fgSe.tap();
-    const drop = sel && sel.drop;
-    setSel({
-      ...sel,
-      mon: monChosen,
-      set: s0,
-      drop: undefined
-    });
-    if (!drop) return;
-    const o = byMon.find(x => JSON.stringify(x.hand) === s0 && (!x.target || `${x.target.p}-${x.target.m}` === drop));
-    if (o) dropUse(o, true);
-  };
   const needTarget = finalOpts.some(o => o.target);
   const [confirm, setConfirm] = useState(null);
   const [bindAsk, setBindAsk] = useState(null);
@@ -96212,7 +96683,7 @@ const CardBattleBoard = ({
     const os = attackOpts.filter(o => o.hand.includes(i));
     const c = cardOf(db, me.hand[i]);
     if (!os.length) {
-      setHint(attackWhyShort(i) || '');
+      setHint(!c ? '' : cardIsGuardKind(c.kind) ? '回避・防御は、相手に攻撃されたときに使います' : !c.ready ? 'このカードは準備中です' : c.guts > me.guts.length ? `ガッツが足りません(あと${c.guts - me.guts.length})` : 'いまは使えません(使える子がいない・もう攻撃した など)');
       setSel(null);
       return;
     }
@@ -96220,17 +96691,6 @@ const CardBattleBoard = ({
       hand: i
     });
     setHint('');
-  };
-  const attackWhyShort = i => {
-    const c = cardOf(db, me.hand[i]);
-    if (!c || attackOpts.some(o => o.hand.includes(i))) return null;
-    if (!c.ready) return '準備中';
-    if (cardIsGuardKind(c.kind)) return '守りの番に使う';
-    if (c.user !== 'any' && c.user !== 'breeder' && !me.mons.some(m => !m.ko && cardUsableBy(c, m))) return cardUserLabel(db, c);
-    if (c.guts > me.guts.length) return `ガッツ不足(あと${c.guts - me.guts.length})`;
-    if (cardHasEff(c, 'attach')) return '付ける技がない';
-    if (cardHasEff(c, 'requires')) return 'いっしょに出す札がない';
-    return '今は使えない';
   };
   const tapMon = (p, m) => {
     if (mode === 'guard' && sel) {
@@ -96277,10 +96737,6 @@ const CardBattleBoard = ({
     if (attackOpts.some(x => mo(x) === mo(o) && x.hand.length === 1 && x.hand[0] === i)) return true;
     return new Set(attackOpts.filter(x => mo(x) === mo(o) && x.hand.includes(i)).map(x => cardHandNameKey(me.hand, x.hand))).size <= 1;
   };
-  const cardDropNameSets = (o, i) => {
-    const mo = x => x.mon === undefined ? -1 : x.mon;
-    return new Set(attackOpts.filter(x => mo(x) === mo(o) && x.hand.includes(i)).map(x => cardHandNameKey(me.hand, x.hand))).size;
-  };
   const dropTargetsOf = i => {
     const out = {};
     if (mode === 'attack') {
@@ -96289,20 +96745,9 @@ const CardBattleBoard = ({
       os.forEach(o => {
         const keys = o.target ? [`${o.target.p}-${o.target.m}`] : [...opp.mons.map((x, m) => x.ko ? null : `${CARD_CPU}-${m}`).filter(Boolean), ...(o.mon >= 0 ? [`${CARD_ME}-${o.mon}`] : [])];
         const alone = x => !chosen && x.hand.length === 1 && x.hand[0] === i;
-        if (!chosen && !tutorial && !cardDropComboOk(o, i) && cardDropNameSets(o, i) > 1) {
-          keys.forEach(k => {
-            if (!out[k]) out[k] = {
-              ask: true,
-              hand: [i],
-              mon: o.mon,
-              key: k
-            };
-          });
-          return;
-        }
         if (!chosen && !alone(o) && !cardDropComboOk(o, i)) return;
         keys.forEach(k => {
-          if (!out[k] || out[k].ask || !alone(out[k]) && (alone(o) || o.hand.length > out[k].hand.length)) out[k] = o;
+          if (!out[k] || !alone(out[k]) && (alone(o) || o.hand.length > out[k].hand.length)) out[k] = o;
         });
       });
     }
@@ -96351,29 +96796,10 @@ const CardBattleBoard = ({
     };
     tapHand(i);
   };
-  const dropUse = (t, picked) => {
+  const dropUse = t => {
     const monKey = o => o.mon === undefined ? -1 : o.mon;
-    if (t.ask) {
-      const us = [...new Set(attackOpts.filter(o => o.hand.includes(t.hand[0])).map(monKey))];
-      if (us.length > 1) {
-        setSel({
-          hand: t.hand[0]
-        });
-        setHint('使う子をタップしてください');
-        return;
-      }
-      setSel({
-        hand: t.hand[0],
-        ...(t.mon !== undefined ? {
-          mon: t.mon
-        } : {}),
-        drop: t.key
-      });
-      setHint('');
-      return;
-    }
     const users = [...new Set(attackOpts.filter(o => o.hand[0] === t.hand[0]).map(monKey))];
-    if (!picked && users.length > 1 && !(sel && t.hand.includes(sel.hand) && monChosen !== undefined)) {
+    if (users.length > 1 && !(sel && t.hand.includes(sel.hand) && monChosen !== undefined)) {
       setSel({
         hand: t.hand[0]
       });
@@ -96752,23 +97178,7 @@ const CardBattleBoard = ({
       type: "button",
       className: `${btn} mh-button-primary`,
       onClick: () => askUse(finalOpts[0])
-    }, chosenPv && (chosenPv.dmg || chosenPv.guts !== null) ? React.createElement("span", {
-      "data-card-use-pv": true,
-      className: "block leading-tight"
-    }, "使う", React.createElement("span", {
-      className: "block text-[11px] font-bold text-amber-100"
-    }, [chosenPv.dmg, chosenPv.guts !== null ? `ガッツ${chosenPv.guts}` : ''].filter(Boolean).join('・'))) : '使う') : null, chosenPv && sel && sel.set ? React.createElement("button", {
-      type: "button",
-      "data-card-combo-change": true,
-      className: `${btn} border border-white/20 bg-slate-800`,
-      onClick: () => {
-        Audio_.fgSe.tap();
-        setSel({
-          hand: sel.hand,
-          mon: monChosen
-        });
-      }
-    }, "組を変える") : React.createElement("button", {
+    }, "使う") : null, React.createElement("button", {
       type: "button",
       disabled: tutOff('end'),
       className: `${btn} border border-violet-300/60 bg-violet-900${tutBtn('end')}`,
@@ -97190,7 +97600,7 @@ const CardBattleBoard = ({
   }, cardGuardBlockReasons(db, st).join(' / ')), !guide && !tutorial && hint && React.createElement("div", {
     className: "mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900",
     style: JA_LABEL_STYLE
-  }, jaWrap(hint)), mode === 'attack' && (tutorial || replay) && sel && monChosen !== undefined && sets.length > 1 && React.createElement("div", {
+  }, jaWrap(hint)), mode === 'attack' && sel && monChosen !== undefined && sets.length > 1 && React.createElement("div", {
     className: "mb-1 flex shrink-0 flex-wrap justify-center gap-1 px-2"
   }, sets.slice().reverse().map(s => React.createElement("button", {
     key: s,
@@ -97226,7 +97636,7 @@ const CardBattleBoard = ({
     const c = cardOf(db, no);
     const on = handUsable(i);
     const up = sel && sel.hand === i || picks.includes(i) || setChosen && JSON.parse(setChosen).includes(i);
-    const why = tutorial || on ? null : mode === 'guard' ? cardGuardWhyShort(db, st, c) : mode === 'attack' && myTurn && !sel ? (w => w === '今は使えない' ? null : w)(attackWhyShort(i)) : null;
+    const why = mode === 'guard' && !tutorial && !on ? cardGuardWhyShort(db, st, c) : null;
     return React.createElement("div", {
       key: `${no}-${i}`,
       "data-card-hand-card": i,
@@ -97699,51 +98109,7 @@ const CardBattleBoard = ({
     className: "block text-[14px] font-black text-white"
   }, c ? c.name : 'カード'), c && React.createElement("span", {
     className: "block text-[11px] font-bold text-slate-300"
-  }, `ガッツ${c.guts}${c.damage !== null && c.damage !== undefined ? `・ダメージ${c.damage}` : ''}`))))))), comboOpen && React.createElement("div", {
-    "data-card-combo-sheet": true,
-    className: "fixed inset-0 z-[80] flex items-center justify-center bg-black/45 px-4",
-    onClick: () => {
-      setSel(null);
-      setHint('');
-    }
-  }, React.createElement("div", {
-    className: "max-h-[80vh] w-full max-w-[340px] overflow-y-auto rounded-2xl border-2 border-sky-300 bg-slate-900 p-3 text-center shadow-[0_8px_24px_#000]",
-    onClick: e => e.stopPropagation()
-  }, React.createElement("div", {
-    className: "text-[14px] font-black text-white"
-  }, "どの組み合わせで出す？"), sets.slice().reverse().map(s0 => {
-    const idx = JSON.parse(s0);
-    const add = idx.filter(i => i !== sel.hand);
-    const pv = comboPreview(s0);
-    const title = add.length ? add.map(i => `＋${(cardOf(db, me.hand[i]) || {}).name || ''}`).join('') : `「${(cardOf(db, me.hand[sel.hand]) || {}).name || ''}」だけ`;
-    return React.createElement("button", {
-      key: s0,
-      type: "button",
-      "data-card-set": s0,
-      onClick: () => pickCombo(s0),
-      className: "mt-2 flex w-full items-center gap-2 rounded-xl border-2 border-white/25 bg-slate-800 p-1.5 text-left active:scale-[.98]"
-    }, React.createElement("span", {
-      className: "flex shrink-0 pl-1.5"
-    }, idx.map(i => {
-      const c = cardOf(db, me.hand[i]);
-      return React.createElement("img", {
-        key: i,
-        src: CARD_IMG(c ? c.img : me.hand[i]),
-        alt: "",
-        className: "-ml-1.5 w-[30px] rounded-[3px] shadow-[0_1px_3px_#000]"
-      });
-    })), React.createElement("span", {
-      className: "min-w-0 flex-1 leading-snug"
-    }, React.createElement("span", {
-      className: "block text-[13px] font-black text-white",
-      style: JA_WRAP_STYLE
-    }, title), React.createElement("span", {
-      "data-card-combo-pv": true,
-      className: "block text-[12px] font-bold text-amber-200"
-    }, [pv.dmg ? `${pv.dmg}ダメージ` : '', pv.guts !== null ? `ガッツ${pv.guts}` : ''].filter(Boolean).join(' / '))));
-  }), React.createElement("div", {
-    className: "mt-2 text-[11px] font-bold text-slate-300"
-  }, "窓の外を押すとやめる"))), guardAsk && React.createElement("div", {
+  }, `ガッツ${c.guts}${c.damage !== null && c.damage !== undefined ? `・ダメージ${c.damage}` : ''}`))))))), guardAsk && React.createElement("div", {
     "data-card-guard-ask": true,
     className: "fixed inset-0 z-[80] flex items-center justify-center bg-black/45 px-4",
     onClick: () => setGuardAsk(null)
@@ -98891,12 +99257,20 @@ const CardBattleScreen = ({
           moves: cardRecordMovesOf(db, replayRec),
           today: cardTodayJst()
         }));
+        const levelGain = !game.demo && typeof cardLevelEntries === 'function' ? await cardLevelEntries({
+          kind: 'cpu',
+          level: game.level,
+          outcome,
+          debug
+        }) : {
+          entries: []
+        };
         const ok = await persist({
           point: save.point + reward.total,
           daily: reward.daily,
           record: nextRecord,
           unlocked: nextUnlocked
-        }, fresh.raw, detailEntry ? [...openExtra, detailEntry] : openExtra);
+        }, fresh.raw, [...openExtra, ...(detailEntry ? [detailEntry] : []), ...levelGain.entries]);
         if (ok && openExtra.length) {
           openIdRef.current = null;
           openRef.current = null;
@@ -99375,6 +99749,13 @@ const CardBattleScreen = ({
         point: base.point + bonus,
         bonus
       };
+      const levelGain = typeof cardLevelEntries === 'function' && (r.reward === 'win' || r.reward === 'lose') ? await cardLevelEntries({
+        kind: 'pvp',
+        outcome: r.reward,
+        debug
+      }) : {
+        entries: []
+      };
       const ok = await persist({
         point: save.point + got.point,
         daily: {
@@ -99389,7 +99770,7 @@ const CardBattleScreen = ({
             lose: record.pvp.lose + (win ? 0 : 1)
           }
         }
-      }, fresh.raw);
+      }, fresh.raw, levelGain.entries);
       let quick = null;
       if (ok && got.loops > 0 && onQuickLoops) {
         try {
@@ -110116,6 +110497,338 @@ const CardDeckShare = ({
       void register();
     }
   }, mine ? 'このデッキで登録し直す' : 'このデッキを登録する')));
+};
+const CARD_TACTICS_KEY = 'mh_card_tactics_v1';
+const CARD_LEVEL_KEY = 'mh_card_level_v1';
+const cardTacticsOpen = () => false;
+const cardLevelNeed = lv => 20 + 3 * lv;
+const CARD_LEVEL_XP = Object.freeze({
+  easy: {
+    win: 20,
+    lose: 8
+  },
+  normal: {
+    win: 30,
+    lose: 12
+  },
+  hard: {
+    win: 40,
+    lose: 16
+  },
+  expert: {
+    win: 50,
+    lose: 20
+  },
+  master: {
+    win: 60,
+    lose: 24
+  },
+  pvp: {
+    win: 100,
+    lose: 40
+  },
+  firstWin: 30
+});
+const CARD_LEVEL_FRAMES = Object.freeze([{
+  at: 1,
+  base: 1,
+  breeder: 1,
+  mon: 2
+}, {
+  at: 5,
+  mon: 3
+}, {
+  at: 10,
+  base: 2
+}, {
+  at: 15,
+  breeder: 2,
+  mon: 4
+}, {
+  at: 20,
+  breeder: 3
+}, {
+  at: 25,
+  mon: 5
+}, {
+  at: 30,
+  base: 3
+}]);
+const cardLevelFrames = lv => CARD_LEVEL_FRAMES.filter(x => lv >= x.at).reduce((a, x) => ({
+  ...a,
+  ...Object.fromEntries(Object.entries(x).filter(([k]) => k !== 'at'))
+}), {});
+const cardLevelNextFrame = lv => CARD_LEVEL_FRAMES.find(x => x.at > lv) || null;
+const cardLevelTicketAt = lv => lv === 3 || lv === 10 || lv >= 20 && lv % 5 === 0;
+const cardLevelSafeXp = xp => {
+  const n = Number(xp);
+  return Number.isFinite(n) ? Math.min(Math.max(0, Math.floor(n)), Number.MAX_SAFE_INTEGER) : 0;
+};
+const cardLevelInfo = xp => {
+  let left = cardLevelSafeXp(xp),
+    level = 1;
+  for (;;) {
+    const need = cardLevelNeed(level);
+    if (left < need) return {
+      level,
+      into: left,
+      need
+    };
+    left -= need;
+    level += 1;
+  }
+};
+const cardNormalizeLevel = raw => {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const got = Array.isArray(r.got) ? [...new Set(r.got.filter(n => Number.isInteger(n) && n > 1))].sort((a, b) => a - b) : [];
+  return {
+    v: 1,
+    xp: cardLevelSafeXp(r.xp),
+    day: typeof r.day === 'string' ? r.day.slice(0, 10) : '',
+    dayWin: r.dayWin === true,
+    got
+  };
+};
+const cardLevelXpOf = ({
+  kind,
+  level,
+  outcome
+}) => {
+  if (outcome !== 'win' && outcome !== 'lose') return 0;
+  const t = kind === 'pvp' ? CARD_LEVEL_XP.pvp : CARD_LEVEL_XP[level];
+  return t ? t[outcome] : 0;
+};
+const cardLevelAfter = (prev, {
+  kind,
+  level,
+  outcome,
+  today
+}) => {
+  const cur = cardNormalizeLevel(prev);
+  const lv0 = cardLevelInfo(cur.xp).level;
+  let add = cardLevelXpOf({
+    kind,
+    level,
+    outcome
+  });
+  if (!add) return {
+    next: cur,
+    tickets: 0,
+    add: 0,
+    from: lv0,
+    to: lv0
+  };
+  const sameDay = cur.day === today;
+  if (outcome === 'win' && !(sameDay && cur.dayWin)) add += CARD_LEVEL_XP.firstWin;
+  const xp = cardLevelSafeXp(cur.xp + add);
+  const to = cardLevelInfo(xp).level;
+  const got = [...cur.got];
+  let tickets = 0;
+  for (let lv = 2; lv <= to; lv++) if (cardLevelTicketAt(lv) && !got.includes(lv)) {
+    got.push(lv);
+    tickets += 1;
+  }
+  return {
+    next: {
+      ...cur,
+      xp,
+      day: today,
+      dayWin: sameDay && cur.dayWin || outcome === 'win',
+      got
+    },
+    tickets,
+    add,
+    from: lv0,
+    to
+  };
+};
+const cardTacticsInt = (n, max = 1e9) => Number.isFinite(Number(n)) ? Math.min(max, Math.max(0, Math.floor(Number(n)))) : 0;
+const cardNormalizeTactics = raw => {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const own = {};
+  if (r.own && typeof r.own === 'object' && !Array.isArray(r.own)) Object.entries(r.own).forEach(([id, n]) => {
+    const k = cardTacticsInt(n, 999);
+    if (id && id.length <= 64 && k > 0) own[id] = k;
+  });
+  return {
+    v: 1,
+    own,
+    frames: cardTacticNormalizeFrames(r.frames),
+    shards: cardTacticsInt(r.shards),
+    tickets: cardTacticsInt(r.tickets),
+    pulls: cardTacticsInt(r.pulls),
+    dry: cardTacticsInt(r.dry, 99)
+  };
+};
+const cardTacticsOwns = (t, id) => CARD_TACTIC_START.includes(id) || (t && t.own && t.own[id] || 0) > 0;
+const cardTacticsFramesForBattle = (t, lv) => {
+  const f = cardTacticNormalizeFrames(t && t.frames);
+  const n = cardLevelFrames(lv);
+  const owns = id => cardTacticsOwns(t, id);
+  const rows = (list, max) => list.filter(r => owns(r.c) && owns(r.a)).slice(0, max);
+  return {
+    base: f.base.map((id, i) => id && i < n.base && owns(id) ? id : null),
+    breeder: rows(f.breeder, n.breeder),
+    mons: f.mons.map(list => rows(list, n.mon))
+  };
+};
+const CARD_TACTICS_PULL = Object.freeze({
+  n: 8,
+  price: 300,
+  bundle: Object.freeze({
+    n: 5,
+    price: 1350
+  }),
+  pityAt: 7
+});
+const CARD_TACTICS_RATE = Object.freeze([['N', 0.7], ['R', 0.25], ['SR', 0.05]]);
+const CARD_TACTICS_SHARD_COST = 10;
+const cardTacticsPool = r => CARD_TACTIC_CARDS.filter(c => c.r === r && !c.start);
+const cardTacticsPrice = count => count === CARD_TACTICS_PULL.bundle.n ? CARD_TACTICS_PULL.bundle.price : CARD_TACTICS_PULL.price * count;
+const cardTacticsPullOnce = (t, rand = Math.random) => {
+  let cur = t;
+  const cards = [];
+  const pity = cur.dry >= CARD_TACTICS_PULL.pityAt;
+  for (let k = 0; k < CARD_TACTICS_PULL.n; k++) {
+    let r = 'N';
+    if (pity && k === CARD_TACTICS_PULL.n - 1) r = 'SR';else {
+      const x = rand();
+      let acc = 0;
+      for (const [q, p] of CARD_TACTICS_RATE) {
+        acc += p;
+        if (x < acc) {
+          r = q;
+          break;
+        }
+      }
+    }
+    const pool = cardTacticsPool(r);
+    const card = pool[Math.min(pool.length - 1, Math.floor(rand() * pool.length))];
+    const dup = cardTacticsOwns(cur, card.id);
+    cur = {
+      ...cur,
+      own: {
+        ...cur.own,
+        [card.id]: Math.min(999, (cur.own[card.id] || 0) + 1)
+      },
+      shards: cur.shards + (dup ? 1 : 0)
+    };
+    cards.push({
+      id: card.id,
+      r: card.r,
+      dup
+    });
+  }
+  const sr = cards.some(c => c.r === 'SR');
+  return {
+    next: {
+      ...cur,
+      pulls: cur.pulls + 1,
+      dry: sr ? 0 : cur.dry + 1
+    },
+    cards
+  };
+};
+const cardTacticsPull = (t, count, {
+  payWith = 'point',
+  point = 0
+} = {}, rand = Math.random) => {
+  if (!Number.isInteger(count) || count < 1) return null;
+  const cost = payWith === 'ticket' ? 0 : cardTacticsPrice(count);
+  if (payWith === 'ticket' ? t.tickets < count : point < cost) return null;
+  let cur = payWith === 'ticket' ? {
+    ...t,
+    tickets: t.tickets - count
+  } : t;
+  const packs = [];
+  for (let i = 0; i < count; i++) {
+    const one = cardTacticsPullOnce(cur, rand);
+    cur = one.next;
+    packs.push(one.cards);
+  }
+  return {
+    next: cur,
+    packs,
+    cost
+  };
+};
+const cardTacticsExchange = (t, id) => {
+  const c = cardTacticOf(id);
+  if (!c || cardTacticsOwns(t, id) || t.shards < CARD_TACTICS_SHARD_COST) return null;
+  return {
+    ...t,
+    own: {
+      ...t.own,
+      [id]: 1
+    },
+    shards: t.shards - CARD_TACTICS_SHARD_COST
+  };
+};
+const cardTacticsLoad = async () => {
+  let rawT = null,
+    rawL = null;
+  try {
+    [rawT, rawL] = await Promise.all([storeGet(CARD_TACTICS_KEY, null), storeGet(CARD_LEVEL_KEY, null)]);
+  } catch (_) {}
+  const level = cardNormalizeLevel(rawL);
+  return {
+    tactics: cardNormalizeTactics(rawT),
+    level,
+    info: cardLevelInfo(level.xp),
+    rawT,
+    rawL
+  };
+};
+const cardLevelEntries = async ({
+  kind,
+  level,
+  outcome,
+  debug = false
+}) => {
+  if (!cardTacticsOpen() && !debug) return {
+    entries: [],
+    gain: null
+  };
+  let rawL = null,
+    rawT = null;
+  try {
+    [rawL, rawT] = await Promise.all([storeGet(CARD_LEVEL_KEY, null), storeGet(CARD_TACTICS_KEY, null)]);
+  } catch (_) {
+    return {
+      entries: [],
+      gain: null
+    };
+  }
+  const gain = cardLevelAfter(rawL, {
+    kind,
+    level,
+    outcome,
+    today: typeof cardTodayJst === 'function' ? cardTodayJst() : ''
+  });
+  if (!gain.add) return {
+    entries: [],
+    gain
+  };
+  const entries = [{
+    key: CARD_LEVEL_KEY,
+    before: rawL,
+    next: gain.next
+  }];
+  if (gain.tickets) {
+    const t = cardNormalizeTactics(rawT);
+    entries.push({
+      key: CARD_TACTICS_KEY,
+      before: rawT,
+      next: {
+        ...t,
+        tickets: t.tickets + gain.tickets
+      }
+    });
+  }
+  return {
+    entries,
+    gain
+  };
 };
 const DEBUG_TRIALS = [{
   id: 'rhythm_mon_ab1',

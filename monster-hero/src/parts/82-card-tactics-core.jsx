@@ -1,8 +1,8 @@
 // ===== MFバトルカード: 戦術カード(ガンビット型)の中身(純粋な計算) =====
 // 2026-10-29 社長: 戦術カードは FF12 のガンビットの形。1行 = 「条件カード ▶ 行動カード」。上の行から順に見て、
 //   条件に当たった行の行動をする(当たらなければ次の行)。どれにも当たらなければ基本カードの型で打つ。
-//   カードは4つの山(154枚): 条件98(どの枠でも使う)・基本15(大まかな型)・ブリーダー12(ブリーダーの手)・モンスター29(技の使い方・立ち回り)。
-//   N91・R57・SR6・はじめに配る9枚。段ごとに1枚(ライフ90%〜10%・ガッツ1〜7 など)
+//   カードは4つの山(246枚): 条件132(どの枠でも使う)・基本20(大まかな型。中身は docs/progress/card-deck-share/base-cards-20.md)・ブリーダー38・モンスター56。
+//   N146・R86・SR14・はじめに配る10枚。段ごとに1枚(ライフ90%〜10%・ガッツ1〜7 など)
 //   枠: 基本(メイン1+サブ2)・ブリーダーの枠・モンスター1体ごとの枠(同じカードをどの子の枠にも入れられる)
 //   案と表: docs/progress/card-deck-share/(ブランチ card-tactics-mock)
 // ★この部品は pure(画面・保存を触らない)。82 の cardAiChooseAction が policy.gambit(枠)を持つときだけ cardTacticDecide を呼ぶ。
@@ -55,44 +55,73 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   { id: 'foeAir', cat: 'cond', sec: '状態', name: '空中に上がった相手', tiers: [['', 'N']], desc: 'いま空中になっている子(もとは地上・水中)' },
   { id: 'field', cat: 'cond', sec: '状態', name: '場に◯全体カードがある', tiers: [['自分の', 'N'], ['相手の', 'N']], desc: 'だれが出した全体カードが場にあるか' },
   { id: 'foeBig', cat: 'cond', sec: '状態', name: '相手が大技を構えている', tiers: [['', 'SR']], desc: '相手のガッツと使える技から、大技を撃てそうと見積もる' },
+  { id: 'myHandLe', cat: 'cond', sec: 'ブリーダー向き', name: '自分の手札◯枚以下', tiers: [0, 1, 2].map((v) => [v, 'N']), desc: '自分の手札がその数以下' },
+  { id: 'breederN', cat: 'cond', sec: 'ブリーダー向き', name: '手札にブリーダーのカード2枚以上', tiers: [['', 'R']], desc: 'ブリーダーのカードが2枚以上ある' },
+  { id: 'breederUnused', cat: 'cond', sec: 'ブリーダー向き', name: 'この番まだブリーダーのカードを使っていない', tiers: [['', 'N']], desc: 'この番に、まだブリーダーのカードを出していない' },
+  { id: 'myGutsLe', cat: 'cond', sec: 'ブリーダー向き', name: '自分のガッツ◯以下', tiers: [0, 1, 2, 3].map((v) => [v, 'N']), desc: '自分のガッツがその数以下' },
+  { id: 'myDiscard', cat: 'cond', sec: 'ブリーダー向き', name: '捨て札◯枚以上', tiers: [[10, 'N'], [20, 'R']], desc: '自分の捨て札がその数以上' },
+  { id: 'myKo', cat: 'cond', sec: 'ブリーダー向き', name: '倒れた味方がいる', tiers: [['', 'N']], desc: '自分の子が1体でも倒れている' },
+  { id: 'noField', cat: 'cond', sec: 'ブリーダー向き', name: '場に全体カードが無い', tiers: [['', 'N']], desc: 'どちらの全体カードも場に無い' },
+  { id: 'selfLife', cat: 'cond', sec: 'この子', name: 'この子のライフ◯%以下', tiers: CARD_TACTIC_LIFE.map((v) => [v, cardTacticFine([80, 60, 40, 20])(v)]), desc: 'その枠の子のライフがその割合以下(モンスターの枠だけ)' },
+  { id: 'selfFresh', cat: 'cond', sec: 'この子', name: 'この子がまだ攻撃していない', tiers: [['', 'N']], desc: 'この番に、その枠の子がまだ攻撃していない' },
+  { id: 'selfType', cat: 'cond', sec: 'この子', name: 'この子が◯', tiers: [['地上', 'N'], ['空中', 'N'], ['水中', 'N']], desc: 'その枠の子のいまの特徴' },
+  { id: 'selfStun', cat: 'cond', sec: 'この子', name: 'この子が攻撃できない', tiers: [['', 'N']], desc: 'その枠の子が封じられている' },
+  { id: 'selfAdv', cat: 'cond', sec: 'この子', name: 'この子が有利な相手がいる', tiers: [['', 'R']], desc: 'その枠の子の手札の技が倍になる相手がいる(その相手を標的にする)' },
+  { id: 'incoming', cat: 'cond', sec: '守るとき', name: '受けるダメージ◯以上', tiers: [[3, 'N'], [5, 'N'], [7, 'N'], [10, 'R']], desc: '受ける攻撃の見込みがその数以上(守るときだけ)' },
+  { id: 'incomingKo', cat: 'cond', sec: '守るとき', name: '受けると倒れる', tiers: [['', 'N']], desc: '守らないと倒れる攻撃(守るときだけ)' },
+  { id: 'incomingArea', cat: 'cond', sec: '守るとき', name: '全体攻撃を受けた', tiers: [['', 'R']], desc: '全員に当たる攻撃を受けている(守るときだけ)' },
   // ---------- 基本カード(大まかな型。基本の枠: メイン1・サブ2) ----------
   { id: 'tBalance', cat: 'base', sec: '基本', name: 'バランス型', tiers: [['', 'N']], start: [''], habit: 'kyuko', desc: 'くせの少ない打ち方(きゅこの型)' },
-  { id: 'tAttack', cat: 'base', sec: '基本', name: '攻め型', tiers: [['', 'N']], habit: 'mua', desc: 'ためずに攻める(みゅあの型)' },
-  { id: 'tGuard', cat: 'base', sec: '基本', name: '守り型', tiers: [['', 'N']], habit: 'dra', desc: '守り札を残して堅く守る(ドラの型)' },
+  { id: 'tAttack', cat: 'base', sec: '基本', name: '攻め型', tiers: [['', 'N']], habit: 'mua', knob: { guardDieOnly: true }, desc: 'ためずに攻める(みゅあの型)' },
+  { id: 'tGuard', cat: 'base', sec: '基本', name: '守り型', tiers: [['', 'N']], habit: 'dra', knob: { guardAll: true }, desc: '守り札を残して堅く守る(ドラの型)' },
   { id: 'tSave', cat: 'base', sec: '基本', name: '溜め型', tiers: [['', 'N']], habit: 'kiki', desc: 'ガッツをためて大技(ききの型)' },
   { id: 'tDisrupt', cat: 'base', sec: '基本', name: '崩し型', tiers: [['', 'N']], habit: 'momosuke', desc: '相手の手を崩す(ももすけの型)' },
   { id: 'tBig', cat: 'base', sec: '基本', name: '大技型', tiers: [['', 'R']], mul: { big: 1.6 }, desc: 'ダメージの大きい技を選ぶ' },
-  { id: 'tArea', cat: 'base', sec: '基本', name: '全体型', tiers: [['', 'R']], mul: { area: 1.6 }, desc: '全体攻撃・全体カードを選ぶ' },
+  { id: 'tArea', cat: 'base', sec: '基本', name: '全体型', tiers: [['', 'R']], mul: { area: 1.6 }, knob: { areaMin2: true }, desc: '全体攻撃・全体カードを選ぶ' },
   { id: 'tFinish', cat: 'base', sec: '基本', name: '仕留め型', tiers: [['', 'R']], mul: { finish: 1.6 }, desc: 'あと少しで倒せる子を先に狙う' },
-  { id: 'tRush', cat: 'base', sec: '基本', name: '速攻型', tiers: [['', 'R']], mul: { attack: 1.6, big: 0.7 }, desc: '軽い技で手数を出す' },
-  { id: 'tSteady', cat: 'base', sec: '基本', name: '堅実型', tiers: [['', 'R']], mul: { keepGuard: 1.3, saveGuts: 1.3, attack: 0.8 }, desc: '守りとガッツを残して、無理をしない' },
+  { id: 'tRush', cat: 'base', sec: '基本', name: '速攻型', tiers: [['', 'R']], mul: { attack: 1.6, big: 0.7 }, knob: { light: true }, desc: '軽い技で手数を出す' },
+  { id: 'tSteady', cat: 'base', sec: '基本', name: '堅実型', tiers: [['', 'R']], mul: { keepGuard: 1.3, saveGuts: 1.3, attack: 0.8 }, knob: { safe: true }, desc: '守りとガッツを残して、無理をしない' },
   { id: 'tJam', cat: 'base', sec: '基本', name: 'かく乱守り型', tiers: [['', 'R']], mul: { disrupt: 1.3, keepGuard: 1.3 }, desc: '崩しながら守る' },
   { id: 'tCalm', cat: 'base', sec: '基本', name: '慎重型', tiers: [['', 'R']], calm: true, desc: '極端な打ち方をせず、損得で冷静に打つ(ほかの型の効きを半分に)' },
   { id: 'tFlex', cat: 'base', sec: '基本', name: '臨機応変型', tiers: [['', 'SR']], habit: 'atsu', desc: '場を見て、とどめ・全体・守り・攻めを切り替える(あつの型)' },
   { id: 'tMill', cat: 'base', sec: '基本', name: '持久型', tiers: [['', 'SR']], habit: 'sorashido', desc: '長引かせて、相手の山札切れで勝つ(ソラシドの型)' },
-  { id: 'tReckless', cat: 'base', sec: '基本', name: '捨て身型', tiers: [['', 'SR']], mul: { keepGuard: 0.5, finish: 1.3 }, desc: '守らずに受けて、そのぶん倒しに行く' },
+  { id: 'tReckless', cat: 'base', sec: '基本', name: '捨て身型', tiers: [['', 'SR']], mul: { keepGuard: 0.5, finish: 1.3 }, knob: { noGuardUnlessFinish: true }, desc: '守らずに受けて、そのぶん倒しに行く' },
+  { id: 'tHand', cat: 'base', sec: '基本', name: '手札温存型', tiers: [['', 'R']], knob: { keepHand: 2 }, desc: '手札を2枚以上残して、次の番に備える' },
+  { id: 'tDeck', cat: 'base', sec: '基本', name: '山札節約型', tiers: [['', 'R']], knob: { noDraw: true }, desc: '引く札・山札を減らす札を控え、山札を切らさない' },
+  { id: 'tFocus', cat: 'base', sec: '基本', name: '一点集中型', tiers: [['', 'R']], knob: { focus: true }, desc: '同じ相手を倒れるまで狙い続ける' },
+  { id: 'tSpread', cat: 'base', sec: '基本', name: '分散型', tiers: [['', 'SR']], mul: { area: 1.4 }, knob: { spread: true }, desc: '全員を少しずつ削り、最後にまとめて倒す' },
+  { id: 'tComeback', cat: 'base', sec: '基本', name: '逆転型', tiers: [['', 'SR']], knob: { comeback: true }, desc: '勝っているあいだは堅く、負けたら捨て身で攻める' },
   // ---------- 行動(ブリーダーカード・モンスターカード) ----------
   { id: 'atk', cat: 'monster', sec: '攻撃', phase: 'attack', name: '攻める', tiers: [['', 'N']], start: [''], desc: '点数がいちばん高い攻撃' },
   { id: 'kind', cat: 'monster', sec: '攻撃', phase: 'attack', name: '◯の技を出す', tiers: [['ちから', 'N'], ['かしこさ', 'N'], ['特殊', 'N']], desc: 'その種類の技を出す' },
   { id: 'cost', cat: 'monster', sec: '攻撃', phase: 'attack', name: '◯を出す', tiers: [['軽い技(ガッツ0〜1)', 'N'], ['中くらいの技(2〜3)', 'N'], ['大技(4以上)', 'N']], start: ['大技(4以上)'], desc: '払うガッツで選ぶ' },
   { id: 'reach', cat: 'monster', sec: '攻撃', phase: 'attack', name: '◯を出す', tiers: [['全体攻撃', 'R'], ['単体攻撃', 'N']], desc: '全員に当たる技か、1体に当てる技か' },
-  { id: 'eff', cat: 'monster', sec: '攻撃', phase: 'attack', name: '「◯」の技を出す', tiers: [['回避されない', 'N'], ['攻撃できなくする', 'R'], ['ガッツを減らす', 'N'], ['吸い取る', 'N'], ['2回攻撃', 'R']], desc: 'その効き目のついた技を出す' },
+  { id: 'eff', cat: 'monster', sec: '攻撃', phase: 'attack', name: '「◯」の技を出す', tiers: [['回避されない', 'N'], ['攻撃できなくする', 'R'], ['ガッツを減らす', 'N'], ['吸い取る', 'N'], ['2回攻撃', 'R'], ['防御で減らない', 'N'], ['回避されても半分', 'N'], ['種族に強い', 'N'], ['ダメージを割り振る', 'R'], ['2枚同時', 'N'], ['手札に戻る', 'N'], ['カード投げ', 'SR']], desc: 'その効き目のついた技を出す' },
   { id: 'attach', cat: 'monster', sec: '攻撃', phase: 'attack', name: '付ける札を使う', tiers: [['', 'R']], desc: '技に付ける札をいっしょに出す' },
-  { id: 'breeder', cat: 'breeder', sec: 'ブリーダー', phase: 'attack', name: 'ブリーダーのカード(◯)', tiers: [['攻撃', 'N'], ['守り', 'N'], ['引く・手札', 'N'], ['回復', 'N']], desc: 'その種類のブリーダーのカードを出す(守り … 攻撃できないを消す・倒れた子を戻す)' },
+  { id: 'attachKind', cat: 'monster', sec: '攻撃', phase: 'attack', name: '付ける札: ◯', tiers: [['ダメージを上げる', 'N'], ['回避させない', 'R'], ['ガッツを軽くする', 'N']], desc: 'その効き目の付ける札を、技にいっしょに出す' },
+  { id: 'spe', cat: 'monster', sec: '特殊技', phase: 'attack', name: '特殊技: ◯', tiers: [['味方を回復', 'N'], ['引く', 'N'], ['空中になる', 'N'], ['安全になる', 'R'], ['まゆと羽化', 'R'], ['のりうつる', 'SR']], desc: 'その効き目の特殊技を出す' },
+  { id: 'stance', cat: 'monster', sec: '立ち回り', phase: 'attack', name: '立ち回り: ◯', tiers: [['この子から攻める', 'N'], ['この子は攻撃しない', 'N'], ['ライフの多い子が先に', 'R'], ['ライフの少ない子は温存', 'R'], ['攻撃は1回だけ', 'N'], ['何回でも攻める', 'SR']], desc: 'その子の前に出る・下がるを決める' },
+  { id: 'bEff', cat: 'breeder', sec: 'ブリーダーのカード', phase: 'attack', name: 'ブリーダー: ◯', tiers: [['回復する', 'N'], ['倒れた子を戻す', 'R'], ['攻撃できないを消す', 'N'], ['相手を攻撃できなくする', 'R'], ['相手のガッツを減らす', 'N'], ['両方のガッツを0にする', 'SR'],
+    ['山札からガッツへ', 'N'], ['カードを引く', 'N'], ['捨て札から拾う', 'N'], ['手札を引き直す', 'N'], ['もう1回攻撃させる', 'R'], ['合体する', 'SR'], ['付ける札をただにする', 'N'], ['守りを名指しで封じる', 'R'], ['捨て札を山札に戻す', 'N'], ['小さく攻撃する', 'N']], desc: 'その効き目のブリーダーのカードを出す' },
   { id: 'fieldCard', cat: 'breeder', sec: 'ブリーダー', phase: 'attack', name: '全体カードを出す', tiers: [['', 'R']], desc: '場に残る全体カードを出す' },
+  { id: 'fieldKind', cat: 'breeder', sec: '全体カード', phase: 'attack', name: '全体カード: ◯', tiers: [['ダメージを足す', 'N'], ['払うガッツを変える', 'N'], ['大きいダメージを封じる', 'R'], ['山札を削る', 'N'], ['純血のプライド', 'N'], ['技の種類を封じる', 'SR'],
+    ['持ちょうを変える', 'R'], ['じわじわ減らす', 'N'], ['ガッツの上限', 'N'], ['出すと引く', 'N']], desc: 'その種類の全体カードを場に出す' },
   { id: 'disrupt', cat: 'monster', sec: '崩す', phase: 'attack', name: '崩し: ◯', tiers: [['手札を捨てさせる', 'R'], ['山札を削る', 'R'], ['ガッツを減らす', 'R'], ['番を飛ばす', 'SR']], desc: '相手の手を崩す札を出す' },
   { id: 'guard', cat: 'monster', sec: '守り', phase: 'guard', name: '守る', tiers: [['', 'N']], start: [''], desc: '攻撃を受けたら守り札で守る' },
-  { id: 'guardFirst', cat: 'monster', sec: '守り', phase: 'guard', name: '◯を先に使う', tiers: [['回避', 'N'], ['防御', 'N']], desc: '守るとき、その種類の札で守る' },
-  { id: 'guardOver', cat: 'monster', sec: '守り', phase: 'guard', name: 'ダメージ◯以上だけ守る', tiers: [[3, 'N'], [5, 'N'], [7, 'R']], desc: 'その数より小さい攻撃は守らない' },
+  { id: 'guardFirst', cat: 'monster', sec: '守り', phase: 'guard', name: '◯を先に使う', tiers: [['回避', 'N'], ['防御', 'N'], ['はね返す守り', 'R'], ['半分にする守り', 'R']], desc: '守るとき、その種類の札で守る' },
+  { id: 'guardOver', cat: 'monster', sec: '守り', phase: 'guard', name: 'ダメージ◯以上だけ守る', tiers: [[3, 'N'], [5, 'N'], [7, 'R'], [10, 'R']], desc: 'その数より小さい攻撃は守らない' },
   { id: 'guardDie', cat: 'monster', sec: '守り', phase: 'guard', name: '倒されるときだけ守る', tiers: [['', 'R']], desc: '受けたら倒れるときだけ守る' },
   { id: 'cover', cat: 'monster', sec: '守り', phase: 'guard', name: '味方をかばう', tiers: [['', 'R']], desc: 'かばう札で、味方への攻撃を受ける' },
   { id: 'noGuard', cat: 'monster', sec: '守り', phase: 'guard', name: '守らない', tiers: [['', 'R']], desc: '守り札を使わず受ける(札を残す)' },
   { id: 'save', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: 'ガッツをためる', tiers: [['', 'N']], start: [''], desc: '手札を多めにガッツへ回す' },
-  { id: 'gutsN', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: 'ガッツを◯枚だけ置く', tiers: [[0, 'N'], [1, 'N'], [2, 'N']], desc: 'ガッツの番に置く数を決める' },
+  { id: 'gutsN', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: 'ガッツを◯枚だけ置く', tiers: [[0, 'N'], [1, 'N'], [2, 'N'], [3, 'N']], desc: 'ガッツの番に置く数を決める' },
   { id: 'keepGuard', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: '守り札を残して置く', tiers: [['', 'R']], desc: '回避・防御はガッツにしない' },
-  { id: 'stop', cat: 'breeder', sec: '流れ', phase: 'attack', name: '攻撃を止める', tiers: [['', 'N']], desc: 'この番の攻撃をここで終える' },
+  { id: 'gutsOrder', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: '◯から置く', tiers: [['重い札', 'N'], ['使えない札', 'N']], desc: 'ガッツにする札の順を決める' },
+  { id: 'stop', cat: 'breeder', sec: '流れ', phase: 'attack', name: '攻撃を止める', tiers: [['', 'N']], start: [''], desc: 'この番の攻撃をここで終える' },
   { id: 'charge', cat: 'monster', sec: '流れ', phase: 'attack', name: '溜め技を使う', tiers: [['', 'R']], desc: '次の技を何倍にする札を先に使う' },
+  { id: 'chargeKind', cat: 'monster', sec: '流れ', phase: 'attack', name: '溜め: ◯', tiers: [['怒り', 'R'], ['次の番の技を倍', 'R']], desc: 'その溜めの札を先に使う' },
   { id: 'ace', cat: 'breeder', sec: '特別', phase: 'attack', name: '切り札を出す', tiers: [['', 'SR']], desc: '登録した切り札を、手にあれば先に出す' },
+  { id: 'holdBreeder', cat: 'breeder', sec: '流れ', phase: 'attack', name: 'ブリーダーのカードを温存する', tiers: [['', 'N']], desc: 'この番はブリーダーのカードを出さない(当たればそれ以外で打つ)' },
 ]);
 // カードのid は「種類.段」(段の無いカードは種類だけ)。保存(mh_card_tactics_v1)にこのまま書くので、変えない
 const cardTacticCardId = (g, v) => (v === '' ? g.id : `${g.id}.${v}`);
@@ -152,7 +181,28 @@ const cardTacticHabitOf = (base, st = null, p = 0) => {
   if (some('tFlex')) h.flex = true;
   const mill = list.filter((x) => x.c.g === 'tMill').reduce((a, x) => a + x.w, 0);
   if (mill) h.mill = Math.min(1, mill);
+  // 逆転型: 倒された数で負けている・ライフの合計が半分以下なら捨て身(守り×0.5・とどめ・大技・全体×1.3)、それまでは堅く(守り・ガッツ×1.2)
+  const back = list.find((x) => x.c.g === 'tComeback');
+  if (back && st) {
+    const me = st.players[p], op = st.players[cardOther(p)];
+    const life = me.mons.reduce((a, m) => a + Math.max(0, m.life), 0), max = me.mons.reduce((a, m) => a + m.max, 0);
+    const losing = me.mons.filter((m) => m.ko).length > op.mons.filter((m) => m.ko).length || life * 2 <= max;
+    const k = (x) => 1 + (x - 1) * back.w;
+    if (losing) { h.keepGuard *= k(0.5); h.finish *= k(1.3); h.big *= k(1.3); h.area *= k(1.3); } else { h.keepGuard *= k(1.2); h.saveGuts *= k(1.2); }
+  }
   return h;
+};
+// 基本カードの細かいくせ(knob)。メインはいつも、サブは3回に1回の番(臨機応変型・持久型と同じ)
+const cardTacticKnobsOf = (base, st = null, p = 0) => {
+  const turn = st ? cardTacticOwnTurn(st, p) : 0;
+  const out = {};
+  (Array.isArray(base) ? base : []).forEach((id, i) => {
+    const c = cardTacticOf(id);
+    if (!c || c.cat !== 'base' || (i > 0 && turn % 3 !== 0)) return;
+    const g = CARD_TACTIC_GROUPS.find((x) => x.id === c.g) || {};
+    Object.assign(out, g.knob || {});
+  });
+  return out;
 };
 
 // ---- 場を見る ----
@@ -168,7 +218,8 @@ const cardTacticBigCost = 4;
 const cardTacticIsBig = (st, c) => !!c && cardIsAttackKind(c.kind) && cardFieldCostOf(st, c.guts || 0) >= cardTacticBigCost;
 
 // 条件を見る。当たらなければ null、当たれば { foes, mine }(標的が無い条件は両方 null)
-const cardTacticCond = (db, st, p, card, row) => {
+// fctx … { mi(その枠の子の番号。ブリーダーの枠は null), phase }
+const cardTacticCond = (db, st, p, card, row, fctx = {}) => {
   const me = st.players[p], opp = st.players[cardOther(p)];
   const foesAlive = cardTacticAlive(opp), mineAlive = cardTacticAlive(me);
   const hit = (ok) => (ok ? { foes: null, mine: null } : null);
@@ -230,6 +281,33 @@ const cardTacticCond = (db, st, p, card, row) => {
       if (g < cardTacticBigCost || !opp.hand.length) return null;
       return hit(Object.values(db.cards || {}).some((c) => cardTacticIsBig(st, c) && cardFieldCostOf(st, c.guts || 0) <= g + 1 && foesAlive.some((j) => cardUsableBy(c, opp.mons[j]))));
     }
+    case 'myHandLe': return hit(me.hand.length <= v);
+    case 'breederN': return hit(hand.filter((c) => c.user === 'breeder').length >= 2);
+    case 'breederUnused': return hit(!me.breederUsed);
+    case 'myGutsLe': return hit(guts <= v);
+    case 'myDiscard': return hit(me.discard.length >= v);
+    case 'myKo': return hit(me.mons.some((m) => m.ko));
+    case 'noField': return hit(!st.field);
+    case 'selfLife': case 'selfFresh': case 'selfType': case 'selfStun': case 'selfAdv': {
+      const mi = fctx.mi;
+      const m = Number.isInteger(mi) ? me.mons[mi] : null;
+      if (!m || m.ko) return null;
+      if (card.g === 'selfLife') return hit(m.life * 100 <= m.max * v);
+      if (card.g === 'selfFresh') return hit(!(m.attacks > 0));
+      if (card.g === 'selfType') return hit(cardMonType(m, st.turn) === { 地上: 'ground', 空中: 'air', 水中: 'water' }[v]);
+      if (card.g === 'selfStun') return hit(m.stunTurn >= st.turn);
+      // 有利な相手: この子が使える手札の技に、その相手の特徴で倍になるもの(multVs)がある
+      return foes(foesAlive.filter((j) => hand.some((c) => cardUsableBy(c, m) && (c.effects || []).some((e) => e && e.t === 'multVs' && e.type === cardMonType(opp.mons[j], st.turn)))));
+    }
+    case 'incoming': case 'incomingKo': case 'incomingArea': {
+      if (!st.pending || st.pending.defender !== p) return null;
+      const dmg = cardAiIncomingDamage(db, st);
+      const pd = st.pending, tgt = pd.targets[pd.ti];
+      const target = tgt ? st.players[tgt.p].mons[pd.cover !== null && pd.cover !== undefined ? pd.cover : tgt.m] : null;
+      if (card.g === 'incoming') return hit(dmg >= v);
+      if (card.g === 'incomingKo') return hit(!!target && target.life <= dmg);
+      return hit(cardHasEff(cardOf(db, pd.main), 'area'));
+    }
     default: return null;
   }
 };
@@ -238,14 +316,23 @@ const cardTacticCond = (db, st, p, card, row) => {
 // 攻撃の手が、その行動に合うか(o … 攻撃の候補。main … 主の札)
 const CARD_TACTIC_EFF = Object.freeze({
   回避されない: ['noEvade'], 攻撃できなくする: ['stunOnHit', 'stunTarget', 'stunAllEnemies'], ガッツを減らす: ['gutsLossOnHit', 'oppGutsLoss'],
-  吸い取る: ['drain'], '2回攻撃': ['extraAttack', 'extraAttackTarget', 'unlimitedAttacks'],
+  吸い取る: ['drain'], '2回攻撃': ['extraAttack', 'extraAttackTarget', 'unlimitedAttacks'], 防御で減らない: ['noBlockReduce'], 回避されても半分: ['halfOnEvade'],
+  種族に強い: ['multVs'], ダメージを割り振る: ['split'], '2枚同時': ['pair', 'combo', 'requires'], 手札に戻る: ['returnOnHit'], カード投げ: ['tossBonus'],
 });
-const CARD_TACTIC_BREEDER = Object.freeze({
-  攻撃: (c) => (c.damage || 0) > 0 || ['stunTarget', 'oppGutsLoss', 'extraAttackTarget', 'gutsZeroBoth'].some((t) => cardHasEff(c, t)),
-  守り: (c) => ['unstunTarget', 'revive'].some((t) => cardHasEff(c, t)),
-  '引く・手札': (c) => ['draw', 'choose', 'refresh', 'rush', 'deckToGuts', 'gutsToDeckShuffle'].some((t) => cardHasEff(c, t)),
-  回復: (c) => cardHasEff(c, 'heal'),
+// ブリーダーのカードの効き目ごと(小さく攻撃する はダメージのある札)
+const CARD_TACTIC_BEFF = Object.freeze({
+  回復する: ['heal'], 倒れた子を戻す: ['revive'], 攻撃できないを消す: ['unstunTarget'], 相手を攻撃できなくする: ['stunTarget'], 相手のガッツを減らす: ['oppGutsLoss'],
+  両方のガッツを0にする: ['gutsZeroBoth'], 山札からガッツへ: ['rush', 'deckToGuts'], カードを引く: ['draw'], 捨て札から拾う: ['choose'], 手札を引き直す: ['refresh'],
+  もう1回攻撃させる: ['extraAttackTarget'], 合体する: ['fuse'], 付ける札をただにする: ['attachFree'], 守りを名指しで封じる: ['attachBind'], 捨て札を山札に戻す: ['gutsToDeckShuffle'],
 });
+const CARD_TACTIC_FIELD = Object.freeze({
+  ダメージを足す: 'fieldDmg', 払うガッツを変える: 'fieldCost', 大きいダメージを封じる: 'fieldBanDmg', 山札を削る: 'fieldMill', 純血のプライド: 'fieldPurePride',
+  技の種類を封じる: 'fieldBanKind', 持ちょうを変える: 'fieldType', じわじわ減らす: 'fieldBurn', ガッツの上限: 'fieldGutsMax', 出すと引く: 'fieldDrawOnPlay',
+});
+const CARD_TACTIC_ATTACH = Object.freeze({ ダメージを上げる: ['attachMult', 'attachAdd'], 回避させない: ['attachNoEvade', 'attachNoGuard', 'attachNoBlockReduce'], ガッツを軽くする: ['attachCost', 'attachCostHalf', 'attachFree'] });
+const CARD_TACTIC_SPE = Object.freeze({ 味方を回復: ['heal'], 引く: ['draw'], 空中になる: ['form', 'becomeAir'], 安全になる: ['safe'], まゆと羽化: ['cocoon', 'emerge'], のりうつる: ['possess'] });
+const CARD_TACTIC_CHARGE = Object.freeze({ 怒り: ['rage'], 次の番の技を倍: ['nextTurnMult'] });
+const CARD_TACTIC_GUARD_EFF = Object.freeze({ はね返す守り: ['reflect'], 半分にする守り: ['reduceHalf'] });
 const CARD_TACTIC_DISRUPT = Object.freeze({
   手札を捨てさせる: ['discardOpp', 'peekPick', 'discardBothHands', 'oppHandToDeckBottom'], 山札を削る: ['millOpp', 'fieldMill'],
   ガッツを減らす: ['oppGutsLoss', 'gutsLossOnHit', 'gutsZeroBoth'], 番を飛ばす: ['skipTurn'],
@@ -263,8 +350,16 @@ const cardTacticAttackFits = (db, st, act, o) => {
     case 'reach': return o.type === 'attack' && (v === '全体攻撃' ? cardHasEff(main, 'area') : !cardHasEff(main, 'area'));
     case 'eff': return cards.some((c) => (CARD_TACTIC_EFF[v] || []).some((t) => cardHasEff(c, t)));
     case 'attach': return o.hand.length > 1 && cards.slice(1).some((c) => cardHasEff(c, 'attach'));
-    case 'breeder': return o.type === 'breeder' && main.kind !== 'fld' && !!CARD_TACTIC_BREEDER[v] && CARD_TACTIC_BREEDER[v](main);
+    case 'bEff': {
+      const br = cards.filter((c) => c.user === 'breeder' && c.kind !== 'fld');
+      if (v === '小さく攻撃する') return o.type === 'breeder' && (main.damage || 0) > 0;
+      return br.some((c) => (CARD_TACTIC_BEFF[v] || []).some((t) => cardHasEff(c, t)));
+    }
     case 'fieldCard': return main.kind === 'fld';
+    case 'fieldKind': return main.kind === 'fld' && cardHasEff(main, CARD_TACTIC_FIELD[v]);
+    case 'attachKind': return o.hand.length > 1 && cards.slice(1).some((c) => (CARD_TACTIC_ATTACH[v] || []).some((t) => cardHasEff(c, t)));
+    case 'spe': return o.type === 'attack' && main.kind === 'spe' && (CARD_TACTIC_SPE[v] || []).some((t) => cardHasEff(main, t));
+    case 'chargeKind': return cards.some((c) => (CARD_TACTIC_CHARGE[v] || []).some((t) => cardHasEff(c, t)));
     case 'disrupt': return cards.some((c) => (CARD_TACTIC_DISRUPT[v] || []).some((t) => cardHasEff(c, t)));
     case 'charge': return cards.some((c) => ['charge', 'rage', 'nextTurnMult'].some((t) => cardHasEff(c, t)));
     default: return false;
@@ -279,22 +374,41 @@ const cardTacticAimsAt = (st, o, foes) => {
   return !o.target;
 };
 // 行の行動を1つ見る。{ act } … その手 / null … この行は出せる手が無い(次の行へ)
-//   attack … mi が数ならその子の手だけ(モンスターの枠)。null ならブリーダーの手(ブリーダーの枠)
+//   ctx.mi … 数ならその子の手だけ(モンスターの枠)。null ならブリーダーの手(ブリーダーの枠)
+//   ctx.skip … 攻撃させない子(立ち回り)/ ctx.noBreeder … この番はブリーダーのカードを出さない。どちらも、このあとの行と基本カードの型にも効く
 const cardTacticRowAct = (db, st, policy, phase, row, aim, ctx) => {
   const act = cardTacticOf(row.a);
   const p = phase === 'guard' ? st.pending.defender : st.active;
   if (act.phase !== 'all' && act.phase !== phase) return null;
+  const me = st.players[p];
+  const usable = (o) => !(o.type === 'attack' && ctx.skip.has(o.mon)) && !(ctx.noBreeder && (o.type === 'breeder' || o.hand.some((i) => (cardOf(db, me.hand[i]) || {}).user === 'breeder')));
+  const pickBest = (fits, floor = 0) => {
+    const best = ctx.scored().find((x) => x.s > floor && usable(x.o) && fits(x.o) && cardTacticAimsAt(st, x.o, aim.foes));
+    return best ? { act: cardAiFillBind(db, st, best.o, policy) } : null;
+  };
   if (act.g === 'ace') {
     const aces = Array.isArray(policy.aces) ? policy.aces : [];
     if (!aces.length || phase !== 'attack') return null;
-    const best = ctx.scored().find((x) => x.s > 0 && x.o.hand.some((i) => aces.includes(st.players[p].hand[i])) && cardTacticAimsAt(st, x.o, aim.foes));
-    return best ? { act: cardAiFillBind(db, st, best.o, policy) } : null;
+    return pickBest((o) => o.hand.some((i) => aces.includes(me.hand[i])));
   }
   if (phase === 'attack') {
     if (act.g === 'stop') return { act: { type: 'endAttacks' } };
-    const mine = (o) => (ctx.mi === null ? o.type === 'breeder' || (cardOf(db, st.players[p].hand[o.hand[0]]) || {}).kind === 'fld' : o.type === 'attack' && o.mon === ctx.mi);
-    const best = ctx.scored().find((x) => x.s > 0 && mine(x.o) && cardTacticAttackFits(db, st, act, x.o) && cardTacticAimsAt(st, x.o, aim.foes));
-    return best ? { act: cardAiFillBind(db, st, best.o, policy) } : null;
+    if (act.g === 'holdBreeder') { ctx.noBreeder = true; return null; }
+    const mine = (o) => (ctx.mi === null ? o.type === 'breeder' || (cardOf(db, me.hand[o.hand[0]]) || {}).kind === 'fld' || o.hand.some((i) => (cardOf(db, me.hand[i]) || {}).user === 'breeder') : o.type === 'attack' && o.mon === ctx.mi);
+    if (act.g === 'stance') {
+      const mi = ctx.mi;
+      const m = Number.isInteger(mi) ? me.mons[mi] : null;
+      if (!m) return null;
+      const alive = me.mons.filter((x) => !x.ko);
+      const v = act.v;
+      if (v === 'この子は攻撃しない') { ctx.skip.add(mi); return null; }
+      if (v === 'ライフの少ない子は温存') { if (alive.length > 1 && m.life === Math.min(...alive.map((x) => x.life))) ctx.skip.add(mi); return null; }
+      if (v === '攻撃は1回だけ') { if (m.attacks > 0) { ctx.skip.add(mi); return null; } return pickBest(mine); }
+      if (v === 'ライフの多い子が先に') return m.life === Math.max(...alive.map((x) => x.life)) ? pickBest(mine) : null;
+      if (v === '何回でも攻める') return pickBest(mine, -1); // 点数が少し低い手でも出す
+      return pickBest(mine); // この子から攻める
+    }
+    return pickBest((o) => mine(o) && cardTacticAttackFits(db, st, act, o));
   }
   if (phase === 'guard') {
     const pd = st.pending;
@@ -302,12 +416,12 @@ const cardTacticRowAct = (db, st, policy, phase, row, aim, ctx) => {
     if (aim.mine && !(tgt && tgt.p === p && aim.mine.includes(tgt.m))) return null; // 守る相手が決まっていて、狙われたのがその子でない
     const dmg = cardAiIncomingDamage(db, st);
     const target = tgt ? st.players[tgt.p].mons[pd.cover !== null && pd.cover !== undefined ? pd.cover : tgt.m] : null;
-    const kindOf = (o) => (cardOf(db, st.players[p].hand[o.hand]) || {}).kind;
+    const cardOfOpt = (o) => cardOf(db, me.hand[o.hand]) || {};
     if (act.g === 'noGuard') return { act: { type: 'pass' } };
     if (act.g === 'guardOver' && dmg < act.v) return { act: { type: 'pass' } };
     if (act.g === 'guardDie' && !(target && target.life <= dmg)) return { act: { type: 'pass' } };
-    const only = act.g === 'guardFirst' ? (o) => kindOf(o) === (act.v === '回避' ? 'dge' : 'blk')
-      : act.g === 'cover' ? (o) => { const c = cardOf(db, st.players[p].hand[o.hand]); return !!c && ['cover', 'shield', 'redirect'].some((t) => cardHasEff(c, t)); }
+    const only = act.g === 'guardFirst' ? (o) => (act.v === '回避' ? cardOfOpt(o).kind === 'dge' : act.v === '防御' ? cardOfOpt(o).kind === 'blk' : (CARD_TACTIC_GUARD_EFF[act.v] || []).some((t) => cardHasEff(cardOfOpt(o), t)))
+      : act.g === 'cover' ? (o) => ['cover', 'shield', 'redirect'].some((t) => cardHasEff(cardOfOpt(o), t))
         : null;
     const g = cardAiChooseGuard(db, st, policy, () => 0, { force: true, only });
     return g.type !== 'pass' ? { act: g } : null;
@@ -316,8 +430,41 @@ const cardTacticRowAct = (db, st, policy, phase, row, aim, ctx) => {
     if (act.g === 'save') return { act: cardAiChooseGuts(db, st, { ...policy, habit: { ...(policy.habit || {}), saveGuts: Math.max(1.6, (policy.habit || {}).saveGuts || 1) } }) };
     if (act.g === 'gutsN') return { act: cardAiChooseGuts(db, st, policy, { count: act.v }) };
     if (act.g === 'keepGuard') return { act: cardAiChooseGuts(db, st, policy, { keepGuards: true }) };
+    if (act.g === 'gutsOrder') {
+      // 置く枚数はふつうのとおり。どの札から置くかだけを変える(重い札/使えない札から)
+      const n = cardAiChooseGuts(db, st, policy).hand.length;
+      const dead = (c) => !c || (c.user !== 'breeder' && !me.mons.some((m) => !m.ko && cardUsableBy(c, m)));
+      const order = me.hand.map((no, i) => ({ i, c: cardOf(db, no) })).sort((x, y) => (act.v === '重い札' ? ((y.c || {}).guts || 0) - ((x.c || {}).guts || 0) : (dead(y.c) ? 1 : 0) - (dead(x.c) ? 1 : 0)) || x.i - y.i);
+      return { act: { type: 'guts', hand: order.slice(0, n).map((x) => x.i) } };
+    }
   }
   return null;
+};
+
+// 基本カードの細かいくせで、攻撃の手を選び直す(どの行にも当たらないとき)。くせが無ければ null(ふつうに打つ)
+const cardTacticBaseAttack = (db, st, policy, knobs, ctx) => {
+  const p = st.active, me = st.players[p], opp = st.players[cardOther(p)];
+  const effs = (o) => o.hand.flatMap((i) => ((cardOf(db, me.hand[i]) || {}).effects || []).map((e) => e && e.t));
+  const foes = opp.mons.map((m, j) => ({ m, j })).filter((x) => !x.m.ko);
+  const lowest = foes.length ? foes.slice().sort((a, b) => a.m.life / a.m.max - b.m.life / b.m.max)[0].j : -1;
+  const highest = foes.length ? foes.slice().sort((a, b) => b.m.life - a.m.life)[0].j : -1;
+  const list = ctx.scored().filter((x) => {
+    const o = x.o;
+    if (o.type === 'attack' && ctx.skip.has(o.mon)) return false;
+    if (ctx.noBreeder && (o.type === 'breeder' || o.hand.some((i) => (cardOf(db, me.hand[i]) || {}).user === 'breeder'))) return false;
+    const e = effs(o);
+    if (knobs.light && o.type === 'attack' && cardActionCost(db, st, p, me.hand, o.hand) > 1) return false;
+    if (knobs.safe && e.some((t) => /^selfDamage|^attachSelfIfHit$|^selfHurt$/.test(t))) return false;
+    if (knobs.noDraw && e.some((t) => ['draw', 'rush', 'deckToGuts', 'refresh', 'oppDraw'].includes(t))) return false;
+    if (knobs.keepHand && me.hand.length - o.hand.length < knobs.keepHand) return false;
+    if (knobs.areaMin2 && foes.length < 2 && e.includes('area')) return false;
+    return true;
+  }).map((x) => {
+    const t = x.o.target && x.o.target.p !== p ? x.o.target.m : -1;
+    return { ...x, s: x.s + (knobs.focus && t === lowest ? 1.5 : 0) + (knobs.spread && t === highest ? 1 : 0) };
+  }).sort((a, b) => b.s - a.s);
+  if (!list.length || list[0].s <= 0.3) return { act: { type: 'endAttacks' } };
+  return { act: cardAiFillBind(db, st, list[0].o, policy) };
 };
 
 // 枠を順に見て、最初に当たった行の手を返す。{ act } … その手 / { policy } … 基本カードの型で、ふつうに打つ / null … 今のまま
@@ -329,9 +476,10 @@ const cardTacticDecide = (db, st, policy) => {
   if (!phase) return null;
   const p = phase === 'guard' ? st.pending.defender : st.active;
   const habit = cardTacticHabitOf(frames.base, st, p);
+  const knobs = cardTacticKnobsOf(frames.base, st, p);
   const pol = habit ? { ...policy, habit } : policy;
   let scored = null;
-  const ctx = { mi: null, scored: () => { if (!scored) scored = cardAiAttackScored(db, st, cardAiAttackChoices(db, st, pol), pol); return scored; } };
+  const ctx = { mi: null, skip: new Set(), noBreeder: false, scored: () => { if (!scored) scored = cardAiAttackScored(db, st, cardAiAttackChoices(db, st, pol), pol); return scored; } };
   const order = [];
   if (phase === 'attack') { [0, 1, 2].forEach((mi) => order.push({ rows: frames.mons[mi], mi })); order.push({ rows: frames.breeder, mi: null }); }
   if (phase === 'guard') { const t = st.pending.targets[st.pending.ti]; if (t && t.p === p) order.push({ rows: frames.mons[t.m] || [], mi: t.m }); }
@@ -340,12 +488,28 @@ const cardTacticDecide = (db, st, policy) => {
     if (phase === 'attack' && fr.mi !== null && st.players[p].mons[fr.mi] && st.players[p].mons[fr.mi].ko) continue;
     for (const row of fr.rows) {
       if (!row.on) continue;
-      const aim = cardTacticCond(db, st, p, cardTacticOf(row.c), row);
+      const aim = cardTacticCond(db, st, p, cardTacticOf(row.c), row, { mi: fr.mi, phase });
       if (!aim) continue;
       ctx.mi = fr.mi;
       const got = cardTacticRowAct(db, st, pol, phase, row, aim, ctx);
       if (got) return got;
     }
+  }
+  // どの行にも当たらない: 基本カードの型で打つ(細かいくせ・立ち回りで外した子・温存したブリーダーのカードも守る)
+  if (phase === 'attack' && (ctx.skip.size || ctx.noBreeder || ['light', 'safe', 'noDraw', 'keepHand', 'focus', 'spread', 'areaMin2'].some((k) => knobs[k]))) return cardTacticBaseAttack(db, st, pol, knobs, ctx);
+  if (phase === 'guard') {
+    const pd = st.pending, tgt = pd.targets[pd.ti];
+    const target = tgt ? st.players[tgt.p].mons[pd.cover !== null && pd.cover !== undefined ? pd.cover : tgt.m] : null;
+    const dies = !!target && target.life <= cardAiIncomingDamage(db, st);
+    if (knobs.noGuardUnlessFinish && !dies) return { act: { type: 'pass' } };
+    if (knobs.guardDieOnly) { if (!dies) return { act: { type: 'pass' } }; const g = cardAiChooseGuard(db, st, pol, () => 0, { force: true }); return { act: g }; }
+    if (knobs.guardAll) { const g = cardAiChooseGuard(db, st, pol, () => 0, { force: true, only: knobs.light ? (o) => ((cardOf(db, st.players[p].hand[o.hand]) || {}).guts || 0) <= 1 : null }); if (g.type !== 'pass') return { act: g }; }
+    if (knobs.light) { const g = cardAiChooseGuard(db, st, pol, () => 0.5, { only: (o) => ((cardOf(db, st.players[p].hand[o.hand]) || {}).guts || 0) <= 1 }); return { act: g }; }
+  }
+  if (phase === 'guts' && knobs.keepHand) {
+    const g = cardAiChooseGuts(db, st, pol);
+    const room = Math.max(0, st.players[p].hand.length - knobs.keepHand);
+    return { act: { ...g, hand: g.hand.slice(0, room) } };
   }
   return habit ? { policy: pol } : null;
 };

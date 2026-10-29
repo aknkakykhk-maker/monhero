@@ -319,7 +319,7 @@
     },
     {
       "file": "82-card-tactics-core.jsx",
-      "role": "MFバトルカードの戦術カード(ガンビット型)の中身。154枚の表(CARD_TACTIC_CARDS。条件・基本・ブリーダー・モンスター)・枠(基本メイン1+サブ2・ブリーダー・モンスターごと)・条件を見る・行動の手を選ぶ・枠を順に見る(cardTacticDecide)。82 の cardAiChooseAction が policy.gambit を持つときだけ呼ぶ",
+      "role": "MFバトルカードの戦術カード(ガンビット型)の中身。246枚の表(CARD_TACTIC_CARDS。条件・基本・ブリーダー・モンスター)・枠(基本メイン1+サブ2・ブリーダー・モンスターごと)・条件を見る・行動の手を選ぶ・枠を順に見る(cardTacticDecide)。82 の cardAiChooseAction が policy.gambit を持つときだけ呼ぶ",
       "pure": true
     },
     {
@@ -389,6 +389,10 @@
     {
       "file": "95-card-deck-share.jsx",
       "role": "MFバトルカードのみんなのデッキ(デッキ登録の対戦・デッキのレンタル)。表 card_deck_entries などとの通信・持ち主の鍵(mh_card_deck_owner_key_v1)・戦い方(助手の打ち方に乗せる)・登録の画面"
+    },
+    {
+      "file": "96-card-tactics.jsx",
+      "role": "MFバトルカードの戦術カードの持ち物・枠(mh_card_tactics_v1)・MFバトルカードのレベル(mh_card_level_v1。式・強さ別の経験値・枠の開き・引く券)・戦術カードのガチャ(1回300ビートPで8枚・まとめ買い・天井・かけら)。84 の結果の取引に cardLevelEntries を足す"
     },
     {
       "file": "81-debug-trials.jsx",
