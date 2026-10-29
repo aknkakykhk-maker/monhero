@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5e643a3bb92aeb82
+// source-sha256: 9649866e6e950bbe
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -96025,6 +96025,10 @@ const CardBattleBoard = ({
   const [picks, setPicks] = useState([]);
   const [fx, setFx] = useState([]);
   const [bubble, setBubble] = useState(null);
+  const [bubbleOpen, setBubbleOpen] = useState(false);
+  useEffect(() => {
+    setBubbleOpen(false);
+  }, [bubble && bubble.key]);
   const [face, setFace] = useState('normal');
   const [detail, setDetail] = useState(null);
   const [statusSheet, setStatusSheet] = useState(null);
@@ -97084,6 +97088,22 @@ const CardBattleBoard = ({
   };
   const guardAtk = pd && pd.defender === CARD_ME && !tutorial ? cardOf(db, pd.main) : null;
   const logLines = st.log.filter(l => l.kind !== 'turn').slice(-3);
+  const liveLine = (() => {
+    const L = st.log.filter(l => l.kind !== 'turn' && !/が先攻、.*が後攻$/.test(String(l.text || '')));
+    const last = L[L.length - 1];
+    if (!last || last.kind !== 'hit') return last || null;
+    let k = L.length - 1;
+    while (k > 0 && L[k - 1].kind === 'hit') k -= 1;
+    const use = L[k - 1];
+    if (!use || use.kind !== 'use') return last;
+    const hits = L.slice(k).slice(-3).map(cardLogText);
+    return {
+      kind: 'hit',
+      text: `${cardLogText(use)} → ${hits.join('・')}`,
+      cards: use.cards
+    };
+  })();
+  const liveCards = liveLine && Array.isArray(liveLine.cards) ? liveLine.cards.slice(0, 3) : [];
   const stageRef = useRef(null);
   const [stageFit, setStageFit] = useState(0);
   const [boardFit, setBoardFit] = useState(0);
@@ -97095,7 +97115,8 @@ const CardBattleBoard = ({
   }, []);
   const bubbleHidden = !!(bigCard || turnBanner || downBand || guarding || endFx);
   const bubbleInFlow = !!(bubble && !replay && bubble.cut && !bubbleHidden);
-  const bubbleOverAction = !!((tiny || wide) && bubble && !bubble.cut && !replay && !tutorial);
+  const bubbleChip = !!(bubble && !bubble.cut && !replay && !bubbleHidden);
+  const bubbleOverAction = false;
   const actionHidden = bubbleOverAction || !!downBand;
   useEffect(() => {
     if (action && actionHidden) actionMissed.current = action;else if (action) actionMissed.current = null;
@@ -97559,7 +97580,7 @@ const CardBattleBoard = ({
     ref: stageRef,
     "data-card-stage": true,
     "data-card-stage-fit": stageFit,
-    className: `relative flex ${boardFit >= 1 ? 'min-h-[40px]' : 'min-h-[64px]'} flex-1 flex-col items-center justify-center ${wide ? 'gap-1 py-0.5' : 'gap-1.5 py-1'} overflow-hidden px-3`,
+    className: `relative flex ${boardFit >= 1 ? 'min-h-[40px]' : 'min-h-[64px]'} flex-1 flex-col items-center ${bubbleChip ? 'justify-end' : 'justify-center'} ${wide ? 'gap-1 py-0.5' : 'gap-1.5 py-1'} overflow-hidden px-3`,
     style: {
       justifyContent: 'safe center'
     }
@@ -97568,16 +97589,17 @@ const CardBattleBoard = ({
     "data-card-bubble": true,
     "data-card-bubble-face": bubble.face || face,
     "data-card-bubble-ms": tutorial ? undefined : cardBubbleMs(bubble.text),
-    onClick: tutorial ? undefined : nextBubble,
+    onClick: tutorial ? undefined : bubble.cut || bubbleOpen ? nextBubble : () => setBubbleOpen(true),
     "data-card-bubble-cut": bubble.cut ? '1' : undefined,
-    className: `${bubbleHidden ? 'invisible ' : ''}${tutorial ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} ${bubbleInFlow ? 'relative shrink-0' : 'absolute inset-x-2 top-0.5'} z-[8] mx-auto flex items-center gap-1.5 ${bubble.cut ? `mh-card-cutin w-full max-w-[calc(100%-16px)] flex-row-reverse rounded-2xl border-[3px] bg-slate-950/95 ${tiny ? 'px-1.5 py-0.5 text-[12px] leading-tight' : 'px-2 py-1 text-[15px] leading-snug'} font-black text-white shadow-[0_6px_18px_rgba(0,0,0,.6)]` : `w-fit max-w-[calc(100%-16px)] rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`}`,
+    "data-card-bubble-open": !bubble.cut && bubbleOpen ? '1' : undefined,
+    className: `${bubbleHidden ? 'invisible ' : ''}${tutorial ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} ${bubbleInFlow ? 'relative shrink-0 mx-auto' : bubble.cut ? 'absolute inset-x-2 top-0.5 mx-auto' : 'absolute left-2 top-0.5'} z-[8] flex items-center gap-1.5 ${bubble.cut ? `mh-card-cutin w-full max-w-[calc(100%-16px)] flex-row-reverse rounded-2xl border-[3px] bg-slate-950/95 ${tiny ? 'px-1.5 py-0.5 text-[12px] leading-tight' : 'px-2 py-1 text-[15px] leading-snug'} font-black text-white shadow-[0_6px_18px_rgba(0,0,0,.6)]` : `w-fit max-w-[calc(100%-16px)] ${bubbleOpen ? 'rounded-2xl' : 'rounded-full'} border-2 bg-white px-1.5 py-0.5 text-[12px] font-extrabold leading-snug text-[#1f1333] shadow-lg`}`,
     style: {
       borderColor: who.accent,
       ...JA_WRAP_STYLE
     }
   }, pvp ? React.createElement("span", {
     "data-card-bubble-pvp-icon": true,
-    className: `block ${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0`
+    className: `block ${bubble.cut ? tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]' : 'h-[22px] w-[22px]'} shrink-0`
   }, React.createElement(CardPvpAvatar, {
     icon: pvp.icon,
     frame: pvp.frame,
@@ -97585,17 +97607,20 @@ const CardBattleBoard = ({
   })) : React.createElement("img", {
     src: assistantFaceImage(who, bubble.face || face),
     alt: "",
-    className: `${bubble.cut ? (tiny || stageFit >= 2 ? 'h-[38px] w-[38px] border-2' : compact ? 'h-[54px] w-[54px] border-[3px]' : 'h-[68px] w-[68px] border-[3px]') + ' border-white bg-black' : tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0 rounded-lg object-cover object-top`
+    className: `${bubble.cut ? (tiny || stageFit >= 2 ? 'h-[38px] w-[38px] border-2' : compact ? 'h-[54px] w-[54px] border-[3px]' : 'h-[68px] w-[68px] border-[3px]') + ' border-white bg-black' : 'h-[22px] w-[22px]'} shrink-0 rounded-lg object-cover object-top`
   }), React.createElement("span", {
-    className: "min-w-0 flex-1"
+    className: `min-w-0 flex-1 ${!bubble.cut && !bubbleOpen ? 'truncate whitespace-nowrap' : ''}`
   }, React.createElement("span", {
     className: bubble.cut ? 'block text-[11px] tracking-wider' : 'mr-1 text-[11px]',
     style: {
       color: who.accent
     }
   }, who.name, bubble.cut ? ' ★' : ''), React.createElement("span", {
-    style: JA_WRAP_STYLE
-  }, cardJaWrap(bubble.text)))), React.createElement("div", {
+    style: !bubble.cut && !bubbleOpen ? undefined : JA_WRAP_STYLE
+  }, !bubble.cut && !bubbleOpen ? bubble.text : cardJaWrap(bubble.text))), !bubble.cut && !bubbleOpen && React.createElement("span", {
+    "aria-hidden": "true",
+    className: "shrink-0 text-[11px] text-slate-400"
+  }, "▸")), React.createElement("div", {
     "aria-hidden": "true",
     className: "pointer-events-none absolute inset-0 overflow-hidden"
   }, React.createElement("div", {
@@ -97621,27 +97646,7 @@ const CardBattleBoard = ({
     src: assistantFaceImage(who, 'happy'),
     alt: "",
     className: "h-full w-full object-cover object-top"
-  })), action && !endFx && !turnBanner && stageFit < 3 && !bubbleOverAction && !(turnSummary && sumOpen) && !guardAtk && React.createElement("div", {
-    key: action.key,
-    "data-card-action": true,
-    "data-card-action-side": action.side,
-    className: `relative z-[1] flex items-center gap-2 rounded-2xl border-2 bg-black/55 px-2 ${action.side === 'foe' ? 'border-rose-400/80' : 'border-amber-300/70'} ${compact ? "py-0.5" : "py-1"} shadow-lg`
-  }, React.createElement("span", {
-    "data-card-fit": true,
-    className: `shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-black ${action.side === 'foe' ? 'bg-rose-500 text-white' : 'bg-amber-300 text-slate-950'}`
-  }, action.side === 'foe' ? watch ? who.name : '相手' : watch ? meName : '自分'), !compact && stageFit < 2 && action.cards.slice(0, 3).map((no, i) => {
-    const c = cardOf(db, no);
-    return c ? React.createElement("img", {
-      key: i,
-      src: CARD_IMG(c.img),
-      alt: c.name,
-      className: `${compact ? 'h-[40px] w-[29px]' : 'h-[64px] w-[46px]'} rounded-[4px] object-cover shadow`
-    }) : null;
-  }), React.createElement("div", {
-    className: `${tiny || wide ? 'whitespace-nowrap text-[12px]' : 'text-[13px]'} font-black leading-tight`
-  }, action.who, React.createElement("span", {
-    className: tiny || wide ? 'text-[13px] text-amber-200' : 'block text-[15px] text-amber-200'
-  }, "「", action.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」"))), st.field && cardOf(db, st.field.no) && React.createElement("button", {
+  })), st.field && cardOf(db, st.field.no) && React.createElement("button", {
     type: "button",
     "data-card-env": st.field.no,
     "data-card-env-side": st.field.p === CARD_ME ? 'me' : 'foe',
@@ -97694,11 +97699,33 @@ const CardBattleBoard = ({
     pv: guardPv,
     compact: compact || stageFit >= 1,
     tight: tiny || stageFit >= 2
-  }), (pendingText ? [] : compact || tutorial || stageFit >= 1 ? logLines.slice(stageFit >= 1 || action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => React.createElement("div", {
-    key: i,
-    "data-card-log-kind": l.kind || undefined,
-    className: `${i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'} ${l.kind === 'ko' ? '!text-rose-300 font-black' : l.kind === 'hit' && /ダメージ/.test(l.text) ? '!text-rose-200' : ''}`
-  }, cardLogText(l))))), !wide && tutorBox, React.createElement("div", {
+  }), !pendingText && liveLine && React.createElement("div", {
+    className: "flex items-center justify-center gap-1.5"
+  }, liveCards.map((no, i) => {
+    const c = cardOf(db, no);
+    return c ? React.createElement("img", _extends({
+      key: i,
+      "data-card-live-card": no,
+      src: CARD_IMG(c.img),
+      alt: c.name
+    }, press(no, () => setDetail(no)), {
+      className: `${tiny || wide ? 'h-[24px]' : 'h-[34px]'} aspect-[5/7] shrink-0 rounded-[3px] object-cover shadow`
+    })) : null;
+  }), React.createElement("div", {
+    "data-card-log-kind": liveLine.kind || undefined,
+    style: (tiny || wide) && [...cardLogText(liveLine)].length <= 30 ? {
+      whiteSpace: 'nowrap',
+      fontSize: `clamp(9px, ${(84 / ([...cardLogText(liveLine)].length + (action ? 3 : 0) + liveCards.length * 2)).toFixed(1)}vw, 12px)`
+    } : undefined,
+    className: `min-w-0 ${(tiny || wide) && [...cardLogText(liveLine)].length <= 30 ? '' : 'line-clamp-2'} ${liveLine.kind === 'ko' ? 'text-rose-300 font-black' : liveLine.kind === 'hit' && /ダメージ/.test(liveLine.text) ? 'text-rose-100' : ''}`
+  }, action && !endFx && !turnBanner && React.createElement("span", {
+    "data-card-action": true,
+    "data-card-action-side": action.side,
+    className: "mr-1.5 inline-block align-[1px]"
+  }, React.createElement("span", {
+    "data-card-fit": true,
+    className: `whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-black ${action.side === 'foe' ? 'bg-rose-500 text-white' : 'bg-amber-300 text-slate-950'}`
+  }, action.side === 'foe' ? watch ? who.name : '相手' : watch ? meName : '自分')), cardLogText(liveLine))))), !wide && tutorBox, React.createElement("div", {
     "data-card-side-active": turnLive && turnMe ? 'me' : undefined,
     "data-card-floor": "me",
     className: `flex shrink-0 items-end justify-around rounded-2xl px-1 transition-shadow ${turnLive && turnMe ? 'shadow-[inset_0_0_0_2px_rgba(252,211,77,.8),0_0_16px_rgba(252,211,77,.35)]' : ''}`,
