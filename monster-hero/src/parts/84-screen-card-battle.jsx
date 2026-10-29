@@ -2530,6 +2530,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const [kitView, setKitView] = useState(null); // スターター選びで「中身を見る」を開いているキット
   const [starterOpen, setStarterOpen] = useState(null); // はじめのスターターを開ける画面に渡す並び(cardStarterOpenResult)
   const [foe, setFoe] = useState({ who: 'mua', level: 'easy' });
+  // 2026-10-29 社長の作り直し: 「助手と対戦」→「フリー対戦」(中に「助手/ほかのブリーダー」のタブ)・「みんなのデッキ」と「戦術カード」→「デッキ登録」。
+  //   公開の印(cardShareOpen)までは、デバッグ設定から入った人だけ新しい形。ふつうの人は今のまま
+  const shareForm = debug || (typeof cardShareOpen === 'function' && cardShareOpen());
+  const [foeTab, setFoeTab] = useState('assistant'); // フリー対戦のタブ: assistant / breeder
   const [startLevel, setStartLevel] = useState('last'); // 設定「助手と対戦の最初の強さ」
   const lastLevelRead = useRef(false);
   useEffect(() => {
@@ -3047,7 +3051,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           <button type="button" data-card-mode-assistant className="mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-orange-200 via-orange-400 to-rose-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); setView('foe'); }}>
             {/* 札の透かしの英字は、トップ・モンヒロビートと同じ置き方(端で切れて見えるのも同じ作り) */}
             <span aria-hidden="true" className="mhms-mark">ASSISTANT</span>
-            <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">⚔️</span><span><b className="block text-[22px] font-black italic leading-tight">助手と対戦</b><small className="block text-[11px] font-black text-slate-900/80">助手のみんなと戦う・強さは5段</small></span></span>
+            <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">⚔️</span><span><b className="block text-[22px] font-black italic leading-tight">{shareForm ? 'フリー対戦' : '助手と対戦'}</b><small className="block text-[11px] font-black text-slate-900/80">{shareForm ? '助手や、ほかのブリーダーのデッキと戦う' : '助手のみんなと戦う・強さは5段'}</small></span></span>
             {/* 顔は、もう会っている助手だけ(まだ会っていない助手が見えるとネタバレ。デバッグでも同じ) */}
             <span aria-hidden="true" className="relative flex -space-x-2">{assistantsUnlockedFrom(seenStoryIds).filter((x) => CARD_AI_HABITS[x.id]).map((x) => <img key={x.id} src={assistantFaceImage(x, 'normal')} alt="" className="h-10 w-10 rounded-full border-2 border-white/80 bg-slate-900 object-cover object-top shadow"/>)}</span>
           </button>
@@ -3057,20 +3061,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🎮</span><span><b className="block text-[22px] font-black italic leading-tight">マルチ対戦</b><small className="block text-[11px] font-black text-slate-900/80">ブリーダーどうしで戦う</small></span></span>
             {!cardPvpOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">{debug ? 'つくっている途中(デバッグ)' : '準備中'}</span>}
           </button>
-          {/* みんなのデッキ(95-card-deck-share.jsx・2026-10-29 社長)。全部そろうまでは、デバッグ設定から入ったときだけ出す */}
-          {typeof CardDeckShare === 'function' && (debug || cardShareOpen()) && (
-            <button type="button" data-card-mode-share onClick={() => { Audio_.fgSe.tap(); setView('share'); }} className="mhms-card mhms-in flex min-h-[110px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-emerald-200 via-emerald-400 to-teal-600 px-4 py-3 text-left text-slate-950 active:scale-[.98]">
-              <span aria-hidden="true" className="mhms-mark">DECKS</span>
-              <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🗂️</span><span><b className="block text-[22px] font-black italic leading-tight">みんなのデッキ</b><small className="block text-[11px] font-black text-slate-900/80">デッキを登録する・ほかの人のデッキと戦う</small></span></span>
-              {!cardShareOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">つくっている途中(デバッグ)</span>}
-            </button>
-          )}
-          {/* 戦術カード(96・97。2026-10-29 社長)。公開の印(cardTacticsOpen)までは、デバッグ設定から入ったときだけ出す */}
-          {typeof CardTacticsScreen === 'function' && (debug || cardTacticsOpen()) && (
+          {/* デッキ登録(95 の登録+96・97 の戦術カード。2026-10-29 社長)。公開の印(cardShareOpen)までは、デバッグ設定から入ったときだけ出す */}
+          {typeof CardTacticsScreen === 'function' && shareForm && (
             <button type="button" data-card-mode-tactics onClick={() => { Audio_.fgSe.tap(); setTacticsBack('mode'); setView('tactics'); }} className="mhms-card mhms-in flex min-h-[96px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-amber-200 via-amber-400 to-orange-600 px-4 py-3 text-left text-slate-950 active:scale-[.98]">
-              <span aria-hidden="true" className="mhms-mark">TACTICS</span>
-              <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🧠</span><span><b className="block text-[22px] font-black italic leading-tight">戦術カード</b><small className="block text-[11px] font-black text-slate-900/80">デッキの戦い方を組む・カードを引く</small></span></span>
-              {!cardTacticsOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">つくっている途中(デバッグ)</span>}
+              <span aria-hidden="true" className="mhms-mark">DECKS</span>
+              <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🗂️</span><span><b className="block text-[22px] font-black italic leading-tight">デッキ登録</b><small className="block text-[11px] font-black text-slate-900/80">デッキを登録する・戦術カードを組む・引く</small></span></span>
+              {!cardShareOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">つくっている途中(デバッグ)</span>}
             </button>
           )}
         </div>
@@ -3081,6 +3077,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     // 戻り先: みんなのデッキの「戦術カードを組む」から来たら、みんなのデッキへ戻る
     // ビートPを払うときは、戦術カードの保存と同じ取引で(persist はビートPを書く直前に読み直して差だけを足す)
     return <CardTacticsScreen db={db} decks={save.decks} point={save.point} onBack={() => { setView(tacticsBack); setTacticsBack('mode'); }}
+      share={typeof CardDeckShare === 'function' ? { collection: save.collection, frame: (rank && rank.profile && rank.profile.frame) || null, unlocked: save.unlocked, debug } : null}
       onPay={async (cost, entries) => (save.point >= cost ? persist({ point: save.point - cost }, {}, entries) : false)}/>;
   }
   if (view === 'share' && typeof CardDeckShare === 'function') {
@@ -3145,12 +3142,26 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       onNavigate('CARD_BATTLE');
     }}/>;
   }
+  // フリー対戦の「助手/ほかのブリーダー」のタブ(公開まではデバッグの人だけ)
+  const foeTabs = shareForm ? (
+    <div data-card-foe-tabs className="mb-2 flex shrink-0 gap-1.5" role="tablist">
+      {[['assistant', '助手'], ['breeder', 'ほかのブリーダー']].map(([id, label]) => (
+        <button key={id} type="button" role="tab" aria-selected={foeTab === id} data-card-foe-tab={id} onClick={() => { Audio_.fgSe.tap(); setFoeTab(id); }}
+          className={`flex-1 rounded-xl py-2 text-[13px] font-black ${foeTab === id ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`}>{label}</button>
+      ))}
+    </div>
+  ) : null;
+  if (view === 'foe' && shareForm && foeTab === 'breeder' && typeof CardDeckShare === 'function') {
+    return <CardDeckShare db={db} decks={save.decks} collection={save.collection} frame={(rank && rank.profile && rank.profile.frame) || null} onBack={() => setView('mode')}
+      unlocked={save.unlocked} debug={debug} part="fight" title="フリー対戦" headExtra={foeTabs} onFight={(e, lv) => startBattle({ who: e.tactics.habit, level: lv, share: e })}/>;
+  }
   if (view === 'foe') {
     const a = allAssistants.find((x) => x.id === foe.who) || foes[0];
     const line = a ? cardPickLine(a.id, 'challenge', null, () => 0.0) : null;
     return (
       <div data-mh-screen data-card-top="foe" className={SCREEN_SHELL_CLASS}>
-        <ScreenHead title="助手と対戦" accent="text-amber-200" onBack={() => setView('mode')} note="相手の助手と強さをえらびます"/>
+        <ScreenHead title={shareForm ? 'フリー対戦' : '助手と対戦'} accent="text-amber-200" onBack={() => setView('mode')} note="相手の助手と強さをえらびます"/>
+        {foeTabs}
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           {/* 7人(ソラシドの印が立ったとき)は縦4列(4人＋3人)・横7列。6人まではいまの縦3列・横6列のまま(2026-10-27 社長の答え・ソランド部長)。
               7列は横の小さい画面(568×320)で名前の字が小さくなりすぎた(5.9px)ので、すき間と札の内側を詰めて、いまの6列と同じくらいにする */}
