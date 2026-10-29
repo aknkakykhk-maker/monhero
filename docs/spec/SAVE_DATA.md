@@ -92,6 +92,7 @@
 | `mh_card_shop_v1` | object / `cardNormalizeShop` | マーケットで買った選ばなかったスターターキットの印 `{ starters:{ キットid: 時刻 } }`。印があるキットは二度と買えない(`cardBuyStarter`) |
 | `mh_card_gacha_points_v1` | number / `cardNormalizeGacha` | MFバトルカードのガチャポイント(2026-10-27)。ブースターパック1つで +10(パックを買う保存と同じまとまりで1回だけ足す)。上限なし。500で `cardExchangeCatalog` がカタログ1冊にかえる(500減る・あまりは残る)。無い・壊れていたら 0。公開前に買ったパックの分は入れない |
 | `mh_card_catalogs_v1` | number / `cardNormalizeCatalogs` | 持っているバトルカードカタログの冊数。`cardUseCatalog` が1冊減らして、選んだカードを `mh_card_collection_v1` に1枚足す(持てる数いっぱいのカードは選べない)。無い・壊れていたら 0 |
+| `mh_card_weekly_reward_v1` | array / `cardNormalizeWeeklyClaims` | MFバトルカードの週間報酬(2026-10-29)を受け取った週の一覧 `['card_weekly_2026-11-02', …]`(新しい30件まで)。もらえる物が無かった週も入れる(次から問い合わせない)。配列でない(壊れている)ときは何も配らない。順位はサーバーの表 `card_battle_week_v1`(週+人で1行)から数える。2026-11-02 より前の週は配らない |
 | `mh_card_top_assist_v1` | object | MFバトルカードのトップの助手の出し入れ `{ modeSelectArt, modeSelectComment }`。無い・壊れていたら両方ON |
 | `mh_card_rank_sync_v1` | string | MFバトルカードのランキング(表 `card_battle_ranks_v2`。無い環境では旧表 `card_battle_ranks`)へ最後に送った行の中身。同じなら送り直さない(90-card-rank.jsx) |
 | `mh_card_bgm_v1` | object / `normalizeCardBgm` | MFバトルカードのBGM `{ top: 曲id(トップ画面・2026-10-26 に足した項目), cpu: 'auto'(相手の助手に合わせる)か曲id, pvp: 曲id }`。オプションで曲を選んだときだけ書く。無い項目・知らない曲idは既定(top `atsu_cup_theme` = MF × ICHIKA MIX・cpu `auto`・pvp `ichika_battle`)へ。選んだ人の値は書き換えない |

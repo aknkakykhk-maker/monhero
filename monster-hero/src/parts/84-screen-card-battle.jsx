@@ -2659,6 +2659,53 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     return () => clearInterval(t);
   }, [save ? 1 : 0, screen]);
 
+  // ---- 週間報酬(2026-10-29 社長。90 の cardWeeksAwaitingReward)。トップを開いたとき、終わった週の分を調べて帯を出す ----
+  //   ランキングに数える人(rank.send)だけ。受け取りは、受け取った週の一覧を読み直して確かめてから、ビートP・ガチャポイントと同じ取引で保存する
+  const [weekly, setWeekly] = useState([]); // [{ id, key, point, place, wins }]
+  const [weeklyBusy, setWeeklyBusy] = useState(false);
+  const weeklyChecked = useRef(false);
+  useEffect(() => {
+    if (!save || !db || debug || !(rank && rank.send) || screen !== 'CARD_TOP' || weeklyChecked.current) return;
+    weeklyChecked.current = true;
+    void (async () => {
+      try {
+        const claims = cardNormalizeWeeklyClaims(await storeGet(CARD_SAVE_KEYS.weeklyReward, null));
+        const weeks = cardWeeksAwaitingReward(Date.now(), claims);
+        if (!weeks.length) return;
+        const breederId = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
+        if (!breederId) return;
+        const list = [];
+        for (const w of weeks) {
+          const st = await cardWeekStanding(w.key, breederId); // 読めなかったら例外(今回は出さない。次に開いたときにもう一度)
+          list.push({ id: w.id, key: w.key, ...cardWeeklyRewardOf({ place: st.place, wins: st.wins }) });
+        }
+        // もらえる物が無い週は、受け取ったものとして覚える(次から問い合わせない)
+        const empty = list.filter((x) => !x.point).map((x) => x.id);
+        if (empty.length) {
+          const raw = await storeGet(CARD_SAVE_KEYS.weeklyReward, null);
+          const now = cardNormalizeWeeklyClaims(raw);
+          if (now) await saveStoredValuesOrRollback([{ key: CARD_SAVE_KEYS.weeklyReward, before: raw, next: [...now, ...empty.filter((id) => !now.includes(id))].slice(-30) }], storeGet, storeSet);
+        }
+        setWeekly(list.filter((x) => x.point));
+      } catch (_) { /* 通信できないときは出さない */ }
+    })();
+  }, [save ? 1 : 0, screen, rank && rank.send ? 1 : 0]);
+  const claimWeekly = async (w) => {
+    if (weeklyBusy) return;
+    setWeeklyBusy(true);
+    try {
+      const raw = await storeGet(CARD_SAVE_KEYS.weeklyReward, null);
+      const claims = cardNormalizeWeeklyClaims(raw);
+      if (!claims || claims.includes(w.id)) { setWeekly((l) => l.filter((x) => x.id !== w.id)); return; } // もう受け取った(ほかのタブなど)・保存が壊れている
+      const ok = await persist({ point: save.point + w.point }, {}, [
+        { key: CARD_SAVE_KEYS.weeklyReward, before: raw, next: [...claims, w.id].slice(-30) },
+      ]);
+      if (!ok) { setNotice('保存できませんでした。もう一度お試しください'); return; }
+      setWeekly((l) => l.filter((x) => x.id !== w.id));
+      setNotice(`週間報酬を受け取りました(ビートP +${w.point.toLocaleString()})`);
+    } finally { setWeeklyBusy(false); }
+  };
+
   // 過去の対戦を見る(93-card-replay.jsx)。id … 試合の番号。back … とじたあとに戻る画面(view)
   const openReplay = async (id, back = 'top') => {
     const rec = await cardReplayGet(id);
@@ -3412,6 +3459,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             </button>
           )}
           {/* 横の背の低い画面(高さ420まで)では1行に縮める(2行だと下のボタンが画面の外へ押し出される。667×375 の点検) */}
+          {weekly.map((w) => (
+            <CardRewardBand key={w.id} tag="weekly" busy={weeklyBusy} onClaim={() => { void claimWeekly(w); }}
+              title={`${w.key.slice(5).replace('-', '/')}からの週の週間報酬`}
+              lines={[`MASTER の勝ち数 ${w.wins}勝・${w.place}位`, `ビートP +${w.point.toLocaleString()}`]}/>
+          ))}
           {notice && <p data-card-top-notice className={`text-[12px] font-bold text-amber-200 [@media(orientation:landscape)_and_(max-height:420px)]:truncate [@media(orientation:landscape)_and_(max-height:420px)]:text-[11px] [@media(orientation:landscape)_and_(max-height:420px)]:leading-snug`} style={JA_LABEL_STYLE} title={notice}>{jaWrap(notice)}</p>}
           <div data-card-top-cards className="grid grid-cols-2 gap-2">
             {bigCards.map((c, idx) => (
