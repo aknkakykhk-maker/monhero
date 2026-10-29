@@ -3,11 +3,12 @@
 //   node tools/card/card-tactics-gambit-check.js [--verbose]
 //
 // 見るもの
-//   A. カードの表: 154枚(条件98・基本15・ブリーダー12・モンスター29)・N91・R57・SR6・はじめに配る9枚・id が重ならない
+//   A. カードの表: 246枚(条件132・基本20・ブリーダー38・モンスター56)・N146・R86・SR14・はじめに配る10枚・id が重ならない
 //   B. 枠を読める形にする: 知らないカード・枠と区分の取り違え・種族の無い「種族を決めた相手」は捨てる・ブリーダー3行・モンスター5行まで
 //   C. 枠が無いときは今と同じ手(助手と対戦・マルチの助手は変わらない)
 //   D. 上から優先: 当たった行の手をする。当たらない・場面が違う・出せる手が無い行は飛ばす。OFF の行は飛ばす。モンスターの枠はその子の手だけ
 //   H. 基本カード: メインはそのまま・サブは3分の1。メインだけで助手の型と同じくせ。慎重型は効きを半分に
+//   I. 増やしたカード: この子の条件・守るときの条件・立ち回り・ブリーダーのカードを温存・基本カードの細かいくせ(速攻・一点集中・手札温存・守り方)
 //   E. 標的: 「相手のライフ◯%以下」▶「攻める」は、その子を攻める
 //   F. 守り: 守らない・ダメージ◯以上だけ守る・倒されるときだけ守る / ガッツ: ◯枚だけ置く・守り札を残す
 //   G. すべての条件と行動が、いろいろな場で投げずに動く(助手どうしの対戦を、並びを持たせて最後まで打つ)
@@ -19,7 +20,7 @@ const GAME = path.resolve(__dirname, '..', '..', 'monster-hero');
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
 const src = (f) => fs.readFileSync(path.join(GAME, f), 'utf8');
 vm.runInContext(`${src('data/card-battle-cards.js')}\n;\n${src('src/parts/82-card-battle-core.jsx')}\n;\n${src('src/parts/82-card-tactics-core.jsx')}\n;\n`
-  + 'this.E = { CARD_BATTLE_DATA, CARD_AI_HABITS, CARD_TACTIC_CARDS, CARD_TACTIC_START, CARD_TACTIC_GROUPS, cardTacticNormalizeFrames, cardTacticHabitOf, cardTacticFilled, cardTacticDecide, cardTacticCond, cardTacticOf, cardCreateGame, cardApplyAction, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardOther, cardGuardOptions };', ctx);
+  + 'this.E = { cardTacticKnobsOf, CARD_BATTLE_DATA, CARD_AI_HABITS, CARD_TACTIC_CARDS, CARD_TACTIC_START, CARD_TACTIC_GROUPS, cardTacticNormalizeFrames, cardTacticHabitOf, cardTacticFilled, cardTacticDecide, cardTacticCond, cardTacticOf, cardCreateGame, cardApplyAction, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardOther, cardGuardOptions };', ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 const VERBOSE = process.argv.includes('--verbose');
@@ -33,10 +34,10 @@ const J = (x) => JSON.stringify(x);
   const C = E.CARD_TACTIC_CARDS;
   const n = (f) => C.filter(f).length;
   const cat = (k) => n((c) => c.cat === k);
-  check('A 154枚', C.length === 154, C.length);
-  check('A 条件98・基本15・ブリーダー12・モンスター29', cat('cond') === 98 && cat('base') === 15 && cat('breeder') === 12 && cat('monster') === 29, `${cat('cond')}/${cat('base')}/${cat('breeder')}/${cat('monster')}`);
-  check('A N91・R57・SR6', n((c) => c.r === 'N') === 91 && n((c) => c.r === 'R') === 57 && n((c) => c.r === 'SR') === 6, `${n((c) => c.r === 'N')}/${n((c) => c.r === 'R')}/${n((c) => c.r === 'SR')}`);
-  check('A はじめに配る9枚', E.CARD_TACTIC_START.length === 9, J(E.CARD_TACTIC_START));
+  check('A 246枚', C.length === 246, C.length);
+  check('A 条件132・基本20・ブリーダー38・モンスター56', cat('cond') === 132 && cat('base') === 20 && cat('breeder') === 38 && cat('monster') === 56, `${cat('cond')}/${cat('base')}/${cat('breeder')}/${cat('monster')}`);
+  check('A N146・R86・SR14', n((c) => c.r === 'N') === 146 && n((c) => c.r === 'R') === 86 && n((c) => c.r === 'SR') === 14, `${n((c) => c.r === 'N')}/${n((c) => c.r === 'R')}/${n((c) => c.r === 'SR')}`);
+  check('A はじめに配る10枚', E.CARD_TACTIC_START.length === 10, J(E.CARD_TACTIC_START));
   check('A id が重ならない', new Set(C.map((c) => c.id)).size === C.length);
   check('A 名前に◯が残らない', C.every((c) => !c.name.includes('◯')), C.filter((c) => c.name.includes('◯')).map((c) => c.id).join(','));
   check('A 行動には場面がある', C.filter((c) => c.cat === 'breeder' || c.cat === 'monster').every((c) => ['attack', 'guard', 'guts'].includes(c.phase)));
@@ -217,6 +218,29 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
   check('H 慎重型(メイン)はほかの効きを半分に', near(calm.big, 1.1), calm.big);
   check('H 臨機応変型・持久型(メイン)', E.cardTacticHabitOf(['tFlex', null, null]).flex === true && E.cardTacticHabitOf(['tMill', null, null]).mill === 1);
   check('H 基本カードが無ければ null', E.cardTacticHabitOf([null, null, null]) === null);
+}
+
+// ---- I ----
+{
+  const P = (g) => ({ ...E.cardAiPolicy('kyuko', 'master'), gambit: g });
+  let st = scene();
+  st.players[0].mons[0].life = 1; // モッチー(左の子)のライフ少し
+  const c1 = E.cardTacticCond(db, st, 0, E.cardTacticOf('selfLife.30'), null, { mi: 0, phase: 'attack' });
+  const c2 = E.cardTacticCond(db, st, 0, E.cardTacticOf('selfLife.30'), null, { mi: 1, phase: 'attack' });
+  const c3 = E.cardTacticCond(db, st, 0, E.cardTacticOf('selfLife.30'), null, { mi: null, phase: 'attack' });
+  check('I 「この子のライフ30%以下」はその枠の子だけを見る', !!c1 && c2 === null && c3 === null, `${J(c1)} ${J(c2)} ${J(c3)}`);
+  check('I 守るときの条件は守るときだけ', E.cardTacticCond(db, st, 0, E.cardTacticOf('incoming.3'), null, { mi: 0, phase: 'attack' }) === null);
+  const skip = E.cardAiChooseAction(db, st, P({ mons: [[{ c: 'any', a: 'stance.この子は攻撃しない' }], [], []] }), zero);
+  check('I 立ち回り「この子は攻撃しない」(モッチーしか攻撃できない場なので攻撃を終える)', skip && skip.type === 'endAttacks', J(skip));
+  const light = E.cardAiChooseAction(db, st, P({ base: ['tRush', null, null] }), zero);
+  check('I 速攻型は軽い技だけ(モッチー砲6は出さない)', light && (light.type === 'endAttacks' || st.players[0].hand[light.hand[0]] !== '105'), J(light));
+  const keep = E.cardAiChooseAction(db, st, P({ base: ['tHand', null, null] }), zero);
+  check('I 手札温存型は手札を2枚残す(2枚しかないので攻撃しない)', keep && keep.type === 'endAttacks', J(keep));
+  st = scene();
+  st.players[1].mons[2].life = 4;
+  const focus = E.cardAiChooseAction(db, st, P({ base: ['tFocus', null, null] }), zero);
+  check('I 一点集中型はいちばん弱った子を狙う', focus && focus.type === 'attack' && focus.target && focus.target.m === 2, J(focus));
+  check('I サブのくせは3回に1回の番だけ', JSON.stringify(E.cardTacticKnobsOf(['tBalance', 'tRush', null], { ...st, turn: 1, first: 0 }, 0)) === '{}', J(E.cardTacticKnobsOf(['tBalance', 'tRush', null], { ...st, turn: 1, first: 0 }, 0)));
 }
 
 console.log(`card-tactics-gambit-check: ${passed} OK / ${fails.length} NG`);
