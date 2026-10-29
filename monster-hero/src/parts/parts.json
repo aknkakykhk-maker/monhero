@@ -319,7 +319,7 @@
     },
     {
       "file": "82-card-tactics-core.jsx",
-      "role": "MFバトルカードの戦術カード(ガンビット型)の中身。142枚の表(CARD_TACTIC_CARDS)・条件を見る・行動の手を選ぶ・行を上から見る(cardTacticDecide)。82 の cardAiChooseAction が policy.gambit を持つときだけ呼ぶ",
+      "role": "MFバトルカードの戦術カード(ガンビット型)の中身。154枚の表(CARD_TACTIC_CARDS。条件・基本・ブリーダー・モンスター)・枠(基本メイン1+サブ2・ブリーダー・モンスターごと)・条件を見る・行動の手を選ぶ・枠を順に見る(cardTacticDecide)。82 の cardAiChooseAction が policy.gambit を持つときだけ呼ぶ",
       "pure": true
     },
     {

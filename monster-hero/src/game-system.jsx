@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 20b119c11ecf2da3
+// generated-sha256: fc17b73b2e7de421
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10810,10 +10810,10 @@ const RAGNAROK_SETTING = Object.freeze({ id:'RAGNAROK', label:'RAGNAROK', japane
 // 敵生成側は難易度名ではなく extremeEnemyStatAdjust だけを見る。
 const HELHEIM_SETTING = Object.freeze({ id:'HELHEIM', label:'HELHEIM', japanese:'ヘルヘイム', available:true, debugAvailable:true, power:230, score:20, xp:100, gold:80, psyche:160, waveCount:10, unlockRequirement:'RAGNAROK', rankingId:'ExtremeHELHEIM', recordId:'HELHEIM', description:'冥府が2WAVEごとに深まり、味方の最大ライフが削れていく。ボスは何度でも起き上がり、距離強化もWAVEごとに薄れていく、極限チャレンジの最奥の難易度。', cardDescription:'2WAVEごとに冥府が深まる。敵のライフは10倍で、距離強化はWAVEごとに薄れ、ボスは何度も蘇る。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 3:1, 5:2, 7:2, 9:1, 10:4 }), hpRate:0.5, atkBoostPerRevival:0.6 }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
 // ETERNALはHELHEIMの次の極限難易度(2026-10-29 社長の決定)。冥府・ボス復活・敵ライフ10倍・デュラハンの上乗せはHELHEIMのまま引き継ぎ、
-// 「殻」(WAVEの始めに敵が最大ライフ50%の盾をまとう。殻に当てた分は距離適性ボーナスに数えない)と
+// 「シールド」(WAVEの始めに敵が最大ライフ50%の盾をまとう。シールドに当てた分は距離適性ボーナスに数えない)と
 // 「貫き」(敵の攻撃の30%〜50%が丈夫さを無視する)を足す。試合を長引かせ、丈夫さの効きすぎを抑えるためのルール。
 // 与ダメ低下は合計ターンで数えるまま(最低10%)。敵の強さ220は、今のHELHEIMクリア編成の約2倍の火力が届く目安で決めた
-const ETERNAL_SETTING = Object.freeze({ id:'ETERNAL', label:'ETERNAL', japanese:'エターナル', available:true, debugAvailable:true, power:220, score:20, xp:120, gold:100, psyche:190, waveCount:10, unlockRequirement:'HELHEIM', rankingId:'ExtremeETERNAL', recordId:'ETERNAL', description:'冥府の上に、敵が殻をまとい、攻撃の一部が丈夫さを貫いてくる。戦いは長く続き、ターンとともに重くなる、極限チャレンジの最奥の難易度。', cardDescription:'WAVEの始めに敵が最大ライフ50%の殻をまとい、攻撃の30〜50%が丈夫さを貫く。冥府・ボス復活・敵ライフ10倍はヘルヘイムのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 3:1, 5:2, 7:2, 9:1, 10:4 }), hpRate:0.5, atkBoostPerRevival:0.6 }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
+const ETERNAL_SETTING = Object.freeze({ id:'ETERNAL', label:'ETERNAL', japanese:'エターナル', available:true, debugAvailable:true, power:220, score:20, xp:120, gold:100, psyche:190, waveCount:10, unlockRequirement:'HELHEIM', rankingId:'ExtremeETERNAL', recordId:'ETERNAL', description:'冥府の上に、敵がシールドをまとい、攻撃の一部が丈夫さを貫いてくる。戦いは長く続き、ターンとともに重くなる、極限チャレンジの最奥の難易度。', cardDescription:'WAVEの始めに敵が最大ライフ50%のシールドをまとい、攻撃の30〜50%が丈夫さを貫く。冥府・ボス復活・敵ライフ10倍はヘルヘイムのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 3:1, 5:2, 7:2, 9:1, 10:4 }), hpRate:0.5, atkBoostPerRevival:0.6 }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
 const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES,GOD_SETTING,RAGNAROK_SETTING,HELHEIM_SETTING,ETERNAL_SETTING]);
 // 極限チャレンジの難易度カラー。カード構造は共通のまま、上位ほど発光を少しずつ強める。
 // 常時アニメーションは使わず、iPhone縦画面でも視認性と軽さを優先する。
@@ -10891,8 +10891,8 @@ const helheimUnderworldRules = (waveNumber) => {
     allyMaxHpRate:1-level*0.05,
   });
 };
-// ETERNALの段階ルール。冥府(helheimUnderworldRules)をそのまま使い、殻と貫きを足す。
-//   shellRate … WAVEの始めに敵がまとう殻(最大ライフに対する割合)。殻に当てた分は距離適性ボーナスに数えない
+// ETERNALの段階ルール。冥府(helheimUnderworldRules)をそのまま使い、シールドと貫きを足す。
+//   shellRate … WAVEの始めに敵がまとうシールド(最大ライフに対する割合)。シールドに当てた分は距離適性ボーナスに数えない
 //   pierceRate … 敵の攻撃のうち、丈夫さを無視して通る割合(Lv1 30% → Lv5 50%)
 const eternalStageRules = (waveNumber) => {
   const base=helheimUnderworldRules(waveNumber);
@@ -10984,8 +10984,8 @@ const extremeAllyMaxHpRate = (difficultyId,waveNumber=1) => {
   const rate=Number(extremeWaveStageRules(difficultyId,waveNumber)?.allyMaxHpRate);
   return Number.isFinite(rate)&&rate>0 ? Math.min(1,rate) : 1;
 };
-// 殻(ETERNAL)。WAVEのはじめに、敵の最大ライフにこの率を掛けたぶんの殻をまとう。
-// 段階の表が shellRate を持たない難易度では0(殻なし)が返り、既存の難易度は変わらない。
+// シールド(ETERNAL)。WAVEのはじめに、敵の最大ライフにこの率を掛けたぶんのシールドをまとう。
+// 段階の表が shellRate を持たない難易度では0(シールドなし)が返り、既存の難易度は変わらない。
 const extremeEnemyShellRate = (difficultyId,waveNumber=1) => {
   const rate=Number(extremeWaveStageRules(difficultyId,waveNumber)?.shellRate);
   return Number.isFinite(rate)&&rate>0 ? Math.min(1,rate) : 0;
@@ -10994,14 +10994,14 @@ const extremeEnemyShellAmount = (maxHp,difficultyId,waveNumber=1) => {
   const hp=Number(maxHp);
   return Number.isFinite(hp)&&hp>0 ? Math.floor(hp*extremeEnemyShellRate(difficultyId,waveNumber)) : 0;
 };
-// 殻はライフより先に削れる。1撃ぶんのダメージを「殻が受けたぶん」と「ライフへ通ったぶん」に分ける
+// シールドはライフより先に削れる。1撃ぶんのダメージを「シールドが受けたぶん」と「ライフへ通ったぶん」に分ける
 const splitShellDamage = (shell,damage) => {
   const s=Math.max(0,Number(shell)||0), d=Math.max(0,Number(damage)||0);
   const absorbed=Math.min(s,d);
   return { absorbed, through:d-absorbed, shellLeft:s-absorbed };
 };
-// 敵へ1撃を当てたあとの敵。殻があれば先に殻を削り、残りをライフから引く。
-// 殻を持たない敵では、これまでの「ライフ−ダメージ(0で止める)」と同じ結果になる
+// 敵へ1撃を当てたあとの敵。シールドがあれば先にシールドを削り、残りをライフから引く。
+// シールドを持たない敵では、これまでの「ライフ−ダメージ(0で止める)」と同じ結果になる
 const enemyAfterHit = (enemy,damage) => {
   if (!enemy) return enemy;
   const shell=Number(enemy.shell)||0;
@@ -11009,7 +11009,7 @@ const enemyAfterHit = (enemy,damage) => {
   const sp=splitShellDamage(shell,damage);
   return { ...enemy, shell:sp.shellLeft, hp:Math.max(0,enemy.hp-sp.through) };
 };
-// 1ターンぶんのヒットを順に殻へ当て、各ヒットに shellAbsorbed(殻が受けたぶん)を書き込む。殻が受けた合計を返す
+// 1ターンぶんのヒットを順にシールドへ当て、各ヒットに shellAbsorbed(シールドが受けたぶん)を書き込む。シールドが受けた合計を返す
 const markShellAbsorbedHits = (hits,startShell) => {
   let left=Math.max(0,Number(startShell)||0), total=0;
   for (const h of (Array.isArray(hits)?hits:[])) {
@@ -11138,7 +11138,7 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     ['Lv4','＋補正 35%→25%・−補正 250%→300%'],
     ['Lv5','与ダメ低下 -1.75pt/T・最低15%'],
   ]);
-  // ETERNALは冥府(HELHEIM)をそのまま引き継ぐので、同じ説明に殻と貫きを足す
+  // ETERNALは冥府(HELHEIM)をそのまま引き継ぐので、同じ説明にシールドと貫きを足す
   if(difficultyId===HELHEIM_SETTING.id||difficultyId===ETERNAL_SETTING.id){
     const adjust=rules.enemyAdjust||{};
     const durahan=adjust.byEnemy?.Durahan;
@@ -11156,9 +11156,9 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     ]);
     push('距離強化',[
       ['WAVEごとに薄れる','WAVE1で10%、1WAVEごとに1%ずつ下がり、WAVE10で1%'],
-    ]);    if(difficultyId===ETERNAL_SETTING.id) push('殻と貫き',[
-      ['殻','WAVEの始めに、敵が最大ライフ50%ぶんの殻をまとう。殻を割るまで敵のライフは減らない'],
-      ['殻と距離強化','殻に当てたダメージは、距離強化(間合いのボーナス)に数えない'],
+    ]);    if(difficultyId===ETERNAL_SETTING.id) push('シールドと貫き',[
+      ['シールド','WAVEの始めに、敵が最大ライフ50%ぶんのシールドをまとう。シールドを割るまで敵のライフは減らない'],
+      ['シールドと距離強化','シールドに当てたダメージは、距離強化(間合いのボーナス)に数えない'],
       ['貫き','敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）'],
     ]);
   }
@@ -55263,14 +55263,16 @@ const cardSimulate = (db, { decks, policies, seed = 1, first = 0, maxSteps = 400
 // ---- part: 82-card-tactics-core.jsx ----
 // ===== MFバトルカード: 戦術カード(ガンビット型)の中身(純粋な計算) =====
 // 2026-10-29 社長: 戦術カードは FF12 のガンビットの形。1行 = 「条件カード ▶ 行動カード」。上の行から順に見て、
-//   条件に当たった行の行動をする(当たらなければ次の行)。いちばん下は、だれにもある受け皿「いつでも ▶ ふつうに打つ」(今のコンピューター)。
-//   カードは段ごとに1枚(ライフ90%〜10%・ガッツ1〜7 など)。142枚 = 条件98枚 + 行動44枚(N86・R50・SR6・はじめに配る8枚)。
-//   案と表: docs/progress/card-deck-share/gambit-cards-detail.md(ブランチ card-tactics-mock)
-// ★この部品は pure(画面・保存を触らない)。82 の cardAiChooseAction が policy.gambit(行の並び)を持つときだけ cardTacticDecide を呼ぶ。
+//   条件に当たった行の行動をする(当たらなければ次の行)。どれにも当たらなければ基本カードの型で打つ。
+//   カードは4つの山(154枚): 条件98(どの枠でも使う)・基本15(大まかな型)・ブリーダー12(ブリーダーの手)・モンスター29(技の使い方・立ち回り)。
+//   N91・R57・SR6・はじめに配る9枚。段ごとに1枚(ライフ90%〜10%・ガッツ1〜7 など)
+//   枠: 基本(メイン1+サブ2)・ブリーダーの枠・モンスター1体ごとの枠(同じカードをどの子の枠にも入れられる)
+//   案と表: docs/progress/card-deck-share/(ブランチ card-tactics-mock)
+// ★この部品は pure(画面・保存を触らない)。82 の cardAiChooseAction が policy.gambit(枠)を持つときだけ cardTacticDecide を呼ぶ。
 //   policy.gambit が無ければ何もしない(助手と対戦・マルチの助手の強さは変わらない)。
+//   何も入れていないとき(0行・基本カードなし)の強さは社長の別案待ち(2026-10-29)。いまは今の打ち方のまま
 //
-// 行の形: { c: 条件カードのid, a: 行動カードのid, on: 真偽, sp: 種族(「種族を決めた相手」のときだけ) }
-// 行動の「いつ見るか」: attack(自分の攻撃を選ぶとき)/ guard(攻撃を受けたとき)/ guts(ガッツの番)/ all(どの場面でも。くせを変えて、ふつうに打つ)
+// 行動の「いつ見るか」: attack(自分の攻撃を選ぶとき)/ guard(攻撃を受けたとき)/ guts(ガッツの番)
 //   いまの場面に合わない行と、行動で出せる手が無い行は飛ばす。損しかない攻撃(点数0以下)も「出せる手が無い」として飛ばす
 // 条件の「標的」: 当たった子を、そのまま行動の相手にする。foes … 相手の子の番号の組 / mine … 自分の子の番号の組(守るとき、狙われた子がこの中にいるか)
 
@@ -55316,31 +55318,44 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   { id: 'foeAir', cat: 'cond', sec: '状態', name: '空中に上がった相手', tiers: [['', 'N']], desc: 'いま空中になっている子(もとは地上・水中)' },
   { id: 'field', cat: 'cond', sec: '状態', name: '場に◯全体カードがある', tiers: [['自分の', 'N'], ['相手の', 'N']], desc: 'だれが出した全体カードが場にあるか' },
   { id: 'foeBig', cat: 'cond', sec: '状態', name: '相手が大技を構えている', tiers: [['', 'SR']], desc: '相手のガッツと使える技から、大技を撃てそうと見積もる' },
-  // ---------- 行動 ----------
-  { id: 'atk', cat: 'act', sec: '攻撃', phase: 'attack', name: '攻める', tiers: [['', 'N']], start: [''], desc: '点数がいちばん高い攻撃' },
-  { id: 'kind', cat: 'act', sec: '攻撃', phase: 'attack', name: '◯の技を出す', tiers: [['ちから', 'N'], ['かしこさ', 'N'], ['特殊', 'N']], desc: 'その種類の技を出す' },
-  { id: 'cost', cat: 'act', sec: '攻撃', phase: 'attack', name: '◯を出す', tiers: [['軽い技(ガッツ0〜1)', 'N'], ['中くらいの技(2〜3)', 'N'], ['大技(4以上)', 'N']], start: ['大技(4以上)'], desc: '払うガッツで選ぶ' },
-  { id: 'reach', cat: 'act', sec: '攻撃', phase: 'attack', name: '◯を出す', tiers: [['全体攻撃', 'R'], ['単体攻撃', 'N']], desc: '全員に当たる技か、1体に当てる技か' },
-  { id: 'eff', cat: 'act', sec: '攻撃', phase: 'attack', name: '「◯」の技を出す', tiers: [['回避されない', 'N'], ['攻撃できなくする', 'R'], ['ガッツを減らす', 'N'], ['吸い取る', 'N'], ['2回攻撃', 'R']], desc: 'その効き目のついた技を出す' },
-  { id: 'attach', cat: 'act', sec: '攻撃', phase: 'attack', name: '付ける札を使う', tiers: [['', 'R']], desc: '技に付ける札をいっしょに出す' },
-  { id: 'breeder', cat: 'act', sec: 'ブリーダー', phase: 'attack', name: 'ブリーダーのカード(◯)', tiers: [['攻撃', 'N'], ['守り', 'N'], ['引く・手札', 'N'], ['回復', 'N']], desc: 'その種類のブリーダーのカードを出す(守り … 攻撃できないを消す・倒れた子を戻す)' },
-  { id: 'fieldCard', cat: 'act', sec: 'ブリーダー', phase: 'attack', name: '全体カードを出す', tiers: [['', 'R']], desc: '場に残る全体カードを出す' },
-  { id: 'disrupt', cat: 'act', sec: '崩す', phase: 'attack', name: '崩し: ◯', tiers: [['手札を捨てさせる', 'R'], ['山札を削る', 'R'], ['ガッツを減らす', 'R'], ['番を飛ばす', 'SR']], desc: '相手の手を崩す札を出す' },
-  { id: 'guard', cat: 'act', sec: '守り', phase: 'guard', name: '守る', tiers: [['', 'N']], start: [''], desc: '攻撃を受けたら守り札で守る' },
-  { id: 'guardFirst', cat: 'act', sec: '守り', phase: 'guard', name: '◯を先に使う', tiers: [['回避', 'N'], ['防御', 'N']], desc: '守るとき、その種類の札で守る' },
-  { id: 'guardOver', cat: 'act', sec: '守り', phase: 'guard', name: 'ダメージ◯以上だけ守る', tiers: [[3, 'N'], [5, 'N'], [7, 'R']], desc: 'その数より小さい攻撃は守らない' },
-  { id: 'guardDie', cat: 'act', sec: '守り', phase: 'guard', name: '倒されるときだけ守る', tiers: [['', 'R']], desc: '受けたら倒れるときだけ守る' },
-  { id: 'cover', cat: 'act', sec: '守り', phase: 'guard', name: '味方をかばう', tiers: [['', 'R']], desc: 'かばう札で、味方への攻撃を受ける' },
-  { id: 'noGuard', cat: 'act', sec: '守り', phase: 'guard', name: '守らない', tiers: [['', 'R']], desc: '守り札を使わず受ける(札を残す)' },
-  { id: 'save', cat: 'act', sec: 'ガッツ', phase: 'guts', name: 'ガッツをためる', tiers: [['', 'N']], start: [''], desc: '手札を多めにガッツへ回す' },
-  { id: 'gutsN', cat: 'act', sec: 'ガッツ', phase: 'guts', name: 'ガッツを◯枚だけ置く', tiers: [[0, 'N'], [1, 'N'], [2, 'N']], desc: 'ガッツの番に置く数を決める' },
-  { id: 'keepGuard', cat: 'act', sec: 'ガッツ', phase: 'guts', name: '守り札を残して置く', tiers: [['', 'R']], desc: '回避・防御はガッツにしない' },
-  { id: 'stop', cat: 'act', sec: '流れ', phase: 'attack', name: '攻撃を止める', tiers: [['', 'N']], desc: 'この番の攻撃をここで終える' },
-  { id: 'charge', cat: 'act', sec: '流れ', phase: 'attack', name: '溜め技を使う', tiers: [['', 'R']], desc: '次の技を何倍にする札を先に使う' },
-  { id: 'ace', cat: 'act', sec: '特別', phase: 'all', name: '切り札を出す', tiers: [['', 'SR']], desc: '登録した切り札を、手にあれば先に出す' },
-  { id: 'flex', cat: 'act', sec: '特別', phase: 'all', name: '臨機応変', tiers: [['', 'SR']], desc: '場を見て、とどめ・全体・守り・攻めを切り替える' },
-  { id: 'mill', cat: 'act', sec: '特別', phase: 'all', name: '山札切れを待つ', tiers: [['', 'SR']], desc: '長引かせて、相手の山札切れで勝つ' },
-  { id: 'reckless', cat: 'act', sec: '特別', phase: 'all', name: '捨て身', tiers: [['', 'SR']], desc: '守らずに受けて、そのぶん倒しに行く' },
+  // ---------- 基本カード(大まかな型。基本の枠: メイン1・サブ2) ----------
+  { id: 'tBalance', cat: 'base', sec: '基本', name: 'バランス型', tiers: [['', 'N']], start: [''], habit: 'kyuko', desc: 'くせの少ない打ち方(きゅこの型)' },
+  { id: 'tAttack', cat: 'base', sec: '基本', name: '攻め型', tiers: [['', 'N']], habit: 'mua', desc: 'ためずに攻める(みゅあの型)' },
+  { id: 'tGuard', cat: 'base', sec: '基本', name: '守り型', tiers: [['', 'N']], habit: 'dra', desc: '守り札を残して堅く守る(ドラの型)' },
+  { id: 'tSave', cat: 'base', sec: '基本', name: '溜め型', tiers: [['', 'N']], habit: 'kiki', desc: 'ガッツをためて大技(ききの型)' },
+  { id: 'tDisrupt', cat: 'base', sec: '基本', name: '崩し型', tiers: [['', 'N']], habit: 'momosuke', desc: '相手の手を崩す(ももすけの型)' },
+  { id: 'tBig', cat: 'base', sec: '基本', name: '大技型', tiers: [['', 'R']], mul: { big: 1.6 }, desc: 'ダメージの大きい技を選ぶ' },
+  { id: 'tArea', cat: 'base', sec: '基本', name: '全体型', tiers: [['', 'R']], mul: { area: 1.6 }, desc: '全体攻撃・全体カードを選ぶ' },
+  { id: 'tFinish', cat: 'base', sec: '基本', name: '仕留め型', tiers: [['', 'R']], mul: { finish: 1.6 }, desc: 'あと少しで倒せる子を先に狙う' },
+  { id: 'tRush', cat: 'base', sec: '基本', name: '速攻型', tiers: [['', 'R']], mul: { attack: 1.6, big: 0.7 }, desc: '軽い技で手数を出す' },
+  { id: 'tSteady', cat: 'base', sec: '基本', name: '堅実型', tiers: [['', 'R']], mul: { keepGuard: 1.3, saveGuts: 1.3, attack: 0.8 }, desc: '守りとガッツを残して、無理をしない' },
+  { id: 'tJam', cat: 'base', sec: '基本', name: 'かく乱守り型', tiers: [['', 'R']], mul: { disrupt: 1.3, keepGuard: 1.3 }, desc: '崩しながら守る' },
+  { id: 'tCalm', cat: 'base', sec: '基本', name: '慎重型', tiers: [['', 'R']], calm: true, desc: '極端な打ち方をせず、損得で冷静に打つ(ほかの型の効きを半分に)' },
+  { id: 'tFlex', cat: 'base', sec: '基本', name: '臨機応変型', tiers: [['', 'SR']], habit: 'atsu', desc: '場を見て、とどめ・全体・守り・攻めを切り替える(あつの型)' },
+  { id: 'tMill', cat: 'base', sec: '基本', name: '持久型', tiers: [['', 'SR']], habit: 'sorashido', desc: '長引かせて、相手の山札切れで勝つ(ソラシドの型)' },
+  { id: 'tReckless', cat: 'base', sec: '基本', name: '捨て身型', tiers: [['', 'SR']], mul: { keepGuard: 0.5, finish: 1.3 }, desc: '守らずに受けて、そのぶん倒しに行く' },
+  // ---------- 行動(ブリーダーカード・モンスターカード) ----------
+  { id: 'atk', cat: 'monster', sec: '攻撃', phase: 'attack', name: '攻める', tiers: [['', 'N']], start: [''], desc: '点数がいちばん高い攻撃' },
+  { id: 'kind', cat: 'monster', sec: '攻撃', phase: 'attack', name: '◯の技を出す', tiers: [['ちから', 'N'], ['かしこさ', 'N'], ['特殊', 'N']], desc: 'その種類の技を出す' },
+  { id: 'cost', cat: 'monster', sec: '攻撃', phase: 'attack', name: '◯を出す', tiers: [['軽い技(ガッツ0〜1)', 'N'], ['中くらいの技(2〜3)', 'N'], ['大技(4以上)', 'N']], start: ['大技(4以上)'], desc: '払うガッツで選ぶ' },
+  { id: 'reach', cat: 'monster', sec: '攻撃', phase: 'attack', name: '◯を出す', tiers: [['全体攻撃', 'R'], ['単体攻撃', 'N']], desc: '全員に当たる技か、1体に当てる技か' },
+  { id: 'eff', cat: 'monster', sec: '攻撃', phase: 'attack', name: '「◯」の技を出す', tiers: [['回避されない', 'N'], ['攻撃できなくする', 'R'], ['ガッツを減らす', 'N'], ['吸い取る', 'N'], ['2回攻撃', 'R']], desc: 'その効き目のついた技を出す' },
+  { id: 'attach', cat: 'monster', sec: '攻撃', phase: 'attack', name: '付ける札を使う', tiers: [['', 'R']], desc: '技に付ける札をいっしょに出す' },
+  { id: 'breeder', cat: 'breeder', sec: 'ブリーダー', phase: 'attack', name: 'ブリーダーのカード(◯)', tiers: [['攻撃', 'N'], ['守り', 'N'], ['引く・手札', 'N'], ['回復', 'N']], desc: 'その種類のブリーダーのカードを出す(守り … 攻撃できないを消す・倒れた子を戻す)' },
+  { id: 'fieldCard', cat: 'breeder', sec: 'ブリーダー', phase: 'attack', name: '全体カードを出す', tiers: [['', 'R']], desc: '場に残る全体カードを出す' },
+  { id: 'disrupt', cat: 'monster', sec: '崩す', phase: 'attack', name: '崩し: ◯', tiers: [['手札を捨てさせる', 'R'], ['山札を削る', 'R'], ['ガッツを減らす', 'R'], ['番を飛ばす', 'SR']], desc: '相手の手を崩す札を出す' },
+  { id: 'guard', cat: 'monster', sec: '守り', phase: 'guard', name: '守る', tiers: [['', 'N']], start: [''], desc: '攻撃を受けたら守り札で守る' },
+  { id: 'guardFirst', cat: 'monster', sec: '守り', phase: 'guard', name: '◯を先に使う', tiers: [['回避', 'N'], ['防御', 'N']], desc: '守るとき、その種類の札で守る' },
+  { id: 'guardOver', cat: 'monster', sec: '守り', phase: 'guard', name: 'ダメージ◯以上だけ守る', tiers: [[3, 'N'], [5, 'N'], [7, 'R']], desc: 'その数より小さい攻撃は守らない' },
+  { id: 'guardDie', cat: 'monster', sec: '守り', phase: 'guard', name: '倒されるときだけ守る', tiers: [['', 'R']], desc: '受けたら倒れるときだけ守る' },
+  { id: 'cover', cat: 'monster', sec: '守り', phase: 'guard', name: '味方をかばう', tiers: [['', 'R']], desc: 'かばう札で、味方への攻撃を受ける' },
+  { id: 'noGuard', cat: 'monster', sec: '守り', phase: 'guard', name: '守らない', tiers: [['', 'R']], desc: '守り札を使わず受ける(札を残す)' },
+  { id: 'save', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: 'ガッツをためる', tiers: [['', 'N']], start: [''], desc: '手札を多めにガッツへ回す' },
+  { id: 'gutsN', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: 'ガッツを◯枚だけ置く', tiers: [[0, 'N'], [1, 'N'], [2, 'N']], desc: 'ガッツの番に置く数を決める' },
+  { id: 'keepGuard', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: '守り札を残して置く', tiers: [['', 'R']], desc: '回避・防御はガッツにしない' },
+  { id: 'stop', cat: 'breeder', sec: '流れ', phase: 'attack', name: '攻撃を止める', tiers: [['', 'N']], desc: 'この番の攻撃をここで終える' },
+  { id: 'charge', cat: 'monster', sec: '流れ', phase: 'attack', name: '溜め技を使う', tiers: [['', 'R']], desc: '次の技を何倍にする札を先に使う' },
+  { id: 'ace', cat: 'breeder', sec: '特別', phase: 'attack', name: '切り札を出す', tiers: [['', 'SR']], desc: '登録した切り札を、手にあれば先に出す' },
 ]);
 // カードのid は「種類.段」(段の無いカードは種類だけ)。保存(mh_card_tactics_v1)にこのまま書くので、変えない
 const cardTacticCardId = (g, v) => (v === '' ? g.id : `${g.id}.${v}`);
@@ -55352,16 +55367,56 @@ const CARD_TACTIC_BY_ID = Object.freeze(Object.fromEntries(CARD_TACTIC_CARDS.map
 const CARD_TACTIC_START = Object.freeze(CARD_TACTIC_CARDS.filter((c) => c.start).map((c) => c.id));
 const cardTacticOf = (id) => (typeof id === 'string' && Object.prototype.hasOwnProperty.call(CARD_TACTIC_BY_ID, id) ? CARD_TACTIC_BY_ID[id] : null);
 
-// 行の並びを読める形にする(知らないカード・条件と行動の取り違え・壊れた行は飛ばす。並びは5行まで)
-const CARD_TACTIC_ROWS_MAX = 5;
-const cardTacticNormalizeRows = (raw) => (Array.isArray(raw) ? raw : []).map((r) => {
+// 枠の形(2026-10-29 社長: 基本カードはメイン1+サブ2・ブリーダーの枠・モンスター1体ごとの枠)
+//   { base:[メイン, サブ1, サブ2](カードidか null), breeder:[行], mons:[[行],[行],[行]] }(mons は場の左・真ん中・右の子)
+//   行 … { c: 条件カード, a: 行動カード, on, sp(「種族を決めた相手」のときの種族) }。ブリーダーの枠にはブリーダーカード、モンスターの枠にはモンスターカードだけ
+//   数の上限: 基本3・ブリーダー3行・モンスター5行(開いている数はレベルで決まる。96 の cardLevelFrames)
+const CARD_TACTIC_FRAME_MAX = Object.freeze({ base: 3, breeder: 3, mon: 5 });
+const cardTacticNormalizeRows = (raw, cat, max) => (Array.isArray(raw) ? raw : []).map((r) => {
   if (!r || typeof r !== 'object') return null;
   const c = cardTacticOf(r.c), a = cardTacticOf(r.a);
-  if (!c || !a || c.cat !== 'cond' || a.cat !== 'act') return null;
+  if (!c || !a || c.cat !== 'cond' || a.cat !== cat) return null;
   const row = { c: c.id, a: a.id, on: r.on !== false };
   if (c.g === 'species') { if (typeof r.sp !== 'string' || !r.sp) return null; row.sp = r.sp.slice(0, 32); }
   return row;
-}).filter(Boolean).slice(0, CARD_TACTIC_ROWS_MAX);
+}).filter(Boolean).slice(0, max);
+const cardTacticNormalizeFrames = (raw) => {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const base = [0, 1, 2].map((i) => { const c = cardTacticOf(Array.isArray(r.base) ? r.base[i] : null); return c && c.cat === 'base' ? c.id : null; });
+  const mons = [0, 1, 2].map((i) => cardTacticNormalizeRows(Array.isArray(r.mons) ? r.mons[i] : null, 'monster', CARD_TACTIC_FRAME_MAX.mon));
+  return { base, breeder: cardTacticNormalizeRows(r.breeder, 'breeder', CARD_TACTIC_FRAME_MAX.breeder), mons };
+};
+// 入れたカードの数(基本カード+ON の行)。賢さに数える
+const cardTacticFilled = (frames) => {
+  const f = cardTacticNormalizeFrames(frames);
+  return f.base.filter(Boolean).length + f.breeder.filter((x) => x.on).length + f.mons.reduce((a, rows) => a + rows.filter((x) => x.on).length, 0);
+};
+
+// ---- 基本カードの型 → くせ ----
+// メインはそのまま、サブは倍率の上げ下げを3分の1ずつ効かせる(2026-10-29 社長「メイン1+サブ2」・ツナグ案)。上限は ×2・下限は ×0.3
+//   慎重型 … ほかの型の効きを半分に(サブなら6分の1減らす)/ 臨機応変型・持久型 … メインならいつも、サブなら3回に1回の番
+const CARD_TACTIC_DIMS = Object.freeze(['attack', 'keepGuard', 'saveGuts', 'big', 'disrupt', 'area', 'finish']);
+const CARD_TACTIC_SUB_W = 1 / 3;
+const cardTacticPresetOf = (card) => {
+  const g = CARD_TACTIC_GROUPS.find((x) => x.id === card.g) || {};
+  if (g.habit) return { ...(CARD_AI_HABITS[g.habit] || {}) };
+  if (g.mul) return { ...g.mul };
+  return {};
+};
+const cardTacticHabitOf = (base, st = null, p = 0) => {
+  const list = (Array.isArray(base) ? base : []).map((id, i) => ({ c: cardTacticOf(id), w: i === 0 ? 1 : CARD_TACTIC_SUB_W })).filter((x) => x.c && x.c.cat === 'base');
+  if (!list.length) return null;
+  const h = Object.fromEntries(CARD_TACTIC_DIMS.map((d) => [d, 1]));
+  list.forEach(({ c, w }) => { const pre = cardTacticPresetOf(c); CARD_TACTIC_DIMS.forEach((d) => { if (Number.isFinite(pre[d])) h[d] *= 1 + (pre[d] - 1) * w; }); });
+  const calm = list.filter((x) => x.c.g === 'tCalm').reduce((a, x) => a * (1 - 0.5 * x.w), 1);
+  CARD_TACTIC_DIMS.forEach((d) => { h[d] = Math.min(2, Math.max(0.3, 1 + (h[d] - 1) * calm)); });
+  const turn = st ? cardTacticOwnTurn(st, p) : 0;
+  const some = (g) => list.some((x) => x.c.g === g && (x.w === 1 || turn % 3 === 0));
+  if (some('tFlex')) h.flex = true;
+  const mill = list.filter((x) => x.c.g === 'tMill').reduce((a, x) => a + x.w, 0);
+  if (mill) h.mill = Math.min(1, mill);
+  return h;
+};
 
 // ---- 場を見る ----
 const cardTacticOwnTurn = (st, p) => Math.max(0, Math.floor((st.turn + (p === st.first ? 1 : 0)) / 2));
@@ -55486,77 +55541,76 @@ const cardTacticAimsAt = (st, o, foes) => {
   if (Array.isArray(o.split)) return foes.some((j) => (o.split[j] || 0) > 0);
   return !o.target;
 };
-// 「すべて」の行動: くせを変えた policy を返す(このあとは、ふつうに打つ)
-const cardTacticStylePolicy = (policy, act) => {
-  const habit = { ...(policy.habit || {}) };
-  if (act.g === 'flex') habit.flex = true;
-  if (act.g === 'mill') habit.mill = Math.max(habit.mill || 0, 1);
-  if (act.g === 'reckless') { habit.keepGuard = (habit.keepGuard || 1) * 0.5; habit.finish = (habit.finish || 1) * 1.3; }
-  return { ...policy, habit };
+// 行の行動を1つ見る。{ act } … その手 / null … この行は出せる手が無い(次の行へ)
+//   attack … mi が数ならその子の手だけ(モンスターの枠)。null ならブリーダーの手(ブリーダーの枠)
+const cardTacticRowAct = (db, st, policy, phase, row, aim, ctx) => {
+  const act = cardTacticOf(row.a);
+  const p = phase === 'guard' ? st.pending.defender : st.active;
+  if (act.phase !== 'all' && act.phase !== phase) return null;
+  if (act.g === 'ace') {
+    const aces = Array.isArray(policy.aces) ? policy.aces : [];
+    if (!aces.length || phase !== 'attack') return null;
+    const best = ctx.scored().find((x) => x.s > 0 && x.o.hand.some((i) => aces.includes(st.players[p].hand[i])) && cardTacticAimsAt(st, x.o, aim.foes));
+    return best ? { act: cardAiFillBind(db, st, best.o, policy) } : null;
+  }
+  if (phase === 'attack') {
+    if (act.g === 'stop') return { act: { type: 'endAttacks' } };
+    const mine = (o) => (ctx.mi === null ? o.type === 'breeder' || (cardOf(db, st.players[p].hand[o.hand[0]]) || {}).kind === 'fld' : o.type === 'attack' && o.mon === ctx.mi);
+    const best = ctx.scored().find((x) => x.s > 0 && mine(x.o) && cardTacticAttackFits(db, st, act, x.o) && cardTacticAimsAt(st, x.o, aim.foes));
+    return best ? { act: cardAiFillBind(db, st, best.o, policy) } : null;
+  }
+  if (phase === 'guard') {
+    const pd = st.pending;
+    const tgt = pd.targets[pd.ti];
+    if (aim.mine && !(tgt && tgt.p === p && aim.mine.includes(tgt.m))) return null; // 守る相手が決まっていて、狙われたのがその子でない
+    const dmg = cardAiIncomingDamage(db, st);
+    const target = tgt ? st.players[tgt.p].mons[pd.cover !== null && pd.cover !== undefined ? pd.cover : tgt.m] : null;
+    const kindOf = (o) => (cardOf(db, st.players[p].hand[o.hand]) || {}).kind;
+    if (act.g === 'noGuard') return { act: { type: 'pass' } };
+    if (act.g === 'guardOver' && dmg < act.v) return { act: { type: 'pass' } };
+    if (act.g === 'guardDie' && !(target && target.life <= dmg)) return { act: { type: 'pass' } };
+    const only = act.g === 'guardFirst' ? (o) => kindOf(o) === (act.v === '回避' ? 'dge' : 'blk')
+      : act.g === 'cover' ? (o) => { const c = cardOf(db, st.players[p].hand[o.hand]); return !!c && ['cover', 'shield', 'redirect'].some((t) => cardHasEff(c, t)); }
+        : null;
+    const g = cardAiChooseGuard(db, st, policy, () => 0, { force: true, only });
+    return g.type !== 'pass' ? { act: g } : null;
+  }
+  if (phase === 'guts') {
+    if (act.g === 'save') return { act: cardAiChooseGuts(db, st, { ...policy, habit: { ...(policy.habit || {}), saveGuts: Math.max(1.6, (policy.habit || {}).saveGuts || 1) } }) };
+    if (act.g === 'gutsN') return { act: cardAiChooseGuts(db, st, policy, { count: act.v }) };
+    if (act.g === 'keepGuard') return { act: cardAiChooseGuts(db, st, policy, { keepGuards: true }) };
+  }
+  return null;
 };
 
-// 行を上から見て、最初に当たった行の手を返す。{ act } … その手 / { policy } … くせを変えて、ふつうに打つ / null … 受け皿(ふつうに打つ)
+// 枠を順に見て、最初に当たった行の手を返す。{ act } … その手 / { policy } … 基本カードの型で、ふつうに打つ / null … 今のまま
+//   攻撃の番: 左の子の枠 → 真ん中 → 右 → ブリーダーの枠 / 守るとき: 狙われた子の枠 / ガッツの番: ブリーダーの枠。どれにも当たらなければ基本カードの型
 const cardTacticDecide = (db, st, policy) => {
-  const rows = cardTacticNormalizeRows(policy && policy.gambit).filter((r) => r.on);
-  if (!rows.length || st.winner !== null) return null;
+  const frames = cardTacticNormalizeFrames(policy && policy.gambit);
+  if (st.winner !== null) return null;
   const phase = st.pending ? 'guard' : st.phase === 'guts' ? 'guts' : st.phase === 'main' ? 'attack' : null;
   if (!phase) return null;
   const p = phase === 'guard' ? st.pending.defender : st.active;
-  let attackScored = null;
-  const scoredAttacks = () => { if (!attackScored) attackScored = cardAiAttackScored(db, st, cardAiAttackChoices(db, st, policy), policy); return attackScored; };
-  for (const row of rows) {
-    const act = cardTacticOf(row.a);
-    if (act.phase !== 'all' && act.phase !== phase) continue;
-    const aim = cardTacticCond(db, st, p, cardTacticOf(row.c), row);
-    if (!aim) continue;
-    if (act.phase === 'all') {
-      if (act.g === 'ace') {
-        const aces = Array.isArray(policy.aces) ? policy.aces : [];
-        if (!aces.length) continue;
-        if (phase === 'attack') {
-          const best = scoredAttacks().find((x) => x.s > 0 && x.o.hand.some((i) => aces.includes(st.players[p].hand[i])) && cardTacticAimsAt(st, x.o, aim.foes));
-          if (best) return { act: cardAiFillBind(db, st, best.o, policy) };
-          continue;
-        }
-        if (phase === 'guard') {
-          const g = cardAiChooseGuard(db, st, policy, () => 0, { force: true, only: (o) => aces.includes(st.players[p].hand[o.hand]) });
-          if (g.type !== 'pass') return { act: g };
-          continue;
-        }
-        continue;
-      }
-      return { policy: cardTacticStylePolicy(policy, act) };
-    }
-    if (phase === 'attack') {
-      if (act.g === 'stop') return { act: { type: 'endAttacks' } };
-      const best = scoredAttacks().find((x) => x.s > 0 && cardTacticAttackFits(db, st, act, x.o) && cardTacticAimsAt(st, x.o, aim.foes));
-      if (best) return { act: cardAiFillBind(db, st, best.o, policy) };
-      continue;
-    }
-    if (phase === 'guard') {
-      const pd = st.pending;
-      const tgt = pd.targets[pd.ti];
-      if (aim.mine && !(tgt && tgt.p === p && aim.mine.includes(tgt.m))) continue; // 守る相手が決まっていて、狙われたのがその子でない
-      const dmg = cardAiIncomingDamage(db, st);
-      const target = tgt ? st.players[tgt.p].mons[pd.cover !== null && pd.cover !== undefined ? pd.cover : tgt.m] : null;
-      const kindOf = (o) => (cardOf(db, st.players[p].hand[o.hand]) || {}).kind;
-      if (act.g === 'noGuard') return { act: { type: 'pass' } };
-      if (act.g === 'guardOver' && dmg < act.v) return { act: { type: 'pass' } };
-      if (act.g === 'guardDie' && !(target && target.life <= dmg)) return { act: { type: 'pass' } };
-      const only = act.g === 'guardFirst' ? (o) => kindOf(o) === (act.v === '回避' ? 'dge' : 'blk')
-        : act.g === 'cover' ? (o) => { const c = cardOf(db, st.players[p].hand[o.hand]); return !!c && ['cover', 'shield', 'redirect'].some((t) => cardHasEff(c, t)); }
-          : null;
-      const g = cardAiChooseGuard(db, st, policy, () => 0, { force: true, only });
-      if (g.type !== 'pass') return { act: g };
-      continue;
-    }
-    if (phase === 'guts') {
-      if (act.g === 'save') return { act: cardAiChooseGuts(db, st, { ...policy, habit: { ...(policy.habit || {}), saveGuts: Math.max(1.6, (policy.habit || {}).saveGuts || 1) } }) };
-      if (act.g === 'gutsN') return { act: cardAiChooseGuts(db, st, policy, { count: act.v }) };
-      if (act.g === 'keepGuard') return { act: cardAiChooseGuts(db, st, policy, { keepGuards: true }) };
+  const habit = cardTacticHabitOf(frames.base, st, p);
+  const pol = habit ? { ...policy, habit } : policy;
+  let scored = null;
+  const ctx = { mi: null, scored: () => { if (!scored) scored = cardAiAttackScored(db, st, cardAiAttackChoices(db, st, pol), pol); return scored; } };
+  const order = [];
+  if (phase === 'attack') { [0, 1, 2].forEach((mi) => order.push({ rows: frames.mons[mi], mi })); order.push({ rows: frames.breeder, mi: null }); }
+  if (phase === 'guard') { const t = st.pending.targets[st.pending.ti]; if (t && t.p === p) order.push({ rows: frames.mons[t.m] || [], mi: t.m }); }
+  if (phase === 'guts') order.push({ rows: frames.breeder, mi: null });
+  for (const fr of order) {
+    if (phase === 'attack' && fr.mi !== null && st.players[p].mons[fr.mi] && st.players[p].mons[fr.mi].ko) continue;
+    for (const row of fr.rows) {
+      if (!row.on) continue;
+      const aim = cardTacticCond(db, st, p, cardTacticOf(row.c), row);
+      if (!aim) continue;
+      ctx.mi = fr.mi;
+      const got = cardTacticRowAct(db, st, pol, phase, row, aim, ctx);
+      if (got) return got;
     }
   }
-  return null;
+  return habit ? { policy: pol } : null;
 };
 
 // ---- part: 83-card-battle-lines.jsx ----
@@ -67582,7 +67636,7 @@ function MonsterHeroGame() {
     setAttackAnim(null); setSlotSkill(null);
     addPopup(`${h.dmg}`, 'enemy', 'text-sky-200 drop-shadow-[0_0_20px_rgba(125,211,252,0.9)] text-5xl font-black animate-bounce',
       `🤖 ${h.actorName}の ${h.skillName} → 敵に ${h.dmg.toLocaleString()} ダメージ`);
-    setEnemy(prev => enemyAfterHit(prev, h.dmg)); // 殻(ETERNAL)があれば先に殻が受ける
+    setEnemy(prev => enemyAfterHit(prev, h.dmg)); // シールド(ETERNAL)があれば先にシールドが受ける
     await battleWait(550);
   };
   // カードを使わないターン(「ターンを進める」・緊急回復)のコピーの1手。敵へ当てて、倒したかを返す
@@ -67591,7 +67645,7 @@ function MonsterHeroGame() {
     const startHp = enemy?.hp ?? 0;
     const ca = runTacticsAiCopyAction(enemyDist);
     if (!(ca.total > 0)) return { defeated: false, enemyHp: startHp };
-    const shellAbsorbed = markShellAbsorbedHits(ca.hits, enemy?.shell); // 殻(ETERNAL)が受けたぶんはライフへ通らない
+    const shellAbsorbed = markShellAbsorbedHits(ca.hits, enemy?.shell); // シールド(ETERNAL)が受けたぶんはライフへ通らない
     for (const h of ca.hits) await playAiCopyHit(h);
     setCurrentWaveDamage(p => p + ca.total); raidJackDamageRef.current += Number(ca.total) || 0;
     const remaining = Math.max(0, startHp - (ca.total - shellAbsorbed));
@@ -77585,8 +77639,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // short … 名前の横の簡易表示に添える短い字(残りターンなど)。value … 詳細の中の言い方。note … 詳細の説明
     const add = (key, mark, label, value, tone, note, short = '') => list.push({ key, mark, label, value, tone, note, short });
     if (!enemy) return list;
-    // 殻(ETERNAL)。ライフより先に削れる。殻を削ったぶんは距離強化の加点に入らない
-    if (Number(enemy.shell) > 0) add('shell', '🛡️', '殻', `${Math.floor(enemy.shell).toLocaleString()}`, 'text-pink-200 border-pink-400/60', 'ライフより先に削れる。殻を削ったぶんは距離強化の加点に入らない', `${Math.floor(enemy.shell).toLocaleString()}`);
+    // シールド(ETERNAL)。ライフより先に削れる。シールドを削ったぶんは距離強化の加点に入らない
+    if (Number(enemy.shell) > 0) add('shell', '🛡️', 'シールド', `${Math.floor(enemy.shell).toLocaleString()}`, 'text-pink-200 border-pink-400/60', 'ライフより先に削れる。シールドを削ったぶんは距離強化の加点に入らない', `${Math.floor(enemy.shell).toLocaleString()}`);
     if (iceLockTurns > 0) add('ice', '❄️', '絶氷の楔', iceLockPreparing ? '準備' : `残り${iceLockTurns}T`, 'text-cyan-200 border-cyan-400/60', iceLockPreparing ? '次のターンから、敵は間合いを動けず、与えるダメージが30%下がる' : '敵は間合いを動けず、与えるダメージが30%下がる', iceLockPreparing ? '準備' : `${iceLockTurns}T`);
     if (enemyConfuseTurns > 0) add('confuse', '🌀', '乱心', `残り${enemyConfuseTurns}T`, 'text-violet-200 border-violet-400/60', '毎ターン50%で、敵は意味不明になって動けない', `${enemyConfuseTurns}T`);
     const psycho = isTacticsMode(runMode) ? tacticsExPsychoLockOf(tacticsExState, { wave, turn: turnCount }) : null;
@@ -80404,8 +80458,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       }
       commitAiCopy({...copy, picks:[], nextCard:null});
     }
-    // 殻(ETERNAL)。ヒットを順に殻へ当て、殻が受けたぶんを数える。殻が受けたぶんはライフへ通らず、
-    // 距離強化の加点にも入れない(2026-10-29 社長の決め)。殻を持たない敵では0
+    // シールド(ETERNAL)。ヒットを順にシールドへ当て、シールドが受けたぶんを数える。シールドが受けたぶんはライフへ通らず、
+    // 距離強化の加点にも入れない(2026-10-29 社長の決め)。シールドを持たない敵では0
     const shellAbsorbedTotal=markShellAbsorbedHits(attackHits,enemy?.shell);
     if (totalDmg>0) {
       if(totalDmg>0){
@@ -81431,8 +81485,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if (Number.isFinite(Number(scenario.enemyAtk))) { newEnemy.atk=Math.max(0,Math.floor(scenario.enemyAtk)); }
       battleScenarioIntentIndexRef.current=0;
     }
-    // 殻(ETERNAL)。WAVEのはじめに最大ライフの率ぶんをまとう(冥府Lvが上がるのもWAVEの変わり目なので、ここで足りる)。
-    // 殻を持たない難易度・ジャック戦・練習の台本では0のまま(既存の敵は何も変わらない)
+    // シールド(ETERNAL)。WAVEのはじめに最大ライフの率ぶんをまとう(冥府Lvが上がるのもWAVEの変わり目なので、ここで足りる)。
+    // シールドを持たない難易度・ジャック戦・練習の台本では0のまま(既存の敵は何も変わらない)
     const shell=raidRun||scenario?0:extremeEnemyShellAmount(newEnemy.maxHp,specialRuleDifficulty,w);
     if (shell>0) { newEnemy.shell=shell; newEnemy.maxShell=shell; }
     enemyDefeatResolvedRef.current=false;

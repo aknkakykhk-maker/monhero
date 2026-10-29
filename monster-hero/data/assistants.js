@@ -2482,8 +2482,8 @@ addAssistantLinePack({
       { e:'wink', t:'いちばん奥の難易度。ルール詳細を読んで、覚悟ができたら行こ〜' },
     ],
     eternalDifficulty: [
-      { e:'surprise', t:'ETERNALの敵は、WAVEのはじめにライフの半分ぶんの殻をまとってるの' },
-      { e:'troubled', t:'殻を削ったぶんは距離強化にならないし、敵の攻撃は一部が丈夫さを貫いてくるよ〜' },
+      { e:'surprise', t:'ETERNALの敵は、WAVEのはじめにライフの半分ぶんのシールドをまとってるの' },
+      { e:'troubled', t:'シールドを削ったぶんは距離強化にならないし、敵の攻撃は一部が丈夫さを貫いてくるよ〜' },
       { e:'wink', t:'いちばんきたえたパーティで行こ〜。ルール詳細は先に読んでね' },
     ],
   },
@@ -3270,8 +3270,8 @@ addAssistantLinePack({
       { e:'wink', t:'報酬は虹のプシュケー160個。短期決着を狙お♪' },
     ],
     eternalDifficulty: [
-      { e:'surprise', t:'ETERNALは、敵がWAVEのはじめに殻をまといまつ…！' },
-      { e:'troubled', t:'殻を削ったぶんは距離強化になりませんでつ。敵の攻撃は丈夫さを一部貫きまつ。' },
+      { e:'surprise', t:'ETERNALは、敵がWAVEのはじめにシールドをまといまつ…！' },
+      { e:'troubled', t:'シールドを削ったぶんは距離強化になりませんでつ。敵の攻撃は丈夫さを一部貫きまつ。' },
       { e:'wink', t:'報酬は虹のプシュケー190個。きたえ抜いてから挑も♪' },
     ],
     // ---- はじめて ----
@@ -3905,8 +3905,8 @@ addAssistantLinePack({
       { e:'happy', t:'ここまで来たキミなら、ももは止めないよ！' },
     ],
     eternalDifficulty: [
-      { e:'surprise', t:'まだ上があったの！？ ETERNAL、敵が殻をまとってくるんだって！' },
-      { e:'troubled', t:'殻を削っても距離強化は伸びないし、攻撃は丈夫さを貫いてくるよ。' },
+      { e:'surprise', t:'まだ上があったの！？ ETERNAL、敵がシールドをまとってくるんだって！' },
+      { e:'troubled', t:'シールドを削っても距離強化は伸びないし、攻撃は丈夫さを貫いてくるよ。' },
       { e:'excited', t:'報酬は虹のプシュケー190個。……キミなら、行くよね？♡' },
     ],
     // ---- はじめての設定 ----
@@ -4727,7 +4727,7 @@ addAssistantLinePack({
     ],
     eternalDifficulty: [
       { e:'normal', t:'エターナル。ヘルヘイムの先があるとはな' },
-      { e:'troubled', t:'敵は殻をかぶってくるし、攻撃は丈夫さを貫いてくる。守りだけじゃ持たんぞ' },
+      { e:'troubled', t:'敵はシールドを張ってくるし、攻撃は丈夫さを貫いてくる。守りだけじゃ持たんぞ' },
       { e:'excited', t:'ここを越えたら、おでもう何も言えんわ' },
     ],
     speciesChallenge: [
@@ -5198,8 +5198,8 @@ addAssistantLinePack({
       { e:'happy', t:'無理だと思ったら引いていい。恥ずかしいことちゃうよ' },
     ],
     eternalDifficulty: [
-      { e:'normal', t:'ヘルヘイムのさらに先や。敵は殻をまとって出てくるで' },
-      { e:'troubled', t:'殻を削ったぶんは距離強化にならん。攻撃も丈夫さを貫いてくる' },
+      { e:'normal', t:'ヘルヘイムのさらに先や。敵はシールドをまとって出てくるで' },
+      { e:'troubled', t:'シールドを削ったぶんは距離強化にならん。攻撃も丈夫さを貫いてくる' },
       { e:'happy', t:'しっかりきたえてからでええ。焦らんでな' },
     ],
     speciesChallenge: [
@@ -5493,8 +5493,8 @@ addAssistantLinePack({
       { e:'happy', t:'無理だと思ったら引いていいからね(〃´o｀)ﾌｩ…' },
     ],
     eternalDifficulty: [
-      { e:'normal', t:'ヘルヘイムのさらに先。敵はWAVEのはじめに殻をまとってるよ。' },
-      { e:'troubled', t:'殻を削っても距離強化は伸びないし、攻撃は丈夫さを貫いてくるの💦' },
+      { e:'normal', t:'ヘルヘイムのさらに先。敵はWAVEのはじめにシールドをまとってるよ。' },
+      { e:'troubled', t:'シールドを削っても距離強化は伸びないし、攻撃は丈夫さを貫いてくるの💦' },
       { e:'happy', t:'きたえ抜いてからでいいからね(〃´o｀)ﾌｩ…' },
     ],
     speciesChallenge: [
@@ -5612,8 +5612,8 @@ addAssistantLinePack({
       { e:'happy', t:'ここに立てるだけで、もう十分すごいじゃん♡' },
     ],
     eternalDifficulty: [
-      { e:'excited', t:'殻つきで、しかも攻撃が丈夫さを貫通。もう笑うしかないねw' },
-      { e:'troubled', t:'殻を削ったぶんは距離強化にならないんだって。容赦ないよ。' },
+      { e:'excited', t:'シールドつきで、しかも攻撃が丈夫さを貫通。もう笑うしかないねw' },
+      { e:'troubled', t:'シールドを削ったぶんは距離強化にならないんだって。容赦ないよ。' },
       { e:'happy', t:'ここまで来たなら、とことん付き合うよ♡' },
     ],
     speciesChallenge: [
@@ -5934,8 +5934,8 @@ addAssistantLinePack({
       { e:'happy', t:'無理だと思ったら引いていいんでつよ。逃げではありません。' },
     ],
     eternalDifficulty: [
-      { e:'normal', t:'ヘルヘイムのさらに先でつ。敵は殻をまとって出てきまつ。' },
-      { e:'troubled', t:'殻を削ったぶんは距離強化になりませんでつ。攻撃は丈夫さを貫いてきまつ。' },
+      { e:'normal', t:'ヘルヘイムのさらに先でつ。敵はシールドをまとって出てきまつ。' },
+      { e:'troubled', t:'シールドを削ったぶんは距離強化になりませんでつ。攻撃は丈夫さを貫いてきまつ。' },
       { e:'happy', t:'きたえ抜いてから挑めば大丈夫でつよ。' },
     ],
     speciesChallenge: [
@@ -6416,7 +6416,7 @@ addAssistantLinePack({
     ],
     eternalDifficulty: [
       { e:'surprise', t:'エターナル！ ヘルヘイムの先とか、まじで燃える！' },
-      { e:'troubled', t:'敵は殻をまとってくるし、攻撃は丈夫さを貫いてくる。えぐいね…' },
+      { e:'troubled', t:'敵はシールドをまとってくるし、攻撃は丈夫さを貫いてくる。えぐいね…' },
       { e:'excited', t:'ここ通ったら、{name}は伝説の勇者だよ！' },
     ],
     speciesChallenge: [
@@ -7149,7 +7149,7 @@ addAssistantLinePack({
     ],
     eternalDifficulty: [
       { e:'surprise', t:'エターナルかぁ。ヘルヘイムの先とか、ちょっとわくわくするわ' },
-      { e:'troubled', t:'殻を削っても距離強化は伸びないし、攻撃は丈夫さを貫いてくるよ😭' },
+      { e:'troubled', t:'シールドを削っても距離強化は伸びないし、攻撃は丈夫さを貫いてくるよ😭' },
       { e:'excited', t:'ここ通ったら、{name}は伝説のランカーだよ。ふふん' },
     ],
     speciesChallenge: [
@@ -8013,7 +8013,7 @@ addAssistantLinePack({
     ],
     eternalDifficulty: [
       { e:'surprise', t:'エターナル!? ヘルヘイムの先とか、うぉぉぉ……' },
-      { e:'troubled', t:'敵は殻をまとってくるし、攻撃は丈夫さを貫いてくる。殻を削っても距離強化は伸びないよ' },
+      { e:'troubled', t:'シールドに攻撃の貫き。シールドを削っても距離強化は伸びないよ' },
       { e:'excited', t:'ここを通ったら、{name}は伝説だぜ・・・！' },
     ],
     speciesChallenge: [
