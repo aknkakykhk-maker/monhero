@@ -146,13 +146,113 @@ const cardRankSync = async (db, { record, collection, profile }) => {
     const sign = JSON.stringify(row);
     if ((await storeGet(CARD_SAVE_KEYS.rankSync, null)) === sign) return true;
     const ok = await sbUpsertCardRank(row);
-    if (ok) { await storeSet(CARD_SAVE_KEYS.rankSync, sign); cardRankCache.clear(); }
+    // 週ごとの記録(card_battle_week_v1)にも、同じ週の勝ち数を送る(週間報酬の順位を、週が終わったあとに数えるため)。
+    //   送れなかったときは「送った印」を残さず、次の対戦のあとにもう一度送る
+    const weekOk = ok && row.breeder_id ? await cardWeekRowSync(row) : true;
+    if (ok && weekOk) { await storeSet(CARD_SAVE_KEYS.rankSync, sign); cardRankCache.clear(); }
     return ok;
   } catch (err) {
     console.error('[ranking] card_battle_ranks sync failed:', err && err.message ? err.message : err);
     return false;
   }
 };
+
+// ==================== 週間報酬(2026-10-29 社長) ====================
+// ・部門は MASTER の週の勝ち数だけ(社長「難易度はマスターのみ」)
+// ・1〜10位に、ガチャポイント (11−順位)×50(1位 500 … 10位 50)と、ビートP (11−順位)×200(1位 2,000 … 10位 200)
+// ・参加報酬: その週に助手と3回対戦で、ガチャポイント 20
+// ・終わった週の分を、2週間のうちに、カードのトップの帯で受け取る(モンヒロビートの週間報酬と同じ)
+// ・順位は、週ごとの記録の表 card_battle_week_v1(週+人で1行)で「自分より勝ち数が多い人の数+1」(いまのランキングと同じ数え方・同じ数は同じ順位)
+// ・受け取った週は mh_card_weekly_reward_v1 に覚える。保存が壊れているときは何も配らない(二重に配らないため)
+// ・CARD_WEEKLY_REWARD_FROM_MS より前に始まった週は配らない(表を足したのが 2026-10-29 で、その週の記録はそろっていない)
+const CARD_WEEK_TABLE = 'card_battle_week_v1';
+let _cardWeekUnavailable = false;
+const CARD_WEEKLY_REWARD_RANKS = 10;
+const CARD_WEEKLY_GACHA_PER_PLACE = 50;
+const CARD_WEEKLY_POINT_PER_PLACE = 200;
+const CARD_WEEKLY_PARTICIPATION = Object.freeze({ plays: 3, gacha: 20 });
+const CARD_WEEKLY_REWARD_FROM_MS = Date.UTC(2026, 10, 1, 20, 0, 0); // 2026-11-02 05:00 JST(表を足したあとの、はじめから記録がそろう週)
+const CARD_WEEK_MS = 7 * 24 * 3600 * 1000;
+const CARD_WEEKLY_CLAIM_MS = 14 * 24 * 3600 * 1000;
+const cardWeeklyRewardForPlace = (place) => {
+  const p = Number(place);
+  if (!Number.isInteger(p) || p < 1 || p > CARD_WEEKLY_REWARD_RANKS) return null;
+  const n = CARD_WEEKLY_REWARD_RANKS + 1 - p;
+  return { gacha: n * CARD_WEEKLY_GACHA_PER_PLACE, point: n * CARD_WEEKLY_POINT_PER_PLACE };
+};
+// 受け取った週の一覧。配列でない(壊れている)ときは null(=何も配らない)。無いときは []
+const cardNormalizeWeeklyClaims = (v) => (v === null || v === undefined ? [] : Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x) : null);
+const cardWeekStartMs = (now) => Date.parse(`${cardWeekKeyJst(now)}T${String(CARD_WEEK_START_HOUR_JST).padStart(2, '0')}:00:00+09:00`);
+const cardWeeklyClaimId = (weekKey) => `card_weekly_${weekKey}`;
+// 終わっていて、まだ受け取っておらず、受け取りの期限の中にある週(先に終わった週から)
+const cardWeeksAwaitingReward = (nowMs, claims) => {
+  if (!Array.isArray(claims)) return [];
+  const now = Number(nowMs) || 0;
+  const thisStart = cardWeekStartMs(now);
+  const out = [];
+  for (let back = 2; back >= 1; back--) {
+    const startMs = thisStart - back * CARD_WEEK_MS;
+    const endMs = startMs + CARD_WEEK_MS;
+    if (startMs < CARD_WEEKLY_REWARD_FROM_MS || now < endMs || now >= endMs + CARD_WEEKLY_CLAIM_MS) continue;
+    const key = cardWeekKeyJst(startMs);
+    const id = cardWeeklyClaimId(key);
+    if (!claims.includes(id)) out.push({ id, key, startMs, endMs });
+  }
+  return out;
+};
+// その週に助手と何回対戦したか(記録の「最近の対戦」(30件)から。投了も1回)
+const cardWeekPlays = (record, startMs, endMs) => cardNormalizeRecord(record).recent.filter((r) => Number(r.at) >= startMs && Number(r.at) < endMs).length;
+// 週ごとの記録へ1行(週+人で上書き)。表がまだ無いときは送らない(true を返して、ランキングの送りは止めない)
+const cardWeekRowSync = async (row) => {
+  if (_cardWeekUnavailable) return true;
+  try {
+    const weekRow = { week_key: row.week_key, breeder_id: row.breeder_id, user_name: row.user_name, icon: row.icon ?? null, ...(row.profile_frame ? { profile_frame: row.profile_frame } : {}) };
+    CARD_LEVEL_ORDER.forEach((lv) => { weekRow[`week_wins_${lv}`] = row[`week_wins_${lv}`] || 0; });
+    const r = await sbUpsertCardRankTo(CARD_WEEK_TABLE, 'week_key,breeder_id', weekRow);
+    if (r === null) { _cardWeekUnavailable = true; return true; }
+    return !!r;
+  } catch (err) {
+    console.error('[ranking] card_battle_week_v1 sync failed:', err && err.message ? err.message : err);
+    return false;
+  }
+};
+// 終わった週の自分の MASTER の勝ち数と順位。{ wins, place(10位までの順位。それより下・0勝は null) }。読めなかったら例外
+const cardWeekStanding = async (weekKey, breederId) => {
+  const get = async (q) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${CARD_WEEK_TABLE}?${q}`, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
+      if (!res.ok) throw new Error(`${CARD_WEEK_TABLE} ${res.status}`);
+      return await res.json();
+    } finally { clearTimeout(timer); }
+  };
+  const key = encodeURIComponent(weekKey);
+  const mine = await get(`select=week_wins_master&week_key=eq.${key}&breeder_id=eq.${encodeURIComponent(breederId)}&limit=1`);
+  const wins = Array.isArray(mine) && mine[0] ? Math.max(0, Math.floor(Number(mine[0].week_wins_master) || 0)) : 0;
+  if (!(wins > 0)) return { wins: 0, place: null };
+  const better = await get(`select=breeder_id&week_key=eq.${key}&week_wins_master=gt.${wins}&limit=${CARD_WEEKLY_REWARD_RANKS}`);
+  const n = Array.isArray(better) ? better.length : CARD_WEEKLY_REWARD_RANKS;
+  return { wins, place: n < CARD_WEEKLY_REWARD_RANKS ? n + 1 : null };
+};
+// 受け取れる中身。{ gacha, point, place, wins, plays } / 何も無いときは gacha も point も 0
+const cardWeeklyRewardOf = ({ place, wins, plays }) => {
+  const byPlace = cardWeeklyRewardForPlace(place) || { gacha: 0, point: 0 };
+  const join = plays >= CARD_WEEKLY_PARTICIPATION.plays ? CARD_WEEKLY_PARTICIPATION.gacha : 0;
+  return { gacha: byPlace.gacha + join, point: byPlace.point, place: place || null, wins, plays, join: join > 0 };
+};
+// 受け取りの帯(週間報酬・デッキの報酬など、カードのトップで受け取るものをそろえて出す部品)。
+//   title … 「先週の週間報酬」 / lines … 中身の行(文字) / onClaim … 「受け取る」 / busy … 押している間
+const CardRewardBand = ({ tag, title, lines, onClaim, busy }) => (
+  <div data-card-reward-band={tag} className="mhms-glass mhms-in flex w-full min-w-0 items-center gap-2 rounded-xl border border-amber-300/70 px-2.5 py-2" style={{ background: 'linear-gradient(135deg,#3b2a05dd,#1e1b4bdd)' }}>
+    <span aria-hidden="true" className="shrink-0 text-2xl leading-none">🏆</span>
+    <div className="min-w-0 flex-1">
+      <b className="block text-[12px] font-black text-amber-200">{title}</b>
+      {lines.map((t, i) => <span key={i} className="block text-[11px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}>{jaWrap(t)}</span>)}
+    </div>
+    <button type="button" data-card-reward-claim={tag} disabled={busy} onClick={onClaim} className="mh-button min-h-[40px] shrink-0 rounded-xl bg-amber-400 px-3 text-[12px] font-black text-stone-900 active:scale-95 disabled:opacity-50">受け取る</button>
+  </div>
+);
 
 // 同じ数は同じ順位(5・5・3 → 1位・1位・3位)。entries は多い順に並んでいる(2026-10-26 社長「全部入れる」の改善)
 const cardRankPlaces = (entries, valueOf) => {
