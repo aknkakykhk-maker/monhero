@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7357174af25db472
+// generated-sha256: 4e748b448a3bea9f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -12138,7 +12138,8 @@ const helpDataRows = (id) => {
         return [`${index + 1}位`,
           `${HERO_PROOF_SHARD_ITEM.emoji} ${HERO_PROOF_SHARD_ITEM.name}×${reward.count}`
           + ` ／ 💗 虹のプシュケー×${reward.psyche.toLocaleString()}`
-          + ` ／ 💎 ダイヤ×${reward.gold.toLocaleString()}`];
+          + ` ／ 💎 ダイヤ×${reward.gold.toLocaleString()}`
+          + ` ／ 🎵 ビートP×${reward.beatPoint.toLocaleString()}`];
       });
     // イベントの回数ボーナス。難易度ごとの割合を実データから出す
     // (ヘルプへ手で書き写すと、割合を変えたときに古いままになる)
@@ -20246,12 +20247,15 @@ const rhythmEventGiftRewards=(prize)=>{
     if(found)found.amount+=n;
     else totals.set(key,itemId?{type,itemId,amount:n}:{type,amount:n});
   };
+  // 週間のビートP(2026-10-29)。配り始めた週より前の週には付けない(rhythmWeeklyBeatPointActive)
+  const beatPointOn=typeof rhythmWeeklyBeatPointActive==='function'&&rhythmWeeklyBeatPointActive(prize&&prize.event);
   const addReward=(reward)=>{
     if(!reward)return;
     const item=rhythmEventRewardItem(reward);
     if(item)add(GIFT_ITEM_REWARD_TYPE,item.id,reward.count);
     add('rainbowPsyche',null,reward.psyche);
     add('diamond',null,reward.gold);
+    if(beatPointOn)add('beatPoint',null,reward.beatPoint);
   };
   (Array.isArray(prize&&prize.prizes)?prize.prizes:[]).forEach(entry=>addReward(entry&&entry.reward));
   // 参加報酬。勇者の証片(count)と勇者の証(heroProof)は別のアイテムなので分けて足す
@@ -20261,6 +20265,7 @@ const rhythmEventGiftRewards=(prize)=>{
     if(join.heroProof>0&&typeof HERO_PROOF_ITEM!=='undefined')add(GIFT_ITEM_REWARD_TYPE,HERO_PROOF_ITEM.id,join.heroProof);
     add('rainbowPsyche',null,join.psyche);
     add('diamond',null,join.gold);
+    if(beatPointOn)add('beatPoint',null,join.beatPoint);
   }
   return [...totals.values()];
 };
@@ -20273,6 +20278,7 @@ const rhythmEventParticipationText=(reward)=>{
   if(reward.heroProof>0)parts.push(`${HERO_PROOF_ITEM.emoji} ${HERO_PROOF_ITEM.name}×${reward.heroProof.toLocaleString()}`);
   if(reward.gold>0)parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
   if(reward.psyche>0)parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
+  if(reward.beatPoint>0)parts.push(`🎵 ビートP×${reward.beatPoint.toLocaleString()}`);
   return parts.join(' ／ ');
 };
 // 「🍇 超越の実（スエゾー種）×5 ／ 虹のプシュケー×1,000」のような1行。
@@ -20285,6 +20291,8 @@ const rhythmEventRewardText=(reward)=>{
   if(reward.psyche>0)parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
   // 週間の順位報酬にはダイヤも付く(イベントの順位報酬には無いので、ある時だけ出す)
   if(reward.gold>0)parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
+  // 週間の順位報酬のビートP(2026-10-29)
+  if(reward.beatPoint>0)parts.push(`🎵 ビートP×${reward.beatPoint.toLocaleString()}`);
   return parts.join(' ／ ');
 };
 
@@ -58358,6 +58366,21 @@ const CardQuickRunDetail = ({ quickRun, autoReady, autoDifficulty, todayLoops = 
 // 次に開いたとき、印が残っていて beat(対戦の画面が生きていた時刻)が古ければ、投了と同じ計算で数え、同じ取引で印を消す(二重に数えない)。
 // beat が新しいあいだは、ほかのタブで対戦中とみて数えない
 const CARD_CPU_OPEN_KEY = 'mh_card_cpu_open_v1';
+// 助手と対戦で前に選んだ難易度(2026-10-29 社長「最初の位置をイージーではなく前に選んだものに」)。'easy'〜'master' の文字だけ。
+// 無い・壊れている・まだ開いていない難易度なら、今までどおりイージー
+const CARD_LAST_LEVEL_KEY = 'mh_card_last_level_v1';
+// 設定「助手と対戦の最初の強さ」(2026-10-29 社長「設定でいじれるように」)。'last'(前に選んだもの・既定)か 'easy'〜'master'。無い・壊れているときは 'last'
+const CARD_START_LEVEL_KEY = 'mh_card_start_level_v1';
+const cardNormalizeStartLevel = (v) => (typeof v === 'string' && (v === 'last' || CARD_LEVEL_ORDER.includes(v)) ? v : 'last');
+// 最初の強さを決める。pref … 設定 / last … 前に選んだもの / isOpen(lv) … 開いているか。開いていなければ開いている中でいちばん近い強さ(同じ近さなら弱いほう)、無ければ EASY
+const cardStartLevelOf = (pref, last, isOpen) => {
+  const want = pref === 'last' ? (typeof last === 'string' && CARD_LEVEL_ORDER.includes(last) ? last : 'easy') : pref;
+  if (isOpen(want)) return want;
+  const i = CARD_LEVEL_ORDER.indexOf(want);
+  const open = CARD_LEVEL_ORDER.filter(isOpen).sort((a, b) => (Math.abs(CARD_LEVEL_ORDER.indexOf(a) - i) - Math.abs(CARD_LEVEL_ORDER.indexOf(b) - i)) || (CARD_LEVEL_ORDER.indexOf(a) - CARD_LEVEL_ORDER.indexOf(b)));
+  return open[0] || 'easy';
+};
+const CARD_START_LEVEL_OPTIONS = Object.freeze([{ id: 'last', label: '前に選んだもの' }, ...CARD_LEVEL_ORDER.map((lv) => ({ id: lv, label: null }))]);
 const CARD_CPU_OPEN_BEAT_MS = 5000;
 const CARD_CPU_OPEN_STALE_MS = 15000;
 const cardNormalizeCpuOpen = (v) => {
@@ -58386,6 +58409,17 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const [kitView, setKitView] = useState(null); // スターター選びで「中身を見る」を開いているキット
   const [starterOpen, setStarterOpen] = useState(null); // はじめのスターターを開ける画面に渡す並び(cardStarterOpenResult)
   const [foe, setFoe] = useState({ who: 'mua', level: 'easy' });
+  const [startLevel, setStartLevel] = useState('last'); // 設定「助手と対戦の最初の強さ」
+  const lastLevelRead = useRef(false);
+  useEffect(() => {
+    if (!save || lastLevelRead.current) return;
+    lastLevelRead.current = true;
+    Promise.all([storeGet(CARD_START_LEVEL_KEY, null), storeGet(CARD_LAST_LEVEL_KEY, null)]).then(([pref, last]) => {
+      const p = cardNormalizeStartLevel(pref);
+      setStartLevel(p);
+      setFoe((f) => ({ ...f, level: cardStartLevelOf(p, last, (lv) => cardLevelOpen(save.unlocked, lv) || debug) }));
+    }).catch(() => {});
+  }, [save]);
   const [game, setGame] = useState(null);
   const [result, setResult] = useState(null);
   const [notice, setNotice] = useState('');
@@ -58847,7 +58881,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             {CARD_LEVEL_ORDER.map((lv) => {
               const open = cardLevelOpen(save.unlocked, lv) || debug;
               return (
-                <button key={lv} type="button" data-card-level={lv} disabled={!open} onClick={() => { Audio_.fgSe.tap(); setFoe((f) => ({ ...f, level: lv })); }} className={`min-h-[52px] rounded-xl border-2 text-[11px] font-black ${foe.level === lv ? 'border-amber-300 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-slate-900 text-slate-200'} disabled:opacity-35`}>
+                <button key={lv} type="button" data-card-level={lv} disabled={!open} onClick={() => { Audio_.fgSe.tap(); setFoe((f) => ({ ...f, level: lv })); void storeSet(CARD_LAST_LEVEL_KEY, lv); }} className={`min-h-[52px] rounded-xl border-2 text-[11px] font-black ${foe.level === lv ? 'border-amber-300 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-slate-900 text-slate-200'} disabled:opacity-35`}>
                   {CARD_LEVEL_LABEL[lv]}<span className="block text-[10px] text-amber-200">{open ? `勝ち${CARD_AI_LEVELS[lv].point}` : '🔒'}</span>
                 </button>
               );
@@ -59090,6 +59124,27 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             {!quickAutoReady && <p data-card-quick-auto-needs className="mt-1 text-[10px] font-bold leading-snug text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('AUTO設定で、勇者モン・配置距離・難易度の3つを決めると使えます')}</p>}
           </div>
     );
+    // 助手と対戦の最初の強さ(設定の「助手」の区切りに置く)。選んだらすぐ、いまの相手えらびの強さにも当てる
+    const startLevelPanel = (
+          <div data-card-setting="startLevel" className="mt-2.5 border-t border-white/10 pt-2.5">
+            <b className="block text-[12px] font-black text-slate-200">助手と対戦の最初の強さ</b>
+            <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{cardJaWrap('相手えらびを開いたときに、はじめに選ばれている強さです。まだ開いていない強さのときは、開いている中でいちばん近い強さになります。')}</p>
+            <div className="mt-2 grid grid-cols-3 gap-1.5">
+              {CARD_START_LEVEL_OPTIONS.map((o) => (
+                <button key={o.id} type="button" data-card-start-level={o.id} aria-pressed={startLevel === o.id}
+                  onClick={() => {
+                    Audio_.fgSe.tap();
+                    setStartLevel(o.id);
+                    void storeSet(CARD_START_LEVEL_KEY, o.id);
+                    void storeGet(CARD_LAST_LEVEL_KEY, null).then((last) => setFoe((f) => ({ ...f, level: cardStartLevelOf(o.id, last, (lv) => cardLevelOpen(save.unlocked, lv) || debug) }))).catch(() => {});
+                  }}
+                  className={`flex min-h-[44px] items-center justify-center rounded-xl px-0.5 text-[11px] font-black leading-tight active:scale-95 ${startLevel === o.id ? 'border border-amber-300 bg-amber-500/30 text-amber-50' : 'border border-white/15 bg-slate-900/75 text-slate-200'}`}>
+                  <span style={JA_LABEL_STYLE}>{o.label ? jaWrap(o.label) : CARD_LEVEL_LABEL[o.id]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+    );
     return (
       <div data-mh-screen data-card-options className={SCREEN_SHELL_CLASS}>
         <ScreenHead title="オプション" accent="text-amber-200" onBack={() => setView('top')} note="MFバトルカード"/>
@@ -59149,6 +59204,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 );
               })}
               {g.title === '自動' && quickAutoPanel}
+              {g.title === '助手' && startLevelPanel}
             </div>
             </React.Fragment>
           ))}

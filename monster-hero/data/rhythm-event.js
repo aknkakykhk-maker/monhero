@@ -580,6 +580,14 @@ const RHYTHM_EVENT_REWARD_RANKS = RHYTHM_EVENT_REWARD_COUNTS.length;
 const RHYTHM_WEEKLY_REWARD_RANKS = 10;
 const RHYTHM_WEEKLY_REWARD_PSYCHE_PER_SHARD = 50;
 const RHYTHM_WEEKLY_REWARD_GOLD_PER_SHARD = 3000;
+// ★ビートP(2026-10-29 社長の決定「中」)。片 × 300(1位3,000P … 10位300P)・参加報酬100P。
+//   渡すのはギフトの beatPoint(受け取りの記録は今のまま。新しい保存キーは作らない)。
+//   配り始めるのは 2026-10-26 05:00 JST に始まった週から(RHYTHM_WEEKLY_BEAT_POINT_FROM_MS)。それより前に始まった週へは、さかのぼって配らない
+const RHYTHM_WEEKLY_REWARD_BEAT_POINT_PER_SHARD = 300;
+const RHYTHM_WEEKLY_BEAT_POINT_FROM_MS = Date.UTC(2026, 9, 25, 20, 0, 0); // 2026-10-26 05:00 JST
+// この週の報酬にビートPを付けるか。週の始まり(startMs)を持たない・壊れた値なら付けない
+const rhythmWeeklyBeatPointActive = (week) => !!week && week.kind === 'weekly'
+  && Number.isFinite(Number(week.startMs)) && Number(week.startMs) >= RHYTHM_WEEKLY_BEAT_POINT_FROM_MS;
 const rhythmWeeklyRewardForRank = (rank) => {
   const place = Number(rank);
   if (!Number.isInteger(place) || place < 1 || place > RHYTHM_WEEKLY_REWARD_RANKS) return null;
@@ -589,11 +597,12 @@ const rhythmWeeklyRewardForRank = (rank) => {
     count,
     psyche: count * RHYTHM_WEEKLY_REWARD_PSYCHE_PER_SHARD,
     gold: count * RHYTHM_WEEKLY_REWARD_GOLD_PER_SHARD,
+    beatPoint: count * RHYTHM_WEEKLY_REWARD_BEAT_POINT_PER_SHARD,
   });
 };
 // 参加報酬(2026-09-13・ユーザーが決めた「条件は3回遊ぶ」「10位より軽く」)。
 // 週間に対象曲は無いので、イベントの「何曲遊んだか」ではなく**何回遊んだか**で見る。
-const RHYTHM_WEEKLY_PARTICIPATION = Object.freeze({ plays: 3, count: 1, psyche: 30, gold: 2000 });
+const RHYTHM_WEEKLY_PARTICIPATION = Object.freeze({ plays: 3, count: 1, psyche: 30, gold: 2000, beatPoint: 100 });
 
 // 週間の報酬を配りはじめた時刻。**これより前に終わった週は対象にしない**。
 // 入れておかないと、公開した瞬間に「先週・先々週ぶん」がまとめて配られる(CLAUDE.md ⑦)。
