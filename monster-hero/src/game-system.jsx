@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b0c1106c84325ae9
+// generated-sha256: 57f20731418e6e1d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -59093,6 +59093,43 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     } finally { setWeeklyBusy(false); }
   };
 
+  // ---- みんなのデッキの報酬(95・2026-10-29 社長)。登録した端末(持ち主の鍵がある)だけ、トップを開いたときに前の日までの分を調べて帯を出す ----
+  //   サーバで受け取った日のうち、まだ端末に足していない日だけを足す。足した日の一覧(mh_card_deck_reward_v1)を読み直して確かめてから、ビートPと同じ取引で保存する
+  const [deckRewards, setDeckRewards] = useState([]); // [{ day, amount, uses }]
+  const [deckRewardBusy, setDeckRewardBusy] = useState(false);
+  const deckRewardChecked = useRef(false);
+  useEffect(() => {
+    if (!save || !db || screen !== 'CARD_TOP' || deckRewardChecked.current || typeof cardSharePendingRewards !== 'function') return;
+    deckRewardChecked.current = true;
+    void (async () => {
+      try {
+        if (!(await cardShareOwnerKey(false))) return; // 登録したことのない端末は問い合わせない
+        const id = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
+        const credited = cardShareNormalizeClaims(await storeGet(CARD_SHARE_REWARD_KEY, null));
+        if (!id || !credited) return;
+        setDeckRewards(await cardSharePendingRewards(id, credited));
+      } catch (_) { /* 通信できないときは出さない(次に開いたときにもう一度) */ }
+    })();
+  }, [save ? 1 : 0, screen]);
+  const claimDeckRewards = async () => {
+    if (deckRewardBusy || !deckRewards.length) return;
+    setDeckRewardBusy(true);
+    try {
+      const raw = await storeGet(CARD_SHARE_REWARD_KEY, null);
+      const credited = cardShareNormalizeClaims(raw);
+      if (!credited) return;
+      const todo = deckRewards.filter((r) => !credited.includes(r.day));
+      if (!todo.length) { setDeckRewards([]); return; } // もう足した(ほかのタブなど)
+      const total = todo.reduce((a, r) => a + r.amount, 0);
+      const ok = await persist({ point: save.point + total }, {}, [
+        { key: CARD_SHARE_REWARD_KEY, before: raw, next: [...credited, ...todo.map((r) => r.day)].slice(-60) },
+      ]);
+      if (!ok) { setNotice('保存できませんでした。もう一度お試しください'); return; }
+      setDeckRewards([]);
+      setNotice(`みんなのデッキの報酬を受け取りました(ビートP +${total.toLocaleString()})`);
+    } finally { setDeckRewardBusy(false); }
+  };
+
   // 過去の対戦を見る(93-card-replay.jsx)。id … 試合の番号。back … とじたあとに戻る画面(view)
   const openReplay = async (id, back = 'top') => {
     const rec = await cardReplayGet(id);
@@ -59851,6 +59888,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               title={`${w.key.slice(5).replace('-', '/')}からの週の週間報酬`}
               lines={[`MASTER の勝ち数 ${w.wins}勝・${w.place}位`, `ビートP +${w.point.toLocaleString()}`]}/>
           ))}
+          {deckRewards.length > 0 && (
+            <CardRewardBand tag="deck" busy={deckRewardBusy} onClaim={() => { void claimDeckRewards(); }} title="みんなのデッキの報酬"
+              lines={[`あなたのデッキが戦われた・借りられた ${deckRewards.reduce((a, r) => a + r.uses, 0)}回ぶん`, `ビートP +${deckRewards.reduce((a, r) => a + r.amount, 0).toLocaleString()}`]}/>
+          )}
           {notice && <p data-card-top-notice className={`text-[12px] font-bold text-amber-200 [@media(orientation:landscape)_and_(max-height:420px)]:truncate [@media(orientation:landscape)_and_(max-height:420px)]:text-[11px] [@media(orientation:landscape)_and_(max-height:420px)]:leading-snug`} style={JA_LABEL_STYLE} title={notice}>{jaWrap(notice)}</p>}
           <div data-card-top-cards className="grid grid-cols-2 gap-2">
             {bigCards.map((c, idx) => (
@@ -64649,7 +64690,8 @@ const CardPvpWatchScreen = ({ onBack }) => {
 
 const CARD_SHARE_KEY = 'mh_card_deck_owner_key_v1';   // 持ち主の鍵(新しいキー。端末で作り、バックアップで引き継ぐ)
 const CARD_SHARE_TABLE = 'card_deck_entries';
-const CARD_RENTED_KEY = 'mh_card_rented_deck_v1';     // 借りているデッキ(新しいキー。1組だけ・期限なし・返すと null)
+const CARD_RENTED_KEY = 'mh_card_rented_deck_v1';
+const CARD_SHARE_REWARD_KEY = 'mh_card_deck_reward_v1'; // 報酬を端末のビートPに足した日の一覧(['2026-10-29', …]・新しい60日まで)     // 借りているデッキ(新しいキー。1組だけ・期限なし・返すと null)
 // 戦い方の7つの向き(82 の CARD_AI_HABITS の項目と同じ名前)。-1 控えめ / 0 ふつう / 1 強め
 const CARD_SHARE_TILTS = Object.freeze([
   { id: 'attack', label: '攻める' }, { id: 'keepGuard', label: '守りを残す' }, { id: 'saveGuts', label: 'ガッツをためる' },
@@ -64779,6 +64821,25 @@ const cardShareReportUse = async ({ match, ownerId, userId, kind, deckWon = fals
 const cardShareSameBlood = (db, deck) => {
   const ms = (deck && Array.isArray(deck.monsters) ? deck.monsters : []).map((no) => cardMonsterOf(db, no)).filter(Boolean);
   return ms.length > 0 && ms.filter((m) => cardAiBloodOf(m) === cardAiBloodOf(ms[0])).length >= 2;
+};
+
+// ---- 報酬の受け取り(区切り⑤)。前の日までの分を、カードのトップの帯で受け取る ----
+// 端末に足した日の一覧。無ければ空・壊れていたら null(二重に足さないよう、壊れているときは何もしない)
+const cardShareNormalizeClaims = (v) => {
+  if (v === null || v === undefined) return [];
+  if (!Array.isArray(v)) return null;
+  return v.filter((x) => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x)).slice(-60);
+};
+// サーバで前の日までの報酬を確かめ(card_deck_claim・(人・日)で1回だけ)、サーバで受け取った日のうち、まだ端末に足していない日を返す。
+//   [{ day, amount, uses }]。サーバで受け取ったあと端末の保存に失敗しても、次に開いたときにここからもう一度出る
+const cardSharePendingRewards = async (ownerId, credited) => {
+  const key = await cardShareOwnerKey(false);
+  if (!key || typeof ownerId !== 'string' || !Array.isArray(credited)) return [];
+  await cardShareRpc('card_deck_claim', { p_owner: ownerId, p_key: key });
+  const rows = await cardShareRpc('card_deck_rewards_of', { p_owner: ownerId, p_key: key });
+  const done = new Set(credited);
+  return (Array.isArray(rows) ? rows : []).filter((r) => r && typeof r.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.day) && Number.isInteger(r.amount) && r.amount > 0 && !done.has(r.day))
+    .map((r) => ({ day: r.day, amount: Math.min(300, r.amount), uses: Number.isInteger(r.uses) && r.uses > 0 ? r.uses : 0 }));
 };
 
 // ---- 借りたデッキ(区切り④)。助手と対戦で使える(マルチでは使えない・社長の決め)。持っているかは見ない(借り物) ----

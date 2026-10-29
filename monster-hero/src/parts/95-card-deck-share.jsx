@@ -12,7 +12,8 @@
 
 const CARD_SHARE_KEY = 'mh_card_deck_owner_key_v1';   // 持ち主の鍵(新しいキー。端末で作り、バックアップで引き継ぐ)
 const CARD_SHARE_TABLE = 'card_deck_entries';
-const CARD_RENTED_KEY = 'mh_card_rented_deck_v1';     // 借りているデッキ(新しいキー。1組だけ・期限なし・返すと null)
+const CARD_RENTED_KEY = 'mh_card_rented_deck_v1';
+const CARD_SHARE_REWARD_KEY = 'mh_card_deck_reward_v1'; // 報酬を端末のビートPに足した日の一覧(['2026-10-29', …]・新しい60日まで)     // 借りているデッキ(新しいキー。1組だけ・期限なし・返すと null)
 // 戦い方の7つの向き(82 の CARD_AI_HABITS の項目と同じ名前)。-1 控えめ / 0 ふつう / 1 強め
 const CARD_SHARE_TILTS = Object.freeze([
   { id: 'attack', label: '攻める' }, { id: 'keepGuard', label: '守りを残す' }, { id: 'saveGuts', label: 'ガッツをためる' },
@@ -142,6 +143,25 @@ const cardShareReportUse = async ({ match, ownerId, userId, kind, deckWon = fals
 const cardShareSameBlood = (db, deck) => {
   const ms = (deck && Array.isArray(deck.monsters) ? deck.monsters : []).map((no) => cardMonsterOf(db, no)).filter(Boolean);
   return ms.length > 0 && ms.filter((m) => cardAiBloodOf(m) === cardAiBloodOf(ms[0])).length >= 2;
+};
+
+// ---- 報酬の受け取り(区切り⑤)。前の日までの分を、カードのトップの帯で受け取る ----
+// 端末に足した日の一覧。無ければ空・壊れていたら null(二重に足さないよう、壊れているときは何もしない)
+const cardShareNormalizeClaims = (v) => {
+  if (v === null || v === undefined) return [];
+  if (!Array.isArray(v)) return null;
+  return v.filter((x) => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x)).slice(-60);
+};
+// サーバで前の日までの報酬を確かめ(card_deck_claim・(人・日)で1回だけ)、サーバで受け取った日のうち、まだ端末に足していない日を返す。
+//   [{ day, amount, uses }]。サーバで受け取ったあと端末の保存に失敗しても、次に開いたときにここからもう一度出る
+const cardSharePendingRewards = async (ownerId, credited) => {
+  const key = await cardShareOwnerKey(false);
+  if (!key || typeof ownerId !== 'string' || !Array.isArray(credited)) return [];
+  await cardShareRpc('card_deck_claim', { p_owner: ownerId, p_key: key });
+  const rows = await cardShareRpc('card_deck_rewards_of', { p_owner: ownerId, p_key: key });
+  const done = new Set(credited);
+  return (Array.isArray(rows) ? rows : []).filter((r) => r && typeof r.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.day) && Number.isInteger(r.amount) && r.amount > 0 && !done.has(r.day))
+    .map((r) => ({ day: r.day, amount: Math.min(300, r.amount), uses: Number.isInteger(r.uses) && r.uses > 0 ? r.uses : 0 }));
 };
 
 // ---- 借りたデッキ(区切り④)。助手と対戦で使える(マルチでは使えない・社長の決め)。持っているかは見ない(借り物) ----

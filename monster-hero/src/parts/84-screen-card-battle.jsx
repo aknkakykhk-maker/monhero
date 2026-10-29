@@ -2706,6 +2706,43 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     } finally { setWeeklyBusy(false); }
   };
 
+  // ---- みんなのデッキの報酬(95・2026-10-29 社長)。登録した端末(持ち主の鍵がある)だけ、トップを開いたときに前の日までの分を調べて帯を出す ----
+  //   サーバで受け取った日のうち、まだ端末に足していない日だけを足す。足した日の一覧(mh_card_deck_reward_v1)を読み直して確かめてから、ビートPと同じ取引で保存する
+  const [deckRewards, setDeckRewards] = useState([]); // [{ day, amount, uses }]
+  const [deckRewardBusy, setDeckRewardBusy] = useState(false);
+  const deckRewardChecked = useRef(false);
+  useEffect(() => {
+    if (!save || !db || screen !== 'CARD_TOP' || deckRewardChecked.current || typeof cardSharePendingRewards !== 'function') return;
+    deckRewardChecked.current = true;
+    void (async () => {
+      try {
+        if (!(await cardShareOwnerKey(false))) return; // 登録したことのない端末は問い合わせない
+        const id = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
+        const credited = cardShareNormalizeClaims(await storeGet(CARD_SHARE_REWARD_KEY, null));
+        if (!id || !credited) return;
+        setDeckRewards(await cardSharePendingRewards(id, credited));
+      } catch (_) { /* 通信できないときは出さない(次に開いたときにもう一度) */ }
+    })();
+  }, [save ? 1 : 0, screen]);
+  const claimDeckRewards = async () => {
+    if (deckRewardBusy || !deckRewards.length) return;
+    setDeckRewardBusy(true);
+    try {
+      const raw = await storeGet(CARD_SHARE_REWARD_KEY, null);
+      const credited = cardShareNormalizeClaims(raw);
+      if (!credited) return;
+      const todo = deckRewards.filter((r) => !credited.includes(r.day));
+      if (!todo.length) { setDeckRewards([]); return; } // もう足した(ほかのタブなど)
+      const total = todo.reduce((a, r) => a + r.amount, 0);
+      const ok = await persist({ point: save.point + total }, {}, [
+        { key: CARD_SHARE_REWARD_KEY, before: raw, next: [...credited, ...todo.map((r) => r.day)].slice(-60) },
+      ]);
+      if (!ok) { setNotice('保存できませんでした。もう一度お試しください'); return; }
+      setDeckRewards([]);
+      setNotice(`みんなのデッキの報酬を受け取りました(ビートP +${total.toLocaleString()})`);
+    } finally { setDeckRewardBusy(false); }
+  };
+
   // 過去の対戦を見る(93-card-replay.jsx)。id … 試合の番号。back … とじたあとに戻る画面(view)
   const openReplay = async (id, back = 'top') => {
     const rec = await cardReplayGet(id);
@@ -3464,6 +3501,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               title={`${w.key.slice(5).replace('-', '/')}からの週の週間報酬`}
               lines={[`MASTER の勝ち数 ${w.wins}勝・${w.place}位`, `ビートP +${w.point.toLocaleString()}`]}/>
           ))}
+          {deckRewards.length > 0 && (
+            <CardRewardBand tag="deck" busy={deckRewardBusy} onClaim={() => { void claimDeckRewards(); }} title="みんなのデッキの報酬"
+              lines={[`あなたのデッキが戦われた・借りられた ${deckRewards.reduce((a, r) => a + r.uses, 0)}回ぶん`, `ビートP +${deckRewards.reduce((a, r) => a + r.amount, 0).toLocaleString()}`]}/>
+          )}
           {notice && <p data-card-top-notice className={`text-[12px] font-bold text-amber-200 [@media(orientation:landscape)_and_(max-height:420px)]:truncate [@media(orientation:landscape)_and_(max-height:420px)]:text-[11px] [@media(orientation:landscape)_and_(max-height:420px)]:leading-snug`} style={JA_LABEL_STYLE} title={notice}>{jaWrap(notice)}</p>}
           <div data-card-top-cards className="grid grid-cols-2 gap-2">
             {bigCards.map((c, idx) => (

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 27a05c6d0f3af63f
+// source-sha256: 17d7d484af2910c9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -97244,6 +97244,52 @@ const CardBattleScreen = ({
       setWeeklyBusy(false);
     }
   };
+  const [deckRewards, setDeckRewards] = useState([]);
+  const [deckRewardBusy, setDeckRewardBusy] = useState(false);
+  const deckRewardChecked = useRef(false);
+  useEffect(() => {
+    if (!save || !db || screen !== 'CARD_TOP' || deckRewardChecked.current || typeof cardSharePendingRewards !== 'function') return;
+    deckRewardChecked.current = true;
+    void (async () => {
+      try {
+        if (!(await cardShareOwnerKey(false))) return;
+        const id = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
+        const credited = cardShareNormalizeClaims(await storeGet(CARD_SHARE_REWARD_KEY, null));
+        if (!id || !credited) return;
+        setDeckRewards(await cardSharePendingRewards(id, credited));
+      } catch (_) {}
+    })();
+  }, [save ? 1 : 0, screen]);
+  const claimDeckRewards = async () => {
+    if (deckRewardBusy || !deckRewards.length) return;
+    setDeckRewardBusy(true);
+    try {
+      const raw = await storeGet(CARD_SHARE_REWARD_KEY, null);
+      const credited = cardShareNormalizeClaims(raw);
+      if (!credited) return;
+      const todo = deckRewards.filter(r => !credited.includes(r.day));
+      if (!todo.length) {
+        setDeckRewards([]);
+        return;
+      }
+      const total = todo.reduce((a, r) => a + r.amount, 0);
+      const ok = await persist({
+        point: save.point + total
+      }, {}, [{
+        key: CARD_SHARE_REWARD_KEY,
+        before: raw,
+        next: [...credited, ...todo.map(r => r.day)].slice(-60)
+      }]);
+      if (!ok) {
+        setNotice('保存できませんでした。もう一度お試しください');
+        return;
+      }
+      setDeckRewards([]);
+      setNotice(`みんなのデッキの報酬を受け取りました(ビートP +${total.toLocaleString()})`);
+    } finally {
+      setDeckRewardBusy(false);
+    }
+  };
   const openReplay = async (id, back = 'top') => {
     const rec = await cardReplayGet(id);
     const g = rec && db ? cardReplayGameOf(db, rec) : null;
@@ -99018,7 +99064,15 @@ const CardBattleScreen = ({
     },
     title: `${w.key.slice(5).replace('-', '/')}からの週の週間報酬`,
     lines: [`MASTER の勝ち数 ${w.wins}勝・${w.place}位`, `ビートP +${w.point.toLocaleString()}`]
-  })), notice && React.createElement("p", {
+  })), deckRewards.length > 0 && React.createElement(CardRewardBand, {
+    tag: "deck",
+    busy: deckRewardBusy,
+    onClaim: () => {
+      void claimDeckRewards();
+    },
+    title: "みんなのデッキの報酬",
+    lines: [`あなたのデッキが戦われた・借りられた ${deckRewards.reduce((a, r) => a + r.uses, 0)}回ぶん`, `ビートP +${deckRewards.reduce((a, r) => a + r.amount, 0).toLocaleString()}`]
+  }), notice && React.createElement("p", {
     "data-card-top-notice": true,
     className: `text-[12px] font-bold text-amber-200 [@media(orientation:landscape)_and_(max-height:420px)]:truncate [@media(orientation:landscape)_and_(max-height:420px)]:text-[11px] [@media(orientation:landscape)_and_(max-height:420px)]:leading-snug`,
     style: JA_LABEL_STYLE,
@@ -107997,6 +108051,7 @@ const CardPvpWatchScreen = ({
 const CARD_SHARE_KEY = 'mh_card_deck_owner_key_v1';
 const CARD_SHARE_TABLE = 'card_deck_entries';
 const CARD_RENTED_KEY = 'mh_card_rented_deck_v1';
+const CARD_SHARE_REWARD_KEY = 'mh_card_deck_reward_v1';
 const CARD_SHARE_TILTS = Object.freeze([{
   id: 'attack',
   label: '攻める'
@@ -108239,6 +108294,29 @@ const cardShareReportUse = async ({
 const cardShareSameBlood = (db, deck) => {
   const ms = (deck && Array.isArray(deck.monsters) ? deck.monsters : []).map(no => cardMonsterOf(db, no)).filter(Boolean);
   return ms.length > 0 && ms.filter(m => cardAiBloodOf(m) === cardAiBloodOf(ms[0])).length >= 2;
+};
+const cardShareNormalizeClaims = v => {
+  if (v === null || v === undefined) return [];
+  if (!Array.isArray(v)) return null;
+  return v.filter(x => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x)).slice(-60);
+};
+const cardSharePendingRewards = async (ownerId, credited) => {
+  const key = await cardShareOwnerKey(false);
+  if (!key || typeof ownerId !== 'string' || !Array.isArray(credited)) return [];
+  await cardShareRpc('card_deck_claim', {
+    p_owner: ownerId,
+    p_key: key
+  });
+  const rows = await cardShareRpc('card_deck_rewards_of', {
+    p_owner: ownerId,
+    p_key: key
+  });
+  const done = new Set(credited);
+  return (Array.isArray(rows) ? rows : []).filter(r => r && typeof r.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.day) && Number.isInteger(r.amount) && r.amount > 0 && !done.has(r.day)).map(r => ({
+    day: r.day,
+    amount: Math.min(300, r.amount),
+    uses: Number.isInteger(r.uses) && r.uses > 0 ? r.uses : 0
+  }));
 };
 const cardRentedNormalize = v => {
   const r = v && typeof v === 'object' && !Array.isArray(v) ? v : null;
