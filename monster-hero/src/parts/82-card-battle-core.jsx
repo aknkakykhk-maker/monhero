@@ -180,7 +180,7 @@ const cardBeginTurn = (st) => {
   st.forbid = {};
   me.mons.forEach((m) => { m.attacks = 0; m.lastCard = null; });
   st.phase = 'main';
-  cardLog(st, `ターン${st.turn}: ${me.name}の番`, { kind: 'turn' });
+  cardLog(st, `ターン${st.turn}: ${me.name}のターン`, { kind: 'turn' });
   cardEvent(st, { t: 'turn', p, turn: st.turn });
   if (st.turn === 1) return; // 先攻の1ターン目は引かない
   // 大混乱(全体カード): ドローの前に、その番の人の山札の上から n 枚を捨て札へ
@@ -891,11 +891,11 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
     if (e.t === 'liftTarget' && tm) { tm.airUntil = Math.max(tm.airUntil, st.turn); cardLog(st, `${tm.name}はこのターン空中になった`); }
     if (e.t === 'unlimitedAttacks' && self) { self.unlimited = st.turn; cardLog(st, `${self.name}はこのターン、技を何枚でも出せる`); }
     if (e.t === 'breederUnlimited') { st.breederFree = { p, turn: st.turn }; cardLog(st, `このターン、${me.name}はブリーダーのカードを何枚でも出せる`); }
-    if (e.t === 'taunt' && self) { st.taunts = [...(st.taunts || []).filter((t) => t.turn >= st.turn), { by: p, m: mi, mode: e.mode, noArea: !!e.noArea, turn: st.turn + 1 }]; cardLog(st, e.mode === 'not' ? `相手は次の番、${self.name}に当たる技を出せない` : `相手は次の番、${self.name}を狙う技しか出せない`); }
+    if (e.t === 'taunt' && self) { st.taunts = [...(st.taunts || []).filter((t) => t.turn >= st.turn), { by: p, m: mi, mode: e.mode, noArea: !!e.noArea, turn: st.turn + 1 }]; cardLog(st, e.mode === 'not' ? `相手は次のターン、${self.name}に当たる技を出せない` : `相手は次のターン、${self.name}を狙う技しか出せない`); }
     if (e.t === 'stunAllEnemies') { opp.mons.forEach((m) => { if (!m.ko) m.stunTurn = st.turn + 1; }); cardLog(st, '相手のモンスターは全員、次のターン攻撃できない'); }
     if (e.t === 'stunTarget' && tm) { tm.stunTurn = st.turn + 1; cardLog(st, `${tm.name}は次のターン攻撃できない`); }
-    if (e.t === 'skipTurn') { st.skip = cardOther(p); cardLog(st, `${opp.name}の次の番を飛ばす`); }
-    if (e.t === 'rage' && self) { self.noGuardUntil = st.turn + 1; self.mult = { turn: st.turn + 2, kinds: ['pow', 'int'], n: 2 }; cardLog(st, `${self.name}は次の番まで守れない。次の番の技は2倍`); }
+    if (e.t === 'skipTurn') { st.skip = cardOther(p); cardLog(st, `${opp.name}の次のターンを飛ばす`); }
+    if (e.t === 'rage' && self) { self.noGuardUntil = st.turn + 1; self.mult = { turn: st.turn + 2, kinds: ['pow', 'int'], n: 2 }; cardLog(st, `${self.name}は次のターンまで守れない。次のターンの技は2倍`); }
     // ---- 区切り7 ----
     if (e.t === 'revive' && tm && tm.ko) { tm.ko = false; tm.life = Math.min(e.life, tm.max); tm.stunTurn = st.turn; tm.attacks = 0; cardLog(st, `${tm.name}がライフ${tm.life}で戻った(このターンは攻撃できない)`); }
     if (e.t === 'possess' && self && !self.ko && tm && tm.ko && tm !== self) {
@@ -913,7 +913,7 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
       cardLog(st, `${b.name}と合体して、${a.name}が出た(このターンは攻撃できない)`);
     }
     // ---- 区切り5 ----
-    if (e.t === 'safe' && self) { self.safeUntil = st.turn + 1; cardLog(st, `${self.name}は次の番までダメージを受けない`); }
+    if (e.t === 'safe' && self) { self.safeUntil = st.turn + 1; cardLog(st, `${self.name}は次のターンまでダメージを受けない`); }
     if (e.t === 'form' && self && (act.form === 'air' || act.form === 'ground')) { self.type = act.form; cardLog(st, `${self.name}は${act.form === 'air' ? '空中' : '地上'}になった`); }
     // ---- 区切り4 ----
     if (e.t === 'choose') {
@@ -1124,7 +1124,7 @@ const cardApplyAction = (db, st0, act) => {
     if (st.skip === st.active) {
       st.skip = null; st.turn += 1;
       st.players[st.active].mons.forEach((m) => { if (m.stunTurn === st.turn) m.stunTurn = st.turn + 2; });
-      cardLog(st, `ターン${st.turn}: ${st.players[st.active].name}の番は飛ばされた`, { kind: 'turn' }); st.active = p;
+      cardLog(st, `ターン${st.turn}: ${st.players[st.active].name}のターンは飛ばされた`, { kind: 'turn' }); st.active = p;
     }
     cardBeginTurn(st);
     return st;
@@ -1177,8 +1177,8 @@ const CARD_AI_HABIT_BLEND = Object.freeze({ expert: { mua: 0.6 }, master: { mua:
 const CARD_AI_PLAY_TUNE = Object.freeze({
   // EASY・NORMAL で同じ血統(モッチーの仲間)でも組むようになって強くなった(2026-10-26)ぶん、みゅあの雑さを戻した(前は easy -0.035・normal -0.105)
   mua: { easy: 0.1, normal: -0.04, hard: -0.11, expert: 0.03, master: 0.12 },
-  momosuke: { easy: 0.12, normal: 0.06, hard: 0, expert: 0.1, master: 0.05 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.165 → 0.14。混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 0.05
-  kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: 0, master: 0.1 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.345 → 0.3。意味不明(277)・混血の直し(2026-10-27)のあと 0.1
+  momosuke: { easy: 0.12, normal: 0.06, hard: 0, expert: 0.04, master: 0 },   // 全体カードを入れた(2026-10-30)ぶん EXPERT 0.1 → 0.04・MASTER 0.05 → 0。   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.165 → 0.14。混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 0.05
+  kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: -0.08, master: 0 },   // 全体カードを入れた(2026-10-30)ぶん EXPERT 0 → -0.08・MASTER 0.1 → 0   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.345 → 0.3。意味不明(277)・混血の直し(2026-10-27)のあと 0.1
   dra: { easy: -0.075, normal: -0.075, hard: 0.03, expert: -0.06, master: 0 },
   atsu: { easy: 0.05, normal: 0, hard: 0.02, expert: 0.06, master: 0 },   // 臨機応変(2026-10-29)で強くなった(NORMAL 55→69%・EASY 73%・EXPERT 69%)ので、各強さで雑さを足した(40戦で測った)   // EXPERT は同じ血統(弱い)でも組むようになった(2026-10-26)ので 0.03 → 0
 });
@@ -1200,6 +1200,8 @@ const cardAiPolicy = (habitId, levelId, opts = {}) => {
   // opts.playerRole … 勝率を測るときのプレイヤー役(tools/card の検査・道具だけが付ける)。山札切れを気にしない前の打ち方のまま
   //   (2026-10-27 ソランド判断: 人が相手のときと測り方をそろえるため。プレイヤー役まで山札切れを避けると、守り型のドラが EXPERT 34%・MASTER 36% に下がった)
   const out = { habit, level: { ...level, sloppy: Math.max(0, Math.min(0.9, (level.sloppy || 0) * tune + add)) }, playerRole: !!(opts && opts.playerRole) };
+  // 助手の得意な全体カード(CARD_AI_DECKS の field)。デッキに入れるだけでは場の点が低くて出さない札があったので、出すときに点を足す(2026-10-30)
+  if (!out.playerRole && CARD_AI_DECKS[habitId] && CARD_AI_DECKS[habitId].field) out.fields = CARD_AI_DECKS[habitId].field;
   // 助手と対戦の EXPERT・MASTER は、戦術カードの基本カードを2枚・3枚持つ(82-card-tactics-core の CARD_AI_TACTIC_BASE)。プレイヤー役は持たない
   const gambit = !out.playerRole && !(opts && opts.noTactics) && typeof cardAiTacticGambit === 'function' ? cardAiTacticGambit(habitId, levelId) : null;
   const when = gambit && typeof CARD_AI_TACTIC_WHEN !== 'undefined' ? CARD_AI_TACTIC_WHEN[habitId] || null : null;
@@ -1292,7 +1294,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
   const main = cardOf(db, me.hand[opt.hand[0]]);
   const cost = cardActionCost(db, st, p, me.hand, opt.hand);
   let score = 0;
-  if (main.kind === 'fld') return cardAiScoreField(db, st, p, main, cost, habit);
+  if (main.kind === 'fld') return cardAiScoreField(db, st, p, main, cost, habit) + (policy.fields && policy.fields.includes(main.name) && !(st.field && st.field.p === p) ? CARD_AI_FIELD_LIKE : 0);
   if (main.kind === 'spe') {
     (main.effects || []).forEach((e) => {
       if (e.t === 'heal' && opt.target) { const m = me.mons[opt.target.m]; score += Math.min(e.n, m.max - m.life) * 1.1; }
@@ -1727,13 +1729,15 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
 // ---- 助手のデッキ(5-5) ----
 // kit … 元のスターターをそのまま使う / build … 3体を決めて、くせに合わせてカードを選ぶ
 // HARD より上は、同じ3体で組み直す(HARD は第1弾のカードだけ・EXPERT と MASTER は全部の弾)
+// field … 助手ごとの全体カード(HARD から2枚ずつ入れる。第2弾より後の札は、弾の制限が外れる EXPERT から)。
+//   入れたい度の点だけで組むと全体カードは入らなかった(2026-10-30 社長「助手ごとに入れる」)
 const CARD_AI_DECKS = Object.freeze({
-  mua:      { kit: 'speed' },
-  momosuke: { kit: 'miracle' },
-  kiki:     { kit: 'powerful' },
-  dra:      { kit: 'powerful' },
-  kyuko:    { monsters: ['C-007', 'C-005', 'C-009'] },  // ナーガ・ピクシー・モッチー
-  atsu:     { monsters: ['C-003', 'C-001', 'C-002'], prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード'] },  // ゴーレム・ライガー・ガリ。全体攻撃を集める
+  mua:      { kit: 'speed', field: ['ホリィの声援', '飛び散る火花'] },     // 速攻。技を安く・特殊攻撃を強く
+  momosuke: { kit: 'miracle', field: ['冷静な判断', 'がんじがらめ'] },     // 手札を整え、相手の特殊技を封じる
+  kiki:     { kit: 'powerful', field: ['必殺技の応酬', '長期戦の予感'] },  // 小技を封じ、ガッツをためて大技
+  dra:      { kit: 'powerful', field: ['興奮のるつぼ', '必殺技の封印'] },  // 守り。受けるダメージを減らす場
+  kyuko:    { monsters: ['C-007', 'C-005', 'C-009'], field: ['必殺技の応酬'] },  // 小技を封じる。2種入れると MASTER で7点下がったので1種(2026-10-30)。ナーガ・ピクシー・モッチー
+  atsu:     { monsters: ['C-003', 'C-001', 'C-002'], prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード'], field: ['必殺技の応酬', '灼熱の地'] },  // 全体カードは大技で押す場と焼ける場。ゴーレム・ライガー・ガリ。全体攻撃を集める
   sorashido: { monsters: ['C-008', 'C-001', 'C-003'], prefer: ['大混乱', '時間稼ぎ', '大鎌', 'ハテナマーク', 'ニャーにゃー'] },  // 山札とガッツを削る札(その3体で使えるものだけ入る)  // ハム・ライガー・ゴーレム(ルールくんが測った試合でいちばん多かった3体。3体は好きな子ハムから毎試合選ぶ)。prefer はまだ無い
 });
 // 助手の好きなモンスター(1体。2026-10-25 社長「1体だけ好きなモンスターを決めて、あとは好みのバランスでデッキ組む」)。
@@ -1797,6 +1801,8 @@ const CARD_AI_LANE_MIN_DEFAULT = 0.8;
 const CARD_AI_LANE_MIN = Object.freeze({ momosuke: 1.5, dra: 0.8, kyuko: 2.0, atsu: 1.5, sorashido: 1.5 });   // きゅうこは混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 1.5。ドラは不自然な手の直し(2026-10-27)で MASTER が 38% を割ったので 0.3 → 0.8(1 より上だと好きな子の技が入らないことがある)
 const CARD_DECK_COPY_MAX = 3; // 同じ名前の技・全体・ブリーダーカードは3枚まで
 const CARD_AI_ATTACH_MAX = 6;
+const CARD_AI_FIELD_LIKE = 1; // 得意な全体カードを出すときに足す点(cardAiScoreAttack)
+const CARD_AI_FIELD_COPIES = 2; // 助手の全体カード(CARD_AI_DECKS の field)は1種2枚。場には1枚しか残らないので多く入れても腐る
 
 // カード1枚の「入れたい度」(くせの重みを掛ける)
 const cardAiCardValue = (card, habit) => {
@@ -2055,6 +2061,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   const used = new Set();
   // 助手らしさの札(あつの全体攻撃など)を先に入れる
   (preferOn ? recipe.prefer || [] : []).forEach((name) => { const x = byName[name]; if (x && !used.has(name)) { used.add(name); add(x.c, CARD_DECK_COPY_MAX); } });
+  (preferOn ? recipe.field || [] : []).forEach((name) => { const x = byName[name]; if (x && !used.has(name)) { used.add(name); add(x.c, CARD_AI_FIELD_COPIES); } });
   let li = 0, guard = 0;
   while (cards.length < CARD_BATTLE_DECK_SIZE && guard++ < 400) {
     const lane = li < lanes.length ? lanes[li] : shared;
@@ -2214,7 +2221,8 @@ const cardNormalizeCollection = (v) => {
 };
 const cardNormalizePoint = (v) => { const x = Number(v); return Number.isFinite(x) && x > 0 ? Math.floor(x) : 0; };
 const cardNormalizeStarter = (v) => (cardIsPlainObject(v) && typeof v.kit === 'string' && v.kit ? { kit: v.kit, at: Number.isFinite(Number(v.at)) ? Number(v.at) : 0 } : null);
-const CARD_DECK_MAX = 5;
+// 組めるデッキの数(2026-10-30 社長「5セットまでしか組めないけど20ぐらいまで増やせない?」→ 20。上げるだけなので今の保存はそのまま読める)
+const CARD_DECK_MAX = 20;
 const cardNormalizeDecks = (v) => {
   const decks = (cardIsPlainObject(v) && Array.isArray(v.decks) ? v.decks : []).filter(cardIsPlainObject).slice(0, CARD_DECK_MAX).map((d, i) => ({
     id: typeof d.id === 'string' && d.id ? d.id : `deck${i + 1}`,
@@ -2237,12 +2245,16 @@ const CARD_LEVEL_ORDER = Object.freeze(['easy', 'normal', 'hard', 'expert', 'mas
 //   助手と対戦は 'auto'(助手ごとの曲)・マルチは ichika_battle(#3634 で一度対戦まで ICHIKA にしたのを戻した)
 //   ★mh_card_bgm_v1 は、オプションで曲を選んだときにだけ書く。選んだ人の値はそのまま読む(書き換えない)。top は足した項目なので、前からの人も既定で補う
 const CARD_BGM_DEFAULT = Object.freeze({ top: 'atsu_cup_theme', cpu: 'auto', pvp: 'ichika_battle' });
+// 'random' … 選べる曲の中から毎回ちがう曲(2026-10-30 社長「曲の設定にランダムもほしい」)。top・pvp と、助手と対戦の並び([CARD_BGM_RANDOM] の1つだけ)で使える
+//   ★前の版は 'random' を知らない曲として既定へ戻して読む(書き換えはしない)。選んでいない人は今のまま
+const CARD_BGM_RANDOM = 'random';
 const normalizeCardBgm = (v, isTrack = () => true) => {
   const r = cardIsPlainObject(v) ? v : {};
+  const pick = (x, def) => (x === CARD_BGM_RANDOM || (typeof x === 'string' && isTrack(x)) ? x : def);
   return {
-    top: typeof r.top === 'string' && isTrack(r.top) ? r.top : CARD_BGM_DEFAULT.top,
+    top: pick(r.top, CARD_BGM_DEFAULT.top),
     cpu: r.cpu === 'auto' || (typeof r.cpu === 'string' && isTrack(r.cpu)) ? r.cpu : CARD_BGM_DEFAULT.cpu,
-    pvp: typeof r.pvp === 'string' && isTrack(r.pvp) ? r.pvp : CARD_BGM_DEFAULT.pvp,
+    pvp: pick(r.pvp, CARD_BGM_DEFAULT.pvp),
   };
 };
 // 助手と対戦の曲の並び(2026-10-26 社長の依頼)。助手ごとに1〜5曲を選び、対戦中は全部を1回ずつシャッフルで流す
@@ -2256,6 +2268,7 @@ const CARD_CPU_PLAYLIST_DEFAULT = Object.freeze({
   sorashido: Object.freeze(['monster_hero_theme']),   // Monster Hero(2026-10-27 社長の答え)
 });
 const cardNormalizePlaylistList = (v, isTrack = () => true) => {
+  if (Array.isArray(v) && v.includes(CARD_BGM_RANDOM)) return [CARD_BGM_RANDOM];   // ランダム(選べる曲ぜんぶ)
   const out = [];
   for (const id of Array.isArray(v) ? v : []) {
     if (out.length >= CARD_PLAYLIST_MAX) break;
@@ -2387,7 +2400,7 @@ const CARD_SETTING_GROUPS = Object.freeze([
   { title: '操作', items: [
     { key: 'confirmUse', title: '技を使う前の確認', desc: '技を選んで相手をタップ(か運んで置く)したときに、「使いますか？」と1回確かめます。押しまちがいを防げます。',
       options: [{ id: 'OFF', label: '確かめない', note: 'すぐ使う' }, { id: 'ON', label: '確かめる', note: '「使う」で決める' }] },
-    { key: 'confirmEnd', title: 'ターン終了の確認', desc: 'ガッツの番に「ターン終了」を押したときに、1回確かめます。',
+    { key: 'confirmEnd', title: 'ターン終了の確認', desc: 'ガッツを置いて「ターン終了」を押したときに、1回確かめます。',
       options: [{ id: 'OFF', label: '確かめない', note: 'すぐ終わる' }, { id: 'ON', label: '確かめる', note: '「終わる」で決める' }] },
     { key: 'press', title: '長押しで詳しく出るまで', desc: 'カードを長押ししたときに、大きな絵と文の画面が出るまでの時間です。',
       options: [{ id: 'SHORT', label: '短め', note: '約0.3秒' }, { id: 'NORMAL', label: 'ふつう', note: '約0.45秒' }, { id: 'LONG', label: '長め', note: '約0.7秒' }] },
@@ -2397,7 +2410,7 @@ const CARD_SETTING_GROUPS = Object.freeze([
   { title: '自動', items: [
     { key: 'autoPass', bool: true, title: '守れないときは自動で「守らない」', desc: '攻撃されたときに、使える回避・防御のカードが1枚も無ければ、理由を少し見せてから自動で「守らない」にします。',
       options: [{ id: 'ON', label: 'する', note: '自動で進む' }, { id: 'OFF', label: 'しない', note: '自分で押す' }] },
-    { key: 'gutsPick', title: 'ガッツにするカードのおすすめ', desc: 'ガッツの番になったときに、おすすめのカードを先に選んでおきます。選び直してから「ターン終了」を押せます。',
+    { key: 'gutsPick', title: 'ガッツにするカードのおすすめ', desc: 'ガッツを置く場面になったら、おすすめのカードを先に選んでおきます。選び直してから「ターン終了」を押せます。',
       options: [{ id: 'OFF', label: '選ばない', note: '自分で選ぶ' }, { id: 'ON', label: '選んでおく', note: '直してもOK' }] },
   ] },
   { title: '表示', items: [

@@ -14,37 +14,15 @@ const CARD_SHARE_KEY = 'mh_card_deck_owner_key_v1';   // 持ち主の鍵(新し�
 const CARD_SHARE_TABLE = 'card_deck_entries';
 const CARD_RENTED_KEY = 'mh_card_rented_deck_v1';
 const CARD_SHARE_REWARD_KEY = 'mh_card_deck_reward_v1'; // 報酬を端末のビートPに足した日の一覧(['2026-10-29', …]・新しい60日まで)     // 借りているデッキ(新しいキー。1組だけ・期限なし・返すと null)
-// 戦い方の7つの向き(82 の CARD_AI_HABITS の項目と同じ名前)。-1 控えめ / 0 ふつう / 1 強め
-const CARD_SHARE_TILTS = Object.freeze([
-  { id: 'attack', label: '攻める' }, { id: 'keepGuard', label: '守りを残す' }, { id: 'saveGuts', label: 'ガッツをためる' },
-  { id: 'big', label: '大技' }, { id: 'disrupt', label: '相手を崩す' }, { id: 'area', label: '全体技' }, { id: 'finish', label: 'とどめ' },
-]);
-const CARD_SHARE_TILT_MUL = Object.freeze({ '-1': 0.6, 0: 1, 1: 1.6 });
-const CARD_SHARE_ACES_MAX = 3;
 let _cardShareUnavailable = false; // 表がまだ無い(SQL 未適用)と分かったら、その回は読みに行かない
+
+// 戦い方の7つの向き・戦い方をきれいにする・賢さ・打ち方(cardSharePolicy)は 82-card-share-core へ移した(2026-10-30)
 
 // 公開の印。区切り⑤(報酬)まで入るまでは、デバッグ設定から入ったときだけ押せる
 const cardShareOpen = () => true;
 
-// 戦い方をきれいにする(知らない項目は捨てる・無い人は既定で補う)。deck を渡すと、切り札はそのデッキに入っている札だけ残す
-const cardShareNormalizeTactics = (v, deck = null) => {
-  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
-  const habit = typeof r.habit === 'string' && Object.prototype.hasOwnProperty.call(CARD_AI_HABITS, r.habit) ? r.habit : 'kyuko';
-  const tilt = {};
-  CARD_SHARE_TILTS.forEach((t) => { const n = r.tilt && r.tilt[t.id]; tilt[t.id] = n === -1 || n === 1 ? n : 0; });
-  const inDeck = deck && Array.isArray(deck.cards) ? new Set(deck.cards) : null;
-  const aces = [...new Set((Array.isArray(r.aces) ? r.aces : []).filter((x) => typeof x === 'string' && /^[A-Z]?[0-9]{3}$/.test(x) && (!inDeck || inDeck.has(x))))].slice(0, CARD_SHARE_ACES_MAX);
-  const name = typeof r.name === 'string' ? r.name.slice(0, 20) : '';
-  // f … 戦術カードの枠(82-card-tactics-core の短い形。2026-10-29 社長)。無い登録(前の形)は、くせと傾きで打つ
-  const f = r.f && typeof r.f === 'object' && !Array.isArray(r.f) && typeof cardTacticPackFrames === 'function' ? cardTacticPackFrames(cardTacticUnpackFrames(r.f)) : null;
-  return { habit, tilt, aces, name, ...(f ? { f } : {}) };
-};
-// 登録デッキの賢さ(戦術カードの枠から。2026-10-29 社長「デッキ側で決まる・戦う人は選ばない」)。前の形の登録は NORMAL
-//   'random' … 何も入れていない(出せる手からランダム)。報酬と経験値は EASY で数える
-const cardShareSmartLevel = (tactics) => {
-  const t = cardShareNormalizeTactics(tactics);
-  return t.f && typeof cardTacticSmartLevel === 'function' ? cardTacticSmartLevel(cardTacticUnpackFrames(t.f)) : 'normal';
-};
+// 登録デッキとの対戦でもらえる物(ビートP・クイック周回・カードランクの経験値)は、相手の賢さにかかわらずこの強さの表で数える(84 が使う。2026-10-30 社長)
+const CARD_SHARE_REWARD_LEVEL = 'master';
 // 賢さに数える戦術カードの枚数(場面が合わない・同じもの・ほとんど当たらないものは数えない。82 の cardTacticCountedRows)
 const cardShareRowsCount = (frames) => cardTacticCountedRows(frames);
 const cardShareSmartText = (tactics) => {
@@ -54,26 +32,6 @@ const cardShareSmartText = (tactics) => {
   if (!t.f) return label;
   const f = cardTacticUnpackFrames(t.f);
   return `${label}(基本${f.base.filter(Boolean).length}・戦術カード${cardShareRowsCount(f)}枚)`;
-};
-// 土台のくせ(メインの基本カードが助手の型ならその助手。前の形の登録や画面の名前に使う)
-const cardShareMainHabit = (frames, fallback = 'kyuko') => {
-  const c = frames && typeof cardTacticOf === 'function' ? cardTacticOf(frames.base[0]) : null;
-  const g = c && typeof CARD_TACTIC_GROUPS !== 'undefined' ? CARD_TACTIC_GROUPS.find((x) => x.id === c.g) : null;
-  return (g && g.habit) || fallback || 'kyuko';
-};
-const cardShareFightLevel = (tactics) => { const lv = cardShareSmartLevel(tactics); return lv === 'random' ? 'easy' : lv; };
-// 戦い方から、助手の打ち方(cardAiPolicy の形)を作る。戦術カードの枠があれば、その枠で打つ(強さは枠の賢さ)
-const cardSharePolicy = (tactics, levelId, opts = {}) => {
-  const t = cardShareNormalizeTactics(tactics);
-  if (t.f) {
-    const frames = cardTacticUnpackFrames(t.f);
-    const base = cardAiPolicy(t.habit, cardShareFightLevel(t), { ...opts, noTactics: true });
-    return { ...base, gambit: frames, gambitRandom: true, aces: t.aces.slice() };
-  }
-  const base = cardAiPolicy(t.habit, levelId, { ...opts, noTactics: true });
-  const habit = { ...base.habit };
-  CARD_SHARE_TILTS.forEach((x) => { if (Number.isFinite(habit[x.id])) habit[x.id] = habit[x.id] * CARD_SHARE_TILT_MUL[t.tilt[x.id]]; });
-  return { ...base, habit, aces: t.aces.slice() };
 };
 
 // 持ち主の鍵。create … 無ければ作って保存する(登録するときだけ)。作れない・保存できないときは null
@@ -245,6 +203,7 @@ const cardRentedDeckSet = async (entry) => {
 const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked = null, debug = false, onFight = null, onOpenTactics = null, part = 'all', title = 'デッキ登録', headExtra = null, embedded = false }) => {
   const [tab, setTab] = useState(part === 'mine' ? 'mine' : onFight ? 'fight' : 'mine');
   const [foes, setFoes] = useState(null);             // { picks, friends, popular } … 戦う相手の3つの並び
+  const [foeFilter, setFoeFilter] = useState('all'); // 一覧の絞り込み(すべて/おすすめ/フレンド/人気。2026-10-30 社長・案C)
   // 戦術カード(96・97): 登録するときに載せる枠(レベルで開いている枠・持っているカードだけ)
   const [tacticsSave, setTacticsSave] = useState(null);
   useEffect(() => { if (typeof cardTacticsLoad === 'function') void cardTacticsLoad().then(setTacticsSave).catch(() => {}); }, []);
@@ -329,29 +288,44 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
   };
   useEffect(() => { if (tab === 'fight' && selfId && !off && foes === null) void loadFoes(); }, [tab, selfId, off]);
   const fightIssues = issuesOf(list.find((d) => d.id === (decks && decks.active)) || list[0] || null);
-  const foeRow = (e) => (
-    <li key={e.ownerId} data-card-share-foe={e.ownerId} className="flex items-center gap-2 rounded-xl bg-black/30 px-2 py-2">
-      {typeof CardPvpAvatar === 'function' && <CardPvpAvatar icon={e.icon} frame={e.frame} className="h-9 w-9"/>}
-      <span className="min-w-0 flex-1">
-        <b className="block truncate text-[13px] font-black text-white">{e.name}</b>
-        <small className="block truncate text-[11px] font-bold text-slate-300">{e.tactics.name || 'デッキ'}・{e.deck.monsters.map((no) => ((cardMonsterOf(db, no) || {}).name) || no).join('・')}</small>
-        <small data-card-share-smart={cardShareSmartLevel(e.tactics)} className="block text-[10px] font-black text-amber-200">{`賢さ ${cardShareSmartText(e.tactics)}`}</small>
-        <small className="block text-[10px] font-bold text-sky-200 tabular-nums">{e.battles ? `戦われた ${e.battles}回・デッキの勝ち ${Math.round((e.deckWins / e.battles) * 100)}%` : 'まだ戦われていません'}</small>
-      </span>
-      <span className="flex shrink-0 flex-col gap-1">
-        <button type="button" data-card-share-fight={e.ownerId} disabled={!onFight || fightIssues.length > 0} className="mh-button mh-button-primary min-h-[36px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
-          onClick={() => { Audio_.fgSe.tap(); if (onFight) onFight(e, cardShareFightLevel(e.tactics)); }}>戦う</button>
-        {part !== 'fight' && <button type="button" data-card-share-rent={e.ownerId} disabled={busy || (rented && rented.ownerId === e.ownerId && rented.version === e.version)} className="min-h-[30px] rounded-lg border border-emerald-300/50 bg-slate-900 px-2 text-[11px] font-black text-emerald-100 disabled:opacity-50"
-          onClick={() => { Audio_.fgSe.tap(); void rent(e); }}>{rented && rented.ownerId === e.ownerId && rented.version === e.version ? '借りています' : '借りる'}</button>}
-      </span>
-    </li>
-  );
-  const foeList = (title, rows, key) => (
-    <div className={SCREEN_PANEL_CLASS} data-card-share-list={key}>
-      <div className="text-[12px] font-bold text-slate-400">{title}</div>
-      {rows.length ? <ul className="mt-1 space-y-1">{rows.map(foeRow)}</ul> : <p className="mt-1 text-[12px] font-bold text-slate-400">{key === 'friends' ? 'デッキを登録しているフレンドはいません' : 'まだだれも登録していません'}</p>}
-    </div>
-  );
+  // 3つの並び(おすすめ・フレンド・人気)を1つの一覧にまとめる。同じ人は1回だけで、どの並びに入るかは印で出す(2026-10-30 社長・案C)
+  const CARD_SHARE_FOE_TAGS = [['picks', 'おすすめ', 'bg-amber-400 text-slate-950'], ['friends', 'フレンド', 'bg-emerald-400 text-emerald-950'], ['popular', '人気', 'bg-pink-400 text-pink-950']];
+  const foeMerged = (() => {
+    if (!foes) return [];
+    const byId = new Map();
+    CARD_SHARE_FOE_TAGS.forEach(([key]) => (foes[key] || []).forEach((e) => {
+      const cur = byId.get(e.ownerId);
+      if (cur) { if (!cur.tags.includes(key)) cur.tags.push(key); } else byId.set(e.ownerId, { e, tags: [key] });
+    }));
+    return [...byId.values()];
+  })();
+  const foeShown = foeFilter === 'all' ? foeMerged : foeMerged.filter((x) => x.tags.includes(foeFilter));
+  const foeRow = ({ e, tags }) => {
+    const mons = e.deck.monsters.map((no) => cardMonsterOf(db, no) || { no, name: no, img: no });
+    return (
+      <li key={e.ownerId} data-card-share-foe={e.ownerId} data-card-share-foe-tags={tags.join(' ')} className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-2 py-2">
+        {/* 3体の丸い顔(カードの絵の上のほう)と、どの並びに入るかの印 */}
+        <span className="flex shrink-0 flex-col items-center gap-1">
+          <span className="flex">{mons.map((m, i) => <img key={i} src={CARD_IMG(m.img)} alt={m.name} loading="lazy" className={`h-9 w-9 rounded-full border-2 border-amber-200 bg-slate-900 object-cover ${i ? '-ml-2' : ''}`} style={{ objectPosition: '50% 18%' }}/>)}</span>
+          <span data-card-share-foe-tag className="flex gap-0.5">{CARD_SHARE_FOE_TAGS.filter(([k]) => tags.includes(k)).map(([k, label, tone]) => <span key={k} className={`whitespace-nowrap rounded px-1 text-[9px] font-black ${tone}`}>{label}</span>)}</span>
+        </span>
+        <span className="min-w-0 flex-1">
+          <b className="block truncate text-[13px] font-black leading-tight text-white">{e.name}</b>
+          <small data-card-share-deck-name className="block truncate text-[11.5px] font-black leading-tight text-amber-100">「{e.tactics.name || 'デッキ'}」</small>
+          <small className="block truncate text-[10.5px] font-bold text-slate-300">{mons.map((m) => m.name).join('・')}</small>
+          <small data-card-share-smart={cardShareSmartLevel(e.tactics)} className="block truncate whitespace-nowrap text-[11px] font-black text-amber-200">{`賢さ ${cardShareSmartText(e.tactics)}`}</small>
+          <small className="block truncate text-[10.5px] font-bold text-sky-200 tabular-nums">{e.battles ? `戦われた ${e.battles}回・勝ち ${Math.round((e.deckWins / e.battles) * 100)}%` : 'まだ戦われていません'}</small>
+        </span>
+        <span className="flex shrink-0 flex-col gap-1">
+          <button type="button" data-card-share-fight={e.ownerId} disabled={!onFight || fightIssues.length > 0} className="mh-button mh-button-primary min-h-[40px] rounded-lg px-2.5 text-[13px] font-black disabled:opacity-50"
+            onClick={() => { Audio_.fgSe.tap(); if (onFight) onFight(e, cardShareFightLevel(e.tactics)); }}>戦う</button>
+          {part !== 'fight' && <button type="button" data-card-share-rent={e.ownerId} disabled={busy || (rented && rented.ownerId === e.ownerId && rented.version === e.version)} className="min-h-[30px] rounded-lg border border-emerald-300/50 bg-slate-900 px-2 text-[11px] font-black text-emerald-100 disabled:opacity-50"
+            onClick={() => { Audio_.fgSe.tap(); void rent(e); }}>{rented && rented.ownerId === e.ownerId && rented.version === e.version ? '借りています' : '借りる'}</button>}
+        </span>
+      </li>
+    );
+  };
+  const foeEmptyText = foeFilter === 'friends' ? 'デッキを登録しているフレンドはいません' : 'まだだれも登録していません';
   const registerButton = (
     <button type="button" data-card-share-register disabled={busy || !picked || issues.length > 0 || !selfId} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40" onClick={() => { Audio_.fgSe.tap(); void register(); }}>{mine ? 'このデッキで登録し直す' : 'このデッキを登録する'}</button>
   );
@@ -366,7 +340,7 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
         )}
         {mine !== undefined && !off && tab === 'fight' && (<>
           <div className={SCREEN_PANEL_CLASS}>
-            <div className="text-[12px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('相手の強さは、登録した人が入れた戦術カードで決まります(賢さ)。もらえるビートPは、その賢さの助手と対戦と同じです')}</div>
+            <div className="text-[12px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('相手の強さは、登録した人が入れた戦術カードで決まります(賢さ)。もらえるビートPや経験値は、賢さにかかわらず助手と対戦の MASTER と同じです')}</div>
             {fightIssues.length > 0 && <p className="mt-1 text-[12px] font-bold text-rose-200" style={JA_WRAP_STYLE}>{jaWrap(`使うデッキ: ${fightIssues[0]}`)}</p>}
           </div>
           {rented && part !== 'fight' && (
@@ -377,10 +351,13 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
           )}
           {msg && tab === 'fight' && <p className="rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
           {foes === null ? <p className="text-[13px] font-bold text-slate-300">読み込み中…</p> : (<>
-            {foeList('おすすめ', foes.picks, 'picks')}
+            <div data-card-share-filters className="flex gap-1.5 overflow-x-auto pb-0.5" role="tablist">
+              {[['all', 'すべて'], ...CARD_SHARE_FOE_TAGS.map(([k, label]) => [k, label])].map(([k, label]) => <button key={k} type="button" role="tab" aria-selected={foeFilter === k} data-card-share-filter={k} className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-black ${foeFilter === k ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-200'}`} onClick={() => { Audio_.fgSe.tap(); setFoeFilter(k); }}>{label}</button>)}
+            </div>
+            <div data-card-share-list={foeFilter}>
+              {foeShown.length ? <ul className="space-y-1.5">{foeShown.map(foeRow)}</ul> : <p className={`${SCREEN_PANEL_CLASS} text-[12px] font-bold text-slate-400`}>{foeEmptyText}</p>}
+            </div>
             <button type="button" data-card-share-reload className="w-full rounded-xl border border-white/15 bg-slate-900 py-2 text-[12px] font-black text-slate-200" onClick={() => { Audio_.fgSe.tap(); void loadFoes(); }}>ほかの人をさがす</button>
-            {foeList('フレンドのデッキ', foes.friends, 'friends')}
-            {foeList('よく戦われているデッキ', foes.popular, 'popular')}
           </>)}
         </>)}
         {mine !== undefined && !off && tab === 'mine' && (<>

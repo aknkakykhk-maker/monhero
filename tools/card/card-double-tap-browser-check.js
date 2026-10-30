@@ -146,14 +146,15 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await usable.click(); await sleep(600);
     check('② 手札を1回タップすると、技が選ばれるだけ(詳しい画面は出ない)', (await raised()) && !(await detailOpen()));
     // 狙える相手(赤い輪)。使う子を選ぶ段なら、黄色い輪の子を先に押す。まだ出せる形でなければ、手札の「候補」を1枚足す(組み合わせは自分で選ぶ。2026-10-29 社長)
-    for (let i = 0; i < 4 && !(await page.locator('[data-card-mon^="1-"].ring-rose-400').count()); i++) {
+    // 狙う先は相手とは限らない(カララギマンゴーなど味方に使う札もある。手札しだいで落ちていた 2026-10-30)。赤い輪ならどちらの場でもよい
+    for (let i = 0; i < 4 && !(await page.locator('[data-card-mon].ring-rose-400').count()); i++) {
       const u0 = page.locator('[data-card-mon^="0-"].ring-amber-300').first();
       const cand = page.locator('[data-card-hand-card]').filter({ has: page.locator('[data-card-hand-pick]', { hasText: '候補' }) }).first();
       if (!(await u0.count()) && (await cand.count())) { await cand.click(); await sleep(600); continue; }
       const u = page.locator('[data-card-mon^="0-"].ring-amber-300').first();
       if (await u.count()) { await u.click(); await sleep(600); } else break;
     }
-    const target = page.locator('[data-card-mon^="1-"].ring-rose-400').first();
+    const target = page.locator('[data-card-mon].ring-rose-400').first();
     await target.waitFor({ timeout: 3000 }).catch(() => {}); // 赤い輪は少し遅れて出ることがある
     const discard0 = await page.locator('[data-card-battle]').innerText();
     const hand0 = await page.locator('[data-card-hand-card]').count();
@@ -161,7 +162,14 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       // 1回目のタップは待たずにすぐ効く(2026-10-27 部長ソランドくん)。狙える相手を押すと、その場で技が出る
       await target.click(); await sleep(1500);
       check('③④ 狙える相手を1回タップすると、待たずに技が出る(手札が減る)', (await page.locator('[data-card-hand-card]').count()) < hand0 || (await page.locator('[data-card-battle]').innerText()) !== discard0, `${hand0} → ${await page.locator('[data-card-hand-card]').count()}`);
-    } else check('③ 狙える相手が出る', false, '赤い輪の相手が見つからない');
+    } else {
+      // 狙う相手のいない技(全体に当たる技など)は、赤い輪が出ずに「使う」で出す。そのときは「使う」を押して確かめる(手札しだいで落ちていた 2026-10-30)
+      const useBtn = page.locator('[data-card-footer] button:not([disabled])').filter({ hasText: /^使う/ }).first();
+      if (await useBtn.count()) {
+        await useBtn.click(); await sleep(1500);
+        check('③④ 狙う相手のいない技は「使う」で、待たずに出る(手札が減る)', (await page.locator('[data-card-hand-card]').count()) < hand0 || (await page.locator('[data-card-battle]').innerText()) !== discard0, `${hand0} → ${await page.locator('[data-card-hand-card]').count()}`);
+      } else check('③ 狙える相手が出る', false, '赤い輪の相手も「使う」も見つからない');
+    }
     // 技を出した直後は大写し・当たりの動き・相手の守りの番が続く。自分の操作に戻ってから(大写しが消えて攻撃かガッツの段)2回タップする
     for (let i = 0; i < 40; i++) {
       const m = await mode();

@@ -121,7 +121,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-replay-row]').first().waitFor({ timeout: 10000 });
     const rows = await page.locator('[data-card-replay-row]').count();
     const firstText = await page.locator('[data-card-replay-row]').first().innerText();
-    check('② 一覧に50試合が並び、日時・相手・種類・勝ち負け・◯番までが出る', rows === 50 && /10\/27 0?0:54/.test(firstText) && /フリー対戦/.test(firstText) && /番まで/.test(firstText) && /勝ち|負け/.test(firstText), `${rows}行 ${firstText.replace(/\n/g, ' ')}`);
+    check('② 一覧に50試合が並び、日時・相手・種類・勝ち負け・ターン◯までが出る', rows === 50 && /10\/27 0?0:54/.test(firstText) && /フリー対戦/.test(firstText) && /ターン\d+まで/.test(firstText) && /勝ち|負け/.test(firstText), `${rows}行 ${firstText.replace(/\n/g, ' ')}`);
     await shot(page, 'replay-list');
 
     // ③ ★
@@ -152,7 +152,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     let banners = 0;
     for (let k = 0; k < 3; k++) { await page.locator('[data-card-replay-next-turn]').click(); await page.waitForTimeout(150); banners += await page.locator('[data-card-turn-banner]').count(); }
     check('④ 見返しで番を進めても、まんなかの番の帯は出ない(上下の帯と食い違わない)', banners === 0, String(banners));
-    check('④ 番を進めると、上の帯の番と下の帯の番がそろう', !!turnOf(headN) && /番目の番/.test(barN) && barN.includes(`${turnOf(headN)}番目の番`), `${headN} / ${barN}`);
+    check('④ ターンを進めると、上の帯のターンと下の帯のターンがそろう', !!turnOf(headN) && /ターン\d+/.test(barN) && barN.includes(`ターン${turnOf(headN)}`), `${headN} / ${barN}`);
     await shot(page, 'replay-open');
     await page.locator('[data-card-replay-exit]').click();
     const back = await page.locator('[data-card-replay-list]').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);

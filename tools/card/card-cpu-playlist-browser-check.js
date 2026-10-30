@@ -243,6 +243,26 @@ const SHORT = 'audio/se-awakened-moo-apocalypse.mp3'; // 7秒ほどの音(検査
     check('④ 入れたあとも助手ごとに直せる(ききだけ変わる)', JSON.stringify(after.assistants.kiki) === '["__pl_bad","__pl_bad2"]' && JSON.stringify(after.assistants.mua) === '["__pl_a","__pl_b"]');
     check('③④ 前の保存(mh_card_bgm_v1)は一度も書き換えていない', (await stored()).bgm === before0.bgm, String((await stored()).bgm));
 
+    // ⑩ ランダム(2026-10-30 社長「曲の設定にランダムもほしい」)。あとの⑦⑧で使わないドラで試す。トップの曲はあとで元に戻す
+    if (OPEN.includes('dra')) {
+      await page.click('[data-card-playlist-who="dra"]');
+      await page.click('[data-card-playlist-random-on]');
+      await page.waitForTimeout(250);
+      const rnd = (await stored()).pl;
+      const label = await page.locator('[data-card-playlist-who="dra"]').innerText();
+      check('⑩ 助手の曲を「ランダム」にでき、保存は [random]・ボタンに「ランダム」・ほかの助手はそのまま', JSON.stringify(rnd.assistants.dra) === '["random"]' && /ランダム/.test(label) && JSON.stringify(rnd.assistants.mua) === '["__pl_a","__pl_b"]' && (await has('[data-card-playlist-random]')), `${JSON.stringify(rnd.assistants.dra)} ${label}`);
+      await page.click('[data-card-playlist-random-off]');
+      await page.waitForTimeout(250);
+      check('⑩ 「ランダムをやめて、曲を選ぶ」で1曲の並びに戻る', ((await stored()).pl.assistants.dra || []).length === 1 && (await stored()).pl.assistants.dra[0] !== 'random');
+    }
+    const topOpts = await page.evaluate(() => [...document.querySelectorAll('[data-card-bgm-select="top"] option')].map((o) => o.value));
+    await page.selectOption('[data-card-bgm-select="top"]', 'random');
+    await page.waitForTimeout(250);
+    const topRnd = JSON.parse((await stored()).bgm || 'null');
+    check('⑩ トップ画面・マルチ対戦の曲えらびの先頭に「ランダム」があり、選ぶと random を保存', topOpts[0] === 'random' && topRnd && topRnd.top === 'random', JSON.stringify(topRnd));
+    await page.selectOption('[data-card-bgm-select="top"]', 'atsu_cup_theme');
+    await page.waitForTimeout(250);
+
     // ⑤ 試聴
     if (audioReady) {
       await page.click('[data-card-playlist-who="mua"]');

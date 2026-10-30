@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b7a89af6da4d3cae
+// generated-sha256: 2c36e0d4dcb764ae
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7658,34 +7658,79 @@ const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).bas
 // イルミネ・ドリーミィ(2026-10-22 公開)は足し忘れていて、マスモンの詳細の丸で上下が切られ「大きく・中心がずれて」見えていた(2026-10-26 社長の指摘)
 const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Melody', 'Kuromy', 'Illumine', 'Dreamy', 'Kyubi', 'Orihime']);
 const monsterArtFitStyle = (baseId, style) => (MONSTER_ART_CONTAIN_IDS.includes(baseId) ? { ...style, objectFit: 'contain' } : style);
-// ★同じ主血統の立ち絵の見た目の大きさをそろえる、表示の倍率(2026-10-29 社長「同血統は基本的に立ち絵はほぼ同じサイズに」・案A)。
+// ★同じ主血統の立ち絵の見た目の大きさをそろえる、表示の倍率(2026-10-29 社長「同血統は基本的に立ち絵はほぼ同じサイズに」・案A。
+//   2026-10-30 社長「MB管理の図鑑で全部血統ごとに確認してサイズを同じぐらいに」で、図鑑に並ぶ全員(下書きのカードだけの子も)を対象に、
+//   1体ずつの数字の表から「絵の中身の範囲」(ART_CONTENT_BOXES。tools/image/make-art-content-boxes.js が測る)で計算する形へ替えた)。
 //   絵の画素は動かさない。その子の立ち絵(imgUrl)を「全体を収める」(contain)で出すときだけ、絵の要素を scale する
 //   (マスクは同じ要素・同じ箱の中にあるので一緒に動く。待機アニメの部品の軸は MonsterIdleArt が同じ式で動かす)。
 //   切り抜く丸いアイコン(cover)・顔アイコン・円盤石アイコン・小さい版(サムネ)は対象外(src か収め方が違う)。
-//   値は絵の不透明な部分を測って決めた(箱に対する高さ。仲間に合わせ、横に広い子は幅 0.98 で頭打ち):
-//   ピクシー 0.81→0.95(ミーア 0.94・パンドラ 0.96。中心が下にずれているので上へ ty)/ アーク 0.59→0.65(羽の幅で頭打ち)/
-//   プラント 0.72→0.78(花の幅で頭打ち)/ スネグーラチカ 0.89→0.97 / ザン 0.90→0.99
-//   ty は箱の高さに対する割合(負で上へ)
-const MONSTER_ART_SCALE = Object.freeze({
-  Pixie: Object.freeze({ scale: 1.17, ty: -0.049 }),
-  Ark: Object.freeze({ scale: 1.10, ty: 0 }),
-  Plant: Object.freeze({ scale: 1.08, ty: 0 }),
-  Snegurochka: Object.freeze({ scale: 1.09, ty: 0 }),
-  Zan: Object.freeze({ scale: 1.10, ty: 0 }),
-});
+//   決め方: 正方形の箱に contain で入れたときの中身の高さを測り、同じ主血統でいちばん高い子に合わせる。
+//   ただし中身の幅は箱の MONSTER_ART_SCALE_MAX_W まで(横に広い子は幅で頭打ち)。中身のまんなかを箱のまんなかへ寄せる(tx・ty)
+// <monster-art-scale>
+const MONSTER_ART_SCALE_MAX_W = 0.98;
+let _monsterArtScaleTable = null;
+const monsterArtScaleTable = () => {
+  if (_monsterArtScaleTable) return _monsterArtScaleTable;
+  const table = {};
+  const boxes = typeof ART_CONTENT_BOXES === 'object' && ART_CONTENT_BOXES ? ART_CONTENT_BOXES : null;
+  const all = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : null;
+  if (!boxes || !all) return table;   // まだ読み込みの途中なら、作らずに次の呼び出しでもう一度試す
+  const drafts = typeof UPCOMING_MONSTER_DRAFTS === 'object' && UPCOMING_MONSTER_DRAFTS ? UPCOMING_MONSTER_DRAFTS : {};
+  const lineageMap = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP : {};
+  const groups = {};
+  for (const [id, mon] of Object.entries({ ...drafts, ...all })) {
+    if (!mon || !mon.imgUrl) continue;
+    const main = (lineageMap[id] || mon.draftLineage || {}).main;
+    const box = boxes[String(mon.imgUrl).split('?')[0].replace(/^images\//, '')];
+    if (!main || !Array.isArray(box)) continue;
+    const [x0, y0, x1, y1, a] = box;
+    // 正方形の箱に contain で入れたときの、箱に対する中身の幅・高さ・まんなか
+    const wide = a >= 1;
+    const iw = wide ? 1 : a, ih = wide ? 1 / a : 1;
+    const ox = (1 - iw) / 2, oy = (1 - ih) / 2;
+    (groups[main] = groups[main] || []).push({ id, h: (y1 - y0) * ih, w: (x1 - x0) * iw,
+      cx: ox + ((x0 + x1) / 2) * iw, cy: oy + ((y0 + y1) / 2) * ih });
+  }
+  for (const list of Object.values(groups)) {
+    if (list.length < 2) continue;
+    const target = Math.max(...list.map((r) => r.h));
+    for (const r of list) {
+      const scale = Math.min(target / r.h, MONSTER_ART_SCALE_MAX_W / r.w);
+      if (!(scale > 1.02)) continue;
+      table[r.id] = Object.freeze({ scale: Math.round(scale * 1000) / 1000,
+        tx: Math.round(-(r.cx - 0.5) * scale * 1000) / 1000, ty: Math.round(-(r.cy - 0.5) * scale * 1000) / 1000 });
+    }
+  }
+  _monsterArtScaleTable = table;
+  return table;
+};
+// </monster-art-scale>
 const _artPathOf = (url) => (typeof url === 'string' ? url.split('?')[0] : '');
 // その絵に掛ける倍率(掛けないなら null)。src がその子の立ち絵で、収め方が contain のときだけ
 const monsterArtScaleOf = (baseId, src, className, style) => {
-  const def = baseId && Object.prototype.hasOwnProperty.call(MONSTER_ART_SCALE, baseId) ? MONSTER_ART_SCALE[baseId] : null;
+  const table = monsterArtScaleTable();
+  const def = baseId && Object.prototype.hasOwnProperty.call(table, baseId) ? table[baseId] : null;
   if (!def) return null;
-  const mon = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS[baseId] : null;
+  const mon = (typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS && ALL_PLAYER_MONSTERS[baseId])
+    || (typeof UPCOMING_MONSTER_DRAFTS === 'object' && UPCOMING_MONSTER_DRAFTS && UPCOMING_MONSTER_DRAFTS[baseId]) || null;
   if (!mon || !src || _artPathOf(src) !== _artPathOf(mon.imgUrl)) return null;
   const fit = (style && style.objectFit) || (/(^|\s)object-contain(\s|$)/.test(className || '') ? 'contain' : '');
   return fit === 'contain' ? def : null;
 };
+// 素の <img> で baseId を持たない所(図鑑の一覧の丸い絵)向け: 絵の道からその子を引いて、倍率を返す
+const monsterArtScaleBySrc = (src) => {
+  if (!src) return null;
+  const path = _artPathOf(src);
+  const lists = [typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS, typeof UPCOMING_MONSTER_DRAFTS === 'object' && UPCOMING_MONSTER_DRAFTS];
+  for (const list of lists) {
+    if (!list) continue;
+    for (const [id, mon] of Object.entries(list)) if (mon && _artPathOf(mon.imgUrl) === path) return monsterArtScaleOf(id, src, 'object-contain', null);
+  }
+  return null;
+};
 const monsterArtScaleTransform = (def, base) => {
   if (!def) return base;
-  const own = `${def.ty ? `translateY(${(def.ty * 100).toFixed(1)}%) ` : ''}scale(${def.scale})`;
+  const own = `${def.tx || def.ty ? `translate(${(def.tx * 100).toFixed(1)}%, ${(def.ty * 100).toFixed(1)}%) ` : ''}scale(${def.scale})`;
   return base ? `${base} ${own}` : own;
 };
 // 技カードのアイコンのように、絵は出すのに baseId を持ち回れない場所がある。
@@ -7794,7 +7839,7 @@ const _bakeDyedLayers = (key, src, layers) => {
   return promise;
 };
 const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: givenStyle, draggable, debugMaskPlacement = null }) => {
-  // 同じ血統の立ち絵の大きさをそろえる倍率(MONSTER_ART_SCALE)。マスクの位置合わせ(debugMaskPlacement)の画面では掛けない
+  // 同じ血統の立ち絵の大きさをそろえる倍率(monsterArtScaleTable)。マスクの位置合わせ(debugMaskPlacement)の画面では掛けない
   const artScale = debugMaskPlacement ? null : monsterArtScaleOf(baseId, src, className, monsterArtFitStyle(baseId, givenStyle));
   const rawStyle = artScale ? { ...(givenStyle || {}), transform: monsterArtScaleTransform(artScale, givenStyle && givenStyle.transform) } : givenStyle;
   const style = monsterArtFitStyle(baseId, rawStyle);
@@ -7941,7 +7986,7 @@ const bakeDyedMonsterCanvas = async (opts, size) => {
   sctx.imageSmoothingEnabled = true;
   sctx.imageSmoothingQuality = 'high';
   const w = out.width * def.scale, h = out.height * def.scale;
-  sctx.drawImage(out, (out.width - w) / 2, (out.height - h) / 2 + def.ty * out.height, w, h);
+  sctx.drawImage(out, (out.width - w) / 2 + def.tx * out.width, (out.height - h) / 2 + def.ty * out.height, w, h);
   return scaled;
 };
 const _bakeDyedMonsterCanvasRaw = async ({ baseId, src, masuColors }, size) => {
@@ -10133,6 +10178,17 @@ const beatRankTicketsFor = (rank) => {
   return r < 2 ? 0 : 1 + (r % 5 === 0 ? r : 0);
 };
 // そのランクに上がったときにもらえる物を、一目で分かる文に(「ビートP 1,300・セッション券 1枚」)
+// そのランクに上がったときにもらえる物を、1つずつ(ごほうびの一覧の画面用)。bonus は5ランクごとのおまけ
+const beatRankRewardItems = (rank) => {
+  const r = Math.max(0, Math.floor(Number(rank) || 0));
+  if (r < 2) return [];
+  const bonus = r % 5 === 0;
+  return [
+    { icon: '🎟️', text: `ビートP ${(r * 100).toLocaleString()}` },
+    { icon: '🎶', text: 'セッション券 1枚' },
+    ...(bonus ? [{ icon: '🎟️', text: `ビートP ${(r * 200).toLocaleString()}`, bonus: true }, { icon: '🎶', text: `セッション券 ${r.toLocaleString()}枚`, bonus: true }] : []),
+  ];
+};
 const beatRankRewardText = (rank) => `ビートP ${playerRankBeatPointsFor(rank).toLocaleString()}・セッション券 ${beatRankTicketsFor(rank).toLocaleString()}枚`;
 
 // { v:1, xp(経験値の合計), day(その日はじめての1曲を数えた日 JST 'YYYY-MM-DD'), dayFirst(その日の +30 を数えたか),
@@ -11788,9 +11844,15 @@ const HomeProfileIcon = ({ src, id, adjustment, frameId=null }) => {
 };
 
 // 図鑑一覧・血統チップ・立ち絵は本番とDEBUGで同じ収め方を使う。
+// 一覧の丸い絵も、同じ血統の立ち絵の大きさをそろえる倍率を掛ける(2026-10-30 社長「MB管理の図鑑で全部血統ごとに…サイズを同じぐらいに」)。
+// 血統の札の小さい顔(lineage)には掛けない
+const dexIconArtScale = (src, lineage) => {
+  const def = !lineage && typeof monsterArtScaleBySrc === 'function' ? monsterArtScaleBySrc(src) : null;
+  return def ? { transform: monsterArtScaleTransform(def) } : null;
+};
 const DexMonsterIcon = ({ src, alt='', hidden=false, lineage=false }) => (
   <span className={`${lineage?'w-7 h-7':'w-14 h-14'} rounded-full overflow-hidden border ${lineage?'border-amber-300/40':'border-amber-400/30'} shrink-0 bg-black/40 flex items-center justify-center`}>
-    {src?<img src={src} alt={alt} draggable={false} data-dex-entry-icon={!lineage||undefined} data-dex-lineage-icon={lineage||undefined} className="w-full h-full object-contain" style={{padding:'10%',...(hidden?{filter:'brightness(0)',opacity:0.6}:{})}}/>:<span className="text-2xl">？</span>}
+    {src?<img src={src} alt={alt} draggable={false} data-dex-entry-icon={!lineage||undefined} data-dex-lineage-icon={lineage||undefined} className="w-full h-full object-contain" style={{padding:'10%',...(dexIconArtScale(src, lineage)||{}),...(hidden?{filter:'brightness(0)',opacity:0.6}:{})}}/>:<span className="text-2xl">？</span>}
   </span>
 );
 // 血統名は「…」で切らず、2行まで折り返す(2026-10-26。幅320pxでは28体中13種が「モッ…」「ライ…」と切れ、
@@ -16152,14 +16214,14 @@ const MonsterIdleArt = ({baseId, image, fill = false, own = false}) => {
   const className = String(image.props.className || '').split(/\s+/).filter(c => c && !/^drop-shadow/.test(c)).join(' ');
   const layer = (url, extra) => React.cloneElement(image, { alt: extra ? '' : image.props.alt, className,
     style:{ ...(image.props.style||{}), ...MONSTER_IDLE_MASK_STYLE(url), ...(extra||{}) } });
-  // 同じ血統の立ち絵の大きさをそろえる倍率(MONSTER_ART_SCALE)は、各層の絵(DyedMonsterImage)が同じだけ掛ける。
+  // 同じ血統の立ち絵の大きさをそろえる倍率(monsterArtScaleTable)は、各層の絵(DyedMonsterImage)が同じだけ掛ける。
   // 部品の回す軸(origin)は「倍率を掛ける前の絵」での位置なので、絵と同じ式で動かす(そうしないと部品が体から浮く)
   const artScale = typeof monsterArtScaleOf === 'function' ? monsterArtScaleOf(baseId, image.props.src, image.props.className, monsterArtFitStyle(baseId, image.props.style)) : null;
   const originOf = (origin) => {
     if (!artScale) return origin;
     const m = /^\s*(-?[\d.]+)%\s+(-?[\d.]+)%\s*$/.exec(String(origin || ''));
     if (!m) return origin;
-    const x = 50 + artScale.scale * (Number(m[1]) - 50), y = 50 + artScale.scale * (Number(m[2]) - 50) + artScale.ty * 100;
+    const x = 50 + artScale.scale * (Number(m[1]) - 50) + (artScale.tx || 0) * 100, y = 50 + artScale.scale * (Number(m[2]) - 50) + artScale.ty * 100;
     return `${x.toFixed(2)}% ${y.toFixed(2)}%`;
   };
   const partNode = (part, index) => (
@@ -23063,7 +23125,7 @@ const RhythmLineAdjustPanel=({adjust,onBump,isLandscape})=>{
     </div>
   </div>;
 };
-const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,beatRankAward=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null})=>{
+const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,beatRankAward=null,onRankBarFull=null,onRankBarDone=null,onRankBarStart=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null})=>{
   // 判定ラインの位置の合わせ(lineAdjust)は、練習と同じ扱い(ライフを減らさない・記録を送らない)。練習の説明の帯は出さない
   const tutorialProp=tutorial;tutorial=tutorial||!!lineAdjust;
   // 合わせている間の地上の判定ラインの高さ(保存はまだ・親が持つ)。null なら設定のまま
@@ -25088,6 +25150,9 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 <div data-rhythm-result-body className="relative flex min-h-0 min-w-0 flex-1 flex-col">
 <div data-rhythm-result-scroll className="min-h-0 flex-1 overflow-y-auto px-4 pb-3 pt-3">
 <h2 className="mb-2 text-[11px] font-black tracking-[.3em] text-cyan-200 [@container(min-width:680px)]:hidden">RHYTHM RESULT</h2>
+{/* ビートランクの経験値の棒(2026-10-30 社長「終わったあとに経験値ゲージのバーの動きが見れない」)。リザルトを開いてすぐ目に入るよう、いちばん上に置く。
+    この1曲でたまった経験値と、ランクが上がったときのごほうび。裏のクイック周回の「経験値」と取り違えないよう、札に「🎵 ビートランク」と書く(PlayerRankGain) */}
+<PlayerRankGain kind="beat" award={beatRankAward} onFull={onRankBarFull} onDone={onRankBarDone} onStart={onRankBarStart} next={beatRankAward?`ランク${playerRankInfo(beatRankAward.xp).rank+1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank+1)}`:''}/>
 <div data-rhythm-result-summary className="[@container(min-width:680px)]:grid [@container(min-width:680px)]:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)] [@container(min-width:680px)]:items-start [@container(min-width:680px)]:gap-2">
 {/* 横に広いときは、曲の札だけを2列ぶち抜きで上に置く(2026-09-26・ユーザー報告「また曲名切れ」)。
     半分の幅に曲の札を入れていたら、曲名が「魔窟…」になり、Lv.とランクのゲージもランクの丸に押しつぶされていた。
@@ -25185,9 +25250,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   <small className="mt-1 block text-[10px] font-black text-amber-200">{result.allMarvelous?'すべてMARVELOUS。文句なしの完璧です':result.allExcellent?'すべてEXCELLENT以上。ほぼ完璧です':'一度もコンボを切らずに完走しました'}</small>
 </div>}
 <div className="my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300">{result.fullCombo&&<span>FULL COMBO</span>}{result.allExcellent&&<span>ALL EXCELLENT</span>}{result.allMarvelous&&<span>ALL MARVELOUS</span>}</div>{/* クイック∞周回を裏で回していたときだけ。曲の長さぶんが周回クリア扱いで入る */}
-{/* ビートランク(2026-10-29 社長)。この1曲でたまった経験値と、ランクが上がったときのごほうび。横向きでも縦持ちでも、ここに1か所だけ出す。
-    裏のクイック周回の「経験値」(マスモンの経験値)と取り違えないよう、札に「🎵 ビートランク」と書く(PlayerRankGain) */}
-<PlayerRankGain kind="beat" award={beatRankAward} next={beatRankAward?`ランク${playerRankInfo(beatRankAward.xp).rank+1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank+1)}`:''}/>
+{/* ビートランクの経験値の棒は、リザルトのいちばん上へ移した(2026-10-30) */}
 {/* 裏で∞周回していたのに失敗したとき。1周も入らないので、その理由をここで言う
     (2026-09-12・ユーザー指示「失敗しても入るようにすると放置で稼げるようになるから失敗は0にして」)。
     ★裏で周回していない人にはそもそも出ない(quickRunAwardがnullのまま) */}
@@ -34597,6 +34660,9 @@ const PLAYER_RANK_BADGE_CSS = `
 .mh-prb.mh-prb-s .mh-prb-shield{width:32px;height:36px}.mh-prb.mh-prb-s .mh-prb-shield::after{inset:2px}
 .mh-prb.mh-prb-s .mh-prb-num{font-size:16px;-webkit-text-stroke:3.5px var(--prb-ink)}.mh-prb.mh-prb-s .mh-prb-num.mh-prb-w3{font-size:12px}
 .mh-prb.mh-prb-s .mh-prb-name{font-size:12px}.mh-prb.mh-prb-s .mh-prb-kind{display:none}
+.mh-prb.mh-prb-xs{gap:4px}.mh-prb.mh-prb-xs .mh-prb-shield{width:18px;height:20px;filter:drop-shadow(0 1px 0 rgba(0,0,0,.45)) drop-shadow(0 0 5px var(--prb-glow))}.mh-prb.mh-prb-xs .mh-prb-shield::after{inset:1.5px}
+.mh-prb.mh-prb-xs .mh-prb-num{font-size:10px;-webkit-text-stroke:2.5px var(--prb-ink)}.mh-prb.mh-prb-xs .mh-prb-num.mh-prb-w3{font-size:8px}
+.mh-prb.mh-prb-xs .mh-prb-name{font-size:10px;-webkit-text-stroke:2.5px var(--prb-ink)}.mh-prb.mh-prb-xs .mh-prb-kind{display:none}
 .mh-prb-t1{--prb-rim:linear-gradient(160deg,#fde2c4,#9a4b1c 55%,#5a250b);--prb-face:linear-gradient(160deg,#e08a4a,#8a3f12);--prb-ink:#3b1406;--prb-glow:rgba(234,138,74,.55);--prb-label:#fbbf8a}
 .mh-prb-t2{--prb-rim:linear-gradient(160deg,#ffffff,#94a3b8 55%,#475569);--prb-face:linear-gradient(160deg,#cbd5e1,#64748b);--prb-ink:#1e293b;--prb-glow:rgba(203,213,225,.6);--prb-label:#e2e8f0}
 .mh-prb-t3{--prb-rim:linear-gradient(160deg,#fff7c2,#f59e0b 55%,#92400e);--prb-face:linear-gradient(160deg,#fcd34d,#d97706);--prb-ink:#5b2a03;--prb-glow:rgba(251,191,36,.7);--prb-label:#fde68a}
@@ -34622,7 +34688,7 @@ function PlayerRankBadge({ kind = 'beat', rank = 1, size = 'lg', showName = true
   const text = r.toLocaleString();
   return (
     <span data-player-rank-badge={kind} data-player-rank-tier={tier.t} aria-label={`${k.label} ${r}`}
-      className={`mh-prb mh-prb-t${tier.t}${size === 'sm' ? ' mh-prb-s' : ''}`}>
+      className={`mh-prb mh-prb-t${tier.t}${size === 'sm' ? ' mh-prb-s' : size === 'xs' ? ' mh-prb-xs' : ''}`}>
       <span className="mh-prb-shield" aria-hidden="true"><span className="mh-prb-gloss"/><b data-player-rank-value className={`mh-prb-num${text.length >= 3 ? ' mh-prb-w3' : ''}`}><span className="mh-prb-digits">{text}</span></b></span>
       {showName && <span className="mh-prb-tag" aria-hidden="true"><span className="mh-prb-kind">{tier.name}</span><span className="mh-prb-name">{k.label}</span></span>}
     </span>
@@ -34664,16 +34730,87 @@ function PlayerRankPanel({ kind = 'beat', xp = 0, note = '', sub = '' }) {
 
 // 上の帯に入れる細い1行(2026-10-29 社長「立ち絵が小さくなるのはだめ」→ 上の帯に横長で薄く)。小さいバッジ・細い棒・次まで。
 // 次のごほうびは帯には入れない(社長「トップに要らなければ詳しい所だけ」。ヘルプと曲の結果で見せる)
-function PlayerRankStrip({ kind = 'beat', xp = 0 }) {
+// size='xs' は、帯の1行に収める小さい札(モードえらびの上の帯。立ち絵の枠を押し下げない・2026-10-30)
+function PlayerRankStrip({ kind = 'beat', xp = 0, size = 'sm' }) {
   const k = playerRankKind(kind);
   const info = playerRankInfo(xp);
   return (
     <div data-player-rank-strip={kind} className="flex min-w-0 items-center gap-1.5">
-      <PlayerRankBadge kind={kind} rank={info.rank} size="sm"/>
+      <PlayerRankBadge kind={kind} rank={info.rank} size={size}/>
       <div className="h-1.5 min-w-[40px] flex-1 overflow-hidden rounded-full bg-slate-700/80" role="progressbar" aria-label="次のランクまで" aria-valuemin={0} aria-valuemax={info.need} aria-valuenow={info.into}>
         <i className={`block h-full rounded-full bg-gradient-to-r ${k.bar}`} style={{ width: `${Math.min(100, Math.round((info.into / info.need) * 100))}%` }}/>
       </div>
       <small className="shrink-0 whitespace-nowrap text-[9px] font-black text-slate-300 tabular-nums">{`次まで ${(info.need - info.into).toLocaleString()}`}</small>
+    </div>
+  );
+}
+
+// ==================== ランクごとのごほうびの一覧と、詳しい画面(2026-10-30 社長「カードランクもビートランクともにちゃんと報酬が全部見れるように作って」) ====================
+// rewardsOf(rank, got) → [{ icon, text, bonus }](got はもう上がったランクか。言い方を「〜なった/〜なる」で分けたいとき用)(そのランクに上がったときにもらえる物。bonus は5ランクごとのおまけ)。
+// ランク2から並べ、開いたときは今のランクの行が上に来るように送る。下まで送ると先を足していく(上限なし)。
+// 今のランクまでは「もらった」、次のランクは「次」と印を付ける。表示だけ(保存は触らない)
+const PLAYER_RANK_REWARDS_STEP = 30;
+function PlayerRankRewards({ kind = 'beat', rank = 1, rewardsOf, cls = '' }) {
+  const k = playerRankKind(kind);
+  const cur = Math.max(1, Math.floor(Number(rank) || 1));
+  const [last, setLast] = React.useState(Math.max(50, cur + 50));
+  const boxRef = React.useRef(null), curRef = React.useRef(null);
+  React.useEffect(() => {
+    const box = boxRef.current, row = curRef.current;
+    if (box && row) box.scrollTop = Math.max(0, row.offsetTop - 4);
+  }, []);
+  const onScroll = (e) => { const b = e.currentTarget; if (b.scrollTop + b.clientHeight >= b.scrollHeight - 80) setLast((n) => n + PLAYER_RANK_REWARDS_STEP); };
+  const rows = [];
+  for (let r = 2; r <= last; r++) rows.push(r);
+  return (
+    <div ref={boxRef} data-player-rank-rewards={kind} onScroll={onScroll} className={`relative max-h-[min(46vh,360px)] overflow-y-auto overscroll-contain rounded-xl bg-black/35 p-1.5 ${cls}`}>
+      <ul className="space-y-1">
+        {rows.map((r) => {
+          const got = r <= cur, next = r === cur + 1, items = (typeof rewardsOf === 'function' ? rewardsOf(r, got) : []) || [];
+          return (
+            <li key={r} ref={r === Math.max(2, cur) ? curRef : null} data-player-rank-reward-row={r} data-got={got ? 'true' : 'false'}
+              className={`flex items-start gap-2 rounded-lg border px-2 py-1.5 ${next ? `${k.border} bg-white/10` : r % 5 === 0 ? 'border-pink-300/40 bg-pink-500/10' : 'border-white/5 bg-slate-900/60'} ${got ? 'opacity-55' : ''}`}>
+              <div className="w-[52px] shrink-0 leading-tight">
+                <b className={`block text-[12px] font-black tabular-nums ${k.accent}`}>{`ランク${r}`}</b>
+                {got && <small className="block text-[9px] font-black text-emerald-300">✓ もらった</small>}
+                {next && <small className="block text-[9px] font-black text-amber-200">▶ 次</small>}
+              </div>
+              <ul className="min-w-0 flex-1 space-y-0.5 text-[11px] font-bold leading-snug text-slate-100">
+                {items.map((g, i) => (
+                  <li key={i} className="flex items-start gap-1">
+                    <span aria-hidden="true" className="shrink-0">{cardIconNode(g.icon, 12)}</span>
+                    <span className="min-w-0" style={JA_WRAP_STYLE}>{jaWrap(String(g.text || ''))}{g.bonus && <small className="ml-1 whitespace-nowrap rounded bg-pink-500/30 px-1 text-[9px] font-black text-pink-100">5ランクごとのおまけ</small>}</span>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          );
+        })}
+      </ul>
+      <button type="button" data-player-rank-rewards-more onClick={() => setLast((n) => n + PLAYER_RANK_REWARDS_STEP)}
+        className="mt-1.5 min-h-[40px] w-full rounded-lg border border-white/15 bg-slate-800/80 text-[12px] font-black text-slate-200">{`ランク${last + 1}から先も見る`}</button>
+    </div>
+  );
+}
+
+// 札を押した先の詳しい画面: 大きい札・棒・ランクごとのごほうびの一覧・経験値のたまり方(how)
+function PlayerRankDetail({ kind = 'beat', xp = 0, rewardsOf, how = '', onClose = null }) {
+  const k = playerRankKind(kind);
+  const info = playerRankInfo(xp);
+  const close = () => { if (typeof Audio_ !== 'undefined' && Audio_.fgSe) Audio_.fgSe.tap(); if (onClose) onClose(); };
+  return (
+    <div data-player-rank-detail={kind} role="dialog" aria-modal="true" aria-label={k.label} className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-3" onClick={close}>
+      <div className={`flex max-h-[calc(var(--mh-vh)-24px)] w-full max-w-[380px] flex-col rounded-2xl border-2 bg-gradient-to-b from-violet-950 to-slate-950 p-3 text-white ${k.border}`} onClick={(e) => e.stopPropagation()}>
+        {/* 背の低い画面(横向きのスマホ)では札を小さくして、ごほうびの一覧に高さを回す */}
+        <div className="flex shrink-0 justify-center [@media(max-height:480px)]:hidden"><PlayerRankBadge kind={kind} rank={info.rank} size="lg"/></div>
+        <div className="hidden shrink-0 justify-center [@media(max-height:480px)]:flex"><PlayerRankBadge kind={kind} rank={info.rank} size="sm"/></div>
+        <div className="mt-2 shrink-0"><PlayerRankGauge kind={kind} info={info} note={`次のランクまで あと${(info.need - info.into).toLocaleString()}`}/></div>
+        <b className={`mt-2 block text-[13px] font-black ${k.accent}`}>ランクごとのごほうび</b>
+        <p className="mb-1 text-[10px] font-bold text-slate-300 [@media(max-height:480px)]:hidden" style={JA_WRAP_STYLE}>{jaWrap('ランクが上がると、そのランクの物をもらえます。下へ送ると先のランクも見られます。')}</p>
+        <PlayerRankRewards kind={kind} rank={info.rank} rewardsOf={rewardsOf} cls="min-h-[96px] shrink"/>
+        {how && <p className="mt-2 shrink-0 text-[11px] font-bold leading-relaxed text-slate-300 [@media(max-height:480px)]:hidden" style={JA_WRAP_STYLE}>{jaWrap(how)}</p>}
+        <button type="button" data-player-rank-detail-close onClick={close} className="mh-button mt-2 min-h-[44px] w-full shrink-0 rounded-xl text-[14px] font-black">とじる</button>
+      </div>
     </div>
   );
 }
@@ -34691,33 +34828,239 @@ function PlayerRankUp({ kind = 'beat', from = 1, to = 1, gains = [] }) {
       </div>
       {gains.length > 0 && <ul data-player-rank-up-gains className="mt-1.5 flex flex-wrap justify-center gap-1.5">
         {gains.map((g, i) => <li key={i} className="rounded-lg border border-fuchsia-200/40 bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-amber-100">
-          {g.icon && <span aria-hidden="true">{g.icon} </span>}<span style={JA_WRAP_STYLE}>{jaWrap(String(g.text || ''))}</span>
+          {g.icon && <span aria-hidden="true">{cardIconNode(g.icon, 14)} </span>}<span style={JA_WRAP_STYLE}>{jaWrap(String(g.text || ''))}</span>
         </li>)}
       </ul>}
     </div>
   );
 }
 
-// 1回ぶんの結果に出す札: 「経験値 +26(ランク12→13)」・内わけ・棒・上がったら演出。
+// ==== 経験値の棒が「前の量」から伸びる演出(2026-10-30 社長「1戦後の経験値のゲージ変動のような演出」→「もっと派手に」×2 →「これで入れて」)。
+// 見本: claude.ai/artifact/MXTLj3u53RsFErJp6qd5rV。ビートの曲の結果とカードの対戦の結果の札(PlayerRankGain)で使う。
+//   内わけの札が1つずつ出て、その分の「+18」が棒へ飛び込み、棒が段々に伸びる(数字も弾んで数え上がる)。
+//   満タンで棒と札全体が光り、光の輪・粒・星・虹色の「RANK UP!」→ 新しいランクの数字が弾んで、次のランクの棒へ。
+//   ブリーダーレベルの結果の棒(LevelGrowthBar: 満タンで LEVEL UP の点滅 → 次の棒)と同じ流れ。長くても約2秒。押すと最後まで飛ばす。
+//   保存データは触らない(表示だけ)。効果音は「画面の前の効果音」(fgSe)で、効果音の音量設定に従う
+const PLAYER_RANK_XP_BAR_CSS = `
+.mh-prxb{--prxb-a:#22d3ee;--prxb-b:#f0abfc;--prxb-glow:rgba(103,232,249,.9);position:relative;cursor:pointer;user-select:none}
+.mh-prxb.gold{--prxb-a:#f59e0b;--prxb-b:#fde68a;--prxb-glow:rgba(253,224,71,.95)}
+.mh-prxb-fx{position:absolute;inset:0;pointer-events:none;overflow:visible;z-index:6}
+.mh-prxb::after{content:"";position:absolute;inset:-6px;border-radius:16px;background:#fff;opacity:0;pointer-events:none;z-index:7}
+.mh-prxb.flash::after{animation:mhPrxbCardFlash .45s ease-out}
+.mh-prxb-add{display:inline-block;font-size:22px;font-weight:900;line-height:1.1;color:#fff;-webkit-text-stroke:4px rgba(30,10,60,.9);paint-order:stroke fill;font-variant-numeric:tabular-nums;text-shadow:0 0 12px var(--prxb-glow)}
+.mh-prxb-add.bump{animation:mhPrxbBump .22s cubic-bezier(.2,1.8,.4,1),mhPrxbTint .22s ease-out}
+.mh-prxb-add.final{animation:mhPrxbFinal .6s cubic-bezier(.2,1.8,.4,1)}
+.mh-prxb-chip{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.1);color:#e2e8f0;opacity:0;transform:translateY(6px) scale(.8);transition:opacity .18s,transform .25s cubic-bezier(.2,1.6,.4,1)}
+.mh-prxb-chip.on{opacity:1;transform:none}
+.mh-prxb-chip b{color:#fde68a}
+.mh-prxb-track{position:relative}
+.mh-prxb-track.shake{animation:mhPrxbShake .28s ease-in-out}
+.mh-prxb-bar{position:relative;height:16px;border-radius:999px;background:#1f2937;overflow:hidden;border:2px solid rgba(255,255,255,.18);box-shadow:inset 0 2px 4px rgba(0,0,0,.6)}
+.mh-prxb-bar.full{animation:mhPrxbFull .55s ease-out}
+.mh-prxb-bar.switch{animation:mhPrxbSwitch .35s ease-out}
+.mh-prxb-fill{position:absolute;inset:0 auto 0 0;border-radius:999px;background:linear-gradient(90deg,var(--prxb-a),var(--prxb-b));box-shadow:0 0 12px var(--prxb-glow);transition:width .34s cubic-bezier(.3,.8,.4,1)}
+.mh-prxb-fill::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.75) 45%,transparent 60%);background-size:220% 100%;animation:mhPrxbSheen 1.1s linear infinite}
+.mh-prxb-fill::before{content:"";position:absolute;inset:0 0 50% 0;background:linear-gradient(180deg,rgba(255,255,255,.45),transparent);border-radius:999px}
+.mh-prxb.instant .mh-prxb-fill,.mh-prxb.instant .mh-prxb-tip{transition:none}
+.mh-prxb-tip{position:absolute;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:radial-gradient(circle,#fff 0 25%,var(--prxb-glow) 40%,transparent 70%);opacity:0;pointer-events:none;z-index:3;transition:left .34s cubic-bezier(.3,.8,.4,1)}
+.mh-prxb-tip.on{opacity:1;animation:mhPrxbTwinkle .25s ease-in-out infinite alternate}
+.mh-prxb-up{position:absolute;right:0;top:-18px;font-size:24px;font-weight:900;line-height:1;background:linear-gradient(90deg,#f43f5e,#f59e0b,#fde047,#84cc16,#06b6d4,#8b5cf6,#f43f5e);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:2px rgba(124,45,18,.9);text-shadow:none;filter:drop-shadow(0 0 8px rgba(253,224,71,.9));pointer-events:none;z-index:8;animation:mhPrxbUpPop .5s cubic-bezier(.2,1.8,.4,1) both,mhPrxbUpPulse 1s ease-in-out .5s infinite,mhPrxbRainbow 1.2s linear infinite}
+.mh-prxb-spark,.mh-prxb-mote{position:absolute;border-radius:50%;background:#fff;box-shadow:0 0 6px var(--prxb-glow);pointer-events:none;z-index:4}
+.mh-prxb-spark{width:5px;height:5px;animation:mhPrxbSpark .55s ease-out forwards}
+.mh-prxb-mote{width:4px;height:4px;animation:mhPrxbMote .9s ease-out forwards}
+.mh-prxb-boom{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 14px var(--prxb-glow);pointer-events:none;z-index:5;animation:mhPrxbBoom .4s ease-out forwards}
+.mh-prxb-ring{position:absolute;left:50%;top:50%;width:60px;height:60px;margin:-30px 0 0 -30px;border-radius:50%;border:3px solid var(--prxb-glow);pointer-events:none;z-index:4;animation:mhPrxbRing .6s ease-out forwards}
+.mh-prxb-burst,.mh-prxb-rad{position:absolute;border-radius:2px;pointer-events:none;z-index:7}
+.mh-prxb-burst{width:7px;height:7px;animation:mhPrxbBurst .8s ease-out forwards}
+.mh-prxb-rad{width:8px;height:8px;animation:mhPrxbBurst .9s cubic-bezier(.2,.7,.4,1) forwards}
+.mh-prxb-star{position:absolute;z-index:8;color:#fff;font-size:18px;line-height:1;text-shadow:0 0 10px var(--prxb-glow),0 0 18px #fff;pointer-events:none;animation:mhPrxbStar .9s ease-out forwards}
+.mh-prxb-fly{position:absolute;z-index:8;font-size:18px;font-weight:900;color:#fde68a;-webkit-text-stroke:3px rgba(30,10,60,.9);paint-order:stroke fill;text-shadow:0 0 10px var(--prxb-glow);pointer-events:none;animation:mhPrxbFly .5s cubic-bezier(.3,.7,.4,1) forwards}
+.mh-prxb-newrank{position:absolute;left:50%;top:-6px;z-index:8;font-size:30px;font-weight:900;line-height:1;color:#fff;-webkit-text-stroke:5px rgba(30,10,60,.95);paint-order:stroke fill;text-shadow:0 0 18px var(--prxb-glow);pointer-events:none;animation:mhPrxbNewRank .9s cubic-bezier(.2,1.8,.4,1) forwards}
+@keyframes mhPrxbCardFlash{0%{opacity:.85}100%{opacity:0}}
+@keyframes mhPrxbBump{0%{transform:scale(1)}50%{transform:scale(1.35)}100%{transform:scale(1)}}
+@keyframes mhPrxbTint{0%{color:#fff}40%{color:#fde047}100%{color:#fff}}
+@keyframes mhPrxbFinal{0%{transform:scale(1)}35%{transform:scale(1.7);color:#fde047;text-shadow:0 0 24px var(--prxb-glow),0 0 40px #fff}100%{transform:scale(1)}}
+@keyframes mhPrxbShake{0%,100%{transform:none}20%{transform:translate(-3px,1px)}40%{transform:translate(3px,-1px)}60%{transform:translate(-2px,0)}80%{transform:translate(2px,0)}}
+@keyframes mhPrxbFull{0%{box-shadow:0 0 0 rgba(255,255,255,0)}30%{box-shadow:0 0 26px 8px var(--prxb-glow);background:#fff;border-color:#fff}100%{box-shadow:0 0 0 rgba(255,255,255,0)}}
+@keyframes mhPrxbSwitch{0%{background:#fff}100%{background:#1f2937}}
+@keyframes mhPrxbSheen{from{background-position:120% 0}to{background-position:-120% 0}}
+@keyframes mhPrxbTwinkle{from{transform:scale(.8)}to{transform:scale(1.3)}}
+@keyframes mhPrxbUpPop{0%{transform:scale(.2) rotate(-12deg);opacity:0}100%{transform:scale(1) rotate(-6deg);opacity:1}}
+@keyframes mhPrxbUpPulse{0%,100%{transform:scale(1) rotate(-6deg)}50%{transform:scale(1.12) rotate(-6deg)}}
+@keyframes mhPrxbRainbow{from{background-position:0 0}to{background-position:200% 0}}
+@keyframes mhPrxbSpark{to{transform:translate(var(--x),var(--y)) scale(.2);opacity:0}}
+@keyframes mhPrxbMote{0%{opacity:0;transform:translate(0,0) scale(.5)}20%{opacity:1}100%{opacity:0;transform:translate(var(--x),var(--y)) scale(1.2)}}
+@keyframes mhPrxbBoom{from{transform:scale(.3);opacity:1}to{transform:scale(2.4);opacity:0}}
+@keyframes mhPrxbRing{from{transform:scale(.3);opacity:1}to{transform:scale(4.5,2.2);opacity:0}}
+@keyframes mhPrxbBurst{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--x),var(--y)) rotate(var(--r))}}
+@keyframes mhPrxbStar{0%{transform:scale(0) rotate(0);opacity:0}30%{transform:scale(1.4) rotate(90deg);opacity:1}100%{transform:scale(.4) rotate(180deg);opacity:0}}
+@keyframes mhPrxbFly{0%{transform:translate(0,0) scale(.6);opacity:0}25%{transform:translate(calc(var(--dx)*.2),-26px) scale(1.25);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(.5);opacity:0}}
+@keyframes mhPrxbNewRank{0%{transform:translate(-50%,10px) scale(.2);opacity:0}35%{transform:translate(-50%,-14px) scale(1.5);opacity:1}75%{transform:translate(-50%,-10px) scale(1.1);opacity:1}100%{transform:translate(-50%,-22px) scale(1);opacity:0}}
+@media (prefers-reduced-motion:reduce){.mh-prxb *{animation-duration:.01s!important;transition:none!important}.mh-prxb.flash::after{animation:none}}
+`;
+const ensurePlayerRankXpBarCss = () => {
+  try {
+    if (typeof document === 'undefined' || document.getElementById('mh-player-rank-xp-bar-css')) return;
+    const el = document.createElement('style');
+    el.id = 'mh-player-rank-xp-bar-css';
+    el.textContent = PLAYER_RANK_XP_BAR_CSS;
+    document.head.appendChild(el);
+  } catch (_) { /* 入れられなくても、棒と数字は読める */ }
+};
+
+// 経験値の棒が伸びる演出の本体。award: { add, parts:[{label,xp}], from, to, xp(足したあとの合計) }
+// onFull(): 棒が満タンで光ったとき(ランクが上がるときだけ・1回)。画面いっぱいの演出はここから出す / onDone(): 伸び終わったとき(1回)
+const PLAYER_RANK_XP_COLORS = ['#fde047', '#f0abfc', '#22d3ee', '#fff', '#a3e635'];
+// 2026-10-30 社長「終わったあとに経験値ゲージのバーの動きが見れない」: 棒が画面に入るまでは前の量で止めておき、
+// 見えたところで動き出す(onStart)。見えているかを調べられない端末では、すぐ動かす
+function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, onStart = null }) {
+  ensurePlayerRankXpBarCss();
+  const k = playerRankKind(kind);
+  const add = Math.max(0, Math.floor(Number(award && award.add) || 0));
+  const toXp = playerRankSafeXp(award && award.xp);
+  const fromXp = Math.max(0, toXp - add);
+  const parts = React.useMemo(() => {
+    const list = (Array.isArray(award && award.parts) ? award.parts : []).filter((p) => p && Number(p.xp) > 0).map((p) => ({ label: String(p.label || ''), xp: Math.floor(Number(p.xp)) }));
+    const sum = list.reduce((a, p) => a + p.xp, 0);
+    if (sum < add) list.push({ label: '経験値', xp: add - sum });
+    return list;
+  }, [add]);
+  const startInfo = playerRankInfo(fromXp), endInfo = playerRankInfo(toXp);
+  const rankUp = endInfo.rank > startInfo.rank;
+  const [view, setView] = React.useState({ rank: startInfo.rank, into: startInfo.into, shown: 0, chips: 0, up: false, instant: true, tip: false, done: false });
+  const rootRef = React.useRef(null), trackRef = React.useRef(null), fxRef = React.useRef(null), addRef = React.useRef(null), chipRefs = React.useRef([]);
+  const runRef = React.useRef({ timers: [], fullSent: false, doneSent: false, running: true });
+  const [seen, setSeen] = React.useState(false);
+  React.useEffect(() => {
+    if (seen) return undefined;
+    const el = rootRef.current;
+    if (!el || typeof IntersectionObserver !== 'function') { setSeen(true); return undefined; }
+    const io = new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) setSeen(true); }, { threshold: 0.6 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [seen]);
+  const se = (name) => { try { const bank = typeof Audio_ !== 'undefined' ? (Audio_.fgSe || Audio_.se) : null; if (bank && typeof bank[name] === 'function') bank[name](); } catch (_) { /* 音が出なくても続ける */ } };
+  const later = (fn, ms) => { const id = setTimeout(fn, ms); runRef.current.timers.push(id); return id; };
+  const spawn = (host, cls, style, ms) => { if (!host) return; const e = document.createElement('i'); e.className = cls; Object.entries(style).forEach(([kk, v]) => e.style.setProperty(kk, v)); host.appendChild(e); setTimeout(() => e.remove(), ms); return e; };
+  const pct = (rank, into) => Math.min(100, (into / playerRankNeed(rank)) * 100);
+  const tipX = () => { const tr = trackRef.current; if (!tr) return 0; const fill = tr.querySelector('.mh-prxb-fill'); return fill ? fill.getBoundingClientRect().right - tr.getBoundingClientRect().left : 0; };
+  const sparks = (n) => { const tr = trackRef.current; if (!tr) return; const x = tipX(); for (let i = 0; i < n; i++) spawn(tr, 'mh-prxb-spark', { left: `${x - 2}px`, top: '6px', '--x': `${-10 - Math.random() * 30}px`, '--y': `${Math.random() * 28 - 14}px` }, 600); };
+  const motes = () => { const tr = trackRef.current; if (!tr) return; const w = Math.max(20, tipX()); for (let i = 0; i < 3; i++) spawn(tr, 'mh-prxb-mote', { left: `${Math.random() * w}px`, top: `${3 + Math.random() * 10}px`, '--x': `${Math.random() * 30 - 15}px`, '--y': `${-14 - Math.random() * 26}px` }, 950); };
+  const boom = () => { const tr = trackRef.current; if (!tr) return; spawn(tr, 'mh-prxb-boom', { left: `${tipX()}px`, top: '8px' }, 420); sparks(12); tr.classList.remove('shake'); void tr.offsetWidth; tr.classList.add('shake'); };
+  const flyIn = (i, amount) => {
+    const root = rootRef.current, fx = fxRef.current, chip = chipRefs.current[i], tr = trackRef.current; if (!root || !fx || !chip || !tr) return;
+    const cr = root.getBoundingClientRect(), hr = chip.getBoundingClientRect(), trr = tr.getBoundingClientRect();
+    const e = spawn(fx, 'mh-prxb-fly', { left: `${hr.left - cr.left + hr.width / 2 - 14}px`, top: `${hr.top - cr.top - 4}px`, '--dx': `${trr.left - cr.left + tipX() - (hr.left - cr.left + hr.width / 2)}px`, '--dy': `${trr.top - hr.top + 6}px` }, 560);
+    if (e) e.textContent = `+${amount}`;
+  };
+  const fullBurst = () => {
+    const root = rootRef.current, fx = fxRef.current, tr = trackRef.current; if (!root || !fx || !tr) return;
+    const bar = tr.querySelector('.mh-prxb-bar'); if (bar) { bar.classList.remove('full'); void bar.offsetWidth; bar.classList.add('full'); }
+    root.classList.remove('flash'); void root.offsetWidth; root.classList.add('flash');
+    spawn(tr, 'mh-prxb-ring', {}, 650);
+    const w = tr.clientWidth;
+    for (let i = 0; i < 26; i++) { const a = Math.random() * Math.PI * 2, d = 30 + Math.random() * 60; spawn(tr, 'mh-prxb-burst', { left: `${Math.random() * w}px`, top: '6px', background: PLAYER_RANK_XP_COLORS[i % 5], '--x': `${Math.cos(a) * d}px`, '--y': `${Math.sin(a) * d - 20}px`, '--r': `${Math.random() * 540}deg` }, 850); }
+    const cr = root.getBoundingClientRect(), trr = tr.getBoundingClientRect(), ox = cr.width / 2, oy = trr.top - cr.top + 8;
+    for (let i = 0; i < 40; i++) { const a = Math.random() * Math.PI * 2, d = 60 + Math.random() * Math.max(cr.width, cr.height) * 0.6; spawn(fx, 'mh-prxb-rad', { left: `${ox}px`, top: `${oy}px`, background: PLAYER_RANK_XP_COLORS[i % 5], '--x': `${Math.cos(a) * d}px`, '--y': `${Math.sin(a) * d}px`, '--r': `${Math.random() * 720}deg` }, 950); }
+    for (let j = 0; j < 7; j++) later(() => { const st = spawn(fx, 'mh-prxb-star', { left: `${Math.random() * Math.max(0, cr.width - 20)}px`, top: `${Math.random() * Math.max(0, cr.height - 20)}px` }, 950); if (st) st.textContent = '✦'; }, j * 70);
+  };
+  const newRankPop = (rank) => { const e = spawn(trackRef.current, 'mh-prxb-newrank', {}, 950); if (e) e.textContent = String(rank); };
+  const bumpAdd = (cls) => { const a = addRef.current; if (!a) return; a.classList.remove('bump', 'final'); void a.offsetWidth; a.classList.add(cls); };
+  const sendFull = () => { if (rankUp && !runRef.current.fullSent) { runRef.current.fullSent = true; if (onFull) onFull(); } };
+  const sendDone = () => { if (!runRef.current.doneSent) { runRef.current.doneSent = true; if (onDone) onDone(); } };
+  // 押したとき・終わったとき: 最後の状態にする
+  const finish = () => {
+    runRef.current.running = false; runRef.current.timers.forEach(clearTimeout); runRef.current.timers = [];
+    setView({ rank: endInfo.rank, into: endInfo.into, shown: add, chips: parts.length, up: rankUp, instant: true, tip: false, done: true });
+    sendFull(); sendDone();
+  };
+  React.useEffect(() => {
+    if (!seen || !(add > 0) || !runRef.current.running) return undefined;
+    const run = runRef.current;
+    if (onStart) onStart();
+    // 舞う光の粒(伸びている間ずっと)
+    const moteTimer = setInterval(() => { if (!run.running) { clearInterval(moteTimer); return; } motes(); }, 90);
+    later(() => setView((v) => ({ ...v, instant: false })), 40);
+    let t = 250, cum = 0, crossed = false;
+    parts.forEach((p, i) => {
+      const before = cum; cum += p.xp;
+      const crossesHere = !crossed && fromXp + cum >= fromXp - startInfo.into + playerRankNeed(startInfo.rank);
+      later(() => setView((v) => ({ ...v, chips: i + 1 })), t);
+      later(() => flyIn(i, p.xp), t + 80);
+      later(() => {
+        // 数字を弾ませながら数え上げる(数が変わるたびに小さい音)
+        const t0 = performance.now(); let last = -1;
+        const step = (now) => { if (!run.running) return; const kk = Math.min(1, (now - t0) / 320), val = Math.round(before + p.xp * kk); if (val !== last) { last = val; setView((v) => ({ ...v, shown: val })); bumpAdd('bump'); if (val % 3 === 0) se('tap'); } if (kk < 1) requestAnimationFrame(step); };
+        requestAnimationFrame(step);
+        boom();
+        if (crossesHere) {
+          setView((v) => ({ ...v, tip: true, into: playerRankNeed(startInfo.rank) }));
+          later(() => { fullBurst(); se('levelUp'); setView((v) => ({ ...v, up: true })); sendFull(); }, 340);
+          later(() => {
+            const mid = playerRankInfo(fromXp + cum);
+            setView((v) => ({ ...v, rank: mid.rank, into: 0, instant: true }));
+            const bar = trackRef.current && trackRef.current.querySelector('.mh-prxb-bar'); if (bar) { bar.classList.remove('switch'); void bar.offsetWidth; bar.classList.add('switch'); }
+            newRankPop(mid.rank);
+            later(() => { setView((v) => ({ ...v, instant: false, into: mid.into })); sparks(6); }, 60);
+          }, 820);
+        } else {
+          const mid = playerRankInfo(fromXp + cum);
+          setView((v) => ({ ...v, tip: true, rank: mid.rank, into: mid.into }));
+          sparks(6);
+        }
+        later(() => setView((v) => ({ ...v, tip: false })), crossesHere ? 1000 : 420);
+      }, t + 320);
+      if (crossesHere) crossed = true;
+      t += crossesHere ? 1150 : 480;
+    });
+    later(() => { bumpAdd('final'); sparks(10); se('trainingReward'); }, t + 150);
+    later(() => { run.running = false; setView((v) => ({ ...v, done: true })); sendDone(); }, t + 250);
+    return () => { run.running = false; clearInterval(moteTimer); run.timers.forEach(clearTimeout); };
+  }, [seen]);
+  const need = playerRankNeed(view.rank);
+  const w = `${pct(view.rank, view.into)}%`;
+  return (
+    <div ref={rootRef} data-player-rank-xp-bar={kind} data-player-rank-xp-bar-done={view.done ? 'true' : 'false'}
+      className={`mh-prxb${kind === 'card' ? ' gold' : ''}${view.instant ? ' instant' : ''}`}
+      role="button" tabIndex={0} aria-label={view.done ? `${k.label} 経験値 +${add}` : '押すと最後まで飛ばす'}
+      onClick={() => { if (!view.done) finish(); }} onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !view.done) { e.preventDefault(); finish(); } }}>
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <span className={`self-center rounded-full px-2 py-0.5 text-[10px] font-black ${k.pill}`}><span aria-hidden="true">{cardIconNode(k.icon, 12)} </span>{k.label}</span>
+        <b ref={addRef} data-player-rank-gain-add className="mh-prxb-add">{`経験値 +${view.shown.toLocaleString()}`}</b>
+        <span className="text-[12px] font-black text-white tabular-nums">{view.up ? `(ランク${startInfo.rank}→${endInfo.rank})` : `(ランク${view.rank})`}</span>
+      </div>
+      {parts.length > 0 && <div data-player-rank-gain-parts className="mb-3 mt-1.5 flex flex-wrap gap-1.5">
+        {parts.map((p, i) => <span key={i} ref={(el) => { chipRefs.current[i] = el; }} className={`mh-prxb-chip${i < view.chips ? ' on' : ''}`}>{p.label} <b>{`+${p.xp}`}</b></span>)}
+      </div>}
+      <div ref={trackRef} className="mh-prxb-track">
+        <div className="mh-prxb-bar" role="progressbar" aria-label="次のランクまで" aria-valuemin={0} aria-valuemax={need} aria-valuenow={view.into}>
+          <i className="mh-prxb-fill" style={{ width: w }}/>
+        </div>
+        <i className={`mh-prxb-tip${view.tip ? ' on' : ''}`} style={{ left: w }}/>
+        {view.up && <span className="mh-prxb-up" aria-hidden="true">RANK UP!</span>}
+      </div>
+      <div className="mt-1 flex justify-between gap-2 text-[10px] font-bold text-slate-300 tabular-nums">
+        <span>{`${view.into.toLocaleString()} / ${need.toLocaleString()}`}</span>
+        <span>{`次まで ${(need - view.into).toLocaleString()}`}</span>
+      </div>
+      <div ref={fxRef} className="mh-prxb-fx" aria-hidden="true"/>
+    </div>
+  );
+}
+
+// 1回ぶんの結果に出す札: 経験値の棒が伸びる演出(PlayerRankXpBar)・次のごほうび・上がったらもらった物。
 // award: { add, parts:[{label,xp}], from, to, xp(足したあとの合計), gains:[{icon,text}] }。next は次のごほうびの文(「ランク20で ビートP 300」)
-function PlayerRankGain({ kind = 'beat', award, next = '' }) {
+// onFull・onDone・onStart(棒が画面に入って動き出した)は PlayerRankXpBar へそのまま渡す(ビートはここで画面いっぱいの演出を出す。カードは渡さなければ今までどおり)
+function PlayerRankGain({ kind = 'beat', award, next = '', onFull = null, onDone = null, onStart = null }) {
+  const [done, setDone] = React.useState(false);
   if (!award || !(award.add > 0)) return null;
   const k = playerRankKind(kind);
-  const info = playerRankInfo(award.xp);
   const up = award.to > award.from;
   return (
-    <section data-player-rank-gain={kind} className={`my-3 space-y-1.5 rounded-2xl border p-3 text-left ${k.border} ${k.panel}`}>
-      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-        <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${k.pill}`}><span aria-hidden="true">{k.icon} </span>{k.label}</span>
-        <b data-player-rank-gain-add className={`text-[15px] font-black ${k.accent}`}>{`経験値 +${award.add.toLocaleString()}`}</b>
-        <span className="text-[12px] font-black text-white tabular-nums">{up ? `(ランク${award.from}→${award.to})` : `(ランク${info.rank})`}</span>
-      </div>
-      {Array.isArray(award.parts) && award.parts.length > 0 && <p data-player-rank-gain-parts className="text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>
-        {jaWrap(award.parts.map((p) => `${p.label} ${p.xp >= 0 ? '+' : ''}${p.xp}`).join(' ・ '))}
-      </p>}
-      <PlayerRankGauge kind={kind} info={info}/>
+    <section data-player-rank-gain={kind} className={`relative my-3 space-y-1.5 rounded-2xl border p-3 pt-4 text-left ${k.border} ${k.panel}`}>
+      <PlayerRankXpBar kind={kind} award={award} onFull={onFull} onStart={onStart} onDone={() => { setDone(true); if (onDone) onDone(); }}/>
       {next && <p data-player-rank-gain-next className="text-[10px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(`次は ${next}`)}</p>}
-      {up && <PlayerRankUp kind={kind} from={award.from} to={award.to} gains={award.gains || []}/>}
+      {up && done && <PlayerRankUp kind={kind} from={award.from} to={award.to} gains={award.gains || []}/>}
     </section>
   );
 }
@@ -34939,7 +35282,7 @@ function PlayerRankUpFx({ kind = 'beat', from = 1, to = 1, gains = [], onClose =
           {list.length > 0 && <ul className="mh-prfx-gains" aria-label="もらった物">
             {list.map((g, i) => (
               <li key={i} className={`mh-prfx-gain${g.bonus ? ' bonus' : ''}`} style={{ '--d': `${gainStart + i * 0.35}s` }}>
-                {g.icon && <span className="ico" aria-hidden="true">{g.icon}</span>}
+                {g.icon && <span className="ico" aria-hidden="true">{cardIconNode(g.icon, 16)}</span>}
                 <span className="min-w-0"><b>{String(g.text || '')}</b>{g.note && <small style={JA_WRAP_STYLE}>{jaWrap(String(g.note))}</small>}</span>
               </li>
             ))}
@@ -43193,6 +43536,8 @@ const exEffectAmountText = (e, long = false) => {
   if (Number.isFinite(Number(e.turnsLeft))) return long ? `あと${e.turnsLeft}ターン` : `あと${e.turnsLeft}`;
   return '';
 };
+// 札・詳細に出す要素。溜まる物は0のとき出さない(2026-10-13 社長「0個のときは出さない」。クッキー・黒音符の×0も)
+const exEffectsShown = (items) => (Array.isArray(items) ? items.filter((e) => e && !(e.kind === 'stack' && !(Number(e.count) > 0))) : []);
 const EX_EFFECT_TONE = {
   buff: 'bg-emerald-900/90 ring-emerald-300/80 text-emerald-50',
   debuff: 'bg-red-900/90 ring-red-300/80 text-red-50',
@@ -43200,15 +43545,22 @@ const EX_EFFECT_TONE = {
 };
 // compact … 新しい盤(横長の枠)。いままでのマーク×数と同じ所(絵の左下・幅40%まで)に、下から上へ積む
 const ExEffectChips = ({ items, max = 3, compact = false, className = '' }) => {
-  const list = Array.isArray(items) ? items.filter(Boolean) : [];
+  const list = exEffectsShown(items);
   if (!list.length) return null;
   // 新しい盤(横長の枠)は高さが足りないので2つまで(上の段の「狙」・予測ダメージに届かないように)。残りは「+N」を1つ目の横に添える
   const limit = compact ? Math.min(max, 2) : max;
   const shown = list.slice(0, limit);
   const more = list.length - shown.length;
-  const chip = (e) => (
-    <span key={e.key} data-ex-effect={e.key} data-ex-effect-kind={e.kind}
-      className={`flex min-w-0 ${compact ? 'max-w-full text-[8px]' : 'max-w-full text-[9px]'} items-center gap-[2px] rounded-md px-1 py-px font-black leading-tight whitespace-nowrap ring-1 ${EX_EFFECT_TONE[e.kind] || EX_EFFECT_TONE.buff}`}>
+  // 札の目印(検査が読む): data-ex-effect(要素の key。溜まる物は 'stack:種類')・data-stack-count(溜まる物の数)・
+  //   data-ex-turns(残りターンの数)・data-ex-from-slot(だれのEXか)・data-ex-last(残り1ターン)。
+  //   「+N」にまとめた札も、目印だけ残すために画面に出さない(hidden)形で置く
+  const turnsNum = (e) => (Number.isFinite(Number(e.turnsLeft)) && e.turnsLeft !== null ? Number(e.turnsLeft) : null);
+  const chip = (e, hide = false) => (
+    <span key={e.key} data-ex-effect={e.key} data-ex-effect-kind={e.kind} data-ex-effect-hidden={hide ? 'true' : undefined}
+      data-stack-count={e.kind === 'stack' && Number.isFinite(Number(e.count)) ? Math.floor(Number(e.count)) : undefined}
+      data-ex-turns={turnsNum(e) != null ? turnsNum(e) : undefined} data-ex-from-slot={Number.isInteger(e.fromSlot) ? e.fromSlot : undefined}
+      data-ex-last={turnsNum(e) === 1 ? 'true' : undefined}
+      className={`${hide ? 'hidden' : 'flex'} min-w-0 ${compact ? 'max-w-full text-[8px]' : 'max-w-full text-[9px]'} items-center gap-[2px] rounded-md px-1 py-px font-black leading-tight whitespace-nowrap ring-1 ${EX_EFFECT_TONE[e.kind] || EX_EFFECT_TONE.buff}${turnsNum(e) === 1 ? ' ring-2 ring-amber-300' : ''}`}>
       <span className="shrink-0">{exEffectIconOf(e)}</span>
       <span className="min-w-0 truncate">{e.name}</span>
       {exEffectAmountText(e) && <span className="shrink-0 tabular-nums opacity-90">{exEffectAmountText(e)}</span>}
@@ -43219,7 +43571,8 @@ const ExEffectChips = ({ items, max = 3, compact = false, className = '' }) => {
     <div data-ex-effect-chips={list.length} className={`pointer-events-none flex ${compact ? 'flex-col-reverse' : 'flex-col'} items-start gap-[2px] ${className}`}>
       {compact
         ? shown.map((e, k) => (k === 0 && moreChip ? <span key={e.key} className="flex max-w-full min-w-0 items-center gap-[2px]">{chip(e)}{moreChip}</span> : chip(e)))
-        : <>{shown.map(chip)}{moreChip}</>}
+        : <>{shown.map((e) => chip(e))}{moreChip}</>}
+      {list.slice(limit).map((e) => chip(e, true))}
     </div>
   );
 };
@@ -43273,7 +43626,7 @@ const BattleUnitDetailBody = ({ side, status, chips = [], marks = null, debuffs 
   // EXの効果の一覧(タクティクス/レイド)。名前・中身(何%)・誰のEX・あとNターン(溜まる物は 今/上限)を1行ずつ。
   //   これを出すときは、同じものを出していた「マーク×数」の行とEXの1行(status.lines の ex)は出さない(二重にしない)
   const hasEx = Array.isArray(exEffects);
-  const exRows = hasEx ? exEffects.filter(Boolean).map((e) => row(`exfx-${e.key}`, exEffectIconOf(e), e.name, exEffectAmountText(e, true),
+  const exRows = hasEx ? exEffectsShown(exEffects).map((e) => row(`exfx-${e.key}`, exEffectIconOf(e), e.name, exEffectAmountText(e, true),
     [e.note, e.fromName ? `${e.fromName}のEX${e.allAllies ? '(味方全員)' : ''}` : ''].filter(Boolean).join('・'),
     e.kind === 'stack' ? 'border-violet-300/50 bg-violet-950/50' : e.kind === 'debuff' ? 'border-red-300/50 bg-red-950/50' : 'border-emerald-300/50 bg-emerald-950/50')) : [];
   const lineRows = (status.lines || []).filter((l) => !(hasEx && l.key === 'ex')).map((l) => row(l.key, null, l.label, l.value, l.note));
@@ -47237,6 +47590,10 @@ const friendsDayText = (day) => {
 // onCardShareGo … フレンドのデッキの札の「このデッキと戦う」(95 の CardShareDeckActions)から MFバトルカードへ移る(60-app)
 function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack, onTargetHandled, onIncomingCount, onOpenMonsterDetail, onCardShareGo = null }) {
   const [tab, setTab] = React.useState(Number(requestCount) > 0 ? 'requests' : 'friends');
+  // 一覧 → フレンドのプロフィール → 戻る で、一覧がいちばん上に戻っていた(2026-10-30 社長「フレンドをタップして戻ったら1番上に戻るから記憶するようにして」)。
+  // 押す前の位置と押した人を覚えておき、戻ったらその位置へ。読み直しで並びが変わって押した人が見えなければ、その人が見える所まで動かす
+  const listScrollRef = React.useRef(null);
+  const listScrollMemoRef = React.useRef({ top: 0, rowId: null });
   const [phase, setPhase] = React.useState('loading');   // loading / ready / notready / noid / error
   const [selfId, setSelfId] = React.useState('');
   const [myCode, setMyCode] = React.useState('');
@@ -47411,7 +47768,21 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
     setSelected(null);
     run(() => (ask.kind === 'remove' ? sbRemoveFriend(selfId, ask.otherId) : sbBlockFriendUser(selfId, ask.otherId)));
   };
+  React.useLayoutEffect(() => {
+    if (selected) return;
+    const box = listScrollRef.current, memo = listScrollMemoRef.current;
+    if (!box || !memo.rowId) return;
+    box.scrollTop = memo.top;
+    const row = [...box.querySelectorAll('[data-friend-row]')].find((el) => el.getAttribute('data-friend-row') === memo.rowId);
+    if (row) {
+      const b = box.getBoundingClientRect(), r = row.getBoundingClientRect();
+      // 一覧の箱だけを動かす(scrollIntoView は外側の画面まで動かすので使わない。viewport-height-check)
+      if (r.top < b.top || r.bottom > b.bottom) box.scrollTop += (r.top - b.top) - (b.height - r.height) / 2;
+    }
+  }, [selected]);
   const openProfile = async (view) => {
+    // 一覧のどこを見ていたかを覚えておく(戻ったときにその位置へ戻す。画面を開いているあいだだけ・保存しない)
+    listScrollMemoRef.current = { top: listScrollRef.current ? listScrollRef.current.scrollTop : 0, rowId: view && view.otherId ? view.otherId : null };
     setSelected(view);
     setProfileTab('overview');
     setSummary({ status: 'loading', entry: null });
@@ -47683,7 +48054,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
       <ScreenHead title="フレンド" accent="text-pink-300" onBack={onBack} backLabel="プロフィールへ戻る"/>
       <div className="mb-2 shrink-0"><AssistantBubble scene="friends" compact/></div>
       <ScreenTabs items={tabs} value={tab} onChange={(id) => { setTab(id); setNotice(null); }}/>
-      <div className={`${SCREEN_LIST_CLASS} pb-4`}>
+      <div ref={listScrollRef} className={`${SCREEN_LIST_CLASS} pb-4`}>
         {noticeBox}
         {tab === 'friends' && (groups.friends.length === 0
           ? <ScreenEmpty emoji="🤝" lines={['まだフレンドがいません', '「追加」から、フレンドコードで申請してみましょう']}
@@ -49722,7 +50093,7 @@ function ModeSelectAssistantPanel({ assistant, showArt, showComment, onToggle })
   // 背の低い枠の上限(絵の高さ×show が枠の高さ)。cqh は枠の高さ(mhms-art-box の container-type:size)
   const capOf = (show) => (artRatio ? `${(100 / (artRatio * show)).toFixed(2)}cqh` : '9999px');
   return (
-    <div data-rhythm-mode-assistant className={`mhms-glass mhms-in-left relative mx-3 mt-3 flex flex-col overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none ${showArt ? 'min-h-[150px] flex-1' : 'flex-none'}`}>
+    <div data-rhythm-mode-assistant className={`mhms-glass mhms-in-left relative mx-3 mt-2 flex flex-col overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none ${showArt ? 'min-h-[150px] flex-1' : 'flex-none'}`}>
       {showArt && (
         <div data-rhythm-mode-assistant-art-box className="mhms-art-box relative min-h-0 flex-1 overflow-hidden">
           <span aria-hidden="true" className="mhms-glow" />
@@ -49737,8 +50108,8 @@ function ModeSelectAssistantPanel({ assistant, showArt, showComment, onToggle })
       {!showArt && <ModeSelectAssistToggles assistant={assistant} showArt={showArt} showComment={showComment} onToggle={onToggle} cls="mx-2 mt-2 justify-end" withLabel />}
       {showComment && (
         <p data-rhythm-mode-assistant-line className={`mhms-bubble ${showArt ? '' : 'mhms-bubble-alone'} relative z-10 m-1.5 shrink-0 rounded-2xl border-2 bg-slate-900/95 px-3 py-1.5 text-[12px] font-bold leading-snug text-white shadow-lg landscape:text-[11px]`} style={{ ...JA_WRAP_STYLE, borderColor: assistant.accent }}>
-          {/* 台詞は言葉の切れ目で折る(320幅で「協力ラ／イブ」と折れていた・2026-10-26) */}
-          <b className="mb-0.5 block text-[10px]" style={{ color: assistant.accent }}>{assistant.name}</b>{jaWrap(assistant.text)}
+          {/* 台詞は言葉の切れ目で折る(320幅で「協力ラ／イブ」と折れていた・2026-10-26)。名前は台詞の頭に並べる(別の行にすると立ち絵の枠が縦画面の半分を割った・2026-10-30) */}
+          <b className="mr-1.5 text-[10px]" style={{ color: assistant.accent }}>{assistant.name}</b>{jaWrap(assistant.text)}
         </p>
       )}
     </div>
@@ -49790,6 +50161,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     RHYTHM_MULTI.setCatalog(songIds, lengths);
   }, [songIds.join(',')]);
   const [codeInput, setCodeInput] = React.useState('');
+  const [beatRankOpen, setBeatRankOpen] = React.useState(false); // モードえらびの上のビートランクを押した先(ごほうびの一覧)
   const [message, setMessage] = React.useState('');
   const [searching, setSearching] = React.useState(null);
   const [countdown, setCountdown] = React.useState(null);
@@ -50257,13 +50629,22 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
           <div className="min-w-0 flex-1 leading-none">
             <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300">MONBEAT ・ SELECT MODE</small>
             <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider">モードえらび</b>
-            {ms.beatPointText && <small data-rhythm-beat-point-balance className="block truncate text-[9px] font-black text-violet-200/90">{ms.beatPointText}</small>}
-            {/* ビートランク(2026-10-29 社長)。立ち絵を小さくしないよう、上の帯に細い1行で出す(ボタンの列には置かない) */}
-            {Number.isFinite(ms.beatRankXp) && <div className="mt-0.5"><PlayerRankStrip kind="beat" xp={ms.beatRankXp}/></div>}
+            {/* ビートランク(2026-10-29 社長)。立ち絵を小さくしないよう、上の帯に細い1行で出す(ボタンの列には置かない)。
+                ビートPと同じ行に、小さい札で並べる(2段にすると帯が高くなり、縦画面で立ち絵の枠が画面の半分を割った・2026-10-30)。
+                押すと詳しい画面(ランクごとのごほうびの一覧)が開く(2026-10-30 社長「報酬が全部見れるように」。カードランクと同じ) */}
+            {(ms.beatPointText || Number.isFinite(ms.beatRankXp)) && (
+              <div className="mt-0.5 flex min-w-0 items-center gap-2">
+                {ms.beatPointText && <small data-rhythm-beat-point-balance className="block min-w-0 shrink truncate text-[9px] font-black text-violet-200/90">{ms.beatPointText}</small>}
+                {Number.isFinite(ms.beatRankXp) && <div role="button" tabIndex={0} data-beat-rank-open aria-label="ビートランク。くわしく見る" className="min-w-0 flex-1 cursor-pointer active:scale-[.98]"
+                  onClick={() => { Audio_.fgSe.tap(); setBeatRankOpen(true); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); Audio_.fgSe.tap(); setBeatRankOpen(true); } }}><PlayerRankStrip kind="beat" xp={ms.beatRankXp} size="xs"/></div>}
+              </div>
+            )}
           </div>
           {quickRunInfo && <RhythmQuickRunPill info={quickRunInfo} onRestart={onRestartQuickRun} onResume={onResumeQuickRun} widthClass="max-w-[42%]" />}
           <RhythmOrientationButton/>
         </header>
+        {beatRankOpen && Number.isFinite(ms.beatRankXp) && <PlayerRankDetail kind="beat" xp={ms.beatRankXp} rewardsOf={beatRankRewardItems}
+          how="曲を遊ぶと経験値がたまります。難しい難易度ほど多く、HELL がいちばん多くたまります。その日はじめての1曲は +30 です。" onClose={() => setBeatRankOpen(false)}/>}
         {ms.exiting && <div data-quick-run-exit-overlay className="absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center"><b className="text-sm font-black text-amber-200">周回を終えています…</b></div>}
         {/* 縦画面: 上に助手の立ち絵(余った高さを使って大きく)、下にボタン。
             横画面: 左に立ち絵、右にボタン(2026-10-03・ユーザー指摘「サイズ感悪い」で組み直し) */}
@@ -53539,7 +53920,7 @@ const cardBeginTurn = (st) => {
   st.forbid = {};
   me.mons.forEach((m) => { m.attacks = 0; m.lastCard = null; });
   st.phase = 'main';
-  cardLog(st, `ターン${st.turn}: ${me.name}の番`, { kind: 'turn' });
+  cardLog(st, `ターン${st.turn}: ${me.name}のターン`, { kind: 'turn' });
   cardEvent(st, { t: 'turn', p, turn: st.turn });
   if (st.turn === 1) return; // 先攻の1ターン目は引かない
   // 大混乱(全体カード): ドローの前に、その番の人の山札の上から n 枚を捨て札へ
@@ -54250,11 +54631,11 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
     if (e.t === 'liftTarget' && tm) { tm.airUntil = Math.max(tm.airUntil, st.turn); cardLog(st, `${tm.name}はこのターン空中になった`); }
     if (e.t === 'unlimitedAttacks' && self) { self.unlimited = st.turn; cardLog(st, `${self.name}はこのターン、技を何枚でも出せる`); }
     if (e.t === 'breederUnlimited') { st.breederFree = { p, turn: st.turn }; cardLog(st, `このターン、${me.name}はブリーダーのカードを何枚でも出せる`); }
-    if (e.t === 'taunt' && self) { st.taunts = [...(st.taunts || []).filter((t) => t.turn >= st.turn), { by: p, m: mi, mode: e.mode, noArea: !!e.noArea, turn: st.turn + 1 }]; cardLog(st, e.mode === 'not' ? `相手は次の番、${self.name}に当たる技を出せない` : `相手は次の番、${self.name}を狙う技しか出せない`); }
+    if (e.t === 'taunt' && self) { st.taunts = [...(st.taunts || []).filter((t) => t.turn >= st.turn), { by: p, m: mi, mode: e.mode, noArea: !!e.noArea, turn: st.turn + 1 }]; cardLog(st, e.mode === 'not' ? `相手は次のターン、${self.name}に当たる技を出せない` : `相手は次のターン、${self.name}を狙う技しか出せない`); }
     if (e.t === 'stunAllEnemies') { opp.mons.forEach((m) => { if (!m.ko) m.stunTurn = st.turn + 1; }); cardLog(st, '相手のモンスターは全員、次のターン攻撃できない'); }
     if (e.t === 'stunTarget' && tm) { tm.stunTurn = st.turn + 1; cardLog(st, `${tm.name}は次のターン攻撃できない`); }
-    if (e.t === 'skipTurn') { st.skip = cardOther(p); cardLog(st, `${opp.name}の次の番を飛ばす`); }
-    if (e.t === 'rage' && self) { self.noGuardUntil = st.turn + 1; self.mult = { turn: st.turn + 2, kinds: ['pow', 'int'], n: 2 }; cardLog(st, `${self.name}は次の番まで守れない。次の番の技は2倍`); }
+    if (e.t === 'skipTurn') { st.skip = cardOther(p); cardLog(st, `${opp.name}の次のターンを飛ばす`); }
+    if (e.t === 'rage' && self) { self.noGuardUntil = st.turn + 1; self.mult = { turn: st.turn + 2, kinds: ['pow', 'int'], n: 2 }; cardLog(st, `${self.name}は次のターンまで守れない。次のターンの技は2倍`); }
     // ---- 区切り7 ----
     if (e.t === 'revive' && tm && tm.ko) { tm.ko = false; tm.life = Math.min(e.life, tm.max); tm.stunTurn = st.turn; tm.attacks = 0; cardLog(st, `${tm.name}がライフ${tm.life}で戻った(このターンは攻撃できない)`); }
     if (e.t === 'possess' && self && !self.ko && tm && tm.ko && tm !== self) {
@@ -54272,7 +54653,7 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
       cardLog(st, `${b.name}と合体して、${a.name}が出た(このターンは攻撃できない)`);
     }
     // ---- 区切り5 ----
-    if (e.t === 'safe' && self) { self.safeUntil = st.turn + 1; cardLog(st, `${self.name}は次の番までダメージを受けない`); }
+    if (e.t === 'safe' && self) { self.safeUntil = st.turn + 1; cardLog(st, `${self.name}は次のターンまでダメージを受けない`); }
     if (e.t === 'form' && self && (act.form === 'air' || act.form === 'ground')) { self.type = act.form; cardLog(st, `${self.name}は${act.form === 'air' ? '空中' : '地上'}になった`); }
     // ---- 区切り4 ----
     if (e.t === 'choose') {
@@ -54483,7 +54864,7 @@ const cardApplyAction = (db, st0, act) => {
     if (st.skip === st.active) {
       st.skip = null; st.turn += 1;
       st.players[st.active].mons.forEach((m) => { if (m.stunTurn === st.turn) m.stunTurn = st.turn + 2; });
-      cardLog(st, `ターン${st.turn}: ${st.players[st.active].name}の番は飛ばされた`, { kind: 'turn' }); st.active = p;
+      cardLog(st, `ターン${st.turn}: ${st.players[st.active].name}のターンは飛ばされた`, { kind: 'turn' }); st.active = p;
     }
     cardBeginTurn(st);
     return st;
@@ -54536,8 +54917,8 @@ const CARD_AI_HABIT_BLEND = Object.freeze({ expert: { mua: 0.6 }, master: { mua:
 const CARD_AI_PLAY_TUNE = Object.freeze({
   // EASY・NORMAL で同じ血統(モッチーの仲間)でも組むようになって強くなった(2026-10-26)ぶん、みゅあの雑さを戻した(前は easy -0.035・normal -0.105)
   mua: { easy: 0.1, normal: -0.04, hard: -0.11, expert: 0.03, master: 0.12 },
-  momosuke: { easy: 0.12, normal: 0.06, hard: 0, expert: 0.1, master: 0.05 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.165 → 0.14。混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 0.05
-  kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: 0, master: 0.1 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.345 → 0.3。意味不明(277)・混血の直し(2026-10-27)のあと 0.1
+  momosuke: { easy: 0.12, normal: 0.06, hard: 0, expert: 0.04, master: 0 },   // 全体カードを入れた(2026-10-30)ぶん EXPERT 0.1 → 0.04・MASTER 0.05 → 0。   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.165 → 0.14。混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 0.05
+  kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: -0.08, master: 0 },   // 全体カードを入れた(2026-10-30)ぶん EXPERT 0 → -0.08・MASTER 0.1 → 0   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.345 → 0.3。意味不明(277)・混血の直し(2026-10-27)のあと 0.1
   dra: { easy: -0.075, normal: -0.075, hard: 0.03, expert: -0.06, master: 0 },
   atsu: { easy: 0.05, normal: 0, hard: 0.02, expert: 0.06, master: 0 },   // 臨機応変(2026-10-29)で強くなった(NORMAL 55→69%・EASY 73%・EXPERT 69%)ので、各強さで雑さを足した(40戦で測った)   // EXPERT は同じ血統(弱い)でも組むようになった(2026-10-26)ので 0.03 → 0
 });
@@ -54559,6 +54940,8 @@ const cardAiPolicy = (habitId, levelId, opts = {}) => {
   // opts.playerRole … 勝率を測るときのプレイヤー役(tools/card の検査・道具だけが付ける)。山札切れを気にしない前の打ち方のまま
   //   (2026-10-27 ソランド判断: 人が相手のときと測り方をそろえるため。プレイヤー役まで山札切れを避けると、守り型のドラが EXPERT 34%・MASTER 36% に下がった)
   const out = { habit, level: { ...level, sloppy: Math.max(0, Math.min(0.9, (level.sloppy || 0) * tune + add)) }, playerRole: !!(opts && opts.playerRole) };
+  // 助手の得意な全体カード(CARD_AI_DECKS の field)。デッキに入れるだけでは場の点が低くて出さない札があったので、出すときに点を足す(2026-10-30)
+  if (!out.playerRole && CARD_AI_DECKS[habitId] && CARD_AI_DECKS[habitId].field) out.fields = CARD_AI_DECKS[habitId].field;
   // 助手と対戦の EXPERT・MASTER は、戦術カードの基本カードを2枚・3枚持つ(82-card-tactics-core の CARD_AI_TACTIC_BASE)。プレイヤー役は持たない
   const gambit = !out.playerRole && !(opts && opts.noTactics) && typeof cardAiTacticGambit === 'function' ? cardAiTacticGambit(habitId, levelId) : null;
   const when = gambit && typeof CARD_AI_TACTIC_WHEN !== 'undefined' ? CARD_AI_TACTIC_WHEN[habitId] || null : null;
@@ -54651,7 +55034,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
   const main = cardOf(db, me.hand[opt.hand[0]]);
   const cost = cardActionCost(db, st, p, me.hand, opt.hand);
   let score = 0;
-  if (main.kind === 'fld') return cardAiScoreField(db, st, p, main, cost, habit);
+  if (main.kind === 'fld') return cardAiScoreField(db, st, p, main, cost, habit) + (policy.fields && policy.fields.includes(main.name) && !(st.field && st.field.p === p) ? CARD_AI_FIELD_LIKE : 0);
   if (main.kind === 'spe') {
     (main.effects || []).forEach((e) => {
       if (e.t === 'heal' && opt.target) { const m = me.mons[opt.target.m]; score += Math.min(e.n, m.max - m.life) * 1.1; }
@@ -55086,13 +55469,15 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
 // ---- 助手のデッキ(5-5) ----
 // kit … 元のスターターをそのまま使う / build … 3体を決めて、くせに合わせてカードを選ぶ
 // HARD より上は、同じ3体で組み直す(HARD は第1弾のカードだけ・EXPERT と MASTER は全部の弾)
+// field … 助手ごとの全体カード(HARD から2枚ずつ入れる。第2弾より後の札は、弾の制限が外れる EXPERT から)。
+//   入れたい度の点だけで組むと全体カードは入らなかった(2026-10-30 社長「助手ごとに入れる」)
 const CARD_AI_DECKS = Object.freeze({
-  mua:      { kit: 'speed' },
-  momosuke: { kit: 'miracle' },
-  kiki:     { kit: 'powerful' },
-  dra:      { kit: 'powerful' },
-  kyuko:    { monsters: ['C-007', 'C-005', 'C-009'] },  // ナーガ・ピクシー・モッチー
-  atsu:     { monsters: ['C-003', 'C-001', 'C-002'], prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード'] },  // ゴーレム・ライガー・ガリ。全体攻撃を集める
+  mua:      { kit: 'speed', field: ['ホリィの声援', '飛び散る火花'] },     // 速攻。技を安く・特殊攻撃を強く
+  momosuke: { kit: 'miracle', field: ['冷静な判断', 'がんじがらめ'] },     // 手札を整え、相手の特殊技を封じる
+  kiki:     { kit: 'powerful', field: ['必殺技の応酬', '長期戦の予感'] },  // 小技を封じ、ガッツをためて大技
+  dra:      { kit: 'powerful', field: ['興奮のるつぼ', '必殺技の封印'] },  // 守り。受けるダメージを減らす場
+  kyuko:    { monsters: ['C-007', 'C-005', 'C-009'], field: ['必殺技の応酬'] },  // 小技を封じる。2種入れると MASTER で7点下がったので1種(2026-10-30)。ナーガ・ピクシー・モッチー
+  atsu:     { monsters: ['C-003', 'C-001', 'C-002'], prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード'], field: ['必殺技の応酬', '灼熱の地'] },  // 全体カードは大技で押す場と焼ける場。ゴーレム・ライガー・ガリ。全体攻撃を集める
   sorashido: { monsters: ['C-008', 'C-001', 'C-003'], prefer: ['大混乱', '時間稼ぎ', '大鎌', 'ハテナマーク', 'ニャーにゃー'] },  // 山札とガッツを削る札(その3体で使えるものだけ入る)  // ハム・ライガー・ゴーレム(ルールくんが測った試合でいちばん多かった3体。3体は好きな子ハムから毎試合選ぶ)。prefer はまだ無い
 });
 // 助手の好きなモンスター(1体。2026-10-25 社長「1体だけ好きなモンスターを決めて、あとは好みのバランスでデッキ組む」)。
@@ -55156,6 +55541,8 @@ const CARD_AI_LANE_MIN_DEFAULT = 0.8;
 const CARD_AI_LANE_MIN = Object.freeze({ momosuke: 1.5, dra: 0.8, kyuko: 2.0, atsu: 1.5, sorashido: 1.5 });   // きゅうこは混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 1.5。ドラは不自然な手の直し(2026-10-27)で MASTER が 38% を割ったので 0.3 → 0.8(1 より上だと好きな子の技が入らないことがある)
 const CARD_DECK_COPY_MAX = 3; // 同じ名前の技・全体・ブリーダーカードは3枚まで
 const CARD_AI_ATTACH_MAX = 6;
+const CARD_AI_FIELD_LIKE = 1; // 得意な全体カードを出すときに足す点(cardAiScoreAttack)
+const CARD_AI_FIELD_COPIES = 2; // 助手の全体カード(CARD_AI_DECKS の field)は1種2枚。場には1枚しか残らないので多く入れても腐る
 
 // カード1枚の「入れたい度」(くせの重みを掛ける)
 const cardAiCardValue = (card, habit) => {
@@ -55414,6 +55801,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   const used = new Set();
   // 助手らしさの札(あつの全体攻撃など)を先に入れる
   (preferOn ? recipe.prefer || [] : []).forEach((name) => { const x = byName[name]; if (x && !used.has(name)) { used.add(name); add(x.c, CARD_DECK_COPY_MAX); } });
+  (preferOn ? recipe.field || [] : []).forEach((name) => { const x = byName[name]; if (x && !used.has(name)) { used.add(name); add(x.c, CARD_AI_FIELD_COPIES); } });
   let li = 0, guard = 0;
   while (cards.length < CARD_BATTLE_DECK_SIZE && guard++ < 400) {
     const lane = li < lanes.length ? lanes[li] : shared;
@@ -55573,7 +55961,8 @@ const cardNormalizeCollection = (v) => {
 };
 const cardNormalizePoint = (v) => { const x = Number(v); return Number.isFinite(x) && x > 0 ? Math.floor(x) : 0; };
 const cardNormalizeStarter = (v) => (cardIsPlainObject(v) && typeof v.kit === 'string' && v.kit ? { kit: v.kit, at: Number.isFinite(Number(v.at)) ? Number(v.at) : 0 } : null);
-const CARD_DECK_MAX = 5;
+// 組めるデッキの数(2026-10-30 社長「5セットまでしか組めないけど20ぐらいまで増やせない?」→ 20。上げるだけなので今の保存はそのまま読める)
+const CARD_DECK_MAX = 20;
 const cardNormalizeDecks = (v) => {
   const decks = (cardIsPlainObject(v) && Array.isArray(v.decks) ? v.decks : []).filter(cardIsPlainObject).slice(0, CARD_DECK_MAX).map((d, i) => ({
     id: typeof d.id === 'string' && d.id ? d.id : `deck${i + 1}`,
@@ -55596,12 +55985,16 @@ const CARD_LEVEL_ORDER = Object.freeze(['easy', 'normal', 'hard', 'expert', 'mas
 //   助手と対戦は 'auto'(助手ごとの曲)・マルチは ichika_battle(#3634 で一度対戦まで ICHIKA にしたのを戻した)
 //   ★mh_card_bgm_v1 は、オプションで曲を選んだときにだけ書く。選んだ人の値はそのまま読む(書き換えない)。top は足した項目なので、前からの人も既定で補う
 const CARD_BGM_DEFAULT = Object.freeze({ top: 'atsu_cup_theme', cpu: 'auto', pvp: 'ichika_battle' });
+// 'random' … 選べる曲の中から毎回ちがう曲(2026-10-30 社長「曲の設定にランダムもほしい」)。top・pvp と、助手と対戦の並び([CARD_BGM_RANDOM] の1つだけ)で使える
+//   ★前の版は 'random' を知らない曲として既定へ戻して読む(書き換えはしない)。選んでいない人は今のまま
+const CARD_BGM_RANDOM = 'random';
 const normalizeCardBgm = (v, isTrack = () => true) => {
   const r = cardIsPlainObject(v) ? v : {};
+  const pick = (x, def) => (x === CARD_BGM_RANDOM || (typeof x === 'string' && isTrack(x)) ? x : def);
   return {
-    top: typeof r.top === 'string' && isTrack(r.top) ? r.top : CARD_BGM_DEFAULT.top,
+    top: pick(r.top, CARD_BGM_DEFAULT.top),
     cpu: r.cpu === 'auto' || (typeof r.cpu === 'string' && isTrack(r.cpu)) ? r.cpu : CARD_BGM_DEFAULT.cpu,
-    pvp: typeof r.pvp === 'string' && isTrack(r.pvp) ? r.pvp : CARD_BGM_DEFAULT.pvp,
+    pvp: pick(r.pvp, CARD_BGM_DEFAULT.pvp),
   };
 };
 // 助手と対戦の曲の並び(2026-10-26 社長の依頼)。助手ごとに1〜5曲を選び、対戦中は全部を1回ずつシャッフルで流す
@@ -55615,6 +56008,7 @@ const CARD_CPU_PLAYLIST_DEFAULT = Object.freeze({
   sorashido: Object.freeze(['monster_hero_theme']),   // Monster Hero(2026-10-27 社長の答え)
 });
 const cardNormalizePlaylistList = (v, isTrack = () => true) => {
+  if (Array.isArray(v) && v.includes(CARD_BGM_RANDOM)) return [CARD_BGM_RANDOM];   // ランダム(選べる曲ぜんぶ)
   const out = [];
   for (const id of Array.isArray(v) ? v : []) {
     if (out.length >= CARD_PLAYLIST_MAX) break;
@@ -55746,7 +56140,7 @@ const CARD_SETTING_GROUPS = Object.freeze([
   { title: '操作', items: [
     { key: 'confirmUse', title: '技を使う前の確認', desc: '技を選んで相手をタップ(か運んで置く)したときに、「使いますか？」と1回確かめます。押しまちがいを防げます。',
       options: [{ id: 'OFF', label: '確かめない', note: 'すぐ使う' }, { id: 'ON', label: '確かめる', note: '「使う」で決める' }] },
-    { key: 'confirmEnd', title: 'ターン終了の確認', desc: 'ガッツの番に「ターン終了」を押したときに、1回確かめます。',
+    { key: 'confirmEnd', title: 'ターン終了の確認', desc: 'ガッツを置いて「ターン終了」を押したときに、1回確かめます。',
       options: [{ id: 'OFF', label: '確かめない', note: 'すぐ終わる' }, { id: 'ON', label: '確かめる', note: '「終わる」で決める' }] },
     { key: 'press', title: '長押しで詳しく出るまで', desc: 'カードを長押ししたときに、大きな絵と文の画面が出るまでの時間です。',
       options: [{ id: 'SHORT', label: '短め', note: '約0.3秒' }, { id: 'NORMAL', label: 'ふつう', note: '約0.45秒' }, { id: 'LONG', label: '長め', note: '約0.7秒' }] },
@@ -55756,7 +56150,7 @@ const CARD_SETTING_GROUPS = Object.freeze([
   { title: '自動', items: [
     { key: 'autoPass', bool: true, title: '守れないときは自動で「守らない」', desc: '攻撃されたときに、使える回避・防御のカードが1枚も無ければ、理由を少し見せてから自動で「守らない」にします。',
       options: [{ id: 'ON', label: 'する', note: '自動で進む' }, { id: 'OFF', label: 'しない', note: '自分で押す' }] },
-    { key: 'gutsPick', title: 'ガッツにするカードのおすすめ', desc: 'ガッツの番になったときに、おすすめのカードを先に選んでおきます。選び直してから「ターン終了」を押せます。',
+    { key: 'gutsPick', title: 'ガッツにするカードのおすすめ', desc: 'ガッツを置く場面になったら、おすすめのカードを先に選んでおきます。選び直してから「ターン終了」を押せます。',
       options: [{ id: 'OFF', label: '選ばない', note: '自分で選ぶ' }, { id: 'ON', label: '選んでおく', note: '直してもOK' }] },
   ] },
   { title: '表示', items: [
@@ -56097,18 +56491,18 @@ const CARD_TACTIC_GROUPS = Object.freeze([
 //   判定を変えたら、ここの文も必ず合わせる。カードの id(保存に書く)は変えない。種類ごとに (段) => [名前, 効果]
 const CARD_TACTIC_TEXT = Object.freeze({
 // ---- 条件(〜なら) ----
-any:()=>['いつでも','いつでも当てはまる。組み合わせた手を、出せるときはいつも出す'],
+any:()=>['いつでも','いつでも当てはまる。組み合わせたカードを、使えるときはいつも使う'],
 ko:()=>['倒せる相手がいる','手札の攻撃の技(特殊技は除く)で、いまのガッツで出せて、ダメージが残りライフ以上になる相手のモンスターがいるとき。その相手を狙う'],
 lowest:()=>['ライフがいちばん少ない相手','相手の場で、残りライフ(数)がいちばん少ない相手を狙う'],
 highest:()=>['ライフがいちばん多い相手','相手の場で、残りライフ(数)がいちばん多い相手を狙う'],
 strongest:()=>['攻撃がいちばん強い相手','相手のモンスターのうち、使える技の最大ダメージがいちばん大きい相手を狙う(手札は見ない)'],
-attacker:()=>['前の番に攻撃してきた相手','直前の相手の番に攻撃してきた相手のモンスターを狙う'],
+attacker:()=>['前のターンに攻撃してきた相手','直前の相手のターンに攻撃してきた相手のモンスターを狙う'],
 leader:()=>['相手のリーダー','相手が1体目(左)に置いたモンスターが残っていれば、それを狙う'],
 type:(v)=>[`${v}の相手`,`いま${v}にいる相手のモンスターを狙う`],
 blood:(v)=>[`${v}の相手`,`${v}のモンスターの相手を狙う`],
 species:()=>['決めた種族の相手','組むときに選んだ種族の相手のモンスター(混血はもとの種族でも当たる)を狙う'],
 foeLife:(v)=>[`相手のライフ${v}%以下`,`残りライフが最大の${v}%以下になっている相手のモンスターがいるとき。その相手を狙う`],
-myLife:(v)=>[`味方のライフ${v}%以下`,`残りライフが最大の${v}%以下の自分のモンスターがいるとき。守る手と組むと、そのモンスターが狙われたときだけ守る`],
+myLife:(v)=>[`味方のライフ${v}%以下`,`残りライフが最大の${v}%以下の自分のモンスターがいるとき。守るカードと組むと、そのモンスターが狙われたときだけ守る`],
 myGuts:(v)=>[`自分のガッツ${v}以上`,`自分のガッツが${v}以上のとき`],
 foeGutsLe:(v)=>[`相手のガッツ${v}以下`,`相手のガッツが${v}以下のとき`],
 foeGutsGe:(v)=>[`相手のガッツ${v}以上`,`相手のガッツが${v}以上のとき(大技に備える)`],
@@ -56117,17 +56511,17 @@ foeHandGe:(v)=>[`相手の手札${v}枚以上`,`相手の手札が${v}枚以上�
 foeHandLe:(v)=>[`相手の手札${v}枚以下`,`相手の手札が${v}枚以下のとき`],
 myDeck:(v)=>[`自分の山札${v}枚以下`,`自分の山札の残りが${v}枚以下のとき`],
 foeDeck:(v)=>[`相手の山札${v}枚以下`,`相手の山札の残りが${v}枚以下のとき`],
-guardN:(v)=>[`手札に守り札${v}枚以上`,`手札に回避・防御の札が合わせて${v}枚以上あるとき`],
-guardKind:(v)=>[`手札に${v}の札がある`,`手札に${v}の札が1枚以上あるとき`],
-bigInHand:()=>['手札に大技がある','手札に、払うガッツが4以上の攻撃の札があるとき'],
-areaInHand:()=>['手札に全体攻撃がある','手札に、相手の全員に当たる攻撃の札があるとき'],
+guardN:(v)=>[`手札に守りのカード${v}枚以上`,`手札に回避・防御のカードが合わせて${v}枚以上あるとき`],
+guardKind:(v)=>[`手札に${v}のカードがある`,`手札に${v}のカードが1枚以上あるとき`],
+bigInHand:()=>['手札に大技がある','手札に、払うガッツが4以上の攻撃のカードがあるとき'],
+areaInHand:()=>['手札に全体攻撃がある','手札に、相手の全員に当たる攻撃のカードがあるとき'],
 breederInHand:()=>['手札にブリーダーのカードがある','手札にブリーダーのカードが1枚以上あるとき'],
-turnLe:(v)=>[`自分の${v}番目の番まで`,`自分の番が${v}回目までのとき(自分のはじめの番が1回目)`],
-turnGe:(v)=>[`自分の${v}番目の番から`,`自分の番が${v}回目以降のとき`],
+turnLe:(v)=>[`自分の${v}ターン目まで`,`自分のターンが${v}回目までのとき(自分のはじめのターンが1回目)`],
+turnGe:(v)=>[`自分の${v}ターン目から`,`自分のターンが${v}回目以降のとき`],
 myAlive:(v)=>[`味方が残り${v}体`,`倒れていない自分のモンスターがちょうど${v}体のとき`],
 foeAlive:(v)=>[`相手が残り${v}体`,`倒れていない相手のモンスターがちょうど${v}体のとき`],
 koDiff:(v)=>[v==='勝っ'?'倒した数で勝っている':'倒した数で負けている',v==='勝っ'?'倒した相手の数が、倒された味方の数より多いとき':'倒された味方の数が、倒した相手の数より多いとき'],
-foeStun:()=>['攻撃できない相手','封じられていて、次の相手の番に攻撃できない相手のモンスターを狙う'],
+foeStun:()=>['攻撃できない相手','封じられていて、相手の次のターンに攻撃できない相手のモンスターを狙う'],
 myStun:()=>['攻撃できない味方がいる','封じられて攻撃できない自分のモンスターがいるとき'],
 foeCharge:()=>['溜めている相手','溜め技を使って、次の技のダメージが何倍にもなる相手のモンスターを狙う'],
 foeAir:()=>['空中に上がった相手','もとは地上・水中なのに、いま空中になっている相手のモンスターを狙う'],
@@ -56135,70 +56529,70 @@ field:(v)=>[`場に${v}全体カードがある`,`場に、${v==='自分の'?'�
 foeBig:()=>['相手が大技を撃てそう','相手のガッツが4以上で手札があり、相手のモンスターが使える大技(払うガッツ4以上)をいまのガッツ+1で払えるとき'],
 myHandLe:(v)=>[`自分の手札${v}枚以下`,`自分の手札が${v}枚以下のとき`],
 breederN:()=>['手札にブリーダーのカード2枚以上','手札にブリーダーのカードが2枚以上あるとき'],
-breederUnused:()=>['この番まだブリーダーのカードを出していない','この番に、まだブリーダーのカードを出していないとき'],
+breederUnused:()=>['このターンまだブリーダーのカードを出していない','このターンに、まだブリーダーのカードを出していないとき'],
 myGutsLe:(v)=>[`自分のガッツ${v}以下`,`自分のガッツが${v}以下のとき`],
 myDiscard:(v)=>[`自分の捨て札${v}枚以上`,`自分の捨て札が${v}枚以上のとき`],
 myKo:()=>['倒れた味方がいる','自分のモンスターが1体でも倒れているとき'],
 noField:()=>['場に全体カードが無い','どちらの全体カードも場に無いとき'],
-selfLife:(v)=>[`このモンスターのライフ${v}%以下`,`このカードを入れたモンスターの残りライフが最大の${v}%以下のとき(モンスターの手に入れたときだけ当たる)`],
-selfFresh:()=>['このモンスターがこの番まだ攻撃していない','このカードを入れたモンスターが、この番にまだ攻撃していないとき(モンスターの手だけ)'],
-selfType:(v)=>[`このモンスターがいま${v}`,`このカードを入れたモンスターが、いま${v}にいるとき(モンスターの手だけ)`],
-selfStun:()=>['このモンスターが攻撃できない','このカードを入れたモンスターが封じられて攻撃できないとき(モンスターの手だけ)'],
-selfAdv:()=>['このモンスターが得意な相手','このカードを入れたモンスターが出せる手札の技に、相手の特徴(地上・空中・水中)でダメージが倍になるものがあるとき。その相手を狙う(モンスターの手だけ)'],
+selfLife:(v)=>[`このモンスターのライフ${v}%以下`,`このカードを入れたモンスターの残りライフが最大の${v}%以下のとき(モンスターの枠に入れたときだけ当たる)`],
+selfFresh:()=>['このモンスターがこのターンまだ攻撃していない','このカードを入れたモンスターが、このターンにまだ攻撃していないとき(モンスターの枠だけ)'],
+selfType:(v)=>[`このモンスターがいま${v}`,`このカードを入れたモンスターが、いま${v}にいるとき(モンスターの枠だけ)`],
+selfStun:()=>['このモンスターが攻撃できない','このカードを入れたモンスターが封じられて攻撃できないとき(モンスターの枠だけ)'],
+selfAdv:()=>['このモンスターが得意な相手','このカードを入れたモンスターが出せる手札の技に、相手の特徴(地上・空中・水中)でダメージが倍になるものがあるとき。その相手を狙う(モンスターの枠だけ)'],
 incoming:(v)=>[`受けるダメージ${v}以上`,`攻撃を受けたとき、受けるダメージの見込みが${v}以上なら(守るときだけ見る)`],
 incomingKo:()=>['受けると倒れる','攻撃を受けたとき、守らないと倒れるなら(守るときだけ見る)'],
 incomingArea:()=>['全体攻撃を受けた','受けた攻撃が、全員に当たる攻撃なら(守るときだけ見る)'],
 // ---- 基本カード(どの手にも当てはまらないときの打ち方) ----
-tBalance:()=>['バランス型','攻め・守り・ガッツ・大技・崩し・全体を同じくらいに見て、損得のいちばん良い手を打つ。とどめだけ少し優先'],
-tAttack:()=>['攻め型','攻撃を多めに出し(1.5倍重く)、ガッツはためず守り札も残さない。守るのは、受けると倒れるときだけ'],
-tGuard:()=>['守り型','守り札を残す(1.5倍重く)・攻撃は控えめ(0.7倍)。攻撃を受けたら、守れるときはいつも守る'],
+tBalance:()=>['バランス型','攻め・守り・ガッツ・大技・崩し・全体を同じくらいに見て、損得のいちばん良い使い方をする。とどめだけ少し優先'],
+tAttack:()=>['攻め型','攻撃を多めに出し(1.5倍重く)、ガッツはためず守りのカードも残さない。守るのは、受けると倒れるときだけ'],
+tGuard:()=>['守り型','守りのカードを残す(1.5倍重く)・攻撃は控えめ(0.7倍)。攻撃を受けたら、守れるときはいつも守る'],
 tSave:()=>['溜め型','ガッツを多めにためて(1.6倍)、大技を優先する(1.8倍)'],
-tDisrupt:()=>['崩し型','相手の手札・山札・ガッツを減らす札を優先する(1.8倍)'],
+tDisrupt:()=>['崩し型','相手の手札・山札・ガッツを減らすカードを優先する(1.8倍)'],
 tBig:()=>['大技型','ダメージの大きい技を優先する(1.6倍)'],
 tArea:()=>['全体型','全員に当たる攻撃・全体カードを優先する(1.6倍)。相手が1体だけのときは全体攻撃を出さない'],
 tFinish:()=>['仕留め型','あと少しで倒せる相手への攻撃を優先する(1.6倍)'],
-tRush:()=>['速攻型','攻撃を多めに(1.6倍)・大技は控えめ(0.7倍)。払うガッツが2以上の技は出さない。守るときもガッツ1以下の守り札だけ使う'],
-tSteady:()=>['堅実型','守り札とガッツを残し(1.3倍)、攻撃は控えめ(0.8倍)。自分も傷つく技は出さない'],
-tJam:()=>['かく乱守り型','崩す札(1.3倍)と、守り札を残すこと(1.3倍)を両方重くする'],
+tRush:()=>['速攻型','攻撃を多めに(1.6倍)・大技は控えめ(0.7倍)。払うガッツが2以上の技は出さない。守るときもガッツ1以下の守りのカードだけ使う'],
+tSteady:()=>['堅実型','守りのカードとガッツを残し(1.3倍)、攻撃は控えめ(0.8倍)。自分も傷つく技は出さない'],
+tJam:()=>['かく乱守り型','崩すカード(1.3倍)と、守りのカードを残すこと(1.3倍)を両方重くする'],
 tCalm:()=>['慎重型','いっしょに入れた基本カードの重みを半分に弱めて、極端な打ち方をしない'],
-tFlex:()=>['臨機応変型','番ごとに場を見て、とどめ・全体攻撃・守り・攻めのどれか1つを強くする'],
-tMill:()=>['持久型','相手の山札を削る・相手に引かせる・ガッツを山札へ戻す札を重くして、相手の山札切れで勝ちを狙う'],
-tReckless:()=>['捨て身型','守り札を残さず(0.5倍)、とどめを優先(1.3倍)。受けると倒れるとき以外は守らない'],
-tHand:()=>['手札温存型','出したあとに手札が2枚以上残る手だけを出す。ガッツの番も手札を2枚残して置く'],
-tDeck:()=>['山札節約型','カードを引く・山札からガッツへ・手札を引き直す・相手に引かせる札は出さない'],
+tFlex:()=>['臨機応変型','ターンごとに場を見て、とどめ・全体攻撃・守り・攻めのどれか1つを強くする'],
+tMill:()=>['持久型','相手の山札を削る・相手に引かせる・ガッツを山札へ戻すカードを重くして、相手の山札切れで勝ちを狙う'],
+tReckless:()=>['捨て身型','守りのカードを残さず(0.5倍)、とどめを優先(1.3倍)。受けると倒れるとき以外は守らない'],
+tHand:()=>['手札温存型','使ったあとに手札が2枚以上残るときだけカードを使う。ガッツを置くときも手札を2枚残して置く'],
+tDeck:()=>['山札節約型','カードを引く・山札からガッツへ・手札を引き直す・相手に引かせるカードは出さない'],
 tFocus:()=>['一点集中型','ライフの割合がいちばん低い相手への攻撃を優先して、倒れるまで同じ相手を狙う'],
 tSpread:()=>['分散型','全体攻撃を重くし(1.4倍)、ライフがいちばん多い相手への攻撃を優先する'],
 tComeback:()=>['逆転型','倒された数で負けている、または味方のライフの合計が半分以下なら捨て身(守り0.5倍・とどめ・大技・全体1.3倍)。それ以外は堅く(守り・ガッツ1.2倍)'],
 // ---- モンスターカード(この子の手) ----
-atk:()=>['いちばん得な攻撃','このモンスターが出せる攻撃のうち、点数(ダメージ・とどめ・ガッツの損得)がいちばん高い手を出す'],
-kind:(v)=>[`${v}の技で攻撃`,`このモンスターの${v}の技のうち、点数がいちばん高い手を出す`],
-cost:(v)=>{const n=v.startsWith('軽い')?'0〜1':v.startsWith('中')?'2〜3':'4以上';const nm=v.startsWith('軽い')?'軽い技':v.startsWith('中')?'中くらいの技':'大技';return [`${nm}で攻撃`,`このモンスターの技のうち、払うガッツが${n}の技で、点数がいちばん高い手を出す`];},
-reach:(v)=>[v==='全体攻撃'?'全体攻撃で攻撃':'1体だけに攻撃',v==='全体攻撃'?'このモンスターの、相手の全員に当たる技のうち、点数がいちばん高い手を出す':'このモンスターの、1体だけに当てる技のうち、点数がいちばん高い手を出す'],
-eff:(v)=>{const d={回避されない:'相手が回避できない技',攻撃できなくする:'当たると相手を攻撃できなくする技',ガッツを減らす:'当たると相手のガッツを減らす技',吸い取る:'相手のライフを吸い取って回復する技','2回攻撃':'もう1回攻撃できるようになる技',防御で減らない:'防御されてもダメージが減らない技',回避されても半分:'回避されても半分のダメージが入る技',種族に強い:'特定の特徴の相手に倍のダメージの技',ダメージを割り振る:'ダメージを相手の何体かに割り振る技','2枚同時':'2枚組でいっしょに出す技',手札に戻る:'当たると手札に戻ってくる技',カード投げ:'カードを投げてダメージを足す技'}[v];return [`「${v}」の技で攻撃`,`このモンスターの、${d}のうち、点数がいちばん高い手を出す`];},
-attach:()=>['付ける札といっしょに攻撃','技に付ける札をいっしょに出す手のうち、点数がいちばん高い手を出す'],
-attachKind:(v)=>[`付ける札(${v})といっしょに攻撃`,`「${v}」付ける札をいっしょに出す手のうち、点数がいちばん高い手を出す`],
+atk:()=>['いちばん得な攻撃','このモンスターが出せる攻撃のうち、点数(ダメージ・とどめ・ガッツの損得)がいちばん高い攻撃をする'],
+kind:(v)=>[`${v}の技で攻撃`,`このモンスターの${v}の技のうち、点数がいちばん高い攻撃をする`],
+cost:(v)=>{const n=v.startsWith('軽い')?'0〜1':v.startsWith('中')?'2〜3':'4以上';const nm=v.startsWith('軽い')?'軽い技':v.startsWith('中')?'中くらいの技':'大技';return [`${nm}で攻撃`,`このモンスターの技のうち、払うガッツが${n}の技で、点数がいちばん高い攻撃をする`];},
+reach:(v)=>[v==='全体攻撃'?'全体攻撃で攻撃':'1体だけに攻撃',v==='全体攻撃'?'このモンスターの、相手の全員に当たる技のうち、点数がいちばん高い攻撃をする':'このモンスターの、1体だけに当てる技のうち、点数がいちばん高い攻撃をする'],
+eff:(v)=>{const d={回避されない:'相手が回避できない技',攻撃できなくする:'当たると相手を攻撃できなくする技',ガッツを減らす:'当たると相手のガッツを減らす技',吸い取る:'相手のライフを吸い取って回復する技','2回攻撃':'もう1回攻撃できるようになる技',防御で減らない:'防御されてもダメージが減らない技',回避されても半分:'回避されても半分のダメージが入る技',種族に強い:'特定の特徴の相手に倍のダメージの技',ダメージを割り振る:'ダメージを相手の何体かに割り振る技','2枚同時':'2枚組でいっしょに出す技',手札に戻る:'当たると手札に戻ってくる技',カード投げ:'カードを投げてダメージを足す技'}[v];return [`「${v}」の技で攻撃`,`このモンスターの、${d}のうち、点数がいちばん高い攻撃をする`];},
+attach:()=>['付けるカードといっしょに攻撃','技に付けるカードをいっしょに出す攻撃のうち、点数がいちばん高いものを出す'],
+attachKind:(v)=>[`付けるカード(${v})といっしょに攻撃`,`「${v}」付けるカードをいっしょに出す攻撃のうち、点数がいちばん高いものを出す`],
 spe:(v)=>{const d={味方を回復:'味方のライフを回復する',引く:'カードを引く',空中になる:'空中に上がる',安全になる:'次の攻撃を受けなくなる',まゆと羽化:'まゆになる・羽化する',のりうつる:'相手にのりうつる'}[v];return [`特殊技で${d}`,`このモンスターの特殊技のうち、${d}技を出す`];},
-stance:(v)=>({この子から攻める:['このモンスターが攻める','当てはまったら、このモンスターの攻撃で点数がいちばん高い手を出す'],この子は攻撃しない:['このモンスターは攻撃しない','当てはまったら、この番はこのモンスターに攻撃させない(このあとの手・基本カードの打ち方でも出さない)'],ライフの多い子が先に:['いちばん元気なら攻める','このモンスターが味方でいちばんライフが多いときだけ、このモンスターの攻撃で点数がいちばん高い手を出す'],ライフの少ない子は温存:['いちばん弱っていたら休む','味方が2体以上いて、このモンスターのライフがいちばん少ないとき、この番は攻撃させない'],攻撃は1回だけ:['攻撃は1回だけ','この番にまだ攻撃していなければ攻撃する。1回攻撃したら、この番はもう攻撃させない'],何回でも攻める:['何回でも攻める','点数が少し低い手でも攻撃を出して、このモンスターの攻撃を続ける']})[v],
-disrupt:(v)=>({手札を捨てさせる:['相手の手札を捨てさせる','相手の手札を捨てさせる・山札の下へ戻す札を含む手を出す'],山札を削る:['相手の山札を削る','相手の山札を削る札を含む手を出す'],ガッツを減らす:['相手のガッツを減らす','相手のガッツを減らす・0にする札を含む手を出す'],番を飛ばす:['相手の番を飛ばす','相手の次の番を飛ばす札を含む手を出す']})[v],
-guard:()=>['守る','このモンスターが攻撃を受けたら、手札の守り札でいちばん良い守り方をする'],
-guardFirst:(v)=>[`${v}で守る`,`このモンスターが攻撃を受けたら、${v==='回避'||v==='防御'?v+'の札':'「'+v+'」の札'}だけで守る(無ければ次の手を見る)`],
+stance:(v)=>({この子から攻める:['このモンスターが攻める','当てはまったら、このモンスターの攻撃で点数がいちばん高い攻撃をする'],この子は攻撃しない:['このモンスターは攻撃しない','当てはまったら、このターンはこのモンスターに攻撃させない(このあとの戦術カード・基本カードの打ち方でも攻撃させない)'],ライフの多い子が先に:['いちばん元気なら攻める','このモンスターが味方でいちばんライフが多いときだけ、このモンスターの攻撃で点数がいちばん高い攻撃をする'],ライフの少ない子は温存:['いちばん弱っていたら休む','味方が2体以上いて、このモンスターのライフがいちばん少ないとき、このターンは攻撃させない'],攻撃は1回だけ:['攻撃は1回だけ','このターンにまだ攻撃していなければ攻撃する。1回攻撃したら、このターンはもう攻撃させない'],何回でも攻める:['何回でも攻める','点数が少し低い攻撃でも出して、このモンスターの攻撃を続ける']})[v],
+disrupt:(v)=>({手札を捨てさせる:['相手の手札を捨てさせる','相手の手札を捨てさせる・山札の下へ戻すカードを使う'],山札を削る:['相手の山札を削る','相手の山札を削るカードを使う'],ガッツを減らす:['相手のガッツを減らす','相手のガッツを減らす・0にするカードを使う'],番を飛ばす:['相手のターンを飛ばす','相手の次のターンを飛ばすカードを使う']})[v],
+guard:()=>['守る','このモンスターが攻撃を受けたら、手札の守りのカードでいちばん良い守り方をする'],
+guardFirst:(v)=>[`${v}で守る`,`このモンスターが攻撃を受けたら、${v==='回避'||v==='防御'?v+'のカード':'「'+v+'」のカード'}だけで守る(無ければ次のカードを見る)`],
 guardOver:(v)=>[`ダメージ${v}以上だけ守る`,`このモンスターが攻撃を受けたとき、受けるダメージの見込みが${v}より小さければ守らずに受ける。${v}以上なら守る`],
 guardDie:()=>['倒れるときだけ守る','このモンスターが攻撃を受けたとき、受けても倒れなければ守らずに受ける。倒れるときだけ守る'],
-cover:()=>['かばう札で守る','このモンスターが攻撃を受けたら、かばう・身代わりの札で守る'],
-noGuard:()=>['守らない','このモンスターが攻撃を受けても、守り札を使わずに受ける(札を残す)'],
-charge:()=>['溜め技を使う','次の技のダメージを何倍にする札(溜め・怒り・次の番の技を倍)を含む手を出す'],
-chargeKind:(v)=>[`溜め(${v})を使う`,`「${v}」の溜めの札を含む手を出す`],
+cover:()=>['かばうカードで守る','このモンスターが攻撃を受けたら、かばう・身代わりのカードで守る'],
+noGuard:()=>['守らない','このモンスターが攻撃を受けても、守りのカードを使わずに受ける(カードを残す)'],
+charge:()=>['溜め技を使う','次の技のダメージを何倍にするカード(溜め・怒り・次のターンの技を倍)を使う'],
+chargeKind:(v)=>((w)=>[`溜め(${w})を使う`,`「${w}」の溜めのカードを使う`])(v==='次の番の技を倍'?'次のターンの技を倍':v), // 段の値(保存に書く)は「次の番の技を倍」のまま。見せる言葉だけ「ターン」(2026-10-30 社長)
 // ---- ブリーダーカード ----
-bEff:(v)=>{const d={回復する:'味方を回復する',倒れた子を戻す:'倒れたモンスターを場に戻す',攻撃できないを消す:'味方の「攻撃できない」を消す',相手を攻撃できなくする:'相手のモンスターを攻撃できなくする',相手のガッツを減らす:'相手のガッツを減らす',両方のガッツを0にする:'両方のガッツを0にする',山札からガッツへ:'山札からガッツを増やす',カードを引く:'カードを引く',捨て札から拾う:'捨て札からカードを拾う',手札を引き直す:'手札を引き直す',もう1回攻撃させる:'味方にもう1回攻撃させる',合体する:'モンスターを合体させる',付ける札をただにする:'付ける札の払うガッツを0にする',守りを名指しで封じる:'相手の守りを名指しで封じる',捨て札を山札に戻す:'ガッツを山札に戻して切り直す',小さく攻撃する:'ダメージのあるブリーダーのカードで攻撃する'}[v];return [`ブリーダー: ${d}`,`手札のブリーダーのカードのうち、${d}カードを出す`];},
+bEff:(v)=>{const d={回復する:'味方を回復する',倒れた子を戻す:'倒れたモンスターを場に戻す',攻撃できないを消す:'味方の「攻撃できない」を消す',相手を攻撃できなくする:'相手のモンスターを攻撃できなくする',相手のガッツを減らす:'相手のガッツを減らす',両方のガッツを0にする:'両方のガッツを0にする',山札からガッツへ:'山札からガッツを増やす',カードを引く:'カードを引く',捨て札から拾う:'捨て札からカードを拾う',手札を引き直す:'手札を引き直す',もう1回攻撃させる:'味方にもう1回攻撃させる',合体する:'モンスターを合体させる',付ける札をただにする:'付けるカードの払うガッツを0にする',守りを名指しで封じる:'相手の守りを名指しで封じる',捨て札を山札に戻す:'ガッツを山札に戻して切り直す',小さく攻撃する:'ダメージのあるブリーダーのカードで攻撃する'}[v];return [`ブリーダー: ${d}`,`手札のブリーダーのカードのうち、${d}カードを出す`];},
 fieldCard:()=>['全体カードを出す','手札の全体カード(場に残るカード)を出す'],
 fieldKind:(v)=>[`全体カード: ${v}`,`手札の全体カードのうち、「${v}」の全体カードを場に出す`],
-save:()=>['ガッツを多めにためる','ガッツの番に、ふだんより多くの手札をガッツに置く'],
-gutsN:(v)=>[`ガッツを${v}枚置く`,`ガッツの番に、手札から${v}枚だけガッツに置く`],
-keepGuard:()=>['守り札は置かない','ガッツの番に、回避・防御の札はガッツに置かない'],
-gutsOrder:(v)=>[v==='重い札'?'重い札からガッツに置く':'使えない札からガッツに置く',v==='重い札'?'ガッツの番に置く枚数はふだんどおり。払うガッツの大きい札から先に置く':'ガッツの番に置く枚数はふだんどおり。場のモンスターが使えない札から先に置く'],
-stop:()=>['この番の攻撃をやめる','当てはまったら、この番の攻撃をここで終える'],
-ace:()=>['切り札を出す','登録で選んだ切り札が手札にあれば、それを含む手を先に出す'],
-holdBreeder:()=>['ブリーダーのカードを温存','当てはまったら、この番はブリーダーのカード(全体カードも)を出さない。ほかの手はそのまま'],
+save:()=>['ガッツを多めにためる','ガッツを置くときに、ふだんより多くの手札をガッツに置く'],
+gutsN:(v)=>[`ガッツを${v}枚置く`,`ガッツを置くときに、手札から${v}枚だけガッツに置く`],
+keepGuard:()=>['守りのカードは置かない','ガッツを置くときに、回避・防御のカードはガッツに置かない'],
+gutsOrder:(v)=>[v==='重い札'?'重いカードからガッツに置く':'使えないカードからガッツに置く',v==='重い札'?'ガッツに置く枚数はふだんどおり。払うガッツの大きいカードから先に置く':'ガッツに置く枚数はふだんどおり。場のモンスターが使えないカードから先に置く'],
+stop:()=>['このターンの攻撃をやめる','当てはまったら、このターンの攻撃をここで終える'],
+ace:()=>['切りカードを出す','登録で選んだ切りカードが手札にあれば、それを先に使う'],
+holdBreeder:()=>['ブリーダーのカードを温存','当てはまったら、このターンはブリーダーのカード(全体カードも)を出さない。ほかのカードはそのまま使う'],
 });
 const cardTacticTextOf = (g, v) => {
   const t = CARD_TACTIC_TEXT[g.id] ? CARD_TACTIC_TEXT[g.id](v) : null;
@@ -56725,6 +57119,229 @@ const cardAiTacticGambit = (who, levelId) => {
   if (!n || !list) return null;
   const rows = (CARD_AI_TACTIC_ROWS[who] || []).slice(0, n - 1).flat().map((r) => ({ ...r, on: true }));
   return { base: [0, 1, 2].map((i) => (i < n ? list[i] || null : null)), breeder: [], mons: [rows, rows, rows] };
+};
+
+// ---- part: 82-card-share-core.jsx ----
+// ===== MFバトルカード: 登録デッキの戦い方(画面と保存を触らない部分) =====
+// 95-card-deck-share から移した(2026-10-30 ルールくん。中身は変えていない)。大会の試合をサーバ(Edge Function)でも
+// 同じ打ち方で回すため、画面(JSX)と保存を触らない部品に分けた。みんなのデッキ(95)・大会(82-card-tournament-core)が使う
+
+// 戦い方の7つの向き(82 の CARD_AI_HABITS の項目と同じ名前)。-1 控えめ / 0 ふつう / 1 強め
+const CARD_SHARE_TILTS = Object.freeze([
+  { id: 'attack', label: '攻める' }, { id: 'keepGuard', label: '守りを残す' }, { id: 'saveGuts', label: 'ガッツをためる' },
+  { id: 'big', label: '大技' }, { id: 'disrupt', label: '相手を崩す' }, { id: 'area', label: '全体技' }, { id: 'finish', label: 'とどめ' },
+]);
+const CARD_SHARE_TILT_MUL = Object.freeze({ '-1': 0.6, 0: 1, 1: 1.6 });
+const CARD_SHARE_ACES_MAX = 3;
+
+// 戦い方をきれいにする(知らない項目は捨てる・無い人は既定で補う)。deck を渡すと、切り札はそのデッキに入っている札だけ残す
+const cardShareNormalizeTactics = (v, deck = null) => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  const habit = typeof r.habit === 'string' && Object.prototype.hasOwnProperty.call(CARD_AI_HABITS, r.habit) ? r.habit : 'kyuko';
+  const tilt = {};
+  CARD_SHARE_TILTS.forEach((t) => { const n = r.tilt && r.tilt[t.id]; tilt[t.id] = n === -1 || n === 1 ? n : 0; });
+  const inDeck = deck && Array.isArray(deck.cards) ? new Set(deck.cards) : null;
+  const aces = [...new Set((Array.isArray(r.aces) ? r.aces : []).filter((x) => typeof x === 'string' && /^[A-Z]?[0-9]{3}$/.test(x) && (!inDeck || inDeck.has(x))))].slice(0, CARD_SHARE_ACES_MAX);
+  const name = typeof r.name === 'string' ? r.name.slice(0, 20) : '';
+  // f … 戦術カードの枠(82-card-tactics-core の短い形。2026-10-29 社長)。無い登録(前の形)は、くせと傾きで打つ
+  const f = r.f && typeof r.f === 'object' && !Array.isArray(r.f) && typeof cardTacticPackFrames === 'function' ? cardTacticPackFrames(cardTacticUnpackFrames(r.f)) : null;
+  return { habit, tilt, aces, name, ...(f ? { f } : {}) };
+};
+// 登録デッキの賢さ(戦術カードの枠から。2026-10-29 社長「デッキ側で決まる・戦う人は選ばない」)。前の形の登録は NORMAL
+//   'random' … 何も入れていない(出せる手からランダム)。報酬と経験値は EASY で数える
+const cardShareSmartLevel = (tactics) => {
+  const t = cardShareNormalizeTactics(tactics);
+  return t.f && typeof cardTacticSmartLevel === 'function' ? cardTacticSmartLevel(cardTacticUnpackFrames(t.f)) : 'normal';
+};
+// 土台のくせ(メインの基本カードが助手の型ならその助手。前の形の登録や画面の名前に使う)
+const cardShareMainHabit = (frames, fallback = 'kyuko') => {
+  const c = frames && typeof cardTacticOf === 'function' ? cardTacticOf(frames.base[0]) : null;
+  const g = c && typeof CARD_TACTIC_GROUPS !== 'undefined' ? CARD_TACTIC_GROUPS.find((x) => x.id === c.g) : null;
+  return (g && g.habit) || fallback || 'kyuko';
+};
+const cardShareFightLevel = (tactics) => { const lv = cardShareSmartLevel(tactics); return lv === 'random' ? 'easy' : lv; };
+// 戦い方から、助手の打ち方(cardAiPolicy の形)を作る。戦術カードの枠があれば、その枠で打つ(強さは枠の賢さ)
+const cardSharePolicy = (tactics, levelId, opts = {}) => {
+  const t = cardShareNormalizeTactics(tactics);
+  if (t.f) {
+    const frames = cardTacticUnpackFrames(t.f);
+    const base = cardAiPolicy(t.habit, cardShareFightLevel(t), { ...opts, noTactics: true });
+    return { ...base, gambit: frames, gambitRandom: true, aces: t.aces.slice() };
+  }
+  const base = cardAiPolicy(t.habit, levelId, { ...opts, noTactics: true });
+  const habit = { ...base.habit };
+  CARD_SHARE_TILTS.forEach((x) => { if (Number.isFinite(habit[x.id])) habit[x.id] = habit[x.id] * CARD_SHARE_TILT_MUL[t.tilt[x.id]]; });
+  return { ...base, habit, aces: t.aces.slice() };
+};
+
+// ---- part: 82-card-tournament-core.jsx ----
+// ===== MFバトルカード: 大会の計算(画面と保存を触らない) =====
+// 2026-10-30 社長「作り始めて」。仕様は docs/progress/card-tournament/plan/README.md
+//   ・組分け … 9人まで全員で1つの総当たり(4人に足りなければ助手)。10人以上は4〜5人の組 → 各組の優勝・準優勝で頂上決戦
+//   ・総当たりの日程 … 輪の回し方(奇数は毎日1人お休み)。1日1試合
+//   ・1試合 … 同じデッキ・戦術カード・種なら、どこで回しても同じ結果。手の並びを残す(見返しは手を当て直すだけ)
+//   ・順位 … 勝ち数 → 倒したモンスターの数 → 2人の対戦の勝ち負け → エントリーが早い人
+//   ・ごほうび … 大会ごとの表(順位ごと・参加賞・1勝ごと)
+// サーバの上の関数(Edge Function card-tournament-run)も、この部品をそのまま使う(ビルドで写す)。だから画面・保存・時計(Date.now)を使わない
+
+const CARD_TOUR_SINGLE_MAX = 9;   // 9人までは全員で1つの総当たり
+const CARD_TOUR_GROUP_SIZE = 5;   // 10人以上は5人ずつを目安に組を作る
+const CARD_TOUR_MIN_SEATS = 4;    // 総当たりは4人から(足りない席は助手)
+const CARD_TOUR_FINAL_TOP = 2;    // 各組から頂上決戦へ進む人数(優勝・準優勝)
+const CARD_TOUR_ASSIST_LEVEL = 'expert'; // 助手の席の強さ
+const CARD_TOUR_MAX_STEPS = 4000;
+
+// 文字から32ビットの数(FNV-1a)。種と、組への振り分けの混ぜ方に使う
+const cardTourHash = (text) => {
+  let h = 0x811c9dc5;
+  const s = String(text);
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h >>> 0;
+};
+const cardTourRand = (key) => { let s = cardTourHash(key) || 1; return () => { const n = cardRngNext(s); s = n.s; return n.v; }; };
+// 試合の種(大会の番号・段・組・日・2人の席から)。0 にはしない
+const cardTourMatchSeed = (tourId, stage, group, day, a, b) => (cardTourHash(`${tourId}|${stage}|${group}|${day}|${a}|${b}`) % 2147483646) + 1;
+
+// ---- 組分け ----
+// ids … エントリーの番号(エントリーが早い順)。key … 締め切りで決める混ぜ方の種(大会の番号など)
+// 返り値: [[席の番号…]…](組ごと)。助手の席は { assist: 何番目の助手 } で入る
+const cardTourGroups = (ids, key) => {
+  const list = Array.isArray(ids) ? ids.slice() : [];
+  const fill = (g) => { const out = g.slice(); let k = 0; while (out.length < CARD_TOUR_MIN_SEATS) out.push({ assist: k++ }); return out; };
+  if (list.length <= CARD_TOUR_SINGLE_MAX) return [fill(list)];
+  // 10人以上: 締め切りの種で混ぜて、組へ順に配る(組の数 = 人数 ÷ 5 の切り上げ。4〜5人ずつになる)
+  const rand = cardTourRand(`groups|${key}`);
+  for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
+  const n = Math.ceil(list.length / CARD_TOUR_GROUP_SIZE);
+  const groups = Array.from({ length: n }, () => []);
+  list.forEach((id, i) => groups[i % n].push(id));
+  return groups.map(fill);
+};
+
+// ---- 総当たりの日程(輪の回し方) ----
+// size 人の総当たりを、1日1試合ずつの日に分ける。[[[a, b]…](その日の試合)…]。奇数は毎日1人お休み
+const cardTourRoundRobin = (size) => {
+  const n = Math.max(0, Math.floor(size));
+  if (n < 2) return [];
+  const seats = Array.from({ length: n % 2 ? n + 1 : n }, (_, i) => i); // 奇数は「お休み」の席を1つ足す
+  const m = seats.length;
+  const days = [];
+  for (let d = 0; d < m - 1; d++) {
+    const day = [];
+    for (let i = 0; i < m / 2; i++) {
+      const a = seats[i], b = seats[m - 1 - i];
+      if (a < n && b < n) day.push(d % 2 ? [b, a] : [a, b]);
+    }
+    days.push(day);
+    seats.splice(1, 0, seats.pop()); // 0 番は動かさず、残りを1つずつ回す
+  }
+  return days;
+};
+
+// 組の試合を並べる。stage … 'group' | 'final'。dayFrom … その段の1日目が大会の何日目か(0 から)
+// 返り値: [{ stage, group, day, a, b, seed, first }](a・b は組の中の席の番号)
+const cardTourSchedule = (tourId, groups, stage = 'group', dayFrom = 0) => {
+  const out = [];
+  (groups || []).forEach((g, gi) => {
+    cardTourRoundRobin(g.length).forEach((pairs, d) => pairs.forEach(([a, b]) => {
+      const day = dayFrom + d;
+      const seed = cardTourMatchSeed(tourId, stage, gi, day, a, b);
+      out.push({ stage, group: gi, day, a, b, seed, first: seed % 2 });
+    }));
+  });
+  return out;
+};
+// その段の日数(いちばん人数の多い組で決まる)
+const cardTourStageDays = (groups) => Math.max(0, ...(groups || []).map((g) => cardTourRoundRobin(g.length).length));
+
+// ---- 順位 ----
+// seats … 組の席の数。matches … その組の試合({ a, b, winner: 0=a・1=b・null=まだ, kos: [aが倒した数, bが倒した数] })。order … 席ごとのエントリーの早さ(小さいほど早い)
+// 返り値: 席の番号を順位の順に並べたもの、と席ごとの成績
+const cardTourStandings = (seats, matches, order = null) => {
+  const rec = Array.from({ length: seats }, (_, i) => ({ seat: i, wins: 0, losses: 0, kos: 0 }));
+  const beat = new Set();
+  (matches || []).forEach((m) => {
+    if (m.winner !== 0 && m.winner !== 1) return;
+    const w = m.winner === 0 ? m.a : m.b, l = m.winner === 0 ? m.b : m.a;
+    if (!rec[w] || !rec[l]) return;
+    rec[w].wins += 1; rec[l].losses += 1;
+    const k = Array.isArray(m.kos) ? m.kos : [0, 0];
+    if (rec[m.a]) rec[m.a].kos += Number(k[0]) || 0;
+    if (rec[m.b]) rec[m.b].kos += Number(k[1]) || 0;
+    beat.add(`${w}>${l}`);
+  });
+  const early = (i) => (Array.isArray(order) && Number.isFinite(order[i]) ? order[i] : i);
+  // 2人の対戦の勝ち負けは、勝ち数と倒した数がちょうど2人だけ並んだときに使う(3人以上が並ぶと勝ち負けが回って決まらないので、エントリーの早さ)
+  const tie = (r) => `${r.wins}|${r.kos}`;
+  const tied = {};
+  rec.forEach((r) => { tied[tie(r)] = (tied[tie(r)] || 0) + 1; });
+  const rank = rec.slice().sort((x, y) => (y.wins - x.wins) || (y.kos - x.kos)
+    || (tied[tie(x)] === 2 ? (beat.has(`${x.seat}>${y.seat}`) ? -1 : beat.has(`${y.seat}>${x.seat}`) ? 1 : 0) : 0)
+    || (early(x.seat) - early(y.seat))).map((r) => r.seat);
+  return { rank, rec };
+};
+// 頂上決戦に進む席(組ごとの順位から、上から CARD_TOUR_FINAL_TOP 人)。組が1つなら頂上決戦は無い(null)
+const cardTourFinalists = (groupRanks) => (Array.isArray(groupRanks) && groupRanks.length > 1
+  ? groupRanks.flatMap((rank, gi) => rank.slice(0, CARD_TOUR_FINAL_TOP).map((seat) => ({ group: gi, seat })))
+  : null);
+
+// ---- 1試合 ----
+// side … { deck, tactics }(エントリーの写し)か { assist: 助手の id }(助手の席)。key … 助手のデッキを決める種の名前
+// 返り値: { winner: 0|1, kos: [0側が倒した数, 1側が倒した数], acts: [[打った人, 手]…], steps, decided: 'ko'|'deck'|'limit', rules, decks: [0側, 1側] }
+//   decks … 使ったデッキ(助手の席は種から作るので、見返しのために返す)
+const cardTourSidePolicy = (db, side, key) => {
+  if (side && side.assist) {
+    const deck = cardAiBuildDeck(db, side.assist, CARD_TOUR_ASSIST_LEVEL, cardAiSeededRand(`tour|${key}|${side.assist}`));
+    return { deck, policy: cardAiPolicy(side.assist, CARD_TOUR_ASSIST_LEVEL, { sameBlood: !!deck.sameBlood }) };
+  }
+  return { deck: side.deck, policy: cardSharePolicy(side.tactics, 'normal') };
+};
+const cardTourPlay = (db, sideA, sideB, { seed, first = 0, key = '' }) => {
+  const A = cardTourSidePolicy(db, sideA, `${key}|a`), B = cardTourSidePolicy(db, sideB, `${key}|b`);
+  let st = cardCreateGame(db, { decks: [A.deck, B.deck], names: ['A', 'B'], seed, first });
+  // 打ち方の気まぐれも種から決める(サーバで何度回しても同じ手になる)
+  let r = (seed * 7919) >>> 0 || 1;
+  const rand = () => { const n = cardRngNext(r); r = n.s; return n.v; };
+  const pol = [A.policy, B.policy];
+  const acts = [];
+  let steps = 0;
+  for (; steps < CARD_TOUR_MAX_STEPS && st.winner === null; steps++) {
+    const who = st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? cardOther(st.first) : cardDecider(st);
+    let act = cardAiChooseAction(db, st, pol[who], rand);
+    let next = act && cardApplyAction(db, st, act);
+    if (!next) {
+      // 出せない手を選んだときは、どの端末でも通る手に替える(見返しでも同じ手を当てるので、替えた手を残す)
+      act = st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : st.phase === 'guts' ? { type: 'guts', hand: [] } : null;
+      next = act && cardApplyAction(db, st, act);
+      if (!next) break;
+    }
+    acts.push([who, act]);
+    st = next;
+  }
+  const kos = [cardKoCount(st, 0), cardKoCount(st, 1)];
+  const decks = [A.deck, B.deck];
+  if (st.winner === 0 || st.winner === 1) return { winner: st.winner, kos, acts, steps, decided: /山札/.test(String(st.reason || '')) ? 'deck' : 'ko', rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null, decks };
+  // 手の数の上限まで決着しなかった(まず起きない): 倒した数 → 残りのライフの合計 → 後攻の勝ち
+  const life = (p) => st.players[p].mons.reduce((a, m) => a + Math.max(0, m.ko ? 0 : m.life), 0);
+  const winner = kos[0] !== kos[1] ? (kos[0] > kos[1] ? 0 : 1) : life(0) !== life(1) ? (life(0) > life(1) ? 0 : 1) : cardOther(first);
+  return { winner, kos, acts, steps, decided: 'limit', rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null, decks };
+};
+
+// ---- ごほうびの表(大会ごと。表の1行に持たせる) ----
+// { ranks: [{ point, title, frame }…](1位から), participation: { point }, perWin: 1勝ごとのビートP }
+const cardTourNormalizeRewards = (raw) => {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const num = (v) => (Number.isFinite(Number(v)) ? Math.max(0, Math.min(100000, Math.floor(Number(v)))) : 0);
+  const str = (v, n) => (typeof v === 'string' ? v.slice(0, n) : '');
+  const ranks = (Array.isArray(r.ranks) ? r.ranks : []).slice(0, 16).map((x) => ({ point: num(x && x.point), title: str(x && x.title, 30), frame: str(x && x.frame, 40) }));
+  return { ranks, participation: { point: num(r.participation && r.participation.point) }, perWin: num(r.perWin) };
+};
+// その人のごほうび。place … 大会の順位(1 から。頂上決戦に出なかった人は null)・wins … 全部の試合で勝った数
+const cardTourRewardOf = (rewards, place, wins) => {
+  const t = cardTourNormalizeRewards(rewards);
+  const r = Number.isInteger(place) && place >= 1 ? t.ranks[place - 1] : null;
+  const base = r ? r.point : t.participation.point;
+  return { point: base + t.perWin * (Math.max(0, Math.floor(Number(wins) || 0))), title: r ? r.title : '', frame: r ? r.frame : '' };
 };
 
 // ---- part: 83-card-battle-lines.jsx ----
@@ -57316,22 +57933,22 @@ const CARD_TUTORIAL_LINES = Object.freeze({
   D8: 'ふむ、上出来。ガッツは次から使えるし、何枚あるかは相手からも見えるからな',
   M2: 'じゃあ次はあたしの番ね！ いっくよー！',
   M3: 'これでどーだ！',
-  D9: 'みゅあが攻めてきたぞ。相手の番でも、回避か防御のカードで守れるんだ',
+  D9: 'みゅあが攻めてきたぞ。相手のターンでも、回避か防御のカードで守れるんだ',
   D10: '光ってる「ステップ」をタップか、狙われたピクシーまで運んでみな。守りのカードは、狙われた子のぶん(か、誰でも使えるもの)だけ使えるからな',
   // D10b … ステップを選んだあと、「これで守る」で決める前(2026-10-26 巡回 → 社長が文をOK。84 が D10 のかわりに出す)
   D10b: 'よし、それでいい。最後に光ってる「これで守る」を押して決めな',
   M4: 'えー！ よけられた！？ うまっ！ｗ',
   D11: 'ほらな、守りは大事なんだよ。おでの膝くらい大事だ。えへへ',
-  D12: '今度はこっちの番。ガッツが2つあるから「パンチ」が出せる',
+  D12: '今度はこっちのターン。ガッツが2つあるから「パンチ」が出せる',
   D13: '技をタップして相手をタップ。相手まで運んで離してもいいぞ。1体は1ターンに1回まで攻撃できるからな',
   M5: 'いったぁ…！ 今のはまぢ効いた…',
   D14: 'いい当たりだ。ダメージの数だけライフが減って、0になったらKOだよ',
   D15: '最後にもうひとつ。ちょっと時間を進めるぞ…',
   M6: 'あれ？ あたしの山札、なんか少なくない？',
-  D16: 'みゅあの山札、もう0枚だろ？ 次の番に引けなかったら、その時点で負けなんだ',
+  D16: 'みゅあの山札、もう0枚だろ？ 次のターンに引けなかったら、その時点で負けなんだ',
   // D17 は2つに分けた(言うボタンと光るボタンを合わせる。2026-10-24 カゲあつくんの確認)
   D17: 'まずは光ってる「攻撃おわり → ガッツへ」を押してみな',
-  D17b: '次は「ガッツにしないでターン終了」だ。みゅあの番になるぞ',
+  D17b: '次は「ガッツにしないでターン終了」だ。みゅあのターンになるぞ',
   M7: 'えっ、引けないぢゃん…！ 負けたー！🤣ｗ',
   D18: 'これが山札切れ。3体全部倒しても勝ちだけど、山札の残りも気にしような',
   D19: 'これで5つ全部だ。あとはデッキを組んで、いろんな相手と戦ってみな',
@@ -57521,14 +58138,14 @@ const CARD_RULE_PAGES = Object.freeze([
   { id: 'start', emoji: '🎲', title: '始め方', lines: [
     '先攻・後攻はランダム。おたがいに手札を5枚引く',
     '後攻は、始める前に手札から2枚までガッツにできる',
-    'そのあと、おたがいのモンスターを表にして、先攻の番から始める',
+    'そのあと、おたがいのモンスターを表にして、先攻のターンから始める',
   ] },
   { id: 'turn', emoji: '🔁', title: 'ターンの流れ', lines: [
     '① 引く: 手札が5枚になるまで山札から引く(先攻の1ターン目は引かない)',
     '手札がもう5枚あるときは、山札のいちばん上が1枚ガッツになる',
     '② 攻撃: 技を使う(使わないモンスターがいてもよい)',
     '③ ガッツ: 手札から好きな枚数をガッツにする',
-    '④ 「ターン終了」で相手の番へ',
+    '④ 「ターン終了」で相手のターンへ',
   ] },
   { id: 'attack', emoji: '⚔️', title: '攻撃', lines: [
     'それぞれのモンスターは、1ターンに攻撃の技(ちから・かしこさ・特殊)を1枚まで',
@@ -57544,7 +58161,7 @@ const CARD_RULE_PAGES = Object.freeze([
     '回避はよけてダメージを0にする。防御はダメージを減らす',
     'そのモンスターの守りのカードは、そのモンスターが狙われたときだけ使える。「全モンスター」の守りは、狙われたモンスターが使う',
     '特殊技は、ふつうの回避・防御では守れない',
-    '守っても、次の自分の番の攻撃はなくならない',
+    '守っても、次の自分のターンの攻撃はなくならない',
   ] },
   { id: 'guts', emoji: '💰', title: 'ガッツ', lines: [
     '技を使うためのもの。カード1枚で1ガッツ',
@@ -58143,6 +58760,15 @@ const cardCpuPlaylistOf = (playlist, who) => {
   return list.length ? list : (CARD_AI_BGM[who] ? [CARD_AI_BGM[who]] : []);
 };
 const cardIsBgmTrack = (id) => typeof BGM_TRACKS !== 'undefined' && BGM_TRACKS.some((t) => t.id === id);
+// 鳴らす曲(onBgm に渡す形)。ランダム(CARD_BGM_RANDOM)は選べる曲ぜんぶの並び → 60-app が開くたび・対戦を始めるたびにシャッフルして流す
+const cardBgmAllTracks = () => (typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS.map((t) => t.id) : []);
+const cardBgmOf = (v) => {
+  if (v === CARD_BGM_RANDOM) return cardBgmAllTracks();
+  if (Array.isArray(v) && v.includes(CARD_BGM_RANDOM)) return cardBgmAllTracks();
+  return v;
+};
+// 試聴でランダムのときに流す1曲
+const cardBgmRandomOne = () => { const all = cardBgmAllTracks(); return all.length ? all[Math.floor(Math.random() * all.length)] : null; };
 // モンスターの絵(5-3)。モンヒロにいる種族はいまのゲームの絵、いない16種族は社長から届いた立ち絵(#3437 でクラフトくんが取り込んだ)。
 // 混血の15体は、立ち絵が届いた子から立ち絵にする(HYBRID_MONSTER_IMGS)。まだの子はカードの絵で代える(社長)
 const CARD_SPECIES_ART = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant', ghost: 'Ghost' });
@@ -58172,6 +58798,24 @@ const cardMonArt = (mon) => {
   if (m && m.imgUrl) return m.imgUrl;
   return cardNewSpeciesArt()[mon.species] || null;
 };
+// 場の立ち絵を、絵の「中身の範囲」(ART_CONTENT_BOXES。対戦開始の画面の cardVsBoxOf と同じ表)で要素いっぱいへ広げる
+// (2026-10-30 社長「同じ血統同士のサイズがあってない」)。カード用に届いた絵(ジェントルなど)は中身が端までなので広げず、
+// 余白のある古い立ち絵(モッチー・スエゾー・ライガーなど)だけが広がる。1体ずつの数字は持たない(表から計算する)。
+// 中身は要素の高さを越えない(幅は CARD_FIELD_ART_SPREAD 倍まで)・足もとは下にそろえる。相手(flip)は左右を返す。広げないなら null
+// 横に広い中身(プラントの花など)は、要素の幅のこの倍まで左右に出てよい。場の絵の枠(artSize)は、どの画面でも
+// 横が高さの 1.23 倍以上あるので、正方形の絵を高さいっぱいにしても 1.15 倍なら枠の中に収まる
+const CARD_FIELD_ART_SPREAD = 1.15;
+const cardFieldArtTransform = (src, flip) => {
+  const box = typeof cardVsBoxOf === 'function' ? cardVsBoxOf(src) : null;
+  if (!box) return null;
+  const [x0, y0, x1, y1] = box;
+  const fw = Math.max(0.01, x1 - x0), fh = Math.max(0.01, y1 - y0);
+  const k = Math.min(CARD_FIELD_ART_SPREAD / fw, 1 / fh);
+  if (!(k > 1.02)) return null;
+  const tx = (flip ? 1 : -1) * k * ((x0 + x1) / 2 - 0.5) * 100;
+  const ty = (1 - (0.5 + k * (y1 - 0.5))) * 100;
+  return `translate(${tx.toFixed(1)}%, ${ty.toFixed(1)}%) scale(${(flip ? -k : k).toFixed(3)}, ${k.toFixed(3)})`;
+};
 const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
 const cardCaption = (c) => (!c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : c.kind === 'fld' ? '全体' : Number.isFinite(c.damage) ? `ダメージ${c.damage}` : '');   // 全体カードはダメージが無い(「ダメージnull」と出ていた)
 // 場の子に今かかっている効果(2026-10-28 社長「こういう効果がかかってるやつがわからない バフとかデバフとか」・案A)。
@@ -58181,10 +58825,10 @@ const cardMonStatuses = (st, p, m) => {
   const mon = st && st.players[p] && st.players[p].mons[m];
   if (!mon || mon.ko) return [];
   const T = st.turn;
-  const left = (until) => (until > T ? `あと${until - T + 1}` : 'この番');
+  const left = (until) => (until > T ? `あと${until - T + 1}` : '今'); // 札は短く(「次」「あと2」とそろえる)。窓の説明は「このターン」
   const out = [];
   const kindsJa = (ks) => (ks || []).map((k) => (k === 'pow' ? 'ちから' : k === 'int' ? 'かしこさ' : k)).join('・');
-  if (mon.mult && Number.isFinite(mon.mult.turn) && mon.mult.turn >= T) out.push({ key: 'mult', short: `技×${mon.mult.n}`, left: mon.mult.turn > T ? '次' : 'この番', text: `${mon.mult.turn > T ? '次の番' : 'この番'}の${kindsJa(mon.mult.kinds)}技のダメージが${mon.mult.n}倍`, tone: 'up', pill: true });
+  if (mon.mult && Number.isFinite(mon.mult.turn) && mon.mult.turn >= T) out.push({ key: 'mult', short: `技×${mon.mult.n}`, left: mon.mult.turn > T ? '次' : '今', text: `${mon.mult.turn > T ? '次のターン' : 'このターン'}の${kindsJa(mon.mult.kinds)}技のダメージが${mon.mult.n}倍`, tone: 'up', pill: true });
   if (mon.charge) out.push({ key: 'charge', short: `ため×${mon.charge.n}`, left: '', text: `次の${kindsJa(mon.charge.kinds)}技のダメージが${mon.charge.n}倍(ダメージを受けると消える)`, tone: 'up', pill: true });
   if (Number.isFinite(mon.safeUntil) && mon.safeUntil >= T) out.push({ key: 'safe', short: '無敵', left: left(mon.safeUntil), text: 'ダメージを受けない', tone: 'guard', pill: true });
   if (Number.isFinite(mon.noGuardUntil) && mon.noGuardUntil >= T) out.push({ key: 'noGuard', short: '守れない', left: left(mon.noGuardUntil), text: '回避・防御のカードを出せない', tone: 'down', pill: true });
@@ -58192,7 +58836,7 @@ const cardMonStatuses = (st, p, m) => {
   else if (Number.isFinite(mon.waterUntil) && mon.waterUntil >= T) out.push({ key: 'water', short: '水中', left: left(mon.waterUntil), text: '持ちょうが水中', tone: 'type', pill: true });
   (Array.isArray(st.taunts) ? st.taunts : []).filter((t) => t && t.by === p && t.m === m && t.turn >= T).forEach((t, i) => out.push({ key: `taunt${i}`, short: t.mode === 'not' ? 'ねらえない' : 'ねらい固定', left: left(t.turn), text: t.mode === 'not' ? '相手はこのモンスターを狙えない' : '相手の攻撃は、このモンスターしか狙えない', tone: 'aim', pill: true }));
   if (mon.cocoon) out.push({ key: 'cocoon', short: 'まゆ', left: '', text: '羽化のほかのカードは出せない', tone: 'down', pill: true });
-  if (mon.stunTurn === T + (st.active === p ? 0 : 1)) out.push({ key: 'stun', short: '攻撃できない', left: st.active === p ? 'この番' : '次', text: `${st.active === p ? 'この番' : '次の番'}は攻撃できない`, tone: 'down', pill: false });
+  if (mon.stunTurn === T + (st.active === p ? 0 : 1)) out.push({ key: 'stun', short: '攻撃できない', left: st.active === p ? '今' : '次', text: `${st.active === p ? 'このターン' : '次のターン'}は攻撃できない`, tone: 'down', pill: false });
   return out;
 };
 const CARD_STATUS_TONE = { up: 'bg-rose-400 text-slate-950', down: 'bg-slate-300 text-slate-950', guard: 'bg-emerald-300 text-slate-950', type: 'bg-sky-300 text-slate-950', aim: 'bg-amber-300 text-slate-950' };
@@ -58300,7 +58944,7 @@ const cardGuardWhyShort = (db, st, c) => {
   if (!c.ready) return '準備中';
   if ((st.forbid[q] || []).includes(c.kind)) return c.kind === 'dge' ? '今は回避できない' : '今は防御できない';
   if (c.guts > me.guts.length) return `ガッツ不足(あと${c.guts - me.guts.length})`;
-  if (cardHasEff(c, 'cover')) return '味方をかばう札';
+  if (cardHasEff(c, 'cover')) return '味方をかばうカード';
   if (target && t.p === q && !cardUsableBy(c, target)) return cardUserLabel(db, c);
   if (ev && cardHasEff(atk, 'noEvade')) return 'この技は回避できない';
   if (ev && !ev.kinds.includes(atk.kind)) return `${ev.kinds.map((k) => kindName[k] || k).join('・')}だけ`;
@@ -58482,7 +59126,7 @@ const cardBubbleMs = (text) => Math.min(7000, Math.max(3000, 1800 + 150 * [...St
 const cardResultCut = (r) => !!r && !r.short && Number.isFinite(r.full) && Number.isFinite(r.got) && r.got < r.full;
 //   投了は「番の数で減った分」と「倒した数×10」の小さいほう(82 の cardCpuBasePoint)なので、効いたほうの理由を出す
 const cardResultCutWhy = (outcome, r) => {
-  const turns = `自分の番が${Number(r.ownTurns) || 0}回。${CARD_LOSE_FULL_TURNS}回で満額`;
+  const turns = `自分のターンが${Number(r.ownTurns) || 0}回。${CARD_LOSE_FULL_TURNS}回で満額`;
   if (outcome !== 'surrender') return turns;
   const byKo = (Number(r.kos) || 0) * CARD_SURRENDER_POINT_PER_KO;
   return byKo < cardLoseScaled(r.full, r.ownTurns) ? `投了は、倒した相手のモンスター1体につき${CARD_SURRENDER_POINT_PER_KO}(倒したのは${Number(r.kos) || 0}体)` : turns;
@@ -58654,8 +59298,9 @@ const CardTurnLogSheet = ({ st, meName, foeName, onClose }) => {
 };
 // カードの画面の文の折り方。jaWrap(41)に任せたうえで、短いかぎかっこの言葉(「守らない」)と、道具が割ってしまう言葉(ひととおり)と、終わりの記号は折らない
 // (320で「「守ら/ない」」「ひと/とおり」と折れた。QA 10・12)
-// 「！w」「？♡」のような記号のかたまりは、手前の2字といっしょに包む(負けの結果で「！w」だけが次の行に落ちた。最後の見回り)
-const CARD_KEEP_WORDS = /(「[^「」\s]{1,8}」|ひととおり[だ。]*|[^\s、。「」『』（）()]{2}[！？!?…‥〜～♡♪]+[wｗ笑]*|[^\s、。「」『』（）()]{2}[wｗ]+(?![A-Za-zＡ-Ｚａ-ｚ]))/;
+// 「！w」「？♡」のような記号のかたまりは、手前の2字といっしょに包む(負けの結果で「！w」だけが次の行に落ちた。最後の見回り)。
+//   あとに続く「。」「、」も入れる(「なんくるないさ〜。」で「。」だけが次の行の頭に来た。2026-10-30)
+const CARD_KEEP_WORDS = /(「[^「」\s]{1,8}」|ひととおり[だ。]*|[^\s、。「」『』（）()]{2,3}[！？!?…‥〜～♡♪]+[wｗ笑]*[。、]*|[^\s、。「」『』（）()]{2}[wｗ]+(?![A-Za-zＡ-Ｚａ-ｚ]))/;
 const cardJaWrap = (text) => String(text ?? '').split(CARD_KEEP_WORDS).map((t, i) => (i % 2 === 1
   ? <span key={i} data-ja-keep style={{ whiteSpace: 'nowrap' }}>{t}</span>
   : <React.Fragment key={i}>{jaWrap(t)}</React.Fragment>));
@@ -58713,8 +59358,10 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   const wideArtH = 'clamp(40px, calc((var(--mh-vh, 100svh) - 262px) / 2), 64px)';
   // 自分の場は、まんなか(1行の実況)で空いた分だけ立ち姿を大きくする(2026-10-29 社長・⑤ 案A。立ち絵の攻撃の動きが映えるように)
   const artSize = wide ? 'max-w-[88px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : opp ? 'max-h-[78px] max-w-[96px]' : 'max-h-[106px] max-w-[126px]';
+  // 同じ血統の子が同じ大きさに見えるよう、絵の余白を詰めて広げる(cardFieldArtTransform。相手の左右の向きもここで返す)
+  const artFit = art ? cardFieldArtTransform(art, opp) : null;
   const imgEl = art
-    ? <img src={art} alt="" style={wide ? { maxHeight: wideArtH } : undefined} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''}`}/>
+    ? <img src={art} alt="" style={{ ...(wide ? { maxHeight: wideArtH } : null), ...(artFit ? { transform: artFit } : null) }} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp && !artFit ? '-scale-x-100' : ''}`}/>
     : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`}/>;
   const mv = motion && !mon.ko ? motion : null;
   // calm … オプションの「画面の揺れ: 揺らさない」。受けたときは揺らさずに光るだけ
@@ -59457,11 +60104,11 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     const c = cardOf(db, me.hand[i]);
     if (!c || attackOpts.some((o) => o.hand.includes(i))) return null;
     if (!c.ready) return '準備中';
-    if (cardIsGuardKind(c.kind)) return '守りの番に使う';
+    if (cardIsGuardKind(c.kind)) return '守りに使う';
     if (c.user !== 'any' && c.user !== 'breeder' && !me.mons.some((m) => !m.ko && cardUsableBy(c, m))) return cardUserLabel(db, c);
     if (c.guts > me.guts.length) return `ガッツ不足(あと${c.guts - me.guts.length})`;
     if (cardHasEff(c, 'attach')) return '付ける技がない';
-    if (cardHasEff(c, 'requires')) return 'いっしょに出す札がない';
+    if (cardHasEff(c, 'requires')) return '組むカードなし';
     return '今は使えない';
   };
   const tapMon = (p, m) => {
@@ -59755,7 +60402,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (watch) {
       const over = st.winner !== null || !!watchEnd;
       const nm = (p) => (p === CARD_ME ? meName : who.name);
-      const say = over ? '' : decider === st.active ? `${nm(decider)}の番…` : `${nm(decider)}が守りを考えています…`;
+      const say = over ? '' : decider === st.active ? `${nm(decider)}のターン…` : `${nm(decider)}が守りを考えています…`;
       return (<>
         {say && <div data-card-watch-say className="flex min-w-0 flex-1 items-center justify-center truncate text-[13px] font-bold text-slate-300">{say}</div>}
         <button type="button" data-card-watch-leave className={`${btn} ${over ? 'mh-button-primary' : 'border border-white/20 bg-slate-800'}`} onClick={() => onFinish({ outcome: 'watchExit', st })}><CardFitLabel>{over ? '観戦の一覧へ戻る' : '観戦をやめる'}</CardFitLabel></button>
@@ -59765,7 +60412,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (st.winner !== null && !tutorial) return <div className="flex-1 text-center text-[15px] font-black text-amber-200">{endFx ? '\u00a0' : st.winner === CARD_ME ? '勝ち！' : '負け…'}</div>;
     if (tutorial && (st.winner !== null || tutStage.next)) return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">ドラの説明を読んで「次へ」</div>;
     // 自分の番に相手が守りを選んでいるあいだは「◯◯の番」と言わない(上のヘッダーと食い違っていた。案A)
-    if (mode === 'wait') return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">{st.active === CARD_ME ? `${who.name}が守りを考えています…` : `${who.name}の番…`}</div>;
+    if (mode === 'wait') return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">{st.active === CARD_ME ? `${who.name}が守りを考えています…` : `${who.name}のターン…`}</div>;
     if (mode === 'setup') return <button type="button" className={`${btn} mh-button-primary`} onClick={() => step({ type: 'setupGuts', hand: picks })}><CardFitLabel>{picks.length ? `${picks.length}枚をガッツにして始める` : 'ガッツにしないで始める'}</CardFitLabel></button>;
     if (mode === 'reveal') return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">相手に手札を見せています…</div>;
     if (mode === 'pray') return <div className="flex-1 text-center text-[13px] font-bold text-amber-200">{prayUse ? 'おいのりを使うか選んでください' : '相手が全体カードを出しました'}</div>;
@@ -59800,7 +60447,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     </>);
   })();
   // 黄色の案内は1行に収まる短い文に(長くて2行になり、手札を押し下げていた。2026-10-26 改良の案 E・カゲあつくん 8)。運ぶ操作の話はヘルプへ
-  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? (sel ? (monChosen === undefined ? '使うモンスターをタップ' : setPending ? '光っている札を押して足してね' : needTarget ? '狙う相手をタップ' : pickCands.length ? '「使う」か、光っている札を足す' : '「使う」をタップ') : attackOpts.length ? '技をタップ → 相手をタップ' : '使える技がありません →「攻撃おわり」でガッツへ')
+  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? (sel ? (monChosen === undefined ? '使うモンスターをタップ' : setPending ? '光っているカードを押して足してね' : needTarget ? '狙う相手をタップ' : pickCands.length ? '「使う」か、光っているカードを足す' : '「使う」をタップ') : attackOpts.length ? '技をタップ → 相手をタップ' : '使える技がありません →「攻撃おわり」でガッツへ')
     : mode === 'guard' ? (guardOpts.length ? '明るいカードで守れます' : '使える回避・防御はありません')
     : mode === 'guts' ? (gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(何枚でも)')
     : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます'
@@ -59849,8 +60496,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           : tutorial ? <span data-card-level-badge="tutorial" className={`shrink-0 whitespace-nowrap rounded-md border px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black tracking-wide ${CARD_LEVEL_TONE.tutorial || CARD_LEVEL_TONE.easy}`}>練習</span> : null}
         {(() => {
           const sig = pvpLive && (pvpClock.offline || pvpClock.foeQuietSec > 0);
-          const nameOf = (nm, fallback) => (String(nm || '').length <= 6 ? `${nm}の番` : fallback);
-          const turnTxt = headSt.phase === 'setup' && replay ? 'はじまり' : headMe ? nameOf(meName, 'あなたの番') : nameOf(who.name, '相手の番');
+          // 上の帯は「ターン3 あなたの攻撃」(「ターン3 あなたのターン」と重ならないように。2026-10-30 社長)
+          const nameOf = (nm, fallback) => (String(nm || '').length <= 6 ? `${nm}の攻撃` : fallback);
+          const turnTxt = headSt.phase === 'setup' && replay ? 'はじまり' : headMe ? nameOf(meName, 'あなたの攻撃') : nameOf(who.name, '相手の攻撃');
           const low = pvpLive && pvpClock.mine && pvpClock.left <= 10;
           const tone = sig ? 'bg-amber-700/90 text-amber-100' : low ? 'bg-rose-500 text-white' : headMe ? 'bg-amber-300 text-slate-950' : 'bg-slate-500/25 text-slate-200';
           return (
@@ -60464,6 +61112,18 @@ const CardPlaylistRows = ({ list, onChange, bgmPreview, tag }) => {
   const tracks = typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : [];
   const choices = (keep) => tracks.filter((t) => t.id === keep || !list.includes(t.id));
   const selectClass = 'min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white';
+  // ランダム(選べる曲ぜんぶから、毎回ちがう順で)。並びは [CARD_BGM_RANDOM] の1つだけ
+  if (list.length === 1 && list[0] === CARD_BGM_RANDOM) {
+    return (
+      <div data-card-playlist-rows={tag} data-card-playlist-count={1} data-card-playlist-random>
+        <div className="mt-1 flex items-center gap-1.5">
+          <span className="min-w-0 flex-1 rounded-xl border border-amber-300/50 bg-amber-500/15 px-2 py-2 text-[12px] font-black text-amber-100" style={JA_LABEL_STYLE}>{jaWrap('🔀 ランダム(選べる曲ぜんぶから、毎回ちがう順で)')}</span>
+          {bgmPreview && <button type="button" data-card-playlist-preview={CARD_BGM_RANDOM} onClick={() => { if (bgmPreview.playing) bgmPreview.stop(); else { const one = cardBgmRandomOne(); if (one) bgmPreview.toggle(one); } }} className="min-h-[44px] min-w-[52px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black">{bgmPreview.playing ? '停止' : '試聴'}</button>}
+        </div>
+        <button type="button" data-card-playlist-random-off onClick={() => onChange([tracks[0] ? tracks[0].id : ''].filter(Boolean))} className="mt-1.5 min-h-[44px] w-full rounded-xl bg-slate-700 px-2 text-[11px] font-black text-white">{jaWrap('ランダムをやめて、曲を選ぶ')}</button>
+      </div>
+    );
+  }
   return (
     <div data-card-playlist-rows={tag} data-card-playlist-count={list.length}>
       <ol className="mt-1 space-y-1.5">
@@ -60486,6 +61146,7 @@ const CardPlaylistRows = ({ list, onChange, bgmPreview, tag }) => {
             {choices(null).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
         : <p data-card-playlist-full className="mt-1.5 text-[10px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(`入れられるのは${CARD_PLAYLIST_MAX}曲までです`)}</p>}
+      <button type="button" data-card-playlist-random-on onClick={() => onChange([CARD_BGM_RANDOM])} className="mt-1.5 min-h-[44px] w-full rounded-xl border border-amber-300/50 bg-slate-900 px-2 text-[11px] font-black text-amber-100">{jaWrap('🔀 ランダムにする(選べる曲ぜんぶから)')}</button>
     </div>
   );
 };
@@ -60586,19 +61247,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // ほかの画面の招待の知らせで「参加する」を押してきたら、マルチの入口を開く(入口が合言葉の部屋へ入る。91 の CARD_PVP_JOIN)
   //   入る前にデッキを選ぶ画面を挟む(2026-10-29 社長 案C)。知らせの番号は CARD_PVP_JOIN に残っていて、入口を開いたときに入口が拾う
   useEffect(() => { const go = (c) => { if (c) { setDeckPick({ next: 'pvp' }); setView('deckPick'); } }; go(CARD_PVP_JOIN.peek()); return CARD_PVP_JOIN.on(go); }, []);
+  // 招待の部屋を開いたままほかの画面にいて、上の帯の「戻る」「対戦へ」を押してきたら、部屋(マルチの入口)を開く(91 の CARD_PVP_BACK・2026-10-30)
+  useEffect(() => { const go = () => { if (CARD_PVP_BACK.take()) setView('pvp'); }; go(); return CARD_PVP_BACK.on(go); }, []);
   // 対戦の前のデッキ選び(87-card-deck-pick.jsx)。next … 'cpu'(助手と対戦。pick は相手と難易度) / 'pvp'(マルチの入口へ)
   const [deckPick, setDeckPick] = useState(null);
-  // マルチの試合のあと、部屋を出て入口へ戻るとき(over → idle)も、入口の前にデッキ選びを挟む。「もう1戦」は同じ部屋・同じデッキのまま
-  const viewRef = useRef(view);
-  viewRef.current = view;
-  useEffect(() => {
-    if (typeof CARD_PVP === 'undefined') return undefined;
-    let prev = CARD_PVP.get().phase;
-    return CARD_PVP.subscribe((r) => {
-      if (prev === 'over' && r.phase === 'idle' && viewRef.current === 'pvp') { setDeckPick({ next: 'pvp' }); setView('deckPick'); }
-      prev = r.phase;
-    });
-  }, []);
+  // マルチは、入口で相手を決めたあとにデッキ選びを挟む(2026-10-30 社長「相手を選んだあとにして」。91 の CARD_PVP_NEXT)。
+  //   試合のあとに部屋を出て入口へ戻るとき(over → idle)は挟まない(次に相手を決めたときに選ぶ)。「もう1戦」は同じ部屋・同じデッキのまま
   const [kitPick, setKitPick] = useState(null);
   const [kitView, setKitView] = useState(null); // スターター選びで「中身を見る」を開いているキット
   const [starterOpen, setStarterOpen] = useState(null); // はじめのスターターを開ける画面に渡す並び(cardStarterOpenResult)
@@ -60680,7 +61334,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   useEffect(() => { void load(); }, []);
   // トップ画面(結果・デッキ編成なども)の曲。対戦の画面へ入るときは、それぞれの曲に替える
   const topBgm = save && save.bgm ? save.bgm.top : null;
-  useEffect(() => { if (screen === 'CARD_TOP' && topBgm && onBgm) onBgm(topBgm); }, [screen, topBgm]);
+  useEffect(() => { if (screen === 'CARD_TOP' && topBgm && onBgm) onBgm(cardBgmOf(topBgm)); }, [screen, topBgm]);
   // 対戦の画面から外へ出たら(戻るなど)、トップに戻す
   // アプリの中の戻るなどで助手との対戦を抜けたら、その場で投了として数える(途中で閉じた対戦と同じ。印があるときだけ)
   useEffect(() => {
@@ -60913,14 +61567,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       // マルチ対戦: 封を開けて確かめるのは 91 の CARD_PVP。結果は部屋の画面に出す(報酬は区切り2)
       if (game.pvp) {
         CARD_PVP.finish(outcome, st);
-        onBgm && onBgm(save.bgm.top);
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
         onNavigate('CARD_TOP');
         setView('pvp');
         return;
       }
       // デバッグの「技の動きの見本」(game.demo)は、終わっても・投了しても何も保存しない(ボタンに「保存しない」と書いてある)。トップへ戻すだけ
       if (game.demo) {
-        onBgm && onBgm(save.bgm.top);
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
         onNavigate('CARD_TOP');
         setView('top');
         return;
@@ -60930,20 +61584,21 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         const fin = cardTutorialFinish(save.tutorial, outcome === 'tutorialDone' ? 'done' : 'skip', Date.now());
         const ok = await persist({ tutorial: fin.tutorial, point: save.point + fin.reward });
         setResult({ tutorial: true, done: outcome === 'tutorialDone', reward: ok ? fin.reward : 0, saved: ok });
-        onBgm && onBgm(save.bgm.top);
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
         onNavigate('CARD_TOP');
         setView('result');
         return;
       }
-      // みんなのデッキ(95)の登録デッキとの対戦: ビートPとクイック周回(助手と対戦と同じ強さの表)と、表への「戦った」の知らせだけ。
+      // みんなのデッキ(95)の登録デッキとの対戦: ビートPとクイック周回と、表への「戦った」の知らせだけ。
       //   記録(助手ごとの勝ち数)・ランキング・強さの解放・着替えの解放・助手のひとことは通らない(助手と戦ったのではないため)
+      //   もらえる物(ビートP・クイック周回・カードランクの経験値)は、相手の賢さにかかわらず助手と対戦 MASTER と同じ
+      //   (2026-10-30 社長「ブリーダーのデッキとの対戦は難易度低いとやる意味なくなるから、経験値等はマスターと同等にして」)。相手の打ち方の強さは賢さ(game.level)のまま
       if (game.share) {
         const facts = cardResultFacts(st, CARD_ME);
         const fresh = await freshCardSave();
-        const reward = cardCpuReward(fresh.daily, game.level, outcome, facts);
-        const loops = cardCpuLoops(game.level, outcome, facts);
-        // MFバトルカードのレベル(96): 相手のデッキの賢さ(game.level)で数える
-        const levelGain = typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: game.level, outcome, debug }) : { entries: [] };
+        const reward = cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts);
+        const loops = cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts);
+        const levelGain = typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: CARD_SHARE_REWARD_LEVEL, outcome, debug }) : { entries: [] };
         const rankPoint = (levelGain.gain && levelGain.gain.points) || 0;
         const ok = await persist({ point: save.point + reward.total + rankPoint, daily: reward.daily }, fresh.raw, levelGain.entries);
         if (ok && levelGain.gain && levelGain.gain.to > levelGain.gain.from && !debug) void cardRankPut(rank && rank.profile);
@@ -60955,7 +61610,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
         if (typeof selfId === 'string' && typeof cardShareReportUse === 'function') void cardShareReportUse({ match: `share-${game.key}-${Date.now().toString(36)}`, ownerId: game.share.ownerId, userId: selfId, kind: 'battle', deckWon: outcome !== 'win', version: game.share.version });
         setResult({ outcome, reward, opened: null, saved: ok, who: null, level: game.level, loops, quick, facts, talk: null, replay: null, share: game.share, rankGain: ok ? levelGain.gain : null });
-        onBgm && onBgm(save.bgm.top);
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
         onNavigate('CARD_TOP');
         setView('result');
         return;
@@ -60970,7 +61625,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         if (!open || open.id !== game.key) {
           openIdRef.current = null; openRef.current = null;
           setNotice('この対戦は、ほかの画面で投了として数えました');
-          onBgm && onBgm(save.bgm.top);
+          onBgm && onBgm(cardBgmOf(save.bgm.top));
           onNavigate('CARD_TOP');
           setView('top');
           return;
@@ -61031,7 +61686,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       let replayId = null;
       if (replayRec && await cardReplaySave(replayRec)) replayId = replayRec.id;
       setResult({ outcome, reward, opened, saved: ok, who: game.who, level: game.level, loops, quick, facts, talk: talkFacts, replay: replayId, rankGain: ok ? levelGain.gain : null });
-      onBgm && onBgm(save.bgm.top);
+      onBgm && onBgm(cardBgmOf(save.bgm.top));
       onNavigate('CARD_TOP');
       setView('result');
     }}/>;
@@ -61090,7 +61745,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     //   みんなのデッキの対戦は数えない(途中で閉じても投了の記録は付かない・ビートPも入らない)
     if (!share) void writeCpuOpen({ id: `${seed}`, who: pick.who, level: pick.level, rankable: !!(rank && rank.send) && !debug, at: Date.now(), beat: Date.now(), facts: cardResultFacts(st, CARD_ME) }, true);
     // 対戦の BGM: オプションで曲を決めていればその曲、「おまかせ」なら相手の助手に合わせる
-    onBgm && onBgm(cardCpuPlaylistOf(save.cpuPlaylist, pick.who)); // 並びは対戦を始めるたびにシャッフルし直す(60-app)
+    onBgm && onBgm(cardBgmOf(cardCpuPlaylistOf(save.cpuPlaylist, pick.who))); // 並びは対戦を始めるたびにシャッフルし直す(60-app)
     onNavigate('CARD_BATTLE');
   };
   startBattleRef.current = startBattle;
@@ -61166,7 +61821,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <span aria-hidden="true" className="relative flex -space-x-2">{assistantsUnlockedFrom(seenStoryIds).filter((x) => CARD_AI_HABITS[x.id]).map((x) => <img key={x.id} src={assistantFaceImage(x, 'normal')} alt="" className="h-10 w-10 rounded-full border-2 border-white/80 bg-slate-900 object-cover object-top shadow"/>)}</span>
           </button>
           {/* マルチ対戦(91-card-battle-multi.jsx)。MFバトルカードの公開の印と同じ日に開く(cardPvpOpen・社長 案A)。それまではデバッグ設定から入ったときだけ押せる */}
-          <button type="button" data-card-mode-multi disabled={!(debug || cardPvpOpen())} onClick={() => { Audio_.fgSe.tap(); setDeckPick({ next: 'pvp' }); setView('deckPick'); }} className="mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50" style={{ animationDelay: '60ms' }}>
+          <button type="button" data-card-mode-multi disabled={!(debug || cardPvpOpen())} onClick={() => { Audio_.fgSe.tap(); setView('pvp'); }} className="mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50" style={{ animationDelay: '60ms' }}>
             <span aria-hidden="true" className="mhms-mark">MULTI</span>
             <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🎮</span><span><b className="block text-[22px] font-black italic leading-tight">マルチ対戦</b><small className="block text-[11px] font-black text-slate-900/80">ブリーダーどうしで戦う</small></span></span>
             {!cardPvpOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">{debug ? 'つくっている途中(デバッグ)' : '準備中'}</span>}
@@ -61204,7 +61859,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const toPvp = deckPick.next === 'pvp';
     return <CardDeckPick db={db} decks={save.decks} collection={save.collection}
       note={toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います'}
-      onBack={() => { setDeckPick(null); setView(toPvp ? 'mode' : 'foe'); }} allowRented={!toPvp} rentTab={shareForm && !toPvp}
+      onBack={() => { setDeckPick(null); if (toPvp && CARD_PVP_NEXT.take()) { setView('pvp'); return; } setView(toPvp ? 'mode' : 'foe'); }} allowRented={!toPvp} rentTab={shareForm && !toPvp}
       onPick={async (c) => {
         // 借りたデッキ(みんなのデッキ・95): 自分のデッキの active は書き換えない
         if (c.kind === 'rent') { const next = deckPick; setDeckPick(null); if (next.next !== 'pvp') startBattle(next.pick, c.deck, { rented: c }); return; }
@@ -61247,14 +61902,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       if (ok && !debug && levelGain.gain && levelGain.gain.to > levelGain.gain.from) void cardRankPut(rank && rank.profile);
       return { ...got, saved: ok, quick, rankGain: ok ? levelGain.gain : null };
     };
-    return <CardPvpLobby onOpenReplay={(id) => { void openReplay(id, 'pvp'); }} replayHas={cardReplayHas} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meFrame={(rank && rank.profile && rank.profile.frame) || null} deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {
+    return <CardPvpLobby onOpenReplay={(id) => { void openReplay(id, 'pvp'); }} replayHas={cardReplayHas} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meFrame={(rank && rank.profile && rank.profile.frame) || null} deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onStepAway={() => setView('mode')} onPickDeck={() => { setDeckPick({ next: 'pvp' }); setView('deckPick'); }} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {
       setResult(null);
       // 対戦開始の画面: 相手の名前・アイコン・相手がデッキ編成で付けたデッキ名(古い版の相手は送ってこないので出さない)
       const pv = g.pvp || {};
       const intro = { mode: 'pvp', foe: { name: pv.name || 'あいて', icon: pv.icon || '🙂', frame: pv.frame || null, deckName: pv.deckName || null, monsters: vsMons(g.st, CARD_CPU) },
         me: { name: myName, deckName: (activeDeck && activeDeck.name) || null, monsters: vsMons(g.st, CARD_ME) } };
       setGame({ ...g, settings: save.settings, intro });
-      onBgm && onBgm(save.bgm.pvp || null);
+      onBgm && onBgm(cardBgmOf(save.bgm.pvp) || null);
       onNavigate('CARD_BATTLE');
     }}/>;
   }
@@ -61420,6 +62075,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <ScreenHead title={win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…'} accent={win ? 'text-amber-200' : 'text-slate-300'} onBack={() => setView('top')}/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           <CardResultBanner title={win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…'} sub={win ? 'YOU WIN' : result.outcome === 'surrender' ? 'SURRENDER' : 'YOU LOSE'} tone={win ? 'win' : 'lose'}/>
+          {/* カードランクの経験値の棒は、結果を開いてすぐ目に入るよう、いちばん上(勝ち負けのすぐ下)に置く(2026-10-30 社長「終わったあとに経験値ゲージのバーの動きが見れない」) */}
+          {result.rankGain && <CardRankResult gain={result.rankGain}/>}
           {a && <CardResultTalk a={a} lineScene={win ? 'lose' : 'win'} talkFacts={result.talk}/>}
           {result.share && <p data-card-result-share className="text-center text-[13px] font-black text-emerald-200">{result.share.name}さんのデッキと対戦しました</p>}
           {a && <CardResultVsRow meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meName={(rank && rank.profile && rank.profile.name) || 'あなた'}
@@ -61431,7 +62088,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <div className="mt-1 text-[12px] font-bold text-slate-300">{CARD_LEVEL_LABEL[result.level]}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {cardResultCut(r) ? `${r.full} → ${r.got}` : r.got}</div>
             {cardResultCut(r) && <div data-card-result-cut className="text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(cardResultCutWhy(result.outcome, r))}</div>}
             {r.bonus > 0 && <div className="text-[12px] font-bold text-slate-300">今日はじめての勝ち: +{r.bonus}</div>}
-            {r.short && <div className="mt-1 text-[11px] font-bold text-slate-500" style={JA_LABEL_STYLE}>{jaWrap('自分の番を3回やる前に終わったので、ビートPとクイック周回は入りません')}</div>}
+            {r.short && <div className="mt-1 text-[11px] font-bold text-slate-500" style={JA_LABEL_STYLE}>{jaWrap('自分のターンを3回やる前に終わったので、ビートPとクイック周回は入りません')}</div>}
             {!r.short && result.loops > 0 && result.quick && (
               <div data-card-quick-loops={result.quick ? result.loops : 0} className="mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5">
                 {result.quick && <>
@@ -61443,7 +62100,6 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             )}
             <div className="mt-1 text-[12px] font-bold text-slate-300">いまのビートP: {save.point}</div>
             {result.opened && <div className="mt-1 text-[13px] font-black text-emerald-300">{CARD_LEVEL_LABEL[result.opened]}が選べるようになりました！</div>}
-            {result.rankGain && <CardRankResult gain={result.rankGain}/>}
             {!result.saved && <div className="mt-1 text-[12px] font-bold text-rose-300" style={JA_LABEL_STYLE}>{jaWrap('保存できませんでした(ビートPは増えていません)')}</div>}
             {result.demo && <div className="mt-1 text-[11px] font-bold text-slate-400">(デバッグの見本です。何も保存していません)</div>}
           </div>
@@ -61477,12 +62133,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const cpuPlaylistPanel = (
           <div data-card-playlist className="mt-3 border-t border-white/10 pt-2.5">
             <b className="block text-[12px] font-black text-slate-200">フリー対戦</b>
-            <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手1人につき5曲まで選べます。対戦中は、選んだ曲を毎回ちがう順番で、続けて流します')}</p>
+            <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手1人につき5曲まで選べます。対戦中は、選んだ曲を毎回ちがう順番で、続けて流します。「ランダム」にすると、選べる曲ぜんぶから流します')}</p>
             <div className="mt-2 grid grid-cols-3 gap-1.5">
               {plWhoList.map((a) => (
                 <button key={a.id} type="button" data-card-playlist-who={a.id} aria-pressed={a.id === plCur} onClick={() => { Audio_.fgSe.tap(); setPlWho(a.id); }}
                   className={`min-h-[40px] min-w-0 rounded-xl border px-1 text-[11px] font-black ${a.id === plCur ? 'border-amber-300 bg-amber-600/85 text-white' : 'border-white/15 bg-slate-900/75 text-slate-200'}`}>
-                  {jaWrap(a.name)}<small className="ml-0.5 text-[10px] opacity-80">{cardCpuPlaylistOf(save.cpuPlaylist, a.id).length}曲</small>
+                  {jaWrap(a.name)}<small className="ml-0.5 text-[10px] opacity-80">{cardCpuPlaylistOf(save.cpuPlaylist, a.id)[0] === CARD_BGM_RANDOM ? 'ランダム' : `${cardCpuPlaylistOf(save.cpuPlaylist, a.id).length}曲`}</small>
                 </button>
               ))}
             </div>
@@ -61529,9 +62185,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 <div className="mt-1 flex gap-2">
                   <select data-card-bgm-select={k} aria-label={`${label}のBGM`} value={save.bgm[k]} onChange={(e) => { void persist({ bgm: normalizeCardBgm({ ...save.bgm, [k]: e.target.value }, cardIsBgmTrack) }); }}
                     className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white">
+                    <option value={CARD_BGM_RANDOM}>ランダム(毎回ちがう曲)</option>
                     {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === CARD_BGM_DEFAULT[k] ? '(はじめの曲)' : ''}</option>)}
                   </select>
-                  {bgmPreview && <button type="button" data-card-bgm-preview={k} onClick={() => bgmPreview.toggle(save.bgm[k])} className="min-h-[44px] min-w-[58px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black">{bgmPreview.playing === save.bgm[k] ? '停止' : '試聴'}</button>}
+                  {/* ランダムの試聴は1曲を選んで流す(鳴っていれば止める) */}
+                  {bgmPreview && (save.bgm[k] === CARD_BGM_RANDOM
+                    ? <button type="button" data-card-bgm-preview={k} onClick={() => { if (bgmPreview.playing) bgmPreview.stop(); else { const one = cardBgmRandomOne(); if (one) bgmPreview.toggle(one); } }} className="min-h-[44px] min-w-[58px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black">{bgmPreview.playing ? '停止' : '試聴'}</button>
+                    : <button type="button" data-card-bgm-preview={k} onClick={() => bgmPreview.toggle(save.bgm[k])} className="min-h-[44px] min-w-[58px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black">{bgmPreview.playing === save.bgm[k] ? '停止' : '試聴'}</button>)}
                 </div>
               </label>
             ))}
@@ -62045,8 +62705,9 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
     <div data-mh-screen data-card-deck-list className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="デッキ編成" accent="text-amber-200" onBack={onBack}/>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-2`}>
-        <p className="text-[11px] font-bold text-slate-400">デッキは{CARD_DECK_MAX}つまで。★のデッキで対戦します</p>
-        {decks.decks.map((d) => {
+        <p data-card-deck-count={decks.decks.length} className="text-[11px] font-bold text-slate-400">{`デッキ ${decks.decks.length} / ${CARD_DECK_MAX}。★のデッキで対戦します(★のデッキはいちばん上に出ます)`}</p>
+        {/* ★(使っている)デッキはいちばん上に出す(20まで並ぶと、どれを使っているか探しにくい。2026-10-30)。保存の並びは変えない */}
+        {[...decks.decks].sort((a, b) => (b.id === decks.active) - (a.id === decks.active)).map((d) => {
           const ready = cardDeckReady(db, d, col);
           const on = d.id === decks.active;
           return (
@@ -62070,15 +62731,16 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
             </div>
           );
         })}
-        {/* 空き枠(あと何個作れるか)。デッキが1つだと真ん中が大きく空いていた(2026-10-29 社長)。押すと新しいデッキを作る */}
-        {Array.from({ length: Math.max(0, CARD_DECK_MAX - decks.decks.length) }, (_, i) => (
+        {/* あと何個作れるか(デッキが1つだと真ん中が大きく空いていた。2026-10-29 社長)。押すと新しいデッキを作る。
+            20まで増やしたので、空きは1つだけ出して、残りの数を書く(2026-10-30) */}
+        {Array.from({ length: Math.min(1, Math.max(0, CARD_DECK_MAX - decks.decks.length)) }, (_, i) => (
           <button key={`slot${i}`} type="button" data-card-deck-slot={i} onClick={newDeck} className="mh-button flex min-h-[64px] w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-white/15 text-[13px] font-black text-slate-400 active:scale-[.99]">
-            <span className="text-[18px]">＋</span>あいている枠({decks.decks.length + i + 1}つ目)
+            <span className="text-[18px]">＋</span>{`新しいデッキを作る(あと${CARD_DECK_MAX - decks.decks.length}個作れます)`}
           </button>
         ))}
       </div>
       <div className={SCREEN_FOOTER_CLASS}>
-        <button type="button" data-card-deck-new disabled={full} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40" onClick={newDeck}>{full ? `デッキは${CARD_DECK_MAX}つまでです` : '新しいデッキを作る'}</button>
+        <button type="button" data-card-deck-new disabled={full} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40" onClick={newDeck}>{full ? `デッキは${CARD_DECK_MAX}個までです` : '新しいデッキを作る'}</button>
       </div>
       {confirmDel && <ConfirmSheet title={`「${confirmDel.name}」を消しますか？`} message="デッキだけを消します(カードは消えません)" confirmLabel="消す" danger onCancel={() => setConfirmDel(null)} onConfirm={() => { const id = confirmDel.id; setConfirmDel(null); onRemove(id); }}/>}
     </div>
@@ -62093,7 +62755,9 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
 //   血統別   … パックの弾の順に種族を並べる。混血はメインの種族に出る。全モンスター・ブリーダー・全体のカードは「種類別」で見る
 //   種類別   … デッキ編成の絞り込み(CARD_DECK_FILTERS)と同じ言葉と並び。先頭に「モンスター」
 // どの見かたでも、並べるカードは弾ごとの図鑑と同じもの(数え方がずれないように、全部の集まりから絞る)
-const CARD_DEX_MODES = Object.freeze([{ id: 'pack', label: 'パック別' }, { id: 'species', label: '血統別' }, { id: 'kind', label: '種類別' }]);
+//   サブ血統別 … モンスターのカードだけを副血統でまとめる(2026-10-30 社長「サブ血統別も作って」)。混血は副血統の側に、純血(主も副も同じ)は自分の血統に「純血」の見出しで出す。
+//                副血統が「？？？」の混血(ジェントルなど・sub が 'unknown')は、最後の「？？？(レア)」にまとめる(2026-10-30 社長「？？？は全部サブがレアを意味してる」)
+const CARD_DEX_MODES = Object.freeze([{ id: 'pack', label: 'パック別' }, { id: 'species', label: '血統別' }, { id: 'sub', label: 'サブ血統別' }, { id: 'kind', label: '種類別' }]);
 const CARD_DEX_TABS = Object.freeze([...CARD_PACKS.map((p) => ({ id: String(p.no), label: `第${p.no}弾` })), { id: 'hybrid', label: '混血' }]);
 const CARD_DEX_KINDS = Object.freeze([{ id: 'mon', label: 'モンスター' }, ...CARD_DECK_FILTERS.filter((f) => f.id !== 'all')]);
 const cardDexList = (db, tab) => {
@@ -62110,14 +62774,24 @@ const cardDexSpeciesOf = (db, no) => {
   const c = cardOf(db, no);
   return c && c.user !== 'any' && c.user !== 'breeder' ? c.user : null;
 };
+// サブ血統別: モンスターのカードの副血統(混血は sub・純血は自分の血統)。混血かどうかは cardIsHybridMon と同じ見方(sub が 'unknown' の子は副血統が分からない)
+const cardDexSubOf = (db, no) => {
+  const m = cardMonsterOf(db, no);
+  if (!m) return null;
+  return String(m.wave) === 'hybrid' ? (m.sub || 'unknown') : m.species;
+};
+const cardDexIsPure = (db, no) => { const m = cardMonsterOf(db, no); return !!m && String(m.wave) !== 'hybrid'; };
 // 見かたごとのタブ。label は図鑑の札に出す名前(血統は、その種族のふつうのモンスターカードの名前)
 const cardDexTabsOf = (db, mode) => {
-  if (mode === 'species') return CARD_PACKS.flatMap((p) => p.species).map((sp) => ({ id: sp, label: (Object.values(db.monsters).find((m) => m.species === sp && !m.variant) || {}).name || sp }));
+  const speciesTabs = () => CARD_PACKS.flatMap((p) => p.species).map((sp) => ({ id: sp, label: (Object.values(db.monsters).find((m) => m.species === sp && !m.variant) || {}).name || sp }));
+  if (mode === 'species') return speciesTabs();
+  if (mode === 'sub') return [...speciesTabs(), ...(Object.values(db.monsters).some((m) => String(m.wave) === 'hybrid' && (m.sub || 'unknown') === 'unknown') ? [{ id: 'unknown', label: '？？？(レア)' }] : [])];
   if (mode === 'kind') return CARD_DEX_KINDS;
   return CARD_DEX_TABS;
 };
 const cardDexListOf = (db, mode, tab, all = cardDexAll(db)) => {
   if (mode === 'species') return all.filter((no) => cardDexSpeciesOf(db, no) === tab);
+  if (mode === 'sub') return all.filter((no) => cardDexSubOf(db, no) === tab);
   if (mode === 'kind') return all.filter((no) => (tab === 'mon' ? !!cardMonsterOf(db, no) : !cardMonsterOf(db, no) && !!cardOf(db, no) && cardDeckFilterOk(cardOf(db, no), tab)));
   return cardDexList(db, tab);
 };
@@ -62132,16 +62806,20 @@ const cardDexPackMap = (db) => {
 const cardDexPackLabel = (k) => (k === 'hybrid' ? '混血(パックには入らない)' : k ? `第${k}弾パック` : 'そのほか');
 // 見出しの色(弾ごと。混血・そのほかは灰)
 const CARD_DEX_PACK_TONE = Object.freeze({ 1: 'bg-amber-600', 2: 'bg-emerald-600', 3: 'bg-blue-600', 4: 'bg-purple-600', 5: 'bg-pink-600', 6: 'bg-red-600', 7: 'bg-teal-600', 8: 'bg-yellow-600' });
-const CARD_DEX_UNIT = Object.freeze({ pack: 'このパック', species: 'この血統', kind: 'この種類' });
+const CARD_DEX_UNIT = Object.freeze({ pack: 'このパック', species: 'この血統', sub: 'このサブ血統', kind: 'この種類' });
+// サブ血統別の見出し: 純血(主も副もこの血統)・混血(副血統がこの血統。主血統はちがう)
+//   副血統が ？？？ の子は、めずらしい種(レア)という意味(2026-10-30 社長)
+const cardDexSubHead = (k, label, tab) => (k === 'pure' ? `純血(主も副も${label})` : tab === 'unknown' ? '副血統が ？？？ の子は、めずらしい種(レア)です' : `混血(副血統が${label})`);
 const CardDex = ({ db, collection, onBack }) => {
   const [mode, setMode] = useState('pack');
-  const [tabs, setTabs] = useState({ pack: '1', species: CARD_PACKS[0].species[0], kind: 'mon' });
+  const [tabs, setTabs] = useState({ pack: '1', species: CARD_PACKS[0].species[0], sub: CARD_PACKS[0].species[0], kind: 'mon' });
   const [show, setShow] = useState('all');
   const [detail, setDetail] = useState(null);
   const press = useCardLongPress((no) => setDetail(no));
   const col = collection || {};
   const all = useMemo(() => cardDexAll(db), [db]);
   const packMap = useMemo(() => cardDexPackMap(db), [db]);
+  const spName = useMemo(() => Object.fromEntries(cardDexTabsOf(db, 'species').map((x) => [x.id, x.label])), [db]); // 血統 → 名前(サブ血統別の混血の札に「主 ◯◯」)
   const tabList = useMemo(() => cardDexTabsOf(db, mode).map((t) => ({ ...t, list: cardDexListOf(db, mode, t.id, all) })), [db, mode, all]);
   const tab = tabs[mode];
   const curTab = tabList.find((t) => t.id === tab) || tabList[0] || { list: [] };
@@ -62149,8 +62827,9 @@ const CardDex = ({ db, collection, onBack }) => {
   const shown = list.filter((no) => (show === 'have' ? col[no] > 0 : show === 'miss' ? !(col[no] > 0) : true));
   const haveIn = (arr) => arr.filter((no) => col[no] > 0).length;
   // 弾ごとの見出しでまとめる(血統別・種類別)。一覧の並びと、詳しい画面の ◀ ▶ の送る順を同じにする
-  const dexKeyOf = (no) => packMap[no] || '';
-  const dexKeyOrder = (k) => (k === 'hybrid' ? 900 : k ? Number(k) : 999);
+  //   サブ血統別は、弾ではなく「純血」「混血」でまとめる
+  const dexKeyOf = (no) => (mode === 'sub' ? (cardDexIsPure(db, no) ? 'pure' : 'mix') : packMap[no] || '');
+  const dexKeyOrder = (k) => (k === 'pure' ? 0 : k === 'mix' ? 1 : k === 'hybrid' ? 900 : k ? Number(k) : 999);
   const dexKeys = mode === 'pack' ? [''] : [...new Set(shown.map(dexKeyOf))].sort((a, b) => dexKeyOrder(a) - dexKeyOrder(b));
   const navOrder = mode === 'pack' ? shown : dexKeys.flatMap((k) => shown.filter((no) => dexKeyOf(no) === k));
   const navAt = detail ? navOrder.indexOf(detail) : -1;
@@ -62203,7 +62882,7 @@ const CardDex = ({ db, collection, onBack }) => {
                 const inTab = mode === 'pack' ? list : list.filter((no) => dexKeyOf(no) === k);
                 return (
                   <section key={k || 'all'} data-card-dex-group={k || undefined}>
-                    {mode !== 'pack' && <div data-card-dex-head={k} className={`mb-1 flex items-center rounded-lg px-2 py-0.5 text-[12px] font-black text-white ${CARD_DEX_PACK_TONE[k] || 'bg-slate-600'}`}>{cardDexPackLabel(k)}<span className="ml-auto text-[11px]">{haveIn(inTab)}/{inTab.length}</span></div>}
+                    {mode !== 'pack' && <div data-card-dex-head={k} className={`mb-1 flex items-center rounded-lg px-2 py-0.5 text-[12px] font-black text-white ${mode === 'sub' ? (k === 'pure' ? 'bg-amber-700' : 'bg-indigo-600') : CARD_DEX_PACK_TONE[k] || 'bg-slate-600'}`}>{mode === 'sub' ? cardDexSubHead(k, curTab.label, curTab.id) : cardDexPackLabel(k)}<span className="ml-auto text-[11px]">{haveIn(inTab)}/{inTab.length}</span></div>}
                     <div className="grid grid-cols-4 gap-1.5">
                       {part.map((no) => {
               const c = cardOf(db, no); const m = c ? null : cardMonsterOf(db, no);
@@ -62219,6 +62898,7 @@ const CardDex = ({ db, collection, onBack }) => {
                   {rare && <span data-card-dex-rare className="absolute left-0.5 top-0.5 rounded-md bg-amber-400 px-1 text-[9px] font-black text-slate-950">{rare}</span>}
                   <CardNameFit name={name} className={`mt-0.5 font-bold leading-tight ${have ? 'text-slate-100' : 'text-slate-500'}`}/>
                   <span className="text-[9px] font-bold text-slate-500">No.{no}</span>
+                  {mode === 'sub' && m && String(m.wave) === 'hybrid' && m.main && <span data-card-dex-main={m.main} className="text-[9px] font-bold text-indigo-200">主 {spName[m.main] || m.main}</span>}
                 </button>
               );
                       })}
@@ -62657,12 +63337,15 @@ const CardStarterContents = ({ db, kit, collection, onClose }) => {
 // 弾に入っている種族の名前(売り場でパックの名前の下に出す。例: ディノ・ハム・モッチー)
 const cardPackSpeciesLabel = (db, pack) => pack.species.map((sp) => (Object.values(db.monsters).find((m) => m.species === sp && !m.variant) || {}).name || sp).join('・');
 // ---- ガチャポイントの帯とバトルカードカタログ(2026-10-27 社長 案A「パックの上に帯」) ----
-// 帯: たまっている数をそのまま出す(上限は無い)。目盛りは次の1冊までの進み具合(730 なら 230 / 500)
+// 帯: たまっている数をそのまま出す(上限は無い)。右は「次の1冊まで あと◯」。500 以上あるときは棒をいっぱいに光らせて「◯冊ぶん交換できます」
+//   (2026-10-30 社長「500以上いったら見た目変わらない?損してるみたいになるから表示変えて」。前は「230 / 500」で、たまった分が消えたように見えた)
 // 2026-10-29 社長 案B「ビートPも同じ帯に」: 上の段に所持ビートP、下の段にガチャポイントを1行で。説明の文は ? で開く。
 //   売り場の一覧の外(タブのすぐ下)に置くので、横の画面では左の列に入る(55 の card の欄)
 const CardGachaPanel = ({ point = 0, gacha = 0, catalogs = 0, busy, onExchange, onOpenCatalog }) => {
   const g = cardNormalizeGacha(gacha);
   const prog = cardGachaProgress(g);
+  const ready = Math.floor(g / CARD_CATALOG_COST);   // いま交換できる冊数
+  const rest = CARD_CATALOG_COST - prog;             // 次の1冊(交換できる分のその次)まで
   const [help, setHelp] = useState(false);
   return (
     <div data-card-gacha className="mb-2 shrink-0 rounded-2xl border-2 border-amber-300/70 px-2.5 py-1.5 text-white" style={{ background: 'linear-gradient(135deg,#2e1065ee,#1e1b4bee)' }}>
@@ -62675,15 +63358,18 @@ const CardGachaPanel = ({ point = 0, gacha = 0, catalogs = 0, busy, onExchange, 
           <div className="flex items-baseline gap-1 text-[12px] font-black text-amber-200">
             <span className="whitespace-nowrap">🎫 ガチャP</span>
             <span data-card-gacha-point={g} className="text-[14px] text-white">{g.toLocaleString()}</span>
-            <span className="ml-auto whitespace-nowrap text-[10px] tabular-nums text-amber-100" aria-label={`次の1冊まで ${prog} / ${CARD_CATALOG_COST}`}>{prog} / {CARD_CATALOG_COST}</span>
           </div>
-          <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-slate-950" aria-hidden="true"><i className="block h-full rounded-full" style={{ width: `${(prog / CARD_CATALOG_COST) * 100}%`, background: 'linear-gradient(90deg,#fbbf24,#f472b6)' }}/></div>
+          <div className={`mt-0.5 h-1.5 overflow-hidden rounded-full bg-slate-950 ${ready > 0 ? 'ring-1 ring-amber-200' : ''}`} aria-hidden="true"><i className={`block h-full rounded-full ${ready > 0 ? 'animate-pulse' : ''}`} style={{ width: `${ready > 0 ? 100 : (prog / CARD_CATALOG_COST) * 100}%`, background: ready > 0 ? 'linear-gradient(90deg,#fde047,#fbbf24,#f472b6)' : 'linear-gradient(90deg,#fbbf24,#f472b6)' }}/></div>
+          {/* 小さいスマホ(320px)でも収まるよう、棒の下の行に出す(折り返してよい) */}
+          {ready > 0
+            ? <div data-card-gacha-ready={ready} className="mt-0.5 text-[10.5px] font-black leading-tight text-amber-50" style={JA_WRAP_STYLE}>{jaWrap(`${ready}冊ぶん交換できます(その次まで あと${rest})`)}</div>
+            : <div data-card-gacha-rest={rest} className="mt-0.5 text-[10px] font-black leading-tight tabular-nums text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(`次の1冊まで あと${rest}`)}</div>}
         </div>
-        <button type="button" data-card-gacha-exchange aria-label={`カタログと交換(${CARD_CATALOG_COST})`} disabled={busy || g < CARD_CATALOG_COST} onClick={onExchange} className="mh-button min-h-[36px] shrink-0 whitespace-nowrap rounded-xl bg-amber-500 px-2 text-[11px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40">交換</button>
+        <button type="button" data-card-gacha-exchange aria-label={`カタログと交換(${CARD_CATALOG_COST})`} disabled={busy || g < CARD_CATALOG_COST} onClick={onExchange} className={`mh-button min-h-[36px] shrink-0 whitespace-nowrap rounded-xl bg-amber-500 px-2 text-[11px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40 ${ready > 0 ? 'animate-pulse ring-2 ring-amber-100 shadow-[0_0_12px_rgba(251,191,36,.8)]' : ''}`}>交換</button>
         <button type="button" data-card-gacha-catalog aria-label={`カタログを使う(${catalogs}冊)`} disabled={busy || catalogs < 1} onClick={onOpenCatalog} className="mh-button min-h-[36px] shrink-0 whitespace-nowrap rounded-xl bg-sky-400 px-2 text-[11px] font-black text-slate-950 active:scale-[.98] disabled:opacity-40">📖{catalogs}冊</button>
         <button type="button" data-card-gacha-help aria-expanded={help} aria-label="ガチャポイントの説明" onClick={() => setHelp((v) => !v)} className="mh-button flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/40 text-[12px] font-black text-white">?</button>
       </div>
-      {help && <div data-card-gacha-help-text className="mt-1 text-[10.5px] font-bold text-slate-200" style={JA_WRAP_STYLE}>{jaWrap(`ブースターパック1つで +${CARD_GACHA_PER_PACK}。${CARD_CATALOG_COST}たまると「バトルカードカタログ」1冊と交換できます(右の数は次の1冊まで)。カタログを使うと、好きなカードを1枚もらえます`)}</div>}
+      {help && <div data-card-gacha-help-text className="mt-1 text-[10.5px] font-bold text-slate-200" style={JA_WRAP_STYLE}>{jaWrap(`ブースターパック1つで +${CARD_GACHA_PER_PACK}。${CARD_CATALOG_COST}たまると「バトルカードカタログ」1冊と交換できます(たまった分は消えません。右に、次の1冊まであといくつかが出ます)。カタログを使うと、好きなカードを1枚もらえます`)}</div>}
     </div>
   );
 };
@@ -63770,11 +64456,11 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
           <div data-card-record-wins className={SCREEN_PANEL_CLASS}>
             <div className="text-[12px] font-bold text-slate-400">勝ち方(フリー対戦)</div>
             <div className="mt-1 grid grid-cols-3 gap-1.5 text-center">
-              {cell('勝つまでの平均', winAvg === null ? '—' : winAvg, '番')}
-              {cell('いちばん早い勝ち', d.wins.fastest || '—', d.wins.fastest ? '番目' : '')}
+              {cell('勝つまでの平均', winAvg === null ? '—' : winAvg, 'ターン')}
+              {cell('いちばん早い勝ち', d.wins.fastest || '—', d.wins.fastest ? 'ターン目' : '')}
               {cell('今日の勝ち', d.day.key === today ? d.day.win : 0, '勝')}
             </div>
-            <p className={small} style={JA_WRAP_STYLE}>{jaWrap('「番」は自分の番の数です。この記録ができてからのぶんです')}</p>
+            <p className={small} style={JA_WRAP_STYLE}>{jaWrap('「ターン」は自分のターンの数です。この記録ができてからのぶんです')}</p>
           </div>
           <div data-card-record-often className={SCREEN_PANEL_CLASS}>
             <div className="text-[12px] font-bold text-slate-400">よく使う(フリー対戦)</div>
@@ -63819,7 +64505,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
                       {row('投了', `${f.surrender}`, 'sur')}
                       {row('いまの連勝', `${f.now}連勝`, 'now')}
                       {row('最高の連勝', `${f.best}連勝`, 'best')}
-                      {row('いちばん早い勝ち', f.fastest ? `${f.fastest}番目` : '—', 'fast')}
+                      {row('いちばん早い勝ち', f.fastest ? `${f.fastest}ターン目` : '—', 'fast')}
                       <div className="mt-1 text-[10px] font-bold text-slate-400">難易度ごとの勝ち</div>
                       <div className="mt-0.5 grid grid-cols-5 gap-1 text-center text-[10px] font-bold">
                         {CARD_LEVEL_ORDER.map((lv) => <div key={lv} className="min-w-0 rounded-md bg-black/30 py-0.5"><span className="block truncate text-slate-400">{levelLabel[lv] || lv}</span><b className="text-[12px] text-amber-200">{f.levels[lv]}</b></div>)}
@@ -64051,10 +64737,10 @@ const cardPvpVerify = (db, { myDeck, mySeed, foeDeck, foeSeed, first, names, his
   let st = cardPvpTruthGame(db, { myDeck, mySeed, foeDeck, foeSeed, first, names });
   for (let n = 0; n < history.length; n++) {
     const e = history[n];
-    if (cardPvpDecider(st) !== e.by) return { ok: false, why: `${n + 1}手目: 番でない人の手` };
+    if (cardPvpDecider(st) !== e.by) return { ok: false, why: `${n + 1}手目: ターンでない人の手` };
     if (e.by === 1) {
       for (const [k, no] of Object.entries(e.reveal || {})) {
-        if (st.players[1].hand[Number(k)] !== no) return { ok: false, why: `${n + 1}手目: 相手の手札に無い札を使った` };
+        if (st.players[1].hand[Number(k)] !== no) return { ok: false, why: `${n + 1}手目: 相手の手札に無いカードを使った` };
       }
     }
     const next = cardApplyAction(db, st, e.act);
@@ -64119,7 +64805,9 @@ const cardPvpCleanMessage = (raw) => {
       // この試合は終わった、の印(終わった試合の番号。2026-10-27 で足した項目。古い版は送らないので null)
       ov: typeof raw.ov === 'string' ? raw.ov.slice(0, 40) : null,
       // ルールの版(2026-10-27 で足した項目。古い版は送らないので null)
-      rv: cardPvpRv(raw.rv) };
+      rv: cardPvpRv(raw.rv),
+      // 招待の部屋を開いたまま、ほかの画面へ出ている(2026-10-30 で足した項目。古い版は送らないので 0)。出ているあいだは試合を始めない
+      aw: raw.aw === 1 ? 1 : 0 };
   }
   if (raw.t === 'start') return { t: 'start', from, match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : '', hostFirst: raw.hostFirst === true, guest: typeof raw.guest === 'string' ? raw.guest.slice(0, 40) : '' };
   if (raw.t === 'act') {
@@ -64361,6 +65049,13 @@ const sbDeclineCardInvite = async (selfId, senderId) => {
   const r = await cardPvpInviteRequest(`card_battle_invites?sender_id=eq.${senderId}&target_id=eq.${selfId}`, { method: 'PATCH', body: { created_at: CARD_PVP_INVITE_DECLINED_AT }, prefer: 'return=minimal' });
   return r !== null;
 };
+// 取り消す: 送り手が「部屋を出る」を押したとき、その部屋への招待の時刻を、断るのと同じ古い値へ書き換える(相手の知らせ・一覧から消える。2026-10-30 ソランド)
+const sbCancelCardInvite = async (selfId, targetId, code) => {
+  const room = rhythmMultiNormalizeCode(code);
+  if (!CARD_PVP_INVITE_ID_RE.test(String(selfId)) || !CARD_PVP_INVITE_ID_RE.test(String(targetId)) || !room) return false;
+  const r = await cardPvpInviteRequest(`card_battle_invites?sender_id=eq.${selfId}&target_id=eq.${targetId}&room_code=eq.${room}`, { method: 'PATCH', body: { created_at: CARD_PVP_INVITE_DECLINED_AT }, prefer: 'return=minimal' });
+  return r !== null;
+};
 // 送った招待のようす(送り手が部屋で待つあいだに読む)。{ [相手のid]: { code, at } }。読めなければ null
 const sbFetchCardInvitesSent = async (selfId, targetIds) => {
   const ids = (targetIds || []).filter((x) => CARD_PVP_INVITE_ID_RE.test(String(x)));
@@ -64388,6 +65083,22 @@ const CARD_PVP_JOIN = (() => {
     take() { const c = code; code = ''; return c; },
     on(f) { listeners.add(f); return () => listeners.delete(f); },
   };
+})();
+// 招待の部屋を開いたままほかの画面にいるとき、上の帯の「戻る」で、MFバトルカードのマルチの入口(部屋)を開く(60-app の帯 → 84)
+const CARD_PVP_BACK = (() => {
+  let asked = false;
+  const listeners = new Set();
+  return {
+    request() { asked = true; listeners.forEach((f) => f()); },
+    take() { const a = asked; asked = false; return a; },
+    on(f) { listeners.add(f); return () => listeners.delete(f); },
+  };
+})();
+// マルチの入口で相手を決めたあと、デッキ選びを挟むあいだ預けておく「次にすること」(2026-10-30 社長「相手を選んだあとにデッキ選択」)。
+//   { kind: 'free' | 'pick' | 'create' | 'invite' | 'join', code?, to?, via? }。デッキを選んで入口へ戻ったら、入口がその場で続きをする
+const CARD_PVP_NEXT = (() => {
+  let next = null;
+  return { set(x) { next = x && typeof x === 'object' ? x : null; }, peek() { return next; }, take() { const x = next; next = null; return x; } };
 })();
 // この端末で、断った・閉じた招待(同じ招待を何度も出さない。保存はしない)
 const cardPvpInviteDismissed = new Set();
@@ -64478,7 +65189,9 @@ const CARD_PVP = (() => {
   const blank = () => ({ phase: 'idle', code: '', me: null, foe: null, deck: null, seed: 0, salt: '', seal: '', match: '', hostFirst: false, first: 0, lostAt: 0, // lostAt … この試合で、自分が止まっていた・電波が切れていた時刻
     game: null, startMsg: null, foeInMatch: false, mySeq: 0, outbox: [], theirSeq: 0, inbox: {}, history: [], result: null, foeOpen: null, error: '', broken: '',
     offline: false, timeouts: 0, autoActing: false, chatAt: 0, mode: 'private', seekAt: 0, seekers: {}, lobbyCount: 0, joining: '', joinAt: 0, ownCode: '', reported: '', pick: false, notice: '', // pick … 入口の一覧から選んで入った / notice … 入口に出す一言
-    round: 0, again: null, foeAgain: null, foeGone: false }); // もう1戦: round … いまの試合の回 / again … 自分が押した次の回 { rd, seed, salt, seal } / foeAgain … 相手が押した次の回 { rd, seal }
+    round: 0, again: null, foeAgain: null, foeGone: false,
+    invited: {}, guest: false, guestAt: 0, via: '' }); // invited … 送った招待 { [相手のid]: { code, at, ok } } / guest … 人の部屋へ入った(来なければ「部屋がもうありません」) / via … 入るときに押した招待
+ // もう1戦: round … いまの試合の回 / again … 自分が押した次の回 { rd, seed, salt, seal } / foeAgain … 相手が押した次の回 { rd, seal }
   let roomWaitSet = false; // カードの部屋が「部屋で待ち中」の印を立てているか
   const emit = () => {
     // 部屋で相手を待っているあいだは、フレンドに「部屋で待ち中」と知らせる(34 の friendsSetRoomWaiting。2026-10-29 社長)
@@ -64490,7 +65203,7 @@ const CARD_PVP = (() => {
   const set = (patch) => { s = { ...s, ...patch }; emit(); };
   const send = (payload) => { if (socket && alive) socket.send({ ...payload, from: s.me.id }); };
   const isHost = () => !!(s.foe && (s.me.at < s.foe.at || (s.me.at === s.foe.at && s.me.id < s.foe.id)));
-  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null, dn: s.me.dn || null, rd: s.round || 0, w: isHost() ? cardPvpWatchHost().eyes() : 0, ov: s.phase === 'over' && s.match ? s.match : null, rv: cardPvpRulesVersion() });
+  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null, dn: s.me.dn || null, rd: s.round || 0, w: isHost() ? cardPvpWatchHost().eyes() : 0, ov: s.phase === 'over' && s.match ? s.match : null, rv: cardPvpRulesVersion(), aw: cardPvpLobbyOpen > 0 ? 0 : 1 });
   // 観戦(94-card-spectate.jsx)。ホストだけが観戦の通り道へ流す。部品が無い環境では何もしない
   const watchPush = (by, act, reveal, st) => { if (isHost()) cardPvpWatchHost().push({ by, act, reveal, turn: st.turn, d: [st.players[0].discard, st.players[1].discard] }); };
   const closeLobby = () => { lobbyAlive = false; if (lobby) { try { lobby.close(); } catch (_) { /* 閉じている */ } } lobby = null; };
@@ -64498,7 +65211,8 @@ const CARD_PVP = (() => {
   // ホストが、2人そろったら先攻・後攻のくじを引く(hb が届いたとき・もう1戦で回を進めたとき)
   // ★くじの知らせは、相手がまだこちらを知らない間に届くと捨てられる。相手の hb にその試合の印が載るまで、毎回送り直す(tick)
   const maybeStart = () => {
-    if (s.phase === 'waiting' && !s.match && !s.startMsg && s.foe && isHost() && s.foe.mons && s.foe.seal) {
+    // 招待の部屋を開いたまま、どちらかがほかの画面へ出ているあいだは始めない(戻って入口を開いたら始まる。2026-10-30)
+    if (s.phase === 'waiting' && !s.match && !s.startMsg && s.foe && isHost() && s.foe.mons && s.foe.seal && cardPvpLobbyOpen > 0 && !s.foe.aw) {
       s = { ...s, startMsg: { t: 'start', match: rhythmMultiMakeId('m'), hostFirst: Math.random() < 0.5, guest: s.foe.id } };
       send(s.startMsg);
     }
@@ -64639,7 +65353,7 @@ const CARD_PVP = (() => {
     alive = false;
     const me = socket = rhythmMultiOpenSocket({
       topic: `${CARD_PVP_ROOM_TOPIC}${s.code}`,
-      onOpen: () => { if (socket !== me) return; alive = true; set({ offline: false, phase: s.phase === 'connecting' ? 'waiting' : s.phase, ...(s.phase === 'playing' && s.foe ? { foe: { ...s.foe, seen: Date.now() } } : {}) }); hb(); }, // つなぎ直した直後に、相手を「抜けた」と見ない(切れていたのはこちら)
+      onOpen: () => { if (socket !== me) return; alive = true; set({ offline: false, phase: s.phase === 'connecting' ? 'waiting' : s.phase, ...(s.phase === 'connecting' && s.guest ? { guestAt: Date.now() } : {}), ...(s.phase === 'playing' && s.foe ? { foe: { ...s.foe, seen: Date.now() } } : {}) }); hb(); }, // つなぎ直した直後に、相手を「抜けた」と見ない(切れていたのはこちら)
       onMessage: (raw) => { if (socket === me) onMessage(raw); },
       onClose: () => {
         if (socket !== me || !s) return;
@@ -64689,13 +65403,14 @@ const CARD_PVP = (() => {
     lobbySend({ t: 'seek', code: s.code, at: s.seekAt, name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, rt: Number.isInteger(s.me.rt) ? s.me.rt : null, rv: cardPvpRulesVersion() });
     emit();
   };
-  const open = async (code, profile, deck, mode = 'private', pick = false) => {
+  // guestVia … 人の部屋へ入るとき(合言葉・招待)。招待から入るときは、その招待の印(部屋が無かったら、一覧から消す)
+  const open = async (code, profile, deck, mode = 'private', pick = false, guestVia = null) => {
     stop();
     const bid = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
     const seed = (Math.floor(Math.random() * 0x7fffffff) ^ Date.now()) >>> 0;
     const salt = rhythmMultiMakeId('k');
     const seal = await cardPvpSha256(cardPvpSealText({ seed, salt, deck }));
-    s = { ...blank(), phase: 'connecting', code, ownCode: code, mode, seekAt: Date.now(), pick, joining: pick ? code : '', joinAt: pick ? Date.now() : 0, deck: { monsters: deck.monsters.slice(), cards: deck.cards.slice() }, seed, salt, seal,
+    s = { ...blank(), phase: 'connecting', code, ownCode: code, mode, seekAt: Date.now(), pick, guest: guestVia !== null, via: guestVia || '', joining: pick ? code : '', joinAt: pick ? Date.now() : 0, deck: { monsters: deck.monsters.slice(), cards: deck.cards.slice() }, seed, salt, seal,
       me: { id: rhythmMultiMakeId('c'), name: rhythmMultiText(profile.name || 'ブリーダー', CARD_PVP_NAME_MAX), icon: rhythmMultiText(profile.icon || '🙂', CARD_PVP_ICON_MAX), fr: typeof profile.frame === 'string' && profile.frame ? profile.frame.slice(0, 40) : null, at: Date.now(), bid: typeof bid === 'string' ? bid : null,
         rt: Number.isFinite(profile.rt) ? Math.max(0, Math.min(10000, Math.round(profile.rt))) : null, // 強さの点数(待っています の知らせに入れる。読めないときは出さない)
         // 相手の対戦開始の画面に出す、こちらのデッキ名(デッキ編成で付けた名前。試合の中身には入れない)
@@ -64712,6 +65427,15 @@ const CARD_PVP = (() => {
       if (!socket) return;
       hb();
       if (s.mode === 'free' && s.phase === 'waiting') seekTick();
+      // 合言葉・招待で人の部屋へ入ったのに、だれもいない(送った人がもう部屋を出た)。入口へ戻して知らせ、その招待は一覧から消す(2026-10-30 ソランド)
+      if (s.guest && s.phase === 'waiting' && !s.foe && alive && s.guestAt && Date.now() - s.guestAt > CARD_PVP_LOBBY_JOIN_MS) {
+        const via = s.via;
+        stop();
+        if (via) cardPvpInviteDismissed.add(via);
+        s = { ...blank(), notice: '部屋がもうありません' };
+        emit();
+        return;
+      }
       if (s.startMsg && !s.foeInMatch && isHost()) send(s.startMsg);
       s.outbox.forEach((m) => send(m)); // 「受け取った」が来ていない手は送り直す
       if (s.phase === 'over') sendOpen();
@@ -64746,8 +65470,20 @@ const CARD_PVP = (() => {
     },
     clearNotice: () => { if (s && s.notice) { s = { ...s, notice: '' }; emit(); } },
     // さがし直す(90秒だれも来なかったあと)
-    join: (code, profile, deck) => { const c = rhythmMultiNormalizeCode(code); if (!c) return false; void open(c, profile, deck); return true; },
-    leave: () => { if (s && s.phase === 'playing') penalize(); if (s && socket) send({ t: 'bye' }); stop(); board = null; s = blank(); emit(); },
+    // 合言葉・招待で人の部屋へ入る。via … 招待から入るときの印(cardPvpInviteKey)
+    join: (code, profile, deck, via = '') => { const c = rhythmMultiNormalizeCode(code); if (!c) return false; void open(c, profile, deck, 'private', false, via); return true; },
+    // 部屋を出る。送った招待は取り消す(相手に「招待が届いています」が残って、押しても入れないのを防ぐ。2026-10-30 ソランド)
+    leave: () => {
+      if (s && s.me && s.me.bid && s.code) {
+        const nowT = Date.now();
+        Object.entries(s.invited || {}).filter(([, x]) => x && x.ok && x.code === s.code && nowT - x.at <= CARD_PVP_INVITE_TTL_MS).forEach(([to, x]) => { void sbCancelCardInvite(s.me.bid, to, x.code); });
+      }
+      if (s && s.phase === 'playing') penalize(); if (s && socket) send({ t: 'bye' }); stop(); board = null; s = blank(); emit();
+    },
+    // 送った招待を覚えておく(入口の画面を閉じても、上の帯と「部屋を出る」で使う)
+    noteInvite: (to, rec) => { if (s && rec && s.code === rec.code) set({ invited: { ...s.invited, [to]: rec } }); },
+    // 入口の画面を開いた・閉じたことを、上の帯と相手へ知らせ直す
+    ping: () => { if (s) { s = { ...s }; emit(); if (socket && alive && s.me && s.deck) hb(); } },
     // 対戦の画面がつなぐ。届いていた手があれば、ここで当てる
     attach: (h) => { board = h; deliver(); return () => { if (board === h) board = null; }; },
     // 自分の手を進めたとき(対戦の画面から)。自分で打った手なら、時間切れの続きの数を0に戻す
@@ -64818,6 +65554,43 @@ const CARD_PVP = (() => {
   };
 })();
 
+// マルチの入口(CardPvpLobby)を開いた・閉じた。上の帯の出し入れと、相手へ「ほかの画面へ出ている」を知らせ直す
+const cardPvpLobbyMark = (d) => { cardPvpLobbyOpen = Math.max(0, cardPvpLobbyOpen + d); CARD_PVP.ping(); };
+// 送った招待の、表のいまのようす(断られたかを見る)。自分の部屋で相手を待つあいだだけ、5秒おきに読む。入口と上の帯で使う
+const useCardPvpSentRows = (room) => {
+  const [rows, setRows] = useState({});
+  const invited = room.invited || {};
+  const sentIds = Object.keys(invited).filter((k) => invited[k] && invited[k].ok).join(',');
+  const bid = room.me && room.me.bid;
+  useEffect(() => {
+    if (room.phase !== 'waiting' || room.foe || !bid || !sentIds) { setRows({}); return undefined; }
+    let alive = true;
+    const load = async () => { const got = await sbFetchCardInvitesSent(bid, sentIds.split(',')); if (alive && got) setRows(got); };
+    void load();
+    const t = setInterval(load, 5000);
+    return () => { alive = false; clearInterval(t); };
+  }, [room.phase, !!room.foe, bid, sentIds]);
+  return rows;
+};
+// 招待の部屋を開いたまま、ほかの画面へ出ているあいだ、画面の上に出す帯(2026-10-30 ソランド・台帳 2026-10-29 の案A。ビートの RhythmMultiAwayBar と同じ形)。
+// 見た目は 77 の MultiAwayBar を共通で使う。入口(部屋)を開いているあいだ・自分の部屋でないとき・だれとでもで探しているときは出さない
+//   busy: 対戦の最中など、ここから画面を移ると途中のものが宙に浮く所。人が来たときだけ知らせ、「対戦へ」は出さない
+const CardMultiAwayBar = ({ busy = false, onReturn = null }) => {
+  const [room, setRoom] = useState(() => CARD_PVP.get());
+  useEffect(() => CARD_PVP.subscribe(setRoom), []);
+  const [now, setNow] = useState(() => Date.now());
+  const sentRows = useCardPvpSentRows(room);
+  const shown = cardPvpLobbyOpen === 0 && room.mode !== 'free' && !room.guest && (room.phase === 'connecting' || room.phase === 'waiting');
+  useEffect(() => { if (!shown) return undefined; const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, [shown]);
+  if (!shown || typeof MultiAwayBar !== 'function') return null;
+  const hot = !!room.foe;
+  if (busy && !hot) return null;
+  // いちばん長く残っている招待の秒数(断られた・時間切れのものは数えない)
+  const sec = Object.entries(room.invited || {}).reduce((m, [to, x]) => (x && x.ok && cardPvpInviteState(x, sentRows[to], now) === 'live' ? Math.max(m, cardPvpInviteLeftSec(x.at, now)) : m), 0);
+  const text = hot ? `${room.foe.name || 'フレンド'}さんが来ました` : sec > 0 ? `フレンドを招待中・あと${sec}秒` : `部屋で待っています(合言葉 ${room.code})`;
+  return <MultiAwayBar text={text} hot={hot} busy={busy} onReturn={onReturn} onLeave={() => CARD_PVP.leave()} icon="🃏" game="card"/>;
+};
+
 // 台詞を、句読点・「！」「？」・「…」・空白の区切りごとの折れないかたまりにする(「かっこよ／すぎたよ」のような言葉の途中の折れを防ぐ。窓口・カゲあつくん)。
 // 顔文字と、うしろに続くカナ・数字・「!」(「(｡ ˘-˘)ｳﾝｳﾝ」「( ˘ω˘)9グッ!」)も1つのかたまり。かたまりが吹き出しの幅より長いときだけ、中で折れる
 const CARD_PVP_FACE_RE = /(\([^()\s]*(?:\s[^()\s]*)*\)[0-9\u30A0-\u30FF\uFF65-\uFF9F!！]*|[\u0660-\u06FF٩][^\s、。！？]*[و])/;
@@ -64860,13 +65633,13 @@ const cardPvpPhrases = (text) => String(text).split(/(?<=、)/).map((x, i) => <s
 // onReward(result) … 確かめが済んだら1回だけ呼ぶ(84 が保存して { point, loops, quick, saved } を返す)。確かめで無効になった試合は呼ばない
 // assistant … 結果の画面に立ち絵を出す自分の助手(84 の topAssistant)/ point … いまのビートP
 // onAssistant … いまは使わない(だれとでもは待ち続ける。呼ぶ側との形を変えないために受けておく)/ rankSend … 強さの点数へ届けてよいか(公開後のふつうの入口だけ。84→60-app の rank.send)
-const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], onStart, onBack, onReward, assistant = null, point = null, onAssistant = null, rankSend = false, onOpenReplay = null, replayHas = null }) => {
+const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], onStart, onBack, onStepAway = null, onPickDeck = null, onReward, assistant = null, point = null, onAssistant = null, rankSend = false, onOpenReplay = null, replayHas = null }) => {
   const [room, setRoom] = useState(() => CARD_PVP.get());
   const [code, setCode] = useState('');
   const [profile, setProfile] = useState({ name: 'ブリーダー', icon: '🙂' });
   const [profileReady, setProfileReady] = useState(false);
   useEffect(() => CARD_PVP.subscribe(setRoom), []);
-  useEffect(() => { cardPvpLobbyOpen += 1; return () => { cardPvpLobbyOpen -= 1; }; }, []);
+  useEffect(() => { cardPvpLobbyMark(1); return () => cardPvpLobbyMark(-1); }, []);
   // 試合の途中で抜けた人は、少しのあいだ入れない(mh_card_pvp_penalty_v1。無い・壊れた値は 0 = 入れる)
   const [penaltyUntil, setPenaltyUntil] = useState(0);
   const [now, setNow] = useState(() => Date.now());
@@ -64900,9 +65673,9 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
     const t = setInterval(load, 60000);
     return () => { alive = false; clearInterval(t); };
   }, [inviteOpen, roster]);
-  const [invited, setInvited] = useState({});
+  const invited = room.invited || {}; // 送った招待(部屋の側に覚えておく。入口を閉じても、上の帯と「部屋を出る」で使う)
   const [inviteNext, setInviteNext] = useState('');   // 入口で選んだ相手。部屋ができて合言葉が出たら送る
-  const [sentRows, setSentRows] = useState({});       // 送った招待の、表の今のようす(断られたかを見る)
+  const sentRows = useCardPvpSentRows(room);           // 送った招待の、表の今のようす(断られたかを見る)
   // 観戦(94-card-spectate.jsx): 「観戦する」で対戦中のフレンドの一覧を開き、「見る」で観戦の画面へ
   const [watchOpen, setWatchOpen] = useState(false);
   const [watch, setWatch] = useState(() => CARD_WATCH.get());
@@ -64932,7 +65705,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   const sendInvite = async (to, roomCode) => {
     const at = Date.now();
     const ok = await sbSendCardInvite(selfBid, to, roomCode);
-    setInvited((cur) => ({ ...cur, [to]: { code: rhythmMultiNormalizeCode(roomCode), at, ok } }));
+    CARD_PVP.noteInvite(to, { code: rhythmMultiNormalizeCode(roomCode), at, ok });
   };
   useEffect(() => {
     if (!inviteNext || room.phase !== 'waiting' || !room.code) return;
@@ -64941,18 +65714,6 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
     setInviteOpen(true);
     void sendInvite(to, room.code);
   }, [inviteNext, room.phase, room.code]);
-  // 部屋を出たら、送った招待の覚えを消す(次の部屋で、また送れるように)
-  useEffect(() => { if (room.phase === 'idle') { setInvited({}); setSentRows({}); } }, [room.phase]);
-  // 部屋で待つあいだ、送った招待が断られていないかを5秒おきに読む
-  const sentIds = Object.keys(invited).filter((k) => invited[k] && invited[k].ok).join(',');
-  useEffect(() => {
-    if (room.phase !== 'waiting' || room.foe || !selfBid || !sentIds) return undefined;
-    let alive = true;
-    const load = async () => { const rows = await sbFetchCardInvitesSent(selfBid, sentIds.split(',')); if (alive && rows) setSentRows(rows); };
-    void load();
-    const t = setInterval(load, 5000);
-    return () => { alive = false; clearInterval(t); };
-  }, [room.phase, !!room.foe, selfBid, sentIds]);
   // ほかの画面の知らせで「参加する」を押してきたら、名前を読み終えたところで、その部屋へ入る
   const [joinAsk, setJoinAsk] = useState(() => CARD_PVP_JOIN.peek());
   useEffect(() => CARD_PVP_JOIN.on(setJoinAsk), []);
@@ -64963,6 +65724,24 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
     setJoinAsk('');
     if (c) CARD_PVP.join(c, profile, deck);
   }, [joinAsk, profileReady, room.phase, !!deck, deckIssues.length, penaltyMin]);
+  // 相手を決めた: デッキ選びを挟む(onPickDeck)。選んで戻ってきたら、下の続きで run する
+  const run = (act, d = deck) => {
+    if (!act || !d) return;
+    const prof = { ...profile, rt: myRating ? myRating.rating : null };
+    if (act.kind === 'free') { CARD_PVP.clearNotice(); void CARD_PVP.free(prof, d); }
+    else if (act.kind === 'pick') { CARD_PVP.clearNotice(); CARD_PVP.pick(act.code, prof, d); }
+    else if (act.kind === 'create') void CARD_PVP.create(profile, d);
+    else if (act.kind === 'invite') { setInviteNext(act.to); void CARD_PVP.create(profile, d); }
+    else if (act.kind === 'join') CARD_PVP.join(act.code, profile, d, act.via || '');
+  };
+  const go = (act) => { if (onPickDeck) { CARD_PVP_NEXT.set(act); onPickDeck(); } else run(act); };
+  // デッキを選んで入口へ戻ってきたら、預けておいた続きをする(名前を読み終えてから。入れない間・デッキが使えないときは捨てる)
+  useEffect(() => {
+    if (!CARD_PVP_NEXT.peek() || !profileReady || room.phase !== 'idle') return;
+    const act = CARD_PVP_NEXT.take();
+    if (!deckOk || penaltyMin > 0) return;
+    run(act);
+  }, [profileReady, room.phase]);
   const declineInvite = (x) => { cardPvpInviteDismissed.add(cardPvpInviteKey(x)); setInvites((cur) => cur.filter((y) => y !== x)); void sbDeclineCardInvite(selfBid, x.senderId); };
   // 報酬: 確かめが「合っている」か「確かめられない(相手が抜けた・封が届かない)」になったら、1回だけ渡す
   const rewardRef = useRef(onReward);
@@ -64989,7 +65768,11 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   const started = useRef('');
   useEffect(() => { if (room.phase === 'playing' && room.game && started.current !== room.match) { started.current = room.match; onStart(room.game); if (typeof cardPvpHistoryBegin === 'function' && (rankSend || (typeof window !== 'undefined' && window.__mhCardPvpRankTest === true))) cardPvpHistoryBegin(room.match, room.me && room.me.bid); } }, [room.phase, room.match]);
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
-  const ready = !!deck && deckIssues.length === 0 && penaltyMin === 0; // 部屋に入るボタンは、プロフィール(名前・アイコン)を読み終えてから押せる(読む前だと「ブリーダー」と人型のアイコンで相手に届く。2026-10-27)
+  // 横に並べるボタン(ふつうの高さで、文字は1行。並びの幅を分け合う)
+  const rowBtn = 'mh-button min-h-[48px] min-w-0 flex-1 whitespace-nowrap rounded-2xl px-2 text-[14px] font-black active:scale-[.98] disabled:opacity-40';
+  // デッキは相手を決めたあとに選ぶ(onPickDeck があるとき)。そのときは、いまのデッキが使えなくても押せる(選ぶ画面で使えるデッキを選ぶ)
+  const deckOk = !!deck && deckIssues.length === 0;
+  const ready = (onPickDeck ? true : deckOk) && penaltyMin === 0; // 部屋に入るボタンは、プロフィール(名前・アイコン)を読み終えてから押せる(読む前だと「ブリーダー」と人型のアイコンで相手に届く。2026-10-27)
   const back = () => { CARD_PVP.leave(); CARD_WATCH.leave(); onBack(); };
   const r = room.result;
   if (watch.phase !== 'idle' && room.phase === 'idle') return <CardPvpWatchScreen/>;
@@ -65013,10 +65796,13 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
       <div data-mh-screen data-card-pvp="over" data-card-pvp-result={r.outcome} className={SCREEN_SHELL_CLASS}>
         <ScreenHead title={win ? '勝ち！' : r.reward === 'surrender' ? '投了' : '負け…'} accent={win ? 'text-amber-200' : 'text-slate-300'} onBack={back}/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+          {/* カードランクの経験値の棒は、結果を開いてすぐ目に入るよう、いちばん上に置く(2026-10-30 社長「終わったあとに経験値ゲージのバーの動きが見れない」)。
+              ごほうびが届いてから出る(got)。見えたところで棒が動き出す */}
+          {got && got.rankGain && typeof CardRankResult === 'function' && <CardRankResult gain={got.rankGain}/>}
           {/* 立ち絵と吹き出し(助手と対戦の結果と同じ形)。台詞は CARD_PVP_RESULT_LINES(相手が抜けたときは left) */}
           {a && line && (
             <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
-              <CardAssistantArt src={assistantFullImage(a, line.face)} alt={a.name} className="h-[220px] w-[46%]"/>
+              <CardAssistantArt src={assistantFullImage(a, line.face)} alt={a.name} className="h-[min(200px,26svh)] w-[42%]"/>
               <div data-card-pvp-line={scene} className="mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{cardPvpLineNode(line.text)}</div>
             </div>
           )}
@@ -65035,7 +65821,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
             {r.verify === 'ng' && <div className="text-[12px] font-bold text-slate-300">無効の試合なので、ビートPとクイック周回は入りません</div>}
             {got && (<>
               <div data-card-pvp-reward className="text-[13px] font-black text-amber-200">もらったビートP: {got.point}</div>
-              {got.short && <div className="mt-1 text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('自分の番を3回やる前に終わったので、ビートPとクイック周回は入りません')}</div>}
+              {got.short && <div className="mt-1 text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('自分のターンを3回やる前に終わったので、ビートPとクイック周回は入りません')}</div>}
               {!got.short && got.loops > 0 && (
                 <div data-card-quick-loops={got.quick ? got.loops : 0} className="mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5">
                   {got.quick
@@ -65047,7 +65833,6 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
                 </div>
               )}
               {point !== null && <div className="mt-1 text-[12px] font-bold text-slate-300">いまのビートP: {point}</div>}
-              {got.rankGain && typeof CardRankResult === 'function' && <CardRankResult gain={got.rankGain}/>}
               {got.saved === false && <div className="mt-1 text-[12px] font-bold text-rose-300" style={JA_LABEL_STYLE}>{jaWrap('保存できませんでした(ビートPは増えていません)')}</div>}
             </>)}
           </div>
@@ -65061,10 +65846,11 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
               {room.again ? '相手を待っています…' : room.foeAgain ? 'もう1戦(相手が待っています)' : 'もう1戦'}
             </button>
           )}
+          {/* 「相手は部屋を出ました」はボタンの上の1行に横書きで(2026-10-30 社長「サイズ感わるい」。前はボタンのあいだに挟まって1文字ずつ縦に詰まり、ボタンが縦に伸びていた) */}
+          {room.foeGone && <p data-card-pvp-foe-gone className="text-center text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('相手は部屋を出ました')}</p>}
           <div className="flex gap-2">
-          {r.replay && onOpenReplay && <button type="button" data-card-pvp-replay className={`${btn} mh-button-secondary`} onClick={() => { Audio_.fgSe.tap(); onOpenReplay(r.replay); }}>この対戦を見る</button>}
-          {room.foeGone && <p data-card-pvp-foe-gone className="flex-1 self-center text-center text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('相手は部屋を出ました')}</p>}
-          <button type="button" data-card-pvp-leave className={`${btn} ${noAgain ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
+          {r.replay && onOpenReplay && <button type="button" data-card-pvp-replay className={`${rowBtn} mh-button-secondary`} onClick={() => { Audio_.fgSe.tap(); onOpenReplay(r.replay); }}>この対戦を見る</button>}
+          <button type="button" data-card-pvp-leave className={`${rowBtn} ${noAgain ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
           </div>
         </div>
       </div>
@@ -65087,7 +65873,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
       <div className={`${SCREEN_LIST_CLASS} space-y-3 pb-4`}>
         {room.phase === 'idle' && (<>
           {penaltyMin > 0 && <p data-card-pvp-penalty className="rounded-xl border border-rose-300/40 bg-rose-500/10 p-2 text-[13px] font-bold text-rose-100">試合の途中で抜けたので、あと{penaltyMin}分は部屋に入れません</p>}
-          {penaltyMin === 0 && !ready && <p className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100">{deckIssues.join('・') || 'デッキがありません'}</p>}
+          {penaltyMin === 0 && !ready && !onPickDeck && <p className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100">{deckIssues.join('・') || 'デッキがありません'}</p>}
           {room.notice && <p data-card-pvp-notice-text className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(room.notice)}</p>}
           {/* いま「だれとでも」で相手を待っている人(2026-10-27 社長「マルチで誰かが募集してたりしたらここで見れるようにして」案A)。
               合言葉の部屋・フレンドの部屋はこの一覧に流れない。押すと、その人の部屋に入って始まる(始まらなければ入口へ戻る) */}
@@ -65103,15 +65889,15 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
                       <small className="block text-[11px] font-bold text-slate-400 tabular-nums">{x.rt !== null ? `強さ ${x.rt}・` : ''}待って {x.waitSec}秒</small>
                     </span>
                     <button type="button" data-card-pvp-seeker-pick={x.id} disabled={!ready || !profileReady} className="mh-button mh-button-primary min-h-[40px] shrink-0 rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
-                      onClick={() => { Audio_.fgSe.tap(); CARD_PVP.clearNotice(); CARD_PVP.pick(x.code, { ...profile, rt: myRating ? myRating.rating : null }, deck); }}>対戦する</button>
+                      onClick={() => { Audio_.fgSe.tap(); go({ kind: 'pick', code: x.code }); }}>対戦する</button>
                   </li>
                 ))}
               </ul>
               <p className="mt-1 px-1 text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('押すと、その人の部屋に入って対戦が始まります')}</p>
             </>)}
           </div>
-          <button type="button" data-card-pvp-free disabled={!ready || !profileReady} className={`${btn} mh-button-primary`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.clearNotice(); void CARD_PVP.free({ ...profile, rt: myRating ? myRating.rating : null }, deck); }}>だれとでも(自分も待つ)</button>
-          <button type="button" data-card-pvp-create disabled={!ready || !profileReady} className={`${btn} border border-sky-300/40 bg-slate-900 text-sky-100`} onClick={() => { Audio_.fgSe.tap(); void CARD_PVP.create(profile, deck); }}>合言葉で部屋を作る</button>
+          <button type="button" data-card-pvp-free disabled={!ready || !profileReady} className={`${btn} mh-button-primary`} onClick={() => { Audio_.fgSe.tap(); go({ kind: 'free' }); }}>だれとでも(自分も待つ)</button>
+          <button type="button" data-card-pvp-create disabled={!ready || !profileReady} className={`${btn} border border-sky-300/40 bg-slate-900 text-sky-100`} onClick={() => { Audio_.fgSe.tap(); go({ kind: 'create' }); }}>合言葉で部屋を作る</button>
           {/* フレンドを招待(2026-10-26 社長「マルチ対戦でフレンド招待もいれて」): 相手を選ぶと部屋を作り、合言葉が出たところで招待を送る。相手が来たら始まる */}
           <button type="button" data-card-pvp-invite-open disabled={!ready || !profileReady || !roster} className={`${btn} border border-emerald-300/40 bg-slate-900 text-emerald-100`}
             onClick={() => { Audio_.fgSe.tap(); setInviteOpen((v) => !v); if (selfBid) void cardPvpRoster(selfBid).then((list) => setRoster(Array.isArray(list) ? list : [])); }}>{inviteOpen ? 'フレンドの招待を閉じる' : 'フレンドを招待'}</button>
@@ -65125,23 +65911,23 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
                       <span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-bold text-white">{f.userName}</span>
                         {typeof FriendPresenceTag === 'function' && <FriendPresenceTag info={presence[f.otherId]}/>}</span>
                       <button type="button" data-card-pvp-invite-to={f.otherId} disabled={!ready || !profileReady} className="mh-button mh-button-primary min-h-[40px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
-                        onClick={() => { Audio_.fgSe.tap(); setInviteNext(f.otherId); void CARD_PVP.create(profile, deck); }}>招待する</button>
+                        onClick={() => { Audio_.fgSe.tap(); go({ kind: 'invite', to: f.otherId }); }}>招待する</button>
                     </li>
                   ))}
                 </ul>}
               <p className="mt-1 px-1 text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('選ぶと部屋を作って招待を送ります。招待は3分のあいだ届きます')}</p>
             </div>
           )}
-          {invites.length > 0 && (
+          {invites.some((x) => !cardPvpInviteDismissed.has(cardPvpInviteKey(x))) && (
             <div data-card-pvp-invites className="space-y-2 rounded-2xl border border-emerald-300/40 bg-emerald-500/10 p-3">
-              {invites.slice(0, 3).map((x) => (
+              {invites.filter((x) => !cardPvpInviteDismissed.has(cardPvpInviteKey(x))).slice(0, 3).map((x) => (
                 <div key={`${x.senderId}-${x.roomCode}`} className="flex items-center gap-2">
                   <p className="min-w-0 flex-1 text-[13px] font-bold text-emerald-50" style={JA_WRAP_STYLE}>{jaWrap(`${x.name || 'フレンド'}さんから、マルチ対戦の招待が届いています`)}
                     <small className="block text-[11px] text-emerald-200/80 tabular-nums">あと{cardPvpInviteLeftSec(x.createdAt, now)}秒</small></p>
                   <button type="button" data-card-pvp-decline={x.roomCode} className="mh-button min-h-[44px] shrink-0 rounded-xl border border-white/20 bg-slate-900 px-3 text-[13px] font-black text-slate-200"
                     onClick={() => { Audio_.fgSe.tap(); declineInvite(x); }}>断る</button>
                   <button type="button" data-card-pvp-accept={x.roomCode} disabled={!ready || !profileReady} className="mh-button mh-button-primary min-h-[44px] shrink-0 rounded-xl px-3 text-[13px] font-black disabled:opacity-40"
-                    onClick={() => { Audio_.fgSe.tap(); CARD_PVP.join(x.roomCode, profile, deck); }}>参加する</button>
+                    onClick={() => { Audio_.fgSe.tap(); go({ kind: 'join', code: x.roomCode, via: cardPvpInviteKey(x) }); }}>参加する</button>
                 </div>
               ))}
             </div>
@@ -65156,7 +65942,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
               <input data-card-pvp-code value={code} onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 4))} maxLength={4} inputMode="text" autoCapitalize="characters" placeholder="K7Q3"
                 className="min-h-[48px] w-0 flex-1 rounded-xl border border-white/20 bg-black/40 px-3 text-center text-[22px] font-black tracking-[.3em] text-white"/>
               <button type="button" data-card-pvp-join disabled={!ready || !profileReady || !rhythmMultiNormalizeCode(code)} className="mh-button mh-button-primary min-h-[48px] rounded-xl px-4 font-black disabled:opacity-40"
-                onClick={() => { Audio_.fgSe.tap(); CARD_PVP.join(code, profile, deck); }}>入る</button>
+                onClick={() => { Audio_.fgSe.tap(); go({ kind: 'join', code }); }}>入る</button>
             </div>
           </div>
           {/* マルチの履歴と相手のデッキ(92-card-pvp-history.jsx・2026-10-27 社長) */}
@@ -65174,16 +65960,23 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
           <div className="rounded-2xl border border-sky-300/40 bg-sky-500/10 p-4 text-center">
             <p className="text-[13px] font-bold text-sky-100">合言葉</p>
             <p data-card-pvp-room className="my-1 text-[40px] font-black tracking-[.3em] text-white">{room.code}</p>
-            <p className="text-[13px] font-bold text-slate-200">{room.phase === 'connecting' ? 'つないでいます…' : room.foe ? `${room.foe.name}さんが来ました。始めます…` : 'この合言葉をフレンドに伝えて、待っています…'}</p>
+            <p className="text-[13px] font-bold text-slate-200">{room.phase === 'connecting' ? 'つないでいます…' : room.foe ? (room.foe.aw ? `${room.foe.name}さんが部屋に戻るのを待っています…` : `${room.foe.name}さんが来ました。始めます…`) : room.guest ? '部屋に入っています…' : 'この合言葉をフレンドに伝えて、待っています…'}</p>
+            {/* 自分の部屋は、開いたままほかの画面へ出られる(2026-10-30 ソランド・ビートの #4204 と同じ案A)。相手が来たら上の帯(CardMultiAwayBar)で知らせる */}
+            {room.phase === 'waiting' && !room.foe && !room.guest && onStepAway && (<>
+              <p data-card-pvp-away-note className="mt-2 text-[11px] font-bold text-sky-100/80" style={JA_WRAP_STYLE}>{jaWrap('ほかの画面へ行っても、部屋はそのまま待てます。「部屋を出る」を押すと、送った招待は取り消されます')}</p>
+              <button type="button" data-card-pvp-step-away className={`${btn} mt-2 border border-cyan-300/40 bg-cyan-800 text-white`} style={JA_WRAP_STYLE} onClick={() => { Audio_.fgSe.tap(); CARD_WATCH.leave(); onStepAway(); }}>{jaWrap('部屋はそのままで、ほかの画面へ')}</button>
+            </>)}
             {/* フレンドから招待(区切り4): 承認済みのフレンドの名簿から選ぶ。フレンドがいない・表が無いときは出さない */}
             {room.phase === 'waiting' && !room.foe && roster && roster.length > 0 && (
               <div className="mt-3 text-left">
                 <button type="button" data-card-pvp-invite className={`${btn} border border-emerald-300/40 bg-slate-900 text-emerald-100`} onClick={() => { Audio_.fgSe.tap(); setInviteOpen((v) => !v); }}>フレンドを招待する</button>
                 {inviteOpen && (
                   <ul data-card-pvp-roster className="mt-2 max-h-[40vh] space-y-1 overflow-y-auto">
-                    {roster.slice(0, 30).map((f) => (
-                      <li key={f.otherId} className="flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5">
-                        <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-white">{f.userName}</span>
+                    {/* 入口の名簿と同じく、相手の様子(ログイン中・いまの場所・最後に来た時刻)を出し、ログイン中の人を上に並べる(2026-10-30 ソランド) */}
+                    {(typeof friendsPresenceSort === 'function' ? friendsPresenceSort(roster.slice(0, 30), presence) : roster.slice(0, 30)).map((f) => (
+                      <li key={f.otherId} data-card-pvp-roster-row className="flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5">
+                        <span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-bold text-white">{f.userName}</span>
+                          {typeof FriendPresenceTag === 'function' && <FriendPresenceTag info={presence[f.otherId]}/>}</span>
                         {(() => {
                           // 招待のようす: 届いている(あと何秒)・断られた・時間切れ・送れなかった。断られた・時間切れ・送れなかったら、もう一度送れる
                           const sent = invited[f.otherId];
@@ -65611,7 +66404,7 @@ const CardPvpHistory = ({ db = CARD_BATTLE_DATA, onBack, onOpenReplay = null, re
         <div className={`${SCREEN_LIST_CLASS} space-y-3 pb-4`}>
           <CardResultVsRow meIcon={meIcon} meName={meName} foeNode={<CardPvpAvatar icon={e.foe.icon} frame={e.foe.frame}/>} foeName={e.foe.name} outcome={outcomeLabel(e)}/>
           <p className="px-1 text-[12px] font-bold text-slate-300">
-            {e.reason && e.reason !== outcomeLabel(e) ? `${e.reason}・` : ''}自分の番 {e.turns}回{delta ? `・強さ ${e.rating.after}(${delta})` : ''}
+            {e.reason && e.reason !== outcomeLabel(e) ? `${e.reason}・` : ''}自分のターン {e.turns}回{delta ? `・強さ ${e.rating.after}(${delta})` : ''}
           </p>
           {replayOk(e.match) && <button type="button" data-card-pvp-history-replay className="mh-button mh-button-primary min-h-[48px] w-full rounded-2xl font-black" onClick={() => { Audio_.fgSe.tap(); onOpenReplay(e.match); }}>▶ この対戦を見る</button>}
           <div className="flex gap-2">
@@ -65623,10 +66416,10 @@ const CardPvpHistory = ({ db = CARD_BATTLE_DATA, onBack, onOpenReplay = null, re
             : e.foeDeck
               ? <>{e.foe.deckName && <p className="px-1 text-[13px] font-black text-white">{e.foe.deckName}</p>}<CardPvpHistoryDeck db={db} deck={e.foeDeck} press={press} tone="foe"/></>
               : (<>
-                <p data-card-pvp-history-partial className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('相手が途中で抜けたので、この試合で使われた札だけです')}</p>
+                <p data-card-pvp-history-partial className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('相手が途中で抜けたので、この試合で使われたカードだけです')}</p>
                 {e.foeSeen.length
                   ? <CardPvpHistoryDeck db={db} deck={{ monsters: [], cards: e.foeSeen }} press={press} tone="seen"/>
-                  : <p className="px-1 text-[13px] font-bold text-slate-400">使われた札はありません</p>}
+                  : <p className="px-1 text-[13px] font-bold text-slate-400">使われたカードはありません</p>}
               </>)}
           <p className="px-1 text-[11px] font-bold text-slate-400">長押しでカードを大きく見られます</p>
         </div>
@@ -66011,7 +66804,7 @@ const CardReplayBar = ({ replay, at, onSeek, tight }) => {
   const by = at > 0 && replay.by ? replay.by[at - 1] : null;
   const byName = by === 0 ? 'あなた' : by === 1 ? replay.foe.name : '';
   // その手を打ったときの番(動いたあとの場ではなく、手を打つ前の場で数える)
-  const label = at === 0 ? 'はじまり' : `${at}手目・${prev && prev.turn >= 1 ? `${prev.turn}番目の番` : 'はじまり'}・${byName}`;
+  const label = at === 0 ? 'はじまり' : `${at}手目・${prev && prev.turn >= 1 ? `ターン${prev.turn}` : 'はじまり'}・${byName}`;
   const caption = cardReplayCaption(replay.states, at) || (at > 0 && replay.types ? cardReplayActText(replay.types[at - 1], byName) : '');
   // tight … 縦の画面で入り切らないとき(84 の boardFit)。ボタンを低く・説明を1行にする(2026-10-27 社長の実機で下が切れた)
   const btn = `mh-button mh-button-secondary ${tight ? 'min-h-[34px]' : 'min-h-[40px]'} flex-1 rounded-lg border border-white/20 bg-slate-800 px-1 text-[12px] font-black text-white disabled:opacity-40`;
@@ -66028,11 +66821,11 @@ const CardReplayBar = ({ replay, at, onSeek, tight }) => {
       )}
       <div className="mt-1 flex gap-1">
         <button type="button" data-card-replay-first className={btn} disabled={at <= 0} onClick={() => { setAuto(false); go(0); }}>⏮</button>
-        <button type="button" data-card-replay-prev-turn className={btn} disabled={at <= 0} onClick={() => { setAuto(false); go(turns[at > turns[turnIdx] ? turnIdx : Math.max(0, turnIdx - 1)]); }}>番◀</button>
+        <button type="button" data-card-replay-prev-turn className={btn} disabled={at <= 0} onClick={() => { setAuto(false); go(turns[at > turns[turnIdx] ? turnIdx : Math.max(0, turnIdx - 1)]); }}>◀ターン</button>
         <button type="button" data-card-replay-prev className={btn} disabled={at <= 0} onClick={() => { setAuto(false); go(at - 1); }}>◀</button>
         <button type="button" data-card-replay-auto className={`${btn} ${auto ? '!bg-sky-600' : ''}`} disabled={at >= last && !auto} onClick={() => { Audio_.fgSe.tap(); setAuto((v) => !v); }}>{auto ? '⏸' : '▶▶'}</button>
         <button type="button" data-card-replay-next className={btn} disabled={at >= last} onClick={() => { setAuto(false); go(at + 1); }}>▶</button>
-        <button type="button" data-card-replay-next-turn className={btn} disabled={at >= last} onClick={() => { setAuto(false); go(turnIdx + 1 < turns.length ? turns[turnIdx + 1] : last); }}>▶番</button>
+        <button type="button" data-card-replay-next-turn className={btn} disabled={at >= last} onClick={() => { setAuto(false); go(turnIdx + 1 < turns.length ? turns[turnIdx + 1] : last); }}>ターン▶</button>
         <button type="button" data-card-replay-speed className={btn} onClick={() => { Audio_.fgSe.tap(); setSpeed((v) => (v === 1 ? 2 : 1)); }}>{(CARD_REPLAY_SPEEDS.find((x) => x.id === speed) || CARD_REPLAY_SPEEDS[0]).label}</button>
       </div>
     </div>
@@ -66093,7 +66886,7 @@ const CardReplayList = ({ onOpen, onBack }) => {
                     <b className="truncate text-[13px] font-black text-white">{r.foe.name}</b>
                     <small className={`shrink-0 rounded-md px-1 text-[10px] font-black ${r.kind === 'pvp' ? 'bg-sky-500/25 text-sky-100' : 'bg-amber-500/20 text-amber-100'}`}>{r.kind === 'pvp' ? 'マルチ' : 'フリー対戦'}</small>
                   </span>
-                  <span className="block text-[11px] font-bold text-slate-400">{cardReplayWhen(r.at)}{r.turn !== null ? `・${r.turn}番まで` : `・${r.acts.length}手`}</span>
+                  <span className="block text-[11px] font-bold text-slate-400">{cardReplayWhen(r.at)}{r.turn !== null ? `・ターン${r.turn}まで` : `・${r.acts.length}手`}</span>
                 </span>
                 <span data-card-replay-result={r.outcome || ''} className={`shrink-0 text-[13px] font-black ${win ? 'text-amber-200' : 'text-slate-300'}`}>{res}</span>
               </button>
@@ -66560,7 +67353,7 @@ const CardWatchSide = ({ db, st, p, person, top = false, low = false, hits = nul
     <div className="flex items-center gap-2 px-1">
       <span className={`block ${low ? 'h-[24px] w-[24px]' : 'h-[34px] w-[34px]'} shrink-0`}><CardPvpAvatar icon={person && person.icon} frame={person && person.fr} className="h-full w-full"/></span>
       <div className="min-w-0 flex-1">
-        <div className={`truncate text-[13px] font-black ${active ? 'text-amber-200' : 'text-white'}`}>{(person && person.name) || pl.name}{active ? ' の番' : ''}</div>
+        <div className={`truncate text-[13px] font-black ${active ? 'text-amber-200' : 'text-white'}`}>{(person && person.name) || pl.name}{active ? ' のターン' : ''}</div>
         <div data-card-watch-counts={p} className="flex flex-wrap gap-x-2 text-[11px] font-bold text-slate-300 tabular-nums">
           <span>手札 {pl.hand.length}</span><span>ガッツ {pl.guts.length}</span><span>山札 {pl.deck.length}</span><span>捨て札 {pl.discard.length}</span>
         </div>
@@ -66672,37 +67465,15 @@ const CARD_SHARE_KEY = 'mh_card_deck_owner_key_v1';   // 持ち主の鍵(新し�
 const CARD_SHARE_TABLE = 'card_deck_entries';
 const CARD_RENTED_KEY = 'mh_card_rented_deck_v1';
 const CARD_SHARE_REWARD_KEY = 'mh_card_deck_reward_v1'; // 報酬を端末のビートPに足した日の一覧(['2026-10-29', …]・新しい60日まで)     // 借りているデッキ(新しいキー。1組だけ・期限なし・返すと null)
-// 戦い方の7つの向き(82 の CARD_AI_HABITS の項目と同じ名前)。-1 控えめ / 0 ふつう / 1 強め
-const CARD_SHARE_TILTS = Object.freeze([
-  { id: 'attack', label: '攻める' }, { id: 'keepGuard', label: '守りを残す' }, { id: 'saveGuts', label: 'ガッツをためる' },
-  { id: 'big', label: '大技' }, { id: 'disrupt', label: '相手を崩す' }, { id: 'area', label: '全体技' }, { id: 'finish', label: 'とどめ' },
-]);
-const CARD_SHARE_TILT_MUL = Object.freeze({ '-1': 0.6, 0: 1, 1: 1.6 });
-const CARD_SHARE_ACES_MAX = 3;
 let _cardShareUnavailable = false; // 表がまだ無い(SQL 未適用)と分かったら、その回は読みに行かない
+
+// 戦い方の7つの向き・戦い方をきれいにする・賢さ・打ち方(cardSharePolicy)は 82-card-share-core へ移した(2026-10-30)
 
 // 公開の印。区切り⑤(報酬)まで入るまでは、デバッグ設定から入ったときだけ押せる
 const cardShareOpen = () => true;
 
-// 戦い方をきれいにする(知らない項目は捨てる・無い人は既定で補う)。deck を渡すと、切り札はそのデッキに入っている札だけ残す
-const cardShareNormalizeTactics = (v, deck = null) => {
-  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
-  const habit = typeof r.habit === 'string' && Object.prototype.hasOwnProperty.call(CARD_AI_HABITS, r.habit) ? r.habit : 'kyuko';
-  const tilt = {};
-  CARD_SHARE_TILTS.forEach((t) => { const n = r.tilt && r.tilt[t.id]; tilt[t.id] = n === -1 || n === 1 ? n : 0; });
-  const inDeck = deck && Array.isArray(deck.cards) ? new Set(deck.cards) : null;
-  const aces = [...new Set((Array.isArray(r.aces) ? r.aces : []).filter((x) => typeof x === 'string' && /^[A-Z]?[0-9]{3}$/.test(x) && (!inDeck || inDeck.has(x))))].slice(0, CARD_SHARE_ACES_MAX);
-  const name = typeof r.name === 'string' ? r.name.slice(0, 20) : '';
-  // f … 戦術カードの枠(82-card-tactics-core の短い形。2026-10-29 社長)。無い登録(前の形)は、くせと傾きで打つ
-  const f = r.f && typeof r.f === 'object' && !Array.isArray(r.f) && typeof cardTacticPackFrames === 'function' ? cardTacticPackFrames(cardTacticUnpackFrames(r.f)) : null;
-  return { habit, tilt, aces, name, ...(f ? { f } : {}) };
-};
-// 登録デッキの賢さ(戦術カードの枠から。2026-10-29 社長「デッキ側で決まる・戦う人は選ばない」)。前の形の登録は NORMAL
-//   'random' … 何も入れていない(出せる手からランダム)。報酬と経験値は EASY で数える
-const cardShareSmartLevel = (tactics) => {
-  const t = cardShareNormalizeTactics(tactics);
-  return t.f && typeof cardTacticSmartLevel === 'function' ? cardTacticSmartLevel(cardTacticUnpackFrames(t.f)) : 'normal';
-};
+// 登録デッキとの対戦でもらえる物(ビートP・クイック周回・カードランクの経験値)は、相手の賢さにかかわらずこの強さの表で数える(84 が使う。2026-10-30 社長)
+const CARD_SHARE_REWARD_LEVEL = 'master';
 // 賢さに数える戦術カードの枚数(場面が合わない・同じもの・ほとんど当たらないものは数えない。82 の cardTacticCountedRows)
 const cardShareRowsCount = (frames) => cardTacticCountedRows(frames);
 const cardShareSmartText = (tactics) => {
@@ -66712,26 +67483,6 @@ const cardShareSmartText = (tactics) => {
   if (!t.f) return label;
   const f = cardTacticUnpackFrames(t.f);
   return `${label}(基本${f.base.filter(Boolean).length}・戦術カード${cardShareRowsCount(f)}枚)`;
-};
-// 土台のくせ(メインの基本カードが助手の型ならその助手。前の形の登録や画面の名前に使う)
-const cardShareMainHabit = (frames, fallback = 'kyuko') => {
-  const c = frames && typeof cardTacticOf === 'function' ? cardTacticOf(frames.base[0]) : null;
-  const g = c && typeof CARD_TACTIC_GROUPS !== 'undefined' ? CARD_TACTIC_GROUPS.find((x) => x.id === c.g) : null;
-  return (g && g.habit) || fallback || 'kyuko';
-};
-const cardShareFightLevel = (tactics) => { const lv = cardShareSmartLevel(tactics); return lv === 'random' ? 'easy' : lv; };
-// 戦い方から、助手の打ち方(cardAiPolicy の形)を作る。戦術カードの枠があれば、その枠で打つ(強さは枠の賢さ)
-const cardSharePolicy = (tactics, levelId, opts = {}) => {
-  const t = cardShareNormalizeTactics(tactics);
-  if (t.f) {
-    const frames = cardTacticUnpackFrames(t.f);
-    const base = cardAiPolicy(t.habit, cardShareFightLevel(t), { ...opts, noTactics: true });
-    return { ...base, gambit: frames, gambitRandom: true, aces: t.aces.slice() };
-  }
-  const base = cardAiPolicy(t.habit, levelId, { ...opts, noTactics: true });
-  const habit = { ...base.habit };
-  CARD_SHARE_TILTS.forEach((x) => { if (Number.isFinite(habit[x.id])) habit[x.id] = habit[x.id] * CARD_SHARE_TILT_MUL[t.tilt[x.id]]; });
-  return { ...base, habit, aces: t.aces.slice() };
 };
 
 // 持ち主の鍵。create … 無ければ作って保存する(登録するときだけ)。作れない・保存できないときは null
@@ -66903,6 +67654,7 @@ const cardRentedDeckSet = async (entry) => {
 const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked = null, debug = false, onFight = null, onOpenTactics = null, part = 'all', title = 'デッキ登録', headExtra = null, embedded = false }) => {
   const [tab, setTab] = useState(part === 'mine' ? 'mine' : onFight ? 'fight' : 'mine');
   const [foes, setFoes] = useState(null);             // { picks, friends, popular } … 戦う相手の3つの並び
+  const [foeFilter, setFoeFilter] = useState('all'); // 一覧の絞り込み(すべて/おすすめ/フレンド/人気。2026-10-30 社長・案C)
   // 戦術カード(96・97): 登録するときに載せる枠(レベルで開いている枠・持っているカードだけ)
   const [tacticsSave, setTacticsSave] = useState(null);
   useEffect(() => { if (typeof cardTacticsLoad === 'function') void cardTacticsLoad().then(setTacticsSave).catch(() => {}); }, []);
@@ -66987,29 +67739,44 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
   };
   useEffect(() => { if (tab === 'fight' && selfId && !off && foes === null) void loadFoes(); }, [tab, selfId, off]);
   const fightIssues = issuesOf(list.find((d) => d.id === (decks && decks.active)) || list[0] || null);
-  const foeRow = (e) => (
-    <li key={e.ownerId} data-card-share-foe={e.ownerId} className="flex items-center gap-2 rounded-xl bg-black/30 px-2 py-2">
-      {typeof CardPvpAvatar === 'function' && <CardPvpAvatar icon={e.icon} frame={e.frame} className="h-9 w-9"/>}
-      <span className="min-w-0 flex-1">
-        <b className="block truncate text-[13px] font-black text-white">{e.name}</b>
-        <small className="block truncate text-[11px] font-bold text-slate-300">{e.tactics.name || 'デッキ'}・{e.deck.monsters.map((no) => ((cardMonsterOf(db, no) || {}).name) || no).join('・')}</small>
-        <small data-card-share-smart={cardShareSmartLevel(e.tactics)} className="block text-[10px] font-black text-amber-200">{`賢さ ${cardShareSmartText(e.tactics)}`}</small>
-        <small className="block text-[10px] font-bold text-sky-200 tabular-nums">{e.battles ? `戦われた ${e.battles}回・デッキの勝ち ${Math.round((e.deckWins / e.battles) * 100)}%` : 'まだ戦われていません'}</small>
-      </span>
-      <span className="flex shrink-0 flex-col gap-1">
-        <button type="button" data-card-share-fight={e.ownerId} disabled={!onFight || fightIssues.length > 0} className="mh-button mh-button-primary min-h-[36px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
-          onClick={() => { Audio_.fgSe.tap(); if (onFight) onFight(e, cardShareFightLevel(e.tactics)); }}>戦う</button>
-        {part !== 'fight' && <button type="button" data-card-share-rent={e.ownerId} disabled={busy || (rented && rented.ownerId === e.ownerId && rented.version === e.version)} className="min-h-[30px] rounded-lg border border-emerald-300/50 bg-slate-900 px-2 text-[11px] font-black text-emerald-100 disabled:opacity-50"
-          onClick={() => { Audio_.fgSe.tap(); void rent(e); }}>{rented && rented.ownerId === e.ownerId && rented.version === e.version ? '借りています' : '借りる'}</button>}
-      </span>
-    </li>
-  );
-  const foeList = (title, rows, key) => (
-    <div className={SCREEN_PANEL_CLASS} data-card-share-list={key}>
-      <div className="text-[12px] font-bold text-slate-400">{title}</div>
-      {rows.length ? <ul className="mt-1 space-y-1">{rows.map(foeRow)}</ul> : <p className="mt-1 text-[12px] font-bold text-slate-400">{key === 'friends' ? 'デッキを登録しているフレンドはいません' : 'まだだれも登録していません'}</p>}
-    </div>
-  );
+  // 3つの並び(おすすめ・フレンド・人気)を1つの一覧にまとめる。同じ人は1回だけで、どの並びに入るかは印で出す(2026-10-30 社長・案C)
+  const CARD_SHARE_FOE_TAGS = [['picks', 'おすすめ', 'bg-amber-400 text-slate-950'], ['friends', 'フレンド', 'bg-emerald-400 text-emerald-950'], ['popular', '人気', 'bg-pink-400 text-pink-950']];
+  const foeMerged = (() => {
+    if (!foes) return [];
+    const byId = new Map();
+    CARD_SHARE_FOE_TAGS.forEach(([key]) => (foes[key] || []).forEach((e) => {
+      const cur = byId.get(e.ownerId);
+      if (cur) { if (!cur.tags.includes(key)) cur.tags.push(key); } else byId.set(e.ownerId, { e, tags: [key] });
+    }));
+    return [...byId.values()];
+  })();
+  const foeShown = foeFilter === 'all' ? foeMerged : foeMerged.filter((x) => x.tags.includes(foeFilter));
+  const foeRow = ({ e, tags }) => {
+    const mons = e.deck.monsters.map((no) => cardMonsterOf(db, no) || { no, name: no, img: no });
+    return (
+      <li key={e.ownerId} data-card-share-foe={e.ownerId} data-card-share-foe-tags={tags.join(' ')} className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-2 py-2">
+        {/* 3体の丸い顔(カードの絵の上のほう)と、どの並びに入るかの印 */}
+        <span className="flex shrink-0 flex-col items-center gap-1">
+          <span className="flex">{mons.map((m, i) => <img key={i} src={CARD_IMG(m.img)} alt={m.name} loading="lazy" className={`h-9 w-9 rounded-full border-2 border-amber-200 bg-slate-900 object-cover ${i ? '-ml-2' : ''}`} style={{ objectPosition: '50% 18%' }}/>)}</span>
+          <span data-card-share-foe-tag className="flex gap-0.5">{CARD_SHARE_FOE_TAGS.filter(([k]) => tags.includes(k)).map(([k, label, tone]) => <span key={k} className={`whitespace-nowrap rounded px-1 text-[9px] font-black ${tone}`}>{label}</span>)}</span>
+        </span>
+        <span className="min-w-0 flex-1">
+          <b className="block truncate text-[13px] font-black leading-tight text-white">{e.name}</b>
+          <small data-card-share-deck-name className="block truncate text-[11.5px] font-black leading-tight text-amber-100">「{e.tactics.name || 'デッキ'}」</small>
+          <small className="block truncate text-[10.5px] font-bold text-slate-300">{mons.map((m) => m.name).join('・')}</small>
+          <small data-card-share-smart={cardShareSmartLevel(e.tactics)} className="block truncate whitespace-nowrap text-[11px] font-black text-amber-200">{`賢さ ${cardShareSmartText(e.tactics)}`}</small>
+          <small className="block truncate text-[10.5px] font-bold text-sky-200 tabular-nums">{e.battles ? `戦われた ${e.battles}回・勝ち ${Math.round((e.deckWins / e.battles) * 100)}%` : 'まだ戦われていません'}</small>
+        </span>
+        <span className="flex shrink-0 flex-col gap-1">
+          <button type="button" data-card-share-fight={e.ownerId} disabled={!onFight || fightIssues.length > 0} className="mh-button mh-button-primary min-h-[40px] rounded-lg px-2.5 text-[13px] font-black disabled:opacity-50"
+            onClick={() => { Audio_.fgSe.tap(); if (onFight) onFight(e, cardShareFightLevel(e.tactics)); }}>戦う</button>
+          {part !== 'fight' && <button type="button" data-card-share-rent={e.ownerId} disabled={busy || (rented && rented.ownerId === e.ownerId && rented.version === e.version)} className="min-h-[30px] rounded-lg border border-emerald-300/50 bg-slate-900 px-2 text-[11px] font-black text-emerald-100 disabled:opacity-50"
+            onClick={() => { Audio_.fgSe.tap(); void rent(e); }}>{rented && rented.ownerId === e.ownerId && rented.version === e.version ? '借りています' : '借りる'}</button>}
+        </span>
+      </li>
+    );
+  };
+  const foeEmptyText = foeFilter === 'friends' ? 'デッキを登録しているフレンドはいません' : 'まだだれも登録していません';
   const registerButton = (
     <button type="button" data-card-share-register disabled={busy || !picked || issues.length > 0 || !selfId} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40" onClick={() => { Audio_.fgSe.tap(); void register(); }}>{mine ? 'このデッキで登録し直す' : 'このデッキを登録する'}</button>
   );
@@ -67024,7 +67791,7 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
         )}
         {mine !== undefined && !off && tab === 'fight' && (<>
           <div className={SCREEN_PANEL_CLASS}>
-            <div className="text-[12px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('相手の強さは、登録した人が入れた戦術カードで決まります(賢さ)。もらえるビートPは、その賢さの助手と対戦と同じです')}</div>
+            <div className="text-[12px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('相手の強さは、登録した人が入れた戦術カードで決まります(賢さ)。もらえるビートPや経験値は、賢さにかかわらず助手と対戦の MASTER と同じです')}</div>
             {fightIssues.length > 0 && <p className="mt-1 text-[12px] font-bold text-rose-200" style={JA_WRAP_STYLE}>{jaWrap(`使うデッキ: ${fightIssues[0]}`)}</p>}
           </div>
           {rented && part !== 'fight' && (
@@ -67035,10 +67802,13 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
           )}
           {msg && tab === 'fight' && <p className="rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
           {foes === null ? <p className="text-[13px] font-bold text-slate-300">読み込み中…</p> : (<>
-            {foeList('おすすめ', foes.picks, 'picks')}
+            <div data-card-share-filters className="flex gap-1.5 overflow-x-auto pb-0.5" role="tablist">
+              {[['all', 'すべて'], ...CARD_SHARE_FOE_TAGS.map(([k, label]) => [k, label])].map(([k, label]) => <button key={k} type="button" role="tab" aria-selected={foeFilter === k} data-card-share-filter={k} className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-black ${foeFilter === k ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-200'}`} onClick={() => { Audio_.fgSe.tap(); setFoeFilter(k); }}>{label}</button>)}
+            </div>
+            <div data-card-share-list={foeFilter}>
+              {foeShown.length ? <ul className="space-y-1.5">{foeShown.map(foeRow)}</ul> : <p className={`${SCREEN_PANEL_CLASS} text-[12px] font-bold text-slate-400`}>{foeEmptyText}</p>}
+            </div>
             <button type="button" data-card-share-reload className="w-full rounded-xl border border-white/15 bg-slate-900 py-2 text-[12px] font-black text-slate-200" onClick={() => { Audio_.fgSe.tap(); void loadFoes(); }}>ほかの人をさがす</button>
-            {foeList('フレンドのデッキ', foes.friends, 'friends')}
-            {foeList('よく戦われているデッキ', foes.popular, 'popular')}
           </>)}
         </>)}
         {mine !== undefined && !off && tab === 'mine' && (<>
@@ -67250,6 +68020,15 @@ const CARD_LEVEL_FRAMES = Object.freeze([
   { at: 20, breeder: 3 }, { at: 25, mon: 5 }, { at: 30, base: 3 },
 ]);
 const cardLevelFrames = (lv) => CARD_LEVEL_FRAMES.filter((x) => lv >= x.at).reduce((a, x) => ({ ...a, ...Object.fromEntries(Object.entries(x).filter(([k]) => k !== 'at')) }), {});
+// ランクで増える分を、ふだんの言葉で(ランクアップの演出・これからもらえる物)。done … 「なった」/「なる」
+//   2026-10-30 社長「文言おかしい」(前は「戦術カードを置ける所が増えた」)。「置ける所」「枠」「行」は使わない
+const cardLevelFrameText = (f, done = true) => {
+  const parts = [];
+  if (f.base) parts.push(`基本カードを${f.base}枚`);
+  if (f.breeder) parts.push(`ブリーダーの戦術カードを${f.breeder}枚`);
+  if (f.mon) parts.push(f.breeder ? `モンスターごとに${f.mon}枚まで` : `モンスターごとに戦術カードを${f.mon}枚まで`);
+  return `${parts.join('・')}セットできるように${done ? 'なった' : 'なる'}`;
+};
 // 次に開く枠(画面に「次は Lv◯ で…」と出す)。無ければ null
 const cardLevelNextFrame = (lv) => CARD_LEVEL_FRAMES.find((x) => x.at > lv) || null;
 // ランクが上がったときのごほうび(2026-10-29 社長の作り直し。前の「Lv3・10・20から5ごとに引く券」はやめた)。
@@ -67297,7 +68076,7 @@ const cardLevelAfter = (prev, { kind, level, outcome, today }) => {
     got.push(lv); points += r.point; tickets += r.tickets;
   }
   const gains = [...(points ? [{ icon: '💰', text: `ビートP ${points.toLocaleString()}` }] : []), ...(tickets ? [{ icon: '🎟️', text: `カードパック券 ×${tickets}` }] : []),
-    ...CARD_LEVEL_FRAMES.filter((f) => f.at > lv0 && f.at <= to).map(() => ({ icon: '🧠', text: '戦術カードを置ける所が増えた' }))];
+    ...CARD_LEVEL_FRAMES.filter((f) => f.at > lv0 && f.at <= to).map((f) => ({ icon: '🧠', text: cardLevelFrameText(f) }))];
   return { next: { ...cur, xp, day: today, dayWin: (sameDay && cur.dayWin) || outcome === 'win', got }, tickets, points, add, from: lv0, to, xp, parts, gains };
 };
 
@@ -67431,8 +68210,8 @@ const cardTacticRowName = (db, row, which) => {
 };
 
 // カードの全文(2026-10-30 社長「表に入りきらない時は、押すと全文」)。区分・見る場面・レア・名前・効果
-const CARD_TACTIC_PHASE_TEXT = Object.freeze({ attack: '攻撃の番に見る', guard: '攻撃を受けたときに見る', guts: 'ガッツの番に見る' });
-const CARD_TACTIC_CAT_TEXT = Object.freeze({ cond: '条件カード(〜なら)。行動カードと組にしてセットする', base: '基本カード。どの組にも当てはまらないときの打ち方', breeder: 'ブリーダーカード(ブリーダーの手)。条件カードと組にしてセットする', monster: 'モンスターカード(そのモンスターの手)。条件カードと組にしてセットする' });
+const CARD_TACTIC_PHASE_TEXT = Object.freeze({ attack: '攻撃するときに見る', guard: '攻撃を受けたときに見る', guts: 'ガッツを置くときに見る' });
+const CARD_TACTIC_CAT_TEXT = Object.freeze({ cond: '条件カード(〜なら)。行動カードと組にしてセットする', base: '基本カード。どの組にも当てはまらないときの打ち方', breeder: 'ブリーダーカード(ブリーダーが使うカードを決める)。条件カードと組にしてセットする', monster: 'モンスターカード(そのモンスターの攻撃・守りを決める)。条件カードと組にしてセットする' });
 const CardTacticDetail = ({ card, onClose }) => {
   if (!card) return null;
   const st = CARD_TACTIC_CAT_STYLE[card.cat] || CARD_TACTIC_CAT_STYLE.cond;
@@ -67466,9 +68245,9 @@ const CardTacticFace = ({ card, owned = true, count = 0, onClick = null, small =
         {count > 1 && <span className="ml-auto text-[10px] font-black text-amber-200">×{count}</span>}
         {mark && <span className="ml-auto rounded bg-emerald-500 px-1 text-[10px] font-black text-white">{mark}</span>}
       </span>
-      <b className={`mt-1 block font-black leading-tight text-white ${small ? 'text-[12.5px]' : 'text-[14px]'}`} style={JA_WRAP_STYLE}>{card.name}</b>
+      <b className={`mt-1 block font-black leading-tight text-white ${small ? ([...String(card.name || '')].length > 10 ? 'text-[11px]' : 'text-[12.5px]') : 'text-[14px]'}`} style={JA_WRAP_STYLE}>{jaWrap(card.name)}</b>
       {/* 小さい札は効果を3行まで(全文は押した先の CardTacticDetail) */}
-      <small className={`mt-0.5 font-bold leading-snug text-white/90 ${small ? 'line-clamp-3 text-[10px]' : 'block text-[11.5px]'}`} style={JA_WRAP_STYLE}>{card.desc}</small>
+      <small className={`mt-0.5 font-bold leading-snug text-white/90 ${small ? 'line-clamp-3 text-[10px]' : 'block text-[11.5px]'}`} style={JA_WRAP_STYLE}>{jaWrap(card.desc)}</small>
     </Tag>
   );
 };
@@ -67572,16 +68351,20 @@ const CardTacticPackArt = ({ width = 200, torn = false, className = '' }) => {
   );
 };
 // めくった表(縦長 5:7。バトルカードと同じ比)。種類の色・レア度・名前・効果
+// 題・説明は jaWrap で言葉の切れ目にだけ折る(「相手の手札を捨/てさせる」「(1./6倍)」と言葉や数字の途中で折れていた。2026-10-30 社長)。
+//   題は長いほど字を小さく(カードの幅に対する割合)。説明は題のすぐ下から並べ、入りきらない分は切る(全文は押した先の CardTacticDetail)
+// [割合(cqw), いちばん小さい字(px)]。開封の結果の小さいカード(幅80px ほど)で、8字のかたまり(「攻撃できなくする」)が1行に入る大きさまで下げる
+const cardTacticTitleFit = (name) => { const n = [...String(name || '')].length; return n <= 7 ? [13, 11] : n <= 10 ? [11.5, 10] : n <= 14 ? [10, 9] : [9, 8]; };
 const CardTacticFront = ({ card, big = false }) => {
   const st = CARD_TACTIC_CAT_STYLE[card.cat] || CARD_TACTIC_CAT_STYLE.cond;
   return (
-    <div className="flex h-full w-full flex-col rounded-[5px] border-2 border-white/70 p-[6%] text-left" style={{ background: st.bg, containerType: 'inline-size' }}>
+    <div data-card-tactic-front={card.id} className="flex h-full w-full flex-col overflow-hidden rounded-[5px] border-2 border-white/70 p-[6%] text-left" style={{ background: st.bg, containerType: 'inline-size' }}>
       <span className="flex items-center gap-1">
         <span className="rounded px-1 font-black text-white" style={{ background: CARD_TACTIC_RARE_COLOR[card.r], fontSize: big ? 14 : 'max(9px, 9cqw)' }}>{card.r}</span>
         <span className="truncate font-bold text-white/80" style={{ fontSize: big ? 13 : 'max(8px, 8cqw)' }}>{st.label}</span>
       </span>
-      <b className="mt-[6%] block font-black leading-tight text-white" style={{ fontSize: big ? 22 : 'max(11px, 13cqw)', ...JA_WRAP_STYLE }}>{card.name}</b>
-      <small className="mt-auto block font-bold leading-snug text-white/90" style={{ fontSize: big ? 14 : 'max(8px, 9cqw)', ...JA_WRAP_STYLE }}>{card.desc}</small>
+      <b data-card-tactic-title className="mt-[6%] block shrink-0 font-black leading-tight text-white" style={{ fontSize: big ? 22 : ((f) => `max(${f[1]}px, ${f[0]}cqw)`)(cardTacticTitleFit(card.name)), ...JA_WRAP_STYLE }}>{jaWrap(card.name)}</b>
+      <small data-card-tactic-desc className="mt-[5%] block min-h-0 flex-1 overflow-hidden font-bold leading-snug text-white/90" style={{ fontSize: big ? 14 : 'max(8px, 8.5cqw)', ...JA_WRAP_STYLE, ...(big ? {} : { WebkitMaskImage: 'linear-gradient(#000 72%, transparent)', maskImage: 'linear-gradient(#000 72%, transparent)' }) }}>{jaWrap(card.desc)}</small>
     </div>
   );
 };
@@ -67665,13 +68448,12 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
                       <div className={`mh-pack-face mh-pack-front ${sr ? 'mh-pack-kira-front' : ''}`}>{card && <CardTacticFront card={card}/>}</div>
                     </div>
                     {on && sr && <div aria-hidden="true" className="mh-pack-rays"/>}
-                    {on && (
-                      <span className="absolute inset-x-0.5 top-0.5 z-[2] flex flex-wrap items-start justify-end gap-0.5">
-                        {c.dup ? <span className="rounded-md bg-slate-950/90 px-1 text-[9px] font-black text-amber-200">かけら+1</span> : <span className="rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950">NEW</span>}
-                      </span>
-                    )}
                   </button>
-                  <CardNameFit name={on && card ? card.name : ' '} className="mt-0.5 font-bold leading-tight text-slate-100"/>
+                  {/* 「かけら+1」「NEW」はカードの下に出す(カードの上に重ねると、左上の種類の文字「モンスター」が隠れていた)。
+                      題はカードの表に書いてあるので、下には重ねて出さない(2026-10-30 社長) */}
+                  <span data-card-tactic-open-tag className="mt-0.5 flex h-[16px] items-center justify-center">
+                    {on && (c.dup ? <span className="rounded-md bg-slate-950/90 px-1.5 text-[10px] font-black text-amber-200">かけら+1</span> : <span className="rounded-md bg-emerald-400 px-1.5 text-[10px] font-black text-slate-950">NEW</span>)}
+                  </span>
                 </div>
               );
             })}
@@ -67810,7 +68592,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
               {frameTabs.map((x) => (
                 <button key={x.k} type="button" data-card-tactics-frame={x.k} onClick={() => { Audio_.fgSe.tap(); setFrame(x.k); }}
                   className={`min-w-0 flex-1 rounded-lg border-2 px-0.5 py-1 text-center ${frame === x.k ? 'border-amber-300 bg-amber-900/40' : 'border-slate-700 bg-slate-900'}`}>
-                  {x.mon ? <img src={CARD_IMG(x.mon.img)} alt="" className="mx-auto h-[30px] w-[22px] rounded object-cover"/> : <span className="block text-[18px] leading-[30px]">{x.icon}</span>}
+                  {x.mon ? <img src={CARD_IMG(x.mon.img)} alt="" className="mx-auto h-[30px] w-[22px] rounded object-cover"/> : <span className="block text-[18px] leading-[30px]">{cardIconNode(x.icon, 22)}</span>}
                   <span className="block truncate text-[10px] font-black text-white">{x.label}</span>
                   <span className="block text-[9px] font-bold text-slate-400">{x.sub}</span>
                 </button>
@@ -67855,7 +68637,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
                   <button type="button" data-card-tactics-auto onClick={() => { Audio_.fgSe.tap(); void setRows(frame, cardTacticAutoFill(t, rowsOf(frame), catOf(frame), maxOf(frame))); }}
                     className="mh-button mh-button-primary min-h-[44px] flex-1 rounded-xl text-[11px] font-black">おまかせで<br/>あいている所に入れる</button>
                 </div>
-                <p className="text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{frame === 'breeder' ? '攻撃の番は、モンスターの枠のあとに見ます。ガッツの番はここだけを見ます。' : '上にセットした戦術カードから順に見て、条件に当たったカードの手をこのモンスターが出します。守るときは、このモンスターが狙われたときに見ます。'}</p>
+                <p className="text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{frame === 'breeder' ? '攻撃するときは、モンスターの枠のあとに見ます。ガッツを置くときは、ここだけを見ます。' : '上にセットした戦術カードから順に見て、条件に当たったカードのとおりに、このモンスターが動きます。守るときは、このモンスターが狙われたときに見ます。'}</p>
               </div>
             )}
           </div>
@@ -67870,7 +68652,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
             <button type="button" data-card-tactics-buy="5" disabled={busy || point < cardTacticsPrice(5)} onClick={() => { void pay(5, 'point'); }} className="mh-button min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40">5回まとめて引く(1,350ビートP)</button>
             <button type="button" data-card-tactics-ticket disabled={busy || t.tickets < 1} onClick={() => { void pay(1, 'ticket'); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40">{`カードパック券で1回引く(のこり${t.tickets}枚)`}</button>
             <button type="button" data-card-tactics-exchange disabled={t.shards < CARD_TACTICS_SHARD_COST} onClick={() => setPick({ cat: 'all-missing', title: 'かけら10個で1枚えらぶ', onPick: exchange })}
-              className="mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40">{`かけらで1枚えらぶ(${t.shards}/${CARD_TACTICS_SHARD_COST})`}</button>
+              className="mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40">{t.shards >= CARD_TACTICS_SHARD_COST ? `かけらで1枚えらぶ(かけら${t.shards}個)` : `かけらで1枚えらぶ(あと${CARD_TACTICS_SHARD_COST - t.shards}個)`}</button>
           </div>
         )}
         {detailCard && <CardTacticDetail card={detailCard} onClose={() => setDetailCard(null)}/>}
@@ -67953,7 +68735,7 @@ const CardTacticsBand = ({ point = 0, busy = false, onBuy, onExchange }) => {
             {tickets > 0 && <button type="button" data-card-tactics-ticket disabled={busy} onClick={() => { Audio_.fgSe.tap(); setConfirm(true); }} className="mh-button min-h-[30px] shrink-0 rounded-lg bg-amber-400 px-2 text-[11px] font-black text-stone-900 active:scale-95 disabled:opacity-40">使う</button>}
           </div>
           <div data-card-tactics-shards={shards} className={`flex min-h-[36px] items-center gap-1 rounded-xl px-2 ${canPick ? 'bg-sky-400/20 ring-1 ring-sky-300' : 'bg-white/5'}`}>
-            <span className={`min-w-0 flex-1 text-[11px] font-black leading-tight ${canPick ? 'text-sky-100' : 'text-slate-400'}`}>かけら<b className="ml-1 text-[14px] text-white tabular-nums">{shards}/{CARD_TACTICS_SHARD_COST}</b></span>
+            <span className={`min-w-0 flex-1 text-[11px] font-black leading-tight ${canPick ? 'text-sky-100' : 'text-slate-400'}`}>かけら<b className="ml-1 text-[14px] text-white tabular-nums">{shards}</b><small className="ml-1 text-[10px]">{canPick ? '1枚えらべます' : `あと${CARD_TACTICS_SHARD_COST - shards}で1枚`}</small></span>
             {canPick && <button type="button" data-card-tactics-exchange disabled={busy} onClick={() => { Audio_.fgSe.tap(); setPicking(true); }} className="mh-button min-h-[30px] shrink-0 rounded-lg bg-sky-400 px-2 text-[11px] font-black text-slate-950 active:scale-95 disabled:opacity-40">えらぶ</button>}
           </div>
         </div>
@@ -68060,14 +68842,14 @@ const CardTacticsShop = ({ point = 0, busy = false, onBuy }) => {
 };
 
 // ==================== カードランクの見せ方(2026-10-29 社長「バトルカードのレベル表記が地味」→「カードランク」) ====================
-// 札・棒・ランクアップは 43 の共通の部品(ビートランクと同じ見た目)。ここはカードの中身(ごほうび・置ける所)を渡すだけ
-// 「これからもらえる物」: 次のランクから、ビートP・カードパック券・戦術カードを置ける所が増えるランクを並べる
+// 札・棒・ランクアップは 43 の共通の部品(ビートランクと同じ見た目)。ここはカードの中身(ごほうび・セットできる戦術カードの枚数)を渡すだけ
+// 「これからもらえる物」: 次のランクから、ビートP・カードパック券・セットできる戦術カードが増えるランクを並べる
 const cardRankUpcoming = (lv, n = 4) => {
   const out = [];
   for (let r = lv + 1; out.length < n && r <= lv + 50; r++) {
     const g = cardRankRewardOf(r);
-    const frame = CARD_LEVEL_FRAMES.some((f) => f.at === r);
-    if (g.tickets || frame || r === lv + 1) out.push({ rank: r, text: `${cardRankRewardText(r)}${frame ? '・戦術カードを置ける所が増える' : ''}` });
+    const frame = CARD_LEVEL_FRAMES.find((f) => f.at === r);
+    if (g.tickets || frame || r === lv + 1) out.push({ rank: r, text: `${cardRankRewardText(r)}${frame ? `・${cardLevelFrameText(frame, false)}` : ''}` });
   }
   return out;
 };
@@ -68081,48 +68863,51 @@ const CardRankChip = ({ xp = 0, onOpen = null, showName = true, cls = '' }) => {
     </button>
   );
 };
-// 札を押した先: 大きい札・棒・これからもらえる物・経験値のたまり方
-const CardRankDetail = ({ xp = 0, onClose }) => {
-  const info = cardLevelInfo(xp);
-  const up = cardRankUpcoming(info.level);
-  return (
-    <div data-card-rank-detail role="dialog" aria-modal="true" aria-label="カードランク" className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4" onClick={onClose}>
-      <div className="w-full max-w-[340px] rounded-2xl border-2 border-amber-200/70 bg-gradient-to-b from-violet-950 to-slate-950 p-4 text-white" onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-center"><PlayerRankBadge kind="card" rank={info.level} size="lg"/></div>
-        <div className="mt-3"><PlayerRankGauge kind="card" info={{ rank: info.level, into: info.into, need: info.need }} note={`次のランクまで あと${(info.need - info.into).toLocaleString()}`}/></div>
-        <b className="mt-3 block text-[13px] font-black text-amber-200">これからもらえる物</b>
-        <ul data-card-rank-upcoming className="mt-1 space-y-1 rounded-xl bg-black/35 px-2.5 py-2 text-[12px] font-bold leading-snug">
-          {up.map((u) => <li key={u.rank} style={JA_WRAP_STYLE}><b className="text-amber-100">{`ランク${u.rank}`}</b>{` … ${u.text}`}</li>)}
-        </ul>
-        <p className="mt-2 text-[11px] font-bold leading-relaxed text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('フリー対戦・マルチ対戦で戦うと経験値がたまります。強い相手ほど多く、マルチがいちばん多くたまります。その日はじめての勝ちは +30。投了・練習試合ではたまりません。')}</p>
-        <button type="button" data-card-rank-detail-close onClick={() => { Audio_.fgSe.tap(); onClose && onClose(); }} className="mh-button mt-3 min-h-[44px] w-full rounded-xl text-[14px] font-black">とじる</button>
-      </div>
-    </div>
-  );
+// そのランクに上がったときにもらえる物を1つずつ(43 のごほうびの一覧 PlayerRankRewards に渡す)。got はもう上がったランクか
+//   ビートP(ランク×100)・5ランクごとのおまけ(ビートP ランク×200・カードパック券)・戦術カードをセットできる数が増えるランク(言い方は cardLevelFrameText)
+const cardRankRewardItems = (r, got = false) => {
+  if (!(r >= 2)) return [];
+  const g = cardRankRewardOf(r), frame = CARD_LEVEL_FRAMES.find((f) => f.at === r), bonus = r % 5 === 0 ? r * 200 : 0;
+  return [
+    { icon: '💰', text: `ビートP ${(g.point - bonus).toLocaleString()}` },
+    ...(bonus ? [{ icon: '💰', text: `ビートP ${bonus.toLocaleString()}`, bonus: true }] : []),
+    ...(g.tickets ? [{ icon: '🎟️', text: `カードパック券 ${g.tickets}枚`, bonus: true }] : []),
+    ...(frame ? [{ icon: '🧠', text: cardLevelFrameText(frame, got) }] : []),
+  ];
 };
-// 対戦の結果: 経験値の札と、ランクが上がったときの演出(43 の PlayerRankUpFx。ビートランクと同じ。帯が変わると自動で豪華になる)。
+// 札を押した先: 大きい札・棒・ランクごとのごほうびの一覧・経験値のたまり方(2026-10-30 社長「報酬が全部見れるように」。43 の共通の画面。ビートランクと同じ)
+const CardRankDetail = ({ xp = 0, onClose }) => (
+  <PlayerRankDetail kind="card" xp={xp} rewardsOf={cardRankRewardItems} onClose={onClose}
+    how={'フリー対戦・マルチ対戦で戦うと経験値がたまります。強い相手ほど多く、マルチがいちばん多くたまります。その日はじめての勝ちは +30。投了・練習試合ではたまりません。'}/>
+);
+// 対戦の結果: 経験値の札(棒が前の量から伸びる)と、ランクが上がったときの演出(43 の PlayerRankUpFx。ビートランクと同じ。帯が変わると自動で豪華になる)。
 //   一度に何ランク上がっても、上がった先のランクで1回だけ出し、もらった物をまとめて渡す。5ランクごとのおまけは bonus(桃色の光)
 const cardRankFxGains = (gain) => {
   let bonusPoint = 0;
   for (let r = gain.from + 1; r <= gain.to; r++) if (r % 5 === 0) bonusPoint += r * 200;
   bonusPoint = Math.min(bonusPoint, gain.points || 0);
   const basePoint = Math.max(0, (gain.points || 0) - bonusPoint);
-  const frames = CARD_LEVEL_FRAMES.filter((f) => f.at > gain.from && f.at <= gain.to).length;
+  const frames = CARD_LEVEL_FRAMES.filter((f) => f.at > gain.from && f.at <= gain.to);
   return [
     ...(basePoint ? [{ icon: '💰', text: `ビートP ${basePoint.toLocaleString()}` }] : []),
     ...(bonusPoint ? [{ icon: '💰', text: `ビートP ${bonusPoint.toLocaleString()}`, note: '5ランクごとのおまけ', bonus: true }] : []),
     ...(gain.tickets ? [{ icon: '🎟️', text: `カードパック券 ${gain.tickets}枚`, note: '5ランクごとのおまけ', bonus: true }] : []),
-    ...(frames ? [{ icon: '🧠', text: '戦術カードを置ける所が増えた' }] : []),
+    ...frames.map((f) => ({ icon: '🧠', text: cardLevelFrameText(f) })),
   ];
 };
 const CardRankResult = ({ gain }) => {
   const up = !!(gain && gain.to > gain.from);
-  const [fx, setFx] = useState(up);
+  // 画面いっぱいの演出は、経験値の棒が満タンで光ったあと(2026-10-30 社長の決め。ビートランクと同じ順番。onFull は1回だけ・押して飛ばしたときも来る)
+  const [fx, setFx] = useState(false); // false … まだ / true・'late' … 出す / 'closed' … 閉じた(もう出さない)
+  // 保険: 棒の合図(onFull)が来ないまま5秒たったら出す(ビートランクの 60-app と同じ)
+  // 合図が来なかったときの保険の5秒は、棒が画面に入って動き出してから数える(2026-10-30 社長: 棒が見えないまま演出だけ出ないように)
+  const [barStarted, setBarStarted] = useState(false);
+  useEffect(() => { if (!up || !barStarted) return undefined; const t = setTimeout(() => setFx((v) => v || 'late'), 5000); return () => clearTimeout(t); }, [up, barStarted]);
   if (!gain || !(gain.add > 0)) return null;
   const award = { add: gain.add, parts: gain.parts || [], from: gain.from, to: gain.to, xp: gain.xp, gains: gain.gains || [] };
   return (<>
-    <PlayerRankGain kind="card" award={award} next={`ランク${gain.to + 1}で ${cardRankRewardText(gain.to + 1)}`}/>
-    {up && fx && typeof PlayerRankUpFx === 'function' && <PlayerRankUpFx kind="card" from={gain.from} to={gain.to} gains={cardRankFxGains(gain)} onClose={() => setFx(false)}/>}
+    <PlayerRankGain kind="card" award={award} next={`ランク${gain.to + 1}で ${cardRankRewardText(gain.to + 1)}`} onFull={up ? () => setFx((v) => v || true) : null} onStart={() => setBarStarted(true)}/>
+    {up && fx && fx !== 'closed' && typeof PlayerRankUpFx === 'function' && <PlayerRankUpFx kind="card" from={gain.from} to={gain.to} gains={cardRankFxGains(gain)} onClose={() => setFx('closed')}/>}
   </>);
 };
 
@@ -68139,7 +68924,7 @@ const CardRankResult = ({ gain }) => {
 const CARD_REG_STYLES = Object.freeze([
   { id: 'attack', icon: '⚔️', name: 'どんどん攻める', desc: '倒せる相手から倒す・ガッツがたまったら大技・ピンチのときだけ守る', base: ['tAttack', 'tRush', 'tBalance'],
     mons: [['ko', 'atk'], ['myGuts.5', 'cost.大技(4以上)'], ['foeLife.50', 'atk'], ['myGuts.3', 'cost.大技(4以上)'], ['selfLife.30', 'guardDie'], ['foeLife.30', 'atk'], ['any', 'atk'], ['incoming.7', 'guard'], ['turnLe.3', 'atk']], breeder: [['any', 'save'], ['foeAlive.3', 'fieldCard']] },
-  { id: 'guard', icon: '🛡️', name: '守りを固める', desc: '守り札を残して堅く守り、相手が弱ったら倒しに行く', base: ['tGuard', 'tSteady', 'tBalance'],
+  { id: 'guard', icon: '🛡️', name: '守りを固める', desc: '守りのカードを残して堅く守り、相手が弱ったら倒しに行く', base: ['tGuard', 'tSteady', 'tBalance'],
     mons: [['selfLife.50', 'guard'], ['ko', 'atk'], ['any', 'guard'], ['incoming.5', 'guard'], ['foeLife.50', 'atk'], ['foeLife.30', 'atk'], ['myGuts.3', 'cost.大技(4以上)'], ['selfLife.30', 'guardDie']], breeder: [['any', 'keepGuard'], ['any', 'save']] },
   { id: 'save', icon: '🔋', name: 'ためて大技', desc: 'はじめはガッツをため、たまったら大技で一気に削る', base: ['tSave', 'tBig', 'tBalance'],
     mons: [['myGuts.5', 'cost.大技(4以上)'], ['myGuts.3', 'cost.大技(4以上)'], ['ko', 'atk'], ['selfLife.30', 'guardDie'], ['foeLife.50', 'atk'], ['any', 'guard']], breeder: [['turnLe.3', 'save'], ['any', 'save']] },
@@ -68165,7 +68950,7 @@ const CARD_REG_COMBOS = Object.freeze([
   { sec: '崩す', icon: '🔻', name: 'ガッツの多い相手を崩す', c: 'foeGutsGe.4', a: 'disrupt.ガッツを減らす', where: 'mon' },
   { sec: 'ブリーダー', icon: '🔋', name: 'ガッツをためる', c: 'any', a: 'save', where: 'breeder' },
   { sec: 'ブリーダー', icon: '⏳', name: 'はじめのうちはためる', c: 'turnLe.3', a: 'save', where: 'breeder' },
-  { sec: 'ブリーダー', icon: '🛡️', name: '守り札はガッツにしない', c: 'any', a: 'keepGuard', where: 'breeder' },
+  { sec: 'ブリーダー', icon: '🛡️', name: '守りのカードはガッツにしない', c: 'any', a: 'keepGuard', where: 'breeder' },
   { sec: 'ブリーダー', icon: '🌐', name: '相手が3体なら全体カード', c: 'foeAlive.3', a: 'fieldCard', where: 'breeder' },
   { sec: 'ブリーダー', icon: '💚', name: 'ピンチなら回復', c: 'myLife.50', a: 'bEff.回復する', where: 'breeder' },
 ]);
@@ -68225,7 +69010,7 @@ const CardRegComboSheet = ({ tactics, where, title, onPick, onCustom, onClose })
                 return (
                   <button key={x.name} type="button" data-card-reg-combo={x.name} disabled={!ok} onClick={() => { Audio_.fgSe.tap(); onPick({ c: x.c, a: x.a, on: true }); }}
                     className={`rounded-xl border-2 p-2 text-left ${ok ? 'border-slate-600 bg-slate-800 active:scale-[.97]' : 'border-slate-800 bg-slate-900 opacity-50'}`}>
-                    <span className="block text-[20px] leading-none">{x.icon}</span>
+                    <span className="block text-[20px] leading-none">{cardIconNode(x.icon, 20)}</span>
                     <b className="mt-1 block text-[13px] font-black leading-tight text-white" style={JA_WRAP_STYLE}>{x.name}</b>
                     <small className="block text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{ok ? `${(cardTacticOf(x.c) || {}).name} ▶ ${(cardTacticOf(x.a) || {}).name}` : 'まだ持っていない戦術カードがいります(マーケットで引けます)'}</small>
                   </button>
@@ -68277,7 +69062,7 @@ const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, onRows, on
         <div className="flex items-center gap-2.5">
           {m && <img src={CARD_IMG(m.img)} alt="" className="aspect-[5/7] w-[52px] rounded-[8px] border-2 border-sky-400 object-cover"/>}
           <div className="min-w-0 flex-1">
-            <b className="block text-[18px] font-black text-white">{`${name(k)}の手`}</b>
+            <b className="block text-[18px] font-black text-white">{`${name(k)}の戦い方`}</b>
             <small className="block text-[11px] font-bold text-slate-300">上から順に見て、当てはまった物を使います</small>
             <span className="mt-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-black text-white">{`${rows.length}枚 / 入れられる ${max}枚`}</span>
           </div>
@@ -68285,11 +69070,11 @@ const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, onRows, on
         </div>
         <CardRegRows rows={rows} why={why} onRows={onRows}/>
         {rows.length < max
-          ? <button type="button" data-card-reg-add={k} onClick={() => { Audio_.fgSe.tap(); onAdd(); }} className="mt-1.5 w-full rounded-xl border-2 border-dashed border-sky-300/70 py-2 text-[12px] font-black text-sky-100">{`＋ ${name(k)}の手を入れる`}</button>
+          ? <button type="button" data-card-reg-add={k} onClick={() => { Audio_.fgSe.tap(); onAdd(); }} className="mt-1.5 w-full rounded-xl border-2 border-dashed border-sky-300/70 py-2 text-[12px] font-black text-sky-100">{`＋ ${name(k)}の戦い方を入れる`}</button>
           : CARD_FRAME_MAX_TEXT('mon', max) && <small className="mt-1 block text-center text-[10px] font-bold text-slate-400">{CARD_FRAME_MAX_TEXT('mon', max)}</small>}
-        <p className="mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('入れると: このモンスターが場面に合った技を出すようになり、賢さが上がります。守る手は、このモンスターが狙われたときに見ます。')}</p>
+        <p className="mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('入れると: このモンスターが場面に合った技を出すようになり、賢さが上がります。守るカードは、このモンスターが狙われたときに見ます。')}</p>
         <div className="mt-2 grid grid-cols-2 gap-2">
-          <button type="button" data-card-reg-mon-copy onClick={() => { Audio_.fgSe.tap(); onCopy(); }} className="mh-button min-h-[44px] rounded-xl text-[12px] font-black">ほかの2体にも同じ手</button>
+          <button type="button" data-card-reg-mon-copy onClick={() => { Audio_.fgSe.tap(); onCopy(); }} className="mh-button min-h-[44px] rounded-xl text-[12px] font-black">ほかの2体にも同じ戦い方</button>
           <button type="button" data-card-reg-mon-auto onClick={() => { Audio_.fgSe.tap(); onAuto(); }} className="mh-button mh-button-primary min-h-[44px] rounded-xl text-[12px] font-black">おすすめで入れる</button>
         </div>
         <div className="mt-2 grid grid-cols-3 gap-1.5">
@@ -68415,7 +69200,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
           {CARD_REG_STYLES.map((s, i) => (
             <button key={s.id} type="button" data-card-reg-style={s.id} onClick={() => { Audio_.fgSe.tap(); setStyleId(s.id); setDraft(cardRegApplyStyle(s, tactics, open)); }}
               className={`flex w-full items-center gap-3 rounded-2xl border-2 p-3 text-left ${styleId === s.id ? 'border-amber-300 bg-amber-950/40' : 'border-slate-700 bg-slate-900'}`}>
-              <span className="w-10 text-center text-[28px]">{s.icon}</span>
+              <span className="w-10 text-center text-[28px]">{cardIconNode(s.icon, 28)}</span>
               <span className="min-w-0 flex-1"><b className="block text-[15px] font-black text-white">{s.name}{i === 0 && <span className="ml-1.5 rounded bg-emerald-600 px-1.5 text-[10px]">おすすめ</span>}</b>
                 <small className="block text-[11px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{s.desc}</small></span>
             </button>
@@ -68457,7 +69242,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
               what="ブリーダーのカード・全体カードをいつ出すか、ガッツをどこに置くか。攻撃の番は③のあとに見ます。"/>
             <CardRegRows rows={draft.breeder} why={uncounted.breeder} onRows={(a) => setRows('breeder', a)}/>
             {draft.breeder.length < open.breeder
-              ? <button type="button" data-card-reg-add="breeder" onClick={() => { Audio_.fgSe.tap(); setSheet({ where: 'breeder', k: 'breeder' }); }} className="mt-1.5 w-full rounded-xl border-2 border-dashed border-violet-300/70 py-2 text-[12px] font-black text-violet-100">＋ ブリーダーの手を入れる</button>
+              ? <button type="button" data-card-reg-add="breeder" onClick={() => { Audio_.fgSe.tap(); setSheet({ where: 'breeder', k: 'breeder' }); }} className="mt-1.5 w-full rounded-xl border-2 border-dashed border-violet-300/70 py-2 text-[12px] font-black text-violet-100">＋ ブリーダーの戦い方を入れる</button>
               : CARD_FRAME_MAX_TEXT('breeder', open.breeder) && <small className="mt-1 block text-center text-[10px] font-bold text-slate-400">{CARD_FRAME_MAX_TEXT('breeder', open.breeder)}</small>}
           </section>
           <section data-card-reg-sec="mons" className="rounded-2xl border-2 border-sky-400 bg-slate-900/90 p-2.5">
@@ -70840,7 +71625,10 @@ function MonsterHeroGame() {
       ];
       setBeatRankAward({ add: gain.add, parts: gain.parts, from: gain.from, to: gain.to, xp: next.xp, gains });
       // ランクが上がったら、画面いっぱいの演出を出す(2026-10-29 社長「この演出で」)。押すと先へ・閉じる
-      if (gain.to > gain.from) setBeatRankFx({ from: gain.from, to: gain.to, gains: fxGains });
+      // 画面いっぱいの演出は、結果の札の経験値の棒が満タンで光ったとき(PlayerRankGain の onFull)に出す(2026-10-30 社長「棒が満タンで光ったあとに」)。
+      // ここでは用意だけしておく(ready:false)。棒の演出のあいだは効果音の音量を戻す(beatRankBarPlaying)
+      setBeatRankBarPlaying(true);
+      if (gain.to > gain.from) setBeatRankFx({ from: gain.from, to: gain.to, gains: fxGains, ready: false });
       void syncBeatRankToServer(next);
     } catch (_) { /* 経験値が書けなくても、曲の記録の保存は止めない */ }
   };
@@ -73416,6 +74204,15 @@ function MonsterHeroGame() {
   const beatRankSyncedRef = useRef(false);
   // ランクが上がった瞬間の画面いっぱいの演出(PlayerRankUpFx)。{ from, to, gains } / null
   const [beatRankFx, setBeatRankFx] = useState(null);
+  // 結果の札の経験値の棒が伸びているあいだ(PlayerRankXpBar)。効果音の音量を戻すのに使う
+  const [beatRankBarPlaying, setBeatRankBarPlaying] = useState(false);
+  // 棒が満タンの合図が来なかったときも、棒が動き出してから5秒で演出を出す。
+  // 棒が画面に入る前(started が無い)は数えない(2026-10-30 社長: 棒が見えないまま演出だけ出ないように)
+  useEffect(() => {
+    if (!beatRankFx || beatRankFx.ready || !beatRankFx.started) return undefined;
+    const t = setTimeout(() => setBeatRankFx((f) => (f && !f.ready ? { ...f, ready: true } : f)), 5000);
+    return () => clearTimeout(t);
+  }, [beatRankFx]);
   const rhythmPlayRunAwardRef = useRef(null);
   const rhythmPlayRunAward = rhythmPlayRunAwardState;
   const setRhythmPlayRunAward = (next) => { rhythmPlayRunAwardRef.current = next; setRhythmPlayRunAwardState(next); };
@@ -74419,7 +75216,7 @@ function MonsterHeroGame() {
   //   (2026-09-07・ユーザー提案)。追いつきが残るのは、途中でやめたときだけ。
   //   その場合はいまの周がそのまま続いているので、止まっていたぶんを取り戻すのが正しい。
   useEffect(() => {
-    if (gameState === 'RHYTHM_PLAY') { rhythmPlayStartedAtRef.current = Date.now(); setRhythmPlayRunAward(null); stopCatchUp(); setBeatRankAward(null); setBeatRankFx(null); return; }
+    if (gameState === 'RHYTHM_PLAY') { rhythmPlayStartedAtRef.current = Date.now(); setRhythmPlayRunAward(null); stopCatchUp(); setBeatRankAward(null); setBeatRankFx(null); setBeatRankBarPlaying(false); return; }
     const startedAt = rhythmPlayStartedAtRef.current;
     rhythmPlayStartedAtRef.current = 0;
     if (!startedAt) return;
@@ -74712,10 +75509,10 @@ function MonsterHeroGame() {
   // 効果音の音量設定どおりに戻して鳴らし、閉じたら上と同じ決まりに戻す(2026-10-29 社長「ファンファーレもなかった」。0のままだと演出の音が鳴らなかった)。
   // 超省エネのあいだは今までどおり鳴らさない
   useEffect(() => {
-    if (!beatRankFx || (ultraEcoSession && !cardScreenOpen)) return undefined;
+    if (!(beatRankFx || beatRankBarPlaying) || (ultraEcoSession && !cardScreenOpen)) return undefined;
     Audio_.setSeVolume(seVolume);
     return () => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen) ? 0 : seVolume); };
-  }, [beatRankFx, seVolume]);
+  }, [beatRankFx, beatRankBarPlaying, seVolume]);
   // MFバトルカードにいるあいだは、裏の周回のバトルの効果音だけを止める(docs/spec/CARD_BATTLE.md 5-3「音」)。
   // カードも同じ効果音を使うので、上の音量(0)では止めない。カードの画面は Audio_.fgSe から鳴らすので、この印を受けない。
   // 超省エネの「効果音を0にする」も、カードの画面にいるあいだは外す(カードの音まで消えるため)。音量の保存値は変えない
@@ -88662,8 +89459,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         })()}
 
         {raidDamageFx&&((gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='raid')||gameState==='RAID_JACK_DEBUG')&&<RaidJackDamageFx key={raidDamageFx.key} fx={raidDamageFx} onDone={()=>setRaidDamageFx(null)}/>}
-        {beatRankFx&&gameState==='RHYTHM_PLAY'&&<PlayerRankUpFx kind="beat" from={beatRankFx.from} to={beatRankFx.to} gains={beatRankFx.gains} onClose={()=>setBeatRankFx(null)}/>}
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward} onComplete={async(result,merged)=>{
+        {beatRankFx&&beatRankFx.ready&&gameState==='RHYTHM_PLAY'&&<PlayerRankUpFx kind="beat" from={beatRankFx.from} to={beatRankFx.to} gains={beatRankFx.gains} onClose={()=>setBeatRankFx(null)}/>}
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward}
+          onRankBarFull={()=>setBeatRankFx(f=>f&&!f.ready?{...f,ready:true}:f)} onRankBarStart={()=>setBeatRankFx(f=>f&&!f.started?{...f,started:true}:f)} onRankBarDone={()=>setBeatRankBarPlaying(false)} onComplete={async(result,merged)=>{
           // デバッグ画面の試作曲(RHYTHM_PROTO_SONGS)は、何も残さない。周回の報酬・経験値・自己ベスト・クリア回数・
           // 実績・全国ランキングのどれにも入れない(CLAUDE.md ⑦。試作は公開しない曲なので、記録に混ぜない)
           if(rhythmPlay.from==='proto')return;
@@ -89307,6 +90105,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           })}</>)}
         {renderCardQuickRunStrip()}
         {/* MFバトルカードのマルチ対戦: フレンドからの招待の知らせ(どの画面でも。対戦中・演奏中などは出さない。91 の CardPvpInviteNotice) */}
+        {/* MFバトルカードのマルチ: 招待の部屋を開いたまま、ほかの画面にいるあいだの帯(91 の CardMultiAwayBar・2026-10-30。ビートの帯と同じ形) */}
+        <CardMultiAwayBar busy={CARD_PVP_NOTICE_BUSY.includes(gameState)} onReturn={()=>{CARD_PVP_BACK.request();if(!String(gameState).startsWith('CARD_'))setCardOrigin('home');setGameState('CARD_TOP');}}/>
         <CardPvpInviteNotice enabled={!!cardBattleEntryVisible&&(cardPvpOpen()||!!cardBattleDebugHome)} busy={CARD_PVP_NOTICE_BUSY.includes(gameState)} onAccept={()=>{if(!String(gameState).startsWith('CARD_'))setCardOrigin('home');setGameState('CARD_TOP');}}/>
         {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{void exitCardBattle();}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={playCardBgm} onQuickLoops={awardCardQuickLoops}
           quickRun={cardQuickRunView()}

@@ -70,6 +70,16 @@ const layoutIssues = async (page) => page.evaluate(() => {
 });
 const layoutSeen = [];
 // 写真には、押した跡の波紋(TapRippleLayer の白い丸)を写さない(社長に見せる写真のため)
+// カードランクが上がったときの「RANK UP!」の演出(押すと閉じる)が結果の画面に重なると、結果の画面のボタンが押せない(2026-10-30 カードランクの演出が入ってから)。
+//   結果の画面のボタンを押す前に、出ていれば押して閉じる(何段か続けて上がることがあるので、消えるまで)
+const closeRankUp = async (page) => {
+  for (let i = 0; i < 6; i++) {
+    const fx = page.locator('[data-player-rank-up-fx]').first();
+    if (!(await fx.count())) return;
+    await fx.click({ force: true }).catch(() => {});
+    await page.waitForTimeout(500);
+  }
+};
 const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, `${name}.png`), style: 'div[style*="2147483647"] > span { display: none !important; }' }).catch(() => {}); } };
   try {
     browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
@@ -589,7 +599,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const added = Object.keys(after.all).filter((k) => !(k in before) && !k.startsWith('mh_card_') && k !== BEAT_KEY && !volatile.test(k));
     check('⑧ 新しく増えた保存キーは mh_card_* とビートPの残高だけ', added.length === 0, added.join(', '));
     // ⑬ 結果の画面の「クイック周回 ◯周ぶん」(デバッグの見本。NORMAL の勝ち = 16周ぶん・保存しない)
-    await page.locator('[data-card-top="result"] button').first().click();
+    await closeRankUp(page); await page.locator('[data-card-top="result"] button').first().click();
     await page.waitForTimeout(300);
     const demoTxt = {};
     for (const k of ['in', 'out']) {
@@ -597,7 +607,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.waitForTimeout(300);
       demoTxt[k] = (await page.locator('[data-card-quick-loops]').count()) ? await page.locator('[data-card-quick-loops]').innerText() : '';
       await shot(page, `16-result-loops-${k}`);
-      await page.locator('[data-card-top="result"] button').first().click();
+      await closeRankUp(page); await page.locator('[data-card-top="result"] button').first().click();
       await page.waitForTimeout(300);
     }
     // ⑬ 助手の絵は、どの子も同じ大きさ・足元を枠の下にそろえる(描かれている所の高さが枠の高さ、または幅いっぱい)
@@ -616,7 +626,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       });
       if (SHOT) await shot(page, `17-art-${id}`);
       if (!m || !(m.h >= m.boxH - 2 || m.w >= m.boxW - 2)) artBad.push(`${id}:${JSON.stringify(m)}`);
-      await page.locator('[data-card-top="result"] button').first().click();
+      await closeRankUp(page); await page.locator('[data-card-top="result"] button').first().click();
       await page.waitForTimeout(250);
     }
     check(`⑬ 結果の画面の助手の絵が、${whoIds.length}人とも同じ大きさで足元が枠の下にそろう`, whoIds.length >= 6 && artBad.length === 0, artBad.join(' / ') || whoIds.join('・'));
@@ -741,11 +751,11 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const dexModes = await page.locator('[data-card-dex] [role="tab"]').count();
     // 混血・派生の数はデータから数える(2026-10-25 に派生25枚が増えた。図鑑だけの子も並ぶ)
     const hybridCount = await page.evaluate(() => Object.values(CARD_BATTLE_DATA.monsters).filter((m) => String(m.wave) === 'hybrid').length);
-    check('⑮ カード図鑑: 見かたのタブが3つ', dexModes === 3, JSON.stringify({ dexModes }));
+    check('⑮ カード図鑑: 見かたのタブが4つ(パック別・血統別・サブ血統別・種類別。サブ血統別は 2026-10-30)', dexModes === 4, JSON.stringify({ dexModes }));
     check('⑮ カード図鑑: 第1〜8弾+混血のタブで、第1弾が並び(見出しは「第1弾 ◯ / ◯」)、集めた種類が持っている種類と同じ数・混血のタブ・持っているだけの絞り込みが効く', dexTabs === 9 && /^\(第1弾 \d+ \/ \d+\)$/.test(dexPart1) && Number(dexTotal) >= 20 && Number(dexTotal) === ownedKinds && dex1 >= 45 && dex1 <= 60 && haveTiles >= 1 && dexH === hybridCount && hybridCount >= 15 && dexHHave === 0, JSON.stringify({ dexTabs, dexPart1, dexTotal, ownedKinds, dex1, haveTiles, dexH, hybridCount, dexHHave }));
     // ⑮-2 血統別・種類別(2026-10-26 社長): 札の数・札ごとの集めた数・種類の言葉と並びがデッキ編成の絞り込みと同じ
     await page.locator('[data-card-dex-show="all"]').click();
-    await page.getByRole('tab', { name: '血統別' }).click();
+    await page.getByRole('tab', { name: '血統別', exact: true }).click();
     await page.waitForTimeout(200);
     const spTabs = await page.locator('[data-card-dex-tabs="species"] [data-card-dex-tab]').count();
     const spFirst = await page.locator('[data-card-dex-tile]').count();
@@ -753,6 +763,22 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const spLabel = await page.locator('[data-card-dex-tabs="species"] [data-card-dex-tab]').first().evaluate((e) => e.firstChild.textContent);
     const spWant = await page.evaluate(() => CARD_PACKS.reduce((a, p) => a + p.species.length, 0));
     if (SHOT) await shot(page, '24b-dex-species');
+    // ⑮-3 サブ血統別(2026-10-30 社長「サブ血統別も作って」): モンスターのカードだけ・純血は自分の血統の「純血」、混血は副血統の側。副血統が分からない子は「不明」
+    await page.getByRole('tab', { name: 'サブ血統別', exact: true }).click();
+    await page.waitForTimeout(200);
+    const subFirstHeads = await page.locator('[data-card-dex-head]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-dex-head')));
+    const subTiles = await page.locator('[data-card-dex-tile]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-dex-tile')));
+    const subWant = await page.evaluate(() => { const sp = CARD_PACKS[0].species[0]; return Object.values(CARD_BATTLE_DATA.monsters).filter((m) => cardDexAll(CARD_BATTLE_DATA).includes(m.no) && (String(m.wave) === 'hybrid' ? m.sub === sp : m.species === sp)).map((m) => m.no).sort(); });
+    await page.locator('[data-card-dex-tabs="sub"] [data-card-dex-tab="unknown"]').click();
+    await page.waitForTimeout(150);
+    const unknownTiles = await page.locator('[data-card-dex-tile]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-dex-tile')));
+    const unknownHead = await page.locator('[data-card-dex-head]').allInnerTexts();
+    const unknownLabel = await page.locator('[data-card-dex-tabs="sub"] [data-card-dex-tab="unknown"]').evaluate((e) => e.firstChild.textContent);
+    const subOver = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+    if (SHOT) await shot(page, '24b2-dex-sub');
+    check('⑮-3 カード図鑑: サブ血統別(最初の血統は純血・混血の見出しで、副血統がこの血統のモンスターだけ・「？？？(レア)」にジェントル・横にはみ出さない)',
+      subFirstHeads[0] === 'pure' && JSON.stringify([...subTiles].sort()) === JSON.stringify(subWant) && unknownTiles.includes('C-020') && /めずらしい種\(レア\)/.test(unknownHead.join(' ')) && unknownLabel === '？？？(レア)' && !subOver,
+      JSON.stringify({ subFirstHeads, n: subTiles.length, want: subWant.length, unknownTiles, unknownHead, subOver }));
     await page.getByRole('tab', { name: '種類別' }).click();
     await page.waitForTimeout(200);
     const kindLabels = await page.locator('[data-card-dex-tabs="kind"] [data-card-dex-tab]').evaluateAll((els) => els.map((e) => e.firstChild.textContent));
@@ -940,7 +966,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       if (SHOT) await shot(page, '35-record');
       const recText = await page.locator('[data-card-record]').innerText().catch(() => '');
       await page.locator('[data-card-record-view] header button').first().click();
-      // ⑱ ランキング: 4つのタブ(勝ち数・連勝・図鑑・マルチ)。マルチは準備中の札。表が無い/空でも壊れない。公開前は「見本です」と出る
+      // ⑱ ランキング: 5つのタブ(勝ち数・連勝・図鑑・マルチ＋カードランク。カードランクのタブは 2026-10-30 の ae4cb5314 から)。マルチは準備中の札。表が無い/空でも壊れない。公開前は「見本です」と出る
       await page.locator('[data-card-ranking-open]').click();
       await page.locator('[data-card-ranking="wins"]').waitFor({ timeout: 10000 });
       await page.waitForFunction(() => !/読み込み中/.test((document.querySelector('[data-card-ranking]') || {}).textContent || ''), null, { timeout: 15000 }).catch(() => {});
@@ -949,7 +975,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.locator('[data-card-ranking-tab="multi"]').click();
       const multiSoon = /準備中/.test(await page.locator('[data-card-ranking-multi]').innerText().catch(() => ''));
       if (SHOT) await shot(page, '37-ranking-multi');
-      check('⑱ ランキング: 勝ち数(今週・通算×5難易度)・連勝・図鑑・マルチ(公開前は準備中・公開後は札なし)。公開前は見本の案内が出て、公開後は合言葉の端末でも HOME から入れば送るので出ない。表が無くても壊れない', rankWins.tabs === 4 && rankWins.levels === 5 && rankWins.periods === 2 && rankWins.mine && (RELEASED ? !rankWins.preview : rankWins.preview) && rankWins.state !== 'other' && (RELEASED ? !multiSoon : multiSoon), JSON.stringify({ ...rankWins, multiSoon }));
+      check('⑱ ランキング: 勝ち数(今週・通算×5難易度)・連勝・図鑑・マルチ(公開前は準備中・公開後は札なし)。公開前は見本の案内が出て、公開後は合言葉の端末でも HOME から入れば送るので出ない。表が無くても壊れない', rankWins.tabs === 5 && rankWins.levels === 5 && rankWins.periods === 2 && rankWins.mine && (RELEASED ? !rankWins.preview : rankWins.preview) && rankWins.state !== 'other' && (RELEASED ? !multiSoon : multiSoon), JSON.stringify({ ...rankWins, multiSoon }));
       await page.locator('[data-card-ranking] header button').first().click();
       await page.locator('[data-card-options-open]').click();
       await page.locator('[data-card-options]').waitFor({ timeout: 10000 });
