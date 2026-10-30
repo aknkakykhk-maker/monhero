@@ -317,7 +317,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       const box = document.querySelector(`button[data-slot-index="${slot}"]`);
       if (!box) return { marks: 0, hits: ['枠が無い'] };
       // ★2026-10-29: タクティクス/レイドでは溜まる物もEXの効果の札(data-ex-effect・ExEffectChips)にまとめた。どちらの形でも同じように測る
-      const marks = [...box.querySelectorAll('[data-stack-mark], [data-ex-effect], [data-ex-effect-more]')];
+      const marks = [...box.querySelectorAll('[data-stack-mark], [data-ex-effect]:not([data-ex-effect-hidden]), [data-ex-effect-more]')];
       const wrap = box.querySelector('[data-stack-marks]') || box.querySelector('[data-ex-effect-chips]');
       const vis = (el) => { const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.opacity !== '0'; };
       const others = [...box.querySelectorAll('*')].filter((el) => el.children.length === 0 && (el.textContent || '').trim()
