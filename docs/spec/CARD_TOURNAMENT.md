@@ -29,3 +29,8 @@
 4. 大会の行を足す(名前・開催日・受付の終わり・ごほうびの表)
 
 ルールを直したら、`node tools/build.js` で `game.js` を作り直し、関数を出し直す(出し直さないと、サーバは古いルールのまま回す)。
+
+### 配り方(2026-10-30 から)
+
+- `game.js` は大きくて窓口の道具で送れないため、出すときは `index.ts` の `import * as game from "./game.js"` だけを、jsDelivr のコミット固定の URL(`https://cdn.jsdelivr.net/gh/aknkakykhk-maker/monhero@<コミット>/supabase/functions/card-tournament-run/game.js`)に替えて出す。`core.js` はそのまま送る。リポジトリの `index.ts` は `./game.js` のままにしておく
+- `game.js` か `core.js` が変わる PR(カードのルールの部品 82-card-* を直した PR も、ビルドで `game.js` が変わる)をマージしたら、その PR 番号をカード部長へ伝える。窓口が新しいコミットの URL で出し直す
