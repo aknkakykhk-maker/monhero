@@ -35,6 +35,12 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-30 14:01", type:'update', title:'ほかのブリーダーとの対戦のごほうびが MASTER と同じになりました', status:'new', group:'cardBattle',
+    items:[
+      'フリー対戦の「ほかのブリーダー」で戦ったときにもらえるビートPやカードランクの経験値が、相手の賢さにかかわらず、助手の MASTER と同じになりました。',
+    ],
+  },
+  {
     date: "2026-10-30 12:13", type:'update', title:'デッキを20個まで組めるようになりました', status:'new', group:'cardBattle',
     items:[
       'MFバトルカードのデッキを、20個まで組めるようになりました。',

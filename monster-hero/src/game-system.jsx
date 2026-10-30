@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6b1555f5677f3f9e
+// generated-sha256: 7e12dcbeb92b91f4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -61444,15 +61444,16 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         setView('result');
         return;
       }
-      // みんなのデッキ(95)の登録デッキとの対戦: ビートPとクイック周回(助手と対戦と同じ強さの表)と、表への「戦った」の知らせだけ。
+      // みんなのデッキ(95)の登録デッキとの対戦: ビートPとクイック周回と、表への「戦った」の知らせだけ。
       //   記録(助手ごとの勝ち数)・ランキング・強さの解放・着替えの解放・助手のひとことは通らない(助手と戦ったのではないため)
+      //   もらえる物(ビートP・クイック周回・カードランクの経験値)は、相手の賢さにかかわらず助手と対戦 MASTER と同じ
+      //   (2026-10-30 社長「ブリーダーのデッキとの対戦は難易度低いとやる意味なくなるから、経験値等はマスターと同等にして」)。相手の打ち方の強さは賢さ(game.level)のまま
       if (game.share) {
         const facts = cardResultFacts(st, CARD_ME);
         const fresh = await freshCardSave();
-        const reward = cardCpuReward(fresh.daily, game.level, outcome, facts);
-        const loops = cardCpuLoops(game.level, outcome, facts);
-        // MFバトルカードのレベル(96): 相手のデッキの賢さ(game.level)で数える
-        const levelGain = typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: game.level, outcome, debug }) : { entries: [] };
+        const reward = cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts);
+        const loops = cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts);
+        const levelGain = typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: CARD_SHARE_REWARD_LEVEL, outcome, debug }) : { entries: [] };
         const rankPoint = (levelGain.gain && levelGain.gain.points) || 0;
         const ok = await persist({ point: save.point + reward.total + rankPoint, daily: reward.daily }, fresh.raw, levelGain.entries);
         if (ok && levelGain.gain && levelGain.gain.to > levelGain.gain.from && !debug) void cardRankPut(rank && rank.profile);
@@ -67266,6 +67267,8 @@ let _cardShareUnavailable = false; // 表がまだ無い(SQL 未適用)と分か
 // 公開の印。区切り⑤(報酬)まで入るまでは、デバッグ設定から入ったときだけ押せる
 const cardShareOpen = () => true;
 
+// 登録デッキとの対戦でもらえる物(ビートP・クイック周回・カードランクの経験値)は、相手の賢さにかかわらずこの強さの表で数える(84 が使う。2026-10-30 社長)
+const CARD_SHARE_REWARD_LEVEL = 'master';
 // 賢さに数える戦術カードの枚数(場面が合わない・同じもの・ほとんど当たらないものは数えない。82 の cardTacticCountedRows)
 const cardShareRowsCount = (frames) => cardTacticCountedRows(frames);
 const cardShareSmartText = (tactics) => {
@@ -67567,7 +67570,7 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
         )}
         {mine !== undefined && !off && tab === 'fight' && (<>
           <div className={SCREEN_PANEL_CLASS}>
-            <div className="text-[12px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('相手の強さは、登録した人が入れた戦術カードで決まります(賢さ)。もらえるビートPは、その賢さの助手と対戦と同じです')}</div>
+            <div className="text-[12px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('相手の強さは、登録した人が入れた戦術カードで決まります(賢さ)。もらえるビートPや経験値は、賢さにかかわらず助手と対戦の MASTER と同じです')}</div>
             {fightIssues.length > 0 && <p className="mt-1 text-[12px] font-bold text-rose-200" style={JA_WRAP_STYLE}>{jaWrap(`使うデッキ: ${fightIssues[0]}`)}</p>}
           </div>
           {rented && part !== 'fight' && (

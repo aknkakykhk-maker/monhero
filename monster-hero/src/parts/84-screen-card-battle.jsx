@@ -2955,15 +2955,16 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         setView('result');
         return;
       }
-      // みんなのデッキ(95)の登録デッキとの対戦: ビートPとクイック周回(助手と対戦と同じ強さの表)と、表への「戦った」の知らせだけ。
+      // みんなのデッキ(95)の登録デッキとの対戦: ビートPとクイック周回と、表への「戦った」の知らせだけ。
       //   記録(助手ごとの勝ち数)・ランキング・強さの解放・着替えの解放・助手のひとことは通らない(助手と戦ったのではないため)
+      //   もらえる物(ビートP・クイック周回・カードランクの経験値)は、相手の賢さにかかわらず助手と対戦 MASTER と同じ
+      //   (2026-10-30 社長「ブリーダーのデッキとの対戦は難易度低いとやる意味なくなるから、経験値等はマスターと同等にして」)。相手の打ち方の強さは賢さ(game.level)のまま
       if (game.share) {
         const facts = cardResultFacts(st, CARD_ME);
         const fresh = await freshCardSave();
-        const reward = cardCpuReward(fresh.daily, game.level, outcome, facts);
-        const loops = cardCpuLoops(game.level, outcome, facts);
-        // MFバトルカードのレベル(96): 相手のデッキの賢さ(game.level)で数える
-        const levelGain = typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: game.level, outcome, debug }) : { entries: [] };
+        const reward = cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts);
+        const loops = cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts);
+        const levelGain = typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: CARD_SHARE_REWARD_LEVEL, outcome, debug }) : { entries: [] };
         const rankPoint = (levelGain.gain && levelGain.gain.points) || 0;
         const ok = await persist({ point: save.point + reward.total + rankPoint, daily: reward.daily }, fresh.raw, levelGain.entries);
         if (ok && levelGain.gain && levelGain.gain.to > levelGain.gain.from && !debug) void cardRankPut(rank && rank.profile);
