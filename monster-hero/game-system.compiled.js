@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d6f04f88a473b90e
+// source-sha256: 1a76fd46c055a4de
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10598,40 +10598,78 @@ const monsterArtFitStyle = (baseId, style) => MONSTER_ART_CONTAIN_IDS.includes(b
   ...style,
   objectFit: 'contain'
 } : style;
-const MONSTER_ART_SCALE = Object.freeze({
-  Pixie: Object.freeze({
-    scale: 1.17,
-    ty: -0.049
-  }),
-  Ark: Object.freeze({
-    scale: 1.10,
-    ty: 0
-  }),
-  Plant: Object.freeze({
-    scale: 1.08,
-    ty: 0
-  }),
-  Snegurochka: Object.freeze({
-    scale: 1.09,
-    ty: 0
-  }),
-  Zan: Object.freeze({
-    scale: 1.10,
-    ty: 0
-  })
-});
+const MONSTER_ART_SCALE_MAX_W = 0.98;
+let _monsterArtScaleTable = null;
+const monsterArtScaleTable = () => {
+  if (_monsterArtScaleTable) return _monsterArtScaleTable;
+  const table = {};
+  const boxes = typeof ART_CONTENT_BOXES === 'object' && ART_CONTENT_BOXES ? ART_CONTENT_BOXES : null;
+  const all = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : null;
+  if (!boxes || !all) return table;
+  const drafts = typeof UPCOMING_MONSTER_DRAFTS === 'object' && UPCOMING_MONSTER_DRAFTS ? UPCOMING_MONSTER_DRAFTS : {};
+  const lineageMap = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP : {};
+  const groups = {};
+  for (const [id, mon] of Object.entries({
+    ...drafts,
+    ...all
+  })) {
+    if (!mon || !mon.imgUrl) continue;
+    const main = (lineageMap[id] || mon.draftLineage || {}).main;
+    const box = boxes[String(mon.imgUrl).split('?')[0].replace(/^images\//, '')];
+    if (!main || !Array.isArray(box)) continue;
+    const [x0, y0, x1, y1, a] = box;
+    const wide = a >= 1;
+    const iw = wide ? 1 : a,
+      ih = wide ? 1 / a : 1;
+    const ox = (1 - iw) / 2,
+      oy = (1 - ih) / 2;
+    (groups[main] = groups[main] || []).push({
+      id,
+      h: (y1 - y0) * ih,
+      w: (x1 - x0) * iw,
+      cx: ox + (x0 + x1) / 2 * iw,
+      cy: oy + (y0 + y1) / 2 * ih
+    });
+  }
+  for (const list of Object.values(groups)) {
+    if (list.length < 2) continue;
+    const target = Math.max(...list.map(r => r.h));
+    for (const r of list) {
+      const scale = Math.min(target / r.h, MONSTER_ART_SCALE_MAX_W / r.w);
+      if (!(scale > 1.02)) continue;
+      table[r.id] = Object.freeze({
+        scale: Math.round(scale * 1000) / 1000,
+        tx: Math.round(-(r.cx - 0.5) * scale * 1000) / 1000,
+        ty: Math.round(-(r.cy - 0.5) * scale * 1000) / 1000
+      });
+    }
+  }
+  _monsterArtScaleTable = table;
+  return table;
+};
 const _artPathOf = url => typeof url === 'string' ? url.split('?')[0] : '';
 const monsterArtScaleOf = (baseId, src, className, style) => {
-  const def = baseId && Object.prototype.hasOwnProperty.call(MONSTER_ART_SCALE, baseId) ? MONSTER_ART_SCALE[baseId] : null;
+  const table = monsterArtScaleTable();
+  const def = baseId && Object.prototype.hasOwnProperty.call(table, baseId) ? table[baseId] : null;
   if (!def) return null;
-  const mon = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS[baseId] : null;
+  const mon = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS && ALL_PLAYER_MONSTERS[baseId] || typeof UPCOMING_MONSTER_DRAFTS === 'object' && UPCOMING_MONSTER_DRAFTS && UPCOMING_MONSTER_DRAFTS[baseId] || null;
   if (!mon || !src || _artPathOf(src) !== _artPathOf(mon.imgUrl)) return null;
   const fit = style && style.objectFit || (/(^|\s)object-contain(\s|$)/.test(className || '') ? 'contain' : '');
   return fit === 'contain' ? def : null;
 };
+const monsterArtScaleBySrc = src => {
+  if (!src) return null;
+  const path = _artPathOf(src);
+  const lists = [typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS, typeof UPCOMING_MONSTER_DRAFTS === 'object' && UPCOMING_MONSTER_DRAFTS];
+  for (const list of lists) {
+    if (!list) continue;
+    for (const [id, mon] of Object.entries(list)) if (mon && _artPathOf(mon.imgUrl) === path) return monsterArtScaleOf(id, src, 'object-contain', null);
+  }
+  return null;
+};
 const monsterArtScaleTransform = (def, base) => {
   if (!def) return base;
-  const own = `${def.ty ? `translateY(${(def.ty * 100).toFixed(1)}%) ` : ''}scale(${def.scale})`;
+  const own = `${def.tx || def.ty ? `translate(${(def.tx * 100).toFixed(1)}%, ${(def.ty * 100).toFixed(1)}%) ` : ''}scale(${def.scale})`;
   return base ? `${base} ${own}` : own;
 };
 let _monsterArtContainUrls = null;
@@ -10987,7 +11025,7 @@ const bakeDyedMonsterCanvas = async (opts, size) => {
   sctx.imageSmoothingQuality = 'high';
   const w = out.width * def.scale,
     h = out.height * def.scale;
-  sctx.drawImage(out, (out.width - w) / 2, (out.height - h) / 2 + def.ty * out.height, w, h);
+  sctx.drawImage(out, (out.width - w) / 2 + def.tx * out.width, (out.height - h) / 2 + def.ty * out.height, w, h);
   return scaled;
 };
 const _bakeDyedMonsterCanvasRaw = async ({
@@ -16781,6 +16819,12 @@ const HomeProfileIcon = ({
     })
   }));
 };
+const dexIconArtScale = (src, lineage) => {
+  const def = !lineage && typeof monsterArtScaleBySrc === 'function' ? monsterArtScaleBySrc(src) : null;
+  return def ? {
+    transform: monsterArtScaleTransform(def)
+  } : null;
+};
 const DexMonsterIcon = ({
   src,
   alt = '',
@@ -16797,6 +16841,7 @@ const DexMonsterIcon = ({
   className: "w-full h-full object-contain",
   style: {
     padding: '10%',
+    ...(dexIconArtScale(src, lineage) || {}),
     ...(hidden ? {
       filter: 'brightness(0)',
       opacity: 0.6
@@ -26812,7 +26857,7 @@ const MonsterIdleArt = ({
     if (!artScale) return origin;
     const m = /^\s*(-?[\d.]+)%\s+(-?[\d.]+)%\s*$/.exec(String(origin || ''));
     if (!m) return origin;
-    const x = 50 + artScale.scale * (Number(m[1]) - 50),
+    const x = 50 + artScale.scale * (Number(m[1]) - 50) + (artScale.tx || 0) * 100,
       y = 50 + artScale.scale * (Number(m[2]) - 50) + artScale.ty * 100;
     return `${x.toFixed(2)}% ${y.toFixed(2)}%`;
   };
@@ -94917,13 +94962,15 @@ const cardTourPlay = (db, sideA, sideB, {
     st = next;
   }
   const kos = [cardKoCount(st, 0), cardKoCount(st, 1)];
+  const decks = [A.deck, B.deck];
   if (st.winner === 0 || st.winner === 1) return {
     winner: st.winner,
     kos,
     acts,
     steps,
     decided: /山札/.test(String(st.reason || '')) ? 'deck' : 'ko',
-    rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null
+    rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null,
+    decks
   };
   const life = p => st.players[p].mons.reduce((a, m) => a + Math.max(0, m.ko ? 0 : m.life), 0);
   const winner = kos[0] !== kos[1] ? kos[0] > kos[1] ? 0 : 1 : life(0) !== life(1) ? life(0) > life(1) ? 0 : 1 : cardOther(first);
@@ -94933,7 +94980,8 @@ const cardTourPlay = (db, sideA, sideB, {
     acts,
     steps,
     decided: 'limit',
-    rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null
+    rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null,
+    decks
   };
 };
 const cardTourNormalizeRewards = raw => {
@@ -97151,6 +97199,19 @@ const cardMonArt = mon => {
   if (m && m.imgUrl) return m.imgUrl;
   return cardNewSpeciesArt()[mon.species] || null;
 };
+const CARD_FIELD_ART_SPREAD = 1.15;
+const cardFieldArtTransform = (src, flip) => {
+  const box = typeof cardVsBoxOf === 'function' ? cardVsBoxOf(src) : null;
+  if (!box) return null;
+  const [x0, y0, x1, y1] = box;
+  const fw = Math.max(0.01, x1 - x0),
+    fh = Math.max(0.01, y1 - y0);
+  const k = Math.min(CARD_FIELD_ART_SPREAD / fw, 1 / fh);
+  if (!(k > 1.02)) return null;
+  const tx = (flip ? 1 : -1) * k * ((x0 + x1) / 2 - 0.5) * 100;
+  const ty = (1 - (0.5 + k * (y1 - 0.5))) * 100;
+  return `translate(${tx.toFixed(1)}%, ${ty.toFixed(1)}%) scale(${(flip ? -k : k).toFixed(3)}, ${k.toFixed(3)})`;
+};
 const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
 const cardCaption = c => !c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : c.kind === 'fld' ? '全体' : Number.isFinite(c.damage) ? `ダメージ${c.damage}` : '';
 const cardMonStatuses = (st, p, m) => {
@@ -98066,13 +98127,19 @@ const CardMonSlot = ({
   }, "攻撃できない")));
   const wideArtH = 'clamp(40px, calc((var(--mh-vh, 100svh) - 262px) / 2), 64px)';
   const artSize = wide ? 'max-w-[88px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : opp ? 'max-h-[78px] max-w-[96px]' : 'max-h-[106px] max-w-[126px]';
+  const artFit = art ? cardFieldArtTransform(art, opp) : null;
   const imgEl = art ? React.createElement("img", {
     src: art,
     alt: "",
-    style: wide ? {
-      maxHeight: wideArtH
-    } : undefined,
-    className: `${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''}`
+    style: {
+      ...(wide ? {
+        maxHeight: wideArtH
+      } : null),
+      ...(artFit ? {
+        transform: artFit
+      } : null)
+    },
+    className: `${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp && !artFit ? '-scale-x-100' : ''}`
   }) : React.createElement("img", {
     src: CARD_IMG(cardMonsterOf(db, mon.no).img),
     alt: "",

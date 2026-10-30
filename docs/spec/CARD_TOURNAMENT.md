@@ -1,0 +1,31 @@
+# MFバトルカード大会(サーバ側)
+
+決まった仕様と絵: [`docs/progress/card-tournament/plan/README.md`](../progress/card-tournament/plan/README.md)
+
+## 置き場所
+
+| 物 | 場所 |
+| --- | --- |
+| 大会の計算(組分け・日程・順位・1試合・ごほうび) | `monster-hero/src/parts/82-card-tournament-core.jsx`(画面と保存を触らない部品) |
+| サーバの上の関数 | `supabase/functions/card-tournament-run/`(`index.ts` 入口・`core.js` 中身・`game.js` ルールの写し) |
+| ルールの写しの作り方 | `tools/build-card-tournament-bundle.js`(`node tools/build.js` が一緒に作り直す。手で直さない) |
+| 表と関数 | `docs/sql/card-tournament/CARD_TOURNAMENT_APPLY.sql` |
+| 決まった時刻に呼ぶ仕組み | `docs/sql/card-tournament/CARD_TOURNAMENT_SCHEDULE.sql` |
+| 検査 | `tools/card/card-tournament-core-check.js`・`tools/card/card-tournament-run-check.js` |
+
+## 1日の流れ(日本時間)
+
+- 0:30 に関数が呼ばれる(1:30・2:30 はやり直し。何度呼ばれても同じになる)
+  1. 受付の終わりを過ぎた大会: 登録デッキの写しを取り、組分けと日程を作る(デッキが壊れた人は外す)
+  2. その日までの試合を回す。実況・解説は AI(失敗したら用意した台詞)
+  3. 段が終わったら、頂上決戦の日程を作るか、順位とごほうびを書いて終わる
+- 4:00 から結果を見せる(`card_tournament_view`・`card_tournament_match` は `visible_at` を過ぎた試合しか返さない)
+
+## 公開の手順(窓口)
+
+1. `CARD_TOURNAMENT_APPLY.sql` を流す(足すだけ。いまの表は読むだけ)
+2. 関数 `card-tournament-run` を出す(verify_jwt を外す。`index.ts`・`core.js`・`game.js` の3つ)。Secrets は既存の `ANTHROPIC_API_KEY` を読む
+3. `CARD_TOURNAMENT_SCHEDULE.sql` を流す(合言葉はサーバの中で作る。だれも見ない)
+4. 大会の行を足す(名前・開催日・受付の終わり・ごほうびの表)
+
+ルールを直したら、`node tools/build.js` で `game.js` を作り直し、関数を出し直す(出し直さないと、サーバは古いルールのまま回す)。
