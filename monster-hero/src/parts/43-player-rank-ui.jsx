@@ -248,10 +248,11 @@ const PLAYER_RANK_UP_FX_CSS = `
 .mh-prfx-rays{position:absolute;left:50%;top:38%;width:560px;height:560px;margin:-280px 0 0 -280px;border-radius:50%;opacity:0;pointer-events:none;background:repeating-conic-gradient(from 0deg,var(--prfx-ray) 0 8deg,transparent 8deg 24deg);-webkit-mask:radial-gradient(circle,#000 25%,transparent 68%);mask:radial-gradient(circle,#000 25%,transparent 68%)}
 .mh-prfx-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
 .mh-prfx-band{align-self:stretch;text-align:center;padding:8px 0;font-weight:900;font-size:20px;line-height:1.2;color:#fff;-webkit-text-stroke:4px rgba(0,0,0,.6);paint-order:stroke fill;opacity:0;background:linear-gradient(90deg,transparent,var(--prfx-band),transparent)}
-.mh-prfx-gains{list-style:none;margin:0;padding:0;width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+/* 2列にするのは、1つの札に字が入りきる幅(220px)が取れるときだけ(2026-10-30 カード部の検査「390幅でセッション券が札の外」) */
+.mh-prfx-gains{list-style:none;margin:0;padding:0;width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
 .mh-prfx-gain{display:flex;align-items:center;gap:10px;min-width:0;padding:8px 12px;border-radius:14px;background:rgba(15,10,35,.88);border:1px solid rgba(253,224,71,.45);opacity:0}
 .mh-prfx-gain.bonus{border-color:#f0abfc;box-shadow:0 0 18px rgba(240,171,252,.45)}
-.mh-prfx-gain b{display:block;font-size:18px;font-weight:900;line-height:1.2;color:#fef08a;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mh-prfx-gain b{display:block;font-size:18px;font-weight:900;line-height:1.2;color:#fef08a;font-variant-numeric:tabular-nums;word-break:keep-all;overflow-wrap:anywhere}
 .mh-prfx-gain small{display:block;font-size:10px;font-weight:700;color:#cbd5e1}
 .mh-prfx-gain .ico{flex:none;font-size:24px}
 .mh-prfx-hint{flex:none;text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,.6)}
@@ -260,7 +261,7 @@ const PLAYER_RANK_UP_FX_CSS = `
   .mh-prfx-stage{flex-direction:row;gap:20px;padding:max(12px,var(--mh-sa-top,0px)) max(16px,var(--mh-sa-right,0px)) max(12px,var(--mh-sa-bottom,0px)) max(16px,var(--mh-sa-left,0px))}
   .mh-prfx-side{flex:1 1 0;min-width:0;max-width:560px}
   .mh-prfx-title{font-size:26px}
-  .mh-prfx-gains{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+  .mh-prfx-gains{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
   .mh-prfx-gain{padding:6px 10px}
   .mh-prfx-gain b{font-size:16px}
   .mh-prfx-band{font-size:17px;padding:6px 0}
