@@ -56,6 +56,10 @@ const friendsDayText = (day) => {
 // onCardShareGo … フレンドのデッキの札の「このデッキと戦う」(95 の CardShareDeckActions)から MFバトルカードへ移る(60-app)
 function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack, onTargetHandled, onIncomingCount, onOpenMonsterDetail, onCardShareGo = null }) {
   const [tab, setTab] = React.useState(Number(requestCount) > 0 ? 'requests' : 'friends');
+  // 一覧 → フレンドのプロフィール → 戻る で、一覧がいちばん上に戻っていた(2026-10-30 社長「フレンドをタップして戻ったら1番上に戻るから記憶するようにして」)。
+  // 押す前の位置と押した人を覚えておき、戻ったらその位置へ。読み直しで並びが変わって押した人が見えなければ、その人が見える所まで動かす
+  const listScrollRef = React.useRef(null);
+  const listScrollMemoRef = React.useRef({ top: 0, rowId: null });
   const [phase, setPhase] = React.useState('loading');   // loading / ready / notready / noid / error
   const [selfId, setSelfId] = React.useState('');
   const [myCode, setMyCode] = React.useState('');
@@ -230,7 +234,20 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
     setSelected(null);
     run(() => (ask.kind === 'remove' ? sbRemoveFriend(selfId, ask.otherId) : sbBlockFriendUser(selfId, ask.otherId)));
   };
+  React.useLayoutEffect(() => {
+    if (selected) return;
+    const box = listScrollRef.current, memo = listScrollMemoRef.current;
+    if (!box || !memo.rowId) return;
+    box.scrollTop = memo.top;
+    const row = [...box.querySelectorAll('[data-friend-row]')].find((el) => el.getAttribute('data-friend-row') === memo.rowId);
+    if (row) {
+      const b = box.getBoundingClientRect(), r = row.getBoundingClientRect();
+      if (r.top < b.top || r.bottom > b.bottom) row.scrollIntoView({ block: 'center' });
+    }
+  }, [selected]);
   const openProfile = async (view) => {
+    // 一覧のどこを見ていたかを覚えておく(戻ったときにその位置へ戻す。画面を開いているあいだだけ・保存しない)
+    listScrollMemoRef.current = { top: listScrollRef.current ? listScrollRef.current.scrollTop : 0, rowId: view && view.otherId ? view.otherId : null };
     setSelected(view);
     setProfileTab('overview');
     setSummary({ status: 'loading', entry: null });
@@ -502,7 +519,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
       <ScreenHead title="フレンド" accent="text-pink-300" onBack={onBack} backLabel="プロフィールへ戻る"/>
       <div className="mb-2 shrink-0"><AssistantBubble scene="friends" compact/></div>
       <ScreenTabs items={tabs} value={tab} onChange={(id) => { setTab(id); setNotice(null); }}/>
-      <div className={`${SCREEN_LIST_CLASS} pb-4`}>
+      <div ref={listScrollRef} className={`${SCREEN_LIST_CLASS} pb-4`}>
         {noticeBox}
         {tab === 'friends' && (groups.friends.length === 0
           ? <ScreenEmpty emoji="🤝" lines={['まだフレンドがいません', '「追加」から、フレンドコードで申請してみましょう']}

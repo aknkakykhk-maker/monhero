@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8f9e9710a0dfdb07
+// source-sha256: 6a63124383ea9d54
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -79095,6 +79095,11 @@ function FriendsScreen({
   onCardShareGo = null
 }) {
   const [tab, setTab] = React.useState(Number(requestCount) > 0 ? 'requests' : 'friends');
+  const listScrollRef = React.useRef(null);
+  const listScrollMemoRef = React.useRef({
+    top: 0,
+    rowId: null
+  });
   const [phase, setPhase] = React.useState('loading');
   const [selfId, setSelfId] = React.useState('');
   const [myCode, setMyCode] = React.useState('');
@@ -79337,7 +79342,26 @@ function FriendsScreen({
     setSelected(null);
     run(() => ask.kind === 'remove' ? sbRemoveFriend(selfId, ask.otherId) : sbBlockFriendUser(selfId, ask.otherId));
   };
+  React.useLayoutEffect(() => {
+    if (selected) return;
+    const box = listScrollRef.current,
+      memo = listScrollMemoRef.current;
+    if (!box || !memo.rowId) return;
+    box.scrollTop = memo.top;
+    const row = [...box.querySelectorAll('[data-friend-row]')].find(el => el.getAttribute('data-friend-row') === memo.rowId);
+    if (row) {
+      const b = box.getBoundingClientRect(),
+        r = row.getBoundingClientRect();
+      if (r.top < b.top || r.bottom > b.bottom) row.scrollIntoView({
+        block: 'center'
+      });
+    }
+  }, [selected]);
   const openProfile = async view => {
+    listScrollMemoRef.current = {
+      top: listScrollRef.current ? listScrollRef.current.scrollTop : 0,
+      rowId: view && view.otherId ? view.otherId : null
+    };
     setSelected(view);
     setProfileTab('overview');
     setSummary({
@@ -79773,6 +79797,7 @@ function FriendsScreen({
       setNotice(null);
     }
   }), React.createElement("div", {
+    ref: listScrollRef,
     className: `${SCREEN_LIST_CLASS} pb-4`
   }, noticeBox, tab === 'friends' && (groups.friends.length === 0 ? React.createElement(ScreenEmpty, {
     emoji: "🤝",
