@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dc1182a318e0970d
+// source-sha256: f1151a136b392c79
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -116035,61 +116035,37 @@ const CardRankChip = ({
     showName: showName
   }));
 };
+const cardRankRewardItems = (r, got = false) => {
+  if (!(r >= 2)) return [];
+  const g = cardRankRewardOf(r),
+    frame = CARD_LEVEL_FRAMES.find(f => f.at === r),
+    bonus = r % 5 === 0 ? r * 200 : 0;
+  return [{
+    icon: '💰',
+    text: `ビートP ${(g.point - bonus).toLocaleString()}`
+  }, ...(bonus ? [{
+    icon: '💰',
+    text: `ビートP ${bonus.toLocaleString()}`,
+    bonus: true
+  }] : []), ...(g.tickets ? [{
+    icon: '🎟️',
+    text: `カードパック券 ${g.tickets}枚`,
+    bonus: true
+  }] : []), ...(frame ? [{
+    icon: '🧠',
+    text: cardLevelFrameText(frame, got)
+  }] : [])];
+};
 const CardRankDetail = ({
   xp = 0,
   onClose
-}) => {
-  const info = cardLevelInfo(xp);
-  const up = cardRankUpcoming(info.level);
-  return React.createElement("div", {
-    "data-card-rank-detail": true,
-    role: "dialog",
-    "aria-modal": "true",
-    "aria-label": "カードランク",
-    className: "fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4",
-    onClick: onClose
-  }, React.createElement("div", {
-    className: "w-full max-w-[340px] rounded-2xl border-2 border-amber-200/70 bg-gradient-to-b from-violet-950 to-slate-950 p-4 text-white",
-    onClick: e => e.stopPropagation()
-  }, React.createElement("div", {
-    className: "flex justify-center"
-  }, React.createElement(PlayerRankBadge, {
-    kind: "card",
-    rank: info.level,
-    size: "lg"
-  })), React.createElement("div", {
-    className: "mt-3"
-  }, React.createElement(PlayerRankGauge, {
-    kind: "card",
-    info: {
-      rank: info.level,
-      into: info.into,
-      need: info.need
-    },
-    note: `次のランクまで あと${(info.need - info.into).toLocaleString()}`
-  })), React.createElement("b", {
-    className: "mt-3 block text-[13px] font-black text-amber-200"
-  }, "これからもらえる物"), React.createElement("ul", {
-    "data-card-rank-upcoming": true,
-    className: "mt-1 space-y-1 rounded-xl bg-black/35 px-2.5 py-2 text-[12px] font-bold leading-snug"
-  }, up.map(u => React.createElement("li", {
-    key: u.rank,
-    style: JA_WRAP_STYLE
-  }, React.createElement("b", {
-    className: "text-amber-100"
-  }, `ランク${u.rank}`), ` … ${u.text}`))), React.createElement("p", {
-    className: "mt-2 text-[11px] font-bold leading-relaxed text-slate-300",
-    style: JA_WRAP_STYLE
-  }, jaWrap('フリー対戦・マルチ対戦で戦うと経験値がたまります。強い相手ほど多く、マルチがいちばん多くたまります。その日はじめての勝ちは +30。投了・練習試合ではたまりません。')), React.createElement("button", {
-    type: "button",
-    "data-card-rank-detail-close": true,
-    onClick: () => {
-      Audio_.fgSe.tap();
-      onClose && onClose();
-    },
-    className: "mh-button mt-3 min-h-[44px] w-full rounded-xl text-[14px] font-black"
-  }, "とじる")));
-};
+}) => React.createElement(PlayerRankDetail, {
+  kind: "card",
+  xp: xp,
+  rewardsOf: cardRankRewardItems,
+  onClose: onClose,
+  how: 'フリー対戦・マルチ対戦で戦うと経験値がたまります。強い相手ほど多く、マルチがいちばん多くたまります。その日はじめての勝ちは +30。投了・練習試合ではたまりません。'
+});
 const cardRankFxGains = gain => {
   let bonusPoint = 0;
   for (let r = gain.from + 1; r <= gain.to; r++) if (r % 5 === 0) bonusPoint += r * 200;
