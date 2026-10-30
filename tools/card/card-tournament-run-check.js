@@ -66,6 +66,9 @@ const fakeDb = (decks) => {
     const db = fakeDb(decks);
     db.s.tours.push({ id: 'cup1', name: '第1回', open_on: '2026-11-01', entry_until: '2026-11-03T00:00:00+09:00', status: 'entry', rewards: { ranks: [{ point: 3000, title: '優勝' }], participation: { point: 500 }, perWin: 100 } });
     ['p0', 'p1', 'p2', 'bad'].forEach((o, i) => db.s.entries.push({ tournament_id: 'cup1', seat_id: o, owner_id: o, is_assist: false, dropped: false, entered_at: `2026-11-01T0${i}:00:00+09:00` }));
+    // 受付中に取り消した人(行は残り、印だけ付く)。デッキは正しくても入れない
+    decks.gone = { deck: deckOf(9), tactics: {}, user_name: 'とりけし' };
+    db.s.entries.push({ tournament_id: 'cup1', seat_id: 'gone', owner_id: 'gone', is_assist: false, dropped: true, entered_at: '2026-11-01T00:30:00+09:00' });
     const logs = [];
     const log = (x) => logs.push(J(x));
 
@@ -76,6 +79,8 @@ const fakeDb = (decks) => {
     const live = db.s.entries.filter((e) => !e.dropped);
     check('A 締め切ると組分けと日程(4席・6試合)・1試合目は締め切りの日', out.closed === 1 && t.status === 'group' && t.first_day === '2026-11-03' && t.groups === 1 && live.length === 4 && db.s.matches.length === 6, `${J(out)} ${t.status} ${t.first_day} 席${live.length} 試合${db.s.matches.length}`);
     check('A デッキの壊れた人は外す', db.s.entries.find((e) => e.seat_id === 'bad').dropped === true);
+    const gone = db.s.entries.find((e) => e.seat_id === 'gone');
+    check('A 取り消した人は組分けに入れない(席・デッキの写しなし)', gone.dropped === true && gone.grp === undefined && !gone.deck);
     check('A 足りない席は助手(ごほうびなし)・デッキの写しを取る', live.filter((e) => e.is_assist).length === 1 && live.filter((e) => !e.is_assist).every((e) => e.deck && Array.isArray(e.deck.monsters)));
     check('B 結果を見せるのはその日の日本時間 4:00', db.s.matches.every((m) => new Date(m.visible_at).getTime() === ms(m.play_on, '04:00')));
     const day1 = db.s.matches.filter((m) => m.day === 0).length;
@@ -96,7 +101,7 @@ const fakeDb = (decks) => {
       && db.s.matches.filter((m) => { const a = live.find((e) => e.grp === m.grp && e.seat === m.a_seat); const b = live.find((e) => e.grp === m.grp && e.seat === m.b_seat); return a.is_assist || b.is_assist; }).every((m) => m.assist_decks.some((d) => d && d.monsters)));
     out = await core.runAll({ db, game, nowMs: ms('2026-11-06', '00:30'), log });
     check('B 終わった大会は回さない', out.played === 0 && out.advanced === 0);
-    check('D ログに名前・本文が出ない', !logs.some((l) => /人\d|こわれ|"play":|"review":/.test(l)), logs.find((l) => /人\d|こわれ|"play":|"review":/.test(l)));
+    check('D ログに名前・本文が出ない', !logs.some((l) => /人\d|こわれ|とりけし|"play":|"review":/.test(l)), logs.find((l) => /人\d|こわれ|とりけし|"play":|"review":/.test(l)));
   }
 
   // ---- 大きい大会(12人 → 3組 → 頂上決戦6人) ----
