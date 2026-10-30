@@ -120,7 +120,7 @@ function PlayerRankStrip({ kind = 'beat', xp = 0 }) {
 }
 
 // ==================== ランクごとのごほうびの一覧と、詳しい画面(2026-10-30 社長「カードランクもビートランクともにちゃんと報酬が全部見れるように作って」) ====================
-// rewardsOf(rank) → [{ icon, text, bonus }](そのランクに上がったときにもらえる物。bonus は5ランクごとのおまけ)。
+// rewardsOf(rank, got) → [{ icon, text, bonus }](got はもう上がったランクか。言い方を「〜なった/〜なる」で分けたいとき用)(そのランクに上がったときにもらえる物。bonus は5ランクごとのおまけ)。
 // ランク2から並べ、開いたときは今のランクの行が上に来るように送る。下まで送ると先を足していく(上限なし)。
 // 今のランクまでは「もらった」、次のランクは「次」と印を付ける。表示だけ(保存は触らない)
 const PLAYER_RANK_REWARDS_STEP = 30;
@@ -140,7 +140,7 @@ function PlayerRankRewards({ kind = 'beat', rank = 1, rewardsOf, cls = '' }) {
     <div ref={boxRef} data-player-rank-rewards={kind} onScroll={onScroll} className={`relative max-h-[min(46vh,360px)] overflow-y-auto overscroll-contain rounded-xl bg-black/35 p-1.5 ${cls}`}>
       <ul className="space-y-1">
         {rows.map((r) => {
-          const got = r <= cur, next = r === cur + 1, items = (typeof rewardsOf === 'function' ? rewardsOf(r) : []) || [];
+          const got = r <= cur, next = r === cur + 1, items = (typeof rewardsOf === 'function' ? rewardsOf(r, got) : []) || [];
           return (
             <li key={r} ref={r === Math.max(2, cur) ? curRef : null} data-player-rank-reward-row={r} data-got={got ? 'true' : 'false'}
               className={`flex items-start gap-2 rounded-lg border px-2 py-1.5 ${next ? `${k.border} bg-white/10` : r % 5 === 0 ? 'border-pink-300/40 bg-pink-500/10' : 'border-white/5 bg-slate-900/60'} ${got ? 'opacity-55' : ''}`}>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a746644ae91b478e
+// source-sha256: d5693b8028b86ea3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -55403,7 +55403,7 @@ function PlayerRankRewards({
   }, rows.map(r => {
     const got = r <= cur,
       next = r === cur + 1,
-      items = (typeof rewardsOf === 'function' ? rewardsOf(r) : []) || [];
+      items = (typeof rewardsOf === 'function' ? rewardsOf(r, got) : []) || [];
     return React.createElement("li", {
       key: r,
       ref: r === Math.max(2, cur) ? curRef : null,
