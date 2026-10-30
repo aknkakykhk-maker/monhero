@@ -41,8 +41,8 @@ for (const [name, src] of [['ヘルプ', help], ['ルールの画面', rules]]) 
   vm.runInContext(`${fs.readFileSync(path.join(GAME, 'data', 'card-battle-cards.js'), 'utf8')}\n;this.D = CARD_BATTLE_DATA;`, ctx);
   const note = (no) => ((ctx.D.cards[no] || {}).note || '');
   ok(/半分/.test(note('084')) && /残りだけ受け/.test(note('084')), `カウンター(084)の補足が「半分を返し、残りだけ受ける」になっていない(${note('084')})`);
-  ok(/飛ばした番のあとの番まで/.test(note('047')), `歌う(047)の補足に「攻撃できないの子は、飛ばした番のあとの番まで止まる」が無い(${note('047')})`);
-  for (const no of ['046', '365']) ok(/全員に当たる技は、この子にも当たるものだけ出せ/.test(note(no)) && !/全員に当たる技は出せます/.test(note(no)), `${no} の補足が「全員に当たる技は、この子にも当たるものだけ出せる」になっていない(${note(no)})`);
+  ok(/飛ばしたターンのあとのターンまで/.test(note('047')), `歌う(047)の補足に「攻撃できないの子は、飛ばしたターンのあとのターンまで止まる」が無い(${note('047')})`);
+  for (const no of ['046', '365']) ok(/全員に当たる技は、この(子|モンスター)にも当たるものだけ出せ/.test(note(no)) && !/全員に当たる技は出せます/.test(note(no)), `${no} の補足が「全員に当たる技は、この子にも当たるものだけ出せる」になっていない(${note(no)})`);
   for (const no of ['057', '269']) ok(/全員に当たる技も出せません/.test(note(no)), `${no} の補足に「全員に当たる技も出せません」が無い(${note(no)})`);
 }
 

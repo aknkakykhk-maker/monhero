@@ -227,7 +227,7 @@ const CardPvpHistory = ({ db = CARD_BATTLE_DATA, onBack, onOpenReplay = null, re
         <div className={`${SCREEN_LIST_CLASS} space-y-3 pb-4`}>
           <CardResultVsRow meIcon={meIcon} meName={meName} foeNode={<CardPvpAvatar icon={e.foe.icon} frame={e.foe.frame}/>} foeName={e.foe.name} outcome={outcomeLabel(e)}/>
           <p className="px-1 text-[12px] font-bold text-slate-300">
-            {e.reason && e.reason !== outcomeLabel(e) ? `${e.reason}・` : ''}自分の番 {e.turns}回{delta ? `・強さ ${e.rating.after}(${delta})` : ''}
+            {e.reason && e.reason !== outcomeLabel(e) ? `${e.reason}・` : ''}自分のターン {e.turns}回{delta ? `・強さ ${e.rating.after}(${delta})` : ''}
           </p>
           {replayOk(e.match) && <button type="button" data-card-pvp-history-replay className="mh-button mh-button-primary min-h-[48px] w-full rounded-2xl font-black" onClick={() => { Audio_.fgSe.tap(); onOpenReplay(e.match); }}>▶ この対戦を見る</button>}
           <div className="flex gap-2">
@@ -239,10 +239,10 @@ const CardPvpHistory = ({ db = CARD_BATTLE_DATA, onBack, onOpenReplay = null, re
             : e.foeDeck
               ? <>{e.foe.deckName && <p className="px-1 text-[13px] font-black text-white">{e.foe.deckName}</p>}<CardPvpHistoryDeck db={db} deck={e.foeDeck} press={press} tone="foe"/></>
               : (<>
-                <p data-card-pvp-history-partial className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('相手が途中で抜けたので、この試合で使われた札だけです')}</p>
+                <p data-card-pvp-history-partial className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('相手が途中で抜けたので、この試合で使われたカードだけです')}</p>
                 {e.foeSeen.length
                   ? <CardPvpHistoryDeck db={db} deck={{ monsters: [], cards: e.foeSeen }} press={press} tone="seen"/>
-                  : <p className="px-1 text-[13px] font-bold text-slate-400">使われた札はありません</p>}
+                  : <p className="px-1 text-[13px] font-bold text-slate-400">使われたカードはありません</p>}
               </>)}
           <p className="px-1 text-[11px] font-bold text-slate-400">長押しでカードを大きく見られます</p>
         </div>

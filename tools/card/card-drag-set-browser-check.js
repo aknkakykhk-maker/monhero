@@ -16,7 +16,7 @@
 //   B 技を押して、相手を押す → 技だけが出る(タップとそろう)
 //   C 何も選ばずに、マウスで相手まで運ぶ → 運んだ技1枚だけで出る(付けたつもりが無いのに付かないように)
 //   D 付ける札(集中)だけを運ぶ → 出さない。集中が「選んだ」になり、技が「候補」で光る
-//   E 集中を押すと「光っている札を押して足してね」。候補の技を押して足し、運ぶと、その2枚で出る(クリティカルは残る)
+//   E 集中を押すと「光っているカードを押して足してね」。候補の技を押して足し、運ぶと、その2枚で出る(クリティカルは残る)
 //   F 候補を押すと「足した」になり、もう1回押すと外れる
 //   どれも実行時エラーが無い
 const http = require('http');
@@ -171,19 +171,19 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     const dTags = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('[data-card-hand-card]')].map((e) => [e.getAttribute('data-card-hand-card'), (e.querySelector('[data-card-hand-pick]') || {}).textContent || ''])));
     check('D 付ける札(集中)を運んでも出さない。集中が「選んだ」・技が「候補」になる', (await handCount(page)) === n0 && dTags['2'] === '選んだ' && dTags['0'] === '候補', `${n0}→${await handCount(page)}枚・${JSON.stringify(dTags)}`);
     await page.close();
-    // ---- E 集中を押す → 「光っている札を押して足してね」→ 候補の技を押して足す → 運ぶ → その2枚で出る ----
+    // ---- E 集中を押す → 「光っているカードを押して足してね」→ 候補の技を押して足す → 運ぶ → その2枚で出る ----
     page = await open();
     n0 = await handCount(page);
     await page.locator('[data-card-hand-card="2"]').click();
     await page.waitForTimeout(300);
-    const askAdd = await page.getByText('光っている札を押して足してね').count();
+    const askAdd = await page.getByText('光っているカードを押して足してね').count();
     await page.locator('[data-card-hand-card="0"]').click();
     await page.waitForTimeout(200);
     const eTag = await page.locator('[data-card-hand-card="0"] [data-card-hand-pick]').textContent().catch(() => '');
     await mouseDrag(page, '[data-card-hand-card="2"]', '[data-card-mon="1-0"]');
     await settle(page, n0);
     names = await handNames(page);
-    check('E 集中を押すと「光っている札を押して足してね」。技を押して足して運ぶと、その2枚で出る(クリティカルは残る)', askAdd > 0 && eTag === '足した' && (await handCount(page)) === n0 - 2 && names.includes('クリティカル'), `${askAdd}・${eTag}・${n0}→${await handCount(page)}枚・${names.join(',')}`);
+    check('E 集中を押すと「光っているカードを押して足してね」。技を押して足して運ぶと、その2枚で出る(クリティカルは残る)', askAdd > 0 && eTag === '足した' && (await handCount(page)) === n0 - 2 && names.includes('クリティカル'), `${askAdd}・${eTag}・${n0}→${await handCount(page)}枚・${names.join(',')}`);
     await page.close();
     // ---- F 候補を押すと「足した」、もう1回押すと外れる ----
     page = await open();

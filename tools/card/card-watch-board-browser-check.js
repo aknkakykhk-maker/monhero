@@ -95,7 +95,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
         quit: root.querySelectorAll('[data-card-quit]').length,
         badge: !!root.querySelector('[data-card-watch-badge]'),
         head: (root.querySelector('[data-card-head-turn]') || {}).textContent || '',
-        anata: /あなた|自分|相手/.test(text.replace(/相手の(番|ターン)/g, '')), surrender: /投了/.test(root.querySelector('[data-card-head]').textContent),
+        anata: /あなた|自分|相手/.test(text.replace(/相手の(番|ターン|攻撃)/g, '')), surrender: /投了/.test(root.querySelector('[data-card-head]').textContent),
         actionTag: (root.querySelector('[data-card-action] [data-card-fit]') || {}).textContent || '',
         endFx: !!root.querySelector('[data-card-end-fx]'), over: !!root.querySelector('[data-card-watch-over]'),
         wide: root.scrollWidth <= window.innerWidth + 1,
@@ -123,7 +123,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     const l1 = await look();
     check('① 押せない: 手札の札が無く、下の人の手札は裏の札で枚数だけ', l1.handCards === 0 && l1.backs > 0, JSON.stringify({ handCards: l1.handCards, backs: l1.backs }));
     check('① 上の帯に「観戦」の札があり、投了・やめるのボタンは無い(下の「観戦をやめる」だけ)', l1.badge && l1.quit === 0 && !l1.surrender, JSON.stringify({ badge: l1.badge, quit: l1.quit }));
-    check('② 名前で出す: 「あなた」「自分」「相手」が出ない・上の帯は「◯◯の番」', !anata && [...heads].some((h) => /ビーの番|エーの番/.test(h)), [...heads].slice(0, 4).join(' / '));
+    check('② 名前で出す: 「あなた」「自分」「相手」が出ない・上の帯は「◯◯の攻撃」', !anata && [...heads].some((h) => /ビーの攻撃|エーの攻撃/.test(h)), [...heads].slice(0, 4).join(' / '));
     check('③ 技の箱が対戦と同じ道で出て、札は名前(自分・相手ではない)', sawAction && [...tags].every((t) => t === 'ビー' || t === 'エー'), [...tags].join(','));
     check('③ カードの大写しが出る', sawBig);
     if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, 'watch-board-390.png') }); }
