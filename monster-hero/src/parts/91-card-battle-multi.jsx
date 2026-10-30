@@ -1237,6 +1237,9 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
       <div data-mh-screen data-card-pvp="over" data-card-pvp-result={r.outcome} className={SCREEN_SHELL_CLASS}>
         <ScreenHead title={win ? '勝ち！' : r.reward === 'surrender' ? '投了' : '負け…'} accent={win ? 'text-amber-200' : 'text-slate-300'} onBack={back}/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+          {/* カードランクの経験値の棒は、結果を開いてすぐ目に入るよう、いちばん上に置く(2026-10-30 社長「終わったあとに経験値ゲージのバーの動きが見れない」)。
+              ごほうびが届いてから出る(got)。見えたところで棒が動き出す */}
+          {got && got.rankGain && typeof CardRankResult === 'function' && <CardRankResult gain={got.rankGain}/>}
           {/* 立ち絵と吹き出し(助手と対戦の結果と同じ形)。台詞は CARD_PVP_RESULT_LINES(相手が抜けたときは left) */}
           {a && line && (
             <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
@@ -1271,7 +1274,6 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
                 </div>
               )}
               {point !== null && <div className="mt-1 text-[12px] font-bold text-slate-300">いまのビートP: {point}</div>}
-              {got.rankGain && typeof CardRankResult === 'function' && <CardRankResult gain={got.rankGain}/>}
               {got.saved === false && <div className="mt-1 text-[12px] font-bold text-rose-300" style={JA_LABEL_STYLE}>{jaWrap('保存できませんでした(ビートPは増えていません)')}</div>}
             </>)}
           </div>

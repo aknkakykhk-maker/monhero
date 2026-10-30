@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bca77cfff53e0181
+// generated-sha256: 0243be84d4196983
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -23114,7 +23114,7 @@ const RhythmLineAdjustPanel=({adjust,onBump,isLandscape})=>{
     </div>
   </div>;
 };
-const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,beatRankAward=null,onRankBarFull=null,onRankBarDone=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null})=>{
+const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,beatRankAward=null,onRankBarFull=null,onRankBarDone=null,onRankBarStart=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null})=>{
   // 判定ラインの位置の合わせ(lineAdjust)は、練習と同じ扱い(ライフを減らさない・記録を送らない)。練習の説明の帯は出さない
   const tutorialProp=tutorial;tutorial=tutorial||!!lineAdjust;
   // 合わせている間の地上の判定ラインの高さ(保存はまだ・親が持つ)。null なら設定のまま
@@ -25139,6 +25139,9 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 <div data-rhythm-result-body className="relative flex min-h-0 min-w-0 flex-1 flex-col">
 <div data-rhythm-result-scroll className="min-h-0 flex-1 overflow-y-auto px-4 pb-3 pt-3">
 <h2 className="mb-2 text-[11px] font-black tracking-[.3em] text-cyan-200 [@container(min-width:680px)]:hidden">RHYTHM RESULT</h2>
+{/* ビートランクの経験値の棒(2026-10-30 社長「終わったあとに経験値ゲージのバーの動きが見れない」)。リザルトを開いてすぐ目に入るよう、いちばん上に置く。
+    この1曲でたまった経験値と、ランクが上がったときのごほうび。裏のクイック周回の「経験値」と取り違えないよう、札に「🎵 ビートランク」と書く(PlayerRankGain) */}
+<PlayerRankGain kind="beat" award={beatRankAward} onFull={onRankBarFull} onDone={onRankBarDone} onStart={onRankBarStart} next={beatRankAward?`ランク${playerRankInfo(beatRankAward.xp).rank+1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank+1)}`:''}/>
 <div data-rhythm-result-summary className="[@container(min-width:680px)]:grid [@container(min-width:680px)]:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)] [@container(min-width:680px)]:items-start [@container(min-width:680px)]:gap-2">
 {/* 横に広いときは、曲の札だけを2列ぶち抜きで上に置く(2026-09-26・ユーザー報告「また曲名切れ」)。
     半分の幅に曲の札を入れていたら、曲名が「魔窟…」になり、Lv.とランクのゲージもランクの丸に押しつぶされていた。
@@ -25236,9 +25239,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   <small className="mt-1 block text-[10px] font-black text-amber-200">{result.allMarvelous?'すべてMARVELOUS。文句なしの完璧です':result.allExcellent?'すべてEXCELLENT以上。ほぼ完璧です':'一度もコンボを切らずに完走しました'}</small>
 </div>}
 <div className="my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300">{result.fullCombo&&<span>FULL COMBO</span>}{result.allExcellent&&<span>ALL EXCELLENT</span>}{result.allMarvelous&&<span>ALL MARVELOUS</span>}</div>{/* クイック∞周回を裏で回していたときだけ。曲の長さぶんが周回クリア扱いで入る */}
-{/* ビートランク(2026-10-29 社長)。この1曲でたまった経験値と、ランクが上がったときのごほうび。横向きでも縦持ちでも、ここに1か所だけ出す。
-    裏のクイック周回の「経験値」(マスモンの経験値)と取り違えないよう、札に「🎵 ビートランク」と書く(PlayerRankGain) */}
-<PlayerRankGain kind="beat" award={beatRankAward} onFull={onRankBarFull} onDone={onRankBarDone} next={beatRankAward?`ランク${playerRankInfo(beatRankAward.xp).rank+1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank+1)}`:''}/>
+{/* ビートランクの経験値の棒は、リザルトのいちばん上へ移した(2026-10-30) */}
 {/* 裏で∞周回していたのに失敗したとき。1周も入らないので、その理由をここで言う
     (2026-09-12・ユーザー指示「失敗しても入るようにすると放置で稼げるようになるから失敗は0にして」)。
     ★裏で周回していない人にはそもそも出ない(quickRunAwardがnullのまま) */}
@@ -34825,7 +34826,9 @@ const ensurePlayerRankXpBarCss = () => {
 // 経験値の棒が伸びる演出の本体。award: { add, parts:[{label,xp}], from, to, xp(足したあとの合計) }
 // onFull(): 棒が満タンで光ったとき(ランクが上がるときだけ・1回)。画面いっぱいの演出はここから出す / onDone(): 伸び終わったとき(1回)
 const PLAYER_RANK_XP_COLORS = ['#fde047', '#f0abfc', '#22d3ee', '#fff', '#a3e635'];
-function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null }) {
+// 2026-10-30 社長「終わったあとに経験値ゲージのバーの動きが見れない」: 棒が画面に入るまでは前の量で止めておき、
+// 見えたところで動き出す(onStart)。見えているかを調べられない端末では、すぐ動かす
+function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, onStart = null }) {
   ensurePlayerRankXpBarCss();
   const k = playerRankKind(kind);
   const add = Math.max(0, Math.floor(Number(award && award.add) || 0));
@@ -34842,6 +34845,15 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null })
   const [view, setView] = React.useState({ rank: startInfo.rank, into: startInfo.into, shown: 0, chips: 0, up: false, instant: true, tip: false, done: false });
   const rootRef = React.useRef(null), trackRef = React.useRef(null), fxRef = React.useRef(null), addRef = React.useRef(null), chipRefs = React.useRef([]);
   const runRef = React.useRef({ timers: [], fullSent: false, doneSent: false, running: true });
+  const [seen, setSeen] = React.useState(false);
+  React.useEffect(() => {
+    if (seen) return undefined;
+    const el = rootRef.current;
+    if (!el || typeof IntersectionObserver !== 'function') { setSeen(true); return undefined; }
+    const io = new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) setSeen(true); }, { threshold: 0.6 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [seen]);
   const se = (name) => { try { const bank = typeof Audio_ !== 'undefined' ? (Audio_.fgSe || Audio_.se) : null; if (bank && typeof bank[name] === 'function') bank[name](); } catch (_) { /* 音が出なくても続ける */ } };
   const later = (fn, ms) => { const id = setTimeout(fn, ms); runRef.current.timers.push(id); return id; };
   const spawn = (host, cls, style, ms) => { if (!host) return; const e = document.createElement('i'); e.className = cls; Object.entries(style).forEach(([kk, v]) => e.style.setProperty(kk, v)); host.appendChild(e); setTimeout(() => e.remove(), ms); return e; };
@@ -34878,8 +34890,9 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null })
     sendFull(); sendDone();
   };
   React.useEffect(() => {
-    if (!(add > 0)) return undefined;
+    if (!seen || !(add > 0) || !runRef.current.running) return undefined;
     const run = runRef.current;
+    if (onStart) onStart();
     // 舞う光の粒(伸びている間ずっと)
     const moteTimer = setInterval(() => { if (!run.running) { clearInterval(moteTimer); return; } motes(); }, 90);
     later(() => setView((v) => ({ ...v, instant: false })), 40);
@@ -34918,7 +34931,7 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null })
     later(() => { bumpAdd('final'); sparks(10); se('trainingReward'); }, t + 150);
     later(() => { run.running = false; setView((v) => ({ ...v, done: true })); sendDone(); }, t + 250);
     return () => { run.running = false; clearInterval(moteTimer); run.timers.forEach(clearTimeout); };
-  }, []);
+  }, [seen]);
   const need = playerRankNeed(view.rank);
   const w = `${pct(view.rank, view.into)}%`;
   return (
@@ -34952,15 +34965,15 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null })
 
 // 1回ぶんの結果に出す札: 経験値の棒が伸びる演出(PlayerRankXpBar)・次のごほうび・上がったらもらった物。
 // award: { add, parts:[{label,xp}], from, to, xp(足したあとの合計), gains:[{icon,text}] }。next は次のごほうびの文(「ランク20で ビートP 300」)
-// onFull・onDone は PlayerRankXpBar へそのまま渡す(ビートはここで画面いっぱいの演出を出す。カードは渡さなければ今までどおり)
-function PlayerRankGain({ kind = 'beat', award, next = '', onFull = null, onDone = null }) {
+// onFull・onDone・onStart(棒が画面に入って動き出した)は PlayerRankXpBar へそのまま渡す(ビートはここで画面いっぱいの演出を出す。カードは渡さなければ今までどおり)
+function PlayerRankGain({ kind = 'beat', award, next = '', onFull = null, onDone = null, onStart = null }) {
   const [done, setDone] = React.useState(false);
   if (!award || !(award.add > 0)) return null;
   const k = playerRankKind(kind);
   const up = award.to > award.from;
   return (
     <section data-player-rank-gain={kind} className={`relative my-3 space-y-1.5 rounded-2xl border p-3 pt-4 text-left ${k.border} ${k.panel}`}>
-      <PlayerRankXpBar kind={kind} award={award} onFull={onFull} onDone={() => { setDone(true); if (onDone) onDone(); }}/>
+      <PlayerRankXpBar kind={kind} award={award} onFull={onFull} onStart={onStart} onDone={() => { setDone(true); if (onDone) onDone(); }}/>
       {next && <p data-player-rank-gain-next className="text-[10px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(`次は ${next}`)}</p>}
       {up && done && <PlayerRankUp kind={kind} from={award.from} to={award.to} gains={award.gains || []}/>}
     </section>
@@ -61922,6 +61935,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <ScreenHead title={win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…'} accent={win ? 'text-amber-200' : 'text-slate-300'} onBack={() => setView('top')}/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           <CardResultBanner title={win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…'} sub={win ? 'YOU WIN' : result.outcome === 'surrender' ? 'SURRENDER' : 'YOU LOSE'} tone={win ? 'win' : 'lose'}/>
+          {/* カードランクの経験値の棒は、結果を開いてすぐ目に入るよう、いちばん上(勝ち負けのすぐ下)に置く(2026-10-30 社長「終わったあとに経験値ゲージのバーの動きが見れない」) */}
+          {result.rankGain && <CardRankResult gain={result.rankGain}/>}
           {a && <CardResultTalk a={a} lineScene={win ? 'lose' : 'win'} talkFacts={result.talk}/>}
           {result.share && <p data-card-result-share className="text-center text-[13px] font-black text-emerald-200">{result.share.name}さんのデッキと対戦しました</p>}
           {a && <CardResultVsRow meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meName={(rank && rank.profile && rank.profile.name) || 'あなた'}
@@ -61945,7 +61960,6 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             )}
             <div className="mt-1 text-[12px] font-bold text-slate-300">いまのビートP: {save.point}</div>
             {result.opened && <div className="mt-1 text-[13px] font-black text-emerald-300">{CARD_LEVEL_LABEL[result.opened]}が選べるようになりました！</div>}
-            {result.rankGain && <CardRankResult gain={result.rankGain}/>}
             {!result.saved && <div className="mt-1 text-[12px] font-bold text-rose-300" style={JA_LABEL_STYLE}>{jaWrap('保存できませんでした(ビートPは増えていません)')}</div>}
             {result.demo && <div className="mt-1 text-[11px] font-bold text-slate-400">(デバッグの見本です。何も保存していません)</div>}
           </div>
@@ -65618,6 +65632,9 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
       <div data-mh-screen data-card-pvp="over" data-card-pvp-result={r.outcome} className={SCREEN_SHELL_CLASS}>
         <ScreenHead title={win ? '勝ち！' : r.reward === 'surrender' ? '投了' : '負け…'} accent={win ? 'text-amber-200' : 'text-slate-300'} onBack={back}/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+          {/* カードランクの経験値の棒は、結果を開いてすぐ目に入るよう、いちばん上に置く(2026-10-30 社長「終わったあとに経験値ゲージのバーの動きが見れない」)。
+              ごほうびが届いてから出る(got)。見えたところで棒が動き出す */}
+          {got && got.rankGain && typeof CardRankResult === 'function' && <CardRankResult gain={got.rankGain}/>}
           {/* 立ち絵と吹き出し(助手と対戦の結果と同じ形)。台詞は CARD_PVP_RESULT_LINES(相手が抜けたときは left) */}
           {a && line && (
             <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
@@ -65652,7 +65669,6 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
                 </div>
               )}
               {point !== null && <div className="mt-1 text-[12px] font-bold text-slate-300">いまのビートP: {point}</div>}
-              {got.rankGain && typeof CardRankResult === 'function' && <CardRankResult gain={got.rankGain}/>}
               {got.saved === false && <div className="mt-1 text-[12px] font-bold text-rose-300" style={JA_LABEL_STYLE}>{jaWrap('保存できませんでした(ビートPは増えていません)')}</div>}
             </>)}
           </div>
@@ -68693,11 +68709,13 @@ const CardRankResult = ({ gain }) => {
   // 画面いっぱいの演出は、経験値の棒が満タンで光ったあと(2026-10-30 社長の決め。ビートランクと同じ順番。onFull は1回だけ・押して飛ばしたときも来る)
   const [fx, setFx] = useState(false); // false … まだ / true・'late' … 出す / 'closed' … 閉じた(もう出さない)
   // 保険: 棒の合図(onFull)が来ないまま5秒たったら出す(ビートランクの 60-app と同じ)
-  useEffect(() => { if (!up) return undefined; const t = setTimeout(() => setFx((v) => v || 'late'), 5000); return () => clearTimeout(t); }, [up]);
+  // 合図が来なかったときの保険の5秒は、棒が画面に入って動き出してから数える(2026-10-30 社長: 棒が見えないまま演出だけ出ないように)
+  const [barStarted, setBarStarted] = useState(false);
+  useEffect(() => { if (!up || !barStarted) return undefined; const t = setTimeout(() => setFx((v) => v || 'late'), 5000); return () => clearTimeout(t); }, [up, barStarted]);
   if (!gain || !(gain.add > 0)) return null;
   const award = { add: gain.add, parts: gain.parts || [], from: gain.from, to: gain.to, xp: gain.xp, gains: gain.gains || [] };
   return (<>
-    <PlayerRankGain kind="card" award={award} next={`ランク${gain.to + 1}で ${cardRankRewardText(gain.to + 1)}`} onFull={up ? () => setFx((v) => v || true) : null}/>
+    <PlayerRankGain kind="card" award={award} next={`ランク${gain.to + 1}で ${cardRankRewardText(gain.to + 1)}`} onFull={up ? () => setFx((v) => v || true) : null} onStart={() => setBarStarted(true)}/>
     {up && fx && fx !== 'closed' && typeof PlayerRankUpFx === 'function' && <PlayerRankUpFx kind="card" from={gain.from} to={gain.to} gains={cardRankFxGains(gain)} onClose={() => setFx('closed')}/>}
   </>);
 };
@@ -73997,9 +74015,10 @@ function MonsterHeroGame() {
   const [beatRankFx, setBeatRankFx] = useState(null);
   // 結果の札の経験値の棒が伸びているあいだ(PlayerRankXpBar)。効果音の音量を戻すのに使う
   const [beatRankBarPlaying, setBeatRankBarPlaying] = useState(false);
-  // 棒が満タンの合図が来なかったとき(結果の札が見えていないなど)も、5秒で演出を出す
+  // 棒が満タンの合図が来なかったときも、棒が動き出してから5秒で演出を出す。
+  // 棒が画面に入る前(started が無い)は数えない(2026-10-30 社長: 棒が見えないまま演出だけ出ないように)
   useEffect(() => {
-    if (!beatRankFx || beatRankFx.ready) return undefined;
+    if (!beatRankFx || beatRankFx.ready || !beatRankFx.started) return undefined;
     const t = setTimeout(() => setBeatRankFx((f) => (f && !f.ready ? { ...f, ready: true } : f)), 5000);
     return () => clearTimeout(t);
   }, [beatRankFx]);
@@ -89251,7 +89270,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {raidDamageFx&&((gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='raid')||gameState==='RAID_JACK_DEBUG')&&<RaidJackDamageFx key={raidDamageFx.key} fx={raidDamageFx} onDone={()=>setRaidDamageFx(null)}/>}
         {beatRankFx&&beatRankFx.ready&&gameState==='RHYTHM_PLAY'&&<PlayerRankUpFx kind="beat" from={beatRankFx.from} to={beatRankFx.to} gains={beatRankFx.gains} onClose={()=>setBeatRankFx(null)}/>}
         {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward}
-          onRankBarFull={()=>setBeatRankFx(f=>f&&!f.ready?{...f,ready:true}:f)} onRankBarDone={()=>setBeatRankBarPlaying(false)} onComplete={async(result,merged)=>{
+          onRankBarFull={()=>setBeatRankFx(f=>f&&!f.ready?{...f,ready:true}:f)} onRankBarStart={()=>setBeatRankFx(f=>f&&!f.started?{...f,started:true}:f)} onRankBarDone={()=>setBeatRankBarPlaying(false)} onComplete={async(result,merged)=>{
           // デバッグ画面の試作曲(RHYTHM_PROTO_SONGS)は、何も残さない。周回の報酬・経験値・自己ベスト・クリア回数・
           // 実績・全国ランキングのどれにも入れない(CLAUDE.md ⑦。試作は公開しない曲なので、記録に混ぜない)
           if(rhythmPlay.from==='proto')return;

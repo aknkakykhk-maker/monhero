@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8f9e9710a0dfdb07
+// source-sha256: 4f56b445d48c04e3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -37396,6 +37396,7 @@ const RhythmTapTest = ({
   beatRankAward = null,
   onRankBarFull = null,
   onRankBarDone = null,
+  onRankBarStart = null,
   debugPlay = false,
   tutorial = false,
   calibrating = false,
@@ -41387,7 +41388,14 @@ const RhythmTapTest = ({
       className: "min-h-0 flex-1 overflow-y-auto px-4 pb-3 pt-3"
     }, React.createElement("h2", {
       className: "mb-2 text-[11px] font-black tracking-[.3em] text-cyan-200 [@container(min-width:680px)]:hidden"
-    }, "RHYTHM RESULT"), React.createElement("div", {
+    }, "RHYTHM RESULT"), React.createElement(PlayerRankGain, {
+      kind: "beat",
+      award: beatRankAward,
+      onFull: onRankBarFull,
+      onDone: onRankBarDone,
+      onStart: onRankBarStart,
+      next: beatRankAward ? `ランク${playerRankInfo(beatRankAward.xp).rank + 1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank + 1)}` : ''
+    }), React.createElement("div", {
       "data-rhythm-result-summary": true,
       className: "[@container(min-width:680px)]:grid [@container(min-width:680px)]:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)] [@container(min-width:680px)]:items-start [@container(min-width:680px)]:gap-2"
     }, React.createElement("div", {
@@ -41653,13 +41661,7 @@ const RhythmTapTest = ({
       className: "mt-1 block text-[10px] font-black text-amber-200"
     }, result.allMarvelous ? 'すべてMARVELOUS。文句なしの完璧です' : result.allExcellent ? 'すべてEXCELLENT以上。ほぼ完璧です' : '一度もコンボを切らずに完走しました')), React.createElement("div", {
       className: "my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300"
-    }, result.fullCombo && React.createElement("span", null, "FULL COMBO"), result.allExcellent && React.createElement("span", null, "ALL EXCELLENT"), result.allMarvelous && React.createElement("span", null, "ALL MARVELOUS")), React.createElement(PlayerRankGain, {
-      kind: "beat",
-      award: beatRankAward,
-      onFull: onRankBarFull,
-      onDone: onRankBarDone,
-      next: beatRankAward ? `ランク${playerRankInfo(beatRankAward.xp).rank + 1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank + 1)}` : ''
-    }), quickRunAward && quickRunAward.loops === 0 && quickRunAward.cleared === false && React.createElement("div", {
+    }, result.fullCombo && React.createElement("span", null, "FULL COMBO"), result.allExcellent && React.createElement("span", null, "ALL EXCELLENT"), result.allMarvelous && React.createElement("span", null, "ALL MARVELOUS")), quickRunAward && quickRunAward.loops === 0 && quickRunAward.cleared === false && React.createElement("div", {
       "data-rhythm-result-quick-run-failed": true,
       className: "my-3 rounded-2xl border border-rose-400/50 bg-rose-950/30 p-3 text-left [@container(min-width:680px)]:hidden"
     }, React.createElement("div", {
@@ -55457,7 +55459,8 @@ function PlayerRankXpBar({
   kind = 'beat',
   award,
   onFull = null,
-  onDone = null
+  onDone = null,
+  onStart = null
 }) {
   ensurePlayerRankXpBarCss();
   const k = playerRankKind(kind);
@@ -55500,6 +55503,22 @@ function PlayerRankXpBar({
     doneSent: false,
     running: true
   });
+  const [seen, setSeen] = React.useState(false);
+  React.useEffect(() => {
+    if (seen) return undefined;
+    const el = rootRef.current;
+    if (!el || typeof IntersectionObserver !== 'function') {
+      setSeen(true);
+      return undefined;
+    }
+    const io = new IntersectionObserver(entries => {
+      if (entries.some(e => e.isIntersecting)) setSeen(true);
+    }, {
+      threshold: 0.6
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [seen]);
   const se = name => {
     try {
       const bank = typeof Audio_ !== 'undefined' ? Audio_.fgSe || Audio_.se : null;
@@ -55671,8 +55690,9 @@ function PlayerRankXpBar({
     sendDone();
   };
   React.useEffect(() => {
-    if (!(add > 0)) return undefined;
+    if (!seen || !(add > 0) || !runRef.current.running) return undefined;
     const run = runRef.current;
+    if (onStart) onStart();
     const moteTimer = setInterval(() => {
       if (!run.running) {
         clearInterval(moteTimer);
@@ -55791,7 +55811,7 @@ function PlayerRankXpBar({
       clearInterval(moteTimer);
       run.timers.forEach(clearTimeout);
     };
-  }, []);
+  }, [seen]);
   const need = playerRankNeed(view.rank);
   const w = `${pct(view.rank, view.into)}%`;
   return React.createElement("div", {
@@ -55868,7 +55888,8 @@ function PlayerRankGain({
   award,
   next = '',
   onFull = null,
-  onDone = null
+  onDone = null,
+  onStart = null
 }) {
   const [done, setDone] = React.useState(false);
   if (!award || !(award.add > 0)) return null;
@@ -55881,6 +55902,7 @@ function PlayerRankGain({
     kind: kind,
     award: award,
     onFull: onFull,
+    onStart: onStart,
     onDone: () => {
       setDone(true);
       if (onDone) onDone();
@@ -102934,6 +102956,8 @@ const CardBattleScreen = ({
       title: win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…',
       sub: win ? 'YOU WIN' : result.outcome === 'surrender' ? 'SURRENDER' : 'YOU LOSE',
       tone: win ? 'win' : 'lose'
+    }), result.rankGain && React.createElement(CardRankResult, {
+      gain: result.rankGain
     }), a && React.createElement(CardResultTalk, {
       a: a,
       lineScene: win ? 'lose' : 'win',
@@ -102991,9 +103015,7 @@ const CardBattleScreen = ({
       className: "mt-1 text-[12px] font-bold text-slate-300"
     }, "いまのビートP: ", save.point), result.opened && React.createElement("div", {
       className: "mt-1 text-[13px] font-black text-emerald-300"
-    }, CARD_LEVEL_LABEL[result.opened], "が選べるようになりました！"), result.rankGain && React.createElement(CardRankResult, {
-      gain: result.rankGain
-    }), !result.saved && React.createElement("div", {
+    }, CARD_LEVEL_LABEL[result.opened], "が選べるようになりました！"), !result.saved && React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-rose-300",
       style: JA_LABEL_STYLE
     }, jaWrap('保存できませんでした(ビートPは増えていません)')), result.demo && React.createElement("div", {
@@ -110116,7 +110138,9 @@ const CardPvpLobby = ({
       onBack: back
     }), React.createElement("div", {
       className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
-    }, a && line && React.createElement("div", {
+    }, got && got.rankGain && typeof CardRankResult === 'function' && React.createElement(CardRankResult, {
+      gain: got.rankGain
+    }), a && line && React.createElement("div", {
       className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
     }, React.createElement(CardAssistantArt, {
       src: assistantFullImage(a, line.face),
@@ -110178,9 +110202,7 @@ const CardPvpLobby = ({
       style: JA_LABEL_STYLE
     }, jaWrap('クイック周回をしていないときは入りません'))), point !== null && React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
-    }, "いまのビートP: ", point), got.rankGain && typeof CardRankResult === 'function' && React.createElement(CardRankResult, {
-      gain: got.rankGain
-    }), got.saved === false && React.createElement("div", {
+    }, "いまのビートP: ", point), got.saved === false && React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-rose-300",
       style: JA_LABEL_STYLE
     }, jaWrap('保存できませんでした(ビートPは増えていません)'))))), React.createElement("div", {
@@ -115925,11 +115947,12 @@ const CardRankResult = ({
 }) => {
   const up = !!(gain && gain.to > gain.from);
   const [fx, setFx] = useState(false);
+  const [barStarted, setBarStarted] = useState(false);
   useEffect(() => {
-    if (!up) return undefined;
+    if (!up || !barStarted) return undefined;
     const t = setTimeout(() => setFx(v => v || 'late'), 5000);
     return () => clearTimeout(t);
-  }, [up]);
+  }, [up, barStarted]);
   if (!gain || !(gain.add > 0)) return null;
   const award = {
     add: gain.add,
@@ -115943,7 +115966,8 @@ const CardRankResult = ({
     kind: "card",
     award: award,
     next: `ランク${gain.to + 1}で ${cardRankRewardText(gain.to + 1)}`,
-    onFull: up ? () => setFx(v => v || true) : null
+    onFull: up ? () => setFx(v => v || true) : null,
+    onStart: () => setBarStarted(true)
   }), up && fx && fx !== 'closed' && typeof PlayerRankUpFx === 'function' && React.createElement(PlayerRankUpFx, {
     kind: "card",
     from: gain.from,
@@ -122244,7 +122268,7 @@ function MonsterHeroGame() {
   const [beatRankFx, setBeatRankFx] = useState(null);
   const [beatRankBarPlaying, setBeatRankBarPlaying] = useState(false);
   useEffect(() => {
-    if (!beatRankFx || beatRankFx.ready) return undefined;
+    if (!beatRankFx || beatRankFx.ready || !beatRankFx.started) return undefined;
     const t = setTimeout(() => setBeatRankFx(f => f && !f.ready ? {
       ...f,
       ready: true
@@ -144090,6 +144114,10 @@ function MonsterHeroGame() {
       onRankBarFull: () => setBeatRankFx(f => f && !f.ready ? {
         ...f,
         ready: true
+      } : f),
+      onRankBarStart: () => setBeatRankFx(f => f && !f.started ? {
+        ...f,
+        started: true
       } : f),
       onRankBarDone: () => setBeatRankBarPlaying(false),
       onComplete: async (result, merged) => {
