@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 36d2d94cd683d15a
+// source-sha256: 45a9d0417e723329
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -97151,6 +97151,19 @@ const cardMonArt = mon => {
   if (m && m.imgUrl) return m.imgUrl;
   return cardNewSpeciesArt()[mon.species] || null;
 };
+const CARD_FIELD_ART_SPREAD = 1.15;
+const cardFieldArtTransform = (src, flip) => {
+  const box = typeof cardVsBoxOf === 'function' ? cardVsBoxOf(src) : null;
+  if (!box) return null;
+  const [x0, y0, x1, y1] = box;
+  const fw = Math.max(0.01, x1 - x0),
+    fh = Math.max(0.01, y1 - y0);
+  const k = Math.min(CARD_FIELD_ART_SPREAD / fw, 1 / fh);
+  if (!(k > 1.02)) return null;
+  const tx = (flip ? 1 : -1) * k * ((x0 + x1) / 2 - 0.5) * 100;
+  const ty = (1 - (0.5 + k * (y1 - 0.5))) * 100;
+  return `translate(${tx.toFixed(1)}%, ${ty.toFixed(1)}%) scale(${(flip ? -k : k).toFixed(3)}, ${k.toFixed(3)})`;
+};
 const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
 const cardCaption = c => !c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : c.kind === 'fld' ? '全体' : Number.isFinite(c.damage) ? `ダメージ${c.damage}` : '';
 const cardMonStatuses = (st, p, m) => {
@@ -98066,13 +98079,19 @@ const CardMonSlot = ({
   }, "攻撃できない")));
   const wideArtH = 'clamp(40px, calc((var(--mh-vh, 100svh) - 262px) / 2), 64px)';
   const artSize = wide ? 'max-w-[88px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : opp ? 'max-h-[78px] max-w-[96px]' : 'max-h-[106px] max-w-[126px]';
+  const artFit = art ? cardFieldArtTransform(art, opp) : null;
   const imgEl = art ? React.createElement("img", {
     src: art,
     alt: "",
-    style: wide ? {
-      maxHeight: wideArtH
-    } : undefined,
-    className: `${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''}`
+    style: {
+      ...(wide ? {
+        maxHeight: wideArtH
+      } : null),
+      ...(artFit ? {
+        transform: artFit
+      } : null)
+    },
+    className: `${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp && !artFit ? '-scale-x-100' : ''}`
   }) : React.createElement("img", {
     src: CARD_IMG(cardMonsterOf(db, mon.no).img),
     alt: "",

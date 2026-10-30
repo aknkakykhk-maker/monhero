@@ -35,6 +35,43 @@ check('つなぎ込み: MonsterArtFrame の素の img とモンスターノー�
 check('つなぎ込み: 待機アニメの部品の軸を同じ式で動かす',
   /transformOrigin:originOf\(part\.origin\)/.test(fx) && /50 \+ artScale\.scale \* \(Number\(m\[1\]\) - 50\)/.test(fx) && /artScale\.ty \* 100/.test(fx));
 
+// ---------- MFバトルカードの場(84-screen-card-battle.jsx の CardMonSlot)。2026-10-30 社長「同じ血統同士のサイズがあってない」 ----------
+// 場の立ち絵は ART_CONTENT_BOXES(絵の中身の範囲)から計算して余白を詰める(1体ずつの数字は持たない)。
+// カードに出る全員(カードだけの混血を含む)を主血統ごとに分け、詰めたあとの「要素に対する中身の高さ」がそろうかを見る
+{
+  const card = read('monster-hero/src/parts/84-screen-card-battle.jsx');
+  check('カードの場: 立ち絵に cardFieldArtTransform を掛け、相手は左右の向きもそこで返す',
+    /const artFit = art \? cardFieldArtTransform\(art, opp\) : null;/.test(card) && /\$\{opp && !artFit \? '-scale-x-100' : ''\}/.test(card));
+  const spread = Number((card.match(/const CARD_FIELD_ART_SPREAD = ([\d.]+);/) || [])[1]);
+  check('カードの場: 横に広い子の左右へのはみ出しは、枠に収まる 1.15 倍まで', spread > 1 && spread <= 1.15, String(spread));
+  const cctx = {};
+  vm.createContext(cctx);
+  vm.runInContext(`${read('monster-hero/data/images/images-ally.js')}\n${read('monster-hero/data/ally-monsters.js')}\n${read('monster-hero/data/card-battle-cards.js')}\nglobalThis.x={ART_CONTENT_BOXES,HYBRID_MONSTER_IMGS,ALL_PLAYER_MONSTERS,CARD_BATTLE_DATA};`, cctx);
+  const { ART_CONTENT_BOXES: boxes, HYBRID_MONSTER_IMGS: hybrid, ALL_PLAYER_MONSTERS: all, CARD_BATTLE_DATA: data } = cctx.x;
+  const species = Function(`return (${card.match(/const CARD_SPECIES_ART = Object\.freeze\((\{[^}]*\})\)/)[1]})`)();
+  const newArt = {};
+  for (const m of card.matchAll(/^  (\w+): typeof (MF_\w+_IMG) !== 'undefined'/gm)) newArt[m[1]] = vm.runInContext(`typeof ${m[2]} !== 'undefined' ? ${m[2]} : null`, cctx);
+  const artOf = (mon) => (mon.main ? (hybrid || {})[mon.no] || null
+    : (species[mon.species] && all[species[mon.species]] && all[species[mon.species]].imgUrl) || newArt[mon.species] || null);
+  const groups = {};
+  const missing = [];
+  for (const mon of Object.values(data.monsters)) {
+    if (mon.variant) continue;
+    const art = artOf(mon);
+    if (!art) continue;
+    const box = boxes[String(art).split('?')[0].replace(/^images\//, '')];
+    if (!box) { missing.push(mon.name); continue; }
+    const fw = box[2] - box[0], fh = box[3] - box[1];
+    const k = Math.min(spread / fw, 1 / fh);
+    (groups[mon.main || mon.species] = groups[mon.main || mon.species] || []).push([mon.name, k > 1.02 ? fh * k : fh]);
+  }
+  check('カードの場: 立ち絵のある子は全員、中身の範囲(ART_CONTENT_BOXES)がある', missing.length === 0, missing.join('・'));
+  const off = Object.entries(groups).filter(([, list]) => list.length > 1)
+    .map(([lin, list]) => [lin, Math.min(...list.map((x) => x[1])), list]).filter(([, low]) => low < 0.9);
+  check('カードの場: 同じ主血統の子は、詰めたあとの中身の高さが 0.9 以上でそろう', off.length === 0,
+    off.map(([lin, , list]) => `${lin}: ${list.map(([n, h]) => `${n} ${h.toFixed(2)}`).join(' / ')}`).join(' | '));
+}
+
 let sharp = null;
 try { sharp = require(path.join(ROOT, 'tools/node_modules/sharp')); } catch (_) { /* 無ければ①は飛ばす */ }
 (async () => {
