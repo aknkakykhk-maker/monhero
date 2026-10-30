@@ -56,7 +56,7 @@ const db = {
   },
   insertRewards: async (id: string, rows: Record<string, unknown>[]) => {
     if (!rows.length) return;
-    const body = rows.map((r) => ({ tournament_id: id, owner_id: r.owner_id, place: r.place, point: r.point, title: r.title, frame: r.frame }));
+    const body = rows.map((r) => ({ tournament_id: id, owner_id: r.owner_id, place: r.place, point: r.point }));
     must(await supabase.from("card_tournament_rewards").upsert(body, { onConflict: "tournament_id,owner_id", ignoreDuplicates: true }), "insertRewards");
   },
 };
