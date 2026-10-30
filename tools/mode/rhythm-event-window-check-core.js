@@ -717,7 +717,7 @@ check('ビートP交換所は対象確定済みの固定13商品だけ',(()=>{
     ['rainbow_psyche','rainbow_psyche',1,5],['skip_ticket_jo','skip_ticket_jo',1,50],['skip_ticket_ha','skip_ticket_ha',1,80],
     ['skip_ticket_kyu','skip_ticket_kyu',1,115],['skip_ticket_kiwami','skip_ticket_kiwami',1,250],['skip_ticket_haou','skip_ticket_haou',1,500],
     ['session_ticket','session_ticket',1,150],
-    ['hero_proof_shard','hero_proof_shard',1,500],['transcend_fruit_rainbow','transcend_fruit_rainbow',1,5000],['hero_proof','hero_proof',1,10000],
+    ['hero_proof_shard','hero_proof_shard',1,75],['transcend_fruit_rainbow','transcend_fruit_rainbow',1,3000],['hero_proof','hero_proof',1,1500],
   ];
   return JSON.stringify(got)===JSON.stringify(want);
 })());
