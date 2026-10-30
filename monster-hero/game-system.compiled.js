@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4f56b445d48c04e3
+// source-sha256: a746644ae91b478e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -14476,6 +14476,26 @@ const playerRankBeatPointsFor = rank => {
 const beatRankTicketsFor = rank => {
   const r = Math.max(0, Math.floor(Number(rank) || 0));
   return r < 2 ? 0 : 1 + (r % 5 === 0 ? r : 0);
+};
+const beatRankRewardItems = rank => {
+  const r = Math.max(0, Math.floor(Number(rank) || 0));
+  if (r < 2) return [];
+  const bonus = r % 5 === 0;
+  return [{
+    icon: '🎟️',
+    text: `ビートP ${(r * 100).toLocaleString()}`
+  }, {
+    icon: '🎶',
+    text: 'セッション券 1枚'
+  }, ...(bonus ? [{
+    icon: '🎟️',
+    text: `ビートP ${(r * 200).toLocaleString()}`,
+    bonus: true
+  }, {
+    icon: '🎶',
+    text: `セッション券 ${r.toLocaleString()}枚`,
+    bonus: true
+  }] : [])];
 };
 const beatRankRewardText = rank => `ビートP ${playerRankBeatPointsFor(rank).toLocaleString()}・セッション券 ${beatRankTicketsFor(rank).toLocaleString()}枚`;
 const normalizeBeatRank = raw => {
@@ -55350,6 +55370,136 @@ function PlayerRankStrip({
     className: "shrink-0 whitespace-nowrap text-[9px] font-black text-slate-300 tabular-nums"
   }, `次まで ${(info.need - info.into).toLocaleString()}`));
 }
+const PLAYER_RANK_REWARDS_STEP = 30;
+function PlayerRankRewards({
+  kind = 'beat',
+  rank = 1,
+  rewardsOf,
+  cls = ''
+}) {
+  const k = playerRankKind(kind);
+  const cur = Math.max(1, Math.floor(Number(rank) || 1));
+  const [last, setLast] = React.useState(Math.max(50, cur + 50));
+  const boxRef = React.useRef(null),
+    curRef = React.useRef(null);
+  React.useEffect(() => {
+    const box = boxRef.current,
+      row = curRef.current;
+    if (box && row) box.scrollTop = Math.max(0, row.offsetTop - 4);
+  }, []);
+  const onScroll = e => {
+    const b = e.currentTarget;
+    if (b.scrollTop + b.clientHeight >= b.scrollHeight - 80) setLast(n => n + PLAYER_RANK_REWARDS_STEP);
+  };
+  const rows = [];
+  for (let r = 2; r <= last; r++) rows.push(r);
+  return React.createElement("div", {
+    ref: boxRef,
+    "data-player-rank-rewards": kind,
+    onScroll: onScroll,
+    className: `relative max-h-[min(46vh,360px)] overflow-y-auto overscroll-contain rounded-xl bg-black/35 p-1.5 ${cls}`
+  }, React.createElement("ul", {
+    className: "space-y-1"
+  }, rows.map(r => {
+    const got = r <= cur,
+      next = r === cur + 1,
+      items = (typeof rewardsOf === 'function' ? rewardsOf(r) : []) || [];
+    return React.createElement("li", {
+      key: r,
+      ref: r === Math.max(2, cur) ? curRef : null,
+      "data-player-rank-reward-row": r,
+      "data-got": got ? 'true' : 'false',
+      className: `flex items-start gap-2 rounded-lg border px-2 py-1.5 ${next ? `${k.border} bg-white/10` : r % 5 === 0 ? 'border-pink-300/40 bg-pink-500/10' : 'border-white/5 bg-slate-900/60'} ${got ? 'opacity-55' : ''}`
+    }, React.createElement("div", {
+      className: "w-[52px] shrink-0 leading-tight"
+    }, React.createElement("b", {
+      className: `block text-[12px] font-black tabular-nums ${k.accent}`
+    }, `ランク${r}`), got && React.createElement("small", {
+      className: "block text-[9px] font-black text-emerald-300"
+    }, "✓ もらった"), next && React.createElement("small", {
+      className: "block text-[9px] font-black text-amber-200"
+    }, "▶ 次")), React.createElement("ul", {
+      className: "min-w-0 flex-1 space-y-0.5 text-[11px] font-bold leading-snug text-slate-100"
+    }, items.map((g, i) => React.createElement("li", {
+      key: i,
+      className: "flex items-start gap-1"
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      className: "shrink-0"
+    }, cardIconNode(g.icon, 12)), React.createElement("span", {
+      className: "min-w-0",
+      style: JA_WRAP_STYLE
+    }, jaWrap(String(g.text || '')), g.bonus && React.createElement("small", {
+      className: "ml-1 whitespace-nowrap rounded bg-pink-500/30 px-1 text-[9px] font-black text-pink-100"
+    }, "5ランクごとのおまけ"))))));
+  })), React.createElement("button", {
+    type: "button",
+    "data-player-rank-rewards-more": true,
+    onClick: () => setLast(n => n + PLAYER_RANK_REWARDS_STEP),
+    className: "mt-1.5 min-h-[40px] w-full rounded-lg border border-white/15 bg-slate-800/80 text-[12px] font-black text-slate-200"
+  }, `ランク${last + 1}から先も見る`));
+}
+function PlayerRankDetail({
+  kind = 'beat',
+  xp = 0,
+  rewardsOf,
+  how = '',
+  onClose = null
+}) {
+  const k = playerRankKind(kind);
+  const info = playerRankInfo(xp);
+  const close = () => {
+    if (typeof Audio_ !== 'undefined' && Audio_.fgSe) Audio_.fgSe.tap();
+    if (onClose) onClose();
+  };
+  return React.createElement("div", {
+    "data-player-rank-detail": kind,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": k.label,
+    className: "fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-3",
+    onClick: close
+  }, React.createElement("div", {
+    className: `flex max-h-[calc(100dvh-24px)] w-full max-w-[380px] flex-col rounded-2xl border-2 bg-gradient-to-b from-violet-950 to-slate-950 p-3 text-white ${k.border}`,
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "flex shrink-0 justify-center [@media(max-height:480px)]:hidden"
+  }, React.createElement(PlayerRankBadge, {
+    kind: kind,
+    rank: info.rank,
+    size: "lg"
+  })), React.createElement("div", {
+    className: "hidden shrink-0 justify-center [@media(max-height:480px)]:flex"
+  }, React.createElement(PlayerRankBadge, {
+    kind: kind,
+    rank: info.rank,
+    size: "sm"
+  })), React.createElement("div", {
+    className: "mt-2 shrink-0"
+  }, React.createElement(PlayerRankGauge, {
+    kind: kind,
+    info: info,
+    note: `次のランクまで あと${(info.need - info.into).toLocaleString()}`
+  })), React.createElement("b", {
+    className: `mt-2 block text-[13px] font-black ${k.accent}`
+  }, "ランクごとのごほうび"), React.createElement("p", {
+    className: "mb-1 text-[10px] font-bold text-slate-300 [@media(max-height:480px)]:hidden",
+    style: JA_WRAP_STYLE
+  }, jaWrap('ランクが上がると、そのランクの物をもらえます。下へ送ると先のランクも見られます。')), React.createElement(PlayerRankRewards, {
+    kind: kind,
+    rank: info.rank,
+    rewardsOf: rewardsOf,
+    cls: "min-h-[96px] shrink"
+  }), how && React.createElement("p", {
+    className: "mt-2 shrink-0 text-[11px] font-bold leading-relaxed text-slate-300 [@media(max-height:480px)]:hidden",
+    style: JA_WRAP_STYLE
+  }, jaWrap(how)), React.createElement("button", {
+    type: "button",
+    "data-player-rank-detail-close": true,
+    onClick: close,
+    className: "mh-button mt-2 min-h-[44px] w-full shrink-0 rounded-xl text-[14px] font-black"
+  }, "とじる")));
+}
 function PlayerRankUp({
   kind = 'beat',
   from = 1,
@@ -82973,6 +83123,7 @@ function RhythmMultiScreen({
     RHYTHM_MULTI.setCatalog(songIds, lengths);
   }, [songIds.join(',')]);
   const [codeInput, setCodeInput] = React.useState('');
+  const [beatRankOpen, setBeatRankOpen] = React.useState(false);
   const [message, setMessage] = React.useState('');
   const [searching, setSearching] = React.useState(null);
   const [countdown, setCountdown] = React.useState(null);
@@ -83612,8 +83763,15 @@ function RhythmMultiScreen({
     }, "モードえらび"), ms.beatPointText && React.createElement("small", {
       "data-rhythm-beat-point-balance": true,
       className: "block truncate text-[9px] font-black text-violet-200/90"
-    }, ms.beatPointText), Number.isFinite(ms.beatRankXp) && React.createElement("div", {
-      className: "mt-0.5"
+    }, ms.beatPointText), Number.isFinite(ms.beatRankXp) && React.createElement("button", {
+      type: "button",
+      "data-beat-rank-open": true,
+      "aria-label": "ビートランク。くわしく見る",
+      onClick: () => {
+        Audio_.fgSe.tap();
+        setBeatRankOpen(true);
+      },
+      className: "mt-0.5 block w-full min-w-0 rounded-md text-left active:scale-[.98]"
     }, React.createElement(PlayerRankStrip, {
       kind: "beat",
       xp: ms.beatRankXp
@@ -83622,7 +83780,13 @@ function RhythmMultiScreen({
       onRestart: onRestartQuickRun,
       onResume: onResumeQuickRun,
       widthClass: "max-w-[42%]"
-    }), React.createElement(RhythmOrientationButton, null)), ms.exiting && React.createElement("div", {
+    }), React.createElement(RhythmOrientationButton, null)), beatRankOpen && Number.isFinite(ms.beatRankXp) && React.createElement(PlayerRankDetail, {
+      kind: "beat",
+      xp: ms.beatRankXp,
+      rewardsOf: beatRankRewardItems,
+      how: "曲を遊ぶと経験値がたまります。難しい難易度ほど多く、HELL がいちばん多くたまります。その日はじめての1曲は +30 です。",
+      onClose: () => setBeatRankOpen(false)
+    }), ms.exiting && React.createElement("div", {
       "data-quick-run-exit-overlay": true,
       className: "absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center"
     }, React.createElement("b", {
