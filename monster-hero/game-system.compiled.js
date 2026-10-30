@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 45a9d0417e723329
+// source-sha256: b7bf3d9f38fc52cc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -94917,13 +94917,15 @@ const cardTourPlay = (db, sideA, sideB, {
     st = next;
   }
   const kos = [cardKoCount(st, 0), cardKoCount(st, 1)];
+  const decks = [A.deck, B.deck];
   if (st.winner === 0 || st.winner === 1) return {
     winner: st.winner,
     kos,
     acts,
     steps,
     decided: /山札/.test(String(st.reason || '')) ? 'deck' : 'ko',
-    rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null
+    rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null,
+    decks
   };
   const life = p => st.players[p].mons.reduce((a, m) => a + Math.max(0, m.ko ? 0 : m.life), 0);
   const winner = kos[0] !== kos[1] ? kos[0] > kos[1] ? 0 : 1 : life(0) !== life(1) ? life(0) > life(1) ? 0 : 1 : cardOther(first);
@@ -94933,7 +94935,8 @@ const cardTourPlay = (db, sideA, sideB, {
     acts,
     steps,
     decided: 'limit',
-    rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null
+    rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null,
+    decks
   };
 };
 const cardTourNormalizeRewards = raw => {
