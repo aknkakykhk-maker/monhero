@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 093932071bd1cf1e
+// source-sha256: db84da342f06f68e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -101783,11 +101783,11 @@ const CardBattleScreen = ({
         if (game.share) {
           const facts = cardResultFacts(st, CARD_ME);
           const fresh = await freshCardSave();
-          const reward = cardCpuReward(fresh.daily, game.level, outcome, facts);
-          const loops = cardCpuLoops(game.level, outcome, facts);
+          const reward = cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts);
+          const loops = cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts);
           const levelGain = typeof cardLevelEntries === 'function' ? await cardLevelEntries({
             kind: 'cpu',
-            level: game.level,
+            level: CARD_SHARE_REWARD_LEVEL,
             outcome,
             debug
           }) : {
@@ -112896,6 +112896,7 @@ const CARD_RENTED_KEY = 'mh_card_rented_deck_v1';
 const CARD_SHARE_REWARD_KEY = 'mh_card_deck_reward_v1';
 let _cardShareUnavailable = false;
 const cardShareOpen = () => true;
+const CARD_SHARE_REWARD_LEVEL = 'master';
 const cardShareRowsCount = frames => cardTacticCountedRows(frames);
 const cardShareSmartText = tactics => {
   const t = cardShareNormalizeTactics(tactics);
@@ -113416,7 +113417,7 @@ const CardDeckShare = ({
   }, React.createElement("div", {
     className: "text-[12px] font-bold text-slate-400",
     style: JA_WRAP_STYLE
-  }, jaWrap('相手の強さは、登録した人が入れた戦術カードで決まります(賢さ)。もらえるビートPは、その賢さの助手と対戦と同じです')), fightIssues.length > 0 && React.createElement("p", {
+  }, jaWrap('相手の強さは、登録した人が入れた戦術カードで決まります(賢さ)。もらえるビートPや経験値は、賢さにかかわらず助手と対戦の MASTER と同じです')), fightIssues.length > 0 && React.createElement("p", {
     className: "mt-1 text-[12px] font-bold text-rose-200",
     style: JA_WRAP_STYLE
   }, jaWrap(`使うデッキ: ${fightIssues[0]}`))), rented && part !== 'fight' && React.createElement("div", {
