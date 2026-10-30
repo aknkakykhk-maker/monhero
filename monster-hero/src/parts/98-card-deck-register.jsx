@@ -111,6 +111,70 @@ const CardRegComboSheet = ({ tactics, where, title, onPick, onCustom, onClose })
   );
 };
 
+// 案B の段の見出し: 番号(色)・題・今いくつ/入れられる数・何を決める所か
+const CardRegSecHead = ({ n, color, title, count, what }) => (
+  <div>
+    <div className="flex items-center gap-2">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[15px] font-black text-slate-950" style={{ background: color }}>{n}</span>
+      <b className="text-[15px] font-black text-white">{title}</b>
+      <span className="ml-auto shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-black text-white">{count}</span>
+    </div>
+    <p className="mt-1 text-[11px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(what)}</p>
+  </div>
+);
+// セットした戦術カードの並び(上から順に見る)。▲▼で並べかえ・✕で外す。賢さに数えないときは理由
+const CardRegRows = ({ rows, why = [], onRows }) => (
+  <div className="mt-1.5 space-y-1">
+    {rows.map((r, i) => (
+      <div key={i} data-card-reg-row={i} className="rounded-xl bg-slate-800 px-2 py-1.5">
+        <div className="flex items-center gap-1.5 text-[13px] font-black text-white">
+          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-950 text-[11px] text-amber-200">{i + 1}</span>
+          <span className="min-w-0 flex-1" style={JA_WRAP_STYLE}>{cardRegRowText(r)}</span>
+          <button type="button" aria-label="上へ" disabled={i === 0} onClick={() => { const a = rows.slice(); [a[i - 1], a[i]] = [a[i], a[i - 1]]; onRows(a); }} className="px-1 text-[12px] text-slate-300 disabled:opacity-20">▲</button>
+          <button type="button" aria-label="下へ" disabled={i >= rows.length - 1} onClick={() => { const a = rows.slice(); [a[i + 1], a[i]] = [a[i], a[i + 1]]; onRows(a); }} className="px-1 text-[12px] text-slate-300 disabled:opacity-20">▼</button>
+          <button type="button" aria-label="外す" data-card-reg-row-remove onClick={() => { Audio_.fgSe.tap(); onRows(rows.filter((_, j) => j !== i)); }} className="px-1 text-[14px] text-slate-400">✕</button>
+        </div>
+        {why[i] && <small className="block pl-6 text-[10px] font-bold text-slate-400">{`賢さに数えない(${why[i]})`}</small>}
+      </div>
+    ))}
+  </div>
+);
+// ③ モンスターを押した先(下から出る「◯◯の手」)。並べかえ・外す・入れる・ほかの2体にも同じ手・おすすめで入れる。下で3体を切りかえ
+const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, onRows, onSwitch, onClose, onAdd, onCopy, onAuto }) => {
+  const m = deck && cardMonsterOf(db, deck.monsters[k]);
+  return (
+    <div data-card-reg-mon-sheet={k} className="fixed inset-0 z-[78] flex flex-col justify-end bg-black/55" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="max-h-[82%] overflow-y-auto rounded-t-3xl border-t-[3px] border-sky-400 bg-slate-950 p-3" style={{ paddingBottom: 'max(.75rem, env(safe-area-inset-bottom))' }}>
+        <div className="flex items-center gap-2.5">
+          {m && <img src={CARD_IMG(m.img)} alt="" className="aspect-[5/7] w-[52px] rounded-[8px] border-2 border-sky-400 object-cover"/>}
+          <div className="min-w-0 flex-1">
+            <b className="block text-[18px] font-black text-white">{`${name(k)}の手`}</b>
+            <small className="block text-[11px] font-bold text-slate-300">上から順に見て、当てはまった物を使います</small>
+            <span className="mt-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-black text-white">{`${rows.length}枚 / 入れられる ${max}枚`}</span>
+          </div>
+          <button type="button" aria-label="とじる" data-card-reg-mon-close onClick={onClose} className="self-start px-2 text-[22px] text-slate-400">✕</button>
+        </div>
+        <CardRegRows rows={rows} why={why} onRows={onRows}/>
+        {rows.length < max
+          ? <button type="button" data-card-reg-add={k} onClick={() => { Audio_.fgSe.tap(); onAdd(); }} className="mt-1.5 w-full rounded-xl border-2 border-dashed border-sky-300/70 py-2 text-[12px] font-black text-sky-100">{`＋ ${name(k)}の手を入れる`}</button>
+          : CARD_FRAME_MAX_TEXT('mon', max) && <small className="mt-1 block text-center text-[10px] font-bold text-slate-400">{CARD_FRAME_MAX_TEXT('mon', max)}</small>}
+        <p className="mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('入れると: この子が場面に合った技を出すようになり、賢さが上がります。守る手は、この子が狙われたときに見ます。')}</p>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <button type="button" data-card-reg-mon-copy onClick={() => { Audio_.fgSe.tap(); onCopy(); }} className="mh-button min-h-[44px] rounded-xl text-[12px] font-black">ほかの2体にも同じ手</button>
+          <button type="button" data-card-reg-mon-auto onClick={() => { Audio_.fgSe.tap(); onAuto(); }} className="mh-button mh-button-primary min-h-[44px] rounded-xl text-[12px] font-black">おすすめで入れる</button>
+        </div>
+        <div className="mt-2 grid grid-cols-3 gap-1.5">
+          {[0, 1, 2].map((i) => (
+            <button key={i} type="button" data-card-reg-mon-tab={i} onClick={() => { Audio_.fgSe.tap(); onSwitch(i); }} className={`rounded-xl border-2 py-1.5 text-center ${i === k ? 'border-sky-400 bg-sky-900/50' : 'border-white/15 bg-slate-800'}`}>
+              <b className="block truncate px-1 text-[12px] font-black text-white">{name(i)}</b><small className="text-[11px] font-black text-emerald-300">{`${counts[i]} / ${max}`}</small>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // onOpenList … 持っている戦術カードの一覧(97)/ onOpenMarket … マーケットの戦術カード
 const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenList = null, onOpenMarket = null }) => {
   const [step, setStep] = useState('deck');
@@ -124,6 +188,8 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
   const [aces, setAces] = useState('auto');     // 'auto' か カード番号の配列
   const [sheet, setSheet] = useState(null);     // { where, k }
   const [custom, setCustom] = useState(null);   // { k, c? } 自分で組み合わせる
+  const [monSheet, setMonSheet] = useState(null); // ③ モンスターを押した先(下から出る「◯◯の手」。0〜2)
+  const [basePick, setBasePick] = useState(null); // ① 基本の型をえらぶ(0 メイン・1 サブ1・2 サブ2)
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const list = (decks && decks.decks) || [];
@@ -232,47 +298,57 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
           </button>
           <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>えらぶと、持っている戦術カードから、その戦い方に合う物を3体それぞれに自動でセットします。次の画面で中身を見られます。</p>
         </>)}
+        {/* 2026-10-30 社長「基本カード/ブリーダーカード/各モンスターカードを、見やすくわかりやすく設定できるように」→ 案B:
+            ①基本の型 ②ブリーダーの手 ③モンスターごとの手 を1画面に、色と番号で分けて並べる。モンスターを押すと下からその子の手 */}
         {step === 'custom' && (<>
-          <div className={`${SCREEN_PANEL_CLASS} py-2`}>
-            <div className="text-[12px] font-black text-amber-200">基本の型</div>
-            <div className="mt-1 flex flex-wrap gap-1">
-              {CARD_TACTIC_CARDS.filter((c) => c.cat === 'base' && cardTacticsOwns(tactics, c.id)).map((c) => (
-                <button key={c.id} type="button" data-card-reg-base={c.id} onClick={() => { Audio_.fgSe.tap(); setDraft((f) => ({ ...f, base: [c.id, ...f.base.slice(1)] })); }}
-                  className={`rounded-lg px-2 py-1 text-[12px] font-black ${draft.base[0] === c.id ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`}>{c.name}</button>
-              ))}
+          <section data-card-reg-sec="base" className="rounded-2xl border-2 border-amber-500 bg-slate-900/90 p-2.5">
+            <CardRegSecHead n="①" color="#f59e0b" title="基本の型" count={`${draft.base.filter(Boolean).length}枚 / 入れられる ${open.base}枚`}
+              what="デッキ全体の大まかな打ち方。下の②③のどれにも当てはまらない場面は、この型で打ちます。"/>
+            <div className="mt-2 grid grid-cols-3 gap-1.5">
+              {[0, 1, 2].map((i) => {
+                const c = cardTacticOf(draft.base[i]);
+                const locked = i >= open.base;
+                const lockAt = (CARD_LEVEL_FRAMES.find((f) => (f.base || 0) > i) || {}).at;
+                return (
+                  <button key={i} type="button" data-card-reg-base-slot={i} disabled={locked} onClick={() => { Audio_.fgSe.tap(); setBasePick(i); }}
+                    className={`flex min-h-[106px] flex-col rounded-xl border-2 p-1.5 text-left ${locked ? 'items-center justify-center border-dashed border-white/25 bg-slate-800/70 text-center' : c ? 'border-white/60 active:scale-[.97]' : 'items-center justify-center border-dashed border-amber-300/60 bg-slate-800/60 active:scale-[.97]'}`}
+                    style={!locked && c ? { background: 'linear-gradient(160deg,#b45309,#7c2d12)' } : undefined}>
+                    <small className="text-[10px] font-black text-amber-200">{i === 0 ? 'メイン' : `サブ${i}`}</small>
+                    {locked ? <><span className="text-[20px]">🔒</span><small className="text-[10px] font-black text-slate-300">{lockAt ? `ランク${lockAt}で` : ''}</small></>
+                      : c ? <><b className="mt-0.5 block text-[14px] font-black leading-tight text-white" style={JA_WRAP_STYLE}>{c.name}</b><small className="mt-auto line-clamp-3 text-[10px] font-bold leading-snug text-orange-50" style={JA_WRAP_STYLE}>{c.desc}</small></>
+                        : <b className="mt-1 text-[13px] font-black text-amber-100">＋ えらぶ</b>}
+                  </button>
+                );
+              })}
             </div>
-            <small className="mt-1 block text-[10px] font-bold text-slate-400">どのカードにも当てはまらない場面は、この型で打ちます</small>
-          </div>
-          {[0, 1, 2, 'breeder'].map((k) => {
-            const rows = rowsOf(k);
-            const max = maxOf(k);
-            const label = k === 'breeder' ? 'ブリーダー(ガッツ・ブリーダーのカード)' : monName(k);
-            return (
-              <div key={k} data-card-reg-frame={k} className="rounded-2xl border-2 border-slate-700 bg-slate-900 p-2">
-                <div className="flex items-center gap-2">
-                  {k !== 'breeder' && deck && cardMonsterOf(db, deck.monsters[k]) && <img src={CARD_IMG(cardMonsterOf(db, deck.monsters[k]).img)} alt="" className="h-[52px] w-[37px] rounded-[5px] object-cover"/>}
-                  <span><b className="block text-[14px] font-black text-white">{label}</b><small className="text-[11px] font-bold text-slate-400">{rows.length < max ? `あと${max - rows.length}枚セットできます` : `${max}枚セットしています`}</small></span>
-                </div>
-                {rows.map((r, i) => {
-                  const why = (k === 'breeder' ? uncounted.breeder : uncounted.mons[k])[i];
-                  return (
-                    <div key={i} data-card-reg-row={i} className="mt-1.5 rounded-xl bg-slate-800 px-2 py-1.5">
-                      <div className="flex items-center gap-1.5 text-[13px] font-black text-white">
-                        <span className="min-w-0 flex-1" style={JA_WRAP_STYLE}>{cardRegRowText(r)}</span>
-                        <button type="button" aria-label="上へ" disabled={i === 0} onClick={() => { const a = rows.slice(); [a[i - 1], a[i]] = [a[i], a[i - 1]]; setRows(k, a); }} className="px-1 text-[11px] text-slate-300 disabled:opacity-20">▲</button>
-                        <button type="button" aria-label="外す" data-card-reg-row-remove onClick={() => { Audio_.fgSe.tap(); setRows(k, rows.filter((_, j) => j !== i)); }} className="px-1 text-[14px] text-slate-400">✕</button>
-                      </div>
-                      {why && <small className="block text-[10px] font-bold text-slate-400">{`賢さに数えない(${why})`}</small>}
-                    </div>
-                  );
-                })}
-                {rows.length < max ? (
-                  <button type="button" data-card-reg-add={k} onClick={() => { Audio_.fgSe.tap(); setSheet({ where: k === 'breeder' ? 'breeder' : 'mon', k }); }}
-                    className="mt-1.5 w-full rounded-xl border-2 border-dashed border-slate-500 py-2 text-[12px] font-black text-slate-200">＋ 戦術カードをセット</button>
-                ) : (CARD_FRAME_MAX_TEXT(k === 'breeder' ? 'breeder' : 'mon', max) && <small className="mt-1 block text-center text-[10px] font-bold text-slate-400">{CARD_FRAME_MAX_TEXT(k === 'breeder' ? 'breeder' : 'mon', max)}</small>)}
-              </div>
-            );
-          })}
+            <p className="mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('入れると: 賢さの上限が上がります(1枚 HARD まで・2枚 EXPERT・3枚 MASTER)。サブは、型を3分の1だけ足します。')}</p>
+          </section>
+          <section data-card-reg-sec="breeder" className="rounded-2xl border-2 border-violet-400 bg-slate-900/90 p-2.5">
+            <CardRegSecHead n="②" color="#a78bfa" title="ブリーダーの手" count={`${draft.breeder.length}枚 / 入れられる ${open.breeder}枚`}
+              what="ブリーダーのカード・全体カードをいつ出すか、ガッツをどこに置くか。攻撃の番は③のあとに見ます。"/>
+            <CardRegRows rows={draft.breeder} why={uncounted.breeder} onRows={(a) => setRows('breeder', a)}/>
+            {draft.breeder.length < open.breeder
+              ? <button type="button" data-card-reg-add="breeder" onClick={() => { Audio_.fgSe.tap(); setSheet({ where: 'breeder', k: 'breeder' }); }} className="mt-1.5 w-full rounded-xl border-2 border-dashed border-violet-300/70 py-2 text-[12px] font-black text-violet-100">＋ ブリーダーの手を入れる</button>
+              : CARD_FRAME_MAX_TEXT('breeder', open.breeder) && <small className="mt-1 block text-center text-[10px] font-bold text-slate-400">{CARD_FRAME_MAX_TEXT('breeder', open.breeder)}</small>}
+          </section>
+          <section data-card-reg-sec="mons" className="rounded-2xl border-2 border-sky-400 bg-slate-900/90 p-2.5">
+            <CardRegSecHead n="③" color="#38bdf8" title="モンスターごとの手" count={`${draft.mons.reduce((a, r) => a + r.length, 0)}枚 / 入れられる ${open.mon * 3}枚`}
+              what="その子が、どの場面で、どの技を出すか。押すと、その子の手を決められます。"/>
+            <div className="mt-2 grid grid-cols-3 gap-1.5">
+              {[0, 1, 2].map((k) => {
+                const m = deck && cardMonsterOf(db, deck.monsters[k]);
+                const rows = draft.mons[k];
+                return (
+                  <button key={k} type="button" data-card-reg-mon={k} onClick={() => { Audio_.fgSe.tap(); setMonSheet(k); }} className="flex flex-col items-center rounded-xl border-2 border-white/15 bg-slate-800/90 p-1.5 text-center active:scale-[.97]">
+                    {m ? <img src={CARD_IMG(m.img)} alt="" className="aspect-[5/7] w-[64px] rounded-[6px] border-2 border-white/50 object-cover"/> : <span className="aspect-[5/7] w-[64px] rounded-[6px] bg-slate-700"/>}
+                    <b className="mt-1 block w-full truncate text-[13px] font-black text-white">{monName(k)}</b>
+                    <small className={`block text-[11px] font-black ${rows.length ? 'text-emerald-300' : 'text-slate-400'}`}>{`${rows.length} / ${open.mon}`}</small>
+                    <small className="mt-0.5 line-clamp-2 text-[10px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{rows.length ? `${cardRegRowText(rows[0])}${rows.length > 1 ? ` ほか${rows.length - 1}` : ''}` : 'まだ入っていません'}</small>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
         </>)}
         {step === 'confirm' && (<>
           <p className="text-[16px] font-black text-white">この内容で登録します</p>
@@ -313,6 +389,15 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
       {step === 'custom' && footer(null, <button type="button" data-card-reg-next onClick={() => { Audio_.fgSe.tap(); setStep('confirm'); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black">決める(登録の確かめへ)</button>)}
       {step === 'confirm' && footer(back(styleId === 'custom' ? 'custom' : 'style'), <button type="button" data-card-reg-register disabled={busy || !deck || !selfId} onClick={() => { Audio_.fgSe.tap(); void register(); }} className="mh-button mh-button-primary min-h-[52px] flex-[2] rounded-2xl font-black disabled:opacity-40">{mine ? 'この内容で登録し直す' : 'このデッキを登録する'}</button>)}
       {step === 'done' && footer(null, <button type="button" onClick={() => { Audio_.fgSe.tap(); onBack(); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black">とじる</button>)}
+      {monSheet !== null && !sheet && !custom && (
+        <CardRegMonSheet db={db} deck={deck} k={monSheet} rows={draft.mons[monSheet]} max={open.mon} why={uncounted.mons[monSheet]} name={monName} counts={draft.mons.map((r) => r.length)}
+          onRows={(a) => setRows(monSheet, a)} onSwitch={setMonSheet} onClose={() => setMonSheet(null)}
+          onAdd={() => setSheet({ where: 'mon', k: monSheet })}
+          onCopy={() => setDraft((f) => ({ ...f, mons: f.mons.map((r, i) => (i === monSheet ? r : f.mons[monSheet].slice(0, open.mon))) }))}
+          onAuto={() => setRows(monSheet, cardTacticAutoFill(tactics, draft.mons[monSheet], 'monster', open.mon))}/>
+      )}
+      {basePick !== null && <CardTacticPicker db={db} tactics={tactics} cat="base" title={basePick === 0 ? '基本の型(メイン)をえらぶ' : `基本の型(サブ${basePick})をえらぶ`} allowNone={basePick > 0}
+        onClose={() => setBasePick(null)} onPick={(id) => { setDraft((f) => ({ ...f, base: f.base.map((x, i) => (i === basePick ? id : x)) })); setBasePick(null); }}/>}
       {sheet && <CardRegComboSheet tactics={tactics} where={sheet.where} title={sheet.where === 'breeder' ? 'ブリーダーの戦い方' : `${monName(sheet.k)}の戦い方`}
         onClose={() => setSheet(null)} onPick={(row) => { setRows(sheet.k, [...rowsOf(sheet.k), row].slice(0, maxOf(sheet.k))); setSheet(null); }}
         onCustom={() => { setCustom({ k: sheet.k, where: sheet.where }); setSheet(null); }}/>}
