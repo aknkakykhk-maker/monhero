@@ -659,14 +659,14 @@ const CardTacticsShop = ({ point = 0, busy = false, onBuy }) => {
 };
 
 // ==================== カードランクの見せ方(2026-10-29 社長「バトルカードのレベル表記が地味」→「カードランク」) ====================
-// 札・棒・ランクアップは 43 の共通の部品(ビートランクと同じ見た目)。ここはカードの中身(ごほうび・置ける所)を渡すだけ
-// 「これからもらえる物」: 次のランクから、ビートP・カードパック券・戦術カードを置ける所が増えるランクを並べる
+// 札・棒・ランクアップは 43 の共通の部品(ビートランクと同じ見た目)。ここはカードの中身(ごほうび・セットできる戦術カードの枚数)を渡すだけ
+// 「これからもらえる物」: 次のランクから、ビートP・カードパック券・セットできる戦術カードが増えるランクを並べる
 const cardRankUpcoming = (lv, n = 4) => {
   const out = [];
   for (let r = lv + 1; out.length < n && r <= lv + 50; r++) {
     const g = cardRankRewardOf(r);
-    const frame = CARD_LEVEL_FRAMES.some((f) => f.at === r);
-    if (g.tickets || frame || r === lv + 1) out.push({ rank: r, text: `${cardRankRewardText(r)}${frame ? '・戦術カードを置ける所が増える' : ''}` });
+    const frame = CARD_LEVEL_FRAMES.find((f) => f.at === r);
+    if (g.tickets || frame || r === lv + 1) out.push({ rank: r, text: `${cardRankRewardText(r)}${frame ? `・${cardLevelFrameText(frame, false)}` : ''}` });
   }
   return out;
 };
@@ -706,12 +706,12 @@ const cardRankFxGains = (gain) => {
   for (let r = gain.from + 1; r <= gain.to; r++) if (r % 5 === 0) bonusPoint += r * 200;
   bonusPoint = Math.min(bonusPoint, gain.points || 0);
   const basePoint = Math.max(0, (gain.points || 0) - bonusPoint);
-  const frames = CARD_LEVEL_FRAMES.filter((f) => f.at > gain.from && f.at <= gain.to).length;
+  const frames = CARD_LEVEL_FRAMES.filter((f) => f.at > gain.from && f.at <= gain.to);
   return [
     ...(basePoint ? [{ icon: '💰', text: `ビートP ${basePoint.toLocaleString()}` }] : []),
     ...(bonusPoint ? [{ icon: '💰', text: `ビートP ${bonusPoint.toLocaleString()}`, note: '5ランクごとのおまけ', bonus: true }] : []),
     ...(gain.tickets ? [{ icon: '🎟️', text: `カードパック券 ${gain.tickets}枚`, note: '5ランクごとのおまけ', bonus: true }] : []),
-    ...(frames ? [{ icon: '🧠', text: '戦術カードを置ける所が増えた' }] : []),
+    ...frames.map((f) => ({ icon: '🧠', text: cardLevelFrameText(f) })),
   ];
 };
 const CardRankResult = ({ gain }) => {
