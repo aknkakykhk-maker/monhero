@@ -228,8 +228,10 @@ const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); aw
     check('② 自分の手札が出る(後攻は始める前に2枚までガッツにするので3〜5枚)', handBacks >= 3 && handBacks <= 5, `${handBacks}枚`);
     // ⑥ 持ち時間・チャット・電波
     check('⑥ 上の帯に持ち時間が出る', (await A.locator('[data-card-pvp-clock]').count()) === 1 && /秒/.test(await A.locator('[data-card-pvp-clock]').innerText()));
+    // 💬 はコメントの板(定型6つ・自由文・ログ。2026-10-30)。定型の「よろしく！」を送って閉じる
     await A.locator('[data-card-pvp-chat]').click();
-    await A.locator('[data-card-pvp-stamp="0"]').click();
+    await A.locator('[data-card-chat-stamp="0"]').click();
+    await A.locator('[data-card-chat-close]').click().catch(() => {});
     // 吹き出しの文と、顔(相手 A のアイコン。助手の顔の絵を引いて、空の白い枠が出ていた)が、同じときに出ているか。A のアイコンは id なので絵になる
     // ★吹き出しは、だれかがカードを使うと消える(84)。この検査は自動で打つのですぐ消えるので、出ている瞬間をページの中で見張る(2026-10-27 あとから数えて 0 になっていた)
     const chatState = await B.waitForFunction(() => {

@@ -138,6 +138,8 @@ const cardWatchCleanMessage = (raw) => {
   const from = raw.from.slice(0, 40);
   const match = typeof raw.match === 'string' ? raw.match.slice(0, 40) : '';
   if (raw.t === 'w-eye') return { t: 'w-eye', from, match, need: cardPvpInt(raw.need, CARD_WATCH_LOG_MAX) };
+  // コメント(2026-10-30)。p … 対戦の人(ホストが流す。0=ホスト・1=相手)・無ければ観戦の人 / n … 観戦の人の名前 / sp … 定型のひとこと
+  if (raw.t === 'w-say') { const x = cardChatClean(raw.x); return x ? { t: 'w-say', from, match, x, n: rhythmMultiText(raw.n, CARD_PVP_NAME_MAX) || 'ブリーダー', p: raw.p === 0 || raw.p === 1 ? raw.p : null, sp: raw.sp === true } : null; }
   if (raw.t === 'w-act') { const n = cardPvpInt(raw.n, CARD_WATCH_LOG_MAX); const e = cardWatchCleanEntry(raw.e); return n && e ? { t: 'w-act', from, match, n, e } : null; }
   if (raw.t === 'w-log') {
     const start = cardPvpInt(raw.start, CARD_WATCH_LOG_MAX);
@@ -180,7 +182,10 @@ const CARD_WATCH_HOST = (() => {
   };
   const onWatch = (raw) => {
     const msg = cardWatchCleanMessage(raw);
-    if (!h || !msg || msg.t !== 'w-eye' || msg.match !== h.match || msg.from === h.id) return;
+    if (!h || !msg || msg.match !== h.match || msg.from === h.id) return;
+    // 観戦の人のコメントは、対戦の2人にも見せる(91 の CARD_PVP.watchSay が自分の画面に出して、相手へ渡す)
+    if (msg.t === 'w-say') { if (msg.p === null && !h.end) CARD_PVP.watchSay(msg.from, msg.n, msg.x, msg.sp); return; }
+    if (msg.t !== 'w-eye') return;
     // 上限を超えた人は数えない(その人には「満員」と出る)
     if (h.eyes.has(msg.from) || eyes() < CARD_WATCH_MAX) h.eyes.set(msg.from, Date.now()); else return;
     if (msg.need !== null && msg.need < h.log.length) {
@@ -218,6 +223,8 @@ const CARD_WATCH_HOST = (() => {
       h.log.push(entry);
       sendWatch({ t: 'w-act', n: h.log.length, e: entry });
     },
+    // 対戦の2人のコメントを、観戦の人へ流す(p … ホストの見え方で 0=ホスト・1=相手)
+    say: ({ p, x, sp }) => { if (h && !h.end && x) sendWatch({ t: 'w-say', p: p === 1 ? 1 : 0, x: String(x).slice(0, 60), sp: !!sp }); },
     discard: (p, list) => { if (h && Array.isArray(list)) { h.d = h.d.map((l, i) => (i === p ? list.slice() : l)); } },
     tick: () => {
       if (!h) return;
@@ -296,12 +303,19 @@ const CARD_WATCH = (() => {
   const onMessage = (raw) => {
     const msg = cardWatchCleanMessage(raw);
     if (!s || !msg || msg.match !== s.match || msg.from === s.id || msg.t === 'w-eye' || msg.t === 'live') return;
+    // コメント: 対戦の人のもの(ホストから・p あり)は、名前を試合の札から出す。観戦の人のものは名前つき
+    if (msg.t === 'w-say') {
+      const player = (msg.p === 0 || msg.p === 1) && !!s.hostId && msg.from === s.hostId;
+      const meta = s.meta;
+      CARD_CHAT.add({ key: player ? `p${msg.p}` : `v:${msg.from}`, name: player && meta && meta.p[msg.p] ? meta.p[msg.p].name : msg.n, text: msg.x, stamp: msg.sp, kind: player ? 'player' : 'watch' });
+      return;
+    }
     s = { ...s, seenAt: Date.now() };
     if (msg.t === 'w-hb') {
       // 上限: はじめての知らせで、もう上限まで見ていて、自分がまだ数えられていなければ「満員」
       if (!s.counted && s.phase === 'connecting' && msg.eyes >= CARD_WATCH_MAX) { stop(); set({ phase: 'full' }); return; }
       const meta = s.meta || msg.meta;
-      const patch = { hostN: msg.n, eyes: msg.eyes, end: msg.end, d: msg.d || s.d, meta, counted: true };
+      const patch = { hostN: msg.n, eyes: msg.eyes, end: msg.end, d: msg.d || s.d, meta, counted: true, hostId: msg.from };
       if (!s.st && meta) { patch.st = cardWatchNewGame(CARD_BATTLE_DATA, cardWatchSideMeta(meta, s.side)); patch.phase = 'watching'; }
       s = { ...s, ...patch };
       if (s.n < s.hostN && !s.buf[s.n + 1] && Date.now() - s.needAt > 2500) { s = { ...s, needAt: Date.now() }; send({ t: 'w-eye', need: s.n }); }
@@ -340,6 +354,7 @@ const CARD_WATCH = (() => {
       stop();
       if (!live || !live.match) return;
       s = { ...blank(), phase: 'connecting', match: live.match, side: side === 1 ? 1 : 0, id: rhythmMultiMakeId('v'), seenAt: Date.now() };
+      CARD_CHAT.reset(`watch:${live.match}`); // 観戦ごとにコメントを空にする
       emit();
       connect();
       tick = setInterval(() => {
@@ -351,6 +366,12 @@ const CARD_WATCH = (() => {
       }, CARD_WATCH_EYE_MS);
     },
     leave: () => { stop(); s = blank(); emit(); },
+    // コメントを送る(CardChatPanel が CARD_CHAT.check を通してから呼ぶ)。観戦の人どうしと、ホスト経由で対戦の2人に届く
+    say: (text, name, stamp = false) => {
+      if (!s || !socket || !alive || !text || (s.phase !== 'watching' && s.phase !== 'over')) return false;
+      send({ t: 'w-say', x: text, n: rhythmMultiText(name, CARD_PVP_NAME_MAX) || 'ブリーダー', sp: !!stamp });
+      return true;
+    },
     // 盤面をつなぐ。つないだときは、いまの場へ動きなしで合わせる。はずす関数を返す
     attachBoard: (h) => {
       boardH = h; boardEnd = null;
