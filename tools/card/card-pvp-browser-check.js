@@ -629,6 +629,13 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await shot(B, 'pvp-14-foe-left');
     check('⑭ 相手が画面を閉じて抜けたら、「相手が抜けた」と出る(時間切れと出さない)', /相手が抜けた/.test(leftText) && !/相手の時間切れ/.test(leftText), leftText.replace(/\n/g, ' ').slice(0, 120));
     check('⑭ そのとき「もう1戦」は出ない(待ち続けない)・「部屋を出る」が押せる', (await B.locator('[data-card-pvp-again]').count()) === 0 && (await B.locator('[data-card-pvp-leave]').count()) === 1);
+    // ⑮ 結果の画面のつり合い(2026-10-30 社長「サイズ感わるい」): 幅320pxでも、下のボタンはふつうの高さ・文字は1行、「相手は部屋を出ました」も横に1行
+    await B.setViewportSize({ width: 320, height: 640 }); await B.waitForTimeout(400);
+    const sizes = await B.evaluate(() => {
+      const h = (sel) => { const el = document.querySelector(sel); return el ? Math.round(el.getBoundingClientRect().height) : null; };
+      return { leave: h('[data-card-pvp-leave]'), replay: h('[data-card-pvp-replay]'), gone: h('[data-card-pvp-foe-gone]') };
+    });
+    check('⑮ 幅320pxで、結果の下のボタンがふつうの高さ(60px 以下)・「相手は部屋を出ました」は1行', sizes.leave !== null && sizes.leave <= 60 && (sizes.replay === null || sizes.replay <= 60) && (sizes.gone === null || sizes.gone <= 24), JSON.stringify(sizes));
     await ctxA.close(); await ctxB.close();
   } finally { await browser.close(); server.close(); }
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');

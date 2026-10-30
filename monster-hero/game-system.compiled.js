@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1b37b101f40b373d
+// source-sha256: 5c574c451641a1a1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -110041,6 +110041,7 @@ const CardPvpLobby = ({
     }
   }, [room.phase, room.match]);
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
+  const rowBtn = 'mh-button min-h-[48px] min-w-0 flex-1 whitespace-nowrap rounded-2xl px-2 text-[14px] font-black active:scale-[.98] disabled:opacity-40';
   const ready = !!deck && deckIssues.length === 0 && penaltyMin === 0;
   const back = () => {
     CARD_PVP.leave();
@@ -110082,7 +110083,7 @@ const CardPvpLobby = ({
     }, React.createElement(CardAssistantArt, {
       src: assistantFullImage(a, line.face),
       alt: a.name,
-      className: "h-[220px] w-[46%]"
+      className: "h-[min(200px,26svh)] w-[42%]"
     }), React.createElement("div", {
       "data-card-pvp-line": scene,
       className: "mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]",
@@ -110155,24 +110156,24 @@ const CardPvpLobby = ({
         Audio_.fgSe.tap();
         void CARD_PVP.again();
       }
-    }, room.again ? '相手を待っています…' : room.foeAgain ? 'もう1戦(相手が待っています)' : 'もう1戦'), React.createElement("div", {
+    }, room.again ? '相手を待っています…' : room.foeAgain ? 'もう1戦(相手が待っています)' : 'もう1戦'), room.foeGone && React.createElement("p", {
+      "data-card-pvp-foe-gone": true,
+      className: "text-center text-[12px] font-bold text-slate-400",
+      style: JA_LABEL_STYLE
+    }, jaWrap('相手は部屋を出ました')), React.createElement("div", {
       className: "flex gap-2"
     }, r.replay && onOpenReplay && React.createElement("button", {
       type: "button",
       "data-card-pvp-replay": true,
-      className: `${btn} mh-button-secondary`,
+      className: `${rowBtn} mh-button-secondary`,
       onClick: () => {
         Audio_.fgSe.tap();
         onOpenReplay(r.replay);
       }
-    }, "この対戦を見る"), room.foeGone && React.createElement("p", {
-      "data-card-pvp-foe-gone": true,
-      className: "flex-1 self-center text-center text-[12px] font-bold text-slate-400",
-      style: JA_LABEL_STYLE
-    }, jaWrap('相手は部屋を出ました')), React.createElement("button", {
+    }, "この対戦を見る"), React.createElement("button", {
       type: "button",
       "data-card-pvp-leave": true,
-      className: `${btn} ${noAgain ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`,
+      className: `${rowBtn} ${noAgain ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`,
       onClick: () => {
         Audio_.fgSe.tap();
         CARD_PVP.leave();
@@ -113980,6 +113981,13 @@ const cardLevelFrames = lv => CARD_LEVEL_FRAMES.filter(x => lv >= x.at).reduce((
   ...a,
   ...Object.fromEntries(Object.entries(x).filter(([k]) => k !== 'at'))
 }), {});
+const cardLevelFrameText = (f, done = true) => {
+  const parts = [];
+  if (f.base) parts.push(`基本カードを${f.base}枚`);
+  if (f.breeder) parts.push(`ブリーダーの戦術カードを${f.breeder}枚`);
+  if (f.mon) parts.push(f.breeder ? `モンスターごとに${f.mon}枚まで` : `モンスターごとに戦術カードを${f.mon}枚まで`);
+  return `${parts.join('・')}セットできるように${done ? 'なった' : 'なる'}`;
+};
 const cardLevelNextFrame = lv => CARD_LEVEL_FRAMES.find(x => x.at > lv) || null;
 const CARD_RANK_PACK_TICKETS = 1;
 const cardRankRewardOf = lv => ({
@@ -114074,9 +114082,9 @@ const cardLevelAfter = (prev, {
   }] : []), ...(tickets ? [{
     icon: '🎟️',
     text: `カードパック券 ×${tickets}`
-  }] : []), ...CARD_LEVEL_FRAMES.filter(f => f.at > lv0 && f.at <= to).map(() => ({
+  }] : []), ...CARD_LEVEL_FRAMES.filter(f => f.at > lv0 && f.at <= to).map(f => ({
     icon: '🧠',
-    text: '戦術カードを置ける所が増えた'
+    text: cardLevelFrameText(f)
   }))];
   return {
     next: {
@@ -115763,10 +115771,10 @@ const cardRankUpcoming = (lv, n = 4) => {
   const out = [];
   for (let r = lv + 1; out.length < n && r <= lv + 50; r++) {
     const g = cardRankRewardOf(r);
-    const frame = CARD_LEVEL_FRAMES.some(f => f.at === r);
+    const frame = CARD_LEVEL_FRAMES.find(f => f.at === r);
     if (g.tickets || frame || r === lv + 1) out.push({
       rank: r,
-      text: `${cardRankRewardText(r)}${frame ? '・戦術カードを置ける所が増える' : ''}`
+      text: `${cardRankRewardText(r)}${frame ? `・${cardLevelFrameText(frame, false)}` : ''}`
     });
   }
   return out;
@@ -115854,7 +115862,7 @@ const cardRankFxGains = gain => {
   for (let r = gain.from + 1; r <= gain.to; r++) if (r % 5 === 0) bonusPoint += r * 200;
   bonusPoint = Math.min(bonusPoint, gain.points || 0);
   const basePoint = Math.max(0, (gain.points || 0) - bonusPoint);
-  const frames = CARD_LEVEL_FRAMES.filter(f => f.at > gain.from && f.at <= gain.to).length;
+  const frames = CARD_LEVEL_FRAMES.filter(f => f.at > gain.from && f.at <= gain.to);
   return [...(basePoint ? [{
     icon: '💰',
     text: `ビートP ${basePoint.toLocaleString()}`
@@ -115868,10 +115876,10 @@ const cardRankFxGains = gain => {
     text: `カードパック券 ${gain.tickets}枚`,
     note: '5ランクごとのおまけ',
     bonus: true
-  }] : []), ...(frames ? [{
+  }] : []), ...frames.map(f => ({
     icon: '🧠',
-    text: '戦術カードを置ける所が増えた'
-  }] : [])];
+    text: cardLevelFrameText(f)
+  }))];
 };
 const CardRankResult = ({
   gain
