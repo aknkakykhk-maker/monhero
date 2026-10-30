@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 81d547501e19f851
+// generated-sha256: f8aac8387109a150
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -61620,6 +61620,21 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     onNavigate('CARD_BATTLE');
     return true;
   };
+  // デバッグのときだけ: サーバと同じ部品(cardTourPlay)でその場で1試合回し、表の1行と同じ形にして開く(何も保存しない・送らない)
+  const openTourSample = () => {
+    if (!db || typeof cardTourPlay !== 'function') return;
+    const seed = (Date.now() % 2147483646) + 1;
+    const res = cardTourPlay(db, { assist: 'mua' }, { assist: 'kiki' }, { seed, first: seed % 2, key: `sample|${seed}` });
+    const row = { id: 0, stage: 'group', day: 0, seed, first: seed % 2, winner: res.winner, kos: res.kos, rules: res.rules, acts: res.acts,
+      live: { who: 'kiki', play: '(見本)両者ともに一歩も引かない攻め合い!最後まで目が離せない試合になりました!', review: '(見本)守りのカードを残せたかどうかが、勝負を分けました' },
+      a: { name: '見本のブリーダーA', icon: null, is_assist: false, deck: res.decks[0] }, b: { name: '見本のブリーダーB', icon: null, is_assist: false, deck: res.decks[1] } };
+    const known = new Set(assistantsUnlockedFrom(seenStoryIds).map((x) => x.id));
+    const rec = cardReplayFromTour(db, JSON.parse(JSON.stringify(row)), { known, title: '見本の大会 第1試合' });
+    const g = rec ? cardReplayGameOf(db, rec) : null;
+    if (!g) return;
+    setGame({ ...g, settings: save ? save.settings : undefined, replay: { ...g.replay, back: 'tour' } });
+    onNavigate('CARD_BATTLE');
+  };
   if (!db) return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="MFバトルカード" onBack={onExit}/><ScreenEmpty emoji="🃏" lines={['カードのデータを読み込めませんでした']}/></div>;
   // プロフィールの登録デッキ(95 の CardShareDeckTile・CardShareDeckActions)からの頼み: そのデッキと戦う / デッキ登録を開く。読み込みが済んでから1回だけ
   const startBattleRef = useRef(null);
@@ -61957,7 +61972,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       ]);
     };
     return <CardTournament onBack={() => setView('mode')} onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('tour'); setView('tactics'); } : null}
-      onCredit={creditTour} onOpenReplay={openTourReplay} knownAssistants={new Set(assistantsUnlockedFrom(seenStoryIds).map((x) => x.id))}/>;
+      onCredit={creditTour} onOpenReplay={openTourReplay} onSample={debug ? openTourSample : null} knownAssistants={new Set(assistantsUnlockedFrom(seenStoryIds).map((x) => x.id))}/>;
   }
   // ---- 対戦の前のデッキ選び(助手と対戦・マルチ。練習試合には出さない) ----
   if (view === 'deckPick' && deckPick) {
@@ -69846,10 +69861,11 @@ const CardTourResult = ({ view, known, claimed, onClaim }) => {
 };
 
 // ---- 画面 ----
-// onBack … 対戦えらびへ / onOpenRegister … デッキ登録へ / onOpenReplay(matchId) … 見返し(PR4。無いあいだは「準備中」)
+// onBack … 対戦えらびへ / onOpenRegister … デッキ登録へ / onOpenReplay(matchId, { title }) … 見返し(PR4。開けたら true)
+// onSample … デバッグのときだけ: その場で1試合回して見返しの見本を開く(表に結果のある試合が無くても、会場と実況の見え方を確かめられる)
 // onCredit(tour, reward) … ビートPを足して受け取りの記録を保存する(84 の persist と同じ取引)。保存できたら true
 // knownAssistants … 会ったことのある助手の id(Set)
-const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, onCredit = null, knownAssistants = null }) => {
+const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, onCredit = null, knownAssistants = null, onSample = null }) => {
   const [list, setList] = useState(undefined);  // undefined … 読み込み中 / null … 表が無い・通信できない
   const [tourId, setTourId] = useState(null);
   const [view, setView] = useState(null);
@@ -69907,7 +69923,10 @@ const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, on
   const shell = (children, title = 'MFバトルカード大会', back = onBack) => (
     <div data-mh-screen data-card-tour className={SCREEN_SHELL_CLASS}>
       <ScreenHead title={title} accent="text-amber-200" onBack={back} note="デッキ登録のデッキで出る大会。試合は毎日自動で行われます"/>
-      <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>{children}</div>
+      <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>{children}
+        {onSample && <button type="button" data-card-tour-sample onClick={() => { Audio_.fgSe.tap(); onSample(); }}
+          className="w-full rounded-xl border-2 border-dashed border-amber-400/70 bg-slate-900/70 py-2 text-[13px] font-black text-amber-200">見返しの見本を開く(デバッグ)</button>}
+      </div>
     </div>
   );
   if (list === undefined) return shell(<ScreenEmpty emoji="⏳" lines={['読み込んでいます']}/>);

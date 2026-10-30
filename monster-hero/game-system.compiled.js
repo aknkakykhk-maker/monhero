@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7212da48025887ae
+// source-sha256: 4082969242b772a3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -102060,6 +102060,63 @@ const CardBattleScreen = ({
     onNavigate('CARD_BATTLE');
     return true;
   };
+  const openTourSample = () => {
+    if (!db || typeof cardTourPlay !== 'function') return;
+    const seed = Date.now() % 2147483646 + 1;
+    const res = cardTourPlay(db, {
+      assist: 'mua'
+    }, {
+      assist: 'kiki'
+    }, {
+      seed,
+      first: seed % 2,
+      key: `sample|${seed}`
+    });
+    const row = {
+      id: 0,
+      stage: 'group',
+      day: 0,
+      seed,
+      first: seed % 2,
+      winner: res.winner,
+      kos: res.kos,
+      rules: res.rules,
+      acts: res.acts,
+      live: {
+        who: 'kiki',
+        play: '(見本)両者ともに一歩も引かない攻め合い!最後まで目が離せない試合になりました!',
+        review: '(見本)守りのカードを残せたかどうかが、勝負を分けました'
+      },
+      a: {
+        name: '見本のブリーダーA',
+        icon: null,
+        is_assist: false,
+        deck: res.decks[0]
+      },
+      b: {
+        name: '見本のブリーダーB',
+        icon: null,
+        is_assist: false,
+        deck: res.decks[1]
+      }
+    };
+    const known = new Set(assistantsUnlockedFrom(seenStoryIds).map(x => x.id));
+    const rec = cardReplayFromTour(db, JSON.parse(JSON.stringify(row)), {
+      known,
+      title: '見本の大会 第1試合'
+    });
+    const g = rec ? cardReplayGameOf(db, rec) : null;
+    if (!g) return;
+    setGame({
+      ...g,
+      settings: save ? save.settings : undefined,
+      replay: {
+        ...g.replay,
+        back: 'tour'
+      }
+    });
+    onNavigate('CARD_BATTLE');
+  };
   if (!db) return React.createElement("div", {
     "data-mh-screen": true,
     className: SCREEN_SHELL_CLASS
@@ -102846,6 +102903,7 @@ const CardBattleScreen = ({
       } : null,
       onCredit: creditTour,
       onOpenReplay: openTourReplay,
+      onSample: debug ? openTourSample : null,
       knownAssistants: new Set(assistantsUnlockedFrom(seenStoryIds).map(x => x.id))
     });
   }
@@ -118228,7 +118286,8 @@ const CardTournament = ({
   onOpenRegister = null,
   onOpenReplay = null,
   onCredit = null,
-  knownAssistants = null
+  knownAssistants = null,
+  onSample = null
 }) => {
   const [list, setList] = useState(undefined);
   const [tourId, setTourId] = useState(null);
@@ -118320,7 +118379,15 @@ const CardTournament = ({
     note: "デッキ登録のデッキで出る大会。試合は毎日自動で行われます"
   }), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
-  }, children));
+  }, children, onSample && React.createElement("button", {
+    type: "button",
+    "data-card-tour-sample": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      onSample();
+    },
+    className: "w-full rounded-xl border-2 border-dashed border-amber-400/70 bg-slate-900/70 py-2 text-[13px] font-black text-amber-200"
+  }, "見返しの見本を開く(デバッグ)")));
   if (list === undefined) return shell(React.createElement(ScreenEmpty, {
     emoji: "⏳",
     lines: ['読み込んでいます']

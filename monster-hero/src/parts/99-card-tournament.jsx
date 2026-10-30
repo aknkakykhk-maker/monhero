@@ -331,10 +331,11 @@ const CardTourResult = ({ view, known, claimed, onClaim }) => {
 };
 
 // ---- 画面 ----
-// onBack … 対戦えらびへ / onOpenRegister … デッキ登録へ / onOpenReplay(matchId) … 見返し(PR4。無いあいだは「準備中」)
+// onBack … 対戦えらびへ / onOpenRegister … デッキ登録へ / onOpenReplay(matchId, { title }) … 見返し(PR4。開けたら true)
+// onSample … デバッグのときだけ: その場で1試合回して見返しの見本を開く(表に結果のある試合が無くても、会場と実況の見え方を確かめられる)
 // onCredit(tour, reward) … ビートPを足して受け取りの記録を保存する(84 の persist と同じ取引)。保存できたら true
 // knownAssistants … 会ったことのある助手の id(Set)
-const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, onCredit = null, knownAssistants = null }) => {
+const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, onCredit = null, knownAssistants = null, onSample = null }) => {
   const [list, setList] = useState(undefined);  // undefined … 読み込み中 / null … 表が無い・通信できない
   const [tourId, setTourId] = useState(null);
   const [view, setView] = useState(null);
@@ -392,7 +393,10 @@ const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, on
   const shell = (children, title = 'MFバトルカード大会', back = onBack) => (
     <div data-mh-screen data-card-tour className={SCREEN_SHELL_CLASS}>
       <ScreenHead title={title} accent="text-amber-200" onBack={back} note="デッキ登録のデッキで出る大会。試合は毎日自動で行われます"/>
-      <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>{children}</div>
+      <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>{children}
+        {onSample && <button type="button" data-card-tour-sample onClick={() => { Audio_.fgSe.tap(); onSample(); }}
+          className="w-full rounded-xl border-2 border-dashed border-amber-400/70 bg-slate-900/70 py-2 text-[13px] font-black text-amber-200">見返しの見本を開く(デバッグ)</button>}
+      </div>
     </div>
   );
   if (list === undefined) return shell(<ScreenEmpty emoji="⏳" lines={['読み込んでいます']}/>);

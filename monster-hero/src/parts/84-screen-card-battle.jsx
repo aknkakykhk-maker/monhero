@@ -2952,6 +2952,21 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     onNavigate('CARD_BATTLE');
     return true;
   };
+  // デバッグのときだけ: サーバと同じ部品(cardTourPlay)でその場で1試合回し、表の1行と同じ形にして開く(何も保存しない・送らない)
+  const openTourSample = () => {
+    if (!db || typeof cardTourPlay !== 'function') return;
+    const seed = (Date.now() % 2147483646) + 1;
+    const res = cardTourPlay(db, { assist: 'mua' }, { assist: 'kiki' }, { seed, first: seed % 2, key: `sample|${seed}` });
+    const row = { id: 0, stage: 'group', day: 0, seed, first: seed % 2, winner: res.winner, kos: res.kos, rules: res.rules, acts: res.acts,
+      live: { who: 'kiki', play: '(見本)両者ともに一歩も引かない攻め合い!最後まで目が離せない試合になりました!', review: '(見本)守りのカードを残せたかどうかが、勝負を分けました' },
+      a: { name: '見本のブリーダーA', icon: null, is_assist: false, deck: res.decks[0] }, b: { name: '見本のブリーダーB', icon: null, is_assist: false, deck: res.decks[1] } };
+    const known = new Set(assistantsUnlockedFrom(seenStoryIds).map((x) => x.id));
+    const rec = cardReplayFromTour(db, JSON.parse(JSON.stringify(row)), { known, title: '見本の大会 第1試合' });
+    const g = rec ? cardReplayGameOf(db, rec) : null;
+    if (!g) return;
+    setGame({ ...g, settings: save ? save.settings : undefined, replay: { ...g.replay, back: 'tour' } });
+    onNavigate('CARD_BATTLE');
+  };
   if (!db) return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="MFバトルカード" onBack={onExit}/><ScreenEmpty emoji="🃏" lines={['カードのデータを読み込めませんでした']}/></div>;
   // プロフィールの登録デッキ(95 の CardShareDeckTile・CardShareDeckActions)からの頼み: そのデッキと戦う / デッキ登録を開く。読み込みが済んでから1回だけ
   const startBattleRef = useRef(null);
@@ -3289,7 +3304,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       ]);
     };
     return <CardTournament onBack={() => setView('mode')} onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('tour'); setView('tactics'); } : null}
-      onCredit={creditTour} onOpenReplay={openTourReplay} knownAssistants={new Set(assistantsUnlockedFrom(seenStoryIds).map((x) => x.id))}/>;
+      onCredit={creditTour} onOpenReplay={openTourReplay} onSample={debug ? openTourSample : null} knownAssistants={new Set(assistantsUnlockedFrom(seenStoryIds).map((x) => x.id))}/>;
   }
   // ---- 対戦の前のデッキ選び(助手と対戦・マルチ。練習試合には出さない) ----
   if (view === 'deckPick' && deckPick) {
