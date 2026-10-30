@@ -6059,6 +6059,14 @@ function MonsterHeroGame() {
   // 曲の試聴・演奏と重なると邪魔になるため(超省エネと同じ考え方)。
   // 音量の保存値そのものは変えないので、モンビーを出れば元の音量へ戻る
   useEffect(() => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen) ? 0 : seVolume); }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen]);
+  // モンヒロビートの画面は上で効果音の音量を0にしている(裏の周回のバトルの音を消すため)。ランクアップの演出(beatRankFx)を出している間だけは、
+  // 効果音の音量設定どおりに戻して鳴らし、閉じたら上と同じ決まりに戻す(2026-10-29 社長「ファンファーレもなかった」。0のままだと演出の音が鳴らなかった)。
+  // 超省エネのあいだは今までどおり鳴らさない
+  useEffect(() => {
+    if (!beatRankFx || (ultraEcoSession && !cardScreenOpen)) return undefined;
+    Audio_.setSeVolume(seVolume);
+    return () => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen) ? 0 : seVolume); };
+  }, [beatRankFx, seVolume]);
   // MFバトルカードにいるあいだは、裏の周回のバトルの効果音だけを止める(docs/spec/CARD_BATTLE.md 5-3「音」)。
   // カードも同じ効果音を使うので、上の音量(0)では止めない。カードの画面は Audio_.fgSe から鳴らすので、この印を受けない。
   // 超省エネの「効果音を0にする」も、カードの画面にいるあいだは外す(カードの音まで消えるため)。音量の保存値は変えない

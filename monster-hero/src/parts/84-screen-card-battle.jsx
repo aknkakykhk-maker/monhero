@@ -787,6 +787,28 @@ const CardGutsFlight = ({ g, still = false }) => {
 // ---- 対戦の盤面 ----
 // onProgress … 場が進むたびに呼ぶ(途中で閉じた対戦の印を書き直す。84 の CardBattleScreen の cpuOpenProgress)
 // onActLog … 当てた手を (決めた人, 手) で知らせる(助手と対戦のリプレイの記録。93-card-replay.jsx)
+// 下のボタンの文を1行に収める(幅に合わせて字を小さくする。言葉は変えない)。
+//   「12枚をガッツにしてターン終了」が「…ターン終/了」と言葉の途中で折れた(2026-10-29 社長「文字サイズで調整して」)。
+//   ボタンの幅が変わったら(横の画面・「← 攻撃に戻る」が並ぶ時など)測り直す
+const CardFitLabel = ({ children, max = 14, min = 9 }) => {
+  const ref = useRef(null);
+  const [size, setSize] = useState(max);
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const fit = () => {
+      let s = max;
+      el.style.fontSize = `${s}px`;
+      while (s > min && el.scrollWidth > el.clientWidth + 0.5) { s -= 0.5; el.style.fontSize = `${s}px`; }
+      setSize(s);
+    };
+    fit();
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(fit) : null;
+    if (ro && el.parentElement) ro.observe(el.parentElement);
+    return () => { if (ro) ro.disconnect(); };
+  }, [children, max, min]);
+  return <span ref={ref} data-card-fit-label className="block w-full overflow-hidden whitespace-nowrap px-1 leading-tight" style={{ fontSize: `${size}px` }}>{children}</span>;
+};
 const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = null, meProfile = null, meIcon = null, onActLog = null }) => {
   // 演出の設定(オプション)。はやい … 相手が考える時間と、決着から結果までを短くする
   const settings = normalizeCardSettings(game.settings);
@@ -1718,7 +1740,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     setSt(replay.states[k]);
   };
   const footer = (() => {
-    const btn = 'mh-button min-h-[44px] flex-1 rounded-xl text-[14px] font-black active:scale-[.98] disabled:opacity-40';
+    // min-w-0: 字が長くてもボタンが広がらず、CardFitLabel が字を小さくして1行に収める
+    const btn = 'mh-button min-h-[44px] min-w-0 flex-1 rounded-xl text-[14px] font-black active:scale-[.98] disabled:opacity-40';
     // 観戦: 押す所は「観戦をやめる」だけ。いまだれが何を考えているかを名前で出す
     if (watch) {
       const over = st.winner !== null || !!watchEnd;
@@ -1726,7 +1749,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       const say = over ? '' : decider === st.active ? `${nm(decider)}の番…` : `${nm(decider)}が守りを考えています…`;
       return (<>
         {say && <div data-card-watch-say className="flex min-w-0 flex-1 items-center justify-center truncate text-[13px] font-bold text-slate-300">{say}</div>}
-        <button type="button" data-card-watch-leave className={`${btn} ${over ? 'mh-button-primary' : 'border border-white/20 bg-slate-800'}`} onClick={() => onFinish({ outcome: 'watchExit', st })}>{over ? '観戦の一覧へ戻る' : '観戦をやめる'}</button>
+        <button type="button" data-card-watch-leave className={`${btn} ${over ? 'mh-button-primary' : 'border border-white/20 bg-slate-800'}`} onClick={() => onFinish({ outcome: 'watchExit', st })}><CardFitLabel>{over ? '観戦の一覧へ戻る' : '観戦をやめる'}</CardFitLabel></button>
       </>);
     }
     // 勝ち負けの演出が出ているあいだは、下の字を出さない(演出の「タップで次へ」と重なった。2026-10-27 ソランドくん)。高さは残す
@@ -1734,25 +1757,25 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (tutorial && (st.winner !== null || tutStage.next)) return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">ドラの説明を読んで「次へ」</div>;
     // 自分の番に相手が守りを選んでいるあいだは「◯◯の番」と言わない(上のヘッダーと食い違っていた。案A)
     if (mode === 'wait') return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">{st.active === CARD_ME ? `${who.name}が守りを考えています…` : `${who.name}の番…`}</div>;
-    if (mode === 'setup') return <button type="button" className={`${btn} mh-button-primary`} onClick={() => step({ type: 'setupGuts', hand: picks })}>{picks.length ? `${picks.length}枚をガッツにして始める` : 'ガッツにしないで始める'}</button>;
+    if (mode === 'setup') return <button type="button" className={`${btn} mh-button-primary`} onClick={() => step({ type: 'setupGuts', hand: picks })}><CardFitLabel>{picks.length ? `${picks.length}枚をガッツにして始める` : 'ガッツにしないで始める'}</CardFitLabel></button>;
     if (mode === 'reveal') return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">相手に手札を見せています…</div>;
     if (mode === 'pray') return <div className="flex-1 text-center text-[13px] font-bold text-amber-200">{prayUse ? 'おいのりを使うか選んでください' : '相手が全体カードを出しました'}</div>;
     if (mode === 'choose') return <div className="flex-1 text-center text-[13px] font-bold text-amber-200">カードを1枚選んでください</div>;
-    if (mode === 'discard') return <button type="button" disabled={picks.length !== st.pendingDiscard.n} className={`${btn} mh-button-danger`} onClick={() => step({ type: 'discard', hand: picks })}>{`${st.pendingDiscard.n}枚えらんで捨てる`}</button>;
-    if (mode === 'guard') return <button type="button" disabled={tutOff('pass')} className={`${btn} border border-white/20 bg-slate-800${tutBtn('pass')}`} onClick={() => step({ type: 'pass' })}>{tutorial && st.pending && st.pending.evaded ? 'これで守る' : guardUsed ? (guardPv.after !== null ? `これで受ける(${guardPv.after}ダメージ)` : 'これで受ける') : guardPv && guardPv.before !== null && !tutorial ? <span data-card-pass-dmg className="block leading-tight">守らない<span className="block text-[11px] font-bold text-rose-200">{`${guardPv.before}ダメージを受ける`}</span></span> : '守らない'}</button>;
+    if (mode === 'discard') return <button type="button" disabled={picks.length !== st.pendingDiscard.n} className={`${btn} mh-button-danger`} onClick={() => step({ type: 'discard', hand: picks })}><CardFitLabel>{`${st.pendingDiscard.n}枚えらんで捨てる`}</CardFitLabel></button>;
+    if (mode === 'guard') return <button type="button" disabled={tutOff('pass')} className={`${btn} border border-white/20 bg-slate-800${tutBtn('pass')}`} onClick={() => step({ type: 'pass' })}><CardFitLabel>{tutorial && st.pending && st.pending.evaded ? 'これで守る' : guardUsed ? (guardPv.after !== null ? `これで受ける(${guardPv.after}ダメージ)` : 'これで受ける') : guardPv && guardPv.before !== null && !tutorial ? <span data-card-pass-dmg className="block leading-tight">守らない<span className="block text-[11px] font-bold text-rose-200">{`${guardPv.before}ダメージを受ける`}</span></span> : '守らない'}</CardFitLabel></button>;
     // ガッツの段から攻撃に戻る(出せるときだけ。灼熱の地でダメージが出た番などは cardCanBackToAttack が false。社長の答え 2026-10-27)
     //   練習試合(手順どおりに進める)と見返しでは出さない
     if (mode === 'guts') return (<>
-      {myTurn && !tutorial && !replay && cardCanBackToAttack(st) && <button type="button" data-card-back-attack className={`${btn} border border-violet-300/60 bg-violet-900`} onClick={() => step({ type: 'backToAttack' })}>← 攻撃に戻る</button>}
-      <button type="button" disabled={tutOff('turn')} className={`${btn} bg-gradient-to-b from-orange-400 to-orange-600${tutBtn('turn')}`} onClick={() => askEnd({ type: 'guts', hand: picks })}>{picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了'}</button>
+      {myTurn && !tutorial && !replay && cardCanBackToAttack(st) && <button type="button" data-card-back-attack className={`${btn.replace('flex-1', 'flex-none px-2.5')} border border-violet-300/60 bg-violet-900`} onClick={() => step({ type: 'backToAttack' })}>← 攻撃に戻る</button>}
+      <button type="button" disabled={tutOff('turn')} className={`${btn} bg-gradient-to-b from-orange-400 to-orange-600${tutBtn('turn')}`} onClick={() => askEnd({ type: 'guts', hand: picks })}><CardFitLabel>{picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了'}</CardFitLabel></button>
     </>);
     const useBtn = sel && monChosen !== undefined && finalOpts.length && !needTarget;
     return (<>
       {/* ショットガン: 割り振りを選ぶ窓 / 変形・トランスフォーム: 空中か地上かを選んで使う */}
-      {useBtn && finalOpts.some((o) => o.split || o.fuse) ? <button type="button" data-card-split-open className={`${btn} mh-button-primary`} onClick={() => setSplitAsk(finalOpts)}>{finalOpts.some((o) => o.fuse) ? '合体の組を選ぶ' : '割り振りを選ぶ'}</button>
-        : useBtn && finalOpts.some((o) => o.form) ? ['air', 'ground'].map((f) => { const o = finalOpts.find((x) => x.form === f); return o ? <button key={f} type="button" data-card-form={f} className={`${btn} mh-button-primary`} onClick={() => askUse(o)}>{f === 'air' ? '空中にして使う' : '地上にして使う'}</button> : null; })
-        : useBtn ? <button type="button" className={`${btn} mh-button-primary`} onClick={() => askUse(finalOpts[0])}>使う</button> : null}
-      <button type="button" disabled={tutOff('end')} className={`${btn} border border-violet-300/60 bg-violet-900${tutBtn('end')}`} onClick={() => step({ type: 'endAttacks' })}>攻撃おわり → ガッツへ</button>
+      {useBtn && finalOpts.some((o) => o.split || o.fuse) ? <button type="button" data-card-split-open className={`${btn} mh-button-primary`} onClick={() => setSplitAsk(finalOpts)}><CardFitLabel>{finalOpts.some((o) => o.fuse) ? '合体の組を選ぶ' : '割り振りを選ぶ'}</CardFitLabel></button>
+        : useBtn && finalOpts.some((o) => o.form) ? ['air', 'ground'].map((f) => { const o = finalOpts.find((x) => x.form === f); return o ? <button key={f} type="button" data-card-form={f} className={`${btn} mh-button-primary`} onClick={() => askUse(o)}><CardFitLabel>{f === 'air' ? '空中にして使う' : '地上にして使う'}</CardFitLabel></button> : null; })
+        : useBtn ? <button type="button" className={`${btn} mh-button-primary`} onClick={() => askUse(finalOpts[0])}><CardFitLabel>使う</CardFitLabel></button> : null}
+      <button type="button" disabled={tutOff('end')} className={`${btn} border border-violet-300/60 bg-violet-900${tutBtn('end')}`} onClick={() => step({ type: 'endAttacks' })}><CardFitLabel>攻撃おわり → ガッツへ</CardFitLabel></button>
     </>);
   })();
   // 黄色の案内は1行に収まる短い文に(長くて2行になり、手札を押し下げていた。2026-10-26 改良の案 E・カゲあつくん 8)。運ぶ操作の話はヘルプへ
