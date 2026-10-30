@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8efdbc54f13544bb
+// generated-sha256: edeff00c3a17bb7d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57105,7 +57105,8 @@ const cardTourFinalists = (groupRanks) => (Array.isArray(groupRanks) && groupRan
 
 // ---- 1試合 ----
 // side … { deck, tactics }(エントリーの写し)か { assist: 助手の id }(助手の席)。key … 助手のデッキを決める種の名前
-// 返り値: { winner: 0|1, kos: [0側が倒した数, 1側が倒した数], acts: [[打った人, 手]…], steps, decided: 'ko'|'deck'|'limit', rules }
+// 返り値: { winner: 0|1, kos: [0側が倒した数, 1側が倒した数], acts: [[打った人, 手]…], steps, decided: 'ko'|'deck'|'limit', rules, decks: [0側, 1側] }
+//   decks … 使ったデッキ(助手の席は種から作るので、見返しのために返す)
 const cardTourSidePolicy = (db, side, key) => {
   if (side && side.assist) {
     const deck = cardAiBuildDeck(db, side.assist, CARD_TOUR_ASSIST_LEVEL, cardAiSeededRand(`tour|${key}|${side.assist}`));
@@ -57136,11 +57137,12 @@ const cardTourPlay = (db, sideA, sideB, { seed, first = 0, key = '' }) => {
     st = next;
   }
   const kos = [cardKoCount(st, 0), cardKoCount(st, 1)];
-  if (st.winner === 0 || st.winner === 1) return { winner: st.winner, kos, acts, steps, decided: /山札/.test(String(st.reason || '')) ? 'deck' : 'ko', rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null };
+  const decks = [A.deck, B.deck];
+  if (st.winner === 0 || st.winner === 1) return { winner: st.winner, kos, acts, steps, decided: /山札/.test(String(st.reason || '')) ? 'deck' : 'ko', rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null, decks };
   // 手の数の上限まで決着しなかった(まず起きない): 倒した数 → 残りのライフの合計 → 後攻の勝ち
   const life = (p) => st.players[p].mons.reduce((a, m) => a + Math.max(0, m.ko ? 0 : m.life), 0);
   const winner = kos[0] !== kos[1] ? (kos[0] > kos[1] ? 0 : 1) : life(0) !== life(1) ? (life(0) > life(1) ? 0 : 1) : cardOther(first);
-  return { winner, kos, acts, steps, decided: 'limit', rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null };
+  return { winner, kos, acts, steps, decided: 'limit', rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null, decks };
 };
 
 // ---- ごほうびの表(大会ごと。表の1行に持たせる) ----
@@ -58605,6 +58607,24 @@ const cardMonArt = (mon) => {
   if (m && m.imgUrl) return m.imgUrl;
   return cardNewSpeciesArt()[mon.species] || null;
 };
+// 場の立ち絵を、絵の「中身の範囲」(ART_CONTENT_BOXES。対戦開始の画面の cardVsBoxOf と同じ表)で要素いっぱいへ広げる
+// (2026-10-30 社長「同じ血統同士のサイズがあってない」)。カード用に届いた絵(ジェントルなど)は中身が端までなので広げず、
+// 余白のある古い立ち絵(モッチー・スエゾー・ライガーなど)だけが広がる。1体ずつの数字は持たない(表から計算する)。
+// 中身は要素の高さを越えない(幅は CARD_FIELD_ART_SPREAD 倍まで)・足もとは下にそろえる。相手(flip)は左右を返す。広げないなら null
+// 横に広い中身(プラントの花など)は、要素の幅のこの倍まで左右に出てよい。場の絵の枠(artSize)は、どの画面でも
+// 横が高さの 1.23 倍以上あるので、正方形の絵を高さいっぱいにしても 1.15 倍なら枠の中に収まる
+const CARD_FIELD_ART_SPREAD = 1.15;
+const cardFieldArtTransform = (src, flip) => {
+  const box = typeof cardVsBoxOf === 'function' ? cardVsBoxOf(src) : null;
+  if (!box) return null;
+  const [x0, y0, x1, y1] = box;
+  const fw = Math.max(0.01, x1 - x0), fh = Math.max(0.01, y1 - y0);
+  const k = Math.min(CARD_FIELD_ART_SPREAD / fw, 1 / fh);
+  if (!(k > 1.02)) return null;
+  const tx = (flip ? 1 : -1) * k * ((x0 + x1) / 2 - 0.5) * 100;
+  const ty = (1 - (0.5 + k * (y1 - 0.5))) * 100;
+  return `translate(${tx.toFixed(1)}%, ${ty.toFixed(1)}%) scale(${(flip ? -k : k).toFixed(3)}, ${k.toFixed(3)})`;
+};
 const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
 const cardCaption = (c) => (!c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : c.kind === 'fld' ? '全体' : Number.isFinite(c.damage) ? `ダメージ${c.damage}` : '');   // 全体カードはダメージが無い(「ダメージnull」と出ていた)
 // 場の子に今かかっている効果(2026-10-28 社長「こういう効果がかかってるやつがわからない バフとかデバフとか」・案A)。
@@ -59146,8 +59166,10 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   const wideArtH = 'clamp(40px, calc((var(--mh-vh, 100svh) - 262px) / 2), 64px)';
   // 自分の場は、まんなか(1行の実況)で空いた分だけ立ち姿を大きくする(2026-10-29 社長・⑤ 案A。立ち絵の攻撃の動きが映えるように)
   const artSize = wide ? 'max-w-[88px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : opp ? 'max-h-[78px] max-w-[96px]' : 'max-h-[106px] max-w-[126px]';
+  // 同じ血統の子が同じ大きさに見えるよう、絵の余白を詰めて広げる(cardFieldArtTransform。相手の左右の向きもここで返す)
+  const artFit = art ? cardFieldArtTransform(art, opp) : null;
   const imgEl = art
-    ? <img src={art} alt="" style={wide ? { maxHeight: wideArtH } : undefined} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''}`}/>
+    ? <img src={art} alt="" style={{ ...(wide ? { maxHeight: wideArtH } : null), ...(artFit ? { transform: artFit } : null) }} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp && !artFit ? '-scale-x-100' : ''}`}/>
     : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`}/>;
   const mv = motion && !mon.ko ? motion : null;
   // calm … オプションの「画面の揺れ: 揺らさない」。受けたときは揺らさずに光るだけ
