@@ -44,7 +44,7 @@ const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemov
   const name = c ? c.name : m ? m.name : no;
   return (
     <div data-card-deck-pick={no} className={`relative flex min-w-0 flex-col rounded-lg p-0.5 ${inDeck > 0 ? 'bg-emerald-500/15 ring-2 ring-emerald-300/70' : 'bg-white/5'}`}>
-      {unusable && <span data-card-deck-unusable-tag={no} className="pointer-events-none absolute inset-x-0.5 top-[38%] z-[1] rounded-sm bg-slate-950/85 py-0.5 text-center text-[10px] font-black leading-tight text-rose-200">このデッキの子は使えない</span>}
+      {unusable && <span data-card-deck-unusable-tag={no} className="pointer-events-none absolute inset-x-0.5 top-[38%] z-[1] rounded-sm bg-slate-950/85 py-0.5 text-center text-[10px] font-black leading-tight text-rose-200">このデッキのモンスターは使えない</span>}
       <button type="button" data-card-deck-tile={no} {...press(no, onAdd, { double: false })} className={`block w-full active:scale-95 ${(!canAdd && inDeck === 0) || unusable ? 'opacity-45' : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }} aria-label={`${name}を1枚入れる`}>
         <img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} draggable={false} onDragStart={(e) => e.preventDefault()} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
       </button>
@@ -194,14 +194,14 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
             </div>
             </div>
             {!ready && <div data-card-deck-problems className="text-[11px] font-bold leading-snug text-rose-300" style={JA_WRAP_STYLE}>{[...rules, ...own].slice(0, 2).join(' / ')}</div>}
-            {unusableCount > 0 && <button type="button" data-card-deck-dead={unusableCount} onClick={() => { Audio_.fgSe.tap(); setView('deck'); setNotice(''); }} className="block w-full text-left text-[11px] font-bold leading-snug text-amber-200 underline decoration-dotted" style={JA_WRAP_STYLE}>{jaWrap(`3体のどの子も使えないカードが${unusableCount}枚入っています(混血の子は、守りのカードはサブの種族のものだけ使えます。押すと先頭に並べます)`)}</button>}
+            {unusableCount > 0 && <button type="button" data-card-deck-dead={unusableCount} onClick={() => { Audio_.fgSe.tap(); setView('deck'); setNotice(''); }} className="block w-full text-left text-[11px] font-bold leading-snug text-amber-200 underline decoration-dotted" style={JA_WRAP_STYLE}>{jaWrap(`3体のどのモンスターも使えないカードが${unusableCount}枚入っています(混血のモンスターは、守りのカードはサブの種族のものだけ使えます。押すと先頭に並べます)`)}</button>}
             {notice && <div data-card-deck-notice className="text-[12px] font-black text-amber-200" style={JA_LABEL_STYLE}>{jaWrap(notice)}</div>}
           </div>
           {/* 絞り込みは1列(縦は横に流す・横の画面は折り返す) */}
           {/* 縦の画面では右端をぼかして、横に続きがあると分かるようにする(端で札が半分に切れて、壊れて見えた。2026-10-26 見回り) */}
           <div ref={chipsRow} data-card-deck-chips className="mh-scroll relative mt-1.5 flex shrink-0 gap-1 overflow-x-auto pb-1 pr-6 landscape:flex-wrap landscape:overflow-visible landscape:pr-0" style={land ? undefined : { WebkitMaskImage: 'linear-gradient(to right, #000 82%, transparent)', maskImage: 'linear-gradient(to right, #000 82%, transparent)' }}>
-            {/* よく使う「使える子だけ」「並び」を先頭へ(右はしで見えなかった。2026-10-29 社長・案B) */}
-            <button type="button" data-card-deck-usable onClick={() => setUsableOnly((v) => !v)} className={chip(usableOnly)}>{usableOnly ? '✓ ' : ''}使える子だけ</button>
+            {/* よく使う「使えるカードだけ」「並び」を先頭へ(右はしで見えなかった。2026-10-29 社長・案B) */}
+            <button type="button" data-card-deck-usable onClick={() => setUsableOnly((v) => !v)} className={chip(usableOnly)}>{usableOnly ? '✓ ' : ''}使えるカードだけ</button>
             <button type="button" data-card-deck-sort={sort} onClick={() => setSort((s) => CARD_DECK_SORTS[(CARD_DECK_SORTS.findIndex((x) => x.id === s) + 1) % CARD_DECK_SORTS.length].id)} className={chip(false)}>並び: {sortLabel} ▾</button>
             {CARD_DECK_VIEWS.map((f) => <button key={f.id} type="button" data-card-deck-filter={f.id} onClick={() => { setView(f.id); setNotice(''); }} className={chip(view === f.id)}>{f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキ ${deck.cards.length}枚+${deck.monsters.length}体` : f.label}</button>)}
             {canAsk && <button type="button" data-card-deck-ask onClick={() => { void consult(); }} className={chip(false)}>💬 {advisor.name}に相談</button>}
