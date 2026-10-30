@@ -2342,8 +2342,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             {ms.beatPointText && <small data-rhythm-beat-point-balance className="block truncate text-[9px] font-black text-violet-200/90">{ms.beatPointText}</small>}
             {/* ビートランク(2026-10-29 社長)。立ち絵を小さくしないよう、上の帯に細い1行で出す(ボタンの列には置かない)。
                 押すと詳しい画面(ランクごとのごほうびの一覧)が開く(2026-10-30 社長「報酬が全部見れるように」。カードランクと同じ) */}
-            {Number.isFinite(ms.beatRankXp) && <button type="button" data-beat-rank-open aria-label="ビートランク。くわしく見る" onClick={() => { Audio_.fgSe.tap(); setBeatRankOpen(true); }}
-              className="mt-0.5 block w-full min-w-0 rounded-md text-left active:scale-[.98]"><PlayerRankStrip kind="beat" xp={ms.beatRankXp}/></button>}
+            {Number.isFinite(ms.beatRankXp) && <div role="button" tabIndex={0} data-beat-rank-open aria-label="ビートランク。くわしく見る" className="mt-0.5 cursor-pointer active:scale-[.98]"
+              onClick={() => { Audio_.fgSe.tap(); setBeatRankOpen(true); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); Audio_.fgSe.tap(); setBeatRankOpen(true); } }}><PlayerRankStrip kind="beat" xp={ms.beatRankXp}/></div>}
           </div>
           {quickRunInfo && <RhythmQuickRunPill info={quickRunInfo} onRestart={onRestartQuickRun} onResume={onResumeQuickRun} widthClass="max-w-[42%]" />}
           <RhythmOrientationButton/>
