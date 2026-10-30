@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 28e292fc22eee51e
+// generated-sha256: d7f2951b6355f3e8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68390,7 +68390,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
                 const lockAt = (CARD_LEVEL_FRAMES.find((f) => (f.base || 0) > i) || {}).at;
                 return (
                   <button key={i} type="button" data-card-reg-base-slot={i} disabled={locked} onClick={() => { Audio_.fgSe.tap(); setBasePick(i); }}
-                    className={`flex min-h-[104px] flex-col rounded-xl border-2 p-1.5 text-left ${locked ? 'items-center justify-center border-dashed border-white/25 bg-slate-800/70 text-center' : c ? 'border-white/60 active:scale-[.97]' : 'items-center justify-center border-dashed border-amber-300/60 bg-slate-800/60 active:scale-[.97]'}`}
+                    className={`flex min-h-[106px] flex-col rounded-xl border-2 p-1.5 text-left ${locked ? 'items-center justify-center border-dashed border-white/25 bg-slate-800/70 text-center' : c ? 'border-white/60 active:scale-[.97]' : 'items-center justify-center border-dashed border-amber-300/60 bg-slate-800/60 active:scale-[.97]'}`}
                     style={!locked && c ? { background: 'linear-gradient(160deg,#b45309,#7c2d12)' } : undefined}>
                     <small className="text-[10px] font-black text-amber-200">{i === 0 ? 'メイン' : `サブ${i}`}</small>
                     {locked ? <><span className="text-[20px]">🔒</span><small className="text-[10px] font-black text-slate-300">{lockAt ? `ランク${lockAt}で` : ''}</small></>

@@ -311,7 +311,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
                 const lockAt = (CARD_LEVEL_FRAMES.find((f) => (f.base || 0) > i) || {}).at;
                 return (
                   <button key={i} type="button" data-card-reg-base-slot={i} disabled={locked} onClick={() => { Audio_.fgSe.tap(); setBasePick(i); }}
-                    className={`flex min-h-[104px] flex-col rounded-xl border-2 p-1.5 text-left ${locked ? 'items-center justify-center border-dashed border-white/25 bg-slate-800/70 text-center' : c ? 'border-white/60 active:scale-[.97]' : 'items-center justify-center border-dashed border-amber-300/60 bg-slate-800/60 active:scale-[.97]'}`}
+                    className={`flex min-h-[106px] flex-col rounded-xl border-2 p-1.5 text-left ${locked ? 'items-center justify-center border-dashed border-white/25 bg-slate-800/70 text-center' : c ? 'border-white/60 active:scale-[.97]' : 'items-center justify-center border-dashed border-amber-300/60 bg-slate-800/60 active:scale-[.97]'}`}
                     style={!locked && c ? { background: 'linear-gradient(160deg,#b45309,#7c2d12)' } : undefined}>
                     <small className="text-[10px] font-black text-amber-200">{i === 0 ? 'メイン' : `サブ${i}`}</small>
                     {locked ? <><span className="text-[20px]">🔒</span><small className="text-[10px] font-black text-slate-300">{lockAt ? `ランク${lockAt}で` : ''}</small></>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3207d5b2ffc191f6
+// source-sha256: f864d95b6c5253b4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115629,7 +115629,7 @@ const CardDeckRegister = ({
         Audio_.fgSe.tap();
         setBasePick(i);
       },
-      className: `flex min-h-[104px] flex-col rounded-xl border-2 p-1.5 text-left ${locked ? 'items-center justify-center border-dashed border-white/25 bg-slate-800/70 text-center' : c ? 'border-white/60 active:scale-[.97]' : 'items-center justify-center border-dashed border-amber-300/60 bg-slate-800/60 active:scale-[.97]'}`,
+      className: `flex min-h-[106px] flex-col rounded-xl border-2 p-1.5 text-left ${locked ? 'items-center justify-center border-dashed border-white/25 bg-slate-800/70 text-center' : c ? 'border-white/60 active:scale-[.97]' : 'items-center justify-center border-dashed border-amber-300/60 bg-slate-800/60 active:scale-[.97]'}`,
       style: !locked && c ? {
         background: 'linear-gradient(160deg,#b45309,#7c2d12)'
       } : undefined
