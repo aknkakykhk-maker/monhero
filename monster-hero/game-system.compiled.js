@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2f9b32e97a801d20
+// source-sha256: fb437382e8f562f8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -55147,8 +55147,12 @@ const PLAYER_RANK_BADGE_CSS = `
 .mh-prb-shield::before{content:"";position:absolute;inset:0;clip-path:polygon(50% 0,100% 18%,100% 70%,50% 100%,0 70%,0 18%);background:var(--prb-rim)}
 .mh-prb-shield::after{content:"";position:absolute;inset:3px;clip-path:polygon(50% 0,100% 18%,100% 70%,50% 100%,0 70%,0 18%);background:var(--prb-face)}
 .mh-prb-gloss{position:absolute;inset:3px 3px 50% 3px;z-index:2;clip-path:polygon(50% 0,100% 18%,100% 100%,0 100%,0 18%);background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.05))}
-.mh-prb-num{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;padding-top:3px;font-weight:900;font-size:26px;color:#fff;-webkit-text-stroke:5px var(--prb-ink);paint-order:stroke fill;letter-spacing:-.04em;line-height:1}
+.mh-prb-num{position:absolute;inset:-2.7% 0 2.7% 0;z-index:3;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:26px;color:#fff;-webkit-text-stroke:5px var(--prb-ink);paint-order:stroke fill;letter-spacing:-.04em;line-height:1}
 .mh-prb-num.mh-prb-w3{font-size:20px}
+/* 2026-10-30 社長「数字の位置がセンターずれ」: 字の上下の余白(字体ごとに違う)を切り落として数字そのものを真ん中に置き、
+   盾は下が長く尖っていて見た目の重心が箱の真ん中より上(約47%)なので、数字の箱(.mh-prb-num)を盾の高さの2.7%だけ上へずらす。
+   字間を詰めた分(最後の字のうしろも詰まる)は右に足して打ち消す */
+.mh-prb-digits{display:inline-block;text-box:trim-both cap alphabetic;padding-right:.04em}
 .mh-prb-tag{display:flex;flex-direction:column;line-height:1.05}
 .mh-prb-kind{white-space:nowrap;font-size:10px;font-weight:900;color:var(--prb-label);letter-spacing:.08em}
 .mh-prb-name{white-space:nowrap;font-size:14px;font-weight:900;color:#fff;-webkit-text-stroke:3px var(--prb-ink);paint-order:stroke fill}
@@ -55194,7 +55198,9 @@ function PlayerRankBadge({
   }), React.createElement("b", {
     "data-player-rank-value": true,
     className: `mh-prb-num${text.length >= 3 ? ' mh-prb-w3' : ''}`
-  }, text)), showName && React.createElement("span", {
+  }, React.createElement("span", {
+    className: "mh-prb-digits"
+  }, text))), showName && React.createElement("span", {
     className: "mh-prb-tag",
     "aria-hidden": "true"
   }, React.createElement("span", {
@@ -55528,10 +55534,11 @@ const PLAYER_RANK_UP_FX_CSS = `
 .mh-prfx-rays{position:absolute;left:50%;top:38%;width:560px;height:560px;margin:-280px 0 0 -280px;border-radius:50%;opacity:0;pointer-events:none;background:repeating-conic-gradient(from 0deg,var(--prfx-ray) 0 8deg,transparent 8deg 24deg);-webkit-mask:radial-gradient(circle,#000 25%,transparent 68%);mask:radial-gradient(circle,#000 25%,transparent 68%)}
 .mh-prfx-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
 .mh-prfx-band{align-self:stretch;text-align:center;padding:8px 0;font-weight:900;font-size:20px;line-height:1.2;color:#fff;-webkit-text-stroke:4px rgba(0,0,0,.6);paint-order:stroke fill;opacity:0;background:linear-gradient(90deg,transparent,var(--prfx-band),transparent)}
-.mh-prfx-gains{list-style:none;margin:0;padding:0;width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+/* 2列にするのは、1つの札に字が入りきる幅(220px)が取れるときだけ(2026-10-30 カード部の検査「390幅でセッション券が札の外」) */
+.mh-prfx-gains{list-style:none;margin:0;padding:0;width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
 .mh-prfx-gain{display:flex;align-items:center;gap:10px;min-width:0;padding:8px 12px;border-radius:14px;background:rgba(15,10,35,.88);border:1px solid rgba(253,224,71,.45);opacity:0}
 .mh-prfx-gain.bonus{border-color:#f0abfc;box-shadow:0 0 18px rgba(240,171,252,.45)}
-.mh-prfx-gain b{display:block;font-size:18px;font-weight:900;line-height:1.2;color:#fef08a;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mh-prfx-gain b{display:block;font-size:18px;font-weight:900;line-height:1.2;color:#fef08a;font-variant-numeric:tabular-nums;word-break:keep-all;overflow-wrap:anywhere}
 .mh-prfx-gain small{display:block;font-size:10px;font-weight:700;color:#cbd5e1}
 .mh-prfx-gain .ico{flex:none;font-size:24px}
 .mh-prfx-hint{flex:none;text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,.6)}
@@ -55540,7 +55547,7 @@ const PLAYER_RANK_UP_FX_CSS = `
   .mh-prfx-stage{flex-direction:row;gap:20px;padding:max(12px,var(--mh-sa-top,0px)) max(16px,var(--mh-sa-right,0px)) max(12px,var(--mh-sa-bottom,0px)) max(16px,var(--mh-sa-left,0px))}
   .mh-prfx-side{flex:1 1 0;min-width:0;max-width:560px}
   .mh-prfx-title{font-size:26px}
-  .mh-prfx-gains{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+  .mh-prfx-gains{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
   .mh-prfx-gain{padding:6px 10px}
   .mh-prfx-gain b{font-size:16px}
   .mh-prfx-band{font-size:17px;padding:6px 0}
@@ -55665,7 +55672,9 @@ function PlayerRankUpFx({
     className: "mh-prb-gloss"
   }), React.createElement("b", {
     className: `mh-prb-num${String(rank).length >= 3 ? ' mh-prb-w3' : ''}`
-  }, rank)));
+  }, React.createElement("span", {
+    className: "mh-prb-digits"
+  }, rank))));
   return React.createElement("div", {
     "data-player-rank-up-fx": kind,
     "data-player-rank-up-fx-stage": stage,
