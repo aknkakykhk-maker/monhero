@@ -28,7 +28,7 @@ const cardTacticRowName = (db, row, which) => {
 
 // カードの全文(2026-10-30 社長「表に入りきらない時は、押すと全文」)。区分・見る場面・レア・名前・効果
 const CARD_TACTIC_PHASE_TEXT = Object.freeze({ attack: '攻撃するときに見る', guard: '攻撃を受けたときに見る', guts: 'ガッツを置くときに見る' });
-const CARD_TACTIC_CAT_TEXT = Object.freeze({ cond: '条件カード(〜なら)。行動カードと組にしてセットする', base: '基本カード。どの組にも当てはまらないときの打ち方', breeder: 'ブリーダーカード(ブリーダーの手)。条件カードと組にしてセットする', monster: 'モンスターカード(そのモンスターの手)。条件カードと組にしてセットする' });
+const CARD_TACTIC_CAT_TEXT = Object.freeze({ cond: '条件カード(〜なら)。行動カードと組にしてセットする', base: '基本カード。どの組にも当てはまらないときの打ち方', breeder: 'ブリーダーカード(ブリーダーが使うカードを決める)。条件カードと組にしてセットする', monster: 'モンスターカード(そのモンスターの攻撃・守りを決める)。条件カードと組にしてセットする' });
 const CardTacticDetail = ({ card, onClose }) => {
   if (!card) return null;
   const st = CARD_TACTIC_CAT_STYLE[card.cat] || CARD_TACTIC_CAT_STYLE.cond;
@@ -454,7 +454,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
                   <button type="button" data-card-tactics-auto onClick={() => { Audio_.fgSe.tap(); void setRows(frame, cardTacticAutoFill(t, rowsOf(frame), catOf(frame), maxOf(frame))); }}
                     className="mh-button mh-button-primary min-h-[44px] flex-1 rounded-xl text-[11px] font-black">おまかせで<br/>あいている所に入れる</button>
                 </div>
-                <p className="text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{frame === 'breeder' ? '攻撃するときは、モンスターの枠のあとに見ます。ガッツを置くときは、ここだけを見ます。' : '上にセットした戦術カードから順に見て、条件に当たったカードの手をこのモンスターが出します。守るときは、このモンスターが狙われたときに見ます。'}</p>
+                <p className="text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{frame === 'breeder' ? '攻撃するときは、モンスターの枠のあとに見ます。ガッツを置くときは、ここだけを見ます。' : '上にセットした戦術カードから順に見て、条件に当たったカードのとおりに、このモンスターが動きます。守るときは、このモンスターが狙われたときに見ます。'}</p>
               </div>
             )}
           </div>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 178d1dba53d3adcf
+// generated-sha256: a9f814e0e0f70e33
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -56299,7 +56299,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([
 //   判定を変えたら、ここの文も必ず合わせる。カードの id(保存に書く)は変えない。種類ごとに (段) => [名前, 効果]
 const CARD_TACTIC_TEXT = Object.freeze({
 // ---- 条件(〜なら) ----
-any:()=>['いつでも','いつでも当てはまる。組み合わせた手を、出せるときはいつも出す'],
+any:()=>['いつでも','いつでも当てはまる。組み合わせたカードを、使えるときはいつも使う'],
 ko:()=>['倒せる相手がいる','手札の攻撃の技(特殊技は除く)で、いまのガッツで出せて、ダメージが残りライフ以上になる相手のモンスターがいるとき。その相手を狙う'],
 lowest:()=>['ライフがいちばん少ない相手','相手の場で、残りライフ(数)がいちばん少ない相手を狙う'],
 highest:()=>['ライフがいちばん多い相手','相手の場で、残りライフ(数)がいちばん多い相手を狙う'],
@@ -56310,7 +56310,7 @@ type:(v)=>[`${v}の相手`,`いま${v}にいる相手のモンスターを狙う
 blood:(v)=>[`${v}の相手`,`${v}のモンスターの相手を狙う`],
 species:()=>['決めた種族の相手','組むときに選んだ種族の相手のモンスター(混血はもとの種族でも当たる)を狙う'],
 foeLife:(v)=>[`相手のライフ${v}%以下`,`残りライフが最大の${v}%以下になっている相手のモンスターがいるとき。その相手を狙う`],
-myLife:(v)=>[`味方のライフ${v}%以下`,`残りライフが最大の${v}%以下の自分のモンスターがいるとき。守る手と組むと、そのモンスターが狙われたときだけ守る`],
+myLife:(v)=>[`味方のライフ${v}%以下`,`残りライフが最大の${v}%以下の自分のモンスターがいるとき。守るカードと組むと、そのモンスターが狙われたときだけ守る`],
 myGuts:(v)=>[`自分のガッツ${v}以上`,`自分のガッツが${v}以上のとき`],
 foeGutsLe:(v)=>[`相手のガッツ${v}以下`,`相手のガッツが${v}以下のとき`],
 foeGutsGe:(v)=>[`相手のガッツ${v}以上`,`相手のガッツが${v}以上のとき(大技に備える)`],
@@ -56319,10 +56319,10 @@ foeHandGe:(v)=>[`相手の手札${v}枚以上`,`相手の手札が${v}枚以上�
 foeHandLe:(v)=>[`相手の手札${v}枚以下`,`相手の手札が${v}枚以下のとき`],
 myDeck:(v)=>[`自分の山札${v}枚以下`,`自分の山札の残りが${v}枚以下のとき`],
 foeDeck:(v)=>[`相手の山札${v}枚以下`,`相手の山札の残りが${v}枚以下のとき`],
-guardN:(v)=>[`手札に守り札${v}枚以上`,`手札に回避・防御の札が合わせて${v}枚以上あるとき`],
-guardKind:(v)=>[`手札に${v}の札がある`,`手札に${v}の札が1枚以上あるとき`],
-bigInHand:()=>['手札に大技がある','手札に、払うガッツが4以上の攻撃の札があるとき'],
-areaInHand:()=>['手札に全体攻撃がある','手札に、相手の全員に当たる攻撃の札があるとき'],
+guardN:(v)=>[`手札に守りのカード${v}枚以上`,`手札に回避・防御のカードが合わせて${v}枚以上あるとき`],
+guardKind:(v)=>[`手札に${v}のカードがある`,`手札に${v}のカードが1枚以上あるとき`],
+bigInHand:()=>['手札に大技がある','手札に、払うガッツが4以上の攻撃のカードがあるとき'],
+areaInHand:()=>['手札に全体攻撃がある','手札に、相手の全員に当たる攻撃のカードがあるとき'],
 breederInHand:()=>['手札にブリーダーのカードがある','手札にブリーダーのカードが1枚以上あるとき'],
 turnLe:(v)=>[`自分の${v}ターン目まで`,`自分のターンが${v}回目までのとき(自分のはじめのターンが1回目)`],
 turnGe:(v)=>[`自分の${v}ターン目から`,`自分のターンが${v}回目以降のとき`],
@@ -56342,65 +56342,65 @@ myGutsLe:(v)=>[`自分のガッツ${v}以下`,`自分のガッツが${v}以下�
 myDiscard:(v)=>[`自分の捨て札${v}枚以上`,`自分の捨て札が${v}枚以上のとき`],
 myKo:()=>['倒れた味方がいる','自分のモンスターが1体でも倒れているとき'],
 noField:()=>['場に全体カードが無い','どちらの全体カードも場に無いとき'],
-selfLife:(v)=>[`このモンスターのライフ${v}%以下`,`このカードを入れたモンスターの残りライフが最大の${v}%以下のとき(モンスターの手に入れたときだけ当たる)`],
-selfFresh:()=>['このモンスターがこのターンまだ攻撃していない','このカードを入れたモンスターが、このターンにまだ攻撃していないとき(モンスターの手だけ)'],
-selfType:(v)=>[`このモンスターがいま${v}`,`このカードを入れたモンスターが、いま${v}にいるとき(モンスターの手だけ)`],
-selfStun:()=>['このモンスターが攻撃できない','このカードを入れたモンスターが封じられて攻撃できないとき(モンスターの手だけ)'],
-selfAdv:()=>['このモンスターが得意な相手','このカードを入れたモンスターが出せる手札の技に、相手の特徴(地上・空中・水中)でダメージが倍になるものがあるとき。その相手を狙う(モンスターの手だけ)'],
+selfLife:(v)=>[`このモンスターのライフ${v}%以下`,`このカードを入れたモンスターの残りライフが最大の${v}%以下のとき(モンスターの枠に入れたときだけ当たる)`],
+selfFresh:()=>['このモンスターがこのターンまだ攻撃していない','このカードを入れたモンスターが、このターンにまだ攻撃していないとき(モンスターの枠だけ)'],
+selfType:(v)=>[`このモンスターがいま${v}`,`このカードを入れたモンスターが、いま${v}にいるとき(モンスターの枠だけ)`],
+selfStun:()=>['このモンスターが攻撃できない','このカードを入れたモンスターが封じられて攻撃できないとき(モンスターの枠だけ)'],
+selfAdv:()=>['このモンスターが得意な相手','このカードを入れたモンスターが出せる手札の技に、相手の特徴(地上・空中・水中)でダメージが倍になるものがあるとき。その相手を狙う(モンスターの枠だけ)'],
 incoming:(v)=>[`受けるダメージ${v}以上`,`攻撃を受けたとき、受けるダメージの見込みが${v}以上なら(守るときだけ見る)`],
 incomingKo:()=>['受けると倒れる','攻撃を受けたとき、守らないと倒れるなら(守るときだけ見る)'],
 incomingArea:()=>['全体攻撃を受けた','受けた攻撃が、全員に当たる攻撃なら(守るときだけ見る)'],
 // ---- 基本カード(どの手にも当てはまらないときの打ち方) ----
-tBalance:()=>['バランス型','攻め・守り・ガッツ・大技・崩し・全体を同じくらいに見て、損得のいちばん良い手を打つ。とどめだけ少し優先'],
-tAttack:()=>['攻め型','攻撃を多めに出し(1.5倍重く)、ガッツはためず守り札も残さない。守るのは、受けると倒れるときだけ'],
-tGuard:()=>['守り型','守り札を残す(1.5倍重く)・攻撃は控えめ(0.7倍)。攻撃を受けたら、守れるときはいつも守る'],
+tBalance:()=>['バランス型','攻め・守り・ガッツ・大技・崩し・全体を同じくらいに見て、損得のいちばん良い使い方をする。とどめだけ少し優先'],
+tAttack:()=>['攻め型','攻撃を多めに出し(1.5倍重く)、ガッツはためず守りのカードも残さない。守るのは、受けると倒れるときだけ'],
+tGuard:()=>['守り型','守りのカードを残す(1.5倍重く)・攻撃は控えめ(0.7倍)。攻撃を受けたら、守れるときはいつも守る'],
 tSave:()=>['溜め型','ガッツを多めにためて(1.6倍)、大技を優先する(1.8倍)'],
-tDisrupt:()=>['崩し型','相手の手札・山札・ガッツを減らす札を優先する(1.8倍)'],
+tDisrupt:()=>['崩し型','相手の手札・山札・ガッツを減らすカードを優先する(1.8倍)'],
 tBig:()=>['大技型','ダメージの大きい技を優先する(1.6倍)'],
 tArea:()=>['全体型','全員に当たる攻撃・全体カードを優先する(1.6倍)。相手が1体だけのときは全体攻撃を出さない'],
 tFinish:()=>['仕留め型','あと少しで倒せる相手への攻撃を優先する(1.6倍)'],
-tRush:()=>['速攻型','攻撃を多めに(1.6倍)・大技は控えめ(0.7倍)。払うガッツが2以上の技は出さない。守るときもガッツ1以下の守り札だけ使う'],
-tSteady:()=>['堅実型','守り札とガッツを残し(1.3倍)、攻撃は控えめ(0.8倍)。自分も傷つく技は出さない'],
-tJam:()=>['かく乱守り型','崩す札(1.3倍)と、守り札を残すこと(1.3倍)を両方重くする'],
+tRush:()=>['速攻型','攻撃を多めに(1.6倍)・大技は控えめ(0.7倍)。払うガッツが2以上の技は出さない。守るときもガッツ1以下の守りのカードだけ使う'],
+tSteady:()=>['堅実型','守りのカードとガッツを残し(1.3倍)、攻撃は控えめ(0.8倍)。自分も傷つく技は出さない'],
+tJam:()=>['かく乱守り型','崩すカード(1.3倍)と、守りのカードを残すこと(1.3倍)を両方重くする'],
 tCalm:()=>['慎重型','いっしょに入れた基本カードの重みを半分に弱めて、極端な打ち方をしない'],
 tFlex:()=>['臨機応変型','ターンごとに場を見て、とどめ・全体攻撃・守り・攻めのどれか1つを強くする'],
-tMill:()=>['持久型','相手の山札を削る・相手に引かせる・ガッツを山札へ戻す札を重くして、相手の山札切れで勝ちを狙う'],
-tReckless:()=>['捨て身型','守り札を残さず(0.5倍)、とどめを優先(1.3倍)。受けると倒れるとき以外は守らない'],
-tHand:()=>['手札温存型','出したあとに手札が2枚以上残る手だけを出す。ガッツを置くときも手札を2枚残して置く'],
-tDeck:()=>['山札節約型','カードを引く・山札からガッツへ・手札を引き直す・相手に引かせる札は出さない'],
+tMill:()=>['持久型','相手の山札を削る・相手に引かせる・ガッツを山札へ戻すカードを重くして、相手の山札切れで勝ちを狙う'],
+tReckless:()=>['捨て身型','守りのカードを残さず(0.5倍)、とどめを優先(1.3倍)。受けると倒れるとき以外は守らない'],
+tHand:()=>['手札温存型','使ったあとに手札が2枚以上残るときだけカードを使う。ガッツを置くときも手札を2枚残して置く'],
+tDeck:()=>['山札節約型','カードを引く・山札からガッツへ・手札を引き直す・相手に引かせるカードは出さない'],
 tFocus:()=>['一点集中型','ライフの割合がいちばん低い相手への攻撃を優先して、倒れるまで同じ相手を狙う'],
 tSpread:()=>['分散型','全体攻撃を重くし(1.4倍)、ライフがいちばん多い相手への攻撃を優先する'],
 tComeback:()=>['逆転型','倒された数で負けている、または味方のライフの合計が半分以下なら捨て身(守り0.5倍・とどめ・大技・全体1.3倍)。それ以外は堅く(守り・ガッツ1.2倍)'],
 // ---- モンスターカード(この子の手) ----
-atk:()=>['いちばん得な攻撃','このモンスターが出せる攻撃のうち、点数(ダメージ・とどめ・ガッツの損得)がいちばん高い手を出す'],
-kind:(v)=>[`${v}の技で攻撃`,`このモンスターの${v}の技のうち、点数がいちばん高い手を出す`],
-cost:(v)=>{const n=v.startsWith('軽い')?'0〜1':v.startsWith('中')?'2〜3':'4以上';const nm=v.startsWith('軽い')?'軽い技':v.startsWith('中')?'中くらいの技':'大技';return [`${nm}で攻撃`,`このモンスターの技のうち、払うガッツが${n}の技で、点数がいちばん高い手を出す`];},
-reach:(v)=>[v==='全体攻撃'?'全体攻撃で攻撃':'1体だけに攻撃',v==='全体攻撃'?'このモンスターの、相手の全員に当たる技のうち、点数がいちばん高い手を出す':'このモンスターの、1体だけに当てる技のうち、点数がいちばん高い手を出す'],
-eff:(v)=>{const d={回避されない:'相手が回避できない技',攻撃できなくする:'当たると相手を攻撃できなくする技',ガッツを減らす:'当たると相手のガッツを減らす技',吸い取る:'相手のライフを吸い取って回復する技','2回攻撃':'もう1回攻撃できるようになる技',防御で減らない:'防御されてもダメージが減らない技',回避されても半分:'回避されても半分のダメージが入る技',種族に強い:'特定の特徴の相手に倍のダメージの技',ダメージを割り振る:'ダメージを相手の何体かに割り振る技','2枚同時':'2枚組でいっしょに出す技',手札に戻る:'当たると手札に戻ってくる技',カード投げ:'カードを投げてダメージを足す技'}[v];return [`「${v}」の技で攻撃`,`このモンスターの、${d}のうち、点数がいちばん高い手を出す`];},
-attach:()=>['付ける札といっしょに攻撃','技に付ける札をいっしょに出す手のうち、点数がいちばん高い手を出す'],
-attachKind:(v)=>[`付ける札(${v})といっしょに攻撃`,`「${v}」付ける札をいっしょに出す手のうち、点数がいちばん高い手を出す`],
+atk:()=>['いちばん得な攻撃','このモンスターが出せる攻撃のうち、点数(ダメージ・とどめ・ガッツの損得)がいちばん高い攻撃をする'],
+kind:(v)=>[`${v}の技で攻撃`,`このモンスターの${v}の技のうち、点数がいちばん高い攻撃をする`],
+cost:(v)=>{const n=v.startsWith('軽い')?'0〜1':v.startsWith('中')?'2〜3':'4以上';const nm=v.startsWith('軽い')?'軽い技':v.startsWith('中')?'中くらいの技':'大技';return [`${nm}で攻撃`,`このモンスターの技のうち、払うガッツが${n}の技で、点数がいちばん高い攻撃をする`];},
+reach:(v)=>[v==='全体攻撃'?'全体攻撃で攻撃':'1体だけに攻撃',v==='全体攻撃'?'このモンスターの、相手の全員に当たる技のうち、点数がいちばん高い攻撃をする':'このモンスターの、1体だけに当てる技のうち、点数がいちばん高い攻撃をする'],
+eff:(v)=>{const d={回避されない:'相手が回避できない技',攻撃できなくする:'当たると相手を攻撃できなくする技',ガッツを減らす:'当たると相手のガッツを減らす技',吸い取る:'相手のライフを吸い取って回復する技','2回攻撃':'もう1回攻撃できるようになる技',防御で減らない:'防御されてもダメージが減らない技',回避されても半分:'回避されても半分のダメージが入る技',種族に強い:'特定の特徴の相手に倍のダメージの技',ダメージを割り振る:'ダメージを相手の何体かに割り振る技','2枚同時':'2枚組でいっしょに出す技',手札に戻る:'当たると手札に戻ってくる技',カード投げ:'カードを投げてダメージを足す技'}[v];return [`「${v}」の技で攻撃`,`このモンスターの、${d}のうち、点数がいちばん高い攻撃をする`];},
+attach:()=>['付けるカードといっしょに攻撃','技に付けるカードをいっしょに出す攻撃のうち、点数がいちばん高いものを出す'],
+attachKind:(v)=>[`付けるカード(${v})といっしょに攻撃`,`「${v}」付けるカードをいっしょに出す攻撃のうち、点数がいちばん高いものを出す`],
 spe:(v)=>{const d={味方を回復:'味方のライフを回復する',引く:'カードを引く',空中になる:'空中に上がる',安全になる:'次の攻撃を受けなくなる',まゆと羽化:'まゆになる・羽化する',のりうつる:'相手にのりうつる'}[v];return [`特殊技で${d}`,`このモンスターの特殊技のうち、${d}技を出す`];},
-stance:(v)=>({この子から攻める:['このモンスターが攻める','当てはまったら、このモンスターの攻撃で点数がいちばん高い手を出す'],この子は攻撃しない:['このモンスターは攻撃しない','当てはまったら、このターンはこのモンスターに攻撃させない(このあとの手・基本カードの打ち方でも出さない)'],ライフの多い子が先に:['いちばん元気なら攻める','このモンスターが味方でいちばんライフが多いときだけ、このモンスターの攻撃で点数がいちばん高い手を出す'],ライフの少ない子は温存:['いちばん弱っていたら休む','味方が2体以上いて、このモンスターのライフがいちばん少ないとき、このターンは攻撃させない'],攻撃は1回だけ:['攻撃は1回だけ','このターンにまだ攻撃していなければ攻撃する。1回攻撃したら、このターンはもう攻撃させない'],何回でも攻める:['何回でも攻める','点数が少し低い手でも攻撃を出して、このモンスターの攻撃を続ける']})[v],
-disrupt:(v)=>({手札を捨てさせる:['相手の手札を捨てさせる','相手の手札を捨てさせる・山札の下へ戻す札を含む手を出す'],山札を削る:['相手の山札を削る','相手の山札を削る札を含む手を出す'],ガッツを減らす:['相手のガッツを減らす','相手のガッツを減らす・0にする札を含む手を出す'],番を飛ばす:['相手のターンを飛ばす','相手の次のターンを飛ばす札を含む手を出す']})[v],
-guard:()=>['守る','このモンスターが攻撃を受けたら、手札の守り札でいちばん良い守り方をする'],
-guardFirst:(v)=>[`${v}で守る`,`このモンスターが攻撃を受けたら、${v==='回避'||v==='防御'?v+'の札':'「'+v+'」の札'}だけで守る(無ければ次の手を見る)`],
+stance:(v)=>({この子から攻める:['このモンスターが攻める','当てはまったら、このモンスターの攻撃で点数がいちばん高い攻撃をする'],この子は攻撃しない:['このモンスターは攻撃しない','当てはまったら、このターンはこのモンスターに攻撃させない(このあとの戦術カード・基本カードの打ち方でも攻撃させない)'],ライフの多い子が先に:['いちばん元気なら攻める','このモンスターが味方でいちばんライフが多いときだけ、このモンスターの攻撃で点数がいちばん高い攻撃をする'],ライフの少ない子は温存:['いちばん弱っていたら休む','味方が2体以上いて、このモンスターのライフがいちばん少ないとき、このターンは攻撃させない'],攻撃は1回だけ:['攻撃は1回だけ','このターンにまだ攻撃していなければ攻撃する。1回攻撃したら、このターンはもう攻撃させない'],何回でも攻める:['何回でも攻める','点数が少し低い攻撃でも出して、このモンスターの攻撃を続ける']})[v],
+disrupt:(v)=>({手札を捨てさせる:['相手の手札を捨てさせる','相手の手札を捨てさせる・山札の下へ戻すカードを使う'],山札を削る:['相手の山札を削る','相手の山札を削るカードを使う'],ガッツを減らす:['相手のガッツを減らす','相手のガッツを減らす・0にするカードを使う'],番を飛ばす:['相手のターンを飛ばす','相手の次のターンを飛ばすカードを使う']})[v],
+guard:()=>['守る','このモンスターが攻撃を受けたら、手札の守りのカードでいちばん良い守り方をする'],
+guardFirst:(v)=>[`${v}で守る`,`このモンスターが攻撃を受けたら、${v==='回避'||v==='防御'?v+'のカード':'「'+v+'」のカード'}だけで守る(無ければ次のカードを見る)`],
 guardOver:(v)=>[`ダメージ${v}以上だけ守る`,`このモンスターが攻撃を受けたとき、受けるダメージの見込みが${v}より小さければ守らずに受ける。${v}以上なら守る`],
 guardDie:()=>['倒れるときだけ守る','このモンスターが攻撃を受けたとき、受けても倒れなければ守らずに受ける。倒れるときだけ守る'],
-cover:()=>['かばう札で守る','このモンスターが攻撃を受けたら、かばう・身代わりの札で守る'],
-noGuard:()=>['守らない','このモンスターが攻撃を受けても、守り札を使わずに受ける(札を残す)'],
-charge:()=>['溜め技を使う','次の技のダメージを何倍にする札(溜め・怒り・次のターンの技を倍)を含む手を出す'],
-chargeKind:(v)=>((w)=>[`溜め(${w})を使う`,`「${w}」の溜めの札を含む手を出す`])(v==='次の番の技を倍'?'次のターンの技を倍':v), // 段の値(保存に書く)は「次の番の技を倍」のまま。見せる言葉だけ「ターン」(2026-10-30 社長)
+cover:()=>['かばうカードで守る','このモンスターが攻撃を受けたら、かばう・身代わりのカードで守る'],
+noGuard:()=>['守らない','このモンスターが攻撃を受けても、守りのカードを使わずに受ける(カードを残す)'],
+charge:()=>['溜め技を使う','次の技のダメージを何倍にするカード(溜め・怒り・次のターンの技を倍)を使う'],
+chargeKind:(v)=>((w)=>[`溜め(${w})を使う`,`「${w}」の溜めのカードを使う`])(v==='次の番の技を倍'?'次のターンの技を倍':v), // 段の値(保存に書く)は「次の番の技を倍」のまま。見せる言葉だけ「ターン」(2026-10-30 社長)
 // ---- ブリーダーカード ----
-bEff:(v)=>{const d={回復する:'味方を回復する',倒れた子を戻す:'倒れたモンスターを場に戻す',攻撃できないを消す:'味方の「攻撃できない」を消す',相手を攻撃できなくする:'相手のモンスターを攻撃できなくする',相手のガッツを減らす:'相手のガッツを減らす',両方のガッツを0にする:'両方のガッツを0にする',山札からガッツへ:'山札からガッツを増やす',カードを引く:'カードを引く',捨て札から拾う:'捨て札からカードを拾う',手札を引き直す:'手札を引き直す',もう1回攻撃させる:'味方にもう1回攻撃させる',合体する:'モンスターを合体させる',付ける札をただにする:'付ける札の払うガッツを0にする',守りを名指しで封じる:'相手の守りを名指しで封じる',捨て札を山札に戻す:'ガッツを山札に戻して切り直す',小さく攻撃する:'ダメージのあるブリーダーのカードで攻撃する'}[v];return [`ブリーダー: ${d}`,`手札のブリーダーのカードのうち、${d}カードを出す`];},
+bEff:(v)=>{const d={回復する:'味方を回復する',倒れた子を戻す:'倒れたモンスターを場に戻す',攻撃できないを消す:'味方の「攻撃できない」を消す',相手を攻撃できなくする:'相手のモンスターを攻撃できなくする',相手のガッツを減らす:'相手のガッツを減らす',両方のガッツを0にする:'両方のガッツを0にする',山札からガッツへ:'山札からガッツを増やす',カードを引く:'カードを引く',捨て札から拾う:'捨て札からカードを拾う',手札を引き直す:'手札を引き直す',もう1回攻撃させる:'味方にもう1回攻撃させる',合体する:'モンスターを合体させる',付ける札をただにする:'付けるカードの払うガッツを0にする',守りを名指しで封じる:'相手の守りを名指しで封じる',捨て札を山札に戻す:'ガッツを山札に戻して切り直す',小さく攻撃する:'ダメージのあるブリーダーのカードで攻撃する'}[v];return [`ブリーダー: ${d}`,`手札のブリーダーのカードのうち、${d}カードを出す`];},
 fieldCard:()=>['全体カードを出す','手札の全体カード(場に残るカード)を出す'],
 fieldKind:(v)=>[`全体カード: ${v}`,`手札の全体カードのうち、「${v}」の全体カードを場に出す`],
 save:()=>['ガッツを多めにためる','ガッツを置くときに、ふだんより多くの手札をガッツに置く'],
 gutsN:(v)=>[`ガッツを${v}枚置く`,`ガッツを置くときに、手札から${v}枚だけガッツに置く`],
-keepGuard:()=>['守り札は置かない','ガッツを置くときに、回避・防御の札はガッツに置かない'],
-gutsOrder:(v)=>[v==='重い札'?'重い札からガッツに置く':'使えない札からガッツに置く',v==='重い札'?'ガッツに置く枚数はふだんどおり。払うガッツの大きい札から先に置く':'ガッツに置く枚数はふだんどおり。場のモンスターが使えない札から先に置く'],
+keepGuard:()=>['守りのカードは置かない','ガッツを置くときに、回避・防御のカードはガッツに置かない'],
+gutsOrder:(v)=>[v==='重い札'?'重いカードからガッツに置く':'使えないカードからガッツに置く',v==='重い札'?'ガッツに置く枚数はふだんどおり。払うガッツの大きいカードから先に置く':'ガッツに置く枚数はふだんどおり。場のモンスターが使えないカードから先に置く'],
 stop:()=>['このターンの攻撃をやめる','当てはまったら、このターンの攻撃をここで終える'],
-ace:()=>['切り札を出す','登録で選んだ切り札が手札にあれば、それを含む手を先に出す'],
-holdBreeder:()=>['ブリーダーのカードを温存','当てはまったら、このターンはブリーダーのカード(全体カードも)を出さない。ほかの手はそのまま'],
+ace:()=>['切りカードを出す','登録で選んだ切りカードが手札にあれば、それを先に使う'],
+holdBreeder:()=>['ブリーダーのカードを温存','当てはまったら、このターンはブリーダーのカード(全体カードも)を出さない。ほかのカードはそのまま使う'],
 });
 const cardTacticTextOf = (g, v) => {
   const t = CARD_TACTIC_TEXT[g.id] ? CARD_TACTIC_TEXT[g.id](v) : null;
@@ -58741,7 +58741,7 @@ const cardGuardWhyShort = (db, st, c) => {
   if (!c.ready) return '準備中';
   if ((st.forbid[q] || []).includes(c.kind)) return c.kind === 'dge' ? '今は回避できない' : '今は防御できない';
   if (c.guts > me.guts.length) return `ガッツ不足(あと${c.guts - me.guts.length})`;
-  if (cardHasEff(c, 'cover')) return '味方をかばう札';
+  if (cardHasEff(c, 'cover')) return '味方をかばうカード';
   if (target && t.p === q && !cardUsableBy(c, target)) return cardUserLabel(db, c);
   if (ev && cardHasEff(atk, 'noEvade')) return 'この技は回避できない';
   if (ev && !ev.kinds.includes(atk.kind)) return `${ev.kinds.map((k) => kindName[k] || k).join('・')}だけ`;
@@ -59904,7 +59904,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (c.user !== 'any' && c.user !== 'breeder' && !me.mons.some((m) => !m.ko && cardUsableBy(c, m))) return cardUserLabel(db, c);
     if (c.guts > me.guts.length) return `ガッツ不足(あと${c.guts - me.guts.length})`;
     if (cardHasEff(c, 'attach')) return '付ける技がない';
-    if (cardHasEff(c, 'requires')) return 'いっしょに出す札がない';
+    if (cardHasEff(c, 'requires')) return '組むカードなし';
     return '今は使えない';
   };
   const tapMon = (p, m) => {
@@ -60243,7 +60243,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     </>);
   })();
   // 黄色の案内は1行に収まる短い文に(長くて2行になり、手札を押し下げていた。2026-10-26 改良の案 E・カゲあつくん 8)。運ぶ操作の話はヘルプへ
-  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? (sel ? (monChosen === undefined ? '使うモンスターをタップ' : setPending ? '光っている札を押して足してね' : needTarget ? '狙う相手をタップ' : pickCands.length ? '「使う」か、光っている札を足す' : '「使う」をタップ') : attackOpts.length ? '技をタップ → 相手をタップ' : '使える技がありません →「攻撃おわり」でガッツへ')
+  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? (sel ? (monChosen === undefined ? '使うモンスターをタップ' : setPending ? '光っているカードを押して足してね' : needTarget ? '狙う相手をタップ' : pickCands.length ? '「使う」か、光っているカードを足す' : '「使う」をタップ') : attackOpts.length ? '技をタップ → 相手をタップ' : '使える技がありません →「攻撃おわり」でガッツへ')
     : mode === 'guard' ? (guardOpts.length ? '明るいカードで守れます' : '使える回避・防御はありません')
     : mode === 'guts' ? (gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(何枚でも)')
     : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます'
@@ -64500,7 +64500,7 @@ const cardPvpVerify = (db, { myDeck, mySeed, foeDeck, foeSeed, first, names, his
     if (cardPvpDecider(st) !== e.by) return { ok: false, why: `${n + 1}手目: ターンでない人の手` };
     if (e.by === 1) {
       for (const [k, no] of Object.entries(e.reveal || {})) {
-        if (st.players[1].hand[Number(k)] !== no) return { ok: false, why: `${n + 1}手目: 相手の手札に無い札を使った` };
+        if (st.players[1].hand[Number(k)] !== no) return { ok: false, why: `${n + 1}手目: 相手の手札に無いカードを使った` };
       }
     }
     const next = cardApplyAction(db, st, e.act);
@@ -66069,10 +66069,10 @@ const CardPvpHistory = ({ db = CARD_BATTLE_DATA, onBack, onOpenReplay = null, re
             : e.foeDeck
               ? <>{e.foe.deckName && <p className="px-1 text-[13px] font-black text-white">{e.foe.deckName}</p>}<CardPvpHistoryDeck db={db} deck={e.foeDeck} press={press} tone="foe"/></>
               : (<>
-                <p data-card-pvp-history-partial className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('相手が途中で抜けたので、この試合で使われた札だけです')}</p>
+                <p data-card-pvp-history-partial className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('相手が途中で抜けたので、この試合で使われたカードだけです')}</p>
                 {e.foeSeen.length
                   ? <CardPvpHistoryDeck db={db} deck={{ monsters: [], cards: e.foeSeen }} press={press} tone="seen"/>
-                  : <p className="px-1 text-[13px] font-bold text-slate-400">使われた札はありません</p>}
+                  : <p className="px-1 text-[13px] font-bold text-slate-400">使われたカードはありません</p>}
               </>)}
           <p className="px-1 text-[11px] font-bold text-slate-400">長押しでカードを大きく見られます</p>
         </div>
@@ -67834,7 +67834,7 @@ const cardTacticRowName = (db, row, which) => {
 
 // カードの全文(2026-10-30 社長「表に入りきらない時は、押すと全文」)。区分・見る場面・レア・名前・効果
 const CARD_TACTIC_PHASE_TEXT = Object.freeze({ attack: '攻撃するときに見る', guard: '攻撃を受けたときに見る', guts: 'ガッツを置くときに見る' });
-const CARD_TACTIC_CAT_TEXT = Object.freeze({ cond: '条件カード(〜なら)。行動カードと組にしてセットする', base: '基本カード。どの組にも当てはまらないときの打ち方', breeder: 'ブリーダーカード(ブリーダーの手)。条件カードと組にしてセットする', monster: 'モンスターカード(そのモンスターの手)。条件カードと組にしてセットする' });
+const CARD_TACTIC_CAT_TEXT = Object.freeze({ cond: '条件カード(〜なら)。行動カードと組にしてセットする', base: '基本カード。どの組にも当てはまらないときの打ち方', breeder: 'ブリーダーカード(ブリーダーが使うカードを決める)。条件カードと組にしてセットする', monster: 'モンスターカード(そのモンスターの攻撃・守りを決める)。条件カードと組にしてセットする' });
 const CardTacticDetail = ({ card, onClose }) => {
   if (!card) return null;
   const st = CARD_TACTIC_CAT_STYLE[card.cat] || CARD_TACTIC_CAT_STYLE.cond;
@@ -68260,7 +68260,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
                   <button type="button" data-card-tactics-auto onClick={() => { Audio_.fgSe.tap(); void setRows(frame, cardTacticAutoFill(t, rowsOf(frame), catOf(frame), maxOf(frame))); }}
                     className="mh-button mh-button-primary min-h-[44px] flex-1 rounded-xl text-[11px] font-black">おまかせで<br/>あいている所に入れる</button>
                 </div>
-                <p className="text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{frame === 'breeder' ? '攻撃するときは、モンスターの枠のあとに見ます。ガッツを置くときは、ここだけを見ます。' : '上にセットした戦術カードから順に見て、条件に当たったカードの手をこのモンスターが出します。守るときは、このモンスターが狙われたときに見ます。'}</p>
+                <p className="text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{frame === 'breeder' ? '攻撃するときは、モンスターの枠のあとに見ます。ガッツを置くときは、ここだけを見ます。' : '上にセットした戦術カードから順に見て、条件に当たったカードのとおりに、このモンスターが動きます。守るときは、このモンスターが狙われたときに見ます。'}</p>
               </div>
             )}
           </div>
@@ -68547,7 +68547,7 @@ const CardRankResult = ({ gain }) => {
 const CARD_REG_STYLES = Object.freeze([
   { id: 'attack', icon: '⚔️', name: 'どんどん攻める', desc: '倒せる相手から倒す・ガッツがたまったら大技・ピンチのときだけ守る', base: ['tAttack', 'tRush', 'tBalance'],
     mons: [['ko', 'atk'], ['myGuts.5', 'cost.大技(4以上)'], ['foeLife.50', 'atk'], ['myGuts.3', 'cost.大技(4以上)'], ['selfLife.30', 'guardDie'], ['foeLife.30', 'atk'], ['any', 'atk'], ['incoming.7', 'guard'], ['turnLe.3', 'atk']], breeder: [['any', 'save'], ['foeAlive.3', 'fieldCard']] },
-  { id: 'guard', icon: '🛡️', name: '守りを固める', desc: '守り札を残して堅く守り、相手が弱ったら倒しに行く', base: ['tGuard', 'tSteady', 'tBalance'],
+  { id: 'guard', icon: '🛡️', name: '守りを固める', desc: '守りのカードを残して堅く守り、相手が弱ったら倒しに行く', base: ['tGuard', 'tSteady', 'tBalance'],
     mons: [['selfLife.50', 'guard'], ['ko', 'atk'], ['any', 'guard'], ['incoming.5', 'guard'], ['foeLife.50', 'atk'], ['foeLife.30', 'atk'], ['myGuts.3', 'cost.大技(4以上)'], ['selfLife.30', 'guardDie']], breeder: [['any', 'keepGuard'], ['any', 'save']] },
   { id: 'save', icon: '🔋', name: 'ためて大技', desc: 'はじめはガッツをため、たまったら大技で一気に削る', base: ['tSave', 'tBig', 'tBalance'],
     mons: [['myGuts.5', 'cost.大技(4以上)'], ['myGuts.3', 'cost.大技(4以上)'], ['ko', 'atk'], ['selfLife.30', 'guardDie'], ['foeLife.50', 'atk'], ['any', 'guard']], breeder: [['turnLe.3', 'save'], ['any', 'save']] },
@@ -68573,7 +68573,7 @@ const CARD_REG_COMBOS = Object.freeze([
   { sec: '崩す', icon: '🔻', name: 'ガッツの多い相手を崩す', c: 'foeGutsGe.4', a: 'disrupt.ガッツを減らす', where: 'mon' },
   { sec: 'ブリーダー', icon: '🔋', name: 'ガッツをためる', c: 'any', a: 'save', where: 'breeder' },
   { sec: 'ブリーダー', icon: '⏳', name: 'はじめのうちはためる', c: 'turnLe.3', a: 'save', where: 'breeder' },
-  { sec: 'ブリーダー', icon: '🛡️', name: '守り札はガッツにしない', c: 'any', a: 'keepGuard', where: 'breeder' },
+  { sec: 'ブリーダー', icon: '🛡️', name: '守りのカードはガッツにしない', c: 'any', a: 'keepGuard', where: 'breeder' },
   { sec: 'ブリーダー', icon: '🌐', name: '相手が3体なら全体カード', c: 'foeAlive.3', a: 'fieldCard', where: 'breeder' },
   { sec: 'ブリーダー', icon: '💚', name: 'ピンチなら回復', c: 'myLife.50', a: 'bEff.回復する', where: 'breeder' },
 ]);
@@ -68685,7 +68685,7 @@ const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, onRows, on
         <div className="flex items-center gap-2.5">
           {m && <img src={CARD_IMG(m.img)} alt="" className="aspect-[5/7] w-[52px] rounded-[8px] border-2 border-sky-400 object-cover"/>}
           <div className="min-w-0 flex-1">
-            <b className="block text-[18px] font-black text-white">{`${name(k)}の手`}</b>
+            <b className="block text-[18px] font-black text-white">{`${name(k)}の戦い方`}</b>
             <small className="block text-[11px] font-bold text-slate-300">上から順に見て、当てはまった物を使います</small>
             <span className="mt-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-black text-white">{`${rows.length}枚 / 入れられる ${max}枚`}</span>
           </div>
@@ -68693,11 +68693,11 @@ const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, onRows, on
         </div>
         <CardRegRows rows={rows} why={why} onRows={onRows}/>
         {rows.length < max
-          ? <button type="button" data-card-reg-add={k} onClick={() => { Audio_.fgSe.tap(); onAdd(); }} className="mt-1.5 w-full rounded-xl border-2 border-dashed border-sky-300/70 py-2 text-[12px] font-black text-sky-100">{`＋ ${name(k)}の手を入れる`}</button>
+          ? <button type="button" data-card-reg-add={k} onClick={() => { Audio_.fgSe.tap(); onAdd(); }} className="mt-1.5 w-full rounded-xl border-2 border-dashed border-sky-300/70 py-2 text-[12px] font-black text-sky-100">{`＋ ${name(k)}の戦い方を入れる`}</button>
           : CARD_FRAME_MAX_TEXT('mon', max) && <small className="mt-1 block text-center text-[10px] font-bold text-slate-400">{CARD_FRAME_MAX_TEXT('mon', max)}</small>}
-        <p className="mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('入れると: このモンスターが場面に合った技を出すようになり、賢さが上がります。守る手は、このモンスターが狙われたときに見ます。')}</p>
+        <p className="mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('入れると: このモンスターが場面に合った技を出すようになり、賢さが上がります。守るカードは、このモンスターが狙われたときに見ます。')}</p>
         <div className="mt-2 grid grid-cols-2 gap-2">
-          <button type="button" data-card-reg-mon-copy onClick={() => { Audio_.fgSe.tap(); onCopy(); }} className="mh-button min-h-[44px] rounded-xl text-[12px] font-black">ほかの2体にも同じ手</button>
+          <button type="button" data-card-reg-mon-copy onClick={() => { Audio_.fgSe.tap(); onCopy(); }} className="mh-button min-h-[44px] rounded-xl text-[12px] font-black">ほかの2体にも同じ戦い方</button>
           <button type="button" data-card-reg-mon-auto onClick={() => { Audio_.fgSe.tap(); onAuto(); }} className="mh-button mh-button-primary min-h-[44px] rounded-xl text-[12px] font-black">おすすめで入れる</button>
         </div>
         <div className="mt-2 grid grid-cols-3 gap-1.5">
@@ -68865,7 +68865,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
               what="ブリーダーのカード・全体カードをいつ出すか、ガッツをどこに置くか。攻撃の番は③のあとに見ます。"/>
             <CardRegRows rows={draft.breeder} why={uncounted.breeder} onRows={(a) => setRows('breeder', a)}/>
             {draft.breeder.length < open.breeder
-              ? <button type="button" data-card-reg-add="breeder" onClick={() => { Audio_.fgSe.tap(); setSheet({ where: 'breeder', k: 'breeder' }); }} className="mt-1.5 w-full rounded-xl border-2 border-dashed border-violet-300/70 py-2 text-[12px] font-black text-violet-100">＋ ブリーダーの手を入れる</button>
+              ? <button type="button" data-card-reg-add="breeder" onClick={() => { Audio_.fgSe.tap(); setSheet({ where: 'breeder', k: 'breeder' }); }} className="mt-1.5 w-full rounded-xl border-2 border-dashed border-violet-300/70 py-2 text-[12px] font-black text-violet-100">＋ ブリーダーの戦い方を入れる</button>
               : CARD_FRAME_MAX_TEXT('breeder', open.breeder) && <small className="mt-1 block text-center text-[10px] font-bold text-slate-400">{CARD_FRAME_MAX_TEXT('breeder', open.breeder)}</small>}
           </section>
           <section data-card-reg-sec="mons" className="rounded-2xl border-2 border-sky-400 bg-slate-900/90 p-2.5">

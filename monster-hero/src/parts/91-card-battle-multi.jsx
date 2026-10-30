@@ -183,7 +183,7 @@ const cardPvpVerify = (db, { myDeck, mySeed, foeDeck, foeSeed, first, names, his
     if (cardPvpDecider(st) !== e.by) return { ok: false, why: `${n + 1}手目: ターンでない人の手` };
     if (e.by === 1) {
       for (const [k, no] of Object.entries(e.reveal || {})) {
-        if (st.players[1].hand[Number(k)] !== no) return { ok: false, why: `${n + 1}手目: 相手の手札に無い札を使った` };
+        if (st.players[1].hand[Number(k)] !== no) return { ok: false, why: `${n + 1}手目: 相手の手札に無いカードを使った` };
       }
     }
     const next = cardApplyAction(db, st, e.act);

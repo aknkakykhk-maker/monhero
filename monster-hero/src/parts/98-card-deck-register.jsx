@@ -10,7 +10,7 @@
 const CARD_REG_STYLES = Object.freeze([
   { id: 'attack', icon: '⚔️', name: 'どんどん攻める', desc: '倒せる相手から倒す・ガッツがたまったら大技・ピンチのときだけ守る', base: ['tAttack', 'tRush', 'tBalance'],
     mons: [['ko', 'atk'], ['myGuts.5', 'cost.大技(4以上)'], ['foeLife.50', 'atk'], ['myGuts.3', 'cost.大技(4以上)'], ['selfLife.30', 'guardDie'], ['foeLife.30', 'atk'], ['any', 'atk'], ['incoming.7', 'guard'], ['turnLe.3', 'atk']], breeder: [['any', 'save'], ['foeAlive.3', 'fieldCard']] },
-  { id: 'guard', icon: '🛡️', name: '守りを固める', desc: '守り札を残して堅く守り、相手が弱ったら倒しに行く', base: ['tGuard', 'tSteady', 'tBalance'],
+  { id: 'guard', icon: '🛡️', name: '守りを固める', desc: '守りのカードを残して堅く守り、相手が弱ったら倒しに行く', base: ['tGuard', 'tSteady', 'tBalance'],
     mons: [['selfLife.50', 'guard'], ['ko', 'atk'], ['any', 'guard'], ['incoming.5', 'guard'], ['foeLife.50', 'atk'], ['foeLife.30', 'atk'], ['myGuts.3', 'cost.大技(4以上)'], ['selfLife.30', 'guardDie']], breeder: [['any', 'keepGuard'], ['any', 'save']] },
   { id: 'save', icon: '🔋', name: 'ためて大技', desc: 'はじめはガッツをため、たまったら大技で一気に削る', base: ['tSave', 'tBig', 'tBalance'],
     mons: [['myGuts.5', 'cost.大技(4以上)'], ['myGuts.3', 'cost.大技(4以上)'], ['ko', 'atk'], ['selfLife.30', 'guardDie'], ['foeLife.50', 'atk'], ['any', 'guard']], breeder: [['turnLe.3', 'save'], ['any', 'save']] },
@@ -36,7 +36,7 @@ const CARD_REG_COMBOS = Object.freeze([
   { sec: '崩す', icon: '🔻', name: 'ガッツの多い相手を崩す', c: 'foeGutsGe.4', a: 'disrupt.ガッツを減らす', where: 'mon' },
   { sec: 'ブリーダー', icon: '🔋', name: 'ガッツをためる', c: 'any', a: 'save', where: 'breeder' },
   { sec: 'ブリーダー', icon: '⏳', name: 'はじめのうちはためる', c: 'turnLe.3', a: 'save', where: 'breeder' },
-  { sec: 'ブリーダー', icon: '🛡️', name: '守り札はガッツにしない', c: 'any', a: 'keepGuard', where: 'breeder' },
+  { sec: 'ブリーダー', icon: '🛡️', name: '守りのカードはガッツにしない', c: 'any', a: 'keepGuard', where: 'breeder' },
   { sec: 'ブリーダー', icon: '🌐', name: '相手が3体なら全体カード', c: 'foeAlive.3', a: 'fieldCard', where: 'breeder' },
   { sec: 'ブリーダー', icon: '💚', name: 'ピンチなら回復', c: 'myLife.50', a: 'bEff.回復する', where: 'breeder' },
 ]);
@@ -148,7 +148,7 @@ const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, onRows, on
         <div className="flex items-center gap-2.5">
           {m && <img src={CARD_IMG(m.img)} alt="" className="aspect-[5/7] w-[52px] rounded-[8px] border-2 border-sky-400 object-cover"/>}
           <div className="min-w-0 flex-1">
-            <b className="block text-[18px] font-black text-white">{`${name(k)}の手`}</b>
+            <b className="block text-[18px] font-black text-white">{`${name(k)}の戦い方`}</b>
             <small className="block text-[11px] font-bold text-slate-300">上から順に見て、当てはまった物を使います</small>
             <span className="mt-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-black text-white">{`${rows.length}枚 / 入れられる ${max}枚`}</span>
           </div>
@@ -156,11 +156,11 @@ const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, onRows, on
         </div>
         <CardRegRows rows={rows} why={why} onRows={onRows}/>
         {rows.length < max
-          ? <button type="button" data-card-reg-add={k} onClick={() => { Audio_.fgSe.tap(); onAdd(); }} className="mt-1.5 w-full rounded-xl border-2 border-dashed border-sky-300/70 py-2 text-[12px] font-black text-sky-100">{`＋ ${name(k)}の手を入れる`}</button>
+          ? <button type="button" data-card-reg-add={k} onClick={() => { Audio_.fgSe.tap(); onAdd(); }} className="mt-1.5 w-full rounded-xl border-2 border-dashed border-sky-300/70 py-2 text-[12px] font-black text-sky-100">{`＋ ${name(k)}の戦い方を入れる`}</button>
           : CARD_FRAME_MAX_TEXT('mon', max) && <small className="mt-1 block text-center text-[10px] font-bold text-slate-400">{CARD_FRAME_MAX_TEXT('mon', max)}</small>}
-        <p className="mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('入れると: このモンスターが場面に合った技を出すようになり、賢さが上がります。守る手は、このモンスターが狙われたときに見ます。')}</p>
+        <p className="mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('入れると: このモンスターが場面に合った技を出すようになり、賢さが上がります。守るカードは、このモンスターが狙われたときに見ます。')}</p>
         <div className="mt-2 grid grid-cols-2 gap-2">
-          <button type="button" data-card-reg-mon-copy onClick={() => { Audio_.fgSe.tap(); onCopy(); }} className="mh-button min-h-[44px] rounded-xl text-[12px] font-black">ほかの2体にも同じ手</button>
+          <button type="button" data-card-reg-mon-copy onClick={() => { Audio_.fgSe.tap(); onCopy(); }} className="mh-button min-h-[44px] rounded-xl text-[12px] font-black">ほかの2体にも同じ戦い方</button>
           <button type="button" data-card-reg-mon-auto onClick={() => { Audio_.fgSe.tap(); onAuto(); }} className="mh-button mh-button-primary min-h-[44px] rounded-xl text-[12px] font-black">おすすめで入れる</button>
         </div>
         <div className="mt-2 grid grid-cols-3 gap-1.5">
@@ -328,7 +328,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
               what="ブリーダーのカード・全体カードをいつ出すか、ガッツをどこに置くか。攻撃の番は③のあとに見ます。"/>
             <CardRegRows rows={draft.breeder} why={uncounted.breeder} onRows={(a) => setRows('breeder', a)}/>
             {draft.breeder.length < open.breeder
-              ? <button type="button" data-card-reg-add="breeder" onClick={() => { Audio_.fgSe.tap(); setSheet({ where: 'breeder', k: 'breeder' }); }} className="mt-1.5 w-full rounded-xl border-2 border-dashed border-violet-300/70 py-2 text-[12px] font-black text-violet-100">＋ ブリーダーの手を入れる</button>
+              ? <button type="button" data-card-reg-add="breeder" onClick={() => { Audio_.fgSe.tap(); setSheet({ where: 'breeder', k: 'breeder' }); }} className="mt-1.5 w-full rounded-xl border-2 border-dashed border-violet-300/70 py-2 text-[12px] font-black text-violet-100">＋ ブリーダーの戦い方を入れる</button>
               : CARD_FRAME_MAX_TEXT('breeder', open.breeder) && <small className="mt-1 block text-center text-[10px] font-bold text-slate-400">{CARD_FRAME_MAX_TEXT('breeder', open.breeder)}</small>}
           </section>
           <section data-card-reg-sec="mons" className="rounded-2xl border-2 border-sky-400 bg-slate-900/90 p-2.5">
