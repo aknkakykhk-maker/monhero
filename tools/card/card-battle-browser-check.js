@@ -755,7 +755,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑮ カード図鑑: 第1〜8弾+混血のタブで、第1弾が並び(見出しは「第1弾 ◯ / ◯」)、集めた種類が持っている種類と同じ数・混血のタブ・持っているだけの絞り込みが効く', dexTabs === 9 && /^\(第1弾 \d+ \/ \d+\)$/.test(dexPart1) && Number(dexTotal) >= 20 && Number(dexTotal) === ownedKinds && dex1 >= 45 && dex1 <= 60 && haveTiles >= 1 && dexH === hybridCount && hybridCount >= 15 && dexHHave === 0, JSON.stringify({ dexTabs, dexPart1, dexTotal, ownedKinds, dex1, haveTiles, dexH, hybridCount, dexHHave }));
     // ⑮-2 血統別・種類別(2026-10-26 社長): 札の数・札ごとの集めた数・種類の言葉と並びがデッキ編成の絞り込みと同じ
     await page.locator('[data-card-dex-show="all"]').click();
-    await page.getByRole('tab', { name: '血統別' }).click();
+    await page.getByRole('tab', { name: '血統別', exact: true }).click();
     await page.waitForTimeout(200);
     const spTabs = await page.locator('[data-card-dex-tabs="species"] [data-card-dex-tab]').count();
     const spFirst = await page.locator('[data-card-dex-tile]').count();
@@ -764,7 +764,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const spWant = await page.evaluate(() => CARD_PACKS.reduce((a, p) => a + p.species.length, 0));
     if (SHOT) await shot(page, '24b-dex-species');
     // ⑮-3 サブ血統別(2026-10-30 社長「サブ血統別も作って」): モンスターのカードだけ・純血は自分の血統の「純血」、混血は副血統の側。副血統が分からない子は「不明」
-    await page.getByRole('tab', { name: 'サブ血統別' }).click();
+    await page.getByRole('tab', { name: 'サブ血統別', exact: true }).click();
     await page.waitForTimeout(200);
     const subFirstHeads = await page.locator('[data-card-dex-head]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-dex-head')));
     const subTiles = await page.locator('[data-card-dex-tile]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-dex-tile')));
