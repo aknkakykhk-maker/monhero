@@ -773,10 +773,11 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.waitForTimeout(150);
     const unknownTiles = await page.locator('[data-card-dex-tile]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-dex-tile')));
     const unknownHead = await page.locator('[data-card-dex-head]').allInnerTexts();
+    const unknownLabel = await page.locator('[data-card-dex-tabs="sub"] [data-card-dex-tab="unknown"]').evaluate((e) => e.firstChild.textContent);
     const subOver = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
     if (SHOT) await shot(page, '24b2-dex-sub');
-    check('⑮-3 カード図鑑: サブ血統別(最初の血統は純血・混血の見出しで、副血統がこの血統のモンスターだけ・「不明」にジェントル・横にはみ出さない)',
-      subFirstHeads[0] === 'pure' && JSON.stringify([...subTiles].sort()) === JSON.stringify(subWant) && unknownTiles.includes('C-020') && /副血統が分からない/.test(unknownHead.join(' ')) && !subOver,
+    check('⑮-3 カード図鑑: サブ血統別(最初の血統は純血・混血の見出しで、副血統がこの血統のモンスターだけ・「？？？(レア)」にジェントル・横にはみ出さない)',
+      subFirstHeads[0] === 'pure' && JSON.stringify([...subTiles].sort()) === JSON.stringify(subWant) && unknownTiles.includes('C-020') && /めずらしい種\(レア\)/.test(unknownHead.join(' ')) && unknownLabel === '？？？(レア)' && !subOver,
       JSON.stringify({ subFirstHeads, n: subTiles.length, want: subWant.length, unknownTiles, unknownHead, subOver }));
     await page.getByRole('tab', { name: '種類別' }).click();
     await page.waitForTimeout(200);

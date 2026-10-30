@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 78637d4a432f6115
+// source-sha256: 165d76157515fa81
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -104664,7 +104664,7 @@ const cardDexTabsOf = (db, mode) => {
   if (mode === 'species') return speciesTabs();
   if (mode === 'sub') return [...speciesTabs(), ...(Object.values(db.monsters).some(m => String(m.wave) === 'hybrid' && (m.sub || 'unknown') === 'unknown') ? [{
     id: 'unknown',
-    label: '不明'
+    label: '？？？(レア)'
   }] : [])];
   if (mode === 'kind') return CARD_DEX_KINDS;
   return CARD_DEX_TABS;
@@ -104705,7 +104705,7 @@ const CARD_DEX_UNIT = Object.freeze({
   sub: 'このサブ血統',
   kind: 'この種類'
 });
-const cardDexSubHead = (k, label) => k === 'pure' ? `純血(主も副も${label})` : label === '不明' ? '混血(副血統が分からない)' : `混血(副血統が${label})`;
+const cardDexSubHead = (k, label, tab) => k === 'pure' ? `純血(主も副も${label})` : tab === 'unknown' ? '副血統が ？？？ の子は、めずらしい種(レア)です' : `混血(副血統が${label})`;
 const CardDex = ({
   db,
   collection,
@@ -104825,7 +104825,7 @@ const CardDex = ({
       }, mode !== 'pack' && React.createElement("div", {
         "data-card-dex-head": k,
         className: `mb-1 flex items-center rounded-lg px-2 py-0.5 text-[12px] font-black text-white ${mode === 'sub' ? k === 'pure' ? 'bg-amber-700' : 'bg-indigo-600' : CARD_DEX_PACK_TONE[k] || 'bg-slate-600'}`
-      }, mode === 'sub' ? cardDexSubHead(k, curTab.label) : cardDexPackLabel(k), React.createElement("span", {
+      }, mode === 'sub' ? cardDexSubHead(k, curTab.label, curTab.id) : cardDexPackLabel(k), React.createElement("span", {
         className: "ml-auto text-[11px]"
       }, haveIn(inTab), "/", inTab.length)), React.createElement("div", {
         className: "grid grid-cols-4 gap-1.5"
