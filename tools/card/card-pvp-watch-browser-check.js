@@ -75,6 +75,9 @@ const FAKE_WS = () => {
 };
 const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, `${name}.png`), style: 'div[style*="2147483647"] > span { display: none !important; }' }).catch(() => {}); } };
 
+// マルチの入口で相手を決めるボタンを押し、続くデッキ選びで「対戦へ」を押す(2026-10-30 社長「相手を選んだあとにデッキ選択」。前に使ったデッキが選ばれている)
+const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); await page.locator('[data-card-deck-pick-go]').click({ timeout: 10000 }); };
+
 (async () => {
   let chromium;
   try { ({ chromium } = require(path.join(ROOT, 'tools', 'node_modules', 'playwright'))); } catch (e) { console.log('SKIP: playwright が入っていないので確かめられません'); process.exit(0); }
@@ -141,18 +144,18 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     };
     const toLobby = async (page) => {
       await page.locator('[data-card-cpu]').first().click({ timeout: 20000 });
-      await page.locator('[data-card-mode-multi]').click(); await page.locator('[data-card-deck-pick-go]').click(); // マルチの入口の前のデッキ選び
+      await page.locator('[data-card-mode-multi]').click(); // マルチの入口がすぐ開く(デッキは相手を決めたあとに選ぶ。2026-10-30)
       await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
     };
     const [ctxA, ctxB, ctxC] = [await makeCtx('snegurochka_icon'), await makeCtx('🐣'), await makeCtx('🦊')];
     const A = await ctxA.newPage(), B = await ctxB.newPage(), C = await ctxC.newPage();
     await boot(A); await openCard(A); await starter(A, 'speed'); await toLobby(A);
-    await A.locator('[data-card-pvp-create]').click();
+    await pvpGo(A, '[data-card-pvp-create]');
     await A.locator('[data-card-pvp="waiting"]').waitFor({ timeout: 10000 });
     const code = (await A.locator('[data-card-pvp-room]').innerText()).trim();
     await boot(B); await openCard(B); await starter(B, 'powerful'); await toLobby(B);
     await B.locator('[data-card-pvp-code]').fill(code);
-    await B.locator('[data-card-pvp-join]').click();
+    await pvpGo(B, '[data-card-pvp-join]');
     await Promise.all([A.locator('[data-card-battle]').waitFor({ timeout: 20000 }), B.locator('[data-card-battle]').waitFor({ timeout: 20000 })]);
     // どちらがホストか(先に部屋を作った A のはず)。C のフレンドは、ホストでない B にする(フレンドが相手側でも見られるか)
     const hostIsA = await A.evaluate(() => { const r = CARD_PVP.get(); return r.me.at < r.foe.at || (r.me.at === r.foe.at && r.me.id < r.foe.id); });

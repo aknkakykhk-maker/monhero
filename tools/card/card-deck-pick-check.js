@@ -42,10 +42,12 @@ check('① 前に使ったデッキが使えないときは、使える最初の
 const opens = (src) => (src.match(/setDeckPick\(\{ next: '(cpu|pvp)'/g) || []).length;
 check('② 「対戦する」はデッキ選びを開く(すぐには始めない)', /data-card-start [^\n]*setDeckPick\(\{ next: 'cpu', pick: foe \}\); setView\('deckPick'\)/.test(p84));
 check('② 結果の「もう一度」もデッキ選びを開く', /setDeckPick\(\{ next: 'cpu', pick: again \}\); setView\('deckPick'\); \}\}>もう一度/.test(p84));
-check('② 「マルチ対戦」もデッキ選びを開く', /data-card-mode-multi [^\n]*setDeckPick\(\{ next: 'pvp' \}\); setView\('deckPick'\)/.test(p84));
+// 2026-10-30 社長「マルチを押したらデッキ選択になるけど相手を選んだあとにしてほしい」: マルチは先に入口、相手を決めたところでデッキ選び
+check('② 「マルチ対戦」は先に入口を開く(デッキ選びはまだ出さない)', /data-card-mode-multi [^\n]*onClick=\{\(\) => \{ Audio_\.fgSe\.tap\(\); setView\('pvp'\); \}\}/.test(p84));
+check('② 入口で相手を決めたらデッキ選びを開く(onPickDeck)', /onPickDeck=\{\(\) => \{ setDeckPick\(\{ next: 'pvp' \}\); setView\('deckPick'\); \}\}/.test(p84));
 check('② 招待の知らせから入るときも、先にデッキ選び', /const go = \(c\) => \{ if \(c\) \{ setDeckPick\(\{ next: 'pvp' \}\); setView\('deckPick'\); \} \}; go\(CARD_PVP_JOIN\.peek\(\)\)/.test(p84));
-check('② マルチの試合のあと(over → idle)入口へ戻る前にもデッキ選び', /prev === 'over' && r\.phase === 'idle' && viewRef\.current === 'pvp'\) \{ setDeckPick\(\{ next: 'pvp' \}\)/.test(p84));
-check('② 開く所は 5 つ', opens(p84) === 5, `${opens(p84)}`);
+check('② マルチの試合のあと(over → idle)は、入口へそのまま戻る(次に相手を決めたときに選ぶ)', !/prev === 'over' && r\.phase === 'idle'/.test(p84));
+check('② 開く所は 4 つ(助手と対戦・もう一度・マルチの相手を決めたとき・招待の知らせ)', opens(p84) === 4, `${opens(p84)}`);
 const tutorial = p84.slice(p84.indexOf('const startTutorial = '), p84.indexOf('const startBattle = '));
 check('② 練習試合には挟まない', tutorial.length > 0 && !/deckPick|setDeckPick/.test(tutorial));
 
