@@ -212,7 +212,7 @@ const sceneScript = (spec) => `(() => {
     await page.waitForTimeout(700);
     n1 = await handCount(page);
     const hintC = await page.locator('[data-card-battle]').innerText();
-    check('C 運ぶ: 使う子が3体いる加勢を、子を選ばずに運ぶと、出さずに「使う子をタップ」の案内', n1 === n0 && /使う子をタップ/.test(hintC), `手札 ${n0}→${n1}`);
+    check('C 運ぶ: 使う子が3体いる加勢を、子を選ばずに運ぶと、出さずに「使う子をタップ」の案内', n1 === n0 && /使うモンスターをタップ/.test(hintC), `手札 ${n0}→${n1}`);
     await page.locator('[data-card-mon="0-1"]').click();
     await page.waitForTimeout(TAP_WAIT);
     await shot(page, 'c-after-hint');

@@ -28,7 +28,7 @@ const cardTacticRowName = (db, row, which) => {
 
 // カードの全文(2026-10-30 社長「表に入りきらない時は、押すと全文」)。区分・見る場面・レア・名前・効果
 const CARD_TACTIC_PHASE_TEXT = Object.freeze({ attack: '攻撃の番に見る', guard: '攻撃を受けたときに見る', guts: 'ガッツの番に見る' });
-const CARD_TACTIC_CAT_TEXT = Object.freeze({ cond: '条件カード(〜なら)。行動カードと組にしてセットする', base: '基本カード。どの組にも当てはまらないときの打ち方', breeder: 'ブリーダーカード(ブリーダーの手)。条件カードと組にしてセットする', monster: 'モンスターカード(その子の手)。条件カードと組にしてセットする' });
+const CARD_TACTIC_CAT_TEXT = Object.freeze({ cond: '条件カード(〜なら)。行動カードと組にしてセットする', base: '基本カード。どの組にも当てはまらないときの打ち方', breeder: 'ブリーダーカード(ブリーダーの手)。条件カードと組にしてセットする', monster: 'モンスターカード(そのモンスターの手)。条件カードと組にしてセットする' });
 const CardTacticDetail = ({ card, onClose }) => {
   if (!card) return null;
   const st = CARD_TACTIC_CAT_STYLE[card.cat] || CARD_TACTIC_CAT_STYLE.cond;
@@ -343,7 +343,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
   const catOf = (k) => (k === 'breeder' ? 'breeder' : 'monster');
   const editRow = (k, i, which) => {
     const rows = rowsOf(k);
-    setPick({ cat: which === 'c' ? 'cond' : catOf(k), hideSecs: which === 'c' && k === 'breeder' ? ['この子', '守るとき'] : [], title: which === 'c' ? '条件カードをえらぶ' : `${CARD_TACTIC_CAT_STYLE[catOf(k)].label}カードをえらぶ`,
+    setPick({ cat: which === 'c' ? 'cond' : catOf(k), hideSecs: which === 'c' && k === 'breeder' ? ['このモンスター', '守るとき'] : [], title: which === 'c' ? '条件カードをえらぶ' : `${CARD_TACTIC_CAT_STYLE[catOf(k)].label}カードをえらぶ`,
       onPick: (id, sp) => { setPick(null); if (!id) return; const r = { ...rows[i], [which]: id }; if (which === 'c') { if (sp) r.sp = sp; else delete r.sp; } void setRows(k, rows.map((x, j) => (j === i ? r : x))); } });
   };
   const addRow = (k) => {
@@ -378,7 +378,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
   };
   const ownCount = CARD_TACTIC_CARDS.filter((c) => cardTacticsOwns(t, c.id)).length;
   const frameTabs = [{ k: 'base', label: '基本', icon: '⭐', sub: `${f.base.filter(Boolean).length}/${open.base}` }, { k: 'breeder', label: 'ブリーダー', icon: '🧑', sub: `${f.breeder.length}/${open.breeder}枚` },
-    ...[0, 1, 2].map((i) => ({ k: i, label: (monOf(i) || {}).name || ['左の子', '真ん中の子', '右の子'][i], mon: monOf(i), sub: `${f.mons[i].length}/${open.mon}枚` }))];
+    ...[0, 1, 2].map((i) => ({ k: i, label: (monOf(i) || {}).name || ['左のモンスター', '真ん中のモンスター', '右のモンスター'][i], mon: monOf(i), sub: `${f.mons[i].length}/${open.mon}枚` }))];
   return (
     <div data-mh-screen data-card-tactics className={SCREEN_SHELL_CLASS}>
       <ScreenHead title={screenTitle} accent="text-amber-200" onBack={onBack} note={(share ? cardShareOpen() : cardTacticsOpen()) ? '' : 'つくっている途中(デバッグ)'}/>
@@ -446,12 +446,12 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
                   <p className="text-center text-[11px] font-bold text-slate-400">{frame === 'breeder' ? CARD_FRAME_MAX_TEXT('breeder', open.breeder) : CARD_FRAME_MAX_TEXT('mon', open.mon)}</p>
                 )}
                 <div className="flex gap-1.5 pt-1">
-                  {frame !== 'breeder' && <button type="button" data-card-tactics-copy onClick={() => { Audio_.fgSe.tap(); void saveFrames({ ...f, mons: [0, 1, 2].map(() => f.mons[frame].slice()) }); setNotice('この子の戦術カードを、ほかの2体にも写しました'); }}
-                    className="mh-button min-h-[44px] flex-1 rounded-xl text-[11px] font-black">この子の戦術カードを<br/>ほかの2体にも写す</button>}
+                  {frame !== 'breeder' && <button type="button" data-card-tactics-copy onClick={() => { Audio_.fgSe.tap(); void saveFrames({ ...f, mons: [0, 1, 2].map(() => f.mons[frame].slice()) }); setNotice('このモンスターの戦術カードを、ほかの2体にも写しました'); }}
+                    className="mh-button min-h-[44px] flex-1 rounded-xl text-[11px] font-black">このモンスターの戦術カードを<br/>ほかの2体にも写す</button>}
                   <button type="button" data-card-tactics-auto onClick={() => { Audio_.fgSe.tap(); void setRows(frame, cardTacticAutoFill(t, rowsOf(frame), catOf(frame), maxOf(frame))); }}
                     className="mh-button mh-button-primary min-h-[44px] flex-1 rounded-xl text-[11px] font-black">おまかせで<br/>あいている所に入れる</button>
                 </div>
-                <p className="text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{frame === 'breeder' ? '攻撃の番は、モンスターの枠のあとに見ます。ガッツの番はここだけを見ます。' : '上にセットした戦術カードから順に見て、条件に当たったカードの手をこの子が出します。守るときは、この子が狙われたときに見ます。'}</p>
+                <p className="text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{frame === 'breeder' ? '攻撃の番は、モンスターの枠のあとに見ます。ガッツの番はここだけを見ます。' : '上にセットした戦術カードから順に見て、条件に当たったカードの手をこのモンスターが出します。守るときは、このモンスターが狙われたときに見ます。'}</p>
               </div>
             )}
           </div>
