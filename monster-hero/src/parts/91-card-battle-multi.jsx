@@ -920,7 +920,7 @@ const CARD_PVP = (() => {
     // 送った招待を覚えておく(入口の画面を閉じても、上の帯と「部屋を出る」で使う)
     noteInvite: (to, rec) => { if (s && rec && s.code === rec.code) set({ invited: { ...s.invited, [to]: rec } }); },
     // 入口の画面を開いた・閉じたことを、上の帯と相手へ知らせ直す
-    ping: () => { if (s) { emit(); if (socket && alive && s.me && s.deck) hb(); } },
+    ping: () => { if (s) { s = { ...s }; emit(); if (socket && alive && s.me && s.deck) hb(); } },
     // 対戦の画面がつなぐ。届いていた手があれば、ここで当てる
     attach: (h) => { board = h; deliver(); return () => { if (board === h) board = null; }; },
     // 自分の手を進めたとき(対戦の画面から)。自分で打った手なら、時間切れの続きの数を0に戻す
@@ -1384,9 +1384,11 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
                 <button type="button" data-card-pvp-invite className={`${btn} border border-emerald-300/40 bg-slate-900 text-emerald-100`} onClick={() => { Audio_.fgSe.tap(); setInviteOpen((v) => !v); }}>フレンドを招待する</button>
                 {inviteOpen && (
                   <ul data-card-pvp-roster className="mt-2 max-h-[40vh] space-y-1 overflow-y-auto">
-                    {roster.slice(0, 30).map((f) => (
-                      <li key={f.otherId} className="flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5">
-                        <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-white">{f.userName}</span>
+                    {/* 入口の名簿と同じく、相手の様子(ログイン中・いまの場所・最後に来た時刻)を出し、ログイン中の人を上に並べる(2026-10-30 ソランド) */}
+                    {(typeof friendsPresenceSort === 'function' ? friendsPresenceSort(roster.slice(0, 30), presence) : roster.slice(0, 30)).map((f) => (
+                      <li key={f.otherId} data-card-pvp-roster-row className="flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5">
+                        <span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-bold text-white">{f.userName}</span>
+                          {typeof FriendPresenceTag === 'function' && <FriendPresenceTag info={presence[f.otherId]}/>}</span>
                         {(() => {
                           // 招待のようす: 届いている(あと何秒)・断られた・時間切れ・送れなかった。断られた・時間切れ・送れなかったら、もう一度送れる
                           const sent = invited[f.otherId];

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 657aebf29c4791cb
+// source-sha256: d6f04f88a473b90e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -109483,6 +109483,9 @@ const CARD_PVP = (() => {
     },
     ping: () => {
       if (s) {
+        s = {
+          ...s
+        };
         emit();
         if (socket && alive && s.me && s.deck) hb();
       }
@@ -110351,12 +110354,17 @@ const CardPvpLobby = ({
   }, "フレンドを招待する"), inviteOpen && React.createElement("ul", {
     "data-card-pvp-roster": true,
     className: "mt-2 max-h-[40vh] space-y-1 overflow-y-auto"
-  }, roster.slice(0, 30).map(f => React.createElement("li", {
+  }, (typeof friendsPresenceSort === 'function' ? friendsPresenceSort(roster.slice(0, 30), presence) : roster.slice(0, 30)).map(f => React.createElement("li", {
     key: f.otherId,
+    "data-card-pvp-roster-row": true,
     className: "flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5"
   }, React.createElement("span", {
-    className: "min-w-0 flex-1 truncate text-[13px] font-bold text-white"
-  }, f.userName), (() => {
+    className: "min-w-0 flex-1"
+  }, React.createElement("span", {
+    className: "block truncate text-[13px] font-bold text-white"
+  }, f.userName), typeof FriendPresenceTag === 'function' && React.createElement(FriendPresenceTag, {
+    info: presence[f.otherId]
+  })), (() => {
     const sent = invited[f.otherId];
     const state = sent && sent.ok ? cardPvpInviteState(sent, sentRows[f.otherId], now) : sent ? 'ng' : '';
     const label = state === 'live' ? `招待しました(あと${cardPvpInviteLeftSec(sent.at, now)}秒)` : state === 'declined' ? '断られました' : state === 'expired' ? '時間切れ' : state === 'ng' ? '送れませんでした' : '';
