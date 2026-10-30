@@ -260,8 +260,9 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
     <div data-mh-screen data-card-deck-list className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="デッキ編成" accent="text-amber-200" onBack={onBack}/>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-2`}>
-        <p className="text-[11px] font-bold text-slate-400">デッキは{CARD_DECK_MAX}つまで。★のデッキで対戦します</p>
-        {decks.decks.map((d) => {
+        <p data-card-deck-count={decks.decks.length} className="text-[11px] font-bold text-slate-400">{`デッキ ${decks.decks.length} / ${CARD_DECK_MAX}。★のデッキで対戦します(★のデッキはいちばん上に出ます)`}</p>
+        {/* ★(使っている)デッキはいちばん上に出す(20まで並ぶと、どれを使っているか探しにくい。2026-10-30)。保存の並びは変えない */}
+        {[...decks.decks].sort((a, b) => (b.id === decks.active) - (a.id === decks.active)).map((d) => {
           const ready = cardDeckReady(db, d, col);
           const on = d.id === decks.active;
           return (
@@ -285,15 +286,16 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
             </div>
           );
         })}
-        {/* 空き枠(あと何個作れるか)。デッキが1つだと真ん中が大きく空いていた(2026-10-29 社長)。押すと新しいデッキを作る */}
-        {Array.from({ length: Math.max(0, CARD_DECK_MAX - decks.decks.length) }, (_, i) => (
+        {/* あと何個作れるか(デッキが1つだと真ん中が大きく空いていた。2026-10-29 社長)。押すと新しいデッキを作る。
+            20まで増やしたので、空きは1つだけ出して、残りの数を書く(2026-10-30) */}
+        {Array.from({ length: Math.min(1, Math.max(0, CARD_DECK_MAX - decks.decks.length)) }, (_, i) => (
           <button key={`slot${i}`} type="button" data-card-deck-slot={i} onClick={newDeck} className="mh-button flex min-h-[64px] w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-white/15 text-[13px] font-black text-slate-400 active:scale-[.99]">
-            <span className="text-[18px]">＋</span>あいている枠({decks.decks.length + i + 1}つ目)
+            <span className="text-[18px]">＋</span>{`新しいデッキを作る(あと${CARD_DECK_MAX - decks.decks.length}個作れます)`}
           </button>
         ))}
       </div>
       <div className={SCREEN_FOOTER_CLASS}>
-        <button type="button" data-card-deck-new disabled={full} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40" onClick={newDeck}>{full ? `デッキは${CARD_DECK_MAX}つまでです` : '新しいデッキを作る'}</button>
+        <button type="button" data-card-deck-new disabled={full} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40" onClick={newDeck}>{full ? `デッキは${CARD_DECK_MAX}個までです` : '新しいデッキを作る'}</button>
       </div>
       {confirmDel && <ConfirmSheet title={`「${confirmDel.name}」を消しますか？`} message="デッキだけを消します(カードは消えません)" confirmLabel="消す" danger onCancel={() => setConfirmDel(null)} onConfirm={() => { const id = confirmDel.id; setConfirmDel(null); onRemove(id); }}/>}
     </div>

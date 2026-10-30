@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3ac9190523049d89
+// source-sha256: 45a9d0417e723329
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91984,7 +91984,7 @@ const cardNormalizeStarter = v => cardIsPlainObject(v) && typeof v.kit === 'stri
   kit: v.kit,
   at: Number.isFinite(Number(v.at)) ? Number(v.at) : 0
 } : null;
-const CARD_DECK_MAX = 5;
+const CARD_DECK_MAX = 20;
 const cardNormalizeDecks = v => {
   const decks = (cardIsPlainObject(v) && Array.isArray(v.decks) ? v.decks : []).filter(cardIsPlainObject).slice(0, CARD_DECK_MAX).map((d, i) => ({
     id: typeof d.id === 'string' && d.id ? d.id : `deck${i + 1}`,
@@ -93564,7 +93564,7 @@ const CARD_TACTIC_TEXT = Object.freeze({
   lowest: () => ['ライフがいちばん少ない相手', '相手の場で、残りライフ(数)がいちばん少ない相手を狙う'],
   highest: () => ['ライフがいちばん多い相手', '相手の場で、残りライフ(数)がいちばん多い相手を狙う'],
   strongest: () => ['攻撃がいちばん強い相手', '相手のモンスターのうち、使える技の最大ダメージがいちばん大きい相手を狙う(手札は見ない)'],
-  attacker: () => ['前の番に攻撃してきた相手', '直前の相手の番に攻撃してきた相手のモンスターを狙う'],
+  attacker: () => ['前のターンに攻撃してきた相手', '直前の相手のターンに攻撃してきた相手のモンスターを狙う'],
   leader: () => ['相手のリーダー', '相手が1体目(左)に置いたモンスターが残っていれば、それを狙う'],
   type: v => [`${v}の相手`, `いま${v}にいる相手のモンスターを狙う`],
   blood: v => [`${v}の相手`, `${v}のモンスターの相手を狙う`],
@@ -93584,12 +93584,12 @@ const CARD_TACTIC_TEXT = Object.freeze({
   bigInHand: () => ['手札に大技がある', '手札に、払うガッツが4以上の攻撃の札があるとき'],
   areaInHand: () => ['手札に全体攻撃がある', '手札に、相手の全員に当たる攻撃の札があるとき'],
   breederInHand: () => ['手札にブリーダーのカードがある', '手札にブリーダーのカードが1枚以上あるとき'],
-  turnLe: v => [`自分の${v}番目の番まで`, `自分の番が${v}回目までのとき(自分のはじめの番が1回目)`],
-  turnGe: v => [`自分の${v}番目の番から`, `自分の番が${v}回目以降のとき`],
+  turnLe: v => [`自分の${v}ターン目まで`, `自分のターンが${v}回目までのとき(自分のはじめのターンが1回目)`],
+  turnGe: v => [`自分の${v}ターン目から`, `自分のターンが${v}回目以降のとき`],
   myAlive: v => [`味方が残り${v}体`, `倒れていない自分のモンスターがちょうど${v}体のとき`],
   foeAlive: v => [`相手が残り${v}体`, `倒れていない相手のモンスターがちょうど${v}体のとき`],
   koDiff: v => [v === '勝っ' ? '倒した数で勝っている' : '倒した数で負けている', v === '勝っ' ? '倒した相手の数が、倒された味方の数より多いとき' : '倒された味方の数が、倒した相手の数より多いとき'],
-  foeStun: () => ['攻撃できない相手', '封じられていて、次の相手の番に攻撃できない相手のモンスターを狙う'],
+  foeStun: () => ['攻撃できない相手', '封じられていて、相手の次のターンに攻撃できない相手のモンスターを狙う'],
   myStun: () => ['攻撃できない味方がいる', '封じられて攻撃できない自分のモンスターがいるとき'],
   foeCharge: () => ['溜めている相手', '溜め技を使って、次の技のダメージが何倍にもなる相手のモンスターを狙う'],
   foeAir: () => ['空中に上がった相手', 'もとは地上・水中なのに、いま空中になっている相手のモンスターを狙う'],
@@ -93597,13 +93597,13 @@ const CARD_TACTIC_TEXT = Object.freeze({
   foeBig: () => ['相手が大技を撃てそう', '相手のガッツが4以上で手札があり、相手のモンスターが使える大技(払うガッツ4以上)をいまのガッツ+1で払えるとき'],
   myHandLe: v => [`自分の手札${v}枚以下`, `自分の手札が${v}枚以下のとき`],
   breederN: () => ['手札にブリーダーのカード2枚以上', '手札にブリーダーのカードが2枚以上あるとき'],
-  breederUnused: () => ['この番まだブリーダーのカードを出していない', 'この番に、まだブリーダーのカードを出していないとき'],
+  breederUnused: () => ['このターンまだブリーダーのカードを出していない', 'このターンに、まだブリーダーのカードを出していないとき'],
   myGutsLe: v => [`自分のガッツ${v}以下`, `自分のガッツが${v}以下のとき`],
   myDiscard: v => [`自分の捨て札${v}枚以上`, `自分の捨て札が${v}枚以上のとき`],
   myKo: () => ['倒れた味方がいる', '自分のモンスターが1体でも倒れているとき'],
   noField: () => ['場に全体カードが無い', 'どちらの全体カードも場に無いとき'],
   selfLife: v => [`このモンスターのライフ${v}%以下`, `このカードを入れたモンスターの残りライフが最大の${v}%以下のとき(モンスターの手に入れたときだけ当たる)`],
-  selfFresh: () => ['このモンスターがこの番まだ攻撃していない', 'このカードを入れたモンスターが、この番にまだ攻撃していないとき(モンスターの手だけ)'],
+  selfFresh: () => ['このモンスターがこのターンまだ攻撃していない', 'このカードを入れたモンスターが、このターンにまだ攻撃していないとき(モンスターの手だけ)'],
   selfType: v => [`このモンスターがいま${v}`, `このカードを入れたモンスターが、いま${v}にいるとき(モンスターの手だけ)`],
   selfStun: () => ['このモンスターが攻撃できない', 'このカードを入れたモンスターが封じられて攻撃できないとき(モンスターの手だけ)'],
   selfAdv: () => ['このモンスターが得意な相手', 'このカードを入れたモンスターが出せる手札の技に、相手の特徴(地上・空中・水中)でダメージが倍になるものがあるとき。その相手を狙う(モンスターの手だけ)'],
@@ -93622,10 +93622,10 @@ const CARD_TACTIC_TEXT = Object.freeze({
   tSteady: () => ['堅実型', '守り札とガッツを残し(1.3倍)、攻撃は控えめ(0.8倍)。自分も傷つく技は出さない'],
   tJam: () => ['かく乱守り型', '崩す札(1.3倍)と、守り札を残すこと(1.3倍)を両方重くする'],
   tCalm: () => ['慎重型', 'いっしょに入れた基本カードの重みを半分に弱めて、極端な打ち方をしない'],
-  tFlex: () => ['臨機応変型', '番ごとに場を見て、とどめ・全体攻撃・守り・攻めのどれか1つを強くする'],
+  tFlex: () => ['臨機応変型', 'ターンごとに場を見て、とどめ・全体攻撃・守り・攻めのどれか1つを強くする'],
   tMill: () => ['持久型', '相手の山札を削る・相手に引かせる・ガッツを山札へ戻す札を重くして、相手の山札切れで勝ちを狙う'],
   tReckless: () => ['捨て身型', '守り札を残さず(0.5倍)、とどめを優先(1.3倍)。受けると倒れるとき以外は守らない'],
-  tHand: () => ['手札温存型', '出したあとに手札が2枚以上残る手だけを出す。ガッツの番も手札を2枚残して置く'],
+  tHand: () => ['手札温存型', '出したあとに手札が2枚以上残る手だけを出す。ガッツを置くときも手札を2枚残して置く'],
   tDeck: () => ['山札節約型', 'カードを引く・山札からガッツへ・手札を引き直す・相手に引かせる札は出さない'],
   tFocus: () => ['一点集中型', 'ライフの割合がいちばん低い相手への攻撃を優先して、倒れるまで同じ相手を狙う'],
   tSpread: () => ['分散型', '全体攻撃を重くし(1.4倍)、ライフがいちばん多い相手への攻撃を優先する'],
@@ -93670,17 +93670,17 @@ const CARD_TACTIC_TEXT = Object.freeze({
   },
   stance: v => ({
     この子から攻める: ['このモンスターが攻める', '当てはまったら、このモンスターの攻撃で点数がいちばん高い手を出す'],
-    この子は攻撃しない: ['このモンスターは攻撃しない', '当てはまったら、この番はこのモンスターに攻撃させない(このあとの手・基本カードの打ち方でも出さない)'],
+    この子は攻撃しない: ['このモンスターは攻撃しない', '当てはまったら、このターンはこのモンスターに攻撃させない(このあとの手・基本カードの打ち方でも出さない)'],
     ライフの多い子が先に: ['いちばん元気なら攻める', 'このモンスターが味方でいちばんライフが多いときだけ、このモンスターの攻撃で点数がいちばん高い手を出す'],
-    ライフの少ない子は温存: ['いちばん弱っていたら休む', '味方が2体以上いて、このモンスターのライフがいちばん少ないとき、この番は攻撃させない'],
-    攻撃は1回だけ: ['攻撃は1回だけ', 'この番にまだ攻撃していなければ攻撃する。1回攻撃したら、この番はもう攻撃させない'],
+    ライフの少ない子は温存: ['いちばん弱っていたら休む', '味方が2体以上いて、このモンスターのライフがいちばん少ないとき、このターンは攻撃させない'],
+    攻撃は1回だけ: ['攻撃は1回だけ', 'このターンにまだ攻撃していなければ攻撃する。1回攻撃したら、このターンはもう攻撃させない'],
     何回でも攻める: ['何回でも攻める', '点数が少し低い手でも攻撃を出して、このモンスターの攻撃を続ける']
   })[v],
   disrupt: v => ({
     手札を捨てさせる: ['相手の手札を捨てさせる', '相手の手札を捨てさせる・山札の下へ戻す札を含む手を出す'],
     山札を削る: ['相手の山札を削る', '相手の山札を削る札を含む手を出す'],
     ガッツを減らす: ['相手のガッツを減らす', '相手のガッツを減らす・0にする札を含む手を出す'],
-    番を飛ばす: ['相手の番を飛ばす', '相手の次の番を飛ばす札を含む手を出す']
+    番を飛ばす: ['相手のターンを飛ばす', '相手の次のターンを飛ばす札を含む手を出す']
   })[v],
   guard: () => ['守る', 'このモンスターが攻撃を受けたら、手札の守り札でいちばん良い守り方をする'],
   guardFirst: v => [`${v}で守る`, `このモンスターが攻撃を受けたら、${v === '回避' || v === '防御' ? v + 'の札' : '「' + v + '」の札'}だけで守る(無ければ次の手を見る)`],
@@ -93688,8 +93688,8 @@ const CARD_TACTIC_TEXT = Object.freeze({
   guardDie: () => ['倒れるときだけ守る', 'このモンスターが攻撃を受けたとき、受けても倒れなければ守らずに受ける。倒れるときだけ守る'],
   cover: () => ['かばう札で守る', 'このモンスターが攻撃を受けたら、かばう・身代わりの札で守る'],
   noGuard: () => ['守らない', 'このモンスターが攻撃を受けても、守り札を使わずに受ける(札を残す)'],
-  charge: () => ['溜め技を使う', '次の技のダメージを何倍にする札(溜め・怒り・次の番の技を倍)を含む手を出す'],
-  chargeKind: v => [`溜め(${v})を使う`, `「${v}」の溜めの札を含む手を出す`],
+  charge: () => ['溜め技を使う', '次の技のダメージを何倍にする札(溜め・怒り・次のターンの技を倍)を含む手を出す'],
+  chargeKind: v => (w => [`溜め(${w})を使う`, `「${w}」の溜めの札を含む手を出す`])(v === '次の番の技を倍' ? '次のターンの技を倍' : v),
   bEff: v => {
     const d = {
       回復する: '味方を回復する',
@@ -93713,13 +93713,13 @@ const CARD_TACTIC_TEXT = Object.freeze({
   },
   fieldCard: () => ['全体カードを出す', '手札の全体カード(場に残るカード)を出す'],
   fieldKind: v => [`全体カード: ${v}`, `手札の全体カードのうち、「${v}」の全体カードを場に出す`],
-  save: () => ['ガッツを多めにためる', 'ガッツの番に、ふだんより多くの手札をガッツに置く'],
-  gutsN: v => [`ガッツを${v}枚置く`, `ガッツの番に、手札から${v}枚だけガッツに置く`],
-  keepGuard: () => ['守り札は置かない', 'ガッツの番に、回避・防御の札はガッツに置かない'],
-  gutsOrder: v => [v === '重い札' ? '重い札からガッツに置く' : '使えない札からガッツに置く', v === '重い札' ? 'ガッツの番に置く枚数はふだんどおり。払うガッツの大きい札から先に置く' : 'ガッツの番に置く枚数はふだんどおり。場のモンスターが使えない札から先に置く'],
-  stop: () => ['この番の攻撃をやめる', '当てはまったら、この番の攻撃をここで終える'],
+  save: () => ['ガッツを多めにためる', 'ガッツを置くときに、ふだんより多くの手札をガッツに置く'],
+  gutsN: v => [`ガッツを${v}枚置く`, `ガッツを置くときに、手札から${v}枚だけガッツに置く`],
+  keepGuard: () => ['守り札は置かない', 'ガッツを置くときに、回避・防御の札はガッツに置かない'],
+  gutsOrder: v => [v === '重い札' ? '重い札からガッツに置く' : '使えない札からガッツに置く', v === '重い札' ? 'ガッツに置く枚数はふだんどおり。払うガッツの大きい札から先に置く' : 'ガッツに置く枚数はふだんどおり。場のモンスターが使えない札から先に置く'],
+  stop: () => ['このターンの攻撃をやめる', '当てはまったら、このターンの攻撃をここで終える'],
   ace: () => ['切り札を出す', '登録で選んだ切り札が手札にあれば、それを含む手を先に出す'],
-  holdBreeder: () => ['ブリーダーのカードを温存', '当てはまったら、この番はブリーダーのカード(全体カードも)を出さない。ほかの手はそのまま']
+  holdBreeder: () => ['ブリーダーのカードを温存', '当てはまったら、このターンはブリーダーのカード(全体カードも)を出さない。ほかの手はそのまま']
 });
 const cardTacticTextOf = (g, v) => {
   const t = CARD_TACTIC_TEXT[g.id] ? CARD_TACTIC_TEXT[g.id](v) : null;
@@ -94639,6 +94639,328 @@ const cardAiTacticGambit = (who, levelId) => {
     base: [0, 1, 2].map(i => i < n ? list[i] || null : null),
     breeder: [],
     mons: [rows, rows, rows]
+  };
+};
+const CARD_SHARE_TILTS = Object.freeze([{
+  id: 'attack',
+  label: '攻める'
+}, {
+  id: 'keepGuard',
+  label: '守りを残す'
+}, {
+  id: 'saveGuts',
+  label: 'ガッツをためる'
+}, {
+  id: 'big',
+  label: '大技'
+}, {
+  id: 'disrupt',
+  label: '相手を崩す'
+}, {
+  id: 'area',
+  label: '全体技'
+}, {
+  id: 'finish',
+  label: 'とどめ'
+}]);
+const CARD_SHARE_TILT_MUL = Object.freeze({
+  '-1': 0.6,
+  0: 1,
+  1: 1.6
+});
+const CARD_SHARE_ACES_MAX = 3;
+const cardShareNormalizeTactics = (v, deck = null) => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  const habit = typeof r.habit === 'string' && Object.prototype.hasOwnProperty.call(CARD_AI_HABITS, r.habit) ? r.habit : 'kyuko';
+  const tilt = {};
+  CARD_SHARE_TILTS.forEach(t => {
+    const n = r.tilt && r.tilt[t.id];
+    tilt[t.id] = n === -1 || n === 1 ? n : 0;
+  });
+  const inDeck = deck && Array.isArray(deck.cards) ? new Set(deck.cards) : null;
+  const aces = [...new Set((Array.isArray(r.aces) ? r.aces : []).filter(x => typeof x === 'string' && /^[A-Z]?[0-9]{3}$/.test(x) && (!inDeck || inDeck.has(x))))].slice(0, CARD_SHARE_ACES_MAX);
+  const name = typeof r.name === 'string' ? r.name.slice(0, 20) : '';
+  const f = r.f && typeof r.f === 'object' && !Array.isArray(r.f) && typeof cardTacticPackFrames === 'function' ? cardTacticPackFrames(cardTacticUnpackFrames(r.f)) : null;
+  return {
+    habit,
+    tilt,
+    aces,
+    name,
+    ...(f ? {
+      f
+    } : {})
+  };
+};
+const cardShareSmartLevel = tactics => {
+  const t = cardShareNormalizeTactics(tactics);
+  return t.f && typeof cardTacticSmartLevel === 'function' ? cardTacticSmartLevel(cardTacticUnpackFrames(t.f)) : 'normal';
+};
+const cardShareMainHabit = (frames, fallback = 'kyuko') => {
+  const c = frames && typeof cardTacticOf === 'function' ? cardTacticOf(frames.base[0]) : null;
+  const g = c && typeof CARD_TACTIC_GROUPS !== 'undefined' ? CARD_TACTIC_GROUPS.find(x => x.id === c.g) : null;
+  return g && g.habit || fallback || 'kyuko';
+};
+const cardShareFightLevel = tactics => {
+  const lv = cardShareSmartLevel(tactics);
+  return lv === 'random' ? 'easy' : lv;
+};
+const cardSharePolicy = (tactics, levelId, opts = {}) => {
+  const t = cardShareNormalizeTactics(tactics);
+  if (t.f) {
+    const frames = cardTacticUnpackFrames(t.f);
+    const base = cardAiPolicy(t.habit, cardShareFightLevel(t), {
+      ...opts,
+      noTactics: true
+    });
+    return {
+      ...base,
+      gambit: frames,
+      gambitRandom: true,
+      aces: t.aces.slice()
+    };
+  }
+  const base = cardAiPolicy(t.habit, levelId, {
+    ...opts,
+    noTactics: true
+  });
+  const habit = {
+    ...base.habit
+  };
+  CARD_SHARE_TILTS.forEach(x => {
+    if (Number.isFinite(habit[x.id])) habit[x.id] = habit[x.id] * CARD_SHARE_TILT_MUL[t.tilt[x.id]];
+  });
+  return {
+    ...base,
+    habit,
+    aces: t.aces.slice()
+  };
+};
+const CARD_TOUR_SINGLE_MAX = 9;
+const CARD_TOUR_GROUP_SIZE = 5;
+const CARD_TOUR_MIN_SEATS = 4;
+const CARD_TOUR_FINAL_TOP = 2;
+const CARD_TOUR_ASSIST_LEVEL = 'expert';
+const CARD_TOUR_MAX_STEPS = 4000;
+const cardTourHash = text => {
+  let h = 0x811c9dc5;
+  const s = String(text);
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+};
+const cardTourRand = key => {
+  let s = cardTourHash(key) || 1;
+  return () => {
+    const n = cardRngNext(s);
+    s = n.s;
+    return n.v;
+  };
+};
+const cardTourMatchSeed = (tourId, stage, group, day, a, b) => cardTourHash(`${tourId}|${stage}|${group}|${day}|${a}|${b}`) % 2147483646 + 1;
+const cardTourGroups = (ids, key) => {
+  const list = Array.isArray(ids) ? ids.slice() : [];
+  const fill = g => {
+    const out = g.slice();
+    let k = 0;
+    while (out.length < CARD_TOUR_MIN_SEATS) out.push({
+      assist: k++
+    });
+    return out;
+  };
+  if (list.length <= CARD_TOUR_SINGLE_MAX) return [fill(list)];
+  const rand = cardTourRand(`groups|${key}`);
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  const n = Math.ceil(list.length / CARD_TOUR_GROUP_SIZE);
+  const groups = Array.from({
+    length: n
+  }, () => []);
+  list.forEach((id, i) => groups[i % n].push(id));
+  return groups.map(fill);
+};
+const cardTourRoundRobin = size => {
+  const n = Math.max(0, Math.floor(size));
+  if (n < 2) return [];
+  const seats = Array.from({
+    length: n % 2 ? n + 1 : n
+  }, (_, i) => i);
+  const m = seats.length;
+  const days = [];
+  for (let d = 0; d < m - 1; d++) {
+    const day = [];
+    for (let i = 0; i < m / 2; i++) {
+      const a = seats[i],
+        b = seats[m - 1 - i];
+      if (a < n && b < n) day.push(d % 2 ? [b, a] : [a, b]);
+    }
+    days.push(day);
+    seats.splice(1, 0, seats.pop());
+  }
+  return days;
+};
+const cardTourSchedule = (tourId, groups, stage = 'group', dayFrom = 0) => {
+  const out = [];
+  (groups || []).forEach((g, gi) => {
+    cardTourRoundRobin(g.length).forEach((pairs, d) => pairs.forEach(([a, b]) => {
+      const day = dayFrom + d;
+      const seed = cardTourMatchSeed(tourId, stage, gi, day, a, b);
+      out.push({
+        stage,
+        group: gi,
+        day,
+        a,
+        b,
+        seed,
+        first: seed % 2
+      });
+    }));
+  });
+  return out;
+};
+const cardTourStageDays = groups => Math.max(0, ...(groups || []).map(g => cardTourRoundRobin(g.length).length));
+const cardTourStandings = (seats, matches, order = null) => {
+  const rec = Array.from({
+    length: seats
+  }, (_, i) => ({
+    seat: i,
+    wins: 0,
+    losses: 0,
+    kos: 0
+  }));
+  const beat = new Set();
+  (matches || []).forEach(m => {
+    if (m.winner !== 0 && m.winner !== 1) return;
+    const w = m.winner === 0 ? m.a : m.b,
+      l = m.winner === 0 ? m.b : m.a;
+    if (!rec[w] || !rec[l]) return;
+    rec[w].wins += 1;
+    rec[l].losses += 1;
+    const k = Array.isArray(m.kos) ? m.kos : [0, 0];
+    if (rec[m.a]) rec[m.a].kos += Number(k[0]) || 0;
+    if (rec[m.b]) rec[m.b].kos += Number(k[1]) || 0;
+    beat.add(`${w}>${l}`);
+  });
+  const early = i => Array.isArray(order) && Number.isFinite(order[i]) ? order[i] : i;
+  const tie = r => `${r.wins}|${r.kos}`;
+  const tied = {};
+  rec.forEach(r => {
+    tied[tie(r)] = (tied[tie(r)] || 0) + 1;
+  });
+  const rank = rec.slice().sort((x, y) => y.wins - x.wins || y.kos - x.kos || (tied[tie(x)] === 2 ? beat.has(`${x.seat}>${y.seat}`) ? -1 : beat.has(`${y.seat}>${x.seat}`) ? 1 : 0 : 0) || early(x.seat) - early(y.seat)).map(r => r.seat);
+  return {
+    rank,
+    rec
+  };
+};
+const cardTourFinalists = groupRanks => Array.isArray(groupRanks) && groupRanks.length > 1 ? groupRanks.flatMap((rank, gi) => rank.slice(0, CARD_TOUR_FINAL_TOP).map(seat => ({
+  group: gi,
+  seat
+}))) : null;
+const cardTourSidePolicy = (db, side, key) => {
+  if (side && side.assist) {
+    const deck = cardAiBuildDeck(db, side.assist, CARD_TOUR_ASSIST_LEVEL, cardAiSeededRand(`tour|${key}|${side.assist}`));
+    return {
+      deck,
+      policy: cardAiPolicy(side.assist, CARD_TOUR_ASSIST_LEVEL, {
+        sameBlood: !!deck.sameBlood
+      })
+    };
+  }
+  return {
+    deck: side.deck,
+    policy: cardSharePolicy(side.tactics, 'normal')
+  };
+};
+const cardTourPlay = (db, sideA, sideB, {
+  seed,
+  first = 0,
+  key = ''
+}) => {
+  const A = cardTourSidePolicy(db, sideA, `${key}|a`),
+    B = cardTourSidePolicy(db, sideB, `${key}|b`);
+  let st = cardCreateGame(db, {
+    decks: [A.deck, B.deck],
+    names: ['A', 'B'],
+    seed,
+    first
+  });
+  let r = seed * 7919 >>> 0 || 1;
+  const rand = () => {
+    const n = cardRngNext(r);
+    r = n.s;
+    return n.v;
+  };
+  const pol = [A.policy, B.policy];
+  const acts = [];
+  let steps = 0;
+  for (; steps < CARD_TOUR_MAX_STEPS && st.winner === null; steps++) {
+    const who = st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? cardOther(st.first) : cardDecider(st);
+    let act = cardAiChooseAction(db, st, pol[who], rand);
+    let next = act && cardApplyAction(db, st, act);
+    if (!next) {
+      act = st.pending ? {
+        type: 'pass'
+      } : st.phase === 'main' ? {
+        type: 'endAttacks'
+      } : st.phase === 'guts' ? {
+        type: 'guts',
+        hand: []
+      } : null;
+      next = act && cardApplyAction(db, st, act);
+      if (!next) break;
+    }
+    acts.push([who, act]);
+    st = next;
+  }
+  const kos = [cardKoCount(st, 0), cardKoCount(st, 1)];
+  if (st.winner === 0 || st.winner === 1) return {
+    winner: st.winner,
+    kos,
+    acts,
+    steps,
+    decided: /山札/.test(String(st.reason || '')) ? 'deck' : 'ko',
+    rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null
+  };
+  const life = p => st.players[p].mons.reduce((a, m) => a + Math.max(0, m.ko ? 0 : m.life), 0);
+  const winner = kos[0] !== kos[1] ? kos[0] > kos[1] ? 0 : 1 : life(0) !== life(1) ? life(0) > life(1) ? 0 : 1 : cardOther(first);
+  return {
+    winner,
+    kos,
+    acts,
+    steps,
+    decided: 'limit',
+    rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null
+  };
+};
+const cardTourNormalizeRewards = raw => {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const num = v => Number.isFinite(Number(v)) ? Math.max(0, Math.min(100000, Math.floor(Number(v)))) : 0;
+  const str = (v, n) => typeof v === 'string' ? v.slice(0, n) : '';
+  const ranks = (Array.isArray(r.ranks) ? r.ranks : []).slice(0, 16).map(x => ({
+    point: num(x && x.point),
+    title: str(x && x.title, 30),
+    frame: str(x && x.frame, 40)
+  }));
+  return {
+    ranks,
+    participation: {
+      point: num(r.participation && r.participation.point)
+    },
+    perWin: num(r.perWin)
+  };
+};
+const cardTourRewardOf = (rewards, place, wins) => {
+  const t = cardTourNormalizeRewards(rewards);
+  const r = Number.isInteger(place) && place >= 1 ? t.ranks[place - 1] : null;
+  const base = r ? r.point : t.participation.point;
+  return {
+    point: base + t.perWin * Math.max(0, Math.floor(Number(wins) || 0)),
+    title: r ? r.title : '',
+    frame: r ? r.frame : ''
   };
 };
 const CARD_LINE_SCENES = Object.freeze(['challenge', 'start', 'big', 'bigHit', 'guardMine', 'guardTheirs', 'myKo', 'theirKo', 'lastMine', 'lastTheirs', 'deckMine', 'deckTheirs', 'win', 'lose']);
@@ -95806,12 +96128,12 @@ const CARD_RULE_PAGES = Object.freeze([{
   id: 'start',
   emoji: '🎲',
   title: '始め方',
-  lines: ['先攻・後攻はランダム。おたがいに手札を5枚引く', '後攻は、始める前に手札から2枚までガッツにできる', 'そのあと、おたがいのモンスターを表にして、先攻の番から始める']
+  lines: ['先攻・後攻はランダム。おたがいに手札を5枚引く', '後攻は、始める前に手札から2枚までガッツにできる', 'そのあと、おたがいのモンスターを表にして、先攻のターンから始める']
 }, {
   id: 'turn',
   emoji: '🔁',
   title: 'ターンの流れ',
-  lines: ['① 引く: 手札が5枚になるまで山札から引く(先攻の1ターン目は引かない)', '手札がもう5枚あるときは、山札のいちばん上が1枚ガッツになる', '② 攻撃: 技を使う(使わないモンスターがいてもよい)', '③ ガッツ: 手札から好きな枚数をガッツにする', '④ 「ターン終了」で相手の番へ']
+  lines: ['① 引く: 手札が5枚になるまで山札から引く(先攻の1ターン目は引かない)', '手札がもう5枚あるときは、山札のいちばん上が1枚ガッツになる', '② 攻撃: 技を使う(使わないモンスターがいてもよい)', '③ ガッツ: 手札から好きな枚数をガッツにする', '④ 「ターン終了」で相手のターンへ']
 }, {
   id: 'attack',
   emoji: '⚔️',
@@ -95821,7 +96143,7 @@ const CARD_RULE_PAGES = Object.freeze([{
   id: 'guard',
   emoji: '🛡️',
   title: '守り',
-  lines: ['攻撃された側は、回避・防御のカードを何枚でも出せる(ガッツが足りる限り)', '回避はよけてダメージを0にする。防御はダメージを減らす', 'そのモンスターの守りのカードは、そのモンスターが狙われたときだけ使える。「全モンスター」の守りは、狙われたモンスターが使う', '特殊技は、ふつうの回避・防御では守れない', '守っても、次の自分の番の攻撃はなくならない']
+  lines: ['攻撃された側は、回避・防御のカードを何枚でも出せる(ガッツが足りる限り)', '回避はよけてダメージを0にする。防御はダメージを減らす', 'そのモンスターの守りのカードは、そのモンスターが狙われたときだけ使える。「全モンスター」の守りは、狙われたモンスターが使う', '特殊技は、ふつうの回避・防御では守れない', '守っても、次の自分のターンの攻撃はなくならない']
 }, {
   id: 'guts',
   emoji: '💰',
@@ -104021,8 +104343,9 @@ const CardDeckList = ({
   }), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-2 pb-2`
   }, React.createElement("p", {
+    "data-card-deck-count": decks.decks.length,
     className: "text-[11px] font-bold text-slate-400"
-  }, "デッキは", CARD_DECK_MAX, "つまで。★のデッキで対戦します"), decks.decks.map(d => {
+  }, `デッキ ${decks.decks.length} / ${CARD_DECK_MAX}。★のデッキで対戦します(★のデッキはいちばん上に出ます)`), [...decks.decks].sort((a, b) => (b.id === decks.active) - (a.id === decks.active)).map(d => {
     const ready = cardDeckReady(db, d, col);
     const on = d.id === decks.active;
     return React.createElement("div", {
@@ -104099,7 +104422,7 @@ const CardDeckList = ({
       onClick: () => setConfirmDel(d)
     }, "消す")));
   }), Array.from({
-    length: Math.max(0, CARD_DECK_MAX - decks.decks.length)
+    length: Math.min(1, Math.max(0, CARD_DECK_MAX - decks.decks.length))
   }, (_, i) => React.createElement("button", {
     key: `slot${i}`,
     type: "button",
@@ -104108,7 +104431,7 @@ const CardDeckList = ({
     className: "mh-button flex min-h-[64px] w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-white/15 text-[13px] font-black text-slate-400 active:scale-[.99]"
   }, React.createElement("span", {
     className: "text-[18px]"
-  }, "＋"), "あいている枠(", decks.decks.length + i + 1, "つ目)"))), React.createElement("div", {
+  }, "＋"), `新しいデッキを作る(あと${CARD_DECK_MAX - decks.decks.length}個作れます)`))), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, React.createElement("button", {
     type: "button",
@@ -104116,7 +104439,7 @@ const CardDeckList = ({
     disabled: full,
     className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40",
     onClick: newDeck
-  }, full ? `デッキは${CARD_DECK_MAX}つまでです` : '新しいデッキを作る')), confirmDel && React.createElement(ConfirmSheet, {
+  }, full ? `デッキは${CARD_DECK_MAX}個までです` : '新しいデッキを作る')), confirmDel && React.createElement(ConfirmSheet, {
     title: `「${confirmDel.name}」を消しますか？`,
     message: "デッキだけを消します(カードは消えません)",
     confirmLabel: "消す",
@@ -112516,62 +112839,8 @@ const CARD_SHARE_KEY = 'mh_card_deck_owner_key_v1';
 const CARD_SHARE_TABLE = 'card_deck_entries';
 const CARD_RENTED_KEY = 'mh_card_rented_deck_v1';
 const CARD_SHARE_REWARD_KEY = 'mh_card_deck_reward_v1';
-const CARD_SHARE_TILTS = Object.freeze([{
-  id: 'attack',
-  label: '攻める'
-}, {
-  id: 'keepGuard',
-  label: '守りを残す'
-}, {
-  id: 'saveGuts',
-  label: 'ガッツをためる'
-}, {
-  id: 'big',
-  label: '大技'
-}, {
-  id: 'disrupt',
-  label: '相手を崩す'
-}, {
-  id: 'area',
-  label: '全体技'
-}, {
-  id: 'finish',
-  label: 'とどめ'
-}]);
-const CARD_SHARE_TILT_MUL = Object.freeze({
-  '-1': 0.6,
-  0: 1,
-  1: 1.6
-});
-const CARD_SHARE_ACES_MAX = 3;
 let _cardShareUnavailable = false;
 const cardShareOpen = () => true;
-const cardShareNormalizeTactics = (v, deck = null) => {
-  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
-  const habit = typeof r.habit === 'string' && Object.prototype.hasOwnProperty.call(CARD_AI_HABITS, r.habit) ? r.habit : 'kyuko';
-  const tilt = {};
-  CARD_SHARE_TILTS.forEach(t => {
-    const n = r.tilt && r.tilt[t.id];
-    tilt[t.id] = n === -1 || n === 1 ? n : 0;
-  });
-  const inDeck = deck && Array.isArray(deck.cards) ? new Set(deck.cards) : null;
-  const aces = [...new Set((Array.isArray(r.aces) ? r.aces : []).filter(x => typeof x === 'string' && /^[A-Z]?[0-9]{3}$/.test(x) && (!inDeck || inDeck.has(x))))].slice(0, CARD_SHARE_ACES_MAX);
-  const name = typeof r.name === 'string' ? r.name.slice(0, 20) : '';
-  const f = r.f && typeof r.f === 'object' && !Array.isArray(r.f) && typeof cardTacticPackFrames === 'function' ? cardTacticPackFrames(cardTacticUnpackFrames(r.f)) : null;
-  return {
-    habit,
-    tilt,
-    aces,
-    name,
-    ...(f ? {
-      f
-    } : {})
-  };
-};
-const cardShareSmartLevel = tactics => {
-  const t = cardShareNormalizeTactics(tactics);
-  return t.f && typeof cardTacticSmartLevel === 'function' ? cardTacticSmartLevel(cardTacticUnpackFrames(t.f)) : 'normal';
-};
 const cardShareRowsCount = frames => cardTacticCountedRows(frames);
 const cardShareSmartText = tactics => {
   const t = cardShareNormalizeTactics(tactics);
@@ -112580,46 +112849,6 @@ const cardShareSmartText = tactics => {
   if (!t.f) return label;
   const f = cardTacticUnpackFrames(t.f);
   return `${label}(基本${f.base.filter(Boolean).length}・戦術カード${cardShareRowsCount(f)}枚)`;
-};
-const cardShareMainHabit = (frames, fallback = 'kyuko') => {
-  const c = frames && typeof cardTacticOf === 'function' ? cardTacticOf(frames.base[0]) : null;
-  const g = c && typeof CARD_TACTIC_GROUPS !== 'undefined' ? CARD_TACTIC_GROUPS.find(x => x.id === c.g) : null;
-  return g && g.habit || fallback || 'kyuko';
-};
-const cardShareFightLevel = tactics => {
-  const lv = cardShareSmartLevel(tactics);
-  return lv === 'random' ? 'easy' : lv;
-};
-const cardSharePolicy = (tactics, levelId, opts = {}) => {
-  const t = cardShareNormalizeTactics(tactics);
-  if (t.f) {
-    const frames = cardTacticUnpackFrames(t.f);
-    const base = cardAiPolicy(t.habit, cardShareFightLevel(t), {
-      ...opts,
-      noTactics: true
-    });
-    return {
-      ...base,
-      gambit: frames,
-      gambitRandom: true,
-      aces: t.aces.slice()
-    };
-  }
-  const base = cardAiPolicy(t.habit, levelId, {
-    ...opts,
-    noTactics: true
-  });
-  const habit = {
-    ...base.habit
-  };
-  CARD_SHARE_TILTS.forEach(x => {
-    if (Number.isFinite(habit[x.id])) habit[x.id] = habit[x.id] * CARD_SHARE_TILT_MUL[t.tilt[x.id]];
-  });
-  return {
-    ...base,
-    habit,
-    aces: t.aces.slice()
-  };
 };
 const cardShareOwnerKey = async (create = false) => {
   let key = null;
@@ -113926,9 +114155,9 @@ const cardTacticRowName = (db, row, which) => {
   return c.name;
 };
 const CARD_TACTIC_PHASE_TEXT = Object.freeze({
-  attack: '攻撃の番に見る',
+  attack: '攻撃するときに見る',
   guard: '攻撃を受けたときに見る',
-  guts: 'ガッツの番に見る'
+  guts: 'ガッツを置くときに見る'
 });
 const CARD_TACTIC_CAT_TEXT = Object.freeze({
   cond: '条件カード(〜なら)。行動カードと組にしてセットする',
@@ -114019,12 +114248,12 @@ const CardTacticFace = ({
   }, "×", count), mark && React.createElement("span", {
     className: "ml-auto rounded bg-emerald-500 px-1 text-[10px] font-black text-white"
   }, mark)), React.createElement("b", {
-    className: `mt-1 block font-black leading-tight text-white ${small ? 'text-[12.5px]' : 'text-[14px]'}`,
+    className: `mt-1 block font-black leading-tight text-white ${small ? [...String(card.name || '')].length > 10 ? 'text-[11px]' : 'text-[12.5px]' : 'text-[14px]'}`,
     style: JA_WRAP_STYLE
-  }, card.name), React.createElement("small", {
+  }, jaWrap(card.name)), React.createElement("small", {
     className: `mt-0.5 font-bold leading-snug text-white/90 ${small ? 'line-clamp-3 text-[10px]' : 'block text-[11.5px]'}`,
     style: JA_WRAP_STYLE
-  }, card.desc));
+  }, jaWrap(card.desc)));
 };
 const CardTacticPicker = ({
   db,
@@ -114253,13 +114482,18 @@ const CardTacticPackArt = ({
     }
   }, "戦術カードパック"));
 };
+const cardTacticTitleFit = name => {
+  const n = [...String(name || '')].length;
+  return n <= 7 ? [13, 11] : n <= 10 ? [11.5, 10] : n <= 14 ? [10, 9] : [9, 8];
+};
 const CardTacticFront = ({
   card,
   big = false
 }) => {
   const st = CARD_TACTIC_CAT_STYLE[card.cat] || CARD_TACTIC_CAT_STYLE.cond;
   return React.createElement("div", {
-    className: "flex h-full w-full flex-col rounded-[5px] border-2 border-white/70 p-[6%] text-left",
+    "data-card-tactic-front": card.id,
+    className: "flex h-full w-full flex-col overflow-hidden rounded-[5px] border-2 border-white/70 p-[6%] text-left",
     style: {
       background: st.bg,
       containerType: 'inline-size'
@@ -114278,18 +114512,24 @@ const CardTacticFront = ({
       fontSize: big ? 13 : 'max(8px, 8cqw)'
     }
   }, st.label)), React.createElement("b", {
-    className: "mt-[6%] block font-black leading-tight text-white",
+    "data-card-tactic-title": true,
+    className: "mt-[6%] block shrink-0 font-black leading-tight text-white",
     style: {
-      fontSize: big ? 22 : 'max(11px, 13cqw)',
+      fontSize: big ? 22 : (f => `max(${f[1]}px, ${f[0]}cqw)`)(cardTacticTitleFit(card.name)),
       ...JA_WRAP_STYLE
     }
-  }, card.name), React.createElement("small", {
-    className: "mt-auto block font-bold leading-snug text-white/90",
+  }, jaWrap(card.name)), React.createElement("small", {
+    "data-card-tactic-desc": true,
+    className: "mt-[5%] block min-h-0 flex-1 overflow-hidden font-bold leading-snug text-white/90",
     style: {
-      fontSize: big ? 14 : 'max(8px, 9cqw)',
-      ...JA_WRAP_STYLE
+      fontSize: big ? 14 : 'max(8px, 8.5cqw)',
+      ...JA_WRAP_STYLE,
+      ...(big ? {} : {
+        WebkitMaskImage: 'linear-gradient(#000 72%, transparent)',
+        maskImage: 'linear-gradient(#000 72%, transparent)'
+      })
     }
-  }, card.desc));
+  }, jaWrap(card.desc)));
 };
 const CARD_TACTIC_TEAR_MS = 1150;
 const CARD_TACTIC_SPOT_MS = 1500;
@@ -114465,16 +114705,14 @@ const CardTacticPackOpen = ({
     }))), on && sr && React.createElement("div", {
       "aria-hidden": "true",
       className: "mh-pack-rays"
-    }), on && React.createElement("span", {
-      className: "absolute inset-x-0.5 top-0.5 z-[2] flex flex-wrap items-start justify-end gap-0.5"
-    }, c.dup ? React.createElement("span", {
-      className: "rounded-md bg-slate-950/90 px-1 text-[9px] font-black text-amber-200"
+    })), React.createElement("span", {
+      "data-card-tactic-open-tag": true,
+      className: "mt-0.5 flex h-[16px] items-center justify-center"
+    }, on && (c.dup ? React.createElement("span", {
+      className: "rounded-md bg-slate-950/90 px-1.5 text-[10px] font-black text-amber-200"
     }, "かけら+1") : React.createElement("span", {
-      className: "rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950"
-    }, "NEW"))), React.createElement(CardNameFit, {
-      name: on && card ? card.name : ' ',
-      className: "mt-0.5 font-bold leading-tight text-slate-100"
-    }));
+      className: "rounded-md bg-emerald-400 px-1.5 text-[10px] font-black text-slate-950"
+    }, "NEW"))));
   })), phase === 'open' && allOpen && React.createElement("div", {
     "data-card-tactic-open-summary": true,
     className: "mt-3 text-center text-[12px] font-bold text-slate-300"
@@ -114902,7 +115140,7 @@ const CardTacticsScreen = ({
   }, "おまかせで", React.createElement("br", null), "あいている所に入れる")), React.createElement("p", {
     className: "text-[11px] font-bold leading-snug text-slate-400",
     style: JA_WRAP_STYLE
-  }, frame === 'breeder' ? '攻撃の番は、モンスターの枠のあとに見ます。ガッツの番はここだけを見ます。' : '上にセットした戦術カードから順に見て、条件に当たったカードの手をこのモンスターが出します。守るときは、このモンスターが狙われたときに見ます。'))), tab === 'pull' && React.createElement("div", {
+  }, frame === 'breeder' ? '攻撃するときは、モンスターの枠のあとに見ます。ガッツを置くときは、ここだけを見ます。' : '上にセットした戦術カードから順に見て、条件に当たったカードの手をこのモンスターが出します。守るときは、このモンスターが狙われたときに見ます。'))), tab === 'pull' && React.createElement("div", {
     "data-card-tactics-pull": true,
     className: "space-y-2"
   }, React.createElement("div", {
