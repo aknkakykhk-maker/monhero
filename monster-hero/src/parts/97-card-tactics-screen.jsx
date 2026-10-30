@@ -406,7 +406,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
               {frameTabs.map((x) => (
                 <button key={x.k} type="button" data-card-tactics-frame={x.k} onClick={() => { Audio_.fgSe.tap(); setFrame(x.k); }}
                   className={`min-w-0 flex-1 rounded-lg border-2 px-0.5 py-1 text-center ${frame === x.k ? 'border-amber-300 bg-amber-900/40' : 'border-slate-700 bg-slate-900'}`}>
-                  {x.mon ? <img src={CARD_IMG(x.mon.img)} alt="" className="mx-auto h-[30px] w-[22px] rounded object-cover"/> : <span className="block text-[18px] leading-[30px]">{x.icon}</span>}
+                  {x.mon ? <img src={CARD_IMG(x.mon.img)} alt="" className="mx-auto h-[30px] w-[22px] rounded object-cover"/> : <span className="block text-[18px] leading-[30px]">{cardIconNode(x.icon, 22)}</span>}
                   <span className="block truncate text-[10px] font-black text-white">{x.label}</span>
                   <span className="block text-[9px] font-bold text-slate-400">{x.sub}</span>
                 </button>
@@ -696,7 +696,7 @@ const CardRankDetail = ({ xp = 0, onClose }) => {
     </div>
   );
 };
-// 対戦の結果: 経験値の札と、ランクが上がったときの演出(43 の PlayerRankUpFx。ビートランクと同じ。帯が変わると自動で豪華になる)。
+// 対戦の結果: 経験値の札(棒が前の量から伸びる)と、ランクが上がったときの演出(43 の PlayerRankUpFx。ビートランクと同じ。帯が変わると自動で豪華になる)。
 //   一度に何ランク上がっても、上がった先のランクで1回だけ出し、もらった物をまとめて渡す。5ランクごとのおまけは bonus(桃色の光)
 const cardRankFxGains = (gain) => {
   let bonusPoint = 0;
@@ -713,11 +713,14 @@ const cardRankFxGains = (gain) => {
 };
 const CardRankResult = ({ gain }) => {
   const up = !!(gain && gain.to > gain.from);
-  const [fx, setFx] = useState(up);
+  // 画面いっぱいの演出は、経験値の棒が満タンで光ったあと(2026-10-30 社長の決め。ビートランクと同じ順番。onFull は1回だけ・押して飛ばしたときも来る)
+  const [fx, setFx] = useState(false); // false … まだ / true・'late' … 出す / 'closed' … 閉じた(もう出さない)
+  // 保険: 棒の合図(onFull)が来ないまま5秒たったら出す(ビートランクの 60-app と同じ)
+  useEffect(() => { if (!up) return undefined; const t = setTimeout(() => setFx((v) => v || 'late'), 5000); return () => clearTimeout(t); }, [up]);
   if (!gain || !(gain.add > 0)) return null;
   const award = { add: gain.add, parts: gain.parts || [], from: gain.from, to: gain.to, xp: gain.xp, gains: gain.gains || [] };
   return (<>
-    <PlayerRankGain kind="card" award={award} next={`ランク${gain.to + 1}で ${cardRankRewardText(gain.to + 1)}`}/>
-    {up && fx && typeof PlayerRankUpFx === 'function' && <PlayerRankUpFx kind="card" from={gain.from} to={gain.to} gains={cardRankFxGains(gain)} onClose={() => setFx(false)}/>}
+    <PlayerRankGain kind="card" award={award} next={`ランク${gain.to + 1}で ${cardRankRewardText(gain.to + 1)}`} onFull={up ? () => setFx((v) => v || true) : null}/>
+    {up && fx && fx !== 'closed' && typeof PlayerRankUpFx === 'function' && <PlayerRankUpFx kind="card" from={gain.from} to={gain.to} gains={cardRankFxGains(gain)} onClose={() => setFx('closed')}/>}
   </>);
 };

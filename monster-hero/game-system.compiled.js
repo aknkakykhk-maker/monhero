@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 913079f9775ffbc3
+// source-sha256: 365a1740c62fb013
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -55337,7 +55337,7 @@ function PlayerRankUp({
     className: "rounded-lg border border-fuchsia-200/40 bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-amber-100"
   }, g.icon && React.createElement("span", {
     "aria-hidden": "true"
-  }, g.icon, " "), React.createElement("span", {
+  }, cardIconNode(g.icon, 14), " "), React.createElement("span", {
     style: JA_WRAP_STYLE
   }, jaWrap(String(g.text || '')))))));
 }
@@ -55772,7 +55772,7 @@ function PlayerRankXpBar({
     className: `self-center rounded-full px-2 py-0.5 text-[10px] font-black ${k.pill}`
   }, React.createElement("span", {
     "aria-hidden": "true"
-  }, k.icon, " "), k.label), React.createElement("b", {
+  }, cardIconNode(k.icon, 12), " "), k.label), React.createElement("b", {
     ref: addRef,
     "data-player-rank-gain-add": true,
     className: "mh-prxb-add"
@@ -56218,7 +56218,7 @@ function PlayerRankUpFx({
   }, g.icon && React.createElement("span", {
     className: "ico",
     "aria-hidden": "true"
-  }, g.icon), React.createElement("span", {
+  }, cardIconNode(g.icon, 16)), React.createElement("span", {
     className: "min-w-0"
   }, React.createElement("b", null, String(g.text || '')), g.note && React.createElement("small", {
     style: JA_WRAP_STYLE
@@ -90616,15 +90616,15 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
     easy: 0.12,
     normal: 0.06,
     hard: 0,
-    expert: 0.1,
-    master: 0.05
+    expert: 0.04,
+    master: 0
   },
   kiki: {
     easy: -0.045,
     normal: 0.06,
     hard: 0.15,
-    expert: 0,
-    master: 0.1
+    expert: -0.08,
+    master: 0
   },
   dra: {
     easy: -0.075,
@@ -90669,6 +90669,7 @@ const cardAiPolicy = (habitId, levelId, opts = {}) => {
     },
     playerRole: !!(opts && opts.playerRole)
   };
+  if (!out.playerRole && CARD_AI_DECKS[habitId] && CARD_AI_DECKS[habitId].field) out.fields = CARD_AI_DECKS[habitId].field;
   const gambit = !out.playerRole && !(opts && opts.noTactics) && typeof cardAiTacticGambit === 'function' ? cardAiTacticGambit(habitId, levelId) : null;
   const when = gambit && typeof CARD_AI_TACTIC_WHEN !== 'undefined' ? CARD_AI_TACTIC_WHEN[habitId] || null : null;
   return gambit ? {
@@ -90770,7 +90771,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
   const main = cardOf(db, me.hand[opt.hand[0]]);
   const cost = cardActionCost(db, st, p, me.hand, opt.hand);
   let score = 0;
-  if (main.kind === 'fld') return cardAiScoreField(db, st, p, main, cost, habit);
+  if (main.kind === 'fld') return cardAiScoreField(db, st, p, main, cost, habit) + (policy.fields && policy.fields.includes(main.name) && !(st.field && st.field.p === p) ? CARD_AI_FIELD_LIKE : 0);
   if (main.kind === 'spe') {
     (main.effects || []).forEach(e => {
       if (e.t === 'heal' && opt.target) {
@@ -91340,23 +91341,29 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
 };
 const CARD_AI_DECKS = Object.freeze({
   mua: {
-    kit: 'speed'
+    kit: 'speed',
+    field: ['ホリィの声援', '飛び散る火花']
   },
   momosuke: {
-    kit: 'miracle'
+    kit: 'miracle',
+    field: ['冷静な判断', 'がんじがらめ']
   },
   kiki: {
-    kit: 'powerful'
+    kit: 'powerful',
+    field: ['必殺技の応酬', '長期戦の予感']
   },
   dra: {
-    kit: 'powerful'
+    kit: 'powerful',
+    field: ['興奮のるつぼ', '必殺技の封印']
   },
   kyuko: {
-    monsters: ['C-007', 'C-005', 'C-009']
+    monsters: ['C-007', 'C-005', 'C-009'],
+    field: ['必殺技の応酬']
   },
   atsu: {
     monsters: ['C-003', 'C-001', 'C-002'],
-    prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード']
+    prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード'],
+    field: ['必殺技の応酬', '灼熱の地']
   },
   sorashido: {
     monsters: ['C-008', 'C-001', 'C-003'],
@@ -91485,6 +91492,8 @@ const CARD_AI_LANE_MIN = Object.freeze({
 });
 const CARD_DECK_COPY_MAX = 3;
 const CARD_AI_ATTACH_MAX = 6;
+const CARD_AI_FIELD_LIKE = 1;
+const CARD_AI_FIELD_COPIES = 2;
 const cardAiCardValue = (card, habit) => {
   const eff = t => cardHasEff(card, t);
   if (eff('attach')) {
@@ -91766,6 +91775,13 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
     if (x && !used.has(name)) {
       used.add(name);
       add(x.c, CARD_DECK_COPY_MAX);
+    }
+  });
+  (preferOn ? recipe.field || [] : []).forEach(name => {
+    const x = byName[name];
+    if (x && !used.has(name)) {
+      used.add(name);
+      add(x.c, CARD_AI_FIELD_COPIES);
     }
   });
   let li = 0,
@@ -114766,7 +114782,7 @@ const CardTacticsScreen = ({
     className: "mx-auto h-[30px] w-[22px] rounded object-cover"
   }) : React.createElement("span", {
     className: "block text-[18px] leading-[30px]"
-  }, x.icon), React.createElement("span", {
+  }, cardIconNode(x.icon, 22)), React.createElement("span", {
     className: "block truncate text-[10px] font-black text-white"
   }, x.label), React.createElement("span", {
     className: "block text-[9px] font-bold text-slate-400"
@@ -115405,7 +115421,12 @@ const CardRankResult = ({
   gain
 }) => {
   const up = !!(gain && gain.to > gain.from);
-  const [fx, setFx] = useState(up);
+  const [fx, setFx] = useState(false);
+  useEffect(() => {
+    if (!up) return undefined;
+    const t = setTimeout(() => setFx(v => v || 'late'), 5000);
+    return () => clearTimeout(t);
+  }, [up]);
   if (!gain || !(gain.add > 0)) return null;
   const award = {
     add: gain.add,
@@ -115418,13 +115439,14 @@ const CardRankResult = ({
   return React.createElement(React.Fragment, null, React.createElement(PlayerRankGain, {
     kind: "card",
     award: award,
-    next: `ランク${gain.to + 1}で ${cardRankRewardText(gain.to + 1)}`
-  }), up && fx && typeof PlayerRankUpFx === 'function' && React.createElement(PlayerRankUpFx, {
+    next: `ランク${gain.to + 1}で ${cardRankRewardText(gain.to + 1)}`,
+    onFull: up ? () => setFx(v => v || true) : null
+  }), up && fx && fx !== 'closed' && typeof PlayerRankUpFx === 'function' && React.createElement(PlayerRankUpFx, {
     kind: "card",
     from: gain.from,
     to: gain.to,
     gains: cardRankFxGains(gain),
-    onClose: () => setFx(false)
+    onClose: () => setFx('closed')
   }));
 };
 const CARD_REG_STYLES = Object.freeze([{
@@ -115715,7 +115737,7 @@ const CardRegComboSheet = ({
       className: `rounded-xl border-2 p-2 text-left ${ok ? 'border-slate-600 bg-slate-800 active:scale-[.97]' : 'border-slate-800 bg-slate-900 opacity-50'}`
     }, React.createElement("span", {
       className: "block text-[20px] leading-none"
-    }, x.icon), React.createElement("b", {
+    }, cardIconNode(x.icon, 20)), React.createElement("b", {
       className: "mt-1 block text-[13px] font-black leading-tight text-white",
       style: JA_WRAP_STYLE
     }, x.name), React.createElement("small", {
@@ -116150,7 +116172,7 @@ const CardDeckRegister = ({
     className: `flex w-full items-center gap-3 rounded-2xl border-2 p-3 text-left ${styleId === s.id ? 'border-amber-300 bg-amber-950/40' : 'border-slate-700 bg-slate-900'}`
   }, React.createElement("span", {
     className: "w-10 text-center text-[28px]"
-  }, s.icon), React.createElement("span", {
+  }, cardIconNode(s.icon, 28)), React.createElement("span", {
     className: "min-w-0 flex-1"
   }, React.createElement("b", {
     className: "block text-[15px] font-black text-white"
