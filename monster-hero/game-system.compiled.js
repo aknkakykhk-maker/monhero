@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f92c39fe1126f4bc
+// source-sha256: 3f2db7aeac644fc2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -101251,21 +101251,6 @@ const CardBattleScreen = ({
     return CARD_PVP_BACK.on(go);
   }, []);
   const [deckPick, setDeckPick] = useState(null);
-  const viewRef = useRef(view);
-  viewRef.current = view;
-  useEffect(() => {
-    if (typeof CARD_PVP === 'undefined') return undefined;
-    let prev = CARD_PVP.get().phase;
-    return CARD_PVP.subscribe(r => {
-      if (prev === 'over' && r.phase === 'idle' && viewRef.current === 'pvp') {
-        setDeckPick({
-          next: 'pvp'
-        });
-        setView('deckPick');
-      }
-      prev = r.phase;
-    });
-  }, []);
   const [kitPick, setKitPick] = useState(null);
   const [kitView, setKitView] = useState(null);
   const [starterOpen, setStarterOpen] = useState(null);
@@ -102341,10 +102326,7 @@ const CardBattleScreen = ({
       disabled: !(debug || cardPvpOpen()),
       onClick: () => {
         Audio_.fgSe.tap();
-        setDeckPick({
-          next: 'pvp'
-        });
-        setView('deckPick');
+        setView('pvp');
       },
       className: "mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50",
       style: {
@@ -102454,6 +102436,10 @@ const CardBattleScreen = ({
       note: toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います',
       onBack: () => {
         setDeckPick(null);
+        if (toPvp && CARD_PVP_NEXT.take()) {
+          setView('pvp');
+          return;
+        }
         setView(toPvp ? 'mode' : 'foe');
       },
       allowRented: !toPvp,
@@ -102571,6 +102557,12 @@ const CardBattleScreen = ({
       deckIssues: deckIssues,
       onBack: () => setView('mode'),
       onStepAway: () => setView('mode'),
+      onPickDeck: () => {
+        setDeckPick({
+          next: 'pvp'
+        });
+        setView('deckPick');
+      },
       onReward: pvpReward,
       assistant: topAssistant,
       point: save.point,
@@ -108637,6 +108629,22 @@ const CARD_PVP_BACK = (() => {
     }
   };
 })();
+const CARD_PVP_NEXT = (() => {
+  let next = null;
+  return {
+    set(x) {
+      next = x && typeof x === 'object' ? x : null;
+    },
+    peek() {
+      return next;
+    },
+    take() {
+      const x = next;
+      next = null;
+      return x;
+    }
+  };
+})();
 const cardPvpInviteDismissed = new Set();
 const cardPvpInviteKey = x => `${x.senderId}:${x.roomCode}:${x.createdAt}`;
 const cardPvpRoster = async selfId => {
@@ -109879,6 +109887,7 @@ const CardPvpLobby = ({
   onStart,
   onBack,
   onStepAway = null,
+  onPickDeck = null,
   onReward,
   assistant = null,
   point = null,
@@ -110012,6 +110021,35 @@ const CardPvpLobby = ({
     setJoinAsk('');
     if (c) CARD_PVP.join(c, profile, deck);
   }, [joinAsk, profileReady, room.phase, !!deck, deckIssues.length, penaltyMin]);
+  const run = (act, d = deck) => {
+    if (!act || !d) return;
+    const prof = {
+      ...profile,
+      rt: myRating ? myRating.rating : null
+    };
+    if (act.kind === 'free') {
+      CARD_PVP.clearNotice();
+      void CARD_PVP.free(prof, d);
+    } else if (act.kind === 'pick') {
+      CARD_PVP.clearNotice();
+      CARD_PVP.pick(act.code, prof, d);
+    } else if (act.kind === 'create') void CARD_PVP.create(profile, d);else if (act.kind === 'invite') {
+      setInviteNext(act.to);
+      void CARD_PVP.create(profile, d);
+    } else if (act.kind === 'join') CARD_PVP.join(act.code, profile, d, act.via || '');
+  };
+  const go = act => {
+    if (onPickDeck) {
+      CARD_PVP_NEXT.set(act);
+      onPickDeck();
+    } else run(act);
+  };
+  useEffect(() => {
+    if (!CARD_PVP_NEXT.peek() || !profileReady || room.phase !== 'idle') return;
+    const act = CARD_PVP_NEXT.take();
+    if (!deckOk || penaltyMin > 0) return;
+    run(act);
+  }, [profileReady, room.phase]);
   const declineInvite = x => {
     cardPvpInviteDismissed.add(cardPvpInviteKey(x));
     setInvites(cur => cur.filter(y => y !== x));
@@ -110063,7 +110101,8 @@ const CardPvpLobby = ({
     }
   }, [room.phase, room.match]);
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
-  const ready = !!deck && deckIssues.length === 0 && penaltyMin === 0;
+  const deckOk = !!deck && deckIssues.length === 0;
+  const ready = (onPickDeck ? true : deckOk) && penaltyMin === 0;
   const back = () => {
     CARD_PVP.leave();
     CARD_WATCH.leave();
@@ -110235,7 +110274,7 @@ const CardPvpLobby = ({
   }, room.phase === 'idle' && React.createElement(React.Fragment, null, penaltyMin > 0 && React.createElement("p", {
     "data-card-pvp-penalty": true,
     className: "rounded-xl border border-rose-300/40 bg-rose-500/10 p-2 text-[13px] font-bold text-rose-100"
-  }, "試合の途中で抜けたので、あと", penaltyMin, "分は部屋に入れません"), penaltyMin === 0 && !ready && React.createElement("p", {
+  }, "試合の途中で抜けたので、あと", penaltyMin, "分は部屋に入れません"), penaltyMin === 0 && !ready && !onPickDeck && React.createElement("p", {
     className: "rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100"
   }, deckIssues.join('・') || 'デッキがありません'), room.notice && React.createElement("p", {
     "data-card-pvp-notice-text": true,
@@ -110269,11 +110308,10 @@ const CardPvpLobby = ({
     className: "mh-button mh-button-primary min-h-[40px] shrink-0 rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
     onClick: () => {
       Audio_.fgSe.tap();
-      CARD_PVP.clearNotice();
-      CARD_PVP.pick(x.code, {
-        ...profile,
-        rt: myRating ? myRating.rating : null
-      }, deck);
+      go({
+        kind: 'pick',
+        code: x.code
+      });
     }
   }, "対戦する")))), React.createElement("p", {
     className: "mt-1 px-1 text-[11px] font-bold text-slate-400",
@@ -110285,11 +110323,9 @@ const CardPvpLobby = ({
     className: `${btn} mh-button-primary`,
     onClick: () => {
       Audio_.fgSe.tap();
-      CARD_PVP.clearNotice();
-      void CARD_PVP.free({
-        ...profile,
-        rt: myRating ? myRating.rating : null
-      }, deck);
+      go({
+        kind: 'free'
+      });
     }
   }, "だれとでも(自分も待つ)"), React.createElement("button", {
     type: "button",
@@ -110298,7 +110334,9 @@ const CardPvpLobby = ({
     className: `${btn} border border-sky-300/40 bg-slate-900 text-sky-100`,
     onClick: () => {
       Audio_.fgSe.tap();
-      void CARD_PVP.create(profile, deck);
+      go({
+        kind: 'create'
+      });
     }
   }, "合言葉で部屋を作る"), React.createElement("button", {
     type: "button",
@@ -110336,8 +110374,10 @@ const CardPvpLobby = ({
     className: "mh-button mh-button-primary min-h-[40px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
     onClick: () => {
       Audio_.fgSe.tap();
-      setInviteNext(f.otherId);
-      void CARD_PVP.create(profile, deck);
+      go({
+        kind: 'invite',
+        to: f.otherId
+      });
     }
   }, "招待する")))), React.createElement("p", {
     className: "mt-1 px-1 text-[11px] font-bold text-slate-400",
@@ -110368,7 +110408,11 @@ const CardPvpLobby = ({
     className: "mh-button mh-button-primary min-h-[44px] shrink-0 rounded-xl px-3 text-[13px] font-black disabled:opacity-40",
     onClick: () => {
       Audio_.fgSe.tap();
-      CARD_PVP.join(x.roomCode, profile, deck, cardPvpInviteKey(x));
+      go({
+        kind: 'join',
+        code: x.roomCode,
+        via: cardPvpInviteKey(x)
+      });
     }
   }, "参加する")))), React.createElement("button", {
     type: "button",
@@ -110403,7 +110447,10 @@ const CardPvpLobby = ({
     className: "mh-button mh-button-primary min-h-[48px] rounded-xl px-4 font-black disabled:opacity-40",
     onClick: () => {
       Audio_.fgSe.tap();
-      CARD_PVP.join(code, profile, deck);
+      go({
+        kind: 'join',
+        code
+      });
     }
   }, "入る"))), typeof CardPvpHistory === 'function' && React.createElement("button", {
     type: "button",
