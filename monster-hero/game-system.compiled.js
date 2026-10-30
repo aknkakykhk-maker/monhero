@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 705975d5a68bae9f
+// source-sha256: 2f9b32e97a801d20
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -96913,7 +96913,8 @@ const CardDetailModal = ({
   onClose,
   status = null,
   statusName = '',
-  dexInfo = null
+  dexInfo = null,
+  nav = null
 }) => {
   const dexLine = dexInfo ? React.createElement("div", {
     "data-card-detail-dex": true,
@@ -96925,6 +96926,20 @@ const CardDetailModal = ({
   }, dexInfo.have > 0 ? `持っている${dexInfo.have}枚` : 'まだ持っていない')) : null;
   const c = cardOf(db, no);
   const m = c ? null : cardMonsterOf(db, no);
+  const navBtn = (dir, fn) => React.createElement("button", {
+    type: "button",
+    "data-card-detail-nav": dir,
+    "aria-label": dir === 'prev' ? '前のカード' : '次のカード',
+    disabled: !fn,
+    onClick: e => {
+      e.stopPropagation();
+      if (fn) {
+        Audio_.fgSe.tap();
+        fn();
+      }
+    },
+    className: "mh-button flex h-12 w-11 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-slate-800 text-[18px] font-black text-white active:scale-95 disabled:opacity-25"
+  }, dir === 'prev' ? '◀' : '▶');
   return React.createElement("div", {
     "data-card-detail": true,
     onClick: onClose,
@@ -96935,7 +96950,19 @@ const CardDetailModal = ({
     },
     role: "dialog",
     "aria-label": "カードの詳しい画面"
-  }, React.createElement("img", {
+  }, nav ? React.createElement("div", {
+    "data-card-detail-navrow": true,
+    className: "flex w-full max-w-sm flex-col items-center gap-1"
+  }, React.createElement("div", {
+    className: "flex w-full items-center justify-center gap-2"
+  }, navBtn('prev', nav.onPrev), React.createElement("img", {
+    src: CARD_IMG(c ? c.img : m ? m.img : no, 'l'),
+    alt: c ? c.name : m ? m.name : '',
+    className: "w-[min(62vw,280px)] min-w-0 rounded-xl shadow-2xl landscape:h-[32vh] landscape:w-auto"
+  }), navBtn('next', nav.onNext)), React.createElement("span", {
+    "data-card-detail-pos": true,
+    className: "text-[12px] font-bold text-slate-400"
+  }, nav.pos)) : React.createElement("img", {
     src: CARD_IMG(c ? c.img : m ? m.img : no, 'l'),
     alt: c ? c.name : m ? m.name : '',
     className: "w-[min(78vw,300px)] rounded-xl shadow-2xl"
@@ -103414,6 +103441,15 @@ const CardDeckList = ({
   const col = collection || {};
   const full = decks.decks.length >= CARD_DECK_MAX;
   const btn = 'mh-button min-h-[40px] rounded-xl text-[12px] font-black active:scale-[.98] disabled:opacity-40';
+  const newDeck = () => {
+    Audio_.fgSe.tap();
+    onEdit({
+      id: cardNewDeckId(decks.decks, Date.now()),
+      name: `デッキ${decks.decks.length + 1}`,
+      monsters: [],
+      cards: []
+    });
+  };
   return React.createElement("div", {
     "data-mh-screen": true,
     "data-card-deck-list": true,
@@ -103460,16 +103496,19 @@ const CardDeckList = ({
       className: "text-[11px] font-bold text-amber-200"
     }, `使えないカード ${cardDeckDeadCount(db, d)}枚`))), React.createElement("div", {
       className: "mt-2 grid grid-cols-4 gap-1"
-    }, React.createElement("button", {
+    }, on ? React.createElement("span", {
+      "data-card-deck-using": d.id,
+      className: "flex min-h-[40px] items-center justify-center rounded-xl bg-amber-300/15 text-[12px] font-black text-amber-200 ring-1 ring-inset ring-amber-300/60"
+    }, "★ 使用中") : React.createElement("button", {
       type: "button",
       "data-card-deck-use": d.id,
-      disabled: on || !ready,
-      className: `${btn} ${on ? 'bg-amber-300 text-slate-950' : 'border border-amber-300/50 bg-amber-900/40 text-amber-100'}`,
+      disabled: !ready,
+      className: `${btn} border border-amber-300/50 bg-amber-900/40 text-amber-100`,
       onClick: () => {
         Audio_.fgSe.tap();
         onActive(d.id);
       }
-    }, on ? '使用中' : '使う'), React.createElement("button", {
+    }, "使う"), React.createElement("button", {
       type: "button",
       "data-card-deck-open": d.id,
       className: `${btn} mh-button-primary`,
@@ -103499,22 +103538,24 @@ const CardDeckList = ({
       className: `${btn} border border-rose-300/40 bg-rose-950/50 text-rose-100`,
       onClick: () => setConfirmDel(d)
     }, "消す")));
-  })), React.createElement("div", {
+  }), Array.from({
+    length: Math.max(0, CARD_DECK_MAX - decks.decks.length)
+  }, (_, i) => React.createElement("button", {
+    key: `slot${i}`,
+    type: "button",
+    "data-card-deck-slot": i,
+    onClick: newDeck,
+    className: "mh-button flex min-h-[64px] w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-white/15 text-[13px] font-black text-slate-400 active:scale-[.99]"
+  }, React.createElement("span", {
+    className: "text-[18px]"
+  }, "＋"), "あいている枠(", decks.decks.length + i + 1, "つ目)"))), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, React.createElement("button", {
     type: "button",
     "data-card-deck-new": true,
     disabled: full,
     className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40",
-    onClick: () => {
-      Audio_.fgSe.tap();
-      onEdit({
-        id: cardNewDeckId(decks.decks, Date.now()),
-        name: `デッキ${decks.decks.length + 1}`,
-        monsters: [],
-        cards: []
-      });
-    }
+    onClick: newDeck
   }, full ? `デッキは${CARD_DECK_MAX}つまでです` : '新しいデッキを作る')), confirmDel && React.createElement(ConfirmSheet, {
     title: `「${confirmDel.name}」を消しますか？`,
     message: "デッキだけを消します(カードは消えません)",
@@ -103633,6 +103674,16 @@ const CardDex = ({
   const list = curTab.list;
   const shown = list.filter(no => show === 'have' ? col[no] > 0 : show === 'miss' ? !(col[no] > 0) : true);
   const haveIn = arr => arr.filter(no => col[no] > 0).length;
+  const dexKeyOf = no => packMap[no] || '';
+  const dexKeyOrder = k => k === 'hybrid' ? 900 : k ? Number(k) : 999;
+  const dexKeys = mode === 'pack' ? [''] : [...new Set(shown.map(dexKeyOf))].sort((a, b) => dexKeyOrder(a) - dexKeyOrder(b));
+  const navOrder = mode === 'pack' ? shown : dexKeys.flatMap(k => shown.filter(no => dexKeyOf(no) === k));
+  const navAt = detail ? navOrder.indexOf(detail) : -1;
+  const detailNav = navAt >= 0 && navOrder.length > 1 ? {
+    pos: `${navAt + 1} / ${navOrder.length}`,
+    onPrev: navAt > 0 ? () => setDetail(navOrder[navAt - 1]) : null,
+    onNext: navAt < navOrder.length - 1 ? () => setDetail(navOrder[navAt + 1]) : null
+  } : null;
   const chip = on => `shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
   const unit = curTab.label || CARD_DEX_UNIT[mode];
   const tabRow = useRef(null);
@@ -103703,12 +103754,9 @@ const CardDex = ({
   }, shown.length ? React.createElement("div", {
     className: "space-y-2"
   }, (() => {
-    const keyOf = no => packMap[no] || '';
-    const order = k => k === 'hybrid' ? 900 : k ? Number(k) : 999;
-    const keys = mode === 'pack' ? [''] : [...new Set(shown.map(keyOf))].sort((a, b) => order(a) - order(b));
-    return keys.map(k => {
-      const part = mode === 'pack' ? shown : shown.filter(no => keyOf(no) === k);
-      const inTab = mode === 'pack' ? list : list.filter(no => keyOf(no) === k);
+    return dexKeys.map(k => {
+      const part = mode === 'pack' ? shown : shown.filter(no => dexKeyOf(no) === k);
+      const inTab = mode === 'pack' ? list : list.filter(no => dexKeyOf(no) === k);
       return React.createElement("section", {
         key: k || 'all',
         "data-card-dex-group": k || undefined
@@ -103768,7 +103816,8 @@ const CardDex = ({
     dexInfo: {
       pack: cardDexPackLabel(packMap[detail]),
       have: col[detail] || 0
-    }
+    },
+    nav: detailNav
   }));
 };
 const cardRuleLine = t => String(t).split(/(「[^」]*」|《[^》]*》)/).map((seg, i) => /^「/.test(seg) ? React.createElement("span", {
