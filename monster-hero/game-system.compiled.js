@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9a029c845b57d614
+// source-sha256: e0c55474d2840882
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115420,7 +115420,12 @@ const CardRankResult = ({
   gain
 }) => {
   const up = !!(gain && gain.to > gain.from);
-  const [fx, setFx] = useState(up);
+  const [fx, setFx] = useState(false);
+  useEffect(() => {
+    if (!up) return undefined;
+    const t = setTimeout(() => setFx(v => v || 'late'), 5000);
+    return () => clearTimeout(t);
+  }, [up]);
   if (!gain || !(gain.add > 0)) return null;
   const award = {
     add: gain.add,
@@ -115433,13 +115438,14 @@ const CardRankResult = ({
   return React.createElement(React.Fragment, null, React.createElement(PlayerRankGain, {
     kind: "card",
     award: award,
-    next: `ランク${gain.to + 1}で ${cardRankRewardText(gain.to + 1)}`
-  }), up && fx && typeof PlayerRankUpFx === 'function' && React.createElement(PlayerRankUpFx, {
+    next: `ランク${gain.to + 1}で ${cardRankRewardText(gain.to + 1)}`,
+    onFull: up ? () => setFx(v => v || true) : null
+  }), up && fx && fx !== 'closed' && typeof PlayerRankUpFx === 'function' && React.createElement(PlayerRankUpFx, {
     kind: "card",
     from: gain.from,
     to: gain.to,
     gains: cardRankFxGains(gain),
-    onClose: () => setFx(false)
+    onClose: () => setFx('closed')
   }));
 };
 const CARD_REG_STYLES = Object.freeze([{
