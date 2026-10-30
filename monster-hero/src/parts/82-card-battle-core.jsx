@@ -2214,7 +2214,8 @@ const cardNormalizeCollection = (v) => {
 };
 const cardNormalizePoint = (v) => { const x = Number(v); return Number.isFinite(x) && x > 0 ? Math.floor(x) : 0; };
 const cardNormalizeStarter = (v) => (cardIsPlainObject(v) && typeof v.kit === 'string' && v.kit ? { kit: v.kit, at: Number.isFinite(Number(v.at)) ? Number(v.at) : 0 } : null);
-const CARD_DECK_MAX = 5;
+// 組めるデッキの数(2026-10-30 社長「5セットまでしか組めないけど20ぐらいまで増やせない?」→ 20。上げるだけなので今の保存はそのまま読める)
+const CARD_DECK_MAX = 20;
 const cardNormalizeDecks = (v) => {
   const decks = (cardIsPlainObject(v) && Array.isArray(v.decks) ? v.decks : []).filter(cardIsPlainObject).slice(0, CARD_DECK_MAX).map((d, i) => ({
     id: typeof d.id === 'string' && d.id ? d.id : `deck${i + 1}`,

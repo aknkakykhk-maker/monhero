@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e702115a824f3445
+// source-sha256: 913079f9775ffbc3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91968,7 +91968,7 @@ const cardNormalizeStarter = v => cardIsPlainObject(v) && typeof v.kit === 'stri
   kit: v.kit,
   at: Number.isFinite(Number(v.at)) ? Number(v.at) : 0
 } : null;
-const CARD_DECK_MAX = 5;
+const CARD_DECK_MAX = 20;
 const cardNormalizeDecks = v => {
   const decks = (cardIsPlainObject(v) && Array.isArray(v.decks) ? v.decks : []).filter(cardIsPlainObject).slice(0, CARD_DECK_MAX).map((d, i) => ({
     id: typeof d.id === 'string' && d.id ? d.id : `deck${i + 1}`,
@@ -103986,8 +103986,9 @@ const CardDeckList = ({
   }), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-2 pb-2`
   }, React.createElement("p", {
+    "data-card-deck-count": decks.decks.length,
     className: "text-[11px] font-bold text-slate-400"
-  }, "デッキは", CARD_DECK_MAX, "つまで。★のデッキで対戦します"), decks.decks.map(d => {
+  }, `デッキ ${decks.decks.length} / ${CARD_DECK_MAX}。★のデッキで対戦します(★のデッキはいちばん上に出ます)`), [...decks.decks].sort((a, b) => (b.id === decks.active) - (a.id === decks.active)).map(d => {
     const ready = cardDeckReady(db, d, col);
     const on = d.id === decks.active;
     return React.createElement("div", {
@@ -104064,7 +104065,7 @@ const CardDeckList = ({
       onClick: () => setConfirmDel(d)
     }, "消す")));
   }), Array.from({
-    length: Math.max(0, CARD_DECK_MAX - decks.decks.length)
+    length: Math.min(1, Math.max(0, CARD_DECK_MAX - decks.decks.length))
   }, (_, i) => React.createElement("button", {
     key: `slot${i}`,
     type: "button",
@@ -104073,7 +104074,7 @@ const CardDeckList = ({
     className: "mh-button flex min-h-[64px] w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-white/15 text-[13px] font-black text-slate-400 active:scale-[.99]"
   }, React.createElement("span", {
     className: "text-[18px]"
-  }, "＋"), "あいている枠(", decks.decks.length + i + 1, "つ目)"))), React.createElement("div", {
+  }, "＋"), `新しいデッキを作る(あと${CARD_DECK_MAX - decks.decks.length}個作れます)`))), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, React.createElement("button", {
     type: "button",
@@ -104081,7 +104082,7 @@ const CardDeckList = ({
     disabled: full,
     className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40",
     onClick: newDeck
-  }, full ? `デッキは${CARD_DECK_MAX}つまでです` : '新しいデッキを作る')), confirmDel && React.createElement(ConfirmSheet, {
+  }, full ? `デッキは${CARD_DECK_MAX}個までです` : '新しいデッキを作る')), confirmDel && React.createElement(ConfirmSheet, {
     title: `「${confirmDel.name}」を消しますか？`,
     message: "デッキだけを消します(カードは消えません)",
     confirmLabel: "消す",
