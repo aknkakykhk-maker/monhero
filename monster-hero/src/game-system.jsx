@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4c0665f375f58848
+// generated-sha256: 6540fee7aac497fe
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -55460,6 +55460,61 @@ const cardAiAttackChoices = (db, st, policy) => {
   return useful.length ? useful : opts0;
 };
 const cardAiAttackScored = (db, st, opts, policy) => opts.map((o) => ({ o, s: cardAiScoreAttack(db, st, o, policy) + (cardAiAceHit(policy, st.players[st.active].hand, o.hand) ? 2 : 0) })).sort((a, b) => b.s - a.s);
+// ===== 先読み(MASTER を超える段。登録デッキの GRAND MASTER・HELL・LEGEND。2026-10-30 社長「マスター超えとかいったりできない?」) =====
+// 攻める段で、点の高い手 K 個と「攻め終わり」を、それぞれ実際に当ててみて、その先を H 手番ぶん MASTER の打ち方で R 回進め、
+// 場がいちばん良くなる手を選ぶ。先の山札の順は知らないことにする(試す前に両方の山札を混ぜ直す。ずるをしない)。
+// policy.search … { k, r, h, eval } / 助手と対戦(cardAiPolicy)には付かない。付けるのは 82-card-share-core の cardSharePolicy だけ
+// 1回の判断で試しに進める手の数に上限を持たせる(スマホで重くしない)。上限に届いたら、そこまでの結果で選ぶ
+const CARD_AI_SEARCH_STEP_MAX = 1500;
+const cardAiSearchLife = (st, p) => { let a = 0, b = 0; st.players[p].mons.forEach((m) => { if (!m.ko) a += Math.max(0, m.life); b += m.max; }); return b ? a / b : 0; };
+// 場の良さ(大きいほど me に良い)。'alive' … 残っているモンスターの数とライフを重く見る(LEGEND)
+const cardAiSearchEval = (st, me, kind) => {
+  if (st.winner === me) return 100;
+  if (st.winner !== null) return -100;
+  const op = cardOther(me), P = st.players[me], O = st.players[op];
+  if (kind === 'alive') {
+    const alive = (x) => x.mons.filter((m) => !m.ko).length;
+    return 12 * (alive(P) - alive(O)) + 8 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.4 * (P.hand.length - O.hand.length) + 0.4 * (P.guts.length - O.guts.length);
+  }
+  return 10 * (cardKoCount(st, me) - cardKoCount(st, op)) + 4 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.3 * (P.hand.length - O.hand.length);
+};
+const cardAiSearchShuffle = (list, rand) => { for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; } };
+const cardAiSearchRollout = (db, st0, act, me, pols, rand, cfg, budget) => {
+  const s1 = cardClone({ ...st0, log: [], events: [] });
+  s1.players.forEach((pl) => cardAiSearchShuffle(pl.deck, rand));
+  let st = cardApplyAction(db, s1, act);
+  if (!st) return -999;
+  const t0 = st.turn;
+  while (st.winner === null && st.turn < t0 + cfg.h && budget.left > 0) {
+    budget.left -= 1;
+    const who = st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? cardOther(st.first) : cardDecider(st);
+    let a = cardAiChooseAction(db, st, pols[who], rand);
+    let n = a && cardApplyAction(db, st, a);
+    if (!n) { a = st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : st.phase === 'guts' ? { type: 'guts', hand: [] } : null; n = a && cardApplyAction(db, st, a); if (!n) break; }
+    st = n; st.log = [];
+  }
+  return cardAiSearchEval(st, me, cfg.eval);
+};
+let _cardAiSearchFoe = null; // 先読みの中で相手が打つ考え方(くせの無い MASTER)
+const cardAiSearchPick = (db, st, scored, policy, rand) => {
+  const cfg = policy.search;
+  const me = st.active;
+  const cands = scored.slice(0, cfg.k).filter((x) => x.s > 0.3).map((x) => cardAiFillBind(db, st, x.o, policy));
+  cands.push({ type: 'endAttacks' });
+  if (!_cardAiSearchFoe) _cardAiSearchFoe = cardAiPolicy('kyuko', 'master', { noTactics: true });
+  const self = { ...policy, search: null, gambit: null };
+  const pols = [null, null]; pols[me] = self; pols[cardOther(me)] = _cardAiSearchFoe;
+  const budget = { left: CARD_AI_SEARCH_STEP_MAX };
+  let best = cands[0], bestV = -Infinity;
+  for (let i = 0; i < cands.length && budget.left > 0; i++) {
+    let v = 0, n = 0;
+    for (let r = 0; r < cfg.r && budget.left > 0; r++) { v += cardAiSearchRollout(db, st, cands[i], me, pols, rand, cfg, budget); n += 1; }
+    if (!n) break;
+    v = v / n + (i === 0 ? 0.5 : 0); // 並んだときは、もとの点がいちばん高い手
+    if (v > bestV) { bestV = v; best = cands[i]; }
+  }
+  return best;
+};
 const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   // おいのり: 相手が出した全体カードは、相手に都合のよいものとみて、持っていれば無くす(雑な手のときは出し忘れる)
   if (st.pendingPray) { const use = cardPrayOptions(db, st).find((o) => o.hand); return use && rand() >= (policy.level.sloppy || 0) ? use : { type: 'pray' }; }
@@ -55504,6 +55559,7 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   if (!opts.length) return { type: 'endAttacks' };
   if (sloppy) return rand() < 0.25 ? { type: 'endAttacks' } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
   const scored = cardAiAttackScored(db, st, opts, policy);
+  if (policy.search) return cardAiSearchPick(db, st, scored, policy, rand);
   if (scored[0].s <= 0.3) return { type: 'endAttacks' };
   if (rand() < policy.level.whim) {
     const pool = scored.filter((x) => x.s > 0.3).slice(0, 3);
@@ -56681,10 +56737,11 @@ const cardTacticFilled = (frames) => {
   return f.base.filter(Boolean).length + f.breeder.filter((x) => x.on).length + f.mons.reduce((a, rows) => a + rows.filter((x) => x.on).length, 0);
 };
 
-// ---- 賢さ(2026-10-29 社長の物差し)----
-// 基本カードの枚数が上限、ON の行の数でそこまで上がる。1枚 … EASY/NORMAL/HARD、2枚 … NORMAL/HARD/EXPERT、3枚 … HARD/EXPERT/MASTER
-//   行 0〜3 / 4〜9 / 10以上。基本カードも行も無ければ 'random'(出せる手からランダム)。基本カード無しで行だけなら EASY
-const CARD_TACTIC_SMART = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
+// ---- 賢さ(2026-10-30 社長「戦術カードなしでエキスパートクラスで、そこから上がっていってマスター超え」・段の名前は本編のチャレンジモード)----
+//   EXPERT … 何もセットしない〜基本1枚 / MASTER … 基本2枚以上、またはちゃんと効く戦術カード4枚以上 /
+//   GRAND MASTER … 基本3枚+効く4枚以上 / HELL … 基本3枚+効く7枚以上 / LEGEND … 基本3枚+効く10枚以上
+//   (前は EASY〜MASTER と、何も入れていないときの「でたらめ」だった)。MASTER を超える段は先読みで強くする(82-card-share-core の CARD_SHARE_SEARCH)
+const CARD_TACTIC_SMART = Object.freeze(['expert', 'master', 'grandmaster', 'hell', 'legend']);
 // ---- 賢さに数えないセット(2026-10-29 社長 案A「ちゃんと効くカードだけ数える」) ----
 //   ・場面が合わない … 守るときだけの条件(受けるダメージ・受けると倒れる・全体攻撃を受けた)を守り以外の手と組んだ /
 //                    「この子の◯◯」の条件をブリーダーの枠に入れた(その子がいないので当たらない)
@@ -56722,11 +56779,11 @@ const cardTacticSmartLevel = (frames) => {
   const f = cardTacticNormalizeFrames(frames);
   const base = f.base.filter(Boolean).length;
   const rows = cardTacticCountedRows(f);
-  // でたらめ(出せる手からランダム)は、何もセットしていないときだけ(数えないセットだけでも、でたらめにはしない)
-  const any = f.breeder.some((x) => x.on) || f.mons.some((r) => r.some((x) => x.on));
-  if (!base && !any) return 'random';
-  if (!base) return 'easy';
-  return CARD_TACTIC_SMART[(base - 1) + (rows >= 10 ? 2 : rows >= 4 ? 1 : 0)];
+  if (base >= 3 && rows >= 10) return 'legend';
+  if (base >= 3 && rows >= 7) return 'hell';
+  if (base >= 3 && rows >= 4) return 'grandmaster';
+  if (base >= 2 || rows >= 4) return 'master';
+  return 'expert';
 };
 // みんなのデッキの登録に載せる短い形(表の tactics は 2000 バイトまで)。{ b:[基本], r:[[c,a,on,sp?]], m:[[[…]]×3] }
 const cardTacticPackFrames = (frames) => {
@@ -57195,28 +57252,40 @@ const cardShareNormalizeTactics = (v, deck = null) => {
   const f = r.f && typeof r.f === 'object' && !Array.isArray(r.f) && typeof cardTacticPackFrames === 'function' ? cardTacticPackFrames(cardTacticUnpackFrames(r.f)) : null;
   return { habit, tilt, aces, name, ...(f ? { f } : {}) };
 };
-// 登録デッキの賢さ(戦術カードの枠から。2026-10-29 社長「デッキ側で決まる・戦う人は選ばない」)。前の形の登録は NORMAL
-//   'random' … 何も入れていない(出せる手からランダム)。報酬と経験値は EASY で数える
+// 登録デッキの賢さ(戦術カードの枠から。2026-10-29 社長「デッキ側で決まる・戦う人は選ばない」)。
+//   'expert' | 'master' | 'grandmaster' | 'hell' | 'legend'(82 の cardTacticSmartLevel)。前の形の登録(枠が無い)は EXPERT
 const cardShareSmartLevel = (tactics) => {
   const t = cardShareNormalizeTactics(tactics);
-  return t.f && typeof cardTacticSmartLevel === 'function' ? cardTacticSmartLevel(cardTacticUnpackFrames(t.f)) : 'normal';
+  return t.f && typeof cardTacticSmartLevel === 'function' ? cardTacticSmartLevel(cardTacticUnpackFrames(t.f)) : 'expert';
 };
+// 画面に出す段の名前(本編のチャレンジモードの並び。2026-10-30 社長)
+const CARD_SHARE_SMART_LABEL = Object.freeze({ expert: 'EXPERT', master: 'MASTER', grandmaster: 'GRAND MASTER', hell: 'HELL', legend: 'LEGEND' });
+// MASTER を超える段の先読み(82 の cardAiSearchPick)。k … 試す手の数 / r … 1つの手を試す回数 / h … 何手番先まで進めるか / eval … 場の見方
+//   2026-10-30 に MASTER の助手と測った: GRAND MASTER 66% / HELL 71% / LEGEND は下の値(docs/progress/card-tournament/share-ai/README.md)
+const CARD_SHARE_SEARCH = Object.freeze({
+  grandmaster: Object.freeze({ k: 3, r: 1, h: 1, eval: 'ko' }),
+  hell: Object.freeze({ k: 4, r: 2, h: 4, eval: 'ko' }),
+  legend: Object.freeze({ k: 4, r: 2, h: 4, eval: 'alive' }),
+});
 // 土台のくせ(メインの基本カードが助手の型ならその助手。前の形の登録や画面の名前に使う)
 const cardShareMainHabit = (frames, fallback = 'kyuko') => {
   const c = frames && typeof cardTacticOf === 'function' ? cardTacticOf(frames.base[0]) : null;
   const g = c && typeof CARD_TACTIC_GROUPS !== 'undefined' ? CARD_TACTIC_GROUPS.find((x) => x.id === c.g) : null;
   return (g && g.habit) || fallback || 'kyuko';
 };
-const cardShareFightLevel = (tactics) => { const lv = cardShareSmartLevel(tactics); return lv === 'random' ? 'easy' : lv; };
-// 戦い方から、助手の打ち方(cardAiPolicy の形)を作る。戦術カードの枠があれば、その枠で打つ(強さは枠の賢さ)
+// 打ち方の土台の強さ(cardAiPolicy の段)。MASTER を超える段は MASTER の打ち方に先読みを足す
+const cardShareFightLevel = (tactics) => (cardShareSmartLevel(tactics) === 'expert' ? 'expert' : 'master');
+// 戦い方から、助手の打ち方(cardAiPolicy の形)を作る。戦術カードの枠があれば、その枠で打つ(強さは枠の賢さ)。
+//   levelId は使わない(強さは登録デッキの賢さで決まる。前は枠の無い登録だけ呼んだ側の強さで打っていた)
 const cardSharePolicy = (tactics, levelId, opts = {}) => {
   const t = cardShareNormalizeTactics(tactics);
+  const search = CARD_SHARE_SEARCH[cardShareSmartLevel(t)] || null;
   if (t.f) {
     const frames = cardTacticUnpackFrames(t.f);
     const base = cardAiPolicy(t.habit, cardShareFightLevel(t), { ...opts, noTactics: true });
-    return { ...base, gambit: frames, gambitRandom: true, aces: t.aces.slice() };
+    return { ...base, gambit: frames, aces: t.aces.slice(), ...(search ? { search } : {}) };
   }
-  const base = cardAiPolicy(t.habit, levelId, { ...opts, noTactics: true });
+  const base = cardAiPolicy(t.habit, cardShareFightLevel(t), { ...opts, noTactics: true });
   const habit = { ...base.habit };
   CARD_SHARE_TILTS.forEach((x) => { if (Number.isFinite(habit[x.id])) habit[x.id] = habit[x.id] * CARD_SHARE_TILT_MUL[t.tilt[x.id]]; });
   return { ...base, habit, aces: t.aces.slice() };
@@ -60608,7 +60677,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       <div className={`flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`}>
         {(pvp || share) ? <span data-card-pvp-foe className={`block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`}><CardPvpAvatar icon={(pvp || share).icon} frame={(pvp || share).frame} className="h-full w-full"/></span>
           : <img src={assistantFaceImage(who, face)} alt={who.name} className={`${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} rounded-xl border-2 bg-black object-cover object-top`} style={{ borderColor: who.accent }}/>}
-        <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level] || 'フリー対戦'}</small></div>
+        <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : cardBattleLevelLabel(game.level, game.share) || 'フリー対戦'}</small></div>
         <div className="ml-auto">{strip(CARD_CPU)}</div>
       </div>
       {/* リプレイでは相手の手札も表で見せる(終わったあとなので。2026-10-27 社長)。押すと詳しい画面 */}
@@ -61305,6 +61374,8 @@ const cardNormalizeCpuOpen = (v) => {
   const f = v.facts && typeof v.facts === 'object' ? v.facts : {};
   return { id: v.id, who: v.who, level: v.level, rankable: v.rankable === true, at: n(v.at), beat: n(v.beat), facts: { ownTurns: n(f.ownTurns), kos: n(f.kos) } };
 };
+// 対戦の見出し・結果に出す強さの名前。登録デッキが相手なら、そのデッキの賢さの段(GRAND MASTER・HELL・LEGEND まで。2026-10-30 社長)
+const cardBattleLevelLabel = (level, share) => (share && typeof cardShareSmartLevel === 'function' ? CARD_SHARE_SMART_LABEL[cardShareSmartLevel(share.tactics)] : CARD_LEVEL_LABEL[level]) || '';
 const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, onSettings = null }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
@@ -62235,7 +62306,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             {/* もらったビートPは大きく数え上げる(下の行が本当の数。数え上げは飾り) */}
             {!result.demo && r.total > 0 && <div data-card-gain-count className="mb-1 text-center text-[32px] font-black leading-none text-amber-200 [text-shadow:0_0_16px_rgba(251,191,36,.55)]">+<CardCountUp to={r.total}/><span className="ml-1 text-[14px]">ビートP</span></div>}
             <div className="text-[13px] font-black text-amber-200">もらったビートP: {r.total}</div>
-            <div className="mt-1 text-[12px] font-bold text-slate-300">{CARD_LEVEL_LABEL[result.level]}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {cardResultCut(r) ? `${r.full} → ${r.got}` : r.got}</div>
+            <div className="mt-1 text-[12px] font-bold text-slate-300">{cardBattleLevelLabel(result.level, result.share)}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {cardResultCut(r) ? `${r.full} → ${r.got}` : r.got}</div>
             {cardResultCut(r) && <div data-card-result-cut className="text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(cardResultCutWhy(result.outcome, r))}</div>}
             {r.bonus > 0 && <div className="text-[12px] font-bold text-slate-300">今日はじめての勝ち: +{r.bonus}</div>}
             {r.short && <div className="mt-1 text-[11px] font-bold text-slate-500" style={JA_LABEL_STYLE}>{jaWrap('自分のターンを3回やる前に終わったので、ビートPとクイック周回は入りません')}</div>}
@@ -67992,7 +68063,7 @@ const cardShareRowsCount = (frames) => cardTacticCountedRows(frames);
 const cardShareSmartText = (tactics) => {
   const t = cardShareNormalizeTactics(tactics);
   const lv = cardShareSmartLevel(t);
-  const label = lv === 'random' ? 'でたらめ' : `${(typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv]) || lv.toUpperCase()} 相当`;
+  const label = `${CARD_SHARE_SMART_LABEL[lv] || lv.toUpperCase()} 相当`;
   if (!t.f) return label;
   const f = cardTacticUnpackFrames(t.f);
   return `${label}(基本${f.base.filter(Boolean).length}・戦術カード${cardShareRowsCount(f)}枚)`;
@@ -68347,7 +68418,6 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
                 <div>{`基本カード: ${framesNow.base.filter(Boolean).map((id) => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`}</div>
                 <div>{`セットした戦術カード: ${cardShareRowsCount(framesNow)}枚`}</div>
                 <div className="text-amber-200">{`賢さ: ${cardShareSmartText({ f: cardTacticPackFrames(framesNow) })}`}</div>
-                {cardShareSmartLevel({ f: cardTacticPackFrames(framesNow) }) === 'random' && <div data-card-share-tactics-empty className="text-rose-200">{jaWrap('戦術カードが入っていません。このままだと、出せる手からでたらめに打ちます')}</div>}
               </>) : <div>読み込み中…</div>}
               {onOpenTactics && <button type="button" data-card-share-open-tactics className="mt-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-[12px] font-black text-slate-950" onClick={() => { Audio_.fgSe.tap(); onOpenTactics(); }}>戦術カードを組む</button>}
             </div>
@@ -69788,7 +69858,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
           </div>
           <div data-card-reg-smart={smartLv} className={`${SCREEN_PANEL_CLASS} py-2`}>
             <div className="flex items-center gap-2 text-[13px] font-black text-white">賢さ <span className="text-amber-200">{smartText}</span></div>
-            <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-700"><i className="block h-full bg-gradient-to-r from-emerald-400 to-amber-300" style={{ width: `${(['random', 'easy', 'normal', 'hard', 'expert', 'master'].indexOf(smartLv) / 5) * 100}%` }}/></div>
+            <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-700"><i className="block h-full bg-gradient-to-r from-emerald-400 to-amber-300" style={{ width: `${((CARD_TACTIC_SMART.indexOf(smartLv) + 1) / CARD_TACTIC_SMART.length) * 100}%` }}/></div>
             <small className="mt-1 block text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>賢さは、ほかのブリーダーがこのデッキと戦うときの相手の強さです。ちゃんと効く戦術カードが多いほど上がります。</small>
           </div>
           <div data-card-reg-aces className={`${SCREEN_PANEL_CLASS} py-2`}>

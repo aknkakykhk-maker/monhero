@@ -252,10 +252,13 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
   const rows = (n) => Array.from({ length: n }, () => ({ c: CONDS[(ci++) % CONDS.length], a: 'atk' }));
   const F = (base, n) => ({ base, mons: [rows(Math.min(5, n)), rows(Math.min(5, Math.max(0, n - 5))), rows(Math.max(0, n - 10))] });
   const L = (base, n) => { ci = 0; return E.cardTacticSmartLevel(F(base, n)); };
-  check('J 何も無ければ random・行だけなら EASY', L([], 0) === 'random' && L([], 3) === 'easy');
-  check('J 基本1枚: 0〜3行 EASY・4〜9 NORMAL・10〜 HARD', L(['tBalance'], 3) === 'easy' && L(['tBalance'], 4) === 'normal' && L(['tBalance'], 12) === 'hard');
-  check('J 基本2枚: NORMAL〜EXPERT', L(['tBalance', 'tBig'], 0) === 'normal' && L(['tBalance', 'tBig'], 10) === 'expert');
-  check('J 基本3枚: HARD〜MASTER', L(['tBalance', 'tBig', 'tArea'], 0) === 'hard' && L(['tBalance', 'tBig', 'tArea'], 15) === 'master');
+  // 2026-10-30 社長「戦術カードなしでエキスパートクラスで、そこから上がっていってマスター超え」(段の名前は本編のチャレンジモード)
+  check('J 何も無ければ EXPERT(でたらめにしない)・効く戦術カード4枚で MASTER', L([], 0) === 'expert' && L([], 3) === 'expert' && L([], 4) === 'master');
+  check('J 基本1枚: 0〜3枚 EXPERT・4枚から MASTER(基本3枚でないと MASTER を超えない)', L(['tBalance'], 3) === 'expert' && L(['tBalance'], 4) === 'master' && L(['tBalance'], 15) === 'master');
+  check('J 基本2枚: MASTER', L(['tBalance', 'tBig'], 0) === 'master' && L(['tBalance', 'tBig'], 15) === 'master');
+  const B = ['tBalance', 'tBig', 'tArea'];
+  check('J 基本3枚: 0〜3枚 MASTER・4〜6 GRAND MASTER・7〜9 HELL・10〜 LEGEND', L(B, 3) === 'master' && L(B, 4) === 'grandmaster' && L(B, 6) === 'grandmaster' && L(B, 7) === 'hell' && L(B, 9) === 'hell' && L(B, 10) === 'legend' && L(B, 15) === 'legend',
+    [3, 4, 6, 7, 9, 10, 15].map((n) => L(B, n)).join(' '));
   // いちばん長い名前のカードで、全部の枠を埋めたとき
   const longest = (cat) => E.CARD_TACTIC_CARDS.filter((c) => c.cat === cat).sort((a, b) => Buffer.byteLength(b.id) - Buffer.byteLength(a.id))[0].id;
   const row = (cat) => ({ c: 'species', a: longest(cat), sp: 'colorpandora', on: false });
@@ -275,17 +278,17 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
   const B3 = ['tBalance', 'tFinish', 'tSteady'];
   const lv = (mons, breeder = []) => E.cardTacticSmartLevel({ base: B3, breeder, mons });
   const same = Array.from({ length: 4 }, () => ({ c: 'ko', a: 'atk' }));
-  check('L 同じセットを3体の枠に何個入れても1つと数える(MASTER にならない)', lv([same, same, same]) === 'hard');
+  check('L 同じセットを3体の枠に何個入れても1つと数える(GRAND MASTER にならない)', lv([same, same, same]) === 'master');
   const rare = [{ c: 'turnGe.15', a: 'guard' }, { c: 'myLife.10', a: 'atk' }, { c: 'foeLife.10', a: 'atk' }, { c: 'foeStun', a: 'atk' }];
-  check('L ほとんど当たらない条件は数えない', lv([rare, rare.map((r) => ({ ...r, a: 'kind.ちから' })), rare.map((r) => ({ ...r, a: 'kind.かしこさ' }))]) === 'hard');
+  check('L ほとんど当たらない条件は数えない', lv([rare, rare.map((r) => ({ ...r, a: 'kind.ちから' })), rare.map((r) => ({ ...r, a: 'kind.かしこさ' }))]) === 'master');
   const mis = [{ c: 'incoming.3', a: 'atk' }, { c: 'incomingKo', a: 'kind.ちから' }, { c: 'incoming.5', a: 'cost.大技(4以上)' }, { c: 'incoming.7', a: 'atk' }];
-  check('L 守るときの条件を攻める手と組んだセットは数えない', lv([mis, [], []]) === 'hard');
+  check('L 守るときの条件を攻める手と組んだセットは数えない', lv([mis, [], []]) === 'master');
   check('L ブリーダーの枠の「この子の◯◯」は数えない', E.cardTacticUncounted({ base: B3, breeder: [{ c: 'selfLife.50', a: 'save' }], mons: [[], [], []] }).breeder[0] === '場面が合わない');
   const good = [{ c: 'incomingKo', a: 'guard' }, { c: 'myGuts.5', a: 'cost.大技(4以上)' }, { c: 'foeAlive.3', a: 'reach.全体攻撃' }, { c: 'foeHandGe.4', a: 'disrupt.手札を捨てさせる' }];
-  check('L 意味のあるセット4つは EXPERT 相当', lv([good, [], []]) === 'expert');
+  check('L 意味のあるセット4つは GRAND MASTER 相当', lv([good, [], []]) === 'grandmaster');
   const u = E.cardTacticUncounted({ base: B3, breeder: [], mons: [[{ c: 'ko', a: 'atk' }], [{ c: 'ko', a: 'atk' }], [{ c: 'turnGe.15', a: 'atk' }]] });
   check('L 数えない理由が付く(同じもの・ほとんど当たらない)', u.mons[0][0] === null && u.mons[1][0] === '同じものが入っている' && u.mons[2][0] === 'ほとんど当たらない', JSON.stringify(u));
-  check('L 数えないセットだけでも、でたらめにはしない', E.cardTacticSmartLevel({ base: [], breeder: [], mons: [[{ c: 'turnGe.15', a: 'atk' }], [], []] }) === 'easy');
+  check('L 数えないセットだけなら EXPERT', E.cardTacticSmartLevel({ base: [], breeder: [], mons: [[{ c: 'turnGe.15', a: 'atk' }], [], []] }) === 'expert');
 }
 
 // ---- K. 助手と対戦の基本カード(2026-10-29 社長: EXPERT は2枚・MASTER は3枚。メインは今の型のまま) ----
