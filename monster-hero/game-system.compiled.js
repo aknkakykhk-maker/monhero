@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a7d0c82ce6d631f7
+// source-sha256: 37cf12a569215258
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8730,6 +8730,70 @@ const Audio_ = (() => {
           sp.dispose();
         } catch (e) {}
       }, 1200);
+    },
+    rankFanfare: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const v = new Tone.PolySynth(Tone.Synth, {
+        oscillator: {
+          type: 'square'
+        },
+        envelope: {
+          attack: 0.01,
+          decay: 0.15,
+          sustain: 0.35,
+          release: 0.35
+        },
+        volume: -18
+      }).connect(reverb);
+      [[0, 'G4', '16n'], [0.1, 'C5', '16n'], [0.2, 'E5', '16n']].forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt));
+      v.triggerAttackRelease(['C5', 'E5', 'G5', 'C6'], '4n', t + 0.32);
+      setTimeout(() => {
+        try {
+          v.dispose();
+        } catch (e) {}
+      }, 1600);
+    },
+    rankFanfareGrand: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const v = new Tone.PolySynth(Tone.Synth, {
+        oscillator: {
+          type: 'square'
+        },
+        envelope: {
+          attack: 0.01,
+          decay: 0.2,
+          sustain: 0.4,
+          release: 0.6
+        },
+        volume: -18
+      }).connect(reverb);
+      [[0, 'C5', '16n'], [0.09, 'C5', '16n'], [0.18, 'C5', '16n'], [0.3, 'G4', '8n'], [0.48, 'A4', '8n'], [0.66, 'B4', '8n']].forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt));
+      v.triggerAttackRelease(['C5', 'E5', 'G5', 'C6'], '2n', t + 0.84);
+      const bell = new Tone.Synth({
+        oscillator: {
+          type: 'sine'
+        },
+        envelope: {
+          attack: 0.005,
+          decay: 0.4,
+          sustain: 0.1,
+          release: 0.8
+        },
+        volume: -14
+      }).connect(reverb);
+      [[0.84, 'C7'], [0.96, 'G6'], [1.08, 'E7']].forEach(([tt, n]) => bell.triggerAttackRelease(n, '8n', t + tt));
+      setTimeout(() => {
+        try {
+          v.dispose();
+          bell.dispose();
+        } catch (e) {}
+      }, 3000);
     },
     fusion: async () => {
       if (!enabled) return;
@@ -55444,33 +55508,50 @@ function PlayerRankBoard({
   }, jaWrap(`あなたの記録は、次に${kind === 'card' ? 'ランクが上がった' : '曲を遊んだ'}ときに載ります。`))));
 }
 const PLAYER_RANK_UP_FX_CSS = `
-.mh-prfx{position:fixed;inset:0;z-index:95000;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 38%,rgba(64,24,120,.92),rgba(8,4,20,.94) 70%);cursor:pointer;user-select:none;overflow:hidden}
-.mh-prfx-stage{position:relative;width:min(100%,420px);height:100%}
-.mh-prfx-center{position:absolute;left:50%;top:36%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:10px}
+.mh-prfx{position:fixed;inset:0;z-index:95000;container-type:size;background:radial-gradient(circle at 50% 38%,rgba(64,24,120,.92),rgba(8,4,20,.94) 70%);cursor:pointer;user-select:none;overflow:hidden}
+.mh-prfx-stage{position:relative;width:100%;height:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:safe center;gap:12px;padding:max(16px,var(--mh-sa-top,0px)) 16px max(16px,var(--mh-sa-bottom,0px));overflow-y:auto}
+.mh-prfx-head{position:relative;flex:none;display:flex;flex-direction:column;align-items:center;gap:8px}
+.mh-prfx-side{flex:none;display:flex;flex-direction:column;align-items:center;gap:10px;width:min(100%,560px)}
 .mh-prfx-big .mh-prb-shield{width:96px;height:107px}
 .mh-prfx-big .mh-prb-shield::after{inset:5px}
 .mh-prfx-big .mh-prb-num{font-size:46px;-webkit-text-stroke:8px var(--prb-ink)}
 .mh-prfx-big .mh-prb-num.mh-prb-w3{font-size:34px}
-.mh-prfx-title{font-weight:900;font-size:32px;color:#fff;-webkit-text-stroke:6px #4c1d95;paint-order:stroke fill;letter-spacing:.04em}
-.mh-prfx-kind{font-weight:900;font-size:15px;color:#fff;-webkit-text-stroke:3px #1e293b;paint-order:stroke fill}
+.mh-prfx-title{font-weight:900;font-size:32px;line-height:1.1;color:#fff;-webkit-text-stroke:6px #4c1d95;paint-order:stroke fill;letter-spacing:.04em}
+.mh-prfx-kind{font-weight:900;font-size:15px;line-height:1.2;color:#fff;-webkit-text-stroke:3px #1e293b;paint-order:stroke fill}
 .mh-prfx-slot{position:relative;width:96px;height:107px}
 .mh-prfx-half{position:absolute;inset:0}
 .mh-prfx-half.l{clip-path:polygon(0 0,52% 0,44% 100%,0 100%)}
 .mh-prfx-half.r{clip-path:polygon(52% 0,100% 0,100% 100%,44% 100%)}
 .mh-prfx-new{position:absolute;inset:0}
-.mh-prfx-ring{position:absolute;left:50%;top:36%;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:4px solid rgba(255,255,255,.9);opacity:0}
-.mh-prfx-conf{position:absolute;left:50%;top:36%;width:8px;height:12px;border-radius:2px;opacity:0}
-.mh-prfx-rays{position:absolute;left:50%;top:36%;width:560px;height:560px;margin:-280px 0 0 -280px;border-radius:50%;opacity:0;background:repeating-conic-gradient(from 0deg,var(--prfx-ray) 0 8deg,transparent 8deg 24deg);-webkit-mask:radial-gradient(circle,#000 25%,transparent 68%);mask:radial-gradient(circle,#000 25%,transparent 68%)}
+.mh-prfx-ring{position:absolute;left:50%;top:53px;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:4px solid rgba(255,255,255,.9);opacity:0;pointer-events:none}
+.mh-prfx-conf{position:absolute;left:50%;top:53px;width:8px;height:12px;border-radius:2px;opacity:0;pointer-events:none}
+.mh-prfx-rays{position:absolute;left:50%;top:38%;width:560px;height:560px;margin:-280px 0 0 -280px;border-radius:50%;opacity:0;pointer-events:none;background:repeating-conic-gradient(from 0deg,var(--prfx-ray) 0 8deg,transparent 8deg 24deg);-webkit-mask:radial-gradient(circle,#000 25%,transparent 68%);mask:radial-gradient(circle,#000 25%,transparent 68%)}
 .mh-prfx-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
-.mh-prfx-band{position:absolute;left:0;right:0;top:56%;text-align:center;padding:10px 0;font-weight:900;font-size:20px;color:#fff;-webkit-text-stroke:4px rgba(0,0,0,.6);paint-order:stroke fill;opacity:0;background:linear-gradient(90deg,transparent,var(--prfx-band),transparent)}
-.mh-prfx-gains{position:absolute;left:16px;right:16px;top:58%;display:flex;flex-direction:column;gap:8px}
-.mh-prfx-band ~ .mh-prfx-gains{top:66%}
-.mh-prfx-gain{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:14px;background:rgba(15,10,35,.88);border:1px solid rgba(253,224,71,.45);opacity:0}
+.mh-prfx-band{align-self:stretch;text-align:center;padding:8px 0;font-weight:900;font-size:20px;line-height:1.2;color:#fff;-webkit-text-stroke:4px rgba(0,0,0,.6);paint-order:stroke fill;opacity:0;background:linear-gradient(90deg,transparent,var(--prfx-band),transparent)}
+.mh-prfx-gains{list-style:none;margin:0;padding:0;width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+.mh-prfx-gain{display:flex;align-items:center;gap:10px;min-width:0;padding:8px 12px;border-radius:14px;background:rgba(15,10,35,.88);border:1px solid rgba(253,224,71,.45);opacity:0}
 .mh-prfx-gain.bonus{border-color:#f0abfc;box-shadow:0 0 18px rgba(240,171,252,.45)}
-.mh-prfx-gain b{font-size:18px;font-weight:900;color:#fef08a;font-variant-numeric:tabular-nums}
+.mh-prfx-gain b{display:block;font-size:18px;font-weight:900;line-height:1.2;color:#fef08a;font-variant-numeric:tabular-nums;white-space:nowrap}
 .mh-prfx-gain small{display:block;font-size:10px;font-weight:700;color:#cbd5e1}
-.mh-prfx-gain .ico{font-size:24px}
-.mh-prfx-hint{position:absolute;left:0;right:0;bottom:calc(14px + var(--mh-sa-bottom,0px));text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,.6)}
+.mh-prfx-gain .ico{flex:none;font-size:24px}
+.mh-prfx-hint{flex:none;text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,.6)}
+/* 横向きで背が低い(画面を回した形も含む。演出の枠の形で見る): 左に盾、右に帯ともらった物 */
+@container (orientation:landscape) and (max-height:520px){
+  .mh-prfx-stage{flex-direction:row;gap:20px;padding:max(12px,var(--mh-sa-top,0px)) max(16px,var(--mh-sa-right,0px)) max(12px,var(--mh-sa-bottom,0px)) max(16px,var(--mh-sa-left,0px))}
+  .mh-prfx-side{flex:1 1 0;min-width:0;max-width:560px}
+  .mh-prfx-title{font-size:26px}
+  .mh-prfx-gains{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+  .mh-prfx-gain{padding:6px 10px}
+  .mh-prfx-gain b{font-size:16px}
+  .mh-prfx-band{font-size:17px;padding:6px 0}
+}
+/* さらに背が低いときは盾と題を小さく */
+@container (max-height:340px){
+  .mh-prfx-head{gap:4px}
+  .mh-prfx-slot{transform:scale(.8);margin:-10px 0}
+  .mh-prfx-title{font-size:22px}
+  .mh-prfx-gain small{display:none}
+}
 .mh-prfx.play .mh-prfx-half .mh-prb{animation:mhPrfxShake .5s ease-in-out}
 .mh-prfx.play .mh-prfx-half.l{animation:mhPrfxSplitL .45s ease-in .5s forwards}
 .mh-prfx.play .mh-prfx-half.r{animation:mhPrfxSplitR .45s ease-in .5s forwards}
@@ -55565,16 +55646,11 @@ function PlayerRankUpFx({
   React.useEffect(() => {
     const se = name => {
       try {
-        if (typeof Audio_ !== 'undefined' && Audio_.se && typeof Audio_.se[name] === 'function') Audio_.se[name]();
+        const bank = typeof Audio_ !== 'undefined' ? Audio_.fgSe || Audio_.se : null;
+        if (bank && typeof bank[name] === 'function') bank[name]();
       } catch (_) {}
     };
-    const timers = [setTimeout(() => se('crit'), 500), setTimeout(() => {
-      if (tierUp && typeof Audio_ !== 'undefined' && typeof Audio_.playJingle === 'function') {
-        try {
-          Audio_.playJingle('victory');
-        } catch (_) {}
-      } else se('levelUp');
-    }, 750), ...list.map((_, i) => setTimeout(() => se('trainingReward'), (gainStart + i * 0.35) * 1000 + 150)), setTimeout(() => setStage(s => s === 'play' ? 'done' : s), (gainStart + list.length * 0.35 + 0.6) * 1000)];
+    const timers = [setTimeout(() => se('crit'), 500), setTimeout(() => se(tierUp ? 'rankFanfareGrand' : 'rankFanfare'), 750), ...list.map((_, i) => setTimeout(() => se('trainingReward'), (gainStart + i * 0.35) * 1000 + 150)), setTimeout(() => setStage(s => s === 'play' ? 'done' : s), (gainStart + list.length * 0.35 + 0.6) * 1000)];
     return () => timers.forEach(clearTimeout);
   }, []);
   const next = () => {
@@ -55609,17 +55685,17 @@ function PlayerRankUpFx({
       '--prfx-ray': fx.ray,
       '--prfx-band': fx.band
     }
-  }, React.createElement("div", {
-    className: "mh-prfx-stage"
   }, tierUp && React.createElement("div", {
     className: "mh-prfx-rays",
     "aria-hidden": "true"
   }), React.createElement("div", {
+    className: "mh-prfx-stage"
+  }, React.createElement("div", {
+    className: "mh-prfx-head"
+  }, React.createElement("div", {
     className: "mh-prfx-ring",
     "aria-hidden": "true"
   }), React.createElement("div", {
-    className: "mh-prfx-center"
-  }, React.createElement("div", {
     className: "mh-prfx-slot"
   }, React.createElement("div", {
     className: "mh-prfx-half l",
@@ -55633,7 +55709,20 @@ function PlayerRankUpFx({
     className: "mh-prfx-title"
   }, "RANK UP!"), React.createElement("div", {
     className: "mh-prfx-kind"
-  }, k.label)), tierUp && React.createElement("div", {
+  }, k.label), confetti.map((c, i) => React.createElement("span", {
+    key: i,
+    className: "mh-prfx-conf",
+    "aria-hidden": "true",
+    style: {
+      '--x': c.x,
+      '--y': c.y,
+      '--r': c.r,
+      '--d': c.d,
+      background: c.c
+    }
+  }))), React.createElement("div", {
+    className: "mh-prfx-side"
+  }, tierUp && React.createElement("div", {
     className: "mh-prfx-band"
   }, `${tierTo.name}に昇格!`), list.length > 0 && React.createElement("ul", {
     className: "mh-prfx-gains",
@@ -55651,23 +55740,12 @@ function PlayerRankUpFx({
     className: "min-w-0"
   }, React.createElement("b", null, String(g.text || '')), g.note && React.createElement("small", {
     style: JA_WRAP_STYLE
-  }, jaWrap(String(g.note))))))), confetti.map((c, i) => React.createElement("span", {
-    key: i,
-    className: "mh-prfx-conf",
-    "aria-hidden": "true",
-    style: {
-      '--x': c.x,
-      '--y': c.y,
-      '--r': c.r,
-      '--d': c.d,
-      background: c.c
-    }
-  })), tierUp && React.createElement("div", {
+  }, jaWrap(String(g.note))))))), React.createElement("div", {
+    className: "mh-prfx-hint"
+  }, stage === 'play' ? '押すと先へ' : '押すと閉じる'))), tierUp && React.createElement("div", {
     className: "mh-prfx-flash",
     "aria-hidden": "true"
-  }), React.createElement("div", {
-    className: "mh-prfx-hint"
-  }, stage === 'play' ? '押すと先へ' : '押すと閉じる')));
+  }));
 }
 class MhErrorBoundary extends React.Component {
   constructor(props) {
@@ -97298,6 +97376,41 @@ const CardGutsFlight = ({
     }
   }, "+", g.n));
 };
+const CardFitLabel = ({
+  children,
+  max = 14,
+  min = 9
+}) => {
+  const ref = useRef(null);
+  const [size, setSize] = useState(max);
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const fit = () => {
+      let s = max;
+      el.style.fontSize = `${s}px`;
+      while (s > min && el.scrollWidth > el.clientWidth + 0.5) {
+        s -= 0.5;
+        el.style.fontSize = `${s}px`;
+      }
+      setSize(s);
+    };
+    fit();
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(fit) : null;
+    if (ro && el.parentElement) ro.observe(el.parentElement);
+    return () => {
+      if (ro) ro.disconnect();
+    };
+  }, [children, max, min]);
+  return React.createElement("span", {
+    ref: ref,
+    "data-card-fit-label": true,
+    className: "block w-full overflow-hidden whitespace-nowrap px-1 leading-tight",
+    style: {
+      fontSize: `${size}px`
+    }
+  }, children);
+};
 const CardBattleBoard = ({
   db,
   game,
@@ -98590,7 +98703,7 @@ const CardBattleBoard = ({
     setSt(replay.states[k]);
   };
   const footer = (() => {
-    const btn = 'mh-button min-h-[44px] flex-1 rounded-xl text-[14px] font-black active:scale-[.98] disabled:opacity-40';
+    const btn = 'mh-button min-h-[44px] min-w-0 flex-1 rounded-xl text-[14px] font-black active:scale-[.98] disabled:opacity-40';
     if (watch) {
       const over = st.winner !== null || !!watchEnd;
       const nm = p => p === CARD_ME ? meName : who.name;
@@ -98606,7 +98719,7 @@ const CardBattleBoard = ({
           outcome: 'watchExit',
           st
         })
-      }, over ? '観戦の一覧へ戻る' : '観戦をやめる'));
+      }, React.createElement(CardFitLabel, null, over ? '観戦の一覧へ戻る' : '観戦をやめる')));
     }
     if (st.winner !== null && !tutorial) return React.createElement("div", {
       className: "flex-1 text-center text-[15px] font-black text-amber-200"
@@ -98624,7 +98737,7 @@ const CardBattleBoard = ({
         type: 'setupGuts',
         hand: picks
       })
-    }, picks.length ? `${picks.length}枚をガッツにして始める` : 'ガッツにしないで始める');
+    }, React.createElement(CardFitLabel, null, picks.length ? `${picks.length}枚をガッツにして始める` : 'ガッツにしないで始める'));
     if (mode === 'reveal') return React.createElement("div", {
       className: "flex-1 text-center text-[13px] font-bold text-slate-300"
     }, "相手に手札を見せています…");
@@ -98642,7 +98755,7 @@ const CardBattleBoard = ({
         type: 'discard',
         hand: picks
       })
-    }, `${st.pendingDiscard.n}枚えらんで捨てる`);
+    }, React.createElement(CardFitLabel, null, `${st.pendingDiscard.n}枚えらんで捨てる`));
     if (mode === 'guard') return React.createElement("button", {
       type: "button",
       disabled: tutOff('pass'),
@@ -98650,16 +98763,16 @@ const CardBattleBoard = ({
       onClick: () => step({
         type: 'pass'
       })
-    }, tutorial && st.pending && st.pending.evaded ? 'これで守る' : guardUsed ? guardPv.after !== null ? `これで受ける(${guardPv.after}ダメージ)` : 'これで受ける' : guardPv && guardPv.before !== null && !tutorial ? React.createElement("span", {
+    }, React.createElement(CardFitLabel, null, tutorial && st.pending && st.pending.evaded ? 'これで守る' : guardUsed ? guardPv.after !== null ? `これで受ける(${guardPv.after}ダメージ)` : 'これで受ける' : guardPv && guardPv.before !== null && !tutorial ? React.createElement("span", {
       "data-card-pass-dmg": true,
       className: "block leading-tight"
     }, "守らない", React.createElement("span", {
       className: "block text-[11px] font-bold text-rose-200"
-    }, `${guardPv.before}ダメージを受ける`)) : '守らない');
+    }, `${guardPv.before}ダメージを受ける`)) : '守らない'));
     if (mode === 'guts') return React.createElement(React.Fragment, null, myTurn && !tutorial && !replay && cardCanBackToAttack(st) && React.createElement("button", {
       type: "button",
       "data-card-back-attack": true,
-      className: `${btn} border border-violet-300/60 bg-violet-900`,
+      className: `${btn.replace('flex-1', 'flex-none px-2.5')} border border-violet-300/60 bg-violet-900`,
       onClick: () => step({
         type: 'backToAttack'
       })
@@ -98671,14 +98784,14 @@ const CardBattleBoard = ({
         type: 'guts',
         hand: picks
       })
-    }, picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了'));
+    }, React.createElement(CardFitLabel, null, picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了')));
     const useBtn = sel && monChosen !== undefined && finalOpts.length && !needTarget;
     return React.createElement(React.Fragment, null, useBtn && finalOpts.some(o => o.split || o.fuse) ? React.createElement("button", {
       type: "button",
       "data-card-split-open": true,
       className: `${btn} mh-button-primary`,
       onClick: () => setSplitAsk(finalOpts)
-    }, finalOpts.some(o => o.fuse) ? '合体の組を選ぶ' : '割り振りを選ぶ') : useBtn && finalOpts.some(o => o.form) ? ['air', 'ground'].map(f => {
+    }, React.createElement(CardFitLabel, null, finalOpts.some(o => o.fuse) ? '合体の組を選ぶ' : '割り振りを選ぶ')) : useBtn && finalOpts.some(o => o.form) ? ['air', 'ground'].map(f => {
       const o = finalOpts.find(x => x.form === f);
       return o ? React.createElement("button", {
         key: f,
@@ -98686,19 +98799,19 @@ const CardBattleBoard = ({
         "data-card-form": f,
         className: `${btn} mh-button-primary`,
         onClick: () => askUse(o)
-      }, f === 'air' ? '空中にして使う' : '地上にして使う') : null;
+      }, React.createElement(CardFitLabel, null, f === 'air' ? '空中にして使う' : '地上にして使う')) : null;
     }) : useBtn ? React.createElement("button", {
       type: "button",
       className: `${btn} mh-button-primary`,
       onClick: () => askUse(finalOpts[0])
-    }, "使う") : null, React.createElement("button", {
+    }, React.createElement(CardFitLabel, null, "使う")) : null, React.createElement("button", {
       type: "button",
       disabled: tutOff('end'),
       className: `${btn} border border-violet-300/60 bg-violet-900${tutBtn('end')}`,
       onClick: () => step({
         type: 'endAttacks'
       })
-    }, "攻撃おわり → ガッツへ"));
+    }, React.createElement(CardFitLabel, null, "攻撃おわり → ガッツへ")));
   })();
   const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : setPending ? '組み合わせを選んでね' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : attackOpts.length ? '技をタップ → 相手をタップ' : '使える技がありません →「攻撃おわり」でガッツへ' : mode === 'guard' ? guardOpts.length ? '明るいカードで守れます' : '使える回避・防御はありません' : mode === 'guts' ? gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
   const tutorBox = tutorial && tutSay ? (() => {
@@ -121959,6 +122072,13 @@ function MonsterHeroGame() {
   useEffect(() => {
     Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen ? 0 : seVolume);
   }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen]);
+  useEffect(() => {
+    if (!beatRankFx || ultraEcoSession && !cardScreenOpen) return undefined;
+    Audio_.setSeVolume(seVolume);
+    return () => {
+      Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen ? 0 : seVolume);
+    };
+  }, [beatRankFx, seVolume]);
   useEffect(() => {
     if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen);
   }, [cardScreenOpen]);
