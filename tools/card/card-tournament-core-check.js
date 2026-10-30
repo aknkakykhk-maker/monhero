@@ -99,10 +99,10 @@ for (let n = 2; n <= 9; n++) {
 }
 // ---- F ----
 {
-  const t = { ranks: [{ point: 3000, title: '◯◯杯 優勝', frame: 'cup_win' }, { point: 2000, title: '◯◯杯 準優勝' }, { point: 1200 }], participation: { point: 500 }, perWin: 300 };
-  check('F 1位・5勝: 3000+1500・称号と枠', J(E.cardTourRewardOf(t, 1, 5)) === J({ point: 4500, title: '◯◯杯 優勝', frame: 'cup_win' }));
-  check('F 順位の表に無い順位・頂上決戦に出なかった人は参加賞+1勝ごと', E.cardTourRewardOf(t, 5, 2).point === 1100 && E.cardTourRewardOf(t, null, 0).point === 500 && E.cardTourRewardOf(t, null, 0).title === '');
-  check('F おかしな値は 0(マイナス・文字・大きすぎ)', J(E.cardTourNormalizeRewards({ ranks: [{ point: -5 }, { point: 'x' }, { point: 1e9 }], participation: null, perWin: -1 })) === J({ ranks: [{ point: 0, title: '', frame: '' }, { point: 0, title: '', frame: '' }, { point: 100000, title: '', frame: '' }], participation: { point: 0 }, perWin: 0 }));
+  const t = { ranks: [{ point: 3000, title: '◯◯杯 優勝', frame: 'cup_win' }, { point: 2000 }, { point: 1200 }], participation: { point: 500 }, perWin: 300 };
+  check('F 1位・5勝: 3000+1500・ビートPだけ(表に称号や枠が書いてあっても出さない)', J(E.cardTourRewardOf(t, 1, 5)) === J({ point: 4500 }));
+  check('F 順位の表に無い順位・頂上決戦に出なかった人は参加賞+1勝ごと', E.cardTourRewardOf(t, 5, 2).point === 1100 && E.cardTourRewardOf(t, null, 0).point === 500);
+  check('F おかしな値は 0(マイナス・文字・大きすぎ)', J(E.cardTourNormalizeRewards({ ranks: [{ point: -5 }, { point: 'x' }, { point: 1e9 }], participation: null, perWin: -1 })) === J({ ranks: [{ point: 0 }, { point: 0 }, { point: 100000 }], participation: { point: 0 }, perWin: 0 }));
 }
 
 if (fails.length) {
