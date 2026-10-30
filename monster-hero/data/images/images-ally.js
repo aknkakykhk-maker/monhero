@@ -213,6 +213,8 @@ const HYBRID_C062_IMG = "images/monsters/c062.png?v=090cdd583324";
 const HYBRID_C063_IMG = "images/monsters/c063.png?v=97693bd14c3a";
 const HYBRID_C064_IMG = "images/monsters/c064.png?v=7e039c580e69";
 const HYBRID_C065_IMG = "images/monsters/c065.png?v=651de4a99a0b";
+// ピンクグジラ(2026-10-30 社長「ピンクグジラ実装」)。元絵の黒い背景(透明)の散った点を消し、余白を切って高さ916px・256色
+const HYBRID_C068_IMG = "images/monsters/c068.png?v=e734038101df";
 // 派生モンスター20体(2026-10-25 社長から。C-010〜C-019 の一部。名前は本編の図鑑の名前)
 const HYBRID_C010_IMG = "images/monsters/c010.png?v=e53142331a97";
 const HYBRID_C012_IMG = "images/monsters/c012.png?v=38661b85c0b6";
@@ -284,6 +286,8 @@ const HYBRID_MONSTER_IMGS = Object.freeze({
   // パンドラ(2026-10-26 パックに追加)。立ち絵はゲームのモンスターのもの(PANDORA_IMG)。キラ・別絵キラも同じ
   'C-067': PANDORA_IMG, 'C-067S': PANDORA_IMG, 'C-067V': PANDORA_IMG,
   'C-208': OBORO_IMG, 'C-208S': OBORO_IMG, 'C-208V': OBORO_IMG,
+  // ピンクグジラ(2026-10-30)。キラ・別絵キラも同じ立ち絵
+  'C-068': HYBRID_C068_IMG, 'C-068S': HYBRID_C068_IMG, 'C-068V': HYBRID_C068_IMG,
 });
 
 const MOCCHI_ICON = MOCCHI_IMG;
@@ -388,6 +392,7 @@ const HYBRID_C055_FACE_ICON = "images/monster-icons/face/c055.png?v=a71918e0b84b
 const HYBRID_C063_FACE_ICON = "images/monster-icons/face/c063.png?v=c15a3b0c53cf";
 const HYBRID_C064_FACE_ICON = "images/monster-icons/face/c064.png?v=59768761cc69";
 const HYBRID_C065_FACE_ICON = "images/monster-icons/face/c065.png?v=c0a6301e2c2a";
+const HYBRID_C068_FACE_ICON = "images/monster-icons/face/c068.png?v=28540c759b9f";
 // 派生モンスター8体(2026-10-25)。社長が A〜D から選んだ案(位置の直しつき)
 const HYBRID_C010_FACE_ICON = "images/monster-icons/face/c010.png?v=42dbe96e69c5";
 const HYBRID_C012_FACE_ICON = "images/monster-icons/face/c012.png?v=5722ee95967f";
@@ -459,6 +464,7 @@ const HYBRID_MONSTER_FACE_ICONS = Object.freeze({
   // パンドラ(2026-10-26 パックに追加)。顔はゲームと同じ(PANDORA_FACE_ICON)。キラ・別絵キラも同じ
   'C-067': PANDORA_FACE_ICON, 'C-067S': PANDORA_FACE_ICON, 'C-067V': PANDORA_FACE_ICON,
   'C-208': OBORO_FACE_ICON, 'C-208S': OBORO_FACE_ICON, 'C-208V': OBORO_FACE_ICON,
+  'C-068': HYBRID_C068_FACE_ICON, 'C-068S': HYBRID_C068_FACE_ICON, 'C-068V': HYBRID_C068_FACE_ICON,
 });
 
 // 血統別のアイコン(エンブレム・144x146・金の枠つき)。2026-10-05・ユーザー提供の37個(blood-icons.zip)。
@@ -605,6 +611,7 @@ const ART_ANCHORS = Object.freeze({
   HYBRID_C063: Object.freeze({ face: Object.freeze([0.521, 0.26]) }),
   HYBRID_C064: Object.freeze({ face: Object.freeze([0.44, 0.184]) }),
   HYBRID_C065: Object.freeze({ face: Object.freeze([0.485, 0.235]) }),
+  HYBRID_C068: Object.freeze({ face: Object.freeze([0.413, 0.3]) }), // ピンクグジラ。目のあいだと口のまんなか(尾が右にあるので体は左寄り)
   HYBRID_C010: Object.freeze({ face: Object.freeze([0.356, 0.25]) }),
   HYBRID_C012: Object.freeze({ face: Object.freeze([0.5, 0.425]) }),
   HYBRID_C013: Object.freeze({ face: Object.freeze([0.5, 0.15]) }),
@@ -716,6 +723,7 @@ const ART_CONTENT_BOXES = {
   "monsters/c063.png": [0, 0, 1, 1, 1.096],
   "monsters/c064.png": [0, 0, 1, 1, 0.702],
   "monsters/c065.png": [0.001, 0.001, 0.999, 1, 0.972],
+  "monsters/c068.png": [0.003, 0.001, 1, 0.999, 0.842],
   "monsters/centaur.png": [0, 0, 0.998, 1, 0.562],
   "monsters/colorpandora.png": [0.002, 0, 0.998, 1, 0.604],
   "monsters/dino.png": [0, 0.001, 1, 1, 0.83],

@@ -7,6 +7,7 @@
 //     例: node tools/card/card-number-redraw.js --font m-plus-rounded-1c-latin-700-normal.woff2 tools/art-sources/card-battle/hybrid/C067.jpg 005 067
 //   字体はリポジトリに入れない。使うときに取ってくる:
 //     npm pack @fontsource/m-plus-rounded-1c@5.0.13 && tar xzf fontsource-m-plus-rounded-1c-5.0.13.tgz → package/files/
+//   --weight <太さ>(既定 700)・--stroke <ふちの太さ px>(既定 5.2)で、原本の字が太いときに合わせる(ピンクグジラは「XXX」→「068」を 900・8)
 //   --test を付けると、変えない字(同じ数字)の上にも描いて、原本と重なるかを見る絵を <元の絵>.test.png に書き出す(元の絵は変えない)
 //
 // やり方
@@ -22,6 +23,9 @@ const sharp = require(path.join(ROOT, 'tools', 'node_modules', 'sharp'));
 const args = process.argv.slice(2);
 const fi = args.indexOf('--font');
 const font = fi >= 0 ? args.splice(fi, 2)[1] : null;
+const opt = (name, def) => { const i = args.indexOf(name); return i >= 0 ? Number(args.splice(i, 2)[1]) : def; };
+const weight = opt('--weight', 700);
+const stroke = opt('--stroke', 5.2);
 const test = args.includes('--test');
 const [file, from, to] = args.filter((a) => a !== '--test');
 
@@ -64,8 +68,8 @@ const findDigits = async (img, n) => {
   const b = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   try {
     const page = await b.newPage();
-    const url = await page.evaluate(async ({ fontUrl, imgUrl, top, bot, jobs, ref, test }) => {
-      const f = new FontFace('R', `url(${fontUrl})`, { weight: '700' });
+    const url = await page.evaluate(async ({ fontUrl, imgUrl, top, bot, jobs, ref, test, weight, stroke }) => {
+      const f = new FontFace('R', `url(${fontUrl})`, { weight: String(weight) });
       await f.load(); document.fonts.add(f);
       const im = new Image(); await new Promise((r) => { im.onload = r; im.src = imgUrl; });
       const cv = document.createElement('canvas'); cv.width = im.naturalWidth; cv.height = im.naturalHeight;
@@ -74,7 +78,7 @@ const findDigits = async (img, n) => {
       const refW = ref[1] - ref[0] + 1;        // 白い「0」の幅
       // 字体の「0」の白い部分の高さ・幅を測って、原本の「0」に合わせる倍率を決める
       const probe = document.createElement('canvas'); probe.width = 200; probe.height = 200;
-      const px = probe.getContext('2d'); px.font = '700 100px R'; px.textBaseline = 'alphabetic';
+      const px = probe.getContext('2d'); px.font = `${weight} 100px R`; px.textBaseline = 'alphabetic';
       const m0 = px.measureText('0');
       const gh = m0.actualBoundingBoxAscent + m0.actualBoundingBoxDescent;
       const gw = m0.actualBoundingBoxLeft + m0.actualBoundingBoxRight;
@@ -99,10 +103,10 @@ const findDigits = async (img, n) => {
         x.save();
         x.translate(cx + ox, bot + 1);
         x.scale(sx, sy);
-        x.font = '700 100px R'; x.textBaseline = 'alphabetic'; x.lineJoin = 'round';
+        x.font = `${weight} 100px R`; x.textBaseline = 'alphabetic'; x.lineJoin = 'round';
         const left = -(m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2 - m.actualBoundingBoxLeft * 0;
         const dx = -((m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2);
-        x.lineWidth = 5.2 / sx; x.strokeStyle = 'rgb(40,2,4)';
+        x.lineWidth = stroke / sx; x.strokeStyle = 'rgb(40,2,4)';
         x.strokeText(ch, dx, 0);
         x.fillStyle = test && same ? 'rgba(80,200,255,.75)' : '#fff';
         x.fillText(ch, dx, 0);
@@ -114,7 +118,7 @@ const findDigits = async (img, n) => {
     }, {
       fontUrl: `data:font/woff2;base64,${fs.readFileSync(font).toString('base64')}`,
       imgUrl: `data:image/jpeg;base64,${fs.readFileSync(file).toString('base64')}`,
-      top, bot, jobs, ref, test,
+      top, bot, jobs, ref, test, weight, stroke,
     });
     const buf = Buffer.from(url.split(',')[1], 'base64');
     if (test) { fs.writeFileSync(`${file}.test.png`, buf); console.log(`見本: ${file}.test.png(同じ数字の上に水色で描き比べ)`); }

@@ -44,7 +44,7 @@ ids.forEach((no, i) => {
   }
 });
 E.CARD_PACKS.forEach((pack) => {
-  const want = pack.no <= 3 || pack.no === 5 ? [85, 12, 3] : [85, 15, 0];
+  const want = pack.no <= 3 || pack.no === 5 || pack.no === 7 ? [85, 12, 3] : [85, 15, 0]; // 第7弾はピンクグジラ(2026-10-30)で 85/12/3
   assert.deepEqual(rarities.map((k) => pack.rarity[k]), want);
   assert.equal(want.reduce((a, b) => a + b), 100);
   rarities.forEach((k, i) => { if (want[i]) assert(E.cardPackMonPool(db, pack, k).length > 0); });
