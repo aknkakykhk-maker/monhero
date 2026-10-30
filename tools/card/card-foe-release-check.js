@@ -97,7 +97,8 @@ setFlag(false);
   .forEach(([name, t]) => check(`⑤ 82 の ${name} にソラシドがある`, t[NEW] != null));
 check('⑤ ソラシドの既定の曲は Monster Hero(2026-10-27 社長の答え)', same(E.CARD_CPU_PLAYLIST_DEFAULT[NEW], ['monster_hero_theme']));
 const habitKeys = Object.keys(E.CARD_AI_HABITS.mua).sort();
-check('⑤ ソラシドの打ち方のくせが、ほかの助手と同じ項目', same(Object.keys(E.CARD_AI_HABITS[NEW]).sort(), habitKeys));
+// ソラシドだけの mill(山札切れ狙いの重み・2026-10-29 社長)は足してよい。ほかの助手の項目は全部持っていること
+check('⑤ ソラシドの打ち方のくせが、ほかの助手の項目を全部持っている', habitKeys.every((k) => k in E.CARD_AI_HABITS[NEW]) && Object.keys(E.CARD_AI_HABITS[NEW]).every((k) => habitKeys.includes(k) || k === 'mill'));
 // 83・91 は画面の部品と一緒に書かれているので、表の中身の文字で確かめる
 const block = (file, name) => { const s = read(P(file)); const i = s.indexOf(`const ${name} = Object.freeze({`); if (i < 0) return ''; return s.slice(i, s.indexOf('\n});', i)); };
 const keysIn = (txt, who) => { const i = txt.indexOf(`\n  ${who}: {`); if (i < 0) return []; const j = txt.indexOf('\n  },', i); return [...txt.slice(i, j < 0 ? undefined : j).matchAll(/\n {4}(\w+):/g)].map((m) => m[1]).sort(); };
