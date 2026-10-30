@@ -64,7 +64,7 @@ const CardTacticFace = ({ card, owned = true, count = 0, onClick = null, small =
       </span>
       <b className={`mt-1 block font-black leading-tight text-white ${small ? 'text-[12.5px]' : 'text-[14px]'}`} style={JA_WRAP_STYLE}>{card.name}</b>
       {/* 小さい札は効果を3行まで(全文は押した先の CardTacticDetail) */}
-      <small className={`mt-0.5 block font-bold leading-snug text-white/90 ${small ? 'line-clamp-3 text-[10px]' : 'text-[11.5px]'}`} style={JA_WRAP_STYLE}>{card.desc}</small>
+      <small className={`mt-0.5 font-bold leading-snug text-white/90 ${small ? 'line-clamp-3 text-[10px]' : 'block text-[11.5px]'}`} style={JA_WRAP_STYLE}>{card.desc}</small>
     </Tag>
   );
 };
