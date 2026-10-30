@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f864d95b6c5253b4
+// source-sha256: fb437382e8f562f8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -55147,8 +55147,12 @@ const PLAYER_RANK_BADGE_CSS = `
 .mh-prb-shield::before{content:"";position:absolute;inset:0;clip-path:polygon(50% 0,100% 18%,100% 70%,50% 100%,0 70%,0 18%);background:var(--prb-rim)}
 .mh-prb-shield::after{content:"";position:absolute;inset:3px;clip-path:polygon(50% 0,100% 18%,100% 70%,50% 100%,0 70%,0 18%);background:var(--prb-face)}
 .mh-prb-gloss{position:absolute;inset:3px 3px 50% 3px;z-index:2;clip-path:polygon(50% 0,100% 18%,100% 100%,0 100%,0 18%);background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.05))}
-.mh-prb-num{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;padding-top:3px;font-weight:900;font-size:26px;color:#fff;-webkit-text-stroke:5px var(--prb-ink);paint-order:stroke fill;letter-spacing:-.04em;line-height:1}
+.mh-prb-num{position:absolute;inset:-2.7% 0 2.7% 0;z-index:3;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:26px;color:#fff;-webkit-text-stroke:5px var(--prb-ink);paint-order:stroke fill;letter-spacing:-.04em;line-height:1}
 .mh-prb-num.mh-prb-w3{font-size:20px}
+/* 2026-10-30 社長「数字の位置がセンターずれ」: 字の上下の余白(字体ごとに違う)を切り落として数字そのものを真ん中に置き、
+   盾は下が長く尖っていて見た目の重心が箱の真ん中より上(約47%)なので、数字の箱(.mh-prb-num)を盾の高さの2.7%だけ上へずらす。
+   字間を詰めた分(最後の字のうしろも詰まる)は右に足して打ち消す */
+.mh-prb-digits{display:inline-block;text-box:trim-both cap alphabetic;padding-right:.04em}
 .mh-prb-tag{display:flex;flex-direction:column;line-height:1.05}
 .mh-prb-kind{white-space:nowrap;font-size:10px;font-weight:900;color:var(--prb-label);letter-spacing:.08em}
 .mh-prb-name{white-space:nowrap;font-size:14px;font-weight:900;color:#fff;-webkit-text-stroke:3px var(--prb-ink);paint-order:stroke fill}
@@ -55194,7 +55198,9 @@ function PlayerRankBadge({
   }), React.createElement("b", {
     "data-player-rank-value": true,
     className: `mh-prb-num${text.length >= 3 ? ' mh-prb-w3' : ''}`
-  }, text)), showName && React.createElement("span", {
+  }, React.createElement("span", {
+    className: "mh-prb-digits"
+  }, text))), showName && React.createElement("span", {
     className: "mh-prb-tag",
     "aria-hidden": "true"
   }, React.createElement("span", {
@@ -55528,10 +55534,11 @@ const PLAYER_RANK_UP_FX_CSS = `
 .mh-prfx-rays{position:absolute;left:50%;top:38%;width:560px;height:560px;margin:-280px 0 0 -280px;border-radius:50%;opacity:0;pointer-events:none;background:repeating-conic-gradient(from 0deg,var(--prfx-ray) 0 8deg,transparent 8deg 24deg);-webkit-mask:radial-gradient(circle,#000 25%,transparent 68%);mask:radial-gradient(circle,#000 25%,transparent 68%)}
 .mh-prfx-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
 .mh-prfx-band{align-self:stretch;text-align:center;padding:8px 0;font-weight:900;font-size:20px;line-height:1.2;color:#fff;-webkit-text-stroke:4px rgba(0,0,0,.6);paint-order:stroke fill;opacity:0;background:linear-gradient(90deg,transparent,var(--prfx-band),transparent)}
-.mh-prfx-gains{list-style:none;margin:0;padding:0;width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+/* 2列にするのは、1つの札に字が入りきる幅(220px)が取れるときだけ(2026-10-30 カード部の検査「390幅でセッション券が札の外」) */
+.mh-prfx-gains{list-style:none;margin:0;padding:0;width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
 .mh-prfx-gain{display:flex;align-items:center;gap:10px;min-width:0;padding:8px 12px;border-radius:14px;background:rgba(15,10,35,.88);border:1px solid rgba(253,224,71,.45);opacity:0}
 .mh-prfx-gain.bonus{border-color:#f0abfc;box-shadow:0 0 18px rgba(240,171,252,.45)}
-.mh-prfx-gain b{display:block;font-size:18px;font-weight:900;line-height:1.2;color:#fef08a;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mh-prfx-gain b{display:block;font-size:18px;font-weight:900;line-height:1.2;color:#fef08a;font-variant-numeric:tabular-nums;word-break:keep-all;overflow-wrap:anywhere}
 .mh-prfx-gain small{display:block;font-size:10px;font-weight:700;color:#cbd5e1}
 .mh-prfx-gain .ico{flex:none;font-size:24px}
 .mh-prfx-hint{flex:none;text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,.6)}
@@ -55540,7 +55547,7 @@ const PLAYER_RANK_UP_FX_CSS = `
   .mh-prfx-stage{flex-direction:row;gap:20px;padding:max(12px,var(--mh-sa-top,0px)) max(16px,var(--mh-sa-right,0px)) max(12px,var(--mh-sa-bottom,0px)) max(16px,var(--mh-sa-left,0px))}
   .mh-prfx-side{flex:1 1 0;min-width:0;max-width:560px}
   .mh-prfx-title{font-size:26px}
-  .mh-prfx-gains{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+  .mh-prfx-gains{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
   .mh-prfx-gain{padding:6px 10px}
   .mh-prfx-gain b{font-size:16px}
   .mh-prfx-band{font-size:17px;padding:6px 0}
@@ -55665,7 +55672,9 @@ function PlayerRankUpFx({
     className: "mh-prb-gloss"
   }), React.createElement("b", {
     className: `mh-prb-num${String(rank).length >= 3 ? ' mh-prb-w3' : ''}`
-  }, rank)));
+  }, React.createElement("span", {
+    className: "mh-prb-digits"
+  }, rank))));
   return React.createElement("div", {
     "data-player-rank-up-fx": kind,
     "data-player-rank-up-fx-stage": stage,
@@ -92566,35 +92575,35 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
 }, {
   id: 'selfLife',
   cat: 'cond',
-  sec: 'この子',
+  sec: 'このモンスター',
   name: 'この子のライフ◯%以下',
   tiers: CARD_TACTIC_LIFE.map(v => [v, cardTacticFine([80, 60, 40, 20])(v)]),
   desc: 'その枠の子のライフがその割合以下(モンスターの枠だけ)'
 }, {
   id: 'selfFresh',
   cat: 'cond',
-  sec: 'この子',
+  sec: 'このモンスター',
   name: 'この子がまだ攻撃していない',
   tiers: [['', 'N']],
   desc: 'この番に、その枠の子がまだ攻撃していない'
 }, {
   id: 'selfType',
   cat: 'cond',
-  sec: 'この子',
+  sec: 'このモンスター',
   name: 'この子が◯',
   tiers: [['地上', 'N'], ['空中', 'N'], ['水中', 'N']],
   desc: 'その枠の子のいまの特徴'
 }, {
   id: 'selfStun',
   cat: 'cond',
-  sec: 'この子',
+  sec: 'このモンスター',
   name: 'この子が攻撃できない',
   tiers: [['', 'N']],
   desc: 'その枠の子が封じられている'
 }, {
   id: 'selfAdv',
   cat: 'cond',
-  sec: 'この子',
+  sec: 'このモンスター',
   name: 'この子が有利な相手がいる',
   tiers: [['', 'R']],
   desc: 'その枠の子の手札の技が倍になる相手がいる(その相手を標的にする)'
@@ -93062,17 +93071,17 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
 }]);
 const CARD_TACTIC_TEXT = Object.freeze({
   any: () => ['いつでも', 'いつでも当てはまる。組み合わせた手を、出せるときはいつも出す'],
-  ko: () => ['倒せる相手がいる', '手札の攻撃の技(特殊技は除く)で、いまのガッツで出せて、ダメージが残りライフ以上になる相手の子がいるとき。その子を狙う'],
-  lowest: () => ['ライフがいちばん少ない相手', '相手の場で、残りライフ(数)がいちばん少ない子を狙う'],
-  highest: () => ['ライフがいちばん多い相手', '相手の場で、残りライフ(数)がいちばん多い子を狙う'],
-  strongest: () => ['攻撃がいちばん強い相手', '相手の子のうち、その子が使える技の最大ダメージがいちばん大きい子を狙う(手札は見ない)'],
-  attacker: () => ['前の番に攻撃してきた相手', '直前の相手の番に攻撃してきた相手の子を狙う'],
-  leader: () => ['相手のリーダー', '相手が1体目(左)に置いた子が残っていれば、その子を狙う'],
-  type: v => [`${v}の相手`, `いま${v}にいる相手の子を狙う`],
+  ko: () => ['倒せる相手がいる', '手札の攻撃の技(特殊技は除く)で、いまのガッツで出せて、ダメージが残りライフ以上になる相手のモンスターがいるとき。その相手を狙う'],
+  lowest: () => ['ライフがいちばん少ない相手', '相手の場で、残りライフ(数)がいちばん少ない相手を狙う'],
+  highest: () => ['ライフがいちばん多い相手', '相手の場で、残りライフ(数)がいちばん多い相手を狙う'],
+  strongest: () => ['攻撃がいちばん強い相手', '相手のモンスターのうち、使える技の最大ダメージがいちばん大きい相手を狙う(手札は見ない)'],
+  attacker: () => ['前の番に攻撃してきた相手', '直前の相手の番に攻撃してきた相手のモンスターを狙う'],
+  leader: () => ['相手のリーダー', '相手が1体目(左)に置いたモンスターが残っていれば、それを狙う'],
+  type: v => [`${v}の相手`, `いま${v}にいる相手のモンスターを狙う`],
   blood: v => [`${v}の相手`, `${v}のモンスターの相手を狙う`],
-  species: () => ['決めた種族の相手', '組むときに選んだ種族の相手の子(混血はもとの種族でも当たる)を狙う'],
-  foeLife: v => [`相手のライフ${v}%以下`, `残りライフが最大の${v}%以下になっている相手の子がいるとき。その子を狙う`],
-  myLife: v => [`味方のライフ${v}%以下`, `残りライフが最大の${v}%以下の自分の子がいるとき。守る手と組むと、その子が狙われたときだけ守る`],
+  species: () => ['決めた種族の相手', '組むときに選んだ種族の相手のモンスター(混血はもとの種族でも当たる)を狙う'],
+  foeLife: v => [`相手のライフ${v}%以下`, `残りライフが最大の${v}%以下になっている相手のモンスターがいるとき。その相手を狙う`],
+  myLife: v => [`味方のライフ${v}%以下`, `残りライフが最大の${v}%以下の自分のモンスターがいるとき。守る手と組むと、そのモンスターが狙われたときだけ守る`],
   myGuts: v => [`自分のガッツ${v}以上`, `自分のガッツが${v}以上のとき`],
   foeGutsLe: v => [`相手のガッツ${v}以下`, `相手のガッツが${v}以下のとき`],
   foeGutsGe: v => [`相手のガッツ${v}以上`, `相手のガッツが${v}以上のとき(大技に備える)`],
@@ -93088,27 +93097,27 @@ const CARD_TACTIC_TEXT = Object.freeze({
   breederInHand: () => ['手札にブリーダーのカードがある', '手札にブリーダーのカードが1枚以上あるとき'],
   turnLe: v => [`自分の${v}番目の番まで`, `自分の番が${v}回目までのとき(自分のはじめの番が1回目)`],
   turnGe: v => [`自分の${v}番目の番から`, `自分の番が${v}回目以降のとき`],
-  myAlive: v => [`味方が残り${v}体`, `倒れていない自分の子がちょうど${v}体のとき`],
-  foeAlive: v => [`相手が残り${v}体`, `倒れていない相手の子がちょうど${v}体のとき`],
+  myAlive: v => [`味方が残り${v}体`, `倒れていない自分のモンスターがちょうど${v}体のとき`],
+  foeAlive: v => [`相手が残り${v}体`, `倒れていない相手のモンスターがちょうど${v}体のとき`],
   koDiff: v => [v === '勝っ' ? '倒した数で勝っている' : '倒した数で負けている', v === '勝っ' ? '倒した相手の数が、倒された味方の数より多いとき' : '倒された味方の数が、倒した相手の数より多いとき'],
-  foeStun: () => ['攻撃できない相手', '封じられていて、次の相手の番に攻撃できない相手の子を狙う'],
-  myStun: () => ['攻撃できない味方がいる', '封じられて攻撃できない自分の子がいるとき'],
-  foeCharge: () => ['溜めている相手', '溜め技を使って、次の技のダメージが何倍にもなる相手の子を狙う'],
-  foeAir: () => ['空中に上がった相手', 'もとは地上・水中なのに、いま空中になっている相手の子を狙う'],
+  foeStun: () => ['攻撃できない相手', '封じられていて、次の相手の番に攻撃できない相手のモンスターを狙う'],
+  myStun: () => ['攻撃できない味方がいる', '封じられて攻撃できない自分のモンスターがいるとき'],
+  foeCharge: () => ['溜めている相手', '溜め技を使って、次の技のダメージが何倍にもなる相手のモンスターを狙う'],
+  foeAir: () => ['空中に上がった相手', 'もとは地上・水中なのに、いま空中になっている相手のモンスターを狙う'],
   field: v => [`場に${v}全体カードがある`, `場に、${v === '自分の' ? '自分' : '相手'}が出した全体カードが残っているとき`],
-  foeBig: () => ['相手が大技を撃てそう', '相手のガッツが4以上で手札があり、相手の子が使える大技(払うガッツ4以上)をいまのガッツ+1で払えるとき'],
+  foeBig: () => ['相手が大技を撃てそう', '相手のガッツが4以上で手札があり、相手のモンスターが使える大技(払うガッツ4以上)をいまのガッツ+1で払えるとき'],
   myHandLe: v => [`自分の手札${v}枚以下`, `自分の手札が${v}枚以下のとき`],
   breederN: () => ['手札にブリーダーのカード2枚以上', '手札にブリーダーのカードが2枚以上あるとき'],
   breederUnused: () => ['この番まだブリーダーのカードを出していない', 'この番に、まだブリーダーのカードを出していないとき'],
   myGutsLe: v => [`自分のガッツ${v}以下`, `自分のガッツが${v}以下のとき`],
   myDiscard: v => [`自分の捨て札${v}枚以上`, `自分の捨て札が${v}枚以上のとき`],
-  myKo: () => ['倒れた味方がいる', '自分の子が1体でも倒れているとき'],
+  myKo: () => ['倒れた味方がいる', '自分のモンスターが1体でも倒れているとき'],
   noField: () => ['場に全体カードが無い', 'どちらの全体カードも場に無いとき'],
-  selfLife: v => [`この子のライフ${v}%以下`, `このカードを入れた子の残りライフが最大の${v}%以下のとき(モンスターの手に入れたときだけ当たる)`],
-  selfFresh: () => ['この子がこの番まだ攻撃していない', 'このカードを入れた子が、この番にまだ攻撃していないとき(モンスターの手だけ)'],
-  selfType: v => [`この子がいま${v}`, `このカードを入れた子が、いま${v}にいるとき(モンスターの手だけ)`],
-  selfStun: () => ['この子が攻撃できない', 'このカードを入れた子が封じられて攻撃できないとき(モンスターの手だけ)'],
-  selfAdv: () => ['この子が得意な相手', 'このカードを入れた子が出せる手札の技に、相手の特徴(地上・空中・水中)でダメージが倍になるものがあるとき。その相手を狙う(モンスターの手だけ)'],
+  selfLife: v => [`このモンスターのライフ${v}%以下`, `このカードを入れたモンスターの残りライフが最大の${v}%以下のとき(モンスターの手に入れたときだけ当たる)`],
+  selfFresh: () => ['このモンスターがこの番まだ攻撃していない', 'このカードを入れたモンスターが、この番にまだ攻撃していないとき(モンスターの手だけ)'],
+  selfType: v => [`このモンスターがいま${v}`, `このカードを入れたモンスターが、いま${v}にいるとき(モンスターの手だけ)`],
+  selfStun: () => ['このモンスターが攻撃できない', 'このカードを入れたモンスターが封じられて攻撃できないとき(モンスターの手だけ)'],
+  selfAdv: () => ['このモンスターが得意な相手', 'このカードを入れたモンスターが出せる手札の技に、相手の特徴(地上・空中・水中)でダメージが倍になるものがあるとき。その相手を狙う(モンスターの手だけ)'],
   incoming: v => [`受けるダメージ${v}以上`, `攻撃を受けたとき、受けるダメージの見込みが${v}以上なら(守るときだけ見る)`],
   incomingKo: () => ['受けると倒れる', '攻撃を受けたとき、守らないと倒れるなら(守るときだけ見る)'],
   incomingArea: () => ['全体攻撃を受けた', '受けた攻撃が、全員に当たる攻撃なら(守るときだけ見る)'],
@@ -93129,17 +93138,17 @@ const CARD_TACTIC_TEXT = Object.freeze({
   tReckless: () => ['捨て身型', '守り札を残さず(0.5倍)、とどめを優先(1.3倍)。受けると倒れるとき以外は守らない'],
   tHand: () => ['手札温存型', '出したあとに手札が2枚以上残る手だけを出す。ガッツの番も手札を2枚残して置く'],
   tDeck: () => ['山札節約型', 'カードを引く・山札からガッツへ・手札を引き直す・相手に引かせる札は出さない'],
-  tFocus: () => ['一点集中型', 'ライフの割合がいちばん低い相手への攻撃を優先して、倒れるまで同じ子を狙う'],
+  tFocus: () => ['一点集中型', 'ライフの割合がいちばん低い相手への攻撃を優先して、倒れるまで同じ相手を狙う'],
   tSpread: () => ['分散型', '全体攻撃を重くし(1.4倍)、ライフがいちばん多い相手への攻撃を優先する'],
   tComeback: () => ['逆転型', '倒された数で負けている、または味方のライフの合計が半分以下なら捨て身(守り0.5倍・とどめ・大技・全体1.3倍)。それ以外は堅く(守り・ガッツ1.2倍)'],
-  atk: () => ['いちばん得な攻撃', 'この子が出せる攻撃のうち、点数(ダメージ・とどめ・ガッツの損得)がいちばん高い手を出す'],
-  kind: v => [`${v}の技で攻撃`, `この子の${v}の技のうち、点数がいちばん高い手を出す`],
+  atk: () => ['いちばん得な攻撃', 'このモンスターが出せる攻撃のうち、点数(ダメージ・とどめ・ガッツの損得)がいちばん高い手を出す'],
+  kind: v => [`${v}の技で攻撃`, `このモンスターの${v}の技のうち、点数がいちばん高い手を出す`],
   cost: v => {
     const n = v.startsWith('軽い') ? '0〜1' : v.startsWith('中') ? '2〜3' : '4以上';
     const nm = v.startsWith('軽い') ? '軽い技' : v.startsWith('中') ? '中くらいの技' : '大技';
-    return [`${nm}で攻撃`, `この子の技のうち、払うガッツが${n}の技で、点数がいちばん高い手を出す`];
+    return [`${nm}で攻撃`, `このモンスターの技のうち、払うガッツが${n}の技で、点数がいちばん高い手を出す`];
   },
-  reach: v => [v === '全体攻撃' ? '全体攻撃で攻撃' : '1体だけに攻撃', v === '全体攻撃' ? 'この子の、相手の全員に当たる技のうち、点数がいちばん高い手を出す' : 'この子の、1体だけに当てる技のうち、点数がいちばん高い手を出す'],
+  reach: v => [v === '全体攻撃' ? '全体攻撃で攻撃' : '1体だけに攻撃', v === '全体攻撃' ? 'このモンスターの、相手の全員に当たる技のうち、点数がいちばん高い手を出す' : 'このモンスターの、1体だけに当てる技のうち、点数がいちばん高い手を出す'],
   eff: v => {
     const d = {
       回避されない: '相手が回避できない技',
@@ -93155,7 +93164,7 @@ const CARD_TACTIC_TEXT = Object.freeze({
       手札に戻る: '当たると手札に戻ってくる技',
       カード投げ: 'カードを投げてダメージを足す技'
     }[v];
-    return [`「${v}」の技で攻撃`, `この子の、${d}のうち、点数がいちばん高い手を出す`];
+    return [`「${v}」の技で攻撃`, `このモンスターの、${d}のうち、点数がいちばん高い手を出す`];
   },
   attach: () => ['付ける札といっしょに攻撃', '技に付ける札をいっしょに出す手のうち、点数がいちばん高い手を出す'],
   attachKind: v => [`付ける札(${v})といっしょに攻撃`, `「${v}」付ける札をいっしょに出す手のうち、点数がいちばん高い手を出す`],
@@ -93168,15 +93177,15 @@ const CARD_TACTIC_TEXT = Object.freeze({
       まゆと羽化: 'まゆになる・羽化する',
       のりうつる: '相手にのりうつる'
     }[v];
-    return [`特殊技で${d}`, `この子の特殊技のうち、${d}技を出す`];
+    return [`特殊技で${d}`, `このモンスターの特殊技のうち、${d}技を出す`];
   },
   stance: v => ({
-    この子から攻める: ['この子が攻める', '当てはまったら、この子の攻撃で点数がいちばん高い手を出す'],
-    この子は攻撃しない: ['この子は攻撃しない', '当てはまったら、この番はこの子に攻撃させない(このあとの手・基本カードの打ち方でも出さない)'],
-    ライフの多い子が先に: ['いちばん元気なら攻める', 'この子が味方でいちばんライフが多いときだけ、この子の攻撃で点数がいちばん高い手を出す'],
-    ライフの少ない子は温存: ['いちばん弱っていたら休む', '味方が2体以上いて、この子のライフがいちばん少ないとき、この番は攻撃させない'],
+    この子から攻める: ['このモンスターが攻める', '当てはまったら、このモンスターの攻撃で点数がいちばん高い手を出す'],
+    この子は攻撃しない: ['このモンスターは攻撃しない', '当てはまったら、この番はこのモンスターに攻撃させない(このあとの手・基本カードの打ち方でも出さない)'],
+    ライフの多い子が先に: ['いちばん元気なら攻める', 'このモンスターが味方でいちばんライフが多いときだけ、このモンスターの攻撃で点数がいちばん高い手を出す'],
+    ライフの少ない子は温存: ['いちばん弱っていたら休む', '味方が2体以上いて、このモンスターのライフがいちばん少ないとき、この番は攻撃させない'],
     攻撃は1回だけ: ['攻撃は1回だけ', 'この番にまだ攻撃していなければ攻撃する。1回攻撃したら、この番はもう攻撃させない'],
-    何回でも攻める: ['何回でも攻める', '点数が少し低い手でも攻撃を出して、この子の攻撃を続ける']
+    何回でも攻める: ['何回でも攻める', '点数が少し低い手でも攻撃を出して、このモンスターの攻撃を続ける']
   })[v],
   disrupt: v => ({
     手札を捨てさせる: ['相手の手札を捨てさせる', '相手の手札を捨てさせる・山札の下へ戻す札を含む手を出す'],
@@ -93184,20 +93193,20 @@ const CARD_TACTIC_TEXT = Object.freeze({
     ガッツを減らす: ['相手のガッツを減らす', '相手のガッツを減らす・0にする札を含む手を出す'],
     番を飛ばす: ['相手の番を飛ばす', '相手の次の番を飛ばす札を含む手を出す']
   })[v],
-  guard: () => ['守る', 'この子が攻撃を受けたら、手札の守り札でいちばん良い守り方をする'],
-  guardFirst: v => [`${v}で守る`, `この子が攻撃を受けたら、${v === '回避' || v === '防御' ? v + 'の札' : '「' + v + '」の札'}だけで守る(無ければ次の手を見る)`],
-  guardOver: v => [`ダメージ${v}以上だけ守る`, `この子が攻撃を受けたとき、受けるダメージの見込みが${v}より小さければ守らずに受ける。${v}以上なら守る`],
-  guardDie: () => ['倒れるときだけ守る', 'この子が攻撃を受けたとき、受けても倒れなければ守らずに受ける。倒れるときだけ守る'],
-  cover: () => ['かばう札で守る', 'この子が攻撃を受けたら、かばう・身代わりの札で守る'],
-  noGuard: () => ['守らない', 'この子が攻撃を受けても、守り札を使わずに受ける(札を残す)'],
+  guard: () => ['守る', 'このモンスターが攻撃を受けたら、手札の守り札でいちばん良い守り方をする'],
+  guardFirst: v => [`${v}で守る`, `このモンスターが攻撃を受けたら、${v === '回避' || v === '防御' ? v + 'の札' : '「' + v + '」の札'}だけで守る(無ければ次の手を見る)`],
+  guardOver: v => [`ダメージ${v}以上だけ守る`, `このモンスターが攻撃を受けたとき、受けるダメージの見込みが${v}より小さければ守らずに受ける。${v}以上なら守る`],
+  guardDie: () => ['倒れるときだけ守る', 'このモンスターが攻撃を受けたとき、受けても倒れなければ守らずに受ける。倒れるときだけ守る'],
+  cover: () => ['かばう札で守る', 'このモンスターが攻撃を受けたら、かばう・身代わりの札で守る'],
+  noGuard: () => ['守らない', 'このモンスターが攻撃を受けても、守り札を使わずに受ける(札を残す)'],
   charge: () => ['溜め技を使う', '次の技のダメージを何倍にする札(溜め・怒り・次の番の技を倍)を含む手を出す'],
   chargeKind: v => [`溜め(${v})を使う`, `「${v}」の溜めの札を含む手を出す`],
   bEff: v => {
     const d = {
       回復する: '味方を回復する',
-      倒れた子を戻す: '倒れた子を場に戻す',
+      倒れた子を戻す: '倒れたモンスターを場に戻す',
       攻撃できないを消す: '味方の「攻撃できない」を消す',
-      相手を攻撃できなくする: '相手の子を攻撃できなくする',
+      相手を攻撃できなくする: '相手のモンスターを攻撃できなくする',
       相手のガッツを減らす: '相手のガッツを減らす',
       両方のガッツを0にする: '両方のガッツを0にする',
       山札からガッツへ: '山札からガッツを増やす',
@@ -93218,7 +93227,7 @@ const CARD_TACTIC_TEXT = Object.freeze({
   save: () => ['ガッツを多めにためる', 'ガッツの番に、ふだんより多くの手札をガッツに置く'],
   gutsN: v => [`ガッツを${v}枚置く`, `ガッツの番に、手札から${v}枚だけガッツに置く`],
   keepGuard: () => ['守り札は置かない', 'ガッツの番に、回避・防御の札はガッツに置かない'],
-  gutsOrder: v => [v === '重い札' ? '重い札からガッツに置く' : '使えない札からガッツに置く', v === '重い札' ? 'ガッツの番に置く枚数はふだんどおり。払うガッツの大きい札から先に置く' : 'ガッツの番に置く枚数はふだんどおり。場の子が使えない札から先に置く'],
+  gutsOrder: v => [v === '重い札' ? '重い札からガッツに置く' : '使えない札からガッツに置く', v === '重い札' ? 'ガッツの番に置く枚数はふだんどおり。払うガッツの大きい札から先に置く' : 'ガッツの番に置く枚数はふだんどおり。場のモンスターが使えない札から先に置く'],
   stop: () => ['この番の攻撃をやめる', '当てはまったら、この番の攻撃をここで終える'],
   ace: () => ['切り札を出す', '登録で選んだ切り札が手札にあれば、それを含む手を先に出す'],
   holdBreeder: () => ['ブリーダーのカードを温存', '当てはまったら、この番はブリーダーのカード(全体カードも)を出さない。ほかの手はそのまま']
@@ -95313,7 +95322,7 @@ const CARD_RULE_PAGES = Object.freeze([{
   id: 'turn',
   emoji: '🔁',
   title: 'ターンの流れ',
-  lines: ['① 引く: 手札が5枚になるまで山札から引く(先攻の1ターン目は引かない)', '手札がもう5枚あるときは、山札のいちばん上が1枚ガッツになる', '② 攻撃: 技を使う(使わない子がいてもよい)', '③ ガッツ: 手札から好きな枚数をガッツにする', '④ 「ターン終了」で相手の番へ']
+  lines: ['① 引く: 手札が5枚になるまで山札から引く(先攻の1ターン目は引かない)', '手札がもう5枚あるときは、山札のいちばん上が1枚ガッツになる', '② 攻撃: 技を使う(使わないモンスターがいてもよい)', '③ ガッツ: 手札から好きな枚数をガッツにする', '④ 「ターン終了」で相手の番へ']
 }, {
   id: 'attack',
   emoji: '⚔️',
@@ -95323,7 +95332,7 @@ const CARD_RULE_PAGES = Object.freeze([{
   id: 'guard',
   emoji: '🛡️',
   title: '守り',
-  lines: ['攻撃された側は、回避・防御のカードを何枚でも出せる(ガッツが足りる限り)', '回避はよけてダメージを0にする。防御はダメージを減らす', 'そのモンスターの守りのカードは、その子が狙われたときだけ使える。「全モンスター」の守りは、狙われた子が使う', '特殊技は、ふつうの回避・防御では守れない', '守っても、次の自分の番の攻撃はなくならない']
+  lines: ['攻撃された側は、回避・防御のカードを何枚でも出せる(ガッツが足りる限り)', '回避はよけてダメージを0にする。防御はダメージを減らす', 'そのモンスターの守りのカードは、そのモンスターが狙われたときだけ使える。「全モンスター」の守りは、狙われたモンスターが使う', '特殊技は、ふつうの回避・防御では守れない', '守っても、次の自分の番の攻撃はなくならない']
 }, {
   id: 'guts',
   emoji: '💰',
@@ -96376,7 +96385,7 @@ const cardMonStatuses = (st, p, m) => {
     key: 'air',
     short: '空中',
     left: left(mon.airUntil),
-    text: '持ちょうが空中(地上の子しか狙えない技は当たらない)',
+    text: '持ちょうが空中(地上のモンスターしか狙えない技は当たらない)',
     tone: 'type',
     pill: true
   });else if (Number.isFinite(mon.waterUntil) && mon.waterUntil >= T) out.push({
@@ -96391,7 +96400,7 @@ const cardMonStatuses = (st, p, m) => {
     key: `taunt${i}`,
     short: t.mode === 'not' ? 'ねらえない' : 'ねらい固定',
     left: left(t.turn),
-    text: t.mode === 'not' ? '相手はこの子を狙えない' : '相手の攻撃は、この子しか狙えない',
+    text: t.mode === 'not' ? '相手はこのモンスターを狙えない' : '相手の攻撃は、このモンスターしか狙えない',
     tone: 'aim',
     pill: true
   }));
@@ -96849,10 +96858,10 @@ const cardResultCutWhy = (outcome, r) => {
   return byKo < cardLoseScaled(r.full, r.ownTurns) ? `投了は、倒した相手のモンスター1体につき${CARD_SURRENDER_POINT_PER_KO}(倒したのは${Number(r.kos) || 0}体)` : turns;
 };
 const CARD_FOE_BUILD_NOTE = Object.freeze({
-  easy: '好きな子を中心に、のんびり組んでくる。気まぐれな子が混ざることも(カードは第1弾から)',
-  normal: '好きな子と、戦い方に合う子で組んでくる。カードはざっくり選ぶ',
-  hard: '戦い方に合う子とカードで、しっかり組んでくる(カードは第1弾から)',
-  expert: '戦い方に合う子と、全部の弾の強いカードで、しっかり組んでくる',
+  easy: '好きなモンスターを中心に、のんびり組んでくる。気まぐれなモンスターが混ざることも(カードは第1弾から)',
+  normal: '好きなモンスターと、戦い方に合うモンスターで組んでくる。カードはざっくり選ぶ',
+  hard: '戦い方に合うモンスターとカードで、しっかり組んでくる(カードは第1弾から)',
+  expert: '戦い方に合うモンスターと、全部の弾の強いカードで、しっかり組んでくる',
   master: '全部の弾から本気で組んでくる。あなたのデッキを見て、モンスターを選び直すことも'
 });
 const CardFoeStyle = ({
@@ -96913,7 +96922,8 @@ const CardDetailModal = ({
   onClose,
   status = null,
   statusName = '',
-  dexInfo = null
+  dexInfo = null,
+  nav = null
 }) => {
   const dexLine = dexInfo ? React.createElement("div", {
     "data-card-detail-dex": true,
@@ -96925,6 +96935,20 @@ const CardDetailModal = ({
   }, dexInfo.have > 0 ? `持っている${dexInfo.have}枚` : 'まだ持っていない')) : null;
   const c = cardOf(db, no);
   const m = c ? null : cardMonsterOf(db, no);
+  const navBtn = (dir, fn) => React.createElement("button", {
+    type: "button",
+    "data-card-detail-nav": dir,
+    "aria-label": dir === 'prev' ? '前のカード' : '次のカード',
+    disabled: !fn,
+    onClick: e => {
+      e.stopPropagation();
+      if (fn) {
+        Audio_.fgSe.tap();
+        fn();
+      }
+    },
+    className: "mh-button flex h-12 w-11 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-slate-800 text-[18px] font-black text-white active:scale-95 disabled:opacity-25"
+  }, dir === 'prev' ? '◀' : '▶');
   return React.createElement("div", {
     "data-card-detail": true,
     onClick: onClose,
@@ -96935,7 +96959,19 @@ const CardDetailModal = ({
     },
     role: "dialog",
     "aria-label": "カードの詳しい画面"
-  }, React.createElement("img", {
+  }, nav ? React.createElement("div", {
+    "data-card-detail-navrow": true,
+    className: "flex w-full max-w-sm flex-col items-center gap-1"
+  }, React.createElement("div", {
+    className: "flex w-full items-center justify-center gap-2"
+  }, navBtn('prev', nav.onPrev), React.createElement("img", {
+    src: CARD_IMG(c ? c.img : m ? m.img : no, 'l'),
+    alt: c ? c.name : m ? m.name : '',
+    className: "w-[min(62vw,280px)] min-w-0 rounded-xl shadow-2xl landscape:h-[32vh] landscape:w-auto"
+  }), navBtn('next', nav.onNext)), React.createElement("span", {
+    "data-card-detail-pos": true,
+    className: "text-[12px] font-bold text-slate-400"
+  }, nav.pos)) : React.createElement("img", {
     src: CARD_IMG(c ? c.img : m ? m.img : no, 'l'),
     alt: c ? c.name : m ? m.name : '',
     className: "w-[min(78vw,300px)] rounded-xl shadow-2xl"
@@ -98280,7 +98316,7 @@ const CardBattleBoard = ({
       setSel({
         hand: i
       });
-      setHint(os.some(o => o.to !== undefined) ? '目標を移す味方をタップ' : 'かばう子をタップ');
+      setHint(os.some(o => o.to !== undefined) ? '目標を移す味方をタップ' : 'かばうモンスターをタップ');
       return;
     }
     if (mode !== 'attack') return;
@@ -98292,7 +98328,7 @@ const CardBattleBoard = ({
     const os = attackOpts.filter(o => o.hand.includes(i));
     const c = cardOf(db, me.hand[i]);
     if (!os.length) {
-      setHint(!c ? '' : cardIsGuardKind(c.kind) ? '回避・防御は、相手に攻撃されたときに使います' : !c.ready ? 'このカードは準備中です' : c.guts > me.guts.length ? `ガッツが足りません(あと${c.guts - me.guts.length})` : 'いまは使えません(使える子がいない・もう攻撃した など)');
+      setHint(!c ? '' : cardIsGuardKind(c.kind) ? '回避・防御は、相手に攻撃されたときに使います' : !c.ready ? 'このカードは準備中です' : c.guts > me.guts.length ? `ガッツが足りません(あと${c.guts - me.guts.length})` : 'いまは使えません(使えるモンスターがいない・もう攻撃した など)');
       setSel(null);
       return;
     }
@@ -98412,7 +98448,7 @@ const CardBattleBoard = ({
       setSel({
         hand: t.hand[0]
       });
-      setHint('使う子をタップしてください');
+      setHint('使うモンスターをタップしてください');
       return;
     }
     const same = attackOpts.filter(o => JSON.stringify(o.hand) === JSON.stringify(t.hand) && monKey(o) === monKey(t));
@@ -98813,7 +98849,7 @@ const CardBattleBoard = ({
       })
     }, React.createElement(CardFitLabel, null, "攻撃おわり → ガッツへ")));
   })();
-  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : setPending ? '組み合わせを選んでね' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : attackOpts.length ? '技をタップ → 相手をタップ' : '使える技がありません →「攻撃おわり」でガッツへ' : mode === 'guard' ? guardOpts.length ? '明るいカードで守れます' : '使える回避・防御はありません' : mode === 'guts' ? gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
+  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? sel ? monChosen === undefined ? '使うモンスターをタップ' : setPending ? '組み合わせを選んでね' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : attackOpts.length ? '技をタップ → 相手をタップ' : '使える技がありません →「攻撃おわり」でガッツへ' : mode === 'guard' ? guardOpts.length ? '明るいカードで守れます' : '使える回避・防御はありません' : mode === 'guts' ? gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
   const tutorBox = tutorial && tutSay ? (() => {
     const dra = ASSISTANTS.find(a => a.id === 'dra');
     const head = tutQ[0];
@@ -99579,7 +99615,7 @@ const CardBattleBoard = ({
   }, jaWrap('影縛り: 使えなくする守りのカードを選ぶ')), React.createElement("div", {
     className: "mt-1 text-[11px] font-bold text-slate-400",
     style: JA_LABEL_STYLE
-  }, jaWrap('同じ名前のカードは全部、この技に使えなくなります。赤いのは、狙った子が使える守りです')), React.createElement("div", {
+  }, jaWrap('同じ名前のカードは全部、この技に使えなくなります。赤いのは、狙った相手が使える守りです')), React.createElement("div", {
     className: "mt-2 grid max-h-[50vh] grid-cols-2 gap-1.5 overflow-y-auto"
   }, (() => {
     const tm = bindAsk.target ? st.players[bindAsk.target.p].mons[bindAsk.target.m] : null;
@@ -102941,7 +102977,7 @@ const CardDeckPickTile = ({
   }, unusable && React.createElement("span", {
     "data-card-deck-unusable-tag": no,
     className: "pointer-events-none absolute inset-x-0.5 top-[38%] z-[1] rounded-sm bg-slate-950/85 py-0.5 text-center text-[10px] font-black leading-tight text-rose-200"
-  }, "このデッキの子は使えない"), React.createElement("button", _extends({
+  }, "このデッキのモンスターは使えない"), React.createElement("button", _extends({
     type: "button",
     "data-card-deck-tile": no
   }, press(no, onAdd, {
@@ -103277,7 +103313,7 @@ const CardDeckEditor = ({
     },
     className: "block w-full text-left text-[11px] font-bold leading-snug text-amber-200 underline decoration-dotted",
     style: JA_WRAP_STYLE
-  }, jaWrap(`3体のどの子も使えないカードが${unusableCount}枚入っています(混血の子は、守りのカードはサブの種族のものだけ使えます。押すと先頭に並べます)`)), notice && React.createElement("div", {
+  }, jaWrap(`3体のどのモンスターも使えないカードが${unusableCount}枚入っています(混血のモンスターは、守りのカードはサブの種族のものだけ使えます。押すと先頭に並べます)`)), notice && React.createElement("div", {
     "data-card-deck-notice": true,
     className: "text-[12px] font-black text-amber-200",
     style: JA_LABEL_STYLE
@@ -103294,7 +103330,7 @@ const CardDeckEditor = ({
     "data-card-deck-usable": true,
     onClick: () => setUsableOnly(v => !v),
     className: chip(usableOnly)
-  }, usableOnly ? '✓ ' : '', "使える子だけ"), React.createElement("button", {
+  }, usableOnly ? '✓ ' : '', "使えるカードだけ"), React.createElement("button", {
     type: "button",
     "data-card-deck-sort": sort,
     onClick: () => setSort(s => CARD_DECK_SORTS[(CARD_DECK_SORTS.findIndex(x => x.id === s) + 1) % CARD_DECK_SORTS.length].id),
@@ -103414,6 +103450,15 @@ const CardDeckList = ({
   const col = collection || {};
   const full = decks.decks.length >= CARD_DECK_MAX;
   const btn = 'mh-button min-h-[40px] rounded-xl text-[12px] font-black active:scale-[.98] disabled:opacity-40';
+  const newDeck = () => {
+    Audio_.fgSe.tap();
+    onEdit({
+      id: cardNewDeckId(decks.decks, Date.now()),
+      name: `デッキ${decks.decks.length + 1}`,
+      monsters: [],
+      cards: []
+    });
+  };
   return React.createElement("div", {
     "data-mh-screen": true,
     "data-card-deck-list": true,
@@ -103460,16 +103505,19 @@ const CardDeckList = ({
       className: "text-[11px] font-bold text-amber-200"
     }, `使えないカード ${cardDeckDeadCount(db, d)}枚`))), React.createElement("div", {
       className: "mt-2 grid grid-cols-4 gap-1"
-    }, React.createElement("button", {
+    }, on ? React.createElement("span", {
+      "data-card-deck-using": d.id,
+      className: "flex min-h-[40px] items-center justify-center rounded-xl bg-amber-300/15 text-[12px] font-black text-amber-200 ring-1 ring-inset ring-amber-300/60"
+    }, "★ 使用中") : React.createElement("button", {
       type: "button",
       "data-card-deck-use": d.id,
-      disabled: on || !ready,
-      className: `${btn} ${on ? 'bg-amber-300 text-slate-950' : 'border border-amber-300/50 bg-amber-900/40 text-amber-100'}`,
+      disabled: !ready,
+      className: `${btn} border border-amber-300/50 bg-amber-900/40 text-amber-100`,
       onClick: () => {
         Audio_.fgSe.tap();
         onActive(d.id);
       }
-    }, on ? '使用中' : '使う'), React.createElement("button", {
+    }, "使う"), React.createElement("button", {
       type: "button",
       "data-card-deck-open": d.id,
       className: `${btn} mh-button-primary`,
@@ -103499,22 +103547,24 @@ const CardDeckList = ({
       className: `${btn} border border-rose-300/40 bg-rose-950/50 text-rose-100`,
       onClick: () => setConfirmDel(d)
     }, "消す")));
-  })), React.createElement("div", {
+  }), Array.from({
+    length: Math.max(0, CARD_DECK_MAX - decks.decks.length)
+  }, (_, i) => React.createElement("button", {
+    key: `slot${i}`,
+    type: "button",
+    "data-card-deck-slot": i,
+    onClick: newDeck,
+    className: "mh-button flex min-h-[64px] w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-white/15 text-[13px] font-black text-slate-400 active:scale-[.99]"
+  }, React.createElement("span", {
+    className: "text-[18px]"
+  }, "＋"), "あいている枠(", decks.decks.length + i + 1, "つ目)"))), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, React.createElement("button", {
     type: "button",
     "data-card-deck-new": true,
     disabled: full,
     className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40",
-    onClick: () => {
-      Audio_.fgSe.tap();
-      onEdit({
-        id: cardNewDeckId(decks.decks, Date.now()),
-        name: `デッキ${decks.decks.length + 1}`,
-        monsters: [],
-        cards: []
-      });
-    }
+    onClick: newDeck
   }, full ? `デッキは${CARD_DECK_MAX}つまでです` : '新しいデッキを作る')), confirmDel && React.createElement(ConfirmSheet, {
     title: `「${confirmDel.name}」を消しますか？`,
     message: "デッキだけを消します(カードは消えません)",
@@ -103633,6 +103683,16 @@ const CardDex = ({
   const list = curTab.list;
   const shown = list.filter(no => show === 'have' ? col[no] > 0 : show === 'miss' ? !(col[no] > 0) : true);
   const haveIn = arr => arr.filter(no => col[no] > 0).length;
+  const dexKeyOf = no => packMap[no] || '';
+  const dexKeyOrder = k => k === 'hybrid' ? 900 : k ? Number(k) : 999;
+  const dexKeys = mode === 'pack' ? [''] : [...new Set(shown.map(dexKeyOf))].sort((a, b) => dexKeyOrder(a) - dexKeyOrder(b));
+  const navOrder = mode === 'pack' ? shown : dexKeys.flatMap(k => shown.filter(no => dexKeyOf(no) === k));
+  const navAt = detail ? navOrder.indexOf(detail) : -1;
+  const detailNav = navAt >= 0 && navOrder.length > 1 ? {
+    pos: `${navAt + 1} / ${navOrder.length}`,
+    onPrev: navAt > 0 ? () => setDetail(navOrder[navAt - 1]) : null,
+    onNext: navAt < navOrder.length - 1 ? () => setDetail(navOrder[navAt + 1]) : null
+  } : null;
   const chip = on => `shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
   const unit = curTab.label || CARD_DEX_UNIT[mode];
   const tabRow = useRef(null);
@@ -103703,12 +103763,9 @@ const CardDex = ({
   }, shown.length ? React.createElement("div", {
     className: "space-y-2"
   }, (() => {
-    const keyOf = no => packMap[no] || '';
-    const order = k => k === 'hybrid' ? 900 : k ? Number(k) : 999;
-    const keys = mode === 'pack' ? [''] : [...new Set(shown.map(keyOf))].sort((a, b) => order(a) - order(b));
-    return keys.map(k => {
-      const part = mode === 'pack' ? shown : shown.filter(no => keyOf(no) === k);
-      const inTab = mode === 'pack' ? list : list.filter(no => keyOf(no) === k);
+    return dexKeys.map(k => {
+      const part = mode === 'pack' ? shown : shown.filter(no => dexKeyOf(no) === k);
+      const inTab = mode === 'pack' ? list : list.filter(no => dexKeyOf(no) === k);
       return React.createElement("section", {
         key: k || 'all',
         "data-card-dex-group": k || undefined
@@ -103768,7 +103825,8 @@ const CardDex = ({
     dexInfo: {
       pack: cardDexPackLabel(packMap[detail]),
       have: col[detail] || 0
-    }
+    },
+    nav: detailNav
   }));
 };
 const cardRuleLine = t => String(t).split(/(「[^」]*」|《[^》]*》)/).map((seg, i) => /^「/.test(seg) ? React.createElement("span", {
@@ -112731,7 +112789,7 @@ const CardShareDeckDetail = ({
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const t = cardShareNormalizeTactics(entry.tactics);
   const f = t.f ? cardTacticUnpackFrames(t.f) : null;
-  const monName = i => (db && cardMonsterOf(db, entry.deck.monsters[i]) || {}).name || ['左の子', '真ん中の子', '右の子'][i];
+  const monName = i => (db && cardMonsterOf(db, entry.deck.monsters[i]) || {}).name || ['左のモンスター', '真ん中のモンスター', '右のモンスター'][i];
   const rowText = r => `${(cardTacticOf(r.c) || {}).name || '?'} ▶ ${(cardTacticOf(r.a) || {}).name || '?'}${r.on ? '' : '(休み)'}`;
   return React.createElement("div", {
     "data-card-share-deck-detail": true,
@@ -113325,7 +113383,7 @@ const CARD_TACTIC_CAT_TEXT = Object.freeze({
   cond: '条件カード(〜なら)。行動カードと組にしてセットする',
   base: '基本カード。どの組にも当てはまらないときの打ち方',
   breeder: 'ブリーダーカード(ブリーダーの手)。条件カードと組にしてセットする',
-  monster: 'モンスターカード(その子の手)。条件カードと組にしてセットする'
+  monster: 'モンスターカード(そのモンスターの手)。条件カードと組にしてセットする'
 });
 const CardTacticDetail = ({
   card,
@@ -114012,7 +114070,7 @@ const CardTacticsScreen = ({
     const rows = rowsOf(k);
     setPick({
       cat: which === 'c' ? 'cond' : catOf(k),
-      hideSecs: which === 'c' && k === 'breeder' ? ['この子', '守るとき'] : [],
+      hideSecs: which === 'c' && k === 'breeder' ? ['このモンスター', '守るとき'] : [],
       title: which === 'c' ? '条件カードをえらぶ' : `${CARD_TACTIC_CAT_STYLE[catOf(k)].label}カードをえらぶ`,
       onPick: (id, sp) => {
         setPick(null);
@@ -114112,7 +114170,7 @@ const CardTacticsScreen = ({
     sub: `${f.breeder.length}/${open.breeder}枚`
   }, ...[0, 1, 2].map(i => ({
     k: i,
-    label: (monOf(i) || {}).name || ['左の子', '真ん中の子', '右の子'][i],
+    label: (monOf(i) || {}).name || ['左のモンスター', '真ん中のモンスター', '右のモンスター'][i],
     mon: monOf(i),
     sub: `${f.mons[i].length}/${open.mon}枚`
   }))];
@@ -114279,10 +114337,10 @@ const CardTacticsScreen = ({
         ...f,
         mons: [0, 1, 2].map(() => f.mons[frame].slice())
       });
-      setNotice('この子の戦術カードを、ほかの2体にも写しました');
+      setNotice('このモンスターの戦術カードを、ほかの2体にも写しました');
     },
     className: "mh-button min-h-[44px] flex-1 rounded-xl text-[11px] font-black"
-  }, "この子の戦術カードを", React.createElement("br", null), "ほかの2体にも写す"), React.createElement("button", {
+  }, "このモンスターの戦術カードを", React.createElement("br", null), "ほかの2体にも写す"), React.createElement("button", {
     type: "button",
     "data-card-tactics-auto": true,
     onClick: () => {
@@ -114293,7 +114351,7 @@ const CardTacticsScreen = ({
   }, "おまかせで", React.createElement("br", null), "あいている所に入れる")), React.createElement("p", {
     className: "text-[11px] font-bold leading-snug text-slate-400",
     style: JA_WRAP_STYLE
-  }, frame === 'breeder' ? '攻撃の番は、モンスターの枠のあとに見ます。ガッツの番はここだけを見ます。' : '上にセットした戦術カードから順に見て、条件に当たったカードの手をこの子が出します。守るときは、この子が狙われたときに見ます。'))), tab === 'pull' && React.createElement("div", {
+  }, frame === 'breeder' ? '攻撃の番は、モンスターの枠のあとに見ます。ガッツの番はここだけを見ます。' : '上にセットした戦術カードから順に見て、条件に当たったカードの手をこのモンスターが出します。守るときは、このモンスターが狙われたときに見ます。'))), tab === 'pull' && React.createElement("div", {
     "data-card-tactics-pull": true,
     className: "space-y-2"
   }, React.createElement("div", {
@@ -114916,7 +114974,7 @@ const CARD_REG_COMBOS = Object.freeze([{
 }, {
   sec: '攻める',
   icon: '⚔️',
-  name: '弱った子を狙う',
+  name: '弱った相手を狙う',
   c: 'foeLife.50',
   a: 'atk',
   where: 'mon'
@@ -114937,7 +114995,7 @@ const CARD_REG_COMBOS = Object.freeze([{
 }, {
   sec: '攻める',
   icon: '🔥',
-  name: '弱った子に大技',
+  name: '弱った相手に大技',
   c: 'foeLife.30',
   a: 'cost.大技(4以上)',
   where: 'mon'
@@ -115291,7 +115349,7 @@ const CardRegMonSheet = ({
   }, CARD_FRAME_MAX_TEXT('mon', max)), React.createElement("p", {
     className: "mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100",
     style: JA_WRAP_STYLE
-  }, jaWrap('入れると: この子が場面に合った技を出すようになり、賢さが上がります。守る手は、この子が狙われたときに見ます。')), React.createElement("div", {
+  }, jaWrap('入れると: このモンスターが場面に合った技を出すようになり、賢さが上がります。守る手は、このモンスターが狙われたときに見ます。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -115395,7 +115453,7 @@ const CardDeckRegister = ({
   const open = cardLevelFrames(lv);
   const tactics = data.tactics;
   const deck = list.find(x => x.id === deckId) || null;
-  const monName = i => (deck && cardMonsterOf(db, deck.monsters[i]) || {}).name || ['左の子', '真ん中の子', '右の子'][i];
+  const monName = i => (deck && cardMonsterOf(db, deck.monsters[i]) || {}).name || ['左のモンスター', '真ん中のモンスター', '右のモンスター'][i];
   const battle = cardTacticsFramesForBattle({
     ...tactics,
     frames: draft
@@ -115685,7 +115743,7 @@ const CardDeckRegister = ({
     color: "#38bdf8",
     title: "モンスターごとの手",
     count: `${draft.mons.reduce((a, r) => a + r.length, 0)}枚 / 入れられる ${open.mon * 3}枚`,
-    what: "その子が、どの場面で、どの技を出すか。押すと、その子の手を決められます。"
+    what: "そのモンスターが、どの場面で、どの技を出すか。押すと、そのモンスターの手を決められます。"
   }), React.createElement("div", {
     className: "mt-2 grid grid-cols-3 gap-1.5"
   }, [0, 1, 2].map(k => {
@@ -115895,7 +115953,7 @@ const CardDeckRegister = ({
     tactics: tactics,
     cat: "cond",
     title: "条件(〜なら)をえらぶ",
-    hideSecs: custom.where === 'breeder' ? ['この子', '守るとき'] : [],
+    hideSecs: custom.where === 'breeder' ? ['このモンスター', '守るとき'] : [],
     onClose: () => setCustom(null),
     onPick: (id, sp) => {
       if (!id) return;

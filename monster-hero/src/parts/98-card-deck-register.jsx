@@ -23,10 +23,10 @@ const CARD_REG_COMBOS = Object.freeze([
   { sec: 'おすすめ', icon: '💥', name: 'ためたら大技', c: 'myGuts.5', a: 'cost.大技(4以上)', where: 'mon' },
   { sec: 'おすすめ', icon: '🛡️', name: 'ピンチなら守る', c: 'selfLife.30', a: 'guard', where: 'mon' },
   { sec: 'おすすめ', icon: '🌊', name: '3体いたら全体攻撃', c: 'foeAlive.3', a: 'reach.全体攻撃', where: 'mon' },
-  { sec: '攻める', icon: '⚔️', name: '弱った子を狙う', c: 'foeLife.50', a: 'atk', where: 'mon' },
+  { sec: '攻める', icon: '⚔️', name: '弱った相手を狙う', c: 'foeLife.50', a: 'atk', where: 'mon' },
   { sec: '攻める', icon: '🎯', name: '最後の1体を倒す', c: 'foeAlive.1', a: 'atk', where: 'mon' },
   { sec: '攻める', icon: '💨', name: 'はじめから攻める', c: 'turnLe.3', a: 'atk', where: 'mon' },
-  { sec: '攻める', icon: '🔥', name: '弱った子に大技', c: 'foeLife.30', a: 'cost.大技(4以上)', where: 'mon' },
+  { sec: '攻める', icon: '🔥', name: '弱った相手に大技', c: 'foeLife.30', a: 'cost.大技(4以上)', where: 'mon' },
   { sec: '攻める', icon: '✨', name: '回避されない技で攻める', c: 'any', a: 'eff.回避されない', where: 'mon' },
   { sec: '守る', icon: '🧱', name: '大きい攻撃だけ守る', c: 'any', a: 'guardOver.5', where: 'mon' },
   { sec: '守る', icon: '🙏', name: '倒されそうなときだけ守る', c: 'any', a: 'guardDie', where: 'mon' },
@@ -158,7 +158,7 @@ const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, onRows, on
         {rows.length < max
           ? <button type="button" data-card-reg-add={k} onClick={() => { Audio_.fgSe.tap(); onAdd(); }} className="mt-1.5 w-full rounded-xl border-2 border-dashed border-sky-300/70 py-2 text-[12px] font-black text-sky-100">{`＋ ${name(k)}の手を入れる`}</button>
           : CARD_FRAME_MAX_TEXT('mon', max) && <small className="mt-1 block text-center text-[10px] font-bold text-slate-400">{CARD_FRAME_MAX_TEXT('mon', max)}</small>}
-        <p className="mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('入れると: この子が場面に合った技を出すようになり、賢さが上がります。守る手は、この子が狙われたときに見ます。')}</p>
+        <p className="mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('入れると: このモンスターが場面に合った技を出すようになり、賢さが上がります。守る手は、このモンスターが狙われたときに見ます。')}</p>
         <div className="mt-2 grid grid-cols-2 gap-2">
           <button type="button" data-card-reg-mon-copy onClick={() => { Audio_.fgSe.tap(); onCopy(); }} className="mh-button min-h-[44px] rounded-xl text-[12px] font-black">ほかの2体にも同じ手</button>
           <button type="button" data-card-reg-mon-auto onClick={() => { Audio_.fgSe.tap(); onAuto(); }} className="mh-button mh-button-primary min-h-[44px] rounded-xl text-[12px] font-black">おすすめで入れる</button>
@@ -217,7 +217,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
   const open = cardLevelFrames(lv);
   const tactics = data.tactics;
   const deck = list.find((x) => x.id === deckId) || null;
-  const monName = (i) => ((deck && cardMonsterOf(db, deck.monsters[i])) || {}).name || ['左の子', '真ん中の子', '右の子'][i];
+  const monName = (i) => ((deck && cardMonsterOf(db, deck.monsters[i])) || {}).name || ['左のモンスター', '真ん中のモンスター', '右のモンスター'][i];
   const battle = cardTacticsFramesForBattle({ ...tactics, frames: draft }, lv);
   const smartLv = cardTacticSmartLevel(battle);
   const smartText = cardShareSmartText({ f: cardTacticPackFrames(battle) });
@@ -333,7 +333,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
           </section>
           <section data-card-reg-sec="mons" className="rounded-2xl border-2 border-sky-400 bg-slate-900/90 p-2.5">
             <CardRegSecHead n="③" color="#38bdf8" title="モンスターごとの手" count={`${draft.mons.reduce((a, r) => a + r.length, 0)}枚 / 入れられる ${open.mon * 3}枚`}
-              what="その子が、どの場面で、どの技を出すか。押すと、その子の手を決められます。"/>
+              what="そのモンスターが、どの場面で、どの技を出すか。押すと、そのモンスターの手を決められます。"/>
             <div className="mt-2 grid grid-cols-3 gap-1.5">
               {[0, 1, 2].map((k) => {
                 const m = deck && cardMonsterOf(db, deck.monsters[k]);
@@ -401,7 +401,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
       {sheet && <CardRegComboSheet tactics={tactics} where={sheet.where} title={sheet.where === 'breeder' ? 'ブリーダーの戦い方' : `${monName(sheet.k)}の戦い方`}
         onClose={() => setSheet(null)} onPick={(row) => { setRows(sheet.k, [...rowsOf(sheet.k), row].slice(0, maxOf(sheet.k))); setSheet(null); }}
         onCustom={() => { setCustom({ k: sheet.k, where: sheet.where }); setSheet(null); }}/>}
-      {custom && !custom.c && <CardTacticPicker db={db} tactics={tactics} cat="cond" title="条件(〜なら)をえらぶ" hideSecs={custom.where === 'breeder' ? ['この子', '守るとき'] : []}
+      {custom && !custom.c && <CardTacticPicker db={db} tactics={tactics} cat="cond" title="条件(〜なら)をえらぶ" hideSecs={custom.where === 'breeder' ? ['このモンスター', '守るとき'] : []}
         onClose={() => setCustom(null)} onPick={(id, sp) => { if (!id) return; setCustom((x) => ({ ...x, c: id, sp })); }}/>}
       {custom && custom.c && <CardTacticPicker db={db} tactics={tactics} cat={custom.where === 'breeder' ? 'breeder' : 'monster'} title="行動(→ 〜する)をえらぶ"
         onClose={() => setCustom(null)} onPick={(id) => { if (!id) return; setRows(custom.k, [...rowsOf(custom.k), { c: custom.c, a: id, on: true, ...(custom.sp ? { sp: custom.sp } : {}) }].slice(0, maxOf(custom.k))); setCustom(null); }}/>}
