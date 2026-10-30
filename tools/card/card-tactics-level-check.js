@@ -68,7 +68,7 @@ check('A 壊れた経験値は0', ['x', NaN, Infinity, -5, null].every((v) => E.
   const g = E.cardLevelAfter({ xp: E.cardLevelNeed(1) - 1 }, { kind: 'pvp', outcome: 'win', today: 'x' });
   // 22 + 90 = 112 → ランク5(23+26+29+32=110)
   check('C 一度に何ランク上がっても、届いた分を全部配る', g.from === 1 && g.to === 5 && g.points === 200 + 300 + 400 + 1500 && g.tickets === 1 && J(g.next.got) === J([2, 3, 4, 5]), `${g.to} ${g.points} ${g.tickets} ${J(g.next.got)}`);
-  check('C もらった物の知らせ', g.gains.some((x) => x.text === 'ビートP 2,400') && g.gains.some((x) => x.text === 'カードパック券 ×1') && g.gains.some((x) => x.text.includes('置ける所が増えた')), J(g.gains));
+  check('C もらった物の知らせ', g.gains.some((x) => x.text === 'ビートP 2,400') && g.gains.some((x) => x.text === 'カードパック券 ×1') && g.gains.some((x) => x.text === 'モンスターごとに戦術カードを3枚までセットできるようになった') && !g.gains.some((x) => /置ける所|枠|行/.test(x.text)), J(g.gains));
   const g2 = E.cardLevelAfter(g.next, { kind: 'pvp', outcome: 'lose', today: 'x' });
   check('C 二度は配らない', g2.points === 0 && g2.tickets === 0, `${g2.points} ${g2.tickets}`);
   const old = E.cardLevelAfter({ xp: xpTo(4) - 1, got: [3] }, { kind: 'cpu', level: 'easy', outcome: 'lose', today: 'x' });
