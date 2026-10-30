@@ -262,12 +262,12 @@ const sceneScript = (spec) => `(() => {
 
     // ---- F カララギマンゴー(ガッツ0)とジョイのサポート(社長の報告・社長の答え 案A＋B) ----
     //   前は、いちばん枚数の多い組み合わせ(マンゴー＋ジョイのサポート)が先に選ばれていて、そのまま味方を押すとジョイのサポートも出た。
-    //   いまは、付けても何も変わらない組み合わせはボタンにも出さず、押した札1枚だけで出す
+    //   いまは、付けても何も変わらない組み合わせは候補にも出さず、押した札1枚だけで出す
     page = await open({ mons: ['golem', 'tiger', 'pixie'], hand: ['113', '276', '100', '100', '100'], hurt: true });
     await page.locator('[data-card-hand-card="0"]').click();
     await page.waitForTimeout(400);
-    const fSets = await page.locator('[data-card-set]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-set')));
-    check('F タップ: マンゴーを押しても、「マンゴー＋ジョイのサポート」のボタンは出ない(付けても何も変わらない)', !fSets.includes('[0,1]'), fSets.join(' / ') || 'ボタン無し');
+    const fTag = await page.locator('[data-card-hand-card="1"] [data-card-hand-pick]').count();
+    check('F タップ: マンゴーを押しても、ジョイのサポートは「候補」に光らない(付けても何も変わらない)', fTag === 0 && (await page.locator('[data-card-set]').count()) === 0, `候補の印 ${fTag}`);
     n0 = await handCount(page);
     await page.locator('[data-card-mon="0-0"]').click();
     await settle(page, n0);
@@ -287,9 +287,9 @@ const sceneScript = (spec) => `(() => {
     page = await open({ mons: ['golem', 'tiger', 'pixie'], hand: ['114', '276', '100', '100', '100'] });
     await page.locator('[data-card-hand-card="0"]').click();
     await page.waitForTimeout(400);
-    // 2026-10-29 案B: 組が2つ以上なら、まんなかの組み合わせの窓に行で出る(勝手に選ばない)。いちばん上は突進1枚だけ
-    const rSets = await page.locator('[data-card-combo-sheet] [data-card-set]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-set')));
-    check('F 意味のある組み合わせ(突進＋ジョイのサポート)は組み合わせの窓に出て、いちばん上は突進1枚だけ', rSets[0] === '[0]' && rSets.includes('[0,1]'), rSets.join(' / '));
+    // 組み合わせは自分で選ぶ(2026-10-29 社長「この形で」): 突進だけが「選んだ」、ジョイのサポートは「候補」に光る(勝手には付かない)
+    const rTags = await page.evaluate(() => [0, 1].map((i) => ((document.querySelector(`[data-card-hand-card="${i}"] [data-card-hand-pick]`) || {}).textContent || '')));
+    check('F 意味のある組み合わせ(突進＋ジョイのサポート)は、ジョイのサポートが「候補」に光る。突進だけが選ばれている', rTags[0] === '選んだ' && rTags[1] === '候補', rTags.join(' / '));
     await page.close();
 
     // ---- G 攻撃に戻る(社長の答え 2026-10-27): ガッツの段で押すと攻撃の段へ戻る / 灼熱の地でダメージが出た番は出さない ----

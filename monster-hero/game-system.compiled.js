@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 115a041e1b8aa892
+// source-sha256: 2e13f3771dd046f3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -98129,16 +98129,17 @@ const CardBattleBoard = ({
     }), Math.round(1100 * pace));
     return () => clearTimeout(t);
   }, [autoPassKey]);
-  const selOpts = sel && mode === 'attack' ? attackOpts.filter(o => o.hand.includes(sel.hand)) : [];
+  const pickSet = sel && mode === 'attack' ? [sel.hand, ...(sel.add || [])] : [];
+  const pickKey = JSON.stringify(pickSet.slice().sort((a, b) => a - b));
+  const sameSet = o => JSON.stringify(o.hand.slice().sort((a, b) => a - b)) === pickKey;
+  const selOpts = sel && mode === 'attack' ? attackOpts.filter(o => pickSet.every(i => o.hand.includes(i))) : [];
   const selMons = [...new Set(selOpts.map(o => o.mon === undefined ? -1 : o.mon))];
-  const monChosen = sel && (sel.mon !== undefined ? sel.mon : selMons.length === 1 ? selMons[0] : undefined);
+  const monChosen = sel && (sel.mon !== undefined && selMons.includes(sel.mon) ? sel.mon : selMons.length === 1 ? selMons[0] : undefined);
   const byMon = monChosen === undefined ? [] : selOpts.filter(o => (o.mon === undefined ? -1 : o.mon) === monChosen);
-  const setsAll = [...new Set(byMon.map(o => JSON.stringify(o.hand)))].sort((a, b) => JSON.parse(b).length - JSON.parse(a).length || JSON.parse(a).reduce((x, y) => x + y, 0) - JSON.parse(b).reduce((x, y) => x + y, 0));
-  const sets = setsAll.filter((s0, k) => setsAll.findIndex(s1 => cardHandNameKey(me.hand, JSON.parse(s1)) === cardHandNameKey(me.hand, JSON.parse(s0))) === k);
-  const setAlone = sel ? JSON.stringify([sel.hand]) : null;
-  const setChosen = sel && sets.length ? sel.set && sets.includes(sel.set) ? sel.set : sets.includes(setAlone) ? setAlone : sets.length === 1 ? sets[0] : null : null;
-  const setPending = !!(sel && monChosen !== undefined && sets.length > 1 && !setChosen);
-  const finalOpts = byMon.filter(o => JSON.stringify(o.hand) === setChosen);
+  const pickCands = sel && mode === 'attack' ? [...new Set((monChosen === undefined ? selOpts : byMon).flatMap(o => o.hand))].filter(i => !pickSet.includes(i)) : [];
+  const setChosen = sel && monChosen !== undefined && byMon.some(sameSet) ? pickKey : null;
+  const setPending = !!(sel && monChosen !== undefined && !setChosen);
+  const finalOpts = setChosen ? byMon.filter(sameSet) : [];
   const needTarget = finalOpts.some(o => o.target);
   const [confirm, setConfirm] = useState(null);
   const [bindAsk, setBindAsk] = useState(null);
@@ -98152,6 +98153,15 @@ const CardBattleBoard = ({
     setTossAsk(null);
     setGuardAsk(null);
   }, [st]);
+  const selFieldKey = `${st.turn}|${st.phase}|${st.log.length}|${!!st.pending}|${me.hand.join(',')}`;
+  const selFieldRef = useRef(selFieldKey);
+  useEffect(() => {
+    if (selFieldRef.current !== selFieldKey) {
+      selFieldRef.current = selFieldKey;
+      setSel(null);
+      setHint('');
+    }
+  }, [selFieldKey]);
   const bindCancel = () => {
     setBindAsk(null);
     setSel(null);
@@ -98289,10 +98299,26 @@ const CardBattleBoard = ({
       setHint('');
       return;
     }
+    if (sel && (sel.add || []).includes(i)) {
+      setSel({
+        ...sel,
+        add: sel.add.filter(x => x !== i)
+      });
+      setHint('');
+      return;
+    }
+    if (sel && pickCands.includes(i)) {
+      setSel({
+        ...sel,
+        add: [...(sel.add || []), i]
+      });
+      setHint('');
+      return;
+    }
     const os = attackOpts.filter(o => o.hand.includes(i));
     const c = cardOf(db, me.hand[i]);
     if (!os.length) {
-      setHint(!c ? '' : cardIsGuardKind(c.kind) ? '回避・防御は、相手に攻撃されたときに使います' : !c.ready ? 'このカードは準備中です' : c.guts > me.guts.length ? `ガッツが足りません(あと${c.guts - me.guts.length})` : 'いまは使えません(使える子がいない・もう攻撃した など)');
+      setHint(attackWhyShort(i) || '');
       setSel(null);
       return;
     }
@@ -98300,6 +98326,17 @@ const CardBattleBoard = ({
       hand: i
     });
     setHint('');
+  };
+  const attackWhyShort = i => {
+    const c = cardOf(db, me.hand[i]);
+    if (!c || attackOpts.some(o => o.hand.includes(i))) return null;
+    if (!c.ready) return '準備中';
+    if (cardIsGuardKind(c.kind)) return '守りの番に使う';
+    if (c.user !== 'any' && c.user !== 'breeder' && !me.mons.some(m => !m.ko && cardUsableBy(c, m))) return cardUserLabel(db, c);
+    if (c.guts > me.guts.length) return `ガッツ不足(あと${c.guts - me.guts.length})`;
+    if (cardHasEff(c, 'attach')) return '付ける技がない';
+    if (cardHasEff(c, 'requires')) return 'いっしょに出す札がない';
+    return '今は使えない';
   };
   const tapMon = (p, m) => {
     if (mode === 'guard' && sel) {
@@ -98341,22 +98378,15 @@ const CardBattleBoard = ({
     if (mode === 'guard') return guardOpts.some(o => o.hand === i);
     return mode === 'guts' || mode === 'setup' || mode === 'discard';
   };
-  const cardDropComboOk = (o, i) => {
-    const mo = x => x.mon === undefined ? -1 : x.mon;
-    if (attackOpts.some(x => mo(x) === mo(o) && x.hand.length === 1 && x.hand[0] === i)) return true;
-    return new Set(attackOpts.filter(x => mo(x) === mo(o) && x.hand.includes(i)).map(x => cardHandNameKey(me.hand, x.hand))).size <= 1;
-  };
   const dropTargetsOf = i => {
     const out = {};
     if (mode === 'attack') {
-      const chosen = sel && setChosen && JSON.parse(setChosen).includes(i) ? finalOpts : null;
-      const os = chosen || attackOpts.filter(o => o.hand[0] === i).concat(attackOpts.filter(o => o.hand[0] !== i && o.hand.includes(i)));
+      const chosen = sel && setChosen && pickSet.includes(i) ? finalOpts : null;
+      const os = chosen || attackOpts.filter(o => o.hand.length === 1 && o.hand[0] === i);
       os.forEach(o => {
         const keys = o.target ? [`${o.target.p}-${o.target.m}`] : [...opp.mons.map((x, m) => x.ko ? null : `${CARD_CPU}-${m}`).filter(Boolean), ...(o.mon >= 0 ? [`${CARD_ME}-${o.mon}`] : [])];
-        const alone = x => !chosen && x.hand.length === 1 && x.hand[0] === i;
-        if (!chosen && !alone(o) && !cardDropComboOk(o, i)) return;
         keys.forEach(k => {
-          if (!out[k] || !alone(out[k]) && (alone(o) || o.hand.length > out[k].hand.length)) out[k] = o;
+          if (!out[k]) out[k] = o;
         });
       });
     }
@@ -98424,7 +98454,7 @@ const CardBattleBoard = ({
       setSel({
         hand: t.hand[0],
         mon: monKey(t),
-        set: JSON.stringify(t.hand)
+        add: t.hand.slice(1)
       });
       setHint('空中か地上かを選んでください');
       return;
@@ -98497,7 +98527,7 @@ const CardBattleBoard = ({
         return;
       }
       if (d.long || ev.type === 'pointercancel') return;
-      if (Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy) < CARD_DRAG_THRESHOLD) tapHandOrDouble(i, no);
+      if (Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy) < CARD_DRAG_THRESHOLD) tapHandOrDouble(i, no);else if (mode === 'attack' && myTurn && !Object.keys(d.targets).length && attackOpts.some(o => o.hand.includes(i)) && !(sel && pickSet.includes(i))) tapHand(i);
     };
     window.addEventListener('pointermove', onMove, {
       passive: false
@@ -98786,6 +98816,21 @@ const CardBattleBoard = ({
       })
     }, React.createElement(CardFitLabel, null, picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了')));
     const useBtn = sel && monChosen !== undefined && finalOpts.length && !needTarget;
+    const usePv = useBtn ? (() => {
+      try {
+        const nx = cardApplyAction(db, st, finalOpts[0]);
+        if (!nx) return null;
+        const pdn = nx.pending && nx.pending.attacker === CARD_ME ? nx.pending : null;
+        return {
+          guts: Math.max(0, me.guts.length - nx.players[CARD_ME].guts.length),
+          dmg: pdn ? pdn.base * pdn.mult : null,
+          all: !!(pdn && pdn.targets.length > 1)
+        };
+      } catch (_) {
+        return null;
+      }
+    })() : null;
+    const useLabel = usePv ? `使う(${usePv.dmg !== null ? `${usePv.all ? '全体に' : ''}ダメージ${usePv.dmg}・` : ''}ガッツ${usePv.guts})` : '使う';
     return React.createElement(React.Fragment, null, useBtn && finalOpts.some(o => o.split || o.fuse) ? React.createElement("button", {
       type: "button",
       "data-card-split-open": true,
@@ -98804,6 +98849,11 @@ const CardBattleBoard = ({
       type: "button",
       className: `${btn} mh-button-primary`,
       onClick: () => askUse(finalOpts[0])
+    }, React.createElement(CardFitLabel, null, useLabel)) : setPending ? React.createElement("button", {
+      type: "button",
+      "data-card-use-wait": true,
+      disabled: true,
+      className: `${btn} mh-button-primary`
     }, React.createElement(CardFitLabel, null, "使う")) : null, React.createElement("button", {
       type: "button",
       disabled: tutOff('end'),
@@ -98813,7 +98863,7 @@ const CardBattleBoard = ({
       })
     }, React.createElement(CardFitLabel, null, "攻撃おわり → ガッツへ")));
   })();
-  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : setPending ? '組み合わせを選んでね' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : attackOpts.length ? '技をタップ → 相手をタップ' : '使える技がありません →「攻撃おわり」でガッツへ' : mode === 'guard' ? guardOpts.length ? '明るいカードで守れます' : '使える回避・防御はありません' : mode === 'guts' ? gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
+  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : setPending ? '光っている札を押して足してね' : needTarget ? '狙う相手をタップ' : pickCands.length ? '「使う」か、光っている札を足す' : '「使う」をタップ' : attackOpts.length ? '技をタップ → 相手をタップ' : '使える技がありません →「攻撃おわり」でガッツへ' : mode === 'guard' ? guardOpts.length ? '明るいカードで守れます' : '使える回避・防御はありません' : mode === 'guts' ? gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
   const tutorBox = tutorial && tutSay ? (() => {
     const dra = ASSISTANTS.find(a => a.id === 'dra');
     const head = tutQ[0];
@@ -99241,19 +99291,7 @@ const CardBattleBoard = ({
   }, cardGuardBlockReasons(db, st).join(' / ')), !guide && !tutorial && hint && React.createElement("div", {
     className: "mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900",
     style: JA_LABEL_STYLE
-  }, jaWrap(hint)), mode === 'attack' && sel && monChosen !== undefined && sets.length > 1 && React.createElement("div", {
-    className: "mb-1 flex shrink-0 flex-wrap justify-center gap-1 px-2"
-  }, sets.slice().reverse().map(s => React.createElement("button", {
-    key: s,
-    type: "button",
-    "data-card-set": s,
-    onClick: () => setSel({
-      ...sel,
-      mon: monChosen,
-      set: s
-    }),
-    className: `whitespace-nowrap rounded-lg border font-black ${tiny ? 'px-1.5 py-0.5 text-[11px]' : 'px-2 py-1 text-[12px]'} ${s === setChosen ? 'border-amber-300 bg-amber-500/25' : 'border-white/20 bg-slate-800'}`
-  }, JSON.parse(s).filter(i => i !== sel.hand).length ? JSON.parse(s).filter(i => i !== sel.hand).map(i => `＋${cardOf(db, me.hand[i]).name}`).join('') : `${cardOf(db, me.hand[sel.hand]).name}だけ`))), watch ? React.createElement("div", {
+  }, jaWrap(hint)), watch ? React.createElement("div", {
     "data-card-hand": true,
     "data-card-watch-hand": CARD_ME,
     className: "flex shrink-0 items-center justify-center gap-2 px-1 pb-1 pt-1",
@@ -99276,8 +99314,10 @@ const CardBattleBoard = ({
     const no = me.hand[i];
     const c = cardOf(db, no);
     const on = handUsable(i);
-    const up = sel && sel.hand === i || picks.includes(i) || setChosen && JSON.parse(setChosen).includes(i);
-    const why = mode === 'guard' && !tutorial && !on ? cardGuardWhyShort(db, st, c) : null;
+    const up = sel && sel.hand === i || picks.includes(i) || pickSet.includes(i);
+    const cand = mode === 'attack' && pickCands.includes(i);
+    const pickTag = mode !== 'attack' || !sel ? null : sel.hand === i ? '選んだ' : pickSet.includes(i) ? '足した' : cand ? '候補' : null;
+    const why = tutorial || on ? null : mode === 'guard' ? cardGuardWhyShort(db, st, c) : mode === 'attack' && myTurn && !sel ? (w => w === '今は使えない' ? null : w)(attackWhyShort(i)) : null;
     return React.createElement("div", {
       key: `${no}-${i}`,
       "data-card-hand-card": i,
@@ -99299,8 +99339,11 @@ const CardBattleBoard = ({
       style: {
         WebkitUserDrag: 'none'
       },
-      className: `w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`
-    }), why && React.createElement("span", {
+      className: `w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : cand ? 'outline outline-[3px] outline-emerald-400 shadow-[0_0_12px_#34d399]' : ''}`
+    }), pickTag && React.createElement("span", {
+      "data-card-hand-pick": pickTag,
+      className: `pointer-events-none absolute left-1/2 top-0 z-[2] -translate-x-1/2 -translate-y-1/3 whitespace-nowrap rounded-md px-1 ${handTiny ? 'text-[9px]' : 'text-[10px]'} font-black leading-tight shadow-[0_2px_4px_#000] ${pickTag === '候補' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-slate-950'}`
+    }, pickTag), why && React.createElement("span", {
       "data-card-why": true,
       className: `pointer-events-none absolute left-1/2 top-[22%] z-[2] max-w-[110%] -translate-x-1/2 rounded-md border border-rose-300/80 bg-rose-950/95 px-1 py-px text-center ${handTiny ? 'text-[9px]' : 'text-[10px]'} font-black leading-tight text-rose-100 shadow-[0_2px_4px_#000]`,
       style: JA_WRAP_STYLE
