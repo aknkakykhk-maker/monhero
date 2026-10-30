@@ -406,7 +406,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
               {frameTabs.map((x) => (
                 <button key={x.k} type="button" data-card-tactics-frame={x.k} onClick={() => { Audio_.fgSe.tap(); setFrame(x.k); }}
                   className={`min-w-0 flex-1 rounded-lg border-2 px-0.5 py-1 text-center ${frame === x.k ? 'border-amber-300 bg-amber-900/40' : 'border-slate-700 bg-slate-900'}`}>
-                  {x.mon ? <img src={CARD_IMG(x.mon.img)} alt="" className="mx-auto h-[30px] w-[22px] rounded object-cover"/> : <span className="block text-[18px] leading-[30px]">{x.icon}</span>}
+                  {x.mon ? <img src={CARD_IMG(x.mon.img)} alt="" className="mx-auto h-[30px] w-[22px] rounded object-cover"/> : <span className="block text-[18px] leading-[30px]">{cardIconNode(x.icon, 22)}</span>}
                   <span className="block truncate text-[10px] font-black text-white">{x.label}</span>
                   <span className="block text-[9px] font-bold text-slate-400">{x.sub}</span>
                 </button>

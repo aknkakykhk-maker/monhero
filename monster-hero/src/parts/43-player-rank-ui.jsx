@@ -132,7 +132,7 @@ function PlayerRankUp({ kind = 'beat', from = 1, to = 1, gains = [] }) {
       </div>
       {gains.length > 0 && <ul data-player-rank-up-gains className="mt-1.5 flex flex-wrap justify-center gap-1.5">
         {gains.map((g, i) => <li key={i} className="rounded-lg border border-fuchsia-200/40 bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-amber-100">
-          {g.icon && <span aria-hidden="true">{g.icon} </span>}<span style={JA_WRAP_STYLE}>{jaWrap(String(g.text || ''))}</span>
+          {g.icon && <span aria-hidden="true">{cardIconNode(g.icon, 14)} </span>}<span style={JA_WRAP_STYLE}>{jaWrap(String(g.text || ''))}</span>
         </li>)}
       </ul>}
     </div>
@@ -317,7 +317,7 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null })
       role="button" tabIndex={0} aria-label={view.done ? `${k.label} 経験値 +${add}` : '押すと最後まで飛ばす'}
       onClick={() => { if (!view.done) finish(); }} onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !view.done) { e.preventDefault(); finish(); } }}>
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-        <span className={`self-center rounded-full px-2 py-0.5 text-[10px] font-black ${k.pill}`}><span aria-hidden="true">{k.icon} </span>{k.label}</span>
+        <span className={`self-center rounded-full px-2 py-0.5 text-[10px] font-black ${k.pill}`}><span aria-hidden="true">{cardIconNode(k.icon, 12)} </span>{k.label}</span>
         <b ref={addRef} data-player-rank-gain-add className="mh-prxb-add">{`経験値 +${view.shown.toLocaleString()}`}</b>
         <span className="text-[12px] font-black text-white tabular-nums">{view.up ? `(ランク${startInfo.rank}→${endInfo.rank})` : `(ランク${view.rank})`}</span>
       </div>
@@ -574,7 +574,7 @@ function PlayerRankUpFx({ kind = 'beat', from = 1, to = 1, gains = [], onClose =
           {list.length > 0 && <ul className="mh-prfx-gains" aria-label="もらった物">
             {list.map((g, i) => (
               <li key={i} className={`mh-prfx-gain${g.bonus ? ' bonus' : ''}`} style={{ '--d': `${gainStart + i * 0.35}s` }}>
-                {g.icon && <span className="ico" aria-hidden="true">{g.icon}</span>}
+                {g.icon && <span className="ico" aria-hidden="true">{cardIconNode(g.icon, 16)}</span>}
                 <span className="min-w-0"><b>{String(g.text || '')}</b>{g.note && <small style={JA_WRAP_STYLE}>{jaWrap(String(g.note))}</small>}</span>
               </li>
             ))}
