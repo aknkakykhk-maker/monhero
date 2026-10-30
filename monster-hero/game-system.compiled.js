@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 25914920d6fe2e5c
+// source-sha256: 6f280277c1f12d8c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -118038,6 +118038,17 @@ const CardTourEntry = ({
     className: "w-full rounded-2xl border-2 border-amber-500/70 bg-amber-100 py-2.5 text-[14px] font-black text-amber-900"
   }, mine ? 'デッキと戦術カードを変える' : 'デッキを登録する'));
 };
+const CARD_TOUR_REVEAL_CSS = `
+[data-card-tour-stamp]{display:inline-block;animation:mhTourStamp .32s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes mhTourStamp{0%{opacity:0;transform:scale(2.6) rotate(-12deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+[data-card-tour-row-glow="1"] > td:first-child > span{box-shadow:0 0 0 2px #fbbf24,0 0 14px 2px rgba(251,191,36,.75);border-radius:12px;animation:mhTourGlow 1.4s ease-in-out infinite alternate}
+[data-card-tour-row-glow="2"] > td:first-child > span{box-shadow:0 0 0 2px #e2e8f0,0 0 12px 2px rgba(226,232,240,.6);border-radius:12px}
+[data-card-tour-row-glow="3"] > td:first-child > span{box-shadow:0 0 0 2px #fb923c,0 0 12px 2px rgba(251,146,60,.6);border-radius:12px}
+@keyframes mhTourGlow{from{filter:brightness(1)}to{filter:brightness(1.35)}}
+[data-card-tour-banner]{animation:mhTourBanner .5s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes mhTourBanner{0%{opacity:0;transform:scale(1.8)}100%{opacity:1;transform:scale(1)}}
+`;
+const _cardTourRevealSeen = new Set();
 const CardTourGrid = ({
   view,
   stage,
@@ -118048,61 +118059,112 @@ const CardTourGrid = ({
   const seats = cardTourStageSeats(view, stage, grp);
   const ms = cardTourStageMatches(view, stage, grp);
   const size = seats.length;
+  const shown = ms.filter(m => m.winner !== null && m.visibleAt <= now).sort((x, y) => x.day - y.day || x.id - y.id);
+  const done = view.tour.status === 'done';
+  const revealKey = `${view.tour.id}|${stage}|${grp}`;
+  const [step, setStep] = useState(() => done && size && shown.length && !_cardTourRevealSeen.has(revealKey) ? 0 : null);
+  useEffect(() => {
+    if (step === null) return undefined;
+    _cardTourRevealSeen.add(revealKey);
+    if (step > shown.length) return undefined;
+    const gap = step === 0 ? 700 : Math.max(90, Math.min(300, Math.floor(2400 / Math.max(1, shown.length))));
+    const t = setTimeout(() => setStep(x => x === null ? null : x + 1), step === shown.length ? 1200 : gap);
+    return () => clearTimeout(t);
+  }, [step]);
   if (!size) return null;
-  const shown = ms.filter(m => m.winner !== null && m.visibleAt <= now);
+  const playing = step !== null && step <= shown.length;
+  const visible = playing ? shown.slice(0, step) : shown;
   const {
     rank,
     rec
-  } = cardTourStandings(size, shown.map(m => ({
+  } = cardTourStandings(size, visible.map(m => ({
     a: m.a,
     b: m.b,
     winner: m.winner,
     kos: m.kos
   })));
+  const decisive = stage === 'final' || (view.tour.groups || 1) <= 1;
+  const placeOf = i => {
+    if (!done || playing) return null;
+    const e = seats[i];
+    const p = decisive && Number.isInteger(e.place) ? e.place : rank.indexOf(i) + 1;
+    return p >= 1 && p <= 3 ? p : null;
+  };
   const cell = (i, j) => {
     if (i === j) return React.createElement("span", {
       className: "block h-full w-full bg-[linear-gradient(to_top_right,transparent_calc(50%-1px),rgba(148,163,184,.6),transparent_calc(50%+1px))]"
     });
     const m = ms.find(x => x.a === i && x.b === j || x.a === j && x.b === i);
     if (!m) return null;
+    const k = visible.indexOf(m);
+    if (playing && k < 0) return null;
     if (m.winner === null || m.visibleAt > now) return React.createElement("span", {
       className: "text-[9px] font-black text-slate-400"
     }, cardTourDayLabel(m.playOn).replace(/\(.\)$/, ''));
     const won = (m.winner === 0 ? m.a : m.b) === i;
-    return React.createElement("span", {
+    const mark = React.createElement("span", {
       className: `text-[16px] font-black ${won ? 'text-rose-400' : 'text-sky-400'}`
     }, won ? '○' : '×');
+    return playing ? React.createElement("span", {
+      "data-card-tour-stamp": true
+    }, mark) : mark;
   };
   return React.createElement("div", {
     "data-card-tour-grid": `${stage}-${grp}`,
-    className: "space-y-2"
-  }, React.createElement("div", {
-    className: "overflow-x-auto rounded-2xl bg-slate-950/70 p-2"
+    "data-card-tour-revealing": playing ? '1' : undefined,
+    className: "relative space-y-2"
+  }, React.createElement("style", null, CARD_TOUR_REVEAL_CSS), playing && React.createElement("button", {
+    type: "button",
+    "data-card-tour-reveal-skip": true,
+    onClick: () => setStep(null),
+    className: "absolute inset-0 z-10 flex flex-col items-center justify-between bg-transparent pb-1 pt-1"
+  }, React.createElement("b", {
+    "data-card-tour-banner": true,
+    className: "rounded-xl border-2 border-amber-300 bg-gradient-to-b from-amber-200 to-amber-500 px-5 py-1 text-[22px] font-black italic text-amber-950 shadow-lg"
+  }, "大会結果"), React.createElement("small", {
+    className: "rounded-full bg-slate-950/80 px-2 text-[11px] font-black text-slate-200"
+  }, "タップで飛ばす")), React.createElement("div", {
+    className: `overflow-x-auto rounded-2xl bg-slate-950/70 p-2 ${playing ? 'pt-16' : ''}`
   }, React.createElement("table", {
     className: "w-full border-separate border-spacing-[3px]"
   }, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", null), seats.map((_, j) => React.createElement("th", {
     key: j,
     className: "text-[12px] font-black text-amber-200"
-  }, j + 1)))), React.createElement("tbody", null, seats.map((e, i) => React.createElement("tr", {
-    key: e.seatId
-  }, React.createElement("td", {
-    className: "max-w-[118px]"
-  }, React.createElement("span", {
-    className: "flex items-center gap-1"
-  }, React.createElement("b", {
-    className: "w-4 shrink-0 text-center text-[12px] font-black text-amber-200"
-  }, i + 1), React.createElement(CardTourWho, {
-    e: e,
-    known: known
-  }))), seats.map((_, j) => React.createElement("td", {
-    key: j,
-    className: "h-9 w-9 min-w-[34px] rounded-md border border-slate-600 bg-slate-900 p-0 text-center align-middle"
-  }, cell(i, j)))))))), React.createElement("div", {
+  }, j + 1)))), React.createElement("tbody", null, seats.map((e, i) => {
+    const p = placeOf(i);
+    return React.createElement("tr", {
+      key: e.seatId,
+      "data-card-tour-row-glow": p || undefined
+    }, React.createElement("td", {
+      className: "max-w-[118px]"
+    }, React.createElement("span", {
+      className: "flex items-center gap-1"
+    }, React.createElement("b", {
+      className: "w-4 shrink-0 text-center text-[12px] font-black text-amber-200"
+    }, i + 1), React.createElement(CardTourWho, {
+      e: e,
+      known: known
+    }), p && React.createElement("b", {
+      "data-card-tour-place": p,
+      className: `shrink-0 rounded-md px-1 text-[11px] font-black ${p === 1 ? 'bg-amber-400 text-amber-950' : p === 2 ? 'bg-slate-200 text-slate-900' : 'bg-orange-400 text-orange-950'}`
+    }, `${p}位`))), seats.map((_, j) => React.createElement("td", {
+      key: j,
+      className: "h-9 w-9 min-w-[34px] rounded-md border border-slate-600 bg-slate-900 p-0 text-center align-middle"
+    }, cell(i, j))));
+  })))), done && !playing && shown.length > 0 && React.createElement("button", {
+    type: "button",
+    "data-card-tour-reveal-replay": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setStep(0);
+    },
+    className: "ml-auto block rounded-xl border-2 border-amber-500/70 bg-amber-100 px-3 py-1 text-[12px] font-black text-amber-900"
+  }, "演出リプレイ"), !playing && React.createElement("div", {
     className: "rounded-2xl bg-slate-950/70 p-2.5 text-[12px] font-bold text-slate-200",
     style: JA_WRAP_STYLE
   }, React.createElement("b", {
     className: "text-amber-200"
-  }, "いまの順位 "), rank.map((s, k) => `${k + 1}位 ${seats[s].mine ? 'あなた' : cardTourNameOf(seats[s], known)}(${rec[s].wins}勝${rec[s].losses}敗)`).join(' ・ '), React.createElement("div", {
+  }, done ? '順位 ' : 'いまの順位 '), (done && decisive && seats.every(e => Number.isInteger(e.place)) ? seats.map((_, i) => i).sort((x, y) => seats[x].place - seats[y].place) : rank).map((s, k) => `${k + 1}位 ${seats[s].mine ? 'あなた' : cardTourNameOf(seats[s], known)}(${rec[s].wins}勝${rec[s].losses}敗)`).join(' ・ '), React.createElement("div", {
     className: "mt-1 text-slate-400"
   }, jaWrap('勝ち数が同じときは、倒したモンスターの数 → 2人の対戦の勝ち負け → エントリーの早さの順で決まります'))));
 };
@@ -118314,7 +118376,6 @@ const CardTournament = ({
     if (!id) return;
     const v = await cardTourFetchView(id, selfId);
     setView(v);
-    if (v && v.tour.status === 'done') setTab(x => x === 'grid' ? 'result' : x);
   };
   useEffect(() => {
     setView(null);
@@ -118470,6 +118531,7 @@ const CardTournament = ({
     onClick: () => setStageKey(s.key),
     className: `rounded-full px-3 py-1 text-[12px] font-black ${s.key === st.key ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`
   }, s.label))), tab === 'grid' && React.createElement(CardTourGrid, {
+    key: `${t.id}|${st.key}`,
     view: view,
     stage: st.stage,
     grp: st.grp,

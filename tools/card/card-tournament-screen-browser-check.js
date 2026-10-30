@@ -9,13 +9,14 @@
 //   ② 総当たりの最中: 対戦表(○×・まだの試合は日付・自分の行)・いまの順位・4:00 より前の試合は結果を出さない
 //   ③ 試合: 発表ずみの日の結果と実況・解説・見返しは準備中・次の日の試合は「4:00 に出ます」
 //   ④ まだ会っていない助手は、顔と名前を出さない(「助手」)
-//   ⑤ 終わった大会: 最終順位・あなたのごほうび → 受け取ると onCredit に渡り、「受け取りました」
+//   ⑤ 終わった大会: まず対戦表で「大会結果」の演出(空の表 → ○× → 上位3人に印・演出リプレイ)・最終順位・あなたのごほうび → 受け取ると onCredit に渡り、「受け取りました」
 //   ⑥ 表が無いときは「準備中」・実行時エラーが無い
 const http = require('http'), path = require('path'), fs = require('fs');
 const ROOT = path.resolve(__dirname, '..', '..');
 const PORT = 8961;
 const SHOT = process.env.SHOT_DIR || '';
 let failed = 0;
+const J = (v) => JSON.stringify(v);
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.json': 'application/json', '.mp3': 'audio/mpeg', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.mp4': 'video/mp4' };
 const serve = () => new Promise((r) => { const s = http.createServer((req, res) => {
@@ -146,6 +147,20 @@ const doneEntries = [ent(0, { id: 'me', name: '検査ブリーダー', mine: tru
     // ⑤ 終わった大会
     tours = [tourDone];
     await mount();
+    // 終わった大会は、まず対戦表で「大会結果」の演出(空の表 → ○×が押される → 上位3人に印)
+    await T('[data-card-tour-revealing="1"]').waitFor({ timeout: 15000 });
+    const emptyAtStart = await T('[data-card-tour-grid] tbody').innerText();
+    check('⑤ 演出: はじめは「大会結果」の帯と、○×の無い表', /大会結果/.test(await text()) && !/[○×]/.test(emptyAtStart), emptyAtStart.replace(/\s+/g, ' ').slice(0, 120));
+    await shot(page, '4a-演出の途中');
+    await T('[data-card-tour-reveal-replay]').waitFor({ timeout: 15000 });
+    const places = await T('[data-card-tour-place]').allInnerTexts();
+    check('⑤ 演出のあと: ○×が全部入り、上位3人の行に 1位・2位・3位 の印', J(places) === J(['1位', '2位', '3位']) && (await T('[data-card-tour-grid] [data-card-tour-row-glow="1"]').count()) === 1, J(places));
+    await shot(page, '4b-演出のあと');
+    await T('[data-card-tour-reveal-replay]').click();
+    await T('[data-card-tour-revealing="1"]').waitFor({ timeout: 5000 });
+    await T('[data-card-tour-reveal-skip]').click();
+    check('⑤ 「演出リプレイ」でもう一度流れ、タップで飛ばせる', (await T('[data-card-tour-revealing="1"]').count()) === 0 && (await T('[data-card-tour-place]').count()) === 3);
+    await T('[data-card-tour-tab="result"]').click();
     await T('[data-card-tour-result]').waitFor({ timeout: 15000 });
     s = await text();
     check('⑤ 最終順位と、あなたのごほうび(1位・3勝: 3000+300・ビートPだけで、表に称号があっても出さない)', /最終順位/.test(s) && /1位/.test(s) && /ビートP 3,300/.test(s) && !/称号|検査杯 優勝|プロフィール枠/.test(s), s.slice(0, 300));
