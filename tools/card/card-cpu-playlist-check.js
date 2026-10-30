@@ -65,9 +65,15 @@ check('前の1曲えらび(mh_card_bgm_v1 の cpu)は読み方を変えていな
 check('⑦ ランダムの値は random', P.CARD_BGM_RANDOM === 'random');
 const rb = plain(P.normalizeCardBgm({ top: 'random', cpu: 'melo_toriko', pvp: 'random' }, isTrack));
 check('⑦ トップ画面・マルチ対戦は「ランダム」を読める(cpu はそのまま)', rb.top === 'random' && rb.pvp === 'random' && rb.cpu === 'melo_toriko', JSON.stringify(rb));
-check('⑦ 選んでいない人・前の値はそのまま(ランダムにならない)', JSON.stringify(plain(P.normalizeCardBgm(oldBgm, isTrack))) === JSON.stringify(oldBgm) && plain(P.normalizeCardBgm(null, isTrack)).top === 'atsu_cup_theme');
+check('⑦ 選んでいない人・前の値はそのまま(ランダムにならない)', JSON.stringify(plain(P.normalizeCardBgm(oldBgm, isTrack))) === JSON.stringify({ ...oldBgm, watch: oldBgm.pvp }) && plain(P.normalizeCardBgm(null, isTrack)).top === 'atsu_cup_theme');
 const rp = plain(P.cardNormalizeCpuPlaylist({ v: 1, assistants: { mua: ['random'], kiki: ['t1', 'random', 't2'] } }, isTrack));
 check('⑦ 助手の並びの「ランダム」は [random] の1つだけで読む(ほかの助手はそのまま)', JSON.stringify(rp.assistants.mua) === '["random"]' && JSON.stringify(rp.assistants.kiki) === '["random"]' && rp.assistants.atsu[0] === 'melo_against_my_own_shadow', JSON.stringify(rp.assistants));
+// ⑧ 観戦の曲(2026-10-30 社長「観戦中の音楽も変えられるようにして」): 足した項目。無い人はマルチ対戦の曲(ランダムならランダム)
+const w0 = plain(P.normalizeCardBgm({ top: 'atsu_cup_theme', cpu: 'auto', pvp: 'melo_toriko' }, isTrack));
+const w1 = plain(P.normalizeCardBgm({ pvp: 'random' }, isTrack));
+const w2 = plain(P.normalizeCardBgm({ pvp: 'melo_toriko', watch: 'eiki_boss' }, isTrack));
+const w3 = plain(P.normalizeCardBgm({ watch: 'random' }, isTrack));
+check('⑧ 観戦の曲は、無ければマルチ対戦の曲・選んだ曲はそのまま・ランダムも読める', w0.watch === 'melo_toriko' && w1.watch === 'random' && w2.watch === 'eiki_boss' && w3.watch === 'random' && plain(P.normalizeCardBgm(null, isTrack)).watch === 'ichika_battle', JSON.stringify([w0.watch, w1.watch, w2.watch, w3.watch]));
 const p84 = fs.readFileSync(path.join(PARTS, '84-screen-card-battle.jsx'), 'utf8');
 check('⑦ 84: 鳴らすときはランダムを曲ぜんぶの並びにする(トップ・マルチ・助手と対戦)', /onBgm\(cardBgmOf\(topBgm\)\)/.test(p84) && /onBgm\(cardBgmOf\(save\.bgm\.pvp\)/.test(p84) && /onBgm\(cardBgmOf\(cardCpuPlaylistOf\(/.test(p84) && !/onBgm\(save\.bgm\.top\)/.test(p84));
 
@@ -173,7 +179,7 @@ const screen = fs.readFileSync(path.join(PARTS, '84-screen-card-battle.jsx'), 'u
 const app = fs.readFileSync(path.join(PARTS, '60-app.jsx'), 'utf8');
 const audio = fs.readFileSync(path.join(PARTS, '14-audio.jsx'), 'utf8');
 check('助手と対戦は、助手ごとの曲の並びで始める(前の1曲えらびを使わない)', /onBgm\((cardBgmOf\()?cardCpuPlaylistOf\(save\.cpuPlaylist, pick\.who\)\)/.test(screen) && !/cardCpuBgm\(/.test(screen));
-check('オプションに助手と対戦の1曲えらびの欄が無い(トップ画面・マルチ対戦の欄は残る)', /\[\['top', 'トップ画面'\], \['pvp', 'マルチ対戦'\]\]/.test(screen) && !/option value="auto"/.test(screen));
+check('オプションに助手と対戦の1曲えらびの欄が無い(トップ画面・マルチ対戦・観戦の欄は残る)', /\[\['top', 'トップ画面'\], \['pvp', 'マルチ対戦'\](, \['watch', '観戦'\])?\]/.test(screen) && !/option value="auto"/.test(screen));
 check('並びを直したときに書くのは新しいキーだけ(mh_card_bgm_v1 を書き換えない)', /persist\(\{ cpuPlaylist: cardNormalizeCpuPlaylist\(/.test(screen) && !/persist\(\{[^}]*bgm:[^}]*cpuPlaylist/.test(screen));
 check('練習試合は、みゅあの曲のまま(並びにしない)', /onBgm\(CARD_AI_BGM\.mua\)/.test(screen));
 check('助手ごとのはじめの曲は1か所(82)から作る', /const CARD_AI_BGM = Object\.freeze\(Object\.fromEntries\(Object\.entries\(CARD_CPU_PLAYLIST_DEFAULT\)/.test(screen));

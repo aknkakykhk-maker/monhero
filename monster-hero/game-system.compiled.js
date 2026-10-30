@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 446ad87844b1f1df
+// source-sha256: d8e53e0fe38fd11f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -92308,7 +92308,8 @@ const normalizeCardBgm = (v, isTrack = () => true) => {
   return {
     top: pick(r.top, CARD_BGM_DEFAULT.top),
     cpu: r.cpu === 'auto' || typeof r.cpu === 'string' && isTrack(r.cpu) ? r.cpu : CARD_BGM_DEFAULT.cpu,
-    pvp: pick(r.pvp, CARD_BGM_DEFAULT.pvp)
+    pvp: pick(r.pvp, CARD_BGM_DEFAULT.pvp),
+    watch: pick(r.watch, pick(r.pvp, CARD_BGM_DEFAULT.pvp))
   };
 };
 const CARD_PLAYLIST_MAX = 5;
@@ -101618,6 +101619,21 @@ const CardBattleScreen = ({
   useEffect(() => {
     if (screen === 'CARD_TOP' && topBgm && onBgm) onBgm(cardBgmOf(topBgm));
   }, [screen, topBgm]);
+  const watchBgm = save && save.bgm ? save.bgm.watch : null;
+  const watchingRef = useRef(false);
+  useEffect(() => {
+    if (typeof CARD_WATCH === 'undefined' || !onBgm) return undefined;
+    const on = w => {
+      const now = !!w && w.phase !== 'idle';
+      if (now === watchingRef.current) return;
+      watchingRef.current = now;
+      if (now) {
+        if (watchBgm) onBgm(cardBgmOf(watchBgm));
+      } else if (topBgm) onBgm(cardBgmOf(topBgm));
+    };
+    on(CARD_WATCH.get());
+    return CARD_WATCH.subscribe(on);
+  }, [watchBgm, topBgm]);
   useEffect(() => {
     if (screen === 'CARD_TOP' && game && !result) {
       if (openIdRef.current === game.key) void settleOpenCpu({
@@ -103462,12 +103478,12 @@ const CardBattleScreen = ({
       className: "text-[13px] font-black text-white"
     }, "音"), React.createElement("b", {
       className: "mt-2 block text-[12px] font-black text-slate-200"
-    }, "対戦のBGM"), [['top', 'トップ画面'], ['pvp', 'マルチ対戦']].map(([k, label]) => React.createElement("label", {
+    }, "対戦のBGM"), [['top', 'トップ画面'], ['pvp', 'マルチ対戦'], ['watch', '観戦']].map(([k, label]) => React.createElement("label", {
       key: k,
       className: "mt-2 block text-left"
     }, React.createElement("span", {
       className: "text-[11px] font-black text-slate-300"
-    }, label, k === 'pvp' && !(typeof cardPvpOpen === 'function' && cardPvpOpen()) ? '(準備中)' : ''), React.createElement("div", {
+    }, label, k !== 'top' && !(typeof cardPvpOpen === 'function' && cardPvpOpen()) ? '(準備中)' : ''), React.createElement("div", {
       className: "mt-1 flex gap-2"
     }, React.createElement("select", {
       "data-card-bgm-select": k,
@@ -103487,7 +103503,7 @@ const CardBattleScreen = ({
     }, "ランダム(毎回ちがう曲)"), (typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map(t => React.createElement("option", {
       key: t.id,
       value: t.id
-    }, t.name, t.id === CARD_BGM_DEFAULT[k] ? '(はじめの曲)' : ''))), bgmPreview && (save.bgm[k] === CARD_BGM_RANDOM ? React.createElement("button", {
+    }, t.name, t.id === (CARD_BGM_DEFAULT[k] || CARD_BGM_DEFAULT.pvp) ? '(はじめの曲)' : ''))), bgmPreview && (save.bgm[k] === CARD_BGM_RANDOM ? React.createElement("button", {
       type: "button",
       "data-card-bgm-preview": k,
       onClick: () => {

@@ -177,6 +177,9 @@ const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); aw
     const w0 = await C.evaluate(() => { const w = CARD_WATCH.get(); return { n: w.n, hostN: w.hostN, side: w.side, phase: w.phase }; });
     check('② 途中から見始めても、はじめからの手をもらって、いまの場面まで追いつく', caught && w0.n >= 3, JSON.stringify(w0));
     check('② フレンド(ホストでない B)が下に出る', w0.side === 1);
+    // ⑩ 観戦を始めたら観戦の曲(2026-10-30。まだ選んでいない人はマルチ対戦の曲 ichika_battle)
+    const watchBgm = await C.waitForFunction(() => { const p = (Audio_.diagnose().playing || []).find((x) => x.kind === 'bgm'); return p && p.key === 'ichika_battle' ? p.key : null; }, null, { timeout: 10000 }).then((h) => h.jsonValue()).catch(() => null);
+    check('⑩ 観戦を始めると観戦の曲(選んでいなければマルチ対戦の曲)に替わる', watchBgm === 'ichika_battle', String(watchBgm));
     const eyesA = await A.locator('[data-card-pvp-eyes]').waitFor({ timeout: 8000 }).then(() => A.locator('[data-card-pvp-eyes]').getAttribute('data-card-pvp-eyes')).catch(() => null);
     const eyesB = await B.locator('[data-card-pvp-eyes]').waitFor({ timeout: 8000 }).then(() => B.locator('[data-card-pvp-eyes]').getAttribute('data-card-pvp-eyes')).catch(() => null);
     check('③ 見ている人の数が、2人の対戦の画面に「👀 1」と出る', eyesA === '1' && eyesB === '1', `${eyesA} / ${eyesB}`);
