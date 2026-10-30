@@ -180,10 +180,10 @@ const cardPvpVerify = (db, { myDeck, mySeed, foeDeck, foeSeed, first, names, his
   let st = cardPvpTruthGame(db, { myDeck, mySeed, foeDeck, foeSeed, first, names });
   for (let n = 0; n < history.length; n++) {
     const e = history[n];
-    if (cardPvpDecider(st) !== e.by) return { ok: false, why: `${n + 1}手目: 番でない人の手` };
+    if (cardPvpDecider(st) !== e.by) return { ok: false, why: `${n + 1}手目: ターンでない人の手` };
     if (e.by === 1) {
       for (const [k, no] of Object.entries(e.reveal || {})) {
-        if (st.players[1].hand[Number(k)] !== no) return { ok: false, why: `${n + 1}手目: 相手の手札に無い札を使った` };
+        if (st.players[1].hand[Number(k)] !== no) return { ok: false, why: `${n + 1}手目: 相手の手札に無いカードを使った` };
       }
     }
     const next = cardApplyAction(db, st, e.act);
@@ -1164,7 +1164,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
             {r.verify === 'ng' && <div className="text-[12px] font-bold text-slate-300">無効の試合なので、ビートPとクイック周回は入りません</div>}
             {got && (<>
               <div data-card-pvp-reward className="text-[13px] font-black text-amber-200">もらったビートP: {got.point}</div>
-              {got.short && <div className="mt-1 text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('自分の番を3回やる前に終わったので、ビートPとクイック周回は入りません')}</div>}
+              {got.short && <div className="mt-1 text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('自分のターンを3回やる前に終わったので、ビートPとクイック周回は入りません')}</div>}
               {!got.short && got.loops > 0 && (
                 <div data-card-quick-loops={got.quick ? got.loops : 0} className="mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5">
                   {got.quick
