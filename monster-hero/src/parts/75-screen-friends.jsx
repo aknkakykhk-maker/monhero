@@ -242,7 +242,8 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
     const row = [...box.querySelectorAll('[data-friend-row]')].find((el) => el.getAttribute('data-friend-row') === memo.rowId);
     if (row) {
       const b = box.getBoundingClientRect(), r = row.getBoundingClientRect();
-      if (r.top < b.top || r.bottom > b.bottom) row.scrollIntoView({ block: 'center' });
+      // 一覧の箱だけを動かす(scrollIntoView は外側の画面まで動かすので使わない。viewport-height-check)
+      if (r.top < b.top || r.bottom > b.bottom) box.scrollTop += (r.top - b.top) - (b.height - r.height) / 2;
     }
   }, [selected]);
   const openProfile = async (view) => {

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 32268105cb141d4c
+// generated-sha256: 8cd6458b0b599a30
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -47678,7 +47678,8 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
     const row = [...box.querySelectorAll('[data-friend-row]')].find((el) => el.getAttribute('data-friend-row') === memo.rowId);
     if (row) {
       const b = box.getBoundingClientRect(), r = row.getBoundingClientRect();
-      if (r.top < b.top || r.bottom > b.bottom) row.scrollIntoView({ block: 'center' });
+      // 一覧の箱だけを動かす(scrollIntoView は外側の画面まで動かすので使わない。viewport-height-check)
+      if (r.top < b.top || r.bottom > b.bottom) box.scrollTop += (r.top - b.top) - (b.height - r.height) / 2;
     }
   }, [selected]);
   const openProfile = async (view) => {
