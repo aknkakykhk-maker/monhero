@@ -680,25 +680,23 @@ const CardRankChip = ({ xp = 0, onOpen = null, showName = true, cls = '' }) => {
     </button>
   );
 };
-// 札を押した先: 大きい札・棒・これからもらえる物・経験値のたまり方
-const CardRankDetail = ({ xp = 0, onClose }) => {
-  const info = cardLevelInfo(xp);
-  const up = cardRankUpcoming(info.level);
-  return (
-    <div data-card-rank-detail role="dialog" aria-modal="true" aria-label="カードランク" className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4" onClick={onClose}>
-      <div className="w-full max-w-[340px] rounded-2xl border-2 border-amber-200/70 bg-gradient-to-b from-violet-950 to-slate-950 p-4 text-white" onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-center"><PlayerRankBadge kind="card" rank={info.level} size="lg"/></div>
-        <div className="mt-3"><PlayerRankGauge kind="card" info={{ rank: info.level, into: info.into, need: info.need }} note={`次のランクまで あと${(info.need - info.into).toLocaleString()}`}/></div>
-        <b className="mt-3 block text-[13px] font-black text-amber-200">これからもらえる物</b>
-        <ul data-card-rank-upcoming className="mt-1 space-y-1 rounded-xl bg-black/35 px-2.5 py-2 text-[12px] font-bold leading-snug">
-          {up.map((u) => <li key={u.rank} style={JA_WRAP_STYLE}><b className="text-amber-100">{`ランク${u.rank}`}</b>{` … ${u.text}`}</li>)}
-        </ul>
-        <p className="mt-2 text-[11px] font-bold leading-relaxed text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('フリー対戦・マルチ対戦で戦うと経験値がたまります。強い相手ほど多く、マルチがいちばん多くたまります。その日はじめての勝ちは +30。投了・練習試合ではたまりません。')}</p>
-        <button type="button" data-card-rank-detail-close onClick={() => { Audio_.fgSe.tap(); onClose && onClose(); }} className="mh-button mt-3 min-h-[44px] w-full rounded-xl text-[14px] font-black">とじる</button>
-      </div>
-    </div>
-  );
+// そのランクに上がったときにもらえる物を1つずつ(43 のごほうびの一覧 PlayerRankRewards に渡す)。got はもう上がったランクか
+//   ビートP(ランク×100)・5ランクごとのおまけ(ビートP ランク×200・カードパック券)・戦術カードをセットできる数が増えるランク(言い方は cardLevelFrameText)
+const cardRankRewardItems = (r, got = false) => {
+  if (!(r >= 2)) return [];
+  const g = cardRankRewardOf(r), frame = CARD_LEVEL_FRAMES.find((f) => f.at === r), bonus = r % 5 === 0 ? r * 200 : 0;
+  return [
+    { icon: '💰', text: `ビートP ${(g.point - bonus).toLocaleString()}` },
+    ...(bonus ? [{ icon: '💰', text: `ビートP ${bonus.toLocaleString()}`, bonus: true }] : []),
+    ...(g.tickets ? [{ icon: '🎟️', text: `カードパック券 ${g.tickets}枚`, bonus: true }] : []),
+    ...(frame ? [{ icon: '🧠', text: cardLevelFrameText(frame, got) }] : []),
+  ];
 };
+// 札を押した先: 大きい札・棒・ランクごとのごほうびの一覧・経験値のたまり方(2026-10-30 社長「報酬が全部見れるように」。43 の共通の画面。ビートランクと同じ)
+const CardRankDetail = ({ xp = 0, onClose }) => (
+  <PlayerRankDetail kind="card" xp={xp} rewardsOf={cardRankRewardItems} onClose={onClose}
+    how={'フリー対戦・マルチ対戦で戦うと経験値がたまります。強い相手ほど多く、マルチがいちばん多くたまります。その日はじめての勝ちは +30。投了・練習試合ではたまりません。'}/>
+);
 // 対戦の結果: 経験値の札(棒が前の量から伸びる)と、ランクが上がったときの演出(43 の PlayerRankUpFx。ビートランクと同じ。帯が変わると自動で豪華になる)。
 //   一度に何ランク上がっても、上がった先のランクで1回だけ出し、もらった物をまとめて渡す。5ランクごとのおまけは bonus(桃色の光)
 const cardRankFxGains = (gain) => {

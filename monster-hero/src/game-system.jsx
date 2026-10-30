@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f553ab0fb44d617d
+// generated-sha256: 2bfc55590d9825ad
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10178,6 +10178,17 @@ const beatRankTicketsFor = (rank) => {
   return r < 2 ? 0 : 1 + (r % 5 === 0 ? r : 0);
 };
 // そのランクに上がったときにもらえる物を、一目で分かる文に(「ビートP 1,300・セッション券 1枚」)
+// そのランクに上がったときにもらえる物を、1つずつ(ごほうびの一覧の画面用)。bonus は5ランクごとのおまけ
+const beatRankRewardItems = (rank) => {
+  const r = Math.max(0, Math.floor(Number(rank) || 0));
+  if (r < 2) return [];
+  const bonus = r % 5 === 0;
+  return [
+    { icon: '🎟️', text: `ビートP ${(r * 100).toLocaleString()}` },
+    { icon: '🎶', text: 'セッション券 1枚' },
+    ...(bonus ? [{ icon: '🎟️', text: `ビートP ${(r * 200).toLocaleString()}`, bonus: true }, { icon: '🎶', text: `セッション券 ${r.toLocaleString()}枚`, bonus: true }] : []),
+  ];
+};
 const beatRankRewardText = (rank) => `ビートP ${playerRankBeatPointsFor(rank).toLocaleString()}・セッション券 ${beatRankTicketsFor(rank).toLocaleString()}枚`;
 
 // { v:1, xp(経験値の合計), day(その日はじめての1曲を数えた日 JST 'YYYY-MM-DD'), dayFirst(その日の +30 を数えたか),
@@ -34730,6 +34741,76 @@ function PlayerRankStrip({ kind = 'beat', xp = 0 }) {
   );
 }
 
+// ==================== ランクごとのごほうびの一覧と、詳しい画面(2026-10-30 社長「カードランクもビートランクともにちゃんと報酬が全部見れるように作って」) ====================
+// rewardsOf(rank, got) → [{ icon, text, bonus }](got はもう上がったランクか。言い方を「〜なった/〜なる」で分けたいとき用)(そのランクに上がったときにもらえる物。bonus は5ランクごとのおまけ)。
+// ランク2から並べ、開いたときは今のランクの行が上に来るように送る。下まで送ると先を足していく(上限なし)。
+// 今のランクまでは「もらった」、次のランクは「次」と印を付ける。表示だけ(保存は触らない)
+const PLAYER_RANK_REWARDS_STEP = 30;
+function PlayerRankRewards({ kind = 'beat', rank = 1, rewardsOf, cls = '' }) {
+  const k = playerRankKind(kind);
+  const cur = Math.max(1, Math.floor(Number(rank) || 1));
+  const [last, setLast] = React.useState(Math.max(50, cur + 50));
+  const boxRef = React.useRef(null), curRef = React.useRef(null);
+  React.useEffect(() => {
+    const box = boxRef.current, row = curRef.current;
+    if (box && row) box.scrollTop = Math.max(0, row.offsetTop - 4);
+  }, []);
+  const onScroll = (e) => { const b = e.currentTarget; if (b.scrollTop + b.clientHeight >= b.scrollHeight - 80) setLast((n) => n + PLAYER_RANK_REWARDS_STEP); };
+  const rows = [];
+  for (let r = 2; r <= last; r++) rows.push(r);
+  return (
+    <div ref={boxRef} data-player-rank-rewards={kind} onScroll={onScroll} className={`relative max-h-[min(46vh,360px)] overflow-y-auto overscroll-contain rounded-xl bg-black/35 p-1.5 ${cls}`}>
+      <ul className="space-y-1">
+        {rows.map((r) => {
+          const got = r <= cur, next = r === cur + 1, items = (typeof rewardsOf === 'function' ? rewardsOf(r, got) : []) || [];
+          return (
+            <li key={r} ref={r === Math.max(2, cur) ? curRef : null} data-player-rank-reward-row={r} data-got={got ? 'true' : 'false'}
+              className={`flex items-start gap-2 rounded-lg border px-2 py-1.5 ${next ? `${k.border} bg-white/10` : r % 5 === 0 ? 'border-pink-300/40 bg-pink-500/10' : 'border-white/5 bg-slate-900/60'} ${got ? 'opacity-55' : ''}`}>
+              <div className="w-[52px] shrink-0 leading-tight">
+                <b className={`block text-[12px] font-black tabular-nums ${k.accent}`}>{`ランク${r}`}</b>
+                {got && <small className="block text-[9px] font-black text-emerald-300">✓ もらった</small>}
+                {next && <small className="block text-[9px] font-black text-amber-200">▶ 次</small>}
+              </div>
+              <ul className="min-w-0 flex-1 space-y-0.5 text-[11px] font-bold leading-snug text-slate-100">
+                {items.map((g, i) => (
+                  <li key={i} className="flex items-start gap-1">
+                    <span aria-hidden="true" className="shrink-0">{cardIconNode(g.icon, 12)}</span>
+                    <span className="min-w-0" style={JA_WRAP_STYLE}>{jaWrap(String(g.text || ''))}{g.bonus && <small className="ml-1 whitespace-nowrap rounded bg-pink-500/30 px-1 text-[9px] font-black text-pink-100">5ランクごとのおまけ</small>}</span>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          );
+        })}
+      </ul>
+      <button type="button" data-player-rank-rewards-more onClick={() => setLast((n) => n + PLAYER_RANK_REWARDS_STEP)}
+        className="mt-1.5 min-h-[40px] w-full rounded-lg border border-white/15 bg-slate-800/80 text-[12px] font-black text-slate-200">{`ランク${last + 1}から先も見る`}</button>
+    </div>
+  );
+}
+
+// 札を押した先の詳しい画面: 大きい札・棒・ランクごとのごほうびの一覧・経験値のたまり方(how)
+function PlayerRankDetail({ kind = 'beat', xp = 0, rewardsOf, how = '', onClose = null }) {
+  const k = playerRankKind(kind);
+  const info = playerRankInfo(xp);
+  const close = () => { if (typeof Audio_ !== 'undefined' && Audio_.fgSe) Audio_.fgSe.tap(); if (onClose) onClose(); };
+  return (
+    <div data-player-rank-detail={kind} role="dialog" aria-modal="true" aria-label={k.label} className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-3" onClick={close}>
+      <div className={`flex max-h-[calc(var(--mh-vh)-24px)] w-full max-w-[380px] flex-col rounded-2xl border-2 bg-gradient-to-b from-violet-950 to-slate-950 p-3 text-white ${k.border}`} onClick={(e) => e.stopPropagation()}>
+        {/* 背の低い画面(横向きのスマホ)では札を小さくして、ごほうびの一覧に高さを回す */}
+        <div className="flex shrink-0 justify-center [@media(max-height:480px)]:hidden"><PlayerRankBadge kind={kind} rank={info.rank} size="lg"/></div>
+        <div className="hidden shrink-0 justify-center [@media(max-height:480px)]:flex"><PlayerRankBadge kind={kind} rank={info.rank} size="sm"/></div>
+        <div className="mt-2 shrink-0"><PlayerRankGauge kind={kind} info={info} note={`次のランクまで あと${(info.need - info.into).toLocaleString()}`}/></div>
+        <b className={`mt-2 block text-[13px] font-black ${k.accent}`}>ランクごとのごほうび</b>
+        <p className="mb-1 text-[10px] font-bold text-slate-300 [@media(max-height:480px)]:hidden" style={JA_WRAP_STYLE}>{jaWrap('ランクが上がると、そのランクの物をもらえます。下へ送ると先のランクも見られます。')}</p>
+        <PlayerRankRewards kind={kind} rank={info.rank} rewardsOf={rewardsOf} cls="min-h-[96px] shrink"/>
+        {how && <p className="mt-2 shrink-0 text-[11px] font-bold leading-relaxed text-slate-300 [@media(max-height:480px)]:hidden" style={JA_WRAP_STYLE}>{jaWrap(how)}</p>}
+        <button type="button" data-player-rank-detail-close onClick={close} className="mh-button mt-2 min-h-[44px] w-full shrink-0 rounded-xl text-[14px] font-black">とじる</button>
+      </div>
+    </div>
+  );
+}
+
 // ランクが上がったときの演出。gains は [{ icon, text }](もらった物。カードは引く券・枠が増える知らせなど)
 function PlayerRankUp({ kind = 'beat', from = 1, to = 1, gains = [] }) {
   if (!(to > from)) return null;
@@ -50076,6 +50157,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     RHYTHM_MULTI.setCatalog(songIds, lengths);
   }, [songIds.join(',')]);
   const [codeInput, setCodeInput] = React.useState('');
+  const [beatRankOpen, setBeatRankOpen] = React.useState(false); // モードえらびの上のビートランクを押した先(ごほうびの一覧)
   const [message, setMessage] = React.useState('');
   const [searching, setSearching] = React.useState(null);
   const [countdown, setCountdown] = React.useState(null);
@@ -50544,12 +50626,16 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300">MONBEAT ・ SELECT MODE</small>
             <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider">モードえらび</b>
             {ms.beatPointText && <small data-rhythm-beat-point-balance className="block truncate text-[9px] font-black text-violet-200/90">{ms.beatPointText}</small>}
-            {/* ビートランク(2026-10-29 社長)。立ち絵を小さくしないよう、上の帯に細い1行で出す(ボタンの列には置かない) */}
-            {Number.isFinite(ms.beatRankXp) && <div className="mt-0.5"><PlayerRankStrip kind="beat" xp={ms.beatRankXp}/></div>}
+            {/* ビートランク(2026-10-29 社長)。立ち絵を小さくしないよう、上の帯に細い1行で出す(ボタンの列には置かない)。
+                押すと詳しい画面(ランクごとのごほうびの一覧)が開く(2026-10-30 社長「報酬が全部見れるように」。カードランクと同じ) */}
+            {Number.isFinite(ms.beatRankXp) && <div role="button" tabIndex={0} data-beat-rank-open aria-label="ビートランク。くわしく見る" className="mt-0.5 cursor-pointer active:scale-[.98]"
+              onClick={() => { Audio_.fgSe.tap(); setBeatRankOpen(true); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); Audio_.fgSe.tap(); setBeatRankOpen(true); } }}><PlayerRankStrip kind="beat" xp={ms.beatRankXp}/></div>}
           </div>
           {quickRunInfo && <RhythmQuickRunPill info={quickRunInfo} onRestart={onRestartQuickRun} onResume={onResumeQuickRun} widthClass="max-w-[42%]" />}
           <RhythmOrientationButton/>
         </header>
+        {beatRankOpen && Number.isFinite(ms.beatRankXp) && <PlayerRankDetail kind="beat" xp={ms.beatRankXp} rewardsOf={beatRankRewardItems}
+          how="曲を遊ぶと経験値がたまります。難しい難易度ほど多く、HELL がいちばん多くたまります。その日はじめての1曲は +30 です。" onClose={() => setBeatRankOpen(false)}/>}
         {ms.exiting && <div data-quick-run-exit-overlay className="absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center"><b className="text-sm font-black text-amber-200">周回を終えています…</b></div>}
         {/* 縦画面: 上に助手の立ち絵(余った高さを使って大きく)、下にボタン。
             横画面: 左に立ち絵、右にボタン(2026-10-03・ユーザー指摘「サイズ感悪い」で組み直し) */}
@@ -68768,25 +68854,23 @@ const CardRankChip = ({ xp = 0, onOpen = null, showName = true, cls = '' }) => {
     </button>
   );
 };
-// 札を押した先: 大きい札・棒・これからもらえる物・経験値のたまり方
-const CardRankDetail = ({ xp = 0, onClose }) => {
-  const info = cardLevelInfo(xp);
-  const up = cardRankUpcoming(info.level);
-  return (
-    <div data-card-rank-detail role="dialog" aria-modal="true" aria-label="カードランク" className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4" onClick={onClose}>
-      <div className="w-full max-w-[340px] rounded-2xl border-2 border-amber-200/70 bg-gradient-to-b from-violet-950 to-slate-950 p-4 text-white" onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-center"><PlayerRankBadge kind="card" rank={info.level} size="lg"/></div>
-        <div className="mt-3"><PlayerRankGauge kind="card" info={{ rank: info.level, into: info.into, need: info.need }} note={`次のランクまで あと${(info.need - info.into).toLocaleString()}`}/></div>
-        <b className="mt-3 block text-[13px] font-black text-amber-200">これからもらえる物</b>
-        <ul data-card-rank-upcoming className="mt-1 space-y-1 rounded-xl bg-black/35 px-2.5 py-2 text-[12px] font-bold leading-snug">
-          {up.map((u) => <li key={u.rank} style={JA_WRAP_STYLE}><b className="text-amber-100">{`ランク${u.rank}`}</b>{` … ${u.text}`}</li>)}
-        </ul>
-        <p className="mt-2 text-[11px] font-bold leading-relaxed text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('フリー対戦・マルチ対戦で戦うと経験値がたまります。強い相手ほど多く、マルチがいちばん多くたまります。その日はじめての勝ちは +30。投了・練習試合ではたまりません。')}</p>
-        <button type="button" data-card-rank-detail-close onClick={() => { Audio_.fgSe.tap(); onClose && onClose(); }} className="mh-button mt-3 min-h-[44px] w-full rounded-xl text-[14px] font-black">とじる</button>
-      </div>
-    </div>
-  );
+// そのランクに上がったときにもらえる物を1つずつ(43 のごほうびの一覧 PlayerRankRewards に渡す)。got はもう上がったランクか
+//   ビートP(ランク×100)・5ランクごとのおまけ(ビートP ランク×200・カードパック券)・戦術カードをセットできる数が増えるランク(言い方は cardLevelFrameText)
+const cardRankRewardItems = (r, got = false) => {
+  if (!(r >= 2)) return [];
+  const g = cardRankRewardOf(r), frame = CARD_LEVEL_FRAMES.find((f) => f.at === r), bonus = r % 5 === 0 ? r * 200 : 0;
+  return [
+    { icon: '💰', text: `ビートP ${(g.point - bonus).toLocaleString()}` },
+    ...(bonus ? [{ icon: '💰', text: `ビートP ${bonus.toLocaleString()}`, bonus: true }] : []),
+    ...(g.tickets ? [{ icon: '🎟️', text: `カードパック券 ${g.tickets}枚`, bonus: true }] : []),
+    ...(frame ? [{ icon: '🧠', text: cardLevelFrameText(frame, got) }] : []),
+  ];
 };
+// 札を押した先: 大きい札・棒・ランクごとのごほうびの一覧・経験値のたまり方(2026-10-30 社長「報酬が全部見れるように」。43 の共通の画面。ビートランクと同じ)
+const CardRankDetail = ({ xp = 0, onClose }) => (
+  <PlayerRankDetail kind="card" xp={xp} rewardsOf={cardRankRewardItems} onClose={onClose}
+    how={'フリー対戦・マルチ対戦で戦うと経験値がたまります。強い相手ほど多く、マルチがいちばん多くたまります。その日はじめての勝ちは +30。投了・練習試合ではたまりません。'}/>
+);
 // 対戦の結果: 経験値の札(棒が前の量から伸びる)と、ランクが上がったときの演出(43 の PlayerRankUpFx。ビートランクと同じ。帯が変わると自動で豪華になる)。
 //   一度に何ランク上がっても、上がった先のランクで1回だけ出し、もらった物をまとめて渡す。5ランクごとのおまけは bonus(桃色の光)
 const cardRankFxGains = (gain) => {
