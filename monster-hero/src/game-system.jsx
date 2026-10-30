@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6540fee7aac497fe
+// generated-sha256: e21fd808bce14dc9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57401,6 +57401,64 @@ const cardTourStandings = (seats, matches, order = null) => {
 const cardTourFinalists = (groupRanks) => (Array.isArray(groupRanks) && groupRanks.length > 1
   ? groupRanks.flatMap((rank, gi) => rank.slice(0, CARD_TOUR_FINAL_TOP).map((seat) => ({ group: gi, seat })))
   : null);
+
+// ---- トーナメント(勝ち抜き。2026-10-30 個人杯で使う。公式杯の頂上決戦にも切りかえられるように、組分けの部品とは分けておく) ----
+//   席の番号(0 から)を締め切りの種で混ぜた順を「種順」とし、種順の上位どうしが早く当たらない並び(1-16・8-9 …)にする。
+//   人数が2のべき乗でないときは、足りない分が上位の種の「不戦勝」(1回戦の相手が null)
+const CARD_TOUR_KO_MAX = 16;
+const cardTourKoSize = (n) => { let s = 2; while (s < n) s *= 2; return s; };
+// 山の並び(位置 → 種順)。size=8 なら [0,7,3,4,1,6,2,5]
+const cardTourKoOrder = (size) => {
+  let o = [0];
+  while (o.length < size) { const m = o.length * 2; o = o.flatMap((x) => [x, m - 1 - x]); }
+  return o;
+};
+// 1回戦の組み合わせ。n … 人数(2〜CARD_TOUR_KO_MAX)/ key … 締め切りの種。返り値: [[a, b]…](b が null なら a の不戦勝)
+const cardTourKoFirst = (n, key) => {
+  const size = cardTourKoSize(n);
+  const r = cardTourRand(`${key}|ko`);
+  const seeds = Array.from({ length: n }, (_, i) => ({ i, w: r() })).sort((x, y) => x.w - y.w).map((x) => x.i);
+  const slot = cardTourKoOrder(size).map((rank) => (rank < n ? seeds[rank] : null));
+  return Array.from({ length: size / 2 }, (_, k) => (slot[2 * k] === null ? [slot[2 * k + 1], null] : [slot[2 * k], slot[2 * k + 1]]));
+};
+// その回戦の勝ち上がり(不戦勝は a)。まだ決まっていない試合があれば null
+const cardTourKoWinners = (pairs, results) => {
+  const out = [];
+  for (let k = 0; k < pairs.length; k++) {
+    const [a, b] = pairs[k];
+    if (b === null) { out.push(a); continue; }
+    const w = results[k];
+    if (w !== 0 && w !== 1) return null;
+    out.push(w === 0 ? a : b);
+  }
+  return out;
+};
+// 次の回戦の組み合わせ(勝ち上がりを隣どうしで)。優勝が決まったら []
+const cardTourKoNextPairs = (winners) => (winners.length < 2 ? [] : Array.from({ length: winners.length / 2 }, (_, k) => [winners[2 * k], winners[2 * k + 1]]));
+// その回戦の試合を並べる(不戦勝は試合にしない)。round … 何回戦か(0 から)
+// 返り値: [{ stage, group: 0, day: dayFrom + round, round, slot, a, b, seed, first }]
+const cardTourKoMatches = (tourId, pairs, round, stage = 'ko', dayFrom = 0) => pairs.flatMap(([a, b], slot) => {
+  if (b === null) return [];
+  const seed = cardTourMatchSeed(tourId, stage, round, slot, a, b);
+  return [{ stage, group: 0, day: dayFrom + round, round, slot, a, b, seed, first: seed % 2 }];
+});
+// 順位: 優勝 1・準優勝 2・準決勝で負け 3・その前の回戦で負け 5・9 …(同じ回戦で負けた人は同じ順位)
+//   rounds … [{ pairs, results }](1回戦から)。返り値: { [席]: 順位 }。まだ決まっていない人は入らない
+const cardTourKoPlaces = (rounds) => {
+  const out = {};
+  const total = rounds.length ? Math.log2(rounds[0].pairs.length * 2) : 0;
+  rounds.forEach(({ pairs, results }, r) => {
+    const left = total - r; // この回戦に残っている山の段(決勝は 1)
+    pairs.forEach(([a, b], k) => {
+      if (b === null) return;
+      const w = results[k];
+      if (w !== 0 && w !== 1) return;
+      out[w === 0 ? b : a] = 2 ** (left - 1) + 1;
+      if (left === 1) out[w === 0 ? a : b] = 1;
+    });
+  });
+  return out;
+};
 
 // ---- 1試合 ----
 // side … { deck, tactics }(エントリーの写し)か { assist: 助手の id }(助手の席)。key … 助手のデッキを決める種の名前

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b732422a4ae839d9
+// source-sha256: 8f5e9836777f67a9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -95341,6 +95341,84 @@ const cardTourFinalists = groupRanks => Array.isArray(groupRanks) && groupRanks.
   group: gi,
   seat
 }))) : null;
+const CARD_TOUR_KO_MAX = 16;
+const cardTourKoSize = n => {
+  let s = 2;
+  while (s < n) s *= 2;
+  return s;
+};
+const cardTourKoOrder = size => {
+  let o = [0];
+  while (o.length < size) {
+    const m = o.length * 2;
+    o = o.flatMap(x => [x, m - 1 - x]);
+  }
+  return o;
+};
+const cardTourKoFirst = (n, key) => {
+  const size = cardTourKoSize(n);
+  const r = cardTourRand(`${key}|ko`);
+  const seeds = Array.from({
+    length: n
+  }, (_, i) => ({
+    i,
+    w: r()
+  })).sort((x, y) => x.w - y.w).map(x => x.i);
+  const slot = cardTourKoOrder(size).map(rank => rank < n ? seeds[rank] : null);
+  return Array.from({
+    length: size / 2
+  }, (_, k) => slot[2 * k] === null ? [slot[2 * k + 1], null] : [slot[2 * k], slot[2 * k + 1]]);
+};
+const cardTourKoWinners = (pairs, results) => {
+  const out = [];
+  for (let k = 0; k < pairs.length; k++) {
+    const [a, b] = pairs[k];
+    if (b === null) {
+      out.push(a);
+      continue;
+    }
+    const w = results[k];
+    if (w !== 0 && w !== 1) return null;
+    out.push(w === 0 ? a : b);
+  }
+  return out;
+};
+const cardTourKoNextPairs = winners => winners.length < 2 ? [] : Array.from({
+  length: winners.length / 2
+}, (_, k) => [winners[2 * k], winners[2 * k + 1]]);
+const cardTourKoMatches = (tourId, pairs, round, stage = 'ko', dayFrom = 0) => pairs.flatMap(([a, b], slot) => {
+  if (b === null) return [];
+  const seed = cardTourMatchSeed(tourId, stage, round, slot, a, b);
+  return [{
+    stage,
+    group: 0,
+    day: dayFrom + round,
+    round,
+    slot,
+    a,
+    b,
+    seed,
+    first: seed % 2
+  }];
+});
+const cardTourKoPlaces = rounds => {
+  const out = {};
+  const total = rounds.length ? Math.log2(rounds[0].pairs.length * 2) : 0;
+  rounds.forEach(({
+    pairs,
+    results
+  }, r) => {
+    const left = total - r;
+    pairs.forEach(([a, b], k) => {
+      if (b === null) return;
+      const w = results[k];
+      if (w !== 0 && w !== 1) return;
+      out[w === 0 ? b : a] = 2 ** (left - 1) + 1;
+      if (left === 1) out[w === 0 ? a : b] = 1;
+    });
+  });
+  return out;
+};
 const cardTourSidePolicy = (db, side, key) => {
   if (side && side.assist) {
     const deck = cardAiBuildDeck(db, side.assist, CARD_TOUR_ASSIST_LEVEL, cardAiSeededRand(`tour|${key}|${side.assist}`));

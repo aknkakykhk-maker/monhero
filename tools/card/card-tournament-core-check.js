@@ -9,6 +9,7 @@
 //   D. 順位: 勝ち数 → 倒した数 → 2人の対戦 → エントリーの早さ / 頂上決戦は各組の上から2人
 //   E. 1試合: 同じ入力なら同じ結果(手も同じ)・残した手を当て直すと同じ勝ち負けになる(見返しで開ける)・助手の席も回せる
 //   F. ごほうびの表: 順位ごと・参加賞・1勝ごと・おかしな値は 0
+//   G. トーナメント: 不戦勝は上位の種・全員が1回ずつ山に入る・勝ち上がり・順位(1・2・3・5・9)・試合の種
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -17,7 +18,7 @@ const GAME = path.resolve(__dirname, '..', '..', 'monster-hero');
 const PART = (n) => fs.readFileSync(path.join(GAME, 'src', 'parts', n), 'utf8');
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
 vm.runInContext(`${fs.readFileSync(path.join(GAME, 'data', 'card-battle-cards.js'), 'utf8')}\n;\n${PART('82-card-battle-core.jsx')}\n;\n${PART('82-card-tactics-core.jsx')}\n;\n${PART('82-card-share-core.jsx')}\n;\n${PART('82-card-tournament-core.jsx')}\n;\n`
-  + 'this.E = { CARD_BATTLE_DATA, CARD_AI_HABITS, cardTourGroups, cardTourRoundRobin, cardTourSchedule, cardTourStageDays, cardTourMatchSeed, cardTourStandings, cardTourFinalists, cardTourPlay, cardTourNormalizeRewards, cardTourRewardOf, cardAiBuildDeck, cardAiSeededRand, cardCreateGame, cardApplyAction };', ctx);
+  + 'this.E = { CARD_BATTLE_DATA, CARD_AI_HABITS, cardTourGroups, cardTourRoundRobin, cardTourSchedule, cardTourStageDays, cardTourMatchSeed, cardTourStandings, cardTourFinalists, cardTourPlay, cardTourNormalizeRewards, cardTourRewardOf, cardTourKoSize, cardTourKoOrder, cardTourKoFirst, cardTourKoWinners, cardTourKoNextPairs, cardTourKoMatches, cardTourKoPlaces, CARD_TOUR_KO_MAX, cardAiBuildDeck, cardAiSeededRand, cardCreateGame, cardApplyAction };', ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 const VERBOSE = process.argv.includes('--verbose');
@@ -103,6 +104,37 @@ for (let n = 2; n <= 9; n++) {
   check('F 1位・5勝: 3000+1500・ビートPだけ(表に称号や枠が書いてあっても出さない)', J(E.cardTourRewardOf(t, 1, 5)) === J({ point: 4500 }));
   check('F 順位の表に無い順位・頂上決戦に出なかった人は参加賞+1勝ごと', E.cardTourRewardOf(t, 5, 2).point === 1100 && E.cardTourRewardOf(t, null, 0).point === 500);
   check('F おかしな値は 0(マイナス・文字・大きすぎ)', J(E.cardTourNormalizeRewards({ ranks: [{ point: -5 }, { point: 'x' }, { point: 1e9 }], participation: null, perWin: -1 })) === J({ ranks: [{ point: 0 }, { point: 0 }, { point: 100000 }], participation: { point: 0 }, perWin: 0 }));
+}
+
+// ---- G ----
+{
+  check('G 山の並びは上位の種どうしが早く当たらない(8人: 1-8・4-5・2-7・3-6 の形)', J(E.cardTourKoOrder(8)) === J([0, 7, 3, 4, 1, 6, 2, 5]));
+  for (let n = 2; n <= E.CARD_TOUR_KO_MAX; n++) {
+    const first = E.cardTourKoFirst(n, `cup|${n}`);
+    const seats = first.flat().filter((x) => x !== null);
+    const byes = first.filter(([, b]) => b === null).length;
+    check(`G ${n}人: 全員が1回ずつ・不戦勝は ${E.cardTourKoSize(n) - n} 人・両方空きの試合は無い`, seats.length === n && new Set(seats).size === n && byes === E.cardTourKoSize(n) - n && first.every(([a]) => a !== null));
+    // いつも a が勝つとして最後まで進める
+    let pairs = first;
+    const rounds = [];
+    let guard = 0;
+    while (pairs.length && guard++ < 6) {
+      const results = pairs.map(([, b]) => (b === null ? null : 0));
+      rounds.push({ pairs, results });
+      const w = E.cardTourKoWinners(pairs, results);
+      pairs = E.cardTourKoNextPairs(w);
+    }
+    const places = E.cardTourKoPlaces(rounds);
+    const champ = Object.keys(places).filter((k) => places[k] === 1);
+    const played = Object.keys(places).length;
+    check(`G ${n}人: 回戦は ${Math.log2(E.cardTourKoSize(n))}・優勝は1人・全員に順位`, rounds.length === Math.log2(E.cardTourKoSize(n)) && champ.length === 1 && played === n, `${rounds.length} ${J(places)}`);
+  }
+  const p8 = (() => { let pairs = E.cardTourKoFirst(8, 'x'); const rounds = []; while (pairs.length) { const results = pairs.map(() => 1); rounds.push({ pairs, results }); pairs = E.cardTourKoNextPairs(E.cardTourKoWinners(pairs, results)); } return Object.values(E.cardTourKoPlaces(rounds)).sort((a, b) => a - b); })();
+  check('G 8人の順位は 1・2・3・3・5・5・5・5', J(p8) === J([1, 2, 3, 3, 5, 5, 5, 5]), J(p8));
+  check('G まだ決まっていない試合があれば、次の回戦は作らない', E.cardTourKoWinners([[0, 1], [2, 3]], [0, null]) === null);
+  const ms = E.cardTourKoMatches('cupA', [[0, 1], [2, null], [3, 4]], 1, 'ko', 5);
+  check('G 試合: 不戦勝は試合にしない・日は dayFrom+回戦・種はちがう', ms.length === 2 && ms.every((m) => m.day === 6 && m.round === 1) && ms[0].seed !== ms[1].seed && J(E.cardTourKoMatches('cupA', [[0, 1]], 1)) === J(E.cardTourKoMatches('cupA', [[0, 1]], 1)));
+  check('G 同じ種なら同じ1回戦・ちがう種ならちがう', J(E.cardTourKoFirst(13, 'k1')) === J(E.cardTourKoFirst(13, 'k1')) && J(E.cardTourKoFirst(13, 'k1')) !== J(E.cardTourKoFirst(13, 'k2')));
 }
 
 if (fails.length) {
