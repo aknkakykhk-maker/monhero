@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bab1df7ac94c355a
+// source-sha256: 7212da48025887ae
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -98658,9 +98658,10 @@ const CardBattleBoard = ({
   const confirmOn = key => settings[key] === 'ON' && !game.tutorial && !game.demo && !(typeof window !== 'undefined' && window.__mhCardPvpAuto);
   const replay = game.replay || null;
   const watch = game.watch || null;
-  const pvp = game.pvp || (replay && replay.kind === 'pvp' ? replay.foe : null) || (watch ? watch.top : null);
+  const tourReplay = replay && replay.tour ? replay.tour : null;
+  const pvp = game.pvp || (replay && (replay.kind === 'pvp' || tourReplay) ? replay.foe : null) || (watch ? watch.top : null);
   const pvpLive = pvp && !replay && !watch;
-  const meName = watch ? watch.bottom.name : 'あなた';
+  const meName = watch ? watch.bottom.name : tourReplay ? tourReplay.me.name : 'あなた';
   const [watchEnd, setWatchEnd] = useState(null);
   const [watchEyes, setWatchEyes] = useState(0);
   const [watchEndHide, setWatchEndHide] = useState(false);
@@ -100179,7 +100180,10 @@ const CardBattleBoard = ({
   }, React.createElement(CardPvpChat, null)), watch ? React.createElement("span", {
     "data-card-watch-badge": true,
     className: `shrink-0 whitespace-nowrap rounded-md border border-violet-300/60 bg-violet-500/20 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-violet-100`
-  }, "観戦", watchEyes ? ` 👀${watchEyes}` : '') : replay ? React.createElement("span", {
+  }, "観戦", watchEyes ? ` 👀${watchEyes}` : '') : tourReplay ? React.createElement("span", {
+    "data-card-replay-badge": "tour",
+    className: `shrink-0 whitespace-nowrap rounded-md border border-amber-300/70 bg-amber-500/25 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-amber-100`
+  }, "大会") : replay ? React.createElement("span", {
     "data-card-replay-badge": true,
     className: `shrink-0 whitespace-nowrap rounded-md border border-sky-300/60 bg-sky-500/20 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-sky-100`
   }, "リプレイ") : tutorial ? React.createElement("span", {
@@ -100605,12 +100609,17 @@ const CardBattleBoard = ({
   }))), React.createElement("div", {
     "data-card-footer": true,
     className: "flex shrink-0 gap-2 px-2.5 pb-2 pt-1"
-  }, replay ? React.createElement(CardReplayBar, {
+  }, replay ? React.createElement(React.Fragment, null, tourReplay && typeof CardTourLive === 'function' && React.createElement(CardTourLive, {
+    tour: tourReplay,
+    at: replayAt,
+    last: replay.states.length - 1,
+    tight: boardFit >= 1
+  }), React.createElement(CardReplayBar, {
     replay: replay,
     at: replayAt,
     onSeek: replaySeek,
     tight: boardFit >= 1
-  }) : footer))), drag && drag.active && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal(React.createElement("div", {
+  })) : footer))), drag && drag.active && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal(React.createElement("div", {
     "data-drag-card-layer": true,
     className: "pointer-events-none fixed inset-0",
     style: {
@@ -102028,6 +102037,29 @@ const CardBattleScreen = ({
     });
     onNavigate('CARD_BATTLE');
   };
+  const openTourReplay = async (id, meta = {}) => {
+    if (!db || typeof cardTourRpc !== 'function' || typeof cardReplayFromTour !== 'function') return false;
+    const row = await cardTourRpc('card_tournament_match', {
+      p_id: id
+    });
+    const known = new Set(assistantsUnlockedFrom(seenStoryIds).map(x => x.id));
+    const rec = row && typeof row === 'object' ? cardReplayFromTour(db, row, {
+      known,
+      title: meta && meta.title
+    }) : null;
+    const g = rec ? cardReplayGameOf(db, rec) : null;
+    if (!g) return false;
+    setGame({
+      ...g,
+      settings: save ? save.settings : undefined,
+      replay: {
+        ...g.replay,
+        back: 'tour'
+      }
+    });
+    onNavigate('CARD_BATTLE');
+    return true;
+  };
   if (!db) return React.createElement("div", {
     "data-mh-screen": true,
     className: SCREEN_SHELL_CLASS
@@ -102075,14 +102107,18 @@ const CardBattleScreen = ({
         intro: null
       } : g)
     });
+    const tourMe = game.replay && game.replay.tour ? {
+      name: game.replay.tour.me.name,
+      icon: game.replay.tour.me.icon || null
+    } : null;
     return React.createElement(CardBattleBoard, {
       key: game.key,
       db: db,
       game: game,
       onProgress: cpuOpenProgress,
       onActLog: cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogAct : null,
-      meProfile: rank && rank.profile,
-      meIcon: rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null,
+      meProfile: tourMe || rank && rank.profile,
+      meIcon: tourMe ? null : rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null,
       quickRun: quickRun ? {
         loops: quickRun.loops,
         stopped: quickRun.stopped
@@ -102809,6 +102845,7 @@ const CardBattleScreen = ({
         setView('tactics');
       } : null,
       onCredit: creditTour,
+      onOpenReplay: openTourReplay,
       knownAssistants: new Set(assistantsUnlockedFrom(seenStoryIds).map(x => x.id))
     });
   }
@@ -112022,6 +112059,85 @@ const cardReplayFromCpu = (db, {
   reason,
   level
 });
+const cardReplayFromTour = (db, row, opts = {}) => {
+  if (!db || !row || typeof row !== 'object') return null;
+  const a = row.a && typeof row.a === 'object' ? row.a : {},
+    b = row.b && typeof row.b === 'object' ? row.b : {};
+  const decks = [cardReplayDeckOf(a.deck), cardReplayDeckOf(b.deck)];
+  if (decks.includes(null)) return null;
+  const seed = Number(row.seed);
+  if (!Number.isInteger(seed) || seed < 0 || seed > 0xFFFFFFFF) return null;
+  if (row.first !== 0 && row.first !== 1) return null;
+  const max = typeof CARD_TOUR_MAX_STEPS === 'number' ? CARD_TOUR_MAX_STEPS : 4000;
+  if (!Array.isArray(row.acts) || !row.acts.length || row.acts.length > max) return null;
+  const acts = [];
+  for (const x of row.acts) {
+    if (!Array.isArray(x) || x[0] !== 0 && x[0] !== 1) return null;
+    const act = typeof cardPvpCleanAct === 'function' ? cardPvpCleanAct(x[1]) : x[1] && typeof x[1] === 'object' ? x[1] : null;
+    if (!act) return null;
+    acts.push([x[0], act]);
+  }
+  const known = opts.known instanceof Set ? opts.known : new Set();
+  const assistOf = id => typeof cardTourAssistOf === 'function' ? cardTourAssistOf(id, known) : {
+    name: '助手',
+    face: null
+  };
+  const nameOf = e => {
+    if (e.is_assist) {
+      const n = assistOf(e.assist_id).name;
+      return n === '助手' ? n : `${n}(助手)`;
+    }
+    return cardReplayText(e.name, 16) || 'ブリーダー';
+  };
+  const iconOf = e => e.is_assist ? '' : cardReplayText(e.icon, 64);
+  const live = row.live && typeof row.live === 'object' && typeof row.live.play === 'string' ? row.live : null;
+  const caster = live && typeof live.who === 'string' ? assistOf(live.who) : null;
+  const rules = Number.isInteger(row.rules) && row.rules > 0 ? row.rules : 0;
+  const names = [nameOf(a), nameOf(b)];
+  return {
+    v: 1,
+    id: `tour-${String(row.id).replace(/[^0-9]/g, '').slice(0, 20)}`,
+    kind: 'tour',
+    at: 0,
+    rules,
+    first: row.first,
+    names,
+    foe: {
+      name: names[1],
+      icon: iconOf(b),
+      frame: null,
+      deckName: null,
+      who: null
+    },
+    outcome: row.winner === 0 ? 'win' : 'lose',
+    reason: '',
+    decks,
+    seeds: [seed, 0],
+    acts,
+    prints: '',
+    fav: false,
+    turn: null,
+    level: null,
+    tour: {
+      title: cardReplayText(opts.title, 40),
+      stage: row.stage === 'final' ? 'final' : 'group',
+      me: {
+        name: names[0],
+        icon: iconOf(a)
+      },
+      winner: row.winner === 0 || row.winner === 1 ? names[row.winner] : '',
+      live: live ? {
+        play: cardReplayText(live.play, 200),
+        review: cardReplayText(live.review, 240)
+      } : null,
+      caster: caster ? {
+        name: caster.name,
+        face: caster.face || null
+      } : null,
+      rulesOld: rules > 0 && rules !== CARD_REPLAY_RULES
+    }
+  };
+};
 let _cardReplayIds = new Set();
 const cardReplayNoteIds = box => {
   _cardReplayIds = new Set(box.list.map(r => r.id));
@@ -112154,7 +112270,8 @@ const cardReplayGameOf = (db, rec) => {
         icon: rec.foe.icon || '🙂',
         frame: rec.foe.frame,
         deckName: rec.foe.deckName
-      }
+      },
+      tour: rec.kind === 'tour' && rec.tour ? rec.tour : null
     }
   };
 };
@@ -112197,7 +112314,7 @@ const CardReplayBar = ({
   const st = replay.states[at];
   const prev = at > 0 ? replay.states[at - 1] : null;
   const by = at > 0 && replay.by ? replay.by[at - 1] : null;
-  const byName = by === 0 ? 'あなた' : by === 1 ? replay.foe.name : '';
+  const byName = by === 0 ? replay.tour ? replay.tour.me.name : 'あなた' : by === 1 ? replay.foe.name : '';
   const label = at === 0 ? 'はじまり' : `${at}手目・${prev && prev.turn >= 1 ? `ターン${prev.turn}` : 'はじまり'}・${byName}`;
   const caption = cardReplayCaption(replay.states, at) || (at > 0 && replay.types ? cardReplayActText(replay.types[at - 1], byName) : '');
   const btn = `mh-button mh-button-secondary ${tight ? 'min-h-[34px]' : 'min-h-[40px]'} flex-1 rounded-lg border border-white/20 bg-slate-800 px-1 text-[12px] font-black text-white disabled:opacity-40`;
@@ -112287,6 +112404,51 @@ const CardReplayBar = ({
       setSpeed(v => v === 1 ? 2 : 1);
     }
   }, (CARD_REPLAY_SPEEDS.find(x => x.id === speed) || CARD_REPLAY_SPEEDS[0]).label)));
+};
+const CardTourLive = ({
+  tour,
+  at,
+  last,
+  tight
+}) => {
+  if (!tour) return null;
+  const head = `🏟️ ${tour.title || (tour.stage === 'final' ? '大会 頂上決戦' : '大会')}`;
+  const end = at >= last;
+  const clamp = tight ? 'line-clamp-2' : '';
+  const face = tour.caster && tour.caster.face ? React.createElement("img", {
+    src: tour.caster.face,
+    alt: "",
+    "aria-hidden": "true",
+    className: "h-7 w-7 shrink-0 rounded-full border border-amber-300/80 bg-slate-900 object-cover object-top"
+  }) : React.createElement("span", {
+    "aria-hidden": "true",
+    className: "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-amber-300/80 bg-slate-800 text-[13px]"
+  }, "🎤");
+  const who = tour.caster ? tour.caster.name : '実況';
+  return React.createElement("div", {
+    "data-card-tour-live": at === 0 ? 'start' : end ? 'end' : 'mid',
+    className: "pointer-events-auto mb-1 w-full rounded-xl border border-amber-400/60 bg-gradient-to-r from-amber-950/95 via-slate-950/95 to-amber-950/95 px-2 py-1 shadow-lg"
+  }, React.createElement("div", {
+    className: "flex items-center justify-between gap-2 text-[11px] font-black text-amber-200"
+  }, React.createElement("span", {
+    "data-card-tour-live-title": true,
+    className: "min-w-0 truncate"
+  }, head), end && tour.winner && React.createElement("span", {
+    "data-card-tour-live-winner": true,
+    className: "shrink-0 text-orange-300"
+  }, `WIN ${tour.winner}`)), at === 0 && tour.rulesOld && React.createElement("div", {
+    "data-card-tour-live-old": true,
+    className: "mt-0.5 text-[11px] font-black text-amber-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('ルールが変わる前の試合です。途中までしか見られないことがあります')), (at === 0 || end) && tour.live && React.createElement("div", {
+    className: "mt-0.5 flex items-start gap-1.5"
+  }, face, React.createElement("p", {
+    "data-card-tour-live-text": end ? 'review' : 'play',
+    className: `min-w-0 flex-1 ${clamp} text-[11px] font-bold leading-snug text-white`,
+    style: JA_WRAP_STYLE
+  }, React.createElement("b", {
+    className: "text-amber-200"
+  }, end ? `解説(${who}) ` : `実況(${who}) `), jaWrap(end ? tour.live.review || tour.live.play : tour.live.play))));
 };
 const CARD_REPLAY_OUTCOME = Object.freeze({
   win: '勝ち',
@@ -117904,15 +118066,31 @@ const CardTourMatchCard = ({
   const A = seats.find(e => cardTourSeatKey(e, m.stage) === m.a),
     B = seats.find(e => cardTourSeatKey(e, m.stage) === m.b);
   const [openReview, setOpenReview] = useState(false);
+  const [replayMsg, setReplayMsg] = useState(null);
   if (!A || !B) return null;
   const done = m.winner !== null && m.visibleAt <= now;
   const caster = m.live && m.live.who ? cardTourAssistOf(m.live.who, known) : null;
+  const matchLabel = `${m.stage === 'final' ? '頂上決戦 ' : view.tour.groups > 1 ? `${m.grp + 1}組 ` : ''}第${m.day - (m.stage === 'final' ? Math.min(...view.matches.filter(x => x.stage === 'final').map(x => x.day)) : 0) + 1}試合`;
+  const openReplay = async () => {
+    if (!onOpenReplay || replayMsg === 'busy') return;
+    Audio_.fgSe.tap();
+    setReplayMsg('busy');
+    let ok = false;
+    try {
+      ok = await onOpenReplay(m.id, {
+        title: `${view.tour.name || '大会'} ${matchLabel}`
+      });
+    } catch (_) {
+      ok = false;
+    }
+    setReplayMsg(ok === false ? 'この試合は、いまは見返せません。時間をおいて開き直してください' : null);
+  };
   return React.createElement("div", {
     "data-card-tour-match": m.id,
     className: "rounded-2xl border-2 border-amber-600/50 bg-slate-950/70 p-2"
   }, React.createElement("div", {
     className: "mb-1 flex items-center justify-between text-[11px] font-black text-amber-200"
-  }, React.createElement("span", null, `${m.stage === 'final' ? '頂上決戦 ' : view.tour.groups > 1 ? `${m.grp + 1}組 ` : ''}第${m.day - (m.stage === 'final' ? Math.min(...view.matches.filter(x => x.stage === 'final').map(x => x.day)) : 0) + 1}試合 ${cardTourDayLabel(m.playOn)}`), done && m.decided && React.createElement("span", {
+  }, React.createElement("span", null, `${matchLabel} ${cardTourDayLabel(m.playOn)}`), done && m.decided && React.createElement("span", {
     className: "text-slate-400"
   }, m.decided === 'deck' ? '山札切れ' : m.decided === 'limit' ? '判定' : '')), React.createElement("div", {
     className: "grid grid-cols-2 gap-1.5"
@@ -117943,15 +118121,16 @@ const CardTourMatchCard = ({
   }, "解説を読む"))), done && React.createElement("button", {
     type: "button",
     "data-card-tour-replay": true,
-    disabled: !onOpenReplay,
+    disabled: !onOpenReplay || replayMsg === 'busy',
     onClick: () => {
-      if (onOpenReplay) {
-        Audio_.fgSe.tap();
-        onOpenReplay(m.id);
-      }
+      void openReplay();
     },
     className: "mt-1.5 w-full rounded-xl border-2 border-amber-500/70 bg-amber-100 py-1.5 text-[13px] font-black text-amber-900 disabled:opacity-50"
-  }, onOpenReplay ? '見返す' : '見返す(準備中)'));
+  }, !onOpenReplay ? '見返す(準備中)' : replayMsg === 'busy' ? '読み込み中…' : '見返す'), done && replayMsg && replayMsg !== 'busy' && React.createElement("p", {
+    "data-card-tour-replay-note": true,
+    className: "mt-1 text-center text-[11px] font-bold text-amber-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap(replayMsg)));
 };
 const CardTourToday = ({
   view,

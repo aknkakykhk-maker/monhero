@@ -231,13 +231,24 @@ const CardTourMatchCard = ({ view, m, known, now, onOpenReplay }) => {
   const seats = cardTourStageSeats(view, m.stage, m.grp);
   const A = seats.find((e) => cardTourSeatKey(e, m.stage) === m.a), B = seats.find((e) => cardTourSeatKey(e, m.stage) === m.b);
   const [openReview, setOpenReview] = useState(false);
+  // 見返しを開けなかったとき(通信できない・ルールの版がちがってはじめから当たらない など)の一言。null … 開いていない / 'busy' … 読み込み中
+  const [replayMsg, setReplayMsg] = useState(null);
   if (!A || !B) return null;
   const done = m.winner !== null && m.visibleAt <= now;
   const caster = m.live && m.live.who ? cardTourAssistOf(m.live.who, known) : null;
+  const matchLabel = `${m.stage === 'final' ? '頂上決戦 ' : view.tour.groups > 1 ? `${m.grp + 1}組 ` : ''}第${m.day - (m.stage === 'final' ? Math.min(...view.matches.filter((x) => x.stage === 'final').map((x) => x.day)) : 0) + 1}試合`;
+  const openReplay = async () => {
+    if (!onOpenReplay || replayMsg === 'busy') return;
+    Audio_.fgSe.tap();
+    setReplayMsg('busy');
+    let ok = false;
+    try { ok = await onOpenReplay(m.id, { title: `${view.tour.name || '大会'} ${matchLabel}` }); } catch (_) { ok = false; }
+    setReplayMsg(ok === false ? 'この試合は、いまは見返せません。時間をおいて開き直してください' : null);
+  };
   return (
     <div data-card-tour-match={m.id} className="rounded-2xl border-2 border-amber-600/50 bg-slate-950/70 p-2">
       <div className="mb-1 flex items-center justify-between text-[11px] font-black text-amber-200">
-        <span>{`${m.stage === 'final' ? '頂上決戦 ' : view.tour.groups > 1 ? `${m.grp + 1}組 ` : ''}第${m.day - (m.stage === 'final' ? Math.min(...view.matches.filter((x) => x.stage === 'final').map((x) => x.day)) : 0) + 1}試合 ${cardTourDayLabel(m.playOn)}`}</span>
+        <span>{`${matchLabel} ${cardTourDayLabel(m.playOn)}`}</span>
         {done && m.decided && <span className="text-slate-400">{m.decided === 'deck' ? '山札切れ' : m.decided === 'limit' ? '判定' : ''}</span>}
       </div>
       <div className="grid grid-cols-2 gap-1.5">
@@ -258,9 +269,10 @@ const CardTourMatchCard = ({ view, m, known, now, onOpenReplay }) => {
         </div>
       )}
       {done && (
-        <button type="button" data-card-tour-replay disabled={!onOpenReplay} onClick={() => { if (onOpenReplay) { Audio_.fgSe.tap(); onOpenReplay(m.id); } }}
-          className="mt-1.5 w-full rounded-xl border-2 border-amber-500/70 bg-amber-100 py-1.5 text-[13px] font-black text-amber-900 disabled:opacity-50">{onOpenReplay ? '見返す' : '見返す(準備中)'}</button>
+        <button type="button" data-card-tour-replay disabled={!onOpenReplay || replayMsg === 'busy'} onClick={() => { void openReplay(); }}
+          className="mt-1.5 w-full rounded-xl border-2 border-amber-500/70 bg-amber-100 py-1.5 text-[13px] font-black text-amber-900 disabled:opacity-50">{!onOpenReplay ? '見返す(準備中)' : replayMsg === 'busy' ? '読み込み中…' : '見返す'}</button>
       )}
+      {done && replayMsg && replayMsg !== 'busy' && <p data-card-tour-replay-note className="mt-1 text-center text-[11px] font-bold text-amber-300" style={JA_WRAP_STYLE}>{jaWrap(replayMsg)}</p>}
     </div>
   );
 };
