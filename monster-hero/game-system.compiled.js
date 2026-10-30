@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a2ee7ed2a72997d0
+// source-sha256: e8ce129c669a42a6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -96576,7 +96576,7 @@ const CARD_PACKS = Object.freeze([{
   }),
   tech: 7,
   mon: 1,
-  rarity: Object.freeze(p.no <= 3 || p.no === 5 ? {
+  rarity: Object.freeze(p.no <= 3 || p.no === 5 || p.no === 7 ? {
     normal: 85,
     kira: 12,
     alt: 3
