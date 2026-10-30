@@ -1897,7 +1897,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         {(pvpLive || watch) && <span className="shrink-0"><CardChatButton mode={watch ? 'watch' : 'pvp'}/></span>}
         {(pvpLive || watch) && <CardChatFlow mode={watch ? 'watch' : 'pvp'}/>}
         {watch ? <span data-card-watch-badge className={`shrink-0 whitespace-nowrap rounded-md border border-violet-300/60 bg-violet-500/20 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-violet-100`}>観戦{watchEyes ? ` 👀${watchEyes}` : ''}</span>
-          : tourReplay ? <span data-card-replay-badge="tour" className={`shrink-0 whitespace-nowrap rounded-md border border-amber-300/70 bg-amber-500/25 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-amber-100`}>大会</span>
+          : tourReplay ? <span data-card-replay-badge={tourReplay.deck ? 'deck' : 'tour'} className={`shrink-0 whitespace-nowrap rounded-md border border-amber-300/70 bg-amber-500/25 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-amber-100`}>{tourReplay.badge || '大会'}</span>
           : replay ? <span data-card-replay-badge className={`shrink-0 whitespace-nowrap rounded-md border border-sky-300/60 bg-sky-500/20 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-sky-100`}>リプレイ</span>
           : tutorial ? <span data-card-level-badge="tutorial" className={`shrink-0 whitespace-nowrap rounded-md border px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black tracking-wide ${CARD_LEVEL_TONE.tutorial || CARD_LEVEL_TONE.easy}`}>練習</span> : null}
         {(() => {
@@ -2973,7 +2973,18 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const rec = row && typeof row === 'object' ? cardReplayFromTour(db, row, { known, title: meta && meta.title }) : null;
     const g = rec ? cardReplayGameOf(db, rec) : null;
     if (!g) return false;
-    setGame({ ...g, settings: save ? save.settings : undefined, replay: { ...g.replay, back: 'tour' } });
+    setGame({ ...g, settings: save ? save.settings : undefined, replay: { ...g.replay, back: (meta && meta.back) || 'tour' } });
+    onNavigate('CARD_BATTLE');
+    return true;
+  };
+  // 登録デッキが戦われた試合を見る(95 の一覧 → card_deck_replay_get の1行 → 93 の cardReplayFromTour)。とじたら一覧へ戻る
+  const openDeckReplay = async (ownerId, slot, meta = {}) => {
+    if (!db || typeof cardShareReplayGet !== 'function' || typeof cardReplayFromTour !== 'function') return false;
+    const row = await cardShareReplayGet(ownerId, slot);
+    const rec = row ? cardReplayFromTour(db, { ...row, kind: 'deck' }, { title: meta && meta.title }) : null;
+    const g = rec ? cardReplayGameOf(db, rec) : null;
+    if (!g) return false;
+    setGame({ ...g, settings: save ? save.settings : undefined, replay: { ...g.replay, back: 'deckReplays' } });
     onNavigate('CARD_BATTLE');
     return true;
   };
@@ -3060,10 +3071,23 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         let quick = null;
         if (ok && loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(loops); } catch (_) { quick = null; } }
         if (ok && quick) await persist({ daily: { ...reward.daily, quickLoops: (reward.daily.quickLoops || 0) + loops } }, { daily: reward.daily });
-        if (cpuLogRef.current && cpuLogRef.current.id === game.key) cpuLogRef.current = null;
+        const shareLog = cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogRef.current : null;
+        if (shareLog) cpuLogRef.current = null;
         // 表へ「戦った」(試合の番号ごとに1回だけ数えられる。登録した人の次の日の報酬になる)。届かなくても結果はそのまま出す
+        //   続けて、登録した人が見返せるように手の並びを送る(95 の cardShareReplayPut。「戦った」が数えられた試合だけ・なぞり直しが最後まで通った物だけ)
         const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
-        if (typeof selfId === 'string' && typeof cardShareReportUse === 'function') void cardShareReportUse({ match: `share-${game.key}-${Date.now().toString(36)}`, ownerId: game.share.ownerId, userId: selfId, kind: 'battle', deckWon: outcome !== 'win', version: game.share.version });
+        if (typeof selfId === 'string' && typeof cardShareReportUse === 'function') {
+          const match = `share-${game.key}-${Date.now().toString(36)}`;
+          const deckWon = outcome !== 'win';
+          const replayRec = shareLog && typeof cardReplayFromCpu === 'function' ? cardReplayFromCpu(db, { id: `s${shareLog.id}`, at: Date.now(), myDeck: shareLog.decks[0], cpuDeck: shareLog.decks[1],
+            seed: shareLog.seed, first: shareLog.first, history: shareLog.acts, foe: { name: game.share.name }, outcome, reason: '' }) : null;
+          void (async () => {
+            const used = await cardShareReportUse({ match, ownerId: game.share.ownerId, userId: selfId, kind: 'battle', deckWon, version: game.share.version });
+            if (used !== 'ok' || !replayRec || typeof cardShareReplayPut !== 'function') return;
+            const me = rank && rank.profile ? rank.profile : {};
+            await cardShareReplayPut({ match, ownerId: game.share.ownerId, userId: selfId, name: me.name || '', icon: me.icon || null, frame: me.frame || null, rec: replayRec, deckWon });
+          })().catch(() => {});
+        }
         setResult({ outcome, reward, opened: null, saved: ok, who: null, level: game.level, loops, quick, facts, talk: null, replay: null, share: game.share, rankGain: ok ? levelGain.gain : null });
         onBgm && onBgm(cardBgmOf(save.bgm.top));
         onNavigate('CARD_TOP');
@@ -3308,7 +3332,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const tacticsBackTo = () => { if (tacticsBack === 'exit') { setTacticsBack('mode'); setView('top'); onExit(); return; } setView(tacticsBack); setTacticsBack('mode'); };
   if (view === 'tactics' && typeof CardDeckRegister === 'function') {
     return <CardDeckRegister db={db} decks={save.decks} collection={save.collection} frame={(rank && rank.profile && rank.profile.frame) || null} onBack={tacticsBackTo}
-      onOpenList={typeof CardTacticsScreen === 'function' ? () => setView('tacticsList') : null} onOpenMarket={onOpenMarket ? () => { setNotice(''); onOpenMarket(); } : null}/>;
+      onOpenList={typeof CardTacticsScreen === 'function' ? () => setView('tacticsList') : null} onOpenMarket={onOpenMarket ? () => { setNotice(''); onOpenMarket(); } : null}
+      onOpenReplays={typeof CardDeckReplays === 'function' ? () => setView('deckReplays') : null}/>;
+  }
+  // 登録デッキが戦われた試合の一覧(95。2026-10-31 社長「案A」)。ぜんぶ/フリー対戦/大会。戻るとデッキ登録へ
+  if (view === 'deckReplays' && typeof CardDeckReplays === 'function') {
+    return <CardDeckReplays onBack={() => setView('tactics')} onOpenDeck={openDeckReplay}
+      onOpenTour={(id, title) => openTourReplay(id, { title, back: 'deckReplays' })} known={new Set(assistantsUnlockedFrom(seenStoryIds).map((x) => x.id))}/>;
   }
   // 持っている戦術カードの一覧(97)。引くのはマーケットの「戦術カード」
   if (view === 'tacticsList' && typeof CardTacticsScreen === 'function') {

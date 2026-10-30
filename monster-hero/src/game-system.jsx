@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e21fd808bce14dc9
+// generated-sha256: f697e7e0e99dcf97
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -17470,7 +17470,7 @@ const SB_HEADERS = { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' 
 // rpc は集計を読むもの(rhythm_week_score_totals など)なので通すが、表へ書く rpc はここに並べて同じく止める
 // (2026-10-27 カード部: マルチの強さの点数 card_battle_pvp_report が、検査のブラウザから本物へ届きうる形だった)
 // ビートランク・カードランクの行を書く関数(2026-10-29)も、表へ書くのでここで止める
-const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report', 'rhythm_beat_rank_put', 'card_rank_put']);
+const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report', 'rhythm_beat_rank_put', 'card_rank_put', 'card_deck_replay_put']);
 const sbAutomationWriteBlocked = (url, method) => {
   try {
     if (typeof navigator === 'undefined' || navigator.webdriver !== true) return false;
@@ -60696,7 +60696,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         {(pvpLive || watch) && <span className="shrink-0"><CardChatButton mode={watch ? 'watch' : 'pvp'}/></span>}
         {(pvpLive || watch) && <CardChatFlow mode={watch ? 'watch' : 'pvp'}/>}
         {watch ? <span data-card-watch-badge className={`shrink-0 whitespace-nowrap rounded-md border border-violet-300/60 bg-violet-500/20 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-violet-100`}>観戦{watchEyes ? ` 👀${watchEyes}` : ''}</span>
-          : tourReplay ? <span data-card-replay-badge="tour" className={`shrink-0 whitespace-nowrap rounded-md border border-amber-300/70 bg-amber-500/25 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-amber-100`}>大会</span>
+          : tourReplay ? <span data-card-replay-badge={tourReplay.deck ? 'deck' : 'tour'} className={`shrink-0 whitespace-nowrap rounded-md border border-amber-300/70 bg-amber-500/25 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-amber-100`}>{tourReplay.badge || '大会'}</span>
           : replay ? <span data-card-replay-badge className={`shrink-0 whitespace-nowrap rounded-md border border-sky-300/60 bg-sky-500/20 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-sky-100`}>リプレイ</span>
           : tutorial ? <span data-card-level-badge="tutorial" className={`shrink-0 whitespace-nowrap rounded-md border px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black tracking-wide ${CARD_LEVEL_TONE.tutorial || CARD_LEVEL_TONE.easy}`}>練習</span> : null}
         {(() => {
@@ -61772,7 +61772,18 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const rec = row && typeof row === 'object' ? cardReplayFromTour(db, row, { known, title: meta && meta.title }) : null;
     const g = rec ? cardReplayGameOf(db, rec) : null;
     if (!g) return false;
-    setGame({ ...g, settings: save ? save.settings : undefined, replay: { ...g.replay, back: 'tour' } });
+    setGame({ ...g, settings: save ? save.settings : undefined, replay: { ...g.replay, back: (meta && meta.back) || 'tour' } });
+    onNavigate('CARD_BATTLE');
+    return true;
+  };
+  // 登録デッキが戦われた試合を見る(95 の一覧 → card_deck_replay_get の1行 → 93 の cardReplayFromTour)。とじたら一覧へ戻る
+  const openDeckReplay = async (ownerId, slot, meta = {}) => {
+    if (!db || typeof cardShareReplayGet !== 'function' || typeof cardReplayFromTour !== 'function') return false;
+    const row = await cardShareReplayGet(ownerId, slot);
+    const rec = row ? cardReplayFromTour(db, { ...row, kind: 'deck' }, { title: meta && meta.title }) : null;
+    const g = rec ? cardReplayGameOf(db, rec) : null;
+    if (!g) return false;
+    setGame({ ...g, settings: save ? save.settings : undefined, replay: { ...g.replay, back: 'deckReplays' } });
     onNavigate('CARD_BATTLE');
     return true;
   };
@@ -61859,10 +61870,23 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         let quick = null;
         if (ok && loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(loops); } catch (_) { quick = null; } }
         if (ok && quick) await persist({ daily: { ...reward.daily, quickLoops: (reward.daily.quickLoops || 0) + loops } }, { daily: reward.daily });
-        if (cpuLogRef.current && cpuLogRef.current.id === game.key) cpuLogRef.current = null;
+        const shareLog = cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogRef.current : null;
+        if (shareLog) cpuLogRef.current = null;
         // 表へ「戦った」(試合の番号ごとに1回だけ数えられる。登録した人の次の日の報酬になる)。届かなくても結果はそのまま出す
+        //   続けて、登録した人が見返せるように手の並びを送る(95 の cardShareReplayPut。「戦った」が数えられた試合だけ・なぞり直しが最後まで通った物だけ)
         const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
-        if (typeof selfId === 'string' && typeof cardShareReportUse === 'function') void cardShareReportUse({ match: `share-${game.key}-${Date.now().toString(36)}`, ownerId: game.share.ownerId, userId: selfId, kind: 'battle', deckWon: outcome !== 'win', version: game.share.version });
+        if (typeof selfId === 'string' && typeof cardShareReportUse === 'function') {
+          const match = `share-${game.key}-${Date.now().toString(36)}`;
+          const deckWon = outcome !== 'win';
+          const replayRec = shareLog && typeof cardReplayFromCpu === 'function' ? cardReplayFromCpu(db, { id: `s${shareLog.id}`, at: Date.now(), myDeck: shareLog.decks[0], cpuDeck: shareLog.decks[1],
+            seed: shareLog.seed, first: shareLog.first, history: shareLog.acts, foe: { name: game.share.name }, outcome, reason: '' }) : null;
+          void (async () => {
+            const used = await cardShareReportUse({ match, ownerId: game.share.ownerId, userId: selfId, kind: 'battle', deckWon, version: game.share.version });
+            if (used !== 'ok' || !replayRec || typeof cardShareReplayPut !== 'function') return;
+            const me = rank && rank.profile ? rank.profile : {};
+            await cardShareReplayPut({ match, ownerId: game.share.ownerId, userId: selfId, name: me.name || '', icon: me.icon || null, frame: me.frame || null, rec: replayRec, deckWon });
+          })().catch(() => {});
+        }
         setResult({ outcome, reward, opened: null, saved: ok, who: null, level: game.level, loops, quick, facts, talk: null, replay: null, share: game.share, rankGain: ok ? levelGain.gain : null });
         onBgm && onBgm(cardBgmOf(save.bgm.top));
         onNavigate('CARD_TOP');
@@ -62107,7 +62131,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const tacticsBackTo = () => { if (tacticsBack === 'exit') { setTacticsBack('mode'); setView('top'); onExit(); return; } setView(tacticsBack); setTacticsBack('mode'); };
   if (view === 'tactics' && typeof CardDeckRegister === 'function') {
     return <CardDeckRegister db={db} decks={save.decks} collection={save.collection} frame={(rank && rank.profile && rank.profile.frame) || null} onBack={tacticsBackTo}
-      onOpenList={typeof CardTacticsScreen === 'function' ? () => setView('tacticsList') : null} onOpenMarket={onOpenMarket ? () => { setNotice(''); onOpenMarket(); } : null}/>;
+      onOpenList={typeof CardTacticsScreen === 'function' ? () => setView('tacticsList') : null} onOpenMarket={onOpenMarket ? () => { setNotice(''); onOpenMarket(); } : null}
+      onOpenReplays={typeof CardDeckReplays === 'function' ? () => setView('deckReplays') : null}/>;
+  }
+  // 登録デッキが戦われた試合の一覧(95。2026-10-31 社長「案A」)。ぜんぶ/フリー対戦/大会。戻るとデッキ登録へ
+  if (view === 'deckReplays' && typeof CardDeckReplays === 'function') {
+    return <CardDeckReplays onBack={() => setView('tactics')} onOpenDeck={openDeckReplay}
+      onOpenTour={(id, title) => openTourReplay(id, { title, back: 'deckReplays' })} known={new Set(assistantsUnlockedFrom(seenStoryIds).map((x) => x.id))}/>;
   }
   // 持っている戦術カードの一覧(97)。引くのはマーケットの「戦術カード」
   if (view === 'tacticsList' && typeof CardTacticsScreen === 'function') {
@@ -67235,6 +67265,7 @@ const cardReplayFromCpu = (db, { id, at, myDeck, cpuDeck, seed, first, history, 
 // 大会の試合から(99。サーバの card_tournament_match が返す1行)。2026-10-30 大会 PR4
 //   端末には保存しない(過去の対戦の50試合の枠を食わない)。種は1つ(サーバの cardTourPlay と同じ cardCreateGame の形)なので、なぞり直しは助手と対戦と同じ道
 //   row … { id, stage, day, seed, first, winner, rules, acts, live:{ who, play, review }, a:{ name, icon, is_assist, assist_id, deck }, b:{ … } }
+//   登録デッキが戦われた試合(95 の card_deck_replay_get。2026-10-31)も同じ形で、row.kind === 'deck'。a = 戦った人(下)・b = 登録デッキ(上・見ている本人)
 //   opts.known … 会った助手の id(まだ会っていない助手は名前と顔を出さない。99 と同じ)。opts.title … 会場の見出し(大会の名前・何試合目)
 const cardReplayFromTour = (db, row, opts = {}) => {
   if (!db || !row || typeof row !== 'object') return null;
@@ -67264,14 +67295,18 @@ const cardReplayFromTour = (db, row, opts = {}) => {
   const live = row.live && typeof row.live === 'object' && typeof row.live.play === 'string' ? row.live : null;
   const caster = live && typeof live.who === 'string' ? assistOf(live.who) : null;
   const rules = Number.isInteger(row.rules) && row.rules > 0 ? row.rules : 0;
-  const names = [nameOf(a), nameOf(b)];
+  const deckKind = row.kind === 'deck';
+  // 登録デッキの試合: 上は見ている本人の登録デッキなので「あなたのデッキ」と呼ぶ(ログの「◯◯の攻撃」もこの名前)
+  const names = [nameOf(a), deckKind ? 'あなたのデッキ' : nameOf(b)];
   return {
-    v: 1, id: `tour-${String(row.id).replace(/[^0-9]/g, '').slice(0, 20)}`, kind: 'tour', at: 0, rules, first: row.first,
+    v: 1, id: `${deckKind ? 'deck' : 'tour'}-${String(row.id).replace(/[^0-9]/g, '').slice(0, 20)}`, kind: deckKind ? 'deck' : 'tour', at: 0, rules, first: row.first,
     names, foe: { name: names[1], icon: iconOf(b), frame: null, deckName: null, who: null },
     outcome: row.winner === 0 ? 'win' : 'lose', reason: '', decks, seeds: [seed, 0], acts, prints: '', fav: false, turn: null, level: null,
     // 見返しの会場と実況(84 の盤面の下・93 の CardTourLive)
     tour: {
       title: cardReplayText(opts.title, 40), stage: row.stage === 'final' ? 'final' : 'group',
+      // 上の帯の印と、はじまりの一言(登録デッキの試合だけ)
+      badge: deckKind ? '登録デッキ' : '大会', deck: deckKind,
       me: { name: names[0], icon: iconOf(a) },
       winner: row.winner === 0 || row.winner === 1 ? names[row.winner] : '',
       live: live ? { play: cardReplayText(live.play, 200), review: cardReplayText(live.review, 240) } : null,
@@ -67425,7 +67460,7 @@ const CardReplayBar = ({ replay, at, onSeek, tight }) => {
 // tour … cardReplayFromTour の tour。at・last … いまの手の番号と最後の番号。tight … 縦の画面で入り切らないとき(文を2行まで)
 const CardTourLive = ({ tour, at, last, tight }) => {
   if (!tour) return null;
-  const head = `🏟️ ${tour.title || (tour.stage === 'final' ? '大会 頂上決戦' : '大会')}`;
+  const head = tour.deck ? `🃏 ${tour.title || '戦われた試合'}` : `🏟️ ${tour.title || (tour.stage === 'final' ? '大会 頂上決戦' : '大会')}`;
   const end = at >= last;
   const clamp = tight ? 'line-clamp-2' : '';
   const face = tour.caster && tour.caster.face
@@ -67438,6 +67473,9 @@ const CardTourLive = ({ tour, at, last, tight }) => {
         <span data-card-tour-live-title className="min-w-0 truncate">{head}</span>
         {end && tour.winner && <span data-card-tour-live-winner className="shrink-0 text-orange-300">{`WIN ${tour.winner}`}</span>}
       </div>
+      {at === 0 && tour.deck && (
+        <div data-card-tour-live-deck className="mt-0.5 text-[11px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(`上があなたの登録デッキ、下が${tour.me.name}さんです`)}</div>
+      )}
       {at === 0 && tour.rulesOld && (
         <div data-card-tour-live-old className="mt-0.5 text-[11px] font-black text-amber-300" style={JA_WRAP_STYLE}>{jaWrap('ルールが変わる前の試合です。途中までしか見られないことがあります')}</div>
       )}
@@ -68241,6 +68279,51 @@ const cardShareReportUse = async ({ match, ownerId, userId, kind, deckWon = fals
   return cardShareRpc('card_deck_use', { p_match_id: match, p_owner: ownerId, p_user: userId, p_kind: kind === 'rent' ? 'rent' : 'battle', p_deck_won: !!deckWon, p_version: Number.isInteger(version) ? version : 1 });
 };
 // 登録デッキの相手の、助手と同じ血統の子のまとまり(cardAiPolicy の opts.sameBlood と同じ見方)
+// ---- 登録デッキが戦われた試合の見返し(2026-10-31 社長「案A・戦った人の名前は出す・新しい20試合」) ----
+// 表 card_deck_replays(docs/sql/card-deck-share/CARD_DECK_REPLAYS_APPLY.sql)。持ち主ごとに20の枠を回して上書き(行は消さない)。
+//   書くのは戦った人の端末(「戦った」の知らせ card_deck_use のあと)。読めるのは登録した本人だけ(持ち主の鍵)
+//   表がまだ無いときは、この見返しだけを止める(みんなのデッキの通信 _cardShareUnavailable は巻き込まない)
+let _cardShareReplayOff = false;
+const cardShareReplayRpc = async (fn, body) => {
+  if (_cardShareReplayOff || _cardShareUnavailable) return null;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = setTimeout(() => { if (controller) controller.abort(); }, 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, { method: 'POST', headers: SB_HEADERS, signal: controller ? controller.signal : undefined, body: JSON.stringify(body) });
+    const text = await res.text();
+    if (!res.ok) { if (_isMissingTableError(res.status, text) || res.status === 404) _cardShareReplayOff = true; return null; }
+    try { return JSON.parse(text); } catch (_) { return text; }
+  } catch (_) { return null; } finally { clearTimeout(timer); }
+};
+const CARD_SHARE_REPLAY_SLOTS = 20;
+// 戦った人の端末から送る。rec … 93 の cardReplayFromCpu で作った記録(なぞり直しが最後まで通った物だけ)。
+//   decks[0] = 戦った人(下)・decks[1] = 登録デッキ(上。表へはサーバが登録から写す)。届かなくても対戦の結果はそのまま
+const cardShareReplayPut = async ({ match, ownerId, userId, name, icon, frame, rec, deckWon }) => {
+  if (!rec || !Array.isArray(rec.acts) || !rec.acts.length) return 'bad';
+  const r = await cardShareReplayRpc('card_deck_replay_put', {
+    p_match_id: match, p_owner: ownerId, p_user: userId, p_name: String(name || '').slice(0, 40), p_icon: icon || null, p_frame: frame || null,
+    p_user_deck: { monsters: rec.decks[0].monsters.slice(), cards: rec.decks[0].cards.slice() }, p_seed: rec.seeds[0] >>> 0, p_first: rec.first,
+    p_rules: rec.rules, p_acts: rec.acts, p_turns: Number.isInteger(rec.turn) ? rec.turn : null, p_deck_won: !!deckWon });
+  return typeof r === 'string' ? r : 'off';
+};
+// 一覧(新しい順・見出しだけ)。表が無い・鍵が無い・通信できないときは null
+const cardShareReplaysOf = async (ownerId) => {
+  const key = await cardShareOwnerKey(false);
+  if (!key || typeof ownerId !== 'string') return null;
+  const rows = await cardShareReplayRpc('card_deck_replays_of', { p_owner: ownerId, p_key: key });
+  if (!Array.isArray(rows)) return null;
+  return rows.filter((r) => r && Number.isInteger(r.slot) && r.slot >= 0 && r.slot < CARD_SHARE_REPLAY_SLOTS).map((r) => ({
+    slot: r.slot, at: Date.parse(r.at) || 0, name: typeof r.name === 'string' && r.name ? r.name.slice(0, 40) : 'ブリーダー',
+    icon: typeof r.icon === 'string' ? r.icon : null, frame: typeof r.frame === 'string' ? r.frame : null,
+    deckWon: r.deck_won === true, turns: Number.isInteger(r.turns) ? r.turns : null, old: r.old === true }));
+};
+// 1試合の中身(card_tournament_match と同じ形。93 の cardReplayFromTour で開く)
+const cardShareReplayGet = async (ownerId, slot) => {
+  const key = await cardShareOwnerKey(false);
+  if (!key || typeof ownerId !== 'string' || !Number.isInteger(slot)) return null;
+  const row = await cardShareReplayRpc('card_deck_replay_get', { p_owner: ownerId, p_key: key, p_slot: slot });
+  return row && typeof row === 'object' && !Array.isArray(row) ? row : null;
+};
 const cardShareSameBlood = (db, deck) => {
   const ms = (deck && Array.isArray(deck.monsters) ? deck.monsters : []).map((no) => cardMonsterOf(db, no)).filter(Boolean);
   return ms.length > 0 && ms.filter((m) => cardAiBloodOf(m) === cardAiBloodOf(ms[0])).length >= 2;
@@ -68630,6 +68713,99 @@ const CardShareDeckActions = ({ breederId, onGo = null }) => {
         <button type="button" data-card-share-tile-rent onClick={() => { Audio_.fgSe.tap(); void rent(); }} className="min-h-[44px] flex-1 rounded-xl border-2 border-amber-600/60 bg-indigo-950/50 text-[13px] font-black text-white">借りる</button>
       </div>
       {msg && <p data-card-share-tile-msg className="mt-1.5 rounded-lg bg-slate-950 p-1.5 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{msg}</p>}
+    </div>
+  );
+};
+
+// ==================== 登録デッキが戦われた試合の一覧(2026-10-31 社長「案A・戦った人の名前は出す・新しい20試合」) ====================
+// デッキ登録(98)の「戦われた試合を見る」から。タブ: ぜんぶ / フリー対戦(表 card_deck_replays)/ 大会(99 の表から、自分の席の試合)
+// 「勝ち」「負け」は登録したデッキから見た結果。表がまだ無い・通信できないときは「まだ記録がありません」だけ(落ちない)
+// onOpenDeck(ownerId, slot, { title }) / onOpenTour(matchId, title) … 見返しを開く(開けたら true)。known … 会った助手の id(大会の助手の名前を伏せる)
+const CardDeckReplays = ({ onBack, onOpenDeck, onOpenTour, known = null }) => {
+  const [tab, setTab] = useState('all');
+  const [items, setItems] = useState(null); // [{ key, kind:'free'|'tour', name, icon, frame, at, won, sub, old, open }]
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+      const out = [];
+      if (typeof selfId === 'string') {
+        const rows = await cardShareReplaysOf(selfId).catch(() => null);
+        (rows || []).forEach((r) => out.push({ key: `d${r.slot}-${r.at}`, kind: 'free', name: r.name, icon: r.icon, frame: r.frame, at: r.at, won: r.deckWon, old: r.old,
+          sub: `${typeof cardReplayWhen === 'function' ? cardReplayWhen(r.at) : ''}${r.turns ? `・ターン${r.turns}まで` : ''}`,
+          title: `フリー対戦 ${typeof cardReplayWhen === 'function' ? cardReplayWhen(r.at) : ''}`.trim(), open: (title) => onOpenDeck(selfId, r.slot, { title }) }));
+        // 大会: 自分の席が入っている、結果の出た試合
+        const tours = typeof cardTourFetchList === 'function' ? await cardTourFetchList().catch(() => null) : null;
+        for (const t of (tours || []).filter((x) => x.status !== 'entry').slice(0, 6)) {
+          const view = await cardTourFetchView(t.id, selfId).catch(() => null);
+          if (!view) continue;
+          const now = Date.now();
+          view.matches.filter((m) => m.winner !== null && m.visibleAt <= now).forEach((m) => {
+            const seats = cardTourStageSeats(view, m.stage, m.grp);
+            const A = seats.find((e) => cardTourSeatKey(e, m.stage) === m.a), B = seats.find((e) => cardTourSeatKey(e, m.stage) === m.b);
+            const side = A && A.mine ? 0 : B && B.mine ? 1 : -1;
+            if (side < 0) return;
+            const foe = side === 0 ? B : A;
+            const label = `${t.name} ${m.stage === 'final' ? '頂上決戦' : `第${m.day + 1}試合`}`;
+            out.push({ key: `t${m.id}`, kind: 'tour', name: foe ? cardTourNameOf(foe, known) : 'ブリーダー', icon: null, frame: null, at: m.visibleAt, won: m.winner === side, old: false,
+              sub: label, title: label, open: (title) => onOpenTour(m.id, title) });
+          });
+        }
+      }
+      out.sort((x, y) => y.at - x.at);
+      if (alive) setItems(out);
+    })();
+    return () => { alive = false; };
+  }, []);
+  const shown = (items || []).filter((x) => tab === 'all' || x.kind === tab);
+  const open = async (x) => {
+    if (busy) return;
+    Audio_.fgSe.tap();
+    setBusy(true);
+    setMsg('');
+    let ok = false;
+    try { ok = await x.open(x.title); } catch (_) { ok = false; }
+    setBusy(false);
+    if (ok === false) setMsg('この試合は、いまは見返せません。時間をおいて開き直してください');
+  };
+  return (
+    <div data-mh-screen data-card-deck-replays className={SCREEN_SHELL_CLASS}>
+      <ScreenHead title="戦われた試合" accent="text-amber-200" onBack={onBack} note={`登録中のデッキが戦った試合。フリー対戦は新しい${CARD_SHARE_REPLAY_SLOTS}試合まで`}/>
+      <div className="mb-2 grid shrink-0 grid-cols-3 gap-1.5" role="tablist">
+        {[['all', 'ぜんぶ'], ['free', 'フリー対戦'], ['tour', '大会']].map(([k, label]) => (
+          <button key={k} type="button" role="tab" aria-selected={tab === k} data-card-deck-replays-tab={k} onClick={() => { Audio_.fgSe.tap(); setTab(k); }}
+            className={`min-h-[40px] rounded-xl border text-[13px] font-black ${tab === k ? 'border-amber-300 bg-amber-500/25 text-amber-50' : 'border-white/10 bg-slate-900/80 text-slate-300'}`}>{label}</button>
+        ))}
+      </div>
+      <div className={`${SCREEN_LIST_CLASS} space-y-1.5 pb-4`}>
+        {msg && <p data-card-deck-replays-note className="rounded-xl border border-amber-300/40 bg-amber-500/10 px-2 py-1.5 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
+        {items === null && <div className="py-6 text-center text-[13px] font-bold text-slate-400">読み込み中…</div>}
+        {items && !shown.length && <div data-card-deck-replays-empty className="py-6 text-center text-[13px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('まだ記録がありません。ほかのブリーダーがあなたのデッキと戦うと、ここに残ります')}</div>}
+        {shown.map((x) => (
+          <button key={x.key} type="button" data-card-deck-replays-row={x.kind} disabled={busy} onClick={() => { void open(x); }}
+            className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-slate-900/70 px-2 py-1.5 text-left disabled:opacity-60">
+            <span className="block h-[38px] w-[38px] shrink-0 overflow-hidden rounded-xl bg-black/40">
+              {x.kind === 'tour' ? <span className="grid h-full w-full place-items-center text-[20px]">🏆</span>
+                : typeof CardPvpAvatar === 'function' ? <CardPvpAvatar icon={x.icon || '🙂'} frame={x.frame} className="h-full w-full"/> : <span className="text-[20px]">🙂</span>}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-1.5">
+                <b className="min-w-0 truncate text-[14px] font-black text-white">{x.name}</b>
+                <span className={`shrink-0 rounded-md px-1.5 text-[10px] font-black ${x.kind === 'tour' ? 'bg-amber-500/30 text-amber-100' : 'bg-emerald-500/25 text-emerald-100'}`}>{x.kind === 'tour' ? '大会' : 'フリー'}</span>
+                {x.old && <span className="shrink-0 rounded-md bg-slate-700 px-1.5 text-[10px] font-black text-slate-200">前の登録</span>}
+              </span>
+              <small className="block truncate text-[11px] font-bold text-slate-400">{x.sub}</small>
+            </span>
+            <span className="shrink-0 text-right">
+              <b className={`block text-[13px] font-black ${x.won ? 'text-orange-400' : 'text-sky-400'}`}>{x.won ? '勝ち' : '負け'}</b>
+              <small className="text-[10px] font-bold text-slate-400">見返す ›</small>
+            </span>
+          </button>
+        ))}
+        <p className="px-1 text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('「勝ち」「負け」は、あなたの登録デッキから見た結果です。見返しは戦った人の画面と同じ並びで、上があなたのデッキです')}</p>
+      </div>
     </div>
   );
 };
@@ -69731,7 +69907,8 @@ const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, onRows, on
 };
 
 // onOpenList … 持っている戦術カードの一覧(97)/ onOpenMarket … マーケットの戦術カード
-const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenList = null, onOpenMarket = null }) => {
+// onOpenReplays … 登録中のデッキが戦われた試合の一覧へ(95 の CardDeckReplays。2026-10-31)
+const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenList = null, onOpenMarket = null, onOpenReplays = null }) => {
   const [step, setStep] = useState('deck');
   const [data, setData] = useState(null);       // cardTacticsLoad
   const [mine, setMine] = useState(undefined);  // 登録中(cardShareFetchMine)
@@ -69807,10 +69984,14 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
   const back = (to) => <button type="button" data-card-reg-back onClick={() => { Audio_.fgSe.tap(); setStep(to); }} className="mh-button min-h-[52px] flex-1 rounded-2xl font-black">戻る</button>;
   const headRight = onOpenList ? <button type="button" data-card-reg-list onClick={() => { Audio_.fgSe.tap(); onOpenList(); }} className="rounded-lg border border-white/20 px-2 py-1 text-[11px] font-black text-slate-200">持っている<br/>戦術カード</button> : null;
   const mineBox = mine ? (
-    <div data-card-reg-mine className={`${SCREEN_PANEL_CLASS} mb-2 flex items-center gap-2 py-2`}>
-      <CardRegThumbs db={db} deck={mine.deck} h={36}/>
-      <span className="min-w-0 flex-1 text-[12px] font-bold text-slate-200"><b className="block truncate text-white">{`登録中: ${cardShareNormalizeTactics(mine.tactics).name || 'デッキ'}`}</b>{`賢さ ${cardShareSmartText(mine.tactics)}・戦われた ${mine.battles}回`}</span>
-      <button type="button" data-card-reg-unregister disabled={busy} onClick={() => { Audio_.fgSe.tap(); void unregister(); }} className="shrink-0 rounded-lg border border-white/15 px-2 py-1 text-[11px] font-black text-slate-300">やめる</button>
+    <div data-card-reg-mine className={`${SCREEN_PANEL_CLASS} mb-2 py-2`}>
+      <div className="flex items-center gap-2">
+        <CardRegThumbs db={db} deck={mine.deck} h={36}/>
+        <span className="min-w-0 flex-1 text-[12px] font-bold text-slate-200"><b className="block truncate text-white">{`登録中: ${cardShareNormalizeTactics(mine.tactics).name || 'デッキ'}`}</b>{`賢さ ${cardShareSmartText(mine.tactics)}・戦われた ${mine.battles}回`}</span>
+        <button type="button" data-card-reg-unregister disabled={busy} onClick={() => { Audio_.fgSe.tap(); void unregister(); }} className="shrink-0 rounded-lg border border-white/15 px-2 py-1 text-[11px] font-black text-slate-300">やめる</button>
+      </div>
+      {onOpenReplays && <button type="button" data-card-reg-replays onClick={() => { Audio_.fgSe.tap(); onOpenReplays(); }}
+        className="mt-1.5 w-full rounded-xl border-2 border-sky-400 bg-sky-950 py-2 text-[13px] font-black text-sky-50">戦われた試合を見る</button>}
     </div>
   ) : null;
   return (

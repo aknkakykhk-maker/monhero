@@ -8,6 +8,8 @@
 //   B. 下の人・上の人の名前はその試合のブリーダー。まだ会っていない助手は「助手」とだけ出す(会った助手は「名前(助手)」)
 //   C. 実況・解説・会場の見出し・勝った人の名前が、見返しに渡る。ルールの版がちがえば知らせの印が立つ
 //   D. 壊れた行(デッキ・種・先攻・手がおかしい)は開かない(null)。端末の保存の形(cardReplayNormalizeOne)には入らない
+//   E. 登録デッキが戦われた試合(2026-10-31): 戦った人の端末で作る記録(cardReplayFromCpu)→ 送る形 → サーバの card_deck_replay_get の1行の形 → 見返し が
+//      最後の手まで通る。上は「あなたのデッキ」・印は「登録デッキ」・勝ち負けは登録デッキから見た値
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const GAME = path.resolve(__dirname, '..', '..', 'monster-hero');
 const read = (p) => fs.readFileSync(path.join(GAME, p), 'utf8');
@@ -20,7 +22,7 @@ vm.runInContext(`${read('data/card-battle-cards.js')}\n;\n${read('src/parts/82-c
   // 99 の助手の見分け(会っていない助手は名前と顔を出さない)と同じ形
   + 'const ASSISTANTS = [{ id: "kiki", name: "きき" }, { id: "dra", name: "ドラ" }];\n'
   + 'const cardTourAssistOf = (id, known) => { const a = ASSISTANTS.find((x) => x.id === id); if (!a || !(known && known.has(id))) return { name: "助手", face: null }; return { name: a.name, face: `face-${id}` }; };\n'
-  + `${multi}\n;\n${replay}\n;\nthis.E = { CARD_BATTLE_DATA, cardTourPlay, cardAiBuildDeck, cardAiSeededRand, cardReplayFromTour, cardReplayBuild, cardReplayNormalizeOne, CARD_REPLAY_RULES, CARD_REPLAY_ACTS_MAX };`, ctx);
+  + `${multi}\n;\n${replay}\n;\nthis.E = { CARD_BATTLE_DATA, cardTourPlay, cardAiBuildDeck, cardAiSeededRand, cardReplayFromTour, cardReplayBuild, cardReplayNormalizeOne, cardReplayFromCpu, CARD_REPLAY_RULES, CARD_REPLAY_ACTS_MAX };`, ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 let failed = 0;
@@ -93,6 +95,35 @@ check('A サーバで回した16試合(助手の席・先攻後攻を含む)が�
   const opened = broken.filter(([, r]) => E.cardReplayFromTour(db, r, {}) !== null).map(([n]) => n);
   check('D 壊れた行は開かない', opened.length === 0, opened.join('・'));
   check('D 大会の記録は端末の保存の形に入らない(過去の対戦の枠を食わない)', E.cardReplayNormalizeOne(knownDra) === null);
+}
+
+// ---- E ----
+{
+  let badE = [];
+  for (let i = 0; i < 8; i++) {
+    const fighter = deckOf(['mua', 'kiki', 'momosuke', 'dra'][i % 4], 200 + i);
+    const owner = { deck: deckOf(['kyuko', 'atsu', 'dra', 'mua'][i % 4], 300 + i), tactics: tacs[i % 3] };
+    const seed = 5000 + i * 104729, first = i % 2;
+    // 戦った人の端末の対戦と同じ: 下が戦った人、上が登録デッキ。手は 84 の cpuLogAct と同じ { by, act }
+    const res = E.cardTourPlay(db, { deck: fighter, tactics: tacs[(i + 1) % 3] }, owner, { seed, first, key: `deck|${i}` });
+    const outcome = res.winner === 0 ? 'win' : 'lose';
+    const rec = E.cardReplayFromCpu(db, { id: `s${seed}`, at: 1, myDeck: fighter, cpuDeck: owner.deck, seed, first, history: res.acts.map(([by, act]) => ({ by, act })), foe: { name: '登録した人' }, outcome, reason: '' });
+    if (!rec) { badE.push(`${i}: 記録を作れない`); continue; }
+    // 送る形(95 の cardShareReplayPut)→ 表 → card_deck_replay_get の形(登録デッキはサーバが登録から写す)
+    const put = { p_user_deck: { monsters: rec.decks[0].monsters, cards: rec.decks[0].cards }, p_seed: rec.seeds[0] >>> 0, p_first: rec.first, p_rules: rec.rules, p_acts: rec.acts, p_deck_won: outcome !== 'win' };
+    const row = JSON.parse(JSON.stringify({ id: i, kind: 'deck', seed: put.p_seed, first: put.p_first, rules: put.p_rules, acts: put.p_acts, winner: put.p_deck_won ? 1 : 0,
+      a: { name: `たたかう人${i}`, icon: '🦊', is_assist: false, deck: put.p_user_deck }, b: { name: '登録した本人', icon: '🐣', is_assist: false, deck: owner.deck } }));
+    const back = E.cardReplayFromTour(db, row, { title: 'フリー対戦 10/31 09:00' });
+    const built = back && E.cardReplayBuild(db, back);
+    const last = built && built.states[built.states.length - 1];
+    if (!back || built.stop !== null || (res.decided !== 'limit' && last.winner !== res.winner)) badE.push(`${i}: ${!back ? '開けない' : `止まった手 ${built.stop}/${rec.acts.length}`}`);
+    else if (i === 0) {
+      check('E 上は「あなたのデッキ」・下は戦った人・印は「登録デッキ」', back.kind === 'deck' && back.names[1] === 'あなたのデッキ' && back.names[0] === 'たたかう人0' && back.tour.badge === '登録デッキ' && back.tour.deck === true && back.tour.me.name === 'たたかう人0');
+      check('E 勝った人は登録デッキから見た勝ち負けどおり', back.tour.winner === (put.p_deck_won ? 'あなたのデッキ' : 'たたかう人0') && back.tour.live === null && back.id === 'deck-0');
+      check('E 送る手の並びは表の上限(30KB・4,000手)に収まる', JSON.stringify(put.p_acts).length <= 30000 && put.p_acts.length <= 4000, `${JSON.stringify(put.p_acts).length}字`);
+    }
+  }
+  check('E 戦った人の端末で作った記録を、表の形にして開くと最後の手まで通る(8試合)', badE.length === 0, badE.slice(0, 3).join(' / '));
 }
 
 console.log(failed ? `\n${failed}件 NG` : '\nすべてOK');

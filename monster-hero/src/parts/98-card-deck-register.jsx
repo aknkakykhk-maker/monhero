@@ -176,7 +176,8 @@ const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, onRows, on
 };
 
 // onOpenList … 持っている戦術カードの一覧(97)/ onOpenMarket … マーケットの戦術カード
-const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenList = null, onOpenMarket = null }) => {
+// onOpenReplays … 登録中のデッキが戦われた試合の一覧へ(95 の CardDeckReplays。2026-10-31)
+const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenList = null, onOpenMarket = null, onOpenReplays = null }) => {
   const [step, setStep] = useState('deck');
   const [data, setData] = useState(null);       // cardTacticsLoad
   const [mine, setMine] = useState(undefined);  // 登録中(cardShareFetchMine)
@@ -252,10 +253,14 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
   const back = (to) => <button type="button" data-card-reg-back onClick={() => { Audio_.fgSe.tap(); setStep(to); }} className="mh-button min-h-[52px] flex-1 rounded-2xl font-black">戻る</button>;
   const headRight = onOpenList ? <button type="button" data-card-reg-list onClick={() => { Audio_.fgSe.tap(); onOpenList(); }} className="rounded-lg border border-white/20 px-2 py-1 text-[11px] font-black text-slate-200">持っている<br/>戦術カード</button> : null;
   const mineBox = mine ? (
-    <div data-card-reg-mine className={`${SCREEN_PANEL_CLASS} mb-2 flex items-center gap-2 py-2`}>
-      <CardRegThumbs db={db} deck={mine.deck} h={36}/>
-      <span className="min-w-0 flex-1 text-[12px] font-bold text-slate-200"><b className="block truncate text-white">{`登録中: ${cardShareNormalizeTactics(mine.tactics).name || 'デッキ'}`}</b>{`賢さ ${cardShareSmartText(mine.tactics)}・戦われた ${mine.battles}回`}</span>
-      <button type="button" data-card-reg-unregister disabled={busy} onClick={() => { Audio_.fgSe.tap(); void unregister(); }} className="shrink-0 rounded-lg border border-white/15 px-2 py-1 text-[11px] font-black text-slate-300">やめる</button>
+    <div data-card-reg-mine className={`${SCREEN_PANEL_CLASS} mb-2 py-2`}>
+      <div className="flex items-center gap-2">
+        <CardRegThumbs db={db} deck={mine.deck} h={36}/>
+        <span className="min-w-0 flex-1 text-[12px] font-bold text-slate-200"><b className="block truncate text-white">{`登録中: ${cardShareNormalizeTactics(mine.tactics).name || 'デッキ'}`}</b>{`賢さ ${cardShareSmartText(mine.tactics)}・戦われた ${mine.battles}回`}</span>
+        <button type="button" data-card-reg-unregister disabled={busy} onClick={() => { Audio_.fgSe.tap(); void unregister(); }} className="shrink-0 rounded-lg border border-white/15 px-2 py-1 text-[11px] font-black text-slate-300">やめる</button>
+      </div>
+      {onOpenReplays && <button type="button" data-card-reg-replays onClick={() => { Audio_.fgSe.tap(); onOpenReplays(); }}
+        className="mt-1.5 w-full rounded-xl border-2 border-sky-400 bg-sky-950 py-2 text-[13px] font-black text-sky-50">戦われた試合を見る</button>}
     </div>
   ) : null;
   return (
