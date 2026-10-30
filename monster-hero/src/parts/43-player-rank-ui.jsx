@@ -26,8 +26,12 @@ const PLAYER_RANK_BADGE_CSS = `
 .mh-prb-shield::before{content:"";position:absolute;inset:0;clip-path:polygon(50% 0,100% 18%,100% 70%,50% 100%,0 70%,0 18%);background:var(--prb-rim)}
 .mh-prb-shield::after{content:"";position:absolute;inset:3px;clip-path:polygon(50% 0,100% 18%,100% 70%,50% 100%,0 70%,0 18%);background:var(--prb-face)}
 .mh-prb-gloss{position:absolute;inset:3px 3px 50% 3px;z-index:2;clip-path:polygon(50% 0,100% 18%,100% 100%,0 100%,0 18%);background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.05))}
-.mh-prb-num{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;padding-top:3px;font-weight:900;font-size:26px;color:#fff;-webkit-text-stroke:5px var(--prb-ink);paint-order:stroke fill;letter-spacing:-.04em;line-height:1}
+.mh-prb-num{position:absolute;inset:-2.7% 0 2.7% 0;z-index:3;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:26px;color:#fff;-webkit-text-stroke:5px var(--prb-ink);paint-order:stroke fill;letter-spacing:-.04em;line-height:1}
 .mh-prb-num.mh-prb-w3{font-size:20px}
+/* 2026-10-30 社長「数字の位置がセンターずれ」: 字の上下の余白(字体ごとに違う)を切り落として数字そのものを真ん中に置き、
+   盾は下が長く尖っていて見た目の重心が箱の真ん中より上(約47%)なので、数字の箱(.mh-prb-num)を盾の高さの2.7%だけ上へずらす。
+   字間を詰めた分(最後の字のうしろも詰まる)は右に足して打ち消す */
+.mh-prb-digits{display:inline-block;text-box:trim-both cap alphabetic;padding-right:.04em}
 .mh-prb-tag{display:flex;flex-direction:column;line-height:1.05}
 .mh-prb-kind{white-space:nowrap;font-size:10px;font-weight:900;color:var(--prb-label);letter-spacing:.08em}
 .mh-prb-name{white-space:nowrap;font-size:14px;font-weight:900;color:#fff;-webkit-text-stroke:3px var(--prb-ink);paint-order:stroke fill}
@@ -60,7 +64,7 @@ function PlayerRankBadge({ kind = 'beat', rank = 1, size = 'lg', showName = true
   return (
     <span data-player-rank-badge={kind} data-player-rank-tier={tier.t} aria-label={`${k.label} ${r}`}
       className={`mh-prb mh-prb-t${tier.t}${size === 'sm' ? ' mh-prb-s' : ''}`}>
-      <span className="mh-prb-shield" aria-hidden="true"><span className="mh-prb-gloss"/><b data-player-rank-value className={`mh-prb-num${text.length >= 3 ? ' mh-prb-w3' : ''}`}>{text}</b></span>
+      <span className="mh-prb-shield" aria-hidden="true"><span className="mh-prb-gloss"/><b data-player-rank-value className={`mh-prb-num${text.length >= 3 ? ' mh-prb-w3' : ''}`}><span className="mh-prb-digits">{text}</span></b></span>
       {showName && <span className="mh-prb-tag" aria-hidden="true"><span className="mh-prb-kind">{tier.name}</span><span className="mh-prb-name">{k.label}</span></span>}
     </span>
   );
@@ -207,11 +211,11 @@ function PlayerRankBoard({ kind = 'beat', fetchTop, fetchMine, renderIcon = null
     <div data-player-rank-board={kind} className="space-y-2 px-3 py-2">
       <p className="text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ランクの高い順。同じランクなら、経験値の合計が多い順です(上位100人とあなた)。')}</p>
       {board.top.length === 0
-        ? <p className="py-4 text-center text-xs font-black text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('まだだれも載っていません。曲を遊ぶと、ここに載ります。')}</p>
+        ? <p className="py-4 text-center text-xs font-black text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`まだだれも載っていません。${kind === 'card' ? 'MFバトルカードで対戦する' : '曲を遊ぶ'}と、ここに載ります。`)}</p>
         : <ol className="space-y-1.5">{board.top.map((e, i) => <PlayerRankRow key={e.breederId || i} kind={kind} place={i + 1} icon={iconOf(e)} name={e.name} rank={e.rank} xp={e.xp} mine={!!selfId && e.breederId === selfId}/>)}</ol>}
       {!inTop && (board.mine
         ? <ol className="border-t border-white/10 pt-2"><PlayerRankRow kind={kind} place={board.mine.place} icon={iconOf(board.mine)} name={board.mine.name} rank={board.mine.rank} xp={board.mine.xp} mine/></ol>
-        : selfXp > 0 && <p className="border-t border-white/10 pt-2 text-center text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('あなたの記録は、次に曲を遊んだときに載ります。')}</p>)}
+        : selfXp > 0 && <p className="border-t border-white/10 pt-2 text-center text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`あなたの記録は、次に${kind === 'card' ? 'ランクが上がった' : '曲を遊んだ'}ときに載ります。`)}</p>)}
     </div>
   );
 }
@@ -244,10 +248,11 @@ const PLAYER_RANK_UP_FX_CSS = `
 .mh-prfx-rays{position:absolute;left:50%;top:38%;width:560px;height:560px;margin:-280px 0 0 -280px;border-radius:50%;opacity:0;pointer-events:none;background:repeating-conic-gradient(from 0deg,var(--prfx-ray) 0 8deg,transparent 8deg 24deg);-webkit-mask:radial-gradient(circle,#000 25%,transparent 68%);mask:radial-gradient(circle,#000 25%,transparent 68%)}
 .mh-prfx-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
 .mh-prfx-band{align-self:stretch;text-align:center;padding:8px 0;font-weight:900;font-size:20px;line-height:1.2;color:#fff;-webkit-text-stroke:4px rgba(0,0,0,.6);paint-order:stroke fill;opacity:0;background:linear-gradient(90deg,transparent,var(--prfx-band),transparent)}
-.mh-prfx-gains{list-style:none;margin:0;padding:0;width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+/* 2列にするのは、1つの札に字が入りきる幅(220px)が取れるときだけ(2026-10-30 カード部の検査「390幅でセッション券が札の外」) */
+.mh-prfx-gains{list-style:none;margin:0;padding:0;width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
 .mh-prfx-gain{display:flex;align-items:center;gap:10px;min-width:0;padding:8px 12px;border-radius:14px;background:rgba(15,10,35,.88);border:1px solid rgba(253,224,71,.45);opacity:0}
 .mh-prfx-gain.bonus{border-color:#f0abfc;box-shadow:0 0 18px rgba(240,171,252,.45)}
-.mh-prfx-gain b{display:block;font-size:18px;font-weight:900;line-height:1.2;color:#fef08a;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mh-prfx-gain b{display:block;font-size:18px;font-weight:900;line-height:1.2;color:#fef08a;font-variant-numeric:tabular-nums;word-break:keep-all;overflow-wrap:anywhere}
 .mh-prfx-gain small{display:block;font-size:10px;font-weight:700;color:#cbd5e1}
 .mh-prfx-gain .ico{flex:none;font-size:24px}
 .mh-prfx-hint{flex:none;text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,.6)}
@@ -256,7 +261,7 @@ const PLAYER_RANK_UP_FX_CSS = `
   .mh-prfx-stage{flex-direction:row;gap:20px;padding:max(12px,var(--mh-sa-top,0px)) max(16px,var(--mh-sa-right,0px)) max(12px,var(--mh-sa-bottom,0px)) max(16px,var(--mh-sa-left,0px))}
   .mh-prfx-side{flex:1 1 0;min-width:0;max-width:560px}
   .mh-prfx-title{font-size:26px}
-  .mh-prfx-gains{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+  .mh-prfx-gains{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
   .mh-prfx-gain{padding:6px 10px}
   .mh-prfx-gain b{font-size:16px}
   .mh-prfx-band{font-size:17px;padding:6px 0}
@@ -349,7 +354,7 @@ function PlayerRankUpFx({ kind = 'beat', from = 1, to = 1, gains = [], onClose =
   const k = playerRankKind(kind);
   const shield = (rank, cls = '') => (
     <span className={`mh-prb mh-prfx-big mh-prb-t${playerRankTier(rank).t} ${cls}`}>
-      <span className="mh-prb-shield"><span className="mh-prb-gloss"/><b className={`mh-prb-num${String(rank).length >= 3 ? ' mh-prb-w3' : ''}`}>{rank}</b></span>
+      <span className="mh-prb-shield"><span className="mh-prb-gloss"/><b className={`mh-prb-num${String(rank).length >= 3 ? ' mh-prb-w3' : ''}`}><span className="mh-prb-digits">{rank}</span></b></span>
     </span>
   );
   return (

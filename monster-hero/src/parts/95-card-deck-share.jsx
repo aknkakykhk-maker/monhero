@@ -480,7 +480,7 @@ const CardShareDeckDetail = ({ entry, onClose }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const t = cardShareNormalizeTactics(entry.tactics);
   const f = t.f ? cardTacticUnpackFrames(t.f) : null;
-  const monName = (i) => ((db && cardMonsterOf(db, entry.deck.monsters[i])) || {}).name || ['左の子', '真ん中の子', '右の子'][i];
+  const monName = (i) => ((db && cardMonsterOf(db, entry.deck.monsters[i])) || {}).name || ['左のモンスター', '真ん中のモンスター', '右のモンスター'][i];
   const rowText = (r) => `${(cardTacticOf(r.c) || {}).name || '?'} ▶ ${(cardTacticOf(r.a) || {}).name || '?'}${r.on ? '' : '(休み)'}`;
   return (
     <div data-card-share-deck-detail className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={onClose}>
