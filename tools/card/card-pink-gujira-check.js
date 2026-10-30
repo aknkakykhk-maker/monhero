@@ -63,3 +63,26 @@ ids.forEach((no) => { assert(new RegExp(`'${no}': HYBRID_C068_IMG`).test(ally), 
 for (const f of ['images/monsters/c068.png', 'images/monster-icons/face/c068.png']) assert(fs.statSync(path.join(root, 'monster-hero', f)).size > 0);
 console.log('OK: ピンクグジラ3種類・画像・立ち絵・顔・血統技・第7弾抽選/天井・保存復元・対戦生成');
 console.log('第7弾候補数:', rarities.map((k) => `${k}=${E.cardPackMonPool(db, p, k).length}`).join(', '));
+
+// 配信の絵(s・l)が、元の絵(tools/art-sources/card-battle/hybrid/C068*.jpg)と同じ見た目か。
+// card-image-build の NO_COPYRIGHT に入れ忘れると、下の帯が塗られて名前の「ラ」が縞に化ける(2026-10-30 テスターさんの知らせ)
+(async () => {
+  const sharp = require(path.join(root, 'tools', 'node_modules', 'sharp'));
+  for (const no of ids) {
+    const img = db.monsters[no].img;
+    // 大きい絵(l)で見る(小さい絵 s は縮め方の差が大きく、塗った帯との見分けがつきにくい。s も同じ道具で同時に作られる)
+    const out = path.join(root, `monster-hero/images/card-battle/l/${img}.jpg`);
+    const { width: w, height: h } = await sharp(out).metadata();
+    const a = await sharp(out).removeAlpha().raw().toBuffer();
+    const b = await sharp(path.join(root, `tools/art-sources/card-battle/hybrid/${img}.jpg`)).resize(w, h, { fit: 'fill' }).removeAlpha().raw().toBuffer();
+    // 下の4分の1(名前・番号・ライフの段)で、行ごとの差の平均のいちばん悪い行。帯を塗ると23以上、塗らなければ9以下(2026-10-30 測った)
+    let worst = 0;
+    for (let y = Math.floor(h * 0.75); y < h; y++) {
+      let t = 0;
+      for (let x = 0; x < w; x++) { const i = (y * w + x) * 3; t += (Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2])) / 3; }
+      worst = Math.max(worst, t / w);
+    }
+    assert(worst < 15, `l/${img}.jpg の下の段が元の絵と違う(いちばん違う行の差 ${worst.toFixed(1)})。card-image-build の NO_COPYRIGHT を見る`);
+  }
+  console.log('OK: 配信の絵の名前・番号の段が元の絵と同じ(帯を塗っていない)');
+})().catch((e) => { console.error(e.message || e); process.exitCode = 1; });
