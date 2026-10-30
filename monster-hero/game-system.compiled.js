@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1b37b101f40b373d
+// source-sha256: 2b31af8658649b2e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113333,6 +113333,7 @@ const CardDeckShare = ({
 }) => {
   const [tab, setTab] = useState(part === 'mine' ? 'mine' : onFight ? 'fight' : 'mine');
   const [foes, setFoes] = useState(null);
+  const [foeFilter, setFoeFilter] = useState('all');
   const [tacticsSave, setTacticsSave] = useState(null);
   useEffect(() => {
     if (typeof cardTacticsLoad === 'function') void cardTacticsLoad().then(setTacticsSave).catch(() => {});
@@ -113472,56 +113473,92 @@ const CardDeckShare = ({
     if (tab === 'fight' && selfId && !off && foes === null) void loadFoes();
   }, [tab, selfId, off]);
   const fightIssues = issuesOf(list.find(d => d.id === (decks && decks.active)) || list[0] || null);
-  const foeRow = e => React.createElement("li", {
-    key: e.ownerId,
-    "data-card-share-foe": e.ownerId,
-    className: "flex items-center gap-2 rounded-xl bg-black/30 px-2 py-2"
-  }, typeof CardPvpAvatar === 'function' && React.createElement(CardPvpAvatar, {
-    icon: e.icon,
-    frame: e.frame,
-    className: "h-9 w-9"
-  }), React.createElement("span", {
-    className: "min-w-0 flex-1"
-  }, React.createElement("b", {
-    className: "block truncate text-[13px] font-black text-white"
-  }, e.name), React.createElement("small", {
-    className: "block truncate text-[11px] font-bold text-slate-300"
-  }, e.tactics.name || 'デッキ', "・", e.deck.monsters.map(no => (cardMonsterOf(db, no) || {}).name || no).join('・')), React.createElement("small", {
-    "data-card-share-smart": cardShareSmartLevel(e.tactics),
-    className: "block text-[10px] font-black text-amber-200"
-  }, `賢さ ${cardShareSmartText(e.tactics)}`), React.createElement("small", {
-    className: "block text-[10px] font-bold text-sky-200 tabular-nums"
-  }, e.battles ? `戦われた ${e.battles}回・デッキの勝ち ${Math.round(e.deckWins / e.battles * 100)}%` : 'まだ戦われていません')), React.createElement("span", {
-    className: "flex shrink-0 flex-col gap-1"
-  }, React.createElement("button", {
-    type: "button",
-    "data-card-share-fight": e.ownerId,
-    disabled: !onFight || fightIssues.length > 0,
-    className: "mh-button mh-button-primary min-h-[36px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
-    onClick: () => {
-      Audio_.fgSe.tap();
-      if (onFight) onFight(e, cardShareFightLevel(e.tactics));
-    }
-  }, "戦う"), part !== 'fight' && React.createElement("button", {
-    type: "button",
-    "data-card-share-rent": e.ownerId,
-    disabled: busy || rented && rented.ownerId === e.ownerId && rented.version === e.version,
-    className: "min-h-[30px] rounded-lg border border-emerald-300/50 bg-slate-900 px-2 text-[11px] font-black text-emerald-100 disabled:opacity-50",
-    onClick: () => {
-      Audio_.fgSe.tap();
-      void rent(e);
-    }
-  }, rented && rented.ownerId === e.ownerId && rented.version === e.version ? '借りています' : '借りる')));
-  const foeList = (title, rows, key) => React.createElement("div", {
-    className: SCREEN_PANEL_CLASS,
-    "data-card-share-list": key
-  }, React.createElement("div", {
-    className: "text-[12px] font-bold text-slate-400"
-  }, title), rows.length ? React.createElement("ul", {
-    className: "mt-1 space-y-1"
-  }, rows.map(foeRow)) : React.createElement("p", {
-    className: "mt-1 text-[12px] font-bold text-slate-400"
-  }, key === 'friends' ? 'デッキを登録しているフレンドはいません' : 'まだだれも登録していません'));
+  const CARD_SHARE_FOE_TAGS = [['picks', 'おすすめ', 'bg-amber-400 text-slate-950'], ['friends', 'フレンド', 'bg-emerald-400 text-emerald-950'], ['popular', '人気', 'bg-pink-400 text-pink-950']];
+  const foeMerged = (() => {
+    if (!foes) return [];
+    const byId = new Map();
+    CARD_SHARE_FOE_TAGS.forEach(([key]) => (foes[key] || []).forEach(e => {
+      const cur = byId.get(e.ownerId);
+      if (cur) {
+        if (!cur.tags.includes(key)) cur.tags.push(key);
+      } else byId.set(e.ownerId, {
+        e,
+        tags: [key]
+      });
+    }));
+    return [...byId.values()];
+  })();
+  const foeShown = foeFilter === 'all' ? foeMerged : foeMerged.filter(x => x.tags.includes(foeFilter));
+  const foeRow = ({
+    e,
+    tags
+  }) => {
+    const mons = e.deck.monsters.map(no => cardMonsterOf(db, no) || {
+      no,
+      name: no,
+      img: no
+    });
+    return React.createElement("li", {
+      key: e.ownerId,
+      "data-card-share-foe": e.ownerId,
+      "data-card-share-foe-tags": tags.join(' '),
+      className: "flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-2 py-2"
+    }, React.createElement("span", {
+      className: "flex shrink-0 flex-col items-center gap-1"
+    }, React.createElement("span", {
+      className: "flex"
+    }, mons.map((m, i) => React.createElement("img", {
+      key: i,
+      src: CARD_IMG(m.img),
+      alt: m.name,
+      loading: "lazy",
+      className: `h-9 w-9 rounded-full border-2 border-amber-200 bg-slate-900 object-cover ${i ? '-ml-2' : ''}`,
+      style: {
+        objectPosition: '50% 18%'
+      }
+    }))), React.createElement("span", {
+      "data-card-share-foe-tag": true,
+      className: "flex gap-0.5"
+    }, CARD_SHARE_FOE_TAGS.filter(([k]) => tags.includes(k)).map(([k, label, tone]) => React.createElement("span", {
+      key: k,
+      className: `whitespace-nowrap rounded px-1 text-[9px] font-black ${tone}`
+    }, label)))), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      className: "block truncate text-[13px] font-black leading-tight text-white"
+    }, e.name), React.createElement("small", {
+      "data-card-share-deck-name": true,
+      className: "block truncate text-[11.5px] font-black leading-tight text-amber-100"
+    }, "「", e.tactics.name || 'デッキ', "」"), React.createElement("small", {
+      className: "block truncate text-[10.5px] font-bold text-slate-300"
+    }, mons.map(m => m.name).join('・')), React.createElement("small", {
+      "data-card-share-smart": cardShareSmartLevel(e.tactics),
+      className: "block truncate whitespace-nowrap text-[11px] font-black text-amber-200"
+    }, `賢さ ${cardShareSmartText(e.tactics)}`), React.createElement("small", {
+      className: "block truncate text-[10.5px] font-bold text-sky-200 tabular-nums"
+    }, e.battles ? `戦われた ${e.battles}回・勝ち ${Math.round(e.deckWins / e.battles * 100)}%` : 'まだ戦われていません')), React.createElement("span", {
+      className: "flex shrink-0 flex-col gap-1"
+    }, React.createElement("button", {
+      type: "button",
+      "data-card-share-fight": e.ownerId,
+      disabled: !onFight || fightIssues.length > 0,
+      className: "mh-button mh-button-primary min-h-[40px] rounded-lg px-2.5 text-[13px] font-black disabled:opacity-50",
+      onClick: () => {
+        Audio_.fgSe.tap();
+        if (onFight) onFight(e, cardShareFightLevel(e.tactics));
+      }
+    }, "戦う"), part !== 'fight' && React.createElement("button", {
+      type: "button",
+      "data-card-share-rent": e.ownerId,
+      disabled: busy || rented && rented.ownerId === e.ownerId && rented.version === e.version,
+      className: "min-h-[30px] rounded-lg border border-emerald-300/50 bg-slate-900 px-2 text-[11px] font-black text-emerald-100 disabled:opacity-50",
+      onClick: () => {
+        Audio_.fgSe.tap();
+        void rent(e);
+      }
+    }, rented && rented.ownerId === e.ownerId && rented.version === e.version ? '借りています' : '借りる')));
+  };
+  const foeEmptyText = foeFilter === 'friends' ? 'デッキを登録しているフレンドはいません' : 'まだだれも登録していません';
   const registerButton = React.createElement("button", {
     type: "button",
     "data-card-share-register": true,
@@ -113582,7 +113619,28 @@ const CardDeckShare = ({
     style: JA_WRAP_STYLE
   }, jaWrap(msg)), foes === null ? React.createElement("p", {
     className: "text-[13px] font-bold text-slate-300"
-  }, "読み込み中…") : React.createElement(React.Fragment, null, foeList('おすすめ', foes.picks, 'picks'), React.createElement("button", {
+  }, "読み込み中…") : React.createElement(React.Fragment, null, React.createElement("div", {
+    "data-card-share-filters": true,
+    className: "flex gap-1.5 overflow-x-auto pb-0.5",
+    role: "tablist"
+  }, [['all', 'すべて'], ...CARD_SHARE_FOE_TAGS.map(([k, label]) => [k, label])].map(([k, label]) => React.createElement("button", {
+    key: k,
+    type: "button",
+    role: "tab",
+    "aria-selected": foeFilter === k,
+    "data-card-share-filter": k,
+    className: `shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-black ${foeFilter === k ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-200'}`,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setFoeFilter(k);
+    }
+  }, label))), React.createElement("div", {
+    "data-card-share-list": foeFilter
+  }, foeShown.length ? React.createElement("ul", {
+    className: "space-y-1.5"
+  }, foeShown.map(foeRow)) : React.createElement("p", {
+    className: `${SCREEN_PANEL_CLASS} text-[12px] font-bold text-slate-400`
+  }, foeEmptyText)), React.createElement("button", {
     type: "button",
     "data-card-share-reload": true,
     className: "w-full rounded-xl border border-white/15 bg-slate-900 py-2 text-[12px] font-black text-slate-200",
@@ -113590,7 +113648,7 @@ const CardDeckShare = ({
       Audio_.fgSe.tap();
       void loadFoes();
     }
-  }, "ほかの人をさがす"), foeList('フレンドのデッキ', foes.friends, 'friends'), foeList('よく戦われているデッキ', foes.popular, 'popular'))), mine !== undefined && !off && tab === 'mine' && React.createElement(React.Fragment, null, React.createElement("div", {
+  }, "ほかの人をさがす"))), mine !== undefined && !off && tab === 'mine' && React.createElement(React.Fragment, null, React.createElement("div", {
     "data-card-share-mine": true,
     className: SCREEN_PANEL_CLASS
   }, React.createElement("div", {
