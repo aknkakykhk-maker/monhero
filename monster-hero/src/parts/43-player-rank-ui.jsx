@@ -174,7 +174,7 @@ function PlayerRankDetail({ kind = 'beat', xp = 0, rewardsOf, how = '', onClose 
   const close = () => { if (typeof Audio_ !== 'undefined' && Audio_.fgSe) Audio_.fgSe.tap(); if (onClose) onClose(); };
   return (
     <div data-player-rank-detail={kind} role="dialog" aria-modal="true" aria-label={k.label} className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-3" onClick={close}>
-      <div className={`flex max-h-[calc(100dvh-24px)] w-full max-w-[380px] flex-col rounded-2xl border-2 bg-gradient-to-b from-violet-950 to-slate-950 p-3 text-white ${k.border}`} onClick={(e) => e.stopPropagation()}>
+      <div className={`flex max-h-[calc(var(--mh-vh)-24px)] w-full max-w-[380px] flex-col rounded-2xl border-2 bg-gradient-to-b from-violet-950 to-slate-950 p-3 text-white ${k.border}`} onClick={(e) => e.stopPropagation()}>
         {/* 背の低い画面(横向きのスマホ)では札を小さくして、ごほうびの一覧に高さを回す */}
         <div className="flex shrink-0 justify-center [@media(max-height:480px)]:hidden"><PlayerRankBadge kind={kind} rank={info.rank} size="lg"/></div>
         <div className="hidden shrink-0 justify-center [@media(max-height:480px)]:flex"><PlayerRankBadge kind={kind} rank={info.rank} size="sm"/></div>

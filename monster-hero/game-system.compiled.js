@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f1151a136b392c79
+// source-sha256: b3ba5d306b81cdd1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -55460,7 +55460,7 @@ function PlayerRankDetail({
     className: "fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-3",
     onClick: close
   }, React.createElement("div", {
-    className: `flex max-h-[calc(100dvh-24px)] w-full max-w-[380px] flex-col rounded-2xl border-2 bg-gradient-to-b from-violet-950 to-slate-950 p-3 text-white ${k.border}`,
+    className: `flex max-h-[calc(var(--mh-vh)-24px)] w-full max-w-[380px] flex-col rounded-2xl border-2 bg-gradient-to-b from-violet-950 to-slate-950 p-3 text-white ${k.border}`,
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
     className: "flex shrink-0 justify-center [@media(max-height:480px)]:hidden"
