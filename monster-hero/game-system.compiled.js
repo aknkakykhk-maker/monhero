@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f73bb9f8fc11b38f
+// source-sha256: 236bfb93875ec5b0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -55337,7 +55337,7 @@ function PlayerRankUp({
     className: "rounded-lg border border-fuchsia-200/40 bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-amber-100"
   }, g.icon && React.createElement("span", {
     "aria-hidden": "true"
-  }, g.icon, " "), React.createElement("span", {
+  }, cardIconNode(g.icon, 14), " "), React.createElement("span", {
     style: JA_WRAP_STYLE
   }, jaWrap(String(g.text || '')))))));
 }
@@ -55772,7 +55772,7 @@ function PlayerRankXpBar({
     className: `self-center rounded-full px-2 py-0.5 text-[10px] font-black ${k.pill}`
   }, React.createElement("span", {
     "aria-hidden": "true"
-  }, k.icon, " "), k.label), React.createElement("b", {
+  }, cardIconNode(k.icon, 12), " "), k.label), React.createElement("b", {
     ref: addRef,
     "data-player-rank-gain-add": true,
     className: "mh-prxb-add"
@@ -56218,7 +56218,7 @@ function PlayerRankUpFx({
   }, g.icon && React.createElement("span", {
     className: "ico",
     "aria-hidden": "true"
-  }, g.icon), React.createElement("span", {
+  }, cardIconNode(g.icon, 16)), React.createElement("span", {
     className: "min-w-0"
   }, React.createElement("b", null, String(g.text || '')), g.note && React.createElement("small", {
     style: JA_WRAP_STYLE
@@ -114774,7 +114774,7 @@ const CardTacticsScreen = ({
     className: "mx-auto h-[30px] w-[22px] rounded object-cover"
   }) : React.createElement("span", {
     className: "block text-[18px] leading-[30px]"
-  }, x.icon), React.createElement("span", {
+  }, cardIconNode(x.icon, 22)), React.createElement("span", {
     className: "block truncate text-[10px] font-black text-white"
   }, x.label), React.createElement("span", {
     className: "block text-[9px] font-bold text-slate-400"
@@ -115723,7 +115723,7 @@ const CardRegComboSheet = ({
       className: `rounded-xl border-2 p-2 text-left ${ok ? 'border-slate-600 bg-slate-800 active:scale-[.97]' : 'border-slate-800 bg-slate-900 opacity-50'}`
     }, React.createElement("span", {
       className: "block text-[20px] leading-none"
-    }, x.icon), React.createElement("b", {
+    }, cardIconNode(x.icon, 20)), React.createElement("b", {
       className: "mt-1 block text-[13px] font-black leading-tight text-white",
       style: JA_WRAP_STYLE
     }, x.name), React.createElement("small", {
@@ -116158,7 +116158,7 @@ const CardDeckRegister = ({
     className: `flex w-full items-center gap-3 rounded-2xl border-2 p-3 text-left ${styleId === s.id ? 'border-amber-300 bg-amber-950/40' : 'border-slate-700 bg-slate-900'}`
   }, React.createElement("span", {
     className: "w-10 text-center text-[28px]"
-  }, s.icon), React.createElement("span", {
+  }, cardIconNode(s.icon, 28)), React.createElement("span", {
     className: "min-w-0 flex-1"
   }, React.createElement("b", {
     className: "block text-[15px] font-black text-white"

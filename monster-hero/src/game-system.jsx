@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3295cfb2075047cd
+// generated-sha256: 43e8c24040033457
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -34691,7 +34691,7 @@ function PlayerRankUp({ kind = 'beat', from = 1, to = 1, gains = [] }) {
       </div>
       {gains.length > 0 && <ul data-player-rank-up-gains className="mt-1.5 flex flex-wrap justify-center gap-1.5">
         {gains.map((g, i) => <li key={i} className="rounded-lg border border-fuchsia-200/40 bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-amber-100">
-          {g.icon && <span aria-hidden="true">{g.icon} </span>}<span style={JA_WRAP_STYLE}>{jaWrap(String(g.text || ''))}</span>
+          {g.icon && <span aria-hidden="true">{cardIconNode(g.icon, 14)} </span>}<span style={JA_WRAP_STYLE}>{jaWrap(String(g.text || ''))}</span>
         </li>)}
       </ul>}
     </div>
@@ -34876,7 +34876,7 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null })
       role="button" tabIndex={0} aria-label={view.done ? `${k.label} 経験値 +${add}` : '押すと最後まで飛ばす'}
       onClick={() => { if (!view.done) finish(); }} onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !view.done) { e.preventDefault(); finish(); } }}>
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-        <span className={`self-center rounded-full px-2 py-0.5 text-[10px] font-black ${k.pill}`}><span aria-hidden="true">{k.icon} </span>{k.label}</span>
+        <span className={`self-center rounded-full px-2 py-0.5 text-[10px] font-black ${k.pill}`}><span aria-hidden="true">{cardIconNode(k.icon, 12)} </span>{k.label}</span>
         <b ref={addRef} data-player-rank-gain-add className="mh-prxb-add">{`経験値 +${view.shown.toLocaleString()}`}</b>
         <span className="text-[12px] font-black text-white tabular-nums">{view.up ? `(ランク${startInfo.rank}→${endInfo.rank})` : `(ランク${view.rank})`}</span>
       </div>
@@ -35133,7 +35133,7 @@ function PlayerRankUpFx({ kind = 'beat', from = 1, to = 1, gains = [], onClose =
           {list.length > 0 && <ul className="mh-prfx-gains" aria-label="もらった物">
             {list.map((g, i) => (
               <li key={i} className={`mh-prfx-gain${g.bonus ? ' bonus' : ''}`} style={{ '--d': `${gainStart + i * 0.35}s` }}>
-                {g.icon && <span className="ico" aria-hidden="true">{g.icon}</span>}
+                {g.icon && <span className="ico" aria-hidden="true">{cardIconNode(g.icon, 16)}</span>}
                 <span className="min-w-0"><b>{String(g.text || '')}</b>{g.note && <small style={JA_WRAP_STYLE}>{jaWrap(String(g.note))}</small>}</span>
               </li>
             ))}
@@ -68007,7 +68007,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
               {frameTabs.map((x) => (
                 <button key={x.k} type="button" data-card-tactics-frame={x.k} onClick={() => { Audio_.fgSe.tap(); setFrame(x.k); }}
                   className={`min-w-0 flex-1 rounded-lg border-2 px-0.5 py-1 text-center ${frame === x.k ? 'border-amber-300 bg-amber-900/40' : 'border-slate-700 bg-slate-900'}`}>
-                  {x.mon ? <img src={CARD_IMG(x.mon.img)} alt="" className="mx-auto h-[30px] w-[22px] rounded object-cover"/> : <span className="block text-[18px] leading-[30px]">{x.icon}</span>}
+                  {x.mon ? <img src={CARD_IMG(x.mon.img)} alt="" className="mx-auto h-[30px] w-[22px] rounded object-cover"/> : <span className="block text-[18px] leading-[30px]">{cardIconNode(x.icon, 22)}</span>}
                   <span className="block truncate text-[10px] font-black text-white">{x.label}</span>
                   <span className="block text-[9px] font-bold text-slate-400">{x.sub}</span>
                 </button>
@@ -68422,7 +68422,7 @@ const CardRegComboSheet = ({ tactics, where, title, onPick, onCustom, onClose })
                 return (
                   <button key={x.name} type="button" data-card-reg-combo={x.name} disabled={!ok} onClick={() => { Audio_.fgSe.tap(); onPick({ c: x.c, a: x.a, on: true }); }}
                     className={`rounded-xl border-2 p-2 text-left ${ok ? 'border-slate-600 bg-slate-800 active:scale-[.97]' : 'border-slate-800 bg-slate-900 opacity-50'}`}>
-                    <span className="block text-[20px] leading-none">{x.icon}</span>
+                    <span className="block text-[20px] leading-none">{cardIconNode(x.icon, 20)}</span>
                     <b className="mt-1 block text-[13px] font-black leading-tight text-white" style={JA_WRAP_STYLE}>{x.name}</b>
                     <small className="block text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{ok ? `${(cardTacticOf(x.c) || {}).name} ▶ ${(cardTacticOf(x.a) || {}).name}` : 'まだ持っていない戦術カードがいります(マーケットで引けます)'}</small>
                   </button>
@@ -68612,7 +68612,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
           {CARD_REG_STYLES.map((s, i) => (
             <button key={s.id} type="button" data-card-reg-style={s.id} onClick={() => { Audio_.fgSe.tap(); setStyleId(s.id); setDraft(cardRegApplyStyle(s, tactics, open)); }}
               className={`flex w-full items-center gap-3 rounded-2xl border-2 p-3 text-left ${styleId === s.id ? 'border-amber-300 bg-amber-950/40' : 'border-slate-700 bg-slate-900'}`}>
-              <span className="w-10 text-center text-[28px]">{s.icon}</span>
+              <span className="w-10 text-center text-[28px]">{cardIconNode(s.icon, 28)}</span>
               <span className="min-w-0 flex-1"><b className="block text-[15px] font-black text-white">{s.name}{i === 0 && <span className="ml-1.5 rounded bg-emerald-600 px-1.5 text-[10px]">おすすめ</span>}</b>
                 <small className="block text-[11px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{s.desc}</small></span>
             </button>
