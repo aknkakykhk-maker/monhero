@@ -108,17 +108,21 @@ const serve = () => new Promise(r => { const s = http.createServer((req, res) =>
     it = await items();
     ok('2回押しても1回ぶん: チケット1→12・ダイヤ50,000→48,900', it.training_ticket === 12 && (await store('mh_gold')) === 48900, `${it.training_ticket} / ${await store('mh_gold')}`);
 
-    // ④ ビートP交換所の勇者の証片(1個500P、3,000Pなので最大6回)
+    // ④ ビートP交換所の勇者の証片。値段はデータから読む(2026-10-30 #4319 で 500P → 75P に値下げ。手で書くと値段を変えるたびに落ちる)。
+    //   3,000P を持っているので、最大の回数は 3,000 ÷ 値段(切り捨て)
+    const shardCost = await page.evaluate(() => (RHYTHM_EVENT_POINT_SHOP_OFFERS.find(o => o.id === 'hero_proof_shard') || {}).cost);
+    const shardMax = Math.floor(3000 / shardCost), shardSpent = shardMax * shardCost;
     await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(b => /戻る/.test(b.getAttribute('aria-label') || '')); b && b.click(); }); await page.waitForTimeout(400);
     await section('event'); await tab('強化素材');
     ok('ビートP「勇者の証片」の窓が開く', await openBuy('勇者の証片を'));
     await page.waitForTimeout(300);
     await press('MAX'); await page.waitForTimeout(200);
     t = await sheetText();
-    ok('MAXで6回・合計3,000ビートP・受け取り6個・残り0が出る', /合計 3,000ビートP/.test(t) && /受け取り 6個/.test(t) && /残り0ビートP/.test(t), t.slice(0, 200));
+    ok(`MAXで${shardMax}回・合計${shardSpent.toLocaleString()}ビートP・受け取り${shardMax}個・残り${(3000 - shardSpent).toLocaleString()}が出る`,
+      Number.isFinite(shardCost) && shardCost > 0 && t.includes(`合計 ${shardSpent.toLocaleString()}ビートP`) && t.includes(`受け取り ${shardMax}個`) && t.includes(`残り${(3000 - shardSpent).toLocaleString()}ビートP`), t.slice(0, 200));
     await doubleConfirm('交換'); await page.waitForTimeout(1200);
     it = await items();
-    ok('2回押しても1回ぶん: 証片5→11・ビートP3,000→0', it.hero_proof_shard === 11 && (await store('mh_rhythm_event_points_v1')) === 0, `${it.hero_proof_shard} / ${await store('mh_rhythm_event_points_v1')}`);
+    ok(`2回押しても1回ぶん: 証片5→${5 + shardMax}・ビートP3,000→${3000 - shardSpent}`, it.hero_proof_shard === 5 + shardMax && (await store('mh_rhythm_event_points_v1')) === 3000 - shardSpent, `${it.hero_proof_shard} / ${await store('mh_rhythm_event_points_v1')}`);
 
     // ⑥ 数を直接打ち込む(2026-10-19 社長「マーケットのアイテムは直接数値入力で買えるようにしよう！」)
     //    ダイヤは48,900、トレーニングチケットは1枚100ダイヤなので、買えるのは489枚まで
