@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 同じ主血統の立ち絵の見た目の大きさをそろえる表示の倍率(MONSTER_ART_SCALE)を見張る(2026-10-29 社長・案A)。
+// 同じ主血統の立ち絵の見た目の大きさをそろえる表示の倍率(monsterArtScaleTable・2026-10-29 社長・案A。2026-10-30 から図鑑の全員を計算)を見張る。
 //
 //   node tools/monster/lineage-art-scale-check.js
 //
@@ -19,12 +19,13 @@ const check = (label, ok, note = '') => { if (!ok) failed++; console.log(`${ok ?
 
 const art = read('monster-hero/src/parts/15-dye-and-art.jsx');
 const fx = read('monster-hero/src/parts/24-battle-fx.jsx');
-const tableSrc = art.match(/const MONSTER_ART_SCALE = Object\.freeze\(\{[\s\S]*?\n\}\);/);
-check('MONSTER_ART_SCALE がある', !!tableSrc);
+const block = art.match(/\/\/ <monster-art-scale>\n([\s\S]*?)\/\/ <\/monster-art-scale>/);
+check('monsterArtScaleTable(倍率の計算)がある', !!block);
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(`${read('monster-hero/data/images/images-ally.js')}\n${read('monster-hero/data/ally-monsters.js')}\n${tableSrc ? tableSrc[0] : 'const MONSTER_ART_SCALE={};'}\nglobalThis.x={ALL_PLAYER_MONSTERS,MONSTER_ART_SCALE};`, ctx);
-const { ALL_PLAYER_MONSTERS: mons, MONSTER_ART_SCALE: table } = ctx.x;
+vm.runInContext(`${read('monster-hero/data/images/images-ally.js')}\n${read('monster-hero/data/lineages.js')}\n${read('monster-hero/data/ally-monsters.js')}\n${block ? block[1] : 'const monsterArtScaleTable=()=>({});const MONSTER_ART_SCALE_MAX_W=1;'}\nglobalThis.x={ALL_PLAYER_MONSTERS,UPCOMING_MONSTER_DRAFTS,MONSTER_LINEAGE_MAP,ART_CONTENT_BOXES,table:monsterArtScaleTable(),maxW:MONSTER_ART_SCALE_MAX_W};`, ctx);
+const { ALL_PLAYER_MONSTERS: mons, UPCOMING_MONSTER_DRAFTS: drafts, MONSTER_LINEAGE_MAP: lineageMap, ART_CONTENT_BOXES: boxes, table, maxW } = ctx.x;
+check('1体ずつの数字の表(MONSTER_ART_SCALE)は持たない(絵の中身の範囲から計算する)', !/const MONSTER_ART_SCALE = Object\.freeze/.test(art));
 
 check('つなぎ込み: DyedMonsterImage が倍率を掛ける(マスクの位置合わせの画面では掛けない)',
   /const artScale = debugMaskPlacement \? null : monsterArtScaleOf\(baseId, src, className, monsterArtFitStyle\(baseId, givenStyle\)\);/.test(art));
@@ -72,28 +73,33 @@ check('つなぎ込み: 待機アニメの部品の軸を同じ式で動かす',
     off.map(([lin, , list]) => `${lin}: ${list.map(([n, h]) => `${n} ${h.toFixed(2)}`).join(' / ')}`).join(' | '));
 }
 
-let sharp = null;
-try { sharp = require(path.join(ROOT, 'tools/node_modules/sharp')); } catch (_) { /* 無ければ①は飛ばす */ }
 (async () => {
-  if (!sharp) { console.log('SKIP: sharp が無いので、はみ出しの測り直しを飛ばします(cd tools && npm install)'); }
-  else {
-    for (const [id, def] of Object.entries(table)) {
-      const mon = mons[id];
-      if (!mon) { check(`${id} が ALL_PLAYER_MONSTERS にいる`, false); continue; }
-      const { data, info } = await sharp(path.join(ROOT, 'monster-hero', mon.imgUrl.split('?')[0])).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-      let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
-      for (let y = 0; y < info.height; y++) for (let x = 0; x < info.width; x++) {
-        if (data[(y * info.width + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
-      }
-      const B = Math.max(info.width, info.height);
-      // 正方形の箱(1×1)に contain で入れ、中心で scale・ty だけ上下へ動かしたときの、不透明な部分の端
-      const off = (v) => 0.5 + def.scale * (v / B - 0.5);
-      const ox = (B - info.width) / 2, oy = (B - info.height) / 2;
-      const L = off(x0 + ox), R = off(x1 + 1 + ox), T = off(y0 + oy) + def.ty, D = off(y1 + 1 + oy) + def.ty;
-      check(`${mon.name}: ×${def.scale} でも箱からはみ出さない`, L >= 0.005 && R <= 0.995 && T >= 0 && D <= 1,
-        `左${L.toFixed(3)} 右${R.toFixed(3)} 上${T.toFixed(3)} 下${D.toFixed(3)} 高さ${(D - T).toFixed(2)}`);
-    }
+  // ---------- 図鑑(本編の子と下書きのカードだけの子)。正方形の箱に contain で入れ、倍率を掛けたあと ----------
+  const groups = {};
+  for (const [id, mon] of Object.entries({ ...drafts, ...mons })) {
+    if (!mon || !mon.imgUrl) continue;
+    const main = (lineageMap[id] || mon.draftLineage || {}).main;
+    const box = boxes[String(mon.imgUrl).split('?')[0].replace(/^images\//, '')];
+    if (!main) continue;
+    check(`${mon.name}: 立ち絵の中身の範囲(ART_CONTENT_BOXES)がある`, Array.isArray(box));
+    if (!Array.isArray(box)) continue;
+    const [x0, y0, x1, y1, a] = box;
+    const iw = a >= 1 ? 1 : a, ih = a >= 1 ? 1 / a : 1, ox = (1 - iw) / 2, oy = (1 - ih) / 2;
+    const def = table[id] || { scale: 1, tx: 0, ty: 0 };
+    const at = (v, o, size, t) => 0.5 + def.scale * (o + v * size - 0.5) + t;
+    const L = at(x0, ox, iw, def.tx), R = at(x1, ox, iw, def.tx), T = at(y0, oy, ih, def.ty), D = at(y1, oy, ih, def.ty);
+    if (table[id]) check(`${mon.name}: ×${def.scale} でも箱からはみ出さない`, L >= -0.002 && R <= 1.002 && T >= -0.002 && D <= 1.002,
+      `左${L.toFixed(3)} 右${R.toFixed(3)} 上${T.toFixed(3)} 下${D.toFixed(3)}`);
+    (groups[main] = groups[main] || []).push({ name: mon.name, h: D - T, w: R - L });
   }
+  // 同じ主血統で、いちばん高い子に合わせる。届かないのは横に広くて幅で頭打ちの子だけ
+  const off = [];
+  for (const [lin, list] of Object.entries(groups)) {
+    if (list.length < 2) continue;
+    const top = Math.max(...list.map((r) => r.h));
+    for (const r of list) if (r.h < top - 0.03 && r.w < maxW - 0.01) off.push(`${lin}: ${r.name} ${r.h.toFixed(2)} / いちばん高い子 ${top.toFixed(2)}`);
+  }
+  check('図鑑: 同じ主血統の子は、いちばん高い子にそろう(届かないのは幅で頭打ちの子だけ)', off.length === 0, off.join(' | '));
   console.log(failed ? `\nNG: ${failed}件` : '\nすべてOK');
   process.exit(failed ? 1 : 0);
 })();
