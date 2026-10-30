@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2b31af8658649b2e
+// source-sha256: 11ae4b6cf1f17496
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -37396,6 +37396,7 @@ const RhythmTapTest = ({
   beatRankAward = null,
   onRankBarFull = null,
   onRankBarDone = null,
+  onRankBarStart = null,
   debugPlay = false,
   tutorial = false,
   calibrating = false,
@@ -41387,7 +41388,14 @@ const RhythmTapTest = ({
       className: "min-h-0 flex-1 overflow-y-auto px-4 pb-3 pt-3"
     }, React.createElement("h2", {
       className: "mb-2 text-[11px] font-black tracking-[.3em] text-cyan-200 [@container(min-width:680px)]:hidden"
-    }, "RHYTHM RESULT"), React.createElement("div", {
+    }, "RHYTHM RESULT"), React.createElement(PlayerRankGain, {
+      kind: "beat",
+      award: beatRankAward,
+      onFull: onRankBarFull,
+      onDone: onRankBarDone,
+      onStart: onRankBarStart,
+      next: beatRankAward ? `ランク${playerRankInfo(beatRankAward.xp).rank + 1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank + 1)}` : ''
+    }), React.createElement("div", {
       "data-rhythm-result-summary": true,
       className: "[@container(min-width:680px)]:grid [@container(min-width:680px)]:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)] [@container(min-width:680px)]:items-start [@container(min-width:680px)]:gap-2"
     }, React.createElement("div", {
@@ -41653,13 +41661,7 @@ const RhythmTapTest = ({
       className: "mt-1 block text-[10px] font-black text-amber-200"
     }, result.allMarvelous ? 'すべてMARVELOUS。文句なしの完璧です' : result.allExcellent ? 'すべてEXCELLENT以上。ほぼ完璧です' : '一度もコンボを切らずに完走しました')), React.createElement("div", {
       className: "my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300"
-    }, result.fullCombo && React.createElement("span", null, "FULL COMBO"), result.allExcellent && React.createElement("span", null, "ALL EXCELLENT"), result.allMarvelous && React.createElement("span", null, "ALL MARVELOUS")), React.createElement(PlayerRankGain, {
-      kind: "beat",
-      award: beatRankAward,
-      onFull: onRankBarFull,
-      onDone: onRankBarDone,
-      next: beatRankAward ? `ランク${playerRankInfo(beatRankAward.xp).rank + 1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank + 1)}` : ''
-    }), quickRunAward && quickRunAward.loops === 0 && quickRunAward.cleared === false && React.createElement("div", {
+    }, result.fullCombo && React.createElement("span", null, "FULL COMBO"), result.allExcellent && React.createElement("span", null, "ALL EXCELLENT"), result.allMarvelous && React.createElement("span", null, "ALL MARVELOUS")), quickRunAward && quickRunAward.loops === 0 && quickRunAward.cleared === false && React.createElement("div", {
       "data-rhythm-result-quick-run-failed": true,
       className: "my-3 rounded-2xl border border-rose-400/50 bg-rose-950/30 p-3 text-left [@container(min-width:680px)]:hidden"
     }, React.createElement("div", {
@@ -55457,7 +55459,8 @@ function PlayerRankXpBar({
   kind = 'beat',
   award,
   onFull = null,
-  onDone = null
+  onDone = null,
+  onStart = null
 }) {
   ensurePlayerRankXpBarCss();
   const k = playerRankKind(kind);
@@ -55500,6 +55503,22 @@ function PlayerRankXpBar({
     doneSent: false,
     running: true
   });
+  const [seen, setSeen] = React.useState(false);
+  React.useEffect(() => {
+    if (seen) return undefined;
+    const el = rootRef.current;
+    if (!el || typeof IntersectionObserver !== 'function') {
+      setSeen(true);
+      return undefined;
+    }
+    const io = new IntersectionObserver(entries => {
+      if (entries.some(e => e.isIntersecting)) setSeen(true);
+    }, {
+      threshold: 0.6
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [seen]);
   const se = name => {
     try {
       const bank = typeof Audio_ !== 'undefined' ? Audio_.fgSe || Audio_.se : null;
@@ -55671,8 +55690,9 @@ function PlayerRankXpBar({
     sendDone();
   };
   React.useEffect(() => {
-    if (!(add > 0)) return undefined;
+    if (!seen || !(add > 0) || !runRef.current.running) return undefined;
     const run = runRef.current;
+    if (onStart) onStart();
     const moteTimer = setInterval(() => {
       if (!run.running) {
         clearInterval(moteTimer);
@@ -55791,7 +55811,7 @@ function PlayerRankXpBar({
       clearInterval(moteTimer);
       run.timers.forEach(clearTimeout);
     };
-  }, []);
+  }, [seen]);
   const need = playerRankNeed(view.rank);
   const w = `${pct(view.rank, view.into)}%`;
   return React.createElement("div", {
@@ -55868,7 +55888,8 @@ function PlayerRankGain({
   award,
   next = '',
   onFull = null,
-  onDone = null
+  onDone = null,
+  onStart = null
 }) {
   const [done, setDone] = React.useState(false);
   if (!award || !(award.add > 0)) return null;
@@ -55881,6 +55902,7 @@ function PlayerRankGain({
     kind: kind,
     award: award,
     onFull: onFull,
+    onStart: onStart,
     onDone: () => {
       setDone(true);
       if (onDone) onDone();
@@ -98010,7 +98032,7 @@ const CardTurnLogSheet = ({
     className: "mh-button mh-button-secondary mt-2 min-h-[44px] rounded-xl font-black"
   }, "閉じる")));
 };
-const CARD_KEEP_WORDS = /(「[^「」\s]{1,8}」|ひととおり[だ。]*|[^\s、。「」『』（）()]{2}[！？!?…‥〜～♡♪]+[wｗ笑]*|[^\s、。「」『』（）()]{2}[wｗ]+(?![A-Za-zＡ-Ｚａ-ｚ]))/;
+const CARD_KEEP_WORDS = /(「[^「」\s]{1,8}」|ひととおり[だ。]*|[^\s、。「」『』（）()]{2,3}[！？!?…‥〜～♡♪]+[wｗ笑]*[。、]*|[^\s、。「」『』（）()]{2}[wｗ]+(?![A-Za-zＡ-Ｚａ-ｚ]))/;
 const cardJaWrap = text => String(text ?? '').split(CARD_KEEP_WORDS).map((t, i) => i % 2 === 1 ? React.createElement("span", {
   key: i,
   "data-ja-keep": true,
@@ -101229,21 +101251,6 @@ const CardBattleScreen = ({
     return CARD_PVP_BACK.on(go);
   }, []);
   const [deckPick, setDeckPick] = useState(null);
-  const viewRef = useRef(view);
-  viewRef.current = view;
-  useEffect(() => {
-    if (typeof CARD_PVP === 'undefined') return undefined;
-    let prev = CARD_PVP.get().phase;
-    return CARD_PVP.subscribe(r => {
-      if (prev === 'over' && r.phase === 'idle' && viewRef.current === 'pvp') {
-        setDeckPick({
-          next: 'pvp'
-        });
-        setView('deckPick');
-      }
-      prev = r.phase;
-    });
-  }, []);
   const [kitPick, setKitPick] = useState(null);
   const [kitView, setKitView] = useState(null);
   const [starterOpen, setStarterOpen] = useState(null);
@@ -102319,10 +102326,7 @@ const CardBattleScreen = ({
       disabled: !(debug || cardPvpOpen()),
       onClick: () => {
         Audio_.fgSe.tap();
-        setDeckPick({
-          next: 'pvp'
-        });
-        setView('deckPick');
+        setView('pvp');
       },
       className: "mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50",
       style: {
@@ -102432,6 +102436,10 @@ const CardBattleScreen = ({
       note: toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います',
       onBack: () => {
         setDeckPick(null);
+        if (toPvp && CARD_PVP_NEXT.take()) {
+          setView('pvp');
+          return;
+        }
         setView(toPvp ? 'mode' : 'foe');
       },
       allowRented: !toPvp,
@@ -102549,6 +102557,12 @@ const CardBattleScreen = ({
       deckIssues: deckIssues,
       onBack: () => setView('mode'),
       onStepAway: () => setView('mode'),
+      onPickDeck: () => {
+        setDeckPick({
+          next: 'pvp'
+        });
+        setView('deckPick');
+      },
       onReward: pvpReward,
       assistant: topAssistant,
       point: save.point,
@@ -102942,6 +102956,8 @@ const CardBattleScreen = ({
       title: win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…',
       sub: win ? 'YOU WIN' : result.outcome === 'surrender' ? 'SURRENDER' : 'YOU LOSE',
       tone: win ? 'win' : 'lose'
+    }), result.rankGain && React.createElement(CardRankResult, {
+      gain: result.rankGain
     }), a && React.createElement(CardResultTalk, {
       a: a,
       lineScene: win ? 'lose' : 'win',
@@ -102999,9 +103015,7 @@ const CardBattleScreen = ({
       className: "mt-1 text-[12px] font-bold text-slate-300"
     }, "いまのビートP: ", save.point), result.opened && React.createElement("div", {
       className: "mt-1 text-[13px] font-black text-emerald-300"
-    }, CARD_LEVEL_LABEL[result.opened], "が選べるようになりました！"), result.rankGain && React.createElement(CardRankResult, {
-      gain: result.rankGain
-    }), !result.saved && React.createElement("div", {
+    }, CARD_LEVEL_LABEL[result.opened], "が選べるようになりました！"), !result.saved && React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-rose-300",
       style: JA_LABEL_STYLE
     }, jaWrap('保存できませんでした(ビートPは増えていません)')), result.demo && React.createElement("div", {
@@ -108615,6 +108629,22 @@ const CARD_PVP_BACK = (() => {
     }
   };
 })();
+const CARD_PVP_NEXT = (() => {
+  let next = null;
+  return {
+    set(x) {
+      next = x && typeof x === 'object' ? x : null;
+    },
+    peek() {
+      return next;
+    },
+    take() {
+      const x = next;
+      next = null;
+      return x;
+    }
+  };
+})();
 const cardPvpInviteDismissed = new Set();
 const cardPvpInviteKey = x => `${x.senderId}:${x.roomCode}:${x.createdAt}`;
 const cardPvpRoster = async selfId => {
@@ -109857,6 +109887,7 @@ const CardPvpLobby = ({
   onStart,
   onBack,
   onStepAway = null,
+  onPickDeck = null,
   onReward,
   assistant = null,
   point = null,
@@ -109990,6 +110021,35 @@ const CardPvpLobby = ({
     setJoinAsk('');
     if (c) CARD_PVP.join(c, profile, deck);
   }, [joinAsk, profileReady, room.phase, !!deck, deckIssues.length, penaltyMin]);
+  const run = (act, d = deck) => {
+    if (!act || !d) return;
+    const prof = {
+      ...profile,
+      rt: myRating ? myRating.rating : null
+    };
+    if (act.kind === 'free') {
+      CARD_PVP.clearNotice();
+      void CARD_PVP.free(prof, d);
+    } else if (act.kind === 'pick') {
+      CARD_PVP.clearNotice();
+      CARD_PVP.pick(act.code, prof, d);
+    } else if (act.kind === 'create') void CARD_PVP.create(profile, d);else if (act.kind === 'invite') {
+      setInviteNext(act.to);
+      void CARD_PVP.create(profile, d);
+    } else if (act.kind === 'join') CARD_PVP.join(act.code, profile, d, act.via || '');
+  };
+  const go = act => {
+    if (onPickDeck) {
+      CARD_PVP_NEXT.set(act);
+      onPickDeck();
+    } else run(act);
+  };
+  useEffect(() => {
+    if (!CARD_PVP_NEXT.peek() || !profileReady || room.phase !== 'idle') return;
+    const act = CARD_PVP_NEXT.take();
+    if (!deckOk || penaltyMin > 0) return;
+    run(act);
+  }, [profileReady, room.phase]);
   const declineInvite = x => {
     cardPvpInviteDismissed.add(cardPvpInviteKey(x));
     setInvites(cur => cur.filter(y => y !== x));
@@ -110041,7 +110101,9 @@ const CardPvpLobby = ({
     }
   }, [room.phase, room.match]);
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
-  const ready = !!deck && deckIssues.length === 0 && penaltyMin === 0;
+  const rowBtn = 'mh-button min-h-[48px] min-w-0 flex-1 whitespace-nowrap rounded-2xl px-2 text-[14px] font-black active:scale-[.98] disabled:opacity-40';
+  const deckOk = !!deck && deckIssues.length === 0;
+  const ready = (onPickDeck ? true : deckOk) && penaltyMin === 0;
   const back = () => {
     CARD_PVP.leave();
     CARD_WATCH.leave();
@@ -110077,12 +110139,14 @@ const CardPvpLobby = ({
       onBack: back
     }), React.createElement("div", {
       className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
-    }, a && line && React.createElement("div", {
+    }, got && got.rankGain && typeof CardRankResult === 'function' && React.createElement(CardRankResult, {
+      gain: got.rankGain
+    }), a && line && React.createElement("div", {
       className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
     }, React.createElement(CardAssistantArt, {
       src: assistantFullImage(a, line.face),
       alt: a.name,
-      className: "h-[220px] w-[46%]"
+      className: "h-[min(200px,26svh)] w-[42%]"
     }), React.createElement("div", {
       "data-card-pvp-line": scene,
       className: "mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]",
@@ -110139,9 +110203,7 @@ const CardPvpLobby = ({
       style: JA_LABEL_STYLE
     }, jaWrap('クイック周回をしていないときは入りません'))), point !== null && React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
-    }, "いまのビートP: ", point), got.rankGain && typeof CardRankResult === 'function' && React.createElement(CardRankResult, {
-      gain: got.rankGain
-    }), got.saved === false && React.createElement("div", {
+    }, "いまのビートP: ", point), got.saved === false && React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-rose-300",
       style: JA_LABEL_STYLE
     }, jaWrap('保存できませんでした(ビートPは増えていません)'))))), React.createElement("div", {
@@ -110155,24 +110217,24 @@ const CardPvpLobby = ({
         Audio_.fgSe.tap();
         void CARD_PVP.again();
       }
-    }, room.again ? '相手を待っています…' : room.foeAgain ? 'もう1戦(相手が待っています)' : 'もう1戦'), React.createElement("div", {
+    }, room.again ? '相手を待っています…' : room.foeAgain ? 'もう1戦(相手が待っています)' : 'もう1戦'), room.foeGone && React.createElement("p", {
+      "data-card-pvp-foe-gone": true,
+      className: "text-center text-[12px] font-bold text-slate-400",
+      style: JA_LABEL_STYLE
+    }, jaWrap('相手は部屋を出ました')), React.createElement("div", {
       className: "flex gap-2"
     }, r.replay && onOpenReplay && React.createElement("button", {
       type: "button",
       "data-card-pvp-replay": true,
-      className: `${btn} mh-button-secondary`,
+      className: `${rowBtn} mh-button-secondary`,
       onClick: () => {
         Audio_.fgSe.tap();
         onOpenReplay(r.replay);
       }
-    }, "この対戦を見る"), room.foeGone && React.createElement("p", {
-      "data-card-pvp-foe-gone": true,
-      className: "flex-1 self-center text-center text-[12px] font-bold text-slate-400",
-      style: JA_LABEL_STYLE
-    }, jaWrap('相手は部屋を出ました')), React.createElement("button", {
+    }, "この対戦を見る"), React.createElement("button", {
       type: "button",
       "data-card-pvp-leave": true,
-      className: `${btn} ${noAgain ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`,
+      className: `${rowBtn} ${noAgain ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`,
       onClick: () => {
         Audio_.fgSe.tap();
         CARD_PVP.leave();
@@ -110213,7 +110275,7 @@ const CardPvpLobby = ({
   }, room.phase === 'idle' && React.createElement(React.Fragment, null, penaltyMin > 0 && React.createElement("p", {
     "data-card-pvp-penalty": true,
     className: "rounded-xl border border-rose-300/40 bg-rose-500/10 p-2 text-[13px] font-bold text-rose-100"
-  }, "試合の途中で抜けたので、あと", penaltyMin, "分は部屋に入れません"), penaltyMin === 0 && !ready && React.createElement("p", {
+  }, "試合の途中で抜けたので、あと", penaltyMin, "分は部屋に入れません"), penaltyMin === 0 && !ready && !onPickDeck && React.createElement("p", {
     className: "rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100"
   }, deckIssues.join('・') || 'デッキがありません'), room.notice && React.createElement("p", {
     "data-card-pvp-notice-text": true,
@@ -110247,11 +110309,10 @@ const CardPvpLobby = ({
     className: "mh-button mh-button-primary min-h-[40px] shrink-0 rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
     onClick: () => {
       Audio_.fgSe.tap();
-      CARD_PVP.clearNotice();
-      CARD_PVP.pick(x.code, {
-        ...profile,
-        rt: myRating ? myRating.rating : null
-      }, deck);
+      go({
+        kind: 'pick',
+        code: x.code
+      });
     }
   }, "対戦する")))), React.createElement("p", {
     className: "mt-1 px-1 text-[11px] font-bold text-slate-400",
@@ -110263,11 +110324,9 @@ const CardPvpLobby = ({
     className: `${btn} mh-button-primary`,
     onClick: () => {
       Audio_.fgSe.tap();
-      CARD_PVP.clearNotice();
-      void CARD_PVP.free({
-        ...profile,
-        rt: myRating ? myRating.rating : null
-      }, deck);
+      go({
+        kind: 'free'
+      });
     }
   }, "だれとでも(自分も待つ)"), React.createElement("button", {
     type: "button",
@@ -110276,7 +110335,9 @@ const CardPvpLobby = ({
     className: `${btn} border border-sky-300/40 bg-slate-900 text-sky-100`,
     onClick: () => {
       Audio_.fgSe.tap();
-      void CARD_PVP.create(profile, deck);
+      go({
+        kind: 'create'
+      });
     }
   }, "合言葉で部屋を作る"), React.createElement("button", {
     type: "button",
@@ -110314,8 +110375,10 @@ const CardPvpLobby = ({
     className: "mh-button mh-button-primary min-h-[40px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
     onClick: () => {
       Audio_.fgSe.tap();
-      setInviteNext(f.otherId);
-      void CARD_PVP.create(profile, deck);
+      go({
+        kind: 'invite',
+        to: f.otherId
+      });
     }
   }, "招待する")))), React.createElement("p", {
     className: "mt-1 px-1 text-[11px] font-bold text-slate-400",
@@ -110346,7 +110409,11 @@ const CardPvpLobby = ({
     className: "mh-button mh-button-primary min-h-[44px] shrink-0 rounded-xl px-3 text-[13px] font-black disabled:opacity-40",
     onClick: () => {
       Audio_.fgSe.tap();
-      CARD_PVP.join(x.roomCode, profile, deck, cardPvpInviteKey(x));
+      go({
+        kind: 'join',
+        code: x.roomCode,
+        via: cardPvpInviteKey(x)
+      });
     }
   }, "参加する")))), React.createElement("button", {
     type: "button",
@@ -110381,7 +110448,10 @@ const CardPvpLobby = ({
     className: "mh-button mh-button-primary min-h-[48px] rounded-xl px-4 font-black disabled:opacity-40",
     onClick: () => {
       Audio_.fgSe.tap();
-      CARD_PVP.join(code, profile, deck);
+      go({
+        kind: 'join',
+        code
+      });
     }
   }, "入る"))), typeof CardPvpHistory === 'function' && React.createElement("button", {
     type: "button",
@@ -114038,6 +114108,13 @@ const cardLevelFrames = lv => CARD_LEVEL_FRAMES.filter(x => lv >= x.at).reduce((
   ...a,
   ...Object.fromEntries(Object.entries(x).filter(([k]) => k !== 'at'))
 }), {});
+const cardLevelFrameText = (f, done = true) => {
+  const parts = [];
+  if (f.base) parts.push(`基本カードを${f.base}枚`);
+  if (f.breeder) parts.push(`ブリーダーの戦術カードを${f.breeder}枚`);
+  if (f.mon) parts.push(f.breeder ? `モンスターごとに${f.mon}枚まで` : `モンスターごとに戦術カードを${f.mon}枚まで`);
+  return `${parts.join('・')}セットできるように${done ? 'なった' : 'なる'}`;
+};
 const cardLevelNextFrame = lv => CARD_LEVEL_FRAMES.find(x => x.at > lv) || null;
 const CARD_RANK_PACK_TICKETS = 1;
 const cardRankRewardOf = lv => ({
@@ -114132,9 +114209,9 @@ const cardLevelAfter = (prev, {
   }] : []), ...(tickets ? [{
     icon: '🎟️',
     text: `カードパック券 ×${tickets}`
-  }] : []), ...CARD_LEVEL_FRAMES.filter(f => f.at > lv0 && f.at <= to).map(() => ({
+  }] : []), ...CARD_LEVEL_FRAMES.filter(f => f.at > lv0 && f.at <= to).map(f => ({
     icon: '🧠',
-    text: '戦術カードを置ける所が増えた'
+    text: cardLevelFrameText(f)
   }))];
   return {
     next: {
@@ -115821,10 +115898,10 @@ const cardRankUpcoming = (lv, n = 4) => {
   const out = [];
   for (let r = lv + 1; out.length < n && r <= lv + 50; r++) {
     const g = cardRankRewardOf(r);
-    const frame = CARD_LEVEL_FRAMES.some(f => f.at === r);
+    const frame = CARD_LEVEL_FRAMES.find(f => f.at === r);
     if (g.tickets || frame || r === lv + 1) out.push({
       rank: r,
-      text: `${cardRankRewardText(r)}${frame ? '・戦術カードを置ける所が増える' : ''}`
+      text: `${cardRankRewardText(r)}${frame ? `・${cardLevelFrameText(frame, false)}` : ''}`
     });
   }
   return out;
@@ -115912,7 +115989,7 @@ const cardRankFxGains = gain => {
   for (let r = gain.from + 1; r <= gain.to; r++) if (r % 5 === 0) bonusPoint += r * 200;
   bonusPoint = Math.min(bonusPoint, gain.points || 0);
   const basePoint = Math.max(0, (gain.points || 0) - bonusPoint);
-  const frames = CARD_LEVEL_FRAMES.filter(f => f.at > gain.from && f.at <= gain.to).length;
+  const frames = CARD_LEVEL_FRAMES.filter(f => f.at > gain.from && f.at <= gain.to);
   return [...(basePoint ? [{
     icon: '💰',
     text: `ビートP ${basePoint.toLocaleString()}`
@@ -115926,21 +116003,22 @@ const cardRankFxGains = gain => {
     text: `カードパック券 ${gain.tickets}枚`,
     note: '5ランクごとのおまけ',
     bonus: true
-  }] : []), ...(frames ? [{
+  }] : []), ...frames.map(f => ({
     icon: '🧠',
-    text: '戦術カードを置ける所が増えた'
-  }] : [])];
+    text: cardLevelFrameText(f)
+  }))];
 };
 const CardRankResult = ({
   gain
 }) => {
   const up = !!(gain && gain.to > gain.from);
   const [fx, setFx] = useState(false);
+  const [barStarted, setBarStarted] = useState(false);
   useEffect(() => {
-    if (!up) return undefined;
+    if (!up || !barStarted) return undefined;
     const t = setTimeout(() => setFx(v => v || 'late'), 5000);
     return () => clearTimeout(t);
-  }, [up]);
+  }, [up, barStarted]);
   if (!gain || !(gain.add > 0)) return null;
   const award = {
     add: gain.add,
@@ -115954,7 +116032,8 @@ const CardRankResult = ({
     kind: "card",
     award: award,
     next: `ランク${gain.to + 1}で ${cardRankRewardText(gain.to + 1)}`,
-    onFull: up ? () => setFx(v => v || true) : null
+    onFull: up ? () => setFx(v => v || true) : null,
+    onStart: () => setBarStarted(true)
   }), up && fx && fx !== 'closed' && typeof PlayerRankUpFx === 'function' && React.createElement(PlayerRankUpFx, {
     kind: "card",
     from: gain.from,
@@ -122255,7 +122334,7 @@ function MonsterHeroGame() {
   const [beatRankFx, setBeatRankFx] = useState(null);
   const [beatRankBarPlaying, setBeatRankBarPlaying] = useState(false);
   useEffect(() => {
-    if (!beatRankFx || beatRankFx.ready) return undefined;
+    if (!beatRankFx || beatRankFx.ready || !beatRankFx.started) return undefined;
     const t = setTimeout(() => setBeatRankFx(f => f && !f.ready ? {
       ...f,
       ready: true
@@ -144101,6 +144180,10 @@ function MonsterHeroGame() {
       onRankBarFull: () => setBeatRankFx(f => f && !f.ready ? {
         ...f,
         ready: true
+      } : f),
+      onRankBarStart: () => setBeatRankFx(f => f && !f.started ? {
+        ...f,
+        started: true
       } : f),
       onRankBarDone: () => setBeatRankBarPlaying(false),
       onComplete: async (result, merged) => {
