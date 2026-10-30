@@ -196,10 +196,10 @@ const cardMonStatuses = (st, p, m) => {
   const mon = st && st.players[p] && st.players[p].mons[m];
   if (!mon || mon.ko) return [];
   const T = st.turn;
-  const left = (until) => (until > T ? `あと${until - T + 1}` : 'この番');
+  const left = (until) => (until > T ? `あと${until - T + 1}` : '今'); // 札は短く(「次」「あと2」とそろえる)。窓の説明は「このターン」
   const out = [];
   const kindsJa = (ks) => (ks || []).map((k) => (k === 'pow' ? 'ちから' : k === 'int' ? 'かしこさ' : k)).join('・');
-  if (mon.mult && Number.isFinite(mon.mult.turn) && mon.mult.turn >= T) out.push({ key: 'mult', short: `技×${mon.mult.n}`, left: mon.mult.turn > T ? '次' : 'この番', text: `${mon.mult.turn > T ? '次の番' : 'この番'}の${kindsJa(mon.mult.kinds)}技のダメージが${mon.mult.n}倍`, tone: 'up', pill: true });
+  if (mon.mult && Number.isFinite(mon.mult.turn) && mon.mult.turn >= T) out.push({ key: 'mult', short: `技×${mon.mult.n}`, left: mon.mult.turn > T ? '次' : '今', text: `${mon.mult.turn > T ? '次のターン' : 'このターン'}の${kindsJa(mon.mult.kinds)}技のダメージが${mon.mult.n}倍`, tone: 'up', pill: true });
   if (mon.charge) out.push({ key: 'charge', short: `ため×${mon.charge.n}`, left: '', text: `次の${kindsJa(mon.charge.kinds)}技のダメージが${mon.charge.n}倍(ダメージを受けると消える)`, tone: 'up', pill: true });
   if (Number.isFinite(mon.safeUntil) && mon.safeUntil >= T) out.push({ key: 'safe', short: '無敵', left: left(mon.safeUntil), text: 'ダメージを受けない', tone: 'guard', pill: true });
   if (Number.isFinite(mon.noGuardUntil) && mon.noGuardUntil >= T) out.push({ key: 'noGuard', short: '守れない', left: left(mon.noGuardUntil), text: '回避・防御のカードを出せない', tone: 'down', pill: true });
@@ -207,7 +207,7 @@ const cardMonStatuses = (st, p, m) => {
   else if (Number.isFinite(mon.waterUntil) && mon.waterUntil >= T) out.push({ key: 'water', short: '水中', left: left(mon.waterUntil), text: '持ちょうが水中', tone: 'type', pill: true });
   (Array.isArray(st.taunts) ? st.taunts : []).filter((t) => t && t.by === p && t.m === m && t.turn >= T).forEach((t, i) => out.push({ key: `taunt${i}`, short: t.mode === 'not' ? 'ねらえない' : 'ねらい固定', left: left(t.turn), text: t.mode === 'not' ? '相手はこのモンスターを狙えない' : '相手の攻撃は、このモンスターしか狙えない', tone: 'aim', pill: true }));
   if (mon.cocoon) out.push({ key: 'cocoon', short: 'まゆ', left: '', text: '羽化のほかのカードは出せない', tone: 'down', pill: true });
-  if (mon.stunTurn === T + (st.active === p ? 0 : 1)) out.push({ key: 'stun', short: '攻撃できない', left: st.active === p ? 'この番' : '次', text: `${st.active === p ? 'この番' : '次の番'}は攻撃できない`, tone: 'down', pill: false });
+  if (mon.stunTurn === T + (st.active === p ? 0 : 1)) out.push({ key: 'stun', short: '攻撃できない', left: st.active === p ? '今' : '次', text: `${st.active === p ? 'このターン' : '次のターン'}は攻撃できない`, tone: 'down', pill: false });
   return out;
 };
 const CARD_STATUS_TONE = { up: 'bg-rose-400 text-slate-950', down: 'bg-slate-300 text-slate-950', guard: 'bg-emerald-300 text-slate-950', type: 'bg-sky-300 text-slate-950', aim: 'bg-amber-300 text-slate-950' };
@@ -497,7 +497,7 @@ const cardBubbleMs = (text) => Math.min(7000, Math.max(3000, 1800 + 150 * [...St
 const cardResultCut = (r) => !!r && !r.short && Number.isFinite(r.full) && Number.isFinite(r.got) && r.got < r.full;
 //   投了は「番の数で減った分」と「倒した数×10」の小さいほう(82 の cardCpuBasePoint)なので、効いたほうの理由を出す
 const cardResultCutWhy = (outcome, r) => {
-  const turns = `自分の番が${Number(r.ownTurns) || 0}回。${CARD_LOSE_FULL_TURNS}回で満額`;
+  const turns = `自分のターンが${Number(r.ownTurns) || 0}回。${CARD_LOSE_FULL_TURNS}回で満額`;
   if (outcome !== 'surrender') return turns;
   const byKo = (Number(r.kos) || 0) * CARD_SURRENDER_POINT_PER_KO;
   return byKo < cardLoseScaled(r.full, r.ownTurns) ? `投了は、倒した相手のモンスター1体につき${CARD_SURRENDER_POINT_PER_KO}(倒したのは${Number(r.kos) || 0}体)` : turns;
@@ -1474,7 +1474,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     const c = cardOf(db, me.hand[i]);
     if (!c || attackOpts.some((o) => o.hand.includes(i))) return null;
     if (!c.ready) return '準備中';
-    if (cardIsGuardKind(c.kind)) return '守りの番に使う';
+    if (cardIsGuardKind(c.kind)) return '守りに使う';
     if (c.user !== 'any' && c.user !== 'breeder' && !me.mons.some((m) => !m.ko && cardUsableBy(c, m))) return cardUserLabel(db, c);
     if (c.guts > me.guts.length) return `ガッツ不足(あと${c.guts - me.guts.length})`;
     if (cardHasEff(c, 'attach')) return '付ける技がない';
@@ -1772,7 +1772,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (watch) {
       const over = st.winner !== null || !!watchEnd;
       const nm = (p) => (p === CARD_ME ? meName : who.name);
-      const say = over ? '' : decider === st.active ? `${nm(decider)}の番…` : `${nm(decider)}が守りを考えています…`;
+      const say = over ? '' : decider === st.active ? `${nm(decider)}のターン…` : `${nm(decider)}が守りを考えています…`;
       return (<>
         {say && <div data-card-watch-say className="flex min-w-0 flex-1 items-center justify-center truncate text-[13px] font-bold text-slate-300">{say}</div>}
         <button type="button" data-card-watch-leave className={`${btn} ${over ? 'mh-button-primary' : 'border border-white/20 bg-slate-800'}`} onClick={() => onFinish({ outcome: 'watchExit', st })}><CardFitLabel>{over ? '観戦の一覧へ戻る' : '観戦をやめる'}</CardFitLabel></button>
@@ -1782,7 +1782,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (st.winner !== null && !tutorial) return <div className="flex-1 text-center text-[15px] font-black text-amber-200">{endFx ? '\u00a0' : st.winner === CARD_ME ? '勝ち！' : '負け…'}</div>;
     if (tutorial && (st.winner !== null || tutStage.next)) return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">ドラの説明を読んで「次へ」</div>;
     // 自分の番に相手が守りを選んでいるあいだは「◯◯の番」と言わない(上のヘッダーと食い違っていた。案A)
-    if (mode === 'wait') return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">{st.active === CARD_ME ? `${who.name}が守りを考えています…` : `${who.name}の番…`}</div>;
+    if (mode === 'wait') return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">{st.active === CARD_ME ? `${who.name}が守りを考えています…` : `${who.name}のターン…`}</div>;
     if (mode === 'setup') return <button type="button" className={`${btn} mh-button-primary`} onClick={() => step({ type: 'setupGuts', hand: picks })}><CardFitLabel>{picks.length ? `${picks.length}枚をガッツにして始める` : 'ガッツにしないで始める'}</CardFitLabel></button>;
     if (mode === 'reveal') return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">相手に手札を見せています…</div>;
     if (mode === 'pray') return <div className="flex-1 text-center text-[13px] font-bold text-amber-200">{prayUse ? 'おいのりを使うか選んでください' : '相手が全体カードを出しました'}</div>;
@@ -1866,8 +1866,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           : tutorial ? <span data-card-level-badge="tutorial" className={`shrink-0 whitespace-nowrap rounded-md border px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black tracking-wide ${CARD_LEVEL_TONE.tutorial || CARD_LEVEL_TONE.easy}`}>練習</span> : null}
         {(() => {
           const sig = pvpLive && (pvpClock.offline || pvpClock.foeQuietSec > 0);
-          const nameOf = (nm, fallback) => (String(nm || '').length <= 6 ? `${nm}の番` : fallback);
-          const turnTxt = headSt.phase === 'setup' && replay ? 'はじまり' : headMe ? nameOf(meName, 'あなたの番') : nameOf(who.name, '相手の番');
+          // 上の帯は「ターン3 あなたの攻撃」(「ターン3 あなたのターン」と重ならないように。2026-10-30 社長)
+          const nameOf = (nm, fallback) => (String(nm || '').length <= 6 ? `${nm}の攻撃` : fallback);
+          const turnTxt = headSt.phase === 'setup' && replay ? 'はじまり' : headMe ? nameOf(meName, 'あなたの攻撃') : nameOf(who.name, '相手の攻撃');
           const low = pvpLive && pvpClock.mine && pvpClock.left <= 10;
           const tone = sig ? 'bg-amber-700/90 text-amber-100' : low ? 'bg-rose-500 text-white' : headMe ? 'bg-amber-300 text-slate-950' : 'bg-slate-500/25 text-slate-200';
           return (
@@ -3448,7 +3449,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <div className="mt-1 text-[12px] font-bold text-slate-300">{CARD_LEVEL_LABEL[result.level]}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {cardResultCut(r) ? `${r.full} → ${r.got}` : r.got}</div>
             {cardResultCut(r) && <div data-card-result-cut className="text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(cardResultCutWhy(result.outcome, r))}</div>}
             {r.bonus > 0 && <div className="text-[12px] font-bold text-slate-300">今日はじめての勝ち: +{r.bonus}</div>}
-            {r.short && <div className="mt-1 text-[11px] font-bold text-slate-500" style={JA_LABEL_STYLE}>{jaWrap('自分の番を3回やる前に終わったので、ビートPとクイック周回は入りません')}</div>}
+            {r.short && <div className="mt-1 text-[11px] font-bold text-slate-500" style={JA_LABEL_STYLE}>{jaWrap('自分のターンを3回やる前に終わったので、ビートPとクイック周回は入りません')}</div>}
             {!r.short && result.loops > 0 && result.quick && (
               <div data-card-quick-loops={result.quick ? result.loops : 0} className="mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5">
                 {result.quick && <>

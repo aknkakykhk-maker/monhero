@@ -227,7 +227,7 @@ const CardPvpHistory = ({ db = CARD_BATTLE_DATA, onBack, onOpenReplay = null, re
         <div className={`${SCREEN_LIST_CLASS} space-y-3 pb-4`}>
           <CardResultVsRow meIcon={meIcon} meName={meName} foeNode={<CardPvpAvatar icon={e.foe.icon} frame={e.foe.frame}/>} foeName={e.foe.name} outcome={outcomeLabel(e)}/>
           <p className="px-1 text-[12px] font-bold text-slate-300">
-            {e.reason && e.reason !== outcomeLabel(e) ? `${e.reason}・` : ''}自分の番 {e.turns}回{delta ? `・強さ ${e.rating.after}(${delta})` : ''}
+            {e.reason && e.reason !== outcomeLabel(e) ? `${e.reason}・` : ''}自分のターン {e.turns}回{delta ? `・強さ ${e.rating.after}(${delta})` : ''}
           </p>
           {replayOk(e.match) && <button type="button" data-card-pvp-history-replay className="mh-button mh-button-primary min-h-[48px] w-full rounded-2xl font-black" onClick={() => { Audio_.fgSe.tap(); onOpenReplay(e.match); }}>▶ この対戦を見る</button>}
           <div className="flex gap-2">

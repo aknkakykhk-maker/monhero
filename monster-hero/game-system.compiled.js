@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 45a9d0417e723329
+// source-sha256: b179e997d09b1794
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -88841,7 +88841,7 @@ const cardBeginTurn = st => {
     m.lastCard = null;
   });
   st.phase = 'main';
-  cardLog(st, `ターン${st.turn}: ${me.name}の番`, {
+  cardLog(st, `ターン${st.turn}: ${me.name}のターン`, {
     kind: 'turn'
   });
   cardEvent(st, {
@@ -90003,7 +90003,7 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
         noArea: !!e.noArea,
         turn: st.turn + 1
       }];
-      cardLog(st, e.mode === 'not' ? `相手は次の番、${self.name}に当たる技を出せない` : `相手は次の番、${self.name}を狙う技しか出せない`);
+      cardLog(st, e.mode === 'not' ? `相手は次のターン、${self.name}に当たる技を出せない` : `相手は次のターン、${self.name}を狙う技しか出せない`);
     }
     if (e.t === 'stunAllEnemies') {
       opp.mons.forEach(m => {
@@ -90017,7 +90017,7 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
     }
     if (e.t === 'skipTurn') {
       st.skip = cardOther(p);
-      cardLog(st, `${opp.name}の次の番を飛ばす`);
+      cardLog(st, `${opp.name}の次のターンを飛ばす`);
     }
     if (e.t === 'rage' && self) {
       self.noGuardUntil = st.turn + 1;
@@ -90026,7 +90026,7 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
         kinds: ['pow', 'int'],
         n: 2
       };
-      cardLog(st, `${self.name}は次の番まで守れない。次の番の技は2倍`);
+      cardLog(st, `${self.name}は次のターンまで守れない。次のターンの技は2倍`);
     }
     if (e.t === 'revive' && tm && tm.ko) {
       tm.ko = false;
@@ -90066,7 +90066,7 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
     }
     if (e.t === 'safe' && self) {
       self.safeUntil = st.turn + 1;
-      cardLog(st, `${self.name}は次の番までダメージを受けない`);
+      cardLog(st, `${self.name}は次のターンまでダメージを受けない`);
     }
     if (e.t === 'form' && self && (act.form === 'air' || act.form === 'ground')) {
       self.type = act.form;
@@ -90455,7 +90455,7 @@ const cardApplyAction = (db, st0, act) => {
       st.players[st.active].mons.forEach(m => {
         if (m.stunTurn === st.turn) m.stunTurn = st.turn + 2;
       });
-      cardLog(st, `ターン${st.turn}: ${st.players[st.active].name}の番は飛ばされた`, {
+      cardLog(st, `ターン${st.turn}: ${st.players[st.active].name}のターンは飛ばされた`, {
         kind: 'turn'
       });
       st.active = p;
@@ -92331,7 +92331,7 @@ const CARD_SETTING_GROUPS = Object.freeze([{
   }, {
     key: 'confirmEnd',
     title: 'ターン終了の確認',
-    desc: 'ガッツの番に「ターン終了」を押したときに、1回確かめます。',
+    desc: 'ガッツを置いて「ターン終了」を押したときに、1回確かめます。',
     options: [{
       id: 'OFF',
       label: '確かめない',
@@ -92391,7 +92391,7 @@ const CARD_SETTING_GROUPS = Object.freeze([{
   }, {
     key: 'gutsPick',
     title: 'ガッツにするカードのおすすめ',
-    desc: 'ガッツの番になったときに、おすすめのカードを先に選んでおきます。選び直してから「ターン終了」を押せます。',
+    desc: 'ガッツを置く場面になったら、おすすめのカードを先に選んでおきます。選び直してから「ターン終了」を押せます。',
     options: [{
       id: 'OFF',
       label: '選ばない',
@@ -95864,20 +95864,20 @@ const CARD_TUTORIAL_LINES = Object.freeze({
   D8: 'ふむ、上出来。ガッツは次から使えるし、何枚あるかは相手からも見えるからな',
   M2: 'じゃあ次はあたしの番ね！ いっくよー！',
   M3: 'これでどーだ！',
-  D9: 'みゅあが攻めてきたぞ。相手の番でも、回避か防御のカードで守れるんだ',
+  D9: 'みゅあが攻めてきたぞ。相手のターンでも、回避か防御のカードで守れるんだ',
   D10: '光ってる「ステップ」をタップか、狙われたピクシーまで運んでみな。守りのカードは、狙われた子のぶん(か、誰でも使えるもの)だけ使えるからな',
   D10b: 'よし、それでいい。最後に光ってる「これで守る」を押して決めな',
   M4: 'えー！ よけられた！？ うまっ！ｗ',
   D11: 'ほらな、守りは大事なんだよ。おでの膝くらい大事だ。えへへ',
-  D12: '今度はこっちの番。ガッツが2つあるから「パンチ」が出せる',
+  D12: '今度はこっちのターン。ガッツが2つあるから「パンチ」が出せる',
   D13: '技をタップして相手をタップ。相手まで運んで離してもいいぞ。1体は1ターンに1回まで攻撃できるからな',
   M5: 'いったぁ…！ 今のはまぢ効いた…',
   D14: 'いい当たりだ。ダメージの数だけライフが減って、0になったらKOだよ',
   D15: '最後にもうひとつ。ちょっと時間を進めるぞ…',
   M6: 'あれ？ あたしの山札、なんか少なくない？',
-  D16: 'みゅあの山札、もう0枚だろ？ 次の番に引けなかったら、その時点で負けなんだ',
+  D16: 'みゅあの山札、もう0枚だろ？ 次のターンに引けなかったら、その時点で負けなんだ',
   D17: 'まずは光ってる「攻撃おわり → ガッツへ」を押してみな',
-  D17b: '次は「ガッツにしないでターン終了」だ。みゅあの番になるぞ',
+  D17b: '次は「ガッツにしないでターン終了」だ。みゅあのターンになるぞ',
   M7: 'えっ、引けないぢゃん…！ 負けたー！🤣ｗ',
   D18: 'これが山札切れ。3体全部倒しても勝ちだけど、山札の残りも気にしような',
   D19: 'これで5つ全部だ。あとはデッキを組んで、いろんな相手と戦ってみな',
@@ -97170,14 +97170,14 @@ const cardMonStatuses = (st, p, m) => {
   const mon = st && st.players[p] && st.players[p].mons[m];
   if (!mon || mon.ko) return [];
   const T = st.turn;
-  const left = until => until > T ? `あと${until - T + 1}` : 'この番';
+  const left = until => until > T ? `あと${until - T + 1}` : '今';
   const out = [];
   const kindsJa = ks => (ks || []).map(k => k === 'pow' ? 'ちから' : k === 'int' ? 'かしこさ' : k).join('・');
   if (mon.mult && Number.isFinite(mon.mult.turn) && mon.mult.turn >= T) out.push({
     key: 'mult',
     short: `技×${mon.mult.n}`,
-    left: mon.mult.turn > T ? '次' : 'この番',
-    text: `${mon.mult.turn > T ? '次の番' : 'この番'}の${kindsJa(mon.mult.kinds)}技のダメージが${mon.mult.n}倍`,
+    left: mon.mult.turn > T ? '次' : '今',
+    text: `${mon.mult.turn > T ? '次のターン' : 'このターン'}の${kindsJa(mon.mult.kinds)}技のダメージが${mon.mult.n}倍`,
     tone: 'up',
     pill: true
   });
@@ -97239,8 +97239,8 @@ const cardMonStatuses = (st, p, m) => {
   if (mon.stunTurn === T + (st.active === p ? 0 : 1)) out.push({
     key: 'stun',
     short: '攻撃できない',
-    left: st.active === p ? 'この番' : '次',
-    text: `${st.active === p ? 'この番' : '次の番'}は攻撃できない`,
+    left: st.active === p ? '今' : '次',
+    text: `${st.active === p ? 'このターン' : '次のターン'}は攻撃できない`,
     tone: 'down',
     pill: false
   });
@@ -97676,7 +97676,7 @@ const CARD_CUTIN_SCENES = Object.freeze(['myKo', 'theirKo', 'lastMine', 'lastThe
 const cardBubbleMs = text => Math.min(7000, Math.max(3000, 1800 + 150 * [...String(text || '')].length));
 const cardResultCut = r => !!r && !r.short && Number.isFinite(r.full) && Number.isFinite(r.got) && r.got < r.full;
 const cardResultCutWhy = (outcome, r) => {
-  const turns = `自分の番が${Number(r.ownTurns) || 0}回。${CARD_LOSE_FULL_TURNS}回で満額`;
+  const turns = `自分のターンが${Number(r.ownTurns) || 0}回。${CARD_LOSE_FULL_TURNS}回で満額`;
   if (outcome !== 'surrender') return turns;
   const byKo = (Number(r.kos) || 0) * CARD_SURRENDER_POINT_PER_KO;
   return byKo < cardLoseScaled(r.full, r.ownTurns) ? `投了は、倒した相手のモンスター1体につき${CARD_SURRENDER_POINT_PER_KO}(倒したのは${Number(r.kos) || 0}体)` : turns;
@@ -99197,7 +99197,7 @@ const CardBattleBoard = ({
     const c = cardOf(db, me.hand[i]);
     if (!c || attackOpts.some(o => o.hand.includes(i))) return null;
     if (!c.ready) return '準備中';
-    if (cardIsGuardKind(c.kind)) return '守りの番に使う';
+    if (cardIsGuardKind(c.kind)) return '守りに使う';
     if (c.user !== 'any' && c.user !== 'breeder' && !me.mons.some(m => !m.ko && cardUsableBy(c, m))) return cardUserLabel(db, c);
     if (c.guts > me.guts.length) return `ガッツ不足(あと${c.guts - me.guts.length})`;
     if (cardHasEff(c, 'attach')) return '付ける技がない';
@@ -99603,7 +99603,7 @@ const CardBattleBoard = ({
     if (watch) {
       const over = st.winner !== null || !!watchEnd;
       const nm = p => p === CARD_ME ? meName : who.name;
-      const say = over ? '' : decider === st.active ? `${nm(decider)}の番…` : `${nm(decider)}が守りを考えています…`;
+      const say = over ? '' : decider === st.active ? `${nm(decider)}のターン…` : `${nm(decider)}が守りを考えています…`;
       return React.createElement(React.Fragment, null, say && React.createElement("div", {
         "data-card-watch-say": true,
         className: "flex min-w-0 flex-1 items-center justify-center truncate text-[13px] font-bold text-slate-300"
@@ -99625,7 +99625,7 @@ const CardBattleBoard = ({
     }, "ドラの説明を読んで「次へ」");
     if (mode === 'wait') return React.createElement("div", {
       className: "flex-1 text-center text-[13px] font-bold text-slate-300"
-    }, st.active === CARD_ME ? `${who.name}が守りを考えています…` : `${who.name}の番…`);
+    }, st.active === CARD_ME ? `${who.name}が守りを考えています…` : `${who.name}のターン…`);
     if (mode === 'setup') return React.createElement("button", {
       type: "button",
       className: `${btn} mh-button-primary`,
@@ -99822,8 +99822,8 @@ const CardBattleBoard = ({
     className: `shrink-0 whitespace-nowrap rounded-md border px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black tracking-wide ${CARD_LEVEL_TONE.tutorial || CARD_LEVEL_TONE.easy}`
   }, "練習") : null, (() => {
     const sig = pvpLive && (pvpClock.offline || pvpClock.foeQuietSec > 0);
-    const nameOf = (nm, fallback) => String(nm || '').length <= 6 ? `${nm}の番` : fallback;
-    const turnTxt = headSt.phase === 'setup' && replay ? 'はじまり' : headMe ? nameOf(meName, 'あなたの番') : nameOf(who.name, '相手の番');
+    const nameOf = (nm, fallback) => String(nm || '').length <= 6 ? `${nm}の攻撃` : fallback;
+    const turnTxt = headSt.phase === 'setup' && replay ? 'はじまり' : headMe ? nameOf(meName, 'あなたの攻撃') : nameOf(who.name, '相手の攻撃');
     const low = pvpLive && pvpClock.mine && pvpClock.left <= 10;
     const tone = sig ? 'bg-amber-700/90 text-amber-100' : low ? 'bg-rose-500 text-white' : headMe ? 'bg-amber-300 text-slate-950' : 'bg-slate-500/25 text-slate-200';
     return React.createElement("span", {
@@ -102921,7 +102921,7 @@ const CardBattleScreen = ({
     }, "今日はじめての勝ち: +", r.bonus), r.short && React.createElement("div", {
       className: "mt-1 text-[11px] font-bold text-slate-500",
       style: JA_LABEL_STYLE
-    }, jaWrap('自分の番を3回やる前に終わったので、ビートPとクイック周回は入りません')), !r.short && result.loops > 0 && result.quick && React.createElement("div", {
+    }, jaWrap('自分のターンを3回やる前に終わったので、ビートPとクイック周回は入りません')), !r.short && result.loops > 0 && result.quick && React.createElement("div", {
       "data-card-quick-loops": result.quick ? result.loops : 0,
       className: "mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5"
     }, result.quick && React.createElement(React.Fragment, null, React.createElement("div", {
@@ -107570,10 +107570,10 @@ const CardRecordScreen = ({
     className: "text-[12px] font-bold text-slate-400"
   }, "勝ち方(フリー対戦)"), React.createElement("div", {
     className: "mt-1 grid grid-cols-3 gap-1.5 text-center"
-  }, cell('勝つまでの平均', winAvg === null ? '—' : winAvg, '番'), cell('いちばん早い勝ち', d.wins.fastest || '—', d.wins.fastest ? '番目' : ''), cell('今日の勝ち', d.day.key === today ? d.day.win : 0, '勝')), React.createElement("p", {
+  }, cell('勝つまでの平均', winAvg === null ? '—' : winAvg, 'ターン'), cell('いちばん早い勝ち', d.wins.fastest || '—', d.wins.fastest ? 'ターン目' : ''), cell('今日の勝ち', d.day.key === today ? d.day.win : 0, '勝')), React.createElement("p", {
     className: small,
     style: JA_WRAP_STYLE
-  }, jaWrap('「番」は自分の番の数です。この記録ができてからのぶんです'))), React.createElement("div", {
+  }, jaWrap('「ターン」は自分のターンの数です。この記録ができてからのぶんです'))), React.createElement("div", {
     "data-card-record-often": true,
     className: SCREEN_PANEL_CLASS
   }, React.createElement("div", {
@@ -107636,7 +107636,7 @@ const CardRecordScreen = ({
     }, open ? '▼' : '▶')), open && React.createElement("div", {
       "data-card-record-foe-open": a.id,
       className: "mb-2 rounded-xl bg-amber-500/10 px-2 py-1.5"
-    }, row('投了', `${f.surrender}`, 'sur'), row('いまの連勝', `${f.now}連勝`, 'now'), row('最高の連勝', `${f.best}連勝`, 'best'), row('いちばん早い勝ち', f.fastest ? `${f.fastest}番目` : '—', 'fast'), React.createElement("div", {
+    }, row('投了', `${f.surrender}`, 'sur'), row('いまの連勝', `${f.now}連勝`, 'now'), row('最高の連勝', `${f.best}連勝`, 'best'), row('いちばん早い勝ち', f.fastest ? `${f.fastest}ターン目` : '—', 'fast'), React.createElement("div", {
       className: "mt-1 text-[10px] font-bold text-slate-400"
     }, "難易度ごとの勝ち"), React.createElement("div", {
       className: "mt-0.5 grid grid-cols-5 gap-1 text-center text-[10px] font-bold"
@@ -107939,7 +107939,7 @@ const cardPvpVerify = (db, {
     const e = history[n];
     if (cardPvpDecider(st) !== e.by) return {
       ok: false,
-      why: `${n + 1}手目: 番でない人の手`
+      why: `${n + 1}手目: ターンでない人の手`
     };
     if (e.by === 1) {
       for (const [k, no] of Object.entries(e.reveal || {})) {
@@ -109948,7 +109948,7 @@ const CardPvpLobby = ({
     }, "もらったビートP: ", got.point), got.short && React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-400",
       style: JA_LABEL_STYLE
-    }, jaWrap('自分の番を3回やる前に終わったので、ビートPとクイック周回は入りません')), !got.short && got.loops > 0 && React.createElement("div", {
+    }, jaWrap('自分のターンを3回やる前に終わったので、ビートPとクイック周回は入りません')), !got.short && got.loops > 0 && React.createElement("div", {
       "data-card-quick-loops": got.quick ? got.loops : 0,
       className: "mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5"
     }, got.quick ? React.createElement(React.Fragment, null, React.createElement("div", {
@@ -110886,7 +110886,7 @@ const CardPvpHistory = ({
       outcome: outcomeLabel(e)
     }), React.createElement("p", {
       className: "px-1 text-[12px] font-bold text-slate-300"
-    }, e.reason && e.reason !== outcomeLabel(e) ? `${e.reason}・` : '', "自分の番 ", e.turns, "回", delta ? `・強さ ${e.rating.after}(${delta})` : ''), replayOk(e.match) && React.createElement("button", {
+    }, e.reason && e.reason !== outcomeLabel(e) ? `${e.reason}・` : '', "自分のターン ", e.turns, "回", delta ? `・強さ ${e.rating.after}(${delta})` : ''), replayOk(e.match) && React.createElement("button", {
       type: "button",
       "data-card-pvp-history-replay": true,
       className: "mh-button mh-button-primary min-h-[48px] w-full rounded-2xl font-black",
@@ -111509,7 +111509,7 @@ const CardReplayBar = ({
   const prev = at > 0 ? replay.states[at - 1] : null;
   const by = at > 0 && replay.by ? replay.by[at - 1] : null;
   const byName = by === 0 ? 'あなた' : by === 1 ? replay.foe.name : '';
-  const label = at === 0 ? 'はじまり' : `${at}手目・${prev && prev.turn >= 1 ? `${prev.turn}番目の番` : 'はじまり'}・${byName}`;
+  const label = at === 0 ? 'はじまり' : `${at}手目・${prev && prev.turn >= 1 ? `ターン${prev.turn}` : 'はじまり'}・${byName}`;
   const caption = cardReplayCaption(replay.states, at) || (at > 0 && replay.types ? cardReplayActText(replay.types[at - 1], byName) : '');
   const btn = `mh-button mh-button-secondary ${tight ? 'min-h-[34px]' : 'min-h-[40px]'} flex-1 rounded-lg border border-white/20 bg-slate-800 px-1 text-[12px] font-black text-white disabled:opacity-40`;
   const go = n => {
@@ -111553,7 +111553,7 @@ const CardReplayBar = ({
       setAuto(false);
       go(turns[at > turns[turnIdx] ? turnIdx : Math.max(0, turnIdx - 1)]);
     }
-  }, "番◀"), React.createElement("button", {
+  }, "◀ターン"), React.createElement("button", {
     type: "button",
     "data-card-replay-prev": true,
     className: btn,
@@ -111589,7 +111589,7 @@ const CardReplayBar = ({
       setAuto(false);
       go(turnIdx + 1 < turns.length ? turns[turnIdx + 1] : last);
     }
-  }, "▶番"), React.createElement("button", {
+  }, "ターン▶"), React.createElement("button", {
     type: "button",
     "data-card-replay-speed": true,
     className: btn,
@@ -111737,7 +111737,7 @@ const CardReplayList = ({
       className: `shrink-0 rounded-md px-1 text-[10px] font-black ${r.kind === 'pvp' ? 'bg-sky-500/25 text-sky-100' : 'bg-amber-500/20 text-amber-100'}`
     }, r.kind === 'pvp' ? 'マルチ' : 'フリー対戦')), React.createElement("span", {
       className: "block text-[11px] font-bold text-slate-400"
-    }, cardReplayWhen(r.at), r.turn !== null ? `・${r.turn}番まで` : `・${r.acts.length}手`)), React.createElement("span", {
+    }, cardReplayWhen(r.at), r.turn !== null ? `・ターン${r.turn}まで` : `・${r.acts.length}手`)), React.createElement("span", {
       "data-card-replay-result": r.outcome || '',
       className: `shrink-0 text-[13px] font-black ${win ? 'text-amber-200' : 'text-slate-300'}`
     }, res)), React.createElement("button", {
@@ -112620,7 +112620,7 @@ const CardWatchSide = ({
     className: "min-w-0 flex-1"
   }, React.createElement("div", {
     className: `truncate text-[13px] font-black ${active ? 'text-amber-200' : 'text-white'}`
-  }, person && person.name || pl.name, active ? ' の番' : ''), React.createElement("div", {
+  }, person && person.name || pl.name, active ? ' のターン' : ''), React.createElement("div", {
     "data-card-watch-counts": p,
     className: "flex flex-wrap gap-x-2 text-[11px] font-bold text-slate-300 tabular-nums"
   }, React.createElement("span", null, "手札 ", pl.hand.length), React.createElement("span", null, "ガッツ ", pl.guts.length), React.createElement("span", null, "山札 ", pl.deck.length), React.createElement("span", null, "捨て札 ", pl.discard.length))), React.createElement("div", {
