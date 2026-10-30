@@ -70,6 +70,16 @@ const layoutIssues = async (page) => page.evaluate(() => {
 });
 const layoutSeen = [];
 // 写真には、押した跡の波紋(TapRippleLayer の白い丸)を写さない(社長に見せる写真のため)
+// カードランクが上がったときの「RANK UP!」の演出(押すと閉じる)が結果の画面に重なると、結果の画面のボタンが押せない(2026-10-30 カードランクの演出が入ってから)。
+//   結果の画面のボタンを押す前に、出ていれば押して閉じる(何段か続けて上がることがあるので、消えるまで)
+const closeRankUp = async (page) => {
+  for (let i = 0; i < 6; i++) {
+    const fx = page.locator('[data-player-rank-up-fx]').first();
+    if (!(await fx.count())) return;
+    await fx.click({ force: true }).catch(() => {});
+    await page.waitForTimeout(500);
+  }
+};
 const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, `${name}.png`), style: 'div[style*="2147483647"] > span { display: none !important; }' }).catch(() => {}); } };
   try {
     browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
@@ -589,7 +599,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const added = Object.keys(after.all).filter((k) => !(k in before) && !k.startsWith('mh_card_') && k !== BEAT_KEY && !volatile.test(k));
     check('⑧ 新しく増えた保存キーは mh_card_* とビートPの残高だけ', added.length === 0, added.join(', '));
     // ⑬ 結果の画面の「クイック周回 ◯周ぶん」(デバッグの見本。NORMAL の勝ち = 16周ぶん・保存しない)
-    await page.locator('[data-card-top="result"] button').first().click();
+    await closeRankUp(page); await page.locator('[data-card-top="result"] button').first().click();
     await page.waitForTimeout(300);
     const demoTxt = {};
     for (const k of ['in', 'out']) {
@@ -597,7 +607,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.waitForTimeout(300);
       demoTxt[k] = (await page.locator('[data-card-quick-loops]').count()) ? await page.locator('[data-card-quick-loops]').innerText() : '';
       await shot(page, `16-result-loops-${k}`);
-      await page.locator('[data-card-top="result"] button').first().click();
+      await closeRankUp(page); await page.locator('[data-card-top="result"] button').first().click();
       await page.waitForTimeout(300);
     }
     // ⑬ 助手の絵は、どの子も同じ大きさ・足元を枠の下にそろえる(描かれている所の高さが枠の高さ、または幅いっぱい)
@@ -616,7 +626,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       });
       if (SHOT) await shot(page, `17-art-${id}`);
       if (!m || !(m.h >= m.boxH - 2 || m.w >= m.boxW - 2)) artBad.push(`${id}:${JSON.stringify(m)}`);
-      await page.locator('[data-card-top="result"] button').first().click();
+      await closeRankUp(page); await page.locator('[data-card-top="result"] button').first().click();
       await page.waitForTimeout(250);
     }
     check(`⑬ 結果の画面の助手の絵が、${whoIds.length}人とも同じ大きさで足元が枠の下にそろう`, whoIds.length >= 6 && artBad.length === 0, artBad.join(' / ') || whoIds.join('・'));
@@ -940,7 +950,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       if (SHOT) await shot(page, '35-record');
       const recText = await page.locator('[data-card-record]').innerText().catch(() => '');
       await page.locator('[data-card-record-view] header button').first().click();
-      // ⑱ ランキング: 4つのタブ(勝ち数・連勝・図鑑・マルチ)。マルチは準備中の札。表が無い/空でも壊れない。公開前は「見本です」と出る
+      // ⑱ ランキング: 5つのタブ(勝ち数・連勝・図鑑・マルチ＋カードランク。カードランクのタブは 2026-10-30 の ae4cb5314 から)。マルチは準備中の札。表が無い/空でも壊れない。公開前は「見本です」と出る
       await page.locator('[data-card-ranking-open]').click();
       await page.locator('[data-card-ranking="wins"]').waitFor({ timeout: 10000 });
       await page.waitForFunction(() => !/読み込み中/.test((document.querySelector('[data-card-ranking]') || {}).textContent || ''), null, { timeout: 15000 }).catch(() => {});
@@ -949,7 +959,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.locator('[data-card-ranking-tab="multi"]').click();
       const multiSoon = /準備中/.test(await page.locator('[data-card-ranking-multi]').innerText().catch(() => ''));
       if (SHOT) await shot(page, '37-ranking-multi');
-      check('⑱ ランキング: 勝ち数(今週・通算×5難易度)・連勝・図鑑・マルチ(公開前は準備中・公開後は札なし)。公開前は見本の案内が出て、公開後は合言葉の端末でも HOME から入れば送るので出ない。表が無くても壊れない', rankWins.tabs === 4 && rankWins.levels === 5 && rankWins.periods === 2 && rankWins.mine && (RELEASED ? !rankWins.preview : rankWins.preview) && rankWins.state !== 'other' && (RELEASED ? !multiSoon : multiSoon), JSON.stringify({ ...rankWins, multiSoon }));
+      check('⑱ ランキング: 勝ち数(今週・通算×5難易度)・連勝・図鑑・マルチ(公開前は準備中・公開後は札なし)。公開前は見本の案内が出て、公開後は合言葉の端末でも HOME から入れば送るので出ない。表が無くても壊れない', rankWins.tabs === 5 && rankWins.levels === 5 && rankWins.periods === 2 && rankWins.mine && (RELEASED ? !rankWins.preview : rankWins.preview) && rankWins.state !== 'other' && (RELEASED ? !multiSoon : multiSoon), JSON.stringify({ ...rankWins, multiSoon }));
       await page.locator('[data-card-ranking] header button').first().click();
       await page.locator('[data-card-options-open]').click();
       await page.locator('[data-card-options]').waitFor({ timeout: 10000 });
