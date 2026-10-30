@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f9b0009b81ce249b
+// source-sha256: e702115a824f3445
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -37349,6 +37349,8 @@ const RhythmTapTest = ({
   raidPlay = false,
   quickRunAward = null,
   beatRankAward = null,
+  onRankBarFull = null,
+  onRankBarDone = null,
   debugPlay = false,
   tutorial = false,
   calibrating = false,
@@ -41609,6 +41611,8 @@ const RhythmTapTest = ({
     }, result.fullCombo && React.createElement("span", null, "FULL COMBO"), result.allExcellent && React.createElement("span", null, "ALL EXCELLENT"), result.allMarvelous && React.createElement("span", null, "ALL MARVELOUS")), React.createElement(PlayerRankGain, {
       kind: "beat",
       award: beatRankAward,
+      onFull: onRankBarFull,
+      onDone: onRankBarDone,
       next: beatRankAward ? `ランク${playerRankInfo(beatRankAward.xp).rank + 1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank + 1)}` : ''
     }), quickRunAward && quickRunAward.loops === 0 && quickRunAward.cleared === false && React.createElement("div", {
       "data-rhythm-result-quick-run-failed": true,
@@ -55337,41 +55341,510 @@ function PlayerRankUp({
     style: JA_WRAP_STYLE
   }, jaWrap(String(g.text || '')))))));
 }
-function PlayerRankGain({
+const PLAYER_RANK_XP_BAR_CSS = `
+.mh-prxb{--prxb-a:#22d3ee;--prxb-b:#f0abfc;--prxb-glow:rgba(103,232,249,.9);position:relative;cursor:pointer;user-select:none}
+.mh-prxb.gold{--prxb-a:#f59e0b;--prxb-b:#fde68a;--prxb-glow:rgba(253,224,71,.95)}
+.mh-prxb-fx{position:absolute;inset:0;pointer-events:none;overflow:visible;z-index:6}
+.mh-prxb::after{content:"";position:absolute;inset:-6px;border-radius:16px;background:#fff;opacity:0;pointer-events:none;z-index:7}
+.mh-prxb.flash::after{animation:mhPrxbCardFlash .45s ease-out}
+.mh-prxb-add{display:inline-block;font-size:22px;font-weight:900;line-height:1.1;color:#fff;-webkit-text-stroke:4px rgba(30,10,60,.9);paint-order:stroke fill;font-variant-numeric:tabular-nums;text-shadow:0 0 12px var(--prxb-glow)}
+.mh-prxb-add.bump{animation:mhPrxbBump .22s cubic-bezier(.2,1.8,.4,1),mhPrxbTint .22s ease-out}
+.mh-prxb-add.final{animation:mhPrxbFinal .6s cubic-bezier(.2,1.8,.4,1)}
+.mh-prxb-chip{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.1);color:#e2e8f0;opacity:0;transform:translateY(6px) scale(.8);transition:opacity .18s,transform .25s cubic-bezier(.2,1.6,.4,1)}
+.mh-prxb-chip.on{opacity:1;transform:none}
+.mh-prxb-chip b{color:#fde68a}
+.mh-prxb-track{position:relative}
+.mh-prxb-track.shake{animation:mhPrxbShake .28s ease-in-out}
+.mh-prxb-bar{position:relative;height:16px;border-radius:999px;background:#1f2937;overflow:hidden;border:2px solid rgba(255,255,255,.18);box-shadow:inset 0 2px 4px rgba(0,0,0,.6)}
+.mh-prxb-bar.full{animation:mhPrxbFull .55s ease-out}
+.mh-prxb-bar.switch{animation:mhPrxbSwitch .35s ease-out}
+.mh-prxb-fill{position:absolute;inset:0 auto 0 0;border-radius:999px;background:linear-gradient(90deg,var(--prxb-a),var(--prxb-b));box-shadow:0 0 12px var(--prxb-glow);transition:width .34s cubic-bezier(.3,.8,.4,1)}
+.mh-prxb-fill::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.75) 45%,transparent 60%);background-size:220% 100%;animation:mhPrxbSheen 1.1s linear infinite}
+.mh-prxb-fill::before{content:"";position:absolute;inset:0 0 50% 0;background:linear-gradient(180deg,rgba(255,255,255,.45),transparent);border-radius:999px}
+.mh-prxb.instant .mh-prxb-fill,.mh-prxb.instant .mh-prxb-tip{transition:none}
+.mh-prxb-tip{position:absolute;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:radial-gradient(circle,#fff 0 25%,var(--prxb-glow) 40%,transparent 70%);opacity:0;pointer-events:none;z-index:3;transition:left .34s cubic-bezier(.3,.8,.4,1)}
+.mh-prxb-tip.on{opacity:1;animation:mhPrxbTwinkle .25s ease-in-out infinite alternate}
+.mh-prxb-up{position:absolute;right:0;top:-18px;font-size:24px;font-weight:900;line-height:1;background:linear-gradient(90deg,#f43f5e,#f59e0b,#fde047,#84cc16,#06b6d4,#8b5cf6,#f43f5e);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:2px rgba(124,45,18,.9);text-shadow:none;filter:drop-shadow(0 0 8px rgba(253,224,71,.9));pointer-events:none;z-index:8;animation:mhPrxbUpPop .5s cubic-bezier(.2,1.8,.4,1) both,mhPrxbUpPulse 1s ease-in-out .5s infinite,mhPrxbRainbow 1.2s linear infinite}
+.mh-prxb-spark,.mh-prxb-mote{position:absolute;border-radius:50%;background:#fff;box-shadow:0 0 6px var(--prxb-glow);pointer-events:none;z-index:4}
+.mh-prxb-spark{width:5px;height:5px;animation:mhPrxbSpark .55s ease-out forwards}
+.mh-prxb-mote{width:4px;height:4px;animation:mhPrxbMote .9s ease-out forwards}
+.mh-prxb-boom{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 14px var(--prxb-glow);pointer-events:none;z-index:5;animation:mhPrxbBoom .4s ease-out forwards}
+.mh-prxb-ring{position:absolute;left:50%;top:50%;width:60px;height:60px;margin:-30px 0 0 -30px;border-radius:50%;border:3px solid var(--prxb-glow);pointer-events:none;z-index:4;animation:mhPrxbRing .6s ease-out forwards}
+.mh-prxb-burst,.mh-prxb-rad{position:absolute;border-radius:2px;pointer-events:none;z-index:7}
+.mh-prxb-burst{width:7px;height:7px;animation:mhPrxbBurst .8s ease-out forwards}
+.mh-prxb-rad{width:8px;height:8px;animation:mhPrxbBurst .9s cubic-bezier(.2,.7,.4,1) forwards}
+.mh-prxb-star{position:absolute;z-index:8;color:#fff;font-size:18px;line-height:1;text-shadow:0 0 10px var(--prxb-glow),0 0 18px #fff;pointer-events:none;animation:mhPrxbStar .9s ease-out forwards}
+.mh-prxb-fly{position:absolute;z-index:8;font-size:18px;font-weight:900;color:#fde68a;-webkit-text-stroke:3px rgba(30,10,60,.9);paint-order:stroke fill;text-shadow:0 0 10px var(--prxb-glow);pointer-events:none;animation:mhPrxbFly .5s cubic-bezier(.3,.7,.4,1) forwards}
+.mh-prxb-newrank{position:absolute;left:50%;top:-6px;z-index:8;font-size:30px;font-weight:900;line-height:1;color:#fff;-webkit-text-stroke:5px rgba(30,10,60,.95);paint-order:stroke fill;text-shadow:0 0 18px var(--prxb-glow);pointer-events:none;animation:mhPrxbNewRank .9s cubic-bezier(.2,1.8,.4,1) forwards}
+@keyframes mhPrxbCardFlash{0%{opacity:.85}100%{opacity:0}}
+@keyframes mhPrxbBump{0%{transform:scale(1)}50%{transform:scale(1.35)}100%{transform:scale(1)}}
+@keyframes mhPrxbTint{0%{color:#fff}40%{color:#fde047}100%{color:#fff}}
+@keyframes mhPrxbFinal{0%{transform:scale(1)}35%{transform:scale(1.7);color:#fde047;text-shadow:0 0 24px var(--prxb-glow),0 0 40px #fff}100%{transform:scale(1)}}
+@keyframes mhPrxbShake{0%,100%{transform:none}20%{transform:translate(-3px,1px)}40%{transform:translate(3px,-1px)}60%{transform:translate(-2px,0)}80%{transform:translate(2px,0)}}
+@keyframes mhPrxbFull{0%{box-shadow:0 0 0 rgba(255,255,255,0)}30%{box-shadow:0 0 26px 8px var(--prxb-glow);background:#fff;border-color:#fff}100%{box-shadow:0 0 0 rgba(255,255,255,0)}}
+@keyframes mhPrxbSwitch{0%{background:#fff}100%{background:#1f2937}}
+@keyframes mhPrxbSheen{from{background-position:120% 0}to{background-position:-120% 0}}
+@keyframes mhPrxbTwinkle{from{transform:scale(.8)}to{transform:scale(1.3)}}
+@keyframes mhPrxbUpPop{0%{transform:scale(.2) rotate(-12deg);opacity:0}100%{transform:scale(1) rotate(-6deg);opacity:1}}
+@keyframes mhPrxbUpPulse{0%,100%{transform:scale(1) rotate(-6deg)}50%{transform:scale(1.12) rotate(-6deg)}}
+@keyframes mhPrxbRainbow{from{background-position:0 0}to{background-position:200% 0}}
+@keyframes mhPrxbSpark{to{transform:translate(var(--x),var(--y)) scale(.2);opacity:0}}
+@keyframes mhPrxbMote{0%{opacity:0;transform:translate(0,0) scale(.5)}20%{opacity:1}100%{opacity:0;transform:translate(var(--x),var(--y)) scale(1.2)}}
+@keyframes mhPrxbBoom{from{transform:scale(.3);opacity:1}to{transform:scale(2.4);opacity:0}}
+@keyframes mhPrxbRing{from{transform:scale(.3);opacity:1}to{transform:scale(4.5,2.2);opacity:0}}
+@keyframes mhPrxbBurst{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--x),var(--y)) rotate(var(--r))}}
+@keyframes mhPrxbStar{0%{transform:scale(0) rotate(0);opacity:0}30%{transform:scale(1.4) rotate(90deg);opacity:1}100%{transform:scale(.4) rotate(180deg);opacity:0}}
+@keyframes mhPrxbFly{0%{transform:translate(0,0) scale(.6);opacity:0}25%{transform:translate(calc(var(--dx)*.2),-26px) scale(1.25);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(.5);opacity:0}}
+@keyframes mhPrxbNewRank{0%{transform:translate(-50%,10px) scale(.2);opacity:0}35%{transform:translate(-50%,-14px) scale(1.5);opacity:1}75%{transform:translate(-50%,-10px) scale(1.1);opacity:1}100%{transform:translate(-50%,-22px) scale(1);opacity:0}}
+@media (prefers-reduced-motion:reduce){.mh-prxb *{animation-duration:.01s!important;transition:none!important}.mh-prxb.flash::after{animation:none}}
+`;
+const ensurePlayerRankXpBarCss = () => {
+  try {
+    if (typeof document === 'undefined' || document.getElementById('mh-player-rank-xp-bar-css')) return;
+    const el = document.createElement('style');
+    el.id = 'mh-player-rank-xp-bar-css';
+    el.textContent = PLAYER_RANK_XP_BAR_CSS;
+    document.head.appendChild(el);
+  } catch (_) {}
+};
+const PLAYER_RANK_XP_COLORS = ['#fde047', '#f0abfc', '#22d3ee', '#fff', '#a3e635'];
+function PlayerRankXpBar({
   kind = 'beat',
   award,
-  next = ''
+  onFull = null,
+  onDone = null
 }) {
-  if (!award || !(award.add > 0)) return null;
+  ensurePlayerRankXpBarCss();
   const k = playerRankKind(kind);
-  const info = playerRankInfo(award.xp);
-  const up = award.to > award.from;
-  return React.createElement("section", {
-    "data-player-rank-gain": kind,
-    className: `my-3 space-y-1.5 rounded-2xl border p-3 text-left ${k.border} ${k.panel}`
+  const add = Math.max(0, Math.floor(Number(award && award.add) || 0));
+  const toXp = playerRankSafeXp(award && award.xp);
+  const fromXp = Math.max(0, toXp - add);
+  const parts = React.useMemo(() => {
+    const list = (Array.isArray(award && award.parts) ? award.parts : []).filter(p => p && Number(p.xp) > 0).map(p => ({
+      label: String(p.label || ''),
+      xp: Math.floor(Number(p.xp))
+    }));
+    const sum = list.reduce((a, p) => a + p.xp, 0);
+    if (sum < add) list.push({
+      label: '経験値',
+      xp: add - sum
+    });
+    return list;
+  }, [add]);
+  const startInfo = playerRankInfo(fromXp),
+    endInfo = playerRankInfo(toXp);
+  const rankUp = endInfo.rank > startInfo.rank;
+  const [view, setView] = React.useState({
+    rank: startInfo.rank,
+    into: startInfo.into,
+    shown: 0,
+    chips: 0,
+    up: false,
+    instant: true,
+    tip: false,
+    done: false
+  });
+  const rootRef = React.useRef(null),
+    trackRef = React.useRef(null),
+    fxRef = React.useRef(null),
+    addRef = React.useRef(null),
+    chipRefs = React.useRef([]);
+  const runRef = React.useRef({
+    timers: [],
+    fullSent: false,
+    doneSent: false,
+    running: true
+  });
+  const se = name => {
+    try {
+      const bank = typeof Audio_ !== 'undefined' ? Audio_.fgSe || Audio_.se : null;
+      if (bank && typeof bank[name] === 'function') bank[name]();
+    } catch (_) {}
+  };
+  const later = (fn, ms) => {
+    const id = setTimeout(fn, ms);
+    runRef.current.timers.push(id);
+    return id;
+  };
+  const spawn = (host, cls, style, ms) => {
+    if (!host) return;
+    const e = document.createElement('i');
+    e.className = cls;
+    Object.entries(style).forEach(([kk, v]) => e.style.setProperty(kk, v));
+    host.appendChild(e);
+    setTimeout(() => e.remove(), ms);
+    return e;
+  };
+  const pct = (rank, into) => Math.min(100, into / playerRankNeed(rank) * 100);
+  const tipX = () => {
+    const tr = trackRef.current;
+    if (!tr) return 0;
+    const fill = tr.querySelector('.mh-prxb-fill');
+    return fill ? fill.getBoundingClientRect().right - tr.getBoundingClientRect().left : 0;
+  };
+  const sparks = n => {
+    const tr = trackRef.current;
+    if (!tr) return;
+    const x = tipX();
+    for (let i = 0; i < n; i++) spawn(tr, 'mh-prxb-spark', {
+      left: `${x - 2}px`,
+      top: '6px',
+      '--x': `${-10 - Math.random() * 30}px`,
+      '--y': `${Math.random() * 28 - 14}px`
+    }, 600);
+  };
+  const motes = () => {
+    const tr = trackRef.current;
+    if (!tr) return;
+    const w = Math.max(20, tipX());
+    for (let i = 0; i < 3; i++) spawn(tr, 'mh-prxb-mote', {
+      left: `${Math.random() * w}px`,
+      top: `${3 + Math.random() * 10}px`,
+      '--x': `${Math.random() * 30 - 15}px`,
+      '--y': `${-14 - Math.random() * 26}px`
+    }, 950);
+  };
+  const boom = () => {
+    const tr = trackRef.current;
+    if (!tr) return;
+    spawn(tr, 'mh-prxb-boom', {
+      left: `${tipX()}px`,
+      top: '8px'
+    }, 420);
+    sparks(12);
+    tr.classList.remove('shake');
+    void tr.offsetWidth;
+    tr.classList.add('shake');
+  };
+  const flyIn = (i, amount) => {
+    const root = rootRef.current,
+      fx = fxRef.current,
+      chip = chipRefs.current[i],
+      tr = trackRef.current;
+    if (!root || !fx || !chip || !tr) return;
+    const cr = root.getBoundingClientRect(),
+      hr = chip.getBoundingClientRect(),
+      trr = tr.getBoundingClientRect();
+    const e = spawn(fx, 'mh-prxb-fly', {
+      left: `${hr.left - cr.left + hr.width / 2 - 14}px`,
+      top: `${hr.top - cr.top - 4}px`,
+      '--dx': `${trr.left - cr.left + tipX() - (hr.left - cr.left + hr.width / 2)}px`,
+      '--dy': `${trr.top - hr.top + 6}px`
+    }, 560);
+    if (e) e.textContent = `+${amount}`;
+  };
+  const fullBurst = () => {
+    const root = rootRef.current,
+      fx = fxRef.current,
+      tr = trackRef.current;
+    if (!root || !fx || !tr) return;
+    const bar = tr.querySelector('.mh-prxb-bar');
+    if (bar) {
+      bar.classList.remove('full');
+      void bar.offsetWidth;
+      bar.classList.add('full');
+    }
+    root.classList.remove('flash');
+    void root.offsetWidth;
+    root.classList.add('flash');
+    spawn(tr, 'mh-prxb-ring', {}, 650);
+    const w = tr.clientWidth;
+    for (let i = 0; i < 26; i++) {
+      const a = Math.random() * Math.PI * 2,
+        d = 30 + Math.random() * 60;
+      spawn(tr, 'mh-prxb-burst', {
+        left: `${Math.random() * w}px`,
+        top: '6px',
+        background: PLAYER_RANK_XP_COLORS[i % 5],
+        '--x': `${Math.cos(a) * d}px`,
+        '--y': `${Math.sin(a) * d - 20}px`,
+        '--r': `${Math.random() * 540}deg`
+      }, 850);
+    }
+    const cr = root.getBoundingClientRect(),
+      trr = tr.getBoundingClientRect(),
+      ox = cr.width / 2,
+      oy = trr.top - cr.top + 8;
+    for (let i = 0; i < 40; i++) {
+      const a = Math.random() * Math.PI * 2,
+        d = 60 + Math.random() * Math.max(cr.width, cr.height) * 0.6;
+      spawn(fx, 'mh-prxb-rad', {
+        left: `${ox}px`,
+        top: `${oy}px`,
+        background: PLAYER_RANK_XP_COLORS[i % 5],
+        '--x': `${Math.cos(a) * d}px`,
+        '--y': `${Math.sin(a) * d}px`,
+        '--r': `${Math.random() * 720}deg`
+      }, 950);
+    }
+    for (let j = 0; j < 7; j++) later(() => {
+      const st = spawn(fx, 'mh-prxb-star', {
+        left: `${Math.random() * Math.max(0, cr.width - 20)}px`,
+        top: `${Math.random() * Math.max(0, cr.height - 20)}px`
+      }, 950);
+      if (st) st.textContent = '✦';
+    }, j * 70);
+  };
+  const newRankPop = rank => {
+    const e = spawn(trackRef.current, 'mh-prxb-newrank', {}, 950);
+    if (e) e.textContent = String(rank);
+  };
+  const bumpAdd = cls => {
+    const a = addRef.current;
+    if (!a) return;
+    a.classList.remove('bump', 'final');
+    void a.offsetWidth;
+    a.classList.add(cls);
+  };
+  const sendFull = () => {
+    if (rankUp && !runRef.current.fullSent) {
+      runRef.current.fullSent = true;
+      if (onFull) onFull();
+    }
+  };
+  const sendDone = () => {
+    if (!runRef.current.doneSent) {
+      runRef.current.doneSent = true;
+      if (onDone) onDone();
+    }
+  };
+  const finish = () => {
+    runRef.current.running = false;
+    runRef.current.timers.forEach(clearTimeout);
+    runRef.current.timers = [];
+    setView({
+      rank: endInfo.rank,
+      into: endInfo.into,
+      shown: add,
+      chips: parts.length,
+      up: rankUp,
+      instant: true,
+      tip: false,
+      done: true
+    });
+    sendFull();
+    sendDone();
+  };
+  React.useEffect(() => {
+    if (!(add > 0)) return undefined;
+    const run = runRef.current;
+    const moteTimer = setInterval(() => {
+      if (!run.running) {
+        clearInterval(moteTimer);
+        return;
+      }
+      motes();
+    }, 90);
+    later(() => setView(v => ({
+      ...v,
+      instant: false
+    })), 40);
+    let t = 250,
+      cum = 0,
+      crossed = false;
+    parts.forEach((p, i) => {
+      const before = cum;
+      cum += p.xp;
+      const crossesHere = !crossed && fromXp + cum >= fromXp - startInfo.into + playerRankNeed(startInfo.rank);
+      later(() => setView(v => ({
+        ...v,
+        chips: i + 1
+      })), t);
+      later(() => flyIn(i, p.xp), t + 80);
+      later(() => {
+        const t0 = performance.now();
+        let last = -1;
+        const step = now => {
+          if (!run.running) return;
+          const kk = Math.min(1, (now - t0) / 320),
+            val = Math.round(before + p.xp * kk);
+          if (val !== last) {
+            last = val;
+            setView(v => ({
+              ...v,
+              shown: val
+            }));
+            bumpAdd('bump');
+            if (val % 3 === 0) se('tap');
+          }
+          if (kk < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+        boom();
+        if (crossesHere) {
+          setView(v => ({
+            ...v,
+            tip: true,
+            into: playerRankNeed(startInfo.rank)
+          }));
+          later(() => {
+            fullBurst();
+            se('levelUp');
+            setView(v => ({
+              ...v,
+              up: true
+            }));
+            sendFull();
+          }, 340);
+          later(() => {
+            const mid = playerRankInfo(fromXp + cum);
+            setView(v => ({
+              ...v,
+              rank: mid.rank,
+              into: 0,
+              instant: true
+            }));
+            const bar = trackRef.current && trackRef.current.querySelector('.mh-prxb-bar');
+            if (bar) {
+              bar.classList.remove('switch');
+              void bar.offsetWidth;
+              bar.classList.add('switch');
+            }
+            newRankPop(mid.rank);
+            later(() => {
+              setView(v => ({
+                ...v,
+                instant: false,
+                into: mid.into
+              }));
+              sparks(6);
+            }, 60);
+          }, 820);
+        } else {
+          const mid = playerRankInfo(fromXp + cum);
+          setView(v => ({
+            ...v,
+            tip: true,
+            rank: mid.rank,
+            into: mid.into
+          }));
+          sparks(6);
+        }
+        later(() => setView(v => ({
+          ...v,
+          tip: false
+        })), crossesHere ? 1000 : 420);
+      }, t + 320);
+      if (crossesHere) crossed = true;
+      t += crossesHere ? 1150 : 480;
+    });
+    later(() => {
+      bumpAdd('final');
+      sparks(10);
+      se('trainingReward');
+    }, t + 150);
+    later(() => {
+      run.running = false;
+      setView(v => ({
+        ...v,
+        done: true
+      }));
+      sendDone();
+    }, t + 250);
+    return () => {
+      run.running = false;
+      clearInterval(moteTimer);
+      run.timers.forEach(clearTimeout);
+    };
+  }, []);
+  const need = playerRankNeed(view.rank);
+  const w = `${pct(view.rank, view.into)}%`;
+  return React.createElement("div", {
+    ref: rootRef,
+    "data-player-rank-xp-bar": kind,
+    "data-player-rank-xp-bar-done": view.done ? 'true' : 'false',
+    className: `mh-prxb${kind === 'card' ? ' gold' : ''}${view.instant ? ' instant' : ''}`,
+    role: "button",
+    tabIndex: 0,
+    "aria-label": view.done ? `${k.label} 経験値 +${add}` : '押すと最後まで飛ばす',
+    onClick: () => {
+      if (!view.done) finish();
+    },
+    onKeyDown: e => {
+      if ((e.key === 'Enter' || e.key === ' ') && !view.done) {
+        e.preventDefault();
+        finish();
+      }
+    }
   }, React.createElement("div", {
     className: "flex flex-wrap items-baseline gap-x-2 gap-y-0.5"
   }, React.createElement("span", {
-    className: `rounded-full px-2 py-0.5 text-[10px] font-black ${k.pill}`
+    className: `self-center rounded-full px-2 py-0.5 text-[10px] font-black ${k.pill}`
   }, React.createElement("span", {
     "aria-hidden": "true"
   }, k.icon, " "), k.label), React.createElement("b", {
+    ref: addRef,
     "data-player-rank-gain-add": true,
-    className: `text-[15px] font-black ${k.accent}`
-  }, `経験値 +${award.add.toLocaleString()}`), React.createElement("span", {
+    className: "mh-prxb-add"
+  }, `経験値 +${view.shown.toLocaleString()}`), React.createElement("span", {
     className: "text-[12px] font-black text-white tabular-nums"
-  }, up ? `(ランク${award.from}→${award.to})` : `(ランク${info.rank})`)), Array.isArray(award.parts) && award.parts.length > 0 && React.createElement("p", {
+  }, view.up ? `(ランク${startInfo.rank}→${endInfo.rank})` : `(ランク${view.rank})`)), parts.length > 0 && React.createElement("div", {
     "data-player-rank-gain-parts": true,
-    className: "text-[10px] font-bold text-slate-400",
-    style: JA_WRAP_STYLE
-  }, jaWrap(award.parts.map(p => `${p.label} ${p.xp >= 0 ? '+' : ''}${p.xp}`).join(' ・ '))), React.createElement(PlayerRankGauge, {
+    className: "mb-3 mt-1.5 flex flex-wrap gap-1.5"
+  }, parts.map((p, i) => React.createElement("span", {
+    key: i,
+    ref: el => {
+      chipRefs.current[i] = el;
+    },
+    className: `mh-prxb-chip${i < view.chips ? ' on' : ''}`
+  }, p.label, " ", React.createElement("b", null, `+${p.xp}`)))), React.createElement("div", {
+    ref: trackRef,
+    className: "mh-prxb-track"
+  }, React.createElement("div", {
+    className: "mh-prxb-bar",
+    role: "progressbar",
+    "aria-label": "次のランクまで",
+    "aria-valuemin": 0,
+    "aria-valuemax": need,
+    "aria-valuenow": view.into
+  }, React.createElement("i", {
+    className: "mh-prxb-fill",
+    style: {
+      width: w
+    }
+  })), React.createElement("i", {
+    className: `mh-prxb-tip${view.tip ? ' on' : ''}`,
+    style: {
+      left: w
+    }
+  }), view.up && React.createElement("span", {
+    className: "mh-prxb-up",
+    "aria-hidden": "true"
+  }, "RANK UP!")), React.createElement("div", {
+    className: "mt-1 flex justify-between gap-2 text-[10px] font-bold text-slate-300 tabular-nums"
+  }, React.createElement("span", null, `${view.into.toLocaleString()} / ${need.toLocaleString()}`), React.createElement("span", null, `次まで ${(need - view.into).toLocaleString()}`)), React.createElement("div", {
+    ref: fxRef,
+    className: "mh-prxb-fx",
+    "aria-hidden": "true"
+  }));
+}
+function PlayerRankGain({
+  kind = 'beat',
+  award,
+  next = '',
+  onFull = null,
+  onDone = null
+}) {
+  const [done, setDone] = React.useState(false);
+  if (!award || !(award.add > 0)) return null;
+  const k = playerRankKind(kind);
+  const up = award.to > award.from;
+  return React.createElement("section", {
+    "data-player-rank-gain": kind,
+    className: `relative my-3 space-y-1.5 rounded-2xl border p-3 pt-4 text-left ${k.border} ${k.panel}`
+  }, React.createElement(PlayerRankXpBar, {
     kind: kind,
-    info: info
+    award: award,
+    onFull: onFull,
+    onDone: () => {
+      setDone(true);
+      if (onDone) onDone();
+    }
   }), next && React.createElement("p", {
     "data-player-rank-gain-next": true,
     className: "text-[10px] font-bold text-slate-300",
     style: JA_WRAP_STYLE
-  }, jaWrap(`次は ${next}`)), up && React.createElement(PlayerRankUp, {
+  }, jaWrap(`次は ${next}`)), up && done && React.createElement(PlayerRankUp, {
     kind: kind,
     from: award.from,
     to: award.to,
@@ -118536,10 +119009,12 @@ function MonsterHeroGame() {
         xp: next.xp,
         gains
       });
+      setBeatRankBarPlaying(true);
       if (gain.to > gain.from) setBeatRankFx({
         from: gain.from,
         to: gain.to,
-        gains: fxGains
+        gains: fxGains,
+        ready: false
       });
       void syncBeatRankToServer(next);
     } catch (_) {}
@@ -121241,6 +121716,15 @@ function MonsterHeroGame() {
   const [beatRankAward, setBeatRankAward] = useState(null);
   const beatRankSyncedRef = useRef(false);
   const [beatRankFx, setBeatRankFx] = useState(null);
+  const [beatRankBarPlaying, setBeatRankBarPlaying] = useState(false);
+  useEffect(() => {
+    if (!beatRankFx || beatRankFx.ready) return undefined;
+    const t = setTimeout(() => setBeatRankFx(f => f && !f.ready ? {
+      ...f,
+      ready: true
+    } : f), 5000);
+    return () => clearTimeout(t);
+  }, [beatRankFx]);
   const rhythmPlayRunAwardRef = useRef(null);
   const rhythmPlayRunAward = rhythmPlayRunAwardState;
   const setRhythmPlayRunAward = next => {
@@ -122116,6 +122600,7 @@ function MonsterHeroGame() {
       stopCatchUp();
       setBeatRankAward(null);
       setBeatRankFx(null);
+      setBeatRankBarPlaying(false);
       return;
     }
     const startedAt = rhythmPlayStartedAtRef.current;
@@ -122404,12 +122889,12 @@ function MonsterHeroGame() {
     Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen ? 0 : seVolume);
   }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen]);
   useEffect(() => {
-    if (!beatRankFx || ultraEcoSession && !cardScreenOpen) return undefined;
+    if (!(beatRankFx || beatRankBarPlaying) || ultraEcoSession && !cardScreenOpen) return undefined;
     Audio_.setSeVolume(seVolume);
     return () => {
       Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen ? 0 : seVolume);
     };
-  }, [beatRankFx, seVolume]);
+  }, [beatRankFx, beatRankBarPlaying, seVolume]);
   useEffect(() => {
     if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen);
   }, [cardScreenOpen]);
@@ -143058,7 +143543,7 @@ function MonsterHeroGame() {
       key: raidDamageFx.key,
       fx: raidDamageFx,
       onDone: () => setRaidDamageFx(null)
-    }), beatRankFx && gameState === 'RHYTHM_PLAY' && React.createElement(PlayerRankUpFx, {
+    }), beatRankFx && beatRankFx.ready && gameState === 'RHYTHM_PLAY' && React.createElement(PlayerRankUpFx, {
       kind: "beat",
       from: beatRankFx.from,
       to: beatRankFx.to,
@@ -143076,6 +143561,11 @@ function MonsterHeroGame() {
       bestRecord: rhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id),
       quickRunAward: rhythmPlayRunAward,
       beatRankAward: beatRankAward,
+      onRankBarFull: () => setBeatRankFx(f => f && !f.ready ? {
+        ...f,
+        ready: true
+      } : f),
+      onRankBarDone: () => setBeatRankBarPlaying(false),
       onComplete: async (result, merged) => {
         if (rhythmPlay.from === 'proto') return;
         if (rhythmPlay.from === 'lineAdjust') return;
