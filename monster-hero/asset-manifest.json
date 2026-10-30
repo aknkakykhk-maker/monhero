@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "a15a3223e8c3",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":120960420,"count":745},"card":{"bytes":32484049,"count":940},"all":{"bytes":260831915,"count":1778},"core":{"bytes":15314749,"count":22}},
+  "id": "56dfcf65bf1c",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":121065503,"count":747},"card":{"bytes":32776256,"count":946},"all":{"bytes":261229205,"count":1786},"core":{"bytes":15316146,"count":22}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -738,6 +738,9 @@
     "images/card-battle/l/C067.jpg": {"v":"72ecd70b3f3a","size":65084,"pack":"card"},
     "images/card-battle/l/C067S.jpg": {"v":"2e70106285f0","size":80254,"pack":"card"},
     "images/card-battle/l/C067V.jpg": {"v":"9d9db70cd12f","size":85859,"pack":"card"},
+    "images/card-battle/l/C068.jpg": {"v":"63340a8c0a7e","size":61165,"pack":"card"},
+    "images/card-battle/l/C068S.jpg": {"v":"ec9516261e7f","size":75333,"pack":"card"},
+    "images/card-battle/l/C068V.jpg": {"v":"4aec66ea517e","size":81832,"pack":"card"},
     "images/card-battle/l/C208.jpg": {"v":"d0d1c6b27df5","size":60687,"pack":"card"},
     "images/card-battle/l/C208S.jpg": {"v":"4300808d6a84","size":82123,"pack":"card"},
     "images/card-battle/l/C208V.jpg": {"v":"7f864b939f28","size":88220,"pack":"card"},
@@ -1208,6 +1211,9 @@
     "images/card-battle/s/C067.jpg": {"v":"f744bebfdd84","size":21910,"pack":"card"},
     "images/card-battle/s/C067S.jpg": {"v":"79318d879933","size":25736,"pack":"card"},
     "images/card-battle/s/C067V.jpg": {"v":"2907860b1bb3","size":27503,"pack":"card"},
+    "images/card-battle/s/C068.jpg": {"v":"ae137e8fe86d","size":22059,"pack":"card"},
+    "images/card-battle/s/C068S.jpg": {"v":"2728efbc7a98","size":25175,"pack":"card"},
+    "images/card-battle/s/C068V.jpg": {"v":"9837a515e934","size":26643,"pack":"card"},
     "images/card-battle/s/C208.jpg": {"v":"fe9595e338e2","size":21217,"pack":"card"},
     "images/card-battle/s/C208S.jpg": {"v":"a99b67af1743","size":26431,"pack":"card"},
     "images/card-battle/s/C208V.jpg": {"v":"5b989a876f4f","size":27887,"pack":"card"},
@@ -1394,6 +1400,7 @@
     "images/monster-icons/face/c063.png": {"v":"c15a3b0c53cf","size":83812,"pack":"battle"},
     "images/monster-icons/face/c064.png": {"v":"59768761cc69","size":53672,"pack":"battle"},
     "images/monster-icons/face/c065.png": {"v":"c0a6301e2c2a","size":88776,"pack":"battle"},
+    "images/monster-icons/face/c068.png": {"v":"28540c759b9f","size":39112,"pack":"battle"},
     "images/monster-icons/face/centaur.png": {"v":"90c8aff29500","size":42767,"pack":"battle"},
     "images/monster-icons/face/colorpandora.png": {"v":"5b510b687438","size":63926,"pack":"battle"},
     "images/monster-icons/face/dino.png": {"v":"49ae7bf49bd7","size":63484,"pack":"battle"},
@@ -1513,6 +1520,7 @@
     "images/monsters/c063.png": {"v":"97693bd14c3a","size":239974,"pack":"battle"},
     "images/monsters/c064.png": {"v":"7e039c580e69","size":144078,"pack":"battle"},
     "images/monsters/c065.png": {"v":"651de4a99a0b","size":315891,"pack":"battle"},
+    "images/monsters/c068.png": {"v":"e734038101df","size":65971,"pack":"battle"},
     "images/monsters/centaur.png": {"v":"55e31863fe99","size":88030,"pack":"battle"},
     "images/monsters/colorpandora.png": {"v":"9deee820503c","size":120359,"pack":"battle"},
     "images/monsters/dino.png": {"v":"ac797293f479","size":127071,"pack":"battle"},
@@ -1783,8 +1791,8 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"428235f031fb","size":274316,"pack":"core"},
-    "data/images/images-ally.js": {"v":"5939b514257f","size":59963,"pack":"core"},
+    "tailwind.css": {"v":"e44b60b34d0e","size":274316,"pack":"core"},
+    "data/images/images-ally.js": {"v":"93da04e0d2a6","size":60768,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"f908809f4b48","size":60701,"pack":"core"},
     "data/lineages.js": {"v":"81f342c471d9","size":26476,"pack":"core"},
@@ -1801,7 +1809,7 @@
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":9047,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
     "data/assistants.js": {"v":"f86613fd9e2c","size":915973,"pack":"core"},
-    "data/card-battle-cards.js": {"v":"dbb25485f297","size":113802,"pack":"core"},
-    "game-system.compiled.js": {"v":"7b858f72b982","size":7357290,"pack":"core"}
+    "data/card-battle-cards.js": {"v":"0ab91f2bf8c8","size":114380,"pack":"core"},
+    "game-system.compiled.js": {"v":"7e016b62710c","size":7357304,"pack":"core"}
   }
 }
