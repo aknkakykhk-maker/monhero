@@ -402,6 +402,7 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
             <div data-card-share-list={foeFilter}>
               {foeShown.length ? <ul className="space-y-1.5">{foeShown.map(foeRow)}</ul> : <p className={`${SCREEN_PANEL_CLASS} text-[12px] font-bold text-slate-400`}>{foeEmptyText}</p>}
             </div>
+            <p data-card-share-replay-note className="px-1 text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('戦った試合は、デッキを登録した人があとから見返せます(あなたの名前とアイコンが出ます)')}</p>
             <button type="button" data-card-share-reload className="w-full rounded-xl border border-white/15 bg-slate-900 py-2 text-[12px] font-black text-slate-200" onClick={() => { Audio_.fgSe.tap(); void loadFoes(); }}>ほかの人をさがす</button>
           </>)}
         </>)}

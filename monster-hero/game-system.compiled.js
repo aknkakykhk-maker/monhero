@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4f5ef4368d952b27
+// source-sha256: 002f8e2f41d76efe
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115321,7 +115321,11 @@ const CardDeckShare = ({
     className: "space-y-1.5"
   }, foeShown.map(foeRow)) : React.createElement("p", {
     className: `${SCREEN_PANEL_CLASS} text-[12px] font-bold text-slate-400`
-  }, foeEmptyText)), React.createElement("button", {
+  }, foeEmptyText)), React.createElement("p", {
+    "data-card-share-replay-note": true,
+    className: "px-1 text-[11px] font-bold leading-snug text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('戦った試合は、デッキを登録した人があとから見返せます(あなたの名前とアイコンが出ます)')), React.createElement("button", {
     type: "button",
     "data-card-share-reload": true,
     className: "w-full rounded-xl border border-white/15 bg-slate-900 py-2 text-[12px] font-black text-slate-200",
