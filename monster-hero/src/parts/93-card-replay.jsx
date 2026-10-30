@@ -230,6 +230,55 @@ const cardReplayFromPvp = (db, { match, at, myDeck, mySeed, foeDeck, foeSeed, fi
 // 助手と対戦から(84 の CardBattleScreen で、結果を書いたあと)。foe.who … 助手の id
 const cardReplayFromCpu = (db, { id, at, myDeck, cpuDeck, seed, first, history, foe, outcome, reason, level = null }) => cardReplayMake(db, {
   kind: 'cpu', match: id, at, decks: [myDeck, cpuDeck], seeds: [seed, 0], first, history, foe, outcome, reason, level });
+// 大会の試合から(99。サーバの card_tournament_match が返す1行)。2026-10-30 大会 PR4
+//   端末には保存しない(過去の対戦の50試合の枠を食わない)。種は1つ(サーバの cardTourPlay と同じ cardCreateGame の形)なので、なぞり直しは助手と対戦と同じ道
+//   row … { id, stage, day, seed, first, winner, rules, acts, live:{ who, play, review }, a:{ name, icon, is_assist, assist_id, deck }, b:{ … } }
+//   opts.known … 会った助手の id(まだ会っていない助手は名前と顔を出さない。99 と同じ)。opts.title … 会場の見出し(大会の名前・何試合目)
+const cardReplayFromTour = (db, row, opts = {}) => {
+  if (!db || !row || typeof row !== 'object') return null;
+  const a = row.a && typeof row.a === 'object' ? row.a : {}, b = row.b && typeof row.b === 'object' ? row.b : {};
+  const decks = [cardReplayDeckOf(a.deck), cardReplayDeckOf(b.deck)];
+  if (decks.includes(null)) return null;
+  const seed = Number(row.seed);
+  if (!Number.isInteger(seed) || seed < 0 || seed > 0xFFFFFFFF) return null;
+  if (row.first !== 0 && row.first !== 1) return null;
+  // サーバは1試合 CARD_TOUR_MAX_STEPS 手まで回す(助手と対戦の上限より多い)
+  const max = typeof CARD_TOUR_MAX_STEPS === 'number' ? CARD_TOUR_MAX_STEPS : 4000;
+  if (!Array.isArray(row.acts) || !row.acts.length || row.acts.length > max) return null;
+  const acts = [];
+  for (const x of row.acts) {
+    if (!Array.isArray(x) || (x[0] !== 0 && x[0] !== 1)) return null;
+    const act = typeof cardPvpCleanAct === 'function' ? cardPvpCleanAct(x[1]) : (x[1] && typeof x[1] === 'object' ? x[1] : null);
+    if (!act) return null;
+    acts.push([x[0], act]);
+  }
+  const known = opts.known instanceof Set ? opts.known : new Set();
+  const assistOf = (id) => (typeof cardTourAssistOf === 'function' ? cardTourAssistOf(id, known) : { name: '助手', face: null });
+  const nameOf = (e) => {
+    if (e.is_assist) { const n = assistOf(e.assist_id).name; return n === '助手' ? n : `${n}(助手)`; }
+    return cardReplayText(e.name, 16) || 'ブリーダー';
+  };
+  const iconOf = (e) => (e.is_assist ? '' : cardReplayText(e.icon, 64));
+  const live = row.live && typeof row.live === 'object' && typeof row.live.play === 'string' ? row.live : null;
+  const caster = live && typeof live.who === 'string' ? assistOf(live.who) : null;
+  const rules = Number.isInteger(row.rules) && row.rules > 0 ? row.rules : 0;
+  const names = [nameOf(a), nameOf(b)];
+  return {
+    v: 1, id: `tour-${String(row.id).replace(/[^0-9]/g, '').slice(0, 20)}`, kind: 'tour', at: 0, rules, first: row.first,
+    names, foe: { name: names[1], icon: iconOf(b), frame: null, deckName: null, who: null },
+    outcome: row.winner === 0 ? 'win' : 'lose', reason: '', decks, seeds: [seed, 0], acts, prints: '', fav: false, turn: null, level: null,
+    // 見返しの会場と実況(84 の盤面の下・93 の CardTourLive)
+    tour: {
+      title: cardReplayText(opts.title, 40), stage: row.stage === 'final' ? 'final' : 'group',
+      me: { name: names[0], icon: iconOf(a) },
+      winner: row.winner === 0 || row.winner === 1 ? names[row.winner] : '',
+      live: live ? { play: cardReplayText(live.play, 200), review: cardReplayText(live.review, 240) } : null,
+      caster: caster ? { name: caster.name, face: caster.face || null } : null,
+      // ルールの版がちがう(サーバで回したあとにルールが変わった)。途中までしか見られないことがあるので、はじめに知らせる
+      rulesOld: rules > 0 && rules !== CARD_REPLAY_RULES,
+    },
+  };
+};
 
 // ---- 保存(端末の中だけ) ----
 // 取ってある試合の番号の控え(履歴の画面の行ごとに、すぐ答えるため)。読み込み・書き込みのたびに作り直す
@@ -313,7 +362,9 @@ const cardReplayGameOf = (db, rec) => {
     // by … 1手ごとの、その手を打った人(0 = あなた)。下の帯は「その手を打った人・打ったときの番」で書く(動いたあとの場の番では書かない)
     replay: { id: rec.id, kind: rec.kind, states: built.states, stop: built.stop, total: rec.acts.length, turns: cardReplayTurnStarts(built.states),
       by: rec.acts.map((a) => a[0]), types: rec.acts.map((a) => a[1].type),
-      foe: { name: rec.foe.name, icon: rec.foe.icon || '🙂', frame: rec.foe.frame, deckName: rec.foe.deckName } },
+      foe: { name: rec.foe.name, icon: rec.foe.icon || '🙂', frame: rec.foe.frame, deckName: rec.foe.deckName },
+      // 大会の試合(cardReplayFromTour)だけ: 会場・実況・下の人の名前
+      tour: rec.kind === 'tour' && rec.tour ? rec.tour : null },
   };
 };
 
@@ -337,7 +388,7 @@ const CardReplayBar = ({ replay, at, onSeek, tight }) => {
   const st = replay.states[at];
   const prev = at > 0 ? replay.states[at - 1] : null;
   const by = at > 0 && replay.by ? replay.by[at - 1] : null;
-  const byName = by === 0 ? 'あなた' : by === 1 ? replay.foe.name : '';
+  const byName = by === 0 ? (replay.tour ? replay.tour.me.name : 'あなた') : by === 1 ? replay.foe.name : '';
   // その手を打ったときの番(動いたあとの場ではなく、手を打つ前の場で数える)
   const label = at === 0 ? 'はじまり' : `${at}手目・${prev && prev.turn >= 1 ? `ターン${prev.turn}` : 'はじまり'}・${byName}`;
   const caption = cardReplayCaption(replay.states, at) || (at > 0 && replay.types ? cardReplayActText(replay.types[at - 1], byName) : '');
@@ -363,6 +414,39 @@ const CardReplayBar = ({ replay, at, onSeek, tight }) => {
         <button type="button" data-card-replay-next-turn className={btn} disabled={at >= last} onClick={() => { setAuto(false); go(turnIdx + 1 < turns.length ? turns[turnIdx + 1] : last); }}>ターン▶</button>
         <button type="button" data-card-replay-speed className={btn} onClick={() => { Audio_.fgSe.tap(); setSpeed((v) => (v === 1 ? 2 : 1)); }}>{(CARD_REPLAY_SPEEDS.find((x) => x.id === speed) || CARD_REPLAY_SPEEDS[0]).label}</button>
       </div>
+    </div>
+  );
+};
+
+// ---- 大会の見返しの会場と実況(2026-10-30 大会 PR4。84 の盤面で、再生の帯のすぐ上に出す) ----
+// はじまり … 会場の見出しと、実況(担当の助手)。途中 … 会場の見出しだけ1行。最後 … 勝った人と解説
+// tour … cardReplayFromTour の tour。at・last … いまの手の番号と最後の番号。tight … 縦の画面で入り切らないとき(文を2行まで)
+const CardTourLive = ({ tour, at, last, tight }) => {
+  if (!tour) return null;
+  const head = `🏟️ ${tour.title || (tour.stage === 'final' ? '大会 頂上決戦' : '大会')}`;
+  const end = at >= last;
+  const clamp = tight ? 'line-clamp-2' : '';
+  const face = tour.caster && tour.caster.face
+    ? <img src={tour.caster.face} alt="" aria-hidden="true" className="h-7 w-7 shrink-0 rounded-full border border-amber-300/80 bg-slate-900 object-cover object-top"/>
+    : <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-amber-300/80 bg-slate-800 text-[13px]">🎤</span>;
+  const who = tour.caster ? tour.caster.name : '実況';
+  return (
+    <div data-card-tour-live={at === 0 ? 'start' : end ? 'end' : 'mid'} className="pointer-events-auto mb-1 w-full rounded-xl border border-amber-400/60 bg-gradient-to-r from-amber-950/95 via-slate-950/95 to-amber-950/95 px-2 py-1 shadow-lg">
+      <div className="flex items-center justify-between gap-2 text-[11px] font-black text-amber-200">
+        <span data-card-tour-live-title className="min-w-0 truncate">{head}</span>
+        {end && tour.winner && <span data-card-tour-live-winner className="shrink-0 text-orange-300">{`WIN ${tour.winner}`}</span>}
+      </div>
+      {at === 0 && tour.rulesOld && (
+        <div data-card-tour-live-old className="mt-0.5 text-[11px] font-black text-amber-300" style={JA_WRAP_STYLE}>{jaWrap('ルールが変わる前の試合です。途中までしか見られないことがあります')}</div>
+      )}
+      {(at === 0 || end) && tour.live && (
+        <div className="mt-0.5 flex items-start gap-1.5">
+          {face}
+          <p data-card-tour-live-text={end ? 'review' : 'play'} className={`min-w-0 flex-1 ${clamp} text-[11px] font-bold leading-snug text-white`} style={JA_WRAP_STYLE}>
+            <b className="text-amber-200">{end ? `解説(${who}) ` : `実況(${who}) `}</b>{jaWrap(end ? (tour.live.review || tour.live.play) : tour.live.play)}
+          </p>
+        </div>
+      )}
     </div>
   );
 };
