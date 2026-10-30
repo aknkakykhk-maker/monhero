@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4a64c6b76b555207
+// generated-sha256: d01b34c4e5d4946e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -60565,7 +60565,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           1段・高さ固定で、どの番でも盤が動かない。電波が途切れたときも段を増やさず、番の札が橙になる。難易度は助手の名前の下にあるので帯には出さない */}
       <div data-card-head className={`relative flex ${compact ? 'h-[36px]' : 'h-[44px]'} shrink-0 items-center gap-1.5 bg-black/35 px-2`}>
         {!tutorial && <button type="button" data-card-log-open onClick={() => setLogSheet(true)} className="shrink-0 rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200" aria-label="ターンの記録を見る">記録</button>}
-        {pvpLive && <span className="shrink-0"><CardPvpChat/></span>}
+        {/* 💬 コメント(定型と自由文・ログ。2026-10-30 社長「マルチと観戦で自由文のコメントも」。91 の CardChatButton) */}
+        {(pvpLive || watch) && <span className="shrink-0"><CardChatButton mode={watch ? 'watch' : 'pvp'}/></span>}
+        {(pvpLive || watch) && <CardChatFlow mode={watch ? 'watch' : 'pvp'}/>}
         {watch ? <span data-card-watch-badge className={`shrink-0 whitespace-nowrap rounded-md border border-violet-300/60 bg-violet-500/20 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-violet-100`}>観戦{watchEyes ? ` 👀${watchEyes}` : ''}</span>
           : tourReplay ? <span data-card-replay-badge="tour" className={`shrink-0 whitespace-nowrap rounded-md border border-amber-300/70 bg-amber-500/25 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-amber-100`}>大会</span>
           : replay ? <span data-card-replay-badge className={`shrink-0 whitespace-nowrap rounded-md border border-sky-300/60 bg-sky-500/20 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-sky-100`}>リプレイ</span>
@@ -64986,7 +64988,13 @@ const cardPvpCleanMessage = (raw) => {
       fr: typeof raw.fr === 'string' && raw.fr ? raw.fr.slice(0, 40) : null,
       rt: Number.isInteger(raw.rt) && raw.rt >= 0 && raw.rt <= 10000 ? raw.rt : null, rv: cardPvpRv(raw.rv) };
   }
-  if (raw.t === 'chat') { const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1); return i === null ? null : { t: 'chat', from, i }; }
+  // ひとこと: 定型(i … 番号)か、自由文(x … 30字まで。2026-10-30 で足した項目。古い版は x を知らないので捨てる)
+  if (raw.t === 'chat') {
+    if (typeof raw.x === 'string') { const x = cardChatClean(raw.x); return x ? { t: 'chat', from, x } : null; }
+    const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1); return i === null ? null : { t: 'chat', from, i };
+  }
+  // 観戦の人のコメント(ホストが観戦の通り道で受け取り、相手へ渡す。v … 観戦の人の印・n … 名前)
+  if (raw.t === 'wsay') { const x = cardChatClean(raw.x); return x ? { t: 'wsay', from, v: typeof raw.v === 'string' ? raw.v.slice(0, 40) : '', n: rhythmMultiText(raw.n, CARD_PVP_NAME_MAX) || 'ブリーダー', x, sp: raw.sp === true } : null; }
   // もう1戦(同じ相手と同じ部屋で。rd … 次の試合の回の番号・seal … 次の試合の山札の封)
   if (raw.t === 'again') { const rd = cardPvpInt(raw.rd, 1000); const seal = typeof raw.seal === 'string' && /^[0-9a-f]{64}$/.test(raw.seal) ? raw.seal : null; return rd && seal ? { t: 'again', from, rd, seal } : null; }
   if (raw.t === 'surrender' || raw.t === 'bye' || raw.t === 'timeout') return { t: raw.t, from };
@@ -65051,6 +65059,63 @@ const cardPvpSeekerList = (seekers, now, freshMs = CARD_PVP_LOBBY_FRESH_MS) => O
   .filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string' && (x.name || x.icon) && x.rv === cardPvpRulesVersion())
   .sort((a, b) => a[1].at - b[1].at || (a[0] < b[0] ? -1 : 1))
   .map(([id, x]) => ({ id, code: x.code, name: x.name || 'ブリーダー', icon: x.icon || null, fr: x.fr || null, rt: Number.isInteger(x.rt) ? x.rt : null, waitSec: Math.max(0, Math.min(999, Math.floor((now - x.at) / 1000))) })); // 待っている秒数は相手の端末の時計なので、ずれても0〜999に収める
+
+// ---- 自由文コメントの純粋な計算(言葉の掃除・置き換え・連絡先。決めごとは下の CARD_CHAT の上) ----
+const CARD_CHAT_MAX = 30;
+const CARD_CHAT_GAP_MS = 3000;
+const CARD_CHAT_LIMIT = Object.freeze({ pvp: 30, watch: 20 });
+const CARD_CHAT_LOG_MAX = 50;
+const CARD_CHAT_PREFS_KEY = 'mh_card_chat_prefs_v1';
+const cardChatNormalizePrefs = (v) => ({ free: !(v && typeof v === 'object' && v.free === false), flow: !(v && typeof v === 'object' && v.flow === false) });
+// 置き換える言葉(ひらがな・小文字で持つ。カタカナ・全角は、ひらがな・半角にそろえた写しで探す)
+const CARD_CHAT_NG = Object.freeze([
+  'しね', 'ころす', 'ころせ', 'きえろ', 'ばか', 'あほ', 'まぬけ', 'ざこ', 'きもい', 'きもち悪', 'うざい', 'ぶす', 'でぶ',
+  'がいじ', 'ちしょう', 'ちんこ', 'ちんぽ', 'まんこ', 'せっくす', 'えっち', 'おっぱい', 'れいぷ', 'ふぁっく',
+  '死ね', '殺す', '殺せ', '馬鹿', '阿呆', '屑', '池沼', '障害者', '雑魚', '気持ち悪',
+  'fuck', 'shit', 'bitch', 'sex', 'porn', 'dick', 'pussy', 'asshole', 'idiot', 'stupid',
+]);
+// 上の言葉を中に含むが、ふつうの言葉(ここに重なる所は置き換えない)。「かす」「はげ」など、ふつうの言葉と重なりやすいものは表に入れていない
+const CARD_CHAT_OK = Object.freeze(['ばかり', 'ばかで', 'ばかず', 'しねま', 'あほうどり']);
+// カタカナ → ひらがな(1文字ずつ。長さは変えない)
+const cardChatHira = (t) => t.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
+// 探すための写し: 1文字ずつ、全角英数字を半角へ(NFKC)・カタカナをひらがなへ・小文字へ(長さを変えない。変わる字はそのまま)
+const cardChatFold = (t) => String(t || '').split('').map((c) => {
+  let n = c;
+  try { n = c.normalize('NFKC'); } catch (_) { /* 古い端末はそのまま */ }
+  if (n.length !== 1) n = c;
+  n = cardChatHira(n);
+  const l = n.toLowerCase();
+  return l.length === 1 ? l : n;
+}).join('');
+// 見えない文字・改行を消して空白をつめ、30字に切る(見た目の字は変えない。全角の「！」もそのまま)
+const cardChatClean = (raw, max = CARD_CHAT_MAX) => {
+  let t = String(raw == null ? '' : raw);
+  t = t.replace(/[\u0000-\u001f\u007f\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff]/g, ' ').replace(/\s+/g, ' ').trim();
+  return [...t].slice(0, max).join('');
+};
+// 悪い言葉を「●」に(長さはそのまま)
+const cardChatMask = (text) => {
+  const t = String(text || '');
+  if (!t) return t;
+  const low = cardChatFold(t);
+  const hit = new Array(t.length).fill(false);
+  const ok = new Array(t.length).fill(false);
+  CARD_CHAT_OK.forEach((w) => { let i = low.indexOf(w); while (i >= 0) { for (let k = i; k < i + w.length; k++) ok[k] = true; i = low.indexOf(w, i + 1); } });
+  CARD_CHAT_NG.forEach((w) => { let i = low.indexOf(w); while (i >= 0) { if (!ok[i]) for (let k = i; k < i + w.length; k++) hit[k] = true; i = low.indexOf(w, i + 1); } });
+  return hit.some(Boolean) ? t.split('').map((c, i) => (hit[i] ? '●' : c)).join('') : t;
+};
+// 連絡先らしいもの(URL・メール・電話番号・SNSのID)。空白・記号をはさんだものも見る
+const cardChatContact = (text) => {
+  let t = String(text || '');
+  try { t = t.normalize('NFKC'); } catch (_) { /* 古い端末はそのまま */ }
+  t = cardChatHira(t).toLowerCase();
+  const flat = t.replace(/[\s\-ー_.。・,、:：/／]/g, '');
+  if (/https?|www|\.(com|net|org|jp|io|me|ly|co|app|gg|tv)\b|どっとこむ|どっとじぇーぴー/.test(t) || /(com|net|org)$/.test(flat) && /\./.test(t)) return true;
+  if (/[a-z0-9._%+-]+@[a-z0-9-]+/.test(t) || /あっとまーく/.test(t)) return true;
+  if (/\d{7,}/.test(flat) || /[0-9０-９〇一二三四五六七八九零]{7,}/.test(flat)) return true;
+  if (/(line|らいん|いんすた|insta|twitter|ついったー|tiktok|てぃっくとっく|discord|でぃすこ|youtube|ゆーちゅーぶ|id|あいでぃー)[:：=＝\s]*@?[a-z0-9_.]{3,}/.test(t)) return true;
+  return false;
+};
 
 // ---- 部屋と通信(ここから下は画面と通信。区切り1)
 // ---- 相手のアイコン(2026-10-26 社長といちかさんの対戦で「sneguroc」と字が出た) ----
@@ -65316,7 +65381,7 @@ const CardPvpInviteNotice = ({ enabled = false, busy = false, onAccept }) => {
 };
 
 // 観戦の受け持ち(94-card-spectate.jsx の CARD_WATCH_HOST)。無い環境では何もしない物
-const CARD_PVP_WATCH_NONE = Object.freeze({ start: () => {}, push: () => {}, discard: () => {}, tick: () => {}, end: () => {}, stop: () => {}, eyes: () => 0 });
+const CARD_PVP_WATCH_NONE = Object.freeze({ start: () => {}, push: () => {}, say: () => {}, discard: () => {}, tick: () => {}, end: () => {}, stop: () => {}, eyes: () => 0 });
 const cardPvpWatchHost = () => (typeof CARD_WATCH_HOST !== 'undefined' ? CARD_WATCH_HOST : CARD_PVP_WATCH_NONE);
 // 部屋の状態は React の外に置く(対戦の画面へ行って戻っても、部屋は切れない。モンヒロビートの RHYTHM_MULTI と同じ)
 const CARD_PVP = (() => {
@@ -65391,6 +65456,7 @@ const CARD_PVP = (() => {
     const first = (iHost === msg.hostFirst) ? 0 : 1;
     const st = cardPvpNewGame(CARD_BATTLE_DATA, { myDeck: s.deck, mySeed: s.seed, foeMonsters: s.foe.mons, foeCount: s.foe.count || CARD_BATTLE_DECK_SIZE, first, names: ['あなた', s.foe.name || 'あいて'] });
     closeLobby();
+    CARD_CHAT.reset(`pvp:${msg.match}`); // 試合ごとにコメントを空にする
     // 観戦の通り道を開く(ホストだけ)。観戦の見え方 = ホストの見え方(ホスト=0)
     if (iHost) {
       const person = (x, mons, count) => ({ name: x.name, icon: x.icon, fr: x.fr || null, bid: x.bid || null, dn: x.dn || null, mons, count });
@@ -65484,7 +65550,15 @@ const CARD_PVP = (() => {
     }
     if (msg.t === 'open') { if (msg.match && msg.match !== s.match) return; if (!s.foeOpen) { set({ foeOpen: msg }); void tryVerify(); } return; } // 前の試合の封は使わない
     if (msg.t === 'again') { if (s.phase === 'over' && !s.foeGone) { s = { ...s, foeAgain: { rd: msg.rd, seal: msg.seal } }; tryAgain(); emit(); } return; }
-    if (msg.t === 'chat') { if (s.phase === 'playing' && board && board.onChat) board.onChat(CARD_PVP_STAMPS[msg.i]); return; }
+    if (msg.t === 'chat') {
+      if (!inGame()) return;
+      const stamp = msg.x === undefined;
+      const text = stamp ? CARD_PVP_STAMPS[msg.i] : msg.x;
+      if (isHost()) cardPvpWatchHost().say({ p: 1, x: text, sp: stamp }); // 観戦の人にも見せる(全員に見える。2026-10-30 社長)
+      if (CARD_CHAT.add({ key: 'foe', name: (s.foe && s.foe.name) || 'あいて', text, stamp, kind: 'foe' }) && s.phase === 'playing' && board && board.onChat) board.onChat(cardChatMask(cardChatClean(text)));
+      return;
+    }
+    if (msg.t === 'wsay') { if (inGame()) CARD_CHAT.add({ key: `v:${msg.v}`, name: msg.n, text: msg.x, stamp: msg.sp, kind: 'watch' }); return; }
     if (msg.t === 'surrender' || msg.t === 'bye' || msg.t === 'timeout') {
       if (s.phase === 'playing') forceEnd(msg.t === 'surrender' ? 'foeSurrender' : msg.t === 'timeout' ? 'foeTimeout' : 'foeLeft');
       else if (s.phase === 'waiting') set({ foe: null });
@@ -65653,7 +65727,26 @@ const CARD_PVP = (() => {
     auto: (fn) => { if (!s) return fn(); s.autoActing = true; try { return fn(); } finally { s.autoActing = false; } },
     chat: (i) => {
       if (!s || s.phase !== 'playing' || !CARD_PVP_STAMPS[i] || Date.now() - s.chatAt < CARD_PVP_CHAT_GAP_MS) return false;
-      s = { ...s, chatAt: Date.now() }; send({ t: 'chat', i }); return true;
+      s = { ...s, chatAt: Date.now() }; send({ t: 'chat', i });
+      if (isHost()) cardPvpWatchHost().say({ p: 0, x: CARD_PVP_STAMPS[i], sp: true });
+      return true;
+    },
+    // 自由文のコメント(CardChatPanel が CARD_CHAT.check を通してから呼ぶ)。観戦の人にも見せる
+    say: (text) => {
+      if (!s || !inGame() || !text) return false;
+      send({ t: 'chat', x: text });
+      if (isHost()) cardPvpWatchHost().say({ p: 0, x: text, sp: false });
+      return true;
+    },
+    // 観戦の人のコメント(ホストだけ。94 の CARD_WATCH_HOST から)。自分の画面に出して、相手へも渡す。1秒に2つまで
+    watchSay: (v, name, text, stamp = false) => {
+      if (!s || !inGame() || !text || !isHost()) return;
+      const nowT = Date.now();
+      s.relayAt = (s.relayAt || []).filter((x) => nowT - x < 1000);
+      if (s.relayAt.length >= 2) return;
+      s.relayAt.push(nowT);
+      CARD_CHAT.add({ key: `v:${v}`, name, text, stamp, kind: 'watch' });
+      send({ t: 'wsay', v, n: name, x: text, sp: stamp });
     },
     alive: () => alive,
     // 観戦している人の数(ホストは自分で数え、相手はホストの hb の w を読む)
@@ -66230,26 +66323,6 @@ const CardPvpSignal = ({ clock }) => ((clock.offline || clock.foeQuietSec > 0) ?
   </div>
 ) : null);
 // 定型のチャット(上の帯の「投了」の横の 💬)。相手の言葉は、助手と対戦のひとことと同じ吹き出しに出る
-const CardPvpChat = () => {
-  const [open, setOpen] = useState(false);
-  const [sent, setSent] = useState('');
-  useEffect(() => { if (!sent) return undefined; const t = setTimeout(() => setSent(''), 1600); return () => clearTimeout(t); }, [sent]);
-  return (
-    <div className="relative">
-      <button type="button" data-card-pvp-chat aria-label="定型文を送る" onClick={() => { Audio_.fgSe.tap(); setOpen((v) => !v); }} className="grid h-[28px] w-[30px] place-items-center rounded-lg border border-white/20 bg-white/10 text-[14px]">💬</button>
-      {sent && <span className="pointer-events-none absolute left-0 top-[32px] z-[40] whitespace-nowrap rounded-full bg-sky-500/80 px-2 py-0.5 text-[11px] font-black text-white">「{sent}」</span>}
-      {open && (
-        <div data-card-pvp-stamps className="absolute left-0 top-[34px] z-[40] grid w-[200px] grid-cols-2 gap-1 rounded-xl border border-white/15 bg-slate-950/95 p-1.5 shadow-xl">
-          {CARD_PVP_STAMPS.map((t, i) => (
-            <button key={t} type="button" data-card-pvp-stamp={i} className="min-h-[36px] rounded-lg bg-white/10 px-1 text-[12px] font-bold text-white active:scale-[.97]"
-              onClick={() => { if (CARD_PVP.chat(i)) setSent(t); setOpen(false); }}>{t}</button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
 // ---- ランキングの「マルチ」の札(90-card-rank.jsx の CardRankingBoard から出す) ----
 // 勝つと上がる強さの点数(はじめ1500)の順。表がまだ無いときは「準備中」のまま
 // reloadKey … ランキングの「更新」で読み直す。ほかのタブ(勝ち数など)と同じ見た目にそろえる(メダル・同じ点数は同じ順位・あなたの強さの欄。2026-10-26 社長「全部入れる」)
@@ -66315,6 +66388,193 @@ const CardPvpRankingList = ({ renderBreederIcon = null, selfId = '', reloadKey =
           );
         })}
       </ol>
+    </>
+  );
+};
+
+// ==================== マルチと観戦の自由文コメント(2026-10-30 社長「マルチと観戦で自由文のコメントも打てるようにして」) ====================
+// 決めごと: docs/progress/card-battle/multi/free-comment/README.md(card-tactics-mock の見本・社長の答え)
+//   ・対戦の2人も観戦の人も、全員のコメントが全員に見える(だれとでもの対戦でも)。30字・改行なし・3秒あけて・1試合に対戦30回/観戦20回まで
+//   ・悪い言葉は「●」に置き換える(送る側と受ける側の両方)。URL・メール・電話番号・SNSのIDは送る前に弾く
+//   ・通報はしない。ログの行を押して、その試合(観戦ならその観戦)のあいだ消せる(ミュート・保存しない)
+//   ・マルチ・観戦の通信にのせるだけ。サーバに残さない。本文はマルチの履歴・過去の対戦の記録に書かない
+//   ・設定だけ新しいキー mh_card_chat_prefs_v1 { free: 自由文を出すか, flow: 観戦のコメントを流すか }
+// いまの試合(観戦)のコメント。React の外に置く(対戦の画面・観戦の画面・コメントの板で同じものを見る)
+// 1行: { id, key(だれか・ミュートの印), name, text, stamp, kind: 'me' | 'foe' | 'player' | 'watch', at }
+const CARD_CHAT = (() => {
+  const listeners = new Set();
+  let s = { scope: '', list: [], muted: new Set(), sent: 0, lastAt: 0, seq: 0 };
+  let prefs = cardChatNormalizePrefs(null);
+  let prefsLoaded = false;
+  const emit = () => listeners.forEach((fn) => { try { fn(s); } catch (_) { /* 画面の都合で落ちても続ける */ } });
+  const loadPrefs = () => {
+    if (prefsLoaded || typeof storeGet !== 'function') return;
+    prefsLoaded = true;
+    storeGet(CARD_CHAT_PREFS_KEY, null, false).then((v) => { prefs = cardChatNormalizePrefs(v); s = { ...s }; emit(); }).catch(() => {});
+  };
+  return {
+    get: () => s,
+    prefs: () => { loadPrefs(); return prefs; },
+    setPrefs: (patch) => { prefs = cardChatNormalizePrefs({ ...prefs, ...patch }); try { void storeSet(CARD_CHAT_PREFS_KEY, prefs, false); } catch (_) { /* 保存できなくても続ける */ } s = { ...s }; emit(); },
+    subscribe: (fn) => { loadPrefs(); listeners.add(fn); return () => listeners.delete(fn); },
+    // 試合・観戦が変わったら、コメント・ミュート・送った数を空にする
+    reset: (scope) => { if (s.scope === scope) return; s = { scope, list: [], muted: new Set(), sent: 0, lastAt: 0, seq: s.seq }; emit(); },
+    // コメントを足す。出したら true(ミュート中・自由文を出さない設定のときは false)
+    add: (e) => {
+      if (!e || !s.scope) return false;
+      const text = cardChatMask(cardChatClean(e.text));
+      if (!text || s.muted.has(e.key)) return false;
+      if (!e.stamp && e.kind !== 'me' && !prefs.free) return false;
+      const row = { id: s.seq + 1, key: String(e.key || ''), name: cardChatMask(cardChatClean(e.name, CARD_PVP_NAME_MAX)) || 'ブリーダー', text, stamp: !!e.stamp, kind: e.kind || 'watch', at: Date.now() };
+      s = { ...s, seq: row.id, list: [...s.list, row].slice(-CARD_CHAT_LOG_MAX) };
+      emit();
+      return true;
+    },
+    // 送れるかを見る(送る前)。{ ok, text, why }
+    check: (raw, kind, stamp = false) => {
+      const text = cardChatClean(raw);
+      if (!text) return { ok: false, why: '' };
+      if (!stamp && cardChatContact(text)) return { ok: false, why: 'URL・メール・電話番号・SNSのIDは送れません' };
+      if (s.sent >= (CARD_CHAT_LIMIT[kind] || 20)) return { ok: false, why: 'この試合では、もう送れません' };
+      if (Date.now() - s.lastAt < (stamp ? CARD_PVP_CHAT_GAP_MS : CARD_CHAT_GAP_MS)) return { ok: false, why: '少しあけてから送ってください' };
+      return { ok: true, text: cardChatMask(text), why: '' };
+    },
+    sent: () => { s = { ...s, sent: s.sent + 1, lastAt: Date.now() }; emit(); },
+    mute: (key) => { if (!key) return; const muted = new Set(s.muted); muted.add(key); s = { ...s, muted, list: s.list.filter((x) => x.key !== key) }; emit(); },
+  };
+})();
+
+// 流れるコメント(観戦はみんなのコメント・対戦中は観戦の人のコメントだけを小さく)。画面のまん中の空きを右から左へ5秒
+//   mode: 'watch' | 'pvp'。設定の「観戦のコメントを流す」を切ると流さない(ログには残る)
+const CardChatFlow = ({ mode = 'watch' }) => {
+  const [rows, setRows] = useState([]);
+  const lastId = useRef(CARD_CHAT.get().seq);
+  const queue = useRef([]);
+  const lanes = mode === 'watch' ? 4 : 2;
+  useEffect(() => CARD_CHAT.subscribe((s) => {
+    const fresh = s.list.filter((x) => x.id > lastId.current);
+    if (s.list.length) lastId.current = Math.max(lastId.current, s.list[s.list.length - 1].id);
+    if (!CARD_CHAT.prefs().flow) return;
+    fresh.filter((x) => mode === 'watch' || x.kind === 'watch').forEach((x) => { if (queue.current.length < 6) queue.current.push(x); });
+  }), [mode]);
+  // 1秒に2つ(対戦中は1つ)まで流す。あふれた分は流さない(ログには残る)
+  useEffect(() => {
+    const t = setInterval(() => {
+      const x = queue.current.shift();
+      if (!x) return;
+      setRows((cur) => {
+        const now = Date.now();
+        const live = cur.filter((r) => now - r.at < 5200);
+        const used = new Set(live.filter((r) => now - r.at < 1800).map((r) => r.lane));
+        let lane = 0; while (used.has(lane) && lane < lanes - 1) lane++;
+        return [...live, { ...x, lane, at: now }].slice(-8);
+      });
+    }, mode === 'watch' ? 500 : 1000);
+    return () => clearInterval(t);
+  }, [mode]);
+  useEffect(() => { if (!rows.length) return undefined; const t = setTimeout(() => setRows((cur) => cur.filter((r) => Date.now() - r.at < 5200)), 5300); return () => clearTimeout(t); }, [rows]);
+  if (!rows.length) return null;
+  const h = mode === 'watch' ? 26 : 22;
+  return (
+    <div data-card-chat-flow={mode} aria-hidden="true" className="pointer-events-none fixed inset-x-0 z-[35] overflow-hidden" style={{ top: mode === 'watch' ? '29%' : '33%', height: `${h * lanes}px` }}>
+      <style>{'@keyframes mhCardChatFlow{from{transform:translateX(100vw)}to{transform:translateX(-100%)}}'}</style>
+      {rows.map((r) => (
+        <span key={r.id} data-card-chat-flow-row={r.kind} className={`absolute left-0 whitespace-nowrap font-black ${mode === 'watch' ? 'text-[16px]' : 'text-[13px]'} ${r.kind === 'watch' ? 'text-violet-100' : 'text-white'}`}
+          style={{ top: `${r.lane * h}px`, animation: 'mhCardChatFlow 5s linear forwards', textShadow: '0 0 3px #000,0 0 3px #000,0 2px 4px #000' }}>
+          <small className={`mr-1 text-[11px] ${r.kind === 'watch' ? 'text-violet-300' : 'text-amber-200'}`}>{r.name}</small>{r.text}
+        </span>
+      ))}
+    </div>
+  );
+};
+
+// コメントの板(下から出る): ログ(新しいのが下・行を押すとその人を消せる)・定型6つ・打つ欄・設定。
+//   mode: 'pvp'(対戦中。定型は今の CARD_PVP.chat)| 'watch'(観戦中。CARD_WATCH.say)
+const CardChatPanel = ({ mode = 'pvp', onClose }) => {
+  const [c, setC] = useState(() => CARD_CHAT.get());
+  useEffect(() => CARD_CHAT.subscribe(setC), []);
+  const prefs = CARD_CHAT.prefs();
+  const [text, setText] = useState('');
+  const [why, setWhy] = useState('');
+  const [pick, setPick] = useState(null); // 押したログの行(消すかを出す)
+  const [myName, setMyName] = useState('ブリーダー');
+  useEffect(() => { if (mode !== 'watch' || typeof storeGet !== 'function') return; storeGet('mh_breeder_name', 'ブリーダー', false).then((v) => { if (typeof v === 'string' && v) setMyName(v); }).catch(() => {}); }, [mode]);
+  const logRef = useRef(null);
+  useEffect(() => { const el = logRef.current; if (el) el.scrollTop = el.scrollHeight; }, [c.list.length]);
+  const send = (raw, stampIndex = null) => {
+    const stamp = stampIndex !== null;
+    const r = CARD_CHAT.check(raw, mode, stamp);
+    if (!r.ok) { setWhy(r.why); return; }
+    const ok = mode === 'pvp' ? (stamp ? CARD_PVP.chat(stampIndex) : CARD_PVP.say(r.text)) : CARD_WATCH.say(r.text, myName, stamp);
+    if (!ok) { setWhy('いまは送れません'); return; }
+    if (mode !== 'pvp' || !stamp) CARD_CHAT.sent();
+    CARD_CHAT.add({ key: 'me', name: mode === 'pvp' ? 'あなた' : myName, text: r.text, stamp, kind: 'me' });
+    setWhy('');
+    if (!stamp) setText('');
+  };
+  const left = Math.max(0, (CARD_CHAT_LIMIT[mode] || 20) - c.sent);
+  const tone = (k) => (k === 'me' ? 'text-sky-200' : k === 'watch' ? 'text-violet-300' : 'text-amber-200');
+  const toggle = (k, on) => (
+    <button type="button" data-card-chat-pref={k} aria-pressed={on} onClick={() => CARD_CHAT.setPrefs({ [k]: !on })}
+      className={`min-h-[34px] flex-1 rounded-lg px-2 text-[11px] font-black ${on ? 'bg-emerald-600 text-white' : 'border border-white/15 bg-slate-800 text-slate-300'}`}>
+      {k === 'free' ? '自由文を出す' : '観戦のコメントを流す'} {on ? 'ON' : 'OFF'}
+    </button>
+  );
+  return (
+    <div data-card-chat-panel={mode} className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/40" onClick={onClose}>
+      <div className="mx-auto w-full max-w-[520px] rounded-t-2xl border-t-2 border-sky-400 bg-slate-950 px-3 pt-2 text-white" style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }} onClick={(e) => e.stopPropagation()}>
+        <div className="mb-1 flex items-center">
+          <b className="flex-1 text-[13px] text-sky-100">💬 コメント{mode === 'watch' ? '(観戦)' : ''}</b>
+          <button type="button" data-card-chat-close onClick={onClose} className="min-h-[32px] rounded-lg px-2 text-[12px] font-black text-slate-300">✕ 閉じる</button>
+        </div>
+        <div ref={logRef} data-card-chat-log={c.list.length} className="mb-2 max-h-[26vh] min-h-[56px] overflow-y-auto rounded-xl border border-violet-300/40 bg-black/40 px-2 py-1">
+          {c.list.length === 0 ? <p className="py-3 text-center text-[12px] font-bold text-slate-400">まだコメントはありません</p>
+            : c.list.map((x) => (
+              <div key={x.id}>
+                <button type="button" data-card-chat-line={x.kind} onClick={() => setPick(x.kind === 'me' ? null : (pick === x.id ? null : x.id))}
+                  className="block w-full border-b border-white/5 py-1 text-left text-[13px] leading-snug" style={JA_WRAP_STYLE}>
+                  <b className={`mr-1.5 text-[11px] ${tone(x.kind)}`}>{x.name}{x.kind === 'watch' ? '(観戦)' : ''}</b>{x.text}
+                </button>
+                {pick === x.id && <button type="button" data-card-chat-mute={x.key} onClick={() => { CARD_CHAT.mute(x.key); setPick(null); }}
+                  className="my-1 min-h-[34px] w-full rounded-lg border border-rose-300/50 bg-rose-500/15 text-[12px] font-black text-rose-100">🔇 {x.name}さんのコメントを消す(この{mode === 'watch' ? '観戦' : '試合'}のあいだ)</button>}
+              </div>
+            ))}
+        </div>
+        <div className="mb-2 grid grid-cols-3 gap-1">
+          {CARD_PVP_STAMPS.map((t, i) => <button key={t} type="button" data-card-chat-stamp={i} onClick={() => send(t, i)} className="min-h-[36px] rounded-lg bg-white/10 px-1 text-[12px] font-bold active:scale-[.97]">{t}</button>)}
+        </div>
+        {prefs.free ? (<>
+          <div className="flex gap-1.5">
+            <input data-card-chat-input value={text} maxLength={CARD_CHAT_MAX * 2} autoComplete="off" enterKeyHint="send" placeholder={`自分で打つ(${CARD_CHAT_MAX}字まで)`}
+              onChange={(e) => { setText([...e.target.value.replace(/[\r\n]/g, '')].slice(0, CARD_CHAT_MAX).join('')); setWhy(''); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); send(text); } }}
+              className="min-h-[44px] min-w-0 flex-1 rounded-xl border-2 border-sky-400/70 bg-black/50 px-3 text-[15px] text-white"/>
+            <button type="button" data-card-chat-send disabled={!text.trim()} onClick={() => send(text)} className="min-h-[44px] shrink-0 rounded-xl bg-amber-300 px-4 text-[14px] font-black text-slate-950 disabled:opacity-40">送る</button>
+          </div>
+          <p className="mt-1 flex text-[11px] font-bold text-slate-400"><span className="flex-1">URL・連絡先は送れません・あと{left}回</span><span className="tabular-nums">{[...text].length}/{CARD_CHAT_MAX}</span></p>
+        </>) : <p className="text-[11px] font-bold text-slate-400">自由文はOFF(定型のひとことだけ出します)</p>}
+        {why && <p data-card-chat-why className="mt-1 text-[12px] font-black text-rose-300">{why}</p>}
+        <div className="mt-2 flex gap-1.5">{toggle('free', prefs.free)}{toggle('flow', prefs.flow)}</div>
+      </div>
+    </div>
+  );
+};
+
+// 上の帯の 💬(押すとコメントの板)。板を閉じているあいだに来たコメントの数を出す
+const CardChatButton = ({ mode = 'pvp' }) => {
+  const [open, setOpen] = useState(false);
+  const [c, setC] = useState(() => CARD_CHAT.get());
+  useEffect(() => CARD_CHAT.subscribe(setC), []);
+  const seen = useRef(c.seq);
+  if (open) seen.current = c.seq;
+  const fresh = c.list.filter((x) => x.id > seen.current && x.kind !== 'me').length;
+  return (
+    <>
+      <button type="button" data-card-pvp-chat data-card-chat-open={mode} aria-label="コメントを見る・送る" onClick={() => { Audio_.fgSe.tap(); setOpen(true); }}
+        className="relative grid h-[28px] w-[30px] place-items-center rounded-lg border border-white/20 bg-white/10 text-[14px]">💬
+        {fresh > 0 && <span data-card-chat-new={fresh} className="absolute -right-1.5 -top-1.5 min-w-[16px] rounded-full bg-rose-500 px-1 text-[10px] font-black leading-[16px] text-white">{Math.min(fresh, 99)}</span>}
+      </button>
+      {open && <CardChatPanel mode={mode} onClose={() => setOpen(false)}/>}
     </>
   );
 };
@@ -67270,6 +67530,8 @@ const cardWatchCleanMessage = (raw) => {
   const from = raw.from.slice(0, 40);
   const match = typeof raw.match === 'string' ? raw.match.slice(0, 40) : '';
   if (raw.t === 'w-eye') return { t: 'w-eye', from, match, need: cardPvpInt(raw.need, CARD_WATCH_LOG_MAX) };
+  // コメント(2026-10-30)。p … 対戦の人(ホストが流す。0=ホスト・1=相手)・無ければ観戦の人 / n … 観戦の人の名前 / sp … 定型のひとこと
+  if (raw.t === 'w-say') { const x = cardChatClean(raw.x); return x ? { t: 'w-say', from, match, x, n: rhythmMultiText(raw.n, CARD_PVP_NAME_MAX) || 'ブリーダー', p: raw.p === 0 || raw.p === 1 ? raw.p : null, sp: raw.sp === true } : null; }
   if (raw.t === 'w-act') { const n = cardPvpInt(raw.n, CARD_WATCH_LOG_MAX); const e = cardWatchCleanEntry(raw.e); return n && e ? { t: 'w-act', from, match, n, e } : null; }
   if (raw.t === 'w-log') {
     const start = cardPvpInt(raw.start, CARD_WATCH_LOG_MAX);
@@ -67312,7 +67574,10 @@ const CARD_WATCH_HOST = (() => {
   };
   const onWatch = (raw) => {
     const msg = cardWatchCleanMessage(raw);
-    if (!h || !msg || msg.t !== 'w-eye' || msg.match !== h.match || msg.from === h.id) return;
+    if (!h || !msg || msg.match !== h.match || msg.from === h.id) return;
+    // 観戦の人のコメントは、対戦の2人にも見せる(91 の CARD_PVP.watchSay が自分の画面に出して、相手へ渡す)
+    if (msg.t === 'w-say') { if (msg.p === null && !h.end) CARD_PVP.watchSay(msg.from, msg.n, msg.x, msg.sp); return; }
+    if (msg.t !== 'w-eye') return;
     // 上限を超えた人は数えない(その人には「満員」と出る)
     if (h.eyes.has(msg.from) || eyes() < CARD_WATCH_MAX) h.eyes.set(msg.from, Date.now()); else return;
     if (msg.need !== null && msg.need < h.log.length) {
@@ -67350,6 +67615,8 @@ const CARD_WATCH_HOST = (() => {
       h.log.push(entry);
       sendWatch({ t: 'w-act', n: h.log.length, e: entry });
     },
+    // 対戦の2人のコメントを、観戦の人へ流す(p … ホストの見え方で 0=ホスト・1=相手)
+    say: ({ p, x, sp }) => { if (h && !h.end && x) sendWatch({ t: 'w-say', p: p === 1 ? 1 : 0, x: String(x).slice(0, 60), sp: !!sp }); },
     discard: (p, list) => { if (h && Array.isArray(list)) { h.d = h.d.map((l, i) => (i === p ? list.slice() : l)); } },
     tick: () => {
       if (!h) return;
@@ -67428,12 +67695,19 @@ const CARD_WATCH = (() => {
   const onMessage = (raw) => {
     const msg = cardWatchCleanMessage(raw);
     if (!s || !msg || msg.match !== s.match || msg.from === s.id || msg.t === 'w-eye' || msg.t === 'live') return;
+    // コメント: 対戦の人のもの(ホストから・p あり)は、名前を試合の札から出す。観戦の人のものは名前つき
+    if (msg.t === 'w-say') {
+      const player = (msg.p === 0 || msg.p === 1) && !!s.hostId && msg.from === s.hostId;
+      const meta = s.meta;
+      CARD_CHAT.add({ key: player ? `p${msg.p}` : `v:${msg.from}`, name: player && meta && meta.p[msg.p] ? meta.p[msg.p].name : msg.n, text: msg.x, stamp: msg.sp, kind: player ? 'player' : 'watch' });
+      return;
+    }
     s = { ...s, seenAt: Date.now() };
     if (msg.t === 'w-hb') {
       // 上限: はじめての知らせで、もう上限まで見ていて、自分がまだ数えられていなければ「満員」
       if (!s.counted && s.phase === 'connecting' && msg.eyes >= CARD_WATCH_MAX) { stop(); set({ phase: 'full' }); return; }
       const meta = s.meta || msg.meta;
-      const patch = { hostN: msg.n, eyes: msg.eyes, end: msg.end, d: msg.d || s.d, meta, counted: true };
+      const patch = { hostN: msg.n, eyes: msg.eyes, end: msg.end, d: msg.d || s.d, meta, counted: true, hostId: msg.from };
       if (!s.st && meta) { patch.st = cardWatchNewGame(CARD_BATTLE_DATA, cardWatchSideMeta(meta, s.side)); patch.phase = 'watching'; }
       s = { ...s, ...patch };
       if (s.n < s.hostN && !s.buf[s.n + 1] && Date.now() - s.needAt > 2500) { s = { ...s, needAt: Date.now() }; send({ t: 'w-eye', need: s.n }); }
@@ -67472,6 +67746,7 @@ const CARD_WATCH = (() => {
       stop();
       if (!live || !live.match) return;
       s = { ...blank(), phase: 'connecting', match: live.match, side: side === 1 ? 1 : 0, id: rhythmMultiMakeId('v'), seenAt: Date.now() };
+      CARD_CHAT.reset(`watch:${live.match}`); // 観戦ごとにコメントを空にする
       emit();
       connect();
       tick = setInterval(() => {
@@ -67483,6 +67758,12 @@ const CARD_WATCH = (() => {
       }, CARD_WATCH_EYE_MS);
     },
     leave: () => { stop(); s = blank(); emit(); },
+    // コメントを送る(CardChatPanel が CARD_CHAT.check を通してから呼ぶ)。観戦の人どうしと、ホスト経由で対戦の2人に届く
+    say: (text, name, stamp = false) => {
+      if (!s || !socket || !alive || !text || (s.phase !== 'watching' && s.phase !== 'over')) return false;
+      send({ t: 'w-say', x: text, n: rhythmMultiText(name, CARD_PVP_NAME_MAX) || 'ブリーダー', sp: !!stamp });
+      return true;
+    },
     // 盤面をつなぐ。つないだときは、いまの場へ動きなしで合わせる。はずす関数を返す
     attachBoard: (h) => {
       boardH = h; boardEnd = null;

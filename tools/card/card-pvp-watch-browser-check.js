@@ -184,6 +184,31 @@ const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); aw
     const eyesB = await B.locator('[data-card-pvp-eyes]').waitFor({ timeout: 8000 }).then(() => B.locator('[data-card-pvp-eyes]').getAttribute('data-card-pvp-eyes')).catch(() => null);
     check('③ 見ている人の数が、2人の対戦の画面に「👀 1」と出る', eyesA === '1' && eyesB === '1', `${eyesA} / ${eyesB}`);
     await shot(C, 'watch-02-screen'); await shot(A, 'watch-03-host'); await shot(B, 'watch-04-guest');
+    // ⑪ 自由文のコメント(2026-10-30 社長「マルチと観戦で自由文のコメントも」): 全員のコメントが全員に見える・連絡先は送る前に弾く
+    const sendChat = async (page, text) => {
+      await page.locator('[data-card-chat-open]').click();
+      await page.locator('[data-card-chat-input]').fill(text);
+      await page.locator('[data-card-chat-send]').click();
+      const why = await page.locator('[data-card-chat-why]').innerText({ timeout: 800 }).catch(() => '');
+      await page.locator('[data-card-chat-close]').click().catch(() => {});
+      return why;
+    };
+    // 自動で打つ速さを落とす(コメントを送るあいだに決着しないように)。終わったら戻す
+    for (const page of [A, B]) await page.evaluate(() => { window.__mhCardPvpAutoMs = 6000; });
+    await A.waitForTimeout(800);
+    await sendChat(C, 'がんばれ！');
+    const flowSeen = await C.locator('[data-card-chat-flow="watch"] [data-card-chat-flow-row]').first().waitFor({ timeout: 4000 }).then(() => true).catch(() => false);
+    await A.waitForTimeout(3200); // 3秒あけてから
+    await sendChat(A, 'いい勝負だね');
+    const contactWhy = await (async () => { await A.waitForTimeout(3200); return sendChat(A, 'LINE: abc_123'); })();
+    const has = (page, kind, text) => page.waitForFunction(([k, x]) => CARD_CHAT.get().list.some((r) => r.kind === k && r.text === x), [kind, text], { timeout: 8000 }).then(() => true).catch(() => false);
+    const seenAll = { AfromC: await has(A, 'watch', 'がんばれ！'), BfromC: await has(B, 'watch', 'がんばれ！'), BfromA: await has(B, 'foe', 'いい勝負だね'), CfromA: await has(C, 'player', 'いい勝負だね') };
+    const leaked = await B.evaluate(() => CARD_CHAT.get().list.some((r) => /abc_123/.test(r.text)));
+    for (const page of [A, B]) await page.evaluate(() => { window.__mhCardPvpAutoMs = 700; });
+    if (SHOT) { await shot(C, 'watch-07-chat'); }
+    check('⑪ 観戦の人のコメントが対戦の2人にも届き、対戦の人のコメントが相手と観戦の人に届く・観戦では流れる',
+      seenAll.AfromC && seenAll.BfromC && seenAll.BfromA && seenAll.CfromA && flowSeen, JSON.stringify({ ...seenAll, flowSeen }));
+    check('⑪ 連絡先(LINE のID)は送る前に弾いて「送れません」と出し、相手に届かない', /送れません/.test(contactWhy) && !leaked, contactWhy);
     // 場が進むと画面の描き直しが少し遅れるので、裏の札の数と手札の数がそろう瞬間を待ってから読む
     await C.waitForFunction(() => { const st = CARD_WATCH.get().st; const b = [0, 1].map((p) => document.querySelectorAll(p === 0 ? '[data-card-watch-hand="0"] img' : '[data-card-hand-of="1"] img').length); return st && b[0] === Math.min(8, st.players[0].hand.length) && b[1] === st.players[1].hand.length; }, null, { timeout: 10000 }).catch(() => {});
     const hid = await C.evaluate(() => { const st = CARD_WATCH.get().st; return { deck: st.players.every((p) => p.deck.every((no) => no === CARD_PVP_HIDDEN)), backs: [0, 1].map((p) => document.querySelectorAll(p === 0 ? '[data-card-watch-hand="0"] img' : '[data-card-hand-of="1"] img').length), front: document.querySelectorAll('[data-card-hand-card]').length, hands: st.players.map((p) => p.hand.length) }; });
@@ -243,7 +268,7 @@ const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); aw
     await C.locator('[data-card-watch-leave]').click();
     await C.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
     const afterC = await C.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('mh_')).map((k) => [k, localStorage.getItem(k)])));
-    const changed = Object.keys({ ...beforeC2, ...afterC }).filter((k) => beforeC2[k] !== afterC[k] && !/^mh_(last_|session|boot|app_open|bgm|se_|ui_|debug|visit)/.test(k));
+    const changed = Object.keys({ ...beforeC2, ...afterC }).filter((k) => beforeC2[k] !== afterC[k] && !/^mh_(last_|session|boot|app_open|bgm|se_|ui_|debug|visit|playtime)/.test(k)); // 遊んだ時間(mh_playtime_v1)は時間がたてば書かれる(観戦とは関係ない)
     check('⑦ 観戦をやめると、マルチ対戦の入口へ戻る', true);
     check('⑧ 観戦では保存を書き換えない', changed.length === 0 && !!beforeC, changed.join(', '));
     check('⑧ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
