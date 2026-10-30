@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 90e4d41e4ababa70
+// source-sha256: 115a041e1b8aa892
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -97376,6 +97376,41 @@ const CardGutsFlight = ({
     }
   }, "+", g.n));
 };
+const CardFitLabel = ({
+  children,
+  max = 14,
+  min = 9
+}) => {
+  const ref = useRef(null);
+  const [size, setSize] = useState(max);
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const fit = () => {
+      let s = max;
+      el.style.fontSize = `${s}px`;
+      while (s > min && el.scrollWidth > el.clientWidth + 0.5) {
+        s -= 0.5;
+        el.style.fontSize = `${s}px`;
+      }
+      setSize(s);
+    };
+    fit();
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(fit) : null;
+    if (ro && el.parentElement) ro.observe(el.parentElement);
+    return () => {
+      if (ro) ro.disconnect();
+    };
+  }, [children, max, min]);
+  return React.createElement("span", {
+    ref: ref,
+    "data-card-fit-label": true,
+    className: "block w-full overflow-hidden whitespace-nowrap px-1 leading-tight",
+    style: {
+      fontSize: `${size}px`
+    }
+  }, children);
+};
 const CardBattleBoard = ({
   db,
   game,
@@ -98668,7 +98703,7 @@ const CardBattleBoard = ({
     setSt(replay.states[k]);
   };
   const footer = (() => {
-    const btn = 'mh-button min-h-[44px] flex-1 rounded-xl text-[14px] font-black active:scale-[.98] disabled:opacity-40';
+    const btn = 'mh-button min-h-[44px] min-w-0 flex-1 rounded-xl text-[14px] font-black active:scale-[.98] disabled:opacity-40';
     if (watch) {
       const over = st.winner !== null || !!watchEnd;
       const nm = p => p === CARD_ME ? meName : who.name;
@@ -98684,7 +98719,7 @@ const CardBattleBoard = ({
           outcome: 'watchExit',
           st
         })
-      }, over ? '観戦の一覧へ戻る' : '観戦をやめる'));
+      }, React.createElement(CardFitLabel, null, over ? '観戦の一覧へ戻る' : '観戦をやめる')));
     }
     if (st.winner !== null && !tutorial) return React.createElement("div", {
       className: "flex-1 text-center text-[15px] font-black text-amber-200"
@@ -98702,7 +98737,7 @@ const CardBattleBoard = ({
         type: 'setupGuts',
         hand: picks
       })
-    }, picks.length ? `${picks.length}枚をガッツにして始める` : 'ガッツにしないで始める');
+    }, React.createElement(CardFitLabel, null, picks.length ? `${picks.length}枚をガッツにして始める` : 'ガッツにしないで始める'));
     if (mode === 'reveal') return React.createElement("div", {
       className: "flex-1 text-center text-[13px] font-bold text-slate-300"
     }, "相手に手札を見せています…");
@@ -98720,7 +98755,7 @@ const CardBattleBoard = ({
         type: 'discard',
         hand: picks
       })
-    }, `${st.pendingDiscard.n}枚えらんで捨てる`);
+    }, React.createElement(CardFitLabel, null, `${st.pendingDiscard.n}枚えらんで捨てる`));
     if (mode === 'guard') return React.createElement("button", {
       type: "button",
       disabled: tutOff('pass'),
@@ -98728,16 +98763,16 @@ const CardBattleBoard = ({
       onClick: () => step({
         type: 'pass'
       })
-    }, tutorial && st.pending && st.pending.evaded ? 'これで守る' : guardUsed ? guardPv.after !== null ? `これで受ける(${guardPv.after}ダメージ)` : 'これで受ける' : guardPv && guardPv.before !== null && !tutorial ? React.createElement("span", {
+    }, React.createElement(CardFitLabel, null, tutorial && st.pending && st.pending.evaded ? 'これで守る' : guardUsed ? guardPv.after !== null ? `これで受ける(${guardPv.after}ダメージ)` : 'これで受ける' : guardPv && guardPv.before !== null && !tutorial ? React.createElement("span", {
       "data-card-pass-dmg": true,
       className: "block leading-tight"
     }, "守らない", React.createElement("span", {
       className: "block text-[11px] font-bold text-rose-200"
-    }, `${guardPv.before}ダメージを受ける`)) : '守らない');
+    }, `${guardPv.before}ダメージを受ける`)) : '守らない'));
     if (mode === 'guts') return React.createElement(React.Fragment, null, myTurn && !tutorial && !replay && cardCanBackToAttack(st) && React.createElement("button", {
       type: "button",
       "data-card-back-attack": true,
-      className: `${btn} border border-violet-300/60 bg-violet-900`,
+      className: `${btn.replace('flex-1', 'flex-none px-2.5')} border border-violet-300/60 bg-violet-900`,
       onClick: () => step({
         type: 'backToAttack'
       })
@@ -98749,14 +98784,14 @@ const CardBattleBoard = ({
         type: 'guts',
         hand: picks
       })
-    }, picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了'));
+    }, React.createElement(CardFitLabel, null, picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了')));
     const useBtn = sel && monChosen !== undefined && finalOpts.length && !needTarget;
     return React.createElement(React.Fragment, null, useBtn && finalOpts.some(o => o.split || o.fuse) ? React.createElement("button", {
       type: "button",
       "data-card-split-open": true,
       className: `${btn} mh-button-primary`,
       onClick: () => setSplitAsk(finalOpts)
-    }, finalOpts.some(o => o.fuse) ? '合体の組を選ぶ' : '割り振りを選ぶ') : useBtn && finalOpts.some(o => o.form) ? ['air', 'ground'].map(f => {
+    }, React.createElement(CardFitLabel, null, finalOpts.some(o => o.fuse) ? '合体の組を選ぶ' : '割り振りを選ぶ')) : useBtn && finalOpts.some(o => o.form) ? ['air', 'ground'].map(f => {
       const o = finalOpts.find(x => x.form === f);
       return o ? React.createElement("button", {
         key: f,
@@ -98764,19 +98799,19 @@ const CardBattleBoard = ({
         "data-card-form": f,
         className: `${btn} mh-button-primary`,
         onClick: () => askUse(o)
-      }, f === 'air' ? '空中にして使う' : '地上にして使う') : null;
+      }, React.createElement(CardFitLabel, null, f === 'air' ? '空中にして使う' : '地上にして使う')) : null;
     }) : useBtn ? React.createElement("button", {
       type: "button",
       className: `${btn} mh-button-primary`,
       onClick: () => askUse(finalOpts[0])
-    }, "使う") : null, React.createElement("button", {
+    }, React.createElement(CardFitLabel, null, "使う")) : null, React.createElement("button", {
       type: "button",
       disabled: tutOff('end'),
       className: `${btn} border border-violet-300/60 bg-violet-900${tutBtn('end')}`,
       onClick: () => step({
         type: 'endAttacks'
       })
-    }, "攻撃おわり → ガッツへ"));
+    }, React.createElement(CardFitLabel, null, "攻撃おわり → ガッツへ")));
   })();
   const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : setPending ? '組み合わせを選んでね' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : attackOpts.length ? '技をタップ → 相手をタップ' : '使える技がありません →「攻撃おわり」でガッツへ' : mode === 'guard' ? guardOpts.length ? '明るいカードで守れます' : '使える回避・防御はありません' : mode === 'guts' ? gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
   const tutorBox = tutorial && tutSay ? (() => {
