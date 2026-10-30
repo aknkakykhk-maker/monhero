@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5012273350f545a9
+// source-sha256: 9cd6e82e69f88462
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91602,6 +91602,106 @@ const cardAiAttackScored = (db, st, opts, policy) => opts.map(o => ({
   o,
   s: cardAiScoreAttack(db, st, o, policy) + (cardAiAceHit(policy, st.players[st.active].hand, o.hand) ? 2 : 0)
 })).sort((a, b) => b.s - a.s);
+const CARD_AI_SEARCH_STEP_MAX = 1500;
+const cardAiSearchLife = (st, p) => {
+  let a = 0,
+    b = 0;
+  st.players[p].mons.forEach(m => {
+    if (!m.ko) a += Math.max(0, m.life);
+    b += m.max;
+  });
+  return b ? a / b : 0;
+};
+const cardAiSearchEval = (st, me, kind) => {
+  if (st.winner === me) return 100;
+  if (st.winner !== null) return -100;
+  const op = cardOther(me),
+    P = st.players[me],
+    O = st.players[op];
+  if (kind === 'alive') {
+    const alive = x => x.mons.filter(m => !m.ko).length;
+    return 12 * (alive(P) - alive(O)) + 8 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.4 * (P.hand.length - O.hand.length) + 0.4 * (P.guts.length - O.guts.length);
+  }
+  return 10 * (cardKoCount(st, me) - cardKoCount(st, op)) + 4 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.3 * (P.hand.length - O.hand.length);
+};
+const cardAiSearchShuffle = (list, rand) => {
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+};
+const cardAiSearchRollout = (db, st0, act, me, pols, rand, cfg, budget) => {
+  const s1 = cardClone({
+    ...st0,
+    log: [],
+    events: []
+  });
+  s1.players.forEach(pl => cardAiSearchShuffle(pl.deck, rand));
+  let st = cardApplyAction(db, s1, act);
+  if (!st) return -999;
+  const t0 = st.turn;
+  while (st.winner === null && st.turn < t0 + cfg.h && budget.left > 0) {
+    budget.left -= 1;
+    const who = st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? cardOther(st.first) : cardDecider(st);
+    let a = cardAiChooseAction(db, st, pols[who], rand);
+    let n = a && cardApplyAction(db, st, a);
+    if (!n) {
+      a = st.pending ? {
+        type: 'pass'
+      } : st.phase === 'main' ? {
+        type: 'endAttacks'
+      } : st.phase === 'guts' ? {
+        type: 'guts',
+        hand: []
+      } : null;
+      n = a && cardApplyAction(db, st, a);
+      if (!n) break;
+    }
+    st = n;
+    st.log = [];
+  }
+  return cardAiSearchEval(st, me, cfg.eval);
+};
+let _cardAiSearchFoe = null;
+const cardAiSearchPick = (db, st, scored, policy, rand) => {
+  const cfg = policy.search;
+  const me = st.active;
+  const cands = scored.slice(0, cfg.k).filter(x => x.s > 0.3).map(x => cardAiFillBind(db, st, x.o, policy));
+  cands.push({
+    type: 'endAttacks'
+  });
+  if (!_cardAiSearchFoe) _cardAiSearchFoe = cardAiPolicy('kyuko', 'master', {
+    noTactics: true
+  });
+  const self = {
+    ...policy,
+    search: null,
+    gambit: null
+  };
+  const pols = [null, null];
+  pols[me] = self;
+  pols[cardOther(me)] = _cardAiSearchFoe;
+  const budget = {
+    left: CARD_AI_SEARCH_STEP_MAX
+  };
+  let best = cands[0],
+    bestV = -Infinity;
+  for (let i = 0; i < cands.length && budget.left > 0; i++) {
+    let v = 0,
+      n = 0;
+    for (let r = 0; r < cfg.r && budget.left > 0; r++) {
+      v += cardAiSearchRollout(db, st, cands[i], me, pols, rand, cfg, budget);
+      n += 1;
+    }
+    if (!n) break;
+    v = v / n + (i === 0 ? 0.5 : 0);
+    if (v > bestV) {
+      bestV = v;
+      best = cands[i];
+    }
+  }
+  return best;
+};
 const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   if (st.pendingPray) {
     const use = cardPrayOptions(db, st).find(o => o.hand);
@@ -91678,6 +91778,7 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
     type: 'endAttacks'
   } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
   const scored = cardAiAttackScored(db, st, opts, policy);
+  if (policy.search) return cardAiSearchPick(db, st, scored, policy, rand);
   if (scored[0].s <= 0.3) return {
     type: 'endAttacks'
   };
@@ -94136,7 +94237,7 @@ const cardTacticFilled = frames => {
   const f = cardTacticNormalizeFrames(frames);
   return f.base.filter(Boolean).length + f.breeder.filter(x => x.on).length + f.mons.reduce((a, rows) => a + rows.filter(x => x.on).length, 0);
 };
-const CARD_TACTIC_SMART = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
+const CARD_TACTIC_SMART = Object.freeze(['expert', 'master', 'grandmaster', 'hell', 'legend']);
 const CARD_TACTIC_GUARD_ONLY_CONDS = Object.freeze(['incoming', 'incomingKo', 'incomingArea']);
 const CARD_TACTIC_SELF_CONDS = Object.freeze(['selfLife', 'selfFresh', 'selfType', 'selfStun', 'selfAdv']);
 const CARD_TACTIC_RARE_CONDS = Object.freeze(['turnGe.15', 'myLife.10', 'foeLife.10', 'selfLife.10', 'selfStun', 'myStun', 'foeStun', 'foeCharge', 'foeAir', 'incomingArea']);
@@ -94170,10 +94271,11 @@ const cardTacticSmartLevel = frames => {
   const f = cardTacticNormalizeFrames(frames);
   const base = f.base.filter(Boolean).length;
   const rows = cardTacticCountedRows(f);
-  const any = f.breeder.some(x => x.on) || f.mons.some(r => r.some(x => x.on));
-  if (!base && !any) return 'random';
-  if (!base) return 'easy';
-  return CARD_TACTIC_SMART[base - 1 + (rows >= 10 ? 2 : rows >= 4 ? 1 : 0)];
+  if (base >= 3 && rows >= 10) return 'legend';
+  if (base >= 3 && rows >= 7) return 'hell';
+  if (base >= 3 && rows >= 4) return 'grandmaster';
+  if (base >= 2 || rows >= 4) return 'master';
+  return 'expert';
 };
 const cardTacticPackFrames = frames => {
   const f = cardTacticNormalizeFrames(frames);
@@ -95045,19 +95147,44 @@ const cardShareNormalizeTactics = (v, deck = null) => {
 };
 const cardShareSmartLevel = tactics => {
   const t = cardShareNormalizeTactics(tactics);
-  return t.f && typeof cardTacticSmartLevel === 'function' ? cardTacticSmartLevel(cardTacticUnpackFrames(t.f)) : 'normal';
+  return t.f && typeof cardTacticSmartLevel === 'function' ? cardTacticSmartLevel(cardTacticUnpackFrames(t.f)) : 'expert';
 };
+const CARD_SHARE_SMART_LABEL = Object.freeze({
+  expert: 'EXPERT',
+  master: 'MASTER',
+  grandmaster: 'GRAND MASTER',
+  hell: 'HELL',
+  legend: 'LEGEND'
+});
+const CARD_SHARE_SEARCH = Object.freeze({
+  grandmaster: Object.freeze({
+    k: 3,
+    r: 1,
+    h: 1,
+    eval: 'ko'
+  }),
+  hell: Object.freeze({
+    k: 4,
+    r: 2,
+    h: 4,
+    eval: 'ko'
+  }),
+  legend: Object.freeze({
+    k: 4,
+    r: 2,
+    h: 4,
+    eval: 'alive'
+  })
+});
 const cardShareMainHabit = (frames, fallback = 'kyuko') => {
   const c = frames && typeof cardTacticOf === 'function' ? cardTacticOf(frames.base[0]) : null;
   const g = c && typeof CARD_TACTIC_GROUPS !== 'undefined' ? CARD_TACTIC_GROUPS.find(x => x.id === c.g) : null;
   return g && g.habit || fallback || 'kyuko';
 };
-const cardShareFightLevel = tactics => {
-  const lv = cardShareSmartLevel(tactics);
-  return lv === 'random' ? 'easy' : lv;
-};
+const cardShareFightLevel = tactics => cardShareSmartLevel(tactics) === 'expert' ? 'expert' : 'master';
 const cardSharePolicy = (tactics, levelId, opts = {}) => {
   const t = cardShareNormalizeTactics(tactics);
+  const search = CARD_SHARE_SEARCH[cardShareSmartLevel(t)] || null;
   if (t.f) {
     const frames = cardTacticUnpackFrames(t.f);
     const base = cardAiPolicy(t.habit, cardShareFightLevel(t), {
@@ -95067,11 +95194,13 @@ const cardSharePolicy = (tactics, levelId, opts = {}) => {
     return {
       ...base,
       gambit: frames,
-      gambitRandom: true,
-      aces: t.aces.slice()
+      aces: t.aces.slice(),
+      ...(search ? {
+        search
+      } : {})
     };
   }
-  const base = cardAiPolicy(t.habit, levelId, {
+  const base = cardAiPolicy(t.habit, cardShareFightLevel(t), {
     ...opts,
     noTactics: true
   });
@@ -100309,7 +100438,7 @@ const CardBattleBoard = ({
     className: `min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`
   }, who.name, React.createElement("small", {
     className: "block text-[10px] font-bold text-rose-200"
-  }, pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level] || 'フリー対戦')), React.createElement("div", {
+  }, pvp ? 'マルチ対戦' : cardBattleLevelLabel(game.level, game.share) || 'フリー対戦')), React.createElement("div", {
     className: "ml-auto"
   }, strip(CARD_CPU))), replay && !wide && replayFoeHand, React.createElement("div", {
     "data-card-side-active": turnLive && !turnMe ? 'foe' : undefined,
@@ -101571,6 +101700,7 @@ const cardNormalizeCpuOpen = v => {
     }
   };
 };
+const cardBattleLevelLabel = (level, share) => (share && typeof cardShareSmartLevel === 'function' ? CARD_SHARE_SMART_LABEL[cardShareSmartLevel(share.tactics)] : CARD_LEVEL_LABEL[level]) || '';
 const CardBattleScreen = ({
   screen,
   onNavigate,
@@ -103532,7 +103662,7 @@ const CardBattleScreen = ({
       className: "text-[13px] font-black text-amber-200"
     }, "もらったビートP: ", r.total), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
-    }, CARD_LEVEL_LABEL[result.level], "の", win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了', ": ", cardResultCut(r) ? `${r.full} → ${r.got}` : r.got), cardResultCut(r) && React.createElement("div", {
+    }, cardBattleLevelLabel(result.level, result.share), "の", win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了', ": ", cardResultCut(r) ? `${r.full} → ${r.got}` : r.got), cardResultCut(r) && React.createElement("div", {
       "data-card-result-cut": true,
       className: "text-[11px] font-bold text-slate-400",
       style: JA_LABEL_STYLE
@@ -114351,7 +114481,7 @@ const cardShareRowsCount = frames => cardTacticCountedRows(frames);
 const cardShareSmartText = tactics => {
   const t = cardShareNormalizeTactics(tactics);
   const lv = cardShareSmartLevel(t);
-  const label = lv === 'random' ? 'でたらめ' : `${typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv] || lv.toUpperCase()} 相当`;
+  const label = `${CARD_SHARE_SMART_LABEL[lv] || lv.toUpperCase()} 相当`;
   if (!t.f) return label;
   const f = cardTacticUnpackFrames(t.f);
   return `${label}(基本${f.base.filter(Boolean).length}・戦術カード${cardShareRowsCount(f)}枚)`;
@@ -115011,12 +115141,7 @@ const CardDeckShare = ({
     className: "text-amber-200"
   }, `賢さ: ${cardShareSmartText({
     f: cardTacticPackFrames(framesNow)
-  })}`), cardShareSmartLevel({
-    f: cardTacticPackFrames(framesNow)
-  }) === 'random' && React.createElement("div", {
-    "data-card-share-tactics-empty": true,
-    className: "text-rose-200"
-  }, jaWrap('戦術カードが入っていません。このままだと、出せる手からでたらめに打ちます'))) : React.createElement("div", null, "読み込み中…"), onOpenTactics && React.createElement("button", {
+  })}`)) : React.createElement("div", null, "読み込み中…"), onOpenTactics && React.createElement("button", {
     type: "button",
     "data-card-share-open-tactics": true,
     className: "mt-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-[12px] font-black text-slate-950",
@@ -118156,7 +118281,7 @@ const CardDeckRegister = ({
   }, React.createElement("i", {
     className: "block h-full bg-gradient-to-r from-emerald-400 to-amber-300",
     style: {
-      width: `${['random', 'easy', 'normal', 'hard', 'expert', 'master'].indexOf(smartLv) / 5 * 100}%`
+      width: `${(CARD_TACTIC_SMART.indexOf(smartLv) + 1) / CARD_TACTIC_SMART.length * 100}%`
     }
   })), React.createElement("small", {
     className: "mt-1 block text-[11px] font-bold text-slate-400",
