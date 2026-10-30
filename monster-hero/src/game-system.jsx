@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1fb8058fa2b5777a
+// generated-sha256: 8efdbc54f13544bb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -43387,6 +43387,8 @@ const exEffectAmountText = (e, long = false) => {
   if (Number.isFinite(Number(e.turnsLeft))) return long ? `あと${e.turnsLeft}ターン` : `あと${e.turnsLeft}`;
   return '';
 };
+// 札・詳細に出す要素。溜まる物は0のとき出さない(2026-10-13 社長「0個のときは出さない」。クッキー・黒音符の×0も)
+const exEffectsShown = (items) => (Array.isArray(items) ? items.filter((e) => e && !(e.kind === 'stack' && !(Number(e.count) > 0))) : []);
 const EX_EFFECT_TONE = {
   buff: 'bg-emerald-900/90 ring-emerald-300/80 text-emerald-50',
   debuff: 'bg-red-900/90 ring-red-300/80 text-red-50',
@@ -43394,15 +43396,22 @@ const EX_EFFECT_TONE = {
 };
 // compact … 新しい盤(横長の枠)。いままでのマーク×数と同じ所(絵の左下・幅40%まで)に、下から上へ積む
 const ExEffectChips = ({ items, max = 3, compact = false, className = '' }) => {
-  const list = Array.isArray(items) ? items.filter(Boolean) : [];
+  const list = exEffectsShown(items);
   if (!list.length) return null;
   // 新しい盤(横長の枠)は高さが足りないので2つまで(上の段の「狙」・予測ダメージに届かないように)。残りは「+N」を1つ目の横に添える
   const limit = compact ? Math.min(max, 2) : max;
   const shown = list.slice(0, limit);
   const more = list.length - shown.length;
-  const chip = (e) => (
-    <span key={e.key} data-ex-effect={e.key} data-ex-effect-kind={e.kind}
-      className={`flex min-w-0 ${compact ? 'max-w-full text-[8px]' : 'max-w-full text-[9px]'} items-center gap-[2px] rounded-md px-1 py-px font-black leading-tight whitespace-nowrap ring-1 ${EX_EFFECT_TONE[e.kind] || EX_EFFECT_TONE.buff}`}>
+  // 札の目印(検査が読む): data-ex-effect(要素の key。溜まる物は 'stack:種類')・data-stack-count(溜まる物の数)・
+  //   data-ex-turns(残りターンの数)・data-ex-from-slot(だれのEXか)・data-ex-last(残り1ターン)。
+  //   「+N」にまとめた札も、目印だけ残すために画面に出さない(hidden)形で置く
+  const turnsNum = (e) => (Number.isFinite(Number(e.turnsLeft)) && e.turnsLeft !== null ? Number(e.turnsLeft) : null);
+  const chip = (e, hide = false) => (
+    <span key={e.key} data-ex-effect={e.key} data-ex-effect-kind={e.kind} data-ex-effect-hidden={hide ? 'true' : undefined}
+      data-stack-count={e.kind === 'stack' && Number.isFinite(Number(e.count)) ? Math.floor(Number(e.count)) : undefined}
+      data-ex-turns={turnsNum(e) != null ? turnsNum(e) : undefined} data-ex-from-slot={Number.isInteger(e.fromSlot) ? e.fromSlot : undefined}
+      data-ex-last={turnsNum(e) === 1 ? 'true' : undefined}
+      className={`${hide ? 'hidden' : 'flex'} min-w-0 ${compact ? 'max-w-full text-[8px]' : 'max-w-full text-[9px]'} items-center gap-[2px] rounded-md px-1 py-px font-black leading-tight whitespace-nowrap ring-1 ${EX_EFFECT_TONE[e.kind] || EX_EFFECT_TONE.buff}${turnsNum(e) === 1 ? ' ring-2 ring-amber-300' : ''}`}>
       <span className="shrink-0">{exEffectIconOf(e)}</span>
       <span className="min-w-0 truncate">{e.name}</span>
       {exEffectAmountText(e) && <span className="shrink-0 tabular-nums opacity-90">{exEffectAmountText(e)}</span>}
@@ -43413,7 +43422,8 @@ const ExEffectChips = ({ items, max = 3, compact = false, className = '' }) => {
     <div data-ex-effect-chips={list.length} className={`pointer-events-none flex ${compact ? 'flex-col-reverse' : 'flex-col'} items-start gap-[2px] ${className}`}>
       {compact
         ? shown.map((e, k) => (k === 0 && moreChip ? <span key={e.key} className="flex max-w-full min-w-0 items-center gap-[2px]">{chip(e)}{moreChip}</span> : chip(e)))
-        : <>{shown.map(chip)}{moreChip}</>}
+        : <>{shown.map((e) => chip(e))}{moreChip}</>}
+      {list.slice(limit).map((e) => chip(e, true))}
     </div>
   );
 };
@@ -43467,7 +43477,7 @@ const BattleUnitDetailBody = ({ side, status, chips = [], marks = null, debuffs 
   // EXの効果の一覧(タクティクス/レイド)。名前・中身(何%)・誰のEX・あとNターン(溜まる物は 今/上限)を1行ずつ。
   //   これを出すときは、同じものを出していた「マーク×数」の行とEXの1行(status.lines の ex)は出さない(二重にしない)
   const hasEx = Array.isArray(exEffects);
-  const exRows = hasEx ? exEffects.filter(Boolean).map((e) => row(`exfx-${e.key}`, exEffectIconOf(e), e.name, exEffectAmountText(e, true),
+  const exRows = hasEx ? exEffectsShown(exEffects).map((e) => row(`exfx-${e.key}`, exEffectIconOf(e), e.name, exEffectAmountText(e, true),
     [e.note, e.fromName ? `${e.fromName}のEX${e.allAllies ? '(味方全員)' : ''}` : ''].filter(Boolean).join('・'),
     e.kind === 'stack' ? 'border-violet-300/50 bg-violet-950/50' : e.kind === 'debuff' ? 'border-red-300/50 bg-red-950/50' : 'border-emerald-300/50 bg-emerald-950/50')) : [];
   const lineRows = (status.lines || []).filter((l) => !(hasEx && l.key === 'ex')).map((l) => row(l.key, null, l.label, l.value, l.note));
