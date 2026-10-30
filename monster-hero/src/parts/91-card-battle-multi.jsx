@@ -1211,6 +1211,8 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   const started = useRef('');
   useEffect(() => { if (room.phase === 'playing' && room.game && started.current !== room.match) { started.current = room.match; onStart(room.game); if (typeof cardPvpHistoryBegin === 'function' && (rankSend || (typeof window !== 'undefined' && window.__mhCardPvpRankTest === true))) cardPvpHistoryBegin(room.match, room.me && room.me.bid); } }, [room.phase, room.match]);
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
+  // 横に並べるボタン(ふつうの高さで、文字は1行。並びの幅を分け合う)
+  const rowBtn = 'mh-button min-h-[48px] min-w-0 flex-1 whitespace-nowrap rounded-2xl px-2 text-[14px] font-black active:scale-[.98] disabled:opacity-40';
   // デッキは相手を決めたあとに選ぶ(onPickDeck があるとき)。そのときは、いまのデッキが使えなくても押せる(選ぶ画面で使えるデッキを選ぶ)
   const deckOk = !!deck && deckIssues.length === 0;
   const ready = (onPickDeck ? true : deckOk) && penaltyMin === 0; // 部屋に入るボタンは、プロフィール(名前・アイコン)を読み終えてから押せる(読む前だと「ブリーダー」と人型のアイコンで相手に届く。2026-10-27)
@@ -1237,10 +1239,13 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
       <div data-mh-screen data-card-pvp="over" data-card-pvp-result={r.outcome} className={SCREEN_SHELL_CLASS}>
         <ScreenHead title={win ? '勝ち！' : r.reward === 'surrender' ? '投了' : '負け…'} accent={win ? 'text-amber-200' : 'text-slate-300'} onBack={back}/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+          {/* カードランクの経験値の棒は、結果を開いてすぐ目に入るよう、いちばん上に置く(2026-10-30 社長「終わったあとに経験値ゲージのバーの動きが見れない」)。
+              ごほうびが届いてから出る(got)。見えたところで棒が動き出す */}
+          {got && got.rankGain && typeof CardRankResult === 'function' && <CardRankResult gain={got.rankGain}/>}
           {/* 立ち絵と吹き出し(助手と対戦の結果と同じ形)。台詞は CARD_PVP_RESULT_LINES(相手が抜けたときは left) */}
           {a && line && (
             <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
-              <CardAssistantArt src={assistantFullImage(a, line.face)} alt={a.name} className="h-[220px] w-[46%]"/>
+              <CardAssistantArt src={assistantFullImage(a, line.face)} alt={a.name} className="h-[min(200px,26svh)] w-[42%]"/>
               <div data-card-pvp-line={scene} className="mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{cardPvpLineNode(line.text)}</div>
             </div>
           )}
@@ -1271,7 +1276,6 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
                 </div>
               )}
               {point !== null && <div className="mt-1 text-[12px] font-bold text-slate-300">いまのビートP: {point}</div>}
-              {got.rankGain && typeof CardRankResult === 'function' && <CardRankResult gain={got.rankGain}/>}
               {got.saved === false && <div className="mt-1 text-[12px] font-bold text-rose-300" style={JA_LABEL_STYLE}>{jaWrap('保存できませんでした(ビートPは増えていません)')}</div>}
             </>)}
           </div>
@@ -1285,10 +1289,11 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
               {room.again ? '相手を待っています…' : room.foeAgain ? 'もう1戦(相手が待っています)' : 'もう1戦'}
             </button>
           )}
+          {/* 「相手は部屋を出ました」はボタンの上の1行に横書きで(2026-10-30 社長「サイズ感わるい」。前はボタンのあいだに挟まって1文字ずつ縦に詰まり、ボタンが縦に伸びていた) */}
+          {room.foeGone && <p data-card-pvp-foe-gone className="text-center text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('相手は部屋を出ました')}</p>}
           <div className="flex gap-2">
-          {r.replay && onOpenReplay && <button type="button" data-card-pvp-replay className={`${btn} mh-button-secondary`} onClick={() => { Audio_.fgSe.tap(); onOpenReplay(r.replay); }}>この対戦を見る</button>}
-          {room.foeGone && <p data-card-pvp-foe-gone className="flex-1 self-center text-center text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('相手は部屋を出ました')}</p>}
-          <button type="button" data-card-pvp-leave className={`${btn} ${noAgain ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
+          {r.replay && onOpenReplay && <button type="button" data-card-pvp-replay className={`${rowBtn} mh-button-secondary`} onClick={() => { Audio_.fgSe.tap(); onOpenReplay(r.replay); }}>この対戦を見る</button>}
+          <button type="button" data-card-pvp-leave className={`${rowBtn} ${noAgain ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
           </div>
         </div>
       </div>
