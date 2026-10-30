@@ -35,6 +35,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-30 22:03", type:'update', title:'フリー対戦の「ほかのブリーダー」の相手が強くなりました', status:'new', group:'cardBattle',
+    items:[
+      '戦術カードを入れていないデッキでも EXPERT の強さで戦い、基本の型とちゃんと効く戦術カードを増やすほど MASTER → GRAND MASTER → HELL → LEGEND と上がります。',
+      'もらえるビートPとカードランクの経験値は、これまでどおり MASTER と同じです。',
+    ],
+  },
+  {
     date: "2026-10-30 21:45", type:'content', title:'ピンクグジラが登場しました', status:'new', group:'cardBattle',
     assistantNotice:{ id:'update_notice_card_pink_gujira_v1', type:'content' },
     items:[
