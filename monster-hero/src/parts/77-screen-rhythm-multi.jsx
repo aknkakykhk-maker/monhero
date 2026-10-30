@@ -1803,7 +1803,7 @@ function ModeSelectAssistantPanel({ assistant, showArt, showComment, onToggle })
   // 背の低い枠の上限(絵の高さ×show が枠の高さ)。cqh は枠の高さ(mhms-art-box の container-type:size)
   const capOf = (show) => (artRatio ? `${(100 / (artRatio * show)).toFixed(2)}cqh` : '9999px');
   return (
-    <div data-rhythm-mode-assistant className={`mhms-glass mhms-in-left relative mx-3 mt-3 flex flex-col overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none ${showArt ? 'min-h-[150px] flex-1' : 'flex-none'}`}>
+    <div data-rhythm-mode-assistant className={`mhms-glass mhms-in-left relative mx-3 mt-2 flex flex-col overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none ${showArt ? 'min-h-[150px] flex-1' : 'flex-none'}`}>
       {showArt && (
         <div data-rhythm-mode-assistant-art-box className="mhms-art-box relative min-h-0 flex-1 overflow-hidden">
           <span aria-hidden="true" className="mhms-glow" />
@@ -2343,7 +2343,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             {(ms.beatPointText || Number.isFinite(ms.beatRankXp)) && (
               <div className="mt-0.5 flex min-w-0 items-center gap-2">
                 {ms.beatPointText && <small data-rhythm-beat-point-balance className="block min-w-0 shrink truncate text-[9px] font-black text-violet-200/90">{ms.beatPointText}</small>}
-                {Number.isFinite(ms.beatRankXp) && <div className="min-w-0 flex-1"><PlayerRankStrip kind="beat" xp={ms.beatRankXp}/></div>}
+                {Number.isFinite(ms.beatRankXp) && <div className="min-w-0 flex-1"><PlayerRankStrip kind="beat" xp={ms.beatRankXp} size="xs"/></div>}
               </div>
             )}
           </div>

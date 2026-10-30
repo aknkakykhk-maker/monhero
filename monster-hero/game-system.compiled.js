@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1426b52b2411335f
+// source-sha256: 2ca96f2df4d8ff68
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -55208,6 +55208,9 @@ const PLAYER_RANK_BADGE_CSS = `
 .mh-prb.mh-prb-s .mh-prb-shield{width:32px;height:36px}.mh-prb.mh-prb-s .mh-prb-shield::after{inset:2px}
 .mh-prb.mh-prb-s .mh-prb-num{font-size:16px;-webkit-text-stroke:3.5px var(--prb-ink)}.mh-prb.mh-prb-s .mh-prb-num.mh-prb-w3{font-size:12px}
 .mh-prb.mh-prb-s .mh-prb-name{font-size:12px}.mh-prb.mh-prb-s .mh-prb-kind{display:none}
+.mh-prb.mh-prb-xs{gap:4px}.mh-prb.mh-prb-xs .mh-prb-shield{width:18px;height:20px;filter:drop-shadow(0 1px 0 rgba(0,0,0,.45)) drop-shadow(0 0 5px var(--prb-glow))}.mh-prb.mh-prb-xs .mh-prb-shield::after{inset:1.5px}
+.mh-prb.mh-prb-xs .mh-prb-num{font-size:10px;-webkit-text-stroke:2.5px var(--prb-ink)}.mh-prb.mh-prb-xs .mh-prb-num.mh-prb-w3{font-size:8px}
+.mh-prb.mh-prb-xs .mh-prb-name{font-size:10px;-webkit-text-stroke:2.5px var(--prb-ink)}.mh-prb.mh-prb-xs .mh-prb-kind{display:none}
 .mh-prb-t1{--prb-rim:linear-gradient(160deg,#fde2c4,#9a4b1c 55%,#5a250b);--prb-face:linear-gradient(160deg,#e08a4a,#8a3f12);--prb-ink:#3b1406;--prb-glow:rgba(234,138,74,.55);--prb-label:#fbbf8a}
 .mh-prb-t2{--prb-rim:linear-gradient(160deg,#ffffff,#94a3b8 55%,#475569);--prb-face:linear-gradient(160deg,#cbd5e1,#64748b);--prb-ink:#1e293b;--prb-glow:rgba(203,213,225,.6);--prb-label:#e2e8f0}
 .mh-prb-t3{--prb-rim:linear-gradient(160deg,#fff7c2,#f59e0b 55%,#92400e);--prb-face:linear-gradient(160deg,#fcd34d,#d97706);--prb-ink:#5b2a03;--prb-glow:rgba(251,191,36,.7);--prb-label:#fde68a}
@@ -55238,7 +55241,7 @@ function PlayerRankBadge({
     "data-player-rank-badge": kind,
     "data-player-rank-tier": tier.t,
     "aria-label": `${k.label} ${r}`,
-    className: `mh-prb mh-prb-t${tier.t}${size === 'sm' ? ' mh-prb-s' : ''}`
+    className: `mh-prb mh-prb-t${tier.t}${size === 'sm' ? ' mh-prb-s' : size === 'xs' ? ' mh-prb-xs' : ''}`
   }, React.createElement("span", {
     className: "mh-prb-shield",
     "aria-hidden": "true"
@@ -55321,7 +55324,8 @@ function PlayerRankPanel({
 }
 function PlayerRankStrip({
   kind = 'beat',
-  xp = 0
+  xp = 0,
+  size = 'sm'
 }) {
   const k = playerRankKind(kind);
   const info = playerRankInfo(xp);
@@ -55331,7 +55335,7 @@ function PlayerRankStrip({
   }, React.createElement(PlayerRankBadge, {
     kind: kind,
     rank: info.rank,
-    size: "sm"
+    size: size
   }), React.createElement("div", {
     className: "h-1.5 min-w-[40px] flex-1 overflow-hidden rounded-full bg-slate-700/80",
     role: "progressbar",
@@ -82795,7 +82799,7 @@ function ModeSelectAssistantPanel({
   const capOf = show => artRatio ? `${(100 / (artRatio * show)).toFixed(2)}cqh` : '9999px';
   return React.createElement("div", {
     "data-rhythm-mode-assistant": true,
-    className: `mhms-glass mhms-in-left relative mx-3 mt-3 flex flex-col overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none ${showArt ? 'min-h-[150px] flex-1' : 'flex-none'}`
+    className: `mhms-glass mhms-in-left relative mx-3 mt-2 flex flex-col overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none ${showArt ? 'min-h-[150px] flex-1' : 'flex-none'}`
   }, showArt && React.createElement("div", {
     "data-rhythm-mode-assistant-art-box": true,
     className: "mhms-art-box relative min-h-0 flex-1 overflow-hidden"
@@ -83596,7 +83600,8 @@ function RhythmMultiScreen({
       className: "min-w-0 flex-1"
     }, React.createElement(PlayerRankStrip, {
       kind: "beat",
-      xp: ms.beatRankXp
+      xp: ms.beatRankXp,
+      size: "xs"
     })))), quickRunInfo && React.createElement(RhythmQuickRunPill, {
       info: quickRunInfo,
       onRestart: onRestartQuickRun,
