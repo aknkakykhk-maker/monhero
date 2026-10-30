@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 76620ae1752a559e
+// source-sha256: c5bf3ffe99a8d379
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -102718,8 +102718,11 @@ const CardBattleScreen = ({
       onClick: closeShareGuide,
       className: "mt-1.5 rounded-lg bg-amber-400 px-3 py-1 text-[12px] font-black text-slate-950"
     }, "わかった"))), React.createElement("div", {
-      className: `${SCREEN_LIST_CLASS} relative z-[1] flex flex-col justify-center space-y-3 pb-4`
-    }, React.createElement("button", {
+      className: `${SCREEN_LIST_CLASS} relative z-[1] flex flex-col space-y-3 pb-4`
+    }, React.createElement("div", {
+      "aria-hidden": "true",
+      className: "flex-1"
+    }), React.createElement("button", {
       type: "button",
       "data-card-mode-assistant": true,
       className: "mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-orange-200 via-orange-400 to-rose-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]",
@@ -102818,7 +102821,10 @@ const CardBattleScreen = ({
       className: "block text-[11px] font-black text-slate-900/80"
     }, "登録したデッキで出る・毎日自動で対戦"))), !cardTourOpen() && React.createElement("span", {
       className: "relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white"
-    }, "つくっている途中(デバッグ)"))));
+    }, "つくっている途中(デバッグ)")), React.createElement("div", {
+      "aria-hidden": "true",
+      className: "flex-1"
+    })));
   }
   const tacticsBackTo = () => {
     if (tacticsBack === 'exit') {

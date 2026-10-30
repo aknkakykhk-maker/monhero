@@ -3244,7 +3244,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             </span>
           </div>
         )}
-        <div className={`${SCREEN_LIST_CLASS} relative z-[1] flex flex-col justify-center space-y-3 pb-4`}>
+        {/* 札は上下の真ん中に置く。札が多くて収まらないときは上から並べて巻き取れる(justify-center だと上の札が画面の外へ出て押せなくなる。2026-10-30 大会の札を足したとき) */}
+        <div className={`${SCREEN_LIST_CLASS} relative z-[1] flex flex-col space-y-3 pb-4`}>
+          <div aria-hidden="true" className="flex-1"/>
           <button type="button" data-card-mode-assistant className="mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-orange-200 via-orange-400 to-rose-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); setView('foe'); }}>
             {/* 札の透かしの英字は、トップ・モンヒロビートと同じ置き方(端で切れて見えるのも同じ作り) */}
             <span aria-hidden="true" className="mhms-mark">ASSISTANT</span>
@@ -3274,6 +3276,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               {!cardTourOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">つくっている途中(デバッグ)</span>}
             </button>
           )}
+          <div aria-hidden="true" className="flex-1"/>
         </div>
       </div>
     );
