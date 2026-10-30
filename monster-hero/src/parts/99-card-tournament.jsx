@@ -9,15 +9,14 @@
 
 // 公開の印。告知(PR5)と同じ日に true にする。それまではデバッグ設定から入ったときだけ入口が出る
 const cardTourOpen = () => false;
-// 受け取ったごほうびの記録(新しいキー。[{ id, place, point, title, frame, at }]・新しい100件まで)。ビートPと同じ取引で保存する
+// 受け取ったごほうびの記録(新しいキー。[{ id, place, point, at }]・新しい100件まで)。ビートPと同じ取引で保存する
 const CARD_TOUR_CLAIMED_KEY = 'mh_card_tour_claimed_v1';
 const cardTourNormalizeClaimed = (v) => {
   if (v === null || v === undefined) return [];
   if (!Array.isArray(v)) return null; // 壊れているときは足さない(二重に足さないため)
   const num = (x) => (Number.isFinite(x) && x >= 0 ? Math.floor(x) : 0);
   return v.filter((x) => x && typeof x.id === 'string' && /^[a-z0-9_-]{1,32}$/.test(x.id))
-    .map((x) => ({ id: x.id, place: Number.isInteger(x.place) && x.place > 0 ? x.place : null, point: num(x.point),
-      title: typeof x.title === 'string' ? x.title.slice(0, 40) : '', frame: typeof x.frame === 'string' ? x.frame.slice(0, 40) : '', at: num(x.at) }))
+    .map((x) => ({ id: x.id, place: Number.isInteger(x.place) && x.place > 0 ? x.place : null, point: num(x.point), at: num(x.at) }))
     .slice(-100);
 };
 
@@ -295,7 +294,8 @@ const CardTourToday = ({ view, known, now, onOpenReplay }) => {
 };
 
 // ---- 順位とごほうび(大会の終わり) ----
-const cardTourRewardText = (r) => [r.title && `称号「${r.title}」`, r.frame && 'プロフィール枠', r.point > 0 && `ビートP ${r.point.toLocaleString()}`].filter(Boolean).join('・');
+// ごほうびはビートPだけ(2026-10-30 社長。称号・プロフィール枠は出さない)
+const cardTourRewardText = (r) => (r && r.point > 0 ? `ビートP ${r.point.toLocaleString()}` : '');
 const CardTourResult = ({ view, known, claimed, onClaim }) => {
   const t = view.tour;
   const ranked = view.entries.filter((e) => e.place !== null).sort((x, y) => x.place - y.place);
@@ -378,8 +378,7 @@ const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, on
       const r = await cardTourRpc('card_tournament_claim', { p_tour: view.tour.id, p_owner: selfId, p_key: key });
       const st = r && typeof r === 'object' ? r.status : null;
       if (st === 'ok') {
-        const reward = { place: Number.isInteger(r.place) ? r.place : null, point: Number.isInteger(r.point) && r.point > 0 ? Math.min(100000, r.point) : 0,
-          title: typeof r.title === 'string' ? r.title.slice(0, 40) : '', frame: typeof r.frame === 'string' ? r.frame.slice(0, 40) : '' };
+        const reward = { place: Number.isInteger(r.place) ? r.place : null, point: Number.isInteger(r.point) && r.point > 0 ? Math.min(100000, r.point) : 0 };
         if (await onCredit(view.tour, reward)) {
           setClaimed(cardTourNormalizeClaimed(await storeGet(CARD_TOUR_CLAIMED_KEY, null).catch(() => null)) || []);
           setMsg(`ごほうびを受け取りました${reward.point ? `(ビートP +${reward.point.toLocaleString()})` : ''}`);

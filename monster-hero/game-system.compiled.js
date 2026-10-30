@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4082969242b772a3
+// source-sha256: 25914920d6fe2e5c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -95294,11 +95294,8 @@ const cardTourPlay = (db, sideA, sideB, {
 const cardTourNormalizeRewards = raw => {
   const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const num = v => Number.isFinite(Number(v)) ? Math.max(0, Math.min(100000, Math.floor(Number(v)))) : 0;
-  const str = (v, n) => typeof v === 'string' ? v.slice(0, n) : '';
   const ranks = (Array.isArray(r.ranks) ? r.ranks : []).slice(0, 16).map(x => ({
-    point: num(x && x.point),
-    title: str(x && x.title, 30),
-    frame: str(x && x.frame, 40)
+    point: num(x && x.point)
   }));
   return {
     ranks,
@@ -95313,9 +95310,7 @@ const cardTourRewardOf = (rewards, place, wins) => {
   const r = Number.isInteger(place) && place >= 1 ? t.ranks[place - 1] : null;
   const base = r ? r.point : t.participation.point;
   return {
-    point: base + t.perWin * Math.max(0, Math.floor(Number(wins) || 0)),
-    title: r ? r.title : '',
-    frame: r ? r.frame : ''
+    point: base + t.perWin * Math.max(0, Math.floor(Number(wins) || 0))
   };
 };
 const CARD_LINE_SCENES = Object.freeze(['challenge', 'start', 'big', 'bigHit', 'guardMine', 'guardTheirs', 'myKo', 'theirKo', 'lastMine', 'lastTheirs', 'deckMine', 'deckTheirs', 'win', 'lose']);
@@ -117743,8 +117738,6 @@ const cardTourNormalizeClaimed = v => {
     id: x.id,
     place: Number.isInteger(x.place) && x.place > 0 ? x.place : null,
     point: num(x.point),
-    title: typeof x.title === 'string' ? x.title.slice(0, 40) : '',
-    frame: typeof x.frame === 'string' ? x.frame.slice(0, 40) : '',
     at: num(x.at)
   })).slice(-100);
 };
@@ -118225,7 +118218,7 @@ const CardTourToday = ({
     className: "space-y-3"
   }, block(lastShown, 'の結果'), block(nextDay, 'の試合'));
 };
-const cardTourRewardText = r => [r.title && `称号「${r.title}」`, r.frame && 'プロフィール枠', r.point > 0 && `ビートP ${r.point.toLocaleString()}`].filter(Boolean).join('・');
+const cardTourRewardText = r => r && r.point > 0 ? `ビートP ${r.point.toLocaleString()}` : '';
 const CardTourResult = ({
   view,
   known,
@@ -118348,9 +118341,7 @@ const CardTournament = ({
       if (st === 'ok') {
         const reward = {
           place: Number.isInteger(r.place) ? r.place : null,
-          point: Number.isInteger(r.point) && r.point > 0 ? Math.min(100000, r.point) : 0,
-          title: typeof r.title === 'string' ? r.title.slice(0, 40) : '',
-          frame: typeof r.frame === 'string' ? r.frame.slice(0, 40) : ''
+          point: Number.isInteger(r.point) && r.point > 0 ? Math.min(100000, r.point) : 0
         };
         if (await onCredit(view.tour, reward)) {
           setClaimed(cardTourNormalizeClaimed(await storeGet(CARD_TOUR_CLAIMED_KEY, null).catch(() => null)) || []);

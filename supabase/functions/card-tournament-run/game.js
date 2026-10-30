@@ -3604,12 +3604,11 @@ const cardTourPlay = (db, sideA, sideB, { seed, first = 0, key = '' }) => {
 };
 
 // ---- ごほうびの表(大会ごと。表の1行に持たせる) ----
-// { ranks: [{ point, title, frame }…](1位から), participation: { point }, perWin: 1勝ごとのビートP }
+// { ranks: [{ point }…](1位から), participation: { point }, perWin: 1勝ごとのビートP }。ごほうびはビートPだけ(2026-10-30 社長。称号・プロフィール枠は出さない)
 const cardTourNormalizeRewards = (raw) => {
   const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const num = (v) => (Number.isFinite(Number(v)) ? Math.max(0, Math.min(100000, Math.floor(Number(v)))) : 0);
-  const str = (v, n) => (typeof v === 'string' ? v.slice(0, n) : '');
-  const ranks = (Array.isArray(r.ranks) ? r.ranks : []).slice(0, 16).map((x) => ({ point: num(x && x.point), title: str(x && x.title, 30), frame: str(x && x.frame, 40) }));
+  const ranks = (Array.isArray(r.ranks) ? r.ranks : []).slice(0, 16).map((x) => ({ point: num(x && x.point) }));
   return { ranks, participation: { point: num(r.participation && r.participation.point) }, perWin: num(r.perWin) };
 };
 // その人のごほうび。place … 大会の順位(1 から。頂上決戦に出なかった人は null)・wins … 全部の試合で勝った数
@@ -3617,7 +3616,7 @@ const cardTourRewardOf = (rewards, place, wins) => {
   const t = cardTourNormalizeRewards(rewards);
   const r = Number.isInteger(place) && place >= 1 ? t.ranks[place - 1] : null;
   const base = r ? r.point : t.participation.point;
-  return { point: base + t.perWin * (Math.max(0, Math.floor(Number(wins) || 0))), title: r ? r.title : '', frame: r ? r.frame : '' };
+  return { point: base + t.perWin * (Math.max(0, Math.floor(Number(wins) || 0))) };
 };
 
 ;

@@ -2,7 +2,7 @@
 // index.ts(Deno の入口)が、表の読み書き(db)・Claude(ai)・回数の数え方(take)を渡して runAll を呼ぶ。
 // 検査(tools/card/card-tournament-run-check.js)は偽物を渡して、本番の表と API に触らずに確かめる。
 //
-// 1回の呼び出しでやること(毎日 0:30、失敗したら 1:30・2:30 にも呼ばれる。何度呼ばれても同じになるように書く)
+// 1回の呼び出しでやること(毎日 0:00〜3:50 に10分おきに呼ばれる。1回に回す試合は PLAY_BUDGET_MS まで。何度呼ばれても同じになるように書く)
 //   1. 受付が終わった大会: 登録デッキの写しを取り、組分けと総当たりの日程を作る
 //   2. その日までの試合を回す(勝ち負け・倒した数・手の並び・ルールの版)+ その日の担当の助手の実況と解説
 //   3. 組の総当たりが終わったら、頂上決戦の日程を作る(組が2つ以上のとき)
@@ -19,6 +19,9 @@ export const LIVE_TIMEOUT_MS = 15000;
 export const LIVE_PLAY_MAX = 120;                   // 実況の字数の上限
 export const LIVE_REVIEW_MAX = 160;                 // 解説の字数の上限
 export const RESULT_HOUR_JST = 4;                   // 結果を見せる時刻
+// 1回の呼び出しで試合を回す時間の目安。サーバの関数は CPU を1回2秒までしか使えない(Supabase の決まり)。1試合およそ 80ms(重い試合で 145ms)。
+//   使い切ったら残りは次の呼び出し(10分おき。CARD_TOURNAMENT_SCHEDULE.sql)に回す。AI を待つ時間は CPU に数えられないので入れない
+export const PLAY_BUDGET_MS = 1200;
 // 実況の担当(日ごとに順番)。公開ずみの助手
 export const LIVE_ASSISTANTS = Object.freeze(['mua', 'momosuke', 'kiki', 'kyuko', 'dra', 'atsu', 'sorashido']);
 const PERSONA = Object.freeze({
@@ -125,19 +128,23 @@ export const makeLive = async ({ ai, take, refund, log, who, summary, stage }) =
     return fallback;
   }
 };
-export const playDue = async ({ db, game, tour, today, ai, take, refund, log }) => {
+export const playDue = async ({ db, game, tour, today, ai, take, refund, log, budget = { left: Infinity } }) => {
   const entries = await db.listEntries(tour.id);
   const seatOf = (stage, grp, seat) => entries.find((e) => (stage === 'final' ? e.final_seat === seat : e.grp === grp && e.seat === seat) && !e.dropped);
   const due = (await db.listMatches(tour.id)).filter((m) => m.winner === null && m.play_on <= today).sort((x, y) => (x.day - y.day) || (x.id - y.id));
   let n = 0;
   for (const m of due) {
+    if (budget.left <= 0) { log({ step: 'play', tour: tour.id, more: true }); break; }
     const ea = seatOf(m.stage, m.grp, m.a_seat), eb = seatOf(m.stage, m.grp, m.b_seat);
     if (!ea || !eb) { log({ step: 'play', tour: tour.id, match: m.id, error: 'seat' }); continue; }
+    const t0 = Date.now();
     const res = game.cardTourPlay(game.CARD_BATTLE_DATA, sideOf(ea), sideOf(eb), { seed: m.seed, first: m.first, key: `${tour.id}|${m.stage}|${m.grp}|${m.day}` });
     // 助手の席のデッキは試合ごとに種から作るので、見返しのために試合の行へ残す
     const decks = [ea.is_assist ? res.decks && res.decks[0] : null, eb.is_assist ? res.decks && res.decks[1] : null];
     const who = LIVE_ASSISTANTS[(m.day + game.cardTourHash(tour.id)) % LIVE_ASSISTANTS.length];
-    const live = await makeLive({ ai, take, refund, log, who, stage: m.stage, summary: summaryOf(game, ea, eb, m, res) });
+    const summary = summaryOf(game, ea, eb, m, res);
+    budget.left -= Date.now() - t0;
+    const live = await makeLive({ ai, take, refund, log, who, stage: m.stage, summary });
     await db.updateMatch(m.id, { winner: res.winner, kos: res.kos, acts: res.acts, decided: res.decided, rules: res.rules, assist_decks: decks, live, done_at: new Date().toISOString() });
     m.winner = res.winner; m.kos = res.kos;
     n += 1;
@@ -190,21 +197,22 @@ export const advance = async ({ db, game, tour, log }) => {
 };
 
 // ---- 1回の呼び出し ----
-export const runAll = async ({ db, game, nowMs, ai = null, take = null, refund = null, log = () => {} }) => {
+export const runAll = async ({ db, game, nowMs, ai = null, take = null, refund = null, log = () => {}, budgetMs = PLAY_BUDGET_MS }) => {
+  const budget = { left: budgetMs };
   const today = jstDate(nowMs);
   const out = { closed: 0, played: 0, advanced: 0 };
   for (const tour of await db.listActive()) {
     try {
       if (tour.status === 'entry' && Date.parse(tour.entry_until) <= nowMs) { await closeEntries({ db, game, tour, log }); out.closed += 1; tour.status = 'group'; Object.assign(tour, await db.getTour(tour.id)); }
       if (tour.status === 'group' || tour.status === 'final') {
-        out.played += await playDue({ db, game, tour, today, ai, take, refund, log });
+        out.played += await playDue({ db, game, tour, today, ai, take, refund, log, budget });
         // 段が終わったら次の段へ。頂上決戦の1日目がもう来ていれば、続けて回す
         for (let k = 0; k < 2; k++) {
           if (!(await advance({ db, game, tour, log }))) break;
           out.advanced += 1;
           Object.assign(tour, await db.getTour(tour.id));
           if (tour.status !== 'final') break;
-          out.played += await playDue({ db, game, tour, today, ai, take, refund, log });
+          out.played += await playDue({ db, game, tour, today, ai, take, refund, log, budget });
         }
       }
     } catch (e) {

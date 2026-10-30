@@ -148,7 +148,7 @@ const doneEntries = [ent(0, { id: 'me', name: '検査ブリーダー', mine: tru
     await mount();
     await T('[data-card-tour-result]').waitFor({ timeout: 15000 });
     s = await text();
-    check('⑤ 最終順位と、あなたのごほうび(1位・3勝: 3000+300)', /最終順位/.test(s) && /1位/.test(s) && /検査杯 優勝/.test(s) && /ビートP 3,300/.test(s), s.slice(0, 300));
+    check('⑤ 最終順位と、あなたのごほうび(1位・3勝: 3000+300・ビートPだけで、表に称号があっても出さない)', /最終順位/.test(s) && /1位/.test(s) && /ビートP 3,300/.test(s) && !/称号|検査杯 優勝|プロフィール枠/.test(s), s.slice(0, 300));
     await shot(page, '4-結果');
     await T('[data-card-tour-claim]').click();
     await page.waitForFunction(() => window.__credit !== null, null, { timeout: 10000 });
