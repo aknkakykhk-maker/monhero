@@ -128,6 +128,12 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       const after = await read(A.page);
       return { before, after, shown };
     };
+    // 売り場に出ている所持ビートP。帯の作りで「所持ビートP 5」と「5 所持ビートP」のどちらの順にもなる(2026-10-27 の帯で順が変わった)
+    const shownPoint = (text) => {
+      const t = text.replace(/\s+/g, ' ');
+      const m = t.match(/所持ビートP\s*(?:🎟️\s*)?([\d,]+)/) || t.match(/([\d,]+)\s*所持ビートP/);
+      return m ? Number(m[1].replace(/,/g, '')) : null;
+    };
     // ① 1パック分だけ(3回)
     const price = await A.page.evaluate(() => (typeof CARD_PACKS !== 'undefined' && CARD_PACKS[0] ? CARD_PACKS[0].price : 300));
     for (let i = 0; i < 3; i++) {
@@ -135,7 +141,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       const other = r.shown[0] ? B : A;
       const otherText = await other.page.evaluate(() => document.body.innerText).catch(() => '');
       check(`① 1パック分のとき、パックが出るのは片方だけ(${i + 1}回目)`, r.shown.filter(Boolean).length === 1, JSON.stringify(r.shown));
-      check(`① 出なかったタブは「足りません」で、所持の表示が保存と同じ(${i + 1}回目)`, /足りません/.test(otherText) && new RegExp(`${r.after.pt.toLocaleString()} 所持ビートP`).test(otherText.replace(/\s+/g, ' ')), otherText.replace(/\s+/g, ' ').slice(0, 80));
+      check(`① 出なかったタブは「足りません」で、所持の表示が保存と同じ(${i + 1}回目)`, /足りません/.test(otherText) && shownPoint(otherText) === r.after.pt, otherText.replace(/\s+/g, ' ').slice(0, 80));
       check(`① ビートPはちょうど1パック分減る(だぶりのビートPは足される)(${i + 1}回目)`, r.after.pt < r.before.pt && r.after.pt >= 0 && r.after.total > r.before.total - 1, `${JSON.stringify(r.before)} → ${JSON.stringify(r.after)}`);
     }
     // ② 2パック分
