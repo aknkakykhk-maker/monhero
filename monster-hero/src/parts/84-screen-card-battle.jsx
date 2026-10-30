@@ -140,6 +140,15 @@ const cardCpuPlaylistOf = (playlist, who) => {
   return list.length ? list : (CARD_AI_BGM[who] ? [CARD_AI_BGM[who]] : []);
 };
 const cardIsBgmTrack = (id) => typeof BGM_TRACKS !== 'undefined' && BGM_TRACKS.some((t) => t.id === id);
+// 鳴らす曲(onBgm に渡す形)。ランダム(CARD_BGM_RANDOM)は選べる曲ぜんぶの並び → 60-app が開くたび・対戦を始めるたびにシャッフルして流す
+const cardBgmAllTracks = () => (typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS.map((t) => t.id) : []);
+const cardBgmOf = (v) => {
+  if (v === CARD_BGM_RANDOM) return cardBgmAllTracks();
+  if (Array.isArray(v) && v.includes(CARD_BGM_RANDOM)) return cardBgmAllTracks();
+  return v;
+};
+// 試聴でランダムのときに流す1曲
+const cardBgmRandomOne = () => { const all = cardBgmAllTracks(); return all.length ? all[Math.floor(Math.random() * all.length)] : null; };
 // モンスターの絵(5-3)。モンヒロにいる種族はいまのゲームの絵、いない16種族は社長から届いた立ち絵(#3437 でクラフトくんが取り込んだ)。
 // 混血の15体は、立ち絵が届いた子から立ち絵にする(HYBRID_MONSTER_IMGS)。まだの子はカードの絵で代える(社長)
 const CARD_SPECIES_ART = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant', ghost: 'Ghost' });
@@ -2483,6 +2492,18 @@ const CardPlaylistRows = ({ list, onChange, bgmPreview, tag }) => {
   const tracks = typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : [];
   const choices = (keep) => tracks.filter((t) => t.id === keep || !list.includes(t.id));
   const selectClass = 'min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white';
+  // ランダム(選べる曲ぜんぶから、毎回ちがう順で)。並びは [CARD_BGM_RANDOM] の1つだけ
+  if (list.length === 1 && list[0] === CARD_BGM_RANDOM) {
+    return (
+      <div data-card-playlist-rows={tag} data-card-playlist-count={1} data-card-playlist-random>
+        <div className="mt-1 flex items-center gap-1.5">
+          <span className="min-w-0 flex-1 rounded-xl border border-amber-300/50 bg-amber-500/15 px-2 py-2 text-[12px] font-black text-amber-100" style={JA_LABEL_STYLE}>{jaWrap('🔀 ランダム(選べる曲ぜんぶから、毎回ちがう順で)')}</span>
+          {bgmPreview && <button type="button" data-card-playlist-preview={CARD_BGM_RANDOM} onClick={() => { if (bgmPreview.playing) bgmPreview.stop(); else { const one = cardBgmRandomOne(); if (one) bgmPreview.toggle(one); } }} className="min-h-[44px] min-w-[52px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black">{bgmPreview.playing ? '停止' : '試聴'}</button>}
+        </div>
+        <button type="button" data-card-playlist-random-off onClick={() => onChange([tracks[0] ? tracks[0].id : ''].filter(Boolean))} className="mt-1.5 min-h-[44px] w-full rounded-xl bg-slate-700 px-2 text-[11px] font-black text-white">{jaWrap('ランダムをやめて、曲を選ぶ')}</button>
+      </div>
+    );
+  }
   return (
     <div data-card-playlist-rows={tag} data-card-playlist-count={list.length}>
       <ol className="mt-1 space-y-1.5">
@@ -2505,6 +2526,7 @@ const CardPlaylistRows = ({ list, onChange, bgmPreview, tag }) => {
             {choices(null).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
         : <p data-card-playlist-full className="mt-1.5 text-[10px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(`入れられるのは${CARD_PLAYLIST_MAX}曲までです`)}</p>}
+      <button type="button" data-card-playlist-random-on onClick={() => onChange([CARD_BGM_RANDOM])} className="mt-1.5 min-h-[44px] w-full rounded-xl border border-amber-300/50 bg-slate-900 px-2 text-[11px] font-black text-amber-100">{jaWrap('🔀 ランダムにする(選べる曲ぜんぶから)')}</button>
     </div>
   );
 };
@@ -2692,7 +2714,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   useEffect(() => { void load(); }, []);
   // トップ画面(結果・デッキ編成なども)の曲。対戦の画面へ入るときは、それぞれの曲に替える
   const topBgm = save && save.bgm ? save.bgm.top : null;
-  useEffect(() => { if (screen === 'CARD_TOP' && topBgm && onBgm) onBgm(topBgm); }, [screen, topBgm]);
+  useEffect(() => { if (screen === 'CARD_TOP' && topBgm && onBgm) onBgm(cardBgmOf(topBgm)); }, [screen, topBgm]);
   // 対戦の画面から外へ出たら(戻るなど)、トップに戻す
   // アプリの中の戻るなどで助手との対戦を抜けたら、その場で投了として数える(途中で閉じた対戦と同じ。印があるときだけ)
   useEffect(() => {
@@ -2925,14 +2947,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       // マルチ対戦: 封を開けて確かめるのは 91 の CARD_PVP。結果は部屋の画面に出す(報酬は区切り2)
       if (game.pvp) {
         CARD_PVP.finish(outcome, st);
-        onBgm && onBgm(save.bgm.top);
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
         onNavigate('CARD_TOP');
         setView('pvp');
         return;
       }
       // デバッグの「技の動きの見本」(game.demo)は、終わっても・投了しても何も保存しない(ボタンに「保存しない」と書いてある)。トップへ戻すだけ
       if (game.demo) {
-        onBgm && onBgm(save.bgm.top);
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
         onNavigate('CARD_TOP');
         setView('top');
         return;
@@ -2942,7 +2964,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         const fin = cardTutorialFinish(save.tutorial, outcome === 'tutorialDone' ? 'done' : 'skip', Date.now());
         const ok = await persist({ tutorial: fin.tutorial, point: save.point + fin.reward });
         setResult({ tutorial: true, done: outcome === 'tutorialDone', reward: ok ? fin.reward : 0, saved: ok });
-        onBgm && onBgm(save.bgm.top);
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
         onNavigate('CARD_TOP');
         setView('result');
         return;
@@ -2968,7 +2990,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
         if (typeof selfId === 'string' && typeof cardShareReportUse === 'function') void cardShareReportUse({ match: `share-${game.key}-${Date.now().toString(36)}`, ownerId: game.share.ownerId, userId: selfId, kind: 'battle', deckWon: outcome !== 'win', version: game.share.version });
         setResult({ outcome, reward, opened: null, saved: ok, who: null, level: game.level, loops, quick, facts, talk: null, replay: null, share: game.share, rankGain: ok ? levelGain.gain : null });
-        onBgm && onBgm(save.bgm.top);
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
         onNavigate('CARD_TOP');
         setView('result');
         return;
@@ -2983,7 +3005,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         if (!open || open.id !== game.key) {
           openIdRef.current = null; openRef.current = null;
           setNotice('この対戦は、ほかの画面で投了として数えました');
-          onBgm && onBgm(save.bgm.top);
+          onBgm && onBgm(cardBgmOf(save.bgm.top));
           onNavigate('CARD_TOP');
           setView('top');
           return;
@@ -3044,7 +3066,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       let replayId = null;
       if (replayRec && await cardReplaySave(replayRec)) replayId = replayRec.id;
       setResult({ outcome, reward, opened, saved: ok, who: game.who, level: game.level, loops, quick, facts, talk: talkFacts, replay: replayId, rankGain: ok ? levelGain.gain : null });
-      onBgm && onBgm(save.bgm.top);
+      onBgm && onBgm(cardBgmOf(save.bgm.top));
       onNavigate('CARD_TOP');
       setView('result');
     }}/>;
@@ -3103,7 +3125,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     //   みんなのデッキの対戦は数えない(途中で閉じても投了の記録は付かない・ビートPも入らない)
     if (!share) void writeCpuOpen({ id: `${seed}`, who: pick.who, level: pick.level, rankable: !!(rank && rank.send) && !debug, at: Date.now(), beat: Date.now(), facts: cardResultFacts(st, CARD_ME) }, true);
     // 対戦の BGM: オプションで曲を決めていればその曲、「おまかせ」なら相手の助手に合わせる
-    onBgm && onBgm(cardCpuPlaylistOf(save.cpuPlaylist, pick.who)); // 並びは対戦を始めるたびにシャッフルし直す(60-app)
+    onBgm && onBgm(cardBgmOf(cardCpuPlaylistOf(save.cpuPlaylist, pick.who))); // 並びは対戦を始めるたびにシャッフルし直す(60-app)
     onNavigate('CARD_BATTLE');
   };
   startBattleRef.current = startBattle;
@@ -3267,7 +3289,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const intro = { mode: 'pvp', foe: { name: pv.name || 'あいて', icon: pv.icon || '🙂', frame: pv.frame || null, deckName: pv.deckName || null, monsters: vsMons(g.st, CARD_CPU) },
         me: { name: myName, deckName: (activeDeck && activeDeck.name) || null, monsters: vsMons(g.st, CARD_ME) } };
       setGame({ ...g, settings: save.settings, intro });
-      onBgm && onBgm(save.bgm.pvp || null);
+      onBgm && onBgm(cardBgmOf(save.bgm.pvp) || null);
       onNavigate('CARD_BATTLE');
     }}/>;
   }
@@ -3433,6 +3455,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <ScreenHead title={win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…'} accent={win ? 'text-amber-200' : 'text-slate-300'} onBack={() => setView('top')}/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           <CardResultBanner title={win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…'} sub={win ? 'YOU WIN' : result.outcome === 'surrender' ? 'SURRENDER' : 'YOU LOSE'} tone={win ? 'win' : 'lose'}/>
+          {/* カードランクの経験値の棒は、結果を開いてすぐ目に入るよう、いちばん上(勝ち負けのすぐ下)に置く(2026-10-30 社長「終わったあとに経験値ゲージのバーの動きが見れない」) */}
+          {result.rankGain && <CardRankResult gain={result.rankGain}/>}
           {a && <CardResultTalk a={a} lineScene={win ? 'lose' : 'win'} talkFacts={result.talk}/>}
           {result.share && <p data-card-result-share className="text-center text-[13px] font-black text-emerald-200">{result.share.name}さんのデッキと対戦しました</p>}
           {a && <CardResultVsRow meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meName={(rank && rank.profile && rank.profile.name) || 'あなた'}
@@ -3456,7 +3480,6 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             )}
             <div className="mt-1 text-[12px] font-bold text-slate-300">いまのビートP: {save.point}</div>
             {result.opened && <div className="mt-1 text-[13px] font-black text-emerald-300">{CARD_LEVEL_LABEL[result.opened]}が選べるようになりました！</div>}
-            {result.rankGain && <CardRankResult gain={result.rankGain}/>}
             {!result.saved && <div className="mt-1 text-[12px] font-bold text-rose-300" style={JA_LABEL_STYLE}>{jaWrap('保存できませんでした(ビートPは増えていません)')}</div>}
             {result.demo && <div className="mt-1 text-[11px] font-bold text-slate-400">(デバッグの見本です。何も保存していません)</div>}
           </div>
@@ -3490,12 +3513,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const cpuPlaylistPanel = (
           <div data-card-playlist className="mt-3 border-t border-white/10 pt-2.5">
             <b className="block text-[12px] font-black text-slate-200">フリー対戦</b>
-            <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手1人につき5曲まで選べます。対戦中は、選んだ曲を毎回ちがう順番で、続けて流します')}</p>
+            <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手1人につき5曲まで選べます。対戦中は、選んだ曲を毎回ちがう順番で、続けて流します。「ランダム」にすると、選べる曲ぜんぶから流します')}</p>
             <div className="mt-2 grid grid-cols-3 gap-1.5">
               {plWhoList.map((a) => (
                 <button key={a.id} type="button" data-card-playlist-who={a.id} aria-pressed={a.id === plCur} onClick={() => { Audio_.fgSe.tap(); setPlWho(a.id); }}
                   className={`min-h-[40px] min-w-0 rounded-xl border px-1 text-[11px] font-black ${a.id === plCur ? 'border-amber-300 bg-amber-600/85 text-white' : 'border-white/15 bg-slate-900/75 text-slate-200'}`}>
-                  {jaWrap(a.name)}<small className="ml-0.5 text-[10px] opacity-80">{cardCpuPlaylistOf(save.cpuPlaylist, a.id).length}曲</small>
+                  {jaWrap(a.name)}<small className="ml-0.5 text-[10px] opacity-80">{cardCpuPlaylistOf(save.cpuPlaylist, a.id)[0] === CARD_BGM_RANDOM ? 'ランダム' : `${cardCpuPlaylistOf(save.cpuPlaylist, a.id).length}曲`}</small>
                 </button>
               ))}
             </div>
@@ -3542,9 +3565,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 <div className="mt-1 flex gap-2">
                   <select data-card-bgm-select={k} aria-label={`${label}のBGM`} value={save.bgm[k]} onChange={(e) => { void persist({ bgm: normalizeCardBgm({ ...save.bgm, [k]: e.target.value }, cardIsBgmTrack) }); }}
                     className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white">
+                    <option value={CARD_BGM_RANDOM}>ランダム(毎回ちがう曲)</option>
                     {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === CARD_BGM_DEFAULT[k] ? '(はじめの曲)' : ''}</option>)}
                   </select>
-                  {bgmPreview && <button type="button" data-card-bgm-preview={k} onClick={() => bgmPreview.toggle(save.bgm[k])} className="min-h-[44px] min-w-[58px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black">{bgmPreview.playing === save.bgm[k] ? '停止' : '試聴'}</button>}
+                  {/* ランダムの試聴は1曲を選んで流す(鳴っていれば止める) */}
+                  {bgmPreview && (save.bgm[k] === CARD_BGM_RANDOM
+                    ? <button type="button" data-card-bgm-preview={k} onClick={() => { if (bgmPreview.playing) bgmPreview.stop(); else { const one = cardBgmRandomOne(); if (one) bgmPreview.toggle(one); } }} className="min-h-[44px] min-w-[58px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black">{bgmPreview.playing ? '停止' : '試聴'}</button>
+                    : <button type="button" data-card-bgm-preview={k} onClick={() => bgmPreview.toggle(save.bgm[k])} className="min-h-[44px] min-w-[58px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black">{bgmPreview.playing === save.bgm[k] ? '停止' : '試聴'}</button>)}
                 </div>
               </label>
             ))}

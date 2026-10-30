@@ -215,7 +215,9 @@ const ensurePlayerRankXpBarCss = () => {
 // 経験値の棒が伸びる演出の本体。award: { add, parts:[{label,xp}], from, to, xp(足したあとの合計) }
 // onFull(): 棒が満タンで光ったとき(ランクが上がるときだけ・1回)。画面いっぱいの演出はここから出す / onDone(): 伸び終わったとき(1回)
 const PLAYER_RANK_XP_COLORS = ['#fde047', '#f0abfc', '#22d3ee', '#fff', '#a3e635'];
-function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null }) {
+// 2026-10-30 社長「終わったあとに経験値ゲージのバーの動きが見れない」: 棒が画面に入るまでは前の量で止めておき、
+// 見えたところで動き出す(onStart)。見えているかを調べられない端末では、すぐ動かす
+function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, onStart = null }) {
   ensurePlayerRankXpBarCss();
   const k = playerRankKind(kind);
   const add = Math.max(0, Math.floor(Number(award && award.add) || 0));
@@ -232,6 +234,15 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null })
   const [view, setView] = React.useState({ rank: startInfo.rank, into: startInfo.into, shown: 0, chips: 0, up: false, instant: true, tip: false, done: false });
   const rootRef = React.useRef(null), trackRef = React.useRef(null), fxRef = React.useRef(null), addRef = React.useRef(null), chipRefs = React.useRef([]);
   const runRef = React.useRef({ timers: [], fullSent: false, doneSent: false, running: true });
+  const [seen, setSeen] = React.useState(false);
+  React.useEffect(() => {
+    if (seen) return undefined;
+    const el = rootRef.current;
+    if (!el || typeof IntersectionObserver !== 'function') { setSeen(true); return undefined; }
+    const io = new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) setSeen(true); }, { threshold: 0.6 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [seen]);
   const se = (name) => { try { const bank = typeof Audio_ !== 'undefined' ? (Audio_.fgSe || Audio_.se) : null; if (bank && typeof bank[name] === 'function') bank[name](); } catch (_) { /* 音が出なくても続ける */ } };
   const later = (fn, ms) => { const id = setTimeout(fn, ms); runRef.current.timers.push(id); return id; };
   const spawn = (host, cls, style, ms) => { if (!host) return; const e = document.createElement('i'); e.className = cls; Object.entries(style).forEach(([kk, v]) => e.style.setProperty(kk, v)); host.appendChild(e); setTimeout(() => e.remove(), ms); return e; };
@@ -268,8 +279,9 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null })
     sendFull(); sendDone();
   };
   React.useEffect(() => {
-    if (!(add > 0)) return undefined;
+    if (!seen || !(add > 0) || !runRef.current.running) return undefined;
     const run = runRef.current;
+    if (onStart) onStart();
     // 舞う光の粒(伸びている間ずっと)
     const moteTimer = setInterval(() => { if (!run.running) { clearInterval(moteTimer); return; } motes(); }, 90);
     later(() => setView((v) => ({ ...v, instant: false })), 40);
@@ -308,7 +320,7 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null })
     later(() => { bumpAdd('final'); sparks(10); se('trainingReward'); }, t + 150);
     later(() => { run.running = false; setView((v) => ({ ...v, done: true })); sendDone(); }, t + 250);
     return () => { run.running = false; clearInterval(moteTimer); run.timers.forEach(clearTimeout); };
-  }, []);
+  }, [seen]);
   const need = playerRankNeed(view.rank);
   const w = `${pct(view.rank, view.into)}%`;
   return (
@@ -342,15 +354,15 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null })
 
 // 1回ぶんの結果に出す札: 経験値の棒が伸びる演出(PlayerRankXpBar)・次のごほうび・上がったらもらった物。
 // award: { add, parts:[{label,xp}], from, to, xp(足したあとの合計), gains:[{icon,text}] }。next は次のごほうびの文(「ランク20で ビートP 300」)
-// onFull・onDone は PlayerRankXpBar へそのまま渡す(ビートはここで画面いっぱいの演出を出す。カードは渡さなければ今までどおり)
-function PlayerRankGain({ kind = 'beat', award, next = '', onFull = null, onDone = null }) {
+// onFull・onDone・onStart(棒が画面に入って動き出した)は PlayerRankXpBar へそのまま渡す(ビートはここで画面いっぱいの演出を出す。カードは渡さなければ今までどおり)
+function PlayerRankGain({ kind = 'beat', award, next = '', onFull = null, onDone = null, onStart = null }) {
   const [done, setDone] = React.useState(false);
   if (!award || !(award.add > 0)) return null;
   const k = playerRankKind(kind);
   const up = award.to > award.from;
   return (
     <section data-player-rank-gain={kind} className={`relative my-3 space-y-1.5 rounded-2xl border p-3 pt-4 text-left ${k.border} ${k.panel}`}>
-      <PlayerRankXpBar kind={kind} award={award} onFull={onFull} onDone={() => { setDone(true); if (onDone) onDone(); }}/>
+      <PlayerRankXpBar kind={kind} award={award} onFull={onFull} onStart={onStart} onDone={() => { setDone(true); if (onDone) onDone(); }}/>
       {next && <p data-player-rank-gain-next className="text-[10px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(`次は ${next}`)}</p>}
       {up && done && <PlayerRankUp kind={kind} from={award.from} to={award.to} gains={award.gains || []}/>}
     </section>
