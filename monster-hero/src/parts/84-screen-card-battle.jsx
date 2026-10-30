@@ -1872,7 +1872,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           1段・高さ固定で、どの番でも盤が動かない。電波が途切れたときも段を増やさず、番の札が橙になる。難易度は助手の名前の下にあるので帯には出さない */}
       <div data-card-head className={`relative flex ${compact ? 'h-[36px]' : 'h-[44px]'} shrink-0 items-center gap-1.5 bg-black/35 px-2`}>
         {!tutorial && <button type="button" data-card-log-open onClick={() => setLogSheet(true)} className="shrink-0 rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200" aria-label="ターンの記録を見る">記録</button>}
-        {pvpLive && <span className="shrink-0"><CardPvpChat/></span>}
+        {/* 💬 コメント(定型と自由文・ログ。2026-10-30 社長「マルチと観戦で自由文のコメントも」。91 の CardChatButton) */}
+        {(pvpLive || watch) && <span className="shrink-0"><CardChatButton mode={watch ? 'watch' : 'pvp'}/></span>}
+        {(pvpLive || watch) && <CardChatFlow mode={watch ? 'watch' : 'pvp'}/>}
         {watch ? <span data-card-watch-badge className={`shrink-0 whitespace-nowrap rounded-md border border-violet-300/60 bg-violet-500/20 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-violet-100`}>観戦{watchEyes ? ` 👀${watchEyes}` : ''}</span>
           : tourReplay ? <span data-card-replay-badge="tour" className={`shrink-0 whitespace-nowrap rounded-md border border-amber-300/70 bg-amber-500/25 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-amber-100`}>大会</span>
           : replay ? <span data-card-replay-badge className={`shrink-0 whitespace-nowrap rounded-md border border-sky-300/60 bg-sky-500/20 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-sky-100`}>リプレイ</span>
