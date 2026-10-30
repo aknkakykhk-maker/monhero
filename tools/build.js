@@ -118,6 +118,11 @@ if (process.argv.includes('--check')) {
     const r = require('./build-assistant-chat-digest').run({ check: true });
     if (!r.ok) { console.error(`NG: ${r.reason}。node tools/build.js を実行してください`); process.exit(1); }
   }
+  // 大会のサーバの関数のルールの写し(card-tournament-run/game.js)が、いまの部品と合っているか
+  {
+    const r = require('./build-card-tournament-bundle').run({ check: true });
+    if (!r.ok) { console.error(`NG: ${r.reason}。node tools/build.js を実行してください`); process.exit(1); }
+  }
   // 本体JSのキャッシュキーが本体の中身と合っているか(合わないと、端末に古い本体が残ったり、ためた物を使えなかったりする)
   {
     const r = require('./stamp-game-build').checkGameBuild();
@@ -175,6 +180,13 @@ if (process.argv.includes('--check')) {
   const r = require('./build-assistant-chat-digest').run();
   if (!r.ok) { console.error(`NG: ${r.reason}`); process.exit(1); }
   if (r.changed) console.log(`助手とおしゃべりの材料を作り直しました(${r.size}文字)`);
+}
+
+// 大会のサーバの関数(supabase/functions/card-tournament-run)が使う、ルール本体の写しを作り直す
+{
+  const r = require('./build-card-tournament-bundle').run();
+  if (!r.ok) { console.error(`NG: ${r.reason}`); process.exit(1); }
+  if (r.changed) console.log(`大会のサーバの関数のルールの写しを作り直しました(${r.size}文字)`);
 }
 
 // 公開用ビルドではバージョン3箇所を先に同一時刻へ揃える。機能変更後に古い日時の

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a9f814e0e0f70e33
+// generated-sha256: fe1b08a2f304d583
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7658,34 +7658,79 @@ const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).bas
 // イルミネ・ドリーミィ(2026-10-22 公開)は足し忘れていて、マスモンの詳細の丸で上下が切られ「大きく・中心がずれて」見えていた(2026-10-26 社長の指摘)
 const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Melody', 'Kuromy', 'Illumine', 'Dreamy', 'Kyubi', 'Orihime']);
 const monsterArtFitStyle = (baseId, style) => (MONSTER_ART_CONTAIN_IDS.includes(baseId) ? { ...style, objectFit: 'contain' } : style);
-// ★同じ主血統の立ち絵の見た目の大きさをそろえる、表示の倍率(2026-10-29 社長「同血統は基本的に立ち絵はほぼ同じサイズに」・案A)。
+// ★同じ主血統の立ち絵の見た目の大きさをそろえる、表示の倍率(2026-10-29 社長「同血統は基本的に立ち絵はほぼ同じサイズに」・案A。
+//   2026-10-30 社長「MB管理の図鑑で全部血統ごとに確認してサイズを同じぐらいに」で、図鑑に並ぶ全員(下書きのカードだけの子も)を対象に、
+//   1体ずつの数字の表から「絵の中身の範囲」(ART_CONTENT_BOXES。tools/image/make-art-content-boxes.js が測る)で計算する形へ替えた)。
 //   絵の画素は動かさない。その子の立ち絵(imgUrl)を「全体を収める」(contain)で出すときだけ、絵の要素を scale する
 //   (マスクは同じ要素・同じ箱の中にあるので一緒に動く。待機アニメの部品の軸は MonsterIdleArt が同じ式で動かす)。
 //   切り抜く丸いアイコン(cover)・顔アイコン・円盤石アイコン・小さい版(サムネ)は対象外(src か収め方が違う)。
-//   値は絵の不透明な部分を測って決めた(箱に対する高さ。仲間に合わせ、横に広い子は幅 0.98 で頭打ち):
-//   ピクシー 0.81→0.95(ミーア 0.94・パンドラ 0.96。中心が下にずれているので上へ ty)/ アーク 0.59→0.65(羽の幅で頭打ち)/
-//   プラント 0.72→0.78(花の幅で頭打ち)/ スネグーラチカ 0.89→0.97 / ザン 0.90→0.99
-//   ty は箱の高さに対する割合(負で上へ)
-const MONSTER_ART_SCALE = Object.freeze({
-  Pixie: Object.freeze({ scale: 1.17, ty: -0.049 }),
-  Ark: Object.freeze({ scale: 1.10, ty: 0 }),
-  Plant: Object.freeze({ scale: 1.08, ty: 0 }),
-  Snegurochka: Object.freeze({ scale: 1.09, ty: 0 }),
-  Zan: Object.freeze({ scale: 1.10, ty: 0 }),
-});
+//   決め方: 正方形の箱に contain で入れたときの中身の高さを測り、同じ主血統でいちばん高い子に合わせる。
+//   ただし中身の幅は箱の MONSTER_ART_SCALE_MAX_W まで(横に広い子は幅で頭打ち)。中身のまんなかを箱のまんなかへ寄せる(tx・ty)
+// <monster-art-scale>
+const MONSTER_ART_SCALE_MAX_W = 0.98;
+let _monsterArtScaleTable = null;
+const monsterArtScaleTable = () => {
+  if (_monsterArtScaleTable) return _monsterArtScaleTable;
+  const table = {};
+  const boxes = typeof ART_CONTENT_BOXES === 'object' && ART_CONTENT_BOXES ? ART_CONTENT_BOXES : null;
+  const all = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : null;
+  if (!boxes || !all) return table;   // まだ読み込みの途中なら、作らずに次の呼び出しでもう一度試す
+  const drafts = typeof UPCOMING_MONSTER_DRAFTS === 'object' && UPCOMING_MONSTER_DRAFTS ? UPCOMING_MONSTER_DRAFTS : {};
+  const lineageMap = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP : {};
+  const groups = {};
+  for (const [id, mon] of Object.entries({ ...drafts, ...all })) {
+    if (!mon || !mon.imgUrl) continue;
+    const main = (lineageMap[id] || mon.draftLineage || {}).main;
+    const box = boxes[String(mon.imgUrl).split('?')[0].replace(/^images\//, '')];
+    if (!main || !Array.isArray(box)) continue;
+    const [x0, y0, x1, y1, a] = box;
+    // 正方形の箱に contain で入れたときの、箱に対する中身の幅・高さ・まんなか
+    const wide = a >= 1;
+    const iw = wide ? 1 : a, ih = wide ? 1 / a : 1;
+    const ox = (1 - iw) / 2, oy = (1 - ih) / 2;
+    (groups[main] = groups[main] || []).push({ id, h: (y1 - y0) * ih, w: (x1 - x0) * iw,
+      cx: ox + ((x0 + x1) / 2) * iw, cy: oy + ((y0 + y1) / 2) * ih });
+  }
+  for (const list of Object.values(groups)) {
+    if (list.length < 2) continue;
+    const target = Math.max(...list.map((r) => r.h));
+    for (const r of list) {
+      const scale = Math.min(target / r.h, MONSTER_ART_SCALE_MAX_W / r.w);
+      if (!(scale > 1.02)) continue;
+      table[r.id] = Object.freeze({ scale: Math.round(scale * 1000) / 1000,
+        tx: Math.round(-(r.cx - 0.5) * scale * 1000) / 1000, ty: Math.round(-(r.cy - 0.5) * scale * 1000) / 1000 });
+    }
+  }
+  _monsterArtScaleTable = table;
+  return table;
+};
+// </monster-art-scale>
 const _artPathOf = (url) => (typeof url === 'string' ? url.split('?')[0] : '');
 // その絵に掛ける倍率(掛けないなら null)。src がその子の立ち絵で、収め方が contain のときだけ
 const monsterArtScaleOf = (baseId, src, className, style) => {
-  const def = baseId && Object.prototype.hasOwnProperty.call(MONSTER_ART_SCALE, baseId) ? MONSTER_ART_SCALE[baseId] : null;
+  const table = monsterArtScaleTable();
+  const def = baseId && Object.prototype.hasOwnProperty.call(table, baseId) ? table[baseId] : null;
   if (!def) return null;
-  const mon = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS[baseId] : null;
+  const mon = (typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS && ALL_PLAYER_MONSTERS[baseId])
+    || (typeof UPCOMING_MONSTER_DRAFTS === 'object' && UPCOMING_MONSTER_DRAFTS && UPCOMING_MONSTER_DRAFTS[baseId]) || null;
   if (!mon || !src || _artPathOf(src) !== _artPathOf(mon.imgUrl)) return null;
   const fit = (style && style.objectFit) || (/(^|\s)object-contain(\s|$)/.test(className || '') ? 'contain' : '');
   return fit === 'contain' ? def : null;
 };
+// 素の <img> で baseId を持たない所(図鑑の一覧の丸い絵)向け: 絵の道からその子を引いて、倍率を返す
+const monsterArtScaleBySrc = (src) => {
+  if (!src) return null;
+  const path = _artPathOf(src);
+  const lists = [typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS, typeof UPCOMING_MONSTER_DRAFTS === 'object' && UPCOMING_MONSTER_DRAFTS];
+  for (const list of lists) {
+    if (!list) continue;
+    for (const [id, mon] of Object.entries(list)) if (mon && _artPathOf(mon.imgUrl) === path) return monsterArtScaleOf(id, src, 'object-contain', null);
+  }
+  return null;
+};
 const monsterArtScaleTransform = (def, base) => {
   if (!def) return base;
-  const own = `${def.ty ? `translateY(${(def.ty * 100).toFixed(1)}%) ` : ''}scale(${def.scale})`;
+  const own = `${def.tx || def.ty ? `translate(${(def.tx * 100).toFixed(1)}%, ${(def.ty * 100).toFixed(1)}%) ` : ''}scale(${def.scale})`;
   return base ? `${base} ${own}` : own;
 };
 // 技カードのアイコンのように、絵は出すのに baseId を持ち回れない場所がある。
@@ -7794,7 +7839,7 @@ const _bakeDyedLayers = (key, src, layers) => {
   return promise;
 };
 const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: givenStyle, draggable, debugMaskPlacement = null }) => {
-  // 同じ血統の立ち絵の大きさをそろえる倍率(MONSTER_ART_SCALE)。マスクの位置合わせ(debugMaskPlacement)の画面では掛けない
+  // 同じ血統の立ち絵の大きさをそろえる倍率(monsterArtScaleTable)。マスクの位置合わせ(debugMaskPlacement)の画面では掛けない
   const artScale = debugMaskPlacement ? null : monsterArtScaleOf(baseId, src, className, monsterArtFitStyle(baseId, givenStyle));
   const rawStyle = artScale ? { ...(givenStyle || {}), transform: monsterArtScaleTransform(artScale, givenStyle && givenStyle.transform) } : givenStyle;
   const style = monsterArtFitStyle(baseId, rawStyle);
@@ -7941,7 +7986,7 @@ const bakeDyedMonsterCanvas = async (opts, size) => {
   sctx.imageSmoothingEnabled = true;
   sctx.imageSmoothingQuality = 'high';
   const w = out.width * def.scale, h = out.height * def.scale;
-  sctx.drawImage(out, (out.width - w) / 2, (out.height - h) / 2 + def.ty * out.height, w, h);
+  sctx.drawImage(out, (out.width - w) / 2 + def.tx * out.width, (out.height - h) / 2 + def.ty * out.height, w, h);
   return scaled;
 };
 const _bakeDyedMonsterCanvasRaw = async ({ baseId, src, masuColors }, size) => {
@@ -11788,9 +11833,15 @@ const HomeProfileIcon = ({ src, id, adjustment, frameId=null }) => {
 };
 
 // 図鑑一覧・血統チップ・立ち絵は本番とDEBUGで同じ収め方を使う。
+// 一覧の丸い絵も、同じ血統の立ち絵の大きさをそろえる倍率を掛ける(2026-10-30 社長「MB管理の図鑑で全部血統ごとに…サイズを同じぐらいに」)。
+// 血統の札の小さい顔(lineage)には掛けない
+const dexIconArtScale = (src, lineage) => {
+  const def = !lineage && typeof monsterArtScaleBySrc === 'function' ? monsterArtScaleBySrc(src) : null;
+  return def ? { transform: monsterArtScaleTransform(def) } : null;
+};
 const DexMonsterIcon = ({ src, alt='', hidden=false, lineage=false }) => (
   <span className={`${lineage?'w-7 h-7':'w-14 h-14'} rounded-full overflow-hidden border ${lineage?'border-amber-300/40':'border-amber-400/30'} shrink-0 bg-black/40 flex items-center justify-center`}>
-    {src?<img src={src} alt={alt} draggable={false} data-dex-entry-icon={!lineage||undefined} data-dex-lineage-icon={lineage||undefined} className="w-full h-full object-contain" style={{padding:'10%',...(hidden?{filter:'brightness(0)',opacity:0.6}:{})}}/>:<span className="text-2xl">？</span>}
+    {src?<img src={src} alt={alt} draggable={false} data-dex-entry-icon={!lineage||undefined} data-dex-lineage-icon={lineage||undefined} className="w-full h-full object-contain" style={{padding:'10%',...(dexIconArtScale(src, lineage)||{}),...(hidden?{filter:'brightness(0)',opacity:0.6}:{})}}/>:<span className="text-2xl">？</span>}
   </span>
 );
 // 血統名は「…」で切らず、2行まで折り返す(2026-10-26。幅320pxでは28体中13種が「モッ…」「ライ…」と切れ、
@@ -16152,14 +16203,14 @@ const MonsterIdleArt = ({baseId, image, fill = false, own = false}) => {
   const className = String(image.props.className || '').split(/\s+/).filter(c => c && !/^drop-shadow/.test(c)).join(' ');
   const layer = (url, extra) => React.cloneElement(image, { alt: extra ? '' : image.props.alt, className,
     style:{ ...(image.props.style||{}), ...MONSTER_IDLE_MASK_STYLE(url), ...(extra||{}) } });
-  // 同じ血統の立ち絵の大きさをそろえる倍率(MONSTER_ART_SCALE)は、各層の絵(DyedMonsterImage)が同じだけ掛ける。
+  // 同じ血統の立ち絵の大きさをそろえる倍率(monsterArtScaleTable)は、各層の絵(DyedMonsterImage)が同じだけ掛ける。
   // 部品の回す軸(origin)は「倍率を掛ける前の絵」での位置なので、絵と同じ式で動かす(そうしないと部品が体から浮く)
   const artScale = typeof monsterArtScaleOf === 'function' ? monsterArtScaleOf(baseId, image.props.src, image.props.className, monsterArtFitStyle(baseId, image.props.style)) : null;
   const originOf = (origin) => {
     if (!artScale) return origin;
     const m = /^\s*(-?[\d.]+)%\s+(-?[\d.]+)%\s*$/.exec(String(origin || ''));
     if (!m) return origin;
-    const x = 50 + artScale.scale * (Number(m[1]) - 50), y = 50 + artScale.scale * (Number(m[2]) - 50) + artScale.ty * 100;
+    const x = 50 + artScale.scale * (Number(m[1]) - 50) + (artScale.tx || 0) * 100, y = 50 + artScale.scale * (Number(m[2]) - 50) + artScale.ty * 100;
     return `${x.toFixed(2)}% ${y.toFixed(2)}%`;
   };
   const partNode = (part, index) => (
@@ -43387,6 +43438,8 @@ const exEffectAmountText = (e, long = false) => {
   if (Number.isFinite(Number(e.turnsLeft))) return long ? `あと${e.turnsLeft}ターン` : `あと${e.turnsLeft}`;
   return '';
 };
+// 札・詳細に出す要素。溜まる物は0のとき出さない(2026-10-13 社長「0個のときは出さない」。クッキー・黒音符の×0も)
+const exEffectsShown = (items) => (Array.isArray(items) ? items.filter((e) => e && !(e.kind === 'stack' && !(Number(e.count) > 0))) : []);
 const EX_EFFECT_TONE = {
   buff: 'bg-emerald-900/90 ring-emerald-300/80 text-emerald-50',
   debuff: 'bg-red-900/90 ring-red-300/80 text-red-50',
@@ -43394,15 +43447,22 @@ const EX_EFFECT_TONE = {
 };
 // compact … 新しい盤(横長の枠)。いままでのマーク×数と同じ所(絵の左下・幅40%まで)に、下から上へ積む
 const ExEffectChips = ({ items, max = 3, compact = false, className = '' }) => {
-  const list = Array.isArray(items) ? items.filter(Boolean) : [];
+  const list = exEffectsShown(items);
   if (!list.length) return null;
   // 新しい盤(横長の枠)は高さが足りないので2つまで(上の段の「狙」・予測ダメージに届かないように)。残りは「+N」を1つ目の横に添える
   const limit = compact ? Math.min(max, 2) : max;
   const shown = list.slice(0, limit);
   const more = list.length - shown.length;
-  const chip = (e) => (
-    <span key={e.key} data-ex-effect={e.key} data-ex-effect-kind={e.kind}
-      className={`flex min-w-0 ${compact ? 'max-w-full text-[8px]' : 'max-w-full text-[9px]'} items-center gap-[2px] rounded-md px-1 py-px font-black leading-tight whitespace-nowrap ring-1 ${EX_EFFECT_TONE[e.kind] || EX_EFFECT_TONE.buff}`}>
+  // 札の目印(検査が読む): data-ex-effect(要素の key。溜まる物は 'stack:種類')・data-stack-count(溜まる物の数)・
+  //   data-ex-turns(残りターンの数)・data-ex-from-slot(だれのEXか)・data-ex-last(残り1ターン)。
+  //   「+N」にまとめた札も、目印だけ残すために画面に出さない(hidden)形で置く
+  const turnsNum = (e) => (Number.isFinite(Number(e.turnsLeft)) && e.turnsLeft !== null ? Number(e.turnsLeft) : null);
+  const chip = (e, hide = false) => (
+    <span key={e.key} data-ex-effect={e.key} data-ex-effect-kind={e.kind} data-ex-effect-hidden={hide ? 'true' : undefined}
+      data-stack-count={e.kind === 'stack' && Number.isFinite(Number(e.count)) ? Math.floor(Number(e.count)) : undefined}
+      data-ex-turns={turnsNum(e) != null ? turnsNum(e) : undefined} data-ex-from-slot={Number.isInteger(e.fromSlot) ? e.fromSlot : undefined}
+      data-ex-last={turnsNum(e) === 1 ? 'true' : undefined}
+      className={`${hide ? 'hidden' : 'flex'} min-w-0 ${compact ? 'max-w-full text-[8px]' : 'max-w-full text-[9px]'} items-center gap-[2px] rounded-md px-1 py-px font-black leading-tight whitespace-nowrap ring-1 ${EX_EFFECT_TONE[e.kind] || EX_EFFECT_TONE.buff}${turnsNum(e) === 1 ? ' ring-2 ring-amber-300' : ''}`}>
       <span className="shrink-0">{exEffectIconOf(e)}</span>
       <span className="min-w-0 truncate">{e.name}</span>
       {exEffectAmountText(e) && <span className="shrink-0 tabular-nums opacity-90">{exEffectAmountText(e)}</span>}
@@ -43413,7 +43473,8 @@ const ExEffectChips = ({ items, max = 3, compact = false, className = '' }) => {
     <div data-ex-effect-chips={list.length} className={`pointer-events-none flex ${compact ? 'flex-col-reverse' : 'flex-col'} items-start gap-[2px] ${className}`}>
       {compact
         ? shown.map((e, k) => (k === 0 && moreChip ? <span key={e.key} className="flex max-w-full min-w-0 items-center gap-[2px]">{chip(e)}{moreChip}</span> : chip(e)))
-        : <>{shown.map(chip)}{moreChip}</>}
+        : <>{shown.map((e) => chip(e))}{moreChip}</>}
+      {list.slice(limit).map((e) => chip(e, true))}
     </div>
   );
 };
@@ -43467,7 +43528,7 @@ const BattleUnitDetailBody = ({ side, status, chips = [], marks = null, debuffs 
   // EXの効果の一覧(タクティクス/レイド)。名前・中身(何%)・誰のEX・あとNターン(溜まる物は 今/上限)を1行ずつ。
   //   これを出すときは、同じものを出していた「マーク×数」の行とEXの1行(status.lines の ex)は出さない(二重にしない)
   const hasEx = Array.isArray(exEffects);
-  const exRows = hasEx ? exEffects.filter(Boolean).map((e) => row(`exfx-${e.key}`, exEffectIconOf(e), e.name, exEffectAmountText(e, true),
+  const exRows = hasEx ? exEffectsShown(exEffects).map((e) => row(`exfx-${e.key}`, exEffectIconOf(e), e.name, exEffectAmountText(e, true),
     [e.note, e.fromName ? `${e.fromName}のEX${e.allAllies ? '(味方全員)' : ''}` : ''].filter(Boolean).join('・'),
     e.kind === 'stack' ? 'border-violet-300/50 bg-violet-950/50' : e.kind === 'debuff' ? 'border-red-300/50 bg-red-950/50' : 'border-emerald-300/50 bg-emerald-950/50')) : [];
   const lineRows = (status.lines || []).filter((l) => !(hasEx && l.key === 'ex')).map((l) => row(l.key, null, l.label, l.value, l.note));
@@ -57095,7 +57156,8 @@ const cardTourFinalists = (groupRanks) => (Array.isArray(groupRanks) && groupRan
 
 // ---- 1試合 ----
 // side … { deck, tactics }(エントリーの写し)か { assist: 助手の id }(助手の席)。key … 助手のデッキを決める種の名前
-// 返り値: { winner: 0|1, kos: [0側が倒した数, 1側が倒した数], acts: [[打った人, 手]…], steps, decided: 'ko'|'deck'|'limit', rules }
+// 返り値: { winner: 0|1, kos: [0側が倒した数, 1側が倒した数], acts: [[打った人, 手]…], steps, decided: 'ko'|'deck'|'limit', rules, decks: [0側, 1側] }
+//   decks … 使ったデッキ(助手の席は種から作るので、見返しのために返す)
 const cardTourSidePolicy = (db, side, key) => {
   if (side && side.assist) {
     const deck = cardAiBuildDeck(db, side.assist, CARD_TOUR_ASSIST_LEVEL, cardAiSeededRand(`tour|${key}|${side.assist}`));
@@ -57126,11 +57188,12 @@ const cardTourPlay = (db, sideA, sideB, { seed, first = 0, key = '' }) => {
     st = next;
   }
   const kos = [cardKoCount(st, 0), cardKoCount(st, 1)];
-  if (st.winner === 0 || st.winner === 1) return { winner: st.winner, kos, acts, steps, decided: /山札/.test(String(st.reason || '')) ? 'deck' : 'ko', rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null };
+  const decks = [A.deck, B.deck];
+  if (st.winner === 0 || st.winner === 1) return { winner: st.winner, kos, acts, steps, decided: /山札/.test(String(st.reason || '')) ? 'deck' : 'ko', rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null, decks };
   // 手の数の上限まで決着しなかった(まず起きない): 倒した数 → 残りのライフの合計 → 後攻の勝ち
   const life = (p) => st.players[p].mons.reduce((a, m) => a + Math.max(0, m.ko ? 0 : m.life), 0);
   const winner = kos[0] !== kos[1] ? (kos[0] > kos[1] ? 0 : 1) : life(0) !== life(1) ? (life(0) > life(1) ? 0 : 1) : cardOther(first);
-  return { winner, kos, acts, steps, decided: 'limit', rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null };
+  return { winner, kos, acts, steps, decided: 'limit', rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null, decks };
 };
 
 // ---- ごほうびの表(大会ごと。表の1行に持たせる) ----
