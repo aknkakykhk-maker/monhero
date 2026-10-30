@@ -290,6 +290,17 @@ const sceneScript = (spec) => `(() => {
     // 組み合わせは自分で選ぶ(2026-10-29 社長「この形で」): 突進だけが「選んだ」、ジョイのサポートは「候補」に光る(勝手には付かない)
     const rTags = await page.evaluate(() => [0, 1].map((i) => ((document.querySelector(`[data-card-hand-card="${i}"] [data-card-hand-pick]`) || {}).textContent || '')));
     check('F 意味のある組み合わせ(突進＋ジョイのサポート)は、ジョイのサポートが「候補」に光る。突進だけが選ばれている', rTags[0] === '選んだ' && rTags[1] === '候補', rTags.join(' / '));
+    // 候補のジョイのサポートを押して足す → 狙う相手を押して使う → 2枚で出る(突進もジョイのサポートも手札から消える)
+    await page.locator('[data-card-hand-card="1"]').click(); await page.waitForTimeout(450);
+    const rAdd = await page.locator('[data-card-hand-card="1"] [data-card-hand-pick]').textContent().catch(() => '');
+    n0 = await handCount(page);
+    const rTarget = page.locator('[data-card-mon^="1-"].ring-rose-400').first();
+    await rTarget.waitFor({ timeout: 3000 }).catch(() => {});
+    if (await rTarget.count()) await rTarget.click();
+    else { const use = page.locator('[data-card-footer] button:not([disabled])').filter({ hasText: '使う' }).first(); if (await use.count()) await use.click(); }
+    await settle(page, n0);
+    const rHand = await page.evaluate(() => [...document.querySelectorAll('[data-card-hand-card]')].map((e) => (e.querySelector('img') || {}).alt || ''));
+    check('F 候補のジョイのサポートを押すと「足した」になり、使うと突進とジョイのサポートの2枚で出る', rAdd === '足した' && (await handCount(page)) === n0 - 2 && !rHand.includes('ジョイのサポート'), `${rAdd}・${n0}→${await handCount(page)}枚・${rHand.join(',')}`);
     await page.close();
 
     // ---- G 攻撃に戻る(社長の答え 2026-10-27): ガッツの段で押すと攻撃の段へ戻る / 灼熱の地でダメージが出た番は出さない ----
