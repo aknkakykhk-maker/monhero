@@ -195,7 +195,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
   return (
     <div data-mh-screen data-card-reg data-card-reg-step={step} className={SCREEN_SHELL_CLASS}>
       <ScreenHead title={step === 'custom' ? '戦い方を決める' : 'デッキ登録'} accent="text-amber-200" onBack={step === 'custom' ? () => setStep('style') : onBack} right={headRight}
-        note={step === 'custom' ? '上から順に見て、当てはまった物を使います' : `バトルカード Lv${lv}`}/>
+        note={step === 'custom' ? '上から順に見て、当てはまった物を使います' : <span data-card-reg-rank className="mt-0.5 inline-flex"><PlayerRankBadge kind="card" rank={lv} size="sm"/></span>}/>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-2`}>
         {step !== 'custom' && step !== 'done' && <CardRegSteps step={step}/>}
         {msg && step !== 'done' && <p data-card-reg-msg className="rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
