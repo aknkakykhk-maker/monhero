@@ -23,7 +23,7 @@ vm.runInContext(`${read('data/card-battle-cards.js')}\n;\n${read('src/parts/82-c
   + 'const rhythmMultiText = (v, max) => String(v == null ? "" : v).replace(/[\\u0000-\\u001f]/g, "").slice(0, max);\n'
   + `${multi}\n;\nthis.E = { CARD_BATTLE_DATA, cardCreateGame, cardLegalActions, cardAiFillBind, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardDecider, cardClone, cardApplyAction, CARD_PVP_HIDDEN,
     cardPvpFlip, cardPvpRevealOf, cardPvpNewGame, cardPvpApplyRemote, cardPvpPatchDiscard, cardPvpSealText, cardPvpSha256, cardPvpTruthGame, cardPvpVerify, cardPvpCleanMessage, cardPvpCleanAct,
-    cardPvpReward, cardUsableBy, cardPvpTimeoutAct, cardPvpLimitMs, cardPvpClockKey, cardPvpDecider, cardPvpNormalizePenalty, CARD_PVP_STAMPS, CARD_PVP_TURN_MS, CARD_PVP_GUARD_MS, CARD_PVP_RESULT_LINES, cardPvpResultLine, cardCpuReward, cardCpuLoops, CARD_AI_LEVELS };`, ctx);
+    cardChatClean, cardChatMask, cardChatContact, cardPvpReward, cardUsableBy, cardPvpTimeoutAct, cardPvpLimitMs, cardPvpClockKey, cardPvpDecider, cardPvpNormalizePenalty, CARD_PVP_STAMPS, CARD_PVP_TURN_MS, CARD_PVP_GUARD_MS, CARD_PVP_RESULT_LINES, cardPvpResultLine, cardCpuReward, cardCpuLoops, CARD_AI_LEVELS };`, ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 let failed = 0;
@@ -300,7 +300,20 @@ const base = { myDeck: g.deckA, mySeed: g.seedA, foeDeck: g.deckB, foeSeed: g.se
   check('⑥ 相手から見た手は、狙う先の人の番号だけが入れ替わる', flip.target.p === 0 && flip.target.m === 2 && flip.mon === 0 && E.cardPvpFlip({ type: 'pass' }).type === 'pass');
   const hb = C({ t: 'hb', from: 'a', name: 'x'.repeat(99), mons: ['C-001', 'C-002', 'C-003'], seal: 'f'.repeat(64) });
   check('⑥ 名前は長さで切り、封は64文字の指紋だけ通す', hb && hb.name.length === 16 && hb.seal === 'f'.repeat(64) && C({ t: 'hb', from: 'a', seal: 'zz' }).seal === null);
-  check('⑥ チャットは定型文の番号だけ通す', C({ t: 'chat', from: 'a', i: 0 }).i === 0 && C({ t: 'chat', from: 'a', i: 99 }) === null && C({ t: 'chat', from: 'a', i: 'よろしく' }) === null);
+  check('⑥ チャットは定型文の番号を通す(番号のずれ・文字の番号は捨てる)', C({ t: 'chat', from: 'a', i: 0 }).i === 0 && C({ t: 'chat', from: 'a', i: 99 }) === null && C({ t: 'chat', from: 'a', i: 'よろしく' }) === null);
+  // 自由文のコメント(2026-10-30 社長): 30字・改行なし・見えない文字を消す・悪い言葉は●・連絡先は送る前に弾く
+  const cx = C({ t: 'chat', from: 'a', x: '  いまのは\n効いた\u200b〜' + 'あ'.repeat(40) });
+  check('⑥ 自由文は改行・見えない文字を消して30字に切る', cx && cx.x.startsWith('いまのは 効いた') && [...cx.x].length === 30 && C({ t: 'chat', from: 'a', x: '   ' }) === null, cx && cx.x);
+  const W = C({ t: 'wsay', from: 'a', v: 'v1', n: 'シー', x: 'がんばれ' });
+  check('⑥ 観戦の人のコメント(wsay)は名前と文を通す', W && W.n === 'シー' && W.x === 'がんばれ' && C({ t: 'wsay', from: 'a', x: '' }) === null);
+  const M = E.cardChatMask;
+  check('⑥ 悪い言葉は●に置き換える(カタカナ・全角も)。ふつうの言葉(ばかり・動かす)はそのまま',
+    M('しね') === '●●' && M(E.cardChatClean('バカじゃん')) === '●●じゃん' && M(E.cardChatClean('ＦＵＣＫ')) === '●●●●' && M('そればかりだね') === 'そればかりだね' && M('うまく動かす') === 'うまく動かす' && M('ナイス！') === 'ナイス！',
+    JSON.stringify([M('バカじゃん'), M('そればかりだね')]));
+  const K = (x) => E.cardChatContact(E.cardChatClean(x));
+  check('⑥ URL・メール・電話番号・SNSのIDは弾く(全角・空白はさみも)。ふつうの文は通す',
+    K('https://example.com') && K('www.abc') && K('abc@mail.jp') && K('０９０ １２３４ ５６７８') && K('090-1234-5678') && K('LINE: abc_123') && K('インスタ @hogehoge')
+    && !K('いまのは効いた〜') && !K('ターン13で決める') && !K('ガッツ5残し'), '');
   // ⑦ 報酬と持ち時間
   const R = E.cardPvpReward;
   const eq = (a, b) => a.point === b[0] && a.loops === b[1];

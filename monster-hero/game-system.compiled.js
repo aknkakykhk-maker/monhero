@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6f280277c1f12d8c
+// source-sha256: 76620ae1752a559e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -100170,9 +100170,13 @@ const CardBattleBoard = ({
     onClick: () => setLogSheet(true),
     className: "shrink-0 rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200",
     "aria-label": "ターンの記録を見る"
-  }, "記録"), pvpLive && React.createElement("span", {
+  }, "記録"), (pvpLive || watch) && React.createElement("span", {
     className: "shrink-0"
-  }, React.createElement(CardPvpChat, null)), watch ? React.createElement("span", {
+  }, React.createElement(CardChatButton, {
+    mode: watch ? 'watch' : 'pvp'
+  })), (pvpLive || watch) && React.createElement(CardChatFlow, {
+    mode: watch ? 'watch' : 'pvp'
+  }), watch ? React.createElement("span", {
     "data-card-watch-badge": true,
     className: `shrink-0 whitespace-nowrap rounded-md border border-violet-300/60 bg-violet-500/20 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-violet-100`
   }, "観戦", watchEyes ? ` 👀${watchEyes}` : '') : tourReplay ? React.createElement("span", {
@@ -108730,12 +108734,31 @@ const cardPvpCleanMessage = raw => {
     };
   }
   if (raw.t === 'chat') {
+    if (typeof raw.x === 'string') {
+      const x = cardChatClean(raw.x);
+      return x ? {
+        t: 'chat',
+        from,
+        x
+      } : null;
+    }
     const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1);
     return i === null ? null : {
       t: 'chat',
       from,
       i
     };
+  }
+  if (raw.t === 'wsay') {
+    const x = cardChatClean(raw.x);
+    return x ? {
+      t: 'wsay',
+      from,
+      v: typeof raw.v === 'string' ? raw.v.slice(0, 40) : '',
+      n: rhythmMultiText(raw.n, CARD_PVP_NAME_MAX) || 'ブリーダー',
+      x,
+      sp: raw.sp === true
+    } : null;
   }
   if (raw.t === 'again') {
     const rd = cardPvpInt(raw.rd, 1000);
@@ -108812,6 +108835,71 @@ const cardPvpSeekerList = (seekers, now, freshMs = CARD_PVP_LOBBY_FRESH_MS) => O
   rt: Number.isInteger(x.rt) ? x.rt : null,
   waitSec: Math.max(0, Math.min(999, Math.floor((now - x.at) / 1000)))
 }));
+const CARD_CHAT_MAX = 30;
+const CARD_CHAT_GAP_MS = 3000;
+const CARD_CHAT_LIMIT = Object.freeze({
+  pvp: 30,
+  watch: 20
+});
+const CARD_CHAT_LOG_MAX = 50;
+const CARD_CHAT_PREFS_KEY = 'mh_card_chat_prefs_v1';
+const cardChatNormalizePrefs = v => ({
+  free: !(v && typeof v === 'object' && v.free === false),
+  flow: !(v && typeof v === 'object' && v.flow === false)
+});
+const CARD_CHAT_NG = Object.freeze(['しね', 'ころす', 'ころせ', 'きえろ', 'ばか', 'あほ', 'まぬけ', 'ざこ', 'きもい', 'きもち悪', 'うざい', 'ぶす', 'でぶ', 'がいじ', 'ちしょう', 'ちんこ', 'ちんぽ', 'まんこ', 'せっくす', 'えっち', 'おっぱい', 'れいぷ', 'ふぁっく', '死ね', '殺す', '殺せ', '馬鹿', '阿呆', '屑', '池沼', '障害者', '雑魚', '気持ち悪', 'fuck', 'shit', 'bitch', 'sex', 'porn', 'dick', 'pussy', 'asshole', 'idiot', 'stupid']);
+const CARD_CHAT_OK = Object.freeze(['ばかり', 'ばかで', 'ばかず', 'しねま', 'あほうどり']);
+const cardChatHira = t => t.replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
+const cardChatFold = t => String(t || '').split('').map(c => {
+  let n = c;
+  try {
+    n = c.normalize('NFKC');
+  } catch (_) {}
+  if (n.length !== 1) n = c;
+  n = cardChatHira(n);
+  const l = n.toLowerCase();
+  return l.length === 1 ? l : n;
+}).join('');
+const cardChatClean = (raw, max = CARD_CHAT_MAX) => {
+  let t = String(raw == null ? '' : raw);
+  t = t.replace(/[\u0000-\u001f\u007f\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff]/g, ' ').replace(/\s+/g, ' ').trim();
+  return [...t].slice(0, max).join('');
+};
+const cardChatMask = text => {
+  const t = String(text || '');
+  if (!t) return t;
+  const low = cardChatFold(t);
+  const hit = new Array(t.length).fill(false);
+  const ok = new Array(t.length).fill(false);
+  CARD_CHAT_OK.forEach(w => {
+    let i = low.indexOf(w);
+    while (i >= 0) {
+      for (let k = i; k < i + w.length; k++) ok[k] = true;
+      i = low.indexOf(w, i + 1);
+    }
+  });
+  CARD_CHAT_NG.forEach(w => {
+    let i = low.indexOf(w);
+    while (i >= 0) {
+      if (!ok[i]) for (let k = i; k < i + w.length; k++) hit[k] = true;
+      i = low.indexOf(w, i + 1);
+    }
+  });
+  return hit.some(Boolean) ? t.split('').map((c, i) => hit[i] ? '●' : c).join('') : t;
+};
+const cardChatContact = text => {
+  let t = String(text || '');
+  try {
+    t = t.normalize('NFKC');
+  } catch (_) {}
+  t = cardChatHira(t).toLowerCase();
+  const flat = t.replace(/[\s\-ー_.。・,、:：/／]/g, '');
+  if (/https?|www|\.(com|net|org|jp|io|me|ly|co|app|gg|tv)\b|どっとこむ|どっとじぇーぴー/.test(t) || /(com|net|org)$/.test(flat) && /\./.test(t)) return true;
+  if (/[a-z0-9._%+-]+@[a-z0-9-]+/.test(t) || /あっとまーく/.test(t)) return true;
+  if (/\d{7,}/.test(flat) || /[0-9０-９〇一二三四五六七八九零]{7,}/.test(flat)) return true;
+  if (/(line|らいん|いんすた|insta|twitter|ついったー|tiktok|てぃっくとっく|discord|でぃすこ|youtube|ゆーちゅーぶ|id|あいでぃー)[:：=＝\s]*@?[a-z0-9_.]{3,}/.test(t)) return true;
+  return false;
+};
 const cardPvpIconIds = () => {
   const out = [];
   try {
@@ -109271,6 +109359,7 @@ const CardPvpInviteNotice = ({
 const CARD_PVP_WATCH_NONE = Object.freeze({
   start: () => {},
   push: () => {},
+  say: () => {},
   discard: () => {},
   tick: () => {},
   end: () => {},
@@ -109493,6 +109582,7 @@ const CARD_PVP = (() => {
       names: ['あなた', s.foe.name || 'あいて']
     });
     closeLobby();
+    CARD_CHAT.reset(`pvp:${msg.match}`);
     if (iHost) {
       const person = (x, mons, count) => ({
         name: x.name,
@@ -109778,7 +109868,31 @@ const CARD_PVP = (() => {
       return;
     }
     if (msg.t === 'chat') {
-      if (s.phase === 'playing' && board && board.onChat) board.onChat(CARD_PVP_STAMPS[msg.i]);
+      if (!inGame()) return;
+      const stamp = msg.x === undefined;
+      const text = stamp ? CARD_PVP_STAMPS[msg.i] : msg.x;
+      if (isHost()) cardPvpWatchHost().say({
+        p: 1,
+        x: text,
+        sp: stamp
+      });
+      if (CARD_CHAT.add({
+        key: 'foe',
+        name: s.foe && s.foe.name || 'あいて',
+        text,
+        stamp,
+        kind: 'foe'
+      }) && s.phase === 'playing' && board && board.onChat) board.onChat(cardChatMask(cardChatClean(text)));
+      return;
+    }
+    if (msg.t === 'wsay') {
+      if (inGame()) CARD_CHAT.add({
+        key: `v:${msg.v}`,
+        name: msg.n,
+        text: msg.x,
+        stamp: msg.sp,
+        kind: 'watch'
+      });
       return;
     }
     if (msg.t === 'surrender' || msg.t === 'bye' || msg.t === 'timeout') {
@@ -110185,7 +110299,46 @@ const CARD_PVP = (() => {
         t: 'chat',
         i
       });
+      if (isHost()) cardPvpWatchHost().say({
+        p: 0,
+        x: CARD_PVP_STAMPS[i],
+        sp: true
+      });
       return true;
+    },
+    say: text => {
+      if (!s || !inGame() || !text) return false;
+      send({
+        t: 'chat',
+        x: text
+      });
+      if (isHost()) cardPvpWatchHost().say({
+        p: 0,
+        x: text,
+        sp: false
+      });
+      return true;
+    },
+    watchSay: (v, name, text, stamp = false) => {
+      if (!s || !inGame() || !text || !isHost()) return;
+      const nowT = Date.now();
+      s.relayAt = (s.relayAt || []).filter(x => nowT - x < 1000);
+      if (s.relayAt.length >= 2) return;
+      s.relayAt.push(nowT);
+      CARD_CHAT.add({
+        key: `v:${v}`,
+        name,
+        text,
+        stamp,
+        kind: 'watch'
+      });
+      send({
+        t: 'wsay',
+        v,
+        n: name,
+        x: text,
+        sp: stamp
+      });
     },
     alive: () => alive,
     eyes: () => !s || !inGame() ? 0 : isHost() ? cardPvpWatchHost().eyes() : s.foe && s.foe.w || 0,
@@ -111158,41 +111311,6 @@ const CardPvpSignal = ({
   "data-card-pvp-signal": true,
   className: "shrink-0 border-y border-amber-300/40 bg-amber-500/15 px-2 py-1 text-center text-[12px] font-bold text-amber-100"
 }, clock.offline ? '電波が途切れています。つなぎ直しています…' : `相手の電波が途切れています(あと${clock.foeQuietSec}秒で相手の負け)`) : null;
-const CardPvpChat = () => {
-  const [open, setOpen] = useState(false);
-  const [sent, setSent] = useState('');
-  useEffect(() => {
-    if (!sent) return undefined;
-    const t = setTimeout(() => setSent(''), 1600);
-    return () => clearTimeout(t);
-  }, [sent]);
-  return React.createElement("div", {
-    className: "relative"
-  }, React.createElement("button", {
-    type: "button",
-    "data-card-pvp-chat": true,
-    "aria-label": "定型文を送る",
-    onClick: () => {
-      Audio_.fgSe.tap();
-      setOpen(v => !v);
-    },
-    className: "grid h-[28px] w-[30px] place-items-center rounded-lg border border-white/20 bg-white/10 text-[14px]"
-  }, "💬"), sent && React.createElement("span", {
-    className: "pointer-events-none absolute left-0 top-[32px] z-[40] whitespace-nowrap rounded-full bg-sky-500/80 px-2 py-0.5 text-[11px] font-black text-white"
-  }, "「", sent, "」"), open && React.createElement("div", {
-    "data-card-pvp-stamps": true,
-    className: "absolute left-0 top-[34px] z-[40] grid w-[200px] grid-cols-2 gap-1 rounded-xl border border-white/15 bg-slate-950/95 p-1.5 shadow-xl"
-  }, CARD_PVP_STAMPS.map((t, i) => React.createElement("button", {
-    key: t,
-    type: "button",
-    "data-card-pvp-stamp": i,
-    className: "min-h-[36px] rounded-lg bg-white/10 px-1 text-[12px] font-bold text-white active:scale-[.97]",
-    onClick: () => {
-      if (CARD_PVP.chat(i)) setSent(t);
-      setOpen(false);
-    }
-  }, t))));
-};
 const CardPvpRankingList = ({
   renderBreederIcon = null,
   selfId = '',
@@ -111323,6 +111441,374 @@ const CardPvpRankingList = ({
       className: "text-right text-base font-black leading-tight text-sky-200"
     }, e.rating));
   })));
+};
+const CARD_CHAT = (() => {
+  const listeners = new Set();
+  let s = {
+    scope: '',
+    list: [],
+    muted: new Set(),
+    sent: 0,
+    lastAt: 0,
+    seq: 0
+  };
+  let prefs = cardChatNormalizePrefs(null);
+  let prefsLoaded = false;
+  const emit = () => listeners.forEach(fn => {
+    try {
+      fn(s);
+    } catch (_) {}
+  });
+  const loadPrefs = () => {
+    if (prefsLoaded || typeof storeGet !== 'function') return;
+    prefsLoaded = true;
+    storeGet(CARD_CHAT_PREFS_KEY, null, false).then(v => {
+      prefs = cardChatNormalizePrefs(v);
+      s = {
+        ...s
+      };
+      emit();
+    }).catch(() => {});
+  };
+  return {
+    get: () => s,
+    prefs: () => {
+      loadPrefs();
+      return prefs;
+    },
+    setPrefs: patch => {
+      prefs = cardChatNormalizePrefs({
+        ...prefs,
+        ...patch
+      });
+      try {
+        void storeSet(CARD_CHAT_PREFS_KEY, prefs, false);
+      } catch (_) {}
+      s = {
+        ...s
+      };
+      emit();
+    },
+    subscribe: fn => {
+      loadPrefs();
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+    reset: scope => {
+      if (s.scope === scope) return;
+      s = {
+        scope,
+        list: [],
+        muted: new Set(),
+        sent: 0,
+        lastAt: 0,
+        seq: s.seq
+      };
+      emit();
+    },
+    add: e => {
+      if (!e || !s.scope) return false;
+      const text = cardChatMask(cardChatClean(e.text));
+      if (!text || s.muted.has(e.key)) return false;
+      if (!e.stamp && e.kind !== 'me' && !prefs.free) return false;
+      const row = {
+        id: s.seq + 1,
+        key: String(e.key || ''),
+        name: cardChatMask(cardChatClean(e.name, CARD_PVP_NAME_MAX)) || 'ブリーダー',
+        text,
+        stamp: !!e.stamp,
+        kind: e.kind || 'watch',
+        at: Date.now()
+      };
+      s = {
+        ...s,
+        seq: row.id,
+        list: [...s.list, row].slice(-CARD_CHAT_LOG_MAX)
+      };
+      emit();
+      return true;
+    },
+    check: (raw, kind, stamp = false) => {
+      const text = cardChatClean(raw);
+      if (!text) return {
+        ok: false,
+        why: ''
+      };
+      if (!stamp && cardChatContact(text)) return {
+        ok: false,
+        why: 'URL・メール・電話番号・SNSのIDは送れません'
+      };
+      if (s.sent >= (CARD_CHAT_LIMIT[kind] || 20)) return {
+        ok: false,
+        why: 'この試合では、もう送れません'
+      };
+      if (Date.now() - s.lastAt < (stamp ? CARD_PVP_CHAT_GAP_MS : CARD_CHAT_GAP_MS)) return {
+        ok: false,
+        why: '少しあけてから送ってください'
+      };
+      return {
+        ok: true,
+        text: cardChatMask(text),
+        why: ''
+      };
+    },
+    sent: () => {
+      s = {
+        ...s,
+        sent: s.sent + 1,
+        lastAt: Date.now()
+      };
+      emit();
+    },
+    mute: key => {
+      if (!key) return;
+      const muted = new Set(s.muted);
+      muted.add(key);
+      s = {
+        ...s,
+        muted,
+        list: s.list.filter(x => x.key !== key)
+      };
+      emit();
+    }
+  };
+})();
+const CardChatFlow = ({
+  mode = 'watch'
+}) => {
+  const [rows, setRows] = useState([]);
+  const lastId = useRef(CARD_CHAT.get().seq);
+  const queue = useRef([]);
+  const lanes = mode === 'watch' ? 4 : 2;
+  useEffect(() => CARD_CHAT.subscribe(s => {
+    const fresh = s.list.filter(x => x.id > lastId.current);
+    if (s.list.length) lastId.current = Math.max(lastId.current, s.list[s.list.length - 1].id);
+    if (!CARD_CHAT.prefs().flow) return;
+    fresh.filter(x => mode === 'watch' || x.kind === 'watch').forEach(x => {
+      if (queue.current.length < 6) queue.current.push(x);
+    });
+  }), [mode]);
+  useEffect(() => {
+    const t = setInterval(() => {
+      const x = queue.current.shift();
+      if (!x) return;
+      setRows(cur => {
+        const now = Date.now();
+        const live = cur.filter(r => now - r.at < 5200);
+        const used = new Set(live.filter(r => now - r.at < 1800).map(r => r.lane));
+        let lane = 0;
+        while (used.has(lane) && lane < lanes - 1) lane++;
+        return [...live, {
+          ...x,
+          lane,
+          at: now
+        }].slice(-8);
+      });
+    }, mode === 'watch' ? 500 : 1000);
+    return () => clearInterval(t);
+  }, [mode]);
+  useEffect(() => {
+    if (!rows.length) return undefined;
+    const t = setTimeout(() => setRows(cur => cur.filter(r => Date.now() - r.at < 5200)), 5300);
+    return () => clearTimeout(t);
+  }, [rows]);
+  if (!rows.length) return null;
+  const h = mode === 'watch' ? 26 : 22;
+  return React.createElement("div", {
+    "data-card-chat-flow": mode,
+    "aria-hidden": "true",
+    className: "pointer-events-none fixed inset-x-0 z-[35] overflow-hidden",
+    style: {
+      top: mode === 'watch' ? '29%' : '33%',
+      height: `${h * lanes}px`
+    }
+  }, React.createElement("style", null, '@keyframes mhCardChatFlow{from{transform:translateX(100vw)}to{transform:translateX(-100%)}}'), rows.map(r => React.createElement("span", {
+    key: r.id,
+    "data-card-chat-flow-row": r.kind,
+    className: `absolute left-0 whitespace-nowrap font-black ${mode === 'watch' ? 'text-[16px]' : 'text-[13px]'} ${r.kind === 'watch' ? 'text-violet-100' : 'text-white'}`,
+    style: {
+      top: `${r.lane * h}px`,
+      animation: 'mhCardChatFlow 5s linear forwards',
+      textShadow: '0 0 3px #000,0 0 3px #000,0 2px 4px #000'
+    }
+  }, React.createElement("small", {
+    className: `mr-1 text-[11px] ${r.kind === 'watch' ? 'text-violet-300' : 'text-amber-200'}`
+  }, r.name), r.text)));
+};
+const CardChatPanel = ({
+  mode = 'pvp',
+  onClose
+}) => {
+  const [c, setC] = useState(() => CARD_CHAT.get());
+  useEffect(() => CARD_CHAT.subscribe(setC), []);
+  const prefs = CARD_CHAT.prefs();
+  const [text, setText] = useState('');
+  const [why, setWhy] = useState('');
+  const [pick, setPick] = useState(null);
+  const [myName, setMyName] = useState('ブリーダー');
+  useEffect(() => {
+    if (mode !== 'watch' || typeof storeGet !== 'function') return;
+    storeGet('mh_breeder_name', 'ブリーダー', false).then(v => {
+      if (typeof v === 'string' && v) setMyName(v);
+    }).catch(() => {});
+  }, [mode]);
+  const logRef = useRef(null);
+  useEffect(() => {
+    const el = logRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [c.list.length]);
+  const send = (raw, stampIndex = null) => {
+    const stamp = stampIndex !== null;
+    const r = CARD_CHAT.check(raw, mode, stamp);
+    if (!r.ok) {
+      setWhy(r.why);
+      return;
+    }
+    const ok = mode === 'pvp' ? stamp ? CARD_PVP.chat(stampIndex) : CARD_PVP.say(r.text) : CARD_WATCH.say(r.text, myName, stamp);
+    if (!ok) {
+      setWhy('いまは送れません');
+      return;
+    }
+    if (mode !== 'pvp' || !stamp) CARD_CHAT.sent();
+    CARD_CHAT.add({
+      key: 'me',
+      name: mode === 'pvp' ? 'あなた' : myName,
+      text: r.text,
+      stamp,
+      kind: 'me'
+    });
+    setWhy('');
+    if (!stamp) setText('');
+  };
+  const left = Math.max(0, (CARD_CHAT_LIMIT[mode] || 20) - c.sent);
+  const tone = k => k === 'me' ? 'text-sky-200' : k === 'watch' ? 'text-violet-300' : 'text-amber-200';
+  const toggle = (k, on) => React.createElement("button", {
+    type: "button",
+    "data-card-chat-pref": k,
+    "aria-pressed": on,
+    onClick: () => CARD_CHAT.setPrefs({
+      [k]: !on
+    }),
+    className: `min-h-[34px] flex-1 rounded-lg px-2 text-[11px] font-black ${on ? 'bg-emerald-600 text-white' : 'border border-white/15 bg-slate-800 text-slate-300'}`
+  }, k === 'free' ? '自由文を出す' : '観戦のコメントを流す', " ", on ? 'ON' : 'OFF');
+  return React.createElement("div", {
+    "data-card-chat-panel": mode,
+    className: "fixed inset-0 z-[60] flex flex-col justify-end bg-black/40",
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "mx-auto w-full max-w-[520px] rounded-t-2xl border-t-2 border-sky-400 bg-slate-950 px-3 pt-2 text-white",
+    style: {
+      paddingBottom: 'max(10px, env(safe-area-inset-bottom))'
+    },
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "mb-1 flex items-center"
+  }, React.createElement("b", {
+    className: "flex-1 text-[13px] text-sky-100"
+  }, "💬 コメント", mode === 'watch' ? '(観戦)' : ''), React.createElement("button", {
+    type: "button",
+    "data-card-chat-close": true,
+    onClick: onClose,
+    className: "min-h-[32px] rounded-lg px-2 text-[12px] font-black text-slate-300"
+  }, "✕ 閉じる")), React.createElement("div", {
+    ref: logRef,
+    "data-card-chat-log": c.list.length,
+    className: "mb-2 max-h-[26vh] min-h-[56px] overflow-y-auto rounded-xl border border-violet-300/40 bg-black/40 px-2 py-1"
+  }, c.list.length === 0 ? React.createElement("p", {
+    className: "py-3 text-center text-[12px] font-bold text-slate-400"
+  }, "まだコメントはありません") : c.list.map(x => React.createElement("div", {
+    key: x.id
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-chat-line": x.kind,
+    onClick: () => setPick(x.kind === 'me' ? null : pick === x.id ? null : x.id),
+    className: "block w-full border-b border-white/5 py-1 text-left text-[13px] leading-snug",
+    style: JA_WRAP_STYLE
+  }, React.createElement("b", {
+    className: `mr-1.5 text-[11px] ${tone(x.kind)}`
+  }, x.name, x.kind === 'watch' ? '(観戦)' : ''), x.text), pick === x.id && React.createElement("button", {
+    type: "button",
+    "data-card-chat-mute": x.key,
+    onClick: () => {
+      CARD_CHAT.mute(x.key);
+      setPick(null);
+    },
+    className: "my-1 min-h-[34px] w-full rounded-lg border border-rose-300/50 bg-rose-500/15 text-[12px] font-black text-rose-100"
+  }, "🔇 ", x.name, "さんのコメントを消す(この", mode === 'watch' ? '観戦' : '試合', "のあいだ)")))), React.createElement("div", {
+    className: "mb-2 grid grid-cols-3 gap-1"
+  }, CARD_PVP_STAMPS.map((t, i) => React.createElement("button", {
+    key: t,
+    type: "button",
+    "data-card-chat-stamp": i,
+    onClick: () => send(t, i),
+    className: "min-h-[36px] rounded-lg bg-white/10 px-1 text-[12px] font-bold active:scale-[.97]"
+  }, t))), prefs.free ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "flex gap-1.5"
+  }, React.createElement("input", {
+    "data-card-chat-input": true,
+    value: text,
+    maxLength: CARD_CHAT_MAX * 2,
+    autoComplete: "off",
+    enterKeyHint: "send",
+    placeholder: `自分で打つ(${CARD_CHAT_MAX}字まで)`,
+    onChange: e => {
+      setText([...e.target.value.replace(/[\r\n]/g, '')].slice(0, CARD_CHAT_MAX).join(''));
+      setWhy('');
+    },
+    onKeyDown: e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        send(text);
+      }
+    },
+    className: "min-h-[44px] min-w-0 flex-1 rounded-xl border-2 border-sky-400/70 bg-black/50 px-3 text-[15px] text-white"
+  }), React.createElement("button", {
+    type: "button",
+    "data-card-chat-send": true,
+    disabled: !text.trim(),
+    onClick: () => send(text),
+    className: "min-h-[44px] shrink-0 rounded-xl bg-amber-300 px-4 text-[14px] font-black text-slate-950 disabled:opacity-40"
+  }, "送る")), React.createElement("p", {
+    className: "mt-1 flex text-[11px] font-bold text-slate-400"
+  }, React.createElement("span", {
+    className: "flex-1"
+  }, "URL・連絡先は送れません・あと", left, "回"), React.createElement("span", {
+    className: "tabular-nums"
+  }, [...text].length, "/", CARD_CHAT_MAX))) : React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-400"
+  }, "自由文はOFF(定型のひとことだけ出します)"), why && React.createElement("p", {
+    "data-card-chat-why": true,
+    className: "mt-1 text-[12px] font-black text-rose-300"
+  }, why), React.createElement("div", {
+    className: "mt-2 flex gap-1.5"
+  }, toggle('free', prefs.free), toggle('flow', prefs.flow))));
+};
+const CardChatButton = ({
+  mode = 'pvp'
+}) => {
+  const [open, setOpen] = useState(false);
+  const [c, setC] = useState(() => CARD_CHAT.get());
+  useEffect(() => CARD_CHAT.subscribe(setC), []);
+  const seen = useRef(c.seq);
+  if (open) seen.current = c.seq;
+  const fresh = c.list.filter(x => x.id > seen.current && x.kind !== 'me').length;
+  return React.createElement(React.Fragment, null, React.createElement("button", {
+    type: "button",
+    "data-card-pvp-chat": true,
+    "data-card-chat-open": mode,
+    "aria-label": "コメントを見る・送る",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setOpen(true);
+    },
+    className: "relative grid h-[28px] w-[30px] place-items-center rounded-lg border border-white/20 bg-white/10 text-[14px]"
+  }, "💬", fresh > 0 && React.createElement("span", {
+    "data-card-chat-new": fresh,
+    className: "absolute -right-1.5 -top-1.5 min-w-[16px] rounded-full bg-rose-500 px-1 text-[10px] font-black leading-[16px] text-white"
+  }, Math.min(fresh, 99))), open && React.createElement(CardChatPanel, {
+    mode: mode,
+    onClose: () => setOpen(false)
+  }));
 };
 const CARD_PVP_HISTORY_KEY = 'mh_card_pvp_history_v1';
 const CARD_PVP_HISTORY_MAX = 30;
@@ -112820,6 +113306,18 @@ const cardWatchCleanMessage = raw => {
     match,
     need: cardPvpInt(raw.need, CARD_WATCH_LOG_MAX)
   };
+  if (raw.t === 'w-say') {
+    const x = cardChatClean(raw.x);
+    return x ? {
+      t: 'w-say',
+      from,
+      match,
+      x,
+      n: rhythmMultiText(raw.n, CARD_PVP_NAME_MAX) || 'ブリーダー',
+      p: raw.p === 0 || raw.p === 1 ? raw.p : null,
+      sp: raw.sp === true
+    } : null;
+  }
   if (raw.t === 'w-act') {
     const n = cardPvpInt(raw.n, CARD_WATCH_LOG_MAX);
     const e = cardWatchCleanEntry(raw.e);
@@ -112924,7 +113422,12 @@ const CARD_WATCH_HOST = (() => {
   };
   const onWatch = raw => {
     const msg = cardWatchCleanMessage(raw);
-    if (!h || !msg || msg.t !== 'w-eye' || msg.match !== h.match || msg.from === h.id) return;
+    if (!h || !msg || msg.match !== h.match || msg.from === h.id) return;
+    if (msg.t === 'w-say') {
+      if (msg.p === null && !h.end) CARD_PVP.watchSay(msg.from, msg.n, msg.x, msg.sp);
+      return;
+    }
+    if (msg.t !== 'w-eye') return;
     if (h.eyes.has(msg.from) || eyes() < CARD_WATCH_MAX) h.eyes.set(msg.from, Date.now());else return;
     if (msg.need !== null && msg.need < h.log.length) {
       h.need = h.need === null ? msg.need : Math.min(h.need, msg.need);
@@ -113014,6 +113517,18 @@ const CARD_WATCH_HOST = (() => {
         t: 'w-act',
         n: h.log.length,
         e: entry
+      });
+    },
+    say: ({
+      p,
+      x,
+      sp
+    }) => {
+      if (h && !h.end && x) sendWatch({
+        t: 'w-say',
+        p: p === 1 ? 1 : 0,
+        x: String(x).slice(0, 60),
+        sp: !!sp
       });
     },
     discard: (p, list) => {
@@ -113207,6 +113722,18 @@ const CARD_WATCH = (() => {
   const onMessage = raw => {
     const msg = cardWatchCleanMessage(raw);
     if (!s || !msg || msg.match !== s.match || msg.from === s.id || msg.t === 'w-eye' || msg.t === 'live') return;
+    if (msg.t === 'w-say') {
+      const player = (msg.p === 0 || msg.p === 1) && !!s.hostId && msg.from === s.hostId;
+      const meta = s.meta;
+      CARD_CHAT.add({
+        key: player ? `p${msg.p}` : `v:${msg.from}`,
+        name: player && meta && meta.p[msg.p] ? meta.p[msg.p].name : msg.n,
+        text: msg.x,
+        stamp: msg.sp,
+        kind: player ? 'player' : 'watch'
+      });
+      return;
+    }
     s = {
       ...s,
       seenAt: Date.now()
@@ -113226,7 +113753,8 @@ const CARD_WATCH = (() => {
         end: msg.end,
         d: msg.d || s.d,
         meta,
-        counted: true
+        counted: true,
+        hostId: msg.from
       };
       if (!s.st && meta) {
         patch.st = cardWatchNewGame(CARD_BATTLE_DATA, cardWatchSideMeta(meta, s.side));
@@ -113326,6 +113854,7 @@ const CARD_WATCH = (() => {
         id: rhythmMultiMakeId('v'),
         seenAt: Date.now()
       };
+      CARD_CHAT.reset(`watch:${live.match}`);
       emit();
       connect();
       tick = setInterval(() => {
@@ -113346,6 +113875,16 @@ const CARD_WATCH = (() => {
       stop();
       s = blank();
       emit();
+    },
+    say: (text, name, stamp = false) => {
+      if (!s || !socket || !alive || !text || s.phase !== 'watching' && s.phase !== 'over') return false;
+      send({
+        t: 'w-say',
+        x: text,
+        n: rhythmMultiText(name, CARD_PVP_NAME_MAX) || 'ブリーダー',
+        sp: !!stamp
+      });
+      return true;
     },
     attachBoard: h => {
       boardH = h;
