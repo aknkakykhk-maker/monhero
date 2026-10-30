@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8910c9be6c359298
+// source-sha256: 4f8afbeafc059efb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -72570,6 +72570,7 @@ const exEffectAmountText = (e, long = false) => {
   if (Number.isFinite(Number(e.turnsLeft))) return long ? `あと${e.turnsLeft}ターン` : `あと${e.turnsLeft}`;
   return '';
 };
+const exEffectsShown = items => Array.isArray(items) ? items.filter(e => e && !(e.kind === 'stack' && !(Number(e.count) > 0))) : [];
 const EX_EFFECT_TONE = {
   buff: 'bg-emerald-900/90 ring-emerald-300/80 text-emerald-50',
   debuff: 'bg-red-900/90 ring-red-300/80 text-red-50',
@@ -72581,16 +72582,22 @@ const ExEffectChips = ({
   compact = false,
   className = ''
 }) => {
-  const list = Array.isArray(items) ? items.filter(Boolean) : [];
+  const list = exEffectsShown(items);
   if (!list.length) return null;
   const limit = compact ? Math.min(max, 2) : max;
   const shown = list.slice(0, limit);
   const more = list.length - shown.length;
-  const chip = e => React.createElement("span", {
+  const turnsNum = e => Number.isFinite(Number(e.turnsLeft)) && e.turnsLeft !== null ? Number(e.turnsLeft) : null;
+  const chip = (e, hide = false) => React.createElement("span", {
     key: e.key,
     "data-ex-effect": e.key,
     "data-ex-effect-kind": e.kind,
-    className: `flex min-w-0 ${compact ? 'max-w-full text-[8px]' : 'max-w-full text-[9px]'} items-center gap-[2px] rounded-md px-1 py-px font-black leading-tight whitespace-nowrap ring-1 ${EX_EFFECT_TONE[e.kind] || EX_EFFECT_TONE.buff}`
+    "data-ex-effect-hidden": hide ? 'true' : undefined,
+    "data-stack-count": e.kind === 'stack' && Number.isFinite(Number(e.count)) ? Math.floor(Number(e.count)) : undefined,
+    "data-ex-turns": turnsNum(e) != null ? turnsNum(e) : undefined,
+    "data-ex-from-slot": Number.isInteger(e.fromSlot) ? e.fromSlot : undefined,
+    "data-ex-last": turnsNum(e) === 1 ? 'true' : undefined,
+    className: `${hide ? 'hidden' : 'flex'} min-w-0 ${compact ? 'max-w-full text-[8px]' : 'max-w-full text-[9px]'} items-center gap-[2px] rounded-md px-1 py-px font-black leading-tight whitespace-nowrap ring-1 ${EX_EFFECT_TONE[e.kind] || EX_EFFECT_TONE.buff}${turnsNum(e) === 1 ? ' ring-2 ring-amber-300' : ''}`
   }, React.createElement("span", {
     className: "shrink-0"
   }, exEffectIconOf(e)), React.createElement("span", {
@@ -72608,7 +72615,7 @@ const ExEffectChips = ({
   }, compact ? shown.map((e, k) => k === 0 && moreChip ? React.createElement("span", {
     key: e.key,
     className: "flex max-w-full min-w-0 items-center gap-[2px]"
-  }, chip(e), moreChip) : chip(e)) : React.createElement(React.Fragment, null, shown.map(chip), moreChip));
+  }, chip(e), moreChip) : chip(e)) : React.createElement(React.Fragment, null, shown.map(e => chip(e)), moreChip), list.slice(limit).map(e => chip(e, true)));
 };
 const BattleUnitDetailBody = ({
   side,
@@ -72673,7 +72680,7 @@ const BattleUnitDetailBody = ({
   const own = (chips || []).filter(c => c.owner === status.slot);
   const team = (chips || []).filter(c => c.owner == null);
   const hasEx = Array.isArray(exEffects);
-  const exRows = hasEx ? exEffects.filter(Boolean).map(e => row(`exfx-${e.key}`, exEffectIconOf(e), e.name, exEffectAmountText(e, true), [e.note, e.fromName ? `${e.fromName}のEX${e.allAllies ? '(味方全員)' : ''}` : ''].filter(Boolean).join('・'), e.kind === 'stack' ? 'border-violet-300/50 bg-violet-950/50' : e.kind === 'debuff' ? 'border-red-300/50 bg-red-950/50' : 'border-emerald-300/50 bg-emerald-950/50')) : [];
+  const exRows = hasEx ? exEffectsShown(exEffects).map(e => row(`exfx-${e.key}`, exEffectIconOf(e), e.name, exEffectAmountText(e, true), [e.note, e.fromName ? `${e.fromName}のEX${e.allAllies ? '(味方全員)' : ''}` : ''].filter(Boolean).join('・'), e.kind === 'stack' ? 'border-violet-300/50 bg-violet-950/50' : e.kind === 'debuff' ? 'border-red-300/50 bg-red-950/50' : 'border-emerald-300/50 bg-emerald-950/50')) : [];
   const lineRows = (status.lines || []).filter(l => !(hasEx && l.key === 'ex')).map(l => row(l.key, null, l.label, l.value, l.note));
   const chipRow = c => row(c.key, c.mark, c.label, c.value, '', c.tone);
   const apt = status.aptPct;
