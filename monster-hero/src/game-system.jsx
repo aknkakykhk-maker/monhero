@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7e12dcbeb92b91f4
+// generated-sha256: cecd0f92d548d2ad
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -63169,12 +63169,15 @@ const CardStarterContents = ({ db, kit, collection, onClose }) => {
 // 弾に入っている種族の名前(売り場でパックの名前の下に出す。例: ディノ・ハム・モッチー)
 const cardPackSpeciesLabel = (db, pack) => pack.species.map((sp) => (Object.values(db.monsters).find((m) => m.species === sp && !m.variant) || {}).name || sp).join('・');
 // ---- ガチャポイントの帯とバトルカードカタログ(2026-10-27 社長 案A「パックの上に帯」) ----
-// 帯: たまっている数をそのまま出す(上限は無い)。目盛りは次の1冊までの進み具合(730 なら 230 / 500)
+// 帯: たまっている数をそのまま出す(上限は無い)。右は「次の1冊まで あと◯」。500 以上あるときは棒をいっぱいに光らせて「◯冊ぶん交換できます」
+//   (2026-10-30 社長「500以上いったら見た目変わらない?損してるみたいになるから表示変えて」。前は「230 / 500」で、たまった分が消えたように見えた)
 // 2026-10-29 社長 案B「ビートPも同じ帯に」: 上の段に所持ビートP、下の段にガチャポイントを1行で。説明の文は ? で開く。
 //   売り場の一覧の外(タブのすぐ下)に置くので、横の画面では左の列に入る(55 の card の欄)
 const CardGachaPanel = ({ point = 0, gacha = 0, catalogs = 0, busy, onExchange, onOpenCatalog }) => {
   const g = cardNormalizeGacha(gacha);
   const prog = cardGachaProgress(g);
+  const ready = Math.floor(g / CARD_CATALOG_COST);   // いま交換できる冊数
+  const rest = CARD_CATALOG_COST - prog;             // 次の1冊(交換できる分のその次)まで
   const [help, setHelp] = useState(false);
   return (
     <div data-card-gacha className="mb-2 shrink-0 rounded-2xl border-2 border-amber-300/70 px-2.5 py-1.5 text-white" style={{ background: 'linear-gradient(135deg,#2e1065ee,#1e1b4bee)' }}>
@@ -63187,15 +63190,18 @@ const CardGachaPanel = ({ point = 0, gacha = 0, catalogs = 0, busy, onExchange, 
           <div className="flex items-baseline gap-1 text-[12px] font-black text-amber-200">
             <span className="whitespace-nowrap">🎫 ガチャP</span>
             <span data-card-gacha-point={g} className="text-[14px] text-white">{g.toLocaleString()}</span>
-            <span className="ml-auto whitespace-nowrap text-[10px] tabular-nums text-amber-100" aria-label={`次の1冊まで ${prog} / ${CARD_CATALOG_COST}`}>{prog} / {CARD_CATALOG_COST}</span>
           </div>
-          <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-slate-950" aria-hidden="true"><i className="block h-full rounded-full" style={{ width: `${(prog / CARD_CATALOG_COST) * 100}%`, background: 'linear-gradient(90deg,#fbbf24,#f472b6)' }}/></div>
+          <div className={`mt-0.5 h-1.5 overflow-hidden rounded-full bg-slate-950 ${ready > 0 ? 'ring-1 ring-amber-200' : ''}`} aria-hidden="true"><i className={`block h-full rounded-full ${ready > 0 ? 'animate-pulse' : ''}`} style={{ width: `${ready > 0 ? 100 : (prog / CARD_CATALOG_COST) * 100}%`, background: ready > 0 ? 'linear-gradient(90deg,#fde047,#fbbf24,#f472b6)' : 'linear-gradient(90deg,#fbbf24,#f472b6)' }}/></div>
+          {/* 小さいスマホ(320px)でも収まるよう、棒の下の行に出す(折り返してよい) */}
+          {ready > 0
+            ? <div data-card-gacha-ready={ready} className="mt-0.5 text-[10.5px] font-black leading-tight text-amber-50" style={JA_WRAP_STYLE}>{jaWrap(`${ready}冊ぶん交換できます(その次まで あと${rest})`)}</div>
+            : <div data-card-gacha-rest={rest} className="mt-0.5 text-[10px] font-black leading-tight tabular-nums text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(`次の1冊まで あと${rest}`)}</div>}
         </div>
-        <button type="button" data-card-gacha-exchange aria-label={`カタログと交換(${CARD_CATALOG_COST})`} disabled={busy || g < CARD_CATALOG_COST} onClick={onExchange} className="mh-button min-h-[36px] shrink-0 whitespace-nowrap rounded-xl bg-amber-500 px-2 text-[11px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40">交換</button>
+        <button type="button" data-card-gacha-exchange aria-label={`カタログと交換(${CARD_CATALOG_COST})`} disabled={busy || g < CARD_CATALOG_COST} onClick={onExchange} className={`mh-button min-h-[36px] shrink-0 whitespace-nowrap rounded-xl bg-amber-500 px-2 text-[11px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40 ${ready > 0 ? 'animate-pulse ring-2 ring-amber-100 shadow-[0_0_12px_rgba(251,191,36,.8)]' : ''}`}>交換</button>
         <button type="button" data-card-gacha-catalog aria-label={`カタログを使う(${catalogs}冊)`} disabled={busy || catalogs < 1} onClick={onOpenCatalog} className="mh-button min-h-[36px] shrink-0 whitespace-nowrap rounded-xl bg-sky-400 px-2 text-[11px] font-black text-slate-950 active:scale-[.98] disabled:opacity-40">📖{catalogs}冊</button>
         <button type="button" data-card-gacha-help aria-expanded={help} aria-label="ガチャポイントの説明" onClick={() => setHelp((v) => !v)} className="mh-button flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/40 text-[12px] font-black text-white">?</button>
       </div>
-      {help && <div data-card-gacha-help-text className="mt-1 text-[10.5px] font-bold text-slate-200" style={JA_WRAP_STYLE}>{jaWrap(`ブースターパック1つで +${CARD_GACHA_PER_PACK}。${CARD_CATALOG_COST}たまると「バトルカードカタログ」1冊と交換できます(右の数は次の1冊まで)。カタログを使うと、好きなカードを1枚もらえます`)}</div>}
+      {help && <div data-card-gacha-help-text className="mt-1 text-[10.5px] font-bold text-slate-200" style={JA_WRAP_STYLE}>{jaWrap(`ブースターパック1つで +${CARD_GACHA_PER_PACK}。${CARD_CATALOG_COST}たまると「バトルカードカタログ」1冊と交換できます(たまった分は消えません。右に、次の1冊まであといくつかが出ます)。カタログを使うと、好きなカードを1枚もらえます`)}</div>}
     </div>
   );
 };
@@ -68419,7 +68425,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
             <button type="button" data-card-tactics-buy="5" disabled={busy || point < cardTacticsPrice(5)} onClick={() => { void pay(5, 'point'); }} className="mh-button min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40">5回まとめて引く(1,350ビートP)</button>
             <button type="button" data-card-tactics-ticket disabled={busy || t.tickets < 1} onClick={() => { void pay(1, 'ticket'); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40">{`カードパック券で1回引く(のこり${t.tickets}枚)`}</button>
             <button type="button" data-card-tactics-exchange disabled={t.shards < CARD_TACTICS_SHARD_COST} onClick={() => setPick({ cat: 'all-missing', title: 'かけら10個で1枚えらぶ', onPick: exchange })}
-              className="mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40">{`かけらで1枚えらぶ(${t.shards}/${CARD_TACTICS_SHARD_COST})`}</button>
+              className="mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40">{t.shards >= CARD_TACTICS_SHARD_COST ? `かけらで1枚えらぶ(かけら${t.shards}個)` : `かけらで1枚えらぶ(あと${CARD_TACTICS_SHARD_COST - t.shards}個)`}</button>
           </div>
         )}
         {detailCard && <CardTacticDetail card={detailCard} onClose={() => setDetailCard(null)}/>}
@@ -68502,7 +68508,7 @@ const CardTacticsBand = ({ point = 0, busy = false, onBuy, onExchange }) => {
             {tickets > 0 && <button type="button" data-card-tactics-ticket disabled={busy} onClick={() => { Audio_.fgSe.tap(); setConfirm(true); }} className="mh-button min-h-[30px] shrink-0 rounded-lg bg-amber-400 px-2 text-[11px] font-black text-stone-900 active:scale-95 disabled:opacity-40">使う</button>}
           </div>
           <div data-card-tactics-shards={shards} className={`flex min-h-[36px] items-center gap-1 rounded-xl px-2 ${canPick ? 'bg-sky-400/20 ring-1 ring-sky-300' : 'bg-white/5'}`}>
-            <span className={`min-w-0 flex-1 text-[11px] font-black leading-tight ${canPick ? 'text-sky-100' : 'text-slate-400'}`}>かけら<b className="ml-1 text-[14px] text-white tabular-nums">{shards}/{CARD_TACTICS_SHARD_COST}</b></span>
+            <span className={`min-w-0 flex-1 text-[11px] font-black leading-tight ${canPick ? 'text-sky-100' : 'text-slate-400'}`}>かけら<b className="ml-1 text-[14px] text-white tabular-nums">{shards}</b><small className="ml-1 text-[10px]">{canPick ? '1枚えらべます' : `あと${CARD_TACTICS_SHARD_COST - shards}で1枚`}</small></span>
             {canPick && <button type="button" data-card-tactics-exchange disabled={busy} onClick={() => { Audio_.fgSe.tap(); setPicking(true); }} className="mh-button min-h-[30px] shrink-0 rounded-lg bg-sky-400 px-2 text-[11px] font-black text-slate-950 active:scale-95 disabled:opacity-40">えらぶ</button>}
           </div>
         </div>

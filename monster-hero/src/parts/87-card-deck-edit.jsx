@@ -874,12 +874,15 @@ const CardStarterContents = ({ db, kit, collection, onClose }) => {
 // 弾に入っている種族の名前(売り場でパックの名前の下に出す。例: ディノ・ハム・モッチー)
 const cardPackSpeciesLabel = (db, pack) => pack.species.map((sp) => (Object.values(db.monsters).find((m) => m.species === sp && !m.variant) || {}).name || sp).join('・');
 // ---- ガチャポイントの帯とバトルカードカタログ(2026-10-27 社長 案A「パックの上に帯」) ----
-// 帯: たまっている数をそのまま出す(上限は無い)。目盛りは次の1冊までの進み具合(730 なら 230 / 500)
+// 帯: たまっている数をそのまま出す(上限は無い)。右は「次の1冊まで あと◯」。500 以上あるときは棒をいっぱいに光らせて「◯冊ぶん交換できます」
+//   (2026-10-30 社長「500以上いったら見た目変わらない?損してるみたいになるから表示変えて」。前は「230 / 500」で、たまった分が消えたように見えた)
 // 2026-10-29 社長 案B「ビートPも同じ帯に」: 上の段に所持ビートP、下の段にガチャポイントを1行で。説明の文は ? で開く。
 //   売り場の一覧の外(タブのすぐ下)に置くので、横の画面では左の列に入る(55 の card の欄)
 const CardGachaPanel = ({ point = 0, gacha = 0, catalogs = 0, busy, onExchange, onOpenCatalog }) => {
   const g = cardNormalizeGacha(gacha);
   const prog = cardGachaProgress(g);
+  const ready = Math.floor(g / CARD_CATALOG_COST);   // いま交換できる冊数
+  const rest = CARD_CATALOG_COST - prog;             // 次の1冊(交換できる分のその次)まで
   const [help, setHelp] = useState(false);
   return (
     <div data-card-gacha className="mb-2 shrink-0 rounded-2xl border-2 border-amber-300/70 px-2.5 py-1.5 text-white" style={{ background: 'linear-gradient(135deg,#2e1065ee,#1e1b4bee)' }}>
@@ -892,15 +895,18 @@ const CardGachaPanel = ({ point = 0, gacha = 0, catalogs = 0, busy, onExchange, 
           <div className="flex items-baseline gap-1 text-[12px] font-black text-amber-200">
             <span className="whitespace-nowrap">🎫 ガチャP</span>
             <span data-card-gacha-point={g} className="text-[14px] text-white">{g.toLocaleString()}</span>
-            <span className="ml-auto whitespace-nowrap text-[10px] tabular-nums text-amber-100" aria-label={`次の1冊まで ${prog} / ${CARD_CATALOG_COST}`}>{prog} / {CARD_CATALOG_COST}</span>
           </div>
-          <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-slate-950" aria-hidden="true"><i className="block h-full rounded-full" style={{ width: `${(prog / CARD_CATALOG_COST) * 100}%`, background: 'linear-gradient(90deg,#fbbf24,#f472b6)' }}/></div>
+          <div className={`mt-0.5 h-1.5 overflow-hidden rounded-full bg-slate-950 ${ready > 0 ? 'ring-1 ring-amber-200' : ''}`} aria-hidden="true"><i className={`block h-full rounded-full ${ready > 0 ? 'animate-pulse' : ''}`} style={{ width: `${ready > 0 ? 100 : (prog / CARD_CATALOG_COST) * 100}%`, background: ready > 0 ? 'linear-gradient(90deg,#fde047,#fbbf24,#f472b6)' : 'linear-gradient(90deg,#fbbf24,#f472b6)' }}/></div>
+          {/* 小さいスマホ(320px)でも収まるよう、棒の下の行に出す(折り返してよい) */}
+          {ready > 0
+            ? <div data-card-gacha-ready={ready} className="mt-0.5 text-[10.5px] font-black leading-tight text-amber-50" style={JA_WRAP_STYLE}>{jaWrap(`${ready}冊ぶん交換できます(その次まで あと${rest})`)}</div>
+            : <div data-card-gacha-rest={rest} className="mt-0.5 text-[10px] font-black leading-tight tabular-nums text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(`次の1冊まで あと${rest}`)}</div>}
         </div>
-        <button type="button" data-card-gacha-exchange aria-label={`カタログと交換(${CARD_CATALOG_COST})`} disabled={busy || g < CARD_CATALOG_COST} onClick={onExchange} className="mh-button min-h-[36px] shrink-0 whitespace-nowrap rounded-xl bg-amber-500 px-2 text-[11px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40">交換</button>
+        <button type="button" data-card-gacha-exchange aria-label={`カタログと交換(${CARD_CATALOG_COST})`} disabled={busy || g < CARD_CATALOG_COST} onClick={onExchange} className={`mh-button min-h-[36px] shrink-0 whitespace-nowrap rounded-xl bg-amber-500 px-2 text-[11px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40 ${ready > 0 ? 'animate-pulse ring-2 ring-amber-100 shadow-[0_0_12px_rgba(251,191,36,.8)]' : ''}`}>交換</button>
         <button type="button" data-card-gacha-catalog aria-label={`カタログを使う(${catalogs}冊)`} disabled={busy || catalogs < 1} onClick={onOpenCatalog} className="mh-button min-h-[36px] shrink-0 whitespace-nowrap rounded-xl bg-sky-400 px-2 text-[11px] font-black text-slate-950 active:scale-[.98] disabled:opacity-40">📖{catalogs}冊</button>
         <button type="button" data-card-gacha-help aria-expanded={help} aria-label="ガチャポイントの説明" onClick={() => setHelp((v) => !v)} className="mh-button flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/40 text-[12px] font-black text-white">?</button>
       </div>
-      {help && <div data-card-gacha-help-text className="mt-1 text-[10.5px] font-bold text-slate-200" style={JA_WRAP_STYLE}>{jaWrap(`ブースターパック1つで +${CARD_GACHA_PER_PACK}。${CARD_CATALOG_COST}たまると「バトルカードカタログ」1冊と交換できます(右の数は次の1冊まで)。カタログを使うと、好きなカードを1枚もらえます`)}</div>}
+      {help && <div data-card-gacha-help-text className="mt-1 text-[10.5px] font-bold text-slate-200" style={JA_WRAP_STYLE}>{jaWrap(`ブースターパック1つで +${CARD_GACHA_PER_PACK}。${CARD_CATALOG_COST}たまると「バトルカードカタログ」1冊と交換できます(たまった分は消えません。右に、次の1冊まであといくつかが出ます)。カタログを使うと、好きなカードを1枚もらえます`)}</div>}
     </div>
   );
 };
