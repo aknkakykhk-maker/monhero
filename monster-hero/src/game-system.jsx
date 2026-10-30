@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7a7393fa65077755
+// generated-sha256: 8a6181f49cfc0ea4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68312,12 +68312,14 @@ const cardRankFxGains = (gain) => {
 const CardRankResult = ({ gain }) => {
   const up = !!(gain && gain.to > gain.from);
   // 画面いっぱいの演出は、経験値の棒が満タンで光ったあと(2026-10-30 社長の決め。ビートランクと同じ順番。onFull は1回だけ・押して飛ばしたときも来る)
-  const [fx, setFx] = useState(false);
+  const [fx, setFx] = useState(false); // false … まだ / true・'late' … 出す / 'closed' … 閉じた(もう出さない)
+  // 保険: 棒の合図(onFull)が来ないまま5秒たったら出す(ビートランクの 60-app と同じ)
+  useEffect(() => { if (!up) return undefined; const t = setTimeout(() => setFx((v) => v || 'late'), 5000); return () => clearTimeout(t); }, [up]);
   if (!gain || !(gain.add > 0)) return null;
   const award = { add: gain.add, parts: gain.parts || [], from: gain.from, to: gain.to, xp: gain.xp, gains: gain.gains || [] };
   return (<>
-    <PlayerRankGain kind="card" award={award} next={`ランク${gain.to + 1}で ${cardRankRewardText(gain.to + 1)}`} onFull={up ? () => setFx(true) : null}/>
-    {up && fx && typeof PlayerRankUpFx === 'function' && <PlayerRankUpFx kind="card" from={gain.from} to={gain.to} gains={cardRankFxGains(gain)} onClose={() => setFx(false)}/>}
+    <PlayerRankGain kind="card" award={award} next={`ランク${gain.to + 1}で ${cardRankRewardText(gain.to + 1)}`} onFull={up ? () => setFx((v) => v || true) : null}/>
+    {up && fx && fx !== 'closed' && typeof PlayerRankUpFx === 'function' && <PlayerRankUpFx kind="card" from={gain.from} to={gain.to} gains={cardRankFxGains(gain)} onClose={() => setFx('closed')}/>}
   </>);
 };
 

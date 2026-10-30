@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 091835d02d03844a
+// source-sha256: 849b1bfc6ace1473
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115405,6 +115405,11 @@ const CardRankResult = ({
 }) => {
   const up = !!(gain && gain.to > gain.from);
   const [fx, setFx] = useState(false);
+  useEffect(() => {
+    if (!up) return undefined;
+    const t = setTimeout(() => setFx(v => v || 'late'), 5000);
+    return () => clearTimeout(t);
+  }, [up]);
   if (!gain || !(gain.add > 0)) return null;
   const award = {
     add: gain.add,
@@ -115418,13 +115423,13 @@ const CardRankResult = ({
     kind: "card",
     award: award,
     next: `ランク${gain.to + 1}で ${cardRankRewardText(gain.to + 1)}`,
-    onFull: up ? () => setFx(true) : null
-  }), up && fx && typeof PlayerRankUpFx === 'function' && React.createElement(PlayerRankUpFx, {
+    onFull: up ? () => setFx(v => v || true) : null
+  }), up && fx && fx !== 'closed' && typeof PlayerRankUpFx === 'function' && React.createElement(PlayerRankUpFx, {
     kind: "card",
     from: gain.from,
     to: gain.to,
     gains: cardRankFxGains(gain),
-    onClose: () => setFx(false)
+    onClose: () => setFx('closed')
   }));
 };
 const CARD_REG_STYLES = Object.freeze([{
