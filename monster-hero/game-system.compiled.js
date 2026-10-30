@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d8e53e0fe38fd11f
+// source-sha256: 2be29e12668d5b38
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -57510,6 +57510,13 @@ function ItemInventoryScreen({
     className: "shrink-0 w-[84px] min-h-[44px] rounded-xl bg-teal-600 text-[12px] font-black text-white active:scale-95"
   }, "使う"))))));
 }
+const CARD_SHOP_ROW_ATTRS = ['data-card-shop-pack', 'data-card-shop-starter', 'data-card-shop-disc', 'data-card-shop-assist'];
+const cardShopScrollMemo = {
+  pending: false,
+  tab: null,
+  top: 0,
+  row: null
+};
 function BreederMarketScreen({
   gold,
   breederPoints,
@@ -57543,7 +57550,63 @@ function BreederMarketScreen({
   const [sheetQuantity, setSheetQuantity] = useState(1);
   const [sheetPending, setSheetPending] = useState(false);
   const [rebirth, setRebirth] = useState(null);
-  const [sectionTabs, setSectionTabs] = useState({});
+  const [sectionTabs, setSectionTabs] = useState(() => initialSection === 'card' && cardShopScrollMemo.pending && cardShopScrollMemo.tab ? {
+    card: cardShopScrollMemo.tab
+  } : {});
+  const cardListRef = React.useRef(null);
+  const cardPressedRowRef = React.useRef(null);
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => () => {
+    mountedRef.current = false;
+  }, []);
+  React.useLayoutEffect(() => {
+    const memo = cardShopScrollMemo;
+    if (!(initialSection === 'card' && memo.pending)) return;
+    memo.pending = false;
+    let tries = 0,
+      raf = 0;
+    const apply = () => {
+      const box = cardListRef.current;
+      const row = box && memo.row ? box.querySelector(`[${memo.row.attr}="${String(memo.row.value).replace(/"/g, '')}"]`) : null;
+      const ready = box && (row || !memo.row && box.scrollHeight - box.clientHeight >= memo.top);
+      if (box && (ready || tries >= 40)) {
+        box.scrollTop = memo.top;
+        if (row) {
+          const b = box.getBoundingClientRect(),
+            r = row.getBoundingClientRect();
+          if (r.top < b.top || r.bottom > b.bottom) box.scrollTop += r.top - b.top - (b.height - r.height) / 2;
+        }
+        return;
+      }
+      tries++;
+      raf = requestAnimationFrame(apply);
+    };
+    apply();
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  const rememberCardShop = tab => {
+    const box = cardListRef.current;
+    Object.assign(cardShopScrollMemo, {
+      pending: true,
+      tab,
+      top: box ? box.scrollTop : 0,
+      row: cardPressedRowRef.current
+    });
+  };
+  const withCardShopMemo = (tab, fn) => fn ? async (...args) => {
+    rememberCardShop(tab);
+    let r;
+    try {
+      r = await fn(...args);
+    } catch (e) {
+      cardShopScrollMemo.pending = false;
+      throw e;
+    }
+    if (!(r && (r === true || r.ok))) cardShopScrollMemo.pending = false;else setTimeout(() => {
+      if (mountedRef.current) cardShopScrollMemo.pending = false;
+    }, 1500);
+    return r;
+  } : fn;
   const safeEventPoints = normalizeRhythmEventPoints(eventPoints);
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
@@ -58077,15 +58140,24 @@ function BreederMarketScreen({
         value: cp
       }]
     }), React.createElement("div", {
+      ref: cardListRef,
       className: SCREEN_LIST_CLASS,
       "data-card-shop": true,
-      "data-card-shop-tab": tab
+      "data-card-shop-tab": tab,
+      onClickCapture: e => {
+        const el = e.target && e.target.closest ? e.target.closest(CARD_SHOP_ROW_ATTRS.map(k => `[${k}]`).join(',')) : null;
+        const attr = el && CARD_SHOP_ROW_ATTRS.find(k => el.hasAttribute(k));
+        if (attr) cardPressedRowRef.current = {
+          attr,
+          value: el.getAttribute(attr)
+        };
+      }
     }, tab === 'pack' && React.createElement(CardShopPacks, {
       db: CARD_BATTLE_DATA,
       point: cp,
       busy: busy || cardShop.busy,
       collection: cardShop.collection,
-      onBuyPack: cardShop.onBuyPack
+      onBuyPack: withCardShopMemo('pack', cardShop.onBuyPack)
     }), tab === 'tactics' && typeof CardTacticsShop === 'function' && React.createElement(CardTacticsShop, {
       point: cp,
       busy: busy || cardShop.busy,
@@ -58097,7 +58169,7 @@ function BreederMarketScreen({
       busy: busy || cardShop.busy,
       starter: cardShop.starter,
       shop: cardShop.shop,
-      onBuyStarter: cardShop.onBuyStarter
+      onBuyStarter: withCardShopMemo('starter', cardShop.onBuyStarter)
     }), (tab === 'disc' || tab === 'assist') && React.createElement("div", {
       className: MARKET_GRID_CLASS
     }, tab === 'disc' && RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS.map(offer => {
