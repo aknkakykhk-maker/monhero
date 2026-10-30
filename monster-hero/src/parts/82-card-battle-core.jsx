@@ -2255,6 +2255,8 @@ const normalizeCardBgm = (v, isTrack = () => true) => {
     top: pick(r.top, CARD_BGM_DEFAULT.top),
     cpu: r.cpu === 'auto' || (typeof r.cpu === 'string' && isTrack(r.cpu)) ? r.cpu : CARD_BGM_DEFAULT.cpu,
     pvp: pick(r.pvp, CARD_BGM_DEFAULT.pvp),
+    // watch … 観戦中の曲(2026-10-30 社長「観戦中の音楽も変えられるようにして」)。足した項目なので、無い人はマルチ対戦の曲で補う
+    watch: pick(r.watch, pick(r.pvp, CARD_BGM_DEFAULT.pvp)),
   };
 };
 // 助手と対戦の曲の並び(2026-10-26 社長の依頼)。助手ごとに1〜5曲を選び、対戦中は全部を1回ずつシャッフルで流す

@@ -25,6 +25,11 @@
 //   勇者の証(証片で交換)と魂格再編の書(勇者の証で交換)も 2026-10-17 の社長依頼「まとめ買いできるようにして」で加えた。
 //   1つしか持てない品(円盤石・アシスト・アイコン・フレーム・着替え)は1つずつ
 // ・窓はこの画面が1つだけ持つ(sheet)。保存の中身は本体のまま(onBuy などは成功したら true / {ok:true} を返す)
+// MFバトルカードの売り場で、パック・スターターを買って開ける画面へ行き、戻ったときの位置(2026-10-30 社長「パックを買って戻ったら上に戻される」)。
+// 開ける画面へ行くとこの画面ごと消える(state も消える)ので、画面の外の変数に覚える。保存はしない(遊んでいる間だけ)。
+// 覚え方はフレンドの一覧(#4313)と同じ: 押す前のスクロールの位置と、押した物(行の目印)。戻ったら位置を戻し、押した物が見えなければ真ん中へ寄せる
+const CARD_SHOP_ROW_ATTRS = ['data-card-shop-pack','data-card-shop-starter','data-card-shop-disc','data-card-shop-assist'];
+const cardShopScrollMemo = { pending:false, tab:null, top:0, row:null };
 function BreederMarketScreen({
   gold, breederPoints, ownedItems, marketTab, marketExchangeError, purchaseProcessing,
   isItemOwned, previewIcon=null, onBack, onSelectTab, onZoomIcon, onBuy, onOpenDetail, onOpenItemDetail, onExchangeSoulRankRespec,
@@ -46,7 +51,46 @@ function BreederMarketScreen({
   const [rebirth,setRebirth]=useState(null);
   // ダイヤショップ以外の売り場のタブ(2026-10-01 ユーザー指示「ビートPの商品をタブわけして / マーケット全体的に統一させて」)。
   // ダイヤショップのタブは本体の marketTab のまま。ほかはこの画面の中だけで持つ(マーケットを出たら最初のタブへ戻る)
-  const [sectionTabs,setSectionTabs]=useState({});
+  // 開ける画面から戻ったときは、買ったときのタブで開く(cardShopScrollMemo)
+  const [sectionTabs,setSectionTabs]=useState(()=>initialSection==='card'&&cardShopScrollMemo.pending&&cardShopScrollMemo.tab?{card:cardShopScrollMemo.tab}:{});
+  const cardListRef = React.useRef(null);
+  const cardPressedRowRef = React.useRef(null); // 一覧で最後に押した行 { attr, value }(確認の窓の「買う」は行の外なので上書きしない)
+  const mountedRef = React.useRef(true);
+  React.useEffect(()=>()=>{ mountedRef.current=false; },[]);
+  // 戻ったとき: 位置を戻す。戦術カードなどは中身が後から出るので、行が出るまで数コマ待つ(scrollIntoView は使わない)
+  React.useLayoutEffect(()=>{
+    const memo=cardShopScrollMemo;
+    if (!(initialSection==='card'&&memo.pending)) return;
+    memo.pending=false;
+    let tries=0, raf=0;
+    const apply=()=>{
+      const box=cardListRef.current;
+      const row=box&&memo.row?box.querySelector(`[${memo.row.attr}="${String(memo.row.value).replace(/"/g,'')}"]`):null;
+      const ready=box&&(row||(!memo.row&&box.scrollHeight-box.clientHeight>=memo.top));
+      if (box&&(ready||tries>=40)) {
+        box.scrollTop=memo.top;
+        if (row) { const b=box.getBoundingClientRect(), r=row.getBoundingClientRect();
+          if (r.top<b.top||r.bottom>b.bottom) box.scrollTop+=(r.top-b.top)-(b.height-r.height)/2; }
+        return;
+      }
+      tries++; raf=requestAnimationFrame(apply);
+    };
+    apply();
+    return ()=>cancelAnimationFrame(raf);
+  },[]);
+  // 買う直前に覚える。開ける画面へ行かなかった(失敗・その場で開いた)ときは、すぐ忘れる
+  const rememberCardShop=(tab)=>{
+    const box=cardListRef.current;
+    Object.assign(cardShopScrollMemo,{ pending:true, tab, top:box?box.scrollTop:0, row:cardPressedRowRef.current });
+  };
+  const withCardShopMemo=(tab,fn)=>fn?async(...args)=>{
+    rememberCardShop(tab);
+    let r;
+    try { r=await fn(...args); } catch (e) { cardShopScrollMemo.pending=false; throw e; }
+    if (!(r&&(r===true||r.ok))) cardShopScrollMemo.pending=false;
+    else setTimeout(()=>{ if (mountedRef.current) cardShopScrollMemo.pending=false; },1500);
+    return r;
+  }:fn;
   const safeEventPoints=normalizeRhythmEventPoints(eventPoints);
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
@@ -304,11 +348,13 @@ function BreederMarketScreen({
             :tab==='tactics'&&typeof CardTacticsBand==='function'
               ?<CardTacticsBand point={cp} busy={busy||cardShop.busy} onBuy={cardShop.onBuyTactics} onExchange={cardShop.onExchangeTactics}/>
               :<MarketBalanceBar balances={[{currency:'cardPoint',value:cp}]}/>}
-          <div className={SCREEN_LIST_CLASS} data-card-shop data-card-shop-tab={tab}>
-            {tab==='pack'&&<CardShopPacks db={CARD_BATTLE_DATA} point={cp} busy={busy||cardShop.busy} collection={cardShop.collection} onBuyPack={cardShop.onBuyPack}/>}
+          <div ref={cardListRef} className={SCREEN_LIST_CLASS} data-card-shop data-card-shop-tab={tab}
+            onClickCapture={(e)=>{ const el=e.target&&e.target.closest?e.target.closest(CARD_SHOP_ROW_ATTRS.map(k=>`[${k}]`).join(',')):null;
+              const attr=el&&CARD_SHOP_ROW_ATTRS.find(k=>el.hasAttribute(k)); if (attr) cardPressedRowRef.current={ attr, value:el.getAttribute(attr) }; }}>
+            {tab==='pack'&&<CardShopPacks db={CARD_BATTLE_DATA} point={cp} busy={busy||cardShop.busy} collection={cardShop.collection} onBuyPack={withCardShopMemo('pack',cardShop.onBuyPack)}/>}
             {/* 戦術カードのパック(97 の CardTacticsShop・2026-10-29 社長「戦術カードはマーケットで買えるようにして」) */}
             {tab==='tactics'&&typeof CardTacticsShop==='function'&&<CardTacticsShop point={cp} busy={busy||cardShop.busy} onBuy={cardShop.onBuyTactics}/>}
-            {tab==='starter'&&<CardShopStarters db={CARD_BATTLE_DATA} point={cp} collection={cardShop.collection} busy={busy||cardShop.busy} starter={cardShop.starter} shop={cardShop.shop} onBuyStarter={cardShop.onBuyStarter}/>}
+            {tab==='starter'&&<CardShopStarters db={CARD_BATTLE_DATA} point={cp} collection={cardShop.collection} busy={busy||cardShop.busy} starter={cardShop.starter} shop={cardShop.shop} onBuyStarter={withCardShopMemo('starter',cardShop.onBuyStarter)}/>}
             {/* 円盤石・アシストカードは、ビートP交換所と同じ物を同じ値段(1,500)で並べる(社長 台帳 #3405)。一覧はビートP交換所のものをそのまま引く */}
             {(tab==='disc'||tab==='assist')&&<div className={MARKET_GRID_CLASS}>
               {tab==='disc'&&RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS.map(offer=>{

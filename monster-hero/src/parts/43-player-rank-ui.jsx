@@ -38,6 +38,9 @@ const PLAYER_RANK_BADGE_CSS = `
 .mh-prb.mh-prb-s .mh-prb-shield{width:32px;height:36px}.mh-prb.mh-prb-s .mh-prb-shield::after{inset:2px}
 .mh-prb.mh-prb-s .mh-prb-num{font-size:16px;-webkit-text-stroke:3.5px var(--prb-ink)}.mh-prb.mh-prb-s .mh-prb-num.mh-prb-w3{font-size:12px}
 .mh-prb.mh-prb-s .mh-prb-name{font-size:12px}.mh-prb.mh-prb-s .mh-prb-kind{display:none}
+.mh-prb.mh-prb-xs{gap:4px}.mh-prb.mh-prb-xs .mh-prb-shield{width:18px;height:20px;filter:drop-shadow(0 1px 0 rgba(0,0,0,.45)) drop-shadow(0 0 5px var(--prb-glow))}.mh-prb.mh-prb-xs .mh-prb-shield::after{inset:1.5px}
+.mh-prb.mh-prb-xs .mh-prb-num{font-size:10px;-webkit-text-stroke:2.5px var(--prb-ink)}.mh-prb.mh-prb-xs .mh-prb-num.mh-prb-w3{font-size:8px}
+.mh-prb.mh-prb-xs .mh-prb-name{font-size:10px;-webkit-text-stroke:2.5px var(--prb-ink)}.mh-prb.mh-prb-xs .mh-prb-kind{display:none}
 .mh-prb-t1{--prb-rim:linear-gradient(160deg,#fde2c4,#9a4b1c 55%,#5a250b);--prb-face:linear-gradient(160deg,#e08a4a,#8a3f12);--prb-ink:#3b1406;--prb-glow:rgba(234,138,74,.55);--prb-label:#fbbf8a}
 .mh-prb-t2{--prb-rim:linear-gradient(160deg,#ffffff,#94a3b8 55%,#475569);--prb-face:linear-gradient(160deg,#cbd5e1,#64748b);--prb-ink:#1e293b;--prb-glow:rgba(203,213,225,.6);--prb-label:#e2e8f0}
 .mh-prb-t3{--prb-rim:linear-gradient(160deg,#fff7c2,#f59e0b 55%,#92400e);--prb-face:linear-gradient(160deg,#fcd34d,#d97706);--prb-ink:#5b2a03;--prb-glow:rgba(251,191,36,.7);--prb-label:#fde68a}
@@ -63,7 +66,7 @@ function PlayerRankBadge({ kind = 'beat', rank = 1, size = 'lg', showName = true
   const text = r.toLocaleString();
   return (
     <span data-player-rank-badge={kind} data-player-rank-tier={tier.t} aria-label={`${k.label} ${r}`}
-      className={`mh-prb mh-prb-t${tier.t}${size === 'sm' ? ' mh-prb-s' : ''}`}>
+      className={`mh-prb mh-prb-t${tier.t}${size === 'sm' ? ' mh-prb-s' : size === 'xs' ? ' mh-prb-xs' : ''}`}>
       <span className="mh-prb-shield" aria-hidden="true"><span className="mh-prb-gloss"/><b data-player-rank-value className={`mh-prb-num${text.length >= 3 ? ' mh-prb-w3' : ''}`}><span className="mh-prb-digits">{text}</span></b></span>
       {showName && <span className="mh-prb-tag" aria-hidden="true"><span className="mh-prb-kind">{tier.name}</span><span className="mh-prb-name">{k.label}</span></span>}
     </span>
@@ -105,16 +108,87 @@ function PlayerRankPanel({ kind = 'beat', xp = 0, note = '', sub = '' }) {
 
 // 上の帯に入れる細い1行(2026-10-29 社長「立ち絵が小さくなるのはだめ」→ 上の帯に横長で薄く)。小さいバッジ・細い棒・次まで。
 // 次のごほうびは帯には入れない(社長「トップに要らなければ詳しい所だけ」。ヘルプと曲の結果で見せる)
-function PlayerRankStrip({ kind = 'beat', xp = 0 }) {
+// size='xs' は、帯の1行に収める小さい札(モードえらびの上の帯。立ち絵の枠を押し下げない・2026-10-30)
+function PlayerRankStrip({ kind = 'beat', xp = 0, size = 'sm' }) {
   const k = playerRankKind(kind);
   const info = playerRankInfo(xp);
   return (
     <div data-player-rank-strip={kind} className="flex min-w-0 items-center gap-1.5">
-      <PlayerRankBadge kind={kind} rank={info.rank} size="sm"/>
+      <PlayerRankBadge kind={kind} rank={info.rank} size={size}/>
       <div className="h-1.5 min-w-[40px] flex-1 overflow-hidden rounded-full bg-slate-700/80" role="progressbar" aria-label="次のランクまで" aria-valuemin={0} aria-valuemax={info.need} aria-valuenow={info.into}>
         <i className={`block h-full rounded-full bg-gradient-to-r ${k.bar}`} style={{ width: `${Math.min(100, Math.round((info.into / info.need) * 100))}%` }}/>
       </div>
       <small className="shrink-0 whitespace-nowrap text-[9px] font-black text-slate-300 tabular-nums">{`次まで ${(info.need - info.into).toLocaleString()}`}</small>
+    </div>
+  );
+}
+
+// ==================== ランクごとのごほうびの一覧と、詳しい画面(2026-10-30 社長「カードランクもビートランクともにちゃんと報酬が全部見れるように作って」) ====================
+// rewardsOf(rank, got) → [{ icon, text, bonus }](got はもう上がったランクか。言い方を「〜なった/〜なる」で分けたいとき用)(そのランクに上がったときにもらえる物。bonus は5ランクごとのおまけ)。
+// ランク2から並べ、開いたときは今のランクの行が上に来るように送る。下まで送ると先を足していく(上限なし)。
+// 今のランクまでは「もらった」、次のランクは「次」と印を付ける。表示だけ(保存は触らない)
+const PLAYER_RANK_REWARDS_STEP = 30;
+function PlayerRankRewards({ kind = 'beat', rank = 1, rewardsOf, cls = '' }) {
+  const k = playerRankKind(kind);
+  const cur = Math.max(1, Math.floor(Number(rank) || 1));
+  const [last, setLast] = React.useState(Math.max(50, cur + 50));
+  const boxRef = React.useRef(null), curRef = React.useRef(null);
+  React.useEffect(() => {
+    const box = boxRef.current, row = curRef.current;
+    if (box && row) box.scrollTop = Math.max(0, row.offsetTop - 4);
+  }, []);
+  const onScroll = (e) => { const b = e.currentTarget; if (b.scrollTop + b.clientHeight >= b.scrollHeight - 80) setLast((n) => n + PLAYER_RANK_REWARDS_STEP); };
+  const rows = [];
+  for (let r = 2; r <= last; r++) rows.push(r);
+  return (
+    <div ref={boxRef} data-player-rank-rewards={kind} onScroll={onScroll} className={`relative max-h-[min(46vh,360px)] overflow-y-auto overscroll-contain rounded-xl bg-black/35 p-1.5 ${cls}`}>
+      <ul className="space-y-1">
+        {rows.map((r) => {
+          const got = r <= cur, next = r === cur + 1, items = (typeof rewardsOf === 'function' ? rewardsOf(r, got) : []) || [];
+          return (
+            <li key={r} ref={r === Math.max(2, cur) ? curRef : null} data-player-rank-reward-row={r} data-got={got ? 'true' : 'false'}
+              className={`flex items-start gap-2 rounded-lg border px-2 py-1.5 ${next ? `${k.border} bg-white/10` : r % 5 === 0 ? 'border-pink-300/40 bg-pink-500/10' : 'border-white/5 bg-slate-900/60'} ${got ? 'opacity-55' : ''}`}>
+              <div className="w-[52px] shrink-0 leading-tight">
+                <b className={`block text-[12px] font-black tabular-nums ${k.accent}`}>{`ランク${r}`}</b>
+                {got && <small className="block text-[9px] font-black text-emerald-300">✓ もらった</small>}
+                {next && <small className="block text-[9px] font-black text-amber-200">▶ 次</small>}
+              </div>
+              <ul className="min-w-0 flex-1 space-y-0.5 text-[11px] font-bold leading-snug text-slate-100">
+                {items.map((g, i) => (
+                  <li key={i} className="flex items-start gap-1">
+                    <span aria-hidden="true" className="shrink-0">{cardIconNode(g.icon, 12)}</span>
+                    <span className="min-w-0" style={JA_WRAP_STYLE}>{jaWrap(String(g.text || ''))}{g.bonus && <small className="ml-1 whitespace-nowrap rounded bg-pink-500/30 px-1 text-[9px] font-black text-pink-100">5ランクごとのおまけ</small>}</span>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          );
+        })}
+      </ul>
+      <button type="button" data-player-rank-rewards-more onClick={() => setLast((n) => n + PLAYER_RANK_REWARDS_STEP)}
+        className="mt-1.5 min-h-[40px] w-full rounded-lg border border-white/15 bg-slate-800/80 text-[12px] font-black text-slate-200">{`ランク${last + 1}から先も見る`}</button>
+    </div>
+  );
+}
+
+// 札を押した先の詳しい画面: 大きい札・棒・ランクごとのごほうびの一覧・経験値のたまり方(how)
+function PlayerRankDetail({ kind = 'beat', xp = 0, rewardsOf, how = '', onClose = null }) {
+  const k = playerRankKind(kind);
+  const info = playerRankInfo(xp);
+  const close = () => { if (typeof Audio_ !== 'undefined' && Audio_.fgSe) Audio_.fgSe.tap(); if (onClose) onClose(); };
+  return (
+    <div data-player-rank-detail={kind} role="dialog" aria-modal="true" aria-label={k.label} className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-3" onClick={close}>
+      <div className={`flex max-h-[calc(var(--mh-vh)-24px)] w-full max-w-[380px] flex-col rounded-2xl border-2 bg-gradient-to-b from-violet-950 to-slate-950 p-3 text-white ${k.border}`} onClick={(e) => e.stopPropagation()}>
+        {/* 背の低い画面(横向きのスマホ)では札を小さくして、ごほうびの一覧に高さを回す */}
+        <div className="flex shrink-0 justify-center [@media(max-height:480px)]:hidden"><PlayerRankBadge kind={kind} rank={info.rank} size="lg"/></div>
+        <div className="hidden shrink-0 justify-center [@media(max-height:480px)]:flex"><PlayerRankBadge kind={kind} rank={info.rank} size="sm"/></div>
+        <div className="mt-2 shrink-0"><PlayerRankGauge kind={kind} info={info} note={`次のランクまで あと${(info.need - info.into).toLocaleString()}`}/></div>
+        <b className={`mt-2 block text-[13px] font-black ${k.accent}`}>ランクごとのごほうび</b>
+        <p className="mb-1 text-[10px] font-bold text-slate-300 [@media(max-height:480px)]:hidden" style={JA_WRAP_STYLE}>{jaWrap('ランクが上がると、そのランクの物をもらえます。下へ送ると先のランクも見られます。')}</p>
+        <PlayerRankRewards kind={kind} rank={info.rank} rewardsOf={rewardsOf} cls="min-h-[96px] shrink"/>
+        {how && <p className="mt-2 shrink-0 text-[11px] font-bold leading-relaxed text-slate-300 [@media(max-height:480px)]:hidden" style={JA_WRAP_STYLE}>{jaWrap(how)}</p>}
+        <button type="button" data-player-rank-detail-close onClick={close} className="mh-button mt-2 min-h-[44px] w-full shrink-0 rounded-xl text-[14px] font-black">とじる</button>
+      </div>
     </div>
   );
 }

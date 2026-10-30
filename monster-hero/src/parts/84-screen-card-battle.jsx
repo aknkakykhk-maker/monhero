@@ -2715,6 +2715,20 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // トップ画面(結果・デッキ編成なども)の曲。対戦の画面へ入るときは、それぞれの曲に替える
   const topBgm = save && save.bgm ? save.bgm.top : null;
   useEffect(() => { if (screen === 'CARD_TOP' && topBgm && onBgm) onBgm(cardBgmOf(topBgm)); }, [screen, topBgm]);
+  // 観戦(94 の CARD_WATCH)を始めたら観戦の曲、やめたらトップ画面の曲へ(2026-10-30 社長「観戦中の音楽も変えられるようにして」)
+  const watchBgm = save && save.bgm ? save.bgm.watch : null;
+  const watchingRef = useRef(false);
+  useEffect(() => {
+    if (typeof CARD_WATCH === 'undefined' || !onBgm) return undefined;
+    const on = (w) => {
+      const now = !!w && w.phase !== 'idle';
+      if (now === watchingRef.current) return;
+      watchingRef.current = now;
+      if (now) { if (watchBgm) onBgm(cardBgmOf(watchBgm)); } else if (topBgm) onBgm(cardBgmOf(topBgm));
+    };
+    on(CARD_WATCH.get());
+    return CARD_WATCH.subscribe(on);
+  }, [watchBgm, topBgm]);
   // 対戦の画面から外へ出たら(戻るなど)、トップに戻す
   // アプリの中の戻るなどで助手との対戦を抜けたら、その場で投了として数える(途中で閉じた対戦と同じ。印があるときだけ)
   useEffect(() => {
@@ -3581,14 +3595,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           <div data-card-options-bgm className={SCREEN_PANEL_CLASS}>
             <div className="text-[13px] font-black text-white">音</div>
             <b className="mt-2 block text-[12px] font-black text-slate-200">対戦のBGM</b>
-            {[['top', 'トップ画面'], ['pvp', 'マルチ対戦']].map(([k, label]) => (
+            {[['top', 'トップ画面'], ['pvp', 'マルチ対戦'], ['watch', '観戦']].map(([k, label]) => (
               <label key={k} className="mt-2 block text-left">
-                <span className="text-[11px] font-black text-slate-300">{label}{k === 'pvp' && !(typeof cardPvpOpen === 'function' && cardPvpOpen()) ? '(準備中)' : ''}</span>
+                <span className="text-[11px] font-black text-slate-300">{label}{k !== 'top' && !(typeof cardPvpOpen === 'function' && cardPvpOpen()) ? '(準備中)' : ''}</span>
                 <div className="mt-1 flex gap-2">
                   <select data-card-bgm-select={k} aria-label={`${label}のBGM`} value={save.bgm[k]} onChange={(e) => { void persist({ bgm: normalizeCardBgm({ ...save.bgm, [k]: e.target.value }, cardIsBgmTrack) }); }}
                     className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white">
                     <option value={CARD_BGM_RANDOM}>ランダム(毎回ちがう曲)</option>
-                    {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === CARD_BGM_DEFAULT[k] ? '(はじめの曲)' : ''}</option>)}
+                    {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === (CARD_BGM_DEFAULT[k] || CARD_BGM_DEFAULT.pvp) ? '(はじめの曲)' : ''}</option>)}
                   </select>
                   {/* ランダムの試聴は1曲を選んで流す(鳴っていれば止める) */}
                   {bgmPreview && (save.bgm[k] === CARD_BGM_RANDOM

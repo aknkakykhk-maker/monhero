@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b6ffa4138c4a9dee
+// source-sha256: bab1df7ac94c355a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -14476,6 +14476,26 @@ const playerRankBeatPointsFor = rank => {
 const beatRankTicketsFor = rank => {
   const r = Math.max(0, Math.floor(Number(rank) || 0));
   return r < 2 ? 0 : 1 + (r % 5 === 0 ? r : 0);
+};
+const beatRankRewardItems = rank => {
+  const r = Math.max(0, Math.floor(Number(rank) || 0));
+  if (r < 2) return [];
+  const bonus = r % 5 === 0;
+  return [{
+    icon: '🎟️',
+    text: `ビートP ${(r * 100).toLocaleString()}`
+  }, {
+    icon: '🎶',
+    text: 'セッション券 1枚'
+  }, ...(bonus ? [{
+    icon: '🎟️',
+    text: `ビートP ${(r * 200).toLocaleString()}`,
+    bonus: true
+  }, {
+    icon: '🎶',
+    text: `セッション券 ${r.toLocaleString()}枚`,
+    bonus: true
+  }] : [])];
 };
 const beatRankRewardText = rank => `ビートP ${playerRankBeatPointsFor(rank).toLocaleString()}・セッション券 ${beatRankTicketsFor(rank).toLocaleString()}枚`;
 const normalizeBeatRank = raw => {
@@ -55210,6 +55230,9 @@ const PLAYER_RANK_BADGE_CSS = `
 .mh-prb.mh-prb-s .mh-prb-shield{width:32px;height:36px}.mh-prb.mh-prb-s .mh-prb-shield::after{inset:2px}
 .mh-prb.mh-prb-s .mh-prb-num{font-size:16px;-webkit-text-stroke:3.5px var(--prb-ink)}.mh-prb.mh-prb-s .mh-prb-num.mh-prb-w3{font-size:12px}
 .mh-prb.mh-prb-s .mh-prb-name{font-size:12px}.mh-prb.mh-prb-s .mh-prb-kind{display:none}
+.mh-prb.mh-prb-xs{gap:4px}.mh-prb.mh-prb-xs .mh-prb-shield{width:18px;height:20px;filter:drop-shadow(0 1px 0 rgba(0,0,0,.45)) drop-shadow(0 0 5px var(--prb-glow))}.mh-prb.mh-prb-xs .mh-prb-shield::after{inset:1.5px}
+.mh-prb.mh-prb-xs .mh-prb-num{font-size:10px;-webkit-text-stroke:2.5px var(--prb-ink)}.mh-prb.mh-prb-xs .mh-prb-num.mh-prb-w3{font-size:8px}
+.mh-prb.mh-prb-xs .mh-prb-name{font-size:10px;-webkit-text-stroke:2.5px var(--prb-ink)}.mh-prb.mh-prb-xs .mh-prb-kind{display:none}
 .mh-prb-t1{--prb-rim:linear-gradient(160deg,#fde2c4,#9a4b1c 55%,#5a250b);--prb-face:linear-gradient(160deg,#e08a4a,#8a3f12);--prb-ink:#3b1406;--prb-glow:rgba(234,138,74,.55);--prb-label:#fbbf8a}
 .mh-prb-t2{--prb-rim:linear-gradient(160deg,#ffffff,#94a3b8 55%,#475569);--prb-face:linear-gradient(160deg,#cbd5e1,#64748b);--prb-ink:#1e293b;--prb-glow:rgba(203,213,225,.6);--prb-label:#e2e8f0}
 .mh-prb-t3{--prb-rim:linear-gradient(160deg,#fff7c2,#f59e0b 55%,#92400e);--prb-face:linear-gradient(160deg,#fcd34d,#d97706);--prb-ink:#5b2a03;--prb-glow:rgba(251,191,36,.7);--prb-label:#fde68a}
@@ -55240,7 +55263,7 @@ function PlayerRankBadge({
     "data-player-rank-badge": kind,
     "data-player-rank-tier": tier.t,
     "aria-label": `${k.label} ${r}`,
-    className: `mh-prb mh-prb-t${tier.t}${size === 'sm' ? ' mh-prb-s' : ''}`
+    className: `mh-prb mh-prb-t${tier.t}${size === 'sm' ? ' mh-prb-s' : size === 'xs' ? ' mh-prb-xs' : ''}`
   }, React.createElement("span", {
     className: "mh-prb-shield",
     "aria-hidden": "true"
@@ -55323,7 +55346,8 @@ function PlayerRankPanel({
 }
 function PlayerRankStrip({
   kind = 'beat',
-  xp = 0
+  xp = 0,
+  size = 'sm'
 }) {
   const k = playerRankKind(kind);
   const info = playerRankInfo(xp);
@@ -55333,7 +55357,7 @@ function PlayerRankStrip({
   }, React.createElement(PlayerRankBadge, {
     kind: kind,
     rank: info.rank,
-    size: "sm"
+    size: size
   }), React.createElement("div", {
     className: "h-1.5 min-w-[40px] flex-1 overflow-hidden rounded-full bg-slate-700/80",
     role: "progressbar",
@@ -55349,6 +55373,136 @@ function PlayerRankStrip({
   })), React.createElement("small", {
     className: "shrink-0 whitespace-nowrap text-[9px] font-black text-slate-300 tabular-nums"
   }, `次まで ${(info.need - info.into).toLocaleString()}`));
+}
+const PLAYER_RANK_REWARDS_STEP = 30;
+function PlayerRankRewards({
+  kind = 'beat',
+  rank = 1,
+  rewardsOf,
+  cls = ''
+}) {
+  const k = playerRankKind(kind);
+  const cur = Math.max(1, Math.floor(Number(rank) || 1));
+  const [last, setLast] = React.useState(Math.max(50, cur + 50));
+  const boxRef = React.useRef(null),
+    curRef = React.useRef(null);
+  React.useEffect(() => {
+    const box = boxRef.current,
+      row = curRef.current;
+    if (box && row) box.scrollTop = Math.max(0, row.offsetTop - 4);
+  }, []);
+  const onScroll = e => {
+    const b = e.currentTarget;
+    if (b.scrollTop + b.clientHeight >= b.scrollHeight - 80) setLast(n => n + PLAYER_RANK_REWARDS_STEP);
+  };
+  const rows = [];
+  for (let r = 2; r <= last; r++) rows.push(r);
+  return React.createElement("div", {
+    ref: boxRef,
+    "data-player-rank-rewards": kind,
+    onScroll: onScroll,
+    className: `relative max-h-[min(46vh,360px)] overflow-y-auto overscroll-contain rounded-xl bg-black/35 p-1.5 ${cls}`
+  }, React.createElement("ul", {
+    className: "space-y-1"
+  }, rows.map(r => {
+    const got = r <= cur,
+      next = r === cur + 1,
+      items = (typeof rewardsOf === 'function' ? rewardsOf(r, got) : []) || [];
+    return React.createElement("li", {
+      key: r,
+      ref: r === Math.max(2, cur) ? curRef : null,
+      "data-player-rank-reward-row": r,
+      "data-got": got ? 'true' : 'false',
+      className: `flex items-start gap-2 rounded-lg border px-2 py-1.5 ${next ? `${k.border} bg-white/10` : r % 5 === 0 ? 'border-pink-300/40 bg-pink-500/10' : 'border-white/5 bg-slate-900/60'} ${got ? 'opacity-55' : ''}`
+    }, React.createElement("div", {
+      className: "w-[52px] shrink-0 leading-tight"
+    }, React.createElement("b", {
+      className: `block text-[12px] font-black tabular-nums ${k.accent}`
+    }, `ランク${r}`), got && React.createElement("small", {
+      className: "block text-[9px] font-black text-emerald-300"
+    }, "✓ もらった"), next && React.createElement("small", {
+      className: "block text-[9px] font-black text-amber-200"
+    }, "▶ 次")), React.createElement("ul", {
+      className: "min-w-0 flex-1 space-y-0.5 text-[11px] font-bold leading-snug text-slate-100"
+    }, items.map((g, i) => React.createElement("li", {
+      key: i,
+      className: "flex items-start gap-1"
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      className: "shrink-0"
+    }, cardIconNode(g.icon, 12)), React.createElement("span", {
+      className: "min-w-0",
+      style: JA_WRAP_STYLE
+    }, jaWrap(String(g.text || '')), g.bonus && React.createElement("small", {
+      className: "ml-1 whitespace-nowrap rounded bg-pink-500/30 px-1 text-[9px] font-black text-pink-100"
+    }, "5ランクごとのおまけ"))))));
+  })), React.createElement("button", {
+    type: "button",
+    "data-player-rank-rewards-more": true,
+    onClick: () => setLast(n => n + PLAYER_RANK_REWARDS_STEP),
+    className: "mt-1.5 min-h-[40px] w-full rounded-lg border border-white/15 bg-slate-800/80 text-[12px] font-black text-slate-200"
+  }, `ランク${last + 1}から先も見る`));
+}
+function PlayerRankDetail({
+  kind = 'beat',
+  xp = 0,
+  rewardsOf,
+  how = '',
+  onClose = null
+}) {
+  const k = playerRankKind(kind);
+  const info = playerRankInfo(xp);
+  const close = () => {
+    if (typeof Audio_ !== 'undefined' && Audio_.fgSe) Audio_.fgSe.tap();
+    if (onClose) onClose();
+  };
+  return React.createElement("div", {
+    "data-player-rank-detail": kind,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": k.label,
+    className: "fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-3",
+    onClick: close
+  }, React.createElement("div", {
+    className: `flex max-h-[calc(var(--mh-vh)-24px)] w-full max-w-[380px] flex-col rounded-2xl border-2 bg-gradient-to-b from-violet-950 to-slate-950 p-3 text-white ${k.border}`,
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "flex shrink-0 justify-center [@media(max-height:480px)]:hidden"
+  }, React.createElement(PlayerRankBadge, {
+    kind: kind,
+    rank: info.rank,
+    size: "lg"
+  })), React.createElement("div", {
+    className: "hidden shrink-0 justify-center [@media(max-height:480px)]:flex"
+  }, React.createElement(PlayerRankBadge, {
+    kind: kind,
+    rank: info.rank,
+    size: "sm"
+  })), React.createElement("div", {
+    className: "mt-2 shrink-0"
+  }, React.createElement(PlayerRankGauge, {
+    kind: kind,
+    info: info,
+    note: `次のランクまで あと${(info.need - info.into).toLocaleString()}`
+  })), React.createElement("b", {
+    className: `mt-2 block text-[13px] font-black ${k.accent}`
+  }, "ランクごとのごほうび"), React.createElement("p", {
+    className: "mb-1 text-[10px] font-bold text-slate-300 [@media(max-height:480px)]:hidden",
+    style: JA_WRAP_STYLE
+  }, jaWrap('ランクが上がると、そのランクの物をもらえます。下へ送ると先のランクも見られます。')), React.createElement(PlayerRankRewards, {
+    kind: kind,
+    rank: info.rank,
+    rewardsOf: rewardsOf,
+    cls: "min-h-[96px] shrink"
+  }), how && React.createElement("p", {
+    className: "mt-2 shrink-0 text-[11px] font-bold leading-relaxed text-slate-300 [@media(max-height:480px)]:hidden",
+    style: JA_WRAP_STYLE
+  }, jaWrap(how)), React.createElement("button", {
+    type: "button",
+    "data-player-rank-detail-close": true,
+    onClick: close,
+    className: "mh-button mt-2 min-h-[44px] w-full shrink-0 rounded-xl text-[14px] font-black"
+  }, "とじる")));
 }
 function PlayerRankUp({
   kind = 'beat',
@@ -57356,6 +57510,13 @@ function ItemInventoryScreen({
     className: "shrink-0 w-[84px] min-h-[44px] rounded-xl bg-teal-600 text-[12px] font-black text-white active:scale-95"
   }, "使う"))))));
 }
+const CARD_SHOP_ROW_ATTRS = ['data-card-shop-pack', 'data-card-shop-starter', 'data-card-shop-disc', 'data-card-shop-assist'];
+const cardShopScrollMemo = {
+  pending: false,
+  tab: null,
+  top: 0,
+  row: null
+};
 function BreederMarketScreen({
   gold,
   breederPoints,
@@ -57389,7 +57550,63 @@ function BreederMarketScreen({
   const [sheetQuantity, setSheetQuantity] = useState(1);
   const [sheetPending, setSheetPending] = useState(false);
   const [rebirth, setRebirth] = useState(null);
-  const [sectionTabs, setSectionTabs] = useState({});
+  const [sectionTabs, setSectionTabs] = useState(() => initialSection === 'card' && cardShopScrollMemo.pending && cardShopScrollMemo.tab ? {
+    card: cardShopScrollMemo.tab
+  } : {});
+  const cardListRef = React.useRef(null);
+  const cardPressedRowRef = React.useRef(null);
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => () => {
+    mountedRef.current = false;
+  }, []);
+  React.useLayoutEffect(() => {
+    const memo = cardShopScrollMemo;
+    if (!(initialSection === 'card' && memo.pending)) return;
+    memo.pending = false;
+    let tries = 0,
+      raf = 0;
+    const apply = () => {
+      const box = cardListRef.current;
+      const row = box && memo.row ? box.querySelector(`[${memo.row.attr}="${String(memo.row.value).replace(/"/g, '')}"]`) : null;
+      const ready = box && (row || !memo.row && box.scrollHeight - box.clientHeight >= memo.top);
+      if (box && (ready || tries >= 40)) {
+        box.scrollTop = memo.top;
+        if (row) {
+          const b = box.getBoundingClientRect(),
+            r = row.getBoundingClientRect();
+          if (r.top < b.top || r.bottom > b.bottom) box.scrollTop += r.top - b.top - (b.height - r.height) / 2;
+        }
+        return;
+      }
+      tries++;
+      raf = requestAnimationFrame(apply);
+    };
+    apply();
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  const rememberCardShop = tab => {
+    const box = cardListRef.current;
+    Object.assign(cardShopScrollMemo, {
+      pending: true,
+      tab,
+      top: box ? box.scrollTop : 0,
+      row: cardPressedRowRef.current
+    });
+  };
+  const withCardShopMemo = (tab, fn) => fn ? async (...args) => {
+    rememberCardShop(tab);
+    let r;
+    try {
+      r = await fn(...args);
+    } catch (e) {
+      cardShopScrollMemo.pending = false;
+      throw e;
+    }
+    if (!(r && (r === true || r.ok))) cardShopScrollMemo.pending = false;else setTimeout(() => {
+      if (mountedRef.current) cardShopScrollMemo.pending = false;
+    }, 1500);
+    return r;
+  } : fn;
   const safeEventPoints = normalizeRhythmEventPoints(eventPoints);
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
@@ -57923,15 +58140,24 @@ function BreederMarketScreen({
         value: cp
       }]
     }), React.createElement("div", {
+      ref: cardListRef,
       className: SCREEN_LIST_CLASS,
       "data-card-shop": true,
-      "data-card-shop-tab": tab
+      "data-card-shop-tab": tab,
+      onClickCapture: e => {
+        const el = e.target && e.target.closest ? e.target.closest(CARD_SHOP_ROW_ATTRS.map(k => `[${k}]`).join(',')) : null;
+        const attr = el && CARD_SHOP_ROW_ATTRS.find(k => el.hasAttribute(k));
+        if (attr) cardPressedRowRef.current = {
+          attr,
+          value: el.getAttribute(attr)
+        };
+      }
     }, tab === 'pack' && React.createElement(CardShopPacks, {
       db: CARD_BATTLE_DATA,
       point: cp,
       busy: busy || cardShop.busy,
       collection: cardShop.collection,
-      onBuyPack: cardShop.onBuyPack
+      onBuyPack: withCardShopMemo('pack', cardShop.onBuyPack)
     }), tab === 'tactics' && typeof CardTacticsShop === 'function' && React.createElement(CardTacticsShop, {
       point: cp,
       busy: busy || cardShop.busy,
@@ -57943,7 +58169,7 @@ function BreederMarketScreen({
       busy: busy || cardShop.busy,
       starter: cardShop.starter,
       shop: cardShop.shop,
-      onBuyStarter: cardShop.onBuyStarter
+      onBuyStarter: withCardShopMemo('starter', cardShop.onBuyStarter)
     }), (tab === 'disc' || tab === 'assist') && React.createElement("div", {
       className: MARKET_GRID_CLASS
     }, tab === 'disc' && RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS.map(offer => {
@@ -79117,6 +79343,11 @@ function FriendsScreen({
   onCardShareGo = null
 }) {
   const [tab, setTab] = React.useState(Number(requestCount) > 0 ? 'requests' : 'friends');
+  const listScrollRef = React.useRef(null);
+  const listScrollMemoRef = React.useRef({
+    top: 0,
+    rowId: null
+  });
   const [phase, setPhase] = React.useState('loading');
   const [selfId, setSelfId] = React.useState('');
   const [myCode, setMyCode] = React.useState('');
@@ -79359,7 +79590,24 @@ function FriendsScreen({
     setSelected(null);
     run(() => ask.kind === 'remove' ? sbRemoveFriend(selfId, ask.otherId) : sbBlockFriendUser(selfId, ask.otherId));
   };
+  React.useLayoutEffect(() => {
+    if (selected) return;
+    const box = listScrollRef.current,
+      memo = listScrollMemoRef.current;
+    if (!box || !memo.rowId) return;
+    box.scrollTop = memo.top;
+    const row = [...box.querySelectorAll('[data-friend-row]')].find(el => el.getAttribute('data-friend-row') === memo.rowId);
+    if (row) {
+      const b = box.getBoundingClientRect(),
+        r = row.getBoundingClientRect();
+      if (r.top < b.top || r.bottom > b.bottom) box.scrollTop += r.top - b.top - (b.height - r.height) / 2;
+    }
+  }, [selected]);
   const openProfile = async view => {
+    listScrollMemoRef.current = {
+      top: listScrollRef.current ? listScrollRef.current.scrollTop : 0,
+      rowId: view && view.otherId ? view.otherId : null
+    };
     setSelected(view);
     setProfileTab('overview');
     setSummary({
@@ -79795,6 +80043,7 @@ function FriendsScreen({
       setNotice(null);
     }
   }), React.createElement("div", {
+    ref: listScrollRef,
     className: `${SCREEN_LIST_CLASS} pb-4`
   }, noticeBox, tab === 'friends' && (groups.friends.length === 0 ? React.createElement(ScreenEmpty, {
     emoji: "🤝",
@@ -82817,7 +83066,7 @@ function ModeSelectAssistantPanel({
   const capOf = show => artRatio ? `${(100 / (artRatio * show)).toFixed(2)}cqh` : '9999px';
   return React.createElement("div", {
     "data-rhythm-mode-assistant": true,
-    className: `mhms-glass mhms-in-left relative mx-3 mt-3 flex flex-col overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none ${showArt ? 'min-h-[150px] flex-1' : 'flex-none'}`
+    className: `mhms-glass mhms-in-left relative mx-3 mt-2 flex flex-col overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none ${showArt ? 'min-h-[150px] flex-1' : 'flex-none'}`
   }, showArt && React.createElement("div", {
     "data-rhythm-mode-assistant-art-box": true,
     className: "mhms-art-box relative min-h-0 flex-1 overflow-hidden"
@@ -82893,7 +83142,7 @@ function ModeSelectAssistantPanel({
       borderColor: assistant.accent
     }
   }, React.createElement("b", {
-    className: "mb-0.5 block text-[10px]",
+    className: "mr-1.5 text-[10px]",
     style: {
       color: assistant.accent
     }
@@ -82973,6 +83222,7 @@ function RhythmMultiScreen({
     RHYTHM_MULTI.setCatalog(songIds, lengths);
   }, [songIds.join(',')]);
   const [codeInput, setCodeInput] = React.useState('');
+  const [beatRankOpen, setBeatRankOpen] = React.useState(false);
   const [message, setMessage] = React.useState('');
   const [searching, setSearching] = React.useState(null);
   const [countdown, setCountdown] = React.useState(null);
@@ -83609,20 +83859,44 @@ function RhythmMultiScreen({
       className: "block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300"
     }, "MONBEAT ・ SELECT MODE"), React.createElement("b", {
       className: "mhms-title block truncate text-lg font-black leading-tight tracking-wider"
-    }, "モードえらび"), ms.beatPointText && React.createElement("small", {
+    }, "モードえらび"), (ms.beatPointText || Number.isFinite(ms.beatRankXp)) && React.createElement("div", {
+      className: "mt-0.5 flex min-w-0 items-center gap-2"
+    }, ms.beatPointText && React.createElement("small", {
       "data-rhythm-beat-point-balance": true,
-      className: "block truncate text-[9px] font-black text-violet-200/90"
+      className: "block min-w-0 shrink truncate text-[9px] font-black text-violet-200/90"
     }, ms.beatPointText), Number.isFinite(ms.beatRankXp) && React.createElement("div", {
-      className: "mt-0.5"
+      role: "button",
+      tabIndex: 0,
+      "data-beat-rank-open": true,
+      "aria-label": "ビートランク。くわしく見る",
+      className: "min-w-0 flex-1 cursor-pointer active:scale-[.98]",
+      onClick: () => {
+        Audio_.fgSe.tap();
+        setBeatRankOpen(true);
+      },
+      onKeyDown: e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          Audio_.fgSe.tap();
+          setBeatRankOpen(true);
+        }
+      }
     }, React.createElement(PlayerRankStrip, {
       kind: "beat",
-      xp: ms.beatRankXp
-    }))), quickRunInfo && React.createElement(RhythmQuickRunPill, {
+      xp: ms.beatRankXp,
+      size: "xs"
+    })))), quickRunInfo && React.createElement(RhythmQuickRunPill, {
       info: quickRunInfo,
       onRestart: onRestartQuickRun,
       onResume: onResumeQuickRun,
       widthClass: "max-w-[42%]"
-    }), React.createElement(RhythmOrientationButton, null)), ms.exiting && React.createElement("div", {
+    }), React.createElement(RhythmOrientationButton, null)), beatRankOpen && Number.isFinite(ms.beatRankXp) && React.createElement(PlayerRankDetail, {
+      kind: "beat",
+      xp: ms.beatRankXp,
+      rewardsOf: beatRankRewardItems,
+      how: "曲を遊ぶと経験値がたまります。難しい難易度ほど多く、HELL がいちばん多くたまります。その日はじめての1曲は +30 です。",
+      onClose: () => setBeatRankOpen(false)
+    }), ms.exiting && React.createElement("div", {
       "data-quick-run-exit-overlay": true,
       className: "absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center"
     }, React.createElement("b", {
@@ -92106,7 +92380,8 @@ const normalizeCardBgm = (v, isTrack = () => true) => {
   return {
     top: pick(r.top, CARD_BGM_DEFAULT.top),
     cpu: r.cpu === 'auto' || typeof r.cpu === 'string' && isTrack(r.cpu) ? r.cpu : CARD_BGM_DEFAULT.cpu,
-    pvp: pick(r.pvp, CARD_BGM_DEFAULT.pvp)
+    pvp: pick(r.pvp, CARD_BGM_DEFAULT.pvp),
+    watch: pick(r.watch, pick(r.pvp, CARD_BGM_DEFAULT.pvp))
   };
 };
 const CARD_PLAYLIST_MAX = 5;
@@ -101416,6 +101691,21 @@ const CardBattleScreen = ({
   useEffect(() => {
     if (screen === 'CARD_TOP' && topBgm && onBgm) onBgm(cardBgmOf(topBgm));
   }, [screen, topBgm]);
+  const watchBgm = save && save.bgm ? save.bgm.watch : null;
+  const watchingRef = useRef(false);
+  useEffect(() => {
+    if (typeof CARD_WATCH === 'undefined' || !onBgm) return undefined;
+    const on = w => {
+      const now = !!w && w.phase !== 'idle';
+      if (now === watchingRef.current) return;
+      watchingRef.current = now;
+      if (now) {
+        if (watchBgm) onBgm(cardBgmOf(watchBgm));
+      } else if (topBgm) onBgm(cardBgmOf(topBgm));
+    };
+    on(CARD_WATCH.get());
+    return CARD_WATCH.subscribe(on);
+  }, [watchBgm, topBgm]);
   useEffect(() => {
     if (screen === 'CARD_TOP' && game && !result) {
       if (openIdRef.current === game.key) void settleOpenCpu({
@@ -103310,12 +103600,12 @@ const CardBattleScreen = ({
       className: "text-[13px] font-black text-white"
     }, "音"), React.createElement("b", {
       className: "mt-2 block text-[12px] font-black text-slate-200"
-    }, "対戦のBGM"), [['top', 'トップ画面'], ['pvp', 'マルチ対戦']].map(([k, label]) => React.createElement("label", {
+    }, "対戦のBGM"), [['top', 'トップ画面'], ['pvp', 'マルチ対戦'], ['watch', '観戦']].map(([k, label]) => React.createElement("label", {
       key: k,
       className: "mt-2 block text-left"
     }, React.createElement("span", {
       className: "text-[11px] font-black text-slate-300"
-    }, label, k === 'pvp' && !(typeof cardPvpOpen === 'function' && cardPvpOpen()) ? '(準備中)' : ''), React.createElement("div", {
+    }, label, k !== 'top' && !(typeof cardPvpOpen === 'function' && cardPvpOpen()) ? '(準備中)' : ''), React.createElement("div", {
       className: "mt-1 flex gap-2"
     }, React.createElement("select", {
       "data-card-bgm-select": k,
@@ -103335,7 +103625,7 @@ const CardBattleScreen = ({
     }, "ランダム(毎回ちがう曲)"), (typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map(t => React.createElement("option", {
       key: t.id,
       value: t.id
-    }, t.name, t.id === CARD_BGM_DEFAULT[k] ? '(はじめの曲)' : ''))), bgmPreview && (save.bgm[k] === CARD_BGM_RANDOM ? React.createElement("button", {
+    }, t.name, t.id === (CARD_BGM_DEFAULT[k] || CARD_BGM_DEFAULT.pvp) ? '(はじめの曲)' : ''))), bgmPreview && (save.bgm[k] === CARD_BGM_RANDOM ? React.createElement("button", {
       type: "button",
       "data-card-bgm-preview": k,
       onClick: () => {
@@ -104691,7 +104981,7 @@ const cardDexTabsOf = (db, mode) => {
   if (mode === 'species') return speciesTabs();
   if (mode === 'sub') return [...speciesTabs(), ...(Object.values(db.monsters).some(m => String(m.wave) === 'hybrid' && (m.sub || 'unknown') === 'unknown') ? [{
     id: 'unknown',
-    label: '不明'
+    label: '？？？(レア)'
   }] : [])];
   if (mode === 'kind') return CARD_DEX_KINDS;
   return CARD_DEX_TABS;
@@ -104732,7 +105022,7 @@ const CARD_DEX_UNIT = Object.freeze({
   sub: 'このサブ血統',
   kind: 'この種類'
 });
-const cardDexSubHead = (k, label) => k === 'pure' ? `純血(主も副も${label})` : label === '不明' ? '混血(副血統が分からない)' : `混血(副血統が${label})`;
+const cardDexSubHead = (k, label, tab) => k === 'pure' ? `純血(主も副も${label})` : tab === 'unknown' ? '副血統が ？？？ の子は、めずらしい種(レア)です' : `混血(副血統が${label})`;
 const CardDex = ({
   db,
   collection,
@@ -104852,7 +105142,7 @@ const CardDex = ({
       }, mode !== 'pack' && React.createElement("div", {
         "data-card-dex-head": k,
         className: `mb-1 flex items-center rounded-lg px-2 py-0.5 text-[12px] font-black text-white ${mode === 'sub' ? k === 'pure' ? 'bg-amber-700' : 'bg-indigo-600' : CARD_DEX_PACK_TONE[k] || 'bg-slate-600'}`
-      }, mode === 'sub' ? cardDexSubHead(k, curTab.label) : cardDexPackLabel(k), React.createElement("span", {
+      }, mode === 'sub' ? cardDexSubHead(k, curTab.label, curTab.id) : cardDexPackLabel(k), React.createElement("span", {
         className: "ml-auto text-[11px]"
       }, haveIn(inTab), "/", inTab.length)), React.createElement("div", {
         className: "grid grid-cols-4 gap-1.5"
@@ -116061,61 +116351,37 @@ const CardRankChip = ({
     showName: showName
   }));
 };
+const cardRankRewardItems = (r, got = false) => {
+  if (!(r >= 2)) return [];
+  const g = cardRankRewardOf(r),
+    frame = CARD_LEVEL_FRAMES.find(f => f.at === r),
+    bonus = r % 5 === 0 ? r * 200 : 0;
+  return [{
+    icon: '💰',
+    text: `ビートP ${(g.point - bonus).toLocaleString()}`
+  }, ...(bonus ? [{
+    icon: '💰',
+    text: `ビートP ${bonus.toLocaleString()}`,
+    bonus: true
+  }] : []), ...(g.tickets ? [{
+    icon: '🎟️',
+    text: `カードパック券 ${g.tickets}枚`,
+    bonus: true
+  }] : []), ...(frame ? [{
+    icon: '🧠',
+    text: cardLevelFrameText(frame, got)
+  }] : [])];
+};
 const CardRankDetail = ({
   xp = 0,
   onClose
-}) => {
-  const info = cardLevelInfo(xp);
-  const up = cardRankUpcoming(info.level);
-  return React.createElement("div", {
-    "data-card-rank-detail": true,
-    role: "dialog",
-    "aria-modal": "true",
-    "aria-label": "カードランク",
-    className: "fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4",
-    onClick: onClose
-  }, React.createElement("div", {
-    className: "w-full max-w-[340px] rounded-2xl border-2 border-amber-200/70 bg-gradient-to-b from-violet-950 to-slate-950 p-4 text-white",
-    onClick: e => e.stopPropagation()
-  }, React.createElement("div", {
-    className: "flex justify-center"
-  }, React.createElement(PlayerRankBadge, {
-    kind: "card",
-    rank: info.level,
-    size: "lg"
-  })), React.createElement("div", {
-    className: "mt-3"
-  }, React.createElement(PlayerRankGauge, {
-    kind: "card",
-    info: {
-      rank: info.level,
-      into: info.into,
-      need: info.need
-    },
-    note: `次のランクまで あと${(info.need - info.into).toLocaleString()}`
-  })), React.createElement("b", {
-    className: "mt-3 block text-[13px] font-black text-amber-200"
-  }, "これからもらえる物"), React.createElement("ul", {
-    "data-card-rank-upcoming": true,
-    className: "mt-1 space-y-1 rounded-xl bg-black/35 px-2.5 py-2 text-[12px] font-bold leading-snug"
-  }, up.map(u => React.createElement("li", {
-    key: u.rank,
-    style: JA_WRAP_STYLE
-  }, React.createElement("b", {
-    className: "text-amber-100"
-  }, `ランク${u.rank}`), ` … ${u.text}`))), React.createElement("p", {
-    className: "mt-2 text-[11px] font-bold leading-relaxed text-slate-300",
-    style: JA_WRAP_STYLE
-  }, jaWrap('フリー対戦・マルチ対戦で戦うと経験値がたまります。強い相手ほど多く、マルチがいちばん多くたまります。その日はじめての勝ちは +30。投了・練習試合ではたまりません。')), React.createElement("button", {
-    type: "button",
-    "data-card-rank-detail-close": true,
-    onClick: () => {
-      Audio_.fgSe.tap();
-      onClose && onClose();
-    },
-    className: "mh-button mt-3 min-h-[44px] w-full rounded-xl text-[14px] font-black"
-  }, "とじる")));
-};
+}) => React.createElement(PlayerRankDetail, {
+  kind: "card",
+  xp: xp,
+  rewardsOf: cardRankRewardItems,
+  onClose: onClose,
+  how: 'フリー対戦・マルチ対戦で戦うと経験値がたまります。強い相手ほど多く、マルチがいちばん多くたまります。その日はじめての勝ちは +30。投了・練習試合ではたまりません。'
+});
 const cardRankFxGains = gain => {
   let bonusPoint = 0;
   for (let r = gain.from + 1; r <= gain.to; r++) if (r % 5 === 0) bonusPoint += r * 200;
