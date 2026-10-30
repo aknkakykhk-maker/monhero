@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8f5e9836777f67a9
+// source-sha256: 002f8e2f41d76efe
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -28854,7 +28854,7 @@ const SB_HEADERS = {
   'apikey': SUPABASE_KEY,
   'Content-Type': 'application/json'
 };
-const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report', 'rhythm_beat_rank_put', 'card_rank_put']);
+const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report', 'rhythm_beat_rank_put', 'card_rank_put', 'card_deck_replay_put']);
 const sbAutomationWriteBlocked = (url, method) => {
   try {
     if (typeof navigator === 'undefined' || navigator.webdriver !== true) return false;
@@ -100443,9 +100443,9 @@ const CardBattleBoard = ({
     "data-card-watch-badge": true,
     className: `shrink-0 whitespace-nowrap rounded-md border border-violet-300/60 bg-violet-500/20 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-violet-100`
   }, "観戦", watchEyes ? ` 👀${watchEyes}` : '') : tourReplay ? React.createElement("span", {
-    "data-card-replay-badge": "tour",
+    "data-card-replay-badge": tourReplay.deck ? 'deck' : 'tour',
     className: `shrink-0 whitespace-nowrap rounded-md border border-amber-300/70 bg-amber-500/25 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-amber-100`
-  }, "大会") : replay ? React.createElement("span", {
+  }, tourReplay.badge || '大会') : replay ? React.createElement("span", {
     "data-card-replay-badge": true,
     className: `shrink-0 whitespace-nowrap rounded-md border border-sky-300/60 bg-sky-500/20 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-sky-100`
   }, "リプレイ") : tutorial ? React.createElement("span", {
@@ -102317,7 +102317,29 @@ const CardBattleScreen = ({
       settings: save ? save.settings : undefined,
       replay: {
         ...g.replay,
-        back: 'tour'
+        back: meta && meta.back || 'tour'
+      }
+    });
+    onNavigate('CARD_BATTLE');
+    return true;
+  };
+  const openDeckReplay = async (ownerId, slot, meta = {}) => {
+    if (!db || typeof cardShareReplayGet !== 'function' || typeof cardReplayFromTour !== 'function') return false;
+    const row = await cardShareReplayGet(ownerId, slot);
+    const rec = row ? cardReplayFromTour(db, {
+      ...row,
+      kind: 'deck'
+    }, {
+      title: meta && meta.title
+    }) : null;
+    const g = rec ? cardReplayGameOf(db, rec) : null;
+    if (!g) return false;
+    setGame({
+      ...g,
+      settings: save ? save.settings : undefined,
+      replay: {
+        ...g.replay,
+        back: 'deckReplays'
       }
     });
     onNavigate('CARD_BATTLE');
@@ -102520,16 +102542,49 @@ const CardBattleScreen = ({
           }, {
             daily: reward.daily
           });
-          if (cpuLogRef.current && cpuLogRef.current.id === game.key) cpuLogRef.current = null;
+          const shareLog = cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogRef.current : null;
+          if (shareLog) cpuLogRef.current = null;
           const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
-          if (typeof selfId === 'string' && typeof cardShareReportUse === 'function') void cardShareReportUse({
-            match: `share-${game.key}-${Date.now().toString(36)}`,
-            ownerId: game.share.ownerId,
-            userId: selfId,
-            kind: 'battle',
-            deckWon: outcome !== 'win',
-            version: game.share.version
-          });
+          if (typeof selfId === 'string' && typeof cardShareReportUse === 'function') {
+            const match = `share-${game.key}-${Date.now().toString(36)}`;
+            const deckWon = outcome !== 'win';
+            const replayRec = shareLog && typeof cardReplayFromCpu === 'function' ? cardReplayFromCpu(db, {
+              id: `s${shareLog.id}`,
+              at: Date.now(),
+              myDeck: shareLog.decks[0],
+              cpuDeck: shareLog.decks[1],
+              seed: shareLog.seed,
+              first: shareLog.first,
+              history: shareLog.acts,
+              foe: {
+                name: game.share.name
+              },
+              outcome,
+              reason: ''
+            }) : null;
+            void (async () => {
+              const used = await cardShareReportUse({
+                match,
+                ownerId: game.share.ownerId,
+                userId: selfId,
+                kind: 'battle',
+                deckWon,
+                version: game.share.version
+              });
+              if (used !== 'ok' || !replayRec || typeof cardShareReplayPut !== 'function') return;
+              const me = rank && rank.profile ? rank.profile : {};
+              await cardShareReplayPut({
+                match,
+                ownerId: game.share.ownerId,
+                userId: selfId,
+                name: me.name || '',
+                icon: me.icon || null,
+                frame: me.frame || null,
+                rec: replayRec,
+                deckWon
+              });
+            })().catch(() => {});
+          }
           setResult({
             outcome,
             reward,
@@ -103111,7 +103166,19 @@ const CardBattleScreen = ({
       onOpenMarket: onOpenMarket ? () => {
         setNotice('');
         onOpenMarket();
-      } : null
+      } : null,
+      onOpenReplays: typeof CardDeckReplays === 'function' ? () => setView('deckReplays') : null
+    });
+  }
+  if (view === 'deckReplays' && typeof CardDeckReplays === 'function') {
+    return React.createElement(CardDeckReplays, {
+      onBack: () => setView('tactics'),
+      onOpenDeck: openDeckReplay,
+      onOpenTour: (id, title) => openTourReplay(id, {
+        title,
+        back: 'deckReplays'
+      }),
+      known: new Set(assistantsUnlockedFrom(seenStoryIds).map(x => x.id))
     });
   }
   if (view === 'tacticsList' && typeof CardTacticsScreen === 'function') {
@@ -112902,11 +112969,12 @@ const cardReplayFromTour = (db, row, opts = {}) => {
   const live = row.live && typeof row.live === 'object' && typeof row.live.play === 'string' ? row.live : null;
   const caster = live && typeof live.who === 'string' ? assistOf(live.who) : null;
   const rules = Number.isInteger(row.rules) && row.rules > 0 ? row.rules : 0;
-  const names = [nameOf(a), nameOf(b)];
+  const deckKind = row.kind === 'deck';
+  const names = [nameOf(a), deckKind ? 'あなたのデッキ' : nameOf(b)];
   return {
     v: 1,
-    id: `tour-${String(row.id).replace(/[^0-9]/g, '').slice(0, 20)}`,
-    kind: 'tour',
+    id: `${deckKind ? 'deck' : 'tour'}-${String(row.id).replace(/[^0-9]/g, '').slice(0, 20)}`,
+    kind: deckKind ? 'deck' : 'tour',
     at: 0,
     rules,
     first: row.first,
@@ -112930,6 +112998,8 @@ const cardReplayFromTour = (db, row, opts = {}) => {
     tour: {
       title: cardReplayText(opts.title, 40),
       stage: row.stage === 'final' ? 'final' : 'group',
+      badge: deckKind ? '登録デッキ' : '大会',
+      deck: deckKind,
       me: {
         name: names[0],
         icon: iconOf(a)
@@ -113221,7 +113291,7 @@ const CardTourLive = ({
   tight
 }) => {
   if (!tour) return null;
-  const head = `🏟️ ${tour.title || (tour.stage === 'final' ? '大会 頂上決戦' : '大会')}`;
+  const head = tour.deck ? `🃏 ${tour.title || '戦われた試合'}` : `🏟️ ${tour.title || (tour.stage === 'final' ? '大会 頂上決戦' : '大会')}`;
   const end = at >= last;
   const clamp = tight ? 'line-clamp-2' : '';
   const face = tour.caster && tour.caster.face ? React.createElement("img", {
@@ -113245,7 +113315,11 @@ const CardTourLive = ({
   }, head), end && tour.winner && React.createElement("span", {
     "data-card-tour-live-winner": true,
     className: "shrink-0 text-orange-300"
-  }, `WIN ${tour.winner}`)), at === 0 && tour.rulesOld && React.createElement("div", {
+  }, `WIN ${tour.winner}`)), at === 0 && tour.deck && React.createElement("div", {
+    "data-card-tour-live-deck": true,
+    className: "mt-0.5 text-[11px] font-bold text-amber-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`上があなたの登録デッキ、下が${tour.me.name}さんです`)), at === 0 && tour.rulesOld && React.createElement("div", {
     "data-card-tour-live-old": true,
     className: "mt-0.5 text-[11px] font-black text-amber-300",
     style: JA_WRAP_STYLE
@@ -114759,6 +114833,97 @@ const cardShareReportUse = async ({
     p_version: Number.isInteger(version) ? version : 1
   });
 };
+let _cardShareReplayOff = false;
+const cardShareReplayRpc = async (fn, body) => {
+  if (_cardShareReplayOff || _cardShareUnavailable) return null;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = setTimeout(() => {
+    if (controller) controller.abort();
+  }, 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+      method: 'POST',
+      headers: SB_HEADERS,
+      signal: controller ? controller.signal : undefined,
+      body: JSON.stringify(body)
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      if (_isMissingTableError(res.status, text) || res.status === 404) _cardShareReplayOff = true;
+      return null;
+    }
+    try {
+      return JSON.parse(text);
+    } catch (_) {
+      return text;
+    }
+  } catch (_) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const CARD_SHARE_REPLAY_SLOTS = 20;
+const cardShareReplayPut = async ({
+  match,
+  ownerId,
+  userId,
+  name,
+  icon,
+  frame,
+  rec,
+  deckWon
+}) => {
+  if (!rec || !Array.isArray(rec.acts) || !rec.acts.length) return 'bad';
+  const r = await cardShareReplayRpc('card_deck_replay_put', {
+    p_match_id: match,
+    p_owner: ownerId,
+    p_user: userId,
+    p_name: String(name || '').slice(0, 40),
+    p_icon: icon || null,
+    p_frame: frame || null,
+    p_user_deck: {
+      monsters: rec.decks[0].monsters.slice(),
+      cards: rec.decks[0].cards.slice()
+    },
+    p_seed: rec.seeds[0] >>> 0,
+    p_first: rec.first,
+    p_rules: rec.rules,
+    p_acts: rec.acts,
+    p_turns: Number.isInteger(rec.turn) ? rec.turn : null,
+    p_deck_won: !!deckWon
+  });
+  return typeof r === 'string' ? r : 'off';
+};
+const cardShareReplaysOf = async ownerId => {
+  const key = await cardShareOwnerKey(false);
+  if (!key || typeof ownerId !== 'string') return null;
+  const rows = await cardShareReplayRpc('card_deck_replays_of', {
+    p_owner: ownerId,
+    p_key: key
+  });
+  if (!Array.isArray(rows)) return null;
+  return rows.filter(r => r && Number.isInteger(r.slot) && r.slot >= 0 && r.slot < CARD_SHARE_REPLAY_SLOTS).map(r => ({
+    slot: r.slot,
+    at: Date.parse(r.at) || 0,
+    name: typeof r.name === 'string' && r.name ? r.name.slice(0, 40) : 'ブリーダー',
+    icon: typeof r.icon === 'string' ? r.icon : null,
+    frame: typeof r.frame === 'string' ? r.frame : null,
+    deckWon: r.deck_won === true,
+    turns: Number.isInteger(r.turns) ? r.turns : null,
+    old: r.old === true
+  }));
+};
+const cardShareReplayGet = async (ownerId, slot) => {
+  const key = await cardShareOwnerKey(false);
+  if (!key || typeof ownerId !== 'string' || !Number.isInteger(slot)) return null;
+  const row = await cardShareReplayRpc('card_deck_replay_get', {
+    p_owner: ownerId,
+    p_key: key,
+    p_slot: slot
+  });
+  return row && typeof row === 'object' && !Array.isArray(row) ? row : null;
+};
 const cardShareSameBlood = (db, deck) => {
   const ms = (deck && Array.isArray(deck.monsters) ? deck.monsters : []).map(no => cardMonsterOf(db, no)).filter(Boolean);
   return ms.length > 0 && ms.filter(m => cardAiBloodOf(m) === cardAiBloodOf(ms[0])).length >= 2;
@@ -115156,7 +115321,11 @@ const CardDeckShare = ({
     className: "space-y-1.5"
   }, foeShown.map(foeRow)) : React.createElement("p", {
     className: `${SCREEN_PANEL_CLASS} text-[12px] font-bold text-slate-400`
-  }, foeEmptyText)), React.createElement("button", {
+  }, foeEmptyText)), React.createElement("p", {
+    "data-card-share-replay-note": true,
+    className: "px-1 text-[11px] font-bold leading-snug text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('戦った試合は、デッキを登録した人があとから見返せます(あなたの名前とアイコンが出ます)')), React.createElement("button", {
     type: "button",
     "data-card-share-reload": true,
     className: "w-full rounded-xl border border-white/15 bg-slate-900 py-2 text-[12px] font-black text-slate-200",
@@ -115488,6 +115657,166 @@ const CardShareDeckActions = ({
     className: "mt-1.5 rounded-lg bg-slate-950 p-1.5 text-[12px] font-bold text-amber-100",
     style: JA_WRAP_STYLE
   }, msg));
+};
+const CardDeckReplays = ({
+  onBack,
+  onOpenDeck,
+  onOpenTour,
+  known = null
+}) => {
+  const [tab, setTab] = useState('all');
+  const [items, setItems] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+      const out = [];
+      if (typeof selfId === 'string') {
+        const rows = await cardShareReplaysOf(selfId).catch(() => null);
+        (rows || []).forEach(r => out.push({
+          key: `d${r.slot}-${r.at}`,
+          kind: 'free',
+          name: r.name,
+          icon: r.icon,
+          frame: r.frame,
+          at: r.at,
+          won: r.deckWon,
+          old: r.old,
+          sub: `${typeof cardReplayWhen === 'function' ? cardReplayWhen(r.at) : ''}${r.turns ? `・ターン${r.turns}まで` : ''}`,
+          title: `フリー対戦 ${typeof cardReplayWhen === 'function' ? cardReplayWhen(r.at) : ''}`.trim(),
+          open: title => onOpenDeck(selfId, r.slot, {
+            title
+          })
+        }));
+        const tours = typeof cardTourFetchList === 'function' ? await cardTourFetchList().catch(() => null) : null;
+        for (const t of (tours || []).filter(x => x.status !== 'entry').slice(0, 6)) {
+          const view = await cardTourFetchView(t.id, selfId).catch(() => null);
+          if (!view) continue;
+          const now = Date.now();
+          view.matches.filter(m => m.winner !== null && m.visibleAt <= now).forEach(m => {
+            const seats = cardTourStageSeats(view, m.stage, m.grp);
+            const A = seats.find(e => cardTourSeatKey(e, m.stage) === m.a),
+              B = seats.find(e => cardTourSeatKey(e, m.stage) === m.b);
+            const side = A && A.mine ? 0 : B && B.mine ? 1 : -1;
+            if (side < 0) return;
+            const foe = side === 0 ? B : A;
+            const label = `${t.name} ${m.stage === 'final' ? '頂上決戦' : `第${m.day + 1}試合`}`;
+            out.push({
+              key: `t${m.id}`,
+              kind: 'tour',
+              name: foe ? cardTourNameOf(foe, known) : 'ブリーダー',
+              icon: null,
+              frame: null,
+              at: m.visibleAt,
+              won: m.winner === side,
+              old: false,
+              sub: label,
+              title: label,
+              open: title => onOpenTour(m.id, title)
+            });
+          });
+        }
+      }
+      out.sort((x, y) => y.at - x.at);
+      if (alive) setItems(out);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const shown = (items || []).filter(x => tab === 'all' || x.kind === tab);
+  const open = async x => {
+    if (busy) return;
+    Audio_.fgSe.tap();
+    setBusy(true);
+    setMsg('');
+    let ok = false;
+    try {
+      ok = await x.open(x.title);
+    } catch (_) {
+      ok = false;
+    }
+    setBusy(false);
+    if (ok === false) setMsg('この試合は、いまは見返せません。時間をおいて開き直してください');
+  };
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-card-deck-replays": true,
+    className: SCREEN_SHELL_CLASS
+  }, React.createElement(ScreenHead, {
+    title: "戦われた試合",
+    accent: "text-amber-200",
+    onBack: onBack,
+    note: `登録中のデッキが戦った試合。フリー対戦は新しい${CARD_SHARE_REPLAY_SLOTS}試合まで`
+  }), React.createElement("div", {
+    className: "mb-2 grid shrink-0 grid-cols-3 gap-1.5",
+    role: "tablist"
+  }, [['all', 'ぜんぶ'], ['free', 'フリー対戦'], ['tour', '大会']].map(([k, label]) => React.createElement("button", {
+    key: k,
+    type: "button",
+    role: "tab",
+    "aria-selected": tab === k,
+    "data-card-deck-replays-tab": k,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setTab(k);
+    },
+    className: `min-h-[40px] rounded-xl border text-[13px] font-black ${tab === k ? 'border-amber-300 bg-amber-500/25 text-amber-50' : 'border-white/10 bg-slate-900/80 text-slate-300'}`
+  }, label))), React.createElement("div", {
+    className: `${SCREEN_LIST_CLASS} space-y-1.5 pb-4`
+  }, msg && React.createElement("p", {
+    "data-card-deck-replays-note": true,
+    className: "rounded-xl border border-amber-300/40 bg-amber-500/10 px-2 py-1.5 text-[12px] font-bold text-amber-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(msg)), items === null && React.createElement("div", {
+    className: "py-6 text-center text-[13px] font-bold text-slate-400"
+  }, "読み込み中…"), items && !shown.length && React.createElement("div", {
+    "data-card-deck-replays-empty": true,
+    className: "py-6 text-center text-[13px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('まだ記録がありません。ほかのブリーダーがあなたのデッキと戦うと、ここに残ります')), shown.map(x => React.createElement("button", {
+    key: x.key,
+    type: "button",
+    "data-card-deck-replays-row": x.kind,
+    disabled: busy,
+    onClick: () => {
+      void open(x);
+    },
+    className: "flex w-full items-center gap-2 rounded-xl border border-white/10 bg-slate-900/70 px-2 py-1.5 text-left disabled:opacity-60"
+  }, React.createElement("span", {
+    className: "block h-[38px] w-[38px] shrink-0 overflow-hidden rounded-xl bg-black/40"
+  }, x.kind === 'tour' ? React.createElement("span", {
+    className: "grid h-full w-full place-items-center text-[20px]"
+  }, "🏆") : typeof CardPvpAvatar === 'function' ? React.createElement(CardPvpAvatar, {
+    icon: x.icon || '🙂',
+    frame: x.frame,
+    className: "h-full w-full"
+  }) : React.createElement("span", {
+    className: "text-[20px]"
+  }, "🙂")), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("span", {
+    className: "flex items-center gap-1.5"
+  }, React.createElement("b", {
+    className: "min-w-0 truncate text-[14px] font-black text-white"
+  }, x.name), React.createElement("span", {
+    className: `shrink-0 rounded-md px-1.5 text-[10px] font-black ${x.kind === 'tour' ? 'bg-amber-500/30 text-amber-100' : 'bg-emerald-500/25 text-emerald-100'}`
+  }, x.kind === 'tour' ? '大会' : 'フリー'), x.old && React.createElement("span", {
+    className: "shrink-0 rounded-md bg-slate-700 px-1.5 text-[10px] font-black text-slate-200"
+  }, "前の登録")), React.createElement("small", {
+    className: "block truncate text-[11px] font-bold text-slate-400"
+  }, x.sub)), React.createElement("span", {
+    className: "shrink-0 text-right"
+  }, React.createElement("b", {
+    className: `block text-[13px] font-black ${x.won ? 'text-orange-400' : 'text-sky-400'}`
+  }, x.won ? '勝ち' : '負け'), React.createElement("small", {
+    className: "text-[10px] font-bold text-slate-400"
+  }, "見返す ›")))), React.createElement("p", {
+    className: "px-1 text-[11px] font-bold leading-snug text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('「勝ち」「負け」は、あなたの登録デッキから見た結果です。見返しは戦った人の画面と同じ並びで、上があなたのデッキです'))));
 };
 const CARD_TACTICS_KEY = 'mh_card_tactics_v1';
 const CARD_LEVEL_KEY = 'mh_card_level_v1';
@@ -117940,7 +118269,8 @@ const CardDeckRegister = ({
   frame = null,
   onBack,
   onOpenList = null,
-  onOpenMarket = null
+  onOpenMarket = null,
+  onOpenReplays = null
 }) => {
   const [step, setStep] = useState('deck');
   const [data, setData] = useState(null);
@@ -118096,7 +118426,9 @@ const CardDeckRegister = ({
   }, "持っている", React.createElement("br", null), "戦術カード") : null;
   const mineBox = mine ? React.createElement("div", {
     "data-card-reg-mine": true,
-    className: `${SCREEN_PANEL_CLASS} mb-2 flex items-center gap-2 py-2`
+    className: `${SCREEN_PANEL_CLASS} mb-2 py-2`
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
   }, React.createElement(CardRegThumbs, {
     db: db,
     deck: mine.deck,
@@ -118114,7 +118446,15 @@ const CardDeckRegister = ({
       void unregister();
     },
     className: "shrink-0 rounded-lg border border-white/15 px-2 py-1 text-[11px] font-black text-slate-300"
-  }, "やめる")) : null;
+  }, "やめる")), onOpenReplays && React.createElement("button", {
+    type: "button",
+    "data-card-reg-replays": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      onOpenReplays();
+    },
+    className: "mt-1.5 w-full rounded-xl border-2 border-sky-400 bg-sky-950 py-2 text-[13px] font-black text-sky-50"
+  }, "戦われた試合を見る")) : null;
   return React.createElement("div", {
     "data-mh-screen": true,
     "data-card-reg": true,

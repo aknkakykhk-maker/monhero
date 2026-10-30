@@ -233,6 +233,7 @@ const cardReplayFromCpu = (db, { id, at, myDeck, cpuDeck, seed, first, history, 
 // 大会の試合から(99。サーバの card_tournament_match が返す1行)。2026-10-30 大会 PR4
 //   端末には保存しない(過去の対戦の50試合の枠を食わない)。種は1つ(サーバの cardTourPlay と同じ cardCreateGame の形)なので、なぞり直しは助手と対戦と同じ道
 //   row … { id, stage, day, seed, first, winner, rules, acts, live:{ who, play, review }, a:{ name, icon, is_assist, assist_id, deck }, b:{ … } }
+//   登録デッキが戦われた試合(95 の card_deck_replay_get。2026-10-31)も同じ形で、row.kind === 'deck'。a = 戦った人(下)・b = 登録デッキ(上・見ている本人)
 //   opts.known … 会った助手の id(まだ会っていない助手は名前と顔を出さない。99 と同じ)。opts.title … 会場の見出し(大会の名前・何試合目)
 const cardReplayFromTour = (db, row, opts = {}) => {
   if (!db || !row || typeof row !== 'object') return null;
@@ -262,14 +263,18 @@ const cardReplayFromTour = (db, row, opts = {}) => {
   const live = row.live && typeof row.live === 'object' && typeof row.live.play === 'string' ? row.live : null;
   const caster = live && typeof live.who === 'string' ? assistOf(live.who) : null;
   const rules = Number.isInteger(row.rules) && row.rules > 0 ? row.rules : 0;
-  const names = [nameOf(a), nameOf(b)];
+  const deckKind = row.kind === 'deck';
+  // 登録デッキの試合: 上は見ている本人の登録デッキなので「あなたのデッキ」と呼ぶ(ログの「◯◯の攻撃」もこの名前)
+  const names = [nameOf(a), deckKind ? 'あなたのデッキ' : nameOf(b)];
   return {
-    v: 1, id: `tour-${String(row.id).replace(/[^0-9]/g, '').slice(0, 20)}`, kind: 'tour', at: 0, rules, first: row.first,
+    v: 1, id: `${deckKind ? 'deck' : 'tour'}-${String(row.id).replace(/[^0-9]/g, '').slice(0, 20)}`, kind: deckKind ? 'deck' : 'tour', at: 0, rules, first: row.first,
     names, foe: { name: names[1], icon: iconOf(b), frame: null, deckName: null, who: null },
     outcome: row.winner === 0 ? 'win' : 'lose', reason: '', decks, seeds: [seed, 0], acts, prints: '', fav: false, turn: null, level: null,
     // 見返しの会場と実況(84 の盤面の下・93 の CardTourLive)
     tour: {
       title: cardReplayText(opts.title, 40), stage: row.stage === 'final' ? 'final' : 'group',
+      // 上の帯の印と、はじまりの一言(登録デッキの試合だけ)
+      badge: deckKind ? '登録デッキ' : '大会', deck: deckKind,
       me: { name: names[0], icon: iconOf(a) },
       winner: row.winner === 0 || row.winner === 1 ? names[row.winner] : '',
       live: live ? { play: cardReplayText(live.play, 200), review: cardReplayText(live.review, 240) } : null,
@@ -423,7 +428,7 @@ const CardReplayBar = ({ replay, at, onSeek, tight }) => {
 // tour … cardReplayFromTour の tour。at・last … いまの手の番号と最後の番号。tight … 縦の画面で入り切らないとき(文を2行まで)
 const CardTourLive = ({ tour, at, last, tight }) => {
   if (!tour) return null;
-  const head = `🏟️ ${tour.title || (tour.stage === 'final' ? '大会 頂上決戦' : '大会')}`;
+  const head = tour.deck ? `🃏 ${tour.title || '戦われた試合'}` : `🏟️ ${tour.title || (tour.stage === 'final' ? '大会 頂上決戦' : '大会')}`;
   const end = at >= last;
   const clamp = tight ? 'line-clamp-2' : '';
   const face = tour.caster && tour.caster.face
@@ -436,6 +441,9 @@ const CardTourLive = ({ tour, at, last, tight }) => {
         <span data-card-tour-live-title className="min-w-0 truncate">{head}</span>
         {end && tour.winner && <span data-card-tour-live-winner className="shrink-0 text-orange-300">{`WIN ${tour.winner}`}</span>}
       </div>
+      {at === 0 && tour.deck && (
+        <div data-card-tour-live-deck className="mt-0.5 text-[11px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(`上があなたの登録デッキ、下が${tour.me.name}さんです`)}</div>
+      )}
       {at === 0 && tour.rulesOld && (
         <div data-card-tour-live-old className="mt-0.5 text-[11px] font-black text-amber-300" style={JA_WRAP_STYLE}>{jaWrap('ルールが変わる前の試合です。途中までしか見られないことがあります')}</div>
       )}
