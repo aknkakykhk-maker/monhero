@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e31fde3404dba8bd
+// generated-sha256: c8ac0dc23436f2b6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -54730,8 +54730,8 @@ const CARD_AI_HABIT_BLEND = Object.freeze({ expert: { mua: 0.6 }, master: { mua:
 const CARD_AI_PLAY_TUNE = Object.freeze({
   // EASY・NORMAL で同じ血統(モッチーの仲間)でも組むようになって強くなった(2026-10-26)ぶん、みゅあの雑さを戻した(前は easy -0.035・normal -0.105)
   mua: { easy: 0.1, normal: -0.04, hard: -0.11, expert: 0.03, master: 0.12 },
-  momosuke: { easy: 0.12, normal: 0.06, hard: 0, expert: 0.1, master: 0.05 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.165 → 0.14。混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 0.05
-  kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: 0, master: 0.1 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.345 → 0.3。意味不明(277)・混血の直し(2026-10-27)のあと 0.1
+  momosuke: { easy: 0.12, normal: 0.06, hard: 0, expert: 0.04, master: 0 },   // 全体カードを入れた(2026-10-30)ぶん EXPERT 0.1 → 0.04・MASTER 0.05 → 0。   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.165 → 0.14。混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 0.05
+  kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: -0.08, master: 0 },   // 全体カードを入れた(2026-10-30)ぶん EXPERT 0 → -0.08・MASTER 0.1 → 0   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.345 → 0.3。意味不明(277)・混血の直し(2026-10-27)のあと 0.1
   dra: { easy: -0.075, normal: -0.075, hard: 0.03, expert: -0.06, master: 0 },
   atsu: { easy: 0.05, normal: 0, hard: 0.02, expert: 0.06, master: 0 },   // 臨機応変(2026-10-29)で強くなった(NORMAL 55→69%・EASY 73%・EXPERT 69%)ので、各強さで雑さを足した(40戦で測った)   // EXPERT は同じ血統(弱い)でも組むようになった(2026-10-26)ので 0.03 → 0
 });
@@ -54753,6 +54753,8 @@ const cardAiPolicy = (habitId, levelId, opts = {}) => {
   // opts.playerRole … 勝率を測るときのプレイヤー役(tools/card の検査・道具だけが付ける)。山札切れを気にしない前の打ち方のまま
   //   (2026-10-27 ソランド判断: 人が相手のときと測り方をそろえるため。プレイヤー役まで山札切れを避けると、守り型のドラが EXPERT 34%・MASTER 36% に下がった)
   const out = { habit, level: { ...level, sloppy: Math.max(0, Math.min(0.9, (level.sloppy || 0) * tune + add)) }, playerRole: !!(opts && opts.playerRole) };
+  // 助手の得意な全体カード(CARD_AI_DECKS の field)。デッキに入れるだけでは場の点が低くて出さない札があったので、出すときに点を足す(2026-10-30)
+  if (!out.playerRole && CARD_AI_DECKS[habitId] && CARD_AI_DECKS[habitId].field) out.fields = CARD_AI_DECKS[habitId].field;
   // 助手と対戦の EXPERT・MASTER は、戦術カードの基本カードを2枚・3枚持つ(82-card-tactics-core の CARD_AI_TACTIC_BASE)。プレイヤー役は持たない
   const gambit = !out.playerRole && !(opts && opts.noTactics) && typeof cardAiTacticGambit === 'function' ? cardAiTacticGambit(habitId, levelId) : null;
   const when = gambit && typeof CARD_AI_TACTIC_WHEN !== 'undefined' ? CARD_AI_TACTIC_WHEN[habitId] || null : null;
@@ -54845,7 +54847,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
   const main = cardOf(db, me.hand[opt.hand[0]]);
   const cost = cardActionCost(db, st, p, me.hand, opt.hand);
   let score = 0;
-  if (main.kind === 'fld') return cardAiScoreField(db, st, p, main, cost, habit);
+  if (main.kind === 'fld') return cardAiScoreField(db, st, p, main, cost, habit) + (policy.fields && policy.fields.includes(main.name) && !(st.field && st.field.p === p) ? CARD_AI_FIELD_LIKE : 0);
   if (main.kind === 'spe') {
     (main.effects || []).forEach((e) => {
       if (e.t === 'heal' && opt.target) { const m = me.mons[opt.target.m]; score += Math.min(e.n, m.max - m.life) * 1.1; }
@@ -55280,13 +55282,15 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
 // ---- 助手のデッキ(5-5) ----
 // kit … 元のスターターをそのまま使う / build … 3体を決めて、くせに合わせてカードを選ぶ
 // HARD より上は、同じ3体で組み直す(HARD は第1弾のカードだけ・EXPERT と MASTER は全部の弾)
+// field … 助手ごとの全体カード(HARD から2枚ずつ入れる。第2弾より後の札は、弾の制限が外れる EXPERT から)。
+//   入れたい度の点だけで組むと全体カードは入らなかった(2026-10-30 社長「助手ごとに入れる」)
 const CARD_AI_DECKS = Object.freeze({
-  mua:      { kit: 'speed' },
-  momosuke: { kit: 'miracle' },
-  kiki:     { kit: 'powerful' },
-  dra:      { kit: 'powerful' },
-  kyuko:    { monsters: ['C-007', 'C-005', 'C-009'] },  // ナーガ・ピクシー・モッチー
-  atsu:     { monsters: ['C-003', 'C-001', 'C-002'], prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード'] },  // ゴーレム・ライガー・ガリ。全体攻撃を集める
+  mua:      { kit: 'speed', field: ['ホリィの声援', '飛び散る火花'] },     // 速攻。技を安く・特殊攻撃を強く
+  momosuke: { kit: 'miracle', field: ['冷静な判断', 'がんじがらめ'] },     // 手札を整え、相手の特殊技を封じる
+  kiki:     { kit: 'powerful', field: ['必殺技の応酬', '長期戦の予感'] },  // 小技を封じ、ガッツをためて大技
+  dra:      { kit: 'powerful', field: ['興奮のるつぼ', '必殺技の封印'] },  // 守り。受けるダメージを減らす場
+  kyuko:    { monsters: ['C-007', 'C-005', 'C-009'], field: ['必殺技の応酬'] },  // 小技を封じる。2種入れると MASTER で7点下がったので1種(2026-10-30)。ナーガ・ピクシー・モッチー
+  atsu:     { monsters: ['C-003', 'C-001', 'C-002'], prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード'], field: ['必殺技の応酬', '灼熱の地'] },  // 全体カードは大技で押す場と焼ける場。ゴーレム・ライガー・ガリ。全体攻撃を集める
   sorashido: { monsters: ['C-008', 'C-001', 'C-003'], prefer: ['大混乱', '時間稼ぎ', '大鎌', 'ハテナマーク', 'ニャーにゃー'] },  // 山札とガッツを削る札(その3体で使えるものだけ入る)  // ハム・ライガー・ゴーレム(ルールくんが測った試合でいちばん多かった3体。3体は好きな子ハムから毎試合選ぶ)。prefer はまだ無い
 });
 // 助手の好きなモンスター(1体。2026-10-25 社長「1体だけ好きなモンスターを決めて、あとは好みのバランスでデッキ組む」)。
@@ -55350,6 +55354,8 @@ const CARD_AI_LANE_MIN_DEFAULT = 0.8;
 const CARD_AI_LANE_MIN = Object.freeze({ momosuke: 1.5, dra: 0.8, kyuko: 2.0, atsu: 1.5, sorashido: 1.5 });   // きゅうこは混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 1.5。ドラは不自然な手の直し(2026-10-27)で MASTER が 38% を割ったので 0.3 → 0.8(1 より上だと好きな子の技が入らないことがある)
 const CARD_DECK_COPY_MAX = 3; // 同じ名前の技・全体・ブリーダーカードは3枚まで
 const CARD_AI_ATTACH_MAX = 6;
+const CARD_AI_FIELD_LIKE = 1; // 得意な全体カードを出すときに足す点(cardAiScoreAttack)
+const CARD_AI_FIELD_COPIES = 2; // 助手の全体カード(CARD_AI_DECKS の field)は1種2枚。場には1枚しか残らないので多く入れても腐る
 
 // カード1枚の「入れたい度」(くせの重みを掛ける)
 const cardAiCardValue = (card, habit) => {
@@ -55608,6 +55614,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   const used = new Set();
   // 助手らしさの札(あつの全体攻撃など)を先に入れる
   (preferOn ? recipe.prefer || [] : []).forEach((name) => { const x = byName[name]; if (x && !used.has(name)) { used.add(name); add(x.c, CARD_DECK_COPY_MAX); } });
+  (preferOn ? recipe.field || [] : []).forEach((name) => { const x = byName[name]; if (x && !used.has(name)) { used.add(name); add(x.c, CARD_AI_FIELD_COPIES); } });
   let li = 0, guard = 0;
   while (cards.length < CARD_BATTLE_DECK_SIZE && guard++ < 400) {
     const lane = li < lanes.length ? lanes[li] : shared;
