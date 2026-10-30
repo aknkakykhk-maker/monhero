@@ -1,5 +1,5 @@
 // MFバトルカード大会: 試合を回すサーバの上の関数(2026-10-30 ルールくん)。Supabase Edge Function(Deno)。
-// 呼ぶのは決まった時刻の仕組み(pg_cron。docs/sql/card-tournament/CARD_TOURNAMENT_SCHEDULE.sql)だけ。日本時間 0:30 に回し、1:30・2:30 にやり直す。
+// 呼ぶのは決まった時刻の仕組み(pg_cron。docs/sql/card-tournament/CARD_TOURNAMENT_SCHEDULE.sql)だけ。日本時間 0:00〜3:50 に10分おき(1回に回す試合は core.js の PLAY_BUDGET_MS まで)。
 // 中身は core.js(検査から偽物の表と偽物の Claude で動かせるように分けてある)。ルール本体は game.js(tools/build-card-tournament-bundle.js が作る写し)。
 // 公開の設定: verify_jwt を外す(合言葉で確かめる)。合言葉は vault の card_tournament_secret を card_tournament_secret_ok で比べる
 // 実況・解説は Secrets の ANTHROPIC_API_KEY(助手のおしゃべりと同じキー)。回数は card_assistant_talk_take で数える

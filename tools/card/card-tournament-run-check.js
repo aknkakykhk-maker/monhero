@@ -8,6 +8,7 @@
 //   C. 頂上決戦: 10人以上は組の総当たりのあと各組の上から2人で総当たり・終わったら順位とごほうび
 //   D. 実況: Claude が答えたら使う・失敗したら用意した台詞で回数を戻す・上限なら Claude を呼ばない・本文をログに出さない
 //   E. ルールの写し(game.js)が、いまの部品と合っている
+//   F. 1回の呼び出しで回す時間の上限: 使い切ったら残りは次の呼び出しへ回し、最後は上限なしと同じ結果になる
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');
 const DIR = path.join(ROOT, 'supabase', 'functions', 'card-tournament-run');
@@ -128,6 +129,25 @@ const fakeDb = (decks) => {
     const ai3 = db.s.matches.filter((m) => m.live.ai).length;
     check('D 答えた分だけ Claude の文・失敗は回数を戻す・上限からは呼ばない', calls === 20 && counts.refunded === 6 && ai3 === 14 && db.s.matches.filter((m) => m.live.ai).every((m) => /^実況\d+です$/.test(m.live.play)), `呼んだ${calls} 戻した${counts.refunded} 文${ai3}`);
     check('D ログに名前・本文が出ない', !logs.some((l) => /人\d|実況\d|解説\d/.test(l)));
+  }
+
+  // ---- 回す時間の上限(サーバの関数は CPU を1回2秒まで) ----
+  {
+    const mk = () => {
+      const db = fakeDb(makeDecks(5));
+      db.s.tours.push({ id: 'cup3', name: '第3回', open_on: '2026-12-01', entry_until: '2026-12-03T00:00:00+09:00', status: 'entry', rewards: {} });
+      ['p0', 'p1', 'p2', 'p3', 'p4'].forEach((o, i) => db.s.entries.push({ tournament_id: 'cup3', seat_id: o, owner_id: o, is_assist: false, dropped: false, entered_at: `2026-12-01T0${i}:00:00+09:00` }));
+      return db;
+    };
+    const full = mk();
+    await core.runAll({ db: full, game, nowMs: ms('2026-12-03', '00:00') });
+    const cut = mk();
+    const counts = [];
+    for (let k = 0; k < 4; k++) counts.push((await core.runAll({ db: cut, game, nowMs: ms('2026-12-03', '00:00') + k * 600000, budgetMs: 1 })).played);
+    const day0 = full.s.matches.filter((m) => m.day === 0).length;
+    check('F 上限を使い切ったら、その回は1試合で止め、残りは次の呼び出しで回す', day0 === 2 && J(counts) === J([1, 1, 0, 0]), `${day0}試合 ${J(counts)}`);
+    const strip = (db) => J(db.s.matches.map(({ done_at, ...m }) => m));
+    check('F 分けて回しても、上限なしで回したのと同じ結果', strip(full) === strip(cut));
   }
 
   if (fails.length) {
