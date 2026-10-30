@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c994d23a68176b5c
+// generated-sha256: 2bfc55590d9825ad
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -47586,6 +47586,10 @@ const friendsDayText = (day) => {
 // onCardShareGo … フレンドのデッキの札の「このデッキと戦う」(95 の CardShareDeckActions)から MFバトルカードへ移る(60-app)
 function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack, onTargetHandled, onIncomingCount, onOpenMonsterDetail, onCardShareGo = null }) {
   const [tab, setTab] = React.useState(Number(requestCount) > 0 ? 'requests' : 'friends');
+  // 一覧 → フレンドのプロフィール → 戻る で、一覧がいちばん上に戻っていた(2026-10-30 社長「フレンドをタップして戻ったら1番上に戻るから記憶するようにして」)。
+  // 押す前の位置と押した人を覚えておき、戻ったらその位置へ。読み直しで並びが変わって押した人が見えなければ、その人が見える所まで動かす
+  const listScrollRef = React.useRef(null);
+  const listScrollMemoRef = React.useRef({ top: 0, rowId: null });
   const [phase, setPhase] = React.useState('loading');   // loading / ready / notready / noid / error
   const [selfId, setSelfId] = React.useState('');
   const [myCode, setMyCode] = React.useState('');
@@ -47760,7 +47764,21 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
     setSelected(null);
     run(() => (ask.kind === 'remove' ? sbRemoveFriend(selfId, ask.otherId) : sbBlockFriendUser(selfId, ask.otherId)));
   };
+  React.useLayoutEffect(() => {
+    if (selected) return;
+    const box = listScrollRef.current, memo = listScrollMemoRef.current;
+    if (!box || !memo.rowId) return;
+    box.scrollTop = memo.top;
+    const row = [...box.querySelectorAll('[data-friend-row]')].find((el) => el.getAttribute('data-friend-row') === memo.rowId);
+    if (row) {
+      const b = box.getBoundingClientRect(), r = row.getBoundingClientRect();
+      // 一覧の箱だけを動かす(scrollIntoView は外側の画面まで動かすので使わない。viewport-height-check)
+      if (r.top < b.top || r.bottom > b.bottom) box.scrollTop += (r.top - b.top) - (b.height - r.height) / 2;
+    }
+  }, [selected]);
   const openProfile = async (view) => {
+    // 一覧のどこを見ていたかを覚えておく(戻ったときにその位置へ戻す。画面を開いているあいだだけ・保存しない)
+    listScrollMemoRef.current = { top: listScrollRef.current ? listScrollRef.current.scrollTop : 0, rowId: view && view.otherId ? view.otherId : null };
     setSelected(view);
     setProfileTab('overview');
     setSummary({ status: 'loading', entry: null });
@@ -48032,7 +48050,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
       <ScreenHead title="フレンド" accent="text-pink-300" onBack={onBack} backLabel="プロフィールへ戻る"/>
       <div className="mb-2 shrink-0"><AssistantBubble scene="friends" compact/></div>
       <ScreenTabs items={tabs} value={tab} onChange={(id) => { setTab(id); setNotice(null); }}/>
-      <div className={`${SCREEN_LIST_CLASS} pb-4`}>
+      <div ref={listScrollRef} className={`${SCREEN_LIST_CLASS} pb-4`}>
         {noticeBox}
         {tab === 'friends' && (groups.friends.length === 0
           ? <ScreenEmpty emoji="🤝" lines={['まだフレンドがいません', '「追加」から、フレンドコードで申請してみましょう']}
@@ -62729,7 +62747,7 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
 //   種類別   … デッキ編成の絞り込み(CARD_DECK_FILTERS)と同じ言葉と並び。先頭に「モンスター」
 // どの見かたでも、並べるカードは弾ごとの図鑑と同じもの(数え方がずれないように、全部の集まりから絞る)
 //   サブ血統別 … モンスターのカードだけを副血統でまとめる(2026-10-30 社長「サブ血統別も作って」)。混血は副血統の側に、純血(主も副も同じ)は自分の血統に「純血」の見出しで出す。
-//                副血統が分からない混血(ジェントルなど・sub が 'unknown')は、最後の「不明」にまとめる
+//                副血統が「？？？」の混血(ジェントルなど・sub が 'unknown')は、最後の「？？？(レア)」にまとめる(2026-10-30 社長「？？？は全部サブがレアを意味してる」)
 const CARD_DEX_MODES = Object.freeze([{ id: 'pack', label: 'パック別' }, { id: 'species', label: '血統別' }, { id: 'sub', label: 'サブ血統別' }, { id: 'kind', label: '種類別' }]);
 const CARD_DEX_TABS = Object.freeze([...CARD_PACKS.map((p) => ({ id: String(p.no), label: `第${p.no}弾` })), { id: 'hybrid', label: '混血' }]);
 const CARD_DEX_KINDS = Object.freeze([{ id: 'mon', label: 'モンスター' }, ...CARD_DECK_FILTERS.filter((f) => f.id !== 'all')]);
@@ -62758,7 +62776,7 @@ const cardDexIsPure = (db, no) => { const m = cardMonsterOf(db, no); return !!m 
 const cardDexTabsOf = (db, mode) => {
   const speciesTabs = () => CARD_PACKS.flatMap((p) => p.species).map((sp) => ({ id: sp, label: (Object.values(db.monsters).find((m) => m.species === sp && !m.variant) || {}).name || sp }));
   if (mode === 'species') return speciesTabs();
-  if (mode === 'sub') return [...speciesTabs(), ...(Object.values(db.monsters).some((m) => String(m.wave) === 'hybrid' && (m.sub || 'unknown') === 'unknown') ? [{ id: 'unknown', label: '不明' }] : [])];
+  if (mode === 'sub') return [...speciesTabs(), ...(Object.values(db.monsters).some((m) => String(m.wave) === 'hybrid' && (m.sub || 'unknown') === 'unknown') ? [{ id: 'unknown', label: '？？？(レア)' }] : [])];
   if (mode === 'kind') return CARD_DEX_KINDS;
   return CARD_DEX_TABS;
 };
@@ -62781,7 +62799,8 @@ const cardDexPackLabel = (k) => (k === 'hybrid' ? '混血(パックには入ら�
 const CARD_DEX_PACK_TONE = Object.freeze({ 1: 'bg-amber-600', 2: 'bg-emerald-600', 3: 'bg-blue-600', 4: 'bg-purple-600', 5: 'bg-pink-600', 6: 'bg-red-600', 7: 'bg-teal-600', 8: 'bg-yellow-600' });
 const CARD_DEX_UNIT = Object.freeze({ pack: 'このパック', species: 'この血統', sub: 'このサブ血統', kind: 'この種類' });
 // サブ血統別の見出し: 純血(主も副もこの血統)・混血(副血統がこの血統。主血統はちがう)
-const cardDexSubHead = (k, label) => (k === 'pure' ? `純血(主も副も${label})` : label === '不明' ? '混血(副血統が分からない)' : `混血(副血統が${label})`);
+//   副血統が ？？？ の子は、めずらしい種(レア)という意味(2026-10-30 社長)
+const cardDexSubHead = (k, label, tab) => (k === 'pure' ? `純血(主も副も${label})` : tab === 'unknown' ? '副血統が ？？？ の子は、めずらしい種(レア)です' : `混血(副血統が${label})`);
 const CardDex = ({ db, collection, onBack }) => {
   const [mode, setMode] = useState('pack');
   const [tabs, setTabs] = useState({ pack: '1', species: CARD_PACKS[0].species[0], sub: CARD_PACKS[0].species[0], kind: 'mon' });
@@ -62854,7 +62873,7 @@ const CardDex = ({ db, collection, onBack }) => {
                 const inTab = mode === 'pack' ? list : list.filter((no) => dexKeyOf(no) === k);
                 return (
                   <section key={k || 'all'} data-card-dex-group={k || undefined}>
-                    {mode !== 'pack' && <div data-card-dex-head={k} className={`mb-1 flex items-center rounded-lg px-2 py-0.5 text-[12px] font-black text-white ${mode === 'sub' ? (k === 'pure' ? 'bg-amber-700' : 'bg-indigo-600') : CARD_DEX_PACK_TONE[k] || 'bg-slate-600'}`}>{mode === 'sub' ? cardDexSubHead(k, curTab.label) : cardDexPackLabel(k)}<span className="ml-auto text-[11px]">{haveIn(inTab)}/{inTab.length}</span></div>}
+                    {mode !== 'pack' && <div data-card-dex-head={k} className={`mb-1 flex items-center rounded-lg px-2 py-0.5 text-[12px] font-black text-white ${mode === 'sub' ? (k === 'pure' ? 'bg-amber-700' : 'bg-indigo-600') : CARD_DEX_PACK_TONE[k] || 'bg-slate-600'}`}>{mode === 'sub' ? cardDexSubHead(k, curTab.label, curTab.id) : cardDexPackLabel(k)}<span className="ml-auto text-[11px]">{haveIn(inTab)}/{inTab.length}</span></div>}
                     <div className="grid grid-cols-4 gap-1.5">
                       {part.map((no) => {
               const c = cardOf(db, no); const m = c ? null : cardMonsterOf(db, no);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 426992a7f87c079a
+// source-sha256: 93c51de7ab252e3c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -79267,6 +79267,11 @@ function FriendsScreen({
   onCardShareGo = null
 }) {
   const [tab, setTab] = React.useState(Number(requestCount) > 0 ? 'requests' : 'friends');
+  const listScrollRef = React.useRef(null);
+  const listScrollMemoRef = React.useRef({
+    top: 0,
+    rowId: null
+  });
   const [phase, setPhase] = React.useState('loading');
   const [selfId, setSelfId] = React.useState('');
   const [myCode, setMyCode] = React.useState('');
@@ -79509,7 +79514,24 @@ function FriendsScreen({
     setSelected(null);
     run(() => ask.kind === 'remove' ? sbRemoveFriend(selfId, ask.otherId) : sbBlockFriendUser(selfId, ask.otherId));
   };
+  React.useLayoutEffect(() => {
+    if (selected) return;
+    const box = listScrollRef.current,
+      memo = listScrollMemoRef.current;
+    if (!box || !memo.rowId) return;
+    box.scrollTop = memo.top;
+    const row = [...box.querySelectorAll('[data-friend-row]')].find(el => el.getAttribute('data-friend-row') === memo.rowId);
+    if (row) {
+      const b = box.getBoundingClientRect(),
+        r = row.getBoundingClientRect();
+      if (r.top < b.top || r.bottom > b.bottom) box.scrollTop += r.top - b.top - (b.height - r.height) / 2;
+    }
+  }, [selected]);
   const openProfile = async view => {
+    listScrollMemoRef.current = {
+      top: listScrollRef.current ? listScrollRef.current.scrollTop : 0,
+      rowId: view && view.otherId ? view.otherId : null
+    };
     setSelected(view);
     setProfileTab('overview');
     setSummary({
@@ -79945,6 +79967,7 @@ function FriendsScreen({
       setNotice(null);
     }
   }), React.createElement("div", {
+    ref: listScrollRef,
     className: `${SCREEN_LIST_CLASS} pb-4`
   }, noticeBox, tab === 'friends' && (groups.friends.length === 0 ? React.createElement(ScreenEmpty, {
     emoji: "🤝",
@@ -104813,7 +104836,7 @@ const cardDexTabsOf = (db, mode) => {
   if (mode === 'species') return speciesTabs();
   if (mode === 'sub') return [...speciesTabs(), ...(Object.values(db.monsters).some(m => String(m.wave) === 'hybrid' && (m.sub || 'unknown') === 'unknown') ? [{
     id: 'unknown',
-    label: '不明'
+    label: '？？？(レア)'
   }] : [])];
   if (mode === 'kind') return CARD_DEX_KINDS;
   return CARD_DEX_TABS;
@@ -104854,7 +104877,7 @@ const CARD_DEX_UNIT = Object.freeze({
   sub: 'このサブ血統',
   kind: 'この種類'
 });
-const cardDexSubHead = (k, label) => k === 'pure' ? `純血(主も副も${label})` : label === '不明' ? '混血(副血統が分からない)' : `混血(副血統が${label})`;
+const cardDexSubHead = (k, label, tab) => k === 'pure' ? `純血(主も副も${label})` : tab === 'unknown' ? '副血統が ？？？ の子は、めずらしい種(レア)です' : `混血(副血統が${label})`;
 const CardDex = ({
   db,
   collection,
@@ -104974,7 +104997,7 @@ const CardDex = ({
       }, mode !== 'pack' && React.createElement("div", {
         "data-card-dex-head": k,
         className: `mb-1 flex items-center rounded-lg px-2 py-0.5 text-[12px] font-black text-white ${mode === 'sub' ? k === 'pure' ? 'bg-amber-700' : 'bg-indigo-600' : CARD_DEX_PACK_TONE[k] || 'bg-slate-600'}`
-      }, mode === 'sub' ? cardDexSubHead(k, curTab.label) : cardDexPackLabel(k), React.createElement("span", {
+      }, mode === 'sub' ? cardDexSubHead(k, curTab.label, curTab.id) : cardDexPackLabel(k), React.createElement("span", {
         className: "ml-auto text-[11px]"
       }, haveIn(inTab), "/", inTab.length)), React.createElement("div", {
         className: "grid grid-cols-4 gap-1.5"
