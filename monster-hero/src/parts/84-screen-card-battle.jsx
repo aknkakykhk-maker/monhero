@@ -3214,6 +3214,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               {!cardShareOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">つくっている途中(デバッグ)</span>}
             </button>
           )}
+          {/* MFバトルカード大会(99)。公開の印(cardTourOpen・告知と同じ日)までは、デバッグ設定から入ったときだけ出す */}
+          {typeof CardTournament === 'function' && shareForm && (debug || cardTourOpen()) && (
+            <button type="button" data-card-mode-tour onClick={() => { Audio_.fgSe.tap(); setView('tour'); }} className="mhms-card mhms-in flex min-h-[96px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-yellow-100 via-yellow-300 to-amber-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]">
+              <span aria-hidden="true" className="mhms-mark">CUP</span>
+              <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🏆</span><span><b className="block text-[22px] font-black italic leading-tight">大会</b><small className="block text-[11px] font-black text-slate-900/80">登録したデッキで出る・毎日自動で対戦</small></span></span>
+              {!cardTourOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">つくっている途中(デバッグ)</span>}
+            </button>
+          )}
         </div>
       </div>
     );
@@ -3233,6 +3241,20 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     return <CardDeckShare db={db} decks={save.decks} collection={save.collection} frame={(rank && rank.profile && rank.profile.frame) || null} onBack={() => setView('mode')}
       unlocked={save.unlocked} debug={debug} onFight={(e, lv) => startBattle({ who: e.tactics.habit, level: lv, share: e })}
       onOpenTactics={typeof CardTacticsScreen === 'function' && (debug || cardTacticsOpen()) ? () => { setTacticsBack('share'); setView('tactics'); } : null}/>;
+  }
+  // MFバトルカード大会(99。2026-10-30 大会 PR3)。ごほうびのビートPは、受け取りの記録(mh_card_tour_claimed_v1)と同じ取引で保存する
+  if (view === 'tour' && typeof CardTournament === 'function') {
+    const creditTour = async (tour, reward) => {
+      const raw = await storeGet(CARD_TOUR_CLAIMED_KEY, null);
+      const claimed = cardTourNormalizeClaimed(raw);
+      if (!claimed) return false;
+      if (claimed.some((c) => c.id === tour.id)) return true; // もう足した(ほかのタブなど)
+      return persist({ point: save.point + reward.point }, {}, [
+        { key: CARD_TOUR_CLAIMED_KEY, before: raw, next: [...claimed, { id: tour.id, ...reward, at: Date.now() }].slice(-100) },
+      ]);
+    };
+    return <CardTournament onBack={() => setView('mode')} onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('tour'); setView('tactics'); } : null}
+      onCredit={creditTour} knownAssistants={new Set(assistantsUnlockedFrom(seenStoryIds).map((x) => x.id))}/>;
   }
   // ---- 対戦の前のデッキ選び(助手と対戦・マルチ。練習試合には出さない) ----
   if (view === 'deckPick' && deckPick) {
