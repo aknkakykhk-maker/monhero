@@ -270,10 +270,11 @@ const cardTacticFilled = (frames) => {
   return f.base.filter(Boolean).length + f.breeder.filter((x) => x.on).length + f.mons.reduce((a, rows) => a + rows.filter((x) => x.on).length, 0);
 };
 
-// ---- 賢さ(2026-10-29 社長の物差し)----
-// 基本カードの枚数が上限、ON の行の数でそこまで上がる。1枚 … EASY/NORMAL/HARD、2枚 … NORMAL/HARD/EXPERT、3枚 … HARD/EXPERT/MASTER
-//   行 0〜3 / 4〜9 / 10以上。基本カードも行も無ければ 'random'(出せる手からランダム)。基本カード無しで行だけなら EASY
-const CARD_TACTIC_SMART = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
+// ---- 賢さ(2026-10-30 社長「戦術カードなしでエキスパートクラスで、そこから上がっていってマスター超え」・段の名前は本編のチャレンジモード)----
+//   EXPERT … 何もセットしない〜基本1枚 / MASTER … 基本2枚以上、またはちゃんと効く戦術カード4枚以上 /
+//   GRAND MASTER … 基本3枚+効く4枚以上 / HELL … 基本3枚+効く7枚以上 / LEGEND … 基本3枚+効く10枚以上
+//   (前は EASY〜MASTER と、何も入れていないときの「でたらめ」だった)。MASTER を超える段は先読みで強くする(82-card-share-core の CARD_SHARE_SEARCH)
+const CARD_TACTIC_SMART = Object.freeze(['expert', 'master', 'grandmaster', 'hell', 'legend']);
 // ---- 賢さに数えないセット(2026-10-29 社長 案A「ちゃんと効くカードだけ数える」) ----
 //   ・場面が合わない … 守るときだけの条件(受けるダメージ・受けると倒れる・全体攻撃を受けた)を守り以外の手と組んだ /
 //                    「この子の◯◯」の条件をブリーダーの枠に入れた(その子がいないので当たらない)
@@ -311,11 +312,11 @@ const cardTacticSmartLevel = (frames) => {
   const f = cardTacticNormalizeFrames(frames);
   const base = f.base.filter(Boolean).length;
   const rows = cardTacticCountedRows(f);
-  // でたらめ(出せる手からランダム)は、何もセットしていないときだけ(数えないセットだけでも、でたらめにはしない)
-  const any = f.breeder.some((x) => x.on) || f.mons.some((r) => r.some((x) => x.on));
-  if (!base && !any) return 'random';
-  if (!base) return 'easy';
-  return CARD_TACTIC_SMART[(base - 1) + (rows >= 10 ? 2 : rows >= 4 ? 1 : 0)];
+  if (base >= 3 && rows >= 10) return 'legend';
+  if (base >= 3 && rows >= 7) return 'hell';
+  if (base >= 3 && rows >= 4) return 'grandmaster';
+  if (base >= 2 || rows >= 4) return 'master';
+  return 'expert';
 };
 // みんなのデッキの登録に載せる短い形(表の tactics は 2000 バイトまで)。{ b:[基本], r:[[c,a,on,sp?]], m:[[[…]]×3] }
 const cardTacticPackFrames = (frames) => {

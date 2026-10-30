@@ -361,7 +361,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
           </div>
           <div data-card-reg-smart={smartLv} className={`${SCREEN_PANEL_CLASS} py-2`}>
             <div className="flex items-center gap-2 text-[13px] font-black text-white">賢さ <span className="text-amber-200">{smartText}</span></div>
-            <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-700"><i className="block h-full bg-gradient-to-r from-emerald-400 to-amber-300" style={{ width: `${(['random', 'easy', 'normal', 'hard', 'expert', 'master'].indexOf(smartLv) / 5) * 100}%` }}/></div>
+            <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-700"><i className="block h-full bg-gradient-to-r from-emerald-400 to-amber-300" style={{ width: `${((CARD_TACTIC_SMART.indexOf(smartLv) + 1) / CARD_TACTIC_SMART.length) * 100}%` }}/></div>
             <small className="mt-1 block text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>賢さは、ほかのブリーダーがこのデッキと戦うときの相手の強さです。ちゃんと効く戦術カードが多いほど上がります。</small>
           </div>
           <div data-card-reg-aces className={`${SCREEN_PANEL_CLASS} py-2`}>

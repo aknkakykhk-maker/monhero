@@ -23,28 +23,40 @@ const cardShareNormalizeTactics = (v, deck = null) => {
   const f = r.f && typeof r.f === 'object' && !Array.isArray(r.f) && typeof cardTacticPackFrames === 'function' ? cardTacticPackFrames(cardTacticUnpackFrames(r.f)) : null;
   return { habit, tilt, aces, name, ...(f ? { f } : {}) };
 };
-// 登録デッキの賢さ(戦術カードの枠から。2026-10-29 社長「デッキ側で決まる・戦う人は選ばない」)。前の形の登録は NORMAL
-//   'random' … 何も入れていない(出せる手からランダム)。報酬と経験値は EASY で数える
+// 登録デッキの賢さ(戦術カードの枠から。2026-10-29 社長「デッキ側で決まる・戦う人は選ばない」)。
+//   'expert' | 'master' | 'grandmaster' | 'hell' | 'legend'(82 の cardTacticSmartLevel)。前の形の登録(枠が無い)は EXPERT
 const cardShareSmartLevel = (tactics) => {
   const t = cardShareNormalizeTactics(tactics);
-  return t.f && typeof cardTacticSmartLevel === 'function' ? cardTacticSmartLevel(cardTacticUnpackFrames(t.f)) : 'normal';
+  return t.f && typeof cardTacticSmartLevel === 'function' ? cardTacticSmartLevel(cardTacticUnpackFrames(t.f)) : 'expert';
 };
+// 画面に出す段の名前(本編のチャレンジモードの並び。2026-10-30 社長)
+const CARD_SHARE_SMART_LABEL = Object.freeze({ expert: 'EXPERT', master: 'MASTER', grandmaster: 'GRAND MASTER', hell: 'HELL', legend: 'LEGEND' });
+// MASTER を超える段の先読み(82 の cardAiSearchPick)。k … 試す手の数 / r … 1つの手を試す回数 / h … 何手番先まで進めるか / eval … 場の見方
+//   2026-10-30 に MASTER の助手と測った: GRAND MASTER 66% / HELL 71% / LEGEND は下の値(docs/progress/card-tournament/share-ai/README.md)
+const CARD_SHARE_SEARCH = Object.freeze({
+  grandmaster: Object.freeze({ k: 3, r: 1, h: 1, eval: 'ko' }),
+  hell: Object.freeze({ k: 4, r: 2, h: 4, eval: 'ko' }),
+  legend: Object.freeze({ k: 4, r: 2, h: 4, eval: 'alive' }),
+});
 // 土台のくせ(メインの基本カードが助手の型ならその助手。前の形の登録や画面の名前に使う)
 const cardShareMainHabit = (frames, fallback = 'kyuko') => {
   const c = frames && typeof cardTacticOf === 'function' ? cardTacticOf(frames.base[0]) : null;
   const g = c && typeof CARD_TACTIC_GROUPS !== 'undefined' ? CARD_TACTIC_GROUPS.find((x) => x.id === c.g) : null;
   return (g && g.habit) || fallback || 'kyuko';
 };
-const cardShareFightLevel = (tactics) => { const lv = cardShareSmartLevel(tactics); return lv === 'random' ? 'easy' : lv; };
-// 戦い方から、助手の打ち方(cardAiPolicy の形)を作る。戦術カードの枠があれば、その枠で打つ(強さは枠の賢さ)
+// 打ち方の土台の強さ(cardAiPolicy の段)。MASTER を超える段は MASTER の打ち方に先読みを足す
+const cardShareFightLevel = (tactics) => (cardShareSmartLevel(tactics) === 'expert' ? 'expert' : 'master');
+// 戦い方から、助手の打ち方(cardAiPolicy の形)を作る。戦術カードの枠があれば、その枠で打つ(強さは枠の賢さ)。
+//   levelId は使わない(強さは登録デッキの賢さで決まる。前は枠の無い登録だけ呼んだ側の強さで打っていた)
 const cardSharePolicy = (tactics, levelId, opts = {}) => {
   const t = cardShareNormalizeTactics(tactics);
+  const search = CARD_SHARE_SEARCH[cardShareSmartLevel(t)] || null;
   if (t.f) {
     const frames = cardTacticUnpackFrames(t.f);
     const base = cardAiPolicy(t.habit, cardShareFightLevel(t), { ...opts, noTactics: true });
-    return { ...base, gambit: frames, gambitRandom: true, aces: t.aces.slice() };
+    return { ...base, gambit: frames, aces: t.aces.slice(), ...(search ? { search } : {}) };
   }
-  const base = cardAiPolicy(t.habit, levelId, { ...opts, noTactics: true });
+  const base = cardAiPolicy(t.habit, cardShareFightLevel(t), { ...opts, noTactics: true });
   const habit = { ...base.habit };
   CARD_SHARE_TILTS.forEach((x) => { if (Number.isFinite(habit[x.id])) habit[x.id] = habit[x.id] * CARD_SHARE_TILT_MUL[t.tilt[x.id]]; });
   return { ...base, habit, aces: t.aces.slice() };

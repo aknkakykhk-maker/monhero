@@ -1674,6 +1674,61 @@ const cardAiAttackChoices = (db, st, policy) => {
   return useful.length ? useful : opts0;
 };
 const cardAiAttackScored = (db, st, opts, policy) => opts.map((o) => ({ o, s: cardAiScoreAttack(db, st, o, policy) + (cardAiAceHit(policy, st.players[st.active].hand, o.hand) ? 2 : 0) })).sort((a, b) => b.s - a.s);
+// ===== 先読み(MASTER を超える段。登録デッキの GRAND MASTER・HELL・LEGEND。2026-10-30 社長「マスター超えとかいったりできない?」) =====
+// 攻める段で、点の高い手 K 個と「攻め終わり」を、それぞれ実際に当ててみて、その先を H 手番ぶん MASTER の打ち方で R 回進め、
+// 場がいちばん良くなる手を選ぶ。先の山札の順は知らないことにする(試す前に両方の山札を混ぜ直す。ずるをしない)。
+// policy.search … { k, r, h, eval } / 助手と対戦(cardAiPolicy)には付かない。付けるのは 82-card-share-core の cardSharePolicy だけ
+// 1回の判断で試しに進める手の数に上限を持たせる(スマホで重くしない)。上限に届いたら、そこまでの結果で選ぶ
+const CARD_AI_SEARCH_STEP_MAX = 1500;
+const cardAiSearchLife = (st, p) => { let a = 0, b = 0; st.players[p].mons.forEach((m) => { if (!m.ko) a += Math.max(0, m.life); b += m.max; }); return b ? a / b : 0; };
+// 場の良さ(大きいほど me に良い)。'alive' … 残っているモンスターの数とライフを重く見る(LEGEND)
+const cardAiSearchEval = (st, me, kind) => {
+  if (st.winner === me) return 100;
+  if (st.winner !== null) return -100;
+  const op = cardOther(me), P = st.players[me], O = st.players[op];
+  if (kind === 'alive') {
+    const alive = (x) => x.mons.filter((m) => !m.ko).length;
+    return 12 * (alive(P) - alive(O)) + 8 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.4 * (P.hand.length - O.hand.length) + 0.4 * (P.guts.length - O.guts.length);
+  }
+  return 10 * (cardKoCount(st, me) - cardKoCount(st, op)) + 4 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.3 * (P.hand.length - O.hand.length);
+};
+const cardAiSearchShuffle = (list, rand) => { for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; } };
+const cardAiSearchRollout = (db, st0, act, me, pols, rand, cfg, budget) => {
+  const s1 = cardClone({ ...st0, log: [], events: [] });
+  s1.players.forEach((pl) => cardAiSearchShuffle(pl.deck, rand));
+  let st = cardApplyAction(db, s1, act);
+  if (!st) return -999;
+  const t0 = st.turn;
+  while (st.winner === null && st.turn < t0 + cfg.h && budget.left > 0) {
+    budget.left -= 1;
+    const who = st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? cardOther(st.first) : cardDecider(st);
+    let a = cardAiChooseAction(db, st, pols[who], rand);
+    let n = a && cardApplyAction(db, st, a);
+    if (!n) { a = st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : st.phase === 'guts' ? { type: 'guts', hand: [] } : null; n = a && cardApplyAction(db, st, a); if (!n) break; }
+    st = n; st.log = [];
+  }
+  return cardAiSearchEval(st, me, cfg.eval);
+};
+let _cardAiSearchFoe = null; // 先読みの中で相手が打つ考え方(くせの無い MASTER)
+const cardAiSearchPick = (db, st, scored, policy, rand) => {
+  const cfg = policy.search;
+  const me = st.active;
+  const cands = scored.slice(0, cfg.k).filter((x) => x.s > 0.3).map((x) => cardAiFillBind(db, st, x.o, policy));
+  cands.push({ type: 'endAttacks' });
+  if (!_cardAiSearchFoe) _cardAiSearchFoe = cardAiPolicy('kyuko', 'master', { noTactics: true });
+  const self = { ...policy, search: null, gambit: null };
+  const pols = [null, null]; pols[me] = self; pols[cardOther(me)] = _cardAiSearchFoe;
+  const budget = { left: CARD_AI_SEARCH_STEP_MAX };
+  let best = cands[0], bestV = -Infinity;
+  for (let i = 0; i < cands.length && budget.left > 0; i++) {
+    let v = 0, n = 0;
+    for (let r = 0; r < cfg.r && budget.left > 0; r++) { v += cardAiSearchRollout(db, st, cands[i], me, pols, rand, cfg, budget); n += 1; }
+    if (!n) break;
+    v = v / n + (i === 0 ? 0.5 : 0); // 並んだときは、もとの点がいちばん高い手
+    if (v > bestV) { bestV = v; best = cands[i]; }
+  }
+  return best;
+};
 const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   // おいのり: 相手が出した全体カードは、相手に都合のよいものとみて、持っていれば無くす(雑な手のときは出し忘れる)
   if (st.pendingPray) { const use = cardPrayOptions(db, st).find((o) => o.hand); return use && rand() >= (policy.level.sloppy || 0) ? use : { type: 'pray' }; }
@@ -1718,6 +1773,7 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   if (!opts.length) return { type: 'endAttacks' };
   if (sloppy) return rand() < 0.25 ? { type: 'endAttacks' } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
   const scored = cardAiAttackScored(db, st, opts, policy);
+  if (policy.search) return cardAiSearchPick(db, st, scored, policy, rand);
   if (scored[0].s <= 0.3) return { type: 'endAttacks' };
   if (rand() < policy.level.whim) {
     const pool = scored.filter((x) => x.s > 0.3).slice(0, 3);

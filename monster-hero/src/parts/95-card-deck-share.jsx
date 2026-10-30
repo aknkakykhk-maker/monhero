@@ -28,7 +28,7 @@ const cardShareRowsCount = (frames) => cardTacticCountedRows(frames);
 const cardShareSmartText = (tactics) => {
   const t = cardShareNormalizeTactics(tactics);
   const lv = cardShareSmartLevel(t);
-  const label = lv === 'random' ? 'でたらめ' : `${(typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv]) || lv.toUpperCase()} 相当`;
+  const label = `${CARD_SHARE_SMART_LABEL[lv] || lv.toUpperCase()} 相当`;
   if (!t.f) return label;
   const f = cardTacticUnpackFrames(t.f);
   return `${label}(基本${f.base.filter(Boolean).length}・戦術カード${cardShareRowsCount(f)}枚)`;
@@ -383,7 +383,6 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
                 <div>{`基本カード: ${framesNow.base.filter(Boolean).map((id) => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`}</div>
                 <div>{`セットした戦術カード: ${cardShareRowsCount(framesNow)}枚`}</div>
                 <div className="text-amber-200">{`賢さ: ${cardShareSmartText({ f: cardTacticPackFrames(framesNow) })}`}</div>
-                {cardShareSmartLevel({ f: cardTacticPackFrames(framesNow) }) === 'random' && <div data-card-share-tactics-empty className="text-rose-200">{jaWrap('戦術カードが入っていません。このままだと、出せる手からでたらめに打ちます')}</div>}
               </>) : <div>読み込み中…</div>}
               {onOpenTactics && <button type="button" data-card-share-open-tactics className="mt-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-[12px] font-black text-slate-950" onClick={() => { Audio_.fgSe.tap(); onOpenTactics(); }}>戦術カードを組む</button>}
             </div>
