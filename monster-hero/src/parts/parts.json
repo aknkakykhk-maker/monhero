@@ -336,6 +336,16 @@
       "pure": true
     },
     {
+      "file": "82-card-share-core.jsx",
+      "role": "MFバトルカードの登録デッキの戦い方(7つの向き・戦い方をきれいにする・賢さ・打ち方 cardSharePolicy)。95 から画面と保存を触らない部分を移した。大会の試合をサーバでも同じ打ち方で回すため",
+      "pure": true
+    },
+    {
+      "file": "82-card-tournament-core.jsx",
+      "role": "MFバトルカードの大会の計算(組分け・総当たりの日程・種・1試合を回して手と結果を出す・順位・ごほうびの表)。サーバの上の関数 card-tournament-run もビルドで写して使う",
+      "pure": true
+    },
+    {
       "file": "83-card-battle-lines.jsx",
       "role": "MFバトルカードの相手の助手のひとこと(6人×14場面の台詞・表情・場面の選び方)",
       "pure": true
