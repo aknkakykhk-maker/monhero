@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c7723334edfc86ed
+// source-sha256: 1b37b101f40b373d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -105643,6 +105643,8 @@ const CardGachaPanel = ({
 }) => {
   const g = cardNormalizeGacha(gacha);
   const prog = cardGachaProgress(g);
+  const ready = Math.floor(g / CARD_CATALOG_COST);
+  const rest = CARD_CATALOG_COST - prog;
   const [help, setHelp] = useState(false);
   return React.createElement("div", {
     "data-card-gacha": true,
@@ -105668,25 +105670,30 @@ const CardGachaPanel = ({
   }, "🎫 ガチャP"), React.createElement("span", {
     "data-card-gacha-point": g,
     className: "text-[14px] text-white"
-  }, g.toLocaleString()), React.createElement("span", {
-    className: "ml-auto whitespace-nowrap text-[10px] tabular-nums text-amber-100",
-    "aria-label": `次の1冊まで ${prog} / ${CARD_CATALOG_COST}`
-  }, prog, " / ", CARD_CATALOG_COST)), React.createElement("div", {
-    className: "mt-0.5 h-1.5 overflow-hidden rounded-full bg-slate-950",
+  }, g.toLocaleString())), React.createElement("div", {
+    className: `mt-0.5 h-1.5 overflow-hidden rounded-full bg-slate-950 ${ready > 0 ? 'ring-1 ring-amber-200' : ''}`,
     "aria-hidden": "true"
   }, React.createElement("i", {
-    className: "block h-full rounded-full",
+    className: `block h-full rounded-full ${ready > 0 ? 'animate-pulse' : ''}`,
     style: {
-      width: `${prog / CARD_CATALOG_COST * 100}%`,
-      background: 'linear-gradient(90deg,#fbbf24,#f472b6)'
+      width: `${ready > 0 ? 100 : prog / CARD_CATALOG_COST * 100}%`,
+      background: ready > 0 ? 'linear-gradient(90deg,#fde047,#fbbf24,#f472b6)' : 'linear-gradient(90deg,#fbbf24,#f472b6)'
     }
-  }))), React.createElement("button", {
+  })), ready > 0 ? React.createElement("div", {
+    "data-card-gacha-ready": ready,
+    className: "mt-0.5 text-[10.5px] font-black leading-tight text-amber-50",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`${ready}冊ぶん交換できます(その次まで あと${rest})`)) : React.createElement("div", {
+    "data-card-gacha-rest": rest,
+    className: "mt-0.5 text-[10px] font-black leading-tight tabular-nums text-amber-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`次の1冊まで あと${rest}`))), React.createElement("button", {
     type: "button",
     "data-card-gacha-exchange": true,
     "aria-label": `カタログと交換(${CARD_CATALOG_COST})`,
     disabled: busy || g < CARD_CATALOG_COST,
     onClick: onExchange,
-    className: "mh-button min-h-[36px] shrink-0 whitespace-nowrap rounded-xl bg-amber-500 px-2 text-[11px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40"
+    className: `mh-button min-h-[36px] shrink-0 whitespace-nowrap rounded-xl bg-amber-500 px-2 text-[11px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40 ${ready > 0 ? 'animate-pulse ring-2 ring-amber-100 shadow-[0_0_12px_rgba(251,191,36,.8)]' : ''}`
   }, "交換"), React.createElement("button", {
     type: "button",
     "data-card-gacha-catalog": true,
@@ -105705,7 +105712,7 @@ const CardGachaPanel = ({
     "data-card-gacha-help-text": true,
     className: "mt-1 text-[10.5px] font-bold text-slate-200",
     style: JA_WRAP_STYLE
-  }, jaWrap(`ブースターパック1つで +${CARD_GACHA_PER_PACK}。${CARD_CATALOG_COST}たまると「バトルカードカタログ」1冊と交換できます(右の数は次の1冊まで)。カタログを使うと、好きなカードを1枚もらえます`)));
+  }, jaWrap(`ブースターパック1つで +${CARD_GACHA_PER_PACK}。${CARD_CATALOG_COST}たまると「バトルカードカタログ」1冊と交換できます(たまった分は消えません。右に、次の1冊まであといくつかが出ます)。カタログを使うと、好きなカードを1枚もらえます`)));
 };
 const CardShopGachaBand = ({
   db,
@@ -115379,7 +115386,7 @@ const CardTacticsScreen = ({
       onPick: exchange
     }),
     className: "mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40"
-  }, `かけらで1枚えらぶ(${t.shards}/${CARD_TACTICS_SHARD_COST})`)), detailCard && React.createElement(CardTacticDetail, {
+  }, t.shards >= CARD_TACTICS_SHARD_COST ? `かけらで1枚えらぶ(かけら${t.shards}個)` : `かけらで1枚えらぶ(あと${CARD_TACTICS_SHARD_COST - t.shards}個)`)), detailCard && React.createElement(CardTacticDetail, {
     card: detailCard,
     onClose: () => setDetailCard(null)
   }), tab === 'list' && React.createElement("div", {
@@ -115530,7 +115537,9 @@ const CardTacticsBand = ({
     className: `min-w-0 flex-1 text-[11px] font-black leading-tight ${canPick ? 'text-sky-100' : 'text-slate-400'}`
   }, "かけら", React.createElement("b", {
     className: "ml-1 text-[14px] text-white tabular-nums"
-  }, shards, "/", CARD_TACTICS_SHARD_COST)), canPick && React.createElement("button", {
+  }, shards), React.createElement("small", {
+    className: "ml-1 text-[10px]"
+  }, canPick ? '1枚えらべます' : `あと${CARD_TACTICS_SHARD_COST - shards}で1枚`)), canPick && React.createElement("button", {
     type: "button",
     "data-card-tactics-exchange": true,
     disabled: busy,
