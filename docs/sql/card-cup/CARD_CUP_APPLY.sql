@@ -4,7 +4,7 @@
 -- 表(どれも直接は読ませない。読むのも書くのも関数だけ)
 --   card_cups         … 個人杯(主催・名前・遊び方 live/auto・形式 rr/ko・人数の上限・合言葉・公開の一覧に出すか・時刻・状態・山の並び)
 --   card_cup_entries  … 参加者(オート杯は締め切りで登録デッキの写しを取る)
---   card_cup_matches  … 試合(種・先攻・勝ち負け・手の並び・実況。リアルタイム杯は2台の結果の申告も)
+--   card_cup_matches  … 試合(種・先攻・勝ち負け・手の並び・実況)
 -- 関数(ゲームから呼ぶ)
 --   card_cup_create(owner, key, name, host_name, icon, mode, format, max, listed, entry_until, start_at) … 開く(主催も参加者になる)
 --   card_cup_list()                    … 公開の一覧(受付中だけ)
@@ -14,7 +14,7 @@
 --   card_cup_view(cup, owner)          … 杯の様子(オート杯の結果は発表の時刻から)
 --   card_cup_match(id)                 … 1試合の見返しの材料(見せてよい試合だけ)
 -- オート杯の試合を回すのはサーバの上の関数 card-tournament-run(service_role)。呼ぶ時刻は CARD_CUP_SCHEDULE.sql(1日中10分おき)
--- リアルタイム杯の集合・結果の申告の関数は、あとの段階(④)で足す。表の列はここで用意しておく
+-- リアルタイム杯の集合・試合の結果の関数は、あとの段階(④)で足す。結果の決め方はマルチ対戦と同じ(2026-10-31 社長)。来ない人は登録デッキが自動で戦う
 -- 持ち主の見分けは、みんなのデッキと同じ owner_id(ブリーダーID)+ 端末の鍵(mh_card_deck_owner_key_v1)。表には md5 の指紋だけ
 
 create table if not exists public.card_cups (
@@ -83,8 +83,6 @@ create table if not exists public.card_cup_matches (
   decided    text,
   rules      integer,
   live       jsonb,
-  report_a   jsonb,
-  report_b   jsonb,
   done_at    timestamptz,
   constraint card_cup_matches_pkey primary key (id),
   constraint card_cup_matches_one unique (cup_id, round, slot),
@@ -101,6 +99,7 @@ revoke all on public.card_cup_matches from anon, authenticated;
 -- 開く。返り値 { status, id, code }。status: 'ok' | 'bad'(形がちがう)| 'busy'(開いている杯がもうある)| 'slot'(その発表の時刻はいっぱい)
 --   | 'crowded'(全体の上限)| 'many'(出ている杯が多い)| 'nodeck'(オート杯は登録デッキが要る)| 'locked'(鍵がちがう)
 --   決まり: 名前1〜20字 / 総当たり4〜8人・トーナメント4〜16人 / 1人が開ける杯は同時に1つ / 出られる杯は同時に3つ / 同時に開いている杯は全体で200まで
+--   どちらの遊び方も主催と参加者は登録デッキが要る(リアルタイム杯でも、来ない人は登録デッキが自動で戦うため。2026-10-31 社長の答えを待つ案)
 --   オート杯: 締め切りは10分後〜3日後・発表は締め切りの1時間後から・ちょうどの時(分は0)・同じ発表の時刻は3杯まで
 --   リアルタイム杯: 始まる時刻は15分後〜3日後・15分きざみ。締め切りは始まる時刻
 create or replace function public.card_cup_create(p_owner text, p_key text, p_name text, p_host_name text, p_icon text,
@@ -125,11 +124,9 @@ begin
     v_until := p_start_at;
   end if;
   v_hash := md5(p_key);
-  if p_mode = 'auto' then
-    select * into d from card_deck_entries where owner_id = p_owner and active;
-    if not found then return jsonb_build_object('status', 'nodeck'); end if;
-    if d.key_hash <> v_hash then return jsonb_build_object('status', 'locked'); end if;
-  end if;
+  select * into d from card_deck_entries where owner_id = p_owner and active;
+  if not found then return jsonb_build_object('status', 'nodeck'); end if;
+  if d.key_hash <> v_hash then return jsonb_build_object('status', 'locked'); end if;
   if exists (select 1 from card_cups where host_id = p_owner and status in ('entry', 'running')) then return jsonb_build_object('status', 'busy'); end if;
   if (select count(*) from card_cup_entries e join card_cups c on c.id = e.cup_id where e.owner_id = p_owner and not e.dropped and c.status in ('entry', 'running')) >= 3 then
     return jsonb_build_object('status', 'many');
@@ -188,11 +185,9 @@ begin
   select * into c from card_cups where id = p_cup for update;
   if not found or c.status <> 'entry' or now() >= c.entry_until then return 'closed'; end if;
   v_hash := md5(p_key);
-  if c.mode = 'auto' then
-    select * into d from card_deck_entries where owner_id = p_owner and active;
-    if not found then return 'nodeck'; end if;
-    if d.key_hash <> v_hash then return 'locked'; end if;
-  end if;
+  select * into d from card_deck_entries where owner_id = p_owner and active;
+  if not found then return 'nodeck'; end if;
+  if d.key_hash <> v_hash then return 'locked'; end if;
   select * into e from card_cup_entries where cup_id = p_cup and owner_id = p_owner;
   if found and e.key_hash <> v_hash then return 'locked'; end if;
   if found and not e.dropped then return 'ok'; end if;
