@@ -8,12 +8,16 @@
 // 技を押すと「技＋クリティカル＋集中」「技」のように組み合わせの札が並び、選べる。前は、選んでから相手まで運ぶ(ドラッグ)と、
 // 選んだ組み合わせではなく、組める札が全部付いて出ていた(運ぶときは、置き先ごとにいちばん枚数の多い組み合わせを選んでいた)
 //
+// 2026-10-29 社長「組み合わせ系が自動で選択されるのなんとかして。自分で選ぶから、何かを選んだら候補として見えるように」(見本4枚「この形で」):
+//   押した1枚だけが選ばれ、いっしょに出せる札は「候補」で光るだけ。候補を押すと足す・もう1回で外す。組のボタンは無い
+//
 // 見ているもの(助手と対戦の始まりを、検査のときだけの口 window.__mhCardScene で決めた場面にする。手札: 技・クリティカル・集中・ほか2枚)
-//   A 技を押して組み合わせ「技だけ」を選び、マウスで相手まで運ぶ → 技だけが出る(クリティカル・集中は手札に残る)
-//   B 技を押して組み合わせ「技だけ」を選び、相手を押す → 技だけが出る(タップとそろう)
-//   C 何も選ばずに、マウスで相手まで運ぶ → 運んだ技1枚だけで出る(組み合わせの札は見えていないので、付けたつもりが無いのに付かないように。2026-10-27 部長と決めた)
-//   D 付ける札(集中)だけを、組み合わせを選ばずに運ぶ → 出さない(1枚では出せない札は、組み合わせのボタンを押すまで何も付けない。2026-10-28 社長・案C)
-//   E 集中を押すと「組み合わせを選んでね」と出て、組み合わせのボタン(技＋集中)を押してから運ぶと、その2枚で出る
+//   A 技を押すと技だけが「選んだ」、クリティカル・集中は「候補」(上がらない)。そのままマウスで相手まで運ぶ → 技だけが出る
+//   B 技を押して、相手を押す → 技だけが出る(タップとそろう)
+//   C 何も選ばずに、マウスで相手まで運ぶ → 運んだ技1枚だけで出る(付けたつもりが無いのに付かないように)
+//   D 付ける札(集中)だけを運ぶ → 出さない。集中が「選んだ」になり、技が「候補」で光る
+//   E 集中を押すと「光っている札を押して足してね」。候補の技を押して足し、運ぶと、その2枚で出る(クリティカルは残る)
+//   F 候補を押すと「足した」になり、もう1回押すと外れる
 //   どれも実行時エラーが無い
 const http = require('http');
 const path = require('path');
@@ -128,30 +132,26 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('場面を作れた(先頭の子の文の無いちから技・クリティカル・集中)', !!atk, JSON.stringify(atk));
     await page.locator('[data-card-hand-card="0"]').click();
     await page.waitForTimeout(300);
-    const sets = await page.locator('[data-card-set]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-set')));
-    check('技を押すと、組み合わせが並ぶ(技だけ・付ける札あり)', sets.includes('[0]') && sets.some((x) => JSON.parse(x).length >= 2), sets.join(' / '));
-    await page.locator('[data-card-set="[0]"]').click();
-    await page.waitForTimeout(200);
+    const tags = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('[data-card-hand-card]')].map((e) => [e.getAttribute('data-card-hand-card'), (e.querySelector('[data-card-hand-pick]') || {}).textContent || ''])));
+    check('A 技を押すと技だけが「選んだ」、クリティカル・集中は「候補」(勝手に足さない・組のボタンは出ない)', tags['0'] === '選んだ' && tags['1'] === '候補' && tags['2'] === '候補' && (await page.locator('[data-card-set]').count()) === 0, JSON.stringify(tags));
     if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, 'drag-set-pick.png') }); }
     let n0 = await handCount(page);
     await mouseDrag(page, '[data-card-hand-card="0"]', '[data-card-mon="1-0"]');
     await settle(page, n0);
     let names = await handNames(page);
-    check('A 「技だけ」を選んでマウスで運ぶと、技だけが出る(クリティカル・集中は手札に残る)', (await handCount(page)) === n0 - 1 && names.includes('クリティカル') && names.includes('集中'), `${n0}→${await handCount(page)}枚・${names.join(',')}`);
+    check('A 技を押してそのままマウスで運ぶと、技だけが出る(クリティカル・集中は手札に残る)', (await handCount(page)) === n0 - 1 && names.includes('クリティカル') && names.includes('集中'), `${n0}→${await handCount(page)}枚・${names.join(',')}`);
     await page.close();
     // ---- B 組み合わせ「技だけ」を選んでから、相手を押す ----
     page = await open();
     await page.locator('[data-card-hand-card="0"]').click();
     await page.waitForTimeout(300);
-    await page.locator('[data-card-set="[0]"]').click();
-    await page.waitForTimeout(200);
     n0 = await handCount(page);
     const user = page.locator('[data-card-mon].ring-amber-300').first();
     if (await user.count()) { await user.click(); await page.waitForTimeout(150); }
     await page.locator('[data-card-mon="1-0"]').click();
     await settle(page, n0);
     names = await handNames(page);
-    check('B 「技だけ」を選んで相手を押すと、技だけが出る(運ぶのとそろう)', (await handCount(page)) === n0 - 1 && names.includes('クリティカル') && names.includes('集中'), `${n0}→${await handCount(page)}枚`);
+    check('B 技を押して相手を押すと、技だけが出る(運ぶのとそろう)', (await handCount(page)) === n0 - 1 && names.includes('クリティカル') && names.includes('集中'), `${n0}→${await handCount(page)}枚`);
     await page.close();
     // ---- C 何も選ばずに、マウスで運ぶ(いまの既定: 技を押したときに先に選ばれている組み合わせ) ----
     page = await open();
@@ -168,22 +168,32 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await mouseDrag(page, '[data-card-hand-card="2"]', '[data-card-mon="1-0"]');
     await page.waitForTimeout(1500);
     names = await handNames(page);
-    check('D 付ける札(集中)を、組み合わせを選ばずに運んでも出さない', (await handCount(page)) === n0, `${n0}→${await handCount(page)}枚・${names.join(',')}`);
+    const dTags = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('[data-card-hand-card]')].map((e) => [e.getAttribute('data-card-hand-card'), (e.querySelector('[data-card-hand-pick]') || {}).textContent || ''])));
+    check('D 付ける札(集中)を運んでも出さない。集中が「選んだ」・技が「候補」になる', (await handCount(page)) === n0 && dTags['2'] === '選んだ' && dTags['0'] === '候補', `${n0}→${await handCount(page)}枚・${JSON.stringify(dTags)}`);
     await page.close();
-    // ---- E 集中を押す → 「組み合わせを選んでね」→ いちばん少ない組(技＋集中)のボタンを押してから運ぶ → その2枚で出る ----
+    // ---- E 集中を押す → 「光っている札を押して足してね」→ 候補の技を押して足す → 運ぶ → その2枚で出る ----
     page = await open();
     n0 = await handCount(page);
     await page.locator('[data-card-hand-card="2"]').click();
     await page.waitForTimeout(300);
-    const askSet = await page.getByText('組み合わせを選んでね').count();
-    const setKeys = await page.locator('[data-card-set]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-set')));
-    const fewest = setKeys.slice().sort((a, b) => JSON.parse(a).length - JSON.parse(b).length)[0];
-    if (fewest) await page.locator(`[data-card-set="${fewest}"]`).click();
+    const askAdd = await page.getByText('光っている札を押して足してね').count();
+    await page.locator('[data-card-hand-card="0"]').click();
     await page.waitForTimeout(200);
+    const eTag = await page.locator('[data-card-hand-card="0"] [data-card-hand-pick]').textContent().catch(() => '');
     await mouseDrag(page, '[data-card-hand-card="2"]', '[data-card-mon="1-0"]');
     await settle(page, n0);
     names = await handNames(page);
-    check('E 集中を押すと「組み合わせを選んでね」と出て、選んだ組(技＋集中)で運ぶとその2枚で出る(クリティカルは残る)', askSet > 0 && fewest === '[0,2]' && (await handCount(page)) === n0 - 2 && names.includes('クリティカル'), `案内 ${askSet}・ボタン ${setKeys.join(' / ')}・${n0}→${await handCount(page)}枚・${names.join(',')}`);
+    check('E 集中を押すと「光っている札を押して足してね」。技を押して足して運ぶと、その2枚で出る(クリティカルは残る)', askAdd > 0 && eTag === '足した' && (await handCount(page)) === n0 - 2 && names.includes('クリティカル'), `${askAdd}・${eTag}・${n0}→${await handCount(page)}枚・${names.join(',')}`);
+    await page.close();
+    // ---- F 候補を押すと「足した」、もう1回押すと外れる ----
+    page = await open();
+    await page.locator('[data-card-hand-card="0"]').click(); await page.waitForTimeout(200);
+    await page.locator('[data-card-hand-card="1"]').click(); await page.waitForTimeout(200);
+    const fAdd = await page.locator('[data-card-hand-card="1"] [data-card-hand-pick]').textContent().catch(() => '');
+    await page.locator('[data-card-hand-card="1"]').click(); await page.waitForTimeout(200);
+    const fOff = await page.locator('[data-card-hand-card="1"] [data-card-hand-pick]').textContent().catch(() => '');
+    check('F 候補を押すと「足した」、もう1回押すと「候補」に戻る', fAdd === '足した' && fOff === '候補', `${fAdd} → ${fOff}`);
+    await page.close();
     check('実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
   } finally { await browser.close(); server.close(); }
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
