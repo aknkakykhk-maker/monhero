@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c5bf3ffe99a8d379
+// source-sha256: 5012273350f545a9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -96042,16 +96042,27 @@ const CardVsMonsters = ({
       animationDelay: `${start + i * step}ms`,
       maxWidth: 140
     }
-  }, art ? React.createElement(CardVsArt, {
-    src: art,
-    alt: m.name,
-    aspect: 1,
-    spread: 1.1,
-    className: "drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]",
-    style: {
-      width: 'min(100%, 19vh, 140px)'
-    }
-  }) : React.createElement("img", {
+  }, art ? (() => {
+    const kira = typeof cardKiraOf === 'function' ? cardKiraOf(db, no) : null;
+    const el = React.createElement(CardVsArt, {
+      src: art,
+      alt: m.name,
+      aspect: 1,
+      spread: 1.1,
+      className: "drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]",
+      style: {
+        width: 'min(100%, 19vh, 140px)'
+      }
+    });
+    return kira ? React.createElement("span", {
+      className: "relative flex w-full justify-center",
+      style: {
+        isolation: 'isolate'
+      }
+    }, React.createElement(CardKiraFx, {
+      kind: kira
+    }), cardKiraWrap(kira, el)) : el;
+  })() : React.createElement("img", {
     src: CARD_IMG(m.img),
     alt: m.name,
     draggable: false,
@@ -97511,6 +97522,46 @@ const cardMonArt = mon => {
   if (m && m.imgUrl) return m.imgUrl;
   return cardNewSpeciesArt()[mon.species] || null;
 };
+const cardKiraOf = (db, no) => {
+  const v = String((db && cardMonsterOf(db, no) || {}).variant || '');
+  return v.includes('別絵キラ') ? 'rare' : v.includes('キラ') ? 'kira' : null;
+};
+const CARD_KIRA_SPARKS = Object.freeze([[24, 30, 0], [68, 22, 1.3], [52, 62, 2.5]]);
+const CARD_RARE_MOTES = Object.freeze([[22, 0], [38, 1.1], [55, 0.5], [70, 1.7], [46, 2.3], [62, 2.9]]);
+const CardKiraFx = ({
+  kind,
+  calm = false
+}) => {
+  if (!kind || calm) return null;
+  return React.createElement("span", {
+    "data-card-kira-fx": kind,
+    className: "mh-kira-fx",
+    "aria-hidden": "true"
+  }, kind === 'rare' && React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "mh-rare-halo"
+  }), React.createElement("span", {
+    className: "mh-rare-glow"
+  })), kind === 'kira' && CARD_KIRA_SPARKS.map(([x, y, d], i) => React.createElement("span", {
+    key: i,
+    className: "mh-kira-spark",
+    style: {
+      left: `${x}%`,
+      top: `${y}%`,
+      animationDelay: `${d}s`
+    }
+  })), kind === 'rare' && CARD_RARE_MOTES.map(([x, d], i) => React.createElement("span", {
+    key: i,
+    className: "mh-rare-mote",
+    style: {
+      left: `${x}%`,
+      animationDelay: `${d}s`
+    }
+  })));
+};
+const cardKiraWrap = (kind, el) => kind ? React.createElement("span", {
+  "data-card-kira": kind,
+  className: `${kind === 'rare' ? 'mh-rare-rim' : 'mh-kira-rim'} inline-flex items-end justify-center`
+}, el) : el;
 const CARD_FIELD_ART_SPREAD = 1.15;
 const cardFieldArtTransform = (src, flip) => {
   const box = typeof cardVsBoxOf === 'function' ? cardVsBoxOf(src) : null;
@@ -98440,7 +98491,8 @@ const CardMonSlot = ({
   const wideArtH = 'clamp(40px, calc((var(--mh-vh, 100svh) - 262px) / 2), 64px)';
   const artSize = wide ? 'max-w-[88px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : opp ? 'max-h-[78px] max-w-[96px]' : 'max-h-[106px] max-w-[126px]';
   const artFit = art ? cardFieldArtTransform(art, opp) : null;
-  const imgEl = art ? React.createElement("img", {
+  const kira = art && !mon.ko ? cardKiraOf(db, mon.no) : null;
+  const imgEl = art ? cardKiraWrap(kira, React.createElement("img", {
     src: art,
     alt: "",
     style: {
@@ -98452,7 +98504,7 @@ const CardMonSlot = ({
       } : null)
     },
     className: `${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp && !artFit ? '-scale-x-100' : ''}`
-  }) : React.createElement("img", {
+  })) : React.createElement("img", {
     src: CARD_IMG(cardMonsterOf(db, mon.no).img),
     alt: "",
     className: `${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`
@@ -98463,6 +98515,7 @@ const CardMonSlot = ({
     "data-card-art": `${p}-${m}`,
     className: `relative flex ${wide ? '' : tiny ? 'h-[44px]' : compact ? 'h-[56px]' : opp ? 'h-[78px]' : 'h-[106px]'} w-full items-end justify-center`,
     style: {
+      isolation: 'isolate',
       ...(wide ? {
         height: wideArtH
       } : null),
@@ -98472,7 +98525,10 @@ const CardMonSlot = ({
         zIndex: 40
       } : null)
     }
-  }, mv && mv.type === 'attack' && mv.kind ? React.createElement(SkillFxMotion, {
+  }, kira && React.createElement(CardKiraFx, {
+    kind: kira,
+    calm: calm
+  }), mv && mv.type === 'attack' && mv.kind ? React.createElement(SkillFxMotion, {
     key: mv.key,
     kind: mv.kind,
     image: imgEl
@@ -159283,6 +159339,26 @@ const createAnimationStyle = () => {
     .mh-card-down-band { animation: mhCardDownBand 1.1s ease-out both; }
     @keyframes mhCardDownBand { 0% { opacity: 0; transform: scaleY(.2); } 15% { opacity: 1; transform: scaleY(1.08); } 25% { transform: scaleY(1); } 82% { opacity: 1; } 100% { opacity: 0; } }
     @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash, .mh-card-dmg-pop, .mh-card-down-band, .mh-card-guard-result { animation: none; } }
+    /* キラ・レアキラの立ち絵の光(84 の CardKiraFx・cardKiraWrap。2026-10-30 社長「この形で入れて」)。CSS だけ・粒は少なく */
+    .mh-kira-rim { animation: mhKiraRim 3.2s linear infinite; }
+    @keyframes mhKiraRim { 0%, 100% { filter: drop-shadow(0 0 2px rgba(255,120,220,.9)); } 33% { filter: drop-shadow(0 0 2px rgba(120,210,255,.9)); } 66% { filter: drop-shadow(0 0 2px rgba(255,230,110,.9)); } }
+    .mh-rare-rim { filter: drop-shadow(0 0 3px rgba(255,214,102,.95)) drop-shadow(0 0 7px rgba(255,170,60,.5)); }
+    .mh-kira-fx { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+    .mh-kira-spark { position: absolute; width: 9px; height: 9px; margin: -4px 0 0 -4px; opacity: 0; background: #fff6fd; clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%); filter: drop-shadow(0 0 2px rgba(255,170,240,.95)); animation: mhKiraSpark 3.8s ease-in-out infinite; }
+    @keyframes mhKiraSpark { 0%, 70%, 100% { opacity: 0; transform: scale(.4) rotate(0deg); } 80% { opacity: 1; transform: scale(1) rotate(25deg); } 90% { opacity: 0; transform: scale(.6) rotate(45deg); } }
+    .mh-rare-halo { position: absolute; left: 50%; top: 54%; width: 82%; aspect-ratio: 1; max-height: 100%; transform: translate(-50%, -50%); border-radius: 50%; z-index: -1;
+      background: conic-gradient(from 0deg, rgba(255,214,102,0), rgba(255,214,102,.55), rgba(255,138,61,0), rgba(255,214,102,.45), rgba(255,214,102,0));
+      -webkit-mask: radial-gradient(circle, transparent 52%, #000 54%, #000 64%, transparent 70%); mask: radial-gradient(circle, transparent 52%, #000 54%, #000 64%, transparent 70%);
+      animation: mhRareSpin 9s linear infinite; }
+    .mh-rare-glow { position: absolute; left: 50%; top: 58%; width: 66%; aspect-ratio: 1; max-height: 100%; transform: translate(-50%, -50%); border-radius: 50%; z-index: -1; background: radial-gradient(circle, rgba(255,214,102,.36), rgba(255,214,102,0) 70%); animation: mhRarePulse 2.6s ease-in-out infinite; }
+    @keyframes mhRareSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+    @keyframes mhRarePulse { 0%, 100% { opacity: .55; transform: translate(-50%, -50%) scale(.92); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); } }
+    .mh-rare-mote { position: absolute; bottom: 6%; width: 3px; height: 3px; border-radius: 50%; background: #ffe08c; box-shadow: 0 0 4px rgba(255,214,102,.9); opacity: 0; animation: mhRareMote 3.4s linear infinite; }
+    @keyframes mhRareMote { 0% { opacity: 0; transform: translateY(0); } 15% { opacity: .95; } 80% { opacity: .6; } 100% { opacity: 0; transform: translateY(-70px); } }
+    @media (prefers-reduced-motion: reduce) {
+      .mh-kira-fx { display: none; }
+      .mh-kira-rim { animation: none; filter: drop-shadow(0 0 2px rgba(200,160,255,.9)); }
+    }
     .mh-card-ko { animation: mhCardKo .9s ease-in forwards; transform-origin: 50% 90%; }
     /* 「画面の揺れ: 揺らさない」(カードのオプション)のときの受けた動き。揺らさずに赤く光るだけ */
     @keyframes mhCardHitCalm { 0%,100% { filter: none; } 30% { filter: drop-shadow(0 0 10px rgba(248,113,113,1)) brightness(1.3); } }

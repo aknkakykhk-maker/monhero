@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 321626b81e053619
+// generated-sha256: 91de7a204ed3f87b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57898,7 +57898,12 @@ const CardVsMonsters = ({ db, monsters, side, start, step }) => (
       return (
         <div key={`${no}-${i}`} data-card-vs-mon={no} className={`${side === 'foe' ? 'mh-vs-mon-foe' : 'mh-vs-mon-me'} flex min-w-0 flex-1 flex-col items-center`} style={{ animationDelay: `${start + i * step}ms`, maxWidth: 140 }}>
           {art
-            ? <CardVsArt src={art} alt={m.name} aspect={1} spread={1.1} className="drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]" style={{ width: 'min(100%, 19vh, 140px)' }}/>
+            ? (() => {
+              // キラ・レアキラの光(84 の CardKiraFx・cardKiraWrap。対戦の場と同じ見た目)
+              const kira = typeof cardKiraOf === 'function' ? cardKiraOf(db, no) : null;
+              const el = <CardVsArt src={art} alt={m.name} aspect={1} spread={1.1} className="drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]" style={{ width: 'min(100%, 19vh, 140px)' }}/>;
+              return kira ? <span className="relative flex w-full justify-center" style={{ isolation: 'isolate' }}><CardKiraFx kind={kira}/>{cardKiraWrap(kira, el)}</span> : el;
+            })()
             : <img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="w-full rounded-md object-cover" style={{ aspectRatio: '63 / 88', maxHeight: 'min(19vh, 140px)' }}/>}
           <span className="mt-0.5 w-full truncate text-center text-[10px] font-black text-white" style={{ textShadow: '0 1px 2px #000' }}>{m.name}</span>
         </div>
@@ -58845,6 +58850,25 @@ const cardMonArt = (mon) => {
   if (m && m.imgUrl) return m.imgUrl;
   return cardNewSpeciesArt()[mon.species] || null;
 };
+// キラ・レアキラ(別絵キラ)の立ち絵の光(2026-10-30 社長「キラとレアキラはエフェクトつきになるようにしたい」・見本のページのとおり)
+//   kira … ふちが虹色に移り変わり、十字のきらめきが時々走る(3つ) / rare … 金のふち・後ろに光の輪がゆっくり回って脈打つ・光の粒が舞う(6つ)
+//   CSS だけで動かす(軽く)。動きを減らす設定(prefers-reduced-motion)と、オプションの「揺らさない」(calm)では、ふちの光だけ
+const cardKiraOf = (db, no) => { const v = String(((db && cardMonsterOf(db, no)) || {}).variant || ''); return v.includes('別絵キラ') ? 'rare' : v.includes('キラ') ? 'kira' : null; };
+const CARD_KIRA_SPARKS = Object.freeze([[24, 30, 0], [68, 22, 1.3], [52, 62, 2.5]]);
+const CARD_RARE_MOTES = Object.freeze([[22, 0], [38, 1.1], [55, 0.5], [70, 1.7], [46, 2.3], [62, 2.9]]);
+// 立ち絵の後ろと前に重ねる光(kind が無いときは何も出さない)。親は relative で isolation: isolate(輪を絵の後ろへ回すため)
+const CardKiraFx = ({ kind, calm = false }) => {
+  if (!kind || calm) return null;
+  return (
+    <span data-card-kira-fx={kind} className="mh-kira-fx" aria-hidden="true">
+      {kind === 'rare' && <><span className="mh-rare-halo"/><span className="mh-rare-glow"/></>}
+      {kind === 'kira' && CARD_KIRA_SPARKS.map(([x, y, d], i) => <span key={i} className="mh-kira-spark" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${d}s` }}/>)}
+      {kind === 'rare' && CARD_RARE_MOTES.map(([x, d], i) => <span key={i} className="mh-rare-mote" style={{ left: `${x}%`, animationDelay: `${d}s` }}/>)}
+    </span>
+  );
+};
+// 立ち絵(img など)を、キラのふちの光で包む。kind が無ければそのまま返す
+const cardKiraWrap = (kind, el) => (kind ? <span data-card-kira={kind} className={`${kind === 'rare' ? 'mh-rare-rim' : 'mh-kira-rim'} inline-flex items-end justify-center`}>{el}</span> : el);
 // 場の立ち絵を、絵の「中身の範囲」(ART_CONTENT_BOXES。対戦開始の画面の cardVsBoxOf と同じ表)で要素いっぱいへ広げる
 // (2026-10-30 社長「同じ血統同士のサイズがあってない」)。カード用に届いた絵(ジェントルなど)は中身が端までなので広げず、
 // 余白のある古い立ち絵(モッチー・スエゾー・ライガーなど)だけが広がる。1体ずつの数字は持たない(表から計算する)。
@@ -59407,15 +59431,17 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   const artSize = wide ? 'max-w-[88px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : opp ? 'max-h-[78px] max-w-[96px]' : 'max-h-[106px] max-w-[126px]';
   // 同じ血統の子が同じ大きさに見えるよう、絵の余白を詰めて広げる(cardFieldArtTransform。相手の左右の向きもここで返す)
   const artFit = art ? cardFieldArtTransform(art, opp) : null;
+  const kira = art && !mon.ko ? cardKiraOf(db, mon.no) : null;
   const imgEl = art
-    ? <img src={art} alt="" style={{ ...(wide ? { maxHeight: wideArtH } : null), ...(artFit ? { transform: artFit } : null) }} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp && !artFit ? '-scale-x-100' : ''}`}/>
+    ? cardKiraWrap(kira, <img src={art} alt="" style={{ ...(wide ? { maxHeight: wideArtH } : null), ...(artFit ? { transform: artFit } : null) }} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp && !artFit ? '-scale-x-100' : ''}`}/>)
     : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`}/>;
   const mv = motion && !mon.ko ? motion : null;
   // calm … オプションの「画面の揺れ: 揺らさない」。受けたときは揺らさずに光るだけ
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? (calm ? 'mh-card-hit-calm' : 'mh-card-hit') : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = (
     <div data-card-art={`${p}-${m}`} className={`relative flex ${wide ? '' : tiny ? 'h-[44px]' : compact ? 'h-[56px]' : opp ? 'h-[78px]' : 'h-[106px]'} w-full items-end justify-center`}
-      style={{ ...(wide ? { height: wideArtH } : null), ...(mv && mv.type === 'attack' ? { '--atk-dx': `${mv.dx}px`, '--atk-dy': `${mv.dy}px`, zIndex: 40 } : null) }}>
+      style={{ isolation: 'isolate', ...(wide ? { height: wideArtH } : null), ...(mv && mv.type === 'attack' ? { '--atk-dx': `${mv.dx}px`, '--atk-dy': `${mv.dy}px`, zIndex: 40 } : null) }}>
+      {kira && <CardKiraFx kind={kira} calm={calm}/>}
       {mv && mv.type === 'attack' && mv.kind
         ? <SkillFxMotion key={mv.key} kind={mv.kind} image={imgEl}/>
         : <div key={mv ? mv.key : 'still'} data-card-pose={mon.ko ? 'ko' : mv ? mv.type : 'still'} className={`flex items-end justify-center ${poseClass}`}>{imgEl}</div>}
@@ -99028,6 +99054,26 @@ const createAnimationStyle = () => {
     .mh-card-down-band { animation: mhCardDownBand 1.1s ease-out both; }
     @keyframes mhCardDownBand { 0% { opacity: 0; transform: scaleY(.2); } 15% { opacity: 1; transform: scaleY(1.08); } 25% { transform: scaleY(1); } 82% { opacity: 1; } 100% { opacity: 0; } }
     @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash, .mh-card-dmg-pop, .mh-card-down-band, .mh-card-guard-result { animation: none; } }
+    /* キラ・レアキラの立ち絵の光(84 の CardKiraFx・cardKiraWrap。2026-10-30 社長「この形で入れて」)。CSS だけ・粒は少なく */
+    .mh-kira-rim { animation: mhKiraRim 3.2s linear infinite; }
+    @keyframes mhKiraRim { 0%, 100% { filter: drop-shadow(0 0 2px rgba(255,120,220,.9)); } 33% { filter: drop-shadow(0 0 2px rgba(120,210,255,.9)); } 66% { filter: drop-shadow(0 0 2px rgba(255,230,110,.9)); } }
+    .mh-rare-rim { filter: drop-shadow(0 0 3px rgba(255,214,102,.95)) drop-shadow(0 0 7px rgba(255,170,60,.5)); }
+    .mh-kira-fx { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+    .mh-kira-spark { position: absolute; width: 9px; height: 9px; margin: -4px 0 0 -4px; opacity: 0; background: #fff6fd; clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%); filter: drop-shadow(0 0 2px rgba(255,170,240,.95)); animation: mhKiraSpark 3.8s ease-in-out infinite; }
+    @keyframes mhKiraSpark { 0%, 70%, 100% { opacity: 0; transform: scale(.4) rotate(0deg); } 80% { opacity: 1; transform: scale(1) rotate(25deg); } 90% { opacity: 0; transform: scale(.6) rotate(45deg); } }
+    .mh-rare-halo { position: absolute; left: 50%; top: 54%; width: 82%; aspect-ratio: 1; max-height: 100%; transform: translate(-50%, -50%); border-radius: 50%; z-index: -1;
+      background: conic-gradient(from 0deg, rgba(255,214,102,0), rgba(255,214,102,.55), rgba(255,138,61,0), rgba(255,214,102,.45), rgba(255,214,102,0));
+      -webkit-mask: radial-gradient(circle, transparent 52%, #000 54%, #000 64%, transparent 70%); mask: radial-gradient(circle, transparent 52%, #000 54%, #000 64%, transparent 70%);
+      animation: mhRareSpin 9s linear infinite; }
+    .mh-rare-glow { position: absolute; left: 50%; top: 58%; width: 66%; aspect-ratio: 1; max-height: 100%; transform: translate(-50%, -50%); border-radius: 50%; z-index: -1; background: radial-gradient(circle, rgba(255,214,102,.36), rgba(255,214,102,0) 70%); animation: mhRarePulse 2.6s ease-in-out infinite; }
+    @keyframes mhRareSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+    @keyframes mhRarePulse { 0%, 100% { opacity: .55; transform: translate(-50%, -50%) scale(.92); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); } }
+    .mh-rare-mote { position: absolute; bottom: 6%; width: 3px; height: 3px; border-radius: 50%; background: #ffe08c; box-shadow: 0 0 4px rgba(255,214,102,.9); opacity: 0; animation: mhRareMote 3.4s linear infinite; }
+    @keyframes mhRareMote { 0% { opacity: 0; transform: translateY(0); } 15% { opacity: .95; } 80% { opacity: .6; } 100% { opacity: 0; transform: translateY(-70px); } }
+    @media (prefers-reduced-motion: reduce) {
+      .mh-kira-fx { display: none; }
+      .mh-kira-rim { animation: none; filter: drop-shadow(0 0 2px rgba(200,160,255,.9)); }
+    }
     .mh-card-ko { animation: mhCardKo .9s ease-in forwards; transform-origin: 50% 90%; }
     /* 「画面の揺れ: 揺らさない」(カードのオプション)のときの受けた動き。揺らさずに赤く光るだけ */
     @keyframes mhCardHitCalm { 0%,100% { filter: none; } 30% { filter: drop-shadow(0 0 10px rgba(248,113,113,1)) brightness(1.3); } }
