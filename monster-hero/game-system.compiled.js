@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 58d1ba297e0b6e58
+// source-sha256: 29b37887b7969916
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -92099,12 +92099,14 @@ const CARD_BGM_DEFAULT = Object.freeze({
   cpu: 'auto',
   pvp: 'ichika_battle'
 });
+const CARD_BGM_RANDOM = 'random';
 const normalizeCardBgm = (v, isTrack = () => true) => {
   const r = cardIsPlainObject(v) ? v : {};
+  const pick = (x, def) => x === CARD_BGM_RANDOM || typeof x === 'string' && isTrack(x) ? x : def;
   return {
-    top: typeof r.top === 'string' && isTrack(r.top) ? r.top : CARD_BGM_DEFAULT.top,
+    top: pick(r.top, CARD_BGM_DEFAULT.top),
     cpu: r.cpu === 'auto' || typeof r.cpu === 'string' && isTrack(r.cpu) ? r.cpu : CARD_BGM_DEFAULT.cpu,
-    pvp: typeof r.pvp === 'string' && isTrack(r.pvp) ? r.pvp : CARD_BGM_DEFAULT.pvp
+    pvp: pick(r.pvp, CARD_BGM_DEFAULT.pvp)
   };
 };
 const CARD_PLAYLIST_MAX = 5;
@@ -92118,6 +92120,7 @@ const CARD_CPU_PLAYLIST_DEFAULT = Object.freeze({
   sorashido: Object.freeze(['monster_hero_theme'])
 });
 const cardNormalizePlaylistList = (v, isTrack = () => true) => {
+  if (Array.isArray(v) && v.includes(CARD_BGM_RANDOM)) return [CARD_BGM_RANDOM];
   const out = [];
   for (const id of Array.isArray(v) ? v : []) {
     if (out.length >= CARD_PLAYLIST_MAX) break;
@@ -97192,6 +97195,16 @@ const cardCpuPlaylistOf = (playlist, who) => {
   return list.length ? list : CARD_AI_BGM[who] ? [CARD_AI_BGM[who]] : [];
 };
 const cardIsBgmTrack = id => typeof BGM_TRACKS !== 'undefined' && BGM_TRACKS.some(t => t.id === id);
+const cardBgmAllTracks = () => typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS.map(t => t.id) : [];
+const cardBgmOf = v => {
+  if (v === CARD_BGM_RANDOM) return cardBgmAllTracks();
+  if (Array.isArray(v) && v.includes(CARD_BGM_RANDOM)) return cardBgmAllTracks();
+  return v;
+};
+const cardBgmRandomOne = () => {
+  const all = cardBgmAllTracks();
+  return all.length ? all[Math.floor(Math.random() * all.length)] : null;
+};
 const CARD_SPECIES_ART = Object.freeze({
   tiger: 'Tiger',
   golem: 'Golem',
@@ -101043,6 +101056,33 @@ const CardPlaylistRows = ({
   const tracks = typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : [];
   const choices = keep => tracks.filter(t => t.id === keep || !list.includes(t.id));
   const selectClass = 'min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white';
+  if (list.length === 1 && list[0] === CARD_BGM_RANDOM) {
+    return React.createElement("div", {
+      "data-card-playlist-rows": tag,
+      "data-card-playlist-count": 1,
+      "data-card-playlist-random": true
+    }, React.createElement("div", {
+      className: "mt-1 flex items-center gap-1.5"
+    }, React.createElement("span", {
+      className: "min-w-0 flex-1 rounded-xl border border-amber-300/50 bg-amber-500/15 px-2 py-2 text-[12px] font-black text-amber-100",
+      style: JA_LABEL_STYLE
+    }, jaWrap('🔀 ランダム(選べる曲ぜんぶから、毎回ちがう順で)')), bgmPreview && React.createElement("button", {
+      type: "button",
+      "data-card-playlist-preview": CARD_BGM_RANDOM,
+      onClick: () => {
+        if (bgmPreview.playing) bgmPreview.stop();else {
+          const one = cardBgmRandomOne();
+          if (one) bgmPreview.toggle(one);
+        }
+      },
+      className: "min-h-[44px] min-w-[52px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black"
+    }, bgmPreview.playing ? '停止' : '試聴')), React.createElement("button", {
+      type: "button",
+      "data-card-playlist-random-off": true,
+      onClick: () => onChange([tracks[0] ? tracks[0].id : ''].filter(Boolean)),
+      className: "mt-1.5 min-h-[44px] w-full rounded-xl bg-slate-700 px-2 text-[11px] font-black text-white"
+    }, jaWrap('ランダムをやめて、曲を選ぶ')));
+  }
   return React.createElement("div", {
     "data-card-playlist-rows": tag,
     "data-card-playlist-count": list.length
@@ -101096,7 +101136,12 @@ const CardPlaylistRows = ({
     "data-card-playlist-full": true,
     className: "mt-1.5 text-[10px] font-bold text-slate-400",
     style: JA_LABEL_STYLE
-  }, jaWrap(`入れられるのは${CARD_PLAYLIST_MAX}曲までです`)));
+  }, jaWrap(`入れられるのは${CARD_PLAYLIST_MAX}曲までです`)), React.createElement("button", {
+    type: "button",
+    "data-card-playlist-random-on": true,
+    onClick: () => onChange([CARD_BGM_RANDOM]),
+    className: "mt-1.5 min-h-[44px] w-full rounded-xl border border-amber-300/50 bg-slate-900 px-2 text-[11px] font-black text-amber-100"
+  }, jaWrap('🔀 ランダムにする(選べる曲ぜんぶから)')));
 };
 const CardQuickRunDetail = ({
   quickRun,
@@ -101369,7 +101414,7 @@ const CardBattleScreen = ({
   }, []);
   const topBgm = save && save.bgm ? save.bgm.top : null;
   useEffect(() => {
-    if (screen === 'CARD_TOP' && topBgm && onBgm) onBgm(topBgm);
+    if (screen === 'CARD_TOP' && topBgm && onBgm) onBgm(cardBgmOf(topBgm));
   }, [screen, topBgm]);
   useEffect(() => {
     if (screen === 'CARD_TOP' && game && !result) {
@@ -101766,13 +101811,13 @@ const CardBattleScreen = ({
         }
         if (game.pvp) {
           CARD_PVP.finish(outcome, st);
-          onBgm && onBgm(save.bgm.top);
+          onBgm && onBgm(cardBgmOf(save.bgm.top));
           onNavigate('CARD_TOP');
           setView('pvp');
           return;
         }
         if (game.demo) {
-          onBgm && onBgm(save.bgm.top);
+          onBgm && onBgm(cardBgmOf(save.bgm.top));
           onNavigate('CARD_TOP');
           setView('top');
           return;
@@ -101789,7 +101834,7 @@ const CardBattleScreen = ({
             reward: ok ? fin.reward : 0,
             saved: ok
           });
-          onBgm && onBgm(save.bgm.top);
+          onBgm && onBgm(cardBgmOf(save.bgm.top));
           onNavigate('CARD_TOP');
           setView('result');
           return;
@@ -101854,7 +101899,7 @@ const CardBattleScreen = ({
             share: game.share,
             rankGain: ok ? levelGain.gain : null
           });
-          onBgm && onBgm(save.bgm.top);
+          onBgm && onBgm(cardBgmOf(save.bgm.top));
           onNavigate('CARD_TOP');
           setView('result');
           return;
@@ -101872,7 +101917,7 @@ const CardBattleScreen = ({
             openIdRef.current = null;
             openRef.current = null;
             setNotice('この対戦は、ほかの画面で投了として数えました');
-            onBgm && onBgm(save.bgm.top);
+            onBgm && onBgm(cardBgmOf(save.bgm.top));
             onNavigate('CARD_TOP');
             setView('top');
             return;
@@ -102017,7 +102062,7 @@ const CardBattleScreen = ({
           replay: replayId,
           rankGain: ok ? levelGain.gain : null
         });
-        onBgm && onBgm(save.bgm.top);
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
         onNavigate('CARD_TOP');
         setView('result');
       }
@@ -102165,7 +102210,7 @@ const CardBattleScreen = ({
       beat: Date.now(),
       facts: cardResultFacts(st, CARD_ME)
     }, true);
-    onBgm && onBgm(cardCpuPlaylistOf(save.cpuPlaylist, pick.who));
+    onBgm && onBgm(cardBgmOf(cardCpuPlaylistOf(save.cpuPlaylist, pick.who)));
     onNavigate('CARD_BATTLE');
   };
   startBattleRef.current = startBattle;
@@ -102591,7 +102636,7 @@ const CardBattleScreen = ({
           settings: save.settings,
           intro
         });
-        onBgm && onBgm(save.bgm.pvp || null);
+        onBgm && onBgm(cardBgmOf(save.bgm.pvp) || null);
         onNavigate('CARD_BATTLE');
       }
     });
@@ -103105,7 +103150,7 @@ const CardBattleScreen = ({
     }, "フリー対戦"), React.createElement("p", {
       className: "mt-0.5 text-[10px] font-bold leading-snug text-slate-400",
       style: JA_WRAP_STYLE
-    }, jaWrap('助手1人につき5曲まで選べます。対戦中は、選んだ曲を毎回ちがう順番で、続けて流します')), React.createElement("div", {
+    }, jaWrap('助手1人につき5曲まで選べます。対戦中は、選んだ曲を毎回ちがう順番で、続けて流します。「ランダム」にすると、選べる曲ぜんぶから流します')), React.createElement("div", {
       className: "mt-2 grid grid-cols-3 gap-1.5"
     }, plWhoList.map(a => React.createElement("button", {
       key: a.id,
@@ -103119,7 +103164,7 @@ const CardBattleScreen = ({
       className: `min-h-[40px] min-w-0 rounded-xl border px-1 text-[11px] font-black ${a.id === plCur ? 'border-amber-300 bg-amber-600/85 text-white' : 'border-white/15 bg-slate-900/75 text-slate-200'}`
     }, jaWrap(a.name), React.createElement("small", {
       className: "ml-0.5 text-[10px] opacity-80"
-    }, cardCpuPlaylistOf(save.cpuPlaylist, a.id).length, "曲")))), plCur && React.createElement("div", {
+    }, cardCpuPlaylistOf(save.cpuPlaylist, a.id)[0] === CARD_BGM_RANDOM ? 'ランダム' : `${cardCpuPlaylistOf(save.cpuPlaylist, a.id).length}曲`)))), plCur && React.createElement("div", {
       "data-card-playlist-edit": plCur,
       className: "mt-2"
     }, React.createElement(CardPlaylistRows, {
@@ -103235,15 +103280,27 @@ const CardBattleScreen = ({
         });
       },
       className: "min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white"
-    }, (typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map(t => React.createElement("option", {
+    }, React.createElement("option", {
+      value: CARD_BGM_RANDOM
+    }, "ランダム(毎回ちがう曲)"), (typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map(t => React.createElement("option", {
       key: t.id,
       value: t.id
-    }, t.name, t.id === CARD_BGM_DEFAULT[k] ? '(はじめの曲)' : ''))), bgmPreview && React.createElement("button", {
+    }, t.name, t.id === CARD_BGM_DEFAULT[k] ? '(はじめの曲)' : ''))), bgmPreview && (save.bgm[k] === CARD_BGM_RANDOM ? React.createElement("button", {
+      type: "button",
+      "data-card-bgm-preview": k,
+      onClick: () => {
+        if (bgmPreview.playing) bgmPreview.stop();else {
+          const one = cardBgmRandomOne();
+          if (one) bgmPreview.toggle(one);
+        }
+      },
+      className: "min-h-[44px] min-w-[58px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black"
+    }, bgmPreview.playing ? '停止' : '試聴') : React.createElement("button", {
       type: "button",
       "data-card-bgm-preview": k,
       onClick: () => bgmPreview.toggle(save.bgm[k]),
       className: "min-h-[44px] min-w-[58px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black"
-    }, bgmPreview.playing === save.bgm[k] ? '停止' : '試聴')))), cpuPlaylistPanel, React.createElement("p", {
+    }, bgmPreview.playing === save.bgm[k] ? '停止' : '試聴'))))), cpuPlaylistPanel, React.createElement("p", {
       "data-card-options-se": true,
       className: "mt-1 text-[10px] font-bold leading-snug text-slate-400",
       style: JA_WRAP_STYLE
