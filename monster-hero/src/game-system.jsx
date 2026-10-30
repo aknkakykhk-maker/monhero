@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b6ca5bb71807807b
+// generated-sha256: efe7fafb7777c64e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -34585,8 +34585,12 @@ const PLAYER_RANK_BADGE_CSS = `
 .mh-prb-shield::before{content:"";position:absolute;inset:0;clip-path:polygon(50% 0,100% 18%,100% 70%,50% 100%,0 70%,0 18%);background:var(--prb-rim)}
 .mh-prb-shield::after{content:"";position:absolute;inset:3px;clip-path:polygon(50% 0,100% 18%,100% 70%,50% 100%,0 70%,0 18%);background:var(--prb-face)}
 .mh-prb-gloss{position:absolute;inset:3px 3px 50% 3px;z-index:2;clip-path:polygon(50% 0,100% 18%,100% 100%,0 100%,0 18%);background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.05))}
-.mh-prb-num{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;padding-top:3px;font-weight:900;font-size:26px;color:#fff;-webkit-text-stroke:5px var(--prb-ink);paint-order:stroke fill;letter-spacing:-.04em;line-height:1}
+.mh-prb-num{position:absolute;inset:-2.7% 0 2.7% 0;z-index:3;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:26px;color:#fff;-webkit-text-stroke:5px var(--prb-ink);paint-order:stroke fill;letter-spacing:-.04em;line-height:1}
 .mh-prb-num.mh-prb-w3{font-size:20px}
+/* 2026-10-30 社長「数字の位置がセンターずれ」: 字の上下の余白(字体ごとに違う)を切り落として数字そのものを真ん中に置き、
+   盾は下が長く尖っていて見た目の重心が箱の真ん中より上(約47%)なので、数字の箱(.mh-prb-num)を盾の高さの2.7%だけ上へずらす。
+   字間を詰めた分(最後の字のうしろも詰まる)は右に足して打ち消す */
+.mh-prb-digits{display:inline-block;text-box:trim-both cap alphabetic;padding-right:.04em}
 .mh-prb-tag{display:flex;flex-direction:column;line-height:1.05}
 .mh-prb-kind{white-space:nowrap;font-size:10px;font-weight:900;color:var(--prb-label);letter-spacing:.08em}
 .mh-prb-name{white-space:nowrap;font-size:14px;font-weight:900;color:#fff;-webkit-text-stroke:3px var(--prb-ink);paint-order:stroke fill}
@@ -34619,7 +34623,7 @@ function PlayerRankBadge({ kind = 'beat', rank = 1, size = 'lg', showName = true
   return (
     <span data-player-rank-badge={kind} data-player-rank-tier={tier.t} aria-label={`${k.label} ${r}`}
       className={`mh-prb mh-prb-t${tier.t}${size === 'sm' ? ' mh-prb-s' : ''}`}>
-      <span className="mh-prb-shield" aria-hidden="true"><span className="mh-prb-gloss"/><b data-player-rank-value className={`mh-prb-num${text.length >= 3 ? ' mh-prb-w3' : ''}`}>{text}</b></span>
+      <span className="mh-prb-shield" aria-hidden="true"><span className="mh-prb-gloss"/><b data-player-rank-value className={`mh-prb-num${text.length >= 3 ? ' mh-prb-w3' : ''}`}><span className="mh-prb-digits">{text}</span></b></span>
       {showName && <span className="mh-prb-tag" aria-hidden="true"><span className="mh-prb-kind">{tier.name}</span><span className="mh-prb-name">{k.label}</span></span>}
     </span>
   );
@@ -34908,7 +34912,7 @@ function PlayerRankUpFx({ kind = 'beat', from = 1, to = 1, gains = [], onClose =
   const k = playerRankKind(kind);
   const shield = (rank, cls = '') => (
     <span className={`mh-prb mh-prfx-big mh-prb-t${playerRankTier(rank).t} ${cls}`}>
-      <span className="mh-prb-shield"><span className="mh-prb-gloss"/><b className={`mh-prb-num${String(rank).length >= 3 ? ' mh-prb-w3' : ''}`}>{rank}</b></span>
+      <span className="mh-prb-shield"><span className="mh-prb-gloss"/><b className={`mh-prb-num${String(rank).length >= 3 ? ' mh-prb-w3' : ''}`}><span className="mh-prb-digits">{rank}</span></b></span>
     </span>
   );
   return (

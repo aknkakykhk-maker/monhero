@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 37cf12a569215258
+// source-sha256: f2e22905a1925b45
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -55147,8 +55147,12 @@ const PLAYER_RANK_BADGE_CSS = `
 .mh-prb-shield::before{content:"";position:absolute;inset:0;clip-path:polygon(50% 0,100% 18%,100% 70%,50% 100%,0 70%,0 18%);background:var(--prb-rim)}
 .mh-prb-shield::after{content:"";position:absolute;inset:3px;clip-path:polygon(50% 0,100% 18%,100% 70%,50% 100%,0 70%,0 18%);background:var(--prb-face)}
 .mh-prb-gloss{position:absolute;inset:3px 3px 50% 3px;z-index:2;clip-path:polygon(50% 0,100% 18%,100% 100%,0 100%,0 18%);background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.05))}
-.mh-prb-num{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;padding-top:3px;font-weight:900;font-size:26px;color:#fff;-webkit-text-stroke:5px var(--prb-ink);paint-order:stroke fill;letter-spacing:-.04em;line-height:1}
+.mh-prb-num{position:absolute;inset:-2.7% 0 2.7% 0;z-index:3;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:26px;color:#fff;-webkit-text-stroke:5px var(--prb-ink);paint-order:stroke fill;letter-spacing:-.04em;line-height:1}
 .mh-prb-num.mh-prb-w3{font-size:20px}
+/* 2026-10-30 社長「数字の位置がセンターずれ」: 字の上下の余白(字体ごとに違う)を切り落として数字そのものを真ん中に置き、
+   盾は下が長く尖っていて見た目の重心が箱の真ん中より上(約47%)なので、数字の箱(.mh-prb-num)を盾の高さの2.7%だけ上へずらす。
+   字間を詰めた分(最後の字のうしろも詰まる)は右に足して打ち消す */
+.mh-prb-digits{display:inline-block;text-box:trim-both cap alphabetic;padding-right:.04em}
 .mh-prb-tag{display:flex;flex-direction:column;line-height:1.05}
 .mh-prb-kind{white-space:nowrap;font-size:10px;font-weight:900;color:var(--prb-label);letter-spacing:.08em}
 .mh-prb-name{white-space:nowrap;font-size:14px;font-weight:900;color:#fff;-webkit-text-stroke:3px var(--prb-ink);paint-order:stroke fill}
@@ -55194,7 +55198,9 @@ function PlayerRankBadge({
   }), React.createElement("b", {
     "data-player-rank-value": true,
     className: `mh-prb-num${text.length >= 3 ? ' mh-prb-w3' : ''}`
-  }, text)), showName && React.createElement("span", {
+  }, React.createElement("span", {
+    className: "mh-prb-digits"
+  }, text))), showName && React.createElement("span", {
     className: "mh-prb-tag",
     "aria-hidden": "true"
   }, React.createElement("span", {
@@ -55665,7 +55671,9 @@ function PlayerRankUpFx({
     className: "mh-prb-gloss"
   }), React.createElement("b", {
     className: `mh-prb-num${String(rank).length >= 3 ? ' mh-prb-w3' : ''}`
-  }, rank)));
+  }, React.createElement("span", {
+    className: "mh-prb-digits"
+  }, rank))));
   return React.createElement("div", {
     "data-player-rank-up-fx": kind,
     "data-player-rank-up-fx-stage": stage,
