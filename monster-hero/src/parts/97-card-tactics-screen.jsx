@@ -659,14 +659,14 @@ const CardTacticsShop = ({ point = 0, busy = false, onBuy }) => {
 };
 
 // ==================== カードランクの見せ方(2026-10-29 社長「バトルカードのレベル表記が地味」→「カードランク」) ====================
-// 札・棒・ランクアップは 43 の共通の部品(ビートランクと同じ見た目)。ここはカードの中身(ごほうび・置ける所)を渡すだけ
-// 「これからもらえる物」: 次のランクから、ビートP・カードパック券・戦術カードを置ける所が増えるランクを並べる
+// 札・棒・ランクアップは 43 の共通の部品(ビートランクと同じ見た目)。ここはカードの中身(ごほうび・セットできる戦術カードの枚数)を渡すだけ
+// 「これからもらえる物」: 次のランクから、ビートP・カードパック券・セットできる戦術カードが増えるランクを並べる
 const cardRankUpcoming = (lv, n = 4) => {
   const out = [];
   for (let r = lv + 1; out.length < n && r <= lv + 50; r++) {
     const g = cardRankRewardOf(r);
-    const frame = CARD_LEVEL_FRAMES.some((f) => f.at === r);
-    if (g.tickets || frame || r === lv + 1) out.push({ rank: r, text: `${cardRankRewardText(r)}${frame ? '・戦術カードを置ける所が増える' : ''}` });
+    const frame = CARD_LEVEL_FRAMES.find((f) => f.at === r);
+    if (g.tickets || frame || r === lv + 1) out.push({ rank: r, text: `${cardRankRewardText(r)}${frame ? `・${cardLevelFrameText(frame, false)}` : ''}` });
   }
   return out;
 };
@@ -680,25 +680,23 @@ const CardRankChip = ({ xp = 0, onOpen = null, showName = true, cls = '' }) => {
     </button>
   );
 };
-// 札を押した先: 大きい札・棒・これからもらえる物・経験値のたまり方
-const CardRankDetail = ({ xp = 0, onClose }) => {
-  const info = cardLevelInfo(xp);
-  const up = cardRankUpcoming(info.level);
-  return (
-    <div data-card-rank-detail role="dialog" aria-modal="true" aria-label="カードランク" className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4" onClick={onClose}>
-      <div className="w-full max-w-[340px] rounded-2xl border-2 border-amber-200/70 bg-gradient-to-b from-violet-950 to-slate-950 p-4 text-white" onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-center"><PlayerRankBadge kind="card" rank={info.level} size="lg"/></div>
-        <div className="mt-3"><PlayerRankGauge kind="card" info={{ rank: info.level, into: info.into, need: info.need }} note={`次のランクまで あと${(info.need - info.into).toLocaleString()}`}/></div>
-        <b className="mt-3 block text-[13px] font-black text-amber-200">これからもらえる物</b>
-        <ul data-card-rank-upcoming className="mt-1 space-y-1 rounded-xl bg-black/35 px-2.5 py-2 text-[12px] font-bold leading-snug">
-          {up.map((u) => <li key={u.rank} style={JA_WRAP_STYLE}><b className="text-amber-100">{`ランク${u.rank}`}</b>{` … ${u.text}`}</li>)}
-        </ul>
-        <p className="mt-2 text-[11px] font-bold leading-relaxed text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('フリー対戦・マルチ対戦で戦うと経験値がたまります。強い相手ほど多く、マルチがいちばん多くたまります。その日はじめての勝ちは +30。投了・練習試合ではたまりません。')}</p>
-        <button type="button" data-card-rank-detail-close onClick={() => { Audio_.fgSe.tap(); onClose && onClose(); }} className="mh-button mt-3 min-h-[44px] w-full rounded-xl text-[14px] font-black">とじる</button>
-      </div>
-    </div>
-  );
+// そのランクに上がったときにもらえる物を1つずつ(43 のごほうびの一覧 PlayerRankRewards に渡す)。got はもう上がったランクか
+//   ビートP(ランク×100)・5ランクごとのおまけ(ビートP ランク×200・カードパック券)・戦術カードをセットできる数が増えるランク(言い方は cardLevelFrameText)
+const cardRankRewardItems = (r, got = false) => {
+  if (!(r >= 2)) return [];
+  const g = cardRankRewardOf(r), frame = CARD_LEVEL_FRAMES.find((f) => f.at === r), bonus = r % 5 === 0 ? r * 200 : 0;
+  return [
+    { icon: '💰', text: `ビートP ${(g.point - bonus).toLocaleString()}` },
+    ...(bonus ? [{ icon: '💰', text: `ビートP ${bonus.toLocaleString()}`, bonus: true }] : []),
+    ...(g.tickets ? [{ icon: '🎟️', text: `カードパック券 ${g.tickets}枚`, bonus: true }] : []),
+    ...(frame ? [{ icon: '🧠', text: cardLevelFrameText(frame, got) }] : []),
+  ];
 };
+// 札を押した先: 大きい札・棒・ランクごとのごほうびの一覧・経験値のたまり方(2026-10-30 社長「報酬が全部見れるように」。43 の共通の画面。ビートランクと同じ)
+const CardRankDetail = ({ xp = 0, onClose }) => (
+  <PlayerRankDetail kind="card" xp={xp} rewardsOf={cardRankRewardItems} onClose={onClose}
+    how={'フリー対戦・マルチ対戦で戦うと経験値がたまります。強い相手ほど多く、マルチがいちばん多くたまります。その日はじめての勝ちは +30。投了・練習試合ではたまりません。'}/>
+);
 // 対戦の結果: 経験値の札(棒が前の量から伸びる)と、ランクが上がったときの演出(43 の PlayerRankUpFx。ビートランクと同じ。帯が変わると自動で豪華になる)。
 //   一度に何ランク上がっても、上がった先のランクで1回だけ出し、もらった物をまとめて渡す。5ランクごとのおまけは bonus(桃色の光)
 const cardRankFxGains = (gain) => {
@@ -706,12 +704,12 @@ const cardRankFxGains = (gain) => {
   for (let r = gain.from + 1; r <= gain.to; r++) if (r % 5 === 0) bonusPoint += r * 200;
   bonusPoint = Math.min(bonusPoint, gain.points || 0);
   const basePoint = Math.max(0, (gain.points || 0) - bonusPoint);
-  const frames = CARD_LEVEL_FRAMES.filter((f) => f.at > gain.from && f.at <= gain.to).length;
+  const frames = CARD_LEVEL_FRAMES.filter((f) => f.at > gain.from && f.at <= gain.to);
   return [
     ...(basePoint ? [{ icon: '💰', text: `ビートP ${basePoint.toLocaleString()}` }] : []),
     ...(bonusPoint ? [{ icon: '💰', text: `ビートP ${bonusPoint.toLocaleString()}`, note: '5ランクごとのおまけ', bonus: true }] : []),
     ...(gain.tickets ? [{ icon: '🎟️', text: `カードパック券 ${gain.tickets}枚`, note: '5ランクごとのおまけ', bonus: true }] : []),
-    ...(frames ? [{ icon: '🧠', text: '戦術カードを置ける所が増えた' }] : []),
+    ...frames.map((f) => ({ icon: '🧠', text: cardLevelFrameText(f) })),
   ];
 };
 const CardRankResult = ({ gain }) => {
@@ -719,11 +717,13 @@ const CardRankResult = ({ gain }) => {
   // 画面いっぱいの演出は、経験値の棒が満タンで光ったあと(2026-10-30 社長の決め。ビートランクと同じ順番。onFull は1回だけ・押して飛ばしたときも来る)
   const [fx, setFx] = useState(false); // false … まだ / true・'late' … 出す / 'closed' … 閉じた(もう出さない)
   // 保険: 棒の合図(onFull)が来ないまま5秒たったら出す(ビートランクの 60-app と同じ)
-  useEffect(() => { if (!up) return undefined; const t = setTimeout(() => setFx((v) => v || 'late'), 5000); return () => clearTimeout(t); }, [up]);
+  // 合図が来なかったときの保険の5秒は、棒が画面に入って動き出してから数える(2026-10-30 社長: 棒が見えないまま演出だけ出ないように)
+  const [barStarted, setBarStarted] = useState(false);
+  useEffect(() => { if (!up || !barStarted) return undefined; const t = setTimeout(() => setFx((v) => v || 'late'), 5000); return () => clearTimeout(t); }, [up, barStarted]);
   if (!gain || !(gain.add > 0)) return null;
   const award = { add: gain.add, parts: gain.parts || [], from: gain.from, to: gain.to, xp: gain.xp, gains: gain.gains || [] };
   return (<>
-    <PlayerRankGain kind="card" award={award} next={`ランク${gain.to + 1}で ${cardRankRewardText(gain.to + 1)}`} onFull={up ? () => setFx((v) => v || true) : null}/>
+    <PlayerRankGain kind="card" award={award} next={`ランク${gain.to + 1}で ${cardRankRewardText(gain.to + 1)}`} onFull={up ? () => setFx((v) => v || true) : null} onStart={() => setBarStarted(true)}/>
     {up && fx && fx !== 'closed' && typeof PlayerRankUpFx === 'function' && <PlayerRankUpFx kind="card" from={gain.from} to={gain.to} gains={cardRankFxGains(gain)} onClose={() => setFx('closed')}/>}
   </>);
 };

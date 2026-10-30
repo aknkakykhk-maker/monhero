@@ -44,7 +44,7 @@ export const visibleAt = (ymd) => new Date(Date.parse(`${ymd}T${String(RESULT_HO
 
 // ---- 1. 受付の締め切り ----
 export const closeEntries = async ({ db, game, tour, log }) => {
-  const entries = (await db.listEntries(tour.id)).filter((e) => !e.is_assist).sort((a, b) => String(a.entered_at).localeCompare(String(b.entered_at)));
+  const entries = (await db.listEntries(tour.id)).filter((e) => !e.is_assist && !e.dropped).sort((a, b) => String(a.entered_at).localeCompare(String(b.entered_at)));
   const decks = await db.decksOf(entries.map((e) => e.owner_id));
   const ok = [];
   for (const e of entries) {

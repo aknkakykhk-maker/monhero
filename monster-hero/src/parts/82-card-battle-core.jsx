@@ -2245,12 +2245,16 @@ const CARD_LEVEL_ORDER = Object.freeze(['easy', 'normal', 'hard', 'expert', 'mas
 //   助手と対戦は 'auto'(助手ごとの曲)・マルチは ichika_battle(#3634 で一度対戦まで ICHIKA にしたのを戻した)
 //   ★mh_card_bgm_v1 は、オプションで曲を選んだときにだけ書く。選んだ人の値はそのまま読む(書き換えない)。top は足した項目なので、前からの人も既定で補う
 const CARD_BGM_DEFAULT = Object.freeze({ top: 'atsu_cup_theme', cpu: 'auto', pvp: 'ichika_battle' });
+// 'random' … 選べる曲の中から毎回ちがう曲(2026-10-30 社長「曲の設定にランダムもほしい」)。top・pvp と、助手と対戦の並び([CARD_BGM_RANDOM] の1つだけ)で使える
+//   ★前の版は 'random' を知らない曲として既定へ戻して読む(書き換えはしない)。選んでいない人は今のまま
+const CARD_BGM_RANDOM = 'random';
 const normalizeCardBgm = (v, isTrack = () => true) => {
   const r = cardIsPlainObject(v) ? v : {};
+  const pick = (x, def) => (x === CARD_BGM_RANDOM || (typeof x === 'string' && isTrack(x)) ? x : def);
   return {
-    top: typeof r.top === 'string' && isTrack(r.top) ? r.top : CARD_BGM_DEFAULT.top,
+    top: pick(r.top, CARD_BGM_DEFAULT.top),
     cpu: r.cpu === 'auto' || (typeof r.cpu === 'string' && isTrack(r.cpu)) ? r.cpu : CARD_BGM_DEFAULT.cpu,
-    pvp: typeof r.pvp === 'string' && isTrack(r.pvp) ? r.pvp : CARD_BGM_DEFAULT.pvp,
+    pvp: pick(r.pvp, CARD_BGM_DEFAULT.pvp),
   };
 };
 // 助手と対戦の曲の並び(2026-10-26 社長の依頼)。助手ごとに1〜5曲を選び、対戦中は全部を1回ずつシャッフルで流す
@@ -2264,6 +2268,7 @@ const CARD_CPU_PLAYLIST_DEFAULT = Object.freeze({
   sorashido: Object.freeze(['monster_hero_theme']),   // Monster Hero(2026-10-27 社長の答え)
 });
 const cardNormalizePlaylistList = (v, isTrack = () => true) => {
+  if (Array.isArray(v) && v.includes(CARD_BGM_RANDOM)) return [CARD_BGM_RANDOM];   // ランダム(選べる曲ぜんぶ)
   const out = [];
   for (const id of Array.isArray(v) ? v : []) {
     if (out.length >= CARD_PLAYLIST_MAX) break;

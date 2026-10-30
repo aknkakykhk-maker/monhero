@@ -37,6 +37,17 @@ const beatRankTicketsFor = (rank) => {
   return r < 2 ? 0 : 1 + (r % 5 === 0 ? r : 0);
 };
 // そのランクに上がったときにもらえる物を、一目で分かる文に(「ビートP 1,300・セッション券 1枚」)
+// そのランクに上がったときにもらえる物を、1つずつ(ごほうびの一覧の画面用)。bonus は5ランクごとのおまけ
+const beatRankRewardItems = (rank) => {
+  const r = Math.max(0, Math.floor(Number(rank) || 0));
+  if (r < 2) return [];
+  const bonus = r % 5 === 0;
+  return [
+    { icon: '🎟️', text: `ビートP ${(r * 100).toLocaleString()}` },
+    { icon: '🎶', text: 'セッション券 1枚' },
+    ...(bonus ? [{ icon: '🎟️', text: `ビートP ${(r * 200).toLocaleString()}`, bonus: true }, { icon: '🎶', text: `セッション券 ${r.toLocaleString()}枚`, bonus: true }] : []),
+  ];
+};
 const beatRankRewardText = (rank) => `ビートP ${playerRankBeatPointsFor(rank).toLocaleString()}・セッション券 ${beatRankTicketsFor(rank).toLocaleString()}枚`;
 
 // { v:1, xp(経験値の合計), day(その日はじめての1曲を数えた日 JST 'YYYY-MM-DD'), dayFirst(その日の +30 を数えたか),

@@ -24,6 +24,15 @@ const CARD_LEVEL_FRAMES = Object.freeze([
   { at: 20, breeder: 3 }, { at: 25, mon: 5 }, { at: 30, base: 3 },
 ]);
 const cardLevelFrames = (lv) => CARD_LEVEL_FRAMES.filter((x) => lv >= x.at).reduce((a, x) => ({ ...a, ...Object.fromEntries(Object.entries(x).filter(([k]) => k !== 'at')) }), {});
+// ランクで増える分を、ふだんの言葉で(ランクアップの演出・これからもらえる物)。done … 「なった」/「なる」
+//   2026-10-30 社長「文言おかしい」(前は「戦術カードを置ける所が増えた」)。「置ける所」「枠」「行」は使わない
+const cardLevelFrameText = (f, done = true) => {
+  const parts = [];
+  if (f.base) parts.push(`基本カードを${f.base}枚`);
+  if (f.breeder) parts.push(`ブリーダーの戦術カードを${f.breeder}枚`);
+  if (f.mon) parts.push(f.breeder ? `モンスターごとに${f.mon}枚まで` : `モンスターごとに戦術カードを${f.mon}枚まで`);
+  return `${parts.join('・')}セットできるように${done ? 'なった' : 'なる'}`;
+};
 // 次に開く枠(画面に「次は Lv◯ で…」と出す)。無ければ null
 const cardLevelNextFrame = (lv) => CARD_LEVEL_FRAMES.find((x) => x.at > lv) || null;
 // ランクが上がったときのごほうび(2026-10-29 社長の作り直し。前の「Lv3・10・20から5ごとに引く券」はやめた)。
@@ -71,7 +80,7 @@ const cardLevelAfter = (prev, { kind, level, outcome, today }) => {
     got.push(lv); points += r.point; tickets += r.tickets;
   }
   const gains = [...(points ? [{ icon: '💰', text: `ビートP ${points.toLocaleString()}` }] : []), ...(tickets ? [{ icon: '🎟️', text: `カードパック券 ×${tickets}` }] : []),
-    ...CARD_LEVEL_FRAMES.filter((f) => f.at > lv0 && f.at <= to).map(() => ({ icon: '🧠', text: '戦術カードを置ける所が増えた' }))];
+    ...CARD_LEVEL_FRAMES.filter((f) => f.at > lv0 && f.at <= to).map((f) => ({ icon: '🧠', text: cardLevelFrameText(f) }))];
   return { next: { ...cur, xp, day: today, dayWin: (sameDay && cur.dayWin) || outcome === 'win', got }, tickets, points, add, from: lv0, to, xp, parts, gains };
 };
 

@@ -133,11 +133,14 @@ begin
   if d.key_hash <> md5(p_key) then return 'locked'; end if;
   insert into card_tournament_entries (tournament_id, seat_id, owner_id, key_hash, user_name, icon, profile_frame)
     values (p_tour, p_owner, p_owner, md5(p_key), d.user_name, d.icon, d.profile_frame)
-    on conflict (tournament_id, seat_id) do update set user_name = excluded.user_name, icon = excluded.icon, profile_frame = excluded.profile_frame;
+    -- 取り消した人がもう一度エントリーしたら、印を外して受付の順を今にする(行は消さない)
+    on conflict (tournament_id, seat_id) do update set user_name = excluded.user_name, icon = excluded.icon, profile_frame = excluded.profile_frame,
+      key_hash = excluded.key_hash, dropped = false,
+      entered_at = case when card_tournament_entries.dropped then now() else card_tournament_entries.entered_at end;
   return 'ok';
 end $$;
 
--- 取り消し(受付中だけ)。返り値: 'ok' | 'closed' | 'locked' | 'none'
+-- 取り消し(受付中だけ)。行は消さずに dropped の印を付ける(締め切り・一覧・対戦表は印の付いた人を入れない)。返り値: 'ok' | 'closed' | 'locked' | 'none'
 create or replace function public.card_tournament_withdraw(p_tour text, p_owner text, p_key text)
 returns text language plpgsql security definer set search_path = public as $$
 declare t public.card_tournaments; e public.card_tournament_entries;
@@ -145,9 +148,9 @@ begin
   select * into t from card_tournaments where id = p_tour;
   if not found or t.status <> 'entry' or now() >= t.entry_until then return 'closed'; end if;
   select * into e from card_tournament_entries where tournament_id = p_tour and owner_id = p_owner;
-  if not found then return 'none'; end if;
+  if not found or e.dropped then return 'none'; end if;
   if p_key is null or e.key_hash <> md5(p_key) then return 'locked'; end if;
-  delete from card_tournament_entries where tournament_id = p_tour and owner_id = p_owner;
+  update card_tournament_entries set dropped = true where tournament_id = p_tour and owner_id = p_owner;
   return 'ok';
 end $$;
 

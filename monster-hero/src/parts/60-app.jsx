@@ -4772,9 +4772,10 @@ function MonsterHeroGame() {
   const [beatRankFx, setBeatRankFx] = useState(null);
   // 結果の札の経験値の棒が伸びているあいだ(PlayerRankXpBar)。効果音の音量を戻すのに使う
   const [beatRankBarPlaying, setBeatRankBarPlaying] = useState(false);
-  // 棒が満タンの合図が来なかったとき(結果の札が見えていないなど)も、5秒で演出を出す
+  // 棒が満タンの合図が来なかったときも、棒が動き出してから5秒で演出を出す。
+  // 棒が画面に入る前(started が無い)は数えない(2026-10-30 社長: 棒が見えないまま演出だけ出ないように)
   useEffect(() => {
-    if (!beatRankFx || beatRankFx.ready) return undefined;
+    if (!beatRankFx || beatRankFx.ready || !beatRankFx.started) return undefined;
     const t = setTimeout(() => setBeatRankFx((f) => (f && !f.ready ? { ...f, ready: true } : f)), 5000);
     return () => clearTimeout(t);
   }, [beatRankFx]);
@@ -20026,7 +20027,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {raidDamageFx&&((gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='raid')||gameState==='RAID_JACK_DEBUG')&&<RaidJackDamageFx key={raidDamageFx.key} fx={raidDamageFx} onDone={()=>setRaidDamageFx(null)}/>}
         {beatRankFx&&beatRankFx.ready&&gameState==='RHYTHM_PLAY'&&<PlayerRankUpFx kind="beat" from={beatRankFx.from} to={beatRankFx.to} gains={beatRankFx.gains} onClose={()=>setBeatRankFx(null)}/>}
         {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward}
-          onRankBarFull={()=>setBeatRankFx(f=>f&&!f.ready?{...f,ready:true}:f)} onRankBarDone={()=>setBeatRankBarPlaying(false)} onComplete={async(result,merged)=>{
+          onRankBarFull={()=>setBeatRankFx(f=>f&&!f.ready?{...f,ready:true}:f)} onRankBarStart={()=>setBeatRankFx(f=>f&&!f.started?{...f,started:true}:f)} onRankBarDone={()=>setBeatRankBarPlaying(false)} onComplete={async(result,merged)=>{
           // デバッグ画面の試作曲(RHYTHM_PROTO_SONGS)は、何も残さない。周回の報酬・経験値・自己ベスト・クリア回数・
           // 実績・全国ランキングのどれにも入れない(CLAUDE.md ⑦。試作は公開しない曲なので、記録に混ぜない)
           if(rhythmPlay.from==='proto')return;
