@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 11ae4b6cf1f17496
+// source-sha256: 722cd5bd870f9bb7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -104536,6 +104536,9 @@ const CARD_DEX_MODES = Object.freeze([{
   id: 'species',
   label: '血統別'
 }, {
+  id: 'sub',
+  label: 'サブ血統別'
+}, {
   id: 'kind',
   label: '種類別'
 }]);
@@ -104564,16 +104567,31 @@ const cardDexSpeciesOf = (db, no) => {
   const c = cardOf(db, no);
   return c && c.user !== 'any' && c.user !== 'breeder' ? c.user : null;
 };
+const cardDexSubOf = (db, no) => {
+  const m = cardMonsterOf(db, no);
+  if (!m) return null;
+  return String(m.wave) === 'hybrid' ? m.sub || 'unknown' : m.species;
+};
+const cardDexIsPure = (db, no) => {
+  const m = cardMonsterOf(db, no);
+  return !!m && String(m.wave) !== 'hybrid';
+};
 const cardDexTabsOf = (db, mode) => {
-  if (mode === 'species') return CARD_PACKS.flatMap(p => p.species).map(sp => ({
+  const speciesTabs = () => CARD_PACKS.flatMap(p => p.species).map(sp => ({
     id: sp,
     label: (Object.values(db.monsters).find(m => m.species === sp && !m.variant) || {}).name || sp
   }));
+  if (mode === 'species') return speciesTabs();
+  if (mode === 'sub') return [...speciesTabs(), ...(Object.values(db.monsters).some(m => String(m.wave) === 'hybrid' && (m.sub || 'unknown') === 'unknown') ? [{
+    id: 'unknown',
+    label: '不明'
+  }] : [])];
   if (mode === 'kind') return CARD_DEX_KINDS;
   return CARD_DEX_TABS;
 };
 const cardDexListOf = (db, mode, tab, all = cardDexAll(db)) => {
   if (mode === 'species') return all.filter(no => cardDexSpeciesOf(db, no) === tab);
+  if (mode === 'sub') return all.filter(no => cardDexSubOf(db, no) === tab);
   if (mode === 'kind') return all.filter(no => tab === 'mon' ? !!cardMonsterOf(db, no) : !cardMonsterOf(db, no) && !!cardOf(db, no) && cardDeckFilterOk(cardOf(db, no), tab));
   return cardDexList(db, tab);
 };
@@ -104604,8 +104622,10 @@ const CARD_DEX_PACK_TONE = Object.freeze({
 const CARD_DEX_UNIT = Object.freeze({
   pack: 'このパック',
   species: 'この血統',
+  sub: 'このサブ血統',
   kind: 'この種類'
 });
+const cardDexSubHead = (k, label) => k === 'pure' ? `純血(主も副も${label})` : label === '不明' ? '混血(副血統が分からない)' : `混血(副血統が${label})`;
 const CardDex = ({
   db,
   collection,
@@ -104615,6 +104635,7 @@ const CardDex = ({
   const [tabs, setTabs] = useState({
     pack: '1',
     species: CARD_PACKS[0].species[0],
+    sub: CARD_PACKS[0].species[0],
     kind: 'mon'
   });
   const [show, setShow] = useState('all');
@@ -104623,6 +104644,7 @@ const CardDex = ({
   const col = collection || {};
   const all = useMemo(() => cardDexAll(db), [db]);
   const packMap = useMemo(() => cardDexPackMap(db), [db]);
+  const spName = useMemo(() => Object.fromEntries(cardDexTabsOf(db, 'species').map(x => [x.id, x.label])), [db]);
   const tabList = useMemo(() => cardDexTabsOf(db, mode).map(t => ({
     ...t,
     list: cardDexListOf(db, mode, t.id, all)
@@ -104634,8 +104656,8 @@ const CardDex = ({
   const list = curTab.list;
   const shown = list.filter(no => show === 'have' ? col[no] > 0 : show === 'miss' ? !(col[no] > 0) : true);
   const haveIn = arr => arr.filter(no => col[no] > 0).length;
-  const dexKeyOf = no => packMap[no] || '';
-  const dexKeyOrder = k => k === 'hybrid' ? 900 : k ? Number(k) : 999;
+  const dexKeyOf = no => mode === 'sub' ? cardDexIsPure(db, no) ? 'pure' : 'mix' : packMap[no] || '';
+  const dexKeyOrder = k => k === 'pure' ? 0 : k === 'mix' ? 1 : k === 'hybrid' ? 900 : k ? Number(k) : 999;
   const dexKeys = mode === 'pack' ? [''] : [...new Set(shown.map(dexKeyOf))].sort((a, b) => dexKeyOrder(a) - dexKeyOrder(b));
   const navOrder = mode === 'pack' ? shown : dexKeys.flatMap(k => shown.filter(no => dexKeyOf(no) === k));
   const navAt = detail ? navOrder.indexOf(detail) : -1;
@@ -104722,8 +104744,8 @@ const CardDex = ({
         "data-card-dex-group": k || undefined
       }, mode !== 'pack' && React.createElement("div", {
         "data-card-dex-head": k,
-        className: `mb-1 flex items-center rounded-lg px-2 py-0.5 text-[12px] font-black text-white ${CARD_DEX_PACK_TONE[k] || 'bg-slate-600'}`
-      }, cardDexPackLabel(k), React.createElement("span", {
+        className: `mb-1 flex items-center rounded-lg px-2 py-0.5 text-[12px] font-black text-white ${mode === 'sub' ? k === 'pure' ? 'bg-amber-700' : 'bg-indigo-600' : CARD_DEX_PACK_TONE[k] || 'bg-slate-600'}`
+      }, mode === 'sub' ? cardDexSubHead(k, curTab.label) : cardDexPackLabel(k), React.createElement("span", {
         className: "ml-auto text-[11px]"
       }, haveIn(inTab), "/", inTab.length)), React.createElement("div", {
         className: "grid grid-cols-4 gap-1.5"
@@ -104763,7 +104785,10 @@ const CardDex = ({
           className: `mt-0.5 font-bold leading-tight ${have ? 'text-slate-100' : 'text-slate-500'}`
         }), React.createElement("span", {
           className: "text-[9px] font-bold text-slate-500"
-        }, "No.", no));
+        }, "No.", no), mode === 'sub' && m && String(m.wave) === 'hybrid' && m.main && React.createElement("span", {
+          "data-card-dex-main": m.main,
+          className: "text-[9px] font-bold text-indigo-200"
+        }, "主 ", spName[m.main] || m.main));
       })));
     });
   })()) : React.createElement(ScreenEmpty, {
