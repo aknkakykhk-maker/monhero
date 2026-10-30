@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c24802d9667dc265
+// source-sha256: 9a029c845b57d614
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -90616,15 +90616,15 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
     easy: 0.12,
     normal: 0.06,
     hard: 0,
-    expert: 0.1,
-    master: 0.05
+    expert: 0.04,
+    master: 0
   },
   kiki: {
     easy: -0.045,
     normal: 0.06,
     hard: 0.15,
-    expert: 0,
-    master: 0.1
+    expert: -0.08,
+    master: 0
   },
   dra: {
     easy: -0.075,
@@ -90669,6 +90669,7 @@ const cardAiPolicy = (habitId, levelId, opts = {}) => {
     },
     playerRole: !!(opts && opts.playerRole)
   };
+  if (!out.playerRole && CARD_AI_DECKS[habitId] && CARD_AI_DECKS[habitId].field) out.fields = CARD_AI_DECKS[habitId].field;
   const gambit = !out.playerRole && !(opts && opts.noTactics) && typeof cardAiTacticGambit === 'function' ? cardAiTacticGambit(habitId, levelId) : null;
   const when = gambit && typeof CARD_AI_TACTIC_WHEN !== 'undefined' ? CARD_AI_TACTIC_WHEN[habitId] || null : null;
   return gambit ? {
@@ -90770,7 +90771,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
   const main = cardOf(db, me.hand[opt.hand[0]]);
   const cost = cardActionCost(db, st, p, me.hand, opt.hand);
   let score = 0;
-  if (main.kind === 'fld') return cardAiScoreField(db, st, p, main, cost, habit);
+  if (main.kind === 'fld') return cardAiScoreField(db, st, p, main, cost, habit) + (policy.fields && policy.fields.includes(main.name) && !(st.field && st.field.p === p) ? CARD_AI_FIELD_LIKE : 0);
   if (main.kind === 'spe') {
     (main.effects || []).forEach(e => {
       if (e.t === 'heal' && opt.target) {
@@ -91340,23 +91341,29 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
 };
 const CARD_AI_DECKS = Object.freeze({
   mua: {
-    kit: 'speed'
+    kit: 'speed',
+    field: ['ホリィの声援', '飛び散る火花']
   },
   momosuke: {
-    kit: 'miracle'
+    kit: 'miracle',
+    field: ['冷静な判断', 'がんじがらめ']
   },
   kiki: {
-    kit: 'powerful'
+    kit: 'powerful',
+    field: ['必殺技の応酬', '長期戦の予感']
   },
   dra: {
-    kit: 'powerful'
+    kit: 'powerful',
+    field: ['興奮のるつぼ', '必殺技の封印']
   },
   kyuko: {
-    monsters: ['C-007', 'C-005', 'C-009']
+    monsters: ['C-007', 'C-005', 'C-009'],
+    field: ['必殺技の応酬']
   },
   atsu: {
     monsters: ['C-003', 'C-001', 'C-002'],
-    prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード']
+    prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード'],
+    field: ['必殺技の応酬', '灼熱の地']
   },
   sorashido: {
     monsters: ['C-008', 'C-001', 'C-003'],
@@ -91485,6 +91492,8 @@ const CARD_AI_LANE_MIN = Object.freeze({
 });
 const CARD_DECK_COPY_MAX = 3;
 const CARD_AI_ATTACH_MAX = 6;
+const CARD_AI_FIELD_LIKE = 1;
+const CARD_AI_FIELD_COPIES = 2;
 const cardAiCardValue = (card, habit) => {
   const eff = t => cardHasEff(card, t);
   if (eff('attach')) {
@@ -91766,6 +91775,13 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
     if (x && !used.has(name)) {
       used.add(name);
       add(x.c, CARD_DECK_COPY_MAX);
+    }
+  });
+  (preferOn ? recipe.field || [] : []).forEach(name => {
+    const x = byName[name];
+    if (x && !used.has(name)) {
+      used.add(name);
+      add(x.c, CARD_AI_FIELD_COPIES);
     }
   });
   let li = 0,
