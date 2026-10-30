@@ -6059,6 +6059,14 @@ function MonsterHeroGame() {
   // 曲の試聴・演奏と重なると邪魔になるため(超省エネと同じ考え方)。
   // 音量の保存値そのものは変えないので、モンビーを出れば元の音量へ戻る
   useEffect(() => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen) ? 0 : seVolume); }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen]);
+  // モンヒロビートの画面は上で効果音の音量を0にしている(裏の周回のバトルの音を消すため)。ランクアップの演出(beatRankFx)を出している間だけは、
+  // 効果音の音量設定どおりに戻して鳴らし、閉じたら上と同じ決まりに戻す(2026-10-29 社長「ファンファーレもなかった」。0のままだと演出の音が鳴らなかった)。
+  // 超省エネのあいだは今までどおり鳴らさない
+  useEffect(() => {
+    if (!beatRankFx || (ultraEcoSession && !cardScreenOpen)) return undefined;
+    Audio_.setSeVolume(seVolume);
+    return () => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen) ? 0 : seVolume); };
+  }, [beatRankFx, seVolume]);
   // MFバトルカードにいるあいだは、裏の周回のバトルの効果音だけを止める(docs/spec/CARD_BATTLE.md 5-3「音」)。
   // カードも同じ効果音を使うので、上の音量(0)では止めない。カードの画面は Audio_.fgSe から鳴らすので、この印を受けない。
   // 超省エネの「効果音を0にする」も、カードの画面にいるあいだは外す(カードの音まで消えるため)。音量の保存値は変えない
@@ -8811,19 +8819,30 @@ function MonsterHeroGame() {
     }
     return { fail: 'save' };
   });
-  const buyCardPacks = async (packId, count) => {
+  // payWith … 'point'(ビートP)か 'ticket'(カードパック券1枚で1パック。2026-10-29 社長「バトルカードのパックにも戦術カードのパックにも使える券」)。
+  //   券は戦術カードの持ち物(mh_card_tactics_v1 の tickets)にあるので、券で買うときはそれも同じ取引で書く。ビートPは使わない(だぶりの戻りは入る)
+  const buyCardPacks = async (packId, count, payWith = 'point') => {
     if (marketPurchaseProcessingRef.current || typeof CARD_BATTLE_DATA === 'undefined') return { ok:false, reason:'busy' };
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
+    const byTicket = payWith === 'ticket' && typeof cardNormalizeTactics === 'function';
+    if (byTicket) count = 1;
     try {
       const K = CARD_SAVE_KEYS;
-      const res = await cardShopTry(() => Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.pitySplit, null), storeGet(K.gacha, 0, false)]), ([rawCol, rawPity, rawPoint, rawSplit, rawGacha]) => {
+      const res = await cardShopTry(() => Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.pitySplit, null), storeGet(K.gacha, 0, false), byTicket ? storeGet(CARD_TACTICS_KEY, null) : null]), ([rawCol, rawPity, rawPoint, rawSplit, rawGacha, rawT]) => {
         const point = cardNormalizePoint(rawPoint);
+        const tactics = byTicket ? cardNormalizeTactics(rawT) : null;
+        if (byTicket && tactics.tickets < 1) return { fail: 'tickets' };
         // 以前の4弾の天井の数は、新しい8弾へ1回だけ写す(印 mh_card_pack_pity_split_v1。以前の数は消さない)
         const split = rawSplit !== true;
         const pity0 = split ? cardSplitPity(cardNormalizePity(rawPity)) : cardNormalizePity(rawPity);
-        const r = cardBuyPacks(CARD_BATTLE_DATA, packId, count, { collection: cardNormalizeCollection(rawCol), pity: pity0, point }, Math.random);
-        if (!r) return { fail: 'points' };
+        const pack = cardPackOf(packId);
+        const bought = byTicket
+          ? (pack ? cardBuyPacks(CARD_BATTLE_DATA, packId, 1, { collection: cardNormalizeCollection(rawCol), pity: pity0, point: cardPackPrice(pack, 1) }, Math.random) : null)
+          : cardBuyPacks(CARD_BATTLE_DATA, packId, count, { collection: cardNormalizeCollection(rawCol), pity: pity0, point }, Math.random);
+        if (!bought) return { fail: 'points' };
+        // 券で買ったときは、ビートPは減らさない(だぶりの戻りだけ足す)
+        const r = byTicket ? { ...bought, point: point + bought.dupPoint, cost: 0 } : bought;
         // ガチャポイントは、買うのと同じ保存のまとまりで1回だけ足す(1パック10。開ける画面を開き直しても増えない)
         const gacha = cardNormalizeGacha(rawGacha) + r.packs.length * CARD_GACHA_PER_PACK;
         return { r, gacha, entries: [
@@ -8832,8 +8851,10 @@ function MonsterHeroGame() {
           { key: CARD_POINT_STORE_KEY, before: rawPoint, next: r.point },
           { key: K.gacha, before: rawGacha, next: gacha },
           ...(split ? [{ key: K.pitySplit, before: rawSplit, next: true }] : []),
+          ...(byTicket ? [{ key: CARD_TACTICS_KEY, before: rawT, next: { ...tactics, tickets: tactics.tickets - 1 } }] : []),
         ] };
       });
+      if (res.fail === 'tickets') { setMarketExchangeError('カードパック券が足りません。'); return { ok:false, reason:'tickets' }; }
       if (res.fail === 'points') { void loadCardShop(); setMarketExchangeError('ビートPが足りません。'); return { ok:false, reason:'points' }; } // 別のタブで使ったあとなど、表示が古いことがあるので読み直す
       if (res.fail) { setMarketExchangeError('保存できませんでした。ビートPは変わっていません。'); return { ok:false, reason:'save' }; }
       const r = res.r;
