@@ -9,15 +9,14 @@
 
 // 公開の印。告知(PR5)と同じ日に true にする。それまではデバッグ設定から入ったときだけ入口が出る
 const cardTourOpen = () => false;
-// 受け取ったごほうびの記録(新しいキー。[{ id, place, point, title, frame, at }]・新しい100件まで)。ビートPと同じ取引で保存する
+// 受け取ったごほうびの記録(新しいキー。[{ id, place, point, at }]・新しい100件まで)。ビートPと同じ取引で保存する
 const CARD_TOUR_CLAIMED_KEY = 'mh_card_tour_claimed_v1';
 const cardTourNormalizeClaimed = (v) => {
   if (v === null || v === undefined) return [];
   if (!Array.isArray(v)) return null; // 壊れているときは足さない(二重に足さないため)
   const num = (x) => (Number.isFinite(x) && x >= 0 ? Math.floor(x) : 0);
   return v.filter((x) => x && typeof x.id === 'string' && /^[a-z0-9_-]{1,32}$/.test(x.id))
-    .map((x) => ({ id: x.id, place: Number.isInteger(x.place) && x.place > 0 ? x.place : null, point: num(x.point),
-      title: typeof x.title === 'string' ? x.title.slice(0, 40) : '', frame: typeof x.frame === 'string' ? x.frame.slice(0, 40) : '', at: num(x.at) }))
+    .map((x) => ({ id: x.id, place: Number.isInteger(x.place) && x.place > 0 ? x.place : null, point: num(x.point), at: num(x.at) }))
     .slice(-100);
 };
 
@@ -189,39 +188,92 @@ const CardTourEntry = ({ t, view, now, mine, selfId, onChanged, onOpenRegister }
 };
 
 // ---- 対戦表(段ごと) ----
+// 大会が終わったときの「大会結果」の演出(2026-10-30 社長の見本の動画「総当たりイメージ」):
+//   空の表 → 試合の順に ○× が押される → 上位3人の行が光って順位の印 → 「演出リプレイ」で見直せる。画面の中で1回だけ自動で流れる(タップで飛ばせる)
+const CARD_TOUR_REVEAL_CSS = `
+[data-card-tour-stamp]{display:inline-block;animation:mhTourStamp .32s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes mhTourStamp{0%{opacity:0;transform:scale(2.6) rotate(-12deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+[data-card-tour-row-glow="1"] > td:first-child > span{box-shadow:0 0 0 2px #fbbf24,0 0 14px 2px rgba(251,191,36,.75);border-radius:12px;animation:mhTourGlow 1.4s ease-in-out infinite alternate}
+[data-card-tour-row-glow="2"] > td:first-child > span{box-shadow:0 0 0 2px #e2e8f0,0 0 12px 2px rgba(226,232,240,.6);border-radius:12px}
+[data-card-tour-row-glow="3"] > td:first-child > span{box-shadow:0 0 0 2px #fb923c,0 0 12px 2px rgba(251,146,60,.6);border-radius:12px}
+@keyframes mhTourGlow{from{filter:brightness(1)}to{filter:brightness(1.35)}}
+[data-card-tour-banner]{animation:mhTourBanner .5s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes mhTourBanner{0%{opacity:0;transform:scale(1.8)}100%{opacity:1;transform:scale(1)}}
+`;
+const _cardTourRevealSeen = new Set(); // この起動の間に自動で流した表(大会・段・組)
 const CardTourGrid = ({ view, stage, grp, known, now }) => {
   const seats = cardTourStageSeats(view, stage, grp);
   const ms = cardTourStageMatches(view, stage, grp);
   const size = seats.length;
+  const shown = ms.filter((m) => m.winner !== null && m.visibleAt <= now).sort((x, y) => (x.day - y.day) || (x.id - y.id));
+  const done = view.tour.status === 'done';
+  const revealKey = `${view.tour.id}|${stage}|${grp}`;
+  const [step, setStep] = useState(() => (done && size && shown.length && !_cardTourRevealSeen.has(revealKey) ? 0 : null)); // null … 演出なし / 数 … 押し終えた試合の数
+  useEffect(() => {
+    if (step === null) return undefined;
+    _cardTourRevealSeen.add(revealKey);
+    if (step > shown.length) return undefined;
+    const gap = step === 0 ? 700 : Math.max(90, Math.min(300, Math.floor(2400 / Math.max(1, shown.length))));
+    const t = setTimeout(() => setStep((x) => (x === null ? null : x + 1)), step === shown.length ? 1200 : gap);
+    return () => clearTimeout(t);
+  }, [step]);
   if (!size) return null;
-  const shown = ms.filter((m) => m.winner !== null && m.visibleAt <= now);
-  const { rank, rec } = cardTourStandings(size, shown.map((m) => ({ a: m.a, b: m.b, winner: m.winner, kos: m.kos })));
+  const playing = step !== null && step <= shown.length;
+  const visible = playing ? shown.slice(0, step) : shown;
+  const { rank, rec } = cardTourStandings(size, visible.map((m) => ({ a: m.a, b: m.b, winner: m.winner, kos: m.kos })));
+  // 順位の印: 終わった大会の、全部押し終えたあと。決める段(頂上決戦・組が1つの総当たり)は大会の順位、ほかは組の中の順位
+  const decisive = stage === 'final' || (view.tour.groups || 1) <= 1;
+  const placeOf = (i) => {
+    if (!done || playing) return null;
+    const e = seats[i];
+    const p = decisive && Number.isInteger(e.place) ? e.place : rank.indexOf(i) + 1;
+    return p >= 1 && p <= 3 ? p : null;
+  };
   const cell = (i, j) => {
     if (i === j) return <span className="block h-full w-full bg-[linear-gradient(to_top_right,transparent_calc(50%-1px),rgba(148,163,184,.6),transparent_calc(50%+1px))]"/>;
     const m = ms.find((x) => (x.a === i && x.b === j) || (x.a === j && x.b === i));
     if (!m) return null;
+    const k = visible.indexOf(m);
+    if (playing && k < 0) return null;
     if (m.winner === null || m.visibleAt > now) return <span className="text-[9px] font-black text-slate-400">{cardTourDayLabel(m.playOn).replace(/\(.\)$/, '')}</span>;
     const won = (m.winner === 0 ? m.a : m.b) === i;
-    return <span className={`text-[16px] font-black ${won ? 'text-rose-400' : 'text-sky-400'}`}>{won ? '○' : '×'}</span>;
+    const mark = <span className={`text-[16px] font-black ${won ? 'text-rose-400' : 'text-sky-400'}`}>{won ? '○' : '×'}</span>;
+    return playing ? <span data-card-tour-stamp>{mark}</span> : mark;
   };
   return (
-    <div data-card-tour-grid={`${stage}-${grp}`} className="space-y-2">
-      <div className="overflow-x-auto rounded-2xl bg-slate-950/70 p-2">
+    <div data-card-tour-grid={`${stage}-${grp}`} data-card-tour-revealing={playing ? '1' : undefined} className="relative space-y-2">
+      <style>{CARD_TOUR_REVEAL_CSS}</style>
+      {playing && (
+        <button type="button" data-card-tour-reveal-skip onClick={() => setStep(null)} className="absolute inset-0 z-10 flex flex-col items-center justify-between bg-transparent pb-1 pt-1">
+          <b data-card-tour-banner className="rounded-xl border-2 border-amber-300 bg-gradient-to-b from-amber-200 to-amber-500 px-5 py-1 text-[22px] font-black italic text-amber-950 shadow-lg">大会結果</b>
+          <small className="rounded-full bg-slate-950/80 px-2 text-[11px] font-black text-slate-200">タップで飛ばす</small>
+        </button>
+      )}
+      <div className={`overflow-x-auto rounded-2xl bg-slate-950/70 p-2 ${playing ? 'pt-16' : ''}`}>
         <table className="w-full border-separate border-spacing-[3px]">
           <thead><tr><th/>{seats.map((_, j) => <th key={j} className="text-[12px] font-black text-amber-200">{j + 1}</th>)}</tr></thead>
-          <tbody>{seats.map((e, i) => (
-            <tr key={e.seatId}>
-              <td className="max-w-[118px]"><span className="flex items-center gap-1"><b className="w-4 shrink-0 text-center text-[12px] font-black text-amber-200">{i + 1}</b><CardTourWho e={e} known={known}/></span></td>
-              {seats.map((_, j) => <td key={j} className="h-9 w-9 min-w-[34px] rounded-md border border-slate-600 bg-slate-900 p-0 text-center align-middle">{cell(i, j)}</td>)}
-            </tr>
-          ))}</tbody>
+          <tbody>{seats.map((e, i) => {
+            const p = placeOf(i);
+            return (
+              <tr key={e.seatId} data-card-tour-row-glow={p || undefined}>
+                <td className="max-w-[118px]"><span className="flex items-center gap-1"><b className="w-4 shrink-0 text-center text-[12px] font-black text-amber-200">{i + 1}</b><CardTourWho e={e} known={known}/>
+                  {p && <b data-card-tour-place={p} className={`shrink-0 rounded-md px-1 text-[11px] font-black ${p === 1 ? 'bg-amber-400 text-amber-950' : p === 2 ? 'bg-slate-200 text-slate-900' : 'bg-orange-400 text-orange-950'}`}>{`${p}位`}</b>}</span></td>
+                {seats.map((_, j) => <td key={j} className="h-9 w-9 min-w-[34px] rounded-md border border-slate-600 bg-slate-900 p-0 text-center align-middle">{cell(i, j)}</td>)}
+              </tr>
+            );
+          })}</tbody>
         </table>
       </div>
-      <div className="rounded-2xl bg-slate-950/70 p-2.5 text-[12px] font-bold text-slate-200" style={JA_WRAP_STYLE}>
-        <b className="text-amber-200">いまの順位 </b>
-        {rank.map((s, k) => `${k + 1}位 ${seats[s].mine ? 'あなた' : cardTourNameOf(seats[s], known)}(${rec[s].wins}勝${rec[s].losses}敗)`).join(' ・ ')}
-        <div className="mt-1 text-slate-400">{jaWrap('勝ち数が同じときは、倒したモンスターの数 → 2人の対戦の勝ち負け → エントリーの早さの順で決まります')}</div>
-      </div>
+      {done && !playing && shown.length > 0 && (
+        <button type="button" data-card-tour-reveal-replay onClick={() => { Audio_.fgSe.tap(); setStep(0); }} className="ml-auto block rounded-xl border-2 border-amber-500/70 bg-amber-100 px-3 py-1 text-[12px] font-black text-amber-900">演出リプレイ</button>
+      )}
+      {!playing && (
+        <div className="rounded-2xl bg-slate-950/70 p-2.5 text-[12px] font-bold text-slate-200" style={JA_WRAP_STYLE}>
+          <b className="text-amber-200">{done ? '順位 ' : 'いまの順位 '}</b>
+          {(done && decisive && seats.every((e) => Number.isInteger(e.place)) ? seats.map((_, i) => i).sort((x, y) => seats[x].place - seats[y].place) : rank).map((s, k) => `${k + 1}位 ${seats[s].mine ? 'あなた' : cardTourNameOf(seats[s], known)}(${rec[s].wins}勝${rec[s].losses}敗)`).join(' ・ ')}
+          <div className="mt-1 text-slate-400">{jaWrap('勝ち数が同じときは、倒したモンスターの数 → 2人の対戦の勝ち負け → エントリーの早さの順で決まります')}</div>
+        </div>
+      )}
     </div>
   );
 };
@@ -231,13 +283,24 @@ const CardTourMatchCard = ({ view, m, known, now, onOpenReplay }) => {
   const seats = cardTourStageSeats(view, m.stage, m.grp);
   const A = seats.find((e) => cardTourSeatKey(e, m.stage) === m.a), B = seats.find((e) => cardTourSeatKey(e, m.stage) === m.b);
   const [openReview, setOpenReview] = useState(false);
+  // 見返しを開けなかったとき(通信できない・ルールの版がちがってはじめから当たらない など)の一言。null … 開いていない / 'busy' … 読み込み中
+  const [replayMsg, setReplayMsg] = useState(null);
   if (!A || !B) return null;
   const done = m.winner !== null && m.visibleAt <= now;
   const caster = m.live && m.live.who ? cardTourAssistOf(m.live.who, known) : null;
+  const matchLabel = `${m.stage === 'final' ? '頂上決戦 ' : view.tour.groups > 1 ? `${m.grp + 1}組 ` : ''}第${m.day - (m.stage === 'final' ? Math.min(...view.matches.filter((x) => x.stage === 'final').map((x) => x.day)) : 0) + 1}試合`;
+  const openReplay = async () => {
+    if (!onOpenReplay || replayMsg === 'busy') return;
+    Audio_.fgSe.tap();
+    setReplayMsg('busy');
+    let ok = false;
+    try { ok = await onOpenReplay(m.id, { title: `${view.tour.name || '大会'} ${matchLabel}` }); } catch (_) { ok = false; }
+    setReplayMsg(ok === false ? 'この試合は、いまは見返せません。時間をおいて開き直してください' : null);
+  };
   return (
     <div data-card-tour-match={m.id} className="rounded-2xl border-2 border-amber-600/50 bg-slate-950/70 p-2">
       <div className="mb-1 flex items-center justify-between text-[11px] font-black text-amber-200">
-        <span>{`${m.stage === 'final' ? '頂上決戦 ' : view.tour.groups > 1 ? `${m.grp + 1}組 ` : ''}第${m.day - (m.stage === 'final' ? Math.min(...view.matches.filter((x) => x.stage === 'final').map((x) => x.day)) : 0) + 1}試合 ${cardTourDayLabel(m.playOn)}`}</span>
+        <span>{`${matchLabel} ${cardTourDayLabel(m.playOn)}`}</span>
         {done && m.decided && <span className="text-slate-400">{m.decided === 'deck' ? '山札切れ' : m.decided === 'limit' ? '判定' : ''}</span>}
       </div>
       <div className="grid grid-cols-2 gap-1.5">
@@ -258,9 +321,10 @@ const CardTourMatchCard = ({ view, m, known, now, onOpenReplay }) => {
         </div>
       )}
       {done && (
-        <button type="button" data-card-tour-replay disabled={!onOpenReplay} onClick={() => { if (onOpenReplay) { Audio_.fgSe.tap(); onOpenReplay(m.id); } }}
-          className="mt-1.5 w-full rounded-xl border-2 border-amber-500/70 bg-amber-100 py-1.5 text-[13px] font-black text-amber-900 disabled:opacity-50">{onOpenReplay ? '見返す' : '見返す(準備中)'}</button>
+        <button type="button" data-card-tour-replay disabled={!onOpenReplay || replayMsg === 'busy'} onClick={() => { void openReplay(); }}
+          className="mt-1.5 w-full rounded-xl border-2 border-amber-500/70 bg-amber-100 py-1.5 text-[13px] font-black text-amber-900 disabled:opacity-50">{!onOpenReplay ? '見返す(準備中)' : replayMsg === 'busy' ? '読み込み中…' : '見返す'}</button>
       )}
+      {done && replayMsg && replayMsg !== 'busy' && <p data-card-tour-replay-note className="mt-1 text-center text-[11px] font-bold text-amber-300" style={JA_WRAP_STYLE}>{jaWrap(replayMsg)}</p>}
     </div>
   );
 };
@@ -283,7 +347,8 @@ const CardTourToday = ({ view, known, now, onOpenReplay }) => {
 };
 
 // ---- 順位とごほうび(大会の終わり) ----
-const cardTourRewardText = (r) => [r.title && `称号「${r.title}」`, r.frame && 'プロフィール枠', r.point > 0 && `ビートP ${r.point.toLocaleString()}`].filter(Boolean).join('・');
+// ごほうびはビートPだけ(2026-10-30 社長。称号・プロフィール枠は出さない)
+const cardTourRewardText = (r) => (r && r.point > 0 ? `ビートP ${r.point.toLocaleString()}` : '');
 const CardTourResult = ({ view, known, claimed, onClaim }) => {
   const t = view.tour;
   const ranked = view.entries.filter((e) => e.place !== null).sort((x, y) => x.place - y.place);
@@ -319,10 +384,11 @@ const CardTourResult = ({ view, known, claimed, onClaim }) => {
 };
 
 // ---- 画面 ----
-// onBack … 対戦えらびへ / onOpenRegister … デッキ登録へ / onOpenReplay(matchId) … 見返し(PR4。無いあいだは「準備中」)
+// onBack … 対戦えらびへ / onOpenRegister … デッキ登録へ / onOpenReplay(matchId, { title }) … 見返し(PR4。開けたら true)
+// onSample … デバッグのときだけ: その場で1試合回して見返しの見本を開く(表に結果のある試合が無くても、会場と実況の見え方を確かめられる)
 // onCredit(tour, reward) … ビートPを足して受け取りの記録を保存する(84 の persist と同じ取引)。保存できたら true
 // knownAssistants … 会ったことのある助手の id(Set)
-const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, onCredit = null, knownAssistants = null }) => {
+const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, onCredit = null, knownAssistants = null, onSample = null }) => {
   const [list, setList] = useState(undefined);  // undefined … 読み込み中 / null … 表が無い・通信できない
   const [tourId, setTourId] = useState(null);
   const [view, setView] = useState(null);
@@ -352,7 +418,6 @@ const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, on
     if (!id) return;
     const v = await cardTourFetchView(id, selfId);
     setView(v);
-    if (v && v.tour.status === 'done') setTab((x) => (x === 'grid' ? 'result' : x));
   };
   useEffect(() => { setView(null); setStageKey(null); setMsg(''); if (tourId && selfId !== undefined) void reload(tourId); }, [tourId, selfId]);
 
@@ -365,8 +430,7 @@ const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, on
       const r = await cardTourRpc('card_tournament_claim', { p_tour: view.tour.id, p_owner: selfId, p_key: key });
       const st = r && typeof r === 'object' ? r.status : null;
       if (st === 'ok') {
-        const reward = { place: Number.isInteger(r.place) ? r.place : null, point: Number.isInteger(r.point) && r.point > 0 ? Math.min(100000, r.point) : 0,
-          title: typeof r.title === 'string' ? r.title.slice(0, 40) : '', frame: typeof r.frame === 'string' ? r.frame.slice(0, 40) : '' };
+        const reward = { place: Number.isInteger(r.place) ? r.place : null, point: Number.isInteger(r.point) && r.point > 0 ? Math.min(100000, r.point) : 0 };
         if (await onCredit(view.tour, reward)) {
           setClaimed(cardTourNormalizeClaimed(await storeGet(CARD_TOUR_CLAIMED_KEY, null).catch(() => null)) || []);
           setMsg(`ごほうびを受け取りました${reward.point ? `(ビートP +${reward.point.toLocaleString()})` : ''}`);
@@ -380,7 +444,10 @@ const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, on
   const shell = (children, title = 'MFバトルカード大会', back = onBack) => (
     <div data-mh-screen data-card-tour className={SCREEN_SHELL_CLASS}>
       <ScreenHead title={title} accent="text-amber-200" onBack={back} note="デッキ登録のデッキで出る大会。試合は毎日自動で行われます"/>
-      <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>{children}</div>
+      <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>{children}
+        {onSample && <button type="button" data-card-tour-sample onClick={() => { Audio_.fgSe.tap(); onSample(); }}
+          className="w-full rounded-xl border-2 border-dashed border-amber-400/70 bg-slate-900/70 py-2 text-[13px] font-black text-amber-200">見返しの見本を開く(デバッグ)</button>}
+      </div>
     </div>
   );
   if (list === undefined) return shell(<ScreenEmpty emoji="⏳" lines={['読み込んでいます']}/>);
@@ -409,7 +476,7 @@ const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, on
     {tab === 'grid' && stages.length > 1 && (
       <div className="flex flex-wrap gap-1">{stages.map((s) => <button key={s.key} type="button" data-card-tour-stage={s.key} onClick={() => setStageKey(s.key)} className={`rounded-full px-3 py-1 text-[12px] font-black ${s.key === st.key ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`}>{s.label}</button>)}</div>
     )}
-    {tab === 'grid' && <CardTourGrid view={view} stage={st.stage} grp={st.grp} known={known} now={now}/>}
+    {tab === 'grid' && <CardTourGrid key={`${t.id}|${st.key}`} view={view} stage={st.stage} grp={st.grp} known={known} now={now}/>}
     {tab === 'today' && <CardTourToday view={view} known={known} now={now} onOpenReplay={onOpenReplay}/>}
     {tab === 'result' && <CardTourResult view={view} known={known} claimed={claimed} onClaim={claim}/>}
     {msg && <p data-card-tour-msg className="rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
