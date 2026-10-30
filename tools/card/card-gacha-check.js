@@ -143,7 +143,13 @@ const browser = async () => {
     await backTop(); await openShop();
     await page.getByRole('tab', { name: 'パック' }).click().catch(() => {}); await page.waitForTimeout(300);
     const label = await page.locator('[data-card-gacha]').innerText();
-    check('帯は上限に見えない書き方(1,030 をそのまま・次の1冊まで 30 / 500)', /1,030/.test(label) && /30 \/ 500/.test(label), label.replace(/\s+/g, ' '));
+    check('帯は上限に見えない書き方(1,030 をそのまま・2冊ぶん交換できます・次の1冊まで あと470・「◯ / 500」の形は出さない)', /1,030/.test(label) && /2冊ぶん交換できます/.test(label) && /あと470/.test(label) && !/\/ 500/.test(label), label.replace(/\s+/g, ' '));
+    // 小さいスマホ(320px)でも帯がはみ出さない(2026-10-30 「次の1冊まで あと◯」「◯冊ぶん交換できます」に変えた)
+    const vp = page.viewportSize();
+    await page.setViewportSize({ width: 320, height: 640 }); await page.waitForTimeout(300);
+    const fit = await page.locator('[data-card-gacha]').evaluate((el) => { const r = el.getBoundingClientRect(); const out = [...el.querySelectorAll('*')].filter((c) => { const b = c.getBoundingClientRect(); return b.width > 0 && (b.right > r.right + 1 || b.left < r.left - 1); }).length; return { out, wide: el.scrollWidth > el.clientWidth + 1, right: r.right }; });
+    if (vp) { await page.setViewportSize(vp); await page.waitForTimeout(300); }
+    check('幅320pxでも帯の中身がはみ出さない', fit.out === 0 && !fit.wide && fit.right <= 321, JSON.stringify(fit));
     await page.locator('[data-card-gacha-exchange]').click();
     const yes = page.locator('[data-confirm-sheet]').locator('xpath=..').getByRole('button', { name: '交換する' });
     await yes.waitFor({ timeout: 5000 });
