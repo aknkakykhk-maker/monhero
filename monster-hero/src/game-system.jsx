@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6d10eea9bf9fb6ad
+// generated-sha256: 0243be84d4196983
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -59171,8 +59171,9 @@ const CardTurnLogSheet = ({ st, meName, foeName, onClose }) => {
 };
 // カードの画面の文の折り方。jaWrap(41)に任せたうえで、短いかぎかっこの言葉(「守らない」)と、道具が割ってしまう言葉(ひととおり)と、終わりの記号は折らない
 // (320で「「守ら/ない」」「ひと/とおり」と折れた。QA 10・12)
-// 「！w」「？♡」のような記号のかたまりは、手前の2字といっしょに包む(負けの結果で「！w」だけが次の行に落ちた。最後の見回り)
-const CARD_KEEP_WORDS = /(「[^「」\s]{1,8}」|ひととおり[だ。]*|[^\s、。「」『』（）()]{2}[！？!?…‥〜～♡♪]+[wｗ笑]*|[^\s、。「」『』（）()]{2}[wｗ]+(?![A-Za-zＡ-Ｚａ-ｚ]))/;
+// 「！w」「？♡」のような記号のかたまりは、手前の2字といっしょに包む(負けの結果で「！w」だけが次の行に落ちた。最後の見回り)。
+//   あとに続く「。」「、」も入れる(「なんくるないさ〜。」で「。」だけが次の行の頭に来た。2026-10-30)
+const CARD_KEEP_WORDS = /(「[^「」\s]{1,8}」|ひととおり[だ。]*|[^\s、。「」『』（）()]{2,3}[！？!?…‥〜～♡♪]+[wｗ笑]*[。、]*|[^\s、。「」『』（）()]{2}[wｗ]+(?![A-Za-zＡ-Ｚａ-ｚ]))/;
 const cardJaWrap = (text) => String(text ?? '').split(CARD_KEEP_WORDS).map((t, i) => (i % 2 === 1
   ? <span key={i} data-ja-keep style={{ whiteSpace: 'nowrap' }}>{t}</span>
   : <React.Fragment key={i}>{jaWrap(t)}</React.Fragment>));
