@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1fb8058fa2b5777a
+// generated-sha256: ce7459370af737ba
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -61009,6 +61009,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // ほかの画面の招待の知らせで「参加する」を押してきたら、マルチの入口を開く(入口が合言葉の部屋へ入る。91 の CARD_PVP_JOIN)
   //   入る前にデッキを選ぶ画面を挟む(2026-10-29 社長 案C)。知らせの番号は CARD_PVP_JOIN に残っていて、入口を開いたときに入口が拾う
   useEffect(() => { const go = (c) => { if (c) { setDeckPick({ next: 'pvp' }); setView('deckPick'); } }; go(CARD_PVP_JOIN.peek()); return CARD_PVP_JOIN.on(go); }, []);
+  // 招待の部屋を開いたままほかの画面にいて、上の帯の「戻る」「対戦へ」を押してきたら、部屋(マルチの入口)を開く(91 の CARD_PVP_BACK・2026-10-30)
+  useEffect(() => { const go = () => { if (CARD_PVP_BACK.take()) setView('pvp'); }; go(); return CARD_PVP_BACK.on(go); }, []);
   // 対戦の前のデッキ選び(87-card-deck-pick.jsx)。next … 'cpu'(助手と対戦。pick は相手と難易度) / 'pvp'(マルチの入口へ)
   const [deckPick, setDeckPick] = useState(null);
   // マルチの試合のあと、部屋を出て入口へ戻るとき(over → idle)も、入口の前にデッキ選びを挟む。「もう1戦」は同じ部屋・同じデッキのまま
@@ -61670,7 +61672,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       if (ok && !debug && levelGain.gain && levelGain.gain.to > levelGain.gain.from) void cardRankPut(rank && rank.profile);
       return { ...got, saved: ok, quick, rankGain: ok ? levelGain.gain : null };
     };
-    return <CardPvpLobby onOpenReplay={(id) => { void openReplay(id, 'pvp'); }} replayHas={cardReplayHas} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meFrame={(rank && rank.profile && rank.profile.frame) || null} deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {
+    return <CardPvpLobby onOpenReplay={(id) => { void openReplay(id, 'pvp'); }} replayHas={cardReplayHas} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meFrame={(rank && rank.profile && rank.profile.frame) || null} deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onStepAway={() => setView('mode')} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {
       setResult(null);
       // 対戦開始の画面: 相手の名前・アイコン・相手がデッキ編成で付けたデッキ名(古い版の相手は送ってこないので出さない)
       const pv = g.pvp || {};
@@ -64544,7 +64546,9 @@ const cardPvpCleanMessage = (raw) => {
       // この試合は終わった、の印(終わった試合の番号。2026-10-27 で足した項目。古い版は送らないので null)
       ov: typeof raw.ov === 'string' ? raw.ov.slice(0, 40) : null,
       // ルールの版(2026-10-27 で足した項目。古い版は送らないので null)
-      rv: cardPvpRv(raw.rv) };
+      rv: cardPvpRv(raw.rv),
+      // 招待の部屋を開いたまま、ほかの画面へ出ている(2026-10-30 で足した項目。古い版は送らないので 0)。出ているあいだは試合を始めない
+      aw: raw.aw === 1 ? 1 : 0 };
   }
   if (raw.t === 'start') return { t: 'start', from, match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : '', hostFirst: raw.hostFirst === true, guest: typeof raw.guest === 'string' ? raw.guest.slice(0, 40) : '' };
   if (raw.t === 'act') {
@@ -64786,6 +64790,13 @@ const sbDeclineCardInvite = async (selfId, senderId) => {
   const r = await cardPvpInviteRequest(`card_battle_invites?sender_id=eq.${senderId}&target_id=eq.${selfId}`, { method: 'PATCH', body: { created_at: CARD_PVP_INVITE_DECLINED_AT }, prefer: 'return=minimal' });
   return r !== null;
 };
+// 取り消す: 送り手が「部屋を出る」を押したとき、その部屋への招待の時刻を、断るのと同じ古い値へ書き換える(相手の知らせ・一覧から消える。2026-10-30 ソランド)
+const sbCancelCardInvite = async (selfId, targetId, code) => {
+  const room = rhythmMultiNormalizeCode(code);
+  if (!CARD_PVP_INVITE_ID_RE.test(String(selfId)) || !CARD_PVP_INVITE_ID_RE.test(String(targetId)) || !room) return false;
+  const r = await cardPvpInviteRequest(`card_battle_invites?sender_id=eq.${selfId}&target_id=eq.${targetId}&room_code=eq.${room}`, { method: 'PATCH', body: { created_at: CARD_PVP_INVITE_DECLINED_AT }, prefer: 'return=minimal' });
+  return r !== null;
+};
 // 送った招待のようす(送り手が部屋で待つあいだに読む)。{ [相手のid]: { code, at } }。読めなければ null
 const sbFetchCardInvitesSent = async (selfId, targetIds) => {
   const ids = (targetIds || []).filter((x) => CARD_PVP_INVITE_ID_RE.test(String(x)));
@@ -64811,6 +64822,16 @@ const CARD_PVP_JOIN = (() => {
     request(c) { code = rhythmMultiNormalizeCode(c) || ''; listeners.forEach((f) => f(code)); },
     peek() { return code; },
     take() { const c = code; code = ''; return c; },
+    on(f) { listeners.add(f); return () => listeners.delete(f); },
+  };
+})();
+// 招待の部屋を開いたままほかの画面にいるとき、上の帯の「戻る」で、MFバトルカードのマルチの入口(部屋)を開く(60-app の帯 → 84)
+const CARD_PVP_BACK = (() => {
+  let asked = false;
+  const listeners = new Set();
+  return {
+    request() { asked = true; listeners.forEach((f) => f()); },
+    take() { const a = asked; asked = false; return a; },
     on(f) { listeners.add(f); return () => listeners.delete(f); },
   };
 })();
@@ -64903,7 +64924,9 @@ const CARD_PVP = (() => {
   const blank = () => ({ phase: 'idle', code: '', me: null, foe: null, deck: null, seed: 0, salt: '', seal: '', match: '', hostFirst: false, first: 0, lostAt: 0, // lostAt … この試合で、自分が止まっていた・電波が切れていた時刻
     game: null, startMsg: null, foeInMatch: false, mySeq: 0, outbox: [], theirSeq: 0, inbox: {}, history: [], result: null, foeOpen: null, error: '', broken: '',
     offline: false, timeouts: 0, autoActing: false, chatAt: 0, mode: 'private', seekAt: 0, seekers: {}, lobbyCount: 0, joining: '', joinAt: 0, ownCode: '', reported: '', pick: false, notice: '', // pick … 入口の一覧から選んで入った / notice … 入口に出す一言
-    round: 0, again: null, foeAgain: null, foeGone: false }); // もう1戦: round … いまの試合の回 / again … 自分が押した次の回 { rd, seed, salt, seal } / foeAgain … 相手が押した次の回 { rd, seal }
+    round: 0, again: null, foeAgain: null, foeGone: false,
+    invited: {}, guest: false, guestAt: 0, via: '' }); // invited … 送った招待 { [相手のid]: { code, at, ok } } / guest … 人の部屋へ入った(来なければ「部屋がもうありません」) / via … 入るときに押した招待
+ // もう1戦: round … いまの試合の回 / again … 自分が押した次の回 { rd, seed, salt, seal } / foeAgain … 相手が押した次の回 { rd, seal }
   let roomWaitSet = false; // カードの部屋が「部屋で待ち中」の印を立てているか
   const emit = () => {
     // 部屋で相手を待っているあいだは、フレンドに「部屋で待ち中」と知らせる(34 の friendsSetRoomWaiting。2026-10-29 社長)
@@ -64915,7 +64938,7 @@ const CARD_PVP = (() => {
   const set = (patch) => { s = { ...s, ...patch }; emit(); };
   const send = (payload) => { if (socket && alive) socket.send({ ...payload, from: s.me.id }); };
   const isHost = () => !!(s.foe && (s.me.at < s.foe.at || (s.me.at === s.foe.at && s.me.id < s.foe.id)));
-  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null, dn: s.me.dn || null, rd: s.round || 0, w: isHost() ? cardPvpWatchHost().eyes() : 0, ov: s.phase === 'over' && s.match ? s.match : null, rv: cardPvpRulesVersion() });
+  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null, dn: s.me.dn || null, rd: s.round || 0, w: isHost() ? cardPvpWatchHost().eyes() : 0, ov: s.phase === 'over' && s.match ? s.match : null, rv: cardPvpRulesVersion(), aw: cardPvpLobbyOpen > 0 ? 0 : 1 });
   // 観戦(94-card-spectate.jsx)。ホストだけが観戦の通り道へ流す。部品が無い環境では何もしない
   const watchPush = (by, act, reveal, st) => { if (isHost()) cardPvpWatchHost().push({ by, act, reveal, turn: st.turn, d: [st.players[0].discard, st.players[1].discard] }); };
   const closeLobby = () => { lobbyAlive = false; if (lobby) { try { lobby.close(); } catch (_) { /* 閉じている */ } } lobby = null; };
@@ -64923,7 +64946,8 @@ const CARD_PVP = (() => {
   // ホストが、2人そろったら先攻・後攻のくじを引く(hb が届いたとき・もう1戦で回を進めたとき)
   // ★くじの知らせは、相手がまだこちらを知らない間に届くと捨てられる。相手の hb にその試合の印が載るまで、毎回送り直す(tick)
   const maybeStart = () => {
-    if (s.phase === 'waiting' && !s.match && !s.startMsg && s.foe && isHost() && s.foe.mons && s.foe.seal) {
+    // 招待の部屋を開いたまま、どちらかがほかの画面へ出ているあいだは始めない(戻って入口を開いたら始まる。2026-10-30)
+    if (s.phase === 'waiting' && !s.match && !s.startMsg && s.foe && isHost() && s.foe.mons && s.foe.seal && cardPvpLobbyOpen > 0 && !s.foe.aw) {
       s = { ...s, startMsg: { t: 'start', match: rhythmMultiMakeId('m'), hostFirst: Math.random() < 0.5, guest: s.foe.id } };
       send(s.startMsg);
     }
@@ -65064,7 +65088,7 @@ const CARD_PVP = (() => {
     alive = false;
     const me = socket = rhythmMultiOpenSocket({
       topic: `${CARD_PVP_ROOM_TOPIC}${s.code}`,
-      onOpen: () => { if (socket !== me) return; alive = true; set({ offline: false, phase: s.phase === 'connecting' ? 'waiting' : s.phase, ...(s.phase === 'playing' && s.foe ? { foe: { ...s.foe, seen: Date.now() } } : {}) }); hb(); }, // つなぎ直した直後に、相手を「抜けた」と見ない(切れていたのはこちら)
+      onOpen: () => { if (socket !== me) return; alive = true; set({ offline: false, phase: s.phase === 'connecting' ? 'waiting' : s.phase, ...(s.phase === 'connecting' && s.guest ? { guestAt: Date.now() } : {}), ...(s.phase === 'playing' && s.foe ? { foe: { ...s.foe, seen: Date.now() } } : {}) }); hb(); }, // つなぎ直した直後に、相手を「抜けた」と見ない(切れていたのはこちら)
       onMessage: (raw) => { if (socket === me) onMessage(raw); },
       onClose: () => {
         if (socket !== me || !s) return;
@@ -65114,13 +65138,14 @@ const CARD_PVP = (() => {
     lobbySend({ t: 'seek', code: s.code, at: s.seekAt, name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, rt: Number.isInteger(s.me.rt) ? s.me.rt : null, rv: cardPvpRulesVersion() });
     emit();
   };
-  const open = async (code, profile, deck, mode = 'private', pick = false) => {
+  // guestVia … 人の部屋へ入るとき(合言葉・招待)。招待から入るときは、その招待の印(部屋が無かったら、一覧から消す)
+  const open = async (code, profile, deck, mode = 'private', pick = false, guestVia = null) => {
     stop();
     const bid = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
     const seed = (Math.floor(Math.random() * 0x7fffffff) ^ Date.now()) >>> 0;
     const salt = rhythmMultiMakeId('k');
     const seal = await cardPvpSha256(cardPvpSealText({ seed, salt, deck }));
-    s = { ...blank(), phase: 'connecting', code, ownCode: code, mode, seekAt: Date.now(), pick, joining: pick ? code : '', joinAt: pick ? Date.now() : 0, deck: { monsters: deck.monsters.slice(), cards: deck.cards.slice() }, seed, salt, seal,
+    s = { ...blank(), phase: 'connecting', code, ownCode: code, mode, seekAt: Date.now(), pick, guest: guestVia !== null, via: guestVia || '', joining: pick ? code : '', joinAt: pick ? Date.now() : 0, deck: { monsters: deck.monsters.slice(), cards: deck.cards.slice() }, seed, salt, seal,
       me: { id: rhythmMultiMakeId('c'), name: rhythmMultiText(profile.name || 'ブリーダー', CARD_PVP_NAME_MAX), icon: rhythmMultiText(profile.icon || '🙂', CARD_PVP_ICON_MAX), fr: typeof profile.frame === 'string' && profile.frame ? profile.frame.slice(0, 40) : null, at: Date.now(), bid: typeof bid === 'string' ? bid : null,
         rt: Number.isFinite(profile.rt) ? Math.max(0, Math.min(10000, Math.round(profile.rt))) : null, // 強さの点数(待っています の知らせに入れる。読めないときは出さない)
         // 相手の対戦開始の画面に出す、こちらのデッキ名(デッキ編成で付けた名前。試合の中身には入れない)
@@ -65137,6 +65162,15 @@ const CARD_PVP = (() => {
       if (!socket) return;
       hb();
       if (s.mode === 'free' && s.phase === 'waiting') seekTick();
+      // 合言葉・招待で人の部屋へ入ったのに、だれもいない(送った人がもう部屋を出た)。入口へ戻して知らせ、その招待は一覧から消す(2026-10-30 ソランド)
+      if (s.guest && s.phase === 'waiting' && !s.foe && alive && s.guestAt && Date.now() - s.guestAt > CARD_PVP_LOBBY_JOIN_MS) {
+        const via = s.via;
+        stop();
+        if (via) cardPvpInviteDismissed.add(via);
+        s = { ...blank(), notice: '部屋がもうありません' };
+        emit();
+        return;
+      }
       if (s.startMsg && !s.foeInMatch && isHost()) send(s.startMsg);
       s.outbox.forEach((m) => send(m)); // 「受け取った」が来ていない手は送り直す
       if (s.phase === 'over') sendOpen();
@@ -65171,8 +65205,20 @@ const CARD_PVP = (() => {
     },
     clearNotice: () => { if (s && s.notice) { s = { ...s, notice: '' }; emit(); } },
     // さがし直す(90秒だれも来なかったあと)
-    join: (code, profile, deck) => { const c = rhythmMultiNormalizeCode(code); if (!c) return false; void open(c, profile, deck); return true; },
-    leave: () => { if (s && s.phase === 'playing') penalize(); if (s && socket) send({ t: 'bye' }); stop(); board = null; s = blank(); emit(); },
+    // 合言葉・招待で人の部屋へ入る。via … 招待から入るときの印(cardPvpInviteKey)
+    join: (code, profile, deck, via = '') => { const c = rhythmMultiNormalizeCode(code); if (!c) return false; void open(c, profile, deck, 'private', false, via); return true; },
+    // 部屋を出る。送った招待は取り消す(相手に「招待が届いています」が残って、押しても入れないのを防ぐ。2026-10-30 ソランド)
+    leave: () => {
+      if (s && s.me && s.me.bid && s.code) {
+        const nowT = Date.now();
+        Object.entries(s.invited || {}).filter(([, x]) => x && x.ok && x.code === s.code && nowT - x.at <= CARD_PVP_INVITE_TTL_MS).forEach(([to, x]) => { void sbCancelCardInvite(s.me.bid, to, x.code); });
+      }
+      if (s && s.phase === 'playing') penalize(); if (s && socket) send({ t: 'bye' }); stop(); board = null; s = blank(); emit();
+    },
+    // 送った招待を覚えておく(入口の画面を閉じても、上の帯と「部屋を出る」で使う)
+    noteInvite: (to, rec) => { if (s && rec && s.code === rec.code) set({ invited: { ...s.invited, [to]: rec } }); },
+    // 入口の画面を開いた・閉じたことを、上の帯と相手へ知らせ直す
+    ping: () => { if (s) { emit(); if (socket && alive && s.me && s.deck) hb(); } },
     // 対戦の画面がつなぐ。届いていた手があれば、ここで当てる
     attach: (h) => { board = h; deliver(); return () => { if (board === h) board = null; }; },
     // 自分の手を進めたとき(対戦の画面から)。自分で打った手なら、時間切れの続きの数を0に戻す
@@ -65243,6 +65289,43 @@ const CARD_PVP = (() => {
   };
 })();
 
+// マルチの入口(CardPvpLobby)を開いた・閉じた。上の帯の出し入れと、相手へ「ほかの画面へ出ている」を知らせ直す
+const cardPvpLobbyMark = (d) => { cardPvpLobbyOpen = Math.max(0, cardPvpLobbyOpen + d); CARD_PVP.ping(); };
+// 送った招待の、表のいまのようす(断られたかを見る)。自分の部屋で相手を待つあいだだけ、5秒おきに読む。入口と上の帯で使う
+const useCardPvpSentRows = (room) => {
+  const [rows, setRows] = useState({});
+  const invited = room.invited || {};
+  const sentIds = Object.keys(invited).filter((k) => invited[k] && invited[k].ok).join(',');
+  const bid = room.me && room.me.bid;
+  useEffect(() => {
+    if (room.phase !== 'waiting' || room.foe || !bid || !sentIds) { setRows({}); return undefined; }
+    let alive = true;
+    const load = async () => { const got = await sbFetchCardInvitesSent(bid, sentIds.split(',')); if (alive && got) setRows(got); };
+    void load();
+    const t = setInterval(load, 5000);
+    return () => { alive = false; clearInterval(t); };
+  }, [room.phase, !!room.foe, bid, sentIds]);
+  return rows;
+};
+// 招待の部屋を開いたまま、ほかの画面へ出ているあいだ、画面の上に出す帯(2026-10-30 ソランド・台帳 2026-10-29 の案A。ビートの RhythmMultiAwayBar と同じ形)。
+// 見た目は 77 の MultiAwayBar を共通で使う。入口(部屋)を開いているあいだ・自分の部屋でないとき・だれとでもで探しているときは出さない
+//   busy: 対戦の最中など、ここから画面を移ると途中のものが宙に浮く所。人が来たときだけ知らせ、「対戦へ」は出さない
+const CardMultiAwayBar = ({ busy = false, onReturn = null }) => {
+  const [room, setRoom] = useState(() => CARD_PVP.get());
+  useEffect(() => CARD_PVP.subscribe(setRoom), []);
+  const [now, setNow] = useState(() => Date.now());
+  const sentRows = useCardPvpSentRows(room);
+  const shown = cardPvpLobbyOpen === 0 && room.mode !== 'free' && !room.guest && (room.phase === 'connecting' || room.phase === 'waiting');
+  useEffect(() => { if (!shown) return undefined; const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, [shown]);
+  if (!shown || typeof MultiAwayBar !== 'function') return null;
+  const hot = !!room.foe;
+  if (busy && !hot) return null;
+  // いちばん長く残っている招待の秒数(断られた・時間切れのものは数えない)
+  const sec = Object.entries(room.invited || {}).reduce((m, [to, x]) => (x && x.ok && cardPvpInviteState(x, sentRows[to], now) === 'live' ? Math.max(m, cardPvpInviteLeftSec(x.at, now)) : m), 0);
+  const text = hot ? `${room.foe.name || 'フレンド'}さんが来ました` : sec > 0 ? `フレンドを招待中・あと${sec}秒` : `部屋で待っています(合言葉 ${room.code})`;
+  return <MultiAwayBar text={text} hot={hot} busy={busy} onReturn={onReturn} onLeave={() => CARD_PVP.leave()} icon="🃏" game="card"/>;
+};
+
 // 台詞を、句読点・「！」「？」・「…」・空白の区切りごとの折れないかたまりにする(「かっこよ／すぎたよ」のような言葉の途中の折れを防ぐ。窓口・カゲあつくん)。
 // 顔文字と、うしろに続くカナ・数字・「!」(「(｡ ˘-˘)ｳﾝｳﾝ」「( ˘ω˘)9グッ!」)も1つのかたまり。かたまりが吹き出しの幅より長いときだけ、中で折れる
 const CARD_PVP_FACE_RE = /(\([^()\s]*(?:\s[^()\s]*)*\)[0-9\u30A0-\u30FF\uFF65-\uFF9F!！]*|[\u0660-\u06FF٩][^\s、。！？]*[و])/;
@@ -65285,13 +65368,13 @@ const cardPvpPhrases = (text) => String(text).split(/(?<=、)/).map((x, i) => <s
 // onReward(result) … 確かめが済んだら1回だけ呼ぶ(84 が保存して { point, loops, quick, saved } を返す)。確かめで無効になった試合は呼ばない
 // assistant … 結果の画面に立ち絵を出す自分の助手(84 の topAssistant)/ point … いまのビートP
 // onAssistant … いまは使わない(だれとでもは待ち続ける。呼ぶ側との形を変えないために受けておく)/ rankSend … 強さの点数へ届けてよいか(公開後のふつうの入口だけ。84→60-app の rank.send)
-const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], onStart, onBack, onReward, assistant = null, point = null, onAssistant = null, rankSend = false, onOpenReplay = null, replayHas = null }) => {
+const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], onStart, onBack, onStepAway = null, onReward, assistant = null, point = null, onAssistant = null, rankSend = false, onOpenReplay = null, replayHas = null }) => {
   const [room, setRoom] = useState(() => CARD_PVP.get());
   const [code, setCode] = useState('');
   const [profile, setProfile] = useState({ name: 'ブリーダー', icon: '🙂' });
   const [profileReady, setProfileReady] = useState(false);
   useEffect(() => CARD_PVP.subscribe(setRoom), []);
-  useEffect(() => { cardPvpLobbyOpen += 1; return () => { cardPvpLobbyOpen -= 1; }; }, []);
+  useEffect(() => { cardPvpLobbyMark(1); return () => cardPvpLobbyMark(-1); }, []);
   // 試合の途中で抜けた人は、少しのあいだ入れない(mh_card_pvp_penalty_v1。無い・壊れた値は 0 = 入れる)
   const [penaltyUntil, setPenaltyUntil] = useState(0);
   const [now, setNow] = useState(() => Date.now());
@@ -65325,9 +65408,9 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
     const t = setInterval(load, 60000);
     return () => { alive = false; clearInterval(t); };
   }, [inviteOpen, roster]);
-  const [invited, setInvited] = useState({});
+  const invited = room.invited || {}; // 送った招待(部屋の側に覚えておく。入口を閉じても、上の帯と「部屋を出る」で使う)
   const [inviteNext, setInviteNext] = useState('');   // 入口で選んだ相手。部屋ができて合言葉が出たら送る
-  const [sentRows, setSentRows] = useState({});       // 送った招待の、表の今のようす(断られたかを見る)
+  const sentRows = useCardPvpSentRows(room);           // 送った招待の、表の今のようす(断られたかを見る)
   // 観戦(94-card-spectate.jsx): 「観戦する」で対戦中のフレンドの一覧を開き、「見る」で観戦の画面へ
   const [watchOpen, setWatchOpen] = useState(false);
   const [watch, setWatch] = useState(() => CARD_WATCH.get());
@@ -65357,7 +65440,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   const sendInvite = async (to, roomCode) => {
     const at = Date.now();
     const ok = await sbSendCardInvite(selfBid, to, roomCode);
-    setInvited((cur) => ({ ...cur, [to]: { code: rhythmMultiNormalizeCode(roomCode), at, ok } }));
+    CARD_PVP.noteInvite(to, { code: rhythmMultiNormalizeCode(roomCode), at, ok });
   };
   useEffect(() => {
     if (!inviteNext || room.phase !== 'waiting' || !room.code) return;
@@ -65366,18 +65449,6 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
     setInviteOpen(true);
     void sendInvite(to, room.code);
   }, [inviteNext, room.phase, room.code]);
-  // 部屋を出たら、送った招待の覚えを消す(次の部屋で、また送れるように)
-  useEffect(() => { if (room.phase === 'idle') { setInvited({}); setSentRows({}); } }, [room.phase]);
-  // 部屋で待つあいだ、送った招待が断られていないかを5秒おきに読む
-  const sentIds = Object.keys(invited).filter((k) => invited[k] && invited[k].ok).join(',');
-  useEffect(() => {
-    if (room.phase !== 'waiting' || room.foe || !selfBid || !sentIds) return undefined;
-    let alive = true;
-    const load = async () => { const rows = await sbFetchCardInvitesSent(selfBid, sentIds.split(',')); if (alive && rows) setSentRows(rows); };
-    void load();
-    const t = setInterval(load, 5000);
-    return () => { alive = false; clearInterval(t); };
-  }, [room.phase, !!room.foe, selfBid, sentIds]);
   // ほかの画面の知らせで「参加する」を押してきたら、名前を読み終えたところで、その部屋へ入る
   const [joinAsk, setJoinAsk] = useState(() => CARD_PVP_JOIN.peek());
   useEffect(() => CARD_PVP_JOIN.on(setJoinAsk), []);
@@ -65557,16 +65628,16 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
               <p className="mt-1 px-1 text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('選ぶと部屋を作って招待を送ります。招待は3分のあいだ届きます')}</p>
             </div>
           )}
-          {invites.length > 0 && (
+          {invites.some((x) => !cardPvpInviteDismissed.has(cardPvpInviteKey(x))) && (
             <div data-card-pvp-invites className="space-y-2 rounded-2xl border border-emerald-300/40 bg-emerald-500/10 p-3">
-              {invites.slice(0, 3).map((x) => (
+              {invites.filter((x) => !cardPvpInviteDismissed.has(cardPvpInviteKey(x))).slice(0, 3).map((x) => (
                 <div key={`${x.senderId}-${x.roomCode}`} className="flex items-center gap-2">
                   <p className="min-w-0 flex-1 text-[13px] font-bold text-emerald-50" style={JA_WRAP_STYLE}>{jaWrap(`${x.name || 'フレンド'}さんから、マルチ対戦の招待が届いています`)}
                     <small className="block text-[11px] text-emerald-200/80 tabular-nums">あと{cardPvpInviteLeftSec(x.createdAt, now)}秒</small></p>
                   <button type="button" data-card-pvp-decline={x.roomCode} className="mh-button min-h-[44px] shrink-0 rounded-xl border border-white/20 bg-slate-900 px-3 text-[13px] font-black text-slate-200"
                     onClick={() => { Audio_.fgSe.tap(); declineInvite(x); }}>断る</button>
                   <button type="button" data-card-pvp-accept={x.roomCode} disabled={!ready || !profileReady} className="mh-button mh-button-primary min-h-[44px] shrink-0 rounded-xl px-3 text-[13px] font-black disabled:opacity-40"
-                    onClick={() => { Audio_.fgSe.tap(); CARD_PVP.join(x.roomCode, profile, deck); }}>参加する</button>
+                    onClick={() => { Audio_.fgSe.tap(); CARD_PVP.join(x.roomCode, profile, deck, cardPvpInviteKey(x)); }}>参加する</button>
                 </div>
               ))}
             </div>
@@ -65599,7 +65670,12 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
           <div className="rounded-2xl border border-sky-300/40 bg-sky-500/10 p-4 text-center">
             <p className="text-[13px] font-bold text-sky-100">合言葉</p>
             <p data-card-pvp-room className="my-1 text-[40px] font-black tracking-[.3em] text-white">{room.code}</p>
-            <p className="text-[13px] font-bold text-slate-200">{room.phase === 'connecting' ? 'つないでいます…' : room.foe ? `${room.foe.name}さんが来ました。始めます…` : 'この合言葉をフレンドに伝えて、待っています…'}</p>
+            <p className="text-[13px] font-bold text-slate-200">{room.phase === 'connecting' ? 'つないでいます…' : room.foe ? (room.foe.aw ? `${room.foe.name}さんが部屋に戻るのを待っています…` : `${room.foe.name}さんが来ました。始めます…`) : room.guest ? '部屋に入っています…' : 'この合言葉をフレンドに伝えて、待っています…'}</p>
+            {/* 自分の部屋は、開いたままほかの画面へ出られる(2026-10-30 ソランド・ビートの #4204 と同じ案A)。相手が来たら上の帯(CardMultiAwayBar)で知らせる */}
+            {room.phase === 'waiting' && !room.foe && !room.guest && onStepAway && (<>
+              <p data-card-pvp-away-note className="mt-2 text-[11px] font-bold text-sky-100/80" style={JA_WRAP_STYLE}>{jaWrap('ほかの画面へ行っても、部屋はそのまま待てます。「部屋を出る」を押すと、送った招待は取り消されます')}</p>
+              <button type="button" data-card-pvp-step-away className={`${btn} mt-2 border border-cyan-300/40 bg-cyan-800 text-white`} style={JA_WRAP_STYLE} onClick={() => { Audio_.fgSe.tap(); CARD_WATCH.leave(); onStepAway(); }}>{jaWrap('部屋はそのままで、ほかの画面へ')}</button>
+            </>)}
             {/* フレンドから招待(区切り4): 承認済みのフレンドの名簿から選ぶ。フレンドがいない・表が無いときは出さない */}
             {room.phase === 'waiting' && !room.foe && roster && roster.length > 0 && (
               <div className="mt-3 text-left">
@@ -89706,6 +89782,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           })}</>)}
         {renderCardQuickRunStrip()}
         {/* MFバトルカードのマルチ対戦: フレンドからの招待の知らせ(どの画面でも。対戦中・演奏中などは出さない。91 の CardPvpInviteNotice) */}
+        {/* MFバトルカードのマルチ: 招待の部屋を開いたまま、ほかの画面にいるあいだの帯(91 の CardMultiAwayBar・2026-10-30。ビートの帯と同じ形) */}
+        <CardMultiAwayBar busy={CARD_PVP_NOTICE_BUSY.includes(gameState)} onReturn={()=>{CARD_PVP_BACK.request();if(!String(gameState).startsWith('CARD_'))setCardOrigin('home');setGameState('CARD_TOP');}}/>
         <CardPvpInviteNotice enabled={!!cardBattleEntryVisible&&(cardPvpOpen()||!!cardBattleDebugHome)} busy={CARD_PVP_NOTICE_BUSY.includes(gameState)} onAccept={()=>{if(!String(gameState).startsWith('CARD_'))setCardOrigin('home');setGameState('CARD_TOP');}}/>
         {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{void exitCardBattle();}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={playCardBgm} onQuickLoops={awardCardQuickLoops}
           quickRun={cardQuickRunView()}
