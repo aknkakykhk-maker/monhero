@@ -229,11 +229,12 @@ const cardArtPrefetchPaths = () => {
 const cardKiraOf = (db, no) => { const v = String(((db && cardMonsterOf(db, no)) || {}).variant || ''); return v.includes('別絵キラ') ? 'rare' : v.includes('キラ') ? 'kira' : null; };
 // 2026-10-31 社長「バトル中の立ち絵も強化して」→ 動画を見て「もっとわかりやすく。モンスターのセンター位置をちゃんと合わせて。ライガーみたいに尻尾があるやつは注意」。
 //   決まった案B(オーロラと粒)に合わせ、ふつうの子・キラ・レアキラの違いが場でひと目で分かる強さにする。
-//   kira … 色が移り変わる太いふち・体の後ろで色の光が脈打つ・星が5つまたたく・絵の上を光の帯が走る /
-//   rare … 金と桃色の太いふち・体の後ろで虹まじりの光の線が回る・強い金の光・光の粒が10・絵の形のとおりにオーロラが流れ光の帯が速く走る
+//   kira … 色が移り変わる太いふち・体の後ろで色の光が脈打つ・ふちのまわりで星が5つまたたく /
+//   rare … 金と桃色の太いふち・体の後ろで虹まじりの光の線が回る・その外を虹の輪が逆に回る・強い金の光・後ろで光の粒が10舞い上がる
+//   2026-10-31 社長「レアキラの光り方がモンスター自身の色を変えてる」→ 光は絵の「後ろ」と「ふち(輪郭の外)」だけ。絵の上に重ねる光(オーロラ・光の帯)はやめた
 //   光の中心と大きさは、絵の四角ではなく「体」に合わせる(ART_BODY_CENTERS。tools/image/make-art-body-centers.js が測る。尻尾・羽は数えない)
-const CARD_KIRA_SPARKS = Object.freeze([[0.18, 0.28, 0], [0.8, 0.18, 1.3], [0.55, 0.62, 2.5], [0.88, 0.6, 0.7], [0.3, 0.08, 1.9]]);
-const CARD_RARE_MOTES = Object.freeze([[0.1, 0], [0.28, 1.1], [0.5, 0.5], [0.72, 1.7], [0.9, 2.3], [0.62, 2.9], [0.38, 1.5], [0.82, 0.8], [0.18, 2.6], [0.95, 2]]);
+const CARD_KIRA_SPARKS = Object.freeze([[-0.08, 0.3, 0], [1.06, 0.16, 1.3], [1.04, 0.72, 2.5], [-0.06, 0.78, 0.7], [0.5, -0.1, 1.9]]); // 体の範囲の外寄り(絵の上に乗らない)
+const CARD_RARE_MOTES = Object.freeze([[-0.12, 0], [0.02, 1.1], [0.5, 0.5], [0.98, 1.7], [1.12, 2.3], [0.62, 2.9], [0.38, 1.5], [1.05, 0.8], [-0.05, 2.6], [0.85, 2]]); // 体の後ろ・左右から舞い上がる
 // 体の範囲 [中心の横, 中心の縦, 左, 上, 右, 下](絵に対する割合)。表に無い絵は、下寄りの真ん中
 const cardKiraBodyOf = (src) => (typeof ART_BODY_CENTERS !== 'undefined' && src ? ART_BODY_CENTERS[String(src).split('?')[0].replace(/^images\//, '')] : null) || [0.5, 0.56, 0.18, 0.12, 0.82, 1];
 // 体を囲む円の大きさ(絵の幅に対する割合)。絵の横÷縦は ART_CONTENT_BOXES の5番目(無ければ正方形)
@@ -252,10 +253,10 @@ const CardKiraAura = ({ kind, src, layer, calm = false, style = null }) => {
   const at = (k) => ({ left: `${cx * 100}%`, top: `${cy * 100}%`, width: `${d * k * 100}%` });
   return (
     <span data-card-kira-fx={kind} data-card-kira-layer={layer} aria-hidden="true" className={`mh-kira-fx mh-kira-fx-${layer}`} style={style || undefined}>
-      {layer === 'back' && kind === 'rare' && <><span className="mh-rare-halo" style={at(1.55)}/><span className="mh-rare-glow" style={at(1.15)}/></>}
+      {layer === 'back' && kind === 'rare' && <><span className="mh-rare-aurora" style={at(1.95)}/><span className="mh-rare-halo" style={at(1.55)}/><span className="mh-rare-glow" style={at(1.15)}/></>}
       {layer === 'back' && kind === 'kira' && ['g1', 'g2', 'g3'].map((g) => <span key={g} className={`mh-kira-glow ${g}`} style={at(1.15)}/>)}
       {layer === 'front' && kind === 'kira' && CARD_KIRA_SPARKS.map(([x, y, t], i) => <span key={i} className="mh-kira-spark" style={{ left: `${(x0 + x * (x1 - x0)) * 100}%`, top: `${(y0 + y * (y1 - y0)) * 100}%`, animationDelay: `${t}s` }}/>)}
-      {layer === 'front' && kind === 'rare' && CARD_RARE_MOTES.map(([x, t], i) => <span key={i} className="mh-rare-mote" style={{ left: `${(x0 + x * (x1 - x0)) * 100}%`, top: `${y1 * 100 - 4}%`, animationDelay: `${t}s` }}/>)}
+      {layer === 'back' && kind === 'rare' && CARD_RARE_MOTES.map(([x, t], i) => <span key={i} className="mh-rare-mote" style={{ left: `${(x0 + x * (x1 - x0)) * 100}%`, top: `${y1 * 100 - 4}%`, animationDelay: `${t}s` }}/>)}
     </span>
   );
 };
@@ -281,20 +282,6 @@ const CardShine = ({ kind, className = '', children }) => {
     </span>
   );
 };
-// 立ち絵の「絵の形のとおり」に重ねる光(絵そのものを型にして切り抜く。透けている所には出ない)。
-//   style … 絵と同じ置き場所・大きさ・transform(左右の向きも)。maskSize/maskPos … 絵の収め方(object-contain なら contain)
-//   calm(揺らさない)・動きを減らす設定では出さない(CSS)。動かすのは中の層の transform だけ
-const CardKiraSil = ({ kind, src, calm = false, style = null, maskSize = '100% 100%', maskPos = 'center' }) => {
-  if (!kind || !src || calm) return null;
-  const m = `url("${src}")`;
-  return (
-    <span data-card-kira-sil={kind} aria-hidden="true" className="mh-kira-sil"
-      style={{ WebkitMaskImage: m, maskImage: m, WebkitMaskSize: maskSize, maskSize, WebkitMaskPosition: maskPos, maskPosition: maskPos, WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat', ...style }}>
-      {kind === 'rare' && <span className="mh-kira-sil-aurora"/>}
-      <span className={`mh-kira-sil-sheen ${kind === 'rare' ? 'fast' : ''}`}/>
-    </span>
-  );
-};
 // 立ち絵(img。中身の大きさそのままの箱)を、キラの光で包む。kind が無ければそのまま返す。
 //   ふちの光(filter)は絵だけにかけ、後ろ・絵の形・前の光はその外に置く(中で動かすと、ふちの光を毎こま描き直して重くなる)。
 //   fx … { src, transform, calm }。transform … 絵と同じ transform(広げる・左右の向き)。光も同じ形で重ねる
@@ -307,7 +294,6 @@ const cardKiraWrap = (kind, el, fx = null) => {
     <span className="relative inline-flex items-end justify-center" style={{ isolation: 'isolate' }}>
       <CardKiraAura kind={kind} src={fx.src} layer="back" style={pos}/>
       {rim}
-      <CardKiraSil kind={kind} src={fx.src} style={pos}/>
       <CardKiraAura kind={kind} src={fx.src} layer="front" style={pos}/>
     </span>
   );
