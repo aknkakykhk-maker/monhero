@@ -865,7 +865,9 @@ const SkillFxMotion = ({kind, image, lunge=false}) => {
   const vars = { '--thm-ms':`${ms}ms`, '--hit-at':`${spec.hit}ms`, '--c1':spec.c1, '--c2':spec.c2, '--c3':c3 };
   if (spec.hit2) vars['--hit-at2'] = `${spec.hit2}ms`;
   const fx = spec.fx;
-  const uex = lunge && !UNIQUE_FX_EXCLUDE.includes(kind);
+  // spec.uex … 固有技と同じ飾り(オーラ・残像・着弾の締め)を、lunge が無くても出す / spec.impact … 着弾の締めだけ出す(MFバトルカードの技。85 の cardMotionKindOf)
+  const uex = (lunge || spec.uex === true) && !UNIQUE_FX_EXCLUDE.includes(kind);
+  const impactOnly = !uex && spec.impact === true;
   return (
     <span className={`thm-atk skfx skfx--${kind} skfx-body--${spec.body}${lunge?' thm-atk--lunge':''}${uex?' uex':''}`} style={vars} data-skill-fx={kind}>
       {uex&&<UniqueFxExtras image={image} ghost={!spec.twin}/>}
@@ -898,7 +900,7 @@ const SkillFxMotion = ({kind, image, lunge=false}) => {
         <i className="thm-atk__core"/>
         <i className="thm-atk__ring"/>
       </span>}
-      {uex&&<UniqueFxImpact form={spec.form || 'burst'} offset={(spec.hit || 0) - 240}/>}
+      {(uex||impactOnly)&&<UniqueFxImpact form={spec.form || 'burst'} offset={(spec.hit || 0) - 240}/>}
     </span>
   );
 };
