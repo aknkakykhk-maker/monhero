@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ae4bd5e92ade1646
+// source-sha256: 47687243720023b3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -103933,7 +103933,7 @@ const CardBattleScreen = ({
     }), React.createElement("button", {
       type: "button",
       "data-card-mode-assistant": true,
-      className: "mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-orange-200 via-orange-400 to-rose-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]",
+      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-orange-200 via-orange-400 to-rose-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]",
       onClick: () => {
         Audio_.fgSe.tap();
         setView('foe');
@@ -103957,7 +103957,7 @@ const CardBattleScreen = ({
       key: x.id,
       src: assistantFaceImage(x, 'normal'),
       alt: "",
-      className: "h-10 w-10 rounded-full border-2 border-white/80 bg-slate-900 object-cover object-top shadow"
+      className: "h-8 w-8 rounded-full border-2 border-white/80 bg-slate-900 object-cover object-top shadow"
     })))), React.createElement("button", {
       type: "button",
       "data-card-mode-multi": true,
@@ -103966,7 +103966,7 @@ const CardBattleScreen = ({
         Audio_.fgSe.tap();
         setView('pvp');
       },
-      className: "mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50",
+      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50",
       style: {
         animationDelay: '60ms'
       }
@@ -103992,7 +103992,7 @@ const CardBattleScreen = ({
         setTacticsBack('mode');
         setView('tactics');
       },
-      className: "mhms-card mhms-in flex min-h-[96px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-amber-200 via-amber-400 to-orange-600 px-4 py-3 text-left text-slate-950 active:scale-[.98]"
+      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-amber-200 via-amber-400 to-orange-600 px-4 py-3 text-left text-slate-950 active:scale-[.98]"
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "mhms-mark"
@@ -104014,7 +104014,7 @@ const CardBattleScreen = ({
         Audio_.fgSe.tap();
         setView('tour');
       },
-      className: "mhms-card mhms-in flex min-h-[96px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-yellow-100 via-yellow-300 to-amber-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]"
+      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-yellow-100 via-yellow-300 to-amber-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]"
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "mhms-mark"
@@ -104036,7 +104036,7 @@ const CardBattleScreen = ({
         Audio_.fgSe.tap();
         setView('cup');
       },
-      className: "mhms-card mhms-in flex min-h-[96px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-lime-100 via-emerald-300 to-teal-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]"
+      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-lime-100 via-emerald-300 to-teal-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]"
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "mhms-mark"
