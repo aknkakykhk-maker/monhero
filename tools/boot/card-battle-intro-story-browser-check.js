@@ -41,6 +41,10 @@ const CARD_CUP_STORY = 'card_cup_2026_10_31';
   let chromium;
   try { ({ chromium } = require(path.join(ROOT, 'tools', 'node_modules', 'playwright'))); } catch (e) { console.log('SKIP: playwright が入っていないので確かめられません'); process.exit(0); }
   const seed = eventStorySeed();
+  const CUP_OPEN = 'const cardCupOpen = () => true;';
+  const compiledRaw = fs.readFileSync(path.join(ROOT, 'monster-hero/game-system.compiled.js'), 'utf8');
+  check('⓪ 個人杯の公開の印を、検査の中だけ閉じられる', compiledRaw.includes(CUP_OPEN), `「${CUP_OPEN}」が見つからない(書き方が変わったら、この検査を直す)`);
+  const compiledCupClosed = compiledRaw.split(CUP_OPEN).join('const cardCupOpen = () => false;');
   const server = await serve();
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   try {
@@ -50,6 +54,9 @@ const CARD_CUP_STORY = 'card_cup_2026_10_31';
       const errors = [];
       page.on('pageerror', (e) => errors.push(String(e)));
       await page.route(/supabase\.co/, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+      // 個人杯を公開したあと(2026-10-31)は、起動の HOME で個人杯のお話が流れ、見たことになってしまう(するとあつの行が出る)。
+      // この検査では個人杯を公開前に戻して、HOME で流れないようにする
+      await page.route(/game-system\.compiled\.js/, (route) => route.fulfill({ status: 200, contentType: 'application/javascript; charset=utf-8', body: compiledCupClosed }));
       await page.addInitScript(() => {
         const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
         put('mh_breeder_name', '検査ブリーダー'); put('mh_breeder_icon', '🐣'); put('mh_onboarded', true); put('mh_tutorial_seen_v1', true);
