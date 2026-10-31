@@ -3400,9 +3400,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // 個人杯(99-card-cup。2026-10-31)。デッキ登録へ行って戻ったら、見ていた杯に戻る(cupOpenId)
   if (view === 'cup' && typeof CardCup === 'function') {
     // 試合の見返し: 公式杯と同じ見返し(93 の cardReplayFromTour)。材料は card_cup_match。とじたら見ていた杯へ戻る
-    const openCupReplay = async (id, title) => {
+    //   合言葉だけの杯は参加者だけ見られる(card_cup_match_for が自分の番号で確かめる。関数がまだ無いときは前の card_cup_match)
+    const openCupReplay = async (id, title, owner = null) => {
       if (!db || typeof cardTourRpc !== 'function' || typeof cardReplayFromTour !== 'function') return false;
-      const row = await cardTourRpc('card_cup_match', { p_id: id });
+      const row = (typeof cardCupRpcSoft === 'function' ? await cardCupRpcSoft('card_cup_match_for', { p_id: id, p_owner: owner || '' }) : null) || (await cardTourRpc('card_cup_match', { p_id: id }));
       const rec = row && typeof row === 'object' ? cardReplayFromTour(db, row, { known: new Set(assistantsUnlockedFrom(seenStoryIds).map((x) => x.id)), title }) : null;
       const g = rec ? cardReplayGameOf(db, rec) : null;
       if (!g) { setNotice('この試合は見返せません'); return false; }

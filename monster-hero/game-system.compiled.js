@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3f0b91f51c7151f3
+// source-sha256: c205383877491583
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -103367,11 +103367,14 @@ const CardBattleScreen = ({
     });
   }
   if (view === 'cup' && typeof CardCup === 'function') {
-    const openCupReplay = async (id, title) => {
+    const openCupReplay = async (id, title, owner = null) => {
       if (!db || typeof cardTourRpc !== 'function' || typeof cardReplayFromTour !== 'function') return false;
-      const row = await cardTourRpc('card_cup_match', {
+      const row = (typeof cardCupRpcSoft === 'function' ? await cardCupRpcSoft('card_cup_match_for', {
+        p_id: id,
+        p_owner: owner || ''
+      }) : null) || (await cardTourRpc('card_cup_match', {
         p_id: id
-      });
+      }));
       const rec = row && typeof row === 'object' ? cardReplayFromTour(db, row, {
         known: new Set(assistantsUnlockedFrom(seenStoryIds).map(x => x.id)),
         title
@@ -120419,6 +120422,23 @@ const cardCupList = async () => {
   const r = await cardTourRpc('card_cup_list', {});
   return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : null;
 };
+const cardCupRpcSoft = async (fn, body) => {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+      method: 'POST',
+      headers: SB_HEADERS,
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (_) {
+    return null;
+  }
+};
+const cardCupListDone = async () => {
+  const r = await cardCupRpcSoft('card_cup_list_done', {});
+  return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : [];
+};
 const cardCupMine = async owner => {
   const r = await cardTourRpc('card_cup_mine', {
     p_owner: owner || ''
@@ -120524,6 +120544,7 @@ const CardCupJoinPanel = ({
     className: "w-full rounded-2xl bg-gradient-to-b from-amber-300 to-orange-500 py-2.5 text-[15px] font-black text-slate-950 disabled:opacity-50"
   }, label));
 };
+const CARD_CUP_BRACKET_GAP = 30;
 const CardCupBracket = ({
   rounds,
   matches,
@@ -120562,7 +120583,7 @@ const CardCupBracket = ({
       x0 = side ? W - slotW - 2 : slotW + 2;
     for (let r = 0; r < total - 1; r++) {
       const n = half / 2 ** r;
-      const step = (W / 2 - slotW - 14) / (total - 1);
+      const step = (W / 2 - CARD_CUP_BRACKET_GAP - (slotW + 2)) / (total - 1);
       const xa = x0 + dir * step * r,
         xb = x0 + dir * step * (r + 1);
       for (let k = 0; k < n; k++) {
@@ -120594,7 +120615,7 @@ const CardCupBracket = ({
       }
     }
     const r = total - 1,
-      xs = x0 + dir * (W / 2 - slotW - 14),
+      xs = x0 + dir * (W / 2 - CARD_CUP_BRACKET_GAP - (slotW + 2)),
       w = winOf(r, 0),
       pair = rounds[r] && rounds[r][0];
     const seat = pair ? pair[side] : null;
@@ -120603,7 +120624,7 @@ const CardCupBracket = ({
       key: `f${side}`,
       x1: total > 1 ? xs : x0,
       y1: H / 2,
-      x2: W / 2 + (side ? 12 : -12),
+      x2: W / 2 + (side ? 6 : -6),
       y2: H / 2,
       className: on ? 'stroke-amber-300' : 'stroke-slate-600',
       strokeWidth: on ? 3 : 2
@@ -120647,7 +120668,7 @@ const CardCupBracket = ({
     className: "absolute text-center",
     style: {
       left: W / 2 - 30,
-      top: H / 2 - 44,
+      top: H / 2 - 52,
       width: 60
     }
   }, React.createElement("span", {
@@ -120852,7 +120873,8 @@ const cardCupRoundLabel = (c, r, rounds) => {
 };
 const CardCupMatches = ({
   v,
-  onOpenReplay
+  onOpenReplay,
+  selfId = null
 }) => {
   const c = v.cup;
   const rounds = Math.max(0, ...v.matches.map(m => m.round + 1));
@@ -120885,7 +120907,7 @@ const CardCupMatches = ({
       disabled: !onOpenReplay || m.winner === null,
       onClick: () => {
         Audio_.fgSe.tap();
-        void onOpenReplay(m.id, c.name);
+        void onOpenReplay(m.id, c.name, selfId);
       },
       className: "shrink-0 rounded-lg border-2 border-amber-500/70 bg-amber-100 px-2 py-0.5 text-[12px] font-black text-amber-900 disabled:opacity-40"
     }, "見返す"));
@@ -120997,7 +121019,8 @@ const CardCupDetail = ({
     className: "mt-1 text-slate-400"
   }, "個人杯にはごほうびはありません。ランキングにも入りません")), shown && React.createElement(CardCupMatches, {
     v: v,
-    onOpenReplay: onOpenReplay
+    onOpenReplay: onOpenReplay,
+    selfId: selfId
   }), !shown && React.createElement("div", {
     "data-card-cup-entries": true,
     className: "space-y-1 rounded-2xl bg-slate-950/70 p-2.5"
@@ -121048,6 +121071,7 @@ const CardCup = ({
 }) => {
   const [tab, setTab] = useState('list');
   const [list, setList] = useState(undefined);
+  const [done, setDone] = useState([]);
   const [mineCups, setMineCups] = useState(undefined);
   const [cupId, setCupId] = useState(initialCup);
   const [view, setView] = useState(null);
@@ -121072,6 +121096,9 @@ const CardCup = ({
       setSelfId(id);
       setMine(m || null);
       setList(l);
+      if (l) void cardCupListDone().then(d => {
+        if (alive) setDone(d);
+      });
       setProfile({
         name: typeof nm === 'string' && nm ? nm.slice(0, 40) : 'ブリーダー',
         icon: typeof ic === 'string' ? ic : null
@@ -121161,7 +121188,17 @@ const CardCup = ({
   })) : React.createElement(ScreenEmpty, {
     emoji: "🏆",
     lines: ['いま募集中の個人杯はありません', '「開く」から自分で開けます']
-  })), tab === 'mine' && (mineCups === undefined ? React.createElement(ScreenEmpty, {
+  })), tab === 'list' && done.length > 0 && React.createElement("div", {
+    "data-card-cup-done": true,
+    className: "space-y-2"
+  }, React.createElement("b", {
+    className: "block px-1 pt-1 text-[13px] font-black text-amber-200"
+  }, "終わった杯(終わって30日まで・だれでも結果と見返しが見られます)"), done.map(c => React.createElement(CardCupRow, {
+    key: c.id,
+    c: c,
+    now: now,
+    onOpen: setCupId
+  }))), tab === 'mine' && (mineCups === undefined ? React.createElement(ScreenEmpty, {
     emoji: "⏳",
     lines: ['読み込んでいます']
   }) : mineCups && mineCups.length ? mineCups.map(c => React.createElement(CardCupRow, {

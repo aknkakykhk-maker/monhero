@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 54d24f584c90ba38
+// generated-sha256: 8aa127053e2a7146
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -62238,9 +62238,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // 個人杯(99-card-cup。2026-10-31)。デッキ登録へ行って戻ったら、見ていた杯に戻る(cupOpenId)
   if (view === 'cup' && typeof CardCup === 'function') {
     // 試合の見返し: 公式杯と同じ見返し(93 の cardReplayFromTour)。材料は card_cup_match。とじたら見ていた杯へ戻る
-    const openCupReplay = async (id, title) => {
+    //   合言葉だけの杯は参加者だけ見られる(card_cup_match_for が自分の番号で確かめる。関数がまだ無いときは前の card_cup_match)
+    const openCupReplay = async (id, title, owner = null) => {
       if (!db || typeof cardTourRpc !== 'function' || typeof cardReplayFromTour !== 'function') return false;
-      const row = await cardTourRpc('card_cup_match', { p_id: id });
+      const row = (typeof cardCupRpcSoft === 'function' ? await cardCupRpcSoft('card_cup_match_for', { p_id: id, p_owner: owner || '' }) : null) || (await cardTourRpc('card_cup_match', { p_id: id }));
       const rec = row && typeof row === 'object' ? cardReplayFromTour(db, row, { known: new Set(assistantsUnlockedFrom(seenStoryIds).map((x) => x.id)), title }) : null;
       const g = rec ? cardReplayGameOf(db, rec) : null;
       if (!g) { setNotice('この試合は見返せません'); return false; }
@@ -71013,6 +71014,15 @@ const cardCupNormalizeView = (v) => {
 };
 
 const cardCupList = async () => { const r = await cardTourRpc('card_cup_list', {}); return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : null; };
+// あとから足した関数を呼ぶ口(関数がまだ無くても、ほかの通信を止めない。cardTourRpc は表が無いと分かると以後の通信をやめる)
+const cardCupRpcSoft = async (fn, body) => {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body) });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (_) { return null; }
+};
+const cardCupListDone = async () => { const r = await cardCupRpcSoft('card_cup_list_done', {}); return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : []; };
 const cardCupMine = async (owner) => { const r = await cardTourRpc('card_cup_mine', { p_owner: owner || '' }); return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : null; };
 const cardCupFind = async (code) => cardCupNormalizeRow(await cardTourRpc('card_cup_find', { p_code: code }));
 const cardCupView = async (id, owner) => cardCupNormalizeView(await cardTourRpc('card_cup_view', { p_cup: id, p_owner: owner || '' }));
@@ -71065,6 +71075,7 @@ const CardCupJoinPanel = ({ mine, onJoin, onOpenRegister, busy = false, label = 
 
 // ---- トーナメントの山と勝ち上がりの演出(社長の見本の動画「トーナメントイメージ」)----
 //   山の左半分と右半分から勝ち上がり、真ん中の優勝カップへ。演出では1回戦から順に、勝った側の線が光って伸びる。「演出リプレイ」で見直せる
+const CARD_CUP_BRACKET_GAP = 30; // 山の両側の線を、真ん中の優勝カップから離す幅(線とカップが重ならないように)
 const CardCupBracket = ({ rounds, matches, entries, done }) => {
   const first = rounds && rounds[0];
   const size = first ? first.length * 2 : 0;
@@ -71095,7 +71106,7 @@ const CardCupBracket = ({ rounds, matches, entries, done }) => {
     const dir = side ? -1 : 1, x0 = side ? W - slotW - 2 : slotW + 2;
     for (let r = 0; r < total - 1; r++) {
       const n = half / 2 ** r; // この回戦のこの側の席の数
-      const step = (W / 2 - slotW - 14) / (total - 1);
+      const step = (W / 2 - CARD_CUP_BRACKET_GAP - (slotW + 2)) / (total - 1);
       const xa = x0 + dir * step * r, xb = x0 + dir * step * (r + 1);
       for (let k = 0; k < n; k++) {
         const slot = side * (first.length / 2) / 2 ** r + Math.floor(k / 2);
@@ -71108,10 +71119,10 @@ const CardCupBracket = ({ rounds, matches, entries, done }) => {
       }
     }
     // 決勝へ
-    const r = total - 1, xs = x0 + dir * ((W / 2 - slotW - 14)), w = winOf(r, 0), pair = rounds[r] && rounds[r][0];
+    const r = total - 1, xs = x0 + dir * (W / 2 - CARD_CUP_BRACKET_GAP - (slotW + 2)), w = winOf(r, 0), pair = rounds[r] && rounds[r][0];
     const seat = pair ? pair[side] : null;
     const on = lit > r && w !== null && seat === w;
-    lines.push(<line key={`f${side}`} x1={total > 1 ? xs : x0} y1={H / 2} x2={W / 2 + (side ? 12 : -12)} y2={H / 2} className={on ? 'stroke-amber-300' : 'stroke-slate-600'} strokeWidth={on ? 3 : 2}/>);
+    lines.push(<line key={`f${side}`} x1={total > 1 ? xs : x0} y1={H / 2} x2={W / 2 + (side ? 6 : -6)} y2={H / 2} className={on ? 'stroke-amber-300' : 'stroke-slate-600'} strokeWidth={on ? 3 : 2}/>);
   });
   const slot = (seat, i, side) => {
     const e = seat === null ? null : bySeat(seat);
@@ -71128,7 +71139,7 @@ const CardCupBracket = ({ rounds, matches, entries, done }) => {
         <svg width={W} height={H} className="absolute inset-0" aria-hidden="true">{lines}</svg>
         {leftSeats.map((s, i) => slot(s, i, 0))}
         {rightSeats.map((s, i) => slot(s, i, 1))}
-        <div className="absolute text-center" style={{ left: W / 2 - 30, top: H / 2 - 44, width: 60 }}>
+        <div className="absolute text-center" style={{ left: W / 2 - 30, top: H / 2 - 52, width: 60 }}>
           <span aria-hidden="true" className={`block text-[34px] leading-none ${champ !== null ? '' : 'opacity-40'}`}>🏆</span>
           <small data-card-cup-champ className="block truncate text-[10px] font-black text-amber-200">{champ !== null && bySeat(champ) ? (bySeat(champ).mine ? 'あなた' : bySeat(champ).name) : '優勝'}</small>
         </div>
@@ -71228,7 +71239,7 @@ const cardCupRoundLabel = (c, r, rounds) => {
   const left = rounds - r;
   return left === 1 ? '決勝' : left === 2 ? '準決勝' : left === 3 ? '準々決勝' : `${r + 1}回戦`;
 };
-const CardCupMatches = ({ v, onOpenReplay }) => {
+const CardCupMatches = ({ v, onOpenReplay, selfId = null }) => {
   const c = v.cup;
   const rounds = Math.max(0, ...v.matches.map((m) => m.round + 1));
   const bySeat = (s) => v.entries.find((e) => e.seat === s) || null;
@@ -71245,7 +71256,7 @@ const CardCupMatches = ({ v, onOpenReplay }) => {
             <span className="min-w-0 flex-1 truncate text-[12px] font-bold text-white">
               <b className={m.winner === 0 ? 'text-orange-300' : 'text-slate-300'}>{nm(a)}</b> 対 <b className={m.winner === 1 ? 'text-orange-300' : 'text-slate-300'}>{nm(b)}</b>
             </span>
-            <button type="button" data-card-cup-replay={m.id} disabled={!onOpenReplay || m.winner === null} onClick={() => { Audio_.fgSe.tap(); void onOpenReplay(m.id, c.name); }}
+            <button type="button" data-card-cup-replay={m.id} disabled={!onOpenReplay || m.winner === null} onClick={() => { Audio_.fgSe.tap(); void onOpenReplay(m.id, c.name, selfId); }}
               className="shrink-0 rounded-lg border-2 border-amber-500/70 bg-amber-100 px-2 py-0.5 text-[12px] font-black text-amber-900 disabled:opacity-40">見返す</button>
           </div>
         );
@@ -71296,7 +71307,7 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
           <div className="mt-1 text-slate-400">個人杯にはごほうびはありません。ランキングにも入りません</div>
         </div>
       )}
-      {shown && <CardCupMatches v={v} onOpenReplay={onOpenReplay}/>}
+      {shown && <CardCupMatches v={v} onOpenReplay={onOpenReplay} selfId={selfId}/>}
       {!shown && (
         <div data-card-cup-entries className="space-y-1 rounded-2xl bg-slate-950/70 p-2.5">
           <b className="block text-[13px] font-black text-amber-200">{`参加者 ${v.entries.length}/${c.max}人`}</b>
@@ -71313,10 +71324,11 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
 
 // ---- 画面 ----
 // onBack … 対戦えらびへ / onOpenRegister … デッキ登録へ(戻ると、この画面のいまの杯に戻る)
-// onOpenReplay(matchId, title) … 試合の見返しを開く(84。開けなかったら false)
+// onOpenReplay(matchId, title, owner) … 試合の見返しを開く(84。開けなかったら false。合言葉だけの杯は参加者だけ見られるので owner を渡す)
 const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange = null, onOpenReplay = null }) => {
   const [tab, setTab] = useState('list');
   const [list, setList] = useState(undefined);
+  const [done, setDone] = useState([]); // 終わった公開の杯(終わって30日まで。2026-10-31 社長 案A)
   const [mineCups, setMineCups] = useState(undefined);
   const [cupId, setCupId] = useState(initialCup);
   const [view, setView] = useState(null);
@@ -71335,6 +71347,7 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
         storeGet('mh_breeder_name', 'ブリーダー', false).catch(() => 'ブリーダー'), storeGet('mh_breeder_icon', null, false).catch(() => null)]);
       if (!alive) return;
       setSelfId(id); setMine(m || null); setList(l);
+      if (l) void cardCupListDone().then((d) => { if (alive) setDone(d); });
       setProfile({ name: typeof nm === 'string' && nm ? nm.slice(0, 40) : 'ブリーダー', icon: typeof ic === 'string' ? ic : null });
       if (id) setMineCups(await cardCupMine(id));
     })();
@@ -71367,6 +71380,12 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
       {tabs.map(([k, label]) => <button key={k} type="button" data-card-cup-tab={k} onClick={() => { Audio_.fgSe.tap(); setTab(k); setMsg(''); }} className={`rounded-xl py-2 text-[12px] font-black ${tab === k ? 'bg-gradient-to-b from-amber-300 to-orange-500 text-slate-950' : 'border-2 border-amber-500/60 bg-amber-100 text-amber-900'}`}>{label}</button>)}
     </div>
     {tab === 'list' && (list.length ? list.map((c) => <CardCupRow key={c.id} c={c} now={now} onOpen={setCupId}/>) : <ScreenEmpty emoji="🏆" lines={['いま募集中の個人杯はありません', '「開く」から自分で開けます']}/>)}
+    {tab === 'list' && done.length > 0 && (
+      <div data-card-cup-done className="space-y-2">
+        <b className="block px-1 pt-1 text-[13px] font-black text-amber-200">終わった杯(終わって30日まで・だれでも結果と見返しが見られます)</b>
+        {done.map((c) => <CardCupRow key={c.id} c={c} now={now} onOpen={setCupId}/>)}
+      </div>
+    )}
     {tab === 'mine' && (mineCups === undefined ? <ScreenEmpty emoji="⏳" lines={['読み込んでいます']}/> : mineCups && mineCups.length ? mineCups.map((c) => <CardCupRow key={c.id} c={c} now={now} onOpen={setCupId}/>) : <ScreenEmpty emoji="📭" lines={['開いた・出ている個人杯はありません']}/>)}
     {tab === 'code' && (
       <div data-card-cup-find className="space-y-2 rounded-2xl border-2 border-amber-600/60 bg-indigo-950/60 p-3">
