@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a419e3884fb705b1
+// source-sha256: b9be2e0f3847ae34
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -96496,11 +96496,18 @@ const CardVsMonsters = ({
       maxHeight: 'min(19vh, 140px)'
     }
   }), React.createElement("span", {
-    className: "mt-0.5 w-full truncate text-center text-[10px] font-black text-white",
+    "data-card-vs-mon-name": true,
+    className: "mt-0.5 block w-full text-center",
     style: {
+      containerType: 'inline-size'
+    }
+  }, React.createElement("span", {
+    className: "whitespace-nowrap font-black text-white",
+    style: {
+      fontSize: `min(10px, calc(100cqw / ${String(m.name).length + 0.5}))`,
       textShadow: '0 1px 2px #000'
     }
-  }, m.name));
+  }, m.name)));
 }));
 const CardVsDeckName = ({
   text,
@@ -99130,14 +99137,6 @@ const CardMonName = ({
   two = false
 }) => {
   const len = Math.max(1, String(name || '').length);
-  if (two && len * 11 > w) return React.createElement("div", {
-    "data-card-mon-name": true,
-    "data-card-mon-name-two": true,
-    className: "line-clamp-2 break-all font-black leading-[1.1]",
-    style: {
-      fontSize: 11
-    }
-  }, name);
   const fs = Math.max(10, Math.min(12, Math.floor(w / len)));
   const k = Math.min(1, w / (len * fs));
   return React.createElement("div", {
