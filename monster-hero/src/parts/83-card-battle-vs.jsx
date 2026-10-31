@@ -179,14 +179,15 @@ const CARD_VS_CSS = `
 //   表に無い絵は、前と同じ object-contain
 // 表のキーは images/ の下の道(images/ を付けると版を打つ道具が ?v= を付けてしまうため)
 const cardVsBoxOf = (src) => (typeof ART_CONTENT_BOXES !== 'undefined' && src ? ART_CONTENT_BOXES[String(src).split('?')[0].replace(/^images\//, '')] || null : null);
-// kira … キラ・レアキラの光(84 の CardKiraAura・CardKiraSil・cardKiraRimClass)を、対戦の場と同じ形で絵に重ねる。
+// kira … キラ・レアキラの光(84 の CardKiraAura・cardKiraRimClass)を、対戦の場と同じ形で、絵の後ろとふちに付ける。
+//   絵の上には重ねない(モンスターの色を変えない。2026-10-31 社長「レアキラの光り方がモンスター自身の色を変えてる」)。
 //   光の中心は体の真ん中(84 の cardKiraBodyOf)。ふちの光は絵だけにかける
 // onImgError … 絵が読めなかったとき(84 の cardArtOnError: 読み直し→カードの絵)
 const CardVsArt = ({ src, alt, aspect, spread = 1, className = '', style = {}, kira = null, onImgError = null, ...rest }) => {
   const box = cardVsBoxOf(src);
   if (!box) {
     const img = <img src={src} alt={alt} draggable={false} onError={onImgError || undefined} className={`w-full object-contain object-bottom ${className}`} style={{ aspectRatio: `${aspect}`, ...(kira ? null : style) }} {...(kira ? null : rest)}/>;
-    return kira ? <div className="relative w-full" style={{ isolation: 'isolate', ...style }} {...rest}><span data-card-kira={kira} className={`${cardKiraRimClass(kira)} block`}>{img}</span><CardKiraSil kind={kira} src={src} style={{ inset: 0 }} maskSize="contain" maskPos="bottom"/></div> : img;
+    return kira ? <div className="relative w-full" style={{ isolation: 'isolate', ...style }} {...rest}><span data-card-kira={kira} className={`${cardKiraRimClass(kira)} block`}>{img}</span></div> : img;
   }
   const [x0, y0, x1, y1, a] = box;
   const fw = Math.max(0.01, x1 - x0), fh = Math.max(0.01, y1 - y0);
@@ -201,7 +202,6 @@ const CardVsArt = ({ src, alt, aspect, spread = 1, className = '', style = {}, k
       {kira
         ? <span data-card-kira={kira} className={`${cardKiraRimClass(kira)} absolute`} style={pos}><img src={src} alt={alt} draggable={false} onError={onImgError || undefined} className={`absolute inset-0 h-full w-full max-w-none ${className}`}/></span>
         : <img src={src} alt={alt} draggable={false} onError={onImgError || undefined} className={`absolute max-w-none ${className}`} style={pos}/>}
-      {kira && <CardKiraSil kind={kira} src={src} style={pos}/>}
       {kira && <CardKiraAura kind={kira} src={src} layer="front" style={pos}/>}
     </div>
   );
