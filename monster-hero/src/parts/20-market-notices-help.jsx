@@ -720,7 +720,7 @@ const helpDataRows = (id) => {
       return CARD_PACKS.map(pack => {
         const species = typeof cardPackSpeciesLabel === 'function' && typeof CARD_BATTLE_DATA !== 'undefined' && CARD_BATTLE_DATA
           ? cardPackSpeciesLabel(CARD_BATTLE_DATA, pack) : pack.species.join('・');
-        const kira = `キラ${pack.rarity.kira}%${pack.rarity.alt ? `・別絵キラ${pack.rarity.alt}%` : ''}`;
+        const kira = `キラ${pack.rarity.kira}%${pack.rarity.alt ? `・レアキラ${pack.rarity.alt}%` : ''}`;
         return [pack.name, `${species} ／ ${kira}`];
       });
     // モンスターの血統一覧。ヘルプへ手で書き写すと、モンスターを足したときに古いままになる

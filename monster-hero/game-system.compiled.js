@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e7ebac00ebbd0153
+// source-sha256: 6474805833bbfc2e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -17654,7 +17654,7 @@ const helpDataRows = id => {
       if (typeof CARD_PACKS === 'undefined') return [];
       return CARD_PACKS.map(pack => {
         const species = typeof cardPackSpeciesLabel === 'function' && typeof CARD_BATTLE_DATA !== 'undefined' && CARD_BATTLE_DATA ? cardPackSpeciesLabel(CARD_BATTLE_DATA, pack) : pack.species.join('・');
-        const kira = `キラ${pack.rarity.kira}%${pack.rarity.alt ? `・別絵キラ${pack.rarity.alt}%` : ''}`;
+        const kira = `キラ${pack.rarity.kira}%${pack.rarity.alt ? `・レアキラ${pack.rarity.alt}%` : ''}`;
         return [pack.name, `${species} ／ ${kira}`];
       });
     case 'monsterLineages':
@@ -96844,7 +96844,7 @@ const CARD_RULE_PAGES = Object.freeze([{
   id: 'deck',
   emoji: '🃏',
   title: 'デッキ',
-  lines: ['モンスター3体と、技などのカード50枚で1つのデッキ', '同じモンスターは1体まで(キラ・別絵キラも同じモンスター)。同じ種族でも、別の混血モンスターなら入れてよい', '同じ名前のカードは3枚まで', 'デッキ編成で5つまで作れる。★のデッキで対戦する']
+  lines: ['モンスター3体と、技などのカード50枚で1つのデッキ', '同じモンスターは1体まで(キラ・レアキラも同じモンスター)。同じ種族でも、別の混血モンスターなら入れてよい', '同じ名前のカードは3枚まで', 'デッキ編成で5つまで作れる。★のデッキで対戦する']
 }, {
   id: 'start',
   emoji: '🎲',
@@ -106038,7 +106038,7 @@ const CardDex = ({
         const m = c ? null : cardMonsterOf(db, no);
         const have = col[no] || 0;
         const name = c ? c.name : m ? m.name : no;
-        const rare = m && m.variant ? /別絵/.test(m.variant) ? '★別絵キラ' : /キラ/.test(m.variant) ? '★キラ' : m.variant : '';
+        const rare = m && m.variant ? /別絵/.test(m.variant) ? '★レアキラ' : /キラ/.test(m.variant) ? '★キラ' : m.variant : '';
         return React.createElement("button", _extends({
           key: no,
           type: "button",
@@ -106325,7 +106325,7 @@ const CardPackArt = ({
 const CARD_RARITY_LABEL = Object.freeze({
   normal: '',
   kira: 'キラ',
-  alt: '別絵キラ'
+  alt: 'レアキラ'
 });
 const CARD_PACK_TEAR_MS = 1150;
 const CARD_PACK_SPOT_MS = 1500;
@@ -106860,7 +106860,7 @@ const CardPackRateSheet = ({
   }, cardShopName(db, x.no)))), React.createElement("td", {
     className: `${td} text-right tabular-nums`
   }, cardShopPct(x.p))));
-  const notes = [`1パックは${pack.tech ? `技などの枠${pack.tech}枚と、` : ''}モンスターの枠${pack.mon}枚です。割合は、枠1つあたりの割合です。`, pack.tech ? `技などの枠は、${r.tech.length}種類から同じ割合で出ます。` : null, pack.mon && Object.keys(r.rarity).length > 1 ? 'モンスターの枠は、まずレア度を決めてから、そのレア度のモンスターから1枚出ます。' : null, '混血のモンスターも、ほかのモンスターと同じく、そのカードのレア度(通常・キラ・別絵キラ)の割合の中から出ます。', '同じレア度のモンスターは、どれも同じ割合で出ます。', pack.pity ? `このパックでキラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けると、つぎのパックのモンスターの枠は必ずキラ以上になります(キラが出ないまま続くのを止める決まり。「天井」と呼びます)。` : null, `だぶったカードはビートPになります(技などは4枚目から1枚${CARD_DUP_POINT.tech}・モンスターは2枚目から${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕)。`, '新しいカードは、できしだい追加されます。'].filter(Boolean);
+  const notes = [`1パックは${pack.tech ? `技などの枠${pack.tech}枚と、` : ''}モンスターの枠${pack.mon}枚です。割合は、枠1つあたりの割合です。`, pack.tech ? `技などの枠は、${r.tech.length}種類から同じ割合で出ます。` : null, pack.mon && Object.keys(r.rarity).length > 1 ? 'モンスターの枠は、まずレア度を決めてから、そのレア度のモンスターから1枚出ます。' : null, '混血のモンスターも、ほかのモンスターと同じく、そのカードのレア度(通常・キラ・レアキラ)の割合の中から出ます。', '同じレア度のモンスターは、どれも同じ割合で出ます。', pack.pity ? `このパックでキラもレアキラも出ないまま${CARD_PACK_PITY_AT}パック開けると、つぎのパックのモンスターの枠は必ずキラ以上になります(キラが出ないまま続くのを止める決まり。「天井」と呼びます)。` : null, `だぶったカードはビートPになります(技などは4枚目から1枚${CARD_DUP_POINT.tech}・モンスターは2枚目から${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・レアキラ${CARD_DUP_POINT.alt}〕)。`, '新しいカードは、できしだい追加されます。'].filter(Boolean);
   return React.createElement(CardShopSheet, {
     tag: "rates",
     title: `${pack.name} 提供割合`,
