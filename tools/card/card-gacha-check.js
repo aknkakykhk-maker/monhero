@@ -25,9 +25,21 @@ const check = (name, ok, detail = '') => { if (ok) passed++; else failed++; if (
 // ---- 計算(82・89 を読み込んで呼ぶ) ----
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
 vm.runInContext(`${fs.readFileSync(path.join(GAME, 'data', 'card-battle-cards.js'), 'utf8')}\n;\n${fs.readFileSync(path.join(GAME, 'src', 'parts', '82-card-battle-core.jsx'), 'utf8')}\n;\n${fs.readFileSync(path.join(GAME, 'src', 'parts', '89-card-pack.jsx'), 'utf8')}\n;\n`
-  + 'this.E = { CARD_BATTLE_DATA, CARD_SAVE_KEYS, CARD_PACKS, CARD_TECH_KEEP_MAX, CARD_GACHA_PER_PACK, CARD_CATALOG_COST, cardNormalizeGacha, cardNormalizeCatalogs, cardGachaProgress, cardExchangeCatalog, cardCatalogPool, cardUseCatalog, cardPackIdOf };', ctx);
+  + 'this.E = { cardPackProgress, cardPackTechPool, cardPackMonPool, CARD_BATTLE_DATA, CARD_SAVE_KEYS, CARD_PACKS, CARD_TECH_KEEP_MAX, CARD_GACHA_PER_PACK, CARD_CATALOG_COST, cardNormalizeGacha, cardNormalizeCatalogs, cardGachaProgress, cardExchangeCatalog, cardCatalogPool, cardUseCatalog, cardPackIdOf };', ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
+// ⑩ パックのコンプの印(2026-10-31 社長「技カードを3枚ずつコンプしてる場合や回す必要がない場合をわかるようにして」)
+{ const pk = E.CARD_PACKS[0];
+  const techs = E.cardPackTechPool(db, pk); const mons = ['normal', 'kira', 'alt'].filter((r) => pk.rarity[r] > 0).flatMap((r) => E.cardPackMonPool(db, pk, r));
+  const full = Object.fromEntries([...techs.map((no) => [no, E.CARD_TECH_KEEP_MAX]), ...mons.map((no) => [no, 1])]);
+  const p0 = E.cardPackProgress(db, pk, {}); const p1 = E.cardPackProgress(db, pk, full);
+  const p2 = E.cardPackProgress(db, pk, { ...full, [techs[0]]: 1, [mons[0]]: 0 });
+  const p3 = E.cardPackProgress(db, pk, { ...full, [techs[0]]: 9 });
+  check('⑩ 何も持っていないと、技は 3×種類ぶん・モンスターは全部足りない', p0.tech === techs.length * 3 && p0.mon === mons.length && techs.length > 0 && mons.length > 0, JSON.stringify(p0));
+  check('⑩ 全部そろうと 0・0(回す必要なし)', p1.tech === 0 && p1.mon === 0, JSON.stringify(p1));
+  check('⑩ 技1種が1枚・モンスター1体が無いと「あと2枚・あと1体」', p2.tech === 2 && p2.mon === 1, JSON.stringify(p2));
+  check('⑩ 3枚より多く持っていてもマイナスにならない', p3.tech === 0, JSON.stringify(p3));
+  check('⑩ 壊れた持ち数でも落ちない', E.cardPackProgress(db, pk, null).tech === p0.tech && E.cardPackProgress(db, pk, { [techs[0]]: 'x' }).tech === p0.tech); }
 check('保存キーは新しい名前(mh_card_gacha_points_v1・mh_card_catalogs_v1)', E.CARD_SAVE_KEYS.gacha === 'mh_card_gacha_points_v1' && E.CARD_SAVE_KEYS.catalogs === 'mh_card_catalogs_v1');
 check('1パック10・交換は500', E.CARD_GACHA_PER_PACK === 10 && E.CARD_CATALOG_COST === 500);
 check('① 無い・壊れているときは 0', [undefined, null, 'abc', -5, NaN, {}, []].every((v) => E.cardNormalizeGacha(v) === 0 && E.cardNormalizeCatalogs(v) === 0));
@@ -175,6 +187,23 @@ const browser = async () => {
     check('⑧ 「もらう」を続けて2回押しても、1冊減って選んだカードが1枚増えるだけ', afterUse.c === 0 && afterUse.after === afterUse.before + 1 && afterUse.others === 0 && /手に入れました/.test(doneMsg), JSON.stringify({ target, ...afterUse, doneMsg }));
     check('⑧ カタログが0冊になると「もらう」は押せない', await page.locator('[data-card-catalog-take]').isDisabled());
     await page.locator('[data-card-catalog-close]').click();
+    // ⑩ パックの札にコンプの印(第1弾を全部そろえた形にして、売り場を開き直す)
+    { const pk = E.CARD_PACKS[0];
+      const techs = E.cardPackTechPool(db, pk); const mons = ['normal', 'kira', 'alt'].filter((r) => pk.rarity[r] > 0).flatMap((r) => E.cardPackMonPool(db, pk, r));
+      const now = (await get('mh_card_collection_v1')) || {};
+      const full = { ...now, ...Object.fromEntries([...techs.map((no) => [no, E.CARD_TECH_KEEP_MAX]), ...mons.map((no) => [no, 1])]) };
+      await page.evaluate((v) => localStorage.setItem('mh_card_collection_v1', JSON.stringify(v)), full);
+      await backTop(); await openShop();
+      await page.getByRole('tab', { name: 'パック' }).click().catch(() => {}); await page.waitForTimeout(400);
+      const k1 = await page.locator('[data-card-shop-pack="p1"] [data-card-shop-pack-progress]').getAttribute('data-card-shop-pack-progress').catch(() => null);
+      const t1 = await page.locator('[data-card-shop-pack="p1"] [data-card-shop-pack-progress]').innerText().catch(() => '');
+      const k2 = await page.locator('[data-card-shop-pack="p2"] [data-card-shop-pack-progress]').getAttribute('data-card-shop-pack-progress').catch(() => null);
+      const t2 = await page.locator('[data-card-shop-pack="p2"] [data-card-shop-pack-progress]').innerText().catch(() => '');
+      check('⑩ そろえた第1弾は「コンプ済み・回す必要なし」・第2弾は「あと◯枚」', k1 === 'done' && /回す必要なし/.test(t1) && k2 === 'left' && /あと\d+枚/.test(t2), JSON.stringify({ k1, t1, k2, t2 }));
+      check('⑩ そろえた弾でも、買うボタンは押せる(引くのは止めない)', !(await page.locator('[data-card-shop-buy="p1-1"]').isDisabled()));
+      await page.setViewportSize({ width: 320, height: 640 }); await page.waitForTimeout(300);
+      const fit = await page.locator('[data-card-shop-pack="p2"]').evaluate((el) => { const r = el.getBoundingClientRect(); const t = el.querySelector('[data-card-shop-pack-progress]').getBoundingClientRect(); return { right: Math.round(t.right), box: Math.round(r.right) }; });
+      check('⑩ 幅320pxでも印が札からはみ出さない', fit.right <= fit.box, JSON.stringify(fit)); }
     check('⑨ 本番のサーバーへ書く通信は止めた(止めた数を出すだけ)', true, `${writes.length}件`);
     check('画面でエラーが出ない', errors.length === 0, errors.slice(0, 2).join(' / '));
   } finally { await b.close(); server.close(); }

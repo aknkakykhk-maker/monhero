@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2b94dc46e990e145
+// source-sha256: 7a5f397cc8238157
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -96868,6 +96868,22 @@ const cardPackIdOf = (db, no) => {
 };
 const cardPackTechPool = (db, pack) => Object.values(db.cards).filter(c => c.ready && cardPackIdOf(db, c.no) === pack.id).map(c => c.no).sort();
 const cardPackMonPool = (db, pack, rarity) => Object.values(db.monsters).filter(m => m.ready !== false && !m.dexOnly && cardMonRarity(m) === rarity && cardPackIdOf(db, m.no) === pack.id).map(m => m.no).sort();
+const cardPackProgress = (db, pack, collection) => {
+  const own = no => {
+    const n = Math.floor(Number(collection && collection[no]));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+  const techs = cardPackTechPool(db, pack);
+  const tech = techs.reduce((sum, no) => sum + Math.max(0, CARD_TECH_KEEP_MAX - own(no)), 0);
+  const mons = ['normal', 'kira', 'alt'].filter(r => (pack.rarity[r] || 0) > 0).flatMap(r => cardPackMonPool(db, pack, r));
+  const mon = mons.filter(no => own(no) === 0).length;
+  return {
+    tech,
+    techKinds: techs.length,
+    mon,
+    monKinds: mons.length
+  };
+};
 const cardPackAllCards = (db, pack) => ({
   monsters: Object.values(db.monsters).filter(m => cardPackIdOf(db, m.no) === pack.id).map(m => m.no).sort(),
   cards: Object.values(db.cards).filter(c => cardPackIdOf(db, c.no) === pack.id).map(c => c.no).sort()
@@ -106947,7 +106963,17 @@ const CardShopPacks = ({
   }, pack.name), React.createElement("div", {
     "data-card-shop-pack-species": true,
     className: "text-[11px] font-black text-amber-100"
-  }, cardPackSpeciesLabel(db, pack)), React.createElement("div", {
+  }, cardPackSpeciesLabel(db, pack)), collection && (() => {
+    const pg = cardPackProgress(db, pack, collection);
+    const done = pg.tech === 0 && pg.mon === 0;
+    const text = done ? '✅ コンプ済み・回す必要なし' : pg.tech === 0 ? `✅ 技カード コンプ済み・あとモンスター${pg.mon}体` : `技カード あと${pg.tech}枚${pg.mon > 0 ? `・モンスター あと${pg.mon}体` : '・モンスターはそろっています'}`;
+    return React.createElement("div", {
+      "data-card-shop-pack-progress": done ? 'done' : pg.tech === 0 ? 'tech' : 'left',
+      "data-card-shop-pack-left": `${pg.tech}-${pg.mon}`,
+      className: `mt-0.5 inline-block rounded-md px-1.5 py-0.5 text-[11px] font-black ${done ? 'bg-emerald-400 text-slate-950' : pg.tech === 0 ? 'bg-emerald-900/70 text-emerald-100' : 'bg-slate-900/70 text-slate-200'}`,
+      style: JA_WRAP_STYLE
+    }, jaWrap(text));
+  })(), React.createElement("div", {
     className: "text-[11px] font-bold text-slate-300",
     style: JA_WRAP_STYLE
   }, jaWrap(pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`)), React.createElement("div", {

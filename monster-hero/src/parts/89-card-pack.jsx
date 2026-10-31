@@ -59,6 +59,17 @@ const cardPackIdOf = (db, no) => {
 const cardPackTechPool = (db, pack) => Object.values(db.cards).filter((c) => c.ready && cardPackIdOf(db, c.no) === pack.id).map((c) => c.no).sort();
 // 図鑑だけの子(dexOnly・立ち絵が無い派生。社長 2026-10-25)はパックに入れない
 const cardPackMonPool = (db, pack, rarity) => Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && cardMonRarity(m) === rarity && cardPackIdOf(db, m.no) === pack.id).map((m) => m.no).sort();
+// その弾で、まだ手に入るものの数(2026-10-31 社長「技カードを3枚ずつコンプしてる場合や回す必要がない場合をわかるようにして」)。
+//   tech … 技などのカードが、持てる上限(3枚)まであと何枚か(足りない分の合計) / mon … まだ持っていないモンスター(出るレア度のものだけ)の数。
+//   どちらも 0 なら、その弾を開けても新しく手に入るものは無い(だぶりはビートPになる)。collection は { 番号: 持っている数 }。読むだけ
+const cardPackProgress = (db, pack, collection) => {
+  const own = (no) => { const n = Math.floor(Number(collection && collection[no])); return Number.isFinite(n) && n > 0 ? n : 0; };
+  const techs = cardPackTechPool(db, pack);
+  const tech = techs.reduce((sum, no) => sum + Math.max(0, CARD_TECH_KEEP_MAX - own(no)), 0);
+  const mons = ['normal', 'kira', 'alt'].filter((r) => (pack.rarity[r] || 0) > 0).flatMap((r) => cardPackMonPool(db, pack, r));
+  const mon = mons.filter((no) => own(no) === 0).length;
+  return { tech, techKinds: techs.length, mon, monKinds: mons.length };
+};
 // 図鑑・中身の一覧用: その弾のカード全部(準備中も含む)
 const cardPackAllCards = (db, pack) => ({
   monsters: Object.values(db.monsters).filter((m) => cardPackIdOf(db, m.no) === pack.id).map((m) => m.no).sort(),
