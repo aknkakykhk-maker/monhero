@@ -2836,7 +2836,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const [packFx, setPackFx] = useState(cardPackFxOn);
   const [tacticsBack, setTacticsBack] = useState('mode'); // 戦術カードの画面から戻る先(97。みんなのデッキから来たら share)
   const [cupOpenId, setCupOpenId] = useState(null); // 個人杯(99-card-cup)で見ていた杯。デッキ登録から戻ったときに開き直す
-  const [tourHome, setTourHome] = useState(null); // HOME の公式杯の札から来た大会(99-card-tournament の cardTourHomeBanner)。戻ると HOME へ帰る
+  const [tourHome, setTourHome] = useState(null); // HOME の公式杯の札・プロフィールの記録から来た大会。戻ると来た所へ帰る
+  const [tourTab, setTourTab] = useState(null); // そのとき最初に開くタブ(プロフィールの「結果を見る」は 'result')
   // オプションの「助手と対戦」の曲の並び: 直している助手と、全員へ写すときの下書き({ list, confirm })
   const [plWho, setPlWho] = useState(null);
   const [plCopy, setPlCopy] = useState(null);
@@ -3242,8 +3243,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     if (!it) return;
     // プロフィールの「バトルカードのデッキ」から: デッキ登録を開き、戻るとそのままプロフィールへ(MFバトルカードを閉じる)
     if (it.kind === 'register' && typeof CardTacticsScreen === 'function') { setTacticsBack('exit'); setView('tactics'); return; }
-    // HOME の公式杯の札から: その大会のトップを開き、戻るとそのまま HOME へ(MFバトルカードを閉じる)
-    if (it.kind === 'tour' && typeof CardTournament === 'function') { setTourHome(typeof it.tourId === 'string' ? it.tourId : null); setView('tour'); return; }
+    // HOME の公式杯の札・プロフィールの「公式杯の記録」から: その大会を開き、戻ると来た所(HOME・プロフィール)へ(MFバトルカードを閉じる)
+    if (it.kind === 'tour' && typeof CardTournament === 'function') { setTourHome(typeof it.tourId === 'string' ? it.tourId : null); setTourTab(it.tab === 'result' ? 'result' : null); setView('tour'); return; }
     if (it.kind === 'fight' && it.entry && startBattleRef.current && typeof cardShareFightLevel === 'function') startBattleRef.current({ who: it.entry.tactics.habit, level: cardShareFightLevel(it.entry.tactics), share: it.entry });
   }, [!!save, !!(save && save.starter), screen]);
   if (!save) return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="MFバトルカード" onBack={onExit}/><ScreenEmpty emoji="⏳" lines={['読み込み中…']}/></div>;
@@ -3575,12 +3576,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               {!cardShareOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">つくっている途中(デバッグ)</span>}
             </button>
           )}
-          {/* MFバトルカード大会(99)。公開の印(cardTourOpen・告知と同じ日)までは、デバッグ設定から入ったときだけ出す */}
-          {typeof CardTournament === 'function' && shareForm && (debug || cardTourOpen()) && (
+          {/* MFバトルカード大会(99)。プレイヤーの入口は HOME の札とプロフィールの「公式杯の記録」(2026-10-31 社長「対戦えらびの大会の札は消す」)。
+              ここはデバッグ設定から入ったときだけ(見返しの見本を開く道) */}
+          {typeof CardTournament === 'function' && shareForm && debug && (
             <button type="button" data-card-mode-tour onClick={() => { Audio_.fgSe.tap(); setView('tour'); }} className="mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-yellow-100 via-yellow-300 to-amber-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]">
               <span aria-hidden="true" className="mhms-mark">CUP</span>
               <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🏆</span><span><b className="block text-[22px] font-black italic leading-tight">大会</b><small className="block text-[11px] font-black text-slate-900/80">登録したデッキで出る・毎日自動で対戦</small></span></span>
-              {!cardTourOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">つくっている途中(デバッグ)</span>}
+              <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">デバッグ</span>
             </button>
           )}
           {/* 個人杯(99-card-cup)。公開の印(cardCupOpen)までは、デバッグ設定から入ったときだけ出す */}
@@ -3629,7 +3631,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         { key: CARD_TOUR_CLAIMED_KEY, before: raw, next: [...claimed, { id: tour.id, ...reward, at: Date.now() }].slice(-100) },
       ]);
     };
-    return <CardTournament initialTour={tourHome} onBack={() => { if (tourHome) { setTourHome(null); onExit(); } else setView('mode'); }} onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('tour'); setView('tactics'); } : null}
+    return <CardTournament initialTour={tourHome} initialTab={tourTab} onBack={() => { if (tourHome) { setTourHome(null); setTourTab(null); onExit(); } else setView('mode'); }} onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('tour'); setView('tactics'); } : null}
       onCredit={creditTour} onOpenReplay={openTourReplay} onSample={debug ? openTourSample : null} knownAssistants={new Set(assistantsUnlockedFrom(seenStoryIds).map((x) => x.id))}/>;
   }
   // 個人杯(99-card-cup。2026-10-31)。デッキ登録へ行って戻ったら、見ていた杯に戻る(cupOpenId)

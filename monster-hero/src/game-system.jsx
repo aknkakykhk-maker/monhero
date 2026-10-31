@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 585d022ecb79a8b1
+// generated-sha256: 1ef0bfb32f61c7fe
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -36987,6 +36987,8 @@ function ProfileScreen({
         {onboarded&&!onboardingPreview&&rhythmAchRows.some(r=>r.clear>0)&&<RhythmAchievementPanel rows={rhythmAchRows} who="self"/>}
         {/* MFバトルカードの戦績(2026-10-26 社長「プロフィールやフレンドでバトルカードの戦績も追加」)。一度も遊んでいなければ出さない。保存は読むだけ(90-card-rank.jsx) */}
         {onboarded&&!onboardingPreview&&<CardBattleStatsSelf/>}
+        {/* MFバトルカード 公式杯の記録(2026-10-31 社長・案B)。終わった大会が1つも無いあいだは出さない。押すと一覧、そこから大会の画面(戻るとプロフィール) */}
+        {onboarded&&!onboardingPreview&&typeof CardTourHistoryButton==='function'&&typeof onCardShareGo==='function'&&<CardTourHistoryButton onOpen={(tourId,tab)=>onCardShareGo({kind:'tour',tourId,tab})}/>}
         {/* モンヒロビートの履歴: 終わった週間ランキング・イベントの順位をあとから見る。
             2026-09-13・ユーザー依頼「モンビーのイベントや週間ランキングの終わったものを
             ヒストリー的に見れる機能」。置き場所もユーザーが決めた(プロフィール)。
@@ -61953,7 +61955,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const [packFx, setPackFx] = useState(cardPackFxOn);
   const [tacticsBack, setTacticsBack] = useState('mode'); // 戦術カードの画面から戻る先(97。みんなのデッキから来たら share)
   const [cupOpenId, setCupOpenId] = useState(null); // 個人杯(99-card-cup)で見ていた杯。デッキ登録から戻ったときに開き直す
-  const [tourHome, setTourHome] = useState(null); // HOME の公式杯の札から来た大会(99-card-tournament の cardTourHomeBanner)。戻ると HOME へ帰る
+  const [tourHome, setTourHome] = useState(null); // HOME の公式杯の札・プロフィールの記録から来た大会。戻ると来た所へ帰る
+  const [tourTab, setTourTab] = useState(null); // そのとき最初に開くタブ(プロフィールの「結果を見る」は 'result')
   // オプションの「助手と対戦」の曲の並び: 直している助手と、全員へ写すときの下書き({ list, confirm })
   const [plWho, setPlWho] = useState(null);
   const [plCopy, setPlCopy] = useState(null);
@@ -62359,8 +62362,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     if (!it) return;
     // プロフィールの「バトルカードのデッキ」から: デッキ登録を開き、戻るとそのままプロフィールへ(MFバトルカードを閉じる)
     if (it.kind === 'register' && typeof CardTacticsScreen === 'function') { setTacticsBack('exit'); setView('tactics'); return; }
-    // HOME の公式杯の札から: その大会のトップを開き、戻るとそのまま HOME へ(MFバトルカードを閉じる)
-    if (it.kind === 'tour' && typeof CardTournament === 'function') { setTourHome(typeof it.tourId === 'string' ? it.tourId : null); setView('tour'); return; }
+    // HOME の公式杯の札・プロフィールの「公式杯の記録」から: その大会を開き、戻ると来た所(HOME・プロフィール)へ(MFバトルカードを閉じる)
+    if (it.kind === 'tour' && typeof CardTournament === 'function') { setTourHome(typeof it.tourId === 'string' ? it.tourId : null); setTourTab(it.tab === 'result' ? 'result' : null); setView('tour'); return; }
     if (it.kind === 'fight' && it.entry && startBattleRef.current && typeof cardShareFightLevel === 'function') startBattleRef.current({ who: it.entry.tactics.habit, level: cardShareFightLevel(it.entry.tactics), share: it.entry });
   }, [!!save, !!(save && save.starter), screen]);
   if (!save) return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="MFバトルカード" onBack={onExit}/><ScreenEmpty emoji="⏳" lines={['読み込み中…']}/></div>;
@@ -62692,12 +62695,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               {!cardShareOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">つくっている途中(デバッグ)</span>}
             </button>
           )}
-          {/* MFバトルカード大会(99)。公開の印(cardTourOpen・告知と同じ日)までは、デバッグ設定から入ったときだけ出す */}
-          {typeof CardTournament === 'function' && shareForm && (debug || cardTourOpen()) && (
+          {/* MFバトルカード大会(99)。プレイヤーの入口は HOME の札とプロフィールの「公式杯の記録」(2026-10-31 社長「対戦えらびの大会の札は消す」)。
+              ここはデバッグ設定から入ったときだけ(見返しの見本を開く道) */}
+          {typeof CardTournament === 'function' && shareForm && debug && (
             <button type="button" data-card-mode-tour onClick={() => { Audio_.fgSe.tap(); setView('tour'); }} className="mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-yellow-100 via-yellow-300 to-amber-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]">
               <span aria-hidden="true" className="mhms-mark">CUP</span>
               <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🏆</span><span><b className="block text-[22px] font-black italic leading-tight">大会</b><small className="block text-[11px] font-black text-slate-900/80">登録したデッキで出る・毎日自動で対戦</small></span></span>
-              {!cardTourOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">つくっている途中(デバッグ)</span>}
+              <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">デバッグ</span>
             </button>
           )}
           {/* 個人杯(99-card-cup)。公開の印(cardCupOpen)までは、デバッグ設定から入ったときだけ出す */}
@@ -62746,7 +62750,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         { key: CARD_TOUR_CLAIMED_KEY, before: raw, next: [...claimed, { id: tour.id, ...reward, at: Date.now() }].slice(-100) },
       ]);
     };
-    return <CardTournament initialTour={tourHome} onBack={() => { if (tourHome) { setTourHome(null); onExit(); } else setView('mode'); }} onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('tour'); setView('tactics'); } : null}
+    return <CardTournament initialTour={tourHome} initialTab={tourTab} onBack={() => { if (tourHome) { setTourHome(null); setTourTab(null); onExit(); } else setView('mode'); }} onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('tour'); setView('tactics'); } : null}
       onCredit={creditTour} onOpenReplay={openTourReplay} onSample={debug ? openTourSample : null} knownAssistants={new Set(assistantsUnlockedFrom(seenStoryIds).map((x) => x.id))}/>;
   }
   // 個人杯(99-card-cup。2026-10-31)。デッキ登録へ行って戻ったら、見ていた杯に戻る(cupOpenId)
@@ -71317,15 +71321,15 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
 // ---- part: 99-card-tournament.jsx ----
 // ===== MFバトルカード大会: 画面(2026-10-30 ルールくん・大会 PR3) =====
 // 仕様: docs/progress/card-tournament/plan/README.md / サーバ: docs/spec/CARD_TOURNAMENT.md
-//   入口(対戦えらびの「大会」)→ 大会の一覧 → 1つの大会: 受付中はエントリー、始まったら 対戦表・試合・順位(終わったらごほうび)
+//   入口(HOME の札・プロフィールの記録。デバッグは対戦えらびの「大会」も)→ 大会の一覧 → 1つの大会: 受付中はエントリー、始まったら 対戦表・試合・順位(終わったらごほうび)
 //   ・エントリーするのは「デッキ登録」(95)で登録した1組。締め切りでサーバが写しを取る。持ち主の見分けは登録と同じ鍵(mh_card_deck_owner_key_v1)
 //   ・試合はサーバが回す。結果は表の「見せてよい時刻」(その日の 4:00)を過ぎた物だけ返ってくる
 //   ・見返しの入口(onOpenReplay)は PR4(リプレイくん)。渡されないうちは「準備中」
 //   ・まだ会っていない助手は、顔と名前を出さない(ネタバレ)
 //   ・表が無い・通信できないときは「準備中」と出して何もしない
 
-// 公開の印。告知(PR5)と同じ日に true にする。それまではデバッグ設定から入ったときだけ入口が出る
-const cardTourOpen = () => false;
+// 入口は HOME の札(大会があるあいだだけ)とプロフィールの「公式杯の記録」(終わった大会があるときだけ)。2026-10-31 社長。
+// 大会の行(card_tournaments)を足すだけで出る。開き方: docs/progress/card-tournament/OPEN_A_TOURNAMENT.md
 // 受け取ったごほうびの記録(新しいキー。[{ id, place, point, at }]・新しい100件まで)。ビートPと同じ取引で保存する
 const CARD_TOUR_CLAIMED_KEY = 'mh_card_tour_claimed_v1';
 const cardTourNormalizeClaimed = (v) => {
@@ -71733,11 +71737,11 @@ const CardTourResult = ({ view, known, claimed, onClaim }) => {
 // onSample … デバッグのときだけ: その場で1試合回して見返しの見本を開く(表に結果のある試合が無くても、会場と実況の見え方を確かめられる)
 // onCredit(tour, reward) … ビートPを足して受け取りの記録を保存する(84 の persist と同じ取引)。保存できたら true
 // knownAssistants … 会ったことのある助手の id(Set)
-const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, onCredit = null, knownAssistants = null, onSample = null, initialTour = null }) => {
+const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, onCredit = null, knownAssistants = null, onSample = null, initialTour = null, initialTab = null }) => {
   const [list, setList] = useState(undefined);  // undefined … 読み込み中 / null … 表が無い・通信できない
   const [tourId, setTourId] = useState(null);
   const [view, setView] = useState(null);
-  const [tab, setTab] = useState('grid');
+  const [tab, setTab] = useState(initialTab === 'result' ? 'result' : 'grid');
   const [stageKey, setStageKey] = useState(null); // 'g0' 'g1' … 'final'
   const [selfId, setSelfId] = useState(null);
   const [mine, setMine] = useState(undefined);
@@ -71755,8 +71759,8 @@ const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, on
       if (!alive) return;
       setSelfId(id); setMine(m || null); setClaimed(cardTourNormalizeClaimed(c) || []);
       setList(l);
-      // HOME の札から来たときは、その大会のトップをそのまま開く
-      if (l && initialTour && l.some((t) => t.id === initialTour)) setTourId(initialTour);
+      // HOME の札・プロフィールの記録から来たときは、その大会をそのまま開く(終わって14日を過ぎた大会は一覧に無いが、大会の中身は読める)
+      if (l && initialTour) setTourId(initialTour);
       else if (l && l.length === 1) setTourId(l[0].id);
     })();
     return () => { alive = false; };
@@ -71815,19 +71819,91 @@ const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, on
     || stages.find((s) => view.entries.some((e) => e.mine && e.grp === s.grp && s.stage === 'group')) || stages[stages.length - 1];
   const st = stages.find((s) => s.key === stageKey) || myStage;
   const tabs = [['grid', '対戦表'], ['today', '試合'], ...(t.status === 'done' ? [['result', '結果']] : [])];
+  const shownTab = tab === 'result' && t.status !== 'done' ? 'grid' : tab;
   return shell(<>
     <CardTourHeadCard t={t} now={now}/>
     <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
-      {tabs.map(([k, label]) => <button key={k} type="button" data-card-tour-tab={k} onClick={() => { Audio_.fgSe.tap(); setTab(k); }} className={`rounded-xl py-2 text-[14px] font-black ${tab === k ? 'bg-gradient-to-b from-amber-300 to-orange-500 text-slate-950' : 'border-2 border-amber-500/60 bg-amber-100 text-amber-900'}`}>{label}</button>)}
+      {tabs.map(([k, label]) => <button key={k} type="button" data-card-tour-tab={k} onClick={() => { Audio_.fgSe.tap(); setTab(k); }} className={`rounded-xl py-2 text-[14px] font-black ${shownTab === k ? 'bg-gradient-to-b from-amber-300 to-orange-500 text-slate-950' : 'border-2 border-amber-500/60 bg-amber-100 text-amber-900'}`}>{label}</button>)}
     </div>
-    {tab === 'grid' && stages.length > 1 && (
+    {shownTab === 'grid' && stages.length > 1 && (
       <div className="flex flex-wrap gap-1">{stages.map((s) => <button key={s.key} type="button" data-card-tour-stage={s.key} onClick={() => setStageKey(s.key)} className={`rounded-full px-3 py-1 text-[12px] font-black ${s.key === st.key ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`}>{s.label}</button>)}</div>
     )}
-    {tab === 'grid' && <CardTourGrid key={`${t.id}|${st.key}`} view={view} stage={st.stage} grp={st.grp} known={known} now={now}/>}
-    {tab === 'today' && <CardTourToday view={view} known={known} now={now} onOpenReplay={onOpenReplay}/>}
-    {tab === 'result' && <CardTourResult view={view} known={known} claimed={claimed} onClaim={claim}/>}
+    {shownTab === 'grid' && <CardTourGrid key={`${t.id}|${st.key}`} view={view} stage={st.stage} grp={st.grp} known={known} now={now}/>}
+    {shownTab === 'today' && <CardTourToday view={view} known={known} now={now} onOpenReplay={onOpenReplay}/>}
+    {shownTab === 'result' && <CardTourResult view={view} known={known} claimed={claimed} onClaim={claim}/>}
     {msg && <p data-card-tour-msg className="rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
   </>, 'MFバトルカード大会', backFromTour);
+};
+
+// ---- プロフィールの「MFバトルカード 公式杯の記録」(2026-10-31 社長・案B) ----
+// 終わった大会を新しい順に並べ、「結果を見る」「対戦表・見返し」でその大会の画面を開く(戻るとプロフィール)。
+// 一覧は読むだけの card_tournament_history(docs/sql/card-tournament/CARD_TOURNAMENT_HISTORY_APPLY.sql)。終わった大会が無い・読めないときはボタンを出さない
+const cardTourNormalizeHistory = (rows) => (Array.isArray(rows) ? rows : []).map((r) => {
+  if (!r || typeof r.id !== 'string' || !/^[a-z0-9_-]{1,32}$/.test(r.id)) return null;
+  const w = r.winner && typeof r.winner === 'object' ? r.winner : null;
+  return { id: r.id, name: typeof r.name === 'string' && r.name ? r.name.slice(0, 40) : 'MFバトルカード大会', openOn: cardTourDate(r.open_on), doneDay: cardTourDate(r.done_day),
+    rewards: cardTourNormalizeRewards(r.rewards), players: Number.isInteger(r.players) && r.players >= 0 ? r.players : null,
+    winner: w ? { name: typeof w.user_name === 'string' ? w.user_name.slice(0, 40) : typeof w.name === 'string' ? w.name.slice(0, 40) : 'ブリーダー', assist: w.is_assist === true, assistId: typeof w.assist_id === 'string' ? w.assist_id : null } : null,
+    myPlace: cardTourInt(r.my_place), entered: r.my_entered === true };
+}).filter(Boolean).slice(0, 50);
+const cardTourFetchHistory = async (ownerId) => {
+  const rows = await cardTourRpc('card_tournament_history', { p_owner: ownerId || '' });
+  return Array.isArray(rows) ? cardTourNormalizeHistory(rows) : null;
+};
+const CardTourHistoryList = ({ list, known, onOpen, onClose }) => (
+  <div data-card-tour-history className="fixed inset-0 z-[80] flex justify-center bg-slate-950">
+    <div className={`${SCREEN_SHELL_CLASS} w-full max-w-[600px]`}>
+      <ScreenHead title="公式杯の記録" accent="text-amber-200" onBack={onClose} note="終わった大会の結果と、試合の見返しを見られます。新しい順"/>
+      <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+        {list.map((t) => {
+          const first = t.rewards.ranks[0] ? t.rewards.ranks[0].point : 0;
+          const winner = t.winner ? (t.winner.assist ? cardTourAssistOf(t.winner.assistId, known).name : t.winner.name) : null;
+          const me = t.myPlace ? `${t.myPlace}位` : t.entered ? '出場' : '出場なし';
+          return (
+            <div key={t.id} data-card-tour-history-row={t.id} className="rounded-2xl border-2 border-amber-600/60 bg-indigo-950/70 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <b className="min-w-0 flex-1 break-words text-[15px] font-black leading-tight text-amber-100">{t.name}</b>
+                <span data-card-tour-history-me className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-black ${t.myPlace && t.myPlace <= 3 ? 'bg-amber-400 text-slate-950' : 'bg-slate-700 text-slate-100'}`}>あなた {me}</span>
+              </div>
+              <div className="mt-1 text-[11.5px] font-bold text-slate-300" style={JA_WRAP_STYLE}>
+                {jaWrap([t.openOn && t.doneDay ? `${cardTourDayLabel(t.openOn)}〜${cardTourDayLabel(t.doneDay)}` : '', winner ? `優勝 ${winner}` : '', first > 0 ? `1位 ビートP ${first.toLocaleString()}` : ''].filter(Boolean).join(' ・ '))}
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-1.5">
+                <button type="button" data-card-tour-history-open="result" onClick={() => { Audio_.fgSe.tap(); onOpen(t.id, 'result'); }} className="rounded-xl bg-amber-500 py-2 text-[12px] font-black text-slate-950 active:scale-[.98]">結果を見る</button>
+                <button type="button" data-card-tour-history-open="grid" onClick={() => { Audio_.fgSe.tap(); onOpen(t.id, 'grid'); }} className="rounded-xl bg-indigo-800 py-2 text-[12px] font-black text-indigo-50 active:scale-[.98]">対戦表・見返し</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+);
+const CardTourHistoryButton = ({ onOpen, knownAssistants = null }) => {
+  const [list, setList] = useState(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const id = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+      const l = await cardTourFetchHistory(id).catch(() => null);
+      if (alive) setList(l);
+    })();
+    return () => { alive = false; };
+  }, []);
+  if (!list || !list.length || typeof onOpen !== 'function') return null;
+  const known = knownAssistants instanceof Set ? knownAssistants : new Set();
+  return (<>
+    <button type="button" data-profile-card-tour-history onClick={() => { Audio_.fgSe.tap(); setOpen(true); }} className="mb-4 flex w-full min-h-[64px] items-center gap-2 rounded-2xl border border-amber-400/40 bg-amber-950/40 px-3 py-2.5 active:scale-[.98]">
+      <span aria-hidden="true" className="shrink-0 text-[18px] leading-none">🏆</span>
+      <span className="min-w-0 flex-1 text-left">
+        <b className="block text-[13px] font-black text-amber-100">MFバトルカード 公式杯の記録</b>
+        <small className="block text-[10px] text-amber-300">{`終わった大会の結果・見返しを見られます（${list.length}件）`}</small>
+      </span>
+      <span aria-hidden="true" className="shrink-0 text-[16px] font-black text-amber-400">›</span>
+    </button>
+    {open && <CardTourHistoryList list={list} known={known} onClose={() => setOpen(false)} onOpen={(id, tab) => { setOpen(false); onOpen(id, tab); }}/>}
+  </>);
 };
 
 // ---- part: 99-card-cup.jsx ----
@@ -91379,8 +91455,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             cardBattleVisible={(EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&cardBattleIntroSeenFlag)||cardBattleDebugHome} onOpenCardBattle={()=>{setCardOrigin('home');setGameState('CARD_TOP');}}
             /* 公開前の予告(社長 2026-10-25)。ふつうのプレイヤーに「近日公開」の札を出し、押すと予告の小窓。公開の印が立てば出なくなり、上のふつうの入口に替わる */
             cardBattleTeaser={!EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&!cardBattleDebugHome} onOpenCardTeaser={()=>setCardTeaserOpen(true)}
-            /* 公式杯の札(2026-10-31 社長・案A)。大会の公開の印(cardTourOpen)まではデバッグの端末だけ。押すと MFバトルカードの大会のトップを開き、戻ると HOME */
-            cardTourVisible={(((EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&cardBattleIntroSeenFlag)&&typeof cardTourOpen==='function'&&cardTourOpen())||cardBattleDebugHome)}
+            /* 公式杯の札(2026-10-31 社長・案A)。MFバトルカードに入れる人に、大会があるあいだだけ出る(大会の行を足すだけで出る)。押すと大会のトップを開き、戻ると HOME */
+            cardTourVisible={(EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&cardBattleIntroSeenFlag)||cardBattleDebugHome}
             onOpenCardTour={(tourId)=>{if(typeof cardShareIntentSet==='function')cardShareIntentSet({kind:'tour',tourId});setCardOrigin('home');setGameState('CARD_TOP');}}
           />
         )}

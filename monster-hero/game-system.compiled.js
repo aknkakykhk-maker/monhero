@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 84fe16249a1d864c
+// source-sha256: 293a09c4ff023df2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -59380,7 +59380,13 @@ function ProfileScreen({
   })(), onboarded && !onboardingPreview && rhythmAchRows.some(r => r.clear > 0) && React.createElement(RhythmAchievementPanel, {
     rows: rhythmAchRows,
     who: "self"
-  }), onboarded && !onboardingPreview && React.createElement(CardBattleStatsSelf, null), onboarded && !onboardingPreview && Number(rhythmHistoryCount) > 0 && React.createElement("button", {
+  }), onboarded && !onboardingPreview && React.createElement(CardBattleStatsSelf, null), onboarded && !onboardingPreview && typeof CardTourHistoryButton === 'function' && typeof onCardShareGo === 'function' && React.createElement(CardTourHistoryButton, {
+    onOpen: (tourId, tab) => onCardShareGo({
+      kind: 'tour',
+      tourId,
+      tab
+    })
+  }), onboarded && !onboardingPreview && Number(rhythmHistoryCount) > 0 && React.createElement("button", {
     type: "button",
     "data-profile-rhythm-history": true,
     onClick: onOpenRhythmHistory,
@@ -102616,6 +102622,7 @@ const CardBattleScreen = ({
   const [tacticsBack, setTacticsBack] = useState('mode');
   const [cupOpenId, setCupOpenId] = useState(null);
   const [tourHome, setTourHome] = useState(null);
+  const [tourTab, setTourTab] = useState(null);
   const [plWho, setPlWho] = useState(null);
   const [plCopy, setPlCopy] = useState(null);
   const bgmPreviewRef = useRef(bgmPreview);
@@ -103302,6 +103309,7 @@ const CardBattleScreen = ({
     }
     if (it.kind === 'tour' && typeof CardTournament === 'function') {
       setTourHome(typeof it.tourId === 'string' ? it.tourId : null);
+      setTourTab(it.tab === 'result' ? 'result' : null);
       setView('tour');
       return;
     }
@@ -104048,7 +104056,7 @@ const CardBattleScreen = ({
       className: "block text-[11px] font-black text-slate-900/80"
     }, "デッキを登録する・戦術カードを組む・引く"))), !cardShareOpen() && React.createElement("span", {
       className: "relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white"
-    }, "つくっている途中(デバッグ)")), typeof CardTournament === 'function' && shareForm && (debug || cardTourOpen()) && React.createElement("button", {
+    }, "つくっている途中(デバッグ)")), typeof CardTournament === 'function' && shareForm && debug && React.createElement("button", {
       type: "button",
       "data-card-mode-tour": true,
       onClick: () => {
@@ -104068,9 +104076,9 @@ const CardBattleScreen = ({
       className: "block text-[22px] font-black italic leading-tight"
     }, "大会"), React.createElement("small", {
       className: "block text-[11px] font-black text-slate-900/80"
-    }, "登録したデッキで出る・毎日自動で対戦"))), !cardTourOpen() && React.createElement("span", {
+    }, "登録したデッキで出る・毎日自動で対戦"))), React.createElement("span", {
       className: "relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white"
-    }, "つくっている途中(デバッグ)")), typeof CardCup === 'function' && shareForm && (debug || cardCupOpen()) && React.createElement("button", {
+    }, "デバッグ")), typeof CardCup === 'function' && shareForm && (debug || cardCupOpen()) && React.createElement("button", {
       type: "button",
       "data-card-mode-cup": true,
       onClick: () => {
@@ -104181,9 +104189,11 @@ const CardBattleScreen = ({
     };
     return React.createElement(CardTournament, {
       initialTour: tourHome,
+      initialTab: tourTab,
       onBack: () => {
         if (tourHome) {
           setTourHome(null);
+          setTourTab(null);
           onExit();
         } else setView('mode');
       },
@@ -121040,7 +121050,6 @@ const CardDeckRegister = ({
     }
   }));
 };
-const cardTourOpen = () => false;
 const CARD_TOUR_CLAIMED_KEY = 'mh_card_tour_claimed_v1';
 const cardTourNormalizeClaimed = v => {
   if (v === null || v === undefined) return [];
@@ -121682,12 +121691,13 @@ const CardTournament = ({
   onCredit = null,
   knownAssistants = null,
   onSample = null,
-  initialTour = null
+  initialTour = null,
+  initialTab = null
 }) => {
   const [list, setList] = useState(undefined);
   const [tourId, setTourId] = useState(null);
   const [view, setView] = useState(null);
-  const [tab, setTab] = useState('grid');
+  const [tab, setTab] = useState(initialTab === 'result' ? 'result' : 'grid');
   const [stageKey, setStageKey] = useState(null);
   const [selfId, setSelfId] = useState(null);
   const [mine, setMine] = useState(undefined);
@@ -121706,7 +121716,7 @@ const CardTournament = ({
       setMine(m || null);
       setClaimed(cardTourNormalizeClaimed(c) || []);
       setList(l);
-      if (l && initialTour && l.some(t => t.id === initialTour)) setTourId(initialTour);else if (l && l.length === 1) setTourId(l[0].id);
+      if (l && initialTour) setTourId(initialTour);else if (l && l.length === 1) setTourId(l[0].id);
     })();
     return () => {
       alive = false;
@@ -121845,6 +121855,7 @@ const CardTournament = ({
   const myStage = stages.find(s => s.stage === 'final' && view.entries.some(e => e.mine && e.finalSeat !== null)) || stages.find(s => view.entries.some(e => e.mine && e.grp === s.grp && s.stage === 'group')) || stages[stages.length - 1];
   const st = stages.find(s => s.key === stageKey) || myStage;
   const tabs = [['grid', '対戦表'], ['today', '試合'], ...(t.status === 'done' ? [['result', '結果']] : [])];
+  const shownTab = tab === 'result' && t.status !== 'done' ? 'grid' : tab;
   return shell(React.createElement(React.Fragment, null, React.createElement(CardTourHeadCard, {
     t: t,
     now: now
@@ -121861,8 +121872,8 @@ const CardTournament = ({
       Audio_.fgSe.tap();
       setTab(k);
     },
-    className: `rounded-xl py-2 text-[14px] font-black ${tab === k ? 'bg-gradient-to-b from-amber-300 to-orange-500 text-slate-950' : 'border-2 border-amber-500/60 bg-amber-100 text-amber-900'}`
-  }, label))), tab === 'grid' && stages.length > 1 && React.createElement("div", {
+    className: `rounded-xl py-2 text-[14px] font-black ${shownTab === k ? 'bg-gradient-to-b from-amber-300 to-orange-500 text-slate-950' : 'border-2 border-amber-500/60 bg-amber-100 text-amber-900'}`
+  }, label))), shownTab === 'grid' && stages.length > 1 && React.createElement("div", {
     className: "flex flex-wrap gap-1"
   }, stages.map(s => React.createElement("button", {
     key: s.key,
@@ -121870,19 +121881,19 @@ const CardTournament = ({
     "data-card-tour-stage": s.key,
     onClick: () => setStageKey(s.key),
     className: `rounded-full px-3 py-1 text-[12px] font-black ${s.key === st.key ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`
-  }, s.label))), tab === 'grid' && React.createElement(CardTourGrid, {
+  }, s.label))), shownTab === 'grid' && React.createElement(CardTourGrid, {
     key: `${t.id}|${st.key}`,
     view: view,
     stage: st.stage,
     grp: st.grp,
     known: known,
     now: now
-  }), tab === 'today' && React.createElement(CardTourToday, {
+  }), shownTab === 'today' && React.createElement(CardTourToday, {
     view: view,
     known: known,
     now: now,
     onOpenReplay: onOpenReplay
-  }), tab === 'result' && React.createElement(CardTourResult, {
+  }), shownTab === 'result' && React.createElement(CardTourResult, {
     view: view,
     known: known,
     claimed: claimed,
@@ -121892,6 +121903,135 @@ const CardTournament = ({
     className: "rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100",
     style: JA_WRAP_STYLE
   }, jaWrap(msg))), 'MFバトルカード大会', backFromTour);
+};
+const cardTourNormalizeHistory = rows => (Array.isArray(rows) ? rows : []).map(r => {
+  if (!r || typeof r.id !== 'string' || !/^[a-z0-9_-]{1,32}$/.test(r.id)) return null;
+  const w = r.winner && typeof r.winner === 'object' ? r.winner : null;
+  return {
+    id: r.id,
+    name: typeof r.name === 'string' && r.name ? r.name.slice(0, 40) : 'MFバトルカード大会',
+    openOn: cardTourDate(r.open_on),
+    doneDay: cardTourDate(r.done_day),
+    rewards: cardTourNormalizeRewards(r.rewards),
+    players: Number.isInteger(r.players) && r.players >= 0 ? r.players : null,
+    winner: w ? {
+      name: typeof w.user_name === 'string' ? w.user_name.slice(0, 40) : typeof w.name === 'string' ? w.name.slice(0, 40) : 'ブリーダー',
+      assist: w.is_assist === true,
+      assistId: typeof w.assist_id === 'string' ? w.assist_id : null
+    } : null,
+    myPlace: cardTourInt(r.my_place),
+    entered: r.my_entered === true
+  };
+}).filter(Boolean).slice(0, 50);
+const cardTourFetchHistory = async ownerId => {
+  const rows = await cardTourRpc('card_tournament_history', {
+    p_owner: ownerId || ''
+  });
+  return Array.isArray(rows) ? cardTourNormalizeHistory(rows) : null;
+};
+const CardTourHistoryList = ({
+  list,
+  known,
+  onOpen,
+  onClose
+}) => React.createElement("div", {
+  "data-card-tour-history": true,
+  className: "fixed inset-0 z-[80] flex justify-center bg-slate-950"
+}, React.createElement("div", {
+  className: `${SCREEN_SHELL_CLASS} w-full max-w-[600px]`
+}, React.createElement(ScreenHead, {
+  title: "公式杯の記録",
+  accent: "text-amber-200",
+  onBack: onClose,
+  note: "終わった大会の結果と、試合の見返しを見られます。新しい順"
+}), React.createElement("div", {
+  className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
+}, list.map(t => {
+  const first = t.rewards.ranks[0] ? t.rewards.ranks[0].point : 0;
+  const winner = t.winner ? t.winner.assist ? cardTourAssistOf(t.winner.assistId, known).name : t.winner.name : null;
+  const me = t.myPlace ? `${t.myPlace}位` : t.entered ? '出場' : '出場なし';
+  return React.createElement("div", {
+    key: t.id,
+    "data-card-tour-history-row": t.id,
+    className: "rounded-2xl border-2 border-amber-600/60 bg-indigo-950/70 p-3"
+  }, React.createElement("div", {
+    className: "flex items-start justify-between gap-2"
+  }, React.createElement("b", {
+    className: "min-w-0 flex-1 break-words text-[15px] font-black leading-tight text-amber-100"
+  }, t.name), React.createElement("span", {
+    "data-card-tour-history-me": true,
+    className: `shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-black ${t.myPlace && t.myPlace <= 3 ? 'bg-amber-400 text-slate-950' : 'bg-slate-700 text-slate-100'}`
+  }, "あなた ", me)), React.createElement("div", {
+    className: "mt-1 text-[11.5px] font-bold text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap([t.openOn && t.doneDay ? `${cardTourDayLabel(t.openOn)}〜${cardTourDayLabel(t.doneDay)}` : '', winner ? `優勝 ${winner}` : '', first > 0 ? `1位 ビートP ${first.toLocaleString()}` : ''].filter(Boolean).join(' ・ '))), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-1.5"
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-tour-history-open": "result",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      onOpen(t.id, 'result');
+    },
+    className: "rounded-xl bg-amber-500 py-2 text-[12px] font-black text-slate-950 active:scale-[.98]"
+  }, "結果を見る"), React.createElement("button", {
+    type: "button",
+    "data-card-tour-history-open": "grid",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      onOpen(t.id, 'grid');
+    },
+    className: "rounded-xl bg-indigo-800 py-2 text-[12px] font-black text-indigo-50 active:scale-[.98]"
+  }, "対戦表・見返し")));
+}))));
+const CardTourHistoryButton = ({
+  onOpen,
+  knownAssistants = null
+}) => {
+  const [list, setList] = useState(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const id = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+      const l = await cardTourFetchHistory(id).catch(() => null);
+      if (alive) setList(l);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  if (!list || !list.length || typeof onOpen !== 'function') return null;
+  const known = knownAssistants instanceof Set ? knownAssistants : new Set();
+  return React.createElement(React.Fragment, null, React.createElement("button", {
+    type: "button",
+    "data-profile-card-tour-history": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setOpen(true);
+    },
+    className: "mb-4 flex w-full min-h-[64px] items-center gap-2 rounded-2xl border border-amber-400/40 bg-amber-950/40 px-3 py-2.5 active:scale-[.98]"
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "shrink-0 text-[18px] leading-none"
+  }, "🏆"), React.createElement("span", {
+    className: "min-w-0 flex-1 text-left"
+  }, React.createElement("b", {
+    className: "block text-[13px] font-black text-amber-100"
+  }, "MFバトルカード 公式杯の記録"), React.createElement("small", {
+    className: "block text-[10px] text-amber-300"
+  }, `終わった大会の結果・見返しを見られます（${list.length}件）`)), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "shrink-0 text-[16px] font-black text-amber-400"
+  }, "›")), open && React.createElement(CardTourHistoryList, {
+    list: list,
+    known: known,
+    onClose: () => setOpen(false),
+    onOpen: (id, tab) => {
+      setOpen(false);
+      onOpen(id, tab);
+    }
+  }));
 };
 const cardCupOpen = () => true;
 const cardCupText = (t, n = 40) => {
@@ -146976,7 +147116,7 @@ function MonsterHeroGame() {
       },
       cardBattleTeaser: !EVENT_REPLAY_RELEASE_FLAGS.cardBattle && !cardBattleDebugHome,
       onOpenCardTeaser: () => setCardTeaserOpen(true),
-      cardTourVisible: EVENT_REPLAY_RELEASE_FLAGS.cardBattle && cardBattleIntroSeenFlag && typeof cardTourOpen === 'function' && cardTourOpen() || cardBattleDebugHome,
+      cardTourVisible: EVENT_REPLAY_RELEASE_FLAGS.cardBattle && cardBattleIntroSeenFlag || cardBattleDebugHome,
       onOpenCardTour: tourId => {
         if (typeof cardShareIntentSet === 'function') cardShareIntentSet({
           kind: 'tour',
