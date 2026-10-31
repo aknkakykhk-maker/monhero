@@ -178,6 +178,51 @@ const cardMonArt = (mon) => {
   if (m && m.imgUrl) return m.imgUrl;
   return cardNewSpeciesArt()[mon.species] || null;
 };
+// ---- 立ち絵を前もって読む(2026-10-31 社長「対戦時に出る立ち絵モンスターが表示されないときがある。事前ダウンロードとかでなんとか」) ----
+//   立ち絵は事前ダウンロードの「バトル」に入っていて、カードだけの人・初めて見る子は対戦のその場で通信していた(遅い回線だと対戦開始の画面に間に合わない)。
+//   ・対戦開始の画面(83 の CardVsIntro)の前に、両方の3体の立ち絵とカードの絵を読む(上限つき)
+//   ・読めなければ1回読み直す。それでもだめなら、その子はカードの絵で出す(真っ白にしない)
+//   ・一度読めた絵は、事前ダウンロード(sw.js)が端末にためるので、次からは通信なしで出る。自動の事前ダウンロードにも立ち絵を入れた(25 の assetCardArtPaths)
+const CARD_ART_STATE = new Map(); // URL → 'ok' | 'ng' | 読んでいる途中の Promise(この起動のあいだだけ)
+const cardArtRetryUrl = (url) => `${url}${url.includes('?') ? '&' : '?'}r=${Date.now()}`;
+const cardArtLoadOne = (url) => {
+  if (!url || typeof Image === 'undefined') return Promise.resolve(false);
+  const s = CARD_ART_STATE.get(url);
+  if (s === 'ok') return Promise.resolve(true);
+  if (s === 'ng') return Promise.resolve(false);
+  if (s && typeof s.then === 'function') return s;
+  const p = new Promise((res) => {
+    const go = (u, left) => {
+      const im = new Image();
+      im.onload = () => { CARD_ART_STATE.set(url, 'ok'); res(true); };
+      im.onerror = () => { if (left > 0) setTimeout(() => go(cardArtRetryUrl(url), left - 1), 600); else { CARD_ART_STATE.set(url, 'ng'); res(false); } };
+      im.src = u;
+    };
+    go(url, 1);
+  });
+  CARD_ART_STATE.set(url, p);
+  return p;
+};
+const cardArtUrlsOf = (db, nos) => [...new Set((nos || []).flatMap((no) => { const m = cardMonsterOf(db, no); return m ? [cardMonArt(m), CARD_IMG(m.img)].filter(Boolean) : []; }))];
+// 前もって読む。読み終わるか capMs たったら終わる(長く待たせない)
+const cardArtPreload = (db, nos, capMs = 2500) => Promise.race([Promise.all(cardArtUrlsOf(db, nos).map(cardArtLoadOne)), new Promise((r) => setTimeout(r, capMs))]);
+const cardArtReady = (db, nos) => cardArtUrlsOf(db, nos).every((u) => CARD_ART_STATE.get(u) === 'ok' || CARD_ART_STATE.get(u) === 'ng');
+// 読めなかった立ち絵は出さない(カードの絵で代える)
+const cardMonArtOk = (mon) => { const a = cardMonArt(mon); return a && CARD_ART_STATE.get(a) !== 'ng' ? a : null; };
+// <img> で読めなかったとき: 1回読み直し、だめならカードの絵へ(fallback)
+const cardArtOnError = (url, fallback) => (e) => {
+  const el = e.currentTarget;
+  const n = Number(el.dataset.artTry || 0);
+  if (n < 1 && url) { el.dataset.artTry = '1'; setTimeout(() => { el.src = cardArtRetryUrl(url); }, 500); return; }
+  if (url) CARD_ART_STATE.set(url, 'ng');
+  if (fallback && n < 2) { el.dataset.artTry = '2'; el.style.objectFit = 'contain'; el.src = fallback; }
+};
+// 自動の事前ダウンロード・「バトルカード」のまとまりに入れる立ち絵のパス(25 の assetCardArtPaths が読む。?v= は外す)
+const cardArtPrefetchPaths = () => {
+  const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
+  if (!db) return [];
+  return [...new Set(Object.values(db.monsters).map((m) => cardMonArt(m)).filter(Boolean).map((u) => String(u).split('?')[0].replace(/^\.\//, '')))];
+};
 // キラ・レアキラ(別絵キラ)の立ち絵の光(2026-10-30 社長「キラとレアキラはエフェクトつきになるようにしたい」・見本のページのとおり)
 //   kira … ふちが虹色に移り変わり、十字のきらめきが時々走る(3つ) / rare … 金のふち・後ろに光の輪がゆっくり回って脈打つ・光の粒が舞う(6つ)
 //   CSS だけで動かす(軽く)。動きを減らす設定(prefers-reduced-motion)と、オプションの「揺らさない」(calm)では、ふちの光だけ
@@ -728,7 +773,7 @@ const CardDiscardName = ({ name }) => {
 };
 const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact = false, tiny = false, wide = false, motion = null, calm = false, guardTag = '', onStatus = null, statusLock = false, onPressMon = null }) => {
   const mon = st.players[p].mons[m];
-  const art = cardMonArt(mon);
+  const art = cardMonArtOk(mon);
   const ty = cardMonType(mon, st.turn);
   const opp = p === CARD_CPU;
   const pct = Math.max(0, Math.round((mon.life / mon.max) * 100));
@@ -764,7 +809,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   const artFit = art ? cardFieldArtTransform(art, opp) : null;
   const kira = art && !mon.ko ? cardKiraOf(db, mon.no) : null;
   const imgEl = art
-    ? cardKiraWrap(kira, <img src={art} alt="" style={{ ...(wide ? { maxHeight: wideArtH } : null), ...(artFit ? { transform: artFit } : null) }} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp && !artFit ? '-scale-x-100' : ''}`}/>)
+    ? cardKiraWrap(kira, <img src={art} alt="" onError={cardArtOnError(art, CARD_IMG(cardMonsterOf(db, mon.no).img))} style={{ ...(wide ? { maxHeight: wideArtH } : null), ...(artFit ? { transform: artFit } : null) }} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp && !artFit ? '-scale-x-100' : ''}`}/>)
     : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`}/>;
   const mv = motion && !mon.ko ? motion : null;
   // calm … オプションの「画面の揺れ: 揺らさない」。受けたときは揺らさずに光るだけ
@@ -924,6 +969,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const [tacGlow, setTacGlow] = useState(null);
   const [tacLog, setTacLog] = useState([]);
   useEffect(() => { if (!tacGlow) return undefined; const t = setTimeout(() => setTacGlow(null), 2400); return () => clearTimeout(t); }, [tacGlow]);
+  const [, setArtTick] = useState(0);
+  // 盤を開いたら、両方の3体の立ち絵を前もって読む(観戦・見返し・大会の見返しは対戦開始の画面を通らないため。読めなかった子はカードの絵で出る)
+  useEffect(() => { if (typeof cardArtPreload === 'function') void cardArtPreload(db, st.players.flatMap((pl) => pl.mons.map((m) => m.no))).then(() => setArtTick((n) => n + 1)); }, []); // 読み終えたら描き直す(読めなかった子をカードの絵へ)
   const [downBand, setDownBand] = useState(null); // 倒れたときの「◯◯ ダウン！ / 残り◯体」の帯 { key, p, names, left }(改良の案 B)
   const [breederFx, setBreederFx] = useState(null); // ブリーダーのカードを使ったとき、まんなかの端に出す顔 { p, key }
   const [beams, setBeams] = useState([]);
