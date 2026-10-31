@@ -2674,7 +2674,7 @@ const cardNormalizeCpuOpen = (v) => {
 };
 // 対戦の見出し・結果に出す強さの名前。登録デッキが相手なら、そのデッキの賢さの段(GRAND MASTER・HELL・LEGEND まで。2026-10-30 社長)
 const cardBattleLevelLabel = (level, share) => (share && typeof cardShareSmartLevel === 'function' ? CARD_SHARE_SMART_LABEL[cardShareSmartLevel(share.tactics)] : CARD_LEVEL_LABEL[level]) || '';
-const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, onSettings = null }) => {
+const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, cupItems = null, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, onSettings = null }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
@@ -2848,6 +2848,39 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     return ok;
   };
 
+  // 個人杯のごほうび・参加費(99-card-cup-prize)のカードの持ち物(かけら・パック券は mh_card_tactics_v1、カタログは mh_card_catalogs_v1)を足し引きする。
+  // 印(extra)も同じ取引で書く。足りない・保存できないときは false
+  //   どちらも開くたびに保存から読み直す作り(96 の cardTacticsLoad・60-app の loadCardShop)なので、ここも保存を読み直して1つの取引で書く
+  const cupCardItems = async (delta, extra = []) => {
+    if (!Array.isArray(delta) || typeof cardCupItemOf !== 'function') return false;
+    let rawT = null, rawC = null;
+    try { [rawT, rawC] = await Promise.all([storeGet(CARD_TACTICS_KEY, null), storeGet(CARD_SAVE_KEYS.catalogs, 0, false)]); } catch (_) { return false; }
+    const t = cardNormalizeTactics(rawT);
+    const c0 = cardNormalizeCatalogs(rawC);
+    let shards = t.shards, tickets = t.tickets, catalogs = c0;
+    for (const d of delta) {
+      const it = cardCupItemOf(d && d.item);
+      const n = Math.trunc(Number(d && d.amount));
+      if (!it || !it.card || !Number.isFinite(n) || n === 0) return false;
+      if (it.card === 'shards') shards += n; else if (it.card === 'tickets') tickets += n; else catalogs += n;
+    }
+    if (shards < 0 || tickets < 0 || catalogs < 0) return false;
+    const entries = [
+      ...(shards !== t.shards || tickets !== t.tickets ? [{ key: CARD_TACTICS_KEY, before: rawT, next: { ...t, shards, tickets } }] : []),
+      ...(catalogs !== c0 ? [{ key: CARD_SAVE_KEYS.catalogs, before: rawC, next: catalogs }] : []),
+      ...(Array.isArray(extra) ? extra : []),
+    ];
+    return saveStoredValuesOrRollback(entries, storeGet, storeSet);
+  };
+  // 個人杯の画面へ渡す口(99-card-cup-prize の adapters の main・card・gift)。have … いまの持ち物の数
+  const cupAdapters = async () => {
+    const owner = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+    const key = typeof cardShareOwnerKey === 'function' ? await cardShareOwnerKey(false) : null;
+    const t = typeof cardTacticsLoad === 'function' ? (await cardTacticsLoad()).tactics : { shards: 0, tickets: 0 };
+    const p = (rank && rank.profile) || {};
+    return { owner, key, name: p.name || '', icon: p.icon || null, main: cupItems && cupItems.main, gift: cupItems && cupItems.gift, card: cupCardItems,
+      have: { main: cupItems && typeof cupItems.have === 'function' ? cupItems.have() : null, card: { shards: t.shards, tickets: t.tickets, catalogs: cardNormalizeCatalogs(await storeGet(CARD_SAVE_KEYS.catalogs, 0, false).catch(() => 0)) } } };
+  };
   // 途中で閉じた助手との対戦を、投了として数える(印 mh_card_cpu_open_v1。上の CARD_CPU_OPEN_KEY の説明)。
   // force … この画面で対戦を抜けたとき(beat を待たずに数える)。数えたら { reward, loops } を返す
   const openIdRef = useRef(null); // この画面で書いた印の試合の鍵(書けなかったら null。そのときは終わりに印を見ない)

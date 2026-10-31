@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9e488e43ae30c472
+// generated-sha256: 785089aa2628e196
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9893,6 +9893,8 @@ const giftTitleDisplay = (gift) => {
   if (gift?.source === 'assistantBond') return { label:'仲良し度', title };
   // 助手のお話のおみやげ(2026-10-27 ソラシド)
   if (gift?.source === 'assistantStory') return { label:'おみやげ', title };
+  // MFバトルカード個人杯のごほうび・返却(2026-10-31・99-card-cup-prize)
+  if (gift?.source === 'cardCup') return { label:'個人杯', title };
   if (gift?.source !== 'mission') return { label:null, title };
   const missionTitle = title.replace(/^ミッション報酬[「『]?/, '').replace(/[」』]$/, '').trim();
   return { label:'ミッション', title:missionTitle || title };
@@ -17475,7 +17477,9 @@ const SB_HEADERS = { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' 
 // rpc は集計を読むもの(rhythm_week_score_totals など)なので通すが、表へ書く rpc はここに並べて同じく止める
 // (2026-10-27 カード部: マルチの強さの点数 card_battle_pvp_report が、検査のブラウザから本物へ届きうる形だった)
 // ビートランク・カードランクの行を書く関数(2026-10-29)も、表へ書くのでここで止める
-const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report', 'rhythm_beat_rank_put', 'card_rank_put', 'card_deck_replay_put']);
+const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report', 'rhythm_beat_rank_put', 'card_rank_put', 'card_deck_replay_put',
+  // 個人杯のごほうび・参加費・主催仲間(99-card-cup-prize。2026-10-31)
+  'card_cup_deposit', 'card_cup_join_pay', 'card_cup_claim', 'card_cup_prize_set', 'card_cup_cohost_invite', 'card_cup_cohost_answer', 'card_cup_cohost_remove']);
 const sbAutomationWriteBlocked = (url, method) => {
   try {
     if (typeof navigator === 'undefined' || navigator.webdriver !== true) return false;
@@ -61624,7 +61628,7 @@ const cardNormalizeCpuOpen = (v) => {
 };
 // 対戦の見出し・結果に出す強さの名前。登録デッキが相手なら、そのデッキの賢さの段(GRAND MASTER・HELL・LEGEND まで。2026-10-30 社長)
 const cardBattleLevelLabel = (level, share) => (share && typeof cardShareSmartLevel === 'function' ? CARD_SHARE_SMART_LABEL[cardShareSmartLevel(share.tactics)] : CARD_LEVEL_LABEL[level]) || '';
-const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, onSettings = null }) => {
+const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, cupItems = null, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, onSettings = null }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
@@ -61798,6 +61802,39 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     return ok;
   };
 
+  // 個人杯のごほうび・参加費(99-card-cup-prize)のカードの持ち物(かけら・パック券は mh_card_tactics_v1、カタログは mh_card_catalogs_v1)を足し引きする。
+  // 印(extra)も同じ取引で書く。足りない・保存できないときは false
+  //   どちらも開くたびに保存から読み直す作り(96 の cardTacticsLoad・60-app の loadCardShop)なので、ここも保存を読み直して1つの取引で書く
+  const cupCardItems = async (delta, extra = []) => {
+    if (!Array.isArray(delta) || typeof cardCupItemOf !== 'function') return false;
+    let rawT = null, rawC = null;
+    try { [rawT, rawC] = await Promise.all([storeGet(CARD_TACTICS_KEY, null), storeGet(CARD_SAVE_KEYS.catalogs, 0, false)]); } catch (_) { return false; }
+    const t = cardNormalizeTactics(rawT);
+    const c0 = cardNormalizeCatalogs(rawC);
+    let shards = t.shards, tickets = t.tickets, catalogs = c0;
+    for (const d of delta) {
+      const it = cardCupItemOf(d && d.item);
+      const n = Math.trunc(Number(d && d.amount));
+      if (!it || !it.card || !Number.isFinite(n) || n === 0) return false;
+      if (it.card === 'shards') shards += n; else if (it.card === 'tickets') tickets += n; else catalogs += n;
+    }
+    if (shards < 0 || tickets < 0 || catalogs < 0) return false;
+    const entries = [
+      ...(shards !== t.shards || tickets !== t.tickets ? [{ key: CARD_TACTICS_KEY, before: rawT, next: { ...t, shards, tickets } }] : []),
+      ...(catalogs !== c0 ? [{ key: CARD_SAVE_KEYS.catalogs, before: rawC, next: catalogs }] : []),
+      ...(Array.isArray(extra) ? extra : []),
+    ];
+    return saveStoredValuesOrRollback(entries, storeGet, storeSet);
+  };
+  // 個人杯の画面へ渡す口(99-card-cup-prize の adapters の main・card・gift)。have … いまの持ち物の数
+  const cupAdapters = async () => {
+    const owner = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+    const key = typeof cardShareOwnerKey === 'function' ? await cardShareOwnerKey(false) : null;
+    const t = typeof cardTacticsLoad === 'function' ? (await cardTacticsLoad()).tactics : { shards: 0, tickets: 0 };
+    const p = (rank && rank.profile) || {};
+    return { owner, key, name: p.name || '', icon: p.icon || null, main: cupItems && cupItems.main, gift: cupItems && cupItems.gift, card: cupCardItems,
+      have: { main: cupItems && typeof cupItems.have === 'function' ? cupItems.have() : null, card: { shards: t.shards, tickets: t.tickets, catalogs: cardNormalizeCatalogs(await storeGet(CARD_SAVE_KEYS.catalogs, 0, false).catch(() => 0)) } } };
+  };
   // 途中で閉じた助手との対戦を、投了として数える(印 mh_card_cpu_open_v1。上の CARD_CPU_OPEN_KEY の説明)。
   // force … この画面で対戦を抜けたとき(beat を待たずに数える)。数えたら { reward, loops } を返す
   const openIdRef = useRef(null); // この画面で書いた印の試合の鍵(書けなかったら null。そのときは終わりに印を見ない)
@@ -71914,6 +71951,248 @@ const CardCupLivePanel = ({ v, now, selfId, onChanged, onPlay = null }) => {
       {msg && <p data-card-cup-live-msg className="rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
     </div>
   );
+};
+
+// ---- part: 99-card-cup-prize.jsx ----
+// ===== MFバトルカード 個人杯: ごほうび・参加費・主催仲間の部品(2026-10-31 リプレイくん・社長の判断) =====
+// 案: docs/progress/card-tournament/personal-cup/prize/README.md / SQL: docs/sql/card-cup/CARD_CUP_PRIZE_APPLY.sql / 仕様: docs/spec/CARD_CUP.md
+//   ・主催・主催仲間が自分の持ち物から出す / 参加費(なしでもよい)。どちらもサーバで預かり、終わったら配る(ギフトボックスへ)
+//   ・持ち物は端末にあるので、「端末で減らす」と「送っている途中の印」を同じ取引で書き、サーバは nonce ごとに1回だけ数える。
+//     返事が来なければ、次に開いたとき同じ nonce で送り直す。受け取りもサーバが最初の nonce だけに中身を返す(二重に受け取れない)
+//   ・本編の持ち物(ダイヤ・アイテム・ビートP)は本編の画面(60-app)が状態を持っているので、減らす・ギフトを足すのは 60-app の口(onCupItems)で。
+//     カードの持ち物(かけら・パック券・カタログ)は 84 の保存(persist)で
+// 保存: 新しいキー mh_card_cup_wallet_v1 だけ(下)。今のキーは、今の形のまま足す・引くだけ
+
+const CARD_CUP_WALLET_KEY = 'mh_card_cup_wallet_v1';
+const CARD_CUP_WALLET_MAX = 200;
+// 出せる物(サーバの表 card_cup_prize_items と同じ名前)。label・emoji は画面の名前。上限はサーバの表が正(card_cup_prize_items_list)
+//   main … 本編の持ち物(ギフトで配る)。card … カードの持ち物(84 で足す・引く)
+const CARD_CUP_ITEMS = Object.freeze([
+  { item: 'diamond', label: 'ダイヤ', emoji: '💎', main: true },
+  { item: 'beatPoint', label: 'ビートP', emoji: '🎵', main: true },
+  { item: 'rainbowPsyche', label: '虹のプシュケー', emoji: '🌈', main: true, owned: 'rainbow_psyche' },
+  { item: 'rainbowTranscendFruit', label: '虹の超越の実', emoji: '🍑', main: true, owned: 'transcend_fruit_rainbow' },
+  { item: 'gameItem:hero_proof', label: '勇者の証', emoji: '🏅', main: true, owned: 'hero_proof' },
+  { item: 'gameItem:hero_proof_shard', label: '勇者の証片', emoji: '🔸', main: true, owned: 'hero_proof_shard' },
+  { item: 'gameItem:session_ticket', label: 'セッション券', emoji: '🎫', main: true, owned: 'session_ticket' },
+  { item: 'gameItem:skip_ticket_jo', label: 'スキップチケット・序', emoji: '⏩', main: true, owned: 'skip_ticket_jo' },
+  { item: 'gameItem:skip_ticket_ha', label: 'スキップチケット・破', emoji: '⏩', main: true, owned: 'skip_ticket_ha' },
+  { item: 'gameItem:skip_ticket_kyu', label: 'スキップチケット・急', emoji: '⏩', main: true, owned: 'skip_ticket_kyu' },
+  { item: 'gameItem:training_ticket', label: 'トレーニングチケット', emoji: '🏋️', main: true, owned: 'training_ticket' },
+  { item: 'dyeMock', label: '染色もどき', emoji: '🎨', main: true, owned: 'dye_mock' },
+  { item: 'card:shard', label: '戦術カードのかけら', emoji: '🧩', card: 'shards' },
+  { item: 'card:ticket', label: 'カードパック券', emoji: '🎟️', card: 'tickets' },
+  { item: 'card:catalog', label: 'バトルカードカタログ', emoji: '📘', card: 'catalogs' },
+]);
+const cardCupItemOf = (item) => CARD_CUP_ITEMS.find((x) => x.item === item) || null;
+const cardCupItemText = (item, amount) => { const it = cardCupItemOf(item); return `${it ? `${it.emoji} ${it.label}` : item} ${Number(amount || 0).toLocaleString()}`; };
+// 出せない物(画面の一覧に理由つきで出す)
+const CARD_CUP_ITEMS_NG = Object.freeze([
+  ['ブリーダーP', '2度と手に入らない物'],
+  ['マスモン・円盤石・アシストカード', 'ひとつずつの物で、育てた中身がある'],
+  ['アイコン・フレーム・着替え', '一度手に入れたら外さない物'],
+  ['バトルカード(1枚ずつ)', 'これから(番号ごとの預かりが要る)'],
+  ['経験値・ランク・記録', '持ち物ではない'],
+]);
+// ギフトの報酬の形へ(本編の持ち物だけ。17 の normalizeGiftRewards が通す形)
+const cardCupGiftReward = (item, amount) => {
+  const n = Math.floor(Number(amount));
+  if (!(n > 0)) return null;
+  if (item === 'diamond' || item === 'beatPoint' || item === 'rainbowPsyche' || item === 'rainbowTranscendFruit' || item === 'dyeMock') return { type: item, amount: n };
+  const m = /^gameItem:([a-z0-9_]{1,40})$/.exec(String(item || ''));
+  return m ? { type: 'gameItem', itemId: m[1], amount: n } : null;
+};
+// 持っている数(本編の持ち物: { gold, ownedItems, beatPoints }。カードの持ち物: { shards, tickets, catalogs })
+const cardCupHave = (item, main, card) => {
+  const it = cardCupItemOf(item);
+  if (!it) return 0;
+  const n = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.floor(Number(v)) : 0);
+  if (it.card) return n(card && card[it.card]);
+  if (item === 'diamond') return n(main && main.gold);
+  if (item === 'beatPoint') return n(main && main.beatPoints);
+  return n(main && main.ownedItems && main.ownedItems[it.owned]);
+};
+
+// ---- 印(mh_card_cup_wallet_v1)----
+// [{ cup, kind:'prize'|'fee'|'claim', item?, amount?, nonce, state, at, name?, icon?, card?:真偽(カードの分を足した), gift?:真偽(ギフトを足した), items? }]
+//   state … 預ける: 'sending'(減らした・まだサーバの返事が無い)→ 'held'(預けた)/ 'returned'(戻した)
+//           受け取る: 'claiming'(nonce を決めた)→ 'claimed'(足し終えた)/ 'elsewhere'(ほかの端末で受け取り済み)/ 'none'(もらう物が無い)
+const cardCupNonce = () => {
+  try { const b = new Uint8Array(16); crypto.getRandomValues(b); return Array.from(b).map((x) => x.toString(16).padStart(2, '0')).join(''); }
+  catch (_) { return Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join(''); }
+};
+const cardCupNormalizeWallet = (raw) => {
+  if (!Array.isArray(raw)) return [];
+  const states = ['sending', 'held', 'returned', 'claiming', 'claimed', 'elsewhere', 'none'];
+  return raw.filter((r) => r && typeof r.cup === 'string' && /^[a-z0-9_-]{1,32}$/.test(r.cup) && ['prize', 'fee', 'claim'].includes(r.kind)
+    && typeof r.nonce === 'string' && /^[0-9a-f]{32,64}$/.test(r.nonce) && states.includes(r.state))
+    .map((r) => ({ cup: r.cup, kind: r.kind, nonce: r.nonce, state: r.state, at: Number.isFinite(r.at) ? r.at : 0,
+      ...(r.kind !== 'claim' ? { item: typeof r.item === 'string' ? r.item : '', amount: Number.isInteger(r.amount) && r.amount > 0 ? r.amount : 0 } : {}),
+      ...(typeof r.name === 'string' ? { name: r.name.slice(0, 40) } : {}), ...(typeof r.icon === 'string' ? { icon: r.icon.slice(0, 64) } : {}),
+      ...(r.card === true ? { card: true } : {}), ...(r.gift === true ? { gift: true } : {}),
+      ...(Array.isArray(r.items) ? { items: r.items.filter((x) => x && typeof x.item === 'string' && Number.isInteger(x.amount) && x.amount > 0).slice(0, 20) } : {}) }))
+    .slice(-CARD_CUP_WALLET_MAX);
+};
+// 1件を足す・置きかえる(nonce が同じ物を置きかえる)。古い物は、終わった物から落とす
+const cardCupWalletPut = (list, rec) => {
+  const rest = list.filter((r) => r.nonce !== rec.nonce);
+  const next = [...rest, rec];
+  if (next.length <= CARD_CUP_WALLET_MAX) return next;
+  const done = ['held', 'returned', 'claimed', 'elsewhere', 'none'];
+  const drop = next.findIndex((r) => done.includes(r.state) && r.nonce !== rec.nonce);
+  return drop >= 0 ? next.filter((_, i) => i !== drop) : next.slice(-CARD_CUP_WALLET_MAX);
+};
+// 印を書く項目(保存の取引 saveStoredValuesOrRollback に足す形)。書く直前に読み直す
+const cardCupWalletEntry = async (rec) => {
+  const raw = await storeGet(CARD_CUP_WALLET_KEY, null, false);
+  if (raw !== null && raw !== undefined && !Array.isArray(raw)) return null; // 壊れているときは書かない(何もしない)
+  return { key: CARD_CUP_WALLET_KEY, before: raw === undefined ? null : raw, next: cardCupWalletPut(cardCupNormalizeWallet(raw), rec) };
+};
+const cardCupWalletLoad = async () => { try { return cardCupNormalizeWallet(await storeGet(CARD_CUP_WALLET_KEY, null, false)); } catch (_) { return []; } };
+const cardCupWalletSet = async (rec) => {
+  const e = await cardCupWalletEntry(rec);
+  if (!e) return false;
+  return saveStoredValuesOrRollback([e], storeGet, storeSet);
+};
+
+// ---- 通信(関数がまだ無い・通信できないときは null。ほかの個人杯の通信は止めない) ----
+const cardCupPrizeRpc = async (fn, body) => {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body) });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (_) { return null; }
+};
+const cardCupPrizeItemsList = async () => {
+  const r = await cardCupPrizeRpc('card_cup_prize_items_list', {});
+  return Array.isArray(r) ? r.filter((x) => x && cardCupItemOf(x.item)).map((x) => ({ item: x.item, label: cardCupItemOf(x.item).label,
+    giveMax: Math.max(0, Number(x.give_max) || 0), feeMax: Math.max(0, Number(x.fee_max) || 0), dayMax: Math.max(0, Number(x.day_max) || 0) })) : null;
+};
+// 杯のごほうび(画面に出す形)。無い・読めないときは null
+const cardCupPrizeView = async (cup, owner) => {
+  const v = await cardCupPrizeRpc('card_cup_prize_view', { p_cup: cup, p_owner: owner || null });
+  if (!v || typeof v !== 'object') return null;
+  const items = (a, k) => (Array.isArray(a) ? a.filter((x) => x && cardCupItemOf(x.item) && Number(x[k]) > 0).map((x) => ({ ...x, [k]: Math.floor(Number(x[k])) })) : []);
+  const split = Array.isArray(v.split) && v.split.every((x) => Number.isInteger(x) && x > 0) ? v.split.slice(0, 8) : [70, 30];
+  return {
+    fee: v.fee && cardCupItemOf(v.fee.item) && Number(v.fee.amount) > 0 ? { item: v.fee.item, amount: Math.floor(Number(v.fee.amount)) } : null,
+    split, pool: items(v.pool, 'total'),
+    givers: items(v.givers, 'amount').map((g) => ({ name: cardCupText(g.name, 40) || 'ブリーダー', icon: typeof g.icon === 'string' ? g.icon : null, item: g.item, amount: g.amount, host: g.host === true })),
+    hosts: Array.isArray(v.hosts) ? v.hosts.filter((h) => h && typeof h.id === 'string').map((h) => ({ id: h.id, name: cardCupText(h.name, 40) || 'ブリーダー', icon: typeof h.icon === 'string' ? h.icon : null, state: h.state === 'joined' ? 'joined' : 'invited' })) : [],
+    me: { host: !!(v.me && v.me.host), invited: !!(v.me && v.me.invited), claimed: !!(v.me && v.me.claimed) },
+    code: typeof v.code === 'string' && /^[0-9]{6}$/.test(v.code) ? v.code : null,
+    payouts: Array.isArray(v.payouts) ? items(v.payouts, 'amount').filter((x) => typeof x.id === 'string') : null,
+  };
+};
+// 配る割合から、1人ずつの見込み(画面の「8人そろったら」「1位 ◯〜」)。サーバの card_cup_payouts と同じ数え方(使わない順位の分は1位へ・端数は1位へ)
+const cardCupShares = (total, split, ranks) => {
+  const k = Math.max(1, Math.min(split.length, ranks));
+  const pct = split.slice(0, k);
+  for (let i = k; i < split.length; i++) pct[0] += split[i];
+  const each = pct.map((p) => Math.floor((total * p) / 100));
+  each[0] += total - each.reduce((a, b) => a + b, 0);
+  return each;
+};
+const CARD_CUP_SPLITS = Object.freeze([
+  { id: 'all', label: '優勝が全部', split: [100] },
+  { id: '73', label: '7:3', split: [70, 30] },
+  { id: '631', label: '6:3:1', split: [60, 30, 10] },
+  { id: '532', label: '5:3:2', split: [50, 30, 20] },
+]);
+
+// ---- 預ける・参加する・受け取る(画面から呼ぶ。adapters は 84 が渡す) ----
+// adapters: { main: async (delta:[{item, amount(±)}], extra:[保存の項目]) → 真偽(本編の持ち物を足し引きし、extra も同じ取引で書く)
+//             card: async (delta, extra) → 真偽(カードの持ち物)
+//             gift: async (gift, extra) → 真偽(本編のギフトボックスへ1件。同じ id は二度入れない)
+//             owner, key, name, icon }
+const cardCupApply = async (adapters, item, amount, extra) => {
+  const it = cardCupItemOf(item);
+  if (!it) return false;
+  const fn = it.card ? adapters.card : adapters.main;
+  return typeof fn === 'function' ? !!(await fn([{ item, amount }], extra)) : false;
+};
+// 預けたあとのサーバの返事で、印を進める。戻すときは、持ち物を戻すのと印を同じ取引で書く
+const cardCupDepositSettle = async (adapters, rec, reply) => {
+  const kept = reply === 'ok' || reply === 'dup';
+  if (kept) { await cardCupWalletSet({ ...rec, state: 'held', at: Date.now() }); return 'ok'; }
+  if (reply === null || reply === undefined) return 'pending'; // 返事が無い: 印は sending のまま(次に開いたとき送り直す)
+  const e = await cardCupWalletEntry({ ...rec, state: 'returned', at: Date.now() });
+  if (!e) return 'pending';
+  const back = await cardCupApply(adapters, rec.item, rec.amount, [e]);
+  return back ? reply : 'pending';
+};
+// 主催・主催仲間が出す。返り値 'ok' | 'short'(足りない)| 'save'(保存できない)| 'pending'(返事待ち)| サーバの返事('over' など。戻した)
+const cardCupGive = async (adapters, cup, item, amount, have) => {
+  if (!(amount > 0) || amount > have) return 'short';
+  const rec = { cup, kind: 'prize', item, amount, nonce: cardCupNonce(), state: 'sending', at: Date.now() };
+  const e = await cardCupWalletEntry(rec);
+  if (!e || !(await cardCupApply(adapters, item, -amount, [e]))) return 'save';
+  const reply = await cardCupPrizeRpc('card_cup_deposit', { p_cup: cup, p_owner: adapters.owner, p_key: adapters.key, p_item: item, p_amount: amount, p_nonce: rec.nonce });
+  return cardCupDepositSettle(adapters, rec, reply);
+};
+// 参加(参加費のある杯は払って)。fee … { item, amount } か null。返り値 'ok' | 'short' | 'save' | 'pending' | サーバの返事
+const cardCupJoinPaid = async (adapters, cup, fee, have) => {
+  if (!fee) {
+    const r = await cardCupPrizeRpc('card_cup_join_pay', { p_cup: cup, p_owner: adapters.owner, p_key: adapters.key, p_name: adapters.name, p_icon: adapters.icon, p_nonce: cardCupNonce() });
+    return r === 'nofee' || r === 'ok' ? 'ok' : (r || 'off');
+  }
+  if (fee.amount > have) return 'short';
+  const rec = { cup, kind: 'fee', item: fee.item, amount: fee.amount, nonce: cardCupNonce(), state: 'sending', at: Date.now(), name: adapters.name, icon: adapters.icon || undefined };
+  const e = await cardCupWalletEntry(rec);
+  if (!e || !(await cardCupApply(adapters, fee.item, -fee.amount, [e]))) return 'save';
+  const reply = await cardCupPrizeRpc('card_cup_join_pay', { p_cup: cup, p_owner: adapters.owner, p_key: adapters.key, p_name: adapters.name, p_icon: adapters.icon, p_nonce: rec.nonce });
+  // 'nofee'(参加費がなくなった・主催仲間になっていた)・'paid'(前に払った分のまま入り直した)は、払った分を戻して参加できた扱い
+  if (reply === 'nofee' || reply === 'paid') { const r = await cardCupDepositSettle(adapters, rec, 'refund'); return r === 'pending' ? 'pending' : 'ok'; }
+  return cardCupDepositSettle(adapters, rec, reply);
+};
+// 返事が来なかった預けを、同じ nonce で送り直す(MFバトルカードの個人杯を開いたとき)。返り値: 進めた数
+const cardCupResume = async (adapters) => {
+  const list = await cardCupWalletLoad();
+  let n = 0;
+  for (const rec of list.filter((r) => r.state === 'sending')) {
+    const reply = rec.kind === 'prize'
+      ? await cardCupPrizeRpc('card_cup_deposit', { p_cup: rec.cup, p_owner: adapters.owner, p_key: adapters.key, p_item: rec.item, p_amount: rec.amount, p_nonce: rec.nonce })
+      : await cardCupPrizeRpc('card_cup_join_pay', { p_cup: rec.cup, p_owner: adapters.owner, p_key: adapters.key, p_name: rec.name || adapters.name, p_icon: rec.icon || adapters.icon, p_nonce: rec.nonce });
+    const r = rec.kind === 'fee' && (reply === 'nofee' || reply === 'paid') ? await cardCupDepositSettle(adapters, rec, 'refund') : await cardCupDepositSettle(adapters, rec, reply);
+    if (r !== 'pending') n += 1;
+  }
+  for (const rec of list.filter((r) => r.kind === 'claim' && r.state === 'claiming')) { if ((await cardCupClaim(adapters, rec.cup, '')).status === 'ok') n += 1; }
+  return n;
+};
+// 受け取る・戻す。返り値 { status:'ok'|'wait'|'elsewhere'|'none'|'pending'|'off', items:[{item, amount}], reason }
+const cardCupClaim = async (adapters, cup, cupName) => {
+  const list = await cardCupWalletLoad();
+  let rec = list.find((r) => r.kind === 'claim' && r.cup === cup);
+  if (rec && rec.state !== 'claiming') return { status: rec.state === 'claimed' ? 'ok' : rec.state, items: rec.items || [], reason: 'done' };
+  if (!rec) {
+    rec = { cup, kind: 'claim', nonce: cardCupNonce(), state: 'claiming', at: Date.now() };
+    if (!(await cardCupWalletSet(rec))) return { status: 'pending', items: [] };
+  }
+  const r = await cardCupPrizeRpc('card_cup_claim', { p_cup: cup, p_owner: adapters.owner, p_key: adapters.key, p_nonce: rec.nonce });
+  if (!r || typeof r !== 'object') return { status: 'pending', items: [] };
+  if (r.status === 'wait') return { status: 'wait', items: [] };
+  if (r.status === 'claimed') { await cardCupWalletSet({ ...rec, state: 'elsewhere', at: Date.now() }); return { status: 'elsewhere', items: [] }; }
+  if (r.status !== 'ok') return { status: r.status || 'off', items: [] };
+  const items = (Array.isArray(r.items) ? r.items : []).filter((x) => x && cardCupItemOf(x.item) && Number.isInteger(x.amount) && x.amount > 0);
+  rec = { ...rec, items };
+  if (!items.length) { await cardCupWalletSet({ ...rec, state: 'none', at: Date.now() }); return { status: 'none', items: [], reason: r.reason }; }
+  // カードの持ち物 → 84 の保存で足す(印の card を同じ取引で立てる)
+  const cards = items.filter((x) => cardCupItemOf(x.item).card);
+  if (cards.length && !rec.card) {
+    const e = await cardCupWalletEntry({ ...rec, card: true });
+    if (!e || typeof adapters.card !== 'function' || !(await adapters.card(cards, [e]))) return { status: 'pending', items };
+    rec = { ...rec, card: true };
+  }
+  // 本編の持ち物 → ギフトボックスへ1件(id は杯ごとに1つ。印の gift を同じ取引で立てる)
+  const mains = items.filter((x) => cardCupItemOf(x.item).main).map((x) => cardCupGiftReward(x.item, x.amount)).filter(Boolean);
+  if (mains.length && !rec.gift) {
+    const gift = { id: `card_cup_${cup}`, title: `個人杯「${cardCupText(cupName, 20) || '個人杯'}」の${r.reason === 'refund' ? '返却' : 'ごほうび'}`, source: 'cardCup', rewards: mains };
+    const e = await cardCupWalletEntry({ ...rec, gift: true });
+    if (!e || typeof adapters.gift !== 'function' || !(await adapters.gift(gift, [e]))) return { status: 'pending', items };
+    rec = { ...rec, gift: true };
+  }
+  await cardCupWalletSet({ ...rec, state: 'claimed', at: Date.now() });
+  return { status: 'ok', items, reason: r.reason };
 };
 
 // ---- part: 81-debug-trials.jsx ----
@@ -83664,6 +83943,50 @@ function MonsterHeroGame() {
 
   // baseGifts … ミッションから送ったばかりのギフトを含めた一覧で受け取るときに渡す(画面の gifts はまだ古いため)
   // title … 「手に入れたもの」の窓の見出し。まとめて受け取っても窓は1回だけ出る
+  // MFバトルカード個人杯のごほうび・参加費(99-card-cup-prize。2026-10-31)。本編の持ち物(ダイヤ・アイテム・ビートP)は、この画面が状態を持っているので、
+  // 足す・引くはここで行い、個人杯の印(extra: mh_card_cup_wallet_v1)も同じ取引で書く。足りない・保存できないときは false(何も変えない)
+  //   delta … [{ item: 'diamond' | 'beatPoint' | 'rainbowPsyche' | … | 'gameItem:<id>', amount: ±数 }]
+  const cardCupMainItems = async (delta, extra = []) => {
+    if (giftClaimingRef.current || !Array.isArray(delta) || typeof cardCupItemOf !== 'function') return false;
+    giftClaimingRef.current = true;
+    try {
+      const storedBeat = await storeGet(RHYTHM_EVENT_POINTS_KEY, 0, false);
+      let nextGold = Math.max(0, Number(gold) || 0);
+      let nextBeat = normalizeRhythmEventPoints(storedBeat);
+      const nextItems = { ...(ownedItems || {}) };
+      for (const d of delta) {
+        const it = cardCupItemOf(d && d.item);
+        const n = Math.trunc(Number(d && d.amount));
+        if (!it || !it.main || !Number.isFinite(n) || n === 0) return false;
+        if (d.item === 'diamond') nextGold += n;
+        else if (d.item === 'beatPoint') nextBeat += n;
+        else nextItems[it.owned] = Math.max(0, Number(nextItems[it.owned]) || 0) + n;
+        if (nextGold < 0 || nextBeat < 0 || (it.owned && nextItems[it.owned] < 0)) return false; // 足りない
+      }
+      for (const k of Object.keys(nextItems)) { if (nextItems[k] === 0 && !(k in (ownedItems || {}))) delete nextItems[k]; }
+      const entries = [
+        { key:'mh_gold', before:gold, next:nextGold },
+        { key:'mh_owned_items', before:ownedItems, next:nextItems },
+        { key:RHYTHM_EVENT_POINTS_KEY, before:storedBeat, next:nextBeat },
+        ...(Array.isArray(extra) ? extra : []),
+      ];
+      const saved = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
+      if (!saved) return false;
+      setGold(nextGold); setOwnedItems(nextItems); setRhythmEventPoints(nextBeat);
+      return true;
+    } finally { giftClaimingRef.current = false; }
+  };
+  // 個人杯の受け取り: ギフトボックスへ1件(同じ id は二度入れない)。印(extra)も同じ取引で書く
+  const cardCupGiftAdd = async (gift, extra = []) => {
+    const savedGifts = await storeGet('mh_gifts', [], false);
+    const before = Array.isArray(savedGifts) ? savedGifts : [];
+    const grant = grantGiftOnce(before, gift);
+    const entries = [...(grant.granted ? [{ key:'mh_gifts', before, next:grant.gifts }] : []), ...(Array.isArray(extra) ? extra : [])];
+    if (!entries.length) return true;
+    const saved = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
+    if (saved && grant.granted) setGifts(grant.gifts);
+    return saved;
+  };
   const claimGiftIds = async (ids, { baseGifts = null, title = 'ギフトを受け取りました' } = {}) => {
     // ミッションの受け取り中は動かない(古いギフト一覧で保存し直さないため)。ミッションの中から呼ぶときは baseGifts を渡す
     if (giftClaimingRef.current || (!baseGifts && missionClaimingRef.current)) return null;
@@ -92717,6 +93040,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           quickRun={cardQuickRunView()}
           quickAutoReady={autoQuickRunConfigured(autoSettings)} onSettings={(settings)=>setCardQuickAutoStart(!!(settings&&settings.quickAutoStart))} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
           topAssistant={cardTopAssistant}
+          cupItems={{main:cardCupMainItems,gift:cardCupGiftAdd,have:()=>({gold,ownedItems,beatPoints:rhythmEventPoints})}}
           bgmPreview={{toggle:toggleBgmPreview,stop:()=>{Audio_.stopPreview();setPreviewTrackId(null);},playing:previewTrackId}}
           /* ランキングへ送るのは公開してから(台帳 #3513「公開前は、デバッグの人の記録も送らない」)。デバッグの合言葉を入れた端末でも、HOME の入口から遊んだ分は送る(2026-10-26 社長「ふつうの入口の対戦はのせる」)。デバッグ設定の入口からの対戦は 84 の debug(cardOrigin==='debug')で外す */
           rank={{send:EVENT_REPLAY_RELEASE_FLAGS.cardBattle===true,profile:{name:breederName||'名無しのブリーダー',icon:breederIcon,frame:rankingProfileFrameValue(profileFrameId)},renderBreederIcon:rankingBreederIcon,
