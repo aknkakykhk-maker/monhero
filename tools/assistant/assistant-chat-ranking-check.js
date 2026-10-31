@@ -143,7 +143,7 @@ const lastReminder = (params) => { const m = params.messages[params.messages.len
       { kind: 'rhythmEvent', songIds: ['journey'], from: 'x', to: 'y' },
       { kind: 'delete' }, ...Array.from({ length: 30 }, () => ({ kind: 'breeder' })),
     ]);
-    check(`④ おかしなキー・知らない種類・形の悪い期間は捨て、1回${ranking.RANKING_PLAN_MAX}まで(チャレンジの全部=通常9+極限8が入る)`, ranking.RANKING_PLAN_MAX === 18 && plan.length === ranking.RANKING_PLAN_MAX && plan[0].keys.join() === 'Normal' && plan.every(p => p.kind === 'score' || p.kind === 'breeder'), JSON.stringify(plan.map(p => p.kind)));
+    check(`④ おかしなキー・知らない種類・形の悪い期間は捨て、1回${ranking.RANKING_PLAN_MAX}まで(チャレンジの全部=通常9+極限10が入る)`, ranking.RANKING_PLAN_MAX === 19 && plan.length === ranking.RANKING_PLAN_MAX && plan[0].keys.join() === 'Normal' && plan.every(p => p.kind === 'score' || p.kind === 'breeder'), JSON.stringify(plan.map(p => p.kind)));
     const db = makeDb();
     const t = await ranking.fetchRankingText({ db: { select: (tb, o) => db.select(tb, o), rpc: (f, a, o) => db.rpc(f, a, o) }, plan: [{ kind: 'breeder' }], me: {} });
     check('④ 読める表・関数は一覧のものだけ(rankings・bond_levels・breeder_profiles・rhythm_total_rankings・rhythm_week_window・raid_jack_*・読むための3つの関数)',

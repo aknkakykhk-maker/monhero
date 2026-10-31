@@ -199,7 +199,7 @@ const round = (v) => Math.round(v * 1e6) / 1e6;
     && (enemyTurn.match(/if \(tookEnemyAttack\) await consumePoltzCharge\(\);/g) || []).length === 1);
   check('ガードで受け止めたときは発動する(最終ダメージ0・余剰回復でも同じ)',
     guardBranch.includes('tookEnemyAttack=true;')
-    && guardBranch.includes('const diff=guardValue-incomingBeforeTurnReduction;')
+    && guardBranch.includes('guardValue-incomingBeforeTurnReduction;') // INFERNOの連撃は同じ diff を連撃の受け方で出す
     && guardBranch.includes('貫通!') && guardBranch.includes('🛡 ガード成功'));
   check('普通にダメージを受けたときも発動する', plainBranch.includes('triggerShake();'));
   check('反射・吸収・回避では発動しない',
