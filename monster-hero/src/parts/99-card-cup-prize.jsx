@@ -9,7 +9,8 @@
 
 // 公開の印(ごほうび・参加費・主催仲間だけ)。個人杯の公開(99-card-cup の cardCupOpen)とは別。
 // 2026-10-31 社長: 個人杯だけ先に公開し、ごほうび・参加費・主催仲間はまだ閉じる(出す日はあとで決める)。それまではデバッグ設定から入ったときだけ出る(84 が口 getAdapters を渡すかで決める)
-const cardCupPrizeOpen = () => false;
+// 2026-10-31 社長「個人杯のごほうび・参加費・主催仲間をすぐ使えるようにする」で true に
+const cardCupPrizeOpen = () => true;
 const CARD_CUP_WALLET_KEY = 'mh_card_cup_wallet_v1';
 const CARD_CUP_WALLET_MAX = 200;
 // 出せる物(サーバの表 card_cup_prize_items と同じ名前)。label・emoji は画面の名前。出す量・参加費の額に上限は無い(2026-10-31 社長「やっぱり上限はなしでいい」)
