@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e35723f1dc4be784
+// generated-sha256: 43c3af4666991ca4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -5373,7 +5373,9 @@ const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAU
 // { menu, market, temple, battle, rhythm } の形で持つ。タイトルとホームの絵は既存の mh_title_art / mh_home_art のまま。
 // ★'auto' は見るたびに今の時刻で決める(読み込み時に1回だけ決めると、開きっぱなしの端末で11月になっても戻らない)
 const SCREEN_THEME_STORAGE_KEY = 'mh_screen_theme_v1';
-const SCREEN_THEME_HALLOWEEN_UNTIL = Date.parse('2026-11-01T00:00:00+09:00');
+// 2026-11-01 0:15 社長「全部4:00にして」: ハロウィン・ナイトのイベントの終わり(HALLOWEEN_NIGHT_END_AT・data/rhythm-event.js)と同じ時刻にそろえる。
+//   前は 11/1 0:00 で、トップ・ホームの絵だけ先に戻り、イベント(4:00 まで)とずれていた
+const SCREEN_THEME_HALLOWEEN_UNTIL = Date.parse(typeof HALLOWEEN_NIGHT_END_AT === 'string' ? HALLOWEEN_NIGHT_END_AT : '2026-11-01T04:00:00+09:00');
 const SCREEN_THEME_CHOICES = [
   { id: 'auto', label: 'おまかせ' },
   { id: 'halloween', label: 'ハロウィン' },
@@ -73105,6 +73107,19 @@ function MonsterHeroGame() {
     storeSet(SCREEN_THEME_STORAGE_KEY, next, false);
     return next;
   });
+  // 季節の切りかえ(SCREEN_THEME_HALLOWEEN_UNTIL)ちょうどに、画面全体を一度描き直す(2026-11-01)。
+  // テーマ・タイトルやホームの絵の「おまかせ」は描くたびに時刻で決まるが、MFバトルカードの画面のように中だけが動く画面に居続けると
+  // 全体が描き直されず、切りかえの時刻を過ぎてもハロウィンの飾り(かぼちゃ)が残っていた。見るだけで、保存には触らない
+  const [, setThemeSeasonTick] = useState(0);
+  const [themeSeasonArm, setThemeSeasonArm] = useState(0);
+  useEffect(() => {
+    const wait = SCREEN_THEME_HALLOWEEN_UNTIL - Date.now();
+    if (!(wait > -1000)) return undefined;
+    // setTimeout は約24日より先を待てないので、遠いときは途中で一度起きて待ち直す
+    const far = wait > 2000000000;
+    const timer = setTimeout(() => { if (far) setThemeSeasonArm(n => n + 1); else setThemeSeasonTick(n => n + 1); }, far ? 2000000000 : Math.max(0, wait) + 1000);
+    return () => clearTimeout(timer);
+  }, [themeSeasonArm]);
   const [showOfficialTitleConfirm, setShowOfficialTitleConfirm] = useState(false);
   const [difficulty, setDifficulty] = useState('Normal');
   const safeDifficulty = normalizeBattleDifficulty(difficulty);
