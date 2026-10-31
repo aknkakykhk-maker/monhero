@@ -280,12 +280,12 @@ const decksAndSaves = () => {
     // watch(観戦の曲・2026-10-30 #4318 で足した)は、無ければマルチ対戦の曲
     ok(JSON.stringify(E.normalizeCardBgm(null, isT)) === '{"top":"atsu_cup_theme","cpu":"auto","pvp":"ichika_battle","watch":"ichika_battle"}' && E.normalizeCardBgm({ cpu: 'nope', pvp: 'nope' }, isT).cpu === 'auto'
       && E.normalizeCardBgm({ cpu: 'melo_toriko' }, isT).cpu === 'melo_toriko' && JSON.stringify(E.normalizeCardBgm({ cpu: 'melo_toriko', pvp: 'ichika_battle' }, isT)) === '{"top":"atsu_cup_theme","cpu":"melo_toriko","pvp":"ichika_battle","watch":"ichika_battle"}', '対戦のBGMの読み込みで、既定・知らない曲の戻し・選んだ人の値が合わない');
-    ok(JSON.stringify(E.normalizeCardSettings(null)) === '{"speed":"normal","autoPass":true,"quickAutoStart":false,"think":"NORMAL","resultWait":"NORMAL","motion":"FULL","shake":"ON","damageNum":"ON","bubble":"NORMAL","confirmUse":"OFF","confirmEnd":"OFF","press":"NORMAL","drag":"ON","gutsPick":"OFF","handText":"NORMAL","handSort":"DRAW"}'
+    ok(JSON.stringify(E.normalizeCardSettings(null)) === '{"speed":"normal","autoPass":true,"quickAutoStart":false,"think":"NORMAL","resultWait":"NORMAL","motion":"FULL","shake":"ON","damageNum":"ON","cutin":"ON","bubble":"NORMAL","confirmUse":"OFF","confirmEnd":"OFF","press":"NORMAL","drag":"ON","gutsPick":"OFF","handText":"NORMAL","handSort":"DRAW"}'
       && E.normalizeCardSettings({ quickAutoStart: true }).quickAutoStart === true && E.normalizeCardSettings({ quickAutoStart: 'yes' }).quickAutoStart === false
       // 前の「はやい」(speed:'fast')だけを持つ人は、相手が考える時間「はやい」・結果までの間「短め」で始まる(足す前と同じ速さ)
       && E.normalizeCardSettings({ speed: 'fast', autoPass: false }).think === 'FAST' && E.normalizeCardSettings({ speed: 'fast' }).resultWait === 'SHORT' && E.normalizeCardSettings({ speed: 'fast' }).speed === 'fast'
       && E.normalizeCardSettings({ think: 'SLOW2', motion: 'nope', bubble: 'OFF' }).think === 'SLOW2' && E.normalizeCardSettings({ motion: 'nope' }).motion === 'FULL'
-      // 既定は足す前の動きと同じ(考える時間 ×1・結果まで 2.2秒・長押し 0.45秒・ひとこと 1ターン2回)
+      // 既定は足す前の動きと同じ(考える時間 ×1・結果まで 2.2秒・長押し 0.45秒・ひとこと 1ターン2回)。大技のカットイン(2026-10-31)は前からの人も「出す」
       && E.CARD_THINK_PACE.NORMAL === 1 && E.CARD_THINK_PACE.FAST === 0.5 && E.CARD_RESULT_WAIT_MS.NORMAL === 2200 && E.CARD_RESULT_WAIT_MS.SHORT === 1200 && E.CARD_PRESS_MS.NORMAL === 450 && E.CARD_BUBBLE_PER_TURN.NORMAL === 2
       // オプションに並べる項目は、どれも normalizeCardSettings が持つ名前・選択肢
       && E.CARD_SETTING_GROUPS.every((g) => g.items.every((it) => it.bool ? typeof E.normalizeCardSettings(null)[it.key] === 'boolean' : it.options.some((o) => o.id === E.normalizeCardSettings(null)[it.key]) && it.options.every((o) => E.normalizeCardSettings({ [it.key]: o.id })[it.key] === o.id))) && E.normalizeCardSettings({ speed: 'fast', autoPass: false }).autoPass === false && E.normalizeCardSettings({ speed: 'x' }).speed === 'normal', '演出の設定の読み込みが合わない');
