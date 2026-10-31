@@ -12,6 +12,7 @@
 --   card_cup_live_settle(cup)               … 片方だけが結果を送って 90秒たった試合を決める(相手が抜けた・閉じた)
 --
 -- card_cup_matches.live(jsonb)の中身: { room, ready_at, join_a, join_b, rep_a: { w, v, at }, rep_b, dispute }
+-- 見返し: 決まった試合には、種・先攻・手の並び(acts)・ルールの版(rules)が残る。両方のデッキは card_cup_entries の写し。読むのは②の card_cup_match
 -- card_cup_matches.decided: pvp(2台で戦った)/ leave(片方が抜けた)/ absent(片方が来ず、登録デッキと戦った)/ auto(2人とも来ず・食い違い)
 
 -- 部屋の合言葉(8文字。ふつうのマルチ対戦の4文字とぶつからない。文字は 77 の RHYTHM_MULTI_CODE_CHARS と同じ)
@@ -229,7 +230,8 @@ create or replace function public.card_cup_live_decide(p_match bigint, p_winner 
 returns boolean language plpgsql security definer set search_path = public as $$
 declare v_cup text;
 begin
-  update card_cup_matches set winner = p_winner, decided = p_decided, kos = p_kos, acts = p_acts, rules = p_rules, done_at = now()
+  -- 手の並びは、決めた人が送った物。送らなかったとき(settle の leave)は、待っている間に先に残した物(見返しに使う。1試合1回だけ書く)
+  update card_cup_matches set winner = p_winner, decided = p_decided, kos = p_kos, acts = coalesce(p_acts, acts), rules = coalesce(p_rules, rules), done_at = now()
     where id = p_match and winner is null returning cup_id into v_cup;
   if v_cup is null then return false; end if;
   perform card_cup_live_advance(v_cup);
@@ -290,8 +292,10 @@ begin
     perform card_cup_live_decide(p_match, p_winner, 'pvp', p_kos, p_acts, p_rules);
     return 'ok';
   end if;
+  -- 待つあいだに、先に送った側の手の並びを残す(相手が抜けて settle で決まっても見返せるように)。食い違ったら残さない(auto の手で上書きする)
   update card_cup_matches set live = jsonb_set(live, array[v_mine], jsonb_build_object('w', p_winner, 'v', false, 'at', now(), 'kos', to_jsonb(p_kos)))
-    || case when v_rep is not null then jsonb_build_object('dispute', true) else '{}'::jsonb end
+    || case when v_rep is not null then jsonb_build_object('dispute', true) else '{}'::jsonb end,
+    acts = case when v_rep is null then coalesce(acts, p_acts) end, rules = case when v_rep is null then coalesce(rules, p_rules) end
     where id = p_match;
   return 'wait';
 end $$;

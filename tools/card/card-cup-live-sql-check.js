@@ -8,6 +8,7 @@
 //     B1 トーナメント5人: 早すぎる集合・主催以外の早い開始・全員そろわない開始は断る / 時刻を過ぎたらだれでも始められ、2回押しても同じ /
 //        山は8の大きさで不戦勝3つ / 2台の答えが違えば「食い違い」で待ち、auto で決まる / 来ない相手とは absent ですぐ決まる /
 //        片方だけ送って90秒たつと settle で leave / 順位は 1・2・3・3・5
+//        どの試合も card_cup_match で見返せる(手の並びは1試合1回だけ書く。抜けた試合は待つあいだに残した手)
 //     B2 総当たり4人: 1回戦だけ戦える → 終わると次の回戦が開く / 全部終わると順位(勝ち数 → 倒した数)
 //   本物のデータベースには何もしない(流すのは手元に作った使い捨てのものだけ)
 const fs = require('fs');
@@ -79,11 +80,12 @@ if (!pgBin || !canSu) {
     const third = ['p1', 'p2', 'p3'].find((o) => o !== a0 && o !== b0);
     check('B1 自分の試合には部屋の合言葉(8文字)が来る', /^[A-Z2-9]{8}$/.test(JSON.parse(one(`select card_cup_live_match(${m0[0]},'${a0}',${K(a0)})::text`)).room));
     check('B1 ほかの人の試合の合言葉は来ない', JSON.parse(one(`select card_cup_live_match(${m0[0]},'${third}',${K(third)})::text`)).room === null);
-    const r1 = one(`select card_cup_live_report(${m0[0]},'${a0}',${K(a0)},0,'pvp',false,'{2,1}',null,6)`);
+    const r1 = one(`select card_cup_live_report(${m0[0]},'${a0}',${K(a0)},0,'pvp',false,'{2,1}','[[0,{"type":"pass"}]]',6)`);
     const r2 = one(`select card_cup_live_report(${m0[0]},'${b0}',${K(b0)},1,'pvp',false,'{1,2}',null,6)`);
     check('B1 2台の答えが違うと決まらず待つ', r1 === 'wait' && r2 === 'wait', `${r1}・${r2}`);
     check('B1 試合に出ていない人は absent を送れない', one(`select card_cup_live_report(${m0[0]},'${third}',${K(third)},0,'absent',false,'{3,0}',null,6)`) === 'none');
-    check('B1 食い違いは auto で決まる', one(`select card_cup_live_report(${m0[0]},'${third}',${K(third)},1,'auto',false,'{1,3}','[]',6)`) === 'ok');
+    check('B1 食い違いは auto で決まる', one(`select card_cup_live_report(${m0[0]},'${third}',${K(third)},1,'auto',false,'{1,3}','[[1,{"type":"auto"}]]',6)`) === 'ok');
+    check('B1 食い違いの試合の手の並びは auto の物', one(`select acts::text from card_cup_matches where id=${m0[0]}`).includes('auto'));
     check('B1 決まったあとの結果は done', one(`select card_cup_live_report(${m0[0]},'${a0}',${K(a0)},0,'pvp',true,'{3,0}',null,6)`) === 'done');
     const r1rows = psql(`select m.id, case when ea.checkin_at is not null then ea.owner_id else eb.owner_id end, case when ea.checkin_at is not null then 0 else 1 end
       from card_cup_matches m join card_cup_entries ea on ea.cup_id=m.cup_id and ea.seat=m.a_seat join card_cup_entries eb on eb.cup_id=m.cup_id and eb.seat=m.b_seat
@@ -93,10 +95,12 @@ if (!pgBin || !canSu) {
     check('B1 来ない相手とは absent ですぐ決まる', ab.every((x) => x === 'ok'), ab.join('・'));
     const fin = one(`select id||','||a_seat from card_cup_matches where cup_id='${cupK}' and round=2`).split(',');
     const fa = ownerOf(Number(fin[1]));
-    check('B1 決勝で片方だけ送ると待つ', one(`select card_cup_live_report(${fin[0]},'${fa}',${K(fa)},0,'pvp',false,'{3,1}',null,6)`) === 'wait');
+    check('B1 決勝で片方だけ送ると待つ', one(`select card_cup_live_report(${fin[0]},'${fa}',${K(fa)},0,'pvp',false,'{3,1}','[[0,{"type":"final"}]]',7)`) === 'wait');
     check('B1 90秒たつ前は settle で決まらない', one(`select card_cup_live_settle('${cupK}')`) === '0');
     psql(`update card_cup_matches set live = jsonb_set(live,'{rep_a,at}',to_jsonb(now() - interval '2 minutes')) where id=${fin[0]}`);
     check('B1 90秒たつと settle で leave として決まる', one(`select card_cup_live_settle('${cupK}')`) === '1' && one(`select decided from card_cup_matches where id=${fin[0]}`) === 'leave');
+    check('B1 抜けた試合も、送った側の手の並びが残り見返せる(card_cup_match)', (() => { const r = JSON.parse(one(`select card_cup_match(${fin[0]})::text`) || 'null'); return r && JSON.stringify(r.acts).includes('final') && r.rules === 7 && r.a && r.a.deck && r.seed > 0; })());
+    check('B1 2人とも来ない・来ない相手の試合も見返せる', psql(`select count(*) from card_cup_matches m where m.cup_id='${cupK}' and card_cup_match(m.id) is null`) === '0');
     const places = psql(`select place from card_cup_entries where cup_id='${cupK}' and not dropped order by place`).split('\n').join(',');
     check('B1 終わって順位は 1・2・3・3・5', one(`select status from card_cups where id='${cupK}'`) === 'done' && places === '1,2,3,3,5', places);
 
