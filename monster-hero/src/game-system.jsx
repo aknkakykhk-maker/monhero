@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: dbfd96537d80eeb2
+// generated-sha256: cfdc4330f5a2bf35
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -53457,8 +53457,8 @@ const assistantChatMonsterIds = (text, prevUserText) => {
 //   ・その発言にランキングの言葉やモードが無ければ、すぐ前のプレイヤーの発言(2つまで)から話題・モード・難易度を引き継ぐ
 //     (中継役も、すぐ前の発言にランキングの言葉があれば読む。ranking.js の rankingTopicOf)
 const ASSISTANT_CHAT_RANKING_TOPIC = /ランキング|ランク(?:イン|上位)|順位|何位|なんい|[0-9０-９一二三四五]+位|トップ|上位|首位|一番(?:上|強い|高い)|いちばん(?:上|強い|高い)/;
-// 1回に読むランキングの数。チャレンジの全部(通常9+極限8)が入る数。中継役の RANKING_PLAN_MAX と同じ
-const ASSISTANT_CHAT_RANKING_MAX = 18;
+// 1回に読むランキングの数。チャレンジの全部(通常9+極限10)が入る数。中継役の RANKING_PLAN_MAX と同じ
+const ASSISTANT_CHAT_RANKING_MAX = 19;
 // 引き継ぐ前の発言の数
 const ASSISTANT_CHAT_RANKING_PREV = 2;
 // 「その種類の難易度を全部」の言葉。英字の EXTREME は難易度そのものの名前なので、ここには入れない(カタカナ・漢字だけ)

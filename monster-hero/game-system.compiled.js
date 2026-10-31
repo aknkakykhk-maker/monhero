@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f73dca68b72fcb6f
+// source-sha256: 622f0bcfce7aac97
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -88632,7 +88632,7 @@ const assistantChatMonsterIds = (text, prevUserText) => {
   return out.slice(0, ASSISTANT_CHAT_MONSTER_MAX);
 };
 const ASSISTANT_CHAT_RANKING_TOPIC = /ランキング|ランク(?:イン|上位)|順位|何位|なんい|[0-9０-９一二三四五]+位|トップ|上位|首位|一番(?:上|強い|高い)|いちばん(?:上|強い|高い)/;
-const ASSISTANT_CHAT_RANKING_MAX = 18;
+const ASSISTANT_CHAT_RANKING_MAX = 19;
 const ASSISTANT_CHAT_RANKING_PREV = 2;
 const ASSISTANT_CHAT_RANKING_EXTREME_WORD = /エクストリーム|極限/;
 const ASSISTANT_CHAT_RANKING_ALL_WORD = /全部|ぜんぶ|全難易度|全ての難易度|すべての難易度|難易度(?:ごと|別|全部)|全部の難易度/;
