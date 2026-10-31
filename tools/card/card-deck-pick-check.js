@@ -47,8 +47,12 @@ check('② 「マルチ対戦」は先に入口を開く(デッキ選びはま�
 check('② 入口で相手を決めたらデッキ選びを開く(onPickDeck)', /onPickDeck=\{\(\) => \{ setDeckPick\(\{ next: 'pvp' \}\); setView\('deckPick'\); \}\}/.test(p84));
 check('② 招待の知らせから入るときも、先にデッキ選び', /const go = \(c\) => \{ if \(c\) \{ setDeckPick\(\{ next: 'pvp' \}\); setView\('deckPick'\); \} \}; go\(CARD_PVP_JOIN\.peek\(\)\)/.test(p84));
 check('② マルチの試合のあと(over → idle)は、入口へそのまま戻る(次に相手を決めたときに選ぶ)', !/prev === 'over' && r\.phase === 'idle'/.test(p84));
-check('② 開く所は 4 つ(助手と対戦・もう一度・マルチの相手を決めたとき・招待の知らせ)', opens(p84) === 4, `${opens(p84)}`);
-const tutorial = p84.slice(p84.indexOf('const startTutorial = '), p84.indexOf('const startBattle = '));
+// 2026-10-31 テスターさんの要望: ほかのブリーダーの登録デッキと戦う前にもデッキ選び(askShareDeck。フリー対戦の「ほかのブリーダー」・デッキ登録の「戦う」)
+check('② ほかのブリーダーと戦う前もデッキ選びを開く(askShareDeck)', /const askShareDeck = [^\n]*setDeckPick\(\{ next: 'cpu', pick: \{ who: entry\.tactics\.habit, level, share: entry \}, back \}\); setView\('deckPick'\)/.test(p84)
+  && (p84.match(/onFight=\{\(e, lv\) => askShareDeck\(e, lv, '(share|foe)'\)\}/g) || []).length === 2);
+check('② 開く所は 5 つ(助手と対戦・もう一度・ほかのブリーダー・マルチの相手を決めたとき・招待の知らせ)', opens(p84) === 5, `${opens(p84)}`);
+const tutorialEnd = p84.indexOf('const askShareDeck = ') > 0 ? Math.min(p84.indexOf('const askShareDeck = '), p84.indexOf('const startBattle = ')) : p84.indexOf('const startBattle = ');
+const tutorial = p84.slice(p84.indexOf('const startTutorial = '), tutorialEnd);
 check('② 練習試合には挟まない', tutorial.length > 0 && !/deckPick|setDeckPick/.test(tutorial));
 
 // ③ 保存と、選んだデッキで組むこと
@@ -56,7 +60,7 @@ const view = p84.slice(p84.indexOf("if (view === 'deckPick' && deckPick)"), p84.
 check('③ 選んだら active だけを書き換える(保存の形は変えない)', /persist\(\{ decks: \{ \.\.\.save\.decks, active: deck\.id \} \}\)/.test(view));
 check('③ 保存できなかったら始めない', /if \(!ok\) \{ setNotice\('保存できませんでした'\); return; \}/.test(view));
 check('③ 助手と対戦は選んだデッキで始める', /startBattle\(next\.pick, deck\)/.test(view) && /const startBattle = \(pick = foe, deck = activeDeck(, opts = \{\})?\) =>/.test(p84));
-check('③ 戻るは、助手と対戦なら相手えらび・マルチならモードえらび', /setView\(toPvp \? 'mode' : 'foe'\)/.test(view));
+check('③ 戻るは、助手と対戦なら相手えらび・ほかのブリーダーなら元の画面・マルチならモードえらび', /setView\(toPvp \? 'mode' : back \|\| 'foe'\)/.test(view));
 
 if (failed) { console.log(`\nNG ${failed} 件`); process.exit(1); }
 console.log('\nすべてOK');
