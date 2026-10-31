@@ -19,7 +19,7 @@ vm.runInContext(`${source.slice(start,end)}\nglobalThis.api={SPECIES_CHALLENGE_D
 const { api } = context;
 const assert = (condition,message) => { if(!condition)throw new Error(message); };
 
-assert(api.SPECIES_CHALLENGE_DIFFICULTY_IDS.length===18,'難易度は既存定義の18件を使う');
+assert(api.SPECIES_CHALLENGE_DIFFICULTY_IDS.length===19,'難易度は既存定義の19件を使う');
 const summary=api.speciesChallengeProfileSummary({ species:{
   mocchi:{
     cleared:{Beginner:true,Hard:true},
@@ -29,11 +29,11 @@ const summary=api.speciesChallengeProfileSummary({ species:{
   pixie:{cleared:{Normal:true},records:{Beginner:{bestScore:1234567}}},
   unknown:{cleared:{Beginner:true},records:{Beginner:{bestScore:9999999}}},
 } });
-assert(summary.totalCount===198,'全11種族×18難易度を198組として集計する');
+assert(summary.totalCount===209,'全11種族×19難易度を209組として集計する');
 assert(summary.bestScore===1234567&&summary.bestSpeciesId==='mocchi'&&summary.bestDifficultyId==='Hard','最高scoreと対応する種族・難易度を抽出し、同点は既存順で固定する');
 assert(summary.clearedCount===3,'clearedだけを重複なく集計し、firstRewardClaimedや未知種族を数えない');
 const empty=api.speciesChallengeProfileSummary(null);
-assert(empty.bestScore===0&&empty.bestSpeciesId===null&&empty.bestDifficultyId===null&&empty.clearedCount===0&&empty.totalCount===198,'未記録を安全に0/198へ正規化する');
+assert(empty.bestScore===0&&empty.bestSpeciesId===null&&empty.bestDifficultyId===null&&empty.clearedCount===0&&empty.totalCount===209,'未記録を安全に0/209へ正規化する');
 
 const profileStart=source.indexOf('{/* 保存済みの各モード記録を読むだけのプロフィール表示。新しい保存キーは作らない。 */}');
 const profileEnd=source.indexOf('{/* イベント回想:',profileStart);

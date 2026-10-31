@@ -1913,7 +1913,7 @@ function MonsterHeroGame() {
     const startHp = enemy?.hp ?? 0;
     const ca = runTacticsAiCopyAction(enemyDist);
     if (!(ca.total > 0)) return { defeated: false, enemyHp: startHp };
-    const shellAbsorbed = markShellAbsorbedHits(ca.hits, enemy?.shell); // シールド(ETERNAL)が受けたぶんはライフへ通らない
+    const shellAbsorbed = markShellAbsorbedHits(ca.hits, enemyShellPool(enemy)); // シールド(ETERNAL)が受けたぶんはライフへ通らない
     for (const h of ca.hits) await playAiCopyHit(h);
     setCurrentWaveDamage(p => p + ca.total); raidJackDamageRef.current += Number(ca.total) || 0;
     const remaining = Math.max(0, startHp - (ca.total - shellAbsorbed));
@@ -3475,6 +3475,8 @@ function MonsterHeroGame() {
   const helheimUnlocked = useMemo(() => isHelheimUnlocked(ragnarokClearCount), [ragnarokClearCount]);
   const helheimClearCount = extremeClearCounts[HELHEIM_SETTING.id] || 0;
   const eternalUnlocked = useMemo(() => isEternalUnlocked(helheimClearCount), [helheimClearCount]);
+  const eternalClearCount = extremeClearCounts[ETERNAL_SETTING.id] || 0;
+  const infernoUnlocked = useMemo(() => isInfernoUnlocked(eternalClearCount), [eternalClearCount]);
   // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
   const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
@@ -12085,13 +12087,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ★敵にかかっているデバフ・敵の強化を、画面の「敵の状態」(名前の横の簡易表示と、押したときの詳細)に出すための一覧(2026-10-06 ユーザー指示
   //   「乱心や敵へのデバフなど、かかっていることとあと何ターンかが分からない」)。
   //   味方の強化の札とは別に、敵の名前の横へまとめる(絶氷も同じ場所)。残りターンがあるものは「残りNT」まで出す
+  // いまの敵(描くたびに追いつく控え)。敵の番の処理は始まったときの enemy を持ったままなので、
+  // そのターンに割れたシールドの枚数(必殺技の連撃の回数を決める)はここから読む
+  const enemyLiveRef = useRef(null);
+  useEffect(() => { enemyLiveRef.current = enemy; }, [enemy]);
   const enemyDebuffs = (() => {
     const list = [];
     // short … 名前の横の簡易表示に添える短い字(残りターンなど)。value … 詳細の中の言い方。note … 詳細の説明
     const add = (key, mark, label, value, tone, note, short = '') => list.push({ key, mark, label, value, tone, note, short });
     if (!enemy) return list;
     // シールド(ETERNAL)。ライフより先に削れる。シールドを削ったぶんは距離強化の加点に入らない
-    if (Number(enemy.shell) > 0) add('shell', '🛡️', 'シールド', `${Math.floor(enemy.shell).toLocaleString()}`, 'text-pink-200 border-pink-400/60', 'ライフより先に削れる。シールドを削ったぶんは距離強化の加点に入らない', `${Math.floor(enemy.shell).toLocaleString()}`);
+    // 層のシールド(INFERNOのボス)は「残り◯枚」も出す。ゲージと割れた演出は見た目側(enemyShellView を読む)
+    const shellView = enemyShellView(enemy);
+    if (shellView.total > 0 && shellView.left > 0) add('shell', '🛡️', 'シールド', `残り${shellView.left}枚・${Math.floor(shellView.current).toLocaleString()}`, 'text-pink-200 border-pink-400/60', `${shellView.total}枚のうち${shellView.broken}枚割れた。1枚割るごとにボスの攻撃が上がる。シールドを削ったぶんは距離強化の加点に入らない`, `${shellView.left}枚`);
+    else if (Number(enemy.shell) > 0) add('shell', '🛡️', 'シールド', `${Math.floor(enemy.shell).toLocaleString()}`, 'text-pink-200 border-pink-400/60', 'ライフより先に削れる。シールドを削ったぶんは距離強化の加点に入らない', `${Math.floor(enemy.shell).toLocaleString()}`);
     if (iceLockTurns > 0) add('ice', '❄️', '絶氷の楔', iceLockPreparing ? '準備' : `残り${iceLockTurns}T`, 'text-cyan-200 border-cyan-400/60', iceLockPreparing ? '次のターンから、敵は間合いを動けず、与えるダメージが30%下がる' : '敵は間合いを動けず、与えるダメージが30%下がる', iceLockPreparing ? '準備' : `${iceLockTurns}T`);
     if (enemyConfuseTurns > 0) add('confuse', '🌀', '乱心', `残り${enemyConfuseTurns}T`, 'text-violet-200 border-violet-400/60', '毎ターン50%で、敵は意味不明になって動けない', `${enemyConfuseTurns}T`);
     const psycho = isTacticsMode(runMode) ? tacticsExPsychoLockOf(tacticsExState, { wave, turn: turnCount }) : null;
@@ -13736,7 +13745,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         } else if (guardValue>0) {
           // ガードは最終ダメージが0でも(余剰でライフ・ガッツが増えても)「受け止めた」扱いにする
           tookEnemyAttack=true;
-          const diff=guardValue-incomingBeforeTurnReduction;
+          // INFERNOのデュラハン・ムーは、割れた枚数に応じて必殺技が連撃になる(合計の威力は同じ)。
+          // ガードはタクティクスの連撃と同じ受け方(resolveTacticsGuardedHit): そのターンのガードが1枚なら1発だけ止まり、2枚以上で全部止まる
+          const rushHits=intent.type==='SPECIAL'?extremeLayerRushHits(specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty),wave,enemyLiveRef.current?.shellBroken):1;
+          const guardCards=Object.values(immediateEffects.guardBySlot||{}).reduce((sum,e)=>sum+Math.max(0,Number(e?.cards)||0),0);
+          const rushGuard=rushHits>1?resolveTacticsGuardedHit(incomingBeforeTurnReduction,rushHits,guardValue,guardCards>=TACTICS_RUSH_GUARD_CARDS?rushHits:1):null;
+          if (rushGuard) addPopup(`${rushHits}連撃！`,'enemy','text-orange-300 font-black text-2xl drop-shadow-md');
+          const diff=rushGuard?(rushGuard.taken>0?-rushGuard.taken:rushGuard.saved):guardValue-incomingBeforeTurnReduction;
           // キーンと弾くガード演出。既存5モードのガードはパーティ全体なので、全員の枠のバリアに結果を出す
           showGuardImpact(Object.fromEntries(slots.map((s, i) => [i, s]).filter(([, s]) => s).map(([i]) => [i, diff<0?'break':'block'])));
           setGuardFx(true); Audio_.se.guard(); triggerShake();
@@ -14911,7 +14926,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }
     // シールド(ETERNAL)。ヒットを順にシールドへ当て、シールドが受けたぶんを数える。シールドが受けたぶんはライフへ通らず、
     // 距離強化の加点にも入れない(2026-10-29 社長の決め)。シールドを持たない敵では0
-    const shellAbsorbedTotal=markShellAbsorbedHits(attackHits,enemy?.shell);
+    const shellAbsorbedTotal=markShellAbsorbedHits(attackHits,enemyShellPool(enemy));
     if (totalDmg>0) {
       if(totalDmg>0){
         const fallbackSlot = lastActionSlot !== null ? lastActionSlot : slots.findIndex(s => s !== null);
@@ -15938,8 +15953,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }
     // シールド(ETERNAL)。WAVEのはじめに最大ライフの率ぶんをまとう(冥府Lvが上がるのもWAVEの変わり目なので、ここで足りる)。
     // シールドを持たない難易度・ジャック戦・練習の台本では0のまま(既存の敵は何も変わらない)
-    const shell=raidRun||scenario?0:extremeEnemyShellAmount(newEnemy.maxHp,specialRuleDifficulty,w);
-    if (shell>0) { newEnemy.shell=shell; newEnemy.maxShell=shell; }
+    // 層のシールド(INFERNOのボスのWAVE)。WAVEのはじめの50%の代わりに、何枚ものシールドをまとって出てくる。
+    // 全部割ったあとの本体のライフにも倍率を掛け、割れるたびの攻撃の上がり方は元の攻撃力から数える(enemyAfterHit)
+    const layerPlan=raidRun||scenario?null:extremeShieldLayerPlan(specialRuleDifficulty,w,newEnemy.maxHp,extremeDifficultySetting(specialRuleDifficulty)?.power);
+    if (layerPlan) {
+      newEnemy.maxHp=Math.max(1,Math.floor(newEnemy.maxHp*layerPlan.bodyRate)); newEnemy.hp=newEnemy.maxHp;
+      newEnemy.shell=layerPlan.layers[0]; newEnemy.maxShell=layerPlan.layers[0];
+      newEnemy.shellLayers=layerPlan.layers.slice(1); newEnemy.shellLayerMaxes=layerPlan.layers;
+      newEnemy.shellLayerTotal=layerPlan.layers.length; newEnemy.shellBroken=0; newEnemy.shellBreakSeq=0;
+      newEnemy.layerAtkBase=newEnemy.atk; newEnemy.layerAtkGain=layerPlan.atkGain;
+    } else {
+      const shell=raidRun||scenario?0:extremeEnemyShellAmount(newEnemy.maxHp,specialRuleDifficulty,w);
+      if (shell>0) { newEnemy.shell=shell; newEnemy.maxShell=shell; }
+    }
     enemyDefeatResolvedRef.current=false;
     // 不死の回数はWAVEごとに数え直す(前のWAVEで使い切っていても、対象WAVEでは規定回数から始まる)
     enemyRevivalUsedRef.current=0; setEnemyRevivalUsed(0); enemyRevivedHpRef.current=null; setEnemyRevivalReveal(null);
@@ -19349,7 +19375,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="relative shrink-0">
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="mhbs-arrow absolute left-0 top-[42%] z-20 disabled:opacity-20"><ChevronLeft size={18}/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.id!==extremeDifficulty)setExtremeDifficulty(difficulties[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll max-[359px]:!px-[4%]" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:setting.id==='HELHEIM'?helheimUnlocked:setting.id==='ETERNAL'?eternalUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;const theme=extremeDifficultyTheme(setting.id);const heroProofReward=heroProofClearReward({extremeDifficulty:setting.id});return (
+                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:setting.id==='HELHEIM'?helheimUnlocked:setting.id==='ETERNAL'?eternalUnlocked:setting.id==='INFERNO'?infernoUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;const theme=extremeDifficultyTheme(setting.id);const heroProofReward=heroProofClearReward({extremeDifficulty:setting.id});return (
                       <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} className={`mhbt-tile mhbt-d-${setting.id} dark snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[400px] flex flex-col px-4 pt-3 pb-2.5 transition-all ${active?'on scale-100 opacity-100':'scale-[.92] opacity-45'} ${previewable?'':'dim'}`} style={{'--acc':theme.accent}}>
                         <span aria-hidden="true" className="mhbt-mark">{setting.label}</span>
                         <div className="mhbt-eyebrow">EXTREME DIFFICULTY</div>
@@ -19357,7 +19383,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <div className="mt-1 h-[42px] shrink-0 rounded-xl bg-black/40 px-2.5 py-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,.12)]">
                           <small className="block text-[8px] text-white/70 font-black">{setting.available?`${setting.label}の記録`:'難易度情報'}</small>
                           <b className="block text-right text-base italic leading-tight text-white">{setting.available&&unlocked?`${(extremeBestScores[setting.id]||0).toLocaleString()} pt`:'？？？'}</b>
-                          <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':setting.id==='ULTIMATE'&&!ultimateUnlocked?'CHAOSクリアで解放':setting.id==='INFINITY'&&!infinityUnlocked?'ULTIMATEクリアで解放':setting.id==='GOD'&&!godUnlocked?'INFINITYクリアで解放':setting.id==='RAGNAROK'&&!ragnarokUnlocked?'GODクリアで解放':setting.id==='HELHEIM'&&!helheimUnlocked?'RAGNAROKクリアで解放':setting.id==='ETERNAL'&&!eternalUnlocked?'HELHEIMクリアで解放':'選択できません'}</span>
+                          <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':setting.id==='ULTIMATE'&&!ultimateUnlocked?'CHAOSクリアで解放':setting.id==='INFINITY'&&!infinityUnlocked?'ULTIMATEクリアで解放':setting.id==='GOD'&&!godUnlocked?'INFINITYクリアで解放':setting.id==='RAGNAROK'&&!ragnarokUnlocked?'GODクリアで解放':setting.id==='HELHEIM'&&!helheimUnlocked?'RAGNAROKクリアで解放':setting.id==='ETERNAL'&&!eternalUnlocked?'HELHEIMクリアで解放':setting.id==='INFERNO'&&!infernoUnlocked?'ETERNALクリアで解放':'選択できません'}</span>
                         </div>
                         {previewable?<>
                           <div className="grid grid-cols-3 gap-1 mt-1">{[['敵強度',`×${setting.power}`],['スコア',setting.score?`×${setting.score}`:'対象外'],['ダイヤ',setting.gold?`×${setting.gold}`:'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
