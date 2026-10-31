@@ -196,8 +196,9 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
         return { name: e.innerText, out: Math.round(b.right - col.right), cut: cs.textOverflow === 'ellipsis' && e.scrollWidth > e.clientWidth + 1, lines: Math.round(b.height / parseFloat(cs.lineHeight || '14')) };
       }));
       if (w === 320) await shot(page, 'qa8-mon-names-320');
-      const bad = names.filter((x) => x.out > 1 || x.cut);
-      check(`③ ${w}×${h}: 場のモンスターの名前が切れず、欄からはみ出さない(${names.map((x) => x.name).join('・')})`, names.length === 6 && LONG.every((n) => names.some((x) => x.name === n)) && bad.length === 0, JSON.stringify(bad));
+      // 名前はいつも1行(2026-10-31 社長「7文字以上のモンスター名が下にずれてる」。2行に折れるとライフ・地上の札が下にずれた)
+      const bad = names.filter((x) => x.out > 1 || x.cut || x.lines > 1);
+      check(`③ ${w}×${h}: 場のモンスターの名前が1行のまま切れず、欄からはみ出さない(${names.map((x) => x.name).join('・')})`, names.length === 6 && LONG.every((n) => names.some((x) => x.name === n)) && bad.length === 0, JSON.stringify(bad));
       // ④ 捨て札の一覧
       await page.locator('[data-card-battle] button', { hasText: /^捨て札/ }).last().click();
       await page.locator('[data-card-discard-name]').first().waitFor({ timeout: 10000 });
