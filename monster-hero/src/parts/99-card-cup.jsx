@@ -34,6 +34,7 @@ const cardCupNormalizeView = (v) => {
     seat: int(e.seat), place: int(e.place), wins: int(e.wins), checkin: e.checkin === true }));
   const matches = (Array.isArray(v.matches) ? v.matches : []).filter((m) => m && Number.isFinite(Number(m.id))).map((m) => ({
     id: Number(m.id), round: int(m.round) || 0, slot: int(m.slot) || 0, a: int(m.a), b: int(m.b), winner: m.winner === 0 || m.winner === 1 ? m.winner : null,
+    ready: !!(m.live && m.live.ready_at), // リアルタイム杯: 戦える回戦か(④ 99-card-cup-live)
     kos: Array.isArray(m.kos) ? m.kos.slice(0, 2).map((k) => (Number.isInteger(k) ? k : 0)) : null,
     live: m.live && typeof m.live.play === 'string' ? { who: typeof m.live.who === 'string' ? m.live.who : null, play: m.live.play.slice(0, 200), review: typeof m.live.review === 'string' ? m.live.review.slice(0, 240) : '' } : null }))
     .filter((m) => m.a !== null && m.b !== null);
@@ -250,7 +251,39 @@ const CardCupCreate = ({ now, mine, onOpenRegister, onCreated, selfId, profile }
 };
 
 // ---- 1つの杯 ----
-const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegister }) => {
+// 試合の一覧(結果が見られるとき)。各試合から見返しを開く(公式杯と同じ見返し。84 の openCupReplay → 93 の cardReplayFromTour)
+const cardCupRoundLabel = (c, r, rounds) => {
+  if (c.format !== 'ko') return `第${r + 1}節`;
+  const left = rounds - r;
+  return left === 1 ? '決勝' : left === 2 ? '準決勝' : left === 3 ? '準々決勝' : `${r + 1}回戦`;
+};
+const CardCupMatches = ({ v, onOpenReplay }) => {
+  const c = v.cup;
+  const rounds = Math.max(0, ...v.matches.map((m) => m.round + 1));
+  const bySeat = (s) => v.entries.find((e) => e.seat === s) || null;
+  const nm = (e) => (e ? (e.mine ? 'あなた' : e.name) : '?');
+  if (!v.matches.length) return null;
+  return (
+    <div data-card-cup-matches className="space-y-1 rounded-2xl bg-slate-950/70 p-2.5">
+      <b className="block text-[13px] font-black text-amber-200">試合</b>
+      {v.matches.slice().sort((x, y) => (y.round - x.round) || (x.slot - y.slot)).map((m) => {
+        const a = bySeat(m.a), b = bySeat(m.b);
+        return (
+          <div key={m.id} data-card-cup-match={m.id} className="flex items-center gap-2 rounded-xl bg-white/5 px-2 py-1.5">
+            <small className="w-14 shrink-0 text-[11px] font-black text-amber-200">{cardCupRoundLabel(c, m.round, c.format === 'ko' && c.bracket ? c.bracket.length : rounds)}</small>
+            <span className="min-w-0 flex-1 truncate text-[12px] font-bold text-white">
+              <b className={m.winner === 0 ? 'text-orange-300' : 'text-slate-300'}>{nm(a)}</b> 対 <b className={m.winner === 1 ? 'text-orange-300' : 'text-slate-300'}>{nm(b)}</b>
+            </span>
+            <button type="button" data-card-cup-replay={m.id} disabled={!onOpenReplay || m.winner === null} onClick={() => { Audio_.fgSe.tap(); void onOpenReplay(m.id, c.name); }}
+              className="shrink-0 rounded-lg border-2 border-amber-500/70 bg-amber-100 px-2 py-0.5 text-[12px] font-black text-amber-900 disabled:opacity-40">見返す</button>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegister, onOpenReplay = null }) => {
   const c = v.cup;
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -283,6 +316,7 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
         {c.status === 'done' && !shown && <div className="mt-1 text-[12px] font-black text-amber-200">{`結果は ${cardTourTimeLabel(c.startAt)} に出ます`}</div>}
         {c.mode === 'auto' && c.status === 'running' && <div className="mt-1 text-[12px] font-black text-amber-200">{`試合はサーバで自動で行われます。結果は ${cardTourTimeLabel(c.startAt)} に出ます`}</div>}
       </div>
+      {c.mode === 'live' && typeof CardCupLivePanel === 'function' && <CardCupLivePanel v={v} now={now} selfId={selfId} onChanged={onChanged}/>}
       {shown && c.format === 'ko' && <CardCupBracket rounds={c.bracket} matches={v.matches} entries={v.entries} done/>}
       {shown && c.format === 'rr' && typeof CardTourGrid === 'function' && <CardTourGrid view={cardCupAsTourView(v)} stage="group" grp={0} known={null} now={now}/>}
       {shown && ranked.length > 0 && (
@@ -291,6 +325,7 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
           <div className="mt-1 text-slate-400">個人杯にはごほうびはありません。ランキングにも入りません</div>
         </div>
       )}
+      {shown && <CardCupMatches v={v} onOpenReplay={onOpenReplay}/>}
       {!shown && (
         <div data-card-cup-entries className="space-y-1 rounded-2xl bg-slate-950/70 p-2.5">
           <b className="block text-[13px] font-black text-amber-200">{`参加者 ${v.entries.length}/${c.max}人`}</b>
@@ -307,7 +342,8 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
 
 // ---- 画面 ----
 // onBack … 対戦えらびへ / onOpenRegister … デッキ登録へ(戻ると、この画面のいまの杯に戻る)
-const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange = null }) => {
+// onOpenReplay(matchId, title) … 試合の見返しを開く(84。開けなかったら false)
+const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange = null, onOpenReplay = null }) => {
   const [tab, setTab] = useState('list');
   const [list, setList] = useState(undefined);
   const [mineCups, setMineCups] = useState(undefined);
@@ -346,7 +382,7 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
   if (cupId) {
     const back = () => { setCupId(null); if (selfId) void cardCupMine(selfId).then(setMineCups); void cardCupList().then((l) => l && setList(l)); };
     if (!view) return shell(<ScreenEmpty emoji="⏳" lines={['読み込んでいます']}/>, back);
-    return shell(<CardCupDetail v={view} now={now} mine={mine} selfId={selfId} profile={profile} onChanged={() => reload()} onOpenRegister={onOpenRegister}/>, back);
+    return shell(<CardCupDetail v={view} now={now} mine={mine} selfId={selfId} profile={profile} onChanged={() => reload()} onOpenRegister={onOpenRegister} onOpenReplay={onOpenReplay}/>, back);
   }
   const find = async () => {
     const c = String(code || '').replace(/[^0-9]/g, '');
