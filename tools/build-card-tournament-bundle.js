@@ -15,7 +15,8 @@ const GAME = path.join(ROOT, 'monster-hero');
 const OUT = path.join(ROOT, 'supabase', 'functions', 'card-tournament-run', 'game.js');
 const PARTS = ['82-card-battle-core.jsx', '82-card-tactics-core.jsx', '82-card-share-core.jsx', '82-card-tournament-core.jsx'];
 const EXPORTS = ['CARD_BATTLE_DATA', 'CARD_AI_HABITS', 'CARD_REPLAY_RULES', 'cardTourGroups', 'cardTourSchedule', 'cardTourStageDays', 'cardTourStandings',
-  'cardTourFinalists', 'cardTourPlay', 'cardTourNormalizeRewards', 'cardTourRewardOf', 'cardTourHash', 'cardDeckProblems', 'cardCreateGame', 'cardApplyAction'];
+  'cardTourFinalists', 'cardTourPlay', 'cardTourNormalizeRewards', 'cardTourRewardOf', 'cardTourHash', 'cardDeckProblems', 'cardCreateGame', 'cardApplyAction',
+  'cardTourKoFirst', 'cardTourKoMatches', 'cardTourKoWinners', 'cardTourKoNextPairs', 'cardTourKoPlaces'];
 
 const make = () => {
   const replay = fs.readFileSync(path.join(GAME, 'src', 'parts', '93-card-replay.jsx'), 'utf8');
