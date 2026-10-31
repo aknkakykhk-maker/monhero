@@ -223,7 +223,10 @@ const CardVsMonsters = ({ db, monsters, side, start, step }) => (
               return el;
             })()
             : <img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="w-full rounded-md object-cover" style={{ aspectRatio: '63 / 88', maxHeight: 'min(19vh, 140px)' }}/>}
-          <span className="mt-0.5 w-full truncate text-center text-[10px] font-black text-white" style={{ textShadow: '0 1px 2px #000' }}>{m.name}</span>
+          {/* 名前は「…」で切らず、幅に合わせて字を小さくして1行に収める(2026-10-31 社長「7文字以上のモンスター名…サイズで調整して」) */}
+          <span data-card-vs-mon-name className="mt-0.5 block w-full text-center" style={{ containerType: 'inline-size' }}>
+            <span className="whitespace-nowrap font-black text-white" style={{ fontSize: `min(10px, calc(100cqw / ${String(m.name).length + 0.5}))`, textShadow: '0 1px 2px #000' }}>{m.name}</span>
+          </span>
         </div>
       );
     })}
