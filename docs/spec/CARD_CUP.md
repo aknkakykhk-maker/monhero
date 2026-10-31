@@ -13,7 +13,8 @@
 | 募り方 | 合言葉(6けたの数字。参加者だけが見られる)と公開の一覧(`listed`)。杯の名前・主催名は画面に出すとき `cardChatMask`(91 の悪い言葉の置き換え)を通す |
 | 上限 | 1人が開ける杯は同時に1つ / 出られる杯は同時に3つ / 同時に開いている杯は全体で200まで / オート杯は同じ発表の時刻に3杯まで |
 | 時刻 | オート杯: 締め切りは10分後〜3日後・発表は締め切りの1時間後から・ちょうどの時(分は0)。リアルタイム杯: 始まる時刻は15分後〜3日後・15分きざみ(締め切り = 始まる時刻) |
-| ごほうび | なし。ランキング・カードランク・強さの点数にも入らない |
+| ごほうび | なし。ランキング・カードランク・強さの点数にも入らない(主催が出すごほうび・参加費は、あとから足す案がある) |
+| 見返し | 各試合を「見返す」で見られる。公開にした杯は、終わって30日のあいだ、だれでも結果と見返しを見られる(公開の一覧の「終わった杯」)。合言葉だけの杯は参加者だけ(2026-10-31 社長 案A・30日) |
 | 公開 | 新しい公開の印を立てる。公開までは遊ぶ人に見えない |
 
 ## 上限の数の決め方(サーバの負担)
@@ -28,7 +29,7 @@
 
 | 物 | 場所 |
 | --- | --- |
-| 表と関数 | `docs/sql/card-cup/CARD_CUP_APPLY.sql`(`card_cups`・`card_cup_entries`・`card_cup_matches` と、下の関数) |
+| 表と関数 | `docs/sql/card-cup/CARD_CUP_APPLY.sql`(`card_cups`・`card_cup_entries`・`card_cup_matches` と、下の関数)と続きの `CARD_CUP_PUBLIC_DONE.sql`(終わった杯の見方) |
 | オート杯を回す所 | `supabase/functions/card-tournament-run/cup.js`(`runCups`。公式杯のあと、同じ残りの時間で回す) |
 | 呼ぶ時刻 | `docs/sql/card-tournament/CARD_TOURNAMENT_SCHEDULE.sql`(1日中10分おき `*/10 * * * *`) |
 | 計算 | `82-card-tournament-core.jsx` の総当たり(`cardTourSchedule`・`cardTourStandings`)とトーナメント(`cardTourKoFirst`・`cardTourKoMatches`・`cardTourKoWinners`・`cardTourKoNextPairs`・`cardTourKoPlaces`) |
@@ -46,7 +47,9 @@
 | `card_cup_leave` | `p_cup, p_owner, p_key` | `ok` / `closed` / `none` / `locked` / `host`(主催は抜けられない) |
 | `card_cup_cancel` | `p_cup, p_owner, p_key` | `ok` / `closed` / `locked`(主催だけ・受付中だけ。状態を `closed` にする) |
 | `card_cup_view` | `p_cup, p_owner` | `{ cup(code は参加者だけ・bracket), me, entries, matches }`。オート杯の結果は「終わって、発表の時刻を過ぎた」ときだけ。リアルタイム杯はすぐ |
-| `card_cup_match` | `p_id` | 1試合の見返しの材料(種・先攻・手・ルールの版・両方のデッキ・実況) |
+| `card_cup_match` | `p_id` | 1試合の見返しの材料(種・先攻・手・ルールの版・両方のデッキ・実況)。公開の杯だけ(CARD_CUP_PUBLIC_DONE.sql で差しかえ) |
+| `card_cup_match_for` | `p_id, p_owner` | 同じ材料。公開の杯はだれでも・合言葉だけの杯は参加者だけ(2026-10-31) |
+| `card_cup_list_done` | なし | 終わった公開の杯(終わって30日まで・新しい順に50まで)(2026-10-31) |
 
 杯の1行(`card_cup_row`)の形: `{ id, name, host_id, host_name, host_icon, mode, format, max, listed, status, entry_until, start_at, closed_reason, done_at, players }`。
 `status`: `entry`(受付中)/ `running`(開催中)/ `done`(終わり)/ `closed`(取り消し `host`・人数が足りない `few`)。

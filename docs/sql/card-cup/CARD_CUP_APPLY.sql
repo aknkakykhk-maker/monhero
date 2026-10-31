@@ -16,6 +16,7 @@
 -- オート杯の試合を回すのはサーバの上の関数 card-tournament-run(service_role)。呼ぶ時刻は CARD_CUP_SCHEDULE.sql(1日中10分おき)
 -- リアルタイム杯の集合・試合の結果の関数は、あとの段階(④)で足す。結果の決め方はマルチ対戦と同じ(2026-10-31 社長)。来ない人は登録デッキが自動で戦う
 -- 持ち主の見分けは、みんなのデッキと同じ owner_id(ブリーダーID)+ 端末の鍵(mh_card_deck_owner_key_v1)。表には md5 の指紋だけ
+-- ★続き: CARD_CUP_PUBLIC_DONE.sql(終わった公開の杯の一覧・30日・見返しの範囲。2026-10-31)。このファイルを流し直したら、続きも流し直す
 
 create table if not exists public.card_cups (
   id            text        not null,
