@@ -7,7 +7,9 @@
 --   card_cup_live_reward … ごほうびのある杯なら true(リアルタイム杯は、なぞり直しが合ったときだけ確定する口。ブレイブくんの #4356)
 --
 -- 決まり(社長):
---   ・出せる物は card_cup_prize_items の表のとおり(物ごとの上限。窓口が行を足す・数を変える。止めるときは enabled = false)
+--   ・出せる物は card_cup_prize_items の表のとおり(窓口が行を足して増やす。止めるときは enabled = false)
+--   ・出す量・参加費の額に上限は付けない(2026-10-31 社長「やっぱり上限はなしでいい」)。持っている分なら、どの物もいくつでも。参加費にもどの物でも使える
+--     (1回に預ける量だけ 10億まで。数の桁あふれを防ぐためで、遊びの上限ではない)
 --   ・主催仲間はフレンドなら何人でも。主催と同じように動ける(持ち物を出す・合言葉を見る・参加費と配り方を決める・仲間を誘う/外す)
 --     杯の取り消し(card_cup_cancel・預かった物が全員へ戻る)だけは主催だけ(今の関数のまま)
 --   ・主催・主催仲間は参加費を払わず、ごほうびも受け取らない(配る順位に入れない。その分は次の順位の人へ)
@@ -16,35 +18,32 @@
 --   'diamond'(mh_gold)/ 'beatPoint'(mh_rhythm_event_points_v1)/ 'rainbowPsyche' / 'rainbowTranscendFruit' / 'dyeMock'
 --   'gameItem:<アイテムid>'(mh_owned_items)/ 'card:shard'・'card:ticket'(mh_card_tactics_v1)/ 'card:catalog'(mh_card_catalogs_v1)
 
--- ---- 出せる物と上限 ----
+-- ---- 出せる物(上限は持たない。並び順と、止める印だけ) ----
 create table if not exists public.card_cup_prize_items (
   item      text    not null,
   label     text    not null,
-  give_max  integer not null,  -- 1人が1杯に出せる上限
-  fee_max   integer not null,  -- 参加費の上限(0 なら参加費には使えない)
-  day_max   integer not null,  -- 1人が1日(日本時間)に預けられる上限(出す + 参加費)
   sort      integer not null default 100,
   enabled   boolean not null default true,
   constraint card_cup_prize_items_pkey primary key (item),
   constraint card_cup_prize_items_shape check (item ~ '^(diamond|beatPoint|rainbowPsyche|rainbowTranscendFruit|dyeMock|gameItem:[a-z0-9_]{1,40}|card:(shard|ticket|catalog))$'
-    and give_max >= 0 and fee_max >= 0 and day_max >= 0 and length(label) between 1 and 40)
+    and length(label) between 1 and 40)
 );
-insert into public.card_cup_prize_items (item, label, give_max, fee_max, day_max, sort) values
-  ('diamond', 'ダイヤ', 50000, 5000, 100000, 10),
-  ('beatPoint', 'ビートP', 5000, 500, 10000, 20),
-  ('rainbowPsyche', '虹のプシュケー', 30, 3, 60, 30),
-  ('rainbowTranscendFruit', '虹の超越の実', 3, 0, 5, 40),
-  ('gameItem:hero_proof', '勇者の証', 3, 0, 5, 50),
-  ('gameItem:hero_proof_shard', '勇者の証片', 30, 3, 60, 60),
-  ('gameItem:session_ticket', 'セッション券', 10, 1, 20, 70),
-  ('gameItem:skip_ticket_jo', 'スキップチケット・序', 10, 1, 20, 80),
-  ('gameItem:skip_ticket_ha', 'スキップチケット・破', 10, 1, 20, 81),
-  ('gameItem:skip_ticket_kyu', 'スキップチケット・急', 10, 1, 20, 82),
-  ('gameItem:training_ticket', 'トレーニングチケット', 10, 1, 20, 90),
-  ('dyeMock', '染色もどき', 10, 1, 20, 100),
-  ('card:shard', '戦術カードのかけら', 30, 3, 60, 110),
-  ('card:ticket', 'カードパック券', 5, 1, 10, 120),
-  ('card:catalog', 'バトルカードカタログ', 3, 0, 5, 130)
+insert into public.card_cup_prize_items (item, label, sort) values
+  ('diamond', 'ダイヤ', 10),
+  ('beatPoint', 'ビートP', 20),
+  ('rainbowPsyche', '虹のプシュケー', 30),
+  ('rainbowTranscendFruit', '虹の超越の実', 40),
+  ('gameItem:hero_proof', '勇者の証', 50),
+  ('gameItem:hero_proof_shard', '勇者の証片', 60),
+  ('gameItem:session_ticket', 'セッション券', 70),
+  ('gameItem:skip_ticket_jo', 'スキップチケット・序', 80),
+  ('gameItem:skip_ticket_ha', 'スキップチケット・破', 81),
+  ('gameItem:skip_ticket_kyu', 'スキップチケット・急', 82),
+  ('gameItem:training_ticket', 'トレーニングチケット', 90),
+  ('dyeMock', '染色もどき', 100),
+  ('card:shard', '戦術カードのかけら', 110),
+  ('card:ticket', 'カードパック券', 120),
+  ('card:catalog', 'バトルカードカタログ', 130)
 on conflict (item) do nothing;
 
 -- ---- 主催仲間(行は消さず、状態で表す) ----
@@ -70,7 +69,7 @@ create table if not exists public.card_cup_prizes (
   split      integer[]   not null default array[70, 30],  -- 1位から。1つ1以上・合計100・8位まで
   updated_at timestamptz not null default now(),
   constraint card_cup_prizes_pkey primary key (cup_id),
-  constraint card_cup_prizes_shape check (fee_amount >= 0 and (fee_amount = 0 or fee_item is not null) and array_length(split, 1) between 1 and 8)
+  constraint card_cup_prizes_shape check (fee_amount >= 0 and fee_amount <= 1000000000 and (fee_amount = 0 or fee_item is not null) and array_length(split, 1) between 1 and 8)
 );
 
 -- ---- 預かった記録。1回預けるごとに1行。nonce(端末が作る長い文字)が鍵なので、同じ送り直しは1回分 ----
@@ -83,10 +82,9 @@ create table if not exists public.card_cup_deposits (
   amount   integer     not null,
   at       timestamptz not null default now(),
   constraint card_cup_deposits_pkey primary key (nonce),
-  constraint card_cup_deposits_shape check (kind in ('prize', 'fee') and amount > 0 and nonce ~ '^[0-9a-f]{32,64}$')
+  constraint card_cup_deposits_shape check (kind in ('prize', 'fee') and amount > 0 and amount <= 1000000000 and nonce ~ '^[0-9a-f]{32,64}$')
 );
 create index if not exists card_cup_deposits_cup_idx on public.card_cup_deposits (cup_id, owner_id);
-create index if not exists card_cup_deposits_day_idx on public.card_cup_deposits (owner_id, at);
 -- 参加費は1杯1人1回だけ(抜けて入り直しても二重に取らない)
 create unique index if not exists card_cup_deposits_fee_once_idx on public.card_cup_deposits (cup_id, owner_id) where kind = 'fee';
 
@@ -121,16 +119,10 @@ returns boolean language sql stable security definer set search_path = public as
   select exists (select 1 from card_cups where id = p_cup and host_id = p_owner)
     or exists (select 1 from card_cup_hosts where cup_id = p_cup and owner_id = p_owner and state = 'joined')
 $$;
--- その人がその日(日本時間)に預けた量
-create or replace function public.card_cup_day_total(p_owner text, p_item text)
-returns integer language sql stable security definer set search_path = public as $$
-  select coalesce(sum(amount), 0)::int from card_cup_deposits
-  where owner_id = p_owner and item = p_item and (at at time zone 'Asia/Tokyo')::date = (now() at time zone 'Asia/Tokyo')::date
-$$;
 -- 配る物の合計(返す人の分を除く: 抜けた・外された参加者の参加費 / 外された主催仲間の出した物)
 create or replace function public.card_cup_pool(p_cup text)
-returns table (item text, total integer) language sql stable security definer set search_path = public as $$
-  select d.item, sum(d.amount)::int from card_cup_deposits d
+returns table (item text, total bigint) language sql stable security definer set search_path = public as $$
+  select d.item, sum(d.amount)::bigint from card_cup_deposits d
   where d.cup_id = p_cup
     and not (d.kind = 'fee' and exists (select 1 from card_cup_entries e where e.cup_id = p_cup and e.owner_id = d.owner_id and e.dropped))
     and not (d.kind = 'prize' and exists (select 1 from card_cup_hosts h where h.cup_id = p_cup and h.owner_id = d.owner_id and h.state = 'removed'))
@@ -145,8 +137,8 @@ $$;
 -- 1人ずつの取り分(物ごと)。配る割合は、人数が足りず使わない順位の分を1位へ寄せる。
 -- 同じ順位の人は、その順位の分を人数で分ける。割り切れない端数は1位の人へ(1位が何人かいれば、owner_id の順で先の人)
 create or replace function public.card_cup_payouts(p_cup text)
-returns table (owner_id text, item text, amount integer) language plpgsql stable security definer set search_path = public as $$
-declare v_split integer[]; v_n integer; v_k integer; v_pct integer[]; i integer; r record; v_t integer; v_each integer; v_given integer; v_first text; v_eachs integer[];
+returns table (owner_id text, item text, amount bigint) language plpgsql stable security definer set search_path = public as $$
+declare v_split integer[]; v_n integer; v_k integer; v_pct integer[]; i integer; r record; v_t integer; v_each bigint; v_given bigint; v_first text; v_eachs bigint[];
 begin
   select p.split into v_split from card_cup_prizes p where p.cup_id = p_cup;
   if v_split is null then v_split := array[70, 30]; end if;
@@ -157,14 +149,14 @@ begin
   for i in v_k + 1 .. array_length(v_split, 1) loop v_pct[1] := v_pct[1] + v_split[i]; end loop;
   select e.owner_id into v_first from card_cup_eligible(p_cup) e where e.rk = 1 order by e.owner_id limit 1;
   for r in select * from card_cup_pool(p_cup) loop
-    v_given := 0; v_eachs := array[]::integer[];
+    v_given := 0; v_eachs := array[]::bigint[];
     for i in 1 .. v_k loop
       select count(*) into v_t from card_cup_eligible(p_cup) e where e.rk = i;
-      v_each := case when v_t > 0 then floor(r.total::numeric * v_pct[i] / 100 / v_t)::int else 0 end;
+      v_each := case when v_t > 0 then floor(r.total::numeric * v_pct[i] / 100 / v_t)::bigint else 0 end;
       v_eachs := v_eachs || v_each;
       v_given := v_given + v_each * v_t;
     end loop;
-    return query select e.owner_id, r.item, (v_eachs[e.rk] + case when e.owner_id = v_first then r.total - v_given else 0 end)::int
+    return query select e.owner_id, r.item, (v_eachs[e.rk] + case when e.owner_id = v_first then r.total - v_given else 0 end)::bigint
       from card_cup_eligible(p_cup) e where e.rk <= v_k and (v_eachs[e.rk] + case when e.owner_id = v_first then r.total - v_given else 0 end) > 0;
   end loop;
 end $$;
@@ -215,7 +207,7 @@ begin
   if s <> 100 then return 'bad'; end if;
   if coalesce(p_fee_amount, 0) > 0 then
     select * into it from card_cup_prize_items where item = p_fee_item and enabled;
-    if not found or it.fee_max < 1 or p_fee_amount > it.fee_max then return 'bad'; end if;
+    if not found or p_fee_amount > 1000000000 then return 'bad'; end if;
   end if;
   insert into card_cup_prizes (cup_id, fee_item, fee_amount, split)
     values (p_cup, case when coalesce(p_fee_amount, 0) > 0 then p_fee_item end, greatest(coalesce(p_fee_amount, 0), 0), p_split)
@@ -267,10 +259,10 @@ begin
   return 'ok';
 end $$;
 
--- 預ける(主催・主催仲間のごほうび)。返り値 'ok' | 'dup'(同じ nonce)| 'closed' | 'locked' | 'bad' | 'over'(上限)
+-- 預ける(主催・主催仲間のごほうび)。返り値 'ok' | 'dup'(同じ nonce)| 'closed' | 'locked' | 'bad'
 create or replace function public.card_cup_deposit(p_cup text, p_owner text, p_key text, p_item text, p_amount integer, p_nonce text)
 returns text language plpgsql security definer set search_path = public as $$
-declare c card_cups; it card_cup_prize_items; cur integer;
+declare c card_cups; it card_cup_prize_items;
 begin
   if p_nonce is null or p_nonce !~ '^[0-9a-f]{32,64}$' then return 'bad'; end if;
   if exists (select 1 from card_cup_deposits where nonce = p_nonce) then return 'dup'; end if;
@@ -278,15 +270,13 @@ begin
   if not found or c.status <> 'entry' or now() >= c.entry_until then return 'closed'; end if;
   if not card_cup_is_host(p_cup, p_owner) or not card_cup_key_ok(p_owner, p_key) then return 'locked'; end if;
   select * into it from card_cup_prize_items where item = p_item and enabled;
-  if not found or p_amount is null or p_amount < 1 then return 'bad'; end if;
-  select coalesce(sum(amount), 0)::int into cur from card_cup_deposits where cup_id = p_cup and owner_id = p_owner and kind = 'prize' and item = p_item;
-  if cur + p_amount > it.give_max or card_cup_day_total(p_owner, p_item) + p_amount > it.day_max then return 'over'; end if;
+  if not found or p_amount is null or p_amount < 1 or p_amount > 1000000000 then return 'bad'; end if;
   insert into card_cup_deposits (nonce, cup_id, owner_id, kind, item, amount) values (p_nonce, p_cup, p_owner, 'prize', p_item, p_amount);
   return 'ok';
 end $$;
 
 -- 参加(参加費のある杯は、参加と参加費を1回で)。参加費の無い杯・主催・主催仲間は、ふつうの参加と同じ('nofee')
--- 返り値: card_cup_join と同じ + 'nofee'(払わずに入った)| 'dup'(同じ nonce)| 'paid'(前に払った分のまま入り直した)| 'over'
+-- 返り値: card_cup_join と同じ + 'nofee'(払わずに入った)| 'dup'(同じ nonce)| 'paid'(前に払った分のまま入り直した)
 create or replace function public.card_cup_join_pay(p_cup text, p_owner text, p_key text, p_name text, p_icon text, p_nonce text)
 returns text language plpgsql security definer set search_path = public as $$
 declare p card_cup_prizes; it card_cup_prize_items; r text;
@@ -305,7 +295,6 @@ begin
     r := card_cup_join(p_cup, p_owner, p_key, p_name, p_icon);
     return case when r = 'ok' then 'paid' else r end;
   end if;
-  if card_cup_day_total(p_owner, p.fee_item) + p.fee_amount > it.day_max then return 'over'; end if;
   r := card_cup_join(p_cup, p_owner, p_key, p_name, p_icon);
   if r <> 'ok' then return r; end if;
   insert into card_cup_deposits (nonce, cup_id, owner_id, kind, item, amount) values (p_nonce, p_cup, p_owner, 'fee', p.fee_item, p.fee_amount);
@@ -335,7 +324,7 @@ begin
     or (c.status = 'done' and not exists (select 1 from card_cup_eligible(p_cup)));
   if v_refund then
     select coalesce(jsonb_agg(jsonb_build_object('item', t.item, 'amount', t.total) order by t.item), '[]'::jsonb) into v_items
-      from (select d.item, sum(d.amount)::int as total from card_cup_deposits d where d.cup_id = p_cup and d.owner_id = p_owner group by d.item) t;
+      from (select d.item, sum(d.amount)::bigint as total from card_cup_deposits d where d.cup_id = p_cup and d.owner_id = p_owner group by d.item) t;
     v_reason := case when jsonb_array_length(v_items) > 0 then 'refund' else 'none' end;
   elsif c.status = 'done' and (c.mode <> 'auto' or now() >= c.start_at) then
     select coalesce(jsonb_agg(jsonb_build_object('item', t.item, 'amount', t.amount) order by t.item), '[]'::jsonb) into v_items
@@ -364,7 +353,7 @@ begin
     'pool', (select coalesce(jsonb_agg(jsonb_build_object('item', t.item, 'total', t.total) order by t.item), '[]'::jsonb) from card_cup_pool(p_cup) t),
     'givers', (select coalesce(jsonb_agg(jsonb_build_object('name', g.name, 'icon', g.icon, 'item', g.item, 'amount', g.amount, 'host', g.host) order by g.host desc, g.name), '[]'::jsonb) from (
       select coalesce(nullif(h.user_name, ''), case when d.owner_id = c.host_id then c.host_name end, 'ブリーダー') as name,
-        coalesce(h.icon, case when d.owner_id = c.host_id then c.host_icon end) as icon, d.item, sum(d.amount)::int as amount, d.owner_id = c.host_id as host
+        coalesce(h.icon, case when d.owner_id = c.host_id then c.host_icon end) as icon, d.item, sum(d.amount)::bigint as amount, d.owner_id = c.host_id as host
       from card_cup_deposits d left join card_cup_hosts h on h.cup_id = d.cup_id and h.owner_id = d.owner_id
       where d.cup_id = p_cup and d.kind = 'prize' and coalesce(h.state, 'joined') <> 'removed'
       group by d.owner_id, h.user_name, h.icon, d.item) g),
@@ -392,13 +381,12 @@ $$;
 -- 出せる物の一覧(画面の「出す物をえらぶ」)
 create or replace function public.card_cup_prize_items_list()
 returns jsonb language sql stable security definer set search_path = public as $$
-  select coalesce(jsonb_agg(jsonb_build_object('item', item, 'label', label, 'give_max', give_max, 'fee_max', fee_max, 'day_max', day_max) order by sort, item), '[]'::jsonb)
+  select coalesce(jsonb_agg(jsonb_build_object('item', item, 'label', label) order by sort, item), '[]'::jsonb)
   from card_cup_prize_items where enabled
 $$;
 
 revoke all on function public.card_cup_key_ok(text, text) from public, anon, authenticated;
 revoke all on function public.card_cup_is_host(text, text) from public, anon, authenticated;
-revoke all on function public.card_cup_day_total(text, text) from public, anon, authenticated;
 revoke all on function public.card_cup_pool(text) from public, anon, authenticated;
 revoke all on function public.card_cup_eligible(text) from public, anon, authenticated;
 revoke all on function public.card_cup_payouts(text) from public, anon, authenticated;
