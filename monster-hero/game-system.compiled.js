@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: aa070ca01e301c41
+// source-sha256: 089c26b89ecdaeaa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -14471,7 +14471,7 @@ const BEAT_RANK_XP = Object.freeze({
   HELL: 60
 });
 const BEAT_RANK_BONUS = Object.freeze({
-  failDivisor: 3,
+  failRate: 0.1,
   fullCombo: 4,
   allMarvelous: 8,
   multiScale: 1.5,
@@ -14533,7 +14533,7 @@ const beatRankPlayXp = ({
     parts: []
   };
   const parts = [];
-  let xp = cleared ? base : Math.round(base / BEAT_RANK_BONUS.failDivisor);
+  let xp = cleared ? base : Math.max(1, Math.round(base * BEAT_RANK_BONUS.failRate));
   parts.push({
     label: cleared ? difficultyId : `${difficultyId}(ライフが尽きた)`,
     xp
@@ -14566,7 +14566,7 @@ const beatRankPlayXp = ({
 };
 const beatRankAfter = (prev, {
   difficultyId,
-  cleared,
+  cleared = true,
   fullCombo,
   allMarvelous,
   multi,
@@ -14591,7 +14591,7 @@ const beatRankAfter = (prev, {
     beatPoints: 0
   };
   const day = typeof today === 'string' ? today.slice(0, 10) : '';
-  const first = !!day && !(cur.day === day && cur.dayFirst);
+  const first = cleared !== false && !!day && !(cur.day === day && cur.dayFirst);
   const parts = first ? [...play.parts, {
     label: 'その日はじめての1曲',
     xp: BEAT_RANK_BONUS.dayFirst
@@ -83902,7 +83902,7 @@ function RhythmMultiScreen({
       kind: "beat",
       xp: ms.beatRankXp,
       rewardsOf: beatRankRewardItems,
-      how: "曲を遊ぶと経験値がたまります。難しい難易度ほど多く、HELL がいちばん多くたまります。その日はじめての1曲は +30 です。",
+      how: "曲を遊ぶと経験値がたまります。難しい難易度ほど多く、HELL がいちばん多くたまります。その日はじめてクリアした1曲は +30 です。",
       onClose: () => setBeatRankOpen(false)
     }), ms.exiting && React.createElement("div", {
       "data-quick-run-exit-overlay": true,
@@ -96415,7 +96415,7 @@ const CardVsMonsters = ({
       spread: 1.1,
       className: "drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]",
       style: {
-        width: 'min(100%, 19vh, 140px)'
+        width: kira ? 'min(19vh, 140px, 30vw)' : 'min(100%, 19vh, 140px)'
       }
     });
     return kira ? React.createElement("span", {
@@ -115564,6 +115564,7 @@ const CardDeckShare = ({
 }) => {
   const [tab, setTab] = useState(part === 'mine' ? 'mine' : onFight ? 'fight' : 'mine');
   const [foes, setFoes] = useState(null);
+  const [foeDetail, setFoeDetail] = useState(null);
   const [foeFilter, setFoeFilter] = useState('all');
   const [tacticsSave, setTacticsSave] = useState(null);
   useEffect(() => {
@@ -115787,7 +115788,15 @@ const CardDeckShare = ({
         Audio_.fgSe.tap();
         void rent(e);
       }
-    }, rented && rented.ownerId === e.ownerId && rented.version === e.version ? '借りています' : '借りる')));
+    }, rented && rented.ownerId === e.ownerId && rented.version === e.version ? '借りています' : '借りる'), React.createElement("button", {
+      type: "button",
+      "data-card-share-detail-open": e.ownerId,
+      className: "min-h-[30px] rounded-lg border border-sky-300/50 bg-slate-900 px-2 text-[11px] font-black text-sky-100",
+      onClick: () => {
+        Audio_.fgSe.tap();
+        setFoeDetail(e);
+      }
+    }, "詳細")));
   };
   const foeEmptyText = foeFilter === 'friends' ? 'デッキを登録しているフレンドはいません' : 'まだだれも登録していません';
   const registerButton = React.createElement("button", {
@@ -115965,10 +115974,28 @@ const CardDeckShare = ({
     className: "rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100",
     style: JA_WRAP_STYLE
   }, jaWrap(msg))), embedded && mine !== undefined && !off && tab === 'mine' && registerButton);
+  const isRented = e => !!(rented && rented.ownerId === e.ownerId && rented.version === e.version);
+  const detailNode = foeDetail ? React.createElement(CardShareDeckDetail, {
+    entry: foeDetail,
+    onClose: () => setFoeDetail(null),
+    fight: {
+      disabled: !onFight || fightIssues.length > 0,
+      go: () => {
+        if (onFight) onFight(foeDetail, cardShareFightLevel(foeDetail.tactics));
+      }
+    },
+    rent: part !== 'fight' ? {
+      disabled: busy || isRented(foeDetail),
+      label: isRented(foeDetail) ? '借りています' : '借りる',
+      go: () => {
+        void rent(foeDetail);
+      }
+    } : null
+  }) : null;
   if (embedded) return React.createElement("div", {
     "data-card-share": true,
     "data-card-share-part": part
-  }, body);
+  }, body, detailNode);
   return React.createElement("div", {
     "data-mh-screen": true,
     "data-card-share": true,
@@ -115981,7 +116008,7 @@ const CardDeckShare = ({
     note: part === 'fight' ? 'だれと戦うかをえらびます' : '自分のデッキを1組登録すると、ほかのブリーダーが戦えます'
   }), headExtra, body, mine !== undefined && !off && tab === 'mine' && React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
-  }, registerButton));
+  }, registerButton), detailNode);
 };
 const cardShareVisible = () => {
   if (cardShareOpen()) return true;
@@ -116050,50 +116077,159 @@ const CardShareDeckThumbs = ({
 };
 const CardShareDeckDetail = ({
   entry,
-  onClose
+  onClose,
+  fight = null,
+  rent = null
 }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const t = cardShareNormalizeTactics(entry.tactics);
   const f = t.f ? cardTacticUnpackFrames(t.f) : null;
-  const monName = i => (db && cardMonsterOf(db, entry.deck.monsters[i]) || {}).name || ['左のモンスター', '真ん中のモンスター', '右のモンスター'][i];
-  const rowText = r => `${(cardTacticOf(r.c) || {}).name || '?'} ▶ ${(cardTacticOf(r.a) || {}).name || '?'}${r.on ? '' : '(休み)'}`;
+  const monOf = i => db && cardMonsterOf(db, entry.deck.monsters[i]) || null;
+  const monName = i => (monOf(i) || {}).name || ['左のモンスター', '真ん中のモンスター', '右のモンスター'][i];
+  const rareOf = m => !m || !m.variant ? '' : /別絵/.test(m.variant) ? 'レアキラ' : /キラ/.test(m.variant) ? 'キラ' : '';
+  const lineOf = id => {
+    const c = cardTacticOf(id) || {};
+    return c.line || c.name || '?';
+  };
+  const rowText = r => `${lineOf(r.c)} → ${lineOf(r.a)}${r.on ? '' : '(休み)'}`;
+  const kindOrder = ['pow', 'int', 'spe', 'dge', 'blk', 'fld'];
+  const kindLabel = {
+    pow: 'ちから',
+    int: 'かしこさ',
+    spe: '特殊',
+    dge: '回避',
+    blk: '防御',
+    fld: '全体'
+  };
+  const counts = {};
+  (entry.deck.cards || []).forEach(no => {
+    counts[no] = (counts[no] || 0) + 1;
+  });
+  const cardRows = Object.entries(counts).map(([no, n]) => ({
+    no,
+    n,
+    c: db && cardOf(db, no) || null
+  })).sort((a, b) => kindOrder.indexOf((a.c || {}).kind) - kindOrder.indexOf((b.c || {}).kind) || String((a.c || {}).name || a.no).localeCompare(String((b.c || {}).name || b.no), 'ja'));
+  const who = c => !c ? '' : c.user === 'breeder' ? 'ブリーダー' : c.user === 'any' ? '全員' : '';
   return React.createElement("div", {
     "data-card-share-deck-detail": true,
     className: "fixed inset-0 z-[90] flex items-end justify-center bg-black/60 p-3 sm:items-center",
     onClick: onClose
   }, React.createElement("div", {
-    className: "max-h-[80vh] w-full max-w-[420px] overflow-y-auto rounded-2xl border-2 border-amber-600/60 bg-slate-950 p-3",
+    className: "max-h-[86vh] w-full max-w-[440px] overflow-y-auto rounded-2xl border-2 border-amber-600/60 bg-slate-950 p-3",
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
     className: "flex items-center gap-2"
-  }, React.createElement(CardShareDeckThumbs, {
-    entry: entry
-  }), React.createElement("span", {
+  }, entry.icon ? React.createElement("span", {
+    className: "shrink-0 text-[24px] leading-none"
+  }, entry.icon) : null, React.createElement("span", {
     className: "min-w-0 flex-1"
   }, React.createElement("b", {
-    className: "block truncate text-[15px] font-black text-white"
-  }, t.name || 'デッキ'), React.createElement("small", {
-    className: "block text-[11px] font-black text-amber-200"
-  }, `賢さ ${cardShareSmartText(t)}`))), React.createElement("div", {
-    className: "mt-2 text-[12px] font-bold leading-relaxed text-slate-200",
+    "data-card-share-detail-name": true,
+    className: "block text-[15px] font-black leading-tight text-white",
     style: JA_WRAP_STYLE
-  }, React.createElement("div", null, `3体: ${[0, 1, 2].map(monName).join('・')}`), f && React.createElement("div", null, `基本カード: ${f.base.filter(Boolean).map(id => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`), t.aces.length > 0 && React.createElement("div", null, `切り札: ${t.aces.map(no => (db && cardOf(db, no) || {}).name || no).join('・')}`)), f && React.createElement("div", {
-    className: "mt-2 space-y-1 rounded-lg bg-black/30 p-2 text-[11px] text-slate-200"
+  }, jaWrap(entry.name || 'ブリーダー')), React.createElement("small", {
+    "data-card-share-detail-deck": true,
+    className: "block text-[12px] font-black text-amber-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`「${t.name || 'デッキ'}」`)))), React.createElement("div", {
+    "data-card-share-detail-mons": true,
+    className: "mt-2 grid grid-cols-3 gap-1.5"
+  }, [0, 1, 2].map(i => {
+    const m = monOf(i);
+    const rare = rareOf(m);
+    return React.createElement("div", {
+      key: i,
+      className: "flex min-w-0 flex-col items-center rounded-lg bg-black/30 p-1"
+    }, m ? React.createElement("img", {
+      src: CARD_IMG(m.img),
+      alt: m.name,
+      loading: "lazy",
+      className: "aspect-[5/7] w-full rounded-[5px] object-cover"
+    }) : React.createElement("span", {
+      className: "block aspect-[5/7] w-full rounded-[5px] bg-slate-700"
+    }), React.createElement("span", {
+      className: "mt-0.5 w-full text-center text-[11px] font-black leading-tight text-white",
+      style: JA_WRAP_STYLE
+    }, jaWrap(monName(i))), rare && React.createElement("span", {
+      "data-card-share-detail-rare": rare,
+      className: "mt-0.5 rounded bg-amber-300 px-1 text-[10px] font-black text-slate-950"
+    }, rare));
+  })), React.createElement("div", {
+    "data-card-share-detail-stats": true,
+    className: "mt-2 rounded-lg bg-black/30 p-2 text-[12px] font-bold text-sky-100 tabular-nums",
+    style: JA_WRAP_STYLE
+  }, jaWrap(entry.battles ? `戦われた ${entry.battles}回・このデッキの勝ち ${Math.round(entry.deckWins / entry.battles * 100)}%` : 'まだ戦われていません'), entry.rents > 0 && React.createElement("span", {
+    className: "block"
+  }, `借りられた ${entry.rents}回`)), React.createElement("div", {
+    className: "mt-2 rounded-lg bg-black/30 p-2 text-[11.5px] text-slate-200",
+    style: JA_WRAP_STYLE
   }, React.createElement("b", {
-    className: "block text-[12px] text-amber-200"
-  }, "セットした戦術カード"), [...f.mons.map((rows, i) => [monName(i), rows]), ['ブリーダー', f.breeder]].map(([label, rows]) => React.createElement("div", {
+    "data-card-share-detail-smart": cardShareSmartLevel(t),
+    className: "block text-[13px] text-amber-200"
+  }, jaWrap(`賢さ ${cardShareSmartText(t)}`)), f && React.createElement("div", {
+    className: "mt-0.5"
+  }, jaWrap(`基本の型: ${f.base.filter(Boolean).map(id => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`)), t.aces.length > 0 && React.createElement("div", {
+    className: "mt-0.5"
+  }, jaWrap(`切り札: ${t.aces.map(no => (db && cardOf(db, no) || {}).name || no).join('・')}`)), f && React.createElement("div", {
+    className: "mt-1 space-y-1"
+  }, React.createElement("b", {
+    className: "block text-[12px] text-amber-100"
+  }, "セットした戦術カード(上から順に見て、当てはまったもの)"), [...f.mons.map((rows, i) => [monName(i), rows]), ['ブリーダー', f.breeder]].map(([label, rows]) => React.createElement("div", {
     key: label
   }, React.createElement("b", {
     className: "text-amber-100"
   }, label), rows.length ? rows.map((r, j) => React.createElement("div", {
     key: j
-  }, `${j + 1}. ${rowText(r)}`)) : React.createElement("div", {
+  }, jaWrap(`${j + 1}. ${rowText(r)}`))) : React.createElement("div", {
     className: "text-slate-400"
-  }, "(なし)")))), React.createElement("button", {
+  }, "(なし)"))))), React.createElement("div", {
+    "data-card-share-detail-cards": entry.deck.cards.length,
+    className: "mt-2 rounded-lg bg-black/30 p-2"
+  }, React.createElement("b", {
+    className: "block text-[12px] font-black text-amber-100"
+  }, `デッキのカード(${entry.deck.cards.length}枚)`), React.createElement("div", {
+    className: "mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5 text-[11.5px] font-bold text-slate-200"
+  }, cardRows.map(({
+    no,
+    n,
+    c
+  }) => React.createElement("div", {
+    key: no,
+    "data-card-share-detail-card": no,
+    className: "flex min-w-0 items-baseline gap-1"
+  }, React.createElement("span", {
+    className: "shrink-0 text-[10px] text-slate-400"
+  }, kindLabel[(c || {}).kind] || ''), React.createElement("span", {
+    className: "min-w-0 flex-1",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`${(c || {}).name || no}${who(c) ? `(${who(c)})` : ''}`)), React.createElement("span", {
+    className: "shrink-0 tabular-nums text-amber-200"
+  }, `×${n}`))))), (fight || rent) && React.createElement("div", {
+    className: "mt-3 flex gap-2"
+  }, fight && React.createElement("button", {
+    type: "button",
+    "data-card-share-detail-fight": true,
+    disabled: fight.disabled,
+    onClick: () => {
+      onClose();
+      fight.go();
+    },
+    className: "mh-button mh-button-primary min-h-[44px] flex-1 rounded-xl text-[14px] font-black disabled:opacity-50"
+  }, "戦う"), rent && React.createElement("button", {
+    type: "button",
+    "data-card-share-detail-rent": true,
+    disabled: rent.disabled,
+    onClick: () => {
+      onClose();
+      rent.go();
+    },
+    className: "min-h-[44px] flex-1 rounded-xl border border-emerald-300/50 bg-slate-900 text-[13px] font-black text-emerald-100 disabled:opacity-50"
+  }, rent.label)), React.createElement("button", {
     type: "button",
     "data-card-share-deck-detail-close": true,
     onClick: onClose,
-    className: "mt-3 w-full rounded-xl bg-slate-800 py-2 text-[13px] font-black text-white"
+    className: "mt-2 w-full rounded-xl bg-slate-800 py-2 text-[13px] font-black text-white"
   }, "とじる")));
 };
 const CardShareDeckTile = ({

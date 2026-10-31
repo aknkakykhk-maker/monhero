@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 788753c9cca21b7c
+// generated-sha256: 81384efbb8a90579
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10167,9 +10167,10 @@ const playerRankInfo = (xp) => {
 const BEAT_RANK_KEY = 'mh_rhythm_rank_v1';
 // 1曲の経験値(2026-10-29 社長。HELL は「劇的に上げる」で 60)。最後まで遊んだときの値
 const BEAT_RANK_XP = Object.freeze({ EASY: 6, NORMAL: 8, HARD: 10, EXPERT: 14, MASTER: 18, HELL: 60 });
-// 途中でライフが尽きた(失敗)ときは3分の1(端数は四捨五入)。フルコンボ +4、全部 MARVELOUS は +8(フルコンボの +4 と重ねない)。
-// みんなで対戦は1曲ぶん(上乗せ込み)を1.5倍(端数は四捨五入)。その日はじめての1曲は、そのあとに +30
-const BEAT_RANK_BONUS = Object.freeze({ failDivisor: 3, fullCombo: 4, allMarvelous: 8, multiScale: 1.5, dayFirst: 30 });
+// 途中でライフが尽きた(失敗)ときは1割(端数は四捨五入・最低1。2026-10-31 社長「失敗でも入りすぎてる」で3分の1から下げた)。
+// フルコンボ +4、全部 MARVELOUS は +8(フルコンボの +4 と重ねない)。
+// みんなで対戦は1曲ぶん(上乗せ込み)を1.5倍(端数は四捨五入)。その日はじめての1曲は、そのあとに +30(成功したときだけ。失敗は数えず、その日の +30 も残す)
+const BEAT_RANK_BONUS = Object.freeze({ failRate: 0.1, fullCombo: 4, allMarvelous: 8, multiScale: 1.5, dayFirst: 30 });
 // ごほうび(2026-10-29 社長が作り直し。前の「ランク3・10・20、そのあと5ごとにビートP 300」はやめた)
 //   ランクが1つ上がるたび: ビートP「そのランク×100」+セッション券1枚
 //   5ランクごと(5・10・15…): さらにビートP「そのランク×200」+セッション券「そのランクと同じ枚数」
@@ -10212,7 +10213,7 @@ const beatRankPlayXp = ({ difficultyId, cleared = true, fullCombo = false, allMa
   const base = BEAT_RANK_XP[difficultyId];
   if (!base) return { xp: 0, parts: [] };
   const parts = [];
-  let xp = cleared ? base : Math.round(base / BEAT_RANK_BONUS.failDivisor);
+  let xp = cleared ? base : Math.max(1, Math.round(base * BEAT_RANK_BONUS.failRate));
   parts.push({ label: cleared ? difficultyId : `${difficultyId}(ライフが尽きた)`, xp });
   if (cleared && allMarvelous) { xp += BEAT_RANK_BONUS.allMarvelous; parts.push({ label: '全部 MARVELOUS', xp: BEAT_RANK_BONUS.allMarvelous }); }
   else if (cleared && fullCombo) { xp += BEAT_RANK_BONUS.fullCombo; parts.push({ label: 'フルコンボ', xp: BEAT_RANK_BONUS.fullCombo }); }
@@ -10222,13 +10223,13 @@ const beatRankPlayXp = ({ difficultyId, cleared = true, fullCombo = false, allMa
 
 // 経験値を足した次の値と、新しくもらうごほうび。today は日本時間の 'YYYY-MM-DD'(呼ぶ側が渡す)
 // 返り値: { next, add, parts, from, to, tickets, beatPoints, bonusTickets, bonusPoints }(bonus* は5ランクごとのおまけの分。tickets・beatPoints に含む)
-const beatRankAfter = (prev, { difficultyId, cleared, fullCombo, allMarvelous, multi, today }) => {
+const beatRankAfter = (prev, { difficultyId, cleared = true, fullCombo, allMarvelous, multi, today }) => {
   const cur = normalizeBeatRank(prev);
   const from = playerRankInfo(cur.xp).rank;
   const play = beatRankPlayXp({ difficultyId, cleared, fullCombo, allMarvelous, multi });
   if (!play.xp) return { next: cur, add: 0, parts: [], from, to: from, tickets: 0, beatPoints: 0 };
   const day = typeof today === 'string' ? today.slice(0, 10) : '';
-  const first = !!day && !(cur.day === day && cur.dayFirst);
+  const first = cleared !== false && !!day && !(cur.day === day && cur.dayFirst);
   const parts = first ? [...play.parts, { label: 'その日はじめての1曲', xp: BEAT_RANK_BONUS.dayFirst }] : play.parts;
   const add = play.xp + (first ? BEAT_RANK_BONUS.dayFirst : 0);
   const xp = playerRankSafeXp(cur.xp + add);
@@ -50698,7 +50699,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
           <RhythmOrientationButton/>
         </header>
         {beatRankOpen && Number.isFinite(ms.beatRankXp) && <PlayerRankDetail kind="beat" xp={ms.beatRankXp} rewardsOf={beatRankRewardItems}
-          how="曲を遊ぶと経験値がたまります。難しい難易度ほど多く、HELL がいちばん多くたまります。その日はじめての1曲は +30 です。" onClose={() => setBeatRankOpen(false)}/>}
+          how="曲を遊ぶと経験値がたまります。難しい難易度ほど多く、HELL がいちばん多くたまります。その日はじめてクリアした1曲は +30 です。" onClose={() => setBeatRankOpen(false)}/>}
         {ms.exiting && <div data-quick-run-exit-overlay className="absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center"><b className="text-sm font-black text-amber-200">周回を終えています…</b></div>}
         {/* 縦画面: 上に助手の立ち絵(余った高さを使って大きく)、下にボタン。
             横画面: 左に立ち絵、右にボタン(2026-10-03・ユーザー指摘「サイズ感悪い」で組み直し) */}
@@ -58169,7 +58170,9 @@ const CardVsMonsters = ({ db, monsters, side, start, step }) => (
             ? (() => {
               // キラ・レアキラの光(84 の CardKiraFx・cardKiraWrap。対戦の場と同じ見た目)
               const kira = typeof cardKiraOf === 'function' ? cardKiraOf(db, no) : null;
-              const el = <CardVsArt src={art} alt={m.name} aspect={1} spread={1.1} className="drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]" style={{ width: 'min(100%, 19vh, 140px)' }}/>;
+              // キラの子は、光のふち(cardKiraWrap)の枠が中身に合わせて縮むので、幅に % を使うと 0 になって絵が消えていた(2026-10-31 ルールくんが見つけた)。
+              //   キラの子だけ、% を使わない決まった幅にする(3体が横に並んでも収まる 30vw まで)
+              const el = <CardVsArt src={art} alt={m.name} aspect={1} spread={1.1} className="drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]" style={{ width: kira ? 'min(19vh, 140px, 30vw)' : 'min(100%, 19vh, 140px)' }}/>;
               return kira ? <span className="relative flex w-full justify-center" style={{ isolation: 'isolate' }}><CardKiraFx kind={kira}/>{cardKiraWrap(kira, el)}</span> : el;
             })()
             : <img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="w-full rounded-md object-cover" style={{ aspectRatio: '63 / 88', maxHeight: 'min(19vh, 140px)' }}/>}
@@ -68724,6 +68727,7 @@ const cardRentedDeckSet = async (entry) => {
 const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked = null, debug = false, onFight = null, onOpenTactics = null, part = 'all', title = 'デッキ登録', headExtra = null, embedded = false }) => {
   const [tab, setTab] = useState(part === 'mine' ? 'mine' : onFight ? 'fight' : 'mine');
   const [foes, setFoes] = useState(null);             // { picks, friends, popular } … 戦う相手の3つの並び
+  const [foeDetail, setFoeDetail] = useState(null); // 一覧の「詳細」で開いている相手(2026-10-31 社長)
   const [foeFilter, setFoeFilter] = useState('all'); // 一覧の絞り込み(すべて/おすすめ/フレンド/人気。2026-10-30 社長・案C)
   // 戦術カード(96・97): 登録するときに載せる枠(レベルで開いている枠・持っているカードだけ)
   const [tacticsSave, setTacticsSave] = useState(null);
@@ -68842,6 +68846,8 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
             onClick={() => { Audio_.fgSe.tap(); if (onFight) onFight(e, cardShareFightLevel(e.tactics)); }}>戦う</button>
           {part !== 'fight' && <button type="button" data-card-share-rent={e.ownerId} disabled={busy || (rented && rented.ownerId === e.ownerId && rented.version === e.version)} className="min-h-[30px] rounded-lg border border-emerald-300/50 bg-slate-900 px-2 text-[11px] font-black text-emerald-100 disabled:opacity-50"
             onClick={() => { Audio_.fgSe.tap(); void rent(e); }}>{rented && rented.ownerId === e.ownerId && rented.version === e.version ? '借りています' : '借りる'}</button>}
+          <button type="button" data-card-share-detail-open={e.ownerId} className="min-h-[30px] rounded-lg border border-sky-300/50 bg-slate-900 px-2 text-[11px] font-black text-sky-100"
+            onClick={() => { Audio_.fgSe.tap(); setFoeDetail(e); }}>詳細</button>
         </span>
       </li>
     );
@@ -68919,13 +68925,21 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
         {embedded && mine !== undefined && !off && tab === 'mine' && registerButton}
       </div>
   );
-  if (embedded) return <div data-card-share data-card-share-part={part}>{body}</div>;
+  // 「詳細」の窓。窓からも「戦う」「借りる」を押せる(一覧の行のボタンと同じ動き)
+  const isRented = (e) => !!(rented && rented.ownerId === e.ownerId && rented.version === e.version);
+  const detailNode = foeDetail ? (
+    <CardShareDeckDetail entry={foeDetail} onClose={() => setFoeDetail(null)}
+      fight={{ disabled: !onFight || fightIssues.length > 0, go: () => { if (onFight) onFight(foeDetail, cardShareFightLevel(foeDetail.tactics)); } }}
+      rent={part !== 'fight' ? { disabled: busy || isRented(foeDetail), label: isRented(foeDetail) ? '借りています' : '借りる', go: () => { void rent(foeDetail); } } : null}/>
+  ) : null;
+  if (embedded) return <div data-card-share data-card-share-part={part}>{body}{detailNode}</div>;
   return (
     <div data-mh-screen data-card-share data-card-share-part={part} className={SCREEN_SHELL_CLASS}>
       <ScreenHead title={title} accent="text-amber-200" onBack={onBack} note={part === 'fight' ? 'だれと戦うかをえらびます' : '自分のデッキを1組登録すると、ほかのブリーダーが戦えます'}/>
       {headExtra}
       {body}
       {mine !== undefined && !off && tab === 'mine' && <div className={SCREEN_FOOTER_CLASS}>{registerButton}</div>}
+      {detailNode}
     </div>
   );
 };
@@ -68973,34 +68987,86 @@ const CardShareDeckThumbs = ({ entry }) => {
     })}</span>
   );
 };
-// 中身の小さな窓(3体・基本カード・セットした戦術カード・切り札)
-const CardShareDeckDetail = ({ entry, onClose }) => {
+// 中身の窓(3体・全カード・賢さと戦術カード・戦われた数)。2026-10-31 社長「各ブリーダーの詳細がわかりにくい。詳細ボタンつけて」で広げた。
+//   プロフィールのタイルと、登録デッキの一覧(フリー対戦の「ほかのブリーダー」・デッキ登録)の「詳細」から開く。
+//   一覧から開いたときは、ここからも「戦う」「借りる」を押せる(fight・rent。無ければ出さない)。
+//   戦術カードは一文(CARD_TACTIC_LINE)まで見せる(プロフィールの窓は前から名前を見せていた。細かい効果の文は出さない)
+const CardShareDeckDetail = ({ entry, onClose, fight = null, rent = null }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const t = cardShareNormalizeTactics(entry.tactics);
   const f = t.f ? cardTacticUnpackFrames(t.f) : null;
-  const monName = (i) => ((db && cardMonsterOf(db, entry.deck.monsters[i])) || {}).name || ['左のモンスター', '真ん中のモンスター', '右のモンスター'][i];
-  const rowText = (r) => `${(cardTacticOf(r.c) || {}).name || '?'} ▶ ${(cardTacticOf(r.a) || {}).name || '?'}${r.on ? '' : '(休み)'}`;
+  const monOf = (i) => (db && cardMonsterOf(db, entry.deck.monsters[i])) || null;
+  const monName = (i) => (monOf(i) || {}).name || ['左のモンスター', '真ん中のモンスター', '右のモンスター'][i];
+  const rareOf = (m) => (!m || !m.variant ? '' : /別絵/.test(m.variant) ? 'レアキラ' : /キラ/.test(m.variant) ? 'キラ' : '');
+  const lineOf = (id) => { const c = cardTacticOf(id) || {}; return c.line || c.name || '?'; };
+  const rowText = (r) => `${lineOf(r.c)} → ${lineOf(r.a)}${r.on ? '' : '(休み)'}`;
+  // 全カード: 同じカードはまとめて「×枚」。種類の順(ちから・かしこさ・特殊・回避・防御・全体)→ 名前の順
+  const kindOrder = ['pow', 'int', 'spe', 'dge', 'blk', 'fld'];
+  const kindLabel = { pow: 'ちから', int: 'かしこさ', spe: '特殊', dge: '回避', blk: '防御', fld: '全体' };
+  const counts = {};
+  (entry.deck.cards || []).forEach((no) => { counts[no] = (counts[no] || 0) + 1; });
+  const cardRows = Object.entries(counts).map(([no, n]) => ({ no, n, c: (db && cardOf(db, no)) || null }))
+    .sort((a, b) => (kindOrder.indexOf((a.c || {}).kind) - kindOrder.indexOf((b.c || {}).kind)) || String((a.c || {}).name || a.no).localeCompare(String((b.c || {}).name || b.no), 'ja'));
+  const who = (c) => (!c ? '' : c.user === 'breeder' ? 'ブリーダー' : c.user === 'any' ? '全員' : '');
   return (
     <div data-card-share-deck-detail className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={onClose}>
-      <div className="max-h-[80vh] w-full max-w-[420px] overflow-y-auto rounded-2xl border-2 border-amber-600/60 bg-slate-950 p-3" onClick={(e) => e.stopPropagation()}>
+      <div className="max-h-[86vh] w-full max-w-[440px] overflow-y-auto rounded-2xl border-2 border-amber-600/60 bg-slate-950 p-3" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2">
-          <CardShareDeckThumbs entry={entry}/>
-          <span className="min-w-0 flex-1"><b className="block truncate text-[15px] font-black text-white">{t.name || 'デッキ'}</b><small className="block text-[11px] font-black text-amber-200">{`賢さ ${cardShareSmartText(t)}`}</small></span>
+          {entry.icon ? <span className="shrink-0 text-[24px] leading-none">{entry.icon}</span> : null}
+          <span className="min-w-0 flex-1">
+            <b data-card-share-detail-name className="block text-[15px] font-black leading-tight text-white" style={JA_WRAP_STYLE}>{jaWrap(entry.name || 'ブリーダー')}</b>
+            <small data-card-share-detail-deck className="block text-[12px] font-black text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(`「${t.name || 'デッキ'}」`)}</small>
+          </span>
         </div>
-        <div className="mt-2 text-[12px] font-bold leading-relaxed text-slate-200" style={JA_WRAP_STYLE}>
-          <div>{`3体: ${[0, 1, 2].map(monName).join('・')}`}</div>
-          {f && <div>{`基本カード: ${f.base.filter(Boolean).map((id) => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`}</div>}
-          {t.aces.length > 0 && <div>{`切り札: ${t.aces.map((no) => ((db && cardOf(db, no)) || {}).name || no).join('・')}`}</div>}
+        {/* 3体: 絵と名前(省かない)とレア度 */}
+        <div data-card-share-detail-mons className="mt-2 grid grid-cols-3 gap-1.5">
+          {[0, 1, 2].map((i) => { const m = monOf(i); const rare = rareOf(m); return (
+            <div key={i} className="flex min-w-0 flex-col items-center rounded-lg bg-black/30 p-1">
+              {m ? <img src={CARD_IMG(m.img)} alt={m.name} loading="lazy" className="aspect-[5/7] w-full rounded-[5px] object-cover"/> : <span className="block aspect-[5/7] w-full rounded-[5px] bg-slate-700"/>}
+              <span className="mt-0.5 w-full text-center text-[11px] font-black leading-tight text-white" style={JA_WRAP_STYLE}>{jaWrap(monName(i))}</span>
+              {rare && <span data-card-share-detail-rare={rare} className="mt-0.5 rounded bg-amber-300 px-1 text-[10px] font-black text-slate-950">{rare}</span>}
+            </div>
+          ); })}
         </div>
-        {f && (
-          <div className="mt-2 space-y-1 rounded-lg bg-black/30 p-2 text-[11px] text-slate-200">
-            <b className="block text-[12px] text-amber-200">セットした戦術カード</b>
-            {[...f.mons.map((rows, i) => [monName(i), rows]), ['ブリーダー', f.breeder]].map(([label, rows]) => (
-              <div key={label}><b className="text-amber-100">{label}</b>{rows.length ? rows.map((r, j) => <div key={j}>{`${j + 1}. ${rowText(r)}`}</div>) : <div className="text-slate-400">(なし)</div>}</div>
+        {/* 数字(戦われた回数・勝ち率・借りられた数) */}
+        <div data-card-share-detail-stats className="mt-2 rounded-lg bg-black/30 p-2 text-[12px] font-bold text-sky-100 tabular-nums" style={JA_WRAP_STYLE}>
+          {jaWrap(entry.battles ? `戦われた ${entry.battles}回・このデッキの勝ち ${Math.round((entry.deckWins / entry.battles) * 100)}%` : 'まだ戦われていません')}
+          {entry.rents > 0 && <span className="block">{`借りられた ${entry.rents}回`}</span>}
+        </div>
+        {/* 賢さと戦術カード */}
+        <div className="mt-2 rounded-lg bg-black/30 p-2 text-[11.5px] text-slate-200" style={JA_WRAP_STYLE}>
+          <b data-card-share-detail-smart={cardShareSmartLevel(t)} className="block text-[13px] text-amber-200">{jaWrap(`賢さ ${cardShareSmartText(t)}`)}</b>
+          {f && <div className="mt-0.5">{jaWrap(`基本の型: ${f.base.filter(Boolean).map((id) => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`)}</div>}
+          {t.aces.length > 0 && <div className="mt-0.5">{jaWrap(`切り札: ${t.aces.map((no) => ((db && cardOf(db, no)) || {}).name || no).join('・')}`)}</div>}
+          {f && (
+            <div className="mt-1 space-y-1">
+              <b className="block text-[12px] text-amber-100">セットした戦術カード(上から順に見て、当てはまったもの)</b>
+              {[...f.mons.map((rows, i) => [monName(i), rows]), ['ブリーダー', f.breeder]].map(([label, rows]) => (
+                <div key={label}><b className="text-amber-100">{label}</b>{rows.length ? rows.map((r, j) => <div key={j}>{jaWrap(`${j + 1}. ${rowText(r)}`)}</div>) : <div className="text-slate-400">(なし)</div>}</div>
+              ))}
+            </div>
+          )}
+        </div>
+        {/* デッキの全カード */}
+        <div data-card-share-detail-cards={entry.deck.cards.length} className="mt-2 rounded-lg bg-black/30 p-2">
+          <b className="block text-[12px] font-black text-amber-100">{`デッキのカード(${entry.deck.cards.length}枚)`}</b>
+          <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5 text-[11.5px] font-bold text-slate-200">
+            {cardRows.map(({ no, n, c }) => (
+              <div key={no} data-card-share-detail-card={no} className="flex min-w-0 items-baseline gap-1">
+                <span className="shrink-0 text-[10px] text-slate-400">{kindLabel[(c || {}).kind] || ''}</span>
+                <span className="min-w-0 flex-1" style={JA_WRAP_STYLE}>{jaWrap(`${(c || {}).name || no}${who(c) ? `(${who(c)})` : ''}`)}</span>
+                <span className="shrink-0 tabular-nums text-amber-200">{`×${n}`}</span>
+              </div>
             ))}
           </div>
+        </div>
+        {(fight || rent) && (
+          <div className="mt-3 flex gap-2">
+            {fight && <button type="button" data-card-share-detail-fight disabled={fight.disabled} onClick={() => { onClose(); fight.go(); }} className="mh-button mh-button-primary min-h-[44px] flex-1 rounded-xl text-[14px] font-black disabled:opacity-50">戦う</button>}
+            {rent && <button type="button" data-card-share-detail-rent disabled={rent.disabled} onClick={() => { onClose(); rent.go(); }} className="min-h-[44px] flex-1 rounded-xl border border-emerald-300/50 bg-slate-900 text-[13px] font-black text-emerald-100 disabled:opacity-50">{rent.label}</button>}
+          </div>
         )}
-        <button type="button" data-card-share-deck-detail-close onClick={onClose} className="mt-3 w-full rounded-xl bg-slate-800 py-2 text-[13px] font-black text-white">とじる</button>
+        <button type="button" data-card-share-deck-detail-close onClick={onClose} className="mt-2 w-full rounded-xl bg-slate-800 py-2 text-[13px] font-black text-white">とじる</button>
       </div>
     </div>
   );
