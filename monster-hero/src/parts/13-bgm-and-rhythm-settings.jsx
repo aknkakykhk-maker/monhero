@@ -1100,7 +1100,9 @@ const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAU
 // { menu, market, temple, battle, rhythm } の形で持つ。タイトルとホームの絵は既存の mh_title_art / mh_home_art のまま。
 // ★'auto' は見るたびに今の時刻で決める(読み込み時に1回だけ決めると、開きっぱなしの端末で11月になっても戻らない)
 const SCREEN_THEME_STORAGE_KEY = 'mh_screen_theme_v1';
-const SCREEN_THEME_HALLOWEEN_UNTIL = Date.parse('2026-11-01T00:00:00+09:00');
+// 2026-11-01 0:15 社長「全部4:00にして」: ハロウィン・ナイトのイベントの終わり(HALLOWEEN_NIGHT_END_AT・data/rhythm-event.js)と同じ時刻にそろえる。
+//   前は 11/1 0:00 で、トップ・ホームの絵だけ先に戻り、イベント(4:00 まで)とずれていた
+const SCREEN_THEME_HALLOWEEN_UNTIL = Date.parse(typeof HALLOWEEN_NIGHT_END_AT === 'string' ? HALLOWEEN_NIGHT_END_AT : '2026-11-01T04:00:00+09:00');
 const SCREEN_THEME_CHOICES = [
   { id: 'auto', label: 'おまかせ' },
   { id: 'halloween', label: 'ハロウィン' },

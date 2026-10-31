@@ -90,6 +90,19 @@ function MonsterHeroGame() {
     storeSet(SCREEN_THEME_STORAGE_KEY, next, false);
     return next;
   });
+  // 季節の切りかえ(SCREEN_THEME_HALLOWEEN_UNTIL)ちょうどに、画面全体を一度描き直す(2026-11-01)。
+  // テーマ・タイトルやホームの絵の「おまかせ」は描くたびに時刻で決まるが、MFバトルカードの画面のように中だけが動く画面に居続けると
+  // 全体が描き直されず、切りかえの時刻を過ぎてもハロウィンの飾り(かぼちゃ)が残っていた。見るだけで、保存には触らない
+  const [, setThemeSeasonTick] = useState(0);
+  const [themeSeasonArm, setThemeSeasonArm] = useState(0);
+  useEffect(() => {
+    const wait = SCREEN_THEME_HALLOWEEN_UNTIL - Date.now();
+    if (!(wait > -1000)) return undefined;
+    // setTimeout は約24日より先を待てないので、遠いときは途中で一度起きて待ち直す
+    const far = wait > 2000000000;
+    const timer = setTimeout(() => { if (far) setThemeSeasonArm(n => n + 1); else setThemeSeasonTick(n => n + 1); }, far ? 2000000000 : Math.max(0, wait) + 1000);
+    return () => clearTimeout(timer);
+  }, [themeSeasonArm]);
   const [showOfficialTitleConfirm, setShowOfficialTitleConfirm] = useState(false);
   const [difficulty, setDifficulty] = useState('Normal');
   const safeDifficulty = normalizeBattleDifficulty(difficulty);
