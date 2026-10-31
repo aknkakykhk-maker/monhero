@@ -130,6 +130,25 @@ const fakeDb = (decks) => {
     await run(db, ms('2026-11-05', '23:00'));
     check('E リアルタイム杯はサーバで回さない', db.s.cups[0].status === 'entry' && db.s.matches.length === 0);
   }
+  // ---- リアルタイム杯の止まった試合(runLiveCups・2026-10-31 社長「30分」) ----
+  {
+    const decks = makeDecks(2);
+    const row = { id: 77, cup_id: 'clive', round: 0, slot: 1, seed: 4242, first: 1, a: decks.p0, b: decks.p1 };
+    const asked = [], decided = [];
+    const db = { ...fakeDb(decks), liveDue: async (min) => { asked.push(min); return [row, { id: 78, cup_id: 'clive', round: 0, slot: 2, seed: 1, first: 0, a: null, b: decks.p1 }]; },
+      liveDecide: async (id, winner, kos, acts, rules) => { decided.push({ id, winner, kos, acts, rules }); return true; } };
+    const out = await run(db, ms('2026-11-05', '23:00'));
+    const want = game.cardTourPlay(db0, { deck: decks.p0.deck, tactics: decks.p0.tactics }, { deck: decks.p1.deck, tactics: decks.p1.tactics }, { seed: 4242, first: 1, key: 'clive|0|1' });
+    check('F 待ち時間は30分(サーバの関数の1か所)を SQL へ渡す', J(asked) === J([30]) && cupMod.CUP_LIVE_IDLE_MS === 30 * 60000, J(asked));
+    check('F 止まった試合を、写しどうし・試合の種・「杯|回戦|枠」の key で回して決める(端末の auto と同じ結果)', decided.length === 1 && decided[0].id === 77 && decided[0].winner === want.winner && J(decided[0].kos) === J(want.kos) && J(decided[0].acts) === J(want.acts) && out.live === 1, J(decided.map((d) => d.id)));
+    check('F 写しの無い試合は回さない', !decided.some((d) => d.id === 78));
+    const db2 = { ...fakeDb(decks), liveDue: async () => [row], liveDecide: async () => { throw new Error('呼ばれない'); } };
+    const out2 = await run(db2, ms('2026-11-05', '23:00'), { budget: 0 });
+    check('F 時間の上限が残っていなければ回さない', out2.live === 0);
+    const db3 = { ...fakeDb(decks), liveDue: async () => { throw new Error('関数が無い'); }, liveDecide: async () => true };
+    const out3 = await run(db3, ms('2026-11-05', '23:00'));
+    check('F 関数がまだ無い(SQL を流す前)ときも止まらない', out3 && out3.live === 0);
+  }
 
   if (fails.length) {
     console.error(`個人杯のオート杯の検査: NG ${fails.length}件(OK ${passed}件)`);
