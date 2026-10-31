@@ -4358,11 +4358,12 @@ const createAnimationStyle = () => {
     @keyframes mhKiraRim { 0%, 100% { filter: drop-shadow(0 0 2px rgba(255,120,220,.9)); } 33% { filter: drop-shadow(0 0 2px rgba(120,210,255,.9)); } 66% { filter: drop-shadow(0 0 2px rgba(255,230,110,.9)); } }
     .mh-rare-rim { filter: drop-shadow(0 0 3px rgba(255,214,102,.95)) drop-shadow(0 0 7px rgba(255,170,60,.5)); }
     .mh-kira-fx { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
-    .mh-kira-spark { position: absolute; width: 9px; height: 9px; margin: -4px 0 0 -4px; opacity: 0; background: #fff6fd; clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%); filter: drop-shadow(0 0 2px rgba(255,170,240,.95)); animation: mhKiraSpark 3.8s ease-in-out infinite; }
+    .mh-kira-spark { position: absolute; width: 13px; height: 13px; margin: -6px 0 0 -6px; opacity: 0; background: #fff6fd; clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%); filter: drop-shadow(0 0 2px rgba(255,170,240,.95)); animation: mhKiraSpark 3.8s ease-in-out infinite; }
     @keyframes mhKiraSpark { 0%, 70%, 100% { opacity: 0; transform: scale(.4) rotate(0deg); } 80% { opacity: 1; transform: scale(1) rotate(25deg); } 90% { opacity: 0; transform: scale(.6) rotate(45deg); } }
     .mh-rare-halo { position: absolute; left: 50%; top: 54%; width: 82%; aspect-ratio: 1; max-height: 100%; transform: translate(-50%, -50%); border-radius: 50%; z-index: -1;
-      background: conic-gradient(from 0deg, rgba(255,214,102,0), rgba(255,214,102,.55), rgba(255,138,61,0), rgba(255,214,102,.45), rgba(255,214,102,0));
-      -webkit-mask: radial-gradient(circle, transparent 52%, #000 54%, #000 64%, transparent 70%); mask: radial-gradient(circle, transparent 52%, #000 54%, #000 64%, transparent 70%);
+      /* 2026-10-31 社長「光り方は案B」: 後ろで光の線が回る(前は細い光の輪) */
+      background: repeating-conic-gradient(rgba(255,214,102,.6) 0 8deg, rgba(255,214,102,0) 8deg 22deg);
+      -webkit-mask: radial-gradient(circle, #000 28%, transparent 70%); mask: radial-gradient(circle, #000 28%, transparent 70%);
       animation: mhRareSpin 9s linear infinite; }
     .mh-rare-glow { position: absolute; left: 50%; top: 58%; width: 66%; aspect-ratio: 1; max-height: 100%; transform: translate(-50%, -50%); border-radius: 50%; z-index: -1; background: radial-gradient(circle, rgba(255,214,102,.36), rgba(255,214,102,0) 70%); animation: mhRarePulse 2.6s ease-in-out infinite; }
     @keyframes mhRareSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
@@ -4372,6 +4373,33 @@ const createAnimationStyle = () => {
     @media (prefers-reduced-motion: reduce) {
       .mh-kira-fx { display: none; }
       .mh-kira-rim { animation: none; filter: drop-shadow(0 0 2px rgba(200,160,255,.9)); }
+    }
+    /* カードの絵のキラ・レアキラ・銀の光(84 の CardShine。2026-10-31 社長「光り方は案B オーロラと粒」「ブリーダー・場のカードに銀の光の帯」)。
+       一覧にたくさん並ぶので、動かすのは transform と opacity だけ(描き直しの要らない動き)。ふちの色の移り変わりも、色ちがいの3枚の層の濃さを入れかえて作る */
+    .mh-shine { position: relative; display: block; isolation: isolate; overflow: hidden; border-radius: inherit; }
+    .mh-shine > .mh-shine-l { position: absolute; pointer-events: none; z-index: 2; }
+    .mh-shine-rim { inset: 0; border-radius: inherit; opacity: 0; }
+    .mh-shine-rim.r1 { box-shadow: inset 0 0 0 2px #ff7ad9, inset 0 0 10px 2px rgba(255,122,217,.65); animation: mhShineRim 2.4s linear infinite; }
+    .mh-shine-rim.r2 { box-shadow: inset 0 0 0 2px #7ad7ff, inset 0 0 10px 2px rgba(122,215,255,.65); animation: mhShineRim 2.4s linear infinite; animation-delay: -.8s; }
+    .mh-shine-rim.r3 { box-shadow: inset 0 0 0 2px #ffe27a, inset 0 0 10px 2px rgba(255,226,122,.65); animation: mhShineRim 2.4s linear infinite; animation-delay: -1.6s; }
+    @keyframes mhShineRim { 0%, 100% { opacity: 0; } 17% { opacity: 1; } 33% { opacity: 0; } }
+    .mh-shine-rare-rim { inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 2px #ffe08a, inset 0 0 12px 3px rgba(255,170,60,.75); animation: mhShinePulse 1.8s ease-in-out infinite; }
+    @keyframes mhShinePulse { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
+    .mh-shine-star { width: 12%; aspect-ratio: 1; margin: -6% 0 0 -6%; background: #fff; clip-path: polygon(50% 0, 58% 42%, 100% 50%, 58% 58%, 50% 100%, 42% 58%, 0 50%, 42% 42%); opacity: 0; animation: mhShineStar 2.2s ease-in-out infinite; }
+    @keyframes mhShineStar { 0%, 60%, 100% { opacity: 0; transform: scale(.3) rotate(0deg); } 75% { opacity: 1; transform: scale(1.1) rotate(30deg); } 88% { opacity: 0; transform: scale(.5) rotate(60deg); } }
+    .mh-shine-aurora { top: 0; bottom: 0; left: -200%; width: 400%; mix-blend-mode: screen; opacity: .5;
+      background: linear-gradient(120deg, rgba(255,0,150,0) 0%, rgba(255,0,150,.35) 12%, rgba(0,200,255,.35) 25%, rgba(255,230,0,.35) 37%, rgba(255,0,150,0) 50%, rgba(255,0,150,.35) 62%, rgba(0,200,255,.35) 75%, rgba(255,230,0,.35) 87%, rgba(255,0,150,0) 100%);
+      animation: mhShineAurora 3s linear infinite; }
+    @keyframes mhShineAurora { from { transform: translateX(0); } to { transform: translateX(50%); } }
+    .mh-shine-sheen { top: -20%; bottom: -20%; left: -60%; right: -60%; animation: mhShineSheen 1.7s ease-in-out infinite; background: linear-gradient(105deg, transparent 38%, rgba(255,255,255,.9) 50%, transparent 62%); mix-blend-mode: overlay; }
+    @keyframes mhShineSheen { 0% { transform: translateX(-55%); } 55%, 100% { transform: translateX(55%); } }
+    .mh-shine-mote { bottom: 4%; width: 4%; aspect-ratio: 1; border-radius: 50%; background: #fff3b0; box-shadow: 0 0 6px #ffd166; opacity: 0; animation: mhShineMote 2.6s linear infinite; }
+    @keyframes mhShineMote { 0% { opacity: 0; transform: translateY(0); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(-900%); } }
+    .mh-shine-silver { top: -20%; bottom: -20%; left: -60%; right: -60%; animation: mhShineSheen 3.4s ease-in-out infinite; background: linear-gradient(105deg, transparent 42%, rgba(220,235,255,.85) 50%, transparent 58%); mix-blend-mode: soft-light; }
+    .mh-shine-silver-rim { inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1.5px rgba(210,225,245,.9), inset 0 0 8px 1px rgba(200,220,255,.5); }
+    @media (prefers-reduced-motion: reduce) {
+      .mh-shine-rim.r2, .mh-shine-rim.r3, .mh-shine-star, .mh-shine-aurora, .mh-shine-sheen, .mh-shine-mote, .mh-shine-silver { display: none; }
+      .mh-shine-rim.r1, .mh-shine-rare-rim { animation: none; opacity: 1; }
     }
     .mh-card-ko { animation: mhCardKo .9s ease-in forwards; transform-origin: 50% 90%; }
     /* 「画面の揺れ: 揺らさない」(カードのオプション)のときの受けた動き。揺らさずに赤く光るだけ */

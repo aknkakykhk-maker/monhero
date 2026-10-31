@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e93cc65f277f987d
+// generated-sha256: 2b4258eee9910edf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -59033,6 +59033,27 @@ const CardKiraFx = ({ kind, calm = false }) => {
     </span>
   );
 };
+// カードの絵(枠つき)のキラ・レアキラ・銀の光(2026-10-31 社長「光り方は案B オーロラと粒」「ブリーダー・場のカード33枚に銀の光の帯」・
+//   見本は docs/progress/card-pack-fx)。手持ちの一覧・デッキを組む画面・売り場・パック・カードを大きく見る画面で使う(対戦中の手札には付けない)
+//   rare … オーロラが流れ、光の帯が走り、光の粒が舞い上がる・金のふち / kira … ふちの色が移り変わり、星がまたたく /
+//   silver … 銀の光の帯(ブリーダーのカード。レアの段は無く、見た目だけ)。CSS は 70-bootstrap の .mh-shine-*(動かすのは transform と opacity だけ)
+const cardShineOf = (db, no) => { const c = db ? cardOf(db, no) : null; if (c) return c.user === 'breeder' ? 'silver' : null; return cardKiraOf(db, no); };
+const CARD_SHINE_STARS = Object.freeze([[24, 26, 0], [74, 40, 0.9], [44, 74, 1.6]]);
+const CARD_SHINE_MOTES = Object.freeze([[15, 0], [30, 0.5], [45, 1.1], [60, 0.3], [75, 0.8], [88, 1.4]]);
+// children(カードの絵)を光の層で包む。kind が無ければそのまま返す。className … 包む枠の形(角の丸みなど)
+const CardShine = ({ kind, className = '', children }) => {
+  if (!kind) return children;
+  return (
+    <span data-card-shine={kind} className={`mh-shine ${className}`}>
+      {children}
+      {kind === 'rare' && <><span aria-hidden="true" className="mh-shine-l mh-shine-aurora"/><span aria-hidden="true" className="mh-shine-l mh-shine-sheen"/><span aria-hidden="true" className="mh-shine-l mh-shine-rare-rim"/>
+        {CARD_SHINE_MOTES.map(([x, d], i) => <span key={i} aria-hidden="true" className="mh-shine-l mh-shine-mote" style={{ left: `${x}%`, animationDelay: `${d}s` }}/>)}</>}
+      {kind === 'kira' && <>{['r1', 'r2', 'r3'].map((r) => <span key={r} aria-hidden="true" className={`mh-shine-l mh-shine-rim ${r}`}/>)}
+        {CARD_SHINE_STARS.map(([x, y, d], i) => <span key={i} aria-hidden="true" className="mh-shine-l mh-shine-star" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${d}s` }}/>)}</>}
+      {kind === 'silver' && <><span aria-hidden="true" className="mh-shine-l mh-shine-silver"/><span aria-hidden="true" className="mh-shine-l mh-shine-silver-rim"/></>}
+    </span>
+  );
+};
 // 立ち絵(img など)を、キラのふちの光で包む。kind が無ければそのまま返す
 const cardKiraWrap = (kind, el) => (kind ? <span data-card-kira={kind} className={`${kind === 'rare' ? 'mh-rare-rim' : 'mh-kira-rim'} inline-flex items-end justify-center`}>{el}</span> : el);
 // 場の立ち絵を、絵の「中身の範囲」(ART_CONTENT_BOXES。対戦開始の画面の cardVsBoxOf と同じ表)で要素いっぱいへ広げる
@@ -59430,12 +59451,12 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
         <div data-card-detail-navrow className="flex w-full max-w-sm flex-col items-center gap-1">
           <div className="flex w-full items-center justify-center gap-2">
             {navBtn('prev', nav.onPrev)}
-            <img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(62vw,280px)] min-w-0 rounded-xl shadow-2xl landscape:h-[32vh] landscape:w-auto"/>
+            <CardShine kind={cardShineOf(db, no)} className="w-fit min-w-0 rounded-xl"><img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(62vw,280px)] min-w-0 rounded-xl shadow-2xl landscape:h-[32vh] landscape:w-auto"/></CardShine>
             {navBtn('next', nav.onNext)}
           </div>
           <span data-card-detail-pos className="text-[12px] font-bold text-slate-400">{nav.pos}</span>
         </div>
-      ) : <img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(78vw,300px)] rounded-xl shadow-2xl"/>}
+      ) : <CardShine kind={cardShineOf(db, no)} className="w-fit rounded-xl"><img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(78vw,300px)] rounded-xl shadow-2xl"/></CardShine>}
       {c && (
         <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100">
           <div className="text-lg font-black">{c.name}</div>
@@ -62923,7 +62944,7 @@ const CardDeckTile = ({ db, no, inDeck = 0, owned = 0, dim = false, press, onTap
     <button type="button" data-card-deck-tile={no} {...press(no, onTap, { double: false })} className={`relative flex flex-col items-center rounded-lg p-0.5 text-center active:scale-95 ${dim ? 'opacity-40' : ''} ${inDeck > 0 ? 'bg-emerald-500/15 ring-2 ring-emerald-300/70' : 'bg-white/5'}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
       {/* 「入/持」の札は絵の右下(カードの名前は絵の上にあるので、上に置くと名前が隠れた。2026-10-24 改善部の点検 V5) */}
       <span className="relative block w-full">
-        <img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} draggable={false} onDragStart={(e) => e.preventDefault()} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
+        <CardShine kind={cardShineOf(db, no)} className="rounded-[5px]"><img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} draggable={false} onDragStart={(e) => e.preventDefault()} className="aspect-[5/7] w-full rounded-[5px] object-cover"/></CardShine>
         <span data-card-deck-badge className="absolute bottom-0.5 right-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-white"><span className="text-emerald-300">入{inDeck}</span>/持{owned}</span>
       </span>
       {mark && <span className="absolute left-0.5 top-0.5 rounded-md bg-amber-400 px-1 text-[9px] font-black text-slate-950">{mark}</span>}
@@ -62947,7 +62968,7 @@ const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemov
     <div data-card-deck-pick={no} className={`relative flex min-w-0 flex-col rounded-lg p-0.5 ${inDeck > 0 ? 'bg-emerald-500/15 ring-2 ring-emerald-300/70' : 'bg-white/5'}`}>
       {unusable && <span data-card-deck-unusable-tag={no} className="pointer-events-none absolute inset-x-0.5 top-[38%] z-[1] rounded-sm bg-slate-950/85 py-0.5 text-center text-[10px] font-black leading-tight text-rose-200">このデッキのモンスターは使えない</span>}
       <button type="button" data-card-deck-tile={no} {...press(no, onAdd, { double: false })} className={`block w-full active:scale-95 ${(!canAdd && inDeck === 0) || unusable ? 'opacity-45' : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }} aria-label={`${name}を1枚入れる`}>
-        <img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} draggable={false} onDragStart={(e) => e.preventDefault()} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
+        <CardShine kind={cardShineOf(db, no)} className="rounded-[5px]"><img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} draggable={false} onDragStart={(e) => e.preventDefault()} className="aspect-[5/7] w-full rounded-[5px] object-cover"/></CardShine>
       </button>
       {/* 名前の行の右はしに「i」(カードの絵の上に置くと、右上の地上・空中の札に重なった) */}
       <div className="mt-0.5 flex items-center gap-0.5">
@@ -63374,7 +63395,7 @@ const CardDex = ({ db, collection, onBack }) => {
               const rare = m && m.variant ? (/別絵/.test(m.variant) ? '★別絵キラ' : /キラ/.test(m.variant) ? '★キラ' : m.variant) : '';
               return (
                 <button key={no} type="button" data-card-dex-tile={no} data-card-dex-have={have} {...press(no, () => setDetail(no))} className={`relative flex flex-col items-center rounded-lg bg-white/5 p-0.5 text-center active:scale-95 ${rare && /キラ/.test(rare) ? 'ring-2 ring-amber-300' : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
-                  <img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} loading="lazy" draggable={false} className={`aspect-[5/7] w-full rounded-[5px] object-cover ${have ? '' : 'brightness-[.45] saturate-[.6]'}`}/>
+                  <CardShine kind={have ? cardShineOf(db, no) : null} className="w-full rounded-[5px]"><img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} loading="lazy" draggable={false} className={`aspect-[5/7] w-full rounded-[5px] object-cover ${have ? '' : 'brightness-[.45] saturate-[.6]'}`}/></CardShine>
                   {/* 持っている枚数(緑)/ まだ(灰)。どのカードにも出す */}
                   <span data-card-dex-count={have} className={`absolute right-0.5 top-0.5 rounded-md px-1 text-[10px] font-black ${have > 0 ? 'bg-emerald-400 text-emerald-950' : 'bg-slate-700 text-slate-200'}`}>{have > 0 ? `×${have}` : 'まだ'}</span>
                   {c && !c.ready && <span className="absolute left-0.5 top-0.5 rounded-md bg-slate-600 px-1 text-[9px] font-black text-white">準備中</span>}
@@ -63604,7 +63625,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
                         {c.slot === 'mon' && <span aria-hidden="true" className="relative mt-[62%] grid aspect-square w-[30%] place-items-center rounded-full border-2 border-amber-200/90 bg-black/55 font-black leading-none text-amber-200 shadow-[0_0_10px_rgba(0,0,0,.5)]" style={{ fontSize: '14cqw', textShadow: '0 1px 2px #000' }}>★</span>}
                       </div>
                       <div className={`mh-pack-face mh-pack-front ${rare ? (c.rarity === 'alt' ? 'mh-pack-alt-front' : 'mh-pack-kira-front') : ''}`}>
-                        <img src={CARD_IMG(card ? card.img : m ? m.img : c.no)} alt={name} draggable={false} className="h-full w-full rounded-[5px] object-cover"/>
+                        <CardShine kind={cardShineOf(db, c.no)} className="h-full w-full rounded-[5px]"><img src={CARD_IMG(card ? card.img : m ? m.img : c.no)} alt={name} draggable={false} className="h-full w-full rounded-[5px] object-cover"/></CardShine>
                       </div>
                     </div>
                     {on && rare && <div aria-hidden="true" className={`mh-pack-rays ${c.rarity === 'alt' ? 'mh-pack-rays-alt' : ''}`}/>}
@@ -63649,7 +63670,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
             <div aria-hidden="true" className={`mh-pack-spot-rays ${alt ? 'mh-pack-spot-rays-alt' : ''}`}/>
             <div className={`relative ${spot.leaving ? 'mh-pack-spot-out' : 'mh-pack-spot-in'}`} style={{ width: spotW }}>
               <div className={`relative aspect-[5/7] w-full ${alt ? 'mh-pack-alt-front' : 'mh-pack-kira-front'}`}>
-                <img src={CARD_IMG(card ? card.img : m ? m.img : c.no)} alt={card ? card.name : m ? m.name : c.no} draggable={false} className="h-full w-full rounded-[8px] object-cover"/>
+                <CardShine kind={cardShineOf(db, c.no)} className="h-full w-full rounded-[8px]"><img src={CARD_IMG(card ? card.img : m ? m.img : c.no)} alt={card ? card.name : m ? m.name : c.no} draggable={false} className="h-full w-full rounded-[8px] object-cover"/></CardShine>
               </div>
             </div>
             <span className={`relative mt-4 rounded-full px-4 py-1 text-[18px] font-black text-slate-950 ${alt ? 'mh-pack-alt-label' : 'bg-amber-300'} ${spot.leaving ? 'opacity-0' : ''}`}>{CARD_RARITY_LABEL[c.rarity]}!</span>
@@ -63722,7 +63743,7 @@ const CardShopGrid = ({ db, rows, collection, onTap }) => (
       return (
         <button key={no} type="button" data-card-shop-item={no} data-card-shop-missing={missing ? '1' : undefined} onClick={() => onTap(no)} className="relative flex flex-col items-center rounded-lg bg-white/5 p-0.5 text-center active:scale-95">
           <span className="relative block w-full">
-            <img src={cardShopImg(db, no)} alt={cardShopName(db, no)} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
+            <CardShine kind={cardShineOf(db, no)} className="rounded-[5px]"><img src={cardShopImg(db, no)} alt={cardShopName(db, no)} className="aspect-[5/7] w-full rounded-[5px] object-cover"/></CardShine>
             {missing && <span data-card-shop-missing-badge className="absolute left-0.5 top-0.5 rounded-md bg-rose-600 px-1 text-[9px] font-black text-white shadow">未取得</span>}
             {owned > 0 && <span data-card-shop-owned={owned} className="absolute right-0.5 top-0.5 rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950 shadow">所持{owned}</span>}
             {rarity && rarity !== 'normal' && <span className="absolute bottom-0.5 left-0.5 rounded-md bg-amber-300 px-1 text-[9px] font-black text-slate-950">{CARD_RARITY_LABEL[rarity]}</span>}
@@ -100425,11 +100446,12 @@ const createAnimationStyle = () => {
     @keyframes mhKiraRim { 0%, 100% { filter: drop-shadow(0 0 2px rgba(255,120,220,.9)); } 33% { filter: drop-shadow(0 0 2px rgba(120,210,255,.9)); } 66% { filter: drop-shadow(0 0 2px rgba(255,230,110,.9)); } }
     .mh-rare-rim { filter: drop-shadow(0 0 3px rgba(255,214,102,.95)) drop-shadow(0 0 7px rgba(255,170,60,.5)); }
     .mh-kira-fx { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
-    .mh-kira-spark { position: absolute; width: 9px; height: 9px; margin: -4px 0 0 -4px; opacity: 0; background: #fff6fd; clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%); filter: drop-shadow(0 0 2px rgba(255,170,240,.95)); animation: mhKiraSpark 3.8s ease-in-out infinite; }
+    .mh-kira-spark { position: absolute; width: 13px; height: 13px; margin: -6px 0 0 -6px; opacity: 0; background: #fff6fd; clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%); filter: drop-shadow(0 0 2px rgba(255,170,240,.95)); animation: mhKiraSpark 3.8s ease-in-out infinite; }
     @keyframes mhKiraSpark { 0%, 70%, 100% { opacity: 0; transform: scale(.4) rotate(0deg); } 80% { opacity: 1; transform: scale(1) rotate(25deg); } 90% { opacity: 0; transform: scale(.6) rotate(45deg); } }
     .mh-rare-halo { position: absolute; left: 50%; top: 54%; width: 82%; aspect-ratio: 1; max-height: 100%; transform: translate(-50%, -50%); border-radius: 50%; z-index: -1;
-      background: conic-gradient(from 0deg, rgba(255,214,102,0), rgba(255,214,102,.55), rgba(255,138,61,0), rgba(255,214,102,.45), rgba(255,214,102,0));
-      -webkit-mask: radial-gradient(circle, transparent 52%, #000 54%, #000 64%, transparent 70%); mask: radial-gradient(circle, transparent 52%, #000 54%, #000 64%, transparent 70%);
+      /* 2026-10-31 社長「光り方は案B」: 後ろで光の線が回る(前は細い光の輪) */
+      background: repeating-conic-gradient(rgba(255,214,102,.6) 0 8deg, rgba(255,214,102,0) 8deg 22deg);
+      -webkit-mask: radial-gradient(circle, #000 28%, transparent 70%); mask: radial-gradient(circle, #000 28%, transparent 70%);
       animation: mhRareSpin 9s linear infinite; }
     .mh-rare-glow { position: absolute; left: 50%; top: 58%; width: 66%; aspect-ratio: 1; max-height: 100%; transform: translate(-50%, -50%); border-radius: 50%; z-index: -1; background: radial-gradient(circle, rgba(255,214,102,.36), rgba(255,214,102,0) 70%); animation: mhRarePulse 2.6s ease-in-out infinite; }
     @keyframes mhRareSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
@@ -100439,6 +100461,33 @@ const createAnimationStyle = () => {
     @media (prefers-reduced-motion: reduce) {
       .mh-kira-fx { display: none; }
       .mh-kira-rim { animation: none; filter: drop-shadow(0 0 2px rgba(200,160,255,.9)); }
+    }
+    /* カードの絵のキラ・レアキラ・銀の光(84 の CardShine。2026-10-31 社長「光り方は案B オーロラと粒」「ブリーダー・場のカードに銀の光の帯」)。
+       一覧にたくさん並ぶので、動かすのは transform と opacity だけ(描き直しの要らない動き)。ふちの色の移り変わりも、色ちがいの3枚の層の濃さを入れかえて作る */
+    .mh-shine { position: relative; display: block; isolation: isolate; overflow: hidden; border-radius: inherit; }
+    .mh-shine > .mh-shine-l { position: absolute; pointer-events: none; z-index: 2; }
+    .mh-shine-rim { inset: 0; border-radius: inherit; opacity: 0; }
+    .mh-shine-rim.r1 { box-shadow: inset 0 0 0 2px #ff7ad9, inset 0 0 10px 2px rgba(255,122,217,.65); animation: mhShineRim 2.4s linear infinite; }
+    .mh-shine-rim.r2 { box-shadow: inset 0 0 0 2px #7ad7ff, inset 0 0 10px 2px rgba(122,215,255,.65); animation: mhShineRim 2.4s linear infinite; animation-delay: -.8s; }
+    .mh-shine-rim.r3 { box-shadow: inset 0 0 0 2px #ffe27a, inset 0 0 10px 2px rgba(255,226,122,.65); animation: mhShineRim 2.4s linear infinite; animation-delay: -1.6s; }
+    @keyframes mhShineRim { 0%, 100% { opacity: 0; } 17% { opacity: 1; } 33% { opacity: 0; } }
+    .mh-shine-rare-rim { inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 2px #ffe08a, inset 0 0 12px 3px rgba(255,170,60,.75); animation: mhShinePulse 1.8s ease-in-out infinite; }
+    @keyframes mhShinePulse { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
+    .mh-shine-star { width: 12%; aspect-ratio: 1; margin: -6% 0 0 -6%; background: #fff; clip-path: polygon(50% 0, 58% 42%, 100% 50%, 58% 58%, 50% 100%, 42% 58%, 0 50%, 42% 42%); opacity: 0; animation: mhShineStar 2.2s ease-in-out infinite; }
+    @keyframes mhShineStar { 0%, 60%, 100% { opacity: 0; transform: scale(.3) rotate(0deg); } 75% { opacity: 1; transform: scale(1.1) rotate(30deg); } 88% { opacity: 0; transform: scale(.5) rotate(60deg); } }
+    .mh-shine-aurora { top: 0; bottom: 0; left: -200%; width: 400%; mix-blend-mode: screen; opacity: .5;
+      background: linear-gradient(120deg, rgba(255,0,150,0) 0%, rgba(255,0,150,.35) 12%, rgba(0,200,255,.35) 25%, rgba(255,230,0,.35) 37%, rgba(255,0,150,0) 50%, rgba(255,0,150,.35) 62%, rgba(0,200,255,.35) 75%, rgba(255,230,0,.35) 87%, rgba(255,0,150,0) 100%);
+      animation: mhShineAurora 3s linear infinite; }
+    @keyframes mhShineAurora { from { transform: translateX(0); } to { transform: translateX(50%); } }
+    .mh-shine-sheen { top: -20%; bottom: -20%; left: -60%; right: -60%; animation: mhShineSheen 1.7s ease-in-out infinite; background: linear-gradient(105deg, transparent 38%, rgba(255,255,255,.9) 50%, transparent 62%); mix-blend-mode: overlay; }
+    @keyframes mhShineSheen { 0% { transform: translateX(-55%); } 55%, 100% { transform: translateX(55%); } }
+    .mh-shine-mote { bottom: 4%; width: 4%; aspect-ratio: 1; border-radius: 50%; background: #fff3b0; box-shadow: 0 0 6px #ffd166; opacity: 0; animation: mhShineMote 2.6s linear infinite; }
+    @keyframes mhShineMote { 0% { opacity: 0; transform: translateY(0); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(-900%); } }
+    .mh-shine-silver { top: -20%; bottom: -20%; left: -60%; right: -60%; animation: mhShineSheen 3.4s ease-in-out infinite; background: linear-gradient(105deg, transparent 42%, rgba(220,235,255,.85) 50%, transparent 58%); mix-blend-mode: soft-light; }
+    .mh-shine-silver-rim { inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1.5px rgba(210,225,245,.9), inset 0 0 8px 1px rgba(200,220,255,.5); }
+    @media (prefers-reduced-motion: reduce) {
+      .mh-shine-rim.r2, .mh-shine-rim.r3, .mh-shine-star, .mh-shine-aurora, .mh-shine-sheen, .mh-shine-mote, .mh-shine-silver { display: none; }
+      .mh-shine-rim.r1, .mh-shine-rare-rim { animation: none; opacity: 1; }
     }
     .mh-card-ko { animation: mhCardKo .9s ease-in forwards; transform-origin: 50% 90%; }
     /* 「画面の揺れ: 揺らさない」(カードのオプション)のときの受けた動き。揺らさずに赤く光るだけ */

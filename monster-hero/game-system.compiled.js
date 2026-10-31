@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cfc3288fdb6b6e37
+// source-sha256: 3771bb9165bff9b9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -97812,6 +97812,60 @@ const CardKiraFx = ({
     }
   })));
 };
+const cardShineOf = (db, no) => {
+  const c = db ? cardOf(db, no) : null;
+  if (c) return c.user === 'breeder' ? 'silver' : null;
+  return cardKiraOf(db, no);
+};
+const CARD_SHINE_STARS = Object.freeze([[24, 26, 0], [74, 40, 0.9], [44, 74, 1.6]]);
+const CARD_SHINE_MOTES = Object.freeze([[15, 0], [30, 0.5], [45, 1.1], [60, 0.3], [75, 0.8], [88, 1.4]]);
+const CardShine = ({
+  kind,
+  className = '',
+  children
+}) => {
+  if (!kind) return children;
+  return React.createElement("span", {
+    "data-card-shine": kind,
+    className: `mh-shine ${className}`
+  }, children, kind === 'rare' && React.createElement(React.Fragment, null, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "mh-shine-l mh-shine-aurora"
+  }), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "mh-shine-l mh-shine-sheen"
+  }), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "mh-shine-l mh-shine-rare-rim"
+  }), CARD_SHINE_MOTES.map(([x, d], i) => React.createElement("span", {
+    key: i,
+    "aria-hidden": "true",
+    className: "mh-shine-l mh-shine-mote",
+    style: {
+      left: `${x}%`,
+      animationDelay: `${d}s`
+    }
+  }))), kind === 'kira' && React.createElement(React.Fragment, null, ['r1', 'r2', 'r3'].map(r => React.createElement("span", {
+    key: r,
+    "aria-hidden": "true",
+    className: `mh-shine-l mh-shine-rim ${r}`
+  })), CARD_SHINE_STARS.map(([x, y, d], i) => React.createElement("span", {
+    key: i,
+    "aria-hidden": "true",
+    className: "mh-shine-l mh-shine-star",
+    style: {
+      left: `${x}%`,
+      top: `${y}%`,
+      animationDelay: `${d}s`
+    }
+  }))), kind === 'silver' && React.createElement(React.Fragment, null, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "mh-shine-l mh-shine-silver"
+  }), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "mh-shine-l mh-shine-silver-rim"
+  })));
+};
 const cardKiraWrap = (kind, el) => kind ? React.createElement("span", {
   "data-card-kira": kind,
   className: `${kind === 'rare' ? 'mh-rare-rim' : 'mh-kira-rim'} inline-flex items-end justify-center`
@@ -98453,18 +98507,24 @@ const CardDetailModal = ({
     className: "flex w-full max-w-sm flex-col items-center gap-1"
   }, React.createElement("div", {
     className: "flex w-full items-center justify-center gap-2"
-  }, navBtn('prev', nav.onPrev), React.createElement("img", {
+  }, navBtn('prev', nav.onPrev), React.createElement(CardShine, {
+    kind: cardShineOf(db, no),
+    className: "w-fit min-w-0 rounded-xl"
+  }, React.createElement("img", {
     src: CARD_IMG(c ? c.img : m ? m.img : no, 'l'),
     alt: c ? c.name : m ? m.name : '',
     className: "w-[min(62vw,280px)] min-w-0 rounded-xl shadow-2xl landscape:h-[32vh] landscape:w-auto"
-  }), navBtn('next', nav.onNext)), React.createElement("span", {
+  })), navBtn('next', nav.onNext)), React.createElement("span", {
     "data-card-detail-pos": true,
     className: "text-[12px] font-bold text-slate-400"
-  }, nav.pos)) : React.createElement("img", {
+  }, nav.pos)) : React.createElement(CardShine, {
+    kind: cardShineOf(db, no),
+    className: "w-fit rounded-xl"
+  }, React.createElement("img", {
     src: CARD_IMG(c ? c.img : m ? m.img : no, 'l'),
     alt: c ? c.name : m ? m.name : '',
     className: "w-[min(78vw,300px)] rounded-xl shadow-2xl"
-  }), c && React.createElement("div", {
+  })), c && React.createElement("div", {
     className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100"
   }, React.createElement("div", {
     className: "text-lg font-black"
@@ -104976,13 +105036,16 @@ const CardDeckTile = ({
     }
   }), React.createElement("span", {
     className: "relative block w-full"
+  }, React.createElement(CardShine, {
+    kind: cardShineOf(db, no),
+    className: "rounded-[5px]"
   }, React.createElement("img", {
     src: CARD_IMG(c ? c.img : m ? m.img : no),
     alt: name,
     draggable: false,
     onDragStart: e => e.preventDefault(),
     className: "aspect-[5/7] w-full rounded-[5px] object-cover"
-  }), React.createElement("span", {
+  })), React.createElement("span", {
     "data-card-deck-badge": true,
     className: "absolute bottom-0.5 right-0.5 rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-white"
   }, React.createElement("span", {
@@ -105047,13 +105110,16 @@ const CardDeckPickTile = ({
       userSelect: 'none'
     },
     "aria-label": `${name}を1枚入れる`
-  }), React.createElement("img", {
+  }), React.createElement(CardShine, {
+    kind: cardShineOf(db, no),
+    className: "rounded-[5px]"
+  }, React.createElement("img", {
     src: CARD_IMG(c ? c.img : m ? m.img : no),
     alt: name,
     draggable: false,
     onDragStart: e => e.preventDefault(),
     className: "aspect-[5/7] w-full rounded-[5px] object-cover"
-  })), React.createElement("div", {
+  }))), React.createElement("div", {
     className: "mt-0.5 flex items-center gap-0.5"
   }, React.createElement(CardNameFit, {
     name: name,
@@ -105928,13 +105994,16 @@ const CardDex = ({
             WebkitUserSelect: 'none',
             userSelect: 'none'
           }
-        }), React.createElement("img", {
+        }), React.createElement(CardShine, {
+          kind: have ? cardShineOf(db, no) : null,
+          className: "w-full rounded-[5px]"
+        }, React.createElement("img", {
           src: CARD_IMG(c ? c.img : m ? m.img : no),
           alt: name,
           loading: "lazy",
           draggable: false,
           className: `aspect-[5/7] w-full rounded-[5px] object-cover ${have ? '' : 'brightness-[.45] saturate-[.6]'}`
-        }), React.createElement("span", {
+        })), React.createElement("span", {
           "data-card-dex-count": have,
           className: `absolute right-0.5 top-0.5 rounded-md px-1 text-[10px] font-black ${have > 0 ? 'bg-emerald-400 text-emerald-950' : 'bg-slate-700 text-slate-200'}`
         }, have > 0 ? `×${have}` : 'まだ'), c && !c.ready && React.createElement("span", {
@@ -106429,12 +106498,15 @@ const CardPackOpen = ({
       }
     }, "★")), React.createElement("div", {
       className: `mh-pack-face mh-pack-front ${rare ? c.rarity === 'alt' ? 'mh-pack-alt-front' : 'mh-pack-kira-front' : ''}`
+    }, React.createElement(CardShine, {
+      kind: cardShineOf(db, c.no),
+      className: "h-full w-full rounded-[5px]"
     }, React.createElement("img", {
       src: CARD_IMG(card ? card.img : m ? m.img : c.no),
       alt: name,
       draggable: false,
       className: "h-full w-full rounded-[5px] object-cover"
-    }))), on && rare && React.createElement("div", {
+    })))), on && rare && React.createElement("div", {
       "aria-hidden": "true",
       className: `mh-pack-rays ${c.rarity === 'alt' ? 'mh-pack-rays-alt' : ''}`
     }), on && (rare || c.point > 0 || c.fresh === undefined || c.fresh) && React.createElement("span", {
@@ -106496,12 +106568,15 @@ const CardPackOpen = ({
       }
     }, React.createElement("div", {
       className: `relative aspect-[5/7] w-full ${alt ? 'mh-pack-alt-front' : 'mh-pack-kira-front'}`
+    }, React.createElement(CardShine, {
+      kind: cardShineOf(db, c.no),
+      className: "h-full w-full rounded-[8px]"
     }, React.createElement("img", {
       src: CARD_IMG(card ? card.img : m ? m.img : c.no),
       alt: card ? card.name : m ? m.name : c.no,
       draggable: false,
       className: "h-full w-full rounded-[8px] object-cover"
-    }))), React.createElement("span", {
+    })))), React.createElement("span", {
       className: `relative mt-4 rounded-full px-4 py-1 text-[18px] font-black text-slate-950 ${alt ? 'mh-pack-alt-label' : 'bg-amber-300'} ${spot.leaving ? 'opacity-0' : ''}`
     }, CARD_RARITY_LABEL[c.rarity], "!"));
   })(), React.createElement("div", {
@@ -106645,11 +106720,14 @@ const CardShopGrid = ({
     className: "relative flex flex-col items-center rounded-lg bg-white/5 p-0.5 text-center active:scale-95"
   }, React.createElement("span", {
     className: "relative block w-full"
+  }, React.createElement(CardShine, {
+    kind: cardShineOf(db, no),
+    className: "rounded-[5px]"
   }, React.createElement("img", {
     src: cardShopImg(db, no),
     alt: cardShopName(db, no),
     className: "aspect-[5/7] w-full rounded-[5px] object-cover"
-  }), missing && React.createElement("span", {
+  })), missing && React.createElement("span", {
     "data-card-shop-missing-badge": true,
     className: "absolute left-0.5 top-0.5 rounded-md bg-rose-600 px-1 text-[9px] font-black text-white shadow"
   }, "未取得"), owned > 0 && React.createElement("span", {
@@ -161918,11 +161996,12 @@ const createAnimationStyle = () => {
     @keyframes mhKiraRim { 0%, 100% { filter: drop-shadow(0 0 2px rgba(255,120,220,.9)); } 33% { filter: drop-shadow(0 0 2px rgba(120,210,255,.9)); } 66% { filter: drop-shadow(0 0 2px rgba(255,230,110,.9)); } }
     .mh-rare-rim { filter: drop-shadow(0 0 3px rgba(255,214,102,.95)) drop-shadow(0 0 7px rgba(255,170,60,.5)); }
     .mh-kira-fx { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
-    .mh-kira-spark { position: absolute; width: 9px; height: 9px; margin: -4px 0 0 -4px; opacity: 0; background: #fff6fd; clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%); filter: drop-shadow(0 0 2px rgba(255,170,240,.95)); animation: mhKiraSpark 3.8s ease-in-out infinite; }
+    .mh-kira-spark { position: absolute; width: 13px; height: 13px; margin: -6px 0 0 -6px; opacity: 0; background: #fff6fd; clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%); filter: drop-shadow(0 0 2px rgba(255,170,240,.95)); animation: mhKiraSpark 3.8s ease-in-out infinite; }
     @keyframes mhKiraSpark { 0%, 70%, 100% { opacity: 0; transform: scale(.4) rotate(0deg); } 80% { opacity: 1; transform: scale(1) rotate(25deg); } 90% { opacity: 0; transform: scale(.6) rotate(45deg); } }
     .mh-rare-halo { position: absolute; left: 50%; top: 54%; width: 82%; aspect-ratio: 1; max-height: 100%; transform: translate(-50%, -50%); border-radius: 50%; z-index: -1;
-      background: conic-gradient(from 0deg, rgba(255,214,102,0), rgba(255,214,102,.55), rgba(255,138,61,0), rgba(255,214,102,.45), rgba(255,214,102,0));
-      -webkit-mask: radial-gradient(circle, transparent 52%, #000 54%, #000 64%, transparent 70%); mask: radial-gradient(circle, transparent 52%, #000 54%, #000 64%, transparent 70%);
+      /* 2026-10-31 社長「光り方は案B」: 後ろで光の線が回る(前は細い光の輪) */
+      background: repeating-conic-gradient(rgba(255,214,102,.6) 0 8deg, rgba(255,214,102,0) 8deg 22deg);
+      -webkit-mask: radial-gradient(circle, #000 28%, transparent 70%); mask: radial-gradient(circle, #000 28%, transparent 70%);
       animation: mhRareSpin 9s linear infinite; }
     .mh-rare-glow { position: absolute; left: 50%; top: 58%; width: 66%; aspect-ratio: 1; max-height: 100%; transform: translate(-50%, -50%); border-radius: 50%; z-index: -1; background: radial-gradient(circle, rgba(255,214,102,.36), rgba(255,214,102,0) 70%); animation: mhRarePulse 2.6s ease-in-out infinite; }
     @keyframes mhRareSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
@@ -161932,6 +162011,33 @@ const createAnimationStyle = () => {
     @media (prefers-reduced-motion: reduce) {
       .mh-kira-fx { display: none; }
       .mh-kira-rim { animation: none; filter: drop-shadow(0 0 2px rgba(200,160,255,.9)); }
+    }
+    /* カードの絵のキラ・レアキラ・銀の光(84 の CardShine。2026-10-31 社長「光り方は案B オーロラと粒」「ブリーダー・場のカードに銀の光の帯」)。
+       一覧にたくさん並ぶので、動かすのは transform と opacity だけ(描き直しの要らない動き)。ふちの色の移り変わりも、色ちがいの3枚の層の濃さを入れかえて作る */
+    .mh-shine { position: relative; display: block; isolation: isolate; overflow: hidden; border-radius: inherit; }
+    .mh-shine > .mh-shine-l { position: absolute; pointer-events: none; z-index: 2; }
+    .mh-shine-rim { inset: 0; border-radius: inherit; opacity: 0; }
+    .mh-shine-rim.r1 { box-shadow: inset 0 0 0 2px #ff7ad9, inset 0 0 10px 2px rgba(255,122,217,.65); animation: mhShineRim 2.4s linear infinite; }
+    .mh-shine-rim.r2 { box-shadow: inset 0 0 0 2px #7ad7ff, inset 0 0 10px 2px rgba(122,215,255,.65); animation: mhShineRim 2.4s linear infinite; animation-delay: -.8s; }
+    .mh-shine-rim.r3 { box-shadow: inset 0 0 0 2px #ffe27a, inset 0 0 10px 2px rgba(255,226,122,.65); animation: mhShineRim 2.4s linear infinite; animation-delay: -1.6s; }
+    @keyframes mhShineRim { 0%, 100% { opacity: 0; } 17% { opacity: 1; } 33% { opacity: 0; } }
+    .mh-shine-rare-rim { inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 2px #ffe08a, inset 0 0 12px 3px rgba(255,170,60,.75); animation: mhShinePulse 1.8s ease-in-out infinite; }
+    @keyframes mhShinePulse { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
+    .mh-shine-star { width: 12%; aspect-ratio: 1; margin: -6% 0 0 -6%; background: #fff; clip-path: polygon(50% 0, 58% 42%, 100% 50%, 58% 58%, 50% 100%, 42% 58%, 0 50%, 42% 42%); opacity: 0; animation: mhShineStar 2.2s ease-in-out infinite; }
+    @keyframes mhShineStar { 0%, 60%, 100% { opacity: 0; transform: scale(.3) rotate(0deg); } 75% { opacity: 1; transform: scale(1.1) rotate(30deg); } 88% { opacity: 0; transform: scale(.5) rotate(60deg); } }
+    .mh-shine-aurora { top: 0; bottom: 0; left: -200%; width: 400%; mix-blend-mode: screen; opacity: .5;
+      background: linear-gradient(120deg, rgba(255,0,150,0) 0%, rgba(255,0,150,.35) 12%, rgba(0,200,255,.35) 25%, rgba(255,230,0,.35) 37%, rgba(255,0,150,0) 50%, rgba(255,0,150,.35) 62%, rgba(0,200,255,.35) 75%, rgba(255,230,0,.35) 87%, rgba(255,0,150,0) 100%);
+      animation: mhShineAurora 3s linear infinite; }
+    @keyframes mhShineAurora { from { transform: translateX(0); } to { transform: translateX(50%); } }
+    .mh-shine-sheen { top: -20%; bottom: -20%; left: -60%; right: -60%; animation: mhShineSheen 1.7s ease-in-out infinite; background: linear-gradient(105deg, transparent 38%, rgba(255,255,255,.9) 50%, transparent 62%); mix-blend-mode: overlay; }
+    @keyframes mhShineSheen { 0% { transform: translateX(-55%); } 55%, 100% { transform: translateX(55%); } }
+    .mh-shine-mote { bottom: 4%; width: 4%; aspect-ratio: 1; border-radius: 50%; background: #fff3b0; box-shadow: 0 0 6px #ffd166; opacity: 0; animation: mhShineMote 2.6s linear infinite; }
+    @keyframes mhShineMote { 0% { opacity: 0; transform: translateY(0); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(-900%); } }
+    .mh-shine-silver { top: -20%; bottom: -20%; left: -60%; right: -60%; animation: mhShineSheen 3.4s ease-in-out infinite; background: linear-gradient(105deg, transparent 42%, rgba(220,235,255,.85) 50%, transparent 58%); mix-blend-mode: soft-light; }
+    .mh-shine-silver-rim { inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1.5px rgba(210,225,245,.9), inset 0 0 8px 1px rgba(200,220,255,.5); }
+    @media (prefers-reduced-motion: reduce) {
+      .mh-shine-rim.r2, .mh-shine-rim.r3, .mh-shine-star, .mh-shine-aurora, .mh-shine-sheen, .mh-shine-mote, .mh-shine-silver { display: none; }
+      .mh-shine-rim.r1, .mh-shine-rare-rim { animation: none; opacity: 1; }
     }
     .mh-card-ko { animation: mhCardKo .9s ease-in forwards; transform-origin: 50% 90%; }
     /* 「画面の揺れ: 揺らさない」(カードのオプション)のときの受けた動き。揺らさずに赤く光るだけ */

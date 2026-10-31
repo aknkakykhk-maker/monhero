@@ -195,6 +195,27 @@ const CardKiraFx = ({ kind, calm = false }) => {
     </span>
   );
 };
+// カードの絵(枠つき)のキラ・レアキラ・銀の光(2026-10-31 社長「光り方は案B オーロラと粒」「ブリーダー・場のカード33枚に銀の光の帯」・
+//   見本は docs/progress/card-pack-fx)。手持ちの一覧・デッキを組む画面・売り場・パック・カードを大きく見る画面で使う(対戦中の手札には付けない)
+//   rare … オーロラが流れ、光の帯が走り、光の粒が舞い上がる・金のふち / kira … ふちの色が移り変わり、星がまたたく /
+//   silver … 銀の光の帯(ブリーダーのカード。レアの段は無く、見た目だけ)。CSS は 70-bootstrap の .mh-shine-*(動かすのは transform と opacity だけ)
+const cardShineOf = (db, no) => { const c = db ? cardOf(db, no) : null; if (c) return c.user === 'breeder' ? 'silver' : null; return cardKiraOf(db, no); };
+const CARD_SHINE_STARS = Object.freeze([[24, 26, 0], [74, 40, 0.9], [44, 74, 1.6]]);
+const CARD_SHINE_MOTES = Object.freeze([[15, 0], [30, 0.5], [45, 1.1], [60, 0.3], [75, 0.8], [88, 1.4]]);
+// children(カードの絵)を光の層で包む。kind が無ければそのまま返す。className … 包む枠の形(角の丸みなど)
+const CardShine = ({ kind, className = '', children }) => {
+  if (!kind) return children;
+  return (
+    <span data-card-shine={kind} className={`mh-shine ${className}`}>
+      {children}
+      {kind === 'rare' && <><span aria-hidden="true" className="mh-shine-l mh-shine-aurora"/><span aria-hidden="true" className="mh-shine-l mh-shine-sheen"/><span aria-hidden="true" className="mh-shine-l mh-shine-rare-rim"/>
+        {CARD_SHINE_MOTES.map(([x, d], i) => <span key={i} aria-hidden="true" className="mh-shine-l mh-shine-mote" style={{ left: `${x}%`, animationDelay: `${d}s` }}/>)}</>}
+      {kind === 'kira' && <>{['r1', 'r2', 'r3'].map((r) => <span key={r} aria-hidden="true" className={`mh-shine-l mh-shine-rim ${r}`}/>)}
+        {CARD_SHINE_STARS.map(([x, y, d], i) => <span key={i} aria-hidden="true" className="mh-shine-l mh-shine-star" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${d}s` }}/>)}</>}
+      {kind === 'silver' && <><span aria-hidden="true" className="mh-shine-l mh-shine-silver"/><span aria-hidden="true" className="mh-shine-l mh-shine-silver-rim"/></>}
+    </span>
+  );
+};
 // 立ち絵(img など)を、キラのふちの光で包む。kind が無ければそのまま返す
 const cardKiraWrap = (kind, el) => (kind ? <span data-card-kira={kind} className={`${kind === 'rare' ? 'mh-rare-rim' : 'mh-kira-rim'} inline-flex items-end justify-center`}>{el}</span> : el);
 // 場の立ち絵を、絵の「中身の範囲」(ART_CONTENT_BOXES。対戦開始の画面の cardVsBoxOf と同じ表)で要素いっぱいへ広げる
@@ -592,12 +613,12 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
         <div data-card-detail-navrow className="flex w-full max-w-sm flex-col items-center gap-1">
           <div className="flex w-full items-center justify-center gap-2">
             {navBtn('prev', nav.onPrev)}
-            <img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(62vw,280px)] min-w-0 rounded-xl shadow-2xl landscape:h-[32vh] landscape:w-auto"/>
+            <CardShine kind={cardShineOf(db, no)} className="w-fit min-w-0 rounded-xl"><img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(62vw,280px)] min-w-0 rounded-xl shadow-2xl landscape:h-[32vh] landscape:w-auto"/></CardShine>
             {navBtn('next', nav.onNext)}
           </div>
           <span data-card-detail-pos className="text-[12px] font-bold text-slate-400">{nav.pos}</span>
         </div>
-      ) : <img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(78vw,300px)] rounded-xl shadow-2xl"/>}
+      ) : <CardShine kind={cardShineOf(db, no)} className="w-fit rounded-xl"><img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(78vw,300px)] rounded-xl shadow-2xl"/></CardShine>}
       {c && (
         <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100">
           <div className="text-lg font-black">{c.name}</div>
