@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 058a749a0db9adca
+// source-sha256: 327a3a58d15f0f7c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -73741,7 +73741,6 @@ const INFERNO_BODY_HP_GRADIENT = 'linear-gradient(180deg,#f3e8ff 0%,#c084fc 34%,
 const infernoShieldColorAt = k => INFERNO_SHIELD_COLORS[Math.max(0, Math.min(INFERNO_SHIELD_COLORS.length - 1, k))];
 const INFERNO_SHIELD_CSS = `
 [data-inferno-shield-gauge]{--mh-shield-w:min(150px,38vw)}
-@media (orientation:landscape) and (max-height:520px){[data-inferno-shield-gauge]{transform:translateX(-50%) scale(.8)!important;transform-origin:50% 0}}
 @keyframes mhShieldFlash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
 @keyframes mhShieldVignette{0%{opacity:0}30%{opacity:1}80%{opacity:1}100%{opacity:0}}
 @keyframes mhShieldGather{0%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.4)}25%{opacity:1}100%{opacity:0;transform:translate(0,0) scale(.4)}}
@@ -73829,15 +73828,15 @@ function InfernoShieldGauge({
     }, Math.floor(layer.now).toLocaleString(), " / ", Math.floor(layer.max).toLocaleString())));
   }
   const curColor = view.left > 0 ? infernoShieldColorAt(view.broken)[1] : '#a8a29e';
-  return React.createElement("div", {
+  return React.createElement(React.Fragment, null, React.createElement("style", null, INFERNO_SHIELD_CSS), React.createElement("div", {
     "data-inferno-shield-gauge": view.total,
     "data-inferno-shield-left": view.left,
     "aria-label": `シールド 残り${view.left}枚(全${view.total}枚)`,
-    className: "pointer-events-none absolute left-1/2 top-1 z-[44] flex items-start gap-1.5",
+    className: "pointer-events-none absolute left-1/2 top-1 z-[44] flex items-start gap-1.5 [@media(max-height:640px)]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden",
     style: {
       transform: 'translateX(-50%)'
     }
-  }, React.createElement("style", null, INFERNO_SHIELD_CSS), React.createElement("div", {
+  }, React.createElement("div", {
     className: "mt-[1px] flex flex-col items-end gap-[1px] leading-none"
   }, React.createElement("span", {
     className: "whitespace-nowrap text-[9px] font-black text-amber-200",
@@ -73853,7 +73852,63 @@ function InfernoShieldGauge({
     className: "text-[9px] text-amber-300"
   }, "/", view.total))), React.createElement("div", {
     className: "flex flex-col gap-[1px]"
-  }, rows));
+  }, rows)));
+}
+function InfernoShieldCompact({
+  view
+}) {
+  if (!view || !(view.total > 0)) return null;
+  const curColor = view.left > 0 ? infernoShieldColorAt(view.broken)[1] : '#a8a29e';
+  const cur = view.layers[view.broken] || null;
+  const [cc1, cc2, cEdge] = view.left > 0 ? infernoShieldColorAt(view.broken) : ['#a8a29e', '#57534e', 'rgba(168,162,158,.5)'];
+  const curPct = cur && cur.max > 0 ? Math.max(0, Math.min(1, cur.now / cur.max)) : 0;
+  return React.createElement("div", {
+    "data-inferno-shield-compact": view.total,
+    "data-inferno-shield-left": view.left,
+    "aria-label": `シールド 残り${view.left}枚(全${view.total}枚)`,
+    className: "pointer-events-none mx-auto mt-[3px] hidden w-max max-w-full items-center gap-1 rounded-full border border-white/15 bg-black/70 py-[1px] pl-1.5 pr-1 not-italic normal-case tracking-normal [@media(max-height:640px)]:flex [@media(orientation:landscape)_and_(max-height:520px)]:flex"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap text-[10px] font-black leading-none text-white",
+    style: {
+      textShadow: `0 0 5px ${curColor},0 1px 2px #000`
+    }
+  }, "🛡", view.left, React.createElement("small", {
+    className: "text-[8px] text-amber-300"
+  }, "/", view.total)), React.createElement("span", {
+    className: "flex items-center gap-[2px]"
+  }, view.layers.map((l, k) => {
+    const c = infernoShieldColorAt(k);
+    const alive = k >= view.broken;
+    return React.createElement("i", {
+      key: k,
+      "data-inferno-shield-pip": k + 1,
+      className: "block h-[8px] w-[5px] rounded-[1px]",
+      style: {
+        transform: 'skewX(-20deg)',
+        background: alive ? c[1] : 'rgba(120,113,108,.6)',
+        boxShadow: k === view.broken ? `0 0 5px ${c[1]}` : 'none'
+      }
+    });
+  })), cur && view.left > 0 && React.createElement("span", {
+    className: "relative block h-[11px] w-[min(118px,30vw)] overflow-hidden rounded-[3px]",
+    style: {
+      background: 'rgba(15,10,20,.85)',
+      border: `1px solid ${cEdge}`
+    }
+  }, React.createElement("span", {
+    className: "absolute inset-y-0 left-0 block transition-[width] duration-500",
+    style: {
+      width: `${curPct * 100}%`,
+      background: `linear-gradient(90deg,${cc1},${cc2})`
+    }
+  }), React.createElement("span", {
+    className: "absolute inset-0 flex items-center justify-end whitespace-nowrap pr-1 font-mono text-[8px] font-black italic leading-none tabular-nums text-white",
+    style: {
+      textShadow: '0 1px 2px #000,0 0 3px #000'
+    }
+  }, React.createElement("span", {
+    className: "mr-auto pl-[3px] not-italic"
+  }, INFERNO_SHIELD_MARKS[view.broken] || view.broken + 1), Math.floor(cur.now).toLocaleString(), " / ", Math.floor(cur.max).toLocaleString())));
 }
 function InfernoShieldBadge({
   view
@@ -75205,7 +75260,9 @@ function BattleScreen({
     style: {
       background: 'linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))'
     }
-  })), enemyDebuffOpen && Array.isArray(enemyDebuffs) && enemyDebuffs.length > 0 && React.createElement("div", {
+  })), infernoShellView?.total > 0 && React.createElement(InfernoShieldCompact, {
+    view: infernoShellView
+  }), enemyDebuffOpen && Array.isArray(enemyDebuffs) && enemyDebuffs.length > 0 && React.createElement("div", {
     "data-enemy-debuff-detail": true,
     className: "mt-1 flex flex-col gap-0.5 rounded-lg border border-white/15 bg-black/60 px-2 py-1 not-italic normal-case tracking-normal"
   }, enemyDebuffs.map(d => React.createElement("div", {

@@ -1253,7 +1253,6 @@ const INFERNO_BODY_HP_GRADIENT = 'linear-gradient(180deg,#f3e8ff 0%,#c084fc 34%,
 const infernoShieldColorAt = (k) => INFERNO_SHIELD_COLORS[Math.max(0, Math.min(INFERNO_SHIELD_COLORS.length - 1, k))];
 const INFERNO_SHIELD_CSS = `
 [data-inferno-shield-gauge]{--mh-shield-w:min(150px,38vw)}
-@media (orientation:landscape) and (max-height:520px){[data-inferno-shield-gauge]{transform:translateX(-50%) scale(.8)!important;transform-origin:50% 0}}
 @keyframes mhShieldFlash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
 @keyframes mhShieldVignette{0%{opacity:0}30%{opacity:1}80%{opacity:1}100%{opacity:0}}
 @keyframes mhShieldGather{0%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.4)}25%{opacity:1}100%{opacity:0;transform:translate(0,0) scale(.4)}}
@@ -1290,15 +1289,35 @@ function InfernoShieldGauge({ view }) {
     );
   }
   const curColor = view.left > 0 ? infernoShieldColorAt(view.broken)[1] : '#a8a29e';
-  return (
+  return (<>
+    <style>{INFERNO_SHIELD_CSS}</style>
     <div data-inferno-shield-gauge={view.total} data-inferno-shield-left={view.left} aria-label={`シールド 残り${view.left}枚(全${view.total}枚)`}
-      className="pointer-events-none absolute left-1/2 top-1 z-[44] flex items-start gap-1.5" style={{ transform: 'translateX(-50%)' }}>
-      <style>{INFERNO_SHIELD_CSS}</style>
+      className="pointer-events-none absolute left-1/2 top-1 z-[44] flex items-start gap-1.5 [@media(max-height:640px)]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden" style={{ transform: 'translateX(-50%)' }}>
       <div className="mt-[1px] flex flex-col items-end gap-[1px] leading-none">
         <span className="whitespace-nowrap text-[9px] font-black text-amber-200" style={{ textShadow: '0 1px 2px #000' }}>🛡 シールド</span>
         <span className="text-[15px] font-black text-white" style={{ textShadow: `0 0 6px ${curColor},0 1px 2px #000` }}>{view.left}<small className="text-[9px] text-amber-300">/{view.total}</small></span>
       </div>
       <div className="flex flex-col gap-[1px]">{rows}</div>
+    </div>
+  </>);
+}
+// 狭い画面(背の低い縦・横向き)のシールド: 敵のライフの棒のすぐ下に細い1本(残りの枚数・各層の小さな印・今の層の「残り / 最大」)。
+//   舞台の上に重ねると、敵の頭の上の吹き出し(「3連撃!」など)とぶつかるので、ライフの帯の中に並べる(2026-10-31 社長「狭いときも見えるように」)
+function InfernoShieldCompact({ view }) {
+  if (!view || !(view.total > 0)) return null;
+  const curColor = view.left > 0 ? infernoShieldColorAt(view.broken)[1] : '#a8a29e';
+  const cur = view.layers[view.broken] || null;
+  const [cc1, cc2, cEdge] = view.left > 0 ? infernoShieldColorAt(view.broken) : ['#a8a29e', '#57534e', 'rgba(168,162,158,.5)'];
+  const curPct = cur && cur.max > 0 ? Math.max(0, Math.min(1, cur.now / cur.max)) : 0;
+  return (
+    <div data-inferno-shield-compact={view.total} data-inferno-shield-left={view.left} aria-label={`シールド 残り${view.left}枚(全${view.total}枚)`}
+      className="pointer-events-none mx-auto mt-[3px] hidden w-max max-w-full items-center gap-1 rounded-full border border-white/15 bg-black/70 py-[1px] pl-1.5 pr-1 not-italic normal-case tracking-normal [@media(max-height:640px)]:flex [@media(orientation:landscape)_and_(max-height:520px)]:flex">
+      <span className="whitespace-nowrap text-[10px] font-black leading-none text-white" style={{ textShadow: `0 0 5px ${curColor},0 1px 2px #000` }}>🛡{view.left}<small className="text-[8px] text-amber-300">/{view.total}</small></span>
+      <span className="flex items-center gap-[2px]">{view.layers.map((l, k) => { const c = infernoShieldColorAt(k); const alive = k >= view.broken; return <i key={k} data-inferno-shield-pip={k + 1} className="block h-[8px] w-[5px] rounded-[1px]" style={{ transform: 'skewX(-20deg)', background: alive ? c[1] : 'rgba(120,113,108,.6)', boxShadow: k === view.broken ? `0 0 5px ${c[1]}` : 'none' }}/>; })}</span>
+      {cur && view.left > 0 && <span className="relative block h-[11px] w-[min(118px,30vw)] overflow-hidden rounded-[3px]" style={{ background: 'rgba(15,10,20,.85)', border: `1px solid ${cEdge}` }}>
+        <span className="absolute inset-y-0 left-0 block transition-[width] duration-500" style={{ width: `${curPct * 100}%`, background: `linear-gradient(90deg,${cc1},${cc2})` }}/>
+        <span className="absolute inset-0 flex items-center justify-end whitespace-nowrap pr-1 font-mono text-[8px] font-black italic leading-none tabular-nums text-white" style={{ textShadow: '0 1px 2px #000,0 0 3px #000' }}><span className="mr-auto pl-[3px] not-italic">{INFERNO_SHIELD_MARKS[view.broken] || view.broken + 1}</span>{Math.floor(cur.now).toLocaleString()} / {Math.floor(cur.max).toLocaleString()}</span>
+      </span>}
     </div>
   );
 }
@@ -2065,6 +2084,7 @@ function BattleScreen({
               <div className="h-full w-full origin-left transition-transform duration-1000" data-enemy-hp-tone={infernoShellView?.total>0?'inferno-body':undefined} style={{transform:`scaleX(${Math.min(1,Math.max(0,enemy.hp)/(enemy.maxHp||1))})`,backgroundImage:infernoShellView?.total>0?INFERNO_BODY_HP_GRADIENT:'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'}}></div>
               <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1/2" style={{background:'linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))'}}></div>
             </div>
+            {infernoShellView?.total>0&&<InfernoShieldCompact view={infernoShellView}/>}
             {/* 敵にかかっているデバフの詳細(2026-10-06 ユーザー指示「全部ウンディーネの絶氷の位置にまとめて、簡易表示して押したら詳細が見える」)。
                 名前の横の簡易表示を押したときだけ開く。デバフが無くなったら、開いたままでも何も出さない */}
             {enemyDebuffOpen&&Array.isArray(enemyDebuffs)&&enemyDebuffs.length>0&&(
