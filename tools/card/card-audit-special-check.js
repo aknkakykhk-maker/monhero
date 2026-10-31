@@ -177,7 +177,8 @@ const EXPECT = {
   revive: (e, a, b, o) => (!b.players[P].mons[o.target.m].ko && b.players[P].mons[o.target.m].life === e.life && b.players[P].mons[o.target.m].stunTurn === b.turn) || `ライフ${e.life}で戻らない(または攻撃できてしまう)`,
   possess: (e, a, b, o) => (b.players[P].mons[0].ko && !b.players[P].mons[o.target.m].ko && b.players[P].mons[o.target.m].life === Math.min(a.players[P].mons[0].life, b.players[P].mons[o.target.m].max)) || 'のりうつりの形にならない',
   cocoon: (e, a, b) => b.players[P].mons[0].cocoon === true || 'まゆにならない',
-  emerge: (e, a, b) => (b.players[P].mons[0].no === e.to && b.players[P].mons[0].life === b.players[P].mons[0].max) || `${e.to} に取りかわらない`,
+  // 羽化は、選んだ取りかえ先(o.emerge・ワームがSUBの派生モンスター)になる(2026-10-31 テスターさんの報告で、決め打ちの e.to から直した)
+  emerge: (e, a, b, o) => (!!o.emerge && b.players[P].mons[0].no === o.emerge && b.players[P].mons[0].life === b.players[P].mons[0].max) || `${o.emerge || e.to} に取りかわらない`,
   fuse: (e, a, b, o) => (o.fuse && b.players[P].mons[o.fuse.a].no === o.fuse.no && b.players[P].mons[o.fuse.b].ko) || '合体の形にならない',
   safe: (e, a, b) => b.players[P].mons[0].safeUntil === b.turn + 1 || '次の番までダメージ0の印が付かない',
   form: (e, a, b, o) => b.players[P].mons[0].type === o.form || '選んだ持ちょうにならない',
