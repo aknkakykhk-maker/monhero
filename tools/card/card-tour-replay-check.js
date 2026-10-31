@@ -65,6 +65,33 @@ for (let i = 0; i < 16; i++) {
 }
 check('A サーバで回した16試合(助手の席・先攻後攻を含む)が、最後の手まで当たり直して同じ勝ち負けで終わる', bad.length === 0, bad.slice(0, 3).join(' / ') || `いちばん長い試合 ${longest}手`);
 
+// ---- L 個人杯のリアルタイム杯: 試合の b 側の端末で戦った試合(2026-10-31 ④) ----
+//   端末は「自分が0番」で組むので、b 側の端末の手の並びは b・a の順。{ order: 'ba', acts } で残し、見返しは b を上・先攻を入れかえて組み直す。
+//   杯の勝ち負け(a・b)はそのまま。a 側で戦ったときと同じく、勝った人の名前と最後の手まで当たり直せるか
+{
+  const badL = [];
+  for (let i = 0; i < 8; i++) {
+    const A = { deck: deckOf(['mua', 'kiki', 'momosuke'][i % 3], 200 + i), tactics: tacs[i % 3] };
+    const B = { deck: deckOf(['dra', 'kyuko', 'atsu'][i % 3], 300 + i), tactics: tacs[(i + 1) % 3] };
+    const seed = 5000 + i * 7919, first = i % 2;
+    for (const side of [0, 1]) {
+      // その側の端末の試合(自分が0番)。先攻は、杯の first(0 = a)を自分から見た向きに直す
+      const res = side === 0 ? E.cardTourPlay(db, A, B, { seed, first, key: `cup|${i}` }) : E.cardTourPlay(db, B, A, { seed, first: 1 - first, key: `cup|${i}` });
+      const cupWinner = side === 0 ? res.winner : 1 - res.winner;
+      const row = JSON.parse(JSON.stringify({ id: 900 + i, seed, first, winner: cupWinner, kos: res.kos, rules: res.rules,
+        acts: side === 0 ? res.acts : { order: 'ba', acts: res.acts }, live: null, a: { ...person(`杯A${i}`), deck: A.deck }, b: { ...person(`杯B${i}`), deck: B.deck } }));
+      const rec = E.cardReplayFromTour(db, row, { known: new Set(), title: '個人杯' });
+      const built = rec && E.cardReplayBuild(db, rec);
+      const last = built && built.states[built.states.length - 1];
+      const wantName = cupWinner === 0 ? `杯A${i}` : `杯B${i}`;
+      if (!rec || built.stop !== null || built.states.length !== res.acts.length + 1 || (res.decided !== 'limit' && last.winner !== res.winner) || rec.tour.winner !== wantName) {
+        badL.push(`${i}/${side ? 'b' : 'a'}: ${!rec ? '開けない' : `止まった手 ${built.stop} 勝ち ${last && last.winner}/${res.winner} 名前 ${rec.tour.winner}/${wantName}`}`);
+      }
+    }
+  }
+  check('L 個人杯: b 側の端末で戦った試合(order ba)も、a 側と同じく最後の手まで当たり直し、勝った人の名前が杯の勝ち負けと合う', badL.length === 0, badL.slice(0, 3).join(' / '));
+}
+
 // ---- B・C ----
 {
   const A = { deck: deckOf('mua', 1), tactics: tacs[0] };

@@ -35,6 +35,7 @@ const cardCupNormalizeView = (v) => {
   const matches = (Array.isArray(v.matches) ? v.matches : []).filter((m) => m && Number.isFinite(Number(m.id))).map((m) => ({
     id: Number(m.id), round: int(m.round) || 0, slot: int(m.slot) || 0, a: int(m.a), b: int(m.b), winner: m.winner === 0 || m.winner === 1 ? m.winner : null,
     ready: !!(m.live && m.live.ready_at), // リアルタイム杯: 戦える回戦か(④ 99-card-cup-live)
+    dispute: !!(m.live && m.live.dispute), // リアルタイム杯: 2台の答えが食い違った(来ている人の端末が auto で決め直す)
     kos: Array.isArray(m.kos) ? m.kos.slice(0, 2).map((k) => (Number.isInteger(k) ? k : 0)) : null,
     live: m.live && typeof m.live.play === 'string' ? { who: typeof m.live.who === 'string' ? m.live.who : null, play: m.live.play.slice(0, 200), review: typeof m.live.review === 'string' ? m.live.review.slice(0, 240) : '' } : null }))
     .filter((m) => m.a !== null && m.b !== null);
@@ -293,7 +294,7 @@ const CardCupMatches = ({ v, onOpenReplay, selfId = null }) => {
   );
 };
 
-const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegister, onOpenReplay = null }) => {
+const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegister, onOpenReplay = null, onPlayLive = null }) => {
   const c = v.cup;
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -326,7 +327,7 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
         {c.status === 'done' && !shown && <div className="mt-1 text-[12px] font-black text-amber-200">{`結果は ${cardTourTimeLabel(c.startAt)} に出ます`}</div>}
         {c.mode === 'auto' && c.status === 'running' && <div className="mt-1 text-[12px] font-black text-amber-200">{`試合はサーバで自動で行われます。結果は ${cardTourTimeLabel(c.startAt)} に出ます`}</div>}
       </div>
-      {c.mode === 'live' && typeof CardCupLivePanel === 'function' && <CardCupLivePanel v={v} now={now} selfId={selfId} onChanged={onChanged}/>}
+      {c.mode === 'live' && typeof CardCupLivePanel === 'function' && <CardCupLivePanel v={v} now={now} selfId={selfId} onChanged={onChanged} onPlay={onPlayLive}/>}
       {shown && c.format === 'ko' && <CardCupBracket rounds={c.bracket} matches={v.matches} entries={v.entries} done/>}
       {shown && c.format === 'rr' && typeof CardTourGrid === 'function' && <CardTourGrid view={cardCupAsTourView(v)} stage="group" grp={0} known={null} now={now}/>}
       {shown && ranked.length > 0 && (
@@ -353,7 +354,8 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
 // ---- 画面 ----
 // onBack … 対戦えらびへ / onOpenRegister … デッキ登録へ(戻ると、この画面のいまの杯に戻る)
 // onOpenReplay(matchId, title, owner) … 試合の見返しを開く(84。開けなかったら false。合言葉だけの杯は参加者だけ見られるので owner を渡す)
-const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange = null, onOpenReplay = null }) => {
+// onPlayLive(match) … リアルタイム杯の自分の試合を戦う(84 が対戦の画面を開く・④)
+const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange = null, onOpenReplay = null, onPlayLive = null }) => {
   const [tab, setTab] = useState('list');
   const [list, setList] = useState(undefined);
   const [done, setDone] = useState([]); // 終わった公開の杯(終わって30日まで。2026-10-31 社長 案A)
@@ -394,7 +396,7 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
   if (cupId) {
     const back = () => { setCupId(null); if (selfId) void cardCupMine(selfId).then(setMineCups); void cardCupList().then((l) => l && setList(l)); };
     if (!view) return shell(<ScreenEmpty emoji="⏳" lines={['読み込んでいます']}/>, back);
-    return shell(<CardCupDetail v={view} now={now} mine={mine} selfId={selfId} profile={profile} onChanged={() => reload()} onOpenRegister={onOpenRegister} onOpenReplay={onOpenReplay}/>, back);
+    return shell(<CardCupDetail v={view} now={now} mine={mine} selfId={selfId} profile={profile} onChanged={() => reload()} onOpenRegister={onOpenRegister} onOpenReplay={onOpenReplay} onPlayLive={onPlayLive}/>, back);
   }
   const find = async () => {
     const c = String(code || '').replace(/[^0-9]/g, '');

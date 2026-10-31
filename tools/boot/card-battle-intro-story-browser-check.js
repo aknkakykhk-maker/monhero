@@ -34,6 +34,9 @@ const TEXT = {
   kyuko: { on: 'もう組み方考えちゃってる', off: 'デッキの組み方なら任せて' },
 };
 const JOIN = { atsu: 'atsu_join_2026_10_22', kyuko: 'kyuko_join_2026_10_22' };
+// 個人杯のお話(2026-10-31)を見た人には、あつを解放していなくても atsu:'with' の行が出る(あつに会ったので)。
+// 「あつなし」を確かめるため、どの場合もこのお話は見ていないことにする
+const CARD_CUP_STORY = 'card_cup_2026_10_31';
 (async () => {
   let chromium;
   try { ({ chromium } = require(path.join(ROOT, 'tools', 'node_modules', 'playwright'))); } catch (e) { console.log('SKIP: playwright が入っていないので確かめられません'); process.exit(0); }
@@ -61,7 +64,7 @@ const JOIN = { atsu: 'atsu_join_2026_10_22', kyuko: 'kyuko_join_2026_10_22' };
           localStorage.setItem(key, JSON.stringify([...list, ...add]));
         } catch (e) { /* 検査の種が壊れていたら、本体の既定に任せる */ }
       }, [(fs.readFileSync(path.join(ROOT, 'monster-hero/src/game-system.jsx'), 'utf8').match(/const RHYTHM_EVENT_STORY_KEY = '([^']+)'/) || [])[1],
-        ['atsu', 'kyuko'].filter((k) => cs[k]).map((k) => JOIN[k]), Object.values(JOIN)]);
+        ['atsu', 'kyuko'].filter((k) => cs[k]).map((k) => JOIN[k]), [...Object.values(JOIN), CARD_CUP_STORY]]);
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
       await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
       await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });

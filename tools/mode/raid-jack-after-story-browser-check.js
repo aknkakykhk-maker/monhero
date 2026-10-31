@@ -53,7 +53,8 @@ const STORIES = [
       // 解放あり … あつの加入のお話を見たことにする / 解放なし … 見ていないことにする(ほかの既読はそのまま)
       await page.addInitScript(([key, on]) => {
         try {
-          const list = JSON.parse(localStorage.getItem(key) || '[]').filter((id) => id !== 'atsu_join_2026_10_22');
+          // 個人杯のお話(card_cup_2026_10_31)を見た人にも、あつの行が出る(2026-10-31)。「解放なし」を確かめるため、どの場合も見ていないことにする
+          const list = JSON.parse(localStorage.getItem(key) || '[]').filter((id) => id !== 'atsu_join_2026_10_22' && id !== 'card_cup_2026_10_31');
           if (on) list.push('atsu_join_2026_10_22');
           localStorage.setItem(key, JSON.stringify(list));
         } catch (e) { /* 検査の種が壊れていたら、本体の既定に任せる */ }
