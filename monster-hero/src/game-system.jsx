@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0a92443f45d1e352
+// generated-sha256: e2e6b22505383bf0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57123,7 +57123,13 @@ const cardTacticBaseAttack = (db, st, policy, knobs, ctx) => {
 
 // 枠を順に見て、最初に当たった行の手を返す。{ act } … その手 / { policy } … 基本カードの型で、ふつうに打つ / null … 今のまま
 //   攻撃の番: 左の子の枠 → 真ん中 → 右 → ブリーダーの枠 / 守るとき: 狙われた子の枠 / ガッツの番: ブリーダーの枠。どれにも当たらなければ基本カードの型
+// どの戦術カードの行で決めたか(2026-10-31 社長「効いているかわからない」→ 対戦中に光らせる・記録に出す)。
+//   画面(84)が cardAiChooseAction のすぐあとに cardTacticTakeWhy で取り出して空にする。打ち方(どの手を選ぶか)は何も変えない
+//   { c: 条件カード, a: 行動カード, mi: モンスターの番号(ブリーダーの手は null), phase }
+let cardTacticLastWhy = null;
+const cardTacticTakeWhy = () => { const w = cardTacticLastWhy; cardTacticLastWhy = null; return w; };
 const cardTacticDecide = (db, st, policy) => {
+  cardTacticLastWhy = null;
   const frames = cardTacticNormalizeFrames(policy && policy.gambit);
   if (st.winner !== null) return null;
   const phase = st.pending ? 'guard' : st.phase === 'guts' ? 'guts' : st.phase === 'main' ? 'attack' : null;
@@ -57147,7 +57153,7 @@ const cardTacticDecide = (db, st, policy) => {
       if (!aim) continue;
       ctx.mi = fr.mi;
       const got = cardTacticRowAct(db, st, pol, phase, row, aim, ctx);
-      if (got) return got;
+      if (got) { cardTacticLastWhy = { c: row.c, a: row.a, mi: fr.mi, phase }; return got; }
     }
   }
   // どの行にも当たらない: 基本カードの型で打つ(細かいくせ・立ち回りで外した子・温存したブリーダーのカードも守る)
@@ -59468,13 +59474,15 @@ const CardDiscardModal = ({ db, st, initial = CARD_ME, onDetail, onClose }) => {
 
 // ---- 場のモンスター1体(カードの小さい絵・名前・ライフ・特徴・モンヒロの絵) ----
 // ターンごとの記録(案C「記録を見る」)。新しいターンが上。ターンの名前は記録の kind:'turn' の行から
-const CardTurnLogSheet = ({ st, meName, foeName, onClose }) => {
+// tac … 相手が戦術カードで動いた記録 [{ turn, text }](2026-10-31 社長「効いているかわからない」)。そのターンの行の下に 📜 で出す
+const CardTurnLogSheet = ({ st, meName, foeName, onClose, tac = [] }) => {
   const turns = [];
   for (const l of st.log) {
-    if (!turns.length || turns[turns.length - 1].turn !== l.turn) turns.push({ turn: l.turn, head: '', lines: [] });
+    if (!turns.length || turns[turns.length - 1].turn !== l.turn) turns.push({ turn: l.turn, head: '', lines: [], tac: [] });
     const t = turns[turns.length - 1];
     if (l.kind === 'turn') t.head = l.text; else t.lines.push(cardLogText(l));
   }
+  tac.forEach((x) => { const t = turns.find((y) => y.turn === x.turn); if (t) t.tac.push(x.text); });
   const list = turns.filter((t) => t.lines.length || t.head).reverse();
   return (
     <div data-card-log-sheet className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={onClose}>
@@ -59485,6 +59493,7 @@ const CardTurnLogSheet = ({ st, meName, foeName, onClose }) => {
             <div key={t.turn} data-card-log-turn={t.turn} className="rounded-xl border border-white/10 bg-white/5 p-2">
               <div data-card-fit className="text-[12px] font-black text-violet-200" style={JA_WRAP_STYLE}>{jaWrap(t.head || `ターン${t.turn}`)}</div>
               {t.lines.map((x, i) => <div key={i} data-card-fit className="text-[13px] font-bold leading-snug text-white" style={JA_WRAP_STYLE}>{jaWrap(x)}</div>)}
+              {t.tac.map((x, i) => <div key={`t${i}`} data-card-log-tactic className="mt-0.5 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[12px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(`📜 ${x}`)}</div>)}
             </div>
           ))}
           {!list.length && <div className="text-[13px] font-bold text-slate-400">まだ記録がありません</div>}
@@ -59716,6 +59725,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const [sumOpen, setSumOpen] = useState(false);
   useEffect(() => { setSumOpen(false); }, [turnSummary && turnSummary.key]);
   const [logSheet, setLogSheet] = useState(false);
+  // 相手が戦術カードで動いたとき: 使った1行を2秒ほど光らせ(tacGlow)、記録に残す(tacLog)。2026-10-31 社長「効いているかわからない」・案A
+  const [tacGlow, setTacGlow] = useState(null);
+  const [tacLog, setTacLog] = useState([]);
+  useEffect(() => { if (!tacGlow) return undefined; const t = setTimeout(() => setTacGlow(null), 2400); return () => clearTimeout(t); }, [tacGlow]);
   const [downBand, setDownBand] = useState(null); // 倒れたときの「◯◯ ダウン！ / 残り◯体」の帯 { key, p, names, left }(改良の案 B)
   const [breederFx, setBreederFx] = useState(null); // ブリーダーのカードを使ったとき、まんなかの端に出す顔 { p, key }
   const [beams, setBeams] = useState([]);
@@ -60009,8 +60022,18 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (cardDeciderOf(st) !== CARD_CPU) return undefined;
     const wait = Math.round((st.pending ? 950 : st.phase === 'guts' ? 600 : 900) * pace); // 守りの番は、技の動きを見せ切ってから
     const t = setTimeout(() => {
+      if (typeof cardTacticTakeWhy === 'function') cardTacticTakeWhy(); // 前の残りを空にする
       const act = tutorial ? cardTutorialCpu(db, tutStage.id, st) : cardAiChooseAction(db, st, policy);
       if (!act) return; // 練習試合のみゅあは、段が来るまで待つ
+      // どの戦術カードの行で決めたか(相手のデッキに戦術カードがあるときだけ。打ち方は変わらない)
+      const why = !tutorial && typeof cardTacticTakeWhy === 'function' ? cardTacticTakeWhy() : null;
+      if (why) {
+        const c = cardTacticOf(why.c), a = cardTacticOf(why.a);
+        const m = why.mi !== null && why.mi !== undefined ? st.players[CARD_CPU].mons[why.mi] : null;
+        const by = m ? m.name : 'ブリーダー';
+        const line = `${!c || why.c === 'any' ? '' : `${c.name} → `}${a ? a.name : ''}`;
+        if (line) { setTacGlow({ key: `${st.turn}-${st.log.length}`, by, line }); setTacLog((cur) => [...cur, { turn: st.turn, text: `${who.name}の${by}: 「${line}」で動いた` }].slice(-80)); }
+      }
       const go = () => { if (!step(act)) step(st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : { type: 'guts', hand: [] }); };
       // 案B: 技・守り・ブリーダー・全体カード・おいのりは、効果の前にまんなかに大きく見せる(練習試合では出さない)。消えたら(タップでも)当てる
       const shown = !tutorial && bigMs > 0 ? cardsOfAct(st, CARD_CPU, act) : [];
@@ -61031,7 +61054,12 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           </div>
         </button>
       )}
-      {logSheet && <CardTurnLogSheet st={st} meName="あなた" foeName={who.name} onClose={() => setLogSheet(false)}/>}
+      {logSheet && <CardTurnLogSheet st={st} meName="あなた" foeName={who.name} tac={tacLog} onClose={() => setLogSheet(false)}/>}
+      {tacGlow && (
+        <div key={tacGlow.key} data-card-tactic-glow className="pointer-events-none fixed left-1/2 top-[22%] z-[36] w-max max-w-[92vw] -translate-x-1/2 rounded-xl bg-amber-300 px-3 py-1.5 text-center text-[12px] font-black text-slate-950 shadow-[0_0_0_3px_#fff,0_0_18px_6px_rgba(251,191,36,.8)] animate-pulse" style={JA_WRAP_STYLE}>
+          <small className="block text-[10px] text-amber-900">{`📜 ${who.name}の戦術カード(${tacGlow.by})`}</small>{jaWrap(tacGlow.line)}
+        </div>
+      )}
       {discard && <CardDiscardModal db={db} st={st} initial={discard.tab} onDetail={(no) => setDetail(no)} onClose={() => setDiscard(null)}/>}
       {bindAsk && (
         <div data-card-bind-pick className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" onClick={bindCancel}>
