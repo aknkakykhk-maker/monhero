@@ -9,7 +9,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   ② 実ブラウザ: クイックにタブが出て、押すと極限の並びへ切り替わる
 //   ③ 実ブラウザ: 極限を持たないモードにはタブが出ない
 //   ④ 開くたびに「通常」から始まる(極限タブのままノーマルを選んでいる状態を作らない)
-//   ⑤ スコアランキングのタブは、チャレンジで17段階(通常9＋極限8)がひと続きに並ぶ
+//   ⑤ スコアランキングのタブは、チャレンジで18段階(通常9＋極限9)(2026-10-29 ETERNAL を足して18段階)がひと続きに並ぶ
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -262,7 +262,7 @@ const serve = () => new Promise((resolve) => {
     check('同じ並びに極限の段階も続く',
       ['EXTREME', 'GOD', 'RAGNAROK', 'HELHEIM'].every(label => rankTabs.includes(label)),
       rankTabs.slice(-4).join(','));
-    check('タブは17段階', rankTabs.length === 17, `${rankTabs.length}枚`);
+    check('タブは18段階', rankTabs.length === 18, `${rankTabs.length}枚`);
     // 極限のタブを押しても画面が落ちない(押した先で引くキーが ExtremeGOD などになる)
     await page.evaluate(() => {
       [...document.querySelectorAll('[data-score-ranking-tabs] button')].find(b => b.textContent.trim() === 'GOD')?.click();

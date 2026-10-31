@@ -43,6 +43,9 @@ const assetPacksShown = () => {
 };
 // 自動ダウンロードで、よく使う画像のあとに落とすカードの絵。小さい版を先に、大きい版をそのあとに(2026-10-25 社長「両方入れる」)
 const ASSET_CARD_AUTO_PREFIXES = ['images/card-battle/s/', 'images/card-battle/l/'];
+// MFバトルカードの対戦で出すモンスターの立ち絵(84 の cardArtPrefetchPaths)。一覧では「バトル」に入っているが、カードの対戦でも使うので、
+//   「バトルカード」のまとまりにも入れ、自動の前もって落としではカードの絵より先に落とす(2026-10-31 社長「立ち絵が表示されないときがある」)
+const assetCardArtPaths = () => { try { return typeof cardArtPrefetchPaths === 'function' ? cardArtPrefetchPaths() : []; } catch (e) { return []; } };
 // 自動の前もって落としで、まず落とす「よく使う画面の画像」(背景・タイトル・画面の部品・顔アイコン)
 const ASSET_CORE_PREFIXES = ['data/images/', 'images/ui/', 'images/monster-icons/'];
 // 自動の前もって落としで1回の起動に落とす上限(バイト)。モバイル回線では少なく、わからない端末(iPhone)は控えめに
@@ -90,7 +93,10 @@ const ASSET_CACHE = (() => {
   };
   // 「全部」には、出してよいまとまりのものだけを入れる(公開前のバトルカードは入れない)
   // 本体・データ(pack:'core')は設定のまとまりに入れない。遊んだときに SW が置き場 mh-code-v1 へためる(2026-10-27)
-  const filesOfPack = (m, packId) => Object.entries(m.files).filter(([, f]) => f.pack !== 'core' && (packId === 'all' ? assetPackOpen(assetPackOfId(f.pack)) : f.pack === packId));
+  const filesOfPack = (m, packId) => {
+    const cardArt = packId === 'card' ? new Set(assetCardArtPaths()) : null;
+    return Object.entries(m.files).filter(([path, f]) => f.pack !== 'core' && (packId === 'all' ? assetPackOpen(assetPackOfId(f.pack)) : f.pack === packId || (cardArt && cardArt.has(path))));
+  };
 
   // 端末にあるもの(版も一覧と同じもの)を数え直す
   const refreshStatus = async () => {
@@ -294,7 +300,10 @@ const ASSET_CACHE = (() => {
     enqueue(Object.keys(m.files).filter(p => m.files[p].pack !== 'core' && ASSET_CORE_PREFIXES.some(pre => p.startsWith(pre))));
     for (const songId of settings.songs) enqueue(songPaths(songId));
     // カードの絵(小さい版→大きい版)は、バトルカードのまとまりを出してよいときだけ(公開前の遊ぶ人の端末では落とさない)
-    if (assetPackOpen(assetPackOfId('card'))) for (const pre of ASSET_CARD_AUTO_PREFIXES) enqueue(Object.keys(m.files).filter(p => p.startsWith(pre)));
+    if (assetPackOpen(assetPackOfId('card'))) {
+      enqueue(assetCardArtPaths().filter(p => m.files[p]));
+      for (const pre of ASSET_CARD_AUTO_PREFIXES) enqueue(Object.keys(m.files).filter(p => p.startsWith(pre)));
+    }
   };
 
   let listening = false;

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d876699af58ce788
+// source-sha256: d55194d4888fb94c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -28386,6 +28386,13 @@ const assetPacksShown = () => {
   } : p);
 };
 const ASSET_CARD_AUTO_PREFIXES = ['images/card-battle/s/', 'images/card-battle/l/'];
+const assetCardArtPaths = () => {
+  try {
+    return typeof cardArtPrefetchPaths === 'function' ? cardArtPrefetchPaths() : [];
+  } catch (e) {
+    return [];
+  }
+};
 const ASSET_CORE_PREFIXES = ['data/images/', 'images/ui/', 'images/monster-icons/'];
 const ASSET_AUTO_BUDGET = {
   cellular: 8 * 1024 * 1024,
@@ -28447,7 +28454,10 @@ const ASSET_CACHE = (() => {
     }
     return manifestPromise;
   };
-  const filesOfPack = (m, packId) => Object.entries(m.files).filter(([, f]) => f.pack !== 'core' && (packId === 'all' ? assetPackOpen(assetPackOfId(f.pack)) : f.pack === packId));
+  const filesOfPack = (m, packId) => {
+    const cardArt = packId === 'card' ? new Set(assetCardArtPaths()) : null;
+    return Object.entries(m.files).filter(([path, f]) => f.pack !== 'core' && (packId === 'all' ? assetPackOpen(assetPackOfId(f.pack)) : f.pack === packId || cardArt && cardArt.has(path)));
+  };
   const refreshStatus = async () => {
     status = {
       ...status,
@@ -28747,7 +28757,10 @@ const ASSET_CACHE = (() => {
     if (!m) return;
     enqueue(Object.keys(m.files).filter(p => m.files[p].pack !== 'core' && ASSET_CORE_PREFIXES.some(pre => p.startsWith(pre))));
     for (const songId of settings.songs) enqueue(songPaths(songId));
-    if (assetPackOpen(assetPackOfId('card'))) for (const pre of ASSET_CARD_AUTO_PREFIXES) enqueue(Object.keys(m.files).filter(p => p.startsWith(pre)));
+    if (assetPackOpen(assetPackOfId('card'))) {
+      enqueue(assetCardArtPaths().filter(p => m.files[p]));
+      for (const pre of ASSET_CARD_AUTO_PREFIXES) enqueue(Object.keys(m.files).filter(p => p.startsWith(pre)));
+    }
   };
   let listening = false;
   const listen = () => {
@@ -96348,6 +96361,7 @@ const CardVsArt = ({
   spread = 1,
   className = '',
   style = {},
+  onImgError = null,
   ...rest
 }) => {
   const box = cardVsBoxOf(src);
@@ -96355,6 +96369,7 @@ const CardVsArt = ({
     src: src,
     alt: alt,
     draggable: false,
+    onError: onImgError || undefined,
     className: `w-full object-contain object-bottom ${className}`,
     style: {
       aspectRatio: `${aspect}`,
@@ -96377,6 +96392,7 @@ const CardVsArt = ({
     src: src,
     alt: alt,
     draggable: false,
+    onError: onImgError || undefined,
     className: `absolute max-w-none ${className}`,
     style: {
       width: `${wP}%`,
@@ -96397,7 +96413,7 @@ const CardVsMonsters = ({
 }, (monsters || []).slice(0, 3).map((no, i) => {
   const m = cardMonsterOf(db, no);
   if (!m) return null;
-  const art = cardMonArt(m);
+  const art = typeof cardMonArtOk === 'function' ? cardMonArtOk(m) : cardMonArt(m);
   return React.createElement("div", {
     key: `${no}-${i}`,
     "data-card-vs-mon": no,
@@ -96413,6 +96429,7 @@ const CardVsMonsters = ({
       alt: m.name,
       aspect: 1,
       spread: 1.1,
+      onImgError: typeof cardArtOnError === 'function' ? cardArtOnError(art, CARD_IMG(m.img)) : null,
       className: "drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]",
       style: {
         width: kira ? 'min(19vh, 140px, 30vw)' : 'min(100%, 19vh, 140px)'
@@ -96466,12 +96483,37 @@ const CardVsIntro = ({
     onDone && onDone();
   };
   const ms = CARD_VS_MS[intro.mode] || CARD_VS_MS.assistant;
-  useEffect(() => {
-    const t = setTimeout(finish, ms);
-    return () => clearTimeout(t);
-  }, []);
   const foe = intro.foe || {};
   const me = intro.me || {};
+  const nos = [...(foe.monsters || []), ...(me.monsters || [])];
+  const [ready, setReady] = useState(() => typeof cardArtReady !== 'function' || cardArtReady(db, nos));
+  useEffect(() => {
+    if (ready) return undefined;
+    let alive = true;
+    void cardArtPreload(db, nos).then(() => {
+      if (alive) setReady(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (!ready) return undefined;
+    const t = setTimeout(finish, ms);
+    return () => clearTimeout(t);
+  }, [ready]);
+  if (!ready) {
+    return React.createElement("div", {
+      "data-mh-screen": true,
+      "data-card-vs-loading": true,
+      className: "relative flex h-full min-h-0 flex-1 flex-col items-center justify-center text-white",
+      style: {
+        background: 'linear-gradient(170deg, #4c0519 0%, #1e1b4b 48%, #0c4a6e 100%)'
+      }
+    }, React.createElement("b", {
+      className: "animate-pulse text-[15px] font-black"
+    }, "対戦の準備中…"));
+  }
   const who = foe.who && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find(x => x.id === foe.who) : null;
   const short = intro.mode === 'tutorial';
   const step = short ? 90 : 170;
@@ -97902,6 +97944,66 @@ const cardMonArt = mon => {
   if (m && m.imgUrl) return m.imgUrl;
   return cardNewSpeciesArt()[mon.species] || null;
 };
+const CARD_ART_STATE = new Map();
+const cardArtRetryUrl = url => `${url}${url.includes('?') ? '&' : '?'}r=${Date.now()}`;
+const cardArtLoadOne = url => {
+  if (!url || typeof Image === 'undefined') return Promise.resolve(false);
+  const s = CARD_ART_STATE.get(url);
+  if (s === 'ok') return Promise.resolve(true);
+  if (s === 'ng') return Promise.resolve(false);
+  if (s && typeof s.then === 'function') return s;
+  const p = new Promise(res => {
+    const go = (u, left) => {
+      const im = new Image();
+      im.onload = () => {
+        CARD_ART_STATE.set(url, 'ok');
+        res(true);
+      };
+      im.onerror = () => {
+        if (left > 0) setTimeout(() => go(cardArtRetryUrl(url), left - 1), 600);else {
+          CARD_ART_STATE.set(url, 'ng');
+          res(false);
+        }
+      };
+      im.src = u;
+    };
+    go(url, 1);
+  });
+  CARD_ART_STATE.set(url, p);
+  return p;
+};
+const cardArtUrlsOf = (db, nos) => [...new Set((nos || []).flatMap(no => {
+  const m = cardMonsterOf(db, no);
+  return m ? [cardMonArt(m), CARD_IMG(m.img)].filter(Boolean) : [];
+}))];
+const cardArtPreload = (db, nos, capMs = 2500) => Promise.race([Promise.all(cardArtUrlsOf(db, nos).map(cardArtLoadOne)), new Promise(r => setTimeout(r, capMs))]);
+const cardArtReady = (db, nos) => cardArtUrlsOf(db, nos).every(u => CARD_ART_STATE.get(u) === 'ok' || CARD_ART_STATE.get(u) === 'ng');
+const cardMonArtOk = mon => {
+  const a = cardMonArt(mon);
+  return a && CARD_ART_STATE.get(a) !== 'ng' ? a : null;
+};
+const cardArtOnError = (url, fallback) => e => {
+  const el = e.currentTarget;
+  const n = Number(el.dataset.artTry || 0);
+  if (n < 1 && url) {
+    el.dataset.artTry = '1';
+    setTimeout(() => {
+      el.src = cardArtRetryUrl(url);
+    }, 500);
+    return;
+  }
+  if (url) CARD_ART_STATE.set(url, 'ng');
+  if (fallback && n < 2) {
+    el.dataset.artTry = '2';
+    el.style.objectFit = 'contain';
+    el.src = fallback;
+  }
+};
+const cardArtPrefetchPaths = () => {
+  const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
+  if (!db) return [];
+  return [...new Set(Object.values(db.monsters).map(m => cardMonArt(m)).filter(Boolean).map(u => String(u).split('?')[0].replace(/^\.\//, '')))];
+};
 const cardKiraOf = (db, no) => {
   const v = String((db && cardMonsterOf(db, no) || {}).variant || '');
   return v.includes('別絵キラ') ? 'rare' : v.includes('キラ') ? 'kira' : null;
@@ -98845,7 +98947,7 @@ const CardMonSlot = ({
   onPressMon = null
 }) => {
   const mon = st.players[p].mons[m];
-  const art = cardMonArt(mon);
+  const art = cardMonArtOk(mon);
   const ty = cardMonType(mon, st.turn);
   const opp = p === CARD_CPU;
   const pct = Math.max(0, Math.round(mon.life / mon.max * 100));
@@ -98900,6 +99002,7 @@ const CardMonSlot = ({
   const imgEl = art ? cardKiraWrap(kira, React.createElement("img", {
     src: art,
     alt: "",
+    onError: cardArtOnError(art, CARD_IMG(cardMonsterOf(db, mon.no).img)),
     style: {
       ...(wide ? {
         maxHeight: wideArtH
@@ -99172,6 +99275,10 @@ const CardBattleBoard = ({
     const t = setTimeout(() => setTacGlow(null), 2400);
     return () => clearTimeout(t);
   }, [tacGlow]);
+  const [, setArtTick] = useState(0);
+  useEffect(() => {
+    if (typeof cardArtPreload === 'function') void cardArtPreload(db, st.players.flatMap(pl => pl.mons.map(m => m.no))).then(() => setArtTick(n => n + 1));
+  }, []);
   const [downBand, setDownBand] = useState(null);
   const [breederFx, setBreederFx] = useState(null);
   const [beams, setBeams] = useState([]);
