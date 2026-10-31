@@ -179,20 +179,30 @@ const CARD_VS_CSS = `
 //   表に無い絵は、前と同じ object-contain
 // 表のキーは images/ の下の道(images/ を付けると版を打つ道具が ?v= を付けてしまうため)
 const cardVsBoxOf = (src) => (typeof ART_CONTENT_BOXES !== 'undefined' && src ? ART_CONTENT_BOXES[String(src).split('?')[0].replace(/^images\//, '')] || null : null);
+// kira … キラ・レアキラの光(84 の CardKiraAura・CardKiraSil・cardKiraRimClass)を、対戦の場と同じ形で絵に重ねる。
+//   光の中心は体の真ん中(84 の cardKiraBodyOf)。ふちの光は絵だけにかける
 // onImgError … 絵が読めなかったとき(84 の cardArtOnError: 読み直し→カードの絵)
-const CardVsArt = ({ src, alt, aspect, spread = 1, className = '', style = {}, onImgError = null, ...rest }) => {
+const CardVsArt = ({ src, alt, aspect, spread = 1, className = '', style = {}, kira = null, onImgError = null, ...rest }) => {
   const box = cardVsBoxOf(src);
-  if (!box) return <img src={src} alt={alt} draggable={false} onError={onImgError || undefined} className={`w-full object-contain object-bottom ${className}`} style={{ aspectRatio: `${aspect}`, ...style }} {...rest}/>;
+  if (!box) {
+    const img = <img src={src} alt={alt} draggable={false} onError={onImgError || undefined} className={`w-full object-contain object-bottom ${className}`} style={{ aspectRatio: `${aspect}`, ...(kira ? null : style) }} {...(kira ? null : rest)}/>;
+    return kira ? <div className="relative w-full" style={{ isolation: 'isolate', ...style }} {...rest}><span data-card-kira={kira} className={`${cardKiraRimClass(kira)} block`}>{img}</span><CardKiraSil kind={kira} src={src} style={{ inset: 0 }} maskSize="contain" maskPos="bottom"/></div> : img;
+  }
   const [x0, y0, x1, y1, a] = box;
   const fw = Math.max(0.01, x1 - x0), fh = Math.max(0.01, y1 - y0);
   const ca = (fw * a) / fh; // 中身の 横÷縦
   // 絵の幅(枠の幅に対する%): 横長の中身は幅で、それ以外は高さで合わせる
   const wP = ca >= aspect * spread ? (100 * spread) / fw : (100 * a) / (fh * aspect);
   const hP = (wP * aspect) / a; // 絵の高さ(枠の高さに対する%)
+  const pos = { width: `${wP}%`, height: `${hP}%`, left: `${50 - (x0 + fw / 2) * wP}%`, top: `${100 - y1 * hP}%` };
   return (
-    <div className="relative w-full" style={{ aspectRatio: `${aspect}`, ...style }} {...rest}>
-      <img src={src} alt={alt} draggable={false} onError={onImgError || undefined} className={`absolute max-w-none ${className}`}
-        style={{ width: `${wP}%`, height: `${hP}%`, left: `${50 - (x0 + fw / 2) * wP}%`, top: `${100 - y1 * hP}%` }}/>
+    <div className="relative w-full" style={{ aspectRatio: `${aspect}`, ...(kira ? { isolation: 'isolate' } : null), ...style }} {...rest}>
+      {kira && <CardKiraAura kind={kira} src={src} layer="back" style={pos}/>}
+      {kira
+        ? <span data-card-kira={kira} className={`${cardKiraRimClass(kira)} absolute`} style={pos}><img src={src} alt={alt} draggable={false} onError={onImgError || undefined} className={`absolute inset-0 h-full w-full max-w-none ${className}`}/></span>
+        : <img src={src} alt={alt} draggable={false} onError={onImgError || undefined} className={`absolute max-w-none ${className}`} style={pos}/>}
+      {kira && <CardKiraSil kind={kira} src={src} style={pos}/>}
+      {kira && <CardKiraAura kind={kira} src={src} layer="front" style={pos}/>}
     </div>
   );
 };
@@ -207,12 +217,10 @@ const CardVsMonsters = ({ db, monsters, side, start, step }) => (
         <div key={`${no}-${i}`} data-card-vs-mon={no} className={`${side === 'foe' ? 'mh-vs-mon-foe' : 'mh-vs-mon-me'} flex min-w-0 flex-1 flex-col items-center`} style={{ animationDelay: `${start + i * step}ms`, maxWidth: 140 }}>
           {art
             ? (() => {
-              // キラ・レアキラの光(84 の CardKiraFx・cardKiraWrap。対戦の場と同じ見た目)
+              // キラ・レアキラの光(CardVsArt の kira。対戦の場と同じ見た目)
               const kira = typeof cardKiraOf === 'function' ? cardKiraOf(db, no) : null;
-              // キラの子は、光のふち(cardKiraWrap)の枠が中身に合わせて縮むので、幅に % を使うと 0 になって絵が消えていた(2026-10-31 ルールくんが見つけた)。
-              //   キラの子だけ、% を使わない決まった幅にする(3体が横に並んでも収まる 30vw まで)
-              const el = <CardVsArt src={art} alt={m.name} aspect={1} spread={1.1} onImgError={typeof cardArtOnError === 'function' ? cardArtOnError(art, CARD_IMG(m.img)) : null} className="drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]" style={{ width: kira ? 'min(19vh, 140px, 30vw)' : 'min(100%, 19vh, 140px)' }}/>;
-              return kira ? <span className="relative flex w-full justify-center" style={{ isolation: 'isolate' }}><CardKiraFx kind={kira}/>{cardKiraWrap(kira, el)}</span> : el;
+              const el = <CardVsArt src={art} alt={m.name} aspect={1} spread={1.1} kira={kira} onImgError={typeof cardArtOnError === 'function' ? cardArtOnError(art, CARD_IMG(m.img)) : null} className="drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]" style={{ width: 'min(100%, 19vh, 140px)' }}/>;
+              return el;
             })()
             : <img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="w-full rounded-md object-cover" style={{ aspectRatio: '63 / 88', maxHeight: 'min(19vh, 140px)' }}/>}
           <span className="mt-0.5 w-full truncate text-center text-[10px] font-black text-white" style={{ textShadow: '0 1px 2px #000' }}>{m.name}</span>

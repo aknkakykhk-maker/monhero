@@ -109,6 +109,7 @@
 | `mh_card_last_level_v1` | string / `CARD_LEVEL_ORDER` に入っているか確かめる | MFバトルカードの助手と対戦で前に選んだ難易度('easy'〜'master')。難易度を押したときに書き、相手えらびを開いたときの最初の位置にする。無い・壊れている・まだ開いていない難易度ならイージー(2026-10-29) |
 | `mh_card_start_level_v1` | string / `cardNormalizeStartLevel` | MFバトルカードの設定「助手と対戦の最初の強さ」。'last'(前に選んだもの・既定)か 'easy'〜'master'。無い・壊れているときは 'last'。選んだ強さがまだ開いていなければ、開いている中でいちばん近い強さ、それも無ければ EASY(2026-10-29) |
 | `mh_card_settings_v1` | object / `normalizeCardSettings` | MFバトルカードの演出 `{ speed: 'normal'|'fast', autoPass: 真偽 }`。無い人は ふつう・自動パスON |
+| `mh_card_pack_fx_v1` | string / `cardPackFxOn`('OFF' のときだけ切る) | MFバトルカードのオプション「パックを開ける演出」(2026-10-31)。'ON'(強め)か 'OFF'(短め)。無い・壊れていたら強め。見た目だけで、出るカードは変わらない |
 | `mh_card_ai_talk_v1` | object / `cardNormalizeAiTalk` | MFバトルカードの助手のおしゃべり(AI)の入/切 `{ on: 真偽 }`(2026-10-25)。無い・壊れていたら入。呼べるのは公開の印かデバッグ端末だけ(83-card-battle-talk-ai.jsx) |
 | `mh_raid_jack_frame_gift_v1` | object / `null` | プロフィールフレーム「ハロウィン・妖」をギフトで届けた印(`{ at, frameId }`・2026-10-20)。レイドで大王まで倒せたときの終章を見た参加者へ1回だけ届けるため。ギフトの一覧(`mh_gifts`)は古いものから消えるので、二重に届けないためにこの印を持つ。ギフトと同じ取引で保存する |
 | `mh_sorashido_gift_v1` | object / `null` | ソラシドの沖縄のおみやげ(10,000ビートP)をギフトで届けた印(`{ at, beatPoints }`・2026-10-27)。ソラシドの加入のお話を見終えた人へ1回だけ届けるため。ギフトの一覧(`mh_gifts`)は古いものから消えるので、それだけでは二重を防げない。イベント回想で見直しても届かない |
