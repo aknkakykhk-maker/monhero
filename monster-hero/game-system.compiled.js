@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 83d7a912de672758
+// source-sha256: d3614b962353daff
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -103328,6 +103328,31 @@ const CardBattleScreen = ({
     });
   }
   if (view === 'cup' && typeof CardCup === 'function') {
+    const openCupReplay = async (id, title) => {
+      if (!db || typeof cardTourRpc !== 'function' || typeof cardReplayFromTour !== 'function') return false;
+      const row = await cardTourRpc('card_cup_match', {
+        p_id: id
+      });
+      const rec = row && typeof row === 'object' ? cardReplayFromTour(db, row, {
+        known: new Set(assistantsUnlockedFrom(seenStoryIds).map(x => x.id)),
+        title
+      }) : null;
+      const g = rec ? cardReplayGameOf(db, rec) : null;
+      if (!g) {
+        setNotice('この試合は見返せません');
+        return false;
+      }
+      setGame({
+        ...g,
+        settings: save ? save.settings : undefined,
+        replay: {
+          ...g.replay,
+          back: 'cup'
+        }
+      });
+      onNavigate('CARD_BATTLE');
+      return true;
+    };
     return React.createElement(CardCup, {
       onBack: () => {
         setCupOpenId(null);
@@ -103335,6 +103360,7 @@ const CardBattleScreen = ({
       },
       initialCup: cupOpenId,
       onCupChange: setCupOpenId,
+      onOpenReplay: openCupReplay,
       onOpenRegister: typeof CardDeckRegister === 'function' ? () => {
         setTacticsBack('cup');
         setView('tactics');
@@ -120518,6 +120544,52 @@ const CardCupCreate = ({
     className: "w-full rounded-2xl bg-gradient-to-b from-amber-300 to-orange-500 py-3 text-[16px] font-black text-slate-950 disabled:opacity-50"
   }, "この内容で開く"));
 };
+const cardCupRoundLabel = (c, r, rounds) => {
+  if (c.format !== 'ko') return `第${r + 1}節`;
+  const left = rounds - r;
+  return left === 1 ? '決勝' : left === 2 ? '準決勝' : left === 3 ? '準々決勝' : `${r + 1}回戦`;
+};
+const CardCupMatches = ({
+  v,
+  onOpenReplay
+}) => {
+  const c = v.cup;
+  const rounds = Math.max(0, ...v.matches.map(m => m.round + 1));
+  const bySeat = s => v.entries.find(e => e.seat === s) || null;
+  const nm = e => e ? e.mine ? 'あなた' : e.name : '?';
+  if (!v.matches.length) return null;
+  return React.createElement("div", {
+    "data-card-cup-matches": true,
+    className: "space-y-1 rounded-2xl bg-slate-950/70 p-2.5"
+  }, React.createElement("b", {
+    className: "block text-[13px] font-black text-amber-200"
+  }, "試合"), v.matches.slice().sort((x, y) => y.round - x.round || x.slot - y.slot).map(m => {
+    const a = bySeat(m.a),
+      b = bySeat(m.b);
+    return React.createElement("div", {
+      key: m.id,
+      "data-card-cup-match": m.id,
+      className: "flex items-center gap-2 rounded-xl bg-white/5 px-2 py-1.5"
+    }, React.createElement("small", {
+      className: "w-14 shrink-0 text-[11px] font-black text-amber-200"
+    }, cardCupRoundLabel(c, m.round, c.format === 'ko' && c.bracket ? c.bracket.length : rounds)), React.createElement("span", {
+      className: "min-w-0 flex-1 truncate text-[12px] font-bold text-white"
+    }, React.createElement("b", {
+      className: m.winner === 0 ? 'text-orange-300' : 'text-slate-300'
+    }, nm(a)), " 対 ", React.createElement("b", {
+      className: m.winner === 1 ? 'text-orange-300' : 'text-slate-300'
+    }, nm(b))), React.createElement("button", {
+      type: "button",
+      "data-card-cup-replay": m.id,
+      disabled: !onOpenReplay || m.winner === null,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        void onOpenReplay(m.id, c.name);
+      },
+      className: "shrink-0 rounded-lg border-2 border-amber-500/70 bg-amber-100 px-2 py-0.5 text-[12px] font-black text-amber-900 disabled:opacity-40"
+    }, "見返す"));
+  }));
+};
 const CardCupDetail = ({
   v,
   now,
@@ -120525,7 +120597,8 @@ const CardCupDetail = ({
   selfId,
   profile,
   onChanged,
-  onOpenRegister
+  onOpenRegister,
+  onOpenReplay = null
 }) => {
   const c = v.cup;
   const [busy, setBusy] = useState(false);
@@ -120616,7 +120689,10 @@ const CardCupDetail = ({
     className: "text-amber-200"
   }, "順位 "), ranked.map(e => `${e.place}位 ${e.mine ? 'あなた' : e.name}(${e.wins || 0}勝)`).join(' ・ '), React.createElement("div", {
     className: "mt-1 text-slate-400"
-  }, "個人杯にはごほうびはありません。ランキングにも入りません")), !shown && React.createElement("div", {
+  }, "個人杯にはごほうびはありません。ランキングにも入りません")), shown && React.createElement(CardCupMatches, {
+    v: v,
+    onOpenReplay: onOpenReplay
+  }), !shown && React.createElement("div", {
     "data-card-cup-entries": true,
     className: "space-y-1 rounded-2xl bg-slate-950/70 p-2.5"
   }, React.createElement("b", {
@@ -120661,7 +120737,8 @@ const CardCup = ({
   onBack,
   onOpenRegister = null,
   initialCup = null,
-  onCupChange = null
+  onCupChange = null,
+  onOpenReplay = null
 }) => {
   const [tab, setTab] = useState('list');
   const [list, setList] = useState(undefined);
@@ -120744,7 +120821,8 @@ const CardCup = ({
       selfId: selfId,
       profile: profile,
       onChanged: () => reload(),
-      onOpenRegister: onOpenRegister
+      onOpenRegister: onOpenRegister,
+      onOpenReplay: onOpenReplay
     }), back);
   }
   const find = async () => {

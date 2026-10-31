@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fa5dddcb1354ead4
+// generated-sha256: e2e6b22505383bf0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -62202,7 +62202,18 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   }
   // 個人杯(99-card-cup。2026-10-31)。デッキ登録へ行って戻ったら、見ていた杯に戻る(cupOpenId)
   if (view === 'cup' && typeof CardCup === 'function') {
-    return <CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId}
+    // 試合の見返し: 公式杯と同じ見返し(93 の cardReplayFromTour)。材料は card_cup_match。とじたら見ていた杯へ戻る
+    const openCupReplay = async (id, title) => {
+      if (!db || typeof cardTourRpc !== 'function' || typeof cardReplayFromTour !== 'function') return false;
+      const row = await cardTourRpc('card_cup_match', { p_id: id });
+      const rec = row && typeof row === 'object' ? cardReplayFromTour(db, row, { known: new Set(assistantsUnlockedFrom(seenStoryIds).map((x) => x.id)), title }) : null;
+      const g = rec ? cardReplayGameOf(db, rec) : null;
+      if (!g) { setNotice('この試合は見返せません'); return false; }
+      setGame({ ...g, settings: save ? save.settings : undefined, replay: { ...g.replay, back: 'cup' } });
+      onNavigate('CARD_BATTLE');
+      return true;
+    };
+    return <CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId} onOpenReplay={openCupReplay}
       onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('cup'); setView('tactics'); } : null}/>;
   }
   // ---- 対戦の前のデッキ選び(助手と対戦・マルチ。練習試合には出さない) ----
@@ -71046,7 +71057,39 @@ const CardCupCreate = ({ now, mine, onOpenRegister, onCreated, selfId, profile }
 };
 
 // ---- 1つの杯 ----
-const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegister }) => {
+// 試合の一覧(結果が見られるとき)。各試合から見返しを開く(公式杯と同じ見返し。84 の openCupReplay → 93 の cardReplayFromTour)
+const cardCupRoundLabel = (c, r, rounds) => {
+  if (c.format !== 'ko') return `第${r + 1}節`;
+  const left = rounds - r;
+  return left === 1 ? '決勝' : left === 2 ? '準決勝' : left === 3 ? '準々決勝' : `${r + 1}回戦`;
+};
+const CardCupMatches = ({ v, onOpenReplay }) => {
+  const c = v.cup;
+  const rounds = Math.max(0, ...v.matches.map((m) => m.round + 1));
+  const bySeat = (s) => v.entries.find((e) => e.seat === s) || null;
+  const nm = (e) => (e ? (e.mine ? 'あなた' : e.name) : '?');
+  if (!v.matches.length) return null;
+  return (
+    <div data-card-cup-matches className="space-y-1 rounded-2xl bg-slate-950/70 p-2.5">
+      <b className="block text-[13px] font-black text-amber-200">試合</b>
+      {v.matches.slice().sort((x, y) => (y.round - x.round) || (x.slot - y.slot)).map((m) => {
+        const a = bySeat(m.a), b = bySeat(m.b);
+        return (
+          <div key={m.id} data-card-cup-match={m.id} className="flex items-center gap-2 rounded-xl bg-white/5 px-2 py-1.5">
+            <small className="w-14 shrink-0 text-[11px] font-black text-amber-200">{cardCupRoundLabel(c, m.round, c.format === 'ko' && c.bracket ? c.bracket.length : rounds)}</small>
+            <span className="min-w-0 flex-1 truncate text-[12px] font-bold text-white">
+              <b className={m.winner === 0 ? 'text-orange-300' : 'text-slate-300'}>{nm(a)}</b> 対 <b className={m.winner === 1 ? 'text-orange-300' : 'text-slate-300'}>{nm(b)}</b>
+            </span>
+            <button type="button" data-card-cup-replay={m.id} disabled={!onOpenReplay || m.winner === null} onClick={() => { Audio_.fgSe.tap(); void onOpenReplay(m.id, c.name); }}
+              className="shrink-0 rounded-lg border-2 border-amber-500/70 bg-amber-100 px-2 py-0.5 text-[12px] font-black text-amber-900 disabled:opacity-40">見返す</button>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegister, onOpenReplay = null }) => {
   const c = v.cup;
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -71087,6 +71130,7 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
           <div className="mt-1 text-slate-400">個人杯にはごほうびはありません。ランキングにも入りません</div>
         </div>
       )}
+      {shown && <CardCupMatches v={v} onOpenReplay={onOpenReplay}/>}
       {!shown && (
         <div data-card-cup-entries className="space-y-1 rounded-2xl bg-slate-950/70 p-2.5">
           <b className="block text-[13px] font-black text-amber-200">{`参加者 ${v.entries.length}/${c.max}人`}</b>
@@ -71103,7 +71147,8 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
 
 // ---- 画面 ----
 // onBack … 対戦えらびへ / onOpenRegister … デッキ登録へ(戻ると、この画面のいまの杯に戻る)
-const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange = null }) => {
+// onOpenReplay(matchId, title) … 試合の見返しを開く(84。開けなかったら false)
+const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange = null, onOpenReplay = null }) => {
   const [tab, setTab] = useState('list');
   const [list, setList] = useState(undefined);
   const [mineCups, setMineCups] = useState(undefined);
@@ -71142,7 +71187,7 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
   if (cupId) {
     const back = () => { setCupId(null); if (selfId) void cardCupMine(selfId).then(setMineCups); void cardCupList().then((l) => l && setList(l)); };
     if (!view) return shell(<ScreenEmpty emoji="⏳" lines={['読み込んでいます']}/>, back);
-    return shell(<CardCupDetail v={view} now={now} mine={mine} selfId={selfId} profile={profile} onChanged={() => reload()} onOpenRegister={onOpenRegister}/>, back);
+    return shell(<CardCupDetail v={view} now={now} mine={mine} selfId={selfId} profile={profile} onChanged={() => reload()} onOpenRegister={onOpenRegister} onOpenReplay={onOpenReplay}/>, back);
   }
   const find = async () => {
     const c = String(code || '').replace(/[^0-9]/g, '');
