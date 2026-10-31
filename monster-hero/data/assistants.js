@@ -1390,6 +1390,10 @@ const ASSISTANT_SCENES = {
     help: 'basics/extreme-challenge',
     lines: [],
   },
+  infernoDifficulty: {
+    help: 'basics/extreme-challenge',
+    lines: [],
+  },
   // 種族チャレンジの選択画面。種族→勇者→供モン→確認の各段で言うことが変わるので、
   // 画面から condition(いまの段)を渡す。セリフ本体は speciesChallengeGuide の束から合流する
   speciesChallenge: {
@@ -2544,6 +2548,11 @@ addAssistantLinePack({
       { e:'troubled', t:'シールドを削ったぶんは距離強化にならないし、敵の攻撃は一部が丈夫さを貫いてくるよ〜' },
       { e:'wink', t:'いちばんきたえたパーティで行こ〜。ルール詳細は先に読んでね' },
     ],
+    infernoDifficulty: [
+      { e:'surprise', t:'INFERNOのボスは起き上がらないけど、シールドを何枚もまとって出てくるの' },
+      { e:'troubled', t:'1枚割るたびにボスが強くなるよ〜。ムーは最後に連撃までしてくるって' },
+      { e:'wink', t:'ためるの予告を見たら、ガードは2枚がおすすめだよ〜' },
+    ],
   },
 });
 
@@ -3332,6 +3341,11 @@ addAssistantLinePack({
       { e:'troubled', t:'シールドを削ったぶんは距離強化になりませんでつ。敵の攻撃は丈夫さを一部貫きまつ。' },
       { e:'wink', t:'報酬は虹のプシュケー190個。きたえ抜いてから挑も♪' },
     ],
+    infernoDifficulty: [
+      { e:'surprise', t:'INFERNOのボスは、シールドを何枚もまとってきまつ…！' },
+      { e:'troubled', t:'割るたびにボスの攻撃が上がりまつ。デュラハンとムーは連撃になりまつ。' },
+      { e:'wink', t:'報酬は虹のプシュケー220個。きたえ抜いてから挑も♪' },
+    ],
     // ---- はじめて ----
     onboarding: [
       { e:'happy',   t:'はじめまして。私はきき、このゲームの助手でつ (´ω`)' },
@@ -3966,6 +3980,11 @@ addAssistantLinePack({
       { e:'surprise', t:'まだ上があったの！？ ETERNAL、敵がシールドをまとってくるんだって！' },
       { e:'troubled', t:'シールドを削っても距離強化は伸びないし、攻撃は丈夫さを貫いてくるよ。' },
       { e:'excited', t:'報酬は虹のプシュケー190個。……キミなら、行くよね？♡' },
+    ],
+    infernoDifficulty: [
+      { e:'surprise', t:'ETERNALの上！？ INFERNOのボス、シールドが何枚もあるんだって！' },
+      { e:'troubled', t:'割るたびに強くなって、最後は必殺技が連撃になるんだよ。' },
+      { e:'excited', t:'報酬は虹のプシュケー220個。……キミなら、行くよね？♡' },
     ],
     // ---- はじめての設定 ----
     onboarding: [
@@ -4788,6 +4807,11 @@ addAssistantLinePack({
       { e:'troubled', t:'敵はシールドを張ってくるし、攻撃は丈夫さを貫いてくる。守りだけじゃ持たんぞ' },
       { e:'excited', t:'ここを越えたら、おでもう何も言えんわ' },
     ],
+    infernoDifficulty: [
+      { e:'normal', t:'インフェルノ。エターナルのさらに下か' },
+      { e:'troubled', t:'シールドを割るたびにボスが強くなる。最後の連撃はガード2枚で受けろよ' },
+      { e:'excited', t:'ここを越えたら、おで本気で拝むわ' },
+    ],
     speciesChallenge: [
       { e:'normal',   t:'ひとつの種族だけで10WAVEな。しばりプレイだよ' },
       { e:'happy',    t:'{name}、育ててる種族から挑むと入りやすいわ' },
@@ -5260,6 +5284,11 @@ addAssistantLinePack({
       { e:'troubled', t:'シールドを削ったぶんは距離強化にならん。攻撃も丈夫さを貫いてくる' },
       { e:'happy', t:'しっかりきたえてからでええ。焦らんでな' },
     ],
+    infernoDifficulty: [
+      { e:'normal', t:'エターナルのさらに先や。ボスはシールドを何枚もまとって出てくるで' },
+      { e:'troubled', t:'割るたびに強うなる。ムーの連撃はガードを重ねて受けや' },
+      { e:'happy', t:'しっかりきたえてからでええ。焦らんでな' },
+    ],
     speciesChallenge: [
       { e:'normal',   t:'同じ種族だけで組むと、弱いとこがはっきり出るな' },
       { e:'happy',    t:'初クリアで超越の実。その種族のやつがもらえるよ' },
@@ -5555,6 +5584,11 @@ addAssistantLinePack({
       { e:'troubled', t:'シールドを削っても距離強化は伸びないし、攻撃は丈夫さを貫いてくるの💦' },
       { e:'happy', t:'きたえ抜いてからでいいからね(〃´o｀)ﾌｩ…' },
     ],
+    infernoDifficulty: [
+      { e:'normal', t:'エターナルのさらに先。ボスはシールドを何枚もまとってるよ。' },
+      { e:'troubled', t:'割るたびに強くなって、最後は連撃なの💦 ガードは2枚で受けてね。' },
+      { e:'happy', t:'きたえ抜いてからでいいからね(〃´o｀)ﾌｩ…' },
+    ],
     speciesChallenge: [
       { e:'normal',  t:'同じ種族だけで組むと、弱点がはっきり出るよ。' },
       { e:'happy',   t:'超越の実は、その種族のぶんがもらえるよ〜' },
@@ -5672,6 +5706,11 @@ addAssistantLinePack({
     eternalDifficulty: [
       { e:'excited', t:'シールドつきで、しかも攻撃が丈夫さを貫通。もう笑うしかないねw' },
       { e:'troubled', t:'シールドを削ったぶんは距離強化にならないんだって。容赦ないよ。' },
+      { e:'happy', t:'ここまで来たなら、とことん付き合うよ♡' },
+    ],
+    infernoDifficulty: [
+      { e:'excited', t:'シールド何枚も重ねて、割るたび強くなる。もう笑うしかないねw' },
+      { e:'troubled', t:'ムーの最後は3連撃なんだって。容赦ないよ。' },
       { e:'happy', t:'ここまで来たなら、とことん付き合うよ♡' },
     ],
     speciesChallenge: [
@@ -5994,6 +6033,11 @@ addAssistantLinePack({
     eternalDifficulty: [
       { e:'normal', t:'ヘルヘイムのさらに先でつ。敵はシールドをまとって出てきまつ。' },
       { e:'troubled', t:'シールドを削ったぶんは距離強化になりませんでつ。攻撃は丈夫さを貫いてきまつ。' },
+      { e:'happy', t:'きたえ抜いてから挑めば大丈夫でつよ。' },
+    ],
+    infernoDifficulty: [
+      { e:'normal', t:'エターナルのさらに先でつ。ボスはシールドを何枚もまとってきまつ。' },
+      { e:'troubled', t:'割るたびにボスが強くなりまつ。連撃はガード2枚で受けてくだしゃい。' },
       { e:'happy', t:'きたえ抜いてから挑めば大丈夫でつよ。' },
     ],
     speciesChallenge: [
@@ -6475,6 +6519,11 @@ addAssistantLinePack({
     eternalDifficulty: [
       { e:'surprise', t:'エターナル！ ヘルヘイムの先とか、まじで燃える！' },
       { e:'troubled', t:'敵はシールドをまとってくるし、攻撃は丈夫さを貫いてくる。えぐいね…' },
+      { e:'excited', t:'ここ通ったら、{name}は伝説の勇者だよ！' },
+    ],
+    infernoDifficulty: [
+      { e:'surprise', t:'インフェルノ！ エターナルの先とか、まじで燃える！' },
+      { e:'troubled', t:'シールドを割るたびにボスが強くなる。最後の連撃、えぐいね…' },
       { e:'excited', t:'ここ通ったら、{name}は伝説の勇者だよ！' },
     ],
     speciesChallenge: [
@@ -7208,6 +7257,11 @@ addAssistantLinePack({
     eternalDifficulty: [
       { e:'surprise', t:'エターナルかぁ。ヘルヘイムの先とか、ちょっとわくわくするわ' },
       { e:'troubled', t:'シールドを削っても距離強化は伸びないし、攻撃は丈夫さを貫いてくるよ😭' },
+      { e:'excited', t:'ここ通ったら、{name}は伝説のランカーだよ。ふふん' },
+    ],
+    infernoDifficulty: [
+      { e:'surprise', t:'インフェルノかぁ。エターナルの先とか、ちょっとわくわくするわ' },
+      { e:'troubled', t:'割るたびに強くなって、最後は連撃だよ😭' },
       { e:'excited', t:'ここ通ったら、{name}は伝説のランカーだよ。ふふん' },
     ],
     speciesChallenge: [
@@ -8072,6 +8126,11 @@ addAssistantLinePack({
     eternalDifficulty: [
       { e:'surprise', t:'エターナル!? ヘルヘイムの先とか、うぉぉぉ……' },
       { e:'troubled', t:'シールドに攻撃の貫き。シールドを削っても距離強化は伸びないよ' },
+      { e:'excited', t:'ここを通ったら、{name}は伝説だぜ・・・！' },
+    ],
+    infernoDifficulty: [
+      { e:'surprise', t:'インフェルノ!? エターナルの先とか、うぉぉぉ……' },
+      { e:'troubled', t:'シールドを割るたびにボスが強くなる。ムーの連撃はガード2枚で' },
       { e:'excited', t:'ここを通ったら、{name}は伝説だぜ・・・！' },
     ],
     speciesChallenge: [
