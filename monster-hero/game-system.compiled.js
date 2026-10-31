@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d55194d4888fb94c
+// source-sha256: a62a9f78b74cfa89
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -116387,7 +116387,7 @@ const CardShareDeckDetail = ({
     className: "flex items-center gap-2"
   }, entry.icon ? React.createElement("span", {
     className: "shrink-0 text-[24px] leading-none"
-  }, entry.icon) : null, React.createElement("span", {
+  }, cardIconNode(entry.icon, 28)) : null, React.createElement("span", {
     className: "min-w-0 flex-1"
   }, React.createElement("b", {
     "data-card-share-detail-name": true,
