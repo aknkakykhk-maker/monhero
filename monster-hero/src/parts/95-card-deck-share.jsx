@@ -186,6 +186,24 @@ const cardShareReplaysOf = async (ownerId) => {
     icon: typeof r.icon === 'string' ? r.icon : null, frame: typeof r.frame === 'string' ? r.frame : null,
     deckWon: r.deck_won === true, turns: Number.isInteger(r.turns) ? r.turns : null, old: r.old === true }));
 };
+// 登録デッキの最近の戦績(2026-10-31 社長「誰に挑まれてとか戦績も見たい」)。だれでも読める(docs/sql/card-deck-share/CARD_DECK_RECORD_APPLY.sql)。
+//   返るのは「いつ・このデッキが勝ったか・何ターン」だけ(挑んだ人の名前は、本人だけが見返しの一覧で見る)。
+//   関数がまだ無い・通信できないときは null。止め印は見返しとは別に持つ(この関数が無くても見返しは止めない)
+let _cardShareRecordOff = false;
+const cardShareRecordOf = async (ownerId) => {
+  if (_cardShareRecordOff || _cardShareUnavailable || typeof ownerId !== 'string') return null;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = setTimeout(() => { if (controller) controller.abort(); }, 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/card_deck_record_of`, { method: 'POST', headers: SB_HEADERS, signal: controller ? controller.signal : undefined, body: JSON.stringify({ p_owner: ownerId }) });
+    const text = await res.text();
+    if (!res.ok) { if (_isMissingTableError(res.status, text) || res.status === 404) _cardShareRecordOff = true; return null; }
+    const rows = JSON.parse(text);
+    if (!Array.isArray(rows)) return null;
+    return rows.filter((r) => r && typeof r.at === 'string').slice(0, CARD_SHARE_REPLAY_SLOTS)
+      .map((r) => ({ at: Date.parse(r.at) || 0, deckWon: r.deck_won === true, turns: Number.isInteger(r.turns) ? r.turns : null, old: r.old === true }));
+  } catch (_) { return null; } finally { clearTimeout(timer); }
+};
 // 1試合の中身(card_tournament_match と同じ形。93 の cardReplayFromTour で開く)
 const cardShareReplayGet = async (ownerId, slot) => {
   const key = await cardShareOwnerKey(false);
@@ -529,6 +547,11 @@ const CardShareDeckDetail = ({ entry, onClose, fight = null, rent = null }) => {
   const cardRows = Object.entries(counts).map(([no, n]) => ({ no, n, c: (db && cardOf(db, no)) || null }))
     .sort((a, b) => (kindOrder.indexOf((a.c || {}).kind) - kindOrder.indexOf((b.c || {}).kind)) || String((a.c || {}).name || a.no).localeCompare(String((b.c || {}).name || b.no), 'ja'));
   const who = (c) => (!c ? '' : c.user === 'breeder' ? 'ブリーダー' : c.user === 'any' ? '全員' : '');
+  // 最近の戦績(開いたときに1回読む。読めなければ「まだ記録がありません」)
+  const [record, setRecord] = useState(undefined);
+  useEffect(() => { let alive = true; void cardShareRecordOf(entry.ownerId).then((r) => { if (alive) setRecord(r); }).catch(() => { if (alive) setRecord(null); }); return () => { alive = false; }; }, [entry.ownerId]);
+  const losses = Math.max(0, (entry.battles || 0) - (entry.deckWins || 0));
+  const dayText = (ms) => { const d = new Date(ms); return Number.isFinite(d.getTime()) ? `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : ''; };
   return (
     <div data-card-share-deck-detail className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={onClose}>
       <div className="max-h-[86vh] w-full max-w-[440px] overflow-y-auto rounded-2xl border-2 border-amber-600/60 bg-slate-950 p-3" onClick={(e) => e.stopPropagation()}>
@@ -549,10 +572,22 @@ const CardShareDeckDetail = ({ entry, onClose, fight = null, rent = null }) => {
             </div>
           ); })}
         </div>
-        {/* 数字(戦われた回数・勝ち率・借りられた数) */}
+        {/* 戦績(戦われた回数・勝ち負け・勝ち率・借りられた数と、最近の試合) */}
         <div data-card-share-detail-stats className="mt-2 rounded-lg bg-black/30 p-2 text-[12px] font-bold text-sky-100 tabular-nums" style={JA_WRAP_STYLE}>
-          {jaWrap(entry.battles ? `戦われた ${entry.battles}回・このデッキの勝ち ${Math.round((entry.deckWins / entry.battles) * 100)}%` : 'まだ戦われていません')}
+          <b className="block text-[12px] text-amber-100">戦績</b>
+          {jaWrap(entry.battles ? `戦われた ${entry.battles}回・このデッキの ${entry.deckWins}勝${losses}敗(勝ち ${Math.round((entry.deckWins / entry.battles) * 100)}%)` : 'まだ戦われていません')}
           {entry.rents > 0 && <span className="block">{`借りられた ${entry.rents}回`}</span>}
+          {entry.battles > 0 && (
+            <div data-card-share-detail-record={record === undefined ? 'loading' : record ? record.length : 'none'} className="mt-1 text-[11px]">
+              <span className="block text-slate-400">最近の試合(新しい順)</span>
+              {record === undefined ? <span className="block text-slate-400">読み込み中…</span>
+                : !record || !record.length ? <span className="block text-slate-400">まだ記録がありません</span>
+                : <span className="mt-0.5 flex flex-wrap gap-1">{record.map((r, i) => (
+                  <span key={i} data-card-share-detail-record-row={r.deckWon ? 'won' : 'lost'} className={`rounded px-1 py-0.5 font-black ${r.deckWon ? 'bg-emerald-500/25 text-emerald-100' : 'bg-rose-500/25 text-rose-100'}`}>
+                    {`${dayText(r.at)} ${r.deckWon ? '勝ち' : '負け'}`}
+                  </span>))}</span>}
+            </div>
+          )}
         </div>
         {/* 賢さと戦術カード */}
         <div className="mt-2 rounded-lg bg-black/30 p-2 text-[11.5px] text-slate-200" style={JA_WRAP_STYLE}>
@@ -715,6 +750,12 @@ const CardDeckReplays = ({ onBack, onOpenDeck, onOpenTour, known = null }) => {
       <div className={`${SCREEN_LIST_CLASS} space-y-1.5 pb-4`}>
         {msg && <p data-card-deck-replays-note className="rounded-xl border border-amber-300/40 bg-amber-500/10 px-2 py-1.5 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
         {items === null && <div className="py-6 text-center text-[13px] font-bold text-slate-400">読み込み中…</div>}
+        {/* 戦績のまとめ(2026-10-31 社長「誰に挑まれてとか戦績も見たい」): いま見ているタブの試合の、このデッキの勝ち負けと勝ち率 */}
+        {items && shown.length > 0 && (() => {
+          const won = shown.filter((x) => x.won).length;
+          return <p data-card-deck-replays-total={`${won}-${shown.length - won}`} className="rounded-xl border border-white/10 bg-black/30 px-2 py-1.5 text-[12px] font-black text-sky-100 tabular-nums" style={JA_WRAP_STYLE}>
+            {jaWrap(`このデッキの戦績: ${shown.length}試合 ${won}勝${shown.length - won}敗(勝ち ${Math.round((won / shown.length) * 100)}%)`)}</p>;
+        })()}
         {items && !shown.length && <div data-card-deck-replays-empty className="py-6 text-center text-[13px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('まだ記録がありません。ほかのブリーダーがあなたのデッキと戦うと、ここに残ります')}</div>}
         {shown.map((x) => (
           <button key={x.key} type="button" data-card-deck-replays-row={x.kind} disabled={busy} onClick={() => { void open(x); }}
