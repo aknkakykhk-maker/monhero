@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 882d7b7adf591e9a
+// generated-sha256: 6c2a51881a5f0b03
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -53842,7 +53842,7 @@ const loadAssistantChatMemoFor = async (assistantId) => {
 //         tossBonus 使うときに手札を好きな枚数捨て、その枚数をダメージに足す(act.toss … 捨てる手札の番号。0枚でもよい。カード投げ)
 //         ---- 区切り7: モンスターが入れ替わる ----
 //         revive(species,life) 倒れたその種族の子を戻す(そのターンは攻撃できない)/ cocoon その子は emerge の札のほかを出せない /
-//         emerge(to) まゆ化した子を to のモンスターと取りかえ、ライフを最大に / fuse 味方2体をKOし、メインとサブが合う混血を出す(act.fuse)/
+//         emerge(to) まゆ化した子を「その種族がSUB」の派生モンスター(act.emerge で選ぶ)と取りかえ、ライフを最大に。to は選んでいない古い手のときだけ / fuse 味方2体をKOし、メインとサブが合う混血を出す(act.fuse)/
 //         ancient(attach) 混血の子が、サブの種族の特殊技を出せる /
 //         possess KOされた味方1体を、この子の今のライフで戻し(もとの最大まで)、この子はKO。戻った子はそのターン攻撃できない(のりうつる)
 //   使える時: useWhen(lifeMax) 自分のライフがその数以下のときだけ出せる
@@ -54202,6 +54202,16 @@ const cardFuseOptions = (db, st, p) => {
   }));
   return out;
 };
+// 羽化: 取りかえる先の候補。札の使い手の種族が SUB の派生モンスター(使えるものだけ・番号の順)。
+//   2026-10-31 テスターさんの報告で直した(前は to のムラサキチュウに決め打ちで、しかもワームが MAIN の子だった)。
+//   候補が無い札は、前と同じ to へ取りかえる
+const cardEmergeOptions = (db, card) => {
+  const sub = card && card.user;
+  const out = sub ? Object.values(db.monsters).filter((m) => m.sub === sub && m.ready !== false).sort((x, y) => (x.no < y.no ? -1 : 1)).map((m) => m.no) : [];
+  if (out.length) return out;
+  const e = cardEff(card, 'emerge');
+  return e && e.to ? [e.to] : [];
+};
 // 子を別のモンスターに取りかえる(羽化・合体)。ライフは最大・印は消す
 const cardSwapMon = (db, mon, no) => {
   const m = cardMonsterOf(db, no);
@@ -54317,7 +54327,13 @@ const cardAttackOptions = (db, st) => {
         if (card.kind === 'spe') {
           // 変形・トランスフォーム: 空中か地上かを選ぶ(手に form を持たせる)
           const forms = cardHasEff(card, 'form') ? ['air', 'ground'] : [undefined];
-          cardSpeTargets(db, st, p, mi, card).forEach((target) => forms.forEach((form) => out.push(form ? { type: 'attack', mon: mi, hand: idxs, target, form } : { type: 'attack', mon: mi, hand: idxs, target })));
+          // 羽化: 取りかえる先ごとに1つずつ(選ぶのは使う人)
+          const emerges = cardHasEff(card, 'emerge') ? cardEmergeOptions(db, card) : [null];
+          cardSpeTargets(db, st, p, mi, card).forEach((target) => forms.forEach((form) => emerges.forEach((emerge) => {
+            const o = form ? { type: 'attack', mon: mi, hand: idxs, target, form } : { type: 'attack', mon: mi, hand: idxs, target };
+            if (emerge) o.emerge = emerge;
+            out.push(o);
+          })));
           return;
         }
         if (cardHasEff(card, 'area')) {
@@ -54695,7 +54711,8 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
       cardKo(st, p, mi);
     }
     if (e.t === 'cocoon' && self) { self.cocoon = true; cardLog(st, `${self.name}はまゆになった(羽化のほかは出せない)`); }
-    if (e.t === 'emerge' && self && self.cocoon) { const from = self.name; cardSwapMon(db, self, e.to); cardLog(st, `${from}は${self.name}になった(ライフ${self.life})`); }
+    // act.emerge の無い手(直す前に記録した見返し・古い版の相手)は、前と同じ to へ取りかえる(結果を変えない)
+    if (e.t === 'emerge' && self && self.cocoon) { const from = self.name; cardSwapMon(db, self, typeof act.emerge === 'string' ? act.emerge : e.to); cardLog(st, `${from}は${self.name}になった(ライフ${self.life})`); }
     if (e.t === 'fuse' && act.fuse) {
       const f = act.fuse; const a = me.mons[f.a], b = me.mons[f.b];
       cardKo(st, p, f.a); cardKo(st, p, f.b);
@@ -54885,6 +54902,7 @@ const cardApplyAction = (db, st0, act) => {
     }
     if (act.type !== 'attack' && act.type !== 'breeder') return null;
     const ok = cardAttackOptions(db, st0).some((o) => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null) && o.form === act.form && JSON.stringify(o.split) === JSON.stringify(act.split) && JSON.stringify(o.fuse) === JSON.stringify(act.fuse)
+      && (act.emerge === undefined || o.emerge === act.emerge) // 羽化の取りかえ先(選んでいない古い手は、どの候補とも合う)
       && JSON.stringify(o.toss) === JSON.stringify(Array.isArray(act.toss) ? act.toss.slice().sort((x, y) => x - y) : act.toss)); // カード投げ: 捨てる手札の組
     if (!ok) return null;
     // 影縛り: 名指しが要る札を付けたら、回避・防御の札の名前が1つ要る(付けていなければ名指しは持たない)
@@ -55101,7 +55119,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
         score += (Math.min(self0.life, back.max) - self0.life) * 0.4 + (usable(back) - usable(self0)) * 0.7 + (back.max - self0.max) * 0.15 - 0.3;
       }
       if (e.t === 'cocoon') score += me.hand.some((n) => cardHasEff(cardOf(db, n), 'emerge')) ? 1 : -3;
-      if (e.t === 'emerge') { const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null; const to = cardMonsterOf(db, e.to); score += 2 + (m0 && to ? (to.life - m0.life) * 0.3 : 0); }
+      if (e.t === 'emerge') { const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null; const to = cardMonsterOf(db, opt.emerge || e.to); score += 2 + (m0 && to ? (to.life - m0.life) * 0.3 : 0); }
       if (e.t === 'fuse' && opt.fuse) { const to = cardMonsterOf(db, opt.fuse.no); score += to.life - (me.mons[opt.fuse.a].life + me.mons[opt.fuse.b].life) * 0.8 - 1; }
       // 区切り5
       if (e.t === 'safe') { const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null; score += m0 && m0.life <= Math.ceil(m0.max / 2) ? 1.4 : 0.4; }
@@ -60432,6 +60450,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (users.length > 1 && !(sel && t.hand.includes(sel.hand) && monChosen !== undefined)) { setSel({ hand: t.hand[0] }); setHint('使うモンスターをタップしてください'); return; }
     const same = attackOpts.filter((o) => JSON.stringify(o.hand) === JSON.stringify(t.hand) && monKey(o) === monKey(t));
     if (t.split || t.fuse) { setSplitAsk(same.filter((o) => o.split || o.fuse)); return; }
+    // 羽化: 取りかえる先が2つ以上なら選ぶ画面へ(1つならそのまま)
+    if (t.emerge && same.filter((o) => o.emerge).length > 1) { setSplitAsk(same.filter((o) => o.emerge)); return; }
     if (t.form) { setSel({ hand: t.hand[0], mon: monKey(t), add: t.hand.slice(1) }); setHint('空中か地上かを選んでください'); return; }
     askUse(t);
   };
@@ -60667,7 +60687,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     const useLabel = usePv ? `使う(${usePv.dmg !== null ? `${usePv.all ? '全体に' : ''}ダメージ${usePv.dmg}・` : ''}ガッツ${usePv.guts})` : '使う';
     return (<>
       {/* ショットガン: 割り振りを選ぶ窓 / 変形・トランスフォーム: 空中か地上かを選んで使う */}
-      {useBtn && finalOpts.some((o) => o.split || o.fuse) ? <button type="button" data-card-split-open className={`${btn} mh-button-primary`} onClick={() => setSplitAsk(finalOpts)}><CardFitLabel>{finalOpts.some((o) => o.fuse) ? '合体の組を選ぶ' : '割り振りを選ぶ'}</CardFitLabel></button>
+      {useBtn && (finalOpts.some((o) => o.split || o.fuse) || finalOpts.filter((o) => o.emerge).length > 1) ? <button type="button" data-card-split-open className={`${btn} mh-button-primary`} onClick={() => setSplitAsk(finalOpts)}><CardFitLabel>{finalOpts.some((o) => o.fuse) ? '合体の組を選ぶ' : finalOpts.some((o) => o.emerge) ? '羽化する先を選ぶ' : '割り振りを選ぶ'}</CardFitLabel></button>
         : useBtn && finalOpts.some((o) => o.form) ? ['air', 'ground'].map((f) => { const o = finalOpts.find((x) => x.form === f); return o ? <button key={f} type="button" data-card-form={f} className={`${btn} mh-button-primary`} onClick={() => askUse(o)}><CardFitLabel>{f === 'air' ? '空中にして使う' : '地上にして使う'}</CardFitLabel></button> : null; })
         : useBtn ? <button type="button" className={`${btn} mh-button-primary`} onClick={() => askUse(finalOpts[0])}><CardFitLabel>{useLabel}</CardFitLabel></button>
         // まだ出せる形になっていない(候補を足す前)は、押せない「使う」を見せる(見本1。そろったら押せるようになる)
@@ -61120,12 +61140,12 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {splitAsk && (
         <div data-card-split-pick className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" onClick={() => setSplitAsk(null)}>
           <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100" onClick={(e) => e.stopPropagation()}>
-            <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap(splitAsk.some((o) => o.fuse) ? '合体する2体を選ぶ(左がメイン・右がサブ)' : 'ダメージの割り振りを選ぶ')}</div>
+            <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap(splitAsk.some((o) => o.fuse) ? '合体する2体を選ぶ(左がメイン・右がサブ)' : splitAsk.some((o) => o.emerge) ? '羽化して取りかえる先を選ぶ' : 'ダメージの割り振りを選ぶ')}</div>
             <div className="mt-2 grid max-h-[55vh] gap-1.5 overflow-y-auto">
               {splitAsk.map((o) => (
-                <button key={JSON.stringify(o.split || o.fuse)} type="button" data-card-split={o.split ? o.split.join('-') : `${o.fuse.a}-${o.fuse.b}`} onClick={() => { setSplitAsk(null); askUse(o); }}
+                <button key={JSON.stringify(o.split || o.fuse || o.emerge)} type="button" data-card-split={o.split ? o.split.join('-') : o.emerge ? o.emerge : `${o.fuse.a}-${o.fuse.b}`} onClick={() => { setSplitAsk(null); askUse(o); }}
                   className="min-h-[44px] rounded-xl bg-slate-700 px-2 text-left text-[14px] font-black text-white active:scale-[.98]">
-                  {o.fuse ? `${me.mons[o.fuse.a].name}＋${me.mons[o.fuse.b].name} → ${(cardMonsterOf(db, o.fuse.no) || {}).name || ''}` : o.split.map((x, j) => (x > 0 ? `${st.players[CARD_CPU].mons[j].name} ${x}` : null)).filter(Boolean).join('・')}
+                  {o.fuse ? `${me.mons[o.fuse.a].name}＋${me.mons[o.fuse.b].name} → ${(cardMonsterOf(db, o.fuse.no) || {}).name || ''}` : o.emerge ? (() => { const m = cardMonsterOf(db, o.emerge) || {}; return `${m.name || ''}(ライフ${m.life || 0}・${m.type === 'air' ? '空中' : '地上'})`; })() : o.split.map((x, j) => (x > 0 ? `${st.players[CARD_CPU].mons[j].name} ${x}` : null)).filter(Boolean).join('・')}
                 </button>
               ))}
             </div>
@@ -65144,6 +65164,8 @@ const cardPvpCleanAct = (raw) => {
   if (raw.split !== undefined) { if (!Array.isArray(raw.split) || raw.split.length !== 3) return null; act.split = raw.split.map((x) => cardPvpInt(x, 30)); if (act.split.some((x) => x === null)) return null; }
   // 合体の組(メインを出す子・サブを出す子・出る混血)
   if (raw.fuse !== undefined) { const f = raw.fuse || {}; const a = cardPvpInt(f.a, 2), b = cardPvpInt(f.b, 2); if (a === null || b === null || typeof f.no !== 'string' || !/^C-[0-9A-Z-]{1,8}$/.test(f.no)) return null; act.fuse = { a, b, no: f.no }; }
+  // 羽化の取りかえ先(2026-10-31)。本当に候補かどうかは、当てるとき(cardApplyAction)に出し方の表で確かめる
+  if (raw.emerge !== undefined) { if (typeof raw.emerge !== 'string' || !/^C-[0-9A-Z-]{1,8}$/.test(raw.emerge)) return null; act.emerge = raw.emerge; }
   // カード投げ(169): 捨てる手札の番号。落とすと、受ける側で手が合わずにはねて試合が止まった(2026-10-27 総点検D)。0枚([])も手の一部
   if (raw.toss !== undefined) { if (!Array.isArray(raw.toss)) return null; act.toss = raw.toss.slice(0, 20).map((i) => cardPvpInt(i, 20)); if (act.toss.some((i) => i === null)) return null; }
   if (raw.form !== undefined) { if (raw.form !== 'air' && raw.form !== 'ground') return null; act.form = raw.form; } // 変形・トランスフォーム

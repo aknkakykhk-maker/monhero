@@ -1053,7 +1053,8 @@ const pendingCards = () => {
     st.players[0].mons[0].ko = true; st.players[0].mons[0].life = 0;
     const a = find(E.cardAttackOptions(db, st), (x) => st.players[0].hand[x.hand[0]] === '128' && x.target && x.target.m === 0); ok(a, '128: 倒れたヒノトリを選べない');
     if (a) { st = act(st, a); const m = st.players[0].mons[0]; ok(!m.ko && m.life === 4, '128: ライフ4で戻らない'); ok(!find(E.cardAttackOptions(db, st), (x) => x.mon === 0), '128: 戻ったヒノトリがそのターン攻撃できる'); } }
-  // まゆ化(221)・羽化(222・ワーム): まゆ化した子は羽化のほかを出せない。羽化でムラサキチュウ(C-062)になり、ライフは最大
+  // まゆ化(221)・羽化(222・ワーム): まゆ化した子は羽化のほかを出せない。羽化で「ワームがSUB」の派生モンスターの中から選んだ子になり、ライフは最大
+  //   (2026-10-31 テスターさんの報告で直した。前はムラサキチュウ(ワームがMAIN)に決め打ちだった)。取りかえ先を持たない古い手は、前と同じムラサキチュウ
   { ready('221'); ready('222'); const wo = monOf('worm'); const wp = plainOf('worm', 'pow');
     let st = scene({ mons: [[wo, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['221', '222', wp.no], []], guts: [9, 0] });
     ok(!find(E.cardAttackOptions(db, st), (x) => st.players[0].hand[x.hand[0]] === '222'), '222: まゆ化の前に羽化を出せる');
@@ -1061,7 +1062,14 @@ const pendingCards = () => {
     const s2 = nextTurnOf(st, 0); s2.turn += 1;
     ok(!optWith(s2, [wp.no], 0), '221: まゆ化した子が技を出せる');
     const e = optWith(s2, ['222']); ok(e, '222: まゆ化した子が羽化を出せない');
-    if (e) { const s3 = act(s2, e); const m = s3.players[0].mons[0]; ok(m.no === 'C-062' && m.life === db.monsters['C-062'].life && m.max === m.life && !m.cocoon, `222: ムラサキチュウ(最大ライフ)にならない(${m.no} ${m.life})`); } }
+    const want = Object.values(db.monsters).filter((m) => m.sub === 'worm' && m.ready !== false).map((m) => m.no).sort();
+    const got = [...new Set(E.cardAttackOptions(db, s2).filter((x) => s2.players[0].hand[x.hand[0]] === '222').map((x) => x.emerge))].sort();
+    ok(want.length >= 2 && JSON.stringify(got) === JSON.stringify(want), `222: 羽化の取りかえ先が「ワームがSUB」の派生モンスターと合わない(${JSON.stringify(got)} / ${JSON.stringify(want)})`);
+    for (const no of want) { const o = E.cardAttackOptions(db, s2).find((x) => s2.players[0].hand[x.hand[0]] === '222' && x.emerge === no);
+      const s3 = o && act(s2, o); const m = s3 && s3.players[0].mons[0];
+      ok(m && m.no === no && m.life === db.monsters[no].life && m.max === m.life && !m.cocoon, `222: 選んだ ${no} (最大ライフ)にならない(${m && m.no} ${m && m.life})`); }
+    if (e) { const old = { ...e }; delete old.emerge; const s3 = E.cardApplyAction(db, s2, old); const m = s3 && s3.players[0].mons[0];
+      ok(m && m.no === 'C-062', `222: 取りかえ先を持たない古い手が、前と同じムラサキチュウにならない(${m && m.no})`); } }
   // 合体(352): 味方2体をKO。メインとサブが合う混血を、メインを出した子の場所に出す(そのターンは攻撃できない)
   { ready('352'); const hy = db.monsters['C-051']; const ma = monOf(hy.main), sb = monOf(hy.sub);
     let st = scene({ mons: [[ma, sb, 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['352'], []], guts: [9, 0] });
