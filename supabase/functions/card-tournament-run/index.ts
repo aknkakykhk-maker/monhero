@@ -1,12 +1,14 @@
 // MFバトルカード大会: 試合を回すサーバの上の関数(2026-10-30 ルールくん)。Supabase Edge Function(Deno)。
-// 呼ぶのは決まった時刻の仕組み(pg_cron。docs/sql/card-tournament/CARD_TOURNAMENT_SCHEDULE.sql)だけ。日本時間 0:00〜3:50 に10分おき(1回に回す試合は core.js の PLAY_BUDGET_MS まで)。
+// 呼ぶのは決まった時刻の仕組み(pg_cron。docs/sql/card-tournament/CARD_TOURNAMENT_SCHEDULE.sql)だけ。1日中10分おき(1回に回す試合は core.js の PLAY_BUDGET_MS まで)。
+// 公式杯(core.js)のあとに、個人杯のオート杯(cup.js)を同じ残りの時間で回す
 // 中身は core.js(検査から偽物の表と偽物の Claude で動かせるように分けてある)。ルール本体は game.js(tools/build-card-tournament-bundle.js が作る写し)。
 // 公開の設定: verify_jwt を外す(合言葉で確かめる)。合言葉は vault の card_tournament_secret を card_tournament_secret_ok で比べる
 // 実況・解説は Secrets の ANTHROPIC_API_KEY(助手のおしゃべりと同じキー)。回数は card_assistant_talk_take で数える
 // ★実況・解説の本文はログに書かない
 import Anthropic from "npm:@anthropic-ai/sdk";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { runAll } from "./core.js";
+import { PLAY_BUDGET_MS, runAll } from "./core.js";
+import { runCups } from "./cup.js";
 import * as game from "./game.js";
 
 const anthropic = new Anthropic({ maxRetries: 0, timeout: 15_000 });
@@ -54,6 +56,27 @@ const db = {
   updateTour: async (id: string, patch: Record<string, unknown>) => {
     must(await supabase.from("card_tournaments").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id), "updateTour");
   },
+  // ---- 個人杯(cup.js)----
+  listOpenCups: async () => must(await supabase.from("card_cups").select("*").in("status", ["entry", "running"]).eq("mode", "auto").order("start_at"), "listOpenCups") ?? [],
+  getCup: async (id: string) => must(await supabase.from("card_cups").select("*").eq("id", id).single(), "getCup"),
+  cupEntries: async (id: string) => must(await supabase.from("card_cup_entries").select("*").eq("cup_id", id), "cupEntries") ?? [],
+  updateCupEntry: async (id: string, owner: string, patch: Record<string, unknown>) => {
+    must(await supabase.from("card_cup_entries").update(patch).eq("cup_id", id).eq("owner_id", owner), "updateCupEntry");
+  },
+  insertCupMatches: async (id: string, rows: Record<string, unknown>[]) => {
+    if (!rows.length) return;
+    const body = rows.map((m) => ({ cup_id: id, round: m.round, slot: m.slot, a_seat: m.a, b_seat: m.b, seed: m.seed, first: m.first }));
+    // 同じ試合はもう入っていれば足さない(やり直しで二重にしない)
+    must(await supabase.from("card_cup_matches").upsert(body, { onConflict: "cup_id,round,slot", ignoreDuplicates: true }), "insertCupMatches");
+  },
+  cupMatches: async (id: string) => must(await supabase.from("card_cup_matches")
+    .select("id, round, slot, a_seat, b_seat, seed, first, winner, kos").eq("cup_id", id), "cupMatches") ?? [],
+  updateCupMatch: async (mid: number, patch: Record<string, unknown>) => {
+    must(await supabase.from("card_cup_matches").update(patch).eq("id", mid).is("winner", null), "updateCupMatch");
+  },
+  updateCup: async (id: string, patch: Record<string, unknown>) => {
+    must(await supabase.from("card_cups").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id), "updateCup");
+  },
   insertRewards: async (id: string, rows: Record<string, unknown>[]) => {
     if (!rows.length) return;
     const body = rows.map((r) => ({ tournament_id: id, owner_id: r.owner_id, place: r.place, point: r.point }));
@@ -83,7 +106,12 @@ Deno.serve(async (req) => {
   const secret = req.headers.get("x-tour-secret") ?? "";
   const { data: okSecret, error } = await supabase.rpc("card_tournament_secret_ok", { p_secret: secret });
   if (error || okSecret !== true) return new Response(JSON.stringify({ ok: false, error: "secret" }), { status: 403, headers });
-  const out = await runAll({ db, game, nowMs: Date.now(), ai, take, refund, log });
-  log({ step: "run", ...out });
-  return new Response(JSON.stringify({ ok: true, ...out }), { status: 200, headers });
+  // 公式杯を先に回し、残りの時間で個人杯のオート杯を回す(サーバの関数は1回に CPU を2秒まで)
+  const budget = { left: PLAY_BUDGET_MS };
+  const nowMs = Date.now();
+  const out = await runAll({ db, game, nowMs, ai, take, refund, log, budget });
+  // 個人杯の表がまだ無い(SQL を流す前)ときも、公式杯の結果は返す
+  const cups = await runCups({ db, game, nowMs, ai, take, refund, log, budget }).catch(() => { log({ step: "cup-error", error: "cups" }); return null; });
+  log({ step: "run", ...out, cups });
+  return new Response(JSON.stringify({ ok: true, ...out, cups }), { status: 200, headers });
 });

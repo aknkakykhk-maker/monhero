@@ -197,8 +197,8 @@ export const advance = async ({ db, game, tour, log }) => {
 };
 
 // ---- 1回の呼び出し ----
-export const runAll = async ({ db, game, nowMs, ai = null, take = null, refund = null, log = () => {}, budgetMs = PLAY_BUDGET_MS }) => {
-  const budget = { left: budgetMs };
+// budget … 1回の呼び出しで試合を回す残りの時間(個人杯 cup.js の runCups と分け合う。渡さなければ budgetMs から作る)
+export const runAll = async ({ db, game, nowMs, ai = null, take = null, refund = null, log = () => {}, budgetMs = PLAY_BUDGET_MS, budget = { left: budgetMs } }) => {
   const today = jstDate(nowMs);
   const out = { closed: 0, played: 0, advanced: 0 };
   for (const tour of await db.listActive()) {

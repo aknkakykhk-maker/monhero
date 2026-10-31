@@ -3753,5 +3753,5 @@ const cardTourRewardOf = (rewards, place, wins) => {
 };
 
 ;
-export { CARD_BATTLE_DATA, CARD_AI_HABITS, CARD_REPLAY_RULES, cardTourGroups, cardTourSchedule, cardTourStageDays, cardTourStandings, cardTourFinalists, cardTourPlay, cardTourNormalizeRewards, cardTourRewardOf, cardTourHash, cardDeckProblems, cardCreateGame, cardApplyAction };
+export { CARD_BATTLE_DATA, CARD_AI_HABITS, CARD_REPLAY_RULES, cardTourGroups, cardTourSchedule, cardTourStageDays, cardTourStandings, cardTourFinalists, cardTourPlay, cardTourNormalizeRewards, cardTourRewardOf, cardTourHash, cardDeckProblems, cardCreateGame, cardApplyAction, cardTourKoFirst, cardTourKoMatches, cardTourKoWinners, cardTourKoNextPairs, cardTourKoPlaces };
 ;
