@@ -70,12 +70,30 @@
 .ring.go{animation:ring .7s ease-out forwards}
 @keyframes ring{0%{opacity:1;transform:translate(-50%,-50%) scale(.3)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.6)}}
 .stage-lbl{position:fixed;left:50%;top:13%;transform:translateX(-50%);z-index:32;font-size:15px;font-weight:900;color:#fff;text-shadow:0 0 8px #000;opacity:0;transition:opacity .2s}
+/* ===== 案A': 案Aの速さのまま強める ===== */
+body.quake1{animation:quake1 .28s linear}
+body.quake2{animation:quake2 .36s linear}
+body.quake3{animation:quake3 .5s linear}
+@keyframes quake1{0%,100%{transform:none}25%{transform:translate(-3px,2px)}50%{transform:translate(3px,-2px)}75%{transform:translate(-2px,-1px)}}
+@keyframes quake2{0%,100%{transform:none}20%{transform:translate(-6px,3px)}40%{transform:translate(6px,-4px)}60%{transform:translate(-5px,-2px)}80%{transform:translate(4px,3px)}}
+@keyframes quake3{0%,100%{transform:none}12%{transform:translate(-10px,5px) rotate(-.6deg)}25%{transform:translate(10px,-6px) rotate(.6deg)}38%{transform:translate(-9px,-4px)}50%{transform:translate(8px,5px)}65%{transform:translate(-6px,3px)}80%{transform:translate(4px,-2px)}}
+.burst{position:fixed;z-index:26;pointer-events:none;border-radius:50%;transform:translate(-50%,-50%) scale(.2);opacity:1;animation:burst .55s ease-out forwards}
+@keyframes burst{to{transform:translate(-50%,-50%) scale(1);opacity:0}}
+.banner.big{font-size:50px;padding:2px 26px;letter-spacing:2px;-webkit-text-stroke:2px rgba(0,0,0,.35);transform:translate(-50%,-50%) scale(2.6) rotate(-14deg)}
+.banner.big.on{transform:translate(-50%,-50%) scale(1) rotate(-6deg)}
+.banner.big.b-rare{font-size:58px;background:linear-gradient(90deg,#ff4d6d,#ffd166,#06d6a0,#4cc9f0,#b388ff,#ff4d6d);background-size:300% 100%;animation:bannerHue 1s linear infinite;box-shadow:0 0 30px 8px rgba(255,255,255,.95),0 0 70px 20px rgba(255,80,200,.6)}
+@keyframes bannerHue{to{background-position:300% 0}}
+.banner.big::after{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.9) 50%,transparent 60%);background-size:250% 100%;animation:bannerSheen 1.1s ease-in-out infinite;pointer-events:none}
+@keyframes bannerSheen{0%{background-position:120% 0}100%{background-position:-120% 0}}
+.rpillar{position:fixed;left:50%;top:0;bottom:0;width:300px;margin-left:-150px;z-index:24;pointer-events:none;opacity:0;transform:scaleX(.1);transition:opacity .25s,transform .35s cubic-bezier(.2,1.4,.4,1);background:linear-gradient(90deg,transparent,rgba(255,77,109,.7),rgba(255,209,102,.8),#fff,rgba(6,214,160,.8),rgba(76,201,240,.7),transparent);filter:blur(8px)}
+.rpillar.on{opacity:.95;transform:scaleX(1)}
+.cflash{position:fixed;inset:0;z-index:50;pointer-events:none;opacity:0;transition:opacity .35s;background:radial-gradient(circle at 50% 44%,#fff 0,#fff 20%,rgba(255,120,220,.85) 45%,rgba(80,200,255,.8) 70%,rgba(255,220,90,.75) 100%)}
 </style></head><body>
 <div class="head" id="head">第1弾パック</div>
 <div class="stage" id="stage"></div>
 <div class="cap" id="cap"></div>
 <div class="dim" id="dim"></div>
-<div class="flash" id="flash"></div>
+<div class="flash" id="flash"></div><div class="cflash" id="cflash"></div>
 <script>
 const Q = new URLSearchParams(location.search);
 const V = Q.get('v');
@@ -139,13 +157,18 @@ const packScene = async (style) => {
     for (const [sh, n] of lv) { pg.style.boxShadow = sh; const l = $(`<div class="stage-lbl" style="opacity:1">${n === '白' ? '…' : n === '金' ? 'キラの予感!' : 'レアキラの予感!!'}</div>`); document.body.appendChild(l); await sleep(750); l.remove(); }
     pillar.style.background = 'linear-gradient(90deg,#ff4d6d,#ffd166,#06d6a0,#4cc9f0,#b388ff)';
   } else {
-    cap(style === 'A' ? '案A 1枚ずつの昇格: 開ける所は今と同じ。めくるときに、良いカードほど光が段を上がる' : '案C 溜めてめくる: 良いカードは真ん中に出して、光を溜めてから割れて出る');
+    cap(style === 'Ap' ? "案A' 案Aの速さのまま強めた: 段を上がるたびに画面がふるえて光がはじける。レアキラは虹の光の柱" : style === 'A' ? '案A 1枚ずつの昇格: 開ける所は今と同じ。めくるときに、良いカードほど光が段を上がる' : '案C 溜めてめくる: 良いカードは真ん中に出して、光を溜めてから割れて出る');
     pg.style.boxShadow = '0 0 30px 10px rgba(255,255,255,.7)'; await sleep(700);
     pillar.style.background = 'linear-gradient(90deg,transparent,#fff,transparent)';
+    if (style === 'Ap') {
+      // 案Bの良い所を短く: 開ける直前に一瞬だけ虹色の予感
+      pg.style.boxShadow = '0 0 50px 22px rgba(255,80,200,.9),0 0 80px 30px rgba(80,200,255,.7)'; quake(1); await sleep(350);
+      pillar.style.background = 'linear-gradient(90deg,#ff4d6d,#ffd166,#06d6a0,#4cc9f0,#b388ff)';
+    }
   }
   pillar.style.transition = 'opacity .3s'; pillar.style.opacity = '1';
   await sleep(450);
-  flash.style.opacity = '1'; await sleep(250); stage.innerHTML = ''; flash.style.opacity = '0';
+  flash.style.opacity = '1'; if (style === 'Ap') quake(2); await sleep(250); stage.innerHTML = ''; flash.style.opacity = '0';
   // 配る
   const grid = $(`<div class="grid"></div>`);
   stage.appendChild(grid);
@@ -164,26 +187,42 @@ const packScene = async (style) => {
     // 案A・B: 裏のまま光が段を上がる(白 → 金 → 虹)
     bg.style.opacity = '1';
     const steps = r === 'rare' ? ['0 0 14px 6px #fff', '0 0 18px 8px #ffc400', '0 0 22px 10px #ff4dd2,0 0 30px 14px #4cc9f0'] : ['0 0 14px 6px #fff', '0 0 18px 8px #ffc400'];
-    for (const sh of steps) { bg.style.boxShadow = sh; s.style.transform = 'scale(1.08)'; await sleep(140); s.style.transform = 'scale(1)'; await sleep(360); }
+    if (style === 'Ap') {
+      const cols = ['rgba(255,255,255,.95)', 'rgba(255,196,0,.95)', 'rgba(255,77,210,.95)'];
+      for (let k = 0; k < steps.length; k++) { bg.style.boxShadow = steps[k].replace(/(\d+)px (\d+)px/g, (m, a, b) => `${a * 1.6 | 0}px ${b * 1.6 | 0}px`); s.style.transform = `scale(${1.12 + k * .04})`; burstAt(s, cols[k], 160 + k * 70); quake(k + 1); await sleep(140); s.style.transform = 'scale(1)'; await sleep(360); }
+    } else {
+      for (const sh of steps) { bg.style.boxShadow = sh; s.style.transform = 'scale(1.08)'; await sleep(140); s.style.transform = 'scale(1)'; await sleep(360); }
+    }
     fl.classList.add('on');
-    await bigReveal(no, r);
+    await bigReveal(no, r, style === 'Ap');
   }
-  cap(style === 'B' ? '案B: パックの光で先に分かり、めくると今より大きく出る' : style === 'A' ? '案A: 1枚ずつ、ふつう → キラ → レアキラ と光が上がって見える' : '案C: レアキラは画面が暗くなり、ひびが入って虹色に割れて出る');
+  if (style === 'Ap') cap("案A': 案Aの速さのまま、昇格の段で画面がふるえ光がはじける。キラ!・レアキラ!! を大きく派手に");
+  else cap(style === 'B' ? '案B: パックの光で先に分かり、めくると今より大きく出る' : style === 'A' ? '案A: 1枚ずつ、ふつう → キラ → レアキラ と光が上がって見える' : '案C: レアキラは画面が暗くなり、ひびが入って虹色に割れて出る');
   await sleep(2500);
 };
-const bigReveal = async (no, r) => {
+const bigReveal = async (no, r, strong = false) => {
   const dim = document.getElementById('dim'); const flash = document.getElementById('flash');
-  if (r === 'rare') { dim.style.opacity = '1'; await sleep(300); flash.style.opacity = '.9'; await sleep(120); flash.style.opacity = '0'; }
+  let pil = null;
+  if (strong) {
+    // 案A': レアキラは画面いっぱいの虹の光 → 虹の光の柱。キラは白い光と小さなふるえ
+    const cf = document.getElementById('cflash');
+    if (r === 'rare') {
+      dim.style.opacity = '1'; await sleep(220);
+      cf.style.transition = 'none'; cf.style.opacity = '1'; quake(3); await sleep(160); cf.style.transition = 'opacity .5s'; cf.style.opacity = '0';
+      pil = $(`<div class="rpillar"></div>`); document.body.appendChild(pil); requestAnimationFrame(() => pil.classList.add('on'));
+    } else { flash.style.opacity = '.75'; quake(2); await sleep(110); flash.style.opacity = '0'; }
+  } else if (r === 'rare') { dim.style.opacity = '1'; await sleep(300); flash.style.opacity = '.9'; await sleep(120); flash.style.opacity = '0'; }
   const rays = $(`<div class="bigrays ${r}"></div>`); document.body.appendChild(rays); requestAnimationFrame(() => { rays.style.opacity = r === 'rare' ? '.9' : '.7'; });
-  const sp = $(`<div class="spot">${shineCard(no, r === 'rare' ? 'rare' : 'kira', 'A').replace('class="card', 'style="width:220px" class="card')}</div>`);
+  const sp = $(`<div class="spot">${shineCard(no, r === 'rare' ? 'rare' : 'kira', strong ? 'B' : 'A').replace('class="card', 'style="width:220px" class="card')}</div>`);
   sp.querySelector('.card').style.width = '220px';
   document.body.appendChild(sp); requestAnimationFrame(() => sp.classList.add('on'));
-  const bn = $(`<div class="banner ${r === 'rare' ? 'b-rare' : 'b-kira'}">${r === 'rare' ? 'レアキラ!!' : 'キラ!'}</div>`); document.body.appendChild(bn);
+  const bn = $(`<div class="banner ${strong ? 'big ' : ''}${r === 'rare' ? 'b-rare' : 'b-kira'}">${r === 'rare' ? 'レアキラ!!' : 'キラ!'}</div>`); document.body.appendChild(bn);
   await sleep(250); bn.classList.add('on');
-  if (r === 'rare') confetti(40);
+  if (strong) { quake(r === 'rare' ? 2 : 1); burstAt(sp, r === 'rare' ? 'rgba(255,80,200,.9)' : 'rgba(255,200,0,.9)', r === 'rare' ? 520 : 360); }
+  if (r === 'rare') { confetti(strong ? 130 : 40); if (strong) setTimeout(() => confetti(60), 700); } else if (strong) confetti(24);
   await sleep(r === 'rare' ? 2200 : 1400);
-  sp.classList.remove('on'); bn.classList.remove('on'); rays.style.opacity = '0'; dim.style.opacity = '0';
-  await sleep(400); sp.remove(); bn.remove(); rays.remove();
+  sp.classList.remove('on'); bn.classList.remove('on'); rays.style.opacity = '0'; dim.style.opacity = '0'; if (pil) pil.classList.remove('on');
+  await sleep(400); sp.remove(); bn.remove(); rays.remove(); if (pil) pil.remove();
 };
 const chargeReveal = async (s, no, r) => {
   // 真ん中に裏のまま出して、光を溜める(白 → 金 → 虹)。レアキラはひびが入って割れる
@@ -199,6 +238,8 @@ const chargeReveal = async (s, no, r) => {
   s.querySelector('.flipper').classList.add('on');
   await bigReveal(no, r);
 };
+const quake = (lv) => { const b = document.body; b.classList.remove('quake1', 'quake2', 'quake3'); void b.offsetWidth; b.classList.add(`quake${lv}`); };
+const burstAt = (el, color, size) => { const r = el.getBoundingClientRect(); const d = $(`<div class="burst" style="left:${r.left + r.width / 2}px;top:${r.top + r.height / 2}px;width:${size}px;height:${size}px;background:radial-gradient(circle,#fff 0,${color} 35%,transparent 70%)"></div>`); document.body.appendChild(d); setTimeout(() => d.remove(), 700); };
 const confetti = (n) => { const cs = ['#ff4d6d', '#ffd166', '#06d6a0', '#4cc9f0', '#b388ff', '#fff']; for (let i = 0; i < n; i++) { const c = $(`<div class="confetti" style="left:${Math.random() * 100}%;background:${cs[i % cs.length]};animation-delay:${Math.random() * .6}s"></div>`); document.body.appendChild(c); setTimeout(() => c.remove(), 3200); } };
 
 (async () => {
@@ -210,6 +251,7 @@ const confetti = (n) => { const cs = ['#ff4d6d', '#ffd166', '#06d6a0', '#4cc9f0'
   if (V === 'packA') await packScene('A');
   if (V === 'packB') await packScene('B');
   if (V === 'packC') await packScene('C');
+  if (V === 'packAp') await packScene('Ap');
   window.__done = true;
 })();
 </script></body></html>
