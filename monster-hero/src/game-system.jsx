@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ddc09939916a5518
+// generated-sha256: be8c76f5db70b418
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -53842,7 +53842,7 @@ const loadAssistantChatMemoFor = async (assistantId) => {
 //         tossBonus 使うときに手札を好きな枚数捨て、その枚数をダメージに足す(act.toss … 捨てる手札の番号。0枚でもよい。カード投げ)
 //         ---- 区切り7: モンスターが入れ替わる ----
 //         revive(species,life) 倒れたその種族の子を戻す(そのターンは攻撃できない)/ cocoon その子は emerge の札のほかを出せない /
-//         emerge(to) まゆ化した子を to のモンスターと取りかえ、ライフを最大に / fuse 味方2体をKOし、メインとサブが合う混血を出す(act.fuse)/
+//         emerge(to) まゆ化した子を「その種族がSUB」の派生モンスター(act.emerge で選ぶ)と取りかえ、ライフを最大に。to は選んでいない古い手のときだけ / fuse 味方2体をKOし、メインとサブが合う混血を出す(act.fuse)/
 //         ancient(attach) 混血の子が、サブの種族の特殊技を出せる /
 //         possess KOされた味方1体を、この子の今のライフで戻し(もとの最大まで)、この子はKO。戻った子はそのターン攻撃できない(のりうつる)
 //   使える時: useWhen(lifeMax) 自分のライフがその数以下のときだけ出せる
@@ -54202,6 +54202,16 @@ const cardFuseOptions = (db, st, p) => {
   }));
   return out;
 };
+// 羽化: 取りかえる先の候補。札の使い手の種族が SUB の派生モンスター(使えるものだけ・番号の順)。
+//   2026-10-31 テスターさんの報告で直した(前は to のムラサキチュウに決め打ちで、しかもワームが MAIN の子だった)。
+//   候補が無い札は、前と同じ to へ取りかえる
+const cardEmergeOptions = (db, card) => {
+  const sub = card && card.user;
+  const out = sub ? Object.values(db.monsters).filter((m) => m.sub === sub && m.ready !== false).sort((x, y) => (x.no < y.no ? -1 : 1)).map((m) => m.no) : [];
+  if (out.length) return out;
+  const e = cardEff(card, 'emerge');
+  return e && e.to ? [e.to] : [];
+};
 // 子を別のモンスターに取りかえる(羽化・合体)。ライフは最大・印は消す
 const cardSwapMon = (db, mon, no) => {
   const m = cardMonsterOf(db, no);
@@ -54317,7 +54327,13 @@ const cardAttackOptions = (db, st) => {
         if (card.kind === 'spe') {
           // 変形・トランスフォーム: 空中か地上かを選ぶ(手に form を持たせる)
           const forms = cardHasEff(card, 'form') ? ['air', 'ground'] : [undefined];
-          cardSpeTargets(db, st, p, mi, card).forEach((target) => forms.forEach((form) => out.push(form ? { type: 'attack', mon: mi, hand: idxs, target, form } : { type: 'attack', mon: mi, hand: idxs, target })));
+          // 羽化: 取りかえる先ごとに1つずつ(選ぶのは使う人)
+          const emerges = cardHasEff(card, 'emerge') ? cardEmergeOptions(db, card) : [null];
+          cardSpeTargets(db, st, p, mi, card).forEach((target) => forms.forEach((form) => emerges.forEach((emerge) => {
+            const o = form ? { type: 'attack', mon: mi, hand: idxs, target, form } : { type: 'attack', mon: mi, hand: idxs, target };
+            if (emerge) o.emerge = emerge;
+            out.push(o);
+          })));
           return;
         }
         if (cardHasEff(card, 'area')) {
@@ -54695,7 +54711,8 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
       cardKo(st, p, mi);
     }
     if (e.t === 'cocoon' && self) { self.cocoon = true; cardLog(st, `${self.name}はまゆになった(羽化のほかは出せない)`); }
-    if (e.t === 'emerge' && self && self.cocoon) { const from = self.name; cardSwapMon(db, self, e.to); cardLog(st, `${from}は${self.name}になった(ライフ${self.life})`); }
+    // act.emerge の無い手(直す前に記録した見返し・古い版の相手)は、前と同じ to へ取りかえる(結果を変えない)
+    if (e.t === 'emerge' && self && self.cocoon) { const from = self.name; cardSwapMon(db, self, typeof act.emerge === 'string' ? act.emerge : e.to); cardLog(st, `${from}は${self.name}になった(ライフ${self.life})`); }
     if (e.t === 'fuse' && act.fuse) {
       const f = act.fuse; const a = me.mons[f.a], b = me.mons[f.b];
       cardKo(st, p, f.a); cardKo(st, p, f.b);
@@ -54885,6 +54902,7 @@ const cardApplyAction = (db, st0, act) => {
     }
     if (act.type !== 'attack' && act.type !== 'breeder') return null;
     const ok = cardAttackOptions(db, st0).some((o) => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null) && o.form === act.form && JSON.stringify(o.split) === JSON.stringify(act.split) && JSON.stringify(o.fuse) === JSON.stringify(act.fuse)
+      && (act.emerge === undefined || o.emerge === act.emerge) // 羽化の取りかえ先(選んでいない古い手は、どの候補とも合う)
       && JSON.stringify(o.toss) === JSON.stringify(Array.isArray(act.toss) ? act.toss.slice().sort((x, y) => x - y) : act.toss)); // カード投げ: 捨てる手札の組
     if (!ok) return null;
     // 影縛り: 名指しが要る札を付けたら、回避・防御の札の名前が1つ要る(付けていなければ名指しは持たない)
@@ -55101,7 +55119,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
         score += (Math.min(self0.life, back.max) - self0.life) * 0.4 + (usable(back) - usable(self0)) * 0.7 + (back.max - self0.max) * 0.15 - 0.3;
       }
       if (e.t === 'cocoon') score += me.hand.some((n) => cardHasEff(cardOf(db, n), 'emerge')) ? 1 : -3;
-      if (e.t === 'emerge') { const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null; const to = cardMonsterOf(db, e.to); score += 2 + (m0 && to ? (to.life - m0.life) * 0.3 : 0); }
+      if (e.t === 'emerge') { const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null; const to = cardMonsterOf(db, opt.emerge || e.to); score += 2 + (m0 && to ? (to.life - m0.life) * 0.3 : 0); }
       if (e.t === 'fuse' && opt.fuse) { const to = cardMonsterOf(db, opt.fuse.no); score += to.life - (me.mons[opt.fuse.a].life + me.mons[opt.fuse.b].life) * 0.8 - 1; }
       // 区切り5
       if (e.t === 'safe') { const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null; score += m0 && m0.life <= Math.ceil(m0.max / 2) ? 1.4 : 0.4; }
@@ -58437,6 +58455,17 @@ const cardPackIdOf = (db, no) => {
 const cardPackTechPool = (db, pack) => Object.values(db.cards).filter((c) => c.ready && cardPackIdOf(db, c.no) === pack.id).map((c) => c.no).sort();
 // 図鑑だけの子(dexOnly・立ち絵が無い派生。社長 2026-10-25)はパックに入れない
 const cardPackMonPool = (db, pack, rarity) => Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && cardMonRarity(m) === rarity && cardPackIdOf(db, m.no) === pack.id).map((m) => m.no).sort();
+// その弾で、まだ手に入るものの数(2026-10-31 社長「技カードを3枚ずつコンプしてる場合や回す必要がない場合をわかるようにして」)。
+//   tech … 技などのカードが、持てる上限(3枚)まであと何枚か(足りない分の合計) / mon … まだ持っていないモンスター(出るレア度のものだけ)の数。
+//   どちらも 0 なら、その弾を開けても新しく手に入るものは無い(だぶりはビートPになる)。collection は { 番号: 持っている数 }。読むだけ
+const cardPackProgress = (db, pack, collection) => {
+  const own = (no) => { const n = Math.floor(Number(collection && collection[no])); return Number.isFinite(n) && n > 0 ? n : 0; };
+  const techs = cardPackTechPool(db, pack);
+  const tech = techs.reduce((sum, no) => sum + Math.max(0, CARD_TECH_KEEP_MAX - own(no)), 0);
+  const mons = ['normal', 'kira', 'alt'].filter((r) => (pack.rarity[r] || 0) > 0).flatMap((r) => cardPackMonPool(db, pack, r));
+  const mon = mons.filter((no) => own(no) === 0).length;
+  return { tech, techKinds: techs.length, mon, monKinds: mons.length };
+};
 // 図鑑・中身の一覧用: その弾のカード全部(準備中も含む)
 const cardPackAllCards = (db, pack) => ({
   monsters: Object.values(db.monsters).filter((m) => cardPackIdOf(db, m.no) === pack.id).map((m) => m.no).sort(),
@@ -60432,6 +60461,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (users.length > 1 && !(sel && t.hand.includes(sel.hand) && monChosen !== undefined)) { setSel({ hand: t.hand[0] }); setHint('使うモンスターをタップしてください'); return; }
     const same = attackOpts.filter((o) => JSON.stringify(o.hand) === JSON.stringify(t.hand) && monKey(o) === monKey(t));
     if (t.split || t.fuse) { setSplitAsk(same.filter((o) => o.split || o.fuse)); return; }
+    // 羽化: 取りかえる先が2つ以上なら選ぶ画面へ(1つならそのまま)
+    if (t.emerge && same.filter((o) => o.emerge).length > 1) { setSplitAsk(same.filter((o) => o.emerge)); return; }
     if (t.form) { setSel({ hand: t.hand[0], mon: monKey(t), add: t.hand.slice(1) }); setHint('空中か地上かを選んでください'); return; }
     askUse(t);
   };
@@ -60667,7 +60698,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     const useLabel = usePv ? `使う(${usePv.dmg !== null ? `${usePv.all ? '全体に' : ''}ダメージ${usePv.dmg}・` : ''}ガッツ${usePv.guts})` : '使う';
     return (<>
       {/* ショットガン: 割り振りを選ぶ窓 / 変形・トランスフォーム: 空中か地上かを選んで使う */}
-      {useBtn && finalOpts.some((o) => o.split || o.fuse) ? <button type="button" data-card-split-open className={`${btn} mh-button-primary`} onClick={() => setSplitAsk(finalOpts)}><CardFitLabel>{finalOpts.some((o) => o.fuse) ? '合体の組を選ぶ' : '割り振りを選ぶ'}</CardFitLabel></button>
+      {useBtn && (finalOpts.some((o) => o.split || o.fuse) || finalOpts.filter((o) => o.emerge).length > 1) ? <button type="button" data-card-split-open className={`${btn} mh-button-primary`} onClick={() => setSplitAsk(finalOpts)}><CardFitLabel>{finalOpts.some((o) => o.fuse) ? '合体の組を選ぶ' : finalOpts.some((o) => o.emerge) ? '羽化する先を選ぶ' : '割り振りを選ぶ'}</CardFitLabel></button>
         : useBtn && finalOpts.some((o) => o.form) ? ['air', 'ground'].map((f) => { const o = finalOpts.find((x) => x.form === f); return o ? <button key={f} type="button" data-card-form={f} className={`${btn} mh-button-primary`} onClick={() => askUse(o)}><CardFitLabel>{f === 'air' ? '空中にして使う' : '地上にして使う'}</CardFitLabel></button> : null; })
         : useBtn ? <button type="button" className={`${btn} mh-button-primary`} onClick={() => askUse(finalOpts[0])}><CardFitLabel>{useLabel}</CardFitLabel></button>
         // まだ出せる形になっていない(候補を足す前)は、押せない「使う」を見せる(見本1。そろったら押せるようになる)
@@ -61120,12 +61151,12 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {splitAsk && (
         <div data-card-split-pick className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" onClick={() => setSplitAsk(null)}>
           <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100" onClick={(e) => e.stopPropagation()}>
-            <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap(splitAsk.some((o) => o.fuse) ? '合体する2体を選ぶ(左がメイン・右がサブ)' : 'ダメージの割り振りを選ぶ')}</div>
+            <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap(splitAsk.some((o) => o.fuse) ? '合体する2体を選ぶ(左がメイン・右がサブ)' : splitAsk.some((o) => o.emerge) ? '羽化して取りかえる先を選ぶ' : 'ダメージの割り振りを選ぶ')}</div>
             <div className="mt-2 grid max-h-[55vh] gap-1.5 overflow-y-auto">
               {splitAsk.map((o) => (
-                <button key={JSON.stringify(o.split || o.fuse)} type="button" data-card-split={o.split ? o.split.join('-') : `${o.fuse.a}-${o.fuse.b}`} onClick={() => { setSplitAsk(null); askUse(o); }}
+                <button key={JSON.stringify(o.split || o.fuse || o.emerge)} type="button" data-card-split={o.split ? o.split.join('-') : o.emerge ? o.emerge : `${o.fuse.a}-${o.fuse.b}`} onClick={() => { setSplitAsk(null); askUse(o); }}
                   className="min-h-[44px] rounded-xl bg-slate-700 px-2 text-left text-[14px] font-black text-white active:scale-[.98]">
-                  {o.fuse ? `${me.mons[o.fuse.a].name}＋${me.mons[o.fuse.b].name} → ${(cardMonsterOf(db, o.fuse.no) || {}).name || ''}` : o.split.map((x, j) => (x > 0 ? `${st.players[CARD_CPU].mons[j].name} ${x}` : null)).filter(Boolean).join('・')}
+                  {o.fuse ? `${me.mons[o.fuse.a].name}＋${me.mons[o.fuse.b].name} → ${(cardMonsterOf(db, o.fuse.no) || {}).name || ''}` : o.emerge ? (() => { const m = cardMonsterOf(db, o.emerge) || {}; return `${m.name || ''}(ライフ${m.life || 0}・${m.type === 'air' ? '空中' : '地上'})`; })() : o.split.map((x, j) => (x > 0 ? `${st.players[CARD_CPU].mons[j].name} ${x}` : null)).filter(Boolean).join('・')}
                 </button>
               ))}
             </div>
@@ -62207,9 +62238,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // 個人杯(99-card-cup。2026-10-31)。デッキ登録へ行って戻ったら、見ていた杯に戻る(cupOpenId)
   if (view === 'cup' && typeof CardCup === 'function') {
     // 試合の見返し: 公式杯と同じ見返し(93 の cardReplayFromTour)。材料は card_cup_match。とじたら見ていた杯へ戻る
-    const openCupReplay = async (id, title) => {
+    //   合言葉だけの杯は参加者だけ見られる(card_cup_match_for が自分の番号で確かめる。関数がまだ無いときは前の card_cup_match)
+    const openCupReplay = async (id, title, owner = null) => {
       if (!db || typeof cardTourRpc !== 'function' || typeof cardReplayFromTour !== 'function') return false;
-      const row = await cardTourRpc('card_cup_match', { p_id: id });
+      const row = (typeof cardCupRpcSoft === 'function' ? await cardCupRpcSoft('card_cup_match_for', { p_id: id, p_owner: owner || '' }) : null) || (await cardTourRpc('card_cup_match', { p_id: id }));
       const rec = row && typeof row === 'object' ? cardReplayFromTour(db, row, { known: new Set(assistantsUnlockedFrom(seenStoryIds).map((x) => x.id)), title }) : null;
       const g = rec ? cardReplayGameOf(db, rec) : null;
       if (!g) { setNotice('この試合は見返せません'); return false; }
@@ -62872,6 +62904,18 @@ const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemov
     </div>
   );
 };
+// デッキの中で使えないカード(2026-10-31 社長「デッキ編成で使えないカードを外すボタンを実装して」)。同じ札は入っている枚数ぶん返す。
+//   ① いまの3体のだれも使えない技(数え方は 82 の cardDeckDeadCount と同じ・ブリーダー・全員・全体のカードは除く)
+//   ② 準備中・表に無い番号の札(遊べないので)。モンスターがまだ1体もいないときは ① を数えない(これから入れるかもしれないので)
+const cardDeckUnusableCards = (db, deck) => {
+  const mons = (deck && Array.isArray(deck.monsters) ? deck.monsters : []).map((no) => cardMonsterOf(db, no)).filter(Boolean);
+  return (deck && Array.isArray(deck.cards) ? deck.cards : []).filter((no) => {
+    const c = cardOf(db, no);
+    if (!c || !c.ready) return true;
+    if (!mons.length || c.user === 'breeder' || c.user === 'any' || c.kind === 'fld') return false;
+    return !mons.some((m) => cardUsableBy(c, { ...m, ko: false }));
+  });
+};
 const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor = null }) => {
   const [deck, setDeck] = useState(() => ({ ...deck0, monsters: deck0.monsters.slice(), cards: deck0.cards.slice() }));
   const [view, setView] = useState(deck0.monsters.length < 3 ? 'mon' : 'all');
@@ -62899,6 +62943,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
   const [notice, setNotice] = useState('');
   const [detail, setDetail] = useState(null);
   const [leave, setLeave] = useState(false);
+  const [dropAsk, setDropAsk] = useState(null); // 使えないカードを外す: 外す札の一覧(確かめの窓)
   // デッキ相談(助手のおしゃべり AI・83-card-battle-talk-ai.jsx)。advisor … トップの助手 { id, name, accent, face }
   //   ask … null / { busy } / { text, face, picks }。届かないときは決まった一言を出す(勧めるカードは出さない)
   const [ask, setAsk] = useState(null);
@@ -62946,6 +62991,16 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
   // デッキに入っているのに、いまの3体のだれも使えない技(ブリーダー・全員・全体のカードは除く。cardDeckDeadCount と同じ見方)。デッキの一覧では先頭に並べる
   const unusableIn = (no) => { const c = cardOf(db, no); return !!c && mons.length > 0 && c.user !== 'any' && c.user !== 'breeder' && c.kind !== 'fld' && !mons.some((m) => cardUsableBy(c, m)); };
   const unusableCount = cardDeckDeadCount(db, deck); // 数え方は 82 の cardDeckDeadCount(デッキ一覧の1行と同じ)
+  // 「使えないカードを外す」(2026-10-31 社長)で外す札。押したときだけ外す(勝手に外さない・保存の形は変えない)
+  const dropList = cardDeckUnusableCards(db, deck);
+  const dropNames = (list) => Object.entries(list.reduce((a, no) => ({ ...a, [no]: (a[no] || 0) + 1 }), {}))
+    .map(([no, n]) => `${(cardOf(db, no) || {}).name || no}${n > 1 ? `×${n}` : ''}`).join('・');
+  const dropNow = () => {
+    const list = dropList;
+    if (!list.length) return;
+    setDeck((d) => { const left = [...list]; return { ...d, cards: d.cards.filter((no) => { const k = left.indexOf(no); if (k < 0) return true; left.splice(k, 1); return false; }) }; });
+    setNotice(`外しました: ${dropNames(list)}`);
+  };
   const shown = view === 'mon' ? ownedMons
     : view === 'deck' ? [...deck.monsters, ...[...new Set(deck.cards)].sort((a, b) => (unusableIn(b) - unusableIn(a)) || bySort(a, b))]
       : ownedCards.filter((no) => cardDeckFilterOk(cardOf(db, no), view) && usable(no)).sort(bySort);
@@ -63006,6 +63061,8 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
             </div>
             {!ready && <div data-card-deck-problems className="text-[11px] font-bold leading-snug text-rose-300" style={JA_WRAP_STYLE}>{[...rules, ...own].slice(0, 2).join(' / ')}</div>}
             {unusableCount > 0 && <button type="button" data-card-deck-dead={unusableCount} onClick={() => { Audio_.fgSe.tap(); setView('deck'); setNotice(''); }} className="block w-full text-left text-[11px] font-bold leading-snug text-amber-200 underline decoration-dotted" style={JA_WRAP_STYLE}>{jaWrap(`3体のどのモンスターも使えないカードが${unusableCount}枚入っています(混血のモンスターは、守りのカードはサブの種族のものだけ使えます。押すと先頭に並べます)`)}</button>}
+            {dropList.length > 0 && <button type="button" data-card-deck-drop-dead={dropList.length} onClick={() => { Audio_.fgSe.tap(); setDropAsk(dropList); }}
+              className="mh-button min-h-[36px] w-full rounded-xl border border-amber-300/70 bg-amber-900/40 px-2 text-[12px] font-black text-amber-100 active:scale-[.98]" style={JA_LABEL_STYLE}>{jaWrap(`使えないカードを外す(${dropList.length}枚)`)}</button>}
             {notice && <div data-card-deck-notice className="text-[12px] font-black text-amber-200" style={JA_LABEL_STYLE}>{jaWrap(notice)}</div>}
           </div>
           {/* 絞り込みは1列(縦は横に流す・横の画面は折り返す) */}
@@ -63056,6 +63113,8 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
         </div>
       )}
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
+      {dropAsk && <ConfirmSheet title={`使えないカードを${dropAsk.length}枚外しますか？`} message={`外すカード: ${dropNames(dropAsk)}(外したあと「保存する」を押すとデッキに残ります)`} confirmLabel="外す"
+        onCancel={() => setDropAsk(null)} onConfirm={() => { setDropAsk(null); Audio_.fgSe.tap(); dropNow(); }}/>}
       {leave && <ConfirmSheet title="保存せずに戻りますか？" message="組みかえたところは消えます" confirmLabel="保存せずに戻る" danger onCancel={() => setLeave(false)} onConfirm={() => { setLeave(false); onCancel(); }}/>}
     </div>
   );
@@ -63833,6 +63892,16 @@ const CardShopPacks = ({ db, point, busy, collection = null, onBuyPack }) => {
             <div className="min-w-0 flex-1">
               <div className="text-[14px] font-black text-white">{pack.name}</div>
               <div data-card-shop-pack-species className="text-[11px] font-black text-amber-100">{cardPackSpeciesLabel(db, pack)}</div>
+              {/* コンプの印(2026-10-31 社長)。引くのは止めない。持っている数を読み込むまでは出さない */}
+              {collection && (() => {
+                const pg = cardPackProgress(db, pack, collection);
+                const done = pg.tech === 0 && pg.mon === 0;
+                const text = done ? '✅ コンプ済み・回す必要なし'
+                  : pg.tech === 0 ? `✅ 技カード コンプ済み・あとモンスター${pg.mon}体`
+                  : `技カード あと${pg.tech}枚${pg.mon > 0 ? `・モンスター あと${pg.mon}体` : '・モンスターはそろっています'}`;
+                return <div data-card-shop-pack-progress={done ? 'done' : pg.tech === 0 ? 'tech' : 'left'} data-card-shop-pack-left={`${pg.tech}-${pg.mon}`}
+                  className={`mt-0.5 inline-block rounded-md px-1.5 py-0.5 text-[11px] font-black ${done ? 'bg-emerald-400 text-slate-950' : pg.tech === 0 ? 'bg-emerald-900/70 text-emerald-100' : 'bg-slate-900/70 text-slate-200'}`} style={JA_WRAP_STYLE}>{jaWrap(text)}</div>;
+              })()}
               <div className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`)}</div>
               <div className="mt-1 flex gap-1.5">
                 <button type="button" data-card-shop-contents={pack.id} onClick={() => setSheet({ kind: 'contents', pack })} className="min-h-[30px] rounded-lg border border-sky-300/60 bg-sky-900/50 px-2 text-[11px] font-black text-sky-100 active:scale-95">中身を見る</button>
@@ -65144,6 +65213,8 @@ const cardPvpCleanAct = (raw) => {
   if (raw.split !== undefined) { if (!Array.isArray(raw.split) || raw.split.length !== 3) return null; act.split = raw.split.map((x) => cardPvpInt(x, 30)); if (act.split.some((x) => x === null)) return null; }
   // 合体の組(メインを出す子・サブを出す子・出る混血)
   if (raw.fuse !== undefined) { const f = raw.fuse || {}; const a = cardPvpInt(f.a, 2), b = cardPvpInt(f.b, 2); if (a === null || b === null || typeof f.no !== 'string' || !/^C-[0-9A-Z-]{1,8}$/.test(f.no)) return null; act.fuse = { a, b, no: f.no }; }
+  // 羽化の取りかえ先(2026-10-31)。本当に候補かどうかは、当てるとき(cardApplyAction)に出し方の表で確かめる
+  if (raw.emerge !== undefined) { if (typeof raw.emerge !== 'string' || !/^C-[0-9A-Z-]{1,8}$/.test(raw.emerge)) return null; act.emerge = raw.emerge; }
   // カード投げ(169): 捨てる手札の番号。落とすと、受ける側で手が合わずにはねて試合が止まった(2026-10-27 総点検D)。0枚([])も手の一部
   if (raw.toss !== undefined) { if (!Array.isArray(raw.toss)) return null; act.toss = raw.toss.slice(0, 20).map((i) => cardPvpInt(i, 20)); if (act.toss.some((i) => i === null)) return null; }
   if (raw.form !== undefined) { if (raw.form !== 'air' && raw.form !== 'ground') return null; act.form = raw.form; } // 変形・トランスフォーム
@@ -70996,6 +71067,15 @@ const cardCupNormalizeView = (v) => {
 };
 
 const cardCupList = async () => { const r = await cardTourRpc('card_cup_list', {}); return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : null; };
+// あとから足した関数を呼ぶ口(関数がまだ無くても、ほかの通信を止めない。cardTourRpc は表が無いと分かると以後の通信をやめる)
+const cardCupRpcSoft = async (fn, body) => {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body) });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (_) { return null; }
+};
+const cardCupListDone = async () => { const r = await cardCupRpcSoft('card_cup_list_done', {}); return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : []; };
 const cardCupMine = async (owner) => { const r = await cardTourRpc('card_cup_mine', { p_owner: owner || '' }); return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : null; };
 const cardCupFind = async (code) => cardCupNormalizeRow(await cardTourRpc('card_cup_find', { p_code: code }));
 const cardCupView = async (id, owner) => cardCupNormalizeView(await cardTourRpc('card_cup_view', { p_cup: id, p_owner: owner || '' }));
@@ -71048,6 +71128,7 @@ const CardCupJoinPanel = ({ mine, onJoin, onOpenRegister, busy = false, label = 
 
 // ---- トーナメントの山と勝ち上がりの演出(社長の見本の動画「トーナメントイメージ」)----
 //   山の左半分と右半分から勝ち上がり、真ん中の優勝カップへ。演出では1回戦から順に、勝った側の線が光って伸びる。「演出リプレイ」で見直せる
+const CARD_CUP_BRACKET_GAP = 30; // 山の両側の線を、真ん中の優勝カップから離す幅(線とカップが重ならないように)
 const CardCupBracket = ({ rounds, matches, entries, done }) => {
   const first = rounds && rounds[0];
   const size = first ? first.length * 2 : 0;
@@ -71078,7 +71159,7 @@ const CardCupBracket = ({ rounds, matches, entries, done }) => {
     const dir = side ? -1 : 1, x0 = side ? W - slotW - 2 : slotW + 2;
     for (let r = 0; r < total - 1; r++) {
       const n = half / 2 ** r; // この回戦のこの側の席の数
-      const step = (W / 2 - slotW - 14) / (total - 1);
+      const step = (W / 2 - CARD_CUP_BRACKET_GAP - (slotW + 2)) / (total - 1);
       const xa = x0 + dir * step * r, xb = x0 + dir * step * (r + 1);
       for (let k = 0; k < n; k++) {
         const slot = side * (first.length / 2) / 2 ** r + Math.floor(k / 2);
@@ -71091,10 +71172,10 @@ const CardCupBracket = ({ rounds, matches, entries, done }) => {
       }
     }
     // 決勝へ
-    const r = total - 1, xs = x0 + dir * ((W / 2 - slotW - 14)), w = winOf(r, 0), pair = rounds[r] && rounds[r][0];
+    const r = total - 1, xs = x0 + dir * (W / 2 - CARD_CUP_BRACKET_GAP - (slotW + 2)), w = winOf(r, 0), pair = rounds[r] && rounds[r][0];
     const seat = pair ? pair[side] : null;
     const on = lit > r && w !== null && seat === w;
-    lines.push(<line key={`f${side}`} x1={total > 1 ? xs : x0} y1={H / 2} x2={W / 2 + (side ? 12 : -12)} y2={H / 2} className={on ? 'stroke-amber-300' : 'stroke-slate-600'} strokeWidth={on ? 3 : 2}/>);
+    lines.push(<line key={`f${side}`} x1={total > 1 ? xs : x0} y1={H / 2} x2={W / 2 + (side ? 6 : -6)} y2={H / 2} className={on ? 'stroke-amber-300' : 'stroke-slate-600'} strokeWidth={on ? 3 : 2}/>);
   });
   const slot = (seat, i, side) => {
     const e = seat === null ? null : bySeat(seat);
@@ -71111,7 +71192,7 @@ const CardCupBracket = ({ rounds, matches, entries, done }) => {
         <svg width={W} height={H} className="absolute inset-0" aria-hidden="true">{lines}</svg>
         {leftSeats.map((s, i) => slot(s, i, 0))}
         {rightSeats.map((s, i) => slot(s, i, 1))}
-        <div className="absolute text-center" style={{ left: W / 2 - 30, top: H / 2 - 44, width: 60 }}>
+        <div className="absolute text-center" style={{ left: W / 2 - 30, top: H / 2 - 52, width: 60 }}>
           <span aria-hidden="true" className={`block text-[34px] leading-none ${champ !== null ? '' : 'opacity-40'}`}>🏆</span>
           <small data-card-cup-champ className="block truncate text-[10px] font-black text-amber-200">{champ !== null && bySeat(champ) ? (bySeat(champ).mine ? 'あなた' : bySeat(champ).name) : '優勝'}</small>
         </div>
@@ -71211,7 +71292,7 @@ const cardCupRoundLabel = (c, r, rounds) => {
   const left = rounds - r;
   return left === 1 ? '決勝' : left === 2 ? '準決勝' : left === 3 ? '準々決勝' : `${r + 1}回戦`;
 };
-const CardCupMatches = ({ v, onOpenReplay }) => {
+const CardCupMatches = ({ v, onOpenReplay, selfId = null }) => {
   const c = v.cup;
   const rounds = Math.max(0, ...v.matches.map((m) => m.round + 1));
   const bySeat = (s) => v.entries.find((e) => e.seat === s) || null;
@@ -71228,7 +71309,7 @@ const CardCupMatches = ({ v, onOpenReplay }) => {
             <span className="min-w-0 flex-1 truncate text-[12px] font-bold text-white">
               <b className={m.winner === 0 ? 'text-orange-300' : 'text-slate-300'}>{nm(a)}</b> 対 <b className={m.winner === 1 ? 'text-orange-300' : 'text-slate-300'}>{nm(b)}</b>
             </span>
-            <button type="button" data-card-cup-replay={m.id} disabled={!onOpenReplay || m.winner === null} onClick={() => { Audio_.fgSe.tap(); void onOpenReplay(m.id, c.name); }}
+            <button type="button" data-card-cup-replay={m.id} disabled={!onOpenReplay || m.winner === null} onClick={() => { Audio_.fgSe.tap(); void onOpenReplay(m.id, c.name, selfId); }}
               className="shrink-0 rounded-lg border-2 border-amber-500/70 bg-amber-100 px-2 py-0.5 text-[12px] font-black text-amber-900 disabled:opacity-40">見返す</button>
           </div>
         );
@@ -71279,7 +71360,7 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
           <div className="mt-1 text-slate-400">個人杯にはごほうびはありません。ランキングにも入りません</div>
         </div>
       )}
-      {shown && <CardCupMatches v={v} onOpenReplay={onOpenReplay}/>}
+      {shown && <CardCupMatches v={v} onOpenReplay={onOpenReplay} selfId={selfId}/>}
       {!shown && (
         <div data-card-cup-entries className="space-y-1 rounded-2xl bg-slate-950/70 p-2.5">
           <b className="block text-[13px] font-black text-amber-200">{`参加者 ${v.entries.length}/${c.max}人`}</b>
@@ -71296,10 +71377,11 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
 
 // ---- 画面 ----
 // onBack … 対戦えらびへ / onOpenRegister … デッキ登録へ(戻ると、この画面のいまの杯に戻る)
-// onOpenReplay(matchId, title) … 試合の見返しを開く(84。開けなかったら false)
+// onOpenReplay(matchId, title, owner) … 試合の見返しを開く(84。開けなかったら false。合言葉だけの杯は参加者だけ見られるので owner を渡す)
 const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange = null, onOpenReplay = null }) => {
   const [tab, setTab] = useState('list');
   const [list, setList] = useState(undefined);
+  const [done, setDone] = useState([]); // 終わった公開の杯(終わって30日まで。2026-10-31 社長 案A)
   const [mineCups, setMineCups] = useState(undefined);
   const [cupId, setCupId] = useState(initialCup);
   const [view, setView] = useState(null);
@@ -71318,6 +71400,7 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
         storeGet('mh_breeder_name', 'ブリーダー', false).catch(() => 'ブリーダー'), storeGet('mh_breeder_icon', null, false).catch(() => null)]);
       if (!alive) return;
       setSelfId(id); setMine(m || null); setList(l);
+      if (l) void cardCupListDone().then((d) => { if (alive) setDone(d); });
       setProfile({ name: typeof nm === 'string' && nm ? nm.slice(0, 40) : 'ブリーダー', icon: typeof ic === 'string' ? ic : null });
       if (id) setMineCups(await cardCupMine(id));
     })();
@@ -71350,6 +71433,12 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
       {tabs.map(([k, label]) => <button key={k} type="button" data-card-cup-tab={k} onClick={() => { Audio_.fgSe.tap(); setTab(k); setMsg(''); }} className={`rounded-xl py-2 text-[12px] font-black ${tab === k ? 'bg-gradient-to-b from-amber-300 to-orange-500 text-slate-950' : 'border-2 border-amber-500/60 bg-amber-100 text-amber-900'}`}>{label}</button>)}
     </div>
     {tab === 'list' && (list.length ? list.map((c) => <CardCupRow key={c.id} c={c} now={now} onOpen={setCupId}/>) : <ScreenEmpty emoji="🏆" lines={['いま募集中の個人杯はありません', '「開く」から自分で開けます']}/>)}
+    {tab === 'list' && done.length > 0 && (
+      <div data-card-cup-done className="space-y-2">
+        <b className="block px-1 pt-1 text-[13px] font-black text-amber-200">終わった杯(終わって30日まで・だれでも結果と見返しが見られます)</b>
+        {done.map((c) => <CardCupRow key={c.id} c={c} now={now} onOpen={setCupId}/>)}
+      </div>
+    )}
     {tab === 'mine' && (mineCups === undefined ? <ScreenEmpty emoji="⏳" lines={['読み込んでいます']}/> : mineCups && mineCups.length ? mineCups.map((c) => <CardCupRow key={c.id} c={c} now={now} onOpen={setCupId}/>) : <ScreenEmpty emoji="📭" lines={['開いた・出ている個人杯はありません']}/>)}
     {tab === 'code' && (
       <div data-card-cup-find className="space-y-2 rounded-2xl border-2 border-amber-600/60 bg-indigo-950/60 p-3">

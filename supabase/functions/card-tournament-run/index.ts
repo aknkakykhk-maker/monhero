@@ -77,6 +77,10 @@ const db = {
   updateCup: async (id: string, patch: Record<string, unknown>) => {
     must(await supabase.from("card_cups").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id), "updateCup");
   },
+  // リアルタイム杯の止まった試合(cup.js の runLiveCups)。SQL は docs/sql/card-cup/CARD_CUP_LIVE_AUTO_APPLY.sql(サーバだけが呼べる)
+  liveDue: async (minutes: number) => must(await supabase.rpc("card_cup_live_server_due", { p_wait_minutes: minutes }), "liveDue") ?? [],
+  liveDecide: async (mid: number, winner: number, kos: number[], acts: unknown, rules: number | null) =>
+    must(await supabase.rpc("card_cup_live_server_decide", { p_match: mid, p_winner: winner, p_kos: kos, p_acts: acts, p_rules: rules }), "liveDecide") === true,
   insertRewards: async (id: string, rows: Record<string, unknown>[]) => {
     if (!rows.length) return;
     const body = rows.map((r) => ({ tournament_id: id, owner_id: r.owner_id, place: r.place, point: r.point }));

@@ -5,7 +5,7 @@
 //   SHOT_DIR=<フォルダ> を付けると、画面ごとの写真を残す
 //
 //   ゲームを開いたあと、個人杯の画面(CardCup)だけを、ゲームの上に重ねて描く(本物の Supabase には行かない)
-//   ① 公開の一覧: 杯の名前・遊び方・形式・人数が出る。悪い言葉は「●」に置き換わる
+//   ① 公開の一覧: 杯の名前・遊び方・形式・人数が出る。悪い言葉は「●」に置き換わる。下に「終わった杯」
 //   ② 参加: 登録デッキがあれば「このデッキで参加」→ 入る関数に鍵つきで頼む → 合言葉が出る
 //   ③ デッキ登録が無い: 「参加にはデッキ登録が必要です」と理由・デッキ登録へ進むボタン
 //   ④ 開く: 名前・遊び方・形式・人数・時刻を選んで開く関数に頼む → 開いた杯の画面へ
@@ -57,7 +57,7 @@ const rrMatches = [[0, 1, 0], [2, 3, 1], [0, 2, 0], [1, 3, 0], [0, 3, 0], [1, 2,
     let hasDeck = true, tablesOff = false, joined = false, ng = '';
     await page.route(/supabase\.co/, async (route) => {
       const url = route.request().url();
-      const m = url.match(/rpc\/(card_cup_[a-z]+)/);
+      const m = url.match(/rpc\/(card_cup_[a-z_]+)/);
       if (!m) return route.fulfill({ status: 200, contentType: 'application/json', body: url.includes('card_deck_entries') && hasDeck ? J([{ owner_id: 'me', user_name: '検査ブリーダー', deck: { monsters: MONS, cards: Array(50).fill('001') }, tactics: { habit: 'kiki', name: '検査デッキ' }, version: 1, active: true, battles: 0, deck_wins: 0, rents: 0, updated_at: iso(now) }]) : '[]' });
       if (tablesOff) return route.fulfill({ status: 404, contentType: 'application/json', body: '{"code":"PGRST202","message":"Could not find the function"}' });
       const body = JSON.parse(route.request().postData() || '{}');
@@ -65,6 +65,8 @@ const rrMatches = [[0, 1, 0], [2, 3, 1], [0, 2, 0], [1, 3, 0], [0, 3, 0], [1, 2,
       const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: J(v) });
       const fn = m[1];
       if (fn === 'card_cup_list') return json([row({ name: `${ng}カップ` }), row({ id: 'c2', name: 'のんびり杯', mode: 'live', format: 'rr', max: 6, players: 5, host_name: 'もちお' })]);
+      if (fn === 'card_cup_list_done') return json([row({ id: 'cko', name: '終わったトーナメント', status: 'done', start_at: iso(now - 3600000), players: 8 })]);
+      if (fn === 'card_cup_match_for') return json(null);
       if (fn === 'card_cup_mine') return json([row({ id: 'cko', name: '終わったトーナメント', status: 'done', start_at: iso(now - 3600000), players: 8 }), row({ id: 'crr', name: '終わった総当たり', format: 'rr', status: 'done', start_at: iso(now - 3600000), players: 4 })]);
       if (fn === 'card_cup_find') return json(body.p_code === '482951' ? row({ id: 'c1' }) : null);
       if (fn === 'card_cup_join') { joined = true; return json('ok'); }
@@ -96,7 +98,7 @@ const rrMatches = [[0, 1, 0], [2, 3, 1], [0, 2, 0], [1, 3, 0], [0, 3, 0], [1, 2,
       window.__reg = 0;
       window.__replay = null;
       window.__root = ReactDOM.createRoot(div);
-      window.__root.render(React.createElement(CardCup, { onBack: () => {}, onOpenRegister: () => { window.__reg += 1; }, onOpenReplay: async (id, title) => { window.__replay = { id, title }; return true; } }));
+      window.__root.render(React.createElement(CardCup, { onBack: () => {}, onOpenRegister: () => { window.__reg += 1; }, onOpenReplay: async (id, title, owner) => { window.__replay = { id, title, owner }; return true; } }));
     });
     const T = (sel) => page.locator(`#__cup ${sel}`);
     const text = async () => (await page.locator('#__cup').innerText()).replace(/\s+/g, ' ');
@@ -107,6 +109,8 @@ const rrMatches = [[0, 1, 0], [2, 3, 1], [0, 2, 0], [1, 3, 0], [0, 3, 0], [1, 2,
     let s = await text();
     check('① 一覧: 名前・遊び方・形式・人数・主催が出る', /のんびり杯/.test(s) && /リアルタイム・総当たり・5\/6人・主催 もちお/.test(s) && /オート・トーナメント・3\/8人/.test(s), s.slice(0, 200));
     check('① 悪い言葉は「●」に置き換わる', !!ng && !s.includes(ng) && /●+カップ/.test(s), ng);
+    await T('[data-card-cup-done] [data-card-cup-row="cko"]').waitFor({ timeout: 10000 });
+    check('① 一覧の下に「終わった杯」(終わって30日まで・だれでも見られる)', /終わった杯\(終わって30日まで/.test(await text()));
     await shot(page, '1-一覧');
     // ② 参加
     await T('[data-card-cup-row="c2"]').click();
@@ -160,7 +164,8 @@ const rrMatches = [[0, 1, 0], [2, 3, 1], [0, 2, 0], [1, 3, 0], [0, 3, 0], [1, 2,
     const rows = await T('[data-card-cup-match]').count();
     check('⑤ 試合の一覧(7試合)・いちばん上は決勝', rows === 7 && /決勝/.test(await T('[data-card-cup-match]').first().innerText()), `${rows}`);
     await T('[data-card-cup-replay="120"]').click();
-    check('⑤ 「見返す」でその試合の見返しを開く(番号と杯の名前を渡す)', J(await page.evaluate(() => window.__replay)) === J({ id: 120, title: '終わったトーナメント' }), J(await page.evaluate(() => window.__replay)));
+    const rp = await page.evaluate(() => window.__replay);
+    check('⑤ 「見返す」でその試合の見返しを開く(番号・杯の名前・自分の番号を渡す)', rp && rp.id === 120 && rp.title === '終わったトーナメント' && typeof rp.owner === 'string' && rp.owner.length > 0, J(rp));
     await T('[data-card-cup-bracket-replay]').click();
     check('⑤ 演出リプレイで、もう一度はじめから', (await T('[data-card-cup-bracket]').getAttribute('data-card-cup-lit')) === '0');
     // ⑥ 総当たりの結果

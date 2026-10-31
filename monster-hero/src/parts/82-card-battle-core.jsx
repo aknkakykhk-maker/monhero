@@ -52,7 +52,7 @@
 //         tossBonus 使うときに手札を好きな枚数捨て、その枚数をダメージに足す(act.toss … 捨てる手札の番号。0枚でもよい。カード投げ)
 //         ---- 区切り7: モンスターが入れ替わる ----
 //         revive(species,life) 倒れたその種族の子を戻す(そのターンは攻撃できない)/ cocoon その子は emerge の札のほかを出せない /
-//         emerge(to) まゆ化した子を to のモンスターと取りかえ、ライフを最大に / fuse 味方2体をKOし、メインとサブが合う混血を出す(act.fuse)/
+//         emerge(to) まゆ化した子を「その種族がSUB」の派生モンスター(act.emerge で選ぶ)と取りかえ、ライフを最大に。to は選んでいない古い手のときだけ / fuse 味方2体をKOし、メインとサブが合う混血を出す(act.fuse)/
 //         ancient(attach) 混血の子が、サブの種族の特殊技を出せる /
 //         possess KOされた味方1体を、この子の今のライフで戻し(もとの最大まで)、この子はKO。戻った子はそのターン攻撃できない(のりうつる)
 //   使える時: useWhen(lifeMax) 自分のライフがその数以下のときだけ出せる
@@ -412,6 +412,16 @@ const cardFuseOptions = (db, st, p) => {
   }));
   return out;
 };
+// 羽化: 取りかえる先の候補。札の使い手の種族が SUB の派生モンスター(使えるものだけ・番号の順)。
+//   2026-10-31 テスターさんの報告で直した(前は to のムラサキチュウに決め打ちで、しかもワームが MAIN の子だった)。
+//   候補が無い札は、前と同じ to へ取りかえる
+const cardEmergeOptions = (db, card) => {
+  const sub = card && card.user;
+  const out = sub ? Object.values(db.monsters).filter((m) => m.sub === sub && m.ready !== false).sort((x, y) => (x.no < y.no ? -1 : 1)).map((m) => m.no) : [];
+  if (out.length) return out;
+  const e = cardEff(card, 'emerge');
+  return e && e.to ? [e.to] : [];
+};
 // 子を別のモンスターに取りかえる(羽化・合体)。ライフは最大・印は消す
 const cardSwapMon = (db, mon, no) => {
   const m = cardMonsterOf(db, no);
@@ -527,7 +537,13 @@ const cardAttackOptions = (db, st) => {
         if (card.kind === 'spe') {
           // 変形・トランスフォーム: 空中か地上かを選ぶ(手に form を持たせる)
           const forms = cardHasEff(card, 'form') ? ['air', 'ground'] : [undefined];
-          cardSpeTargets(db, st, p, mi, card).forEach((target) => forms.forEach((form) => out.push(form ? { type: 'attack', mon: mi, hand: idxs, target, form } : { type: 'attack', mon: mi, hand: idxs, target })));
+          // 羽化: 取りかえる先ごとに1つずつ(選ぶのは使う人)
+          const emerges = cardHasEff(card, 'emerge') ? cardEmergeOptions(db, card) : [null];
+          cardSpeTargets(db, st, p, mi, card).forEach((target) => forms.forEach((form) => emerges.forEach((emerge) => {
+            const o = form ? { type: 'attack', mon: mi, hand: idxs, target, form } : { type: 'attack', mon: mi, hand: idxs, target };
+            if (emerge) o.emerge = emerge;
+            out.push(o);
+          })));
           return;
         }
         if (cardHasEff(card, 'area')) {
@@ -905,7 +921,8 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
       cardKo(st, p, mi);
     }
     if (e.t === 'cocoon' && self) { self.cocoon = true; cardLog(st, `${self.name}はまゆになった(羽化のほかは出せない)`); }
-    if (e.t === 'emerge' && self && self.cocoon) { const from = self.name; cardSwapMon(db, self, e.to); cardLog(st, `${from}は${self.name}になった(ライフ${self.life})`); }
+    // act.emerge の無い手(直す前に記録した見返し・古い版の相手)は、前と同じ to へ取りかえる(結果を変えない)
+    if (e.t === 'emerge' && self && self.cocoon) { const from = self.name; cardSwapMon(db, self, typeof act.emerge === 'string' ? act.emerge : e.to); cardLog(st, `${from}は${self.name}になった(ライフ${self.life})`); }
     if (e.t === 'fuse' && act.fuse) {
       const f = act.fuse; const a = me.mons[f.a], b = me.mons[f.b];
       cardKo(st, p, f.a); cardKo(st, p, f.b);
@@ -1095,6 +1112,7 @@ const cardApplyAction = (db, st0, act) => {
     }
     if (act.type !== 'attack' && act.type !== 'breeder') return null;
     const ok = cardAttackOptions(db, st0).some((o) => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null) && o.form === act.form && JSON.stringify(o.split) === JSON.stringify(act.split) && JSON.stringify(o.fuse) === JSON.stringify(act.fuse)
+      && (act.emerge === undefined || o.emerge === act.emerge) // 羽化の取りかえ先(選んでいない古い手は、どの候補とも合う)
       && JSON.stringify(o.toss) === JSON.stringify(Array.isArray(act.toss) ? act.toss.slice().sort((x, y) => x - y) : act.toss)); // カード投げ: 捨てる手札の組
     if (!ok) return null;
     // 影縛り: 名指しが要る札を付けたら、回避・防御の札の名前が1つ要る(付けていなければ名指しは持たない)
@@ -1311,7 +1329,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
         score += (Math.min(self0.life, back.max) - self0.life) * 0.4 + (usable(back) - usable(self0)) * 0.7 + (back.max - self0.max) * 0.15 - 0.3;
       }
       if (e.t === 'cocoon') score += me.hand.some((n) => cardHasEff(cardOf(db, n), 'emerge')) ? 1 : -3;
-      if (e.t === 'emerge') { const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null; const to = cardMonsterOf(db, e.to); score += 2 + (m0 && to ? (to.life - m0.life) * 0.3 : 0); }
+      if (e.t === 'emerge') { const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null; const to = cardMonsterOf(db, opt.emerge || e.to); score += 2 + (m0 && to ? (to.life - m0.life) * 0.3 : 0); }
       if (e.t === 'fuse' && opt.fuse) { const to = cardMonsterOf(db, opt.fuse.no); score += to.life - (me.mons[opt.fuse.a].life + me.mons[opt.fuse.b].life) * 0.8 - 1; }
       // 区切り5
       if (e.t === 'safe') { const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null; score += m0 && m0.life <= Math.ceil(m0.max / 2) ? 1.4 : 0.4; }

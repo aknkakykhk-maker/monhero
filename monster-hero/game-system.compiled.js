@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9ac509180c142cea
+// source-sha256: c35a125a69e6a159
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -89480,6 +89480,13 @@ const cardFuseOptions = (db, st, p) => {
   }));
   return out;
 };
+const cardEmergeOptions = (db, card) => {
+  const sub = card && card.user;
+  const out = sub ? Object.values(db.monsters).filter(m => m.sub === sub && m.ready !== false).sort((x, y) => x.no < y.no ? -1 : 1).map(m => m.no) : [];
+  if (out.length) return out;
+  const e = cardEff(card, 'emerge');
+  return e && e.to ? [e.to] : [];
+};
 const cardSwapMon = (db, mon, no) => {
   const m = cardMonsterOf(db, no);
   Object.assign(mon, {
@@ -89695,17 +89702,22 @@ const cardAttackOptions = (db, st) => {
         if (!byTarget && cardFieldBanned(db, st, p, mi, card, idxs)) return;
         if (card.kind === 'spe') {
           const forms = cardHasEff(card, 'form') ? ['air', 'ground'] : [undefined];
-          cardSpeTargets(db, st, p, mi, card).forEach(target => forms.forEach(form => out.push(form ? {
-            type: 'attack',
-            mon: mi,
-            hand: idxs,
-            target,
-            form
-          } : {
-            type: 'attack',
-            mon: mi,
-            hand: idxs,
-            target
+          const emerges = cardHasEff(card, 'emerge') ? cardEmergeOptions(db, card) : [null];
+          cardSpeTargets(db, st, p, mi, card).forEach(target => forms.forEach(form => emerges.forEach(emerge => {
+            const o = form ? {
+              type: 'attack',
+              mon: mi,
+              hand: idxs,
+              target,
+              form
+            } : {
+              type: 'attack',
+              mon: mi,
+              hand: idxs,
+              target
+            };
+            if (emerge) o.emerge = emerge;
+            out.push(o);
           })));
           return;
         }
@@ -90402,7 +90414,7 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
     }
     if (e.t === 'emerge' && self && self.cocoon) {
       const from = self.name;
-      cardSwapMon(db, self, e.to);
+      cardSwapMon(db, self, typeof act.emerge === 'string' ? act.emerge : e.to);
       cardLog(st, `${from}は${self.name}になった(ライフ${self.life})`);
     }
     if (e.t === 'fuse' && act.fuse) {
@@ -90779,7 +90791,7 @@ const cardApplyAction = (db, st0, act) => {
       return st;
     }
     if (act.type !== 'attack' && act.type !== 'breeder') return null;
-    const ok = cardAttackOptions(db, st0).some(o => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null) && o.form === act.form && JSON.stringify(o.split) === JSON.stringify(act.split) && JSON.stringify(o.fuse) === JSON.stringify(act.fuse) && JSON.stringify(o.toss) === JSON.stringify(Array.isArray(act.toss) ? act.toss.slice().sort((x, y) => x - y) : act.toss));
+    const ok = cardAttackOptions(db, st0).some(o => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null) && o.form === act.form && JSON.stringify(o.split) === JSON.stringify(act.split) && JSON.stringify(o.fuse) === JSON.stringify(act.fuse) && (act.emerge === undefined || o.emerge === act.emerge) && JSON.stringify(o.toss) === JSON.stringify(Array.isArray(act.toss) ? act.toss.slice().sort((x, y) => x - y) : act.toss));
     if (!ok) return null;
     const needBind = act.hand.some(i => cardHasEff(cardOf(db, st0.players[p].hand[i]), 'attachBind'));
     if (needBind ? !(typeof act.bind === 'string' && cardBindNames(db).includes(act.bind)) : act.bind !== undefined && act.bind !== null) return null;
@@ -91147,7 +91159,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'cocoon') score += me.hand.some(n => cardHasEff(cardOf(db, n), 'emerge')) ? 1 : -3;
       if (e.t === 'emerge') {
         const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null;
-        const to = cardMonsterOf(db, e.to);
+        const to = cardMonsterOf(db, opt.emerge || e.to);
         score += 2 + (m0 && to ? (to.life - m0.life) * 0.3 : 0);
       }
       if (e.t === 'fuse' && opt.fuse) {
@@ -96856,6 +96868,22 @@ const cardPackIdOf = (db, no) => {
 };
 const cardPackTechPool = (db, pack) => Object.values(db.cards).filter(c => c.ready && cardPackIdOf(db, c.no) === pack.id).map(c => c.no).sort();
 const cardPackMonPool = (db, pack, rarity) => Object.values(db.monsters).filter(m => m.ready !== false && !m.dexOnly && cardMonRarity(m) === rarity && cardPackIdOf(db, m.no) === pack.id).map(m => m.no).sort();
+const cardPackProgress = (db, pack, collection) => {
+  const own = no => {
+    const n = Math.floor(Number(collection && collection[no]));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+  const techs = cardPackTechPool(db, pack);
+  const tech = techs.reduce((sum, no) => sum + Math.max(0, CARD_TECH_KEEP_MAX - own(no)), 0);
+  const mons = ['normal', 'kira', 'alt'].filter(r => (pack.rarity[r] || 0) > 0).flatMap(r => cardPackMonPool(db, pack, r));
+  const mon = mons.filter(no => own(no) === 0).length;
+  return {
+    tech,
+    techKinds: techs.length,
+    mon,
+    monKinds: mons.length
+  };
+};
 const cardPackAllCards = (db, pack) => ({
   monsters: Object.values(db.monsters).filter(m => cardPackIdOf(db, m.no) === pack.id).map(m => m.no).sort(),
   cards: Object.values(db.cards).filter(c => cardPackIdOf(db, c.no) === pack.id).map(c => c.no).sort()
@@ -99997,6 +100025,10 @@ const CardBattleBoard = ({
       setSplitAsk(same.filter(o => o.split || o.fuse));
       return;
     }
+    if (t.emerge && same.filter(o => o.emerge).length > 1) {
+      setSplitAsk(same.filter(o => o.emerge));
+      return;
+    }
     if (t.form) {
       setSel({
         hand: t.hand[0],
@@ -100378,12 +100410,12 @@ const CardBattleBoard = ({
       }
     })() : null;
     const useLabel = usePv ? `使う(${usePv.dmg !== null ? `${usePv.all ? '全体に' : ''}ダメージ${usePv.dmg}・` : ''}ガッツ${usePv.guts})` : '使う';
-    return React.createElement(React.Fragment, null, useBtn && finalOpts.some(o => o.split || o.fuse) ? React.createElement("button", {
+    return React.createElement(React.Fragment, null, useBtn && (finalOpts.some(o => o.split || o.fuse) || finalOpts.filter(o => o.emerge).length > 1) ? React.createElement("button", {
       type: "button",
       "data-card-split-open": true,
       className: `${btn} mh-button-primary`,
       onClick: () => setSplitAsk(finalOpts)
-    }, React.createElement(CardFitLabel, null, finalOpts.some(o => o.fuse) ? '合体の組を選ぶ' : '割り振りを選ぶ')) : useBtn && finalOpts.some(o => o.form) ? ['air', 'ground'].map(f => {
+    }, React.createElement(CardFitLabel, null, finalOpts.some(o => o.fuse) ? '合体の組を選ぶ' : finalOpts.some(o => o.emerge) ? '羽化する先を選ぶ' : '割り振りを選ぶ')) : useBtn && finalOpts.some(o => o.form) ? ['air', 'ground'].map(f => {
       const o = finalOpts.find(x => x.form === f);
       return o ? React.createElement("button", {
         key: f,
@@ -101281,18 +101313,21 @@ const CardBattleBoard = ({
   }, React.createElement("div", {
     className: "text-[15px] font-black",
     style: JA_LABEL_STYLE
-  }, jaWrap(splitAsk.some(o => o.fuse) ? '合体する2体を選ぶ(左がメイン・右がサブ)' : 'ダメージの割り振りを選ぶ')), React.createElement("div", {
+  }, jaWrap(splitAsk.some(o => o.fuse) ? '合体する2体を選ぶ(左がメイン・右がサブ)' : splitAsk.some(o => o.emerge) ? '羽化して取りかえる先を選ぶ' : 'ダメージの割り振りを選ぶ')), React.createElement("div", {
     className: "mt-2 grid max-h-[55vh] gap-1.5 overflow-y-auto"
   }, splitAsk.map(o => React.createElement("button", {
-    key: JSON.stringify(o.split || o.fuse),
+    key: JSON.stringify(o.split || o.fuse || o.emerge),
     type: "button",
-    "data-card-split": o.split ? o.split.join('-') : `${o.fuse.a}-${o.fuse.b}`,
+    "data-card-split": o.split ? o.split.join('-') : o.emerge ? o.emerge : `${o.fuse.a}-${o.fuse.b}`,
     onClick: () => {
       setSplitAsk(null);
       askUse(o);
     },
     className: "min-h-[44px] rounded-xl bg-slate-700 px-2 text-left text-[14px] font-black text-white active:scale-[.98]"
-  }, o.fuse ? `${me.mons[o.fuse.a].name}＋${me.mons[o.fuse.b].name} → ${(cardMonsterOf(db, o.fuse.no) || {}).name || ''}` : o.split.map((x, j) => x > 0 ? `${st.players[CARD_CPU].mons[j].name} ${x}` : null).filter(Boolean).join('・')))), React.createElement("button", {
+  }, o.fuse ? `${me.mons[o.fuse.a].name}＋${me.mons[o.fuse.b].name} → ${(cardMonsterOf(db, o.fuse.no) || {}).name || ''}` : o.emerge ? (() => {
+    const m = cardMonsterOf(db, o.emerge) || {};
+    return `${m.name || ''}(ライフ${m.life || 0}・${m.type === 'air' ? '空中' : '地上'})`;
+  })() : o.split.map((x, j) => x > 0 ? `${st.players[CARD_CPU].mons[j].name} ${x}` : null).filter(Boolean).join('・')))), React.createElement("button", {
     type: "button",
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200",
     onClick: () => setSplitAsk(null)
@@ -103332,11 +103367,14 @@ const CardBattleScreen = ({
     });
   }
   if (view === 'cup' && typeof CardCup === 'function') {
-    const openCupReplay = async (id, title) => {
+    const openCupReplay = async (id, title, owner = null) => {
       if (!db || typeof cardTourRpc !== 'function' || typeof cardReplayFromTour !== 'function') return false;
-      const row = await cardTourRpc('card_cup_match', {
+      const row = (typeof cardCupRpcSoft === 'function' ? await cardCupRpcSoft('card_cup_match_for', {
+        p_id: id,
+        p_owner: owner || ''
+      }) : null) || (await cardTourRpc('card_cup_match', {
         p_id: id
-      });
+      }));
       const rec = row && typeof row === 'object' ? cardReplayFromTour(db, row, {
         known: new Set(assistantsUnlockedFrom(seenStoryIds).map(x => x.id)),
         title
@@ -104939,6 +104977,18 @@ const CardDeckPickTile = ({
     className: "flex h-[28px] w-[27px] shrink-0 items-center justify-center rounded-md bg-emerald-600 text-[18px] font-black leading-none text-white active:scale-90 disabled:bg-slate-700 disabled:text-slate-500"
   }, "＋")));
 };
+const cardDeckUnusableCards = (db, deck) => {
+  const mons = (deck && Array.isArray(deck.monsters) ? deck.monsters : []).map(no => cardMonsterOf(db, no)).filter(Boolean);
+  return (deck && Array.isArray(deck.cards) ? deck.cards : []).filter(no => {
+    const c = cardOf(db, no);
+    if (!c || !c.ready) return true;
+    if (!mons.length || c.user === 'breeder' || c.user === 'any' || c.kind === 'fld') return false;
+    return !mons.some(m => cardUsableBy(c, {
+      ...m,
+      ko: false
+    }));
+  });
+};
 const CardDeckEditor = ({
   db,
   collection,
@@ -104974,6 +105024,7 @@ const CardDeckEditor = ({
   const [notice, setNotice] = useState('');
   const [detail, setDetail] = useState(null);
   const [leave, setLeave] = useState(false);
+  const [dropAsk, setDropAsk] = useState(null);
   const [ask, setAsk] = useState(null);
   const press = useCardLongPress(no => setDetail(no));
   const short = typeof window !== 'undefined' && window.innerHeight < 760 && window.innerHeight > window.innerWidth;
@@ -105045,6 +105096,28 @@ const CardDeckEditor = ({
     return !!c && mons.length > 0 && c.user !== 'any' && c.user !== 'breeder' && c.kind !== 'fld' && !mons.some(m => cardUsableBy(c, m));
   };
   const unusableCount = cardDeckDeadCount(db, deck);
+  const dropList = cardDeckUnusableCards(db, deck);
+  const dropNames = list => Object.entries(list.reduce((a, no) => ({
+    ...a,
+    [no]: (a[no] || 0) + 1
+  }), {})).map(([no, n]) => `${(cardOf(db, no) || {}).name || no}${n > 1 ? `×${n}` : ''}`).join('・');
+  const dropNow = () => {
+    const list = dropList;
+    if (!list.length) return;
+    setDeck(d => {
+      const left = [...list];
+      return {
+        ...d,
+        cards: d.cards.filter(no => {
+          const k = left.indexOf(no);
+          if (k < 0) return true;
+          left.splice(k, 1);
+          return false;
+        })
+      };
+    });
+    setNotice(`外しました: ${dropNames(list)}`);
+  };
   const shown = view === 'mon' ? ownedMons : view === 'deck' ? [...deck.monsters, ...[...new Set(deck.cards)].sort((a, b) => unusableIn(b) - unusableIn(a) || bySort(a, b))] : ownedCards.filter(no => cardDeckFilterOk(cardOf(db, no), view) && usable(no)).sort(bySort);
   const tile = no => {
     const inDeck = countOf(no);
@@ -105219,7 +105292,16 @@ const CardDeckEditor = ({
     },
     className: "block w-full text-left text-[11px] font-bold leading-snug text-amber-200 underline decoration-dotted",
     style: JA_WRAP_STYLE
-  }, jaWrap(`3体のどのモンスターも使えないカードが${unusableCount}枚入っています(混血のモンスターは、守りのカードはサブの種族のものだけ使えます。押すと先頭に並べます)`)), notice && React.createElement("div", {
+  }, jaWrap(`3体のどのモンスターも使えないカードが${unusableCount}枚入っています(混血のモンスターは、守りのカードはサブの種族のものだけ使えます。押すと先頭に並べます)`)), dropList.length > 0 && React.createElement("button", {
+    type: "button",
+    "data-card-deck-drop-dead": dropList.length,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setDropAsk(dropList);
+    },
+    className: "mh-button min-h-[36px] w-full rounded-xl border border-amber-300/70 bg-amber-900/40 px-2 text-[12px] font-black text-amber-100 active:scale-[.98]",
+    style: JA_LABEL_STYLE
+  }, jaWrap(`使えないカードを外す(${dropList.length}枚)`)), notice && React.createElement("div", {
     "data-card-deck-notice": true,
     className: "text-[12px] font-black text-amber-200",
     style: JA_LABEL_STYLE
@@ -105330,6 +105412,16 @@ const CardDeckEditor = ({
     db: db,
     no: detail,
     onClose: () => setDetail(null)
+  }), dropAsk && React.createElement(ConfirmSheet, {
+    title: `使えないカードを${dropAsk.length}枚外しますか？`,
+    message: `外すカード: ${dropNames(dropAsk)}(外したあと「保存する」を押すとデッキに残ります)`,
+    confirmLabel: "外す",
+    onCancel: () => setDropAsk(null),
+    onConfirm: () => {
+      setDropAsk(null);
+      Audio_.fgSe.tap();
+      dropNow();
+    }
   }), leave && React.createElement(ConfirmSheet, {
     title: "保存せずに戻りますか？",
     message: "組みかえたところは消えます",
@@ -106928,7 +107020,17 @@ const CardShopPacks = ({
   }, pack.name), React.createElement("div", {
     "data-card-shop-pack-species": true,
     className: "text-[11px] font-black text-amber-100"
-  }, cardPackSpeciesLabel(db, pack)), React.createElement("div", {
+  }, cardPackSpeciesLabel(db, pack)), collection && (() => {
+    const pg = cardPackProgress(db, pack, collection);
+    const done = pg.tech === 0 && pg.mon === 0;
+    const text = done ? '✅ コンプ済み・回す必要なし' : pg.tech === 0 ? `✅ 技カード コンプ済み・あとモンスター${pg.mon}体` : `技カード あと${pg.tech}枚${pg.mon > 0 ? `・モンスター あと${pg.mon}体` : '・モンスターはそろっています'}`;
+    return React.createElement("div", {
+      "data-card-shop-pack-progress": done ? 'done' : pg.tech === 0 ? 'tech' : 'left',
+      "data-card-shop-pack-left": `${pg.tech}-${pg.mon}`,
+      className: `mt-0.5 inline-block rounded-md px-1.5 py-0.5 text-[11px] font-black ${done ? 'bg-emerald-400 text-slate-950' : pg.tech === 0 ? 'bg-emerald-900/70 text-emerald-100' : 'bg-slate-900/70 text-slate-200'}`,
+      style: JA_WRAP_STYLE
+    }, jaWrap(text));
+  })(), React.createElement("div", {
     className: "text-[11px] font-bold text-slate-300",
     style: JA_WRAP_STYLE
   }, jaWrap(pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`)), React.createElement("div", {
@@ -109088,6 +109190,10 @@ const cardPvpCleanAct = raw => {
       b,
       no: f.no
     };
+  }
+  if (raw.emerge !== undefined) {
+    if (typeof raw.emerge !== 'string' || !/^C-[0-9A-Z-]{1,8}$/.test(raw.emerge)) return null;
+    act.emerge = raw.emerge;
   }
   if (raw.toss !== undefined) {
     if (!Array.isArray(raw.toss)) return null;
@@ -120430,6 +120536,23 @@ const cardCupList = async () => {
   const r = await cardTourRpc('card_cup_list', {});
   return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : null;
 };
+const cardCupRpcSoft = async (fn, body) => {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+      method: 'POST',
+      headers: SB_HEADERS,
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (_) {
+    return null;
+  }
+};
+const cardCupListDone = async () => {
+  const r = await cardCupRpcSoft('card_cup_list_done', {});
+  return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : [];
+};
 const cardCupMine = async owner => {
   const r = await cardTourRpc('card_cup_mine', {
     p_owner: owner || ''
@@ -120535,6 +120658,7 @@ const CardCupJoinPanel = ({
     className: "w-full rounded-2xl bg-gradient-to-b from-amber-300 to-orange-500 py-2.5 text-[15px] font-black text-slate-950 disabled:opacity-50"
   }, label));
 };
+const CARD_CUP_BRACKET_GAP = 30;
 const CardCupBracket = ({
   rounds,
   matches,
@@ -120573,7 +120697,7 @@ const CardCupBracket = ({
       x0 = side ? W - slotW - 2 : slotW + 2;
     for (let r = 0; r < total - 1; r++) {
       const n = half / 2 ** r;
-      const step = (W / 2 - slotW - 14) / (total - 1);
+      const step = (W / 2 - CARD_CUP_BRACKET_GAP - (slotW + 2)) / (total - 1);
       const xa = x0 + dir * step * r,
         xb = x0 + dir * step * (r + 1);
       for (let k = 0; k < n; k++) {
@@ -120605,7 +120729,7 @@ const CardCupBracket = ({
       }
     }
     const r = total - 1,
-      xs = x0 + dir * (W / 2 - slotW - 14),
+      xs = x0 + dir * (W / 2 - CARD_CUP_BRACKET_GAP - (slotW + 2)),
       w = winOf(r, 0),
       pair = rounds[r] && rounds[r][0];
     const seat = pair ? pair[side] : null;
@@ -120614,7 +120738,7 @@ const CardCupBracket = ({
       key: `f${side}`,
       x1: total > 1 ? xs : x0,
       y1: H / 2,
-      x2: W / 2 + (side ? 12 : -12),
+      x2: W / 2 + (side ? 6 : -6),
       y2: H / 2,
       className: on ? 'stroke-amber-300' : 'stroke-slate-600',
       strokeWidth: on ? 3 : 2
@@ -120658,7 +120782,7 @@ const CardCupBracket = ({
     className: "absolute text-center",
     style: {
       left: W / 2 - 30,
-      top: H / 2 - 44,
+      top: H / 2 - 52,
       width: 60
     }
   }, React.createElement("span", {
@@ -120863,7 +120987,8 @@ const cardCupRoundLabel = (c, r, rounds) => {
 };
 const CardCupMatches = ({
   v,
-  onOpenReplay
+  onOpenReplay,
+  selfId = null
 }) => {
   const c = v.cup;
   const rounds = Math.max(0, ...v.matches.map(m => m.round + 1));
@@ -120896,7 +121021,7 @@ const CardCupMatches = ({
       disabled: !onOpenReplay || m.winner === null,
       onClick: () => {
         Audio_.fgSe.tap();
-        void onOpenReplay(m.id, c.name);
+        void onOpenReplay(m.id, c.name, selfId);
       },
       className: "shrink-0 rounded-lg border-2 border-amber-500/70 bg-amber-100 px-2 py-0.5 text-[12px] font-black text-amber-900 disabled:opacity-40"
     }, "見返す"));
@@ -121008,7 +121133,8 @@ const CardCupDetail = ({
     className: "mt-1 text-slate-400"
   }, "個人杯にはごほうびはありません。ランキングにも入りません")), shown && React.createElement(CardCupMatches, {
     v: v,
-    onOpenReplay: onOpenReplay
+    onOpenReplay: onOpenReplay,
+    selfId: selfId
   }), !shown && React.createElement("div", {
     "data-card-cup-entries": true,
     className: "space-y-1 rounded-2xl bg-slate-950/70 p-2.5"
@@ -121059,6 +121185,7 @@ const CardCup = ({
 }) => {
   const [tab, setTab] = useState('list');
   const [list, setList] = useState(undefined);
+  const [done, setDone] = useState([]);
   const [mineCups, setMineCups] = useState(undefined);
   const [cupId, setCupId] = useState(initialCup);
   const [view, setView] = useState(null);
@@ -121083,6 +121210,9 @@ const CardCup = ({
       setSelfId(id);
       setMine(m || null);
       setList(l);
+      if (l) void cardCupListDone().then(d => {
+        if (alive) setDone(d);
+      });
       setProfile({
         name: typeof nm === 'string' && nm ? nm.slice(0, 40) : 'ブリーダー',
         icon: typeof ic === 'string' ? ic : null
@@ -121172,7 +121302,17 @@ const CardCup = ({
   })) : React.createElement(ScreenEmpty, {
     emoji: "🏆",
     lines: ['いま募集中の個人杯はありません', '「開く」から自分で開けます']
-  })), tab === 'mine' && (mineCups === undefined ? React.createElement(ScreenEmpty, {
+  })), tab === 'list' && done.length > 0 && React.createElement("div", {
+    "data-card-cup-done": true,
+    className: "space-y-2"
+  }, React.createElement("b", {
+    className: "block px-1 pt-1 text-[13px] font-black text-amber-200"
+  }, "終わった杯(終わって30日まで・だれでも結果と見返しが見られます)"), done.map(c => React.createElement(CardCupRow, {
+    key: c.id,
+    c: c,
+    now: now,
+    onOpen: setCupId
+  }))), tab === 'mine' && (mineCups === undefined ? React.createElement(ScreenEmpty, {
     emoji: "⏳",
     lines: ['読み込んでいます']
   }) : mineCups && mineCups.length ? mineCups.map(c => React.createElement(CardCupRow, {

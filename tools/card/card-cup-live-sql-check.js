@@ -9,6 +9,8 @@
 //        山は8の大きさで不戦勝3つ / 2台の答えが違えば「食い違い」で待ち、auto で決まる / 来ない相手とは absent ですぐ決まる /
 //        片方だけ送って90秒たつと settle で leave / 順位は 1・2・3・3・5
 //        どの試合も card_cup_match で見返せる(手の並びは1試合1回だけ書く。抜けた試合は待つあいだに残した手)
+//     B3 だれも開かない杯: 30分で始め、30分決まらない試合をサーバが auto で決める(1回だけ・ゲームからは呼べない)
+//     B4 ごほうびのある杯: 確かめていない答えは決めず食い違い → auto。なぞり直しが合えば決まる
 //     B2 総当たり4人: 1回戦だけ戦える → 終わると次の回戦が開く / 全部終わると順位(勝ち数 → 倒した数)
 //   本物のデータベースには何もしない(流すのは手元に作った使い捨てのものだけ)
 const fs = require('fs');
@@ -18,6 +20,7 @@ const { execFileSync, spawnSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const LIVE = fs.readFileSync(path.join(ROOT, 'docs/sql/card-cup/CARD_CUP_LIVE_APPLY.sql'), 'utf8');
+const AUTO = fs.readFileSync(path.join(ROOT, 'docs/sql/card-cup/CARD_CUP_LIVE_AUTO_APPLY.sql'), 'utf8');
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 
@@ -31,6 +34,13 @@ const granted = [...code.matchAll(/grant execute on function public\.(\w+)\(/g)]
 check('A 実行の権限はゲームから呼ぶ5つだけ', JSON.stringify(granted.slice().sort()) === JSON.stringify(PUBLIC_FNS.slice().sort()), granted.join('・'));
 const inner = fns.filter((f) => !PUBLIC_FNS.includes(f));
 check('A 中の部品は anon・authenticated から外す', inner.every((f) => new RegExp(`revoke all on function public\\.${f}\\([^)]*\\) from public, anon, authenticated;`).test(code)), inner.join('・'));
+
+// A2: 止まった試合・ごほうび杯(CARD_CUP_LIVE_AUTO_APPLY.sql)
+const code2 = AUTO.split('\n').filter((l) => !/^\s*--/.test(l)).join('\n');
+check('A2 足すだけ(DELETE・DROP・ALTER・TRUNCATE が無い)', !/\b(delete\s+from|drop\s+(table|function|index)|alter\s+table|truncate)\b/i.test(code2));
+const granted2 = [...code2.matchAll(/grant execute on function public\.(\w+)\([^)]*\) to (\w+);/g)].map((m) => `${m[1]}:${m[2]}`);
+check('A2 サーバだけが呼べる(service_role だけに2つ)', JSON.stringify(granted2.sort()) === JSON.stringify(['card_cup_live_server_decide:service_role', 'card_cup_live_server_due:service_role']), granted2.join('・'));
+check('A2 待ち時間はサーバの関数の1か所(CUP_LIVE_IDLE_MS = 30分)', /export const CUP_LIVE_IDLE_MS = 30 \* 60000;/.test(fs.readFileSync(path.join(ROOT, 'supabase/functions/card-tournament-run/cup.js'), 'utf8')) && !/interval '30 minutes'/.test(code2));
 
 // ---- B ----
 const pgBin = ['/usr/lib/postgresql/16/bin', '/usr/lib/postgresql/15/bin', '/usr/lib/postgresql/17/bin'].find((d) => fs.existsSync(path.join(d, 'initdb')));
@@ -48,11 +58,12 @@ if (!pgBin || !canSu) {
     asPg(`${pgBin}/pg_ctl -D ${dir}/data -o '-p ${port} -k ${dir}' -l ${dir}/log -w start`);
     started = true;
     const psql = (sql, file = null) => execFileSync('psql', ['-h', dir, '-p', port, '-U', 'postgres', '-q', '-tA', '-v', 'ON_ERROR_STOP=1', ...(file ? ['-f', file] : ['-c', sql])], { encoding: 'utf8' }).trim();
-    psql('create role anon; create role authenticated;');
+    psql('create role anon; create role authenticated; create role service_role;');
     const share = fs.readFileSync(path.join(ROOT, 'docs/sql/card-deck-share/CARD_DECK_SHARE_APPLY.sql'), 'utf8');
     psql(share.slice(share.indexOf('create table if not exists public.card_deck_entries'), share.indexOf('\n);', share.indexOf('create table if not exists public.card_deck_entries')) + 3));
     psql(null, path.join(ROOT, 'docs/sql/card-cup/CARD_CUP_APPLY.sql'));
     psql(null, path.join(ROOT, 'docs/sql/card-cup/CARD_CUP_LIVE_APPLY.sql'));
+    psql(null, path.join(ROOT, 'docs/sql/card-cup/CARD_CUP_LIVE_AUTO_APPLY.sql'));
     const K = (o) => `'k_${o}_xxxxxxxxxxxxxxxxxxxxxxxx'`;
     psql(`insert into card_deck_entries (owner_id, key_hash, user_name, deck) select 'p'||i, md5('k_p'||i||'_xxxxxxxxxxxxxxxxxxxxxxxx'), 'P'||i, '{"monsters":["C-001"]}'::jsonb from generate_series(1,8) i;`);
     const one = (sql) => psql(sql).split('\n')[0];
@@ -120,6 +131,39 @@ if (!pgBin || !canSu) {
     playRound(2, '{3,0}');
     const rr = psql(`select seat||':'||place||':'||wins from card_cup_entries where cup_id='${cupR}' order by place`).split('\n').join(',');
     check('B2 全部終わると順位(勝ち数 → 倒した数)', one(`select status from card_cups where id='${cupR}'`) === 'done' && rr === '0:1:2,2:2:2,1:3:2,3:4:0', rr);
+
+    // B3 だれも開かない杯(待ち時間30分)
+    psql(`update card_cups set status='done' where host_id in ('p1','p6')`);
+    const cupS = JSON.parse(one(`select card_cup_create('p1',${K('p1')},'止まる杯','P1',null,'live','ko',4,true,null, date_trunc('hour', now()) + interval '2 hours')`)).id;
+    for (const o of ['p2', 'p3', 'p4']) one(`select card_cup_join('${cupS}','${o}',${K(o)},'${o}',null)`);
+    psql(`update card_cups set start_at = now() - interval '20 minutes', entry_until = now() - interval '20 minutes' where id = '${cupS}'`);
+    check('B3 始まって20分では、サーバは始めない', psql(`select card_cup_live_server_due(30)`) === '[]' && one(`select status from card_cups where id='${cupS}'`) === 'entry');
+    psql(`update card_cups set start_at = now() - interval '31 minutes' where id = '${cupS}'`);
+    const due0 = JSON.parse(psql(`select card_cup_live_server_due(30)`));
+    check('B3 30分を過ぎると始める(試合は今戦えるようになったので、まだ返さない)', one(`select status from card_cups where id='${cupS}'`) === 'running' && due0.length === 0, JSON.stringify(due0).slice(0, 80));
+    psql(`update card_cup_matches set live = jsonb_set(live,'{ready_at}',to_jsonb(now() - interval '31 minutes')) where cup_id='${cupS}'`);
+    const due1 = JSON.parse(psql(`select card_cup_live_server_due(30)`));
+    check('B3 戦えるようになって30分決まらない試合を、両方の写しと一緒に返す', due1.length === 2 && due1.every((m) => m.a.deck && m.b.deck && m.seed > 0 && m.cup_id === cupS), String(due1.length));
+    check('B3 サーバが auto で決める', one(`select card_cup_live_server_decide(${due1[0].id}, 0, '{3,1}', '[[0,{"type":"srv"}]]', 6)`) === 't' && one(`select decided from card_cup_matches where id=${due1[0].id}`) === 'auto');
+    check('B3 決まった試合は二度と決めない', one(`select card_cup_live_server_decide(${due1[0].id}, 1, '{1,3}', null, 6)`) === 'f' && one(`select winner from card_cup_matches where id=${due1[0].id}`) === '0');
+    one(`select card_cup_live_server_decide(${due1[1].id}, 1, '{1,3}', '[]', 6)`);
+    check('B3 回戦が終わると決勝ができ、決勝もサーバが決められる', JSON.parse(psql(`select card_cup_live_server_due(30)`)).length === 0 && one(`select count(*) from card_cup_matches where cup_id='${cupS}' and round=1`) === '1');
+    check('B3 ゲームからはサーバの関数を呼べない(anon に実行の権限が無い)', one(`select has_function_privilege('anon','public.card_cup_live_server_due(integer)','execute')`) === 'f'
+      && one(`select has_function_privilege('service_role','public.card_cup_live_server_decide(bigint,integer,integer[],jsonb,integer)','execute')`) === 't');
+
+    // B4 ごほうびのある杯(A): 確かめていない答えは、2台そろっても決まらない → 食い違い → auto
+    psql(`create or replace function public.card_cup_live_reward(c public.card_cups) returns boolean language sql immutable as $$ select true $$`);
+    const cupW = JSON.parse(one(`select card_cup_create('p5',${K('p5')},'ごほうび杯','P5',null,'live','ko',4,true,null, date_trunc('hour', now()) + interval '2 hours')`)).id;
+    one(`select card_cup_join('${cupW}','p6',${K('p6')},'p6',null)`);
+    psql(`update card_cups set start_at = now() - interval '1 minute', entry_until = now() - interval '1 minute' where id = '${cupW}'`);
+    for (const o of ['p5', 'p6']) one(`select card_cup_live_checkin('${cupW}','${o}',${K(o)})`);
+    one(`select card_cup_live_start('${cupW}','p5',${K('p5')})`);
+    const mw = one(`select id from card_cup_matches where cup_id='${cupW}'`);
+    const w1 = one(`select card_cup_live_report(${mw},'p5',${K('p5')},0,'pvp',false,'{3,1}',null,6)`);
+    const w2 = one(`select card_cup_live_report(${mw},'p6',${K('p6')},0,'pvp',false,'{3,1}',null,6)`);
+    check('B4 ごほうび杯は、確かめていない答えが2台そろっても決まらず食い違いになる', w1 === 'wait' && w2 === 'wait' && one(`select (live->>'dispute') from card_cup_matches where id=${mw}`) === 'true', `${w1}・${w2}`);
+    check('B4 ごほうび杯でも、なぞり直しが合った答えなら決まる', one(`select card_cup_live_report(${mw},'p5',${K('p5')},0,'pvp',true,'{3,1}',null,6)`) === 'ok');
+    psql(`create or replace function public.card_cup_live_reward(c public.card_cups) returns boolean language sql immutable as $$ select false $$`);
   } catch (e) {
     check('B 筋書きが最後まで進む', false, String(e.stderr || e.message).slice(0, 400));
   } finally {
