@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 002f8e2f41d76efe
+// source-sha256: 0bda1ce59b169d44
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -118114,55 +118114,102 @@ const CardRegSecHead = ({
   className: "mt-1 text-[11px] font-bold leading-snug text-slate-300",
   style: JA_WRAP_STYLE
 }, jaWrap(what)));
+const CARD_REG_WHEN = Object.freeze({
+  attack: '攻撃のときに見る',
+  guard: '攻撃を受けたときだけ見る',
+  guts: 'ガッツを置くときに見る',
+  all: ''
+});
 const CardRegRows = ({
   rows,
   why = [],
-  onRows
+  onRows,
+  baseName = '',
+  rest = ''
 }) => React.createElement("div", {
-  className: "mt-1.5 space-y-1"
-}, rows.map((r, i) => React.createElement("div", {
-  key: i,
-  "data-card-reg-row": i,
-  className: "rounded-xl bg-slate-800 px-2 py-1.5"
-}, React.createElement("div", {
-  className: "flex items-center gap-1.5 text-[13px] font-black text-white"
-}, React.createElement("span", {
-  className: "flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-950 text-[11px] text-amber-200"
-}, i + 1), React.createElement("span", {
-  className: "min-w-0 flex-1",
+  className: "mt-1.5"
+}, rows.map((r, i) => {
+  const c = cardTacticOf(r.c),
+    a = cardTacticOf(r.a);
+  const combo = CARD_REG_COMBOS.find(x => x.c === r.c && x.a === r.a);
+  const when = a ? CARD_REG_WHEN[a.phase] || '' : '';
+  return React.createElement("div", {
+    key: i
+  }, i > 0 && React.createElement("p", {
+    "data-card-reg-next-row": true,
+    className: "py-0.5 text-center text-[10px] font-black text-slate-400"
+  }, "↓ 当てはまらなければ、次へ"), React.createElement("div", {
+    "data-card-reg-row": i,
+    className: "rounded-xl border border-white/10 bg-slate-800 px-2 py-1.5"
+  }, React.createElement("div", {
+    className: "flex items-start gap-1.5"
+  }, React.createElement("span", {
+    className: "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-950 text-[11px] font-black text-amber-200"
+  }, i + 1), React.createElement("div", {
+    className: "min-w-0 flex-1 space-y-1"
+  }, combo && React.createElement("small", {
+    "data-card-reg-row-combo": true,
+    className: "block text-[10px] font-black text-amber-200"
+  }, cardIconNode(combo.icon, 12), " ", combo.name), React.createElement("div", {
+    "data-card-reg-row-if": true,
+    className: "flex items-center gap-1.5"
+  }, React.createElement("span", {
+    className: "w-[34px] shrink-0 text-[11px] font-black text-sky-300"
+  }, "もし"), React.createElement("span", {
+    className: "min-w-0 flex-1 rounded-lg bg-blue-700 px-2 py-1 text-[12px] font-black leading-snug text-white",
+    style: JA_WRAP_STYLE
+  }, r.c === 'any' ? 'いつでも' : c ? c.name : '?')), React.createElement("div", {
+    "data-card-reg-row-then": true,
+    className: "flex items-center gap-1.5"
+  }, React.createElement("span", {
+    className: "w-[34px] shrink-0 text-[11px] font-black text-rose-300"
+  }, "なら→"), React.createElement("span", {
+    className: "min-w-0 flex-1 rounded-lg bg-red-700 px-2 py-1 text-[12px] font-black leading-snug text-white",
+    style: JA_WRAP_STYLE
+  }, a ? a.name : '?')), when && React.createElement("small", {
+    "data-card-reg-row-when": true,
+    className: "block pl-[40px] text-[10px] font-bold text-slate-400"
+  }, `(${when})`)), React.createElement("div", {
+    className: "flex shrink-0 flex-col items-center"
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "外す",
+    "data-card-reg-row-remove": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      onRows(rows.filter((_, j) => j !== i));
+    },
+    className: "px-1 text-[14px] text-slate-400"
+  }, "✕"), React.createElement("button", {
+    type: "button",
+    "aria-label": "上へ",
+    disabled: i === 0,
+    onClick: () => {
+      const x = rows.slice();
+      [x[i - 1], x[i]] = [x[i], x[i - 1]];
+      onRows(x);
+    },
+    className: "px-1 text-[12px] text-slate-300 disabled:opacity-20"
+  }, "▲"), React.createElement("button", {
+    type: "button",
+    "aria-label": "下へ",
+    disabled: i >= rows.length - 1,
+    onClick: () => {
+      const x = rows.slice();
+      [x[i + 1], x[i]] = [x[i], x[i + 1]];
+      onRows(x);
+    },
+    className: "px-1 text-[12px] text-slate-300 disabled:opacity-20"
+  }, "▼"))), why[i] && React.createElement("small", {
+    className: "block pl-6 text-[10px] font-bold text-slate-400"
+  }, `賢さに数えない(${why[i]})`)));
+}), rows.length > 0 && React.createElement(React.Fragment, null, React.createElement("p", {
+  className: "py-0.5 text-center text-[10px] font-black text-slate-400",
   style: JA_WRAP_STYLE
-}, cardRegRowText(r)), React.createElement("button", {
-  type: "button",
-  "aria-label": "上へ",
-  disabled: i === 0,
-  onClick: () => {
-    const a = rows.slice();
-    [a[i - 1], a[i]] = [a[i], a[i - 1]];
-    onRows(a);
-  },
-  className: "px-1 text-[12px] text-slate-300 disabled:opacity-20"
-}, "▲"), React.createElement("button", {
-  type: "button",
-  "aria-label": "下へ",
-  disabled: i >= rows.length - 1,
-  onClick: () => {
-    const a = rows.slice();
-    [a[i + 1], a[i]] = [a[i], a[i + 1]];
-    onRows(a);
-  },
-  className: "px-1 text-[12px] text-slate-300 disabled:opacity-20"
-}, "▼"), React.createElement("button", {
-  type: "button",
-  "aria-label": "外す",
-  "data-card-reg-row-remove": true,
-  onClick: () => {
-    Audio_.fgSe.tap();
-    onRows(rows.filter((_, j) => j !== i));
-  },
-  className: "px-1 text-[14px] text-slate-400"
-}, "✕")), why[i] && React.createElement("small", {
-  className: "block pl-6 text-[10px] font-bold text-slate-400"
-}, `賢さに数えない(${why[i]})`))));
+}, `↓ どれにも当てはまらなければ${rest}`), React.createElement("div", {
+  "data-card-reg-row-base": true,
+  className: "rounded-xl border border-amber-500/70 bg-amber-950/60 px-2 py-1.5 text-[12px] font-black text-amber-100"
+}, `📘 基本の型${baseName ? `「${baseName}」` : ''}で打つ`)));
 const CardRegMonSheet = ({
   db,
   deck,
@@ -118172,6 +118219,7 @@ const CardRegMonSheet = ({
   why,
   name,
   counts,
+  baseName = '',
   onRows,
   onSwitch,
   onClose,
@@ -118201,8 +118249,8 @@ const CardRegMonSheet = ({
   }, React.createElement("b", {
     className: "block text-[18px] font-black text-white"
   }, `${name(k)}の戦い方`), React.createElement("small", {
-    className: "block text-[11px] font-bold text-slate-300"
-  }, "上から順に見て、当てはまった物を使います"), React.createElement("span", {
+    className: "block text-[11px] font-bold text-sky-200"
+  }, "上から順に見て、", React.createElement("u", null, "最初に当てはまった1つ"), "だけを使います"), React.createElement("span", {
     className: "mt-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-black text-white"
   }, `${rows.length}枚 / 入れられる ${max}枚`)), React.createElement("button", {
     type: "button",
@@ -118213,7 +118261,9 @@ const CardRegMonSheet = ({
   }, "✕")), React.createElement(CardRegRows, {
     rows: rows,
     why: why,
-    onRows: onRows
+    onRows: onRows,
+    baseName: baseName,
+    rest: "(攻撃のときは、ほかのモンスター・ブリーダーの手も見てから)"
   }), rows.length < max ? React.createElement("button", {
     type: "button",
     "data-card-reg-add": k,
@@ -118610,7 +118660,8 @@ const CardDeckRegister = ({
   }), React.createElement(CardRegRows, {
     rows: draft.breeder,
     why: uncounted.breeder,
-    onRows: a => setRows('breeder', a)
+    onRows: a => setRows('breeder', a),
+    baseName: (cardTacticOf(draft.base[0]) || {}).name || ''
   }), draft.breeder.length < open.breeder ? React.createElement("button", {
     type: "button",
     "data-card-reg-add": "breeder",
@@ -118795,6 +118846,7 @@ const CardDeckRegister = ({
     why: uncounted.mons[monSheet],
     name: monName,
     counts: draft.mons.map(r => r.length),
+    baseName: (cardTacticOf(draft.base[0]) || {}).name || '',
     onRows: a => setRows(monSheet, a),
     onSwitch: setMonSheet,
     onClose: () => setMonSheet(null),
