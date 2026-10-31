@@ -1022,6 +1022,16 @@ const CardShopPacks = ({ db, point, busy, collection = null, onBuyPack }) => {
             <div className="min-w-0 flex-1">
               <div className="text-[14px] font-black text-white">{pack.name}</div>
               <div data-card-shop-pack-species className="text-[11px] font-black text-amber-100">{cardPackSpeciesLabel(db, pack)}</div>
+              {/* コンプの印(2026-10-31 社長)。引くのは止めない。持っている数を読み込むまでは出さない */}
+              {collection && (() => {
+                const pg = cardPackProgress(db, pack, collection);
+                const done = pg.tech === 0 && pg.mon === 0;
+                const text = done ? '✅ コンプ済み・回す必要なし'
+                  : pg.tech === 0 ? `✅ 技カード コンプ済み・あとモンスター${pg.mon}体`
+                  : `技カード あと${pg.tech}枚${pg.mon > 0 ? `・モンスター あと${pg.mon}体` : '・モンスターはそろっています'}`;
+                return <div data-card-shop-pack-progress={done ? 'done' : pg.tech === 0 ? 'tech' : 'left'} data-card-shop-pack-left={`${pg.tech}-${pg.mon}`}
+                  className={`mt-0.5 inline-block rounded-md px-1.5 py-0.5 text-[11px] font-black ${done ? 'bg-emerald-400 text-slate-950' : pg.tech === 0 ? 'bg-emerald-900/70 text-emerald-100' : 'bg-slate-900/70 text-slate-200'}`} style={JA_WRAP_STYLE}>{jaWrap(text)}</div>;
+              })()}
               <div className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`)}</div>
               <div className="mt-1 flex gap-1.5">
                 <button type="button" data-card-shop-contents={pack.id} onClick={() => setSheet({ kind: 'contents', pack })} className="min-h-[30px] rounded-lg border border-sky-300/60 bg-sky-900/50 px-2 text-[11px] font-black text-sky-100 active:scale-95">中身を見る</button>
