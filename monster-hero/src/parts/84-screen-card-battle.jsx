@@ -3458,7 +3458,21 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const r = selfId && key ? await cardTourRpc('card_cup_live_match', { p_match: m.id, p_owner: selfId, p_key: key }) : null;
       if (!r || (r.side !== 0 && r.side !== 1) || r.winner === 0 || r.winner === 1) { setNotice('この試合には入れません'); return; }
       const mine = r.side === 0 ? r.a_side : r.b_side, foe = r.side === 0 ? r.b_side : r.a_side;
-      if ((r.side === 0 ? r.checkin_b : r.checkin_a)) { setNotice('相手が来ています。2人で戦う部屋は準備中です'); return; }
+      // 相手が集合している: サーバが作った合言葉(8文字)の部屋で、2台で戦う(91 の CARD_PVP.cup・自分のデッキは杯の写し)。
+      //   ただし、戦えるようになって2分たっても相手が部屋に来ていない(card_cup_live_match を呼んでいない)なら、来ない人と同じく登録デッキと戦う(SQL の absent と同じ決まり)
+      const foeHere = r.side === 0 ? r.checkin_b : r.checkin_a;
+      const foeJoined = !!(r.side === 0 ? r.join_b : r.join_a);
+      const readyAt = Date.parse(r.ready_at) || 0;
+      const foeLate = !foeJoined && readyAt > 0 && Date.now() >= readyAt + 2 * 60000;
+      if (foeHere && !foeLate) {
+        if (typeof CARD_PVP === 'undefined' || !r.room || !mine || !mine.deck) { setNotice('部屋に入れませんでした'); return; }
+        const me = rank && rank.profile ? rank.profile : {};
+        const ok = CARD_PVP.cup(r.room, { name: me.name || myName, icon: me.icon || '🙂', frame: me.frame || null }, { ...mine.deck, name: (mine.tactics && mine.tactics.name) || '' },
+          { matchId: r.id, cupId: r.cup_id, side: r.side, selfId });
+        if (!ok) { setNotice('部屋に入れませんでした'); return; }
+        setView('pvp');
+        return;
+      }
       if (!mine || !mine.deck || !foe || !foe.deck) { setNotice('デッキの写しが読めませんでした'); return; }
       const tactics = foe.tactics && typeof foe.tactics === 'object' ? foe.tactics : {};
       const share = { name: (typeof cardCupText === 'function' ? cardCupText(foe.name, 40) : String(foe.name || '').slice(0, 40)) || 'ブリーダー', icon: foe.icon || null, frame: null,
@@ -3520,7 +3534,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       if (ok && !debug && levelGain.gain && levelGain.gain.to > levelGain.gain.from) void cardRankPut(rank && rank.profile);
       return { ...got, saved: ok, quick, rankGain: ok ? levelGain.gain : null };
     };
-    return <CardPvpLobby onOpenReplay={(id) => { void openReplay(id, 'pvp'); }} replayHas={cardReplayHas} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meFrame={(rank && rank.profile && rank.profile.frame) || null} deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onStepAway={() => setView('mode')} onPickDeck={() => { setDeckPick({ next: 'pvp' }); setView('deckPick'); }} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {
+    // 個人杯の試合(④・CARD_PVP.cup)から来たときは、戻る先は杯の画面
+    const pvpBackTo = () => (typeof CARD_PVP !== 'undefined' && CARD_PVP.get().cup ? 'cup' : 'mode');
+    return <CardPvpLobby onOpenReplay={(id) => { void openReplay(id, 'pvp'); }} replayHas={cardReplayHas} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meFrame={(rank && rank.profile && rank.profile.frame) || null} deck={activeDeck} deckIssues={deckIssues} onBack={(wasCup) => setView(wasCup === true ? 'cup' : pvpBackTo())} onStepAway={() => setView(pvpBackTo())} onPickDeck={() => { setDeckPick({ next: 'pvp' }); setView('deckPick'); }} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {
       setResult(null);
       // 対戦開始の画面: 相手の名前・アイコン・相手がデッキ編成で付けたデッキ名(古い版の相手は送ってこないので出さない)
       const pv = g.pvp || {};

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e93cc65f277f987d
+// generated-sha256: 118240fbee3f34b0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -62296,7 +62296,21 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const r = selfId && key ? await cardTourRpc('card_cup_live_match', { p_match: m.id, p_owner: selfId, p_key: key }) : null;
       if (!r || (r.side !== 0 && r.side !== 1) || r.winner === 0 || r.winner === 1) { setNotice('この試合には入れません'); return; }
       const mine = r.side === 0 ? r.a_side : r.b_side, foe = r.side === 0 ? r.b_side : r.a_side;
-      if ((r.side === 0 ? r.checkin_b : r.checkin_a)) { setNotice('相手が来ています。2人で戦う部屋は準備中です'); return; }
+      // 相手が集合している: サーバが作った合言葉(8文字)の部屋で、2台で戦う(91 の CARD_PVP.cup・自分のデッキは杯の写し)。
+      //   ただし、戦えるようになって2分たっても相手が部屋に来ていない(card_cup_live_match を呼んでいない)なら、来ない人と同じく登録デッキと戦う(SQL の absent と同じ決まり)
+      const foeHere = r.side === 0 ? r.checkin_b : r.checkin_a;
+      const foeJoined = !!(r.side === 0 ? r.join_b : r.join_a);
+      const readyAt = Date.parse(r.ready_at) || 0;
+      const foeLate = !foeJoined && readyAt > 0 && Date.now() >= readyAt + 2 * 60000;
+      if (foeHere && !foeLate) {
+        if (typeof CARD_PVP === 'undefined' || !r.room || !mine || !mine.deck) { setNotice('部屋に入れませんでした'); return; }
+        const me = rank && rank.profile ? rank.profile : {};
+        const ok = CARD_PVP.cup(r.room, { name: me.name || myName, icon: me.icon || '🙂', frame: me.frame || null }, { ...mine.deck, name: (mine.tactics && mine.tactics.name) || '' },
+          { matchId: r.id, cupId: r.cup_id, side: r.side, selfId });
+        if (!ok) { setNotice('部屋に入れませんでした'); return; }
+        setView('pvp');
+        return;
+      }
       if (!mine || !mine.deck || !foe || !foe.deck) { setNotice('デッキの写しが読めませんでした'); return; }
       const tactics = foe.tactics && typeof foe.tactics === 'object' ? foe.tactics : {};
       const share = { name: (typeof cardCupText === 'function' ? cardCupText(foe.name, 40) : String(foe.name || '').slice(0, 40)) || 'ブリーダー', icon: foe.icon || null, frame: null,
@@ -62358,7 +62372,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       if (ok && !debug && levelGain.gain && levelGain.gain.to > levelGain.gain.from) void cardRankPut(rank && rank.profile);
       return { ...got, saved: ok, quick, rankGain: ok ? levelGain.gain : null };
     };
-    return <CardPvpLobby onOpenReplay={(id) => { void openReplay(id, 'pvp'); }} replayHas={cardReplayHas} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meFrame={(rank && rank.profile && rank.profile.frame) || null} deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onStepAway={() => setView('mode')} onPickDeck={() => { setDeckPick({ next: 'pvp' }); setView('deckPick'); }} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {
+    // 個人杯の試合(④・CARD_PVP.cup)から来たときは、戻る先は杯の画面
+    const pvpBackTo = () => (typeof CARD_PVP !== 'undefined' && CARD_PVP.get().cup ? 'cup' : 'mode');
+    return <CardPvpLobby onOpenReplay={(id) => { void openReplay(id, 'pvp'); }} replayHas={cardReplayHas} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meFrame={(rank && rank.profile && rank.profile.frame) || null} deck={activeDeck} deckIssues={deckIssues} onBack={(wasCup) => setView(wasCup === true ? 'cup' : pvpBackTo())} onStepAway={() => setView(pvpBackTo())} onPickDeck={() => { setDeckPick({ next: 'pvp' }); setView('deckPick'); }} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {
       setResult(null);
       // 対戦開始の画面: 相手の名前・アイコン・相手がデッキ編成で付けたデッキ名(古い版の相手は送ってこないので出さない)
       const pv = g.pvp || {};
@@ -65748,7 +65764,8 @@ const CARD_PVP = (() => {
     game: null, startMsg: null, foeInMatch: false, mySeq: 0, outbox: [], theirSeq: 0, inbox: {}, history: [], result: null, foeOpen: null, error: '', broken: '',
     offline: false, timeouts: 0, autoActing: false, chatAt: 0, mode: 'private', seekAt: 0, seekers: {}, lobbyCount: 0, joining: '', joinAt: 0, ownCode: '', reported: '', pick: false, notice: '', // pick … 入口の一覧から選んで入った / notice … 入口に出す一言
     round: 0, again: null, foeAgain: null, foeGone: false,
-    invited: {}, guest: false, guestAt: 0, via: '' }); // invited … 送った招待 { [相手のid]: { code, at, ok } } / guest … 人の部屋へ入った(来なければ「部屋がもうありません」) / via … 入るときに押した招待
+    invited: {}, guest: false, guestAt: 0, via: '',
+    cup: null, cupSent: false, cupResult: null }); // cup … 個人杯のリアルタイム杯の試合(④)。{ matchId, cupId, side, selfId }。報酬・強さの点数・もう1戦は通らず、結果を杯へ送る // invited … 送った招待 { [相手のid]: { code, at, ok } } / guest … 人の部屋へ入った(来なければ「部屋がもうありません」) / via … 入るときに押した招待
  // もう1戦: round … いまの試合の回 / again … 自分が押した次の回 { rd, seed, salt, seal } / foeAgain … 相手が押した次の回 { rd, seal }
   let roomWaitSet = false; // カードの部屋が「部屋で待ち中」の印を立てているか
   const emit = () => {
@@ -65835,6 +65852,20 @@ const CARD_PVP = (() => {
     return slept;
   };
   const forceEnd = (outcome) => { if (s && s.phase === 'playing' && board) board.onForceEnd(outcome); };
+  // 個人杯の試合(④): 確かめが決まったら(ok / ng / skip)、杯へ結果を1回だけ送る(card_cup_live_report・how=pvp)。
+  //   手の並びは、確かめが通った試合だけ { kind: 'pvp', order, seeds: [自分, 相手], first, acts }(自分が0番の向き。93 の cardReplayFromTour が並びを戻す)
+  const cupSend = async () => {
+    if (!s || !s.cup || s.cupSent || !s.result || s.result.verify === 'wait') return;
+    const cup = s.cup, r = s.result, o = s.foeOpen;
+    s = { ...s, cupSent: true };
+    const acts = r.verify === 'ok' && o ? { kind: 'pvp', order: cup.side === 0 ? 'ab' : 'ba', seeds: [s.seed >>> 0, o.seed >>> 0], first: s.first, acts: s.history.map((e) => [e.by, e.act]) } : null;
+    const kos = Array.isArray(r.kos) ? (cup.side === 0 ? r.kos : [r.kos[1], r.kos[0]]) : null;
+    const key = typeof cardShareOwnerKey === 'function' ? await cardShareOwnerKey(false).catch(() => null) : null;
+    const res = key && typeof cardTourRpc === 'function' ? await cardTourRpc('card_cup_live_report', { p_match: cup.matchId, p_owner: cup.selfId, p_key: key,
+      p_winner: r.outcome === 'win' ? cup.side : 1 - cup.side, p_how: 'pvp', p_verified: r.verify === 'ok', p_kos: kos, p_acts: acts,
+      p_rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null }) : null;
+    if (s && s.cup === cup) set({ cupResult: res === 'ok' || res === 'wait' || res === 'done' ? res : 'error' });
+  };
   // 終わったあと: 両方の封がそろったら、なぞり直す
   const tryVerify = async () => {
     if (!s.result || !s.foeOpen || s.result.verify !== 'wait') return;
@@ -65845,6 +65876,7 @@ const CARD_PVP = (() => {
     const winner = s.result.reward === 'win' && !s.result.forced ? 0 : s.result.reward === 'lose' && !s.result.forced ? 1 : null;
     const v = cardPvpVerify(CARD_BATTLE_DATA, { myDeck: s.deck, mySeed: s.seed, foeDeck: o.deck, foeSeed: o.seed, first: s.first, names: ['あなた', 'あいて'], history: s.history, winner });
     set({ result: { ...s.result, verify: v.ok ? 'ok' : 'ng', why: v.why } });
+    void cupSend();
     // 過去の対戦を見る(93-card-replay.jsx): 確かめが通った試合だけ、端末に取っておく(mh_card_replays_v1)。保存できたら結果の画面に「この対戦を見る」
     if (v.ok && typeof cardReplayFromPvp === 'function') {
       const match = s.match;
@@ -65971,13 +66003,13 @@ const CARD_PVP = (() => {
     emit();
   };
   // guestVia … 人の部屋へ入るとき(合言葉・招待)。招待から入るときは、その招待の印(部屋が無かったら、一覧から消す)
-  const open = async (code, profile, deck, mode = 'private', pick = false, guestVia = null) => {
+  const open = async (code, profile, deck, mode = 'private', pick = false, guestVia = null, cup = null) => {
     stop();
     const bid = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
     const seed = (Math.floor(Math.random() * 0x7fffffff) ^ Date.now()) >>> 0;
     const salt = rhythmMultiMakeId('k');
     const seal = await cardPvpSha256(cardPvpSealText({ seed, salt, deck }));
-    s = { ...blank(), phase: 'connecting', code, ownCode: code, mode, seekAt: Date.now(), pick, guest: guestVia !== null, via: guestVia || '', joining: pick ? code : '', joinAt: pick ? Date.now() : 0, deck: { monsters: deck.monsters.slice(), cards: deck.cards.slice() }, seed, salt, seal,
+    s = { ...blank(), phase: 'connecting', code, ownCode: code, mode, cup, seekAt: Date.now(), pick, guest: guestVia !== null, via: guestVia || '', joining: pick ? code : '', joinAt: pick ? Date.now() : 0, deck: { monsters: deck.monsters.slice(), cards: deck.cards.slice() }, seed, salt, seal,
       me: { id: rhythmMultiMakeId('c'), name: rhythmMultiText(profile.name || 'ブリーダー', CARD_PVP_NAME_MAX), icon: rhythmMultiText(profile.icon || '🙂', CARD_PVP_ICON_MAX), fr: typeof profile.frame === 'string' && profile.frame ? profile.frame.slice(0, 40) : null, at: Date.now(), bid: typeof bid === 'string' ? bid : null,
         rt: Number.isFinite(profile.rt) ? Math.max(0, Math.min(10000, Math.round(profile.rt))) : null, // 強さの点数(待っています の知らせに入れる。読めないときは出さない)
         // 相手の対戦開始の画面に出す、こちらのデッキ名(デッキ編成で付けた名前。試合の中身には入れない)
@@ -66038,6 +66070,14 @@ const CARD_PVP = (() => {
     clearNotice: () => { if (s && s.notice) { s = { ...s, notice: '' }; emit(); } },
     // さがし直す(90秒だれも来なかったあと)
     // 合言葉・招待で人の部屋へ入る。via … 招待から入るときの印(cardPvpInviteKey)
+    // 個人杯のリアルタイム杯の試合(④): サーバが試合ごとに作った8文字の合言葉の部屋へ入る。ふつうの合言葉の部屋と同じ動き(だれでも先に来たほうが待つ)。
+    //   info … { matchId, cupId, side, selfId }。報酬・強さの点数・マルチの履歴・もう1戦は通らない
+    cup: (code, profile, deck, info) => {
+      const c = String(code || '').toUpperCase();
+      if (!/^[A-Z2-9]{8}$/.test(c) || !info || !Number.isFinite(info.matchId) || (info.side !== 0 && info.side !== 1)) return false;
+      void open(c, profile, deck, 'cup', false, null, { matchId: info.matchId, cupId: String(info.cupId || ''), side: info.side, selfId: String(info.selfId || '') });
+      return true;
+    },
     join: (code, profile, deck, via = '') => { const c = rhythmMultiNormalizeCode(code); if (!c) return false; void open(c, profile, deck, 'private', false, via); return true; },
     // 部屋を出る。送った招待は取り消す(相手に「招待が届いています」が残って、押しても入れないのを防ぐ。2026-10-30 ソランド)
     leave: () => {
@@ -66108,10 +66148,12 @@ const CARD_PVP = (() => {
       const reward = ['win', 'foeSurrender', 'foeLeft', 'foeTimeout'].includes(outcome) ? 'win' : outcome === 'surrender' ? 'surrender' : outcome === 'dropped' ? 'left' : 'lose';
       const forced = !['win', 'lose'].includes(outcome); // 投了・抜けた・時間切れで終わった(なぞり直しで勝ち負けまでは比べない)
       if (isHost()) cardPvpWatchHost().end(reward === 'win' ? 0 : 1, label);
-      set({ phase: 'over', result: { outcome: reward === 'win' ? 'win' : 'lose', reward, forced, reason: label, facts: cardResultFacts(st, CARD_ME), verify: outcome === 'foeLeft' ? 'skip' : 'wait', why: '', rewarded: false } });
+      set({ phase: 'over', result: { outcome: reward === 'win' ? 'win' : 'lose', reward, forced, reason: label, facts: cardResultFacts(st, CARD_ME), verify: outcome === 'foeLeft' ? 'skip' : 'wait', why: '', rewarded: false,
+        kos: [cardKoCount(st, CARD_ME), cardKoCount(st, CARD_CPU)] } });
+      void cupSend();
       sendOpen();
       void tryVerify();
-      setTimeout(() => { if (s && s.result && s.result.verify === 'wait') set({ result: { ...s.result, verify: 'skip' } }); }, CARD_PVP_VERIFY_WAIT_MS);
+      setTimeout(() => { if (s && s.result && s.result.verify === 'wait') { set({ result: { ...s.result, verify: 'skip' } }); void cupSend(); } }, CARD_PVP_VERIFY_WAIT_MS);
     },
     // もう1戦(結果の画面から)。次の回の山札の封を作って知らせる。相手も押したら、同じ部屋で次の試合へ
     again: async () => {
@@ -66335,6 +66377,8 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   useEffect(() => {
     const r = room.result;
     if (room.phase !== 'over' || !r || r.rewarded) return;
+    // 個人杯の試合: 報酬・強さの点数・マルチの履歴には入れない(結果は杯へ送る・cupSend)
+    if (room.cup) { if (r.verify !== 'wait') CARD_PVP.markRewarded(null); return; }
     // マルチの履歴へ1行(92。確かめが決まったら1回だけ・無効の試合も残す)
     if (r.verify !== 'wait' && typeof cardPvpHistoryRecord === 'function') void cardPvpHistoryRecord(CARD_PVP.get(), { rankable: r.verify !== 'ng' && (rankSend || (typeof window !== 'undefined' && window.__mhCardPvpRankTest === true)) });
     if (r.verify === 'ng') { CARD_PVP.markRewarded(null); return; }
@@ -66359,7 +66403,8 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   // デッキは相手を決めたあとに選ぶ(onPickDeck があるとき)。そのときは、いまのデッキが使えなくても押せる(選ぶ画面で使えるデッキを選ぶ)
   const deckOk = !!deck && deckIssues.length === 0;
   const ready = (onPickDeck ? true : deckOk) && penaltyMin === 0; // 部屋に入るボタンは、プロフィール(名前・アイコン)を読み終えてから押せる(読む前だと「ブリーダー」と人型のアイコンで相手に届く。2026-10-27)
-  const back = () => { CARD_PVP.leave(); CARD_WATCH.leave(); onBack(); };
+  // 個人杯の試合(④)だったかは、部屋を出る前に見て渡す(84 が杯の画面へ戻す)
+  const back = () => { const wasCup = !!CARD_PVP.get().cup; CARD_PVP.leave(); CARD_WATCH.leave(); onBack(wasCup); };
   const r = room.result;
   if (watch.phase !== 'idle' && room.phase === 'idle') return <CardPvpWatchScreen/>;
   // ---- 結果(助手と対戦の結果の画面と同じ形: 立ち絵・もらったビートP・クイック周回・いまのビートP) ----
@@ -66367,7 +66412,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   if (historyOpen && room.phase === 'idle' && typeof CardPvpHistory === 'function') return <CardPvpHistory onBack={() => setHistoryOpen(false)} onOpenReplay={onOpenReplay} replayHas={replayHas} meIcon={meIcon} meName={profile.name}/>;
   if (room.phase === 'over' && r) {
     // 「もう1戦」を出さない試合: 相手が部屋を出た・抜けた・時間切れ(相手がもういない・離れているので、待ち続けてしまう)
-    const noAgain = room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ' || r.reason === '通信が切れた';
+    const noAgain = !!room.cup || room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ' || r.reason === '通信が切れた';
     const win = r.outcome === 'win';
     const a = assistant && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find((x) => x.id === assistant.id && cardFoeReleased(x.id)) || null : null;
     const got = r.got && !r.got.pending ? r.got : null;
@@ -66423,6 +66468,10 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
             </>)}
           </div>
         </div>
+        {/* 個人杯の試合(④): 杯へ送った結果。報酬はない */}
+        {room.cup && <p data-card-pvp-cup-sent={room.cupResult || 'sending'} className="mx-3 rounded-xl bg-slate-900 p-2 text-center text-[13px] font-black text-amber-100" style={JA_WRAP_STYLE}>
+          {jaWrap(!room.cupResult ? '結果を杯に送っています…' : room.cupResult === 'error' ? '結果を送れませんでした。杯の画面を開き直してください' : room.cupResult === 'wait' ? '結果を杯に送りました(相手の結果を待っています)' : '結果を杯に送りました')}
+        </p>}
         {/* もう1戦(同じ相手と同じ部屋で。2026-10-26 社長「全部入れる」)。2人とも押したら始まる。相手が部屋を出た・抜けた・時間切れのときは出さない(2026-10-27 部長) */}
         {/* 上の段に「もう1戦」、下の段に「この対戦を見る」「部屋を出る」を並べる(320px でも3つが詰まらないように) */}
         <div className={`${SCREEN_FOOTER_CLASS} flex flex-col gap-2`}>
@@ -66436,7 +66485,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
           {room.foeGone && <p data-card-pvp-foe-gone className="text-center text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('相手は部屋を出ました')}</p>}
           <div className="flex gap-2">
           {r.replay && onOpenReplay && <button type="button" data-card-pvp-replay className={`${rowBtn} mh-button-secondary`} onClick={() => { Audio_.fgSe.tap(); onOpenReplay(r.replay); }}>この対戦を見る</button>}
-          <button type="button" data-card-pvp-leave className={`${rowBtn} ${noAgain ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
+          <button type="button" data-card-pvp-leave className={`${rowBtn} ${noAgain ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`} onClick={() => { Audio_.fgSe.tap(); if (room.cup) { back(); return; } CARD_PVP.leave(); }}>部屋を出る</button>
           </div>
         </div>
       </div>
@@ -66589,7 +66638,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
       </div>
       {room.phase !== 'idle' && (
         <div className={SCREEN_FOOTER_CLASS}>
-          <button type="button" data-card-pvp-leave className={`${btn} border border-white/15 bg-slate-900 text-slate-100`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
+          <button type="button" data-card-pvp-leave className={`${btn} border border-white/15 bg-slate-900 text-slate-100`} onClick={() => { Audio_.fgSe.tap(); if (room.cup) { back(); return; } CARD_PVP.leave(); }}>部屋を出る</button>
         </div>
       )}
     </div>
@@ -67358,7 +67407,8 @@ const cardReplaySetFav = (saved, id, on) => {
 // はじめの場(自分 = 0 の見え方で、両方の山札が本物)
 const cardReplayStart = (db, rec) => {
   const names = [rec.names[0], rec.foe.name || rec.names[1]];
-  if (rec.kind === 'pvp') {
+  // 個人杯のリアルタイム杯で2台で戦った試合(tour.pvp・④)も、マルチと同じく2人それぞれの種で山札を作る
+  if (rec.kind === 'pvp' || (rec.tour && rec.tour.pvp === true)) {
     const st = cardCreateGame(db, { decks: [rec.decks[0], rec.decks[1]], names, seed: rec.seeds[0] >>> 0, first: rec.first });
     const theirs = cardCreateGame(db, { decks: [rec.decks[1], rec.decks[0]], seed: rec.seeds[1] >>> 0, first: 1 - rec.first });
     st.players[1] = { ...theirs.players[0], name: st.players[1].name };
@@ -67457,8 +67507,13 @@ const cardReplayFromTour = (db, row, opts = {}) => {
   if (!db || !row || typeof row !== 'object') return null;
   // 個人杯のリアルタイム杯で、試合の b 側の端末が戦った試合(2026-10-31 ④): 端末は「自分が0番」で組むので、手の並びは b・a の順。
   //   acts が { order: 'ba', acts: [...] } のときは、b を上(0番)・a を下に入れかえ、先攻も入れかえて組み直す(勝ち負けは杯の a・b のまま読む)
-  const ba = !!(row.acts && !Array.isArray(row.acts) && typeof row.acts === 'object' && row.acts.order === 'ba');
-  const rowActs = ba ? row.acts.acts : row.acts;
+  //   2台で戦った試合(91 の部屋・{ kind: 'pvp', order, seeds: [その端末, 相手], first, acts })は、山札の種が2人それぞれなので、その種と先攻(その端末から見た向き)で組み直す
+  const wrap = row.acts && !Array.isArray(row.acts) && typeof row.acts === 'object' ? row.acts : null;
+  const ba = !!(wrap && wrap.order === 'ba');
+  const pvpSeeds = wrap && wrap.kind === 'pvp' && Array.isArray(wrap.seeds) && wrap.seeds.length === 2
+    && wrap.seeds.every((n) => Number.isInteger(n) && n >= 0 && n <= 0xFFFFFFFF) && (wrap.first === 0 || wrap.first === 1) ? wrap.seeds : null;
+  if (wrap && wrap.kind === 'pvp' && !pvpSeeds) return null;
+  const rowActs = wrap ? wrap.acts : row.acts;
   const ra = row.a && typeof row.a === 'object' ? row.a : {}, rb = row.b && typeof row.b === 'object' ? row.b : {};
   const a = ba ? rb : ra, b = ba ? ra : rb;
   const decks = [cardReplayDeckOf(a.deck), cardReplayDeckOf(b.deck)];
@@ -67466,7 +67521,7 @@ const cardReplayFromTour = (db, row, opts = {}) => {
   const seed = Number(row.seed);
   if (!Number.isInteger(seed) || seed < 0 || seed > 0xFFFFFFFF) return null;
   if (row.first !== 0 && row.first !== 1) return null;
-  const first = ba ? 1 - row.first : row.first;
+  const first = pvpSeeds ? wrap.first : ba ? 1 - row.first : row.first;
   const winner = row.winner === 0 || row.winner === 1 ? (ba ? 1 - row.winner : row.winner) : null;
   // サーバは1試合 CARD_TOUR_MAX_STEPS 手まで回す(助手と対戦の上限より多い)
   const max = typeof CARD_TOUR_MAX_STEPS === 'number' ? CARD_TOUR_MAX_STEPS : 4000;
@@ -67494,12 +67549,12 @@ const cardReplayFromTour = (db, row, opts = {}) => {
   return {
     v: 1, id: `${deckKind ? 'deck' : 'tour'}-${String(row.id).replace(/[^0-9]/g, '').slice(0, 20)}`, kind: deckKind ? 'deck' : 'tour', at: 0, rules, first,
     names, foe: { name: names[1], icon: iconOf(b), frame: null, deckName: null, who: null },
-    outcome: winner === 0 ? 'win' : 'lose', reason: '', decks, seeds: [seed, 0], acts, prints: '', fav: false, turn: null, level: null,
+    outcome: winner === 0 ? 'win' : 'lose', reason: '', decks, seeds: pvpSeeds ? pvpSeeds.slice() : [seed, 0], acts, prints: '', fav: false, turn: null, level: null,
     // 見返しの会場と実況(84 の盤面の下・93 の CardTourLive)
     tour: {
       title: cardReplayText(opts.title, 40), stage: row.stage === 'final' ? 'final' : 'group',
       // 上の帯の印と、はじまりの一言(登録デッキの試合だけ)
-      badge: deckKind ? '登録デッキ' : '大会', deck: deckKind,
+      badge: deckKind ? '登録デッキ' : '大会', deck: deckKind, pvp: !!pvpSeeds,
       me: { name: names[0], icon: iconOf(a) },
       winner: winner === 0 || winner === 1 ? names[winner] : '',
       live: live ? { play: cardReplayText(live.play, 200), review: cardReplayText(live.review, 240) } : null,
@@ -71526,7 +71581,7 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
 //   ・集合は始まる10分前から。来ていない人の試合は、その人の登録デッキが自動で戦う
 //   ・始まる時刻を過ぎたら、開いている参加者のだれかの端末が始める(card_cup_live_start。何度呼ばれても同じ)。全員そろえば主催が早めに始められる
 //   ・開いているあいだ、様子を読み直す(8秒おき)。片方だけが結果を送った試合も決める(card_cup_live_settle・30秒おき)
-//   ・「試合へ」(onPlay・84): 相手が来ていなければ、相手の登録デッキの写しと戦う(absent)。2人で戦う部屋(91)は区切り3b
+//   ・「試合へ」(onPlay・84): 相手が来ていなければ、相手の登録デッキの写しと戦う(absent)。来ていれば、91 の部屋(CARD_PVP.cup・合言葉8文字)で2台で戦う(pvp)
 //   ・2人とも来ていない試合・2台の答えが食い違った試合は、来ている参加者の端末が写しどうしを回して決める(auto)。
 //     回し方はサーバ(cup.js の runLiveCups)と同じ cardTourPlay・種は試合の種・key は「杯|回戦|枠」なので、だれが回しても同じ結果
 
@@ -71660,10 +71715,12 @@ const CardCupLivePanel = ({ v, now, selfId, onChanged, onPlay = null }) => {
                 <span className="min-w-0 flex-1 truncate text-[14px] font-black text-white">{`相手: ${foe ? foe.name : 'ブリーダー'}`}</span>
                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-black ${foe && foe.checkin ? 'bg-emerald-500 text-slate-950' : 'bg-slate-600 text-slate-100'}`}>{foe && foe.checkin ? '来ています' : '来ていません'}</span>
               </div>
-              {foe && !foe.checkin && <div className="text-[12px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('相手が来ていないので、相手の登録デッキと戦います')}</div>}
-              <button type="button" data-card-cup-live-play={next.match.id} disabled={!next.match.ready || !onPlay || !!(foe && foe.checkin)} onClick={() => { Audio_.fgSe.tap(); if (onPlay) onPlay(next.match); }}
-                className={`w-full rounded-2xl py-3 text-[15px] font-black ${next.match.ready && onPlay && !(foe && foe.checkin) ? 'bg-gradient-to-b from-sky-300 to-sky-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
-                {!next.match.ready ? '前の回戦が終わるのを待っています' : !onPlay ? '試合の画面は準備中です' : foe && foe.checkin ? '2人で戦う部屋は準備中です' : '試合へ'}
+              <div className="text-[12px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(foe && foe.checkin
+                ? 'マルチ対戦の部屋で、相手と2人で戦います(相手が2分たっても部屋に来なければ、相手の登録デッキと戦います)'
+                : '相手が来ていないので、相手の登録デッキと戦います')}</div>
+              <button type="button" data-card-cup-live-play={next.match.id} disabled={!next.match.ready || !onPlay} onClick={() => { Audio_.fgSe.tap(); if (onPlay) onPlay(next.match); }}
+                className={`w-full rounded-2xl py-3 text-[15px] font-black ${next.match.ready && onPlay ? 'bg-gradient-to-b from-sky-300 to-sky-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
+                {!next.match.ready ? '前の回戦が終わるのを待っています' : !onPlay ? '試合の画面は準備中です' : foe && foe.checkin ? '試合へ(相手と2人で戦う)' : '試合へ'}
               </button>
             </>
           )}

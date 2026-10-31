@@ -19,7 +19,7 @@ const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, Strin
 vm.runInContext(`${read('data/card-battle-cards.js')}\n;\n${read('src/parts/82-card-battle-core.jsx')}\n;\n`
   + 'const rhythmMultiText = (v, max) => String(v == null ? "" : v).replace(/[\\u0000-\\u001f]/g, "").slice(0, max);\n'
   + `${multi}\n;\n${replay}\n;\nthis.E = { CARD_BATTLE_DATA, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardApplyAction, cardPvpTruthGame, cardPvpVerify, cardPvpDecider, cardPvpTimeoutAct,
-    cardReplayPrint, cardReplayNormalize, cardReplayNormalizeOne, cardReplayAdd, cardReplaySetFav, cardReplayBuild, cardReplayFromPvp, cardReplayFromCpu, cardCreateGame, cardReplayTurnStarts, cardReplayCaption,
+    cardReplayPrint, cardReplayNormalize, cardReplayNormalizeOne, cardReplayAdd, cardReplaySetFav, cardReplayBuild, cardReplayFromPvp, cardReplayFromCpu, cardReplayFromTour, cardCreateGame, cardReplayTurnStarts, cardReplayCaption,
     CARD_REPLAY_MAX, CARD_REPLAY_FAV_MAX, CARD_REPLAY_BYTES_MAX, CARD_REPLAY_RULES };`, ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
@@ -192,4 +192,28 @@ check(`1試合の記録の大きさ(最大 ${(maxBytes / 1024).toFixed(1)}KB・�
 }
 
 console.log(failed ? `\nNG ${failed} 件` : '\nすべて OK');
+// ---- 個人杯のリアルタイム杯で、2台で戦った試合(2026-10-31 ④): 91 が杯へ送る { kind: 'pvp', order, seeds, first, acts } を、杯の見返し(cardReplayFromTour)で組み直せるか ----
+//   a 側の端末が送っても(order ab)、b 側の端末が送っても(order ba)、最後の手まで当たり直し、勝った人の名前が杯の勝ち負けと合う
+{
+  const badCup = [];
+  for (let n = 0; n < 6; n++) {
+    const g = play(n);
+    for (const side of [0, 1]) {
+      const cupWinner = g.st.winner === 0 ? side : 1 - side;
+      const row = JSON.parse(JSON.stringify({ id: 700 + n, seed: 1, first: 0, winner: cupWinner, kos: [0, 0], rules: E.CARD_REPLAY_RULES, live: null,
+        acts: { kind: 'pvp', order: side === 0 ? 'ab' : 'ba', seeds: [g.mySeed, g.foeSeed], first: g.first, acts: g.history.map((e) => [e.by, e.act]) },
+        a: { name: '杯A', icon: '', deck: side === 0 ? g.myDeck : g.foeDeck }, b: { name: '杯B', icon: '', deck: side === 0 ? g.foeDeck : g.myDeck } }));
+      const rec = E.cardReplayFromTour(db, row, { title: '個人杯' });
+      const built = rec && E.cardReplayBuild(db, rec);
+      const last = built && built.states[built.states.length - 1];
+      const want = cupWinner === 0 ? '杯A' : '杯B';
+      if (!rec || built.stop !== null || built.states.length !== g.history.length + 1 || last.winner !== g.st.winner || rec.tour.winner !== want) {
+        badCup.push(`${n}/${side ? 'b' : 'a'}: ${!rec ? '開けない' : `止まった手 ${built.stop} 勝ち ${last && last.winner}/${g.st.winner} 名前 ${rec.tour.winner}/${want}`}`);
+      }
+    }
+  }
+  check('個人杯: 2台で戦った試合(kind pvp)を a 側・b 側どちらが送っても、杯の見返しで最後の手まで当たり直し、勝った人が杯と合う', badCup.length === 0, badCup.slice(0, 3).join(' / '));
+  const broken = E.cardReplayFromTour(db, { id: 1, seed: 1, first: 0, winner: 0, acts: { kind: 'pvp', order: 'ab', seeds: [1], first: 0, acts: [] }, a: { deck: play(0).myDeck }, b: { deck: play(0).foeDeck } });
+  check('個人杯: 種のそろわない kind pvp は開かない(null)', broken === null);
+}
 process.exit(failed ? 1 : 0);
