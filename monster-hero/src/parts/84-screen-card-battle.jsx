@@ -811,7 +811,9 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   const imgEl = art
     ? cardKiraWrap(kira, <img src={art} alt="" onError={cardArtOnError(art, CARD_IMG(cardMonsterOf(db, mon.no).img))} style={{ ...(wide ? { maxHeight: wideArtH } : null), ...(artFit ? { transform: artFit } : null) }} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp && !artFit ? '-scale-x-100' : ''}`}/>)
     : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`}/>;
-  const mv = motion && !mon.ko ? motion : null;
+  // 攻撃の動きだけは、その手で倒れた子(はね返されて倒れたなど)でも最後まで見せる。動きが終わると倒れた形になる
+  //   (攻撃の動きを守りが決まった手で流すようにしたので、はね返しで倒れる手と同じになった。2026-10-31)
+  const mv = motion && (!mon.ko || motion.type === 'attack') ? motion : null;
   // calm … オプションの「画面の揺れ: 揺らさない」。受けたときは揺らさずに光るだけ
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? (calm ? 'mh-card-hit-calm' : 'mh-card-hit') : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = (
@@ -1176,7 +1178,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     const evs = next.events || [];
     // 控えていた攻撃の動きを、守りが決まった手で流す。当たり・守りの動きと数字は、攻撃の動きが届くころまで遅らせる(lead)
     const held = pendingAtk.current;
-    const deferred = held && held.turn === next.turn && evs.some((e) => e.t === 'hit' || e.t === 'guard') ? held : null;
+    // ★流すのは当たりが決まった手(hit)だけ。守りのカードを出した手(guard)では流さない。守りは何枚でも重ねられ、
+    //   出すたびに流すと「攻撃 → よける → もう一度よける」と二重に見えていた(2026-10-31 社長「まだ攻撃→防御(回避)の流れで二重描写がある」)
+    const deferred = held && held.turn === next.turn && evs.some((e) => e.t === 'hit') ? held : null;
     if (deferred) { pendingAtk.current = null; playMotion(deferred.id, { ...deferred.mv, key: `${deferred.mv.key}-go` }, cardMotionMs(deferred.mv.kind) + 80); }
     if (held && held.turn !== next.turn) pendingAtk.current = null;
     const lead = deferred ? Math.round(cardMotionMs(deferred.mv.kind) * 0.5) : 0;
@@ -1240,19 +1244,16 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     // ★守りのカードを出した手と、当たりが決まる手は別のことがある。よけ方(ジャンプ)・盾の数字は、守りのカードを出したときの控えから引く
     evs.filter((e) => e.t === 'guard').forEach((e) => { const c = cardOf(db, e.card); lastGuard.current[`${e.p}-${e.mon}`] = { jump: cardDodgeIsJump(c), label: c && c.kind !== 'dge' ? cardGuardLabel(c) : '', at: Date.now() }; });
     evs.filter((e) => e.t === 'hit').forEach((e, n) => {
-      let type = e.evaded && !e.dmg ? 'dodge' : e.guarded && !e.dmg ? 'guard' : e.dmg > 0 ? 'hit' : (e.evaded ? 'dodge' : null);
+      // 防御のカードで受けた当たりは、ダメージが残っても盾の動きにする(守りのカードを出した手では動かさなくなったので、ここで1回だけ見せる)
+      let type = e.evaded && !e.dmg ? 'dodge' : e.guarded ? 'guard' : e.dmg > 0 ? 'hit' : (e.evaded ? 'dodge' : null);
       const g = lastGuard.current[`${e.p}-${e.m}`];
       const recent = g && Date.now() - g.at < 20000;
       if (type === 'dodge' && recent && g.jump) type = 'jump';
       const hk = `h${next.log.length}-${n}-${Date.now()}`;
       if (type && motionOn) later(() => playMotion(`${e.p}-${e.m}`, { type, label: type === 'guard' && recent ? g.label : '', key: hk }, type === 'jump' ? 920 : 720));
     });
-    evs.filter((e) => e.t === 'guard').forEach((e, n) => {
-      const c = cardOf(db, e.card);
-      const type = c && c.kind === 'dge' ? (cardDodgeIsJump(c) ? 'jump' : 'dodge') : 'guard';
-      const gk = `g${next.log.length}-${n}-${Date.now()}`;
-      if (motionOn) later(() => playMotion(`${e.p}-${e.mon}`, { type, label: type === 'guard' ? cardGuardLabel(c) : '', key: gk }, type === 'jump' ? 920 : 720));
-    });
+    // 守りのカードを出した手(guard)では動かさない。よける・防ぐの動きは、当たりが決まった手(上の hit)で1回だけ出す
+    //   (跳んでよける・盾の数字は、上の lastGuard の控えから引く)。前はここでも流していて、同じ子が2回よけて見えていた
     const use = evs.find((e) => e.t === 'use');
     if (use) {
       const key = `${next.log.length}-${Date.now()}`;
