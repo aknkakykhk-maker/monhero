@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 00b76403e527217a
+// source-sha256: e4fd2a9c6b34c97c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -124411,6 +124411,17 @@ function MonsterHeroGame() {
     storeSet(SCREEN_THEME_STORAGE_KEY, next, false);
     return next;
   });
+  const [, setThemeSeasonTick] = useState(0);
+  const [themeSeasonArm, setThemeSeasonArm] = useState(0);
+  useEffect(() => {
+    const wait = SCREEN_THEME_HALLOWEEN_UNTIL - Date.now();
+    if (!(wait > -1000)) return undefined;
+    const far = wait > 2000000000;
+    const timer = setTimeout(() => {
+      if (far) setThemeSeasonArm(n => n + 1);else setThemeSeasonTick(n => n + 1);
+    }, far ? 2000000000 : Math.max(0, wait) + 1000);
+    return () => clearTimeout(timer);
+  }, [themeSeasonArm]);
   const [showOfficialTitleConfirm, setShowOfficialTitleConfirm] = useState(false);
   const [difficulty, setDifficulty] = useState('Normal');
   const safeDifficulty = normalizeBattleDifficulty(difficulty);
