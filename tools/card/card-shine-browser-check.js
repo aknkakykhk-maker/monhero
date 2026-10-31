@@ -10,7 +10,7 @@
 //   ③ 重さ: スマホくらいに遅くした(CPU 4倍遅く)ブラウザで、全部持っている一覧を出しても、光らせないときと比べて描ける回数が大きく落ちない
 //   ④ 動きを減らす設定では、動く光の層を出さない(ふちの光だけ)
 //   ⑤ 実行時エラーが無い
-//   ⑥ 対戦開始の画面で、キラ・レアキラの子の絵が消えず、絵の形の光(84 CardKiraSil)が重なる
+//   ⑥ 対戦開始の画面で、キラ・レアキラの子の絵が消えず、光は絵の後ろとふちだけ(絵の上に重ねて色を変えない。2026-10-31 社長「レアキラの光り方がモンスター自身の色を変えてる」)
 const http = require('http'), path = require('path'), fs = require('fs');
 const ROOT = path.resolve(__dirname, '..', '..');
 const PORT = 8963;
@@ -107,7 +107,7 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
     const manyOff = await fps(page);
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
     check(`③ 光るカード ${many}枚を1画面に並べても、光らせないときの8割以上(光あり ${manyOn.toFixed(0)} / なし ${manyOff.toFixed(0)} 回/秒)`, many >= 60 && manyOn >= manyOff * 0.8, `${manyOn.toFixed(1)} / ${manyOff.toFixed(1)}`);
-    // ⑥ 対戦開始の画面(83 CardVsIntro): キラ・レアキラの子の絵が消えない(光のふちの枠が幅 0 になって消えていた)・絵の形の光が重なる
+    // ⑥ 対戦開始の画面(83 CardVsIntro): キラ・レアキラの子の絵が消えない(光のふちの枠が幅 0 になって消えていた)・光は後ろとふちだけ
     await page.evaluate(() => {
       document.getElementById('__dex')?.remove();
       const div = document.createElement('div');
@@ -120,8 +120,10 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
     const vs = await page.evaluate(() => ({
       widths: [...document.querySelectorAll('#__dex [data-card-vs-mon] img')].map((x) => Math.round(x.getBoundingClientRect().width)),
       sil: document.querySelectorAll('#__dex [data-card-kira-sil]').length,
+      back: document.querySelectorAll('#__dex [data-card-kira-layer="back"]').length,
+      blend: [...document.querySelectorAll('#__dex [data-card-vs-mon] *')].filter((el) => getComputedStyle(el).mixBlendMode !== 'normal').length,
     }));
-    check('⑥ 対戦開始の画面: キラ・レアキラの子も絵が出て(幅がある)、絵の形の光が4体に重なる', vs.widths.length === 6 && vs.widths.every((w) => w >= 30) && vs.sil === 4, JSON.stringify(vs));
+    check('⑥ 対戦開始の画面: キラ・レアキラの子も絵が出て(幅がある)、光は4体とも絵の後ろにあり、絵の上に色を変える層が無い', vs.widths.length === 6 && vs.widths.every((w) => w >= 30) && vs.sil === 0 && vs.back === 4 && vs.blend === 0, JSON.stringify(vs));
     await page.close();
     // ④ 動きを減らす設定
     const page2 = await open(true);

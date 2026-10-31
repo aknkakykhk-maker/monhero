@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3d2a3e05167e184f
+// generated-sha256: ecd25329e625a941
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -58151,14 +58151,15 @@ const CARD_VS_CSS = `
 //   表に無い絵は、前と同じ object-contain
 // 表のキーは images/ の下の道(images/ を付けると版を打つ道具が ?v= を付けてしまうため)
 const cardVsBoxOf = (src) => (typeof ART_CONTENT_BOXES !== 'undefined' && src ? ART_CONTENT_BOXES[String(src).split('?')[0].replace(/^images\//, '')] || null : null);
-// kira … キラ・レアキラの光(84 の CardKiraAura・CardKiraSil・cardKiraRimClass)を、対戦の場と同じ形で絵に重ねる。
+// kira … キラ・レアキラの光(84 の CardKiraAura・cardKiraRimClass)を、対戦の場と同じ形で、絵の後ろとふちに付ける。
+//   絵の上には重ねない(モンスターの色を変えない。2026-10-31 社長「レアキラの光り方がモンスター自身の色を変えてる」)。
 //   光の中心は体の真ん中(84 の cardKiraBodyOf)。ふちの光は絵だけにかける
 // onImgError … 絵が読めなかったとき(84 の cardArtOnError: 読み直し→カードの絵)
 const CardVsArt = ({ src, alt, aspect, spread = 1, className = '', style = {}, kira = null, onImgError = null, ...rest }) => {
   const box = cardVsBoxOf(src);
   if (!box) {
     const img = <img src={src} alt={alt} draggable={false} onError={onImgError || undefined} className={`w-full object-contain object-bottom ${className}`} style={{ aspectRatio: `${aspect}`, ...(kira ? null : style) }} {...(kira ? null : rest)}/>;
-    return kira ? <div className="relative w-full" style={{ isolation: 'isolate', ...style }} {...rest}><span data-card-kira={kira} className={`${cardKiraRimClass(kira)} block`}>{img}</span><CardKiraSil kind={kira} src={src} style={{ inset: 0 }} maskSize="contain" maskPos="bottom"/></div> : img;
+    return kira ? <div className="relative w-full" style={{ isolation: 'isolate', ...style }} {...rest}><span data-card-kira={kira} className={`${cardKiraRimClass(kira)} block`}>{img}</span></div> : img;
   }
   const [x0, y0, x1, y1, a] = box;
   const fw = Math.max(0.01, x1 - x0), fh = Math.max(0.01, y1 - y0);
@@ -58173,7 +58174,6 @@ const CardVsArt = ({ src, alt, aspect, spread = 1, className = '', style = {}, k
       {kira
         ? <span data-card-kira={kira} className={`${cardKiraRimClass(kira)} absolute`} style={pos}><img src={src} alt={alt} draggable={false} onError={onImgError || undefined} className={`absolute inset-0 h-full w-full max-w-none ${className}`}/></span>
         : <img src={src} alt={alt} draggable={false} onError={onImgError || undefined} className={`absolute max-w-none ${className}`} style={pos}/>}
-      {kira && <CardKiraSil kind={kira} src={src} style={pos}/>}
       {kira && <CardKiraAura kind={kira} src={src} layer="front" style={pos}/>}
     </div>
   );
@@ -59245,11 +59245,12 @@ const cardArtPrefetchPaths = () => {
 const cardKiraOf = (db, no) => { const v = String(((db && cardMonsterOf(db, no)) || {}).variant || ''); return v.includes('別絵キラ') ? 'rare' : v.includes('キラ') ? 'kira' : null; };
 // 2026-10-31 社長「バトル中の立ち絵も強化して」→ 動画を見て「もっとわかりやすく。モンスターのセンター位置をちゃんと合わせて。ライガーみたいに尻尾があるやつは注意」。
 //   決まった案B(オーロラと粒)に合わせ、ふつうの子・キラ・レアキラの違いが場でひと目で分かる強さにする。
-//   kira … 色が移り変わる太いふち・体の後ろで色の光が脈打つ・星が5つまたたく・絵の上を光の帯が走る /
-//   rare … 金と桃色の太いふち・体の後ろで虹まじりの光の線が回る・強い金の光・光の粒が10・絵の形のとおりにオーロラが流れ光の帯が速く走る
+//   kira … 色が移り変わる太いふち・体の後ろで色の光が脈打つ・ふちのまわりで星が5つまたたく /
+//   rare … 金と桃色の太いふち・体の後ろで虹まじりの光の線が回る・その外を虹の輪が逆に回る・強い金の光・後ろで光の粒が10舞い上がる
+//   2026-10-31 社長「レアキラの光り方がモンスター自身の色を変えてる」→ 光は絵の「後ろ」と「ふち(輪郭の外)」だけ。絵の上に重ねる光(オーロラ・光の帯)はやめた
 //   光の中心と大きさは、絵の四角ではなく「体」に合わせる(ART_BODY_CENTERS。tools/image/make-art-body-centers.js が測る。尻尾・羽は数えない)
-const CARD_KIRA_SPARKS = Object.freeze([[0.18, 0.28, 0], [0.8, 0.18, 1.3], [0.55, 0.62, 2.5], [0.88, 0.6, 0.7], [0.3, 0.08, 1.9]]);
-const CARD_RARE_MOTES = Object.freeze([[0.1, 0], [0.28, 1.1], [0.5, 0.5], [0.72, 1.7], [0.9, 2.3], [0.62, 2.9], [0.38, 1.5], [0.82, 0.8], [0.18, 2.6], [0.95, 2]]);
+const CARD_KIRA_SPARKS = Object.freeze([[-0.08, 0.3, 0], [1.06, 0.16, 1.3], [1.04, 0.72, 2.5], [-0.06, 0.78, 0.7], [0.5, -0.1, 1.9]]); // 体の範囲の外寄り(絵の上に乗らない)
+const CARD_RARE_MOTES = Object.freeze([[-0.12, 0], [0.02, 1.1], [0.5, 0.5], [0.98, 1.7], [1.12, 2.3], [0.62, 2.9], [0.38, 1.5], [1.05, 0.8], [-0.05, 2.6], [0.85, 2]]); // 体の後ろ・左右から舞い上がる
 // 体の範囲 [中心の横, 中心の縦, 左, 上, 右, 下](絵に対する割合)。表に無い絵は、下寄りの真ん中
 const cardKiraBodyOf = (src) => (typeof ART_BODY_CENTERS !== 'undefined' && src ? ART_BODY_CENTERS[String(src).split('?')[0].replace(/^images\//, '')] : null) || [0.5, 0.56, 0.18, 0.12, 0.82, 1];
 // 体を囲む円の大きさ(絵の幅に対する割合)。絵の横÷縦は ART_CONTENT_BOXES の5番目(無ければ正方形)
@@ -59268,10 +59269,10 @@ const CardKiraAura = ({ kind, src, layer, calm = false, style = null }) => {
   const at = (k) => ({ left: `${cx * 100}%`, top: `${cy * 100}%`, width: `${d * k * 100}%` });
   return (
     <span data-card-kira-fx={kind} data-card-kira-layer={layer} aria-hidden="true" className={`mh-kira-fx mh-kira-fx-${layer}`} style={style || undefined}>
-      {layer === 'back' && kind === 'rare' && <><span className="mh-rare-halo" style={at(1.55)}/><span className="mh-rare-glow" style={at(1.15)}/></>}
+      {layer === 'back' && kind === 'rare' && <><span className="mh-rare-aurora" style={at(1.95)}/><span className="mh-rare-halo" style={at(1.55)}/><span className="mh-rare-glow" style={at(1.15)}/></>}
       {layer === 'back' && kind === 'kira' && ['g1', 'g2', 'g3'].map((g) => <span key={g} className={`mh-kira-glow ${g}`} style={at(1.15)}/>)}
       {layer === 'front' && kind === 'kira' && CARD_KIRA_SPARKS.map(([x, y, t], i) => <span key={i} className="mh-kira-spark" style={{ left: `${(x0 + x * (x1 - x0)) * 100}%`, top: `${(y0 + y * (y1 - y0)) * 100}%`, animationDelay: `${t}s` }}/>)}
-      {layer === 'front' && kind === 'rare' && CARD_RARE_MOTES.map(([x, t], i) => <span key={i} className="mh-rare-mote" style={{ left: `${(x0 + x * (x1 - x0)) * 100}%`, top: `${y1 * 100 - 4}%`, animationDelay: `${t}s` }}/>)}
+      {layer === 'back' && kind === 'rare' && CARD_RARE_MOTES.map(([x, t], i) => <span key={i} className="mh-rare-mote" style={{ left: `${(x0 + x * (x1 - x0)) * 100}%`, top: `${y1 * 100 - 4}%`, animationDelay: `${t}s` }}/>)}
     </span>
   );
 };
@@ -59297,20 +59298,6 @@ const CardShine = ({ kind, className = '', children }) => {
     </span>
   );
 };
-// 立ち絵の「絵の形のとおり」に重ねる光(絵そのものを型にして切り抜く。透けている所には出ない)。
-//   style … 絵と同じ置き場所・大きさ・transform(左右の向きも)。maskSize/maskPos … 絵の収め方(object-contain なら contain)
-//   calm(揺らさない)・動きを減らす設定では出さない(CSS)。動かすのは中の層の transform だけ
-const CardKiraSil = ({ kind, src, calm = false, style = null, maskSize = '100% 100%', maskPos = 'center' }) => {
-  if (!kind || !src || calm) return null;
-  const m = `url("${src}")`;
-  return (
-    <span data-card-kira-sil={kind} aria-hidden="true" className="mh-kira-sil"
-      style={{ WebkitMaskImage: m, maskImage: m, WebkitMaskSize: maskSize, maskSize, WebkitMaskPosition: maskPos, maskPosition: maskPos, WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat', ...style }}>
-      {kind === 'rare' && <span className="mh-kira-sil-aurora"/>}
-      <span className={`mh-kira-sil-sheen ${kind === 'rare' ? 'fast' : ''}`}/>
-    </span>
-  );
-};
 // 立ち絵(img。中身の大きさそのままの箱)を、キラの光で包む。kind が無ければそのまま返す。
 //   ふちの光(filter)は絵だけにかけ、後ろ・絵の形・前の光はその外に置く(中で動かすと、ふちの光を毎こま描き直して重くなる)。
 //   fx … { src, transform, calm }。transform … 絵と同じ transform(広げる・左右の向き)。光も同じ形で重ねる
@@ -59323,7 +59310,6 @@ const cardKiraWrap = (kind, el, fx = null) => {
     <span className="relative inline-flex items-end justify-center" style={{ isolation: 'isolate' }}>
       <CardKiraAura kind={kind} src={fx.src} layer="back" style={pos}/>
       {rim}
-      <CardKiraSil kind={kind} src={fx.src} style={pos}/>
       <CardKiraAura kind={kind} src={fx.src} layer="front" style={pos}/>
     </span>
   );
@@ -101438,7 +101424,7 @@ const createAnimationStyle = () => {
     .mh-card-down-band { animation: mhCardDownBand 1.1s ease-out both; }
     @keyframes mhCardDownBand { 0% { opacity: 0; transform: scaleY(.2); } 15% { opacity: 1; transform: scaleY(1.08); } 25% { transform: scaleY(1); } 82% { opacity: 1; } 100% { opacity: 0; } }
     @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash, .mh-card-dmg-pop, .mh-card-down-band, .mh-card-guard-result { animation: none; } }
-    /* キラ・レアキラの立ち絵の光(84 の CardKiraAura・CardKiraSil・cardKiraWrap。2026-10-30 社長「この形で入れて」→
+    /* キラ・レアキラの立ち絵の光(84 の CardKiraAura・cardKiraWrap。2026-10-30 社長「この形で入れて」→
        2026-10-31「バトル中の立ち絵も強化して」「もっとわかりやすく。センター位置をちゃんと合わせて」)。CSS だけ。動かすのは transform と opacity
        (ふちの光の filter だけは色を移すため動かす。ふちの光の中には動く物を入れない)。光の中心・大きさは 84 が体の範囲から決めて style で渡す */
     .mh-kira-rim { animation: mhKiraRim 2.4s linear infinite; }
@@ -101466,16 +101452,14 @@ const createAnimationStyle = () => {
     @keyframes mhRarePulse { 0%, 100% { opacity: .7; transform: translate(-50%, -50%) scale(.92); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); } }
     .mh-rare-mote { width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: #fff6c8; box-shadow: 0 0 6px 2px rgba(255,214,102,.95); opacity: 0; animation: mhRareMote 2.8s linear infinite; }
     @keyframes mhRareMote { 0% { opacity: 0; transform: translateY(0); } 12% { opacity: 1; } 80% { opacity: .7; } 100% { opacity: 0; transform: translateY(-90px); } }
-    /* 絵の形のとおりの光(84 の CardKiraSil)。絵を型に切り抜くので、透けている所には出ない */
-    .mh-kira-sil { position: absolute; pointer-events: none; overflow: hidden; z-index: 1; }
-    .mh-kira-sil-aurora { position: absolute; top: 0; bottom: 0; left: -200%; width: 400%; mix-blend-mode: screen; opacity: .6;
-      background: linear-gradient(120deg, rgba(255,0,150,0) 0%, rgba(255,0,150,.45) 12%, rgba(0,200,255,.45) 25%, rgba(255,230,0,.45) 37%, rgba(255,0,150,0) 50%, rgba(255,0,150,.45) 62%, rgba(0,200,255,.45) 75%, rgba(255,230,0,.45) 87%, rgba(255,0,150,0) 100%);
-      animation: mhShineAurora 3s linear infinite; }
-    .mh-kira-sil-sheen { position: absolute; top: -20%; bottom: -20%; left: -60%; right: -60%; background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.9) 50%, transparent 60%); mix-blend-mode: overlay; animation: mhKiraSilSheen 2.6s ease-in-out infinite; }
-    .mh-kira-sil-sheen.fast { background: linear-gradient(105deg, transparent 36%, rgba(255,255,255,1) 50%, transparent 64%); animation: mhShineSheen 1.5s ease-in-out infinite; }
-    @keyframes mhKiraSilSheen { 0% { transform: translateX(-55%); } 40%, 100% { transform: translateX(55%); } }
+    /* レアキラ: いちばん外を、虹の輪が逆向きにゆっくり回る(体の後ろだけ。2026-10-31 社長「絵の上に重ねず、後ろとふちで格を出す」) */
+    .mh-rare-aurora { aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; opacity: .75;
+      background: conic-gradient(rgba(255,90,200,.7), rgba(90,200,255,.7), rgba(255,230,90,.7), rgba(150,255,170,.6), rgba(255,90,200,.7));
+      -webkit-mask: radial-gradient(circle, transparent 42%, #000 50%, #000 58%, transparent 70%); mask: radial-gradient(circle, transparent 42%, #000 50%, #000 58%, transparent 70%);
+      animation: mhRareSpinBack 11s linear infinite; }
+    @keyframes mhRareSpinBack { to { transform: translate(-50%, -50%) rotate(-360deg); } }
     @media (prefers-reduced-motion: reduce) {
-      .mh-kira-fx, .mh-kira-sil { display: none; }
+      .mh-kira-fx { display: none; }
       .mh-kira-rim { animation: none; filter: drop-shadow(0 0 2px #c8a0ff) drop-shadow(0 0 2px #c8a0ff) drop-shadow(0 0 8px rgba(200,160,255,.8)); }
     }
     /* カードの絵のキラ・レアキラ・銀の光(84 の CardShine。2026-10-31 社長「光り方は案B オーロラと粒」「ブリーダー・場のカードに銀の光の帯」)。
