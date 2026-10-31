@@ -69,7 +69,7 @@ const seed = () => {
         const b = [...document.querySelectorAll('button')].find((x) => /^(確認|受け取る|閉じる|OK)$/.test((x.innerText || '').trim()));
         if (b) { b.click(); return true; }
         const dialog = document.querySelector('[role="dialog"]');
-        if (dialog) { (dialog.querySelector('button') || dialog).click(); return true; }
+        if (dialog) { const bs = [...dialog.querySelectorAll('button')], lb = (x) => (x.innerText || x.getAttribute('aria-label') || '').trim(); (bs.find((x) => /^(あとで読む|スキップ|閉じる|とじる|OK)$/.test(lb(x))) || bs.find((x) => !/(へ行く|を見る|くわしく|詳しく)/.test(lb(x))) || dialog).click(); return true; } // 「くわしく」→「バトルへ行く」で別の画面へ移らないよう、閉じる側を先に押す(2026-10-31)
         return false;
       });
       if (!closed) break;
