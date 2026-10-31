@@ -207,7 +207,9 @@ const CardVsMonsters = ({ db, monsters, side, start, step }) => (
             ? (() => {
               // キラ・レアキラの光(84 の CardKiraFx・cardKiraWrap。対戦の場と同じ見た目)
               const kira = typeof cardKiraOf === 'function' ? cardKiraOf(db, no) : null;
-              const el = <CardVsArt src={art} alt={m.name} aspect={1} spread={1.1} className="drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]" style={{ width: 'min(100%, 19vh, 140px)' }}/>;
+              // キラの子は、光のふち(cardKiraWrap)の枠が中身に合わせて縮むので、幅に % を使うと 0 になって絵が消えていた(2026-10-31 ルールくんが見つけた)。
+              //   キラの子だけ、% を使わない決まった幅にする(3体が横に並んでも収まる 30vw まで)
+              const el = <CardVsArt src={art} alt={m.name} aspect={1} spread={1.1} className="drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]" style={{ width: kira ? 'min(19vh, 140px, 30vw)' : 'min(100%, 19vh, 140px)' }}/>;
               return kira ? <span className="relative flex w-full justify-center" style={{ isolation: 'isolate' }}><CardKiraFx kind={kira}/>{cardKiraWrap(kira, el)}</span> : el;
             })()
             : <img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="w-full rounded-md object-cover" style={{ aspectRatio: '63 / 88', maxHeight: 'min(19vh, 140px)' }}/>}
