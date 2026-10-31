@@ -821,9 +821,10 @@ const cardJaWrap = (text) => String(text ?? '').split(CARD_KEEP_WORDS).map((t, i
 // 場のモンスターの名前。「…」で切らずに収める(320で「メタル…」と切れていた。QA 8)。
 // 字を少し小さく(10pxまで) → それでも入らなければ横をつめて1行に収める(2行にすると「ストライ/クリパー」と言葉の途中で割れる)
 // two … 長い名前を、字を縮めすぎずに2行で出す(2026-10-29 社長「長い名前の字が小さくなりすぎない工夫」。地上・空中の札をライフの行へ移して空いた1行を使う)
-const CardMonName = ({ name, w, two = false }) => {
+// 場の札の名前。いつも1行にして、長い名前は字を小さく・横に詰めて札の幅に収める(2026-10-31 社長「7文字以上のモンスター名が下にずれてる。サイズで調整して」。
+//   前は長い名前を2行に折っていて(two)、「ダークヘンガ/ー」のように折れ、ライフ・地上の札が1行ぶん下にずれていた)。two は呼ぶ側との互換のために受け取るだけ
+const CardMonName = ({ name, w, two = false }) => { // eslint-disable-line no-unused-vars
   const len = Math.max(1, String(name || '').length);
-  if (two && len * 11 > w) return <div data-card-mon-name data-card-mon-name-two className="line-clamp-2 break-all font-black leading-[1.1]" style={{ fontSize: 11 }}>{name}</div>;
   const fs = Math.max(10, Math.min(12, Math.floor(w / len)));
   const k = Math.min(1, w / (len * fs));
   return <div data-card-mon-name className="whitespace-nowrap font-black leading-tight" style={{ fontSize: fs, transform: k < 1 ? `scaleX(${k})` : undefined, transformOrigin: 'left', width: k < 1 ? `${w / k}px` : undefined }}>{name}</div>;
@@ -3638,7 +3639,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         { cup: { matchId: r.id, cupId: r.cup_id, side: r.side, seed: r.seed, first: r.first, selfId } });
     };
     // 杯の試合のあと・入れなかったときの知らせ(下に小さく出す)
-    return <><CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId} onOpenReplay={openCupReplay} onPlayLive={playCupLive} getAdapters={cupAdapters}
+    return <><CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId} onOpenReplay={openCupReplay} onPlayLive={playCupLive} getAdapters={debug || (typeof cardCupPrizeOpen === 'function' && cardCupPrizeOpen()) ? cupAdapters : null}
       onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('cup'); setView('tactics'); } : null}/>
       {notice && <div data-card-cup-toast className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit max-w-[92vw] rounded-full bg-slate-950/95 px-4 py-2 text-[13px] font-black text-amber-100 shadow-lg" style={JA_WRAP_STYLE}>{jaWrap(notice)}</div>}
     </>;
