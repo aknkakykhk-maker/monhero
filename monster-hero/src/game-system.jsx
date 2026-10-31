@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 992b7ba878eed49b
+// generated-sha256: 08e7ea849ccc5f49
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -69964,6 +69964,92 @@ const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, baseName =
   );
 };
 
+// ---- ためしに戦わせる(2026-10-31 社長「効いているかわからない」・案B) ----
+// 自分で打つ対戦では戦術カードは使われないので、いまの戦い方で、自分のデッキを助手(MASTER)と画面なしで5戦させ、
+//   どの行で何回動いたか(82 の cardTacticTakeWhy)を数える。ビートP・記録・ランク・クエストには何も数えない(保存も書かない)
+//   打ち方は登録したときと同じ(cardSharePolicy)。先読み(GRAND MASTER より上)は時間がかかるので省く
+const CARD_REG_TRIAL_GAMES = 5;
+const CARD_REG_TRIAL_FOES = Object.freeze(['kyuko', 'mua', 'kiki', 'dra', 'atsu']);
+const cardRegTrialOne = (db, deck, battle, aces, g) => {
+  let s = ((g + 1) * 2654435761 + (Date.now() & 0xffff)) >>> 0;
+  const rand = () => { const n = cardRngNext(s); s = n.s; return n.v; };
+  const foe = CARD_REG_TRIAL_FOES[g % CARD_REG_TRIAL_FOES.length];
+  const foeDeck = cardAiBuildDeck(db, foe, 'master', rand, { playerDeck: deck });
+  const me = { ...cardSharePolicy({ name: deck.name, habit: cardShareMainHabit(battle, 'kyuko'), aces, f: cardTacticPackFrames(battle) }, 'master'), search: null };
+  const pols = [me, cardAiPolicy(foe, 'master')];
+  let st = cardCreateGame(db, { decks: [{ monsters: deck.monsters.slice(), cards: deck.cards.slice() }, foeDeck], seed: s, first: g % 2 });
+  const used = {};
+  for (let i = 0; i < 4000 && st.winner === null; i++) {
+    const who = st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? cardOther(st.first) : cardDecider(st);
+    if (typeof cardTacticTakeWhy === 'function') cardTacticTakeWhy();
+    const act = cardAiChooseAction(db, st, pols[who], rand);
+    if (who === 0 && typeof cardTacticTakeWhy === 'function') { const w = cardTacticTakeWhy(); if (w) { const k = `${w.mi === null || w.mi === undefined ? 'b' : w.mi}|${w.c}|${w.a}`; used[k] = (used[k] || 0) + 1; } }
+    const next = cardApplyAction(db, st, act);
+    if (next) { st = next; continue; }
+    const fb = st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : st.phase === 'guts' ? { type: 'guts', hand: [] } : null;
+    if (!fb) break;
+    st = cardApplyAction(db, st, fb) || st;
+  }
+  return { win: st.winner === 0, turn: st.turn, used, foe };
+};
+// 結果の窓: 何戦何勝・よく働いた行(多い順)・一度も当てはまらなかった行
+const CardRegTrialSheet = ({ db, deck, battle, aces, monName, onClose }) => {
+  const [res, setRes] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    // 1戦ずつ間をあけて回す(画面が固まらないように)
+    const run = (g) => { if (!alive || g >= CARD_REG_TRIAL_GAMES) return; const r = cardRegTrialOne(db, deck, battle, aces, g); if (!alive) return; setRes((cur) => [...cur, r]); setTimeout(() => run(g + 1), 30); };
+    const t = setTimeout(() => run(0), 60);
+    return () => { alive = false; clearTimeout(t); };
+  }, []);
+  const done = res.length >= CARD_REG_TRIAL_GAMES;
+  const used = {};
+  res.forEach((r) => Object.entries(r.used).forEach(([k, n]) => { used[k] = (used[k] || 0) + n; }));
+  const rows = [...[0, 1, 2].flatMap((mi) => battle.mons[mi].map((r) => ({ k: `${mi}|${r.c}|${r.a}`, by: monName(mi), r }))), ...battle.breeder.map((r) => ({ k: `b|${r.c}|${r.a}`, by: 'ブリーダー', r }))];
+  const seen = new Set();
+  const uniq = rows.filter((x) => (seen.has(x.k) ? false : seen.add(x.k)));
+  const top = uniq.filter((x) => used[x.k] > 0).sort((a, b) => used[b.k] - used[a.k]);
+  const zero = uniq.filter((x) => !used[x.k]);
+  const max = Math.max(1, ...top.map((x) => used[x.k]));
+  const wins = res.filter((r) => r.win).length;
+  return (
+    <div data-card-reg-trial={done ? 'done' : 'run'} className="fixed inset-0 z-[82] flex flex-col bg-slate-950/95 p-3">
+      <ScreenHead title="ためしに戦わせる" accent="text-violet-200" onBack={onClose} note={`いまの戦い方で、助手(MASTER)と${CARD_REG_TRIAL_GAMES}戦`}/>
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
+        <div className={`${SCREEN_PANEL_CLASS} py-2 text-center`}>
+          {done ? <b data-card-reg-trial-wins={wins} className="text-[18px] font-black text-amber-200">{`${CARD_REG_TRIAL_GAMES}戦 ${wins}勝`}</b>
+            : <b className="text-[15px] font-black text-white">{`戦わせています… ${res.length} / ${CARD_REG_TRIAL_GAMES}`}</b>}
+          {done && <small className="block text-[11px] font-bold text-slate-400">{`平均 ${Math.round(res.reduce((a, r) => a + r.turn, 0) / res.length)}ターン`}</small>}
+        </div>
+        {done && (<>
+          <p className="text-[13px] font-black text-amber-200">よく働いたカード</p>
+          {!top.length && <p className="text-[12px] font-bold text-slate-400">戦術カードの行で動いたことはありませんでした(どの行にも当てはまらず、基本の型で打っていました)</p>}
+          {top.map((x, i) => (
+            <div key={x.k} data-card-reg-trial-row={used[x.k]} className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900 px-2 py-1.5">
+              <b className="w-5 shrink-0 text-center text-[15px] font-black text-amber-200">{i + 1}</b>
+              <div className="min-w-0 flex-1">
+                <div className="text-[12px] font-black leading-snug text-white" style={JA_WRAP_STYLE}>{cardRegRowText(x.r)}</div>
+                <small className="block text-[10px] font-bold text-slate-400">{x.by}</small>
+                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-700"><i className="block h-full bg-amber-300" style={{ width: `${Math.round(used[x.k] / max * 100)}%` }}/></div>
+              </div>
+              <b className="shrink-0 text-[15px] font-black text-amber-200">{`${used[x.k]}回`}</b>
+            </div>
+          ))}
+          {zero.length > 0 && <p className="pt-1 text-[13px] font-black text-rose-200">一度も当てはまらなかったカード</p>}
+          {zero.map((x) => (
+            <div key={x.k} data-card-reg-trial-zero className="rounded-xl border border-white/10 bg-slate-900/60 px-2 py-1.5 opacity-80">
+              <div className="text-[12px] font-black leading-snug text-white" style={JA_WRAP_STYLE}>{cardRegRowText(x.r)}</div>
+              <small className="block text-[10px] font-bold text-slate-400">{`${x.by} ・ 上の行が先に当てはまっていたか、その場面が来なかった`}</small>
+            </div>
+          ))}
+          <p className="text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ためしの対戦は、ビートP・記録・ランクに数えません。自分で打つ対戦では戦術カードは使われません(ほかのブリーダーがこのデッキと戦うときに使われます)')}</p>
+        </>)}
+      </div>
+      {done && <button type="button" data-card-reg-trial-close onClick={onClose} className="mh-button mh-button-primary min-h-[48px] w-full rounded-2xl font-black">戦い方にもどる</button>}
+    </div>
+  );
+};
+
 // onOpenList … 持っている戦術カードの一覧(97)/ onOpenMarket … マーケットの戦術カード
 // onOpenReplays … 登録中のデッキが戦われた試合の一覧へ(95 の CardDeckReplays。2026-10-31)
 const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenList = null, onOpenMarket = null, onOpenReplays = null }) => {
@@ -69978,6 +70064,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
   const [aces, setAces] = useState('auto');     // 'auto' か カード番号の配列
   const [sheet, setSheet] = useState(null);     // { where, k }
   const [custom, setCustom] = useState(null);   // { k, c? } 自分で組み合わせる
+  const [trial, setTrial] = useState(false); // ためしに戦わせる(CardRegTrialSheet)
   const [monSheet, setMonSheet] = useState(null); // ③ モンスターを押した先(下から出る「◯◯の手」。0〜2)
   const [basePick, setBasePick] = useState(null); // ① 基本の型をえらぶ(0 メイン・1 サブ1・2 サブ2)
   const [busy, setBusy] = useState(false);
@@ -70143,6 +70230,8 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
               })}
             </div>
           </section>
+          <button type="button" data-card-reg-trial-open disabled={!deck || !!issuesOf(deck).length} onClick={() => { Audio_.fgSe.tap(); setTrial(true); }}
+            className="mh-button min-h-[48px] w-full rounded-2xl border-2 border-violet-400 bg-violet-900/60 text-[14px] font-black text-violet-50 disabled:opacity-40">{`▶ ためしに戦わせる(助手と${CARD_REG_TRIAL_GAMES}戦・よく働いたカード)`}</button>
         </>)}
         {step === 'confirm' && (<>
           <p className="text-[16px] font-black text-white">この内容で登録します</p>
@@ -70183,6 +70272,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
       {step === 'custom' && footer(null, <button type="button" data-card-reg-next onClick={() => { Audio_.fgSe.tap(); setStep('confirm'); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black">決める(登録の確かめへ)</button>)}
       {step === 'confirm' && footer(back(styleId === 'custom' ? 'custom' : 'style'), <button type="button" data-card-reg-register disabled={busy || !deck || !selfId} onClick={() => { Audio_.fgSe.tap(); void register(); }} className="mh-button mh-button-primary min-h-[52px] flex-[2] rounded-2xl font-black disabled:opacity-40">{mine ? 'この内容で登録し直す' : 'このデッキを登録する'}</button>)}
       {step === 'done' && footer(null, <button type="button" onClick={() => { Audio_.fgSe.tap(); onBack(); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black">とじる</button>)}
+      {trial && deck && <CardRegTrialSheet db={db} deck={deck} battle={battle} aces={acesNow} monName={monName} onClose={() => setTrial(false)}/>}
       {monSheet !== null && !sheet && !custom && (
         <CardRegMonSheet db={db} deck={deck} k={monSheet} rows={draft.mons[monSheet]} max={open.mon} why={uncounted.mons[monSheet]} name={monName} counts={draft.mons.map((r) => r.length)} baseName={(cardTacticOf(draft.base[0]) || {}).name || ''}
           onRows={(a) => setRows(monSheet, a)} onSwitch={setMonSheet} onClose={() => setMonSheet(null)}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b7a1ba6ee74f935d
+// source-sha256: a97b5ce9a943b1d2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -118373,6 +118373,182 @@ const CardRegMonSheet = ({
     className: "text-[11px] font-black text-emerald-300"
   }, `${counts[i]} / ${max}`))))));
 };
+const CARD_REG_TRIAL_GAMES = 5;
+const CARD_REG_TRIAL_FOES = Object.freeze(['kyuko', 'mua', 'kiki', 'dra', 'atsu']);
+const cardRegTrialOne = (db, deck, battle, aces, g) => {
+  let s = (g + 1) * 2654435761 + (Date.now() & 0xffff) >>> 0;
+  const rand = () => {
+    const n = cardRngNext(s);
+    s = n.s;
+    return n.v;
+  };
+  const foe = CARD_REG_TRIAL_FOES[g % CARD_REG_TRIAL_FOES.length];
+  const foeDeck = cardAiBuildDeck(db, foe, 'master', rand, {
+    playerDeck: deck
+  });
+  const me = {
+    ...cardSharePolicy({
+      name: deck.name,
+      habit: cardShareMainHabit(battle, 'kyuko'),
+      aces,
+      f: cardTacticPackFrames(battle)
+    }, 'master'),
+    search: null
+  };
+  const pols = [me, cardAiPolicy(foe, 'master')];
+  let st = cardCreateGame(db, {
+    decks: [{
+      monsters: deck.monsters.slice(),
+      cards: deck.cards.slice()
+    }, foeDeck],
+    seed: s,
+    first: g % 2
+  });
+  const used = {};
+  for (let i = 0; i < 4000 && st.winner === null; i++) {
+    const who = st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? cardOther(st.first) : cardDecider(st);
+    if (typeof cardTacticTakeWhy === 'function') cardTacticTakeWhy();
+    const act = cardAiChooseAction(db, st, pols[who], rand);
+    if (who === 0 && typeof cardTacticTakeWhy === 'function') {
+      const w = cardTacticTakeWhy();
+      if (w) {
+        const k = `${w.mi === null || w.mi === undefined ? 'b' : w.mi}|${w.c}|${w.a}`;
+        used[k] = (used[k] || 0) + 1;
+      }
+    }
+    const next = cardApplyAction(db, st, act);
+    if (next) {
+      st = next;
+      continue;
+    }
+    const fb = st.pending ? {
+      type: 'pass'
+    } : st.phase === 'main' ? {
+      type: 'endAttacks'
+    } : st.phase === 'guts' ? {
+      type: 'guts',
+      hand: []
+    } : null;
+    if (!fb) break;
+    st = cardApplyAction(db, st, fb) || st;
+  }
+  return {
+    win: st.winner === 0,
+    turn: st.turn,
+    used,
+    foe
+  };
+};
+const CardRegTrialSheet = ({
+  db,
+  deck,
+  battle,
+  aces,
+  monName,
+  onClose
+}) => {
+  const [res, setRes] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    const run = g => {
+      if (!alive || g >= CARD_REG_TRIAL_GAMES) return;
+      const r = cardRegTrialOne(db, deck, battle, aces, g);
+      if (!alive) return;
+      setRes(cur => [...cur, r]);
+      setTimeout(() => run(g + 1), 30);
+    };
+    const t = setTimeout(() => run(0), 60);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, []);
+  const done = res.length >= CARD_REG_TRIAL_GAMES;
+  const used = {};
+  res.forEach(r => Object.entries(r.used).forEach(([k, n]) => {
+    used[k] = (used[k] || 0) + n;
+  }));
+  const rows = [...[0, 1, 2].flatMap(mi => battle.mons[mi].map(r => ({
+    k: `${mi}|${r.c}|${r.a}`,
+    by: monName(mi),
+    r
+  }))), ...battle.breeder.map(r => ({
+    k: `b|${r.c}|${r.a}`,
+    by: 'ブリーダー',
+    r
+  }))];
+  const seen = new Set();
+  const uniq = rows.filter(x => seen.has(x.k) ? false : seen.add(x.k));
+  const top = uniq.filter(x => used[x.k] > 0).sort((a, b) => used[b.k] - used[a.k]);
+  const zero = uniq.filter(x => !used[x.k]);
+  const max = Math.max(1, ...top.map(x => used[x.k]));
+  const wins = res.filter(r => r.win).length;
+  return React.createElement("div", {
+    "data-card-reg-trial": done ? 'done' : 'run',
+    className: "fixed inset-0 z-[82] flex flex-col bg-slate-950/95 p-3"
+  }, React.createElement(ScreenHead, {
+    title: "ためしに戦わせる",
+    accent: "text-violet-200",
+    onBack: onClose,
+    note: `いまの戦い方で、助手(MASTER)と${CARD_REG_TRIAL_GAMES}戦`
+  }), React.createElement("div", {
+    className: "min-h-0 flex-1 space-y-2 overflow-y-auto pb-3"
+  }, React.createElement("div", {
+    className: `${SCREEN_PANEL_CLASS} py-2 text-center`
+  }, done ? React.createElement("b", {
+    "data-card-reg-trial-wins": wins,
+    className: "text-[18px] font-black text-amber-200"
+  }, `${CARD_REG_TRIAL_GAMES}戦 ${wins}勝`) : React.createElement("b", {
+    className: "text-[15px] font-black text-white"
+  }, `戦わせています… ${res.length} / ${CARD_REG_TRIAL_GAMES}`), done && React.createElement("small", {
+    className: "block text-[11px] font-bold text-slate-400"
+  }, `平均 ${Math.round(res.reduce((a, r) => a + r.turn, 0) / res.length)}ターン`)), done && React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "text-[13px] font-black text-amber-200"
+  }, "よく働いたカード"), !top.length && React.createElement("p", {
+    className: "text-[12px] font-bold text-slate-400"
+  }, "戦術カードの行で動いたことはありませんでした(どの行にも当てはまらず、基本の型で打っていました)"), top.map((x, i) => React.createElement("div", {
+    key: x.k,
+    "data-card-reg-trial-row": used[x.k],
+    className: "flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900 px-2 py-1.5"
+  }, React.createElement("b", {
+    className: "w-5 shrink-0 text-center text-[15px] font-black text-amber-200"
+  }, i + 1), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("div", {
+    className: "text-[12px] font-black leading-snug text-white",
+    style: JA_WRAP_STYLE
+  }, cardRegRowText(x.r)), React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, x.by), React.createElement("div", {
+    className: "mt-1 h-1.5 overflow-hidden rounded-full bg-slate-700"
+  }, React.createElement("i", {
+    className: "block h-full bg-amber-300",
+    style: {
+      width: `${Math.round(used[x.k] / max * 100)}%`
+    }
+  }))), React.createElement("b", {
+    className: "shrink-0 text-[15px] font-black text-amber-200"
+  }, `${used[x.k]}回`))), zero.length > 0 && React.createElement("p", {
+    className: "pt-1 text-[13px] font-black text-rose-200"
+  }, "一度も当てはまらなかったカード"), zero.map(x => React.createElement("div", {
+    key: x.k,
+    "data-card-reg-trial-zero": true,
+    className: "rounded-xl border border-white/10 bg-slate-900/60 px-2 py-1.5 opacity-80"
+  }, React.createElement("div", {
+    className: "text-[12px] font-black leading-snug text-white",
+    style: JA_WRAP_STYLE
+  }, cardRegRowText(x.r)), React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, `${x.by} ・ 上の行が先に当てはまっていたか、その場面が来なかった`))), React.createElement("p", {
+    className: "text-[11px] font-bold leading-snug text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('ためしの対戦は、ビートP・記録・ランクに数えません。自分で打つ対戦では戦術カードは使われません(ほかのブリーダーがこのデッキと戦うときに使われます)')))), done && React.createElement("button", {
+    type: "button",
+    "data-card-reg-trial-close": true,
+    onClick: onClose,
+    className: "mh-button mh-button-primary min-h-[48px] w-full rounded-2xl font-black"
+  }, "戦い方にもどる"));
+};
 const CardDeckRegister = ({
   db,
   decks,
@@ -118397,6 +118573,7 @@ const CardDeckRegister = ({
   const [aces, setAces] = useState('auto');
   const [sheet, setSheet] = useState(null);
   const [custom, setCustom] = useState(null);
+  const [trial, setTrial] = useState(false);
   const [monSheet, setMonSheet] = useState(null);
   const [basePick, setBasePick] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -118773,7 +118950,16 @@ const CardDeckRegister = ({
       className: "mt-0.5 line-clamp-2 text-[10px] font-bold leading-snug text-slate-300",
       style: JA_WRAP_STYLE
     }, rows.length ? `${cardRegRowText(rows[0])}${rows.length > 1 ? ` ほか${rows.length - 1}` : ''}` : 'まだ入っていません'));
-  })))), step === 'confirm' && React.createElement(React.Fragment, null, React.createElement("p", {
+  }))), React.createElement("button", {
+    type: "button",
+    "data-card-reg-trial-open": true,
+    disabled: !deck || !!issuesOf(deck).length,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setTrial(true);
+    },
+    className: "mh-button min-h-[48px] w-full rounded-2xl border-2 border-violet-400 bg-violet-900/60 text-[14px] font-black text-violet-50 disabled:opacity-40"
+  }, `▶ ためしに戦わせる(助手と${CARD_REG_TRIAL_GAMES}戦・よく働いたカード)`)), step === 'confirm' && React.createElement(React.Fragment, null, React.createElement("p", {
     className: "text-[16px] font-black text-white"
   }, "この内容で登録します"), React.createElement("div", {
     "data-card-reg-summary": true,
@@ -118898,7 +119084,14 @@ const CardDeckRegister = ({
       onBack();
     },
     className: "mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black"
-  }, "とじる")), monSheet !== null && !sheet && !custom && React.createElement(CardRegMonSheet, {
+  }, "とじる")), trial && deck && React.createElement(CardRegTrialSheet, {
+    db: db,
+    deck: deck,
+    battle: battle,
+    aces: acesNow,
+    monName: monName,
+    onClose: () => setTrial(false)
+  }), monSheet !== null && !sheet && !custom && React.createElement(CardRegMonSheet, {
     db: db,
     deck: deck,
     k: monSheet,
