@@ -4353,7 +4353,7 @@ const createAnimationStyle = () => {
     .mh-card-down-band { animation: mhCardDownBand 1.1s ease-out both; }
     @keyframes mhCardDownBand { 0% { opacity: 0; transform: scaleY(.2); } 15% { opacity: 1; transform: scaleY(1.08); } 25% { transform: scaleY(1); } 82% { opacity: 1; } 100% { opacity: 0; } }
     @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash, .mh-card-dmg-pop, .mh-card-down-band, .mh-card-guard-result { animation: none; } }
-    /* キラ・レアキラの立ち絵の光(84 の CardKiraAura・CardKiraSil・cardKiraWrap。2026-10-30 社長「この形で入れて」→
+    /* キラ・レアキラの立ち絵の光(84 の CardKiraAura・cardKiraWrap。2026-10-30 社長「この形で入れて」→
        2026-10-31「バトル中の立ち絵も強化して」「もっとわかりやすく。センター位置をちゃんと合わせて」)。CSS だけ。動かすのは transform と opacity
        (ふちの光の filter だけは色を移すため動かす。ふちの光の中には動く物を入れない)。光の中心・大きさは 84 が体の範囲から決めて style で渡す */
     .mh-kira-rim { animation: mhKiraRim 2.4s linear infinite; }
@@ -4381,16 +4381,14 @@ const createAnimationStyle = () => {
     @keyframes mhRarePulse { 0%, 100% { opacity: .7; transform: translate(-50%, -50%) scale(.92); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); } }
     .mh-rare-mote { width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: #fff6c8; box-shadow: 0 0 6px 2px rgba(255,214,102,.95); opacity: 0; animation: mhRareMote 2.8s linear infinite; }
     @keyframes mhRareMote { 0% { opacity: 0; transform: translateY(0); } 12% { opacity: 1; } 80% { opacity: .7; } 100% { opacity: 0; transform: translateY(-90px); } }
-    /* 絵の形のとおりの光(84 の CardKiraSil)。絵を型に切り抜くので、透けている所には出ない */
-    .mh-kira-sil { position: absolute; pointer-events: none; overflow: hidden; z-index: 1; }
-    .mh-kira-sil-aurora { position: absolute; top: 0; bottom: 0; left: -200%; width: 400%; mix-blend-mode: screen; opacity: .6;
-      background: linear-gradient(120deg, rgba(255,0,150,0) 0%, rgba(255,0,150,.45) 12%, rgba(0,200,255,.45) 25%, rgba(255,230,0,.45) 37%, rgba(255,0,150,0) 50%, rgba(255,0,150,.45) 62%, rgba(0,200,255,.45) 75%, rgba(255,230,0,.45) 87%, rgba(255,0,150,0) 100%);
-      animation: mhShineAurora 3s linear infinite; }
-    .mh-kira-sil-sheen { position: absolute; top: -20%; bottom: -20%; left: -60%; right: -60%; background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.9) 50%, transparent 60%); mix-blend-mode: overlay; animation: mhKiraSilSheen 2.6s ease-in-out infinite; }
-    .mh-kira-sil-sheen.fast { background: linear-gradient(105deg, transparent 36%, rgba(255,255,255,1) 50%, transparent 64%); animation: mhShineSheen 1.5s ease-in-out infinite; }
-    @keyframes mhKiraSilSheen { 0% { transform: translateX(-55%); } 40%, 100% { transform: translateX(55%); } }
+    /* レアキラ: いちばん外を、虹の輪が逆向きにゆっくり回る(体の後ろだけ。2026-10-31 社長「絵の上に重ねず、後ろとふちで格を出す」) */
+    .mh-rare-aurora { aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; opacity: .75;
+      background: conic-gradient(rgba(255,90,200,.7), rgba(90,200,255,.7), rgba(255,230,90,.7), rgba(150,255,170,.6), rgba(255,90,200,.7));
+      -webkit-mask: radial-gradient(circle, transparent 42%, #000 50%, #000 58%, transparent 70%); mask: radial-gradient(circle, transparent 42%, #000 50%, #000 58%, transparent 70%);
+      animation: mhRareSpinBack 11s linear infinite; }
+    @keyframes mhRareSpinBack { to { transform: translate(-50%, -50%) rotate(-360deg); } }
     @media (prefers-reduced-motion: reduce) {
-      .mh-kira-fx, .mh-kira-sil { display: none; }
+      .mh-kira-fx { display: none; }
       .mh-kira-rim { animation: none; filter: drop-shadow(0 0 2px #c8a0ff) drop-shadow(0 0 2px #c8a0ff) drop-shadow(0 0 8px rgba(200,160,255,.8)); }
     }
     /* カードの絵のキラ・レアキラ・銀の光(84 の CardShine。2026-10-31 社長「光り方は案B オーロラと粒」「ブリーダー・場のカードに銀の光の帯」)。
