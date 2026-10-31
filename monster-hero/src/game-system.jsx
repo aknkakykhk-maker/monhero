@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7ab8b5609d3a1fc9
+// generated-sha256: 65542143b87116fd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -62633,7 +62633,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         { cup: { matchId: r.id, cupId: r.cup_id, side: r.side, seed: r.seed, first: r.first, selfId } });
     };
     // 杯の試合のあと・入れなかったときの知らせ(下に小さく出す)
-    return <><CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId} onOpenReplay={openCupReplay} onPlayLive={playCupLive} getAdapters={cupAdapters}
+    return <><CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId} onOpenReplay={openCupReplay} onPlayLive={playCupLive} getAdapters={debug || (typeof cardCupPrizeOpen === 'function' && cardCupPrizeOpen()) ? cupAdapters : null}
       onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('cup'); setView('tactics'); } : null}/>
       {notice && <div data-card-cup-toast className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit max-w-[92vw] rounded-full bg-slate-950/95 px-4 py-2 text-[13px] font-black text-amber-100 shadow-lg" style={JA_WRAP_STYLE}>{jaWrap(notice)}</div>}
     </>;
@@ -71696,8 +71696,9 @@ const cardCupRpcSoft = async (fn, body) => {
 const cardCupListDone = async () => { const r = await cardCupRpcSoft('card_cup_list_done', {}); return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : []; };
 const cardCupMine = async (owner) => { const r = await cardTourRpc('card_cup_mine', { p_owner: owner || '' }); return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : null; };
 // 自分が出ている杯 + 主催仲間として誘われている・入っている杯(99-card-cup-prize の card_cup_hosting_of。関数がまだ無ければ出ている杯だけ)
-const cardCupMineWithHosting = async (owner) => {
-  const [a, b] = await Promise.all([cardCupMine(owner), cardCupRpcSoft('card_cup_hosting_of', { p_owner: owner || '' })]);
+//   withHosting … ごほうび・参加費・主催仲間が出せるとき(84 が口を渡したとき)だけ、主催仲間の杯を混ぜる
+const cardCupMineWithHosting = async (owner, withHosting = true) => {
+  const [a, b] = await Promise.all([cardCupMine(owner), withHosting ? cardCupRpcSoft('card_cup_hosting_of', { p_owner: owner || '' }) : null]);
   if (!Array.isArray(a)) return a;
   const extra = (Array.isArray(b) ? b : []).map(cardCupNormalizeRow).filter((c) => c && !a.some((x) => x.id === c.id));
   return [...a, ...extra];
@@ -71949,7 +71950,8 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
   const [msg, setMsg] = useState('');
   // ごほうび・参加費・主催仲間(99-card-cup-prize)。表がまだ無いときは null(欄を出さない・ふつうの参加)
   const [prize, setPrize] = useState(null);
-  const reloadPrize = async () => { if (typeof cardCupPrizeView === 'function') setPrize(await cardCupPrizeView(c.id, selfId)); };
+  //   口(getAdapters)が無いとき(ごほうびの公開の印 cardCupPrizeOpen が閉じていてデバッグでもない)は読まない → 欄・参加費・主催仲間は出ない
+  const reloadPrize = async () => { if (getAdapters && typeof cardCupPrizeView === 'function') setPrize(await cardCupPrizeView(c.id, selfId)); };
   useEffect(() => { void reloadPrize(); }, [c.id, selfId]);
   const joinPaid = async () => {
     if (busy || !getAdapters) return;
@@ -71974,7 +71976,7 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
       const r = await cardTourRpc(fn, { p_cup: c.id, p_owner: selfId, p_key: key, ...extra });
       const text = { ok: { card_cup_join: '参加しました', card_cup_leave: '参加を取り消しました', card_cup_cancel: 'この個人杯を取り消しました' }[fn],
         closed: '受付は終わりました', full: '人数がいっぱいです', many: '出ている個人杯が3つあります', nodeck: 'デッキ登録をしてから参加してください',
-        locked: 'デッキを登録した端末でだけ参加できます', none: '参加していません', host: '主催は抜けられません(取り消しはできます)', bad: '参加できませんでした' }[r];
+        locked: 'デッキを登録した端末でだけ参加できます', none: '参加していません', fee: 'この個人杯には、いまは参加できません', host: '主催は抜けられません(取り消しはできます)', bad: '参加できませんでした' }[r];
       setMsg(text || '通信できませんでした。もう一度お試しください');
       if (r === 'ok') await onChanged();
     } finally { setBusy(false); }
@@ -72050,7 +72052,7 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
       setSelfId(id); setMine(m || null); setList(l);
       if (l) void cardCupListDone().then((d) => { if (alive) setDone(d); });
       setProfile({ name: typeof nm === 'string' && nm ? nm.slice(0, 40) : 'ブリーダー', icon: typeof ic === 'string' ? ic : null });
-      if (id) setMineCups(await cardCupMineWithHosting(id));
+      if (id) setMineCups(await cardCupMineWithHosting(id, !!getAdapters));
     })();
     return () => { alive = false; };
   }, []);
@@ -72065,7 +72067,7 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
   if (list === undefined) return shell(<ScreenEmpty emoji="⏳" lines={['読み込んでいます']}/>);
   if (list === null) return shell(<ScreenEmpty emoji="🛠️" lines={['個人杯は準備中です']}/>);
   if (cupId) {
-    const back = () => { setCupId(null); if (selfId) void cardCupMineWithHosting(selfId).then(setMineCups); void cardCupList().then((l) => l && setList(l)); };
+    const back = () => { setCupId(null); if (selfId) void cardCupMineWithHosting(selfId, !!getAdapters).then(setMineCups); void cardCupList().then((l) => l && setList(l)); };
     if (!view) return shell(<ScreenEmpty emoji="⏳" lines={['読み込んでいます']}/>, back);
     return shell(<CardCupDetail v={view} now={now} mine={mine} selfId={selfId} profile={profile} onChanged={() => reload()} onOpenRegister={onOpenRegister} onOpenReplay={onOpenReplay} onPlayLive={onPlayLive} getAdapters={getAdapters}/>, back);
   }
@@ -72269,6 +72271,9 @@ const CardCupLivePanel = ({ v, now, selfId, onChanged, onPlay = null }) => {
 //     カードの持ち物(かけら・パック券・カタログ)は 84 の保存(persist)で
 // 保存: 新しいキー mh_card_cup_wallet_v1 だけ(下)。今のキーは、今の形のまま足す・引くだけ
 
+// 公開の印(ごほうび・参加費・主催仲間だけ)。個人杯の公開(99-card-cup の cardCupOpen)とは別。
+// 2026-10-31 社長: 個人杯だけ先に公開し、ごほうび・参加費・主催仲間はまだ閉じる(出す日はあとで決める)。それまではデバッグ設定から入ったときだけ出る(84 が口 getAdapters を渡すかで決める)
+const cardCupPrizeOpen = () => false;
 const CARD_CUP_WALLET_KEY = 'mh_card_cup_wallet_v1';
 const CARD_CUP_WALLET_MAX = 200;
 // 出せる物(サーバの表 card_cup_prize_items と同じ名前)。label・emoji は画面の名前。出す量・参加費の額に上限は無い(2026-10-31 社長「やっぱり上限はなしでいい」)

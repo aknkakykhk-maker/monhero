@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c3d6798a5c201e00
+// source-sha256: 496fd705818829ab
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -104041,7 +104041,7 @@ const CardBattleScreen = ({
       onCupChange: setCupOpenId,
       onOpenReplay: openCupReplay,
       onPlayLive: playCupLive,
-      getAdapters: cupAdapters,
+      getAdapters: debug || typeof cardCupPrizeOpen === 'function' && cardCupPrizeOpen() ? cupAdapters : null,
       onOpenRegister: typeof CardDeckRegister === 'function' ? () => {
         setTacticsBack('cup');
         setView('tactics');
@@ -121688,10 +121688,10 @@ const cardCupMine = async owner => {
   });
   return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : null;
 };
-const cardCupMineWithHosting = async owner => {
-  const [a, b] = await Promise.all([cardCupMine(owner), cardCupRpcSoft('card_cup_hosting_of', {
+const cardCupMineWithHosting = async (owner, withHosting = true) => {
+  const [a, b] = await Promise.all([cardCupMine(owner), withHosting ? cardCupRpcSoft('card_cup_hosting_of', {
     p_owner: owner || ''
-  })]);
+  }) : null]);
   if (!Array.isArray(a)) return a;
   const extra = (Array.isArray(b) ? b : []).map(cardCupNormalizeRow).filter(c => c && !a.some(x => x.id === c.id));
   return [...a, ...extra];
@@ -122181,7 +122181,7 @@ const CardCupDetail = ({
   const [msg, setMsg] = useState('');
   const [prize, setPrize] = useState(null);
   const reloadPrize = async () => {
-    if (typeof cardCupPrizeView === 'function') setPrize(await cardCupPrizeView(c.id, selfId));
+    if (getAdapters && typeof cardCupPrizeView === 'function') setPrize(await cardCupPrizeView(c.id, selfId));
   };
   useEffect(() => {
     void reloadPrize();
@@ -122240,6 +122240,7 @@ const CardCupDetail = ({
         nodeck: 'デッキ登録をしてから参加してください',
         locked: 'デッキを登録した端末でだけ参加できます',
         none: '参加していません',
+        fee: 'この個人杯には、いまは参加できません',
         host: '主催は抜けられません(取り消しはできます)',
         bad: '参加できませんでした'
       }[r];
@@ -122404,7 +122405,7 @@ const CardCup = ({
         name: typeof nm === 'string' && nm ? nm.slice(0, 40) : 'ブリーダー',
         icon: typeof ic === 'string' ? ic : null
       });
-      if (id) setMineCups(await cardCupMineWithHosting(id));
+      if (id) setMineCups(await cardCupMineWithHosting(id, !!getAdapters));
     })();
     return () => {
       alive = false;
@@ -122441,7 +122442,7 @@ const CardCup = ({
   if (cupId) {
     const back = () => {
       setCupId(null);
-      if (selfId) void cardCupMineWithHosting(selfId).then(setMineCups);
+      if (selfId) void cardCupMineWithHosting(selfId, !!getAdapters).then(setMineCups);
       void cardCupList().then(l => l && setList(l));
     };
     if (!view) return shell(React.createElement(ScreenEmpty, {
@@ -122783,6 +122784,7 @@ const CardCupLivePanel = ({
     style: JA_WRAP_STYLE
   }, jaWrap(msg)));
 };
+const cardCupPrizeOpen = () => false;
 const CARD_CUP_WALLET_KEY = 'mh_card_cup_wallet_v1';
 const CARD_CUP_WALLET_MAX = 200;
 const CARD_CUP_ITEMS = Object.freeze([{
