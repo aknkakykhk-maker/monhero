@@ -82,6 +82,34 @@ const cardTourFetchList = async () => {
 };
 const cardTourFetchView = async (tourId, ownerId) => cardTourNormalizeView(await cardTourRpc('card_tournament_view', { p_tour: tourId, p_owner: ownerId || '' }));
 
+// ---- HOME の札(2026-10-31 社長「公式の大会はイベント的にするからホームに置く」・案A) ----
+// 受付が始まってから、結果発表(最終日 4:00)の1週間あとまで出す。大会が無いときは null(札を出さない)。
+// 押したら、いつも大会のトップを開く(時期で開く画面を変えない)。札に出すごほうびは1位のビートPだけ
+const CARD_TOUR_HOME_KEEP_MS = 7 * 86400000;
+const cardTourHomeBanner = (list, now) => {
+  if (!Array.isArray(list)) return null;
+  const shown = list.filter((t) => {
+    if (!t) return false;
+    if (t.openOn && now < Date.parse(`${t.openOn}T00:00:00+09:00`)) return false;
+    if (t.status !== 'done') return true;
+    const done = t.doneDay ? Date.parse(`${t.doneDay}T04:00:00+09:00`) : NaN;
+    return Number.isFinite(done) && now < done + CARD_TOUR_HOME_KEEP_MS;
+  });
+  // 開いている大会があればそちら(受付・開催中)。無ければいちばん新しく終わった大会
+  const t = shown.find((x) => x.status !== 'done') || shown[0];
+  if (!t) return null;
+  let sub;
+  if (t.status === 'entry' && now < t.entryUntil) {
+    // 1日以上あるときは日だけ(札の幅に1位のごほうびまで入れるため。分まではトップの「受付」の行に出る)
+    const left = t.entryUntil - now, d = Math.floor(left / 86400000), h = Math.floor(left / 3600000);
+    sub = `受付中 あと${d > 0 ? `${d}日` : h > 0 ? `${h}時間` : `${Math.max(1, Math.ceil(left / 60000))}分`}`;
+  } else if (t.status === 'entry') sub = '組み合わせ中';
+  else if (t.status === 'done') sub = '結果発表';
+  else sub = t.status === 'final' ? '開催中 頂上決戦' : '開催中';
+  const first = t.rewards && t.rewards.ranks[0] ? t.rewards.ranks[0].point : 0;
+  return { id: t.id, name: t.name, sub, prize: first > 0 ? `1位 ビートP ${first.toLocaleString()}` : '' };
+};
+
 // 段(組の総当たり・頂上決戦)ごとの席と試合
 const cardTourStageSeats = (view, stage, grp) => view.entries
   .filter((e) => (stage === 'final' ? e.finalSeat !== null : e.grp === grp && e.seat !== null))
@@ -388,7 +416,7 @@ const CardTourResult = ({ view, known, claimed, onClaim }) => {
 // onSample … デバッグのときだけ: その場で1試合回して見返しの見本を開く(表に結果のある試合が無くても、会場と実況の見え方を確かめられる)
 // onCredit(tour, reward) … ビートPを足して受け取りの記録を保存する(84 の persist と同じ取引)。保存できたら true
 // knownAssistants … 会ったことのある助手の id(Set)
-const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, onCredit = null, knownAssistants = null, onSample = null }) => {
+const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, onCredit = null, knownAssistants = null, onSample = null, initialTour = null }) => {
   const [list, setList] = useState(undefined);  // undefined … 読み込み中 / null … 表が無い・通信できない
   const [tourId, setTourId] = useState(null);
   const [view, setView] = useState(null);
@@ -410,7 +438,9 @@ const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, on
       if (!alive) return;
       setSelfId(id); setMine(m || null); setClaimed(cardTourNormalizeClaimed(c) || []);
       setList(l);
-      if (l && l.length === 1) setTourId(l[0].id);
+      // HOME の札から来たときは、その大会のトップをそのまま開く
+      if (l && initialTour && l.some((t) => t.id === initialTour)) setTourId(initialTour);
+      else if (l && l.length === 1) setTourId(l[0].id);
     })();
     return () => { alive = false; };
   }, []);
@@ -458,7 +488,7 @@ const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, on
       <button key={t.id} type="button" data-card-tour-pick={t.id} onClick={() => { Audio_.fgSe.tap(); setTourId(t.id); }} className="block w-full text-left"><CardTourHeadCard t={t} now={now}/></button>
     )));
   }
-  const backFromTour = list.length > 1 ? () => setTourId(null) : onBack;
+  const backFromTour = list.length > 1 && !initialTour ? () => setTourId(null) : onBack;
   if (!view) return shell(<ScreenEmpty emoji="⏳" lines={['読み込んでいます']}/>, 'MFバトルカード大会', backFromTour);
   const t = view.tour;
   if (t.status === 'entry') return shell(<><CardTourHeadCard t={t} now={now}/><CardTourEntry t={t} view={view} now={now} mine={mine} selfId={selfId} onChanged={async () => { await reload(); const l = await cardTourFetchList(); if (l) setList(l); }} onOpenRegister={onOpenRegister}/></>, 'MFバトルカード大会', backFromTour);

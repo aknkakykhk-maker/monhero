@@ -18456,6 +18456,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             cardBattleVisible={(EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&cardBattleIntroSeenFlag)||cardBattleDebugHome} onOpenCardBattle={()=>{setCardOrigin('home');setGameState('CARD_TOP');}}
             /* 公開前の予告(社長 2026-10-25)。ふつうのプレイヤーに「近日公開」の札を出し、押すと予告の小窓。公開の印が立てば出なくなり、上のふつうの入口に替わる */
             cardBattleTeaser={!EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&!cardBattleDebugHome} onOpenCardTeaser={()=>setCardTeaserOpen(true)}
+            /* 公式杯の札(2026-10-31 社長・案A)。大会の公開の印(cardTourOpen)まではデバッグの端末だけ。押すと MFバトルカードの大会のトップを開き、戻ると HOME */
+            cardTourVisible={(((EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&cardBattleIntroSeenFlag)&&typeof cardTourOpen==='function'&&cardTourOpen())||cardBattleDebugHome)}
+            onOpenCardTour={(tourId)=>{if(typeof cardShareIntentSet==='function')cardShareIntentSet({kind:'tour',tourId});setCardOrigin('home');setGameState('CARD_TOP');}}
           />
         )}
         {/* 助手とおしゃべり(2026-10-14)。話す相手は、いま選んでいる助手。返事が来た1往復ごとにその助手の仲良し度(chat)が増える */}
