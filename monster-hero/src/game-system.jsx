@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c7fb150f49335d29
+// generated-sha256: b62f1bb09eb5b77f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -60140,7 +60140,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         const c = cardTacticOf(why.c), a = cardTacticOf(why.a);
         const m = why.mi !== null && why.mi !== undefined ? st.players[CARD_CPU].mons[why.mi] : null;
         const by = m ? m.name : 'ブリーダー';
-        const line = `${!c || why.c === 'any' ? '' : `${c.name} → `}${a ? a.name : ''}`;
+        const line = `${!c || why.c === 'any' ? '' : `${c.line || c.name} → `}${a ? a.line || a.name : ''}`; // 一文(2026-10-31 案A)
         if (line) { setTacGlow({ key: `${st.turn}-${st.log.length}`, by, line }); setTacLog((cur) => [...cur, { turn: st.turn, text: `${who.name}の${by}: 「${line}」で動いた` }].slice(-80)); }
       }
       const go = () => { if (!step(act)) step(st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : { type: 'guts', hand: [] }); };
@@ -70020,8 +70020,8 @@ const cardRegRowText = (row) => {
   const combo = CARD_REG_COMBOS.find((x) => x.c === row.c && x.a === row.a);
   if (combo) return `${combo.icon} ${combo.name}`;
   const c = cardTacticOf(row.c), a = cardTacticOf(row.a);
-  if (row.c === 'any') return `いつでも → ${a ? a.name : '?'}`;
-  return `${c ? c.name : '?'} なら → ${a ? a.name : '?'}`;
+  if (row.c === 'any') return `いつでも → ${a ? a.line || a.name : '?'}`;
+  return `${c ? c.line || c.name : '?'} → ${a ? a.line || a.name : '?'}`; // 一文(2026-10-31 案A)。条件は「〜とき」で終わる
 };
 // おすすめの戦い方を、持っているカード・開いている枚数で入れる。
 //   3体に同じカードを入れると賢さに1枚としか数えない(82 の cardTacticUncounted)ので、候補を上から順に3体へ配る(左・真ん中・右・左…)。

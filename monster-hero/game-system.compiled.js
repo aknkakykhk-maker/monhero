@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6c14d3135c7c3ada
+// source-sha256: 4105231beaf18d9f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99557,7 +99557,7 @@ const CardBattleBoard = ({
           a = cardTacticOf(why.a);
         const m = why.mi !== null && why.mi !== undefined ? st.players[CARD_CPU].mons[why.mi] : null;
         const by = m ? m.name : 'ブリーダー';
-        const line = `${!c || why.c === 'any' ? '' : `${c.name} → `}${a ? a.name : ''}`;
+        const line = `${!c || why.c === 'any' ? '' : `${c.line || c.name} → `}${a ? a.line || a.name : ''}`;
         if (line) {
           setTacGlow({
             key: `${st.turn}-${st.log.length}`,
@@ -118368,8 +118368,8 @@ const cardRegRowText = row => {
   if (combo) return `${combo.icon} ${combo.name}`;
   const c = cardTacticOf(row.c),
     a = cardTacticOf(row.a);
-  if (row.c === 'any') return `いつでも → ${a ? a.name : '?'}`;
-  return `${c ? c.name : '?'} なら → ${a ? a.name : '?'}`;
+  if (row.c === 'any') return `いつでも → ${a ? a.line || a.name : '?'}`;
+  return `${c ? c.line || c.name : '?'} → ${a ? a.line || a.name : '?'}`;
 };
 const cardRegApplyStyle = (style, tactics, open) => {
   const owns = id => cardTacticsOwns(tactics, id);

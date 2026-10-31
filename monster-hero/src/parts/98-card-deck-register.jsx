@@ -45,8 +45,8 @@ const cardRegRowText = (row) => {
   const combo = CARD_REG_COMBOS.find((x) => x.c === row.c && x.a === row.a);
   if (combo) return `${combo.icon} ${combo.name}`;
   const c = cardTacticOf(row.c), a = cardTacticOf(row.a);
-  if (row.c === 'any') return `いつでも → ${a ? a.name : '?'}`;
-  return `${c ? c.name : '?'} なら → ${a ? a.name : '?'}`;
+  if (row.c === 'any') return `いつでも → ${a ? a.line || a.name : '?'}`;
+  return `${c ? c.line || c.name : '?'} → ${a ? a.line || a.name : '?'}`; // 一文(2026-10-31 案A)。条件は「〜とき」で終わる
 };
 // おすすめの戦い方を、持っているカード・開いている枚数で入れる。
 //   3体に同じカードを入れると賢さに1枚としか数えない(82 の cardTacticUncounted)ので、候補を上から順に3体へ配る(左・真ん中・右・左…)。

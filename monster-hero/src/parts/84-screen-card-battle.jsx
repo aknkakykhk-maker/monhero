@@ -1226,7 +1226,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         const c = cardTacticOf(why.c), a = cardTacticOf(why.a);
         const m = why.mi !== null && why.mi !== undefined ? st.players[CARD_CPU].mons[why.mi] : null;
         const by = m ? m.name : 'ブリーダー';
-        const line = `${!c || why.c === 'any' ? '' : `${c.name} → `}${a ? a.name : ''}`;
+        const line = `${!c || why.c === 'any' ? '' : `${c.line || c.name} → `}${a ? a.line || a.name : ''}`; // 一文(2026-10-31 案A)
         if (line) { setTacGlow({ key: `${st.turn}-${st.log.length}`, by, line }); setTacLog((cur) => [...cur, { turn: st.turn, text: `${who.name}の${by}: 「${line}」で動いた` }].slice(-80)); }
       }
       const go = () => { if (!step(act)) step(st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : { type: 'guts', hand: [] }); };
