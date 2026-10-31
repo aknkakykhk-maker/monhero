@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1a7423267ac9de92
+// source-sha256: 3357f542d7753890
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -14467,7 +14467,7 @@ const BEAT_RANK_XP = Object.freeze({
   HELL: 60
 });
 const BEAT_RANK_BONUS = Object.freeze({
-  failDivisor: 3,
+  failRate: 0.1,
   fullCombo: 4,
   allMarvelous: 8,
   multiScale: 1.5,
@@ -14529,7 +14529,7 @@ const beatRankPlayXp = ({
     parts: []
   };
   const parts = [];
-  let xp = cleared ? base : Math.round(base / BEAT_RANK_BONUS.failDivisor);
+  let xp = cleared ? base : Math.max(1, Math.round(base * BEAT_RANK_BONUS.failRate));
   parts.push({
     label: cleared ? difficultyId : `${difficultyId}(ライフが尽きた)`,
     xp
@@ -14562,7 +14562,7 @@ const beatRankPlayXp = ({
 };
 const beatRankAfter = (prev, {
   difficultyId,
-  cleared,
+  cleared = true,
   fullCombo,
   allMarvelous,
   multi,
@@ -14587,7 +14587,7 @@ const beatRankAfter = (prev, {
     beatPoints: 0
   };
   const day = typeof today === 'string' ? today.slice(0, 10) : '';
-  const first = !!day && !(cur.day === day && cur.dayFirst);
+  const first = cleared !== false && !!day && !(cur.day === day && cur.dayFirst);
   const parts = first ? [...play.parts, {
     label: 'その日はじめての1曲',
     xp: BEAT_RANK_BONUS.dayFirst
@@ -83898,7 +83898,7 @@ function RhythmMultiScreen({
       kind: "beat",
       xp: ms.beatRankXp,
       rewardsOf: beatRankRewardItems,
-      how: "曲を遊ぶと経験値がたまります。難しい難易度ほど多く、HELL がいちばん多くたまります。その日はじめての1曲は +30 です。",
+      how: "曲を遊ぶと経験値がたまります。難しい難易度ほど多く、HELL がいちばん多くたまります。その日はじめてクリアした1曲は +30 です。",
       onClose: () => setBeatRankOpen(false)
     }), ms.exiting && React.createElement("div", {
       "data-quick-run-exit-overlay": true,
