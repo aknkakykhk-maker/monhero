@@ -3,8 +3,9 @@
 //     p1.webp … 袋の全体(512×835)。パックを開ける画面・見本の一覧など、大きく出す所。
 //               社長「ふちぎりぎりにして、いらないとこは透過」: 袋のふちぎりぎりで切り出し(BAG)、それでも残る袋の外の黒(角など)は、
 //               絵のふちから黒い点をたどって透けさせる(袋の中の黒は、ふちからつながっていないので残る)
-//     p1-thumb.jpg … 袋の真ん中(モンスターと「第◯弾」の字の所)だけを、同じ縦横比(2:3)で切り出したもの(200×300)。
-//                    マーケットの一覧のように幅60px ほどで出す所。全体を縮めると「第◯弾」の字が高さ6px ほどになって読めないため
+//     p1-thumb.webp … p1.webp と同じ袋の全体(外は透過)を小さくしたもの(160×261)。マーケットの一覧のように幅60px ほどで出す所。
+//                    (はじめは袋の真ん中だけを切り出していたが、「全16種類」が左で切れ、モンスターの頭も切れて中途半端なので、
+//                     2026-10-31 社長「袋を丸ごと出す」に変えた)
 //   絵の中の字(1パック8枚入り・300円・全◯種類 など)は社長の絵のまま。描き直さない
 //   第1弾・第8弾の下の帯(全◯種類の枠・キラカード封入! の所)は、社長が直した一覧の絵(pack-sheet-v2.png・2048×1600)から
 //   その帯(届いた絵の座標で x 60〜965・y 1145〜1472)だけを位置合わせして引き伸ばし、ふちを14pxぼかして重ねた絵を渡している
@@ -18,8 +19,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');
 const sharp = require(path.join(ROOT, 'tools', 'node_modules', 'sharp'));
 const OUT = path.join(ROOT, 'monster-hero', 'images', 'card-battle', 'packs');
-// 一覧用に切り出す範囲(届いた絵 1024×1536 の上)。2:3 のまま、上のモンスターの顔から「MFバトルカード」の字までが入る
-const THUMB = { left: 212, top: 420, width: 600, height: 900 };
+const THUMB_W = 160, THUMB_H = 261;
 // 袋のふちぎりぎりの範囲(第1〜8弾とも、黒でない点はこの中に収まる)。縦横比 1.631(ゲームの CardPackArt の高さもこれに合わせる)
 const BAG = { left: 48, top: 11, width: 927, height: 1512 };
 const FULL_W = 512, FULL_H = 835;
@@ -62,9 +62,10 @@ const cutOutside = async (file) => {
     const file = path.join(src, `pack-0${i}.png`);
     const meta = await sharp(file).metadata();
     if (meta.width !== 1024 || meta.height !== 1536) throw new Error(`${file}: 大きさが ${meta.width}×${meta.height}(1024×1536 のはず)`);
-    await (await cutOutside(file)).webp({ quality: 80, alphaQuality: 90 }).toFile(path.join(OUT, `p${i}.webp`));
-    await sharp(file).removeAlpha().extract(THUMB).resize(200, 300).jpeg({ quality: 82, mozjpeg: true }).toFile(path.join(OUT, `p${i}-thumb.jpg`));
-    const a = fs.statSync(path.join(OUT, `p${i}.webp`)).size, b = fs.statSync(path.join(OUT, `p${i}-thumb.jpg`)).size;
-    console.log(`書き出し: 第${i}弾 p${i}.webp ${Math.round(a / 1024)}KB / p${i}-thumb.jpg ${Math.round(b / 1024)}KB`);
+    const cut = await (await cutOutside(file)).png().toBuffer();
+    await sharp(cut).webp({ quality: 80, alphaQuality: 90 }).toFile(path.join(OUT, `p${i}.webp`));
+    await sharp(cut).resize(THUMB_W, THUMB_H).webp({ quality: 85, alphaQuality: 90 }).toFile(path.join(OUT, `p${i}-thumb.webp`));
+    const a = fs.statSync(path.join(OUT, `p${i}.webp`)).size, b = fs.statSync(path.join(OUT, `p${i}-thumb.webp`)).size;
+    console.log(`書き出し: 第${i}弾 p${i}.webp ${Math.round(a / 1024)}KB / p${i}-thumb.webp ${Math.round(b / 1024)}KB`);
   }
 })().catch((e) => { console.error(e.message || e); process.exitCode = 1; });
