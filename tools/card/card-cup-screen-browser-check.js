@@ -122,6 +122,10 @@ const rrMatches = [[0, 1, 0], [2, 3, 1], [0, 2, 0], [1, 3, 0], [0, 3, 0], [1, 2,
     await T('[data-card-cup-code]').waitFor({ timeout: 10000 });
     const join = calls.find((c) => c.fn === 'card_cup_join');
     check('② 入る関数に、杯・自分の番号・鍵・名前で頼む → 合言葉が出る', join && join.body.p_key === KEY && join.body.p_cup === 'c2' && typeof join.body.p_owner === 'string' && join.body.p_name === '検査ブリーダー' && /482951/.test(await text()), J(join && join.body));
+    // ②' 個人杯だけ先に公開(2026-10-31 社長): 公開の印は開き、ごほうび・参加費・主催仲間の印(cardCupPrizeOpen)は閉じたまま。
+    //   ごほうびの口(getAdapters)を渡さないときは、ごほうびを読みに行かず、欄も参加費も出ない(ふつうの参加)
+    check("②' 個人杯の公開の印は開き、ごほうびの公開の印は閉じている", await page.evaluate(() => cardCupOpen() === true && cardCupPrizeOpen() === false));
+    check("②' ごほうびの口が無いときは、ごほうびを読みに行かず欄も出ない", !calls.some((c) => /^card_cup_prize/.test(c.fn)) && (await T('[data-card-cup-prize]').count()) === 0 && !/参加費/.test(await text()), calls.map((c) => c.fn).join(','));
     // ③ デッキ登録が無い
     hasDeck = false; joined = false;
     await mount();

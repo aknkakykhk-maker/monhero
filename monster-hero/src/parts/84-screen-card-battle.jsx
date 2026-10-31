@@ -835,9 +835,10 @@ const cardJaWrap = (text) => String(text ?? '').split(CARD_KEEP_WORDS).map((t, i
 // 場のモンスターの名前。「…」で切らずに収める(320で「メタル…」と切れていた。QA 8)。
 // 字を少し小さく(10pxまで) → それでも入らなければ横をつめて1行に収める(2行にすると「ストライ/クリパー」と言葉の途中で割れる)
 // two … 長い名前を、字を縮めすぎずに2行で出す(2026-10-29 社長「長い名前の字が小さくなりすぎない工夫」。地上・空中の札をライフの行へ移して空いた1行を使う)
-const CardMonName = ({ name, w, two = false }) => {
+// 場の札の名前。いつも1行にして、長い名前は字を小さく・横に詰めて札の幅に収める(2026-10-31 社長「7文字以上のモンスター名が下にずれてる。サイズで調整して」。
+//   前は長い名前を2行に折っていて(two)、「ダークヘンガ/ー」のように折れ、ライフ・地上の札が1行ぶん下にずれていた)。two は呼ぶ側との互換のために受け取るだけ
+const CardMonName = ({ name, w, two = false }) => { // eslint-disable-line no-unused-vars
   const len = Math.max(1, String(name || '').length);
-  if (two && len * 11 > w) return <div data-card-mon-name data-card-mon-name-two className="line-clamp-2 break-all font-black leading-[1.1]" style={{ fontSize: 11 }}>{name}</div>;
   const fs = Math.max(10, Math.min(12, Math.floor(w / len)));
   const k = Math.min(1, w / (len * fs));
   return <div data-card-mon-name className="whitespace-nowrap font-black leading-tight" style={{ fontSize: fs, transform: k < 1 ? `scaleX(${k})` : undefined, transformOrigin: 'left', width: k < 1 ? `${w / k}px` : undefined }}>{name}</div>;
@@ -896,6 +897,9 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   // 攻撃の動きだけは、その手で倒れた子(はね返されて倒れたなど)でも最後まで見せる。動きが終わると倒れた形になる
   //   (攻撃の動きを守りが決まった手で流すようにしたので、はね返しで倒れる手と同じになった。2026-10-31)
   const mv = motion && (!mon.ko || motion.type === 'attack') ? motion : null;
+  // 止まっているあいだの待機の動き(85-card-battle-motion.jsx の cardIdleBodyOf。2026-10-31 社長・案A 種族ごとの動き)。
+  //   動いている・倒れた・オプションの「揺らさない」では付けない。端末の「動きを減らす」は CSS(.mon-idle)で止まる
+  const idleBody = art && !mv && !mon.ko && !calm ? cardIdleBodyOf(mon, ty) : null;
   // calm … オプションの「画面の揺れ: 揺らさない」。受けたときは揺らさずに光るだけ
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? (calm ? 'mh-card-hit-calm' : 'mh-card-hit') : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = (
@@ -903,7 +907,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
       style={{ isolation: 'isolate', ...(wide ? { height: wideArtH } : null), ...(mv && mv.type === 'attack' ? { '--atk-dx': `${mv.dx}px`, '--atk-dy': `${mv.dy}px`, zIndex: 40 } : null) }}>
       {mv && mv.type === 'attack' && mv.kind
         ? <SkillFxMotion key={mv.key} kind={mv.kind} image={imgEl}/>
-        : <div key={mv ? mv.key : 'still'} data-card-pose={mon.ko ? 'ko' : mv ? mv.type : 'still'} className={`flex items-end justify-center ${poseClass}`}>{imgEl}</div>}
+        : <div key={mv ? mv.key : 'still'} data-card-pose={mon.ko ? 'ko' : mv ? mv.type : 'still'} className={`flex items-end justify-center ${poseClass}`}>{idleBody ? <span data-card-idle={idleBody} className={`mon-idle mon-idle--${idleBody}`} style={cardIdleStyleOf(idleBody, p, m, mon.no)}>{imgEl}</span> : imgEl}</div>}
       {/* よけた: 元の場所に残像が残って消える / ジャンプでよけた: 上で止まって「空中」の印 */}
       {mv && mv.type === 'dodge' && <div key={`${mv.key}-a`} className="mh-card-afterimage" aria-hidden="true">{imgEl}</div>}
       {mv && mv.type === 'jump' && <span key={`${mv.key}-j`} data-card-air-mark className="mh-card-air-mark">空中</span>}
@@ -3649,7 +3653,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         { cup: { matchId: r.id, cupId: r.cup_id, side: r.side, seed: r.seed, first: r.first, selfId } });
     };
     // 杯の試合のあと・入れなかったときの知らせ(下に小さく出す)
-    return <><CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId} onOpenReplay={openCupReplay} onPlayLive={playCupLive} getAdapters={cupAdapters}
+    return <><CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId} onOpenReplay={openCupReplay} onPlayLive={playCupLive} getAdapters={debug || (typeof cardCupPrizeOpen === 'function' && cardCupPrizeOpen()) ? cupAdapters : null}
       onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('cup'); setView('tactics'); } : null}/>
       {notice && <div data-card-cup-toast className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit max-w-[92vw] rounded-full bg-slate-950/95 px-4 py-2 text-[13px] font-black text-amber-100 shadow-lg" style={JA_WRAP_STYLE}>{jaWrap(notice)}</div>}
     </>;

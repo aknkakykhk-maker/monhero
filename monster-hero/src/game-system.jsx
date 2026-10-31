@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 83d9f32019438d7e
+// generated-sha256: 80df07a28e552d90
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -58197,7 +58197,10 @@ const CardVsMonsters = ({ db, monsters, side, start, step }) => (
               return el;
             })()
             : <img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="w-full rounded-md object-cover" style={{ aspectRatio: '63 / 88', maxHeight: 'min(19vh, 140px)' }}/>}
-          <span className="mt-0.5 w-full truncate text-center text-[10px] font-black text-white" style={{ textShadow: '0 1px 2px #000' }}>{m.name}</span>
+          {/* 名前は「…」で切らず、幅に合わせて字を小さくして1行に収める(2026-10-31 社長「7文字以上のモンスター名…サイズで調整して」) */}
+          <span data-card-vs-mon-name className="mt-0.5 block w-full text-center" style={{ containerType: 'inline-size' }}>
+            <span className="whitespace-nowrap font-black text-white" style={{ fontSize: `min(10px, calc(100cqw / ${String(m.name).length + 0.5}))`, textShadow: '0 1px 2px #000' }}>{m.name}</span>
+          </span>
         </div>
       );
     })}
@@ -59031,6 +59034,38 @@ const cardMotionDemoAction = (db, st, step) => {
   const me = st.players[st.active];
   return cardAttackOptions(db, st).find((o) => me.hand[o.hand[0]] === step.attack && o.mon === step.mon && o.hand.length === 1
     && JSON.stringify(o.target || null) === JSON.stringify(step.target || null)) || null;
+};
+
+// ===== 場の立ち絵の待機の動き(2026-10-31 社長「バトルカードも待機モーションほしい」) =====
+// 止まっているあいだ、場の立ち絵に体全体の動きを付ける。動きそのものはモンヒロのバトルの味方と同じ
+// .mon-idle--<動き>(70-bootstrap.jsx の keyframes)を使い回し、ここでは「どの子にどの動きか」と「ずらし方」だけ決める。
+// ・味方にいる種族は、味方の待機アニメ(MONSTER_IDLE_RIGS)の体の動きをそのまま。いない種族は下の表
+// ・混血は主の種族の動き。空中の子は浮く・水中の子は泳ぐ(地上・空中・水中が変わるカードがあるので、そのときの場所で決める)
+// ・止めるのは呼び出し側(攻撃・受ける・よける・倒れたとき、オプションの「揺らさない」)。端末の「動きを減らす」は CSS で止まる
+const CARD_IDLE_BODY = Object.freeze({
+  ghost: 'hover', dino: 'heavy', gali: 'hover', naga: 'sway', dragon: 'heavy', henger: 'breathe', durahan: 'heavy',
+  arrowhead: 'heavy', zilla: 'heavy', phoenix: 'glide', joker: 'drift', jell: 'jelly', mew: 'bounce', metalner: 'hover',
+  worm: 'sway', centaur: 'breathe', colorpandora: 'hover',
+});
+const CARD_IDLE_FLOAT = ['hover', 'glide', 'drift'];
+const cardIdleBodyOf = (mon, ty) => {
+  if (!mon) return null;
+  const sp = mon.main || mon.species;
+  const ally = CARD_SPECIES_ART[sp];
+  const rig = ally && typeof monsterIdleRigOf === 'function' ? monsterIdleRigOf(ally) : null;
+  let body = (rig && rig.body) || CARD_IDLE_BODY[sp] || 'breathe';
+  if (ty === 'water') body = 'swim';
+  else if (ty === 'air' && !CARD_IDLE_FLOAT.includes(body)) body = 'hover';
+  return body;
+};
+// 3体がそろって同じ動きにならないよう、席とカードの番号から速さ(0.88〜1.12倍)と始まり(周期のどこから)をずらす。
+// 周期の長さは 70-bootstrap.jsx の .mon-idle--<動き> と同じ
+const CARD_IDLE_MS = Object.freeze({ hover: 2600, bounce: 1800, breathe: 3200, sway: 3000, swim: 2800, jelly: 2000, hop: 2800, heavy: 3600, glide: 3200, drift: 4200 });
+const cardIdleStyleOf = (body, p, m, no) => {
+  let h = 2166136261;
+  for (const c of `${p}|${m}|${no}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0;
+  const ms = Math.round((CARD_IDLE_MS[body] || 3000) * (0.88 + (h % 25) / 100));
+  return { animationDuration: `${ms}ms`, animationDelay: `-${Math.round(ms * (((h >>> 8) % 100) / 100))}ms` };
 };
 
 // ---- part: 84-screen-card-battle.jsx ----
@@ -59871,9 +59906,10 @@ const cardJaWrap = (text) => String(text ?? '').split(CARD_KEEP_WORDS).map((t, i
 // 場のモンスターの名前。「…」で切らずに収める(320で「メタル…」と切れていた。QA 8)。
 // 字を少し小さく(10pxまで) → それでも入らなければ横をつめて1行に収める(2行にすると「ストライ/クリパー」と言葉の途中で割れる)
 // two … 長い名前を、字を縮めすぎずに2行で出す(2026-10-29 社長「長い名前の字が小さくなりすぎない工夫」。地上・空中の札をライフの行へ移して空いた1行を使う)
-const CardMonName = ({ name, w, two = false }) => {
+// 場の札の名前。いつも1行にして、長い名前は字を小さく・横に詰めて札の幅に収める(2026-10-31 社長「7文字以上のモンスター名が下にずれてる。サイズで調整して」。
+//   前は長い名前を2行に折っていて(two)、「ダークヘンガ/ー」のように折れ、ライフ・地上の札が1行ぶん下にずれていた)。two は呼ぶ側との互換のために受け取るだけ
+const CardMonName = ({ name, w, two = false }) => { // eslint-disable-line no-unused-vars
   const len = Math.max(1, String(name || '').length);
-  if (two && len * 11 > w) return <div data-card-mon-name data-card-mon-name-two className="line-clamp-2 break-all font-black leading-[1.1]" style={{ fontSize: 11 }}>{name}</div>;
   const fs = Math.max(10, Math.min(12, Math.floor(w / len)));
   const k = Math.min(1, w / (len * fs));
   return <div data-card-mon-name className="whitespace-nowrap font-black leading-tight" style={{ fontSize: fs, transform: k < 1 ? `scaleX(${k})` : undefined, transformOrigin: 'left', width: k < 1 ? `${w / k}px` : undefined }}>{name}</div>;
@@ -59932,6 +59968,9 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   // 攻撃の動きだけは、その手で倒れた子(はね返されて倒れたなど)でも最後まで見せる。動きが終わると倒れた形になる
   //   (攻撃の動きを守りが決まった手で流すようにしたので、はね返しで倒れる手と同じになった。2026-10-31)
   const mv = motion && (!mon.ko || motion.type === 'attack') ? motion : null;
+  // 止まっているあいだの待機の動き(85-card-battle-motion.jsx の cardIdleBodyOf。2026-10-31 社長・案A 種族ごとの動き)。
+  //   動いている・倒れた・オプションの「揺らさない」では付けない。端末の「動きを減らす」は CSS(.mon-idle)で止まる
+  const idleBody = art && !mv && !mon.ko && !calm ? cardIdleBodyOf(mon, ty) : null;
   // calm … オプションの「画面の揺れ: 揺らさない」。受けたときは揺らさずに光るだけ
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? (calm ? 'mh-card-hit-calm' : 'mh-card-hit') : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = (
@@ -59939,7 +59978,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
       style={{ isolation: 'isolate', ...(wide ? { height: wideArtH } : null), ...(mv && mv.type === 'attack' ? { '--atk-dx': `${mv.dx}px`, '--atk-dy': `${mv.dy}px`, zIndex: 40 } : null) }}>
       {mv && mv.type === 'attack' && mv.kind
         ? <SkillFxMotion key={mv.key} kind={mv.kind} image={imgEl}/>
-        : <div key={mv ? mv.key : 'still'} data-card-pose={mon.ko ? 'ko' : mv ? mv.type : 'still'} className={`flex items-end justify-center ${poseClass}`}>{imgEl}</div>}
+        : <div key={mv ? mv.key : 'still'} data-card-pose={mon.ko ? 'ko' : mv ? mv.type : 'still'} className={`flex items-end justify-center ${poseClass}`}>{idleBody ? <span data-card-idle={idleBody} className={`mon-idle mon-idle--${idleBody}`} style={cardIdleStyleOf(idleBody, p, m, mon.no)}>{imgEl}</span> : imgEl}</div>}
       {/* よけた: 元の場所に残像が残って消える / ジャンプでよけた: 上で止まって「空中」の印 */}
       {mv && mv.type === 'dodge' && <div key={`${mv.key}-a`} className="mh-card-afterimage" aria-hidden="true">{imgEl}</div>}
       {mv && mv.type === 'jump' && <span key={`${mv.key}-j`} data-card-air-mark className="mh-card-air-mark">空中</span>}
@@ -62685,7 +62724,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         { cup: { matchId: r.id, cupId: r.cup_id, side: r.side, seed: r.seed, first: r.first, selfId } });
     };
     // 杯の試合のあと・入れなかったときの知らせ(下に小さく出す)
-    return <><CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId} onOpenReplay={openCupReplay} onPlayLive={playCupLive} getAdapters={cupAdapters}
+    return <><CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId} onOpenReplay={openCupReplay} onPlayLive={playCupLive} getAdapters={debug || (typeof cardCupPrizeOpen === 'function' && cardCupPrizeOpen()) ? cupAdapters : null}
       onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('cup'); setView('tactics'); } : null}/>
       {notice && <div data-card-cup-toast className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit max-w-[92vw] rounded-full bg-slate-950/95 px-4 py-2 text-[13px] font-black text-amber-100 shadow-lg" style={JA_WRAP_STYLE}>{jaWrap(notice)}</div>}
     </>;
@@ -71702,7 +71741,8 @@ const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, on
 //   ・表が無い・通信できないときは「準備中」と出して何もしない
 
 // 公開の印。告知と同じ日に true にする。それまではデバッグ設定から入ったときだけ入口が出る
-const cardCupOpen = () => false;
+// 2026-10-31 社長「個人杯だけ先に公開」で true に。ごほうび・参加費・主催仲間は別の印(99-card-cup-prize の cardCupPrizeOpen。リプレイくん)で、まだ閉じたまま
+const cardCupOpen = () => true;
 
 const cardCupText = (t, n = 40) => {
   const s = String(t || '').slice(0, n);
@@ -71748,8 +71788,9 @@ const cardCupRpcSoft = async (fn, body) => {
 const cardCupListDone = async () => { const r = await cardCupRpcSoft('card_cup_list_done', {}); return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : []; };
 const cardCupMine = async (owner) => { const r = await cardTourRpc('card_cup_mine', { p_owner: owner || '' }); return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : null; };
 // 自分が出ている杯 + 主催仲間として誘われている・入っている杯(99-card-cup-prize の card_cup_hosting_of。関数がまだ無ければ出ている杯だけ)
-const cardCupMineWithHosting = async (owner) => {
-  const [a, b] = await Promise.all([cardCupMine(owner), cardCupRpcSoft('card_cup_hosting_of', { p_owner: owner || '' })]);
+//   withHosting … ごほうび・参加費・主催仲間が出せるとき(84 が口を渡したとき)だけ、主催仲間の杯を混ぜる
+const cardCupMineWithHosting = async (owner, withHosting = true) => {
+  const [a, b] = await Promise.all([cardCupMine(owner), withHosting ? cardCupRpcSoft('card_cup_hosting_of', { p_owner: owner || '' }) : null]);
   if (!Array.isArray(a)) return a;
   const extra = (Array.isArray(b) ? b : []).map(cardCupNormalizeRow).filter((c) => c && !a.some((x) => x.id === c.id));
   return [...a, ...extra];
@@ -72001,7 +72042,8 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
   const [msg, setMsg] = useState('');
   // ごほうび・参加費・主催仲間(99-card-cup-prize)。表がまだ無いときは null(欄を出さない・ふつうの参加)
   const [prize, setPrize] = useState(null);
-  const reloadPrize = async () => { if (typeof cardCupPrizeView === 'function') setPrize(await cardCupPrizeView(c.id, selfId)); };
+  //   口(getAdapters)が無いとき(ごほうびの公開の印 cardCupPrizeOpen が閉じていてデバッグでもない)は読まない → 欄・参加費・主催仲間は出ない
+  const reloadPrize = async () => { if (getAdapters && typeof cardCupPrizeView === 'function') setPrize(await cardCupPrizeView(c.id, selfId)); };
   useEffect(() => { void reloadPrize(); }, [c.id, selfId]);
   const joinPaid = async () => {
     if (busy || !getAdapters) return;
@@ -72026,7 +72068,7 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
       const r = await cardTourRpc(fn, { p_cup: c.id, p_owner: selfId, p_key: key, ...extra });
       const text = { ok: { card_cup_join: '参加しました', card_cup_leave: '参加を取り消しました', card_cup_cancel: 'この個人杯を取り消しました' }[fn],
         closed: '受付は終わりました', full: '人数がいっぱいです', many: '出ている個人杯が3つあります', nodeck: 'デッキ登録をしてから参加してください',
-        locked: 'デッキを登録した端末でだけ参加できます', none: '参加していません', host: '主催は抜けられません(取り消しはできます)', bad: '参加できませんでした' }[r];
+        locked: 'デッキを登録した端末でだけ参加できます', none: '参加していません', fee: 'この個人杯には、いまは参加できません', host: '主催は抜けられません(取り消しはできます)', bad: '参加できませんでした' }[r];
       setMsg(text || '通信できませんでした。もう一度お試しください');
       if (r === 'ok') await onChanged();
     } finally { setBusy(false); }
@@ -72102,7 +72144,7 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
       setSelfId(id); setMine(m || null); setList(l);
       if (l) void cardCupListDone().then((d) => { if (alive) setDone(d); });
       setProfile({ name: typeof nm === 'string' && nm ? nm.slice(0, 40) : 'ブリーダー', icon: typeof ic === 'string' ? ic : null });
-      if (id) setMineCups(await cardCupMineWithHosting(id));
+      if (id) setMineCups(await cardCupMineWithHosting(id, !!getAdapters));
     })();
     return () => { alive = false; };
   }, []);
@@ -72117,7 +72159,7 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
   if (list === undefined) return shell(<ScreenEmpty emoji="⏳" lines={['読み込んでいます']}/>);
   if (list === null) return shell(<ScreenEmpty emoji="🛠️" lines={['個人杯は準備中です']}/>);
   if (cupId) {
-    const back = () => { setCupId(null); if (selfId) void cardCupMineWithHosting(selfId).then(setMineCups); void cardCupList().then((l) => l && setList(l)); };
+    const back = () => { setCupId(null); if (selfId) void cardCupMineWithHosting(selfId, !!getAdapters).then(setMineCups); void cardCupList().then((l) => l && setList(l)); };
     if (!view) return shell(<ScreenEmpty emoji="⏳" lines={['読み込んでいます']}/>, back);
     return shell(<CardCupDetail v={view} now={now} mine={mine} selfId={selfId} profile={profile} onChanged={() => reload()} onOpenRegister={onOpenRegister} onOpenReplay={onOpenReplay} onPlayLive={onPlayLive} getAdapters={getAdapters}/>, back);
   }
@@ -72321,6 +72363,9 @@ const CardCupLivePanel = ({ v, now, selfId, onChanged, onPlay = null }) => {
 //     カードの持ち物(かけら・パック券・カタログ)は 84 の保存(persist)で
 // 保存: 新しいキー mh_card_cup_wallet_v1 だけ(下)。今のキーは、今の形のまま足す・引くだけ
 
+// 公開の印(ごほうび・参加費・主催仲間だけ)。個人杯の公開(99-card-cup の cardCupOpen)とは別。
+// 2026-10-31 社長: 個人杯だけ先に公開し、ごほうび・参加費・主催仲間はまだ閉じる(出す日はあとで決める)。それまではデバッグ設定から入ったときだけ出る(84 が口 getAdapters を渡すかで決める)
+const cardCupPrizeOpen = () => false;
 const CARD_CUP_WALLET_KEY = 'mh_card_cup_wallet_v1';
 const CARD_CUP_WALLET_MAX = 200;
 // 出せる物(サーバの表 card_cup_prize_items と同じ名前)。label・emoji は画面の名前。出す量・参加費の額に上限は無い(2026-10-31 社長「やっぱり上限はなしでいい」)
