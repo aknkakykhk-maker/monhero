@@ -20,7 +20,9 @@ const SB_HEADERS = { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' 
 // rpc は集計を読むもの(rhythm_week_score_totals など)なので通すが、表へ書く rpc はここに並べて同じく止める
 // (2026-10-27 カード部: マルチの強さの点数 card_battle_pvp_report が、検査のブラウザから本物へ届きうる形だった)
 // ビートランク・カードランクの行を書く関数(2026-10-29)も、表へ書くのでここで止める
-const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report', 'rhythm_beat_rank_put', 'card_rank_put', 'card_deck_replay_put']);
+const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report', 'rhythm_beat_rank_put', 'card_rank_put', 'card_deck_replay_put',
+  // 個人杯のごほうび・参加費・主催仲間(99-card-cup-prize。2026-10-31)
+  'card_cup_deposit', 'card_cup_join_pay', 'card_cup_claim', 'card_cup_prize_set', 'card_cup_cohost_invite', 'card_cup_cohost_answer', 'card_cup_cohost_remove']);
 const sbAutomationWriteBlocked = (url, method) => {
   try {
     if (typeof navigator === 'undefined' || navigator.webdriver !== true) return false;
