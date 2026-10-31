@@ -40,8 +40,10 @@ const CardTacticDetail = ({ card, onClose }) => {
           <span className="rounded bg-black/35 px-1.5 text-[13px] font-black">{st.label}</span>
           {card.phase && <span className="rounded bg-black/25 px-1.5 text-[12px] font-bold">{CARD_TACTIC_PHASE_TEXT[card.phase]}</span>}
         </div>
-        <b className="mt-2 block text-[21px] font-black leading-tight" style={JA_WRAP_STYLE}>{card.name}</b>
-        <p className="mt-2 text-[15px] font-bold leading-relaxed" style={JA_WRAP_STYLE}>{jaWrap(card.desc)}</p>
+        {/* 一文(2026-10-31 案A)を大きく、カードの名前と細かい効果は「くわしく」として下に */}
+        <b data-card-tactic-detail-line className="mt-2 block text-[19px] font-black leading-snug" style={JA_WRAP_STYLE}>{jaWrap(card.line || card.name)}</b>
+        <p className="mt-2 text-[12px] font-black text-white/80">{`カードの名前「${card.name}」`}</p>
+        <p className="mt-1 rounded-lg bg-black/25 px-2 py-1.5 text-[13px] font-bold leading-relaxed" style={JA_WRAP_STYLE}><small className="block text-[10px] font-black text-white/70">くわしく</small>{jaWrap(card.desc)}</p>
         <p className="mt-2 text-[11px] font-bold text-white/80" style={JA_WRAP_STYLE}>{jaWrap(CARD_TACTIC_CAT_TEXT[card.cat] || '')}</p>
         <button type="button" data-card-tactic-detail-close onClick={() => { Audio_.fgSe.tap(); onClose && onClose(); }} className="mh-button mt-3 min-h-[44px] w-full rounded-xl bg-black/40 text-[14px] font-black">とじる</button>
       </div>
@@ -62,9 +64,9 @@ const CardTacticFace = ({ card, owned = true, count = 0, onClick = null, small =
         {count > 1 && <span className="ml-auto text-[10px] font-black text-amber-200">×{count}</span>}
         {mark && <span className="ml-auto rounded bg-emerald-500 px-1 text-[10px] font-black text-white">{mark}</span>}
       </span>
-      <b className={`mt-1 block font-black leading-tight text-white ${small ? ([...String(card.name || '')].length > 10 ? 'text-[11px]' : 'text-[12.5px]') : 'text-[14px]'}`} style={JA_WRAP_STYLE}>{jaWrap(card.name)}</b>
-      {/* 小さい札は効果を3行まで(全文は押した先の CardTacticDetail) */}
-      <small className={`mt-0.5 font-bold leading-snug text-white/90 ${small ? 'line-clamp-3 text-[10px]' : 'block text-[11.5px]'}`} style={JA_WRAP_STYLE}>{jaWrap(card.desc)}</small>
+      {/* 一文(2026-10-31 社長 案A「〜とき」「〜する」)を大きく。下にカードの名前。細かい効果は押した先の CardTacticDetail(くわしく) */}
+      <b data-card-tactic-line className={`mt-1 block font-black leading-snug text-white ${small ? ([...String(card.line || card.name || '')].length > 16 ? 'line-clamp-4 text-[10.5px]' : 'text-[12px]') : 'text-[13.5px]'}`} style={JA_WRAP_STYLE}>{jaWrap(card.line || card.name)}</b>
+      <small className={`mt-auto pt-0.5 font-bold leading-snug text-white/65 ${small ? 'line-clamp-1 text-[9.5px]' : 'block text-[10.5px]'}`} style={JA_WRAP_STYLE}>{card.name}</small>
     </Tag>
   );
 };
@@ -155,7 +157,7 @@ const CardTacticPicker = ({ db, tactics, cat, title, onPick, onClose, allowNone 
   }
   const words = cardTacticFold(q).split(/[\s　]+/).filter(Boolean);
   const shown = list.filter((c) => (!sec || c.sec === sec) && (!ownOnly || cardTacticsOwns(tactics, c.id)) && (!fitOnly || cardTacticDeckFits(db, deck, c))
-    && words.every((w) => cardTacticFold(`${c.name} ${c.desc} ${c.sec}`).includes(w)));
+    && words.every((w) => cardTacticFold(`${c.line || ''} ${c.name} ${c.desc} ${c.sec}`).includes(w)));
   const order = sort === 'rec' ? shown.slice().sort((x, y) => (rec.has(y.id) ? 1 : 0) - (rec.has(x.id) ? 1 : 0))
     : sort === 'use' ? shown.slice().sort((x, y) => (use[y.id] || 0) - (use[x.id] || 0)) : shown;
   const chip = (on) => `shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
