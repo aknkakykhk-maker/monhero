@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6f951a9c92f29627
+// generated-sha256: 3d2a3e05167e184f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -62668,7 +62668,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         { cup: { matchId: r.id, cupId: r.cup_id, side: r.side, seed: r.seed, first: r.first, selfId } });
     };
     // 杯の試合のあと・入れなかったときの知らせ(下に小さく出す)
-    return <><CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId} onOpenReplay={openCupReplay} onPlayLive={playCupLive}
+    return <><CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId} onOpenReplay={openCupReplay} onPlayLive={playCupLive} getAdapters={cupAdapters}
       onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('cup'); setView('tactics'); } : null}/>
       {notice && <div data-card-cup-toast className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit max-w-[92vw] rounded-full bg-slate-950/95 px-4 py-2 text-[13px] font-black text-amber-100 shadow-lg" style={JA_WRAP_STYLE}>{jaWrap(notice)}</div>}
     </>;
@@ -71730,6 +71730,13 @@ const cardCupRpcSoft = async (fn, body) => {
 };
 const cardCupListDone = async () => { const r = await cardCupRpcSoft('card_cup_list_done', {}); return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : []; };
 const cardCupMine = async (owner) => { const r = await cardTourRpc('card_cup_mine', { p_owner: owner || '' }); return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : null; };
+// 自分が出ている杯 + 主催仲間として誘われている・入っている杯(99-card-cup-prize の card_cup_hosting_of。関数がまだ無ければ出ている杯だけ)
+const cardCupMineWithHosting = async (owner) => {
+  const [a, b] = await Promise.all([cardCupMine(owner), cardCupRpcSoft('card_cup_hosting_of', { p_owner: owner || '' })]);
+  if (!Array.isArray(a)) return a;
+  const extra = (Array.isArray(b) ? b : []).map(cardCupNormalizeRow).filter((c) => c && !a.some((x) => x.id === c.id));
+  return [...a, ...extra];
+};
 const cardCupFind = async (code) => cardCupNormalizeRow(await cardTourRpc('card_cup_find', { p_code: code }));
 const cardCupView = async (id, owner) => cardCupNormalizeView(await cardTourRpc('card_cup_view', { p_cup: id, p_owner: owner || '' }));
 
@@ -71971,10 +71978,28 @@ const CardCupMatches = ({ v, onOpenReplay, selfId = null }) => {
   );
 };
 
-const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegister, onOpenReplay = null, onPlayLive = null }) => {
+const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegister, onOpenReplay = null, onPlayLive = null, getAdapters = null }) => {
   const c = v.cup;
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  // ごほうび・参加費・主催仲間(99-card-cup-prize)。表がまだ無いときは null(欄を出さない・ふつうの参加)
+  const [prize, setPrize] = useState(null);
+  const reloadPrize = async () => { if (typeof cardCupPrizeView === 'function') setPrize(await cardCupPrizeView(c.id, selfId)); };
+  useEffect(() => { void reloadPrize(); }, [c.id, selfId]);
+  const joinPaid = async () => {
+    if (busy || !getAdapters) return;
+    setBusy(true); setMsg('');
+    try {
+      const a = await getAdapters();
+      if (!a.owner || !a.key) { setMsg('デッキを登録した端末でだけ参加できます'); return; }
+      // 主催・主催仲間は払わない(サーバの card_cup_join_pay が払わずに入れる)
+      const fee = prize.me.host ? null : prize.fee;
+      const have = fee ? cardCupHave(fee.item, a.have && a.have.main, a.have && a.have.card) : 0;
+      const r = await cardCupJoinPaid({ ...a, name: (profile && profile.name) || a.name || 'ブリーダー', icon: (profile && profile.icon) || a.icon }, c.id, fee, have);
+      setMsg(r === 'ok' ? '参加しました' : (CARD_CUP_PRIZE_MSG[r] || CARD_CUP_PRIZE_MSG.off));
+      if (r === 'ok') { await onChanged(); await reloadPrize(); }
+    } finally { setBusy(false); }
+  };
   const act = async (fn, extra = {}) => {
     if (busy) return;
     setBusy(true); setMsg('');
@@ -72004,13 +72029,14 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
         {c.status === 'done' && !shown && <div className="mt-1 text-[12px] font-black text-amber-200">{`結果は ${cardTourTimeLabel(c.startAt)} に出ます`}</div>}
         {c.mode === 'auto' && c.status === 'running' && <div className="mt-1 text-[12px] font-black text-amber-200">{`試合はサーバで自動で行われます。結果は ${cardTourTimeLabel(c.startAt)} に出ます`}</div>}
       </div>
+      {prize && getAdapters && typeof CardCupPrizePanel === 'function' && <CardCupPrizePanel c={c} v={v} now={now} selfId={selfId} prize={prize} reload={async () => { await reloadPrize(); await onChanged(); }} getAdapters={getAdapters}/>}
       {c.mode === 'live' && typeof CardCupLivePanel === 'function' && <CardCupLivePanel v={v} now={now} selfId={selfId} onChanged={onChanged} onPlay={onPlayLive}/>}
       {shown && c.format === 'ko' && <CardCupBracket rounds={c.bracket} matches={v.matches} entries={v.entries} done/>}
       {shown && c.format === 'rr' && typeof CardTourGrid === 'function' && <CardTourGrid view={cardCupAsTourView(v)} stage="group" grp={0} known={null} now={now}/>}
       {shown && ranked.length > 0 && (
         <div data-card-cup-ranks className="rounded-2xl bg-slate-950/70 p-2.5 text-[12px] font-bold text-slate-200" style={JA_WRAP_STYLE}>
           <b className="text-amber-200">順位 </b>{ranked.map((e) => `${e.place}位 ${e.mine ? 'あなた' : e.name}(${e.wins || 0}勝)`).join(' ・ ')}
-          <div className="mt-1 text-slate-400">個人杯にはごほうびはありません。ランキングにも入りません</div>
+          {!(prize && (prize.pool.length || prize.fee)) && <div className="mt-1 text-slate-400">この個人杯にはごほうびはありません。ランキングにも入りません</div>}
         </div>
       )}
       {shown && <CardCupMatches v={v} onOpenReplay={onOpenReplay} selfId={selfId}/>}
@@ -72020,7 +72046,9 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
           {v.entries.map((e) => <CardTourWho key={e.ownerId} e={e} known={null}/>)}
         </div>
       )}
-      {open && !v.me && <CardCupJoinPanel mine={mine} busy={busy} onOpenRegister={onOpenRegister} onJoin={() => void act('card_cup_join', { p_name: (profile && profile.name) || 'ブリーダー', p_icon: (profile && profile.icon) || null })}/>}
+      {open && !v.me && <CardCupJoinPanel mine={mine} busy={busy} onOpenRegister={onOpenRegister}
+        label={prize && prize.fee && !prize.me.host ? `参加費 ${cardCupItemText(prize.fee.item, prize.fee.amount)} を払って参加` : 'このデッキで参加'}
+        onJoin={() => (prize && prize.fee ? void joinPaid() : void act('card_cup_join', { p_name: (profile && profile.name) || 'ブリーダー', p_icon: (profile && profile.icon) || null }))}/>}
       {open && v.me && !host && <button type="button" data-card-cup-leave disabled={busy} onClick={() => { Audio_.fgSe.tap(); void act('card_cup_leave'); }} className="w-full rounded-2xl border-2 border-slate-500 bg-slate-800 py-2.5 text-[14px] font-black text-slate-100 disabled:opacity-50">参加を取り消す</button>}
       {c.status === 'entry' && host && <button type="button" data-card-cup-cancel disabled={busy} onClick={() => { Audio_.fgSe.tap(); void act('card_cup_cancel'); }} className="w-full rounded-2xl border-2 border-rose-500/70 bg-slate-800 py-2.5 text-[14px] font-black text-rose-100 disabled:opacity-50">この個人杯を取り消す</button>}
       {msg && <p data-card-cup-msg className="rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
@@ -72032,7 +72060,8 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
 // onBack … 対戦えらびへ / onOpenRegister … デッキ登録へ(戻ると、この画面のいまの杯に戻る)
 // onOpenReplay(matchId, title, owner) … 試合の見返しを開く(84。開けなかったら false。合言葉だけの杯は参加者だけ見られるので owner を渡す)
 // onPlayLive(match) … リアルタイム杯の自分の試合を戦う(84 が対戦の画面を開く・④)
-const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange = null, onOpenReplay = null, onPlayLive = null }) => {
+// getAdapters … ごほうび・参加費の持ち物を足し引きする口(84 の cupAdapters。99-card-cup-prize)
+const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange = null, onOpenReplay = null, onPlayLive = null, getAdapters = null }) => {
   const [tab, setTab] = useState('list');
   const [list, setList] = useState(undefined);
   const [done, setDone] = useState([]); // 終わった公開の杯(終わって30日まで。2026-10-31 社長 案A)
@@ -72056,7 +72085,7 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
       setSelfId(id); setMine(m || null); setList(l);
       if (l) void cardCupListDone().then((d) => { if (alive) setDone(d); });
       setProfile({ name: typeof nm === 'string' && nm ? nm.slice(0, 40) : 'ブリーダー', icon: typeof ic === 'string' ? ic : null });
-      if (id) setMineCups(await cardCupMine(id));
+      if (id) setMineCups(await cardCupMineWithHosting(id));
     })();
     return () => { alive = false; };
   }, []);
@@ -72064,16 +72093,16 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
   useEffect(() => { setView(null); setMsg(''); if (cupId) void reload(cupId); }, [cupId, selfId]);
   const shell = (children, back = onBack) => (
     <div data-mh-screen data-card-cup className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title="個人杯" accent="text-amber-200" onBack={back} note="自分で大会を開いて、仲間と競う(ごほうびはありません)"/>
+      <ScreenHead title="個人杯" accent="text-amber-200" onBack={back} note="自分で大会を開いて、仲間と競う"/>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>{children}</div>
     </div>
   );
   if (list === undefined) return shell(<ScreenEmpty emoji="⏳" lines={['読み込んでいます']}/>);
   if (list === null) return shell(<ScreenEmpty emoji="🛠️" lines={['個人杯は準備中です']}/>);
   if (cupId) {
-    const back = () => { setCupId(null); if (selfId) void cardCupMine(selfId).then(setMineCups); void cardCupList().then((l) => l && setList(l)); };
+    const back = () => { setCupId(null); if (selfId) void cardCupMineWithHosting(selfId).then(setMineCups); void cardCupList().then((l) => l && setList(l)); };
     if (!view) return shell(<ScreenEmpty emoji="⏳" lines={['読み込んでいます']}/>, back);
-    return shell(<CardCupDetail v={view} now={now} mine={mine} selfId={selfId} profile={profile} onChanged={() => reload()} onOpenRegister={onOpenRegister} onOpenReplay={onOpenReplay} onPlayLive={onPlayLive}/>, back);
+    return shell(<CardCupDetail v={view} now={now} mine={mine} selfId={selfId} profile={profile} onChanged={() => reload()} onOpenRegister={onOpenRegister} onOpenReplay={onOpenReplay} onPlayLive={onPlayLive} getAdapters={getAdapters}/>, back);
   }
   const find = async () => {
     const c = String(code || '').replace(/[^0-9]/g, '');
@@ -72277,7 +72306,7 @@ const CardCupLivePanel = ({ v, now, selfId, onChanged, onPlay = null }) => {
 
 const CARD_CUP_WALLET_KEY = 'mh_card_cup_wallet_v1';
 const CARD_CUP_WALLET_MAX = 200;
-// 出せる物(サーバの表 card_cup_prize_items と同じ名前)。label・emoji は画面の名前。上限はサーバの表が正(card_cup_prize_items_list)
+// 出せる物(サーバの表 card_cup_prize_items と同じ名前)。label・emoji は画面の名前。出す量・参加費の額に上限は無い(2026-10-31 社長「やっぱり上限はなしでいい」)
 //   main … 本編の持ち物(ギフトで配る)。card … カードの持ち物(84 で足す・引く)
 const CARD_CUP_ITEMS = Object.freeze([
   { item: 'diamond', label: 'ダイヤ', emoji: '💎', main: true },
@@ -72377,8 +72406,7 @@ const cardCupPrizeRpc = async (fn, body) => {
 };
 const cardCupPrizeItemsList = async () => {
   const r = await cardCupPrizeRpc('card_cup_prize_items_list', {});
-  return Array.isArray(r) ? r.filter((x) => x && cardCupItemOf(x.item)).map((x) => ({ item: x.item, label: cardCupItemOf(x.item).label,
-    giveMax: Math.max(0, Number(x.give_max) || 0), feeMax: Math.max(0, Number(x.fee_max) || 0), dayMax: Math.max(0, Number(x.day_max) || 0) })) : null;
+  return Array.isArray(r) ? r.filter((x) => x && cardCupItemOf(x.item)).map((x) => ({ item: x.item, label: cardCupItemOf(x.item).label })) : null;
 };
 // 杯のごほうび(画面に出す形)。無い・読めないときは null
 const cardCupPrizeView = async (cup, owner) => {
@@ -72505,6 +72533,120 @@ const cardCupClaim = async (adapters, cup, cupName) => {
   }
   await cardCupWalletSet({ ...rec, state: 'claimed', at: Date.now() });
   return { status: 'ok', items, reason: r.reason };
+};
+
+// ==================== 画面: 杯のごほうびの欄(99-card-cup の CardCupDetail の中に出す) ====================
+// 見せる: いまのごほうび(主催・主催仲間が出した物 + 集まった参加費)・参加費・配る割合と見込み
+// 主催・主催仲間(受付中): 出す物を足す・参加費と割合を決める(参加費を払った人がいると変えられない)・主催仲間を誘う/外す・合言葉
+// 誘われた人: 受ける・断る / 終わった・取り消された杯: 受け取る(1回だけ・ギフトボックスへ)
+// getAdapters … 84 の cupAdapters(持ち物を足し引きする口と、持ち主の鍵)。prize・reload … 84 側で読んだごほうび(cardCupPrizeView)と読み直し
+const CARD_CUP_PRIZE_MSG = Object.freeze({
+  ok: 'できました', short: '持っている数が足りません', save: 'この端末に保存できませんでした', pending: '通信が途切れました。次に開いたとき、もう一度送ります(持ち物は預けたままです)',
+  closed: '受付は終わりました', locked: 'デッキを登録した端末でだけできます', bad: '内容を確かめてください', paid: '参加費を払った人がいるので、もう変えられません',
+  notfriend: 'フレンドだけ誘えます', host: '主催は外せません', none: 'もう返事をしています', full: '人数がいっぱいです', many: '出ている個人杯が3つあります', nodeck: 'デッキ登録をしてから参加してください', off: '通信できませんでした。もう一度お試しください',
+  nothing: 'この個人杯で受け取る物はありません', elsewhere: 'ほかの端末で受け取り済みです', got: '受け取りました。本編の持ち物はギフトボックスから受け取ってください', wait: 'まだ受け取れません(結果が出てから)',
+});
+const CardCupPrizePanel = ({ c, v, now, selfId, prize, reload, getAdapters }) => {
+  const [items, setItems] = useState(null);       // 出せる物(サーバの表)
+  const [have, setHave] = useState(null);         // { main, card } いまの持ち物
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [pick, setPick] = useState(null);         // 出す物をえらぶ: { item, amount }
+  const [feeItem, setFeeItem] = useState('');
+  const [feeAmount, setFeeAmount] = useState(0);
+  const [split, setSplit] = useState(null);
+  const [friends, setFriends] = useState(null);
+  const [claimed, setClaimed] = useState(null);   // 受け取った中身(この端末で)
+  const open = c.status === 'entry' && now < c.entryUntil;
+  const hostish = !!(prize && prize.me.host);
+  useEffect(() => { void cardCupPrizeItemsList().then(setItems); }, []);
+  const refreshHave = async () => { try { const a = await getAdapters(); setHave(a.have); return a; } catch (_) { return null; } };
+  useEffect(() => { void (async () => { const a = await refreshHave(); if (a && a.owner && a.key) { const n = await cardCupResume(a); if (n) await reload(); } })(); }, [c.id]);
+  useEffect(() => { void cardCupWalletLoad().then((w) => { const r = w.find((x) => x.kind === 'claim' && x.cup === c.id && x.state === 'claimed'); if (r) setClaimed(r.items || []); }); }, [c.id]);
+  useEffect(() => { if (prize) { setFeeItem(prize.fee ? prize.fee.item : ''); setFeeAmount(prize.fee ? prize.fee.amount : 0); setSplit(prize.split); } }, [prize && JSON.stringify([prize.fee, prize.split])]);
+  if (!prize) return null;
+  const run = async (fn) => {
+    if (busy) return;
+    setBusy(true); setMsg('');
+    try { const r = await fn(); setMsg(CARD_CUP_PRIZE_MSG[r] || CARD_CUP_PRIZE_MSG.off); await refreshHave(); await reload(); } finally { setBusy(false); }
+  };
+  const haveOf = (item) => cardCupHave(item, have && have.main, have && have.card);
+  // 見込み: 参加者(主催・主催仲間を除く)が定員までそろったとき
+  const hostIds = new Set([c.hostId, ...prize.hosts.filter((h) => h.state === 'joined').map((h) => h.id)]);
+  const players = Math.max(1, c.max - v.entries.filter((e) => hostIds.has(e.ownerId)).length - (v.entries.some((e) => e.ownerId === c.hostId) ? 0 : 1));
+  const poolFull = prize.pool.map((p) => ({ ...p, total: p.total + (prize.fee && prize.fee.item === p.item ? prize.fee.amount * Math.max(0, players - v.entries.filter((e) => !hostIds.has(e.ownerId)).length) : 0) }));
+  if (prize.fee && !poolFull.some((p) => p.item === prize.fee.item)) poolFull.push({ item: prize.fee.item, total: prize.fee.amount * players });
+  const shares = (total) => cardCupShares(total, prize.split, players);
+  const giveOptions = items || [];
+  const feeOptions = items || [];
+  const chip = (on) => `rounded-full border px-2.5 py-1 text-[12px] font-black ${on ? 'border-amber-300 bg-amber-500/30 text-amber-50' : 'border-white/15 bg-slate-900 text-slate-300'}`;
+  const shown = c.status === 'done' && (c.mode === 'live' || now >= c.startAt);
+  const myPay = prize.payouts ? prize.payouts.filter((p) => p.id === selfId) : [];
+  const canClaim = (shown || c.status === 'closed') && !claimed;
+  return (
+    <div data-card-cup-prize className="space-y-2 rounded-2xl border-2 border-amber-500/60 bg-slate-950/70 p-2.5">
+      <b className="block text-[13px] font-black text-amber-200">ごほうび</b>
+      {!prize.pool.length && !prize.fee && <p className="text-[12px] font-bold text-slate-400">この個人杯にはごほうびはありません(ランキングにも入りません)</p>}
+      {prize.pool.map((p) => <div key={p.item} data-card-cup-pool={p.item} className="flex items-center justify-between text-[13px] font-black text-white"><span>{cardCupItemText(p.item, 0).replace(/ 0$/, '')}</span><span className="text-amber-200">{p.total.toLocaleString()}</span></div>)}
+      {prize.givers.length > 0 && <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`出した人: ${prize.givers.map((g) => `${g.name} ${cardCupItemText(g.item, g.amount)}`).join('・')}`)}</p>}
+      {prize.fee && <p data-card-cup-fee className="text-[12px] font-black text-sky-100">{`参加費 ${cardCupItemText(prize.fee.item, prize.fee.amount)}(主催・主催仲間は払いません)`}</p>}
+      {(prize.pool.length > 0 || prize.fee) && (
+        <div data-card-cup-split className="space-y-0.5 text-[12px] font-bold text-slate-200">
+          {prize.split.map((pct, i) => <div key={i} className="flex justify-between"><span>{`${i + 1}位 ${pct}%`}</span><span className="text-slate-300">{poolFull.map((p) => { const s = shares(p.total)[i] || 0; return s > 0 ? cardCupItemText(p.item, s) : null; }).filter(Boolean).join('・') || '−'}</span></div>)}
+          <p className="text-[11px] text-slate-400">{`${players}人そろったときの見込み。主催・主催仲間は受け取りません(その分は次の順位の人へ)`}</p>
+        </div>
+      )}
+      {prize.me.invited && open && (
+        <div data-card-cup-invited className="space-y-1.5 rounded-xl bg-amber-500/15 p-2">
+          <p className="text-[12px] font-black text-amber-100">主催仲間に誘われています</p>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button type="button" data-card-cup-cohost-accept disabled={busy} onClick={() => run(async () => { const a = await getAdapters(); return cardCupPrizeRpc('card_cup_cohost_answer', { p_cup: c.id, p_owner: a.owner, p_key: a.key, p_accept: true, p_name: a.name, p_icon: a.icon }); })} className="rounded-xl bg-amber-400 py-2 text-[13px] font-black text-slate-950">受ける</button>
+            <button type="button" data-card-cup-cohost-decline disabled={busy} onClick={() => run(async () => { const a = await getAdapters(); return cardCupPrizeRpc('card_cup_cohost_answer', { p_cup: c.id, p_owner: a.owner, p_key: a.key, p_accept: false, p_name: a.name, p_icon: a.icon }); })} className="rounded-xl border border-white/20 bg-slate-800 py-2 text-[13px] font-black text-slate-200">断る</button>
+          </div>
+        </div>
+      )}
+      {hostish && open && (<>
+        {prize.code && !v.me && <p data-card-cup-cohost-code className="text-[13px] font-black text-amber-200">合言葉 <span className="text-[18px] tracking-[0.3em] text-amber-100">{prize.code}</span></p>}
+        <div data-card-cup-give className="space-y-1.5 rounded-xl bg-white/5 p-2">
+          <b className="block text-[12px] font-black text-slate-200">出す物を足す(あなたの持ち物から預ける)</b>
+          <div className="flex flex-wrap gap-1">{giveOptions.map((x) => <button key={x.item} type="button" data-card-cup-give-item={x.item} onClick={() => setPick({ item: x.item, amount: haveOf(x.item) })} className={chip(pick && pick.item === x.item)}>{cardCupItemOf(x.item).emoji} {x.label}</button>)}</div>
+          {pick && (
+            <div className="flex items-center gap-1.5">
+              <input data-card-cup-give-amount inputMode="numeric" value={pick.amount} onChange={(e) => setPick({ ...pick, amount: Math.max(0, Math.floor(Number(String(e.target.value).replace(/[^0-9]/g, '')) || 0)) })} className="w-24 rounded-lg border border-slate-600 bg-slate-900 px-2 py-1.5 text-[14px] font-black text-white"/>
+              <small className="min-w-0 flex-1 text-[11px] font-bold text-slate-400">{`持っている ${haveOf(pick.item).toLocaleString()}`}</small>
+              <button type="button" data-card-cup-give-go disabled={busy || !(pick.amount > 0)} onClick={() => run(async () => { const a = await getAdapters(); if (!a.owner || !a.key) return 'locked'; return cardCupGive(a, c.id, pick.item, pick.amount, haveOf(pick.item)); })} className="shrink-0 rounded-lg bg-amber-400 px-3 py-1.5 text-[13px] font-black text-slate-950 disabled:opacity-50">預ける</button>
+            </div>
+          )}
+        </div>
+        <div data-card-cup-fee-set className="space-y-1.5 rounded-xl bg-white/5 p-2">
+          <b className="block text-[12px] font-black text-slate-200">参加費と配る割合</b>
+          <div className="flex flex-wrap gap-1">
+            <button type="button" data-card-cup-fee-item="" onClick={() => { setFeeItem(''); setFeeAmount(0); }} className={chip(!feeItem)}>なし</button>
+            {feeOptions.map((x) => <button key={x.item} type="button" data-card-cup-fee-item={x.item} onClick={() => { setFeeItem(x.item); setFeeAmount(Math.max(1, feeAmount)); }} className={chip(feeItem === x.item)}>{cardCupItemOf(x.item).emoji} {x.label}</button>)}
+          </div>
+          {feeItem && <div className="flex items-center gap-1.5"><input data-card-cup-fee-amount inputMode="numeric" value={feeAmount} onChange={(e) => setFeeAmount(Math.max(0, Math.floor(Number(String(e.target.value).replace(/[^0-9]/g, '')) || 0)))} className="w-24 rounded-lg border border-slate-600 bg-slate-900 px-2 py-1.5 text-[14px] font-black text-white"/><small className="text-[11px] font-bold text-slate-400">参加する人が払う量</small></div>}
+          <div className="flex flex-wrap gap-1">{CARD_CUP_SPLITS.map((s) => <button key={s.id} type="button" data-card-cup-split-pick={s.id} onClick={() => setSplit(s.split)} className={chip(split && split.join() === s.split.join())}>{s.label}</button>)}</div>
+          <input data-card-cup-split-custom value={(split || []).join(',')} onChange={(e) => setSplit(String(e.target.value).split(/[,、・\s]+/).map((x) => Math.floor(Number(x))).filter((x) => x > 0).slice(0, 8))} placeholder="自分で決める(例 60,30,10)" className="w-full rounded-lg border border-slate-600 bg-slate-900 px-2 py-1.5 text-[13px] font-bold text-white"/>
+          <small className="block text-[11px] font-bold text-slate-400">{`1位から順に・合計100%(いま ${(split || []).reduce((a, b) => a + b, 0)}%)`}</small>
+          <button type="button" data-card-cup-fee-go disabled={busy || !split || split.reduce((a, b) => a + b, 0) !== 100} onClick={() => run(async () => { const a = await getAdapters(); return cardCupPrizeRpc('card_cup_prize_set', { p_cup: c.id, p_owner: a.owner, p_key: a.key, p_fee_item: feeItem || null, p_fee_amount: feeItem ? feeAmount : 0, p_split: split }); })} className="w-full rounded-lg bg-amber-400 py-1.5 text-[13px] font-black text-slate-950 disabled:opacity-50">この内容で決める</button>
+        </div>
+        <div data-card-cup-cohosts className="space-y-1 rounded-xl bg-white/5 p-2">
+          <b className="block text-[12px] font-black text-slate-200">主催仲間(フレンドから何人でも。杯の取り消しは主催だけ)</b>
+          {prize.hosts.map((h) => <div key={h.id} data-card-cup-cohost={h.id} className="flex items-center gap-2 text-[12px] font-bold text-slate-200"><span className="min-w-0 flex-1 truncate">{`${h.name}${h.state === 'invited' ? '(返事待ち)' : ''}`}</span><button type="button" data-card-cup-cohost-remove={h.id} disabled={busy} onClick={() => run(async () => { const a = await getAdapters(); return cardCupPrizeRpc('card_cup_cohost_remove', { p_cup: c.id, p_owner: a.owner, p_key: a.key, p_target: h.id }); })} className="shrink-0 rounded-md border border-white/15 px-2 py-0.5 text-[11px] font-black text-slate-300">外す</button></div>)}
+          {friends === null
+            ? <button type="button" data-card-cup-friends onClick={() => { void (async () => { setFriends([]); setFriends(typeof sbFetchFriendRoster === 'function' ? await sbFetchFriendRoster(selfId).catch(() => []) : []); })(); }} className="w-full rounded-lg border border-sky-400/60 bg-sky-950 py-1.5 text-[12px] font-black text-sky-100">フレンドから誘う</button>
+            : friends.filter((f) => f.otherId !== c.hostId && !prize.hosts.some((h) => h.id === f.otherId)).map((f) => <div key={f.otherId} className="flex items-center gap-2 text-[12px] font-bold text-slate-200"><span className="min-w-0 flex-1 truncate">{f.userName}</span><button type="button" data-card-cup-cohost-invite={f.otherId} disabled={busy} onClick={() => run(async () => { const a = await getAdapters(); return cardCupPrizeRpc('card_cup_cohost_invite', { p_cup: c.id, p_owner: a.owner, p_key: a.key, p_friend: f.otherId }); })} className="shrink-0 rounded-md bg-sky-500 px-2 py-0.5 text-[11px] font-black text-slate-950">誘う</button></div>)}
+        </div>
+      </>)}
+      {shown && myPay.length > 0 && !claimed && <p data-card-cup-mypay className="text-[13px] font-black text-amber-100">{`あなたのごほうび: ${myPay.map((p) => cardCupItemText(p.item, p.amount)).join('・')}`}</p>}
+      {canClaim && (prize.me.claimed ? <p className="text-[12px] font-bold text-slate-400">受け取り済みです</p> : (
+        <button type="button" data-card-cup-claim disabled={busy} onClick={() => run(async () => { const a = await getAdapters(); if (!a.owner || !a.key) return 'locked'; const r = await cardCupClaim(a, c.id, c.name); if (r.status === 'ok' || r.status === 'none') setClaimed(r.items); return { ok: r.items.length ? 'got' : 'nothing', none: 'nothing', wait: 'wait', elsewhere: 'elsewhere', pending: 'pending' }[r.status] || 'off'; })}
+          className="w-full rounded-xl bg-gradient-to-b from-amber-300 to-orange-500 py-2 text-[14px] font-black text-slate-950">{c.status === 'closed' ? '預けた物を戻す(ギフトボックスへ)' : 'ごほうびを受け取る(ギフトボックスへ)'}</button>
+      ))}
+      {claimed && <p data-card-cup-claimed className="text-[12px] font-black text-emerald-200" style={JA_WRAP_STYLE}>{jaWrap(claimed.length ? `受け取りました: ${claimed.map((x) => cardCupItemText(x.item, x.amount)).join('・')}(本編の持ち物はギフトボックスから)` : 'この個人杯で受け取る物はありません')}</p>}
+      {msg && <p data-card-cup-prize-msg className="rounded-lg bg-slate-900 p-1.5 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
+    </div>
+  );
 };
 
 // ---- part: 81-debug-trials.jsx ----
