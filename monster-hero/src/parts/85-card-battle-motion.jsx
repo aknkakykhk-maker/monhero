@@ -36,19 +36,39 @@ const CARD_MOTION_SPECS = Object.freeze({
   cardSpeRing:   skm('gather', { c:'holy',   over:'aurora', burst:'spark' }),
   cardSpeSong:   skm('float',  { c:'pink',   fx:skmFx('orbit', 'note', 6), burst:'note' }),
   cardSpeEye:    skm('gather', { c:'gold',   over:'eye' }),
+  // 2026-10-31 社長「各カードアクションをもっと一新して」で足した動き(名前から当てる。下の CARD_MOTION_RULES)
+  cardPress:   skm('jump',  { c:'rock',    over:'boom',  burst:'dust', form:'rubble' }),
+  cardDrill:   skm('dash',  { c:'sky',     over:'claw',  burst:'spark', line:'arc' }),
+  cardBeam:    skm('cast',  { c:'holy',    line:'ray',   over:'pillar', form:'light' }),
+  cardDark:    skm('cast',  { c:'dark',    fx:skmFx('shot', 'ghost', 4), over:'shadow', form:'void' }),
+  cardHammer:  skm('bash',  { c:'gold',    over:'boom',  burst:'star', form:'rubble' }),
+  cardCombo:   skm('jab',   { c:'white',   over:'fist',  burst:'star', hit2:true }),
+  cardBreath:  skm('cast',  { c:'fire',    fx:skmFx('shot', 'fire', 6, { step:30 }), over:'boom', form:'fire' }),
+  cardSword:   skm('slash', { c:'sky',     over:'sword', line:'arc', form:'slash' }),
+  cardTail:    skm('spin',  { c:'white',   over:'slash', burst:'star' }),
 });
 // 動きの表を SkillFxMotion が読む入れ物へ入れておく(skillFxSpecOf は SKILL_FX_SPEC_CACHE を先に見る)
 Object.entries(CARD_MOTION_SPECS).forEach(([kind, sp]) => { SKILL_FX_SPEC_CACHE[kind] = skmNormalize(sp); });
 
 // [名前に当たる言葉, 動き]。上から順に見て、最初に当たったものを使う
+//   2026-10-31 一新: 連打・プレス・ドリル・闇・ハンマー・ブレス・剣・しっぽの動きを足した(前の動きより先に見る)。ビームは炎・氷などの後に見る(火炎砲は炎)
 const CARD_MOTION_RULES = Object.freeze([
+  [/コンビネーション|ラッシュ|連|乱れ|3段|三段|マシンガン|ダブル|ワンツー|ポカポカ|わらわら/, 'cardCombo'],
+  [/ブレス/, 'cardBreath'],
+  [/デス|死神|ドクロ|悪夢|冥|ソウル|シャドー|闇/, 'cardDark'],
+  [/プレス|ふみつけ|ボディ|たおれこみ|ヒップ|ドロップ|メテオ/, 'cardPress'],
+  [/ドリル|ニードル|針|ターン/, 'cardDrill'],
+  [/ハンマー|げんこつ|たたき|ごっちん|ボンバ/, 'cardHammer'],
+  [/剣|ソード|ブレード|スラッシュ|斬/, 'cardSword'],
+  [/しっぽ/, 'cardTail'],
   [/キッス|ぺろ|なめ|ベロ|舌/, 'cardKiss'],
   [/歌|うた|ソング|音/, 'cardSong'],
   [/雷|電撃|ライトニング|サンダー|稲妻|放電/, 'cardThunder'],
   [/炎|火|ファイア|フレイム|熱|バーニング/, 'cardFire'],
   [/冷|氷|ブリザード|吹雪|凍/, 'cardIce'],
   [/水|泡|ツバ|しぶき|ウォーター/, 'cardWater'],
-  [/光|聖|レーザー|ビーム|ビッグバン/, 'cardLight'],
+  [/ビーム|レーザー|キャノン|砲|光線/, 'cardBeam'],
+  [/光|聖|ビッグバン/, 'cardLight'],
   [/魔空|ドレイン|弾|玉|波動|念/, 'cardOrb'],
   [/毒|ガス|おなら|胞子/, 'cardGas'],
   [/葉|花|さくら|種|つる/, 'cardLeaf'],
@@ -71,8 +91,38 @@ const CARD_SPECIAL_MOTION_RULES = Object.freeze([
 const CARD_MOTION_BY_NO = Object.freeze({});
 const CARD_MOTION_GAME_ID = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant', ghost: 'Ghost' });
 
+// ---- 技の重さの段(2026-10-31 社長「各カードアクションをもっと一新して」 → 案A) ----
+// 同じ動きでも、ダメージの大きい技ほど派手にする。段は 軽い(2以下)・ふつう(3〜5)・大技(6以上)。全ての相手に当たる技は ふつう以上。
+//   ふつう … 着弾が二段・飛ぶものを増やす・属性の締め(炎の柱・氷柱・稲妻・水柱・岩・斬撃など。24 の UniqueFxImpact)
+//   大技   … ふつう + 使う子のオーラと残像(モンヒロの固有技と同じ飾り)
+// 属性の締めの型は、動きの色から決まる(24 の skmFormOf)。表で上書きする動きは form を書いておく
+const CARD_MOTION_TIER_OF = (c) => {
+  const d = Number.isFinite(c && c.damage) ? c.damage : 0;
+  if (d >= 6) return 'L';
+  if (d >= 3 || cardHasEff(c, 'area')) return 'M';
+  return 'S';
+};
+const CARD_MOTION_FORM = Object.freeze({ cardClaw:'rend', cardBite:'rend', cardBlade:'slash', cardSpin:'slash', cardTail:'slash', cardKick:'burst', cardJab:'burst', cardDash:'rubble', cardBash:'burst', cardThrow:'rubble',
+  cardKiss:'bloom', cardSong:'bloom', cardOrb:'psy', cardLeaf:'thorn', cardGas:'thorn', cardRock:'rubble', cardDrill:'slash', cardCombo:'burst' });
+// 段をつけた動きを作って SkillFxMotion の入れ物へ入れ、その名前('<動き>@M' など)を返す。軽い段はそのまま
+const cardMotionTiered = (base, tier) => {
+  if (tier === 'S' || !CARD_MOTION_SPECS[base]) return base;
+  const kind = `${base}@${tier}`;
+  if (SKILL_FX_SPEC_CACHE[kind]) return kind;
+  const sp = CARD_MOTION_SPECS[base];
+  const norm = skmNormalize({ ...sp, fx:skmBoostFx(sp.fx), hit2:true, bits:tier === 'L' ? SKM_UNIQUE_BITS : sp.bits, burst:sp.burst || 'star', form:sp.form || CARD_MOTION_FORM[base] || skmFormOf(sp.c) });
+  SKILL_FX_SPEC_CACHE[kind] = { ...norm, ms:Math.min(SKM_MAX_MS, norm.ms + (tier === 'L' ? 120 : 60)), ...(tier === 'L' ? { uex:true } : { impact:true }) };
+  return kind;
+};
 // そのカードの技を、その子が出すときの動き(SkillFxMotion の kind)。特殊技・ブリーダーは体を動かさない(null)
 const cardMotionKindOf = (db, cardNo, mon) => {
+  const c0 = cardOf(db, cardNo);
+  const kind = cardMotionBaseOf(db, cardNo, mon);
+  if (!kind || !c0 || c0.kind === 'spe') return kind;
+  return cardMotionTiered(kind, CARD_MOTION_TIER_OF(c0));
+};
+// 段をつける前の動き
+const cardMotionBaseOf = (db, cardNo, mon) => {
   const c = cardOf(db, cardNo);
   if (!c || !cardIsAttackKind(c.kind) || c.user === 'breeder') return null;
   if (CARD_MOTION_BY_NO[c.no]) return CARD_MOTION_BY_NO[c.no];

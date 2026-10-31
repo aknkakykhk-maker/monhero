@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c3d6798a5c201e00
+// source-sha256: c7ee9fd5664bd764
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -24275,7 +24275,8 @@ const SkillFxMotion = ({
   };
   if (spec.hit2) vars['--hit-at2'] = `${spec.hit2}ms`;
   const fx = spec.fx;
-  const uex = lunge && !UNIQUE_FX_EXCLUDE.includes(kind);
+  const uex = (lunge || spec.uex === true) && !UNIQUE_FX_EXCLUDE.includes(kind);
+  const impactOnly = !uex && spec.impact === true;
   return React.createElement("span", {
     className: `thm-atk skfx skfx--${kind} skfx-body--${spec.body}${lunge ? ' thm-atk--lunge' : ''}${uex ? ' uex' : ''}`,
     style: vars,
@@ -24349,7 +24350,7 @@ const SkillFxMotion = ({
     className: "thm-atk__core"
   }), React.createElement("i", {
     className: "thm-atk__ring"
-  })), uex && React.createElement(UniqueFxImpact, {
+  })), (uex || impactOnly) && React.createElement(UniqueFxImpact, {
     form: spec.form || 'burst',
     offset: (spec.hit || 0) - 240
   }));
@@ -97554,12 +97555,67 @@ const CARD_MOTION_SPECS = Object.freeze({
   cardSpeEye: skm('gather', {
     c: 'gold',
     over: 'eye'
+  }),
+  cardPress: skm('jump', {
+    c: 'rock',
+    over: 'boom',
+    burst: 'dust',
+    form: 'rubble'
+  }),
+  cardDrill: skm('dash', {
+    c: 'sky',
+    over: 'claw',
+    burst: 'spark',
+    line: 'arc'
+  }),
+  cardBeam: skm('cast', {
+    c: 'holy',
+    line: 'ray',
+    over: 'pillar',
+    form: 'light'
+  }),
+  cardDark: skm('cast', {
+    c: 'dark',
+    fx: skmFx('shot', 'ghost', 4),
+    over: 'shadow',
+    form: 'void'
+  }),
+  cardHammer: skm('bash', {
+    c: 'gold',
+    over: 'boom',
+    burst: 'star',
+    form: 'rubble'
+  }),
+  cardCombo: skm('jab', {
+    c: 'white',
+    over: 'fist',
+    burst: 'star',
+    hit2: true
+  }),
+  cardBreath: skm('cast', {
+    c: 'fire',
+    fx: skmFx('shot', 'fire', 6, {
+      step: 30
+    }),
+    over: 'boom',
+    form: 'fire'
+  }),
+  cardSword: skm('slash', {
+    c: 'sky',
+    over: 'sword',
+    line: 'arc',
+    form: 'slash'
+  }),
+  cardTail: skm('spin', {
+    c: 'white',
+    over: 'slash',
+    burst: 'star'
   })
 });
 Object.entries(CARD_MOTION_SPECS).forEach(([kind, sp]) => {
   SKILL_FX_SPEC_CACHE[kind] = skmNormalize(sp);
 });
-const CARD_MOTION_RULES = Object.freeze([[/キッス|ぺろ|なめ|ベロ|舌/, 'cardKiss'], [/歌|うた|ソング|音/, 'cardSong'], [/雷|電撃|ライトニング|サンダー|稲妻|放電/, 'cardThunder'], [/炎|火|ファイア|フレイム|熱|バーニング/, 'cardFire'], [/冷|氷|ブリザード|吹雪|凍/, 'cardIce'], [/水|泡|ツバ|しぶき|ウォーター/, 'cardWater'], [/光|聖|レーザー|ビーム|ビッグバン/, 'cardLight'], [/魔空|ドレイン|弾|玉|波動|念/, 'cardOrb'], [/毒|ガス|おなら|胞子/, 'cardGas'], [/葉|花|さくら|種|つる/, 'cardLeaf'], [/岩|石|地震|ロック/, 'cardRock'], [/投げ/, 'cardThrow'], [/回転|ぐるぐる|竜巻|スピン|旋風|まわし/, 'cardSpin'], [/剣|斬|まっぷたつ|Vの字|居合|カッター/, 'cardBlade'], [/かみ|噛|かじ/, 'cardBite'], [/ひっかき|爪|ツノ|クロー|突き|つき|くしざし|ヤリ|槍/, 'cardClaw'], [/キック|けり|蹴|ひざ/, 'cardKick'], [/体当たり|タックル|頭つき|突進|ダッシュ|ころがる|転がる/, 'cardDash'], [/パンチ|チョップ|はたき|ソバット|ビンタ|でこぴん|こぶし|殴/, 'cardJab']]);
+const CARD_MOTION_RULES = Object.freeze([[/コンビネーション|ラッシュ|連|乱れ|3段|三段|マシンガン|ダブル|ワンツー|ポカポカ|わらわら/, 'cardCombo'], [/ブレス/, 'cardBreath'], [/デス|死神|ドクロ|悪夢|冥|ソウル|シャドー|闇/, 'cardDark'], [/プレス|ふみつけ|ボディ|たおれこみ|ヒップ|ドロップ|メテオ/, 'cardPress'], [/ドリル|ニードル|針|ターン/, 'cardDrill'], [/ハンマー|げんこつ|たたき|ごっちん|ボンバ/, 'cardHammer'], [/剣|ソード|ブレード|スラッシュ|斬/, 'cardSword'], [/しっぽ/, 'cardTail'], [/キッス|ぺろ|なめ|ベロ|舌/, 'cardKiss'], [/歌|うた|ソング|音/, 'cardSong'], [/雷|電撃|ライトニング|サンダー|稲妻|放電/, 'cardThunder'], [/炎|火|ファイア|フレイム|熱|バーニング/, 'cardFire'], [/冷|氷|ブリザード|吹雪|凍/, 'cardIce'], [/水|泡|ツバ|しぶき|ウォーター/, 'cardWater'], [/ビーム|レーザー|キャノン|砲|光線/, 'cardBeam'], [/光|聖|ビッグバン/, 'cardLight'], [/魔空|ドレイン|弾|玉|波動|念/, 'cardOrb'], [/毒|ガス|おなら|胞子/, 'cardGas'], [/葉|花|さくら|種|つる/, 'cardLeaf'], [/岩|石|地震|ロック/, 'cardRock'], [/投げ/, 'cardThrow'], [/回転|ぐるぐる|竜巻|スピン|旋風|まわし/, 'cardSpin'], [/剣|斬|まっぷたつ|Vの字|居合|カッター/, 'cardBlade'], [/かみ|噛|かじ/, 'cardBite'], [/ひっかき|爪|ツノ|クロー|突き|つき|くしざし|ヤリ|槍/, 'cardClaw'], [/キック|けり|蹴|ひざ/, 'cardKick'], [/体当たり|タックル|頭つき|突進|ダッシュ|ころがる|転がる/, 'cardDash'], [/パンチ|チョップ|はたき|ソバット|ビンタ|でこぴん|こぶし|殴/, 'cardJab']]);
 const CARD_SPECIAL_MOTION_RULES = Object.freeze([[/歌|うた|ソング|音|笛|おどり|踊/, 'cardSpeSong'], [/偵察|にらむ|睨|見|挑発|のぞ|ガン/, 'cardSpeEye']]);
 const CARD_MOTION_BY_NO = Object.freeze({});
 const CARD_MOTION_GAME_ID = Object.freeze({
@@ -97573,7 +97629,63 @@ const CARD_MOTION_GAME_ID = Object.freeze({
   plant: 'Plant',
   ghost: 'Ghost'
 });
+const CARD_MOTION_TIER_OF = c => {
+  const d = Number.isFinite(c && c.damage) ? c.damage : 0;
+  if (d >= 6) return 'L';
+  if (d >= 3 || cardHasEff(c, 'area')) return 'M';
+  return 'S';
+};
+const CARD_MOTION_FORM = Object.freeze({
+  cardClaw: 'rend',
+  cardBite: 'rend',
+  cardBlade: 'slash',
+  cardSpin: 'slash',
+  cardTail: 'slash',
+  cardKick: 'burst',
+  cardJab: 'burst',
+  cardDash: 'rubble',
+  cardBash: 'burst',
+  cardThrow: 'rubble',
+  cardKiss: 'bloom',
+  cardSong: 'bloom',
+  cardOrb: 'psy',
+  cardLeaf: 'thorn',
+  cardGas: 'thorn',
+  cardRock: 'rubble',
+  cardDrill: 'slash',
+  cardCombo: 'burst'
+});
+const cardMotionTiered = (base, tier) => {
+  if (tier === 'S' || !CARD_MOTION_SPECS[base]) return base;
+  const kind = `${base}@${tier}`;
+  if (SKILL_FX_SPEC_CACHE[kind]) return kind;
+  const sp = CARD_MOTION_SPECS[base];
+  const norm = skmNormalize({
+    ...sp,
+    fx: skmBoostFx(sp.fx),
+    hit2: true,
+    bits: tier === 'L' ? SKM_UNIQUE_BITS : sp.bits,
+    burst: sp.burst || 'star',
+    form: sp.form || CARD_MOTION_FORM[base] || skmFormOf(sp.c)
+  });
+  SKILL_FX_SPEC_CACHE[kind] = {
+    ...norm,
+    ms: Math.min(SKM_MAX_MS, norm.ms + (tier === 'L' ? 120 : 60)),
+    ...(tier === 'L' ? {
+      uex: true
+    } : {
+      impact: true
+    })
+  };
+  return kind;
+};
 const cardMotionKindOf = (db, cardNo, mon) => {
+  const c0 = cardOf(db, cardNo);
+  const kind = cardMotionBaseOf(db, cardNo, mon);
+  if (!kind || !c0 || c0.kind === 'spe') return kind;
+  return cardMotionTiered(kind, CARD_MOTION_TIER_OF(c0));
+};
+const cardMotionBaseOf = (db, cardNo, mon) => {
   const c = cardOf(db, cardNo);
   if (!c || !cardIsAttackKind(c.kind) || c.user === 'breeder') return null;
   if (CARD_MOTION_BY_NO[c.no]) return CARD_MOTION_BY_NO[c.no];
