@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6cca2498e8136413
+// source-sha256: 639b562f5b36530f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -98900,7 +98900,7 @@ const CardMonSlot = ({
     alt: "",
     className: `${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`
   });
-  const mv = motion && !mon.ko ? motion : null;
+  const mv = motion && (!mon.ko || motion.type === 'attack') ? motion : null;
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? calm ? 'mh-card-hit-calm' : 'mh-card-hit' : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = React.createElement("div", {
     "data-card-art": `${p}-${m}`,
@@ -99446,7 +99446,7 @@ const CardBattleBoard = ({
     stRef.current = next;
     const evs = next.events || [];
     const held = pendingAtk.current;
-    const deferred = held && held.turn === next.turn && evs.some(e => e.t === 'hit' || e.t === 'guard') ? held : null;
+    const deferred = held && held.turn === next.turn && evs.some(e => e.t === 'hit') ? held : null;
     if (deferred) {
       pendingAtk.current = null;
       playMotion(deferred.id, {
@@ -99555,7 +99555,7 @@ const CardBattleBoard = ({
       };
     });
     evs.filter(e => e.t === 'hit').forEach((e, n) => {
-      let type = e.evaded && !e.dmg ? 'dodge' : e.guarded && !e.dmg ? 'guard' : e.dmg > 0 ? 'hit' : e.evaded ? 'dodge' : null;
+      let type = e.evaded && !e.dmg ? 'dodge' : e.guarded ? 'guard' : e.dmg > 0 ? 'hit' : e.evaded ? 'dodge' : null;
       const g = lastGuard.current[`${e.p}-${e.m}`];
       const recent = g && Date.now() - g.at < 20000;
       if (type === 'dodge' && recent && g.jump) type = 'jump';
@@ -99564,16 +99564,6 @@ const CardBattleBoard = ({
         type,
         label: type === 'guard' && recent ? g.label : '',
         key: hk
-      }, type === 'jump' ? 920 : 720));
-    });
-    evs.filter(e => e.t === 'guard').forEach((e, n) => {
-      const c = cardOf(db, e.card);
-      const type = c && c.kind === 'dge' ? cardDodgeIsJump(c) ? 'jump' : 'dodge' : 'guard';
-      const gk = `g${next.log.length}-${n}-${Date.now()}`;
-      if (motionOn) later(() => playMotion(`${e.p}-${e.mon}`, {
-        type,
-        label: type === 'guard' ? cardGuardLabel(c) : '',
-        key: gk
       }, type === 'jump' ? 920 : 720));
     });
     const use = evs.find(e => e.t === 'use');
