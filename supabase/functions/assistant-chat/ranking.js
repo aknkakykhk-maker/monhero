@@ -17,7 +17,7 @@ export const RANKING_TABLES = Object.freeze(['rankings', 'bond_levels', 'breeder
 export const RANKING_FUNCTIONS = Object.freeze(['rhythm_week_score_totals', 'rhythm_event_totals', 'rhythm_event_totals_bonus']);
 export const RANKING_TOP = 5;
 // 1回の話題で読むランキングの数の上限(重さと費用を増やしすぎない)
-export const RANKING_PLAN_MAX = 18;
+export const RANKING_PLAN_MAX = 19;
 // すぐ前のプレイヤーの発言をいくつまで見て、ランキングの話の続きとみなすか(ゲームの ASSISTANT_CHAT_RANKING_PREV と同じ)
 export const RANKING_PREV_TURNS = 2;
 // 一度に並べて読むランキングの数(データベースへの問い合わせを一度に出しすぎない)
