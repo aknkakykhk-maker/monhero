@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 98597ccfb9cd5010
+// generated-sha256: 81987e019682ee41
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -69086,39 +69086,129 @@ const CardTacticFace = ({ card, owned = true, count = 0, onClick = null, small =
 
 // カードをえらぶ(持っているものだけ押せる)。cat … 'cond'|'base'|'breeder'|'monster'
 // hideSecs … 出さない区分(ブリーダーの枠では「この子」「守るとき」の条件は当たらないので出さない)
-const CardTacticPicker = ({ db, tactics, cat, title, onPick, onClose, allowNone = false, hideSecs = [] }) => {
+// ---- カードの一覧のしぼりこみ(2026-10-31 社長「セットするとき、あれだけの数があるのにセットしやすい工夫がない」・案A) ----
+// よく使う順: 登録で入れた回数(新しいキー mh_card_tactic_use_v1 { v:1, used:{ [カードid]: 回数 } }。無い・壊れているときは空)
+const CARD_TACTIC_USE_KEY = 'mh_card_tactic_use_v1';
+const cardTacticUseNormalize = (v) => {
+  const used = {};
+  if (v && typeof v === 'object' && v.used && typeof v.used === 'object' && !Array.isArray(v.used)) {
+    Object.entries(v.used).forEach(([k, n]) => { if (cardTacticOf(k) && Number.isFinite(n) && n > 0) used[k] = Math.min(9999, Math.floor(n)); });
+  }
+  return { v: 1, used };
+};
+const cardTacticUseLoad = async () => { try { return cardTacticUseNormalize(await storeGet(CARD_TACTIC_USE_KEY, null, false)); } catch (_) { return cardTacticUseNormalize(null); } };
+const cardTacticUseAdd = async (id) => {
+  if (!cardTacticOf(id)) return;
+  const u = await cardTacticUseLoad();
+  u.used[id] = Math.min(9999, (u.used[id] || 0) + 1);
+  try { await storeSet(CARD_TACTIC_USE_KEY, u, false); } catch (_) { /* 保存できなくても続ける */ }
+};
+// おすすめ: 登録の「組み合わせのおすすめ」(98 の CARD_REG_COMBOS)に出てくるカード
+const cardTacticRecommended = () => new Set(typeof CARD_REG_COMBOS !== 'undefined' ? CARD_REG_COMBOS.flatMap((x) => [x.c, x.a]) : []);
+// このデッキで効くか: デッキの技・カードに、そのカードが見る物が1枚も無ければ効かない(手札の中身の条件・技やカードを選ぶ行動)。
+//   場面で決まる物(ライフ・ガッツ・番など)は、いつも効くとみる。判定の表は 82-card-tactics-core の CARD_TACTIC_*(打ち方と同じ表)
+const cardTacticDeckFits = (db, deck, card) => {
+  if (!deck || !Array.isArray(deck.cards) || !card) return true;
+  const cs = deck.cards.map((no) => cardOf(db, no)).filter(Boolean);
+  const has = (f) => cs.some(f);
+  const eff = (list) => (c) => (list || []).some((x) => cardHasEff(c, x));
+  const atk = (c) => cardIsAttackKind(c.kind);
+  const v = card.v;
+  switch (card.g) {
+    case 'areaInHand': return has((c) => atk(c) && cardHasEff(c, 'area'));
+    case 'bigInHand': return has((c) => atk(c) && (c.guts || 0) >= 4);
+    case 'breederInHand': case 'breederN': case 'breederUnused': case 'holdBreeder': return has((c) => c.user === 'breeder');
+    case 'guardKind': return has((c) => c.kind === (v === '回避' ? 'dge' : 'blk'));
+    case 'guardN': case 'guard': case 'guardOver': case 'guardDie': return has((c) => cardIsGuardKind(c.kind));
+    case 'field': return v !== '自分の' || has((c) => c.kind === 'fld');
+    case 'kind': return has((c) => c.kind === { ちから: 'pow', かしこさ: 'int', 特殊: 'spe' }[v]);
+    case 'cost': return has((c) => atk(c) && (/^軽い/.test(v) ? (c.guts || 0) <= 1 : /^中/.test(v) ? (c.guts || 0) >= 2 && (c.guts || 0) <= 3 : (c.guts || 0) >= 4));
+    case 'reach': return has((c) => atk(c) && (v === '全体攻撃' ? cardHasEff(c, 'area') : !cardHasEff(c, 'area')));
+    case 'eff': return has(eff(CARD_TACTIC_EFF[v]));
+    case 'attach': return has((c) => cardHasEff(c, 'attach'));
+    case 'attachKind': return has(eff(CARD_TACTIC_ATTACH[v]));
+    case 'spe': return has((c) => c.kind === 'spe' && eff(CARD_TACTIC_SPE[v])(c));
+    case 'charge': return has(eff(['charge', 'rage', 'nextTurnMult']));
+    case 'chargeKind': return has(eff(CARD_TACTIC_CHARGE[v]));
+    case 'disrupt': return has(eff(CARD_TACTIC_DISRUPT[v]));
+    case 'guardFirst': return has((c) => (v === '回避' ? c.kind === 'dge' : v === '防御' ? c.kind === 'blk' : eff(CARD_TACTIC_GUARD_EFF[v])(c)));
+    case 'cover': return has(eff(['cover', 'shield', 'redirect']));
+    case 'bEff': return v === '小さく攻撃する' ? has((c) => c.user === 'breeder' && (c.damage || 0) > 0) : has((c) => c.user === 'breeder' && c.kind !== 'fld' && eff(CARD_TACTIC_BEFF[v])(c));
+    case 'fieldCard': return has((c) => c.kind === 'fld');
+    case 'fieldKind': return has((c) => c.kind === 'fld' && cardHasEff(c, CARD_TACTIC_FIELD[v]));
+    default: return true;
+  }
+};
+// ことばでさがす(ひらがな・カタカナ・大文字小文字をそろえて、名前と効果から)
+const cardTacticFold = (s) => String(s || '').replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60)).toLowerCase();
+// deck … いま組んでいるデッキ(「このデッキで効く」に使う。無ければ出さない)
+const CardTacticPicker = ({ db, tactics, cat, title, onPick, onClose, allowNone = false, hideSecs = [], deck = null }) => {
   const list = CARD_TACTIC_CARDS.filter((c) => c.cat === cat && !hideSecs.includes(c.sec));
   const secs = [...new Set(list.map((c) => c.sec))];
   const [sp, setSp] = useState(null); // 「種族を決めた相手」の種族えらび
+  const [q, setQ] = useState('');
+  const [sec, setSec] = useState('');
+  const [ownOnly, setOwnOnly] = useState(true);
+  const [fitOnly, setFitOnly] = useState(false);
+  const [sort, setSort] = useState('table'); // table(表の順)/ rec(おすすめ順)/ use(よく使う順)
+  const [use, setUse] = useState({});
+  useEffect(() => { let alive = true; void cardTacticUseLoad().then((u) => { if (alive) setUse(u.used); }); return () => { alive = false; }; }, []);
+  const rec = useMemo(() => cardTacticRecommended(), []);
+  const pick = (id, spc) => { if (id) void cardTacticUseAdd(id); onPick(id, spc); };
   if (sp) {
     return (
       <div data-card-tactic-species className="fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3">
         <ScreenHead title="種族をえらぶ" accent="text-amber-200" onBack={() => setSp(null)}/>
         <div className="grid min-h-0 flex-1 grid-cols-3 content-start gap-1.5 overflow-y-auto">
           {cardTacticSpeciesList(db).map((x) => (
-            <button key={x.id} type="button" data-card-tactic-species-pick={x.id} onClick={() => { Audio_.fgSe.tap(); onPick(sp, x.id); }}
+            <button key={x.id} type="button" data-card-tactic-species-pick={x.id} onClick={() => { Audio_.fgSe.tap(); pick(sp, x.id); }}
               className="rounded-lg border border-white/20 bg-slate-800 px-1 py-2 text-[12px] font-black text-white active:scale-[.97]">{x.name}</button>
           ))}
         </div>
       </div>
     );
   }
+  const words = cardTacticFold(q).split(/[\s　]+/).filter(Boolean);
+  const shown = list.filter((c) => (!sec || c.sec === sec) && (!ownOnly || cardTacticsOwns(tactics, c.id)) && (!fitOnly || cardTacticDeckFits(db, deck, c))
+    && words.every((w) => cardTacticFold(`${c.name} ${c.desc} ${c.sec}`).includes(w)));
+  const order = sort === 'rec' ? shown.slice().sort((x, y) => (rec.has(y.id) ? 1 : 0) - (rec.has(x.id) ? 1 : 0))
+    : sort === 'use' ? shown.slice().sort((x, y) => (use[y.id] || 0) - (use[x.id] || 0)) : shown;
+  const chip = (on) => `shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
+  const face = (c) => {
+    const owned = cardTacticsOwns(tactics, c.id);
+    return (
+      <div key={c.id} className="relative">
+        <CardTacticFace card={c} owned={owned} small onClick={owned ? () => { Audio_.fgSe.tap(); if (c.g === 'species') setSp(c.id); else pick(c.id); } : null}/>
+        {rec.has(c.id) && <span data-card-tactic-rec className="pointer-events-none absolute -right-1 -top-1 rounded-md bg-amber-300 px-1 text-[9px] font-black text-slate-950">★おすすめ</span>}
+        {sort === 'use' && use[c.id] > 0 && <span data-card-tactic-used={use[c.id]} className="pointer-events-none absolute -left-1 -top-1 rounded-md bg-emerald-500 px-1 text-[9px] font-black text-white">{`${use[c.id]}回`}</span>}
+      </div>
+    );
+  };
   return (
     <div data-card-tactic-picker={cat} className="fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3">
       <ScreenHead title={title} accent="text-amber-200" onBack={onClose}/>
+      <input data-card-tactic-search value={q} onChange={(e) => setQ(e.target.value.slice(0, 20))} placeholder="🔍 ことばでさがす(例: ライフ・大技・守る)" autoComplete="off"
+        className="mb-1.5 min-h-[40px] w-full shrink-0 rounded-xl border-2 border-sky-400/60 bg-black/50 px-3 text-[14px] text-white"/>
+      {secs.length > 1 && (
+        <div data-card-tactic-secs className="mb-1 flex shrink-0 gap-1 overflow-x-auto pb-1">
+          <button type="button" data-card-tactic-sec="" onClick={() => setSec('')} className={chip(!sec)}>すべて</button>
+          {secs.map((s) => <button key={s} type="button" data-card-tactic-sec={s} onClick={() => setSec(sec === s ? '' : s)} className={chip(sec === s)}>{s}</button>)}
+        </div>
+      )}
+      <div className="mb-1.5 flex shrink-0 gap-1 overflow-x-auto pb-1">
+        <button type="button" data-card-tactic-own aria-pressed={ownOnly} onClick={() => setOwnOnly((v) => !v)} className={chip(ownOnly)}>持っているだけ</button>
+        {deck && <button type="button" data-card-tactic-fit aria-pressed={fitOnly} onClick={() => setFitOnly((v) => !v)} className={chip(fitOnly)}>このデッキで効く</button>}
+        {[['table', 'ふつうの順'], ['rec', '★おすすめ順'], ['use', 'よく使う順']].map(([k, label]) => <button key={k} type="button" data-card-tactic-sort={k} onClick={() => setSort(k)} className={chip(sort === k)}>{label}</button>)}
+      </div>
       <div className="min-h-0 flex-1 overflow-y-auto pb-3">
         {allowNone && <button type="button" data-card-tactic-pick-none onClick={() => { Audio_.fgSe.tap(); onPick(null); }} className="mb-2 w-full rounded-xl border border-white/25 bg-slate-800 py-2 text-[13px] font-black text-white">外す</button>}
-        {secs.map((s) => (
+        {!order.length && <p data-card-tactic-empty className="py-6 text-center text-[13px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(ownOnly ? '当てはまるカードがありません(「持っているだけ」を外すと、まだ持っていないカードも出ます)' : '当てはまるカードがありません')}</p>}
+        {sort === 'table' ? secs.filter((s) => order.some((c) => c.sec === s)).map((s) => (
           <div key={s} className="mb-2">
             <p className="mb-1 text-[12px] font-black text-amber-200">{s}</p>
-            <div className="grid grid-cols-3 gap-1.5">
-              {list.filter((c) => c.sec === s).map((c) => {
-                const owned = cardTacticsOwns(tactics, c.id);
-                return <CardTacticFace key={c.id} card={c} owned={owned} small onClick={owned ? () => { Audio_.fgSe.tap(); if (c.g === 'species') setSp(c.id); else onPick(c.id); } : null}/>;
-              })}
-            </div>
+            <div className="grid grid-cols-3 gap-1.5">{order.filter((c) => c.sec === s).map(face)}</div>
           </div>
-        ))}
+        )) : <div className="grid grid-cols-3 gap-1.5">{order.map(face)}</div>}
       </div>
     </div>
   );
@@ -69868,25 +69958,54 @@ const CardRegSecHead = ({ n, color, title, count, what }) => (
     <p className="mt-1 text-[11px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(what)}</p>
   </div>
 );
-// セットした戦術カードの並び(上から順に見る)。▲▼で並べかえ・✕で外す。賢さに数えないときは理由
-const CardRegRows = ({ rows, why = [], onRows }) => (
-  <div className="mt-1.5 space-y-1">
-    {rows.map((r, i) => (
-      <div key={i} data-card-reg-row={i} className="rounded-xl bg-slate-800 px-2 py-1.5">
-        <div className="flex items-center gap-1.5 text-[13px] font-black text-white">
-          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-950 text-[11px] text-amber-200">{i + 1}</span>
-          <span className="min-w-0 flex-1" style={JA_WRAP_STYLE}>{cardRegRowText(r)}</span>
-          <button type="button" aria-label="上へ" disabled={i === 0} onClick={() => { const a = rows.slice(); [a[i - 1], a[i]] = [a[i], a[i - 1]]; onRows(a); }} className="px-1 text-[12px] text-slate-300 disabled:opacity-20">▲</button>
-          <button type="button" aria-label="下へ" disabled={i >= rows.length - 1} onClick={() => { const a = rows.slice(); [a[i + 1], a[i]] = [a[i], a[i + 1]]; onRows(a); }} className="px-1 text-[12px] text-slate-300 disabled:opacity-20">▼</button>
-          <button type="button" aria-label="外す" data-card-reg-row-remove onClick={() => { Audio_.fgSe.tap(); onRows(rows.filter((_, j) => j !== i)); }} className="px-1 text-[14px] text-slate-400">✕</button>
+// 行動カードを、いつ見るか(2026-10-31 社長「組み合わせ方がわからない」→「もし〜なら」の並び)。82 の行動カードの phase
+const CARD_REG_WHEN = Object.freeze({ attack: '攻撃のときに見る', guard: '攻撃を受けたときだけ見る', guts: 'ガッツを置くときに見る', all: '' });
+// セットした戦術カードの並び(上から順に見る)。1行を「もし[条件] なら → [行動]」の2段で見せ、行のあいだに「当てはまらなければ、次へ」、
+//   いちばん下に「どれにも当てはまらなければ → 基本の型」(2026-10-31 社長 案A)。▲▼で並べかえ・✕で外す。賢さに数えないときは理由
+//   baseName … いま入っている基本の型(メイン)の名前 / rest … 基本の型の前に見る物(モンスターの枠は、ほかのモンスター・ブリーダーの手)
+const CardRegRows = ({ rows, why = [], onRows, baseName = '', rest = '' }) => (
+  <div className="mt-1.5">
+    {rows.map((r, i) => {
+      const c = cardTacticOf(r.c), a = cardTacticOf(r.a);
+      const combo = CARD_REG_COMBOS.find((x) => x.c === r.c && x.a === r.a);
+      const when = a ? CARD_REG_WHEN[a.phase] || '' : '';
+      return (
+        <div key={i}>
+          {i > 0 && <p data-card-reg-next-row className="py-0.5 text-center text-[10px] font-black text-slate-400">↓ 当てはまらなければ、次へ</p>}
+          <div data-card-reg-row={i} className="rounded-xl border border-white/10 bg-slate-800 px-2 py-1.5">
+            <div className="flex items-start gap-1.5">
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-950 text-[11px] font-black text-amber-200">{i + 1}</span>
+              <div className="min-w-0 flex-1 space-y-1">
+                {combo && <small data-card-reg-row-combo className="block text-[10px] font-black text-amber-200">{cardIconNode(combo.icon, 12)} {combo.name}</small>}
+                <div data-card-reg-row-if className="flex items-center gap-1.5">
+                  <span className="w-[34px] shrink-0 text-[11px] font-black text-sky-300">もし</span>
+                  <span className="min-w-0 flex-1 rounded-lg bg-blue-700 px-2 py-1 text-[12px] font-black leading-snug text-white" style={JA_WRAP_STYLE}>{r.c === 'any' ? 'いつでも' : c ? c.name : '?'}</span>
+                </div>
+                <div data-card-reg-row-then className="flex items-center gap-1.5">
+                  <span className="w-[34px] shrink-0 text-[11px] font-black text-rose-300">なら→</span>
+                  <span className="min-w-0 flex-1 rounded-lg bg-red-700 px-2 py-1 text-[12px] font-black leading-snug text-white" style={JA_WRAP_STYLE}>{a ? a.name : '?'}</span>
+                </div>
+                {when && <small data-card-reg-row-when className="block pl-[40px] text-[10px] font-bold text-slate-400">{`(${when})`}</small>}
+              </div>
+              <div className="flex shrink-0 flex-col items-center">
+                <button type="button" aria-label="外す" data-card-reg-row-remove onClick={() => { Audio_.fgSe.tap(); onRows(rows.filter((_, j) => j !== i)); }} className="px-1 text-[14px] text-slate-400">✕</button>
+                <button type="button" aria-label="上へ" disabled={i === 0} onClick={() => { const x = rows.slice(); [x[i - 1], x[i]] = [x[i], x[i - 1]]; onRows(x); }} className="px-1 text-[12px] text-slate-300 disabled:opacity-20">▲</button>
+                <button type="button" aria-label="下へ" disabled={i >= rows.length - 1} onClick={() => { const x = rows.slice(); [x[i + 1], x[i]] = [x[i], x[i + 1]]; onRows(x); }} className="px-1 text-[12px] text-slate-300 disabled:opacity-20">▼</button>
+              </div>
+            </div>
+            {why[i] && <small className="block pl-6 text-[10px] font-bold text-slate-400">{`賢さに数えない(${why[i]})`}</small>}
+          </div>
         </div>
-        {why[i] && <small className="block pl-6 text-[10px] font-bold text-slate-400">{`賢さに数えない(${why[i]})`}</small>}
-      </div>
-    ))}
+      );
+    })}
+    {rows.length > 0 && (<>
+      <p className="py-0.5 text-center text-[10px] font-black text-slate-400" style={JA_WRAP_STYLE}>{`↓ どれにも当てはまらなければ${rest}`}</p>
+      <div data-card-reg-row-base className="rounded-xl border border-amber-500/70 bg-amber-950/60 px-2 py-1.5 text-[12px] font-black text-amber-100">{`📘 基本の型${baseName ? `「${baseName}」` : ''}で打つ`}</div>
+    </>)}
   </div>
 );
 // ③ モンスターを押した先(下から出る「◯◯の手」)。並べかえ・外す・入れる・ほかの2体にも同じ手・おすすめで入れる。下で3体を切りかえ
-const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, onRows, onSwitch, onClose, onAdd, onCopy, onAuto }) => {
+const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, baseName = '', onRows, onSwitch, onClose, onAdd, onCopy, onAuto }) => {
   const m = deck && cardMonsterOf(db, deck.monsters[k]);
   return (
     <div data-card-reg-mon-sheet={k} className="fixed inset-0 z-[78] flex flex-col justify-end bg-black/55" onClick={onClose}>
@@ -69895,12 +70014,12 @@ const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, onRows, on
           {m && <img src={CARD_IMG(m.img)} alt="" className="aspect-[5/7] w-[52px] rounded-[8px] border-2 border-sky-400 object-cover"/>}
           <div className="min-w-0 flex-1">
             <b className="block text-[18px] font-black text-white">{`${name(k)}の戦い方`}</b>
-            <small className="block text-[11px] font-bold text-slate-300">上から順に見て、当てはまった物を使います</small>
+            <small className="block text-[11px] font-bold text-sky-200">上から順に見て、<u>最初に当てはまった1つ</u>だけを使います</small>
             <span className="mt-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-black text-white">{`${rows.length}枚 / 入れられる ${max}枚`}</span>
           </div>
           <button type="button" aria-label="とじる" data-card-reg-mon-close onClick={onClose} className="self-start px-2 text-[22px] text-slate-400">✕</button>
         </div>
-        <CardRegRows rows={rows} why={why} onRows={onRows}/>
+        <CardRegRows rows={rows} why={why} onRows={onRows} baseName={baseName} rest="(攻撃のときは、ほかのモンスター・ブリーダーの手も見てから)"/>
         {rows.length < max
           ? <button type="button" data-card-reg-add={k} onClick={() => { Audio_.fgSe.tap(); onAdd(); }} className="mt-1.5 w-full rounded-xl border-2 border-dashed border-sky-300/70 py-2 text-[12px] font-black text-sky-100">{`＋ ${name(k)}の戦い方を入れる`}</button>
           : CARD_FRAME_MAX_TEXT('mon', max) && <small className="mt-1 block text-center text-[10px] font-bold text-slate-400">{CARD_FRAME_MAX_TEXT('mon', max)}</small>}
@@ -70077,7 +70196,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
           <section data-card-reg-sec="breeder" className="rounded-2xl border-2 border-violet-400 bg-slate-900/90 p-2.5">
             <CardRegSecHead n="②" color="#a78bfa" title="ブリーダーの手" count={`${draft.breeder.length}枚 / 入れられる ${open.breeder}枚`}
               what="ブリーダーのカード・全体カードをいつ出すか、ガッツをどこに置くか。攻撃の番は③のあとに見ます。"/>
-            <CardRegRows rows={draft.breeder} why={uncounted.breeder} onRows={(a) => setRows('breeder', a)}/>
+            <CardRegRows rows={draft.breeder} why={uncounted.breeder} onRows={(a) => setRows('breeder', a)} baseName={(cardTacticOf(draft.base[0]) || {}).name || ''}/>
             {draft.breeder.length < open.breeder
               ? <button type="button" data-card-reg-add="breeder" onClick={() => { Audio_.fgSe.tap(); setSheet({ where: 'breeder', k: 'breeder' }); }} className="mt-1.5 w-full rounded-xl border-2 border-dashed border-violet-300/70 py-2 text-[12px] font-black text-violet-100">＋ ブリーダーの戦い方を入れる</button>
               : CARD_FRAME_MAX_TEXT('breeder', open.breeder) && <small className="mt-1 block text-center text-[10px] font-bold text-slate-400">{CARD_FRAME_MAX_TEXT('breeder', open.breeder)}</small>}
@@ -70141,20 +70260,20 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
       {step === 'confirm' && footer(back(styleId === 'custom' ? 'custom' : 'style'), <button type="button" data-card-reg-register disabled={busy || !deck || !selfId} onClick={() => { Audio_.fgSe.tap(); void register(); }} className="mh-button mh-button-primary min-h-[52px] flex-[2] rounded-2xl font-black disabled:opacity-40">{mine ? 'この内容で登録し直す' : 'このデッキを登録する'}</button>)}
       {step === 'done' && footer(null, <button type="button" onClick={() => { Audio_.fgSe.tap(); onBack(); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black">とじる</button>)}
       {monSheet !== null && !sheet && !custom && (
-        <CardRegMonSheet db={db} deck={deck} k={monSheet} rows={draft.mons[monSheet]} max={open.mon} why={uncounted.mons[monSheet]} name={monName} counts={draft.mons.map((r) => r.length)}
+        <CardRegMonSheet db={db} deck={deck} k={monSheet} rows={draft.mons[monSheet]} max={open.mon} why={uncounted.mons[monSheet]} name={monName} counts={draft.mons.map((r) => r.length)} baseName={(cardTacticOf(draft.base[0]) || {}).name || ''}
           onRows={(a) => setRows(monSheet, a)} onSwitch={setMonSheet} onClose={() => setMonSheet(null)}
           onAdd={() => setSheet({ where: 'mon', k: monSheet })}
           onCopy={() => setDraft((f) => ({ ...f, mons: f.mons.map((r, i) => (i === monSheet ? r : f.mons[monSheet].slice(0, open.mon))) }))}
           onAuto={() => setRows(monSheet, cardTacticAutoFill(tactics, draft.mons[monSheet], 'monster', open.mon))}/>
       )}
-      {basePick !== null && <CardTacticPicker db={db} tactics={tactics} cat="base" title={basePick === 0 ? '基本の型(メイン)をえらぶ' : `基本の型(サブ${basePick})をえらぶ`} allowNone={basePick > 0}
+      {basePick !== null && <CardTacticPicker db={db} tactics={tactics} deck={deck} cat="base" title={basePick === 0 ? '基本の型(メイン)をえらぶ' : `基本の型(サブ${basePick})をえらぶ`} allowNone={basePick > 0}
         onClose={() => setBasePick(null)} onPick={(id) => { setDraft((f) => ({ ...f, base: f.base.map((x, i) => (i === basePick ? id : x)) })); setBasePick(null); }}/>}
       {sheet && <CardRegComboSheet tactics={tactics} where={sheet.where} title={sheet.where === 'breeder' ? 'ブリーダーの戦い方' : `${monName(sheet.k)}の戦い方`}
         onClose={() => setSheet(null)} onPick={(row) => { setRows(sheet.k, [...rowsOf(sheet.k), row].slice(0, maxOf(sheet.k))); setSheet(null); }}
         onCustom={() => { setCustom({ k: sheet.k, where: sheet.where }); setSheet(null); }}/>}
-      {custom && !custom.c && <CardTacticPicker db={db} tactics={tactics} cat="cond" title="条件(〜なら)をえらぶ" hideSecs={custom.where === 'breeder' ? ['このモンスター', '守るとき'] : []}
+      {custom && !custom.c && <CardTacticPicker db={db} tactics={tactics} deck={deck} cat="cond" title="条件(〜なら)をえらぶ" hideSecs={custom.where === 'breeder' ? ['このモンスター', '守るとき'] : []}
         onClose={() => setCustom(null)} onPick={(id, sp) => { if (!id) return; setCustom((x) => ({ ...x, c: id, sp })); }}/>}
-      {custom && custom.c && <CardTacticPicker db={db} tactics={tactics} cat={custom.where === 'breeder' ? 'breeder' : 'monster'} title="行動(→ 〜する)をえらぶ"
+      {custom && custom.c && <CardTacticPicker db={db} tactics={tactics} deck={deck} cat={custom.where === 'breeder' ? 'breeder' : 'monster'} title="行動(→ 〜する)をえらぶ"
         onClose={() => setCustom(null)} onPick={(id) => { if (!id) return; setRows(custom.k, [...rowsOf(custom.k), { c: custom.c, a: id, on: true, ...(custom.sp ? { sp: custom.sp } : {}) }].slice(0, maxOf(custom.k))); setCustom(null); }}/>}
     </div>
   );

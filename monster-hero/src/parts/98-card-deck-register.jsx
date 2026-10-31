@@ -122,25 +122,54 @@ const CardRegSecHead = ({ n, color, title, count, what }) => (
     <p className="mt-1 text-[11px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(what)}</p>
   </div>
 );
-// セットした戦術カードの並び(上から順に見る)。▲▼で並べかえ・✕で外す。賢さに数えないときは理由
-const CardRegRows = ({ rows, why = [], onRows }) => (
-  <div className="mt-1.5 space-y-1">
-    {rows.map((r, i) => (
-      <div key={i} data-card-reg-row={i} className="rounded-xl bg-slate-800 px-2 py-1.5">
-        <div className="flex items-center gap-1.5 text-[13px] font-black text-white">
-          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-950 text-[11px] text-amber-200">{i + 1}</span>
-          <span className="min-w-0 flex-1" style={JA_WRAP_STYLE}>{cardRegRowText(r)}</span>
-          <button type="button" aria-label="上へ" disabled={i === 0} onClick={() => { const a = rows.slice(); [a[i - 1], a[i]] = [a[i], a[i - 1]]; onRows(a); }} className="px-1 text-[12px] text-slate-300 disabled:opacity-20">▲</button>
-          <button type="button" aria-label="下へ" disabled={i >= rows.length - 1} onClick={() => { const a = rows.slice(); [a[i + 1], a[i]] = [a[i], a[i + 1]]; onRows(a); }} className="px-1 text-[12px] text-slate-300 disabled:opacity-20">▼</button>
-          <button type="button" aria-label="外す" data-card-reg-row-remove onClick={() => { Audio_.fgSe.tap(); onRows(rows.filter((_, j) => j !== i)); }} className="px-1 text-[14px] text-slate-400">✕</button>
+// 行動カードを、いつ見るか(2026-10-31 社長「組み合わせ方がわからない」→「もし〜なら」の並び)。82 の行動カードの phase
+const CARD_REG_WHEN = Object.freeze({ attack: '攻撃のときに見る', guard: '攻撃を受けたときだけ見る', guts: 'ガッツを置くときに見る', all: '' });
+// セットした戦術カードの並び(上から順に見る)。1行を「もし[条件] なら → [行動]」の2段で見せ、行のあいだに「当てはまらなければ、次へ」、
+//   いちばん下に「どれにも当てはまらなければ → 基本の型」(2026-10-31 社長 案A)。▲▼で並べかえ・✕で外す。賢さに数えないときは理由
+//   baseName … いま入っている基本の型(メイン)の名前 / rest … 基本の型の前に見る物(モンスターの枠は、ほかのモンスター・ブリーダーの手)
+const CardRegRows = ({ rows, why = [], onRows, baseName = '', rest = '' }) => (
+  <div className="mt-1.5">
+    {rows.map((r, i) => {
+      const c = cardTacticOf(r.c), a = cardTacticOf(r.a);
+      const combo = CARD_REG_COMBOS.find((x) => x.c === r.c && x.a === r.a);
+      const when = a ? CARD_REG_WHEN[a.phase] || '' : '';
+      return (
+        <div key={i}>
+          {i > 0 && <p data-card-reg-next-row className="py-0.5 text-center text-[10px] font-black text-slate-400">↓ 当てはまらなければ、次へ</p>}
+          <div data-card-reg-row={i} className="rounded-xl border border-white/10 bg-slate-800 px-2 py-1.5">
+            <div className="flex items-start gap-1.5">
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-950 text-[11px] font-black text-amber-200">{i + 1}</span>
+              <div className="min-w-0 flex-1 space-y-1">
+                {combo && <small data-card-reg-row-combo className="block text-[10px] font-black text-amber-200">{cardIconNode(combo.icon, 12)} {combo.name}</small>}
+                <div data-card-reg-row-if className="flex items-center gap-1.5">
+                  <span className="w-[34px] shrink-0 text-[11px] font-black text-sky-300">もし</span>
+                  <span className="min-w-0 flex-1 rounded-lg bg-blue-700 px-2 py-1 text-[12px] font-black leading-snug text-white" style={JA_WRAP_STYLE}>{r.c === 'any' ? 'いつでも' : c ? c.name : '?'}</span>
+                </div>
+                <div data-card-reg-row-then className="flex items-center gap-1.5">
+                  <span className="w-[34px] shrink-0 text-[11px] font-black text-rose-300">なら→</span>
+                  <span className="min-w-0 flex-1 rounded-lg bg-red-700 px-2 py-1 text-[12px] font-black leading-snug text-white" style={JA_WRAP_STYLE}>{a ? a.name : '?'}</span>
+                </div>
+                {when && <small data-card-reg-row-when className="block pl-[40px] text-[10px] font-bold text-slate-400">{`(${when})`}</small>}
+              </div>
+              <div className="flex shrink-0 flex-col items-center">
+                <button type="button" aria-label="外す" data-card-reg-row-remove onClick={() => { Audio_.fgSe.tap(); onRows(rows.filter((_, j) => j !== i)); }} className="px-1 text-[14px] text-slate-400">✕</button>
+                <button type="button" aria-label="上へ" disabled={i === 0} onClick={() => { const x = rows.slice(); [x[i - 1], x[i]] = [x[i], x[i - 1]]; onRows(x); }} className="px-1 text-[12px] text-slate-300 disabled:opacity-20">▲</button>
+                <button type="button" aria-label="下へ" disabled={i >= rows.length - 1} onClick={() => { const x = rows.slice(); [x[i + 1], x[i]] = [x[i], x[i + 1]]; onRows(x); }} className="px-1 text-[12px] text-slate-300 disabled:opacity-20">▼</button>
+              </div>
+            </div>
+            {why[i] && <small className="block pl-6 text-[10px] font-bold text-slate-400">{`賢さに数えない(${why[i]})`}</small>}
+          </div>
         </div>
-        {why[i] && <small className="block pl-6 text-[10px] font-bold text-slate-400">{`賢さに数えない(${why[i]})`}</small>}
-      </div>
-    ))}
+      );
+    })}
+    {rows.length > 0 && (<>
+      <p className="py-0.5 text-center text-[10px] font-black text-slate-400" style={JA_WRAP_STYLE}>{`↓ どれにも当てはまらなければ${rest}`}</p>
+      <div data-card-reg-row-base className="rounded-xl border border-amber-500/70 bg-amber-950/60 px-2 py-1.5 text-[12px] font-black text-amber-100">{`📘 基本の型${baseName ? `「${baseName}」` : ''}で打つ`}</div>
+    </>)}
   </div>
 );
 // ③ モンスターを押した先(下から出る「◯◯の手」)。並べかえ・外す・入れる・ほかの2体にも同じ手・おすすめで入れる。下で3体を切りかえ
-const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, onRows, onSwitch, onClose, onAdd, onCopy, onAuto }) => {
+const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, baseName = '', onRows, onSwitch, onClose, onAdd, onCopy, onAuto }) => {
   const m = deck && cardMonsterOf(db, deck.monsters[k]);
   return (
     <div data-card-reg-mon-sheet={k} className="fixed inset-0 z-[78] flex flex-col justify-end bg-black/55" onClick={onClose}>
@@ -149,12 +178,12 @@ const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, onRows, on
           {m && <img src={CARD_IMG(m.img)} alt="" className="aspect-[5/7] w-[52px] rounded-[8px] border-2 border-sky-400 object-cover"/>}
           <div className="min-w-0 flex-1">
             <b className="block text-[18px] font-black text-white">{`${name(k)}の戦い方`}</b>
-            <small className="block text-[11px] font-bold text-slate-300">上から順に見て、当てはまった物を使います</small>
+            <small className="block text-[11px] font-bold text-sky-200">上から順に見て、<u>最初に当てはまった1つ</u>だけを使います</small>
             <span className="mt-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-black text-white">{`${rows.length}枚 / 入れられる ${max}枚`}</span>
           </div>
           <button type="button" aria-label="とじる" data-card-reg-mon-close onClick={onClose} className="self-start px-2 text-[22px] text-slate-400">✕</button>
         </div>
-        <CardRegRows rows={rows} why={why} onRows={onRows}/>
+        <CardRegRows rows={rows} why={why} onRows={onRows} baseName={baseName} rest="(攻撃のときは、ほかのモンスター・ブリーダーの手も見てから)"/>
         {rows.length < max
           ? <button type="button" data-card-reg-add={k} onClick={() => { Audio_.fgSe.tap(); onAdd(); }} className="mt-1.5 w-full rounded-xl border-2 border-dashed border-sky-300/70 py-2 text-[12px] font-black text-sky-100">{`＋ ${name(k)}の戦い方を入れる`}</button>
           : CARD_FRAME_MAX_TEXT('mon', max) && <small className="mt-1 block text-center text-[10px] font-bold text-slate-400">{CARD_FRAME_MAX_TEXT('mon', max)}</small>}
@@ -331,7 +360,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
           <section data-card-reg-sec="breeder" className="rounded-2xl border-2 border-violet-400 bg-slate-900/90 p-2.5">
             <CardRegSecHead n="②" color="#a78bfa" title="ブリーダーの手" count={`${draft.breeder.length}枚 / 入れられる ${open.breeder}枚`}
               what="ブリーダーのカード・全体カードをいつ出すか、ガッツをどこに置くか。攻撃の番は③のあとに見ます。"/>
-            <CardRegRows rows={draft.breeder} why={uncounted.breeder} onRows={(a) => setRows('breeder', a)}/>
+            <CardRegRows rows={draft.breeder} why={uncounted.breeder} onRows={(a) => setRows('breeder', a)} baseName={(cardTacticOf(draft.base[0]) || {}).name || ''}/>
             {draft.breeder.length < open.breeder
               ? <button type="button" data-card-reg-add="breeder" onClick={() => { Audio_.fgSe.tap(); setSheet({ where: 'breeder', k: 'breeder' }); }} className="mt-1.5 w-full rounded-xl border-2 border-dashed border-violet-300/70 py-2 text-[12px] font-black text-violet-100">＋ ブリーダーの戦い方を入れる</button>
               : CARD_FRAME_MAX_TEXT('breeder', open.breeder) && <small className="mt-1 block text-center text-[10px] font-bold text-slate-400">{CARD_FRAME_MAX_TEXT('breeder', open.breeder)}</small>}
@@ -395,20 +424,20 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
       {step === 'confirm' && footer(back(styleId === 'custom' ? 'custom' : 'style'), <button type="button" data-card-reg-register disabled={busy || !deck || !selfId} onClick={() => { Audio_.fgSe.tap(); void register(); }} className="mh-button mh-button-primary min-h-[52px] flex-[2] rounded-2xl font-black disabled:opacity-40">{mine ? 'この内容で登録し直す' : 'このデッキを登録する'}</button>)}
       {step === 'done' && footer(null, <button type="button" onClick={() => { Audio_.fgSe.tap(); onBack(); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black">とじる</button>)}
       {monSheet !== null && !sheet && !custom && (
-        <CardRegMonSheet db={db} deck={deck} k={monSheet} rows={draft.mons[monSheet]} max={open.mon} why={uncounted.mons[monSheet]} name={monName} counts={draft.mons.map((r) => r.length)}
+        <CardRegMonSheet db={db} deck={deck} k={monSheet} rows={draft.mons[monSheet]} max={open.mon} why={uncounted.mons[monSheet]} name={monName} counts={draft.mons.map((r) => r.length)} baseName={(cardTacticOf(draft.base[0]) || {}).name || ''}
           onRows={(a) => setRows(monSheet, a)} onSwitch={setMonSheet} onClose={() => setMonSheet(null)}
           onAdd={() => setSheet({ where: 'mon', k: monSheet })}
           onCopy={() => setDraft((f) => ({ ...f, mons: f.mons.map((r, i) => (i === monSheet ? r : f.mons[monSheet].slice(0, open.mon))) }))}
           onAuto={() => setRows(monSheet, cardTacticAutoFill(tactics, draft.mons[monSheet], 'monster', open.mon))}/>
       )}
-      {basePick !== null && <CardTacticPicker db={db} tactics={tactics} cat="base" title={basePick === 0 ? '基本の型(メイン)をえらぶ' : `基本の型(サブ${basePick})をえらぶ`} allowNone={basePick > 0}
+      {basePick !== null && <CardTacticPicker db={db} tactics={tactics} deck={deck} cat="base" title={basePick === 0 ? '基本の型(メイン)をえらぶ' : `基本の型(サブ${basePick})をえらぶ`} allowNone={basePick > 0}
         onClose={() => setBasePick(null)} onPick={(id) => { setDraft((f) => ({ ...f, base: f.base.map((x, i) => (i === basePick ? id : x)) })); setBasePick(null); }}/>}
       {sheet && <CardRegComboSheet tactics={tactics} where={sheet.where} title={sheet.where === 'breeder' ? 'ブリーダーの戦い方' : `${monName(sheet.k)}の戦い方`}
         onClose={() => setSheet(null)} onPick={(row) => { setRows(sheet.k, [...rowsOf(sheet.k), row].slice(0, maxOf(sheet.k))); setSheet(null); }}
         onCustom={() => { setCustom({ k: sheet.k, where: sheet.where }); setSheet(null); }}/>}
-      {custom && !custom.c && <CardTacticPicker db={db} tactics={tactics} cat="cond" title="条件(〜なら)をえらぶ" hideSecs={custom.where === 'breeder' ? ['このモンスター', '守るとき'] : []}
+      {custom && !custom.c && <CardTacticPicker db={db} tactics={tactics} deck={deck} cat="cond" title="条件(〜なら)をえらぶ" hideSecs={custom.where === 'breeder' ? ['このモンスター', '守るとき'] : []}
         onClose={() => setCustom(null)} onPick={(id, sp) => { if (!id) return; setCustom((x) => ({ ...x, c: id, sp })); }}/>}
-      {custom && custom.c && <CardTacticPicker db={db} tactics={tactics} cat={custom.where === 'breeder' ? 'breeder' : 'monster'} title="行動(→ 〜する)をえらぶ"
+      {custom && custom.c && <CardTacticPicker db={db} tactics={tactics} deck={deck} cat={custom.where === 'breeder' ? 'breeder' : 'monster'} title="行動(→ 〜する)をえらぶ"
         onClose={() => setCustom(null)} onPick={(id) => { if (!id) return; setRows(custom.k, [...rowsOf(custom.k), { c: custom.c, a: id, on: true, ...(custom.sp ? { sp: custom.sp } : {}) }].slice(0, maxOf(custom.k))); setCustom(null); }}/>}
     </div>
   );
