@@ -3397,7 +3397,18 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   }
   // 個人杯(99-card-cup。2026-10-31)。デッキ登録へ行って戻ったら、見ていた杯に戻る(cupOpenId)
   if (view === 'cup' && typeof CardCup === 'function') {
-    return <CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId}
+    // 試合の見返し: 公式杯と同じ見返し(93 の cardReplayFromTour)。材料は card_cup_match。とじたら見ていた杯へ戻る
+    const openCupReplay = async (id, title) => {
+      if (!db || typeof cardTourRpc !== 'function' || typeof cardReplayFromTour !== 'function') return false;
+      const row = await cardTourRpc('card_cup_match', { p_id: id });
+      const rec = row && typeof row === 'object' ? cardReplayFromTour(db, row, { known: new Set(assistantsUnlockedFrom(seenStoryIds).map((x) => x.id)), title }) : null;
+      const g = rec ? cardReplayGameOf(db, rec) : null;
+      if (!g) { setNotice('この試合は見返せません'); return false; }
+      setGame({ ...g, settings: save ? save.settings : undefined, replay: { ...g.replay, back: 'cup' } });
+      onNavigate('CARD_BATTLE');
+      return true;
+    };
+    return <CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId} onOpenReplay={openCupReplay}
       onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('cup'); setView('tactics'); } : null}/>;
   }
   // ---- 対戦の前のデッキ選び(助手と対戦・マルチ。練習試合には出さない) ----

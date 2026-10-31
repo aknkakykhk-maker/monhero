@@ -9,7 +9,7 @@
 //   ② 参加: 登録デッキがあれば「このデッキで参加」→ 入る関数に鍵つきで頼む → 合言葉が出る
 //   ③ デッキ登録が無い: 「参加にはデッキ登録が必要です」と理由・デッキ登録へ進むボタン
 //   ④ 開く: 名前・遊び方・形式・人数・時刻を選んで開く関数に頼む → 開いた杯の画面へ
-//   ⑤ 結果(トーナメント): 山の表に全員・勝ち上がりの線が光って優勝カップへ・演出リプレイ
+//   ⑤ 結果(トーナメント): 山の表に全員・勝ち上がりの線が光って優勝カップへ・演出リプレイ・試合の一覧と「見返す」
 //   ⑥ 結果(総当たり): 公式杯と同じ対戦表と「大会結果」の演出・順位
 //   ⑦ 合言葉で探す・表が無いときは「準備中」・実行時エラーが無い
 const http = require('http'), path = require('path'), fs = require('fs');
@@ -94,8 +94,9 @@ const rrMatches = [[0, 1, 0], [2, 3, 1], [0, 2, 0], [1, 3, 0], [0, 3, 0], [1, 2,
       div.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;background:#0f172a;color:#fff';
       document.body.appendChild(div);
       window.__reg = 0;
+      window.__replay = null;
       window.__root = ReactDOM.createRoot(div);
-      window.__root.render(React.createElement(CardCup, { onBack: () => {}, onOpenRegister: () => { window.__reg += 1; } }));
+      window.__root.render(React.createElement(CardCup, { onBack: () => {}, onOpenRegister: () => { window.__reg += 1; }, onOpenReplay: async (id, title) => { window.__replay = { id, title }; return true; } }));
     });
     const T = (sel) => page.locator(`#__cup ${sel}`);
     const text = async () => (await page.locator('#__cup').innerText()).replace(/\s+/g, ' ');
@@ -156,6 +157,10 @@ const rrMatches = [[0, 1, 0], [2, 3, 1], [0, 2, 0], [1, 3, 0], [0, 3, 0], [1, 2,
     check('⑤ 山の表: 全員の名前・はじめは線が光っていない → 3回戦ぶん光って優勝カップに優勝者', lit0 === '0' && ['ハム次郎', 'もちお', 'ぺんた', 'たまご'].every((n) => s.includes(n)) && (await T('[data-card-cup-champ]').innerText()) === 'あなた', `${lit0} ${s.slice(0, 160)}`);
     check('⑤ 順位(1位 あなた・2位 ハム次郎)・ごほうびなし', /1位 あなた\(3勝\)/.test(s) && /2位 ハム次郎/.test(s) && /ごほうびはありません/.test(s));
     await shot(page, '5b-山のあと');
+    const rows = await T('[data-card-cup-match]').count();
+    check('⑤ 試合の一覧(7試合)・いちばん上は決勝', rows === 7 && /決勝/.test(await T('[data-card-cup-match]').first().innerText()), `${rows}`);
+    await T('[data-card-cup-replay="120"]').click();
+    check('⑤ 「見返す」でその試合の見返しを開く(番号と杯の名前を渡す)', J(await page.evaluate(() => window.__replay)) === J({ id: 120, title: '終わったトーナメント' }), J(await page.evaluate(() => window.__replay)));
     await T('[data-card-cup-bracket-replay]').click();
     check('⑤ 演出リプレイで、もう一度はじめから', (await T('[data-card-cup-bracket]').getAttribute('data-card-cup-lit')) === '0');
     // ⑥ 総当たりの結果

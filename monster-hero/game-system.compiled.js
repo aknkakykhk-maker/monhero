@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3d4d753928798049
+// source-sha256: 3cd373c7356588b2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -410,6 +410,9 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   },
   get cardBattle() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardBattle === true;
+  },
+  get cardCup() {
+    return typeof cardCupOpen === 'function' && cardCupOpen() === true;
   }
 });
 const eventReplayReleased = event => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
@@ -13137,6 +13140,7 @@ const ASSISTANT_CHAT_STORY_ID = 'assistant_chat_story';
 const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
 const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
 const SORASHIDO_JOIN_STORY_ID = 'sorashido_join_2026_10_27';
+const CARD_CUP_STORY_ID = 'card_cup_2026_10_31';
 const SORASHIDO_GIFT_KEY = 'mh_sorashido_gift_v1';
 const SORASHIDO_GIFT_BEAT_POINTS = 10000;
 const sorashidoJoinGift = () => ({
@@ -103328,6 +103332,31 @@ const CardBattleScreen = ({
     });
   }
   if (view === 'cup' && typeof CardCup === 'function') {
+    const openCupReplay = async (id, title) => {
+      if (!db || typeof cardTourRpc !== 'function' || typeof cardReplayFromTour !== 'function') return false;
+      const row = await cardTourRpc('card_cup_match', {
+        p_id: id
+      });
+      const rec = row && typeof row === 'object' ? cardReplayFromTour(db, row, {
+        known: new Set(assistantsUnlockedFrom(seenStoryIds).map(x => x.id)),
+        title
+      }) : null;
+      const g = rec ? cardReplayGameOf(db, rec) : null;
+      if (!g) {
+        setNotice('この試合は見返せません');
+        return false;
+      }
+      setGame({
+        ...g,
+        settings: save ? save.settings : undefined,
+        replay: {
+          ...g.replay,
+          back: 'cup'
+        }
+      });
+      onNavigate('CARD_BATTLE');
+      return true;
+    };
     return React.createElement(CardCup, {
       onBack: () => {
         setCupOpenId(null);
@@ -103335,6 +103364,7 @@ const CardBattleScreen = ({
       },
       initialCup: cupOpenId,
       onCupChange: setCupOpenId,
+      onOpenReplay: openCupReplay,
       onOpenRegister: typeof CardDeckRegister === 'function' ? () => {
         setTacticsBack('cup');
         setView('tactics');
@@ -120267,6 +120297,7 @@ const cardCupNormalizeView = v => {
     a: int(m.a),
     b: int(m.b),
     winner: m.winner === 0 || m.winner === 1 ? m.winner : null,
+    ready: !!(m.live && m.live.ready_at),
     kos: Array.isArray(m.kos) ? m.kos.slice(0, 2).map(k => Number.isInteger(k) ? k : 0) : null,
     live: m.live && typeof m.live.play === 'string' ? {
       who: typeof m.live.who === 'string' ? m.live.who : null,
@@ -120711,6 +120742,52 @@ const CardCupCreate = ({
     className: "w-full rounded-2xl bg-gradient-to-b from-amber-300 to-orange-500 py-3 text-[16px] font-black text-slate-950 disabled:opacity-50"
   }, "この内容で開く"));
 };
+const cardCupRoundLabel = (c, r, rounds) => {
+  if (c.format !== 'ko') return `第${r + 1}節`;
+  const left = rounds - r;
+  return left === 1 ? '決勝' : left === 2 ? '準決勝' : left === 3 ? '準々決勝' : `${r + 1}回戦`;
+};
+const CardCupMatches = ({
+  v,
+  onOpenReplay
+}) => {
+  const c = v.cup;
+  const rounds = Math.max(0, ...v.matches.map(m => m.round + 1));
+  const bySeat = s => v.entries.find(e => e.seat === s) || null;
+  const nm = e => e ? e.mine ? 'あなた' : e.name : '?';
+  if (!v.matches.length) return null;
+  return React.createElement("div", {
+    "data-card-cup-matches": true,
+    className: "space-y-1 rounded-2xl bg-slate-950/70 p-2.5"
+  }, React.createElement("b", {
+    className: "block text-[13px] font-black text-amber-200"
+  }, "試合"), v.matches.slice().sort((x, y) => y.round - x.round || x.slot - y.slot).map(m => {
+    const a = bySeat(m.a),
+      b = bySeat(m.b);
+    return React.createElement("div", {
+      key: m.id,
+      "data-card-cup-match": m.id,
+      className: "flex items-center gap-2 rounded-xl bg-white/5 px-2 py-1.5"
+    }, React.createElement("small", {
+      className: "w-14 shrink-0 text-[11px] font-black text-amber-200"
+    }, cardCupRoundLabel(c, m.round, c.format === 'ko' && c.bracket ? c.bracket.length : rounds)), React.createElement("span", {
+      className: "min-w-0 flex-1 truncate text-[12px] font-bold text-white"
+    }, React.createElement("b", {
+      className: m.winner === 0 ? 'text-orange-300' : 'text-slate-300'
+    }, nm(a)), " 対 ", React.createElement("b", {
+      className: m.winner === 1 ? 'text-orange-300' : 'text-slate-300'
+    }, nm(b))), React.createElement("button", {
+      type: "button",
+      "data-card-cup-replay": m.id,
+      disabled: !onOpenReplay || m.winner === null,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        void onOpenReplay(m.id, c.name);
+      },
+      className: "shrink-0 rounded-lg border-2 border-amber-500/70 bg-amber-100 px-2 py-0.5 text-[12px] font-black text-amber-900 disabled:opacity-40"
+    }, "見返す"));
+  }));
+};
 const CardCupDetail = ({
   v,
   now,
@@ -120718,7 +120795,8 @@ const CardCupDetail = ({
   selfId,
   profile,
   onChanged,
-  onOpenRegister
+  onOpenRegister,
+  onOpenReplay = null
 }) => {
   const c = v.cup;
   const [busy, setBusy] = useState(false);
@@ -120790,7 +120868,12 @@ const CardCupDetail = ({
     className: "mt-1 text-[12px] font-black text-amber-200"
   }, `結果は ${cardTourTimeLabel(c.startAt)} に出ます`), c.mode === 'auto' && c.status === 'running' && React.createElement("div", {
     className: "mt-1 text-[12px] font-black text-amber-200"
-  }, `試合はサーバで自動で行われます。結果は ${cardTourTimeLabel(c.startAt)} に出ます`)), shown && c.format === 'ko' && React.createElement(CardCupBracket, {
+  }, `試合はサーバで自動で行われます。結果は ${cardTourTimeLabel(c.startAt)} に出ます`)), c.mode === 'live' && typeof CardCupLivePanel === 'function' && React.createElement(CardCupLivePanel, {
+    v: v,
+    now: now,
+    selfId: selfId,
+    onChanged: onChanged
+  }), shown && c.format === 'ko' && React.createElement(CardCupBracket, {
     rounds: c.bracket,
     matches: v.matches,
     entries: v.entries,
@@ -120809,7 +120892,10 @@ const CardCupDetail = ({
     className: "text-amber-200"
   }, "順位 "), ranked.map(e => `${e.place}位 ${e.mine ? 'あなた' : e.name}(${e.wins || 0}勝)`).join(' ・ '), React.createElement("div", {
     className: "mt-1 text-slate-400"
-  }, "個人杯にはごほうびはありません。ランキングにも入りません")), !shown && React.createElement("div", {
+  }, "個人杯にはごほうびはありません。ランキングにも入りません")), shown && React.createElement(CardCupMatches, {
+    v: v,
+    onOpenReplay: onOpenReplay
+  }), !shown && React.createElement("div", {
     "data-card-cup-entries": true,
     className: "space-y-1 rounded-2xl bg-slate-950/70 p-2.5"
   }, React.createElement("b", {
@@ -120854,7 +120940,8 @@ const CardCup = ({
   onBack,
   onOpenRegister = null,
   initialCup = null,
-  onCupChange = null
+  onCupChange = null,
+  onOpenReplay = null
 }) => {
   const [tab, setTab] = useState('list');
   const [list, setList] = useState(undefined);
@@ -120937,7 +121024,8 @@ const CardCup = ({
       selfId: selfId,
       profile: profile,
       onChanged: () => reload(),
-      onOpenRegister: onOpenRegister
+      onOpenRegister: onOpenRegister,
+      onOpenReplay: onOpenReplay
     }), back);
   }
   const find = async () => {
@@ -121016,6 +121104,191 @@ const CardCup = ({
     className: "rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100",
     style: JA_WRAP_STYLE
   }, jaWrap(msg))));
+};
+const CARD_CUP_LIVE_CHECKIN_MS = 10 * 60000;
+const CARD_CUP_LIVE_POLL_MS = 8000;
+const CARD_CUP_LIVE_SETTLE_MS = 30000;
+const cardCupLiveNext = v => {
+  const me = v.entries.find(e => e.mine);
+  const seat = me && Number.isInteger(me.seat) ? me.seat : null;
+  if (seat === null) return {
+    seat: null,
+    match: null,
+    out: false
+  };
+  const mineAll = v.matches.filter(m => m.a === seat || m.b === seat).sort((x, y) => x.round - y.round || x.slot - y.slot);
+  const match = mineAll.find(m => m.winner === null) || null;
+  const out = v.cup.format === 'ko' && mineAll.some(m => m.winner !== null && (m.winner === 0 ? m.a : m.b) !== seat);
+  return {
+    seat,
+    match,
+    out
+  };
+};
+const cardCupLiveMsg = {
+  checkin: {
+    ok: '集合しました',
+    early: 'まだ集合できません(始まる10分前から)',
+    closed: 'この個人杯は終わりました',
+    none: 'デッキを登録した端末でだけ集合できます',
+    bad: '集合できませんでした'
+  },
+  start: {
+    ok: '始まりました',
+    early: 'まだ始められません',
+    wait: '全員が集合したら、早めに始められます',
+    few: '人数が足りなかったため、中止になりました',
+    none: 'デッキを登録した端末でだけ始められます',
+    closed: 'この個人杯は終わりました',
+    bad: '始められませんでした'
+  }
+};
+const CardCupLivePanel = ({
+  v,
+  now,
+  selfId,
+  onChanged,
+  onPlay = null
+}) => {
+  const c = v.cup;
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const startTried = useRef(false);
+  const call = async (fn, extra = {}) => {
+    const key = await cardShareOwnerKey(false);
+    if (!key || !selfId) return 'none';
+    return cardTourRpc(fn, {
+      p_cup: c.id,
+      p_owner: selfId,
+      p_key: key,
+      ...extra
+    });
+  };
+  const act = async (fn, kind) => {
+    if (busy) return;
+    setBusy(true);
+    setMsg('');
+    try {
+      const r = await call(fn);
+      setMsg(cardCupLiveMsg[kind][r] || '通信できませんでした。もう一度お試しください');
+      await onChanged();
+    } finally {
+      setBusy(false);
+    }
+  };
+  const live = c.status === 'entry' || c.status === 'running';
+  useEffect(() => {
+    if (!live || now < c.startAt - CARD_CUP_LIVE_CHECKIN_MS - 5 * 60000) return undefined;
+    const t = setInterval(() => {
+      void onChanged();
+    }, CARD_CUP_LIVE_POLL_MS);
+    return () => clearInterval(t);
+  }, [live, c.id]);
+  useEffect(() => {
+    if (c.status !== 'entry' || !v.me || now < c.startAt || startTried.current) return;
+    startTried.current = true;
+    void call('card_cup_live_start').then(() => onChanged());
+  }, [c.status, v.me, now >= c.startAt]);
+  useEffect(() => {
+    if (c.status !== 'running') return undefined;
+    const t = setInterval(() => {
+      void cardTourRpc('card_cup_live_settle', {
+        p_cup: c.id
+      }).then(n => {
+        if (n > 0) void onChanged();
+      });
+    }, CARD_CUP_LIVE_SETTLE_MS);
+    return () => clearInterval(t);
+  }, [c.status, c.id]);
+  if (!live) return null;
+  const meE = v.entries.find(e => e.mine) || null;
+  const host = selfId && c.hostId === selfId;
+  const canCheckin = v.me && meE && !meE.checkin && now >= c.startAt - CARD_CUP_LIVE_CHECKIN_MS;
+  const here = v.entries.filter(e => e.checkin).length;
+  const allHere = v.entries.length >= 2 && here === v.entries.length;
+  const next = c.status === 'running' ? cardCupLiveNext(v) : null;
+  const bySeat = s => v.entries.find(e => e.seat === s) || null;
+  const foe = next && next.match ? bySeat(next.match.a === next.seat ? next.match.b : next.match.a) : null;
+  const roundText = m => c.format === 'ko' ? (() => {
+    const total = c.bracket && c.bracket[0] ? Math.round(Math.log2(c.bracket[0].length * 2)) : 0;
+    return m.round === total - 1 ? '決勝' : m.round === total - 2 ? '準決勝' : `${m.round + 1}回戦`;
+  })() : `${m.round + 1}回戦`;
+  return React.createElement("div", {
+    "data-card-cup-live": c.status,
+    className: "space-y-2 rounded-2xl border-2 border-sky-500/60 bg-slate-950/70 p-3"
+  }, c.status === 'entry' && React.createElement(React.Fragment, null, React.createElement("b", {
+    className: "block text-[14px] font-black text-sky-200"
+  }, now < c.startAt ? `${cardTourTimeLabel(c.startAt)} に始まります` : 'まもなく始まります'), React.createElement("div", {
+    "data-card-cup-live-here": true,
+    className: "text-[12px] font-bold text-slate-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`集合 ${here}/${v.entries.length}人。始まる10分前から集合できます。来られない人の試合は、その人の登録デッキが代わりに自動で戦います`)), v.me && meE && meE.checkin && React.createElement("div", {
+    "data-card-cup-live-checked": true,
+    className: "rounded-xl bg-emerald-900/50 p-2 text-[13px] font-black text-emerald-200"
+  }, "集合しました。始まるまでこの画面で待っていてください"), v.me && meE && !meE.checkin && React.createElement("button", {
+    type: "button",
+    "data-card-cup-live-checkin": true,
+    disabled: busy || !canCheckin,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      void act('card_cup_live_checkin', 'checkin');
+    },
+    className: `w-full rounded-2xl py-3 text-[15px] font-black ${canCheckin ? 'bg-gradient-to-b from-sky-300 to-sky-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`
+  }, canCheckin ? '集合する' : `集合は ${cardTourTimeLabel(c.startAt - CARD_CUP_LIVE_CHECKIN_MS)} から`), host && now < c.startAt && allHere && now >= c.startAt - CARD_CUP_LIVE_CHECKIN_MS && React.createElement("button", {
+    type: "button",
+    "data-card-cup-live-start": true,
+    disabled: busy,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      void act('card_cup_live_start', 'start');
+    },
+    className: "w-full rounded-2xl bg-gradient-to-b from-amber-300 to-orange-500 py-3 text-[15px] font-black text-slate-950"
+  }, "全員そろったので始める")), c.status === 'running' && next && React.createElement("div", {
+    "data-card-cup-live-next": true,
+    className: "space-y-1.5"
+  }, next.seat === null && React.createElement("div", {
+    className: "text-[13px] font-bold text-slate-200"
+  }, "開催中です。試合のようすは下の表で見られます"), next.seat !== null && next.out && React.createElement("div", {
+    "data-card-cup-live-out": true,
+    className: "rounded-xl bg-slate-800 p-2 text-[13px] font-black text-slate-200"
+  }, "あなたの試合は終わりました。ほかの試合の結果を待っています"), next.seat !== null && !next.out && !next.match && React.createElement("div", {
+    className: "rounded-xl bg-slate-800 p-2 text-[13px] font-black text-slate-200"
+  }, c.format === 'ko' ? 'この回戦は不戦勝です。次の回戦を待っています' : 'あなたの試合は全部終わりました。ほかの試合の結果を待っています'), next.match && React.createElement(React.Fragment, null, React.createElement("b", {
+    className: "block text-[14px] font-black text-sky-200"
+  }, `あなたの次の試合: ${roundText(next.match)}`), React.createElement("div", {
+    className: "flex items-center gap-2 rounded-xl bg-slate-900 p-2"
+  }, React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-[14px] font-black text-white"
+  }, `相手: ${foe ? foe.name : 'ブリーダー'}`), React.createElement("span", {
+    className: `shrink-0 rounded-full px-2 py-0.5 text-[11px] font-black ${foe && foe.checkin ? 'bg-emerald-500 text-slate-950' : 'bg-slate-600 text-slate-100'}`
+  }, foe && foe.checkin ? '来ています' : '来ていません')), foe && !foe.checkin && React.createElement("div", {
+    className: "text-[12px] font-bold text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('相手が来ていないので、相手の登録デッキと戦います')), React.createElement("button", {
+    type: "button",
+    "data-card-cup-live-play": next.match.id,
+    disabled: !next.match.ready || !onPlay,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      if (onPlay) onPlay(next.match);
+    },
+    className: `w-full rounded-2xl py-3 text-[15px] font-black ${next.match.ready && onPlay ? 'bg-gradient-to-b from-sky-300 to-sky-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`
+  }, !next.match.ready ? '前の回戦が終わるのを待っています' : onPlay ? '試合へ' : '試合の画面は準備中です'))), c.status === 'running' && c.format === 'ko' && typeof CardCupBracket === 'function' && React.createElement(CardCupBracket, {
+    rounds: c.bracket,
+    matches: v.matches,
+    entries: v.entries,
+    done: true
+  }), c.status === 'running' && c.format === 'rr' && typeof CardTourGrid === 'function' && typeof cardCupAsTourView === 'function' && React.createElement(CardTourGrid, {
+    view: cardCupAsTourView(v),
+    stage: "group",
+    grp: 0,
+    known: null,
+    now: now
+  }), msg && React.createElement("p", {
+    "data-card-cup-live-msg": true,
+    className: "rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(msg)));
 };
 const DEBUG_TRIALS = [{
   id: 'rhythm_mon_ab1',
@@ -126570,7 +126843,7 @@ function MonsterHeroGame() {
   const RAID_JACK_HOWTO_AFTER_STORY_ID = 'halloween_night_2026_part1';
   const RAID_JACK_RHYTHM_STORY_ID = 'raid_jack_rhythm_story_2026_10_06';
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, CARD_CUP_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID
@@ -126817,6 +127090,14 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(SORASHIDO_JOIN_STORY_ID)) return;
     setRhythmEventStoryPending(SORASHIDO_JOIN_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.cardCup || !EVENT_REPLAY_RELEASE_FLAGS.cardBattle) return;
+    if (!cardBattleIntroSeenLoaded || !cardBattleIntroSeenFlag) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(CARD_CUP_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(CARD_CUP_STORY_ID)) return;
+    setRhythmEventStoryPending(prev => prev || CARD_CUP_STORY_ID);
+  }, [cardBattleIntroSeenLoaded, cardBattleIntroSeenFlag, rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (typeof setSorashidoJoinSeenForShop === 'function') setSorashidoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID));
   }, [rhythmEventStorySeen]);
@@ -129831,6 +130112,7 @@ function MonsterHeroGame() {
     atsuJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID),
     kyukoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID),
     sorashidoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID),
+    cardCupStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(CARD_CUP_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
