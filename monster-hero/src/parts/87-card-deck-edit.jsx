@@ -587,6 +587,32 @@ const CARD_RARITY_LABEL = Object.freeze({ normal: '', kira: 'キラ', alt: 'レ�
 const CARD_PACK_TEAR_MS = 1150;   // 破れる → 光の柱 → 白く光る → 配る
 const CARD_PACK_SPOT_MS = 1500;   // キラ以上を真ん中に出しておく長さ(このあと並びへ戻る)
 const CARD_PACK_SPOT_BACK_MS = 320;
+// パックを開ける演出・強め(2026-10-31 社長「速度感は案Aだけど、もっと演出は強く」→ 案A'「これで入れて」。見本 docs/progress/card-pack-fx)。
+//   キラ以上は、裏のまま光が 白 → 金(→ 虹)と段を上がってからめくれる。段ごとに画面がふるえて光がはじける。
+//   「キラ!」「レアキラ!!」の札を大きく、レアキラは画面いっぱいの虹の光・虹の光の柱・紙吹雪。破るときは中のいちばん良いカードの色で一瞬光る。
+//   確率・中身は変えない(見た目だけ)。カードのオプション「パックを開ける演出」で切れる(保存は mh_card_pack_fx_v1 の 'ON'/'OFF'。無い人は ON)
+const CARD_PACK_FX_KEY = 'mh_card_pack_fx_v1';
+const cardPackFxOn = () => { try { return localStorage.getItem(CARD_PACK_FX_KEY) !== 'OFF'; } catch (e) { return true; } };
+const cardPackFxSet = (on) => { try { localStorage.setItem(CARD_PACK_FX_KEY, on ? 'ON' : 'OFF'); } catch (e) {} };
+const CARD_PACK_CLIMB_MS = 500;        // 光が1段上がる間
+const CARD_PACK_SPOT_ALT_FX_MS = 2000; // 強めのときの、別絵キラを真ん中に出しておく長さ
+const CARD_PACK_CLIMB = Object.freeze([['#ffffff', 150], ['#facc15', 210], ['#f472b6', 280]]); // 段ごとの光の色と、はじける大きさ(px)
+const CARD_PACK_CONFETTI_COLORS = Object.freeze(['#f87171', '#facc15', '#4ade80', '#60a5fa', '#c084fc', '#ffffff']);
+// 画面のふるえ(lv 1〜3)。動きを減らす設定の人には出さない
+const cardPackQuake = (el, lv) => {
+  if (!el || typeof el.animate !== 'function') return;
+  try { if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; } catch (e) {}
+  const a = [0, 3, 6, 10][lv] || 3;
+  el.animate([{ transform: 'none' }, { transform: `translate(${-a}px, ${a / 2}px)` }, { transform: `translate(${a}px, ${-a / 2}px)` }, { transform: `translate(${-a * 0.7}px, ${-a / 3}px)` }, { transform: `translate(${a / 2}px, ${a / 3}px)` }, { transform: 'none' }],
+    { duration: 220 + lv * 90, easing: 'linear' });
+};
+// 紙吹雪(強めのとき)。n 枚を降らせ、again があれば少し遅れてもう1回。数と置き場所は出したときに1回だけ決める
+const CardPackConfetti = ({ n, again = 0 }) => {
+  const [bits] = useState(() => Array.from({ length: n + again }, (_, i) => ({
+    x: Math.random() * 100, d: (i < n ? 0 : 0.7) + Math.random() * 0.6, c: CARD_PACK_CONFETTI_COLORS[i % CARD_PACK_CONFETTI_COLORS.length], r: Math.random() * 360, w: 6 + Math.random() * 4,
+  })));
+  return <div aria-hidden="true" data-card-pack-confetti={bits.length} className="mh-pack-confetti">{bits.map((b, i) => <i key={i} style={{ left: `${b.x}%`, background: b.c, animationDelay: `${b.d}s`, width: b.w, transform: `rotate(${b.r}deg)` }}/>)}</div>;
+};
 const CardPackOpen = ({ db, result, onDone }) => {
   const [pi, setPi] = useState(0);
   const [phase, setPhase] = useState('closed'); // closed → tearing → open
@@ -596,6 +622,10 @@ const CardPackOpen = ({ db, result, onDone }) => {
   const [detail, setDetail] = useState(null);
   const [showList, setShowList] = useState(false); // スターターキット: 開けたあとの「入っていたカード」の一覧(社長 案B)
   const timers = useRef([]);
+  // 演出・強め(案A')。開いたときの設定のまま最後まで(途中で変えない)。climb … { i, k, n } いま光が段を上がっているカード
+  const [fx] = useState(cardPackFxOn);
+  const [climb, setClimb] = useState(null);
+  const rootRef = useRef(null);
   // 鳴らした効果音の記録(data-card-pack-se。実機の音の確かめと、ブラウザ検査でキラの音を鳴らしたかを見る)
   const [seLog, setSeLog] = useState([]);
   const se = (name) => { try { Audio_.fgSe[name](); } catch (e) {} setSeLog((l) => [...l.slice(-40), name]); };
@@ -627,14 +657,19 @@ const CardPackOpen = ({ db, result, onDone }) => {
     se('special');
     setPhase('tearing');
     later(() => se('crit'), 520);
+    if (fx) { cardPackQuake(rootRef.current, 1); later(() => cardPackQuake(rootRef.current, 2), 640); }
     later(() => setPhase('open'), CARD_PACK_TEAR_MS);
   };
   const spotOff = () => {
     setSpot((sp) => (sp && !sp.leaving ? { ...sp, leaving: true } : sp));
     later(() => setSpot(null), CARD_PACK_SPOT_BACK_MS);
   };
-  const reveal = (i) => {
+  // 強めのとき、キラ以上がめくれる前に光が上がる段の数(キラ 2・別絵キラ 3)と、真ん中に出しておく長さ
+  const climbSteps = (c) => (fx && c && c.rarity !== 'normal' ? (c.rarity === 'alt' ? 3 : 2) : 0);
+  const spotMs = (c) => (fx && c && c.rarity === 'alt' ? CARD_PACK_SPOT_ALT_FX_MS : CARD_PACK_SPOT_MS);
+  const turn = (i) => {
     se('card');
+    setClimb(null);
     setFlipped((f) => (f.includes(i) ? f : [...f, i]));
     const c = cards[i];
     if (c && c.rarity !== 'normal') {
@@ -642,21 +677,32 @@ const CardPackOpen = ({ db, result, onDone }) => {
         setFlash((x) => ({ n: ((x && x.n) || 0) + 1, rarity: c.rarity }));
         setSpot({ i, rarity: c.rarity, leaving: false });
         se('crit'); if (c.rarity === 'alt') se('fusion'); else se('levelUp');
+        if (fx) cardPackQuake(rootRef.current, c.rarity === 'alt' ? 3 : 2);
       }, 380);
-      later(spotOff, 380 + CARD_PACK_SPOT_MS);
+      later(spotOff, 380 + spotMs(c));
     }
   };
-  const flip = (i) => { if (flipped.includes(i) || phase !== 'open' || spot) return; reveal(i); };
+  const reveal = (i) => {
+    const steps = climbSteps(cards[i]);
+    if (!steps) { turn(i); return; }
+    for (let k = 0; k < steps; k++) {
+      later(() => { setClimb((x) => ({ i, k, n: ((x && x.n) || 0) + 1 })); se('tap'); cardPackQuake(rootRef.current, k + 1); }, k * CARD_PACK_CLIMB_MS);
+    }
+    later(() => turn(i), steps * CARD_PACK_CLIMB_MS);
+  };
+  const flip = (i) => { if (flipped.includes(i) || phase !== 'open' || spot || climb) return; reveal(i); };
   // 1枚ずつ順に。キラ以上は真ん中に出している間だけ次を待つ
   const flipAll = () => {
-    if (spot) return;
+    if (spot || climb) return;
     let at = 0;
     cards.map((_, i) => i).filter((i) => !flipped.includes(i)).forEach((i) => {
       later(() => reveal(i), at);
-      at += cards[i].rarity !== 'normal' ? 380 + CARD_PACK_SPOT_MS + CARD_PACK_SPOT_BACK_MS + 120 : 140;
+      at += cards[i].rarity !== 'normal' ? climbSteps(cards[i]) * CARD_PACK_CLIMB_MS + 380 + spotMs(cards[i]) + CARD_PACK_SPOT_BACK_MS + 120 : 140;
     });
   };
-  const next = () => { Audio_.fgSe.tap(); timers.current.forEach(clearTimeout); timers.current = []; setPi((x) => x + 1); setPhase(kit ? 'open' : 'closed'); setFlipped([]); setSpot(null); };
+  const next = () => { Audio_.fgSe.tap(); timers.current.forEach(clearTimeout); timers.current = []; setPi((x) => x + 1); setPhase(kit ? 'open' : 'closed'); setFlipped([]); setSpot(null); setClimb(null); };
+  // 破るときに一瞬光る色(中のいちばん良いカード。強めのときだけ)
+  const omen = fx ? (cards.some((c) => c.rarity === 'alt') ? 'alt' : cards.some((c) => c.rarity === 'kira') ? 'kira' : null) : null;
   const packPoint = cards.reduce((a, c) => a + (c.point || 0), 0);
   // 背の高い画面では3列にしてカードを大きく見せる(4列だと小さく、下が大きく空いた。V7)。背の低い画面は4列のまま
   const cols = cards.length > 4 && !(typeof window !== 'undefined' && window.innerHeight >= 760) ? 4 : 3;
@@ -666,7 +712,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
   // 真ん中に大きく出すキラ以上: 背の低い画面では、カードと「キラ!」の札が画面に収まる大きさにする(横画面ではみ出していた)
   const spotW = `min(62vw, 260px, ${Math.max(140, Math.floor((((typeof window !== 'undefined' ? window.innerHeight : 844) - 120) * 5) / 7))}px)`;
   return (
-    <div data-mh-screen data-card-pack-open data-card-pack-phase={phase} data-card-pack-se={seLog.join(',')} className={SCREEN_SHELL_CLASS}>
+    <div ref={rootRef} data-mh-screen data-card-pack-open data-card-pack-phase={phase} data-card-pack-fx={fx ? 'on' : 'off'} data-card-pack-se={seLog.join(',')} className={SCREEN_SHELL_CLASS}>
       <ScreenHead title={kit ? kit.name : pack.name} accent="text-amber-200" note={result.packs.length > 1 ? (kit ? `${pi + 1} / ${result.packs.length}(${pi === 0 ? 'モンスター' : '技カード'})` : `${pi + 1} / ${result.packs.length}パック`) : ''}/>
       <div ref={listRef} className={`${SCREEN_LIST_CLASS} relative flex flex-col items-center justify-center overflow-hidden pb-2`}>
         {showList && kit ? (
@@ -684,6 +730,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
             {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-strip absolute inset-x-0 top-0 h-[7%] rounded-t-[14px]" style={{ background: 'repeating-linear-gradient(90deg, rgba(255,255,255,.95) 0 6px, rgba(255,255,255,.5) 6px 12px)' }}/>}
             {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-pillar"/>}
             {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-burst"/>}
+            {phase === 'tearing' && omen && <div aria-hidden="true" data-card-pack-omen={omen} className={`mh-pack-omen mh-pack-omen-${omen}`}/>}
             {phase === 'closed' && <span className="absolute inset-x-0 -bottom-9 animate-pulse text-center text-[14px] font-black text-white">タップで開ける</span>}
           </button>
         ) : (
@@ -693,9 +740,11 @@ const CardPackOpen = ({ db, result, onDone }) => {
               const card = cardOf(db, c.no); const m = card ? null : cardMonsterOf(db, c.no);
               const name = card ? card.name : m ? m.name : c.no;
               const rare = c.rarity !== 'normal';
+              const cl = climb && climb.i === i ? climb : null;
               return (
                 <div key={`${pi}-${i}`} className="mh-pack-deal flex flex-col items-center" style={{ animationDelay: `${i * 70}ms` }}>
-                  <button type="button" data-card-pack-card={i} data-card-pack-flipped={on ? 1 : 0} data-card-pack-rarity={c.rarity} {...(on ? press(c.no, () => setDetail(c.no)) : { onClick: () => flip(i) })} className="mh-pack-card relative w-full active:scale-95" style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
+                  <button type="button" data-card-pack-card={i} data-card-pack-flipped={on ? 1 : 0} data-card-pack-rarity={c.rarity} data-card-pack-climb={cl ? cl.k + 1 : undefined} {...(on ? press(c.no, () => setDetail(c.no)) : { onClick: () => flip(i) })} className={`mh-pack-card relative w-full active:scale-95 ${cl ? `mh-pack-climb mh-pack-climb-${cl.k + 1}` : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
+                    {cl && <span key={cl.n} aria-hidden="true" className="mh-pack-climb-burst" style={{ '--c': CARD_PACK_CLIMB[cl.k][0], '--s': `${CARD_PACK_CLIMB[cl.k][1]}px` }}/>}
                     <div className={`mh-pack-card-in aspect-[5/7] w-full ${on ? 'flipped' : ''}`}>
                       <div className={`mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${rare && !on ? (c.rarity === 'alt' ? 'mh-pack-alt-back' : 'mh-pack-kira-back') : ''}`} style={{ containerType: 'inline-size' }}>
                         {/* カードの裏面(2026-10-26 社長から届いた絵)。キラ・別絵キラは今までどおり光って揺れる。モンスターの枠は金の★を重ねる */}
@@ -744,14 +793,18 @@ const CardPackOpen = ({ db, result, onDone }) => {
         const c = cards[spot.i]; const card = cardOf(db, c.no); const m = card ? null : cardMonsterOf(db, c.no);
         const alt = spot.rarity === 'alt';
         return (
-          <button type="button" data-card-pack-spot={spot.rarity} aria-label="並びへ戻す" onClick={spotOff} className="fixed inset-0 z-[72] flex flex-col items-center justify-center bg-slate-950/70">
+          <button type="button" data-card-pack-spot={spot.rarity} aria-label="並びへ戻す" onClick={spotOff} className="fixed inset-0 z-[72] flex flex-col items-center justify-center overflow-hidden bg-slate-950/70">
             <div aria-hidden="true" className={`mh-pack-spot-rays ${alt ? 'mh-pack-spot-rays-alt' : ''}`}/>
+            {fx && alt && !spot.leaving && <div aria-hidden="true" data-card-pack-pillar className="mh-pack-rpillar"/>}
+            {fx && !spot.leaving && <div aria-hidden="true" className={`mh-pack-spot-burst ${alt ? 'alt' : ''}`}/>}
+            {fx && <CardPackConfetti key={`cf-${spot.i}`} n={alt ? 130 : 24} again={alt ? 60 : 0}/>}
             <div className={`relative ${spot.leaving ? 'mh-pack-spot-out' : 'mh-pack-spot-in'}`} style={{ width: spotW }}>
               <div className={`relative aspect-[5/7] w-full ${alt ? 'mh-pack-alt-front' : 'mh-pack-kira-front'}`}>
                 <CardShine kind={cardShineOf(db, c.no)} className="h-full w-full rounded-[8px]"><img src={CARD_IMG(card ? card.img : m ? m.img : c.no)} alt={card ? card.name : m ? m.name : c.no} draggable={false} className="h-full w-full rounded-[8px] object-cover"/></CardShine>
               </div>
             </div>
-            <span className={`relative mt-4 rounded-full px-4 py-1 text-[18px] font-black text-slate-950 ${alt ? 'mh-pack-alt-label' : 'bg-amber-300'} ${spot.leaving ? 'opacity-0' : ''}`}>{CARD_RARITY_LABEL[c.rarity]}!</span>
+            <span data-card-pack-label={fx ? 'big' : 'normal'} className={`relative mt-4 rounded-full px-4 py-1 text-[18px] font-black text-slate-950 ${alt ? 'mh-pack-alt-label' : 'bg-amber-300'} ${fx ? `mh-pack-label-big ${alt ? 'alt' : ''}` : ''} ${spot.leaving ? 'opacity-0' : ''}`}>{CARD_RARITY_LABEL[c.rarity]}{fx && alt ? '!!' : '!'}</span>
+            {fx && alt && <div key={`cfl-${spot.i}`} aria-hidden="true" className="mh-pack-cflash"/>}
           </button>
         );
       })()}

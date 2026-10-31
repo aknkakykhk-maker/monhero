@@ -2725,6 +2725,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
+  // オプション「パックを開ける演出」(87 の cardPackFxOn。保存は mh_card_pack_fx_v1。カードの設定 mh_card_settings_v1 とは別)
+  const [packFx, setPackFx] = useState(cardPackFxOn);
   const [tacticsBack, setTacticsBack] = useState('mode'); // 戦術カードの画面から戻る先(97。みんなのデッキから来たら share)
   const [cupOpenId, setCupOpenId] = useState(null); // 個人杯(99-card-cup)で見ていた杯。デッキ登録から戻ったときに開き直す
   // オプションの「助手と対戦」の曲の並び: 直している助手と、全員へ写すときの下書き({ list, confirm })
@@ -3871,6 +3873,25 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           </div>
     );
     // 対戦の BGM(社長「バトルと同じように自分で決められる」)。いまの BGM アレンジと同じ、曲の一覧から選んで試聴できる形(上の bgmPanel)
+    // パックを開ける演出(設定の「演出」の区切りの最後。並べ方はほかの項目と同じ)
+    const packFxPanel = (
+          <div data-card-setting="packFx" className="mt-2.5 border-t border-white/10 pt-2.5">
+            <b className="block text-[12px] font-black text-slate-200">パックを開ける演出</b>
+            <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{cardJaWrap('パックを開けたときの演出です。「強め」は、キラ以上のカードがめくれる前に光が段を上がり、画面がふるえて光がはじけます。出るカードは変わりません。')}</p>
+            <div className="mt-2 grid grid-cols-2 gap-1.5">
+              {[{ id: 'ON', label: '強め', note: '光ってふるえる' }, { id: 'OFF', label: '短め', note: 'すぐめくれる' }].map((o) => {
+                const cur = (packFx ? 'ON' : 'OFF') === o.id;
+                return (
+                  <button key={o.id} type="button" data-card-setting-option={o.id} aria-pressed={cur} onClick={() => { Audio_.fgSe.tap(); cardPackFxSet(o.id === 'ON'); setPackFx(o.id === 'ON'); }}
+                    className={`flex min-h-[48px] flex-col items-center justify-center rounded-xl px-0.5 py-1 text-[11px] font-black leading-tight active:scale-95 ${cur ? 'border border-amber-300 bg-amber-500/30 text-amber-50' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
+                    <span className="block whitespace-pre-line text-center">{o.label}</span>
+                    <small className="mt-0.5 block text-center text-[9px] font-bold leading-tight opacity-80">{o.note}</small>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+    );
     const quickAutoPanel = (
           <div data-card-options-quick data-card-setting="quickAutoStart" className="mt-2.5 border-t border-white/10 pt-2.5">
             <b className="block text-[12px] font-black text-slate-200">裏のクイック周回</b>
@@ -3962,6 +3983,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                   </div>
                 );
               })}
+              {g.title === '演出' && packFxPanel}
               {g.title === '自動' && quickAutoPanel}
               {g.title === '助手' && startLevelPanel}
             </div>

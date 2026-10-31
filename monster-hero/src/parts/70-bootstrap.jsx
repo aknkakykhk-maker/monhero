@@ -4500,6 +4500,44 @@ const createAnimationStyle = () => {
     .mh-pack-spot-out { animation: mhPackSpotOut .32s ease-in forwards; }
     .mh-pack-spot-rays { position: absolute; left: 50%; top: 46%; width: 180vmax; height: 180vmax; pointer-events: none; background: repeating-conic-gradient(rgba(253,224,71,.4) 0 7deg, transparent 7deg 20deg); border-radius: 50%; animation: mhPackSpin 9s linear infinite; -webkit-mask: radial-gradient(circle, #000 10%, transparent 55%); mask: radial-gradient(circle, #000 10%, transparent 55%); }
     .mh-pack-spot-rays-alt { background: repeating-conic-gradient(rgba(248,113,113,.55) 0 6deg, transparent 6deg 12deg, rgba(250,204,21,.55) 12deg 18deg, transparent 18deg 24deg, rgba(74,222,128,.55) 24deg 30deg, transparent 30deg 36deg, rgba(96,165,250,.55) 36deg 42deg, transparent 42deg 48deg, rgba(192,132,252,.55) 48deg 54deg, transparent 54deg 60deg); animation-duration: 6s; }
+    /* パックを開ける演出・強め(87 の CardPackOpen・案A'。2026-10-31 社長「これで入れて」)。
+       破るときの予感の光 / 裏のまま光が段を上がる(白 → 金 → 虹)・段ごとに光がはじける / 大きな「キラ!」「レアキラ!!」/ 虹の光の柱 / 画面いっぱいの虹の光 / 紙吹雪 */
+    .mh-pack-omen { position: absolute; inset: -16px; border-radius: 26px; pointer-events: none; z-index: -1; animation: mhPackOmen .5s ease-out both; }
+    .mh-pack-omen-kira { box-shadow: 0 0 40px 16px rgba(255,200,40,.95); }
+    .mh-pack-omen-alt { box-shadow: 0 0 50px 22px rgba(255,80,200,.9), 0 0 80px 30px rgba(80,200,255,.7); }
+    @keyframes mhPackOmen { 0% { opacity: 0; transform: scale(.9); } 40% { opacity: 1; transform: scale(1.04); } 100% { opacity: .85; transform: scale(1); } }
+    .mh-pack-climb { z-index: 3; transition: transform .14s; }
+    .mh-pack-climb-1 { transform: scale(1.12); filter: drop-shadow(0 0 10px #fff) drop-shadow(0 0 4px #fff); }
+    .mh-pack-climb-2 { transform: scale(1.16); filter: drop-shadow(0 0 13px #ffc400) drop-shadow(0 0 5px #ffc400); }
+    .mh-pack-climb-3 { transform: scale(1.2); filter: drop-shadow(0 0 16px #ff4dd2) drop-shadow(0 0 24px #4cc9f0); }
+    .mh-pack-climb-burst { position: absolute; left: 50%; top: 50%; width: var(--s); height: var(--s); border-radius: 50%; pointer-events: none; z-index: -1;
+      background: radial-gradient(circle, #fff 0, var(--c) 35%, transparent 70%); transform: translate(-50%, -50%) scale(.2); animation: mhPackClimbBurst .55s ease-out forwards; }
+    @keyframes mhPackClimbBurst { 0% { opacity: 1; transform: translate(-50%, -50%) scale(.2); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1); } }
+    .mh-pack-spot-burst { position: absolute; left: 50%; top: 46%; width: 360px; height: 360px; border-radius: 50%; pointer-events: none;
+      background: radial-gradient(circle, #fff 0, rgba(255,200,0,.9) 35%, transparent 70%); transform: translate(-50%, -50%) scale(.2); animation: mhPackClimbBurst .6s ease-out forwards; }
+    .mh-pack-spot-burst.alt { width: 520px; height: 520px; background: radial-gradient(circle, #fff 0, rgba(255,80,200,.9) 35%, transparent 70%); }
+    .mh-pack-rpillar { position: absolute; left: 50%; top: 0; bottom: 0; width: 300px; margin-left: -150px; pointer-events: none; filter: blur(8px);
+      background: linear-gradient(90deg, transparent, rgba(255,77,109,.7), rgba(255,209,102,.8), #fff, rgba(6,214,160,.8), rgba(76,201,240,.7), transparent); animation: mhPackRPillar .4s cubic-bezier(.2,1.4,.4,1) both; }
+    @keyframes mhPackRPillar { 0% { opacity: 0; transform: scaleX(.1); } 100% { opacity: .95; transform: scaleX(1); } }
+    .mh-pack-cflash { position: fixed; inset: 0; pointer-events: none; z-index: 2; animation: mhPackCFlash .7s ease-out forwards;
+      background: radial-gradient(circle at 50% 44%, #fff 0, #fff 20%, rgba(255,120,220,.85) 45%, rgba(80,200,255,.8) 70%, rgba(255,220,90,.75) 100%); }
+    @keyframes mhPackCFlash { 0%, 20% { opacity: 1; } 100% { opacity: 0; } }
+    .mh-pack-label-big { font-size: 40px; padding: 2px 24px; font-style: italic; letter-spacing: 2px; overflow: hidden; -webkit-text-stroke: 1.5px rgba(0,0,0,.3);
+      box-shadow: 0 0 18px rgba(255,200,0,.9); animation: mhPackLabelIn .45s cubic-bezier(.2,1.6,.4,1) both; }
+    .mh-pack-label-big.alt { font-size: 46px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.6); box-shadow: 0 0 30px 8px rgba(255,255,255,.95), 0 0 70px 20px rgba(255,80,200,.6);
+      animation: mhPackLabelIn .45s cubic-bezier(.2,1.6,.4,1) both, mhPackRainbowMove 1s linear infinite; }
+    .mh-pack-label-big::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.9) 50%, transparent 60%); background-size: 250% 100%; animation: mhPackLabelSheen 1.1s ease-in-out infinite; }
+    @keyframes mhPackLabelIn { 0% { opacity: 0; transform: scale(2.6) rotate(-14deg); } 100% { opacity: 1; transform: scale(1) rotate(-6deg); } }
+    @keyframes mhPackLabelSheen { 0% { background-position: 120% 0; } 100% { background-position: -120% 0; } }
+    .mh-pack-confetti { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 3; }
+    .mh-pack-confetti > i { position: absolute; top: -14px; height: 12px; opacity: 0; animation: mhPackConfetti 2.4s linear forwards; }
+    @keyframes mhPackConfetti { 0% { opacity: 1; translate: 0 0; rotate: 0deg; } 100% { opacity: 1; translate: 0 110vh; rotate: 720deg; } }
+    @media (prefers-reduced-motion: reduce) {
+      .mh-pack-confetti, .mh-pack-rpillar, .mh-pack-climb-burst, .mh-pack-spot-burst { display: none; }
+      .mh-pack-cflash { animation-duration: .3s; }
+      .mh-pack-label-big, .mh-pack-label-big.alt { animation: none; transform: rotate(-6deg); }
+      .mh-pack-label-big::after { display: none; }
+    }
     @media (prefers-reduced-motion: reduce) { .mh-pack-idle, .mh-pack-kira-back, .mh-pack-alt-back, .mh-pack-spot-rays { animation: none; } }
     @keyframes mhRjJackHit { 0% { transform: none; filter: brightness(1); } 12% { transform: translate(-14px, 2px) rotate(-4deg); filter: brightness(2.6); } 30% { transform: translate(12px, -2px) rotate(3deg); filter: brightness(1.6); } 55% { transform: translate(-6px, 0); filter: brightness(1.2); } 100% { transform: none; filter: brightness(1); } }
     @keyframes mhRjBarDrop { 0% { transform: scaleX(var(--from)); } 100% { transform: scaleX(var(--to)); } }

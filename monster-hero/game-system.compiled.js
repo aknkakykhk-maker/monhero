@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2531c6b1727b435e
+// source-sha256: 4ae3f951e1444c11
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -102187,6 +102187,7 @@ const CardBattleScreen = ({
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
+  const [packFx, setPackFx] = useState(cardPackFxOn);
   const [tacticsBack, setTacticsBack] = useState('mode');
   const [cupOpenId, setCupOpenId] = useState(null);
   const [plWho, setPlWho] = useState(null);
@@ -104625,6 +104626,43 @@ const CardBattleScreen = ({
       className: "mt-1 text-[10px] font-bold leading-snug text-slate-400",
       style: JA_WRAP_STYLE
     }, jaWrap('音の大きさは、ゲーム全体の設定の「音量」で変えられます')));
+    const packFxPanel = React.createElement("div", {
+      "data-card-setting": "packFx",
+      className: "mt-2.5 border-t border-white/10 pt-2.5"
+    }, React.createElement("b", {
+      className: "block text-[12px] font-black text-slate-200"
+    }, "パックを開ける演出"), React.createElement("p", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+      style: JA_WRAP_STYLE
+    }, cardJaWrap('パックを開けたときの演出です。「強め」は、キラ以上のカードがめくれる前に光が段を上がり、画面がふるえて光がはじけます。出るカードは変わりません。')), React.createElement("div", {
+      className: "mt-2 grid grid-cols-2 gap-1.5"
+    }, [{
+      id: 'ON',
+      label: '強め',
+      note: 'いつもの見た目'
+    }, {
+      id: 'OFF',
+      label: '短め',
+      note: 'すぐめくれる'
+    }].map(o => {
+      const cur = (packFx ? 'ON' : 'OFF') === o.id;
+      return React.createElement("button", {
+        key: o.id,
+        type: "button",
+        "data-card-setting-option": o.id,
+        "aria-pressed": cur,
+        onClick: () => {
+          Audio_.fgSe.tap();
+          cardPackFxSet(o.id === 'ON');
+          setPackFx(o.id === 'ON');
+        },
+        className: `flex min-h-[48px] flex-col items-center justify-center rounded-xl px-0.5 py-1 text-[11px] font-black leading-tight active:scale-95 ${cur ? 'border border-amber-300 bg-amber-500/30 text-amber-50' : 'border border-white/10 bg-slate-950 text-slate-300'}`
+      }, React.createElement("span", {
+        className: "block whitespace-pre-line text-center"
+      }, o.label), React.createElement("small", {
+        className: "mt-0.5 block text-center text-[9px] font-bold leading-tight opacity-80"
+      }, o.note));
+    })));
     const quickAutoPanel = React.createElement("div", {
       "data-card-options-quick": true,
       "data-card-setting": "quickAutoStart",
@@ -104795,7 +104833,7 @@ const CardBattleScreen = ({
       }, o.label), React.createElement("small", {
         className: "mt-0.5 block text-center text-[9px] font-bold leading-tight opacity-80"
       }, o.note)))));
-    }), g.title === '自動' && quickAutoPanel, g.title === '助手' && startLevelPanel)))));
+    }), g.title === '演出' && packFxPanel, g.title === '自動' && quickAutoPanel, g.title === '助手' && startLevelPanel)))));
   }
   if (view === 'ranking') {
     return React.createElement(CardRankingBoard, {
@@ -106486,6 +106524,74 @@ const CARD_RARITY_LABEL = Object.freeze({
 const CARD_PACK_TEAR_MS = 1150;
 const CARD_PACK_SPOT_MS = 1500;
 const CARD_PACK_SPOT_BACK_MS = 320;
+const CARD_PACK_FX_KEY = 'mh_card_pack_fx_v1';
+const cardPackFxOn = () => {
+  try {
+    return localStorage.getItem(CARD_PACK_FX_KEY) !== 'OFF';
+  } catch (e) {
+    return true;
+  }
+};
+const cardPackFxSet = on => {
+  try {
+    localStorage.setItem(CARD_PACK_FX_KEY, on ? 'ON' : 'OFF');
+  } catch (e) {}
+};
+const CARD_PACK_CLIMB_MS = 500;
+const CARD_PACK_SPOT_ALT_FX_MS = 2000;
+const CARD_PACK_CLIMB = Object.freeze([['#ffffff', 150], ['#facc15', 210], ['#f472b6', 280]]);
+const CARD_PACK_CONFETTI_COLORS = Object.freeze(['#f87171', '#facc15', '#4ade80', '#60a5fa', '#c084fc', '#ffffff']);
+const cardPackQuake = (el, lv) => {
+  if (!el || typeof el.animate !== 'function') return;
+  try {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  } catch (e) {}
+  const a = [0, 3, 6, 10][lv] || 3;
+  el.animate([{
+    transform: 'none'
+  }, {
+    transform: `translate(${-a}px, ${a / 2}px)`
+  }, {
+    transform: `translate(${a}px, ${-a / 2}px)`
+  }, {
+    transform: `translate(${-a * 0.7}px, ${-a / 3}px)`
+  }, {
+    transform: `translate(${a / 2}px, ${a / 3}px)`
+  }, {
+    transform: 'none'
+  }], {
+    duration: 220 + lv * 90,
+    easing: 'linear'
+  });
+};
+const CardPackConfetti = ({
+  n,
+  again = 0
+}) => {
+  const [bits] = useState(() => Array.from({
+    length: n + again
+  }, (_, i) => ({
+    x: Math.random() * 100,
+    d: (i < n ? 0 : 0.7) + Math.random() * 0.6,
+    c: CARD_PACK_CONFETTI_COLORS[i % CARD_PACK_CONFETTI_COLORS.length],
+    r: Math.random() * 360,
+    w: 6 + Math.random() * 4
+  })));
+  return React.createElement("div", {
+    "aria-hidden": "true",
+    "data-card-pack-confetti": bits.length,
+    className: "mh-pack-confetti"
+  }, bits.map((b, i) => React.createElement("i", {
+    key: i,
+    style: {
+      left: `${b.x}%`,
+      background: b.c,
+      animationDelay: `${b.d}s`,
+      width: b.w,
+      transform: `rotate(${b.r}deg)`
+    }
+  })));
+};
 const CardPackOpen = ({
   db,
   result,
@@ -106499,6 +106605,9 @@ const CardPackOpen = ({
   const [detail, setDetail] = useState(null);
   const [showList, setShowList] = useState(false);
   const timers = useRef([]);
+  const [fx] = useState(cardPackFxOn);
+  const [climb, setClimb] = useState(null);
+  const rootRef = useRef(null);
   const [seLog, setSeLog] = useState([]);
   const se = name => {
     try {
@@ -106536,6 +106645,10 @@ const CardPackOpen = ({
     se('special');
     setPhase('tearing');
     later(() => se('crit'), 520);
+    if (fx) {
+      cardPackQuake(rootRef.current, 1);
+      later(() => cardPackQuake(rootRef.current, 2), 640);
+    }
     later(() => setPhase('open'), CARD_PACK_TEAR_MS);
   };
   const spotOff = () => {
@@ -106545,8 +106658,11 @@ const CardPackOpen = ({
     } : sp);
     later(() => setSpot(null), CARD_PACK_SPOT_BACK_MS);
   };
-  const reveal = i => {
+  const climbSteps = c => fx && c && c.rarity !== 'normal' ? c.rarity === 'alt' ? 3 : 2 : 0;
+  const spotMs = c => fx && c && c.rarity === 'alt' ? CARD_PACK_SPOT_ALT_FX_MS : CARD_PACK_SPOT_MS;
+  const turn = i => {
     se('card');
+    setClimb(null);
     setFlipped(f => f.includes(i) ? f : [...f, i]);
     const c = cards[i];
     if (c && c.rarity !== 'normal') {
@@ -106562,20 +106678,40 @@ const CardPackOpen = ({
         });
         se('crit');
         if (c.rarity === 'alt') se('fusion');else se('levelUp');
+        if (fx) cardPackQuake(rootRef.current, c.rarity === 'alt' ? 3 : 2);
       }, 380);
-      later(spotOff, 380 + CARD_PACK_SPOT_MS);
+      later(spotOff, 380 + spotMs(c));
     }
   };
+  const reveal = i => {
+    const steps = climbSteps(cards[i]);
+    if (!steps) {
+      turn(i);
+      return;
+    }
+    for (let k = 0; k < steps; k++) {
+      later(() => {
+        setClimb(x => ({
+          i,
+          k,
+          n: (x && x.n || 0) + 1
+        }));
+        se('tap');
+        cardPackQuake(rootRef.current, k + 1);
+      }, k * CARD_PACK_CLIMB_MS);
+    }
+    later(() => turn(i), steps * CARD_PACK_CLIMB_MS);
+  };
   const flip = i => {
-    if (flipped.includes(i) || phase !== 'open' || spot) return;
+    if (flipped.includes(i) || phase !== 'open' || spot || climb) return;
     reveal(i);
   };
   const flipAll = () => {
-    if (spot) return;
+    if (spot || climb) return;
     let at = 0;
     cards.map((_, i) => i).filter(i => !flipped.includes(i)).forEach(i => {
       later(() => reveal(i), at);
-      at += cards[i].rarity !== 'normal' ? 380 + CARD_PACK_SPOT_MS + CARD_PACK_SPOT_BACK_MS + 120 : 140;
+      at += cards[i].rarity !== 'normal' ? climbSteps(cards[i]) * CARD_PACK_CLIMB_MS + 380 + spotMs(cards[i]) + CARD_PACK_SPOT_BACK_MS + 120 : 140;
     });
   };
   const next = () => {
@@ -106586,16 +106722,20 @@ const CardPackOpen = ({
     setPhase(kit ? 'open' : 'closed');
     setFlipped([]);
     setSpot(null);
+    setClimb(null);
   };
+  const omen = fx ? cards.some(c => c.rarity === 'alt') ? 'alt' : cards.some(c => c.rarity === 'kira') ? 'kira' : null : null;
   const packPoint = cards.reduce((a, c) => a + (c.point || 0), 0);
   const cols = cards.length > 4 && !(typeof window !== 'undefined' && window.innerHeight >= 760) ? 4 : 3;
   const rows = Math.ceil(cards.length / cols);
   const gridMaxW = listH > 0 ? Math.max(200, Math.floor(((listH - 52) / rows - 24) * 5 / 7 * cols + 8 * (cols - 1) + 8)) : null;
   const spotW = `min(62vw, 260px, ${Math.max(140, Math.floor(((typeof window !== 'undefined' ? window.innerHeight : 844) - 120) * 5 / 7))}px)`;
   return React.createElement("div", {
+    ref: rootRef,
     "data-mh-screen": true,
     "data-card-pack-open": true,
     "data-card-pack-phase": phase,
+    "data-card-pack-fx": fx ? 'on' : 'off',
     "data-card-pack-se": seLog.join(','),
     className: SCREEN_SHELL_CLASS
   }, React.createElement(ScreenHead, {
@@ -106653,6 +106793,10 @@ const CardPackOpen = ({
   }), phase === 'tearing' && React.createElement("div", {
     "aria-hidden": "true",
     className: "mh-pack-burst"
+  }), phase === 'tearing' && omen && React.createElement("div", {
+    "aria-hidden": "true",
+    "data-card-pack-omen": omen,
+    className: `mh-pack-omen mh-pack-omen-${omen}`
   }), phase === 'closed' && React.createElement("span", {
     className: "absolute inset-x-0 -bottom-9 animate-pulse text-center text-[14px] font-black text-white"
   }, "タップで開ける")) : React.createElement("div", {
@@ -106667,6 +106811,7 @@ const CardPackOpen = ({
     const m = card ? null : cardMonsterOf(db, c.no);
     const name = card ? card.name : m ? m.name : c.no;
     const rare = c.rarity !== 'normal';
+    const cl = climb && climb.i === i ? climb : null;
     return React.createElement("div", {
       key: `${pi}-${i}`,
       className: "mh-pack-deal flex flex-col items-center",
@@ -106677,14 +106822,23 @@ const CardPackOpen = ({
       type: "button",
       "data-card-pack-card": i,
       "data-card-pack-flipped": on ? 1 : 0,
-      "data-card-pack-rarity": c.rarity
+      "data-card-pack-rarity": c.rarity,
+      "data-card-pack-climb": cl ? cl.k + 1 : undefined
     }, on ? press(c.no, () => setDetail(c.no)) : {
       onClick: () => flip(i)
     }, {
-      className: "mh-pack-card relative w-full active:scale-95",
+      className: `mh-pack-card relative w-full active:scale-95 ${cl ? `mh-pack-climb mh-pack-climb-${cl.k + 1}` : ''}`,
       style: {
         WebkitUserSelect: 'none',
         userSelect: 'none'
+      }
+    }), cl && React.createElement("span", {
+      key: cl.n,
+      "aria-hidden": "true",
+      className: "mh-pack-climb-burst",
+      style: {
+        '--c': CARD_PACK_CLIMB[cl.k][0],
+        '--s': `${CARD_PACK_CLIMB[cl.k][1]}px`
       }
     }), React.createElement("div", {
       className: `mh-pack-card-in aspect-[5/7] w-full ${on ? 'flipped' : ''}`
@@ -106766,10 +106920,21 @@ const CardPackOpen = ({
       "data-card-pack-spot": spot.rarity,
       "aria-label": "並びへ戻す",
       onClick: spotOff,
-      className: "fixed inset-0 z-[72] flex flex-col items-center justify-center bg-slate-950/70"
+      className: "fixed inset-0 z-[72] flex flex-col items-center justify-center overflow-hidden bg-slate-950/70"
     }, React.createElement("div", {
       "aria-hidden": "true",
       className: `mh-pack-spot-rays ${alt ? 'mh-pack-spot-rays-alt' : ''}`
+    }), fx && alt && !spot.leaving && React.createElement("div", {
+      "aria-hidden": "true",
+      "data-card-pack-pillar": true,
+      className: "mh-pack-rpillar"
+    }), fx && !spot.leaving && React.createElement("div", {
+      "aria-hidden": "true",
+      className: `mh-pack-spot-burst ${alt ? 'alt' : ''}`
+    }), fx && React.createElement(CardPackConfetti, {
+      key: `cf-${spot.i}`,
+      n: alt ? 130 : 24,
+      again: alt ? 60 : 0
     }), React.createElement("div", {
       className: `relative ${spot.leaving ? 'mh-pack-spot-out' : 'mh-pack-spot-in'}`,
       style: {
@@ -106786,8 +106951,13 @@ const CardPackOpen = ({
       draggable: false,
       className: "h-full w-full rounded-[8px] object-cover"
     })))), React.createElement("span", {
-      className: `relative mt-4 rounded-full px-4 py-1 text-[18px] font-black text-slate-950 ${alt ? 'mh-pack-alt-label' : 'bg-amber-300'} ${spot.leaving ? 'opacity-0' : ''}`
-    }, CARD_RARITY_LABEL[c.rarity], "!"));
+      "data-card-pack-label": fx ? 'big' : 'normal',
+      className: `relative mt-4 rounded-full px-4 py-1 text-[18px] font-black text-slate-950 ${alt ? 'mh-pack-alt-label' : 'bg-amber-300'} ${fx ? `mh-pack-label-big ${alt ? 'alt' : ''}` : ''} ${spot.leaving ? 'opacity-0' : ''}`
+    }, CARD_RARITY_LABEL[c.rarity], fx && alt ? '!!' : '!'), fx && alt && React.createElement("div", {
+      key: `cfl-${spot.i}`,
+      "aria-hidden": "true",
+      className: "mh-pack-cflash"
+    }));
   })(), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, phase !== 'open' ? React.createElement("div", {
@@ -162353,6 +162523,44 @@ const createAnimationStyle = () => {
     .mh-pack-spot-out { animation: mhPackSpotOut .32s ease-in forwards; }
     .mh-pack-spot-rays { position: absolute; left: 50%; top: 46%; width: 180vmax; height: 180vmax; pointer-events: none; background: repeating-conic-gradient(rgba(253,224,71,.4) 0 7deg, transparent 7deg 20deg); border-radius: 50%; animation: mhPackSpin 9s linear infinite; -webkit-mask: radial-gradient(circle, #000 10%, transparent 55%); mask: radial-gradient(circle, #000 10%, transparent 55%); }
     .mh-pack-spot-rays-alt { background: repeating-conic-gradient(rgba(248,113,113,.55) 0 6deg, transparent 6deg 12deg, rgba(250,204,21,.55) 12deg 18deg, transparent 18deg 24deg, rgba(74,222,128,.55) 24deg 30deg, transparent 30deg 36deg, rgba(96,165,250,.55) 36deg 42deg, transparent 42deg 48deg, rgba(192,132,252,.55) 48deg 54deg, transparent 54deg 60deg); animation-duration: 6s; }
+    /* パックを開ける演出・強め(87 の CardPackOpen・案A'。2026-10-31 社長「これで入れて」)。
+       破るときの予感の光 / 裏のまま光が段を上がる(白 → 金 → 虹)・段ごとに光がはじける / 大きな「キラ!」「レアキラ!!」/ 虹の光の柱 / 画面いっぱいの虹の光 / 紙吹雪 */
+    .mh-pack-omen { position: absolute; inset: -16px; border-radius: 26px; pointer-events: none; z-index: -1; animation: mhPackOmen .5s ease-out both; }
+    .mh-pack-omen-kira { box-shadow: 0 0 40px 16px rgba(255,200,40,.95); }
+    .mh-pack-omen-alt { box-shadow: 0 0 50px 22px rgba(255,80,200,.9), 0 0 80px 30px rgba(80,200,255,.7); }
+    @keyframes mhPackOmen { 0% { opacity: 0; transform: scale(.9); } 40% { opacity: 1; transform: scale(1.04); } 100% { opacity: .85; transform: scale(1); } }
+    .mh-pack-climb { z-index: 3; transition: transform .14s; }
+    .mh-pack-climb-1 { transform: scale(1.12); filter: drop-shadow(0 0 10px #fff) drop-shadow(0 0 4px #fff); }
+    .mh-pack-climb-2 { transform: scale(1.16); filter: drop-shadow(0 0 13px #ffc400) drop-shadow(0 0 5px #ffc400); }
+    .mh-pack-climb-3 { transform: scale(1.2); filter: drop-shadow(0 0 16px #ff4dd2) drop-shadow(0 0 24px #4cc9f0); }
+    .mh-pack-climb-burst { position: absolute; left: 50%; top: 50%; width: var(--s); height: var(--s); border-radius: 50%; pointer-events: none; z-index: -1;
+      background: radial-gradient(circle, #fff 0, var(--c) 35%, transparent 70%); transform: translate(-50%, -50%) scale(.2); animation: mhPackClimbBurst .55s ease-out forwards; }
+    @keyframes mhPackClimbBurst { 0% { opacity: 1; transform: translate(-50%, -50%) scale(.2); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1); } }
+    .mh-pack-spot-burst { position: absolute; left: 50%; top: 46%; width: 360px; height: 360px; border-radius: 50%; pointer-events: none;
+      background: radial-gradient(circle, #fff 0, rgba(255,200,0,.9) 35%, transparent 70%); transform: translate(-50%, -50%) scale(.2); animation: mhPackClimbBurst .6s ease-out forwards; }
+    .mh-pack-spot-burst.alt { width: 520px; height: 520px; background: radial-gradient(circle, #fff 0, rgba(255,80,200,.9) 35%, transparent 70%); }
+    .mh-pack-rpillar { position: absolute; left: 50%; top: 0; bottom: 0; width: 300px; margin-left: -150px; pointer-events: none; filter: blur(8px);
+      background: linear-gradient(90deg, transparent, rgba(255,77,109,.7), rgba(255,209,102,.8), #fff, rgba(6,214,160,.8), rgba(76,201,240,.7), transparent); animation: mhPackRPillar .4s cubic-bezier(.2,1.4,.4,1) both; }
+    @keyframes mhPackRPillar { 0% { opacity: 0; transform: scaleX(.1); } 100% { opacity: .95; transform: scaleX(1); } }
+    .mh-pack-cflash { position: fixed; inset: 0; pointer-events: none; z-index: 2; animation: mhPackCFlash .7s ease-out forwards;
+      background: radial-gradient(circle at 50% 44%, #fff 0, #fff 20%, rgba(255,120,220,.85) 45%, rgba(80,200,255,.8) 70%, rgba(255,220,90,.75) 100%); }
+    @keyframes mhPackCFlash { 0%, 20% { opacity: 1; } 100% { opacity: 0; } }
+    .mh-pack-label-big { font-size: 40px; padding: 2px 24px; font-style: italic; letter-spacing: 2px; overflow: hidden; -webkit-text-stroke: 1.5px rgba(0,0,0,.3);
+      box-shadow: 0 0 18px rgba(255,200,0,.9); animation: mhPackLabelIn .45s cubic-bezier(.2,1.6,.4,1) both; }
+    .mh-pack-label-big.alt { font-size: 46px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.6); box-shadow: 0 0 30px 8px rgba(255,255,255,.95), 0 0 70px 20px rgba(255,80,200,.6);
+      animation: mhPackLabelIn .45s cubic-bezier(.2,1.6,.4,1) both, mhPackRainbowMove 1s linear infinite; }
+    .mh-pack-label-big::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.9) 50%, transparent 60%); background-size: 250% 100%; animation: mhPackLabelSheen 1.1s ease-in-out infinite; }
+    @keyframes mhPackLabelIn { 0% { opacity: 0; transform: scale(2.6) rotate(-14deg); } 100% { opacity: 1; transform: scale(1) rotate(-6deg); } }
+    @keyframes mhPackLabelSheen { 0% { background-position: 120% 0; } 100% { background-position: -120% 0; } }
+    .mh-pack-confetti { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 3; }
+    .mh-pack-confetti > i { position: absolute; top: -14px; height: 12px; opacity: 0; animation: mhPackConfetti 2.4s linear forwards; }
+    @keyframes mhPackConfetti { 0% { opacity: 1; translate: 0 0; rotate: 0deg; } 100% { opacity: 1; translate: 0 110vh; rotate: 720deg; } }
+    @media (prefers-reduced-motion: reduce) {
+      .mh-pack-confetti, .mh-pack-rpillar, .mh-pack-climb-burst, .mh-pack-spot-burst { display: none; }
+      .mh-pack-cflash { animation-duration: .3s; }
+      .mh-pack-label-big, .mh-pack-label-big.alt { animation: none; transform: rotate(-6deg); }
+      .mh-pack-label-big::after { display: none; }
+    }
     @media (prefers-reduced-motion: reduce) { .mh-pack-idle, .mh-pack-kira-back, .mh-pack-alt-back, .mh-pack-spot-rays { animation: none; } }
     @keyframes mhRjJackHit { 0% { transform: none; filter: brightness(1); } 12% { transform: translate(-14px, 2px) rotate(-4deg); filter: brightness(2.6); } 30% { transform: translate(12px, -2px) rotate(3deg); filter: brightness(1.6); } 55% { transform: translate(-6px, 0); filter: brightness(1.2); } 100% { transform: none; filter: brightness(1); } }
     @keyframes mhRjBarDrop { 0% { transform: scaleX(var(--from)); } 100% { transform: scaleX(var(--to)); } }
