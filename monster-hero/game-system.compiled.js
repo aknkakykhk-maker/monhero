@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c3d6798a5c201e00
+// source-sha256: 67c98e977c3a4aa3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -100582,7 +100582,10 @@ const CardBattleBoard = ({
     const t = pd.targets[pd.ti];
     return t && t.p === p && t.m === m ? guardPv.cards.map(no => cardGuardShort(cardOf(db, no))).join('・') : '';
   };
-  const guardAtk = pd && pd.defender === CARD_ME && !tutorial ? cardOf(db, pd.main) : null;
+  const guardAtk = pd && !tutorial ? cardOf(db, pd.main) : null;
+  const guardAtkText = guardAtk ? guardAtk.text || cardPlainEffectText(guardAtk) : '';
+  const liveFoeCard = !pd && action && action.side === 'foe' && Array.isArray(action.cards) ? cardOf(db, action.cards[0]) : null;
+  const liveFoeText = liveFoeCard ? liveFoeCard.text || cardPlainEffectText(liveFoeCard) : '';
   const logLines = st.log.filter(l => l.kind !== 'turn').slice(-3);
   const liveLine = (() => {
     const L = st.log.filter(l => l.kind !== 'turn' && !/が先攻、.*が後攻$/.test(String(l.text || '')));
@@ -101208,15 +101211,15 @@ const CardBattleBoard = ({
   }), stageFit < 3 && React.createElement("img", {
     src: CARD_IMG(guardAtk.img),
     alt: guardAtk.name,
-    className: `${tiny || stageFit >= 2 ? 'h-[36px]' : 'h-[52px]'} aspect-[5/7] shrink-0 rounded-[4px] object-cover shadow`
+    className: `${tiny || stageFit >= 2 ? 'h-[36px]' : stageFit >= 1 || compact ? 'h-[52px]' : 'h-[76px]'} aspect-[5/7] shrink-0 rounded-[4px] object-cover shadow`
   }), React.createElement("span", {
     className: "min-w-0 flex-1"
   }, React.createElement("span", {
     className: "block text-rose-200"
-  }, pendingText), guardAtk.text && stageFit < 2 && React.createElement("span", {
+  }, pendingText), guardAtkText && stageFit < 2 && React.createElement("span", {
     "data-card-guard-attack-text": true,
-    className: `${tiny || stageFit >= 1 ? 'line-clamp-1' : 'line-clamp-2'} block text-[11px] leading-snug text-slate-200`
-  }, guardAtk.text))) : React.createElement("div", {
+    className: `${tiny || stageFit >= 1 ? 'line-clamp-1' : compact ? 'line-clamp-2' : 'line-clamp-3'} block text-[11px] leading-snug text-slate-200`
+  }, guardAtkText))) : React.createElement("div", {
     className: "text-rose-200"
   }, pendingText)), pendingText && React.createElement(CardGuardPreview, {
     db: db,
@@ -101249,7 +101252,12 @@ const CardBattleBoard = ({
   }, React.createElement("span", {
     "data-card-fit": true,
     className: `whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-black ${action.side === 'foe' ? 'bg-rose-500 text-white' : 'bg-amber-300 text-slate-950'}`
-  }, action.side === 'foe' ? watch ? who.name : '相手' : watch ? meName : '自分')), cardLogText(liveLine))))), !wide && tutorBox, React.createElement("div", {
+  }, action.side === 'foe' ? watch ? who.name : '相手' : watch ? meName : '自分')), cardLogText(liveLine))), !pendingText && liveLine && liveFoeText && stageFit < 2 && React.createElement("button", _extends({
+    type: "button",
+    "data-card-live-foe-text": liveFoeCard.no
+  }, press(liveFoeCard.no, () => setDetail(liveFoeCard.no)), {
+    className: `mt-0.5 block w-full ${tiny || stageFit >= 1 ? 'line-clamp-1' : 'line-clamp-2'} text-center text-[11px] font-bold leading-snug text-slate-200`
+  }), liveFoeText))), !wide && tutorBox, React.createElement("div", {
     "data-card-side-active": turnLive && turnMe ? 'me' : undefined,
     "data-card-floor": "me",
     className: `flex shrink-0 items-end justify-around rounded-2xl px-1 transition-shadow ${turnLive && turnMe ? 'shadow-[inset_0_0_0_2px_rgba(252,211,77,.8),0_0_16px_rgba(252,211,77,.35)]' : ''}`,

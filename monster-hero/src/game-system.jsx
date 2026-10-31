@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7ab8b5609d3a1fc9
+// generated-sha256: 729f5fc38453da73
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -60818,8 +60818,14 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     const t = pd.targets[pd.ti];
     return t && t.p === p && t.m === m ? guardPv.cards.map((no) => cardGuardShort(cardOf(db, no))).join('・') : '';
   };
-  // 自分が守る番に受けている攻撃カード(相手が守る番・練習試合は出さない)
-  const guardAtk = pd && pd.defender === CARD_ME && !tutorial ? cardOf(db, pd.main) : null;
+  // 守りの番に受けている攻撃カード(練習試合は出さない)。守りを決めるまで、まんなかに大きめに残す(2026-10-31 社長
+  //   「カードを相手が使ったときにカードがすぐ流れて効果がわからない」「そのまま場に残るとかして効果見て防御回避とか決めたい」)。
+  //   前は自分が守る番だけだった。観戦・マルチの相手が守る番も、同じ形で出す。効果の文が空のカードは、ダメージから作った一文(cardPlainEffectText)
+  const guardAtk = pd && !tutorial ? cardOf(db, pd.main) : null;
+  const guardAtkText = guardAtk ? (guardAtk.text || cardPlainEffectText(guardAtk)) : '';
+  // 守りの判断が要らない相手の手(特殊・全体など)は、使ったカードの効果の一文を、次の手まで実況の下に残す
+  const liveFoeCard = !pd && action && action.side === 'foe' && Array.isArray(action.cards) ? cardOf(db, action.cards[0]) : null;
+  const liveFoeText = liveFoeCard ? (liveFoeCard.text || cardPlainEffectText(liveFoeCard)) : '';
   const logLines = st.log.filter((l) => l.kind !== 'turn').slice(-3);
   // まんなかの1行の実況: いちばん新しい1つ(番の替わり目・始めの「先攻・後攻」は除く。2026-10-29 まんなか案A)
   //   技の行(use)のすぐあとに当たりの行(hit)が続くときは「ゴーレムの「でこぴん」→ ナーガに5ダメージ」と1行にまとめる(だれの何の技かが抜けないように)
@@ -61158,10 +61164,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           {pendingText && (guardAtk
             ? <button type="button" data-card-guard-attack={guardAtk.no} {...press(guardAtk.no, () => setDetail(guardAtk.no))} className="flex w-full max-w-[360px] items-center gap-2 text-left active:scale-[.98]">
               {/* まんなかに入り切らないときは、効果の文を1行に → 効果の文を省く → 絵を省く(stageFit。320×568 で下が切れた) */}
-              {stageFit < 3 && <img src={CARD_IMG(guardAtk.img)} alt={guardAtk.name} className={`${tiny || stageFit >= 2 ? 'h-[36px]' : 'h-[52px]'} aspect-[5/7] shrink-0 rounded-[4px] object-cover shadow`}/>}
+              {stageFit < 3 && <img src={CARD_IMG(guardAtk.img)} alt={guardAtk.name} className={`${tiny || stageFit >= 2 ? 'h-[36px]' : stageFit >= 1 || compact ? 'h-[52px]' : 'h-[76px]'} aspect-[5/7] shrink-0 rounded-[4px] object-cover shadow`}/>}
               <span className="min-w-0 flex-1">
                 <span className="block text-rose-200">{pendingText}</span>
-                {guardAtk.text && stageFit < 2 && <span data-card-guard-attack-text className={`${tiny || stageFit >= 1 ? 'line-clamp-1' : 'line-clamp-2'} block text-[11px] leading-snug text-slate-200`}>{guardAtk.text}</span>}
+                {guardAtkText && stageFit < 2 && <span data-card-guard-attack-text className={`${tiny || stageFit >= 1 ? 'line-clamp-1' : compact ? 'line-clamp-2' : 'line-clamp-3'} block text-[11px] leading-snug text-slate-200`}>{guardAtkText}</span>}
               </span>
             </button>
             : <div className="text-rose-200">{pendingText}</div>)}
@@ -61181,6 +61187,11 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
               {cardLogText(liveLine)}
             </div>
             </div>
+          )}
+          {/* 相手が使ったカード(守りの判断が要らない特殊・全体など)の効果の一文。次の手まで残す。押すと詳しい画面 */}
+          {!pendingText && liveLine && liveFoeText && stageFit < 2 && (
+            <button type="button" data-card-live-foe-text={liveFoeCard.no} {...press(liveFoeCard.no, () => setDetail(liveFoeCard.no))}
+              className={`mt-0.5 block w-full ${tiny || stageFit >= 1 ? 'line-clamp-1' : 'line-clamp-2'} text-center text-[11px] font-bold leading-snug text-slate-200`}>{liveFoeText}</button>
           )}
         </div>
         )}
