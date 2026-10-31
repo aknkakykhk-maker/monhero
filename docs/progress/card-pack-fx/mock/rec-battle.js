@@ -14,8 +14,8 @@ const [port, name, thr] = process.argv.slice(2);
   await page.evaluate(() => {
     const db = CARD_BATTLE_DATA;
     const pol = cardAiPolicy('kyuko', 'normal');
-    const d0 = cardAiBuildDeck(db, 'momosuke', 'master', cardAiSeededRand('w0:1')); d0.monsters = ['C-001V', 'C-003S', 'C-010'];
-    const d1 = cardAiBuildDeck(db, 'kiki', 'master', cardAiSeededRand('w1:1')); d1.monsters = ['C-004S', 'C-005V', 'C-051'];
+    const d0 = cardAiBuildDeck(db, 'momosuke', 'master', cardAiSeededRand('w0:1')); d0.monsters = ['C-001V', 'C-006S', 'C-010'];
+    const d1 = cardAiBuildDeck(db, 'kiki', 'master', cardAiSeededRand('w1:1')); d1.monsters = ['C-029S', 'C-008V', 'C-021S'];
     let st = cardCreateGame(db, { decks: [d0, d1], names: ['ビー', 'エー'], seed: 11, first: 0 });
     let seed = 123; const rand = () => { const n = cardRngNext(seed); seed = n.s; return n.v; };
     const W = window.__watch = { handler: null };
