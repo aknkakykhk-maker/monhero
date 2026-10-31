@@ -3653,7 +3653,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         { cup: { matchId: r.id, cupId: r.cup_id, side: r.side, seed: r.seed, first: r.first, selfId } });
     };
     // 杯の試合のあと・入れなかったときの知らせ(下に小さく出す)
-    return <><CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId} onOpenReplay={openCupReplay} onPlayLive={playCupLive} getAdapters={cupAdapters}
+    return <><CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId} onOpenReplay={openCupReplay} onPlayLive={playCupLive} getAdapters={debug || (typeof cardCupPrizeOpen === 'function' && cardCupPrizeOpen()) ? cupAdapters : null}
       onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('cup'); setView('tactics'); } : null}/>
       {notice && <div data-card-cup-toast className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit max-w-[92vw] rounded-full bg-slate-950/95 px-4 py-2 text-[13px] font-black text-amber-100 shadow-lg" style={JA_WRAP_STYLE}>{jaWrap(notice)}</div>}
     </>;
