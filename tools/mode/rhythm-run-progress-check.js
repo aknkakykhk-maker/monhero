@@ -61,8 +61,17 @@ const seed = () => {
       const closed = await page.evaluate(() => {
         const b = [...document.querySelectorAll('button')].find((x) => /^(確認|受け取る|閉じる|OK)$/.test((x.innerText || '').trim()));
         if (b) { b.click(); return true; }
+        // 吹き出しは「あとで読む・スキップ・閉じる」を先に押す。いちばん最初のボタンを押すと、お知らせの一覧の「くわしく」から
+        // 「バトルへ行く」まで進んで、HOME ではなくバトルの画面へ移ってしまう(2026-10-31 INFERNO のお知らせで止まった)
         const dialog = document.querySelector('[role="dialog"]');
-        if (dialog) { (dialog.querySelector('button') || dialog).click(); return true; }
+        if (dialog) {
+          const bs = [...dialog.querySelectorAll('button')];
+          const label = (x) => (x.innerText || x.getAttribute('aria-label') || '').trim();
+          const pick = bs.find((x) => /^(あとで読む|スキップ|閉じる|とじる|OK)$/.test(label(x)))
+            || bs.find((x) => !/(へ行く|を見る|くわしく|詳しく)/.test(label(x)));
+          (pick || dialog).click();
+          return true;
+        }
         return false;
       });
       if (!closed) break;
