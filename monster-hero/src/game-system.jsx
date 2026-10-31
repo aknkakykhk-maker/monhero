@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8a05f4b9daef865e
+// generated-sha256: 43d74fcf69ce2029
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -70255,6 +70255,54 @@ const CardRegTrialSheet = ({ db, deck, battle, aces, monName, onClose }) => {
   );
 };
 
+// ---- おすすめの組み方・おまかせ(2026-10-31 社長「組み合わせ方がわからない」・案B) ----
+// 戦い方を決める画面から、型(CARD_REG_STYLES)の中の並びを見て選べる。「おまかせ」は4つの型をためしに3戦ずつ戦わせて、いちばん勝った型で組む
+const CARD_REG_AUTO_GAMES = 3;
+const cardRegAutoPick = (db, deck, tactics, open, lv, aces) => {
+  const scores = CARD_REG_STYLES.map((s, si) => {
+    const frames = cardRegApplyStyle(s, tactics, open);
+    const battle = cardTacticsFramesForBattle({ ...tactics, frames }, lv);
+    let wins = 0;
+    for (let g = 0; g < CARD_REG_AUTO_GAMES; g++) if (cardRegTrialOne(db, deck, battle, aces, si * CARD_REG_AUTO_GAMES + g).win) wins++;
+    return { s, frames, wins };
+  });
+  return scores.reduce((best, x) => (x.wins > best.wins ? x : best), scores[0]);
+};
+const CardRegTemplateSheet = ({ db, deck, tactics, open, lv, aces, monName, onPick, onClose }) => {
+  const [auto, setAuto] = useState(''); // '' / 'run'
+  const runAuto = () => {
+    setAuto('run');
+    setTimeout(() => { const best = cardRegAutoPick(db, deck, tactics, open, lv, aces); onPick(best.frames, `おまかせ: 「${best.s.name}」がいちばん勝ちました(${CARD_REG_AUTO_GAMES}戦 ${best.wins}勝)`); }, 60);
+  };
+  return (
+    <div data-card-reg-templates className="fixed inset-0 z-[82] flex flex-col bg-slate-950/95 p-3">
+      <ScreenHead title="おすすめの組み方" accent="text-amber-200" onBack={onClose} note="えらぶと、3体とブリーダーの戦い方がまとめて入ります(いまの戦い方は置きかわります)"/>
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
+        <button type="button" data-card-reg-auto disabled={auto === 'run'} onClick={() => { Audio_.fgSe.tap(); runAuto(); }}
+          className="mh-button w-full rounded-2xl border-2 border-dashed border-sky-300 bg-sky-950/60 py-3 text-[14px] font-black text-sky-50 disabled:opacity-60" style={JA_WRAP_STYLE}>
+          {auto === 'run' ? '4つの型を、ためしに戦わせています…' : `🎲 おまかせ(4つの型をためしに${CARD_REG_AUTO_GAMES}戦ずつ戦わせて、いちばん勝った型で組む)`}
+        </button>
+        {CARD_REG_STYLES.map((s) => {
+          const f = cardRegApplyStyle(s, tactics, open);
+          const rows = [...[0, 1, 2].flatMap((mi) => f.mons[mi].slice(0, 1).map((r) => `${monName(mi)}: ${cardRegRowText(r)}`)), ...f.breeder.slice(0, 1).map((r) => `ブリーダー: ${cardRegRowText(r)}`)];
+          return (
+            <div key={s.id} data-card-reg-template={s.id} className="rounded-2xl border-2 border-white/15 bg-slate-900 p-2.5">
+              <b className="block text-[15px] font-black text-white">{cardIconNode(s.icon, 16)} {s.name}</b>
+              <small className="block text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{s.desc}</small>
+              <div className="mt-1.5 space-y-0.5">
+                {rows.map((x, i) => <div key={i} className="rounded-md bg-white/5 px-1.5 py-0.5 text-[11px] font-bold text-slate-100" style={JA_WRAP_STYLE}>{x}</div>)}
+                <div className="rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[11px] font-bold text-amber-100">{`📘 基本の型: ${(cardTacticOf(f.base[0]) || {}).name || ''}`}</div>
+              </div>
+              <button type="button" data-card-reg-template-pick={s.id} disabled={auto === 'run'} onClick={() => { Audio_.fgSe.tap(); onPick(f, `「${s.name}」で組みました`); }}
+                className="mh-button mh-button-primary mt-2 min-h-[40px] w-full rounded-xl text-[13px] font-black">これで組む</button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 // onOpenList … 持っている戦術カードの一覧(97)/ onOpenMarket … マーケットの戦術カード
 // onOpenReplays … 登録中のデッキが戦われた試合の一覧へ(95 の CardDeckReplays。2026-10-31)
 const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenList = null, onOpenMarket = null, onOpenReplays = null }) => {
@@ -70270,6 +70318,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
   const [sheet, setSheet] = useState(null);     // { where, k }
   const [custom, setCustom] = useState(null);   // { k, c? } 自分で組み合わせる
   const [trial, setTrial] = useState(false); // ためしに戦わせる(CardRegTrialSheet)
+  const [tpl, setTpl] = useState(false);     // おすすめの組み方・おまかせ(CardRegTemplateSheet)
   const [monSheet, setMonSheet] = useState(null); // ③ モンスターを押した先(下から出る「◯◯の手」。0〜2)
   const [basePick, setBasePick] = useState(null); // ① 基本の型をえらぶ(0 メイン・1 サブ1・2 サブ2)
   const [busy, setBusy] = useState(false);
@@ -70435,6 +70484,8 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
               })}
             </div>
           </section>
+          <button type="button" data-card-reg-template-open disabled={!deck} onClick={() => { Audio_.fgSe.tap(); setTpl(true); }}
+            className="mh-button min-h-[48px] w-full rounded-2xl border-2 border-amber-400 bg-amber-900/40 text-[14px] font-black text-amber-50 disabled:opacity-40">📋 おすすめの組み方・おまかせ</button>
           <button type="button" data-card-reg-trial-open disabled={!deck || !!issuesOf(deck).length} onClick={() => { Audio_.fgSe.tap(); setTrial(true); }}
             className="mh-button min-h-[48px] w-full rounded-2xl border-2 border-violet-400 bg-violet-900/60 text-[14px] font-black text-violet-50 disabled:opacity-40">{`▶ ためしに戦わせる(助手と${CARD_REG_TRIAL_GAMES}戦・よく働いたカード)`}</button>
         </>)}
@@ -70477,6 +70528,8 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
       {step === 'custom' && footer(null, <button type="button" data-card-reg-next onClick={() => { Audio_.fgSe.tap(); setStep('confirm'); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black">決める(登録の確かめへ)</button>)}
       {step === 'confirm' && footer(back(styleId === 'custom' ? 'custom' : 'style'), <button type="button" data-card-reg-register disabled={busy || !deck || !selfId} onClick={() => { Audio_.fgSe.tap(); void register(); }} className="mh-button mh-button-primary min-h-[52px] flex-[2] rounded-2xl font-black disabled:opacity-40">{mine ? 'この内容で登録し直す' : 'このデッキを登録する'}</button>)}
       {step === 'done' && footer(null, <button type="button" onClick={() => { Audio_.fgSe.tap(); onBack(); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black">とじる</button>)}
+      {tpl && deck && <CardRegTemplateSheet db={db} deck={deck} tactics={tactics} open={open} lv={lv} aces={acesNow} monName={monName}
+        onPick={(frames, note) => { setDraft(frames); setStyleId('custom'); setTpl(false); setMsg(note); }} onClose={() => setTpl(false)}/>}
       {trial && deck && <CardRegTrialSheet db={db} deck={deck} battle={battle} aces={acesNow} monName={monName} onClose={() => setTrial(false)}/>}
       {monSheet !== null && !sheet && !custom && (
         <CardRegMonSheet db={db} deck={deck} k={monSheet} rows={draft.mons[monSheet]} max={open.mon} why={uncounted.mons[monSheet]} name={monName} counts={draft.mons.map((r) => r.length)} baseName={(cardTacticOf(draft.base[0]) || {}).name || ''}
