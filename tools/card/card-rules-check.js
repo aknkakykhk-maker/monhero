@@ -338,7 +338,7 @@ const decksAndSaves = () => {
   const g = E.cardCreateGame(db, { decks: [E.cardAiBuildDeck(db, 'speed'), E.cardAiBuildDeck(db, 'speed')], first: 1 });
   g.turn = 7;
   ok(E.cardOwnTurns(g, 0) === 3 && E.cardOwnTurns(g, 1) === 4, '自分の番の数え方が違う');
-  // デッキ編成(区切り2): 同じ名前3枚まで・持っている枚数まで・同じモンスター1体まで・準備中は入らない
+  // デッキ編成(区切り2): 同じカード(番号)3枚まで・持っている枚数まで・同じモンスター1体まで・準備中は入らない
   {
     const kit = db.starters.speed;
     const col = {}; [...kit.monsters, ...kit.cards].forEach((no) => { col[no] = (col[no] || 0) + 1; });
@@ -348,8 +348,23 @@ const decksAndSaves = () => {
     if (kira) ok(/同じモンスター/.test(E.cardDeckAddReason(db, { ...d, monsters: [kit.monsters[0]] }, kira.no, { ...col, [kira.no]: 1 })), 'キラも同じモンスターとして止まらない');
     const no = kit.cards[0];
     const three = { ...d, cards: [no, no, no] };
-    ok(/3枚まで/.test(E.cardDeckAddReason(db, three, no, { [no]: 9 })), '同じ名前の4枚目が入ってしまう');
+    ok(/3枚まで/.test(E.cardDeckAddReason(db, three, no, { [no]: 9 })), '同じカードの4枚目が入ってしまう');
     ok(/持っているのは/.test(E.cardDeckAddReason(db, { ...d, cards: [no] }, no, { [no]: 1 })), '持っている枚数を超えて入ってしまう');
+    // 3枚までは番号で数える(2026-10-31 社長「ゴーレムのキックとヘンガーのキックが数分組めない」)。名前が同じでも番号がちがうカードは、それぞれ3枚まで
+    {
+      const kicks = Object.values(db.cards).filter((c) => c.name === 'キック' && c.ready).map((c) => c.no);
+      ok(kicks.length >= 2, `名前が同じ別のカード(キック)が見つからない: ${kicks.join(',')}`);
+      if (kicks.length >= 2) {
+        const [k1, k2] = kicks;
+        const lots = { [k1]: 9, [k2]: 9 };
+        const withK1 = { ...d, cards: [k1, k1, k1] };
+        ok(E.cardDeckAddReason(db, withK1, k2, lots) === '', `別のキック(${k2})が、ほかのキック(${k1})3枚のあとに入らない: ${E.cardDeckAddReason(db, withK1, k2, lots)}`);
+        ok(/同じカードは3枚まで/.test(E.cardDeckAddReason(db, withK1, k1, lots)), `同じ番号のキック(${k1})の4枚目が入ってしまう`);
+        const both = { monsters: [], cards: [k1, k1, k1, k2, k2, k2] };
+        ok(!E.cardDeckProblems(db, both).some((t) => /キック/.test(t)), `別のキックを3枚ずつ入れたデッキが決まり違反になる: ${E.cardDeckProblems(db, both).join('・')}`);
+        ok(E.cardDeckProblems(db, { monsters: [], cards: [k1, k1, k1, k1] }).some((t) => /「キック」が4枚/.test(t)), '同じ番号のキック4枚が決まり違反にならない');
+      }
+    }
     const notReady = Object.values(db.cards).find((c) => !c.ready);
     // 準備中のカードは 2026-10-25 に0枚になった(おいのり・全体カード)。準備中の札が増えたときに見る
     const nr = notReady || { ...Object.values(db.cards)[0], no: '__nr', ready: false };

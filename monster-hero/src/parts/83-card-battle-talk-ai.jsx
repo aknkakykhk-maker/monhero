@@ -106,9 +106,9 @@ const cardTalkDeckFacts = (db, deck, collection) => {
   const userName = (u) => (u === 'any' ? '全モンスター' : u === 'breeder' ? 'ブリーダー' : ((Object.values(db.monsters).find((m) => m.species === u && !m.main) || {}).name || u));
   const cards = Object.values(db.cards).filter((c) => c.ready && (c.user === 'any' || c.user === 'breeder' || mons.some((m) => cardUsableBy(c, m))))
     .map((c) => {
-      // 入れられるか・あと何枚かは、デッキ編成と同じ決まり(82 の cardDeckAddReason・同じ名前は CARD_DECK_COPY_MAX 枚まで)
+      // 入れられるか・あと何枚かは、デッキ編成と同じ決まり(82 の cardDeckAddReason・同じカード(番号)は CARD_DECK_COPY_MAX 枚まで)
       const have = Math.floor(Number((collection || {})[c.no]) || 0);
-      const sameName = (deck.cards || []).filter((x) => (cardOf(db, x) || {}).name === c.name).length;
+      const sameName = inDeck[c.no] || 0; // 番号で数える(名前が同じでも、使うモンスターがちがうカードは別)
       const room = cardDeckAddReason(db, { monsters: deck.monsters || [], cards: deck.cards || [] }, c.no, collection) ? 0
         : Math.max(0, Math.min(CARD_DECK_COPY_MAX - sameName, have - (inDeck[c.no] || 0), CARD_BATTLE_DECK_SIZE - (deck.cards || []).length));
       return { no: c.no, name: c.name, kind: kinds[c.kind] || c.kind, user: userName(c.user), guts: c.guts || 0, damage: Number.isFinite(c.damage) ? c.damage : null, text: String(c.text || '').slice(0, 90), room };

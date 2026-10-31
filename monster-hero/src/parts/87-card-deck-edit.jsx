@@ -2,7 +2,7 @@
 // トップの「デッキ編成」から入る(社長: デッキ編成はトップ画面に置く)。設計: docs/spec/CARD_BATTLE.md 5-2
 //   CardDeckList   … デッキの一覧(5つまで)。使うデッキを決める・組む・新しく作る・コピー・消す
 //   CardDeckEditor … 1つのデッキを組む。上にモンスター3体の枠、下に持っているカード(タブ: 技/モンスター/デッキの中)
-// ★決まり(同じモンスターは1体まで・同じ名前のカードは3枚まで・50枚)は 82-card-battle-core.jsx の
+// ★決まり(同じモンスターは1体まで・同じカード(番号)は3枚まで・50枚)は 82-card-battle-core.jsx の
 //   cardDeckProblems / cardDeckAddReason / cardDeckOwnProblems が正本。この部品は画面だけを持つ
 // ★保存は CardBattleScreen が mh_card_decks_v1 へ入れる(この部品は保存しない)
 // ★50枚そろっていなくても「保存」はできる。対戦に使えるのは、決まりどおりで持っている枚数の中のデッキだけ

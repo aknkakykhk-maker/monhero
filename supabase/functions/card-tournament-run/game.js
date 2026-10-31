@@ -1883,7 +1883,7 @@ const CARD_AI_DECK_TUNE = Object.freeze({
 //   EXPERT・MASTER でプレイヤー役との勝率がそろうように tools/card/card-ai-balance.js で決めた
 const CARD_AI_LANE_MIN_DEFAULT = 0.8;
 const CARD_AI_LANE_MIN = Object.freeze({ momosuke: 1.5, dra: 0.8, kyuko: 2.0, atsu: 1.5, sorashido: 1.5 });   // きゅうこは混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 1.5。ドラは不自然な手の直し(2026-10-27)で MASTER が 38% を割ったので 0.3 → 0.8(1 より上だと好きな子の技が入らないことがある)
-const CARD_DECK_COPY_MAX = 3; // 同じ名前の技・全体・ブリーダーカードは3枚まで
+const CARD_DECK_COPY_MAX = 3; // 同じカード(同じ番号)の技・全体・ブリーダーカードは3枚まで。名前が同じでも番号がちがう(使うモンスターがちがう)カードは別に数える(2026-10-31 社長「ゴーレムのキックとヘンガーのキック」)
 const CARD_AI_ATTACH_MAX = 6;
 const CARD_AI_FIELD_LIKE = 1; // 得意な全体カードを出すときに足す点(cardAiScoreAttack)
 const CARD_AI_FIELD_COPIES = 2; // 助手の全体カード(CARD_AI_DECKS の field)は1種2枚。場には1枚しか残らないので多く入れても腐る
@@ -2159,15 +2159,16 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
     add(x.c, CARD_DECK_COPY_MAX);
   }
   // 足りなければ、残りの候補から入れる(どの子も使える札が少ないとき)
-  for (const x of ranked) { if (cards.length >= CARD_BATTLE_DECK_SIZE) break; const have = cards.filter((n) => cardOf(db, n).name === x.c.name).length; add(x.c, CARD_DECK_COPY_MAX - have); }
+  // 3枚までは番号で数える(ranked は名前ごとに1つの番号だけなので、名前で数えていたころと組み上がるデッキは同じ)
+  for (const x of ranked) { if (cards.length >= CARD_BATTLE_DECK_SIZE) break; const have = cards.filter((n) => n === x.c.no).length; add(x.c, CARD_DECK_COPY_MAX - have); }
   heavy = -99; // それでも50枚に届かなければ、重い技の上限を外して埋める
-  for (const x of ranked) { if (cards.length >= CARD_BATTLE_DECK_SIZE) break; const have = cards.filter((n) => cardOf(db, n).name === x.c.name).length; add(x.c, CARD_DECK_COPY_MAX - have); }
+  for (const x of ranked) { if (cards.length >= CARD_BATTLE_DECK_SIZE) break; const have = cards.filter((n) => n === x.c.no).length; add(x.c, CARD_DECK_COPY_MAX - have); }
   // sameBlood … 好きな子と同じ血統の子が2体以上(相手の考え方 cardAiPolicy の opts.sameBlood に渡す)
   const sameBlood = mons.filter((m) => cardAiBloodOf(m) === cardAiBloodOf(mons[0])).length >= 2;
   return { monsters: monsters.slice(), cards, sameBlood };
 };
 
-// デッキが決まりどおりか(3体・別々のモンスター・50枚・同じ名前は3枚まで・使えないカードが無い)。だめなら理由の文の配列
+// デッキが決まりどおりか(3体・別々のモンスター・50枚・同じカード(番号)は3枚まで・使えないカードが無い)。だめなら理由の文の配列
 const cardDeckProblems = (db, deck) => {
   const out = [];
   if (!deck || !Array.isArray(deck.monsters) || !Array.isArray(deck.cards)) return ['デッキがありません'];
@@ -2177,9 +2178,10 @@ const cardDeckProblems = (db, deck) => {
   const species = ms.filter(Boolean).map((m) => m.species);
   if (new Set(species).size !== species.length) out.push('同じモンスターが2体入っています');
   if (deck.cards.length !== CARD_BATTLE_DECK_SIZE) out.push(`カードが${deck.cards.length}枚です(あと${CARD_BATTLE_DECK_SIZE - deck.cards.length}枚)`);
-  const names = {};
-  deck.cards.forEach((no) => { const c = cardOf(db, no); if (!c) { out.push(`知らないカード(${no})が入っています`); return; } names[c.name] = (names[c.name] || 0) + 1; });
-  Object.entries(names).forEach(([n, k]) => { if (k > CARD_DECK_COPY_MAX) out.push(`「${n}」が${k}枚です(3枚まで)`); });
+  // 3枚までは番号で数える(名前で数えていたため、ゴーレムのキックとヘンガーのキックが合わせて3枚までになっていた。2026-10-31 社長)
+  const nos = {};
+  deck.cards.forEach((no) => { const c = cardOf(db, no); if (!c) { out.push(`知らないカード(${no})が入っています`); return; } nos[no] = (nos[no] || 0) + 1; });
+  Object.entries(nos).forEach(([no, k]) => { if (k > CARD_DECK_COPY_MAX) out.push(`「${cardOf(db, no).name}」が${k}枚です(3枚まで)`); });
   return [...new Set(out)];
 };
 
@@ -2216,8 +2218,8 @@ const cardDeckAddReason = (db, deck, no, collection) => {
   if (!c) return '知らないカードです';
   if (!c.ready) return '準備中のカードです';
   if (deck.cards.length >= CARD_BATTLE_DECK_SIZE) return `カードは${CARD_BATTLE_DECK_SIZE}枚までです`;
-  const same = deck.cards.filter((x) => (cardOf(db, x) || {}).name === c.name).length;
-  if (same >= CARD_DECK_COPY_MAX) return `同じ名前のカードは${CARD_DECK_COPY_MAX}枚までです`;
+  const same = deck.cards.filter((x) => x === no).length; // 番号で数える(名前が同じでも、使うモンスターがちがうカードは別)
+  if (same >= CARD_DECK_COPY_MAX) return `同じカードは${CARD_DECK_COPY_MAX}枚までです`;
   const mine = deck.cards.filter((x) => x === no).length;
   if (mine >= (col[no] || 0)) return `持っているのは${col[no] || 0}枚です`;
   return '';
