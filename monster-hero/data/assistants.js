@@ -340,13 +340,29 @@ const assistantUnlockedBy = (assistantId, seenStoryIds) => {
 //   解放の判定はあつの解放と同じ(assistantUnlockedBy)。印の無いお話は、同じ台本をそのまま返す(今までと何も変わらない)。
 //   再生の画面は選んだあとの台本から話し手・顔の列を作るので、解放していない人にはあつが一度も出ない
 // きゅうこも同じ形(kyuko:'with'/'without'・2026-10-24 MFバトルカードのお話から)。1行に両方の印があれば、両方が合うときだけ出す
-const EVENT_SCRIPT_SPLIT_ASSISTANTS = Object.freeze(['atsu', 'kyuko']);
+// 個人杯のお話(2026-10-31 社長)を見た人には、あつを解放していなくても atsu:'with' の行を出す(あつに会ったことがあるので)。
+//   そのお話の中の出し分けは atsuJoin(解放しているかだけで決める)。あつの加入のお話の「大会ぶり」などの行は cardCup(このお話を見たか)。
+//   助手として選べる条件(assistantUnlockedBy)は変えない
+const CARD_CUP_STORY_ID_FOR_SPLIT = 'card_cup_2026_10_31';
+const EVENT_SCRIPT_SPLIT_ASSISTANTS = Object.freeze(['atsu', 'kyuko', 'atsuJoin', 'cardCup']);
+const eventScriptSplitOn = (id, seenStoryIds) => {
+  const seenCup = assistantReleased('atsu') && Array.isArray(seenStoryIds) && seenStoryIds.includes(CARD_CUP_STORY_ID_FOR_SPLIT);
+  if (id === 'atsuJoin') return assistantUnlockedBy('atsu', seenStoryIds);
+  // 加入のお話より先に個人杯のお話を見た人だけ(見た印は見た順に並ぶ)。解放してから個人杯を見た人は、加入のお話を見返してもいつもの行
+  if (id === 'cardCup') {
+    if (!seenCup) return false;
+    const join = seenStoryIds.indexOf(assistantUnlockStoryId('atsu'));
+    return join < 0 || seenStoryIds.indexOf(CARD_CUP_STORY_ID_FOR_SPLIT) < join;
+  }
+  if (id === 'atsu') return assistantUnlockedBy('atsu', seenStoryIds) || seenCup;
+  return assistantUnlockedBy(id, seenStoryIds);
+};
 const eventScriptForPlayer = (script, seenStoryIds) => {
   const list = Array.isArray(script) ? script : [];
   const marked = (l, id) => l && (l[id] === 'with' || l[id] === 'without');
   const ids = EVENT_SCRIPT_SPLIT_ASSISTANTS.filter(id => list.some(l => marked(l, id)));
   if (!ids.length) return list;
-  const on = Object.fromEntries(ids.map(id => [id, assistantUnlockedBy(id, seenStoryIds)]));
+  const on = Object.fromEntries(ids.map(id => [id, eventScriptSplitOn(id, seenStoryIds)]));
   return list.filter(l => !l || ids.every(id => !marked(l, id) || ((l[id] === 'with') === on[id])));
 };
 // 選べる助手だけを残す。読み込みが間に合っていない・壊れた値でも、
@@ -10120,16 +10136,20 @@ const ASSISTANT_ATSU_JOIN_STORY = [
   { who:'mua',      e:'excited',  t:'でも、みんなで力を合わせて、魔王を倒したの！ ٩(ˊᗜˋ*)و' },
   { who:'kiki',     e:'happy',    t:'それから世界は平和になって、いまの村の暮らしがあるんです。' },
   { who:'momosuke', e:'wink',     t:'で、ももたちは助手になって、{name}と遊んでるってわけ♡' },
-  { who:'mua',      e:'normal',   t:'……でもさ。あの人だけ、ずっと顔見せないよね' },
+  { who:'mua',      e:'normal',   cardCup:'without', t:'……でもさ。あの人だけ、ずっと顔見せないよね' },
+  // 個人杯のお話であつに会った人だけ(2026-10-31 社長)
+  { who:'mua',      e:'normal',   cardCup:'with',    t:'……でもさ。あの人、大会に1回来たきり、また顔見せないよね' },
   { who:'kiki',     e:'normal',   t:'アシカ(アシストカード)には、ずっといるんでつけどね。「あつの挑発」。' },
-  { who:'momosuke', e:'angry',    t:'カードの中から挑発ばっかりして、本人はぜんぜん来ないの！ ずるくない！？' },
+  { who:'momosuke', e:'angry',    cardCup:'without', t:'カードの中から挑発ばっかりして、本人はぜんぜん来ないの！ ずるくない！？' },
+  { who:'momosuke', e:'angry',    cardCup:'with',    t:'大会のときだけ来て、また挑発ばっかり！ ずるくない！？' },
   { who:'mua',      e:'troubled', t:'あつくん、いまどこで何してるんだろ……' },
   // ---- あつ登場 ----
   { who:'atsu',     e:'normal',   t:'呼んだ？' },
   { who:'mua',      e:'surprise', t:'うわっ！？ あつくん！？' },
   { who:'kiki',     e:'surprise', t:'あっくん……！ ほんとに、あっくんでつか？' },
   { who:'momosuke', e:'surprise', t:'え、まって！！ なんでいるの！？' },
-  { who:'atsu',     e:'happy',    t:'なんでって、旗が見えたから。てか久しぶり！' },
+  { who:'atsu',     e:'happy',    cardCup:'without', t:'なんでって、旗が見えたから。てか久しぶり！' },
+  { who:'atsu',     e:'happy',    cardCup:'with',    t:'なんでって、旗が見えたから。てか大会ぶり！笑' },
   { who:'momosuke', e:'angry',    t:'久しぶり、じゃないし！ アシカの中にばっかりいて、ぜんぜん出てこなかったくせに！' },
   { who:'atsu',     e:'wink',     t:'挑発は届いてたでしょ笑' },
   { who:'momosuke', e:'angry',    t:'そういうとこ！！' },
@@ -10366,6 +10386,78 @@ const ASSISTANT_SORASHIDO_JOIN_STORY = [
 ];
 const ASSISTANT_SORASHIDO_JOIN_STORY_CALLS = { mua: 'どれみふぁソラシド～♪', kiki: 'ソラシドさん', momosuke: 'ソラちゃん', dra: 'ソラシド', atsu: 'ばこっちゃん', kyuko: 'ばこちゃん', sorashido: 'みゅあさん／ききさん／ももさん／ドラさん／あつさん／きゅうこちゃん' };
 
+// ---------- 個人杯のお話(2026-10-31・社長が全文を読んで OK) ----------
+// MFバトルカードの「個人杯」の公開のお話。公開の印(99-card-cup.jsx の cardCupOpen)が立ったあと、
+// MFバトルカードのはじまりを見た人に HOME で1回だけ流れ、そのあとは回想から見返せる(きゅうこ・ソラシドの加入のお話と同じ流れ)。
+// 見たかは mh_rhythm_event_story_v1 の id(新しいキーは作らない)。台本の下書きは docs/progress/card-tournament/personal-cup/story.md
+// 【あつ】(2026-10-31 社長) あつを解放していない人には、このお話が「あつがはじめて登場する」お話になる。
+//   atsuJoin:'with' はあつを解放している人だけ、atsuJoin:'without' は解放していない人だけ(このお話を見たかどうかでは変わらない)。
+//   このお話を見たあとは、ほかのお話の atsu:'with' の行にあつが出る(eventScriptForPlayer)。助手として選べる条件は変えない
+// ★呼び方は ASSISTANT_PEER_CALLS のとおり。イルミネ・ドリーミィはしゃべらない(きゅうこのデッキの子として名前だけ)
+const ASSISTANT_CARD_CUP_STORY = [
+  { who:'mua',       e:'excited',  t:'ひめちん、もも、みんな集まって！ 大ニュース！ MFバトルカードで、自分で大会が開けるようになったの！' },
+  { who:'kiki',      e:'surprise', t:'あれま。公式杯みたいなのを、私たちで開けるんでつか？' },
+  { who:'mua',       e:'happy',    t:'そう！「対戦」の「個人杯」から開けるんだって。さっそく作っちゃお〜' },
+  { who:'momosuke',  e:'excited',  t:'やるやる！ 名前は？ 名前は何にするの、みゅあねぇ？' },
+  { who:'mua',       e:'wink',     t:'決まってるぢゃん。「みゅあ様杯」！' },
+  { who:'kiki',      e:'troubled', t:'……自分の名前に「様」を付ける人、はじめて見まちた。' },
+  { who:'dra',       e:'happy',    t:'ふむ。様が付くと強そうでいいな。おでも次は「ドラ様杯」にするか。えへへ' },
+  { who:'momosuke',  e:'happy',    t:'いいじゃん、みゅあねぇっぽい w ももは賛成〜♡' },
+  { who:'mua',       e:'normal',   t:'遊び方は「オート」と「リアルタイム」があるんだって' },
+  { who:'kyuko',     e:'normal',   t:'ほい！ オートは、登録したデッキが決めた時刻に自動で戦って、結果がいっせいに出るほうだよぉ' },
+  { who:'sorashido', e:'excited',  t:'リアルタイムは、決めた時刻にみんなで集まって、1試合ずつ自分で戦うほう！ マルチ対戦と同じ感じだよ笑' },
+  { who:'momosuke',  e:'excited',  t:'じゃあリアルタイム！ みんなで集まるほうが楽しいもん♡' },
+  { who:'mua',       e:'normal',   t:'形式は「トーナメント」か「総当たり」……今日はトーナメントにしよっか' },
+  { who:'kiki',      e:'happy',    t:'勝ち抜きでつね。表が光っていくの、見てるだけでドキドキしまつ。' },
+  { who:'mua',       e:'excited',  t:'よーし、参加！ ……あれ？「参加にはデッキ登録が必要です」って出た' },
+  { who:'kiki',      e:'normal',   t:'みゅあちん、デッキ登録、まだしてなかったんでつか？' },
+  { who:'mua',       e:'troubled', t:'……してない。だって自分で戦うんだもん、いらないと思ってた〜' },
+  { who:'kyuko',     e:'normal',   t:'来られなくなったときは、登録したデッキが代わりに自動で戦ってくれるんだぁ。だから要るんだよねぇ' },
+  { who:'mua',       e:'surprise', t:'あ、そういうこと！ 寝坊しても、あたしのデッキが代わりにがんばってくれるんだ' },
+  { who:'momosuke',  e:'wink',     t:'寝坊する前提なのウケる w' },
+  { who:'mua',       e:'happy',    t:'登録してきた！ 参加の画面に戻ったら、そのデッキで「このデッキで参加」だって。かんたん〜' },
+  { who:'mua',       e:'normal',   t:'{name}も出てよ！ 合言葉を教えるね。6けたの数字を入れたら入れるよ' },
+  { who:'kiki',      e:'normal',   t:'公開の一覧に出しておけば、ほかのブリーダーさんも探して入れまつね。デロチーにも合言葉、送っておきまつ。' },
+  { who:'kyuko',     e:'happy',    t:'俺も出る〜。イルミネとドリーミィのデッキで、ゆるっといくよぉw' },
+  { who:'momosuke',  e:'excited',  t:'ドリーミィ！？ きゅうちゃん、ドリーミィ出すの！？ もも、そっちを応援しちゃうかも♡' },
+  { who:'kyuko',     e:'wink',     t:'ももすけも出るんでしょ？ 敵を応援しちゃだめだよぉ笑' },
+  { who:'sorashido', e:'excited',  t:'うぉぉぉ、俺も出る！ ニャーのデッキで、優勝する確率もう計算してあるから！' },
+  { who:'dra',       e:'normal',   t:'ソラシドの計算か……。オリヒメの夜も「9割」って言ってたよな。くさ' },
+  { who:'sorashido', e:'troubled', t:'なに！？ あれは風の向きを入れ忘れただけだから笑' },
+  // ---- あつを解放している人: いつもの仲間として ----
+  { who:'atsu',      e:'happy',    atsuJoin:'with',    t:'なんか楽しそうなことやってんね笑 俺も入っていい？' },
+  { who:'mua',       e:'excited',  atsuJoin:'with',    t:'あつくん！ 入って入って！ ……でも手加減はしてね！' },
+  { who:'atsu',      e:'wink',     atsuJoin:'with',    t:'甲子園に出たことある人に手加減たのむのは、無理あるって笑' },
+  // ---- あつを解放していない人: あつのはじめての登場 ----
+  { who:'atsu',      e:'normal',   atsuJoin:'without', t:'その大会、まだ席あいてる？ 俺も入れてほしいんだけど笑' },
+  { who:'mua',       e:'surprise', atsuJoin:'without', t:'……えっ！？ あつくん！？ なんでここに！？' },
+  { who:'momosuke',  e:'surprise', atsuJoin:'without', t:'うそ、本物！？ ずっと顔見せなかったくせに！' },
+  { who:'kiki',      e:'surprise', atsuJoin:'without', t:'あっくん……！ 大会の知らせを見て、来てくれたんでつか？' },
+  { who:'atsu',      e:'happy',    atsuJoin:'without', t:'そういうこと笑 {name}、はじめまして！ 俺はあつ。この3人とは昔からの仲間なんだ( *\'ω\'*)ノ' },
+  { who:'atsu',      e:'wink',     atsuJoin:'without', t:'今日は大会に出たら帰るけどね笑 また顔出すよ！' },
+  { who:'mua',       e:'excited',  atsuJoin:'without', t:'入って入って！ ……でも手加減はしてね！' },
+  // ---- 大会 ----
+  { who:'kiki',      e:'happy',    t:'大会で手加減をたのむ主催、はじめて見まちた。' },
+  { who:'dra',       e:'wink',     t:'あっくんが出るなら、おでも本気だな。おでのグジラは固いぞ。……グジラの話な。えへへ' },
+  { who:'mua',       e:'normal',   t:'……時間になった！ はじめるよ！ ……って、ももがいない！？' },
+  { who:'kiki',      e:'surprise', t:'ももさん、さっきまでいたのに……。' },
+  { who:'mua',       e:'troubled', t:'でも大丈夫、ももの登録デッキが代わりに戦ってくれてる！' },
+  { who:'momosuke',  e:'surprise', t:'ごめーん！ おやつ取りに行ってた！ ……え、ももの代わりに、ももが勝ってる！？' },
+  { who:'kiki',      e:'happy',    t:'ももさんのデッキ、ももさんより強いかもしれまちぇんね。' },
+  { who:'momosuke',  e:'angry',    t:'ひどーい！！ ……でも勝ったからいっか♡' },
+  { who:'sorashido', e:'troubled', t:'……計算だと俺が優勝だったのに、1回戦できゅうこちゃんに負けた笑 ドリーミィ、強すぎない！？' },
+  { who:'kyuko',     e:'happy',    t:'イルミネで守って、ドリーミィで崩しただけだよぉ。ありがとん笑' },
+  { who:'momosuke',  e:'excited',  t:'ほら！ ドリーミィはかわいいだけじゃないんだから♡' },
+  { who:'atsu',      e:'happy',    t:'いい組み方してんね、きゅうこちゃん笑 決勝で待ってるよ！' },
+  { who:'mua',       e:'happy',    t:'終わったー！ 結果はトーナメントの表が光って、優勝した人のところまで線が伸びるんだよ' },
+  { who:'kiki',      e:'normal',   t:'終わった試合は、あとから「見返す」でふり返れまつ。公開の大会なら、だれでも見られまつよ。' },
+  { who:'dra',       e:'troubled', t:'負けた試合も見返せるのか……。おでは見ないでおこう。くさ' },
+  { who:'momosuke',  e:'wink',     t:'次はももが主催する！ 名前は「もも様杯」ね♡' },
+  { who:'mua',       e:'wink',     t:'まねっこぢゃん！' },
+  { who:'mua',       e:'normal',   t:'{name}も、「対戦」の「個人杯」から開いてみてね。仲間を呼んで、表が光るところ見てみて〜' },
+];
+const ASSISTANT_CARD_CUP_STORY_CALLS = { mua: 'ひめちん／もも／あつくん', kiki: 'みゅあちん／ももさん／あっくん', momosuke: 'みゅあねぇ／きゅうちゃん', dra: 'あっくん／ソラシド', kyuko: 'ももすけ／きゅうこちゃん', sorashido: 'きゅうこちゃん', atsu: 'きゅうこちゃん' };
+
 const EVENT_REPLAYS = [
   // ぱんぷきん×ジャックのストーリー(2026-10-04・台本は docs/spec/RAID_JACK_STORY.md)。**公開するまでは回想にも出さない**(releaseFlag)。
   // 第1部(halloween_night_2026_part1)は時刻で流れる既存のもの。ここは第1.5部から終章まで。
@@ -10440,6 +10532,9 @@ const EVENT_REPLAYS = [
   // ソラシドの加入のお話(2026-10-27)。公開の印 assistantSorashido が立つまで流れず、回想にも出ない。ソラシドは駆け込んでくる行まで顔を伏せる
   //   date は公開の日に合わせて直す(いまは台本を書いた日)
   { id: 'sorashido_join_2026_10_27', date: '2026-10-27 12:00', title: '推しに会える夜 ～ソラシド登場～', script: ASSISTANT_SORASHIDO_JOIN_STORY, calls: ASSISTANT_SORASHIDO_JOIN_STORY_CALLS, unlockedKey: 'sorashidoJoinSeen', releaseFlag: 'assistantSorashido', hideUntilFirstLine: ['sorashido'], group: 'assistant' },
+  // 個人杯のお話(2026-10-31)。公開の印 cardCup(99-card-cup.jsx の cardCupOpen)が立つまで流れず、回想にも出ない。
+  //   あつを解放していない人には、あつのはじめての登場になる(atsuJoin)。あつは最初にしゃべる行まで顔を伏せる
+  { id: 'card_cup_2026_10_31', date: '2026-10-31 12:00', title: 'みゅあ杯、はじまるよ！ ～個人杯～', script: ASSISTANT_CARD_CUP_STORY, calls: ASSISTANT_CARD_CUP_STORY_CALLS, unlockedKey: 'cardCupStorySeen', releaseFlag: 'cardCup', hideUntilFirstLine: ['atsu'], group: 'update' },
   { id: 'raid_jack_howto_2026_10_04', date: '2026-10-04 08:02', title: 'カボチャの大王ジャック ～レイドの遊び方～', script: ASSISTANT_RAID_JACK_HOWTO, calls: ASSISTANT_RAID_JACK_HOWTO_CALLS, unlockedKey: 'raidJackHowtoSeen', releaseFlag: 'raidJack', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, group: 'halloween' },
 ];
 

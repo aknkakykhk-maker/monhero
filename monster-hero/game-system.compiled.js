@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dd9d1f02567b91c3
+// source-sha256: 6d43f8eef3572a9c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -410,6 +410,9 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   },
   get cardBattle() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardBattle === true;
+  },
+  get cardCup() {
+    return typeof cardCupOpen === 'function' && cardCupOpen() === true;
   }
 });
 const eventReplayReleased = event => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
@@ -13137,6 +13140,7 @@ const ASSISTANT_CHAT_STORY_ID = 'assistant_chat_story';
 const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
 const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
 const SORASHIDO_JOIN_STORY_ID = 'sorashido_join_2026_10_27';
+const CARD_CUP_STORY_ID = 'card_cup_2026_10_31';
 const SORASHIDO_GIFT_KEY = 'mh_sorashido_gift_v1';
 const SORASHIDO_GIFT_BEAT_POINTS = 10000;
 const sorashidoJoinGift = () => ({
@@ -89476,6 +89480,13 @@ const cardFuseOptions = (db, st, p) => {
   }));
   return out;
 };
+const cardEmergeOptions = (db, card) => {
+  const sub = card && card.user;
+  const out = sub ? Object.values(db.monsters).filter(m => m.sub === sub && m.ready !== false).sort((x, y) => x.no < y.no ? -1 : 1).map(m => m.no) : [];
+  if (out.length) return out;
+  const e = cardEff(card, 'emerge');
+  return e && e.to ? [e.to] : [];
+};
 const cardSwapMon = (db, mon, no) => {
   const m = cardMonsterOf(db, no);
   Object.assign(mon, {
@@ -89691,17 +89702,22 @@ const cardAttackOptions = (db, st) => {
         if (!byTarget && cardFieldBanned(db, st, p, mi, card, idxs)) return;
         if (card.kind === 'spe') {
           const forms = cardHasEff(card, 'form') ? ['air', 'ground'] : [undefined];
-          cardSpeTargets(db, st, p, mi, card).forEach(target => forms.forEach(form => out.push(form ? {
-            type: 'attack',
-            mon: mi,
-            hand: idxs,
-            target,
-            form
-          } : {
-            type: 'attack',
-            mon: mi,
-            hand: idxs,
-            target
+          const emerges = cardHasEff(card, 'emerge') ? cardEmergeOptions(db, card) : [null];
+          cardSpeTargets(db, st, p, mi, card).forEach(target => forms.forEach(form => emerges.forEach(emerge => {
+            const o = form ? {
+              type: 'attack',
+              mon: mi,
+              hand: idxs,
+              target,
+              form
+            } : {
+              type: 'attack',
+              mon: mi,
+              hand: idxs,
+              target
+            };
+            if (emerge) o.emerge = emerge;
+            out.push(o);
           })));
           return;
         }
@@ -90398,7 +90414,7 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
     }
     if (e.t === 'emerge' && self && self.cocoon) {
       const from = self.name;
-      cardSwapMon(db, self, e.to);
+      cardSwapMon(db, self, typeof act.emerge === 'string' ? act.emerge : e.to);
       cardLog(st, `${from}は${self.name}になった(ライフ${self.life})`);
     }
     if (e.t === 'fuse' && act.fuse) {
@@ -90775,7 +90791,7 @@ const cardApplyAction = (db, st0, act) => {
       return st;
     }
     if (act.type !== 'attack' && act.type !== 'breeder') return null;
-    const ok = cardAttackOptions(db, st0).some(o => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null) && o.form === act.form && JSON.stringify(o.split) === JSON.stringify(act.split) && JSON.stringify(o.fuse) === JSON.stringify(act.fuse) && JSON.stringify(o.toss) === JSON.stringify(Array.isArray(act.toss) ? act.toss.slice().sort((x, y) => x - y) : act.toss));
+    const ok = cardAttackOptions(db, st0).some(o => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null) && o.form === act.form && JSON.stringify(o.split) === JSON.stringify(act.split) && JSON.stringify(o.fuse) === JSON.stringify(act.fuse) && (act.emerge === undefined || o.emerge === act.emerge) && JSON.stringify(o.toss) === JSON.stringify(Array.isArray(act.toss) ? act.toss.slice().sort((x, y) => x - y) : act.toss));
     if (!ok) return null;
     const needBind = act.hand.some(i => cardHasEff(cardOf(db, st0.players[p].hand[i]), 'attachBind'));
     if (needBind ? !(typeof act.bind === 'string' && cardBindNames(db).includes(act.bind)) : act.bind !== undefined && act.bind !== null) return null;
@@ -91143,7 +91159,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'cocoon') score += me.hand.some(n => cardHasEff(cardOf(db, n), 'emerge')) ? 1 : -3;
       if (e.t === 'emerge') {
         const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null;
-        const to = cardMonsterOf(db, e.to);
+        const to = cardMonsterOf(db, opt.emerge || e.to);
         score += 2 + (m0 && to ? (to.life - m0.life) * 0.3 : 0);
       }
       if (e.t === 'fuse' && opt.fuse) {
@@ -96852,6 +96868,22 @@ const cardPackIdOf = (db, no) => {
 };
 const cardPackTechPool = (db, pack) => Object.values(db.cards).filter(c => c.ready && cardPackIdOf(db, c.no) === pack.id).map(c => c.no).sort();
 const cardPackMonPool = (db, pack, rarity) => Object.values(db.monsters).filter(m => m.ready !== false && !m.dexOnly && cardMonRarity(m) === rarity && cardPackIdOf(db, m.no) === pack.id).map(m => m.no).sort();
+const cardPackProgress = (db, pack, collection) => {
+  const own = no => {
+    const n = Math.floor(Number(collection && collection[no]));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+  const techs = cardPackTechPool(db, pack);
+  const tech = techs.reduce((sum, no) => sum + Math.max(0, CARD_TECH_KEEP_MAX - own(no)), 0);
+  const mons = ['normal', 'kira', 'alt'].filter(r => (pack.rarity[r] || 0) > 0).flatMap(r => cardPackMonPool(db, pack, r));
+  const mon = mons.filter(no => own(no) === 0).length;
+  return {
+    tech,
+    techKinds: techs.length,
+    mon,
+    monKinds: mons.length
+  };
+};
 const cardPackAllCards = (db, pack) => ({
   monsters: Object.values(db.monsters).filter(m => cardPackIdOf(db, m.no) === pack.id).map(m => m.no).sort(),
   cards: Object.values(db.cards).filter(c => cardPackIdOf(db, c.no) === pack.id).map(c => c.no).sort()
@@ -99993,6 +100025,10 @@ const CardBattleBoard = ({
       setSplitAsk(same.filter(o => o.split || o.fuse));
       return;
     }
+    if (t.emerge && same.filter(o => o.emerge).length > 1) {
+      setSplitAsk(same.filter(o => o.emerge));
+      return;
+    }
     if (t.form) {
       setSel({
         hand: t.hand[0],
@@ -100374,12 +100410,12 @@ const CardBattleBoard = ({
       }
     })() : null;
     const useLabel = usePv ? `使う(${usePv.dmg !== null ? `${usePv.all ? '全体に' : ''}ダメージ${usePv.dmg}・` : ''}ガッツ${usePv.guts})` : '使う';
-    return React.createElement(React.Fragment, null, useBtn && finalOpts.some(o => o.split || o.fuse) ? React.createElement("button", {
+    return React.createElement(React.Fragment, null, useBtn && (finalOpts.some(o => o.split || o.fuse) || finalOpts.filter(o => o.emerge).length > 1) ? React.createElement("button", {
       type: "button",
       "data-card-split-open": true,
       className: `${btn} mh-button-primary`,
       onClick: () => setSplitAsk(finalOpts)
-    }, React.createElement(CardFitLabel, null, finalOpts.some(o => o.fuse) ? '合体の組を選ぶ' : '割り振りを選ぶ')) : useBtn && finalOpts.some(o => o.form) ? ['air', 'ground'].map(f => {
+    }, React.createElement(CardFitLabel, null, finalOpts.some(o => o.fuse) ? '合体の組を選ぶ' : finalOpts.some(o => o.emerge) ? '羽化する先を選ぶ' : '割り振りを選ぶ')) : useBtn && finalOpts.some(o => o.form) ? ['air', 'ground'].map(f => {
       const o = finalOpts.find(x => x.form === f);
       return o ? React.createElement("button", {
         key: f,
@@ -101277,18 +101313,21 @@ const CardBattleBoard = ({
   }, React.createElement("div", {
     className: "text-[15px] font-black",
     style: JA_LABEL_STYLE
-  }, jaWrap(splitAsk.some(o => o.fuse) ? '合体する2体を選ぶ(左がメイン・右がサブ)' : 'ダメージの割り振りを選ぶ')), React.createElement("div", {
+  }, jaWrap(splitAsk.some(o => o.fuse) ? '合体する2体を選ぶ(左がメイン・右がサブ)' : splitAsk.some(o => o.emerge) ? '羽化して取りかえる先を選ぶ' : 'ダメージの割り振りを選ぶ')), React.createElement("div", {
     className: "mt-2 grid max-h-[55vh] gap-1.5 overflow-y-auto"
   }, splitAsk.map(o => React.createElement("button", {
-    key: JSON.stringify(o.split || o.fuse),
+    key: JSON.stringify(o.split || o.fuse || o.emerge),
     type: "button",
-    "data-card-split": o.split ? o.split.join('-') : `${o.fuse.a}-${o.fuse.b}`,
+    "data-card-split": o.split ? o.split.join('-') : o.emerge ? o.emerge : `${o.fuse.a}-${o.fuse.b}`,
     onClick: () => {
       setSplitAsk(null);
       askUse(o);
     },
     className: "min-h-[44px] rounded-xl bg-slate-700 px-2 text-left text-[14px] font-black text-white active:scale-[.98]"
-  }, o.fuse ? `${me.mons[o.fuse.a].name}＋${me.mons[o.fuse.b].name} → ${(cardMonsterOf(db, o.fuse.no) || {}).name || ''}` : o.split.map((x, j) => x > 0 ? `${st.players[CARD_CPU].mons[j].name} ${x}` : null).filter(Boolean).join('・')))), React.createElement("button", {
+  }, o.fuse ? `${me.mons[o.fuse.a].name}＋${me.mons[o.fuse.b].name} → ${(cardMonsterOf(db, o.fuse.no) || {}).name || ''}` : o.emerge ? (() => {
+    const m = cardMonsterOf(db, o.emerge) || {};
+    return `${m.name || ''}(ライフ${m.life || 0}・${m.type === 'air' ? '空中' : '地上'})`;
+  })() : o.split.map((x, j) => x > 0 ? `${st.players[CARD_CPU].mons[j].name} ${x}` : null).filter(Boolean).join('・')))), React.createElement("button", {
     type: "button",
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200",
     onClick: () => setSplitAsk(null)
@@ -106927,7 +106966,17 @@ const CardShopPacks = ({
   }, pack.name), React.createElement("div", {
     "data-card-shop-pack-species": true,
     className: "text-[11px] font-black text-amber-100"
-  }, cardPackSpeciesLabel(db, pack)), React.createElement("div", {
+  }, cardPackSpeciesLabel(db, pack)), collection && (() => {
+    const pg = cardPackProgress(db, pack, collection);
+    const done = pg.tech === 0 && pg.mon === 0;
+    const text = done ? '✅ コンプ済み・回す必要なし' : pg.tech === 0 ? `✅ 技カード コンプ済み・あとモンスター${pg.mon}体` : `技カード あと${pg.tech}枚${pg.mon > 0 ? `・モンスター あと${pg.mon}体` : '・モンスターはそろっています'}`;
+    return React.createElement("div", {
+      "data-card-shop-pack-progress": done ? 'done' : pg.tech === 0 ? 'tech' : 'left',
+      "data-card-shop-pack-left": `${pg.tech}-${pg.mon}`,
+      className: `mt-0.5 inline-block rounded-md px-1.5 py-0.5 text-[11px] font-black ${done ? 'bg-emerald-400 text-slate-950' : pg.tech === 0 ? 'bg-emerald-900/70 text-emerald-100' : 'bg-slate-900/70 text-slate-200'}`,
+      style: JA_WRAP_STYLE
+    }, jaWrap(text));
+  })(), React.createElement("div", {
     className: "text-[11px] font-bold text-slate-300",
     style: JA_WRAP_STYLE
   }, jaWrap(pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`)), React.createElement("div", {
@@ -109087,6 +109136,10 @@ const cardPvpCleanAct = raw => {
       b,
       no: f.no
     };
+  }
+  if (raw.emerge !== undefined) {
+    if (typeof raw.emerge !== 'string' || !/^C-[0-9A-Z-]{1,8}$/.test(raw.emerge)) return null;
+    act.emerge = raw.emerge;
   }
   if (raw.toss !== undefined) {
     if (!Array.isArray(raw.toss)) return null;
@@ -118614,6 +118667,182 @@ const CardRegMonSheet = ({
     className: "text-[11px] font-black text-emerald-300"
   }, `${counts[i]} / ${max}`))))));
 };
+const CARD_REG_TRIAL_GAMES = 5;
+const CARD_REG_TRIAL_FOES = Object.freeze(['kyuko', 'mua', 'kiki', 'dra', 'atsu']);
+const cardRegTrialOne = (db, deck, battle, aces, g) => {
+  let s = (g + 1) * 2654435761 + (Date.now() & 0xffff) >>> 0;
+  const rand = () => {
+    const n = cardRngNext(s);
+    s = n.s;
+    return n.v;
+  };
+  const foe = CARD_REG_TRIAL_FOES[g % CARD_REG_TRIAL_FOES.length];
+  const foeDeck = cardAiBuildDeck(db, foe, 'master', rand, {
+    playerDeck: deck
+  });
+  const me = {
+    ...cardSharePolicy({
+      name: deck.name,
+      habit: cardShareMainHabit(battle, 'kyuko'),
+      aces,
+      f: cardTacticPackFrames(battle)
+    }, 'master'),
+    search: null
+  };
+  const pols = [me, cardAiPolicy(foe, 'master')];
+  let st = cardCreateGame(db, {
+    decks: [{
+      monsters: deck.monsters.slice(),
+      cards: deck.cards.slice()
+    }, foeDeck],
+    seed: s,
+    first: g % 2
+  });
+  const used = {};
+  for (let i = 0; i < 4000 && st.winner === null; i++) {
+    const who = st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? cardOther(st.first) : cardDecider(st);
+    if (typeof cardTacticTakeWhy === 'function') cardTacticTakeWhy();
+    const act = cardAiChooseAction(db, st, pols[who], rand);
+    if (who === 0 && typeof cardTacticTakeWhy === 'function') {
+      const w = cardTacticTakeWhy();
+      if (w) {
+        const k = `${w.mi === null || w.mi === undefined ? 'b' : w.mi}|${w.c}|${w.a}`;
+        used[k] = (used[k] || 0) + 1;
+      }
+    }
+    const next = cardApplyAction(db, st, act);
+    if (next) {
+      st = next;
+      continue;
+    }
+    const fb = st.pending ? {
+      type: 'pass'
+    } : st.phase === 'main' ? {
+      type: 'endAttacks'
+    } : st.phase === 'guts' ? {
+      type: 'guts',
+      hand: []
+    } : null;
+    if (!fb) break;
+    st = cardApplyAction(db, st, fb) || st;
+  }
+  return {
+    win: st.winner === 0,
+    turn: st.turn,
+    used,
+    foe
+  };
+};
+const CardRegTrialSheet = ({
+  db,
+  deck,
+  battle,
+  aces,
+  monName,
+  onClose
+}) => {
+  const [res, setRes] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    const run = g => {
+      if (!alive || g >= CARD_REG_TRIAL_GAMES) return;
+      const r = cardRegTrialOne(db, deck, battle, aces, g);
+      if (!alive) return;
+      setRes(cur => [...cur, r]);
+      setTimeout(() => run(g + 1), 30);
+    };
+    const t = setTimeout(() => run(0), 60);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, []);
+  const done = res.length >= CARD_REG_TRIAL_GAMES;
+  const used = {};
+  res.forEach(r => Object.entries(r.used).forEach(([k, n]) => {
+    used[k] = (used[k] || 0) + n;
+  }));
+  const rows = [...[0, 1, 2].flatMap(mi => battle.mons[mi].map(r => ({
+    k: `${mi}|${r.c}|${r.a}`,
+    by: monName(mi),
+    r
+  }))), ...battle.breeder.map(r => ({
+    k: `b|${r.c}|${r.a}`,
+    by: 'ブリーダー',
+    r
+  }))];
+  const seen = new Set();
+  const uniq = rows.filter(x => seen.has(x.k) ? false : seen.add(x.k));
+  const top = uniq.filter(x => used[x.k] > 0).sort((a, b) => used[b.k] - used[a.k]);
+  const zero = uniq.filter(x => !used[x.k]);
+  const max = Math.max(1, ...top.map(x => used[x.k]));
+  const wins = res.filter(r => r.win).length;
+  return React.createElement("div", {
+    "data-card-reg-trial": done ? 'done' : 'run',
+    className: "fixed inset-0 z-[82] flex flex-col bg-slate-950/95 p-3"
+  }, React.createElement(ScreenHead, {
+    title: "ためしに戦わせる",
+    accent: "text-violet-200",
+    onBack: onClose,
+    note: `いまの戦い方で、助手(MASTER)と${CARD_REG_TRIAL_GAMES}戦`
+  }), React.createElement("div", {
+    className: "min-h-0 flex-1 space-y-2 overflow-y-auto pb-3"
+  }, React.createElement("div", {
+    className: `${SCREEN_PANEL_CLASS} py-2 text-center`
+  }, done ? React.createElement("b", {
+    "data-card-reg-trial-wins": wins,
+    className: "text-[18px] font-black text-amber-200"
+  }, `${CARD_REG_TRIAL_GAMES}戦 ${wins}勝`) : React.createElement("b", {
+    className: "text-[15px] font-black text-white"
+  }, `戦わせています… ${res.length} / ${CARD_REG_TRIAL_GAMES}`), done && React.createElement("small", {
+    className: "block text-[11px] font-bold text-slate-400"
+  }, `平均 ${Math.round(res.reduce((a, r) => a + r.turn, 0) / res.length)}ターン`)), done && React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "text-[13px] font-black text-amber-200"
+  }, "よく働いたカード"), !top.length && React.createElement("p", {
+    className: "text-[12px] font-bold text-slate-400"
+  }, "戦術カードの行で動いたことはありませんでした(どの行にも当てはまらず、基本の型で打っていました)"), top.map((x, i) => React.createElement("div", {
+    key: x.k,
+    "data-card-reg-trial-row": used[x.k],
+    className: "flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900 px-2 py-1.5"
+  }, React.createElement("b", {
+    className: "w-5 shrink-0 text-center text-[15px] font-black text-amber-200"
+  }, i + 1), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("div", {
+    className: "text-[12px] font-black leading-snug text-white",
+    style: JA_WRAP_STYLE
+  }, cardRegRowText(x.r)), React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, x.by), React.createElement("div", {
+    className: "mt-1 h-1.5 overflow-hidden rounded-full bg-slate-700"
+  }, React.createElement("i", {
+    className: "block h-full bg-amber-300",
+    style: {
+      width: `${Math.round(used[x.k] / max * 100)}%`
+    }
+  }))), React.createElement("b", {
+    className: "shrink-0 text-[15px] font-black text-amber-200"
+  }, `${used[x.k]}回`))), zero.length > 0 && React.createElement("p", {
+    className: "pt-1 text-[13px] font-black text-rose-200"
+  }, "一度も当てはまらなかったカード"), zero.map(x => React.createElement("div", {
+    key: x.k,
+    "data-card-reg-trial-zero": true,
+    className: "rounded-xl border border-white/10 bg-slate-900/60 px-2 py-1.5 opacity-80"
+  }, React.createElement("div", {
+    className: "text-[12px] font-black leading-snug text-white",
+    style: JA_WRAP_STYLE
+  }, cardRegRowText(x.r)), React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, `${x.by} ・ 上の行が先に当てはまっていたか、その場面が来なかった`))), React.createElement("p", {
+    className: "text-[11px] font-bold leading-snug text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('ためしの対戦は、ビートP・記録・ランクに数えません。自分で打つ対戦では戦術カードは使われません(ほかのブリーダーがこのデッキと戦うときに使われます)')))), done && React.createElement("button", {
+    type: "button",
+    "data-card-reg-trial-close": true,
+    onClick: onClose,
+    className: "mh-button mh-button-primary min-h-[48px] w-full rounded-2xl font-black"
+  }, "戦い方にもどる"));
+};
 const CardDeckRegister = ({
   db,
   decks,
@@ -118638,6 +118867,7 @@ const CardDeckRegister = ({
   const [aces, setAces] = useState('auto');
   const [sheet, setSheet] = useState(null);
   const [custom, setCustom] = useState(null);
+  const [trial, setTrial] = useState(false);
   const [monSheet, setMonSheet] = useState(null);
   const [basePick, setBasePick] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -119014,7 +119244,16 @@ const CardDeckRegister = ({
       className: "mt-0.5 line-clamp-2 text-[10px] font-bold leading-snug text-slate-300",
       style: JA_WRAP_STYLE
     }, rows.length ? `${cardRegRowText(rows[0])}${rows.length > 1 ? ` ほか${rows.length - 1}` : ''}` : 'まだ入っていません'));
-  })))), step === 'confirm' && React.createElement(React.Fragment, null, React.createElement("p", {
+  }))), React.createElement("button", {
+    type: "button",
+    "data-card-reg-trial-open": true,
+    disabled: !deck || !!issuesOf(deck).length,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setTrial(true);
+    },
+    className: "mh-button min-h-[48px] w-full rounded-2xl border-2 border-violet-400 bg-violet-900/60 text-[14px] font-black text-violet-50 disabled:opacity-40"
+  }, `▶ ためしに戦わせる(助手と${CARD_REG_TRIAL_GAMES}戦・よく働いたカード)`)), step === 'confirm' && React.createElement(React.Fragment, null, React.createElement("p", {
     className: "text-[16px] font-black text-white"
   }, "この内容で登録します"), React.createElement("div", {
     "data-card-reg-summary": true,
@@ -119139,7 +119378,14 @@ const CardDeckRegister = ({
       onBack();
     },
     className: "mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black"
-  }, "とじる")), monSheet !== null && !sheet && !custom && React.createElement(CardRegMonSheet, {
+  }, "とじる")), trial && deck && React.createElement(CardRegTrialSheet, {
+    db: db,
+    deck: deck,
+    battle: battle,
+    aces: acesNow,
+    monName: monName,
+    onClose: () => setTrial(false)
+  }), monSheet !== null && !sheet && !custom && React.createElement(CardRegMonSheet, {
     db: db,
     deck: deck,
     k: monSheet,
@@ -120103,6 +120349,7 @@ const cardCupNormalizeView = v => {
     a: int(m.a),
     b: int(m.b),
     winner: m.winner === 0 || m.winner === 1 ? m.winner : null,
+    ready: !!(m.live && m.live.ready_at),
     kos: Array.isArray(m.kos) ? m.kos.slice(0, 2).map(k => Number.isInteger(k) ? k : 0) : null,
     live: m.live && typeof m.live.play === 'string' ? {
       who: typeof m.live.who === 'string' ? m.live.who : null,
@@ -120692,7 +120939,12 @@ const CardCupDetail = ({
     className: "mt-1 text-[12px] font-black text-amber-200"
   }, `結果は ${cardTourTimeLabel(c.startAt)} に出ます`), c.mode === 'auto' && c.status === 'running' && React.createElement("div", {
     className: "mt-1 text-[12px] font-black text-amber-200"
-  }, `試合はサーバで自動で行われます。結果は ${cardTourTimeLabel(c.startAt)} に出ます`)), shown && c.format === 'ko' && React.createElement(CardCupBracket, {
+  }, `試合はサーバで自動で行われます。結果は ${cardTourTimeLabel(c.startAt)} に出ます`)), c.mode === 'live' && typeof CardCupLivePanel === 'function' && React.createElement(CardCupLivePanel, {
+    v: v,
+    now: now,
+    selfId: selfId,
+    onChanged: onChanged
+  }), shown && c.format === 'ko' && React.createElement(CardCupBracket, {
     rounds: c.bracket,
     matches: v.matches,
     entries: v.entries,
@@ -120938,6 +121190,191 @@ const CardCup = ({
     className: "rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100",
     style: JA_WRAP_STYLE
   }, jaWrap(msg))));
+};
+const CARD_CUP_LIVE_CHECKIN_MS = 10 * 60000;
+const CARD_CUP_LIVE_POLL_MS = 8000;
+const CARD_CUP_LIVE_SETTLE_MS = 30000;
+const cardCupLiveNext = v => {
+  const me = v.entries.find(e => e.mine);
+  const seat = me && Number.isInteger(me.seat) ? me.seat : null;
+  if (seat === null) return {
+    seat: null,
+    match: null,
+    out: false
+  };
+  const mineAll = v.matches.filter(m => m.a === seat || m.b === seat).sort((x, y) => x.round - y.round || x.slot - y.slot);
+  const match = mineAll.find(m => m.winner === null) || null;
+  const out = v.cup.format === 'ko' && mineAll.some(m => m.winner !== null && (m.winner === 0 ? m.a : m.b) !== seat);
+  return {
+    seat,
+    match,
+    out
+  };
+};
+const cardCupLiveMsg = {
+  checkin: {
+    ok: '集合しました',
+    early: 'まだ集合できません(始まる10分前から)',
+    closed: 'この個人杯は終わりました',
+    none: 'デッキを登録した端末でだけ集合できます',
+    bad: '集合できませんでした'
+  },
+  start: {
+    ok: '始まりました',
+    early: 'まだ始められません',
+    wait: '全員が集合したら、早めに始められます',
+    few: '人数が足りなかったため、中止になりました',
+    none: 'デッキを登録した端末でだけ始められます',
+    closed: 'この個人杯は終わりました',
+    bad: '始められませんでした'
+  }
+};
+const CardCupLivePanel = ({
+  v,
+  now,
+  selfId,
+  onChanged,
+  onPlay = null
+}) => {
+  const c = v.cup;
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const startTried = useRef(false);
+  const call = async (fn, extra = {}) => {
+    const key = await cardShareOwnerKey(false);
+    if (!key || !selfId) return 'none';
+    return cardTourRpc(fn, {
+      p_cup: c.id,
+      p_owner: selfId,
+      p_key: key,
+      ...extra
+    });
+  };
+  const act = async (fn, kind) => {
+    if (busy) return;
+    setBusy(true);
+    setMsg('');
+    try {
+      const r = await call(fn);
+      setMsg(cardCupLiveMsg[kind][r] || '通信できませんでした。もう一度お試しください');
+      await onChanged();
+    } finally {
+      setBusy(false);
+    }
+  };
+  const live = c.status === 'entry' || c.status === 'running';
+  useEffect(() => {
+    if (!live || now < c.startAt - CARD_CUP_LIVE_CHECKIN_MS - 5 * 60000) return undefined;
+    const t = setInterval(() => {
+      void onChanged();
+    }, CARD_CUP_LIVE_POLL_MS);
+    return () => clearInterval(t);
+  }, [live, c.id]);
+  useEffect(() => {
+    if (c.status !== 'entry' || !v.me || now < c.startAt || startTried.current) return;
+    startTried.current = true;
+    void call('card_cup_live_start').then(() => onChanged());
+  }, [c.status, v.me, now >= c.startAt]);
+  useEffect(() => {
+    if (c.status !== 'running') return undefined;
+    const t = setInterval(() => {
+      void cardTourRpc('card_cup_live_settle', {
+        p_cup: c.id
+      }).then(n => {
+        if (n > 0) void onChanged();
+      });
+    }, CARD_CUP_LIVE_SETTLE_MS);
+    return () => clearInterval(t);
+  }, [c.status, c.id]);
+  if (!live) return null;
+  const meE = v.entries.find(e => e.mine) || null;
+  const host = selfId && c.hostId === selfId;
+  const canCheckin = v.me && meE && !meE.checkin && now >= c.startAt - CARD_CUP_LIVE_CHECKIN_MS;
+  const here = v.entries.filter(e => e.checkin).length;
+  const allHere = v.entries.length >= 2 && here === v.entries.length;
+  const next = c.status === 'running' ? cardCupLiveNext(v) : null;
+  const bySeat = s => v.entries.find(e => e.seat === s) || null;
+  const foe = next && next.match ? bySeat(next.match.a === next.seat ? next.match.b : next.match.a) : null;
+  const roundText = m => c.format === 'ko' ? (() => {
+    const total = c.bracket && c.bracket[0] ? Math.round(Math.log2(c.bracket[0].length * 2)) : 0;
+    return m.round === total - 1 ? '決勝' : m.round === total - 2 ? '準決勝' : `${m.round + 1}回戦`;
+  })() : `${m.round + 1}回戦`;
+  return React.createElement("div", {
+    "data-card-cup-live": c.status,
+    className: "space-y-2 rounded-2xl border-2 border-sky-500/60 bg-slate-950/70 p-3"
+  }, c.status === 'entry' && React.createElement(React.Fragment, null, React.createElement("b", {
+    className: "block text-[14px] font-black text-sky-200"
+  }, now < c.startAt ? `${cardTourTimeLabel(c.startAt)} に始まります` : 'まもなく始まります'), React.createElement("div", {
+    "data-card-cup-live-here": true,
+    className: "text-[12px] font-bold text-slate-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`集合 ${here}/${v.entries.length}人。始まる10分前から集合できます。来られない人の試合は、その人の登録デッキが代わりに自動で戦います`)), v.me && meE && meE.checkin && React.createElement("div", {
+    "data-card-cup-live-checked": true,
+    className: "rounded-xl bg-emerald-900/50 p-2 text-[13px] font-black text-emerald-200"
+  }, "集合しました。始まるまでこの画面で待っていてください"), v.me && meE && !meE.checkin && React.createElement("button", {
+    type: "button",
+    "data-card-cup-live-checkin": true,
+    disabled: busy || !canCheckin,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      void act('card_cup_live_checkin', 'checkin');
+    },
+    className: `w-full rounded-2xl py-3 text-[15px] font-black ${canCheckin ? 'bg-gradient-to-b from-sky-300 to-sky-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`
+  }, canCheckin ? '集合する' : `集合は ${cardTourTimeLabel(c.startAt - CARD_CUP_LIVE_CHECKIN_MS)} から`), host && now < c.startAt && allHere && now >= c.startAt - CARD_CUP_LIVE_CHECKIN_MS && React.createElement("button", {
+    type: "button",
+    "data-card-cup-live-start": true,
+    disabled: busy,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      void act('card_cup_live_start', 'start');
+    },
+    className: "w-full rounded-2xl bg-gradient-to-b from-amber-300 to-orange-500 py-3 text-[15px] font-black text-slate-950"
+  }, "全員そろったので始める")), c.status === 'running' && next && React.createElement("div", {
+    "data-card-cup-live-next": true,
+    className: "space-y-1.5"
+  }, next.seat === null && React.createElement("div", {
+    className: "text-[13px] font-bold text-slate-200"
+  }, "開催中です。試合のようすは下の表で見られます"), next.seat !== null && next.out && React.createElement("div", {
+    "data-card-cup-live-out": true,
+    className: "rounded-xl bg-slate-800 p-2 text-[13px] font-black text-slate-200"
+  }, "あなたの試合は終わりました。ほかの試合の結果を待っています"), next.seat !== null && !next.out && !next.match && React.createElement("div", {
+    className: "rounded-xl bg-slate-800 p-2 text-[13px] font-black text-slate-200"
+  }, c.format === 'ko' ? 'この回戦は不戦勝です。次の回戦を待っています' : 'あなたの試合は全部終わりました。ほかの試合の結果を待っています'), next.match && React.createElement(React.Fragment, null, React.createElement("b", {
+    className: "block text-[14px] font-black text-sky-200"
+  }, `あなたの次の試合: ${roundText(next.match)}`), React.createElement("div", {
+    className: "flex items-center gap-2 rounded-xl bg-slate-900 p-2"
+  }, React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-[14px] font-black text-white"
+  }, `相手: ${foe ? foe.name : 'ブリーダー'}`), React.createElement("span", {
+    className: `shrink-0 rounded-full px-2 py-0.5 text-[11px] font-black ${foe && foe.checkin ? 'bg-emerald-500 text-slate-950' : 'bg-slate-600 text-slate-100'}`
+  }, foe && foe.checkin ? '来ています' : '来ていません')), foe && !foe.checkin && React.createElement("div", {
+    className: "text-[12px] font-bold text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('相手が来ていないので、相手の登録デッキと戦います')), React.createElement("button", {
+    type: "button",
+    "data-card-cup-live-play": next.match.id,
+    disabled: !next.match.ready || !onPlay,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      if (onPlay) onPlay(next.match);
+    },
+    className: `w-full rounded-2xl py-3 text-[15px] font-black ${next.match.ready && onPlay ? 'bg-gradient-to-b from-sky-300 to-sky-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`
+  }, !next.match.ready ? '前の回戦が終わるのを待っています' : onPlay ? '試合へ' : '試合の画面は準備中です'))), c.status === 'running' && c.format === 'ko' && typeof CardCupBracket === 'function' && React.createElement(CardCupBracket, {
+    rounds: c.bracket,
+    matches: v.matches,
+    entries: v.entries,
+    done: true
+  }), c.status === 'running' && c.format === 'rr' && typeof CardTourGrid === 'function' && typeof cardCupAsTourView === 'function' && React.createElement(CardTourGrid, {
+    view: cardCupAsTourView(v),
+    stage: "group",
+    grp: 0,
+    known: null,
+    now: now
+  }), msg && React.createElement("p", {
+    "data-card-cup-live-msg": true,
+    className: "rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(msg)));
 };
 const DEBUG_TRIALS = [{
   id: 'rhythm_mon_ab1',
@@ -126492,7 +126929,7 @@ function MonsterHeroGame() {
   const RAID_JACK_HOWTO_AFTER_STORY_ID = 'halloween_night_2026_part1';
   const RAID_JACK_RHYTHM_STORY_ID = 'raid_jack_rhythm_story_2026_10_06';
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, CARD_CUP_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID
@@ -126739,6 +127176,14 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(SORASHIDO_JOIN_STORY_ID)) return;
     setRhythmEventStoryPending(SORASHIDO_JOIN_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.cardCup || !EVENT_REPLAY_RELEASE_FLAGS.cardBattle) return;
+    if (!cardBattleIntroSeenLoaded || !cardBattleIntroSeenFlag) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(CARD_CUP_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(CARD_CUP_STORY_ID)) return;
+    setRhythmEventStoryPending(prev => prev || CARD_CUP_STORY_ID);
+  }, [cardBattleIntroSeenLoaded, cardBattleIntroSeenFlag, rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (typeof setSorashidoJoinSeenForShop === 'function') setSorashidoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID));
   }, [rhythmEventStorySeen]);
@@ -129753,6 +130198,7 @@ function MonsterHeroGame() {
     atsuJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID),
     kyukoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID),
     sorashidoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID),
+    cardCupStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(CARD_CUP_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];

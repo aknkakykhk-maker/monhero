@@ -8,6 +8,9 @@ import { makeLive, summaryOf, LIVE_ASSISTANTS } from './core.js';
 
 export const CUP_PLAY_LEAD_MS = 2 * 3600000; // 発表の何時間前から回し始めるか
 export const CUP_MIN_PLAYERS = 2;
+// リアルタイム杯: 戦えるようになってからこの時間たっても決まらない試合(だれも開かない杯)は、サーバが写しどうしで回して決める。
+// 始まらないままこの時間を過ぎた杯も、ここで始めてから決める(2026-10-31 社長「30分」)。待ち時間を変えるときは、ここだけ直す
+export const CUP_LIVE_IDLE_MS = 30 * 60000;
 
 const sideOf = (e) => ({ deck: e.deck, tactics: e.tactics || {} });
 
@@ -122,9 +125,28 @@ export const cupFinish = async ({ db, game, cup, log }) => {
   return true;
 };
 
+// リアルタイム杯の止まった試合を決める(SQL の card_cup_live_server_due が、始まらない杯を始めてから、決まらない試合と両方の写しを返す)
+//   回し方はオート杯と同じ(cardTourPlay・種は試合の種・key は「杯|回戦|枠」。端末が auto で回すときも同じ key にする)。決まり方は auto
+export const runLiveCups = async ({ db, game, log = () => {}, budget }) => {
+  if (!db.liveDue) return 0;
+  const due = await db.liveDue(Math.round(CUP_LIVE_IDLE_MS / 60000));
+  let played = 0;
+  for (const m of Array.isArray(due) ? due : []) {
+    if (budget.left <= 0) { log({ step: 'cup-live', more: true }); break; }
+    if (!m || !m.a || !m.b || !m.a.deck || !m.b.deck) { log({ step: 'cup-live', match: m && m.id, error: 'deck' }); continue; }
+    const t0 = Date.now();
+    const res = game.cardTourPlay(game.CARD_BATTLE_DATA, { deck: m.a.deck, tactics: m.a.tactics || {} }, { deck: m.b.deck, tactics: m.b.tactics || {} },
+      { seed: m.seed, first: m.first, key: `${m.cup_id}|${m.round}|${m.slot}` });
+    budget.left -= Date.now() - t0;
+    if (await db.liveDecide(m.id, res.winner, res.kos, res.acts, res.rules)) played += 1;
+  }
+  if (played) log({ step: 'cup-live', played });
+  return played;
+};
+
 // 1回の呼び出しでオート杯を回す(公式杯のあと。budget は公式杯と分け合う)
 export const runCups = async ({ db, game, nowMs, ai = null, take = null, refund = null, log = () => {}, budget }) => {
-  const out = { closed: 0, played: 0, done: 0 };
+  const out = { closed: 0, played: 0, done: 0, live: 0 };
   for (const cup of await db.listOpenCups()) {
     if (cup.mode !== 'auto') continue;
     try {
@@ -139,5 +161,7 @@ export const runCups = async ({ db, game, nowMs, ai = null, take = null, refund 
       log({ step: 'cup-error', cup: cup.id, error: String((e && e.message) || e).slice(0, 80) });
     }
   }
+  // リアルタイム杯の止まった試合(表や関数がまだ無いときは何もしない)
+  out.live = await runLiveCups({ db, game, log, budget }).catch(() => { log({ step: 'cup-live-error' }); return 0; });
   return out;
 };
