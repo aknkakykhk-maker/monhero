@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: acccdd6f448f8223
+// source-sha256: 3b99516ad87d68e4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -92648,6 +92648,7 @@ const normalizeCardSettings = v => {
     motion: pick(r.motion, ['FULL', 'SHORT', 'OFF'], 'FULL'),
     shake: onOff(r.shake, 'ON'),
     damageNum: onOff(r.damageNum, 'ON'),
+    cutin: onOff(r.cutin, 'ON'),
     bubble: pick(r.bubble, ['MANY', 'NORMAL', 'FEW', 'OFF'], 'NORMAL'),
     confirmUse: onOff(r.confirmUse, 'OFF'),
     confirmEnd: onOff(r.confirmEnd, 'OFF'),
@@ -92700,6 +92701,19 @@ const CARD_SETTING_GROUPS = Object.freeze([{
       id: 'OFF',
       label: '出さない',
       note: 'すぐ次へ'
+    }]
+  }, {
+    key: 'cutin',
+    title: '大技のカットイン',
+    desc: 'ダメージ6以上の大技を出したときに、カードの絵と技の名前が大きく横切る演出です。技の動きが「ふつう」のときだけ出ます。',
+    options: [{
+      id: 'ON',
+      label: '出す',
+      note: '大きく横切る'
+    }, {
+      id: 'OFF',
+      label: '出さない',
+      note: 'すぐ動く'
     }]
   }, {
     key: 'shake',
@@ -97704,6 +97718,39 @@ const cardMotionBaseOf = (db, cardNo, mon) => {
   }
   return base;
 };
+const CARD_CUTIN_MS = 1000;
+const cardMotionIsBig = c => !!c && cardIsAttackKind(c.kind) && c.kind !== 'spe' && c.user !== 'breeder' && CARD_MOTION_TIER_OF(c) === 'L';
+const CardCutIn = ({
+  db,
+  cut
+}) => {
+  const c = cardOf(db, cut.no);
+  if (!c) return null;
+  const n = c.name.length;
+  return React.createElement("div", {
+    "data-card-cutin": c.no,
+    "aria-hidden": "true",
+    className: "mh-cutin pointer-events-none absolute inset-x-0 top-1/2 z-[51] h-[210px] -translate-y-1/2 overflow-hidden"
+  }, React.createElement("div", {
+    className: "mh-cutin-flash"
+  }), React.createElement("div", {
+    className: "mh-cutin-band"
+  }), React.createElement("div", {
+    className: "mh-cutin-lines"
+  }), React.createElement("img", {
+    className: "mh-cutin-card",
+    src: CARD_IMG(c.img),
+    alt: "",
+    draggable: false
+  }), React.createElement("div", {
+    className: "mh-cutin-name",
+    style: {
+      fontSize: n <= 4 ? 46 : n <= 6 ? 36 : 28
+    }
+  }, c.name), cut.mon && React.createElement("div", {
+    className: "mh-cutin-sub"
+  }, cut.mon, "の大技!"));
+};
 const cardIsBreederCard = (db, cardNo) => {
   const c = cardOf(db, cardNo);
   return !!c && c.user === 'breeder';
@@ -99593,6 +99640,7 @@ const CardBattleBoard = ({
   useEffect(() => {
     if (typeof cardArtPreload === 'function') void cardArtPreload(db, st.players.flatMap(pl => pl.mons.map(m => m.no))).then(() => setArtTick(n => n + 1));
   }, []);
+  const [cutIn, setCutIn] = useState(null);
   const [downBand, setDownBand] = useState(null);
   const [breederFx, setBreederFx] = useState(null);
   const [beams, setBeams] = useState([]);
@@ -99620,6 +99668,13 @@ const CardBattleBoard = ({
       ...cur,
       [id]: mv
     }));
+    if (mv.cut) {
+      setCutIn({
+        ...mv.cut,
+        key: mv.key
+      });
+      motionTimers.current.push(setTimeout(() => setCutIn(cur => cur && cur.key === mv.key ? null : cur), CARD_CUTIN_MS));
+    }
     motionTimers.current.push(setTimeout(() => setMotions(cur => cur[id] && cur[id].key === mv.key ? (({
       [id]: _,
       ...rest
@@ -99942,7 +99997,13 @@ const CardBattleBoard = ({
         kind,
         dx: Math.round(to.x - from.x),
         dy: Math.round(to.y - from.y),
-        key
+        key,
+        ...(settings.cutin !== 'OFF' && cardMotionIsBig(c0) ? {
+          cut: {
+            no: e.cards[0],
+            mon: mon.name
+          }
+        } : null)
       };
       if (!inPlace && next.pending && next.pending.attacker === e.p && next.pending.mon === e.mon) {
         pendingAtk.current = {
@@ -101723,7 +101784,11 @@ const CardBattleBoard = ({
     style: JA_LABEL_STYLE
   }, st.winner === CARD_ME ? `${who.name}に勝った！` : 'おしかった！ もう一回いってみよう'), React.createElement("span", {
     className: "absolute bottom-5 text-[12px] font-bold text-white/70"
-  }, "タップで次へ")), downBand && !bigCard && !turnBanner && React.createElement("div", {
+  }, "タップで次へ")), cutIn && React.createElement(CardCutIn, {
+    key: cutIn.key,
+    db: db,
+    cut: cutIn
+  }), downBand && !bigCard && !turnBanner && React.createElement("div", {
     key: downBand.key,
     "data-card-down-band": downBand.p === CARD_ME ? 'me' : 'foe',
     className: "pointer-events-none absolute inset-0 z-[52] flex items-center justify-center",
@@ -164148,6 +164213,20 @@ const createAnimationStyle = () => {
       .mh-shine-rim.r2, .mh-shine-rim.r3, .mh-shine-star, .mh-shine-aurora, .mh-shine-sheen, .mh-shine-mote, .mh-shine-silver { display: none; }
       .mh-shine-rim.r1, .mh-shine-rare-rim { animation: none; opacity: 1; }
     }
+    /* 大技のカットイン(85 の CardCutIn。2026-10-31 社長「この形と文で入れて」)。白い光 → 金の帯 → カードの絵と技の名前が横切る(約1秒) */
+    .mh-cutin > * { position: absolute; }
+    .mh-cutin-flash { inset: -40px 0; background: radial-gradient(ellipse at 50% 50%, rgba(255,255,255,.95), rgba(255,230,120,.6) 40%, transparent 70%); animation: mhCutinFlash 1s ease-out both; }
+    .mh-cutin-band { left: -10px; right: -10px; top: 24px; bottom: 24px; background: linear-gradient(90deg, #f59e0b, #fde047 18%, #fff7cc 50%, #fde047 82%, #f59e0b); transform: skewY(-7deg); box-shadow: 0 0 0 4px #fff, 0 0 40px 10px rgba(253,224,71,.95); animation: mhCutinBand 1s ease-out both; }
+    .mh-cutin-lines { left: -10px; right: -10px; top: 24px; bottom: 24px; transform: skewY(-7deg); background: repeating-linear-gradient(90deg, rgba(255,255,255,.65) 0 3px, transparent 3px 30px); mix-blend-mode: overlay; animation: mhCutinLines 1s linear both; }
+    .mh-cutin-card { top: 8px; height: 194px; aspect-ratio: 5 / 7; border-radius: 10px; box-shadow: 0 0 0 4px #fff, 0 0 30px 8px rgba(255,255,255,.95); animation: mhCutinCard 1s cubic-bezier(.2,.9,.3,1) both; }
+    .mh-cutin-name { left: 158px; right: 6px; top: 62px; line-height: 1.05; font-weight: 900; font-style: italic; color: #fff; -webkit-text-stroke: 3px #b45309; paint-order: stroke fill; text-shadow: 0 0 14px #fff, 0 4px 0 #78350f; white-space: nowrap; animation: mhCutinName 1s cubic-bezier(.2,1.4,.4,1) both; }
+    .mh-cutin-sub { left: 162px; top: 122px; font-size: 17px; font-weight: 900; color: #7c2d12; background: #fff; padding: 1px 10px; border-radius: 999px; animation: mhCutinName 1s .05s cubic-bezier(.2,1.4,.4,1) both; }
+    @keyframes mhCutinFlash { 0% { opacity: 0; } 10% { opacity: 1; } 40%, 100% { opacity: 0; } }
+    @keyframes mhCutinBand { 0% { opacity: 0; transform: skewY(-7deg) scaleY(0); } 12% { opacity: 1; transform: skewY(-7deg) scaleY(1.15); } 20% { transform: skewY(-7deg) scaleY(1); } 85% { opacity: 1; } 100% { opacity: 0; transform: skewY(-7deg) scaleY(.2); } }
+    @keyframes mhCutinLines { 0% { background-position: 0 0; opacity: 0; } 15% { opacity: 1; } 100% { background-position: -420px 0; opacity: 0; } }
+    @keyframes mhCutinCard { 0% { left: 105%; transform: rotate(10deg) scale(1.2); } 22% { left: 14px; transform: rotate(-5deg) scale(1); } 85% { left: 6px; opacity: 1; } 100% { left: -200px; opacity: 0; } }
+    @keyframes mhCutinName { 0% { opacity: 0; transform: translateX(160px) scale(1.6); } 22% { opacity: 1; transform: none; } 85% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateX(-80px); } }
+    @media (prefers-reduced-motion: reduce) { .mh-cutin { display: none; } }
     .mh-card-ko { animation: mhCardKo .9s ease-in forwards; transform-origin: 50% 90%; }
     /* 「画面の揺れ: 揺らさない」(カードのオプション)のときの受けた動き。揺らさずに赤く光るだけ */
     @keyframes mhCardHitCalm { 0%,100% { filter: none; } 30% { filter: drop-shadow(0 0 10px rgba(248,113,113,1)) brightness(1.3); } }

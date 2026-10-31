@@ -1045,6 +1045,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const [, setArtTick] = useState(0);
   // 盤を開いたら、両方の3体の立ち絵を前もって読む(観戦・見返し・大会の見返しは対戦開始の画面を通らないため。読めなかった子はカードの絵で出る)
   useEffect(() => { if (typeof cardArtPreload === 'function') void cardArtPreload(db, st.players.flatMap((pl) => pl.mons.map((m) => m.no))).then(() => setArtTick((n) => n + 1)); }, []); // 読み終えたら描き直す(読めなかった子をカードの絵へ)
+  const [cutIn, setCutIn] = useState(null); // 大技のカットイン { key, no, mon }(85 の CardCutIn。技の動きといっしょに出す)
   const [downBand, setDownBand] = useState(null); // 倒れたときの「◯◯ ダウン！ / 残り◯体」の帯 { key, p, names, left }(改良の案 B)
   const [breederFx, setBreederFx] = useState(null); // ブリーダーのカードを使ったとき、まんなかの端に出す顔 { p, key }
   const [beams, setBeams] = useState([]);
@@ -1070,6 +1071,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   useEffect(() => () => motionTimers.current.forEach(clearTimeout), []);
   const playMotion = (id, mv, ms) => {
     setMotions((cur) => ({ ...cur, [id]: mv }));
+    if (mv.cut) {
+      setCutIn({ ...mv.cut, key: mv.key });
+      motionTimers.current.push(setTimeout(() => setCutIn((cur) => (cur && cur.key === mv.key ? null : cur)), CARD_CUTIN_MS));
+    }
     motionTimers.current.push(setTimeout(() => setMotions((cur) => (cur[id] && cur[id].key === mv.key ? (({ [id]: _, ...rest }) => rest)(cur) : cur)), ms));
   };
   // 背の低い画面(iPhone SE など)では、絵と手札を少し小さくして、まんなかの場所を残す
@@ -1287,7 +1292,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       const to = inPlace ? from : e.target ? centerOf(`${e.target.p}-${e.target.m}`) : centerOf(`${1 - e.p}-1`);
       if (!from || !to) return;
       const key = `${next.log.length}-${n}-${Date.now()}`;
-      const mv = { type: 'attack', kind, dx: Math.round(to.x - from.x), dy: Math.round(to.y - from.y), key };
+      const mv = { type: 'attack', kind, dx: Math.round(to.x - from.x), dy: Math.round(to.y - from.y), key,
+        ...(settings.cutin !== 'OFF' && cardMotionIsBig(c0) ? { cut: { no: e.cards[0], mon: mon.name } } : null) };
       // 相手の守りの番に入る技は、ここでは動かさずに控える(守りが決まった手で流す)
       if (!inPlace && next.pending && next.pending.attacker === e.p && next.pending.mon === e.mon) { pendingAtk.current = { id: `${e.p}-${e.mon}`, mv, turn: next.turn }; return; }
       playMotion(`${e.p}-${e.mon}`, mv, cardMotionMs(kind) + 80);
@@ -2375,6 +2381,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       )}
       {/* 倒れたときの帯(改良の案 B・カゲあつくん 4・9)。番の帯より下・指の操作は帯の外では下へ通す。
           出ているあいだは、まんなかの記録の字を消す(倒れたときの説明の文の上に帯の字が重なって読めなかった。2026-10-27 ソランドくん)。帯が消えると記録が見える */}
+      {cutIn && <CardCutIn key={cutIn.key} db={db} cut={cutIn}/>}
       {downBand && !bigCard && !turnBanner && (
         <div key={downBand.key} data-card-down-band={downBand.p === CARD_ME ? 'me' : 'foe'} className="pointer-events-none absolute inset-0 z-[52] flex items-center justify-center"
           style={wide ? { right: 'calc(min(42%, 420px) + 8px)' } : undefined}>

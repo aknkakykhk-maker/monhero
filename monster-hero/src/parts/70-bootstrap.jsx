@@ -4418,6 +4418,20 @@ const createAnimationStyle = () => {
       .mh-shine-rim.r2, .mh-shine-rim.r3, .mh-shine-star, .mh-shine-aurora, .mh-shine-sheen, .mh-shine-mote, .mh-shine-silver { display: none; }
       .mh-shine-rim.r1, .mh-shine-rare-rim { animation: none; opacity: 1; }
     }
+    /* 大技のカットイン(85 の CardCutIn。2026-10-31 社長「この形と文で入れて」)。白い光 → 金の帯 → カードの絵と技の名前が横切る(約1秒) */
+    .mh-cutin > * { position: absolute; }
+    .mh-cutin-flash { inset: -40px 0; background: radial-gradient(ellipse at 50% 50%, rgba(255,255,255,.95), rgba(255,230,120,.6) 40%, transparent 70%); animation: mhCutinFlash 1s ease-out both; }
+    .mh-cutin-band { left: -10px; right: -10px; top: 24px; bottom: 24px; background: linear-gradient(90deg, #f59e0b, #fde047 18%, #fff7cc 50%, #fde047 82%, #f59e0b); transform: skewY(-7deg); box-shadow: 0 0 0 4px #fff, 0 0 40px 10px rgba(253,224,71,.95); animation: mhCutinBand 1s ease-out both; }
+    .mh-cutin-lines { left: -10px; right: -10px; top: 24px; bottom: 24px; transform: skewY(-7deg); background: repeating-linear-gradient(90deg, rgba(255,255,255,.65) 0 3px, transparent 3px 30px); mix-blend-mode: overlay; animation: mhCutinLines 1s linear both; }
+    .mh-cutin-card { top: 8px; height: 194px; aspect-ratio: 5 / 7; border-radius: 10px; box-shadow: 0 0 0 4px #fff, 0 0 30px 8px rgba(255,255,255,.95); animation: mhCutinCard 1s cubic-bezier(.2,.9,.3,1) both; }
+    .mh-cutin-name { left: 158px; right: 6px; top: 62px; line-height: 1.05; font-weight: 900; font-style: italic; color: #fff; -webkit-text-stroke: 3px #b45309; paint-order: stroke fill; text-shadow: 0 0 14px #fff, 0 4px 0 #78350f; white-space: nowrap; animation: mhCutinName 1s cubic-bezier(.2,1.4,.4,1) both; }
+    .mh-cutin-sub { left: 162px; top: 122px; font-size: 17px; font-weight: 900; color: #7c2d12; background: #fff; padding: 1px 10px; border-radius: 999px; animation: mhCutinName 1s .05s cubic-bezier(.2,1.4,.4,1) both; }
+    @keyframes mhCutinFlash { 0% { opacity: 0; } 10% { opacity: 1; } 40%, 100% { opacity: 0; } }
+    @keyframes mhCutinBand { 0% { opacity: 0; transform: skewY(-7deg) scaleY(0); } 12% { opacity: 1; transform: skewY(-7deg) scaleY(1.15); } 20% { transform: skewY(-7deg) scaleY(1); } 85% { opacity: 1; } 100% { opacity: 0; transform: skewY(-7deg) scaleY(.2); } }
+    @keyframes mhCutinLines { 0% { background-position: 0 0; opacity: 0; } 15% { opacity: 1; } 100% { background-position: -420px 0; opacity: 0; } }
+    @keyframes mhCutinCard { 0% { left: 105%; transform: rotate(10deg) scale(1.2); } 22% { left: 14px; transform: rotate(-5deg) scale(1); } 85% { left: 6px; opacity: 1; } 100% { left: -200px; opacity: 0; } }
+    @keyframes mhCutinName { 0% { opacity: 0; transform: translateX(160px) scale(1.6); } 22% { opacity: 1; transform: none; } 85% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateX(-80px); } }
+    @media (prefers-reduced-motion: reduce) { .mh-cutin { display: none; } }
     .mh-card-ko { animation: mhCardKo .9s ease-in forwards; transform-origin: 50% 90%; }
     /* 「画面の揺れ: 揺らさない」(カードのオプション)のときの受けた動き。揺らさずに赤く光るだけ */
     @keyframes mhCardHitCalm { 0%,100% { filter: none; } 30% { filter: drop-shadow(0 0 10px rgba(248,113,113,1)) brightness(1.3); } }
