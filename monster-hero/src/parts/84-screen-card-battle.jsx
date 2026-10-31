@@ -3061,6 +3061,26 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         setView('pvp');
         return;
       }
+      // 個人杯のリアルタイム杯(99-card-cup-live・④): 来ない相手の登録デッキと戦った試合。ごほうび・記録・ランキングには入れず、杯へ結果(absent)と手の並びを送って杯の画面へ戻る
+      //   手の並びは自分が0番の向き。自分が試合の b 側なら { order: 'ba', acts } で送る(93 の cardReplayFromTour が並びを戻す)
+      if (game.cup) {
+        const cup = game.cup;
+        const log = cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogRef.current : null;
+        if (log) cpuLogRef.current = null;
+        const acts = log ? log.acts.map((x) => [x.by, x.act]) : null;
+        const kosMe = [cardKoCount(st, CARD_ME), cardKoCount(st, CARD_CPU)];
+        const winnerSide = outcome === 'win' ? cup.side : 1 - cup.side;
+        const key = typeof cardShareOwnerKey === 'function' ? await cardShareOwnerKey(false) : null;
+        const r = key && typeof cardTourRpc === 'function' ? await cardTourRpc('card_cup_live_report', { p_match: cup.matchId, p_owner: cup.selfId, p_key: key, p_winner: winnerSide,
+          p_how: 'absent', p_verified: false, p_kos: cup.side === 0 ? kosMe : [kosMe[1], kosMe[0]], p_acts: acts && acts.length ? (cup.side === 0 ? acts : { order: 'ba', acts }) : null,
+          p_rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null }) : null;
+        setGame(null);
+        setNotice(r === 'ok' || r === 'done' ? (outcome === 'win' ? '勝ちました。結果を杯に送りました' : '負けました。結果を杯に送りました') : '結果を送れませんでした。杯の画面を開き直してください');
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView('cup');
+        return;
+      }
       // デバッグの「技の動きの見本」(game.demo)は、終わっても・投了しても何も保存しない(ボタンに「保存しない」と書いてある)。トップへ戻すだけ
       if (game.demo) {
         onBgm && onBgm(cardBgmOf(save.bgm.top));
@@ -3219,7 +3239,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // opts.rented … みんなのデッキ(95)で借りたデッキで戦う(デッキ選びの kind:'rent' の行)。借り物なので、持っているかは見ない
   const startBattle = (pick = foe, deck = activeDeck, opts = {}) => {
     const rented = opts && opts.rented ? opts.rented : null;
-    const issues = deck ? (rented ? cardDeckProblems(db, deck) : [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)]) : ['デッキがありません'];
+    // 個人杯のリアルタイム杯(④): 自分も相手も、始まる時刻に取った登録デッキの写し。種と先攻は杯の試合のもの(見返しで同じ試合になる)
+    const cup = opts && opts.cup ? opts.cup : null;
+    const issues = deck ? (rented || cup ? cardDeckProblems(db, deck) : [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)]) : ['デッキがありません'];
     if (!deck || issues.length) { setNotice(issues.join('・')); return; }
     const activeDeck = deck; // 下は選んだデッキで組む(デッキ選びで書き換えた active は、この描画ではまだ古いので受け取った物を使う)
     // みんなのデッキ(95): 登録デッキがそのまま相手。打ち方は登録した戦い方(盤面の policy)・名前とアイコンは登録した人
@@ -3227,8 +3249,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     // 毎試合、好きなモンスター ベスト4から3体を選んで組み直す(MASTER はこちらのデッキも見る)
     const cpuDeck = share ? { monsters: share.deck.monsters.slice(), cards: share.deck.cards.slice(), sameBlood: cardShareSameBlood(db, share.deck) }
       : cardAiBuildDeck(db, pick.who, pick.level, Math.random, { playerDeck: activeDeck });
-    const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
-    const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
+    const seed = cup ? cup.seed : (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+    const gameKey = cup ? `cup-${cup.matchId}-${Date.now().toString(36)}` : `${seed}`; // 試合の番号(手の記録と同じにする)
+    // 杯の first は 0 = a が先攻。自分が b 側(side 1)なら向きを入れかえる
+    const first = cup ? ((cup.first === cup.side) ? CARD_ME : CARD_CPU) : Math.random() < 0.5 ? CARD_ME : CARD_CPU;
     const assistant = share ? null : allAssistants.find((a) => a.id === pick.who);
     let st = cardCreateGame(db, { decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], names: ['あなた', share ? share.name : assistant ? assistant.name : 'あいて'], seed, first });
     // 検査のときだけ: 始まりの場を決めた形に差しかえる(window.__mhCardScene が関数のときだけ。ふだんの遊びでは無い)
@@ -3239,10 +3263,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } } : { mode: 'assistant',
       foe: { who: pick.who, name: assistant ? assistant.name : 'あいて', line: (CARD_VS_LINES[pick.who] || {})[pick.level] || null, deckName: cardAssistantDeckName(db, cpuDeck, pick.who, pick.level), monsters: vsMons(st, CARD_CPU) },
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } };
-    setGame({ key: `${seed}`, st, who: pick.who, level: pick.level, settings: save.settings, intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(share ? { share } : {}),
+    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(share ? { share } : {}), ...(cup ? { cup } : {}),
       ...(rented ? { rented: { ownerId: rented.ownerId, version: rented.version, name: rented.owner } } : {}) });
     const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
-    cpuLogRef.current = scene ? null : { id: `${seed}`, seed, first, decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], foeName: intro.foe.name, deckName: intro.foe.deckName || null, acts: [] };
+    cpuLogRef.current = scene ? null : { id: gameKey, seed, first, decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], foeName: intro.foe.name, deckName: intro.foe.deckName || null, acts: [] };
     // 途中で閉じたときに投了として数えるための印(CARD_CPU_OPEN_KEY)。書けなかったら、終わりにも印を見ない
     //   みんなのデッキの対戦は数えない(途中で閉じても投了の記録は付かない・ビートPも入らない)
     if (!share) void writeCpuOpen({ id: `${seed}`, who: pick.who, level: pick.level, rankable: !!(rank && rank.send) && !debug, at: Date.now(), beat: Date.now(), facts: cardResultFacts(st, CARD_ME) }, true);
@@ -3408,8 +3432,27 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       onNavigate('CARD_BATTLE');
       return true;
     };
-    return <CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId} onOpenReplay={openCupReplay}
-      onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('cup'); setView('tactics'); } : null}/>;
+    // リアルタイム杯の自分の試合(④): 材料(種・先攻・両方の写し)を読み、相手が来ていなければ相手の登録デッキの写しと戦う(2人で戦う部屋は 91・区切り3b)
+    const playCupLive = async (m) => {
+      if (!db || typeof cardTourRpc !== 'function' || typeof cardShareOwnerKey !== 'function') return;
+      const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+      const key = await cardShareOwnerKey(false);
+      const r = selfId && key ? await cardTourRpc('card_cup_live_match', { p_match: m.id, p_owner: selfId, p_key: key }) : null;
+      if (!r || (r.side !== 0 && r.side !== 1) || r.winner === 0 || r.winner === 1) { setNotice('この試合には入れません'); return; }
+      const mine = r.side === 0 ? r.a_side : r.b_side, foe = r.side === 0 ? r.b_side : r.a_side;
+      if ((r.side === 0 ? r.checkin_b : r.checkin_a)) { setNotice('相手が来ています。2人で戦う部屋は準備中です'); return; }
+      if (!mine || !mine.deck || !foe || !foe.deck) { setNotice('デッキの写しが読めませんでした'); return; }
+      const tactics = foe.tactics && typeof foe.tactics === 'object' ? foe.tactics : {};
+      const share = { name: (typeof cardCupText === 'function' ? cardCupText(foe.name, 40) : String(foe.name || '').slice(0, 40)) || 'ブリーダー', icon: foe.icon || null, frame: null,
+        deck: foe.deck, tactics: { ...tactics, name: tactics.name || null } };
+      startBattle({ who: tactics.habit || 'mua', level: 'normal', share }, mine.deck,
+        { cup: { matchId: r.id, cupId: r.cup_id, side: r.side, seed: r.seed, first: r.first, selfId } });
+    };
+    // 杯の試合のあと・入れなかったときの知らせ(下に小さく出す)
+    return <><CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId} onOpenReplay={openCupReplay} onPlayLive={playCupLive}
+      onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('cup'); setView('tactics'); } : null}/>
+      {notice && <div data-card-cup-toast className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit max-w-[92vw] rounded-full bg-slate-950/95 px-4 py-2 text-[13px] font-black text-amber-100 shadow-lg" style={JA_WRAP_STYLE}>{jaWrap(notice)}</div>}
+    </>;
   }
   // ---- 対戦の前のデッキ選び(助手と対戦・マルチ。練習試合には出さない) ----
   if (view === 'deckPick' && deckPick) {

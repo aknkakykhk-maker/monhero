@@ -4,7 +4,9 @@
 //   ・集合は始まる10分前から。来ていない人の試合は、その人の登録デッキが自動で戦う
 //   ・始まる時刻を過ぎたら、開いている参加者のだれかの端末が始める(card_cup_live_start。何度呼ばれても同じ)。全員そろえば主催が早めに始められる
 //   ・開いているあいだ、様子を読み直す(8秒おき)。片方だけが結果を送った試合も決める(card_cup_live_settle・30秒おき)
-//   ・試合の画面(91 の部屋で戦う・来ない人のデッキと戦う)は区切り3。onPlay が無いあいだは「試合へ」を押せない
+//   ・「試合へ」(onPlay・84): 相手が来ていなければ、相手の登録デッキの写しと戦う(absent)。2人で戦う部屋(91)は区切り3b
+//   ・2人とも来ていない試合・2台の答えが食い違った試合は、来ている参加者の端末が写しどうしを回して決める(auto)。
+//     回し方はサーバ(cup.js の runLiveCups)と同じ cardTourPlay・種は試合の種・key は「杯|回戦|枠」なので、だれが回しても同じ結果
 
 const CARD_CUP_LIVE_CHECKIN_MS = 10 * 60000; // 集合は始まる何分前から
 const CARD_CUP_LIVE_POLL_MS = 8000;
@@ -58,6 +60,32 @@ const CardCupLivePanel = ({ v, now, selfId, onChanged, onPlay = null }) => {
     startTried.current = true;
     void call('card_cup_live_start').then(() => onChanged());
   }, [c.status, v.me, now >= c.startAt]);
+  // 2人とも来ていない試合・食い違った試合を、来ている自分の端末で回して決める(同じ試合はこの画面で1回だけ試す)
+  const autoTried = useRef(new Set());
+  useEffect(() => {
+    if (c.status !== 'running' || !selfId || typeof cardTourPlay !== 'function') return;
+    const meE = v.entries.find((e) => e.mine);
+    if (!meE || !meE.checkin) return;
+    const here = (s) => { const e = v.entries.find((x) => x.seat === s); return !!(e && e.checkin); };
+    const todo = v.matches.filter((m) => m.winner === null && m.ready && !autoTried.current.has(m.id) && (m.dispute || (!here(m.a) && !here(m.b))));
+    if (!todo.length) return;
+    todo.forEach((m) => autoTried.current.add(m.id));
+    void (async () => {
+      const key = await cardShareOwnerKey(false);
+      if (!key) return;
+      let done = 0;
+      for (const m of todo) {
+        const r = await cardTourRpc('card_cup_live_match', { p_match: m.id, p_owner: selfId, p_key: key });
+        if (!r || !r.a_side || !r.b_side || !r.a_side.deck || !r.b_side.deck) continue;
+        const res = cardTourPlay(CARD_BATTLE_DATA, { deck: r.a_side.deck, tactics: r.a_side.tactics || {} }, { deck: r.b_side.deck, tactics: r.b_side.tactics || {} },
+          { seed: r.seed, first: r.first, key: `${c.id}|${r.round}|${r.slot}` });
+        const out = await cardTourRpc('card_cup_live_report', { p_match: m.id, p_owner: selfId, p_key: key, p_winner: res.winner, p_how: 'auto', p_verified: false,
+          p_kos: res.kos, p_acts: res.acts, p_rules: res.rules });
+        if (out === 'ok') done += 1;
+      }
+      if (done) void onChanged();
+    })();
+  }, [c.status, v.matches, selfId]);
   // 片方だけが結果を送った試合を決める
   useEffect(() => {
     if (c.status !== 'running') return undefined;
@@ -111,9 +139,9 @@ const CardCupLivePanel = ({ v, now, selfId, onChanged, onPlay = null }) => {
                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-black ${foe && foe.checkin ? 'bg-emerald-500 text-slate-950' : 'bg-slate-600 text-slate-100'}`}>{foe && foe.checkin ? '来ています' : '来ていません'}</span>
               </div>
               {foe && !foe.checkin && <div className="text-[12px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('相手が来ていないので、相手の登録デッキと戦います')}</div>}
-              <button type="button" data-card-cup-live-play={next.match.id} disabled={!next.match.ready || !onPlay} onClick={() => { Audio_.fgSe.tap(); if (onPlay) onPlay(next.match); }}
-                className={`w-full rounded-2xl py-3 text-[15px] font-black ${next.match.ready && onPlay ? 'bg-gradient-to-b from-sky-300 to-sky-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
-                {!next.match.ready ? '前の回戦が終わるのを待っています' : onPlay ? '試合へ' : '試合の画面は準備中です'}
+              <button type="button" data-card-cup-live-play={next.match.id} disabled={!next.match.ready || !onPlay || !!(foe && foe.checkin)} onClick={() => { Audio_.fgSe.tap(); if (onPlay) onPlay(next.match); }}
+                className={`w-full rounded-2xl py-3 text-[15px] font-black ${next.match.ready && onPlay && !(foe && foe.checkin) ? 'bg-gradient-to-b from-sky-300 to-sky-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
+                {!next.match.ready ? '前の回戦が終わるのを待っています' : !onPlay ? '試合の画面は準備中です' : foe && foe.checkin ? '2人で戦う部屋は準備中です' : '試合へ'}
               </button>
             </>
           )}
