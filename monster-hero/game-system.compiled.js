@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a4f9735b42b9fc58
+// source-sha256: 9f999be673a2df3a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115945,6 +115945,41 @@ const cardShareReplaysOf = async ownerId => {
     old: r.old === true
   }));
 };
+let _cardShareRecordOff = false;
+const cardShareRecordOf = async ownerId => {
+  if (_cardShareRecordOff || _cardShareUnavailable || typeof ownerId !== 'string') return null;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = setTimeout(() => {
+    if (controller) controller.abort();
+  }, 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/card_deck_record_of`, {
+      method: 'POST',
+      headers: SB_HEADERS,
+      signal: controller ? controller.signal : undefined,
+      body: JSON.stringify({
+        p_owner: ownerId
+      })
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      if (_isMissingTableError(res.status, text) || res.status === 404) _cardShareRecordOff = true;
+      return null;
+    }
+    const rows = JSON.parse(text);
+    if (!Array.isArray(rows)) return null;
+    return rows.filter(r => r && typeof r.at === 'string').slice(0, CARD_SHARE_REPLAY_SLOTS).map(r => ({
+      at: Date.parse(r.at) || 0,
+      deckWon: r.deck_won === true,
+      turns: Number.isInteger(r.turns) ? r.turns : null,
+      old: r.old === true
+    }));
+  } catch (_) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+};
 const cardShareReplayGet = async (ownerId, slot) => {
   const key = await cardShareOwnerKey(false);
   if (!key || typeof ownerId !== 'string' || !Number.isInteger(slot)) return null;
@@ -116592,6 +116627,23 @@ const CardShareDeckDetail = ({
     c: db && cardOf(db, no) || null
   })).sort((a, b) => kindOrder.indexOf((a.c || {}).kind) - kindOrder.indexOf((b.c || {}).kind) || String((a.c || {}).name || a.no).localeCompare(String((b.c || {}).name || b.no), 'ja'));
   const who = c => !c ? '' : c.user === 'breeder' ? 'ブリーダー' : c.user === 'any' ? '全員' : '';
+  const [record, setRecord] = useState(undefined);
+  useEffect(() => {
+    let alive = true;
+    void cardShareRecordOf(entry.ownerId).then(r => {
+      if (alive) setRecord(r);
+    }).catch(() => {
+      if (alive) setRecord(null);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [entry.ownerId]);
+  const losses = Math.max(0, (entry.battles || 0) - (entry.deckWins || 0));
+  const dayText = ms => {
+    const d = new Date(ms);
+    return Number.isFinite(d.getTime()) ? `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : '';
+  };
   return React.createElement("div", {
     "data-card-share-deck-detail": true,
     className: "fixed inset-0 z-[90] flex items-end justify-center bg-black/60 p-3 sm:items-center",
@@ -116640,9 +116692,26 @@ const CardShareDeckDetail = ({
     "data-card-share-detail-stats": true,
     className: "mt-2 rounded-lg bg-black/30 p-2 text-[12px] font-bold text-sky-100 tabular-nums",
     style: JA_WRAP_STYLE
-  }, jaWrap(entry.battles ? `戦われた ${entry.battles}回・このデッキの勝ち ${Math.round(entry.deckWins / entry.battles * 100)}%` : 'まだ戦われていません'), entry.rents > 0 && React.createElement("span", {
+  }, React.createElement("b", {
+    className: "block text-[12px] text-amber-100"
+  }, "戦績"), jaWrap(entry.battles ? `戦われた ${entry.battles}回・このデッキの ${entry.deckWins}勝${losses}敗(勝ち ${Math.round(entry.deckWins / entry.battles * 100)}%)` : 'まだ戦われていません'), entry.rents > 0 && React.createElement("span", {
     className: "block"
-  }, `借りられた ${entry.rents}回`)), React.createElement("div", {
+  }, `借りられた ${entry.rents}回`), entry.battles > 0 && React.createElement("div", {
+    "data-card-share-detail-record": record === undefined ? 'loading' : record ? record.length : 'none',
+    className: "mt-1 text-[11px]"
+  }, React.createElement("span", {
+    className: "block text-slate-400"
+  }, "最近の試合(新しい順)"), record === undefined ? React.createElement("span", {
+    className: "block text-slate-400"
+  }, "読み込み中…") : !record || !record.length ? React.createElement("span", {
+    className: "block text-slate-400"
+  }, "まだ記録がありません") : React.createElement("span", {
+    className: "mt-0.5 flex flex-wrap gap-1"
+  }, record.map((r, i) => React.createElement("span", {
+    key: i,
+    "data-card-share-detail-record-row": r.deckWon ? 'won' : 'lost',
+    className: `rounded px-1 py-0.5 font-black ${r.deckWon ? 'bg-emerald-500/25 text-emerald-100' : 'bg-rose-500/25 text-rose-100'}`
+  }, `${dayText(r.at)} ${r.deckWon ? '勝ち' : '負け'}`))))), React.createElement("div", {
     className: "mt-2 rounded-lg bg-black/30 p-2 text-[11.5px] text-slate-200",
     style: JA_WRAP_STYLE
   }, React.createElement("b", {
@@ -116939,7 +117008,14 @@ const CardDeckReplays = ({
     style: JA_WRAP_STYLE
   }, jaWrap(msg)), items === null && React.createElement("div", {
     className: "py-6 text-center text-[13px] font-bold text-slate-400"
-  }, "読み込み中…"), items && !shown.length && React.createElement("div", {
+  }, "読み込み中…"), items && shown.length > 0 && (() => {
+    const won = shown.filter(x => x.won).length;
+    return React.createElement("p", {
+      "data-card-deck-replays-total": `${won}-${shown.length - won}`,
+      className: "rounded-xl border border-white/10 bg-black/30 px-2 py-1.5 text-[12px] font-black text-sky-100 tabular-nums",
+      style: JA_WRAP_STYLE
+    }, jaWrap(`このデッキの戦績: ${shown.length}試合 ${won}勝${shown.length - won}敗(勝ち ${Math.round(won / shown.length * 100)}%)`));
+  })(), items && !shown.length && React.createElement("div", {
     "data-card-deck-replays-empty": true,
     className: "py-6 text-center text-[13px] font-bold text-slate-400",
     style: JA_WRAP_STYLE

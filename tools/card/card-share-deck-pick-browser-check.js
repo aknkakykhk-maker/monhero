@@ -5,6 +5,7 @@
 // ③ 借りたデッキのタブは出ない(ごほうびの扱いを変えないため)
 // ④ 「このデッキで対戦」で、選んだデッキで対戦が始まる
 // ⑥ 対戦開始の画面で、キラ・レアキラの子の絵が消えない
+// ⑦ 「詳細」の戦績(勝ち負け・勝ち率・最近の試合)。最近の試合の関数(card_deck_record_of)も検査の中で返す
 // ⑤ 一覧の「詳細」で、名前・3体・全カード・賢さ・数字が見られ、そこからも「戦う」でデッキ選びへ進む
 // 登録デッキの一覧(card_deck_entries)は、検査の中で1人ぶんを返す(本番のサーバには書かない)
 const fs = require('fs');
@@ -33,6 +34,9 @@ const browser = async () => {
       if (u.hostname === 'localhost') return route.continue();
       // 登録デッキの一覧: 検査の相手を1人だけ返す
       if (/\/rest\/v1\/card_deck_entries/.test(u.pathname) && rq.method() === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(shareRow ? [shareRow] : []) });
+      // 最近の戦績(card_deck_record_of): 3試合ぶん(このデッキの 2勝1敗)を返す
+      if (/\/rest\/v1\/rpc\/card_deck_record_of/.test(u.pathname)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+        { at: '2026-10-31T03:00:00Z', deck_won: true, turns: 9, old: false }, { at: '2026-10-30T12:00:00Z', deck_won: false, turns: 12, old: false }, { at: '2026-10-29T09:30:00Z', deck_won: true, turns: 7, old: false }]) });
       if (rq.method() === 'GET') return route.continue();
       return route.abort();
     });
@@ -67,7 +71,7 @@ const browser = async () => {
     const d0 = decks && decks.decks && decks.decks[0];
     // 相手の3体は、同じ種族のキラ・レアキラの子に替える(対戦開始の画面で、キラの子の絵が消えないかを見るため。⑥)
     const kiraOf = (no) => ({ 'C-003': 'C-003V', 'C-005': 'C-005S', 'C-007': 'C-007S' })[no] || no;
-    shareRow = { owner_id: 'check-breeder-1', user_name: '検査の相手', icon: null, profile_frame: null, deck: { monsters: d0.monsters.map(kiraOf), cards: d0.cards }, tactics: {}, version: 1, active: true, battles: 0, deck_wins: 0, rents: 0, updated_at: new Date().toISOString() };
+    shareRow = { owner_id: 'check-breeder-1', user_name: '検査の相手', icon: null, profile_frame: null, deck: { monsters: d0.monsters.map(kiraOf), cards: d0.cards }, tactics: {}, version: 1, active: true, battles: 3, deck_wins: 2, rents: 0, updated_at: new Date().toISOString() };
     await page.locator('[data-card-cpu]').click();
     await page.locator('[data-card-mode-assistant]').click();
     await page.locator('[data-card-foe-tab="breeder"]').waitFor({ timeout: 10000 });
@@ -95,10 +99,12 @@ const browser = async () => {
       sum: [...el.querySelectorAll('[data-card-share-detail-card]')].reduce((a, x) => a + Number((x.textContent.match(/×(\d+)$/) || [0, 0])[1]), 0),
       smart: !!el.querySelector('[data-card-share-detail-smart]'),
       stats: (el.querySelector('[data-card-share-detail-stats]') || {}).textContent || '',
+      rows: [...el.querySelectorAll('[data-card-share-detail-record-row]')].map((x) => x.getAttribute('data-card-share-detail-record-row')).join(','),
       fight: !!el.querySelector('[data-card-share-detail-fight]'),
     })) : null;
-    check('⑤ 「詳細」で、名前・3体の絵・全カード(合わせて50枚)・賢さ・戦われた数・「戦う」が出る',
-      !!info && /検査の相手/.test(info.name) && info.mons === 3 && info.cards === 50 && info.sum === 50 && info.smart && /まだ戦われていません/.test(info.stats) && info.fight, JSON.stringify(info));
+    check('⑤ 「詳細」で、名前・3体の絵・全カード(合わせて50枚)・賢さ・「戦う」が出る',
+      !!info && /検査の相手/.test(info.name) && info.mons === 3 && info.cards === 50 && info.sum === 50 && info.smart && info.fight, JSON.stringify(info));
+    check('⑦ 「詳細」の戦績: 2勝1敗(勝ち 67%)と、最近の試合の勝ち・負け(新しい順)が出る', !!info && /2勝1敗/.test(info.stats) && /67%/.test(info.stats) && info.rows === 'won,lost,won', JSON.stringify(info && { stats: info.stats, rows: info.rows }));
     if (process.env.SHARE_SHOT) await page.screenshot({ path: process.env.SHARE_SHOT });
     const fitD = await det.evaluate((el) => { const box = el.firstElementChild.getBoundingClientRect(); return { right: Math.round(box.right), w: window.innerWidth, over: [...el.querySelectorAll('*')].filter((c) => c.scrollWidth > c.clientWidth + 1 && getComputedStyle(c).overflowX !== 'auto').length }; }).catch(() => null);
     check('⑤ 詳細の窓が画面からはみ出さない', !!fitD && fitD.right <= fitD.w && fitD.over === 0, JSON.stringify(fitD));
