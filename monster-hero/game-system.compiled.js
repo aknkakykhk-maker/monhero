@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bb966628f69c0c76
+// source-sha256: 63981df64d3702ed
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -120013,6 +120013,7 @@ const cardCupNormalizeView = v => {
     a: int(m.a),
     b: int(m.b),
     winner: m.winner === 0 || m.winner === 1 ? m.winner : null,
+    ready: !!(m.live && m.live.ready_at),
     kos: Array.isArray(m.kos) ? m.kos.slice(0, 2).map(k => Number.isInteger(k) ? k : 0) : null,
     live: m.live && typeof m.live.play === 'string' ? {
       who: typeof m.live.who === 'string' ? m.live.who : null,
@@ -120536,7 +120537,12 @@ const CardCupDetail = ({
     className: "mt-1 text-[12px] font-black text-amber-200"
   }, `結果は ${cardTourTimeLabel(c.startAt)} に出ます`), c.mode === 'auto' && c.status === 'running' && React.createElement("div", {
     className: "mt-1 text-[12px] font-black text-amber-200"
-  }, `試合はサーバで自動で行われます。結果は ${cardTourTimeLabel(c.startAt)} に出ます`)), shown && c.format === 'ko' && React.createElement(CardCupBracket, {
+  }, `試合はサーバで自動で行われます。結果は ${cardTourTimeLabel(c.startAt)} に出ます`)), c.mode === 'live' && typeof CardCupLivePanel === 'function' && React.createElement(CardCupLivePanel, {
+    v: v,
+    now: now,
+    selfId: selfId,
+    onChanged: onChanged
+  }), shown && c.format === 'ko' && React.createElement(CardCupBracket, {
     rounds: c.bracket,
     matches: v.matches,
     entries: v.entries,
@@ -120762,6 +120768,191 @@ const CardCup = ({
     className: "rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100",
     style: JA_WRAP_STYLE
   }, jaWrap(msg))));
+};
+const CARD_CUP_LIVE_CHECKIN_MS = 10 * 60000;
+const CARD_CUP_LIVE_POLL_MS = 8000;
+const CARD_CUP_LIVE_SETTLE_MS = 30000;
+const cardCupLiveNext = v => {
+  const me = v.entries.find(e => e.mine);
+  const seat = me && Number.isInteger(me.seat) ? me.seat : null;
+  if (seat === null) return {
+    seat: null,
+    match: null,
+    out: false
+  };
+  const mineAll = v.matches.filter(m => m.a === seat || m.b === seat).sort((x, y) => x.round - y.round || x.slot - y.slot);
+  const match = mineAll.find(m => m.winner === null) || null;
+  const out = v.cup.format === 'ko' && mineAll.some(m => m.winner !== null && (m.winner === 0 ? m.a : m.b) !== seat);
+  return {
+    seat,
+    match,
+    out
+  };
+};
+const cardCupLiveMsg = {
+  checkin: {
+    ok: '集合しました',
+    early: 'まだ集合できません(始まる10分前から)',
+    closed: 'この個人杯は終わりました',
+    none: 'デッキを登録した端末でだけ集合できます',
+    bad: '集合できませんでした'
+  },
+  start: {
+    ok: '始まりました',
+    early: 'まだ始められません',
+    wait: '全員が集合したら、早めに始められます',
+    few: '人数が足りなかったため、中止になりました',
+    none: 'デッキを登録した端末でだけ始められます',
+    closed: 'この個人杯は終わりました',
+    bad: '始められませんでした'
+  }
+};
+const CardCupLivePanel = ({
+  v,
+  now,
+  selfId,
+  onChanged,
+  onPlay = null
+}) => {
+  const c = v.cup;
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const startTried = useRef(false);
+  const call = async (fn, extra = {}) => {
+    const key = await cardShareOwnerKey(false);
+    if (!key || !selfId) return 'none';
+    return cardTourRpc(fn, {
+      p_cup: c.id,
+      p_owner: selfId,
+      p_key: key,
+      ...extra
+    });
+  };
+  const act = async (fn, kind) => {
+    if (busy) return;
+    setBusy(true);
+    setMsg('');
+    try {
+      const r = await call(fn);
+      setMsg(cardCupLiveMsg[kind][r] || '通信できませんでした。もう一度お試しください');
+      await onChanged();
+    } finally {
+      setBusy(false);
+    }
+  };
+  const live = c.status === 'entry' || c.status === 'running';
+  useEffect(() => {
+    if (!live || now < c.startAt - CARD_CUP_LIVE_CHECKIN_MS - 5 * 60000) return undefined;
+    const t = setInterval(() => {
+      void onChanged();
+    }, CARD_CUP_LIVE_POLL_MS);
+    return () => clearInterval(t);
+  }, [live, c.id]);
+  useEffect(() => {
+    if (c.status !== 'entry' || !v.me || now < c.startAt || startTried.current) return;
+    startTried.current = true;
+    void call('card_cup_live_start').then(() => onChanged());
+  }, [c.status, v.me, now >= c.startAt]);
+  useEffect(() => {
+    if (c.status !== 'running') return undefined;
+    const t = setInterval(() => {
+      void cardTourRpc('card_cup_live_settle', {
+        p_cup: c.id
+      }).then(n => {
+        if (n > 0) void onChanged();
+      });
+    }, CARD_CUP_LIVE_SETTLE_MS);
+    return () => clearInterval(t);
+  }, [c.status, c.id]);
+  if (!live) return null;
+  const meE = v.entries.find(e => e.mine) || null;
+  const host = selfId && c.hostId === selfId;
+  const canCheckin = v.me && meE && !meE.checkin && now >= c.startAt - CARD_CUP_LIVE_CHECKIN_MS;
+  const here = v.entries.filter(e => e.checkin).length;
+  const allHere = v.entries.length >= 2 && here === v.entries.length;
+  const next = c.status === 'running' ? cardCupLiveNext(v) : null;
+  const bySeat = s => v.entries.find(e => e.seat === s) || null;
+  const foe = next && next.match ? bySeat(next.match.a === next.seat ? next.match.b : next.match.a) : null;
+  const roundText = m => c.format === 'ko' ? (() => {
+    const total = c.bracket && c.bracket[0] ? Math.round(Math.log2(c.bracket[0].length * 2)) : 0;
+    return m.round === total - 1 ? '決勝' : m.round === total - 2 ? '準決勝' : `${m.round + 1}回戦`;
+  })() : `${m.round + 1}回戦`;
+  return React.createElement("div", {
+    "data-card-cup-live": c.status,
+    className: "space-y-2 rounded-2xl border-2 border-sky-500/60 bg-slate-950/70 p-3"
+  }, c.status === 'entry' && React.createElement(React.Fragment, null, React.createElement("b", {
+    className: "block text-[14px] font-black text-sky-200"
+  }, now < c.startAt ? `${cardTourTimeLabel(c.startAt)} に始まります` : 'まもなく始まります'), React.createElement("div", {
+    "data-card-cup-live-here": true,
+    className: "text-[12px] font-bold text-slate-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`集合 ${here}/${v.entries.length}人。始まる10分前から集合できます。来られない人の試合は、その人の登録デッキが代わりに自動で戦います`)), v.me && meE && meE.checkin && React.createElement("div", {
+    "data-card-cup-live-checked": true,
+    className: "rounded-xl bg-emerald-900/50 p-2 text-[13px] font-black text-emerald-200"
+  }, "集合しました。始まるまでこの画面で待っていてください"), v.me && meE && !meE.checkin && React.createElement("button", {
+    type: "button",
+    "data-card-cup-live-checkin": true,
+    disabled: busy || !canCheckin,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      void act('card_cup_live_checkin', 'checkin');
+    },
+    className: `w-full rounded-2xl py-3 text-[15px] font-black ${canCheckin ? 'bg-gradient-to-b from-sky-300 to-sky-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`
+  }, canCheckin ? '集合する' : `集合は ${cardTourTimeLabel(c.startAt - CARD_CUP_LIVE_CHECKIN_MS)} から`), host && now < c.startAt && allHere && now >= c.startAt - CARD_CUP_LIVE_CHECKIN_MS && React.createElement("button", {
+    type: "button",
+    "data-card-cup-live-start": true,
+    disabled: busy,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      void act('card_cup_live_start', 'start');
+    },
+    className: "w-full rounded-2xl bg-gradient-to-b from-amber-300 to-orange-500 py-3 text-[15px] font-black text-slate-950"
+  }, "全員そろったので始める")), c.status === 'running' && next && React.createElement("div", {
+    "data-card-cup-live-next": true,
+    className: "space-y-1.5"
+  }, next.seat === null && React.createElement("div", {
+    className: "text-[13px] font-bold text-slate-200"
+  }, "開催中です。試合のようすは下の表で見られます"), next.seat !== null && next.out && React.createElement("div", {
+    "data-card-cup-live-out": true,
+    className: "rounded-xl bg-slate-800 p-2 text-[13px] font-black text-slate-200"
+  }, "あなたの試合は終わりました。ほかの試合の結果を待っています"), next.seat !== null && !next.out && !next.match && React.createElement("div", {
+    className: "rounded-xl bg-slate-800 p-2 text-[13px] font-black text-slate-200"
+  }, c.format === 'ko' ? 'この回戦は不戦勝です。次の回戦を待っています' : 'あなたの試合は全部終わりました。ほかの試合の結果を待っています'), next.match && React.createElement(React.Fragment, null, React.createElement("b", {
+    className: "block text-[14px] font-black text-sky-200"
+  }, `あなたの次の試合: ${roundText(next.match)}`), React.createElement("div", {
+    className: "flex items-center gap-2 rounded-xl bg-slate-900 p-2"
+  }, React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-[14px] font-black text-white"
+  }, `相手: ${foe ? foe.name : 'ブリーダー'}`), React.createElement("span", {
+    className: `shrink-0 rounded-full px-2 py-0.5 text-[11px] font-black ${foe && foe.checkin ? 'bg-emerald-500 text-slate-950' : 'bg-slate-600 text-slate-100'}`
+  }, foe && foe.checkin ? '来ています' : '来ていません')), foe && !foe.checkin && React.createElement("div", {
+    className: "text-[12px] font-bold text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('相手が来ていないので、相手の登録デッキと戦います')), React.createElement("button", {
+    type: "button",
+    "data-card-cup-live-play": next.match.id,
+    disabled: !next.match.ready || !onPlay,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      if (onPlay) onPlay(next.match);
+    },
+    className: `w-full rounded-2xl py-3 text-[15px] font-black ${next.match.ready && onPlay ? 'bg-gradient-to-b from-sky-300 to-sky-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`
+  }, !next.match.ready ? '前の回戦が終わるのを待っています' : onPlay ? '試合へ' : '試合の画面は準備中です'))), c.status === 'running' && c.format === 'ko' && typeof CardCupBracket === 'function' && React.createElement(CardCupBracket, {
+    rounds: c.bracket,
+    matches: v.matches,
+    entries: v.entries,
+    done: true
+  }), c.status === 'running' && c.format === 'rr' && typeof CardTourGrid === 'function' && typeof cardCupAsTourView === 'function' && React.createElement(CardTourGrid, {
+    view: cardCupAsTourView(v),
+    stage: "group",
+    grp: 0,
+    known: null,
+    now: now
+  }), msg && React.createElement("p", {
+    "data-card-cup-live-msg": true,
+    className: "rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(msg)));
 };
 const DEBUG_TRIALS = [{
   id: 'rhythm_mon_ab1',
