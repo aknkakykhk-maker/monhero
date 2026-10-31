@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d766d7d1957f1200
+// source-sha256: 00b76403e527217a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6711,7 +6711,7 @@ const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAU
   return [scene, BGM_TRACK_BY_ID[legacySaved] ? legacySaved : fallback];
 }));
 const SCREEN_THEME_STORAGE_KEY = 'mh_screen_theme_v1';
-const SCREEN_THEME_HALLOWEEN_UNTIL = Date.parse('2026-11-01T00:00:00+09:00');
+const SCREEN_THEME_HALLOWEEN_UNTIL = Date.parse(typeof HALLOWEEN_NIGHT_END_AT === 'string' ? HALLOWEEN_NIGHT_END_AT : '2026-11-01T04:00:00+09:00');
 const SCREEN_THEME_CHOICES = [{
   id: 'auto',
   label: 'おまかせ'
