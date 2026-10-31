@@ -34,6 +34,7 @@ const cardCupNormalizeView = (v) => {
     seat: int(e.seat), place: int(e.place), wins: int(e.wins), checkin: e.checkin === true }));
   const matches = (Array.isArray(v.matches) ? v.matches : []).filter((m) => m && Number.isFinite(Number(m.id))).map((m) => ({
     id: Number(m.id), round: int(m.round) || 0, slot: int(m.slot) || 0, a: int(m.a), b: int(m.b), winner: m.winner === 0 || m.winner === 1 ? m.winner : null,
+    ready: !!(m.live && m.live.ready_at), // リアルタイム杯: 戦える回戦か(④ 99-card-cup-live)
     kos: Array.isArray(m.kos) ? m.kos.slice(0, 2).map((k) => (Number.isInteger(k) ? k : 0)) : null,
     live: m.live && typeof m.live.play === 'string' ? { who: typeof m.live.who === 'string' ? m.live.who : null, play: m.live.play.slice(0, 200), review: typeof m.live.review === 'string' ? m.live.review.slice(0, 240) : '' } : null }))
     .filter((m) => m.a !== null && m.b !== null);
@@ -315,6 +316,7 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
         {c.status === 'done' && !shown && <div className="mt-1 text-[12px] font-black text-amber-200">{`結果は ${cardTourTimeLabel(c.startAt)} に出ます`}</div>}
         {c.mode === 'auto' && c.status === 'running' && <div className="mt-1 text-[12px] font-black text-amber-200">{`試合はサーバで自動で行われます。結果は ${cardTourTimeLabel(c.startAt)} に出ます`}</div>}
       </div>
+      {c.mode === 'live' && typeof CardCupLivePanel === 'function' && <CardCupLivePanel v={v} now={now} selfId={selfId} onChanged={onChanged}/>}
       {shown && c.format === 'ko' && <CardCupBracket rounds={c.bracket} matches={v.matches} entries={v.entries} done/>}
       {shown && c.format === 'rr' && typeof CardTourGrid === 'function' && <CardTourGrid view={cardCupAsTourView(v)} stage="group" grp={0} known={null} now={now}/>}
       {shown && ranked.length > 0 && (
