@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e680f2d53d4350f0
+// source-sha256: 7534b21f14ac96a2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -100640,7 +100640,8 @@ const CardBattleBoard = ({
   const guardAtk = pd && !tutorial ? cardOf(db, pd.main) : null;
   const guardAtkText = guardAtk ? guardAtk.text || cardPlainEffectText(guardAtk) : '';
   const guardAtkAll = guardAtk ? [pd.main, ...(Array.isArray(pd.used) ? pd.used : []).filter((no, i, a) => no !== pd.main || a.indexOf(no) !== i)].map(no => cardOf(db, no)).filter(Boolean) : [];
-  const guardAtkMore = guardAtkAll.slice(1);
+  const guardAtkSame = guardAtk ? guardAtkAll.filter(c => c.no === guardAtk.no).length : 0;
+  const guardAtkMore = guardAtkAll.slice(1).filter((c, i, a) => c.no !== (guardAtk && guardAtk.no) && a.findIndex(x => x.no === c.no) === i);
   const liveFoeCard = !pd && action && action.side === 'foe' && Array.isArray(action.cards) ? cardOf(db, action.cards[0]) : null;
   const liveFoeText = liveFoeCard ? liveFoeCard.text || cardPlainEffectText(liveFoeCard) : '';
   const logLines = st.log.filter(l => l.kind !== 'turn').slice(-3);
@@ -101290,7 +101291,10 @@ const CardBattleBoard = ({
     className: "min-w-0 flex-1 text-left active:scale-[.98]"
   }), React.createElement("span", {
     className: "block text-rose-200"
-  }, pendingText), guardAtkText && stageFit < 2 && React.createElement("span", {
+  }, pendingText), guardAtkSame > 1 && React.createElement("span", {
+    "data-card-guard-attack-same": guardAtkSame,
+    className: "block text-[11px] font-black text-amber-200"
+  }, `「${guardAtk.name}」×${guardAtkSame}`), guardAtkText && stageFit < 2 && React.createElement("span", {
     "data-card-guard-attack-text": true,
     className: `${tiny || stageFit >= 1 ? 'line-clamp-1' : compact ? 'line-clamp-2' : 'line-clamp-3'} block text-[11px] leading-snug text-slate-200`
   }, guardAtkText), guardAtkMore.length > 0 && stageFit < 2 && guardAtkMore.map((c, i) => React.createElement("span", {

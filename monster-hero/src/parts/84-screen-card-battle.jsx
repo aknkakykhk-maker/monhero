@@ -1845,7 +1845,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   // 組み合わせ(キックの2枚・同時に使う札・技に付ける札など)で1手に使ったカードを全部(主のカードが先頭)。
   //   2026-10-31 社長「組み合わせ系も見れるようになってる?」: 前は主の1枚だけだった。それぞれ押すと詳しい画面
   const guardAtkAll = guardAtk ? [pd.main, ...((Array.isArray(pd.used) ? pd.used : []).filter((no, i, a) => no !== pd.main || a.indexOf(no) !== i))].map((no) => cardOf(db, no)).filter(Boolean) : [];
-  const guardAtkMore = guardAtkAll.slice(1);
+  // 文に出すほかのカードは、主と同じカード・同じカードどうしを1つにまとめる(キック2枚なら文は1回・「×2」で数を出す)
+  const guardAtkSame = guardAtk ? guardAtkAll.filter((c) => c.no === guardAtk.no).length : 0;
+  const guardAtkMore = guardAtkAll.slice(1).filter((c, i, a) => c.no !== (guardAtk && guardAtk.no) && a.findIndex((x) => x.no === c.no) === i);
   // 守りの判断が要らない相手の手(特殊・全体など)は、使ったカードの効果の一文を、次の手まで実況の下に残す
   const liveFoeCard = !pd && action && action.side === 'foe' && Array.isArray(action.cards) ? cardOf(db, action.cards[0]) : null;
   const liveFoeText = liveFoeCard ? (liveFoeCard.text || cardPlainEffectText(liveFoeCard)) : '';
@@ -2195,6 +2197,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
                 </button>))}</span>}
               <button type="button" {...press(guardAtk.no, () => setDetail(guardAtk.no), { double: false })} className="min-w-0 flex-1 text-left active:scale-[.98]">
                 <span className="block text-rose-200">{pendingText}</span>
+                {guardAtkSame > 1 && <span data-card-guard-attack-same={guardAtkSame} className="block text-[11px] font-black text-amber-200">{`「${guardAtk.name}」×${guardAtkSame}`}</span>}
                 {guardAtkText && stageFit < 2 && <span data-card-guard-attack-text className={`${tiny || stageFit >= 1 ? 'line-clamp-1' : compact ? 'line-clamp-2' : 'line-clamp-3'} block text-[11px] leading-snug text-slate-200`}>{guardAtkText}</span>}
                 {/* 組み合わせのほかのカード: 名前と効果を1行ずつ */}
                 {guardAtkMore.length > 0 && stageFit < 2 && guardAtkMore.map((c, i) => (
