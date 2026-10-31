@@ -179,9 +179,13 @@ const CARD_VS_CSS = `
 //   表に無い絵は、前と同じ object-contain
 // 表のキーは images/ の下の道(images/ を付けると版を打つ道具が ?v= を付けてしまうため)
 const cardVsBoxOf = (src) => (typeof ART_CONTENT_BOXES !== 'undefined' && src ? ART_CONTENT_BOXES[String(src).split('?')[0].replace(/^images\//, '')] || null : null);
-const CardVsArt = ({ src, alt, aspect, spread = 1, className = '', style = {}, ...rest }) => {
+// kira … キラ・レアキラの絵の形のとおりの光(84 の CardKiraSil)を絵に重ねる
+const CardVsArt = ({ src, alt, aspect, spread = 1, className = '', style = {}, kira = null, ...rest }) => {
   const box = cardVsBoxOf(src);
-  if (!box) return <img src={src} alt={alt} draggable={false} className={`w-full object-contain object-bottom ${className}`} style={{ aspectRatio: `${aspect}`, ...style }} {...rest}/>;
+  if (!box) {
+    const img = <img src={src} alt={alt} draggable={false} className={`w-full object-contain object-bottom ${className}`} style={{ aspectRatio: `${aspect}`, ...(kira ? null : style) }} {...(kira ? null : rest)}/>;
+    return kira ? <div className="relative w-full" style={style} {...rest}>{img}<CardKiraSil kind={kira} src={src} style={{ inset: 0 }} maskSize="contain" maskPos="bottom"/></div> : img;
+  }
   const [x0, y0, x1, y1, a] = box;
   const fw = Math.max(0.01, x1 - x0), fh = Math.max(0.01, y1 - y0);
   const ca = (fw * a) / fh; // 中身の 横÷縦
@@ -192,6 +196,7 @@ const CardVsArt = ({ src, alt, aspect, spread = 1, className = '', style = {}, .
     <div className="relative w-full" style={{ aspectRatio: `${aspect}`, ...style }} {...rest}>
       <img src={src} alt={alt} draggable={false} className={`absolute max-w-none ${className}`}
         style={{ width: `${wP}%`, height: `${hP}%`, left: `${50 - (x0 + fw / 2) * wP}%`, top: `${100 - y1 * hP}%` }}/>
+      {kira && <CardKiraSil kind={kira} src={src} style={{ width: `${wP}%`, height: `${hP}%`, left: `${50 - (x0 + fw / 2) * wP}%`, top: `${100 - y1 * hP}%` }}/>}
     </div>
   );
 };
@@ -207,8 +212,10 @@ const CardVsMonsters = ({ db, monsters, side, start, step }) => (
             ? (() => {
               // キラ・レアキラの光(84 の CardKiraFx・cardKiraWrap。対戦の場と同じ見た目)
               const kira = typeof cardKiraOf === 'function' ? cardKiraOf(db, no) : null;
-              const el = <CardVsArt src={art} alt={m.name} aspect={1} spread={1.1} className="drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]" style={{ width: 'min(100%, 19vh, 140px)' }}/>;
-              return kira ? <span className="relative flex w-full justify-center" style={{ isolation: 'isolate' }}><CardKiraFx kind={kira}/>{cardKiraWrap(kira, el)}</span> : el;
+              // キラの子は、光のふちの枠に大きさを持たせる(枠が幅 0 になって絵が消えていた。2026-10-31)
+              const size = { width: 'min(100%, 19vh, 140px)' };
+              const el = <CardVsArt src={art} alt={m.name} aspect={1} spread={1.1} kira={kira} className="drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]" style={kira ? { width: '100%' } : size}/>;
+              return kira ? <span className="relative flex w-full justify-center" style={{ isolation: 'isolate' }}><CardKiraFx kind={kira}/>{cardKiraWrap(kira, el, null, size)}</span> : el;
             })()
             : <img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="w-full rounded-md object-cover" style={{ aspectRatio: '63 / 88', maxHeight: 'min(19vh, 140px)' }}/>}
           <span className="mt-0.5 w-full truncate text-center text-[10px] font-black text-white" style={{ textShadow: '0 1px 2px #000' }}>{m.name}</span>

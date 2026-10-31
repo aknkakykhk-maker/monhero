@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1417e77243e1bdee
+// source-sha256: 2531c6b1727b435e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -96344,19 +96344,34 @@ const CardVsArt = ({
   spread = 1,
   className = '',
   style = {},
+  kira = null,
   ...rest
 }) => {
   const box = cardVsBoxOf(src);
-  if (!box) return React.createElement("img", _extends({
-    src: src,
-    alt: alt,
-    draggable: false,
-    className: `w-full object-contain object-bottom ${className}`,
-    style: {
-      aspectRatio: `${aspect}`,
-      ...style
-    }
-  }, rest));
+  if (!box) {
+    const img = React.createElement("img", _extends({
+      src: src,
+      alt: alt,
+      draggable: false,
+      className: `w-full object-contain object-bottom ${className}`,
+      style: {
+        aspectRatio: `${aspect}`,
+        ...(kira ? null : style)
+      }
+    }, kira ? null : rest));
+    return kira ? React.createElement("div", _extends({
+      className: "relative w-full",
+      style: style
+    }, rest), img, React.createElement(CardKiraSil, {
+      kind: kira,
+      src: src,
+      style: {
+        inset: 0
+      },
+      maskSize: "contain",
+      maskPos: "bottom"
+    })) : img;
+  }
   const [x0, y0, x1, y1, a] = box;
   const fw = Math.max(0.01, x1 - x0),
     fh = Math.max(0.01, y1 - y0);
@@ -96374,6 +96389,15 @@ const CardVsArt = ({
     alt: alt,
     draggable: false,
     className: `absolute max-w-none ${className}`,
+    style: {
+      width: `${wP}%`,
+      height: `${hP}%`,
+      left: `${50 - (x0 + fw / 2) * wP}%`,
+      top: `${100 - y1 * hP}%`
+    }
+  }), kira && React.createElement(CardKiraSil, {
+    kind: kira,
+    src: src,
     style: {
       width: `${wP}%`,
       height: `${hP}%`,
@@ -96404,15 +96428,19 @@ const CardVsMonsters = ({
     }
   }, art ? (() => {
     const kira = typeof cardKiraOf === 'function' ? cardKiraOf(db, no) : null;
+    const size = {
+      width: 'min(100%, 19vh, 140px)'
+    };
     const el = React.createElement(CardVsArt, {
       src: art,
       alt: m.name,
       aspect: 1,
       spread: 1.1,
+      kira: kira,
       className: "drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]",
-      style: {
-        width: 'min(100%, 19vh, 140px)'
-      }
+      style: kira ? {
+        width: '100%'
+      } : size
     });
     return kira ? React.createElement("span", {
       className: "relative flex w-full justify-center",
@@ -96421,7 +96449,7 @@ const CardVsMonsters = ({
       }
     }, React.createElement(CardKiraFx, {
       kind: kira
-    }), cardKiraWrap(kira, el)) : el;
+    }), cardKiraWrap(kira, el, null, size)) : el;
   })() : React.createElement("img", {
     src: CARD_IMG(m.img),
     alt: m.name,
@@ -97902,8 +97930,8 @@ const cardKiraOf = (db, no) => {
   const v = String((db && cardMonsterOf(db, no) || {}).variant || '');
   return v.includes('別絵キラ') ? 'rare' : v.includes('キラ') ? 'kira' : null;
 };
-const CARD_KIRA_SPARKS = Object.freeze([[24, 30, 0], [68, 22, 1.3], [52, 62, 2.5]]);
-const CARD_RARE_MOTES = Object.freeze([[22, 0], [38, 1.1], [55, 0.5], [70, 1.7], [46, 2.3], [62, 2.9]]);
+const CARD_KIRA_SPARKS = Object.freeze([[24, 30, 0], [68, 22, 1.3], [52, 62, 2.5], [78, 56, 0.7], [36, 12, 1.9]]);
+const CARD_RARE_MOTES = Object.freeze([[22, 0], [38, 1.1], [55, 0.5], [70, 1.7], [46, 2.3], [62, 2.9], [30, 1.5], [78, 0.8], [14, 2.6], [86, 2]]);
 const CardKiraFx = ({
   kind,
   calm = false
@@ -97988,10 +98016,58 @@ const CardShine = ({
     className: "mh-shine-l mh-shine-silver-rim"
   })));
 };
-const cardKiraWrap = (kind, el) => kind ? React.createElement("span", {
-  "data-card-kira": kind,
-  className: `${kind === 'rare' ? 'mh-rare-rim' : 'mh-kira-rim'} inline-flex items-end justify-center`
-}, el) : el;
+const CardKiraSil = ({
+  kind,
+  src,
+  calm = false,
+  style = null,
+  maskSize = '100% 100%',
+  maskPos = 'center'
+}) => {
+  if (!kind || !src || calm) return null;
+  const m = `url("${src}")`;
+  return React.createElement("span", {
+    "data-card-kira-sil": kind,
+    "aria-hidden": "true",
+    className: "mh-kira-sil",
+    style: {
+      WebkitMaskImage: m,
+      maskImage: m,
+      WebkitMaskSize: maskSize,
+      maskSize,
+      WebkitMaskPosition: maskPos,
+      maskPosition: maskPos,
+      WebkitMaskRepeat: 'no-repeat',
+      maskRepeat: 'no-repeat',
+      ...style
+    }
+  }, kind === 'rare' && React.createElement("span", {
+    className: "mh-kira-sil-aurora"
+  }), React.createElement("span", {
+    className: `mh-kira-sil-sheen ${kind === 'rare' ? 'fast' : ''}`
+  }));
+};
+const cardKiraWrap = (kind, el, sil = null, box = null) => {
+  if (!kind) return el;
+  const rim = React.createElement("span", {
+    "data-card-kira": kind,
+    className: `${kind === 'rare' ? 'mh-rare-rim' : 'mh-kira-rim'} inline-flex items-end justify-center`,
+    style: box || undefined
+  }, el);
+  if (!sil || sil.calm) return rim;
+  return React.createElement("span", {
+    className: "relative inline-flex items-end justify-center"
+  }, rim, React.createElement(CardKiraSil, {
+    kind: kind,
+    src: sil.src,
+    style: {
+      inset: 0,
+      ...(sil.transform ? {
+        transform: sil.transform
+      } : null)
+    }
+  }));
+};
 const CARD_FIELD_ART_SPREAD = 1.15;
 const cardFieldArtTransform = (src, flip) => {
   const box = typeof cardVsBoxOf === 'function' ? cardVsBoxOf(src) : null;
@@ -98951,7 +99027,11 @@ const CardMonSlot = ({
       } : null)
     },
     className: `${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp && !artFit ? '-scale-x-100' : ''}`
-  })) : React.createElement("img", {
+  }), {
+    src: art,
+    transform: artFit || (opp ? 'scaleX(-1)' : null),
+    calm
+  }) : React.createElement("img", {
     src: CARD_IMG(cardMonsterOf(db, mon.no).img),
     alt: "",
     className: `${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`
@@ -162128,23 +162208,34 @@ const createAnimationStyle = () => {
     @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash, .mh-card-dmg-pop, .mh-card-down-band, .mh-card-guard-result { animation: none; } }
     /* キラ・レアキラの立ち絵の光(84 の CardKiraFx・cardKiraWrap。2026-10-30 社長「この形で入れて」)。CSS だけ・粒は少なく */
     .mh-kira-rim { animation: mhKiraRim 3.2s linear infinite; }
-    @keyframes mhKiraRim { 0%, 100% { filter: drop-shadow(0 0 2px rgba(255,120,220,.9)); } 33% { filter: drop-shadow(0 0 2px rgba(120,210,255,.9)); } 66% { filter: drop-shadow(0 0 2px rgba(255,230,110,.9)); } }
-    .mh-rare-rim { filter: drop-shadow(0 0 3px rgba(255,214,102,.95)) drop-shadow(0 0 7px rgba(255,170,60,.5)); }
+    /* 2026-10-31 社長「バトル中の立ち絵も強化して」: ふちを太く・外へにじむ光を足す(キラは色が移り変わる/レアキラは金に桃色を重ねる) */
+    @keyframes mhKiraRim { 0%, 100% { filter: drop-shadow(0 0 2px rgba(255,120,220,1)) drop-shadow(0 0 6px rgba(255,120,220,.55)); } 33% { filter: drop-shadow(0 0 2px rgba(120,210,255,1)) drop-shadow(0 0 6px rgba(120,210,255,.55)); } 66% { filter: drop-shadow(0 0 2px rgba(255,230,110,1)) drop-shadow(0 0 6px rgba(255,230,110,.55)); } }
+    .mh-rare-rim { filter: drop-shadow(0 0 2px rgba(255,236,150,1)) drop-shadow(0 0 6px rgba(255,190,60,.85)) drop-shadow(0 0 12px rgba(255,90,200,.45)); }
+    /* 絵の形のとおりの光(84 の CardKiraSil)。絵を型に切り抜くので、透けている所には出ない */
+    .mh-kira-sil { position: absolute; pointer-events: none; overflow: hidden; z-index: 1; }
+    .mh-kira-sil-aurora { position: absolute; top: 0; bottom: 0; left: -200%; width: 400%; mix-blend-mode: screen; opacity: .6;
+      background: linear-gradient(120deg, rgba(255,0,150,0) 0%, rgba(255,0,150,.4) 12%, rgba(0,200,255,.4) 25%, rgba(255,230,0,.4) 37%, rgba(255,0,150,0) 50%, rgba(255,0,150,.4) 62%, rgba(0,200,255,.4) 75%, rgba(255,230,0,.4) 87%, rgba(255,0,150,0) 100%);
+      animation: mhShineAurora 3s linear infinite; }
+    .mh-kira-sil-sheen { position: absolute; top: -20%; bottom: -20%; left: -60%; right: -60%; background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.75) 50%, transparent 60%); mix-blend-mode: overlay; animation: mhKiraSilSheen 3.6s ease-in-out infinite; }
+    .mh-kira-sil-sheen.fast { background: linear-gradient(105deg, transparent 38%, rgba(255,255,255,.95) 50%, transparent 62%); animation: mhShineSheen 1.7s ease-in-out infinite; }
+    @keyframes mhKiraSilSheen { 0% { transform: translateX(-55%); } 35%, 100% { transform: translateX(55%); } }
     .mh-kira-fx { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
-    .mh-kira-spark { position: absolute; width: 13px; height: 13px; margin: -6px 0 0 -6px; opacity: 0; background: #fff6fd; clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%); filter: drop-shadow(0 0 2px rgba(255,170,240,.95)); animation: mhKiraSpark 3.8s ease-in-out infinite; }
+    .mh-kira-spark { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; opacity: 0; background: #fff6fd; clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%); filter: drop-shadow(0 0 2px rgba(255,170,240,.95)); animation: mhKiraSpark 3.8s ease-in-out infinite; }
     @keyframes mhKiraSpark { 0%, 70%, 100% { opacity: 0; transform: scale(.4) rotate(0deg); } 80% { opacity: 1; transform: scale(1) rotate(25deg); } 90% { opacity: 0; transform: scale(.6) rotate(45deg); } }
     .mh-rare-halo { position: absolute; left: 50%; top: 54%; width: 82%; aspect-ratio: 1; max-height: 100%; transform: translate(-50%, -50%); border-radius: 50%; z-index: -1;
       /* 2026-10-31 社長「光り方は案B」: 後ろで光の線が回る(前は細い光の輪) */
       background: repeating-conic-gradient(rgba(255,214,102,.6) 0 8deg, rgba(255,214,102,0) 8deg 22deg);
       -webkit-mask: radial-gradient(circle, #000 28%, transparent 70%); mask: radial-gradient(circle, #000 28%, transparent 70%);
       animation: mhRareSpin 9s linear infinite; }
+    /* レアキラはキラより上だと分かるように、光の線を濃く・虹色を混ぜる */
+    .mh-rare-halo { width: 96%; background: repeating-conic-gradient(rgba(255,214,102,.8) 0 7deg, rgba(255,214,102,0) 7deg 18deg, rgba(255,120,220,.55) 18deg 23deg, rgba(255,120,220,0) 23deg 36deg, rgba(120,210,255,.55) 36deg 41deg, rgba(120,210,255,0) 41deg 54deg); }
     .mh-rare-glow { position: absolute; left: 50%; top: 58%; width: 66%; aspect-ratio: 1; max-height: 100%; transform: translate(-50%, -50%); border-radius: 50%; z-index: -1; background: radial-gradient(circle, rgba(255,214,102,.36), rgba(255,214,102,0) 70%); animation: mhRarePulse 2.6s ease-in-out infinite; }
     @keyframes mhRareSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
     @keyframes mhRarePulse { 0%, 100% { opacity: .55; transform: translate(-50%, -50%) scale(.92); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); } }
-    .mh-rare-mote { position: absolute; bottom: 6%; width: 3px; height: 3px; border-radius: 50%; background: #ffe08c; box-shadow: 0 0 4px rgba(255,214,102,.9); opacity: 0; animation: mhRareMote 3.4s linear infinite; }
-    @keyframes mhRareMote { 0% { opacity: 0; transform: translateY(0); } 15% { opacity: .95; } 80% { opacity: .6; } 100% { opacity: 0; transform: translateY(-70px); } }
+    .mh-rare-mote { position: absolute; bottom: 6%; width: 4px; height: 4px; border-radius: 50%; background: #ffe08c; box-shadow: 0 0 4px rgba(255,214,102,.9); opacity: 0; animation: mhRareMote 3.4s linear infinite; }
+    @keyframes mhRareMote { 0% { opacity: 0; transform: translateY(0); } 15% { opacity: .95; } 80% { opacity: .6; } 100% { opacity: 0; transform: translateY(-80px); } }
     @media (prefers-reduced-motion: reduce) {
-      .mh-kira-fx { display: none; }
+      .mh-kira-fx, .mh-kira-sil { display: none; }
       .mh-kira-rim { animation: none; filter: drop-shadow(0 0 2px rgba(200,160,255,.9)); }
     }
     /* カードの絵のキラ・レアキラ・銀の光(84 の CardShine。2026-10-31 社長「光り方は案B オーロラと粒」「ブリーダー・場のカードに銀の光の帯」)。

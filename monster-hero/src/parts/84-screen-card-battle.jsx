@@ -182,8 +182,11 @@ const cardMonArt = (mon) => {
 //   kira … ふちが虹色に移り変わり、十字のきらめきが時々走る(3つ) / rare … 金のふち・後ろに光の輪がゆっくり回って脈打つ・光の粒が舞う(6つ)
 //   CSS だけで動かす(軽く)。動きを減らす設定(prefers-reduced-motion)と、オプションの「揺らさない」(calm)では、ふちの光だけ
 const cardKiraOf = (db, no) => { const v = String(((db && cardMonsterOf(db, no)) || {}).variant || ''); return v.includes('別絵キラ') ? 'rare' : v.includes('キラ') ? 'kira' : null; };
-const CARD_KIRA_SPARKS = Object.freeze([[24, 30, 0], [68, 22, 1.3], [52, 62, 2.5]]);
-const CARD_RARE_MOTES = Object.freeze([[22, 0], [38, 1.1], [55, 0.5], [70, 1.7], [46, 2.3], [62, 2.9]]);
+// 2026-10-31 社長「バトル中の立ち絵も強化して」: 決まった案B(オーロラと粒)に合わせて強める。キラよりレアキラが上だとひと目で分かるように
+//   kira … ふちの色が移り変わる・星が5つまたたく・絵の上を光の帯がときどき走る /
+//   rare … 後ろで光の線が回る・金のふち・光の粒が10・絵の形のとおりにオーロラが流れ、光の帯が速く走る(CardKiraSil)
+const CARD_KIRA_SPARKS = Object.freeze([[24, 30, 0], [68, 22, 1.3], [52, 62, 2.5], [78, 56, 0.7], [36, 12, 1.9]]);
+const CARD_RARE_MOTES = Object.freeze([[22, 0], [38, 1.1], [55, 0.5], [70, 1.7], [46, 2.3], [62, 2.9], [30, 1.5], [78, 0.8], [14, 2.6], [86, 2]]);
 // 立ち絵の後ろと前に重ねる光(kind が無いときは何も出さない)。親は relative で isolation: isolate(輪を絵の後ろへ回すため)
 const CardKiraFx = ({ kind, calm = false }) => {
   if (!kind || calm) return null;
@@ -216,8 +219,30 @@ const CardShine = ({ kind, className = '', children }) => {
     </span>
   );
 };
-// 立ち絵(img など)を、キラのふちの光で包む。kind が無ければそのまま返す
-const cardKiraWrap = (kind, el) => (kind ? <span data-card-kira={kind} className={`${kind === 'rare' ? 'mh-rare-rim' : 'mh-kira-rim'} inline-flex items-end justify-center`}>{el}</span> : el);
+// 立ち絵の「絵の形のとおり」に重ねる光(絵そのものを型にして切り抜く。透けている所には出ない)。
+//   style … 絵と同じ置き場所・大きさ・transform(左右の向きも)。maskSize/maskPos … 絵の収め方(object-contain なら contain)
+//   calm(揺らさない)・動きを減らす設定では出さない(CSS)。動かすのは中の層の transform だけ
+const CardKiraSil = ({ kind, src, calm = false, style = null, maskSize = '100% 100%', maskPos = 'center' }) => {
+  if (!kind || !src || calm) return null;
+  const m = `url("${src}")`;
+  return (
+    <span data-card-kira-sil={kind} aria-hidden="true" className="mh-kira-sil"
+      style={{ WebkitMaskImage: m, maskImage: m, WebkitMaskSize: maskSize, maskSize, WebkitMaskPosition: maskPos, maskPosition: maskPos, WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat', ...style }}>
+      {kind === 'rare' && <span className="mh-kira-sil-aurora"/>}
+      <span className={`mh-kira-sil-sheen ${kind === 'rare' ? 'fast' : ''}`}/>
+    </span>
+  );
+};
+// 立ち絵(img など)を、キラのふちの光で包む。kind が無ければそのまま返す。
+// sil … { src, transform, calm } を渡すと、絵の形のとおりの光(CardKiraSil)も重ねる(img がそのまま中身の大きさのとき)
+//   絵の形の光は、ふちの光(filter)の外に置く(中で動かすと、ふちの光を毎こま描き直して重くなる)
+//   box … 包む枠の大きさ(中身が幅を % で持つとき。無いと枠の幅が 0 になって絵が消える。対戦開始の画面)
+const cardKiraWrap = (kind, el, sil = null, box = null) => {
+  if (!kind) return el;
+  const rim = <span data-card-kira={kind} className={`${kind === 'rare' ? 'mh-rare-rim' : 'mh-kira-rim'} inline-flex items-end justify-center`} style={box || undefined}>{el}</span>;
+  if (!sil || sil.calm) return rim;
+  return <span className="relative inline-flex items-end justify-center">{rim}<CardKiraSil kind={kind} src={sil.src} style={{ inset: 0, ...(sil.transform ? { transform: sil.transform } : null) }}/></span>;
+};
 // 場の立ち絵を、絵の「中身の範囲」(ART_CONTENT_BOXES。対戦開始の画面の cardVsBoxOf と同じ表)で要素いっぱいへ広げる
 // (2026-10-30 社長「同じ血統同士のサイズがあってない」)。カード用に届いた絵(ジェントルなど)は中身が端までなので広げず、
 // 余白のある古い立ち絵(モッチー・スエゾー・ライガーなど)だけが広がる。1体ずつの数字は持たない(表から計算する)。
@@ -785,7 +810,8 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   const artFit = art ? cardFieldArtTransform(art, opp) : null;
   const kira = art && !mon.ko ? cardKiraOf(db, mon.no) : null;
   const imgEl = art
-    ? cardKiraWrap(kira, <img src={art} alt="" style={{ ...(wide ? { maxHeight: wideArtH } : null), ...(artFit ? { transform: artFit } : null) }} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp && !artFit ? '-scale-x-100' : ''}`}/>)
+    ? cardKiraWrap(kira, <img src={art} alt="" style={{ ...(wide ? { maxHeight: wideArtH } : null), ...(artFit ? { transform: artFit } : null) }} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp && !artFit ? '-scale-x-100' : ''}`}/>,
+      { src: art, transform: artFit || (opp ? 'scaleX(-1)' : null), calm })
     : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`}/>;
   const mv = motion && !mon.ko ? motion : null;
   // calm … オプションの「画面の揺れ: 揺らさない」。受けたときは揺らさずに光るだけ
