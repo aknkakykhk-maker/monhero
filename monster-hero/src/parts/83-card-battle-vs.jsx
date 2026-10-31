@@ -179,9 +179,10 @@ const CARD_VS_CSS = `
 //   表に無い絵は、前と同じ object-contain
 // 表のキーは images/ の下の道(images/ を付けると版を打つ道具が ?v= を付けてしまうため)
 const cardVsBoxOf = (src) => (typeof ART_CONTENT_BOXES !== 'undefined' && src ? ART_CONTENT_BOXES[String(src).split('?')[0].replace(/^images\//, '')] || null : null);
-const CardVsArt = ({ src, alt, aspect, spread = 1, className = '', style = {}, ...rest }) => {
+// onImgError … 絵が読めなかったとき(84 の cardArtOnError: 読み直し→カードの絵)
+const CardVsArt = ({ src, alt, aspect, spread = 1, className = '', style = {}, onImgError = null, ...rest }) => {
   const box = cardVsBoxOf(src);
-  if (!box) return <img src={src} alt={alt} draggable={false} className={`w-full object-contain object-bottom ${className}`} style={{ aspectRatio: `${aspect}`, ...style }} {...rest}/>;
+  if (!box) return <img src={src} alt={alt} draggable={false} onError={onImgError || undefined} className={`w-full object-contain object-bottom ${className}`} style={{ aspectRatio: `${aspect}`, ...style }} {...rest}/>;
   const [x0, y0, x1, y1, a] = box;
   const fw = Math.max(0.01, x1 - x0), fh = Math.max(0.01, y1 - y0);
   const ca = (fw * a) / fh; // 中身の 横÷縦
@@ -190,7 +191,7 @@ const CardVsArt = ({ src, alt, aspect, spread = 1, className = '', style = {}, .
   const hP = (wP * aspect) / a; // 絵の高さ(枠の高さに対する%)
   return (
     <div className="relative w-full" style={{ aspectRatio: `${aspect}`, ...style }} {...rest}>
-      <img src={src} alt={alt} draggable={false} className={`absolute max-w-none ${className}`}
+      <img src={src} alt={alt} draggable={false} onError={onImgError || undefined} className={`absolute max-w-none ${className}`}
         style={{ width: `${wP}%`, height: `${hP}%`, left: `${50 - (x0 + fw / 2) * wP}%`, top: `${100 - y1 * hP}%` }}/>
     </div>
   );
@@ -200,7 +201,8 @@ const CardVsMonsters = ({ db, monsters, side, start, step }) => (
     {(monsters || []).slice(0, 3).map((no, i) => {
       const m = cardMonsterOf(db, no);
       if (!m) return null;
-      const art = cardMonArt(m);
+      // 読めなかった立ち絵は出さず、カードの絵で代える(84 の cardMonArtOk。2026-10-31 社長「立ち絵が表示されないときがある」)
+      const art = typeof cardMonArtOk === 'function' ? cardMonArtOk(m) : cardMonArt(m);
       return (
         <div key={`${no}-${i}`} data-card-vs-mon={no} className={`${side === 'foe' ? 'mh-vs-mon-foe' : 'mh-vs-mon-me'} flex min-w-0 flex-1 flex-col items-center`} style={{ animationDelay: `${start + i * step}ms`, maxWidth: 140 }}>
           {art
@@ -209,7 +211,7 @@ const CardVsMonsters = ({ db, monsters, side, start, step }) => (
               const kira = typeof cardKiraOf === 'function' ? cardKiraOf(db, no) : null;
               // キラの子は、光のふち(cardKiraWrap)の枠が中身に合わせて縮むので、幅に % を使うと 0 になって絵が消えていた(2026-10-31 ルールくんが見つけた)。
               //   キラの子だけ、% を使わない決まった幅にする(3体が横に並んでも収まる 30vw まで)
-              const el = <CardVsArt src={art} alt={m.name} aspect={1} spread={1.1} className="drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]" style={{ width: kira ? 'min(19vh, 140px, 30vw)' : 'min(100%, 19vh, 140px)' }}/>;
+              const el = <CardVsArt src={art} alt={m.name} aspect={1} spread={1.1} onImgError={typeof cardArtOnError === 'function' ? cardArtOnError(art, CARD_IMG(m.img)) : null} className="drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]" style={{ width: kira ? 'min(19vh, 140px, 30vw)' : 'min(100%, 19vh, 140px)' }}/>;
               return kira ? <span className="relative flex w-full justify-center" style={{ isolation: 'isolate' }}><CardKiraFx kind={kira}/>{cardKiraWrap(kira, el)}</span> : el;
             })()
             : <img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="w-full rounded-md object-cover" style={{ aspectRatio: '63 / 88', maxHeight: 'min(19vh, 140px)' }}/>}
@@ -227,9 +229,20 @@ const CardVsIntro = ({ db, intro, onDone, meIcon = null }) => {
   const done = useRef(false);
   const finish = () => { if (done.current) return; done.current = true; onDone && onDone(); };
   const ms = CARD_VS_MS[intro.mode] || CARD_VS_MS.assistant;
-  useEffect(() => { const t = setTimeout(finish, ms); return () => clearTimeout(t); }, []);
   const foe = intro.foe || {};
   const me = intro.me || {};
+  // 両方の3体の立ち絵とカードの絵を読み終えてから出す(長くても2.5秒。2026-10-31 社長「立ち絵が表示されないときがある」)。読めた絵は端末にたまるので、次からはすぐ
+  const nos = [...(foe.monsters || []), ...(me.monsters || [])];
+  const [ready, setReady] = useState(() => typeof cardArtReady !== 'function' || cardArtReady(db, nos));
+  useEffect(() => { if (ready) return undefined; let alive = true; void cardArtPreload(db, nos).then(() => { if (alive) setReady(true); }); return () => { alive = false; }; }, []);
+  useEffect(() => { if (!ready) return undefined; const t = setTimeout(finish, ms); return () => clearTimeout(t); }, [ready]);
+  if (!ready) {
+    return (
+      <div data-mh-screen data-card-vs-loading className="relative flex h-full min-h-0 flex-1 flex-col items-center justify-center text-white" style={{ background: 'linear-gradient(170deg, #4c0519 0%, #1e1b4b 48%, #0c4a6e 100%)' }}>
+        <b className="animate-pulse text-[15px] font-black">対戦の準備中…</b>
+      </div>
+    );
+  }
   const who = foe.who && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find((x) => x.id === foe.who) : null;
   const short = intro.mode === 'tutorial';
   const step = short ? 90 : 170;
