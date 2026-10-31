@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: abc9c8db2eace48e
+// source-sha256: 3357f542d7753890
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -103601,8 +103601,34 @@ const CardBattleScreen = ({
       }
       const mine = r.side === 0 ? r.a_side : r.b_side,
         foe = r.side === 0 ? r.b_side : r.a_side;
-      if (r.side === 0 ? r.checkin_b : r.checkin_a) {
-        setNotice('相手が来ています。2人で戦う部屋は準備中です');
+      const foeHere = r.side === 0 ? r.checkin_b : r.checkin_a;
+      const foeJoined = !!(r.side === 0 ? r.join_b : r.join_a);
+      const readyAt = Date.parse(r.ready_at) || 0;
+      const foeLate = !foeJoined && readyAt > 0 && Date.now() >= readyAt + 2 * 60000;
+      if (foeHere && !foeLate) {
+        if (typeof CARD_PVP === 'undefined' || !r.room || !mine || !mine.deck) {
+          setNotice('部屋に入れませんでした');
+          return;
+        }
+        const me = rank && rank.profile ? rank.profile : {};
+        const ok = CARD_PVP.cup(r.room, {
+          name: me.name || myName,
+          icon: me.icon || '🙂',
+          frame: me.frame || null
+        }, {
+          ...mine.deck,
+          name: mine.tactics && mine.tactics.name || ''
+        }, {
+          matchId: r.id,
+          cupId: r.cup_id,
+          side: r.side,
+          selfId
+        });
+        if (!ok) {
+          setNotice('部屋に入れませんでした');
+          return;
+        }
+        setView('pvp');
         return;
       }
       if (!mine || !mine.deck || !foe || !foe.deck) {
@@ -103775,6 +103801,7 @@ const CardBattleScreen = ({
         rankGain: ok ? levelGain.gain : null
       };
     };
+    const pvpBackTo = () => typeof CARD_PVP !== 'undefined' && CARD_PVP.get().cup ? 'cup' : 'mode';
     return React.createElement(CardPvpLobby, {
       onOpenReplay: id => {
         void openReplay(id, 'pvp');
@@ -103784,8 +103811,8 @@ const CardBattleScreen = ({
       meFrame: rank && rank.profile && rank.profile.frame || null,
       deck: activeDeck,
       deckIssues: deckIssues,
-      onBack: () => setView('mode'),
-      onStepAway: () => setView('mode'),
+      onBack: wasCup => setView(wasCup === true ? 'cup' : pvpBackTo()),
+      onStepAway: () => setView(pvpBackTo()),
       onPickDeck: () => {
         setDeckPick({
           next: 'pvp'
@@ -110239,7 +110266,10 @@ const CARD_PVP = (() => {
     invited: {},
     guest: false,
     guestAt: 0,
-    via: ''
+    via: '',
+    cup: null,
+    cupSent: false,
+    cupResult: null
   });
   let roomWaitSet = false;
   const emit = () => {
@@ -110486,6 +110516,39 @@ const CARD_PVP = (() => {
   const forceEnd = outcome => {
     if (s && s.phase === 'playing' && board) board.onForceEnd(outcome);
   };
+  const cupSend = async () => {
+    if (!s || !s.cup || s.cupSent || !s.result || s.result.verify === 'wait') return;
+    const cup = s.cup,
+      r = s.result,
+      o = s.foeOpen;
+    s = {
+      ...s,
+      cupSent: true
+    };
+    const acts = r.verify === 'ok' && o ? {
+      kind: 'pvp',
+      order: cup.side === 0 ? 'ab' : 'ba',
+      seeds: [s.seed >>> 0, o.seed >>> 0],
+      first: s.first,
+      acts: s.history.map(e => [e.by, e.act])
+    } : null;
+    const kos = Array.isArray(r.kos) ? cup.side === 0 ? r.kos : [r.kos[1], r.kos[0]] : null;
+    const key = typeof cardShareOwnerKey === 'function' ? await cardShareOwnerKey(false).catch(() => null) : null;
+    const res = key && typeof cardTourRpc === 'function' ? await cardTourRpc('card_cup_live_report', {
+      p_match: cup.matchId,
+      p_owner: cup.selfId,
+      p_key: key,
+      p_winner: r.outcome === 'win' ? cup.side : 1 - cup.side,
+      p_how: 'pvp',
+      p_verified: r.verify === 'ok',
+      p_kos: kos,
+      p_acts: acts,
+      p_rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null
+    }) : null;
+    if (s && s.cup === cup) set({
+      cupResult: res === 'ok' || res === 'wait' || res === 'done' ? res : 'error'
+    });
+  };
   const tryVerify = async () => {
     if (!s.result || !s.foeOpen || s.result.verify !== 'wait') return;
     const o = s.foeOpen;
@@ -110523,6 +110586,7 @@ const CARD_PVP = (() => {
         why: v.why
       }
     });
+    void cupSend();
     if (v.ok && typeof cardReplayFromPvp === 'function') {
       const match = s.match;
       const rec = cardReplayFromPvp(CARD_BATTLE_DATA, {
@@ -110874,7 +110938,7 @@ const CARD_PVP = (() => {
     });
     emit();
   };
-  const open = async (code, profile, deck, mode = 'private', pick = false, guestVia = null) => {
+  const open = async (code, profile, deck, mode = 'private', pick = false, guestVia = null, cup = null) => {
     stop();
     const bid = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
     const seed = (Math.floor(Math.random() * 0x7fffffff) ^ Date.now()) >>> 0;
@@ -110890,6 +110954,7 @@ const CARD_PVP = (() => {
       code,
       ownCode: code,
       mode,
+      cup,
       seekAt: Date.now(),
       pick,
       guest: guestVia !== null,
@@ -111001,6 +111066,17 @@ const CARD_PVP = (() => {
         };
         emit();
       }
+    },
+    cup: (code, profile, deck, info) => {
+      const c = String(code || '').toUpperCase();
+      if (!/^[A-Z2-9]{8}$/.test(c) || !info || !Number.isFinite(info.matchId) || info.side !== 0 && info.side !== 1) return false;
+      void open(c, profile, deck, 'cup', false, null, {
+        matchId: info.matchId,
+        cupId: String(info.cupId || ''),
+        side: info.side,
+        selfId: String(info.selfId || '')
+      });
+      return true;
     },
     join: (code, profile, deck, via = '') => {
       const c = rhythmMultiNormalizeCode(code);
@@ -111186,18 +111262,23 @@ const CARD_PVP = (() => {
           facts: cardResultFacts(st, CARD_ME),
           verify: outcome === 'foeLeft' ? 'skip' : 'wait',
           why: '',
-          rewarded: false
+          rewarded: false,
+          kos: [cardKoCount(st, CARD_ME), cardKoCount(st, CARD_CPU)]
         }
       });
+      void cupSend();
       sendOpen();
       void tryVerify();
       setTimeout(() => {
-        if (s && s.result && s.result.verify === 'wait') set({
-          result: {
-            ...s.result,
-            verify: 'skip'
-          }
-        });
+        if (s && s.result && s.result.verify === 'wait') {
+          set({
+            result: {
+              ...s.result,
+              verify: 'skip'
+            }
+          });
+          void cupSend();
+        }
       }, CARD_PVP_VERIFY_WAIT_MS);
     },
     again: async () => {
@@ -111539,6 +111620,10 @@ const CardPvpLobby = ({
   useEffect(() => {
     const r = room.result;
     if (room.phase !== 'over' || !r || r.rewarded) return;
+    if (room.cup) {
+      if (r.verify !== 'wait') CARD_PVP.markRewarded(null);
+      return;
+    }
     if (r.verify !== 'wait' && typeof cardPvpHistoryRecord === 'function') void cardPvpHistoryRecord(CARD_PVP.get(), {
       rankable: r.verify !== 'ng' && (rankSend || typeof window !== 'undefined' && window.__mhCardPvpRankTest === true)
     });
@@ -111584,9 +111669,10 @@ const CardPvpLobby = ({
   const deckOk = !!deck && deckIssues.length === 0;
   const ready = (onPickDeck ? true : deckOk) && penaltyMin === 0;
   const back = () => {
+    const wasCup = !!CARD_PVP.get().cup;
     CARD_PVP.leave();
     CARD_WATCH.leave();
-    onBack();
+    onBack(wasCup);
   };
   const r = room.result;
   if (watch.phase !== 'idle' && room.phase === 'idle') return React.createElement(CardPvpWatchScreen, null);
@@ -111598,7 +111684,7 @@ const CardPvpLobby = ({
     meName: profile.name
   });
   if (room.phase === 'over' && r) {
-    const noAgain = room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ' || r.reason === '通信が切れた';
+    const noAgain = !!room.cup || room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ' || r.reason === '通信が切れた';
     const win = r.outcome === 'win';
     const a = assistant && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find(x => x.id === assistant.id && cardFoeReleased(x.id)) || null : null;
     const got = r.got && !r.got.pending ? r.got : null;
@@ -111685,7 +111771,11 @@ const CardPvpLobby = ({
     }, "いまのビートP: ", point), got.saved === false && React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-rose-300",
       style: JA_LABEL_STYLE
-    }, jaWrap('保存できませんでした(ビートPは増えていません)'))))), React.createElement("div", {
+    }, jaWrap('保存できませんでした(ビートPは増えていません)'))))), room.cup && React.createElement("p", {
+      "data-card-pvp-cup-sent": room.cupResult || 'sending',
+      className: "mx-3 rounded-xl bg-slate-900 p-2 text-center text-[13px] font-black text-amber-100",
+      style: JA_WRAP_STYLE
+    }, jaWrap(!room.cupResult ? '結果を杯に送っています…' : room.cupResult === 'error' ? '結果を送れませんでした。杯の画面を開き直してください' : room.cupResult === 'wait' ? '結果を杯に送りました(相手の結果を待っています)' : '結果を杯に送りました')), React.createElement("div", {
       className: `${SCREEN_FOOTER_CLASS} flex flex-col gap-2`
     }, !noAgain && React.createElement("button", {
       type: "button",
@@ -111716,6 +111806,10 @@ const CardPvpLobby = ({
       className: `${rowBtn} ${noAgain ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`,
       onClick: () => {
         Audio_.fgSe.tap();
+        if (room.cup) {
+          back();
+          return;
+        }
         CARD_PVP.leave();
       }
     }, "部屋を出る"))));
@@ -112022,6 +112116,10 @@ const CardPvpLobby = ({
     className: `${btn} border border-white/15 bg-slate-900 text-slate-100`,
     onClick: () => {
       Audio_.fgSe.tap();
+      if (room.cup) {
+        back();
+        return;
+      }
       CARD_PVP.leave();
     }
   }, "部屋を出る")));
@@ -113220,7 +113318,7 @@ const cardReplaySetFav = (saved, id, on) => {
 };
 const cardReplayStart = (db, rec) => {
   const names = [rec.names[0], rec.foe.name || rec.names[1]];
-  if (rec.kind === 'pvp') {
+  if (rec.kind === 'pvp' || rec.tour && rec.tour.pvp === true) {
     const st = cardCreateGame(db, {
       decks: [rec.decks[0], rec.decks[1]],
       names,
@@ -113414,8 +113512,11 @@ const cardReplayFromCpu = (db, {
 });
 const cardReplayFromTour = (db, row, opts = {}) => {
   if (!db || !row || typeof row !== 'object') return null;
-  const ba = !!(row.acts && !Array.isArray(row.acts) && typeof row.acts === 'object' && row.acts.order === 'ba');
-  const rowActs = ba ? row.acts.acts : row.acts;
+  const wrap = row.acts && !Array.isArray(row.acts) && typeof row.acts === 'object' ? row.acts : null;
+  const ba = !!(wrap && wrap.order === 'ba');
+  const pvpSeeds = wrap && wrap.kind === 'pvp' && Array.isArray(wrap.seeds) && wrap.seeds.length === 2 && wrap.seeds.every(n => Number.isInteger(n) && n >= 0 && n <= 0xFFFFFFFF) && (wrap.first === 0 || wrap.first === 1) ? wrap.seeds : null;
+  if (wrap && wrap.kind === 'pvp' && !pvpSeeds) return null;
+  const rowActs = wrap ? wrap.acts : row.acts;
   const ra = row.a && typeof row.a === 'object' ? row.a : {},
     rb = row.b && typeof row.b === 'object' ? row.b : {};
   const a = ba ? rb : ra,
@@ -113425,7 +113526,7 @@ const cardReplayFromTour = (db, row, opts = {}) => {
   const seed = Number(row.seed);
   if (!Number.isInteger(seed) || seed < 0 || seed > 0xFFFFFFFF) return null;
   if (row.first !== 0 && row.first !== 1) return null;
-  const first = ba ? 1 - row.first : row.first;
+  const first = pvpSeeds ? wrap.first : ba ? 1 - row.first : row.first;
   const winner = row.winner === 0 || row.winner === 1 ? ba ? 1 - row.winner : row.winner : null;
   const max = typeof CARD_TOUR_MAX_STEPS === 'number' ? CARD_TOUR_MAX_STEPS : 4000;
   if (!Array.isArray(rowActs) || !rowActs.length || rowActs.length > max) return null;
@@ -113472,7 +113573,7 @@ const cardReplayFromTour = (db, row, opts = {}) => {
     outcome: winner === 0 ? 'win' : 'lose',
     reason: '',
     decks,
-    seeds: [seed, 0],
+    seeds: pvpSeeds ? pvpSeeds.slice() : [seed, 0],
     acts,
     prints: '',
     fav: false,
@@ -113483,6 +113584,7 @@ const cardReplayFromTour = (db, row, opts = {}) => {
       stage: row.stage === 'final' ? 'final' : 'group',
       badge: deckKind ? '登録デッキ' : '大会',
       deck: deckKind,
+      pvp: !!pvpSeeds,
       me: {
         name: names[0],
         icon: iconOf(a)
@@ -121961,19 +122063,19 @@ const CardCupLivePanel = ({
     className: "min-w-0 flex-1 truncate text-[14px] font-black text-white"
   }, `相手: ${foe ? foe.name : 'ブリーダー'}`), React.createElement("span", {
     className: `shrink-0 rounded-full px-2 py-0.5 text-[11px] font-black ${foe && foe.checkin ? 'bg-emerald-500 text-slate-950' : 'bg-slate-600 text-slate-100'}`
-  }, foe && foe.checkin ? '来ています' : '来ていません')), foe && !foe.checkin && React.createElement("div", {
+  }, foe && foe.checkin ? '来ています' : '来ていません')), React.createElement("div", {
     className: "text-[12px] font-bold text-slate-300",
     style: JA_WRAP_STYLE
-  }, jaWrap('相手が来ていないので、相手の登録デッキと戦います')), React.createElement("button", {
+  }, jaWrap(foe && foe.checkin ? 'マルチ対戦の部屋で、相手と2人で戦います(相手が2分たっても部屋に来なければ、相手の登録デッキと戦います)' : '相手が来ていないので、相手の登録デッキと戦います')), React.createElement("button", {
     type: "button",
     "data-card-cup-live-play": next.match.id,
-    disabled: !next.match.ready || !onPlay || !!(foe && foe.checkin),
+    disabled: !next.match.ready || !onPlay,
     onClick: () => {
       Audio_.fgSe.tap();
       if (onPlay) onPlay(next.match);
     },
-    className: `w-full rounded-2xl py-3 text-[15px] font-black ${next.match.ready && onPlay && !(foe && foe.checkin) ? 'bg-gradient-to-b from-sky-300 to-sky-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`
-  }, !next.match.ready ? '前の回戦が終わるのを待っています' : !onPlay ? '試合の画面は準備中です' : foe && foe.checkin ? '2人で戦う部屋は準備中です' : '試合へ'))), c.status === 'running' && c.format === 'ko' && typeof CardCupBracket === 'function' && React.createElement(CardCupBracket, {
+    className: `w-full rounded-2xl py-3 text-[15px] font-black ${next.match.ready && onPlay ? 'bg-gradient-to-b from-sky-300 to-sky-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`
+  }, !next.match.ready ? '前の回戦が終わるのを待っています' : !onPlay ? '試合の画面は準備中です' : foe && foe.checkin ? '試合へ(相手と2人で戦う)' : '試合へ'))), c.status === 'running' && c.format === 'ko' && typeof CardCupBracket === 'function' && React.createElement(CardCupBracket, {
     rounds: c.bracket,
     matches: v.matches,
     entries: v.entries,
