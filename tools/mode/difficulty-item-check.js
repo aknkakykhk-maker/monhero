@@ -122,7 +122,9 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   check('重トレーニングチケットも絆経験値の用途で説明されている', inv.includes('絆経験値を150'));
   check('旧名称の「修行チケット」が残っていない', !inv.includes('修行チケット'));
 
-  const used = await clickText('使う');
+  // 「使う」ボタンだけを押す(字がぴったり「使う」)。助手の吹き出しも押せるボタンで、セリフが「効果と使う相手を見て…」のときに
+  //   そちらを押してしまい、たまに落ちていた(2026-10-31。セリフはランダムなので、7回に1回ほど)
+  const used = await clickText('^使う$');
   await page.waitForTimeout(800);
   check('「使う」から対象選択へ進める', used && (await bodyText()).includes('を使う相手を選ぶ'));
 
