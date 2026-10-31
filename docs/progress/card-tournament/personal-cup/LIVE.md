@@ -9,8 +9,8 @@
 | 1 | サーバの関数(`docs/sql/card-cup/CARD_CUP_LIVE_APPLY.sql`・足すだけ)と検査 `card-cup-live-sql-check` | #4350 |
 | 2.5 | 止まった杯は30分でサーバが決める(`CARD_CUP_LIVE_AUTO_APPLY.sql`・`cup.js` の `runLiveCups`)・ごほうびのある杯の決まり方 A(`card_cup_live_reward`) | #4356 |
 | 2 | 画面 `99-card-cup-live.jsx` の `CardCupLivePanel`(集合・始める・自分の次の試合・開催中の表)。③の杯の画面 `CardCupDetail` に1行で差し込む。参加の画面は③の `CardCupJoinPanel`。検査 `card-cup-live-browser-check` | #4353 |
-| 3a | 来ない相手の登録デッキと戦う(absent): 84 の `playCupLive`(杯の画面の「試合へ」)→ `startBattle` に杯の種・先攻・写し → 終わったら `card_cup_live_report`(ごほうび・記録なし)。2人とも来ない・食い違いは開催の画面が端末で回す(auto)。b 側の試合は手の並びを `{ order: 'ba', acts }` で送り、93 の `cardReplayFromTour` が並びを戻す。検査 `card-cup-live-play-browser-check`・`card-tour-replay-check` の L | このPR |
-| 3b | 2人で戦う部屋(91 に杯の口を足す。ふつうのマルチは変えない) | 次 |
+| 3a | 来ない相手の登録デッキと戦う(absent): 84 の `playCupLive`(杯の画面の「試合へ」)→ `startBattle` に杯の種・先攻・写し → 終わったら `card_cup_live_report`(ごほうび・記録なし)。2人とも来ない・食い違いは開催の画面が端末で回す(auto)。b 側の試合は手の並びを `{ order: 'ba', acts }` で送り、93 の `cardReplayFromTour` が並びを戻す。検査 `card-cup-live-play-browser-check`・`card-tour-replay-check` の L | #4363 |
+| 3b | 2人で戦う部屋: 91 に `CARD_PVP.cup(合言葉8文字, 名前, 写しのデッキ, { matchId, cupId, side, selfId })` を足した(mode 'cup'・ふつうの合言葉の部屋と同じ動き)。確かめが決まったら杯へ結果(pvp・verified)と手の並び `{ kind: 'pvp', order, seeds: [自分, 相手], first, acts }` を1回だけ送る。報酬・強さの点数・マルチの履歴・もう1戦は通らない。「部屋を出る」は杯の画面へ。相手が集合したのに部屋へ2分来なければ、登録デッキと戦う(absent)。見返しは 93 の cardReplayFromTour が tour.pvp で2人の種から組む。検査 `card-cup-pvp-browser-check`(2台)・`card-replay-check` の個人杯 | このPR |
 | (旧3) | 試合のつなぎ(`CardCupLivePanel` の `onPlay` に、84 の入口1か所から試合の画面を渡す): 91 の部屋を合言葉(8文字)で開く・登録デッキの写しで戦う・終わったら `card_cup_live_report`。来ない相手は `cardSharePolicy` で戦う(absent)。食い違い・2人とも来ないは写しどうしを `cardTourPlay` で回す(auto)。観戦の一覧(94)に杯の印 | 次の次 |
 
 ## 決めたこと(区切り1)
@@ -30,6 +30,8 @@
 - サーバの関数の出し直しは公開前にまとめて1回(`cup.js`・`index.ts` を変えた)
 
 ## 残り・気になる所
+
+- 観戦: 杯の部屋の試合も、ふつうの合言葉の部屋と同じく観戦の一覧(94)の作りに乗る。杯の印(どの杯の何回戦か)を一覧に出すのは、公開のPR(⑤)で画面と合わせて決める
 
 - 送られた結果は端末を信じている(いまのマルチの強さの点数と同じ)。ごほうび・ランキングが無いので、まずはこのまま
 - 主催がいなくなっても、参加者のだれかが開けば進む(start・settle はだれでも呼べる)。だれも開かない杯は30分でサーバが決める(区切り2.5)

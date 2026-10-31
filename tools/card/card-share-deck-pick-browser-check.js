@@ -4,6 +4,7 @@
 // ② デッキ選びの「戻る」で、「ほかのブリーダー」タブへ戻る
 // ③ 借りたデッキのタブは出ない(ごほうびの扱いを変えないため)
 // ④ 「このデッキで対戦」で、選んだデッキで対戦が始まる
+// ⑥ 対戦開始の画面で、キラ・レアキラの子の絵が消えない
 // ⑤ 一覧の「詳細」で、名前・3体・全カード・賢さ・数字が見られ、そこからも「戦う」でデッキ選びへ進む
 // 登録デッキの一覧(card_deck_entries)は、検査の中で1人ぶんを返す(本番のサーバには書かない)
 const fs = require('fs');
@@ -64,7 +65,9 @@ const browser = async () => {
     // 検査の相手: 自分のスターターのデッキを、ほかのブリーダーが登録した形にする
     const decks = await get('mh_card_decks_v1');
     const d0 = decks && decks.decks && decks.decks[0];
-    shareRow = { owner_id: 'check-breeder-1', user_name: '検査の相手', icon: null, profile_frame: null, deck: { monsters: d0.monsters, cards: d0.cards }, tactics: {}, version: 1, active: true, battles: 0, deck_wins: 0, rents: 0, updated_at: new Date().toISOString() };
+    // 相手の3体は、同じ種族のキラ・レアキラの子に替える(対戦開始の画面で、キラの子の絵が消えないかを見るため。⑥)
+    const kiraOf = (no) => ({ 'C-003': 'C-003V', 'C-005': 'C-005S', 'C-007': 'C-007S' })[no] || no;
+    shareRow = { owner_id: 'check-breeder-1', user_name: '検査の相手', icon: null, profile_frame: null, deck: { monsters: d0.monsters.map(kiraOf), cards: d0.cards }, tactics: {}, version: 1, active: true, battles: 0, deck_wins: 0, rents: 0, updated_at: new Date().toISOString() };
     await page.locator('[data-card-cpu]').click();
     await page.locator('[data-card-mode-assistant]').click();
     await page.locator('[data-card-foe-tab="breeder"]').waitFor({ timeout: 10000 });
@@ -107,6 +110,12 @@ const browser = async () => {
     // ④ 対戦が始まる
     await page.locator('[data-card-share-fight="check-breeder-1"]').click();
     await page.locator('[data-card-deck-pick-go]').click();
+    // ⑥ 対戦開始の画面: キラ・レアキラの子の絵も、ふつうの子と同じく見える(2026-10-31 光のふちの枠が幅0になって消えていた)
+    const vs = await page.locator('[data-card-vs-mon]').first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    if (vs) await page.waitForTimeout(1200);
+    const vsArts = vs ? await page.evaluate(() => [...document.querySelectorAll('[data-card-vs-mon]')].map((el) => { const img = el.querySelector('img'); const r = img ? img.getBoundingClientRect() : { width: 0, height: 0 }; return { no: el.getAttribute('data-card-vs-mon'), kira: !!el.querySelector('[data-card-kira]'), w: Math.round(r.width), h: Math.round(r.height), right: Math.round(el.getBoundingClientRect().right) }; })) : [];
+    const kiraArts = vsArts.filter((x) => x.kira);
+    check('⑥ 対戦開始の画面で、キラ・レアキラの子の絵が消えずに見え、画面からはみ出さない', vs && kiraArts.length === 3 && vsArts.every((x) => x.w >= 40 && x.h >= 40 && x.right <= 391), JSON.stringify(vsArts));
     const started = await page.locator('[data-card-battle]').waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
     check('④ 「このデッキで対戦」で、ほかのブリーダーのデッキとの対戦が始まる', started);
     check('画面でエラーが出ない', errors.length === 0, errors.slice(0, 2).join(' / '));
