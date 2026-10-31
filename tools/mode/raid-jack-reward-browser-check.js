@@ -54,6 +54,13 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
   try {
     browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    // 乱入ジャックのイベント期間の中へ時計を合わせる(期間が終わったあとに回しても HOME の札が出るように。時間はふつうに進む)
+    {
+      const src = fs.readFileSync(path.resolve(__dirname, '../../monster-hero/src/parts/35-raid-jack.jsx'), 'utf8');
+      const startAt = Date.parse((src.match(/startAt:\s*'([^']+)'/) || [])[1]);
+      await page.clock.install({ time: new Date(startAt + 24 * 3600 * 1000) });
+      await page.clock.resume();
+    }
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.addInitScript(() => {
       localStorage.setItem('mh_breeder_name', JSON.stringify('検査ブリーダー'));
