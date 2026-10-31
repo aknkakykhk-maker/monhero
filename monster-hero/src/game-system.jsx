@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 14245d3bed00d3c8
+// generated-sha256: 67babab118c7ae0a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -59530,6 +59530,13 @@ const CardFoeStyle = ({ db, who, level }) => {
 // ---- 詳しい画面(大きな絵・名前・種類・ガッツ・使える子・番号・文)。どこをタップしても閉じる ----
 // dexInfo … 図鑑から開いたときだけ { pack: '第2弾パック', have: 3 }。入っている弾と持っている枚数を出す(2026-10-29 社長・図鑑 案B)
 // nav … 図鑑から開いたときだけ { pos: '3 / 59', onPrev, onNext }。絵の左右の ◀ ▶ で となりのカードへ送る(端では押せない)
+// 効果の文が空のカード(ダメージを与えるだけのちから技・かしこさ技。パンチ・かま首突き・バーストキャノンなど77枚)の一文。
+//   カードの絵には効果の欄が空で、観戦・見返しで「何をするカードか」が分からなかった(2026-10-31 社長「観戦でカードの効果がわからないものがある」)
+const cardPlainEffectText = (c) => {
+  if (!c || c.text || (c.effects || []).length) return '';
+  if ((c.kind === 'pow' || c.kind === 'int') && Number.isFinite(Number(c.damage))) return `相手のモンスター1体に、${c.damage}ダメージを与える${c.kind === 'pow' ? 'ちから技' : 'かしこさ技'}です。`;
+  return '';
+};
 const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexInfo = null, nav = null }) => {
   const dexLine = dexInfo ? (
     <div data-card-detail-dex className="mt-1.5 flex flex-wrap gap-1.5 text-[12px] font-bold">
@@ -59541,7 +59548,9 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
   const m = c ? null : cardMonsterOf(db, no);
   const navBtn = (dir, fn) => <button type="button" data-card-detail-nav={dir} aria-label={dir === 'prev' ? '前のカード' : '次のカード'} disabled={!fn} onClick={(e) => { e.stopPropagation(); if (fn) { Audio_.fgSe.tap(); fn(); } }} className="mh-button flex h-12 w-11 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-slate-800 text-[18px] font-black text-white active:scale-95 disabled:opacity-25">{dir === 'prev' ? '◀' : '▶'}</button>;
   return (
-    <div data-card-detail onClick={onClose} className="fixed inset-0 flex flex-col items-center justify-center gap-3 overflow-y-auto px-4 py-6" style={{ zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.94)' }} role="dialog" aria-label="カードの詳しい画面">
+    // 詳しい画面は、ほかの窓(捨て札・記録・チャットなど。どれも MODAL_Z.dialog)より手前に出す。同じ高さだと、
+    //   画面の部品の並び順しだいで捨て札の窓の後ろに回っていた(2026-10-31 社長「すてふだからだと詳細カード画面が裏に回ってる」)。確かめの窓(confirm)よりは下
+    <div data-card-detail onClick={onClose} className="fixed inset-0 flex flex-col items-center justify-center gap-3 overflow-y-auto px-4 py-6" style={{ zIndex: MODAL_Z.dialog + 100, backgroundColor: 'rgba(2,6,23,0.94)' }} role="dialog" aria-label="カードの詳しい画面">
       {nav ? (
         <div data-card-detail-navrow className="flex w-full max-w-sm flex-col items-center gap-1">
           <div className="flex w-full items-center justify-center gap-2">
@@ -59564,6 +59573,7 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
           </div>
           {dexLine}
           {c.text && <p className="mt-2 text-[14px] font-bold leading-relaxed">{c.text}</p>}
+          {!c.text && cardPlainEffectText(c) && <p data-card-detail-plain className="mt-2 text-[14px] font-bold leading-relaxed" style={JA_LABEL_STYLE}>{jaWrap(cardPlainEffectText(c))}</p>}
           {c.note && <p data-card-detail-note className="mt-1.5 text-[12px] font-bold leading-relaxed text-sky-200" style={JA_LABEL_STYLE}>{jaWrap(c.note)}</p>}
           {!c.ready && <p className="mt-2 text-[12px] font-bold text-amber-300" style={JA_LABEL_STYLE}>{jaWrap('このカードは準備中です(まだデッキに入れられません)')}</p>}
         </div>
@@ -59592,7 +59602,8 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
   );
 };
 
-// ---- 捨て札の一覧(自分/相手のタブ・新しい順・1枚を長押しで詳しい画面) ----
+// ---- 捨て札の一覧(自分/相手のタブ・新しい順・1枚をタップで詳しい画面。長押しでも開く) ----
+//   2026-10-31 社長「すてふだはワンタップで詳細見せて」。前は長押しだけだった
 const CardDiscardModal = ({ db, st, initial = CARD_ME, onDetail, onClose }) => {
   const [tab, setTab] = useState(initial);
   const press = useCardLongPress(onDetail);
@@ -59609,13 +59620,13 @@ const CardDiscardModal = ({ db, st, initial = CARD_ME, onDetail, onClose }) => {
       <div className="grid max-h-[60vh] grid-cols-4 gap-1.5 overflow-y-auto">
         {list.length === 0 && <p className="col-span-4 py-6 text-center text-[13px] font-bold text-slate-400">まだありません</p>}
         {list.map((no, i) => { const c = cardOf(db, no); return (
-          <div key={`${no}-${i}`} {...press(no)} className="flex flex-col items-center" style={{ containerType: 'inline-size' }}>
+          <div key={`${no}-${i}`} {...press(no, () => onDetail(no), { double: false })} role="button" data-card-discard-item={no} className="flex cursor-pointer flex-col items-center active:scale-95" style={{ containerType: 'inline-size' }}>
             <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} loading="lazy" className="w-full rounded-md"/>
             <CardDiscardName name={c ? c.name : no}/>
           </div>
         ); })}
       </div>
-      <p className="mt-2 text-center text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('カードを長押しすると詳しく見られます')}</p>
+      <p className="mt-2 text-center text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('カードをタップすると詳しく見られます')}</p>
       <div className="mt-2"><ModalCloseButton onClick={onClose}/></div>
     </ModalFrame>
   );

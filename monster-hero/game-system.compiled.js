@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 639b562f5b36530f
+// source-sha256: d876699af58ce788
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -98531,6 +98531,11 @@ const CardFoeStyle = ({
     style: JA_WRAP_STYLE
   }, jaWrap(`${lv}: ${CARD_FOE_BUILD_NOTE[level] || ''}`)));
 };
+const cardPlainEffectText = c => {
+  if (!c || c.text || (c.effects || []).length) return '';
+  if ((c.kind === 'pow' || c.kind === 'int') && Number.isFinite(Number(c.damage))) return `相手のモンスター1体に、${c.damage}ダメージを与える${c.kind === 'pow' ? 'ちから技' : 'かしこさ技'}です。`;
+  return '';
+};
 const CardDetailModal = ({
   db,
   no,
@@ -98564,86 +98569,91 @@ const CardDetailModal = ({
     },
     className: "mh-button flex h-12 w-11 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-slate-800 text-[18px] font-black text-white active:scale-95 disabled:opacity-25"
   }, dir === 'prev' ? '◀' : '▶');
-  return React.createElement("div", {
-    "data-card-detail": true,
-    onClick: onClose,
-    className: "fixed inset-0 flex flex-col items-center justify-center gap-3 overflow-y-auto px-4 py-6",
-    style: {
-      zIndex: MODAL_Z.dialog,
-      backgroundColor: 'rgba(2,6,23,0.94)'
-    },
-    role: "dialog",
-    "aria-label": "カードの詳しい画面"
-  }, nav ? React.createElement("div", {
-    "data-card-detail-navrow": true,
-    className: "flex w-full max-w-sm flex-col items-center gap-1"
-  }, React.createElement("div", {
-    className: "flex w-full items-center justify-center gap-2"
-  }, navBtn('prev', nav.onPrev), React.createElement("img", {
-    src: CARD_IMG(c ? c.img : m ? m.img : no, 'l'),
-    alt: c ? c.name : m ? m.name : '',
-    className: "w-[min(62vw,280px)] min-w-0 rounded-xl shadow-2xl landscape:h-[32vh] landscape:w-auto"
-  }), navBtn('next', nav.onNext)), React.createElement("span", {
-    "data-card-detail-pos": true,
-    className: "text-[12px] font-bold text-slate-400"
-  }, nav.pos)) : React.createElement("img", {
-    src: CARD_IMG(c ? c.img : m ? m.img : no, 'l'),
-    alt: c ? c.name : m ? m.name : '',
-    className: "w-[min(78vw,300px)] rounded-xl shadow-2xl"
-  }), c && React.createElement("div", {
-    className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100"
-  }, React.createElement("div", {
-    className: "text-lg font-black"
-  }, c.name), React.createElement("div", {
-    className: "mt-1 flex flex-wrap gap-1.5 text-[12px] font-bold"
-  }, React.createElement("span", {
-    className: "rounded-md bg-indigo-900 px-2 py-0.5"
-  }, CARD_KIND_LABEL[c.kind]), React.createElement("span", {
-    className: "rounded-md bg-amber-900 px-2 py-0.5"
-  }, "ガッツ", c.guts), c.damage !== null && c.damage !== undefined && React.createElement("span", {
-    className: "rounded-md bg-rose-900 px-2 py-0.5"
-  }, "ダメージ", c.damage), React.createElement("span", {
-    className: "rounded-md bg-slate-700 px-2 py-0.5"
-  }, cardUserLabel(db, c)), React.createElement("span", {
-    className: "rounded-md bg-slate-800 px-2 py-0.5 text-slate-400"
-  }, "No.", c.no)), dexLine, c.text && React.createElement("p", {
-    className: "mt-2 text-[14px] font-bold leading-relaxed"
-  }, c.text), c.note && React.createElement("p", {
-    "data-card-detail-note": true,
-    className: "mt-1.5 text-[12px] font-bold leading-relaxed text-sky-200",
-    style: JA_LABEL_STYLE
-  }, jaWrap(c.note)), !c.ready && React.createElement("p", {
-    className: "mt-2 text-[12px] font-bold text-amber-300",
-    style: JA_LABEL_STYLE
-  }, jaWrap('このカードは準備中です(まだデッキに入れられません)'))), m && React.createElement("div", {
-    className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100"
-  }, React.createElement("div", {
-    className: "text-lg font-black"
-  }, m.name), React.createElement("div", {
-    className: "mt-1 flex flex-wrap gap-1.5 text-[12px] font-bold"
-  }, React.createElement("span", {
-    className: "rounded-md bg-emerald-900 px-2 py-0.5"
-  }, "ライフ", m.life), React.createElement("span", {
-    className: "rounded-md bg-sky-900 px-2 py-0.5"
-  }, CARD_TYPE_LABEL[m.type]), React.createElement("span", {
-    className: "rounded-md bg-slate-800 px-2 py-0.5 text-slate-400"
-  }, "No.", m.no)), dexLine, m.dexOnly && React.createElement("p", {
-    "data-card-dex-only": true,
-    className: "mt-2 text-[12px] font-bold text-amber-300",
-    style: JA_LABEL_STYLE
-  }, jaWrap('まだ手に入らないカードです(パックには入っていません)'))), m && status && status.length > 0 && React.createElement("div", {
-    "data-card-detail-status": true,
-    className: "w-full max-w-sm rounded-2xl border border-amber-300/50 bg-slate-900/90 p-3 text-slate-100"
-  }, React.createElement("div", {
-    className: "mb-1.5 text-[13px] font-black text-amber-200",
-    style: JA_WRAP_STYLE
-  }, statusName || m.name, "にかかっている効果"), React.createElement(CardStatusList, {
-    list: status
-  })), React.createElement("button", {
-    type: "button",
-    onClick: onClose,
-    className: "mh-button mh-button-secondary min-h-[48px] w-full max-w-sm rounded-2xl border border-white/20 bg-slate-900 font-black"
-  }, "閉じる"));
+  return (React.createElement("div", {
+      "data-card-detail": true,
+      onClick: onClose,
+      className: "fixed inset-0 flex flex-col items-center justify-center gap-3 overflow-y-auto px-4 py-6",
+      style: {
+        zIndex: MODAL_Z.dialog + 100,
+        backgroundColor: 'rgba(2,6,23,0.94)'
+      },
+      role: "dialog",
+      "aria-label": "カードの詳しい画面"
+    }, nav ? React.createElement("div", {
+      "data-card-detail-navrow": true,
+      className: "flex w-full max-w-sm flex-col items-center gap-1"
+    }, React.createElement("div", {
+      className: "flex w-full items-center justify-center gap-2"
+    }, navBtn('prev', nav.onPrev), React.createElement("img", {
+      src: CARD_IMG(c ? c.img : m ? m.img : no, 'l'),
+      alt: c ? c.name : m ? m.name : '',
+      className: "w-[min(62vw,280px)] min-w-0 rounded-xl shadow-2xl landscape:h-[32vh] landscape:w-auto"
+    }), navBtn('next', nav.onNext)), React.createElement("span", {
+      "data-card-detail-pos": true,
+      className: "text-[12px] font-bold text-slate-400"
+    }, nav.pos)) : React.createElement("img", {
+      src: CARD_IMG(c ? c.img : m ? m.img : no, 'l'),
+      alt: c ? c.name : m ? m.name : '',
+      className: "w-[min(78vw,300px)] rounded-xl shadow-2xl"
+    }), c && React.createElement("div", {
+      className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100"
+    }, React.createElement("div", {
+      className: "text-lg font-black"
+    }, c.name), React.createElement("div", {
+      className: "mt-1 flex flex-wrap gap-1.5 text-[12px] font-bold"
+    }, React.createElement("span", {
+      className: "rounded-md bg-indigo-900 px-2 py-0.5"
+    }, CARD_KIND_LABEL[c.kind]), React.createElement("span", {
+      className: "rounded-md bg-amber-900 px-2 py-0.5"
+    }, "ガッツ", c.guts), c.damage !== null && c.damage !== undefined && React.createElement("span", {
+      className: "rounded-md bg-rose-900 px-2 py-0.5"
+    }, "ダメージ", c.damage), React.createElement("span", {
+      className: "rounded-md bg-slate-700 px-2 py-0.5"
+    }, cardUserLabel(db, c)), React.createElement("span", {
+      className: "rounded-md bg-slate-800 px-2 py-0.5 text-slate-400"
+    }, "No.", c.no)), dexLine, c.text && React.createElement("p", {
+      className: "mt-2 text-[14px] font-bold leading-relaxed"
+    }, c.text), !c.text && cardPlainEffectText(c) && React.createElement("p", {
+      "data-card-detail-plain": true,
+      className: "mt-2 text-[14px] font-bold leading-relaxed",
+      style: JA_LABEL_STYLE
+    }, jaWrap(cardPlainEffectText(c))), c.note && React.createElement("p", {
+      "data-card-detail-note": true,
+      className: "mt-1.5 text-[12px] font-bold leading-relaxed text-sky-200",
+      style: JA_LABEL_STYLE
+    }, jaWrap(c.note)), !c.ready && React.createElement("p", {
+      className: "mt-2 text-[12px] font-bold text-amber-300",
+      style: JA_LABEL_STYLE
+    }, jaWrap('このカードは準備中です(まだデッキに入れられません)'))), m && React.createElement("div", {
+      className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100"
+    }, React.createElement("div", {
+      className: "text-lg font-black"
+    }, m.name), React.createElement("div", {
+      className: "mt-1 flex flex-wrap gap-1.5 text-[12px] font-bold"
+    }, React.createElement("span", {
+      className: "rounded-md bg-emerald-900 px-2 py-0.5"
+    }, "ライフ", m.life), React.createElement("span", {
+      className: "rounded-md bg-sky-900 px-2 py-0.5"
+    }, CARD_TYPE_LABEL[m.type]), React.createElement("span", {
+      className: "rounded-md bg-slate-800 px-2 py-0.5 text-slate-400"
+    }, "No.", m.no)), dexLine, m.dexOnly && React.createElement("p", {
+      "data-card-dex-only": true,
+      className: "mt-2 text-[12px] font-bold text-amber-300",
+      style: JA_LABEL_STYLE
+    }, jaWrap('まだ手に入らないカードです(パックには入っていません)'))), m && status && status.length > 0 && React.createElement("div", {
+      "data-card-detail-status": true,
+      className: "w-full max-w-sm rounded-2xl border border-amber-300/50 bg-slate-900/90 p-3 text-slate-100"
+    }, React.createElement("div", {
+      className: "mb-1.5 text-[13px] font-black text-amber-200",
+      style: JA_WRAP_STYLE
+    }, statusName || m.name, "にかかっている効果"), React.createElement(CardStatusList, {
+      list: status
+    })), React.createElement("button", {
+      type: "button",
+      onClick: onClose,
+      className: "mh-button mh-button-secondary min-h-[48px] w-full max-w-sm rounded-2xl border border-white/20 bg-slate-900 font-black"
+    }, "閉じる"))
+  );
 };
 const CardDiscardModal = ({
   db,
@@ -98675,8 +98685,12 @@ const CardDiscardModal = ({
     const c = cardOf(db, no);
     return React.createElement("div", _extends({
       key: `${no}-${i}`
-    }, press(no), {
-      className: "flex flex-col items-center",
+    }, press(no, () => onDetail(no), {
+      double: false
+    }), {
+      role: "button",
+      "data-card-discard-item": no,
+      className: "flex cursor-pointer flex-col items-center active:scale-95",
       style: {
         containerType: 'inline-size'
       }
@@ -98691,7 +98705,7 @@ const CardDiscardModal = ({
   })), React.createElement("p", {
     className: "mt-2 text-center text-[11px] font-bold text-slate-400",
     style: JA_LABEL_STYLE
-  }, jaWrap('カードを長押しすると詳しく見られます')), React.createElement("div", {
+  }, jaWrap('カードをタップすると詳しく見られます')), React.createElement("div", {
     className: "mt-2"
   }, React.createElement(ModalCloseButton, {
     onClick: onClose

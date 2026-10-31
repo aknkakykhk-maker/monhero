@@ -8,6 +8,8 @@
 //   ② よける・跳ぶ・防ぐの動きの前には、必ずその攻撃の動きがある(攻撃が見えないまま守りだけ動かない。全体攻撃の2体目からは除く)
 //   ③ はね返されて倒れる子も、攻撃の動きを見せてから倒れる
 //   ④ 実行時エラーが無い
+//   ⑤ 捨て札は1回のタップで詳しい画面が開き、捨て札の窓より手前に出る(2026-10-31 社長)
+//   ⑥ 効果の文が空のカード(ダメージだけの技)にも、詳しい画面に一文が出る(2026-10-31 社長「観戦でカードの効果がわからないものがある」)
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
@@ -119,6 +121,18 @@ const check = (name, ok, detail = '') => { if (!ok) failed++; console.log(`${ok 
     // ③ はね返しで倒れた子(ko)の、倒れる前に攻撃の動きがある
     const kos = log.filter((x) => x.k === 'ko');
     check('③ はね返されて倒れる子も、攻撃の動きを見せてから倒れる', kos.some((k) => atks.some((a) => a.id === k.id && a.t <= k.t && k.t - a.t < 2000)), JSON.stringify({ kos, atks }));
+    // ⑤ 捨て札(2026-10-31 社長「すてふだはワンタップで詳細見せて」「すてふだからだと詳細カード画面が裏に回ってる」): 1回のタップで詳しい画面が、いちばん手前に出る
+    await page.getByRole('button', { name: /^捨て札 [1-9]/ }).first().click();
+    const item = page.locator('[data-card-discard-item]').first();
+    await item.waitFor({ timeout: 5000 });
+    await item.click();
+    const opened = await page.locator('[data-card-detail]').waitFor({ timeout: 3000 }).then(() => true).catch(() => false);
+    const top = opened ? await page.evaluate(() => { const d = document.querySelector('[data-card-detail] img'); const r = d.getBoundingClientRect(); const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!(el && el.closest('[data-card-detail]')); }) : false;
+    check('⑤ 捨て札は1回のタップで詳しい画面が開き、捨て札の窓より手前に出る', opened && top, JSON.stringify({ opened, top }));
+    // ⑥ 効果の文が空のカード(ダメージだけの技)にも、詳しい画面に一文が出る
+    const plain = await page.evaluate(() => (typeof cardPlainEffectText === 'function' && typeof CARD_BATTLE_DATA !== 'undefined')
+      ? ['177', '184', '334'].map((no) => cardPlainEffectText(CARD_BATTLE_DATA.cards[no])) : null);
+    check('⑥ 効果の文が空のカード(パンチ・バーストキャノン・かま首突き)にも一文が出る', Array.isArray(plain) && /2ダメージ.*ちから技/.test(plain[0]) && /8ダメージ.*かしこさ技/.test(plain[1]) && /2ダメージ/.test(plain[2]), JSON.stringify(plain));
     check('④ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
     await context.close();
   } finally {
