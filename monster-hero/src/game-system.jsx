@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1c3725f0e276ff41
+// generated-sha256: 35f714c76de6901a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -63941,6 +63941,18 @@ const CARD_PACK_FEW_SLOTS = Object.freeze({
 // スターターキットの箱の色(キットごと)。パックと同じ作りの絵に、キットのモンスター3体とキットの名前を出す
 const CARD_STARTER_BOX_COLOR = Object.freeze({ speed: '#2f7fe0', powerful: '#ef4444', miracle: '#e0a420' });
 const CardPackArt = ({ db, pack, kit = null, width = 200, torn = false, className = '' }) => {
+  // ブースターパックは、社長の描いた袋の絵(2026-10-31。data/images/images-ally.js の CARD_PACK_ART_IMGS)を出す。
+  //   幅100px 未満の所(マーケットの一覧)は、真ん中を切り出した絵(thumb)にして「第◯弾」の字を読めるようにする。
+  //   torn(開ける画面でちぎれた帯を飛ばすとき)は、袋の上のふちを隠す。スターターキットは今までどおり下の描き方
+  const art = !kit && pack && typeof CARD_PACK_ART_IMGS !== 'undefined' ? CARD_PACK_ART_IMGS[pack.id] : null;
+  if (art) {
+    const small = width < 100;
+    return (
+      <div data-card-pack-art={pack.id} data-card-pack-art-img={small ? 'thumb' : 'full'} className={`relative overflow-hidden rounded-[10px] shadow-2xl ${className}`} style={{ width, height: Math.round(width * 1.5) }}>
+        <img src={small ? art.thumb : art.full} alt={pack.name} draggable={false} className="h-full w-full object-cover" style={torn ? { clipPath: 'inset(8% 0 0 0)' } : undefined}/>
+      </div>
+    );
+  }
   const mons = kit ? kit.monsters.map((no) => cardMonsterOf(db, no)).filter(Boolean) : cardPackMonsters(db, pack);
   // 真ん中を最後に(いちばん手前)。並べる順: 奥の左右 → 中の左右 → 真ん中
   const order = mons.length >= 5 ? [mons[0], mons[4], mons[1], mons[3], mons[2]] : mons;

@@ -243,6 +243,18 @@ const HYBRID_C032_IMG = "images/monsters/c032.png?v=5b63d78632ff";
 const HYBRID_C014_IMG = "images/monsters/c014.png?v=dde0b6c82d78";
 const HYBRID_C037_IMG = "images/monsters/c037.png?v=8479c3319aac";
 const HYBRID_C044_IMG = "images/monsters/c044.png?v=997468609578";
+// MFバトルカードのパック(第1〜8弾)の絵(2026-10-31 社長「バトルカードのパック作ったから差し替えて」)。tools/card/card-pack-art-build.js が作る
+//   full … 袋の全体(パックを開ける画面など大きく出す所) / thumb … 真ん中(モンスターと「第◯弾」の字)を同じ縦横比で切り出したもの(マーケットの一覧など小さく出す所)
+const CARD_PACK_ART_IMGS = Object.freeze({
+  p1: Object.freeze({ full: "images/card-battle/packs/p1.jpg?v=054a5c75ebd3", thumb: "images/card-battle/packs/p1-thumb.jpg?v=cdefe321965d" }),
+  p2: Object.freeze({ full: "images/card-battle/packs/p2.jpg?v=c55a1a9e86fc", thumb: "images/card-battle/packs/p2-thumb.jpg?v=64a2c9e3b06e" }),
+  p3: Object.freeze({ full: "images/card-battle/packs/p3.jpg?v=bde449a27d84", thumb: "images/card-battle/packs/p3-thumb.jpg?v=b01a7d29791c" }),
+  p4: Object.freeze({ full: "images/card-battle/packs/p4.jpg?v=7015e8e026a5", thumb: "images/card-battle/packs/p4-thumb.jpg?v=a23cc3d4f52a" }),
+  p5: Object.freeze({ full: "images/card-battle/packs/p5.jpg?v=37acc27c571c", thumb: "images/card-battle/packs/p5-thumb.jpg?v=d6ede0d6fece" }),
+  p6: Object.freeze({ full: "images/card-battle/packs/p6.jpg?v=9399a2d2d452", thumb: "images/card-battle/packs/p6-thumb.jpg?v=17b38462f140" }),
+  p7: Object.freeze({ full: "images/card-battle/packs/p7.jpg?v=50bd26797c89", thumb: "images/card-battle/packs/p7-thumb.jpg?v=e474a38009da" }),
+  p8: Object.freeze({ full: "images/card-battle/packs/p8.jpg?v=407e77e24da6", thumb: "images/card-battle/packs/p8-thumb.jpg?v=2620b4a02099" }),
+});
 const HYBRID_MONSTER_IMGS = Object.freeze({
   'C-010': HYBRID_C010_IMG,
   'C-012': HYBRID_C012_IMG,

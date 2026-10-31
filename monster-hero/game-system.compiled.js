@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ae4bd5e92ade1646
+// source-sha256: ff9701918cc61ba3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -106914,6 +106914,27 @@ const CardPackArt = ({
   torn = false,
   className = ''
 }) => {
+  const art = !kit && pack && typeof CARD_PACK_ART_IMGS !== 'undefined' ? CARD_PACK_ART_IMGS[pack.id] : null;
+  if (art) {
+    const small = width < 100;
+    return React.createElement("div", {
+      "data-card-pack-art": pack.id,
+      "data-card-pack-art-img": small ? 'thumb' : 'full',
+      className: `relative overflow-hidden rounded-[10px] shadow-2xl ${className}`,
+      style: {
+        width,
+        height: Math.round(width * 1.5)
+      }
+    }, React.createElement("img", {
+      src: small ? art.thumb : art.full,
+      alt: pack.name,
+      draggable: false,
+      className: "h-full w-full object-cover",
+      style: torn ? {
+        clipPath: 'inset(8% 0 0 0)'
+      } : undefined
+    }));
+  }
   const mons = kit ? kit.monsters.map(no => cardMonsterOf(db, no)).filter(Boolean) : cardPackMonsters(db, pack);
   const order = mons.length >= 5 ? [mons[0], mons[4], mons[1], mons[3], mons[2]] : mons;
   const slots = mons.length >= 5 ? CARD_PACK_SLOTS : CARD_PACK_FEW_SLOTS[mons.length] || [];
