@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 898575473615f5ff
+// generated-sha256: 0c0b4f77c0fc5749
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -69172,7 +69172,8 @@ const CardShareDeckDetail = ({ entry, onClose, fight = null, rent = null }) => {
     <div data-card-share-deck-detail className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={onClose}>
       <div className="max-h-[86vh] w-full max-w-[440px] overflow-y-auto rounded-2xl border-2 border-amber-600/60 bg-slate-950 p-3" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2">
-          {entry.icon ? <span className="shrink-0 text-[24px] leading-none">{entry.icon}</span> : null}
+          {/* アイコンは絵文字のことも画像のことも(images/breeder-icons/…)ある。cardIconNode を通す(文字のまま出さない) */}
+          {entry.icon ? <span className="shrink-0 text-[24px] leading-none">{cardIconNode(entry.icon, 28)}</span> : null}
           <span className="min-w-0 flex-1">
             <b data-card-share-detail-name className="block text-[15px] font-black leading-tight text-white" style={JA_WRAP_STYLE}>{jaWrap(entry.name || 'ブリーダー')}</b>
             <small data-card-share-detail-deck className="block text-[12px] font-black text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(`「${t.name || 'デッキ'}」`)}</small>
