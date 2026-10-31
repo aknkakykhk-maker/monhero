@@ -9,7 +9,7 @@
 
 const CARD_CUP_WALLET_KEY = 'mh_card_cup_wallet_v1';
 const CARD_CUP_WALLET_MAX = 200;
-// 出せる物(サーバの表 card_cup_prize_items と同じ名前)。label・emoji は画面の名前。上限はサーバの表が正(card_cup_prize_items_list)
+// 出せる物(サーバの表 card_cup_prize_items と同じ名前)。label・emoji は画面の名前。出す量・参加費の額に上限は無い(2026-10-31 社長「やっぱり上限はなしでいい」)
 //   main … 本編の持ち物(ギフトで配る)。card … カードの持ち物(84 で足す・引く)
 const CARD_CUP_ITEMS = Object.freeze([
   { item: 'diamond', label: 'ダイヤ', emoji: '💎', main: true },
@@ -109,8 +109,7 @@ const cardCupPrizeRpc = async (fn, body) => {
 };
 const cardCupPrizeItemsList = async () => {
   const r = await cardCupPrizeRpc('card_cup_prize_items_list', {});
-  return Array.isArray(r) ? r.filter((x) => x && cardCupItemOf(x.item)).map((x) => ({ item: x.item, label: cardCupItemOf(x.item).label,
-    giveMax: Math.max(0, Number(x.give_max) || 0), feeMax: Math.max(0, Number(x.fee_max) || 0), dayMax: Math.max(0, Number(x.day_max) || 0) })) : null;
+  return Array.isArray(r) ? r.filter((x) => x && cardCupItemOf(x.item)).map((x) => ({ item: x.item, label: cardCupItemOf(x.item).label })) : null;
 };
 // 杯のごほうび(画面に出す形)。無い・読めないときは null
 const cardCupPrizeView = async (cup, owner) => {
@@ -246,12 +245,12 @@ const cardCupClaim = async (adapters, cup, cupName) => {
 // getAdapters … 84 の cupAdapters(持ち物を足し引きする口と、持ち主の鍵)。prize・reload … 84 側で読んだごほうび(cardCupPrizeView)と読み直し
 const CARD_CUP_PRIZE_MSG = Object.freeze({
   ok: 'できました', short: '持っている数が足りません', save: 'この端末に保存できませんでした', pending: '通信が途切れました。次に開いたとき、もう一度送ります(持ち物は預けたままです)',
-  over: '1杯・1日に出せる上限を超えています', closed: '受付は終わりました', locked: 'デッキを登録した端末でだけできます', bad: '内容を確かめてください', paid: '参加費を払った人がいるので、もう変えられません',
+  closed: '受付は終わりました', locked: 'デッキを登録した端末でだけできます', bad: '内容を確かめてください', paid: '参加費を払った人がいるので、もう変えられません',
   notfriend: 'フレンドだけ誘えます', host: '主催は外せません', none: 'もう返事をしています', full: '人数がいっぱいです', many: '出ている個人杯が3つあります', nodeck: 'デッキ登録をしてから参加してください', off: '通信できませんでした。もう一度お試しください',
   nothing: 'この個人杯で受け取る物はありません', elsewhere: 'ほかの端末で受け取り済みです', got: '受け取りました。本編の持ち物はギフトボックスから受け取ってください', wait: 'まだ受け取れません(結果が出てから)',
 });
 const CardCupPrizePanel = ({ c, v, now, selfId, prize, reload, getAdapters }) => {
-  const [items, setItems] = useState(null);       // 出せる物と上限(サーバの表)
+  const [items, setItems] = useState(null);       // 出せる物(サーバの表)
   const [have, setHave] = useState(null);         // { main, card } いまの持ち物
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -275,15 +274,14 @@ const CardCupPrizePanel = ({ c, v, now, selfId, prize, reload, getAdapters }) =>
     try { const r = await fn(); setMsg(CARD_CUP_PRIZE_MSG[r] || CARD_CUP_PRIZE_MSG.off); await refreshHave(); await reload(); } finally { setBusy(false); }
   };
   const haveOf = (item) => cardCupHave(item, have && have.main, have && have.card);
-  const limitOf = (item) => (items || []).find((x) => x.item === item) || null;
-  // 見込み: 参加者(主催・主催仲間を除く)が上限までそろったとき
+  // 見込み: 参加者(主催・主催仲間を除く)が定員までそろったとき
   const hostIds = new Set([c.hostId, ...prize.hosts.filter((h) => h.state === 'joined').map((h) => h.id)]);
   const players = Math.max(1, c.max - v.entries.filter((e) => hostIds.has(e.ownerId)).length - (v.entries.some((e) => e.ownerId === c.hostId) ? 0 : 1));
   const poolFull = prize.pool.map((p) => ({ ...p, total: p.total + (prize.fee && prize.fee.item === p.item ? prize.fee.amount * Math.max(0, players - v.entries.filter((e) => !hostIds.has(e.ownerId)).length) : 0) }));
   if (prize.fee && !poolFull.some((p) => p.item === prize.fee.item)) poolFull.push({ item: prize.fee.item, total: prize.fee.amount * players });
   const shares = (total) => cardCupShares(total, prize.split, players);
-  const giveOptions = (items || []).filter((x) => x.giveMax > 0);
-  const feeOptions = (items || []).filter((x) => x.feeMax > 0);
+  const giveOptions = items || [];
+  const feeOptions = items || [];
   const chip = (on) => `rounded-full border px-2.5 py-1 text-[12px] font-black ${on ? 'border-amber-300 bg-amber-500/30 text-amber-50' : 'border-white/15 bg-slate-900 text-slate-300'}`;
   const shown = c.status === 'done' && (c.mode === 'live' || now >= c.startAt);
   const myPay = prize.payouts ? prize.payouts.filter((p) => p.id === selfId) : [];
@@ -314,11 +312,11 @@ const CardCupPrizePanel = ({ c, v, now, selfId, prize, reload, getAdapters }) =>
         {prize.code && !v.me && <p data-card-cup-cohost-code className="text-[13px] font-black text-amber-200">合言葉 <span className="text-[18px] tracking-[0.3em] text-amber-100">{prize.code}</span></p>}
         <div data-card-cup-give className="space-y-1.5 rounded-xl bg-white/5 p-2">
           <b className="block text-[12px] font-black text-slate-200">出す物を足す(あなたの持ち物から預ける)</b>
-          <div className="flex flex-wrap gap-1">{giveOptions.map((x) => <button key={x.item} type="button" data-card-cup-give-item={x.item} onClick={() => setPick({ item: x.item, amount: Math.min(haveOf(x.item), x.giveMax) })} className={chip(pick && pick.item === x.item)}>{cardCupItemOf(x.item).emoji} {x.label}</button>)}</div>
+          <div className="flex flex-wrap gap-1">{giveOptions.map((x) => <button key={x.item} type="button" data-card-cup-give-item={x.item} onClick={() => setPick({ item: x.item, amount: haveOf(x.item) })} className={chip(pick && pick.item === x.item)}>{cardCupItemOf(x.item).emoji} {x.label}</button>)}</div>
           {pick && (
             <div className="flex items-center gap-1.5">
               <input data-card-cup-give-amount inputMode="numeric" value={pick.amount} onChange={(e) => setPick({ ...pick, amount: Math.max(0, Math.floor(Number(String(e.target.value).replace(/[^0-9]/g, '')) || 0)) })} className="w-24 rounded-lg border border-slate-600 bg-slate-900 px-2 py-1.5 text-[14px] font-black text-white"/>
-              <small className="min-w-0 flex-1 text-[11px] font-bold text-slate-400">{`持っている ${haveOf(pick.item).toLocaleString()} / 上限 ${(limitOf(pick.item) || { giveMax: 0 }).giveMax.toLocaleString()}`}</small>
+              <small className="min-w-0 flex-1 text-[11px] font-bold text-slate-400">{`持っている ${haveOf(pick.item).toLocaleString()}`}</small>
               <button type="button" data-card-cup-give-go disabled={busy || !(pick.amount > 0)} onClick={() => run(async () => { const a = await getAdapters(); if (!a.owner || !a.key) return 'locked'; return cardCupGive(a, c.id, pick.item, pick.amount, haveOf(pick.item)); })} className="shrink-0 rounded-lg bg-amber-400 px-3 py-1.5 text-[13px] font-black text-slate-950 disabled:opacity-50">預ける</button>
             </div>
           )}
@@ -327,9 +325,9 @@ const CardCupPrizePanel = ({ c, v, now, selfId, prize, reload, getAdapters }) =>
           <b className="block text-[12px] font-black text-slate-200">参加費と配る割合</b>
           <div className="flex flex-wrap gap-1">
             <button type="button" data-card-cup-fee-item="" onClick={() => { setFeeItem(''); setFeeAmount(0); }} className={chip(!feeItem)}>なし</button>
-            {feeOptions.map((x) => <button key={x.item} type="button" data-card-cup-fee-item={x.item} onClick={() => { setFeeItem(x.item); setFeeAmount(Math.min(x.feeMax, Math.max(1, feeAmount))); }} className={chip(feeItem === x.item)}>{cardCupItemOf(x.item).emoji} {x.label}</button>)}
+            {feeOptions.map((x) => <button key={x.item} type="button" data-card-cup-fee-item={x.item} onClick={() => { setFeeItem(x.item); setFeeAmount(Math.max(1, feeAmount)); }} className={chip(feeItem === x.item)}>{cardCupItemOf(x.item).emoji} {x.label}</button>)}
           </div>
-          {feeItem && <div className="flex items-center gap-1.5"><input data-card-cup-fee-amount inputMode="numeric" value={feeAmount} onChange={(e) => setFeeAmount(Math.max(0, Math.floor(Number(String(e.target.value).replace(/[^0-9]/g, '')) || 0)))} className="w-24 rounded-lg border border-slate-600 bg-slate-900 px-2 py-1.5 text-[14px] font-black text-white"/><small className="text-[11px] font-bold text-slate-400">{`上限 ${((limitOf(feeItem) || { feeMax: 0 }).feeMax).toLocaleString()}`}</small></div>}
+          {feeItem && <div className="flex items-center gap-1.5"><input data-card-cup-fee-amount inputMode="numeric" value={feeAmount} onChange={(e) => setFeeAmount(Math.max(0, Math.floor(Number(String(e.target.value).replace(/[^0-9]/g, '')) || 0)))} className="w-24 rounded-lg border border-slate-600 bg-slate-900 px-2 py-1.5 text-[14px] font-black text-white"/><small className="text-[11px] font-bold text-slate-400">参加する人が払う量</small></div>}
           <div className="flex flex-wrap gap-1">{CARD_CUP_SPLITS.map((s) => <button key={s.id} type="button" data-card-cup-split-pick={s.id} onClick={() => setSplit(s.split)} className={chip(split && split.join() === s.split.join())}>{s.label}</button>)}</div>
           <input data-card-cup-split-custom value={(split || []).join(',')} onChange={(e) => setSplit(String(e.target.value).split(/[,、・\s]+/).map((x) => Math.floor(Number(x))).filter((x) => x > 0).slice(0, 8))} placeholder="自分で決める(例 60,30,10)" className="w-full rounded-lg border border-slate-600 bg-slate-900 px-2 py-1.5 text-[13px] font-bold text-white"/>
           <small className="block text-[11px] font-bold text-slate-400">{`1位から順に・合計100%(いま ${(split || []).reduce((a, b) => a + b, 0)}%)`}</small>

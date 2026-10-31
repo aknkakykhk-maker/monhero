@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2420b09a4d2e3a72
+// source-sha256: cb17cfe2d19e97b4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122182,10 +122182,7 @@ const cardCupPrizeItemsList = async () => {
   const r = await cardCupPrizeRpc('card_cup_prize_items_list', {});
   return Array.isArray(r) ? r.filter(x => x && cardCupItemOf(x.item)).map(x => ({
     item: x.item,
-    label: cardCupItemOf(x.item).label,
-    giveMax: Math.max(0, Number(x.give_max) || 0),
-    feeMax: Math.max(0, Number(x.fee_max) || 0),
-    dayMax: Math.max(0, Number(x.day_max) || 0)
+    label: cardCupItemOf(x.item).label
   })) : null;
 };
 const cardCupPrizeView = async (cup, owner) => {
@@ -122491,7 +122488,6 @@ const CARD_CUP_PRIZE_MSG = Object.freeze({
   short: '持っている数が足りません',
   save: 'この端末に保存できませんでした',
   pending: '通信が途切れました。次に開いたとき、もう一度送ります(持ち物は預けたままです)',
-  over: '1杯・1日に出せる上限を超えています',
   closed: '受付は終わりました',
   locked: 'デッキを登録した端末でだけできます',
   bad: '内容を確かめてください',
@@ -122578,7 +122574,6 @@ const CardCupPrizePanel = ({
     }
   };
   const haveOf = item => cardCupHave(item, have && have.main, have && have.card);
-  const limitOf = item => (items || []).find(x => x.item === item) || null;
   const hostIds = new Set([c.hostId, ...prize.hosts.filter(h => h.state === 'joined').map(h => h.id)]);
   const players = Math.max(1, c.max - v.entries.filter(e => hostIds.has(e.ownerId)).length - (v.entries.some(e => e.ownerId === c.hostId) ? 0 : 1));
   const poolFull = prize.pool.map(p => ({
@@ -122590,8 +122585,8 @@ const CardCupPrizePanel = ({
     total: prize.fee.amount * players
   });
   const shares = total => cardCupShares(total, prize.split, players);
-  const giveOptions = (items || []).filter(x => x.giveMax > 0);
-  const feeOptions = (items || []).filter(x => x.feeMax > 0);
+  const giveOptions = items || [];
+  const feeOptions = items || [];
   const chip = on => `rounded-full border px-2.5 py-1 text-[12px] font-black ${on ? 'border-amber-300 bg-amber-500/30 text-amber-50' : 'border-white/15 bg-slate-900 text-slate-300'}`;
   const shown = c.status === 'done' && (c.mode === 'live' || now >= c.startAt);
   const myPay = prize.payouts ? prize.payouts.filter(p => p.id === selfId) : [];
@@ -122685,7 +122680,7 @@ const CardCupPrizePanel = ({
     "data-card-cup-give-item": x.item,
     onClick: () => setPick({
       item: x.item,
-      amount: Math.min(haveOf(x.item), x.giveMax)
+      amount: haveOf(x.item)
     }),
     className: chip(pick && pick.item === x.item)
   }, cardCupItemOf(x.item).emoji, " ", x.label))), pick && React.createElement("div", {
@@ -122701,9 +122696,7 @@ const CardCupPrizePanel = ({
     className: "w-24 rounded-lg border border-slate-600 bg-slate-900 px-2 py-1.5 text-[14px] font-black text-white"
   }), React.createElement("small", {
     className: "min-w-0 flex-1 text-[11px] font-bold text-slate-400"
-  }, `持っている ${haveOf(pick.item).toLocaleString()} / 上限 ${(limitOf(pick.item) || {
-    giveMax: 0
-  }).giveMax.toLocaleString()}`), React.createElement("button", {
+  }, `持っている ${haveOf(pick.item).toLocaleString()}`), React.createElement("button", {
     type: "button",
     "data-card-cup-give-go": true,
     disabled: busy || !(pick.amount > 0),
@@ -122734,7 +122727,7 @@ const CardCupPrizePanel = ({
     "data-card-cup-fee-item": x.item,
     onClick: () => {
       setFeeItem(x.item);
-      setFeeAmount(Math.min(x.feeMax, Math.max(1, feeAmount)));
+      setFeeAmount(Math.max(1, feeAmount));
     },
     className: chip(feeItem === x.item)
   }, cardCupItemOf(x.item).emoji, " ", x.label))), feeItem && React.createElement("div", {
@@ -122747,9 +122740,7 @@ const CardCupPrizePanel = ({
     className: "w-24 rounded-lg border border-slate-600 bg-slate-900 px-2 py-1.5 text-[14px] font-black text-white"
   }), React.createElement("small", {
     className: "text-[11px] font-bold text-slate-400"
-  }, `上限 ${(limitOf(feeItem) || {
-    feeMax: 0
-  }).feeMax.toLocaleString()}`)), React.createElement("div", {
+  }, "参加する人が払う量")), React.createElement("div", {
     className: "flex flex-wrap gap-1"
   }, CARD_CUP_SPLITS.map(s => React.createElement("button", {
     key: s.id,
