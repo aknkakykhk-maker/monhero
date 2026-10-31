@@ -555,9 +555,18 @@ const CardPackArt = ({ db, pack, kit = null, width = 200, torn = false, classNam
   const art = !kit && pack && typeof CARD_PACK_ART_IMGS !== 'undefined' ? CARD_PACK_ART_IMGS[pack.id] : null;
   if (art) {
     const small = width < 100;
+    // 大きい絵(full)は袋のふちぎりぎりで切り出し、袋の外を透けさせてある(縦横比 1.631・社長「ふちぎりぎりにして、いらないとこは透過」)。
+    //   透けた所に箱の影が出ないよう、影は袋の形に沿う drop-shadow にする。一覧の小さい絵(thumb)は今までどおり 2:3 の四角
+    if (!small) {
+      return (
+        <div data-card-pack-art={pack.id} data-card-pack-art-img="full" className={`relative ${className}`} style={{ width, height: Math.round(width * 1.631) }}>
+          <img src={art.full} alt={pack.name} draggable={false} className="h-full w-full object-contain drop-shadow-[0_10px_18px_rgba(0,0,0,.55)]" style={torn ? { clipPath: 'inset(8% 0 0 0)' } : undefined}/>
+        </div>
+      );
+    }
     return (
-      <div data-card-pack-art={pack.id} data-card-pack-art-img={small ? 'thumb' : 'full'} className={`relative overflow-hidden rounded-[10px] shadow-2xl ${className}`} style={{ width, height: Math.round(width * 1.5) }}>
-        <img src={small ? art.thumb : art.full} alt={pack.name} draggable={false} className="h-full w-full object-cover" style={torn ? { clipPath: 'inset(8% 0 0 0)' } : undefined}/>
+      <div data-card-pack-art={pack.id} data-card-pack-art-img="thumb" className={`relative overflow-hidden rounded-[10px] shadow-2xl ${className}`} style={{ width, height: Math.round(width * 1.5) }}>
+        <img src={art.thumb} alt={pack.name} draggable={false} className="h-full w-full object-cover"/>
       </div>
     );
   }
