@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5093a551a0209d92
+// generated-sha256: 1c3725f0e276ff41
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -56241,6 +56241,8 @@ const normalizeCardSettings = (v) => {
     motion: pick(r.motion, ['FULL', 'SHORT', 'OFF'], 'FULL'),
     shake: onOff(r.shake, 'ON'),
     damageNum: onOff(r.damageNum, 'ON'),
+    // 大技のカットイン(2026-10-31 社長「この形と文で入れて」)。前からの人は「出す」
+    cutin: onOff(r.cutin, 'ON'),
     bubble: pick(r.bubble, ['MANY', 'NORMAL', 'FEW', 'OFF'], 'NORMAL'),
     confirmUse: onOff(r.confirmUse, 'OFF'),
     confirmEnd: onOff(r.confirmEnd, 'OFF'),
@@ -56266,6 +56268,8 @@ const CARD_SETTING_GROUPS = Object.freeze([
   { title: '演出', items: [
     { key: 'motion', title: '技の動き', desc: '技を出したときに、モンスターが相手へ向かって動く演出です。「短め」は攻める側の動きを省き、受けた・よけた・防いだ動きだけ出します。',
       options: [{ id: 'FULL', label: 'ふつう', note: '全部の動き' }, { id: 'SHORT', label: '短め', note: '受ける側だけ' }, { id: 'OFF', label: '出さない', note: 'すぐ次へ' }] },
+    { key: 'cutin', title: '大技のカットイン', desc: 'ダメージ6以上の大技を出したときに、カードの絵と技の名前が大きく横切る演出です。技の動きが「ふつう」のときだけ出ます。',
+      options: [{ id: 'ON', label: '出す', note: '大きく横切る' }, { id: 'OFF', label: '出さない', note: 'すぐ動く' }] },
     { key: 'shake', title: '画面の揺れ', desc: '攻撃を受けたモンスターが揺れる演出です。止めても光や数字は出ます。',
       options: [{ id: 'ON', label: '揺らす', note: 'いつもの見た目' }, { id: 'OFF', label: '揺らさない', note: '酔いやすい人向け' }] },
     { key: 'damageNum', title: 'ダメージの数字', desc: '攻撃を受けたモンスターの上に出る「−3」などの大きな数字です。出さなくても、ライフの数字とバーは減ります。',
@@ -58971,6 +58975,27 @@ const cardMotionBaseOf = (db, cardNo, mon) => {
   }
   return base;
 };
+// ---- 大技のカットイン(2026-10-31 社長「目立たせてから入れる」→「この形と文で入れて」。見本 docs/progress/card-action) ----
+// 大技(ダメージ6以上。段 L)を出すと、技の動きの出だしに、斜めの金の帯の上をカードの絵と技の名前が横切る(約1秒)。
+// 技の動きに重ねて出すだけなので、1手の長さ・攻撃の順番は変わらない。出すのは技の動きが「ふつう」で、オプション「大技のカットイン」が出すのとき。
+// 動きを減らす設定では出さない(70 の CSS)
+const CARD_CUTIN_MS = 1000;
+const cardMotionIsBig = (c) => !!c && cardIsAttackKind(c.kind) && c.kind !== 'spe' && c.user !== 'breeder' && CARD_MOTION_TIER_OF(c) === 'L';
+const CardCutIn = ({ db, cut }) => {
+  const c = cardOf(db, cut.no);
+  if (!c) return null;
+  const n = c.name.length;
+  return (
+    <div data-card-cutin={c.no} aria-hidden="true" className="mh-cutin pointer-events-none absolute inset-x-0 top-1/2 z-[51] h-[210px] -translate-y-1/2 overflow-hidden">
+      <div className="mh-cutin-flash"/>
+      <div className="mh-cutin-band"/>
+      <div className="mh-cutin-lines"/>
+      <img className="mh-cutin-card" src={CARD_IMG(c.img)} alt="" draggable={false}/>
+      <div className="mh-cutin-name" style={{ fontSize: n <= 4 ? 46 : n <= 6 ? 36 : 28 }}>{c.name}</div>
+      {cut.mon && <div className="mh-cutin-sub">{cut.mon}の大技!</div>}
+    </div>
+  );
+};
 // ブリーダーのカードか(モンスターは動かず、画面の端に助手・ブリーダーの顔を出す。設計書 5-4)
 const cardIsBreederCard = (db, cardNo) => { const c = cardOf(db, cardNo); return !!c && c.user === 'breeder'; };
 // よけ方: ジャンプ・舞い上がる・空中になるカードは、上へ跳んで止まる(空中の印つき)。ほかは横へすっと避ける
@@ -60118,6 +60143,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const [, setArtTick] = useState(0);
   // 盤を開いたら、両方の3体の立ち絵を前もって読む(観戦・見返し・大会の見返しは対戦開始の画面を通らないため。読めなかった子はカードの絵で出る)
   useEffect(() => { if (typeof cardArtPreload === 'function') void cardArtPreload(db, st.players.flatMap((pl) => pl.mons.map((m) => m.no))).then(() => setArtTick((n) => n + 1)); }, []); // 読み終えたら描き直す(読めなかった子をカードの絵へ)
+  const [cutIn, setCutIn] = useState(null); // 大技のカットイン { key, no, mon }(85 の CardCutIn。技の動きといっしょに出す)
   const [downBand, setDownBand] = useState(null); // 倒れたときの「◯◯ ダウン！ / 残り◯体」の帯 { key, p, names, left }(改良の案 B)
   const [breederFx, setBreederFx] = useState(null); // ブリーダーのカードを使ったとき、まんなかの端に出す顔 { p, key }
   const [beams, setBeams] = useState([]);
@@ -60143,6 +60169,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   useEffect(() => () => motionTimers.current.forEach(clearTimeout), []);
   const playMotion = (id, mv, ms) => {
     setMotions((cur) => ({ ...cur, [id]: mv }));
+    if (mv.cut) {
+      setCutIn({ ...mv.cut, key: mv.key });
+      motionTimers.current.push(setTimeout(() => setCutIn((cur) => (cur && cur.key === mv.key ? null : cur)), CARD_CUTIN_MS));
+    }
     motionTimers.current.push(setTimeout(() => setMotions((cur) => (cur[id] && cur[id].key === mv.key ? (({ [id]: _, ...rest }) => rest)(cur) : cur)), ms));
   };
   // 背の低い画面(iPhone SE など)では、絵と手札を少し小さくして、まんなかの場所を残す
@@ -60360,7 +60390,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       const to = inPlace ? from : e.target ? centerOf(`${e.target.p}-${e.target.m}`) : centerOf(`${1 - e.p}-1`);
       if (!from || !to) return;
       const key = `${next.log.length}-${n}-${Date.now()}`;
-      const mv = { type: 'attack', kind, dx: Math.round(to.x - from.x), dy: Math.round(to.y - from.y), key };
+      const mv = { type: 'attack', kind, dx: Math.round(to.x - from.x), dy: Math.round(to.y - from.y), key,
+        ...(settings.cutin !== 'OFF' && cardMotionIsBig(c0) ? { cut: { no: e.cards[0], mon: mon.name } } : null) };
       // 相手の守りの番に入る技は、ここでは動かさずに控える(守りが決まった手で流す)
       if (!inPlace && next.pending && next.pending.attacker === e.p && next.pending.mon === e.mon) { pendingAtk.current = { id: `${e.p}-${e.mon}`, mv, turn: next.turn }; return; }
       playMotion(`${e.p}-${e.mon}`, mv, cardMotionMs(kind) + 80);
@@ -61448,6 +61479,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       )}
       {/* 倒れたときの帯(改良の案 B・カゲあつくん 4・9)。番の帯より下・指の操作は帯の外では下へ通す。
           出ているあいだは、まんなかの記録の字を消す(倒れたときの説明の文の上に帯の字が重なって読めなかった。2026-10-27 ソランドくん)。帯が消えると記録が見える */}
+      {cutIn && <CardCutIn key={cutIn.key} db={db} cut={cutIn}/>}
       {downBand && !bigCard && !turnBanner && (
         <div key={downBand.key} data-card-down-band={downBand.p === CARD_ME ? 'me' : 'foe'} className="pointer-events-none absolute inset-0 z-[52] flex items-center justify-center"
           style={wide ? { right: 'calc(min(42%, 420px) + 8px)' } : undefined}>
@@ -101581,6 +101613,20 @@ const createAnimationStyle = () => {
       .mh-shine-rim.r2, .mh-shine-rim.r3, .mh-shine-star, .mh-shine-aurora, .mh-shine-sheen, .mh-shine-mote, .mh-shine-silver { display: none; }
       .mh-shine-rim.r1, .mh-shine-rare-rim { animation: none; opacity: 1; }
     }
+    /* 大技のカットイン(85 の CardCutIn。2026-10-31 社長「この形と文で入れて」)。白い光 → 金の帯 → カードの絵と技の名前が横切る(約1秒) */
+    .mh-cutin > * { position: absolute; }
+    .mh-cutin-flash { inset: -40px 0; background: radial-gradient(ellipse at 50% 50%, rgba(255,255,255,.95), rgba(255,230,120,.6) 40%, transparent 70%); animation: mhCutinFlash 1s ease-out both; }
+    .mh-cutin-band { left: -10px; right: -10px; top: 24px; bottom: 24px; background: linear-gradient(90deg, #f59e0b, #fde047 18%, #fff7cc 50%, #fde047 82%, #f59e0b); transform: skewY(-7deg); box-shadow: 0 0 0 4px #fff, 0 0 40px 10px rgba(253,224,71,.95); animation: mhCutinBand 1s ease-out both; }
+    .mh-cutin-lines { left: -10px; right: -10px; top: 24px; bottom: 24px; transform: skewY(-7deg); background: repeating-linear-gradient(90deg, rgba(255,255,255,.65) 0 3px, transparent 3px 30px); mix-blend-mode: overlay; animation: mhCutinLines 1s linear both; }
+    .mh-cutin-card { top: 8px; height: 194px; aspect-ratio: 5 / 7; border-radius: 10px; box-shadow: 0 0 0 4px #fff, 0 0 30px 8px rgba(255,255,255,.95); animation: mhCutinCard 1s cubic-bezier(.2,.9,.3,1) both; }
+    .mh-cutin-name { left: 158px; right: 6px; top: 62px; line-height: 1.05; font-weight: 900; font-style: italic; color: #fff; -webkit-text-stroke: 3px #b45309; paint-order: stroke fill; text-shadow: 0 0 14px #fff, 0 4px 0 #78350f; white-space: nowrap; animation: mhCutinName 1s cubic-bezier(.2,1.4,.4,1) both; }
+    .mh-cutin-sub { left: 162px; top: 122px; font-size: 17px; font-weight: 900; color: #7c2d12; background: #fff; padding: 1px 10px; border-radius: 999px; animation: mhCutinName 1s .05s cubic-bezier(.2,1.4,.4,1) both; }
+    @keyframes mhCutinFlash { 0% { opacity: 0; } 10% { opacity: 1; } 40%, 100% { opacity: 0; } }
+    @keyframes mhCutinBand { 0% { opacity: 0; transform: skewY(-7deg) scaleY(0); } 12% { opacity: 1; transform: skewY(-7deg) scaleY(1.15); } 20% { transform: skewY(-7deg) scaleY(1); } 85% { opacity: 1; } 100% { opacity: 0; transform: skewY(-7deg) scaleY(.2); } }
+    @keyframes mhCutinLines { 0% { background-position: 0 0; opacity: 0; } 15% { opacity: 1; } 100% { background-position: -420px 0; opacity: 0; } }
+    @keyframes mhCutinCard { 0% { left: 105%; transform: rotate(10deg) scale(1.2); } 22% { left: 14px; transform: rotate(-5deg) scale(1); } 85% { left: 6px; opacity: 1; } 100% { left: -200px; opacity: 0; } }
+    @keyframes mhCutinName { 0% { opacity: 0; transform: translateX(160px) scale(1.6); } 22% { opacity: 1; transform: none; } 85% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateX(-80px); } }
+    @media (prefers-reduced-motion: reduce) { .mh-cutin { display: none; } }
     .mh-card-ko { animation: mhCardKo .9s ease-in forwards; transform-origin: 50% 90%; }
     /* 「画面の揺れ: 揺らさない」(カードのオプション)のときの受けた動き。揺らさずに赤く光るだけ */
     @keyframes mhCardHitCalm { 0%,100% { filter: none; } 30% { filter: drop-shadow(0 0 10px rgba(248,113,113,1)) brightness(1.3); } }
