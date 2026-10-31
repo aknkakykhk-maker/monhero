@@ -24,7 +24,7 @@
 ## 公開の手順(窓口)
 
 1. `CARD_TOURNAMENT_APPLY.sql` を流す(足すだけ。いまの表は読むだけ)
-2. 関数 `card-tournament-run` を出す(verify_jwt を外す。`index.ts`・`core.js`・`game.js` の3つ)。Secrets は既存の `ANTHROPIC_API_KEY` を読む
+2. 関数 `card-tournament-run` を出す(verify_jwt を外す。`index.ts`・`core.js`・`cup.js`(個人杯)・`game.js` の4つ)。Secrets は既存の `ANTHROPIC_API_KEY` を読む
 3. `CARD_TOURNAMENT_SCHEDULE.sql` を流す(合言葉はサーバの中で作る。だれも見ない)
 4. 大会の行を足す(名前・開催日・受付の終わり・ごほうびの表)
 
@@ -32,5 +32,5 @@
 
 ### 配り方(2026-10-30 から)
 
-- `game.js` は大きくて窓口の道具で送れないため、出すときは `index.ts` の `import * as game from "./game.js"` だけを、jsDelivr のコミット固定の URL(`https://cdn.jsdelivr.net/gh/aknkakykhk-maker/monhero@<コミット>/supabase/functions/card-tournament-run/game.js`)に替えて出す。`core.js` はそのまま送る。リポジトリの `index.ts` は `./game.js` のままにしておく
+- `game.js` は大きくて窓口の道具で送れないため、出すときは `index.ts` の `import * as game from "./game.js"` だけを、jsDelivr のコミット固定の URL(`https://cdn.jsdelivr.net/gh/aknkakykhk-maker/monhero@<コミット>/supabase/functions/card-tournament-run/game.js`)に替えて出す。`core.js`・`cup.js` はそのまま送る。リポジトリの `index.ts` は `./game.js` のままにしておく
 - `game.js` か `core.js` が変わる PR(カードのルールの部品 82-card-* を直した PR も、ビルドで `game.js` が変わる)をマージしたら、その PR 番号をカード部長へ伝える。窓口が新しいコミットの URL で出し直す
