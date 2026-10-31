@@ -549,6 +549,27 @@ const CARD_PACK_FEW_SLOTS = Object.freeze({
 // スターターキットの箱の色(キットごと)。パックと同じ作りの絵に、キットのモンスター3体とキットの名前を出す
 const CARD_STARTER_BOX_COLOR = Object.freeze({ speed: '#2f7fe0', powerful: '#ef4444', miracle: '#e0a420' });
 const CardPackArt = ({ db, pack, kit = null, width = 200, torn = false, className = '' }) => {
+  // ブースターパックは、社長の描いた袋の絵(2026-10-31。data/images/images-ally.js の CARD_PACK_ART_IMGS)を出す。
+  //   幅100px 未満の所(マーケットの一覧)は、真ん中を切り出した絵(thumb)にして「第◯弾」の字を読めるようにする。
+  //   torn(開ける画面でちぎれた帯を飛ばすとき)は、袋の上のふちを隠す。スターターキットは今までどおり下の描き方
+  const art = !kit && pack && typeof CARD_PACK_ART_IMGS !== 'undefined' ? CARD_PACK_ART_IMGS[pack.id] : null;
+  if (art) {
+    const small = width < 100;
+    // 大きい絵(full)は袋のふちぎりぎりで切り出し、袋の外を透けさせてある(縦横比 1.631・社長「ふちぎりぎりにして、いらないとこは透過」)。
+    //   透けた所に箱の影が出ないよう、影は袋の形に沿う drop-shadow にする。一覧の小さい絵(thumb)は今までどおり 2:3 の四角
+    if (!small) {
+      return (
+        <div data-card-pack-art={pack.id} data-card-pack-art-img="full" className={`relative ${className}`} style={{ width, height: Math.round(width * 1.631) }}>
+          <img src={art.full} alt={pack.name} draggable={false} className="h-full w-full object-contain drop-shadow-[0_10px_18px_rgba(0,0,0,.55)]" style={torn ? { clipPath: 'inset(8% 0 0 0)' } : undefined}/>
+        </div>
+      );
+    }
+    return (
+      <div data-card-pack-art={pack.id} data-card-pack-art-img="thumb" className={`relative overflow-hidden rounded-[10px] shadow-2xl ${className}`} style={{ width, height: Math.round(width * 1.5) }}>
+        <img src={art.thumb} alt={pack.name} draggable={false} className="h-full w-full object-cover"/>
+      </div>
+    );
+  }
   const mons = kit ? kit.monsters.map((no) => cardMonsterOf(db, no)).filter(Boolean) : cardPackMonsters(db, pack);
   // 真ん中を最後に(いちばん手前)。並べる順: 奥の左右 → 中の左右 → 真ん中
   const order = mons.length >= 5 ? [mons[0], mons[4], mons[1], mons[3], mons[2]] : mons;
