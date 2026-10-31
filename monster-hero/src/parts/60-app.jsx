@@ -15952,7 +15952,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }
     // シールド(ETERNAL)。WAVEのはじめに最大ライフの率ぶんをまとう(冥府Lvが上がるのもWAVEの変わり目なので、ここで足りる)。
     // シールドを持たない難易度・ジャック戦・練習の台本では0のまま(既存の敵は何も変わらない)
-    // 層のシールド(INFERNOのボスのWAVE)。WAVEのはじめの50%の代わりに、何枚ものシールドをまとって出てくる。
+    // 層のシールド(INFERNOの敵。2026-11-01 からボス以外も)。WAVEのはじめの50%の代わりに、何枚ものシールドをまとって出てくる。
     // 全部割ったあとの本体のライフにも倍率を掛け、割れるたびの攻撃の上がり方は元の攻撃力から数える(enemyAfterHit)
     const layerPlan=raidRun||scenario?null:extremeShieldLayerPlan(specialRuleDifficulty,w,newEnemy.maxHp,extremeDifficultySetting(specialRuleDifficulty)?.power);
     if (layerPlan) {
@@ -15960,7 +15960,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       newEnemy.shell=layerPlan.layers[0]; newEnemy.maxShell=layerPlan.layers[0];
       newEnemy.shellLayers=layerPlan.layers.slice(1); newEnemy.shellLayerMaxes=layerPlan.layers;
       newEnemy.shellLayerTotal=layerPlan.layers.length; newEnemy.shellBroken=0; newEnemy.shellBreakSeq=0;
-      newEnemy.layerAtkBase=newEnemy.atk; newEnemy.layerAtkGain=layerPlan.atkGain;
+      newEnemy.layerAtkBase=newEnemy.atk; newEnemy.layerAtkGain=layerPlan.atkGain; newEnemy.shellBoss=layerPlan.boss;
     } else {
       const shell=raidRun||scenario?0:extremeEnemyShellAmount(newEnemy.maxHp,specialRuleDifficulty,w);
       if (shell>0) { newEnemy.shell=shell; newEnemy.maxShell=shell; }

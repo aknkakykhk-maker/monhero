@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// INFERNO(極限10番目)の正式設定・ボスの層のシールド(枚数・量・割れたときの持ち越しと攻撃の上がり方)・連撃の回数・
+// INFERNO(極限10番目)の正式設定・層のシールド(ふつうの敵もボスも。枚数・量・割れたときの持ち越しと攻撃の上がり方)・連撃の回数・
 // 見た目が読む enemyShellView を、本体helperを切り出して検査する。eternal-rules-check.js と同じ作り。
 const fs=require('fs');
 const path=require('path');
@@ -47,11 +47,12 @@ check('ボスは起き上がらない',[3,5,7,9,10].every(w=>G('extremeRevivalCo
 check('ETERNALのルール(冥府・ふつうのシールド・貫き・ライフ10倍)を引き継ぐ',
   [1,3,9,10].every(w=>{const a=rules(w),b=G('eternalStageRules')(w);return a.level===b.level&&a.enemyMultiplier===b.enemyMultiplier&&a.shellRate===b.shellRate&&a.pierceRate===b.pierceRate&&a.minimumDamageDealt===b.minimumDamageDealt;})
   &&G('extremeEnemyStatAdjust')('INFERNO','Dino').lifeRate===10&&near(G('extremeEnemyStatAdjust')('INFERNO','Durahan').lifeRate,13));
-check('層の数はW3/5/7 3枚・W9 4枚・W10 5枚、ふつうのWAVEは0',[[3,3],[5,3],[7,3],[9,4],[10,5],[1,0],[2,0],[4,0],[6,0],[8,0]].every(([w,n])=>rules(w).shieldLayers===n));
+check('層の数はW1・2 2枚・W3〜8 3枚・W9 4枚・W10 5枚(ふつうの敵も)',[[1,2],[2,2],[3,3],[4,3],[5,3],[6,3],[7,3],[8,3],[9,4],[10,5]].every(([w,n])=>rules(w).shieldLayers===n));
+check('ボスのWAVEの印はW3/5/7/9/10だけ',[3,5,7,9,10].every(w=>rules(w).bossWave===true)&&[1,2,4,6,8].every(w=>rules(w).bossWave===false)&&plan('INFERNO',10,4000,400).boss===true&&plan('INFERNO',4,4000,400).boss===false);
 check('1枚目=ETERNAL(強度300)のライフ、割れるたびに+30%、本体にもその倍率',(()=>{const p=plan('INFERNO',10,4000,400);
   return p&&p.layers.join()==='3000,3900,4800,5700,6600'&&near(p.bodyRate,2.5)&&near(p.atkGain,0.6);})()
   &&(()=>{const p=plan('INFERNO',3,4000,400);return p.layers.join()==='3000,3900,4800'&&near(p.bodyRate,1.9);})()
-  &&plan('INFERNO',2,4000,400)===null&&plan('ETERNAL',10,4000,300)===null);
+  &&(()=>{const p=plan('INFERNO',2,4000,400);return p.layers.join()==='3000,3900'&&near(p.bodyRate,1.6);})()&&plan('ETERNAL',10,4000,300)===null);
 const boss=()=>({hp:1000,maxHp:1000,atk:100,shell:300,maxShell:300,shellLayers:[390,480],shellLayerMaxes:[300,390,480],shellLayerTotal:3,shellBroken:0,shellBreakSeq:0,layerAtkBase:100,layerAtkGain:0.6});
 check('いまの1枚から削れ、割れた余りは次の1枚へ持ち越す',(()=>{const x=afterHit(boss(),500);return x.shell===190&&x.maxShell===390&&x.shellLayers.join()==='480'&&x.shellBroken===1&&x.shellBreakSeq===1&&x.hp===1000;})());
 check('1枚割れるたびに攻撃+60%(元の攻撃力から数える)',(()=>{const x=afterHit(boss(),500);const y=afterHit(x,190+480);return x.atk===160&&y.atk===280&&y.shellBroken===3&&y.shellBreakSeq===3;})());
@@ -63,7 +64,7 @@ check('ヒットの見積もりは層の合計に当てる',(()=>{const hits=[{d
 check('連撃はデュラハン4枚目で2・ムー4枚目で2・5枚目で3、ほかは1',rush('INFERNO',9,3)===1&&rush('INFERNO',9,4)===2&&rush('INFERNO',10,3)===1&&rush('INFERNO',10,4)===2&&rush('INFERNO',10,5)===3
   &&rush('INFERNO',3,3)===1&&rush('INFERNO',7,3)===1&&rush('ETERNAL',10,5)===1);
 check('見た目が読む状態',(()=>{const v=view(afterHit(boss(),500));return v.total===3&&v.broken===1&&v.left===2&&v.current===190&&v.currentMax===390&&v.breakSeq===1
-  &&v.layers.map(l=>l.now).join()==='0,190,480'&&v.layers.map(l=>l.max).join()==='300,390,480';})()&&view({hp:10,shell:5,maxShell:9}).total===0&&view(null).total===0);
+  &&v.layers.map(l=>l.now).join()==='0,190,480'&&v.layers.map(l=>l.max).join()==='300,390,480';})()&&view({...boss(),shellBoss:true}).boss===true&&view(boss()).boss===false&&view({hp:10,shell:5,maxShell:9}).total===0&&view(null).total===0);
 check('本体: ボスのWAVEは層を作る・ヒットの見積もりは層の合計',source.includes('extremeShieldLayerPlan(specialRuleDifficulty,w,newEnemy.maxHp,')
   &&source.includes('markShellAbsorbedHits(attackHits,enemyShellPool(enemy))')&&source.includes('markShellAbsorbedHits(ca.hits, enemyShellPool(enemy))'));
 check('本体: 本編の必殺技の連撃はタクティクスの連撃と同じ受け方',source.includes('resolveTacticsGuardedHit(incomingBeforeTurnReduction,rushHits,guardValue,guardCards>=TACTICS_RUSH_GUARD_CARDS?rushHits:1)'));

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 22072326e5019bab
+// source-sha256: 8190a79d122689db
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -15847,8 +15847,8 @@ const INFERNO_SETTING = Object.freeze({
   unlockRequirement: 'ETERNAL',
   rankingId: 'ExtremeINFERNO',
   recordId: 'INFERNO',
-  description: 'ボスは起き上がらないかわりに、何枚ものシールドをまとって現れる。1枚割るごとにボスは強くなり、最後は必殺技が連撃になる、極限チャレンジの最奥の難易度。',
-  cardDescription: 'ボスは3〜5枚のシールドをまとい、割るたびに攻撃が上がる。デュラハンとムーは必殺技が連撃に。冥府・シールド・貫き・敵ライフ10倍はエターナルのまま。',
+  description: 'ボスは起き上がらないかわりに、どの敵も何枚ものシールドをまとって現れる。1枚割るごとに敵は強くなり、最後は必殺技が連撃になる、極限チャレンジの最奥の難易度。',
+  cardDescription: 'どの敵も2〜5枚のシールドをまとい、割るたびに攻撃が上がる。デュラハンとムーは必殺技が連撃に。冥府・貫き・敵ライフ10倍はエターナルのまま。',
   specialRules: Object.freeze({
     assistCardEffect: 0.30,
     positiveModifier: 0.30,
@@ -16052,12 +16052,18 @@ const eternalStageRules = waveNumber => {
   });
 };
 const INFERNO_SHIELD_LAYERS = Object.freeze({
+  1: 2,
+  2: 2,
   3: 3,
+  4: 3,
   5: 3,
+  6: 3,
   7: 3,
+  8: 3,
   9: 4,
   10: 5
 });
+const INFERNO_BOSS_WAVES = Object.freeze([3, 5, 7, 9, 10]);
 const INFERNO_RUSH_AT_BROKEN = Object.freeze({
   9: Object.freeze({
     4: 2
@@ -16073,6 +16079,7 @@ const infernoStageRules = waveNumber => {
   return Object.freeze({
     ...base,
     shieldLayers: INFERNO_SHIELD_LAYERS[w] || 0,
+    bossWave: INFERNO_BOSS_WAVES.includes(w),
     layerGrowth: 0.3,
     layerAtkGain: 0.6,
     layerBasePower: ETERNAL_SETTING.power,
@@ -16303,7 +16310,8 @@ const extremeShieldLayerPlan = (difficultyId, waveNumber, maxHp, power) => {
   return {
     layers,
     bodyRate: 1 + growth * count,
-    atkGain: Math.max(0, Number(rules.layerAtkGain) || 0)
+    atkGain: Math.max(0, Number(rules.layerAtkGain) || 0),
+    boss: rules.bossWave === true
   };
 };
 const extremeLayerRushHits = (difficultyId, waveNumber, broken) => {
@@ -16323,7 +16331,8 @@ const enemyShellView = enemy => {
     current: Math.max(0, Number(enemy?.shell) || 0),
     currentMax: Math.max(0, Number(enemy?.maxShell) || 0),
     layers: [],
-    breakSeq: 0
+    breakSeq: 0,
+    boss: false
   };
   const broken = Math.min(total, Math.max(0, Math.floor(Number(enemy.shellBroken) || 0)));
   const maxes = Array.isArray(enemy.shellLayerMaxes) ? enemy.shellLayerMaxes : [];
@@ -16341,7 +16350,8 @@ const enemyShellView = enemy => {
     current,
     currentMax: Math.max(0, Number(enemy.maxShell) || 0),
     layers,
-    breakSeq: Math.max(0, Math.floor(Number(enemy.shellBreakSeq) || 0))
+    breakSeq: Math.max(0, Math.floor(Number(enemy.shellBreakSeq) || 0)),
+    boss: enemy.shellBoss === true
   };
 };
 const markShellAbsorbedHits = (hits, startShell) => {
@@ -16451,7 +16461,7 @@ const extremeRuleDetailGroups = (difficultyId, quick = false) => {
     push('冥府', [['進行', '2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'], ['敵ライフ/攻撃力', '冥府Lvごと +30% / +60% / +90% / +120% / +150%'], ['味方の最大ライフ', '冥府Lvごと -5%（Lv5で-25%）'], ['Lv3', '消費ガッツ 200%→225%'], ['Lv4', '＋補正 30%→20%・−補正 300%→350%'], ['Lv5', '与ダメ低下 -2.0pt/T・最低10%']]);
     push('敵の強さ', [adjust.lifeRate > 1 && ['敵ライフ', `すべての敵が${adjust.lifeRate}倍`], durahan && ['デュラハン', `ライフ・攻撃力が さらに${durahan.lifeRate}倍`]]);
     push('距離強化', [['WAVEごとに薄れる', 'WAVE1で10%、1WAVEごとに1%ずつ下がり、WAVE10で1%']]);
-    if (difficultyId === INFERNO_SETTING.id) push('ボスの層のシールド', [['起き上がり', 'ボスは起き上がらない'], ['層の数', 'W3・W5・W7のボス 3枚 / W9 デュラハン 4枚 / W10 ムー 5枚'], ['シールドの量', '1枚目はエターナルのそのボスのライフと同じ。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率'], ['割れるたび', 'ボスの攻撃力 +60%(最後の1枚も)'], ['連撃', 'デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)']]);
+    if (difficultyId === INFERNO_SETTING.id) push('層のシールド', [['起き上がり', 'ボスは起き上がらない'], ['層の数', 'W1・W2の敵 2枚 / W3〜W8の敵(ボスも) 3枚 / W9 デュラハン 4枚 / W10 ムー 5枚'], ['WAVEのはじめのシールド', 'エターナルの50%のシールドは、層のシールドに置き換わる'], ['シールドの量', '1枚目はエターナルのその敵のライフと同じ。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとの敵のライフにも同じ倍率'], ['割れるたび', '敵の攻撃力 +60%(最後の1枚も)'], ['連撃', 'デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)']]);
     if (difficultyId === ETERNAL_SETTING.id || difficultyId === INFERNO_SETTING.id) push('シールドと貫き', [['シールド', 'WAVEの始めに、敵が最大ライフ50%ぶんのシールドをまとう。シールドを割るまで敵のライフは減らない'], ['シールドと距離強化', 'シールドに当てたダメージは、距離強化(間合いのボーナス)に数えない'], ['貫き', '敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）']]);
   }
   push('カード', [rules.assistCardEffect != null && ['アシストカード効果', specialRulePercent(rules.assistCardEffect)]]);
@@ -142971,6 +142981,7 @@ function MonsterHeroGame() {
       newEnemy.shellBreakSeq = 0;
       newEnemy.layerAtkBase = newEnemy.atk;
       newEnemy.layerAtkGain = layerPlan.atkGain;
+      newEnemy.shellBoss = layerPlan.boss;
     } else {
       const shell = raidRun || scenario ? 0 : extremeEnemyShellAmount(newEnemy.maxHp, specialRuleDifficulty, w);
       if (shell > 0) {

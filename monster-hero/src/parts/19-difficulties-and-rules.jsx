@@ -442,7 +442,7 @@ const HELHEIM_SETTING = Object.freeze({ id:'HELHEIM', label:'HELHEIM', japanese:
 const ETERNAL_SETTING = Object.freeze({ id:'ETERNAL', label:'ETERNAL', japanese:'エターナル', available:true, debugAvailable:true, power:300, score:20, xp:120, gold:100, psyche:190, waveCount:10, unlockRequirement:'HELHEIM', rankingId:'ExtremeETERNAL', recordId:'ETERNAL', description:'冥府の上に、敵がシールドをまとい、攻撃の一部が丈夫さを貫いてくる。戦いは長く続き、ターンとともに重くなる、極限チャレンジの最奥の難易度。', cardDescription:'WAVEの始めに敵が最大ライフ50%のシールドをまとい、攻撃の30〜50%が丈夫さを貫く。冥府・ボス復活・敵ライフ10倍はヘルヘイムのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 3:1, 5:2, 7:2, 9:1, 10:4 }), hpRate:0.5, atkBoostPerRevival:0.6 }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
 // INFERNOはETERNALの次の極限難易度(2026-10-31 社長の決定)。冥府・ふつうのWAVEのシールド・貫き・敵ライフ10倍・デュラハンの上乗せはETERNALのまま。
 // ボスは起き上がらない(revival なし)。かわりにボスのWAVEは何枚ものシールド(層)をまとって出てくる。層の決まりは infernoStageRules
-const INFERNO_SETTING = Object.freeze({ id:'INFERNO', label:'INFERNO', japanese:'インフェルノ', available:true, debugAvailable:true, power:400, score:20, xp:140, gold:120, psyche:220, waveCount:10, unlockRequirement:'ETERNAL', rankingId:'ExtremeINFERNO', recordId:'INFERNO', description:'ボスは起き上がらないかわりに、何枚ものシールドをまとって現れる。1枚割るごとにボスは強くなり、最後は必殺技が連撃になる、極限チャレンジの最奥の難易度。', cardDescription:'ボスは3〜5枚のシールドをまとい、割るたびに攻撃が上がる。デュラハンとムーは必殺技が連撃に。冥府・シールド・貫き・敵ライフ10倍はエターナルのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
+const INFERNO_SETTING = Object.freeze({ id:'INFERNO', label:'INFERNO', japanese:'インフェルノ', available:true, debugAvailable:true, power:400, score:20, xp:140, gold:120, psyche:220, waveCount:10, unlockRequirement:'ETERNAL', rankingId:'ExtremeINFERNO', recordId:'INFERNO', description:'ボスは起き上がらないかわりに、どの敵も何枚ものシールドをまとって現れる。1枚割るごとに敵は強くなり、最後は必殺技が連撃になる、極限チャレンジの最奥の難易度。', cardDescription:'どの敵も2〜5枚のシールドをまとい、割るたびに攻撃が上がる。デュラハンとムーは必殺技が連撃に。冥府・貫き・敵ライフ10倍はエターナルのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
 const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES,GOD_SETTING,RAGNAROK_SETTING,HELHEIM_SETTING,ETERNAL_SETTING,INFERNO_SETTING]);
 // 極限チャレンジの難易度カラー。カード構造は共通のまま、上位ほど発光を少しずつ強める。
 // 常時アニメーションは使わず、iPhone縦画面でも視認性と軽さを優先する。
@@ -529,17 +529,20 @@ const eternalStageRules = (waveNumber) => {
   return Object.freeze({ ...base, shellRate:0.5, pierceRate:Number((0.30+(base.level-1)*0.05).toFixed(2)) });
 };
 // INFERNOの段階ルール。ETERNAL(冥府・ふつうのWAVEのシールド・貫き)の上に、ボスのWAVEの層を足す(2026-10-31 社長の決定)。
-//   shieldLayers … そのWAVEのボスがまとうシールドの枚数(W3/5/7 3枚・W9 4枚・W10 5枚)。0のWAVEはふつうのWAVE(シールドはETERNALと同じ50%が1枚)
+//   shieldLayers … そのWAVEの敵がまとうシールドの枚数(W1・2 2枚・W3〜8 3枚・W9 4枚・W10 5枚。2026-11-01 社長: ふつうの敵もボスと同じ仕組み)。
+//   層を持つ敵は、ETERNALのWAVEのはじめの50%のシールドを持たない(層に置き換える)
+//   bossWave … ボスのWAVE(ETERNALで起き上がっていたWAVE)。見た目がボスかどうかを見分ける印に使う
 //   1枚目の量はETERNAL(強度 layerBasePower)のそのボスのライフと同じ。割れるたびに次の1枚が layerGrowth ずつ大きくなる(×1.0→1.3→1.6…)。
 //   全部割ったあとのボス本体のライフにも、その時点の倍率(1+layerGrowth×枚数)を掛ける
 //   layerAtkGain … 1枚割れるたびに、ボスの攻撃力が元の値のこの割合ずつ上がる(最後の1枚も)
 //   rushAtBroken … 割れた枚数ごとの必殺技の連撃の回数(合計の倍率は変えずに分ける)。書いていない枚数・WAVEは1発のまま
-const INFERNO_SHIELD_LAYERS = Object.freeze({ 3:3, 5:3, 7:3, 9:4, 10:5 });
+const INFERNO_SHIELD_LAYERS = Object.freeze({ 1:2, 2:2, 3:3, 4:3, 5:3, 6:3, 7:3, 8:3, 9:4, 10:5 });
+const INFERNO_BOSS_WAVES = Object.freeze([3,5,7,9,10]);
 const INFERNO_RUSH_AT_BROKEN = Object.freeze({ 9:Object.freeze({ 4:2 }), 10:Object.freeze({ 4:2, 5:3 }) });
 const infernoStageRules = (waveNumber) => {
   const base=eternalStageRules(waveNumber);
   const w=Math.floor(Number(waveNumber)||0);
-  return Object.freeze({ ...base, shieldLayers:INFERNO_SHIELD_LAYERS[w]||0, layerGrowth:0.3, layerAtkGain:0.6, layerBasePower:ETERNAL_SETTING.power,
+  return Object.freeze({ ...base, shieldLayers:INFERNO_SHIELD_LAYERS[w]||0, bossWave:INFERNO_BOSS_WAVES.includes(w), layerGrowth:0.3, layerAtkGain:0.6, layerBasePower:ETERNAL_SETTING.power,
     rushAtBroken:INFERNO_RUSH_AT_BROKEN[w]||null });
 };
 // 「WAVEで段階が動く難易度」の一覧。ここに1行足せば、実効倍率・与ダメ・BREAK・表示まで
@@ -690,7 +693,7 @@ const extremeShieldLayerPlan = (difficultyId,waveNumber,maxHp,power) => {
   const growth=Math.max(0,Number(rules.layerGrowth)||0);
   const first=hp*Math.max(0,Number(rules.layerBasePower)||p)/p;
   const layers=Array.from({length:count},(_,k)=>Math.max(1,Math.floor(first*(1+growth*k))));
-  return { layers, bodyRate:1+growth*count, atkGain:Math.max(0,Number(rules.layerAtkGain)||0) };
+  return { layers, bodyRate:1+growth*count, atkGain:Math.max(0,Number(rules.layerAtkGain)||0), boss:rules.bossWave===true };
 };
 // 割れた枚数に応じた必殺技の連撃の回数(INFERNOのデュラハン・ムー)。連撃にならないときは1
 const extremeLayerRushHits = (difficultyId,waveNumber,broken) => {
@@ -703,15 +706,15 @@ const extremeLayerRushHits = (difficultyId,waveNumber,broken) => {
 };
 // 見た目が読むシールドの状態(2026-10-31 レフェリーくんと取り決め)。層を持たない敵は total 0
 //   { total:全部の枚数, broken:割れた枚数, left:残りの枚数(いまの1枚を含む), current:いまの1枚の残り, currentMax:いまの1枚の最大,
-//     layers:[{ max, now }](上から順・割れた層は now 0), breakSeq:割れた合図の通し番号(増えたら割れた瞬間) }
+//     layers:[{ max, now }](上から順・割れた層は now 0), breakSeq:割れた合図の通し番号(増えたら割れた瞬間), boss:ボスのWAVEの敵か }
 const enemyShellView = (enemy) => {
   const total=Math.max(0,Math.floor(Number(enemy?.shellLayerTotal)||0));
-  if (!enemy||!(total>0)) return { total:0, broken:0, left:0, current:Math.max(0,Number(enemy?.shell)||0), currentMax:Math.max(0,Number(enemy?.maxShell)||0), layers:[], breakSeq:0 };
+  if (!enemy||!(total>0)) return { total:0, broken:0, left:0, current:Math.max(0,Number(enemy?.shell)||0), currentMax:Math.max(0,Number(enemy?.maxShell)||0), layers:[], breakSeq:0, boss:false };
   const broken=Math.min(total,Math.max(0,Math.floor(Number(enemy.shellBroken)||0)));
   const maxes=Array.isArray(enemy.shellLayerMaxes)?enemy.shellLayerMaxes:[];
   const current=Math.max(0,Number(enemy.shell)||0);
   const layers=Array.from({length:total},(_,k)=>({ max:Math.max(0,Number(maxes[k])||0), now:k<broken?0:(k===broken?current:Math.max(0,Number(maxes[k])||0)) }));
-  return { total, broken, left:total-broken, current, currentMax:Math.max(0,Number(enemy.maxShell)||0), layers, breakSeq:Math.max(0,Math.floor(Number(enemy.shellBreakSeq)||0)) };
+  return { total, broken, left:total-broken, current, currentMax:Math.max(0,Number(enemy.maxShell)||0), layers, breakSeq:Math.max(0,Math.floor(Number(enemy.shellBreakSeq)||0)), boss:enemy.shellBoss===true };
 };
 // 1ターンぶんのヒットを順にシールドへ当て、各ヒットに shellAbsorbed(シールドが受けたぶん)を書き込む。シールドが受けた合計を返す
 const markShellAbsorbedHits = (hits,startShell) => {
@@ -861,11 +864,12 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     push('距離強化',[
       ['WAVEごとに薄れる','WAVE1で10%、1WAVEごとに1%ずつ下がり、WAVE10で1%'],
     ]);
-    if(difficultyId===INFERNO_SETTING.id) push('ボスの層のシールド',[
+    if(difficultyId===INFERNO_SETTING.id) push('層のシールド',[
       ['起き上がり','ボスは起き上がらない'],
-      ['層の数','W3・W5・W7のボス 3枚 / W9 デュラハン 4枚 / W10 ムー 5枚'],
-      ['シールドの量','1枚目はエターナルのそのボスのライフと同じ。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率'],
-      ['割れるたび','ボスの攻撃力 +60%(最後の1枚も)'],
+      ['層の数','W1・W2の敵 2枚 / W3〜W8の敵(ボスも) 3枚 / W9 デュラハン 4枚 / W10 ムー 5枚'],
+      ['WAVEのはじめのシールド','エターナルの50%のシールドは、層のシールドに置き換わる'],
+      ['シールドの量','1枚目はエターナルのその敵のライフと同じ。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとの敵のライフにも同じ倍率'],
+      ['割れるたび','敵の攻撃力 +60%(最後の1枚も)'],
       ['連撃','デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)'],
     ]);
     if(difficultyId===ETERNAL_SETTING.id||difficultyId===INFERNO_SETTING.id) push('シールドと貫き',[
