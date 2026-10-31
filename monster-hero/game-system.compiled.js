@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 21ac04690d9451a5
+// source-sha256: d964d308c53f96d6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -94174,6 +94174,127 @@ const CARD_TACTIC_TEXT = Object.freeze({
   ace: () => ['切りカードを出す', '登録で選んだ切りカードが手札にあれば、それを先に使う'],
   holdBreeder: () => ['ブリーダーのカードを温存', '当てはまったら、このターンはブリーダーのカード(全体カードも)を出さない。ほかのカードはそのまま使う']
 });
+const cardTacticPct = v => v === 50 ? '半分' : `${v / 10}割`;
+const CARD_TACTIC_LINE = Object.freeze({
+  any: () => 'いつでも(ほかの条件なしで、いつも)',
+  ko: () => 'いまの手札とガッツで倒しきれる相手がいるとき(その相手をねらう)',
+  lowest: () => 'ライフがいちばん少ない相手をねらうとき',
+  highest: () => 'ライフがいちばん多い相手をねらうとき',
+  strongest: () => 'いちばん強い技をもつ相手をねらうとき',
+  attacker: () => '前のターンに攻撃してきた相手をねらうとき',
+  leader: () => '相手のリーダー(1体目)が残っているとき(その相手をねらう)',
+  type: v => `${v}にいる相手がいるとき(その相手をねらう)`,
+  blood: v => `${v}の相手がいるとき(その相手をねらう)`,
+  species: () => '決めた種族の相手がいるとき(その相手をねらう)',
+  foeLife: v => `ライフが${cardTacticPct(v)}以下の相手がいるとき(その相手をねらう)`,
+  myLife: v => `ライフが${cardTacticPct(v)}以下の味方がいるとき(守るカードなら、その味方を守る)`,
+  myGuts: v => `自分のガッツが${v}以上たまっているとき`,
+  foeGutsLe: v => `相手のガッツが${v}以下しかないとき`,
+  foeGutsGe: v => `相手のガッツが${v}以上たまっているとき`,
+  myHand: v => `自分の手札が${v}枚以上あるとき`,
+  foeHandGe: v => `相手の手札が${v}枚以上あるとき`,
+  foeHandLe: v => `相手の手札が${v}枚以下しかないとき`,
+  myDeck: v => `自分の山札が残り${v}枚以下のとき`,
+  foeDeck: v => `相手の山札が残り${v}枚以下のとき`,
+  guardN: v => `手札に守りのカードが${v}枚以上あるとき`,
+  guardKind: v => `手札に${v}のカードがあるとき`,
+  bigInHand: () => '手札に大技(ガッツ4以上)があるとき',
+  areaInHand: () => '手札に全体攻撃があるとき',
+  breederInHand: () => '手札にブリーダーのカードがあるとき',
+  turnLe: v => `自分の${v}ターン目までのとき(はじめのうち)`,
+  turnGe: v => `自分の${v}ターン目からのとき(終わりのほう)`,
+  myAlive: v => `味方が残り${v}体のとき`,
+  foeAlive: v => `相手が残り${v}体のとき`,
+  koDiff: v => v === '勝っ' ? '倒した数で勝っているとき' : '倒した数で負けているとき',
+  foeStun: () => '攻撃できない相手がいるとき(その相手をねらう)',
+  myStun: () => '攻撃できない味方がいるとき',
+  foeCharge: () => '溜めている相手がいるとき(その相手をねらう)',
+  foeAir: () => '空中に上がった相手がいるとき(その相手をねらう)',
+  field: v => `場に${v}全体カードがあるとき`,
+  foeBig: () => '相手の大技が来そうなとき',
+  myHandLe: v => `自分の手札が${v}枚以下しかないとき`,
+  breederN: () => '手札にブリーダーのカードが2枚以上あるとき',
+  breederUnused: () => 'このターン、まだブリーダーのカードを出していないとき',
+  myGutsLe: v => `自分のガッツが${v}以下しかないとき`,
+  myDiscard: v => `自分の捨て札が${v}枚以上たまったとき`,
+  myKo: () => '倒れた味方がいるとき',
+  noField: () => '場に全体カードが1枚も無いとき',
+  selfLife: v => `このモンスターのライフが${cardTacticPct(v)}以下のとき`,
+  selfFresh: () => 'このモンスターが、このターンまだ攻撃していないとき',
+  selfType: v => `このモンスターがいま${v}にいるとき`,
+  selfStun: () => 'このモンスターが攻撃できないとき',
+  selfAdv: () => 'このモンスターの得意な相手がいるとき(ダメージが倍になる相手をねらう)',
+  incoming: v => `${v}ダメージ以上の攻撃を受けたとき`,
+  incomingKo: () => '受けると倒れる攻撃が来たとき',
+  incomingArea: () => '全体攻撃を受けたとき',
+  tBalance: () => '攻めも守りも、いちばん得になるように打つ',
+  tAttack: () => 'どんどん攻撃する。守るのは倒れそうなときだけ',
+  tGuard: () => '守りのカードをとっておき、攻撃を受けたらできるだけ守る',
+  tSave: () => 'ガッツを多めにためて、大技をねらう',
+  tDisrupt: () => '相手の手札・山札・ガッツを減らすカードを先に使う',
+  tBig: () => 'ダメージの大きい技を先に使う',
+  tArea: () => '全体攻撃・全体カードを先に使う',
+  tFinish: () => 'あと少しで倒せる相手から攻撃する',
+  tRush: () => '軽い技でどんどん攻撃する(大技は使わない)',
+  tSteady: () => '守りのカードとガッツを残して、むりせず攻撃する',
+  tJam: () => '相手を崩しながら、守りのカードもとっておく',
+  tCalm: () => 'いっしょに入れた型を弱めて、かたよらずに打つ',
+  tFlex: () => 'ターンごとに場を見て、攻め・守り・とどめを切りかえる',
+  tMill: () => '相手の山札を減らして、山札切れで勝ちをねらう',
+  tReckless: () => '守らずに、とどめをねらって攻撃する',
+  tHand: () => '手札を2枚以上残しながら打つ',
+  tDeck: () => '山札を減らすカードは使わずに打つ',
+  tFocus: () => '同じ相手を、倒れるまでねらい続ける',
+  tSpread: () => 'ライフの多い相手や全員に、ばらしてダメージを与える',
+  tComeback: () => '負けているときは捨て身で、勝っているときは堅く打つ',
+  atk: () => 'いちばん良い技で攻撃する',
+  kind: v => `${v}の技で攻撃する`,
+  cost: v => /^軽い/.test(v) ? '軽い技(ガッツ0〜1)で攻撃する' : /^中/.test(v) ? '中くらいの技(ガッツ2〜3)で攻撃する' : '大技(ガッツ4以上)で攻撃する',
+  reach: v => v === '全体攻撃' ? '全体攻撃で攻撃する' : '1体だけをねらう技で攻撃する',
+  eff: v => `「${v}」の技で攻撃する`,
+  attach: () => '付けるカードといっしょに攻撃する',
+  attachKind: v => `「${v}」の付けるカードといっしょに攻撃する`,
+  spe: v => ({
+    味方を回復: '特殊技で味方を回復する',
+    引く: '特殊技でカードを引く',
+    空中になる: '特殊技で空中に上がる',
+    安全になる: '特殊技で次の攻撃を受けなくする',
+    まゆと羽化: '特殊技でまゆになる・羽化する',
+    のりうつる: '特殊技でのりうつる'
+  })[v] || `特殊技(${v})を使う`,
+  stance: v => ({
+    この子から攻める: 'このモンスターから先に攻撃する',
+    この子は攻撃しない: 'このモンスターは攻撃しない',
+    ライフの多い子が先に: 'ライフの多い味方から先に攻撃する',
+    ライフの少ない子は温存: 'ライフの少ない味方は攻撃させずに温存する',
+    攻撃は1回だけ: 'このターンの攻撃は1回だけにする',
+    何回でも攻める: '出せるだけ何回でも攻撃する'
+  })[v] || v,
+  disrupt: v => ({
+    手札を捨てさせる: '相手の手札を捨てさせる',
+    山札を削る: '相手の山札を減らす',
+    ガッツを減らす: '相手のガッツを減らす',
+    番を飛ばす: '相手のターンを飛ばす'
+  })[v] || v,
+  guard: () => '攻撃を受けたら、いちばん良い守り方で守る',
+  guardFirst: v => `攻撃を受けたら、${v}のカードで守る`,
+  guardOver: v => `${v}ダメージ以上の攻撃だけ守る(小さい攻撃は受ける)`,
+  guardDie: () => '倒れそうなときだけ守る',
+  cover: () => 'かばう・身代わりのカードで守る',
+  noGuard: () => '守らずに受ける(守りのカードをとっておく)',
+  charge: () => '溜め技で、次の技を強くする',
+  chargeKind: v => `溜め(${v === '次の番の技を倍' ? '次のターンの技を倍' : v})で、次の技を強くする`,
+  bEff: v => `ブリーダーのカードで「${v}」をする`,
+  fieldCard: () => '全体カードを場に出す',
+  fieldKind: v => `全体カード「${v}」を場に出す`,
+  save: () => 'ガッツを多めにためる',
+  gutsN: v => `ガッツを${v}枚だけ置く`,
+  keepGuard: () => '守りのカードはガッツに置かずにとっておく',
+  gutsOrder: v => v === '重い札' ? '重いカードからガッツに置く' : '使えないカードからガッツに置く',
+  stop: () => 'このターンの攻撃をやめる',
+  ace: () => '切りカードを先に出す',
+  holdBreeder: () => 'ブリーダーのカードを出さずにとっておく'
+});
 const cardTacticTextOf = (g, v) => {
   const t = CARD_TACTIC_TEXT[g.id] ? CARD_TACTIC_TEXT[g.id](v) : null;
   return t ? {
@@ -94193,6 +94314,7 @@ const CARD_TACTIC_CARDS = Object.freeze(CARD_TACTIC_GROUPS.flatMap(g => g.tiers.
   phase: g.phase || null,
   v,
   ...cardTacticTextOf(g, v),
+  line: CARD_TACTIC_LINE[g.id] ? CARD_TACTIC_LINE[g.id](v) : '',
   r,
   start: (g.start || []).includes(v)
 }))));
@@ -116299,12 +116421,17 @@ const CardTacticDetail = ({
   }, st.label), card.phase && React.createElement("span", {
     className: "rounded bg-black/25 px-1.5 text-[12px] font-bold"
   }, CARD_TACTIC_PHASE_TEXT[card.phase])), React.createElement("b", {
-    className: "mt-2 block text-[21px] font-black leading-tight",
+    "data-card-tactic-detail-line": true,
+    className: "mt-2 block text-[19px] font-black leading-snug",
     style: JA_WRAP_STYLE
-  }, card.name), React.createElement("p", {
-    className: "mt-2 text-[15px] font-bold leading-relaxed",
+  }, jaWrap(card.line || card.name)), React.createElement("p", {
+    className: "mt-2 text-[12px] font-black text-white/80"
+  }, `カードの名前「${card.name}」`), React.createElement("p", {
+    className: "mt-1 rounded-lg bg-black/25 px-2 py-1.5 text-[13px] font-bold leading-relaxed",
     style: JA_WRAP_STYLE
-  }, jaWrap(card.desc)), React.createElement("p", {
+  }, React.createElement("small", {
+    className: "block text-[10px] font-black text-white/70"
+  }, "くわしく"), jaWrap(card.desc)), React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-white/80",
     style: JA_WRAP_STYLE
   }, jaWrap(CARD_TACTIC_CAT_TEXT[card.cat] || '')), React.createElement("button", {
@@ -116351,12 +116478,13 @@ const CardTacticFace = ({
   }, "×", count), mark && React.createElement("span", {
     className: "ml-auto rounded bg-emerald-500 px-1 text-[10px] font-black text-white"
   }, mark)), React.createElement("b", {
-    className: `mt-1 block font-black leading-tight text-white ${small ? [...String(card.name || '')].length > 10 ? 'text-[11px]' : 'text-[12.5px]' : 'text-[14px]'}`,
+    "data-card-tactic-line": true,
+    className: `mt-1 block font-black leading-snug text-white ${small ? [...String(card.line || card.name || '')].length > 16 ? 'line-clamp-4 text-[10.5px]' : 'text-[12px]' : 'text-[13.5px]'}`,
     style: JA_WRAP_STYLE
-  }, jaWrap(card.name)), React.createElement("small", {
-    className: `mt-0.5 font-bold leading-snug text-white/90 ${small ? 'line-clamp-3 text-[10px]' : 'block text-[11.5px]'}`,
+  }, jaWrap(card.line || card.name)), React.createElement("small", {
+    className: `mt-auto pt-0.5 font-bold leading-snug text-white/65 ${small ? 'line-clamp-1 text-[9.5px]' : 'block text-[10.5px]'}`,
     style: JA_WRAP_STYLE
-  }, jaWrap(card.desc)));
+  }, card.name));
 };
 const CARD_TACTIC_USE_KEY = 'mh_card_tactic_use_v1';
 const cardTacticUseNormalize = v => {
@@ -116508,7 +116636,7 @@ const CardTacticPicker = ({
     }, x.name))));
   }
   const words = cardTacticFold(q).split(/[\s　]+/).filter(Boolean);
-  const shown = list.filter(c => (!sec || c.sec === sec) && (!ownOnly || cardTacticsOwns(tactics, c.id)) && (!fitOnly || cardTacticDeckFits(db, deck, c)) && words.every(w => cardTacticFold(`${c.name} ${c.desc} ${c.sec}`).includes(w)));
+  const shown = list.filter(c => (!sec || c.sec === sec) && (!ownOnly || cardTacticsOwns(tactics, c.id)) && (!fitOnly || cardTacticDeckFits(db, deck, c)) && words.every(w => cardTacticFold(`${c.line || ''} ${c.name} ${c.desc} ${c.sec}`).includes(w)));
   const order = sort === 'rec' ? shown.slice().sort((x, y) => (rec.has(y.id) ? 1 : 0) - (rec.has(x.id) ? 1 : 0)) : sort === 'use' ? shown.slice().sort((x, y) => (use[y.id] || 0) - (use[x.id] || 0)) : shown;
   const chip = on => `shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
   const face = c => {
@@ -118333,7 +118461,7 @@ const CardRegRows = ({
   }, "もし"), React.createElement("span", {
     className: "min-w-0 flex-1 rounded-lg bg-blue-700 px-2 py-1 text-[12px] font-black leading-snug text-white",
     style: JA_WRAP_STYLE
-  }, r.c === 'any' ? 'いつでも' : c ? c.name : '?')), React.createElement("div", {
+  }, r.c === 'any' ? 'いつでも' : c ? c.line || c.name : '?')), React.createElement("div", {
     "data-card-reg-row-then": true,
     className: "flex items-center gap-1.5"
   }, React.createElement("span", {
@@ -118341,7 +118469,7 @@ const CardRegRows = ({
   }, "なら→"), React.createElement("span", {
     className: "min-w-0 flex-1 rounded-lg bg-red-700 px-2 py-1 text-[12px] font-black leading-snug text-white",
     style: JA_WRAP_STYLE
-  }, a ? a.name : '?')), when && React.createElement("small", {
+  }, a ? a.line || a.name : '?')), when && React.createElement("small", {
     "data-card-reg-row-when": true,
     className: "block pl-[40px] text-[10px] font-bold text-slate-400"
   }, `(${when})`)), React.createElement("div", {
