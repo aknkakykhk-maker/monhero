@@ -470,7 +470,7 @@ const CardDex = ({ db, collection, onBack }) => {
               const c = cardOf(db, no); const m = c ? null : cardMonsterOf(db, no);
               const have = col[no] || 0;
               const name = c ? c.name : m ? m.name : no; // キラ・別絵キラは札で出す(名前が2〜3行になっていた)
-              const rare = m && m.variant ? (/別絵/.test(m.variant) ? '★別絵キラ' : /キラ/.test(m.variant) ? '★キラ' : m.variant) : '';
+              const rare = m && m.variant ? (/別絵/.test(m.variant) ? '★レアキラ' : /キラ/.test(m.variant) ? '★キラ' : m.variant) : '';
               return (
                 <button key={no} type="button" data-card-dex-tile={no} data-card-dex-have={have} {...press(no, () => setDetail(no))} className={`relative flex flex-col items-center rounded-lg bg-white/5 p-0.5 text-center active:scale-95 ${rare && /キラ/.test(rare) ? 'ring-2 ring-amber-300' : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
                   <CardShine kind={have ? cardShineOf(db, no) : null} className="w-full rounded-[5px]"><img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} loading="lazy" draggable={false} className={`aspect-[5/7] w-full rounded-[5px] object-cover ${have ? '' : 'brightness-[.45] saturate-[.6]'}`}/></CardShine>
@@ -583,7 +583,7 @@ const CardPackArt = ({ db, pack, kit = null, width = 200, torn = false, classNam
 //   キラ・別絵キラは、めくる前から裏が光って揺れる。めくると真ん中へ大きく出て少し止まり、並びへ戻る(タップで早く戻せる)
 //   別絵キラはキラより1段上の虹色の光(レア度の差が見て分かるように)。「全部めくる」も1枚ずつ順にめくり、キラ以上では止まる
 //   音は今ある効果音(Audio_.se の special・card・crit・levelUp・fusion)
-const CARD_RARITY_LABEL = Object.freeze({ normal: '', kira: 'キラ', alt: '別絵キラ' });
+const CARD_RARITY_LABEL = Object.freeze({ normal: '', kira: 'キラ', alt: 'レアキラ' });
 const CARD_PACK_TEAR_MS = 1150;   // 破れる → 光の柱 → 白く光る → 配る
 const CARD_PACK_SPOT_MS = 1500;   // キラ以上を真ん中に出しておく長さ(このあと並びへ戻る)
 const CARD_PACK_SPOT_BACK_MS = 320;
@@ -869,10 +869,10 @@ const CardPackRateSheet = ({ db, pack, collection, onClose }) => {
     `1パックは${pack.tech ? `技などの枠${pack.tech}枚と、` : ''}モンスターの枠${pack.mon}枚です。割合は、枠1つあたりの割合です。`,
     pack.tech ? `技などの枠は、${r.tech.length}種類から同じ割合で出ます。` : null,
     pack.mon && Object.keys(r.rarity).length > 1 ? 'モンスターの枠は、まずレア度を決めてから、そのレア度のモンスターから1枚出ます。' : null,
-    '混血のモンスターも、ほかのモンスターと同じく、そのカードのレア度(通常・キラ・別絵キラ)の割合の中から出ます。',
+    '混血のモンスターも、ほかのモンスターと同じく、そのカードのレア度(通常・キラ・レアキラ)の割合の中から出ます。',
     '同じレア度のモンスターは、どれも同じ割合で出ます。',
-    pack.pity ? `このパックでキラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けると、つぎのパックのモンスターの枠は必ずキラ以上になります(キラが出ないまま続くのを止める決まり。「天井」と呼びます)。` : null,
-    `だぶったカードはビートPになります(技などは4枚目から1枚${CARD_DUP_POINT.tech}・モンスターは2枚目から${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕)。`,
+    pack.pity ? `このパックでキラもレアキラも出ないまま${CARD_PACK_PITY_AT}パック開けると、つぎのパックのモンスターの枠は必ずキラ以上になります(キラが出ないまま続くのを止める決まり。「天井」と呼びます)。` : null,
+    `だぶったカードはビートPになります(技などは4枚目から1枚${CARD_DUP_POINT.tech}・モンスターは2枚目から${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・レアキラ${CARD_DUP_POINT.alt}〕)。`,
     '新しいカードは、できしだい追加されます。',
   ].filter(Boolean);
   return (
