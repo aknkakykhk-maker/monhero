@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 54d24f584c90ba38
+// generated-sha256: aede3aa2cd939b98
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -59780,6 +59780,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const tutStage = tutorial ? CARD_TUTORIAL_STAGES[Math.min(tutI, CARD_TUTORIAL_STAGES.length - 1)] : null;
   const [motions, setMotions] = useState({});   // 場の子の動き { 'p-m': { type, kind, dx, dy, key } }
   const motionTimers = useRef([]);
+  // 守りの番を待っている攻撃の動き(2026-10-31 社長「相手が攻撃してきて効果をわかるようにして、防御とか選べるようにしてそのあとにモーションが正しい」)。
+  //   技を出した手では動かさずにここへ控え、守りが決まった手(回避・防御・何もしない)で1回だけ流してから、よける・防ぐ・当たるを続けて見せる
+  const pendingAtk = useRef(null);
   const actionMissed = useRef(null); // 吹き出しで隠れたまま消えた技の札(下の bubbleOverAction のところで出し直す)
   useEffect(() => () => motionTimers.current.forEach(clearTimeout), []);
   const playMotion = (id, mv, ms) => {
@@ -59961,21 +59964,28 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     }
     stRef.current = next;
     const evs = next.events || [];
+    // 控えていた攻撃の動きを、守りが決まった手で流す。当たり・守りの動きと数字は、攻撃の動きが届くころまで遅らせる(lead)
+    const held = pendingAtk.current;
+    const deferred = held && held.turn === next.turn && evs.some((e) => e.t === 'hit' || e.t === 'guard') ? held : null;
+    if (deferred) { pendingAtk.current = null; playMotion(deferred.id, { ...deferred.mv, key: `${deferred.mv.key}-go` }, cardMotionMs(deferred.mv.kind) + 80); }
+    if (held && held.turn !== next.turn) pendingAtk.current = null;
+    const lead = deferred ? Math.round(cardMotionMs(deferred.mv.kind) * 0.5) : 0;
+    const later = (fn) => { if (lead > 0) motionTimers.current.push(setTimeout(fn, lead)); else fn(); };
     // 技や守りが出ても、吹き出しは消さない(読む前に流れた。2026-10-27 社長)。時間と順番は showBubble が決める
     const hits = evs.filter((e) => e.t === 'hit' || e.t === 'heal').map((e, i) => ({ ...e, key: `${next.log.length}-${i}-${Date.now()}`, heal: e.t === 'heal' ? e.n : 0, dmg: e.t === 'hit' ? e.dmg : 0 }));
-    if (hits.length) {
+    if (hits.length) later(() => {
       if (settings.damageNum !== 'OFF') setFx(hits); // ダメージの数字(オプション)。出さなくても音とライフは今までどおり
       motionTimers.current.push(setTimeout(() => setFx((cur) => cur.filter((f) => !hits.some((h) => h.key === f.key))), hits.some((h) => cardHitResultOf(h) && cardHitResultOf(h).kind !== 'none') ? 1600 : 1000)); // 「防御！ 5 → 2」は読めるように長く
       if (hits.some((h) => h.dmg >= 3)) Audio_.fgSe.crit(); else if (hits.some((h) => h.dmg > 0)) Audio_.fgSe.attack(); else if (hits.some((h) => h.heal)) Audio_.fgSe.heal(); else Audio_.fgSe.guard();
-    } else if (evs.some((e) => e.t === 'use')) Audio_.fgSe.card();
+    }); else if (evs.some((e) => e.t === 'use')) Audio_.fgSe.card();
     // 倒れた子がいたら、まんなかに赤い帯「◯◯ ダウン！ / 残り◯体」(1秒ほど・タップで消える)。決着した時は勝ち負けの演出に任せる。練習試合はドラの窓と重ねない
     const kos = evs.filter((e) => e.t === 'ko');
-    if (kos.length && next.winner === null && !tutorial) {
+    if (kos.length && next.winner === null && !tutorial) later(() => {
       const p0 = kos[0].p;
       const key = `down-${next.log.length}-${Date.now()}`;
       setDownBand({ key, p: p0, names: kos.filter((e) => e.p === p0).map((e) => next.players[p0].mons[e.m].name), left: next.players[p0].mons.filter((x) => !x.ko).length });
       motionTimers.current.push(setTimeout(() => setDownBand((cur) => (cur && cur.key === key ? null : cur)), Math.max(700, Math.round(1100 * pace))));
-    }
+    });
     // 技の動き: 攻撃した子が狙った子へ向かって動く(位置は画面で測る。全員に当たる技は相手の真ん中へ)
     const centerOf = (id) => { const el = document.querySelector(`[data-card-art="${id}"]`); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
     // 技の動き(オプション): ふつう … 全部 / 短め … 攻める側の動きを省く / 出さない … 動きを出さない。
@@ -59992,7 +60002,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       const to = inPlace ? from : e.target ? centerOf(`${e.target.p}-${e.target.m}`) : centerOf(`${1 - e.p}-1`);
       if (!from || !to) return;
       const key = `${next.log.length}-${n}-${Date.now()}`;
-      playMotion(`${e.p}-${e.mon}`, { type: 'attack', kind, dx: Math.round(to.x - from.x), dy: Math.round(to.y - from.y), key }, cardMotionMs(kind) + 80);
+      const mv = { type: 'attack', kind, dx: Math.round(to.x - from.x), dy: Math.round(to.y - from.y), key };
+      // 相手の守りの番に入る技は、ここでは動かさずに控える(守りが決まった手で流す)
+      if (!inPlace && next.pending && next.pending.attacker === e.p && next.pending.mon === e.mon) { pendingAtk.current = { id: `${e.p}-${e.mon}`, mv, turn: next.turn }; return; }
+      playMotion(`${e.p}-${e.mon}`, mv, cardMotionMs(kind) + 80);
     });
     // ブリーダーのカード: モンスターは動かさず、まんなかの端に使った側の助手・ブリーダーの顔を出す(設計書 5-4)
     const breederUse = motionOn && evs.find((e) => e.t === 'use' && cardIsBreederCard(db, e.cards[0]));
@@ -60004,7 +60017,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     // はね返した: 防いだ子から攻撃した子へ光線(少し遅らせて、盾のあとに出す)
     const back = motionOn && evs.find((e) => e.t === 'hit' && e.reflect);
     const shield = back && evs.find((e) => e.t === 'hit' && !e.reflect && e.guarded);
-    if (back && shield) {
+    if (back && shield) later(() => {
       const a = centerOf(`${shield.p}-${shield.m}`); const b = centerOf(`${back.p}-${back.m}`);
       if (a && b) {
         const key = `r${next.log.length}-${Date.now()}`;
@@ -60012,7 +60025,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         motionTimers.current.push(setTimeout(() => setBeams((cur) => [...cur, beam]), 260));
         motionTimers.current.push(setTimeout(() => setBeams((cur) => cur.filter((x) => x.key !== key)), 1100));
       }
-    }
+    });
     // 受ける・よける・防ぐ
     // ★守りのカードを出した手と、当たりが決まる手は別のことがある。よけ方(ジャンプ)・盾の数字は、守りのカードを出したときの控えから引く
     evs.filter((e) => e.t === 'guard').forEach((e) => { const c = cardOf(db, e.card); lastGuard.current[`${e.p}-${e.mon}`] = { jump: cardDodgeIsJump(c), label: c && c.kind !== 'dge' ? cardGuardLabel(c) : '', at: Date.now() }; });
@@ -60021,12 +60034,14 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       const g = lastGuard.current[`${e.p}-${e.m}`];
       const recent = g && Date.now() - g.at < 20000;
       if (type === 'dodge' && recent && g.jump) type = 'jump';
-      if (type && motionOn) playMotion(`${e.p}-${e.m}`, { type, label: type === 'guard' && recent ? g.label : '', key: `h${next.log.length}-${n}-${Date.now()}` }, type === 'jump' ? 920 : 720);
+      const hk = `h${next.log.length}-${n}-${Date.now()}`;
+      if (type && motionOn) later(() => playMotion(`${e.p}-${e.m}`, { type, label: type === 'guard' && recent ? g.label : '', key: hk }, type === 'jump' ? 920 : 720));
     });
     evs.filter((e) => e.t === 'guard').forEach((e, n) => {
       const c = cardOf(db, e.card);
       const type = c && c.kind === 'dge' ? (cardDodgeIsJump(c) ? 'jump' : 'dodge') : 'guard';
-      if (motionOn) playMotion(`${e.p}-${e.mon}`, { type, label: type === 'guard' ? cardGuardLabel(c) : '', key: `g${next.log.length}-${n}-${Date.now()}` }, type === 'jump' ? 920 : 720);
+      const gk = `g${next.log.length}-${n}-${Date.now()}`;
+      if (motionOn) later(() => playMotion(`${e.p}-${e.mon}`, { type, label: type === 'guard' ? cardGuardLabel(c) : '', key: gk }, type === 'jump' ? 920 : 720));
     });
     const use = evs.find((e) => e.t === 'use');
     if (use) {
