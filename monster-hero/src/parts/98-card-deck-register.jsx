@@ -45,8 +45,8 @@ const cardRegRowText = (row) => {
   const combo = CARD_REG_COMBOS.find((x) => x.c === row.c && x.a === row.a);
   if (combo) return `${combo.icon} ${combo.name}`;
   const c = cardTacticOf(row.c), a = cardTacticOf(row.a);
-  if (row.c === 'any') return `いつでも → ${a ? a.name : '?'}`;
-  return `${c ? c.name : '?'} なら → ${a ? a.name : '?'}`;
+  if (row.c === 'any') return `いつでも → ${a ? a.line || a.name : '?'}`;
+  return `${c ? c.line || c.name : '?'} → ${a ? a.line || a.name : '?'}`; // 一文(2026-10-31 案A)。条件は「〜とき」で終わる
 };
 // おすすめの戦い方を、持っているカード・開いている枚数で入れる。
 //   3体に同じカードを入れると賢さに1枚としか数えない(82 の cardTacticUncounted)ので、候補を上から順に3体へ配る(左・真ん中・右・左…)。
@@ -143,11 +143,11 @@ const CardRegRows = ({ rows, why = [], onRows, baseName = '', rest = '' }) => (
                 {combo && <small data-card-reg-row-combo className="block text-[10px] font-black text-amber-200">{cardIconNode(combo.icon, 12)} {combo.name}</small>}
                 <div data-card-reg-row-if className="flex items-center gap-1.5">
                   <span className="w-[34px] shrink-0 text-[11px] font-black text-sky-300">もし</span>
-                  <span className="min-w-0 flex-1 rounded-lg bg-blue-700 px-2 py-1 text-[12px] font-black leading-snug text-white" style={JA_WRAP_STYLE}>{r.c === 'any' ? 'いつでも' : c ? c.name : '?'}</span>
+                  <span className="min-w-0 flex-1 rounded-lg bg-blue-700 px-2 py-1 text-[12px] font-black leading-snug text-white" style={JA_WRAP_STYLE}>{r.c === 'any' ? 'いつでも' : c ? c.line || c.name : '?'}</span>
                 </div>
                 <div data-card-reg-row-then className="flex items-center gap-1.5">
                   <span className="w-[34px] shrink-0 text-[11px] font-black text-rose-300">なら→</span>
-                  <span className="min-w-0 flex-1 rounded-lg bg-red-700 px-2 py-1 text-[12px] font-black leading-snug text-white" style={JA_WRAP_STYLE}>{a ? a.name : '?'}</span>
+                  <span className="min-w-0 flex-1 rounded-lg bg-red-700 px-2 py-1 text-[12px] font-black leading-snug text-white" style={JA_WRAP_STYLE}>{a ? a.line || a.name : '?'}</span>
                 </div>
                 {when && <small data-card-reg-row-when className="block pl-[40px] text-[10px] font-bold text-slate-400">{`(${when})`}</small>}
               </div>
