@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 729f5fc38453da73
+// generated-sha256: bf445bdaf67dffaa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -58981,6 +58981,38 @@ const cardMotionDemoAction = (db, st, step) => {
     && JSON.stringify(o.target || null) === JSON.stringify(step.target || null)) || null;
 };
 
+// ===== 場の立ち絵の待機の動き(2026-10-31 社長「バトルカードも待機モーションほしい」) =====
+// 止まっているあいだ、場の立ち絵に体全体の動きを付ける。動きそのものはモンヒロのバトルの味方と同じ
+// .mon-idle--<動き>(70-bootstrap.jsx の keyframes)を使い回し、ここでは「どの子にどの動きか」と「ずらし方」だけ決める。
+// ・味方にいる種族は、味方の待機アニメ(MONSTER_IDLE_RIGS)の体の動きをそのまま。いない種族は下の表
+// ・混血は主の種族の動き。空中の子は浮く・水中の子は泳ぐ(地上・空中・水中が変わるカードがあるので、そのときの場所で決める)
+// ・止めるのは呼び出し側(攻撃・受ける・よける・倒れたとき、オプションの「揺らさない」)。端末の「動きを減らす」は CSS で止まる
+const CARD_IDLE_BODY = Object.freeze({
+  ghost: 'hover', dino: 'heavy', gali: 'hover', naga: 'sway', dragon: 'heavy', henger: 'breathe', durahan: 'heavy',
+  arrowhead: 'heavy', zilla: 'heavy', phoenix: 'glide', joker: 'drift', jell: 'jelly', mew: 'bounce', metalner: 'hover',
+  worm: 'sway', centaur: 'breathe', colorpandora: 'hover',
+});
+const CARD_IDLE_FLOAT = ['hover', 'glide', 'drift'];
+const cardIdleBodyOf = (mon, ty) => {
+  if (!mon) return null;
+  const sp = mon.main || mon.species;
+  const ally = CARD_SPECIES_ART[sp];
+  const rig = ally && typeof monsterIdleRigOf === 'function' ? monsterIdleRigOf(ally) : null;
+  let body = (rig && rig.body) || CARD_IDLE_BODY[sp] || 'breathe';
+  if (ty === 'water') body = 'swim';
+  else if (ty === 'air' && !CARD_IDLE_FLOAT.includes(body)) body = 'hover';
+  return body;
+};
+// 3体がそろって同じ動きにならないよう、席とカードの番号から速さ(0.88〜1.12倍)と始まり(周期のどこから)をずらす。
+// 周期の長さは 70-bootstrap.jsx の .mon-idle--<動き> と同じ
+const CARD_IDLE_MS = Object.freeze({ hover: 2600, bounce: 1800, breathe: 3200, sway: 3000, swim: 2800, jelly: 2000, hop: 2800, heavy: 3600, glide: 3200, drift: 4200 });
+const cardIdleStyleOf = (body, p, m, no) => {
+  let h = 2166136261;
+  for (const c of `${p}|${m}|${no}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0;
+  const ms = Math.round((CARD_IDLE_MS[body] || 3000) * (0.88 + (h % 25) / 100));
+  return { animationDuration: `${ms}ms`, animationDelay: `-${Math.round(ms * (((h >>> 8) % 100) / 100))}ms` };
+};
+
 // ---- part: 84-screen-card-battle.jsx ----
 // ==================== 画面: MFバトルカード ====================
 // 紙の『モンスターファームバトルカード』を元にしたカードバトル。設計: docs/spec/CARD_BATTLE.md
@@ -59880,6 +59912,9 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   // 攻撃の動きだけは、その手で倒れた子(はね返されて倒れたなど)でも最後まで見せる。動きが終わると倒れた形になる
   //   (攻撃の動きを守りが決まった手で流すようにしたので、はね返しで倒れる手と同じになった。2026-10-31)
   const mv = motion && (!mon.ko || motion.type === 'attack') ? motion : null;
+  // 止まっているあいだの待機の動き(85-card-battle-motion.jsx の cardIdleBodyOf。2026-10-31 社長・案A 種族ごとの動き)。
+  //   動いている・倒れた・オプションの「揺らさない」では付けない。端末の「動きを減らす」は CSS(.mon-idle)で止まる
+  const idleBody = art && !mv && !mon.ko && !calm ? cardIdleBodyOf(mon, ty) : null;
   // calm … オプションの「画面の揺れ: 揺らさない」。受けたときは揺らさずに光るだけ
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? (calm ? 'mh-card-hit-calm' : 'mh-card-hit') : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = (
@@ -59887,7 +59922,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
       style={{ isolation: 'isolate', ...(wide ? { height: wideArtH } : null), ...(mv && mv.type === 'attack' ? { '--atk-dx': `${mv.dx}px`, '--atk-dy': `${mv.dy}px`, zIndex: 40 } : null) }}>
       {mv && mv.type === 'attack' && mv.kind
         ? <SkillFxMotion key={mv.key} kind={mv.kind} image={imgEl}/>
-        : <div key={mv ? mv.key : 'still'} data-card-pose={mon.ko ? 'ko' : mv ? mv.type : 'still'} className={`flex items-end justify-center ${poseClass}`}>{imgEl}</div>}
+        : <div key={mv ? mv.key : 'still'} data-card-pose={mon.ko ? 'ko' : mv ? mv.type : 'still'} className={`flex items-end justify-center ${poseClass}`}>{idleBody ? <span data-card-idle={idleBody} className={`mon-idle mon-idle--${idleBody}`} style={cardIdleStyleOf(idleBody, p, m, mon.no)}>{imgEl}</span> : imgEl}</div>}
       {/* よけた: 元の場所に残像が残って消える / ジャンプでよけた: 上で止まって「空中」の印 */}
       {mv && mv.type === 'dodge' && <div key={`${mv.key}-a`} className="mh-card-afterimage" aria-hidden="true">{imgEl}</div>}
       {mv && mv.type === 'jump' && <span key={`${mv.key}-j`} data-card-air-mark className="mh-card-air-mark">空中</span>}
@@ -60823,6 +60858,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   //   前は自分が守る番だけだった。観戦・マルチの相手が守る番も、同じ形で出す。効果の文が空のカードは、ダメージから作った一文(cardPlainEffectText)
   const guardAtk = pd && !tutorial ? cardOf(db, pd.main) : null;
   const guardAtkText = guardAtk ? (guardAtk.text || cardPlainEffectText(guardAtk)) : '';
+  // 組み合わせ(キックの2枚・同時に使う札・技に付ける札など)で1手に使ったカードを全部(主のカードが先頭)。
+  //   2026-10-31 社長「組み合わせ系も見れるようになってる?」: 前は主の1枚だけだった。それぞれ押すと詳しい画面
+  const guardAtkAll = guardAtk ? [pd.main, ...((Array.isArray(pd.used) ? pd.used : []).filter((no, i, a) => no !== pd.main || a.indexOf(no) !== i))].map((no) => cardOf(db, no)).filter(Boolean) : [];
+  const guardAtkMore = guardAtkAll.slice(1);
   // 守りの判断が要らない相手の手(特殊・全体など)は、使ったカードの効果の一文を、次の手まで実況の下に残す
   const liveFoeCard = !pd && action && action.side === 'foe' && Array.isArray(action.cards) ? cardOf(db, action.cards[0]) : null;
   const liveFoeText = liveFoeCard ? (liveFoeCard.text || cardPlainEffectText(liveFoeCard)) : '';
@@ -61162,14 +61201,23 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         <div data-card-log data-card-log-empty={!pendingText && !liveLine ? '1' : undefined} className={`${!pendingText && !liveLine ? 'invisible ' : ''}relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center ${compact ? 'text-[13px]' : 'text-[14px]'} font-bold leading-snug ${turnBanner || bigCard || downBand || endFx ? 'invisible' : ''}`} style={JA_WRAP_STYLE}>
           {/* 守りを選ぶあいだは、いま受けている相手の攻撃カード(絵・名前・ダメージ・効果)を出す。押すと詳しい画面(2026-10-26 ソラシドさん) */}
           {pendingText && (guardAtk
-            ? <button type="button" data-card-guard-attack={guardAtk.no} {...press(guardAtk.no, () => setDetail(guardAtk.no))} className="flex w-full max-w-[360px] items-center gap-2 text-left active:scale-[.98]">
+            ? <div data-card-guard-attack={guardAtk.no} data-card-guard-attack-count={guardAtkAll.length} className="flex w-full max-w-[360px] items-center gap-2 text-left">
               {/* まんなかに入り切らないときは、効果の文を1行に → 効果の文を省く → 絵を省く(stageFit。320×568 で下が切れた) */}
-              {stageFit < 3 && <img src={CARD_IMG(guardAtk.img)} alt={guardAtk.name} className={`${tiny || stageFit >= 2 ? 'h-[36px]' : stageFit >= 1 || compact ? 'h-[52px]' : 'h-[76px]'} aspect-[5/7] shrink-0 rounded-[4px] object-cover shadow`}/>}
-              <span className="min-w-0 flex-1">
+              {/* 使ったカードを全部、少しずらして重ねる。1回のタップで、そのカードの詳しい画面 */}
+              {stageFit < 3 && <span className="flex shrink-0">{guardAtkAll.map((c, i) => (
+                <button key={`${c.no}-${i}`} type="button" data-card-guard-attack-card={c.no} {...press(c.no, () => setDetail(c.no), { double: false })} aria-label={`${c.name}を詳しく見る`}
+                  className={`relative shrink-0 active:scale-95 ${i ? (guardAtkAll.length > 2 ? '-ml-5' : '-ml-3') : ''}`} style={{ zIndex: guardAtkAll.length - i }}>
+                  <img src={CARD_IMG(c.img)} alt={c.name} className={`${tiny || stageFit >= 2 ? 'h-[36px]' : stageFit >= 1 || compact ? 'h-[52px]' : 'h-[76px]'} aspect-[5/7] rounded-[4px] object-cover shadow ring-1 ring-black/40`}/>
+                </button>))}</span>}
+              <button type="button" {...press(guardAtk.no, () => setDetail(guardAtk.no), { double: false })} className="min-w-0 flex-1 text-left active:scale-[.98]">
                 <span className="block text-rose-200">{pendingText}</span>
                 {guardAtkText && stageFit < 2 && <span data-card-guard-attack-text className={`${tiny || stageFit >= 1 ? 'line-clamp-1' : compact ? 'line-clamp-2' : 'line-clamp-3'} block text-[11px] leading-snug text-slate-200`}>{guardAtkText}</span>}
-              </span>
-            </button>
+                {/* 組み合わせのほかのカード: 名前と効果を1行ずつ */}
+                {guardAtkMore.length > 0 && stageFit < 2 && guardAtkMore.map((c, i) => (
+                  <span key={`${c.no}-m${i}`} data-card-guard-attack-more={c.no} className="line-clamp-1 block text-[11px] leading-snug text-amber-100">{`＋「${c.name}」${(c.text || cardPlainEffectText(c)) ? ` ${c.text || cardPlainEffectText(c)}` : ''}`}</span>
+                ))}
+              </button>
+            </div>
             : <div className="text-rose-200">{pendingText}</div>)}
           {pendingText && <CardGuardPreview db={db} pv={guardPv} compact={compact || stageFit >= 1} tight={tiny || stageFit >= 2}/>}
           {/* 1行の実況(2026-10-29 まんなか案A): いちばん新しい1つだけを、まんなかの同じ所に出す。技なら頭に「自分」「相手」の札。

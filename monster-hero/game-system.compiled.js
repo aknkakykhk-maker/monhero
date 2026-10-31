@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 67c98e977c3a4aa3
+// source-sha256: e680f2d53d4350f0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -97734,6 +97734,56 @@ const cardMotionDemoAction = (db, st, step) => {
   const me = st.players[st.active];
   return cardAttackOptions(db, st).find(o => me.hand[o.hand[0]] === step.attack && o.mon === step.mon && o.hand.length === 1 && JSON.stringify(o.target || null) === JSON.stringify(step.target || null)) || null;
 };
+const CARD_IDLE_BODY = Object.freeze({
+  ghost: 'hover',
+  dino: 'heavy',
+  gali: 'hover',
+  naga: 'sway',
+  dragon: 'heavy',
+  henger: 'breathe',
+  durahan: 'heavy',
+  arrowhead: 'heavy',
+  zilla: 'heavy',
+  phoenix: 'glide',
+  joker: 'drift',
+  jell: 'jelly',
+  mew: 'bounce',
+  metalner: 'hover',
+  worm: 'sway',
+  centaur: 'breathe',
+  colorpandora: 'hover'
+});
+const CARD_IDLE_FLOAT = ['hover', 'glide', 'drift'];
+const cardIdleBodyOf = (mon, ty) => {
+  if (!mon) return null;
+  const sp = mon.main || mon.species;
+  const ally = CARD_SPECIES_ART[sp];
+  const rig = ally && typeof monsterIdleRigOf === 'function' ? monsterIdleRigOf(ally) : null;
+  let body = rig && rig.body || CARD_IDLE_BODY[sp] || 'breathe';
+  if (ty === 'water') body = 'swim';else if (ty === 'air' && !CARD_IDLE_FLOAT.includes(body)) body = 'hover';
+  return body;
+};
+const CARD_IDLE_MS = Object.freeze({
+  hover: 2600,
+  bounce: 1800,
+  breathe: 3200,
+  sway: 3000,
+  swim: 2800,
+  jelly: 2000,
+  hop: 2800,
+  heavy: 3600,
+  glide: 3200,
+  drift: 4200
+});
+const cardIdleStyleOf = (body, p, m, no) => {
+  let h = 2166136261;
+  for (const c of `${p}|${m}|${no}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0;
+  const ms = Math.round((CARD_IDLE_MS[body] || 3000) * (0.88 + h % 25 / 100));
+  return {
+    animationDuration: `${ms}ms`,
+    animationDelay: `-${Math.round(ms * ((h >>> 8) % 100 / 100))}ms`
+  };
+};
 const CARD_IMAGE_SET = Object.freeze({
   imageDir: 'images/card-battle'
 });
@@ -99213,6 +99263,7 @@ const CardMonSlot = ({
     className: `${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`
   });
   const mv = motion && (!mon.ko || motion.type === 'attack') ? motion : null;
+  const idleBody = art && !mv && !mon.ko && !calm ? cardIdleBodyOf(mon, ty) : null;
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? calm ? 'mh-card-hit-calm' : 'mh-card-hit' : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = React.createElement("div", {
     "data-card-art": `${p}-${m}`,
@@ -99236,7 +99287,11 @@ const CardMonSlot = ({
     key: mv ? mv.key : 'still',
     "data-card-pose": mon.ko ? 'ko' : mv ? mv.type : 'still',
     className: `flex items-end justify-center ${poseClass}`
-  }, imgEl), mv && mv.type === 'dodge' && React.createElement("div", {
+  }, idleBody ? React.createElement("span", {
+    "data-card-idle": idleBody,
+    className: `mon-idle mon-idle--${idleBody}`,
+    style: cardIdleStyleOf(idleBody, p, m, mon.no)
+  }, imgEl) : imgEl), mv && mv.type === 'dodge' && React.createElement("div", {
     key: `${mv.key}-a`,
     className: "mh-card-afterimage",
     "aria-hidden": "true"
@@ -100584,6 +100639,8 @@ const CardBattleBoard = ({
   };
   const guardAtk = pd && !tutorial ? cardOf(db, pd.main) : null;
   const guardAtkText = guardAtk ? guardAtk.text || cardPlainEffectText(guardAtk) : '';
+  const guardAtkAll = guardAtk ? [pd.main, ...(Array.isArray(pd.used) ? pd.used : []).filter((no, i, a) => no !== pd.main || a.indexOf(no) !== i)].map(no => cardOf(db, no)).filter(Boolean) : [];
+  const guardAtkMore = guardAtkAll.slice(1);
   const liveFoeCard = !pd && action && action.side === 'foe' && Array.isArray(action.cards) ? cardOf(db, action.cards[0]) : null;
   const liveFoeText = liveFoeCard ? liveFoeCard.text || cardPlainEffectText(liveFoeCard) : '';
   const logLines = st.log.filter(l => l.kind !== 'turn').slice(-3);
@@ -101203,23 +101260,44 @@ const CardBattleBoard = ({
     "data-card-log-empty": !pendingText && !liveLine ? '1' : undefined,
     className: `${!pendingText && !liveLine ? 'invisible ' : ''}relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center ${compact ? 'text-[13px]' : 'text-[14px]'} font-bold leading-snug ${turnBanner || bigCard || downBand || endFx ? 'invisible' : ''}`,
     style: JA_WRAP_STYLE
-  }, pendingText && (guardAtk ? React.createElement("button", _extends({
+  }, pendingText && (guardAtk ? React.createElement("div", {
+    "data-card-guard-attack": guardAtk.no,
+    "data-card-guard-attack-count": guardAtkAll.length,
+    className: "flex w-full max-w-[360px] items-center gap-2 text-left"
+  }, stageFit < 3 && React.createElement("span", {
+    className: "flex shrink-0"
+  }, guardAtkAll.map((c, i) => React.createElement("button", _extends({
+    key: `${c.no}-${i}`,
     type: "button",
-    "data-card-guard-attack": guardAtk.no
-  }, press(guardAtk.no, () => setDetail(guardAtk.no)), {
-    className: "flex w-full max-w-[360px] items-center gap-2 text-left active:scale-[.98]"
-  }), stageFit < 3 && React.createElement("img", {
-    src: CARD_IMG(guardAtk.img),
-    alt: guardAtk.name,
-    className: `${tiny || stageFit >= 2 ? 'h-[36px]' : stageFit >= 1 || compact ? 'h-[52px]' : 'h-[76px]'} aspect-[5/7] shrink-0 rounded-[4px] object-cover shadow`
+    "data-card-guard-attack-card": c.no
+  }, press(c.no, () => setDetail(c.no), {
+    double: false
+  }), {
+    "aria-label": `${c.name}を詳しく見る`,
+    className: `relative shrink-0 active:scale-95 ${i ? guardAtkAll.length > 2 ? '-ml-5' : '-ml-3' : ''}`,
+    style: {
+      zIndex: guardAtkAll.length - i
+    }
+  }), React.createElement("img", {
+    src: CARD_IMG(c.img),
+    alt: c.name,
+    className: `${tiny || stageFit >= 2 ? 'h-[36px]' : stageFit >= 1 || compact ? 'h-[52px]' : 'h-[76px]'} aspect-[5/7] rounded-[4px] object-cover shadow ring-1 ring-black/40`
+  })))), React.createElement("button", _extends({
+    type: "button"
+  }, press(guardAtk.no, () => setDetail(guardAtk.no), {
+    double: false
+  }), {
+    className: "min-w-0 flex-1 text-left active:scale-[.98]"
   }), React.createElement("span", {
-    className: "min-w-0 flex-1"
-  }, React.createElement("span", {
     className: "block text-rose-200"
   }, pendingText), guardAtkText && stageFit < 2 && React.createElement("span", {
     "data-card-guard-attack-text": true,
     className: `${tiny || stageFit >= 1 ? 'line-clamp-1' : compact ? 'line-clamp-2' : 'line-clamp-3'} block text-[11px] leading-snug text-slate-200`
-  }, guardAtkText))) : React.createElement("div", {
+  }, guardAtkText), guardAtkMore.length > 0 && stageFit < 2 && guardAtkMore.map((c, i) => React.createElement("span", {
+    key: `${c.no}-m${i}`,
+    "data-card-guard-attack-more": c.no,
+    className: "line-clamp-1 block text-[11px] leading-snug text-amber-100"
+  }, `＋「${c.name}」${c.text || cardPlainEffectText(c) ? ` ${c.text || cardPlainEffectText(c)}` : ''}`)))) : React.createElement("div", {
     className: "text-rose-200"
   }, pendingText)), pendingText && React.createElement(CardGuardPreview, {
     db: db,
