@@ -11637,6 +11637,50 @@ function MonsterHeroGame() {
 
   // baseGifts … ミッションから送ったばかりのギフトを含めた一覧で受け取るときに渡す(画面の gifts はまだ古いため)
   // title … 「手に入れたもの」の窓の見出し。まとめて受け取っても窓は1回だけ出る
+  // MFバトルカード個人杯のごほうび・参加費(99-card-cup-prize。2026-10-31)。本編の持ち物(ダイヤ・アイテム・ビートP)は、この画面が状態を持っているので、
+  // 足す・引くはここで行い、個人杯の印(extra: mh_card_cup_wallet_v1)も同じ取引で書く。足りない・保存できないときは false(何も変えない)
+  //   delta … [{ item: 'diamond' | 'beatPoint' | 'rainbowPsyche' | … | 'gameItem:<id>', amount: ±数 }]
+  const cardCupMainItems = async (delta, extra = []) => {
+    if (giftClaimingRef.current || !Array.isArray(delta) || typeof cardCupItemOf !== 'function') return false;
+    giftClaimingRef.current = true;
+    try {
+      const storedBeat = await storeGet(RHYTHM_EVENT_POINTS_KEY, 0, false);
+      let nextGold = Math.max(0, Number(gold) || 0);
+      let nextBeat = normalizeRhythmEventPoints(storedBeat);
+      const nextItems = { ...(ownedItems || {}) };
+      for (const d of delta) {
+        const it = cardCupItemOf(d && d.item);
+        const n = Math.trunc(Number(d && d.amount));
+        if (!it || !it.main || !Number.isFinite(n) || n === 0) return false;
+        if (d.item === 'diamond') nextGold += n;
+        else if (d.item === 'beatPoint') nextBeat += n;
+        else nextItems[it.owned] = Math.max(0, Number(nextItems[it.owned]) || 0) + n;
+        if (nextGold < 0 || nextBeat < 0 || (it.owned && nextItems[it.owned] < 0)) return false; // 足りない
+      }
+      for (const k of Object.keys(nextItems)) { if (nextItems[k] === 0 && !(k in (ownedItems || {}))) delete nextItems[k]; }
+      const entries = [
+        { key:'mh_gold', before:gold, next:nextGold },
+        { key:'mh_owned_items', before:ownedItems, next:nextItems },
+        { key:RHYTHM_EVENT_POINTS_KEY, before:storedBeat, next:nextBeat },
+        ...(Array.isArray(extra) ? extra : []),
+      ];
+      const saved = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
+      if (!saved) return false;
+      setGold(nextGold); setOwnedItems(nextItems); setRhythmEventPoints(nextBeat);
+      return true;
+    } finally { giftClaimingRef.current = false; }
+  };
+  // 個人杯の受け取り: ギフトボックスへ1件(同じ id は二度入れない)。印(extra)も同じ取引で書く
+  const cardCupGiftAdd = async (gift, extra = []) => {
+    const savedGifts = await storeGet('mh_gifts', [], false);
+    const before = Array.isArray(savedGifts) ? savedGifts : [];
+    const grant = grantGiftOnce(before, gift);
+    const entries = [...(grant.granted ? [{ key:'mh_gifts', before, next:grant.gifts }] : []), ...(Array.isArray(extra) ? extra : [])];
+    if (!entries.length) return true;
+    const saved = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
+    if (saved && grant.granted) setGifts(grant.gifts);
+    return saved;
+  };
   const claimGiftIds = async (ids, { baseGifts = null, title = 'ギフトを受け取りました' } = {}) => {
     // ミッションの受け取り中は動かない(古いギフト一覧で保存し直さないため)。ミッションの中から呼ぶときは baseGifts を渡す
     if (giftClaimingRef.current || (!baseGifts && missionClaimingRef.current)) return null;
@@ -20690,6 +20734,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           quickRun={cardQuickRunView()}
           quickAutoReady={autoQuickRunConfigured(autoSettings)} onSettings={(settings)=>setCardQuickAutoStart(!!(settings&&settings.quickAutoStart))} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
           topAssistant={cardTopAssistant}
+          cupItems={{main:cardCupMainItems,gift:cardCupGiftAdd,have:()=>({gold,ownedItems,beatPoints:rhythmEventPoints})}}
           bgmPreview={{toggle:toggleBgmPreview,stop:()=>{Audio_.stopPreview();setPreviewTrackId(null);},playing:previewTrackId}}
           /* ランキングへ送るのは公開してから(台帳 #3513「公開前は、デバッグの人の記録も送らない」)。デバッグの合言葉を入れた端末でも、HOME の入口から遊んだ分は送る(2026-10-26 社長「ふつうの入口の対戦はのせる」)。デバッグ設定の入口からの対戦は 84 の debug(cardOrigin==='debug')で外す */
           rank={{send:EVENT_REPLAY_RELEASE_FLAGS.cardBattle===true,profile:{name:breederName||'名無しのブリーダー',icon:breederIcon,frame:rankingProfileFrameValue(profileFrameId)},renderBreederIcon:rankingBreederIcon,

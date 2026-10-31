@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cfb3242ba25135bb
+// source-sha256: aa070ca01e301c41
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13766,6 +13766,10 @@ const giftTitleDisplay = gift => {
   };
   if (gift?.source === 'assistantStory') return {
     label: 'おみやげ',
+    title
+  };
+  if (gift?.source === 'cardCup') return {
+    label: '個人杯',
     title
   };
   if (gift?.source !== 'mission') return {
@@ -28858,7 +28862,7 @@ const SB_HEADERS = {
   'apikey': SUPABASE_KEY,
   'Content-Type': 'application/json'
 };
-const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report', 'rhythm_beat_rank_put', 'card_rank_put', 'card_deck_replay_put']);
+const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report', 'rhythm_beat_rank_put', 'card_rank_put', 'card_deck_replay_put', 'card_cup_deposit', 'card_cup_join_pay', 'card_cup_claim', 'card_cup_prize_set', 'card_cup_cohost_invite', 'card_cup_cohost_answer', 'card_cup_cohost_remove']);
 const sbAutomationWriteBlocked = (url, method) => {
   try {
     if (typeof navigator === 'undefined' || navigator.webdriver !== true) return false;
@@ -102034,6 +102038,7 @@ const CardBattleScreen = ({
   exitLabel = '戻る',
   seenStoryIds = [],
   debug = false,
+  cupItems = null,
   onBgm,
   onQuickLoops,
   onOpenMarket,
@@ -102287,6 +102292,68 @@ const CardBattleScreen = ({
     }));
     if (ok && patch.settings && onSettings) onSettings(patch.settings);
     return ok;
+  };
+  const cupCardItems = async (delta, extra = []) => {
+    if (!Array.isArray(delta) || typeof cardCupItemOf !== 'function') return false;
+    let rawT = null,
+      rawC = null;
+    try {
+      [rawT, rawC] = await Promise.all([storeGet(CARD_TACTICS_KEY, null), storeGet(CARD_SAVE_KEYS.catalogs, 0, false)]);
+    } catch (_) {
+      return false;
+    }
+    const t = cardNormalizeTactics(rawT);
+    const c0 = cardNormalizeCatalogs(rawC);
+    let shards = t.shards,
+      tickets = t.tickets,
+      catalogs = c0;
+    for (const d of delta) {
+      const it = cardCupItemOf(d && d.item);
+      const n = Math.trunc(Number(d && d.amount));
+      if (!it || !it.card || !Number.isFinite(n) || n === 0) return false;
+      if (it.card === 'shards') shards += n;else if (it.card === 'tickets') tickets += n;else catalogs += n;
+    }
+    if (shards < 0 || tickets < 0 || catalogs < 0) return false;
+    const entries = [...(shards !== t.shards || tickets !== t.tickets ? [{
+      key: CARD_TACTICS_KEY,
+      before: rawT,
+      next: {
+        ...t,
+        shards,
+        tickets
+      }
+    }] : []), ...(catalogs !== c0 ? [{
+      key: CARD_SAVE_KEYS.catalogs,
+      before: rawC,
+      next: catalogs
+    }] : []), ...(Array.isArray(extra) ? extra : [])];
+    return saveStoredValuesOrRollback(entries, storeGet, storeSet);
+  };
+  const cupAdapters = async () => {
+    const owner = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+    const key = typeof cardShareOwnerKey === 'function' ? await cardShareOwnerKey(false) : null;
+    const t = typeof cardTacticsLoad === 'function' ? (await cardTacticsLoad()).tactics : {
+      shards: 0,
+      tickets: 0
+    };
+    const p = rank && rank.profile || {};
+    return {
+      owner,
+      key,
+      name: p.name || '',
+      icon: p.icon || null,
+      main: cupItems && cupItems.main,
+      gift: cupItems && cupItems.gift,
+      card: cupCardItems,
+      have: {
+        main: cupItems && typeof cupItems.have === 'function' ? cupItems.have() : null,
+        card: {
+          shards: t.shards,
+          tickets: t.tickets,
+          catalogs: cardNormalizeCatalogs(await storeGet(CARD_SAVE_KEYS.catalogs, 0, false).catch(() => 0))
+        }
+      }
+    };
   };
   const openIdRef = useRef(null);
   const settleOpenCpu = async ({
@@ -121854,6 +121921,514 @@ const CardCupLivePanel = ({
     style: JA_WRAP_STYLE
   }, jaWrap(msg)));
 };
+const CARD_CUP_WALLET_KEY = 'mh_card_cup_wallet_v1';
+const CARD_CUP_WALLET_MAX = 200;
+const CARD_CUP_ITEMS = Object.freeze([{
+  item: 'diamond',
+  label: 'ダイヤ',
+  emoji: '💎',
+  main: true
+}, {
+  item: 'beatPoint',
+  label: 'ビートP',
+  emoji: '🎵',
+  main: true
+}, {
+  item: 'rainbowPsyche',
+  label: '虹のプシュケー',
+  emoji: '🌈',
+  main: true,
+  owned: 'rainbow_psyche'
+}, {
+  item: 'rainbowTranscendFruit',
+  label: '虹の超越の実',
+  emoji: '🍑',
+  main: true,
+  owned: 'transcend_fruit_rainbow'
+}, {
+  item: 'gameItem:hero_proof',
+  label: '勇者の証',
+  emoji: '🏅',
+  main: true,
+  owned: 'hero_proof'
+}, {
+  item: 'gameItem:hero_proof_shard',
+  label: '勇者の証片',
+  emoji: '🔸',
+  main: true,
+  owned: 'hero_proof_shard'
+}, {
+  item: 'gameItem:session_ticket',
+  label: 'セッション券',
+  emoji: '🎫',
+  main: true,
+  owned: 'session_ticket'
+}, {
+  item: 'gameItem:skip_ticket_jo',
+  label: 'スキップチケット・序',
+  emoji: '⏩',
+  main: true,
+  owned: 'skip_ticket_jo'
+}, {
+  item: 'gameItem:skip_ticket_ha',
+  label: 'スキップチケット・破',
+  emoji: '⏩',
+  main: true,
+  owned: 'skip_ticket_ha'
+}, {
+  item: 'gameItem:skip_ticket_kyu',
+  label: 'スキップチケット・急',
+  emoji: '⏩',
+  main: true,
+  owned: 'skip_ticket_kyu'
+}, {
+  item: 'gameItem:training_ticket',
+  label: 'トレーニングチケット',
+  emoji: '🏋️',
+  main: true,
+  owned: 'training_ticket'
+}, {
+  item: 'dyeMock',
+  label: '染色もどき',
+  emoji: '🎨',
+  main: true,
+  owned: 'dye_mock'
+}, {
+  item: 'card:shard',
+  label: '戦術カードのかけら',
+  emoji: '🧩',
+  card: 'shards'
+}, {
+  item: 'card:ticket',
+  label: 'カードパック券',
+  emoji: '🎟️',
+  card: 'tickets'
+}, {
+  item: 'card:catalog',
+  label: 'バトルカードカタログ',
+  emoji: '📘',
+  card: 'catalogs'
+}]);
+const cardCupItemOf = item => CARD_CUP_ITEMS.find(x => x.item === item) || null;
+const cardCupItemText = (item, amount) => {
+  const it = cardCupItemOf(item);
+  return `${it ? `${it.emoji} ${it.label}` : item} ${Number(amount || 0).toLocaleString()}`;
+};
+const CARD_CUP_ITEMS_NG = Object.freeze([['ブリーダーP', '2度と手に入らない物'], ['マスモン・円盤石・アシストカード', 'ひとつずつの物で、育てた中身がある'], ['アイコン・フレーム・着替え', '一度手に入れたら外さない物'], ['バトルカード(1枚ずつ)', 'これから(番号ごとの預かりが要る)'], ['経験値・ランク・記録', '持ち物ではない']]);
+const cardCupGiftReward = (item, amount) => {
+  const n = Math.floor(Number(amount));
+  if (!(n > 0)) return null;
+  if (item === 'diamond' || item === 'beatPoint' || item === 'rainbowPsyche' || item === 'rainbowTranscendFruit' || item === 'dyeMock') return {
+    type: item,
+    amount: n
+  };
+  const m = /^gameItem:([a-z0-9_]{1,40})$/.exec(String(item || ''));
+  return m ? {
+    type: 'gameItem',
+    itemId: m[1],
+    amount: n
+  } : null;
+};
+const cardCupHave = (item, main, card) => {
+  const it = cardCupItemOf(item);
+  if (!it) return 0;
+  const n = v => Number.isFinite(Number(v)) && Number(v) > 0 ? Math.floor(Number(v)) : 0;
+  if (it.card) return n(card && card[it.card]);
+  if (item === 'diamond') return n(main && main.gold);
+  if (item === 'beatPoint') return n(main && main.beatPoints);
+  return n(main && main.ownedItems && main.ownedItems[it.owned]);
+};
+const cardCupNonce = () => {
+  try {
+    const b = new Uint8Array(16);
+    crypto.getRandomValues(b);
+    return Array.from(b).map(x => x.toString(16).padStart(2, '0')).join('');
+  } catch (_) {
+    return Array.from({
+      length: 32
+    }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+  }
+};
+const cardCupNormalizeWallet = raw => {
+  if (!Array.isArray(raw)) return [];
+  const states = ['sending', 'held', 'returned', 'claiming', 'claimed', 'elsewhere', 'none'];
+  return raw.filter(r => r && typeof r.cup === 'string' && /^[a-z0-9_-]{1,32}$/.test(r.cup) && ['prize', 'fee', 'claim'].includes(r.kind) && typeof r.nonce === 'string' && /^[0-9a-f]{32,64}$/.test(r.nonce) && states.includes(r.state)).map(r => ({
+    cup: r.cup,
+    kind: r.kind,
+    nonce: r.nonce,
+    state: r.state,
+    at: Number.isFinite(r.at) ? r.at : 0,
+    ...(r.kind !== 'claim' ? {
+      item: typeof r.item === 'string' ? r.item : '',
+      amount: Number.isInteger(r.amount) && r.amount > 0 ? r.amount : 0
+    } : {}),
+    ...(typeof r.name === 'string' ? {
+      name: r.name.slice(0, 40)
+    } : {}),
+    ...(typeof r.icon === 'string' ? {
+      icon: r.icon.slice(0, 64)
+    } : {}),
+    ...(r.card === true ? {
+      card: true
+    } : {}),
+    ...(r.gift === true ? {
+      gift: true
+    } : {}),
+    ...(Array.isArray(r.items) ? {
+      items: r.items.filter(x => x && typeof x.item === 'string' && Number.isInteger(x.amount) && x.amount > 0).slice(0, 20)
+    } : {})
+  })).slice(-CARD_CUP_WALLET_MAX);
+};
+const cardCupWalletPut = (list, rec) => {
+  const rest = list.filter(r => r.nonce !== rec.nonce);
+  const next = [...rest, rec];
+  if (next.length <= CARD_CUP_WALLET_MAX) return next;
+  const done = ['held', 'returned', 'claimed', 'elsewhere', 'none'];
+  const drop = next.findIndex(r => done.includes(r.state) && r.nonce !== rec.nonce);
+  return drop >= 0 ? next.filter((_, i) => i !== drop) : next.slice(-CARD_CUP_WALLET_MAX);
+};
+const cardCupWalletEntry = async rec => {
+  const raw = await storeGet(CARD_CUP_WALLET_KEY, null, false);
+  if (raw !== null && raw !== undefined && !Array.isArray(raw)) return null;
+  return {
+    key: CARD_CUP_WALLET_KEY,
+    before: raw === undefined ? null : raw,
+    next: cardCupWalletPut(cardCupNormalizeWallet(raw), rec)
+  };
+};
+const cardCupWalletLoad = async () => {
+  try {
+    return cardCupNormalizeWallet(await storeGet(CARD_CUP_WALLET_KEY, null, false));
+  } catch (_) {
+    return [];
+  }
+};
+const cardCupWalletSet = async rec => {
+  const e = await cardCupWalletEntry(rec);
+  if (!e) return false;
+  return saveStoredValuesOrRollback([e], storeGet, storeSet);
+};
+const cardCupPrizeRpc = async (fn, body) => {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+      method: 'POST',
+      headers: SB_HEADERS,
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (_) {
+    return null;
+  }
+};
+const cardCupPrizeItemsList = async () => {
+  const r = await cardCupPrizeRpc('card_cup_prize_items_list', {});
+  return Array.isArray(r) ? r.filter(x => x && cardCupItemOf(x.item)).map(x => ({
+    item: x.item,
+    label: cardCupItemOf(x.item).label,
+    giveMax: Math.max(0, Number(x.give_max) || 0),
+    feeMax: Math.max(0, Number(x.fee_max) || 0),
+    dayMax: Math.max(0, Number(x.day_max) || 0)
+  })) : null;
+};
+const cardCupPrizeView = async (cup, owner) => {
+  const v = await cardCupPrizeRpc('card_cup_prize_view', {
+    p_cup: cup,
+    p_owner: owner || null
+  });
+  if (!v || typeof v !== 'object') return null;
+  const items = (a, k) => Array.isArray(a) ? a.filter(x => x && cardCupItemOf(x.item) && Number(x[k]) > 0).map(x => ({
+    ...x,
+    [k]: Math.floor(Number(x[k]))
+  })) : [];
+  const split = Array.isArray(v.split) && v.split.every(x => Number.isInteger(x) && x > 0) ? v.split.slice(0, 8) : [70, 30];
+  return {
+    fee: v.fee && cardCupItemOf(v.fee.item) && Number(v.fee.amount) > 0 ? {
+      item: v.fee.item,
+      amount: Math.floor(Number(v.fee.amount))
+    } : null,
+    split,
+    pool: items(v.pool, 'total'),
+    givers: items(v.givers, 'amount').map(g => ({
+      name: cardCupText(g.name, 40) || 'ブリーダー',
+      icon: typeof g.icon === 'string' ? g.icon : null,
+      item: g.item,
+      amount: g.amount,
+      host: g.host === true
+    })),
+    hosts: Array.isArray(v.hosts) ? v.hosts.filter(h => h && typeof h.id === 'string').map(h => ({
+      id: h.id,
+      name: cardCupText(h.name, 40) || 'ブリーダー',
+      icon: typeof h.icon === 'string' ? h.icon : null,
+      state: h.state === 'joined' ? 'joined' : 'invited'
+    })) : [],
+    me: {
+      host: !!(v.me && v.me.host),
+      invited: !!(v.me && v.me.invited),
+      claimed: !!(v.me && v.me.claimed)
+    },
+    code: typeof v.code === 'string' && /^[0-9]{6}$/.test(v.code) ? v.code : null,
+    payouts: Array.isArray(v.payouts) ? items(v.payouts, 'amount').filter(x => typeof x.id === 'string') : null
+  };
+};
+const cardCupShares = (total, split, ranks) => {
+  const k = Math.max(1, Math.min(split.length, ranks));
+  const pct = split.slice(0, k);
+  for (let i = k; i < split.length; i++) pct[0] += split[i];
+  const each = pct.map(p => Math.floor(total * p / 100));
+  each[0] += total - each.reduce((a, b) => a + b, 0);
+  return each;
+};
+const CARD_CUP_SPLITS = Object.freeze([{
+  id: 'all',
+  label: '優勝が全部',
+  split: [100]
+}, {
+  id: '73',
+  label: '7:3',
+  split: [70, 30]
+}, {
+  id: '631',
+  label: '6:3:1',
+  split: [60, 30, 10]
+}, {
+  id: '532',
+  label: '5:3:2',
+  split: [50, 30, 20]
+}]);
+const cardCupApply = async (adapters, item, amount, extra) => {
+  const it = cardCupItemOf(item);
+  if (!it) return false;
+  const fn = it.card ? adapters.card : adapters.main;
+  return typeof fn === 'function' ? !!(await fn([{
+    item,
+    amount
+  }], extra)) : false;
+};
+const cardCupDepositSettle = async (adapters, rec, reply) => {
+  const kept = reply === 'ok' || reply === 'dup';
+  if (kept) {
+    await cardCupWalletSet({
+      ...rec,
+      state: 'held',
+      at: Date.now()
+    });
+    return 'ok';
+  }
+  if (reply === null || reply === undefined) return 'pending';
+  const e = await cardCupWalletEntry({
+    ...rec,
+    state: 'returned',
+    at: Date.now()
+  });
+  if (!e) return 'pending';
+  const back = await cardCupApply(adapters, rec.item, rec.amount, [e]);
+  return back ? reply : 'pending';
+};
+const cardCupGive = async (adapters, cup, item, amount, have) => {
+  if (!(amount > 0) || amount > have) return 'short';
+  const rec = {
+    cup,
+    kind: 'prize',
+    item,
+    amount,
+    nonce: cardCupNonce(),
+    state: 'sending',
+    at: Date.now()
+  };
+  const e = await cardCupWalletEntry(rec);
+  if (!e || !(await cardCupApply(adapters, item, -amount, [e]))) return 'save';
+  const reply = await cardCupPrizeRpc('card_cup_deposit', {
+    p_cup: cup,
+    p_owner: adapters.owner,
+    p_key: adapters.key,
+    p_item: item,
+    p_amount: amount,
+    p_nonce: rec.nonce
+  });
+  return cardCupDepositSettle(adapters, rec, reply);
+};
+const cardCupJoinPaid = async (adapters, cup, fee, have) => {
+  if (!fee) {
+    const r = await cardCupPrizeRpc('card_cup_join_pay', {
+      p_cup: cup,
+      p_owner: adapters.owner,
+      p_key: adapters.key,
+      p_name: adapters.name,
+      p_icon: adapters.icon,
+      p_nonce: cardCupNonce()
+    });
+    return r === 'nofee' || r === 'ok' ? 'ok' : r || 'off';
+  }
+  if (fee.amount > have) return 'short';
+  const rec = {
+    cup,
+    kind: 'fee',
+    item: fee.item,
+    amount: fee.amount,
+    nonce: cardCupNonce(),
+    state: 'sending',
+    at: Date.now(),
+    name: adapters.name,
+    icon: adapters.icon || undefined
+  };
+  const e = await cardCupWalletEntry(rec);
+  if (!e || !(await cardCupApply(adapters, fee.item, -fee.amount, [e]))) return 'save';
+  const reply = await cardCupPrizeRpc('card_cup_join_pay', {
+    p_cup: cup,
+    p_owner: adapters.owner,
+    p_key: adapters.key,
+    p_name: adapters.name,
+    p_icon: adapters.icon,
+    p_nonce: rec.nonce
+  });
+  if (reply === 'nofee' || reply === 'paid') {
+    const r = await cardCupDepositSettle(adapters, rec, 'refund');
+    return r === 'pending' ? 'pending' : 'ok';
+  }
+  return cardCupDepositSettle(adapters, rec, reply);
+};
+const cardCupResume = async adapters => {
+  const list = await cardCupWalletLoad();
+  let n = 0;
+  for (const rec of list.filter(r => r.state === 'sending')) {
+    const reply = rec.kind === 'prize' ? await cardCupPrizeRpc('card_cup_deposit', {
+      p_cup: rec.cup,
+      p_owner: adapters.owner,
+      p_key: adapters.key,
+      p_item: rec.item,
+      p_amount: rec.amount,
+      p_nonce: rec.nonce
+    }) : await cardCupPrizeRpc('card_cup_join_pay', {
+      p_cup: rec.cup,
+      p_owner: adapters.owner,
+      p_key: adapters.key,
+      p_name: rec.name || adapters.name,
+      p_icon: rec.icon || adapters.icon,
+      p_nonce: rec.nonce
+    });
+    const r = rec.kind === 'fee' && (reply === 'nofee' || reply === 'paid') ? await cardCupDepositSettle(adapters, rec, 'refund') : await cardCupDepositSettle(adapters, rec, reply);
+    if (r !== 'pending') n += 1;
+  }
+  for (const rec of list.filter(r => r.kind === 'claim' && r.state === 'claiming')) {
+    if ((await cardCupClaim(adapters, rec.cup, '')).status === 'ok') n += 1;
+  }
+  return n;
+};
+const cardCupClaim = async (adapters, cup, cupName) => {
+  const list = await cardCupWalletLoad();
+  let rec = list.find(r => r.kind === 'claim' && r.cup === cup);
+  if (rec && rec.state !== 'claiming') return {
+    status: rec.state === 'claimed' ? 'ok' : rec.state,
+    items: rec.items || [],
+    reason: 'done'
+  };
+  if (!rec) {
+    rec = {
+      cup,
+      kind: 'claim',
+      nonce: cardCupNonce(),
+      state: 'claiming',
+      at: Date.now()
+    };
+    if (!(await cardCupWalletSet(rec))) return {
+      status: 'pending',
+      items: []
+    };
+  }
+  const r = await cardCupPrizeRpc('card_cup_claim', {
+    p_cup: cup,
+    p_owner: adapters.owner,
+    p_key: adapters.key,
+    p_nonce: rec.nonce
+  });
+  if (!r || typeof r !== 'object') return {
+    status: 'pending',
+    items: []
+  };
+  if (r.status === 'wait') return {
+    status: 'wait',
+    items: []
+  };
+  if (r.status === 'claimed') {
+    await cardCupWalletSet({
+      ...rec,
+      state: 'elsewhere',
+      at: Date.now()
+    });
+    return {
+      status: 'elsewhere',
+      items: []
+    };
+  }
+  if (r.status !== 'ok') return {
+    status: r.status || 'off',
+    items: []
+  };
+  const items = (Array.isArray(r.items) ? r.items : []).filter(x => x && cardCupItemOf(x.item) && Number.isInteger(x.amount) && x.amount > 0);
+  rec = {
+    ...rec,
+    items
+  };
+  if (!items.length) {
+    await cardCupWalletSet({
+      ...rec,
+      state: 'none',
+      at: Date.now()
+    });
+    return {
+      status: 'none',
+      items: [],
+      reason: r.reason
+    };
+  }
+  const cards = items.filter(x => cardCupItemOf(x.item).card);
+  if (cards.length && !rec.card) {
+    const e = await cardCupWalletEntry({
+      ...rec,
+      card: true
+    });
+    if (!e || typeof adapters.card !== 'function' || !(await adapters.card(cards, [e]))) return {
+      status: 'pending',
+      items
+    };
+    rec = {
+      ...rec,
+      card: true
+    };
+  }
+  const mains = items.filter(x => cardCupItemOf(x.item).main).map(x => cardCupGiftReward(x.item, x.amount)).filter(Boolean);
+  if (mains.length && !rec.gift) {
+    const gift = {
+      id: `card_cup_${cup}`,
+      title: `個人杯「${cardCupText(cupName, 20) || '個人杯'}」の${r.reason === 'refund' ? '返却' : 'ごほうび'}`,
+      source: 'cardCup',
+      rewards: mains
+    };
+    const e = await cardCupWalletEntry({
+      ...rec,
+      gift: true
+    });
+    if (!e || typeof adapters.gift !== 'function' || !(await adapters.gift(gift, [e]))) return {
+      status: 'pending',
+      items
+    };
+    rec = {
+      ...rec,
+      gift: true
+    };
+  }
+  await cardCupWalletSet({
+    ...rec,
+    state: 'claimed',
+    at: Date.now()
+  });
+  return {
+    status: 'ok',
+    items,
+    reason: r.reason
+  };
+};
 const DEBUG_TRIALS = [{
   id: 'rhythm_mon_ab1',
   added: '2026-10-27',
@@ -135436,6 +136011,63 @@ function MonsterHeroGame() {
     setSkipResult(null);
     setSkipInfoItemId(null);
     setGameState('HOME');
+  };
+  const cardCupMainItems = async (delta, extra = []) => {
+    if (giftClaimingRef.current || !Array.isArray(delta) || typeof cardCupItemOf !== 'function') return false;
+    giftClaimingRef.current = true;
+    try {
+      const storedBeat = await storeGet(RHYTHM_EVENT_POINTS_KEY, 0, false);
+      let nextGold = Math.max(0, Number(gold) || 0);
+      let nextBeat = normalizeRhythmEventPoints(storedBeat);
+      const nextItems = {
+        ...(ownedItems || {})
+      };
+      for (const d of delta) {
+        const it = cardCupItemOf(d && d.item);
+        const n = Math.trunc(Number(d && d.amount));
+        if (!it || !it.main || !Number.isFinite(n) || n === 0) return false;
+        if (d.item === 'diamond') nextGold += n;else if (d.item === 'beatPoint') nextBeat += n;else nextItems[it.owned] = Math.max(0, Number(nextItems[it.owned]) || 0) + n;
+        if (nextGold < 0 || nextBeat < 0 || it.owned && nextItems[it.owned] < 0) return false;
+      }
+      for (const k of Object.keys(nextItems)) {
+        if (nextItems[k] === 0 && !(k in (ownedItems || {}))) delete nextItems[k];
+      }
+      const entries = [{
+        key: 'mh_gold',
+        before: gold,
+        next: nextGold
+      }, {
+        key: 'mh_owned_items',
+        before: ownedItems,
+        next: nextItems
+      }, {
+        key: RHYTHM_EVENT_POINTS_KEY,
+        before: storedBeat,
+        next: nextBeat
+      }, ...(Array.isArray(extra) ? extra : [])];
+      const saved = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
+      if (!saved) return false;
+      setGold(nextGold);
+      setOwnedItems(nextItems);
+      setRhythmEventPoints(nextBeat);
+      return true;
+    } finally {
+      giftClaimingRef.current = false;
+    }
+  };
+  const cardCupGiftAdd = async (gift, extra = []) => {
+    const savedGifts = await storeGet('mh_gifts', [], false);
+    const before = Array.isArray(savedGifts) ? savedGifts : [];
+    const grant = grantGiftOnce(before, gift);
+    const entries = [...(grant.granted ? [{
+      key: 'mh_gifts',
+      before,
+      next: grant.gifts
+    }] : []), ...(Array.isArray(extra) ? extra : [])];
+    if (!entries.length) return true;
+    const saved = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
+    if (saved && grant.granted) setGifts(grant.gifts);
+    return saved;
   };
   const claimGiftIds = async (ids, {
     baseGifts = null,
@@ -150481,6 +151113,15 @@ function MonsterHeroGame() {
         setGameState('BREEDER_MARKET');
       },
       topAssistant: cardTopAssistant,
+      cupItems: {
+        main: cardCupMainItems,
+        gift: cardCupGiftAdd,
+        have: () => ({
+          gold,
+          ownedItems,
+          beatPoints: rhythmEventPoints
+        })
+      },
       bgmPreview: {
         toggle: toggleBgmPreview,
         stop: () => {
