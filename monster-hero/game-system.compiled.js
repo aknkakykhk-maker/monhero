@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ae4bd5e92ade1646
+// source-sha256: 894271e2276c7145
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6514,6 +6514,7 @@ const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Pa
 const eikiBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   cardBattleIntroEvent: 'atsu_cup_theme',
+  cardCupStoryEvent: 'melo_toriko',
   kyukoJoinStoryEvent: 'original_event_01',
   atsuJoinStoryEvent: 'melo_against_my_own_shadow',
   tacticsTypesEvent: 'original_event_01',
@@ -6610,6 +6611,7 @@ const eventScriptBgmAt = (script, step) => {
 const EVENT_BGM_FADE_MS = 800;
 const EVENT_BGM_SCENES = Object.freeze({
   card_battle_intro_2026: 'cardBattleIntroEvent',
+  card_cup_2026_10_31: 'cardCupStoryEvent',
   kyuko_join_2026_10_22: 'kyukoJoinStoryEvent',
   atsu_join_2026_10_22: 'atsuJoinStoryEvent',
   tactics_types: 'tacticsTypesEvent',
@@ -146003,7 +146005,7 @@ function MonsterHeroGame() {
     }, {
       id: 'event',
       label: 'イベント',
-      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM'], ['masuCallEvent', 'マスモンとセッションのお話 BGM'], ['halloweenNightEvent', 'ハロウィン・ナイトのお話 BGM'], ['assistantChatStoryEvent', '助手とおしゃべりのお話 BGM'], ['atsuJoinStoryEvent', 'あつ加入のお話 BGM'], ['kyukoJoinStoryEvent', 'きゅうこ加入のお話 BGM'], ['cardBattleIntroEvent', 'MFバトルカードのお話 BGM']]
+      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM'], ['masuCallEvent', 'マスモンとセッションのお話 BGM'], ['halloweenNightEvent', 'ハロウィン・ナイトのお話 BGM'], ['assistantChatStoryEvent', '助手とおしゃべりのお話 BGM'], ['atsuJoinStoryEvent', 'あつ加入のお話 BGM'], ['kyukoJoinStoryEvent', 'きゅうこ加入のお話 BGM'], ['cardBattleIntroEvent', 'MFバトルカードのお話 BGM'], ['cardCupStoryEvent', '個人杯のお話 BGM']]
     }, {
       id: 'other',
       label: 'その他',
