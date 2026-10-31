@@ -186,6 +186,24 @@ const cardShareReplaysOf = async (ownerId) => {
     icon: typeof r.icon === 'string' ? r.icon : null, frame: typeof r.frame === 'string' ? r.frame : null,
     deckWon: r.deck_won === true, turns: Number.isInteger(r.turns) ? r.turns : null, old: r.old === true }));
 };
+// 登録デッキの最近の戦績(2026-10-31 社長「誰に挑まれてとか戦績も見たい」)。だれでも読める(docs/sql/card-deck-share/CARD_DECK_RECORD_APPLY.sql)。
+//   返るのは「いつ・このデッキが勝ったか・何ターン」だけ(挑んだ人の名前は、本人だけが見返しの一覧で見る)。
+//   関数がまだ無い・通信できないときは null。止め印は見返しとは別に持つ(この関数が無くても見返しは止めない)
+let _cardShareRecordOff = false;
+const cardShareRecordOf = async (ownerId) => {
+  if (_cardShareRecordOff || _cardShareUnavailable || typeof ownerId !== 'string') return null;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = setTimeout(() => { if (controller) controller.abort(); }, 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/card_deck_record_of`, { method: 'POST', headers: SB_HEADERS, signal: controller ? controller.signal : undefined, body: JSON.stringify({ p_owner: ownerId }) });
+    const text = await res.text();
+    if (!res.ok) { if (_isMissingTableError(res.status, text) || res.status === 404) _cardShareRecordOff = true; return null; }
+    const rows = JSON.parse(text);
+    if (!Array.isArray(rows)) return null;
+    return rows.filter((r) => r && typeof r.at === 'string').slice(0, CARD_SHARE_REPLAY_SLOTS)
+      .map((r) => ({ at: Date.parse(r.at) || 0, deckWon: r.deck_won === true, turns: Number.isInteger(r.turns) ? r.turns : null, old: r.old === true }));
+  } catch (_) { return null; } finally { clearTimeout(timer); }
+};
 // 1試合の中身(card_tournament_match と同じ形。93 の cardReplayFromTour で開く)
 const cardShareReplayGet = async (ownerId, slot) => {
   const key = await cardShareOwnerKey(false);
@@ -248,6 +266,7 @@ const cardRentedDeckSet = async (entry) => {
 const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked = null, debug = false, onFight = null, onOpenTactics = null, part = 'all', title = 'デッキ登録', headExtra = null, embedded = false }) => {
   const [tab, setTab] = useState(part === 'mine' ? 'mine' : onFight ? 'fight' : 'mine');
   const [foes, setFoes] = useState(null);             // { picks, friends, popular } … 戦う相手の3つの並び
+  const [foeDetail, setFoeDetail] = useState(null); // 一覧の「詳細」で開いている相手(2026-10-31 社長)
   const [foeFilter, setFoeFilter] = useState('all'); // 一覧の絞り込み(すべて/おすすめ/フレンド/人気。2026-10-30 社長・案C)
   // 戦術カード(96・97): 登録するときに載せる枠(レベルで開いている枠・持っているカードだけ)
   const [tacticsSave, setTacticsSave] = useState(null);
@@ -366,6 +385,8 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
             onClick={() => { Audio_.fgSe.tap(); if (onFight) onFight(e, cardShareFightLevel(e.tactics)); }}>戦う</button>
           {part !== 'fight' && <button type="button" data-card-share-rent={e.ownerId} disabled={busy || (rented && rented.ownerId === e.ownerId && rented.version === e.version)} className="min-h-[30px] rounded-lg border border-emerald-300/50 bg-slate-900 px-2 text-[11px] font-black text-emerald-100 disabled:opacity-50"
             onClick={() => { Audio_.fgSe.tap(); void rent(e); }}>{rented && rented.ownerId === e.ownerId && rented.version === e.version ? '借りています' : '借りる'}</button>}
+          <button type="button" data-card-share-detail-open={e.ownerId} className="min-h-[30px] rounded-lg border border-sky-300/50 bg-slate-900 px-2 text-[11px] font-black text-sky-100"
+            onClick={() => { Audio_.fgSe.tap(); setFoeDetail(e); }}>詳細</button>
         </span>
       </li>
     );
@@ -443,13 +464,21 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
         {embedded && mine !== undefined && !off && tab === 'mine' && registerButton}
       </div>
   );
-  if (embedded) return <div data-card-share data-card-share-part={part}>{body}</div>;
+  // 「詳細」の窓。窓からも「戦う」「借りる」を押せる(一覧の行のボタンと同じ動き)
+  const isRented = (e) => !!(rented && rented.ownerId === e.ownerId && rented.version === e.version);
+  const detailNode = foeDetail ? (
+    <CardShareDeckDetail entry={foeDetail} onClose={() => setFoeDetail(null)}
+      fight={{ disabled: !onFight || fightIssues.length > 0, go: () => { if (onFight) onFight(foeDetail, cardShareFightLevel(foeDetail.tactics)); } }}
+      rent={part !== 'fight' ? { disabled: busy || isRented(foeDetail), label: isRented(foeDetail) ? '借りています' : '借りる', go: () => { void rent(foeDetail); } } : null}/>
+  ) : null;
+  if (embedded) return <div data-card-share data-card-share-part={part}>{body}{detailNode}</div>;
   return (
     <div data-mh-screen data-card-share data-card-share-part={part} className={SCREEN_SHELL_CLASS}>
       <ScreenHead title={title} accent="text-amber-200" onBack={onBack} note={part === 'fight' ? 'だれと戦うかをえらびます' : '自分のデッキを1組登録すると、ほかのブリーダーが戦えます'}/>
       {headExtra}
       {body}
       {mine !== undefined && !off && tab === 'mine' && <div className={SCREEN_FOOTER_CLASS}>{registerButton}</div>}
+      {detailNode}
     </div>
   );
 };
@@ -497,34 +526,103 @@ const CardShareDeckThumbs = ({ entry }) => {
     })}</span>
   );
 };
-// 中身の小さな窓(3体・基本カード・セットした戦術カード・切り札)
-const CardShareDeckDetail = ({ entry, onClose }) => {
+// 中身の窓(3体・全カード・賢さと戦術カード・戦われた数)。2026-10-31 社長「各ブリーダーの詳細がわかりにくい。詳細ボタンつけて」で広げた。
+//   プロフィールのタイルと、登録デッキの一覧(フリー対戦の「ほかのブリーダー」・デッキ登録)の「詳細」から開く。
+//   一覧から開いたときは、ここからも「戦う」「借りる」を押せる(fight・rent。無ければ出さない)。
+//   戦術カードは一文(CARD_TACTIC_LINE)まで見せる(プロフィールの窓は前から名前を見せていた。細かい効果の文は出さない)
+const CardShareDeckDetail = ({ entry, onClose, fight = null, rent = null }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const t = cardShareNormalizeTactics(entry.tactics);
   const f = t.f ? cardTacticUnpackFrames(t.f) : null;
-  const monName = (i) => ((db && cardMonsterOf(db, entry.deck.monsters[i])) || {}).name || ['左のモンスター', '真ん中のモンスター', '右のモンスター'][i];
-  const rowText = (r) => `${(cardTacticOf(r.c) || {}).name || '?'} ▶ ${(cardTacticOf(r.a) || {}).name || '?'}${r.on ? '' : '(休み)'}`;
+  const monOf = (i) => (db && cardMonsterOf(db, entry.deck.monsters[i])) || null;
+  const monName = (i) => (monOf(i) || {}).name || ['左のモンスター', '真ん中のモンスター', '右のモンスター'][i];
+  const rareOf = (m) => (!m || !m.variant ? '' : /別絵/.test(m.variant) ? 'レアキラ' : /キラ/.test(m.variant) ? 'キラ' : '');
+  const lineOf = (id) => { const c = cardTacticOf(id) || {}; return c.line || c.name || '?'; };
+  const rowText = (r) => `${lineOf(r.c)} → ${lineOf(r.a)}${r.on ? '' : '(休み)'}`;
+  // 全カード: 同じカードはまとめて「×枚」。種類の順(ちから・かしこさ・特殊・回避・防御・全体)→ 名前の順
+  const kindOrder = ['pow', 'int', 'spe', 'dge', 'blk', 'fld'];
+  const kindLabel = { pow: 'ちから', int: 'かしこさ', spe: '特殊', dge: '回避', blk: '防御', fld: '全体' };
+  const counts = {};
+  (entry.deck.cards || []).forEach((no) => { counts[no] = (counts[no] || 0) + 1; });
+  const cardRows = Object.entries(counts).map(([no, n]) => ({ no, n, c: (db && cardOf(db, no)) || null }))
+    .sort((a, b) => (kindOrder.indexOf((a.c || {}).kind) - kindOrder.indexOf((b.c || {}).kind)) || String((a.c || {}).name || a.no).localeCompare(String((b.c || {}).name || b.no), 'ja'));
+  const who = (c) => (!c ? '' : c.user === 'breeder' ? 'ブリーダー' : c.user === 'any' ? '全員' : '');
+  // 最近の戦績(開いたときに1回読む。読めなければ「まだ記録がありません」)
+  const [record, setRecord] = useState(undefined);
+  useEffect(() => { let alive = true; void cardShareRecordOf(entry.ownerId).then((r) => { if (alive) setRecord(r); }).catch(() => { if (alive) setRecord(null); }); return () => { alive = false; }; }, [entry.ownerId]);
+  const losses = Math.max(0, (entry.battles || 0) - (entry.deckWins || 0));
+  const dayText = (ms) => { const d = new Date(ms); return Number.isFinite(d.getTime()) ? `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : ''; };
   return (
     <div data-card-share-deck-detail className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={onClose}>
-      <div className="max-h-[80vh] w-full max-w-[420px] overflow-y-auto rounded-2xl border-2 border-amber-600/60 bg-slate-950 p-3" onClick={(e) => e.stopPropagation()}>
+      <div className="max-h-[86vh] w-full max-w-[440px] overflow-y-auto rounded-2xl border-2 border-amber-600/60 bg-slate-950 p-3" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2">
-          <CardShareDeckThumbs entry={entry}/>
-          <span className="min-w-0 flex-1"><b className="block truncate text-[15px] font-black text-white">{t.name || 'デッキ'}</b><small className="block text-[11px] font-black text-amber-200">{`賢さ ${cardShareSmartText(t)}`}</small></span>
+          {entry.icon ? <span className="shrink-0 text-[24px] leading-none">{entry.icon}</span> : null}
+          <span className="min-w-0 flex-1">
+            <b data-card-share-detail-name className="block text-[15px] font-black leading-tight text-white" style={JA_WRAP_STYLE}>{jaWrap(entry.name || 'ブリーダー')}</b>
+            <small data-card-share-detail-deck className="block text-[12px] font-black text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(`「${t.name || 'デッキ'}」`)}</small>
+          </span>
         </div>
-        <div className="mt-2 text-[12px] font-bold leading-relaxed text-slate-200" style={JA_WRAP_STYLE}>
-          <div>{`3体: ${[0, 1, 2].map(monName).join('・')}`}</div>
-          {f && <div>{`基本カード: ${f.base.filter(Boolean).map((id) => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`}</div>}
-          {t.aces.length > 0 && <div>{`切り札: ${t.aces.map((no) => ((db && cardOf(db, no)) || {}).name || no).join('・')}`}</div>}
+        {/* 3体: 絵と名前(省かない)とレア度 */}
+        <div data-card-share-detail-mons className="mt-2 grid grid-cols-3 gap-1.5">
+          {[0, 1, 2].map((i) => { const m = monOf(i); const rare = rareOf(m); return (
+            <div key={i} className="flex min-w-0 flex-col items-center rounded-lg bg-black/30 p-1">
+              {m ? <img src={CARD_IMG(m.img)} alt={m.name} loading="lazy" className="aspect-[5/7] w-full rounded-[5px] object-cover"/> : <span className="block aspect-[5/7] w-full rounded-[5px] bg-slate-700"/>}
+              <span className="mt-0.5 w-full text-center text-[11px] font-black leading-tight text-white" style={JA_WRAP_STYLE}>{jaWrap(monName(i))}</span>
+              {rare && <span data-card-share-detail-rare={rare} className="mt-0.5 rounded bg-amber-300 px-1 text-[10px] font-black text-slate-950">{rare}</span>}
+            </div>
+          ); })}
         </div>
-        {f && (
-          <div className="mt-2 space-y-1 rounded-lg bg-black/30 p-2 text-[11px] text-slate-200">
-            <b className="block text-[12px] text-amber-200">セットした戦術カード</b>
-            {[...f.mons.map((rows, i) => [monName(i), rows]), ['ブリーダー', f.breeder]].map(([label, rows]) => (
-              <div key={label}><b className="text-amber-100">{label}</b>{rows.length ? rows.map((r, j) => <div key={j}>{`${j + 1}. ${rowText(r)}`}</div>) : <div className="text-slate-400">(なし)</div>}</div>
+        {/* 戦績(戦われた回数・勝ち負け・勝ち率・借りられた数と、最近の試合) */}
+        <div data-card-share-detail-stats className="mt-2 rounded-lg bg-black/30 p-2 text-[12px] font-bold text-sky-100 tabular-nums" style={JA_WRAP_STYLE}>
+          <b className="block text-[12px] text-amber-100">戦績</b>
+          {jaWrap(entry.battles ? `戦われた ${entry.battles}回・このデッキの ${entry.deckWins}勝${losses}敗(勝ち ${Math.round((entry.deckWins / entry.battles) * 100)}%)` : 'まだ戦われていません')}
+          {entry.rents > 0 && <span className="block">{`借りられた ${entry.rents}回`}</span>}
+          {entry.battles > 0 && (
+            <div data-card-share-detail-record={record === undefined ? 'loading' : record ? record.length : 'none'} className="mt-1 text-[11px]">
+              <span className="block text-slate-400">最近の試合(新しい順)</span>
+              {record === undefined ? <span className="block text-slate-400">読み込み中…</span>
+                : !record || !record.length ? <span className="block text-slate-400">まだ記録がありません</span>
+                : <span className="mt-0.5 flex flex-wrap gap-1">{record.map((r, i) => (
+                  <span key={i} data-card-share-detail-record-row={r.deckWon ? 'won' : 'lost'} className={`rounded px-1 py-0.5 font-black ${r.deckWon ? 'bg-emerald-500/25 text-emerald-100' : 'bg-rose-500/25 text-rose-100'}`}>
+                    {`${dayText(r.at)} ${r.deckWon ? '勝ち' : '負け'}`}
+                  </span>))}</span>}
+            </div>
+          )}
+        </div>
+        {/* 賢さと戦術カード */}
+        <div className="mt-2 rounded-lg bg-black/30 p-2 text-[11.5px] text-slate-200" style={JA_WRAP_STYLE}>
+          <b data-card-share-detail-smart={cardShareSmartLevel(t)} className="block text-[13px] text-amber-200">{jaWrap(`賢さ ${cardShareSmartText(t)}`)}</b>
+          {f && <div className="mt-0.5">{jaWrap(`基本の型: ${f.base.filter(Boolean).map((id) => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`)}</div>}
+          {t.aces.length > 0 && <div className="mt-0.5">{jaWrap(`切り札: ${t.aces.map((no) => ((db && cardOf(db, no)) || {}).name || no).join('・')}`)}</div>}
+          {f && (
+            <div className="mt-1 space-y-1">
+              <b className="block text-[12px] text-amber-100">セットした戦術カード(上から順に見て、当てはまったもの)</b>
+              {[...f.mons.map((rows, i) => [monName(i), rows]), ['ブリーダー', f.breeder]].map(([label, rows]) => (
+                <div key={label}><b className="text-amber-100">{label}</b>{rows.length ? rows.map((r, j) => <div key={j}>{jaWrap(`${j + 1}. ${rowText(r)}`)}</div>) : <div className="text-slate-400">(なし)</div>}</div>
+              ))}
+            </div>
+          )}
+        </div>
+        {/* デッキの全カード */}
+        <div data-card-share-detail-cards={entry.deck.cards.length} className="mt-2 rounded-lg bg-black/30 p-2">
+          <b className="block text-[12px] font-black text-amber-100">{`デッキのカード(${entry.deck.cards.length}枚)`}</b>
+          <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5 text-[11.5px] font-bold text-slate-200">
+            {cardRows.map(({ no, n, c }) => (
+              <div key={no} data-card-share-detail-card={no} className="flex min-w-0 items-baseline gap-1">
+                <span className="shrink-0 text-[10px] text-slate-400">{kindLabel[(c || {}).kind] || ''}</span>
+                <span className="min-w-0 flex-1" style={JA_WRAP_STYLE}>{jaWrap(`${(c || {}).name || no}${who(c) ? `(${who(c)})` : ''}`)}</span>
+                <span className="shrink-0 tabular-nums text-amber-200">{`×${n}`}</span>
+              </div>
             ))}
           </div>
+        </div>
+        {(fight || rent) && (
+          <div className="mt-3 flex gap-2">
+            {fight && <button type="button" data-card-share-detail-fight disabled={fight.disabled} onClick={() => { onClose(); fight.go(); }} className="mh-button mh-button-primary min-h-[44px] flex-1 rounded-xl text-[14px] font-black disabled:opacity-50">戦う</button>}
+            {rent && <button type="button" data-card-share-detail-rent disabled={rent.disabled} onClick={() => { onClose(); rent.go(); }} className="min-h-[44px] flex-1 rounded-xl border border-emerald-300/50 bg-slate-900 text-[13px] font-black text-emerald-100 disabled:opacity-50">{rent.label}</button>}
+          </div>
         )}
-        <button type="button" data-card-share-deck-detail-close onClick={onClose} className="mt-3 w-full rounded-xl bg-slate-800 py-2 text-[13px] font-black text-white">とじる</button>
+        <button type="button" data-card-share-deck-detail-close onClick={onClose} className="mt-2 w-full rounded-xl bg-slate-800 py-2 text-[13px] font-black text-white">とじる</button>
       </div>
     </div>
   );
@@ -652,6 +750,12 @@ const CardDeckReplays = ({ onBack, onOpenDeck, onOpenTour, known = null }) => {
       <div className={`${SCREEN_LIST_CLASS} space-y-1.5 pb-4`}>
         {msg && <p data-card-deck-replays-note className="rounded-xl border border-amber-300/40 bg-amber-500/10 px-2 py-1.5 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
         {items === null && <div className="py-6 text-center text-[13px] font-bold text-slate-400">読み込み中…</div>}
+        {/* 戦績のまとめ(2026-10-31 社長「誰に挑まれてとか戦績も見たい」): いま見ているタブの試合の、このデッキの勝ち負けと勝ち率 */}
+        {items && shown.length > 0 && (() => {
+          const won = shown.filter((x) => x.won).length;
+          return <p data-card-deck-replays-total={`${won}-${shown.length - won}`} className="rounded-xl border border-white/10 bg-black/30 px-2 py-1.5 text-[12px] font-black text-sky-100 tabular-nums" style={JA_WRAP_STYLE}>
+            {jaWrap(`このデッキの戦績: ${shown.length}試合 ${won}勝${shown.length - won}敗(勝ち ${Math.round((won / shown.length) * 100)}%)`)}</p>;
+        })()}
         {items && !shown.length && <div data-card-deck-replays-empty className="py-6 text-center text-[13px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('まだ記録がありません。ほかのブリーダーがあなたのデッキと戦うと、ここに残ります')}</div>}
         {shown.map((x) => (
           <button key={x.key} type="button" data-card-deck-replays-row={x.kind} disabled={busy} onClick={() => { void open(x); }}
