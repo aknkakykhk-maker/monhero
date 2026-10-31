@@ -31,6 +31,9 @@ const seed = ({ points, seenNoticeIds }) => {
   put('mh_kiki_intro_seen_v1', true); put('mh_momosuke_intro_seen_v1', true);
   // MFバトルカードの公開のお話(2026-10-26 公開)も、飾り枠の案内より先に出る。見た扱いにしておく
   put('mh_story_card_battle_seen_v1', true);
+  // 個人杯のお話(2026-10-31 公開)も、カードのはじまりを見た人には HOME で先に流れる。見た扱いにしておく
+  // (見たかは mh_rhythm_event_story_v1 の id。会話idは本体 17-release-changelog-login-missions.jsx の CARD_CUP_STORY_ID)
+  put('mh_rhythm_event_story_v1', ['card_cup_2026_10_31']);
   // 更新の案内・日次アドバイスも、飾り枠の案内より先に出る決まり。ここでは見た扱いにしておく
   // (実際の遊び方でも、それらを閉じたあとに飾り枠の案内が出る)
   put('mh_seen_update_notices_v1', seenNoticeIds);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5baf484fabd4c429
+// generated-sha256: b1cb6e1b2eef49aa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -5254,7 +5254,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ cardBattleIntroEvent:'atsu_cup_theme', kyukoJoinStoryEvent:'original_event_01', atsuJoinStoryEvent:'melo_against_my_own_shadow', tacticsTypesEvent:'original_event_01', rhythmHellStoryEvent:'melo_sheriruth', assistantChatStoryEvent:'close_to_your_heart_alt', title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', masuCallEvent:'six_eternel',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ cardBattleIntroEvent:'atsu_cup_theme', cardCupStoryEvent:'melo_toriko', kyukoJoinStoryEvent:'original_event_01', atsuJoinStoryEvent:'melo_against_my_own_shadow', tacticsTypesEvent:'original_event_01', rhythmHellStoryEvent:'melo_sheriruth', assistantChatStoryEvent:'close_to_your_heart_alt', title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', masuCallEvent:'six_eternel',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -5303,7 +5303,7 @@ const eventScriptBgmAt = (script, step) => {
   return found;
 };
 const EVENT_BGM_FADE_MS = 800; // 会話イベントの途中で曲を替えるとき、今の曲を下げる長さ
-const EVENT_BGM_SCENES = Object.freeze({ card_battle_intro_2026:'cardBattleIntroEvent', kyuko_join_2026_10_22:'kyukoJoinStoryEvent', atsu_join_2026_10_22:'atsuJoinStoryEvent', tactics_types:'tacticsTypesEvent', kiki_intro:'kikiIntro', rhythm_hell_story:'rhythmHellStoryEvent', assistant_chat_story:'assistantChatStoryEvent', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', rhythm_masu_call_2026_10_07:'masuCallEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
+const EVENT_BGM_SCENES = Object.freeze({ card_battle_intro_2026:'cardBattleIntroEvent', card_cup_2026_10_31:'cardCupStoryEvent', kyuko_join_2026_10_22:'kyukoJoinStoryEvent', atsu_join_2026_10_22:'atsuJoinStoryEvent', tactics_types:'tacticsTypesEvent', kiki_intro:'kikiIntro', rhythm_hell_story:'rhythmHellStoryEvent', assistant_chat_story:'assistantChatStoryEvent', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', rhythm_masu_call_2026_10_07:'masuCallEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
 // 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、
@@ -36987,6 +36987,8 @@ function ProfileScreen({
         {onboarded&&!onboardingPreview&&rhythmAchRows.some(r=>r.clear>0)&&<RhythmAchievementPanel rows={rhythmAchRows} who="self"/>}
         {/* MFバトルカードの戦績(2026-10-26 社長「プロフィールやフレンドでバトルカードの戦績も追加」)。一度も遊んでいなければ出さない。保存は読むだけ(90-card-rank.jsx) */}
         {onboarded&&!onboardingPreview&&<CardBattleStatsSelf/>}
+        {/* MFバトルカード 公式杯の記録(2026-10-31 社長・案B)。終わった大会が1つも無いあいだは出さない。押すと一覧、そこから大会の画面(戻るとプロフィール) */}
+        {onboarded&&!onboardingPreview&&typeof CardTourHistoryButton==='function'&&typeof onCardShareGo==='function'&&<CardTourHistoryButton onOpen={(tourId,tab)=>onCardShareGo({kind:'tour',tourId,tab})}/>}
         {/* モンヒロビートの履歴: 終わった週間ランキング・イベントの順位をあとから見る。
             2026-09-13・ユーザー依頼「モンビーのイベントや週間ランキングの終わったものを
             ヒストリー的に見れる機能」。置き場所もユーザーが決めた(プロフィール)。
@@ -42409,6 +42411,7 @@ function HomeScreen({
   onOpenAssistantChat = null,
   // MFバトルカードの入口(案A・左の列のいちばん下)。公開の印 cardBattle が立ち、公開のお話を見た人だけ(60-app.jsx が決める)
   cardBattleVisible = false, onOpenCardBattle = null, cardBattleTeaser = false, onOpenCardTeaser = null,
+  cardTourVisible = false, onOpenCardTour = null,
 }) {
   // 背景の絵は「HOMEの枠が横長かどうか」で選ぶ。画面の向きでは決めない。
   // パソコンは画面が横長でも、HOMEは幅600の縦長の列に収まるので、横長の絵を出すと村の真ん中だけが大きく写り、
@@ -42453,6 +42456,20 @@ function HomeScreen({
     const campaign=rhythmEventPointCampaignAt(Date.now());
     return campaign&&campaign.banner?campaign:null;
   })();
+  // 公式杯の札(2026-10-31 社長・案A。中身は 99-card-tournament の cardTourHomeBanner)。
+  //   一覧は HOME を開いたときと10分ごとに読む。残り時間は1分ごとに数え直す。読めない・大会が無いときは出さない
+  const [cardTourList,setCardTourList]=React.useState(null);
+  const [cardTourNow,setCardTourNow]=React.useState(()=>Date.now());
+  React.useEffect(()=>{
+    if(!cardTourVisible||typeof cardTourFetchList!=='function')return undefined;
+    let alive=true;
+    const load=()=>{cardTourFetchList().then(l=>{if(alive)setCardTourList(Array.isArray(l)?l:null);}).catch(()=>{});};
+    load();
+    let ticks=0;
+    const id=setInterval(()=>{ticks+=1;setCardTourNow(Date.now());if(ticks%10===0)load();},60000);
+    return ()=>{alive=false;clearInterval(id);};
+  },[cardTourVisible]);
+  const homeCardTour=cardTourVisible&&typeof cardTourHomeBanner==='function'?cardTourHomeBanner(cardTourList,cardTourNow):null;
   // モンヒロビートのイベントを開催しているか。描くたびに数え直す(上の★のとおり)
   const homeRhythmEventOpen=(()=>{
     const released=(typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS&&RELEASE_FLAGS.rhythmWeeklyRanking===true);
@@ -42514,8 +42531,12 @@ function HomeScreen({
         {homeEventCampaign&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={openChangelog} aria-label={`${homeEventCampaign.banner.title} ${homeEventCampaign.banner.sub}`}>
           <b>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}</b><small>{homeEventCampaign.banner.sub}</small>
         </button>}
-        {/* MFバトルカード(社長が決めた案A: 左の列のいちばん下・ハロウィン・ナイトの札の下。札が無いときは1段上がる) */}
-        {cardBattleVisible&&typeof onOpenCardBattle==='function'&&<button type="button" data-home-card-battle className={`mh-home-card-battle${homeEventCampaign?'':' raised'}`} onClick={onOpenCardBattle} aria-label="MFバトルカード"><span>🃏 MFバトルカード</span></button>}
+        {/* 公式杯(2026-10-31 社長・案A): ハロウィン・ナイトの札の下、MFバトルカードの上。イベントの札が無いときは1段上がる。押すといつも大会のトップ */}
+        {homeCardTour&&typeof onOpenCardTour==='function'&&<button type="button" data-home-card-tour={homeCardTour.id} className={`mh-home-tour-banner${homeEventCampaign?'':' raised'}`} onClick={()=>onOpenCardTour(homeCardTour.id)} aria-label={`${homeCardTour.name} ${homeCardTour.sub}`}>
+          <span aria-hidden="true">🏆</span><span><b>{homeCardTour.name}</b><small>{homeCardTour.sub}{homeCardTour.prize&&<em>{homeCardTour.prize}</em>}</small></span>
+        </button>}
+        {/* MFバトルカード(社長が決めた案A: 左の列のいちばん下・ハロウィン・ナイトの札の下。札が無いときは1段上がる。公式杯の札があるときはその下) */}
+        {cardBattleVisible&&typeof onOpenCardBattle==='function'&&<button type="button" data-home-card-battle className={`mh-home-card-battle${homeCardTour?(homeEventCampaign?' below-tour':''):(homeEventCampaign?'':' raised')}`} onClick={onOpenCardBattle} aria-label="MFバトルカード"><span>🃏 MFバトルカード</span></button>}
         {/* 公開前の予告(社長 2026-10-25「近日公開みたいな感じでホームに出して」)。同じ場所に「近日公開」の札を付けて出し、押すと予告の小窓。中には入れない。
             公開の印(RELEASE_FLAGS.cardBattle)を立てると、60-app がこちらを下ろして上のふつうの入口に切り替える */}
         {!cardBattleVisible&&cardBattleTeaser&&typeof onOpenCardTeaser==='function'&&<button type="button" data-home-card-battle-teaser className={`mh-home-card-battle soon${homeEventCampaign?'':' raised'}`} onClick={onOpenCardTeaser} aria-label="MFバトルカード 近日公開"><span>🃏 MFバトルカード<small>近日公開</small></span></button>}
@@ -61934,6 +61955,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const [packFx, setPackFx] = useState(cardPackFxOn);
   const [tacticsBack, setTacticsBack] = useState('mode'); // 戦術カードの画面から戻る先(97。みんなのデッキから来たら share)
   const [cupOpenId, setCupOpenId] = useState(null); // 個人杯(99-card-cup)で見ていた杯。デッキ登録から戻ったときに開き直す
+  const [tourHome, setTourHome] = useState(null); // HOME の公式杯の札・プロフィールの記録から来た大会。戻ると来た所へ帰る
+  const [tourTab, setTourTab] = useState(null); // そのとき最初に開くタブ(プロフィールの「結果を見る」は 'result')
   // オプションの「助手と対戦」の曲の並び: 直している助手と、全員へ写すときの下書き({ list, confirm })
   const [plWho, setPlWho] = useState(null);
   const [plCopy, setPlCopy] = useState(null);
@@ -62339,6 +62362,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     if (!it) return;
     // プロフィールの「バトルカードのデッキ」から: デッキ登録を開き、戻るとそのままプロフィールへ(MFバトルカードを閉じる)
     if (it.kind === 'register' && typeof CardTacticsScreen === 'function') { setTacticsBack('exit'); setView('tactics'); return; }
+    // HOME の公式杯の札・プロフィールの「公式杯の記録」から: その大会を開き、戻ると来た所(HOME・プロフィール)へ(MFバトルカードを閉じる)
+    if (it.kind === 'tour' && typeof CardTournament === 'function') { setTourHome(typeof it.tourId === 'string' ? it.tourId : null); setTourTab(it.tab === 'result' ? 'result' : null); setView('tour'); return; }
     if (it.kind === 'fight' && it.entry && startBattleRef.current && typeof cardShareFightLevel === 'function') startBattleRef.current({ who: it.entry.tactics.habit, level: cardShareFightLevel(it.entry.tactics), share: it.entry });
   }, [!!save, !!(save && save.starter), screen]);
   if (!save) return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="MFバトルカード" onBack={onExit}/><ScreenEmpty emoji="⏳" lines={['読み込み中…']}/></div>;
@@ -62647,39 +62672,41 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         )}
         {/* 札は上下の真ん中に置く。札が多くて収まらないときは上から並べて巻き取れる(justify-center だと上の札が画面の外へ出て押せなくなる。2026-10-30 大会の札を足したとき) */}
         <div className={`${SCREEN_LIST_CLASS} relative z-[1] flex flex-col space-y-3 pb-4`}>
+          {/* 札の高さは5つともそろえる(2026-10-31 社長「高さがばらばら」)。フリー対戦の顔の並びが入る高さ(112px)に合わせ、顔は小さめ(h-8) */}
           <div aria-hidden="true" className="flex-1"/>
-          <button type="button" data-card-mode-assistant className="mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-orange-200 via-orange-400 to-rose-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); setView('foe'); }}>
+          <button type="button" data-card-mode-assistant className="mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-orange-200 via-orange-400 to-rose-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); setView('foe'); }}>
             {/* 札の透かしの英字は、トップ・モンヒロビートと同じ置き方(端で切れて見えるのも同じ作り) */}
             <span aria-hidden="true" className="mhms-mark">ASSISTANT</span>
             <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">⚔️</span><span><b className="block text-[22px] font-black italic leading-tight">{shareForm ? 'フリー対戦' : '助手と対戦'}</b><small className="block text-[11px] font-black text-slate-900/80">{shareForm ? '助手や、ほかのブリーダーのデッキと戦う' : '助手のみんなと戦う・強さは5段'}</small></span></span>
             {/* 顔は、もう会っている助手だけ(まだ会っていない助手が見えるとネタバレ。デバッグでも同じ) */}
-            <span aria-hidden="true" className="relative flex -space-x-2">{assistantsUnlockedFrom(seenStoryIds).filter((x) => CARD_AI_HABITS[x.id]).map((x) => <img key={x.id} src={assistantFaceImage(x, 'normal')} alt="" className="h-10 w-10 rounded-full border-2 border-white/80 bg-slate-900 object-cover object-top shadow"/>)}</span>
+            <span aria-hidden="true" className="relative flex -space-x-2">{assistantsUnlockedFrom(seenStoryIds).filter((x) => CARD_AI_HABITS[x.id]).map((x) => <img key={x.id} src={assistantFaceImage(x, 'normal')} alt="" className="h-8 w-8 rounded-full border-2 border-white/80 bg-slate-900 object-cover object-top shadow"/>)}</span>
           </button>
           {/* マルチ対戦(91-card-battle-multi.jsx)。MFバトルカードの公開の印と同じ日に開く(cardPvpOpen・社長 案A)。それまではデバッグ設定から入ったときだけ押せる */}
-          <button type="button" data-card-mode-multi disabled={!(debug || cardPvpOpen())} onClick={() => { Audio_.fgSe.tap(); setView('pvp'); }} className="mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50" style={{ animationDelay: '60ms' }}>
+          <button type="button" data-card-mode-multi disabled={!(debug || cardPvpOpen())} onClick={() => { Audio_.fgSe.tap(); setView('pvp'); }} className="mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50" style={{ animationDelay: '60ms' }}>
             <span aria-hidden="true" className="mhms-mark">MULTI</span>
             <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🎮</span><span><b className="block text-[22px] font-black italic leading-tight">マルチ対戦</b><small className="block text-[11px] font-black text-slate-900/80">ブリーダーどうしで戦う</small></span></span>
             {!cardPvpOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">{debug ? 'つくっている途中(デバッグ)' : '準備中'}</span>}
           </button>
           {/* デッキ登録(95 の登録+96・97 の戦術カード。2026-10-29 社長)。公開の印(cardShareOpen)までは、デバッグ設定から入ったときだけ出す */}
           {typeof CardTacticsScreen === 'function' && shareForm && (
-            <button type="button" data-card-mode-tactics onClick={() => { Audio_.fgSe.tap(); setTacticsBack('mode'); setView('tactics'); }} className="mhms-card mhms-in flex min-h-[96px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-amber-200 via-amber-400 to-orange-600 px-4 py-3 text-left text-slate-950 active:scale-[.98]">
+            <button type="button" data-card-mode-tactics onClick={() => { Audio_.fgSe.tap(); setTacticsBack('mode'); setView('tactics'); }} className="mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-amber-200 via-amber-400 to-orange-600 px-4 py-3 text-left text-slate-950 active:scale-[.98]">
               <span aria-hidden="true" className="mhms-mark">DECKS</span>
               <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🗂️</span><span><b className="block text-[22px] font-black italic leading-tight">デッキ登録</b><small className="block text-[11px] font-black text-slate-900/80">デッキを登録する・戦術カードを組む・引く</small></span></span>
               {!cardShareOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">つくっている途中(デバッグ)</span>}
             </button>
           )}
-          {/* MFバトルカード大会(99)。公開の印(cardTourOpen・告知と同じ日)までは、デバッグ設定から入ったときだけ出す */}
-          {typeof CardTournament === 'function' && shareForm && (debug || cardTourOpen()) && (
-            <button type="button" data-card-mode-tour onClick={() => { Audio_.fgSe.tap(); setView('tour'); }} className="mhms-card mhms-in flex min-h-[96px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-yellow-100 via-yellow-300 to-amber-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]">
+          {/* MFバトルカード大会(99)。プレイヤーの入口は HOME の札とプロフィールの「公式杯の記録」(2026-10-31 社長「対戦えらびの大会の札は消す」)。
+              ここはデバッグ設定から入ったときだけ(見返しの見本を開く道) */}
+          {typeof CardTournament === 'function' && shareForm && debug && (
+            <button type="button" data-card-mode-tour onClick={() => { Audio_.fgSe.tap(); setView('tour'); }} className="mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-yellow-100 via-yellow-300 to-amber-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]">
               <span aria-hidden="true" className="mhms-mark">CUP</span>
               <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🏆</span><span><b className="block text-[22px] font-black italic leading-tight">大会</b><small className="block text-[11px] font-black text-slate-900/80">登録したデッキで出る・毎日自動で対戦</small></span></span>
-              {!cardTourOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">つくっている途中(デバッグ)</span>}
+              <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">デバッグ</span>
             </button>
           )}
           {/* 個人杯(99-card-cup)。公開の印(cardCupOpen)までは、デバッグ設定から入ったときだけ出す */}
           {typeof CardCup === 'function' && shareForm && (debug || cardCupOpen()) && (
-            <button type="button" data-card-mode-cup onClick={() => { Audio_.fgSe.tap(); setView('cup'); }} className="mhms-card mhms-in flex min-h-[96px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-lime-100 via-emerald-300 to-teal-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]">
+            <button type="button" data-card-mode-cup onClick={() => { Audio_.fgSe.tap(); setView('cup'); }} className="mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-lime-100 via-emerald-300 to-teal-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]">
               <span aria-hidden="true" className="mhms-mark">MY CUP</span>
               <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🎌</span><span><b className="block text-[22px] font-black italic leading-tight">個人杯</b><small className="block text-[11px] font-black text-slate-900/80">自分で大会を開く・仲間の大会に出る</small></span></span>
               {!cardCupOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">つくっている途中(デバッグ)</span>}
@@ -62723,7 +62750,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         { key: CARD_TOUR_CLAIMED_KEY, before: raw, next: [...claimed, { id: tour.id, ...reward, at: Date.now() }].slice(-100) },
       ]);
     };
-    return <CardTournament onBack={() => setView('mode')} onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('tour'); setView('tactics'); } : null}
+    return <CardTournament initialTour={tourHome} initialTab={tourTab} onBack={() => { if (tourHome) { setTourHome(null); setTourTab(null); onExit(); } else setView('mode'); }} onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('tour'); setView('tactics'); } : null}
       onCredit={creditTour} onOpenReplay={openTourReplay} onSample={debug ? openTourSample : null} knownAssistants={new Set(assistantsUnlockedFrom(seenStoryIds).map((x) => x.id))}/>;
   }
   // 個人杯(99-card-cup。2026-10-31)。デッキ登録へ行って戻ったら、見ていた杯に戻る(cupOpenId)
@@ -71315,15 +71342,15 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
 // ---- part: 99-card-tournament.jsx ----
 // ===== MFバトルカード大会: 画面(2026-10-30 ルールくん・大会 PR3) =====
 // 仕様: docs/progress/card-tournament/plan/README.md / サーバ: docs/spec/CARD_TOURNAMENT.md
-//   入口(対戦えらびの「大会」)→ 大会の一覧 → 1つの大会: 受付中はエントリー、始まったら 対戦表・試合・順位(終わったらごほうび)
+//   入口(HOME の札・プロフィールの記録。デバッグは対戦えらびの「大会」も)→ 大会の一覧 → 1つの大会: 受付中はエントリー、始まったら 対戦表・試合・順位(終わったらごほうび)
 //   ・エントリーするのは「デッキ登録」(95)で登録した1組。締め切りでサーバが写しを取る。持ち主の見分けは登録と同じ鍵(mh_card_deck_owner_key_v1)
 //   ・試合はサーバが回す。結果は表の「見せてよい時刻」(その日の 4:00)を過ぎた物だけ返ってくる
 //   ・見返しの入口(onOpenReplay)は PR4(リプレイくん)。渡されないうちは「準備中」
 //   ・まだ会っていない助手は、顔と名前を出さない(ネタバレ)
 //   ・表が無い・通信できないときは「準備中」と出して何もしない
 
-// 公開の印。告知(PR5)と同じ日に true にする。それまではデバッグ設定から入ったときだけ入口が出る
-const cardTourOpen = () => false;
+// 入口は HOME の札(大会があるあいだだけ)とプロフィールの「公式杯の記録」(終わった大会があるときだけ)。2026-10-31 社長。
+// 大会の行(card_tournaments)を足すだけで出る。開き方: docs/progress/card-tournament/OPEN_A_TOURNAMENT.md
 // 受け取ったごほうびの記録(新しいキー。[{ id, place, point, at }]・新しい100件まで)。ビートPと同じ取引で保存する
 const CARD_TOUR_CLAIMED_KEY = 'mh_card_tour_claimed_v1';
 const cardTourNormalizeClaimed = (v) => {
@@ -71396,6 +71423,34 @@ const cardTourFetchList = async () => {
   return Array.isArray(rows) ? rows.map(cardTourNormalizeTour).filter(Boolean) : null;
 };
 const cardTourFetchView = async (tourId, ownerId) => cardTourNormalizeView(await cardTourRpc('card_tournament_view', { p_tour: tourId, p_owner: ownerId || '' }));
+
+// ---- HOME の札(2026-10-31 社長「公式の大会はイベント的にするからホームに置く」・案A) ----
+// 受付が始まってから、結果発表(最終日 4:00)の1週間あとまで出す。大会が無いときは null(札を出さない)。
+// 押したら、いつも大会のトップを開く(時期で開く画面を変えない)。札に出すごほうびは1位のビートPだけ
+const CARD_TOUR_HOME_KEEP_MS = 7 * 86400000;
+const cardTourHomeBanner = (list, now) => {
+  if (!Array.isArray(list)) return null;
+  const shown = list.filter((t) => {
+    if (!t) return false;
+    if (t.openOn && now < Date.parse(`${t.openOn}T00:00:00+09:00`)) return false;
+    if (t.status !== 'done') return true;
+    const done = t.doneDay ? Date.parse(`${t.doneDay}T04:00:00+09:00`) : NaN;
+    return Number.isFinite(done) && now < done + CARD_TOUR_HOME_KEEP_MS;
+  });
+  // 開いている大会があればそちら(受付・開催中)。無ければいちばん新しく終わった大会
+  const t = shown.find((x) => x.status !== 'done') || shown[0];
+  if (!t) return null;
+  let sub;
+  if (t.status === 'entry' && now < t.entryUntil) {
+    // 1日以上あるときは日だけ(札の幅に1位のごほうびまで入れるため。分まではトップの「受付」の行に出る)
+    const left = t.entryUntil - now, d = Math.floor(left / 86400000), h = Math.floor(left / 3600000);
+    sub = `受付中 あと${d > 0 ? `${d}日` : h > 0 ? `${h}時間` : `${Math.max(1, Math.ceil(left / 60000))}分`}`;
+  } else if (t.status === 'entry') sub = '組み合わせ中';
+  else if (t.status === 'done') sub = '結果発表';
+  else sub = t.status === 'final' ? '開催中 頂上決戦' : '開催中';
+  const first = t.rewards && t.rewards.ranks[0] ? t.rewards.ranks[0].point : 0;
+  return { id: t.id, name: t.name, sub, prize: first > 0 ? `1位 ビートP ${first.toLocaleString()}` : '' };
+};
 
 // 段(組の総当たり・頂上決戦)ごとの席と試合
 const cardTourStageSeats = (view, stage, grp) => view.entries
@@ -71703,11 +71758,11 @@ const CardTourResult = ({ view, known, claimed, onClaim }) => {
 // onSample … デバッグのときだけ: その場で1試合回して見返しの見本を開く(表に結果のある試合が無くても、会場と実況の見え方を確かめられる)
 // onCredit(tour, reward) … ビートPを足して受け取りの記録を保存する(84 の persist と同じ取引)。保存できたら true
 // knownAssistants … 会ったことのある助手の id(Set)
-const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, onCredit = null, knownAssistants = null, onSample = null }) => {
+const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, onCredit = null, knownAssistants = null, onSample = null, initialTour = null, initialTab = null }) => {
   const [list, setList] = useState(undefined);  // undefined … 読み込み中 / null … 表が無い・通信できない
   const [tourId, setTourId] = useState(null);
   const [view, setView] = useState(null);
-  const [tab, setTab] = useState('grid');
+  const [tab, setTab] = useState(initialTab === 'result' ? 'result' : 'grid');
   const [stageKey, setStageKey] = useState(null); // 'g0' 'g1' … 'final'
   const [selfId, setSelfId] = useState(null);
   const [mine, setMine] = useState(undefined);
@@ -71725,7 +71780,9 @@ const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, on
       if (!alive) return;
       setSelfId(id); setMine(m || null); setClaimed(cardTourNormalizeClaimed(c) || []);
       setList(l);
-      if (l && l.length === 1) setTourId(l[0].id);
+      // HOME の札・プロフィールの記録から来たときは、その大会をそのまま開く(終わって14日を過ぎた大会は一覧に無いが、大会の中身は読める)
+      if (l && initialTour) setTourId(initialTour);
+      else if (l && l.length === 1) setTourId(l[0].id);
     })();
     return () => { alive = false; };
   }, []);
@@ -71773,7 +71830,7 @@ const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, on
       <button key={t.id} type="button" data-card-tour-pick={t.id} onClick={() => { Audio_.fgSe.tap(); setTourId(t.id); }} className="block w-full text-left"><CardTourHeadCard t={t} now={now}/></button>
     )));
   }
-  const backFromTour = list.length > 1 ? () => setTourId(null) : onBack;
+  const backFromTour = list.length > 1 && !initialTour ? () => setTourId(null) : onBack;
   if (!view) return shell(<ScreenEmpty emoji="⏳" lines={['読み込んでいます']}/>, 'MFバトルカード大会', backFromTour);
   const t = view.tour;
   if (t.status === 'entry') return shell(<><CardTourHeadCard t={t} now={now}/><CardTourEntry t={t} view={view} now={now} mine={mine} selfId={selfId} onChanged={async () => { await reload(); const l = await cardTourFetchList(); if (l) setList(l); }} onOpenRegister={onOpenRegister}/></>, 'MFバトルカード大会', backFromTour);
@@ -71783,19 +71840,91 @@ const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, on
     || stages.find((s) => view.entries.some((e) => e.mine && e.grp === s.grp && s.stage === 'group')) || stages[stages.length - 1];
   const st = stages.find((s) => s.key === stageKey) || myStage;
   const tabs = [['grid', '対戦表'], ['today', '試合'], ...(t.status === 'done' ? [['result', '結果']] : [])];
+  const shownTab = tab === 'result' && t.status !== 'done' ? 'grid' : tab;
   return shell(<>
     <CardTourHeadCard t={t} now={now}/>
     <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
-      {tabs.map(([k, label]) => <button key={k} type="button" data-card-tour-tab={k} onClick={() => { Audio_.fgSe.tap(); setTab(k); }} className={`rounded-xl py-2 text-[14px] font-black ${tab === k ? 'bg-gradient-to-b from-amber-300 to-orange-500 text-slate-950' : 'border-2 border-amber-500/60 bg-amber-100 text-amber-900'}`}>{label}</button>)}
+      {tabs.map(([k, label]) => <button key={k} type="button" data-card-tour-tab={k} onClick={() => { Audio_.fgSe.tap(); setTab(k); }} className={`rounded-xl py-2 text-[14px] font-black ${shownTab === k ? 'bg-gradient-to-b from-amber-300 to-orange-500 text-slate-950' : 'border-2 border-amber-500/60 bg-amber-100 text-amber-900'}`}>{label}</button>)}
     </div>
-    {tab === 'grid' && stages.length > 1 && (
+    {shownTab === 'grid' && stages.length > 1 && (
       <div className="flex flex-wrap gap-1">{stages.map((s) => <button key={s.key} type="button" data-card-tour-stage={s.key} onClick={() => setStageKey(s.key)} className={`rounded-full px-3 py-1 text-[12px] font-black ${s.key === st.key ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`}>{s.label}</button>)}</div>
     )}
-    {tab === 'grid' && <CardTourGrid key={`${t.id}|${st.key}`} view={view} stage={st.stage} grp={st.grp} known={known} now={now}/>}
-    {tab === 'today' && <CardTourToday view={view} known={known} now={now} onOpenReplay={onOpenReplay}/>}
-    {tab === 'result' && <CardTourResult view={view} known={known} claimed={claimed} onClaim={claim}/>}
+    {shownTab === 'grid' && <CardTourGrid key={`${t.id}|${st.key}`} view={view} stage={st.stage} grp={st.grp} known={known} now={now}/>}
+    {shownTab === 'today' && <CardTourToday view={view} known={known} now={now} onOpenReplay={onOpenReplay}/>}
+    {shownTab === 'result' && <CardTourResult view={view} known={known} claimed={claimed} onClaim={claim}/>}
     {msg && <p data-card-tour-msg className="rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
   </>, 'MFバトルカード大会', backFromTour);
+};
+
+// ---- プロフィールの「MFバトルカード 公式杯の記録」(2026-10-31 社長・案B) ----
+// 終わった大会を新しい順に並べ、「結果を見る」「対戦表・見返し」でその大会の画面を開く(戻るとプロフィール)。
+// 一覧は読むだけの card_tournament_history(docs/sql/card-tournament/CARD_TOURNAMENT_HISTORY_APPLY.sql)。終わった大会が無い・読めないときはボタンを出さない
+const cardTourNormalizeHistory = (rows) => (Array.isArray(rows) ? rows : []).map((r) => {
+  if (!r || typeof r.id !== 'string' || !/^[a-z0-9_-]{1,32}$/.test(r.id)) return null;
+  const w = r.winner && typeof r.winner === 'object' ? r.winner : null;
+  return { id: r.id, name: typeof r.name === 'string' && r.name ? r.name.slice(0, 40) : 'MFバトルカード大会', openOn: cardTourDate(r.open_on), doneDay: cardTourDate(r.done_day),
+    rewards: cardTourNormalizeRewards(r.rewards), players: Number.isInteger(r.players) && r.players >= 0 ? r.players : null,
+    winner: w ? { name: typeof w.user_name === 'string' ? w.user_name.slice(0, 40) : typeof w.name === 'string' ? w.name.slice(0, 40) : 'ブリーダー', assist: w.is_assist === true, assistId: typeof w.assist_id === 'string' ? w.assist_id : null } : null,
+    myPlace: cardTourInt(r.my_place), entered: r.my_entered === true };
+}).filter(Boolean).slice(0, 50);
+const cardTourFetchHistory = async (ownerId) => {
+  const rows = await cardTourRpc('card_tournament_history', { p_owner: ownerId || '' });
+  return Array.isArray(rows) ? cardTourNormalizeHistory(rows) : null;
+};
+const CardTourHistoryList = ({ list, known, onOpen, onClose }) => (
+  <div data-card-tour-history className="fixed inset-0 z-[80] flex justify-center bg-slate-950">
+    <div className={`${SCREEN_SHELL_CLASS} w-full max-w-[600px]`}>
+      <ScreenHead title="公式杯の記録" accent="text-amber-200" onBack={onClose} note="終わった大会の結果と、試合の見返しを見られます。新しい順"/>
+      <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+        {list.map((t) => {
+          const first = t.rewards.ranks[0] ? t.rewards.ranks[0].point : 0;
+          const winner = t.winner ? (t.winner.assist ? cardTourAssistOf(t.winner.assistId, known).name : t.winner.name) : null;
+          const me = t.myPlace ? `${t.myPlace}位` : t.entered ? '出場' : '出場なし';
+          return (
+            <div key={t.id} data-card-tour-history-row={t.id} className="rounded-2xl border-2 border-amber-600/60 bg-indigo-950/70 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <b className="min-w-0 flex-1 break-words text-[15px] font-black leading-tight text-amber-100">{t.name}</b>
+                <span data-card-tour-history-me className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-black ${t.myPlace && t.myPlace <= 3 ? 'bg-amber-400 text-slate-950' : 'bg-slate-700 text-slate-100'}`}>あなた {me}</span>
+              </div>
+              <div className="mt-1 text-[11.5px] font-bold text-slate-300" style={JA_WRAP_STYLE}>
+                {jaWrap([t.openOn && t.doneDay ? `${cardTourDayLabel(t.openOn)}〜${cardTourDayLabel(t.doneDay)}` : '', winner ? `優勝 ${winner}` : '', first > 0 ? `1位 ビートP ${first.toLocaleString()}` : ''].filter(Boolean).join(' ・ '))}
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-1.5">
+                <button type="button" data-card-tour-history-open="result" onClick={() => { Audio_.fgSe.tap(); onOpen(t.id, 'result'); }} className="rounded-xl bg-amber-500 py-2 text-[12px] font-black text-slate-950 active:scale-[.98]">結果を見る</button>
+                <button type="button" data-card-tour-history-open="grid" onClick={() => { Audio_.fgSe.tap(); onOpen(t.id, 'grid'); }} className="rounded-xl bg-indigo-800 py-2 text-[12px] font-black text-indigo-50 active:scale-[.98]">対戦表・見返し</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+);
+const CardTourHistoryButton = ({ onOpen, knownAssistants = null }) => {
+  const [list, setList] = useState(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const id = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+      const l = await cardTourFetchHistory(id).catch(() => null);
+      if (alive) setList(l);
+    })();
+    return () => { alive = false; };
+  }, []);
+  if (!list || !list.length || typeof onOpen !== 'function') return null;
+  const known = knownAssistants instanceof Set ? knownAssistants : new Set();
+  return (<>
+    <button type="button" data-profile-card-tour-history onClick={() => { Audio_.fgSe.tap(); setOpen(true); }} className="mb-4 flex w-full min-h-[64px] items-center gap-2 rounded-2xl border border-amber-400/40 bg-amber-950/40 px-3 py-2.5 active:scale-[.98]">
+      <span aria-hidden="true" className="shrink-0 text-[18px] leading-none">🏆</span>
+      <span className="min-w-0 flex-1 text-left">
+        <b className="block text-[13px] font-black text-amber-100">MFバトルカード 公式杯の記録</b>
+        <small className="block text-[10px] text-amber-300">{`終わった大会の結果・見返しを見られます（${list.length}件）`}</small>
+      </span>
+      <span aria-hidden="true" className="shrink-0 text-[16px] font-black text-amber-400">›</span>
+    </button>
+    {open && <CardTourHistoryList list={list} known={known} onClose={() => setOpen(false)} onOpen={(id, tab) => { setOpen(false); onOpen(id, tab); }}/>}
+  </>);
 };
 
 // ---- part: 99-card-cup.jsx ----
@@ -90992,7 +91121,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 既定値は今まで鳴っていた曲そのものなので、これまでの音は変わらない
         ['enhance','準備・強化フェーズ BGM'],['result','WAVE後リザルト BGM'],['gameOver','敗北 BGM']]},
       {id:'battle',label:'バトル'},
-      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM'],['masuCallEvent','マスモンとセッションのお話 BGM'],['halloweenNightEvent','ハロウィン・ナイトのお話 BGM'],['assistantChatStoryEvent','助手とおしゃべりのお話 BGM'],['atsuJoinStoryEvent','あつ加入のお話 BGM'],['kyukoJoinStoryEvent','きゅうこ加入のお話 BGM'],['cardBattleIntroEvent','MFバトルカードのお話 BGM']]},
+      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM'],['masuCallEvent','マスモンとセッションのお話 BGM'],['halloweenNightEvent','ハロウィン・ナイトのお話 BGM'],['assistantChatStoryEvent','助手とおしゃべりのお話 BGM'],['atsuJoinStoryEvent','あつ加入のお話 BGM'],['kyukoJoinStoryEvent','きゅうこ加入のお話 BGM'],['cardBattleIntroEvent','MFバトルカードのお話 BGM'],['cardCupStoryEvent','個人杯のお話 BGM']]},
       {id:'other',label:'その他',items:[['rhythmModeSelect','モンヒロビート モードえらび BGM'],['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM']]},
     ];const battleModes=BGM_BATTLE_MODE_TABS;const selected=categories.find(category=>category.id===bgmArrangementCategory)||categories[0];const selectedMode=battleModes.find(mode=>mode.id===bgmArrangementBattleMode)||battleModes[0];const items=selected.id==='battle'?selectedMode.items:selected.items;return <><div role="tablist" aria-label="BGMカテゴリ" className="grid grid-cols-4 gap-1 mb-3">{categories.map(category=><button key={category.id} type="button" role="tab" aria-selected={selected.id===category.id} onClick={()=>setBgmArrangementCategory(category.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selected.id===category.id?'bg-indigo-600 border-indigo-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{category.label}</button>)}</div>{selected.id==='battle'&&<div role="tablist" aria-label="バトルモード" className={`grid ${battleModes.length>=6?'grid-cols-3':battleModes.length>=5?'grid-cols-5':'grid-cols-4'} gap-1 mb-4`}>{battleModes.map(mode=><button key={mode.id} type="button" role="tab" aria-selected={selectedMode.id===mode.id} onClick={()=>setBgmArrangementBattleMode(mode.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selectedMode.id===mode.id?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{mode.label}</button>)}</div>}<div className="space-y-4">{selected.id==='other'&&[
       ['autoVictoryJingle','AUTO時 敵撃破ファンファーレ'],
@@ -91347,6 +91476,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             cardBattleVisible={(EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&cardBattleIntroSeenFlag)||cardBattleDebugHome} onOpenCardBattle={()=>{setCardOrigin('home');setGameState('CARD_TOP');}}
             /* 公開前の予告(社長 2026-10-25)。ふつうのプレイヤーに「近日公開」の札を出し、押すと予告の小窓。公開の印が立てば出なくなり、上のふつうの入口に替わる */
             cardBattleTeaser={!EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&!cardBattleDebugHome} onOpenCardTeaser={()=>setCardTeaserOpen(true)}
+            /* 公式杯の札(2026-10-31 社長・案A)。MFバトルカードに入れる人に、大会があるあいだだけ出る(大会の行を足すだけで出る)。押すと大会のトップを開き、戻ると HOME */
+            cardTourVisible={(EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&cardBattleIntroSeenFlag)||cardBattleDebugHome}
+            onOpenCardTour={(tourId)=>{if(typeof cardShareIntentSet==='function')cardShareIntentSet({kind:'tour',tourId});setCardOrigin('home');setGameState('CARD_TOP');}}
           />
         )}
         {/* 助手とおしゃべり(2026-10-14)。話す相手は、いま選んでいる助手。返事が来た1往復ごとにその助手の仲良し度(chat)が増える */}
@@ -102162,7 +102294,7 @@ const createAnimationStyle = () => {
     @keyframes mhDiscBorn{0%{opacity:0;transform:scale(.35)}60%{opacity:1;filter:drop-shadow(0 0 30px #fde68a) brightness(1.6)}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(253,230,138,.55)) brightness(1)}}
     @keyframes mhDiscUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
     @media (prefers-reduced-motion: reduce){.mh-disc-rebirth-disc,.mh-disc-rebirth-flash,.mh-disc-rebirth-sparks i{animation:none;opacity:0}.mh-disc-rebirth-rays{animation:none;opacity:1}.mh-disc-rebirth-plate,.mh-disc-rebirth-art,.mh-disc-rebirth-name,.mh-disc-rebirth-note,.mh-disc-rebirth-close{animation:none;opacity:1;transform:none;pointer-events:auto}}
-    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 43px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(152px + var(--wal-grow,0px));padding:4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:2.52%;top:max(26.58%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:2.94%;top:max(25.9%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}.mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{position:absolute;z-index:5;left:9px;bottom:min(calc(33% + 4px),calc(44.75% - 82px));display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}.mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}.mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}.mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}.mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}.mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{bottom:52px}/* 横向きでもイベントの札を出す。MFバトルカードの札(下から12px)のすぐ上(2026-10-26 ダメダシくん「横では見当たらない」) */.mh-home-card-battle,.mh-home-card-battle.raised{bottom:12px}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 43px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(152px + var(--wal-grow,0px));padding:4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:2.52%;top:max(26.58%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:2.94%;top:max(25.9%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}.mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{position:absolute;z-index:5;left:9px;bottom:min(calc(33% + 4px),calc(44.75% - 82px));display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}.mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}.mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}/* 公式杯の札(2026-10-31 社長・案A)。イベントの札の下・MFバトルカードの札の上(MFバトルカードの札のいつもの段)。イベントの札が無いときは1段上がる。公式杯の札があるときは、MFバトルカードの札は1段下(below-tour) */.mh-home-tour-banner{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));display:flex;align-items:center;gap:6px;max-width:min(calc(100% - 150px),240px);padding:3px 10px 3px 7px;border:1.5px solid #fde68a;border-radius:13px;background:linear-gradient(135deg,#78350fee,#b45309ee 45%,#1e1b4bee);color:#fffbeb;text-align:left;box-shadow:0 0 0 2px #f59e0b55,0 3px 10px #0008}.mh-home-tour-banner.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}.mh-home-tour-banner>span:first-child{font-size:19px;line-height:1}.mh-home-tour-banner>span:last-child{display:flex;min-width:0;flex-direction:column;gap:1px;line-height:1.2}.mh-home-tour-banner b{overflow:hidden;font-size:11.5px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner small{display:block;overflow:hidden;font-size:9.5px;font-weight:800;color:#fde68a;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner em{margin-left:5px;padding:0 5px;border-radius:999px;background:#fbbf24;color:#3d2305;font-style:normal;font-size:9px;font-weight:900;line-height:1.5}.mh-home-tour-banner:active{transform:scale(.96);filter:brightness(1.15)}.mh-home-card-battle.below-tour{bottom:min(calc(33% - 84px),calc(44.75% - 170px))}.mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}.mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}.mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{bottom:52px}/* 横向きでもイベントの札を出す。MFバトルカードの札(下から12px)のすぐ上(2026-10-26 ダメダシくん「横では見当たらない」) */.mh-home-card-battle,.mh-home-card-battle.raised,.mh-home-card-battle.below-tour{bottom:12px}/* 横向きの公式杯の札は MFバトルカードの札のすぐ上、イベントの札はその上 */.mh-home-tour-banner,.mh-home-tour-banner.raised{bottom:52px}.mh-home-scene:has(.mh-home-tour-banner) .mh-home-event-banner{bottom:96px}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも
