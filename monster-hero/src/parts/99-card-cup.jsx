@@ -8,7 +8,8 @@
 //   ・表が無い・通信できないときは「準備中」と出して何もしない
 
 // 公開の印。告知と同じ日に true にする。それまではデバッグ設定から入ったときだけ入口が出る
-const cardCupOpen = () => false;
+// 2026-10-31 社長「個人杯だけ先に公開」で true に。ごほうび・参加費・主催仲間は別の印(99-card-cup-prize の cardCupPrizeOpen。リプレイくん)で、まだ閉じたまま
+const cardCupOpen = () => true;
 
 const cardCupText = (t, n = 40) => {
   const s = String(t || '').slice(0, n);
