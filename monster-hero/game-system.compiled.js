@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c35a125a69e6a159
+// source-sha256: cfab58436f8bef4b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99051,6 +99051,7 @@ const CardBattleBoard = ({
   const tutStage = tutorial ? CARD_TUTORIAL_STAGES[Math.min(tutI, CARD_TUTORIAL_STAGES.length - 1)] : null;
   const [motions, setMotions] = useState({});
   const motionTimers = useRef([]);
+  const pendingAtk = useRef(null);
   const actionMissed = useRef(null);
   useEffect(() => () => motionTimers.current.forEach(clearTimeout), []);
   const playMotion = (id, mv, ms) => {
@@ -99318,19 +99319,33 @@ const CardBattleBoard = ({
     }
     stRef.current = next;
     const evs = next.events || [];
+    const held = pendingAtk.current;
+    const deferred = held && held.turn === next.turn && evs.some(e => e.t === 'hit' || e.t === 'guard') ? held : null;
+    if (deferred) {
+      pendingAtk.current = null;
+      playMotion(deferred.id, {
+        ...deferred.mv,
+        key: `${deferred.mv.key}-go`
+      }, cardMotionMs(deferred.mv.kind) + 80);
+    }
+    if (held && held.turn !== next.turn) pendingAtk.current = null;
+    const lead = deferred ? Math.round(cardMotionMs(deferred.mv.kind) * 0.5) : 0;
+    const later = fn => {
+      if (lead > 0) motionTimers.current.push(setTimeout(fn, lead));else fn();
+    };
     const hits = evs.filter(e => e.t === 'hit' || e.t === 'heal').map((e, i) => ({
       ...e,
       key: `${next.log.length}-${i}-${Date.now()}`,
       heal: e.t === 'heal' ? e.n : 0,
       dmg: e.t === 'hit' ? e.dmg : 0
     }));
-    if (hits.length) {
+    if (hits.length) later(() => {
       if (settings.damageNum !== 'OFF') setFx(hits);
       motionTimers.current.push(setTimeout(() => setFx(cur => cur.filter(f => !hits.some(h => h.key === f.key))), hits.some(h => cardHitResultOf(h) && cardHitResultOf(h).kind !== 'none') ? 1600 : 1000));
       if (hits.some(h => h.dmg >= 3)) Audio_.fgSe.crit();else if (hits.some(h => h.dmg > 0)) Audio_.fgSe.attack();else if (hits.some(h => h.heal)) Audio_.fgSe.heal();else Audio_.fgSe.guard();
-    } else if (evs.some(e => e.t === 'use')) Audio_.fgSe.card();
+    });else if (evs.some(e => e.t === 'use')) Audio_.fgSe.card();
     const kos = evs.filter(e => e.t === 'ko');
-    if (kos.length && next.winner === null && !tutorial) {
+    if (kos.length && next.winner === null && !tutorial) later(() => {
       const p0 = kos[0].p;
       const key = `down-${next.log.length}-${Date.now()}`;
       setDownBand({
@@ -99340,7 +99355,7 @@ const CardBattleBoard = ({
         left: next.players[p0].mons.filter(x => !x.ko).length
       });
       motionTimers.current.push(setTimeout(() => setDownBand(cur => cur && cur.key === key ? null : cur), Math.max(700, Math.round(1100 * pace))));
-    }
+    });
     const centerOf = id => {
       const el = document.querySelector(`[data-card-art="${id}"]`);
       if (!el) return null;
@@ -99361,13 +99376,22 @@ const CardBattleBoard = ({
       const to = inPlace ? from : e.target ? centerOf(`${e.target.p}-${e.target.m}`) : centerOf(`${1 - e.p}-1`);
       if (!from || !to) return;
       const key = `${next.log.length}-${n}-${Date.now()}`;
-      playMotion(`${e.p}-${e.mon}`, {
+      const mv = {
         type: 'attack',
         kind,
         dx: Math.round(to.x - from.x),
         dy: Math.round(to.y - from.y),
         key
-      }, cardMotionMs(kind) + 80);
+      };
+      if (!inPlace && next.pending && next.pending.attacker === e.p && next.pending.mon === e.mon) {
+        pendingAtk.current = {
+          id: `${e.p}-${e.mon}`,
+          mv,
+          turn: next.turn
+        };
+        return;
+      }
+      playMotion(`${e.p}-${e.mon}`, mv, cardMotionMs(kind) + 80);
     });
     const breederUse = motionOn && evs.find(e => e.t === 'use' && cardIsBreederCard(db, e.cards[0]));
     if (breederUse) {
@@ -99380,7 +99404,7 @@ const CardBattleBoard = ({
     }
     const back = motionOn && evs.find(e => e.t === 'hit' && e.reflect);
     const shield = back && evs.find(e => e.t === 'hit' && !e.reflect && e.guarded);
-    if (back && shield) {
+    if (back && shield) later(() => {
       const a = centerOf(`${shield.p}-${shield.m}`);
       const b = centerOf(`${back.p}-${back.m}`);
       if (a && b) {
@@ -99395,7 +99419,7 @@ const CardBattleBoard = ({
         motionTimers.current.push(setTimeout(() => setBeams(cur => [...cur, beam]), 260));
         motionTimers.current.push(setTimeout(() => setBeams(cur => cur.filter(x => x.key !== key)), 1100));
       }
-    }
+    });
     evs.filter(e => e.t === 'guard').forEach(e => {
       const c = cardOf(db, e.card);
       lastGuard.current[`${e.p}-${e.mon}`] = {
@@ -99409,20 +99433,22 @@ const CardBattleBoard = ({
       const g = lastGuard.current[`${e.p}-${e.m}`];
       const recent = g && Date.now() - g.at < 20000;
       if (type === 'dodge' && recent && g.jump) type = 'jump';
-      if (type && motionOn) playMotion(`${e.p}-${e.m}`, {
+      const hk = `h${next.log.length}-${n}-${Date.now()}`;
+      if (type && motionOn) later(() => playMotion(`${e.p}-${e.m}`, {
         type,
         label: type === 'guard' && recent ? g.label : '',
-        key: `h${next.log.length}-${n}-${Date.now()}`
-      }, type === 'jump' ? 920 : 720);
+        key: hk
+      }, type === 'jump' ? 920 : 720));
     });
     evs.filter(e => e.t === 'guard').forEach((e, n) => {
       const c = cardOf(db, e.card);
       const type = c && c.kind === 'dge' ? cardDodgeIsJump(c) ? 'jump' : 'dodge' : 'guard';
-      if (motionOn) playMotion(`${e.p}-${e.mon}`, {
+      const gk = `g${next.log.length}-${n}-${Date.now()}`;
+      if (motionOn) later(() => playMotion(`${e.p}-${e.mon}`, {
         type,
         label: type === 'guard' ? cardGuardLabel(c) : '',
-        key: `g${next.log.length}-${n}-${Date.now()}`
-      }, type === 'jump' ? 920 : 720);
+        key: gk
+      }, type === 'jump' ? 920 : 720));
     });
     const use = evs.find(e => e.t === 'use');
     if (use) {
