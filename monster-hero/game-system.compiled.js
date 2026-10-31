@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7a5f397cc8238157
+// source-sha256: 3f0b91f51c7151f3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -104974,6 +104974,18 @@ const CardDeckPickTile = ({
     className: "flex h-[28px] w-[27px] shrink-0 items-center justify-center rounded-md bg-emerald-600 text-[18px] font-black leading-none text-white active:scale-90 disabled:bg-slate-700 disabled:text-slate-500"
   }, "＋")));
 };
+const cardDeckUnusableCards = (db, deck) => {
+  const mons = (deck && Array.isArray(deck.monsters) ? deck.monsters : []).map(no => cardMonsterOf(db, no)).filter(Boolean);
+  return (deck && Array.isArray(deck.cards) ? deck.cards : []).filter(no => {
+    const c = cardOf(db, no);
+    if (!c || !c.ready) return true;
+    if (!mons.length || c.user === 'breeder' || c.user === 'any' || c.kind === 'fld') return false;
+    return !mons.some(m => cardUsableBy(c, {
+      ...m,
+      ko: false
+    }));
+  });
+};
 const CardDeckEditor = ({
   db,
   collection,
@@ -105009,6 +105021,7 @@ const CardDeckEditor = ({
   const [notice, setNotice] = useState('');
   const [detail, setDetail] = useState(null);
   const [leave, setLeave] = useState(false);
+  const [dropAsk, setDropAsk] = useState(null);
   const [ask, setAsk] = useState(null);
   const press = useCardLongPress(no => setDetail(no));
   const short = typeof window !== 'undefined' && window.innerHeight < 760 && window.innerHeight > window.innerWidth;
@@ -105080,6 +105093,28 @@ const CardDeckEditor = ({
     return !!c && mons.length > 0 && c.user !== 'any' && c.user !== 'breeder' && c.kind !== 'fld' && !mons.some(m => cardUsableBy(c, m));
   };
   const unusableCount = cardDeckDeadCount(db, deck);
+  const dropList = cardDeckUnusableCards(db, deck);
+  const dropNames = list => Object.entries(list.reduce((a, no) => ({
+    ...a,
+    [no]: (a[no] || 0) + 1
+  }), {})).map(([no, n]) => `${(cardOf(db, no) || {}).name || no}${n > 1 ? `×${n}` : ''}`).join('・');
+  const dropNow = () => {
+    const list = dropList;
+    if (!list.length) return;
+    setDeck(d => {
+      const left = [...list];
+      return {
+        ...d,
+        cards: d.cards.filter(no => {
+          const k = left.indexOf(no);
+          if (k < 0) return true;
+          left.splice(k, 1);
+          return false;
+        })
+      };
+    });
+    setNotice(`外しました: ${dropNames(list)}`);
+  };
   const shown = view === 'mon' ? ownedMons : view === 'deck' ? [...deck.monsters, ...[...new Set(deck.cards)].sort((a, b) => unusableIn(b) - unusableIn(a) || bySort(a, b))] : ownedCards.filter(no => cardDeckFilterOk(cardOf(db, no), view) && usable(no)).sort(bySort);
   const tile = no => {
     const inDeck = countOf(no);
@@ -105254,7 +105289,16 @@ const CardDeckEditor = ({
     },
     className: "block w-full text-left text-[11px] font-bold leading-snug text-amber-200 underline decoration-dotted",
     style: JA_WRAP_STYLE
-  }, jaWrap(`3体のどのモンスターも使えないカードが${unusableCount}枚入っています(混血のモンスターは、守りのカードはサブの種族のものだけ使えます。押すと先頭に並べます)`)), notice && React.createElement("div", {
+  }, jaWrap(`3体のどのモンスターも使えないカードが${unusableCount}枚入っています(混血のモンスターは、守りのカードはサブの種族のものだけ使えます。押すと先頭に並べます)`)), dropList.length > 0 && React.createElement("button", {
+    type: "button",
+    "data-card-deck-drop-dead": dropList.length,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setDropAsk(dropList);
+    },
+    className: "mh-button min-h-[36px] w-full rounded-xl border border-amber-300/70 bg-amber-900/40 px-2 text-[12px] font-black text-amber-100 active:scale-[.98]",
+    style: JA_LABEL_STYLE
+  }, jaWrap(`使えないカードを外す(${dropList.length}枚)`)), notice && React.createElement("div", {
     "data-card-deck-notice": true,
     className: "text-[12px] font-black text-amber-200",
     style: JA_LABEL_STYLE
@@ -105365,6 +105409,16 @@ const CardDeckEditor = ({
     db: db,
     no: detail,
     onClose: () => setDetail(null)
+  }), dropAsk && React.createElement(ConfirmSheet, {
+    title: `使えないカードを${dropAsk.length}枚外しますか？`,
+    message: `外すカード: ${dropNames(dropAsk)}(外したあと「保存する」を押すとデッキに残ります)`,
+    confirmLabel: "外す",
+    onCancel: () => setDropAsk(null),
+    onConfirm: () => {
+      setDropAsk(null);
+      Audio_.fgSe.tap();
+      dropNow();
+    }
   }), leave && React.createElement(ConfirmSheet, {
     title: "保存せずに戻りますか？",
     message: "組みかえたところは消えます",
