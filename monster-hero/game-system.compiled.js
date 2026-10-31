@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ba08449f5a489877
+// source-sha256: 1c8611cec6adfc37
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -89480,6 +89480,13 @@ const cardFuseOptions = (db, st, p) => {
   }));
   return out;
 };
+const cardEmergeOptions = (db, card) => {
+  const sub = card && card.user;
+  const out = sub ? Object.values(db.monsters).filter(m => m.sub === sub && m.ready !== false).sort((x, y) => x.no < y.no ? -1 : 1).map(m => m.no) : [];
+  if (out.length) return out;
+  const e = cardEff(card, 'emerge');
+  return e && e.to ? [e.to] : [];
+};
 const cardSwapMon = (db, mon, no) => {
   const m = cardMonsterOf(db, no);
   Object.assign(mon, {
@@ -89695,17 +89702,22 @@ const cardAttackOptions = (db, st) => {
         if (!byTarget && cardFieldBanned(db, st, p, mi, card, idxs)) return;
         if (card.kind === 'spe') {
           const forms = cardHasEff(card, 'form') ? ['air', 'ground'] : [undefined];
-          cardSpeTargets(db, st, p, mi, card).forEach(target => forms.forEach(form => out.push(form ? {
-            type: 'attack',
-            mon: mi,
-            hand: idxs,
-            target,
-            form
-          } : {
-            type: 'attack',
-            mon: mi,
-            hand: idxs,
-            target
+          const emerges = cardHasEff(card, 'emerge') ? cardEmergeOptions(db, card) : [null];
+          cardSpeTargets(db, st, p, mi, card).forEach(target => forms.forEach(form => emerges.forEach(emerge => {
+            const o = form ? {
+              type: 'attack',
+              mon: mi,
+              hand: idxs,
+              target,
+              form
+            } : {
+              type: 'attack',
+              mon: mi,
+              hand: idxs,
+              target
+            };
+            if (emerge) o.emerge = emerge;
+            out.push(o);
           })));
           return;
         }
@@ -90402,7 +90414,7 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
     }
     if (e.t === 'emerge' && self && self.cocoon) {
       const from = self.name;
-      cardSwapMon(db, self, e.to);
+      cardSwapMon(db, self, typeof act.emerge === 'string' ? act.emerge : e.to);
       cardLog(st, `${from}は${self.name}になった(ライフ${self.life})`);
     }
     if (e.t === 'fuse' && act.fuse) {
@@ -90779,7 +90791,7 @@ const cardApplyAction = (db, st0, act) => {
       return st;
     }
     if (act.type !== 'attack' && act.type !== 'breeder') return null;
-    const ok = cardAttackOptions(db, st0).some(o => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null) && o.form === act.form && JSON.stringify(o.split) === JSON.stringify(act.split) && JSON.stringify(o.fuse) === JSON.stringify(act.fuse) && JSON.stringify(o.toss) === JSON.stringify(Array.isArray(act.toss) ? act.toss.slice().sort((x, y) => x - y) : act.toss));
+    const ok = cardAttackOptions(db, st0).some(o => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null) && o.form === act.form && JSON.stringify(o.split) === JSON.stringify(act.split) && JSON.stringify(o.fuse) === JSON.stringify(act.fuse) && (act.emerge === undefined || o.emerge === act.emerge) && JSON.stringify(o.toss) === JSON.stringify(Array.isArray(act.toss) ? act.toss.slice().sort((x, y) => x - y) : act.toss));
     if (!ok) return null;
     const needBind = act.hand.some(i => cardHasEff(cardOf(db, st0.players[p].hand[i]), 'attachBind'));
     if (needBind ? !(typeof act.bind === 'string' && cardBindNames(db).includes(act.bind)) : act.bind !== undefined && act.bind !== null) return null;
@@ -91147,7 +91159,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'cocoon') score += me.hand.some(n => cardHasEff(cardOf(db, n), 'emerge')) ? 1 : -3;
       if (e.t === 'emerge') {
         const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null;
-        const to = cardMonsterOf(db, e.to);
+        const to = cardMonsterOf(db, opt.emerge || e.to);
         score += 2 + (m0 && to ? (to.life - m0.life) * 0.3 : 0);
       }
       if (e.t === 'fuse' && opt.fuse) {
@@ -99997,6 +100009,10 @@ const CardBattleBoard = ({
       setSplitAsk(same.filter(o => o.split || o.fuse));
       return;
     }
+    if (t.emerge && same.filter(o => o.emerge).length > 1) {
+      setSplitAsk(same.filter(o => o.emerge));
+      return;
+    }
     if (t.form) {
       setSel({
         hand: t.hand[0],
@@ -100378,12 +100394,12 @@ const CardBattleBoard = ({
       }
     })() : null;
     const useLabel = usePv ? `使う(${usePv.dmg !== null ? `${usePv.all ? '全体に' : ''}ダメージ${usePv.dmg}・` : ''}ガッツ${usePv.guts})` : '使う';
-    return React.createElement(React.Fragment, null, useBtn && finalOpts.some(o => o.split || o.fuse) ? React.createElement("button", {
+    return React.createElement(React.Fragment, null, useBtn && (finalOpts.some(o => o.split || o.fuse) || finalOpts.filter(o => o.emerge).length > 1) ? React.createElement("button", {
       type: "button",
       "data-card-split-open": true,
       className: `${btn} mh-button-primary`,
       onClick: () => setSplitAsk(finalOpts)
-    }, React.createElement(CardFitLabel, null, finalOpts.some(o => o.fuse) ? '合体の組を選ぶ' : '割り振りを選ぶ')) : useBtn && finalOpts.some(o => o.form) ? ['air', 'ground'].map(f => {
+    }, React.createElement(CardFitLabel, null, finalOpts.some(o => o.fuse) ? '合体の組を選ぶ' : finalOpts.some(o => o.emerge) ? '羽化する先を選ぶ' : '割り振りを選ぶ')) : useBtn && finalOpts.some(o => o.form) ? ['air', 'ground'].map(f => {
       const o = finalOpts.find(x => x.form === f);
       return o ? React.createElement("button", {
         key: f,
@@ -101281,18 +101297,21 @@ const CardBattleBoard = ({
   }, React.createElement("div", {
     className: "text-[15px] font-black",
     style: JA_LABEL_STYLE
-  }, jaWrap(splitAsk.some(o => o.fuse) ? '合体する2体を選ぶ(左がメイン・右がサブ)' : 'ダメージの割り振りを選ぶ')), React.createElement("div", {
+  }, jaWrap(splitAsk.some(o => o.fuse) ? '合体する2体を選ぶ(左がメイン・右がサブ)' : splitAsk.some(o => o.emerge) ? '羽化して取りかえる先を選ぶ' : 'ダメージの割り振りを選ぶ')), React.createElement("div", {
     className: "mt-2 grid max-h-[55vh] gap-1.5 overflow-y-auto"
   }, splitAsk.map(o => React.createElement("button", {
-    key: JSON.stringify(o.split || o.fuse),
+    key: JSON.stringify(o.split || o.fuse || o.emerge),
     type: "button",
-    "data-card-split": o.split ? o.split.join('-') : `${o.fuse.a}-${o.fuse.b}`,
+    "data-card-split": o.split ? o.split.join('-') : o.emerge ? o.emerge : `${o.fuse.a}-${o.fuse.b}`,
     onClick: () => {
       setSplitAsk(null);
       askUse(o);
     },
     className: "min-h-[44px] rounded-xl bg-slate-700 px-2 text-left text-[14px] font-black text-white active:scale-[.98]"
-  }, o.fuse ? `${me.mons[o.fuse.a].name}＋${me.mons[o.fuse.b].name} → ${(cardMonsterOf(db, o.fuse.no) || {}).name || ''}` : o.split.map((x, j) => x > 0 ? `${st.players[CARD_CPU].mons[j].name} ${x}` : null).filter(Boolean).join('・')))), React.createElement("button", {
+  }, o.fuse ? `${me.mons[o.fuse.a].name}＋${me.mons[o.fuse.b].name} → ${(cardMonsterOf(db, o.fuse.no) || {}).name || ''}` : o.emerge ? (() => {
+    const m = cardMonsterOf(db, o.emerge) || {};
+    return `${m.name || ''}(ライフ${m.life || 0}・${m.type === 'air' ? '空中' : '地上'})`;
+  })() : o.split.map((x, j) => x > 0 ? `${st.players[CARD_CPU].mons[j].name} ${x}` : null).filter(Boolean).join('・')))), React.createElement("button", {
     type: "button",
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200",
     onClick: () => setSplitAsk(null)
@@ -109088,6 +109107,10 @@ const cardPvpCleanAct = raw => {
       b,
       no: f.no
     };
+  }
+  if (raw.emerge !== undefined) {
+    if (typeof raw.emerge !== 'string' || !/^C-[0-9A-Z-]{1,8}$/.test(raw.emerge)) return null;
+    act.emerge = raw.emerge;
   }
   if (raw.toss !== undefined) {
     if (!Array.isArray(raw.toss)) return null;
