@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 29dffb6f0b8f09cc
+// source-sha256: cf858ee5bb3ddd47
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -100592,7 +100592,13 @@ const CardBattleBoard = ({
     const t = pd.targets[pd.ti];
     return t && t.p === p && t.m === m ? guardPv.cards.map(no => cardGuardShort(cardOf(db, no))).join('・') : '';
   };
-  const guardAtk = pd && pd.defender === CARD_ME && !tutorial ? cardOf(db, pd.main) : null;
+  const guardAtk = pd && !tutorial ? cardOf(db, pd.main) : null;
+  const guardAtkText = guardAtk ? guardAtk.text || cardPlainEffectText(guardAtk) : '';
+  const guardAtkAll = guardAtk ? [pd.main, ...(Array.isArray(pd.used) ? pd.used : []).filter((no, i, a) => no !== pd.main || a.indexOf(no) !== i)].map(no => cardOf(db, no)).filter(Boolean) : [];
+  const guardAtkSame = guardAtk ? guardAtkAll.filter(c => c.no === guardAtk.no).length : 0;
+  const guardAtkMore = guardAtkAll.slice(1).filter((c, i, a) => c.no !== (guardAtk && guardAtk.no) && a.findIndex(x => x.no === c.no) === i);
+  const liveFoeCard = !pd && action && action.side === 'foe' && Array.isArray(action.cards) ? cardOf(db, action.cards[0]) : null;
+  const liveFoeText = liveFoeCard ? liveFoeCard.text || cardPlainEffectText(liveFoeCard) : '';
   const logLines = st.log.filter(l => l.kind !== 'turn').slice(-3);
   const liveLine = (() => {
     const L = st.log.filter(l => l.kind !== 'turn' && !/が先攻、.*が後攻$/.test(String(l.text || '')));
@@ -101210,23 +101216,47 @@ const CardBattleBoard = ({
     "data-card-log-empty": !pendingText && !liveLine ? '1' : undefined,
     className: `${!pendingText && !liveLine ? 'invisible ' : ''}relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center ${compact ? 'text-[13px]' : 'text-[14px]'} font-bold leading-snug ${turnBanner || bigCard || downBand || endFx ? 'invisible' : ''}`,
     style: JA_WRAP_STYLE
-  }, pendingText && (guardAtk ? React.createElement("button", _extends({
+  }, pendingText && (guardAtk ? React.createElement("div", {
+    "data-card-guard-attack": guardAtk.no,
+    "data-card-guard-attack-count": guardAtkAll.length,
+    className: "flex w-full max-w-[360px] items-center gap-2 text-left"
+  }, stageFit < 3 && React.createElement("span", {
+    className: "flex shrink-0"
+  }, guardAtkAll.map((c, i) => React.createElement("button", _extends({
+    key: `${c.no}-${i}`,
     type: "button",
-    "data-card-guard-attack": guardAtk.no
-  }, press(guardAtk.no, () => setDetail(guardAtk.no)), {
-    className: "flex w-full max-w-[360px] items-center gap-2 text-left active:scale-[.98]"
-  }), stageFit < 3 && React.createElement("img", {
-    src: CARD_IMG(guardAtk.img),
-    alt: guardAtk.name,
-    className: `${tiny || stageFit >= 2 ? 'h-[36px]' : 'h-[52px]'} aspect-[5/7] shrink-0 rounded-[4px] object-cover shadow`
+    "data-card-guard-attack-card": c.no
+  }, press(c.no, () => setDetail(c.no), {
+    double: false
+  }), {
+    "aria-label": `${c.name}を詳しく見る`,
+    className: `relative shrink-0 active:scale-95 ${i ? guardAtkAll.length > 2 ? '-ml-5' : '-ml-3' : ''}`,
+    style: {
+      zIndex: guardAtkAll.length - i
+    }
+  }), React.createElement("img", {
+    src: CARD_IMG(c.img),
+    alt: c.name,
+    className: `${tiny || stageFit >= 2 ? 'h-[36px]' : stageFit >= 1 || compact ? 'h-[52px]' : 'h-[76px]'} aspect-[5/7] rounded-[4px] object-cover shadow ring-1 ring-black/40`
+  })))), React.createElement("button", _extends({
+    type: "button"
+  }, press(guardAtk.no, () => setDetail(guardAtk.no), {
+    double: false
+  }), {
+    className: "min-w-0 flex-1 text-left active:scale-[.98]"
   }), React.createElement("span", {
-    className: "min-w-0 flex-1"
-  }, React.createElement("span", {
     className: "block text-rose-200"
-  }, pendingText), guardAtk.text && stageFit < 2 && React.createElement("span", {
+  }, pendingText), guardAtkSame > 1 && React.createElement("span", {
+    "data-card-guard-attack-same": guardAtkSame,
+    className: "block text-[11px] font-black text-amber-200"
+  }, `「${guardAtk.name}」×${guardAtkSame}`), guardAtkText && stageFit < 2 && React.createElement("span", {
     "data-card-guard-attack-text": true,
-    className: `${tiny || stageFit >= 1 ? 'line-clamp-1' : 'line-clamp-2'} block text-[11px] leading-snug text-slate-200`
-  }, guardAtk.text))) : React.createElement("div", {
+    className: `${tiny || stageFit >= 1 ? 'line-clamp-1' : compact ? 'line-clamp-2' : 'line-clamp-3'} block text-[11px] leading-snug text-slate-200`
+  }, guardAtkText), guardAtkMore.length > 0 && stageFit < 2 && guardAtkMore.map((c, i) => React.createElement("span", {
+    key: `${c.no}-m${i}`,
+    "data-card-guard-attack-more": c.no,
+    className: "line-clamp-1 block text-[11px] leading-snug text-amber-100"
+  }, `＋「${c.name}」${c.text || cardPlainEffectText(c) ? ` ${c.text || cardPlainEffectText(c)}` : ''}`)))) : React.createElement("div", {
     className: "text-rose-200"
   }, pendingText)), pendingText && React.createElement(CardGuardPreview, {
     db: db,
@@ -101259,7 +101289,12 @@ const CardBattleBoard = ({
   }, React.createElement("span", {
     "data-card-fit": true,
     className: `whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-black ${action.side === 'foe' ? 'bg-rose-500 text-white' : 'bg-amber-300 text-slate-950'}`
-  }, action.side === 'foe' ? watch ? who.name : '相手' : watch ? meName : '自分')), cardLogText(liveLine))))), !wide && tutorBox, React.createElement("div", {
+  }, action.side === 'foe' ? watch ? who.name : '相手' : watch ? meName : '自分')), cardLogText(liveLine))), !pendingText && liveLine && liveFoeText && stageFit < 2 && React.createElement("button", _extends({
+    type: "button",
+    "data-card-live-foe-text": liveFoeCard.no
+  }, press(liveFoeCard.no, () => setDetail(liveFoeCard.no)), {
+    className: `mt-0.5 block w-full ${tiny || stageFit >= 1 ? 'line-clamp-1' : 'line-clamp-2'} text-center text-[11px] font-bold leading-snug text-slate-200`
+  }), liveFoeText))), !wide && tutorBox, React.createElement("div", {
     "data-card-side-active": turnLive && turnMe ? 'me' : undefined,
     "data-card-floor": "me",
     className: `flex shrink-0 items-end justify-around rounded-2xl px-1 transition-shadow ${turnLive && turnMe ? 'shadow-[inset_0_0_0_2px_rgba(252,211,77,.8),0_0_16px_rgba(252,211,77,.35)]' : ''}`,

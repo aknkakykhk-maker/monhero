@@ -1824,8 +1824,20 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     const t = pd.targets[pd.ti];
     return t && t.p === p && t.m === m ? guardPv.cards.map((no) => cardGuardShort(cardOf(db, no))).join('・') : '';
   };
-  // 自分が守る番に受けている攻撃カード(相手が守る番・練習試合は出さない)
-  const guardAtk = pd && pd.defender === CARD_ME && !tutorial ? cardOf(db, pd.main) : null;
+  // 守りの番に受けている攻撃カード(練習試合は出さない)。守りを決めるまで、まんなかに大きめに残す(2026-10-31 社長
+  //   「カードを相手が使ったときにカードがすぐ流れて効果がわからない」「そのまま場に残るとかして効果見て防御回避とか決めたい」)。
+  //   前は自分が守る番だけだった。観戦・マルチの相手が守る番も、同じ形で出す。効果の文が空のカードは、ダメージから作った一文(cardPlainEffectText)
+  const guardAtk = pd && !tutorial ? cardOf(db, pd.main) : null;
+  const guardAtkText = guardAtk ? (guardAtk.text || cardPlainEffectText(guardAtk)) : '';
+  // 組み合わせ(キックの2枚・同時に使う札・技に付ける札など)で1手に使ったカードを全部(主のカードが先頭)。
+  //   2026-10-31 社長「組み合わせ系も見れるようになってる?」: 前は主の1枚だけだった。それぞれ押すと詳しい画面
+  const guardAtkAll = guardAtk ? [pd.main, ...((Array.isArray(pd.used) ? pd.used : []).filter((no, i, a) => no !== pd.main || a.indexOf(no) !== i))].map((no) => cardOf(db, no)).filter(Boolean) : [];
+  // 文に出すほかのカードは、主と同じカード・同じカードどうしを1つにまとめる(キック2枚なら文は1回・「×2」で数を出す)
+  const guardAtkSame = guardAtk ? guardAtkAll.filter((c) => c.no === guardAtk.no).length : 0;
+  const guardAtkMore = guardAtkAll.slice(1).filter((c, i, a) => c.no !== (guardAtk && guardAtk.no) && a.findIndex((x) => x.no === c.no) === i);
+  // 守りの判断が要らない相手の手(特殊・全体など)は、使ったカードの効果の一文を、次の手まで実況の下に残す
+  const liveFoeCard = !pd && action && action.side === 'foe' && Array.isArray(action.cards) ? cardOf(db, action.cards[0]) : null;
+  const liveFoeText = liveFoeCard ? (liveFoeCard.text || cardPlainEffectText(liveFoeCard)) : '';
   const logLines = st.log.filter((l) => l.kind !== 'turn').slice(-3);
   // まんなかの1行の実況: いちばん新しい1つ(番の替わり目・始めの「先攻・後攻」は除く。2026-10-29 まんなか案A)
   //   技の行(use)のすぐあとに当たりの行(hit)が続くときは「ゴーレムの「でこぴん」→ ナーガに5ダメージ」と1行にまとめる(だれの何の技かが抜けないように)
@@ -2162,14 +2174,24 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         <div data-card-log data-card-log-empty={!pendingText && !liveLine ? '1' : undefined} className={`${!pendingText && !liveLine ? 'invisible ' : ''}relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center ${compact ? 'text-[13px]' : 'text-[14px]'} font-bold leading-snug ${turnBanner || bigCard || downBand || endFx ? 'invisible' : ''}`} style={JA_WRAP_STYLE}>
           {/* 守りを選ぶあいだは、いま受けている相手の攻撃カード(絵・名前・ダメージ・効果)を出す。押すと詳しい画面(2026-10-26 ソラシドさん) */}
           {pendingText && (guardAtk
-            ? <button type="button" data-card-guard-attack={guardAtk.no} {...press(guardAtk.no, () => setDetail(guardAtk.no))} className="flex w-full max-w-[360px] items-center gap-2 text-left active:scale-[.98]">
+            ? <div data-card-guard-attack={guardAtk.no} data-card-guard-attack-count={guardAtkAll.length} className="flex w-full max-w-[360px] items-center gap-2 text-left">
               {/* まんなかに入り切らないときは、効果の文を1行に → 効果の文を省く → 絵を省く(stageFit。320×568 で下が切れた) */}
-              {stageFit < 3 && <img src={CARD_IMG(guardAtk.img)} alt={guardAtk.name} className={`${tiny || stageFit >= 2 ? 'h-[36px]' : 'h-[52px]'} aspect-[5/7] shrink-0 rounded-[4px] object-cover shadow`}/>}
-              <span className="min-w-0 flex-1">
+              {/* 使ったカードを全部、少しずらして重ねる。1回のタップで、そのカードの詳しい画面 */}
+              {stageFit < 3 && <span className="flex shrink-0">{guardAtkAll.map((c, i) => (
+                <button key={`${c.no}-${i}`} type="button" data-card-guard-attack-card={c.no} {...press(c.no, () => setDetail(c.no), { double: false })} aria-label={`${c.name}を詳しく見る`}
+                  className={`relative shrink-0 active:scale-95 ${i ? (guardAtkAll.length > 2 ? '-ml-5' : '-ml-3') : ''}`} style={{ zIndex: guardAtkAll.length - i }}>
+                  <img src={CARD_IMG(c.img)} alt={c.name} className={`${tiny || stageFit >= 2 ? 'h-[36px]' : stageFit >= 1 || compact ? 'h-[52px]' : 'h-[76px]'} aspect-[5/7] rounded-[4px] object-cover shadow ring-1 ring-black/40`}/>
+                </button>))}</span>}
+              <button type="button" {...press(guardAtk.no, () => setDetail(guardAtk.no), { double: false })} className="min-w-0 flex-1 text-left active:scale-[.98]">
                 <span className="block text-rose-200">{pendingText}</span>
-                {guardAtk.text && stageFit < 2 && <span data-card-guard-attack-text className={`${tiny || stageFit >= 1 ? 'line-clamp-1' : 'line-clamp-2'} block text-[11px] leading-snug text-slate-200`}>{guardAtk.text}</span>}
-              </span>
-            </button>
+                {guardAtkSame > 1 && <span data-card-guard-attack-same={guardAtkSame} className="block text-[11px] font-black text-amber-200">{`「${guardAtk.name}」×${guardAtkSame}`}</span>}
+                {guardAtkText && stageFit < 2 && <span data-card-guard-attack-text className={`${tiny || stageFit >= 1 ? 'line-clamp-1' : compact ? 'line-clamp-2' : 'line-clamp-3'} block text-[11px] leading-snug text-slate-200`}>{guardAtkText}</span>}
+                {/* 組み合わせのほかのカード: 名前と効果を1行ずつ */}
+                {guardAtkMore.length > 0 && stageFit < 2 && guardAtkMore.map((c, i) => (
+                  <span key={`${c.no}-m${i}`} data-card-guard-attack-more={c.no} className="line-clamp-1 block text-[11px] leading-snug text-amber-100">{`＋「${c.name}」${(c.text || cardPlainEffectText(c)) ? ` ${c.text || cardPlainEffectText(c)}` : ''}`}</span>
+                ))}
+              </button>
+            </div>
             : <div className="text-rose-200">{pendingText}</div>)}
           {pendingText && <CardGuardPreview db={db} pv={guardPv} compact={compact || stageFit >= 1} tight={tiny || stageFit >= 2}/>}
           {/* 1行の実況(2026-10-29 まんなか案A): いちばん新しい1つだけを、まんなかの同じ所に出す。技なら頭に「自分」「相手」の札。
@@ -2187,6 +2209,11 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
               {cardLogText(liveLine)}
             </div>
             </div>
+          )}
+          {/* 相手が使ったカード(守りの判断が要らない特殊・全体など)の効果の一文。次の手まで残す。押すと詳しい画面 */}
+          {!pendingText && liveLine && liveFoeText && stageFit < 2 && (
+            <button type="button" data-card-live-foe-text={liveFoeCard.no} {...press(liveFoeCard.no, () => setDetail(liveFoeCard.no))}
+              className={`mt-0.5 block w-full ${tiny || stageFit >= 1 ? 'line-clamp-1' : 'line-clamp-2'} text-center text-[11px] font-bold leading-snug text-slate-200`}>{liveFoeText}</button>
           )}
         </div>
         )}
