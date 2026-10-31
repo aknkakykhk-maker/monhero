@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b1cb6e1b2eef49aa
+// generated-sha256: e35723f1dc4be784
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -63973,19 +63973,14 @@ const CardPackArt = ({ db, pack, kit = null, width = 200, torn = false, classNam
   //   torn(開ける画面でちぎれた帯を飛ばすとき)は、袋の上のふちを隠す。スターターキットは今までどおり下の描き方
   const art = !kit && pack && typeof CARD_PACK_ART_IMGS !== 'undefined' ? CARD_PACK_ART_IMGS[pack.id] : null;
   if (art) {
+    // 袋のふちぎりぎりで切り出し、袋の外を透けさせた絵(縦横比 1.631・社長「ふちぎりぎりにして、いらないとこは透過」)。
+    //   透けた所に箱の影が出ないよう、影は袋の形に沿う drop-shadow にする。
+    //   幅100px 未満の所(マーケットの一覧)は、同じ袋の全体を小さくした絵(thumb)。真ん中だけを切り出すと字やモンスターの頭が切れるので、
+    //   袋を丸ごと出す(2026-10-31 社長)
     const small = width < 100;
-    // 大きい絵(full)は袋のふちぎりぎりで切り出し、袋の外を透けさせてある(縦横比 1.631・社長「ふちぎりぎりにして、いらないとこは透過」)。
-    //   透けた所に箱の影が出ないよう、影は袋の形に沿う drop-shadow にする。一覧の小さい絵(thumb)は今までどおり 2:3 の四角
-    if (!small) {
-      return (
-        <div data-card-pack-art={pack.id} data-card-pack-art-img="full" className={`relative ${className}`} style={{ width, height: Math.round(width * 1.631) }}>
-          <img src={art.full} alt={pack.name} draggable={false} className="h-full w-full object-contain drop-shadow-[0_10px_18px_rgba(0,0,0,.55)]" style={torn ? { clipPath: 'inset(8% 0 0 0)' } : undefined}/>
-        </div>
-      );
-    }
     return (
-      <div data-card-pack-art={pack.id} data-card-pack-art-img="thumb" className={`relative overflow-hidden rounded-[10px] shadow-2xl ${className}`} style={{ width, height: Math.round(width * 1.5) }}>
-        <img src={art.thumb} alt={pack.name} draggable={false} className="h-full w-full object-cover"/>
+      <div data-card-pack-art={pack.id} data-card-pack-art-img={small ? 'thumb' : 'full'} className={`relative ${className}`} style={{ width, height: Math.round(width * 1.631) }}>
+        <img src={small ? art.thumb : art.full} alt={pack.name} draggable={false} className={`h-full w-full object-contain ${small ? 'drop-shadow-[0_3px_5px_rgba(0,0,0,.55)]' : 'drop-shadow-[0_10px_18px_rgba(0,0,0,.55)]'}`} style={torn ? { clipPath: 'inset(8% 0 0 0)' } : undefined}/>
       </div>
     );
   }
@@ -64538,7 +64533,7 @@ const CardShopPacks = ({ db, point, busy, collection = null, onBuyPack }) => {
       {CARD_PACKS.map((pack) => (
         <div key={pack.id} data-card-shop-pack={pack.id} className={SCREEN_PANEL_CLASS} style={{ borderColor: `${pack.color}88` }}>
           <div className="flex items-center gap-2">
-            <CardPackArt db={db} pack={pack} width={58} className="shrink-0 !rounded-[8px] !border-2"/>
+            <CardPackArt db={db} pack={pack} width={64} className="shrink-0"/>
             <div className="min-w-0 flex-1">
               <div className="text-[14px] font-black text-white">{pack.name}</div>
               <div data-card-shop-pack-species className="text-[11px] font-black text-amber-100">{cardPackSpeciesLabel(db, pack)}</div>
