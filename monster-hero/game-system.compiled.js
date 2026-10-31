@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f012352a52c078af
+// source-sha256: f53a623f53f8c1ea
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -138929,8 +138929,7 @@ function MonsterHeroGame() {
       short
     });
     if (!enemy) return list;
-    const shellView = enemyShellView(enemy);
-    if (shellView.total > 0 && shellView.left > 0) add('shell', '🛡️', 'シールド', `残り${shellView.left}枚・${Math.floor(shellView.current).toLocaleString()}`, 'text-pink-200 border-pink-400/60', `${shellView.total}枚のうち${shellView.broken}枚割れた。1枚割るごとにボスの攻撃が上がる。シールドを削ったぶんは距離強化の加点に入らない`, `${shellView.left}枚`);else if (Number(enemy.shell) > 0) add('shell', '🛡️', 'シールド', `${Math.floor(enemy.shell).toLocaleString()}`, 'text-pink-200 border-pink-400/60', 'ライフより先に削れる。シールドを削ったぶんは距離強化の加点に入らない', `${Math.floor(enemy.shell).toLocaleString()}`);
+    if ((Number(enemy.shellLayerTotal) || 0) > 0) {} else if (Number(enemy.shell) > 0) add('shell', '🛡️', 'シールド', `${Math.floor(enemy.shell).toLocaleString()}`, 'text-pink-200 border-pink-400/60', 'ライフより先に削れる。シールドを削ったぶんは距離強化の加点に入らない', `${Math.floor(enemy.shell).toLocaleString()}`);
     if (iceLockTurns > 0) add('ice', '❄️', '絶氷の楔', iceLockPreparing ? '準備' : `残り${iceLockTurns}T`, 'text-cyan-200 border-cyan-400/60', iceLockPreparing ? '次のターンから、敵は間合いを動けず、与えるダメージが30%下がる' : '敵は間合いを動けず、与えるダメージが30%下がる', iceLockPreparing ? '準備' : `${iceLockTurns}T`);
     if (enemyConfuseTurns > 0) add('confuse', '🌀', '乱心', `残り${enemyConfuseTurns}T`, 'text-violet-200 border-violet-400/60', '毎ターン50%で、敵は意味不明になって動けない', `${enemyConfuseTurns}T`);
     const psycho = isTacticsMode(runMode) ? tacticsExPsychoLockOf(tacticsExState, {

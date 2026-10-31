@@ -12097,9 +12097,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const add = (key, mark, label, value, tone, note, short = '') => list.push({ key, mark, label, value, tone, note, short });
     if (!enemy) return list;
     // シールド(ETERNAL)。ライフより先に削れる。シールドを削ったぶんは距離強化の加点に入らない
-    // 層のシールド(INFERNOのボス)は「残り◯枚」も出す。ゲージと割れた演出は見た目側(enemyShellView を読む)
-    const shellView = enemyShellView(enemy);
-    if (shellView.total > 0 && shellView.left > 0) add('shell', '🛡️', 'シールド', `残り${shellView.left}枚・${Math.floor(shellView.current).toLocaleString()}`, 'text-pink-200 border-pink-400/60', `${shellView.total}枚のうち${shellView.broken}枚割れた。1枚割るごとにボスの攻撃が上がる。シールドを削ったぶんは距離強化の加点に入らない`, `${shellView.left}枚`);
+    // 層のシールド(INFERNOのボス)は、敵のゲージ(見た目側の enemyShellView)だけで見せる。状態欄には札を出さない(2026-10-31 社長)
+    if ((Number(enemy.shellLayerTotal) || 0) > 0) { /* ゲージだけ */ }
     else if (Number(enemy.shell) > 0) add('shell', '🛡️', 'シールド', `${Math.floor(enemy.shell).toLocaleString()}`, 'text-pink-200 border-pink-400/60', 'ライフより先に削れる。シールドを削ったぶんは距離強化の加点に入らない', `${Math.floor(enemy.shell).toLocaleString()}`);
     if (iceLockTurns > 0) add('ice', '❄️', '絶氷の楔', iceLockPreparing ? '準備' : `残り${iceLockTurns}T`, 'text-cyan-200 border-cyan-400/60', iceLockPreparing ? '次のターンから、敵は間合いを動けず、与えるダメージが30%下がる' : '敵は間合いを動けず、与えるダメージが30%下がる', iceLockPreparing ? '準備' : `${iceLockTurns}T`);
     if (enemyConfuseTurns > 0) add('confuse', '🌀', '乱心', `残り${enemyConfuseTurns}T`, 'text-violet-200 border-violet-400/60', '毎ターン50%で、敵は意味不明になって動けない', `${enemyConfuseTurns}T`);
