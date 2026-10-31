@@ -767,6 +767,9 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
     ? cardKiraWrap(kira, <img src={art} alt="" style={{ ...(wide ? { maxHeight: wideArtH } : null), ...(artFit ? { transform: artFit } : null) }} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp && !artFit ? '-scale-x-100' : ''}`}/>)
     : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`}/>;
   const mv = motion && !mon.ko ? motion : null;
+  // 止まっているあいだの待機の動き(85-card-battle-motion.jsx の cardIdleBodyOf)。動き・倒れた・「揺らさない」では付けない
+  const idleTry = typeof window !== 'undefined' && window.__cardIdleTry ? window.__cardIdleTry : 'A';
+  const idleBody = art && !mv && !mon.ko && !calm && idleTry !== 'now' ? (idleTry === 'B' ? (ty === 'water' ? 'swim' : ty === 'air' ? 'hover' : 'breathe') : cardIdleBodyOf(mon, ty)) : null;
   // calm … オプションの「画面の揺れ: 揺らさない」。受けたときは揺らさずに光るだけ
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? (calm ? 'mh-card-hit-calm' : 'mh-card-hit') : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = (
@@ -775,7 +778,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
       {kira && <CardKiraFx kind={kira} calm={calm}/>}
       {mv && mv.type === 'attack' && mv.kind
         ? <SkillFxMotion key={mv.key} kind={mv.kind} image={imgEl}/>
-        : <div key={mv ? mv.key : 'still'} data-card-pose={mon.ko ? 'ko' : mv ? mv.type : 'still'} className={`flex items-end justify-center ${poseClass}`}>{imgEl}</div>}
+        : <div key={mv ? mv.key : 'still'} data-card-pose={mon.ko ? 'ko' : mv ? mv.type : 'still'} className={`flex items-end justify-center ${poseClass}`}>{idleBody ? <span data-card-idle={idleBody} className={`mon-idle mon-idle--${idleBody}`} style={cardIdleStyleOf(idleBody, p, m, mon.no)}>{imgEl}</span> : imgEl}</div>}
       {/* よけた: 元の場所に残像が残って消える / ジャンプでよけた: 上で止まって「空中」の印 */}
       {mv && mv.type === 'dodge' && <div key={`${mv.key}-a`} className="mh-card-afterimage" aria-hidden="true">{imgEl}</div>}
       {mv && mv.type === 'jump' && <span key={`${mv.key}-j`} data-card-air-mark className="mh-card-air-mark">空中</span>}

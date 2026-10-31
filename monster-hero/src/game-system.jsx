@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d163cc9b35d0e3eb
+// generated-sha256: ee98b2debba988cc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -58951,6 +58951,38 @@ const cardMotionDemoAction = (db, st, step) => {
     && JSON.stringify(o.target || null) === JSON.stringify(step.target || null)) || null;
 };
 
+// ===== 場の立ち絵の待機の動き(2026-10-31 社長「バトルカードも待機モーションほしい」) =====
+// 止まっているあいだ、場の立ち絵に体全体の動きを付ける。動きそのものはモンヒロのバトルの味方と同じ
+// .mon-idle--<動き>(70-bootstrap.jsx の keyframes)を使い回し、ここでは「どの子にどの動きか」と「ずらし方」だけ決める。
+// ・味方にいる種族は、味方の待機アニメ(MONSTER_IDLE_RIGS)の体の動きをそのまま。いない種族は下の表
+// ・混血は主の種族の動き。空中の子は浮く・水中の子は泳ぐ(地上・空中・水中が変わるカードがあるので、そのときの場所で決める)
+// ・止めるのは呼び出し側(攻撃・受ける・よける・倒れたとき、オプションの「揺らさない」)。端末の「動きを減らす」は CSS で止まる
+const CARD_IDLE_BODY = Object.freeze({
+  ghost: 'hover', dino: 'heavy', gali: 'hover', naga: 'sway', dragon: 'heavy', henger: 'breathe', durahan: 'heavy',
+  arrowhead: 'heavy', zilla: 'heavy', phoenix: 'glide', joker: 'drift', jell: 'jelly', mew: 'bounce', metalner: 'hover',
+  worm: 'sway', centaur: 'breathe', colorpandora: 'hover',
+});
+const CARD_IDLE_FLOAT = ['hover', 'glide', 'drift'];
+const cardIdleBodyOf = (mon, ty) => {
+  if (!mon) return null;
+  const sp = mon.main || mon.species;
+  const ally = CARD_SPECIES_ART[sp];
+  const rig = ally && typeof monsterIdleRigOf === 'function' ? monsterIdleRigOf(ally) : null;
+  let body = (rig && rig.body) || CARD_IDLE_BODY[sp] || 'breathe';
+  if (ty === 'water') body = 'swim';
+  else if (ty === 'air' && !CARD_IDLE_FLOAT.includes(body)) body = 'hover';
+  return body;
+};
+// 3体がそろって同じ動きにならないよう、席とカードの番号から速さ(0.88〜1.12倍)と始まり(周期のどこから)をずらす。
+// 周期の長さは 70-bootstrap.jsx の .mon-idle--<動き> と同じ
+const CARD_IDLE_MS = Object.freeze({ hover: 2600, bounce: 1800, breathe: 3200, sway: 3000, swim: 2800, jelly: 2000, hop: 2800, heavy: 3600, glide: 3200, drift: 4200 });
+const cardIdleStyleOf = (body, p, m, no) => {
+  let h = 2166136261;
+  for (const c of `${p}|${m}|${no}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0;
+  const ms = Math.round((CARD_IDLE_MS[body] || 3000) * (0.88 + (h % 25) / 100));
+  return { animationDuration: `${ms}ms`, animationDelay: `-${Math.round(ms * (((h >>> 8) % 100) / 100))}ms` };
+};
+
 // ---- part: 84-screen-card-battle.jsx ----
 // ==================== 画面: MFバトルカード ====================
 // 紙の『モンスターファームバトルカード』を元にしたカードバトル。設計: docs/spec/CARD_BATTLE.md
@@ -59721,6 +59753,9 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
     ? cardKiraWrap(kira, <img src={art} alt="" style={{ ...(wide ? { maxHeight: wideArtH } : null), ...(artFit ? { transform: artFit } : null) }} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp && !artFit ? '-scale-x-100' : ''}`}/>)
     : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`}/>;
   const mv = motion && !mon.ko ? motion : null;
+  // 止まっているあいだの待機の動き(85-card-battle-motion.jsx の cardIdleBodyOf)。動き・倒れた・「揺らさない」では付けない
+  const idleTry = typeof window !== 'undefined' && window.__cardIdleTry ? window.__cardIdleTry : 'A';
+  const idleBody = art && !mv && !mon.ko && !calm && idleTry !== 'now' ? (idleTry === 'B' ? (ty === 'water' ? 'swim' : ty === 'air' ? 'hover' : 'breathe') : cardIdleBodyOf(mon, ty)) : null;
   // calm … オプションの「画面の揺れ: 揺らさない」。受けたときは揺らさずに光るだけ
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? (calm ? 'mh-card-hit-calm' : 'mh-card-hit') : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = (
@@ -59729,7 +59764,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
       {kira && <CardKiraFx kind={kira} calm={calm}/>}
       {mv && mv.type === 'attack' && mv.kind
         ? <SkillFxMotion key={mv.key} kind={mv.kind} image={imgEl}/>
-        : <div key={mv ? mv.key : 'still'} data-card-pose={mon.ko ? 'ko' : mv ? mv.type : 'still'} className={`flex items-end justify-center ${poseClass}`}>{imgEl}</div>}
+        : <div key={mv ? mv.key : 'still'} data-card-pose={mon.ko ? 'ko' : mv ? mv.type : 'still'} className={`flex items-end justify-center ${poseClass}`}>{idleBody ? <span data-card-idle={idleBody} className={`mon-idle mon-idle--${idleBody}`} style={cardIdleStyleOf(idleBody, p, m, mon.no)}>{imgEl}</span> : imgEl}</div>}
       {/* よけた: 元の場所に残像が残って消える / ジャンプでよけた: 上で止まって「空中」の印 */}
       {mv && mv.type === 'dodge' && <div key={`${mv.key}-a`} className="mh-card-afterimage" aria-hidden="true">{imgEl}</div>}
       {mv && mv.type === 'jump' && <span key={`${mv.key}-j`} data-card-air-mark className="mh-card-air-mark">空中</span>}
