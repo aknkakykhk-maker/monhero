@@ -1236,6 +1236,141 @@ function AiCopyGutsMeter({ guts, maxGuts }) {
     </span>
   );
 }
+// ===== INFERNOのボスの層のシールド(2026-10-31 社長の決定・見本 docs/progress/inferno/shield-README.md) =====
+// ゲージは層の数だけ(ムー5・デュラハン4・ほか3)。下の層(1枚目)から割れ、割れた層はひびが入った灰色で残る(残り方1)。
+// 色は案2: 1枚目の淡い黄 → 黄 → 橙 → 赤 → 深紅。後の層ほど少し長く太い。本体のライフは別の色(紫)。
+// 色が見分けにくい人のために、各層に ①〜⑤ の印と「残り / 最大」の数も出す。
+// 状態は 19 の enemyShellView(enemy) を読むだけ(数と決まりはセコンドくんの側)
+const INFERNO_SHIELD_COLORS = Object.freeze([
+  Object.freeze(['#fefce8', '#fde68a', '#fef3c7']),
+  Object.freeze(['#fef3c7', '#fbbf24', '#fde68a']),
+  Object.freeze(['#fed7aa', '#f97316', '#fdba74']),
+  Object.freeze(['#fecaca', '#dc2626', '#fca5a5']),
+  Object.freeze(['#fca5a5', '#7f1d1d', '#f87171']),
+]);
+const INFERNO_SHIELD_MARKS = Object.freeze(['①', '②', '③', '④', '⑤', '⑥', '⑦']);
+const INFERNO_BODY_HP_GRADIENT = 'linear-gradient(180deg,#f3e8ff 0%,#c084fc 34%,#7c3aed 70%,#3b0764 100%)';
+const infernoShieldColorAt = (k) => INFERNO_SHIELD_COLORS[Math.max(0, Math.min(INFERNO_SHIELD_COLORS.length - 1, k))];
+const INFERNO_SHIELD_CSS = `
+[data-inferno-shield-gauge]{--mh-shield-w:min(150px,38vw)}
+@media (orientation:landscape) and (max-height:520px){[data-inferno-shield-gauge]{transform:translateX(-50%) scale(.8)!important;transform-origin:50% 0}}
+@keyframes mhShieldFlash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
+@keyframes mhShieldVignette{0%{opacity:0}30%{opacity:1}80%{opacity:1}100%{opacity:0}}
+@keyframes mhShieldGather{0%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.4)}25%{opacity:1}100%{opacity:0;transform:translate(0,0) scale(.4)}}
+@keyframes mhShieldShard{0%{opacity:1;transform:translate(0,0) rotate(0deg) skewX(-28deg)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--rot)) skewX(-28deg)}}
+@keyframes mhShieldWord{0%{opacity:0;transform:translateX(-50%) rotate(-6deg) scale(2.2)}18%{opacity:1;transform:translateX(-50%) rotate(-6deg) scale(.94)}28%{transform:translateX(-50%) rotate(-6deg) scale(1)}80%{opacity:1}100%{opacity:0;transform:translateX(-50%) rotate(-6deg) scale(1.06)}}
+@keyframes mhShieldRing{0%{opacity:.95;transform:translate(-50%,-50%) scale(.3)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.6)}}
+@keyframes mhShieldBand{0%{opacity:0;transform:translateX(-30%)}12%{opacity:1;transform:translateX(0)}86%{opacity:1;transform:translateX(0)}100%{opacity:0;transform:translateX(12%)}}
+@keyframes mhShieldShake{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,3px) rotate(-.6deg)}40%{transform:translate(5px,-3px) rotate(.5deg)}60%{transform:translate(-4px,2px)}80%{transform:translate(3px,-2px)}}
+[data-inferno-shield-fx] *{pointer-events:none}
+`;
+// 層のゲージ(敵の段のいちばん上の真ん中)。上の行ほど後の層。いちばん下の残った層が、いま削っている層
+function InfernoShieldGauge({ view }) {
+  if (!view || !(view.total > 0)) return null;
+  const rows = [];
+  for (let row = 0; row < view.total; row += 1) {
+    const k = view.total - 1 - row;
+    const layer = view.layers[k] || { max: 0, now: 0 };
+    const alive = k >= view.broken;
+    const active = k === view.broken;
+    const [c1, c2, edge] = infernoShieldColorAt(k);
+    const pct = layer.max > 0 ? Math.max(0, Math.min(1, layer.now / layer.max)) : 0;
+    const h = 11 + Math.min(4, k);
+    rows.push(
+      <div key={k} data-inferno-shield-layer={k + 1} data-inferno-shield-alive={alive ? 'true' : 'false'} data-inferno-shield-active={active ? 'true' : undefined}
+        className="relative overflow-visible rounded-[3px]"
+        style={{ width: `calc(var(--mh-shield-w) * ${(1 + k * 0.07).toFixed(2)})`, height: `${h}px`, marginLeft: `${row * 6}px`, transform: 'skewX(-28deg)',
+          background: alive ? 'rgba(15,10,20,.85)' : 'linear-gradient(90deg,rgba(120,113,108,.55),rgba(68,64,60,.55))',
+          border: `1px solid ${alive ? edge : 'rgba(168,162,158,.5)'}`, boxShadow: alive ? `0 0 ${active ? 10 : 4}px ${c2}` : 'none' }}>
+        {alive && <div className="absolute inset-y-0 left-0 rounded-[2px] transition-[width] duration-500" style={{ width: `${pct * 100}%`, background: `linear-gradient(90deg,${c1},${c2})` }}/>}
+        {!alive && <svg aria-hidden="true" className="absolute inset-0 h-full w-full" viewBox="0 0 160 14" preserveAspectRatio="none"><g stroke="rgba(15,23,42,.9)" strokeWidth="1.2" fill="none" strokeLinecap="round"><polyline points="22,1 26,5 23,8 28,13"/><polyline points="26,5 33,6"/><polyline points="58,2 55,7 60,10 57,14"/><polyline points="96,1 100,6 97,9 101,14"/><polyline points="100,6 92,8"/><polyline points="132,2 128,6 133,10 130,14"/></g></svg>}
+        <span className="absolute left-[4px] top-1/2 font-black leading-none" style={{ transform: 'translateY(-50%) skewX(28deg)', fontSize: `${h - 2}px`, color: alive ? '#fff' : 'rgba(214,211,209,.65)', textShadow: '0 1px 2px #000' }}>{INFERNO_SHIELD_MARKS[k] || String(k + 1)}</span>
+        <span className="absolute right-[7px] top-1/2 whitespace-nowrap font-mono text-[9px] font-black italic leading-none tabular-nums" style={{ transform: 'translateY(-50%) skewX(28deg)', color: alive ? '#fff' : 'rgba(214,211,209,.6)', textShadow: '0 1px 2px #000,0 0 3px #000' }}>{Math.floor(layer.now).toLocaleString()} / {Math.floor(layer.max).toLocaleString()}</span>
+      </div>
+    );
+  }
+  const curColor = view.left > 0 ? infernoShieldColorAt(view.broken)[1] : '#a8a29e';
+  return (
+    <div data-inferno-shield-gauge={view.total} data-inferno-shield-left={view.left} aria-label={`シールド 残り${view.left}枚(全${view.total}枚)`}
+      className="pointer-events-none absolute left-1/2 top-1 z-[44] flex items-start gap-1.5" style={{ transform: 'translateX(-50%)' }}>
+      <style>{INFERNO_SHIELD_CSS}</style>
+      <div className="mt-[1px] flex flex-col items-end gap-[1px] leading-none">
+        <span className="whitespace-nowrap text-[9px] font-black text-amber-200" style={{ textShadow: '0 1px 2px #000' }}>🛡 シールド</span>
+        <span className="text-[15px] font-black text-white" style={{ textShadow: `0 0 6px ${curColor},0 1px 2px #000` }}>{view.left}<small className="text-[9px] text-amber-300">/{view.total}</small></span>
+      </div>
+      <div className="flex flex-col gap-[1px]">{rows}</div>
+    </div>
+  );
+}
+// 大きな札(案B)。のこりの枚数をひと目で。縁は、いま削っている層の色
+function InfernoShieldBadge({ view }) {
+  if (!view || !(view.total > 0)) return null;
+  const col = view.left > 0 ? infernoShieldColorAt(view.broken) : ['#e7e5e4', '#78716c', '#a8a29e'];
+  return (
+    <div data-inferno-shield-badge={view.left} aria-hidden="true"
+      className="pointer-events-none absolute left-2 top-[96px] z-[43] w-[84px] rounded-[14px] px-1 pb-1 pt-1.5 text-center [@media(max-height:640px)]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
+      style={{ background: 'linear-gradient(180deg,#1c0a0a,#0c0a09)', border: `2px solid ${col[1]}`, boxShadow: `0 0 12px ${col[1]}` }}>
+      <div className="text-[10px] font-black tracking-wide text-amber-200" style={{ textShadow: '0 0 6px #f97316' }}>🔥 INFERNO</div>
+      <div className="mt-[1px] text-[8px] font-black text-red-200">のこりシールド</div>
+      <div className="mt-0.5 text-[30px] font-black leading-none text-white" style={{ textShadow: `0 0 10px ${col[1]},0 2px 2px #000` }}>×{view.left}</div>
+      {view.left > 0 && <div className="mt-[3px] text-[9px] font-black" style={{ color: col[0] }}>いま {INFERNO_SHIELD_MARKS[view.broken] || view.broken + 1}</div>}
+      {view.left > 1 && <div className="mt-[1px] text-[8px] font-extrabold text-amber-200">次の1枚 +30%</div>}
+    </div>
+  );
+}
+// 割れた瞬間の演出。kind: mid(1〜3枚目・攻撃が上がる)/ rush(必殺技が連撃に)/ final(5枚目・最終形態)
+//   軽め・最軽量・省エネ表示では、溜めと破片を出さず帯だけ
+function InfernoShieldBreakFx({ fx, lite, onDone }) {
+  const dur = lite ? 1700 : fx.kind === 'final' ? 3600 : fx.kind === 'rush' ? 3300 : 2900;
+  React.useEffect(() => { const t = setTimeout(() => onDone && onDone(fx.id), dur); return () => clearTimeout(t); }, [fx.id]);
+  const final = fx.kind === 'final';
+  const bandDelay = lite ? 0 : 1.25;
+  const bandLen = (dur / 1000) - bandDelay;
+  const shards = lite ? [] : Array.from({ length: final ? 30 : 18 }, (_, k) => {
+    const n = final ? 30 : 18; const ang = k / n * Math.PI * 2 + (k % 2) * 0.3; const d = 90 + (k * 37 % 170);
+    return { k, dx: `${Math.round(Math.cos(ang) * d)}px`, dy: `${Math.round(Math.sin(ang) * d)}px`, rot: `${(k * 47) % 360}deg`, w: 16 + (k * 13 % 30), h: 7 + (k * 7 % 10) };
+  });
+  const gather = lite ? [] : Array.from({ length: 12 }, (_, k) => { const ang = k / 12 * Math.PI * 2; const d = 80 + (k % 3) * 24; return { k, dx: `${Math.round(Math.cos(ang) * d)}px`, dy: `${Math.round(Math.sin(ang) * d * 0.6)}px` }; });
+  const band = fx.kind === 'rush'
+    ? { cls: 'mh-shield-band-rush', bg: 'linear-gradient(90deg,rgba(30,10,60,.96),rgba(126,34,206,.96) 50%,rgba(30,10,60,.96))', line: '#f0abfc', glow: 'rgba(192,38,211,.9)',
+        title: '⚡ 必殺技が連撃に!', sub: `次から必殺技が${fx.hits}回続けて来る${fx.left === 0 ? '(シールドは全部割れた)' : ''}`, big: `×${fx.hits}` }
+    : final
+      ? { cls: 'mh-shield-band-final', bg: 'linear-gradient(90deg,rgba(69,10,10,.97),rgba(185,28,28,.97) 50%,rgba(69,10,10,.97))', line: '#facc15', glow: 'rgba(250,204,21,.8)',
+          title: `🔥 ${fx.name} 最終形態!`, sub: `シールドが全部割れた。必殺技が${fx.hits}連撃に・攻撃力 +${fx.atkPct}%`, big: null }
+      : { cls: 'mh-shield-band-mid', bg: 'linear-gradient(90deg,rgba(69,10,10,.96),rgba(185,28,28,.96) 50%,rgba(69,10,10,.96))', line: '#fb923c', glow: 'rgba(239,68,68,.8)',
+          title: `🔥 ${fx.name}が怒った!`, sub: `${fx.left === 0 ? 'シールドが全部割れた。' : ''}攻撃力 +${fx.atkPct}%`, big: null };
+  return ReactDOM.createPortal(
+    <div data-inferno-shield-fx={fx.kind} data-inferno-shield-broken={fx.broken} className="fixed inset-0 z-[9400] overflow-hidden pointer-events-none" aria-live="polite">
+      <style>{INFERNO_SHIELD_CSS}</style>
+      {!lite && <>
+        <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 90px 34px rgba(127,29,29,.8)', animation: 'mhShieldVignette 1.3s ease-out both' }}/>
+        <div className="absolute left-1/2 top-[22%]" style={{ width: 0, height: 0 }}>
+          {gather.map(g => <i key={g.k} className="absolute block h-[8px] w-[8px] rounded-full bg-white" style={{ '--dx': g.dx, '--dy': g.dy, boxShadow: '0 0 10px 4px #fbbf24', animation: 'mhShieldGather .6s .2s ease-in both' }}/>)}
+        </div>
+        <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 50% 24%,rgba(255,255,255,${final ? .97 : .9}),rgba(253,186,116,${final ? .8 : .6}) 35%,rgba(${final ? '220,38,38,.65' : '127,29,29,.35'}) 75%)`, animation: `mhShieldFlash ${final ? 1.1 : .8}s .8s ease-out both` }}/>
+        {[0, ...(final ? [1, 2] : [])].map(n => <div key={n} className="absolute left-1/2 top-[30%] rounded-full" style={{ width: `${180 + n * 70}px`, height: `${180 + n * 70}px`, border: `${6 - n}px solid ${['rgba(249,115,22,.95)', 'rgba(239,68,68,.9)', 'rgba(250,204,21,.85)'][n]}`, boxShadow: `0 0 30px 10px ${['rgba(249,115,22,.7)', 'rgba(239,68,68,.6)', 'rgba(250,204,21,.6)'][n]}`, animation: `mhShieldRing .9s ${.8 + n * .12}s ease-out both` }}/>)}
+        <div className="absolute left-1/2 top-[18%]" style={{ width: 0, height: 0 }}>
+          {shards.map(s => <i key={s.k} className="absolute block" style={{ '--dx': s.dx, '--dy': s.dy, '--rot': s.rot, width: `${s.w}px`, height: `${s.h}px`, background: 'linear-gradient(90deg,#fffbeb,#fbbf24 40%,#f97316)', clipPath: 'polygon(0 20%,85% 0,100% 80%,10% 100%)', boxShadow: '0 0 10px #fb923c', animation: 'mhShieldShard 1s .8s cubic-bezier(.2,.7,.3,1) both' }}/>)}
+        </div>
+        <div className="absolute left-1/2 top-[22%] whitespace-nowrap text-center font-black italic leading-none text-white"
+          style={{ fontSize: final ? 'min(48px,12vw)' : 'min(42px,11vw)', WebkitTextStroke: '2px #9a3412', textShadow: '0 0 18px #f97316,0 0 40px #ef4444,0 4px 0 #7c2d12', animation: `mhShieldWord 1.5s .8s ease-out both` }}>
+          {final ? <>ALL SHIELD<br/>BREAK!!</> : <>SHIELD<br/>BREAK!!</>}
+        </div>
+      </>}
+      <div data-inferno-shield-band={fx.kind} className="absolute inset-x-0 top-[38%] px-3.5 py-2.5"
+        style={{ background: band.bg, borderTop: `3px solid ${band.line}`, borderBottom: `3px solid ${band.line}`, boxShadow: `0 0 26px ${band.glow}`, animation: `mhShieldBand ${bandLen}s ${bandDelay}s ease-out both` }}>
+        <div className="flex items-center gap-2.5">
+          {band.big && <div className="shrink-0 text-[42px] font-black italic leading-none text-white" style={{ WebkitTextStroke: '2px #701a75', textShadow: '0 0 16px #e879f9' }}>{band.big}</div>}
+          <div className="min-w-0">
+            <div className="text-[20px] font-black italic leading-tight" style={{ color: final ? '#fef08a' : fx.kind === 'rush' ? '#fdf4ff' : '#fecaca', textShadow: '0 2px 0 #7c2d12' }}>{band.title}</div>
+            <div className="mt-1 text-[13px] font-extrabold leading-snug text-white">{band.sub}</div>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 function BattleScreen({
   battleOverlayOpen = false, applyTurnDamageReduction, attackAnim, autoBattle, autoBattleRef, autoRepeat, battleFxSettings, onBattleFxAutoStep, battleIntimidate,
   battleScenarioRef, battleScreenActive, battleScreenStyle, battleSoulMasus, battleSpeed, battleTutorial,
@@ -1476,6 +1611,25 @@ function BattleScreen({
   const fxRestEnabled = battleFx.restPause === 'ON';
   const idleMotionOff = battleFx.idleMotion === 'OFF' || fxLoad === 'LIGHT';
   const shakeOff = battleFx.shake === 'OFF';
+  // INFERNOのボスの層のシールド。割れた合図(breakSeq)が増えたら、何枚目が割れたかで演出を選ぶ(1〜3枚目=攻撃が上がる/連撃が増えた=必殺技が連撃に/5枚目=最終形態)
+  const infernoShellView = enemy ? enemyShellView(enemy) : null;
+  const infernoShellRule = specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
+  const [infernoShellFx, setInfernoShellFx] = useState(null);
+  const infernoShellSeqRef = useRef({ key:null, seq:0 });
+  useEffect(()=>{
+    const view=infernoShellView;
+    const key=`${wave}:${enemy?.id||''}`;
+    const seq=view?.breakSeq||0;
+    const prev=infernoShellSeqRef.current;
+    infernoShellSeqRef.current={ key, seq };
+    if(prev.key!==key||!(view?.total>0)||!(seq>prev.seq)||!(view.broken>0)) return;
+    const broken=view.broken;
+    const hitsNow=extremeLayerRushHits(infernoShellRule,wave,broken);
+    const hitsBefore=extremeLayerRushHits(infernoShellRule,wave,Math.max(0,broken-(seq-prev.seq)));
+    const gain=Number(extremeWaveStageRules(infernoShellRule,wave)?.layerAtkGain)||0;
+    const kind=broken>=5?'final':hitsNow>hitsBefore?'rush':'mid';
+    setInfernoShellFx({ id:`${key}:${seq}`, kind, broken, left:view.left, total:view.total, hits:hitsNow, name:enemy?.name||'', atkPct:Math.round(gain*broken*100) });
+  },[infernoShellView?.breakSeq,wave,enemy?.id]);
   // 敵の攻撃(ためるを含む)を絵だけで動かす場面。移動とムーは今までどおり丸枠ごと
   const enemyImageOnlyAttack = tacticsNewLayout && !!enemyAttackAnim && !ecoBattleView && enemyAttackFx?.kind !== 'move' && !isMooBoss(enemy?.id);
   // 敵ごとの動き方(2026-09-24 ユーザー指示「敵のグラフィックを攻撃時にアニメーション化」「待機時間も動いてるように」
@@ -1908,7 +2062,7 @@ function BattleScreen({
             <div data-enemy-hpbar className="relative h-[14px] overflow-hidden rounded-full border-2 border-white/25 bg-slate-950" style={{boxShadow:'inset 0 2px 6px rgba(0,0,0,.85)'}}>
               {/* ★幅(width)ではなく横の縮み(scaleX)で減らす。幅を変えると1秒のあいだ毎コマ組み直しが起き、スマホでライフの減り方がかくつく
                   (2026-09-24 ユーザー指摘「敵のライフの減り方とかかくつき」) */}
-              <div className="h-full w-full origin-left transition-transform duration-1000" style={{transform:`scaleX(${Math.min(1,Math.max(0,enemy.hp)/(enemy.maxHp||1))})`,backgroundImage:'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'}}></div>
+              <div className="h-full w-full origin-left transition-transform duration-1000" data-enemy-hp-tone={infernoShellView?.total>0?'inferno-body':undefined} style={{transform:`scaleX(${Math.min(1,Math.max(0,enemy.hp)/(enemy.maxHp||1))})`,backgroundImage:infernoShellView?.total>0?INFERNO_BODY_HP_GRADIENT:'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'}}></div>
               <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1/2" style={{background:'linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))'}}></div>
             </div>
             {/* 敵にかかっているデバフの詳細(2026-10-06 ユーザー指示「全部ウンディーネの絶氷の位置にまとめて、簡易表示して押したら詳細が見える」)。
@@ -2002,6 +2156,10 @@ function BattleScreen({
               onOpen={aiCopy?()=>setCopyHandOpen(true):null} hatePct={hc&&Number.isInteger(hc.copy)?hc.copy:null}
               lift={battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)}/>;
           })()}
+          {/* INFERNOのボスの層のシールド: ゲージ(上の真ん中)と大きな札(左)。AIコピーの小窓が出ている間は札を出さない(同じ左に重なるので) */}
+          {infernoShellView?.total>0&&<InfernoShieldGauge view={infernoShellView}/>}
+          {infernoShellView?.total>0&&!copyFloat&&<InfernoShieldBadge view={infernoShellView}/>}
+          {infernoShellFx&&<InfernoShieldBreakFx key={infernoShellFx.id} fx={infernoShellFx} lite={!!(ecoBattleView||liteBattleView||fxLoad==='LIGHT'||fxLoad==='MINIMAL')} onDone={(id)=>setInfernoShellFx(cur=>cur&&cur.id===id?null:cur)}/>}
           {battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)&&<button data-soul-battle-effects-button type="button" onClick={()=>setShowSoulBattleEffects(true)} aria-label="魂格効果" className="absolute right-2 top-[56px] z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7 [@media(max-height:640px)]:rounded-full [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:top-auto [@media(max-height:640px)]:bottom-1 [@media(max-height:640px)]:right-auto [@media(max-height:640px)]:left-2" style={{boxShadow:'0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'}}><Sparkles size={17} className="text-sky-300"/><span className="text-[10px] font-black leading-none text-white [@media(max-height:640px)]:sr-only">魂格効果</span></button>}
           {/* 敵が次に何をしてくるかの札(2026-09-19・ユーザー指摘「敵の行動予測が見えない」)。
               ★置き場所は**敵の絵の右下**(2026-09-22 ユーザー指示「敵の行動予測は右下に出るほうが
@@ -2065,6 +2223,8 @@ function BattleScreen({
               <div data-enemy-intent
                 className={`absolute right-2 bottom-1 z-[45] w-[100px] rounded-xl border px-1.5 py-1 shadow-lg animate-pulse [@media(max-height:640px)]:grid [@media(max-height:640px)]:w-[112px] [@media(max-height:640px)]:grid-cols-[minmax(0,1fr)_auto] [@media(max-height:640px)]:items-center [@media(max-height:640px)]:gap-x-1 [@media(max-height:640px)]:py-0.5${battleTutorialSpotClass('enemyIntent')} ${focusedCard&&!tacticsNewLayout?'invisible':'visible'} ${tone}`}>
                 {/* 背の低い画面(高さ640以下)は舞台が低いので、ダメージの数字を右の列へ移して3行ぶんの高さに収める(2026-10-20 改善部 M2) */}
+                {/* INFERNOで必殺技が連撃になっているとき、札の角に「×2連撃」の小さな印(何連撃かを札の名前には書かない決まりのまま、札の外側に出す) */}
+                {enemyIntent.type==='SPECIAL'&&infernoShellView?.total>0&&extremeLayerRushHits(infernoShellRule,wave,infernoShellView.broken)>1?<span data-inferno-rush-chip className="pointer-events-none absolute -left-2 -top-2.5 z-[2] whitespace-nowrap rounded-full border border-fuchsia-300 bg-purple-800 px-1.5 py-[1px] text-[10px] font-black leading-tight text-white shadow-[0_0_10px_#c026d3]">×{extremeLayerRushHits(infernoShellRule,wave,infernoShellView.broken)}連撃</span>:null}
                 <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-wider opacity-80 [@media(max-height:640px)]:col-start-1"><Target size={9}/>次の行動</div>
                 {/* 背の低い画面は1行。「カボチャ…」と切らず、札の幅に合わせて字を縮める(2026-10-27 レイドの見回り) */}
                 <div className="mt-0.5 text-[11px] font-black leading-tight [@media(max-height:640px)]:col-start-1 [@media(max-height:640px)]:min-w-0 [@media(max-height:640px)]:overflow-hidden [@media(max-height:640px)]:whitespace-nowrap [@media(max-height:640px)]:[container-type:inline-size]"><span className="block [@media(max-height:640px)]:[font-size:var(--mh-intent-fit)]" style={{'--mh-intent-fit':`min(11px, calc(100cqw / ${[...String(intentTitle||'')].length+0.3}))`}}>{intentTitle}</span></div>
