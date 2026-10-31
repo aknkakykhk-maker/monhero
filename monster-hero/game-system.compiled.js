@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6474805833bbfc2e
+// source-sha256: cfb3242ba25135bb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -103083,6 +103083,19 @@ const CardBattleScreen = ({
     onBgm && onBgm(CARD_AI_BGM.mua);
     onNavigate('CARD_BATTLE');
   };
+  const askShareDeck = (entry, level, back) => {
+    Audio_.fgSe.tap();
+    setDeckPick({
+      next: 'cpu',
+      pick: {
+        who: entry.tactics.habit,
+        level,
+        share: entry
+      },
+      back
+    });
+    setView('deckPick');
+  };
   const startBattle = (pick = foe, deck = activeDeck, opts = {}) => {
     const rented = opts && opts.rented ? opts.rented : null;
     const cup = opts && opts.cup ? opts.cup : null;
@@ -103507,11 +103520,7 @@ const CardBattleScreen = ({
       onBack: () => setView('mode'),
       unlocked: save.unlocked,
       debug: debug,
-      onFight: (e, lv) => startBattle({
-        who: e.tactics.habit,
-        level: lv,
-        share: e
-      }),
+      onFight: (e, lv) => askShareDeck(e, lv, 'share'),
       onOpenTactics: typeof CardTacticsScreen === 'function' && (debug || cardTacticsOpen()) ? () => {
         setTacticsBack('share');
         setView('tactics');
@@ -103647,21 +103656,23 @@ const CardBattleScreen = ({
   }
   if (view === 'deckPick' && deckPick) {
     const toPvp = deckPick.next === 'pvp';
+    const sharePick = !!(deckPick.pick && deckPick.pick.share);
     return React.createElement(CardDeckPick, {
       db: db,
       decks: save.decks,
       collection: save.collection,
       note: toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います',
       onBack: () => {
+        const back = deckPick.back;
         setDeckPick(null);
         if (toPvp && CARD_PVP_NEXT.take()) {
           setView('pvp');
           return;
         }
-        setView(toPvp ? 'mode' : 'foe');
+        setView(toPvp ? 'mode' : back || 'foe');
       },
-      allowRented: !toPvp,
-      rentTab: shareForm && !toPvp,
+      allowRented: !toPvp && !sharePick,
+      rentTab: shareForm && !toPvp && !sharePick,
       onPick: async c => {
         if (c.kind === 'rent') {
           const next = deckPick;
@@ -103842,11 +103853,7 @@ const CardBattleScreen = ({
       part: "fight",
       title: "フリー対戦",
       headExtra: foeTabs,
-      onFight: (e, lv) => startBattle({
-        who: e.tactics.habit,
-        level: lv,
-        share: e
-      })
+      onFight: (e, lv) => askShareDeck(e, lv, 'foe')
     });
   }
   if (view === 'foe') {

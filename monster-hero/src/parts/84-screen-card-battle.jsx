@@ -3254,6 +3254,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     onNavigate('CARD_BATTLE');
   };
   // opts.rented … みんなのデッキ(95)で借りたデッキで戦う(デッキ選びの kind:'rent' の行)。借り物なので、持っているかは見ない
+  // ほかのブリーダーの登録デッキと戦う前に、助手と対戦と同じく自分のデッキを選ぶ(2026-10-31 テスターさんの要望。前に選んだデッキから始まる)。
+  //   back … デッキ選びで「戻る」を押したときに戻る画面(フリー対戦の「ほかのブリーダー」タブ / デッキ登録の画面)
+  const askShareDeck = (entry, level, back) => { Audio_.fgSe.tap(); setDeckPick({ next: 'cpu', pick: { who: entry.tactics.habit, level, share: entry }, back }); setView('deckPick'); };
   const startBattle = (pick = foe, deck = activeDeck, opts = {}) => {
     const rented = opts && opts.rented ? opts.rented : null;
     // 個人杯のリアルタイム杯(④): 自分も相手も、始まる時刻に取った登録デッキの写し。種と先攻は杯の試合のもの(見返しで同じ試合になる)
@@ -3419,7 +3422,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   }
   if (view === 'share' && typeof CardDeckShare === 'function') {
     return <CardDeckShare db={db} decks={save.decks} collection={save.collection} frame={(rank && rank.profile && rank.profile.frame) || null} onBack={() => setView('mode')}
-      unlocked={save.unlocked} debug={debug} onFight={(e, lv) => startBattle({ who: e.tactics.habit, level: lv, share: e })}
+      unlocked={save.unlocked} debug={debug} onFight={(e, lv) => askShareDeck(e, lv, 'share')}
       onOpenTactics={typeof CardTacticsScreen === 'function' && (debug || cardTacticsOpen()) ? () => { setTacticsBack('share'); setView('tactics'); } : null}/>;
   }
   // MFバトルカード大会(99。2026-10-30 大会 PR3)。ごほうびのビートPは、受け取りの記録(mh_card_tour_claimed_v1)と同じ取引で保存する
@@ -3475,9 +3478,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // ---- 対戦の前のデッキ選び(助手と対戦・マルチ。練習試合には出さない) ----
   if (view === 'deckPick' && deckPick) {
     const toPvp = deckPick.next === 'pvp';
+    // ほかのブリーダーの登録デッキと戦うとき(2026-10-31 テスターさんの要望)。借りたデッキでは戦わない(ごほうびの扱いを変えないため)
+    const sharePick = !!(deckPick.pick && deckPick.pick.share);
     return <CardDeckPick db={db} decks={save.decks} collection={save.collection}
       note={toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います'}
-      onBack={() => { setDeckPick(null); if (toPvp && CARD_PVP_NEXT.take()) { setView('pvp'); return; } setView(toPvp ? 'mode' : 'foe'); }} allowRented={!toPvp} rentTab={shareForm && !toPvp}
+      onBack={() => { const back = deckPick.back; setDeckPick(null); if (toPvp && CARD_PVP_NEXT.take()) { setView('pvp'); return; } setView(toPvp ? 'mode' : back || 'foe'); }}
+      allowRented={!toPvp && !sharePick} rentTab={shareForm && !toPvp && !sharePick}
       onPick={async (c) => {
         // 借りたデッキ(みんなのデッキ・95): 自分のデッキの active は書き換えない
         if (c.kind === 'rent') { const next = deckPick; setDeckPick(null); if (next.next !== 'pvp') startBattle(next.pick, c.deck, { rented: c }); return; }
@@ -3542,7 +3548,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   ) : null;
   if (view === 'foe' && shareForm && foeTab === 'breeder' && typeof CardDeckShare === 'function') {
     return <CardDeckShare db={db} decks={save.decks} collection={save.collection} frame={(rank && rank.profile && rank.profile.frame) || null} onBack={() => setView('mode')}
-      unlocked={save.unlocked} debug={debug} part="fight" title="フリー対戦" headExtra={foeTabs} onFight={(e, lv) => startBattle({ who: e.tactics.habit, level: lv, share: e })}/>;
+      unlocked={save.unlocked} debug={debug} part="fight" title="フリー対戦" headExtra={foeTabs} onFight={(e, lv) => askShareDeck(e, lv, 'foe')}/>;
   }
   if (view === 'foe') {
     const a = allAssistants.find((x) => x.id === foe.who) || foes[0];
