@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 002f8e2f41d76efe
+// source-sha256: bdc963067048b9bd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -94874,7 +94874,14 @@ const cardTacticBaseAttack = (db, st, policy, knobs, ctx) => {
     act: cardAiFillBind(db, st, list[0].o, policy)
   };
 };
+let cardTacticLastWhy = null;
+const cardTacticTakeWhy = () => {
+  const w = cardTacticLastWhy;
+  cardTacticLastWhy = null;
+  return w;
+};
 const cardTacticDecide = (db, st, policy) => {
+  cardTacticLastWhy = null;
   const frames = cardTacticNormalizeFrames(policy && policy.gambit);
   if (st.winner !== null) return null;
   const phase = st.pending ? 'guard' : st.phase === 'guts' ? 'guts' : st.phase === 'main' ? 'attack' : null;
@@ -94932,7 +94939,15 @@ const cardTacticDecide = (db, st, policy) => {
       if (!aim) continue;
       ctx.mi = fr.mi;
       const got = cardTacticRowAct(db, st, pol, phase, row, aim, ctx);
-      if (got) return got;
+      if (got) {
+        cardTacticLastWhy = {
+          c: row.c,
+          a: row.a,
+          mi: fr.mi,
+          phase
+        };
+        return got;
+      }
     }
   }
   if (phase === 'attack' && (ctx.skip.size || ctx.noBreeder || ['light', 'safe', 'noDraw', 'keepHand', 'focus', 'spread', 'areaMin2'].some(k => knobs[k]))) return cardTacticBaseAttack(db, st, pol, knobs, ctx);
@@ -98528,18 +98543,24 @@ const CardTurnLogSheet = ({
   st,
   meName,
   foeName,
-  onClose
+  onClose,
+  tac = []
 }) => {
   const turns = [];
   for (const l of st.log) {
     if (!turns.length || turns[turns.length - 1].turn !== l.turn) turns.push({
       turn: l.turn,
       head: '',
-      lines: []
+      lines: [],
+      tac: []
     });
     const t = turns[turns.length - 1];
     if (l.kind === 'turn') t.head = l.text;else t.lines.push(cardLogText(l));
   }
+  tac.forEach(x => {
+    const t = turns.find(y => y.turn === x.turn);
+    if (t) t.tac.push(x.text);
+  });
   const list = turns.filter(t => t.lines.length || t.head).reverse();
   return React.createElement("div", {
     "data-card-log-sheet": true,
@@ -98565,7 +98586,12 @@ const CardTurnLogSheet = ({
     "data-card-fit": true,
     className: "text-[13px] font-bold leading-snug text-white",
     style: JA_WRAP_STYLE
-  }, jaWrap(x))))), !list.length && React.createElement("div", {
+  }, jaWrap(x))), t.tac.map((x, i) => React.createElement("div", {
+    key: `t${i}`,
+    "data-card-log-tactic": true,
+    className: "mt-0.5 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[12px] font-bold leading-snug text-amber-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`📜 ${x}`))))), !list.length && React.createElement("div", {
     className: "text-[13px] font-bold text-slate-400"
   }, "まだ記録がありません")), React.createElement("button", {
     type: "button",
@@ -98967,6 +98993,13 @@ const CardBattleBoard = ({
     setSumOpen(false);
   }, [turnSummary && turnSummary.key]);
   const [logSheet, setLogSheet] = useState(false);
+  const [tacGlow, setTacGlow] = useState(null);
+  const [tacLog, setTacLog] = useState([]);
+  useEffect(() => {
+    if (!tacGlow) return undefined;
+    const t = setTimeout(() => setTacGlow(null), 2400);
+    return () => clearTimeout(t);
+  }, [tacGlow]);
   const [downBand, setDownBand] = useState(null);
   const [breederFx, setBreederFx] = useState(null);
   const [beams, setBeams] = useState([]);
@@ -99393,8 +99426,28 @@ const CardBattleBoard = ({
     if (cardDeciderOf(st) !== CARD_CPU) return undefined;
     const wait = Math.round((st.pending ? 950 : st.phase === 'guts' ? 600 : 900) * pace);
     const t = setTimeout(() => {
+      if (typeof cardTacticTakeWhy === 'function') cardTacticTakeWhy();
       const act = tutorial ? cardTutorialCpu(db, tutStage.id, st) : cardAiChooseAction(db, st, policy);
       if (!act) return;
+      const why = !tutorial && typeof cardTacticTakeWhy === 'function' ? cardTacticTakeWhy() : null;
+      if (why) {
+        const c = cardTacticOf(why.c),
+          a = cardTacticOf(why.a);
+        const m = why.mi !== null && why.mi !== undefined ? st.players[CARD_CPU].mons[why.mi] : null;
+        const by = m ? m.name : 'ブリーダー';
+        const line = `${!c || why.c === 'any' ? '' : `${c.name} → `}${a ? a.name : ''}`;
+        if (line) {
+          setTacGlow({
+            key: `${st.turn}-${st.log.length}`,
+            by,
+            line
+          });
+          setTacLog(cur => [...cur, {
+            turn: st.turn,
+            text: `${who.name}の${by}: 「${line}」で動いた`
+          }].slice(-80));
+        }
+      }
       const go = () => {
         if (!step(act)) step(st.pending ? {
           type: 'pass'
@@ -101104,8 +101157,16 @@ const CardBattleBoard = ({
     st: st,
     meName: "あなた",
     foeName: who.name,
+    tac: tacLog,
     onClose: () => setLogSheet(false)
-  }), discard && React.createElement(CardDiscardModal, {
+  }), tacGlow && React.createElement("div", {
+    key: tacGlow.key,
+    "data-card-tactic-glow": true,
+    className: "pointer-events-none fixed left-1/2 top-[22%] z-[36] w-max max-w-[92vw] -translate-x-1/2 rounded-xl bg-amber-300 px-3 py-1.5 text-center text-[12px] font-black text-slate-950 shadow-[0_0_0_3px_#fff,0_0_18px_6px_rgba(251,191,36,.8)] animate-pulse",
+    style: JA_WRAP_STYLE
+  }, React.createElement("small", {
+    className: "block text-[10px] text-amber-900"
+  }, `📜 ${who.name}の戦術カード(${tacGlow.by})`), jaWrap(tacGlow.line)), discard && React.createElement(CardDiscardModal, {
     db: db,
     st: st,
     initial: discard.tab,
