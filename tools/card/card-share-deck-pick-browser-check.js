@@ -4,6 +4,7 @@
 // ② デッキ選びの「戻る」で、「ほかのブリーダー」タブへ戻る
 // ③ 借りたデッキのタブは出ない(ごほうびの扱いを変えないため)
 // ④ 「このデッキで対戦」で、選んだデッキで対戦が始まる
+// ⑤ 一覧の「詳細」で、名前・3体・全カード・賢さ・数字が見られ、そこからも「戦う」でデッキ選びへ進む
 // 登録デッキの一覧(card_deck_entries)は、検査の中で1人ぶんを返す(本番のサーバには書かない)
 const fs = require('fs');
 const path = require('path');
@@ -80,6 +81,29 @@ const browser = async () => {
     await page.locator('[data-mh-screen] header button, [data-mh-screen] button').first().click();
     const back = await page.locator('[data-card-share-fight="check-breeder-1"]').waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
     check('② デッキ選びの「戻る」で、「ほかのブリーダー」タブへ戻る', back && (await page.locator('[data-card-foe-tab="breeder"][aria-selected="true"]').count()) === 1);
+    // ⑤ 「詳細」(2026-10-31 社長「各ブリーダーの詳細がわかりにくい。詳細ボタンつけて」): 名前・デッキ名・3体(絵と名前)・全カード・賢さ・数字・戦う
+    await page.locator('[data-card-share-detail-open="check-breeder-1"]').click();
+    const det = page.locator('[data-card-share-deck-detail]');
+    const opened = await det.waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
+    const info = opened ? await det.evaluate((el) => ({
+      name: (el.querySelector('[data-card-share-detail-name]') || {}).textContent || '',
+      mons: el.querySelectorAll('[data-card-share-detail-mons] img').length,
+      cards: Number((el.querySelector('[data-card-share-detail-cards]') || { getAttribute: () => 0 }).getAttribute('data-card-share-detail-cards')),
+      sum: [...el.querySelectorAll('[data-card-share-detail-card]')].reduce((a, x) => a + Number((x.textContent.match(/×(\d+)$/) || [0, 0])[1]), 0),
+      smart: !!el.querySelector('[data-card-share-detail-smart]'),
+      stats: (el.querySelector('[data-card-share-detail-stats]') || {}).textContent || '',
+      fight: !!el.querySelector('[data-card-share-detail-fight]'),
+    })) : null;
+    check('⑤ 「詳細」で、名前・3体の絵・全カード(合わせて50枚)・賢さ・戦われた数・「戦う」が出る',
+      !!info && /検査の相手/.test(info.name) && info.mons === 3 && info.cards === 50 && info.sum === 50 && info.smart && /まだ戦われていません/.test(info.stats) && info.fight, JSON.stringify(info));
+    if (process.env.SHARE_SHOT) await page.screenshot({ path: process.env.SHARE_SHOT });
+    const fitD = await det.evaluate((el) => { const box = el.firstElementChild.getBoundingClientRect(); return { right: Math.round(box.right), w: window.innerWidth, over: [...el.querySelectorAll('*')].filter((c) => c.scrollWidth > c.clientWidth + 1 && getComputedStyle(c).overflowX !== 'auto').length }; }).catch(() => null);
+    check('⑤ 詳細の窓が画面からはみ出さない', !!fitD && fitD.right <= fitD.w && fitD.over === 0, JSON.stringify(fitD));
+    await page.locator('[data-card-share-detail-fight]').click();
+    const viaDetail = await page.locator('[data-card-deck-pick-go]').waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
+    check('⑤ 詳細の「戦う」でも、デッキ選びへ進む', viaDetail);
+    await page.locator('[data-mh-screen] header button, [data-mh-screen] button').first().click();
+    await page.locator('[data-card-share-fight="check-breeder-1"]').waitFor({ timeout: 8000 });
     // ④ 対戦が始まる
     await page.locator('[data-card-share-fight="check-breeder-1"]').click();
     await page.locator('[data-card-deck-pick-go]').click();
