@@ -178,25 +178,140 @@ const cardMonArt = (mon) => {
   if (m && m.imgUrl) return m.imgUrl;
   return cardNewSpeciesArt()[mon.species] || null;
 };
+// ---- 立ち絵を前もって読む(2026-10-31 社長「対戦時に出る立ち絵モンスターが表示されないときがある。事前ダウンロードとかでなんとか」) ----
+//   立ち絵は事前ダウンロードの「バトル」に入っていて、カードだけの人・初めて見る子は対戦のその場で通信していた(遅い回線だと対戦開始の画面に間に合わない)。
+//   ・対戦開始の画面(83 の CardVsIntro)の前に、両方の3体の立ち絵とカードの絵を読む(上限つき)
+//   ・読めなければ1回読み直す。それでもだめなら、その子はカードの絵で出す(真っ白にしない)
+//   ・一度読めた絵は、事前ダウンロード(sw.js)が端末にためるので、次からは通信なしで出る。自動の事前ダウンロードにも立ち絵を入れた(25 の assetCardArtPaths)
+const CARD_ART_STATE = new Map(); // URL → 'ok' | 'ng' | 読んでいる途中の Promise(この起動のあいだだけ)
+const cardArtRetryUrl = (url) => `${url}${url.includes('?') ? '&' : '?'}r=${Date.now()}`;
+const cardArtLoadOne = (url) => {
+  if (!url || typeof Image === 'undefined') return Promise.resolve(false);
+  const s = CARD_ART_STATE.get(url);
+  if (s === 'ok') return Promise.resolve(true);
+  if (s === 'ng') return Promise.resolve(false);
+  if (s && typeof s.then === 'function') return s;
+  const p = new Promise((res) => {
+    const go = (u, left) => {
+      const im = new Image();
+      im.onload = () => { CARD_ART_STATE.set(url, 'ok'); res(true); };
+      im.onerror = () => { if (left > 0) setTimeout(() => go(cardArtRetryUrl(url), left - 1), 600); else { CARD_ART_STATE.set(url, 'ng'); res(false); } };
+      im.src = u;
+    };
+    go(url, 1);
+  });
+  CARD_ART_STATE.set(url, p);
+  return p;
+};
+const cardArtUrlsOf = (db, nos) => [...new Set((nos || []).flatMap((no) => { const m = cardMonsterOf(db, no); return m ? [cardMonArt(m), CARD_IMG(m.img)].filter(Boolean) : []; }))];
+// 前もって読む。読み終わるか capMs たったら終わる(長く待たせない)
+const cardArtPreload = (db, nos, capMs = 2500) => Promise.race([Promise.all(cardArtUrlsOf(db, nos).map(cardArtLoadOne)), new Promise((r) => setTimeout(r, capMs))]);
+const cardArtReady = (db, nos) => cardArtUrlsOf(db, nos).every((u) => CARD_ART_STATE.get(u) === 'ok' || CARD_ART_STATE.get(u) === 'ng');
+// 読めなかった立ち絵は出さない(カードの絵で代える)
+const cardMonArtOk = (mon) => { const a = cardMonArt(mon); return a && CARD_ART_STATE.get(a) !== 'ng' ? a : null; };
+// <img> で読めなかったとき: 1回読み直し、だめならカードの絵へ(fallback)
+const cardArtOnError = (url, fallback) => (e) => {
+  const el = e.currentTarget;
+  const n = Number(el.dataset.artTry || 0);
+  if (n < 1 && url) { el.dataset.artTry = '1'; setTimeout(() => { el.src = cardArtRetryUrl(url); }, 500); return; }
+  if (url) CARD_ART_STATE.set(url, 'ng');
+  if (fallback && n < 2) { el.dataset.artTry = '2'; el.style.objectFit = 'contain'; el.src = fallback; }
+};
+// 自動の事前ダウンロード・「バトルカード」のまとまりに入れる立ち絵のパス(25 の assetCardArtPaths が読む。?v= は外す)
+const cardArtPrefetchPaths = () => {
+  const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
+  if (!db) return [];
+  return [...new Set(Object.values(db.monsters).map((m) => cardMonArt(m)).filter(Boolean).map((u) => String(u).split('?')[0].replace(/^\.\//, '')))];
+};
 // キラ・レアキラ(別絵キラ)の立ち絵の光(2026-10-30 社長「キラとレアキラはエフェクトつきになるようにしたい」・見本のページのとおり)
 //   kira … ふちが虹色に移り変わり、十字のきらめきが時々走る(3つ) / rare … 金のふち・後ろに光の輪がゆっくり回って脈打つ・光の粒が舞う(6つ)
 //   CSS だけで動かす(軽く)。動きを減らす設定(prefers-reduced-motion)と、オプションの「揺らさない」(calm)では、ふちの光だけ
 const cardKiraOf = (db, no) => { const v = String(((db && cardMonsterOf(db, no)) || {}).variant || ''); return v.includes('別絵キラ') ? 'rare' : v.includes('キラ') ? 'kira' : null; };
-const CARD_KIRA_SPARKS = Object.freeze([[24, 30, 0], [68, 22, 1.3], [52, 62, 2.5]]);
-const CARD_RARE_MOTES = Object.freeze([[22, 0], [38, 1.1], [55, 0.5], [70, 1.7], [46, 2.3], [62, 2.9]]);
-// 立ち絵の後ろと前に重ねる光(kind が無いときは何も出さない)。親は relative で isolation: isolate(輪を絵の後ろへ回すため)
-const CardKiraFx = ({ kind, calm = false }) => {
+// 2026-10-31 社長「バトル中の立ち絵も強化して」→ 動画を見て「もっとわかりやすく。モンスターのセンター位置をちゃんと合わせて。ライガーみたいに尻尾があるやつは注意」。
+//   決まった案B(オーロラと粒)に合わせ、ふつうの子・キラ・レアキラの違いが場でひと目で分かる強さにする。
+//   kira … 色が移り変わる太いふち・体の後ろで色の光が脈打つ・星が5つまたたく・絵の上を光の帯が走る /
+//   rare … 金と桃色の太いふち・体の後ろで虹まじりの光の線が回る・強い金の光・光の粒が10・絵の形のとおりにオーロラが流れ光の帯が速く走る
+//   光の中心と大きさは、絵の四角ではなく「体」に合わせる(ART_BODY_CENTERS。tools/image/make-art-body-centers.js が測る。尻尾・羽は数えない)
+const CARD_KIRA_SPARKS = Object.freeze([[0.18, 0.28, 0], [0.8, 0.18, 1.3], [0.55, 0.62, 2.5], [0.88, 0.6, 0.7], [0.3, 0.08, 1.9]]);
+const CARD_RARE_MOTES = Object.freeze([[0.1, 0], [0.28, 1.1], [0.5, 0.5], [0.72, 1.7], [0.9, 2.3], [0.62, 2.9], [0.38, 1.5], [0.82, 0.8], [0.18, 2.6], [0.95, 2]]);
+// 体の範囲 [中心の横, 中心の縦, 左, 上, 右, 下](絵に対する割合)。表に無い絵は、下寄りの真ん中
+const cardKiraBodyOf = (src) => (typeof ART_BODY_CENTERS !== 'undefined' && src ? ART_BODY_CENTERS[String(src).split('?')[0].replace(/^images\//, '')] : null) || [0.5, 0.56, 0.18, 0.12, 0.82, 1];
+// 体を囲む円の大きさ(絵の幅に対する割合)。絵の横÷縦は ART_CONTENT_BOXES の5番目(無ければ正方形)
+const cardKiraBodySize = (src) => {
+  const [, , x0, y0, x1, y1] = cardKiraBodyOf(src);
+  const box = typeof cardVsBoxOf === 'function' ? cardVsBoxOf(src) : null;
+  const a = box && Number.isFinite(box[4]) && box[4] > 0 ? box[4] : 1;
+  return Math.max(x1 - x0, (y1 - y0) / a);
+};
+// 体の後ろ(back)と前(front)に重ねる光。style … 絵と同じ置き場所・大きさ・transform(絵の箱に重ねる)。
+//   back は z-index -1 で絵の後ろへ回る(親に isolation: isolate)。calm(揺らさない)・動きを減らす設定(CSS)では出さない
+const CardKiraAura = ({ kind, src, layer, calm = false, style = null }) => {
   if (!kind || calm) return null;
+  const [cx, cy, x0, y0, x1, y1] = cardKiraBodyOf(src);
+  const d = cardKiraBodySize(src);
+  const at = (k) => ({ left: `${cx * 100}%`, top: `${cy * 100}%`, width: `${d * k * 100}%` });
   return (
-    <span data-card-kira-fx={kind} className="mh-kira-fx" aria-hidden="true">
-      {kind === 'rare' && <><span className="mh-rare-halo"/><span className="mh-rare-glow"/></>}
-      {kind === 'kira' && CARD_KIRA_SPARKS.map(([x, y, d], i) => <span key={i} className="mh-kira-spark" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${d}s` }}/>)}
-      {kind === 'rare' && CARD_RARE_MOTES.map(([x, d], i) => <span key={i} className="mh-rare-mote" style={{ left: `${x}%`, animationDelay: `${d}s` }}/>)}
+    <span data-card-kira-fx={kind} data-card-kira-layer={layer} aria-hidden="true" className={`mh-kira-fx mh-kira-fx-${layer}`} style={style || undefined}>
+      {layer === 'back' && kind === 'rare' && <><span className="mh-rare-halo" style={at(1.55)}/><span className="mh-rare-glow" style={at(1.15)}/></>}
+      {layer === 'back' && kind === 'kira' && ['g1', 'g2', 'g3'].map((g) => <span key={g} className={`mh-kira-glow ${g}`} style={at(1.15)}/>)}
+      {layer === 'front' && kind === 'kira' && CARD_KIRA_SPARKS.map(([x, y, t], i) => <span key={i} className="mh-kira-spark" style={{ left: `${(x0 + x * (x1 - x0)) * 100}%`, top: `${(y0 + y * (y1 - y0)) * 100}%`, animationDelay: `${t}s` }}/>)}
+      {layer === 'front' && kind === 'rare' && CARD_RARE_MOTES.map(([x, t], i) => <span key={i} className="mh-rare-mote" style={{ left: `${(x0 + x * (x1 - x0)) * 100}%`, top: `${y1 * 100 - 4}%`, animationDelay: `${t}s` }}/>)}
     </span>
   );
 };
-// 立ち絵(img など)を、キラのふちの光で包む。kind が無ければそのまま返す
-const cardKiraWrap = (kind, el) => (kind ? <span data-card-kira={kind} className={`${kind === 'rare' ? 'mh-rare-rim' : 'mh-kira-rim'} inline-flex items-end justify-center`}>{el}</span> : el);
+const cardKiraRimClass = (kind) => (kind === 'rare' ? 'mh-rare-rim' : 'mh-kira-rim');
+// カードの絵(枠つき)のキラ・レアキラ・銀の光(2026-10-31 社長「光り方は案B オーロラと粒」「ブリーダー・場のカード33枚に銀の光の帯」・
+//   見本は docs/progress/card-pack-fx)。手持ちの一覧・デッキを組む画面・売り場・パック・カードを大きく見る画面で使う(対戦中の手札には付けない)
+//   rare … オーロラが流れ、光の帯が走り、光の粒が舞い上がる・金のふち / kira … ふちの色が移り変わり、星がまたたく /
+//   silver … 銀の光の帯(ブリーダーのカード。レアの段は無く、見た目だけ)。CSS は 70-bootstrap の .mh-shine-*(動かすのは transform と opacity だけ)
+const cardShineOf = (db, no) => { const c = db ? cardOf(db, no) : null; if (c) return c.user === 'breeder' ? 'silver' : null; return cardKiraOf(db, no); };
+const CARD_SHINE_STARS = Object.freeze([[24, 26, 0], [74, 40, 0.9], [44, 74, 1.6]]);
+const CARD_SHINE_MOTES = Object.freeze([[15, 0], [30, 0.5], [45, 1.1], [60, 0.3], [75, 0.8], [88, 1.4]]);
+// children(カードの絵)を光の層で包む。kind が無ければそのまま返す。className … 包む枠の形(角の丸みなど)
+const CardShine = ({ kind, className = '', children }) => {
+  if (!kind) return children;
+  return (
+    <span data-card-shine={kind} className={`mh-shine ${className}`}>
+      {children}
+      {kind === 'rare' && <><span aria-hidden="true" className="mh-shine-l mh-shine-aurora"/><span aria-hidden="true" className="mh-shine-l mh-shine-sheen"/><span aria-hidden="true" className="mh-shine-l mh-shine-rare-rim"/>
+        {CARD_SHINE_MOTES.map(([x, d], i) => <span key={i} aria-hidden="true" className="mh-shine-l mh-shine-mote" style={{ left: `${x}%`, animationDelay: `${d}s` }}/>)}</>}
+      {kind === 'kira' && <>{['r1', 'r2', 'r3'].map((r) => <span key={r} aria-hidden="true" className={`mh-shine-l mh-shine-rim ${r}`}/>)}
+        {CARD_SHINE_STARS.map(([x, y, d], i) => <span key={i} aria-hidden="true" className="mh-shine-l mh-shine-star" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${d}s` }}/>)}</>}
+      {kind === 'silver' && <><span aria-hidden="true" className="mh-shine-l mh-shine-silver"/><span aria-hidden="true" className="mh-shine-l mh-shine-silver-rim"/></>}
+    </span>
+  );
+};
+// 立ち絵の「絵の形のとおり」に重ねる光(絵そのものを型にして切り抜く。透けている所には出ない)。
+//   style … 絵と同じ置き場所・大きさ・transform(左右の向きも)。maskSize/maskPos … 絵の収め方(object-contain なら contain)
+//   calm(揺らさない)・動きを減らす設定では出さない(CSS)。動かすのは中の層の transform だけ
+const CardKiraSil = ({ kind, src, calm = false, style = null, maskSize = '100% 100%', maskPos = 'center' }) => {
+  if (!kind || !src || calm) return null;
+  const m = `url("${src}")`;
+  return (
+    <span data-card-kira-sil={kind} aria-hidden="true" className="mh-kira-sil"
+      style={{ WebkitMaskImage: m, maskImage: m, WebkitMaskSize: maskSize, maskSize, WebkitMaskPosition: maskPos, maskPosition: maskPos, WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat', ...style }}>
+      {kind === 'rare' && <span className="mh-kira-sil-aurora"/>}
+      <span className={`mh-kira-sil-sheen ${kind === 'rare' ? 'fast' : ''}`}/>
+    </span>
+  );
+};
+// 立ち絵(img。中身の大きさそのままの箱)を、キラの光で包む。kind が無ければそのまま返す。
+//   ふちの光(filter)は絵だけにかけ、後ろ・絵の形・前の光はその外に置く(中で動かすと、ふちの光を毎こま描き直して重くなる)。
+//   fx … { src, transform, calm }。transform … 絵と同じ transform(広げる・左右の向き)。光も同じ形で重ねる
+const cardKiraWrap = (kind, el, fx = null) => {
+  if (!kind) return el;
+  const rim = <span data-card-kira={kind} className={`${cardKiraRimClass(kind)} inline-flex items-end justify-center`}>{el}</span>;
+  if (!fx || fx.calm) return rim;
+  const pos = { inset: 0, ...(fx.transform ? { transform: fx.transform } : null) };
+  return (
+    <span className="relative inline-flex items-end justify-center" style={{ isolation: 'isolate' }}>
+      <CardKiraAura kind={kind} src={fx.src} layer="back" style={pos}/>
+      {rim}
+      <CardKiraSil kind={kind} src={fx.src} style={pos}/>
+      <CardKiraAura kind={kind} src={fx.src} layer="front" style={pos}/>
+    </span>
+  );
+};
 // 場の立ち絵を、絵の「中身の範囲」(ART_CONTENT_BOXES。対戦開始の画面の cardVsBoxOf と同じ表)で要素いっぱいへ広げる
 // (2026-10-30 社長「同じ血統同士のサイズがあってない」)。カード用に届いた絵(ジェントルなど)は中身が端までなので広げず、
 // 余白のある古い立ち絵(モッチー・スエゾー・ライガーなど)だけが広がる。1体ずつの数字は持たない(表から計算する)。
@@ -576,6 +691,13 @@ const CardFoeStyle = ({ db, who, level }) => {
 // ---- 詳しい画面(大きな絵・名前・種類・ガッツ・使える子・番号・文)。どこをタップしても閉じる ----
 // dexInfo … 図鑑から開いたときだけ { pack: '第2弾パック', have: 3 }。入っている弾と持っている枚数を出す(2026-10-29 社長・図鑑 案B)
 // nav … 図鑑から開いたときだけ { pos: '3 / 59', onPrev, onNext }。絵の左右の ◀ ▶ で となりのカードへ送る(端では押せない)
+// 効果の文が空のカード(ダメージを与えるだけのちから技・かしこさ技。パンチ・かま首突き・バーストキャノンなど77枚)の一文。
+//   カードの絵には効果の欄が空で、観戦・見返しで「何をするカードか」が分からなかった(2026-10-31 社長「観戦でカードの効果がわからないものがある」)
+const cardPlainEffectText = (c) => {
+  if (!c || c.text || (c.effects || []).length) return '';
+  if ((c.kind === 'pow' || c.kind === 'int') && Number.isFinite(Number(c.damage))) return `相手のモンスター1体に、${c.damage}ダメージを与える${c.kind === 'pow' ? 'ちから技' : 'かしこさ技'}です。`;
+  return '';
+};
 const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexInfo = null, nav = null }) => {
   const dexLine = dexInfo ? (
     <div data-card-detail-dex className="mt-1.5 flex flex-wrap gap-1.5 text-[12px] font-bold">
@@ -587,17 +709,19 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
   const m = c ? null : cardMonsterOf(db, no);
   const navBtn = (dir, fn) => <button type="button" data-card-detail-nav={dir} aria-label={dir === 'prev' ? '前のカード' : '次のカード'} disabled={!fn} onClick={(e) => { e.stopPropagation(); if (fn) { Audio_.fgSe.tap(); fn(); } }} className="mh-button flex h-12 w-11 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-slate-800 text-[18px] font-black text-white active:scale-95 disabled:opacity-25">{dir === 'prev' ? '◀' : '▶'}</button>;
   return (
-    <div data-card-detail onClick={onClose} className="fixed inset-0 flex flex-col items-center justify-center gap-3 overflow-y-auto px-4 py-6" style={{ zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.94)' }} role="dialog" aria-label="カードの詳しい画面">
+    // 詳しい画面は、ほかの窓(捨て札・記録・チャットなど。どれも MODAL_Z.dialog)より手前に出す。同じ高さだと、
+    //   画面の部品の並び順しだいで捨て札の窓の後ろに回っていた(2026-10-31 社長「すてふだからだと詳細カード画面が裏に回ってる」)。確かめの窓(confirm)よりは下
+    <div data-card-detail onClick={onClose} className="fixed inset-0 flex flex-col items-center justify-center gap-3 overflow-y-auto px-4 py-6" style={{ zIndex: MODAL_Z.dialog + 100, backgroundColor: 'rgba(2,6,23,0.94)' }} role="dialog" aria-label="カードの詳しい画面">
       {nav ? (
         <div data-card-detail-navrow className="flex w-full max-w-sm flex-col items-center gap-1">
           <div className="flex w-full items-center justify-center gap-2">
             {navBtn('prev', nav.onPrev)}
-            <img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(62vw,280px)] min-w-0 rounded-xl shadow-2xl landscape:h-[32vh] landscape:w-auto"/>
+            <CardShine kind={cardShineOf(db, no)} className="w-fit min-w-0 rounded-xl"><img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(62vw,280px)] min-w-0 rounded-xl shadow-2xl landscape:h-[32vh] landscape:w-auto"/></CardShine>
             {navBtn('next', nav.onNext)}
           </div>
           <span data-card-detail-pos className="text-[12px] font-bold text-slate-400">{nav.pos}</span>
         </div>
-      ) : <img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(78vw,300px)] rounded-xl shadow-2xl"/>}
+      ) : <CardShine kind={cardShineOf(db, no)} className="w-fit rounded-xl"><img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(78vw,300px)] rounded-xl shadow-2xl"/></CardShine>}
       {c && (
         <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100">
           <div className="text-lg font-black">{c.name}</div>
@@ -610,6 +734,7 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
           </div>
           {dexLine}
           {c.text && <p className="mt-2 text-[14px] font-bold leading-relaxed">{c.text}</p>}
+          {!c.text && cardPlainEffectText(c) && <p data-card-detail-plain className="mt-2 text-[14px] font-bold leading-relaxed" style={JA_LABEL_STYLE}>{jaWrap(cardPlainEffectText(c))}</p>}
           {c.note && <p data-card-detail-note className="mt-1.5 text-[12px] font-bold leading-relaxed text-sky-200" style={JA_LABEL_STYLE}>{jaWrap(c.note)}</p>}
           {!c.ready && <p className="mt-2 text-[12px] font-bold text-amber-300" style={JA_LABEL_STYLE}>{jaWrap('このカードは準備中です(まだデッキに入れられません)')}</p>}
         </div>
@@ -638,7 +763,8 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
   );
 };
 
-// ---- 捨て札の一覧(自分/相手のタブ・新しい順・1枚を長押しで詳しい画面) ----
+// ---- 捨て札の一覧(自分/相手のタブ・新しい順・1枚をタップで詳しい画面。長押しでも開く) ----
+//   2026-10-31 社長「すてふだはワンタップで詳細見せて」。前は長押しだけだった
 const CardDiscardModal = ({ db, st, initial = CARD_ME, onDetail, onClose }) => {
   const [tab, setTab] = useState(initial);
   const press = useCardLongPress(onDetail);
@@ -655,13 +781,13 @@ const CardDiscardModal = ({ db, st, initial = CARD_ME, onDetail, onClose }) => {
       <div className="grid max-h-[60vh] grid-cols-4 gap-1.5 overflow-y-auto">
         {list.length === 0 && <p className="col-span-4 py-6 text-center text-[13px] font-bold text-slate-400">まだありません</p>}
         {list.map((no, i) => { const c = cardOf(db, no); return (
-          <div key={`${no}-${i}`} {...press(no)} className="flex flex-col items-center" style={{ containerType: 'inline-size' }}>
+          <div key={`${no}-${i}`} {...press(no, () => onDetail(no), { double: false })} role="button" data-card-discard-item={no} className="flex cursor-pointer flex-col items-center active:scale-95" style={{ containerType: 'inline-size' }}>
             <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} loading="lazy" className="w-full rounded-md"/>
             <CardDiscardName name={c ? c.name : no}/>
           </div>
         ); })}
       </div>
-      <p className="mt-2 text-center text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('カードを長押しすると詳しく見られます')}</p>
+      <p className="mt-2 text-center text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('カードをタップすると詳しく見られます')}</p>
       <div className="mt-2"><ModalCloseButton onClick={onClose}/></div>
     </ModalFrame>
   );
@@ -728,7 +854,7 @@ const CardDiscardName = ({ name }) => {
 };
 const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact = false, tiny = false, wide = false, motion = null, calm = false, guardTag = '', onStatus = null, statusLock = false, onPressMon = null }) => {
   const mon = st.players[p].mons[m];
-  const art = cardMonArt(mon);
+  const art = cardMonArtOk(mon);
   const ty = cardMonType(mon, st.turn);
   const opp = p === CARD_CPU;
   const pct = Math.max(0, Math.round((mon.life / mon.max) * 100));
@@ -764,15 +890,17 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   const artFit = art ? cardFieldArtTransform(art, opp) : null;
   const kira = art && !mon.ko ? cardKiraOf(db, mon.no) : null;
   const imgEl = art
-    ? cardKiraWrap(kira, <img src={art} alt="" style={{ ...(wide ? { maxHeight: wideArtH } : null), ...(artFit ? { transform: artFit } : null) }} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp && !artFit ? '-scale-x-100' : ''}`}/>)
+    ? cardKiraWrap(kira, <img src={art} alt="" onError={cardArtOnError(art, CARD_IMG(cardMonsterOf(db, mon.no).img))} style={{ ...(wide ? { maxHeight: wideArtH } : null), ...(artFit ? { transform: artFit } : null) }} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp && !artFit ? '-scale-x-100' : ''}`}/>,
+      { src: art, transform: artFit || (opp ? 'scaleX(-1)' : null), calm })
     : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`}/>;
-  const mv = motion && !mon.ko ? motion : null;
+  // 攻撃の動きだけは、その手で倒れた子(はね返されて倒れたなど)でも最後まで見せる。動きが終わると倒れた形になる
+  //   (攻撃の動きを守りが決まった手で流すようにしたので、はね返しで倒れる手と同じになった。2026-10-31)
+  const mv = motion && (!mon.ko || motion.type === 'attack') ? motion : null;
   // calm … オプションの「画面の揺れ: 揺らさない」。受けたときは揺らさずに光るだけ
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? (calm ? 'mh-card-hit-calm' : 'mh-card-hit') : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = (
     <div data-card-art={`${p}-${m}`} className={`relative flex ${wide ? '' : tiny ? 'h-[44px]' : compact ? 'h-[56px]' : opp ? 'h-[78px]' : 'h-[106px]'} w-full items-end justify-center`}
       style={{ isolation: 'isolate', ...(wide ? { height: wideArtH } : null), ...(mv && mv.type === 'attack' ? { '--atk-dx': `${mv.dx}px`, '--atk-dy': `${mv.dy}px`, zIndex: 40 } : null) }}>
-      {kira && <CardKiraFx kind={kira} calm={calm}/>}
       {mv && mv.type === 'attack' && mv.kind
         ? <SkillFxMotion key={mv.key} kind={mv.kind} image={imgEl}/>
         : <div key={mv ? mv.key : 'still'} data-card-pose={mon.ko ? 'ko' : mv ? mv.type : 'still'} className={`flex items-end justify-center ${poseClass}`}>{imgEl}</div>}
@@ -924,6 +1052,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const [tacGlow, setTacGlow] = useState(null);
   const [tacLog, setTacLog] = useState([]);
   useEffect(() => { if (!tacGlow) return undefined; const t = setTimeout(() => setTacGlow(null), 2400); return () => clearTimeout(t); }, [tacGlow]);
+  const [, setArtTick] = useState(0);
+  // 盤を開いたら、両方の3体の立ち絵を前もって読む(観戦・見返し・大会の見返しは対戦開始の画面を通らないため。読めなかった子はカードの絵で出る)
+  useEffect(() => { if (typeof cardArtPreload === 'function') void cardArtPreload(db, st.players.flatMap((pl) => pl.mons.map((m) => m.no))).then(() => setArtTick((n) => n + 1)); }, []); // 読み終えたら描き直す(読めなかった子をカードの絵へ)
   const [downBand, setDownBand] = useState(null); // 倒れたときの「◯◯ ダウン！ / 残り◯体」の帯 { key, p, names, left }(改良の案 B)
   const [breederFx, setBreederFx] = useState(null); // ブリーダーのカードを使ったとき、まんなかの端に出す顔 { p, key }
   const [beams, setBeams] = useState([]);
@@ -1128,7 +1259,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     const evs = next.events || [];
     // 控えていた攻撃の動きを、守りが決まった手で流す。当たり・守りの動きと数字は、攻撃の動きが届くころまで遅らせる(lead)
     const held = pendingAtk.current;
-    const deferred = held && held.turn === next.turn && evs.some((e) => e.t === 'hit' || e.t === 'guard') ? held : null;
+    // ★流すのは当たりが決まった手(hit)だけ。守りのカードを出した手(guard)では流さない。守りは何枚でも重ねられ、
+    //   出すたびに流すと「攻撃 → よける → もう一度よける」と二重に見えていた(2026-10-31 社長「まだ攻撃→防御(回避)の流れで二重描写がある」)
+    const deferred = held && held.turn === next.turn && evs.some((e) => e.t === 'hit') ? held : null;
     if (deferred) { pendingAtk.current = null; playMotion(deferred.id, { ...deferred.mv, key: `${deferred.mv.key}-go` }, cardMotionMs(deferred.mv.kind) + 80); }
     if (held && held.turn !== next.turn) pendingAtk.current = null;
     const lead = deferred ? Math.round(cardMotionMs(deferred.mv.kind) * 0.5) : 0;
@@ -1192,19 +1325,16 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     // ★守りのカードを出した手と、当たりが決まる手は別のことがある。よけ方(ジャンプ)・盾の数字は、守りのカードを出したときの控えから引く
     evs.filter((e) => e.t === 'guard').forEach((e) => { const c = cardOf(db, e.card); lastGuard.current[`${e.p}-${e.mon}`] = { jump: cardDodgeIsJump(c), label: c && c.kind !== 'dge' ? cardGuardLabel(c) : '', at: Date.now() }; });
     evs.filter((e) => e.t === 'hit').forEach((e, n) => {
-      let type = e.evaded && !e.dmg ? 'dodge' : e.guarded && !e.dmg ? 'guard' : e.dmg > 0 ? 'hit' : (e.evaded ? 'dodge' : null);
+      // 防御のカードで受けた当たりは、ダメージが残っても盾の動きにする(守りのカードを出した手では動かさなくなったので、ここで1回だけ見せる)
+      let type = e.evaded && !e.dmg ? 'dodge' : e.guarded ? 'guard' : e.dmg > 0 ? 'hit' : (e.evaded ? 'dodge' : null);
       const g = lastGuard.current[`${e.p}-${e.m}`];
       const recent = g && Date.now() - g.at < 20000;
       if (type === 'dodge' && recent && g.jump) type = 'jump';
       const hk = `h${next.log.length}-${n}-${Date.now()}`;
       if (type && motionOn) later(() => playMotion(`${e.p}-${e.m}`, { type, label: type === 'guard' && recent ? g.label : '', key: hk }, type === 'jump' ? 920 : 720));
     });
-    evs.filter((e) => e.t === 'guard').forEach((e, n) => {
-      const c = cardOf(db, e.card);
-      const type = c && c.kind === 'dge' ? (cardDodgeIsJump(c) ? 'jump' : 'dodge') : 'guard';
-      const gk = `g${next.log.length}-${n}-${Date.now()}`;
-      if (motionOn) later(() => playMotion(`${e.p}-${e.mon}`, { type, label: type === 'guard' ? cardGuardLabel(c) : '', key: gk }, type === 'jump' ? 920 : 720));
-    });
+    // 守りのカードを出した手(guard)では動かさない。よける・防ぐの動きは、当たりが決まった手(上の hit)で1回だけ出す
+    //   (跳んでよける・盾の数字は、上の lastGuard の控えから引く)。前はここでも流していて、同じ子が2回よけて見えていた
     const use = evs.find((e) => e.t === 'use');
     if (use) {
       const key = `${next.log.length}-${Date.now()}`;
@@ -2678,6 +2808,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
+  // オプション「パックを開ける演出」(87 の cardPackFxOn。保存は mh_card_pack_fx_v1。カードの設定 mh_card_settings_v1 とは別)
+  const [packFx, setPackFx] = useState(cardPackFxOn);
   const [tacticsBack, setTacticsBack] = useState('mode'); // 戦術カードの画面から戻る先(97。みんなのデッキから来たら share)
   const [cupOpenId, setCupOpenId] = useState(null); // 個人杯(99-card-cup)で見ていた杯。デッキ登録から戻ったときに開き直す
   // オプションの「助手と対戦」の曲の並び: 直している助手と、全員へ写すときの下書き({ list, confirm })
@@ -3873,6 +4005,25 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           </div>
     );
     // 対戦の BGM(社長「バトルと同じように自分で決められる」)。いまの BGM アレンジと同じ、曲の一覧から選んで試聴できる形(上の bgmPanel)
+    // パックを開ける演出(設定の「演出」の区切りの最後。並べ方はほかの項目と同じ)
+    const packFxPanel = (
+          <div data-card-setting="packFx" className="mt-2.5 border-t border-white/10 pt-2.5">
+            <b className="block text-[12px] font-black text-slate-200">パックを開ける演出</b>
+            <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{cardJaWrap('パックを開けたときの演出です。「強め」は、キラ以上のカードがめくれる前に光が段を上がり、画面がふるえて光がはじけます。出るカードは変わりません。')}</p>
+            <div className="mt-2 grid grid-cols-2 gap-1.5">
+              {[{ id: 'ON', label: '強め', note: '光ってふるえる' }, { id: 'OFF', label: '短め', note: 'すぐめくれる' }].map((o) => {
+                const cur = (packFx ? 'ON' : 'OFF') === o.id;
+                return (
+                  <button key={o.id} type="button" data-card-setting-option={o.id} aria-pressed={cur} onClick={() => { Audio_.fgSe.tap(); cardPackFxSet(o.id === 'ON'); setPackFx(o.id === 'ON'); }}
+                    className={`flex min-h-[48px] flex-col items-center justify-center rounded-xl px-0.5 py-1 text-[11px] font-black leading-tight active:scale-95 ${cur ? 'border border-amber-300 bg-amber-500/30 text-amber-50' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
+                    <span className="block whitespace-pre-line text-center">{o.label}</span>
+                    <small className="mt-0.5 block text-center text-[9px] font-bold leading-tight opacity-80">{o.note}</small>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+    );
     const quickAutoPanel = (
           <div data-card-options-quick data-card-setting="quickAutoStart" className="mt-2.5 border-t border-white/10 pt-2.5">
             <b className="block text-[12px] font-black text-slate-200">裏のクイック周回</b>
@@ -3964,6 +4115,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                   </div>
                 );
               })}
+              {g.title === '演出' && packFxPanel}
               {g.title === '自動' && quickAutoPanel}
               {g.title === '助手' && startLevelPanel}
             </div>
