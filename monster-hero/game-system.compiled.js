@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e4fd2a9c6b34c97c
+// source-sha256: 2247d0d80c9cb111
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -57778,7 +57778,7 @@ function BreederMarketScreen({
       color: SECTION_TABS[section].color
     }));
     const value = activeSectionTab(section);
-    const tight = section === 'card';
+    const tight = section === 'card' || section === 'event';
     if (!scroll || items.length < (tight ? 5 : 6)) return React.createElement(ScreenTabs, {
       value: value,
       onChange: key => selectSectionTab(section, key),
