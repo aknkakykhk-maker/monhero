@@ -153,7 +153,8 @@ const waitFor = async (page, fn, arg, timeout = 120000) => page.waitForFunction(
       await ASSET_CACHE.refreshStatus();
       return { shown, all: st.packs.all && st.packs.all.count, card: st.packs.card && st.packs.card.count };
     });
-    check('デバッグ端末には「バトルカード」が出て、「全部」にもカードの絵が入る', cardDebug.shown === 'beat,battle,card,all' && cardDebug.card > 400 && cardDebug.all === cardGate.nonCard + cardDebug.card, JSON.stringify(cardDebug));
+    //「バトルカード」には、カードの対戦の立ち絵(バトルと共通)も入る(2026-10-31)。「全部」は重ねて数えない
+    check('デバッグ端末には「バトルカード」が出て、「全部」にもカードの絵が入る', cardDebug.shown === 'beat,battle,card,all' && cardDebug.card > 400 && cardDebug.all === cardGate.nonCard + cardGate.cardCount && cardDebug.card >= cardGate.cardCount, JSON.stringify(cardDebug));
 
     console.log('③ ダウンロード・取り消し・消す');
     const battleBefore = (await status()).packs.battle.haveCount; // 遊んでいる画面が使った絵は SW が入れる(作りどおり)

@@ -264,7 +264,8 @@ check('既存のランキング行を書き換える処理を足していない'
     //   ランキングの表ではない(2026-10-26 #3678)。例外にするのは、この関数の中の card_battle_invites への PATCH だけ
     && !/method:\s*'PATCH'/.test(source
       .replace(/const friendsPatchLink[\s\S]*?prefer: 'return=minimal' \}\);/, '')
-      .replace(/const sbDeclineCardInvite = async[\s\S]*?cardPvpInviteRequest\(`card_battle_invites\?[^`]*`, \{ method: 'PATCH', [^}]*\}, prefer: 'return=minimal' \}\);/, ''))
+      // 2026-10-30: 招待を取り消す処理にも card_battle_invites への PATCH が増えた。招待の表への PATCH はどれもランキングの表ではないので外して数える
+      .replace(/cardPvpInviteRequest\(`card_battle_invites\?[^`]*`, \{ method: 'PATCH',[^\n]*/g, ''))
     && !has('DELETE FROM') && !has('migrateRanking'));
 
 // --- ③ WAVEごとの自動成長 ---

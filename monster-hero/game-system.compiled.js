@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6b6f747b5b048dd9
+// source-sha256: d785df8e45cfd66c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -28386,6 +28386,13 @@ const assetPacksShown = () => {
   } : p);
 };
 const ASSET_CARD_AUTO_PREFIXES = ['images/card-battle/s/', 'images/card-battle/l/'];
+const assetCardArtPaths = () => {
+  try {
+    return typeof cardArtPrefetchPaths === 'function' ? cardArtPrefetchPaths() : [];
+  } catch (e) {
+    return [];
+  }
+};
 const ASSET_CORE_PREFIXES = ['data/images/', 'images/ui/', 'images/monster-icons/'];
 const ASSET_AUTO_BUDGET = {
   cellular: 8 * 1024 * 1024,
@@ -28447,7 +28454,10 @@ const ASSET_CACHE = (() => {
     }
     return manifestPromise;
   };
-  const filesOfPack = (m, packId) => Object.entries(m.files).filter(([, f]) => f.pack !== 'core' && (packId === 'all' ? assetPackOpen(assetPackOfId(f.pack)) : f.pack === packId));
+  const filesOfPack = (m, packId) => {
+    const cardArt = packId === 'card' ? new Set(assetCardArtPaths()) : null;
+    return Object.entries(m.files).filter(([path, f]) => f.pack !== 'core' && (packId === 'all' ? assetPackOpen(assetPackOfId(f.pack)) : f.pack === packId || cardArt && cardArt.has(path)));
+  };
   const refreshStatus = async () => {
     status = {
       ...status,
@@ -28747,7 +28757,10 @@ const ASSET_CACHE = (() => {
     if (!m) return;
     enqueue(Object.keys(m.files).filter(p => m.files[p].pack !== 'core' && ASSET_CORE_PREFIXES.some(pre => p.startsWith(pre))));
     for (const songId of settings.songs) enqueue(songPaths(songId));
-    if (assetPackOpen(assetPackOfId('card'))) for (const pre of ASSET_CARD_AUTO_PREFIXES) enqueue(Object.keys(m.files).filter(p => p.startsWith(pre)));
+    if (assetPackOpen(assetPackOfId('card'))) {
+      enqueue(assetCardArtPaths().filter(p => m.files[p]));
+      for (const pre of ASSET_CARD_AUTO_PREFIXES) enqueue(Object.keys(m.files).filter(p => p.startsWith(pre)));
+    }
   };
   let listening = false;
   const listen = () => {
@@ -96348,6 +96361,7 @@ const CardVsArt = ({
   spread = 1,
   className = '',
   style = {},
+  onImgError = null,
   ...rest
 }) => {
   const box = cardVsBoxOf(src);
@@ -96355,6 +96369,7 @@ const CardVsArt = ({
     src: src,
     alt: alt,
     draggable: false,
+    onError: onImgError || undefined,
     className: `w-full object-contain object-bottom ${className}`,
     style: {
       aspectRatio: `${aspect}`,
@@ -96377,6 +96392,7 @@ const CardVsArt = ({
     src: src,
     alt: alt,
     draggable: false,
+    onError: onImgError || undefined,
     className: `absolute max-w-none ${className}`,
     style: {
       width: `${wP}%`,
@@ -96397,7 +96413,7 @@ const CardVsMonsters = ({
 }, (monsters || []).slice(0, 3).map((no, i) => {
   const m = cardMonsterOf(db, no);
   if (!m) return null;
-  const art = cardMonArt(m);
+  const art = typeof cardMonArtOk === 'function' ? cardMonArtOk(m) : cardMonArt(m);
   return React.createElement("div", {
     key: `${no}-${i}`,
     "data-card-vs-mon": no,
@@ -96413,6 +96429,7 @@ const CardVsMonsters = ({
       alt: m.name,
       aspect: 1,
       spread: 1.1,
+      onImgError: typeof cardArtOnError === 'function' ? cardArtOnError(art, CARD_IMG(m.img)) : null,
       className: "drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]",
       style: {
         width: kira ? 'min(19vh, 140px, 30vw)' : 'min(100%, 19vh, 140px)'
@@ -96466,12 +96483,37 @@ const CardVsIntro = ({
     onDone && onDone();
   };
   const ms = CARD_VS_MS[intro.mode] || CARD_VS_MS.assistant;
-  useEffect(() => {
-    const t = setTimeout(finish, ms);
-    return () => clearTimeout(t);
-  }, []);
   const foe = intro.foe || {};
   const me = intro.me || {};
+  const nos = [...(foe.monsters || []), ...(me.monsters || [])];
+  const [ready, setReady] = useState(() => typeof cardArtReady !== 'function' || cardArtReady(db, nos));
+  useEffect(() => {
+    if (ready) return undefined;
+    let alive = true;
+    void cardArtPreload(db, nos).then(() => {
+      if (alive) setReady(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (!ready) return undefined;
+    const t = setTimeout(finish, ms);
+    return () => clearTimeout(t);
+  }, [ready]);
+  if (!ready) {
+    return React.createElement("div", {
+      "data-mh-screen": true,
+      "data-card-vs-loading": true,
+      className: "relative flex h-full min-h-0 flex-1 flex-col items-center justify-center text-white",
+      style: {
+        background: 'linear-gradient(170deg, #4c0519 0%, #1e1b4b 48%, #0c4a6e 100%)'
+      }
+    }, React.createElement("b", {
+      className: "animate-pulse text-[15px] font-black"
+    }, "対戦の準備中…"));
+  }
   const who = foe.who && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find(x => x.id === foe.who) : null;
   const short = intro.mode === 'tutorial';
   const step = short ? 90 : 170;
@@ -97952,6 +97994,66 @@ const cardMonArt = mon => {
   if (m && m.imgUrl) return m.imgUrl;
   return cardNewSpeciesArt()[mon.species] || null;
 };
+const CARD_ART_STATE = new Map();
+const cardArtRetryUrl = url => `${url}${url.includes('?') ? '&' : '?'}r=${Date.now()}`;
+const cardArtLoadOne = url => {
+  if (!url || typeof Image === 'undefined') return Promise.resolve(false);
+  const s = CARD_ART_STATE.get(url);
+  if (s === 'ok') return Promise.resolve(true);
+  if (s === 'ng') return Promise.resolve(false);
+  if (s && typeof s.then === 'function') return s;
+  const p = new Promise(res => {
+    const go = (u, left) => {
+      const im = new Image();
+      im.onload = () => {
+        CARD_ART_STATE.set(url, 'ok');
+        res(true);
+      };
+      im.onerror = () => {
+        if (left > 0) setTimeout(() => go(cardArtRetryUrl(url), left - 1), 600);else {
+          CARD_ART_STATE.set(url, 'ng');
+          res(false);
+        }
+      };
+      im.src = u;
+    };
+    go(url, 1);
+  });
+  CARD_ART_STATE.set(url, p);
+  return p;
+};
+const cardArtUrlsOf = (db, nos) => [...new Set((nos || []).flatMap(no => {
+  const m = cardMonsterOf(db, no);
+  return m ? [cardMonArt(m), CARD_IMG(m.img)].filter(Boolean) : [];
+}))];
+const cardArtPreload = (db, nos, capMs = 2500) => Promise.race([Promise.all(cardArtUrlsOf(db, nos).map(cardArtLoadOne)), new Promise(r => setTimeout(r, capMs))]);
+const cardArtReady = (db, nos) => cardArtUrlsOf(db, nos).every(u => CARD_ART_STATE.get(u) === 'ok' || CARD_ART_STATE.get(u) === 'ng');
+const cardMonArtOk = mon => {
+  const a = cardMonArt(mon);
+  return a && CARD_ART_STATE.get(a) !== 'ng' ? a : null;
+};
+const cardArtOnError = (url, fallback) => e => {
+  const el = e.currentTarget;
+  const n = Number(el.dataset.artTry || 0);
+  if (n < 1 && url) {
+    el.dataset.artTry = '1';
+    setTimeout(() => {
+      el.src = cardArtRetryUrl(url);
+    }, 500);
+    return;
+  }
+  if (url) CARD_ART_STATE.set(url, 'ng');
+  if (fallback && n < 2) {
+    el.dataset.artTry = '2';
+    el.style.objectFit = 'contain';
+    el.src = fallback;
+  }
+};
+const cardArtPrefetchPaths = () => {
+  const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
+  if (!db) return [];
+  return [...new Set(Object.values(db.monsters).map(m => cardMonArt(m)).filter(Boolean).map(u => String(u).split('?')[0].replace(/^\.\//, '')))];
+};
 const cardKiraOf = (db, no) => {
   const v = String((db && cardMonsterOf(db, no) || {}).variant || '');
   return v.includes('別絵キラ') ? 'rare' : v.includes('キラ') ? 'kira' : null;
@@ -98581,6 +98683,11 @@ const CardFoeStyle = ({
     style: JA_WRAP_STYLE
   }, jaWrap(`${lv}: ${CARD_FOE_BUILD_NOTE[level] || ''}`)));
 };
+const cardPlainEffectText = c => {
+  if (!c || c.text || (c.effects || []).length) return '';
+  if ((c.kind === 'pow' || c.kind === 'int') && Number.isFinite(Number(c.damage))) return `相手のモンスター1体に、${c.damage}ダメージを与える${c.kind === 'pow' ? 'ちから技' : 'かしこさ技'}です。`;
+  return '';
+};
 const CardDetailModal = ({
   db,
   no,
@@ -98614,86 +98721,91 @@ const CardDetailModal = ({
     },
     className: "mh-button flex h-12 w-11 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-slate-800 text-[18px] font-black text-white active:scale-95 disabled:opacity-25"
   }, dir === 'prev' ? '◀' : '▶');
-  return React.createElement("div", {
-    "data-card-detail": true,
-    onClick: onClose,
-    className: "fixed inset-0 flex flex-col items-center justify-center gap-3 overflow-y-auto px-4 py-6",
-    style: {
-      zIndex: MODAL_Z.dialog,
-      backgroundColor: 'rgba(2,6,23,0.94)'
-    },
-    role: "dialog",
-    "aria-label": "カードの詳しい画面"
-  }, nav ? React.createElement("div", {
-    "data-card-detail-navrow": true,
-    className: "flex w-full max-w-sm flex-col items-center gap-1"
-  }, React.createElement("div", {
-    className: "flex w-full items-center justify-center gap-2"
-  }, navBtn('prev', nav.onPrev), React.createElement("img", {
-    src: CARD_IMG(c ? c.img : m ? m.img : no, 'l'),
-    alt: c ? c.name : m ? m.name : '',
-    className: "w-[min(62vw,280px)] min-w-0 rounded-xl shadow-2xl landscape:h-[32vh] landscape:w-auto"
-  }), navBtn('next', nav.onNext)), React.createElement("span", {
-    "data-card-detail-pos": true,
-    className: "text-[12px] font-bold text-slate-400"
-  }, nav.pos)) : React.createElement("img", {
-    src: CARD_IMG(c ? c.img : m ? m.img : no, 'l'),
-    alt: c ? c.name : m ? m.name : '',
-    className: "w-[min(78vw,300px)] rounded-xl shadow-2xl"
-  }), c && React.createElement("div", {
-    className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100"
-  }, React.createElement("div", {
-    className: "text-lg font-black"
-  }, c.name), React.createElement("div", {
-    className: "mt-1 flex flex-wrap gap-1.5 text-[12px] font-bold"
-  }, React.createElement("span", {
-    className: "rounded-md bg-indigo-900 px-2 py-0.5"
-  }, CARD_KIND_LABEL[c.kind]), React.createElement("span", {
-    className: "rounded-md bg-amber-900 px-2 py-0.5"
-  }, "ガッツ", c.guts), c.damage !== null && c.damage !== undefined && React.createElement("span", {
-    className: "rounded-md bg-rose-900 px-2 py-0.5"
-  }, "ダメージ", c.damage), React.createElement("span", {
-    className: "rounded-md bg-slate-700 px-2 py-0.5"
-  }, cardUserLabel(db, c)), React.createElement("span", {
-    className: "rounded-md bg-slate-800 px-2 py-0.5 text-slate-400"
-  }, "No.", c.no)), dexLine, c.text && React.createElement("p", {
-    className: "mt-2 text-[14px] font-bold leading-relaxed"
-  }, c.text), c.note && React.createElement("p", {
-    "data-card-detail-note": true,
-    className: "mt-1.5 text-[12px] font-bold leading-relaxed text-sky-200",
-    style: JA_LABEL_STYLE
-  }, jaWrap(c.note)), !c.ready && React.createElement("p", {
-    className: "mt-2 text-[12px] font-bold text-amber-300",
-    style: JA_LABEL_STYLE
-  }, jaWrap('このカードは準備中です(まだデッキに入れられません)'))), m && React.createElement("div", {
-    className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100"
-  }, React.createElement("div", {
-    className: "text-lg font-black"
-  }, m.name), React.createElement("div", {
-    className: "mt-1 flex flex-wrap gap-1.5 text-[12px] font-bold"
-  }, React.createElement("span", {
-    className: "rounded-md bg-emerald-900 px-2 py-0.5"
-  }, "ライフ", m.life), React.createElement("span", {
-    className: "rounded-md bg-sky-900 px-2 py-0.5"
-  }, CARD_TYPE_LABEL[m.type]), React.createElement("span", {
-    className: "rounded-md bg-slate-800 px-2 py-0.5 text-slate-400"
-  }, "No.", m.no)), dexLine, m.dexOnly && React.createElement("p", {
-    "data-card-dex-only": true,
-    className: "mt-2 text-[12px] font-bold text-amber-300",
-    style: JA_LABEL_STYLE
-  }, jaWrap('まだ手に入らないカードです(パックには入っていません)'))), m && status && status.length > 0 && React.createElement("div", {
-    "data-card-detail-status": true,
-    className: "w-full max-w-sm rounded-2xl border border-amber-300/50 bg-slate-900/90 p-3 text-slate-100"
-  }, React.createElement("div", {
-    className: "mb-1.5 text-[13px] font-black text-amber-200",
-    style: JA_WRAP_STYLE
-  }, statusName || m.name, "にかかっている効果"), React.createElement(CardStatusList, {
-    list: status
-  })), React.createElement("button", {
-    type: "button",
-    onClick: onClose,
-    className: "mh-button mh-button-secondary min-h-[48px] w-full max-w-sm rounded-2xl border border-white/20 bg-slate-900 font-black"
-  }, "閉じる"));
+  return (React.createElement("div", {
+      "data-card-detail": true,
+      onClick: onClose,
+      className: "fixed inset-0 flex flex-col items-center justify-center gap-3 overflow-y-auto px-4 py-6",
+      style: {
+        zIndex: MODAL_Z.dialog + 100,
+        backgroundColor: 'rgba(2,6,23,0.94)'
+      },
+      role: "dialog",
+      "aria-label": "カードの詳しい画面"
+    }, nav ? React.createElement("div", {
+      "data-card-detail-navrow": true,
+      className: "flex w-full max-w-sm flex-col items-center gap-1"
+    }, React.createElement("div", {
+      className: "flex w-full items-center justify-center gap-2"
+    }, navBtn('prev', nav.onPrev), React.createElement("img", {
+      src: CARD_IMG(c ? c.img : m ? m.img : no, 'l'),
+      alt: c ? c.name : m ? m.name : '',
+      className: "w-[min(62vw,280px)] min-w-0 rounded-xl shadow-2xl landscape:h-[32vh] landscape:w-auto"
+    }), navBtn('next', nav.onNext)), React.createElement("span", {
+      "data-card-detail-pos": true,
+      className: "text-[12px] font-bold text-slate-400"
+    }, nav.pos)) : React.createElement("img", {
+      src: CARD_IMG(c ? c.img : m ? m.img : no, 'l'),
+      alt: c ? c.name : m ? m.name : '',
+      className: "w-[min(78vw,300px)] rounded-xl shadow-2xl"
+    }), c && React.createElement("div", {
+      className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100"
+    }, React.createElement("div", {
+      className: "text-lg font-black"
+    }, c.name), React.createElement("div", {
+      className: "mt-1 flex flex-wrap gap-1.5 text-[12px] font-bold"
+    }, React.createElement("span", {
+      className: "rounded-md bg-indigo-900 px-2 py-0.5"
+    }, CARD_KIND_LABEL[c.kind]), React.createElement("span", {
+      className: "rounded-md bg-amber-900 px-2 py-0.5"
+    }, "ガッツ", c.guts), c.damage !== null && c.damage !== undefined && React.createElement("span", {
+      className: "rounded-md bg-rose-900 px-2 py-0.5"
+    }, "ダメージ", c.damage), React.createElement("span", {
+      className: "rounded-md bg-slate-700 px-2 py-0.5"
+    }, cardUserLabel(db, c)), React.createElement("span", {
+      className: "rounded-md bg-slate-800 px-2 py-0.5 text-slate-400"
+    }, "No.", c.no)), dexLine, c.text && React.createElement("p", {
+      className: "mt-2 text-[14px] font-bold leading-relaxed"
+    }, c.text), !c.text && cardPlainEffectText(c) && React.createElement("p", {
+      "data-card-detail-plain": true,
+      className: "mt-2 text-[14px] font-bold leading-relaxed",
+      style: JA_LABEL_STYLE
+    }, jaWrap(cardPlainEffectText(c))), c.note && React.createElement("p", {
+      "data-card-detail-note": true,
+      className: "mt-1.5 text-[12px] font-bold leading-relaxed text-sky-200",
+      style: JA_LABEL_STYLE
+    }, jaWrap(c.note)), !c.ready && React.createElement("p", {
+      className: "mt-2 text-[12px] font-bold text-amber-300",
+      style: JA_LABEL_STYLE
+    }, jaWrap('このカードは準備中です(まだデッキに入れられません)'))), m && React.createElement("div", {
+      className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100"
+    }, React.createElement("div", {
+      className: "text-lg font-black"
+    }, m.name), React.createElement("div", {
+      className: "mt-1 flex flex-wrap gap-1.5 text-[12px] font-bold"
+    }, React.createElement("span", {
+      className: "rounded-md bg-emerald-900 px-2 py-0.5"
+    }, "ライフ", m.life), React.createElement("span", {
+      className: "rounded-md bg-sky-900 px-2 py-0.5"
+    }, CARD_TYPE_LABEL[m.type]), React.createElement("span", {
+      className: "rounded-md bg-slate-800 px-2 py-0.5 text-slate-400"
+    }, "No.", m.no)), dexLine, m.dexOnly && React.createElement("p", {
+      "data-card-dex-only": true,
+      className: "mt-2 text-[12px] font-bold text-amber-300",
+      style: JA_LABEL_STYLE
+    }, jaWrap('まだ手に入らないカードです(パックには入っていません)'))), m && status && status.length > 0 && React.createElement("div", {
+      "data-card-detail-status": true,
+      className: "w-full max-w-sm rounded-2xl border border-amber-300/50 bg-slate-900/90 p-3 text-slate-100"
+    }, React.createElement("div", {
+      className: "mb-1.5 text-[13px] font-black text-amber-200",
+      style: JA_WRAP_STYLE
+    }, statusName || m.name, "にかかっている効果"), React.createElement(CardStatusList, {
+      list: status
+    })), React.createElement("button", {
+      type: "button",
+      onClick: onClose,
+      className: "mh-button mh-button-secondary min-h-[48px] w-full max-w-sm rounded-2xl border border-white/20 bg-slate-900 font-black"
+    }, "閉じる"))
+  );
 };
 const CardDiscardModal = ({
   db,
@@ -98725,8 +98837,12 @@ const CardDiscardModal = ({
     const c = cardOf(db, no);
     return React.createElement("div", _extends({
       key: `${no}-${i}`
-    }, press(no), {
-      className: "flex flex-col items-center",
+    }, press(no, () => onDetail(no), {
+      double: false
+    }), {
+      role: "button",
+      "data-card-discard-item": no,
+      className: "flex cursor-pointer flex-col items-center active:scale-95",
       style: {
         containerType: 'inline-size'
       }
@@ -98741,7 +98857,7 @@ const CardDiscardModal = ({
   })), React.createElement("p", {
     className: "mt-2 text-center text-[11px] font-bold text-slate-400",
     style: JA_LABEL_STYLE
-  }, jaWrap('カードを長押しすると詳しく見られます')), React.createElement("div", {
+  }, jaWrap('カードをタップすると詳しく見られます')), React.createElement("div", {
     className: "mt-2"
   }, React.createElement(ModalCloseButton, {
     onClick: onClose
@@ -98881,7 +98997,7 @@ const CardMonSlot = ({
   onPressMon = null
 }) => {
   const mon = st.players[p].mons[m];
-  const art = cardMonArt(mon);
+  const art = cardMonArtOk(mon);
   const ty = cardMonType(mon, st.turn);
   const opp = p === CARD_CPU;
   const pct = Math.max(0, Math.round(mon.life / mon.max * 100));
@@ -98936,6 +99052,7 @@ const CardMonSlot = ({
   const imgEl = art ? cardKiraWrap(kira, React.createElement("img", {
     src: art,
     alt: "",
+    onError: cardArtOnError(art, CARD_IMG(cardMonsterOf(db, mon.no).img)),
     style: {
       ...(wide ? {
         maxHeight: wideArtH
@@ -98950,9 +99067,8 @@ const CardMonSlot = ({
     alt: "",
     className: `${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`
   });
-  const mv = motion && !mon.ko ? motion : null;
-  const idleTry = typeof window !== 'undefined' && window.__cardIdleTry ? window.__cardIdleTry : 'A';
-  const idleBody = art && !mv && !mon.ko && !calm && idleTry !== 'now' ? idleTry === 'B' ? ty === 'water' ? 'swim' : ty === 'air' ? 'hover' : 'breathe' : cardIdleBodyOf(mon, ty) : null;
+  const mv = motion && (!mon.ko || motion.type === 'attack') ? motion : null;
+  const idleBody = art && !mv && !mon.ko && !calm ? cardIdleBodyOf(mon, ty) : null;
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? calm ? 'mh-card-hit-calm' : 'mh-card-hit' : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = React.createElement("div", {
     "data-card-art": `${p}-${m}`,
@@ -99214,6 +99330,10 @@ const CardBattleBoard = ({
     const t = setTimeout(() => setTacGlow(null), 2400);
     return () => clearTimeout(t);
   }, [tacGlow]);
+  const [, setArtTick] = useState(0);
+  useEffect(() => {
+    if (typeof cardArtPreload === 'function') void cardArtPreload(db, st.players.flatMap(pl => pl.mons.map(m => m.no))).then(() => setArtTick(n => n + 1));
+  }, []);
   const [downBand, setDownBand] = useState(null);
   const [breederFx, setBreederFx] = useState(null);
   const [beams, setBeams] = useState([]);
@@ -99502,7 +99622,7 @@ const CardBattleBoard = ({
     stRef.current = next;
     const evs = next.events || [];
     const held = pendingAtk.current;
-    const deferred = held && held.turn === next.turn && evs.some(e => e.t === 'hit' || e.t === 'guard') ? held : null;
+    const deferred = held && held.turn === next.turn && evs.some(e => e.t === 'hit') ? held : null;
     if (deferred) {
       pendingAtk.current = null;
       playMotion(deferred.id, {
@@ -99611,7 +99731,7 @@ const CardBattleBoard = ({
       };
     });
     evs.filter(e => e.t === 'hit').forEach((e, n) => {
-      let type = e.evaded && !e.dmg ? 'dodge' : e.guarded && !e.dmg ? 'guard' : e.dmg > 0 ? 'hit' : e.evaded ? 'dodge' : null;
+      let type = e.evaded && !e.dmg ? 'dodge' : e.guarded ? 'guard' : e.dmg > 0 ? 'hit' : e.evaded ? 'dodge' : null;
       const g = lastGuard.current[`${e.p}-${e.m}`];
       const recent = g && Date.now() - g.at < 20000;
       if (type === 'dodge' && recent && g.jump) type = 'jump';
@@ -99620,16 +99740,6 @@ const CardBattleBoard = ({
         type,
         label: type === 'guard' && recent ? g.label : '',
         key: hk
-      }, type === 'jump' ? 920 : 720));
-    });
-    evs.filter(e => e.t === 'guard').forEach((e, n) => {
-      const c = cardOf(db, e.card);
-      const type = c && c.kind === 'dge' ? cardDodgeIsJump(c) ? 'jump' : 'dodge' : 'guard';
-      const gk = `g${next.log.length}-${n}-${Date.now()}`;
-      if (motionOn) later(() => playMotion(`${e.p}-${e.mon}`, {
-        type,
-        label: type === 'guard' ? cardGuardLabel(c) : '',
-        key: gk
       }, type === 'jump' ? 920 : 720));
     });
     const use = evs.find(e => e.t === 'use');
@@ -116332,7 +116442,7 @@ const CardShareDeckDetail = ({
     className: "flex items-center gap-2"
   }, entry.icon ? React.createElement("span", {
     className: "shrink-0 text-[24px] leading-none"
-  }, entry.icon) : null, React.createElement("span", {
+  }, cardIconNode(entry.icon, 28)) : null, React.createElement("span", {
     className: "min-w-0 flex-1"
   }, React.createElement("b", {
     "data-card-share-detail-name": true,
