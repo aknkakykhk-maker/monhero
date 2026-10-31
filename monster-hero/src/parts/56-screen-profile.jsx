@@ -457,6 +457,8 @@ function ProfileScreen({
         {onboarded&&!onboardingPreview&&rhythmAchRows.some(r=>r.clear>0)&&<RhythmAchievementPanel rows={rhythmAchRows} who="self"/>}
         {/* MFバトルカードの戦績(2026-10-26 社長「プロフィールやフレンドでバトルカードの戦績も追加」)。一度も遊んでいなければ出さない。保存は読むだけ(90-card-rank.jsx) */}
         {onboarded&&!onboardingPreview&&<CardBattleStatsSelf/>}
+        {/* MFバトルカード 公式杯の記録(2026-10-31 社長・案B)。終わった大会が1つも無いあいだは出さない。押すと一覧、そこから大会の画面(戻るとプロフィール) */}
+        {onboarded&&!onboardingPreview&&typeof CardTourHistoryButton==='function'&&typeof onCardShareGo==='function'&&<CardTourHistoryButton onOpen={(tourId,tab)=>onCardShareGo({kind:'tour',tourId,tab})}/>}
         {/* モンヒロビートの履歴: 終わった週間ランキング・イベントの順位をあとから見る。
             2026-09-13・ユーザー依頼「モンビーのイベントや週間ランキングの終わったものを
             ヒストリー的に見れる機能」。置き場所もユーザーが決めた(プロフィール)。

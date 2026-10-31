@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9ce750b9b142e415
+// source-sha256: 293a09c4ff023df2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -59380,7 +59380,13 @@ function ProfileScreen({
   })(), onboarded && !onboardingPreview && rhythmAchRows.some(r => r.clear > 0) && React.createElement(RhythmAchievementPanel, {
     rows: rhythmAchRows,
     who: "self"
-  }), onboarded && !onboardingPreview && React.createElement(CardBattleStatsSelf, null), onboarded && !onboardingPreview && Number(rhythmHistoryCount) > 0 && React.createElement("button", {
+  }), onboarded && !onboardingPreview && React.createElement(CardBattleStatsSelf, null), onboarded && !onboardingPreview && typeof CardTourHistoryButton === 'function' && typeof onCardShareGo === 'function' && React.createElement(CardTourHistoryButton, {
+    onOpen: (tourId, tab) => onCardShareGo({
+      kind: 'tour',
+      tourId,
+      tab
+    })
+  }), onboarded && !onboardingPreview && Number(rhythmHistoryCount) > 0 && React.createElement("button", {
     type: "button",
     "data-profile-rhythm-history": true,
     onClick: onOpenRhythmHistory,
@@ -70347,7 +70353,9 @@ function HomeScreen({
   cardBattleVisible = false,
   onOpenCardBattle = null,
   cardBattleTeaser = false,
-  onOpenCardTeaser = null
+  onOpenCardTeaser = null,
+  cardTourVisible = false,
+  onOpenCardTour = null
 }) {
   const homeSceneRef = React.useRef(null);
   const [homeSceneWide, setHomeSceneWide] = React.useState(false);
@@ -70401,6 +70409,29 @@ function HomeScreen({
     const campaign = rhythmEventPointCampaignAt(Date.now());
     return campaign && campaign.banner ? campaign : null;
   })();
+  const [cardTourList, setCardTourList] = React.useState(null);
+  const [cardTourNow, setCardTourNow] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    if (!cardTourVisible || typeof cardTourFetchList !== 'function') return undefined;
+    let alive = true;
+    const load = () => {
+      cardTourFetchList().then(l => {
+        if (alive) setCardTourList(Array.isArray(l) ? l : null);
+      }).catch(() => {});
+    };
+    load();
+    let ticks = 0;
+    const id = setInterval(() => {
+      ticks += 1;
+      setCardTourNow(Date.now());
+      if (ticks % 10 === 0) load();
+    }, 60000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, [cardTourVisible]);
+  const homeCardTour = cardTourVisible && typeof cardTourHomeBanner === 'function' ? cardTourHomeBanner(cardTourList, cardTourNow) : null;
   const homeRhythmEventOpen = (() => {
     const released = typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS && RELEASE_FLAGS.rhythmWeeklyRanking === true;
     if (!released || typeof rhythmLimitedEventAt !== 'function') return false;
@@ -70546,10 +70577,18 @@ function HomeScreen({
     className: "mh-home-event-banner",
     onClick: openChangelog,
     "aria-label": `${homeEventCampaign.banner.title} ${homeEventCampaign.banner.sub}`
-  }, React.createElement("b", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title), React.createElement("small", null, homeEventCampaign.banner.sub)), cardBattleVisible && typeof onOpenCardBattle === 'function' && React.createElement("button", {
+  }, React.createElement("b", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title), React.createElement("small", null, homeEventCampaign.banner.sub)), homeCardTour && typeof onOpenCardTour === 'function' && React.createElement("button", {
+    type: "button",
+    "data-home-card-tour": homeCardTour.id,
+    className: `mh-home-tour-banner${homeEventCampaign ? '' : ' raised'}`,
+    onClick: () => onOpenCardTour(homeCardTour.id),
+    "aria-label": `${homeCardTour.name} ${homeCardTour.sub}`
+  }, React.createElement("span", {
+    "aria-hidden": "true"
+  }, "🏆"), React.createElement("span", null, React.createElement("b", null, homeCardTour.name), React.createElement("small", null, homeCardTour.sub, homeCardTour.prize && React.createElement("em", null, homeCardTour.prize)))), cardBattleVisible && typeof onOpenCardBattle === 'function' && React.createElement("button", {
     type: "button",
     "data-home-card-battle": true,
-    className: `mh-home-card-battle${homeEventCampaign ? '' : ' raised'}`,
+    className: `mh-home-card-battle${homeCardTour ? homeEventCampaign ? ' below-tour' : '' : homeEventCampaign ? '' : ' raised'}`,
     onClick: onOpenCardBattle,
     "aria-label": "MFバトルカード"
   }, React.createElement("span", null, "🃏 MFバトルカード")), !cardBattleVisible && cardBattleTeaser && typeof onOpenCardTeaser === 'function' && React.createElement("button", {
@@ -102582,6 +102621,8 @@ const CardBattleScreen = ({
   const [packFx, setPackFx] = useState(cardPackFxOn);
   const [tacticsBack, setTacticsBack] = useState('mode');
   const [cupOpenId, setCupOpenId] = useState(null);
+  const [tourHome, setTourHome] = useState(null);
+  const [tourTab, setTourTab] = useState(null);
   const [plWho, setPlWho] = useState(null);
   const [plCopy, setPlCopy] = useState(null);
   const bgmPreviewRef = useRef(bgmPreview);
@@ -103264,6 +103305,12 @@ const CardBattleScreen = ({
     if (it.kind === 'register' && typeof CardTacticsScreen === 'function') {
       setTacticsBack('exit');
       setView('tactics');
+      return;
+    }
+    if (it.kind === 'tour' && typeof CardTournament === 'function') {
+      setTourHome(typeof it.tourId === 'string' ? it.tourId : null);
+      setTourTab(it.tab === 'result' ? 'result' : null);
+      setView('tour');
       return;
     }
     if (it.kind === 'fight' && it.entry && startBattleRef.current && typeof cardShareFightLevel === 'function') startBattleRef.current({
@@ -104009,7 +104056,7 @@ const CardBattleScreen = ({
       className: "block text-[11px] font-black text-slate-900/80"
     }, "デッキを登録する・戦術カードを組む・引く"))), !cardShareOpen() && React.createElement("span", {
       className: "relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white"
-    }, "つくっている途中(デバッグ)")), typeof CardTournament === 'function' && shareForm && (debug || cardTourOpen()) && React.createElement("button", {
+    }, "つくっている途中(デバッグ)")), typeof CardTournament === 'function' && shareForm && debug && React.createElement("button", {
       type: "button",
       "data-card-mode-tour": true,
       onClick: () => {
@@ -104029,9 +104076,9 @@ const CardBattleScreen = ({
       className: "block text-[22px] font-black italic leading-tight"
     }, "大会"), React.createElement("small", {
       className: "block text-[11px] font-black text-slate-900/80"
-    }, "登録したデッキで出る・毎日自動で対戦"))), !cardTourOpen() && React.createElement("span", {
+    }, "登録したデッキで出る・毎日自動で対戦"))), React.createElement("span", {
       className: "relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white"
-    }, "つくっている途中(デバッグ)")), typeof CardCup === 'function' && shareForm && (debug || cardCupOpen()) && React.createElement("button", {
+    }, "デバッグ")), typeof CardCup === 'function' && shareForm && (debug || cardCupOpen()) && React.createElement("button", {
       type: "button",
       "data-card-mode-cup": true,
       onClick: () => {
@@ -104141,7 +104188,15 @@ const CardBattleScreen = ({
       }]);
     };
     return React.createElement(CardTournament, {
-      onBack: () => setView('mode'),
+      initialTour: tourHome,
+      initialTab: tourTab,
+      onBack: () => {
+        if (tourHome) {
+          setTourHome(null);
+          setTourTab(null);
+          onExit();
+        } else setView('mode');
+      },
       onOpenRegister: typeof CardDeckRegister === 'function' ? () => {
         setTacticsBack('tour');
         setView('tactics');
@@ -120995,7 +121050,6 @@ const CardDeckRegister = ({
     }
   }));
 };
-const cardTourOpen = () => false;
 const CARD_TOUR_CLAIMED_KEY = 'mh_card_tour_claimed_v1';
 const cardTourNormalizeClaimed = v => {
   if (v === null || v === undefined) return [];
@@ -121119,6 +121173,33 @@ const cardTourFetchView = async (tourId, ownerId) => cardTourNormalizeView(await
   p_tour: tourId,
   p_owner: ownerId || ''
 }));
+const CARD_TOUR_HOME_KEEP_MS = 7 * 86400000;
+const cardTourHomeBanner = (list, now) => {
+  if (!Array.isArray(list)) return null;
+  const shown = list.filter(t => {
+    if (!t) return false;
+    if (t.openOn && now < Date.parse(`${t.openOn}T00:00:00+09:00`)) return false;
+    if (t.status !== 'done') return true;
+    const done = t.doneDay ? Date.parse(`${t.doneDay}T04:00:00+09:00`) : NaN;
+    return Number.isFinite(done) && now < done + CARD_TOUR_HOME_KEEP_MS;
+  });
+  const t = shown.find(x => x.status !== 'done') || shown[0];
+  if (!t) return null;
+  let sub;
+  if (t.status === 'entry' && now < t.entryUntil) {
+    const left = t.entryUntil - now,
+      d = Math.floor(left / 86400000),
+      h = Math.floor(left / 3600000);
+    sub = `受付中 あと${d > 0 ? `${d}日` : h > 0 ? `${h}時間` : `${Math.max(1, Math.ceil(left / 60000))}分`}`;
+  } else if (t.status === 'entry') sub = '組み合わせ中';else if (t.status === 'done') sub = '結果発表';else sub = t.status === 'final' ? '開催中 頂上決戦' : '開催中';
+  const first = t.rewards && t.rewards.ranks[0] ? t.rewards.ranks[0].point : 0;
+  return {
+    id: t.id,
+    name: t.name,
+    sub,
+    prize: first > 0 ? `1位 ビートP ${first.toLocaleString()}` : ''
+  };
+};
 const cardTourStageSeats = (view, stage, grp) => view.entries.filter(e => stage === 'final' ? e.finalSeat !== null : e.grp === grp && e.seat !== null).sort((x, y) => stage === 'final' ? x.finalSeat - y.finalSeat : x.seat - y.seat);
 const cardTourStageMatches = (view, stage, grp) => view.matches.filter(m => m.stage === stage && (stage === 'final' || m.grp === grp));
 const cardTourSeatKey = (e, stage) => stage === 'final' ? e.finalSeat : e.seat;
@@ -121609,12 +121690,14 @@ const CardTournament = ({
   onOpenReplay = null,
   onCredit = null,
   knownAssistants = null,
-  onSample = null
+  onSample = null,
+  initialTour = null,
+  initialTab = null
 }) => {
   const [list, setList] = useState(undefined);
   const [tourId, setTourId] = useState(null);
   const [view, setView] = useState(null);
-  const [tab, setTab] = useState('grid');
+  const [tab, setTab] = useState(initialTab === 'result' ? 'result' : 'grid');
   const [stageKey, setStageKey] = useState(null);
   const [selfId, setSelfId] = useState(null);
   const [mine, setMine] = useState(undefined);
@@ -121633,7 +121716,7 @@ const CardTournament = ({
       setMine(m || null);
       setClaimed(cardTourNormalizeClaimed(c) || []);
       setList(l);
-      if (l && l.length === 1) setTourId(l[0].id);
+      if (l && initialTour) setTourId(initialTour);else if (l && l.length === 1) setTourId(l[0].id);
     })();
     return () => {
       alive = false;
@@ -121734,7 +121817,7 @@ const CardTournament = ({
       now: now
     }))));
   }
-  const backFromTour = list.length > 1 ? () => setTourId(null) : onBack;
+  const backFromTour = list.length > 1 && !initialTour ? () => setTourId(null) : onBack;
   if (!view) return shell(React.createElement(ScreenEmpty, {
     emoji: "⏳",
     lines: ['読み込んでいます']
@@ -121772,6 +121855,7 @@ const CardTournament = ({
   const myStage = stages.find(s => s.stage === 'final' && view.entries.some(e => e.mine && e.finalSeat !== null)) || stages.find(s => view.entries.some(e => e.mine && e.grp === s.grp && s.stage === 'group')) || stages[stages.length - 1];
   const st = stages.find(s => s.key === stageKey) || myStage;
   const tabs = [['grid', '対戦表'], ['today', '試合'], ...(t.status === 'done' ? [['result', '結果']] : [])];
+  const shownTab = tab === 'result' && t.status !== 'done' ? 'grid' : tab;
   return shell(React.createElement(React.Fragment, null, React.createElement(CardTourHeadCard, {
     t: t,
     now: now
@@ -121788,8 +121872,8 @@ const CardTournament = ({
       Audio_.fgSe.tap();
       setTab(k);
     },
-    className: `rounded-xl py-2 text-[14px] font-black ${tab === k ? 'bg-gradient-to-b from-amber-300 to-orange-500 text-slate-950' : 'border-2 border-amber-500/60 bg-amber-100 text-amber-900'}`
-  }, label))), tab === 'grid' && stages.length > 1 && React.createElement("div", {
+    className: `rounded-xl py-2 text-[14px] font-black ${shownTab === k ? 'bg-gradient-to-b from-amber-300 to-orange-500 text-slate-950' : 'border-2 border-amber-500/60 bg-amber-100 text-amber-900'}`
+  }, label))), shownTab === 'grid' && stages.length > 1 && React.createElement("div", {
     className: "flex flex-wrap gap-1"
   }, stages.map(s => React.createElement("button", {
     key: s.key,
@@ -121797,19 +121881,19 @@ const CardTournament = ({
     "data-card-tour-stage": s.key,
     onClick: () => setStageKey(s.key),
     className: `rounded-full px-3 py-1 text-[12px] font-black ${s.key === st.key ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`
-  }, s.label))), tab === 'grid' && React.createElement(CardTourGrid, {
+  }, s.label))), shownTab === 'grid' && React.createElement(CardTourGrid, {
     key: `${t.id}|${st.key}`,
     view: view,
     stage: st.stage,
     grp: st.grp,
     known: known,
     now: now
-  }), tab === 'today' && React.createElement(CardTourToday, {
+  }), shownTab === 'today' && React.createElement(CardTourToday, {
     view: view,
     known: known,
     now: now,
     onOpenReplay: onOpenReplay
-  }), tab === 'result' && React.createElement(CardTourResult, {
+  }), shownTab === 'result' && React.createElement(CardTourResult, {
     view: view,
     known: known,
     claimed: claimed,
@@ -121819,6 +121903,135 @@ const CardTournament = ({
     className: "rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100",
     style: JA_WRAP_STYLE
   }, jaWrap(msg))), 'MFバトルカード大会', backFromTour);
+};
+const cardTourNormalizeHistory = rows => (Array.isArray(rows) ? rows : []).map(r => {
+  if (!r || typeof r.id !== 'string' || !/^[a-z0-9_-]{1,32}$/.test(r.id)) return null;
+  const w = r.winner && typeof r.winner === 'object' ? r.winner : null;
+  return {
+    id: r.id,
+    name: typeof r.name === 'string' && r.name ? r.name.slice(0, 40) : 'MFバトルカード大会',
+    openOn: cardTourDate(r.open_on),
+    doneDay: cardTourDate(r.done_day),
+    rewards: cardTourNormalizeRewards(r.rewards),
+    players: Number.isInteger(r.players) && r.players >= 0 ? r.players : null,
+    winner: w ? {
+      name: typeof w.user_name === 'string' ? w.user_name.slice(0, 40) : typeof w.name === 'string' ? w.name.slice(0, 40) : 'ブリーダー',
+      assist: w.is_assist === true,
+      assistId: typeof w.assist_id === 'string' ? w.assist_id : null
+    } : null,
+    myPlace: cardTourInt(r.my_place),
+    entered: r.my_entered === true
+  };
+}).filter(Boolean).slice(0, 50);
+const cardTourFetchHistory = async ownerId => {
+  const rows = await cardTourRpc('card_tournament_history', {
+    p_owner: ownerId || ''
+  });
+  return Array.isArray(rows) ? cardTourNormalizeHistory(rows) : null;
+};
+const CardTourHistoryList = ({
+  list,
+  known,
+  onOpen,
+  onClose
+}) => React.createElement("div", {
+  "data-card-tour-history": true,
+  className: "fixed inset-0 z-[80] flex justify-center bg-slate-950"
+}, React.createElement("div", {
+  className: `${SCREEN_SHELL_CLASS} w-full max-w-[600px]`
+}, React.createElement(ScreenHead, {
+  title: "公式杯の記録",
+  accent: "text-amber-200",
+  onBack: onClose,
+  note: "終わった大会の結果と、試合の見返しを見られます。新しい順"
+}), React.createElement("div", {
+  className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
+}, list.map(t => {
+  const first = t.rewards.ranks[0] ? t.rewards.ranks[0].point : 0;
+  const winner = t.winner ? t.winner.assist ? cardTourAssistOf(t.winner.assistId, known).name : t.winner.name : null;
+  const me = t.myPlace ? `${t.myPlace}位` : t.entered ? '出場' : '出場なし';
+  return React.createElement("div", {
+    key: t.id,
+    "data-card-tour-history-row": t.id,
+    className: "rounded-2xl border-2 border-amber-600/60 bg-indigo-950/70 p-3"
+  }, React.createElement("div", {
+    className: "flex items-start justify-between gap-2"
+  }, React.createElement("b", {
+    className: "min-w-0 flex-1 break-words text-[15px] font-black leading-tight text-amber-100"
+  }, t.name), React.createElement("span", {
+    "data-card-tour-history-me": true,
+    className: `shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-black ${t.myPlace && t.myPlace <= 3 ? 'bg-amber-400 text-slate-950' : 'bg-slate-700 text-slate-100'}`
+  }, "あなた ", me)), React.createElement("div", {
+    className: "mt-1 text-[11.5px] font-bold text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap([t.openOn && t.doneDay ? `${cardTourDayLabel(t.openOn)}〜${cardTourDayLabel(t.doneDay)}` : '', winner ? `優勝 ${winner}` : '', first > 0 ? `1位 ビートP ${first.toLocaleString()}` : ''].filter(Boolean).join(' ・ '))), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-1.5"
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-tour-history-open": "result",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      onOpen(t.id, 'result');
+    },
+    className: "rounded-xl bg-amber-500 py-2 text-[12px] font-black text-slate-950 active:scale-[.98]"
+  }, "結果を見る"), React.createElement("button", {
+    type: "button",
+    "data-card-tour-history-open": "grid",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      onOpen(t.id, 'grid');
+    },
+    className: "rounded-xl bg-indigo-800 py-2 text-[12px] font-black text-indigo-50 active:scale-[.98]"
+  }, "対戦表・見返し")));
+}))));
+const CardTourHistoryButton = ({
+  onOpen,
+  knownAssistants = null
+}) => {
+  const [list, setList] = useState(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const id = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+      const l = await cardTourFetchHistory(id).catch(() => null);
+      if (alive) setList(l);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  if (!list || !list.length || typeof onOpen !== 'function') return null;
+  const known = knownAssistants instanceof Set ? knownAssistants : new Set();
+  return React.createElement(React.Fragment, null, React.createElement("button", {
+    type: "button",
+    "data-profile-card-tour-history": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setOpen(true);
+    },
+    className: "mb-4 flex w-full min-h-[64px] items-center gap-2 rounded-2xl border border-amber-400/40 bg-amber-950/40 px-3 py-2.5 active:scale-[.98]"
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "shrink-0 text-[18px] leading-none"
+  }, "🏆"), React.createElement("span", {
+    className: "min-w-0 flex-1 text-left"
+  }, React.createElement("b", {
+    className: "block text-[13px] font-black text-amber-100"
+  }, "MFバトルカード 公式杯の記録"), React.createElement("small", {
+    className: "block text-[10px] text-amber-300"
+  }, `終わった大会の結果・見返しを見られます（${list.length}件）`)), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "shrink-0 text-[16px] font-black text-amber-400"
+  }, "›")), open && React.createElement(CardTourHistoryList, {
+    list: list,
+    known: known,
+    onClose: () => setOpen(false),
+    onOpen: (id, tab) => {
+      setOpen(false);
+      onOpen(id, tab);
+    }
+  }));
 };
 const cardCupOpen = () => true;
 const cardCupText = (t, n = 40) => {
@@ -146902,7 +147115,16 @@ function MonsterHeroGame() {
         setGameState('CARD_TOP');
       },
       cardBattleTeaser: !EVENT_REPLAY_RELEASE_FLAGS.cardBattle && !cardBattleDebugHome,
-      onOpenCardTeaser: () => setCardTeaserOpen(true)
+      onOpenCardTeaser: () => setCardTeaserOpen(true),
+      cardTourVisible: EVENT_REPLAY_RELEASE_FLAGS.cardBattle && cardBattleIntroSeenFlag || cardBattleDebugHome,
+      onOpenCardTour: tourId => {
+        if (typeof cardShareIntentSet === 'function') cardShareIntentSet({
+          kind: 'tour',
+          tourId
+        });
+        setCardOrigin('home');
+        setGameState('CARD_TOP');
+      }
     }), assistantChatOpen && activeAssistant && (() => {
       const id = activeAssistant.id;
       const lv = assistantBondLevelNow;
@@ -164743,7 +164965,7 @@ const createAnimationStyle = () => {
     @keyframes mhDiscBorn{0%{opacity:0;transform:scale(.35)}60%{opacity:1;filter:drop-shadow(0 0 30px #fde68a) brightness(1.6)}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(253,230,138,.55)) brightness(1)}}
     @keyframes mhDiscUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
     @media (prefers-reduced-motion: reduce){.mh-disc-rebirth-disc,.mh-disc-rebirth-flash,.mh-disc-rebirth-sparks i{animation:none;opacity:0}.mh-disc-rebirth-rays{animation:none;opacity:1}.mh-disc-rebirth-plate,.mh-disc-rebirth-art,.mh-disc-rebirth-name,.mh-disc-rebirth-note,.mh-disc-rebirth-close{animation:none;opacity:1;transform:none;pointer-events:auto}}
-    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 43px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(152px + var(--wal-grow,0px));padding:4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:2.52%;top:max(26.58%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:2.94%;top:max(25.9%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}.mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{position:absolute;z-index:5;left:9px;bottom:min(calc(33% + 4px),calc(44.75% - 82px));display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}.mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}.mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}.mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}.mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}.mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{bottom:52px}/* 横向きでもイベントの札を出す。MFバトルカードの札(下から12px)のすぐ上(2026-10-26 ダメダシくん「横では見当たらない」) */.mh-home-card-battle,.mh-home-card-battle.raised{bottom:12px}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 43px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(152px + var(--wal-grow,0px));padding:4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:2.52%;top:max(26.58%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:2.94%;top:max(25.9%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}.mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{position:absolute;z-index:5;left:9px;bottom:min(calc(33% + 4px),calc(44.75% - 82px));display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}.mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}.mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}/* 公式杯の札(2026-10-31 社長・案A)。イベントの札の下・MFバトルカードの札の上(MFバトルカードの札のいつもの段)。イベントの札が無いときは1段上がる。公式杯の札があるときは、MFバトルカードの札は1段下(below-tour) */.mh-home-tour-banner{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));display:flex;align-items:center;gap:6px;max-width:min(calc(100% - 150px),240px);padding:3px 10px 3px 7px;border:1.5px solid #fde68a;border-radius:13px;background:linear-gradient(135deg,#78350fee,#b45309ee 45%,#1e1b4bee);color:#fffbeb;text-align:left;box-shadow:0 0 0 2px #f59e0b55,0 3px 10px #0008}.mh-home-tour-banner.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}.mh-home-tour-banner>span:first-child{font-size:19px;line-height:1}.mh-home-tour-banner>span:last-child{display:flex;min-width:0;flex-direction:column;gap:1px;line-height:1.2}.mh-home-tour-banner b{overflow:hidden;font-size:11.5px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner small{display:block;overflow:hidden;font-size:9.5px;font-weight:800;color:#fde68a;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner em{margin-left:5px;padding:0 5px;border-radius:999px;background:#fbbf24;color:#3d2305;font-style:normal;font-size:9px;font-weight:900;line-height:1.5}.mh-home-tour-banner:active{transform:scale(.96);filter:brightness(1.15)}.mh-home-card-battle.below-tour{bottom:min(calc(33% - 84px),calc(44.75% - 170px))}.mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}.mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}.mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{bottom:52px}/* 横向きでもイベントの札を出す。MFバトルカードの札(下から12px)のすぐ上(2026-10-26 ダメダシくん「横では見当たらない」) */.mh-home-card-battle,.mh-home-card-battle.raised,.mh-home-card-battle.below-tour{bottom:12px}/* 横向きの公式杯の札は MFバトルカードの札のすぐ上、イベントの札はその上 */.mh-home-tour-banner,.mh-home-tour-banner.raised{bottom:52px}.mh-home-scene:has(.mh-home-tour-banner) .mh-home-event-banner{bottom:96px}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも
