@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7ac865abb47af458
+// source-sha256: 4ae78b5d75f078cf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -92278,13 +92278,13 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   }
   for (const x of ranked) {
     if (cards.length >= CARD_BATTLE_DECK_SIZE) break;
-    const have = cards.filter(n => cardOf(db, n).name === x.c.name).length;
+    const have = cards.filter(n => n === x.c.no).length;
     add(x.c, CARD_DECK_COPY_MAX - have);
   }
   heavy = -99;
   for (const x of ranked) {
     if (cards.length >= CARD_BATTLE_DECK_SIZE) break;
-    const have = cards.filter(n => cardOf(db, n).name === x.c.name).length;
+    const have = cards.filter(n => n === x.c.no).length;
     add(x.c, CARD_DECK_COPY_MAX - have);
   }
   const sameBlood = mons.filter(m => cardAiBloodOf(m) === cardAiBloodOf(mons[0])).length >= 2;
@@ -92303,17 +92303,17 @@ const cardDeckProblems = (db, deck) => {
   const species = ms.filter(Boolean).map(m => m.species);
   if (new Set(species).size !== species.length) out.push('同じモンスターが2体入っています');
   if (deck.cards.length !== CARD_BATTLE_DECK_SIZE) out.push(`カードが${deck.cards.length}枚です(あと${CARD_BATTLE_DECK_SIZE - deck.cards.length}枚)`);
-  const names = {};
+  const nos = {};
   deck.cards.forEach(no => {
     const c = cardOf(db, no);
     if (!c) {
       out.push(`知らないカード(${no})が入っています`);
       return;
     }
-    names[c.name] = (names[c.name] || 0) + 1;
+    nos[no] = (nos[no] || 0) + 1;
   });
-  Object.entries(names).forEach(([n, k]) => {
-    if (k > CARD_DECK_COPY_MAX) out.push(`「${n}」が${k}枚です(3枚まで)`);
+  Object.entries(nos).forEach(([no, k]) => {
+    if (k > CARD_DECK_COPY_MAX) out.push(`「${cardOf(db, no).name}」が${k}枚です(3枚まで)`);
   });
   return [...new Set(out)];
 };
@@ -92349,8 +92349,8 @@ const cardDeckAddReason = (db, deck, no, collection) => {
   if (!c) return '知らないカードです';
   if (!c.ready) return '準備中のカードです';
   if (deck.cards.length >= CARD_BATTLE_DECK_SIZE) return `カードは${CARD_BATTLE_DECK_SIZE}枚までです`;
-  const same = deck.cards.filter(x => (cardOf(db, x) || {}).name === c.name).length;
-  if (same >= CARD_DECK_COPY_MAX) return `同じ名前のカードは${CARD_DECK_COPY_MAX}枚までです`;
+  const same = deck.cards.filter(x => x === no).length;
+  if (same >= CARD_DECK_COPY_MAX) return `同じカードは${CARD_DECK_COPY_MAX}枚までです`;
   const mine = deck.cards.filter(x => x === no).length;
   if (mine >= (col[no] || 0)) return `持っているのは${col[no] || 0}枚です`;
   return '';
@@ -96020,7 +96020,7 @@ const cardTalkDeckFacts = (db, deck, collection) => {
   const userName = u => u === 'any' ? '全モンスター' : u === 'breeder' ? 'ブリーダー' : (Object.values(db.monsters).find(m => m.species === u && !m.main) || {}).name || u;
   const cards = Object.values(db.cards).filter(c => c.ready && (c.user === 'any' || c.user === 'breeder' || mons.some(m => cardUsableBy(c, m)))).map(c => {
     const have = Math.floor(Number((collection || {})[c.no]) || 0);
-    const sameName = (deck.cards || []).filter(x => (cardOf(db, x) || {}).name === c.name).length;
+    const sameName = inDeck[c.no] || 0;
     const room = cardDeckAddReason(db, {
       monsters: deck.monsters || [],
       cards: deck.cards || []
@@ -96940,7 +96940,7 @@ const CARD_RULE_PAGES = Object.freeze([{
   id: 'deck',
   emoji: '🃏',
   title: 'デッキ',
-  lines: ['モンスター3体と、技などのカード50枚で1つのデッキ', '同じモンスターは1体まで(キラ・レアキラも同じモンスター)。同じ種族でも、別の混血モンスターなら入れてよい', '同じ名前のカードは3枚まで', 'デッキ編成で5つまで作れる。★のデッキで対戦する']
+  lines: ['モンスター3体と、技などのカード50枚で1つのデッキ', '同じモンスターは1体まで(キラ・レアキラも同じモンスター)。同じ種族でも、別の混血モンスターなら入れてよい', '同じカードは3枚まで。名前が同じでも、使うモンスターがちがうカードは別に数える', 'デッキ編成で5つまで作れる。★のデッキで対戦する']
 }, {
   id: 'start',
   emoji: '🎲',
