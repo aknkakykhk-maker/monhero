@@ -765,7 +765,13 @@ const cardTacticBaseAttack = (db, st, policy, knobs, ctx) => {
 
 // 枠を順に見て、最初に当たった行の手を返す。{ act } … その手 / { policy } … 基本カードの型で、ふつうに打つ / null … 今のまま
 //   攻撃の番: 左の子の枠 → 真ん中 → 右 → ブリーダーの枠 / 守るとき: 狙われた子の枠 / ガッツの番: ブリーダーの枠。どれにも当たらなければ基本カードの型
+// どの戦術カードの行で決めたか(2026-10-31 社長「効いているかわからない」→ 対戦中に光らせる・記録に出す)。
+//   画面(84)が cardAiChooseAction のすぐあとに cardTacticTakeWhy で取り出して空にする。打ち方(どの手を選ぶか)は何も変えない
+//   { c: 条件カード, a: 行動カード, mi: モンスターの番号(ブリーダーの手は null), phase }
+let cardTacticLastWhy = null;
+const cardTacticTakeWhy = () => { const w = cardTacticLastWhy; cardTacticLastWhy = null; return w; };
 const cardTacticDecide = (db, st, policy) => {
+  cardTacticLastWhy = null;
   const frames = cardTacticNormalizeFrames(policy && policy.gambit);
   if (st.winner !== null) return null;
   const phase = st.pending ? 'guard' : st.phase === 'guts' ? 'guts' : st.phase === 'main' ? 'attack' : null;
@@ -789,7 +795,7 @@ const cardTacticDecide = (db, st, policy) => {
       if (!aim) continue;
       ctx.mi = fr.mi;
       const got = cardTacticRowAct(db, st, pol, phase, row, aim, ctx);
-      if (got) return got;
+      if (got) { cardTacticLastWhy = { c: row.c, a: row.a, mi: fr.mi, phase }; return got; }
     }
   }
   // どの行にも当たらない: 基本カードの型で打つ(細かいくせ・立ち回りで外した子・温存したブリーダーのカードも守る)
