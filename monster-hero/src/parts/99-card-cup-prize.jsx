@@ -7,9 +7,6 @@
 //     カードの持ち物(かけら・パック券・カタログ)は 84 の保存(persist)で
 // 保存: 新しいキー mh_card_cup_wallet_v1 だけ(下)。今のキーは、今の形のまま足す・引くだけ
 
-// ごほうび・参加費・主催仲間の公開の印(2026-10-31 社長「個人杯だけ先に公開。ごほうび・参加費・主催仲間はまだ閉じたまま」)。
-// 閉じているあいだは、84 が個人杯の画面へごほうびの口(getAdapters)を渡さない(デバッグから入ったときだけ渡す)ので、欄も参加費も出ない
-const cardCupPrizeOpen = () => false;
 const CARD_CUP_WALLET_KEY = 'mh_card_cup_wallet_v1';
 const CARD_CUP_WALLET_MAX = 200;
 // 出せる物(サーバの表 card_cup_prize_items と同じ名前)。label・emoji は画面の名前。出す量・参加費の額に上限は無い(2026-10-31 社長「やっぱり上限はなしでいい」)

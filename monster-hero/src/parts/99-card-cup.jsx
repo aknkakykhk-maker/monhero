@@ -8,7 +8,7 @@
 //   ・表が無い・通信できないときは「準備中」と出して何もしない
 
 // 公開の印。告知と同じ日に true にする。それまではデバッグ設定から入ったときだけ入口が出る
-// 2026-10-31 社長「個人杯だけ先に公開」で true に。ごほうび・参加費・主催仲間は別の印(99-card-cup-prize の cardCupPrizeOpen)で、まだ閉じたまま
+// 2026-10-31 社長「個人杯だけ先に公開」で true に。ごほうび・参加費・主催仲間は別の印(99-card-cup-prize の cardCupPrizeOpen。リプレイくん)で、まだ閉じたまま
 const cardCupOpen = () => true;
 
 const cardCupText = (t, n = 40) => {
@@ -308,8 +308,7 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
   const [msg, setMsg] = useState('');
   // ごほうび・参加費・主催仲間(99-card-cup-prize)。表がまだ無いときは null(欄を出さない・ふつうの参加)
   const [prize, setPrize] = useState(null);
-  // ごほうびの口(getAdapters)を渡されていないとき(ごほうびの公開の印 cardCupPrizeOpen の前)は読みに行かない(欄なし・ふつうの参加)
-  const reloadPrize = async () => { if (getAdapters && typeof cardCupPrizeView === 'function') setPrize(await cardCupPrizeView(c.id, selfId)); };
+  const reloadPrize = async () => { if (typeof cardCupPrizeView === 'function') setPrize(await cardCupPrizeView(c.id, selfId)); };
   useEffect(() => { void reloadPrize(); }, [c.id, selfId]);
   const joinPaid = async () => {
     if (busy || !getAdapters) return;
