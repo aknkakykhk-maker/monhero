@@ -53,6 +53,13 @@ const cardCupRpcSoft = async (fn, body) => {
 };
 const cardCupListDone = async () => { const r = await cardCupRpcSoft('card_cup_list_done', {}); return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : []; };
 const cardCupMine = async (owner) => { const r = await cardTourRpc('card_cup_mine', { p_owner: owner || '' }); return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : null; };
+// 自分が出ている杯 + 主催仲間として誘われている・入っている杯(99-card-cup-prize の card_cup_hosting_of。関数がまだ無ければ出ている杯だけ)
+const cardCupMineWithHosting = async (owner) => {
+  const [a, b] = await Promise.all([cardCupMine(owner), cardCupRpcSoft('card_cup_hosting_of', { p_owner: owner || '' })]);
+  if (!Array.isArray(a)) return a;
+  const extra = (Array.isArray(b) ? b : []).map(cardCupNormalizeRow).filter((c) => c && !a.some((x) => x.id === c.id));
+  return [...a, ...extra];
+};
 const cardCupFind = async (code) => cardCupNormalizeRow(await cardTourRpc('card_cup_find', { p_code: code }));
 const cardCupView = async (id, owner) => cardCupNormalizeView(await cardTourRpc('card_cup_view', { p_cup: id, p_owner: owner || '' }));
 
@@ -294,10 +301,28 @@ const CardCupMatches = ({ v, onOpenReplay, selfId = null }) => {
   );
 };
 
-const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegister, onOpenReplay = null, onPlayLive = null }) => {
+const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegister, onOpenReplay = null, onPlayLive = null, getAdapters = null }) => {
   const c = v.cup;
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  // ごほうび・参加費・主催仲間(99-card-cup-prize)。表がまだ無いときは null(欄を出さない・ふつうの参加)
+  const [prize, setPrize] = useState(null);
+  const reloadPrize = async () => { if (typeof cardCupPrizeView === 'function') setPrize(await cardCupPrizeView(c.id, selfId)); };
+  useEffect(() => { void reloadPrize(); }, [c.id, selfId]);
+  const joinPaid = async () => {
+    if (busy || !getAdapters) return;
+    setBusy(true); setMsg('');
+    try {
+      const a = await getAdapters();
+      if (!a.owner || !a.key) { setMsg('デッキを登録した端末でだけ参加できます'); return; }
+      // 主催・主催仲間は払わない(サーバの card_cup_join_pay が払わずに入れる)
+      const fee = prize.me.host ? null : prize.fee;
+      const have = fee ? cardCupHave(fee.item, a.have && a.have.main, a.have && a.have.card) : 0;
+      const r = await cardCupJoinPaid({ ...a, name: (profile && profile.name) || a.name || 'ブリーダー', icon: (profile && profile.icon) || a.icon }, c.id, fee, have);
+      setMsg(r === 'ok' ? '参加しました' : (CARD_CUP_PRIZE_MSG[r] || CARD_CUP_PRIZE_MSG.off));
+      if (r === 'ok') { await onChanged(); await reloadPrize(); }
+    } finally { setBusy(false); }
+  };
   const act = async (fn, extra = {}) => {
     if (busy) return;
     setBusy(true); setMsg('');
@@ -327,13 +352,14 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
         {c.status === 'done' && !shown && <div className="mt-1 text-[12px] font-black text-amber-200">{`結果は ${cardTourTimeLabel(c.startAt)} に出ます`}</div>}
         {c.mode === 'auto' && c.status === 'running' && <div className="mt-1 text-[12px] font-black text-amber-200">{`試合はサーバで自動で行われます。結果は ${cardTourTimeLabel(c.startAt)} に出ます`}</div>}
       </div>
+      {prize && getAdapters && typeof CardCupPrizePanel === 'function' && <CardCupPrizePanel c={c} v={v} now={now} selfId={selfId} prize={prize} reload={async () => { await reloadPrize(); await onChanged(); }} getAdapters={getAdapters}/>}
       {c.mode === 'live' && typeof CardCupLivePanel === 'function' && <CardCupLivePanel v={v} now={now} selfId={selfId} onChanged={onChanged} onPlay={onPlayLive}/>}
       {shown && c.format === 'ko' && <CardCupBracket rounds={c.bracket} matches={v.matches} entries={v.entries} done/>}
       {shown && c.format === 'rr' && typeof CardTourGrid === 'function' && <CardTourGrid view={cardCupAsTourView(v)} stage="group" grp={0} known={null} now={now}/>}
       {shown && ranked.length > 0 && (
         <div data-card-cup-ranks className="rounded-2xl bg-slate-950/70 p-2.5 text-[12px] font-bold text-slate-200" style={JA_WRAP_STYLE}>
           <b className="text-amber-200">順位 </b>{ranked.map((e) => `${e.place}位 ${e.mine ? 'あなた' : e.name}(${e.wins || 0}勝)`).join(' ・ ')}
-          <div className="mt-1 text-slate-400">個人杯にはごほうびはありません。ランキングにも入りません</div>
+          {!(prize && (prize.pool.length || prize.fee)) && <div className="mt-1 text-slate-400">この個人杯にはごほうびはありません。ランキングにも入りません</div>}
         </div>
       )}
       {shown && <CardCupMatches v={v} onOpenReplay={onOpenReplay} selfId={selfId}/>}
@@ -343,7 +369,9 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
           {v.entries.map((e) => <CardTourWho key={e.ownerId} e={e} known={null}/>)}
         </div>
       )}
-      {open && !v.me && <CardCupJoinPanel mine={mine} busy={busy} onOpenRegister={onOpenRegister} onJoin={() => void act('card_cup_join', { p_name: (profile && profile.name) || 'ブリーダー', p_icon: (profile && profile.icon) || null })}/>}
+      {open && !v.me && <CardCupJoinPanel mine={mine} busy={busy} onOpenRegister={onOpenRegister}
+        label={prize && prize.fee && !prize.me.host ? `参加費 ${cardCupItemText(prize.fee.item, prize.fee.amount)} を払って参加` : 'このデッキで参加'}
+        onJoin={() => (prize && prize.fee ? void joinPaid() : void act('card_cup_join', { p_name: (profile && profile.name) || 'ブリーダー', p_icon: (profile && profile.icon) || null }))}/>}
       {open && v.me && !host && <button type="button" data-card-cup-leave disabled={busy} onClick={() => { Audio_.fgSe.tap(); void act('card_cup_leave'); }} className="w-full rounded-2xl border-2 border-slate-500 bg-slate-800 py-2.5 text-[14px] font-black text-slate-100 disabled:opacity-50">参加を取り消す</button>}
       {c.status === 'entry' && host && <button type="button" data-card-cup-cancel disabled={busy} onClick={() => { Audio_.fgSe.tap(); void act('card_cup_cancel'); }} className="w-full rounded-2xl border-2 border-rose-500/70 bg-slate-800 py-2.5 text-[14px] font-black text-rose-100 disabled:opacity-50">この個人杯を取り消す</button>}
       {msg && <p data-card-cup-msg className="rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
@@ -355,7 +383,8 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
 // onBack … 対戦えらびへ / onOpenRegister … デッキ登録へ(戻ると、この画面のいまの杯に戻る)
 // onOpenReplay(matchId, title, owner) … 試合の見返しを開く(84。開けなかったら false。合言葉だけの杯は参加者だけ見られるので owner を渡す)
 // onPlayLive(match) … リアルタイム杯の自分の試合を戦う(84 が対戦の画面を開く・④)
-const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange = null, onOpenReplay = null, onPlayLive = null }) => {
+// getAdapters … ごほうび・参加費の持ち物を足し引きする口(84 の cupAdapters。99-card-cup-prize)
+const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange = null, onOpenReplay = null, onPlayLive = null, getAdapters = null }) => {
   const [tab, setTab] = useState('list');
   const [list, setList] = useState(undefined);
   const [done, setDone] = useState([]); // 終わった公開の杯(終わって30日まで。2026-10-31 社長 案A)
@@ -379,7 +408,7 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
       setSelfId(id); setMine(m || null); setList(l);
       if (l) void cardCupListDone().then((d) => { if (alive) setDone(d); });
       setProfile({ name: typeof nm === 'string' && nm ? nm.slice(0, 40) : 'ブリーダー', icon: typeof ic === 'string' ? ic : null });
-      if (id) setMineCups(await cardCupMine(id));
+      if (id) setMineCups(await cardCupMineWithHosting(id));
     })();
     return () => { alive = false; };
   }, []);
@@ -387,16 +416,16 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
   useEffect(() => { setView(null); setMsg(''); if (cupId) void reload(cupId); }, [cupId, selfId]);
   const shell = (children, back = onBack) => (
     <div data-mh-screen data-card-cup className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title="個人杯" accent="text-amber-200" onBack={back} note="自分で大会を開いて、仲間と競う(ごほうびはありません)"/>
+      <ScreenHead title="個人杯" accent="text-amber-200" onBack={back} note="自分で大会を開いて、仲間と競う"/>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>{children}</div>
     </div>
   );
   if (list === undefined) return shell(<ScreenEmpty emoji="⏳" lines={['読み込んでいます']}/>);
   if (list === null) return shell(<ScreenEmpty emoji="🛠️" lines={['個人杯は準備中です']}/>);
   if (cupId) {
-    const back = () => { setCupId(null); if (selfId) void cardCupMine(selfId).then(setMineCups); void cardCupList().then((l) => l && setList(l)); };
+    const back = () => { setCupId(null); if (selfId) void cardCupMineWithHosting(selfId).then(setMineCups); void cardCupList().then((l) => l && setList(l)); };
     if (!view) return shell(<ScreenEmpty emoji="⏳" lines={['読み込んでいます']}/>, back);
-    return shell(<CardCupDetail v={view} now={now} mine={mine} selfId={selfId} profile={profile} onChanged={() => reload()} onOpenRegister={onOpenRegister} onOpenReplay={onOpenReplay} onPlayLive={onPlayLive}/>, back);
+    return shell(<CardCupDetail v={view} now={now} mine={mine} selfId={selfId} profile={profile} onChanged={() => reload()} onOpenRegister={onOpenRegister} onOpenReplay={onOpenReplay} onPlayLive={onPlayLive} getAdapters={getAdapters}/>, back);
   }
   const find = async () => {
     const c = String(code || '').replace(/[^0-9]/g, '');
