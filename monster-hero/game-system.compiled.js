@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 327a3a58d15f0f7c
+// source-sha256: 8e32b43f181eed62
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -73076,7 +73076,7 @@ const exEffectAmountText = (e, long = false) => {
     return Number(e.max) > 0 ? `${c}/${Math.floor(Number(e.max))}` : `×${c}`;
   }
   if (e.turnsLeft === 'wave') return long ? 'このWAVE' : 'WAVE中';
-  if (Number.isFinite(Number(e.turnsLeft))) return long ? `あと${e.turnsLeft}ターン` : `あと${e.turnsLeft}`;
+  if (e.turnsLeft != null && e.turnsLeft !== '' && Number.isFinite(Number(e.turnsLeft))) return long ? `あと${e.turnsLeft}ターン` : `あと${e.turnsLeft}`;
   return '';
 };
 const exEffectsShown = items => Array.isArray(items) ? items.filter(e => e && !(e.kind === 'stack' && !(Number(e.count) > 0))) : [];
@@ -73866,7 +73866,7 @@ function InfernoShieldCompact({
     "data-inferno-shield-compact": view.total,
     "data-inferno-shield-left": view.left,
     "aria-label": `シールド 残り${view.left}枚(全${view.total}枚)`,
-    className: "pointer-events-none mx-auto mt-[3px] hidden w-max max-w-full items-center gap-1 rounded-full border border-white/15 bg-black/70 py-[1px] pl-1.5 pr-1 not-italic normal-case tracking-normal [@media(max-height:640px)]:flex [@media(orientation:landscape)_and_(max-height:520px)]:flex"
+    className: "pointer-events-none mt-[3px] hidden w-max max-w-full items-center gap-1 rounded-full border border-white/15 bg-black/70 py-[1px] pl-1.5 pr-1 not-italic normal-case tracking-normal [@media(max-height:640px)]:flex [@media(orientation:landscape)_and_(max-height:520px)]:flex"
   }, React.createElement("span", {
     className: "whitespace-nowrap text-[10px] font-black leading-none text-white",
     style: {
