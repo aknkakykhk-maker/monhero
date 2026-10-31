@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=390">
+<style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:#0b1020;color:#fff;font-family:'Noto Sans CJK JP',sans-serif;overflow:hidden}
+.head{padding:14px 16px 6px;font-size:20px;font-weight:900;color:#fde68a;border-bottom:1px solid rgba(255,255,255,.1)}
+.cap{position:absolute;left:0;right:0;bottom:0;padding:10px 14px 16px;font-size:13px;font-weight:800;color:#fde68a;background:linear-gradient(transparent,rgba(0,0,0,.85) 30%);line-height:1.5}
+.stage{position:absolute;inset:52px 0 70px;display:flex;align-items:center;justify-content:center}
+/* ---- カード(一覧の1枚) ---- */
+.card{position:relative;width:150px;aspect-ratio:5/7;border-radius:7px;overflow:hidden;isolation:isolate;transform:translateZ(0)}
+.card img{width:100%;height:100%;object-fit:cover;display:block}
+.lbl{text-align:center;font-size:13px;font-weight:900;margin-top:5px}
+/* 今のキラ: ふちが虹色に移り変わる */
+.now-kira{animation:nowRim 3.2s linear infinite}
+@keyframes nowRim{0%,100%{filter:drop-shadow(0 0 2px rgba(255,120,220,.9))}33%{filter:drop-shadow(0 0 2px rgba(120,210,255,.9))}66%{filter:drop-shadow(0 0 2px rgba(255,230,110,.9))}}
+/* ===== 光り方 案A: 光の帯 ===== */
+.sheen{position:absolute;inset:-20% -60%;pointer-events:none;z-index:2;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.0) 44%,rgba(255,255,255,.75) 50%,rgba(255,255,255,0) 56%,transparent 60%);mix-blend-mode:overlay;animation:sheen 2.6s ease-in-out infinite;will-change:transform}
+.sheen.fast{animation-duration:1.7s;background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,.95) 50%,transparent 62%)}
+@keyframes sheen{0%{transform:translateX(-55%)}55%,100%{transform:translateX(55%)}}
+.holo{position:absolute;inset:-50%;pointer-events:none;z-index:1;mix-blend-mode:color-dodge;opacity:.45;background:conic-gradient(from 0deg,#ff4d6d,#ffd166,#06d6a0,#4cc9f0,#b388ff,#ff4d6d);animation:spin 6s linear infinite;will-change:transform}
+@keyframes spin{to{transform:rotate(360deg)}}
+.rimA-kira{box-shadow:0 0 0 2px rgba(255,255,255,.85),0 0 12px 2px rgba(150,220,255,.8);animation:rimPulse 2.6s ease-in-out infinite}
+.rimA-rare{box-shadow:0 0 0 3px #ffe08a,0 0 18px 6px rgba(255,170,60,.85),0 0 34px 10px rgba(255,100,200,.45);animation:rimPulse 1.8s ease-in-out infinite}
+@keyframes rimPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.18)}}
+.star{position:absolute;width:16px;height:16px;margin:-8px 0 0 -8px;z-index:3;background:#fff;clip-path:polygon(50% 0,58% 42%,100% 50%,58% 58%,50% 100%,42% 58%,0 50%,42% 42%);filter:drop-shadow(0 0 4px #fff);opacity:0;animation:twinkle 2.2s ease-in-out infinite}
+@keyframes twinkle{0%,60%,100%{opacity:0;transform:scale(.3) rotate(0)}75%{opacity:1;transform:scale(1.1) rotate(30deg)}88%{opacity:0;transform:scale(.5) rotate(60deg)}}
+/* ===== 光り方 案B: オーロラと粒 ===== */
+.aurora{position:absolute;inset:0;z-index:1;pointer-events:none;mix-blend-mode:screen;opacity:.55;background:linear-gradient(120deg,rgba(255,0,150,.0),rgba(255,0,150,.35),rgba(0,200,255,.35),rgba(255,230,0,.35),rgba(255,0,150,0));background-size:300% 100%;animation:auroraMove 3s linear infinite}
+@keyframes auroraMove{to{background-position:300% 0}}
+.rimB-kira{animation:rimHue 2.4s linear infinite}
+@keyframes rimHue{0%{box-shadow:0 0 0 2px #ff7ad9,0 0 14px 3px rgba(255,122,217,.7)}33%{box-shadow:0 0 0 2px #7ad7ff,0 0 14px 3px rgba(122,215,255,.7)}66%{box-shadow:0 0 0 2px #ffe27a,0 0 14px 3px rgba(255,226,122,.7)}100%{box-shadow:0 0 0 2px #ff7ad9,0 0 14px 3px rgba(255,122,217,.7)}}
+.rays{position:absolute;left:50%;top:50%;width:260px;height:260px;margin:-130px 0 0 -130px;z-index:-1;pointer-events:none;background:repeating-conic-gradient(rgba(255,214,102,.55) 0 8deg,rgba(255,214,102,0) 8deg 22deg);-webkit-mask:radial-gradient(circle,#000 30%,transparent 70%);mask:radial-gradient(circle,#000 30%,transparent 70%);animation:spin 10s linear infinite}
+.wrap{position:relative;isolation:isolate}
+.mote{position:absolute;bottom:4%;width:5px;height:5px;border-radius:50%;z-index:3;background:#fff3b0;box-shadow:0 0 6px #ffd166;opacity:0;animation:mote 2.6s linear infinite}
+@keyframes mote{0%{opacity:0;transform:translateY(0)}15%{opacity:1}100%{opacity:0;transform:translateY(-190px)}}
+/* ===== ブリーダーのカード(見た目キラ): 銀の光の帯 ===== */
+.silver{position:absolute;inset:-20% -60%;pointer-events:none;z-index:2;background:linear-gradient(105deg,transparent 42%,rgba(220,235,255,.85) 50%,transparent 58%);mix-blend-mode:soft-light;animation:sheen 3.4s ease-in-out infinite}
+.rimS{box-shadow:0 0 0 2px rgba(210,225,245,.9),0 0 10px 2px rgba(200,220,255,.55)}
+/* ===== パック ===== */
+.pack{position:relative;width:210px}
+.pack img{width:100%;display:block;border-radius:14px}
+.pack.idle{animation:idle 1.8s ease-in-out infinite}
+@keyframes idle{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.pack.shake{animation:shake .12s linear infinite}
+@keyframes shake{0%{transform:translate(0,0) rotate(0)}25%{transform:translate(-3px,1px) rotate(-1.5deg)}75%{transform:translate(3px,-1px) rotate(1.5deg)}}
+.packglow{position:absolute;inset:-14px;border-radius:24px;z-index:-1;transition:box-shadow .5s,background .5s}
+.flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:50;transition:opacity .25s}
+.pillar{position:absolute;left:50%;top:-40%;width:120px;height:180%;margin-left:-60px;z-index:4;pointer-events:none;opacity:0;filter:blur(6px)}
+.grid{display:grid;grid-template-columns:repeat(3,100px);gap:10px;justify-content:center}
+.slot{position:relative;width:100px;aspect-ratio:5/7;perspective:600px}
+.flipper{position:absolute;inset:0;transition:transform .45s;transform-style:preserve-3d}
+.flipper.on{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;border-radius:6px;overflow:hidden}
+.face img{width:100%;height:100%;object-fit:cover}
+.front{transform:rotateY(180deg)}
+.backglow{position:absolute;inset:-6px;border-radius:10px;z-index:-1;opacity:0;transition:opacity .3s,box-shadow .3s}
+.dim{position:fixed;inset:0;background:rgba(0,0,0,.7);opacity:0;pointer-events:none;z-index:20;transition:opacity .4s}
+.spot{position:fixed;left:50%;top:44%;z-index:30;width:220px;transform:translate(-50%,-50%) scale(.2);opacity:0;transition:transform .5s cubic-bezier(.2,1.5,.4,1),opacity .3s}
+.spot.on{transform:translate(-50%,-50%) scale(1);opacity:1}
+.banner{position:fixed;left:50%;top:76%;z-index:31;transform:translate(-50%,-50%) scale(.3);opacity:0;font-size:30px;font-weight:900;font-style:italic;padding:4px 22px;border-radius:14px;transition:transform .4s cubic-bezier(.2,1.6,.4,1),opacity .3s;white-space:nowrap}
+.banner.on{transform:translate(-50%,-50%) scale(1);opacity:1}
+.b-kira{background:linear-gradient(#fff3b0,#f5b800);color:#3b2600;box-shadow:0 0 18px rgba(255,200,0,.9)}
+.b-rare{background:linear-gradient(90deg,#ff4d6d,#ffd166,#06d6a0,#4cc9f0,#b388ff);color:#fff;text-shadow:0 2px 4px rgba(0,0,0,.6);box-shadow:0 0 28px rgba(255,255,255,.9);font-size:34px}
+.bigrays{position:fixed;left:50%;top:44%;width:900px;height:900px;margin:-450px 0 0 -450px;z-index:25;pointer-events:none;opacity:0;transition:opacity .4s;animation:spin 8s linear infinite}
+.bigrays.kira{background:repeating-conic-gradient(rgba(255,214,102,.6) 0 6deg,transparent 6deg 18deg)}
+.bigrays.rare{background:repeating-conic-gradient(#ff4d6d 0 5deg,transparent 5deg 12deg,#ffd166 12deg 17deg,transparent 17deg 24deg,#06d6a0 24deg 29deg,transparent 29deg 36deg,#4cc9f0 36deg 41deg,transparent 41deg 48deg,#b388ff 48deg 53deg,transparent 53deg 60deg)}
+.confetti{position:fixed;top:-10px;width:8px;height:12px;z-index:40;pointer-events:none;animation:fall 2.4s linear forwards}
+@keyframes fall{to{transform:translateY(900px) rotate(720deg)}}
+.crack{position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;background:linear-gradient(60deg,transparent 46%,#fff 48%,transparent 50%),linear-gradient(-40deg,transparent 47%,#fff 49%,transparent 51%),linear-gradient(10deg,transparent 48%,#fff 50%,transparent 52%);filter:drop-shadow(0 0 6px #fff);transition:opacity .2s}
+.ring{position:absolute;left:50%;top:50%;width:150%;aspect-ratio:1;transform:translate(-50%,-50%) scale(.3);border-radius:50%;z-index:-1;border:4px solid #fff;opacity:0}
+.ring.go{animation:ring .7s ease-out forwards}
+@keyframes ring{0%{opacity:1;transform:translate(-50%,-50%) scale(.3)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.6)}}
+.stage-lbl{position:fixed;left:50%;top:13%;transform:translateX(-50%);z-index:32;font-size:15px;font-weight:900;color:#fff;text-shadow:0 0 8px #000;opacity:0;transition:opacity .2s}
+</style></head><body>
+<div class="head" id="head">第1弾パック</div>
+<div class="stage" id="stage"></div>
+<div class="cap" id="cap"></div>
+<div class="dim" id="dim"></div>
+<div class="flash" id="flash"></div>
+<script>
+const Q = new URLSearchParams(location.search);
+const V = Q.get('v');
+const IMG = (n) => `/monster-hero/images/card-battle/s/${n}.jpg`;
+const BACK = IMG('back');
+const $ = (h) => { const t = document.createElement('template'); t.innerHTML = h.trim(); return t.content.firstChild; };
+const stage = document.getElementById('stage');
+const cap = (t) => { document.getElementById('cap').textContent = t; };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// ---------- 光り方 ----------
+const shineCard = (no, kind, style, w = 150) => {
+  let fx = '';
+  if (style === 'A') {
+    if (kind === 'kira') fx = '<div class="sheen"></div>';
+    if (kind === 'rare') fx = '<div class="holo"></div><div class="sheen fast"></div>' + [[20, 22, 0], [78, 30, .7], [30, 70, 1.4], [72, 78, 1.9]].map(([x, y, d]) => `<span class="star" style="left:${x}%;top:${y}%;animation-delay:${d}s"></span>`).join('');
+    if (kind === 'silver') fx = '<div class="silver"></div>';
+  } else {
+    if (kind === 'kira') fx = '<div class="aurora" style="opacity:.35"></div>' + [[24, 26, 0], [74, 40, .9], [44, 74, 1.6]].map(([x, y, d]) => `<span class="star" style="left:${x}%;top:${y}%;animation-delay:${d}s;width:12px;height:12px"></span>`).join('');
+    if (kind === 'rare') fx = '<div class="aurora"></div><div class="sheen fast"></div>' + [[15, 0], [30, .5], [45, 1.1], [60, .3], [75, .8], [88, 1.4], [52, 1.9]].map(([x, d]) => `<span class="mote" style="left:${x}%;animation-delay:${d}s"></span>`).join('');
+  }
+  const rim = kind === 'kira' ? (style === 'A' ? 'rimA-kira' : 'rimB-kira') : kind === 'rare' ? 'rimA-rare' : kind === 'silver' ? 'rimS' : '';
+  const rays = kind === 'rare' && style === 'B' ? '<div class="rays"></div>' : '';
+  return `<div class="wrap">${rays}<div class="card ${rim}" style="width:${w}px"><img src="${IMG(no)}">${fx}</div></div>`;
+};
+const shineScene = (style, title, capText) => {
+  document.getElementById('head').textContent = title;
+  const cells = [['C-003', null, 'ふつう'], ['C-003S', 'kira', 'キラ'], ['C-001V', 'rare', 'レアキラ(別絵キラ)'], ['C-004V', 'rare', 'レアキラ(別絵キラ)']];
+  stage.appendChild($(`<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px 14px;justify-items:center">${cells.map(([no, k, l]) => `<div>${shineCard(no, k, style)}<div class="lbl">${l}</div></div>`).join('')}</div>`));
+  cap(capText);
+};
+const listScene = (style) => {
+  // 手持ちの一覧のようにたくさん並べる(軽さの見本)
+  document.getElementById('head').textContent = `光り方 案${style}: 一覧に並べたとき`;
+  const nos = ['C-003S', 'C-001', 'C-001V', 'C-002S', 'C-004', 'C-004V', 'C-005S', 'C-003', 'C-003V', 'C-002', 'C-004S', 'C-005', 'C-001S', 'C-003V', 'C-002'];
+  const kind = (n) => (/V$/.test(n) ? 'rare' : /S$/.test(n) ? 'kira' : null);
+  stage.appendChild($(`<div style="display:grid;grid-template-columns:repeat(3,96px);gap:10px 12px">${nos.map((n) => `<div>${shineCard(n, kind(n), style, 96)}</div>`).join('')}</div>`));
+  cap('15枚並べても、動くのは光の層だけ(絵は動かさない)ので軽い');
+};
+const breederScene = () => {
+  document.getElementById('head').textContent = 'ブリーダーのカード(見た目キラ)';
+  const cells = [['F115', null, '今'], ['F115', 'silver', '案: 銀の光の帯'], ['F255', null, '今'], ['F255', 'silver', '案: 銀の光の帯']];
+  stage.appendChild($(`<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px 14px;justify-items:center">${cells.map(([no, k, l]) => `<div>${shineCard(no, k, 'A')}<div class="lbl">${l}</div></div>`).join('')}</div>`));
+  cap('レアの段は無いまま(確率も同じ)。金属の枠のブリーダーのカードだけ、キラより控えめな銀の光の帯が流れる。パックでめくったときも同じ光り方');
+};
+
+// ---------- パック ----------
+const PACK = [['001', 'normal'], ['013', 'normal'], ['F115', 'silver'], ['025', 'normal'], ['C-003S', 'kira'], ['C-001V', 'rare']];
+const packScene = async (style) => {
+  document.getElementById('head').textContent = '第1弾パック';
+  const pack = $(`<div class="pack idle"><div class="packglow" id="pg"></div><img src="pack.png"><div class="pillar" id="pillar"></div></div>`);
+  stage.appendChild(pack);
+  const pg = pack.querySelector('#pg'), pillar = pack.querySelector('#pillar');
+  const flash = document.getElementById('flash');
+  await sleep(900);
+  pack.classList.remove('idle'); pack.classList.add('shake');
+  if (style === 'B') {
+    // パックの昇格: 中のいちばん良いカードまで、白 → 金 → 虹と光が上がる
+    cap('案B パックの昇格: 開ける前に、パックの光が 白 → 金 → 虹 と上がる(中のいちばん良いカードまで)');
+    const lv = [['0 0 30px 10px rgba(255,255,255,.8)', '白'], ['0 0 40px 16px rgba(255,200,40,.95)', '金'], ['0 0 50px 22px rgba(255,80,200,.9),0 0 80px 30px rgba(80,200,255,.7)', '虹']];
+    for (const [sh, n] of lv) { pg.style.boxShadow = sh; const l = $(`<div class="stage-lbl" style="opacity:1">${n === '白' ? '…' : n === '金' ? 'キラの予感!' : 'レアキラの予感!!'}</div>`); document.body.appendChild(l); await sleep(750); l.remove(); }
+    pillar.style.background = 'linear-gradient(90deg,#ff4d6d,#ffd166,#06d6a0,#4cc9f0,#b388ff)';
+  } else {
+    cap(style === 'A' ? '案A 1枚ずつの昇格: 開ける所は今と同じ。めくるときに、良いカードほど光が段を上がる' : '案C 溜めてめくる: 良いカードは真ん中に出して、光を溜めてから割れて出る');
+    pg.style.boxShadow = '0 0 30px 10px rgba(255,255,255,.7)'; await sleep(700);
+    pillar.style.background = 'linear-gradient(90deg,transparent,#fff,transparent)';
+  }
+  pillar.style.transition = 'opacity .3s'; pillar.style.opacity = '1';
+  await sleep(450);
+  flash.style.opacity = '1'; await sleep(250); stage.innerHTML = ''; flash.style.opacity = '0';
+  // 配る
+  const grid = $(`<div class="grid"></div>`);
+  stage.appendChild(grid);
+  const slots = PACK.map(([no, r], i) => {
+    const s = $(`<div class="slot"><div class="backglow"></div><div class="flipper"><div class="face"><img src="${BACK}"></div><div class="face front">${r === 'normal' ? `<img src="${IMG(no)}">` : `<div class="card ${r === 'kira' ? 'rimA-kira' : r === 'rare' ? 'rimA-rare' : 'rimS'}" style="width:100%">${`<img src="${IMG(no)}">`}${r === 'kira' ? '<div class="sheen"></div>' : r === 'rare' ? '<div class="holo"></div><div class="sheen fast"></div>' : '<div class="silver"></div>'}</div>`}</div></div><div class="crack"></div><div class="ring"></div></div>`);
+    s.style.opacity = '0'; s.style.transform = 'translateY(40px)'; s.style.transition = 'all .3s'; grid.appendChild(s);
+    setTimeout(() => { s.style.opacity = '1'; s.style.transform = 'none'; }, 80 * i);
+    return s;
+  });
+  await sleep(900);
+  for (let i = 0; i < PACK.length; i++) {
+    const [no, r] = PACK[i];
+    const s = slots[i], fl = s.querySelector('.flipper'), bg = s.querySelector('.backglow');
+    if (r === 'normal' || r === 'silver') { fl.classList.add('on'); await sleep(260); continue; }
+    if (style === 'C') { await chargeReveal(s, no, r); continue; }
+    // 案A・B: 裏のまま光が段を上がる(白 → 金 → 虹)
+    bg.style.opacity = '1';
+    const steps = r === 'rare' ? ['0 0 14px 6px #fff', '0 0 18px 8px #ffc400', '0 0 22px 10px #ff4dd2,0 0 30px 14px #4cc9f0'] : ['0 0 14px 6px #fff', '0 0 18px 8px #ffc400'];
+    for (const sh of steps) { bg.style.boxShadow = sh; s.style.transform = 'scale(1.08)'; await sleep(140); s.style.transform = 'scale(1)'; await sleep(360); }
+    fl.classList.add('on');
+    await bigReveal(no, r);
+  }
+  cap(style === 'B' ? '案B: パックの光で先に分かり、めくると今より大きく出る' : style === 'A' ? '案A: 1枚ずつ、ふつう → キラ → レアキラ と光が上がって見える' : '案C: レアキラは画面が暗くなり、ひびが入って虹色に割れて出る');
+  await sleep(2500);
+};
+const bigReveal = async (no, r) => {
+  const dim = document.getElementById('dim'); const flash = document.getElementById('flash');
+  if (r === 'rare') { dim.style.opacity = '1'; await sleep(300); flash.style.opacity = '.9'; await sleep(120); flash.style.opacity = '0'; }
+  const rays = $(`<div class="bigrays ${r}"></div>`); document.body.appendChild(rays); requestAnimationFrame(() => { rays.style.opacity = r === 'rare' ? '.9' : '.7'; });
+  const sp = $(`<div class="spot">${shineCard(no, r === 'rare' ? 'rare' : 'kira', 'A').replace('class="card', 'style="width:220px" class="card')}</div>`);
+  sp.querySelector('.card').style.width = '220px';
+  document.body.appendChild(sp); requestAnimationFrame(() => sp.classList.add('on'));
+  const bn = $(`<div class="banner ${r === 'rare' ? 'b-rare' : 'b-kira'}">${r === 'rare' ? 'レアキラ!!' : 'キラ!'}</div>`); document.body.appendChild(bn);
+  await sleep(250); bn.classList.add('on');
+  if (r === 'rare') confetti(40);
+  await sleep(r === 'rare' ? 2200 : 1400);
+  sp.classList.remove('on'); bn.classList.remove('on'); rays.style.opacity = '0'; dim.style.opacity = '0';
+  await sleep(400); sp.remove(); bn.remove(); rays.remove();
+};
+const chargeReveal = async (s, no, r) => {
+  // 真ん中に裏のまま出して、光を溜める(白 → 金 → 虹)。レアキラはひびが入って割れる
+  const dim = document.getElementById('dim'); dim.style.opacity = '1';
+  const sp = $(`<div class="spot on" style="transition:none"><div class="wrap"><div class="ring"></div><div class="card" style="width:220px"><img src="${BACK}"><div class="crack"></div></div></div></div>`);
+  document.body.appendChild(sp);
+  const card = sp.querySelector('.card'), ring = sp.querySelector('.ring'), crack = sp.querySelector('.crack');
+  const lbl = $(`<div class="stage-lbl" style="opacity:1">光を溜めています…</div>`); document.body.appendChild(lbl);
+  const steps = r === 'rare' ? [['0 0 20px 8px #fff', '…'], ['0 0 30px 12px #ffc400', 'キラ…?'], ['0 0 40px 18px #ff4dd2,0 0 60px 24px #4cc9f0', 'まだ上がる!!']] : [['0 0 20px 8px #fff', '…'], ['0 0 30px 12px #ffc400', 'キラ…?']];
+  for (const [sh, t] of steps) { card.style.boxShadow = sh; lbl.textContent = t; ring.classList.remove('go'); void ring.offsetWidth; ring.style.borderColor = sh.includes('ff4dd2') ? '#ff4dd2' : sh.includes('ffc400') ? '#ffc400' : '#fff'; ring.classList.add('go'); card.style.transform = 'scale(1.06)'; await sleep(160); card.style.transform = 'scale(1)'; await sleep(560); }
+  if (r === 'rare') { crack.style.opacity = '1'; await sleep(500); }
+  lbl.remove(); sp.remove();
+  s.querySelector('.flipper').classList.add('on');
+  await bigReveal(no, r);
+};
+const confetti = (n) => { const cs = ['#ff4d6d', '#ffd166', '#06d6a0', '#4cc9f0', '#b388ff', '#fff']; for (let i = 0; i < n; i++) { const c = $(`<div class="confetti" style="left:${Math.random() * 100}%;background:${cs[i % cs.length]};animation-delay:${Math.random() * .6}s"></div>`); document.body.appendChild(c); setTimeout(() => c.remove(), 3200); } };
+
+(async () => {
+  if (V === 'shineA') shineScene('A', '光り方 案A: 光の帯と虹', 'キラ: 白い光の帯が斜めに流れる。レアキラ: 虹色が回り、光の帯が速く流れ、星がまたたき、金のふちが脈打つ');
+  if (V === 'shineB') shineScene('B', '光り方 案B: オーロラと粒', 'キラ: ふちの色が移り変わり、星がまたたく。レアキラ: 後ろで光の線が回り、オーロラが流れ、光の粒が舞い上がる');
+  if (V === 'listA') listScene('A');
+  if (V === 'listB') listScene('B');
+  if (V === 'breeder') breederScene();
+  if (V === 'packA') await packScene('A');
+  if (V === 'packB') await packScene('B');
+  if (V === 'packC') await packScene('C');
+  window.__done = true;
+})();
+</script></body></html>
