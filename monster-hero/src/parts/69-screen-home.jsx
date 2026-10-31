@@ -335,6 +335,7 @@ function HomeScreen({
   onOpenAssistantChat = null,
   // MFバトルカードの入口(案A・左の列のいちばん下)。公開の印 cardBattle が立ち、公開のお話を見た人だけ(60-app.jsx が決める)
   cardBattleVisible = false, onOpenCardBattle = null, cardBattleTeaser = false, onOpenCardTeaser = null,
+  cardTourVisible = false, onOpenCardTour = null,
 }) {
   // 背景の絵は「HOMEの枠が横長かどうか」で選ぶ。画面の向きでは決めない。
   // パソコンは画面が横長でも、HOMEは幅600の縦長の列に収まるので、横長の絵を出すと村の真ん中だけが大きく写り、
@@ -379,6 +380,20 @@ function HomeScreen({
     const campaign=rhythmEventPointCampaignAt(Date.now());
     return campaign&&campaign.banner?campaign:null;
   })();
+  // 公式杯の札(2026-10-31 社長・案A。中身は 99-card-tournament の cardTourHomeBanner)。
+  //   一覧は HOME を開いたときと10分ごとに読む。残り時間は1分ごとに数え直す。読めない・大会が無いときは出さない
+  const [cardTourList,setCardTourList]=React.useState(null);
+  const [cardTourNow,setCardTourNow]=React.useState(()=>Date.now());
+  React.useEffect(()=>{
+    if(!cardTourVisible||typeof cardTourFetchList!=='function')return undefined;
+    let alive=true;
+    const load=()=>{cardTourFetchList().then(l=>{if(alive)setCardTourList(Array.isArray(l)?l:null);}).catch(()=>{});};
+    load();
+    let ticks=0;
+    const id=setInterval(()=>{ticks+=1;setCardTourNow(Date.now());if(ticks%10===0)load();},60000);
+    return ()=>{alive=false;clearInterval(id);};
+  },[cardTourVisible]);
+  const homeCardTour=cardTourVisible&&typeof cardTourHomeBanner==='function'?cardTourHomeBanner(cardTourList,cardTourNow):null;
   // モンヒロビートのイベントを開催しているか。描くたびに数え直す(上の★のとおり)
   const homeRhythmEventOpen=(()=>{
     const released=(typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS&&RELEASE_FLAGS.rhythmWeeklyRanking===true);
@@ -440,8 +455,12 @@ function HomeScreen({
         {homeEventCampaign&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={openChangelog} aria-label={`${homeEventCampaign.banner.title} ${homeEventCampaign.banner.sub}`}>
           <b>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}</b><small>{homeEventCampaign.banner.sub}</small>
         </button>}
-        {/* MFバトルカード(社長が決めた案A: 左の列のいちばん下・ハロウィン・ナイトの札の下。札が無いときは1段上がる) */}
-        {cardBattleVisible&&typeof onOpenCardBattle==='function'&&<button type="button" data-home-card-battle className={`mh-home-card-battle${homeEventCampaign?'':' raised'}`} onClick={onOpenCardBattle} aria-label="MFバトルカード"><span>🃏 MFバトルカード</span></button>}
+        {/* 公式杯(2026-10-31 社長・案A): ハロウィン・ナイトの札の下、MFバトルカードの上。イベントの札が無いときは1段上がる。押すといつも大会のトップ */}
+        {homeCardTour&&typeof onOpenCardTour==='function'&&<button type="button" data-home-card-tour={homeCardTour.id} className={`mh-home-tour-banner${homeEventCampaign?'':' raised'}`} onClick={()=>onOpenCardTour(homeCardTour.id)} aria-label={`${homeCardTour.name} ${homeCardTour.sub}`}>
+          <span aria-hidden="true">🏆</span><span><b>{homeCardTour.name}</b><small>{homeCardTour.sub}{homeCardTour.prize&&<em>{homeCardTour.prize}</em>}</small></span>
+        </button>}
+        {/* MFバトルカード(社長が決めた案A: 左の列のいちばん下・ハロウィン・ナイトの札の下。札が無いときは1段上がる。公式杯の札があるときはその下) */}
+        {cardBattleVisible&&typeof onOpenCardBattle==='function'&&<button type="button" data-home-card-battle className={`mh-home-card-battle${homeCardTour?(homeEventCampaign?' below-tour':''):(homeEventCampaign?'':' raised')}`} onClick={onOpenCardBattle} aria-label="MFバトルカード"><span>🃏 MFバトルカード</span></button>}
         {/* 公開前の予告(社長 2026-10-25「近日公開みたいな感じでホームに出して」)。同じ場所に「近日公開」の札を付けて出し、押すと予告の小窓。中には入れない。
             公開の印(RELEASE_FLAGS.cardBattle)を立てると、60-app がこちらを下ろして上のふつうの入口に切り替える */}
         {!cardBattleVisible&&cardBattleTeaser&&typeof onOpenCardTeaser==='function'&&<button type="button" data-home-card-battle-teaser className={`mh-home-card-battle soon${homeEventCampaign?'':' raised'}`} onClick={onOpenCardTeaser} aria-label="MFバトルカード 近日公開"><span>🃏 MFバトルカード<small>近日公開</small></span></button>}

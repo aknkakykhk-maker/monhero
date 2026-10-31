@@ -55,6 +55,7 @@ ${css}
   <button class="mh-home-gift">ギフト</button>
   <button class="mh-home-update">更新履歴</button>
   <button class="mh-home-event-banner"><b>🎃 ハロウィン・ナイト</b><small>開催中 〜11/1 13:59</small></button>
+  <button class="mh-home-tour-banner" style="display:none"><span>🏆</span><span><b>第1回 MFバトルカード公式杯</b><small>受付中 あと23時間<em>1位 ビートP 100,000</em></small></span></button>
   <button class="mh-home-card-battle"><span>🃏 MFバトルカード</span></button>
   <div class="mh-home-assistant" style="height:70px">みゅあ</div>
 </main></div></body></html>`;
@@ -141,24 +142,37 @@ const SIZES = [
     const cut = res.facilities.filter(f => f.bottom > res.height + 0.5 || f.top < -0.5);
     check('  施設のラベルが上下に切れない', cut.length === 0,
       cut.map(f => `${f.name}(上${Math.round(f.top)} 下${Math.round(f.bottom)} / 画面高${res.height})`).join(', '));
-    // ⑦ 左の列の札(モンヒロビート・イベントの札・MFバトルカード)が重ならない(2026-10-26 320×568〜375×667 で 3〜6px 重なっていた)。
-    //    イベントの札が無いときは、MFバトルカードの札が1段上がる(.raised)ので、そちらも見る
-    const leftCol = async (event) => page.evaluate((event) => {
+    // ⑦ 左の列の札(モンヒロビート・イベントの札・公式杯・MFバトルカード)が重ならない(2026-10-26 320×568〜375×667 で 3〜6px 重なっていた)。
+    //    イベントの札が無いときは、下の札が1段上がる(.raised)ので、そちらも見る。
+    //    公式杯の札(2026-10-31 社長・案A)はイベントの札の下・MFバトルカードの上。あるときは MFバトルカードの札が1段下がる(.below-tour)
+    const leftCol = async ([event, tour]) => page.evaluate(([event, tour]) => {
       const ev = document.querySelector('.mh-home-event-banner'); const cardBtn = document.querySelector('.mh-home-card-battle');
-      ev.style.display = event ? '' : 'none'; cardBtn.classList.toggle('raised', !event);
+      const tourBtn = document.querySelector('.mh-home-tour-banner');
+      ev.style.display = event ? '' : 'none'; tourBtn.style.display = tour ? '' : 'none'; tourBtn.classList.toggle('raised', !event);
+      cardBtn.classList.toggle('raised', !tour && !event); cardBtn.classList.toggle('below-tour', tour && event);
       const r = (el) => { const b = el.getBoundingClientRect(); return { top: b.top, bottom: b.bottom, left: b.left, right: b.right, h: b.height }; };
-      const items = [['モンヒロビート', document.querySelector('.mh-home-facility.rhythm>span')], ['イベントの札', ev], ['MFバトルカード', cardBtn.querySelector('span')], ['バトル', document.querySelector('.mh-home-facility.battle>span')]]
+      const items = [['モンヒロビート', document.querySelector('.mh-home-facility.rhythm>span')], ['イベントの札', ev], ['公式杯', tourBtn], ['MFバトルカード', cardBtn.querySelector('span')], ['バトル', document.querySelector('.mh-home-facility.battle>span')]]
         .map(([n, el]) => [n, r(el)]).filter(([, b]) => b.h > 0);
       const hits = [];
       for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
         const [na, a] = items[i], [nb, b] = items[j];
         if (a.top < b.bottom && a.bottom > b.top && a.left < b.right && a.right > b.left) hits.push(`${na}と${nb}(${Math.round(Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top))}px)`);
       }
-      ev.style.display = ''; cardBtn.classList.remove('raised');
+      // 公式杯の札は、画面の中に収まり、右の列(ミッション・ギフト)にかからない
+      if (tour) {
+        const t = r(tourBtn);
+        if (t.right > window.innerWidth + 0.5 || t.left < -0.5) hits.push(`公式杯の札が画面の外(${Math.round(t.left)}〜${Math.round(t.right)})`);
+        for (const sel of ['.mh-home-mission', '.mh-home-gift', '.mh-home-facility.market>span']) {
+          const b = r(document.querySelector(sel));
+          if (b.h > 0 && t.top < b.bottom && t.bottom > b.top && t.left < b.right && t.right > b.left) hits.push(`公式杯と${sel}`);
+        }
+      }
+      ev.style.display = ''; tourBtn.style.display = 'none'; tourBtn.classList.remove('raised'); cardBtn.classList.remove('raised', 'below-tour');
       return hits;
-    }, event);
-    for (const [label, event] of [['イベントの札があるとき', true], ['イベントの札が無いとき', false]]) {
-      const hits = await leftCol(event);
+    }, [event, tour]);
+    for (const [label, event, tour] of [['イベントの札があるとき', true, false], ['イベントの札が無いとき', false, false],
+      ['イベントの札と公式杯の札があるとき', true, true], ['公式杯の札だけのとき', false, true]]) {
+      const hits = await leftCol([event, tour]);
       check(`  左の列の札が重ならない(${label})`, hits.length === 0, hits.join(', '));
     }
     // ⑥ 右上の枠(ダイヤ・ブリーダーP)は桁が増えても高さが変わらない(2026-10-13 社長「8桁で『ダイヤ』が縦に折れた」)。
