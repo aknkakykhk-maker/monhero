@@ -976,6 +976,8 @@ const giftTitleDisplay = (gift) => {
   if (gift?.source === 'assistantBond') return { label:'仲良し度', title };
   // 助手のお話のおみやげ(2026-10-27 ソラシド)
   if (gift?.source === 'assistantStory') return { label:'おみやげ', title };
+  // MFバトルカード個人杯のごほうび・返却(2026-10-31・99-card-cup-prize)
+  if (gift?.source === 'cardCup') return { label:'個人杯', title };
   if (gift?.source !== 'mission') return { label:null, title };
   const missionTitle = title.replace(/^ミッション報酬[「『]?/, '').replace(/[」』]$/, '').trim();
   return { label:'ミッション', title:missionTitle || title };

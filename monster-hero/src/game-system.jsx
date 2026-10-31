@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bffd6bfc2651dbe0
+// generated-sha256: 461199aed917f79a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9893,6 +9893,8 @@ const giftTitleDisplay = (gift) => {
   if (gift?.source === 'assistantBond') return { label:'仲良し度', title };
   // 助手のお話のおみやげ(2026-10-27 ソラシド)
   if (gift?.source === 'assistantStory') return { label:'おみやげ', title };
+  // MFバトルカード個人杯のごほうび・返却(2026-10-31・99-card-cup-prize)
+  if (gift?.source === 'cardCup') return { label:'個人杯', title };
   if (gift?.source !== 'mission') return { label:null, title };
   const missionTitle = title.replace(/^ミッション報酬[「『]?/, '').replace(/[」』]$/, '').trim();
   return { label:'ミッション', title:missionTitle || title };
@@ -10165,9 +10167,10 @@ const playerRankInfo = (xp) => {
 const BEAT_RANK_KEY = 'mh_rhythm_rank_v1';
 // 1曲の経験値(2026-10-29 社長。HELL は「劇的に上げる」で 60)。最後まで遊んだときの値
 const BEAT_RANK_XP = Object.freeze({ EASY: 6, NORMAL: 8, HARD: 10, EXPERT: 14, MASTER: 18, HELL: 60 });
-// 途中でライフが尽きた(失敗)ときは3分の1(端数は四捨五入)。フルコンボ +4、全部 MARVELOUS は +8(フルコンボの +4 と重ねない)。
-// みんなで対戦は1曲ぶん(上乗せ込み)を1.5倍(端数は四捨五入)。その日はじめての1曲は、そのあとに +30
-const BEAT_RANK_BONUS = Object.freeze({ failDivisor: 3, fullCombo: 4, allMarvelous: 8, multiScale: 1.5, dayFirst: 30 });
+// 途中でライフが尽きた(失敗)ときは1割(端数は四捨五入・最低1。2026-10-31 社長「失敗でも入りすぎてる」で3分の1から下げた)。
+// フルコンボ +4、全部 MARVELOUS は +8(フルコンボの +4 と重ねない)。
+// みんなで対戦は1曲ぶん(上乗せ込み)を1.5倍(端数は四捨五入)。その日はじめての1曲は、そのあとに +30(成功したときだけ。失敗は数えず、その日の +30 も残す)
+const BEAT_RANK_BONUS = Object.freeze({ failRate: 0.1, fullCombo: 4, allMarvelous: 8, multiScale: 1.5, dayFirst: 30 });
 // ごほうび(2026-10-29 社長が作り直し。前の「ランク3・10・20、そのあと5ごとにビートP 300」はやめた)
 //   ランクが1つ上がるたび: ビートP「そのランク×100」+セッション券1枚
 //   5ランクごと(5・10・15…): さらにビートP「そのランク×200」+セッション券「そのランクと同じ枚数」
@@ -10210,7 +10213,7 @@ const beatRankPlayXp = ({ difficultyId, cleared = true, fullCombo = false, allMa
   const base = BEAT_RANK_XP[difficultyId];
   if (!base) return { xp: 0, parts: [] };
   const parts = [];
-  let xp = cleared ? base : Math.round(base / BEAT_RANK_BONUS.failDivisor);
+  let xp = cleared ? base : Math.max(1, Math.round(base * BEAT_RANK_BONUS.failRate));
   parts.push({ label: cleared ? difficultyId : `${difficultyId}(ライフが尽きた)`, xp });
   if (cleared && allMarvelous) { xp += BEAT_RANK_BONUS.allMarvelous; parts.push({ label: '全部 MARVELOUS', xp: BEAT_RANK_BONUS.allMarvelous }); }
   else if (cleared && fullCombo) { xp += BEAT_RANK_BONUS.fullCombo; parts.push({ label: 'フルコンボ', xp: BEAT_RANK_BONUS.fullCombo }); }
@@ -10220,13 +10223,13 @@ const beatRankPlayXp = ({ difficultyId, cleared = true, fullCombo = false, allMa
 
 // 経験値を足した次の値と、新しくもらうごほうび。today は日本時間の 'YYYY-MM-DD'(呼ぶ側が渡す)
 // 返り値: { next, add, parts, from, to, tickets, beatPoints, bonusTickets, bonusPoints }(bonus* は5ランクごとのおまけの分。tickets・beatPoints に含む)
-const beatRankAfter = (prev, { difficultyId, cleared, fullCombo, allMarvelous, multi, today }) => {
+const beatRankAfter = (prev, { difficultyId, cleared = true, fullCombo, allMarvelous, multi, today }) => {
   const cur = normalizeBeatRank(prev);
   const from = playerRankInfo(cur.xp).rank;
   const play = beatRankPlayXp({ difficultyId, cleared, fullCombo, allMarvelous, multi });
   if (!play.xp) return { next: cur, add: 0, parts: [], from, to: from, tickets: 0, beatPoints: 0 };
   const day = typeof today === 'string' ? today.slice(0, 10) : '';
-  const first = !!day && !(cur.day === day && cur.dayFirst);
+  const first = cleared !== false && !!day && !(cur.day === day && cur.dayFirst);
   const parts = first ? [...play.parts, { label: 'その日はじめての1曲', xp: BEAT_RANK_BONUS.dayFirst }] : play.parts;
   const add = play.xp + (first ? BEAT_RANK_BONUS.dayFirst : 0);
   const xp = playerRankSafeXp(cur.xp + add);
@@ -17474,7 +17477,9 @@ const SB_HEADERS = { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' 
 // rpc は集計を読むもの(rhythm_week_score_totals など)なので通すが、表へ書く rpc はここに並べて同じく止める
 // (2026-10-27 カード部: マルチの強さの点数 card_battle_pvp_report が、検査のブラウザから本物へ届きうる形だった)
 // ビートランク・カードランクの行を書く関数(2026-10-29)も、表へ書くのでここで止める
-const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report', 'rhythm_beat_rank_put', 'card_rank_put', 'card_deck_replay_put']);
+const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report', 'rhythm_beat_rank_put', 'card_rank_put', 'card_deck_replay_put',
+  // 個人杯のごほうび・参加費・主催仲間(99-card-cup-prize。2026-10-31)
+  'card_cup_deposit', 'card_cup_join_pay', 'card_cup_claim', 'card_cup_prize_set', 'card_cup_cohost_invite', 'card_cup_cohost_answer', 'card_cup_cohost_remove']);
 const sbAutomationWriteBlocked = (url, method) => {
   try {
     if (typeof navigator === 'undefined' || navigator.webdriver !== true) return false;
@@ -50694,7 +50699,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
           <RhythmOrientationButton/>
         </header>
         {beatRankOpen && Number.isFinite(ms.beatRankXp) && <PlayerRankDetail kind="beat" xp={ms.beatRankXp} rewardsOf={beatRankRewardItems}
-          how="曲を遊ぶと経験値がたまります。難しい難易度ほど多く、HELL がいちばん多くたまります。その日はじめての1曲は +30 です。" onClose={() => setBeatRankOpen(false)}/>}
+          how="曲を遊ぶと経験値がたまります。難しい難易度ほど多く、HELL がいちばん多くたまります。その日はじめてクリアした1曲は +30 です。" onClose={() => setBeatRankOpen(false)}/>}
         {ms.exiting && <div data-quick-run-exit-overlay className="absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center"><b className="text-sm font-black text-amber-200">周回を終えています…</b></div>}
         {/* 縦画面: 上に助手の立ち絵(余った高さを使って大きく)、下にボタン。
             横画面: 左に立ち絵、右にボタン(2026-10-03・ユーザー指摘「サイズ感悪い」で組み直し) */}
@@ -61675,7 +61680,7 @@ const cardNormalizeCpuOpen = (v) => {
 };
 // 対戦の見出し・結果に出す強さの名前。登録デッキが相手なら、そのデッキの賢さの段(GRAND MASTER・HELL・LEGEND まで。2026-10-30 社長)
 const cardBattleLevelLabel = (level, share) => (share && typeof cardShareSmartLevel === 'function' ? CARD_SHARE_SMART_LABEL[cardShareSmartLevel(share.tactics)] : CARD_LEVEL_LABEL[level]) || '';
-const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, onSettings = null }) => {
+const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, cupItems = null, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, onSettings = null }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
@@ -61851,6 +61856,39 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     return ok;
   };
 
+  // 個人杯のごほうび・参加費(99-card-cup-prize)のカードの持ち物(かけら・パック券は mh_card_tactics_v1、カタログは mh_card_catalogs_v1)を足し引きする。
+  // 印(extra)も同じ取引で書く。足りない・保存できないときは false
+  //   どちらも開くたびに保存から読み直す作り(96 の cardTacticsLoad・60-app の loadCardShop)なので、ここも保存を読み直して1つの取引で書く
+  const cupCardItems = async (delta, extra = []) => {
+    if (!Array.isArray(delta) || typeof cardCupItemOf !== 'function') return false;
+    let rawT = null, rawC = null;
+    try { [rawT, rawC] = await Promise.all([storeGet(CARD_TACTICS_KEY, null), storeGet(CARD_SAVE_KEYS.catalogs, 0, false)]); } catch (_) { return false; }
+    const t = cardNormalizeTactics(rawT);
+    const c0 = cardNormalizeCatalogs(rawC);
+    let shards = t.shards, tickets = t.tickets, catalogs = c0;
+    for (const d of delta) {
+      const it = cardCupItemOf(d && d.item);
+      const n = Math.trunc(Number(d && d.amount));
+      if (!it || !it.card || !Number.isFinite(n) || n === 0) return false;
+      if (it.card === 'shards') shards += n; else if (it.card === 'tickets') tickets += n; else catalogs += n;
+    }
+    if (shards < 0 || tickets < 0 || catalogs < 0) return false;
+    const entries = [
+      ...(shards !== t.shards || tickets !== t.tickets ? [{ key: CARD_TACTICS_KEY, before: rawT, next: { ...t, shards, tickets } }] : []),
+      ...(catalogs !== c0 ? [{ key: CARD_SAVE_KEYS.catalogs, before: rawC, next: catalogs }] : []),
+      ...(Array.isArray(extra) ? extra : []),
+    ];
+    return saveStoredValuesOrRollback(entries, storeGet, storeSet);
+  };
+  // 個人杯の画面へ渡す口(99-card-cup-prize の adapters の main・card・gift)。have … いまの持ち物の数
+  const cupAdapters = async () => {
+    const owner = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+    const key = typeof cardShareOwnerKey === 'function' ? await cardShareOwnerKey(false) : null;
+    const t = typeof cardTacticsLoad === 'function' ? (await cardTacticsLoad()).tactics : { shards: 0, tickets: 0 };
+    const p = (rank && rank.profile) || {};
+    return { owner, key, name: p.name || '', icon: p.icon || null, main: cupItems && cupItems.main, gift: cupItems && cupItems.gift, card: cupCardItems,
+      have: { main: cupItems && typeof cupItems.have === 'function' ? cupItems.have() : null, card: { shards: t.shards, tickets: t.tickets, catalogs: cardNormalizeCatalogs(await storeGet(CARD_SAVE_KEYS.catalogs, 0, false).catch(() => 0)) } } };
+  };
   // 途中で閉じた助手との対戦を、投了として数える(印 mh_card_cpu_open_v1。上の CARD_CPU_OPEN_KEY の説明)。
   // force … この画面で対戦を抜けたとき(beat を待たずに数える)。数えたら { reward, loops } を返す
   const openIdRef = useRef(null); // この画面で書いた印の試合の鍵(書けなかったら null。そのときは終わりに印を見ない)
@@ -62464,7 +62502,21 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const r = selfId && key ? await cardTourRpc('card_cup_live_match', { p_match: m.id, p_owner: selfId, p_key: key }) : null;
       if (!r || (r.side !== 0 && r.side !== 1) || r.winner === 0 || r.winner === 1) { setNotice('この試合には入れません'); return; }
       const mine = r.side === 0 ? r.a_side : r.b_side, foe = r.side === 0 ? r.b_side : r.a_side;
-      if ((r.side === 0 ? r.checkin_b : r.checkin_a)) { setNotice('相手が来ています。2人で戦う部屋は準備中です'); return; }
+      // 相手が集合している: サーバが作った合言葉(8文字)の部屋で、2台で戦う(91 の CARD_PVP.cup・自分のデッキは杯の写し)。
+      //   ただし、戦えるようになって2分たっても相手が部屋に来ていない(card_cup_live_match を呼んでいない)なら、来ない人と同じく登録デッキと戦う(SQL の absent と同じ決まり)
+      const foeHere = r.side === 0 ? r.checkin_b : r.checkin_a;
+      const foeJoined = !!(r.side === 0 ? r.join_b : r.join_a);
+      const readyAt = Date.parse(r.ready_at) || 0;
+      const foeLate = !foeJoined && readyAt > 0 && Date.now() >= readyAt + 2 * 60000;
+      if (foeHere && !foeLate) {
+        if (typeof CARD_PVP === 'undefined' || !r.room || !mine || !mine.deck) { setNotice('部屋に入れませんでした'); return; }
+        const me = rank && rank.profile ? rank.profile : {};
+        const ok = CARD_PVP.cup(r.room, { name: me.name || myName, icon: me.icon || '🙂', frame: me.frame || null }, { ...mine.deck, name: (mine.tactics && mine.tactics.name) || '' },
+          { matchId: r.id, cupId: r.cup_id, side: r.side, selfId });
+        if (!ok) { setNotice('部屋に入れませんでした'); return; }
+        setView('pvp');
+        return;
+      }
       if (!mine || !mine.deck || !foe || !foe.deck) { setNotice('デッキの写しが読めませんでした'); return; }
       const tactics = foe.tactics && typeof foe.tactics === 'object' ? foe.tactics : {};
       const share = { name: (typeof cardCupText === 'function' ? cardCupText(foe.name, 40) : String(foe.name || '').slice(0, 40)) || 'ブリーダー', icon: foe.icon || null, frame: null,
@@ -62529,7 +62581,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       if (ok && !debug && levelGain.gain && levelGain.gain.to > levelGain.gain.from) void cardRankPut(rank && rank.profile);
       return { ...got, saved: ok, quick, rankGain: ok ? levelGain.gain : null };
     };
-    return <CardPvpLobby onOpenReplay={(id) => { void openReplay(id, 'pvp'); }} replayHas={cardReplayHas} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meFrame={(rank && rank.profile && rank.profile.frame) || null} deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onStepAway={() => setView('mode')} onPickDeck={() => { setDeckPick({ next: 'pvp' }); setView('deckPick'); }} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {
+    // 個人杯の試合(④・CARD_PVP.cup)から来たときは、戻る先は杯の画面
+    const pvpBackTo = () => (typeof CARD_PVP !== 'undefined' && CARD_PVP.get().cup ? 'cup' : 'mode');
+    return <CardPvpLobby onOpenReplay={(id) => { void openReplay(id, 'pvp'); }} replayHas={cardReplayHas} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meFrame={(rank && rank.profile && rank.profile.frame) || null} deck={activeDeck} deckIssues={deckIssues} onBack={(wasCup) => setView(wasCup === true ? 'cup' : pvpBackTo())} onStepAway={() => setView(pvpBackTo())} onPickDeck={() => { setDeckPick({ next: 'pvp' }); setView('deckPick'); }} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {
       setResult(null);
       // 対戦開始の画面: 相手の名前・アイコン・相手がデッキ編成で付けたデッキ名(古い版の相手は送ってこないので出さない)
       const pv = g.pvp || {};
@@ -65992,7 +66046,8 @@ const CARD_PVP = (() => {
     game: null, startMsg: null, foeInMatch: false, mySeq: 0, outbox: [], theirSeq: 0, inbox: {}, history: [], result: null, foeOpen: null, error: '', broken: '',
     offline: false, timeouts: 0, autoActing: false, chatAt: 0, mode: 'private', seekAt: 0, seekers: {}, lobbyCount: 0, joining: '', joinAt: 0, ownCode: '', reported: '', pick: false, notice: '', // pick … 入口の一覧から選んで入った / notice … 入口に出す一言
     round: 0, again: null, foeAgain: null, foeGone: false,
-    invited: {}, guest: false, guestAt: 0, via: '' }); // invited … 送った招待 { [相手のid]: { code, at, ok } } / guest … 人の部屋へ入った(来なければ「部屋がもうありません」) / via … 入るときに押した招待
+    invited: {}, guest: false, guestAt: 0, via: '',
+    cup: null, cupSent: false, cupResult: null }); // cup … 個人杯のリアルタイム杯の試合(④)。{ matchId, cupId, side, selfId }。報酬・強さの点数・もう1戦は通らず、結果を杯へ送る // invited … 送った招待 { [相手のid]: { code, at, ok } } / guest … 人の部屋へ入った(来なければ「部屋がもうありません」) / via … 入るときに押した招待
  // もう1戦: round … いまの試合の回 / again … 自分が押した次の回 { rd, seed, salt, seal } / foeAgain … 相手が押した次の回 { rd, seal }
   let roomWaitSet = false; // カードの部屋が「部屋で待ち中」の印を立てているか
   const emit = () => {
@@ -66079,6 +66134,20 @@ const CARD_PVP = (() => {
     return slept;
   };
   const forceEnd = (outcome) => { if (s && s.phase === 'playing' && board) board.onForceEnd(outcome); };
+  // 個人杯の試合(④): 確かめが決まったら(ok / ng / skip)、杯へ結果を1回だけ送る(card_cup_live_report・how=pvp)。
+  //   手の並びは、確かめが通った試合だけ { kind: 'pvp', order, seeds: [自分, 相手], first, acts }(自分が0番の向き。93 の cardReplayFromTour が並びを戻す)
+  const cupSend = async () => {
+    if (!s || !s.cup || s.cupSent || !s.result || s.result.verify === 'wait') return;
+    const cup = s.cup, r = s.result, o = s.foeOpen;
+    s = { ...s, cupSent: true };
+    const acts = r.verify === 'ok' && o ? { kind: 'pvp', order: cup.side === 0 ? 'ab' : 'ba', seeds: [s.seed >>> 0, o.seed >>> 0], first: s.first, acts: s.history.map((e) => [e.by, e.act]) } : null;
+    const kos = Array.isArray(r.kos) ? (cup.side === 0 ? r.kos : [r.kos[1], r.kos[0]]) : null;
+    const key = typeof cardShareOwnerKey === 'function' ? await cardShareOwnerKey(false).catch(() => null) : null;
+    const res = key && typeof cardTourRpc === 'function' ? await cardTourRpc('card_cup_live_report', { p_match: cup.matchId, p_owner: cup.selfId, p_key: key,
+      p_winner: r.outcome === 'win' ? cup.side : 1 - cup.side, p_how: 'pvp', p_verified: r.verify === 'ok', p_kos: kos, p_acts: acts,
+      p_rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null }) : null;
+    if (s && s.cup === cup) set({ cupResult: res === 'ok' || res === 'wait' || res === 'done' ? res : 'error' });
+  };
   // 終わったあと: 両方の封がそろったら、なぞり直す
   const tryVerify = async () => {
     if (!s.result || !s.foeOpen || s.result.verify !== 'wait') return;
@@ -66089,6 +66158,7 @@ const CARD_PVP = (() => {
     const winner = s.result.reward === 'win' && !s.result.forced ? 0 : s.result.reward === 'lose' && !s.result.forced ? 1 : null;
     const v = cardPvpVerify(CARD_BATTLE_DATA, { myDeck: s.deck, mySeed: s.seed, foeDeck: o.deck, foeSeed: o.seed, first: s.first, names: ['あなた', 'あいて'], history: s.history, winner });
     set({ result: { ...s.result, verify: v.ok ? 'ok' : 'ng', why: v.why } });
+    void cupSend();
     // 過去の対戦を見る(93-card-replay.jsx): 確かめが通った試合だけ、端末に取っておく(mh_card_replays_v1)。保存できたら結果の画面に「この対戦を見る」
     if (v.ok && typeof cardReplayFromPvp === 'function') {
       const match = s.match;
@@ -66215,13 +66285,13 @@ const CARD_PVP = (() => {
     emit();
   };
   // guestVia … 人の部屋へ入るとき(合言葉・招待)。招待から入るときは、その招待の印(部屋が無かったら、一覧から消す)
-  const open = async (code, profile, deck, mode = 'private', pick = false, guestVia = null) => {
+  const open = async (code, profile, deck, mode = 'private', pick = false, guestVia = null, cup = null) => {
     stop();
     const bid = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
     const seed = (Math.floor(Math.random() * 0x7fffffff) ^ Date.now()) >>> 0;
     const salt = rhythmMultiMakeId('k');
     const seal = await cardPvpSha256(cardPvpSealText({ seed, salt, deck }));
-    s = { ...blank(), phase: 'connecting', code, ownCode: code, mode, seekAt: Date.now(), pick, guest: guestVia !== null, via: guestVia || '', joining: pick ? code : '', joinAt: pick ? Date.now() : 0, deck: { monsters: deck.monsters.slice(), cards: deck.cards.slice() }, seed, salt, seal,
+    s = { ...blank(), phase: 'connecting', code, ownCode: code, mode, cup, seekAt: Date.now(), pick, guest: guestVia !== null, via: guestVia || '', joining: pick ? code : '', joinAt: pick ? Date.now() : 0, deck: { monsters: deck.monsters.slice(), cards: deck.cards.slice() }, seed, salt, seal,
       me: { id: rhythmMultiMakeId('c'), name: rhythmMultiText(profile.name || 'ブリーダー', CARD_PVP_NAME_MAX), icon: rhythmMultiText(profile.icon || '🙂', CARD_PVP_ICON_MAX), fr: typeof profile.frame === 'string' && profile.frame ? profile.frame.slice(0, 40) : null, at: Date.now(), bid: typeof bid === 'string' ? bid : null,
         rt: Number.isFinite(profile.rt) ? Math.max(0, Math.min(10000, Math.round(profile.rt))) : null, // 強さの点数(待っています の知らせに入れる。読めないときは出さない)
         // 相手の対戦開始の画面に出す、こちらのデッキ名(デッキ編成で付けた名前。試合の中身には入れない)
@@ -66282,6 +66352,14 @@ const CARD_PVP = (() => {
     clearNotice: () => { if (s && s.notice) { s = { ...s, notice: '' }; emit(); } },
     // さがし直す(90秒だれも来なかったあと)
     // 合言葉・招待で人の部屋へ入る。via … 招待から入るときの印(cardPvpInviteKey)
+    // 個人杯のリアルタイム杯の試合(④): サーバが試合ごとに作った8文字の合言葉の部屋へ入る。ふつうの合言葉の部屋と同じ動き(だれでも先に来たほうが待つ)。
+    //   info … { matchId, cupId, side, selfId }。報酬・強さの点数・マルチの履歴・もう1戦は通らない
+    cup: (code, profile, deck, info) => {
+      const c = String(code || '').toUpperCase();
+      if (!/^[A-Z2-9]{8}$/.test(c) || !info || !Number.isFinite(info.matchId) || (info.side !== 0 && info.side !== 1)) return false;
+      void open(c, profile, deck, 'cup', false, null, { matchId: info.matchId, cupId: String(info.cupId || ''), side: info.side, selfId: String(info.selfId || '') });
+      return true;
+    },
     join: (code, profile, deck, via = '') => { const c = rhythmMultiNormalizeCode(code); if (!c) return false; void open(c, profile, deck, 'private', false, via); return true; },
     // 部屋を出る。送った招待は取り消す(相手に「招待が届いています」が残って、押しても入れないのを防ぐ。2026-10-30 ソランド)
     leave: () => {
@@ -66352,10 +66430,12 @@ const CARD_PVP = (() => {
       const reward = ['win', 'foeSurrender', 'foeLeft', 'foeTimeout'].includes(outcome) ? 'win' : outcome === 'surrender' ? 'surrender' : outcome === 'dropped' ? 'left' : 'lose';
       const forced = !['win', 'lose'].includes(outcome); // 投了・抜けた・時間切れで終わった(なぞり直しで勝ち負けまでは比べない)
       if (isHost()) cardPvpWatchHost().end(reward === 'win' ? 0 : 1, label);
-      set({ phase: 'over', result: { outcome: reward === 'win' ? 'win' : 'lose', reward, forced, reason: label, facts: cardResultFacts(st, CARD_ME), verify: outcome === 'foeLeft' ? 'skip' : 'wait', why: '', rewarded: false } });
+      set({ phase: 'over', result: { outcome: reward === 'win' ? 'win' : 'lose', reward, forced, reason: label, facts: cardResultFacts(st, CARD_ME), verify: outcome === 'foeLeft' ? 'skip' : 'wait', why: '', rewarded: false,
+        kos: [cardKoCount(st, CARD_ME), cardKoCount(st, CARD_CPU)] } });
+      void cupSend();
       sendOpen();
       void tryVerify();
-      setTimeout(() => { if (s && s.result && s.result.verify === 'wait') set({ result: { ...s.result, verify: 'skip' } }); }, CARD_PVP_VERIFY_WAIT_MS);
+      setTimeout(() => { if (s && s.result && s.result.verify === 'wait') { set({ result: { ...s.result, verify: 'skip' } }); void cupSend(); } }, CARD_PVP_VERIFY_WAIT_MS);
     },
     // もう1戦(結果の画面から)。次の回の山札の封を作って知らせる。相手も押したら、同じ部屋で次の試合へ
     again: async () => {
@@ -66579,6 +66659,8 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   useEffect(() => {
     const r = room.result;
     if (room.phase !== 'over' || !r || r.rewarded) return;
+    // 個人杯の試合: 報酬・強さの点数・マルチの履歴には入れない(結果は杯へ送る・cupSend)
+    if (room.cup) { if (r.verify !== 'wait') CARD_PVP.markRewarded(null); return; }
     // マルチの履歴へ1行(92。確かめが決まったら1回だけ・無効の試合も残す)
     if (r.verify !== 'wait' && typeof cardPvpHistoryRecord === 'function') void cardPvpHistoryRecord(CARD_PVP.get(), { rankable: r.verify !== 'ng' && (rankSend || (typeof window !== 'undefined' && window.__mhCardPvpRankTest === true)) });
     if (r.verify === 'ng') { CARD_PVP.markRewarded(null); return; }
@@ -66603,7 +66685,8 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   // デッキは相手を決めたあとに選ぶ(onPickDeck があるとき)。そのときは、いまのデッキが使えなくても押せる(選ぶ画面で使えるデッキを選ぶ)
   const deckOk = !!deck && deckIssues.length === 0;
   const ready = (onPickDeck ? true : deckOk) && penaltyMin === 0; // 部屋に入るボタンは、プロフィール(名前・アイコン)を読み終えてから押せる(読む前だと「ブリーダー」と人型のアイコンで相手に届く。2026-10-27)
-  const back = () => { CARD_PVP.leave(); CARD_WATCH.leave(); onBack(); };
+  // 個人杯の試合(④)だったかは、部屋を出る前に見て渡す(84 が杯の画面へ戻す)
+  const back = () => { const wasCup = !!CARD_PVP.get().cup; CARD_PVP.leave(); CARD_WATCH.leave(); onBack(wasCup); };
   const r = room.result;
   if (watch.phase !== 'idle' && room.phase === 'idle') return <CardPvpWatchScreen/>;
   // ---- 結果(助手と対戦の結果の画面と同じ形: 立ち絵・もらったビートP・クイック周回・いまのビートP) ----
@@ -66611,7 +66694,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   if (historyOpen && room.phase === 'idle' && typeof CardPvpHistory === 'function') return <CardPvpHistory onBack={() => setHistoryOpen(false)} onOpenReplay={onOpenReplay} replayHas={replayHas} meIcon={meIcon} meName={profile.name}/>;
   if (room.phase === 'over' && r) {
     // 「もう1戦」を出さない試合: 相手が部屋を出た・抜けた・時間切れ(相手がもういない・離れているので、待ち続けてしまう)
-    const noAgain = room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ' || r.reason === '通信が切れた';
+    const noAgain = !!room.cup || room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ' || r.reason === '通信が切れた';
     const win = r.outcome === 'win';
     const a = assistant && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find((x) => x.id === assistant.id && cardFoeReleased(x.id)) || null : null;
     const got = r.got && !r.got.pending ? r.got : null;
@@ -66667,6 +66750,10 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
             </>)}
           </div>
         </div>
+        {/* 個人杯の試合(④): 杯へ送った結果。報酬はない */}
+        {room.cup && <p data-card-pvp-cup-sent={room.cupResult || 'sending'} className="mx-3 rounded-xl bg-slate-900 p-2 text-center text-[13px] font-black text-amber-100" style={JA_WRAP_STYLE}>
+          {jaWrap(!room.cupResult ? '結果を杯に送っています…' : room.cupResult === 'error' ? '結果を送れませんでした。杯の画面を開き直してください' : room.cupResult === 'wait' ? '結果を杯に送りました(相手の結果を待っています)' : '結果を杯に送りました')}
+        </p>}
         {/* もう1戦(同じ相手と同じ部屋で。2026-10-26 社長「全部入れる」)。2人とも押したら始まる。相手が部屋を出た・抜けた・時間切れのときは出さない(2026-10-27 部長) */}
         {/* 上の段に「もう1戦」、下の段に「この対戦を見る」「部屋を出る」を並べる(320px でも3つが詰まらないように) */}
         <div className={`${SCREEN_FOOTER_CLASS} flex flex-col gap-2`}>
@@ -66680,7 +66767,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
           {room.foeGone && <p data-card-pvp-foe-gone className="text-center text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('相手は部屋を出ました')}</p>}
           <div className="flex gap-2">
           {r.replay && onOpenReplay && <button type="button" data-card-pvp-replay className={`${rowBtn} mh-button-secondary`} onClick={() => { Audio_.fgSe.tap(); onOpenReplay(r.replay); }}>この対戦を見る</button>}
-          <button type="button" data-card-pvp-leave className={`${rowBtn} ${noAgain ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
+          <button type="button" data-card-pvp-leave className={`${rowBtn} ${noAgain ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`} onClick={() => { Audio_.fgSe.tap(); if (room.cup) { back(); return; } CARD_PVP.leave(); }}>部屋を出る</button>
           </div>
         </div>
       </div>
@@ -66833,7 +66920,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
       </div>
       {room.phase !== 'idle' && (
         <div className={SCREEN_FOOTER_CLASS}>
-          <button type="button" data-card-pvp-leave className={`${btn} border border-white/15 bg-slate-900 text-slate-100`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
+          <button type="button" data-card-pvp-leave className={`${btn} border border-white/15 bg-slate-900 text-slate-100`} onClick={() => { Audio_.fgSe.tap(); if (room.cup) { back(); return; } CARD_PVP.leave(); }}>部屋を出る</button>
         </div>
       )}
     </div>
@@ -67602,7 +67689,8 @@ const cardReplaySetFav = (saved, id, on) => {
 // はじめの場(自分 = 0 の見え方で、両方の山札が本物)
 const cardReplayStart = (db, rec) => {
   const names = [rec.names[0], rec.foe.name || rec.names[1]];
-  if (rec.kind === 'pvp') {
+  // 個人杯のリアルタイム杯で2台で戦った試合(tour.pvp・④)も、マルチと同じく2人それぞれの種で山札を作る
+  if (rec.kind === 'pvp' || (rec.tour && rec.tour.pvp === true)) {
     const st = cardCreateGame(db, { decks: [rec.decks[0], rec.decks[1]], names, seed: rec.seeds[0] >>> 0, first: rec.first });
     const theirs = cardCreateGame(db, { decks: [rec.decks[1], rec.decks[0]], seed: rec.seeds[1] >>> 0, first: 1 - rec.first });
     st.players[1] = { ...theirs.players[0], name: st.players[1].name };
@@ -67701,8 +67789,13 @@ const cardReplayFromTour = (db, row, opts = {}) => {
   if (!db || !row || typeof row !== 'object') return null;
   // 個人杯のリアルタイム杯で、試合の b 側の端末が戦った試合(2026-10-31 ④): 端末は「自分が0番」で組むので、手の並びは b・a の順。
   //   acts が { order: 'ba', acts: [...] } のときは、b を上(0番)・a を下に入れかえ、先攻も入れかえて組み直す(勝ち負けは杯の a・b のまま読む)
-  const ba = !!(row.acts && !Array.isArray(row.acts) && typeof row.acts === 'object' && row.acts.order === 'ba');
-  const rowActs = ba ? row.acts.acts : row.acts;
+  //   2台で戦った試合(91 の部屋・{ kind: 'pvp', order, seeds: [その端末, 相手], first, acts })は、山札の種が2人それぞれなので、その種と先攻(その端末から見た向き)で組み直す
+  const wrap = row.acts && !Array.isArray(row.acts) && typeof row.acts === 'object' ? row.acts : null;
+  const ba = !!(wrap && wrap.order === 'ba');
+  const pvpSeeds = wrap && wrap.kind === 'pvp' && Array.isArray(wrap.seeds) && wrap.seeds.length === 2
+    && wrap.seeds.every((n) => Number.isInteger(n) && n >= 0 && n <= 0xFFFFFFFF) && (wrap.first === 0 || wrap.first === 1) ? wrap.seeds : null;
+  if (wrap && wrap.kind === 'pvp' && !pvpSeeds) return null;
+  const rowActs = wrap ? wrap.acts : row.acts;
   const ra = row.a && typeof row.a === 'object' ? row.a : {}, rb = row.b && typeof row.b === 'object' ? row.b : {};
   const a = ba ? rb : ra, b = ba ? ra : rb;
   const decks = [cardReplayDeckOf(a.deck), cardReplayDeckOf(b.deck)];
@@ -67710,7 +67803,7 @@ const cardReplayFromTour = (db, row, opts = {}) => {
   const seed = Number(row.seed);
   if (!Number.isInteger(seed) || seed < 0 || seed > 0xFFFFFFFF) return null;
   if (row.first !== 0 && row.first !== 1) return null;
-  const first = ba ? 1 - row.first : row.first;
+  const first = pvpSeeds ? wrap.first : ba ? 1 - row.first : row.first;
   const winner = row.winner === 0 || row.winner === 1 ? (ba ? 1 - row.winner : row.winner) : null;
   // サーバは1試合 CARD_TOUR_MAX_STEPS 手まで回す(助手と対戦の上限より多い)
   const max = typeof CARD_TOUR_MAX_STEPS === 'number' ? CARD_TOUR_MAX_STEPS : 4000;
@@ -67738,12 +67831,12 @@ const cardReplayFromTour = (db, row, opts = {}) => {
   return {
     v: 1, id: `${deckKind ? 'deck' : 'tour'}-${String(row.id).replace(/[^0-9]/g, '').slice(0, 20)}`, kind: deckKind ? 'deck' : 'tour', at: 0, rules, first,
     names, foe: { name: names[1], icon: iconOf(b), frame: null, deckName: null, who: null },
-    outcome: winner === 0 ? 'win' : 'lose', reason: '', decks, seeds: [seed, 0], acts, prints: '', fav: false, turn: null, level: null,
+    outcome: winner === 0 ? 'win' : 'lose', reason: '', decks, seeds: pvpSeeds ? pvpSeeds.slice() : [seed, 0], acts, prints: '', fav: false, turn: null, level: null,
     // 見返しの会場と実況(84 の盤面の下・93 の CardTourLive)
     tour: {
       title: cardReplayText(opts.title, 40), stage: row.stage === 'final' ? 'final' : 'group',
       // 上の帯の印と、はじまりの一言(登録デッキの試合だけ)
-      badge: deckKind ? '登録デッキ' : '大会', deck: deckKind,
+      badge: deckKind ? '登録デッキ' : '大会', deck: deckKind, pvp: !!pvpSeeds,
       me: { name: names[0], icon: iconOf(a) },
       winner: winner === 0 || winner === 1 ? names[winner] : '',
       live: live ? { play: cardReplayText(live.play, 200), review: cardReplayText(live.review, 240) } : null,
@@ -71835,7 +71928,7 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
 //   ・集合は始まる10分前から。来ていない人の試合は、その人の登録デッキが自動で戦う
 //   ・始まる時刻を過ぎたら、開いている参加者のだれかの端末が始める(card_cup_live_start。何度呼ばれても同じ)。全員そろえば主催が早めに始められる
 //   ・開いているあいだ、様子を読み直す(8秒おき)。片方だけが結果を送った試合も決める(card_cup_live_settle・30秒おき)
-//   ・「試合へ」(onPlay・84): 相手が来ていなければ、相手の登録デッキの写しと戦う(absent)。2人で戦う部屋(91)は区切り3b
+//   ・「試合へ」(onPlay・84): 相手が来ていなければ、相手の登録デッキの写しと戦う(absent)。来ていれば、91 の部屋(CARD_PVP.cup・合言葉8文字)で2台で戦う(pvp)
 //   ・2人とも来ていない試合・2台の答えが食い違った試合は、来ている参加者の端末が写しどうしを回して決める(auto)。
 //     回し方はサーバ(cup.js の runLiveCups)と同じ cardTourPlay・種は試合の種・key は「杯|回戦|枠」なので、だれが回しても同じ結果
 
@@ -71969,10 +72062,12 @@ const CardCupLivePanel = ({ v, now, selfId, onChanged, onPlay = null }) => {
                 <span className="min-w-0 flex-1 truncate text-[14px] font-black text-white">{`相手: ${foe ? foe.name : 'ブリーダー'}`}</span>
                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-black ${foe && foe.checkin ? 'bg-emerald-500 text-slate-950' : 'bg-slate-600 text-slate-100'}`}>{foe && foe.checkin ? '来ています' : '来ていません'}</span>
               </div>
-              {foe && !foe.checkin && <div className="text-[12px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('相手が来ていないので、相手の登録デッキと戦います')}</div>}
-              <button type="button" data-card-cup-live-play={next.match.id} disabled={!next.match.ready || !onPlay || !!(foe && foe.checkin)} onClick={() => { Audio_.fgSe.tap(); if (onPlay) onPlay(next.match); }}
-                className={`w-full rounded-2xl py-3 text-[15px] font-black ${next.match.ready && onPlay && !(foe && foe.checkin) ? 'bg-gradient-to-b from-sky-300 to-sky-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
-                {!next.match.ready ? '前の回戦が終わるのを待っています' : !onPlay ? '試合の画面は準備中です' : foe && foe.checkin ? '2人で戦う部屋は準備中です' : '試合へ'}
+              <div className="text-[12px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(foe && foe.checkin
+                ? 'マルチ対戦の部屋で、相手と2人で戦います(相手が2分たっても部屋に来なければ、相手の登録デッキと戦います)'
+                : '相手が来ていないので、相手の登録デッキと戦います')}</div>
+              <button type="button" data-card-cup-live-play={next.match.id} disabled={!next.match.ready || !onPlay} onClick={() => { Audio_.fgSe.tap(); if (onPlay) onPlay(next.match); }}
+                className={`w-full rounded-2xl py-3 text-[15px] font-black ${next.match.ready && onPlay ? 'bg-gradient-to-b from-sky-300 to-sky-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
+                {!next.match.ready ? '前の回戦が終わるのを待っています' : !onPlay ? '試合の画面は準備中です' : foe && foe.checkin ? '試合へ(相手と2人で戦う)' : '試合へ'}
               </button>
             </>
           )}
@@ -71983,6 +72078,248 @@ const CardCupLivePanel = ({ v, now, selfId, onChanged, onPlay = null }) => {
       {msg && <p data-card-cup-live-msg className="rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
     </div>
   );
+};
+
+// ---- part: 99-card-cup-prize.jsx ----
+// ===== MFバトルカード 個人杯: ごほうび・参加費・主催仲間の部品(2026-10-31 リプレイくん・社長の判断) =====
+// 案: docs/progress/card-tournament/personal-cup/prize/README.md / SQL: docs/sql/card-cup/CARD_CUP_PRIZE_APPLY.sql / 仕様: docs/spec/CARD_CUP.md
+//   ・主催・主催仲間が自分の持ち物から出す / 参加費(なしでもよい)。どちらもサーバで預かり、終わったら配る(ギフトボックスへ)
+//   ・持ち物は端末にあるので、「端末で減らす」と「送っている途中の印」を同じ取引で書き、サーバは nonce ごとに1回だけ数える。
+//     返事が来なければ、次に開いたとき同じ nonce で送り直す。受け取りもサーバが最初の nonce だけに中身を返す(二重に受け取れない)
+//   ・本編の持ち物(ダイヤ・アイテム・ビートP)は本編の画面(60-app)が状態を持っているので、減らす・ギフトを足すのは 60-app の口(onCupItems)で。
+//     カードの持ち物(かけら・パック券・カタログ)は 84 の保存(persist)で
+// 保存: 新しいキー mh_card_cup_wallet_v1 だけ(下)。今のキーは、今の形のまま足す・引くだけ
+
+const CARD_CUP_WALLET_KEY = 'mh_card_cup_wallet_v1';
+const CARD_CUP_WALLET_MAX = 200;
+// 出せる物(サーバの表 card_cup_prize_items と同じ名前)。label・emoji は画面の名前。上限はサーバの表が正(card_cup_prize_items_list)
+//   main … 本編の持ち物(ギフトで配る)。card … カードの持ち物(84 で足す・引く)
+const CARD_CUP_ITEMS = Object.freeze([
+  { item: 'diamond', label: 'ダイヤ', emoji: '💎', main: true },
+  { item: 'beatPoint', label: 'ビートP', emoji: '🎵', main: true },
+  { item: 'rainbowPsyche', label: '虹のプシュケー', emoji: '🌈', main: true, owned: 'rainbow_psyche' },
+  { item: 'rainbowTranscendFruit', label: '虹の超越の実', emoji: '🍑', main: true, owned: 'transcend_fruit_rainbow' },
+  { item: 'gameItem:hero_proof', label: '勇者の証', emoji: '🏅', main: true, owned: 'hero_proof' },
+  { item: 'gameItem:hero_proof_shard', label: '勇者の証片', emoji: '🔸', main: true, owned: 'hero_proof_shard' },
+  { item: 'gameItem:session_ticket', label: 'セッション券', emoji: '🎫', main: true, owned: 'session_ticket' },
+  { item: 'gameItem:skip_ticket_jo', label: 'スキップチケット・序', emoji: '⏩', main: true, owned: 'skip_ticket_jo' },
+  { item: 'gameItem:skip_ticket_ha', label: 'スキップチケット・破', emoji: '⏩', main: true, owned: 'skip_ticket_ha' },
+  { item: 'gameItem:skip_ticket_kyu', label: 'スキップチケット・急', emoji: '⏩', main: true, owned: 'skip_ticket_kyu' },
+  { item: 'gameItem:training_ticket', label: 'トレーニングチケット', emoji: '🏋️', main: true, owned: 'training_ticket' },
+  { item: 'dyeMock', label: '染色もどき', emoji: '🎨', main: true, owned: 'dye_mock' },
+  { item: 'card:shard', label: '戦術カードのかけら', emoji: '🧩', card: 'shards' },
+  { item: 'card:ticket', label: 'カードパック券', emoji: '🎟️', card: 'tickets' },
+  { item: 'card:catalog', label: 'バトルカードカタログ', emoji: '📘', card: 'catalogs' },
+]);
+const cardCupItemOf = (item) => CARD_CUP_ITEMS.find((x) => x.item === item) || null;
+const cardCupItemText = (item, amount) => { const it = cardCupItemOf(item); return `${it ? `${it.emoji} ${it.label}` : item} ${Number(amount || 0).toLocaleString()}`; };
+// 出せない物(画面の一覧に理由つきで出す)
+const CARD_CUP_ITEMS_NG = Object.freeze([
+  ['ブリーダーP', '2度と手に入らない物'],
+  ['マスモン・円盤石・アシストカード', 'ひとつずつの物で、育てた中身がある'],
+  ['アイコン・フレーム・着替え', '一度手に入れたら外さない物'],
+  ['バトルカード(1枚ずつ)', 'これから(番号ごとの預かりが要る)'],
+  ['経験値・ランク・記録', '持ち物ではない'],
+]);
+// ギフトの報酬の形へ(本編の持ち物だけ。17 の normalizeGiftRewards が通す形)
+const cardCupGiftReward = (item, amount) => {
+  const n = Math.floor(Number(amount));
+  if (!(n > 0)) return null;
+  if (item === 'diamond' || item === 'beatPoint' || item === 'rainbowPsyche' || item === 'rainbowTranscendFruit' || item === 'dyeMock') return { type: item, amount: n };
+  const m = /^gameItem:([a-z0-9_]{1,40})$/.exec(String(item || ''));
+  return m ? { type: 'gameItem', itemId: m[1], amount: n } : null;
+};
+// 持っている数(本編の持ち物: { gold, ownedItems, beatPoints }。カードの持ち物: { shards, tickets, catalogs })
+const cardCupHave = (item, main, card) => {
+  const it = cardCupItemOf(item);
+  if (!it) return 0;
+  const n = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.floor(Number(v)) : 0);
+  if (it.card) return n(card && card[it.card]);
+  if (item === 'diamond') return n(main && main.gold);
+  if (item === 'beatPoint') return n(main && main.beatPoints);
+  return n(main && main.ownedItems && main.ownedItems[it.owned]);
+};
+
+// ---- 印(mh_card_cup_wallet_v1)----
+// [{ cup, kind:'prize'|'fee'|'claim', item?, amount?, nonce, state, at, name?, icon?, card?:真偽(カードの分を足した), gift?:真偽(ギフトを足した), items? }]
+//   state … 預ける: 'sending'(減らした・まだサーバの返事が無い)→ 'held'(預けた)/ 'returned'(戻した)
+//           受け取る: 'claiming'(nonce を決めた)→ 'claimed'(足し終えた)/ 'elsewhere'(ほかの端末で受け取り済み)/ 'none'(もらう物が無い)
+const cardCupNonce = () => {
+  try { const b = new Uint8Array(16); crypto.getRandomValues(b); return Array.from(b).map((x) => x.toString(16).padStart(2, '0')).join(''); }
+  catch (_) { return Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join(''); }
+};
+const cardCupNormalizeWallet = (raw) => {
+  if (!Array.isArray(raw)) return [];
+  const states = ['sending', 'held', 'returned', 'claiming', 'claimed', 'elsewhere', 'none'];
+  return raw.filter((r) => r && typeof r.cup === 'string' && /^[a-z0-9_-]{1,32}$/.test(r.cup) && ['prize', 'fee', 'claim'].includes(r.kind)
+    && typeof r.nonce === 'string' && /^[0-9a-f]{32,64}$/.test(r.nonce) && states.includes(r.state))
+    .map((r) => ({ cup: r.cup, kind: r.kind, nonce: r.nonce, state: r.state, at: Number.isFinite(r.at) ? r.at : 0,
+      ...(r.kind !== 'claim' ? { item: typeof r.item === 'string' ? r.item : '', amount: Number.isInteger(r.amount) && r.amount > 0 ? r.amount : 0 } : {}),
+      ...(typeof r.name === 'string' ? { name: r.name.slice(0, 40) } : {}), ...(typeof r.icon === 'string' ? { icon: r.icon.slice(0, 64) } : {}),
+      ...(r.card === true ? { card: true } : {}), ...(r.gift === true ? { gift: true } : {}),
+      ...(Array.isArray(r.items) ? { items: r.items.filter((x) => x && typeof x.item === 'string' && Number.isInteger(x.amount) && x.amount > 0).slice(0, 20) } : {}) }))
+    .slice(-CARD_CUP_WALLET_MAX);
+};
+// 1件を足す・置きかえる(nonce が同じ物を置きかえる)。古い物は、終わった物から落とす
+const cardCupWalletPut = (list, rec) => {
+  const rest = list.filter((r) => r.nonce !== rec.nonce);
+  const next = [...rest, rec];
+  if (next.length <= CARD_CUP_WALLET_MAX) return next;
+  const done = ['held', 'returned', 'claimed', 'elsewhere', 'none'];
+  const drop = next.findIndex((r) => done.includes(r.state) && r.nonce !== rec.nonce);
+  return drop >= 0 ? next.filter((_, i) => i !== drop) : next.slice(-CARD_CUP_WALLET_MAX);
+};
+// 印を書く項目(保存の取引 saveStoredValuesOrRollback に足す形)。書く直前に読み直す
+const cardCupWalletEntry = async (rec) => {
+  const raw = await storeGet(CARD_CUP_WALLET_KEY, null, false);
+  if (raw !== null && raw !== undefined && !Array.isArray(raw)) return null; // 壊れているときは書かない(何もしない)
+  return { key: CARD_CUP_WALLET_KEY, before: raw === undefined ? null : raw, next: cardCupWalletPut(cardCupNormalizeWallet(raw), rec) };
+};
+const cardCupWalletLoad = async () => { try { return cardCupNormalizeWallet(await storeGet(CARD_CUP_WALLET_KEY, null, false)); } catch (_) { return []; } };
+const cardCupWalletSet = async (rec) => {
+  const e = await cardCupWalletEntry(rec);
+  if (!e) return false;
+  return saveStoredValuesOrRollback([e], storeGet, storeSet);
+};
+
+// ---- 通信(関数がまだ無い・通信できないときは null。ほかの個人杯の通信は止めない) ----
+const cardCupPrizeRpc = async (fn, body) => {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body) });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (_) { return null; }
+};
+const cardCupPrizeItemsList = async () => {
+  const r = await cardCupPrizeRpc('card_cup_prize_items_list', {});
+  return Array.isArray(r) ? r.filter((x) => x && cardCupItemOf(x.item)).map((x) => ({ item: x.item, label: cardCupItemOf(x.item).label,
+    giveMax: Math.max(0, Number(x.give_max) || 0), feeMax: Math.max(0, Number(x.fee_max) || 0), dayMax: Math.max(0, Number(x.day_max) || 0) })) : null;
+};
+// 杯のごほうび(画面に出す形)。無い・読めないときは null
+const cardCupPrizeView = async (cup, owner) => {
+  const v = await cardCupPrizeRpc('card_cup_prize_view', { p_cup: cup, p_owner: owner || null });
+  if (!v || typeof v !== 'object') return null;
+  const items = (a, k) => (Array.isArray(a) ? a.filter((x) => x && cardCupItemOf(x.item) && Number(x[k]) > 0).map((x) => ({ ...x, [k]: Math.floor(Number(x[k])) })) : []);
+  const split = Array.isArray(v.split) && v.split.every((x) => Number.isInteger(x) && x > 0) ? v.split.slice(0, 8) : [70, 30];
+  return {
+    fee: v.fee && cardCupItemOf(v.fee.item) && Number(v.fee.amount) > 0 ? { item: v.fee.item, amount: Math.floor(Number(v.fee.amount)) } : null,
+    split, pool: items(v.pool, 'total'),
+    givers: items(v.givers, 'amount').map((g) => ({ name: cardCupText(g.name, 40) || 'ブリーダー', icon: typeof g.icon === 'string' ? g.icon : null, item: g.item, amount: g.amount, host: g.host === true })),
+    hosts: Array.isArray(v.hosts) ? v.hosts.filter((h) => h && typeof h.id === 'string').map((h) => ({ id: h.id, name: cardCupText(h.name, 40) || 'ブリーダー', icon: typeof h.icon === 'string' ? h.icon : null, state: h.state === 'joined' ? 'joined' : 'invited' })) : [],
+    me: { host: !!(v.me && v.me.host), invited: !!(v.me && v.me.invited), claimed: !!(v.me && v.me.claimed) },
+    code: typeof v.code === 'string' && /^[0-9]{6}$/.test(v.code) ? v.code : null,
+    payouts: Array.isArray(v.payouts) ? items(v.payouts, 'amount').filter((x) => typeof x.id === 'string') : null,
+  };
+};
+// 配る割合から、1人ずつの見込み(画面の「8人そろったら」「1位 ◯〜」)。サーバの card_cup_payouts と同じ数え方(使わない順位の分は1位へ・端数は1位へ)
+const cardCupShares = (total, split, ranks) => {
+  const k = Math.max(1, Math.min(split.length, ranks));
+  const pct = split.slice(0, k);
+  for (let i = k; i < split.length; i++) pct[0] += split[i];
+  const each = pct.map((p) => Math.floor((total * p) / 100));
+  each[0] += total - each.reduce((a, b) => a + b, 0);
+  return each;
+};
+const CARD_CUP_SPLITS = Object.freeze([
+  { id: 'all', label: '優勝が全部', split: [100] },
+  { id: '73', label: '7:3', split: [70, 30] },
+  { id: '631', label: '6:3:1', split: [60, 30, 10] },
+  { id: '532', label: '5:3:2', split: [50, 30, 20] },
+]);
+
+// ---- 預ける・参加する・受け取る(画面から呼ぶ。adapters は 84 が渡す) ----
+// adapters: { main: async (delta:[{item, amount(±)}], extra:[保存の項目]) → 真偽(本編の持ち物を足し引きし、extra も同じ取引で書く)
+//             card: async (delta, extra) → 真偽(カードの持ち物)
+//             gift: async (gift, extra) → 真偽(本編のギフトボックスへ1件。同じ id は二度入れない)
+//             owner, key, name, icon }
+const cardCupApply = async (adapters, item, amount, extra) => {
+  const it = cardCupItemOf(item);
+  if (!it) return false;
+  const fn = it.card ? adapters.card : adapters.main;
+  return typeof fn === 'function' ? !!(await fn([{ item, amount }], extra)) : false;
+};
+// 預けたあとのサーバの返事で、印を進める。戻すときは、持ち物を戻すのと印を同じ取引で書く
+const cardCupDepositSettle = async (adapters, rec, reply) => {
+  const kept = reply === 'ok' || reply === 'dup';
+  if (kept) { await cardCupWalletSet({ ...rec, state: 'held', at: Date.now() }); return 'ok'; }
+  if (reply === null || reply === undefined) return 'pending'; // 返事が無い: 印は sending のまま(次に開いたとき送り直す)
+  const e = await cardCupWalletEntry({ ...rec, state: 'returned', at: Date.now() });
+  if (!e) return 'pending';
+  const back = await cardCupApply(adapters, rec.item, rec.amount, [e]);
+  return back ? reply : 'pending';
+};
+// 主催・主催仲間が出す。返り値 'ok' | 'short'(足りない)| 'save'(保存できない)| 'pending'(返事待ち)| サーバの返事('over' など。戻した)
+const cardCupGive = async (adapters, cup, item, amount, have) => {
+  if (!(amount > 0) || amount > have) return 'short';
+  const rec = { cup, kind: 'prize', item, amount, nonce: cardCupNonce(), state: 'sending', at: Date.now() };
+  const e = await cardCupWalletEntry(rec);
+  if (!e || !(await cardCupApply(adapters, item, -amount, [e]))) return 'save';
+  const reply = await cardCupPrizeRpc('card_cup_deposit', { p_cup: cup, p_owner: adapters.owner, p_key: adapters.key, p_item: item, p_amount: amount, p_nonce: rec.nonce });
+  return cardCupDepositSettle(adapters, rec, reply);
+};
+// 参加(参加費のある杯は払って)。fee … { item, amount } か null。返り値 'ok' | 'short' | 'save' | 'pending' | サーバの返事
+const cardCupJoinPaid = async (adapters, cup, fee, have) => {
+  if (!fee) {
+    const r = await cardCupPrizeRpc('card_cup_join_pay', { p_cup: cup, p_owner: adapters.owner, p_key: adapters.key, p_name: adapters.name, p_icon: adapters.icon, p_nonce: cardCupNonce() });
+    return r === 'nofee' || r === 'ok' ? 'ok' : (r || 'off');
+  }
+  if (fee.amount > have) return 'short';
+  const rec = { cup, kind: 'fee', item: fee.item, amount: fee.amount, nonce: cardCupNonce(), state: 'sending', at: Date.now(), name: adapters.name, icon: adapters.icon || undefined };
+  const e = await cardCupWalletEntry(rec);
+  if (!e || !(await cardCupApply(adapters, fee.item, -fee.amount, [e]))) return 'save';
+  const reply = await cardCupPrizeRpc('card_cup_join_pay', { p_cup: cup, p_owner: adapters.owner, p_key: adapters.key, p_name: adapters.name, p_icon: adapters.icon, p_nonce: rec.nonce });
+  // 'nofee'(参加費がなくなった・主催仲間になっていた)・'paid'(前に払った分のまま入り直した)は、払った分を戻して参加できた扱い
+  if (reply === 'nofee' || reply === 'paid') { const r = await cardCupDepositSettle(adapters, rec, 'refund'); return r === 'pending' ? 'pending' : 'ok'; }
+  return cardCupDepositSettle(adapters, rec, reply);
+};
+// 返事が来なかった預けを、同じ nonce で送り直す(MFバトルカードの個人杯を開いたとき)。返り値: 進めた数
+const cardCupResume = async (adapters) => {
+  const list = await cardCupWalletLoad();
+  let n = 0;
+  for (const rec of list.filter((r) => r.state === 'sending')) {
+    const reply = rec.kind === 'prize'
+      ? await cardCupPrizeRpc('card_cup_deposit', { p_cup: rec.cup, p_owner: adapters.owner, p_key: adapters.key, p_item: rec.item, p_amount: rec.amount, p_nonce: rec.nonce })
+      : await cardCupPrizeRpc('card_cup_join_pay', { p_cup: rec.cup, p_owner: adapters.owner, p_key: adapters.key, p_name: rec.name || adapters.name, p_icon: rec.icon || adapters.icon, p_nonce: rec.nonce });
+    const r = rec.kind === 'fee' && (reply === 'nofee' || reply === 'paid') ? await cardCupDepositSettle(adapters, rec, 'refund') : await cardCupDepositSettle(adapters, rec, reply);
+    if (r !== 'pending') n += 1;
+  }
+  for (const rec of list.filter((r) => r.kind === 'claim' && r.state === 'claiming')) { if ((await cardCupClaim(adapters, rec.cup, '')).status === 'ok') n += 1; }
+  return n;
+};
+// 受け取る・戻す。返り値 { status:'ok'|'wait'|'elsewhere'|'none'|'pending'|'off', items:[{item, amount}], reason }
+const cardCupClaim = async (adapters, cup, cupName) => {
+  const list = await cardCupWalletLoad();
+  let rec = list.find((r) => r.kind === 'claim' && r.cup === cup);
+  if (rec && rec.state !== 'claiming') return { status: rec.state === 'claimed' ? 'ok' : rec.state, items: rec.items || [], reason: 'done' };
+  if (!rec) {
+    rec = { cup, kind: 'claim', nonce: cardCupNonce(), state: 'claiming', at: Date.now() };
+    if (!(await cardCupWalletSet(rec))) return { status: 'pending', items: [] };
+  }
+  const r = await cardCupPrizeRpc('card_cup_claim', { p_cup: cup, p_owner: adapters.owner, p_key: adapters.key, p_nonce: rec.nonce });
+  if (!r || typeof r !== 'object') return { status: 'pending', items: [] };
+  if (r.status === 'wait') return { status: 'wait', items: [] };
+  if (r.status === 'claimed') { await cardCupWalletSet({ ...rec, state: 'elsewhere', at: Date.now() }); return { status: 'elsewhere', items: [] }; }
+  if (r.status !== 'ok') return { status: r.status || 'off', items: [] };
+  const items = (Array.isArray(r.items) ? r.items : []).filter((x) => x && cardCupItemOf(x.item) && Number.isInteger(x.amount) && x.amount > 0);
+  rec = { ...rec, items };
+  if (!items.length) { await cardCupWalletSet({ ...rec, state: 'none', at: Date.now() }); return { status: 'none', items: [], reason: r.reason }; }
+  // カードの持ち物 → 84 の保存で足す(印の card を同じ取引で立てる)
+  const cards = items.filter((x) => cardCupItemOf(x.item).card);
+  if (cards.length && !rec.card) {
+    const e = await cardCupWalletEntry({ ...rec, card: true });
+    if (!e || typeof adapters.card !== 'function' || !(await adapters.card(cards, [e]))) return { status: 'pending', items };
+    rec = { ...rec, card: true };
+  }
+  // 本編の持ち物 → ギフトボックスへ1件(id は杯ごとに1つ。印の gift を同じ取引で立てる)
+  const mains = items.filter((x) => cardCupItemOf(x.item).main).map((x) => cardCupGiftReward(x.item, x.amount)).filter(Boolean);
+  if (mains.length && !rec.gift) {
+    const gift = { id: `card_cup_${cup}`, title: `個人杯「${cardCupText(cupName, 20) || '個人杯'}」の${r.reason === 'refund' ? '返却' : 'ごほうび'}`, source: 'cardCup', rewards: mains };
+    const e = await cardCupWalletEntry({ ...rec, gift: true });
+    if (!e || typeof adapters.gift !== 'function' || !(await adapters.gift(gift, [e]))) return { status: 'pending', items };
+    rec = { ...rec, gift: true };
+  }
+  await cardCupWalletSet({ ...rec, state: 'claimed', at: Date.now() });
+  return { status: 'ok', items, reason: r.reason };
 };
 
 // ---- part: 81-debug-trials.jsx ----
@@ -83733,6 +84070,50 @@ function MonsterHeroGame() {
 
   // baseGifts … ミッションから送ったばかりのギフトを含めた一覧で受け取るときに渡す(画面の gifts はまだ古いため)
   // title … 「手に入れたもの」の窓の見出し。まとめて受け取っても窓は1回だけ出る
+  // MFバトルカード個人杯のごほうび・参加費(99-card-cup-prize。2026-10-31)。本編の持ち物(ダイヤ・アイテム・ビートP)は、この画面が状態を持っているので、
+  // 足す・引くはここで行い、個人杯の印(extra: mh_card_cup_wallet_v1)も同じ取引で書く。足りない・保存できないときは false(何も変えない)
+  //   delta … [{ item: 'diamond' | 'beatPoint' | 'rainbowPsyche' | … | 'gameItem:<id>', amount: ±数 }]
+  const cardCupMainItems = async (delta, extra = []) => {
+    if (giftClaimingRef.current || !Array.isArray(delta) || typeof cardCupItemOf !== 'function') return false;
+    giftClaimingRef.current = true;
+    try {
+      const storedBeat = await storeGet(RHYTHM_EVENT_POINTS_KEY, 0, false);
+      let nextGold = Math.max(0, Number(gold) || 0);
+      let nextBeat = normalizeRhythmEventPoints(storedBeat);
+      const nextItems = { ...(ownedItems || {}) };
+      for (const d of delta) {
+        const it = cardCupItemOf(d && d.item);
+        const n = Math.trunc(Number(d && d.amount));
+        if (!it || !it.main || !Number.isFinite(n) || n === 0) return false;
+        if (d.item === 'diamond') nextGold += n;
+        else if (d.item === 'beatPoint') nextBeat += n;
+        else nextItems[it.owned] = Math.max(0, Number(nextItems[it.owned]) || 0) + n;
+        if (nextGold < 0 || nextBeat < 0 || (it.owned && nextItems[it.owned] < 0)) return false; // 足りない
+      }
+      for (const k of Object.keys(nextItems)) { if (nextItems[k] === 0 && !(k in (ownedItems || {}))) delete nextItems[k]; }
+      const entries = [
+        { key:'mh_gold', before:gold, next:nextGold },
+        { key:'mh_owned_items', before:ownedItems, next:nextItems },
+        { key:RHYTHM_EVENT_POINTS_KEY, before:storedBeat, next:nextBeat },
+        ...(Array.isArray(extra) ? extra : []),
+      ];
+      const saved = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
+      if (!saved) return false;
+      setGold(nextGold); setOwnedItems(nextItems); setRhythmEventPoints(nextBeat);
+      return true;
+    } finally { giftClaimingRef.current = false; }
+  };
+  // 個人杯の受け取り: ギフトボックスへ1件(同じ id は二度入れない)。印(extra)も同じ取引で書く
+  const cardCupGiftAdd = async (gift, extra = []) => {
+    const savedGifts = await storeGet('mh_gifts', [], false);
+    const before = Array.isArray(savedGifts) ? savedGifts : [];
+    const grant = grantGiftOnce(before, gift);
+    const entries = [...(grant.granted ? [{ key:'mh_gifts', before, next:grant.gifts }] : []), ...(Array.isArray(extra) ? extra : [])];
+    if (!entries.length) return true;
+    const saved = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
+    if (saved && grant.granted) setGifts(grant.gifts);
+    return saved;
+  };
   const claimGiftIds = async (ids, { baseGifts = null, title = 'ギフトを受け取りました' } = {}) => {
     // ミッションの受け取り中は動かない(古いギフト一覧で保存し直さないため)。ミッションの中から呼ぶときは baseGifts を渡す
     if (giftClaimingRef.current || (!baseGifts && missionClaimingRef.current)) return null;
@@ -92786,6 +93167,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           quickRun={cardQuickRunView()}
           quickAutoReady={autoQuickRunConfigured(autoSettings)} onSettings={(settings)=>setCardQuickAutoStart(!!(settings&&settings.quickAutoStart))} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
           topAssistant={cardTopAssistant}
+          cupItems={{main:cardCupMainItems,gift:cardCupGiftAdd,have:()=>({gold,ownedItems,beatPoints:rhythmEventPoints})}}
           bgmPreview={{toggle:toggleBgmPreview,stop:()=>{Audio_.stopPreview();setPreviewTrackId(null);},playing:previewTrackId}}
           /* ランキングへ送るのは公開してから(台帳 #3513「公開前は、デバッグの人の記録も送らない」)。デバッグの合言葉を入れた端末でも、HOME の入口から遊んだ分は送る(2026-10-26 社長「ふつうの入口の対戦はのせる」)。デバッグ設定の入口からの対戦は 84 の debug(cardOrigin==='debug')で外す */
           rank={{send:EVENT_REPLAY_RELEASE_FLAGS.cardBattle===true,profile:{name:breederName||'名無しのブリーダー',icon:breederIcon,frame:rankingProfileFrameValue(profileFrameId)},renderBreederIcon:rankingBreederIcon,

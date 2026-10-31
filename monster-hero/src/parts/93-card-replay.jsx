@@ -140,7 +140,8 @@ const cardReplaySetFav = (saved, id, on) => {
 // はじめの場(自分 = 0 の見え方で、両方の山札が本物)
 const cardReplayStart = (db, rec) => {
   const names = [rec.names[0], rec.foe.name || rec.names[1]];
-  if (rec.kind === 'pvp') {
+  // 個人杯のリアルタイム杯で2台で戦った試合(tour.pvp・④)も、マルチと同じく2人それぞれの種で山札を作る
+  if (rec.kind === 'pvp' || (rec.tour && rec.tour.pvp === true)) {
     const st = cardCreateGame(db, { decks: [rec.decks[0], rec.decks[1]], names, seed: rec.seeds[0] >>> 0, first: rec.first });
     const theirs = cardCreateGame(db, { decks: [rec.decks[1], rec.decks[0]], seed: rec.seeds[1] >>> 0, first: 1 - rec.first });
     st.players[1] = { ...theirs.players[0], name: st.players[1].name };
@@ -239,8 +240,13 @@ const cardReplayFromTour = (db, row, opts = {}) => {
   if (!db || !row || typeof row !== 'object') return null;
   // 個人杯のリアルタイム杯で、試合の b 側の端末が戦った試合(2026-10-31 ④): 端末は「自分が0番」で組むので、手の並びは b・a の順。
   //   acts が { order: 'ba', acts: [...] } のときは、b を上(0番)・a を下に入れかえ、先攻も入れかえて組み直す(勝ち負けは杯の a・b のまま読む)
-  const ba = !!(row.acts && !Array.isArray(row.acts) && typeof row.acts === 'object' && row.acts.order === 'ba');
-  const rowActs = ba ? row.acts.acts : row.acts;
+  //   2台で戦った試合(91 の部屋・{ kind: 'pvp', order, seeds: [その端末, 相手], first, acts })は、山札の種が2人それぞれなので、その種と先攻(その端末から見た向き)で組み直す
+  const wrap = row.acts && !Array.isArray(row.acts) && typeof row.acts === 'object' ? row.acts : null;
+  const ba = !!(wrap && wrap.order === 'ba');
+  const pvpSeeds = wrap && wrap.kind === 'pvp' && Array.isArray(wrap.seeds) && wrap.seeds.length === 2
+    && wrap.seeds.every((n) => Number.isInteger(n) && n >= 0 && n <= 0xFFFFFFFF) && (wrap.first === 0 || wrap.first === 1) ? wrap.seeds : null;
+  if (wrap && wrap.kind === 'pvp' && !pvpSeeds) return null;
+  const rowActs = wrap ? wrap.acts : row.acts;
   const ra = row.a && typeof row.a === 'object' ? row.a : {}, rb = row.b && typeof row.b === 'object' ? row.b : {};
   const a = ba ? rb : ra, b = ba ? ra : rb;
   const decks = [cardReplayDeckOf(a.deck), cardReplayDeckOf(b.deck)];
@@ -248,7 +254,7 @@ const cardReplayFromTour = (db, row, opts = {}) => {
   const seed = Number(row.seed);
   if (!Number.isInteger(seed) || seed < 0 || seed > 0xFFFFFFFF) return null;
   if (row.first !== 0 && row.first !== 1) return null;
-  const first = ba ? 1 - row.first : row.first;
+  const first = pvpSeeds ? wrap.first : ba ? 1 - row.first : row.first;
   const winner = row.winner === 0 || row.winner === 1 ? (ba ? 1 - row.winner : row.winner) : null;
   // サーバは1試合 CARD_TOUR_MAX_STEPS 手まで回す(助手と対戦の上限より多い)
   const max = typeof CARD_TOUR_MAX_STEPS === 'number' ? CARD_TOUR_MAX_STEPS : 4000;
@@ -276,12 +282,12 @@ const cardReplayFromTour = (db, row, opts = {}) => {
   return {
     v: 1, id: `${deckKind ? 'deck' : 'tour'}-${String(row.id).replace(/[^0-9]/g, '').slice(0, 20)}`, kind: deckKind ? 'deck' : 'tour', at: 0, rules, first,
     names, foe: { name: names[1], icon: iconOf(b), frame: null, deckName: null, who: null },
-    outcome: winner === 0 ? 'win' : 'lose', reason: '', decks, seeds: [seed, 0], acts, prints: '', fav: false, turn: null, level: null,
+    outcome: winner === 0 ? 'win' : 'lose', reason: '', decks, seeds: pvpSeeds ? pvpSeeds.slice() : [seed, 0], acts, prints: '', fav: false, turn: null, level: null,
     // 見返しの会場と実況(84 の盤面の下・93 の CardTourLive)
     tour: {
       title: cardReplayText(opts.title, 40), stage: row.stage === 'final' ? 'final' : 'group',
       // 上の帯の印と、はじまりの一言(登録デッキの試合だけ)
-      badge: deckKind ? '登録デッキ' : '大会', deck: deckKind,
+      badge: deckKind ? '登録デッキ' : '大会', deck: deckKind, pvp: !!pvpSeeds,
       me: { name: names[0], icon: iconOf(a) },
       winner: winner === 0 || winner === 1 ? names[winner] : '',
       live: live ? { play: cardReplayText(live.play, 200), review: cardReplayText(live.review, 240) } : null,

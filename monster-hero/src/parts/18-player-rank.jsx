@@ -20,9 +20,10 @@ const playerRankInfo = (xp) => {
 const BEAT_RANK_KEY = 'mh_rhythm_rank_v1';
 // 1曲の経験値(2026-10-29 社長。HELL は「劇的に上げる」で 60)。最後まで遊んだときの値
 const BEAT_RANK_XP = Object.freeze({ EASY: 6, NORMAL: 8, HARD: 10, EXPERT: 14, MASTER: 18, HELL: 60 });
-// 途中でライフが尽きた(失敗)ときは3分の1(端数は四捨五入)。フルコンボ +4、全部 MARVELOUS は +8(フルコンボの +4 と重ねない)。
-// みんなで対戦は1曲ぶん(上乗せ込み)を1.5倍(端数は四捨五入)。その日はじめての1曲は、そのあとに +30
-const BEAT_RANK_BONUS = Object.freeze({ failDivisor: 3, fullCombo: 4, allMarvelous: 8, multiScale: 1.5, dayFirst: 30 });
+// 途中でライフが尽きた(失敗)ときは1割(端数は四捨五入・最低1。2026-10-31 社長「失敗でも入りすぎてる」で3分の1から下げた)。
+// フルコンボ +4、全部 MARVELOUS は +8(フルコンボの +4 と重ねない)。
+// みんなで対戦は1曲ぶん(上乗せ込み)を1.5倍(端数は四捨五入)。その日はじめての1曲は、そのあとに +30(成功したときだけ。失敗は数えず、その日の +30 も残す)
+const BEAT_RANK_BONUS = Object.freeze({ failRate: 0.1, fullCombo: 4, allMarvelous: 8, multiScale: 1.5, dayFirst: 30 });
 // ごほうび(2026-10-29 社長が作り直し。前の「ランク3・10・20、そのあと5ごとにビートP 300」はやめた)
 //   ランクが1つ上がるたび: ビートP「そのランク×100」+セッション券1枚
 //   5ランクごと(5・10・15…): さらにビートP「そのランク×200」+セッション券「そのランクと同じ枚数」
@@ -65,7 +66,7 @@ const beatRankPlayXp = ({ difficultyId, cleared = true, fullCombo = false, allMa
   const base = BEAT_RANK_XP[difficultyId];
   if (!base) return { xp: 0, parts: [] };
   const parts = [];
-  let xp = cleared ? base : Math.round(base / BEAT_RANK_BONUS.failDivisor);
+  let xp = cleared ? base : Math.max(1, Math.round(base * BEAT_RANK_BONUS.failRate));
   parts.push({ label: cleared ? difficultyId : `${difficultyId}(ライフが尽きた)`, xp });
   if (cleared && allMarvelous) { xp += BEAT_RANK_BONUS.allMarvelous; parts.push({ label: '全部 MARVELOUS', xp: BEAT_RANK_BONUS.allMarvelous }); }
   else if (cleared && fullCombo) { xp += BEAT_RANK_BONUS.fullCombo; parts.push({ label: 'フルコンボ', xp: BEAT_RANK_BONUS.fullCombo }); }
@@ -75,13 +76,13 @@ const beatRankPlayXp = ({ difficultyId, cleared = true, fullCombo = false, allMa
 
 // 経験値を足した次の値と、新しくもらうごほうび。today は日本時間の 'YYYY-MM-DD'(呼ぶ側が渡す)
 // 返り値: { next, add, parts, from, to, tickets, beatPoints, bonusTickets, bonusPoints }(bonus* は5ランクごとのおまけの分。tickets・beatPoints に含む)
-const beatRankAfter = (prev, { difficultyId, cleared, fullCombo, allMarvelous, multi, today }) => {
+const beatRankAfter = (prev, { difficultyId, cleared = true, fullCombo, allMarvelous, multi, today }) => {
   const cur = normalizeBeatRank(prev);
   const from = playerRankInfo(cur.xp).rank;
   const play = beatRankPlayXp({ difficultyId, cleared, fullCombo, allMarvelous, multi });
   if (!play.xp) return { next: cur, add: 0, parts: [], from, to: from, tickets: 0, beatPoints: 0 };
   const day = typeof today === 'string' ? today.slice(0, 10) : '';
-  const first = !!day && !(cur.day === day && cur.dayFirst);
+  const first = cleared !== false && !!day && !(cur.day === day && cur.dayFirst);
   const parts = first ? [...play.parts, { label: 'その日はじめての1曲', xp: BEAT_RANK_BONUS.dayFirst }] : play.parts;
   const add = play.xp + (first ? BEAT_RANK_BONUS.dayFirst : 0);
   const xp = playerRankSafeXp(cur.xp + add);
