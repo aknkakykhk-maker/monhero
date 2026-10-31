@@ -2443,6 +2443,8 @@ const normalizeCardSettings = (v) => {
     motion: pick(r.motion, ['FULL', 'SHORT', 'OFF'], 'FULL'),
     shake: onOff(r.shake, 'ON'),
     damageNum: onOff(r.damageNum, 'ON'),
+    // 大技のカットイン(2026-10-31 社長「この形と文で入れて」)。前からの人は「出す」
+    cutin: onOff(r.cutin, 'ON'),
     bubble: pick(r.bubble, ['MANY', 'NORMAL', 'FEW', 'OFF'], 'NORMAL'),
     confirmUse: onOff(r.confirmUse, 'OFF'),
     confirmEnd: onOff(r.confirmEnd, 'OFF'),
@@ -2468,6 +2470,8 @@ const CARD_SETTING_GROUPS = Object.freeze([
   { title: '演出', items: [
     { key: 'motion', title: '技の動き', desc: '技を出したときに、モンスターが相手へ向かって動く演出です。「短め」は攻める側の動きを省き、受けた・よけた・防いだ動きだけ出します。',
       options: [{ id: 'FULL', label: 'ふつう', note: '全部の動き' }, { id: 'SHORT', label: '短め', note: '受ける側だけ' }, { id: 'OFF', label: '出さない', note: 'すぐ次へ' }] },
+    { key: 'cutin', title: '大技のカットイン', desc: 'ダメージ6以上の大技を出したときに、カードの絵と技の名前が大きく横切る演出です。技の動きが「ふつう」のときだけ出ます。',
+      options: [{ id: 'ON', label: '出す', note: '大きく横切る' }, { id: 'OFF', label: '出さない', note: 'すぐ動く' }] },
     { key: 'shake', title: '画面の揺れ', desc: '攻撃を受けたモンスターが揺れる演出です。止めても光や数字は出ます。',
       options: [{ id: 'ON', label: '揺らす', note: 'いつもの見た目' }, { id: 'OFF', label: '揺らさない', note: '酔いやすい人向け' }] },
     { key: 'damageNum', title: 'ダメージの数字', desc: '攻撃を受けたモンスターの上に出る「−3」などの大きな数字です。出さなくても、ライフの数字とバーは減ります。',

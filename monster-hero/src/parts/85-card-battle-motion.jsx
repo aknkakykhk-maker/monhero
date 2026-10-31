@@ -145,6 +145,27 @@ const cardMotionBaseOf = (db, cardNo, mon) => {
   }
   return base;
 };
+// ---- 大技のカットイン(2026-10-31 社長「目立たせてから入れる」→「この形と文で入れて」。見本 docs/progress/card-action) ----
+// 大技(ダメージ6以上。段 L)を出すと、技の動きの出だしに、斜めの金の帯の上をカードの絵と技の名前が横切る(約1秒)。
+// 技の動きに重ねて出すだけなので、1手の長さ・攻撃の順番は変わらない。出すのは技の動きが「ふつう」で、オプション「大技のカットイン」が出すのとき。
+// 動きを減らす設定では出さない(70 の CSS)
+const CARD_CUTIN_MS = 1000;
+const cardMotionIsBig = (c) => !!c && cardIsAttackKind(c.kind) && c.kind !== 'spe' && c.user !== 'breeder' && CARD_MOTION_TIER_OF(c) === 'L';
+const CardCutIn = ({ db, cut }) => {
+  const c = cardOf(db, cut.no);
+  if (!c) return null;
+  const n = c.name.length;
+  return (
+    <div data-card-cutin={c.no} aria-hidden="true" className="mh-cutin pointer-events-none absolute inset-x-0 top-1/2 z-[51] h-[210px] -translate-y-1/2 overflow-hidden">
+      <div className="mh-cutin-flash"/>
+      <div className="mh-cutin-band"/>
+      <div className="mh-cutin-lines"/>
+      <img className="mh-cutin-card" src={CARD_IMG(c.img)} alt="" draggable={false}/>
+      <div className="mh-cutin-name" style={{ fontSize: n <= 4 ? 46 : n <= 6 ? 36 : 28 }}>{c.name}</div>
+      {cut.mon && <div className="mh-cutin-sub">{cut.mon}の大技!</div>}
+    </div>
+  );
+};
 // ブリーダーのカードか(モンスターは動かず、画面の端に助手・ブリーダーの顔を出す。設計書 5-4)
 const cardIsBreederCard = (db, cardNo) => { const c = cardOf(db, cardNo); return !!c && c.user === 'breeder'; };
 // よけ方: ジャンプ・舞い上がる・空中になるカードは、上へ跳んで止まる(空中の印つき)。ほかは横へすっと避ける
