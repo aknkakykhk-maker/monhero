@@ -15,7 +15,8 @@
 //   I. 配る見込みの数え方が、サーバ(card_cup_payouts)と同じ
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const GAME = path.resolve(__dirname, '..', '..', 'monster-hero');
-const src = fs.readFileSync(path.join(GAME, 'src/parts/99-card-cup-prize.jsx'), 'utf8');
+// 画面の部品(JSX)より前の、純粋な部品と通信の所だけを読む
+const src = fs.readFileSync(path.join(GAME, 'src/parts/99-card-cup-prize.jsx'), 'utf8').split('// ==================== 画面:')[0];
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 const J = (v) => JSON.stringify(v);
