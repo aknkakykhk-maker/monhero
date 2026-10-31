@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 002f8e2f41d76efe
+// source-sha256: 963ed1fcc1f71590
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -116358,6 +116358,100 @@ const CardTacticFace = ({
     style: JA_WRAP_STYLE
   }, jaWrap(card.desc)));
 };
+const CARD_TACTIC_USE_KEY = 'mh_card_tactic_use_v1';
+const cardTacticUseNormalize = v => {
+  const used = {};
+  if (v && typeof v === 'object' && v.used && typeof v.used === 'object' && !Array.isArray(v.used)) {
+    Object.entries(v.used).forEach(([k, n]) => {
+      if (cardTacticOf(k) && Number.isFinite(n) && n > 0) used[k] = Math.min(9999, Math.floor(n));
+    });
+  }
+  return {
+    v: 1,
+    used
+  };
+};
+const cardTacticUseLoad = async () => {
+  try {
+    return cardTacticUseNormalize(await storeGet(CARD_TACTIC_USE_KEY, null, false));
+  } catch (_) {
+    return cardTacticUseNormalize(null);
+  }
+};
+const cardTacticUseAdd = async id => {
+  if (!cardTacticOf(id)) return;
+  const u = await cardTacticUseLoad();
+  u.used[id] = Math.min(9999, (u.used[id] || 0) + 1);
+  try {
+    await storeSet(CARD_TACTIC_USE_KEY, u, false);
+  } catch (_) {}
+};
+const cardTacticRecommended = () => new Set(typeof CARD_REG_COMBOS !== 'undefined' ? CARD_REG_COMBOS.flatMap(x => [x.c, x.a]) : []);
+const cardTacticDeckFits = (db, deck, card) => {
+  if (!deck || !Array.isArray(deck.cards) || !card) return true;
+  const cs = deck.cards.map(no => cardOf(db, no)).filter(Boolean);
+  const has = f => cs.some(f);
+  const eff = list => c => (list || []).some(x => cardHasEff(c, x));
+  const atk = c => cardIsAttackKind(c.kind);
+  const v = card.v;
+  switch (card.g) {
+    case 'areaInHand':
+      return has(c => atk(c) && cardHasEff(c, 'area'));
+    case 'bigInHand':
+      return has(c => atk(c) && (c.guts || 0) >= 4);
+    case 'breederInHand':
+    case 'breederN':
+    case 'breederUnused':
+    case 'holdBreeder':
+      return has(c => c.user === 'breeder');
+    case 'guardKind':
+      return has(c => c.kind === (v === '回避' ? 'dge' : 'blk'));
+    case 'guardN':
+    case 'guard':
+    case 'guardOver':
+    case 'guardDie':
+      return has(c => cardIsGuardKind(c.kind));
+    case 'field':
+      return v !== '自分の' || has(c => c.kind === 'fld');
+    case 'kind':
+      return has(c => c.kind === {
+        ちから: 'pow',
+        かしこさ: 'int',
+        特殊: 'spe'
+      }[v]);
+    case 'cost':
+      return has(c => atk(c) && (/^軽い/.test(v) ? (c.guts || 0) <= 1 : /^中/.test(v) ? (c.guts || 0) >= 2 && (c.guts || 0) <= 3 : (c.guts || 0) >= 4));
+    case 'reach':
+      return has(c => atk(c) && (v === '全体攻撃' ? cardHasEff(c, 'area') : !cardHasEff(c, 'area')));
+    case 'eff':
+      return has(eff(CARD_TACTIC_EFF[v]));
+    case 'attach':
+      return has(c => cardHasEff(c, 'attach'));
+    case 'attachKind':
+      return has(eff(CARD_TACTIC_ATTACH[v]));
+    case 'spe':
+      return has(c => c.kind === 'spe' && eff(CARD_TACTIC_SPE[v])(c));
+    case 'charge':
+      return has(eff(['charge', 'rage', 'nextTurnMult']));
+    case 'chargeKind':
+      return has(eff(CARD_TACTIC_CHARGE[v]));
+    case 'disrupt':
+      return has(eff(CARD_TACTIC_DISRUPT[v]));
+    case 'guardFirst':
+      return has(c => v === '回避' ? c.kind === 'dge' : v === '防御' ? c.kind === 'blk' : eff(CARD_TACTIC_GUARD_EFF[v])(c));
+    case 'cover':
+      return has(eff(['cover', 'shield', 'redirect']));
+    case 'bEff':
+      return v === '小さく攻撃する' ? has(c => c.user === 'breeder' && (c.damage || 0) > 0) : has(c => c.user === 'breeder' && c.kind !== 'fld' && eff(CARD_TACTIC_BEFF[v])(c));
+    case 'fieldCard':
+      return has(c => c.kind === 'fld');
+    case 'fieldKind':
+      return has(c => c.kind === 'fld' && cardHasEff(c, CARD_TACTIC_FIELD[v]));
+    default:
+      return true;
+  }
+};
+const cardTacticFold = s => String(s || '').replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60)).toLowerCase();
 const CardTacticPicker = ({
   db,
   tactics,
@@ -116366,11 +116460,32 @@ const CardTacticPicker = ({
   onPick,
   onClose,
   allowNone = false,
-  hideSecs = []
+  hideSecs = [],
+  deck = null
 }) => {
   const list = CARD_TACTIC_CARDS.filter(c => c.cat === cat && !hideSecs.includes(c.sec));
   const secs = [...new Set(list.map(c => c.sec))];
   const [sp, setSp] = useState(null);
+  const [q, setQ] = useState('');
+  const [sec, setSec] = useState('');
+  const [ownOnly, setOwnOnly] = useState(true);
+  const [fitOnly, setFitOnly] = useState(false);
+  const [sort, setSort] = useState('table');
+  const [use, setUse] = useState({});
+  useEffect(() => {
+    let alive = true;
+    void cardTacticUseLoad().then(u => {
+      if (alive) setUse(u.used);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const rec = useMemo(() => cardTacticRecommended(), []);
+  const pick = (id, spc) => {
+    if (id) void cardTacticUseAdd(id);
+    onPick(id, spc);
+  };
   if (sp) {
     return React.createElement("div", {
       "data-card-tactic-species": true,
@@ -116387,11 +116502,36 @@ const CardTacticPicker = ({
       "data-card-tactic-species-pick": x.id,
       onClick: () => {
         Audio_.fgSe.tap();
-        onPick(sp, x.id);
+        pick(sp, x.id);
       },
       className: "rounded-lg border border-white/20 bg-slate-800 px-1 py-2 text-[12px] font-black text-white active:scale-[.97]"
     }, x.name))));
   }
+  const words = cardTacticFold(q).split(/[\s　]+/).filter(Boolean);
+  const shown = list.filter(c => (!sec || c.sec === sec) && (!ownOnly || cardTacticsOwns(tactics, c.id)) && (!fitOnly || cardTacticDeckFits(db, deck, c)) && words.every(w => cardTacticFold(`${c.name} ${c.desc} ${c.sec}`).includes(w)));
+  const order = sort === 'rec' ? shown.slice().sort((x, y) => (rec.has(y.id) ? 1 : 0) - (rec.has(x.id) ? 1 : 0)) : sort === 'use' ? shown.slice().sort((x, y) => (use[y.id] || 0) - (use[x.id] || 0)) : shown;
+  const chip = on => `shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
+  const face = c => {
+    const owned = cardTacticsOwns(tactics, c.id);
+    return React.createElement("div", {
+      key: c.id,
+      className: "relative"
+    }, React.createElement(CardTacticFace, {
+      card: c,
+      owned: owned,
+      small: true,
+      onClick: owned ? () => {
+        Audio_.fgSe.tap();
+        if (c.g === 'species') setSp(c.id);else pick(c.id);
+      } : null
+    }), rec.has(c.id) && React.createElement("span", {
+      "data-card-tactic-rec": true,
+      className: "pointer-events-none absolute -right-1 -top-1 rounded-md bg-amber-300 px-1 text-[9px] font-black text-slate-950"
+    }, "★おすすめ"), sort === 'use' && use[c.id] > 0 && React.createElement("span", {
+      "data-card-tactic-used": use[c.id],
+      className: "pointer-events-none absolute -left-1 -top-1 rounded-md bg-emerald-500 px-1 text-[9px] font-black text-white"
+    }, `${use[c.id]}回`));
+  };
   return React.createElement("div", {
     "data-card-tactic-picker": cat,
     className: "fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3"
@@ -116399,7 +116539,48 @@ const CardTacticPicker = ({
     title: title,
     accent: "text-amber-200",
     onBack: onClose
-  }), React.createElement("div", {
+  }), React.createElement("input", {
+    "data-card-tactic-search": true,
+    value: q,
+    onChange: e => setQ(e.target.value.slice(0, 20)),
+    placeholder: "🔍 ことばでさがす(例: ライフ・大技・守る)",
+    autoComplete: "off",
+    className: "mb-1.5 min-h-[40px] w-full shrink-0 rounded-xl border-2 border-sky-400/60 bg-black/50 px-3 text-[14px] text-white"
+  }), secs.length > 1 && React.createElement("div", {
+    "data-card-tactic-secs": true,
+    className: "mb-1 flex shrink-0 gap-1 overflow-x-auto pb-1"
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-tactic-sec": "",
+    onClick: () => setSec(''),
+    className: chip(!sec)
+  }, "すべて"), secs.map(s => React.createElement("button", {
+    key: s,
+    type: "button",
+    "data-card-tactic-sec": s,
+    onClick: () => setSec(sec === s ? '' : s),
+    className: chip(sec === s)
+  }, s))), React.createElement("div", {
+    className: "mb-1.5 flex shrink-0 gap-1 overflow-x-auto pb-1"
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-tactic-own": true,
+    "aria-pressed": ownOnly,
+    onClick: () => setOwnOnly(v => !v),
+    className: chip(ownOnly)
+  }, "持っているだけ"), deck && React.createElement("button", {
+    type: "button",
+    "data-card-tactic-fit": true,
+    "aria-pressed": fitOnly,
+    onClick: () => setFitOnly(v => !v),
+    className: chip(fitOnly)
+  }, "このデッキで効く"), [['table', 'ふつうの順'], ['rec', '★おすすめ順'], ['use', 'よく使う順']].map(([k, label]) => React.createElement("button", {
+    key: k,
+    type: "button",
+    "data-card-tactic-sort": k,
+    onClick: () => setSort(k),
+    className: chip(sort === k)
+  }, label))), React.createElement("div", {
     className: "min-h-0 flex-1 overflow-y-auto pb-3"
   }, allowNone && React.createElement("button", {
     type: "button",
@@ -116409,26 +116590,20 @@ const CardTacticPicker = ({
       onPick(null);
     },
     className: "mb-2 w-full rounded-xl border border-white/25 bg-slate-800 py-2 text-[13px] font-black text-white"
-  }, "外す"), secs.map(s => React.createElement("div", {
+  }, "外す"), !order.length && React.createElement("p", {
+    "data-card-tactic-empty": true,
+    className: "py-6 text-center text-[13px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap(ownOnly ? '当てはまるカードがありません(「持っているだけ」を外すと、まだ持っていないカードも出ます)' : '当てはまるカードがありません')), sort === 'table' ? secs.filter(s => order.some(c => c.sec === s)).map(s => React.createElement("div", {
     key: s,
     className: "mb-2"
   }, React.createElement("p", {
     className: "mb-1 text-[12px] font-black text-amber-200"
   }, s), React.createElement("div", {
     className: "grid grid-cols-3 gap-1.5"
-  }, list.filter(c => c.sec === s).map(c => {
-    const owned = cardTacticsOwns(tactics, c.id);
-    return React.createElement(CardTacticFace, {
-      key: c.id,
-      card: c,
-      owned: owned,
-      small: true,
-      onClick: owned ? () => {
-        Audio_.fgSe.tap();
-        if (c.g === 'species') setSp(c.id);else onPick(c.id);
-      } : null
-    });
-  }))))));
+  }, order.filter(c => c.sec === s).map(face)))) : React.createElement("div", {
+    className: "grid grid-cols-3 gap-1.5"
+  }, order.map(face))));
 };
 const CardTacticRow = ({
   db,
@@ -118810,6 +118985,7 @@ const CardDeckRegister = ({
   }), basePick !== null && React.createElement(CardTacticPicker, {
     db: db,
     tactics: tactics,
+    deck: deck,
     cat: "base",
     title: basePick === 0 ? '基本の型(メイン)をえらぶ' : `基本の型(サブ${basePick})をえらぶ`,
     allowNone: basePick > 0,
@@ -118840,6 +119016,7 @@ const CardDeckRegister = ({
   }), custom && !custom.c && React.createElement(CardTacticPicker, {
     db: db,
     tactics: tactics,
+    deck: deck,
     cat: "cond",
     title: "条件(〜なら)をえらぶ",
     hideSecs: custom.where === 'breeder' ? ['このモンスター', '守るとき'] : [],
@@ -118855,6 +119032,7 @@ const CardDeckRegister = ({
   }), custom && custom.c && React.createElement(CardTacticPicker, {
     db: db,
     tactics: tactics,
+    deck: deck,
     cat: custom.where === 'breeder' ? 'breeder' : 'monster',
     title: "行動(→ 〜する)をえらぶ",
     onClose: () => setCustom(null),
