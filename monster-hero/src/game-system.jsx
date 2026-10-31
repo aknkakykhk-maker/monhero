@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7ab8b5609d3a1fc9
+// generated-sha256: a64b542d9cd15ced
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -62633,7 +62633,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         { cup: { matchId: r.id, cupId: r.cup_id, side: r.side, seed: r.seed, first: r.first, selfId } });
     };
     // 杯の試合のあと・入れなかったときの知らせ(下に小さく出す)
-    return <><CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId} onOpenReplay={openCupReplay} onPlayLive={playCupLive} getAdapters={cupAdapters}
+    return <><CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId} onOpenReplay={openCupReplay} onPlayLive={playCupLive} getAdapters={debug || (typeof cardCupPrizeOpen === 'function' && cardCupPrizeOpen()) ? cupAdapters : null}
       onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('cup'); setView('tactics'); } : null}/>
       {notice && <div data-card-cup-toast className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit max-w-[92vw] rounded-full bg-slate-950/95 px-4 py-2 text-[13px] font-black text-amber-100 shadow-lg" style={JA_WRAP_STYLE}>{jaWrap(notice)}</div>}
     </>;
@@ -71650,7 +71650,8 @@ const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, on
 //   ・表が無い・通信できないときは「準備中」と出して何もしない
 
 // 公開の印。告知と同じ日に true にする。それまではデバッグ設定から入ったときだけ入口が出る
-const cardCupOpen = () => false;
+// 2026-10-31 社長「個人杯だけ先に公開」で true に。ごほうび・参加費・主催仲間は別の印(99-card-cup-prize の cardCupPrizeOpen)で、まだ閉じたまま
+const cardCupOpen = () => true;
 
 const cardCupText = (t, n = 40) => {
   const s = String(t || '').slice(0, n);
@@ -71949,7 +71950,8 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
   const [msg, setMsg] = useState('');
   // ごほうび・参加費・主催仲間(99-card-cup-prize)。表がまだ無いときは null(欄を出さない・ふつうの参加)
   const [prize, setPrize] = useState(null);
-  const reloadPrize = async () => { if (typeof cardCupPrizeView === 'function') setPrize(await cardCupPrizeView(c.id, selfId)); };
+  // ごほうびの口(getAdapters)を渡されていないとき(ごほうびの公開の印 cardCupPrizeOpen の前)は読みに行かない(欄なし・ふつうの参加)
+  const reloadPrize = async () => { if (getAdapters && typeof cardCupPrizeView === 'function') setPrize(await cardCupPrizeView(c.id, selfId)); };
   useEffect(() => { void reloadPrize(); }, [c.id, selfId]);
   const joinPaid = async () => {
     if (busy || !getAdapters) return;
@@ -72269,6 +72271,9 @@ const CardCupLivePanel = ({ v, now, selfId, onChanged, onPlay = null }) => {
 //     カードの持ち物(かけら・パック券・カタログ)は 84 の保存(persist)で
 // 保存: 新しいキー mh_card_cup_wallet_v1 だけ(下)。今のキーは、今の形のまま足す・引くだけ
 
+// ごほうび・参加費・主催仲間の公開の印(2026-10-31 社長「個人杯だけ先に公開。ごほうび・参加費・主催仲間はまだ閉じたまま」)。
+// 閉じているあいだは、84 が個人杯の画面へごほうびの口(getAdapters)を渡さない(デバッグから入ったときだけ渡す)ので、欄も参加費も出ない
+const cardCupPrizeOpen = () => false;
 const CARD_CUP_WALLET_KEY = 'mh_card_cup_wallet_v1';
 const CARD_CUP_WALLET_MAX = 200;
 // 出せる物(サーバの表 card_cup_prize_items と同じ名前)。label・emoji は画面の名前。出す量・参加費の額に上限は無い(2026-10-31 社長「やっぱり上限はなしでいい」)

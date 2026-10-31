@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c3d6798a5c201e00
+// source-sha256: 2ecfc4b318ac869c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -104041,7 +104041,7 @@ const CardBattleScreen = ({
       onCupChange: setCupOpenId,
       onOpenReplay: openCupReplay,
       onPlayLive: playCupLive,
-      getAdapters: cupAdapters,
+      getAdapters: debug || typeof cardCupPrizeOpen === 'function' && cardCupPrizeOpen() ? cupAdapters : null,
       onOpenRegister: typeof CardDeckRegister === 'function' ? () => {
         setTacticsBack('cup');
         setView('tactics');
@@ -121596,7 +121596,7 @@ const CardTournament = ({
     style: JA_WRAP_STYLE
   }, jaWrap(msg))), 'MFバトルカード大会', backFromTour);
 };
-const cardCupOpen = () => false;
+const cardCupOpen = () => true;
 const cardCupText = (t, n = 40) => {
   const s = String(t || '').slice(0, n);
   return typeof cardChatMask === 'function' ? cardChatMask(s) : s;
@@ -122181,7 +122181,7 @@ const CardCupDetail = ({
   const [msg, setMsg] = useState('');
   const [prize, setPrize] = useState(null);
   const reloadPrize = async () => {
-    if (typeof cardCupPrizeView === 'function') setPrize(await cardCupPrizeView(c.id, selfId));
+    if (getAdapters && typeof cardCupPrizeView === 'function') setPrize(await cardCupPrizeView(c.id, selfId));
   };
   useEffect(() => {
     void reloadPrize();
@@ -122783,6 +122783,7 @@ const CardCupLivePanel = ({
     style: JA_WRAP_STYLE
   }, jaWrap(msg)));
 };
+const cardCupPrizeOpen = () => false;
 const CARD_CUP_WALLET_KEY = 'mh_card_cup_wallet_v1';
 const CARD_CUP_WALLET_MAX = 200;
 const CARD_CUP_ITEMS = Object.freeze([{
