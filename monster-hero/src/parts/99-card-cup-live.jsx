@@ -4,7 +4,7 @@
 //   ・集合は始まる10分前から。来ていない人の試合は、その人の登録デッキが自動で戦う
 //   ・始まる時刻を過ぎたら、開いている参加者のだれかの端末が始める(card_cup_live_start。何度呼ばれても同じ)。全員そろえば主催が早めに始められる
 //   ・開いているあいだ、様子を読み直す(8秒おき)。片方だけが結果を送った試合も決める(card_cup_live_settle・30秒おき)
-//   ・「試合へ」(onPlay・84): 相手が来ていなければ、相手の登録デッキの写しと戦う(absent)。2人で戦う部屋(91)は区切り3b
+//   ・「試合へ」(onPlay・84): 相手が来ていなければ、相手の登録デッキの写しと戦う(absent)。来ていれば、91 の部屋(CARD_PVP.cup・合言葉8文字)で2台で戦う(pvp)
 //   ・2人とも来ていない試合・2台の答えが食い違った試合は、来ている参加者の端末が写しどうしを回して決める(auto)。
 //     回し方はサーバ(cup.js の runLiveCups)と同じ cardTourPlay・種は試合の種・key は「杯|回戦|枠」なので、だれが回しても同じ結果
 
@@ -138,10 +138,12 @@ const CardCupLivePanel = ({ v, now, selfId, onChanged, onPlay = null }) => {
                 <span className="min-w-0 flex-1 truncate text-[14px] font-black text-white">{`相手: ${foe ? foe.name : 'ブリーダー'}`}</span>
                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-black ${foe && foe.checkin ? 'bg-emerald-500 text-slate-950' : 'bg-slate-600 text-slate-100'}`}>{foe && foe.checkin ? '来ています' : '来ていません'}</span>
               </div>
-              {foe && !foe.checkin && <div className="text-[12px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('相手が来ていないので、相手の登録デッキと戦います')}</div>}
-              <button type="button" data-card-cup-live-play={next.match.id} disabled={!next.match.ready || !onPlay || !!(foe && foe.checkin)} onClick={() => { Audio_.fgSe.tap(); if (onPlay) onPlay(next.match); }}
-                className={`w-full rounded-2xl py-3 text-[15px] font-black ${next.match.ready && onPlay && !(foe && foe.checkin) ? 'bg-gradient-to-b from-sky-300 to-sky-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
-                {!next.match.ready ? '前の回戦が終わるのを待っています' : !onPlay ? '試合の画面は準備中です' : foe && foe.checkin ? '2人で戦う部屋は準備中です' : '試合へ'}
+              <div className="text-[12px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(foe && foe.checkin
+                ? 'マルチ対戦の部屋で、相手と2人で戦います(相手が2分たっても部屋に来なければ、相手の登録デッキと戦います)'
+                : '相手が来ていないので、相手の登録デッキと戦います')}</div>
+              <button type="button" data-card-cup-live-play={next.match.id} disabled={!next.match.ready || !onPlay} onClick={() => { Audio_.fgSe.tap(); if (onPlay) onPlay(next.match); }}
+                className={`w-full rounded-2xl py-3 text-[15px] font-black ${next.match.ready && onPlay ? 'bg-gradient-to-b from-sky-300 to-sky-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
+                {!next.match.ready ? '前の回戦が終わるのを待っています' : !onPlay ? '試合の画面は準備中です' : foe && foe.checkin ? '試合へ(相手と2人で戦う)' : '試合へ'}
               </button>
             </>
           )}
