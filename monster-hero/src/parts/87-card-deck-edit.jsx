@@ -61,6 +61,18 @@ const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemov
     </div>
   );
 };
+// デッキの中で使えないカード(2026-10-31 社長「デッキ編成で使えないカードを外すボタンを実装して」)。同じ札は入っている枚数ぶん返す。
+//   ① いまの3体のだれも使えない技(数え方は 82 の cardDeckDeadCount と同じ・ブリーダー・全員・全体のカードは除く)
+//   ② 準備中・表に無い番号の札(遊べないので)。モンスターがまだ1体もいないときは ① を数えない(これから入れるかもしれないので)
+const cardDeckUnusableCards = (db, deck) => {
+  const mons = (deck && Array.isArray(deck.monsters) ? deck.monsters : []).map((no) => cardMonsterOf(db, no)).filter(Boolean);
+  return (deck && Array.isArray(deck.cards) ? deck.cards : []).filter((no) => {
+    const c = cardOf(db, no);
+    if (!c || !c.ready) return true;
+    if (!mons.length || c.user === 'breeder' || c.user === 'any' || c.kind === 'fld') return false;
+    return !mons.some((m) => cardUsableBy(c, { ...m, ko: false }));
+  });
+};
 const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor = null }) => {
   const [deck, setDeck] = useState(() => ({ ...deck0, monsters: deck0.monsters.slice(), cards: deck0.cards.slice() }));
   const [view, setView] = useState(deck0.monsters.length < 3 ? 'mon' : 'all');
@@ -88,6 +100,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
   const [notice, setNotice] = useState('');
   const [detail, setDetail] = useState(null);
   const [leave, setLeave] = useState(false);
+  const [dropAsk, setDropAsk] = useState(null); // 使えないカードを外す: 外す札の一覧(確かめの窓)
   // デッキ相談(助手のおしゃべり AI・83-card-battle-talk-ai.jsx)。advisor … トップの助手 { id, name, accent, face }
   //   ask … null / { busy } / { text, face, picks }。届かないときは決まった一言を出す(勧めるカードは出さない)
   const [ask, setAsk] = useState(null);
@@ -135,6 +148,16 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
   // デッキに入っているのに、いまの3体のだれも使えない技(ブリーダー・全員・全体のカードは除く。cardDeckDeadCount と同じ見方)。デッキの一覧では先頭に並べる
   const unusableIn = (no) => { const c = cardOf(db, no); return !!c && mons.length > 0 && c.user !== 'any' && c.user !== 'breeder' && c.kind !== 'fld' && !mons.some((m) => cardUsableBy(c, m)); };
   const unusableCount = cardDeckDeadCount(db, deck); // 数え方は 82 の cardDeckDeadCount(デッキ一覧の1行と同じ)
+  // 「使えないカードを外す」(2026-10-31 社長)で外す札。押したときだけ外す(勝手に外さない・保存の形は変えない)
+  const dropList = cardDeckUnusableCards(db, deck);
+  const dropNames = (list) => Object.entries(list.reduce((a, no) => ({ ...a, [no]: (a[no] || 0) + 1 }), {}))
+    .map(([no, n]) => `${(cardOf(db, no) || {}).name || no}${n > 1 ? `×${n}` : ''}`).join('・');
+  const dropNow = () => {
+    const list = dropList;
+    if (!list.length) return;
+    setDeck((d) => { const left = [...list]; return { ...d, cards: d.cards.filter((no) => { const k = left.indexOf(no); if (k < 0) return true; left.splice(k, 1); return false; }) }; });
+    setNotice(`外しました: ${dropNames(list)}`);
+  };
   const shown = view === 'mon' ? ownedMons
     : view === 'deck' ? [...deck.monsters, ...[...new Set(deck.cards)].sort((a, b) => (unusableIn(b) - unusableIn(a)) || bySort(a, b))]
       : ownedCards.filter((no) => cardDeckFilterOk(cardOf(db, no), view) && usable(no)).sort(bySort);
@@ -195,6 +218,8 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
             </div>
             {!ready && <div data-card-deck-problems className="text-[11px] font-bold leading-snug text-rose-300" style={JA_WRAP_STYLE}>{[...rules, ...own].slice(0, 2).join(' / ')}</div>}
             {unusableCount > 0 && <button type="button" data-card-deck-dead={unusableCount} onClick={() => { Audio_.fgSe.tap(); setView('deck'); setNotice(''); }} className="block w-full text-left text-[11px] font-bold leading-snug text-amber-200 underline decoration-dotted" style={JA_WRAP_STYLE}>{jaWrap(`3体のどのモンスターも使えないカードが${unusableCount}枚入っています(混血のモンスターは、守りのカードはサブの種族のものだけ使えます。押すと先頭に並べます)`)}</button>}
+            {dropList.length > 0 && <button type="button" data-card-deck-drop-dead={dropList.length} onClick={() => { Audio_.fgSe.tap(); setDropAsk(dropList); }}
+              className="mh-button min-h-[36px] w-full rounded-xl border border-amber-300/70 bg-amber-900/40 px-2 text-[12px] font-black text-amber-100 active:scale-[.98]" style={JA_LABEL_STYLE}>{jaWrap(`使えないカードを外す(${dropList.length}枚)`)}</button>}
             {notice && <div data-card-deck-notice className="text-[12px] font-black text-amber-200" style={JA_LABEL_STYLE}>{jaWrap(notice)}</div>}
           </div>
           {/* 絞り込みは1列(縦は横に流す・横の画面は折り返す) */}
@@ -245,6 +270,8 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
         </div>
       )}
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
+      {dropAsk && <ConfirmSheet title={`使えないカードを${dropAsk.length}枚外しますか？`} message={`外すカード: ${dropNames(dropAsk)}(外したあと「保存する」を押すとデッキに残ります)`} confirmLabel="外す"
+        onCancel={() => setDropAsk(null)} onConfirm={() => { setDropAsk(null); Audio_.fgSe.tap(); dropNow(); }}/>}
       {leave && <ConfirmSheet title="保存せずに戻りますか？" message="組みかえたところは消えます" confirmLabel="保存せずに戻る" danger onCancel={() => setLeave(false)} onConfirm={() => { setLeave(false); onCancel(); }}/>}
     </div>
   );
@@ -1022,6 +1049,16 @@ const CardShopPacks = ({ db, point, busy, collection = null, onBuyPack }) => {
             <div className="min-w-0 flex-1">
               <div className="text-[14px] font-black text-white">{pack.name}</div>
               <div data-card-shop-pack-species className="text-[11px] font-black text-amber-100">{cardPackSpeciesLabel(db, pack)}</div>
+              {/* コンプの印(2026-10-31 社長)。引くのは止めない。持っている数を読み込むまでは出さない */}
+              {collection && (() => {
+                const pg = cardPackProgress(db, pack, collection);
+                const done = pg.tech === 0 && pg.mon === 0;
+                const text = done ? '✅ コンプ済み・回す必要なし'
+                  : pg.tech === 0 ? `✅ 技カード コンプ済み・あとモンスター${pg.mon}体`
+                  : `技カード あと${pg.tech}枚${pg.mon > 0 ? `・モンスター あと${pg.mon}体` : '・モンスターはそろっています'}`;
+                return <div data-card-shop-pack-progress={done ? 'done' : pg.tech === 0 ? 'tech' : 'left'} data-card-shop-pack-left={`${pg.tech}-${pg.mon}`}
+                  className={`mt-0.5 inline-block rounded-md px-1.5 py-0.5 text-[11px] font-black ${done ? 'bg-emerald-400 text-slate-950' : pg.tech === 0 ? 'bg-emerald-900/70 text-emerald-100' : 'bg-slate-900/70 text-slate-200'}`} style={JA_WRAP_STYLE}>{jaWrap(text)}</div>;
+              })()}
               <div className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`)}</div>
               <div className="mt-1 flex gap-1.5">
                 <button type="button" data-card-shop-contents={pack.id} onClick={() => setSheet({ kind: 'contents', pack })} className="min-h-[30px] rounded-lg border border-sky-300/60 bg-sky-900/50 px-2 text-[11px] font-black text-sky-100 active:scale-95">中身を見る</button>

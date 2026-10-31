@@ -942,6 +942,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const tutStage = tutorial ? CARD_TUTORIAL_STAGES[Math.min(tutI, CARD_TUTORIAL_STAGES.length - 1)] : null;
   const [motions, setMotions] = useState({});   // 場の子の動き { 'p-m': { type, kind, dx, dy, key } }
   const motionTimers = useRef([]);
+  // 守りの番を待っている攻撃の動き(2026-10-31 社長「相手が攻撃してきて効果をわかるようにして、防御とか選べるようにしてそのあとにモーションが正しい」)。
+  //   技を出した手では動かさずにここへ控え、守りが決まった手(回避・防御・何もしない)で1回だけ流してから、よける・防ぐ・当たるを続けて見せる
+  const pendingAtk = useRef(null);
   const actionMissed = useRef(null); // 吹き出しで隠れたまま消えた技の札(下の bubbleOverAction のところで出し直す)
   useEffect(() => () => motionTimers.current.forEach(clearTimeout), []);
   const playMotion = (id, mv, ms) => {
@@ -1123,21 +1126,28 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     }
     stRef.current = next;
     const evs = next.events || [];
+    // 控えていた攻撃の動きを、守りが決まった手で流す。当たり・守りの動きと数字は、攻撃の動きが届くころまで遅らせる(lead)
+    const held = pendingAtk.current;
+    const deferred = held && held.turn === next.turn && evs.some((e) => e.t === 'hit' || e.t === 'guard') ? held : null;
+    if (deferred) { pendingAtk.current = null; playMotion(deferred.id, { ...deferred.mv, key: `${deferred.mv.key}-go` }, cardMotionMs(deferred.mv.kind) + 80); }
+    if (held && held.turn !== next.turn) pendingAtk.current = null;
+    const lead = deferred ? Math.round(cardMotionMs(deferred.mv.kind) * 0.5) : 0;
+    const later = (fn) => { if (lead > 0) motionTimers.current.push(setTimeout(fn, lead)); else fn(); };
     // 技や守りが出ても、吹き出しは消さない(読む前に流れた。2026-10-27 社長)。時間と順番は showBubble が決める
     const hits = evs.filter((e) => e.t === 'hit' || e.t === 'heal').map((e, i) => ({ ...e, key: `${next.log.length}-${i}-${Date.now()}`, heal: e.t === 'heal' ? e.n : 0, dmg: e.t === 'hit' ? e.dmg : 0 }));
-    if (hits.length) {
+    if (hits.length) later(() => {
       if (settings.damageNum !== 'OFF') setFx(hits); // ダメージの数字(オプション)。出さなくても音とライフは今までどおり
       motionTimers.current.push(setTimeout(() => setFx((cur) => cur.filter((f) => !hits.some((h) => h.key === f.key))), hits.some((h) => cardHitResultOf(h) && cardHitResultOf(h).kind !== 'none') ? 1600 : 1000)); // 「防御！ 5 → 2」は読めるように長く
       if (hits.some((h) => h.dmg >= 3)) Audio_.fgSe.crit(); else if (hits.some((h) => h.dmg > 0)) Audio_.fgSe.attack(); else if (hits.some((h) => h.heal)) Audio_.fgSe.heal(); else Audio_.fgSe.guard();
-    } else if (evs.some((e) => e.t === 'use')) Audio_.fgSe.card();
+    }); else if (evs.some((e) => e.t === 'use')) Audio_.fgSe.card();
     // 倒れた子がいたら、まんなかに赤い帯「◯◯ ダウン！ / 残り◯体」(1秒ほど・タップで消える)。決着した時は勝ち負けの演出に任せる。練習試合はドラの窓と重ねない
     const kos = evs.filter((e) => e.t === 'ko');
-    if (kos.length && next.winner === null && !tutorial) {
+    if (kos.length && next.winner === null && !tutorial) later(() => {
       const p0 = kos[0].p;
       const key = `down-${next.log.length}-${Date.now()}`;
       setDownBand({ key, p: p0, names: kos.filter((e) => e.p === p0).map((e) => next.players[p0].mons[e.m].name), left: next.players[p0].mons.filter((x) => !x.ko).length });
       motionTimers.current.push(setTimeout(() => setDownBand((cur) => (cur && cur.key === key ? null : cur)), Math.max(700, Math.round(1100 * pace))));
-    }
+    });
     // 技の動き: 攻撃した子が狙った子へ向かって動く(位置は画面で測る。全員に当たる技は相手の真ん中へ)
     const centerOf = (id) => { const el = document.querySelector(`[data-card-art="${id}"]`); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
     // 技の動き(オプション): ふつう … 全部 / 短め … 攻める側の動きを省く / 出さない … 動きを出さない。
@@ -1154,7 +1164,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       const to = inPlace ? from : e.target ? centerOf(`${e.target.p}-${e.target.m}`) : centerOf(`${1 - e.p}-1`);
       if (!from || !to) return;
       const key = `${next.log.length}-${n}-${Date.now()}`;
-      playMotion(`${e.p}-${e.mon}`, { type: 'attack', kind, dx: Math.round(to.x - from.x), dy: Math.round(to.y - from.y), key }, cardMotionMs(kind) + 80);
+      const mv = { type: 'attack', kind, dx: Math.round(to.x - from.x), dy: Math.round(to.y - from.y), key };
+      // 相手の守りの番に入る技は、ここでは動かさずに控える(守りが決まった手で流す)
+      if (!inPlace && next.pending && next.pending.attacker === e.p && next.pending.mon === e.mon) { pendingAtk.current = { id: `${e.p}-${e.mon}`, mv, turn: next.turn }; return; }
+      playMotion(`${e.p}-${e.mon}`, mv, cardMotionMs(kind) + 80);
     });
     // ブリーダーのカード: モンスターは動かさず、まんなかの端に使った側の助手・ブリーダーの顔を出す(設計書 5-4)
     const breederUse = motionOn && evs.find((e) => e.t === 'use' && cardIsBreederCard(db, e.cards[0]));
@@ -1166,7 +1179,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     // はね返した: 防いだ子から攻撃した子へ光線(少し遅らせて、盾のあとに出す)
     const back = motionOn && evs.find((e) => e.t === 'hit' && e.reflect);
     const shield = back && evs.find((e) => e.t === 'hit' && !e.reflect && e.guarded);
-    if (back && shield) {
+    if (back && shield) later(() => {
       const a = centerOf(`${shield.p}-${shield.m}`); const b = centerOf(`${back.p}-${back.m}`);
       if (a && b) {
         const key = `r${next.log.length}-${Date.now()}`;
@@ -1174,7 +1187,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         motionTimers.current.push(setTimeout(() => setBeams((cur) => [...cur, beam]), 260));
         motionTimers.current.push(setTimeout(() => setBeams((cur) => cur.filter((x) => x.key !== key)), 1100));
       }
-    }
+    });
     // 受ける・よける・防ぐ
     // ★守りのカードを出した手と、当たりが決まる手は別のことがある。よけ方(ジャンプ)・盾の数字は、守りのカードを出したときの控えから引く
     evs.filter((e) => e.t === 'guard').forEach((e) => { const c = cardOf(db, e.card); lastGuard.current[`${e.p}-${e.mon}`] = { jump: cardDodgeIsJump(c), label: c && c.kind !== 'dge' ? cardGuardLabel(c) : '', at: Date.now() }; });
@@ -1183,12 +1196,14 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       const g = lastGuard.current[`${e.p}-${e.m}`];
       const recent = g && Date.now() - g.at < 20000;
       if (type === 'dodge' && recent && g.jump) type = 'jump';
-      if (type && motionOn) playMotion(`${e.p}-${e.m}`, { type, label: type === 'guard' && recent ? g.label : '', key: `h${next.log.length}-${n}-${Date.now()}` }, type === 'jump' ? 920 : 720);
+      const hk = `h${next.log.length}-${n}-${Date.now()}`;
+      if (type && motionOn) later(() => playMotion(`${e.p}-${e.m}`, { type, label: type === 'guard' && recent ? g.label : '', key: hk }, type === 'jump' ? 920 : 720));
     });
     evs.filter((e) => e.t === 'guard').forEach((e, n) => {
       const c = cardOf(db, e.card);
       const type = c && c.kind === 'dge' ? (cardDodgeIsJump(c) ? 'jump' : 'dodge') : 'guard';
-      if (motionOn) playMotion(`${e.p}-${e.mon}`, { type, label: type === 'guard' ? cardGuardLabel(c) : '', key: `g${next.log.length}-${n}-${Date.now()}` }, type === 'jump' ? 920 : 720);
+      const gk = `g${next.log.length}-${n}-${Date.now()}`;
+      if (motionOn) later(() => playMotion(`${e.p}-${e.mon}`, { type, label: type === 'guard' ? cardGuardLabel(c) : '', key: gk }, type === 'jump' ? 920 : 720));
     });
     const use = evs.find((e) => e.t === 'use');
     if (use) {
@@ -1623,6 +1638,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (users.length > 1 && !(sel && t.hand.includes(sel.hand) && monChosen !== undefined)) { setSel({ hand: t.hand[0] }); setHint('使うモンスターをタップしてください'); return; }
     const same = attackOpts.filter((o) => JSON.stringify(o.hand) === JSON.stringify(t.hand) && monKey(o) === monKey(t));
     if (t.split || t.fuse) { setSplitAsk(same.filter((o) => o.split || o.fuse)); return; }
+    // 羽化: 取りかえる先が2つ以上なら選ぶ画面へ(1つならそのまま)
+    if (t.emerge && same.filter((o) => o.emerge).length > 1) { setSplitAsk(same.filter((o) => o.emerge)); return; }
     if (t.form) { setSel({ hand: t.hand[0], mon: monKey(t), add: t.hand.slice(1) }); setHint('空中か地上かを選んでください'); return; }
     askUse(t);
   };
@@ -1858,7 +1875,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     const useLabel = usePv ? `使う(${usePv.dmg !== null ? `${usePv.all ? '全体に' : ''}ダメージ${usePv.dmg}・` : ''}ガッツ${usePv.guts})` : '使う';
     return (<>
       {/* ショットガン: 割り振りを選ぶ窓 / 変形・トランスフォーム: 空中か地上かを選んで使う */}
-      {useBtn && finalOpts.some((o) => o.split || o.fuse) ? <button type="button" data-card-split-open className={`${btn} mh-button-primary`} onClick={() => setSplitAsk(finalOpts)}><CardFitLabel>{finalOpts.some((o) => o.fuse) ? '合体の組を選ぶ' : '割り振りを選ぶ'}</CardFitLabel></button>
+      {useBtn && (finalOpts.some((o) => o.split || o.fuse) || finalOpts.filter((o) => o.emerge).length > 1) ? <button type="button" data-card-split-open className={`${btn} mh-button-primary`} onClick={() => setSplitAsk(finalOpts)}><CardFitLabel>{finalOpts.some((o) => o.fuse) ? '合体の組を選ぶ' : finalOpts.some((o) => o.emerge) ? '羽化する先を選ぶ' : '割り振りを選ぶ'}</CardFitLabel></button>
         : useBtn && finalOpts.some((o) => o.form) ? ['air', 'ground'].map((f) => { const o = finalOpts.find((x) => x.form === f); return o ? <button key={f} type="button" data-card-form={f} className={`${btn} mh-button-primary`} onClick={() => askUse(o)}><CardFitLabel>{f === 'air' ? '空中にして使う' : '地上にして使う'}</CardFitLabel></button> : null; })
         : useBtn ? <button type="button" className={`${btn} mh-button-primary`} onClick={() => askUse(finalOpts[0])}><CardFitLabel>{useLabel}</CardFitLabel></button>
         // まだ出せる形になっていない(候補を足す前)は、押せない「使う」を見せる(見本1。そろったら押せるようになる)
@@ -2311,12 +2328,12 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {splitAsk && (
         <div data-card-split-pick className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" onClick={() => setSplitAsk(null)}>
           <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100" onClick={(e) => e.stopPropagation()}>
-            <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap(splitAsk.some((o) => o.fuse) ? '合体する2体を選ぶ(左がメイン・右がサブ)' : 'ダメージの割り振りを選ぶ')}</div>
+            <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap(splitAsk.some((o) => o.fuse) ? '合体する2体を選ぶ(左がメイン・右がサブ)' : splitAsk.some((o) => o.emerge) ? '羽化して取りかえる先を選ぶ' : 'ダメージの割り振りを選ぶ')}</div>
             <div className="mt-2 grid max-h-[55vh] gap-1.5 overflow-y-auto">
               {splitAsk.map((o) => (
-                <button key={JSON.stringify(o.split || o.fuse)} type="button" data-card-split={o.split ? o.split.join('-') : `${o.fuse.a}-${o.fuse.b}`} onClick={() => { setSplitAsk(null); askUse(o); }}
+                <button key={JSON.stringify(o.split || o.fuse || o.emerge)} type="button" data-card-split={o.split ? o.split.join('-') : o.emerge ? o.emerge : `${o.fuse.a}-${o.fuse.b}`} onClick={() => { setSplitAsk(null); askUse(o); }}
                   className="min-h-[44px] rounded-xl bg-slate-700 px-2 text-left text-[14px] font-black text-white active:scale-[.98]">
-                  {o.fuse ? `${me.mons[o.fuse.a].name}＋${me.mons[o.fuse.b].name} → ${(cardMonsterOf(db, o.fuse.no) || {}).name || ''}` : o.split.map((x, j) => (x > 0 ? `${st.players[CARD_CPU].mons[j].name} ${x}` : null)).filter(Boolean).join('・')}
+                  {o.fuse ? `${me.mons[o.fuse.a].name}＋${me.mons[o.fuse.b].name} → ${(cardMonsterOf(db, o.fuse.no) || {}).name || ''}` : o.emerge ? (() => { const m = cardMonsterOf(db, o.emerge) || {}; return `${m.name || ''}(ライフ${m.life || 0}・${m.type === 'air' ? '空中' : '地上'})`; })() : o.split.map((x, j) => (x > 0 ? `${st.players[CARD_CPU].mons[j].name} ${x}` : null)).filter(Boolean).join('・')}
                 </button>
               ))}
             </div>
@@ -3397,7 +3414,19 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   }
   // 個人杯(99-card-cup。2026-10-31)。デッキ登録へ行って戻ったら、見ていた杯に戻る(cupOpenId)
   if (view === 'cup' && typeof CardCup === 'function') {
-    return <CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId}
+    // 試合の見返し: 公式杯と同じ見返し(93 の cardReplayFromTour)。材料は card_cup_match。とじたら見ていた杯へ戻る
+    //   合言葉だけの杯は参加者だけ見られる(card_cup_match_for が自分の番号で確かめる。関数がまだ無いときは前の card_cup_match)
+    const openCupReplay = async (id, title, owner = null) => {
+      if (!db || typeof cardTourRpc !== 'function' || typeof cardReplayFromTour !== 'function') return false;
+      const row = (typeof cardCupRpcSoft === 'function' ? await cardCupRpcSoft('card_cup_match_for', { p_id: id, p_owner: owner || '' }) : null) || (await cardTourRpc('card_cup_match', { p_id: id }));
+      const rec = row && typeof row === 'object' ? cardReplayFromTour(db, row, { known: new Set(assistantsUnlockedFrom(seenStoryIds).map((x) => x.id)), title }) : null;
+      const g = rec ? cardReplayGameOf(db, rec) : null;
+      if (!g) { setNotice('この試合は見返せません'); return false; }
+      setGame({ ...g, settings: save ? save.settings : undefined, replay: { ...g.replay, back: 'cup' } });
+      onNavigate('CARD_BATTLE');
+      return true;
+    };
+    return <CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId} onOpenReplay={openCupReplay}
       onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('cup'); setView('tactics'); } : null}/>;
   }
   // ---- 対戦の前のデッキ選び(助手と対戦・マルチ。練習試合には出さない) ----

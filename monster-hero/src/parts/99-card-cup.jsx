@@ -34,6 +34,7 @@ const cardCupNormalizeView = (v) => {
     seat: int(e.seat), place: int(e.place), wins: int(e.wins), checkin: e.checkin === true }));
   const matches = (Array.isArray(v.matches) ? v.matches : []).filter((m) => m && Number.isFinite(Number(m.id))).map((m) => ({
     id: Number(m.id), round: int(m.round) || 0, slot: int(m.slot) || 0, a: int(m.a), b: int(m.b), winner: m.winner === 0 || m.winner === 1 ? m.winner : null,
+    ready: !!(m.live && m.live.ready_at), // リアルタイム杯: 戦える回戦か(④ 99-card-cup-live)
     kos: Array.isArray(m.kos) ? m.kos.slice(0, 2).map((k) => (Number.isInteger(k) ? k : 0)) : null,
     live: m.live && typeof m.live.play === 'string' ? { who: typeof m.live.who === 'string' ? m.live.who : null, play: m.live.play.slice(0, 200), review: typeof m.live.review === 'string' ? m.live.review.slice(0, 240) : '' } : null }))
     .filter((m) => m.a !== null && m.b !== null);
@@ -41,6 +42,15 @@ const cardCupNormalizeView = (v) => {
 };
 
 const cardCupList = async () => { const r = await cardTourRpc('card_cup_list', {}); return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : null; };
+// あとから足した関数を呼ぶ口(関数がまだ無くても、ほかの通信を止めない。cardTourRpc は表が無いと分かると以後の通信をやめる)
+const cardCupRpcSoft = async (fn, body) => {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body) });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (_) { return null; }
+};
+const cardCupListDone = async () => { const r = await cardCupRpcSoft('card_cup_list_done', {}); return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : []; };
 const cardCupMine = async (owner) => { const r = await cardTourRpc('card_cup_mine', { p_owner: owner || '' }); return Array.isArray(r) ? r.map(cardCupNormalizeRow).filter(Boolean) : null; };
 const cardCupFind = async (code) => cardCupNormalizeRow(await cardTourRpc('card_cup_find', { p_code: code }));
 const cardCupView = async (id, owner) => cardCupNormalizeView(await cardTourRpc('card_cup_view', { p_cup: id, p_owner: owner || '' }));
@@ -93,6 +103,7 @@ const CardCupJoinPanel = ({ mine, onJoin, onOpenRegister, busy = false, label = 
 
 // ---- トーナメントの山と勝ち上がりの演出(社長の見本の動画「トーナメントイメージ」)----
 //   山の左半分と右半分から勝ち上がり、真ん中の優勝カップへ。演出では1回戦から順に、勝った側の線が光って伸びる。「演出リプレイ」で見直せる
+const CARD_CUP_BRACKET_GAP = 30; // 山の両側の線を、真ん中の優勝カップから離す幅(線とカップが重ならないように)
 const CardCupBracket = ({ rounds, matches, entries, done }) => {
   const first = rounds && rounds[0];
   const size = first ? first.length * 2 : 0;
@@ -123,7 +134,7 @@ const CardCupBracket = ({ rounds, matches, entries, done }) => {
     const dir = side ? -1 : 1, x0 = side ? W - slotW - 2 : slotW + 2;
     for (let r = 0; r < total - 1; r++) {
       const n = half / 2 ** r; // この回戦のこの側の席の数
-      const step = (W / 2 - slotW - 14) / (total - 1);
+      const step = (W / 2 - CARD_CUP_BRACKET_GAP - (slotW + 2)) / (total - 1);
       const xa = x0 + dir * step * r, xb = x0 + dir * step * (r + 1);
       for (let k = 0; k < n; k++) {
         const slot = side * (first.length / 2) / 2 ** r + Math.floor(k / 2);
@@ -136,10 +147,10 @@ const CardCupBracket = ({ rounds, matches, entries, done }) => {
       }
     }
     // 決勝へ
-    const r = total - 1, xs = x0 + dir * ((W / 2 - slotW - 14)), w = winOf(r, 0), pair = rounds[r] && rounds[r][0];
+    const r = total - 1, xs = x0 + dir * (W / 2 - CARD_CUP_BRACKET_GAP - (slotW + 2)), w = winOf(r, 0), pair = rounds[r] && rounds[r][0];
     const seat = pair ? pair[side] : null;
     const on = lit > r && w !== null && seat === w;
-    lines.push(<line key={`f${side}`} x1={total > 1 ? xs : x0} y1={H / 2} x2={W / 2 + (side ? 12 : -12)} y2={H / 2} className={on ? 'stroke-amber-300' : 'stroke-slate-600'} strokeWidth={on ? 3 : 2}/>);
+    lines.push(<line key={`f${side}`} x1={total > 1 ? xs : x0} y1={H / 2} x2={W / 2 + (side ? 6 : -6)} y2={H / 2} className={on ? 'stroke-amber-300' : 'stroke-slate-600'} strokeWidth={on ? 3 : 2}/>);
   });
   const slot = (seat, i, side) => {
     const e = seat === null ? null : bySeat(seat);
@@ -156,7 +167,7 @@ const CardCupBracket = ({ rounds, matches, entries, done }) => {
         <svg width={W} height={H} className="absolute inset-0" aria-hidden="true">{lines}</svg>
         {leftSeats.map((s, i) => slot(s, i, 0))}
         {rightSeats.map((s, i) => slot(s, i, 1))}
-        <div className="absolute text-center" style={{ left: W / 2 - 30, top: H / 2 - 44, width: 60 }}>
+        <div className="absolute text-center" style={{ left: W / 2 - 30, top: H / 2 - 52, width: 60 }}>
           <span aria-hidden="true" className={`block text-[34px] leading-none ${champ !== null ? '' : 'opacity-40'}`}>🏆</span>
           <small data-card-cup-champ className="block truncate text-[10px] font-black text-amber-200">{champ !== null && bySeat(champ) ? (bySeat(champ).mine ? 'あなた' : bySeat(champ).name) : '優勝'}</small>
         </div>
@@ -250,7 +261,39 @@ const CardCupCreate = ({ now, mine, onOpenRegister, onCreated, selfId, profile }
 };
 
 // ---- 1つの杯 ----
-const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegister }) => {
+// 試合の一覧(結果が見られるとき)。各試合から見返しを開く(公式杯と同じ見返し。84 の openCupReplay → 93 の cardReplayFromTour)
+const cardCupRoundLabel = (c, r, rounds) => {
+  if (c.format !== 'ko') return `第${r + 1}節`;
+  const left = rounds - r;
+  return left === 1 ? '決勝' : left === 2 ? '準決勝' : left === 3 ? '準々決勝' : `${r + 1}回戦`;
+};
+const CardCupMatches = ({ v, onOpenReplay, selfId = null }) => {
+  const c = v.cup;
+  const rounds = Math.max(0, ...v.matches.map((m) => m.round + 1));
+  const bySeat = (s) => v.entries.find((e) => e.seat === s) || null;
+  const nm = (e) => (e ? (e.mine ? 'あなた' : e.name) : '?');
+  if (!v.matches.length) return null;
+  return (
+    <div data-card-cup-matches className="space-y-1 rounded-2xl bg-slate-950/70 p-2.5">
+      <b className="block text-[13px] font-black text-amber-200">試合</b>
+      {v.matches.slice().sort((x, y) => (y.round - x.round) || (x.slot - y.slot)).map((m) => {
+        const a = bySeat(m.a), b = bySeat(m.b);
+        return (
+          <div key={m.id} data-card-cup-match={m.id} className="flex items-center gap-2 rounded-xl bg-white/5 px-2 py-1.5">
+            <small className="w-14 shrink-0 text-[11px] font-black text-amber-200">{cardCupRoundLabel(c, m.round, c.format === 'ko' && c.bracket ? c.bracket.length : rounds)}</small>
+            <span className="min-w-0 flex-1 truncate text-[12px] font-bold text-white">
+              <b className={m.winner === 0 ? 'text-orange-300' : 'text-slate-300'}>{nm(a)}</b> 対 <b className={m.winner === 1 ? 'text-orange-300' : 'text-slate-300'}>{nm(b)}</b>
+            </span>
+            <button type="button" data-card-cup-replay={m.id} disabled={!onOpenReplay || m.winner === null} onClick={() => { Audio_.fgSe.tap(); void onOpenReplay(m.id, c.name, selfId); }}
+              className="shrink-0 rounded-lg border-2 border-amber-500/70 bg-amber-100 px-2 py-0.5 text-[12px] font-black text-amber-900 disabled:opacity-40">見返す</button>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegister, onOpenReplay = null }) => {
   const c = v.cup;
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -283,6 +326,7 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
         {c.status === 'done' && !shown && <div className="mt-1 text-[12px] font-black text-amber-200">{`結果は ${cardTourTimeLabel(c.startAt)} に出ます`}</div>}
         {c.mode === 'auto' && c.status === 'running' && <div className="mt-1 text-[12px] font-black text-amber-200">{`試合はサーバで自動で行われます。結果は ${cardTourTimeLabel(c.startAt)} に出ます`}</div>}
       </div>
+      {c.mode === 'live' && typeof CardCupLivePanel === 'function' && <CardCupLivePanel v={v} now={now} selfId={selfId} onChanged={onChanged}/>}
       {shown && c.format === 'ko' && <CardCupBracket rounds={c.bracket} matches={v.matches} entries={v.entries} done/>}
       {shown && c.format === 'rr' && typeof CardTourGrid === 'function' && <CardTourGrid view={cardCupAsTourView(v)} stage="group" grp={0} known={null} now={now}/>}
       {shown && ranked.length > 0 && (
@@ -291,6 +335,7 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
           <div className="mt-1 text-slate-400">個人杯にはごほうびはありません。ランキングにも入りません</div>
         </div>
       )}
+      {shown && <CardCupMatches v={v} onOpenReplay={onOpenReplay} selfId={selfId}/>}
       {!shown && (
         <div data-card-cup-entries className="space-y-1 rounded-2xl bg-slate-950/70 p-2.5">
           <b className="block text-[13px] font-black text-amber-200">{`参加者 ${v.entries.length}/${c.max}人`}</b>
@@ -307,9 +352,11 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
 
 // ---- 画面 ----
 // onBack … 対戦えらびへ / onOpenRegister … デッキ登録へ(戻ると、この画面のいまの杯に戻る)
-const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange = null }) => {
+// onOpenReplay(matchId, title, owner) … 試合の見返しを開く(84。開けなかったら false。合言葉だけの杯は参加者だけ見られるので owner を渡す)
+const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange = null, onOpenReplay = null }) => {
   const [tab, setTab] = useState('list');
   const [list, setList] = useState(undefined);
+  const [done, setDone] = useState([]); // 終わった公開の杯(終わって30日まで。2026-10-31 社長 案A)
   const [mineCups, setMineCups] = useState(undefined);
   const [cupId, setCupId] = useState(initialCup);
   const [view, setView] = useState(null);
@@ -328,6 +375,7 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
         storeGet('mh_breeder_name', 'ブリーダー', false).catch(() => 'ブリーダー'), storeGet('mh_breeder_icon', null, false).catch(() => null)]);
       if (!alive) return;
       setSelfId(id); setMine(m || null); setList(l);
+      if (l) void cardCupListDone().then((d) => { if (alive) setDone(d); });
       setProfile({ name: typeof nm === 'string' && nm ? nm.slice(0, 40) : 'ブリーダー', icon: typeof ic === 'string' ? ic : null });
       if (id) setMineCups(await cardCupMine(id));
     })();
@@ -346,7 +394,7 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
   if (cupId) {
     const back = () => { setCupId(null); if (selfId) void cardCupMine(selfId).then(setMineCups); void cardCupList().then((l) => l && setList(l)); };
     if (!view) return shell(<ScreenEmpty emoji="⏳" lines={['読み込んでいます']}/>, back);
-    return shell(<CardCupDetail v={view} now={now} mine={mine} selfId={selfId} profile={profile} onChanged={() => reload()} onOpenRegister={onOpenRegister}/>, back);
+    return shell(<CardCupDetail v={view} now={now} mine={mine} selfId={selfId} profile={profile} onChanged={() => reload()} onOpenRegister={onOpenRegister} onOpenReplay={onOpenReplay}/>, back);
   }
   const find = async () => {
     const c = String(code || '').replace(/[^0-9]/g, '');
@@ -360,6 +408,12 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
       {tabs.map(([k, label]) => <button key={k} type="button" data-card-cup-tab={k} onClick={() => { Audio_.fgSe.tap(); setTab(k); setMsg(''); }} className={`rounded-xl py-2 text-[12px] font-black ${tab === k ? 'bg-gradient-to-b from-amber-300 to-orange-500 text-slate-950' : 'border-2 border-amber-500/60 bg-amber-100 text-amber-900'}`}>{label}</button>)}
     </div>
     {tab === 'list' && (list.length ? list.map((c) => <CardCupRow key={c.id} c={c} now={now} onOpen={setCupId}/>) : <ScreenEmpty emoji="🏆" lines={['いま募集中の個人杯はありません', '「開く」から自分で開けます']}/>)}
+    {tab === 'list' && done.length > 0 && (
+      <div data-card-cup-done className="space-y-2">
+        <b className="block px-1 pt-1 text-[13px] font-black text-amber-200">終わった杯(終わって30日まで・だれでも結果と見返しが見られます)</b>
+        {done.map((c) => <CardCupRow key={c.id} c={c} now={now} onOpen={setCupId}/>)}
+      </div>
+    )}
     {tab === 'mine' && (mineCups === undefined ? <ScreenEmpty emoji="⏳" lines={['読み込んでいます']}/> : mineCups && mineCups.length ? mineCups.map((c) => <CardCupRow key={c.id} c={c} now={now} onOpen={setCupId}/>) : <ScreenEmpty emoji="📭" lines={['開いた・出ている個人杯はありません']}/>)}
     {tab === 'code' && (
       <div data-card-cup-find className="space-y-2 rounded-2xl border-2 border-amber-600/60 bg-indigo-950/60 p-3">
