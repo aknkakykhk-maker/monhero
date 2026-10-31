@@ -7,9 +7,11 @@
 | 区切り | 中身 | 状態 |
 | --- | --- | --- |
 | 1 | サーバの関数(`docs/sql/card-cup/CARD_CUP_LIVE_APPLY.sql`・足すだけ)と検査 `card-cup-live-sql-check` | #4350 |
-| 2.5 | 止まった杯は30分でサーバが決める(`CARD_CUP_LIVE_AUTO_APPLY.sql`・`cup.js` の `runLiveCups`)・ごほうびのある杯の決まり方 A(`card_cup_live_reward`) | このPR |
+| 2.5 | 止まった杯は30分でサーバが決める(`CARD_CUP_LIVE_AUTO_APPLY.sql`・`cup.js` の `runLiveCups`)・ごほうびのある杯の決まり方 A(`card_cup_live_reward`) | #4356 |
 | 2 | 画面 `99-card-cup-live.jsx` の `CardCupLivePanel`(集合・始める・自分の次の試合・開催中の表)。③の杯の画面 `CardCupDetail` に1行で差し込む。参加の画面は③の `CardCupJoinPanel`。検査 `card-cup-live-browser-check` | #4353 |
-| 3 | 試合のつなぎ(`CardCupLivePanel` の `onPlay` に、84 の入口1か所から試合の画面を渡す): 91 の部屋を合言葉(8文字)で開く・登録デッキの写しで戦う・終わったら `card_cup_live_report`。来ない相手は `cardSharePolicy` で戦う(absent)。食い違い・2人とも来ないは写しどうしを `cardTourPlay` で回す(auto)。観戦の一覧(94)に杯の印 | 次の次 |
+| 3a | 来ない相手の登録デッキと戦う(absent): 84 の `playCupLive`(杯の画面の「試合へ」)→ `startBattle` に杯の種・先攻・写し → 終わったら `card_cup_live_report`(ごほうび・記録なし)。2人とも来ない・食い違いは開催の画面が端末で回す(auto)。b 側の試合は手の並びを `{ order: 'ba', acts }` で送り、93 の `cardReplayFromTour` が並びを戻す。検査 `card-cup-live-play-browser-check`・`card-tour-replay-check` の L | このPR |
+| 3b | 2人で戦う部屋(91 に杯の口を足す。ふつうのマルチは変えない) | 次 |
+| (旧3) | 試合のつなぎ(`CardCupLivePanel` の `onPlay` に、84 の入口1か所から試合の画面を渡す): 91 の部屋を合言葉(8文字)で開く・登録デッキの写しで戦う・終わったら `card_cup_live_report`。来ない相手は `cardSharePolicy` で戦う(absent)。食い違い・2人とも来ないは写しどうしを `cardTourPlay` で回す(auto)。観戦の一覧(94)に杯の印 | 次の次 |
 
 ## 決めたこと(区切り1)
 

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4f03ea46a0c5e406
+// source-sha256: cfc3288fdb6b6e37
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -102611,6 +102611,35 @@ const CardBattleScreen = ({
           setView('pvp');
           return;
         }
+        if (game.cup) {
+          const cup = game.cup;
+          const log = cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogRef.current : null;
+          if (log) cpuLogRef.current = null;
+          const acts = log ? log.acts.map(x => [x.by, x.act]) : null;
+          const kosMe = [cardKoCount(st, CARD_ME), cardKoCount(st, CARD_CPU)];
+          const winnerSide = outcome === 'win' ? cup.side : 1 - cup.side;
+          const key = typeof cardShareOwnerKey === 'function' ? await cardShareOwnerKey(false) : null;
+          const r = key && typeof cardTourRpc === 'function' ? await cardTourRpc('card_cup_live_report', {
+            p_match: cup.matchId,
+            p_owner: cup.selfId,
+            p_key: key,
+            p_winner: winnerSide,
+            p_how: 'absent',
+            p_verified: false,
+            p_kos: cup.side === 0 ? kosMe : [kosMe[1], kosMe[0]],
+            p_acts: acts && acts.length ? cup.side === 0 ? acts : {
+              order: 'ba',
+              acts
+            } : null,
+            p_rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null
+          }) : null;
+          setGame(null);
+          setNotice(r === 'ok' || r === 'done' ? outcome === 'win' ? '勝ちました。結果を杯に送りました' : '負けました。結果を杯に送りました' : '結果を送れませんでした。杯の画面を開き直してください');
+          onBgm && onBgm(cardBgmOf(save.bgm.top));
+          onNavigate('CARD_TOP');
+          setView('cup');
+          return;
+        }
         if (game.demo) {
           onBgm && onBgm(cardBgmOf(save.bgm.top));
           onNavigate('CARD_TOP');
@@ -102934,7 +102963,8 @@ const CardBattleScreen = ({
   };
   const startBattle = (pick = foe, deck = activeDeck, opts = {}) => {
     const rented = opts && opts.rented ? opts.rented : null;
-    const issues = deck ? rented ? cardDeckProblems(db, deck) : [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)] : ['デッキがありません'];
+    const cup = opts && opts.cup ? opts.cup : null;
+    const issues = deck ? rented || cup ? cardDeckProblems(db, deck) : [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)] : ['デッキがありません'];
     if (!deck || issues.length) {
       setNotice(issues.join('・'));
       return;
@@ -102948,8 +102978,9 @@ const CardBattleScreen = ({
     } : cardAiBuildDeck(db, pick.who, pick.level, Math.random, {
       playerDeck: activeDeck
     });
-    const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
-    const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
+    const seed = cup ? cup.seed : (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+    const gameKey = cup ? `cup-${cup.matchId}-${Date.now().toString(36)}` : `${seed}`;
+    const first = cup ? cup.first === cup.side ? CARD_ME : CARD_CPU : Math.random() < 0.5 ? CARD_ME : CARD_CPU;
     const assistant = share ? null : allAssistants.find(a => a.id === pick.who);
     let st = cardCreateGame(db, {
       decks: [{
@@ -102998,7 +103029,7 @@ const CardBattleScreen = ({
       }
     };
     setGame({
-      key: `${seed}`,
+      key: gameKey,
       st,
       who: pick.who,
       level: pick.level,
@@ -103007,6 +103038,9 @@ const CardBattleScreen = ({
       cpuSameBlood: !!cpuDeck.sameBlood,
       ...(share ? {
         share
+      } : {}),
+      ...(cup ? {
+        cup
       } : {}),
       ...(rented ? {
         rented: {
@@ -103018,7 +103052,7 @@ const CardBattleScreen = ({
     });
     const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
     cpuLogRef.current = scene ? null : {
-      id: `${seed}`,
+      id: gameKey,
       seed,
       first,
       decks: [{
@@ -103421,7 +103455,56 @@ const CardBattleScreen = ({
       onNavigate('CARD_BATTLE');
       return true;
     };
-    return React.createElement(CardCup, {
+    const playCupLive = async m => {
+      if (!db || typeof cardTourRpc !== 'function' || typeof cardShareOwnerKey !== 'function') return;
+      const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+      const key = await cardShareOwnerKey(false);
+      const r = selfId && key ? await cardTourRpc('card_cup_live_match', {
+        p_match: m.id,
+        p_owner: selfId,
+        p_key: key
+      }) : null;
+      if (!r || r.side !== 0 && r.side !== 1 || r.winner === 0 || r.winner === 1) {
+        setNotice('この試合には入れません');
+        return;
+      }
+      const mine = r.side === 0 ? r.a_side : r.b_side,
+        foe = r.side === 0 ? r.b_side : r.a_side;
+      if (r.side === 0 ? r.checkin_b : r.checkin_a) {
+        setNotice('相手が来ています。2人で戦う部屋は準備中です');
+        return;
+      }
+      if (!mine || !mine.deck || !foe || !foe.deck) {
+        setNotice('デッキの写しが読めませんでした');
+        return;
+      }
+      const tactics = foe.tactics && typeof foe.tactics === 'object' ? foe.tactics : {};
+      const share = {
+        name: (typeof cardCupText === 'function' ? cardCupText(foe.name, 40) : String(foe.name || '').slice(0, 40)) || 'ブリーダー',
+        icon: foe.icon || null,
+        frame: null,
+        deck: foe.deck,
+        tactics: {
+          ...tactics,
+          name: tactics.name || null
+        }
+      };
+      startBattle({
+        who: tactics.habit || 'mua',
+        level: 'normal',
+        share
+      }, mine.deck, {
+        cup: {
+          matchId: r.id,
+          cupId: r.cup_id,
+          side: r.side,
+          seed: r.seed,
+          first: r.first,
+          selfId
+        }
+      });
+    };
+    return React.createElement(React.Fragment, null, React.createElement(CardCup, {
       onBack: () => {
         setCupOpenId(null);
         setView('mode');
@@ -103429,11 +103512,16 @@ const CardBattleScreen = ({
       initialCup: cupOpenId,
       onCupChange: setCupOpenId,
       onOpenReplay: openCupReplay,
+      onPlayLive: playCupLive,
       onOpenRegister: typeof CardDeckRegister === 'function' ? () => {
         setTacticsBack('cup');
         setView('tactics');
       } : null
-    });
+    }), notice && React.createElement("div", {
+      "data-card-cup-toast": true,
+      className: "pointer-events-none fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit max-w-[92vw] rounded-full bg-slate-950/95 px-4 py-2 text-[13px] font-black text-amber-100 shadow-lg",
+      style: JA_WRAP_STYLE
+    }, jaWrap(notice)));
   }
   if (view === 'deckPick' && deckPick) {
     const toPvp = deckPick.next === 'pvp';
@@ -113197,17 +113285,23 @@ const cardReplayFromCpu = (db, {
 });
 const cardReplayFromTour = (db, row, opts = {}) => {
   if (!db || !row || typeof row !== 'object') return null;
-  const a = row.a && typeof row.a === 'object' ? row.a : {},
-    b = row.b && typeof row.b === 'object' ? row.b : {};
+  const ba = !!(row.acts && !Array.isArray(row.acts) && typeof row.acts === 'object' && row.acts.order === 'ba');
+  const rowActs = ba ? row.acts.acts : row.acts;
+  const ra = row.a && typeof row.a === 'object' ? row.a : {},
+    rb = row.b && typeof row.b === 'object' ? row.b : {};
+  const a = ba ? rb : ra,
+    b = ba ? ra : rb;
   const decks = [cardReplayDeckOf(a.deck), cardReplayDeckOf(b.deck)];
   if (decks.includes(null)) return null;
   const seed = Number(row.seed);
   if (!Number.isInteger(seed) || seed < 0 || seed > 0xFFFFFFFF) return null;
   if (row.first !== 0 && row.first !== 1) return null;
+  const first = ba ? 1 - row.first : row.first;
+  const winner = row.winner === 0 || row.winner === 1 ? ba ? 1 - row.winner : row.winner : null;
   const max = typeof CARD_TOUR_MAX_STEPS === 'number' ? CARD_TOUR_MAX_STEPS : 4000;
-  if (!Array.isArray(row.acts) || !row.acts.length || row.acts.length > max) return null;
+  if (!Array.isArray(rowActs) || !rowActs.length || rowActs.length > max) return null;
   const acts = [];
-  for (const x of row.acts) {
+  for (const x of rowActs) {
     if (!Array.isArray(x) || x[0] !== 0 && x[0] !== 1) return null;
     const act = typeof cardPvpCleanAct === 'function' ? cardPvpCleanAct(x[1]) : x[1] && typeof x[1] === 'object' ? x[1] : null;
     if (!act) return null;
@@ -113237,7 +113331,7 @@ const cardReplayFromTour = (db, row, opts = {}) => {
     kind: deckKind ? 'deck' : 'tour',
     at: 0,
     rules,
-    first: row.first,
+    first,
     names,
     foe: {
       name: names[1],
@@ -113246,7 +113340,7 @@ const cardReplayFromTour = (db, row, opts = {}) => {
       deckName: null,
       who: null
     },
-    outcome: row.winner === 0 ? 'win' : 'lose',
+    outcome: winner === 0 ? 'win' : 'lose',
     reason: '',
     decks,
     seeds: [seed, 0],
@@ -113264,7 +113358,7 @@ const cardReplayFromTour = (db, row, opts = {}) => {
         name: names[0],
         icon: iconOf(a)
       },
-      winner: row.winner === 0 || row.winner === 1 ? names[row.winner] : '',
+      winner: winner === 0 || winner === 1 ? names[winner] : '',
       live: live ? {
         play: cardReplayText(live.play, 200),
         review: cardReplayText(live.review, 240)
@@ -118923,6 +119017,95 @@ const CardRegTrialSheet = ({
     className: "mh-button mh-button-primary min-h-[48px] w-full rounded-2xl font-black"
   }, "戦い方にもどる"));
 };
+const CARD_REG_AUTO_GAMES = 3;
+const cardRegAutoPick = (db, deck, tactics, open, lv, aces) => {
+  const scores = CARD_REG_STYLES.map((s, si) => {
+    const frames = cardRegApplyStyle(s, tactics, open);
+    const battle = cardTacticsFramesForBattle({
+      ...tactics,
+      frames
+    }, lv);
+    let wins = 0;
+    for (let g = 0; g < CARD_REG_AUTO_GAMES; g++) if (cardRegTrialOne(db, deck, battle, aces, si * CARD_REG_AUTO_GAMES + g).win) wins++;
+    return {
+      s,
+      frames,
+      wins
+    };
+  });
+  return scores.reduce((best, x) => x.wins > best.wins ? x : best, scores[0]);
+};
+const CardRegTemplateSheet = ({
+  db,
+  deck,
+  tactics,
+  open,
+  lv,
+  aces,
+  monName,
+  onPick,
+  onClose
+}) => {
+  const [auto, setAuto] = useState('');
+  const runAuto = () => {
+    setAuto('run');
+    setTimeout(() => {
+      const best = cardRegAutoPick(db, deck, tactics, open, lv, aces);
+      onPick(best.frames, `おまかせ: 「${best.s.name}」がいちばん勝ちました(${CARD_REG_AUTO_GAMES}戦 ${best.wins}勝)`);
+    }, 60);
+  };
+  return React.createElement("div", {
+    "data-card-reg-templates": true,
+    className: "fixed inset-0 z-[82] flex flex-col bg-slate-950/95 p-3"
+  }, React.createElement(ScreenHead, {
+    title: "おすすめの組み方",
+    accent: "text-amber-200",
+    onBack: onClose,
+    note: "えらぶと、3体とブリーダーの戦い方がまとめて入ります(いまの戦い方は置きかわります)"
+  }), React.createElement("div", {
+    className: "min-h-0 flex-1 space-y-2 overflow-y-auto pb-3"
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-reg-auto": true,
+    disabled: auto === 'run',
+    onClick: () => {
+      Audio_.fgSe.tap();
+      runAuto();
+    },
+    className: "mh-button w-full rounded-2xl border-2 border-dashed border-sky-300 bg-sky-950/60 py-3 text-[14px] font-black text-sky-50 disabled:opacity-60",
+    style: JA_WRAP_STYLE
+  }, auto === 'run' ? '4つの型を、ためしに戦わせています…' : `🎲 おまかせ(4つの型をためしに${CARD_REG_AUTO_GAMES}戦ずつ戦わせて、いちばん勝った型で組む)`), CARD_REG_STYLES.map(s => {
+    const f = cardRegApplyStyle(s, tactics, open);
+    const rows = [...[0, 1, 2].flatMap(mi => f.mons[mi].slice(0, 1).map(r => `${monName(mi)}: ${cardRegRowText(r)}`)), ...f.breeder.slice(0, 1).map(r => `ブリーダー: ${cardRegRowText(r)}`)];
+    return React.createElement("div", {
+      key: s.id,
+      "data-card-reg-template": s.id,
+      className: "rounded-2xl border-2 border-white/15 bg-slate-900 p-2.5"
+    }, React.createElement("b", {
+      className: "block text-[15px] font-black text-white"
+    }, cardIconNode(s.icon, 16), " ", s.name), React.createElement("small", {
+      className: "block text-[11px] font-bold text-slate-300",
+      style: JA_WRAP_STYLE
+    }, s.desc), React.createElement("div", {
+      className: "mt-1.5 space-y-0.5"
+    }, rows.map((x, i) => React.createElement("div", {
+      key: i,
+      className: "rounded-md bg-white/5 px-1.5 py-0.5 text-[11px] font-bold text-slate-100",
+      style: JA_WRAP_STYLE
+    }, x)), React.createElement("div", {
+      className: "rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[11px] font-bold text-amber-100"
+    }, `📘 基本の型: ${(cardTacticOf(f.base[0]) || {}).name || ''}`)), React.createElement("button", {
+      type: "button",
+      "data-card-reg-template-pick": s.id,
+      disabled: auto === 'run',
+      onClick: () => {
+        Audio_.fgSe.tap();
+        onPick(f, `「${s.name}」で組みました`);
+      },
+      className: "mh-button mh-button-primary mt-2 min-h-[40px] w-full rounded-xl text-[13px] font-black"
+    }, "これで組む"));
+  })));
+};
 const CardDeckRegister = ({
   db,
   decks,
@@ -118948,6 +119131,7 @@ const CardDeckRegister = ({
   const [sheet, setSheet] = useState(null);
   const [custom, setCustom] = useState(null);
   const [trial, setTrial] = useState(false);
+  const [tpl, setTpl] = useState(false);
   const [monSheet, setMonSheet] = useState(null);
   const [basePick, setBasePick] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -119326,6 +119510,15 @@ const CardDeckRegister = ({
     }, rows.length ? `${cardRegRowText(rows[0])}${rows.length > 1 ? ` ほか${rows.length - 1}` : ''}` : 'まだ入っていません'));
   }))), React.createElement("button", {
     type: "button",
+    "data-card-reg-template-open": true,
+    disabled: !deck,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setTpl(true);
+    },
+    className: "mh-button min-h-[48px] w-full rounded-2xl border-2 border-amber-400 bg-amber-900/40 text-[14px] font-black text-amber-50 disabled:opacity-40"
+  }, "📋 おすすめの組み方・おまかせ"), React.createElement("button", {
+    type: "button",
     "data-card-reg-trial-open": true,
     disabled: !deck || !!issuesOf(deck).length,
     onClick: () => {
@@ -119458,7 +119651,22 @@ const CardDeckRegister = ({
       onBack();
     },
     className: "mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black"
-  }, "とじる")), trial && deck && React.createElement(CardRegTrialSheet, {
+  }, "とじる")), tpl && deck && React.createElement(CardRegTemplateSheet, {
+    db: db,
+    deck: deck,
+    tactics: tactics,
+    open: open,
+    lv: lv,
+    aces: acesNow,
+    monName: monName,
+    onPick: (frames, note) => {
+      setDraft(frames);
+      setStyleId('custom');
+      setTpl(false);
+      setMsg(note);
+    },
+    onClose: () => setTpl(false)
+  }), trial && deck && React.createElement(CardRegTrialSheet, {
     db: db,
     deck: deck,
     battle: battle,
@@ -120430,6 +120638,7 @@ const cardCupNormalizeView = v => {
     b: int(m.b),
     winner: m.winner === 0 || m.winner === 1 ? m.winner : null,
     ready: !!(m.live && m.live.ready_at),
+    dispute: !!(m.live && m.live.dispute),
     kos: Array.isArray(m.kos) ? m.kos.slice(0, 2).map(k => Number.isInteger(k) ? k : 0) : null,
     live: m.live && typeof m.live.play === 'string' ? {
       who: typeof m.live.who === 'string' ? m.live.who : null,
@@ -120947,7 +121156,8 @@ const CardCupDetail = ({
   profile,
   onChanged,
   onOpenRegister,
-  onOpenReplay = null
+  onOpenReplay = null,
+  onPlayLive = null
 }) => {
   const c = v.cup;
   const [busy, setBusy] = useState(false);
@@ -121023,7 +121233,8 @@ const CardCupDetail = ({
     v: v,
     now: now,
     selfId: selfId,
-    onChanged: onChanged
+    onChanged: onChanged,
+    onPlay: onPlayLive
   }), shown && c.format === 'ko' && React.createElement(CardCupBracket, {
     rounds: c.bracket,
     matches: v.matches,
@@ -121093,7 +121304,8 @@ const CardCup = ({
   onOpenRegister = null,
   initialCup = null,
   onCupChange = null,
-  onOpenReplay = null
+  onOpenReplay = null,
+  onPlayLive = null
 }) => {
   const [tab, setTab] = useState('list');
   const [list, setList] = useState(undefined);
@@ -121181,7 +121393,8 @@ const CardCup = ({
       profile: profile,
       onChanged: () => reload(),
       onOpenRegister: onOpenRegister,
-      onOpenReplay: onOpenReplay
+      onOpenReplay: onOpenReplay,
+      onPlayLive: onPlayLive
     }), back);
   }
   const find = async () => {
@@ -121355,6 +121568,56 @@ const CardCupLivePanel = ({
     startTried.current = true;
     void call('card_cup_live_start').then(() => onChanged());
   }, [c.status, v.me, now >= c.startAt]);
+  const autoTried = useRef(new Set());
+  useEffect(() => {
+    if (c.status !== 'running' || !selfId || typeof cardTourPlay !== 'function') return;
+    const meE = v.entries.find(e => e.mine);
+    if (!meE || !meE.checkin) return;
+    const here = s => {
+      const e = v.entries.find(x => x.seat === s);
+      return !!(e && e.checkin);
+    };
+    const todo = v.matches.filter(m => m.winner === null && m.ready && !autoTried.current.has(m.id) && (m.dispute || !here(m.a) && !here(m.b)));
+    if (!todo.length) return;
+    todo.forEach(m => autoTried.current.add(m.id));
+    void (async () => {
+      const key = await cardShareOwnerKey(false);
+      if (!key) return;
+      let done = 0;
+      for (const m of todo) {
+        const r = await cardTourRpc('card_cup_live_match', {
+          p_match: m.id,
+          p_owner: selfId,
+          p_key: key
+        });
+        if (!r || !r.a_side || !r.b_side || !r.a_side.deck || !r.b_side.deck) continue;
+        const res = cardTourPlay(CARD_BATTLE_DATA, {
+          deck: r.a_side.deck,
+          tactics: r.a_side.tactics || {}
+        }, {
+          deck: r.b_side.deck,
+          tactics: r.b_side.tactics || {}
+        }, {
+          seed: r.seed,
+          first: r.first,
+          key: `${c.id}|${r.round}|${r.slot}`
+        });
+        const out = await cardTourRpc('card_cup_live_report', {
+          p_match: m.id,
+          p_owner: selfId,
+          p_key: key,
+          p_winner: res.winner,
+          p_how: 'auto',
+          p_verified: false,
+          p_kos: res.kos,
+          p_acts: res.acts,
+          p_rules: res.rules
+        });
+        if (out === 'ok') done += 1;
+      }
+      if (done) void onChanged();
+    })();
+  }, [c.status, v.matches, selfId]);
   useEffect(() => {
     if (c.status !== 'running') return undefined;
     const t = setInterval(() => {
@@ -121433,13 +121696,13 @@ const CardCupLivePanel = ({
   }, jaWrap('相手が来ていないので、相手の登録デッキと戦います')), React.createElement("button", {
     type: "button",
     "data-card-cup-live-play": next.match.id,
-    disabled: !next.match.ready || !onPlay,
+    disabled: !next.match.ready || !onPlay || !!(foe && foe.checkin),
     onClick: () => {
       Audio_.fgSe.tap();
       if (onPlay) onPlay(next.match);
     },
-    className: `w-full rounded-2xl py-3 text-[15px] font-black ${next.match.ready && onPlay ? 'bg-gradient-to-b from-sky-300 to-sky-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`
-  }, !next.match.ready ? '前の回戦が終わるのを待っています' : onPlay ? '試合へ' : '試合の画面は準備中です'))), c.status === 'running' && c.format === 'ko' && typeof CardCupBracket === 'function' && React.createElement(CardCupBracket, {
+    className: `w-full rounded-2xl py-3 text-[15px] font-black ${next.match.ready && onPlay && !(foe && foe.checkin) ? 'bg-gradient-to-b from-sky-300 to-sky-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`
+  }, !next.match.ready ? '前の回戦が終わるのを待っています' : !onPlay ? '試合の画面は準備中です' : foe && foe.checkin ? '2人で戦う部屋は準備中です' : '試合へ'))), c.status === 'running' && c.format === 'ko' && typeof CardCupBracket === 'function' && React.createElement(CardCupBracket, {
     rounds: c.bracket,
     matches: v.matches,
     entries: v.entries,

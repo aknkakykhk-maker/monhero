@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8a05f4b9daef865e
+// generated-sha256: e93cc65f277f987d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -61916,6 +61916,26 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         setView('pvp');
         return;
       }
+      // 個人杯のリアルタイム杯(99-card-cup-live・④): 来ない相手の登録デッキと戦った試合。ごほうび・記録・ランキングには入れず、杯へ結果(absent)と手の並びを送って杯の画面へ戻る
+      //   手の並びは自分が0番の向き。自分が試合の b 側なら { order: 'ba', acts } で送る(93 の cardReplayFromTour が並びを戻す)
+      if (game.cup) {
+        const cup = game.cup;
+        const log = cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogRef.current : null;
+        if (log) cpuLogRef.current = null;
+        const acts = log ? log.acts.map((x) => [x.by, x.act]) : null;
+        const kosMe = [cardKoCount(st, CARD_ME), cardKoCount(st, CARD_CPU)];
+        const winnerSide = outcome === 'win' ? cup.side : 1 - cup.side;
+        const key = typeof cardShareOwnerKey === 'function' ? await cardShareOwnerKey(false) : null;
+        const r = key && typeof cardTourRpc === 'function' ? await cardTourRpc('card_cup_live_report', { p_match: cup.matchId, p_owner: cup.selfId, p_key: key, p_winner: winnerSide,
+          p_how: 'absent', p_verified: false, p_kos: cup.side === 0 ? kosMe : [kosMe[1], kosMe[0]], p_acts: acts && acts.length ? (cup.side === 0 ? acts : { order: 'ba', acts }) : null,
+          p_rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null }) : null;
+        setGame(null);
+        setNotice(r === 'ok' || r === 'done' ? (outcome === 'win' ? '勝ちました。結果を杯に送りました' : '負けました。結果を杯に送りました') : '結果を送れませんでした。杯の画面を開き直してください');
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView('cup');
+        return;
+      }
       // デバッグの「技の動きの見本」(game.demo)は、終わっても・投了しても何も保存しない(ボタンに「保存しない」と書いてある)。トップへ戻すだけ
       if (game.demo) {
         onBgm && onBgm(cardBgmOf(save.bgm.top));
@@ -62074,7 +62094,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // opts.rented … みんなのデッキ(95)で借りたデッキで戦う(デッキ選びの kind:'rent' の行)。借り物なので、持っているかは見ない
   const startBattle = (pick = foe, deck = activeDeck, opts = {}) => {
     const rented = opts && opts.rented ? opts.rented : null;
-    const issues = deck ? (rented ? cardDeckProblems(db, deck) : [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)]) : ['デッキがありません'];
+    // 個人杯のリアルタイム杯(④): 自分も相手も、始まる時刻に取った登録デッキの写し。種と先攻は杯の試合のもの(見返しで同じ試合になる)
+    const cup = opts && opts.cup ? opts.cup : null;
+    const issues = deck ? (rented || cup ? cardDeckProblems(db, deck) : [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)]) : ['デッキがありません'];
     if (!deck || issues.length) { setNotice(issues.join('・')); return; }
     const activeDeck = deck; // 下は選んだデッキで組む(デッキ選びで書き換えた active は、この描画ではまだ古いので受け取った物を使う)
     // みんなのデッキ(95): 登録デッキがそのまま相手。打ち方は登録した戦い方(盤面の policy)・名前とアイコンは登録した人
@@ -62082,8 +62104,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     // 毎試合、好きなモンスター ベスト4から3体を選んで組み直す(MASTER はこちらのデッキも見る)
     const cpuDeck = share ? { monsters: share.deck.monsters.slice(), cards: share.deck.cards.slice(), sameBlood: cardShareSameBlood(db, share.deck) }
       : cardAiBuildDeck(db, pick.who, pick.level, Math.random, { playerDeck: activeDeck });
-    const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
-    const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
+    const seed = cup ? cup.seed : (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+    const gameKey = cup ? `cup-${cup.matchId}-${Date.now().toString(36)}` : `${seed}`; // 試合の番号(手の記録と同じにする)
+    // 杯の first は 0 = a が先攻。自分が b 側(side 1)なら向きを入れかえる
+    const first = cup ? ((cup.first === cup.side) ? CARD_ME : CARD_CPU) : Math.random() < 0.5 ? CARD_ME : CARD_CPU;
     const assistant = share ? null : allAssistants.find((a) => a.id === pick.who);
     let st = cardCreateGame(db, { decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], names: ['あなた', share ? share.name : assistant ? assistant.name : 'あいて'], seed, first });
     // 検査のときだけ: 始まりの場を決めた形に差しかえる(window.__mhCardScene が関数のときだけ。ふだんの遊びでは無い)
@@ -62094,10 +62118,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } } : { mode: 'assistant',
       foe: { who: pick.who, name: assistant ? assistant.name : 'あいて', line: (CARD_VS_LINES[pick.who] || {})[pick.level] || null, deckName: cardAssistantDeckName(db, cpuDeck, pick.who, pick.level), monsters: vsMons(st, CARD_CPU) },
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } };
-    setGame({ key: `${seed}`, st, who: pick.who, level: pick.level, settings: save.settings, intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(share ? { share } : {}),
+    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(share ? { share } : {}), ...(cup ? { cup } : {}),
       ...(rented ? { rented: { ownerId: rented.ownerId, version: rented.version, name: rented.owner } } : {}) });
     const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
-    cpuLogRef.current = scene ? null : { id: `${seed}`, seed, first, decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], foeName: intro.foe.name, deckName: intro.foe.deckName || null, acts: [] };
+    cpuLogRef.current = scene ? null : { id: gameKey, seed, first, decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], foeName: intro.foe.name, deckName: intro.foe.deckName || null, acts: [] };
     // 途中で閉じたときに投了として数えるための印(CARD_CPU_OPEN_KEY)。書けなかったら、終わりにも印を見ない
     //   みんなのデッキの対戦は数えない(途中で閉じても投了の記録は付かない・ビートPも入らない)
     if (!share) void writeCpuOpen({ id: `${seed}`, who: pick.who, level: pick.level, rankable: !!(rank && rank.send) && !debug, at: Date.now(), beat: Date.now(), facts: cardResultFacts(st, CARD_ME) }, true);
@@ -62264,8 +62288,27 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       onNavigate('CARD_BATTLE');
       return true;
     };
-    return <CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId} onOpenReplay={openCupReplay}
-      onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('cup'); setView('tactics'); } : null}/>;
+    // リアルタイム杯の自分の試合(④): 材料(種・先攻・両方の写し)を読み、相手が来ていなければ相手の登録デッキの写しと戦う(2人で戦う部屋は 91・区切り3b)
+    const playCupLive = async (m) => {
+      if (!db || typeof cardTourRpc !== 'function' || typeof cardShareOwnerKey !== 'function') return;
+      const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+      const key = await cardShareOwnerKey(false);
+      const r = selfId && key ? await cardTourRpc('card_cup_live_match', { p_match: m.id, p_owner: selfId, p_key: key }) : null;
+      if (!r || (r.side !== 0 && r.side !== 1) || r.winner === 0 || r.winner === 1) { setNotice('この試合には入れません'); return; }
+      const mine = r.side === 0 ? r.a_side : r.b_side, foe = r.side === 0 ? r.b_side : r.a_side;
+      if ((r.side === 0 ? r.checkin_b : r.checkin_a)) { setNotice('相手が来ています。2人で戦う部屋は準備中です'); return; }
+      if (!mine || !mine.deck || !foe || !foe.deck) { setNotice('デッキの写しが読めませんでした'); return; }
+      const tactics = foe.tactics && typeof foe.tactics === 'object' ? foe.tactics : {};
+      const share = { name: (typeof cardCupText === 'function' ? cardCupText(foe.name, 40) : String(foe.name || '').slice(0, 40)) || 'ブリーダー', icon: foe.icon || null, frame: null,
+        deck: foe.deck, tactics: { ...tactics, name: tactics.name || null } };
+      startBattle({ who: tactics.habit || 'mua', level: 'normal', share }, mine.deck,
+        { cup: { matchId: r.id, cupId: r.cup_id, side: r.side, seed: r.seed, first: r.first, selfId } });
+    };
+    // 杯の試合のあと・入れなかったときの知らせ(下に小さく出す)
+    return <><CardCup onBack={() => { setCupOpenId(null); setView('mode'); }} initialCup={cupOpenId} onCupChange={setCupOpenId} onOpenReplay={openCupReplay} onPlayLive={playCupLive}
+      onOpenRegister={typeof CardDeckRegister === 'function' ? () => { setTacticsBack('cup'); setView('tactics'); } : null}/>
+      {notice && <div data-card-cup-toast className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit max-w-[92vw] rounded-full bg-slate-950/95 px-4 py-2 text-[13px] font-black text-amber-100 shadow-lg" style={JA_WRAP_STYLE}>{jaWrap(notice)}</div>}
+    </>;
   }
   // ---- 対戦の前のデッキ選び(助手と対戦・マルチ。練習試合には出さない) ----
   if (view === 'deckPick' && deckPick) {
@@ -67412,17 +67455,24 @@ const cardReplayFromCpu = (db, { id, at, myDeck, cpuDeck, seed, first, history, 
 //   opts.known … 会った助手の id(まだ会っていない助手は名前と顔を出さない。99 と同じ)。opts.title … 会場の見出し(大会の名前・何試合目)
 const cardReplayFromTour = (db, row, opts = {}) => {
   if (!db || !row || typeof row !== 'object') return null;
-  const a = row.a && typeof row.a === 'object' ? row.a : {}, b = row.b && typeof row.b === 'object' ? row.b : {};
+  // 個人杯のリアルタイム杯で、試合の b 側の端末が戦った試合(2026-10-31 ④): 端末は「自分が0番」で組むので、手の並びは b・a の順。
+  //   acts が { order: 'ba', acts: [...] } のときは、b を上(0番)・a を下に入れかえ、先攻も入れかえて組み直す(勝ち負けは杯の a・b のまま読む)
+  const ba = !!(row.acts && !Array.isArray(row.acts) && typeof row.acts === 'object' && row.acts.order === 'ba');
+  const rowActs = ba ? row.acts.acts : row.acts;
+  const ra = row.a && typeof row.a === 'object' ? row.a : {}, rb = row.b && typeof row.b === 'object' ? row.b : {};
+  const a = ba ? rb : ra, b = ba ? ra : rb;
   const decks = [cardReplayDeckOf(a.deck), cardReplayDeckOf(b.deck)];
   if (decks.includes(null)) return null;
   const seed = Number(row.seed);
   if (!Number.isInteger(seed) || seed < 0 || seed > 0xFFFFFFFF) return null;
   if (row.first !== 0 && row.first !== 1) return null;
+  const first = ba ? 1 - row.first : row.first;
+  const winner = row.winner === 0 || row.winner === 1 ? (ba ? 1 - row.winner : row.winner) : null;
   // サーバは1試合 CARD_TOUR_MAX_STEPS 手まで回す(助手と対戦の上限より多い)
   const max = typeof CARD_TOUR_MAX_STEPS === 'number' ? CARD_TOUR_MAX_STEPS : 4000;
-  if (!Array.isArray(row.acts) || !row.acts.length || row.acts.length > max) return null;
+  if (!Array.isArray(rowActs) || !rowActs.length || rowActs.length > max) return null;
   const acts = [];
-  for (const x of row.acts) {
+  for (const x of rowActs) {
     if (!Array.isArray(x) || (x[0] !== 0 && x[0] !== 1)) return null;
     const act = typeof cardPvpCleanAct === 'function' ? cardPvpCleanAct(x[1]) : (x[1] && typeof x[1] === 'object' ? x[1] : null);
     if (!act) return null;
@@ -67442,16 +67492,16 @@ const cardReplayFromTour = (db, row, opts = {}) => {
   // 登録デッキの試合: 上は見ている本人の登録デッキなので「あなたのデッキ」と呼ぶ(ログの「◯◯の攻撃」もこの名前)
   const names = [nameOf(a), deckKind ? 'あなたのデッキ' : nameOf(b)];
   return {
-    v: 1, id: `${deckKind ? 'deck' : 'tour'}-${String(row.id).replace(/[^0-9]/g, '').slice(0, 20)}`, kind: deckKind ? 'deck' : 'tour', at: 0, rules, first: row.first,
+    v: 1, id: `${deckKind ? 'deck' : 'tour'}-${String(row.id).replace(/[^0-9]/g, '').slice(0, 20)}`, kind: deckKind ? 'deck' : 'tour', at: 0, rules, first,
     names, foe: { name: names[1], icon: iconOf(b), frame: null, deckName: null, who: null },
-    outcome: row.winner === 0 ? 'win' : 'lose', reason: '', decks, seeds: [seed, 0], acts, prints: '', fav: false, turn: null, level: null,
+    outcome: winner === 0 ? 'win' : 'lose', reason: '', decks, seeds: [seed, 0], acts, prints: '', fav: false, turn: null, level: null,
     // 見返しの会場と実況(84 の盤面の下・93 の CardTourLive)
     tour: {
       title: cardReplayText(opts.title, 40), stage: row.stage === 'final' ? 'final' : 'group',
       // 上の帯の印と、はじまりの一言(登録デッキの試合だけ)
       badge: deckKind ? '登録デッキ' : '大会', deck: deckKind,
       me: { name: names[0], icon: iconOf(a) },
-      winner: row.winner === 0 || row.winner === 1 ? names[row.winner] : '',
+      winner: winner === 0 || winner === 1 ? names[winner] : '',
       live: live ? { play: cardReplayText(live.play, 200), review: cardReplayText(live.review, 240) } : null,
       caster: caster ? { name: caster.name, face: caster.face || null } : null,
       // ルールの版がちがう(サーバで回したあとにルールが変わった)。途中までしか見られないことがあるので、はじめに知らせる
@@ -70255,6 +70305,54 @@ const CardRegTrialSheet = ({ db, deck, battle, aces, monName, onClose }) => {
   );
 };
 
+// ---- おすすめの組み方・おまかせ(2026-10-31 社長「組み合わせ方がわからない」・案B) ----
+// 戦い方を決める画面から、型(CARD_REG_STYLES)の中の並びを見て選べる。「おまかせ」は4つの型をためしに3戦ずつ戦わせて、いちばん勝った型で組む
+const CARD_REG_AUTO_GAMES = 3;
+const cardRegAutoPick = (db, deck, tactics, open, lv, aces) => {
+  const scores = CARD_REG_STYLES.map((s, si) => {
+    const frames = cardRegApplyStyle(s, tactics, open);
+    const battle = cardTacticsFramesForBattle({ ...tactics, frames }, lv);
+    let wins = 0;
+    for (let g = 0; g < CARD_REG_AUTO_GAMES; g++) if (cardRegTrialOne(db, deck, battle, aces, si * CARD_REG_AUTO_GAMES + g).win) wins++;
+    return { s, frames, wins };
+  });
+  return scores.reduce((best, x) => (x.wins > best.wins ? x : best), scores[0]);
+};
+const CardRegTemplateSheet = ({ db, deck, tactics, open, lv, aces, monName, onPick, onClose }) => {
+  const [auto, setAuto] = useState(''); // '' / 'run'
+  const runAuto = () => {
+    setAuto('run');
+    setTimeout(() => { const best = cardRegAutoPick(db, deck, tactics, open, lv, aces); onPick(best.frames, `おまかせ: 「${best.s.name}」がいちばん勝ちました(${CARD_REG_AUTO_GAMES}戦 ${best.wins}勝)`); }, 60);
+  };
+  return (
+    <div data-card-reg-templates className="fixed inset-0 z-[82] flex flex-col bg-slate-950/95 p-3">
+      <ScreenHead title="おすすめの組み方" accent="text-amber-200" onBack={onClose} note="えらぶと、3体とブリーダーの戦い方がまとめて入ります(いまの戦い方は置きかわります)"/>
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
+        <button type="button" data-card-reg-auto disabled={auto === 'run'} onClick={() => { Audio_.fgSe.tap(); runAuto(); }}
+          className="mh-button w-full rounded-2xl border-2 border-dashed border-sky-300 bg-sky-950/60 py-3 text-[14px] font-black text-sky-50 disabled:opacity-60" style={JA_WRAP_STYLE}>
+          {auto === 'run' ? '4つの型を、ためしに戦わせています…' : `🎲 おまかせ(4つの型をためしに${CARD_REG_AUTO_GAMES}戦ずつ戦わせて、いちばん勝った型で組む)`}
+        </button>
+        {CARD_REG_STYLES.map((s) => {
+          const f = cardRegApplyStyle(s, tactics, open);
+          const rows = [...[0, 1, 2].flatMap((mi) => f.mons[mi].slice(0, 1).map((r) => `${monName(mi)}: ${cardRegRowText(r)}`)), ...f.breeder.slice(0, 1).map((r) => `ブリーダー: ${cardRegRowText(r)}`)];
+          return (
+            <div key={s.id} data-card-reg-template={s.id} className="rounded-2xl border-2 border-white/15 bg-slate-900 p-2.5">
+              <b className="block text-[15px] font-black text-white">{cardIconNode(s.icon, 16)} {s.name}</b>
+              <small className="block text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{s.desc}</small>
+              <div className="mt-1.5 space-y-0.5">
+                {rows.map((x, i) => <div key={i} className="rounded-md bg-white/5 px-1.5 py-0.5 text-[11px] font-bold text-slate-100" style={JA_WRAP_STYLE}>{x}</div>)}
+                <div className="rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[11px] font-bold text-amber-100">{`📘 基本の型: ${(cardTacticOf(f.base[0]) || {}).name || ''}`}</div>
+              </div>
+              <button type="button" data-card-reg-template-pick={s.id} disabled={auto === 'run'} onClick={() => { Audio_.fgSe.tap(); onPick(f, `「${s.name}」で組みました`); }}
+                className="mh-button mh-button-primary mt-2 min-h-[40px] w-full rounded-xl text-[13px] font-black">これで組む</button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 // onOpenList … 持っている戦術カードの一覧(97)/ onOpenMarket … マーケットの戦術カード
 // onOpenReplays … 登録中のデッキが戦われた試合の一覧へ(95 の CardDeckReplays。2026-10-31)
 const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenList = null, onOpenMarket = null, onOpenReplays = null }) => {
@@ -70270,6 +70368,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
   const [sheet, setSheet] = useState(null);     // { where, k }
   const [custom, setCustom] = useState(null);   // { k, c? } 自分で組み合わせる
   const [trial, setTrial] = useState(false); // ためしに戦わせる(CardRegTrialSheet)
+  const [tpl, setTpl] = useState(false);     // おすすめの組み方・おまかせ(CardRegTemplateSheet)
   const [monSheet, setMonSheet] = useState(null); // ③ モンスターを押した先(下から出る「◯◯の手」。0〜2)
   const [basePick, setBasePick] = useState(null); // ① 基本の型をえらぶ(0 メイン・1 サブ1・2 サブ2)
   const [busy, setBusy] = useState(false);
@@ -70435,6 +70534,8 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
               })}
             </div>
           </section>
+          <button type="button" data-card-reg-template-open disabled={!deck} onClick={() => { Audio_.fgSe.tap(); setTpl(true); }}
+            className="mh-button min-h-[48px] w-full rounded-2xl border-2 border-amber-400 bg-amber-900/40 text-[14px] font-black text-amber-50 disabled:opacity-40">📋 おすすめの組み方・おまかせ</button>
           <button type="button" data-card-reg-trial-open disabled={!deck || !!issuesOf(deck).length} onClick={() => { Audio_.fgSe.tap(); setTrial(true); }}
             className="mh-button min-h-[48px] w-full rounded-2xl border-2 border-violet-400 bg-violet-900/60 text-[14px] font-black text-violet-50 disabled:opacity-40">{`▶ ためしに戦わせる(助手と${CARD_REG_TRIAL_GAMES}戦・よく働いたカード)`}</button>
         </>)}
@@ -70477,6 +70578,8 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
       {step === 'custom' && footer(null, <button type="button" data-card-reg-next onClick={() => { Audio_.fgSe.tap(); setStep('confirm'); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black">決める(登録の確かめへ)</button>)}
       {step === 'confirm' && footer(back(styleId === 'custom' ? 'custom' : 'style'), <button type="button" data-card-reg-register disabled={busy || !deck || !selfId} onClick={() => { Audio_.fgSe.tap(); void register(); }} className="mh-button mh-button-primary min-h-[52px] flex-[2] rounded-2xl font-black disabled:opacity-40">{mine ? 'この内容で登録し直す' : 'このデッキを登録する'}</button>)}
       {step === 'done' && footer(null, <button type="button" onClick={() => { Audio_.fgSe.tap(); onBack(); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black">とじる</button>)}
+      {tpl && deck && <CardRegTemplateSheet db={db} deck={deck} tactics={tactics} open={open} lv={lv} aces={acesNow} monName={monName}
+        onPick={(frames, note) => { setDraft(frames); setStyleId('custom'); setTpl(false); setMsg(note); }} onClose={() => setTpl(false)}/>}
       {trial && deck && <CardRegTrialSheet db={db} deck={deck} battle={battle} aces={acesNow} monName={monName} onClose={() => setTrial(false)}/>}
       {monSheet !== null && !sheet && !custom && (
         <CardRegMonSheet db={db} deck={deck} k={monSheet} rows={draft.mons[monSheet]} max={open.mon} why={uncounted.mons[monSheet]} name={monName} counts={draft.mons.map((r) => r.length)} baseName={(cardTacticOf(draft.base[0]) || {}).name || ''}
@@ -71022,6 +71125,7 @@ const cardCupNormalizeView = (v) => {
   const matches = (Array.isArray(v.matches) ? v.matches : []).filter((m) => m && Number.isFinite(Number(m.id))).map((m) => ({
     id: Number(m.id), round: int(m.round) || 0, slot: int(m.slot) || 0, a: int(m.a), b: int(m.b), winner: m.winner === 0 || m.winner === 1 ? m.winner : null,
     ready: !!(m.live && m.live.ready_at), // リアルタイム杯: 戦える回戦か(④ 99-card-cup-live)
+    dispute: !!(m.live && m.live.dispute), // リアルタイム杯: 2台の答えが食い違った(来ている人の端末が auto で決め直す)
     kos: Array.isArray(m.kos) ? m.kos.slice(0, 2).map((k) => (Number.isInteger(k) ? k : 0)) : null,
     live: m.live && typeof m.live.play === 'string' ? { who: typeof m.live.who === 'string' ? m.live.who : null, play: m.live.play.slice(0, 200), review: typeof m.live.review === 'string' ? m.live.review.slice(0, 240) : '' } : null }))
     .filter((m) => m.a !== null && m.b !== null);
@@ -71280,7 +71384,7 @@ const CardCupMatches = ({ v, onOpenReplay, selfId = null }) => {
   );
 };
 
-const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegister, onOpenReplay = null }) => {
+const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegister, onOpenReplay = null, onPlayLive = null }) => {
   const c = v.cup;
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -71313,7 +71417,7 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
         {c.status === 'done' && !shown && <div className="mt-1 text-[12px] font-black text-amber-200">{`結果は ${cardTourTimeLabel(c.startAt)} に出ます`}</div>}
         {c.mode === 'auto' && c.status === 'running' && <div className="mt-1 text-[12px] font-black text-amber-200">{`試合はサーバで自動で行われます。結果は ${cardTourTimeLabel(c.startAt)} に出ます`}</div>}
       </div>
-      {c.mode === 'live' && typeof CardCupLivePanel === 'function' && <CardCupLivePanel v={v} now={now} selfId={selfId} onChanged={onChanged}/>}
+      {c.mode === 'live' && typeof CardCupLivePanel === 'function' && <CardCupLivePanel v={v} now={now} selfId={selfId} onChanged={onChanged} onPlay={onPlayLive}/>}
       {shown && c.format === 'ko' && <CardCupBracket rounds={c.bracket} matches={v.matches} entries={v.entries} done/>}
       {shown && c.format === 'rr' && typeof CardTourGrid === 'function' && <CardTourGrid view={cardCupAsTourView(v)} stage="group" grp={0} known={null} now={now}/>}
       {shown && ranked.length > 0 && (
@@ -71340,7 +71444,8 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
 // ---- 画面 ----
 // onBack … 対戦えらびへ / onOpenRegister … デッキ登録へ(戻ると、この画面のいまの杯に戻る)
 // onOpenReplay(matchId, title, owner) … 試合の見返しを開く(84。開けなかったら false。合言葉だけの杯は参加者だけ見られるので owner を渡す)
-const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange = null, onOpenReplay = null }) => {
+// onPlayLive(match) … リアルタイム杯の自分の試合を戦う(84 が対戦の画面を開く・④)
+const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange = null, onOpenReplay = null, onPlayLive = null }) => {
   const [tab, setTab] = useState('list');
   const [list, setList] = useState(undefined);
   const [done, setDone] = useState([]); // 終わった公開の杯(終わって30日まで。2026-10-31 社長 案A)
@@ -71381,7 +71486,7 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
   if (cupId) {
     const back = () => { setCupId(null); if (selfId) void cardCupMine(selfId).then(setMineCups); void cardCupList().then((l) => l && setList(l)); };
     if (!view) return shell(<ScreenEmpty emoji="⏳" lines={['読み込んでいます']}/>, back);
-    return shell(<CardCupDetail v={view} now={now} mine={mine} selfId={selfId} profile={profile} onChanged={() => reload()} onOpenRegister={onOpenRegister} onOpenReplay={onOpenReplay}/>, back);
+    return shell(<CardCupDetail v={view} now={now} mine={mine} selfId={selfId} profile={profile} onChanged={() => reload()} onOpenRegister={onOpenRegister} onOpenReplay={onOpenReplay} onPlayLive={onPlayLive}/>, back);
   }
   const find = async () => {
     const c = String(code || '').replace(/[^0-9]/g, '');
@@ -71421,7 +71526,9 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
 //   ・集合は始まる10分前から。来ていない人の試合は、その人の登録デッキが自動で戦う
 //   ・始まる時刻を過ぎたら、開いている参加者のだれかの端末が始める(card_cup_live_start。何度呼ばれても同じ)。全員そろえば主催が早めに始められる
 //   ・開いているあいだ、様子を読み直す(8秒おき)。片方だけが結果を送った試合も決める(card_cup_live_settle・30秒おき)
-//   ・試合の画面(91 の部屋で戦う・来ない人のデッキと戦う)は区切り3。onPlay が無いあいだは「試合へ」を押せない
+//   ・「試合へ」(onPlay・84): 相手が来ていなければ、相手の登録デッキの写しと戦う(absent)。2人で戦う部屋(91)は区切り3b
+//   ・2人とも来ていない試合・2台の答えが食い違った試合は、来ている参加者の端末が写しどうしを回して決める(auto)。
+//     回し方はサーバ(cup.js の runLiveCups)と同じ cardTourPlay・種は試合の種・key は「杯|回戦|枠」なので、だれが回しても同じ結果
 
 const CARD_CUP_LIVE_CHECKIN_MS = 10 * 60000; // 集合は始まる何分前から
 const CARD_CUP_LIVE_POLL_MS = 8000;
@@ -71475,6 +71582,32 @@ const CardCupLivePanel = ({ v, now, selfId, onChanged, onPlay = null }) => {
     startTried.current = true;
     void call('card_cup_live_start').then(() => onChanged());
   }, [c.status, v.me, now >= c.startAt]);
+  // 2人とも来ていない試合・食い違った試合を、来ている自分の端末で回して決める(同じ試合はこの画面で1回だけ試す)
+  const autoTried = useRef(new Set());
+  useEffect(() => {
+    if (c.status !== 'running' || !selfId || typeof cardTourPlay !== 'function') return;
+    const meE = v.entries.find((e) => e.mine);
+    if (!meE || !meE.checkin) return;
+    const here = (s) => { const e = v.entries.find((x) => x.seat === s); return !!(e && e.checkin); };
+    const todo = v.matches.filter((m) => m.winner === null && m.ready && !autoTried.current.has(m.id) && (m.dispute || (!here(m.a) && !here(m.b))));
+    if (!todo.length) return;
+    todo.forEach((m) => autoTried.current.add(m.id));
+    void (async () => {
+      const key = await cardShareOwnerKey(false);
+      if (!key) return;
+      let done = 0;
+      for (const m of todo) {
+        const r = await cardTourRpc('card_cup_live_match', { p_match: m.id, p_owner: selfId, p_key: key });
+        if (!r || !r.a_side || !r.b_side || !r.a_side.deck || !r.b_side.deck) continue;
+        const res = cardTourPlay(CARD_BATTLE_DATA, { deck: r.a_side.deck, tactics: r.a_side.tactics || {} }, { deck: r.b_side.deck, tactics: r.b_side.tactics || {} },
+          { seed: r.seed, first: r.first, key: `${c.id}|${r.round}|${r.slot}` });
+        const out = await cardTourRpc('card_cup_live_report', { p_match: m.id, p_owner: selfId, p_key: key, p_winner: res.winner, p_how: 'auto', p_verified: false,
+          p_kos: res.kos, p_acts: res.acts, p_rules: res.rules });
+        if (out === 'ok') done += 1;
+      }
+      if (done) void onChanged();
+    })();
+  }, [c.status, v.matches, selfId]);
   // 片方だけが結果を送った試合を決める
   useEffect(() => {
     if (c.status !== 'running') return undefined;
@@ -71528,9 +71661,9 @@ const CardCupLivePanel = ({ v, now, selfId, onChanged, onPlay = null }) => {
                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-black ${foe && foe.checkin ? 'bg-emerald-500 text-slate-950' : 'bg-slate-600 text-slate-100'}`}>{foe && foe.checkin ? '来ています' : '来ていません'}</span>
               </div>
               {foe && !foe.checkin && <div className="text-[12px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('相手が来ていないので、相手の登録デッキと戦います')}</div>}
-              <button type="button" data-card-cup-live-play={next.match.id} disabled={!next.match.ready || !onPlay} onClick={() => { Audio_.fgSe.tap(); if (onPlay) onPlay(next.match); }}
-                className={`w-full rounded-2xl py-3 text-[15px] font-black ${next.match.ready && onPlay ? 'bg-gradient-to-b from-sky-300 to-sky-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
-                {!next.match.ready ? '前の回戦が終わるのを待っています' : onPlay ? '試合へ' : '試合の画面は準備中です'}
+              <button type="button" data-card-cup-live-play={next.match.id} disabled={!next.match.ready || !onPlay || !!(foe && foe.checkin)} onClick={() => { Audio_.fgSe.tap(); if (onPlay) onPlay(next.match); }}
+                className={`w-full rounded-2xl py-3 text-[15px] font-black ${next.match.ready && onPlay && !(foe && foe.checkin) ? 'bg-gradient-to-b from-sky-300 to-sky-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
+                {!next.match.ready ? '前の回戦が終わるのを待っています' : !onPlay ? '試合の画面は準備中です' : foe && foe.checkin ? '2人で戦う部屋は準備中です' : '試合へ'}
               </button>
             </>
           )}
