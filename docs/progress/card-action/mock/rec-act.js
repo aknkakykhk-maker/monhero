@@ -3,7 +3,7 @@ const { chromium } = require('playwright');
 const path = require('path'), fs = require('fs'), cp = require('child_process');
 const [port, ver, out] = process.argv.slice(2);
 const CUT = ver === 'cut';
-const CARDS = ['261', '018', '131', '147', '357', '311', '264', '242', '232'];
+const CARDS = process.env.CARDS ? process.env.CARDS.split(',') : ['261', '018', '131', '147', '357', '311', '264', '242', '232'];
 (async () => {
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const dir = fs.mkdtempSync(path.join(path.dirname(out), 'raw-'));
@@ -17,16 +17,18 @@ const CARDS = ['261', '018', '131', '147', '357', '311', '264', '242', '232'];
   await page.evaluate((ver) => {
     window.__cardMotionV = ver === 'now' ? 'now' : 'A';
     const st = document.createElement('style'); st.textContent = `
-      .ci{position:absolute;left:0;right:0;top:330px;height:150px;z-index:90;pointer-events:none;overflow:hidden}
-      .ci-band{position:absolute;inset:0;background:linear-gradient(90deg,rgba(15,10,40,.0),rgba(15,10,40,.92) 12%,rgba(60,20,90,.92) 50%,rgba(15,10,40,.92) 88%,rgba(15,10,40,0));transform:skewY(-6deg);animation:ciBand .6s ease-out both;border-top:3px solid #fde047;border-bottom:3px solid #fde047;box-shadow:0 0 30px rgba(253,224,71,.6)}
-      .ci-lines{position:absolute;inset:0;transform:skewY(-6deg);background:repeating-linear-gradient(90deg,rgba(255,255,255,.18) 0 2px,transparent 2px 26px);animation:ciLines .6s linear both}
-      .ci-card{position:absolute;top:10px;height:130px;aspect-ratio:5/7;border-radius:8px;box-shadow:0 0 0 3px #fff,0 0 24px 6px rgba(253,224,71,.9);animation:ciCard .6s cubic-bezier(.2,.9,.3,1) both}
-      .ci-name{position:absolute;left:150px;right:8px;top:38px;font-size:34px;font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:1.5px #7c2d12;text-shadow:0 0 12px #f59e0b,0 3px 0 #7c2d12;white-space:nowrap;animation:ciName .6s cubic-bezier(.2,1.4,.4,1) both}
-      .ci-sub{position:absolute;left:152px;top:88px;font-size:14px;font-weight:900;color:#fde047;animation:ciName .6s .05s cubic-bezier(.2,1.4,.4,1) both}
-      @keyframes ciBand{0%{opacity:0;transform:skewY(-6deg) scaleY(0)}20%{opacity:1;transform:skewY(-6deg) scaleY(1)}80%{opacity:1}100%{opacity:0;transform:skewY(-6deg) scaleY(.2)}}
-      @keyframes ciLines{0%{background-position:0 0;opacity:0}20%{opacity:1}100%{background-position:-260px 0;opacity:0}}
-      @keyframes ciCard{0%{left:420px;transform:rotate(8deg)}30%{left:22px;transform:rotate(-4deg)}80%{left:12px;opacity:1}100%{left:-160px;opacity:0}}
-      @keyframes ciName{0%{opacity:0;transform:translateX(120px) scale(1.4)}30%{opacity:1;transform:none}80%{opacity:1;transform:none}100%{opacity:0;transform:translateX(-60px)}}`; document.head.appendChild(st);
+      .ci{position:absolute;left:0;right:0;top:300px;height:210px;z-index:90;pointer-events:none;overflow:hidden}
+      .ci-flash{position:absolute;inset:-40px 0;background:radial-gradient(ellipse at 50% 50%,rgba(255,255,255,.95),rgba(255,230,120,.6) 40%,transparent 70%);animation:ciFlash 1s ease-out both}
+      .ci-band{position:absolute;left:-10px;right:-10px;top:24px;bottom:24px;background:linear-gradient(90deg,#f59e0b,#fde047 18%,#fff7cc 50%,#fde047 82%,#f59e0b);transform:skewY(-7deg);animation:ciBand 1s ease-out both;box-shadow:0 0 0 4px #fff,0 0 40px 10px rgba(253,224,71,.95)}
+      .ci-lines{position:absolute;left:-10px;right:-10px;top:24px;bottom:24px;transform:skewY(-7deg);background:repeating-linear-gradient(90deg,rgba(255,255,255,.65) 0 3px,transparent 3px 30px);mix-blend-mode:overlay;animation:ciLines 1s linear both}
+      .ci-card{position:absolute;top:8px;height:194px;aspect-ratio:5/7;border-radius:10px;box-shadow:0 0 0 4px #fff,0 0 30px 8px rgba(255,255,255,.95);animation:ciCard 1s cubic-bezier(.2,.9,.3,1) both}
+      .ci-name{position:absolute;left:158px;right:6px;top:62px;font-size:44px;line-height:1.05;font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:3px #b45309;paint-order:stroke fill;text-shadow:0 0 14px #fff,0 4px 0 #78350f;white-space:nowrap;animation:ciName 1s cubic-bezier(.2,1.4,.4,1) both}
+      .ci-sub{position:absolute;left:162px;top:122px;font-size:17px;font-weight:900;color:#7c2d12;background:#fff;padding:1px 10px;border-radius:999px;animation:ciName 1s .05s cubic-bezier(.2,1.4,.4,1) both}
+      @keyframes ciFlash{0%{opacity:0}10%{opacity:1}40%{opacity:0}100%{opacity:0}}
+      @keyframes ciBand{0%{opacity:0;transform:skewY(-7deg) scaleY(0)}12%{opacity:1;transform:skewY(-7deg) scaleY(1.15)}20%{transform:skewY(-7deg) scaleY(1)}85%{opacity:1}100%{opacity:0;transform:skewY(-7deg) scaleY(.2)}}
+      @keyframes ciLines{0%{background-position:0 0;opacity:0}15%{opacity:1}100%{background-position:-420px 0;opacity:0}}
+      @keyframes ciCard{0%{left:420px;transform:rotate(10deg) scale(1.2)}22%{left:14px;transform:rotate(-5deg) scale(1)}85%{left:6px;opacity:1}100%{left:-200px;opacity:0}}
+      @keyframes ciName{0%{opacity:0;transform:translateX(160px) scale(1.6)}22%{opacity:1;transform:none}85%{opacity:1;transform:none}100%{opacity:0;transform:translateX(-80px)}}`; document.head.appendChild(st);
     const h = document.createElement('div'); h.id = 'h';
     h.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:radial-gradient(circle at 50% 40%,#3b2a6b,#120d2a);color:#fff;overflow:hidden';
     document.body.appendChild(h);
@@ -47,8 +49,8 @@ const CARDS = ['261', '018', '131', '147', '357', '311', '264', '242', '232'];
         E('div', { id: 'tg', className: 'flex items-end justify-center', style: { position: 'absolute', top: 150, left: 0, right: 0, height: 150 } }, E('img', { src: target, style: { height: 150, transform: 'scaleX(-1)' } })),
         E('div', { className: 'relative flex items-end justify-center', style: { position: 'absolute', top: 520, left: 0, right: 0, height: 160, isolation: 'isolate', zIndex: 40, '--atk-dx': '0px', '--atk-dy': '-370px' } },
           E(SkillFxMotion, { key: `${no}-${Date.now()}`, kind, image: E('img', { src: art, style: { height: 160 } }) })),
-        ver === 'cut' && c.damage >= 6 ? E('div', { className: 'ci', key: `ci-${no}` }, E('div', { className: 'ci-band' }), E('div', { className: 'ci-lines' }),
-          E('img', { className: 'ci-card', src: CARD_IMG(c.img) }), E('div', { className: 'ci-name' }, c.name), E('div', { className: 'ci-sub' }, `${m.name}の大技!`)) : null));
+        ver === 'cut' && c.damage >= 6 ? E('div', { className: 'ci', key: `ci-${no}` }, E('div', { className: 'ci-flash' }), E('div', { className: 'ci-band' }), E('div', { className: 'ci-lines' }),
+          E('img', { className: 'ci-card', src: CARD_IMG(c.img) }), E('div', { className: 'ci-name', style: { fontSize: c.name.length <= 4 ? 46 : c.name.length <= 6 ? 36 : 28 } }, c.name), E('div', { className: 'ci-sub' }, `${m.name}の大技!`)) : null));
       const sp = skillFxSpecOf(kind);
       setTimeout(() => { const t = document.getElementById('tg'); if (t) { t.classList.add('mh-card-hit'); } }, sp ? sp.hit : 400);
       return cardMotionMs(kind);
