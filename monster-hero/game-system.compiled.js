@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fd9ab684f702e5e1
+// source-sha256: cfc3288fdb6b6e37
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -119017,6 +119017,95 @@ const CardRegTrialSheet = ({
     className: "mh-button mh-button-primary min-h-[48px] w-full rounded-2xl font-black"
   }, "戦い方にもどる"));
 };
+const CARD_REG_AUTO_GAMES = 3;
+const cardRegAutoPick = (db, deck, tactics, open, lv, aces) => {
+  const scores = CARD_REG_STYLES.map((s, si) => {
+    const frames = cardRegApplyStyle(s, tactics, open);
+    const battle = cardTacticsFramesForBattle({
+      ...tactics,
+      frames
+    }, lv);
+    let wins = 0;
+    for (let g = 0; g < CARD_REG_AUTO_GAMES; g++) if (cardRegTrialOne(db, deck, battle, aces, si * CARD_REG_AUTO_GAMES + g).win) wins++;
+    return {
+      s,
+      frames,
+      wins
+    };
+  });
+  return scores.reduce((best, x) => x.wins > best.wins ? x : best, scores[0]);
+};
+const CardRegTemplateSheet = ({
+  db,
+  deck,
+  tactics,
+  open,
+  lv,
+  aces,
+  monName,
+  onPick,
+  onClose
+}) => {
+  const [auto, setAuto] = useState('');
+  const runAuto = () => {
+    setAuto('run');
+    setTimeout(() => {
+      const best = cardRegAutoPick(db, deck, tactics, open, lv, aces);
+      onPick(best.frames, `おまかせ: 「${best.s.name}」がいちばん勝ちました(${CARD_REG_AUTO_GAMES}戦 ${best.wins}勝)`);
+    }, 60);
+  };
+  return React.createElement("div", {
+    "data-card-reg-templates": true,
+    className: "fixed inset-0 z-[82] flex flex-col bg-slate-950/95 p-3"
+  }, React.createElement(ScreenHead, {
+    title: "おすすめの組み方",
+    accent: "text-amber-200",
+    onBack: onClose,
+    note: "えらぶと、3体とブリーダーの戦い方がまとめて入ります(いまの戦い方は置きかわります)"
+  }), React.createElement("div", {
+    className: "min-h-0 flex-1 space-y-2 overflow-y-auto pb-3"
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-reg-auto": true,
+    disabled: auto === 'run',
+    onClick: () => {
+      Audio_.fgSe.tap();
+      runAuto();
+    },
+    className: "mh-button w-full rounded-2xl border-2 border-dashed border-sky-300 bg-sky-950/60 py-3 text-[14px] font-black text-sky-50 disabled:opacity-60",
+    style: JA_WRAP_STYLE
+  }, auto === 'run' ? '4つの型を、ためしに戦わせています…' : `🎲 おまかせ(4つの型をためしに${CARD_REG_AUTO_GAMES}戦ずつ戦わせて、いちばん勝った型で組む)`), CARD_REG_STYLES.map(s => {
+    const f = cardRegApplyStyle(s, tactics, open);
+    const rows = [...[0, 1, 2].flatMap(mi => f.mons[mi].slice(0, 1).map(r => `${monName(mi)}: ${cardRegRowText(r)}`)), ...f.breeder.slice(0, 1).map(r => `ブリーダー: ${cardRegRowText(r)}`)];
+    return React.createElement("div", {
+      key: s.id,
+      "data-card-reg-template": s.id,
+      className: "rounded-2xl border-2 border-white/15 bg-slate-900 p-2.5"
+    }, React.createElement("b", {
+      className: "block text-[15px] font-black text-white"
+    }, cardIconNode(s.icon, 16), " ", s.name), React.createElement("small", {
+      className: "block text-[11px] font-bold text-slate-300",
+      style: JA_WRAP_STYLE
+    }, s.desc), React.createElement("div", {
+      className: "mt-1.5 space-y-0.5"
+    }, rows.map((x, i) => React.createElement("div", {
+      key: i,
+      className: "rounded-md bg-white/5 px-1.5 py-0.5 text-[11px] font-bold text-slate-100",
+      style: JA_WRAP_STYLE
+    }, x)), React.createElement("div", {
+      className: "rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[11px] font-bold text-amber-100"
+    }, `📘 基本の型: ${(cardTacticOf(f.base[0]) || {}).name || ''}`)), React.createElement("button", {
+      type: "button",
+      "data-card-reg-template-pick": s.id,
+      disabled: auto === 'run',
+      onClick: () => {
+        Audio_.fgSe.tap();
+        onPick(f, `「${s.name}」で組みました`);
+      },
+      className: "mh-button mh-button-primary mt-2 min-h-[40px] w-full rounded-xl text-[13px] font-black"
+    }, "これで組む"));
+  })));
+};
 const CardDeckRegister = ({
   db,
   decks,
@@ -119042,6 +119131,7 @@ const CardDeckRegister = ({
   const [sheet, setSheet] = useState(null);
   const [custom, setCustom] = useState(null);
   const [trial, setTrial] = useState(false);
+  const [tpl, setTpl] = useState(false);
   const [monSheet, setMonSheet] = useState(null);
   const [basePick, setBasePick] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -119420,6 +119510,15 @@ const CardDeckRegister = ({
     }, rows.length ? `${cardRegRowText(rows[0])}${rows.length > 1 ? ` ほか${rows.length - 1}` : ''}` : 'まだ入っていません'));
   }))), React.createElement("button", {
     type: "button",
+    "data-card-reg-template-open": true,
+    disabled: !deck,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setTpl(true);
+    },
+    className: "mh-button min-h-[48px] w-full rounded-2xl border-2 border-amber-400 bg-amber-900/40 text-[14px] font-black text-amber-50 disabled:opacity-40"
+  }, "📋 おすすめの組み方・おまかせ"), React.createElement("button", {
+    type: "button",
     "data-card-reg-trial-open": true,
     disabled: !deck || !!issuesOf(deck).length,
     onClick: () => {
@@ -119552,7 +119651,22 @@ const CardDeckRegister = ({
       onBack();
     },
     className: "mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black"
-  }, "とじる")), trial && deck && React.createElement(CardRegTrialSheet, {
+  }, "とじる")), tpl && deck && React.createElement(CardRegTemplateSheet, {
+    db: db,
+    deck: deck,
+    tactics: tactics,
+    open: open,
+    lv: lv,
+    aces: acesNow,
+    monName: monName,
+    onPick: (frames, note) => {
+      setDraft(frames);
+      setStyleId('custom');
+      setTpl(false);
+      setMsg(note);
+    },
+    onClose: () => setTpl(false)
+  }), trial && deck && React.createElement(CardRegTrialSheet, {
     db: db,
     deck: deck,
     battle: battle,
