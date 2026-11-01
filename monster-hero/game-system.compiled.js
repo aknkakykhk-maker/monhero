@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 469761c88f74b0c4
+// source-sha256: 1d6097230694362e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115425,7 +115425,7 @@ const cardReplayMake = (db, {
   const built = cardReplayBuild(db, one);
   if (built.stop !== null) return null;
   one.prints = built.states.slice(1).map(cardReplayPrint).join('');
-  one.turn = built.states[built.states.length - 1].turn;
+  one.turn = built.states[Math.max(0, built.states.length - 2)].turn;
   return one;
 };
 const cardReplayFromPvp = (db, {
