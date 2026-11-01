@@ -62,6 +62,8 @@ const ASSISTANT_CHAT_RANKING_MAX = 20;
 const ASSISTANT_CHAT_RANKING_PREV = 2;
 // 「その種類の難易度を全部」の言葉。英字の EXTREME は難易度そのものの名前なので、ここには入れない(カタカナ・漢字だけ)
 const ASSISTANT_CHAT_RANKING_EXTREME_WORD = /エクストリーム|極限/;
+// 冥界チャレンジ(INFERNO・COCYTUS。2026-11-01)。「冥界のランキング」は冥界の2つ、「極限のランキング」は ETERNAL までの9つを読む
+const ASSISTANT_CHAT_RANKING_UNDERWORLD_WORD = /冥界/;
 const ASSISTANT_CHAT_RANKING_ALL_WORD = /全部|ぜんぶ|全難易度|全ての難易度|すべての難易度|難易度(?:ごと|別|全部)|全部の難易度/;
 const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
   const text = String(rawText || '');
@@ -120,13 +122,14 @@ const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
       const hits = modeWords.filter(x => has(x.w));
       const other = hits.find(x => !extremeMode || x.m.id !== extremeMode.id);
       const modeHit = other ? other.m : (hits[0] ? hits[0].m : null);
-      const extreme = ASSISTANT_CHAT_RANKING_EXTREME_WORD.test(raw);
+      const underworld = ASSISTANT_CHAT_RANKING_UNDERWORLD_WORD.test(raw);
+      const extreme = ASSISTANT_CHAT_RANKING_EXTREME_WORD.test(raw) || underworld;
       const all = ASSISTANT_CHAT_RANKING_ALL_WORD.test(raw);
       const diffHit = rhythm && !/バトル/.test(raw) ? null : (diffChoices.find(d => has(d.label)) || null);
       const lineage = lineages.find(l => has(`${l.name}種`)) || lineages.find(l => has(l.name)) || null;
       const battle = /バトル|スコア|チャレンジ|難易度/.test(raw) || !!modeHit || !!diffHit || extreme;
       return {
-        song, rhythm, rhythmDiff, modeHit, extreme, all, diffHit, lineage,
+        song, rhythm, rhythmDiff, modeHit, extreme, underworld, all, diffHit, lineage,
         battle: battle && !(rhythm && !modeHit && !diffHit && !extreme),
         week: /週間|今週/.test(raw), event: /イベント/.test(raw), total: /合算|全曲|総合/.test(raw),
         raid: /ジャック|レイド/.test(raw), breeder: /ブリーダー\s*(?:lv|ＬＶ|レベル)|ブリーダーlv/i.test(String(raw).normalize('NFKC')),
@@ -148,7 +151,7 @@ const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
         // 前の話題の種類を使い、難易度の指定はいまの発言を優先する(いまの発言に指定が無ければ前のまま)
         const own = ownSelector;
         c = { ...base, lineage: now.lineage || base.lineage,
-          diffHit: own ? now.diffHit : base.diffHit, extreme: own ? now.extreme : base.extreme, all: own ? now.all : base.all,
+          diffHit: own ? now.diffHit : base.diffHit, extreme: own ? now.extreme : base.extreme, underworld: own ? now.underworld : base.underworld, all: own ? now.all : base.all,
           rhythmDiff: now.rhythmDiff || base.rhythmDiff, inherited: true };
       } else if (!topicNow && !(ownSelector && prevs.some(t => ASSISTANT_CHAT_RANKING_TOPIC.test(t)))) return null;
       // 前の話題に種類が無くても、ランキングの話の続きで「エクストリーム」「全部」などと言われたら、その指定で読む(モードが無ければ下でバトルの既定へ)
@@ -197,7 +200,11 @@ const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
       if (c.extreme && !c.diffHit && !tabs.some(isExtremeId) && extremeMode && modes.some(m => m.id === extremeMode.id)) { mode = extremeMode; tabs = rankingDiffIds(mode); }
       let ids;
       if (c.diffHit) ids = [c.diffHit.id];
-      else if (c.extreme) ids = tabs.filter(isExtremeId);
+      else if (c.extreme) {
+        // 冥界と言われたら INFERNO・COCYTUS、極限だけなら ETERNAL までの9つ(冥界チャレンジは別のタブなので混ぜない)
+        const isUw = (id) => typeof isUnderworldDifficultyId === 'function' && isUnderworldDifficultyId(id);
+        ids = tabs.filter(isExtremeId).filter(id => (c.underworld ? isUw(id) : !isUw(id)));
+      }
       else if (c.all || c.modeHit) ids = tabs;
       else ids = tabs.filter(id => id === 'Normal' || id === 'Master' || id === 'Legend');
       const isSpecies = mode && (mode.id === BATTLE_MODE_SPECIES_CHALLENGE || mode.id === BATTLE_MODE_TACTICS_SPECIES);

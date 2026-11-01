@@ -3223,6 +3223,13 @@ function MonsterHeroGame() {
   const extremeRunRef = useRef(false);
   const [extremeRuleOpen, setExtremeRuleOpen] = useState(false);
   const [extremeDifficulty, setExtremeDifficulty] = useState('EXTREME');
+  // 冥界チャレンジのタブを開いたか(一度きりの NEW の札に使う・2026-11-01 の新しいキー)。読み込むまでは見たことにして、札を出しっぱなしにしない
+  const UNDERWORLD_TAB_SEEN_KEY = 'mh_underworld_tab_seen_v1';
+  const [underworldTabSeen, setUnderworldTabSeen] = useState(true);
+  useEffect(() => { (async () => {
+    try { setUnderworldTabSeen((await storeGet(UNDERWORLD_TAB_SEEN_KEY, false, false)) === true); } catch (e) { setUnderworldTabSeen(true); }
+  })(); }, []);
+  const markUnderworldTabSeen = () => { if (underworldTabSeen) return; setUnderworldTabSeen(true); storeSet(UNDERWORLD_TAB_SEEN_KEY, true, false); };
   // ★タクティクスバトルの記録を分ける難易度。極限で遊ぶと difficulty は 'Normal' へ
   //   置き換わる(極限チャレンジ・種族チャレンジと同じ作り)ので、そのときだけ
   //   extremeDifficulty を使う。自己ベスト・クリア回数・最高到達WAVE・ランキングの
@@ -3485,6 +3492,8 @@ function MonsterHeroGame() {
   const infernoUnlocked = useMemo(() => isInfernoUnlocked(eternalClearCount), [eternalClearCount]);
   const infernoClearCount = extremeClearCounts[INFERNO_SETTING.id] || 0;
   const cocytusUnlocked = useMemo(() => isCocytusUnlocked(infernoClearCount), [infernoClearCount]);
+  // 冥界チャレンジのタブ(INFERNO・COCYTUS)は ETERNAL クリアで開く
+  const underworldUnlocked = useMemo(() => isUnderworldUnlocked(eternalClearCount), [eternalClearCount]);
   // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
   const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
@@ -18374,7 +18383,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       <div data-score-ranking-tabs className="flex gap-1.5 overflow-x-auto pb-2 shrink-0">{rankingTabs.map(([d,st])=>{
         const on=rankingViewDiff===d;
         const extremeTab=isExtremeDifficultyId(d);
-        return <button key={d} onClick={()=>{setRankingViewDiff(d);loadRankings(keyOf(d));}} className={`px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${on?'ring-2 ring-white':'border border-white/10'}`} style={extremeTab?{backgroundColor:extremeDifficultyTheme(d).accent,color:'#0f172a'}:difficultyStyle(st,on)}>{st.label}</button>;
+        return <button key={d} onClick={()=>{setRankingViewDiff(d);loadRankings(keyOf(d));}} className={`px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${on?'ring-2 ring-white':'border border-white/10'}`} style={extremeTab?{backgroundColor:extremeDifficultyTheme(d).accent,color:'#0f172a'}:difficultyStyle(st,on)} data-underworld-rank={isUnderworldDifficultyId(d)?'1':undefined}>{isUnderworldDifficultyId(d)&&<span aria-hidden="true">🛡</span>}{st.label}</button>;
       })}</div>
       <div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{status.refreshing&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{status.error&&status.fetched&&<div className="text-center text-[9px] text-amber-300">{status.error}</div>}{rows.map(renderScoreRankingEntry)}{rows.length===0&&(status.loading?<div className="text-center text-slate-400 py-8">Loading...</div>:status.error&&!status.fetched?rankingRetryButton(()=>loadRankings(viewKey,false,true)):rankingEmptyText)}</div>
     </>;
@@ -19337,7 +19346,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className={`relative shrink-0${battleTutorialSpotClass('modeCards')}`}>
                   <button aria-label="前のモード" onClick={()=>stepMode(-1)} className="mhbs-arrow absolute left-0 top-[42%] z-20"><ChevronLeft size={18}/></button>
                   <div ref={modeCarouselRef} onScroll={()=>{const index=centeredLoopIndex();const picked=loopModes[index];if(picked&&picked.id!==current.id)setBattleMode(picked.id);if(modeLoopTimerRef.current)clearTimeout(modeLoopTimerRef.current);modeLoopTimerRef.current=setTimeout(recenterModeLoop,180);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain pt-1 pb-4 mh-scroll max-[359px]:!px-[4%]" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-                    {loopModes.map((m,loopIndex)=>{const active=m.id===current.id,isExtreme=m.id===EXTREME_MODE.id,isSpecies=isSpeciesChallengeMode(m.id),modeSoon=battleModeComingSoon(m.id,{debugBattle}),extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle,speciesLocked=isSpecies&&!speciesChallengeUnlocked&&!debugBattle,rec=isExtreme?{score:highestModeScore(extremeBestScores,PUBLIC_EXTREME_DIFFICULTIES.map(setting=>setting.id)),wave:0,clears:extremeClearCount}:modeRecordFor(m.id,safeDifficulty),ranked=!isExtreme&&!isSpecies&&modeHasRanking(m.id),modeBestScore=ranked?highestModeScore(isTacticsMode(m.id)?tacticsRecordsOf(m.id).hs:isProMode(m.id)?proHighScores:highScores,isTacticsMode(m.id)?TACTICS_DIFFICULTY_IDS:Object.keys(DIFFICULTY_SETTINGS)):rec.score;return (
+                    {loopModes.map((m,loopIndex)=>{const active=m.id===current.id,isExtreme=m.id===EXTREME_MODE.id,isSpecies=isSpeciesChallengeMode(m.id),modeSoon=battleModeComingSoon(m.id,{debugBattle}),extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle,speciesLocked=isSpecies&&!speciesChallengeUnlocked&&!debugBattle,rec=isExtreme?{score:highestModeScore(extremeBestScores,PUBLIC_EXTREME_TAB_DIFFICULTIES.map(setting=>setting.id)),wave:0,clears:extremeClearCount}:modeRecordFor(m.id,safeDifficulty),ranked=!isExtreme&&!isSpecies&&modeHasRanking(m.id),modeBestScore=ranked?highestModeScore(isTacticsMode(m.id)?tacticsRecordsOf(m.id).hs:isProMode(m.id)?proHighScores:highScores,isTacticsMode(m.id)?TACTICS_DIFFICULTY_IDS:Object.keys(DIFFICULTY_SETTINGS)):rec.score;return (
                       <article key={`${m.id}-${loopIndex}`} data-battle-mode={m.id} className={`mhbt-tile snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[366px] px-4 pt-3.5 pb-4 [@media(orientation:landscape)_and_(max-height:520px)]:h-auto [@media(orientation:landscape)_and_(max-height:520px)]:pt-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:pb-3 [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:520px)]:content-start transition-all flex flex-col ${active?'on scale-100 opacity-100':'scale-[.92] opacity-45'}`} style={{'--acc':m.color}}>
                         <span aria-hidden="true" className="mhbt-mark">{String(m.id).replace(/([A-Z])/g,' $1').toUpperCase()}</span>
                         <div className="mhbt-eyebrow">BATTLE MODE</div>
@@ -19382,16 +19391,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {gameState==='EXTREME_DIFFICULTY_SELECT'&&(()=>{
           // 公開中の極限難易度を並べる。バトルデバッグも同じ導線を使い、保存だけを無効化する。
-          const difficulties=ALL_EXTREME_DIFFICULTIES.filter(setting=>setting.available||(debugBattle&&setting.debugAvailable));
+          // ★冥界チャレンジ(INFERNO・COCYTUS)は同じ画面で「冥界」タブとして出す。どちらのタブかは選んでいる難易度で決める
+          //   (状態を別に持たない。戻ってきたときも前のタブのまま開く)。記録・ランキングは難易度の名前のままなので変わらない
+          const underworldTab=isUnderworldDifficultyId(extremeDifficulty);
+          const difficulties=ALL_EXTREME_DIFFICULTIES.filter(setting=>(setting.available||(debugBattle&&setting.debugAvailable))&&isUnderworldDifficultyId(setting.id)===underworldTab);
+          const underworldOpen=underworldUnlocked||debugBattle;
           const selectedIndex=Math.max(0,difficulties.findIndex(setting=>setting.id===extremeDifficulty));
           const selectDifficultyIndex=(index,behavior='smooth')=>{const safe=Math.max(0,Math.min(difficulties.length-1,index));setExtremeDifficulty(difficulties[safe].id);centerCarouselChild(modeDifficultyCarouselRef.current,safe,behavior);};
           return (
-          <div data-mh-screen className="mhms-stage mhbs-screen relative overflow-hidden flex-1 flex flex-col h-full min-h-0 px-4 text-white" data-extreme-difficulties style={{paddingTop:'.35rem',paddingBottom:'.35rem'}}>
+          <div data-mh-screen className="mhms-stage mhbs-screen relative overflow-hidden flex-1 flex flex-col h-full min-h-0 px-4 text-white" data-extreme-difficulties data-underworld={underworldTab?'1':undefined} style={{paddingTop:'.35rem',paddingBottom:'.35rem'}}>
             <RhythmModeSelectStage notes={false}/>
             {/* ★極限チャレンジがモードのカードだった頃は、カードの「このモードの説明」から読めた。
                  チャレンジの極限タブへ入れ込んだとき(2026-09-19)に入口ごと無くなっていたので、ここへ置き直す。
                  説明の中身は EXTREME_MODE の points。モードの説明モーダルをそのまま使う */}
-            <BattleScreenHead eyebrow="EXTREME CHALLENGE ・ SELECT LEVEL" title="極限チャレンジ" accent="text-fuchsia-300" onBack={()=>setGameState('BATTLE_MODE_SELECT')}
+            <BattleScreenHead eyebrow={underworldTab?'UNDERWORLD CHALLENGE ・ SELECT LEVEL':'EXTREME CHALLENGE ・ SELECT LEVEL'} title={underworldTab?'冥界チャレンジ':'極限チャレンジ'} accent={underworldTab?'text-cyan-200':'text-fuchsia-300'} onBack={()=>setGameState('BATTLE_MODE_SELECT')}
               right={<button data-extreme-mode-info aria-label="極限チャレンジの説明を開く" onClick={()=>setModeInfoId(EXTREME_MODE.id)} className="shrink-0 min-h-[38px] px-3 max-[359px]:px-2.5 rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-95">{/* 幅の狭い画面では「説明」だけにして、見出しの「極限チャレンジ」を切らない(320 で「極限チャレ…」。2026-10-27 ジン部長の見回り) */}<span className="max-[359px]:hidden">このモードの</span>説明</button>}/>
             {/* 横向きの背の低い画面(844×390 など)では、札を左右2列(左=記録・倍率/右=説明・特殊ルール・ボタン)にして、
                 「この難易度で挑戦」まで最初から見えるようにする(画面の下へ出て押せなかった。難易度えらび #3790 と同じ形。2026-10-27 ジン部長の見回り) */}
@@ -19401,15 +19414,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     極限チャレンジはチャレンジの極限タブとして入れ込んだので、
                     ここから通常の9段階へ戻れないと行き来できない(2026-09-19 ユーザー指示)。
                     どちらの画面も同じ横カルーセルなので、遊ぶ側にはタブの切り替えに見える */}
-                <div data-difficulty-tabs className="mhbs-tabs grid-cols-2 w-full shrink-0 mb-1.5">
-                  {[[DIFFICULTY_TAB_NORMAL,'通常'],[DIFFICULTY_TAB_EXTREME,'極限']].map(([tabId,tabLabel])=>{
-                    const on=tabId===DIFFICULTY_TAB_EXTREME;
-                    return <button key={tabId} aria-pressed={on} onClick={()=>{
-                      if(on)return;
-                      battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';
-                      setBattleMode(BATTLE_MODE_CHALLENGE);
-                      setGameState('BATTLE_DIFFICULTY_SELECT');
-                    }} className={`mhbs-tab text-[12px] active:scale-95 ${on?'on x':''}`}>{tabLabel}<span className="ml-1 text-[9px] opacity-75">{on?difficulties.length:Object.keys(DIFFICULTY_SETTINGS).length}</span></button>;
+                {/* 冥界チャレンジ(2026-11-01 社長の決定・案1)で「通常 / 極限 / 冥界」の3つにした。
+                    冥界は ETERNAL クリアで開く。開く前もタブは出して押せなくする(何があるのか分かるように) */}
+                <div data-difficulty-tabs className="mhbs-tabs grid-cols-3 w-full shrink-0 mb-1.5">
+                  {[[DIFFICULTY_TAB_NORMAL,'通常'],[DIFFICULTY_TAB_EXTREME,'極限'],[UNDERWORLD_TAB_ID,'冥界']].map(([tabId,tabLabel])=>{
+                    const isUw=tabId===UNDERWORLD_TAB_ID;
+                    const on=isUw?underworldTab:(tabId===DIFFICULTY_TAB_EXTREME&&!underworldTab);
+                    const locked=isUw&&!underworldOpen;
+                    const count=tabId===DIFFICULTY_TAB_NORMAL?Object.keys(DIFFICULTY_SETTINGS).length:isUw?PUBLIC_UNDERWORLD_DIFFICULTIES.length:PUBLIC_EXTREME_TAB_DIFFICULTIES.length;
+                    return <button key={tabId} aria-pressed={on} disabled={locked} data-difficulty-tab={tabId} data-underworld-new={isUw&&underworldOpen&&!underworldTabSeen?'1':undefined} onClick={()=>{
+                      if(on||locked)return;
+                      if(tabId===DIFFICULTY_TAB_NORMAL){
+                        battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';
+                        setBattleMode(BATTLE_MODE_CHALLENGE);
+                        setGameState('BATTLE_DIFFICULTY_SELECT');
+                        return;
+                      }
+                      if(isUw){ markUnderworldTabSeen(); setExtremeDifficulty(PUBLIC_UNDERWORLD_DIFFICULTIES[0]?.id||'INFERNO'); }
+                      else setExtremeDifficulty(PUBLIC_EXTREME_TAB_DIFFICULTIES[PUBLIC_EXTREME_TAB_DIFFICULTIES.length-1]?.id||'EXTREME');
+                      requestAnimationFrame(()=>centerCarouselChild(modeDifficultyCarouselRef.current,isUw?0:PUBLIC_EXTREME_TAB_DIFFICULTIES.length-1,'auto'));
+                    }} className={`mhbs-tab text-[12px] active:scale-95 disabled:opacity-40 ${isUw?'uw':''} ${on?'on x':''}`}>{isUw&&<span aria-hidden="true" className="mr-0.5">🛡</span>}{tabLabel}<span className="ml-1 text-[9px] opacity-75">{locked?'🔒':count}</span></button>;
                   })}
                 </div>
                 <div className="mhbs-hint mt-auto mb-1 shrink-0">左右にスワイプして難易度をえらぶ</div>
@@ -19417,7 +19441,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="mhbs-arrow absolute left-0 top-[42%] z-20 disabled:opacity-20"><ChevronLeft size={18}/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.id!==extremeDifficulty)setExtremeDifficulty(difficulties[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll max-[359px]:!px-[4%]" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
                     {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:setting.id==='HELHEIM'?helheimUnlocked:setting.id==='ETERNAL'?eternalUnlocked:setting.id==='INFERNO'?infernoUnlocked:setting.id==='COCYTUS'?cocytusUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;const theme=extremeDifficultyTheme(setting.id);const heroProofReward=heroProofClearReward({extremeDifficulty:setting.id});return (
-                      <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} className={`mhbt-tile mhbt-d-${setting.id} dark snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[400px] flex flex-col px-4 pt-3 pb-2.5 transition-all ${active?'on scale-100 opacity-100':'scale-[.92] opacity-45'} ${previewable?'':'dim'}`} style={{'--acc':theme.accent}}>
+                      <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} data-underworld-card={underworldTab?setting.id:undefined} data-shield-layers={underworldTab?underworldShieldLayerRange(setting.id):undefined} className={`mhbt-tile mhbt-d-${setting.id} dark snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[400px] flex flex-col px-4 pt-3 pb-2.5 transition-all ${active?'on scale-100 opacity-100':'scale-[.92] opacity-45'} ${previewable?'':'dim'}`} style={{'--acc':theme.accent}}>
                         <span aria-hidden="true" className="mhbt-mark">{setting.label}</span>
                         <div className="mhbt-eyebrow">EXTREME DIFFICULTY</div>
                         <h3 className="mhbt-name truncate text-[22px]">{setting.label}</h3>
@@ -19525,18 +19549,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {/* 難易度の「通常 / 極限」タブ。クイックは15段階、種族チャレンジは14段階あり、
                     一続きに並べると目当ての難易度まで遠い(2026-09-19 ユーザー指示)。
                     極限を持たないモードでは出さないので、これまでどおり1つの並びに見える */}
-                {hasExtremeTab&&<div data-difficulty-tabs className="mhbs-tabs grid-cols-2 w-full shrink-0 mb-1.5">
-                  {[[DIFFICULTY_TAB_NORMAL,'通常'],[DIFFICULTY_TAB_EXTREME,'極限']].map(([tabId,tabLabel])=>{
+                {/* チャレンジは「通常 / 極限 / 冥界」の3つ(冥界チャレンジ・2026-11-01)。ほかのモードは今までどおり2つ */}
+                {hasExtremeTab&&<div data-difficulty-tabs className={`mhbs-tabs ${challengeExtremeTab?'grid-cols-3':'grid-cols-2'} w-full shrink-0 mb-1.5`}>
+                  {[[DIFFICULTY_TAB_NORMAL,'通常'],[DIFFICULTY_TAB_EXTREME,'極限'],...(challengeExtremeTab?[[UNDERWORLD_TAB_ID,'冥界']]:[])].map(([tabId,tabLabel])=>{
                     const on=activeDifficultyTab===tabId;
+                    const isUw=tabId===UNDERWORLD_TAB_ID;
                     const toExtreme=tabId===DIFFICULTY_TAB_EXTREME;
                     const group=toExtreme?difficultyGroups.extreme:difficultyGroups.normal;
-                    // チャレンジの極限は専用画面へ移る。解放前は押せないが、タブ自体は出す
+                    // チャレンジの極限・冥界は専用画面へ移る。解放前は押せないが、タブ自体は出す
                     // (何があるのか分かるようにするため。モードのカードもそうしていた)
-                    const jumps=challengeExtremeTab&&toExtreme;
-                    const locked=jumps&&!extremeUnlocked&&!debugBattle;
-                    const count=jumps?PUBLIC_EXTREME_DIFFICULTIES.length:group.length;
-                    return <button key={tabId} aria-pressed={on} disabled={locked} onClick={()=>{
+                    const jumps=challengeExtremeTab&&(toExtreme||isUw);
+                    const locked=jumps&&(isUw?!underworldUnlocked:!extremeUnlocked)&&!debugBattle;
+                    const count=isUw?PUBLIC_UNDERWORLD_DIFFICULTIES.length:jumps?PUBLIC_EXTREME_TAB_DIFFICULTIES.length:group.length;
+                    return <button key={tabId} aria-pressed={on} disabled={locked} data-difficulty-tab={tabId} data-underworld-new={isUw&&(underworldUnlocked||debugBattle)&&!underworldTabSeen?'1':undefined} onClick={()=>{
                       if(jumps){
+                        // どちらのタブを開くかは選んでいる難易度で決まる(極限の画面と同じ)。押したタブの難易度へそろえてから移る
+                        if(isUw){ markUnderworldTabSeen(); if(!isUnderworldDifficultyId(extremeDifficulty))setExtremeDifficulty(PUBLIC_UNDERWORLD_DIFFICULTIES[0]?.id||'INFERNO'); }
+                        else if(isUnderworldDifficultyId(extremeDifficulty))setExtremeDifficulty(PUBLIC_EXTREME_TAB_DIFFICULTIES[PUBLIC_EXTREME_TAB_DIFFICULTIES.length-1]?.id||'EXTREME');
                         battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';
                         setGameState('EXTREME_DIFFICULTY_SELECT');
                         return;
@@ -19546,7 +19575,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       // 切り替えた先の先頭を選ぶ。選びっぱなしにすると、見えていない難易度のまま
                       // 「この難易度で挑戦」を押せてしまう
                       if(group[0])chooseDifficulty(group[0][0]);
-                    }} className={`mhbs-tab text-[12px] active:scale-95 disabled:opacity-40 ${on?(toExtreme?'on x':'on'):''}`}>{tabLabel}<span className="ml-1 text-[9px] opacity-75">{locked?'🔒':count}</span></button>;
+                    }} className={`mhbs-tab text-[12px] active:scale-95 disabled:opacity-40 ${isUw?'uw':''} ${on?(toExtreme?'on x':'on'):''}`}>{isUw&&<span aria-hidden="true" className="mr-0.5">🛡</span>}{tabLabel}<span className="ml-1 text-[9px] opacity-75">{locked?'🔒':count}</span></button>;
                   })}
                 </div>}
                 {/* 極限タブが押せない理由を出す。タブの中は「極限 🔒」しか入らないので、

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: da5373cd6820315e
+// source-sha256: e4ac1a2020bb6b05
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -15839,6 +15839,7 @@ const INFERNO_SETTING = Object.freeze({
   id: 'INFERNO',
   label: 'INFERNO',
   japanese: 'インフェルノ',
+  tab: 'underworld',
   available: true,
   debugAvailable: true,
   power: 400,
@@ -15887,6 +15888,7 @@ const COCYTUS_SETTING = Object.freeze({
   id: 'COCYTUS',
   label: 'COCYTUS',
   japanese: 'コキュートス',
+  tab: 'underworld',
   available: true,
   debugAvailable: true,
   power: 500,
@@ -16082,6 +16084,10 @@ const EXTREME_DIFFICULTY_THEMES = Object.freeze({
 });
 const extremeDifficultyTheme = difficultyId => EXTREME_DIFFICULTY_THEMES[difficultyId] || EXTREME_DIFFICULTY_THEMES.EXTREME;
 const PUBLIC_EXTREME_DIFFICULTIES = Object.freeze(ALL_EXTREME_DIFFICULTIES.filter(setting => setting.available));
+const UNDERWORLD_TAB_ID = 'underworld';
+const isUnderworldDifficultyId = difficultyId => extremeRuleSetting(difficultyId)?.tab === UNDERWORLD_TAB_ID;
+const PUBLIC_EXTREME_TAB_DIFFICULTIES = Object.freeze(PUBLIC_EXTREME_DIFFICULTIES.filter(setting => setting.tab !== UNDERWORLD_TAB_ID));
+const PUBLIC_UNDERWORLD_DIFFICULTIES = Object.freeze(PUBLIC_EXTREME_DIFFICULTIES.filter(setting => setting.tab === UNDERWORLD_TAB_ID));
 const extremeWaveStageLevel = waveNumber => Math.max(1, Math.min(5, Math.floor((Math.max(1, Number(waveNumber) || 1) - 1) / 2) + 1));
 const godDivinityLevel = waveNumber => extremeWaveStageLevel(waveNumber);
 const godDivinityRules = waveNumber => {
@@ -16605,7 +16611,11 @@ const extremeRuleDetailGroups = (difficultyId, quick = false) => {
   const breakRule = extremeDistanceBreakRule(difficultyId);
   if (breakRule) push('DISTANCE BREAK', [['進行', `累計${breakRule.interval}ターンごとに1距離の弱体Lv上昇`], ['弱体倍率', `Lv1 ${specialRulePercent(breakRule.damageDealtPerLevel)} / Lv2 ${specialRulePercent(breakRule.damageDealtPerLevel ** 2)} / Lv3 ${compactPercent(breakRule.damageDealtPerLevel ** 3)}（以降も半減）`], ['安全距離', breakRule.safeDistanceCount > 0 ? `${breakRule.safeDistanceCount}距離は最後まで弱体化しない` : 'なし（4距離すべて弱体化する）']]);
   const revivalRule = extremeRevivalRule(difficultyId);
-  if (revivalRule) push('不死（死者の再起）', [['対象', Object.entries(revivalRule.waves).map(([waveNumber, count]) => `WAVE${waveNumber}（${count}回）`).join(' / ')], ['復活時', `ライフ${specialRulePercent(revivalRule.hpRate)}で起き上がる（最大ライフは変わらない）`], ['起き上がるたび', `敵の攻撃力 +${specialRulePercent(revivalRule.atkBoostPerRevival)}`]]);
+  if (revivalRule && !(Number(revivalRule.maxHpRatePerRevival) > 0)) push('不死（死者の再起）', [['対象', Object.entries(revivalRule.waves).map(([waveNumber, count]) => `WAVE${waveNumber}（${count}回）`).join(' / ')], ['復活時', `ライフ${specialRulePercent(revivalRule.hpRate)}で起き上がる（最大ライフは変わらない）`], ['起き上がるたび', `敵の攻撃力 +${specialRulePercent(revivalRule.atkBoostPerRevival)}`]]);
+  if (isUnderworldDifficultyId(difficultyId)) {
+    const first = groups.findIndex(g => g.title === 'ボスの層のシールド' || g.title === '層のシールド');
+    if (first > 0) groups.unshift(...groups.splice(first, 1));
+  }
   return groups;
 };
 const extremeRuleSummaryText = difficultyId => extremeRuleDetailGroups(difficultyId).length >= 4 ? '複合特殊ルールあり' : '特殊ルールあり';
@@ -16823,6 +16833,16 @@ const isHelheimUnlocked = ragnarokClearCount => (Number(ragnarokClearCount) || 0
 const isEternalUnlocked = helheimClearCount => (Number(helheimClearCount) || 0) > 0;
 const isInfernoUnlocked = eternalClearCount => (Number(eternalClearCount) || 0) > 0;
 const isCocytusUnlocked = infernoClearCount => (Number(infernoClearCount) || 0) > 0;
+const isUnderworldUnlocked = eternalClearCount => (Number(eternalClearCount) || 0) > 0;
+const underworldShieldLayerRange = difficultyId => {
+  const counts = Array.from({
+    length: 10
+  }, (_, i) => Math.floor(Number(extremeWaveStageRules(difficultyId, i + 1)?.shieldLayers) || 0)).filter(n => n > 0);
+  if (!counts.length) return '';
+  const min = Math.min(...counts),
+    max = Math.max(...counts);
+  return min === max ? String(min) : `${min}〜${max}`;
+};
 const normalizeBattleDifficulty = value => quickDifficultySetting(value) ? value : 'Normal';
 const BATTLE_DEFAULT_DIFFICULTY = 'Normal';
 const CLEAR_PSYCHE_REWARD = Object.freeze({
@@ -59694,29 +59714,35 @@ function ProfileScreen({
       className: "font-black text-[13px]"
     }, selected.label, "の記録")), React.createElement("div", {
       className: "flex flex-col gap-2"
-    }, selected.id === EXTREME_MODE.id ? PUBLIC_EXTREME_DIFFICULTIES.map(setting => {
-      const score = extremeBestScores[setting.id] || 0;
-      const clears = extremeClearCounts[setting.id] || 0;
-      const played = score > 0 || clears > 0;
-      return React.createElement("div", {
-        key: setting.id,
-        className: "rounded-xl border border-white/10 bg-black/30 p-3"
-      }, React.createElement("b", {
-        className: "block text-[13px] text-fuchsia-200"
-      }, setting.label), played ? React.createElement("div", {
-        className: "mt-2 grid grid-cols-2 gap-2 text-center"
-      }, React.createElement("div", null, React.createElement("small", {
-        className: "block text-[10px] text-slate-400"
-      }, "最高スコア"), React.createElement("strong", {
-        className: "text-[12px] text-amber-300"
-      }, score.toLocaleString(), " pt")), React.createElement("div", null, React.createElement("small", {
-        className: "block text-[10px] text-slate-400"
-      }, "クリア回数"), React.createElement("strong", {
-        className: "text-[12px] text-emerald-300"
-      }, clears, "回"))) : React.createElement("div", {
-        className: "mt-2 text-center text-[11px] font-black text-slate-400"
-      }, "未記録"));
-    }) : (isTacticsMode(selected.id) ? TACTICS_DIFFICULTY_IDS.map(id => [id, DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING]) : Object.entries(DIFFICULTY_SETTINGS)).map(([key, setting]) => {
+    }, selected.id === EXTREME_MODE.id ? (() => {
+      const row = setting => {
+        const score = extremeBestScores[setting.id] || 0;
+        const clears = extremeClearCounts[setting.id] || 0;
+        const played = score > 0 || clears > 0;
+        return React.createElement("div", {
+          key: setting.id,
+          className: "rounded-xl border border-white/10 bg-black/30 p-3"
+        }, React.createElement("b", {
+          className: "block text-[13px] text-fuchsia-200"
+        }, setting.label), played ? React.createElement("div", {
+          className: "mt-2 grid grid-cols-2 gap-2 text-center"
+        }, React.createElement("div", null, React.createElement("small", {
+          className: "block text-[10px] text-slate-400"
+        }, "最高スコア"), React.createElement("strong", {
+          className: "text-[12px] text-amber-300"
+        }, score.toLocaleString(), " pt")), React.createElement("div", null, React.createElement("small", {
+          className: "block text-[10px] text-slate-400"
+        }, "クリア回数"), React.createElement("strong", {
+          className: "text-[12px] text-emerald-300"
+        }, clears, "回"))) : React.createElement("div", {
+          className: "mt-2 text-center text-[11px] font-black text-slate-400"
+        }, "未記録"));
+      };
+      return React.createElement(React.Fragment, null, PUBLIC_EXTREME_TAB_DIFFICULTIES.map(row), PUBLIC_UNDERWORLD_DIFFICULTIES.length > 0 && React.createElement("p", {
+        "data-profile-underworld": true,
+        className: "mt-1 text-[11px] font-black text-cyan-200"
+      }, "🛡 冥界チャレンジ"), PUBLIC_UNDERWORLD_DIFFICULTIES.map(row));
+    })() : (isTacticsMode(selected.id) ? TACTICS_DIFFICULTY_IDS.map(id => [id, DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING]) : Object.entries(DIFFICULTY_SETTINGS)).map(([key, setting]) => {
       const record = modeRecordFor(selected.id, key);
       const quick = isQuickMode(selected.id);
       const challenge = selected.id === BATTLE_MODE_CHALLENGE;
@@ -89235,6 +89261,7 @@ const ASSISTANT_CHAT_RANKING_TOPIC = /ランキング|ランク(?:イン|上位)
 const ASSISTANT_CHAT_RANKING_MAX = 20;
 const ASSISTANT_CHAT_RANKING_PREV = 2;
 const ASSISTANT_CHAT_RANKING_EXTREME_WORD = /エクストリーム|極限/;
+const ASSISTANT_CHAT_RANKING_UNDERWORLD_WORD = /冥界/;
 const ASSISTANT_CHAT_RANKING_ALL_WORD = /全部|ぜんぶ|全難易度|全ての難易度|すべての難易度|難易度(?:ごと|別|全部)|全部の難易度/;
 const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
   const text = String(rawText || '');
@@ -89286,7 +89313,8 @@ const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
       const hits = modeWords.filter(x => has(x.w));
       const other = hits.find(x => !extremeMode || x.m.id !== extremeMode.id);
       const modeHit = other ? other.m : hits[0] ? hits[0].m : null;
-      const extreme = ASSISTANT_CHAT_RANKING_EXTREME_WORD.test(raw);
+      const underworld = ASSISTANT_CHAT_RANKING_UNDERWORLD_WORD.test(raw);
+      const extreme = ASSISTANT_CHAT_RANKING_EXTREME_WORD.test(raw) || underworld;
       const all = ASSISTANT_CHAT_RANKING_ALL_WORD.test(raw);
       const diffHit = rhythm && !/バトル/.test(raw) ? null : diffChoices.find(d => has(d.label)) || null;
       const lineage = lineages.find(l => has(`${l.name}種`)) || lineages.find(l => has(l.name)) || null;
@@ -89297,6 +89325,7 @@ const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
         rhythmDiff,
         modeHit,
         extreme,
+        underworld,
         all,
         diffHit,
         lineage,
@@ -89326,6 +89355,7 @@ const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
           lineage: now.lineage || base.lineage,
           diffHit: own ? now.diffHit : base.diffHit,
           extreme: own ? now.extreme : base.extreme,
+          underworld: own ? now.underworld : base.underworld,
           all: own ? now.all : base.all,
           rhythmDiff: now.rhythmDiff || base.rhythmDiff,
           inherited: true
@@ -89420,7 +89450,10 @@ const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
         tabs = rankingDiffIds(mode);
       }
       let ids;
-      if (c.diffHit) ids = [c.diffHit.id];else if (c.extreme) ids = tabs.filter(isExtremeId);else if (c.all || c.modeHit) ids = tabs;else ids = tabs.filter(id => id === 'Normal' || id === 'Master' || id === 'Legend');
+      if (c.diffHit) ids = [c.diffHit.id];else if (c.extreme) {
+        const isUw = id => typeof isUnderworldDifficultyId === 'function' && isUnderworldDifficultyId(id);
+        ids = tabs.filter(isExtremeId).filter(id => c.underworld ? isUw(id) : !isUw(id));
+      } else if (c.all || c.modeHit) ids = tabs;else ids = tabs.filter(id => id === 'Normal' || id === 'Master' || id === 'Legend');
       const isSpecies = mode && (mode.id === BATTLE_MODE_SPECIES_CHALLENGE || mode.id === BATTLE_MODE_TACTICS_SPECIES);
       for (const id of ids) {
         let keys = [];
@@ -128478,6 +128511,22 @@ function MonsterHeroGame() {
   const extremeRunRef = useRef(false);
   const [extremeRuleOpen, setExtremeRuleOpen] = useState(false);
   const [extremeDifficulty, setExtremeDifficulty] = useState('EXTREME');
+  const UNDERWORLD_TAB_SEEN_KEY = 'mh_underworld_tab_seen_v1';
+  const [underworldTabSeen, setUnderworldTabSeen] = useState(true);
+  useEffect(() => {
+    (async () => {
+      try {
+        setUnderworldTabSeen((await storeGet(UNDERWORLD_TAB_SEEN_KEY, false, false)) === true);
+      } catch (e) {
+        setUnderworldTabSeen(true);
+      }
+    })();
+  }, []);
+  const markUnderworldTabSeen = () => {
+    if (underworldTabSeen) return;
+    setUnderworldTabSeen(true);
+    storeSet(UNDERWORLD_TAB_SEEN_KEY, true, false);
+  };
   const tacticsRecordDifficulty = () => extremeRunRef.current ? extremeDifficulty : difficulty;
   const [debugEnemyKey, setDebugEnemyKey] = useState(null);
   const [debugBattleModeId, setDebugBattleModeId] = useState('challenge');
@@ -128817,6 +128866,7 @@ function MonsterHeroGame() {
   const infernoUnlocked = useMemo(() => isInfernoUnlocked(eternalClearCount), [eternalClearCount]);
   const infernoClearCount = extremeClearCounts[INFERNO_SETTING.id] || 0;
   const cocytusUnlocked = useMemo(() => isCocytusUnlocked(infernoClearCount), [infernoClearCount]);
+  const underworldUnlocked = useMemo(() => isUnderworldUnlocked(eternalClearCount), [eternalClearCount]);
   const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
   const activeExtremeBattleSetting = activeExtremeSetting;
@@ -147655,8 +147705,11 @@ function MonsterHeroGame() {
         style: extremeTab ? {
           backgroundColor: extremeDifficultyTheme(d).accent,
           color: '#0f172a'
-        } : difficultyStyle(st, on)
-      }, st.label);
+        } : difficultyStyle(st, on),
+        "data-underworld-rank": isUnderworldDifficultyId(d) ? '1' : undefined
+      }, isUnderworldDifficultyId(d) && React.createElement("span", {
+        "aria-hidden": "true"
+      }, "🛡"), st.label);
     })), React.createElement("div", {
       className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
     }, status.refreshing && React.createElement("div", {
@@ -149985,7 +150038,7 @@ function MonsterHeroGame() {
           extremeLocked = isExtreme && !extremeUnlocked && !debugBattle,
           speciesLocked = isSpecies && !speciesChallengeUnlocked && !debugBattle,
           rec = isExtreme ? {
-            score: highestModeScore(extremeBestScores, PUBLIC_EXTREME_DIFFICULTIES.map(setting => setting.id)),
+            score: highestModeScore(extremeBestScores, PUBLIC_EXTREME_TAB_DIFFICULTIES.map(setting => setting.id)),
             wave: 0,
             clears: extremeClearCount
           } : modeRecordFor(m.id, safeDifficulty),
@@ -150107,7 +150160,9 @@ function MonsterHeroGame() {
         compact: true
       })), renderPowerRankingBody())));
     })(), gameState === 'EXTREME_DIFFICULTY_SELECT' && (() => {
-      const difficulties = ALL_EXTREME_DIFFICULTIES.filter(setting => setting.available || debugBattle && setting.debugAvailable);
+      const underworldTab = isUnderworldDifficultyId(extremeDifficulty);
+      const difficulties = ALL_EXTREME_DIFFICULTIES.filter(setting => (setting.available || debugBattle && setting.debugAvailable) && isUnderworldDifficultyId(setting.id) === underworldTab);
+      const underworldOpen = underworldUnlocked || debugBattle;
       const selectedIndex = Math.max(0, difficulties.findIndex(setting => setting.id === extremeDifficulty));
       const selectDifficultyIndex = (index, behavior = 'smooth') => {
         const safe = Math.max(0, Math.min(difficulties.length - 1, index));
@@ -150118,6 +150173,7 @@ function MonsterHeroGame() {
         "data-mh-screen": true,
         className: "mhms-stage mhbs-screen relative overflow-hidden flex-1 flex flex-col h-full min-h-0 px-4 text-white",
         "data-extreme-difficulties": true,
+        "data-underworld": underworldTab ? '1' : undefined,
         style: {
           paddingTop: '.35rem',
           paddingBottom: '.35rem'
@@ -150125,9 +150181,9 @@ function MonsterHeroGame() {
       }, React.createElement(RhythmModeSelectStage, {
         notes: false
       }), React.createElement(BattleScreenHead, {
-        eyebrow: "EXTREME CHALLENGE ・ SELECT LEVEL",
-        title: "極限チャレンジ",
-        accent: "text-fuchsia-300",
+        eyebrow: underworldTab ? 'UNDERWORLD CHALLENGE ・ SELECT LEVEL' : 'EXTREME CHALLENGE ・ SELECT LEVEL',
+        title: underworldTab ? '冥界チャレンジ' : '極限チャレンジ',
+        accent: underworldTab ? 'text-cyan-200' : 'text-fuchsia-300',
         onBack: () => setGameState('BATTLE_MODE_SELECT'),
         right: React.createElement("button", {
           "data-extreme-mode-info": true,
@@ -150143,22 +150199,39 @@ function MonsterHeroGame() {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
       }, React.createElement("div", {
         "data-difficulty-tabs": true,
-        className: "mhbs-tabs grid-cols-2 w-full shrink-0 mb-1.5"
-      }, [[DIFFICULTY_TAB_NORMAL, '通常'], [DIFFICULTY_TAB_EXTREME, '極限']].map(([tabId, tabLabel]) => {
-        const on = tabId === DIFFICULTY_TAB_EXTREME;
+        className: "mhbs-tabs grid-cols-3 w-full shrink-0 mb-1.5"
+      }, [[DIFFICULTY_TAB_NORMAL, '通常'], [DIFFICULTY_TAB_EXTREME, '極限'], [UNDERWORLD_TAB_ID, '冥界']].map(([tabId, tabLabel]) => {
+        const isUw = tabId === UNDERWORLD_TAB_ID;
+        const on = isUw ? underworldTab : tabId === DIFFICULTY_TAB_EXTREME && !underworldTab;
+        const locked = isUw && !underworldOpen;
+        const count = tabId === DIFFICULTY_TAB_NORMAL ? Object.keys(DIFFICULTY_SETTINGS).length : isUw ? PUBLIC_UNDERWORLD_DIFFICULTIES.length : PUBLIC_EXTREME_TAB_DIFFICULTIES.length;
         return React.createElement("button", {
           key: tabId,
           "aria-pressed": on,
+          disabled: locked,
+          "data-difficulty-tab": tabId,
+          "data-underworld-new": isUw && underworldOpen && !underworldTabSeen ? '1' : undefined,
           onClick: () => {
-            if (on) return;
-            battleEntryStateRef.current = 'BATTLE_DIFFICULTY_SELECT';
-            setBattleMode(BATTLE_MODE_CHALLENGE);
-            setGameState('BATTLE_DIFFICULTY_SELECT');
+            if (on || locked) return;
+            if (tabId === DIFFICULTY_TAB_NORMAL) {
+              battleEntryStateRef.current = 'BATTLE_DIFFICULTY_SELECT';
+              setBattleMode(BATTLE_MODE_CHALLENGE);
+              setGameState('BATTLE_DIFFICULTY_SELECT');
+              return;
+            }
+            if (isUw) {
+              markUnderworldTabSeen();
+              setExtremeDifficulty(PUBLIC_UNDERWORLD_DIFFICULTIES[0]?.id || 'INFERNO');
+            } else setExtremeDifficulty(PUBLIC_EXTREME_TAB_DIFFICULTIES[PUBLIC_EXTREME_TAB_DIFFICULTIES.length - 1]?.id || 'EXTREME');
+            requestAnimationFrame(() => centerCarouselChild(modeDifficultyCarouselRef.current, isUw ? 0 : PUBLIC_EXTREME_TAB_DIFFICULTIES.length - 1, 'auto'));
           },
-          className: `mhbs-tab text-[12px] active:scale-95 ${on ? 'on x' : ''}`
-        }, tabLabel, React.createElement("span", {
+          className: `mhbs-tab text-[12px] active:scale-95 disabled:opacity-40 ${isUw ? 'uw' : ''} ${on ? 'on x' : ''}`
+        }, isUw && React.createElement("span", {
+          "aria-hidden": "true",
+          className: "mr-0.5"
+        }, "🛡"), tabLabel, React.createElement("span", {
           className: "ml-1 text-[9px] opacity-75"
-        }, on ? difficulties.length : Object.keys(DIFFICULTY_SETTINGS).length));
+        }, locked ? '🔒' : count));
       })), React.createElement("div", {
         className: "mhbs-hint mt-auto mb-1 shrink-0"
       }, "左右にスワイプして難易度をえらぶ"), React.createElement("div", {
@@ -150204,6 +150277,8 @@ function MonsterHeroGame() {
           key: setting.id,
           "aria-disabled": !previewable,
           "data-extreme-difficulty-card": setting.id,
+          "data-underworld-card": underworldTab ? setting.id : undefined,
+          "data-shield-layers": underworldTab ? underworldShieldLayerRange(setting.id) : undefined,
           className: `mhbt-tile mhbt-d-${setting.id} dark snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[400px] flex flex-col px-4 pt-3 pb-2.5 transition-all ${active ? 'on scale-100 opacity-100' : 'scale-[.92] opacity-45'} ${previewable ? '' : 'dim'}`,
           style: {
             '--acc': theme.accent
@@ -150403,20 +150478,27 @@ function MonsterHeroGame() {
         className: "mt-1 text-center text-[8px] font-black text-slate-400"
       }, "同じ難易度をチャレンジ・プロ・極限のどれかでクリアすると解放")), hasExtremeTab && React.createElement("div", {
         "data-difficulty-tabs": true,
-        className: "mhbs-tabs grid-cols-2 w-full shrink-0 mb-1.5"
-      }, [[DIFFICULTY_TAB_NORMAL, '通常'], [DIFFICULTY_TAB_EXTREME, '極限']].map(([tabId, tabLabel]) => {
+        className: `mhbs-tabs ${challengeExtremeTab ? 'grid-cols-3' : 'grid-cols-2'} w-full shrink-0 mb-1.5`
+      }, [[DIFFICULTY_TAB_NORMAL, '通常'], [DIFFICULTY_TAB_EXTREME, '極限'], ...(challengeExtremeTab ? [[UNDERWORLD_TAB_ID, '冥界']] : [])].map(([tabId, tabLabel]) => {
         const on = activeDifficultyTab === tabId;
+        const isUw = tabId === UNDERWORLD_TAB_ID;
         const toExtreme = tabId === DIFFICULTY_TAB_EXTREME;
         const group = toExtreme ? difficultyGroups.extreme : difficultyGroups.normal;
-        const jumps = challengeExtremeTab && toExtreme;
-        const locked = jumps && !extremeUnlocked && !debugBattle;
-        const count = jumps ? PUBLIC_EXTREME_DIFFICULTIES.length : group.length;
+        const jumps = challengeExtremeTab && (toExtreme || isUw);
+        const locked = jumps && (isUw ? !underworldUnlocked : !extremeUnlocked) && !debugBattle;
+        const count = isUw ? PUBLIC_UNDERWORLD_DIFFICULTIES.length : jumps ? PUBLIC_EXTREME_TAB_DIFFICULTIES.length : group.length;
         return React.createElement("button", {
           key: tabId,
           "aria-pressed": on,
           disabled: locked,
+          "data-difficulty-tab": tabId,
+          "data-underworld-new": isUw && (underworldUnlocked || debugBattle) && !underworldTabSeen ? '1' : undefined,
           onClick: () => {
             if (jumps) {
+              if (isUw) {
+                markUnderworldTabSeen();
+                if (!isUnderworldDifficultyId(extremeDifficulty)) setExtremeDifficulty(PUBLIC_UNDERWORLD_DIFFICULTIES[0]?.id || 'INFERNO');
+              } else if (isUnderworldDifficultyId(extremeDifficulty)) setExtremeDifficulty(PUBLIC_EXTREME_TAB_DIFFICULTIES[PUBLIC_EXTREME_TAB_DIFFICULTIES.length - 1]?.id || 'EXTREME');
               battleEntryStateRef.current = 'BATTLE_DIFFICULTY_SELECT';
               setGameState('EXTREME_DIFFICULTY_SELECT');
               return;
@@ -150425,8 +150507,11 @@ function MonsterHeroGame() {
             setDifficultySelectTab(tabId);
             if (group[0]) chooseDifficulty(group[0][0]);
           },
-          className: `mhbs-tab text-[12px] active:scale-95 disabled:opacity-40 ${on ? toExtreme ? 'on x' : 'on' : ''}`
-        }, tabLabel, React.createElement("span", {
+          className: `mhbs-tab text-[12px] active:scale-95 disabled:opacity-40 ${isUw ? 'uw' : ''} ${on ? toExtreme ? 'on x' : 'on' : ''}`
+        }, isUw && React.createElement("span", {
+          "aria-hidden": "true",
+          className: "mr-0.5"
+        }, "🛡"), tabLabel, React.createElement("span", {
           className: "ml-1 text-[9px] opacity-75"
         }, locked ? '🔒' : count));
       })), challengeExtremeTab && !extremeUnlocked && !debugBattle && React.createElement("p", {
