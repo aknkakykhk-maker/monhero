@@ -111,8 +111,10 @@ const advance=ms=>{
   };
   check('HOLD: 奥を押さえた指が端のレーンの帯の上に居続けても失敗しない(幅2)',run(4,8,2)==='MARVELOUS','holdJudgment='+run(4,8,2));
   check('HOLD: 奥を押さえた指が端のレーンの細い帯(幅1)の上に居続けても失敗しない',run(4,9,1)==='MARVELOUS','holdJudgment='+run(4,9,1));
-  check('HOLD: 追従の許容は押し始めのタップの受付と同じ広がり(細い帯 .45 / それ以外 .6 サブレーン)',
-    context.margin(1)===.45/2&&context.margin(2)===.6/2,'細い='+context.margin(1)+' ふつう='+context.margin(2));
+  // 2026-11-02 社長「全部+0.25」で、タップの受付は 細い帯 .95 / それ以外 1.10 サブレーンになった(押さえ中も同じ値を使う)
+  const near=(a,b)=>Math.abs(a-b)<1e-9;
+  check('HOLD: 追従の許容は押し始めのタップの受付と同じ広がり(細い帯 .95 / それ以外 1.10 サブレーン)',
+    near(context.margin(1),.95/2)&&near(context.margin(2),1.1/2),'細い='+context.margin(1)+' ふつう='+context.margin(2));
 }
 
 // --- HOLD: 終わりの100msは外れを見ない(離すときの接点の動きで外れ扱いにしない・2026-10-07) ---

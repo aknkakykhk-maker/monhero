@@ -788,8 +788,12 @@ const rhythmHeadWidthRatio=note=>note&&(note.type==='SLIDE'||note._rhythmOrigina
 // 幅2以上なら 1.0 以上あるので .60 でも隣の中心には届かない。
 // なお候補が複数あるときは**入力位置にいちばん近い中心**のノーツを選ぶので、
 // 広げたことで「狙った側とは違うノーツが取れる」ことは起きない。
-const RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES=.45;
-const RHYTHM_TAP_TOLERANCE_SUB_LANES=.60;
+// 【2026-11-02 社長「少しだけ指の判定幅広げる？」→「全部+0.25」】帯の外側の受付を、どれも +0.25レーン(=+0.5サブレーン)広げた。
+// それまでは 細い帯 .45 / それ以外 .60 サブレーン。タップ・フリック・押し始め・ホールド中がこの2つを共有する(スライド中は RHYTHM_SLIDE_TOLERANCE_LANES)。
+// 隙間を押したときに隣のノーツを取りやすくなることは、社長へ説明したうえでの決定。帯の中を押した指が自分の帯を取るのは変わらない。
+const RHYTHM_TAP_TOLERANCE_EXTRA_SUB_LANES=.5;
+const RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES=.45+RHYTHM_TAP_TOLERANCE_EXTRA_SUB_LANES;
+const RHYTHM_TAP_TOLERANCE_SUB_LANES=.60+RHYTHM_TAP_TOLERANCE_EXTRA_SUB_LANES;
 const rhythmClamp01=value=>Math.max(0,Math.min(1,Number(value)||0));
 // 画面より上(yRatio<0)は、道がまっすぐ(CURVE=1)なら消える一点まで細くなり続ける(0で止める)。
 // 以前のように上端の幅で止めると、画面の上端をまたぐ帯がそこで折れて見える(2026-09-26)。
@@ -1177,7 +1181,8 @@ const rhythmReleaseLane=note=>{
 // 幅はその高さのレーンに比例するので、レーンが細くなる画面の上のほうでは猶予も狭い。
 // 実測: 判定ラインで34px(死角23pxを覆う) / 画面のいちばん上では7pxしか広がらない。
 // 「関係ないところを押しても取れる」にはならない。
-const RHYTHM_INPUT_EDGE_MARGIN_SUB_LANES=1;
+// 2026-11-02 タップの受付を+0.5サブレーン広げたので、端の猶予も同じだけ広げて「受付より広い」を保つ(1→1.5)
+const RHYTHM_INPUT_EDGE_MARGIN_SUB_LANES=1+RHYTHM_TAP_TOLERANCE_EXTRA_SUB_LANES;
 const rhythmLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
   if(!rect||!Number.isFinite(rect.width)||rect.width<=0||!Number.isFinite(rect.height)||rect.height<=0)return null;
   const rawYRatio=rhythmClamp01((Number(clientY)-rect.top)/rect.height),nx=(Number(clientX)-rect.left)/rect.width;
@@ -2038,7 +2043,8 @@ const rhythmNoteWantsEndFlick=note=>{
   const type=note?._rhythmOriginalType||note?.type;
   return type==='HOLD'||type==='SLIDE';
 };
-const RHYTHM_SLIDE_TOLERANCE_LANES = .82;
+// 2026-11-02 社長「全部+0.25」で .82 → 1.07(猶予と速さぶんの上乗せはそのまま)
+const RHYTHM_SLIDE_TOLERANCE_LANES = .82+.25;
 // SLIDEの追従を、難易度ごとにやさしくする。
 //
 // 【2026-09-11・ユーザー指示】
@@ -4462,7 +4468,8 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       }
       return rhythmSlideInputSpan(note);
     };
-    const acceptsPosition=note=>{
+    // shrink … 受付の広がりから引くサブレーン数。0=いまの受付。RHYTHM_TAP_TOLERANCE_EXTRA_SUB_LANES を渡すと、2026-11-02 に広げる前の受付で見る
+    const acceptsPosition=(note,shrink=0)=>{
       // 空中の段(試作): 空中のノーツは空中の指で、地上のノーツは地上の指でだけ取る(スライドは横の位置だけで追う)
       if(RHYTHM_SKY_INPUT.active&&!rhythmNoteIsSlide(note)&&note._rhythmOriginalType!=='SLIDE'&&!rhythmSkyAccepts(note,Number(input?.sky)))return false;
       // 空中から始まるスライドは、空中の段を押したときだけ押し始めを受ける(2026-10-10 社長「位置を合わせなくても勝手に判定オッケーになってない?」。
@@ -4476,7 +4483,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       const span=inputSpan(note);
       if(!span)return note.lane===lane;
       if(!Number.isFinite(subCoordinate))return note.lane===lane;
-      const tolerance=span.width===1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:RHYTHM_TAP_TOLERANCE_SUB_LANES;
+      const tolerance=(span.width===1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:RHYTHM_TAP_TOLERANCE_SUB_LANES)-shrink;
       // 判定ラインより下を押した指は、判定ラインの高さに直した位置でも見る(どちらかが帯の中なら受け付ける)
       const within=coordinate=>Number.isFinite(coordinate)&&coordinate>=span.start-tolerance&&coordinate<=span.end+tolerance;
       return within(subCoordinate)||within(altCoordinate);
@@ -4653,6 +4660,11 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       return distance<current.distance?made:current;
     };
     let passedBest=null,upcomingBest=null;
+    // 【2026-11-02 受付を+0.25レーン広げたぶんは「ほかに取れるものが無いとき」だけ使う】
+    // 社長「全部+0.25」の条件「帯の中をちゃんと押した指は、自分の帯を取る」を守るため。
+    // 広げた所(前の受付の外・いまの受付の中)でしか当たらないノーツは、いったん控えに回し、
+    // 前の受付で当たる候補が1つも無かったときだけ候補へ入れる。前の受付で当たるものの選び方は今までと同じ。
+    const widenedOnly=[];
     for(let index=matchStart;index<matchEnd;index++){
       const note=source[index];
       // flickOnly … 押さえていたホールド/スライドが指を置いたまま終わったあと、その指を滑らせたときの取り直し。フリックだけを取る(下の説明・30-rhythm-play.jsx の inputMoves)
@@ -4694,10 +4706,18 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       // HOLD/SLIDE/FLICKは指を置き続ける・弾く一続きの操作で、取らなかったら押し直しが
       // 効かない(指はもう降りている)。巻き込みが起きるのはTAPなので、TAPだけに限る。
       if(now<noteTime&&note.type==='TAP'&&timeDistance>RHYTHM_COMBO_SAFE_WINDOW_MS)continue;
+      if(!acceptsPosition(note,RHYTHM_TAP_TOLERANCE_EXTRA_SUB_LANES)){widenedOnly.push({note,index,noteTime});continue;}
       const distance=spatialDistance(note),inside=isInside(note);
       const noteSpan=inputSpan(note),spanWidth=noteSpan?Number(noteSpan.width):NaN;
       if(now>=noteTime)passedBest=candidate(passedBest,note,index,noteTime,inside,distance,true,spanWidth);
       else upcomingBest=candidate(upcomingBest,note,index,noteTime,inside,distance,false,spanWidth);
+    }
+    if(!passedBest&&!upcomingBest){
+      for(const {note,index,noteTime} of widenedOnly){
+        const distance=spatialDistance(note),noteSpan=inputSpan(note),spanWidth=noteSpan?Number(noteSpan.width):NaN;
+        if(now>=noteTime)passedBest=candidate(passedBest,note,index,noteTime,false,distance,true,spanWidth);
+        else upcomingBest=candidate(upcomingBest,note,index,noteTime,false,distance,false,spanWidth);
+      }
     }
     // 過ぎている側とまだ来ていない側の両方がある場合は、判定ランクの良し悪しではなく
     // 「ノーツ間のどこまでを前ノーツの所有時間にするか」で決める。
