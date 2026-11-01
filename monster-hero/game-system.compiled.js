@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 469761c88f74b0c4
+// source-sha256: e92a137bd527bbe9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -100527,6 +100527,27 @@ const CardMonSlot = ({
   });
   const mv = motion && (!mon.ko || motion.type === 'attack') ? motion : null;
   const idleBody = art && !mv && !mon.ko && !calm ? cardIdleBodyOf(mon, ty) : null;
+  const hitSil = mv && mv.type === 'hit' && art ? (() => {
+    const mk = `url("${art}")`;
+    const tf = artFit || (opp ? 'scaleX(-1)' : null);
+    return React.createElement("span", {
+      key: `${mv.key}-f`,
+      "data-card-hit-flash": "sil",
+      className: "mh-card-hit-flash mh-card-hit-flash-sil",
+      "aria-hidden": "true",
+      style: {
+        WebkitMaskImage: mk,
+        maskImage: mk,
+        WebkitMaskSize: '100% 100%',
+        maskSize: '100% 100%',
+        WebkitMaskRepeat: 'no-repeat',
+        maskRepeat: 'no-repeat',
+        ...(tf ? {
+          transform: tf
+        } : null)
+      }
+    });
+  })() : null;
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? calm ? 'mh-card-hit-calm' : 'mh-card-hit' : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = React.createElement("div", {
     "data-card-art": `${p}-${m}`,
@@ -100554,7 +100575,9 @@ const CardMonSlot = ({
     "data-card-idle": idleBody,
     className: `mon-idle mon-idle--${idleBody}`,
     style: cardIdleStyleOf(idleBody, p, m, mon.no)
-  }, imgEl) : imgEl), mv && mv.type === 'dodge' && React.createElement("div", {
+  }, imgEl) : hitSil ? React.createElement("span", {
+    className: "relative inline-flex items-end justify-center"
+  }, imgEl, hitSil) : imgEl), mv && mv.type === 'dodge' && React.createElement("div", {
     key: `${mv.key}-a`,
     className: "mh-card-afterimage",
     "aria-hidden": "true"
@@ -100562,7 +100585,7 @@ const CardMonSlot = ({
     key: `${mv.key}-j`,
     "data-card-air-mark": true,
     className: "mh-card-air-mark"
-  }, "空中"), mv && mv.type === 'hit' && React.createElement("span", {
+  }, "空中"), mv && mv.type === 'hit' && !art && React.createElement("span", {
     key: `${mv.key}-f`,
     "data-card-hit-flash": true,
     className: "mh-card-hit-flash",
@@ -165680,6 +165703,8 @@ const createAnimationStyle = () => {
     @keyframes mhCardCutin { 0% { opacity: 0; transform: translateX(40%); } 100% { opacity: 1; transform: translateX(0); } }
     @media (prefers-reduced-motion: reduce) { .mh-card-cutin { animation: none; } }
     .mh-card-hit-flash { position: absolute; inset: 0; border-radius: 12px; background: rgba(255,255,255,.85); pointer-events: none; animation: mhCardHitFlash .28s ease-out both; }
+    /* 立ち絵の子は、絵の形どおりに白く光る(84 の hitSil。絵を型に切り抜く。2026-11-01 点検 G) */
+    .mh-card-hit-flash-sil { border-radius: 0; background: #fff; z-index: 3; }
     @keyframes mhCardHitFlash { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
     .mh-card-dmg-pop { animation: mhCardDmgPop 1s ease-out both; }
     /* 当たった瞬間の「防御！ 5 → 2」(1.6秒。ぽんと出て、しばらく止まって、消える。2026-10-27 社長・案A) */
