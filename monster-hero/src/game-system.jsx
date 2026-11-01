@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2ab4c96bb120ecfe
+// generated-sha256: 45a30f83bb2d7762
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4356,8 +4356,8 @@ const BGM_TRACKS = [
   { id:'melo_tsuki_ga_michiru_mae_ni', name:'月が満ちる前に', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni.mp3', gain:1, loop:true },
   { id:'melo_rebellion', name:'Rebellion ～Beyond the Lock～', creator:'オリジナル', src:'audio/bgm-rebellion.mp3', gain:1, loop:true },
   { id:'melo_rebellion_short', name:'Rebellion ～Beyond the Lock～ short ver.', creator:'オリジナル', src:'audio/bgm-rebellion-short.mp3', gain:1, loop:true },
-  { id:'melo_altar_world_tree', name:'Altar of the World Tree, Beneath the White Night', creator:'オリジナル', src:'audio/bgm-altar-world-tree.mp3', gain:1, loop:true },
-  { id:'melo_altar_world_tree_short', name:'Altar of the World Tree, Beneath the White Night short ver.', creator:'オリジナル', src:'audio/bgm-altar-world-tree-short.mp3', gain:1, loop:true },
+  { id:'melo_altar_world_tree', name:'Altar of the World Tree, Beneath the White Night', creator:'仙夜玖子', src:'audio/bgm-altar-world-tree.mp3', gain:1, loop:true },
+  { id:'melo_altar_world_tree_short', name:'Altar of the World Tree, Beneath the White Night short ver.', creator:'仙夜玖子', src:'audio/bgm-altar-world-tree-short.mp3', gain:1, loop:true },
   { id:'melo_tsuki_ga_michiru_mae_ni_short', name:'月が満ちる前に short ver.', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },

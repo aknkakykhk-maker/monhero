@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 601b8b9a118e55d7
+// source-sha256: 8881022fa44b284d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -5526,14 +5526,14 @@ const BGM_TRACKS = [{
 }, {
   id: 'melo_altar_world_tree',
   name: 'Altar of the World Tree, Beneath the White Night',
-  creator: 'オリジナル',
+  creator: '仙夜玖子',
   src: 'audio/bgm-altar-world-tree.mp3',
   gain: 1,
   loop: true
 }, {
   id: 'melo_altar_world_tree_short',
   name: 'Altar of the World Tree, Beneath the White Night short ver.',
-  creator: 'オリジナル',
+  creator: '仙夜玖子',
   src: 'audio/bgm-altar-world-tree-short.mp3',
   gain: 1,
   loop: true
