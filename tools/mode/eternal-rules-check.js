@@ -40,7 +40,7 @@ check('IDと動的キー',e.recordId==='ETERNAL'&&e.rankingId==='ExtremeETERNAL'
   &&G('extremeBestScoreKey')('ETERNAL')==='mh_extreme_hs_ETERNAL'&&G('extremeClearCountKey')('ETERNAL')==='mh_extreme_clears_ETERNAL'
   &&G('rankingDifficultyForMode')('extreme','ETERNAL')==='ExtremeETERNAL');
 check('HELHEIMクリアで解放',!G('isEternalUnlocked')(0)&&G('isEternalUnlocked')(1)&&!G('isEternalUnlocked')(undefined));
-check('難易度一覧でINFERNOの1つ前',G('ALL_EXTREME_DIFFICULTIES').map(x=>x.id).slice(-2)[0]==='ETERNAL');
+check('難易度一覧でINFERNOの1つ前',G('ALL_EXTREME_DIFFICULTIES').map(x=>x.id).slice(-3)[0]==='ETERNAL');
 check('種族チャレンジの初回クリア報酬は120',G('speciesChallengeFirstClearReward')('ETERNAL')===120);
 check('種族チャレンジはHELHEIMを先にクリアするとETERNALが開く',(()=>{const f=G('isSpeciesChallengeDifficultyUnlocked');return !f('ETERNAL',['RAGNAROK'])&&f('ETERNAL',['HELHEIM']);})());
 check('クイックにETERNALを入れない',G('QUICK_EXTREME_SETTINGS').ETERNAL===undefined);
@@ -64,5 +64,5 @@ check('本体: シールドが受けたぶんは距離強化に入れない',sou
   &&source.includes('(enemy?.hp??0)-(totalDmg-shellAbsorbedTotal)'));
 check('本体: 被ダメに貫きを通す',source.includes('applyEnemyPierce(Math.max(30,(atkVal-defVal*0.5)*(1-defenseRate)),atkVal,enemyPierceRate)'));
 check('本体: 通常UIへ公開しHELHEIMクリアで解放',source.includes("setting.id==='ETERNAL'?eternalUnlocked:")&&source.includes("'HELHEIMクリアで解放'"));
-check('勇者の証はETERNALで4個',/speciesChallenge:Object\.freeze\(\{ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4(, INFERNO:5)? \}\)/.test(source));
+check('勇者の証はETERNALで4個',/speciesChallenge:Object\.freeze\(\{ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4(, INFERNO:5)?(, COCYTUS:6)? \}\)/.test(source));
 process.exit(failed?1:0);

@@ -36,17 +36,17 @@ assert(source.includes('const extremeUnlocked = useMemo(() => isExtremeUnlocked(
 //   約束(未解放でも入口が見えて、押せなくて、条件が分かる)は変わっていないので、そこを見る。
 //   タブが実際に出ること・押せないこと・解放条件が出ることは
 //   tools/mode/extreme-browser-check.js が実ブラウザで確かめている
-assert(source.includes('const challengeExtremeTab=') && source.includes('const jumps=challengeExtremeTab&&toExtreme;')
-  && source.includes('const locked=jumps&&!extremeUnlocked&&!debugBattle;')
+assert(source.includes('const challengeExtremeTab=') && source.includes('const jumps=challengeExtremeTab&&(toExtreme||isUw);')
+  && source.includes('const locked=jumps&&(isUw?!underworldUnlocked:!extremeUnlocked)&&!debugBattle;')
   && source.includes('data-extreme-tab-locked'),
   'the extreme tab must be shown even when locked, with the unlock condition');
 // 種族チャレンジにも同じ形の解放条件が付いたため、開始ボタンは2つのロックを見る
 // ★2026-09-20 に「準備中」のカード(modeSoon)が増えたので、押せない理由が1つ増えた
 assert(source.includes('extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle') && source.includes("disabled={extremeLocked||speciesLocked||modeSoon||(!!battleTutorial") && source.includes("disabled={!previewable}"), 'official locked extreme tiers must remain unselectable while debug may enter');
 assert(source.includes("const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);") && source.includes("setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:"), 'NIGHTMARE details must unlock from the loaded EXTREME clear count');
-assert(source.includes("const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:setting.id==='HELHEIM'?helheimUnlocked:setting.id==='ETERNAL'?eternalUnlocked:setting.id==='INFERNO'?infernoUnlocked:false)"), 'debug mode must unlock every EXTREME difficulty regardless of official progress');
+assert(source.includes("const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:setting.id==='HELHEIM'?helheimUnlocked:setting.id==='ETERNAL'?eternalUnlocked:setting.id==='INFERNO'?infernoUnlocked:setting.id==='COCYTUS'?cocytusUnlocked:false)"), 'debug mode must unlock every EXTREME difficulty regardless of official progress');
 assert(source.includes('const infinityUnlocked = useMemo(() => isInfinityUnlocked(ultimateClearCount), [ultimateClearCount]);'), 'INFINITY details must unlock from the loaded ULTIMATE clear count');
-assert(source.includes("setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:setting.id==='HELHEIM'?helheimUnlocked:setting.id==='ETERNAL'?eternalUnlocked:setting.id==='INFERNO'?infernoUnlocked:false") && source.includes('const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked'), 'CHAOS / ULTIMATE / INFINITY / GOD must use their preceding clear state while debug remains available');
+assert(source.includes("setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:setting.id==='HELHEIM'?helheimUnlocked:setting.id==='ETERNAL'?eternalUnlocked:setting.id==='INFERNO'?infernoUnlocked:setting.id==='COCYTUS'?cocytusUnlocked:false") && source.includes('const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked'), 'CHAOS / ULTIMATE / INFINITY / GOD must use their preceding clear state while debug remains available');
 assert(source.includes("setting.id==='CHAOS'?'NIGHTMAREクリアで解放'"), 'CHAOS card must show its unlock condition');
 assert(source.includes("disabled={!previewable} onClick={()=>setShowWaveDetails(true)}")
   && source.includes("const extreme=gameState==='EXTREME_DIFFICULTY_SELECT'")
@@ -152,7 +152,8 @@ assert(source.includes('h-[366px]') && source.includes('flex items-start gap-2.5
 // 場面の定義がある場面では束のセリフを組み立てない形にした(2026-09-26)。束だけで足した場面は今までどおり束から読む
 assert(/const packedLines = \(scene && !sceneDef\) \? ASSISTANT_LINE_PACKS\.flatMap/.test(assistants)
   && assistants.includes('const def = sceneDef || (packedLines.length ? { lines:packedLines } : null);'), 'line-pack-only EXTREME assistant dialogue must remain reachable');
-assert(source.includes("? 'extremeChallenge'") && source.includes('const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;') && source.includes('key={extremeDifficultyAssistantScene}') && source.includes('scene={extremeDifficultyAssistantScene}') && !source.includes('extremeGuideStep'), 'the centered EXTREME tier card must select its own shared assistant scene regardless of unlock state');
+// 2026-11-01 冥界タブを初めて開いたときだけ、みゅあの冥界の一言(underworldTab)を出す
+assert(source.includes("? 'extremeChallenge'") && source.includes("const extremeDifficultyAssistantScene = isUnderworldDifficultyId(extremeDifficulty) && !underworldIntroDone ? 'underworldTab' : `${extremeDifficulty.toLowerCase()}Difficulty`;") && source.includes('key={extremeDifficultyAssistantScene}') && source.includes('scene={extremeDifficultyAssistantScene}') && !source.includes('extremeGuideStep'), 'the centered EXTREME tier card must select its own shared assistant scene regardless of unlock state');
 const sceneLines = (name) => {
   const start = assistants.indexOf(`${name}: [`);
   return assistants.slice(start, assistants.indexOf('],', start)).match(/\{ e:/g)?.length || 0;
