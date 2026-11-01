@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5af0708d9fb4b5c8
+// source-sha256: b0b6ca059773a498
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6402,12 +6402,13 @@ const rhythmFxRenderOptions = (settings, live = settings) => {
   const motionAuto = !!live && live.noteMotionFx === true && base;
   const glow = rhythmFxPick(settings, 'noteGlow'),
     burst = rhythmFxPick(settings, 'burst');
+  const tapOnly = burst === 'AUTO' && rhythmTapLightOnly(settings);
   return {
     motionFlick: rhythmFxOn(settings, 'flickMotion', motionAuto),
     motionSlide: rhythmFxOn(settings, 'slideWave', motionAuto),
     glowLevel: glow === 'AUTO' ? undefined : glow,
-    hitLevel: rhythmFxLevel(settings, 'burst'),
-    hitLight: rhythmFxLight(settings, 'burst'),
+    hitLevel: tapOnly ? 'NORMAL' : rhythmFxLevel(settings, 'burst'),
+    hitLight: tapOnly ? false : rhythmFxLight(settings, 'burst'),
     hitScale: burst === 'L' ? 1.35 : burst === 'S' ? .7 : 1,
     holdTrace: !!settings && settings.holdTrace !== false
   };
