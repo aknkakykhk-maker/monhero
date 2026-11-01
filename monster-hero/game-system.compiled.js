@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 90c23455e89bf439
+// source-sha256: 4bf8b4121578159d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -158611,6 +158611,7 @@ function MonsterHeroGame() {
       const fxColors = {
         split: '233,213,255',
         merge: '255,250,235',
+        unlock: '253,230,138',
         transform: '255,237,180',
         rankup: ['251,146,60', '251,191,36', '192,132,252', '248,113,113', '250,204,21'][Math.max(0, stageTier - 1)],
         shrink: '186,230,253'
@@ -158828,12 +158829,14 @@ function MonsterHeroGame() {
         style: {
           position: 'absolute',
           inset: 0,
-          background: `radial-gradient(circle at 50% ${fx === 'split' || fx === 'merge' ? '46%' : '22%'}, rgba(${fxColors[fx] || '255,255,255'},.95), rgba(${fxColors[fx] || '255,255,255'},.35) 45%, rgba(0,0,0,0) 75%)`,
+          background: `radial-gradient(circle at 50% ${fx === 'split' || fx === 'merge' || fx === 'unlock' ? '46%' : '22%'}, rgba(${fxColors[fx] || '255,255,255'},.95), rgba(${fxColors[fx] || '255,255,255'},.35) 45%, rgba(0,0,0,0) 75%)`,
           animation: 'storyFlash 1s ease-out both'
         }
-      }), (fx === 'split' || fx === 'merge') && React.createElement("span", {
+      }), (fx === 'split' || fx === 'merge' || fx === 'unlock') && React.createElement("span", {
         "data-story-keyhole": true
-      }), fx === 'split' && React.createElement("span", {
+      }), fx === 'unlock' && React.createElement("span", {
+        "data-story-unlock": true
+      }, React.createElement("i", null)), fx === 'split' && React.createElement("span", {
         "data-story-crack": true
       }, [-160, -118, -72, -28, 14, 58, 104, 142].map((deg, i) => React.createElement("i", {
         key: deg,
@@ -164635,6 +164638,9 @@ const createAnimationStyle = () => {
     [data-story-crack] > i { position: absolute; left: 0; top: 0; width: 46vmax; height: 3px; transform-origin: 0 50%; border-radius: 3px; background: linear-gradient(90deg, rgba(255,255,255,1), rgba(216,180,254,.9) 40%, rgba(168,85,247,0)); box-shadow: 0 0 10px rgba(216,180,254,.9); animation: storyCrack .9s ease-out both; }
     [data-story-crack] > i:nth-child(even) { background: linear-gradient(90deg, rgba(255,255,255,1), rgba(254,240,138,.9) 40%, rgba(255,255,255,0)); box-shadow: 0 0 10px rgba(255,255,255,.9); }
     [data-story-keyhole] { position: absolute; left: 50%; top: 46%; width: 34vmin; height: 34vmin; margin: -17vmin 0 0 -17vmin; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,1) 0 12%, rgba(233,213,255,.85) 26%, rgba(147,51,234,.45) 48%, rgba(0,0,0,0) 70%); animation: storyKeyhole 1.1s ease-out both; }
+    [data-story-unlock] { position: absolute; left: 50%; top: 46%; width: 30vmin; height: 30vmin; margin: -15vmin 0 0 -15vmin; border-radius: 50%; border: 4px solid rgba(253,224,71,.95); box-shadow: 0 0 18px rgba(253,224,71,.9), inset 0 0 14px rgba(255,255,255,.8); animation: storyUnlock 1.6s ease-out both; }
+    [data-story-unlock] > i { position: absolute; left: 50%; top: -8%; width: 14%; height: 30%; margin-left: -7%; border-radius: 40% 40% 20% 20%; background: rgba(253,224,71,1); box-shadow: 0 0 10px rgba(253,224,71,1); }
+    @keyframes storyUnlock { 0% { opacity: 0; transform: scale(.4) rotate(0deg); } 20% { opacity: 1; transform: scale(1) rotate(0deg); } 65% { opacity: 1; transform: scale(1) rotate(90deg); } 100% { opacity: 0; transform: scale(2.4) rotate(90deg); } }
     @keyframes storyCrack { 0% { opacity: 0; scale: 0 1; } 20% { opacity: 1; } 55% { opacity: 1; scale: 1 1; } 100% { opacity: 0; scale: 1 .4; } }
     @keyframes storyKeyhole { 0% { opacity: 0; transform: scale(.2); } 25% { opacity: 1; transform: scale(1.15); } 100% { opacity: 0; transform: scale(2.2); } }
     /* 動きを減らす設定・軽量モードでは、光の筋は出さず、光だけを短く控えめに */
