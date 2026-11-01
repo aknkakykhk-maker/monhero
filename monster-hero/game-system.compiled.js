@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 99bbb66d7a6b508f
+// source-sha256: 9a1831017dff18cb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -97506,6 +97506,8 @@ const cardAssistantDeckName = (db, deck, who, level, rnd = Math.random) => {
   return strong.length <= CARD_DECK_NAME_MAX ? strong : plain;
 };
 const CARD_VS_CSS = `
+/* 背の低い縦の画面(390×600 など)では、相手の立ち絵とモンスターの絵を小さくして高さに収める(はみ出して頭が切れ、「あなた」と「タップで始める」が重なっていた。2026-11-01 見た目の点検) */
+@media (orientation: portrait) and (max-height: 700px) { [data-card-vs] { --mh-vs-foe-h: 18vh; --mh-vs-mon-h: 15vh; } }
 @keyframes mhVsFoeIn { from { transform: translateX(60%); opacity: 0 } to { transform: none; opacity: 1 } }
 @keyframes mhVsMonFoe { 0% { transform: translateX(140%) scale(.6); opacity: 0 } 70% { transform: translateX(-6%) scale(1.06); opacity: 1 } 100% { transform: none; opacity: 1 } }
 @keyframes mhVsMonMe { 0% { transform: translateX(-140%) scale(.6); opacity: 0 } 70% { transform: translateX(6%) scale(1.06); opacity: 1 } 100% { transform: none; opacity: 1 } }
@@ -97635,7 +97637,7 @@ const CardVsMonsters = ({
       onImgError: typeof cardArtOnError === 'function' ? cardArtOnError(art, CARD_IMG(m.img)) : null,
       className: "drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]",
       style: {
-        width: 'min(100%, 19vh, 140px)'
+        width: 'min(100%, var(--mh-vs-mon-h, 19vh), 140px)'
       }
     });
     return el;
@@ -97646,7 +97648,7 @@ const CardVsMonsters = ({
     className: "w-full rounded-md object-cover",
     style: {
       aspectRatio: '63 / 88',
-      maxHeight: 'min(19vh, 140px)'
+      maxHeight: 'min(var(--mh-vs-mon-h, 19vh), 140px)'
     }
   }), React.createElement("span", {
     "data-card-vs-mon-name": true,
@@ -97750,7 +97752,7 @@ const CardVsIntro = ({
   }, React.createElement("div", {
     className: "mh-vs-foe shrink-0",
     style: {
-      width: 'min(34vw, 30vh, 150px)'
+      width: 'min(34vw, var(--mh-vs-foe-h, 30vh), 150px)'
     }
   }, who ? React.createElement(CardVsArt, {
     "data-card-vs-foe-art": true,
@@ -100209,7 +100211,7 @@ const CardDetailModal = ({
     }, React.createElement("img", {
       src: CARD_IMG(c ? c.img : m ? m.img : no, 'l'),
       alt: c ? c.name : m ? m.name : '',
-      className: "w-[min(78vw,300px)] rounded-xl shadow-2xl"
+      className: "w-[min(78vw,300px)] rounded-xl shadow-2xl landscape:h-[32vh] landscape:w-auto"
     })), c && React.createElement("div", {
       className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100"
     }, React.createElement("div", {
@@ -102754,9 +102756,9 @@ const CardBattleBoard = ({
       className: `pointer-events-none absolute left-1/2 top-0 z-[2] -translate-x-1/2 -translate-y-1/3 whitespace-nowrap rounded-md px-1 ${handTiny ? 'text-[9px]' : 'text-[10px]'} font-black leading-tight shadow-[0_2px_4px_#000] ${pickTag === '候補' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-slate-950'}`
     }, pickTag), why && React.createElement("span", {
       "data-card-why": true,
-      className: `pointer-events-none absolute left-1/2 top-[22%] z-[2] max-w-[110%] -translate-x-1/2 rounded-md border border-rose-300/80 bg-rose-950/95 px-1 py-px text-center ${handTiny ? 'text-[9px]' : 'text-[10px]'} font-black leading-tight text-rose-100 shadow-[0_2px_4px_#000]`,
+      className: `pointer-events-none absolute left-1/2 top-[22%] z-[2] w-max max-w-[110%] -translate-x-1/2 rounded-md border border-rose-300/80 bg-rose-950/95 px-1 py-px text-center ${handTiny ? 'text-[9px]' : 'text-[10px]'} font-black leading-tight text-rose-100 shadow-[0_2px_4px_#000]`,
       style: JA_WRAP_STYLE
-    }, why), !(replay && boardFit >= 3) && React.createElement("div", {
+    }, jaWrap(why)), !(replay && boardFit >= 3) && React.createElement("div", {
       className: `mt-0.5 w-full rounded-md bg-black/60 ${handTiny ? 'py-px' : 'py-0.5'} text-center leading-tight`
     }, React.createElement(CardNameFit, {
       name: c ? c.name : no,
