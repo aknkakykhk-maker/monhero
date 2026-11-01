@@ -299,7 +299,7 @@ const CardCupPrizePanel = ({ c, v, now, selfId, prize, reload, getAdapters }) =>
       {prize.fee && <p data-card-cup-fee className="text-[12px] font-black text-sky-100">{`参加費 ${cardCupItemText(prize.fee.item, prize.fee.amount)}(主催・主催仲間は払いません)`}</p>}
       {(prize.pool.length > 0 || prize.fee) && (
         <div data-card-cup-split className="space-y-0.5 text-[12px] font-bold text-slate-200">
-          {prize.split.map((pct, i) => <div key={i} className="flex justify-between"><span>{`${i + 1}位 ${pct}%`}</span><span className="text-slate-300">{poolFull.map((p) => { const s = shares(p.total)[i] || 0; return s > 0 ? cardCupItemText(p.item, s) : null; }).filter(Boolean).join('・') || '−'}</span></div>)}
+          {prize.split.map((pct, i) => <div key={i} className="flex justify-between gap-2"><span className="shrink-0 whitespace-nowrap">{`${i + 1}位 ${pct}%`}</span><span className="min-w-0 text-right text-slate-300">{(() => { const t = poolFull.map((p) => { const s = shares(p.total)[i] || 0; return s > 0 ? cardCupItemText(p.item, s) : null; }).filter(Boolean); return t.length ? t.map((x, k) => <span key={k} className="whitespace-nowrap">{`${x}${k < t.length - 1 ? '・' : ''}`}</span>) : '−'; })()}</span></div>)}
           <p className="text-[11px] text-slate-400">{`${players}人そろったときの見込み。主催・主催仲間は受け取りません(その分は次の順位の人へ)`}</p>
         </div>
       )}

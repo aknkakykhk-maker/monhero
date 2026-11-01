@@ -1,5 +1,6 @@
 -- MFバトルカード: デッキ登録の対戦・デッキのレンタル(2026-10-29 社長「すぐ作り始める」・カード部 ツナグくん)
 -- 流すのは統括部長。足すだけ(いまの表は変えない)。何度流しても同じになる(if not exists・create or replace)
+-- 本番は 10/30 にこの形(モンスター ^C-[0-9]{3}[A-Z]{0,2}$・カード ^[A-Z]?[0-9]{3}$。色ちがい・場のカードを通す)で流し済み。流し直しても同じになる
 --
 -- 表
 --   card_deck_entries … 1人1組の登録デッキ(だれでも読める。持ち主の鍵の指紋 key_hash だけは読ませない)
@@ -92,9 +93,9 @@ begin
     or octet_length(p_deck::text) > 2000 or octet_length(p_tactics::text) > 2000 then return 'bad'; end if;
   mons := p_deck -> 'monsters'; cards := p_deck -> 'cards';
   if jsonb_typeof(mons) <> 'array' or jsonb_array_length(mons) <> 3 or jsonb_typeof(cards) <> 'array' or jsonb_array_length(cards) <> 50 then return 'bad'; end if;
-  select bool_and(jsonb_typeof(x) = 'string' and (x #>> '{}') ~ '^C-[0-9]{3}$') into ok from jsonb_array_elements(mons) x;
+  select bool_and(jsonb_typeof(x) = 'string' and (x #>> '{}') ~ '^C-[0-9]{3}[A-Z]{0,2}$') into ok from jsonb_array_elements(mons) x;
   if not ok then return 'bad'; end if;
-  select bool_and(jsonb_typeof(x) = 'string' and (x #>> '{}') ~ '^[0-9]{3}$') into ok from jsonb_array_elements(cards) x;
+  select bool_and(jsonb_typeof(x) = 'string' and (x #>> '{}') ~ '^[A-Z]?[0-9]{3}$') into ok from jsonb_array_elements(cards) x;
   if not ok then return 'bad'; end if;
   -- 同じ番号のカードは3枚まで(同じ名前で番号がちがう札は、登録の画面で確かめる)
   if exists (select 1 from jsonb_array_elements_text(cards) c group by c having count(*) > 3) then return 'bad'; end if;

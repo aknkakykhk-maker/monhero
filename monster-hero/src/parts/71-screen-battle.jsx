@@ -3403,10 +3403,13 @@ function BattleScreen({
                           (2026-09-22 ユーザー指摘「カードも距離枠も全て安っぽくない？」)。
                           読む順が「何の値か → いくつか」で固定され、4枚並べたときに縦がそろう */}
                       <div className="flex h-[10px] items-center justify-between leading-none">
-                        <span className="shrink-0 whitespace-nowrap text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] font-black tracking-wider [@media(orientation:landscape)_and_(max-height:520px)]:tracking-normal text-pink-300">ライフ</span>
-                        <span className="font-mono leading-none">{/* ★ミルフィーシールド(ドリーミィのEX)の残り。ライフの数字の前に出す */}
-                          {Array.isArray(tacticsShields)&&tacticsShields[i]>0&&<span data-tactics-shield={tacticsShields[i]} className="mr-1 text-[9px] font-black text-sky-200">🛡️{tacticsShields[i]}</span>}
-                          <span className="text-[11px] font-black text-white">{tacticsUnit.hp}</span><span className="text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] text-slate-400">/{tacticsUnit.maxHp}</span></span>
+                        {/* ★ミルフィーシールド(ドリーミィのEX)の残りは、「ライフ」の文字の代わりに出す。ライフの数字の前に足すと、
+                            狭い枠(375幅など)で行に入り切らず折り返して、下の GUTS の行に重なっていた(2026-11-01 タクティクスの点検) */}
+                        {Array.isArray(tacticsShields)&&tacticsShields[i]>0
+                          ?<span data-tactics-shield={tacticsShields[i]} className="mr-1 shrink-0 whitespace-nowrap text-[9px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[8px] font-black leading-none text-sky-200">🛡️{tacticsShields[i]}</span>
+                          :<span className="shrink-0 whitespace-nowrap text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] font-black tracking-wider [@media(orientation:landscape)_and_(max-height:520px)]:tracking-normal text-pink-300">ライフ</span>}
+                        <span className="whitespace-nowrap font-mono leading-none">
+                          <span className="text-[11px] font-black text-white">{tacticsUnit.hp}</span><span className={`text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] text-slate-400${Array.isArray(tacticsShields)&&tacticsShields[i]>0?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}>/{tacticsUnit.maxHp}</span></span>
                       </div>
                       <div className="relative h-[2px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
                         <div data-tactics-hp-bar className={`h-full w-full origin-left transition-transform duration-1000 ${tacticsUnit.downed?'bg-gradient-to-r from-emerald-500 to-teal-300':'bg-gradient-to-r from-rose-500 to-pink-300'}`} style={{transform:`scaleX(${Math.min(100,Math.max(0,hpPct))/100})`,boxShadow:'0 0 6px rgba(244,114,182,.55)'}}></div>
