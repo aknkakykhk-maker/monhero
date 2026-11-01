@@ -3224,7 +3224,12 @@ const RHYTHM_HOLD_END_TRACKING_SKIP_MS=100;
 // HOLDを押さえている最中の横ズレの許容(帯の外側へ足すレーン数)は、押し始めのタップが受け付ける広がりと同じにする。
 // タップは帯の幅が1サブレーンのとき RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES、それ以外は RHYTHM_TAP_TOLERANCE_SUB_LANES だけ外まで受け付ける
 // (サブレーン=レーンの半分)。追従がこれより狭いと、押し始めで通った指が、動かしていないのに外れ扱いになる。
-const rhythmHoldTrackingMarginLanes=widthSubLanes=>(widthSubLanes<=1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:RHYTHM_TAP_TOLERANCE_SUB_LANES)/2;
+// 【2026-11-02 社長「あんまりいじりたくないんだけど、少しだけ指の判定幅広げる？」→ +0.25レーンに決定】
+// リベリオンMASTERの「途中で細くなるホールド」(太い帯から細い帯へ寄っていく形)で、始めの帯の端に置いた指が
+// 動かさないまま外れになっていた。押さえている最中の横幅だけを、タップの受付よりこのレーン数だけ広げる。
+// 押し始め・タップ・フリック・スライドの受付、どのノーツを取るかの照合には効かない(この関数は押さえ中のHOLDの外れ判定だけが使う)。
+const RHYTHM_HOLD_TRACKING_EXTRA_LANES=.25;
+const rhythmHoldTrackingMarginLanes=widthSubLanes=>(widthSubLanes<=1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:RHYTHM_TAP_TOLERANCE_SUB_LANES)/2+RHYTHM_HOLD_TRACKING_EXTRA_LANES;
 // note.lane / rhythmLaneCoordinateAtPoint と同じ「整数=レーン中心」座標系で、
 // HOLDの中心と半幅を返す。subLane/width指定はboundary座標系(整数=境界)なので
 // -0.5して中心座標系へ揃える。
