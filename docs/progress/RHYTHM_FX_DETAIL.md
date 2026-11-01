@@ -13,10 +13,11 @@
 
 - `RHYTHM_FX_ITEMS`(13-bgm-and-rhythm-settings.jsx): 項目の一覧(キー・組・名前・重さ・選べる値)
 - `normalizeRhythmFx(raw)`: どの値も一覧に無ければ `AUTO`
-- `rhythmFxLevel(settings,key)`: CSS 用の段。AUTO は「軽量モードなら LW、そうでなければ演出量の値」。
-  出す/強 は `NORMAL`、出さない/なし は `LW`
-- 演奏画面のプレイエリアに `data-fx-<項目>` を付け、CSS の `[data-rhythm-effect=…]` `[data-rhythm-lightweight="true"]` のうち
-  その項目の要素を止めている規則だけを `[data-fx-<項目>=…]` に付け替える(おまかせなら同じ値が入るので見た目は同じ)
+- `rhythmFxLevel(settings,key)` / `rhythmFxLight(settings,key)`: CSS 用の「演出量の段」と「軽量モードかどうか」の組。
+  AUTO はいまの演出量・軽量モードそのまま。出す/強/大 は `NORMAL`・軽量でない、出さない/なし は `MINIMAL`・軽量
+- 演奏画面(画面全体とプレイエリア)に `data-fx-<項目>` と `data-fx-<項目>-lw` を付け、CSS の `[data-rhythm-effect=…]` `[data-rhythm-lightweight="true"]` のうち
+  その項目の要素を止めている規則だけを付け替える(おまかせなら同じ値の組が入るので見た目は同じ)。1つの値にまとめると、
+  軽量モードのときに演出量の段の規則が効かなくなって見た目が変わるので、2つに分けている
 
 ## 進み具合
 - [x] 設定の器・正規化・解決の関数(rhythmFxPick/Level/Light/On/Attrs/RenderOptions/StageLevel/StageStyle/ArtSize・rhythmJudgeScaleStyle)
