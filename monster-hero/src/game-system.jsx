@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 12bfb0ef05c0c296
+// generated-sha256: aa3fad5a9dff25d6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4665,12 +4665,15 @@ const RHYTHM_ROAD_DEPTH_LABELS = Object.freeze([['NORMAL','いまの'],['DEEP','
 //   名前は重さの順に読めるようにそろえてある(既定が「標準」なのは前の指示のまま)。
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL','最大'],['LOW','多め'],['LIGHT','標準'],['MINIMAL','最小']]);
 // 押したときの光(2026-10-15・社長「演出量を最小にしても、フリックとかのタップ時の光は出る設定がほしい」)。
-// AUTO   … 演出量に合わせる(これまでどおり。演出量「最小」・軽量モードでは出さない)
-// ALWAYS … 演出量「最小」・軽量モードでも、判定ラインで弾ける光だけは出す(ほかの演出は止めたまま)
+// AUTO   … 演出量に合わせる。演出量「最小」では光だけ出す(2026-11-02)。軽量モードでは出さない
+// ALWAYS … 軽量モードでも、判定ラインで弾ける光だけは出す(ほかの演出は止めたまま)
 const RHYTHM_TAP_LIGHT_MODES = Object.freeze(['AUTO','ALWAYS']);
 const RHYTHM_TAP_LIGHT_LABELS = Object.freeze([['AUTO','おまかせ'],['ALWAYS','いつも出す']]);
 // 「最小」・軽量モードのせいで止まっている光を、この設定で出すときだけ真(ふだんの段では、もともと光が出ているので偽)
-const rhythmTapLightOnly = settings => !!settings&&settings.tapLight==='ALWAYS'&&(settings.lightweightMode===true||settings.effectAmount==='MINIMAL');
+// 2026-11-02 社長「演出量を最小にしてフリックやノーツを押したときの光だけ出すようにしたい」→ 演出量「最小」は、押したときの光をいつも出す
+//   (「押したときの光」がおまかせでも)。軽量モードは今までどおり「いつも出す」を選んだときだけ。設定 fx の「弾ける光」を「なし」にすれば止められる
+const rhythmTapLightOnly = settings => !!settings&&((settings.effectAmount==='MINIMAL'&&settings.lightweightMode!==true)
+  ||(settings.tapLight==='ALWAYS'&&(settings.lightweightMode===true||settings.effectAmount==='MINIMAL')));
 // 演奏中に1秒あたり何回描くか(2026-09-24・ユーザーと相談して決めた)。
 // POWER_SAVE … 120Hz以上の画面では1回おきに描き、毎秒60回ほどに抑える。発熱と電池を抑える。
 //   90Hzの画面は抑えない(60へ落とすと 11ms/22ms が交互に並び、かえってガタついて見える)。
@@ -4937,6 +4940,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   judgmentAtTap:false,
   // 演奏中は左上の曲名とジャケットを薄くする(2026-09-27)。始まって4秒で薄くなり、ポーズ中は元に戻る。目線を道に集めるため。既定は ON
   hudSongFade:true,
+  // ホールド・スライドを押せている指は、その指の道の光を出さず、帯を指の所からなぞるように光らせる(2026-11-02 社長・既定 ON)
+  holdTrace:true,
   // 重いときは演出を自動で控えめにする(2026-09-27)。演奏中にカクつき続けたら、重い演出から一段ずつ下げる(保存値は変えない)。既定は ON
   autoEffectDown:true,
   // 押したときの光(2026-10-15)。新しい項目なので、保存値に無い人は「おまかせ」(これまでの見え方)で補う
@@ -5019,7 +5024,7 @@ const RHYTHM_FX_HELP = Object.freeze({
   judgeSize:'判定の文字（MARVELOUS・GREAT など）の大きさです。既定は「おまかせ」（これまでどおり「標準」）。文字の後ろの光も一緒に大きさが変わります。',
   judgeFlow:'判定の文字の金色の帯・虹が流れる動きと、文字が出た瞬間に弾む動き、文字のまわりの強い光です。既定は「おまかせ」（演出量が「最大」のときに出ます）。\n毎フレーム文字を塗り直すので、カクつく端末ではここを「出さない」にすると効きます。色と大きさはどれでも残ります。',
   judgeLinePulse:'判定ラインが拍に合わせて脈打つ動きです。既定は「おまかせ」（演出量が「最大」「多め」のときに出ます）。',
-  burst:'ノーツを取った瞬間に判定ラインで弾ける光の大きさです。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません。「押したときの光」を「いつも出す」にすると出ます）。\n「大」「標準」「小」を選ぶと、演出量・軽量モードに関係なく、その大きさで出ます。',
+  burst:'ノーツを取った瞬間に判定ラインで弾ける光の大きさです。既定は「おまかせ」（演出量「最小」では出ます。軽量モードでは出ません。「押したときの光」を「いつも出す」にすると軽量モードでも出ます）。\n「大」「標準」「小」を選ぶと、演出量・軽量モードに関係なく、その大きさで出ます。',
   flash:'モンスターノーツを取ったときに画面全体が光る演出です。既定は「おまかせ」。まぶしいときは「出さない」にしてください。',
   comboBounce:'コンボ数が増えるたびに数字が跳ねる動きと、枠の脈打ちです。既定は「おまかせ」（演出量が「最大」「多め」のときに出ます）。',
   combo100:'コンボが100のくぎりに届いたときのお祝いの表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
@@ -5048,13 +5053,27 @@ const rhythmFxAttrs = settings => Object.fromEntries(RHYTHM_FX_CSS_KEYS.flatMap(
 const rhythmFxOn = (settings,key,auto) => {const v=rhythmFxPick(settings,key);return v==='AUTO'?!!auto:!(v==='OFF'||v==='NONE');};
 // ノーツの描き手(RHYTHM_CANVAS_RENDERER.begin)へ渡す値。live は演奏中に変わる設定(にじむ光・ノーツの動き)を読む先。
 // おまかせの項目は描き手が演出量・軽量モードから決めるので、渡す値もこれまでと同じになる
+// 押せているホールド・スライドが、判定ラインのところで覆っているサブレーン(ビットの集まり・前後1つずつ余裕を持たせる)。
+// ホールドは譜面の subLane と幅、スライドは今の帯の位置(lane 単位)から数える。道の光を消すのに使う(設定 holdTrace・2026-11-02)
+const rhythmHoldTraceMask = (note,visualLane) => {
+  if(!note)return 0;
+  const w=Math.max(1,Number(note.subLaneWidth)||2);
+  const lane=Number(visualLane);
+  const start=rhythmNoteIsSlide(note)&&Number.isFinite(lane)?Math.round(lane*2+1-w/2):(Number.isFinite(Number(note.subLane))?Number(note.subLane):Number(note.lane)*2);
+  if(!Number.isFinite(start))return 0;
+  let mask=0;
+  for(let i=Math.max(0,start-1);i<=Math.min(RHYTHM_SUB_LANE_COUNT-1,start+w);i++)mask|=1<<i;
+  return mask;
+};
 const rhythmFxRenderOptions = (settings,live=settings) => {
   const base=!!settings&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
   const motionAuto=!!live&&live.noteMotionFx===true&&base;
   const glow=rhythmFxPick(settings,'noteGlow'),burst=rhythmFxPick(settings,'burst');
   return {motionFlick:rhythmFxOn(settings,'flickMotion',motionAuto),motionSlide:rhythmFxOn(settings,'slideWave',motionAuto),
     glowLevel:glow==='AUTO'?undefined:glow,hitLevel:rhythmFxLevel(settings,'burst'),hitLight:rhythmFxLight(settings,'burst'),
-    hitScale:burst==='L'?1.35:burst==='S'?.7:1};
+    hitScale:burst==='L'?1.35:burst==='S'?.7:1,
+    // ホールド・スライドを押せている間、帯を指の所からなぞるように光らせる(設定 holdTrace・既定 ON・演出量や軽量モードに関係なく)
+    holdTrace:!!settings&&settings.holdTrace!==false};
 };
 // 判定文字の大きさ(設定 fx「判定文字の大きさ」)。判定文字の枠ごと、下のふちを軸に広げ・縮める(文字の後ろの光・ずれメーターも一緒に)。
 // 枠は translate で中央へ寄せているので、別の指定の scale を使う(transform を上書きしない)。おまかせ・標準は何も付けない
@@ -5131,6 +5150,7 @@ const normalizeRhythmSettings = value => {
     climaxFx:typeof source.climaxFx==='boolean'?source.climaxFx:DEFAULT_RHYTHM_SETTINGS.climaxFx,
     judgmentAtTap:typeof source.judgmentAtTap==='boolean'?source.judgmentAtTap:DEFAULT_RHYTHM_SETTINGS.judgmentAtTap,
     hudSongFade:typeof source.hudSongFade==='boolean'?source.hudSongFade:DEFAULT_RHYTHM_SETTINGS.hudSongFade,
+    holdTrace:typeof source.holdTrace==='boolean'?source.holdTrace:DEFAULT_RHYTHM_SETTINGS.holdTrace,
     autoEffectDown:typeof source.autoEffectDown==='boolean'?source.autoEffectDown:DEFAULT_RHYTHM_SETTINGS.autoEffectDown,
     tapLight:RHYTHM_TAP_LIGHT_MODES.includes(source.tapLight)?source.tapLight:DEFAULT_RHYTHM_SETTINGS.tapLight,
     stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
@@ -21253,6 +21273,9 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 {field('演奏中は曲名を薄くする',toggle('hudSongFade'),
               '演奏が始まって4秒たつと、左上の曲名とジャケットを薄くします。目線を道に集めやすくするためです。既定は「ON」です。\nポーズ中は元の濃さに戻ります。スコア・ランク・ライフの表示は薄くなりません。')}
 {field('レーン発光',segments('laneGlow',RHYTHM_LANE_GLOW_LABELS),null,{full:true})}
+{/* ホールド・スライドをなぞる光(2026-11-02 社長「押せてるときは道の押した光が出なくてホールドとかを綺麗になぞってるように」)。既定は ON */}
+{field('ホールド・スライドをなぞる光',toggle('holdTrace'),
+              'ホールド・スライドを押せているあいだ、押している指の道の光を出さず、代わりに帯そのものを指の所から奥へなぞるように光らせます。既定は「ON」です。\n指が帯から外れると、帯の光も止まります。タップ・フリック・何もない所を押したときの道の光は、これまでどおりです。演出量「最小」や軽量モードでも出ます。判定・スコアは変わりません。\n「OFF」にすると、これまでの見た目(押している所の道が光る)に戻ります。')}
 {hellReleased&&field('空中の道の見え方',hellSegments('lane',[['em','はっきり'],['el','控えめ'],['none','なし']]),
   'HELL で、空中のノーツが流れてくる空中の道をどれくらいはっきり出すかです。既定は「はっきり」です。「なし」にすると、空中の判定線だけになります。判定・スコアは変わりません。',{full:true})}
 {/* 空中のノーツの見た目(2026-10-17 社長「空中を本物の3D(段階A)が1番見やすかった。これと今のを設定で選べるようにする」)。既定は「いつもの」 */}
@@ -21360,7 +21383,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
                 「重い」との声)。判定文字の金の帯・虹の流れは毎フレーム字を塗り直すので、
                 動きがカクつく端末ではここがいちばん効く */}
 {field('演出量',segments('effectAmount',RHYTHM_EFFECT_LABELS),
-              '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります（取ったときの光だけは、下の「押したときの光」を「いつも出す」にすると出せます）。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。',{full:true})}
+              '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝ノーツ・フリックを取ったときに判定ラインで弾ける光だけを出し、ほかの演出（判定文字やコンボ数の弾み、画面のフラッシュ、100コンボごとの演出、フルコンボの大きな表示、モンスターノーツの大きな光）は出しません。モンスターノーツの光も、ふつうのノーツと同じ大きさになります。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。',{full:true})}
 {/* 重いときは演出を自動で控えめにする(2026-09-27)。既定は ON */}
 {field('重いときは演出を自動で控えめに',toggle('autoEffectDown'),
               '演奏中にカクつきが続いたら、重い演出から順に自動で控えめにします。既定は「ON」です。保存してある設定は変わらず、アプリを開き直すと元に戻ります。判定・スコアは変わりません。\n下げる順番は、にじむ光 → ライブ背景「ライブ」を「派手」に → 道の演出・ノーツの動き → 判定の演出・コンボの節目 → ライブ背景を「控えめ」→「シンプル」です。\n画質を「自動」にしているときは、先に画質を下げ、それでもカクつくときに演出を下げます。')}
@@ -21417,7 +21440,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
               'GREAT 以上の判定のとき、判定の文字の後ろで光がはじけ、文字が大きく弾みます。既定は「OFF」です。判定・スコアは変わりません。\n光の色は判定の色（GREAT は赤、EXCELLENT は桃紫、MARVELOUS は金）で、ぴったりの MARVELOUS では虹色の光が走ります。\n判定のたびに動くので少し重くなります。演出量が「最小」のときと軽量モードでは出ません。')}
 {/* 押したときの光(2026-10-15・社長「演出量を最小にしても、フリックとかのタップ時の光は出る設定がほしい」)。既定は「おまかせ」(これまでの見た目) */}
 {field('押したときの光',segments('tapLight',RHYTHM_TAP_LIGHT_LABELS),
-              'ノーツを取った瞬間に判定ラインで弾ける光（TAP・フリックの炎・ホールドやスライドを押し切ったときの光）を、演出量とは別に決めます。既定は「おまかせ」です。判定・スコアは変わりません。\n「おまかせ」＝演出量に合わせます。演出量「最小」と軽量モードでは出ません（これまでどおり）。\n「いつも出す」＝演出量「最小」や軽量モードでも、この光だけは出します。判定文字やコンボ数の弾み、画面のフラッシュ、両サイドのマスモンの跳ねなど、ほかの演出は止まったままです。モンスターノーツの光も、ふつうのノーツと同じ大きさになります。',{full:true})}
+              'ノーツを取った瞬間に判定ラインで弾ける光（TAP・フリックの炎・ホールドやスライドを押し切ったときの光）を、演出量とは別に決めます。既定は「おまかせ」です。判定・スコアは変わりません。\n「おまかせ」＝演出量に合わせます。演出量「最小」では、この光だけを出します。軽量モードでは出ません。\n「いつも出す」＝軽量モードでも、この光だけは出します。判定文字やコンボ数の弾み、画面のフラッシュ、両サイドのマスモンの跳ねなど、ほかの演出は止まったままです。モンスターノーツの光も、ふつうのノーツと同じ大きさになります。',{full:true})}
 {hellReleased&&field('空中を叩いた柱の光',hellSegments('hit',[['far','奥まで'],['on','短い'],['off','出さない']]),
   'HELL で空中のノーツを叩いたとき、空中の判定線から立ち上がる光の柱です。既定は「奥まで」で、空中の道に沿って奥の端まで伸びます。「短い」は地上と同じ長さ、「出さない」で光の柱を出しません。判定・スコアは変わりません。',{full:true})}
 {RHYTHM_FX_ITEMS.filter(item=>item.group==='judge').map(fxField)}
@@ -24792,7 +24815,7 @@ if(settingsLiveRef.current.autoEffectDown!==false&&stepEffectCapRef.current){con
     //   この枠でタッチが RHYTHM_TOUCH_FIX_LATE_BURST 回以上 50ms 以上遅れて届いていたら、同じ道で演出を一段下げる
     const lateNow=RHYTHM_TOUCH_BRIDGE.lateCount(),lateBurst=rhythmTouchFixOn('lateInputEffectDown')&&lateNow-(ae.late||0)>=RHYTHM_TOUCH_FIX_LATE_BURST;ae.late=lateNow;
     if(ae.settle>0)ae.settle--;else if(!qualityFirst&&((ae.frames>=RHYTHM_AUTO_QUALITY_MIN_FRAMES&&ae.slow/ae.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO)||lateBurst)&&stepEffectCapRef.current()){ae.settle=1;RHYTHM_PERF.autoStep(lateBurst?'演出(タッチの遅れ)':'演出',RHYTHM_AUTO_EFFECT_STEP_LABELS[rhythmAutoEffectMemory.level-1]||'',ae.slow,ae.frames);}ae.start=frameNowMs;ae.frames=0;ae.slow=0;}}
-if(powerSave){const gap=prevFrameMs?frameNowMs-prevFrameMs:0;prevFrameMs=frameNowMs;if(gap>0&&gap<50)avgFrameMs=avgFrameMs*.9+gap*.1;if(avgFrameMs<10&&lastDrawnMs&&frameNowMs-lastDrawnMs<12.5){frameRef.current=requestAnimationFrame(tick);return;}lastDrawnMs=frameNowMs;}const perfTickStart=typeof performance!=='undefined'&&performance.now?performance.now():0;const songTimeMs=run.audio.songTimeMs();RHYTHM_PERF.songTime(songTimeMs);RHYTHM_TIMING_DIAG.frame(songTimeMs);/* 取りこぼしの回収の長さ。直し方 inputAgeCap を入れた端末では、遅れて届く入力を待つぶん長い(入れていなければ、これまでと同じ値の定数) */const RHYTHM_MISS_RECLAIM_MS=rhythmMissReclaimMs();const travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0;updateJudgmentBand(travel,travelMs);
+if(powerSave){const gap=prevFrameMs?frameNowMs-prevFrameMs:0;prevFrameMs=frameNowMs;if(gap>0&&gap<50)avgFrameMs=avgFrameMs*.9+gap*.1;if(avgFrameMs<10&&lastDrawnMs&&frameNowMs-lastDrawnMs<12.5){frameRef.current=requestAnimationFrame(tick);return;}lastDrawnMs=frameNowMs;}const perfTickStart=typeof performance!=='undefined'&&performance.now?performance.now():0;const songTimeMs=run.audio.songTimeMs();RHYTHM_PERF.songTime(songTimeMs);RHYTHM_TIMING_DIAG.frame(songTimeMs);/* 取りこぼしの回収の長さ。直し方 inputAgeCap を入れた端末では、遅れて届く入力を待つぶん長い(入れていなければ、これまでと同じ値の定数) */const RHYTHM_MISS_RECLAIM_MS=rhythmMissReclaimMs();const travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0,traceGround=0,traceSky=0;updateJudgmentBand(travel,travelMs);
 /* ライブ背景の光。ノーツが判定ラインへ来る時刻(=曲のリズム)ごとに背景を光らせる。
    取れたかどうかでは変えない(下手でも曲に合わせて光る)。同時押しとモンスターノーツは強く光る。
    間隔が110ms未満の連打では光らせ直さない(光りっぱなしで何も分からなくなるため)。
@@ -24852,7 +24875,10 @@ const paintCanvasNote=note=>{
   const geo=rhythmNoteCanvasGeometry(note,yPx,visualLane,travel.rect,travel.noteHeight,hasBody?releaseYpx:null,{chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs,visualTime,travelMs,spawnY:travel.spawnY,travelPx:travel.travelPx,gpu:gpuBandNow},hasBody?bodyPx:0);
   const monster=!!monsterForNote(note);
   const depthScale=Math.round((0.56+geo.scale*.44)*100)/100,brightness=Math.round((0.72+geo.scale*.28)*100)/100;
-  RHYTHM_CANVAS_RENDERER.drawNote(note,geo,{failed:failedTrail,monster,wide:rhythmNoteIsWide(note),pressed:note.type==='HOLD'&&note.activePointerId!==null,slideOff:note.type==='HOLD'&&note.activePointerId!==null&&RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index),heldMs:songTimeMs-note.timeMs,alpha:failedTrail?.34:1,pop:clearFlash?Math.min(1,(songTimeMs-note._rhythmClearAt)/RHYTHM_CLEAR_FLASH_MS):null,depthScale,brightness});
+  const notePressed=note.type==='HOLD'&&note.activePointerId!==null,noteSlideOff=notePressed&&RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index);
+  // 押せている帯(外れていない)のサブレーン。そこを押している指の道の光は出さない(設定 holdTrace・2026-11-02)
+  if(notePressed&&!noteSlideOff&&!failedTrail&&hasBody){const m=rhythmHoldTraceMask(note,visualLane);if(rhythmNoteIsSky(note)||(typeof rhythmSlideHasSky==='function'&&rhythmSlideHasSky(note)))traceSky|=m;else traceGround|=m;}
+  RHYTHM_CANVAS_RENDERER.drawNote(note,geo,{failed:failedTrail,monster,wide:rhythmNoteIsWide(note),pressed:notePressed,slideOff:noteSlideOff,heldMs:songTimeMs-note.timeMs,alpha:failedTrail?.34:1,pop:clearFlash?Math.min(1,(songTimeMs-note._rhythmClearAt)/RHYTHM_CLEAR_FLASH_MS):null,depthScale,brightness});
   // マスモンの顔(焼いた絵)。以前の DOM 版と同じく、落下中は「奥行き×1.28倍」、
   // 取った瞬間は枠の大きさから2.1倍へ広がりながら消える(0.26秒・影なし)
   const monsterSlot=monster?rhythmNoteMonsterSlot(note):0,faceBitmap=monsterSlot?faceBitmapsRef.current[monsterSlot-1]:null;
@@ -24977,6 +25003,16 @@ for(let i=0;i<heldNotes.length;i++){const note=heldNotes[i],ticks=Number(note._r
 run.notesReady=true;
 if(canvasNotes)RHYTHM_CANVAS_RENDERER.end();
 RHYTHM_PERF.notes(perfScanned,perfDrawn,scanFrom,run.notesAscending);
+// 押せている帯が変わったときだけ、道の光を付け直す(毎フレームは作り直さない)
+if(settings.holdTrace===false){traceGround=0;traceSky=0;}
+if(traceGround!==holdTraceRef.current.g||traceSky!==holdTraceRef.current.s){
+  const groundChanged=traceGround!==holdTraceRef.current.g;holdTraceRef.current={g:traceGround,s:traceSky};
+  // 地上: 押せている帯のサブレーンの道の光に印を付けて消す(指の位置の光・接触幅の光のどちらも CSS でまとめて止める)
+  if(groundChanged){const area=playAreaRef.current;let nodes=glowNodesRef.current;if(area&&(!nodes||!nodes.length||!nodes[0].isConnected))nodes=glowNodesRef.current=Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));
+    (nodes||[]).forEach((el,index)=>{const off=!!(traceGround>>index&1);if(off===(el.dataset.rhythmTraceOff==='true'))return;if(off)el.dataset.rhythmTraceOff='true';else delete el.dataset.rhythmTraceOff;});}
+  // 空中: canvas に描く押した光から、押せている帯のサブレーンを外す
+  setPressedLanes(pressedLanesNow());
+}
 // 無敵・我慢の残り時間と根性ストックは、毎フレームsetStateせずDOMへ直接書く。
 // スコアやコンボと同じ頻度でReactを走らせると、そのぶんノーツの描画が遅れるため。
 const badge=abilityBadgeRef.current;
@@ -25362,7 +25398,9 @@ const inputEnds=inputs=>{const run=runRef.current;if(!run||run.finished||run.pau
   // 空中の段(試作): 空中の高さで押している指のサブレーン。地上の光の代わりに、空中の判定ラインの上で赤く光らせる(canvas で描く)。
   // 空中の段が無い譜面では、どの指も地上なので空のまま(既存の全曲は何も変わらない)
   const pressedSkyLanesNow=()=>[...(liveTouchSkySubLanesRef.current||[]),...(runRef.current?.activePointerSkyFeedback?.values()||[])];
-  const setPressedLanes=coordinates=>{const area=playAreaRef.current;if(!area)return;const active=new Set(Array.from(coordinates||[]).map(value=>Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(Number(value))))).filter(Number.isFinite)),glowOpacity=settings.laneGlow==='NONE'?'0':settings.laneGlow==='LOW'?'.35':'1';let nodes=glowNodesRef.current;if(!nodes||!nodes.length||!nodes[0].isConnected)nodes=glowNodesRef.current=Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));nodes.forEach((el,index)=>{const pressed=active.has(index);const want=pressed?'true':'false';if(el.dataset.pressed===want&&(!pressed||el.style.opacity===glowOpacity))return;el.dataset.pressed=want;el.style.opacity=pressed?glowOpacity:'0';});if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&typeof RHYTHM_CANVAS_RENDERER.setSkyPressed==='function'){RHYTHM_CANVAS_RENDERER.setSkyPressed(pressedSkyLanesNow(),Number(glowOpacity));paintIdleSkyPress();}};
+  // 押せている帯のサブレーン(ビットの集まり。g=地上・s=空中)。tick が変わったときだけ書き換える(設定 holdTrace)
+  const holdTraceRef=useRef({g:0,s:0});
+  const setPressedLanes=coordinates=>{const area=playAreaRef.current;if(!area)return;const active=new Set(Array.from(coordinates||[]).map(value=>Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(Number(value))))).filter(Number.isFinite)),glowOpacity=settings.laneGlow==='NONE'?'0':settings.laneGlow==='LOW'?'.35':'1';let nodes=glowNodesRef.current;if(!nodes||!nodes.length||!nodes[0].isConnected)nodes=glowNodesRef.current=Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));nodes.forEach((el,index)=>{const pressed=active.has(index);const want=pressed?'true':'false';if(el.dataset.pressed===want&&(!pressed||el.style.opacity===glowOpacity))return;el.dataset.pressed=want;el.style.opacity=pressed?glowOpacity:'0';});if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&typeof RHYTHM_CANVAS_RENDERER.setSkyPressed==='function'){{const skyMask=settings.holdTrace!==false?holdTraceRef.current.s:0;RHYTHM_CANVAS_RENDERER.setSkyPressed(skyMask?pressedSkyLanesNow().filter(v=>!(skyMask>>Math.floor(Number(v))&1)):pressedSkyLanesNow(),Number(glowOpacity));}paintIdleSkyPress();}};
   // 曲が始まる前の待機中(幕・READY→3→2→1)は、毎フレームの描画(tick)がまだ動いていない。地上のレーンの光は画面の要素なので光るが、
   // 空中のレーンの光は canvas に描くので、そのままだと光らなかった(2026-10-13 社長「待機中、地上は光るのに空中は光らない」)。
   // 指の出入りのたびに、空中の押した光だけをここで1回描く(叩いた光・ノーツはまだ無い)。止めている間(ポーズ)はノーツの絵を残すので描かない

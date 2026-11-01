@@ -389,12 +389,15 @@ const RHYTHM_ROAD_DEPTH_LABELS = Object.freeze([['NORMAL','いまの'],['DEEP','
 //   名前は重さの順に読めるようにそろえてある(既定が「標準」なのは前の指示のまま)。
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL','最大'],['LOW','多め'],['LIGHT','標準'],['MINIMAL','最小']]);
 // 押したときの光(2026-10-15・社長「演出量を最小にしても、フリックとかのタップ時の光は出る設定がほしい」)。
-// AUTO   … 演出量に合わせる(これまでどおり。演出量「最小」・軽量モードでは出さない)
-// ALWAYS … 演出量「最小」・軽量モードでも、判定ラインで弾ける光だけは出す(ほかの演出は止めたまま)
+// AUTO   … 演出量に合わせる。演出量「最小」では光だけ出す(2026-11-02)。軽量モードでは出さない
+// ALWAYS … 軽量モードでも、判定ラインで弾ける光だけは出す(ほかの演出は止めたまま)
 const RHYTHM_TAP_LIGHT_MODES = Object.freeze(['AUTO','ALWAYS']);
 const RHYTHM_TAP_LIGHT_LABELS = Object.freeze([['AUTO','おまかせ'],['ALWAYS','いつも出す']]);
 // 「最小」・軽量モードのせいで止まっている光を、この設定で出すときだけ真(ふだんの段では、もともと光が出ているので偽)
-const rhythmTapLightOnly = settings => !!settings&&settings.tapLight==='ALWAYS'&&(settings.lightweightMode===true||settings.effectAmount==='MINIMAL');
+// 2026-11-02 社長「演出量を最小にしてフリックやノーツを押したときの光だけ出すようにしたい」→ 演出量「最小」は、押したときの光をいつも出す
+//   (「押したときの光」がおまかせでも)。軽量モードは今までどおり「いつも出す」を選んだときだけ。設定 fx の「弾ける光」を「なし」にすれば止められる
+const rhythmTapLightOnly = settings => !!settings&&((settings.effectAmount==='MINIMAL'&&settings.lightweightMode!==true)
+  ||(settings.tapLight==='ALWAYS'&&(settings.lightweightMode===true||settings.effectAmount==='MINIMAL')));
 // 演奏中に1秒あたり何回描くか(2026-09-24・ユーザーと相談して決めた)。
 // POWER_SAVE … 120Hz以上の画面では1回おきに描き、毎秒60回ほどに抑える。発熱と電池を抑える。
 //   90Hzの画面は抑えない(60へ落とすと 11ms/22ms が交互に並び、かえってガタついて見える)。
@@ -661,6 +664,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   judgmentAtTap:false,
   // 演奏中は左上の曲名とジャケットを薄くする(2026-09-27)。始まって4秒で薄くなり、ポーズ中は元に戻る。目線を道に集めるため。既定は ON
   hudSongFade:true,
+  // ホールド・スライドを押せている指は、その指の道の光を出さず、帯を指の所からなぞるように光らせる(2026-11-02 社長・既定 ON)
+  holdTrace:true,
   // 重いときは演出を自動で控えめにする(2026-09-27)。演奏中にカクつき続けたら、重い演出から一段ずつ下げる(保存値は変えない)。既定は ON
   autoEffectDown:true,
   // 押したときの光(2026-10-15)。新しい項目なので、保存値に無い人は「おまかせ」(これまでの見え方)で補う
@@ -743,7 +748,7 @@ const RHYTHM_FX_HELP = Object.freeze({
   judgeSize:'判定の文字（MARVELOUS・GREAT など）の大きさです。既定は「おまかせ」（これまでどおり「標準」）。文字の後ろの光も一緒に大きさが変わります。',
   judgeFlow:'判定の文字の金色の帯・虹が流れる動きと、文字が出た瞬間に弾む動き、文字のまわりの強い光です。既定は「おまかせ」（演出量が「最大」のときに出ます）。\n毎フレーム文字を塗り直すので、カクつく端末ではここを「出さない」にすると効きます。色と大きさはどれでも残ります。',
   judgeLinePulse:'判定ラインが拍に合わせて脈打つ動きです。既定は「おまかせ」（演出量が「最大」「多め」のときに出ます）。',
-  burst:'ノーツを取った瞬間に判定ラインで弾ける光の大きさです。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません。「押したときの光」を「いつも出す」にすると出ます）。\n「大」「標準」「小」を選ぶと、演出量・軽量モードに関係なく、その大きさで出ます。',
+  burst:'ノーツを取った瞬間に判定ラインで弾ける光の大きさです。既定は「おまかせ」（演出量「最小」では出ます。軽量モードでは出ません。「押したときの光」を「いつも出す」にすると軽量モードでも出ます）。\n「大」「標準」「小」を選ぶと、演出量・軽量モードに関係なく、その大きさで出ます。',
   flash:'モンスターノーツを取ったときに画面全体が光る演出です。既定は「おまかせ」。まぶしいときは「出さない」にしてください。',
   comboBounce:'コンボ数が増えるたびに数字が跳ねる動きと、枠の脈打ちです。既定は「おまかせ」（演出量が「最大」「多め」のときに出ます）。',
   combo100:'コンボが100のくぎりに届いたときのお祝いの表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
@@ -772,13 +777,27 @@ const rhythmFxAttrs = settings => Object.fromEntries(RHYTHM_FX_CSS_KEYS.flatMap(
 const rhythmFxOn = (settings,key,auto) => {const v=rhythmFxPick(settings,key);return v==='AUTO'?!!auto:!(v==='OFF'||v==='NONE');};
 // ノーツの描き手(RHYTHM_CANVAS_RENDERER.begin)へ渡す値。live は演奏中に変わる設定(にじむ光・ノーツの動き)を読む先。
 // おまかせの項目は描き手が演出量・軽量モードから決めるので、渡す値もこれまでと同じになる
+// 押せているホールド・スライドが、判定ラインのところで覆っているサブレーン(ビットの集まり・前後1つずつ余裕を持たせる)。
+// ホールドは譜面の subLane と幅、スライドは今の帯の位置(lane 単位)から数える。道の光を消すのに使う(設定 holdTrace・2026-11-02)
+const rhythmHoldTraceMask = (note,visualLane) => {
+  if(!note)return 0;
+  const w=Math.max(1,Number(note.subLaneWidth)||2);
+  const lane=Number(visualLane);
+  const start=rhythmNoteIsSlide(note)&&Number.isFinite(lane)?Math.round(lane*2+1-w/2):(Number.isFinite(Number(note.subLane))?Number(note.subLane):Number(note.lane)*2);
+  if(!Number.isFinite(start))return 0;
+  let mask=0;
+  for(let i=Math.max(0,start-1);i<=Math.min(RHYTHM_SUB_LANE_COUNT-1,start+w);i++)mask|=1<<i;
+  return mask;
+};
 const rhythmFxRenderOptions = (settings,live=settings) => {
   const base=!!settings&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
   const motionAuto=!!live&&live.noteMotionFx===true&&base;
   const glow=rhythmFxPick(settings,'noteGlow'),burst=rhythmFxPick(settings,'burst');
   return {motionFlick:rhythmFxOn(settings,'flickMotion',motionAuto),motionSlide:rhythmFxOn(settings,'slideWave',motionAuto),
     glowLevel:glow==='AUTO'?undefined:glow,hitLevel:rhythmFxLevel(settings,'burst'),hitLight:rhythmFxLight(settings,'burst'),
-    hitScale:burst==='L'?1.35:burst==='S'?.7:1};
+    hitScale:burst==='L'?1.35:burst==='S'?.7:1,
+    // ホールド・スライドを押せている間、帯を指の所からなぞるように光らせる(設定 holdTrace・既定 ON・演出量や軽量モードに関係なく)
+    holdTrace:!!settings&&settings.holdTrace!==false};
 };
 // 判定文字の大きさ(設定 fx「判定文字の大きさ」)。判定文字の枠ごと、下のふちを軸に広げ・縮める(文字の後ろの光・ずれメーターも一緒に)。
 // 枠は translate で中央へ寄せているので、別の指定の scale を使う(transform を上書きしない)。おまかせ・標準は何も付けない
@@ -855,6 +874,7 @@ const normalizeRhythmSettings = value => {
     climaxFx:typeof source.climaxFx==='boolean'?source.climaxFx:DEFAULT_RHYTHM_SETTINGS.climaxFx,
     judgmentAtTap:typeof source.judgmentAtTap==='boolean'?source.judgmentAtTap:DEFAULT_RHYTHM_SETTINGS.judgmentAtTap,
     hudSongFade:typeof source.hudSongFade==='boolean'?source.hudSongFade:DEFAULT_RHYTHM_SETTINGS.hudSongFade,
+    holdTrace:typeof source.holdTrace==='boolean'?source.holdTrace:DEFAULT_RHYTHM_SETTINGS.holdTrace,
     autoEffectDown:typeof source.autoEffectDown==='boolean'?source.autoEffectDown:DEFAULT_RHYTHM_SETTINGS.autoEffectDown,
     tapLight:RHYTHM_TAP_LIGHT_MODES.includes(source.tapLight)?source.tapLight:DEFAULT_RHYTHM_SETTINGS.tapLight,
     stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
