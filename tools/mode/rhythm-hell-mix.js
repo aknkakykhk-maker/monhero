@@ -56,7 +56,7 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   rebellion_short:{marker:'rebellion-short-v3',zero:2010.5,beat:310.0775,levelRe:/const rebellionShortHellChart=mhChart\((\d+),/,source:'audio',variant:3,uncross:true,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   // Altar of the World Tree, Beneath the White Night(2026-11-01)。交差はいつもの作り方のまま(社長「交差はありでいいよ。普通に作って」。uncross は付けない)
   altar_world_tree:{marker:'altar-world-tree-v3',zero:2895,beat:365.9206,levelRe:/const altarWorldTreeHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
-  altar_world_tree_short:{marker:'altar-world-tree-short-v3',zero:2895,beat:365.9206,levelRe:/const altarWorldTreeShortHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  altar_world_tree_short:{marker:'altar-world-tree-short-v3',zero:2895,beat:365.9206,levelRe:/const altarWorldTreeShortHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   // Toward the Stars, Paradise or Truth short ver.(hitoyakyuko・2026-10-19・新曲は基本 HELL あり)
   // 全曲ヘル(2026-10-21 社長「全曲ヘルを実装して」)。marker・track は rhythm-runtime-notes.js の RELEASED_MARKERS・RELEASED_TRACKS、拍の頭と1拍は解析の timing
   mf_ichika_mix:{marker:'atsu-cup-theme-v3',track:'atsu_cup_theme',zero:40,beat:355.0296,levelRe:/const mfIchikaMixHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
