@@ -105,6 +105,8 @@ const PANDORA_IMG = "images/monsters/pandora.PNG?v=f8009b5d2b5e";
 const PANDORA_DYE_MASK = "images/monsters/pandora-dye-mask.PNG?v=3bacac1187f6";
 // パンドラの箱(タクティクスEX)の間だけ出す、悪魔・天使の姿。起動時には読まない(箱を使うときに先読みする)
 const PANDORA_DEVIL_IMG = "images/monsters/pandora-devil.PNG?v=5ce010729f00";
+// イベント「鍵の向こう側へ」のお話で、箱のすきまからのぞく影(2026-11-02。立ち絵から作った黒い影の絵)
+const PANDORA_SHADOW_IMG = "images/monsters/pandora-shadow.png?v=3883210975c5";
 const PANDORA_ANGEL_IMG = "images/monsters/pandora-angel.PNG?v=d3dedf0b3d90";
 const SUEZO_IMG = "images/monsters/suezo.png?v=979846ef01a1";
 const SUEZO_DYE_MASK = "images/monsters/suezo-dye-mask.PNG?v=ce9b0ee85836";

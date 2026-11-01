@@ -131,7 +131,9 @@ check('選択肢のボタンは名前の定数を渡している',
 const SCREENLESS = new Set(['displayTimingOffsetMs', 'judgmentTextPosition', 'holdSlideOpacity', 'livePartnerVisible', 'multiLightLook', 'multiLook', 'modeSelectArt', 'modeSelectComment', 'roadDepth']);
 const defaults = grab('const DEFAULT_RHYTHM_SETTINGS = Object.freeze({', '});');
 const settingKeys = [...defaults.matchAll(/(?:^|[\s{,])([a-zA-Z][a-zA-Z0-9]*)\s*:/g)].map(m => m[1]);
-const missing = settingKeys.filter(key => !SCREENLESS.has(key) && !options.includes(`'${key}'`));
+// fx(演出を1つずつ選ぶ・2026-11-01)は項目の一覧 RHYTHM_FX_ITEMS を「軽さ・演出」タブに並べて変える
+const placed = key => key === 'fx' ? options.includes('.map(fxField)') : options.includes(`'${key}'`);
+const missing = settingKeys.filter(key => !SCREENLESS.has(key) && !placed(key));
 check('画面から変えられる設定は、どれかのタブに置いてある', settingKeys.length > 0 && missing.length === 0,
   missing.length ? `置き場所が無い: ${missing.join(', ')}` : `${settingKeys.filter(k => !SCREENLESS.has(k)).length}件`);
 

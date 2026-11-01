@@ -14,7 +14,7 @@
 | 種類 | そろえる形 | 目安 |
 | --- | --- | --- |
 | 曲えらびのジャケット(`images/song-art/`) | 512×512 JPEG(`sharp` の `fit:'cover'` / `quality:80` / `mozjpeg`) | 60〜90KB |
-| モンビーの音源(`audio/`) | 32kHz / 96kbps モノラルでないステレオmp3。`-map_metadata -1 -vn` で埋め込みジャケットとタグを落とす。**大きさは -14 LUFS へそろえる**(下記) | 1曲2〜3MB |
+| モンビーの音源(`audio/`) | 44.1kHz / 128kbps モノラルでないステレオmp3(2026-11-02 社長の決めで 32kHz / 96kbps から上げた)。`-map_metadata -1 -vn` で埋め込みジャケットとタグを落とす。**大きさは -14 LUFS へそろえる**(下記) | 1曲2〜3MB |
 | モンスターの絵・アイコン(`images/`) | PNGのまま。`node tools/image-asset-check.js` を通す | — |
 | 敵の絵(`images/enemies/`) | **透過はこちらでやらない。透過済みで受け取る**（下記）。長辺160pxの透過PNG | 数KB |
 
@@ -65,7 +65,7 @@
 > `node tools/build.js --check` がキーの古さも見る。
 
 > ⚠️ **すでに公開した音源を作り直すときは、頭の 1104 サンプルを切る。**
-> Chromiumでデコードして lamejs で入れ直すと、LAMEのエンコーダ遅延ぶん(1104サンプル=32kHzで34.5ms)
+> Chromiumでデコードして lamejs で入れ直すと、LAMEのエンコーダ遅延ぶん(1104サンプル=32kHzで34.5ms・44.1kHzで25.0ms)
 > 音が後ろへずれ、譜面と合わなくなる。`--from 0.0345` で切ると実測0msに戻る。
 > 元の動画が残っているなら、そこから作り直すほうが確実(同じ手順ならバイト単位で再現する)。
 
@@ -117,3 +117,24 @@ A〜D の字を付けた1枚にして送り、`AskUserQuestion` で選んでも�
 - **検査**: `node tools/image/art-anchor-check.js`(基準の書き忘れ・顔アイコンが基準どおりか・寄せが増えていないか)
 - **目で見る**: `node tools/image/art-anchor-sheet.js` で、全員を丸に入れて十字を引いた一覧(`tools/out/art-anchor-sheet.png`)が出る
 - 経緯と棚卸し: [`docs/progress/art-framing/README.md`](../progress/art-framing/README.md)
+
+## 44.1kHz / 128kbps への作り直し(2026-11-02 社長「全曲 44.1kHz・128kbps に上げる」)
+
+前の標準(32kHz / 96kbps)で入れた曲は、**元の音源が残っている曲だけ**作り直す(32kHz のファイルから上げ直しても音は良くならない)。
+やり方: 元の音源を 44.1kHz の WAV にし、今の版と波形を突き合わせて同じ位置・同じ長さに並べ、頭の無音とフェードは今の版との音の大きさの比から写す。
+44.1kHz・128kbps でエンコードし、ffmpeg と Chromium(ゲームと同じ decodeAudioData)の両方で、今の版とのずれが0.1ms以内かを確かめる。譜面は変えない。
+
+| 済み | 曲 |
+| --- | --- |
+| 2026-11-02 | Rebellion(原曲・short ver.) |
+| 2026-11-02 | Against My Own Shadow・Grievous Lady・Journey・Sheriruth・ROSE(原曲・short ver.)・Toward the Stars, Paradise or Truth short ver. |
+| 2026-11-02 | light player(原曲・short ver.)・月が満ちる前に(原曲・short ver.)… 届いた m4a(44.1kHz / 98kbps の AAC)から。風がそよぐ場所 … 過去の 44.1kHz / 96kbps の版から(どちらも元の音源ではないので、元の音源が届いたら作り直す) |
+| 2026-11-02 | デュラハンテーマ・呪われた騎士の時計仕掛け(バトルの BGM と共用)… 過去に入っていた 48kHz の元の音源から |
+| 2026-11-02 | 綺季一閃 short ver. … 原曲の元の音源(48kHz)から。short は原曲を 100.818秒で約57.5秒飛ばしてつないだ版なので、区間ごとに位置を合わせて同じ所でつないだ |
+| 2026-11-02 | Stay With Me ～Locked Fate～ short ver. … 原曲の元の音源(48kHz)から。short は原曲を 88.962秒で約82秒飛ばしてつないだ版なので、区間ごとに位置を合わせて同じ所でつないだ。Altar of the World Tree, Beneath the White Night(原曲・short ver.)… 受け取った元の音源から(イベント開始前・社長「まだ始まってないから直して」) |
+| 作り直さない | 綺季一閃(原曲)… もとから 48kHz / 185kbps のまま入っている |
+| 作り直さない | Stay With Me ～Locked Fate～(原曲・bgm-pandora-boss.mp3)… もとから 48kHz / 178kbps のまま入っている |
+| 作り直さない | MF × ICHIKA MIX(あつ杯テーマ)… もとから 48kHz / 191kbps のまま入っている |
+| 作り直さない(元の音源待ち) | Monster Hero・Monster Hero -Another-・戦場の疾風・魔窟の旋律 … 今のファイルがすでに 44.1kHz / 96kbps で、それより良い音源が残っていない |
+
+元の音源の置き場所: `tools/art-sources/song-audio/<songId>/`(曲を入れるときに必ず残す)
