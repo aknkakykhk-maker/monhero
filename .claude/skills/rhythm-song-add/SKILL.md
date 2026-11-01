@@ -139,7 +139,7 @@ $FF -v error -i src.m4a -map_metadata -1 -vn -ac 2 -ar 44100 -c:a pcm_s16le full
 
 # ② mp3へ（ここはリポジトリのツールへ戻す。既存曲と作り方をそろえるため）
 node tools/mode/rhythm-audio-reencode.js --in full.wav \
-  --out monster-hero/audio/bgm-<slug>.mp3 --kbps 96 --rate 32000
+  --out monster-hero/audio/bgm-<slug>.mp3 --kbps 128 --rate 44100
 
 # ③ いまの大きさを測る
 $FF -hide_banner -nostats -i monster-hero/audio/bgm-<slug>.mp3 \
@@ -148,7 +148,7 @@ $FF -hide_banner -nostats -i monster-hero/audio/bgm-<slug>.mp3 \
 # ④ 倍率を出して、もう一度エンコードし直す（②をやり直す。mp3を二重に通さない）
 #    dB = min(-14 - いまのLUFS, -1 - いまの真のピーク)   倍率 = 10^(dB/20)
 node tools/mode/rhythm-audio-reencode.js --in full.wav \
-  --out monster-hero/audio/bgm-<slug>.mp3 --kbps 96 --rate 32000 --gain <倍率>
+  --out monster-hero/audio/bgm-<slug>.mp3 --kbps 128 --rate 44100 --gain <倍率>
 ```
 
 **圧縮はしない**（音の表情が変わる）。上限に当たったらそこで止める。
