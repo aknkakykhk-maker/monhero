@@ -140,6 +140,7 @@
   "mode/eiki-combo-damage-check.js",
   "mode/eternal-rules-check.js",
   "mode/inferno-rules-check.js",
+  "mode/cocytus-rules-check.js",
   "mode/extreme-challenge-check.js",
   "mode/extreme-difficulty-theme-check.js",
   "mode/extreme-reward-check.js",

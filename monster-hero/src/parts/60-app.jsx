@@ -3480,6 +3480,8 @@ function MonsterHeroGame() {
   const eternalUnlocked = useMemo(() => isEternalUnlocked(helheimClearCount), [helheimClearCount]);
   const eternalClearCount = extremeClearCounts[ETERNAL_SETTING.id] || 0;
   const infernoUnlocked = useMemo(() => isInfernoUnlocked(eternalClearCount), [eternalClearCount]);
+  const infernoClearCount = extremeClearCounts[INFERNO_SETTING.id] || 0;
+  const cocytusUnlocked = useMemo(() => isCocytusUnlocked(infernoClearCount), [infernoClearCount]);
   // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
   const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
@@ -15972,7 +15974,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       newEnemy.shell=layerPlan.layers[0]; newEnemy.maxShell=layerPlan.layers[0];
       newEnemy.shellLayers=layerPlan.layers.slice(1); newEnemy.shellLayerMaxes=layerPlan.layers;
       newEnemy.shellLayerTotal=layerPlan.layers.length; newEnemy.shellBroken=0; newEnemy.shellBreakSeq=0;
-      newEnemy.layerAtkBase=newEnemy.atk; newEnemy.layerAtkGain=layerPlan.atkGain;
+      newEnemy.layerAtkBase=newEnemy.atk; newEnemy.layerAtkGain=layerPlan.atkGain; newEnemy.shellBoss=layerPlan.boss;
     } else {
       const shell=raidRun||scenario?0:extremeEnemyShellAmount(newEnemy.maxHp,specialRuleDifficulty,w);
       if (shell>0) { newEnemy.shell=shell; newEnemy.maxShell=shell; }
@@ -19387,7 +19389,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="relative shrink-0">
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="mhbs-arrow absolute left-0 top-[42%] z-20 disabled:opacity-20"><ChevronLeft size={18}/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.id!==extremeDifficulty)setExtremeDifficulty(difficulties[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll max-[359px]:!px-[4%]" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:setting.id==='HELHEIM'?helheimUnlocked:setting.id==='ETERNAL'?eternalUnlocked:setting.id==='INFERNO'?infernoUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;const theme=extremeDifficultyTheme(setting.id);const heroProofReward=heroProofClearReward({extremeDifficulty:setting.id});return (
+                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:setting.id==='HELHEIM'?helheimUnlocked:setting.id==='ETERNAL'?eternalUnlocked:setting.id==='INFERNO'?infernoUnlocked:setting.id==='COCYTUS'?cocytusUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;const theme=extremeDifficultyTheme(setting.id);const heroProofReward=heroProofClearReward({extremeDifficulty:setting.id});return (
                       <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} className={`mhbt-tile mhbt-d-${setting.id} dark snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[400px] flex flex-col px-4 pt-3 pb-2.5 transition-all ${active?'on scale-100 opacity-100':'scale-[.92] opacity-45'} ${previewable?'':'dim'}`} style={{'--acc':theme.accent}}>
                         <span aria-hidden="true" className="mhbt-mark">{setting.label}</span>
                         <div className="mhbt-eyebrow">EXTREME DIFFICULTY</div>
@@ -19395,7 +19397,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <div className="mt-1 h-[42px] shrink-0 rounded-xl bg-black/40 px-2.5 py-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,.12)]">
                           <small className="block text-[8px] text-white/70 font-black">{setting.available?`${setting.label}の記録`:'難易度情報'}</small>
                           <b className="block text-right text-base italic leading-tight text-white">{setting.available&&unlocked?`${(extremeBestScores[setting.id]||0).toLocaleString()} pt`:'？？？'}</b>
-                          <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':setting.id==='ULTIMATE'&&!ultimateUnlocked?'CHAOSクリアで解放':setting.id==='INFINITY'&&!infinityUnlocked?'ULTIMATEクリアで解放':setting.id==='GOD'&&!godUnlocked?'INFINITYクリアで解放':setting.id==='RAGNAROK'&&!ragnarokUnlocked?'GODクリアで解放':setting.id==='HELHEIM'&&!helheimUnlocked?'RAGNAROKクリアで解放':setting.id==='ETERNAL'&&!eternalUnlocked?'HELHEIMクリアで解放':setting.id==='INFERNO'&&!infernoUnlocked?'ETERNALクリアで解放':'選択できません'}</span>
+                          <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':setting.id==='ULTIMATE'&&!ultimateUnlocked?'CHAOSクリアで解放':setting.id==='INFINITY'&&!infinityUnlocked?'ULTIMATEクリアで解放':setting.id==='GOD'&&!godUnlocked?'INFINITYクリアで解放':setting.id==='RAGNAROK'&&!ragnarokUnlocked?'GODクリアで解放':setting.id==='HELHEIM'&&!helheimUnlocked?'RAGNAROKクリアで解放':setting.id==='ETERNAL'&&!eternalUnlocked?'HELHEIMクリアで解放':setting.id==='INFERNO'&&!infernoUnlocked?'ETERNALクリアで解放':setting.id==='COCYTUS'&&!cocytusUnlocked?'INFERNOクリアで解放':'選択できません'}</span>
                         </div>
                         {previewable?<>
                           <div className="grid grid-cols-3 gap-1 mt-1">{[['敵強度',`×${setting.power}`],['スコア',setting.score?`×${setting.score}`:'対象外'],['ダイヤ',setting.gold?`×${setting.gold}`:'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
