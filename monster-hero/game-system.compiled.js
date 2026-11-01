@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 469761c88f74b0c4
+// source-sha256: 86e101e077d2536c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -630,7 +630,7 @@ const rhythmPlayRunLoops = (durationMs, scale = RHYTHM_PLAY_RUN_LOOP_SCALE) => {
 const rhythmPlayRunLoopScale = (songId, event, campaign) => {
   const campaignScale = campaign ? Number(campaign.loopScale) : NaN;
   if (Number.isFinite(campaignScale) && campaignScale > 0) return campaignScale;
-  const ids = event && Array.isArray(event.songIds) ? event.songIds : null;
+  const ids = event && Array.isArray(event.songIds) ? typeof rhythmEventPlaySongIds === 'function' ? rhythmEventPlaySongIds(event) : event.songIds : null;
   const id = songId === null || songId === undefined ? '' : String(songId);
   return id && ids && ids.includes(id) ? RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE : RHYTHM_PLAY_RUN_LOOP_SCALE;
 };
@@ -6533,6 +6533,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Eiki'
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   cardBattleIntroEvent: 'atsu_cup_theme',
   cardCupStoryEvent: 'melo_toriko',
+  pandoraWingsStoryEvent: 'melo_rebellion',
   kyukoJoinStoryEvent: 'original_event_01',
   atsuJoinStoryEvent: 'melo_against_my_own_shadow',
   tacticsTypesEvent: 'original_event_01',
@@ -6630,6 +6631,14 @@ const EVENT_BGM_FADE_MS = 800;
 const EVENT_BGM_SCENES = Object.freeze({
   card_battle_intro_2026: 'cardBattleIntroEvent',
   card_cup_2026_10_31: 'cardCupStoryEvent',
+  pandora_wings_2026_ep1: 'pandoraWingsStoryEvent',
+  pandora_wings_2026_ep2: 'pandoraWingsStoryEvent',
+  pandora_wings_2026_ep3: 'pandoraWingsStoryEvent',
+  pandora_wings_2026_ep4: 'pandoraWingsStoryEvent',
+  pandora_wings_2026_ep5: 'pandoraWingsStoryEvent',
+  pandora_wings_2026_ep6: 'pandoraWingsStoryEvent',
+  pandora_wings_2026_ep7: 'pandoraWingsStoryEvent',
+  pandora_wings_2026_ep8: 'pandoraWingsStoryEvent',
   kyuko_join_2026_10_22: 'kyukoJoinStoryEvent',
   atsu_join_2026_10_22: 'atsuJoinStoryEvent',
   tactics_types: 'tacticsTypesEvent',
@@ -30784,7 +30793,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({
 }) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})` : '';
   const body = {
-    song_ids: [songId],
+    song_ids: rhythmEventQuerySongIds([songId], fromMs, toMs),
     from_at: new Date(fromMs).toISOString(),
     to_at: new Date(toMs).toISOString()
   };
@@ -30845,7 +30854,7 @@ const sbFetchRhythmEventTotalsRaw = async ({
 }) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})` : '';
   const body = {
-    song_ids: songIds,
+    song_ids: rhythmEventQuerySongIds(songIds, fromMs, toMs),
     from_at: new Date(fromMs).toISOString(),
     to_at: new Date(toMs).toISOString()
   };
@@ -31093,7 +31102,7 @@ const sbFetchRhythmEventTotals = async (options = {}) => {
     timeKey: 'last_scored_at',
     fn: 'rhythm_event_precise',
     body: {
-      song_ids: songIds,
+      song_ids: rhythmEventQuerySongIds(songIds, fromMs, toMs),
       from_at: new Date(fromMs).toISOString(),
       to_at: new Date(toMs).toISOString()
     },
@@ -34435,7 +34444,7 @@ const RhythmSongSelect = ({
   const eventSongIds = (() => {
     const released = typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS && RELEASE_FLAGS.rhythmWeeklyRanking === true;
     const event = released && typeof rhythmLimitedEventAt === 'function' ? rhythmLimitedEventAt(Date.now()) : null;
-    return new Set(event && Array.isArray(event.songIds) ? event.songIds : []);
+    return new Set(rhythmEventPlaySongIds(event));
   })();
   const eventActive = eventSongIds.size > 0;
   const favoriteIds = new Set(state.favorites || []);
@@ -60873,7 +60882,7 @@ function RhythmSongSelectScreen({
   const eventSongTitles = rhythmEventNotice ? rhythmEventNotice.songIds.map(songId => rhythmSongFullName(rhythmEventSong(songId, RHYTHM_SONGS)) || songId) : [];
   const beatPointReleased = !debugAll && RELEASE_FLAGS.rhythmEventPoints === true;
   const beatPointEvent = beatPointReleased ? rhythmLimitedEventAt(Date.now()) : null;
-  const beatPointTargetSong = !!beatPointEvent && Array.isArray(beatPointEvent.songIds) && beatPointEvent.songIds.includes(rhythmSelectedSongId);
+  const beatPointTargetSong = !!beatPointEvent && rhythmEventHasSong(beatPointEvent, rhythmSelectedSongId);
   const beatPointCampaign = beatPointReleased && !beatPointEvent ? rhythmEventPointCampaignAt(Date.now()) : null;
   const beatPointSideCard = beatPointCampaign ? React.createElement("div", {
     "data-rhythm-beat-band-landscape": true,
@@ -147471,7 +147480,7 @@ function MonsterHeroGame() {
     }, {
       id: 'event',
       label: 'イベント',
-      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM'], ['masuCallEvent', 'マスモンとセッションのお話 BGM'], ['halloweenNightEvent', 'ハロウィン・ナイトのお話 BGM'], ['assistantChatStoryEvent', '助手とおしゃべりのお話 BGM'], ['atsuJoinStoryEvent', 'あつ加入のお話 BGM'], ['kyukoJoinStoryEvent', 'きゅうこ加入のお話 BGM'], ['cardBattleIntroEvent', 'MFバトルカードのお話 BGM'], ['cardCupStoryEvent', '個人杯のお話 BGM']]
+      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM'], ['masuCallEvent', 'マスモンとセッションのお話 BGM'], ['halloweenNightEvent', 'ハロウィン・ナイトのお話 BGM'], ['assistantChatStoryEvent', '助手とおしゃべりのお話 BGM'], ['atsuJoinStoryEvent', 'あつ加入のお話 BGM'], ['kyukoJoinStoryEvent', 'きゅうこ加入のお話 BGM'], ['cardBattleIntroEvent', 'MFバトルカードのお話 BGM'], ['cardCupStoryEvent', '個人杯のお話 BGM'], ['pandoraWingsStoryEvent', '鍵の向こう側へのお話 BGM']]
     }, {
       id: 'other',
       label: 'その他',

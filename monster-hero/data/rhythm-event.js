@@ -154,7 +154,60 @@ const RHYTHM_EVENTS = Object.freeze([
     // 参加報酬。対象3曲を**すべて**遊べば、入賞しなくてももらえる
     participationReward: Object.freeze({ songs: 3, gold: 3000, psyche: 50 }),
   }),
+  // 第3回(2026-11-01・社長)。「鍵の向こう側へ ～パンドラとふたつの翼～」。11/2(月) 4:00 〜 11/9(月) 4:00(画面は 3:59 まで)。
+  // ★報酬は今までのイベントと同じ(順位ごとの個数・プシュケーは共通の決めごと)。超越の実は3曲ともピクシー(パンドラの主血統)。
+  // ★原曲とショート版を「同じ曲」として数える(社長「イベント用のランキングだけ、原曲とショートを一緒に」)。
+  //   songIds は原曲だけ(部門も3つ)。songVersions にショート版の id を書くと、
+  //   ①集計の関数へショート版の id も渡し(サーバーは末尾の _short を外して1曲にまとめる・RHYTHM_EVENT_SONG_VERSIONS_APPLY.sql)
+  //   ②ショート版を遊んでも対象曲として数える(ビートP・周回・イベントの曲の一覧)。
+  //   ふだんの曲ごとのランキング・自己ベスト・週間は今までどおり別々。
+  // ★開始の 4:00 は週の区切り(月曜5:00)の1時間前。最初の1時間の記録だけ前の週の週間ランキングに入る(ハロウィンと同じ)
+  Object.freeze({
+    id: 'pandora_wings_2026_11_02',
+    kind: 'limited',
+    name: '鍵の向こう側へ ～パンドラとふたつの翼～',
+    startAt: '2026-11-02T04:00:00+09:00',
+    endAt: '2026-11-09T04:00:00+09:00',
+    banner: 'images/events/pandora-wings-2026-wide.jpg?v=91a40957576b',
+    songIds: Object.freeze(['stay_with_me', 'rebellion', 'tsuki_ga_michiru_mae_ni']),
+    songVersions: Object.freeze({
+      stay_with_me: Object.freeze(['stay_with_me_short']),
+      rebellion: Object.freeze(['rebellion_short']),
+      tsuki_ga_michiru_mae_ni: Object.freeze(['tsuki_ga_michiru_mae_ni_short']),
+    }),
+    rewardLineageBySongId: Object.freeze({
+      stay_with_me: 'pixie',
+      rebellion: 'pixie',
+      tsuki_ga_michiru_mae_ni: 'pixie',
+    }),
+    totalReward: 'heroProof',
+    playBonus: true,
+    participationReward: Object.freeze({ songs: 3, gold: 3000, psyche: 50 }),
+  }),
 ]);
+// その曲の id と、同じ曲として数える版(ショート版)の id。songVersions を書いていないイベントは原曲だけ(これまでと同じ)
+const rhythmEventSongVersionIds = (event, songId) => {
+  const id = songId === null || songId === undefined ? '' : String(songId);
+  if (!id) return [];
+  const map = event && event.songVersions;
+  const extra = map && Array.isArray(map[id]) ? map[id] : [];
+  return [id, ...extra];
+};
+// イベントで遊ぶと対象曲として数える曲の id(原曲＋ショート版)
+const rhythmEventPlaySongIds = (event) => (event && Array.isArray(event.songIds))
+  ? event.songIds.flatMap(id => rhythmEventSongVersionIds(event, id)) : [];
+const rhythmEventHasSong = (event, songId) => songId !== null && songId !== undefined && rhythmEventPlaySongIds(event).includes(String(songId));
+// 集計の関数へ渡す曲の id。期間が songVersions を持つイベントと重なるときだけ、ショート版の id を足す
+// (サーバーが原曲とショートを1曲にまとめる)。それ以外の期間(これまでのイベント・週間)は渡されたまま。
+// ★期間で引くので、呼ぶ側はイベントを持っていなくてよい。見るたびに数え直す(CLAUDE.md ⑥-4)
+const rhythmEventQuerySongIds = (songIds, fromMs, toMs) => {
+  const ids = Array.isArray(songIds) ? songIds.map(String) : [];
+  const from = Number(fromMs), to = Number(toMs);
+  if (!Number.isFinite(from) || !Number.isFinite(to)) return ids;
+  const event = RHYTHM_EVENTS.find(e => e && e.songVersions && Date.parse(e.startAt) < to && from < Date.parse(e.endAt));
+  if (!event) return ids;
+  return [...new Set(ids.flatMap(id => rhythmEventSongVersionIds(event, id)))];
+};
 
 // ===== イベントP（docs/spec/RHYTHM_EVENT_POINTS.md） =====
 // 初期実装の正式式。ランキング用スコアや回数ボーナスとは完全に分離する。
@@ -223,6 +276,19 @@ const RHYTHM_EVENT_POINT_CAMPAIGNS = Object.freeze([
     // HOMEの札・バナー(2026-10-04・ユーザー指示「イベント開催中みたいなのを更新情報とかどこかしらに出しといて」)。
     // banner を書いたキャンペーンだけ出す。書かない(ビートPアップキャンペーン)は今までどおり何も出ない
     banner: Object.freeze({ emoji: '🎃', title: 'ハロウィン・ナイト', sub: '開催中 〜11/1 3:59' }),
+  }),
+  // 「鍵の向こう側へ ～パンドラとふたつの翼～」(2026-11-02〜11-09)。社長「周回5倍: ハロウィンと同じ」。
+  // ランキングは RHYTHM_EVENTS の pandora_wings_2026_11_02。ビートPはランキングイベントの計算が先に効く(重ねがけしない)
+  Object.freeze({
+    id: 'pandora_wings_2026',
+    name: '鍵の向こう側へ ～パンドラとふたつの翼～',
+    startAt: '2026-11-02T04:00:00+09:00',
+    endAt: '2026-11-09T04:00:00+09:00',
+    displayEndAt: '2026-11-09T03:59:00+09:00',
+    boost: 5,
+    loopScale: 10,
+    loopBoost: 5,
+    banner: Object.freeze({ emoji: '🔑', title: '鍵の向こう側へ', sub: '開催中 〜11/9 3:59' }),
   }),
 ]);
 // ハロウィン・ナイトのストーリー(2026-10-03・ユーザー指示「開始と終了にストーリーイベントあり(長め)、
@@ -301,7 +367,8 @@ const rhythmEventPointAwardAt = (nowMs, songId, score, durationMs = 0) => {
     // 0.2 は2進数で割り切れないので、先に5で割って切り捨てる(floor(base×0.2)と同じ値)
     return Object.freeze({ eventId:null, base, target:false, offEvent:true, ...length, multiplier, amount:Math.floor(base * L / 50) });
   }
-  const target = Array.isArray(event.songIds) && event.songIds.includes(id);
+  // ショート版も対象曲として数える(songVersions・2026-11-01)
+  const target = rhythmEventHasSong(event, id);
   const multiplier = target ? RHYTHM_EVENT_POINT_TARGET_MULTIPLIER : 1;
   // 対象曲1.5倍は 3/2 として整数で掛ける: floor(base × (3 or 2) × L ÷ 20)
   return Object.freeze({ eventId:event.id, base, target, offEvent:false, ...length, multiplier, amount:Math.floor(base * (target ? 3 : 2) * L / 20) });

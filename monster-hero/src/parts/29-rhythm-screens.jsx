@@ -822,7 +822,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   const eventSongIds=(()=>{
     const released=(typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS&&RELEASE_FLAGS.rhythmWeeklyRanking===true);
     const event=(released&&typeof rhythmLimitedEventAt==='function')?rhythmLimitedEventAt(Date.now()):null;
-    return new Set((event&&Array.isArray(event.songIds))?event.songIds:[]);
+    // ショート版も「イベントの曲」に並べる(songVersions・2026-11-01)
+    return new Set(rhythmEventPlaySongIds(event));
   })();
   // ジャンル(2026-09-26。押すと下から選ぶところが出る。並べるものは RHYTHM_GENRES)。
   // ★イベントは、開催していないあいだも選ぶところに出したまま押せなくする(ユーザー指示「イベントタブもなくさないで」)。
