@@ -442,11 +442,11 @@ const HELHEIM_SETTING = Object.freeze({ id:'HELHEIM', label:'HELHEIM', japanese:
 const ETERNAL_SETTING = Object.freeze({ id:'ETERNAL', label:'ETERNAL', japanese:'エターナル', available:true, debugAvailable:true, power:300, score:20, xp:120, gold:100, psyche:190, waveCount:10, unlockRequirement:'HELHEIM', rankingId:'ExtremeETERNAL', recordId:'ETERNAL', description:'冥府の上に、敵がシールドをまとい、攻撃の一部が丈夫さを貫いてくる。戦いは長く続き、ターンとともに重くなる、極限チャレンジの最奥の難易度。', cardDescription:'WAVEの始めに敵が最大ライフ50%のシールドをまとい、攻撃の30〜50%が丈夫さを貫く。冥府・ボス復活・敵ライフ10倍はヘルヘイムのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 3:1, 5:2, 7:2, 9:1, 10:4 }), hpRate:0.5, atkBoostPerRevival:0.6 }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
 // INFERNOはETERNALの次の極限難易度(2026-10-31 社長の決定)。冥府・ふつうのWAVEのシールド・貫き・敵ライフ10倍・デュラハンの上乗せはETERNALのまま。
 // ボスは起き上がらない(revival なし)。かわりにボスのWAVEは何枚ものシールド(層)をまとって出てくる。層の決まりは infernoStageRules
-const INFERNO_SETTING = Object.freeze({ id:'INFERNO', label:'INFERNO', japanese:'インフェルノ', available:true, debugAvailable:true, power:400, score:20, xp:140, gold:120, psyche:220, waveCount:10, unlockRequirement:'ETERNAL', rankingId:'ExtremeINFERNO', recordId:'INFERNO', description:'ボスは起き上がらないかわりに、何枚ものシールドをまとって現れる。1枚割るごとにボスは強くなり、最後は必殺技が連撃になる、極限チャレンジの最奥の難易度。', cardDescription:'ボスは3〜5枚のシールドをまとい、割るたびに攻撃が上がる。デュラハンとムーは必殺技が連撃に。冥府・シールド・貫き・敵ライフ10倍はエターナルのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
+const INFERNO_SETTING = Object.freeze({ id:'INFERNO', label:'INFERNO', japanese:'インフェルノ', tab:'underworld', available:true, debugAvailable:true, power:400, score:20, xp:140, gold:120, psyche:220, waveCount:10, unlockRequirement:'ETERNAL', rankingId:'ExtremeINFERNO', recordId:'INFERNO', description:'ボスは起き上がらないかわりに、何枚ものシールドをまとって現れる。1枚割るごとにボスは強くなり、最後は必殺技が連撃になる、極限チャレンジの最奥の難易度。', cardDescription:'ボスは3〜5枚のシールドをまとい、割るたびに攻撃が上がる。デュラハンとムーは必殺技が連撃に。冥府・シールド・貫き・敵ライフ10倍はエターナルのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
 // COCYTUSはINFERNOの次の極限難易度(2026-11-01 社長の決定)。冥府・貫き・敵ライフ10倍・デュラハンの上乗せはINFERNOのまま。
 // デュラハンは1回・ムーは2回、本体を倒すと全回復+最大ライフ1.5倍(掛け算)で蘇る(シールドは張り直さない)。蘇るたびに攻撃も+20%(層1枚ぶんと同じ)。
 // ふつうの敵も層のシールドをまとい(WAVEのはじめの50%は層に置き換え)、層は厚く・枚数は多い。層の決まりは cocytusStageRules
-const COCYTUS_SETTING = Object.freeze({ id:'COCYTUS', label:'COCYTUS', japanese:'コキュートス', available:true, debugAvailable:true, power:500, score:20, xp:160, gold:140, psyche:250, waveCount:10, unlockRequirement:'INFERNO', rankingId:'ExtremeCOCYTUS', recordId:'COCYTUS', description:'どの敵も何枚もの厚いシールドをまとって現れる。1枚割るごとに敵は強くなり、デュラハンとムーは倒しても大きくなって蘇る、極限チャレンジの最奥の難易度。', cardDescription:'どの敵も4〜5枚の厚いシールドをまとい、割るたびに攻撃が上がる。デュラハンは1回・ムーは2回、全回復して大きくなって蘇る。冥府・貫き・敵ライフ10倍はインフェルノのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 9:1, 10:2 }), hpRate:1, maxHpRatePerRevival:1.5, atkStepsWithLayers:true, reveal:Object.freeze({ 9:Object.freeze([Object.freeze({ stage:'durahan', name:'凍土の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' })]), 10:Object.freeze([Object.freeze({ stage:'moo1', name:'凍土の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' }),Object.freeze({ stage:'moo2', name:'凍土の再起', desc:'ライフ全回復・最大ライフ2.25倍で復活' })]) }) }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
+const COCYTUS_SETTING = Object.freeze({ id:'COCYTUS', label:'COCYTUS', japanese:'コキュートス', tab:'underworld', available:true, debugAvailable:true, power:500, score:20, xp:160, gold:140, psyche:250, waveCount:10, unlockRequirement:'INFERNO', rankingId:'ExtremeCOCYTUS', recordId:'COCYTUS', description:'どの敵も何枚もの厚いシールドをまとって現れる。1枚割るごとに敵は強くなり、デュラハンとムーは倒しても大きくなって蘇る、極限チャレンジの最奥の難易度。', cardDescription:'どの敵も4〜5枚の厚いシールドをまとい、割るたびに攻撃が上がる。デュラハンは1回・ムーは2回、全回復して大きくなって蘇る。冥府・貫き・敵ライフ10倍はインフェルノのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 9:1, 10:2 }), hpRate:1, maxHpRatePerRevival:1.5, atkStepsWithLayers:true, reveal:Object.freeze({ 9:Object.freeze([Object.freeze({ stage:'durahan', name:'凍土の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' })]), 10:Object.freeze([Object.freeze({ stage:'moo1', name:'凍土の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' }),Object.freeze({ stage:'moo2', name:'凍土の再起', desc:'ライフ全回復・最大ライフ2.25倍で復活' })]) }) }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
 const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES,GOD_SETTING,RAGNAROK_SETTING,HELHEIM_SETTING,ETERNAL_SETTING,INFERNO_SETTING,COCYTUS_SETTING]);
 // 極限チャレンジの難易度カラー。カード構造は共通のまま、上位ほど発光を少しずつ強める。
 // 常時アニメーションは使わず、iPhone縦画面でも視認性と軽さを優先する。
@@ -472,6 +472,15 @@ const EXTREME_DIFFICULTY_THEMES = Object.freeze({
 });
 const extremeDifficultyTheme = (difficultyId) => EXTREME_DIFFICULTY_THEMES[difficultyId] || EXTREME_DIFFICULTY_THEMES.EXTREME;
 const PUBLIC_EXTREME_DIFFICULTIES = Object.freeze(ALL_EXTREME_DIFFICULTIES.filter(setting=>setting.available));
+// 冥界チャレンジ(2026-11-01 社長の決定)。INFERNO・COCYTUS は難易度選びのタブだけ「冥界」へ移す。
+// ★難易度の名前・極限の一覧(ALL_EXTREME_DIFFICULTIES)の並び・保存キー(mh_extreme_hs_/clears_<id>)・ランキングの枠(Extreme<id>)は変えない。
+//   表示の分け方だけを、設定の tab:'underworld' の印で決める
+const UNDERWORLD_TAB_ID = 'underworld';
+const isUnderworldDifficultyId = (difficultyId) => extremeRuleSetting(difficultyId)?.tab === UNDERWORLD_TAB_ID;
+// 極限タブに出す難易度(EXTREME〜ETERNAL の9つ)。極限の「全部クリア」を数えるときもこの9つ(2026-11-01 社長)
+const PUBLIC_EXTREME_TAB_DIFFICULTIES = Object.freeze(PUBLIC_EXTREME_DIFFICULTIES.filter(setting=>setting.tab!==UNDERWORLD_TAB_ID));
+// 冥界タブに出す難易度(INFERNO・COCYTUS)
+const PUBLIC_UNDERWORLD_DIFFICULTIES = Object.freeze(PUBLIC_EXTREME_DIFFICULTIES.filter(setting=>setting.tab===UNDERWORLD_TAB_ID));
 // 2WAVEごとに1段上がる段階(Lv1〜5)。GODの「神威」もRAGNAROKの「黄昏」も刻み方は同じで、
 // 段ごとに何を締めるかだけが違う。刻み方をここへ1つだけ置き、難易度側は中身の表だけを持つ。
 const extremeWaveStageLevel = (waveNumber) => Math.max(1,Math.min(5,Math.floor((Math.max(1,Number(waveNumber)||1)-1)/2)+1));
@@ -954,11 +963,18 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     ['安全距離',breakRule.safeDistanceCount>0?`${breakRule.safeDistanceCount}距離は最後まで弱体化しない`:'なし（4距離すべて弱体化する）'],
   ]);
   const revivalRule=extremeRevivalRule(difficultyId);
-  if(revivalRule)push('不死（死者の再起）',[
+  // COCYTUSの蘇り(全回復・最大ライフが増える)は「層のシールド」の欄に書くので、ここ(半分で起き上がる形)には出さない
+  if(revivalRule&&!(Number(revivalRule.maxHpRatePerRevival)>0))push('不死（死者の再起）',[
     ['対象',Object.entries(revivalRule.waves).map(([waveNumber,count])=>`WAVE${waveNumber}（${count}回）`).join(' / ')],
     ['復活時',`ライフ${specialRulePercent(revivalRule.hpRate)}で起き上がる（最大ライフは変わらない）`],
     ['起き上がるたび',`敵の攻撃力 +${specialRulePercent(revivalRule.atkBoostPerRevival)}`],
   ]);
+  // 冥界チャレンジ(INFERNO・COCYTUS)は、ルール詳細の先頭にシールドの1枚を置く(2026-11-01 社長「ルール詳細の先頭にシールドの1枚」)。
+  // 冥府などの引き継ぎは、そのうしろへ回す
+  if(isUnderworldDifficultyId(difficultyId)){
+    const first=groups.findIndex(g=>g.title==='ボスの層のシールド'||g.title==='層のシールド');
+    if(first>0)groups.unshift(...groups.splice(first,1));
+  }
   return groups;
 };
 // カードには中身を並べず、特殊ルールがあることだけを出す(INFINITYは種類が多いので複合と書く)
@@ -1201,6 +1217,15 @@ const isHelheimUnlocked = (ragnarokClearCount) => (Number(ragnarokClearCount) ||
 const isEternalUnlocked = (helheimClearCount) => (Number(helheimClearCount) || 0) > 0;
 const isInfernoUnlocked = (eternalClearCount) => (Number(eternalClearCount) || 0) > 0;
 const isCocytusUnlocked = (infernoClearCount) => (Number(infernoClearCount) || 0) > 0;
+// 冥界チャレンジのタブは ETERNAL を1回以上クリアすると開く(今の INFERNO の解放と同じ)
+const isUnderworldUnlocked = (eternalClearCount) => (Number(eternalClearCount) || 0) > 0;
+// 難易度のシールドの枚数の幅(見た目のカードの「🛡×3〜5」に使う)。層を持たない難易度は ''
+const underworldShieldLayerRange = (difficultyId) => {
+  const counts=Array.from({length:10},(_,i)=>Math.floor(Number(extremeWaveStageRules(difficultyId,i+1)?.shieldLayers)||0)).filter(n=>n>0);
+  if(!counts.length)return '';
+  const min=Math.min(...counts), max=Math.max(...counts);
+  return min===max?String(min):`${min}〜${max}`;
+};
 const normalizeBattleDifficulty = (value) => quickDifficultySetting(value) ? value : 'Normal';
 // 難易度選択を開いたときの既定位置。前に遊んだ難易度を引きずらず、いつでもノーマルから始める
 const BATTLE_DEFAULT_DIFFICULTY = 'Normal';
