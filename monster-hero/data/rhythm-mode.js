@@ -51065,6 +51065,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   //   hitLevel/hitLight … 弾ける光の段と軽量かどうか / hitScale … 弾ける光の大きさ
   // holdTrace … ホールド・スライドを押せている間、帯を指の所からなぞるように光らせる(2026-11-02・設定 holdTrace)
   let motionFlick=false,motionSlide=false,glowLevel='NORMAL',hitLevel='FULL',hitLight=false,hitScale=1,holdTrace=false;
+  // なぞる光が ON のとき、左右のはしの光の柱も残すか(案A=false・案B=true)
+  const HOLD_TRACE_KEEP_PILLARS=false;
   // 何も映らないフレームは描き直さない(2026-09-27・ユーザー指示「見た目を変えずに軽く」)。
   // begin() では消さずに「消す予定」だけ立て、最初に何かを描く瞬間に消す(touch)。最後まで何も描かなかったフレームは、
   // 前のフレームがもう空(blank)なら何もしない。前奏・間奏・曲の終わりで、canvas の消去・GPU への命令・画面の合成し直しがなくなる
@@ -51391,8 +51393,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // 上へ立ちのぼる光(参考動画: 押さえているレーンの上が青白く光る)。焼いた縦のグラデーションを1枚貼るだけ
     // 1枚目はレーンの形(奥ほど細くなる台形)に沿って道の中ほどまで届く光、2枚目は中央のやわらかく明るい芯
     const columnH=head.cy*(.46+.2*charge)*(.95+.05*pulse),tint=HOLD_SPARK_TINT[kind]||HOLD_SPARK_TINT.HOLD;
-    // 「なぞる光」(holdTrace)が ON のときは出さない。レーンの形に沿って立ちのぼるので、道の光と同じに見える(2026-11-02 社長「道の光が出てる気がする」)
-    if(!holdTrace&&!lightweight&&cssH>0){
+    // 上へ立ちのぼる光は、なぞる光が ON でも残す(2026-11-02 社長「オフのときの炎のような光はオンでも残したい」)
+    if(!lightweight&&cssH>0){
       const topY=Math.max(0,head.cy-columnH),baseScale=rhythmProjectionScale(head.cy/cssH),k=baseScale>0?rhythmProjectionScale(topY/cssH)/baseScale:1;
       const half=w*.56,mid=cssW/2,topCx=mid+(head.cx-mid)*k;
       const g=ctx.createLinearGradient(0,head.cy,0,topY);
@@ -51416,8 +51418,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.drawImage(hitFlareSprite().canvas,head.cx-fw/2,head.cy-fh/2,fw,fh);
     // ノーツの左右のはしに立つ光の柱(参考動画でいちばん目立つ「押さえている」合図)。押さえているあいだずっと立ち、
     // 溜まるほど高く明るくなる。細かくゆらぐだけで消えない。焼いた1枚を2本貼るだけ(演出量「最小」以外)
-    // 左右のはしの光の柱も、なぞる光が ON のときは出さない(帯の外に立つので道の光に見える)
-    if(!holdTrace){
+    // 左右のはしの光の柱。なぞる光が ON のとき出すかは HOLD_TRACE_KEEP_PILLARS(社長が案A・案Bから選ぶ)
+    if(!holdTrace||HOLD_TRACE_KEEP_PILLARS){
       // 道の高さの3〜4割まで伸びる(溜まるほど高い)。根元には星形の光(叩いたときの十字と同じ焼いた1枚)を小さく置く
       const pillar=holdPillarSprite(kind).canvas,ph=head.cy*(.3+.14*charge),pw=Math.max(20,30*depth),star=hitFlareSprite().canvas,sw2=Math.max(40,56*depth)*(.9+.2*pulse);
       for(const side of [-1,1]){
@@ -51509,7 +51511,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // 見た目だけ。判定・入力の受け付け幅はこれまでどおりノーツサイズに左右されない。
   const sizeX=(left,right)=>{const c=(left+right)/2,k=sizeScale;return [c-(c-left)*k,c+(right-c)*k];};
   const drawBand=(geo,opts)=>{
-    const {failed,alpha,pressed}=opts,band=geo.band;
+    // 押せている間だけ明るくする(指が帯から外れている間 slideOff は明るくしない・2026-11-02)
+    const {failed,alpha}=opts,pressed=opts.pressed&&!opts.slideOff,band=geo.band;
     if(!band||band.length<2)return;
     const top=band[0].y,bottom=band[band.length-1].y;
     ctx.globalAlpha=alpha;
@@ -53051,7 +53054,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const headOpts=o.pop===null?{...o}:{...o,alpha:o.alpha*.95*(1-easeOut(o.pop)),brightness:1};
       if(trackDim<1){headOpts.alpha=o.alpha*trackDim;headOpts.brightness=(Number(headOpts.brightness)||1)*.6;}
       // 押さえている最中の光は粒の下に敷く(粒の形は隠さない)。演出量「最小」では出さない
-      if(o.pressed&&!o.failed&&o.pop===null&&effect!=='MINIMAL')drawHoldSpark(note,geo,o);
+      // 指が帯から外れている間(slideOff)は出さない(2026-11-02 社長「外れても光が出ていて押せているように見える」)
+      if(o.pressed&&!o.slideOff&&!o.failed&&o.pop===null&&effect!=='MINIMAL')drawHoldSpark(note,geo,o);
       // 空中のノーツも、既定(plate)ではふつうの板(drawHead)で描く。旧スタイルは drawSkyTap(箱・星など)
       const skyPlate=!!(geo.skyShadow&&!isSlide&&geo.head&&isSkyPlate(note));
       // 案Z: 空中のタップ/フリックは半透明のガラスの箱(叩いて弾けるとき=popのときだけ従来の頭で描く)

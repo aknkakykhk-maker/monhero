@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 588b42a0f3f453c3
+// generated-sha256: 1eae9aa4bb4717a8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -24980,7 +24980,9 @@ for(let i=scanFrom;i<notes.length;i++){
   if(run.notesReady&&run.notesAscending&&(scrollTable?rhythmScrollMinAfter(note.timeMs)>scanHorizonScroll:note.timeMs>scanHorizonMs))break;
   perfScanned++;
   visitNote(note);
-  if(!note.done&&note.activePointerId!==null&&note.type==='HOLD'&&rhythmNoteHasBody(note))heldNotes.push(note);
+  // 指が帯から外れている間は、押さえている間の音を止める(2026-11-02 社長「外れても すーって音がなってて判定に入ってるように感じる」)。
+  // 外れの判断は判定と同じ所(RHYTHM_GESTURE_RUNTIME の trackingBadSincePerf)を読む。戻ればまた一覧に入って鳴る
+  if(!note.done&&note.activePointerId!==null&&note.type==='HOLD'&&rhythmNoteHasBody(note)&&!RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index))heldNotes.push(note);
 }
 RHYTHM_NOTE_SE_RUNTIME.holdSync(heldNotes);
 // 刻みの数え方: 押さえている帯の刻みを判定・コンボ・スコアへ入れる(comboTicksRef。押し終わりは判定の処理が残りを清算する)

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b0b6ca059773a498
+// source-sha256: ebfa6773aa24ce9e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -40790,7 +40790,7 @@ const RhythmTapTest = ({
         if (run.notesReady && run.notesAscending && (scrollTable ? rhythmScrollMinAfter(note.timeMs) > scanHorizonScroll : note.timeMs > scanHorizonMs)) break;
         perfScanned++;
         visitNote(note);
-        if (!note.done && note.activePointerId !== null && note.type === 'HOLD' && rhythmNoteHasBody(note)) heldNotes.push(note);
+        if (!note.done && note.activePointerId !== null && note.type === 'HOLD' && rhythmNoteHasBody(note) && !RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index)) heldNotes.push(note);
       }
       RHYTHM_NOTE_SE_RUNTIME.holdSync(heldNotes);
       if (run.tickRules) for (let i = 0; i < heldNotes.length; i++) comboTicksRef.current(heldNotes[i]);
