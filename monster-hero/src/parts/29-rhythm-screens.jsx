@@ -1384,6 +1384,18 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
 // 動画は data/rhythm-mode.js の RHYTHM_HELL_GUIDE_VIDEOS から名前で引く(説明の video と、ヘルプの {t:'video'})。
 // 無音・自動再生・繰り返し(iPhone でも自動で流れるよう muted playsInline)。sound のある動画だけ「音ありで見る」を出し、押すと音つきで最初から。
 // 読み込み前は暗い枠、読めなかったら枠ごと出さない(文だけの今の形に戻る)
+// ===== お知らせの予告動画(2026-11-02 イベント「鍵の向こう側へ」・社長「BGMを止めて公開」) =====
+// 押すまで読み込まない(preload none)。再生しているあいだだけゲームの音を絞り(Audio_.setVideoHold)、
+// 終わる・一時停止する・枠を閉じる(この部品が消える)と元に戻す。読めなかったら外枠(figure)ごと消す
+const ChangelogVideo=({src,poster})=>{
+  const ref=useRef(null);
+  const hold=(on)=>{try{if(typeof Audio_!=='undefined'&&Audio_&&typeof Audio_.setVideoHold==='function')Audio_.setVideoHold(on);}catch(e){}};
+  useEffect(()=>()=>{try{if(ref.current)ref.current.pause();}catch(e){}hold(false);},[]);
+  return <video ref={ref} src={src} poster={poster} controls playsInline preload="none"
+    onPlay={()=>hold(true)} onPause={()=>hold(false)} onEnded={()=>hold(false)}
+    onError={e=>{hold(false);const f=e.currentTarget.closest('figure');if(f)f.style.display='none';}}
+    style={{display:'block',width:'100%',maxWidth:'320px',margin:'0 auto',borderRadius:'12px',background:'#000'}}/>;
+};
 const rhythmHellGuideVideo=(id)=>{try{const v=typeof RHYTHM_HELL_GUIDE_VIDEOS!=='undefined'&&RHYTHM_HELL_GUIDE_VIDEOS?RHYTHM_HELL_GUIDE_VIDEOS[id]:null;return v&&typeof v.src==='string'&&Number(v.w)>0&&Number(v.h)>0?v:null;}catch(e){return null;}};
 const RhythmHellVideo=({id})=>{
   const info=rhythmHellGuideVideo(id);

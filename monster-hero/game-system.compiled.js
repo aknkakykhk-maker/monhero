@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ff2ce32229547839
+// source-sha256: ab79bfa5f1fd4a51
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -7122,6 +7122,7 @@ const Audio_ = (() => {
     masterOut = null,
     analyser = null,
     analyserData = null;
+  let videoHold = false;
   let ctxTimeMark = null,
     ctxRebuildCount = 0,
     toneLoadFailed = false;
@@ -7352,7 +7353,7 @@ const Audio_ = (() => {
   const _bgmGain = pct => pct <= 0 ? 0 : Math.pow(10, (-55 + Math.min(100, pct) / 100 * 55) / 20) * 0.55;
   const buildAudioGraph = ctx => {
     masterOut = ctx.createGain();
-    masterOut.gain.value = 1;
+    masterOut.gain.value = videoHold ? 0 : 1;
     analyser = ctx.createAnalyser();
     analyser.fftSize = 2048;
     analyser.smoothingTimeConstant = 0;
@@ -9159,7 +9160,20 @@ const Audio_ = (() => {
     }
   };
   const se = Object.fromEntries(Object.entries(fgSe).map(([name, play]) => [name, (...args) => backgroundSeQuiet ? Promise.resolve() : play(...args)]));
+  const setVideoHold = on => {
+    videoHold = !!on;
+    if (!masterOut || !audioCtx) return;
+    try {
+      const at = audioCtx.currentTime;
+      masterOut.gain.cancelScheduledValues(at);
+      masterOut.gain.setValueAtTime(masterOut.gain.value, at);
+      masterOut.gain.linearRampToValueAtTime(videoHold ? 0 : 1, at + 0.25);
+    } catch (e) {
+      masterOut.gain.value = videoHold ? 0 : 1;
+    }
+  };
   return {
+    setVideoHold,
     playSeFile,
     preloadSE,
     playBGM,
@@ -35597,6 +35611,47 @@ const RhythmSongSelect = ({
     onClick: () => setSortOpen(false),
     className: "mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white"
   }, "閉じる"))));
+};
+const ChangelogVideo = ({
+  src,
+  poster
+}) => {
+  const ref = useRef(null);
+  const hold = on => {
+    try {
+      if (typeof Audio_ !== 'undefined' && Audio_ && typeof Audio_.setVideoHold === 'function') Audio_.setVideoHold(on);
+    } catch (e) {}
+  };
+  useEffect(() => () => {
+    try {
+      if (ref.current) ref.current.pause();
+    } catch (e) {}
+    hold(false);
+  }, []);
+  return React.createElement("video", {
+    ref: ref,
+    src: src,
+    poster: poster,
+    controls: true,
+    playsInline: true,
+    preload: "none",
+    onPlay: () => hold(true),
+    onPause: () => hold(false),
+    onEnded: () => hold(false),
+    onError: e => {
+      hold(false);
+      const f = e.currentTarget.closest('figure');
+      if (f) f.style.display = 'none';
+    },
+    style: {
+      display: 'block',
+      width: '100%',
+      maxWidth: '320px',
+      margin: '0 auto',
+      borderRadius: '12px',
+      background: '#000'
+    }
+  });
 };
 const rhythmHellGuideVideo = id => {
   try {
@@ -147804,24 +147859,9 @@ function MonsterHeroGame() {
           fontWeight: 900,
           margin: '0 0 4px'
         }
-      }, "▶ 予告動画"), React.createElement("video", {
+      }, "▶ 予告動画"), React.createElement(ChangelogVideo, {
         src: c.video,
-        poster: typeof c.videoPoster === 'string' ? c.videoPoster : undefined,
-        controls: true,
-        playsInline: true,
-        preload: "none",
-        onError: e => {
-          const f = e.currentTarget.closest('figure');
-          if (f) f.style.display = 'none';
-        },
-        style: {
-          display: 'block',
-          width: '100%',
-          maxWidth: '320px',
-          margin: '0 auto',
-          borderRadius: '12px',
-          background: '#000'
-        }
+        poster: typeof c.videoPoster === 'string' ? c.videoPoster : undefined
       })), (c.items || []).map((x, j) => React.createElement("p", {
         key: j
       }, "・", x)), (Array.isArray(c.gallery) ? c.gallery : []).filter(g => g && typeof g.image === 'string' && g.image).map((g, j) => React.createElement("figure", {

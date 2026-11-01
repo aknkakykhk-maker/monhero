@@ -18175,9 +18175,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           押すまで読み込まない(preload none)。videoPoster は押す前に見せる絵。読めなかったら黙って消す */}
                       {typeof c.video==='string'&&c.video&&<figure data-changelog-video style={{margin:'6px 0'}}>
                         <figcaption style={{fontWeight:900,margin:'0 0 4px'}}>▶ 予告動画</figcaption>
-                        <video src={c.video} poster={typeof c.videoPoster==='string'?c.videoPoster:undefined} controls playsInline preload="none"
-                          onError={e=>{const f=e.currentTarget.closest('figure');if(f)f.style.display='none';}}
-                          style={{display:'block',width:'100%',maxWidth:'320px',margin:'0 auto',borderRadius:'12px',background:'#000'}}/>
+                        <ChangelogVideo src={c.video} poster={typeof c.videoPoster==='string'?c.videoPoster:undefined}/>
                       </figure>}
                       {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
                       {/* 本文の下に並べる見本の絵(2026-09-28・ユーザー提案「こんな感じに染色イメージを出したりしたらどう？」)。
