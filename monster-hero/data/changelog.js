@@ -44,7 +44,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-11-01 15:11", type:'update', title:'「Rebellion ～Beyond the Lock～」に short ver. を追加しました', status:'new', group:'rhythm',
+    date: "2026-11-01 13:59", type:'update', title:'「Rebellion ～Beyond the Lock～」に short ver. を追加しました', status:'new', group:'rhythm',
     image:'images/song-art/rebellion.jpg?v=ef38f7ab2382',
     items:[
       '「Rebellion ～Beyond the Lock～」の short ver.(2分32秒)を追加しました。曲えらびで、原曲と切り替えて遊べます。',
