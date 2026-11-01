@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a743b92be0d31691
+// source-sha256: 84ff35cdefbf7960
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -52288,6 +52288,14 @@ const raidJackStoryCandidates = (totals, nowMs) => {
     out.push(defeatedAt(RAID_JACK_A_TIERS.length - 1) ? RAID_JACK_ENDING_CLEARED_ID : RAID_JACK_ENDING_NOTCLEARED_ID);
   }
   return out.filter(Boolean);
+};
+const RAID_JACK_ENDING_REPLAY_KEY = 'mh_raid_jack_ending_replay_v1';
+const RAID_JACK_ENDING_REPLAY_READY = true;
+const raidJackEndingReplayIdFor = seenStoryIds => {
+  const seen = Array.isArray(seenStoryIds) ? seenStoryIds : [];
+  if (seen.includes(RAID_JACK_ENDING_CLEARED_ID)) return RAID_JACK_ENDING_CLEARED_ID;
+  if (seen.includes(RAID_JACK_ENDING_NOTCLEARED_ID)) return RAID_JACK_ENDING_NOTCLEARED_ID;
+  return null;
 };
 const RAID_JACK_BOSS_DOWN_KEY = 'mh_raid_jack_boss_down_v1';
 const RAID_JACK_FRAME_GIFT_KEY = 'mh_raid_jack_frame_gift_v1';
@@ -127501,6 +127509,8 @@ function MonsterHeroGame() {
   const [cardBattleIntroSeenLoaded, setCardBattleIntroSeenLoaded] = useState(false);
   const [rhythmHellStorySeenLoaded, setRhythmHellStorySeenLoaded] = useState(false);
   const [rhythmHellGuide, setRhythmHellGuide] = useState(null);
+  const [raidJackEndingReplayDone, setRaidJackEndingReplayDone] = useState(false);
+  const [raidJackEndingReplayLoaded, setRaidJackEndingReplayLoaded] = useState(false);
   const rhythmHellStoryAfterResultRef = useRef(false);
   const [tacticsIntroPending, setTacticsIntroPending] = useState(false);
   const [assistantBonds, setAssistantBonds] = useState({});
@@ -130699,6 +130709,16 @@ function MonsterHeroGame() {
     setRhythmEventStoryPending(SORASHIDO_JOIN_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
+    if (!RAID_JACK_ENDING_REPLAY_READY || RELEASE_FLAGS.raidJack !== true) return;
+    if (!raidJackEndingReplayLoaded || raidJackEndingReplayDone) return;
+    const replayId = raidJackEndingReplayIdFor(rhythmEventStorySeen);
+    if (!replayId) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(`${replayId}#replay`)) return;
+    rhythmEventStoryStartedRef.current = [...rhythmEventStoryStartedRef.current, `${replayId}#replay`];
+    setRhythmEventStoryPending(prev => prev || replayId);
+  }, [raidJackEndingReplayLoaded, raidJackEndingReplayDone, rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.cardCup || !EVENT_REPLAY_RELEASE_FLAGS.cardBattle) return;
     if (!cardBattleIntroSeenLoaded || !cardBattleIntroSeenFlag) return;
     if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(CARD_CUP_STORY_ID)) return;
@@ -132248,6 +132268,13 @@ function MonsterHeroGame() {
           setRhythmHellStorySeenLoaded(true);
         } catch {}
       }
+      if (RAID_JACK_ENDING_REPLAY_READY) {
+        try {
+          const v = await storeGet(RAID_JACK_ENDING_REPLAY_KEY, null, false);
+          setRaidJackEndingReplayDone(v === true || !!v && typeof v === 'object');
+          setRaidJackEndingReplayLoaded(true);
+        } catch {}
+      }
       if (EVENT_REPLAY_RELEASE_FLAGS.assistantChat) {
         try {
           setAssistantChatStorySeenFlag((await storeGet(ASSISTANT_CHAT_STORY_SEEN_KEY, false, false)) === true);
@@ -133684,6 +133711,15 @@ function MonsterHeroGame() {
     setRhythmHellStorySeenFlag(true);
     try {
       storeSet(rhythmHellStorySeenKey(), true, false);
+    } catch {}
+  }, []);
+  const markRaidJackEndingReplayed = useCallback(() => {
+    if (!RAID_JACK_ENDING_REPLAY_READY) return;
+    setRaidJackEndingReplayDone(true);
+    try {
+      storeSet(RAID_JACK_ENDING_REPLAY_KEY, {
+        at: new Date().toISOString()
+      }, false);
     } catch {}
   }, []);
   const markAssistantChatStorySeen = useCallback(() => {
@@ -158158,6 +158194,7 @@ function MonsterHeroGame() {
         if (event && event.id === RAID_JACK_STORY_START_ID && eventReplay.live && !eventReplay.debug && RELEASE_FLAGS.raidJack === true && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_HOWTO_STORY_ID)) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
         if (event && event.id === ASSISTANT_CHAT_STORY_ID && eventReplay.live && !eventReplay.debug) markAssistantChatStorySeen();
         if (event && event.id === TACTICS_TYPES_STORY_ID && eventReplay.live && !eventReplay.debug) markTacticsTypesStorySeen();
+        if (event && (event.id === RAID_JACK_ENDING_CLEARED_ID || event.id === RAID_JACK_ENDING_NOTCLEARED_ID) && eventReplay.live && !eventReplay.debug) markRaidJackEndingReplayed();
         if (event && event.id === CARD_BATTLE_INTRO_STORY_ID && eventReplay.live && !eventReplay.debug) {
           markCardBattleIntroSeen();
           setEventReplay(null);
@@ -158183,6 +158220,7 @@ function MonsterHeroGame() {
         if (eventReplay.live && !eventReplay.debug && event && event.id === 'tactics_intro') markTacticsIntroSeen();
         if (eventReplay.live && !eventReplay.debug && event && event.id === ASSISTANT_CHAT_STORY_ID) markAssistantChatStorySeen();
         if (eventReplay.live && !eventReplay.debug && event && event.id === TACTICS_TYPES_STORY_ID) markTacticsTypesStorySeen();
+        if (eventReplay.live && !eventReplay.debug && event && (event.id === RAID_JACK_ENDING_CLEARED_ID || event.id === RAID_JACK_ENDING_NOTCLEARED_ID)) markRaidJackEndingReplayed();
         if (eventReplay.live && !eventReplay.debug && event && event.id === CARD_BATTLE_INTRO_STORY_ID) markCardBattleIntroSeen();
         if (event && event.id === RHYTHM_HELL_STORY_ID) {
           if (eventReplay.live && !eventReplay.debug) markRhythmHellStorySeen();

@@ -26,8 +26,8 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
 // お話ごとの行の数(解放あり・なし)と、写真を撮る行(0から)と、その行に出るはずの文
 const STORIES = [
   { id: 'raid_jack_story_6', title: '第6部', lines: { with: 34, without: 32 }, shot: 3, withText: '間に合った……いや、もう終わったんだね', withoutText: '……終わった、みたいだな' },
-  { id: 'raid_jack_ending_cleared', title: '終章(倒せた)', lines: { with: 48, without: 48 }, shot: 4, withText: '主役、ちょっと緊張してるかもね', withoutText: '主役は、ちょっと緊張しているかもしれないでつね' },
-  { id: 'raid_jack_ending_notcleared', title: '終章(倒せなかった)', lines: { with: 47, without: 47 }, shot: 2, withText: '今回は、ジャックの勝ちだ', withoutText: '……今回は、ジャックの勝ちだな' },
+  { id: 'raid_jack_ending_cleared', title: '終章(倒せた)', lines: { with: 53, without: 53 }, shot: 4, withText: '主役、ちょっと緊張してるかもね', withoutText: '主役は、ちょっと緊張しているかもしれないでつね' },
+  { id: 'raid_jack_ending_notcleared', title: '終章(倒せなかった)', lines: { with: 52, without: 52 }, shot: 2, withText: '今回は、ジャックの勝ちだ', withoutText: '……今回は、ジャックの勝ちだな' },
   { id: 'kyuko_join_2026_10_22', title: 'きゅうこの加入', lines: { with: 55, without: 55 }, shot: 33, withText: 'あつニキ、ひさしぶりぃ', withoutText: 'あ、知っててくれたんだぁ' },
 ];
 (async () => {
@@ -64,6 +64,9 @@ const STORIES = [
       await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
       await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
       for (let i = 0; i < 8; i++) {
+        // 個人杯のお話(card_cup_2026_10_31)は飛ばさない。飛ばすと「見た」になり、あつに会ったことになって「解放なし」が確かめられない。
+        // 開いたままでも、下のボタンは dispatchEvent で押せる。デバッグのお話の一覧から再生すると、このお話は見た印を付けずに入れ替わる
+        if (await page.locator('[data-event-story="card_cup_2026_10_31"]').count()) break;
         const b = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK|スキップ/ }).first();
         if (await b.count() === 0 || !(await b.isVisible().catch(() => false))) break;
         await b.dispatchEvent('click').catch(() => {}); await page.waitForTimeout(300);

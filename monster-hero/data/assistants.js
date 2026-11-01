@@ -10040,6 +10040,7 @@ const RAID_JACK_STORY_6 = [
   { who:'pumpkin', e:'happy', t:'うん！ ぼく、こんなにたくさんの友だち、はじめてだよ！' },
 ];
 
+// ソラシドの行は 2026-11-01 に足した(社長「ハロウィン終了ストーリーにソラシドがいない」)。見終えた人へは1回だけ流し直す(35-raid-jack.jsx の RAID_JACK_ENDING_REPLAY_KEY)
 // 終章の冒頭 結末A(大王まで倒せた)
 const RAID_JACK_ENDING_A_HEAD = [
   { who:'mua', e:'excited', t:'いよいよ、ハロウィン・ナイト最後の夜だね！ ……みんなで、ぱんぷきんを大王まで止められたんだもん' },
@@ -10050,6 +10051,7 @@ const RAID_JACK_ENDING_A_HEAD = [
   { who:'kiki', e:'normal', atsu:'without', t:'主役は、ちょっと緊張しているかもしれないでつね。' },
   { who:'dra', e:'normal', t:'来るかな、ぱんぷきん' },
   { who:'mua', e:'normal', t:'来るよ。だって、ビートはちゃんと届いたもん' },
+  { who:'sorashido', e:'normal', t:'来る確率、計算しようと思ったけど。。。今日はやめとく笑 来るって信じるしかない！' },
   { who:'pumpkin', e:'normal', t:'……来たよ。みんな、ぼくの仲間も連れてきたんだ' },
   { who:'dra', e:'normal', t:'畑にいた、ランタンになれなかったかぼちゃたちが、みんな来たんだな' },
   { who:'kyuko', e:'surprise', t:'え、いっぱいいる笑 ちっちゃいのがぞろぞろ……かわいいねぇ' },
@@ -10066,6 +10068,7 @@ const RAID_JACK_ENDING_B_HEAD = [
   { who:'dra', e:'normal', atsu:'without', t:'……今回は、ジャックの勝ちだな' },
   { who:'kiki', e:'normal', t:'それでも、ビートは届いていたはずでつ。ジャックの笑い声が、前より優しくなっていまつ。' },
   { who:'kyuko', e:'normal', t:'削ったぶんは、ちゃんと記録に残ってるよ。あと一押しだった。来年は、編成から考え直そう。' },
+  { who:'sorashido', e:'troubled', t:'あー、計算だとあと少しだったんだよなぁ💦 でも来年のぶんのデータは取れたし、次は届くでしょ笑' },
   { who:'dra', e:'normal', t:'ああ。ここまで食い下がったんだ。胸を張っていい' },
   { who:'jack', name:'ジャック(大王)', e:'normal', t:'……フン。なかなか、楽しかったぞ。だから……もう、暴れなくてよいのじゃ' },
   { who:'pumpkin', e:'happy', t:'……ありがとう。みんなのビート、ちゃんと聞こえたよ。ぼくも、パーティーに入れてほしいんだ' },
@@ -10080,6 +10083,7 @@ const RAID_JACK_ENDING_COMMON = [
   { who:'dra', e:'normal', t:'よし、始めるぞ！ 最後の『Crazy Party Night ～ぱんぷきんの逆襲～』だ！' },
   { who:'mua', e:'excited', t:'みんなで踊ろう！ 魔女も、うさ耳も、小悪魔も、かぼちゃ頭も、ぜーんぶ一緒に！' },
   { who:'kyuko', e:'excited', t:'この曲、譜面がおもしろいんだよねぇ。ほい、俺も入るよぉ' },
+  { who:'sorashido', e:'excited', t:'じゃあ俺は三線で入るか笑 ぱんぷきんのステップに合わせて弾くよー☺️' },
   { who:'kiki', e:'normal', t:'ぱんぷきんが、一緒にステップを踏んでいまつ！' },
   { who:'momosuke', e:'happy', t:'かわいい〜♡ 光るおなかが、リズムに合わせてぴかぴかしてる' },
   { who:'atsu', e:'excited', atsu:'with', t:'いいね、ぱんぷきん！ その調子で、もう一段速くいこ笑' },
@@ -10105,6 +10109,7 @@ const RAID_JACK_ENDING_COMMON = [
   { who:'kiki', e:'normal', t:'ハロウィン・ナイトも、もうすぐおしまいでつね。' },
   { who:'mua', e:'normal', t:'ちょっと寂しいな。ずっと続けばいいのに' },
   { who:'kyuko', e:'troubled', t:'わかるなぁ……楽しい夜って、終わるの早いんだよね。' },
+  { who:'sorashido', e:'normal', t:'俺は途中から来たけど、この夜に間に合ってよかったよなー。来年は最初からいたい笑' },
   { who:'atsu', e:'normal', atsu:'with', t:'終わるから、また来たくなるんだよ。来年も、全員そろって来よう！' },
   { who:'momosuke', e:'normal', atsu:'without', t:'終わるから、また来たくなるんだよ。来年も、みんなそろって来ようね' },
   { who:'dra', e:'normal', t:'またやればいいさ。ハロウィンは、来年も来る。ぱんぷきんも、モンヒロビートの中でいつでも待ってるよ' },
@@ -10114,10 +10119,12 @@ const RAID_JACK_ENDING_COMMON = [
   { who:'kyuko', e:'wink', t:'俺は今年、衣装なしだったからなぁ。来年は着たいなぁw' },
   { who:'atsu', e:'happy', atsu:'with', t:'それ見たい笑 俺も来年は着る！' },
   { who:'mua', e:'excited', atsu:'without', t:'それ見たい！ きゅきゅの衣装、来年いっしょに選ぼ！' },
+  { who:'sorashido', e:'wink', t:'俺も来年は着たいよなー笑 柄、いまから計算しとくか。。。？' },
   { who:'dra', e:'normal', t:'最後に、遊んでくれた全員にお礼だ。おまえたちのビートのおかげで、ぱんぷきんは笑えた' },
   { who:'atsu', e:'normal', atsu:'with', t:'{name}、最後まで付き合ってくれてありがと！ 一番がんばってたの、ちゃんと見てたよ！' },
   { who:'mua', e:'happy', atsu:'without', t:'{name}、最後まで付き合ってくれてありがと！ 一番がんばってたの、ちゃんと見てたよ！' },
   { who:'kyuko', e:'happy', t:'{name}、おつかれさまぁ。いい夜だったねぇ🫂' },
+  { who:'sorashido', e:'happy', t:'{name}、おつかれ！ 最後まで一緒に踊れて最高だったじゃん笑😊' },
   { who:'pumpkin', e:'happy', t:'ありがとう、みんな！ また来年、いっしょに遊ぼうね！' },
   { who:'momosuke', e:'happy', t:'ありがとう〜♡ また次のイベントで会おうね！' },
   { who:'mua', e:'happy', t:'ハッピー・ハロウィン！' },
