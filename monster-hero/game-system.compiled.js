@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c77a9ff1ef858f57
+// source-sha256: 65c34e92d42097a1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -100158,7 +100158,7 @@ const CardDetailModal = ({
     }, React.createElement("img", {
       src: CARD_IMG(c ? c.img : m ? m.img : no, 'l'),
       alt: c ? c.name : m ? m.name : '',
-      className: "w-[min(78vw,300px)] rounded-xl shadow-2xl"
+      className: "w-[min(78vw,300px)] rounded-xl shadow-2xl landscape:h-[32vh] landscape:w-auto"
     })), c && React.createElement("div", {
       className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100"
     }, React.createElement("div", {

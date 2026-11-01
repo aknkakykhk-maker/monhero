@@ -684,6 +684,8 @@ const cardPlainEffectText = (c) => {
   if ((c.kind === 'pow' || c.kind === 'int') && Number.isFinite(Number(c.damage))) return `相手のモンスター1体に、${c.damage}ダメージを与える${c.kind === 'pow' ? 'ちから技' : 'かしこさ技'}です。`;
   return '';
 };
+// 横の画面では、絵の高さを図鑑から開いたとき(nav)と同じ 32vh にそろえる(対戦中に開くと絵が 300px 幅のまま縦にはみ出し、
+//   上が切れて「閉じる」も画面の外だった・場のモンスターは説明の欄に下半分が隠れた。2026-11-01 見た目の点検)
 const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexInfo = null, nav = null }) => {
   const dexLine = dexInfo ? (
     <div data-card-detail-dex className="mt-1.5 flex flex-wrap gap-1.5 text-[12px] font-bold">
@@ -707,7 +709,7 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
           </div>
           <span data-card-detail-pos className="text-[12px] font-bold text-slate-400">{nav.pos}</span>
         </div>
-      ) : <CardShine kind={cardShineOf(db, no)} className="w-fit rounded-xl"><img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(78vw,300px)] rounded-xl shadow-2xl"/></CardShine>}
+      ) : <CardShine kind={cardShineOf(db, no)} className="w-fit rounded-xl"><img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(78vw,300px)] rounded-xl shadow-2xl landscape:h-[32vh] landscape:w-auto"/></CardShine>}
       {c && (
         <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100">
           <div className="text-lg font-black">{c.name}</div>
