@@ -35,24 +35,48 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-02 01:16", type:'update', title:'新曲「Altar of the World Tree, Beneath the White Night」を追加しました', status:'new', group:'rhythm',
+    image:'images/song-art/altar-world-tree.jpg?v=8c7e3102a11f',
+    items:[
+      '新曲「Altar of the World Tree, Beneath the White Night」(6分25秒)と、その short ver.(2分18秒)を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.13 ／ EXPERT Lv.20 ／ MASTER Lv.24 ／ HELL Lv.46 です。',
+      'ノーツ数は 597 ／ 680 ／ 940 ／ 1145 ／ 1295 ／ 1551 です。',
+      'short ver. のレベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.20 ／ MASTER Lv.27 ／ HELL Lv.53 です。',
+      'short ver. のノーツ数は 227 ／ 264 ／ 354 ／ 434 ／ 500 ／ 570 です。',
+    ],
+    assistantNotice:{ id:'update_notice_altar_world_tree_v1', type:'content' },
+  },
+  {
+    // 2026-11-01 社長「演出量とか背景を別に細かく設定したい」→ 文は社長「この文で公開」
+    date: "2026-11-02 00:10", type:'update', group:'rhythm', title:'モンヒロビートの演出を1つずつ選べるようになりました', status:'new',
+    items:[
+      'オプションの「軽さ・演出」タブで、背景・道・ノーツ・取ったときの光や文字・コンボの演出を1つずつ選べるようになりました。',
+      '背景の明るさやジャケットのぼかし、サーチライト・光の粒・レーザー・観客のペンライト、拍の線、ノーツの光の強さ、MARVELOUS などの文字の大きさ、ノーツを取ったときに弾ける光、画面のフラッシュ、100コンボのお祝い、フルコンボの大きな表示などを、それぞれ選べます。',
+      'どれも最初は「おまかせ」で、これまでどおり演出量・軽量モード・ライブ背景に合わせて決まります。',
+      '「おまかせ」以外を選んだ項目は、演出量「最小」や軽量モードでも選んだとおりになります。重いものだけ止めたり、好きな演出だけ残したりできます。',
+      '項目ごとに付いた「軽・中・重」の札で、端末への重さの目安が分かります。スコアは変わりません。',
+    ],
+  },
+  {
+    // 2026-11-02 社長: 開始を 11/2 12:00 に変更・3曲目を「月が満ちる前に」から新曲へ差し替え。告知を見た人にも出し直すため、告知の id を v2 にした(v1 は使い回さない)
     // 2026-11-01 社長「イベント告知は出来次第、更新に出しておけ」。開始前の予告なので、出しはじめる時刻(いま)を date・visibleFrom・notifyFrom にそろえる。
     // 期間・倍率・ランキングは data/rhythm-event.js、お話は assistants.js が受け持つ(このあと入れる)。お話の中身は書かない(ネタバレ)
     date: "2026-11-01 18:53", type:'event', group:'rhythm', title:'【期間限定】鍵の向こう側へ ～パンドラとふたつの翼～ を開催します', status:'new',
     visibleFrom:'2026-11-01T18:53:00+09:00',
-    image: 'images/events/pandora-wings-2026.jpg?v=7b0d6c712d52',
+    image: 'images/events/pandora-wings-2026.jpg?v=5ada391b4929',
     assistantNotice: {
-      id:'update_notice_pandora_wings_2026_v1', type:'content',
+      id:'update_notice_pandora_wings_2026_v2', type:'content',
       notifyFrom:'2026-11-01T18:53:00+09:00',
       notifyUntil:'2026-11-09T04:00:00+09:00',
       destination:'RHYTHM_DEMO_HOME', buttonLabel:'モンヒロビートへ',
     },
     items:[
-      '11/2(月) 4:00 〜 11/9(月) 3:59 のあいだ、モンヒロビートのイベント「鍵の向こう側へ ～パンドラとふたつの翼～」を開催します。',
-      '対象曲は「Stay With Me ～Locked Fate～」「Rebellion ～Beyond the Lock～」「月が満ちる前に」です。3曲とも、原曲とショート版のどちらも対象です。',
+      '11/2(月) 12:00 〜 11/9(月) 3:59 のあいだ、モンヒロビートのイベント「鍵の向こう側へ ～パンドラとふたつの翼～」を開催します。',
+      '対象曲は「Stay With Me ～Locked Fate～」「Rebellion ～Beyond the Lock～」「Altar of the World Tree, Beneath the White Night」です。3曲とも、原曲とショート版のどちらも対象です。',
       'イベントのランキングでは、原曲とショート版を同じ曲として数えます(ふだんの曲ごとの記録は、これまでどおり別々です)。',
       '期間中は、対象曲のランキングを開きます。報酬は、これまでのモンヒロビートのイベントと同じく、順位に応じてギフトで届きます。',
       'クイックの∞周回を回しながらモンヒロビートを演奏したときに入る周回数が、期間中はどの曲でも、いつもの5倍になります。',
-      'イベントのお話は全8話です。毎朝4:00に1話ずつ公開され、最終話はイベントの終わりに流れます。見のがしても、プロフィールの「イベント回想」から見返せます。',
+      'イベントのお話は全8話です。第1話はイベントの開始と同時に、第2話からは毎朝4:00に1話ずつ公開され、最終話はイベントの終わりに流れます。見のがしても、プロフィールの「イベント回想」から見返せます。',
     ],
   },
   {

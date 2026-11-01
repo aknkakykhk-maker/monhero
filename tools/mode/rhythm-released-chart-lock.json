@@ -261,6 +261,16 @@
   "rebellion_short/hard": "c466e9527efe3a32",
   "rebellion_short/expert": "9ec0947f47cf563d",
   "rebellion_short/master": "512c52464dacc1d7",
+  "altar_world_tree/easy": "780c3cd411d61c8c",
+  "altar_world_tree/normal": "bf0e55fcf8607e13",
+  "altar_world_tree/hard": "cf6418b7fdbe6d5a",
+  "altar_world_tree/expert": "8a704c17ac1d3cd2",
+  "altar_world_tree/master": "aeb99d94b7e5f0f5",
+  "altar_world_tree_short/easy": "eba62b0e3285e282",
+  "altar_world_tree_short/normal": "616926e0d8390d32",
+  "altar_world_tree_short/hard": "2e6eef62ff6c822c",
+  "altar_world_tree_short/expert": "ab6c4319d6c24f88",
+  "altar_world_tree_short/master": "dc9fbbc0868386bb",
   "mf_ichika_mix/hell": "fb44abd7b8b62f15",
   "monster_hero/hell": "5e9db00bf41b8e59",
   "monster_hero_another/hell": "5dc329f75601a73e",
@@ -312,7 +322,9 @@
   "tsuki_ga_michiru_mae_ni/hell": "7c53909ece20ab67",
   "tsuki_ga_michiru_mae_ni_short/hell": "270a9bd2954e5578",
   "rebellion/hell": "b9725052c60b586d",
-  "rebellion_short/hell": "afe6b5390d7d8392"
+  "rebellion_short/hell": "afe6b5390d7d8392",
+  "altar_world_tree/hell": "7a17297ddcf051e7",
+  "altar_world_tree_short/hell": "02d22507dcb0689c"
  },
  "history": [
   {
@@ -569,6 +581,24 @@
     "rebellion_short/master",
     "rebellion/hell",
     "rebellion_short/hell"
+   ]
+  },
+  {
+   "at": "2026-11-02 01:15",
+   "reason": "新曲 Altar of the World Tree, Beneath the White Night(全編・short ver.)を公開",
+   "changed": [
+    "altar_world_tree/easy",
+    "altar_world_tree/normal",
+    "altar_world_tree/hard",
+    "altar_world_tree/expert",
+    "altar_world_tree/master",
+    "altar_world_tree_short/easy",
+    "altar_world_tree_short/normal",
+    "altar_world_tree_short/hard",
+    "altar_world_tree_short/expert",
+    "altar_world_tree_short/master",
+    "altar_world_tree/hell",
+    "altar_world_tree_short/hell"
    ]
   }
  ]
