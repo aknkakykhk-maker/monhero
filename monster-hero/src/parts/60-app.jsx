@@ -3715,7 +3715,8 @@ function MonsterHeroGame() {
     const id=rhythmSettings.multiLook||'LIGHT';
     if(id==='OWN')return rhythmSettings;
     const preset=RHYTHM_LOOK_PRESETS.find(item=>item.id===id)||RHYTHM_LOOK_PRESETS.find(item=>item.id==='LIGHT');
-    return {...rhythmSettings,...(preset?preset.values:{})};
+    // 演出を1つずつ選ぶ設定(fx)は、対戦のあいだは全部「おまかせ」にして、重ねた見た目に従わせる(2026-11-01)
+    return {...rhythmSettings,...(preset?preset.values:{}),fx:{}};
   },[rhythmSettings]);
   // 曲えらびで選んだ曲を、事前ダウンロード(入のときだけ)が前もって落とす
   useEffect(()=>{if(String(gameState).startsWith('RHYTHM'))ASSET_CACHE.noteSong(rhythmSelectedSongId);},[rhythmSelectedSongId,gameState]);
