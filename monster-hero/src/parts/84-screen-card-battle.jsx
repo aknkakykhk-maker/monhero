@@ -684,6 +684,8 @@ const cardPlainEffectText = (c) => {
   if ((c.kind === 'pow' || c.kind === 'int') && Number.isFinite(Number(c.damage))) return `相手のモンスター1体に、${c.damage}ダメージを与える${c.kind === 'pow' ? 'ちから技' : 'かしこさ技'}です。`;
   return '';
 };
+// 横の画面では、絵の高さを図鑑から開いたとき(nav)と同じ 32vh にそろえる(対戦中に開くと絵が 300px 幅のまま縦にはみ出し、
+//   上が切れて「閉じる」も画面の外だった・場のモンスターは説明の欄に下半分が隠れた。2026-11-01 見た目の点検)
 const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexInfo = null, nav = null }) => {
   const dexLine = dexInfo ? (
     <div data-card-detail-dex className="mt-1.5 flex flex-wrap gap-1.5 text-[12px] font-bold">
@@ -707,7 +709,7 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
           </div>
           <span data-card-detail-pos className="text-[12px] font-bold text-slate-400">{nav.pos}</span>
         </div>
-      ) : <CardShine kind={cardShineOf(db, no)} className="w-fit rounded-xl"><img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(78vw,300px)] rounded-xl shadow-2xl"/></CardShine>}
+      ) : <CardShine kind={cardShineOf(db, no)} className="w-fit rounded-xl"><img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(78vw,300px)] rounded-xl shadow-2xl landscape:h-[32vh] landscape:w-auto"/></CardShine>}
       {c && (
         <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100">
           <div className="text-lg font-black">{c.name}</div>
@@ -2278,12 +2280,14 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           const cand = mode === 'attack' && pickCands.includes(i);
           const pickTag = mode !== 'attack' || !sel ? null : sel.hand === i ? '選んだ' : pickSet.includes(i) ? '足した' : cand ? '候補' : null;
           // 守りの番: 使えない回避・防御の札に、理由を短く重ねる(「ガッツ不足」「ナーガ専用」など。案C)
+          // 理由の札は字の幅で出し(w-max。left-1/2 だと札の半分の幅しか使えず「守り/に使/う」「(あと1/)」と細かく折れていた)、
+          //   折るのは言葉の切れ目(jaWrap)。2026-11-01 見た目の点検
           const why = tutorial || on ? null : mode === 'guard' ? cardGuardWhyShort(db, st, c) : mode === 'attack' && myTurn && !sel ? ((w) => (w === '今は使えない' ? null : w))(attackWhyShort(i)) : null;
           return (
             <div key={`${no}-${i}`} data-card-hand-card={i} data-card-press onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${wide ? 'max-w-[72px]' : handTiny ? (boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]') : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${replay && boardFit >= 4 ? '!max-w-[38px]' : ''} ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? (why ? 'relative [&>*:not([data-card-why])]:opacity-45' : 'opacity-45') : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
               <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} draggable={false} style={{ WebkitUserDrag: 'none' }} className={`w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : cand ? 'outline outline-[3px] outline-emerald-400 shadow-[0_0_12px_#34d399]' : ''}`}/>
               {pickTag && <span data-card-hand-pick={pickTag} className={`pointer-events-none absolute left-1/2 top-0 z-[2] -translate-x-1/2 -translate-y-1/3 whitespace-nowrap rounded-md px-1 ${handTiny ? 'text-[9px]' : 'text-[10px]'} font-black leading-tight shadow-[0_2px_4px_#000] ${pickTag === '候補' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-slate-950'}`}>{pickTag}</span>}
-              {why && <span data-card-why className={`pointer-events-none absolute left-1/2 top-[22%] z-[2] max-w-[110%] -translate-x-1/2 rounded-md border border-rose-300/80 bg-rose-950/95 px-1 py-px text-center ${handTiny ? 'text-[9px]' : 'text-[10px]'} font-black leading-tight text-rose-100 shadow-[0_2px_4px_#000]`} style={JA_WRAP_STYLE}>{why}</span>}
+              {why && <span data-card-why className={`pointer-events-none absolute left-1/2 top-[22%] z-[2] w-max max-w-[110%] -translate-x-1/2 rounded-md border border-rose-300/80 bg-rose-950/95 px-1 py-px text-center ${handTiny ? 'text-[9px]' : 'text-[10px]'} font-black leading-tight text-rose-100 shadow-[0_2px_4px_#000]`} style={JA_WRAP_STYLE}>{jaWrap(why)}</span>}
               {/* 小さい段(tiny)は名前が2行になることがあるので、字の行間と上下の余白を詰めて、下のボタンを画面に残す(320×568 の守りの番) */}
               {!(replay && boardFit >= 3) && <div className={`mt-0.5 w-full rounded-md bg-black/60 ${handTiny ? 'py-px' : 'py-0.5'} text-center leading-tight`}>
                 <CardNameFit name={c ? c.name : no} size={handLarge ? (compact ? 12 : 13) : compact ? 10 : 11} className="font-bold leading-tight" twoLine/>
