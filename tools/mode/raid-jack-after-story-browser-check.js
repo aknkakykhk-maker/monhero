@@ -64,6 +64,9 @@ const STORIES = [
       await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
       await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
       for (let i = 0; i < 8; i++) {
+        // 個人杯のお話(card_cup_2026_10_31)は飛ばさない。飛ばすと「見た」になり、あつに会ったことになって「解放なし」が確かめられない。
+        // 開いたままでも、下のボタンは dispatchEvent で押せる。デバッグのお話の一覧から再生すると、このお話は見た印を付けずに入れ替わる
+        if (await page.locator('[data-event-story="card_cup_2026_10_31"]').count()) break;
         const b = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK|スキップ/ }).first();
         if (await b.count() === 0 || !(await b.isVisible().catch(() => false))) break;
         await b.dispatchEvent('click').catch(() => {}); await page.waitForTimeout(300);
