@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9707b3d0104efd52
+// generated-sha256: d331aefab7eedfd5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -44535,7 +44535,7 @@ function BattleScreen({
   const infernoShellRule = specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
   const [infernoShellFx, setInfernoShellFx] = useState(null);
   // 必殺技・ためる・貫通の予告の札(画面の上から11%に固定)は、層のゲージと同じ高さに来るので、ゲージが出ている間はゲージの高さぶん下げる
-  //   (2026-10-31 社長「ゲージの下の層にかからないように」)。背の低い画面・横向きはゲージがライフの帯の中の細い1本なので、その分だけ下げる
+  //   (2026-10-31 社長「ゲージの下の層にかからないように」)。背の低い画面はゲージがライフの帯の中の細い1本なので16pxだけ、横向きは画面が低く上の飾り(✨☠️)が細い1本にかかるので56px下げる
   const infernoFloatShift = infernoShellView?.total>0 ? infernoShellView.total*15+8 : 0;
   const infernoFloatTop = infernoFloatShift ? `calc(11% + ${infernoFloatShift}px)` : '11%';
   const infernoShellSeqRef = useRef({ key:null, seq:0 });
@@ -45199,13 +45199,13 @@ function BattleScreen({
               </div>,document.body
             )}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='SPECIAL'&&(
-              <div data-battle-float className={`fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift?' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+16px)]':''}`} style={{top:infernoFloatTop,zIndex:65000,animation:'specialWarnFlash 500ms ease-in-out infinite'}}>
+              <div data-battle-float className={`fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift?' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+56px)]':''}`} style={{top:infernoFloatTop,zIndex:65000,animation:'specialWarnFlash 500ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(217,70,239,1)]">☠️</div>
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-purple-900 via-fuchsia-700 to-purple-900 border-2 border-fuchsia-300 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(217,70,239,0.9)]">必 殺 技</div>
               </div>
             )}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='CHARGE'&&(
-              <div data-battle-float className={`fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift?' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+16px)]':''}`} style={{top:infernoFloatTop,zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
+              <div data-battle-float className={`fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift?' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+56px)]':''}`} style={{top:infernoFloatTop,zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(251,191,36,1)]">✨</div>
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-900 via-amber-600 to-amber-900 border-2 border-amber-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(251,191,36,0.9)]">た め る</div>
               </div>
@@ -45217,7 +45217,7 @@ function BattleScreen({
                 貫通技準備とかがいいかな？」)。予告の帯には敵ごとの技名(「◯◯の構え」)が
                 出るので、そこへ種別の「構え」を重ねると同じ言葉が2つ並んで読みにくかった */}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='PIERCE_CHARGE'&&(
-              <div data-battle-float className={`fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift?' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+16px)]':''}`} style={{top:infernoFloatTop,zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
+              <div data-battle-float className={`fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift?' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+56px)]':''}`} style={{top:infernoFloatTop,zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(244,63,94,1)]">⚔️</div>
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-rose-900 via-rose-600 to-rose-900 border-2 border-rose-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(244,63,94,0.9)]">貫 通 技 準 備</div>
               </div>
