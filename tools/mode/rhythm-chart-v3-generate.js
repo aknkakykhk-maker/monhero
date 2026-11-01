@@ -506,6 +506,9 @@ let registryEntry=null;
     // HELL だけ音を多く拾う倍率(下の hellBoost)。書いた曲の HELL だけ
     const hellDensity=Number(entry&&entry.hellDensity);
     if(Number.isFinite(hellDensity)&&hellDensity>1)audio.hellDensity=hellDensity;
+    // MASTER だけ音を多く拾う倍率(2026-11-01 社長「もっとノーツ数を増やした高速系にしてほしい」・Rebellion)。hellDensity と同じ仕組みを MASTER に。書いた曲の MASTER だけ
+    const masterDensity=Number(entry&&entry.masterDensity);
+    if(Number.isFinite(masterDensity)&&masterDensity>1)audio.masterDensity=masterDensity;
     // --hell-density で HELL の量の倍率を渡せる(rhythm-hell-mix.js の SONGS の hellDensity・2026-10-21 社長「ざしてぃを60ぐらいまで下げる」「すてぃうぃずみーだけ上げる」)。
     //   0.5〜2。1より小さいと量を減らす(拾う音の範囲は広げない)。曲の一覧の値より優先。HELL のときだけ効く
     {const cli=Number(arg('--hell-density',NaN));if(Number.isFinite(cli)&&cli>=.5&&cli<=2&&cli!==1)audio.hellDensity=cli;}
@@ -1221,7 +1224,9 @@ const buildChart=(difficulty,options={})=>{
   // HELL だけ音を多く拾う(hellDensity を書いた曲の HELL だけ・2026-10-18)。量の倍率(下の hellBoost)だけでは、拾える音の数が天井になって増えない
   //   (Toward the Stars の HELL: 目標950に対して拾える音566・打点881)。拾う範囲を広げる: 弱い裏の音も落とさず、
   //   格子からのずれの許容をどの音も大きい一発と同じ 43ms にする(格子へ寄せても最良の判定 ±55ms の中)。書いていない曲は今までと同じ
-  const hellWide=difficulty==='HELL'&&Number(audio&&audio.hellDensity)>1;
+  const hellWide=difficulty==='HELL'&&Number(audio&&audio.hellDensity)>1
+    // MASTER も同じ(曲の一覧に masterDensity(1より大きく2まで)を書いた曲の MASTER だけ・2026-11-01 Rebellion。書いていない曲は今までと1音も変わらない)
+    ||difficulty==='MASTER'&&Number(audio&&audio.masterDensity)>1;
   const offBeatFloor=hellWide?0:(()=>{
     const clarity=audio.summary?.beatClarity;
     if(!clarity||!(clarity.ratio>0)||clarity.ratio>=BEAT_CLARITY_MIN)return 0;
@@ -1264,7 +1269,7 @@ const buildChart=(difficulty,options={})=>{
   // 曲の一覧に hellDensity(1より大きく2まで)を書いた曲の HELL だけ、量に掛ける。書いていない曲・HELL 以外の難易度は今までと1音も変わらない
   // (公開中の曲の HELL は書いていないうえ、譜面は rhythm-mode.js に書き出し済みで、公開中の譜面の控え rhythm-released-chart-lock-check.js が見張る)。
   // 天井(hardMaxPerSecond・実際に鳴っている音の数)はそのまま。押せるかどうかは両手のシミュレートと rhythm-hell-mix.js の手の決まりが見張る
-  const hellBoost=hellWide?Math.min(2,Number(audio.hellDensity)):(difficulty==='HELL'&&Number(audio&&audio.hellDensity)>=.5&&Number(audio.hellDensity)<1?Number(audio.hellDensity):1);
+  const hellBoost=hellWide?Math.min(2,Number(difficulty==='MASTER'?audio.masterDensity:audio.hellDensity)):(difficulty==='HELL'&&Number(audio&&audio.hellDensity)>=.5&&Number(audio.hellDensity)<1?Number(audio.hellDensity):1);
   const densityBoost=(Number(I.density)>0?Number(I.density):1)*hellBoost;
   // 激しさを書いた曲では、上限を1段上げる（既定の maxPerSecond ではなく hardMaxPerSecond を使う）。
   const softMax=densityBoost>1?target.hardMaxPerSecond:target.maxPerSecond;
