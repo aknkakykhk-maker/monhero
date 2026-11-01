@@ -35,7 +35,7 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
-    date: "2026-11-01 11:53", type:'update', title:'モンヒロビート：新曲「Rebellion ～Beyond the Lock～」を追加しました', status:'new', group:'rhythm',
+    date: "2026-11-01 11:53", type:'update', title:'新曲「Rebellion ～Beyond the Lock～」を追加しました', status:'new', group:'rhythm',
     image:'images/song-art/rebellion.jpg?v=ef38f7ab2382',
     items:[
       '「Stay With Me ～Locked Fate～」の続きのお話、「Rebellion ～Beyond the Lock～」(4分14秒)を追加しました。曲えらびからすぐ遊べます。',
