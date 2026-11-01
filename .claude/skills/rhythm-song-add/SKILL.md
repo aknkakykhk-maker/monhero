@@ -133,6 +133,8 @@ node tools/mode/rhythm-audio-listen.js --in <届いた音源> --out "$SCRATCH/li
 
 ## 2. 音源（-14 LUFS へそろえる）
 
+**最初に、受け取った元の音源を `tools/art-sources/song-audio/<songId>/` へそのまま置く**(配信しない場所。2026-11-02 社長。あとで音質を上げ直すときに要る)。
+
 ```bash
 # ① 映像とタグを落として素のWAVへ（mp3ならこの手順は省いてよい）
 $FF -v error -i src.m4a -map_metadata -1 -vn -ac 2 -ar 44100 -c:a pcm_s16le full.wav

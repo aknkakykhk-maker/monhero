@@ -127,3 +127,7 @@ A〜D の字を付けた1枚にして送り、`AskUserQuestion` で選んでも�
 | 済み | 曲 |
 | --- | --- |
 | 2026-11-02 | Rebellion(原曲・short ver.) |
+| 2026-11-02 | Against My Own Shadow・Grievous Lady・Journey・Sheriruth・ROSE(原曲・short ver.)・Toward the Stars, Paradise or Truth short ver. |
+| 作り直さない | 綺季一閃(原曲)… もとから 48kHz / 185kbps のまま入っている |
+
+元の音源の置き場所: `tools/art-sources/song-audio/<songId>/`(曲を入れるときに必ず残す)
