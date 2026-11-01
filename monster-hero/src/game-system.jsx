@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 280331ca32ff6cd5
+// generated-sha256: 7908c2566cc3f242
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4355,6 +4355,7 @@ const BGM_TRACKS = [
   { id:'melo_light_player_short', name:'light player short ver.', creator:'school food punishment', src:'audio/bgm-light-player-short.mp3', gain:1, loop:true },
   { id:'melo_tsuki_ga_michiru_mae_ni', name:'月が満ちる前に', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni.mp3', gain:1, loop:true },
   { id:'melo_rebellion', name:'Rebellion ～Beyond the Lock～', creator:'オリジナル', src:'audio/bgm-rebellion.mp3', gain:1, loop:true },
+  { id:'melo_rebellion_short', name:'Rebellion ～Beyond the Lock～ short ver.', creator:'オリジナル', src:'audio/bgm-rebellion-short.mp3', gain:1, loop:true },
   { id:'melo_tsuki_ga_michiru_mae_ni_short', name:'月が満ちる前に short ver.', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
@@ -5625,6 +5626,7 @@ const Audio_ = (() => {
     "audio/bgm-pro-battle-01.mp3": "59a3a0fbfef1",
     "audio/bgm-pro-battle-02.mp3": "f572c81a9ef6",
     "audio/bgm-profile.mp3": "523789845ff1",
+    "audio/bgm-rebellion-short.mp3": "04678c77a7e1",
     "audio/bgm-rebellion.mp3": "cc5dab0bab8b",
     "audio/bgm-result.mp3": "c4dc9d2fb8a5",
     "audio/bgm-rising-hope.mp3": "5b56b8f9d099",

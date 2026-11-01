@@ -1876,6 +1876,41 @@
    "besideHeldBand": 0,
    "fastSameSide": 82,
    "heldHandSwitch": 0
+  },
+  "rebellion_short/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "rebellion_short/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "rebellion_short/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 28,
+   "heldHandSwitch": 0
+  },
+  "rebellion_short/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 42,
+   "heldHandSwitch": 0
+  },
+  "rebellion_short/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 65,
+   "heldHandSwitch": 0
   }
  },
  "history": [
@@ -1917,6 +1952,11 @@
   {
    "at": "2026-11-01T02:25",
    "reason": "新曲 Rebellion ～Beyond the Lock～ の行だけを足す",
+   "changed": 5
+  },
+  {
+   "at": "2026-11-01T04:55",
+   "reason": "Rebellion ～Beyond the Lock～ short ver. の行だけを足す",
    "changed": 5
   }
  ]
