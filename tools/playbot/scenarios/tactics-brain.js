@@ -214,6 +214,11 @@ const monOf = (mem, name) => (mem.mons[name] = mem.mons[name] || { dmg: 0, taken
 //   ★おならは 2026-10-10 から(ハカセくんの直す順5)。前は普通の攻撃として先に撃ち、ためる・貫通の構えのターンに残っていなかった。
 //   PLAYBOT_TACTICS_HAM_STUN=0 で前の扱い
 const isStunCard = (c) => c.type === 'debuff' || (process.env.PLAYBOT_TACTICS_HAM_STUN !== '0' && c.type === 'unique' && /おなら/.test(c.label || ''));
+// 手札のカードの名前だけを取り出す。手札の文字は「20 I 🔥 ニコラオの力 支援・全体」のように、ガッツの数字・レベルの印・
+// 狙われやすさの🔥が名前の前に付く(2026-11-01 点検: 🔥が付いてから、名前で探すアシカ(きき・ポルツ・ももすけ・メロソ・ニコラオ)が
+// 一度も当たっていなかった。数字しか外していなかったため)
+const handCardName = (label) => String(label || '').replace(/^\d+\s*/, '').replace(/^(?:[IVX]+\s+)?(?:🔥\s*)*/u, '').trim();
+
 function decidePick(b, opts, ctx) {
   const alive = b.slots.filter((x) => x.occupied && !x.downed);
   const threat = threatOf(b);
@@ -265,7 +270,7 @@ function decidePick(b, opts, ctx) {
     //   狙われた子が大きく削られそうで、ほかにその1発を受けても半分以上残る子がいれば、その子へ置く(ガードより先。行動回数を使わない)
     if ((threat === 'single' || threat === 'big') && !ctx.kyukoed) {
       const target = b.slots.find((x) => x.aimed);
-      const kyu = opts.find((o) => /^きゅうこ/.test(o.card.label.replace(/^\d+\s*/, '')));
+      const kyu = opts.find((o) => /^きゅうこ/.test(handCardName(o.card.label)));
       const tank = target && target.aimDamage && [...alive].filter((x) => x.i !== target.i && x.hp && x.hp.now - target.aimDamage >= x.hp.max * 0.5)
         .sort((p, q) => q.hp.now - p.hp.now)[0];
       if (kyu && target && tank && needFor(target)) { ctx.kyukoed = true; return { kind: 'support', card: kyu.card, slot: tank.i, why: `${target.name}への${threat === 'big' ? '必殺技' : '攻撃'}を${tank.name}が引き受ける(きゅうこの譜面)` }; }
@@ -307,7 +312,7 @@ function decidePick(b, opts, ctx) {
   // ④' あとから出たアシストカード。ガッツや手数を増やすものは、早めに使うほど得
   const richestG = alive.reduce((m, x) => Math.max(m, x.guts && x.guts.max ? x.guts.now / x.guts.max : 0), 0);
   const leanG = alive.some((x) => x.guts && x.guts.max && x.guts.now < x.guts.max * 0.35);
-  const named2 = (re) => opts.find((o) => re.test(o.card.label.replace(/^\d+\s*/, '')));
+  const named2 = (re) => opts.find((o) => re.test(handCardName(o.card.label)));
   const kiki = named2(/^きき/), poltz = named2(/^ポルツ/), momo = named2(/^ももすけ/), meloso = named2(/^メロソ/);
   // ★ニコラオの力は手札に来たら早めに置く(2026-10-10 ダイスくん: 上手な使い方は 1ラン 5.0 回・1〜5 ターン目に 66%。ボットは 1.3 回で、Expert で +0.91 WAVE の差)
   const nikolao = process.env.PLAYBOT_TACTICS_EX_EARLY !== '0' && named2(/^ニコラオ/);
@@ -534,6 +539,7 @@ async function playTurn(s, b0, mem, log, stats) {
     for (let k = 0; k < 10 && !(b.picked > 0) && !b.hand.some((c) => c.usable); k++) { await s.wait(500); b = await readBoard(s); }
     let opts = await evalHand(s, b, failed);
     let d = decidePick(b, opts, ctx);
+    if (process.env.PLAYBOT_DEBUG && n === 0) console.log(`    [手札] W${b.wave} T${b.turn} ${b.hand.map((c) => `${handCardName(c.label).slice(0, 10)}${c.usable ? '' : '×'}`).join(' / ')} | 使える ${opts.map((o) => handCardName(o.card.label).slice(0, 8)).join(' / ')}`);
     if (!d && !(b.picked > 0) && n === 0) {
       // 何も置けないと出たときは、少し待ってからもう一度だけ読み直す(演出の途中で読んだことがある)
       await s.wait(1500);
