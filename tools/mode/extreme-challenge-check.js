@@ -36,8 +36,8 @@ assert(source.includes('const extremeUnlocked = useMemo(() => isExtremeUnlocked(
 //   約束(未解放でも入口が見えて、押せなくて、条件が分かる)は変わっていないので、そこを見る。
 //   タブが実際に出ること・押せないこと・解放条件が出ることは
 //   tools/mode/extreme-browser-check.js が実ブラウザで確かめている
-assert(source.includes('const challengeExtremeTab=') && source.includes('const jumps=challengeExtremeTab&&toExtreme;')
-  && source.includes('const locked=jumps&&!extremeUnlocked&&!debugBattle;')
+assert(source.includes('const challengeExtremeTab=') && source.includes('const jumps=challengeExtremeTab&&(toExtreme||isUw);')
+  && source.includes('const locked=jumps&&(isUw?!underworldUnlocked:!extremeUnlocked)&&!debugBattle;')
   && source.includes('data-extreme-tab-locked'),
   'the extreme tab must be shown even when locked, with the unlock condition');
 // 種族チャレンジにも同じ形の解放条件が付いたため、開始ボタンは2つのロックを見る
@@ -152,7 +152,8 @@ assert(source.includes('h-[366px]') && source.includes('flex items-start gap-2.5
 // 場面の定義がある場面では束のセリフを組み立てない形にした(2026-09-26)。束だけで足した場面は今までどおり束から読む
 assert(/const packedLines = \(scene && !sceneDef\) \? ASSISTANT_LINE_PACKS\.flatMap/.test(assistants)
   && assistants.includes('const def = sceneDef || (packedLines.length ? { lines:packedLines } : null);'), 'line-pack-only EXTREME assistant dialogue must remain reachable');
-assert(source.includes("? 'extremeChallenge'") && source.includes('const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;') && source.includes('key={extremeDifficultyAssistantScene}') && source.includes('scene={extremeDifficultyAssistantScene}') && !source.includes('extremeGuideStep'), 'the centered EXTREME tier card must select its own shared assistant scene regardless of unlock state');
+// 2026-11-01 冥界タブを初めて開いたときだけ、みゅあの冥界の一言(underworldTab)を出す
+assert(source.includes("? 'extremeChallenge'") && source.includes("const extremeDifficultyAssistantScene = isUnderworldDifficultyId(extremeDifficulty) && !underworldIntroDone ? 'underworldTab' : `${extremeDifficulty.toLowerCase()}Difficulty`;") && source.includes('key={extremeDifficultyAssistantScene}') && source.includes('scene={extremeDifficultyAssistantScene}') && !source.includes('extremeGuideStep'), 'the centered EXTREME tier card must select its own shared assistant scene regardless of unlock state');
 const sceneLines = (name) => {
   const start = assistants.indexOf(`${name}: [`);
   return assistants.slice(start, assistants.indexOf('],', start)).match(/\{ e:/g)?.length || 0;

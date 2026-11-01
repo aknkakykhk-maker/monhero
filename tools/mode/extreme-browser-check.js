@@ -13,7 +13,8 @@ const path = require('path');
 // 検査へ書き写すと、難易度を足すたびに検査だけが古くなる
 const source = fs.readFileSync(path.resolve(__dirname, '../..', 'monster-hero/src/game-system.jsx'), 'utf8');
 const PUBLIC_EXTREME_IDS = ((source.match(/const EXTREME_DIFFICULTIES = Object\.freeze\(\[[\s\S]*?const ALL_EXTREME_DIFFICULTIES = [^\n]+/) || [''])[0]
-  .match(/\{ id:'([A-Z]+)'[^\n]*available:true/g) || []).map(text => text.match(/id:'([A-Z]+)'/)[1]);
+  .match(/\{ id:'([A-Z]+)'[^\n]*available:true/g) || []).filter(text => !text.includes("tab:'underworld'")).map(text => text.match(/id:'([A-Z]+)'/)[1]);
+// ↑ 2026-11-01 冥界チャレンジ: tab:'underworld' の難易度(INFERNO・COCYTUS)は冥界タブへ分けたので、極限の並びから除く
 
 const PAGE_URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 const results = [];
