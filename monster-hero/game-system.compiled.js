@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2eeab5a2d8782070
+// source-sha256: 5af0708d9fb4b5c8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6172,6 +6172,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   climaxFx: false,
   judgmentAtTap: false,
   hudSongFade: true,
+  holdTrace: true,
   autoEffectDown: true,
   tapLight: 'AUTO',
   stageEffect: 'SIMPLE',
@@ -6386,6 +6387,16 @@ const rhythmFxOn = (settings, key, auto) => {
   const v = rhythmFxPick(settings, key);
   return v === 'AUTO' ? !!auto : !(v === 'OFF' || v === 'NONE');
 };
+const rhythmHoldTraceMask = (note, visualLane) => {
+  if (!note) return 0;
+  const w = Math.max(1, Number(note.subLaneWidth) || 2);
+  const lane = Number(visualLane);
+  const start = rhythmNoteIsSlide(note) && Number.isFinite(lane) ? Math.round(lane * 2 + 1 - w / 2) : Number.isFinite(Number(note.subLane)) ? Number(note.subLane) : Number(note.lane) * 2;
+  if (!Number.isFinite(start)) return 0;
+  let mask = 0;
+  for (let i = Math.max(0, start - 1); i <= Math.min(RHYTHM_SUB_LANE_COUNT - 1, start + w); i++) mask |= 1 << i;
+  return mask;
+};
 const rhythmFxRenderOptions = (settings, live = settings) => {
   const base = !!settings && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL';
   const motionAuto = !!live && live.noteMotionFx === true && base;
@@ -6397,7 +6408,8 @@ const rhythmFxRenderOptions = (settings, live = settings) => {
     glowLevel: glow === 'AUTO' ? undefined : glow,
     hitLevel: rhythmFxLevel(settings, 'burst'),
     hitLight: rhythmFxLight(settings, 'burst'),
-    hitScale: burst === 'L' ? 1.35 : burst === 'S' ? .7 : 1
+    hitScale: burst === 'L' ? 1.35 : burst === 'S' ? .7 : 1,
+    holdTrace: !!settings && settings.holdTrace !== false
   };
 };
 const rhythmJudgeScaleStyle = settings => {
@@ -6490,6 +6502,7 @@ const normalizeRhythmSettings = value => {
     climaxFx: typeof source.climaxFx === 'boolean' ? source.climaxFx : DEFAULT_RHYTHM_SETTINGS.climaxFx,
     judgmentAtTap: typeof source.judgmentAtTap === 'boolean' ? source.judgmentAtTap : DEFAULT_RHYTHM_SETTINGS.judgmentAtTap,
     hudSongFade: typeof source.hudSongFade === 'boolean' ? source.hudSongFade : DEFAULT_RHYTHM_SETTINGS.hudSongFade,
+    holdTrace: typeof source.holdTrace === 'boolean' ? source.holdTrace : DEFAULT_RHYTHM_SETTINGS.holdTrace,
     autoEffectDown: typeof source.autoEffectDown === 'boolean' ? source.autoEffectDown : DEFAULT_RHYTHM_SETTINGS.autoEffectDown,
     tapLight: RHYTHM_TAP_LIGHT_MODES.includes(source.tapLight) ? source.tapLight : DEFAULT_RHYTHM_SETTINGS.tapLight,
     stageEffect: RHYTHM_STAGE_EFFECTS.includes(source.stageEffect) ? source.stageEffect : DEFAULT_RHYTHM_SETTINGS.stageEffect,
@@ -34123,7 +34136,7 @@ const RhythmOptions = ({
     full: true
   }), field('演奏中は曲名を薄くする', toggle('hudSongFade'), '演奏が始まって4秒たつと、左上の曲名とジャケットを薄くします。目線を道に集めやすくするためです。既定は「ON」です。\nポーズ中は元の濃さに戻ります。スコア・ランク・ライフの表示は薄くなりません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
     full: true
-  }), hellReleased && field('空中の道の見え方', hellSegments('lane', [['em', 'はっきり'], ['el', '控えめ'], ['none', 'なし']]), 'HELL で、空中のノーツが流れてくる空中の道をどれくらいはっきり出すかです。既定は「はっきり」です。「なし」にすると、空中の判定線だけになります。判定・スコアは変わりません。', {
+  }), field('ホールド・スライドをなぞる光', toggle('holdTrace'), 'ホールド・スライドを押せているあいだ、押している指の道の光を出さず、代わりに帯そのものを指の所から奥へなぞるように光らせます。既定は「ON」です。\n指が帯から外れると、帯の光も止まります。タップ・フリック・何もない所を押したときの道の光は、これまでどおりです。演出量「最小」や軽量モードでも出ます。判定・スコアは変わりません。\n「OFF」にすると、これまでの見た目(押している所の道が光る)に戻ります。'), hellReleased && field('空中の道の見え方', hellSegments('lane', [['em', 'はっきり'], ['el', '控えめ'], ['none', 'なし']]), 'HELL で、空中のノーツが流れてくる空中の道をどれくらいはっきり出すかです。既定は「はっきり」です。「なし」にすると、空中の判定線だけになります。判定・スコアは変わりません。', {
     full: true
   }), hellReleased && field('空中のノーツの見た目', hellSegments('skyNote', [['normal', 'いつもの'], ['3d', '立体']]), 'HELL の空中のノーツを、どんな形で描くかです。既定は「いつもの」です。\n「立体」＝空中のタップを光の当たる立体の箱に、空中のスライドを丸い管にして、真下の床に影を落とします。地上のノーツと道はいつもの見た目のままです。\nノーツの位置・判定・色・スコアはどちらでも変わりません。「立体」は描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効き、「Canvas」のときはいつもの見た目で描きます。', {
     full: true
@@ -40425,7 +40438,9 @@ const RhythmTapTest = ({
         visualTime = songTimeMs - settings.judgmentTimingOffsetMs,
         travelMs = rhythmTravelMsForSpeed(settings.noteSpeed);
       let perfScanned = 0,
-        perfDrawn = 0;
+        perfDrawn = 0,
+        traceGround = 0,
+        traceSky = 0;
       updateJudgmentBand(travel, travelMs);
       if (stagePulseOn) {
         const pulseEl = stagePulseRef.current,
@@ -40574,12 +40589,18 @@ const RhythmTapTest = ({
         const monster = !!monsterForNote(note);
         const depthScale = Math.round((0.56 + geo.scale * .44) * 100) / 100,
           brightness = Math.round((0.72 + geo.scale * .28) * 100) / 100;
+        const notePressed = note.type === 'HOLD' && note.activePointerId !== null,
+          noteSlideOff = notePressed && RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index);
+        if (notePressed && !noteSlideOff && !failedTrail && hasBody) {
+          const m = rhythmHoldTraceMask(note, visualLane);
+          if (rhythmNoteIsSky(note) || typeof rhythmSlideHasSky === 'function' && rhythmSlideHasSky(note)) traceSky |= m;else traceGround |= m;
+        }
         RHYTHM_CANVAS_RENDERER.drawNote(note, geo, {
           failed: failedTrail,
           monster,
           wide: rhythmNoteIsWide(note),
-          pressed: note.type === 'HOLD' && note.activePointerId !== null,
-          slideOff: note.type === 'HOLD' && note.activePointerId !== null && RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index),
+          pressed: notePressed,
+          slideOff: noteSlideOff,
           heldMs: songTimeMs - note.timeMs,
           alpha: failedTrail ? .34 : 1,
           pop: clearFlash ? Math.min(1, (songTimeMs - note._rhythmClearAt) / RHYTHM_CLEAR_FLASH_MS) : null,
@@ -40826,6 +40847,28 @@ const RhythmTapTest = ({
       run.notesReady = true;
       if (canvasNotes) RHYTHM_CANVAS_RENDERER.end();
       RHYTHM_PERF.notes(perfScanned, perfDrawn, scanFrom, run.notesAscending);
+      if (settings.holdTrace === false) {
+        traceGround = 0;
+        traceSky = 0;
+      }
+      if (traceGround !== holdTraceRef.current.g || traceSky !== holdTraceRef.current.s) {
+        const groundChanged = traceGround !== holdTraceRef.current.g;
+        holdTraceRef.current = {
+          g: traceGround,
+          s: traceSky
+        };
+        if (groundChanged) {
+          const area = playAreaRef.current;
+          let nodes = glowNodesRef.current;
+          if (area && (!nodes || !nodes.length || !nodes[0].isConnected)) nodes = glowNodesRef.current = Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));
+          (nodes || []).forEach((el, index) => {
+            const off = !!(traceGround >> index & 1);
+            if (off === (el.dataset.rhythmTraceOff === 'true')) return;
+            if (off) el.dataset.rhythmTraceOff = 'true';else delete el.dataset.rhythmTraceOff;
+          });
+        }
+        setPressedLanes(pressedLanesNow());
+      }
       const badge = abilityBadgeRef.current;
       const hasAbilityBadge = badge && (rhythmMonsterAbilityRemainingMs(run.abilities, 'MUTEKI', songTimeMs) > 0 || rhythmMonsterAbilityRemainingMs(run.abilities, 'GAMAN', songTimeMs) > 0 || rhythmMonsterAbilityRemainingMs(run.abilities, 'HISSHI', songTimeMs) > 0 || rhythmMonsterAbilityRemainingMs(run.abilities, 'ITAZURA', songTimeMs) > 0 || Number(run.abilities?.konjoStock) > 0);
       if (badge && !hasAbilityBadge) {
@@ -41748,6 +41791,10 @@ const RhythmTapTest = ({
   const inputPoint = (clientX, clientY) => RHYTHM_VIEW_ROTATION.point(clientX, clientY);
   const pressedLanesNow = () => [...(liveTouchSubLanesRef.current || []), ...(runRef.current?.activePointerFeedback?.values() || [])];
   const pressedSkyLanesNow = () => [...(liveTouchSkySubLanesRef.current || []), ...(runRef.current?.activePointerSkyFeedback?.values() || [])];
+  const holdTraceRef = useRef({
+    g: 0,
+    s: 0
+  });
   const setPressedLanes = coordinates => {
     const area = playAreaRef.current;
     if (!area) return;
@@ -41763,7 +41810,10 @@ const RhythmTapTest = ({
       el.style.opacity = pressed ? glowOpacity : '0';
     });
     if (typeof RHYTHM_CANVAS_RENDERER !== 'undefined' && typeof RHYTHM_CANVAS_RENDERER.setSkyPressed === 'function') {
-      RHYTHM_CANVAS_RENDERER.setSkyPressed(pressedSkyLanesNow(), Number(glowOpacity));
+      {
+        const skyMask = settings.holdTrace !== false ? holdTraceRef.current.s : 0;
+        RHYTHM_CANVAS_RENDERER.setSkyPressed(skyMask ? pressedSkyLanesNow().filter(v => !(skyMask >> Math.floor(Number(v)) & 1)) : pressedSkyLanesNow(), Number(glowOpacity));
+      }
       paintIdleSkyPress();
     }
   };

@@ -48434,6 +48434,8 @@ const installRhythmGeometryStyles=()=>{
        押さえている最中の合図は、レーンではなくノーツの側(判定ラインの接点の光)が受け持つ。
        明るさの設定(レーンの光 強/弱/なし)は --mh-lane-glow で渡す。動くのは opacity だけ(合成だけで済む) */
     [data-rhythm-sublane-feedback][data-pressed="true"],[data-rhythm-sublane-feedback][data-rhythm-touchspan="true"]{transition:opacity 40ms linear;animation:mhRhythmLaneTap 460ms ease-out forwards}
+    /* ホールド・スライドを押せている指の道の光は出さない(設定 holdTrace・2026-11-02。帯そのものが指の所から光る) */
+    [data-rhythm-play-area][data-rhythm-play-area] [data-rhythm-sublane-feedback][data-rhythm-trace-off="true"][data-rhythm-trace-off]{opacity:0!important;animation:none!important}
     @keyframes mhRhythmLaneTap{0%,30%{opacity:var(--mh-lane-glow,1)}100%{opacity:calc(var(--mh-lane-glow,1) * .3)}}
     [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-sublane-feedback]{transition:none;animation:none}
     /* canvas でノーツを描くとき(2026-09-07)。canvas はノーツと同じ層に置く。
@@ -51041,7 +51043,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // 演出を1つずつ選ぶ設定(fx・2026-11-01)。begin() の options で渡す。渡さないときは演出量・軽量モード・motion から決める(これまでと同じ)。
   //   motionFlick/motionSlide … フリックの矢印の動き・スライドの光の波 / glowLevel … ノーツの光(STRONG・NORMAL・WEAK)
   //   hitLevel/hitLight … 弾ける光の段と軽量かどうか / hitScale … 弾ける光の大きさ
-  let motionFlick=false,motionSlide=false,glowLevel='NORMAL',hitLevel='FULL',hitLight=false,hitScale=1;
+  // holdTrace … ホールド・スライドを押せている間、帯を指の所からなぞるように光らせる(2026-11-02・設定 holdTrace)
+  let motionFlick=false,motionSlide=false,glowLevel='NORMAL',hitLevel='FULL',hitLight=false,hitScale=1,holdTrace=false;
   // 何も映らないフレームは描き直さない(2026-09-27・ユーザー指示「見た目を変えずに軽く」)。
   // begin() では消さずに「消す予定」だけ立て、最初に何かを描く瞬間に消す(touch)。最後まで何も描かなかったフレームは、
   // 前のフレームがもう空(blank)なら何もしない。前奏・間奏・曲の終わりで、canvas の消去・GPU への命令・画面の合成し直しがなくなる
@@ -52897,7 +52900,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       }
       ctx.setTransform(dpr,0,0,dpr,0,0);
       pendingClear=true;frameGround.length=0;
-      frameNow=Number(options.nowMs)||0;effect=options.effect||'FULL';motion=options.motion===true&&options.effect!=='MINIMAL'&&!options.lightweight;lightweight=!!options.lightweight;motionFlick=options.motionFlick!==undefined?options.motionFlick===true:motion;motionSlide=options.motionSlide!==undefined?options.motionSlide===true:motion;glowLevel=options.glowLevel||((effect==='MINIMAL'||lightweight)?'WEAK':'NORMAL');hitLevel=options.hitLevel||effect;hitLight=options.hitLight!==undefined?!!options.hitLight:lightweight;hitScale=Number(options.hitScale)>0?Number(options.hitScale):1;sizeScale=Number(options.sizeScale)||1;drawn=0;faces.length=0;
+      frameNow=Number(options.nowMs)||0;effect=options.effect||'FULL';motion=options.motion===true&&options.effect!=='MINIMAL'&&!options.lightweight;lightweight=!!options.lightweight;motionFlick=options.motionFlick!==undefined?options.motionFlick===true:motion;motionSlide=options.motionSlide!==undefined?options.motionSlide===true:motion;glowLevel=options.glowLevel||((effect==='MINIMAL'||lightweight)?'WEAK':'NORMAL');hitLevel=options.hitLevel||effect;hitLight=options.hitLight!==undefined?!!options.hitLight:lightweight;hitScale=Number(options.hitScale)>0?Number(options.hitScale):1;holdTrace=options.holdTrace===true;sizeScale=Number(options.sizeScale)||1;drawn=0;faces.length=0;
       // にじむ光(ブルーム)。オプションで入れた人だけ・WebGL で光を足し算で描いているときだけ。演出量「最小」と軽量モードでは使わない
       if(typeof ctx.gpuFrameBegin==='function')ctx.gpuFrameBegin();
       if(typeof ctx.setBloom==='function')ctx.setBloom(!!options.bloom&&additiveGlow&&effect!=='MINIMAL'&&!lightweight);
@@ -52910,12 +52913,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // 絵は横72×縦56の大きさで組み、c を w×h へ縮めて描く。kind は RHYTHM_NOTE_SWATCH_KINDS
     drawSwatch(c,kind,w,h){
       if(!c||typeof c.beginPath!=='function'||!(w>0)||!(h>0)||!RHYTHM_NOTE_SWATCH_KINDS.some(k=>k.id===kind))return false;
-      const keep={canvas,ctx,backend,dpr,cssW,cssH,frameNow,effect,lightweight,sizeScale,floor3d,floor3d2,floor3d3,sky3dWanted,case3,gpuBandWanted,motion,motionFlick,motionSlide,glowLevel,hitLevel,hitLight,hitScale};
+      const keep={canvas,ctx,backend,dpr,cssW,cssH,frameNow,effect,lightweight,sizeScale,floor3d,floor3d2,floor3d3,sky3dWanted,case3,gpuBandWanted,motion,motionFlick,motionSlide,glowLevel,hitLevel,hitLight,hitScale,holdTrace};
       const VW=72,VH=56;
       c.save();
       try{
         canvas=c.canvas||null;ctx=c;backend='2d';dpr=Math.max(1,Math.min(3,(typeof window!=='undefined'&&window.devicePixelRatio)||1));cssW=VW;cssH=VH;frameNow=0;
-        effect='FULL';lightweight=false;sizeScale=1;floor3d=floor3d2=floor3d3=false;sky3dWanted=false;case3=false;gpuBandWanted=false;motion=false;motionFlick=false;motionSlide=false;glowLevel='NORMAL';hitLevel='FULL';hitLight=false;hitScale=1;
+        effect='FULL';lightweight=false;sizeScale=1;floor3d=floor3d2=floor3d3=false;sky3dWanted=false;case3=false;gpuBandWanted=false;motion=false;motionFlick=false;motionSlide=false;glowLevel='NORMAL';hitLevel='FULL';hitLight=false;hitScale=1;holdTrace=false;
         c.scale(w/VW,h/VH);
         const o={failed:false,monster:false,wide:false,pressed:false,alpha:1,pop:null,depthScale:1,brightness:1};
         const head=(note,cx,cy,hw,extra)=>drawHead(note,{head:{cx,cy,w:hw,h:HEAD_H}},{...o,...(extra||{})});
@@ -52949,8 +52952,33 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       }catch(e){return false;}
       finally{
         c.restore();c.globalAlpha=1;c.globalCompositeOperation='source-over';
-        ({canvas,ctx,backend,dpr,cssW,cssH,frameNow,effect,lightweight,sizeScale,floor3d,floor3d2,floor3d3,sky3dWanted,case3,gpuBandWanted,motion,motionFlick,motionSlide,glowLevel,hitLevel,hitLight,hitScale}=keep);
+        ({canvas,ctx,backend,dpr,cssW,cssH,frameNow,effect,lightweight,sizeScale,floor3d,floor3d2,floor3d3,sky3dWanted,case3,gpuBandWanted,motion,motionFlick,motionSlide,glowLevel,hitLevel,hitLight,hitScale,holdTrace}=keep);
       }
+    },
+    // 押せているホールド・スライドの帯を、指の所(判定ライン)から奥へなぞるように光らせる(2026-11-02 社長「綺麗になぞってるように」・設定 holdTrace)。
+    // 帯の真ん中に、手前ほど明るい光の筋を2本(にじみと芯)引くだけ。演出量・軽量モードに関係なく出す(押したときの光と同じ扱い)
+    drawHoldTrace(note,geo,o){
+      let pts=null;
+      if(geo.band&&geo.band.length>1)pts=geo.band.map(e=>[(e.left+e.right)/2,e.y,e.right-e.left]);
+      else{
+        let quads=geo.slide||null;
+        if(!quads&&geo.slideGpu){const g=geo.slideGpu;try{quads=rhythmSlideSegmentQuads(note,g.travel.chartNowMs,{...g.travel,window:true},g.rect,g.halfH);}catch(e){quads=null;}}
+        if(quads&&quads.length){pts=[];for(const q of quads){pts.push([(q.l0+q.r0)/2,q.y0,q.r0-q.l0]);pts.push([(q.l1+q.r1)/2,q.y1,q.r1-q.l1]);}}
+      }
+      if(!pts||pts.length<2)return;
+      pts.sort((a,b)=>b[1]-a[1]);
+      const bottom=pts[0][1],len=Math.max(90,Math.min(bottom-pts[pts.length-1][1],bottom*.55)),stop=bottom-len;
+      const line=[];for(const p of pts){line.push(p);if(p[1]<=stop)break;}
+      if(line.length<2)return;
+      const width=Math.max(6,line[0][2]*.55);
+      const rgb=rhythmNoteIsSlide(note)?(o.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb):RHYTHM_NOTE_COLORS.HOLD.rgb;
+      const path=()=>{ctx.beginPath();line.forEach((p,i)=>{if(i===0)ctx.moveTo(p[0],p[1]);else ctx.lineTo(p[0],p[1]);});};
+      const g1=ctx.createLinearGradient(0,bottom,0,stop);g1.addColorStop(0,`rgba(${rgb},.55)`);g1.addColorStop(1,`rgba(${rgb},0)`);
+      const g2=ctx.createLinearGradient(0,bottom,0,stop);g2.addColorStop(0,'rgba(255,255,255,.95)');g2.addColorStop(.6,'rgba(255,255,255,.35)');g2.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.globalAlpha=o.alpha;ctx.lineCap='round';ctx.lineJoin='round';
+      path();ctx.lineWidth=width;ctx.strokeStyle=g1;ctx.stroke();
+      path();ctx.lineWidth=Math.max(2,width*.22);ctx.strokeStyle=g2;ctx.stroke();
+      ctx.lineCap='butt';ctx.globalAlpha=1;
     },
     // ノーツ1個。geo は rhythmNoteCanvasGeometry の結果。opts: {failed,monster,wide,pressed,heldMs(押さえ始めからの時間),alpha,pop(0..1|null),depthScale,brightness,hideBody}
     drawNote(note,geo,opts){
@@ -52988,6 +53016,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         if(geo.slide)drawSlide(geo,o,note);
         else if(geo.slideGpu)drawSlideGpu(note,geo,o);
         drawEndBar(note,geo,o);
+        if(holdTrace&&o.pressed&&!o.failed&&!o.slideOff)this.drawHoldTrace(note,geo,o);
       }
       const headOpts=o.pop===null?{...o}:{...o,alpha:o.alpha*.95*(1-easeOut(o.pop)),brightness:1};
       if(trackDim<1){headOpts.alpha=o.alpha*trackDim;headOpts.brightness=(Number(headOpts.brightness)||1)*.6;}
