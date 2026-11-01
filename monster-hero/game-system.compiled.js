@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7bb48c7188892344
+// source-sha256: 584f3c9c264d4423
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -73980,7 +73980,13 @@ function InfernoShieldGauge({
     }
   }, React.createElement("div", {
     className: "mt-[1px] flex flex-col items-end gap-[1px] leading-none"
-  }, React.createElement("span", {
+  }, view.boss && React.createElement("span", {
+    "data-inferno-shield-boss": true,
+    className: "whitespace-nowrap text-[10px] font-black italic text-yellow-300",
+    style: {
+      textShadow: '0 0 6px #f59e0b,0 1px 2px #000'
+    }
+  }, "👑 BOSS"), React.createElement("span", {
     className: "whitespace-nowrap text-[9px] font-black text-amber-200",
     style: {
       textShadow: '0 1px 2px #000'
@@ -74052,27 +74058,52 @@ function InfernoShieldCompact({
     className: "mr-auto pl-[3px] not-italic"
   }, INFERNO_SHIELD_MARKS[view.broken] || view.broken + 1), Math.floor(cur.now).toLocaleString(), " / ", Math.floor(cur.max).toLocaleString())));
 }
+const SHIELD_BADGE_THEME = Object.freeze({
+  INFERNO: Object.freeze({
+    title: '🔥 INFERNO',
+    titleColor: '#fde68a',
+    titleGlow: '#f97316',
+    bg: 'linear-gradient(180deg,#1c0a0a,#0c0a09)',
+    sub: '#fecaca'
+  }),
+  COCYTUS: Object.freeze({
+    title: '❄ COCYTUS',
+    titleColor: '#cffafe',
+    titleGlow: '#22d3ee',
+    bg: 'linear-gradient(180deg,#082f49,#020617)',
+    sub: '#a5f3fc',
+    ring: '#a5f3fc'
+  })
+});
 function InfernoShieldBadge({
-  view
+  view,
+  rule = 'INFERNO',
+  growthPct = 30
 }) {
-  if (!view || !(view.total > 0)) return null;
+  if (!view || !(view.total > 0) || !view.boss) return null;
+  const theme = SHIELD_BADGE_THEME[rule] || SHIELD_BADGE_THEME.INFERNO;
   const col = view.left > 0 ? infernoShieldColorAt(view.broken) : ['#e7e5e4', '#78716c', '#a8a29e'];
   return React.createElement("div", {
     "data-inferno-shield-badge": view.left,
     "aria-hidden": "true",
     className: "pointer-events-none absolute left-2 top-[96px] z-[43] w-[84px] rounded-[14px] px-1 pb-1 pt-1.5 text-center [@media(max-height:640px)]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden",
+    "data-shield-badge-theme": rule,
     style: {
-      background: 'linear-gradient(180deg,#1c0a0a,#0c0a09)',
+      background: theme.bg,
       border: `2px solid ${col[1]}`,
-      boxShadow: `0 0 12px ${col[1]}`
+      boxShadow: `0 0 12px ${col[1]}${theme.ring ? `,0 0 0 1px ${theme.ring} inset` : ''}`
     }
   }, React.createElement("div", {
-    className: "text-[10px] font-black tracking-wide text-amber-200",
+    className: "text-[10px] font-black tracking-wide",
     style: {
-      textShadow: '0 0 6px #f97316'
+      color: theme.titleColor,
+      textShadow: `0 0 6px ${theme.titleGlow}`
     }
-  }, "🔥 INFERNO"), React.createElement("div", {
-    className: "mt-[1px] text-[8px] font-black text-red-200"
+  }, theme.title), React.createElement("div", {
+    className: "mt-[1px] text-[8px] font-black",
+    style: {
+      color: theme.sub
+    }
   }, "のこりシールド"), React.createElement("div", {
     className: "mt-0.5 text-[30px] font-black leading-none text-white",
     style: {
@@ -74083,9 +74114,9 @@ function InfernoShieldBadge({
     style: {
       color: col[0]
     }
-  }, "いま ", INFERNO_SHIELD_MARKS[view.broken] || view.broken + 1), view.left > 1 && React.createElement("div", {
+  }, "いま ", INFERNO_SHIELD_MARKS[view.broken] || view.broken + 1), view.left > 1 && growthPct > 0 && React.createElement("div", {
     className: "mt-[1px] text-[8px] font-extrabold text-amber-200"
-  }, "次の1枚 +30%"));
+  }, "次の1枚 +", growthPct, "%"));
 }
 function InfernoShieldBreakFx({
   fx,
@@ -74758,7 +74789,7 @@ function BattleScreen({
     const hitsNow = extremeLayerRushHits(infernoShellRule, wave, broken);
     const hitsBefore = extremeLayerRushHits(infernoShellRule, wave, Math.max(0, broken - (seq - prev.seq)));
     const gain = Number(extremeWaveStageRules(infernoShellRule, wave)?.layerAtkGain) || 0;
-    const kind = broken >= 5 ? 'final' : hitsNow > hitsBefore ? 'rush' : 'mid';
+    const kind = hitsNow > hitsBefore ? hitsNow >= 3 ? 'final' : 'rush' : 'mid';
     setInfernoShellFx({
       id: `${key}:${seq}`,
       kind,
@@ -75356,7 +75387,10 @@ function BattleScreen({
     className: "shrink-0"
   }), React.createElement("span", {
     className: "max-w-[34vw] truncate pr-[3px]"
-  }, enemy.name), React.createElement("span", {
+  }, enemy.name), infernoShellView?.boss && React.createElement("span", {
+    "data-inferno-boss-name": true,
+    className: "hidden shrink-0 rounded-full bg-gradient-to-r from-yellow-300 to-amber-500 px-1.5 py-[1px] text-[9px] font-black not-italic tracking-wider text-amber-950 shadow-[0_0_8px_#f59e0b] [@media(max-height:640px)]:inline [@media(orientation:landscape)_and_(max-height:520px)]:inline"
+  }, "BOSS"), React.createElement("span", {
     className: `shrink-0 px-1.5 py-0.5 rounded-full text-[10px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`
   }, RANGE_LABELS[enemyDist]), Array.isArray(enemyDebuffs) && enemyDebuffs.length > 0 && React.createElement("button", {
     type: "button",
@@ -75575,7 +75609,9 @@ function BattleScreen({
   })(), infernoShellView?.total > 0 && React.createElement(InfernoShieldGauge, {
     view: infernoShellView
   }), infernoShellView?.total > 0 && !copyFloat && React.createElement(InfernoShieldBadge, {
-    view: infernoShellView
+    view: infernoShellView,
+    rule: infernoShellRule,
+    growthPct: Math.round((Number(extremeWaveStageRules(infernoShellRule, wave)?.layerGrowth) || 0) * 100)
   }), infernoShellFx && React.createElement(InfernoShieldBreakFx, {
     key: infernoShellFx.id,
     fx: infernoShellFx,
@@ -78198,9 +78234,9 @@ function EnemyRevivalReveal({
     className: "mt-2 text-2xl font-black italic tracking-wider text-slate-100"
   }, "DEAD RISING"), React.createElement("div", {
     className: "mt-5 text-xl font-black text-white"
-  }, "死者の再起 ", enemyRevivalReveal.revivalNumber, "回目"), React.createElement("div", {
+  }, enemyRevivalReveal.name || '死者の再起', " ", enemyRevivalReveal.revivalNumber, "回目"), React.createElement("div", {
     className: "mt-2 rounded-xl border border-slate-300/50 bg-black/40 py-2 text-sm font-black text-slate-200"
-  }, "ライフ半分で起き上がり、攻撃力+50%"), React.createElement("div", {
+  }, enemyRevivalReveal.desc || 'ライフ半分で起き上がり、攻撃力+50%'), React.createElement("div", {
     className: "mt-4 border-t border-slate-300/20 pt-3 text-[10px] text-slate-300"
   }, React.createElement("span", {
     className: "font-black text-slate-400"

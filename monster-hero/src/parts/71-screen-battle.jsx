@@ -1239,7 +1239,7 @@ function AiCopyGutsMeter({ guts, maxGuts }) {
   );
 }
 // ===== INFERNOのボスの層のシールド(2026-10-31 社長の決定・見本 docs/progress/inferno/shield-README.md) =====
-// ゲージは層の数だけ(ムー5・デュラハン4・ほか3)。下の層(1枚目)から割れ、割れた層はひびが入った灰色で残る(残り方1)。
+// ゲージは層の数だけ(ムー5・デュラハン4・W3〜8の敵3・W1〜2の敵2。2026-11-01 ふつうの敵にも層)。ボスだけ見出しに「👑 BOSS」と左の大きな札。下の層(1枚目)から割れ、割れた層はひびが入った灰色で残る(残り方1)。
 // 色は案2: 1枚目の淡い黄 → 黄 → 橙 → 赤 → 深紅。後の層ほど少し長く太い。本体のライフは別の色(紫)。
 // 色が見分けにくい人のために、各層に ①〜⑤ の印と「残り / 最大」の数も出す。
 // 状態は 19 の enemyShellView(enemy) を読むだけ(数と決まりはセコンドくんの側)
@@ -1296,6 +1296,7 @@ function InfernoShieldGauge({ view }) {
     <div data-inferno-shield-gauge={view.total} data-inferno-shield-left={view.left} aria-label={`シールド 残り${view.left}枚(全${view.total}枚)`}
       className="pointer-events-none absolute left-1/2 top-1 z-[44] flex items-start gap-1.5 [@media(max-height:640px)]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden" style={{ transform: 'translateX(-50%)' }}>
       <div className="mt-[1px] flex flex-col items-end gap-[1px] leading-none">
+        {view.boss && <span data-inferno-shield-boss className="whitespace-nowrap text-[10px] font-black italic text-yellow-300" style={{ textShadow: '0 0 6px #f59e0b,0 1px 2px #000' }}>👑 BOSS</span>}
         <span className="whitespace-nowrap text-[9px] font-black text-amber-200" style={{ textShadow: '0 1px 2px #000' }}>🛡 シールド</span>
         <span className="text-[15px] font-black text-white" style={{ textShadow: `0 0 6px ${curColor},0 1px 2px #000` }}>{view.left}<small className="text-[9px] text-amber-300">/{view.total}</small></span>
       </div>
@@ -1324,18 +1325,26 @@ function InfernoShieldCompact({ view }) {
   );
 }
 // 大きな札(案B)。のこりの枚数をひと目で。縁は、いま削っている層の色
-function InfernoShieldBadge({ view }) {
-  if (!view || !(view.total > 0)) return null;
+//   ふつうの敵(W1〜8 のボスでない敵)には出さない。ゲージだけで残りの枚数が分かる(2026-11-01 社長「案2」)
+//   見出しは難易度ごと(INFERNO=燃える橙 / COCYTUS=氷の水色・2026-11-01 社長「これで」)。growthPct は次の1枚が大きくなる割合(難易度の決まりから)
+const SHIELD_BADGE_THEME = Object.freeze({
+  INFERNO: Object.freeze({ title: '🔥 INFERNO', titleColor: '#fde68a', titleGlow: '#f97316', bg: 'linear-gradient(180deg,#1c0a0a,#0c0a09)', sub: '#fecaca' }),
+  COCYTUS: Object.freeze({ title: '❄ COCYTUS', titleColor: '#cffafe', titleGlow: '#22d3ee', bg: 'linear-gradient(180deg,#082f49,#020617)', sub: '#a5f3fc', ring: '#a5f3fc' }),
+});
+function InfernoShieldBadge({ view, rule = 'INFERNO', growthPct = 30 }) {
+  if (!view || !(view.total > 0) || !view.boss) return null;
+  const theme = SHIELD_BADGE_THEME[rule] || SHIELD_BADGE_THEME.INFERNO;
   const col = view.left > 0 ? infernoShieldColorAt(view.broken) : ['#e7e5e4', '#78716c', '#a8a29e'];
   return (
     <div data-inferno-shield-badge={view.left} aria-hidden="true"
       className="pointer-events-none absolute left-2 top-[96px] z-[43] w-[84px] rounded-[14px] px-1 pb-1 pt-1.5 text-center [@media(max-height:640px)]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
-      style={{ background: 'linear-gradient(180deg,#1c0a0a,#0c0a09)', border: `2px solid ${col[1]}`, boxShadow: `0 0 12px ${col[1]}` }}>
-      <div className="text-[10px] font-black tracking-wide text-amber-200" style={{ textShadow: '0 0 6px #f97316' }}>🔥 INFERNO</div>
-      <div className="mt-[1px] text-[8px] font-black text-red-200">のこりシールド</div>
+      data-shield-badge-theme={rule}
+      style={{ background: theme.bg, border: `2px solid ${col[1]}`, boxShadow: `0 0 12px ${col[1]}${theme.ring ? `,0 0 0 1px ${theme.ring} inset` : ''}` }}>
+      <div className="text-[10px] font-black tracking-wide" style={{ color: theme.titleColor, textShadow: `0 0 6px ${theme.titleGlow}` }}>{theme.title}</div>
+      <div className="mt-[1px] text-[8px] font-black" style={{ color: theme.sub }}>のこりシールド</div>
       <div className="mt-0.5 text-[30px] font-black leading-none text-white" style={{ textShadow: `0 0 10px ${col[1]},0 2px 2px #000` }}>×{view.left}</div>
       {view.left > 0 && <div className="mt-[3px] text-[9px] font-black" style={{ color: col[0] }}>いま {INFERNO_SHIELD_MARKS[view.broken] || view.broken + 1}</div>}
-      {view.left > 1 && <div className="mt-[1px] text-[8px] font-extrabold text-amber-200">次の1枚 +30%</div>}
+      {view.left > 1 && growthPct > 0 && <div className="mt-[1px] text-[8px] font-extrabold text-amber-200">次の1枚 +{growthPct}%</div>}
     </div>
   );
 }
@@ -1652,7 +1661,8 @@ function BattleScreen({
     const hitsNow=extremeLayerRushHits(infernoShellRule,wave,broken);
     const hitsBefore=extremeLayerRushHits(infernoShellRule,wave,Math.max(0,broken-(seq-prev.seq)));
     const gain=Number(extremeWaveStageRules(infernoShellRule,wave)?.layerAtkGain)||0;
-    const kind=broken>=5?'final':hitsNow>hitsBefore?'rush':'mid';
+    // 連撃が増えたら連撃の演出。3連撃になったとき(ムーの最後の1枚)はいちばん派手な最終形態。デュラハンは最後の1枚でも2連撃なので連撃の演出
+    const kind=hitsNow>hitsBefore?(hitsNow>=3?'final':'rush'):'mid';
     setInfernoShellFx({ id:`${key}:${seq}`, kind, broken, left:view.left, total:view.total, hits:hitsNow, name:enemy?.name||'', atkPct:Math.round(gain*broken*100) });
   },[infernoShellView?.breakSeq,wave,enemy?.id]);
   // 敵の攻撃(ためるを含む)を絵だけで動かす場面。移動とムーは今までどおり丸枠ごと
@@ -2075,7 +2085,7 @@ function BattleScreen({
         {enemy&&(
           <div data-enemy-bar className={`shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`}>
             <div className="flex justify-between items-center text-[11px] font-black italic uppercase tracking-tighter mb-0.5">
-              <span className={`flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-none ${wave===10?'text-red-500 animate-pulse':'text-slate-200'}`}><Skull size={11} className="shrink-0"/>{/* 斜体の最後の字の傾きが truncate の枠で欠ける(「ディノ」の「ノ」)ので右に少し余白 */}<span className="max-w-[34vw] truncate pr-[3px]">{enemy.name}</span><span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`}>{RANGE_LABELS[enemyDist]}</span>{Array.isArray(enemyDebuffs)&&enemyDebuffs.length>0&&<button type="button" data-enemy-debuffs={enemyDebuffs.length} aria-expanded={enemyDebuffOpen} aria-label={`敵の状態 ${enemyDebuffs.map(d=>`${d.label} ${d.value}`).join('、')}（押すと詳細）`} onClick={()=>setEnemyDebuffOpen(v=>!v)} className="mh-hit-expand relative shrink-0 inline-flex items-center gap-1 rounded-full border border-white/25 bg-black/60 px-1.5 py-0.5 text-[10px] not-italic font-black leading-none tracking-normal normal-case text-slate-100 active:scale-95">{enemyDebuffs.map(d=>(<span key={d.key} data-enemy-debuff={d.key} aria-label={`${d.label} ${d.value}`} className={`inline-flex items-center gap-px ${d.tone.split(' ')[0]}`}><span aria-hidden="true">{d.mark}</span>{d.short?<span className="font-mono">{d.short}</span>:null}</span>))}<span aria-hidden="true" className="text-slate-300">{enemyDebuffOpen?'▲':'▼'}</span></button>}</span>
+              <span className={`flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-none ${wave===10?'text-red-500 animate-pulse':'text-slate-200'}`}><Skull size={11} className="shrink-0"/>{/* 斜体の最後の字の傾きが truncate の枠で欠ける(「ディノ」の「ノ」)ので右に少し余白 */}<span className="max-w-[34vw] truncate pr-[3px]">{enemy.name}</span>{infernoShellView?.boss&&<span data-inferno-boss-name className="hidden shrink-0 rounded-full bg-gradient-to-r from-yellow-300 to-amber-500 px-1.5 py-[1px] text-[9px] font-black not-italic tracking-wider text-amber-950 shadow-[0_0_8px_#f59e0b] [@media(max-height:640px)]:inline [@media(orientation:landscape)_and_(max-height:520px)]:inline">BOSS</span>}<span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`}>{RANGE_LABELS[enemyDist]}</span>{Array.isArray(enemyDebuffs)&&enemyDebuffs.length>0&&<button type="button" data-enemy-debuffs={enemyDebuffs.length} aria-expanded={enemyDebuffOpen} aria-label={`敵の状態 ${enemyDebuffs.map(d=>`${d.label} ${d.value}`).join('、')}（押すと詳細）`} onClick={()=>setEnemyDebuffOpen(v=>!v)} className="mh-hit-expand relative shrink-0 inline-flex items-center gap-1 rounded-full border border-white/25 bg-black/60 px-1.5 py-0.5 text-[10px] not-italic font-black leading-none tracking-normal normal-case text-slate-100 active:scale-95">{enemyDebuffs.map(d=>(<span key={d.key} data-enemy-debuff={d.key} aria-label={`${d.label} ${d.value}`} className={`inline-flex items-center gap-px ${d.tone.split(' ')[0]}`}><span aria-hidden="true">{d.mark}</span>{d.short?<span className="font-mono">{d.short}</span>:null}</span>))}<span aria-hidden="true" className="text-slate-300">{enemyDebuffOpen?'▲':'▼'}</span></button>}</span>
               {/* ★敵に重なってかかっている状態(水牢・氷結・咆哮)を「マーク×数」で常に出す(2026-10-12 社長の依頼)。
                   敵の絵の隅は、技名の帯・次の行動の札と重なり、横持ちでは絵ごと隠れるので、どの画面でも見えるライフの帯の右端(数字の左)に置く */}
               <span className="flex shrink-0 items-center gap-1"><BattleStackMarks counts={enemyStackCounts} side="enemy" className="mh-stack-marks-enemy"/><span className="text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]">{Math.max(0,enemy.hp).toLocaleString()} / {enemy.maxHp.toLocaleString()}</span></span>
@@ -2184,7 +2194,7 @@ function BattleScreen({
           })()}
           {/* INFERNOのボスの層のシールド: ゲージ(上の真ん中)と大きな札(左)。AIコピーの小窓が出ている間は札を出さない(同じ左に重なるので) */}
           {infernoShellView?.total>0&&<InfernoShieldGauge view={infernoShellView}/>}
-          {infernoShellView?.total>0&&!copyFloat&&<InfernoShieldBadge view={infernoShellView}/>}
+          {infernoShellView?.total>0&&!copyFloat&&<InfernoShieldBadge view={infernoShellView} rule={infernoShellRule} growthPct={Math.round((Number(extremeWaveStageRules(infernoShellRule,wave)?.layerGrowth)||0)*100)}/>}
           {infernoShellFx&&<InfernoShieldBreakFx key={infernoShellFx.id} fx={infernoShellFx} lite={!!(ecoBattleView||liteBattleView||fxLoad==='LIGHT'||fxLoad==='MINIMAL')} onDone={(id)=>setInfernoShellFx(cur=>cur&&cur.id===id?null:cur)}/>}
           {battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)&&<button data-soul-battle-effects-button type="button" onClick={()=>setShowSoulBattleEffects(true)} aria-label="魂格効果" className="absolute right-2 top-[56px] z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7 [@media(max-height:640px)]:rounded-full [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:top-auto [@media(max-height:640px)]:bottom-1 [@media(max-height:640px)]:right-auto [@media(max-height:640px)]:left-2" style={{boxShadow:'0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'}}><Sparkles size={17} className="text-sky-300"/><span className="text-[10px] font-black leading-none text-white [@media(max-height:640px)]:sr-only">魂格効果</span></button>}
           {/* 敵が次に何をしてくるかの札(2026-09-19・ユーザー指摘「敵の行動予測が見えない」)。
@@ -3738,8 +3748,9 @@ function EnemyRevivalReveal({
     <div className="w-full max-w-xs rounded-3xl border-2 border-slate-200 bg-slate-950/95 px-5 py-7 shadow-[0_0_56px_rgba(203,213,225,.7)]" style={{animation:'mhExtremeRuleIn .38s ease-out'}}>
       <div className="text-xs font-black tracking-[.24em] text-slate-300">{specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty)||RAGNAROK_SETTING.id}</div>
       <div className="mt-2 text-2xl font-black italic tracking-wider text-slate-100">DEAD RISING</div>
-      <div className="mt-5 text-xl font-black text-white">死者の再起 {enemyRevivalReveal.revivalNumber}回目</div>
-      <div className="mt-2 rounded-xl border border-slate-300/50 bg-black/40 py-2 text-sm font-black text-slate-200">ライフ半分で起き上がり、攻撃力+50%</div>
+      <div className="mt-5 text-xl font-black text-white">{enemyRevivalReveal.name||'死者の再起'} {enemyRevivalReveal.revivalNumber}回目</div>
+      {/* 説明の文は渡されたもの(COCYTUS の「ライフ全回復・最大ライフ1.5倍で復活」など)を出す。無ければ今までの起き上がり(ETERNALまで)の文 */}
+      <div className="mt-2 rounded-xl border border-slate-300/50 bg-black/40 py-2 text-sm font-black text-slate-200">{enemyRevivalReveal.desc||'ライフ半分で起き上がり、攻撃力+50%'}</div>
       <div className="mt-4 border-t border-slate-300/20 pt-3 text-[10px] text-slate-300"><span className="font-black text-slate-400">残りの再起：</span><span className="font-black">{enemyRevivalReveal.remaining}回</span></div>
     </div>
   </div>
