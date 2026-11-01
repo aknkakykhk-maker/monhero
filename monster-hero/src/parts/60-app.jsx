@@ -5232,6 +5232,8 @@ function MonsterHeroGame() {
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
+    // 「鍵の向こう側へ」の第1話(第2〜7話は時刻で・第8話は閉幕のお話)
+    pandora_wings_2026_11_02: 'pandora_wings_2026_ep1',
   };
   // イベントid → 閉幕の会話id。用意していないイベントでは閉幕の会話は流れない
   // (別の回の「閉幕とお礼」を代わりに流してしまわないよう、必ずここから引く)

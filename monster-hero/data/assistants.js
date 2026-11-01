@@ -10697,6 +10697,58 @@ const ASSISTANT_CARD_CUP_STORY = [
 ];
 const ASSISTANT_CARD_CUP_STORY_CALLS = { mua: 'ひめちん／もも／あつくん', kiki: 'みゅあちん／ももさん／あっくん', momosuke: 'みゅあねぇ／きゅうちゃん', dra: 'あっくん／ソラシド', kyuko: 'ももすけ／きゅうこちゃん', sorashido: 'きゅうこちゃん', atsu: 'きゅうこちゃん' };
 
+// ===== イベント「鍵の向こう側へ ～パンドラとふたつの翼～」(2026-11-02〜11-09)のお話 =====
+// 第1話「鎖の箱」(社長の「この文で」2026-11-02)。開始の 11/2 12:00 に開幕のお話として HOME で1回流れ、そのあとは回想から見返せる。
+// 出る時刻・話の一覧は data/rhythm-event.js の PANDORA_WINGS_STORIES。BGM は Rebellion(13-bgm の pandoraWingsStoryEvent)。
+// atsu:'with' はあつを解放している人だけ、atsu:'without' はその代わりに出る行。後半の森は笑・顔文字なし(シリアスな場面)
+const PANDORA_WINGS_EP1 = [
+  // ---- お昼の広場(イベントの説明) ----
+  { who:'mua',      e:'excited',  t:'ねえねえみんな、聞いて！ 今日から、モンヒロビートのイベントがはじまったよ〜！' },
+  { who:'momosuke', e:'excited',  t:'きた〜！ 今回はなんて名前なの？' },
+  { who:'mua',      e:'happy',    t:'「鍵の向こう側へ ～パンドラとふたつの翼～」！ なんか、かっこよくない？' },
+  { who:'dra',      e:'happy',    t:'鍵か……。おで、こういうの好きだぞ。開けたくなる' },
+  { who:'kiki',     e:'normal',   t:'対象曲は3曲でつ。「Stay With Me ～Locked Fate～」「Rebellion ～Beyond the Lock～」、それと新しい曲の「Altar of the World Tree, Beneath the White Night」。' },
+  { who:'kiki',     e:'normal',   t:'3曲とも、原曲でもショート版でも大丈夫でつよ。イベントのランキングでは、同じ曲として数えまつ。' },
+  { who:'momosuke', e:'excited',  t:'ショートでいいの！？ 時間ないときでも出られるじゃん♡' },
+  { who:'atsu',     e:'happy',    atsu:'with',    t:'長いほうで粘るもよし、ショートで回数かせぐもよし。好きなほうでどうぞ笑' },
+  { who:'dra',      e:'normal',   atsu:'without', t:'長いほうで粘るもよし、ショートで回数をかせぐもよし。好きなほうでいいぞ' },
+  { who:'mua',      e:'normal',   t:'ランキングは、曲ごとと、3曲の合計の総合があるんだよね？' },
+  { who:'kiki',     e:'normal',   t:'そうでつ。曲ごとの1〜5位には、順位に応じてピクシーの超越の実。総合の上位には勇者の証が届きまつ。' },
+  { who:'kiki',     e:'happy',    t:'入賞できなくても、3曲ぜんぶ遊べば、参加報酬でダイヤ3,000と虹のプシュケー50がもらえまつよ (´ー`*)' },
+  { who:'dra',      e:'normal',   t:'遊んだ回数も点に少し上乗せされるからな。たくさん叩いたやつが、ちゃんと報われるわけだ' },
+  { who:'momosuke', e:'excited',  t:'あとあと！ 周回のやつ！' },
+  { who:'mua',      e:'excited',  t:'そうそう！ イベントのあいだは、クイックの∞周回を回しながらモンヒロビートを遊ぶと、入る周回数がいつもの5倍！' },
+  { who:'momosuke', e:'surprise', t:'5倍！？ 曲を叩いてるだけで、育成もどんどん進むってこと！？' },
+  { who:'dra',      e:'normal',   t:'どの曲でも5倍だぞ。イベントの曲じゃなくてもな' },
+  { who:'kiki',     e:'normal',   t:'それと、今回はお話もありまつ。全部で8話で、このあとは明日から毎朝4:00に1話ずつでつ。' },
+  { who:'mua',      e:'normal',   t:'最後のお話は、イベントが終わるときに流れるんだって。見のがしても、プロフィールの「イベント回想」から見られるよ〜' },
+  { who:'momosuke', e:'happy',    t:'毎朝のおたのしみだね！ ……で、パンドラって、だれ？' },
+  { who:'mua',      e:'troubled', t:'……そういえば、だれだろ？' },
+  // ---- きゅうこ、遅れてくる ----
+  { who:'kyuko',    e:'normal',   t:'ほい、遅れてごめん。……みんな、ちょっといい？' },
+  { who:'kiki',     e:'surprise', t:'きゅうこさん。どうしたんでつか？' },
+  { who:'kyuko',    e:'normal',   t:'さっき森を通ってきたんだけどさ。奥のほうから、歌が聞こえたんだよね' },
+  { who:'mua',      e:'surprise', t:'歌？ あんな森の奥で？' },
+  { who:'kyuko',    e:'troubled', t:'うん。なんていうか……すごく、さみしそうな歌だった' },
+  { who:'dra',      e:'normal',   t:'……気になるな。行ってみるか' },
+  { who:'momosuke', e:'troubled', t:'え、森の奥……？ ももはドラちゃんのうしろ歩くからね！？' },
+  // ---- 森の奥(ここから笑・顔文字なし) ----
+  { who:'mua',      e:'surprise', t:'……あった。あれ、箱……？' },
+  { who:'kiki',     e:'normal',   t:'古い箱でつね。鎖がぐるぐるに巻かれてまつ。まんなかに、鍵穴がひとつ……。' },
+  { who:'dra',      e:'normal',   t:'歌は、この中から聞こえるぞ' },
+  { who:'momosuke', e:'troubled', t:'箱の中で、だれかが歌ってるの……？' },
+  { who:'kyuko',    e:'normal',   t:'……静かに。' },
+  { who:'pandora_shadow', e:'normal', fxText:'箱のふたが、ほんの少しだけ開いた', t:'……' },
+  { who:'mua',      e:'surprise', t:'あ……！' },
+  { who:'momosuke', e:'troubled', fxText:'影は引っこみ、ふたが閉じた', t:'閉じちゃった……。ももたち、こわがらせちゃったかな' },
+  { who:'atsu',     e:'normal',   atsu:'with',    t:'見られたくなかったんじゃないかな。……無理には開けないほうがいい' },
+  { who:'kiki',     e:'normal',   atsu:'without', t:'見られたくなかったのかもしれまつ。……無理に開けないほうがいいでつ' },
+  { who:'kyuko',    e:'normal',   t:'うん。無理に開けるもんじゃないな' },
+  { who:'kyuko',    e:'normal',   t:'……また来るよ。歌、きれいだった' },
+  { who:'kyuko',    e:'normal',   fxText:'箱の中から、歌がもう一度だけ、小さく聞こえた', t:'……' },
+];
+const PANDORA_WINGS_EP1_CALLS = { mua: 'きゅきゅ', kiki: 'きゅうこさん', momosuke: 'きゅうちゃん／ドラちゃん', dra: 'きゅうこちゃん', atsu: 'きゅうこちゃん', kyuko: 'みゅあねぇ／ききさん／ももすけ／ドラちゃん' };
+
 const EVENT_REPLAYS = [
   // ぱんぷきん×ジャックのストーリー(2026-10-04・台本は docs/spec/RAID_JACK_STORY.md)。**公開するまでは回想にも出さない**(releaseFlag)。
   // 第1部(halloween_night_2026_part1)は時刻で流れる既存のもの。ここは第1.5部から終章まで。
@@ -10773,6 +10825,8 @@ const EVENT_REPLAYS = [
   { id: 'sorashido_join_2026_10_27', date: '2026-10-27 12:00', title: '推しに会える夜 ～ソラシド登場～', script: ASSISTANT_SORASHIDO_JOIN_STORY, calls: ASSISTANT_SORASHIDO_JOIN_STORY_CALLS, unlockedKey: 'sorashidoJoinSeen', releaseFlag: 'assistantSorashido', hideUntilFirstLine: ['sorashido'], group: 'assistant' },
   // 個人杯のお話(2026-10-31)。公開の印 cardCup(99-card-cup.jsx の cardCupOpen)が立つまで流れず、回想にも出ない。
   //   あつを解放していない人には、あつのはじめての登場になる(atsuJoin)。あつは最初にしゃべる行まで顔を伏せる
+  // イベント「鍵の向こう側へ」第1話(2026-11-02 12:00)。開幕のお話として流れる(60-app.jsx の RHYTHM_EVENT_STORY_BY_EVENT)。見たかは mh_rhythm_event_story_v1 の id
+  { id: 'pandora_wings_2026_ep1', date: '2026-11-02 12:00', title: '鍵の向こう側へ 第1話 ～鎖の箱～', script: PANDORA_WINGS_EP1, calls: PANDORA_WINGS_EP1_CALLS, unlockedKey: 'pandoraWingsEp1Seen', group: 'pandora_wings' },
   { id: 'card_cup_2026_10_31', date: '2026-10-31 12:00', title: 'みゅあ杯、はじまるよ！ ～個人杯～', script: ASSISTANT_CARD_CUP_STORY, calls: ASSISTANT_CARD_CUP_STORY_CALLS, unlockedKey: 'cardCupStorySeen', releaseFlag: 'cardCup', hideUntilFirstLine: ['atsu'], group: 'update' },
   { id: 'raid_jack_howto_2026_10_04', date: '2026-10-04 08:02', title: 'カボチャの大王ジャック ～レイドの遊び方～', script: ASSISTANT_RAID_JACK_HOWTO, calls: ASSISTANT_RAID_JACK_HOWTO_CALLS, unlockedKey: 'raidJackHowtoSeen', releaseFlag: 'raidJack', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, group: 'halloween' },
 ];

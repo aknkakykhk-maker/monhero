@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 484eaf5168c21d66
+// generated-sha256: 60d2940403029a65
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -353,6 +353,7 @@ const eventReplayAllList = () => eventReplaySorted(() => true);
 //   イベントを足すときは、data/assistants.js の項目へ group を1つ書く(tools/boot/event-replay-check.js が見張る)。
 // ★この並びを使うのは一覧の画面だけ。再生・着替え・デバッグ一覧は今までの eventReplayList / eventReplayAllList(id で引くだけ)。
 const EVENT_REPLAY_GROUPS = Object.freeze([
+  { id:'pandora_wings', emoji:'🗝️', label:'鍵の向こう側へ', note:'パンドラとふたつの翼のお話', color:'#c084fc' },
   { id:'halloween', emoji:'🎃', label:'ハロウィン・ナイト', note:'レイドバトルとジャックのお話', color:'#fb923c' },
   { id:'update', emoji:'✨', label:'新しい遊びのお話', note:'新しい遊びができたときの案内', color:'#e879f9' },
   { id:'beat_point', emoji:'🎵', label:'ビートP', note:'ビートPと交換所のお話', color:'#34d399' },
@@ -78761,6 +78762,8 @@ function MonsterHeroGame() {
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
+    // 「鍵の向こう側へ」の第1話(第2〜7話は時刻で・第8話は閉幕のお話)
+    pandora_wings_2026_11_02: 'pandora_wings_2026_ep1',
   };
   // イベントid → 閉幕の会話id。用意していないイベントでは閉幕の会話は流れない
   // (別の回の「閉幕とお礼」を代わりに流してしまわないよう、必ずここから引く)

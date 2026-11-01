@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b08d1716dbcbb725
+// source-sha256: 558c8646495afbd8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -434,6 +434,12 @@ const eventReplaySorted = keep => (typeof EVENT_REPLAYS !== 'undefined' && EVENT
 const eventReplayList = () => eventReplaySorted(eventReplayReleased);
 const eventReplayAllList = () => eventReplaySorted(() => true);
 const EVENT_REPLAY_GROUPS = Object.freeze([{
+  id: 'pandora_wings',
+  emoji: '🗝️',
+  label: '鍵の向こう側へ',
+  note: 'パンドラとふたつの翼のお話',
+  color: '#c084fc'
+}, {
   id: 'halloween',
   emoji: '🎃',
   label: 'ハロウィン・ナイト',
@@ -130845,7 +130851,8 @@ function MonsterHeroGame() {
   const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, CARD_CUP_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
-    [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID
+    [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
+    pandora_wings_2026_11_02: 'pandora_wings_2026_ep1'
   };
   const RHYTHM_EVENT_THANKS_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_THANKS_STORY_ID,
