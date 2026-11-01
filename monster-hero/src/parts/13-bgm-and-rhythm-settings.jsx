@@ -725,15 +725,45 @@ const normalizeRhythmFx = raw => {
 };
 // その項目の選んだ値(おまかせなら 'AUTO')
 const rhythmFxPick = (settings,key) => {const v=settings&&settings.fx&&settings.fx[key];return typeof v==='string'&&v?v:'AUTO';};
-// CSS の段(演奏画面のプレイエリアの data-fx-<項目>)。おまかせは「軽量モードなら LW、そうでなければ演出量の値」= これまでと同じ止まり方。
-// 出す・強・大 は NORMAL(いちばん多い)、出さない・なし は LW(いちばん少ない)
+// CSS の段(演奏画面のプレイエリアの data-fx-<項目> と data-fx-<項目>-lw)。いまの data-rhythm-effect・data-rhythm-lightweight と同じ値の組を、項目ごとに持つ。
+// おまかせは「演出量の値・軽量モードかどうか」そのまま(= これまでと同じ止まり方)。出す・強・大 は「最大・軽量でない」、出さない・なし は「最小・軽量」
 const rhythmFxLevel = (settings,key) => {
   const v=rhythmFxPick(settings,key);
-  if(v==='AUTO')return settings&&settings.lightweightMode?'LW':(RHYTHM_EFFECT_LEVELS.includes(settings&&settings.effectAmount)?settings.effectAmount:DEFAULT_RHYTHM_SETTINGS.effectAmount);
-  return v==='OFF'||v==='NONE'?'LW':'NORMAL';
+  if(v==='AUTO')return RHYTHM_EFFECT_LEVELS.includes(settings&&settings.effectAmount)?settings.effectAmount:DEFAULT_RHYTHM_SETTINGS.effectAmount;
+  return v==='OFF'||v==='NONE'?'MINIMAL':'NORMAL';
 };
+const rhythmFxLight = (settings,key) => {const v=rhythmFxPick(settings,key);return v==='AUTO'?!!(settings&&settings.lightweightMode):v==='OFF'||v==='NONE';};
+// 演奏画面の要素に付ける属性(CSS の付け替えた規則が見る)
+const RHYTHM_FX_CSS_KEYS = Object.freeze(['searchlight','sparks','comboBounce','judgeFlow','burst','flash','judgeLinePulse']);
+const rhythmFxAttrs = settings => Object.fromEntries(RHYTHM_FX_CSS_KEYS.flatMap(key=>{const name='data-fx-'+key.replace(/[A-Z]/g,c=>'-'+c.toLowerCase());
+  return [[name,rhythmFxLevel(settings,key)],[name+'-lw',rhythmFxLight(settings,key)?'true':'false']];}));
 // 出す・出さないの項目を真偽で。auto はおまかせのときの答え(呼ぶ側が、いまの決まりどおりの値を渡す)
 const rhythmFxOn = (settings,key,auto) => {const v=rhythmFxPick(settings,key);return v==='AUTO'?!!auto:!(v==='OFF'||v==='NONE');};
+// ノーツの描き手(RHYTHM_CANVAS_RENDERER.begin)へ渡す値。live は演奏中に変わる設定(にじむ光・ノーツの動き)を読む先。
+// おまかせの項目は描き手が演出量・軽量モードから決めるので、渡す値もこれまでと同じになる
+const rhythmFxRenderOptions = (settings,live=settings) => {
+  const base=!!settings&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
+  const motionAuto=!!live&&live.noteMotionFx===true&&base;
+  const glow=rhythmFxPick(settings,'noteGlow'),burst=rhythmFxPick(settings,'burst');
+  return {motionFlick:rhythmFxOn(settings,'flickMotion',motionAuto),motionSlide:rhythmFxOn(settings,'slideWave',motionAuto),
+    glowLevel:glow==='AUTO'?undefined:glow,hitLevel:rhythmFxLevel(settings,'burst'),hitLight:rhythmFxLight(settings,'burst'),
+    hitScale:burst==='L'?1.35:burst==='S'?.7:1};
+};
+// 判定文字の大きさ(設定 fx「判定文字の大きさ」)。判定文字の枠ごと、下のふちを軸に広げ・縮める(文字の後ろの光・ずれメーターも一緒に)。
+// 枠は translate で中央へ寄せているので、別の指定の scale を使う(transform を上書きしない)。おまかせ・標準は何も付けない
+const rhythmJudgeScaleStyle = settings => {const v=rhythmFxPick(settings,'judgeSize');return v==='L'?{scale:'1.3',transformOrigin:'50% 100%'}:v==='S'?{scale:'.75',transformOrigin:'50% 100%'}:{};};
+// 背景の段(rhythmStageLevel の答え)を、出すを選んだ背景の項目が出る段まで上げる(下げはしない。下げるのは項目ごとの「出さない」)
+const RHYTHM_STAGE_ORDER = Object.freeze(['SIMPLE','CALM','VIVID','LIVE']);
+const rhythmFxStageLevel = (settings,base) => {
+  const want=key=>{const v=rhythmFxPick(settings,key);return v!=='AUTO'&&v!=='OFF'&&v!=='NONE';};
+  const need=want('laser')||want('penlight')?'LIVE':want('searchlight')||want('sparks')?'VIVID'
+    :want('timingLight')||want('stageBlur')||['70','40','100'].includes(rhythmFxPick(settings,'stageBright'))?'CALM':'SIMPLE';
+  return RHYTHM_STAGE_ORDER.indexOf(need)>RHYTHM_STAGE_ORDER.indexOf(base)?need:base;
+};
+// 背景の明るさ(設定 fx「背景の明るさ」)。背景の層ごと薄くして暗い地を透かす。おまかせ・100% は何も付けない
+const rhythmFxStageStyle = settings => {const v=rhythmFxPick(settings,'stageBright');return v==='70'?{opacity:.7}:v==='40'?{opacity:.4}:undefined;};
+// ジャケットのぼかし(設定 fx「ジャケットのぼかし」)。ジャケットを縮めてから引き伸ばしてぼかすので、縮める大きさで強さが変わる(強=これまでの 24)
+const rhythmFxArtSize = settings => {const v=rhythmFxPick(settings,'stageBlur');return v==='WEAK'?64:v==='NONE'?256:24;};
 // どれか1つでも「おまかせ」以外を選んでいるか(オプションの組の見出し・重いときの自動の控えめに使う)
 const rhythmFxChangedCount = (settings,keys=RHYTHM_FX_KEYS) => keys.filter(key=>rhythmFxPick(settings,key)!=='AUTO').length;
 

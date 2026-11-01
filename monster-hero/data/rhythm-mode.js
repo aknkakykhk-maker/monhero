@@ -46254,7 +46254,7 @@ const installRhythmGeometryStyles=()=>{
       0%{opacity:0;transform:scale(.35) rotate(-6deg)}
       14%{opacity:1;transform:scale(1) rotate(0deg)}
       100%{opacity:0;transform:scale(1.25,.8) rotate(4deg)}}
-    [data-rhythm-play-area][data-rhythm-effect="LOW"] [data-rhythm-hit-effect]>s{display:none}
+    [data-rhythm-play-area][data-fx-burst="LOW"] [data-rhythm-hit-effect]>s{display:none}
     /* フリックを取ったとき、払った向きへ吹き上がる炎の羽(2026-09-28・ユーザーが送ったアワーノーツの動画)。canvas 版の drawPlume と同じ絵
        (rhythmPaintFlickPlume で1回だけ焼いた画像)を、根元を判定ラインに置いて向きへ傾ける。動かすのは transform と opacity だけ */
     [data-rhythm-hit-effect]>em{position:absolute;display:block;opacity:0;left:50%;bottom:-4px;width:max(96px,190%);height:clamp(180px,80vh,720px);
@@ -46335,10 +46335,10 @@ const installRhythmGeometryStyles=()=>{
     @keyframes mhRhythmScreenFlash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
     /* 演出量MINIMAL・軽量モードでは出さない(音は鳴る) */
     /* ただし設定「押したときの光」が「いつも出す」(data-rhythm-tap-light)のときは、判定ラインで弾ける光だけは出す(2026-10-15) */
-    [data-rhythm-play-area][data-rhythm-lightweight="true"]:not([data-rhythm-tap-light="1"]) [data-rhythm-hit-layer],
-    [data-rhythm-play-area][data-rhythm-effect="MINIMAL"]:not([data-rhythm-tap-light="1"]) [data-rhythm-hit-layer],
-    [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-screen-flash],
-    [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-screen-flash]{display:none!important}
+    [data-rhythm-play-area][data-fx-burst-lw="true"]:not([data-rhythm-tap-light="1"]) [data-rhythm-hit-layer],
+    [data-rhythm-play-area][data-fx-burst="MINIMAL"]:not([data-rhythm-tap-light="1"]) [data-rhythm-hit-layer],
+    [data-rhythm-play-area][data-fx-flash-lw="true"] [data-rhythm-screen-flash],
+    [data-rhythm-play-area][data-fx-flash="MINIMAL"] [data-rhythm-screen-flash]{display:none!important}
     /* 能力名(「ミーア 元気！」)も出た瞬間に大きく弾ませる。1曲に最大4回しか出ないので大きめに。 */
     [data-rhythm-ability-flash]{animation:mhRhythmAbilityPop 420ms cubic-bezier(.2,1.5,.4,1) 1;
       transform-origin:center;will-change:transform}
@@ -46357,9 +46357,9 @@ const installRhythmGeometryStyles=()=>{
       100%{transform:scale(1)}}
     /* ★「標準」でも止める(2026-09-13・ユーザー指摘「通常が今までの多めの演出量に
        なってる気がする」)。判定のたびに走るので、ノーツが詰まるほど効いてくる */
-    [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-judgment-text],
-    [data-rhythm-play-area][data-rhythm-effect="LIGHT"] [data-rhythm-judgment-text],
-    [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-judgment-text]{animation:none!important}
+    [data-rhythm-play-area][data-fx-judge-flow-lw="true"] [data-rhythm-judgment-text],
+    [data-rhythm-play-area][data-fx-judge-flow="LIGHT"] [data-rhythm-judgment-text],
+    [data-rhythm-play-area][data-fx-judge-flow="MINIMAL"] [data-rhythm-judgment-text]{animation:none!important}
     /* コンボ数も1つ増えるたびに弾ませる(プロセカのように数字が跳ねる)。
        HUDはプレイエリアの外にあるので、出す・出さないはJS側の演出量の判定で決める。 */
     [data-rhythm-combo][data-rhythm-combo-pop="1"]{animation:mhRhythmComboPop 180ms ease-out 1;
@@ -46502,9 +46502,9 @@ const installRhythmGeometryStyles=()=>{
       animation:mhRhythmLinePulse var(--rhythm-beat,500ms) ease-out infinite}
     /* 軽量モードと演出量「標準」以下では止める(ほかの演出と同じ扱い)。
        ★これは曲のあいだ一度も止まらないので、「標準」を軽くするときの効きが大きい */
-    [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-judgment-line],
-    [data-rhythm-play-area][data-rhythm-effect="LIGHT"] [data-rhythm-judgment-line],
-    [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-judgment-line]{animation:none!important;will-change:auto}
+    [data-rhythm-play-area][data-fx-judge-line-pulse-lw="true"] [data-rhythm-judgment-line],
+    [data-rhythm-play-area][data-fx-judge-line-pulse="LIGHT"] [data-rhythm-judgment-line],
+    [data-rhythm-play-area][data-fx-judge-line-pulse="MINIMAL"] [data-rhythm-judgment-line]{animation:none!important;will-change:auto}
   
     /* --- 装飾を個別に切る(デバッグ限定) ---
        data-rhythm-strip に書いた語だけを切る。ふだんは属性そのものが付かないので何も起きない。
@@ -48756,6 +48756,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   let roadEdgeCache=null;
   // ノーツの動き(オプション「ノーツの動き」・2026-09-27)。フリックの矢印と SLIDE の帯に流れる光を足す。演出量「最小」・軽量モードでは切る
   let motion=false;
+  // 演出を1つずつ選ぶ設定(fx・2026-11-01)。begin() の options で渡す。渡さないときは演出量・軽量モード・motion から決める(これまでと同じ)。
+  //   motionFlick/motionSlide … フリックの矢印の動き・スライドの光の波 / glowLevel … ノーツの光(STRONG・NORMAL・WEAK)
+  //   hitLevel/hitLight … 弾ける光の段と軽量かどうか / hitScale … 弾ける光の大きさ
+  let motionFlick=false,motionSlide=false,glowLevel='NORMAL',hitLevel='FULL',hitLight=false,hitScale=1;
   // 何も映らないフレームは描き直さない(2026-09-27・ユーザー指示「見た目を変えずに軽く」)。
   // begin() では消さずに「消す予定」だけ立て、最初に何かを描く瞬間に消す(touch)。最後まで何も描かなかったフレームは、
   // 前のフレームがもう空(blank)なら何もしない。前奏・間奏・曲の終わりで、canvas の消去・GPU への命令・画面の合成し直しがなくなる
@@ -48937,7 +48941,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // 光の絵(3分割で貼るもの)を、描く順に並べる。使い回しの入れ物へ入れる(ノーツごとに配列を作らない)
     headGlowCount=0;
     if(style.glow.length&&!failed){
-      if(effect==='MINIMAL'||lightweight)pushHeadGlow(glowSprite(monster?'MONSTER':(style===HEADS.SKY?'SKY':note.type),style.radius,style.glow),w,h,alpha);
+      if(glowLevel==='WEAK')pushHeadGlow(glowSprite(monster?'MONSTER':(style===HEADS.SKY?'SKY':note.type),style.radius,style.glow),w,h,alpha);
+      else if(glowLevel==='STRONG')pushHeadGlow(glowSprite(style.glowStrongKey,style.radius,style.glowStrong),w*1.12,h*1.6,alpha);
       else pushHeadGlow(glowSprite(style.glowStrongKey,style.radius,style.glowStrong),w*1.04,h*1.25,alpha);
     }
     if(monster&&!failed){
@@ -49015,12 +49020,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const ay=y-2*sizeMul*depthScale-(sprite.th+sprite.margin)*sizeMul*depthScale;
       ctx.drawImage(sprite.canvas,cx-aw/2,ay,aw,ah);
       // ノーツの動き: 払う向きへ、同じ山形の残像がすっと流れ出て消える(0.6秒ごと)
-      if(motion){const p=(frameNow%600)/600,base=ctx.globalAlpha;ctx.globalAlpha=base*(1-p)*.6;ctx.drawImage(sprite.canvas,cx-aw/2+(sideDir==='left'?-1:1)*p*aw*.35,ay,aw,ah);ctx.globalAlpha=base;}
+      if(motionFlick){const p=(frameNow%600)/600,base=ctx.globalAlpha;ctx.globalAlpha=base*(1-p)*.6;ctx.drawImage(sprite.canvas,cx-aw/2+(sideDir==='left'?-1:1)*p*aw*.35,ay,aw,ah);ctx.globalAlpha=base;}
     }else if(rhythmNoteVisualType(note)==='FLICK'&&!failed){
       const sprite=isSkyPlate(note)?arrowSprite('flickSky2',26,19,SKY_ARROW_GLOWS,SKY_ARROW_FILL,'#ffffff'):arrowSprite('flick',26,19,FLICK_ARROW_GLOWS,FLICK_ARROW_FILL);
       const aw=(sprite.tw+sprite.margin*2)*sizeMul,ah=(sprite.th+sprite.margin*2)*sizeMul*depthScale;
       const ay=y-3*sizeMul*depthScale-(sprite.th+sprite.margin)*sizeMul*depthScale;
-      if(motion){
+      if(motionFlick){
         // ノーツの動き: 矢印を3段に重ね(上ほど少し小さく)、明るさの波を下から上へ流す(0.7秒で1周)
         const base=ctx.globalAlpha;
         for(let i=2;i>=0;i--){const k=Math.pow(.86,i),bw=aw*k,bh=ah*k,wave=.5+.5*Math.cos(2*Math.PI*(frameNow/700-i/3));
@@ -49206,7 +49211,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     for(let index=band.length-1;index>=0;index--)ctx.lineTo(sizeX(band[index].left,band[index].right)[0],band[index].y);
     ctx.closePath();
     // 帯のまわりの光(ノーツ全体の drop-shadow 相当)は、外周の太い半透明の線で出す
-    if(!failed&&effect!=='MINIMAL'&&!lightweight){ctx.lineWidth=5;ctx.strokeStyle=`rgba(${RHYTHM_NOTE_COLORS.HOLD.rgb},.18)`;ctx.lineJoin='round';ctx.stroke();}
+    if(!failed&&glowLevel!=='WEAK'){ctx.lineWidth=5;ctx.strokeStyle=`rgba(${RHYTHM_NOTE_COLORS.HOLD.rgb},.18)`;ctx.lineJoin='round';ctx.stroke();}
     const g=ctx.createLinearGradient(0,bottom,0,top);
     if(failed){g.addColorStop(0,'rgba(120,130,145,.9)');g.addColorStop(1,'rgba(150,160,175,.7)');}
     else{const c=RHYTHM_NOTE_COLORS.HOLD.rgb;g.addColorStop(0,`rgba(${c},.62)`);g.addColorStop(.6,`rgba(${c},.40)`);g.addColorStop(1,`rgba(${c},.55)`);}
@@ -49818,7 +49823,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     // ノーツの動き: 帯の上を、判定ライン(画面の下)へ向かって光の波が流れる。明るさは画面の高さで決めるので(波長110px・0.5秒で1波長)、
     // 区切りごとに上端と下端の明るさを縦のグラデーションでつなげば、区切りの継ぎ目で段にならない
-    if(motion&&!failed&&!dim){
+    if(motionSlide&&!failed&&!dim){
       const glow=y=>{const wave=.5+.5*Math.cos(2*Math.PI*(y/110-frameNow/500));return wave>.3?((wave-.3)/.7*.3).toFixed(3):'0';};
       quads.forEach(q=>{const a0=glow(q.y0),a1=glow(q.y1);if(a0==='0'&&a1==='0')return;
         const g=ctx.createLinearGradient(0,q.y0,0,q.y1);g.addColorStop(0,`rgba(243,232,255,${a0})`);g.addColorStop(1,`rgba(243,232,255,${a1})`);
@@ -49864,7 +49869,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       return;
     }
     const base=opts.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb;
-    if(!failed&&effect!=='MINIMAL'&&!lightweight)band.pass('outline',{mode:0,hw:3,color:`rgba(${base},.18)`,alpha,stencil:true});
+    if(!failed&&glowLevel!=='WEAK')band.pass('outline',{mode:0,hw:3,color:`rgba(${base},.18)`,alpha,stencil:true});
     const groundFill=failed?RHYTHM_FAILED_SLIDE_FILL:`rgba(${base},${opts.slideRgb?.62:.5})`;
     if(!failed&&opts.skySlideRgb){
       band.pass('fill',{mode:1,color:groundFill,color2:`rgba(${opts.skySlideRgb},1)`,alpha,stencil:true});
@@ -49887,7 +49892,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         }
       }
     }
-    if(motion&&!failed&&!dim){const phase=frameNow/500;band.pass('fill',{mode:6,phase:phase-Math.floor(phase),alpha,stencil:false});}
+    if(motionSlide&&!failed&&!dim){const phase=frameNow/500;band.pass('fill',{mode:6,phase:phase-Math.floor(phase),alpha,stencil:false});}
     // 区切りの線(drawSlide と同じ色・太さ・端は丸)。形は帯と一緒に GPU に置いてあり、CPU では投影しない(作り替え B の S2)
     if(!opts.skySlideRgb&&band.hasLines)band.pass('lines',{mode:0,hw:1,color:failed?'rgba(190,190,200,.6)':'rgba(233,213,255,.85)',alpha,stencil:false});
     band.done();
@@ -50201,6 +50206,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   };
   // (ox,oy) を中心に拡大(sx,sy)→回転(deg)。CSS の transform:scale() rotate() と同じ順
   const hitTransform=(ox,oy,sx,sy,deg=0)=>{
+    // 弾ける光の大きさ(設定 fx「判定ラインで弾ける光」の大・標準・小)。光の中心を軸に広げ・縮める
+    sx*=hitScale;sy*=hitScale;
     const rad=deg*Math.PI/180,cos=Math.cos(rad),sin=Math.sin(rad);
     const a=sx*cos,b=sy*sin,c=-sx*sin,d=sy*cos;
     ctx.setTransform(a*dpr,b*dpr,c*dpr,d*dpr,(ox-(a*ox+c*oy))*dpr,(oy-(b*ox+d*oy))*dpr);
@@ -50512,12 +50519,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     },
     pushHit(hit){
       if(!(hit.sky?(hitArea||skyHitArea):hitArea))return;
-      const lite=effect==='MINIMAL'||lightweight;
+      const lite=hitLevel==='MINIMAL'||hitLight;
       if(lite&&!(hit.sky&&!hit.big&&RHYTHM_HELL_SKY_HIT.id!=='off'))return;
       const key=`${hit.judgment||''}|${hit.precise?'1':''}`;
       const plume=!hit.big&&!!hit.flick&&HIT_PLUME_TILT[hit.flick]!==undefined;
       hitSlots[hitNext]={...hit,filter:hitFilters.get(key)||{core:null,beam:null},start:typeof performance!=='undefined'?performance.now():Date.now(),
-        ms:hit.sky?RHYTHM_SKY_HIT_MS:RHYTHM_HIT_EFFECT_MS[hit.big?'MONSTER':'NORMAL'],flare:effect!=='LOW',plume:plume&&!hit.sky,seed:plume&&!hit.sky?(Math.random()*4294967296)>>>0:0,beamOnly:lite};
+        ms:hit.sky?RHYTHM_SKY_HIT_MS:RHYTHM_HIT_EFFECT_MS[hit.big?'MONSTER':'NORMAL'],flare:hitLevel!=='LOW',plume:plume&&!hit.sky,seed:plume&&!hit.sky?(Math.random()*4294967296)>>>0:0,beamOnly:lite};
       hitNext=(hitNext+1)%hitSlots.length;
     },
     // begin() のすぐあと(ノーツより先)に呼ぶ。hitY は判定ラインの下端(光の入れ物の bottom)の高さ
@@ -50608,7 +50615,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       }
       ctx.setTransform(dpr,0,0,dpr,0,0);
       pendingClear=true;frameGround.length=0;
-      frameNow=Number(options.nowMs)||0;effect=options.effect||'FULL';motion=options.motion===true&&options.effect!=='MINIMAL'&&!options.lightweight;lightweight=!!options.lightweight;sizeScale=Number(options.sizeScale)||1;drawn=0;faces.length=0;
+      frameNow=Number(options.nowMs)||0;effect=options.effect||'FULL';motion=options.motion===true&&options.effect!=='MINIMAL'&&!options.lightweight;lightweight=!!options.lightweight;motionFlick=options.motionFlick!==undefined?options.motionFlick===true:motion;motionSlide=options.motionSlide!==undefined?options.motionSlide===true:motion;glowLevel=options.glowLevel||((effect==='MINIMAL'||lightweight)?'WEAK':'NORMAL');hitLevel=options.hitLevel||effect;hitLight=options.hitLight!==undefined?!!options.hitLight:lightweight;hitScale=Number(options.hitScale)>0?Number(options.hitScale):1;sizeScale=Number(options.sizeScale)||1;drawn=0;faces.length=0;
       // にじむ光(ブルーム)。オプションで入れた人だけ・WebGL で光を足し算で描いているときだけ。演出量「最小」と軽量モードでは使わない
       if(typeof ctx.gpuFrameBegin==='function')ctx.gpuFrameBegin();
       if(typeof ctx.setBloom==='function')ctx.setBloom(!!options.bloom&&additiveGlow&&effect!=='MINIMAL'&&!lightweight);
@@ -50621,12 +50628,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // 絵は横72×縦56の大きさで組み、c を w×h へ縮めて描く。kind は RHYTHM_NOTE_SWATCH_KINDS
     drawSwatch(c,kind,w,h){
       if(!c||typeof c.beginPath!=='function'||!(w>0)||!(h>0)||!RHYTHM_NOTE_SWATCH_KINDS.some(k=>k.id===kind))return false;
-      const keep={canvas,ctx,backend,dpr,cssW,cssH,frameNow,effect,lightweight,sizeScale,floor3d,floor3d2,floor3d3,sky3dWanted,case3,gpuBandWanted,motion};
+      const keep={canvas,ctx,backend,dpr,cssW,cssH,frameNow,effect,lightweight,sizeScale,floor3d,floor3d2,floor3d3,sky3dWanted,case3,gpuBandWanted,motion,motionFlick,motionSlide,glowLevel,hitLevel,hitLight,hitScale};
       const VW=72,VH=56;
       c.save();
       try{
         canvas=c.canvas||null;ctx=c;backend='2d';dpr=Math.max(1,Math.min(3,(typeof window!=='undefined'&&window.devicePixelRatio)||1));cssW=VW;cssH=VH;frameNow=0;
-        effect='FULL';lightweight=false;sizeScale=1;floor3d=floor3d2=floor3d3=false;sky3dWanted=false;case3=false;gpuBandWanted=false;motion=false;
+        effect='FULL';lightweight=false;sizeScale=1;floor3d=floor3d2=floor3d3=false;sky3dWanted=false;case3=false;gpuBandWanted=false;motion=false;motionFlick=false;motionSlide=false;glowLevel='NORMAL';hitLevel='FULL';hitLight=false;hitScale=1;
         c.scale(w/VW,h/VH);
         const o={failed:false,monster:false,wide:false,pressed:false,alpha:1,pop:null,depthScale:1,brightness:1};
         const head=(note,cx,cy,hw,extra)=>drawHead(note,{head:{cx,cy,w:hw,h:HEAD_H}},{...o,...(extra||{})});
@@ -50660,7 +50667,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       }catch(e){return false;}
       finally{
         c.restore();c.globalAlpha=1;c.globalCompositeOperation='source-over';
-        ({canvas,ctx,backend,dpr,cssW,cssH,frameNow,effect,lightweight,sizeScale,floor3d,floor3d2,floor3d3,sky3dWanted,case3,gpuBandWanted,motion}=keep);
+        ({canvas,ctx,backend,dpr,cssW,cssH,frameNow,effect,lightweight,sizeScale,floor3d,floor3d2,floor3d3,sky3dWanted,case3,gpuBandWanted,motion,motionFlick,motionSlide,glowLevel,hitLevel,hitLight,hitScale}=keep);
       }
     },
     // ノーツ1個。geo は rhythmNoteCanvasGeometry の結果。opts: {failed,monster,wide,pressed,heldMs(押さえ始めからの時間),alpha,pop(0..1|null),depthScale,brightness,hideBody}

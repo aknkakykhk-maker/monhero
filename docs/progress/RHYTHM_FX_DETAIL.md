@@ -19,8 +19,8 @@
   その項目の要素を止めている規則だけを `[data-fx-<項目>=…]` に付け替える(おまかせなら同じ値が入るので見た目は同じ)
 
 ## 進み具合
-- [ ] 設定の器・正規化・解決の関数
-- [ ] CSS の付け替え(判定文字・判定ライン・弾ける光・フラッシュ・コンボ・背景のサーチライトと粒)
-- [ ] JS の付け替え(背景 WebGL・道の演出・ノーツの光と動き・コンボのお祝い・フルコンボの大表示・判定文字の大きさ)
+- [x] 設定の器・正規化・解決の関数(rhythmFxPick/Level/Light/On/Attrs/RenderOptions/StageLevel/StageStyle/ArtSize・rhythmJudgeScaleStyle)
+- [x] CSS の付け替え(index.html 11規則・rhythm-mode.js 4規則。data-fx-<項目> と data-fx-<項目>-lw の2つ組)。レーンの区切り線は rhythm-lane-svg.js
+- [x] JS の付け替え(背景 WebGL/CSS・道の演出3つ・ノーツの描き手 glowLevel/hitLevel/hitScale/motionFlick/motionSlide・100コンボ・フルコンボ・判定文字の大きさ・最小/軽量の分かれ道で出すを選んだ項目)
 - [ ] オプション画面(縦・横)
 - [ ] 止め絵・更新履歴とヘルプの文案 → 窓口

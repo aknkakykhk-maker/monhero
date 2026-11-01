@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5c191edaf3823f4c
+// source-sha256: e1145f78187ffed5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -5894,7 +5894,17 @@ const RHYTHM_LOOK_PRESETS = Object.freeze([{
     climaxFx: true
   }
 }]);
-const RHYTHM_AUTO_EFFECT_STEPS = Object.freeze([s => s.noteBloom ? {
+const RHYTHM_AUTO_EFFECT_STEPS = Object.freeze([s => {
+  const up = ['ON', 'MANY', 'STRONG', 'L', 'DARK'],
+    fx = s.fx || {};
+  const keys = Object.keys(fx).filter(key => up.includes(fx[key]));
+  return keys.length ? {
+    fx: {
+      ...fx,
+      ...Object.fromEntries(keys.map(key => [key, 'AUTO']))
+    }
+  } : null;
+}, s => s.noteBloom ? {
   noteBloom: false
 } : null, s => s.stageEffect === 'LIVE' ? {
   stageEffect: 'VIVID'
@@ -6162,6 +6172,214 @@ const rhythmFiniteStep = (value, min, max, step, fallback) => {
   const number = rhythmFiniteInRange(value, min, max, fallback);
   return Math.round((Math.round((number - min) / step) * step + min) * 1000) / 1000;
 };
+const RHYTHM_FX_ON_OFF = Object.freeze([['AUTO', 'おまかせ'], ['ON', '出す'], ['OFF', '出さない']]);
+const RHYTHM_FX_GROUPS = Object.freeze([['stage', '背景'], ['road', '道'], ['note', 'ノーツ'], ['judge', '判定'], ['combo', 'コンボ']]);
+const RHYTHM_FX_ITEMS = Object.freeze([{
+  key: 'stageBlur',
+  group: 'stage',
+  label: 'ジャケットのぼかし',
+  weight: 'm',
+  options: [['AUTO', 'おまかせ'], ['STRONG', '強'], ['WEAK', '弱'], ['NONE', 'なし']]
+}, {
+  key: 'stageBright',
+  group: 'stage',
+  label: '背景の明るさ',
+  weight: 'l',
+  options: [['AUTO', 'おまかせ'], ['100', '100%'], ['70', '70%'], ['40', '40%']]
+}, {
+  key: 'searchlight',
+  group: 'stage',
+  label: 'サーチライト',
+  weight: 'm',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'sparks',
+  group: 'stage',
+  label: '光の粒',
+  weight: 'm',
+  options: [['AUTO', 'おまかせ'], ['MANY', '多い'], ['FEW', '少ない'], ['NONE', 'なし']]
+}, {
+  key: 'laser',
+  group: 'stage',
+  label: 'レーザー',
+  weight: 'h',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'penlight',
+  group: 'stage',
+  label: '観客のペンライト',
+  weight: 'h',
+  options: [['AUTO', 'おまかせ'], ['MANY', '多い'], ['FEW', '少ない'], ['NONE', 'なし']]
+}, {
+  key: 'timingLight',
+  group: 'stage',
+  label: 'タイミングの光',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'beatLine',
+  group: 'road',
+  label: '拍の線',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'roadEdge',
+  group: 'road',
+  label: '道のふちの光',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'roadFog',
+  group: 'road',
+  label: '奥のもや・脈打ち',
+  weight: 'm',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'laneLine',
+  group: 'road',
+  label: 'レーンの区切り線の濃さ',
+  weight: 'l',
+  options: [['AUTO', 'おまかせ'], ['DARK', '濃い'], ['NORMAL', '標準'], ['LIGHT', '薄い']]
+}, {
+  key: 'noteGlow',
+  group: 'note',
+  label: 'ノーツの光の強さ',
+  weight: 'l',
+  options: [['AUTO', 'おまかせ'], ['STRONG', '強'], ['NORMAL', '標準'], ['WEAK', '弱']]
+}, {
+  key: 'flickMotion',
+  group: 'note',
+  label: 'フリックの矢印の動き',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'slideWave',
+  group: 'note',
+  label: 'スライドの光の波',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'judgeSize',
+  group: 'judge',
+  label: '判定文字の大きさ',
+  weight: 'l',
+  options: [['AUTO', 'おまかせ'], ['L', '大'], ['M', '標準'], ['S', '小']]
+}, {
+  key: 'judgeFlow',
+  group: 'judge',
+  label: '判定文字の金・虹の流れ',
+  weight: 'm',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'judgeLinePulse',
+  group: 'judge',
+  label: '判定ラインの脈打ち',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'burst',
+  group: 'judge',
+  label: '判定ラインで弾ける光',
+  weight: 'm',
+  options: [['AUTO', 'おまかせ'], ['L', '大'], ['M', '標準'], ['S', '小'], ['NONE', 'なし']]
+}, {
+  key: 'flash',
+  group: 'judge',
+  label: '画面のフラッシュ',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'comboBounce',
+  group: 'combo',
+  label: 'コンボ数の跳ね',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'combo100',
+  group: 'combo',
+  label: '100コンボのお祝い',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'fullComboBig',
+  group: 'combo',
+  label: 'フルコンボの大きな表示',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
+}]);
+const RHYTHM_FX_KEYS = Object.freeze(RHYTHM_FX_ITEMS.map(item => item.key));
+const normalizeRhythmFx = raw => {
+  const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  return Object.fromEntries(RHYTHM_FX_ITEMS.map(item => [item.key, item.options.some(([id]) => id === source[item.key]) ? source[item.key] : 'AUTO']));
+};
+const rhythmFxPick = (settings, key) => {
+  const v = settings && settings.fx && settings.fx[key];
+  return typeof v === 'string' && v ? v : 'AUTO';
+};
+const rhythmFxLevel = (settings, key) => {
+  const v = rhythmFxPick(settings, key);
+  if (v === 'AUTO') return RHYTHM_EFFECT_LEVELS.includes(settings && settings.effectAmount) ? settings.effectAmount : DEFAULT_RHYTHM_SETTINGS.effectAmount;
+  return v === 'OFF' || v === 'NONE' ? 'MINIMAL' : 'NORMAL';
+};
+const rhythmFxLight = (settings, key) => {
+  const v = rhythmFxPick(settings, key);
+  return v === 'AUTO' ? !!(settings && settings.lightweightMode) : v === 'OFF' || v === 'NONE';
+};
+const RHYTHM_FX_CSS_KEYS = Object.freeze(['searchlight', 'sparks', 'comboBounce', 'judgeFlow', 'burst', 'flash', 'judgeLinePulse']);
+const rhythmFxAttrs = settings => Object.fromEntries(RHYTHM_FX_CSS_KEYS.flatMap(key => {
+  const name = 'data-fx-' + key.replace(/[A-Z]/g, c => '-' + c.toLowerCase());
+  return [[name, rhythmFxLevel(settings, key)], [name + '-lw', rhythmFxLight(settings, key) ? 'true' : 'false']];
+}));
+const rhythmFxOn = (settings, key, auto) => {
+  const v = rhythmFxPick(settings, key);
+  return v === 'AUTO' ? !!auto : !(v === 'OFF' || v === 'NONE');
+};
+const rhythmFxRenderOptions = (settings, live = settings) => {
+  const base = !!settings && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL';
+  const motionAuto = !!live && live.noteMotionFx === true && base;
+  const glow = rhythmFxPick(settings, 'noteGlow'),
+    burst = rhythmFxPick(settings, 'burst');
+  return {
+    motionFlick: rhythmFxOn(settings, 'flickMotion', motionAuto),
+    motionSlide: rhythmFxOn(settings, 'slideWave', motionAuto),
+    glowLevel: glow === 'AUTO' ? undefined : glow,
+    hitLevel: rhythmFxLevel(settings, 'burst'),
+    hitLight: rhythmFxLight(settings, 'burst'),
+    hitScale: burst === 'L' ? 1.35 : burst === 'S' ? .7 : 1
+  };
+};
+const rhythmJudgeScaleStyle = settings => {
+  const v = rhythmFxPick(settings, 'judgeSize');
+  return v === 'L' ? {
+    scale: '1.3',
+    transformOrigin: '50% 100%'
+  } : v === 'S' ? {
+    scale: '.75',
+    transformOrigin: '50% 100%'
+  } : {};
+};
+const RHYTHM_STAGE_ORDER = Object.freeze(['SIMPLE', 'CALM', 'VIVID', 'LIVE']);
+const rhythmFxStageLevel = (settings, base) => {
+  const want = key => {
+    const v = rhythmFxPick(settings, key);
+    return v !== 'AUTO' && v !== 'OFF' && v !== 'NONE';
+  };
+  const need = want('laser') || want('penlight') ? 'LIVE' : want('searchlight') || want('sparks') ? 'VIVID' : want('timingLight') || want('stageBlur') || ['70', '40', '100'].includes(rhythmFxPick(settings, 'stageBright')) ? 'CALM' : 'SIMPLE';
+  return RHYTHM_STAGE_ORDER.indexOf(need) > RHYTHM_STAGE_ORDER.indexOf(base) ? need : base;
+};
+const rhythmFxStageStyle = settings => {
+  const v = rhythmFxPick(settings, 'stageBright');
+  return v === '70' ? {
+    opacity: .7
+  } : v === '40' ? {
+    opacity: .4
+  } : undefined;
+};
+const rhythmFxArtSize = settings => {
+  const v = rhythmFxPick(settings, 'stageBlur');
+  return v === 'WEAK' ? 64 : v === 'NONE' ? 256 : 24;
+};
+const rhythmFxChangedCount = (settings, keys = RHYTHM_FX_KEYS) => keys.filter(key => rhythmFxPick(settings, key) !== 'AUTO').length;
 const normalizeRhythmSettings = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const bool = key => typeof source[key] === 'boolean' ? source[key] : DEFAULT_RHYTHM_SETTINGS[key];
@@ -6229,7 +6447,8 @@ const normalizeRhythmSettings = value => {
     paceDisplay: bool('paceDisplay'),
     assistMode: bool('assistMode'),
     mirrorChart: bool('mirrorChart'),
-    luckyRush: bool('luckyRush')
+    luckyRush: bool('luckyRush'),
+    fx: normalizeRhythmFx(source.fx)
   };
 };
 const emptyRhythmBestRecord = () => ({
@@ -35726,7 +35945,7 @@ precision mediump float;
 varying vec2 vP;
 uniform vec2 uSize,uRes;uniform sampler2D uArt,uStatic;uniform float uArtA,uFx,uMode;
 uniform vec4 uBeamL,uBeamR,uBeamC;uniform vec2 uBeamBox;
-uniform float uLive,uPulse,uBeats;uniform vec3 uPenA,uPenB;uniform vec4 uLas[4],uLasC[4];
+uniform float uLive,uPulse,uBeats,uPenKeep;uniform vec3 uPenA,uPenB;uniform vec4 uLas[4],uLasC[4];
 vec4 over(vec4 c,vec4 s){return s+c*(1.-s.a);}
 vec4 tint(vec3 rgb,float a){return vec4(rgb*a,a);}
 float hash(float n){return fract(sin(n*127.1)*43758.5453);}
@@ -35738,7 +35957,7 @@ vec4 pens(){
   float y=vP.y/uSize.y;if(y<.16)return vec4(0.);
   float fi=18.*pow((y-.16)/.84,1./1.5);vec4 s=vec4(0.);
   for(int k=0;k<2;k++){float row=floor(fi)+float(k),ry=.16+.84*pow(row/18.,1.5),sc=mix(.35,1.,ry),cell=26.*sc,r=7.*sc,by=ry*uSize.y,i=floor(vP.x/cell);
-    for(int j=-1;j<=1;j++){float n=i+float(j)+row*37.,h=hash(n);if(hash(n*3.1)>.8)continue;
+    for(int j=-1;j<=1;j++){float n=i+float(j)+row*37.,h=hash(n);if(hash(n*3.1)>uPenKeep)continue;
       float sw=sin(uBeats*3.14159+h*6.2832),cs=cos(sw*.35),sn=sin(sw*.35);
       vec2 q=vP-vec2((i+float(j)+.5)*cell+(h-.5)*cell*.5+sw*r*.8,by-r*1.5+(hash(n*7.7)-.5)*r*1.6);q=vec2(cs*q.x+sn*q.y,-sn*q.x+cs*q.y);q.y*=.38;float d=dot(q,q)/(r*r);if(d>9.)continue;
       float a=(exp(-d/.06)*.95+exp(-d/.7)*.3)*mix(.45,1.,sc)*(.55+.45*hash(n*9.1))*(.5+.5*uPulse);s+=vec4((hash(n*5.3)<.5?uPenA:uPenB)*a,a);}}
@@ -35840,7 +36059,7 @@ const rhythmCreateStageGL = canvas => {
   gl.disable(gl.DEPTH_TEST);
   gl.clearColor(0, 0, 0, 0);
   const u = {};
-  ['uSize', 'uRes', 'uArt', 'uStatic', 'uArtA', 'uFx', 'uMode', 'uBeamL', 'uBeamR', 'uBeamC', 'uBeamBox', 'uLive', 'uPulse', 'uBeats', 'uPenA', 'uPenB', 'uLas', 'uLasC'].forEach(name => {
+  ['uSize', 'uRes', 'uArt', 'uStatic', 'uArtA', 'uFx', 'uMode', 'uBeamL', 'uBeamR', 'uBeamC', 'uBeamBox', 'uLive', 'uPulse', 'uBeats', 'uPenA', 'uPenB', 'uLas', 'uLasC', 'uPenKeep'].forEach(name => {
     u[name] = gl.getUniformLocation(prog, name);
   });
   gl.uniform1i(u.uArt, 0);
@@ -35893,7 +36112,11 @@ const rhythmCreateStageGL = canvas => {
       artA,
       fx,
       tier,
-      live = null
+      live = null,
+      beam = true,
+      sparks = 'MANY',
+      laser = true,
+      pens = 'MANY'
     }) {
       const pw = Math.max(1, Math.round(w * scale)),
         ph = Math.max(1, Math.round(h * scale));
@@ -35941,7 +36164,7 @@ const rhythmCreateStageGL = canvas => {
         put(u.uBeamL, -22 + 28 * swing(0), -.1 * w + bw / 2);
         put(u.uBeamR, 22 - 28 * swing(3500), w + .1 * w - bw / 2);
         const rgba = RHYTHM_STAGE_GL_BEAM_RGBA[tier] || RHYTHM_STAGE_GL_BEAM_RGBA[0];
-        gl.uniform4f(u.uBeamC, rgba[0] / 255, rgba[1] / 255, rgba[2] / 255, (rgba[3] || 0) * .75);
+        gl.uniform4f(u.uBeamC, rgba[0] / 255, rgba[1] / 255, rgba[2] / 255, beam ? (rgba[3] || 0) * .75 : 0);
         gl.uniform2f(u.uBeamBox, bw, bh);
       }
       const liveOn = !!(fx && live);
@@ -35970,7 +36193,7 @@ const rhythmCreateStageGL = canvas => {
           laserColors[i * 4] = color[0] / 255;
           laserColors[i * 4 + 1] = color[1] / 255;
           laserColors[i * 4 + 2] = color[2] / 255;
-          laserColors[i * 4 + 3] = on ? (.3 + .7 * pulse) * .8 : 0;
+          laserColors[i * 4 + 3] = on && laser ? (.3 + .7 * pulse) * .8 : 0;
         });
         gl.uniform4fv(u.uLas, lasers);
         gl.uniform4fv(u.uLasC, laserColors);
@@ -35981,7 +36204,7 @@ const rhythmCreateStageGL = canvas => {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.uniform2f(su.uSize, w, h);
-      for (const layer of [0, 1]) {
+      for (const layer of sparks === 'NONE' ? [] : sparks === 'FEW' ? [1] : [0, 1]) {
         const spec = RHYTHM_STAGE_SPARKS[layer],
           end = spec.end,
           off = timeMs / spec.duration % 1 * h;
@@ -36005,7 +36228,8 @@ const rhythmCreateStageGL = canvas => {
           gl.scissor(0, ph - top, pw, top);
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
-        gl.uniform1f(u.uMode, 2);
+        gl.uniform1f(u.uPenKeep, pens === 'FEW' ? .35 : .8);
+        gl.uniform1f(u.uMode, pens === 'NONE' ? 3 : 2);
         gl.scissor(0, 0, pw, ph - top);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         gl.disable(gl.SCISSOR_TEST);
@@ -38343,16 +38567,27 @@ const RhythmTapTest = ({
   }, [settings.effectAmount, settings.lightweightMode, renderQualityStill]);
   const lifeBoxRef = useRef(null),
     lifeDamageRef = useRef(null);
-  const stageLevel = rhythmStageLevel(settings);
+  const stageBaseLevel = rhythmStageLevel(settings);
+  const stageLevel = rhythmFxStageLevel(settings, stageBaseLevel);
   const stageArtRef = useRef(null),
     stagePulseRef = useRef(null);
   const stageGlWanted = useState(() => stageLevel !== 'SIMPLE' && (rhythmStageGlActive(webglWanted) || stageLevel === 'LIVE' && rhythmStageGlPreference() !== 'css' && rhythmWebglGpuUsable()))[0];
   const [stageGlLost, setStageGlLost] = useState(false);
   const stageGl = stageGlWanted && stageLevel !== 'SIMPLE' && !stageGlLost;
   const stageGlRef = useRef(null);
-  const roadFxOn = settings.roadFx === true && settings.effectAmount !== 'MINIMAL' && !settings.lightweightMode;
+  const roadFxBase = settings.roadFx === true && settings.effectAmount !== 'MINIMAL' && !settings.lightweightMode;
+  const roadBeatLineOn = rhythmFxOn(settings, 'beatLine', roadFxBase),
+    roadEdgeOn = rhythmFxOn(settings, 'roadEdge', roadFxBase),
+    roadFogOn = rhythmFxOn(settings, 'roadFog', roadFxBase);
+  const roadFxOn = roadBeatLineOn || roadEdgeOn || roadFogOn;
   const roadFxRef = useRef(null);
   roadFxRef.current = roadFxOn && !tutorial ? rhythmSongBeatGrid(song.songId) : null;
+  const roadPartsRef = useRef(null);
+  roadPartsRef.current = {
+    line: roadBeatLineOn,
+    edge: roadEdgeOn,
+    fog: roadFogOn
+  };
   const roadLinesRef = useRef(null);
   if (!roadLinesRef.current) roadLinesRef.current = new Float32Array(6 * 64);
   const roadGlowRef = useRef(null);
@@ -38363,6 +38598,7 @@ const RhythmTapTest = ({
     return grid ? Math.round(Math.min(1400, Math.max(500, grid.beatMs * 2))) : 900;
   })();
   const stageArtSrc = stageLevel !== 'SIMPLE' && typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
+  const stageArtSize = rhythmFxArtSize(settings);
   const hudArtSrc = typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
   useEffect(() => {
     const canvas = stageArtRef.current;
@@ -38383,7 +38619,7 @@ const RhythmTapTest = ({
       alive = false;
       img.onload = null;
     };
-  }, [stageArtSrc, stageGl]);
+  }, [stageArtSrc, stageGl, stageArtSize]);
   const sideMonsterElements = useMemo(() => {
     if (settings.sideMonsterOpacity === 'OFF') return null;
     const opacity = rhythmSideMonsterOpacityValue(settings.sideMonsterOpacity);
@@ -38597,14 +38833,14 @@ const RhythmTapTest = ({
   const [comboMilestone, setComboMilestone] = useState(0);
   const comboMilestoneTier = Math.floor((Number(view.combo) || 0) / RHYTHM_COMBO_MILESTONE_STEP);
   useEffect(() => {
-    if (settings.lightweightMode || settings.effectAmount === 'MINIMAL' || comboMilestoneTier <= 0) {
+    if (!rhythmFxOn(settings, 'combo100', !settings.lightweightMode && settings.effectAmount !== 'MINIMAL') || comboMilestoneTier <= 0) {
       setComboMilestone(0);
       return;
     }
     setComboMilestone(comboMilestoneTier * RHYTHM_COMBO_MILESTONE_STEP);
     const timer = setTimeout(() => setComboMilestone(0), 1100);
     return () => clearTimeout(timer);
-  }, [comboMilestoneTier, settings.lightweightMode, settings.effectAmount]);
+  }, [comboMilestoneTier, settings.lightweightMode, settings.effectAmount, settings.fx]);
   const comboMilestoneStage = Math.min(5, comboMilestoneTier);
   const lifeRatio = rhythmLifeRatio(view.life);
   const lifeState = rhythmLifeState(view.life);
@@ -38612,7 +38848,15 @@ const RhythmTapTest = ({
   const stageTierNow = Math.min(3, Math.floor(comboTier / 2));
   const stageHostRef = useRef(null);
   const [stageImages, setStageImages] = useState(null);
-  const stageFxOn = (stageLevel === 'VIVID' || stageLevel === 'LIVE') && settings.effectAmount !== 'MINIMAL';
+  const stageFxBase = (stageBaseLevel === 'VIVID' || stageBaseLevel === 'LIVE') && settings.effectAmount !== 'MINIMAL';
+  const stageBeamOn = rhythmFxOn(settings, 'searchlight', stageFxBase);
+  const stageSparksPick = rhythmFxPick(settings, 'sparks'),
+    stageSparks = stageSparksPick === 'AUTO' ? stageFxBase ? 'MANY' : 'NONE' : stageSparksPick;
+  const stageLaserOn = rhythmFxOn(settings, 'laser', stageFxBase && stageBaseLevel === 'LIVE');
+  const stagePensPick = rhythmFxPick(settings, 'penlight'),
+    stagePens = stagePensPick === 'AUTO' ? stageFxBase && stageBaseLevel === 'LIVE' ? 'MANY' : 'NONE' : stagePensPick;
+  const stageFxOn = stageBeamOn || stageSparks !== 'NONE';
+  const stageTimingOn = rhythmFxOn(settings, 'timingLight', stageBaseLevel !== 'SIMPLE');
   useEffect(() => {
     const host = stageHostRef.current;
     if (!host || !stageFxOn || stageGl || typeof window === 'undefined' || typeof document === 'undefined') return undefined;
@@ -38692,8 +38936,12 @@ const RhythmTapTest = ({
   const stageGlLiveRef = useRef(null);
   stageGlLiveRef.current = {
     tier: stageTierNow,
-    fx: stageFxOn,
-    live: stageLevel === 'LIVE',
+    fx: stageFxOn || stageLaserOn || stagePens !== 'NONE',
+    beam: stageBeamOn,
+    sparks: stageSparks,
+    laser: stageLaserOn,
+    pens: stagePens,
+    live: stageLevel === 'LIVE' && (stageLaserOn || stagePens !== 'NONE'),
     art: stageLevel === 'CALM' ? .34 : .5,
     grid: stageLevel === 'LIVE' && !tutorial ? rhythmSongBeatGrid(song.songId) : null
   };
@@ -38731,12 +38979,12 @@ const RhythmTapTest = ({
       img.onload = () => {
         if (!alive) return;
         const c = document.createElement('canvas');
-        c.width = 24;
-        c.height = 24;
+        c.width = stageArtSize;
+        c.height = stageArtSize;
         const g = c.getContext('2d');
         if (!g) return;
         try {
-          g.drawImage(img, 0, 0, 24, 24);
+          g.drawImage(img, 0, 0, stageArtSize, stageArtSize);
         } catch (_) {
           return;
         }
@@ -38810,7 +39058,11 @@ const RhythmTapTest = ({
         artA,
         fx,
         tier,
-        live: liveArg
+        live: liveArg,
+        beam: live.beam !== false,
+        sparks: live.sparks || 'MANY',
+        laser: live.laser !== false,
+        pens: live.pens || 'MANY'
       });
     };
     frame = requestAnimationFrame(loop);
@@ -38821,7 +39073,7 @@ const RhythmTapTest = ({
       canvas.removeEventListener('webglcontextlost', onLost);
       renderer.release();
     };
-  }, [stageGl, stageArtSrc, renderQualityStill]);
+  }, [stageGl, stageArtSrc, renderQualityStill, stageArtSize]);
   const comboPosition = RHYTHM_COMBO_POSITIONS.includes(settings.comboPosition) ? settings.comboPosition : 'CENTER';
   const [isLandscape, setIsLandscape] = useState(() => orientationIsLandscape());
   const hudSongLong = !isLandscape && rhythmSongFullName(song).length > 30;
@@ -39240,7 +39492,7 @@ const RhythmTapTest = ({
         const monsterEffect = RHYTHM_MONSTER_EFFECT_LEVELS.includes(settings.monsterNoteEffect) ? settings.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect;
         const bigMonsterEffect = monsterHit && !rhythmMonsterEffectAtMost(monsterEffect, 'OFF') && !monAbOff('spark');
         const flickHit = rhythmNoteVisualType(note) === 'FLICK' ? rhythmFlickDir(note) || 'up' : note.endFlick ? 'up' : '';
-        const hitEffect = rhythmSpawnHitEffect(area, {
+        const hitEffect = rhythmFxOn(settings, 'burst', true) ? rhythmSpawnHitEffect(area, {
           centerRatio: span.center,
           widthRatio: span.width,
           judgment,
@@ -39250,9 +39502,9 @@ const RhythmTapTest = ({
           flick: flickHit,
           finish: rhythmNoteHasBody(note),
           sky: rhythmNoteSkyHeight(note) > 0
-        });
+        }) : null;
         if (hitEffect) restarts.push(hitEffect);
-        if (monsterHit && monsterEffect === 'NORMAL' && !monAbOff('spark') && screenFlashRef.current) restarts.push({
+        if (monsterHit && monsterEffect === 'NORMAL' && !monAbOff('spark') && screenFlashRef.current && rhythmFxOn(settings, 'flash', true)) restarts.push({
           el: screenFlashRef.current,
           attr: 'rhythmFlash'
         });
@@ -39291,24 +39543,43 @@ const RhythmTapTest = ({
           attr: 'rhythmComboPop'
         });
         rhythmRestartAnimations(restarts);
-      } else if (rhythmTapLightOnly(settings)) {
-        const area = playAreaRef.current,
-          lineY = RHYTHM_JUDGMENT_LINE_Y.ratio,
-          nowMs = run.audio?.songTimeMs?.() ?? note.timeMs;
-        const span = rhythmNoteIsSlide(note) ? rhythmProjectSlideSpan(rhythmReleaseLane(note), note, lineY, nowMs) : rhythmNoteVisualSpan(note, note.lane, lineY, nowMs);
-        const flickHit = rhythmNoteVisualType(note) === 'FLICK' ? rhythmFlickDir(note) || 'up' : note.endFlick ? 'up' : '';
-        const hitEffect = rhythmSpawnHitEffect(area, {
-          centerRatio: span.center,
-          widthRatio: span.width,
-          judgment,
-          monster: false,
-          precise: preciseHit,
-          defer: true,
-          flick: flickHit,
-          finish: rhythmNoteHasBody(note),
-          sky: rhythmNoteSkyHeight(note) > 0
+      } else {
+        const extra = [];
+        if (rhythmFxOn(settings, 'burst', rhythmTapLightOnly(settings))) {
+          const area = playAreaRef.current,
+            lineY = RHYTHM_JUDGMENT_LINE_Y.ratio,
+            nowMs = run.audio?.songTimeMs?.() ?? note.timeMs;
+          const span = rhythmNoteIsSlide(note) ? rhythmProjectSlideSpan(rhythmReleaseLane(note), note, lineY, nowMs) : rhythmNoteVisualSpan(note, note.lane, lineY, nowMs);
+          const flickHit = rhythmNoteVisualType(note) === 'FLICK' ? rhythmFlickDir(note) || 'up' : note.endFlick ? 'up' : '';
+          const hitEffect = rhythmSpawnHitEffect(area, {
+            centerRatio: span.center,
+            widthRatio: span.width,
+            judgment,
+            monster: false,
+            precise: preciseHit,
+            defer: true,
+            flick: flickHit,
+            finish: rhythmNoteHasBody(note),
+            sky: rhythmNoteSkyHeight(note) > 0
+          });
+          if (hitEffect) extra.push(hitEffect);
+        }
+        if (monsterHit && screenFlashRef.current && rhythmFxPick(settings, 'flash') === 'ON') extra.push({
+          el: screenFlashRef.current,
+          attr: 'rhythmFlash'
         });
-        if (hitEffect) rhythmRestartAnimations([hitEffect]);
+        if (rhythmFxPick(settings, 'judgeFlow') === 'ON') {
+          const text = rhythmNoteIsSky(note) ? skyJudgmentTextRef.current : judgmentTextRef.current;
+          if (text) extra.push({
+            el: text,
+            attr: 'rhythmJudgmentPop'
+          });
+        }
+        if (rhythmFxPick(settings, 'comboBounce') === 'ON' && comboRef.current) extra.push({
+          el: comboRef.current,
+          attr: 'rhythmComboPop'
+        });
+        if (extra.length) rhythmRestartAnimations(extra);
       }
     }
     if (settings.vibrationEnabled && judgment !== 'MISS') RHYTHM_HAPTICS.tap(monsterHit ? 26 : 12);
@@ -39674,7 +39945,7 @@ const RhythmTapTest = ({
     const liveLogEndMs = Number.isFinite(Number(song.playDurationMs)) ? Number(song.playDurationMs) : chart.durationMs;
     const liveLog = rhythmLiveLogSections(run.liveLog, liveLogEndMs);
     const celebrateTitle = achievements.allMarvelous ? 'ALL MARVELOUS!!' : achievements.allExcellent ? 'ALL EXCELLENT!!' : achievements.fullCombo ? 'FULL COMBO!' : null;
-    const showCelebrate = !!celebrateTitle && !failed && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL';
+    const showCelebrate = !!celebrateTitle && !failed && rhythmFxOn(settings, 'fullComboBig', !settings.lightweightMode && settings.effectAmount !== 'MINIMAL');
     const previousBestScore = Math.max(0, Math.floor(Number(run.startBestScore) || 0));
     const recordFx = isNewRecord && previousBestScore > 0 && !failed && !tutorial && !calibrating && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL' ? {
       id: `${Date.now()}-${score}`,
@@ -39730,7 +40001,7 @@ const RhythmTapTest = ({
       }
     } : v);
     onComplete(result, merged);
-  }, [chart.totalNotes, chart.durationMs, difficulty.maxScore, difficulty.id, onComplete, settings.effectAmount, settings.lightweightMode, settings.judgmentTimingOffsetMs, stopFrame, tutorial, calibrating, debugPlay, song.songId, song.playDurationMs, assistOn, mirrorOn, luckOn, multi, multiRewardScale]);
+  }, [chart.totalNotes, chart.durationMs, difficulty.maxScore, difficulty.id, onComplete, settings.effectAmount, settings.lightweightMode, settings.fx, settings.judgmentTimingOffsetMs, stopFrame, tutorial, calibrating, debugPlay, song.songId, song.playDurationMs, assistOn, mirrorOn, luckOn, multi, multiRewardScale]);
   const celebrateTimerRef = useRef(null);
   const [touchReportSent, setTouchReportSent] = useState(null);
   const recordFxId = view.status === 'result' && view.result && view.result.recordFx ? view.result.recordFx.id : null;
@@ -39792,7 +40063,7 @@ const RhythmTapTest = ({
   const scheduleTick = useCallback(() => {
     stopFrame();
     const powerSave = settings.frameRateMode !== 'DEVICE';
-    const stagePulseOn = rhythmStageLevel(settings) !== 'SIMPLE';
+    const stagePulseOn = rhythmFxStageLevel(settings, rhythmStageLevel(settings)) !== 'SIMPLE' && rhythmFxOn(settings, 'timingLight', rhythmStageLevel(settings) !== 'SIMPLE');
     let prevFrameMs = 0,
       avgFrameMs = 1000 / 60,
       lastDrawnMs = 0;
@@ -39915,7 +40186,8 @@ const RhythmTapTest = ({
         maxDpr: noteCanvasMaxDprRef.current,
         sizeScale: settings.noteSize / 100,
         bloom: settingsLiveRef.current.noteBloom === true,
-        motion: settingsLiveRef.current.noteMotionFx === true
+        motion: settingsLiveRef.current.noteMotionFx === true,
+        ...rhythmFxRenderOptions(settings, settingsLiveRef.current)
       });
       {
         const stageClock = stageClockRef.current;
@@ -39962,7 +40234,8 @@ const RhythmTapTest = ({
             lines[o + 5] = Math.min(1, Math.max(0, progress / .25)) * (progress > 1 ? Math.max(0, 1 - (progress - 1) / .3) : 1);
             count++;
           }
-          RHYTHM_CANVAS_RENDERER.drawRoadFx(lines, count, beatIndex >= 0 ? Math.exp(-since / (onBar ? 260 : 170)) * (onBar ? 1 : .55) : 0);
+          const parts = roadPartsRef.current || {};
+          RHYTHM_CANVAS_RENDERER.drawRoadFx(lines, parts.line === false ? 0 : count, parts.edge !== false && beatIndex >= 0 ? Math.exp(-since / (onBar ? 260 : 170)) * (onBar ? 1 : .55) : 0);
         }
         const glowEl = roadGlowRef.current;
         if (glowEl && onBar && beatIndex >= 0 && run._roadBarAt !== beatIndex && typeof glowEl.animate === 'function') {
@@ -40507,7 +40780,8 @@ const RhythmTapTest = ({
             maxDpr: noteCanvasMaxDprRef.current,
             sizeScale: settings.noteSize / 100,
             bloom: live.noteBloom === true,
-            motion: live.noteMotionFx === true
+            motion: live.noteMotionFx === true,
+            ...rhythmFxRenderOptions(settings, live)
           };
           if (R.begin(travel.rect, opts)) {
             const travelMs = rhythmTravelMsForSpeed(settings.noteSpeed),
@@ -40723,7 +40997,7 @@ const RhythmTapTest = ({
     if (canvasNotes) RHYTHM_CANVAS_RENDERER.warmSprites({
       effect: settings.effectAmount,
       lightweight: settings.lightweightMode,
-      tapLight: rhythmTapLightOnly(settings),
+      tapLight: rhythmTapLightOnly(settings) || !['AUTO', 'NONE'].includes(rhythmFxPick(settings, 'burst')),
       maxDpr: noteCanvasMaxDpr
     });
     if (canvasNotes) faceBitmapsRef.current.forEach(face => {
@@ -41228,7 +41502,8 @@ const RhythmTapTest = ({
       effect: settings.effectAmount,
       lightweight: settings.lightweightMode,
       maxDpr: noteCanvasMaxDprRef.current,
-      sizeScale: settings.noteSize / 100
+      sizeScale: settings.noteSize / 100,
+      ...rhythmFxRenderOptions(settings)
     })) return;
     RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);
     RHYTHM_CANVAS_RENDERER.end();
@@ -42284,15 +42559,16 @@ const RhythmTapTest = ({
       onClick: abort
     }, multi && 'みんなの結果を見る', !multi && raidPlay && 'レイドの結果を見る', !multi && !raidPlay && React.createElement(React.Fragment, null, debugPlay ? '音ゲーデバッグへ戻る' : '曲えらびへ戻る'))))))));
   }
-  return React.createElement("main", {
+  return React.createElement("main", _extends({
     "data-rhythm-tap-test": true,
     className: "relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[var(--mh-sa-left)] landscape:pr-[var(--mh-sa-right)] [container-type:inline-size]",
     "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
-    "data-rhythm-effect": settings.effectAmount,
+    "data-rhythm-effect": settings.effectAmount
+  }, rhythmFxAttrs(settings), {
     style: {
       touchAction: 'none'
     }
-  }, songIntro && (() => {
+  }), songIntro && (() => {
     const introTitle = rhythmSongFullName(song),
       introTitleFont = (() => {
         const avail = Math.min((typeof window !== 'undefined' ? window.innerWidth : 844) * .72, 560) - 16,
@@ -42621,7 +42897,7 @@ const RhythmTapTest = ({
     className: "block text-5xl font-black leading-none"
   }, "LIFE 0"), React.createElement("small", {
     className: "mt-1 block text-xs font-black tracking-[0.34em]"
-  }, "DOWN")), React.createElement("div", {
+  }, "DOWN")), React.createElement("div", _extends({
     ref: playAreaRef,
     "data-rhythm-play-area": true,
     "data-rhythm-mon-layers": monLayersOn ? '1' : undefined,
@@ -42631,7 +42907,9 @@ const RhythmTapTest = ({
     "data-rhythm-strip": RHYTHM_STRIP.value || undefined,
     "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
     "data-rhythm-effect": settings.effectAmount,
-    "data-rhythm-tap-light": rhythmTapLightOnly(settings) ? '1' : undefined,
+    "data-rhythm-tap-light": rhythmTapLightOnly(settings) && rhythmFxPick(settings, 'burst') === 'AUTO' ? '1' : undefined
+  }, rhythmFxAttrs(settings), {
+    "data-fx-lane-line": ['DARK', 'LIGHT'].includes(rhythmFxPick(settings, 'laneLine')) ? rhythmFxPick(settings, 'laneLine') : undefined,
     onPointerDown: pointerDown,
     onPointerMove: pointerMove,
     onPointerUp: pointerEnd,
@@ -42648,22 +42926,24 @@ const RhythmTapTest = ({
       '--mh-judgment-line-bottom': `${rhythmFiniteStep(settings.judgmentLineHeight, RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`,
       filter: settings.effectAmount === 'MINIMAL' ? 'saturate(.78)' : settings.effectAmount === 'LOW' ? 'saturate(.92)' : 'none'
     }
-  }, laneElements, stageLevel !== 'SIMPLE' && React.createElement("div", {
+  }), laneElements, stageLevel !== 'SIMPLE' && React.createElement("div", {
     ref: stageHostRef,
     "data-rhythm-stage": stageLevel,
     "data-stage-tier": String(stageTierNow),
     "data-stage-gl": stageGl ? '1' : undefined,
-    "aria-hidden": "true"
+    "aria-hidden": "true",
+    style: rhythmFxStageStyle(settings)
   }, stageGl && React.createElement("canvas", {
     key: `stage-gl-${renderQualityStill}`,
     ref: stageGlRef,
     "data-rhythm-stage-gl": true
   }), !stageGl && stageArtSrc && React.createElement("canvas", {
+    key: `stage-art-${stageArtSize}`,
     ref: stageArtRef,
     "data-rhythm-stage-art": true,
-    width: "24",
-    height: "24"
-  }), !stageGl && stageFxOn && stageImages && React.createElement(React.Fragment, null, React.createElement("img", {
+    width: stageArtSize,
+    height: stageArtSize
+  }), !stageGl && stageFxOn && stageImages && React.createElement(React.Fragment, null, stageBeamOn && React.createElement(React.Fragment, null, React.createElement("img", {
     "data-rhythm-stage-beam": "left",
     src: stageImages.beams[stageTierNow] || stageImages.beams[0],
     alt: "",
@@ -42673,17 +42953,17 @@ const RhythmTapTest = ({
     src: stageImages.beams[stageTierNow] || stageImages.beams[0],
     alt: "",
     draggable: false
-  }), React.createElement("img", {
+  })), stageSparks === 'MANY' && React.createElement("img", {
     "data-rhythm-stage-sparks": "far",
     src: stageImages.sparks[0],
     alt: "",
     draggable: false
-  }), React.createElement("img", {
+  }), stageSparks !== 'NONE' && React.createElement("img", {
     "data-rhythm-stage-sparks": "near",
     src: stageImages.sparks[1],
     alt: "",
     draggable: false
-  }))), roadFxOn && React.createElement(React.Fragment, null, React.createElement("i", {
+  }))), roadFogOn && React.createElement(React.Fragment, null, React.createElement("i", {
     "data-rhythm-road-haze": true,
     "aria-hidden": "true"
   }), React.createElement("i", {
@@ -42702,7 +42982,7 @@ const RhythmTapTest = ({
     "data-side": "l"
   }), React.createElement("b", {
     "data-side": "r"
-  })), stageLevel !== 'SIMPLE' && React.createElement("i", {
+  })), stageLevel !== 'SIMPLE' && stageTimingOn && React.createElement("i", {
     ref: stagePulseRef,
     "data-rhythm-stage-pulse": true,
     "data-stage-tier": String(Math.min(3, Math.floor(comboTier / 2))),
@@ -42831,6 +43111,7 @@ const RhythmTapTest = ({
     "data-rhythm-judge-text-pos": !skyChart && judgeTextPos !== 'now' ? judgeTextPos : undefined,
     className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
     style: {
+      ...rhythmJudgeScaleStyle(settings),
       bottom: !skyChart && (judgeTextPos === 'raise' || judgeTextPos === 'both') ? 'calc(var(--mh-judgment-line-bottom,12%) + 26%)' : 'calc(var(--mh-judgment-line-bottom,12%) + 38px)',
       ...(!skyChart && (judgeTextPos === 'fade' || judgeTextPos === 'both') ? {
         opacity: .55
@@ -42876,6 +43157,7 @@ const RhythmTapTest = ({
     "data-rhythm-sky-judgment-display": true,
     className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
     style: {
+      ...rhythmJudgeScaleStyle(settings),
       bottom: `calc(var(--mh-judgment-line-bottom,12%) + ${(RHYTHM_SKY_LIFT.ratio * 100).toFixed(2)}% ${RHYTHM_HELL_SKY_TEXT.id === 'below' ? '- 64px' : '+ 38px'})`
     }
   }, settings.judgmentFx === true && React.createElement("i", {
@@ -129312,7 +129594,8 @@ function MonsterHeroGame() {
     const preset = RHYTHM_LOOK_PRESETS.find(item => item.id === id) || RHYTHM_LOOK_PRESETS.find(item => item.id === 'LIGHT');
     return {
       ...rhythmSettings,
-      ...(preset ? preset.values : {})
+      ...(preset ? preset.values : {}),
+      fx: {}
     };
   }, [rhythmSettings]);
   useEffect(() => {
