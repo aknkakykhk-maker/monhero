@@ -71,6 +71,8 @@ const readBoard = (s) => s.page.evaluate(() => {
     enemyBar: bar.slice(0, 60),
     enemy: bm ? { name: bm[1].trim(), dist: bm[2], hp: Number(bm[3].replace(/,/g, '')), max: Number(bm[4].replace(/,/g, '')) } : null,
     notice: ((document.querySelector('[data-enemy-notice]') || {}).innerText || '').replace(/\s+/g, ' ').trim().slice(0, 40),
+    // ソラシドの自動化の AIコピーが出ているか(出ているあいだは重ねて置かない。2026-11-01)
+    aiCopyOut: !!document.querySelector('[data-tactics-ai-copy-out="1"]'),
     intent: ((document.querySelector('[data-enemy-intent]') || {}).innerText || '').replace(/\s+/g, ' ').trim().slice(0, 60),
     aimed: (slots.find((x) => x.aimed) || {}).i ?? null, aimedDamage: slots.reduce((a, x) => a + x.aimDamage, 0),
     hand, inBattle: !!action || hand.length > 0 || !!document.querySelector('[data-tactics-party-slot]'),
@@ -259,6 +261,15 @@ function decidePick(b, opts, ctx) {
       // 残りターンで倒しきれない見込みのときは、倒れるのを防ぐときだけ守る
       return rushing ? deadly : (deadly || heavy);
     };
+    // ★きゅうこの譜面(2026-11-01 点検で教えた): 単体攻撃を、置いた子が引き受けて被ダメも減る。
+    //   狙われた子が大きく削られそうで、ほかにその1発を受けても半分以上残る子がいれば、その子へ置く(ガードより先。行動回数を使わない)
+    if ((threat === 'single' || threat === 'big') && !ctx.kyukoed) {
+      const target = b.slots.find((x) => x.aimed);
+      const kyu = opts.find((o) => /^きゅうこ/.test(o.card.label.replace(/^\d+\s*/, '')));
+      const tank = target && target.aimDamage && [...alive].filter((x) => x.i !== target.i && x.hp && x.hp.now - target.aimDamage >= x.hp.max * 0.5)
+        .sort((p, q) => q.hp.now - p.hp.now)[0];
+      if (kyu && target && tank && needFor(target)) { ctx.kyukoed = true; return { kind: 'support', card: kyu.card, slot: tank.i, why: `${target.name}への${threat === 'big' ? '必殺技' : '攻撃'}を${tank.name}が引き受ける(きゅうこの譜面)` }; }
+    }
     if (threat === 'multi' || threat === 'single' || threat === 'big') {
       const target = b.slots.find((x) => x.aimed);
       // 3連撃は同じ子へ2枚(連撃ガード)。必殺技も1枚で受けきれないことが多いので、倒れそうなら2枚重ねる
@@ -301,6 +312,13 @@ function decidePick(b, opts, ctx) {
   // ★ニコラオの力は手札に来たら早めに置く(2026-10-10 ダイスくん: 上手な使い方は 1ラン 5.0 回・1〜5 ターン目に 66%。ボットは 1.3 回で、Expert で +0.91 WAVE の差)
   const nikolao = process.env.PLAYBOT_TACTICS_EX_EARLY !== '0' && named2(/^ニコラオ/);
   if (nikolao && !ctx.buffed && b.enemy && b.enemy.hp > b.enemy.max * 0.3) { ctx.buffed = true; return { kind: 'support', card: nikolao.card, why: '手札に来たので早めに置く(ニコラオの力)' }; }
+  // ★ソラシドの自動化(2026-11-01 点検で教えた): 置いた子の AIコピーが次のターンから5人目として戦う。
+  //   敵のライフがまだ多いうちに、いちばんダメージを出している間合いの子(いなければガッツの多い子)へ置く
+  const sora = named2(/^ソラシド/);
+  if (sora && !ctx.copied && !b.aiCopyOut && b.enemy && b.enemy.hp > b.enemy.max * 0.4) {
+    const main = alive.find((x) => ctx.mainDist != null && x.i === ctx.mainDist) || [...alive].sort((p, q) => (q.guts ? q.guts.now : 0) - (p.guts ? p.guts.now : 0))[0];
+    if (main) { ctx.copied = true; return { kind: 'support', card: sora.card, slot: main.i, why: `${main.name}の AIコピーを出す(ソラシドの自動化)` }; }
+  }
   if (momo && leanG && !ctx.healed) return { kind: 'support', card: momo.card, why: 'ガッツが細った子がいる(ももすけ: ガッツ回復)' };
   if (kiki && !ctx.buffed && richestG >= 0.3 && b.enemy && b.enemy.hp > b.enemy.max * 0.3) return { kind: 'support', card: kiki.card, why: '次のターンからカードの上限を増やす(きき)' };
   if (poltz && !ctx.buffed && richestG >= 0.3 && b.enemy && b.enemy.hp > b.enemy.max * 0.4) return { kind: 'support', card: poltz.card, why: '受けるたびにガッツが戻るようにする(ポルツ)' };
@@ -805,7 +823,9 @@ async function chooseBetween(s, mem, log) {
     const atkPct = (t) => pctOf(t, /攻撃\s*(\d+(?:\.\d+)?)%アップ/) + (/攻撃\s*(\d+(?:\.\d+)?)倍/.test(t) && !/自傷/.test(t) ? (pctOf(t, /攻撃\s*(\d+(?:\.\d+)?)倍/) - 1) * 100 : 0);
     // あとから出たアシストカード(2026-10-09 に全部解放で使えるようにした)。ボットが詰まっていた「ガッツ」と「手数」を直接補う
     //   きき=次ターンからカード上限アップ・全体連撃 / ポルツ=受けるたびガッツ回復・自動回復アップ / ももすけ=ガッツ回復・能力永続アップ / メロソ=回復・ガード
-    const named = (t) => (/^きき/.test(t) ? 5 : 0) + (/^ポルツ/.test(t) ? (starved ? 5 : 3.5) : 0) + (/^ももすけ/.test(t) ? (starved ? 4.5 : 3) : 0) + (/^メロソ/.test(t) ? (hurt ? 3.5 : 2) : 0);
+    const named = (t) => (/^きき/.test(t) ? 5 : 0) + (/^ポルツ/.test(t) ? (starved ? 5 : 3.5) : 0) + (/^ももすけ/.test(t) ? (starved ? 4.5 : 3) : 0) + (/^メロソ/.test(t) ? (hurt ? 3.5 : 2) : 0)
+      // きゅうこ=単体攻撃の引き受け+被ダメ減(打たれると効く)/ ソラシド=AIコピーが5人目として戦う(手数)。2026-11-01 点検で足した
+      + (/^きゅうこ/.test(t) ? (hurt ? 3.5 : 2) : 0) + (/^ソラシド/.test(t) ? 3.5 : 0);
     const score = (t) => (/自傷/.test(t) ? -5 : 0) + atkPct(t) / 5 + (isHeal(t) ? (hurt ? 3 : 1.5) : 0) + named(t)
       + (isGuts(t) ? (starved ? 3.2 : 1.2) : 0) + (/被ダメ|軽減|守り/.test(t) ? (hurt ? 2.5 : 1) : 0) + (/行動を無効|スタン/.test(t) ? 2.5 : 0);
     let best = cards.sort((a, z) => score(z) - score(a))[0];
