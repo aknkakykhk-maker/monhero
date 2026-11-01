@@ -30,6 +30,9 @@ const registry=JSON.parse(fs.readFileSync(path.join(ROOT,'tools/mode/authoring/r
 
 // 遊ぶのが長すぎない上限。先行公開の曲はどれもこれより短い。
 const MAX_PLAY_MS=5*60*1000;
+// 5分を超えてよい曲(社長がその曲だけ例外にしたもの)。ほかの曲の上限は変えない
+//   altar_world_tree … 2026-11-01 社長「この曲だけ例外」(原曲は6分25秒のまま最後まで遊べる。イベント「鍵の向こう側へ」の対象曲)
+const LONG_PLAY_ALLOWED=new Set(['altar_world_tree']);
 
 for(const songId of RHYTHM_DEMO_SONG_IDS){
   const song=RHYTHM_SONGS.find(entry=>entry.songId===songId);
@@ -49,7 +52,7 @@ for(const songId of RHYTHM_DEMO_SONG_IDS){
   ok(`${song.displayName}: 最後のノーツが曲の終わりより前にある`,lastNoteMs<durationMs,
     `最後 ${seconds(lastNoteMs)} / 終わり ${seconds(durationMs)}`);
 
-  ok(`${song.displayName}: 遊ぶ長さが5分を超えない`,durationMs<=MAX_PLAY_MS,seconds(durationMs));
+  ok(`${song.displayName}: 遊ぶ長さが5分を超えない${LONG_PLAY_ALLOWED.has(songId)?'(社長が決めた例外の曲)':''}`,durationMs<=MAX_PLAY_MS||LONG_PLAY_ALLOWED.has(songId),seconds(durationMs));
 
   // 音源より短く終わる曲は、どこで終わるかが曲の一覧に書いてあること。
   // 書いていないと、次に譜面を作り直したとき黙って元の長さへ戻る。

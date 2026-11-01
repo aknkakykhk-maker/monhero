@@ -270,7 +270,7 @@ check('画質の設定がノーツの canvas の画素密度に効き、描く�
   gameSrc.includes("const noteCanvasMaxDpr=Math.min(settings.effectAmount==='MINIMAL'?2:RHYTHM_NOTE_CANVAS_MAX_DPR,rhythmRenderQualityCap(renderQualityNow,RHYTHM_NOTE_CANVAS_MAX_DPR));")
   &&gameSrc.includes('noteCanvasMaxDprRef.current=noteCanvasMaxDpr;')
   &&gameSrc.includes('maxDpr:noteCanvasMaxDprRef.current,sizeScale:')
-  &&gameSrc.includes('lightweight:settings.lightweightMode,tapLight:rhythmTapLightOnly(settings),maxDpr:noteCanvasMaxDpr});'));
+  &&gameSrc.includes("lightweight:settings.lightweightMode,tapLight:rhythmTapLightOnly(settings)||!['AUTO','NONE'].includes(rhythmFxPick(settings,'burst')),maxDpr:noteCanvasMaxDpr});"));
 check('画質「自動」は詰まりが続いたときだけ一段下げ、上げ直さない',
   gameSrc.includes("if(settings.renderQuality==='AUTO'){const aq=run._autoQuality")
   &&gameSrc.includes('aq.slow/aq.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO&&stepAutoQualityRef.current')
@@ -322,9 +322,10 @@ check('脈打ちで動かすのは厚みと濃さだけ(判定ラインの位置
   const block=data.slice(start,data.indexOf('}',data.indexOf('100%{',start)));
   return /transform:scaleY\(/.test(block)&&!/translate/.test(block)&&!/\btop\b|\bbottom\b/.test(block);
 })());
+// 2026-11-01 「判定ラインの脈打ち」を1つずつ選べるようにした。おまかせ(既定)は演出量・軽量モードと同じ値が data-fx-judge-line-pulse(-lw) に入る
 check('軽量モード・演出量MINIMALでは脈打ちを止める',
-  data.includes('[data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-judgment-line]')
-  &&data.includes('[data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-judgment-line]'));
+  data.includes('[data-rhythm-play-area][data-fx-judge-line-pulse-lw="true"] [data-rhythm-judgment-line]')
+  &&data.includes('[data-rhythm-play-area][data-fx-judge-line-pulse="MINIMAL"] [data-rhythm-judgment-line]'));
 
 // --- 2026-09-12 モンスターノーツのかくつき ---
 // 【ユーザー指摘】「モンスターノーツでかくつきがまた出てきた /
