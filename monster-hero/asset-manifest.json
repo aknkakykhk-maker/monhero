@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "dc9538a8422d",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":121065503,"count":747},"card":{"bytes":34095815,"count":962},"all":{"bytes":262548764,"count":1802},"core":{"bytes":15681650,"count":22}},
+  "id": "e329d4de573a",
+  "packs": {"beat":{"bytes":110525767,"count":95},"battle":{"bytes":121065503,"count":747},"card":{"bytes":34095815,"count":962},"all":{"bytes":265687085,"count":1804},"core":{"bytes":15790750,"count":22}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -58,6 +58,7 @@
     "audio/bgm-pro-battle-01.mp3": {"v":"59a3a0fbfef1","size":2458886,"pack":"battle"},
     "audio/bgm-pro-battle-02.mp3": {"v":"f572c81a9ef6","size":2287127,"pack":"battle"},
     "audio/bgm-profile.mp3": {"v":"523789845ff1","size":641055,"pack":"battle"},
+    "audio/bgm-rebellion.mp3": {"v":"cc5dab0bab8b","size":3048624,"pack":"beat"},
     "audio/bgm-result.mp3": {"v":"c4dc9d2fb8a5","size":172583,"pack":"battle"},
     "audio/bgm-rising-hope.mp3": {"v":"5b56b8f9d099","size":1083024,"pack":"beat"},
     "audio/bgm-rose-short.mp3": {"v":"57888379506b","size":1385424,"pack":"beat"},
@@ -1754,6 +1755,7 @@
     "images/song-art/mou-hitotsu-no-sekai-e.jpg": {"v":"82a25df70a16","size":87659,"pack":"beat"},
     "images/song-art/nothing-without-you.jpg": {"v":"44f9c91f5487","size":22672,"pack":"beat"},
     "images/song-art/only-my-railgun.jpg": {"v":"a79e2735865b","size":82919,"pack":"beat"},
+    "images/song-art/rebellion.jpg": {"v":"ef38f7ab2382","size":89697,"pack":"beat"},
     "images/song-art/rising-hope.jpg": {"v":"4c1e106d0e39","size":56296,"pack":"beat"},
     "images/song-art/rose.jpg": {"v":"c877115de5a6","size":79633,"pack":"beat"},
     "images/song-art/sad-song.jpg": {"v":"cc2bf8ddee1c","size":53804,"pack":"beat"},
@@ -1807,7 +1809,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"13a142ddea51","size":277606,"pack":"core"},
+    "tailwind.css": {"v":"f33abc4367dd","size":277606,"pack":"core"},
     "data/images/images-ally.js": {"v":"3f1b217d1e16","size":70535,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"f908809f4b48","size":60701,"pack":"core"},
@@ -1815,17 +1817,17 @@
     "data/breeder.js": {"v":"53591f2a00d9","size":120833,"pack":"core"},
     "data/enemy-monsters.js": {"v":"6811f59c3732","size":7879,"pack":"core"},
     "data/skills.js": {"v":"06be9af9b367","size":4375,"pack":"core"},
-    "data/rhythm-mode.js": {"v":"3e8211d3c75f","size":3892325,"pack":"core"},
+    "data/rhythm-mode.js": {"v":"f082c6ffe2a2","size":4000444,"pack":"core"},
     "data/rhythm-lane-svg.js": {"v":"ad47da271965","size":11949,"pack":"core"},
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"790ee809e410","size":78171,"pack":"core"},
-    "data/changelog.js": {"v":"7eb75c676ac3","size":1541554,"pack":"core"},
+    "data/changelog.js": {"v":"cd2335096fba","size":1542328,"pack":"core"},
     "data/help.js": {"v":"233c2ab8b8c1","size":692657,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":9047,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
     "data/assistants.js": {"v":"a73e7f49a073","size":971838,"pack":"core"},
     "data/card-battle-cards.js": {"v":"9c6a8274b2f6","size":114416,"pack":"core"},
-    "game-system.compiled.js": {"v":"c7962534dd60","size":7625964,"pack":"core"}
+    "game-system.compiled.js": {"v":"83f038f549a0","size":7626171,"pack":"core"}
   }
 }

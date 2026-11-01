@@ -50,6 +50,17 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-11-01 11:53", type:'update', title:'新曲「Rebellion ～Beyond the Lock～」を追加しました', status:'new', group:'rhythm',
+    image:'images/song-art/rebellion.jpg?v=ef38f7ab2382',
+    items:[
+      '「Stay With Me ～Locked Fate～」の続きのお話、「Rebellion ～Beyond the Lock～」(4分14秒)を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.9 ／ NORMAL Lv.11 ／ HARD Lv.16 ／ EXPERT Lv.25 ／ MASTER Lv.34 ／ HELL Lv.57 です。',
+      'ノーツ数は 430 ／ 499 ／ 675 ／ 826 ／ 957 ／ 1168 です。',
+      'テンポに合わせて、速いノーツを押し続ける譜面です。',
+    ],
+    assistantNotice:{ id:'update_notice_rebellion_v1', type:'content' },
+  },
+  {
     // 2026-10-31 社長の決め「ETERNALの上の難易度 INFERNO」(ボスは起き上がらず層のシールド・割るたびに攻撃+60%・デュラハン/ムーは連撃・強度400)
     date: "2026-11-01 04:48", type:'feature', title:'極限チャレンジにいちばん奥の難易度 INFERNO を追加しました', status:'new',
     assistantNotice:{id:'update_notice_inferno_v1',type:'mode'},
