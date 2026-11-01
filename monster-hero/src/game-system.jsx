@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0bea67a617db5c7e
+// generated-sha256: 17f9af60e3279554
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -46346,10 +46346,13 @@ function BattleScreen({
                           (2026-09-22 ユーザー指摘「カードも距離枠も全て安っぽくない？」)。
                           読む順が「何の値か → いくつか」で固定され、4枚並べたときに縦がそろう */}
                       <div className="flex h-[10px] items-center justify-between leading-none">
-                        <span className="shrink-0 whitespace-nowrap text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] font-black tracking-wider [@media(orientation:landscape)_and_(max-height:520px)]:tracking-normal text-pink-300">ライフ</span>
-                        <span className="font-mono leading-none">{/* ★ミルフィーシールド(ドリーミィのEX)の残り。ライフの数字の前に出す */}
-                          {Array.isArray(tacticsShields)&&tacticsShields[i]>0&&<span data-tactics-shield={tacticsShields[i]} className="mr-1 text-[9px] font-black text-sky-200">🛡️{tacticsShields[i]}</span>}
-                          <span className="text-[11px] font-black text-white">{tacticsUnit.hp}</span><span className="text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] text-slate-400">/{tacticsUnit.maxHp}</span></span>
+                        {/* ★ミルフィーシールド(ドリーミィのEX)の残りは、「ライフ」の文字の代わりに出す。ライフの数字の前に足すと、
+                            狭い枠(375幅など)で行に入り切らず折り返して、下の GUTS の行に重なっていた(2026-11-01 タクティクスの点検) */}
+                        {Array.isArray(tacticsShields)&&tacticsShields[i]>0
+                          ?<span data-tactics-shield={tacticsShields[i]} className="mr-1 shrink-0 whitespace-nowrap text-[9px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[8px] font-black leading-none text-sky-200">🛡️{tacticsShields[i]}</span>
+                          :<span className="shrink-0 whitespace-nowrap text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] font-black tracking-wider [@media(orientation:landscape)_and_(max-height:520px)]:tracking-normal text-pink-300">ライフ</span>}
+                        <span className="whitespace-nowrap font-mono leading-none">
+                          <span className="text-[11px] font-black text-white">{tacticsUnit.hp}</span><span className={`text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] text-slate-400${Array.isArray(tacticsShields)&&tacticsShields[i]>0?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}>/{tacticsUnit.maxHp}</span></span>
                       </div>
                       <div className="relative h-[2px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
                         <div data-tactics-hp-bar className={`h-full w-full origin-left transition-transform duration-1000 ${tacticsUnit.downed?'bg-gradient-to-r from-emerald-500 to-teal-300':'bg-gradient-to-r from-rose-500 to-pink-300'}`} style={{transform:`scaleX(${Math.min(100,Math.max(0,hpPct))/100})`,boxShadow:'0 0 6px rgba(244,114,182,.55)'}}></div>
@@ -73323,7 +73326,7 @@ const CardCupPrizePanel = ({ c, v, now, selfId, prize, reload, getAdapters }) =>
       {prize.fee && <p data-card-cup-fee className="text-[12px] font-black text-sky-100">{`参加費 ${cardCupItemText(prize.fee.item, prize.fee.amount)}(主催・主催仲間は払いません)`}</p>}
       {(prize.pool.length > 0 || prize.fee) && (
         <div data-card-cup-split className="space-y-0.5 text-[12px] font-bold text-slate-200">
-          {prize.split.map((pct, i) => <div key={i} className="flex justify-between"><span>{`${i + 1}位 ${pct}%`}</span><span className="text-slate-300">{poolFull.map((p) => { const s = shares(p.total)[i] || 0; return s > 0 ? cardCupItemText(p.item, s) : null; }).filter(Boolean).join('・') || '−'}</span></div>)}
+          {prize.split.map((pct, i) => <div key={i} className="flex justify-between gap-2"><span className="shrink-0 whitespace-nowrap">{`${i + 1}位 ${pct}%`}</span><span className="min-w-0 text-right text-slate-300">{(() => { const t = poolFull.map((p) => { const s = shares(p.total)[i] || 0; return s > 0 ? cardCupItemText(p.item, s) : null; }).filter(Boolean); return t.length ? t.map((x, k) => <span key={k} className="whitespace-nowrap">{`${x}${k < t.length - 1 ? '・' : ''}`}</span>) : '−'; })()}</span></div>)}
           <p className="text-[11px] text-slate-400">{`${players}人そろったときの見込み。主催・主催仲間は受け取りません(その分は次の順位の人へ)`}</p>
         </div>
       )}
@@ -86403,7 +86406,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const cardScopeLabel = (card) => {
     if (!card || !isTacticsMode(runMode)) return null;
     if (isAttackCard(card)) return '敵へ';
-    if (card.type === 'guard' || card.type === 'weak_guard' || card.subType === 'buff_myaru') return '単体';
+    // きゅうこの譜面(2026-10-22)も、タクティクスでは置いた子が単体攻撃を引き受け、その子だけ被ダメが減る(2026-11-01 点検で直した)
+    if (card.type === 'guard' || card.type === 'weak_guard' || card.subType === 'buff_myaru' || card.subType === 'cover_kyuko') return '単体';
     return '全体';
   };
   // 色は「見た目だけ」。Tailwindは静的化してあるので、組み立てずにそのまま書く
@@ -102314,6 +102318,8 @@ const createAnimationStyle = () => {
     .mh-card-down-band { animation: mhCardDownBand 1.1s ease-out both; }
     @keyframes mhCardDownBand { 0% { opacity: 0; transform: scaleY(.2); } 15% { opacity: 1; transform: scaleY(1.08); } 25% { transform: scaleY(1); } 82% { opacity: 1; } 100% { opacity: 0; } }
     @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash, .mh-card-dmg-pop, .mh-card-down-band, .mh-card-guard-result { animation: none; } }
+    /* 受けた瞬間の白い光は、動きを止めると白い四角が絵を隠したまま残る(2026-11-01 点検)ので、動きを減らす設定では出さない */
+    @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash { display: none; } }
     /* キラ・レアキラの立ち絵の光(84 の CardKiraAura・cardKiraWrap。2026-10-30 社長「この形で入れて」→
        2026-10-31「バトル中の立ち絵も強化して」「もっとわかりやすく。センター位置をちゃんと合わせて」)。CSS だけ。動かすのは transform と opacity
        (ふちの光の filter だけは色を移すため動かす。ふちの光の中には動く物を入れない)。光の中心・大きさは 84 が体の範囲から決めて style で渡す */

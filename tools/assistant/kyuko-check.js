@@ -156,6 +156,10 @@ check('単体攻撃だけ使った子へ向く(全体攻撃・倒れた子・使
 check('ゲーム側: カードの処理・被ダメの倍率・残りターンの減り・説明文がある',
   /card\.subType==='cover_kyuko'/.test(app) && /\*kyukoTakenMultAt\(slotIdx\)(?:[^\n]*\n\s*\*orihimeTakenMultAt\(slotIdx\))?\)/.test(app) /* 2026-10-27 オリヒメの天河の契りの軽減が後ろに付いてよい */ && /kyukoCutTurns:Math\.max\(0,p\.kyukoCutTurns-1\)/.test(app) && /if\(t\.id==='kyuko'\)\{/.test(app));
 
+// 2026-11-01 点検(レフェリーくんの指摘): タクティクスでは置いた子だけに効くので、手札の札は「支援・単体」
+check('タクティクスの手札の範囲は「単体」(置いた子が引き受け・その子だけ被ダメが減る)',
+  /card\.subType === 'cover_kyuko'\) return '単体'/.test(app));
+
 // ---- 絵 ----
 const exps = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
 check('顔の絵・大きい絵が8表情ぶんそろっている', exps.every(e => fs.existsSync(path.join(ROOT, 'monster-hero', a.assistantFaceImage(kyuko, e)))

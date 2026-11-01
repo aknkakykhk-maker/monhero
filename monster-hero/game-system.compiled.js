@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 65c34e92d42097a1
+// source-sha256: a02d40669b9475a1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -77522,17 +77522,17 @@ function BattleScreen({
         className: `${tacticsNewLayout ? `absolute right-0 bottom-[3px] w-[60%] min-w-0 border-l flex flex-col justify-end py-px px-2 gap-0 backdrop-blur-sm` : 'shrink-0 border-t px-1'} z-20 border-white/[.06] bg-[linear-gradient(90deg,rgba(8,15,31,.86),rgba(15,23,42,.72))]${battleTutorialSpotClass('tacticsParty')}`
       }, React.createElement("div", {
         className: "flex h-[10px] items-center justify-between leading-none"
-      }, React.createElement("span", {
+      }, Array.isArray(tacticsShields) && tacticsShields[i] > 0 ? React.createElement("span", {
+        "data-tactics-shield": tacticsShields[i],
+        className: "mr-1 shrink-0 whitespace-nowrap text-[9px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[8px] font-black leading-none text-sky-200"
+      }, "🛡️", tacticsShields[i]) : React.createElement("span", {
         className: "shrink-0 whitespace-nowrap text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] font-black tracking-wider [@media(orientation:landscape)_and_(max-height:520px)]:tracking-normal text-pink-300"
       }, "ライフ"), React.createElement("span", {
-        className: "font-mono leading-none"
-      }, Array.isArray(tacticsShields) && tacticsShields[i] > 0 && React.createElement("span", {
-        "data-tactics-shield": tacticsShields[i],
-        className: "mr-1 text-[9px] font-black text-sky-200"
-      }, "🛡️", tacticsShields[i]), React.createElement("span", {
+        className: "whitespace-nowrap font-mono leading-none"
+      }, React.createElement("span", {
         className: "text-[11px] font-black text-white"
       }, tacticsUnit.hp), React.createElement("span", {
-        className: "text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] text-slate-400"
+        className: `text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] text-slate-400${Array.isArray(tacticsShields) && tacticsShields[i] > 0 ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
       }, "/", tacticsUnit.maxHp))), React.createElement("div", {
         className: "relative h-[2px] overflow-hidden rounded-full bg-black/60",
         style: {
@@ -124938,13 +124938,21 @@ const CardCupPrizePanel = ({
     className: "space-y-0.5 text-[12px] font-bold text-slate-200"
   }, prize.split.map((pct, i) => React.createElement("div", {
     key: i,
-    className: "flex justify-between"
-  }, React.createElement("span", null, `${i + 1}位 ${pct}%`), React.createElement("span", {
-    className: "text-slate-300"
-  }, poolFull.map(p => {
-    const s = shares(p.total)[i] || 0;
-    return s > 0 ? cardCupItemText(p.item, s) : null;
-  }).filter(Boolean).join('・') || '−'))), React.createElement("p", {
+    className: "flex justify-between gap-2"
+  }, React.createElement("span", {
+    className: "shrink-0 whitespace-nowrap"
+  }, `${i + 1}位 ${pct}%`), React.createElement("span", {
+    className: "min-w-0 text-right text-slate-300"
+  }, (() => {
+    const t = poolFull.map(p => {
+      const s = shares(p.total)[i] || 0;
+      return s > 0 ? cardCupItemText(p.item, s) : null;
+    }).filter(Boolean);
+    return t.length ? t.map((x, k) => React.createElement("span", {
+      key: k,
+      className: "whitespace-nowrap"
+    }, `${x}${k < t.length - 1 ? '・' : ''}`)) : '−';
+  })()))), React.createElement("p", {
     className: "text-[11px] text-slate-400"
   }, `${players}人そろったときの見込み。主催・主催仲間は受け取りません(その分は次の順位の人へ)`)), prize.me.invited && open && React.createElement("div", {
     "data-card-cup-invited": true,
@@ -140273,7 +140281,7 @@ function MonsterHeroGame() {
   const cardScopeLabel = card => {
     if (!card || !isTacticsMode(runMode)) return null;
     if (isAttackCard(card)) return '敵へ';
-    if (card.type === 'guard' || card.type === 'weak_guard' || card.subType === 'buff_myaru') return '単体';
+    if (card.type === 'guard' || card.type === 'weak_guard' || card.subType === 'buff_myaru' || card.subType === 'cover_kyuko') return '単体';
     return '全体';
   };
   const CARD_GENRE_TONE = {
@@ -165626,6 +165634,8 @@ const createAnimationStyle = () => {
     .mh-card-down-band { animation: mhCardDownBand 1.1s ease-out both; }
     @keyframes mhCardDownBand { 0% { opacity: 0; transform: scaleY(.2); } 15% { opacity: 1; transform: scaleY(1.08); } 25% { transform: scaleY(1); } 82% { opacity: 1; } 100% { opacity: 0; } }
     @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash, .mh-card-dmg-pop, .mh-card-down-band, .mh-card-guard-result { animation: none; } }
+    /* 受けた瞬間の白い光は、動きを止めると白い四角が絵を隠したまま残る(2026-11-01 点検)ので、動きを減らす設定では出さない */
+    @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash { display: none; } }
     /* キラ・レアキラの立ち絵の光(84 の CardKiraAura・cardKiraWrap。2026-10-30 社長「この形で入れて」→
        2026-10-31「バトル中の立ち絵も強化して」「もっとわかりやすく。センター位置をちゃんと合わせて」)。CSS だけ。動かすのは transform と opacity
        (ふちの光の filter だけは色を移すため動かす。ふちの光の中には動く物を入れない)。光の中心・大きさは 84 が体の範囲から決めて style で渡す */
