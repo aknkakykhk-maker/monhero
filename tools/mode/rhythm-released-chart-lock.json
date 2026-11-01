@@ -265,7 +265,7 @@
   "altar_world_tree/normal": "bf0e55fcf8607e13",
   "altar_world_tree/hard": "cf6418b7fdbe6d5a",
   "altar_world_tree/expert": "8a704c17ac1d3cd2",
-  "altar_world_tree/master": "aeb99d94b7e5f0f5",
+  "altar_world_tree/master": "1ef5d22a69de7406",
   "altar_world_tree_short/easy": "eba62b0e3285e282",
   "altar_world_tree_short/normal": "616926e0d8390d32",
   "altar_world_tree_short/hard": "2e6eef62ff6c822c",
@@ -599,6 +599,13 @@
     "altar_world_tree_short/master",
     "altar_world_tree/hell",
     "altar_world_tree_short/hell"
+   ]
+  },
+  {
+   "at": "2026-11-02 07:07",
+   "reason": "2026-11-02 社長の決定: アルター原曲MASTERの131.23秒の交差ノーツ1つを、押さえている帯の外側(左端)へ動かす(クロスが内側にあった所。イベント開始前の1か所だけの直し)",
+   "changed": [
+    "altar_world_tree/master"
    ]
   }
  ]
