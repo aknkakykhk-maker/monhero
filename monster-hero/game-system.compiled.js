@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 01f988ee1d44f165
+// source-sha256: d435b278c41429bf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -124936,13 +124936,21 @@ const CardCupPrizePanel = ({
     className: "space-y-0.5 text-[12px] font-bold text-slate-200"
   }, prize.split.map((pct, i) => React.createElement("div", {
     key: i,
-    className: "flex justify-between"
-  }, React.createElement("span", null, `${i + 1}位 ${pct}%`), React.createElement("span", {
-    className: "text-slate-300"
-  }, poolFull.map(p => {
-    const s = shares(p.total)[i] || 0;
-    return s > 0 ? cardCupItemText(p.item, s) : null;
-  }).filter(Boolean).join('・') || '−'))), React.createElement("p", {
+    className: "flex justify-between gap-2"
+  }, React.createElement("span", {
+    className: "shrink-0 whitespace-nowrap"
+  }, `${i + 1}位 ${pct}%`), React.createElement("span", {
+    className: "min-w-0 text-right text-slate-300"
+  }, (() => {
+    const t = poolFull.map(p => {
+      const s = shares(p.total)[i] || 0;
+      return s > 0 ? cardCupItemText(p.item, s) : null;
+    }).filter(Boolean);
+    return t.length ? t.map((x, k) => React.createElement("span", {
+      key: k,
+      className: "whitespace-nowrap"
+    }, `${x}${k < t.length - 1 ? '・' : ''}`)) : '−';
+  })()))), React.createElement("p", {
     className: "text-[11px] text-slate-400"
   }, `${players}人そろったときの見込み。主催・主催仲間は受け取りません(その分は次の順位の人へ)`)), prize.me.invited && open && React.createElement("div", {
     "data-card-cup-invited": true,
