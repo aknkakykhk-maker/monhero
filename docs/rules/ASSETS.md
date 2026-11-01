@@ -131,7 +131,9 @@ A〜D の字を付けた1枚にして送り、`AskUserQuestion` で選んでも�
 | 2026-11-02 | light player(原曲・short ver.)・月が満ちる前に(原曲・short ver.)… 届いた m4a(44.1kHz / 98kbps の AAC)から。風がそよぐ場所 … 過去の 44.1kHz / 96kbps の版から(どちらも元の音源ではないので、元の音源が届いたら作り直す) |
 | 2026-11-02 | デュラハンテーマ・呪われた騎士の時計仕掛け(バトルの BGM と共用)… 過去に入っていた 48kHz の元の音源から |
 | 2026-11-02 | 綺季一閃 short ver. … 原曲の元の音源(48kHz)から。short は原曲を 100.818秒で約57.5秒飛ばしてつないだ版なので、区間ごとに位置を合わせて同じ所でつないだ |
+| 2026-11-02 | Stay With Me ～Locked Fate～ short ver. … 原曲の元の音源(48kHz)から。short は原曲を 88.962秒で約82秒飛ばしてつないだ版なので、区間ごとに位置を合わせて同じ所でつないだ。Altar of the World Tree, Beneath the White Night(原曲・short ver.)… 受け取った元の音源から(イベント開始前・社長「まだ始まってないから直して」) |
 | 作り直さない | 綺季一閃(原曲)… もとから 48kHz / 185kbps のまま入っている |
+| 作り直さない | Stay With Me ～Locked Fate～(原曲・bgm-pandora-boss.mp3)… もとから 48kHz / 178kbps のまま入っている |
 | 作り直さない | MF × ICHIKA MIX(あつ杯テーマ)… もとから 48kHz / 191kbps のまま入っている |
 | 作り直さない(元の音源待ち) | Monster Hero・Monster Hero -Another-・戦場の疾風・魔窟の旋律 … 今のファイルがすでに 44.1kHz / 96kbps で、それより良い音源が残っていない |
 
