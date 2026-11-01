@@ -47,7 +47,9 @@ check('通常UIへGODを公開しINFINITYクリアで解放',source.includes("av
 // PUBLIC_EXTREME_DIFFICULTIES から作る。難易度を手で並べ直すと、足したときに片方へ出ない
 check('GODランキングと記録を公開一覧へ分離',
   source.includes('? PUBLIC_EXTREME_DIFFICULTIES.map(setting => [setting.id, setting])')
-  &&source.includes('? PUBLIC_EXTREME_DIFFICULTIES.map(setting=>{const score=extremeBestScores[setting.id]||0;'));
+  &&source.includes('const row=(setting)=>{const score=extremeBestScores[setting.id]||0;')
+  // 2026-11-01 冥界チャレンジ: プロフィールは極限9つ・冥界2つに分けて並べる(どちらも公開一覧から作る)
+  &&source.includes('PUBLIC_EXTREME_TAB_DIFFICULTIES.map(row)')&&source.includes('PUBLIC_UNDERWORLD_DIFFICULTIES.map(row)'));
 // 2026-09-13・ユーザー依頼でクイックへも公開した(報酬は案A)。極限本体の数値は上の検査が見ている。
 check('QuickへGODを公開(経験値45/ダイヤ24/虹100・敵強度は本体を参照)',
   G('QUICK_EXTREME_SETTINGS').GOD?.xp===45&&G('QUICK_EXTREME_SETTINGS').GOD?.gold===24

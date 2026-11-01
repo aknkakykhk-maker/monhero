@@ -3378,6 +3378,7 @@ addAssistantLinePack({
     underworldTab: [
       { e:'surprise', t:'ここから先は冥界でつ。シールドの世界でつよ…！' },
       { e:'wink', t:'炎のインフェルノと氷のコキュートス、どっちから行きまつ？' },
+      { e:'troubled', t:'ききはちょっと寒いのが苦手でつ…。でもいっしょに行きまつ！' },
     ],
     // ---- はじめて ----
     onboarding: [
