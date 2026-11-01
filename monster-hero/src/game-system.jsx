@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: aa3fad5a9dff25d6
+// generated-sha256: 588b42a0f3f453c3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -5069,8 +5069,11 @@ const rhythmFxRenderOptions = (settings,live=settings) => {
   const base=!!settings&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
   const motionAuto=!!live&&live.noteMotionFx===true&&base;
   const glow=rhythmFxPick(settings,'noteGlow'),burst=rhythmFxPick(settings,'burst');
+  // 弾ける光がおまかせで「押したときの光だけ出す」とき(演出量「最小」・「いつも出す」)は、標準と同じ形の光(炎・十字・柱)を描かせる。
+  // 2026-11-02 まで描き手には「最小・軽量」の段をそのまま渡していて、描き手が地上の光を捨てていた(社長「最小でもフリックの炎を出して」で判明)
+  const tapOnly=burst==='AUTO'&&rhythmTapLightOnly(settings);
   return {motionFlick:rhythmFxOn(settings,'flickMotion',motionAuto),motionSlide:rhythmFxOn(settings,'slideWave',motionAuto),
-    glowLevel:glow==='AUTO'?undefined:glow,hitLevel:rhythmFxLevel(settings,'burst'),hitLight:rhythmFxLight(settings,'burst'),
+    glowLevel:glow==='AUTO'?undefined:glow,hitLevel:tapOnly?'NORMAL':rhythmFxLevel(settings,'burst'),hitLight:tapOnly?false:rhythmFxLight(settings,'burst'),
     hitScale:burst==='L'?1.35:burst==='S'?.7:1,
     // ホールド・スライドを押せている間、帯を指の所からなぞるように光らせる(設定 holdTrace・既定 ON・演出量や軽量モードに関係なく)
     holdTrace:!!settings&&settings.holdTrace!==false};
