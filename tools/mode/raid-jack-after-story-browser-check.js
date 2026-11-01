@@ -26,8 +26,8 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
 // お話ごとの行の数(解放あり・なし)と、写真を撮る行(0から)と、その行に出るはずの文
 const STORIES = [
   { id: 'raid_jack_story_6', title: '第6部', lines: { with: 34, without: 32 }, shot: 3, withText: '間に合った……いや、もう終わったんだね', withoutText: '……終わった、みたいだな' },
-  { id: 'raid_jack_ending_cleared', title: '終章(倒せた)', lines: { with: 48, without: 48 }, shot: 4, withText: '主役、ちょっと緊張してるかもね', withoutText: '主役は、ちょっと緊張しているかもしれないでつね' },
-  { id: 'raid_jack_ending_notcleared', title: '終章(倒せなかった)', lines: { with: 47, without: 47 }, shot: 2, withText: '今回は、ジャックの勝ちだ', withoutText: '……今回は、ジャックの勝ちだな' },
+  { id: 'raid_jack_ending_cleared', title: '終章(倒せた)', lines: { with: 53, without: 53 }, shot: 4, withText: '主役、ちょっと緊張してるかもね', withoutText: '主役は、ちょっと緊張しているかもしれないでつね' },
+  { id: 'raid_jack_ending_notcleared', title: '終章(倒せなかった)', lines: { with: 52, without: 52 }, shot: 2, withText: '今回は、ジャックの勝ちだ', withoutText: '……今回は、ジャックの勝ちだな' },
   { id: 'kyuko_join_2026_10_22', title: 'きゅうこの加入', lines: { with: 55, without: 55 }, shot: 33, withText: 'あつニキ、ひさしぶりぃ', withoutText: 'あ、知っててくれたんだぁ' },
 ];
 (async () => {

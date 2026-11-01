@@ -2287,6 +2287,9 @@ function MonsterHeroGame() {
   // 既読を読み終えたか(読む前に「まだ見ていない」と取り違えて流さないため)
   const [rhythmHellStorySeenLoaded, setRhythmHellStorySeenLoaded] = useState(false);
   const [rhythmHellGuide, setRhythmHellGuide] = useState(null);
+  // ハロウィン・ナイトの終章を一度だけ流し直したか(RAID_JACK_ENDING_REPLAY_KEY)。読み終えるまで流さない
+  const [raidJackEndingReplayDone, setRaidJackEndingReplayDone] = useState(false);
+  const [raidJackEndingReplayLoaded, setRaidJackEndingReplayLoaded] = useState(false);
   // HELL が初めて開いた演奏の結果画面を閉じたら、お話を流す(RHYTHM_HELL_STORY_TRIGGER が 'after-result' のとき)
   const rhythmHellStoryAfterResultRef = useRef(false);
   const [tacticsIntroPending, setTacticsIntroPending] = useState(false);
@@ -5439,6 +5442,18 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(SORASHIDO_JOIN_STORY_ID)) return;
     setRhythmEventStoryPending(SORASHIDO_JOIN_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // ハロウィン・ナイトの終章を、見終えた人へ一度だけ流し直す(2026-11-01 社長。35-raid-jack.jsx の RAID_JACK_ENDING_REPLAY_KEY)。
+  // 流すのは前に見た方。見ていない人はふつうの流れで見る(見終えたところで印が立つので、二度は流れない)
+  useEffect(() => {
+    if (!RAID_JACK_ENDING_REPLAY_READY || RELEASE_FLAGS.raidJack !== true) return;
+    if (!raidJackEndingReplayLoaded || raidJackEndingReplayDone) return;
+    const replayId = raidJackEndingReplayIdFor(rhythmEventStorySeen);
+    if (!replayId) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(`${replayId}#replay`)) return;
+    rhythmEventStoryStartedRef.current = [...rhythmEventStoryStartedRef.current, `${replayId}#replay`];
+    setRhythmEventStoryPending(prev => prev || replayId);
+  }, [raidJackEndingReplayLoaded, raidJackEndingReplayDone, rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // 個人杯のお話(2026-10-31)。公開のあとの最初の HOME で1回だけ流す(見たかは mh_rhythm_event_story_v1 の id)。
   // MFバトルカードのはじまりをまだ見ていない人には流さない(何の話か分からないので。はじまりを見たあとの HOME で流れる)。
   // 公開の印 cardCup が偽なら何もしない。はじめて遊ぶ人にも見た扱いにはしない(見ると、ほかのお話にもあつが出るようになるので)
@@ -7097,6 +7112,10 @@ function MonsterHeroGame() {
       if (EVENT_REPLAY_RELEASE_FLAGS.rhythmHell) {
         try { setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(), false, false)) === true); setRhythmHellStorySeenLoaded(true); } catch {}
       }
+      // ハロウィン・ナイトの終章を流し直したか。仕組みを開けたあとだけ読む(値は { at }。true も済んだ扱い。それ以外は「まだ」)
+      if (RAID_JACK_ENDING_REPLAY_READY) {
+        try { const v = await storeGet(RAID_JACK_ENDING_REPLAY_KEY, null, false); setRaidJackEndingReplayDone(v === true || (!!v && typeof v === 'object')); setRaidJackEndingReplayLoaded(true); } catch {}
+      }
       // 助手とおしゃべりのお話を見たか。おしゃべりの公開(assistantChat)のあとだけ読む
       if (EVENT_REPLAY_RELEASE_FLAGS.assistantChat) {
         try { setAssistantChatStorySeenFlag((await storeGet(ASSISTANT_CHAT_STORY_SEEN_KEY, false, false)) === true); setAssistantChatStorySeenLoaded(true); } catch {}
@@ -8420,6 +8439,12 @@ function MonsterHeroGame() {
   const markRhythmHellStorySeen = useCallback(() => {
     setRhythmHellStorySeenFlag(true);
     try { storeSet(rhythmHellStorySeenKey(), true, false); } catch {}
+  }, []);
+  // ハロウィン・ナイトの終章を「流し直した」にする。本編で流したときだけ(回想・デバッグでは立てない)
+  const markRaidJackEndingReplayed = useCallback(() => {
+    if (!RAID_JACK_ENDING_REPLAY_READY) return;
+    setRaidJackEndingReplayDone(true);
+    try { storeSet(RAID_JACK_ENDING_REPLAY_KEY, { at: new Date().toISOString() }, false); } catch {}
   }, []);
   // 助手とおしゃべりのお話を「見た」にする。回想の画面からは保存へ直接書かず、この関数を通す
   const markAssistantChatStorySeen = useCallback(() => {
@@ -23113,6 +23138,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 助手とおしゃべりのお話は、本編で流したときだけ「見た」にする(回想・デバッグでは立てない)
           if(event&&event.id===ASSISTANT_CHAT_STORY_ID&&eventReplay.live&&!eventReplay.debug) markAssistantChatStorySeen();
           if(event&&event.id===TACTICS_TYPES_STORY_ID&&eventReplay.live&&!eventReplay.debug) markTacticsTypesStorySeen();
+          // ハロウィン・ナイトの終章は、本編で見終えたら「流し直した」も立てる(はじめて見た人にも、もう流さない)
+          if(event&&(event.id===RAID_JACK_ENDING_CLEARED_ID||event.id===RAID_JACK_ENDING_NOTCLEARED_ID)&&eventReplay.live&&!eventReplay.debug) markRaidJackEndingReplayed();
           // MFバトルカードのはじまりは、本編で見終えたらそのままスターター選び(CARD_TOP。持っていない人にはスターター選びが出る)へ
           if(event&&event.id===CARD_BATTLE_INTRO_STORY_ID&&eventReplay.live&&!eventReplay.debug){
             markCardBattleIntroSeen();
@@ -23138,6 +23165,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id==='tactics_intro') markTacticsIntroSeen();
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id===ASSISTANT_CHAT_STORY_ID) markAssistantChatStorySeen();
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id===TACTICS_TYPES_STORY_ID) markTacticsTypesStorySeen();
+          if(eventReplay.live&&!eventReplay.debug&&event&&(event.id===RAID_JACK_ENDING_CLEARED_ID||event.id===RAID_JACK_ENDING_NOTCLEARED_ID)) markRaidJackEndingReplayed();
           // MFバトルカードのはじまりは、飛ばしたら HOME のまま(入口から入れる)
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id===CARD_BATTLE_INTRO_STORY_ID) markCardBattleIntroSeen();
           // HELL のお話は飛ばしても説明は出す(遊び方は飛ばさずに知ってほしい)。見たにするのは本編で流したときだけ
