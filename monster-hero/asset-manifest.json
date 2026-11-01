@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "cb3a97bddeaf",
-  "packs": {"beat":{"bytes":118707439,"count":99},"battle":{"bytes":121226023,"count":748},"card":{"bytes":34095815,"count":962},"all":{"bytes":274029277,"count":1809},"core":{"bytes":16124933,"count":22}},
+  "id": "b48c83c23748",
+  "packs": {"beat":{"bytes":119723468,"count":99},"battle":{"bytes":121226023,"count":748},"card":{"bytes":34095815,"count":962},"all":{"bytes":275045306,"count":1809},"core":{"bytes":16124933,"count":22}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -61,7 +61,7 @@
     "audio/bgm-pro-battle-02.mp3": {"v":"f572c81a9ef6","size":2287127,"pack":"battle"},
     "audio/bgm-profile.mp3": {"v":"523789845ff1","size":641055,"pack":"battle"},
     "audio/bgm-rebellion-short.mp3": {"v":"04678c77a7e1","size":1828224,"pack":"beat"},
-    "audio/bgm-rebellion.mp3": {"v":"cc5dab0bab8b","size":3048624,"pack":"beat"},
+    "audio/bgm-rebellion.mp3": {"v":"4c8807e74e0e","size":4064653,"pack":"beat"},
     "audio/bgm-result.mp3": {"v":"c4dc9d2fb8a5","size":172583,"pack":"battle"},
     "audio/bgm-rising-hope.mp3": {"v":"5b56b8f9d099","size":1083024,"pack":"beat"},
     "audio/bgm-rose-short.mp3": {"v":"57888379506b","size":1385424,"pack":"beat"},
@@ -1814,7 +1814,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"7bfbff0593f8","size":278423,"pack":"core"},
+    "tailwind.css": {"v":"fc6491a15f2c","size":278423,"pack":"core"},
     "data/images/images-ally.js": {"v":"3f1b217d1e16","size":70535,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"f908809f4b48","size":60701,"pack":"core"},
@@ -1833,6 +1833,6 @@
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
     "data/assistants.js": {"v":"a73e7f49a073","size":971838,"pack":"core"},
     "data/card-battle-cards.js": {"v":"9c6a8274b2f6","size":114416,"pack":"core"},
-    "game-system.compiled.js": {"v":"8fbd250c0b93","size":7670480,"pack":"core"}
+    "game-system.compiled.js": {"v":"4fb9c7b33e73","size":7670480,"pack":"core"}
   }
 }

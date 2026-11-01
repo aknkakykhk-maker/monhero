@@ -18,6 +18,8 @@
 | モンビーの音源(`audio/`) | 32kHz / 96kbps ステレオmp3。`-map_metadata -1 -vn` でタグとジャケットを落とす | 1曲2〜3MB |
 | モンスターの絵・アイコン(`images/`) | PNGのまま。`node tools/image-asset-check.js` を通す | — |
 
+> 例外: `audio/bgm-rebellion.mp3`(Rebellion の原曲)だけは 44.1kHz / 128kbps(2026-11-02 社長「なおして」。32kHz / 96kbps では高い音が削れてこもった)。位置は前の版と0.1ms以内で同じ
+
 - **曲の音量は全部そろえる。** 統合ラウドネス **-14 LUFS** / 真のピーク上限 **-1 dBTP**。
   かける倍率は `min(-14 - いまのLUFS, -1 - いまの真のピーク)` の1つだけで、**圧縮はしない**。
   `node tools/audio/rhythm-loudness-check.js --ffmpeg <パス>` で確かめる
