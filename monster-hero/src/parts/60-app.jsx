@@ -3495,7 +3495,10 @@ function MonsterHeroGame() {
   // 冥界チャレンジのタブ(INFERNO・COCYTUS)は ETERNAL クリアで開く
   const underworldUnlocked = useMemo(() => isUnderworldUnlocked(eternalClearCount), [eternalClearCount]);
   // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
-  const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
+  // 冥界チャレンジのタブを開いた最初の1回は「冥界の一言」(underworldTab)。カードを INFERNO から動かすか、タブを離れたら難易度ごとのセリフへ
+  const [underworldIntroDone, setUnderworldIntroDone] = useState(false);
+  useEffect(() => { if (extremeDifficulty !== 'INFERNO') setUnderworldIntroDone(true); }, [extremeDifficulty]);
+  const extremeDifficultyAssistantScene = isUnderworldDifficultyId(extremeDifficulty) && !underworldIntroDone ? 'underworldTab' : `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
   const activeExtremeBattleSetting = activeExtremeSetting;
   // クイックのEXTREME/NIGHTMAREは通常難易度表に存在しない。カルーセルのonScrollで
