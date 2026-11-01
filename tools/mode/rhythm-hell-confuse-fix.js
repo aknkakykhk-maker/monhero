@@ -27,6 +27,9 @@ const SONGS=Object.freeze({
   kaze_ga_soyogu:{marker:'kaze-ga-soyogu-v4-hell',slot:['kaze_ga_soyogu_hell_debug','HELL'],beat:60000/118.88},
   // 2026-10-21 量を0.78倍にして作り直したら1件だけ残った(社長「ざしてぃを60ぐらいまで下げる」)
   the_city_beneath_the_comets:{marker:'the-city-beneath-the-comets-v3-hell',slot:['the_city_beneath_the_comets_hell_debug','HELL'],beat:351.976},
+  // 2026-11-01 Rebellion(原曲・short)の HELL。押す位置を並べ直したあと(rhythm-hell-mix.js の uncross)に、見分けにくい所が1〜2件出た
+  rebellion:{marker:'rebellion-v3-hell',slot:['rebellion_hell_debug','HELL'],beat:310.0775},
+  rebellion_short:{marker:'rebellion-short-v3-hell',slot:['rebellion_short_hell_debug','HELL'],beat:310.0775},
 });
 
 // rhythm-chart-level.js の loadRuntimeSongs と同じ読み方を、手元の文字列に使う
