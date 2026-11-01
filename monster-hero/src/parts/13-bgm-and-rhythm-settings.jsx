@@ -664,6 +664,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   judgmentAtTap:false,
   // 演奏中は左上の曲名とジャケットを薄くする(2026-09-27)。始まって4秒で薄くなり、ポーズ中は元に戻る。目線を道に集めるため。既定は ON
   hudSongFade:true,
+  // ホールド・スライドを押せている指は、その指の道の光を出さず、帯を指の所からなぞるように光らせる(2026-11-02 社長・既定 ON)
+  holdTrace:true,
   // 重いときは演出を自動で控えめにする(2026-09-27)。演奏中にカクつき続けたら、重い演出から一段ずつ下げる(保存値は変えない)。既定は ON
   autoEffectDown:true,
   // 押したときの光(2026-10-15)。新しい項目なので、保存値に無い人は「おまかせ」(これまでの見え方)で補う
@@ -775,13 +777,27 @@ const rhythmFxAttrs = settings => Object.fromEntries(RHYTHM_FX_CSS_KEYS.flatMap(
 const rhythmFxOn = (settings,key,auto) => {const v=rhythmFxPick(settings,key);return v==='AUTO'?!!auto:!(v==='OFF'||v==='NONE');};
 // ノーツの描き手(RHYTHM_CANVAS_RENDERER.begin)へ渡す値。live は演奏中に変わる設定(にじむ光・ノーツの動き)を読む先。
 // おまかせの項目は描き手が演出量・軽量モードから決めるので、渡す値もこれまでと同じになる
+// 押せているホールド・スライドが、判定ラインのところで覆っているサブレーン(ビットの集まり・前後1つずつ余裕を持たせる)。
+// ホールドは譜面の subLane と幅、スライドは今の帯の位置(lane 単位)から数える。道の光を消すのに使う(設定 holdTrace・2026-11-02)
+const rhythmHoldTraceMask = (note,visualLane) => {
+  if(!note)return 0;
+  const w=Math.max(1,Number(note.subLaneWidth)||2);
+  const lane=Number(visualLane);
+  const start=rhythmNoteIsSlide(note)&&Number.isFinite(lane)?Math.round(lane*2+1-w/2):(Number.isFinite(Number(note.subLane))?Number(note.subLane):Number(note.lane)*2);
+  if(!Number.isFinite(start))return 0;
+  let mask=0;
+  for(let i=Math.max(0,start-1);i<=Math.min(RHYTHM_SUB_LANE_COUNT-1,start+w);i++)mask|=1<<i;
+  return mask;
+};
 const rhythmFxRenderOptions = (settings,live=settings) => {
   const base=!!settings&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
   const motionAuto=!!live&&live.noteMotionFx===true&&base;
   const glow=rhythmFxPick(settings,'noteGlow'),burst=rhythmFxPick(settings,'burst');
   return {motionFlick:rhythmFxOn(settings,'flickMotion',motionAuto),motionSlide:rhythmFxOn(settings,'slideWave',motionAuto),
     glowLevel:glow==='AUTO'?undefined:glow,hitLevel:rhythmFxLevel(settings,'burst'),hitLight:rhythmFxLight(settings,'burst'),
-    hitScale:burst==='L'?1.35:burst==='S'?.7:1};
+    hitScale:burst==='L'?1.35:burst==='S'?.7:1,
+    // ホールド・スライドを押せている間、帯を指の所からなぞるように光らせる(設定 holdTrace・既定 ON・演出量や軽量モードに関係なく)
+    holdTrace:!!settings&&settings.holdTrace!==false};
 };
 // 判定文字の大きさ(設定 fx「判定文字の大きさ」)。判定文字の枠ごと、下のふちを軸に広げ・縮める(文字の後ろの光・ずれメーターも一緒に)。
 // 枠は translate で中央へ寄せているので、別の指定の scale を使う(transform を上書きしない)。おまかせ・標準は何も付けない
@@ -858,6 +874,7 @@ const normalizeRhythmSettings = value => {
     climaxFx:typeof source.climaxFx==='boolean'?source.climaxFx:DEFAULT_RHYTHM_SETTINGS.climaxFx,
     judgmentAtTap:typeof source.judgmentAtTap==='boolean'?source.judgmentAtTap:DEFAULT_RHYTHM_SETTINGS.judgmentAtTap,
     hudSongFade:typeof source.hudSongFade==='boolean'?source.hudSongFade:DEFAULT_RHYTHM_SETTINGS.hudSongFade,
+    holdTrace:typeof source.holdTrace==='boolean'?source.holdTrace:DEFAULT_RHYTHM_SETTINGS.holdTrace,
     autoEffectDown:typeof source.autoEffectDown==='boolean'?source.autoEffectDown:DEFAULT_RHYTHM_SETTINGS.autoEffectDown,
     tapLight:RHYTHM_TAP_LIGHT_MODES.includes(source.tapLight)?source.tapLight:DEFAULT_RHYTHM_SETTINGS.tapLight,
     stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
