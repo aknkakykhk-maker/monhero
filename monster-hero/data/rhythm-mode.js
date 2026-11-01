@@ -51391,7 +51391,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // 上へ立ちのぼる光(参考動画: 押さえているレーンの上が青白く光る)。焼いた縦のグラデーションを1枚貼るだけ
     // 1枚目はレーンの形(奥ほど細くなる台形)に沿って道の中ほどまで届く光、2枚目は中央のやわらかく明るい芯
     const columnH=head.cy*(.46+.2*charge)*(.95+.05*pulse),tint=HOLD_SPARK_TINT[kind]||HOLD_SPARK_TINT.HOLD;
-    if(!lightweight&&cssH>0){
+    // 「なぞる光」(holdTrace)が ON のときは出さない。レーンの形に沿って立ちのぼるので、道の光と同じに見える(2026-11-02 社長「道の光が出てる気がする」)
+    if(!holdTrace&&!lightweight&&cssH>0){
       const topY=Math.max(0,head.cy-columnH),baseScale=rhythmProjectionScale(head.cy/cssH),k=baseScale>0?rhythmProjectionScale(topY/cssH)/baseScale:1;
       const half=w*.56,mid=cssW/2,topCx=mid+(head.cx-mid)*k;
       const g=ctx.createLinearGradient(0,head.cy,0,topY);
@@ -51415,7 +51416,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.drawImage(hitFlareSprite().canvas,head.cx-fw/2,head.cy-fh/2,fw,fh);
     // ノーツの左右のはしに立つ光の柱(参考動画でいちばん目立つ「押さえている」合図)。押さえているあいだずっと立ち、
     // 溜まるほど高く明るくなる。細かくゆらぐだけで消えない。焼いた1枚を2本貼るだけ(演出量「最小」以外)
-    {
+    // 左右のはしの光の柱も、なぞる光が ON のときは出さない(帯の外に立つので道の光に見える)
+    if(!holdTrace){
       // 道の高さの3〜4割まで伸びる(溜まるほど高い)。根元には星形の光(叩いたときの十字と同じ焼いた1枚)を小さく置く
       const pillar=holdPillarSprite(kind).canvas,ph=head.cy*(.3+.14*charge),pw=Math.max(20,30*depth),star=hitFlareSprite().canvas,sw2=Math.max(40,56*depth)*(.9+.2*pulse);
       for(const side of [-1,1]){
@@ -52987,17 +52989,25 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       }
       if(!pts||pts.length<2)return;
       pts.sort((a,b)=>b[1]-a[1]);
-      const bottom=pts[0][1],len=Math.max(90,Math.min(bottom-pts[pts.length-1][1],bottom*.55)),stop=bottom-len;
+      const bottom=pts[0][1],len=Math.max(120,Math.min(bottom-pts[pts.length-1][1],bottom*.8)),stop=bottom-len;
       const line=[];for(const p of pts){line.push(p);if(p[1]<=stop)break;}
       if(line.length<2)return;
-      const width=Math.max(6,line[0][2]*.55);
+      const bandW=Math.max(8,line[0][2]),width=Math.max(8,bandW*.8);
       const rgb=rhythmNoteIsSlide(note)?(o.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb):RHYTHM_NOTE_COLORS.HOLD.rgb;
       const path=()=>{ctx.beginPath();line.forEach((p,i)=>{if(i===0)ctx.moveTo(p[0],p[1]);else ctx.lineTo(p[0],p[1]);});};
-      const g1=ctx.createLinearGradient(0,bottom,0,stop);g1.addColorStop(0,`rgba(${rgb},.55)`);g1.addColorStop(1,`rgba(${rgb},0)`);
-      const g2=ctx.createLinearGradient(0,bottom,0,stop);g2.addColorStop(0,'rgba(255,255,255,.95)');g2.addColorStop(.6,'rgba(255,255,255,.35)');g2.addColorStop(1,'rgba(255,255,255,0)');
+      const pulse=.5-.5*Math.cos(frameNow/160);
+      // 帯の幅いっぱいの光(指の所がいちばん明るく、奥へ消える)・色のにじみ・白い芯の3重
+      const g0=ctx.createLinearGradient(0,bottom,0,stop);g0.addColorStop(0,'rgba(255,255,255,.95)');g0.addColorStop(.35,'rgba(255,255,255,.6)');g0.addColorStop(.75,`rgba(${rgb},.35)`);g0.addColorStop(1,`rgba(${rgb},0)`);
+      const g1=ctx.createLinearGradient(0,bottom,0,stop);g1.addColorStop(0,`rgba(${rgb},.9)`);g1.addColorStop(1,`rgba(${rgb},0)`);
+      const g2=ctx.createLinearGradient(0,bottom,0,stop);g2.addColorStop(0,'rgba(255,255,255,1)');g2.addColorStop(.55,'rgba(255,255,255,.6)');g2.addColorStop(1,'rgba(255,255,255,0)');
       ctx.globalAlpha=o.alpha;ctx.lineCap='round';ctx.lineJoin='round';
-      path();ctx.lineWidth=width;ctx.strokeStyle=g1;ctx.stroke();
-      path();ctx.lineWidth=Math.max(2,width*.22);ctx.strokeStyle=g2;ctx.stroke();
+      path();ctx.lineWidth=bandW*1.05;ctx.strokeStyle=g0;ctx.stroke();
+      path();ctx.lineWidth=width*.6;ctx.strokeStyle=g1;ctx.stroke();
+      path();ctx.lineWidth=Math.max(4,width*.32);ctx.strokeStyle=g2;ctx.stroke();
+      // 指の所(判定ライン)の光の玉。ゆっくり脈打つ
+      const cx=line[0][0],cy=bottom,r=Math.max(16,bandW*.75)*(1+.12*pulse);
+      // 丸い光は焼いた光の点を大きく貼る(WebGL の描き方には丸いグラデーションが無いため)。2枚重ねて芯を白く
+      const dot=sparkDotSprite().canvas;ctx.drawImage(dot,cx-r*1.5,cy-r*1.5,r*3,r*3);ctx.drawImage(dot,cx-r*.8,cy-r*.8,r*1.6,r*1.6);
       ctx.lineCap='butt';ctx.globalAlpha=1;
     },
     // ノーツ1個。geo は rhythmNoteCanvasGeometry の結果。opts: {failed,monster,wide,pressed,heldMs(押さえ始めからの時間),alpha,pop(0..1|null),depthScale,brightness,hideBody}
