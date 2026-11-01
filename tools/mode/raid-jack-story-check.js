@@ -3,7 +3,7 @@
 //   node tools/mode/raid-jack-story-check.js
 //
 // 見るもの
-//   ① 台本の本数と台詞数が文書どおり(第1.5部34 / 第2部16 / 第3部19 / 第4部21 / 第5部20 / 第6部 あつ解放あり34・なし32 / 終章 倒せた48・倒せなかった47)
+//   ① 台本の本数と台詞数が文書どおり(第1.5部34 / 第2部16 / 第3部19 / 第4部21 / 第5部20 / 第6部 あつ解放あり34・なし32 / 終章 倒せた53・倒せなかった52。2026-11-01 にソラシドの5行を足した)
 //   ② ジャックは助手(ASSISTANT_LIST)に入れず、話し手(STORY_GUEST_SPEAKERS)として持つ
 //   ③ ジャックの台詞は、爵位ごとの名前(ジャック(男爵)など)かぱんぷきんを name に持つ
 //   ④ 再生画面が、ジャックを話し手として出せる(名前の上書き・顔の並び)
@@ -36,8 +36,8 @@ const pick = (s, on) => e.eventScriptForPlayer(s, on ? ATSU_SEEN : []);
 const want = [['第1.5部', e.RAID_JACK_STORY_1B, 34, 'raid_jack_story_1b'], ['第2部', e.RAID_JACK_STORY_2, 16, 'raid_jack_story_2'], ['第3部', e.RAID_JACK_STORY_3, 19, 'raid_jack_story_3'], ['第4部', e.RAID_JACK_STORY_4, 21, 'raid_jack_story_4'],
   ['第5部', e.RAID_JACK_STORY_5, 20, 'raid_jack_story_5'],
   ['第6部(あつ解放あり)', pick(e.RAID_JACK_STORY_6, true), 34, 'raid_jack_story_6', ATSU_SEEN], ['第6部(あつ解放なし)', pick(e.RAID_JACK_STORY_6, false), 32, 'raid_jack_story_6', []],
-  ['終章(倒せた・あつ解放あり)', pick(e.RAID_JACK_ENDING_CLEARED, true), 48, 'raid_jack_ending_cleared', ATSU_SEEN], ['終章(倒せた・あつ解放なし)', pick(e.RAID_JACK_ENDING_CLEARED, false), 48, 'raid_jack_ending_cleared', []],
-  ['終章(倒せなかった・あつ解放あり)', pick(e.RAID_JACK_ENDING_NOTCLEARED, true), 47, 'raid_jack_ending_notcleared', ATSU_SEEN], ['終章(倒せなかった・あつ解放なし)', pick(e.RAID_JACK_ENDING_NOTCLEARED, false), 47, 'raid_jack_ending_notcleared', []]];
+  ['終章(倒せた・あつ解放あり)', pick(e.RAID_JACK_ENDING_CLEARED, true), 53, 'raid_jack_ending_cleared', ATSU_SEEN], ['終章(倒せた・あつ解放なし)', pick(e.RAID_JACK_ENDING_CLEARED, false), 53, 'raid_jack_ending_cleared', []],
+  ['終章(倒せなかった・あつ解放あり)', pick(e.RAID_JACK_ENDING_NOTCLEARED, true), 52, 'raid_jack_ending_notcleared', ATSU_SEEN], ['終章(倒せなかった・あつ解放なし)', pick(e.RAID_JACK_ENDING_NOTCLEARED, false), 52, 'raid_jack_ending_notcleared', []]];
 want.forEach(([n, s, c]) => check(`${n}の台詞は ${c} 行`, Array.isArray(s) && s.length === c, String(s && s.length)));
 const allScripts = want.map(([, s]) => s);
 check('あつを解放していない人の版には、あつが一度も出ない(話し手にも台詞にも)', want.filter((w) => /解放なし/.test(w[0])).every(([, s]) => s.every((l) => l.who !== 'atsu' && l.atsu !== 'with')));
@@ -159,7 +159,7 @@ for (const [n, s, , id, seen] of want) {
   if (!ok) break;
 }
 check('全部の台詞を最後まで再生しても画面が落ちず、どの行もその版の台詞が出る・解放していない人の版はあつの顔が一度も出ない', ok, bad);
-check('終章の最後のお礼の {name} は、ブリーダーの名前に替わる', text(render('raid_jack_ending_cleared', 44, ATSU_SEEN)).includes('テスト、おつかれさまぁ'), text(render('raid_jack_ending_cleared', 44, ATSU_SEEN)).slice(0, 100));
+check('終章の最後のお礼の {name} は、ブリーダーの名前に替わる', text(render('raid_jack_ending_cleared', 48, ATSU_SEEN)).includes('テスト、おつかれさまぁ'), text(render('raid_jack_ending_cleared', 48, ATSU_SEEN)).slice(0, 100));
 
 // ⑦ 画面の出し方(2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」「敵側上部にコメント」「画面演出」)
 {

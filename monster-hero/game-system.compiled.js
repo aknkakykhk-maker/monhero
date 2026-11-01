@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d1e5535176b38fc2
+// source-sha256: 1ec7029979fe02cb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -29246,6 +29246,13 @@ const _isMissingColumnError = (status, body) => {
   if (!/turns|reached_wave/i.test(text)) return false;
   return /PGRST204|PGRST100|42703|does not exist|Could not find the/i.test(text);
 };
+let _rankingPlayedTurnsUnavailable = false;
+const _isMissingPlayedTurnsError = (status, body) => {
+  if (status !== 400) return false;
+  const text = String(body || '');
+  if (!/played_turns/i.test(text)) return false;
+  return /PGRST204|PGRST100|42703|does not exist|Could not find the/i.test(text);
+};
 const rankingSelectWithRunStats = base => _rankingRunStatsUnavailable || !base || !base.includes('score') ? base : `${base},${RANKING_RUN_STATS_COLUMNS}`;
 const RANKING_PROFILE_FRAME_COLUMN = 'profile_frame';
 let _rankingProfileFrameUnavailable = false;
@@ -29666,6 +29673,7 @@ const sbInsertScore = async row => {
     delete normalizedRow.reached_wave;
   }
   if (_rankingProfileFrameUnavailable) delete normalizedRow.profile_frame;
+  if (_rankingPlayedTurnsUnavailable) delete normalizedRow.played_turns;
   const requestId = `insert-${normalizedRow.difficulty}-${Date.now()}`;
   const query = '?on_conflict=clear_id';
   const prefer = 'resolution=ignore-duplicates,return=minimal';
@@ -29711,6 +29719,17 @@ const sbInsertScore = async row => {
       error: res.ok ? null : body || res.statusText
     });
     if (!res.ok) {
+      if (!_rankingPlayedTurnsUnavailable && normalizedRow.played_turns !== undefined && _isMissingPlayedTurnsError(res.status, body)) {
+        _rankingPlayedTurnsUnavailable = true;
+        rankingLog(requestId, 'played-turns-column-missing', {
+          status: res.status
+        });
+        const {
+          played_turns,
+          ...withoutPlayedTurns
+        } = normalizedRow;
+        return sbInsertScore(withoutPlayedTurns);
+      }
       if (!_rankingProfileFrameUnavailable && normalizedRow.profile_frame !== undefined && _isMissingProfileFrameError(res.status, body)) {
         _rankingProfileFrameUnavailable = true;
         rankingLog(requestId, 'profile-frame-column-missing', {
@@ -29809,6 +29828,7 @@ const rankingRowFromLocalEntry = (entry, difficulty) => {
   if (!diff) return null;
   const reachedWave = Number(entry.reachedWave);
   const turns = Number(entry.turns);
+  const playedTurns = Number(entry.playedTurns);
   const level = Number(entry.level);
   const createdAt = rankingCreatedAtFromLocal(entry.at);
   return {
@@ -29829,6 +29849,9 @@ const rankingRowFromLocalEntry = (entry, difficulty) => {
     } : {}),
     ...(Number.isFinite(turns) && turns > 0 ? {
       turns
+    } : {}),
+    ...(Number.isFinite(playedTurns) && playedTurns > 0 ? {
+      played_turns: playedTurns
     } : {}),
     ...(entry.breederId ? {
       breeder_id: entry.breederId
@@ -52154,6 +52177,14 @@ const raidJackStoryCandidates = (totals, nowMs) => {
     out.push(defeatedAt(RAID_JACK_A_TIERS.length - 1) ? RAID_JACK_ENDING_CLEARED_ID : RAID_JACK_ENDING_NOTCLEARED_ID);
   }
   return out.filter(Boolean);
+};
+const RAID_JACK_ENDING_REPLAY_KEY = 'mh_raid_jack_ending_replay_v1';
+const RAID_JACK_ENDING_REPLAY_READY = true;
+const raidJackEndingReplayIdFor = seenStoryIds => {
+  const seen = Array.isArray(seenStoryIds) ? seenStoryIds : [];
+  if (seen.includes(RAID_JACK_ENDING_CLEARED_ID)) return RAID_JACK_ENDING_CLEARED_ID;
+  if (seen.includes(RAID_JACK_ENDING_NOTCLEARED_ID)) return RAID_JACK_ENDING_NOTCLEARED_ID;
+  return null;
 };
 const RAID_JACK_BOSS_DOWN_KEY = 'mh_raid_jack_boss_down_v1';
 const RAID_JACK_FRAME_GIFT_KEY = 'mh_raid_jack_frame_gift_v1';
@@ -127366,6 +127397,8 @@ function MonsterHeroGame() {
   const [cardBattleIntroSeenLoaded, setCardBattleIntroSeenLoaded] = useState(false);
   const [rhythmHellStorySeenLoaded, setRhythmHellStorySeenLoaded] = useState(false);
   const [rhythmHellGuide, setRhythmHellGuide] = useState(null);
+  const [raidJackEndingReplayDone, setRaidJackEndingReplayDone] = useState(false);
+  const [raidJackEndingReplayLoaded, setRaidJackEndingReplayLoaded] = useState(false);
   const rhythmHellStoryAfterResultRef = useRef(false);
   const [tacticsIntroPending, setTacticsIntroPending] = useState(false);
   const [assistantBonds, setAssistantBonds] = useState({});
@@ -127505,6 +127538,7 @@ function MonsterHeroGame() {
   const runHeroBondLevelRef = useRef(null);
   const runEndWaveRef = useRef(null);
   const runClearTurnsRef = useRef(null);
+  const runPlayedTurnsRef = useRef(null);
   const totalTurnCountRef = useRef(0);
   const [finalRewardSummary, setFinalRewardSummary] = useState(null);
   const [championPresentationComplete, setChampionPresentationComplete] = useState(false);
@@ -130561,6 +130595,16 @@ function MonsterHeroGame() {
     setRhythmEventStoryPending(SORASHIDO_JOIN_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
+    if (!RAID_JACK_ENDING_REPLAY_READY || RELEASE_FLAGS.raidJack !== true) return;
+    if (!raidJackEndingReplayLoaded || raidJackEndingReplayDone) return;
+    const replayId = raidJackEndingReplayIdFor(rhythmEventStorySeen);
+    if (!replayId) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(`${replayId}#replay`)) return;
+    rhythmEventStoryStartedRef.current = [...rhythmEventStoryStartedRef.current, `${replayId}#replay`];
+    setRhythmEventStoryPending(prev => prev || replayId);
+  }, [raidJackEndingReplayLoaded, raidJackEndingReplayDone, rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.cardCup || !EVENT_REPLAY_RELEASE_FLAGS.cardBattle) return;
     if (!cardBattleIntroSeenLoaded || !cardBattleIntroSeenFlag) return;
     if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(CARD_CUP_STORY_ID)) return;
@@ -132110,6 +132154,13 @@ function MonsterHeroGame() {
           setRhythmHellStorySeenLoaded(true);
         } catch {}
       }
+      if (RAID_JACK_ENDING_REPLAY_READY) {
+        try {
+          const v = await storeGet(RAID_JACK_ENDING_REPLAY_KEY, null, false);
+          setRaidJackEndingReplayDone(v === true || !!v && typeof v === 'object');
+          setRaidJackEndingReplayLoaded(true);
+        } catch {}
+      }
       if (EVENT_REPLAY_RELEASE_FLAGS.assistantChat) {
         try {
           setAssistantChatStorySeenFlag((await storeGet(ASSISTANT_CHAT_STORY_SEEN_KEY, false, false)) === true);
@@ -132384,6 +132435,7 @@ function MonsterHeroGame() {
     const icon = breederIcon;
     const reachedWave = Number.isFinite(Number(runEndWaveRef.current)) ? Number(runEndWaveRef.current) : null;
     const clearTurns = Number.isFinite(Number(runClearTurnsRef.current)) && Number(runClearTurnsRef.current) > 0 ? Number(runClearTurnsRef.current) : null;
+    const playedTurns = Number.isFinite(Number(runPlayedTurnsRef.current)) && Number(runPlayedTurnsRef.current) > 0 ? Number(runPlayedTurnsRef.current) : null;
     const profileFrame = rankingProfileFrameValue(profileFrameId);
     const breederId = await ensureBreederId();
     if (tacticsProLogRef.current) {
@@ -132419,6 +132471,9 @@ function MonsterHeroGame() {
       } : {}),
       ...(clearTurns != null ? {
         turns: clearTurns
+      } : {}),
+      ...(playedTurns != null ? {
+        played_turns: playedTurns
       } : {})
     };
     try {
@@ -132453,6 +132508,9 @@ function MonsterHeroGame() {
           } : {}),
           ...(clearTurns != null ? {
             turns: clearTurns
+          } : {}),
+          ...(playedTurns != null ? {
+            playedTurns
           } : {}),
           nationalSaved: false,
           nationalError: {
@@ -133539,6 +133597,15 @@ function MonsterHeroGame() {
     setRhythmHellStorySeenFlag(true);
     try {
       storeSet(rhythmHellStorySeenKey(), true, false);
+    } catch {}
+  }, []);
+  const markRaidJackEndingReplayed = useCallback(() => {
+    if (!RAID_JACK_ENDING_REPLAY_READY) return;
+    setRaidJackEndingReplayDone(true);
+    try {
+      storeSet(RAID_JACK_ENDING_REPLAY_KEY, {
+        at: new Date().toISOString()
+      }, false);
     } catch {}
   }, []);
   const markAssistantChatStorySeen = useCallback(() => {
@@ -137245,6 +137312,7 @@ function MonsterHeroGame() {
         try {
           runEndWaveRef.current = wave;
           runClearTurnsRef.current = null;
+          runPlayedTurnsRef.current = (Number(totalTurnCountRef.current) || 0) + (Number(turnCount) || 0);
           await awardRunRewards(Math.max(0, wave - 1));
         } catch (e) {
           console.error('[result] award rewards failed:', e && e.message ? e.message : e);
@@ -137528,6 +137596,7 @@ function MonsterHeroGame() {
     try {
       runEndWaveRef.current = 10;
       runClearTurnsRef.current = clearTurns;
+      runPlayedTurnsRef.current = clearTurns;
       await awardRunRewards(10);
       await recordClearOnce();
     } catch (e) {
@@ -138795,6 +138864,7 @@ function MonsterHeroGame() {
     setResultProcessing(true);
     runEndWaveRef.current = wave;
     runClearTurnsRef.current = null;
+    runPlayedTurnsRef.current = (Number(totalTurnCountRef.current) || 0) + (Number(turnCount) || 0);
     try {
       await awardRunRewards(Math.max(0, wave - 1));
     } catch {}
@@ -142950,6 +143020,7 @@ function MonsterHeroGame() {
       try {
         runEndWaveRef.current = 10;
         runClearTurnsRef.current = totalTurnCountRef.current;
+        runPlayedTurnsRef.current = totalTurnCountRef.current;
         await awardRunRewards(10);
         await recordClearOnce();
       } catch (e) {
@@ -143503,6 +143574,7 @@ function MonsterHeroGame() {
       totalTurnCountRef.current = 0;
       runEndWaveRef.current = null;
       runClearTurnsRef.current = null;
+      runPlayedTurnsRef.current = null;
       ultimateDistanceBreakLevelsRef.current = [0, 0, 0, 0];
       setUltimateDistanceBreakLevels([0, 0, 0, 0]);
       ultimateDistanceBreakPendingRef.current = null;
@@ -158007,6 +158079,7 @@ function MonsterHeroGame() {
         if (event && event.id === RAID_JACK_STORY_START_ID && eventReplay.live && !eventReplay.debug && RELEASE_FLAGS.raidJack === true && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_HOWTO_STORY_ID)) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
         if (event && event.id === ASSISTANT_CHAT_STORY_ID && eventReplay.live && !eventReplay.debug) markAssistantChatStorySeen();
         if (event && event.id === TACTICS_TYPES_STORY_ID && eventReplay.live && !eventReplay.debug) markTacticsTypesStorySeen();
+        if (event && (event.id === RAID_JACK_ENDING_CLEARED_ID || event.id === RAID_JACK_ENDING_NOTCLEARED_ID) && eventReplay.live && !eventReplay.debug) markRaidJackEndingReplayed();
         if (event && event.id === CARD_BATTLE_INTRO_STORY_ID && eventReplay.live && !eventReplay.debug) {
           markCardBattleIntroSeen();
           setEventReplay(null);
@@ -158032,6 +158105,7 @@ function MonsterHeroGame() {
         if (eventReplay.live && !eventReplay.debug && event && event.id === 'tactics_intro') markTacticsIntroSeen();
         if (eventReplay.live && !eventReplay.debug && event && event.id === ASSISTANT_CHAT_STORY_ID) markAssistantChatStorySeen();
         if (eventReplay.live && !eventReplay.debug && event && event.id === TACTICS_TYPES_STORY_ID) markTacticsTypesStorySeen();
+        if (eventReplay.live && !eventReplay.debug && event && (event.id === RAID_JACK_ENDING_CLEARED_ID || event.id === RAID_JACK_ENDING_NOTCLEARED_ID)) markRaidJackEndingReplayed();
         if (eventReplay.live && !eventReplay.debug && event && event.id === CARD_BATTLE_INTRO_STORY_ID) markCardBattleIntroSeen();
         if (event && event.id === RHYTHM_HELL_STORY_ID) {
           if (eventReplay.live && !eventReplay.debug) markRhythmHellStorySeen();

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2298084f224a7799
+// generated-sha256: 0af5c1e0c029ce8f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -17843,6 +17843,17 @@ const _isMissingColumnError = (status, body) => {
   if (!/turns|reached_wave/i.test(text)) return false;
   return /PGRST204|PGRST100|42703|does not exist|Could not find the/i.test(text);
 };
+// 遊んだ累計ターン数の列 played_turns(2026-11-01 社長「負けたときもターン数を記録して」)。
+// turns は「クリアしたときのターン数」で最速クリアの表示・並びに使うので意味を変えず、
+// クリアでも負けでも入る値は別の列へ送る。送るだけで、取得・表示には使わない。
+// 列がまだ無い環境(SQL適用前)では400になるので、一度気付いたら以後は外して送る(記録を落とさない)
+let _rankingPlayedTurnsUnavailable = false;
+const _isMissingPlayedTurnsError = (status, body) => {
+  if (status !== 400) return false;
+  const text = String(body || '');
+  if (!/played_turns/i.test(text)) return false;
+  return /PGRST204|PGRST100|42703|does not exist|Could not find the/i.test(text);
+};
 // 取得する列。ターン数を使う一覧(スコア)にだけ足す。ブリーダーLvの一覧は
 // 全件をページ送りで読むので、使わない列を運ばせない
 const rankingSelectWithRunStats = (base) =>
@@ -18326,6 +18337,7 @@ const sbInsertScore = async (row) => {
   if (_rankingRunStatsUnavailable) { delete normalizedRow.turns; delete normalizedRow.reached_wave; }
   // プロフィールフレームの列も同じ。無いと分かっている間は最初から外して送る
   if (_rankingProfileFrameUnavailable) delete normalizedRow.profile_frame;
+  if (_rankingPlayedTurnsUnavailable) delete normalizedRow.played_turns;
   const requestId = `insert-${normalizedRow.difficulty}-${Date.now()}`;
   const query = '?on_conflict=clear_id';
   const prefer = 'resolution=ignore-duplicates,return=minimal';
@@ -18353,6 +18365,15 @@ const sbInsertScore = async (row) => {
       errorCode, isUniqueViolation, error: res.ok ? null : (body || res.statusText)
     });
     if (!res.ok) {
+      // 遊んだターン数の列がまだ無い環境。その列だけを外して送り直す。
+      // ★turns の判定(_isMissingColumnError)は「turns」を含む応答に反応するので、必ずこちらを先に見る
+      if (!_rankingPlayedTurnsUnavailable && normalizedRow.played_turns !== undefined
+          && _isMissingPlayedTurnsError(res.status, body)) {
+        _rankingPlayedTurnsUnavailable = true;
+        rankingLog(requestId, 'played-turns-column-missing', { status: res.status });
+        const { played_turns, ...withoutPlayedTurns } = normalizedRow;
+        return sbInsertScore(withoutPlayedTurns);
+      }
       // プロフィールフレームの列がまだ無い環境。飾り枠のためにスコアを落とさない。
       // その列だけを外して必ず送り直す(一度気付けば以後は最初から外して送る)
       if (!_rankingProfileFrameUnavailable && normalizedRow.profile_frame !== undefined
@@ -18476,6 +18497,7 @@ const rankingRowFromLocalEntry = (entry, difficulty) => {
   if (!diff) return null;
   const reachedWave = Number(entry.reachedWave);
   const turns = Number(entry.turns);
+  const playedTurns = Number(entry.playedTurns);
   const level = Number(entry.level);
   const createdAt = rankingCreatedAtFromLocal(entry.at);
   return {
@@ -18489,6 +18511,7 @@ const rankingRowFromLocalEntry = (entry, difficulty) => {
     clear_id: entry.clearId,
     ...(Number.isFinite(reachedWave) && reachedWave > 0 ? { reached_wave: reachedWave } : {}),
     ...(Number.isFinite(turns) && turns > 0 ? { turns } : {}),
+    ...(Number.isFinite(playedTurns) && playedTurns > 0 ? { played_turns: playedTurns } : {}),
     ...(entry.breederId ? { breeder_id: entry.breederId } : {}),
     // プロフィールフレーム。退避した時点で選んでいたものをそのまま送り直す
     // (未選択・古い退避データには入っていないので、その場合は列ごと付けない)
@@ -32307,6 +32330,20 @@ const raidJackStoryCandidates = (totals, nowMs) => {
     out.push(defeatedAt(RAID_JACK_A_TIERS.length - 1) ? RAID_JACK_ENDING_CLEARED_ID : RAID_JACK_ENDING_NOTCLEARED_ID);
   }
   return out.filter(Boolean);
+};
+
+// 終章を見終えた人へ、一度だけ流し直す(2026-11-01 社長「ハロウィン終了ストーリーにソラシドがいない」→ 足したら見た人にも1回だけ流す)。
+//   流すのは前に見た方(倒せた/倒せなかった)。見た印(mh_rhythm_event_story_v1 の終章の id)と大王のフレームのギフトは触らない。
+//   流し直したかは新しいキー mh_raid_jack_ending_replay_v1 に持つ(値は { at })。終章をはじめて見た人も、見終えたところで印を立てる(二度流さない)。
+//   ★RAID_JACK_ENDING_REPLAY_READY が false のあいだは何もしない(ソラシドのセリフを入れた 2026-11-01 に true にした)
+const RAID_JACK_ENDING_REPLAY_KEY = 'mh_raid_jack_ending_replay_v1';
+const RAID_JACK_ENDING_REPLAY_READY = true;
+// 流し直す終章の id。見た印の並びから、前に見た方を選ぶ(両方見ていれば倒せた方)。見ていなければ null(ふつうの流れで見る)
+const raidJackEndingReplayIdFor = (seenStoryIds) => {
+  const seen = Array.isArray(seenStoryIds) ? seenStoryIds : [];
+  if (seen.includes(RAID_JACK_ENDING_CLEARED_ID)) return RAID_JACK_ENDING_CLEARED_ID;
+  if (seen.includes(RAID_JACK_ENDING_NOTCLEARED_ID)) return RAID_JACK_ENDING_NOTCLEARED_ID;
+  return null;
 };
 
 // 大王が倒されたのを見た印(2026-10-20)。フレーム「ハロウィン・恐」をマーケットで買えるようにする条件に使う。
@@ -75579,6 +75616,9 @@ function MonsterHeroGame() {
   // 既読を読み終えたか(読む前に「まだ見ていない」と取り違えて流さないため)
   const [rhythmHellStorySeenLoaded, setRhythmHellStorySeenLoaded] = useState(false);
   const [rhythmHellGuide, setRhythmHellGuide] = useState(null);
+  // ハロウィン・ナイトの終章を一度だけ流し直したか(RAID_JACK_ENDING_REPLAY_KEY)。読み終えるまで流さない
+  const [raidJackEndingReplayDone, setRaidJackEndingReplayDone] = useState(false);
+  const [raidJackEndingReplayLoaded, setRaidJackEndingReplayLoaded] = useState(false);
   // HELL が初めて開いた演奏の結果画面を閉じたら、お話を流す(RHYTHM_HELL_STORY_TRIGGER が 'after-result' のとき)
   const rhythmHellStoryAfterResultRef = useRef(false);
   const [tacticsIntroPending, setTacticsIntroPending] = useState(false);
@@ -75746,6 +75786,9 @@ function MonsterHeroGame() {
   // 「少ないターンで終えた」ように見えてしまうため、クリア以外は入れない。
   const runEndWaveRef = useRef(null);
   const runClearTurnsRef = useRef(null);
+  // その回で遊んだ累計ターン数(クリアでも負けでも入れる・2026-11-01 社長「負けたときもターン数を記録して」)。
+  // turns(クリアしたときだけ)とは別の列 played_turns へ送る。turns の意味は変えない
+  const runPlayedTurnsRef = useRef(null);
   // totalTurnCount のstateは描画のため。送信はレンダーを挟まず読むことがあるので、
   // 加算のたびに同じ値をこのrefへも書き、1周ぶん古い値を送らないようにする
   const totalTurnCountRef = useRef(0);
@@ -78728,6 +78771,18 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(SORASHIDO_JOIN_STORY_ID)) return;
     setRhythmEventStoryPending(SORASHIDO_JOIN_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // ハロウィン・ナイトの終章を、見終えた人へ一度だけ流し直す(2026-11-01 社長。35-raid-jack.jsx の RAID_JACK_ENDING_REPLAY_KEY)。
+  // 流すのは前に見た方。見ていない人はふつうの流れで見る(見終えたところで印が立つので、二度は流れない)
+  useEffect(() => {
+    if (!RAID_JACK_ENDING_REPLAY_READY || RELEASE_FLAGS.raidJack !== true) return;
+    if (!raidJackEndingReplayLoaded || raidJackEndingReplayDone) return;
+    const replayId = raidJackEndingReplayIdFor(rhythmEventStorySeen);
+    if (!replayId) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(`${replayId}#replay`)) return;
+    rhythmEventStoryStartedRef.current = [...rhythmEventStoryStartedRef.current, `${replayId}#replay`];
+    setRhythmEventStoryPending(prev => prev || replayId);
+  }, [raidJackEndingReplayLoaded, raidJackEndingReplayDone, rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // 個人杯のお話(2026-10-31)。公開のあとの最初の HOME で1回だけ流す(見たかは mh_rhythm_event_story_v1 の id)。
   // MFバトルカードのはじまりをまだ見ていない人には流さない(何の話か分からないので。はじまりを見たあとの HOME で流れる)。
   // 公開の印 cardCup が偽なら何もしない。はじめて遊ぶ人にも見た扱いにはしない(見ると、ほかのお話にもあつが出るようになるので)
@@ -80386,6 +80441,10 @@ function MonsterHeroGame() {
       if (EVENT_REPLAY_RELEASE_FLAGS.rhythmHell) {
         try { setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(), false, false)) === true); setRhythmHellStorySeenLoaded(true); } catch {}
       }
+      // ハロウィン・ナイトの終章を流し直したか。仕組みを開けたあとだけ読む(値は { at }。true も済んだ扱い。それ以外は「まだ」)
+      if (RAID_JACK_ENDING_REPLAY_READY) {
+        try { const v = await storeGet(RAID_JACK_ENDING_REPLAY_KEY, null, false); setRaidJackEndingReplayDone(v === true || (!!v && typeof v === 'object')); setRaidJackEndingReplayLoaded(true); } catch {}
+      }
       // 助手とおしゃべりのお話を見たか。おしゃべりの公開(assistantChat)のあとだけ読む
       if (EVENT_REPLAY_RELEASE_FLAGS.assistantChat) {
         try { setAssistantChatStorySeenFlag((await storeGet(ASSISTANT_CHAT_STORY_SEEN_KEY, false, false)) === true); setAssistantChatStorySeenLoaded(true); } catch {}
@@ -80666,6 +80725,9 @@ function MonsterHeroGame() {
     const reachedWave = Number.isFinite(Number(runEndWaveRef.current)) ? Number(runEndWaveRef.current) : null;
     const clearTurns = Number.isFinite(Number(runClearTurnsRef.current)) && Number(runClearTurnsRef.current) > 0
       ? Number(runClearTurnsRef.current) : null;
+    // 遊んだ累計ターン数(クリアでも負けでも)。取れないときは列ごと付けない
+    const playedTurns = Number.isFinite(Number(runPlayedTurnsRef.current)) && Number(runPlayedTurnsRef.current) > 0
+      ? Number(runPlayedTurnsRef.current) : null;
     // プロフィールフレーム(2026-09-15)。フレームなしのときは列ごと付けない
     const profileFrame = rankingProfileFrameValue(profileFrameId);
     // ブリーダーID(2026-09-16)。これまでバトルの記録には付けていなかったため、
@@ -80684,7 +80746,8 @@ function MonsterHeroGame() {
       ...(breederId ? { breeder_id: breederId } : {}),
       ...(reachedWave != null ? { reached_wave: reachedWave } : {}),
       ...(profileFrame ? { profile_frame: profileFrame } : {}),
-      ...(clearTurns != null ? { turns: clearTurns } : {}) };
+      ...(clearTurns != null ? { turns: clearTurns } : {}),
+      ...(playedTurns != null ? { played_turns: playedTurns } : {}) };
     // 絆Lvの正本テーブルへも同じ内容を書く(1人1個体1行で上書き)。
     // 結果画面はスコア送信の完了を待つので、こちらは待たせない(待つと最大8秒ぶん
     // リザルトが遅れる)。書けなくても次の周回で書き直されるし、一覧は記録側の
@@ -80706,6 +80769,7 @@ function MonsterHeroGame() {
         const entry = { userName: name, hero: heroName, party, score: finalScore, diff, level, icon, clearId, at: Date.now(),
           ...(profileFrame ? { profileFrame } : {}),
           ...(reachedWave != null ? { reachedWave } : {}), ...(clearTurns != null ? { turns: clearTurns } : {}),
+          ...(playedTurns != null ? { playedTurns } : {}),
           nationalSaved: false, nationalError: { message: error?.message || String(error), status: error?.status || null, code: error?.code || null, body: error?.body || null } };
         const rows = await storeGet(`mh_rank_${diff}`, [], false);
         const list = Array.isArray(rows) ? rows.slice() : [];
@@ -81704,6 +81768,12 @@ function MonsterHeroGame() {
   const markRhythmHellStorySeen = useCallback(() => {
     setRhythmHellStorySeenFlag(true);
     try { storeSet(rhythmHellStorySeenKey(), true, false); } catch {}
+  }, []);
+  // ハロウィン・ナイトの終章を「流し直した」にする。本編で流したときだけ(回想・デバッグでは立てない)
+  const markRaidJackEndingReplayed = useCallback(() => {
+    if (!RAID_JACK_ENDING_REPLAY_READY) return;
+    setRaidJackEndingReplayDone(true);
+    try { storeSet(RAID_JACK_ENDING_REPLAY_KEY, { at: new Date().toISOString() }, false); } catch {}
   }, []);
   // 助手とおしゃべりのお話を「見た」にする。回想の画面からは保存へ直接書かず、この関数を通す
   const markAssistantChatStorySeen = useCallback(() => {
@@ -84069,6 +84139,7 @@ function MonsterHeroGame() {
           // 敗北。倒しきれなかったWAVEがあるのでターン数は残さず、どこまで来たかだけ残す
           runEndWaveRef.current = wave;
           runClearTurnsRef.current = null;
+          runPlayedTurnsRef.current = (Number(totalTurnCountRef.current)||0) + (Number(turnCount)||0);
           await awardRunRewards(Math.max(0, wave - 1));
         } catch (e) { console.error('[result] award rewards failed:', e && e.message ? e.message : e); }
         // リザルト自体は背面に表示するが、ランキング保存の成否が確定するまでは全面ロックを
@@ -84298,6 +84369,7 @@ function MonsterHeroGame() {
     try{
       runEndWaveRef.current=10;
       runClearTurnsRef.current=clearTurns;
+      runPlayedTurnsRef.current=clearTurns;
       await awardRunRewards(10);
       await recordClearOnce();
     }catch(e){
@@ -85239,6 +85311,7 @@ function MonsterHeroGame() {
     // リタイア。敗北と同じく、到達WAVEだけを残す
     runEndWaveRef.current = wave;
     runClearTurnsRef.current = null;
+    runPlayedTurnsRef.current = (Number(totalTurnCountRef.current)||0) + (Number(turnCount)||0);
     try { await awardRunRewards(Math.max(0, wave - 1)); } catch {}
     setShowQuitConfirm(false);
     if (!silent) setGaveUp(true);
@@ -88907,6 +88980,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // クリア。全WAVEを倒しきったので、かかった累計ターン数を記録に残す
         runEndWaveRef.current = 10;
         runClearTurnsRef.current = totalTurnCountRef.current;
+        runPlayedTurnsRef.current = totalTurnCountRef.current;
         await awardRunRewards(10);
         await recordClearOnce();
       } catch (e) { console.error('[result] award rewards failed:', e && e.message ? e.message : e); }
@@ -89323,6 +89397,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       totalTurnCountRef.current = 0;
       runEndWaveRef.current = null;
       runClearTurnsRef.current = null;
+      runPlayedTurnsRef.current = null;
       ultimateDistanceBreakLevelsRef.current=[0,0,0,0]; setUltimateDistanceBreakLevels([0,0,0,0]);
       ultimateDistanceBreakPendingRef.current=null; setUltimateDistanceBreakPending(null); setUltimateDistanceBreakReveal(null);
     }
@@ -96392,6 +96467,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 助手とおしゃべりのお話は、本編で流したときだけ「見た」にする(回想・デバッグでは立てない)
           if(event&&event.id===ASSISTANT_CHAT_STORY_ID&&eventReplay.live&&!eventReplay.debug) markAssistantChatStorySeen();
           if(event&&event.id===TACTICS_TYPES_STORY_ID&&eventReplay.live&&!eventReplay.debug) markTacticsTypesStorySeen();
+          // ハロウィン・ナイトの終章は、本編で見終えたら「流し直した」も立てる(はじめて見た人にも、もう流さない)
+          if(event&&(event.id===RAID_JACK_ENDING_CLEARED_ID||event.id===RAID_JACK_ENDING_NOTCLEARED_ID)&&eventReplay.live&&!eventReplay.debug) markRaidJackEndingReplayed();
           // MFバトルカードのはじまりは、本編で見終えたらそのままスターター選び(CARD_TOP。持っていない人にはスターター選びが出る)へ
           if(event&&event.id===CARD_BATTLE_INTRO_STORY_ID&&eventReplay.live&&!eventReplay.debug){
             markCardBattleIntroSeen();
@@ -96417,6 +96494,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id==='tactics_intro') markTacticsIntroSeen();
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id===ASSISTANT_CHAT_STORY_ID) markAssistantChatStorySeen();
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id===TACTICS_TYPES_STORY_ID) markTacticsTypesStorySeen();
+          if(eventReplay.live&&!eventReplay.debug&&event&&(event.id===RAID_JACK_ENDING_CLEARED_ID||event.id===RAID_JACK_ENDING_NOTCLEARED_ID)) markRaidJackEndingReplayed();
           // MFバトルカードのはじまりは、飛ばしたら HOME のまま(入口から入れる)
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id===CARD_BATTLE_INTRO_STORY_ID) markCardBattleIntroSeen();
           // HELL のお話は飛ばしても説明は出す(遊び方は飛ばさずに知ってほしい)。見たにするのは本編で流したときだけ

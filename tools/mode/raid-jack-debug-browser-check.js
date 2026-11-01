@@ -161,7 +161,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     // ⑤ 端末の記録
     await page.getByRole('button', { name: '記録を初期化' }).click();
     await page.waitForTimeout(300);
-    const keys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('mh_raid_jack')));
+    // 終章の流し直しの印(mh_raid_jack_ending_replay_v1)は、検査の種(quiet-boot-seed)が入れたもの。デバッグが書いたものではないので数えない
+    const keys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('mh_raid_jack') && k !== 'mh_raid_jack_ending_replay_v1'));
     check('端末に書くのは新しいキー mh_raid_jack_v1 だけ', keys.length === 1 && keys[0] === 'mh_raid_jack_v1', keys.join(','));
     await page.getByRole('button', { name: '手前4段階を倒した状態にする' }).click();
     await page.waitForTimeout(300);
