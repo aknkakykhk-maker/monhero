@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b5e5d9c054ac12cb
+// source-sha256: 2f80b59cff7b24c6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -131337,15 +131337,18 @@ function MonsterHeroGame() {
   const RAID_JACK_RHYTHM_STORY_ID = 'raid_jack_rhythm_story_2026_10_06';
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
   const PANDORA_WINGS_STORY_IDS = PANDORA_WINGS_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, CARD_CUP_STORY_ID];
+  const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
+  const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, CARD_CUP_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
-    pandora_wings_2026_11_02: 'pandora_wings_2026_ep1'
+    [PANDORA_WINGS_EVENT_ID]: 'pandora_wings_2026_ep1'
   };
   const RHYTHM_EVENT_THANKS_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_THANKS_STORY_ID,
-    [SYMPHONY_EVENT_ID]: SYMPHONY_THANKS_STORY_ID
+    [SYMPHONY_EVENT_ID]: SYMPHONY_THANKS_STORY_ID,
+    [PANDORA_WINGS_EVENT_ID]: PANDORA_WINGS_THANKS_STORY_ID
   };
   const rhythmEventStoryIdFor = event => event && RHYTHM_EVENT_STORY_BY_EVENT[event.id] || null;
   const rhythmEventThanksStoryIdFor = event => event && RHYTHM_EVENT_THANKS_STORY_BY_EVENT[event.id] || null;
@@ -134632,7 +134635,8 @@ function MonsterHeroGame() {
     beatPointAlwaysSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_ALWAYS_STORY_ID),
     rhythmSixLaneSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_SIX_LANE_STORY_ID),
     beatPointUpSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_UP_STORY_ID),
-    ...Object.fromEntries(PANDORA_WINGS_STORIES.map(story => [`pandoraWingsEp${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
+    ...Object.fromEntries(PANDORA_WINGS_STORIES.filter(story => story.id !== PANDORA_WINGS_THANKS_STORY_ID).map(story => [`pandoraWingsEp${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
+    pandoraWingsEp8Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(PANDORA_WINGS_THANKS_STORY_ID),
     ...Object.fromEntries(HALLOWEEN_NIGHT_STORIES.map(story => [`halloweenNightPart${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
     ...Object.fromEntries(RAID_JACK_STORY_IDS.map(id => [raidJackStoryUnlockKey(id), Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(id)])),
     rhythmMultiFriendsSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MULTI_FRIENDS_STORY_ID),

@@ -191,10 +191,7 @@ check('ほかのイベントの受け取りは待たせない',app.includes("con
   //   用意し忘れると、終わっても何も流れないまま静かに幕が下りる(第2回で実際にそうなった)。
   const limited=(O.RHYTHM_EVENTS||[]).filter(e=>e&&e.kind==='limited');
   const covered=new Set(pairs.map(([eventConst])=>idOfConst(eventConst)));
-  // 2026-11-01 「鍵の向こう側へ」は閉幕の会話が第8話(終章)で、お話は社長の確認を1話ずつ取ってから入れる。
-  //   開催中に入れ忘れないよう、終わりの2日前からは必ず求める(それより前は、まだ無くてもよい)
-  const dueMs=Date.now()+2*24*60*60*1000;
-  const missing=limited.filter(e=>!covered.has(e.id)&&Date.parse(e.endAt)<=dueMs);
+  const missing=limited.filter(e=>!covered.has(e.id));
   check('どの期間限定イベントにも閉幕の会話がある',missing.length===0,
     missing.length?missing.map(e=>e.id).join(' / '):`${limited.length}回ぶん`);
 
