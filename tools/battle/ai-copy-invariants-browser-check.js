@@ -68,6 +68,9 @@ const check = (name, ok, detail = '') => {
       set('mh_tutorial_seen_v1', true); set('mh_battle_tutorial_seen_v1', true); set('mh_battle_tutorial_guide_shown_v1', true);
       set('mh_masu_migrated', true); set('mh_inherited_unique_level_compensation_v1', true); set('mh_inherited_unique_level_compensation_pending_v1', false);
       set('mh_tactics_intro_seen_v1', true);
+      // 個人杯のお話(2026-10-31 公開)は、HOME に来た最初の1回だけ流れる。HOME からすぐバトルへ進むこの検査では、
+      //   流れ始めたお話が編成の画面の上に残って「枠に入れる」が押せなくなる(2026-11-01 点検で見つけた)。見たことにしてから始める
+      set('mh_rhythm_event_story_v1', ['card_cup_2026_10_31']);
       // 勇者モンに選ぶ子を解放しておく(stack-marks の検査と同じ並び)
       localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Monol','Oboro','KenshiMocchi','Mia','Snegurochka','Undine','Yaobikuni','Pandora','Ghost','Spooky','Melody','Kuromy']));
       // アシストカードはソラシドの自動化だけ(検査のまっさらなデータだけの話)

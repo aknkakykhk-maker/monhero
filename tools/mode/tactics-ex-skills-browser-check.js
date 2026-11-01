@@ -66,6 +66,8 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       localStorage.setItem('mh_inherited_unique_level_compensation_v1', JSON.stringify(true));
       localStorage.setItem('mh_inherited_unique_level_compensation_pending_v1', JSON.stringify(false));
       localStorage.setItem('mh_tactics_intro_seen_v1', JSON.stringify(true));
+      // 個人杯のお話(2026-10-31 公開)は HOME に来た最初の1回だけ流れ、すぐバトルへ進むと編成の画面の上に残って「枠に入れる」が押せない(2026-11-01 点検)。見たことにしてから始める
+      localStorage.setItem('mh_rhythm_event_story_v1', JSON.stringify(['card_cup_2026_10_31']));
       // HELL の公開(#2931)で、HOME に来た人へ1回だけお話と遊び方の説明が出る。画面全体を覆う窓なので、ほかの紹介と同じく見たことにしてから始める
       //   (2026-10-13: 下準備に無く、説明が開いたままバトルへ進んで、説明の動画が枠を押す邪魔をしていた。プレイヤーは閉じないと進めないので起きない)
       localStorage.setItem('mh_rhythm_hell_story_seen_v1', JSON.stringify(true));
