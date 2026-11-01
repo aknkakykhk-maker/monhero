@@ -173,7 +173,7 @@ const Audio_ = (() => {
     "audio/bgm-pro-battle-01.mp3": "59a3a0fbfef1",
     "audio/bgm-pro-battle-02.mp3": "f572c81a9ef6",
     "audio/bgm-profile.mp3": "523789845ff1",
-    "audio/bgm-rebellion-short.mp3": "04678c77a7e1",
+    "audio/bgm-rebellion-short.mp3": "92a340e95441",
     "audio/bgm-rebellion.mp3": "4c8807e74e0e",
     "audio/bgm-result.mp3": "c4dc9d2fb8a5",
     "audio/bgm-rising-hope.mp3": "5b56b8f9d099",
