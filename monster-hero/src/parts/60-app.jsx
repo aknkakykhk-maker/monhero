@@ -7109,9 +7109,9 @@ function MonsterHeroGame() {
       if (EVENT_REPLAY_RELEASE_FLAGS.rhythmHell) {
         try { setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(), false, false)) === true); setRhythmHellStorySeenLoaded(true); } catch {}
       }
-      // ハロウィン・ナイトの終章を流し直したか。仕組みを開けたあとだけ読む(値は { at }。壊れた値は「まだ」)
+      // ハロウィン・ナイトの終章を流し直したか。仕組みを開けたあとだけ読む(値は { at }。true も済んだ扱い。それ以外は「まだ」)
       if (RAID_JACK_ENDING_REPLAY_READY) {
-        try { const v = await storeGet(RAID_JACK_ENDING_REPLAY_KEY, null, false); setRaidJackEndingReplayDone(!!v && typeof v === 'object'); setRaidJackEndingReplayLoaded(true); } catch {}
+        try { const v = await storeGet(RAID_JACK_ENDING_REPLAY_KEY, null, false); setRaidJackEndingReplayDone(v === true || (!!v && typeof v === 'object')); setRaidJackEndingReplayLoaded(true); } catch {}
       }
       // 助手とおしゃべりのお話を見たか。おしゃべりの公開(assistantChat)のあとだけ読む
       if (EVENT_REPLAY_RELEASE_FLAGS.assistantChat) {

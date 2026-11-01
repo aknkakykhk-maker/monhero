@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d8321bbb6b90b488
+// source-sha256: 6bb0f2a638b79caa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -52156,7 +52156,7 @@ const raidJackStoryCandidates = (totals, nowMs) => {
   return out.filter(Boolean);
 };
 const RAID_JACK_ENDING_REPLAY_KEY = 'mh_raid_jack_ending_replay_v1';
-const RAID_JACK_ENDING_REPLAY_READY = false;
+const RAID_JACK_ENDING_REPLAY_READY = true;
 const raidJackEndingReplayIdFor = seenStoryIds => {
   const seen = Array.isArray(seenStoryIds) ? seenStoryIds : [];
   if (seen.includes(RAID_JACK_ENDING_CLEARED_ID)) return RAID_JACK_ENDING_CLEARED_ID;
@@ -132133,7 +132133,7 @@ function MonsterHeroGame() {
       if (RAID_JACK_ENDING_REPLAY_READY) {
         try {
           const v = await storeGet(RAID_JACK_ENDING_REPLAY_KEY, null, false);
-          setRaidJackEndingReplayDone(!!v && typeof v === 'object');
+          setRaidJackEndingReplayDone(v === true || !!v && typeof v === 'object');
           setRaidJackEndingReplayLoaded(true);
         } catch {}
       }

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f65ee561dee6ef13
+// generated-sha256: 16a755a61eac52eb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -32312,9 +32312,9 @@ const raidJackStoryCandidates = (totals, nowMs) => {
 // 終章を見終えた人へ、一度だけ流し直す(2026-11-01 社長「ハロウィン終了ストーリーにソラシドがいない」→ 足したら見た人にも1回だけ流す)。
 //   流すのは前に見た方(倒せた/倒せなかった)。見た印(mh_rhythm_event_story_v1 の終章の id)と大王のフレームのギフトは触らない。
 //   流し直したかは新しいキー mh_raid_jack_ending_replay_v1 に持つ(値は { at })。終章をはじめて見た人も、見終えたところで印を立てる(二度流さない)。
-//   ★RAID_JACK_ENDING_REPLAY_READY が false のあいだは何もしない。ソラシドのセリフを入れたら true にする
+//   ★RAID_JACK_ENDING_REPLAY_READY が false のあいだは何もしない(ソラシドのセリフを入れた 2026-11-01 に true にした)
 const RAID_JACK_ENDING_REPLAY_KEY = 'mh_raid_jack_ending_replay_v1';
-const RAID_JACK_ENDING_REPLAY_READY = false;
+const RAID_JACK_ENDING_REPLAY_READY = true;
 // 流し直す終章の id。見た印の並びから、前に見た方を選ぶ(両方見ていれば倒せた方)。見ていなければ null(ふつうの流れで見る)
 const raidJackEndingReplayIdFor = (seenStoryIds) => {
   const seen = Array.isArray(seenStoryIds) ? seenStoryIds : [];
@@ -80415,9 +80415,9 @@ function MonsterHeroGame() {
       if (EVENT_REPLAY_RELEASE_FLAGS.rhythmHell) {
         try { setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(), false, false)) === true); setRhythmHellStorySeenLoaded(true); } catch {}
       }
-      // ハロウィン・ナイトの終章を流し直したか。仕組みを開けたあとだけ読む(値は { at }。壊れた値は「まだ」)
+      // ハロウィン・ナイトの終章を流し直したか。仕組みを開けたあとだけ読む(値は { at }。true も済んだ扱い。それ以外は「まだ」)
       if (RAID_JACK_ENDING_REPLAY_READY) {
-        try { const v = await storeGet(RAID_JACK_ENDING_REPLAY_KEY, null, false); setRaidJackEndingReplayDone(!!v && typeof v === 'object'); setRaidJackEndingReplayLoaded(true); } catch {}
+        try { const v = await storeGet(RAID_JACK_ENDING_REPLAY_KEY, null, false); setRaidJackEndingReplayDone(v === true || (!!v && typeof v === 'object')); setRaidJackEndingReplayLoaded(true); } catch {}
       }
       // 助手とおしゃべりのお話を見たか。おしゃべりの公開(assistantChat)のあとだけ読む
       if (EVENT_REPLAY_RELEASE_FLAGS.assistantChat) {

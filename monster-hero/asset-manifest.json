@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "dc02a083645e",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":121065503,"count":747},"card":{"bytes":34095815,"count":962},"all":{"bytes":262548764,"count":1802},"core":{"bytes":15652387,"count":22}},
+  "id": "672e3a90f965",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":121065503,"count":747},"card":{"bytes":34095815,"count":962},"all":{"bytes":262548764,"count":1802},"core":{"bytes":15653511,"count":22}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -1807,7 +1807,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"a188f3d225aa","size":277606,"pack":"core"},
+    "tailwind.css": {"v":"cb628c5cbcc7","size":277606,"pack":"core"},
     "data/images/images-ally.js": {"v":"3f1b217d1e16","size":70535,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"f908809f4b48","size":60701,"pack":"core"},
@@ -1824,8 +1824,8 @@
     "data/help.js": {"v":"d74ed46c90fa","size":688754,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":9047,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
-    "data/assistants.js": {"v":"525fd5acf100","size":963482,"pack":"core"},
+    "data/assistants.js": {"v":"2438489c392b","size":964593,"pack":"core"},
     "data/card-battle-cards.js": {"v":"9c6a8274b2f6","size":114416,"pack":"core"},
-    "game-system.compiled.js": {"v":"d5edd0ea2d79","size":7611414,"pack":"core"}
+    "game-system.compiled.js": {"v":"3d238bb71840","size":7611427,"pack":"core"}
   }
 }

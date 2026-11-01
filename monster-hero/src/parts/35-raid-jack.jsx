@@ -250,9 +250,9 @@ const raidJackStoryCandidates = (totals, nowMs) => {
 // 終章を見終えた人へ、一度だけ流し直す(2026-11-01 社長「ハロウィン終了ストーリーにソラシドがいない」→ 足したら見た人にも1回だけ流す)。
 //   流すのは前に見た方(倒せた/倒せなかった)。見た印(mh_rhythm_event_story_v1 の終章の id)と大王のフレームのギフトは触らない。
 //   流し直したかは新しいキー mh_raid_jack_ending_replay_v1 に持つ(値は { at })。終章をはじめて見た人も、見終えたところで印を立てる(二度流さない)。
-//   ★RAID_JACK_ENDING_REPLAY_READY が false のあいだは何もしない。ソラシドのセリフを入れたら true にする
+//   ★RAID_JACK_ENDING_REPLAY_READY が false のあいだは何もしない(ソラシドのセリフを入れた 2026-11-01 に true にした)
 const RAID_JACK_ENDING_REPLAY_KEY = 'mh_raid_jack_ending_replay_v1';
-const RAID_JACK_ENDING_REPLAY_READY = false;
+const RAID_JACK_ENDING_REPLAY_READY = true;
 // 流し直す終章の id。見た印の並びから、前に見た方を選ぶ(両方見ていれば倒せた方)。見ていなければ null(ふつうの流れで見る)
 const raidJackEndingReplayIdFor = (seenStoryIds) => {
   const seen = Array.isArray(seenStoryIds) ? seenStoryIds : [];

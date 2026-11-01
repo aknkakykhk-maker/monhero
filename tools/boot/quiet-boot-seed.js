@@ -69,9 +69,12 @@ const INTRO_STORY_KEY_IDS = Object.freeze({
   // 育成の検査2本がこの窓の下で押せずに落ちていた(2026-10-27)
   ASSISTANT_CHAT_STORY_SEEN_KEY: 'assistant_chat_story',
   TACTICS_TYPES_STORY_SEEN_KEY: 'tactics_types',
+  // ハロウィン・ナイトの終章の流し直し(2026-11-01)。上で終章を見たことにするので、流し直しも済んだことにする(キーは 35-raid-jack.jsx)
+  RAID_JACK_ENDING_REPLAY_KEY: 'raid_jack_ending_replay',
 });
 const introStoryKeys = (except = []) => {
-  const src = fs.readFileSync(path.resolve(__dirname, '..', '..', 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8');
+  const parts = path.resolve(__dirname, '..', '..', 'monster-hero/src/parts');
+  const src = ['17-release-changelog-login-missions.jsx', '35-raid-jack.jsx'].map((f) => fs.readFileSync(path.join(parts, f), 'utf8')).join('\n');
   return Object.entries(INTRO_STORY_KEY_IDS).filter(([, id]) => !except.includes(id))
     .map(([name]) => (src.match(new RegExp(`const ${name} = '([^']+)'`)) || [])[1]).filter(Boolean);
 };
