@@ -35,6 +35,15 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-01 13:59", type:'update', title:'「Rebellion ～Beyond the Lock～」に short ver. を追加しました', status:'new', group:'rhythm',
+    image:'images/song-art/rebellion.jpg?v=ef38f7ab2382',
+    items:[
+      '「Rebellion ～Beyond the Lock～」の short ver.(2分32秒)を追加しました。曲えらびで、原曲と切り替えて遊べます。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.11 ／ HARD Lv.16 ／ EXPERT Lv.26 ／ MASTER Lv.32 ／ HELL Lv.54 です。',
+      'ノーツ数は 268 ／ 309 ／ 419 ／ 507 ／ 572 ／ 720 です。',
+    ],
+  },
+  {
     // 2026-11-01 社長の決め「冥界チャレンジ(UNDERWORLD)と COCYTUS」文案A(1つにまとめる)・社長「この文で」
     date: "2026-11-01 11:59", type:'feature', title:'極限の上に「冥界チャレンジ」が加わり、新しい難易度 COCYTUS を追加しました', status:'new', group:'battle',
     assistantNotice:{id:'update_notice_underworld_v1',type:'mode'},

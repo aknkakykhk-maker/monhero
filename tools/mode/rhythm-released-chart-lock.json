@@ -256,6 +256,11 @@
   "rebellion/hard": "f9d2da5d9d6c01c0",
   "rebellion/expert": "0361007927fe8895",
   "rebellion/master": "26d5f964a3536420",
+  "rebellion_short/easy": "d3bb2e35e8f3f63e",
+  "rebellion_short/normal": "fc6d5c7019218945",
+  "rebellion_short/hard": "c466e9527efe3a32",
+  "rebellion_short/expert": "9ec0947f47cf563d",
+  "rebellion_short/master": "ac761327436253d7",
   "mf_ichika_mix/hell": "fb44abd7b8b62f15",
   "monster_hero/hell": "5e9db00bf41b8e59",
   "monster_hero_another/hell": "5dc329f75601a73e",
@@ -306,7 +311,8 @@
   "light_player_short/hell": "87684abfa3a11ca0",
   "tsuki_ga_michiru_mae_ni/hell": "7c53909ece20ab67",
   "tsuki_ga_michiru_mae_ni_short/hell": "270a9bd2954e5578",
-  "rebellion/hell": "c49270cc06ee302f"
+  "rebellion/hell": "c49270cc06ee302f",
+  "rebellion_short/hell": "80fb92cc2130b0f5"
  },
  "history": [
   {
@@ -541,6 +547,18 @@
     "rebellion/expert",
     "rebellion/master",
     "rebellion/hell"
+   ]
+  },
+  {
+   "at": "2026-11-01 14:00",
+   "reason": "Rebellion ～Beyond the Lock～ short ver. を公開",
+   "changed": [
+    "rebellion_short/easy",
+    "rebellion_short/normal",
+    "rebellion_short/hard",
+    "rebellion_short/expert",
+    "rebellion_short/master",
+    "rebellion_short/hell"
    ]
   }
  ]
