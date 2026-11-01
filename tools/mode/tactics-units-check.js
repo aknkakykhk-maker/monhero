@@ -1366,7 +1366,8 @@ check('カードの説明にも「飲んだ子だけ」と書く',
   // ★単体に効くのはガードとみゃるの薬だけ(2026-09-19 ユーザーの整理
   //   「単体に効くのはガードの余りとドレインと吸収だけ」／みゃるは2026-09-22に単体へ直した)
   const singles = teachings.filter(t => scopeOf(t) === '単体').map(t => t.id);
-  check('助手の教えで単体なのはみゃるの薬だけ', singles.join(',') === 'myaru', singles.join(',') || 'なし');
+  // 2026-11-01 点検: きゅうこの譜面(タクティクスでは置いた子が単体攻撃を引き受け、その子だけ被ダメが減る)も単体
+  check('助手の教えで単体なのはみゃるの薬ときゅうこの譜面だけ', singles.join(',') === 'myaru,kyuko', singles.join(',') || 'なし');
   check('ガードは守り・単体', genreOf({ type:'guard' }) === '守り' && scopeOf({ type:'guard' }) === '単体'
     && genreOf({ type:'weak_guard' }) === '守り' && scopeOf({ type:'weak_guard' }) === '単体');
   check('回復は回復・全体', genreOf({ type:'heal' }) === '回復' && scopeOf({ type:'heal' }) === '全体');

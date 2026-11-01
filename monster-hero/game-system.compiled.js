@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ed8dc9a9f58daab2
+// source-sha256: 99bbb66d7a6b508f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -140332,7 +140332,7 @@ function MonsterHeroGame() {
   const cardScopeLabel = card => {
     if (!card || !isTacticsMode(runMode)) return null;
     if (isAttackCard(card)) return '敵へ';
-    if (card.type === 'guard' || card.type === 'weak_guard' || card.subType === 'buff_myaru') return '単体';
+    if (card.type === 'guard' || card.type === 'weak_guard' || card.subType === 'buff_myaru' || card.subType === 'cover_kyuko') return '単体';
     return '全体';
   };
   const CARD_GENRE_TONE = {
@@ -165685,6 +165685,8 @@ const createAnimationStyle = () => {
     .mh-card-down-band { animation: mhCardDownBand 1.1s ease-out both; }
     @keyframes mhCardDownBand { 0% { opacity: 0; transform: scaleY(.2); } 15% { opacity: 1; transform: scaleY(1.08); } 25% { transform: scaleY(1); } 82% { opacity: 1; } 100% { opacity: 0; } }
     @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash, .mh-card-dmg-pop, .mh-card-down-band, .mh-card-guard-result { animation: none; } }
+    /* 受けた瞬間の白い光は、動きを止めると白い四角が絵を隠したまま残る(2026-11-01 点検)ので、動きを減らす設定では出さない */
+    @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash { display: none; } }
     /* キラ・レアキラの立ち絵の光(84 の CardKiraAura・cardKiraWrap。2026-10-30 社長「この形で入れて」→
        2026-10-31「バトル中の立ち絵も強化して」「もっとわかりやすく。センター位置をちゃんと合わせて」)。CSS だけ。動かすのは transform と opacity
        (ふちの光の filter だけは色を移すため動かす。ふちの光の中には動く物を入れない)。光の中心・大きさは 84 が体の範囲から決めて style で渡す */
