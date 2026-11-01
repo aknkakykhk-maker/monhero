@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 60d2940403029a65
+// generated-sha256: 79b275b70a83ef45
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -12902,6 +12902,12 @@ const storyCastOf = (script) => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(
 const STORY_MONSTER_ART = Object.freeze({
   Kyubi: typeof KYUBI_IMG !== 'undefined' ? KYUBI_IMG : null,
   Orihime: typeof ORIHIME_IMG !== 'undefined' ? ORIHIME_IMG : null,
+  // イベント「鍵の向こう側へ」(2026-11-02)のパンドラ。Pandora は pose:'idle' で待機アニメ(翼・尾が動く)。
+  //   PandoraShadow … 正体が分かる前の影 / PandoraAngel・PandoraDevil … 天使側・悪魔側に分かれた全身(pose:'splitL'/'splitR'・'mergeL'/'mergeR')
+  Pandora: typeof PANDORA_IMG !== 'undefined' ? PANDORA_IMG : null,
+  PandoraShadow: typeof PANDORA_SHADOW_IMG !== 'undefined' ? PANDORA_SHADOW_IMG : null,
+  PandoraAngel: typeof PANDORA_ANGEL_IMG !== 'undefined' ? PANDORA_ANGEL_IMG : null,
+  PandoraDevil: typeof PANDORA_DEVIL_IMG !== 'undefined' ? PANDORA_DEVIL_IMG : null,
 });
 // お話の層の位置を測って、いちばん外側の箱([data-event-story])の CSS 変数へ書く ref。
 // 上のステージの下端(--story-stage-bottom)と下の窓の高さ(--story-sheet-h)で、真ん中のモンスターの置き場を決める。
@@ -96689,7 +96695,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         let monstersIdx=-1;
         for(let i=step;i>=0;i--){if(Array.isArray(script[i].monsters)){monstersIdx=i;break;}}
         const storyMonsters=monstersIdx>=0?script[monstersIdx].monsters.filter(m=>m&&m.pose!=='hide'&&STORY_MONSTER_ART[m.id]):[];
-        const fxColors={transform:'255,237,180',rankup:['251,146,60','251,191,36','192,132,252','248,113,113','250,204,21'][Math.max(0,stageTier-1)],shrink:'186,230,253'};
+        const fxColors={split:'233,213,255',merge:'255,250,235',transform:'255,237,180',rankup:['251,146,60','251,191,36','192,132,252','248,113,113','250,204,21'][Math.max(0,stageTier-1)],shrink:'186,230,253'};
         const speakText=(l,w)=>{
           // ★呼び方は normalizeAssistantBond には入っていない(別の入れ物 assistantCallStyles)。話している助手ごとのぶんを引く
           const bond=normalizeAssistantBond(assistantBonds[w.id]);
@@ -96798,7 +96804,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {storyMonsters.map(m=>{
                 const art=<img src={STORY_MONSTER_ART[m.id]} alt="" draggable={false} className="block h-full w-full object-contain"/>;
                 return(
-                  <span key={`${m.id}:${m.pose}`} data-story-monster={m.id} data-story-pose={m.pose}>
+                  <span key={`${m.id}:${m.pose}`} data-story-monster={m.id} data-story-pose={m.pose} data-story-fierce={m.fierce?'':undefined}>
                     {m.pose==='idle'?withMonsterIdleArt(m.id,art,{fill:true,own:true}):art}
                   </span>
                 );
@@ -96807,7 +96813,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           )}
           {fx&&(
             <div key={`fx${step}`} aria-hidden="true" className="pointer-events-none" style={{position:'absolute',inset:0,zIndex:4}}>
-              <div data-story-fx-flash={fx} style={{position:'absolute',inset:0,background:`radial-gradient(circle at 50% 22%, rgba(${fxColors[fx]||'255,255,255'},.95), rgba(${fxColors[fx]||'255,255,255'},.35) 45%, rgba(0,0,0,0) 75%)`,animation:'storyFlash 1s ease-out both'}}/>
+              <div data-story-fx-flash={fx} style={{position:'absolute',inset:0,background:`radial-gradient(circle at 50% ${fx==='split'||fx==='merge'?'46%':'22%'}, rgba(${fxColors[fx]||'255,255,255'},.95), rgba(${fxColors[fx]||'255,255,255'},.35) 45%, rgba(0,0,0,0) 75%)`,animation:'storyFlash 1s ease-out both'}}/>
+              {/* パンドラが分かれる/戻るときの鍵穴の光(2026-11-02 イベント「鍵の向こう側へ」)。分かれるときは光の筋が放射状に走る */}
+              {(fx==='split'||fx==='merge')&&<span data-story-keyhole/>}
+              {fx==='split'&&<span data-story-crack>{[-160,-118,-72,-28,14,58,104,142].map((deg,i)=><i key={deg} style={{transform:`rotate(${deg}deg)`,animationDelay:`${i%3*40}ms`}}/>)}</span>}
               {line.fxText&&<div data-story-banner className="px-4 text-center text-[17px] font-black" style={{position:'absolute',top:'42%',left:'50%',width:'100%',maxWidth:'28rem',color:'#fff',textShadow:`0 0 14px rgba(${fxColors[fx]||'255,255,255'},1), 0 2px 0 rgba(0,0,0,.6)`,animation:'storyBanner 2.2s ease-out both'}}>{line.fxText}</div>}
             </div>
           )}
@@ -101251,6 +101260,39 @@ const createAnimationStyle = () => {
     [data-story-pose="front"] { animation: storyMonFront .5s ease-out both; }
     [data-story-pose="approach"] { animation: storyMonApproach .8s ease-out both; }
     [data-story-pose="hop"] { animation: storyMonHop 1.1s ease-out both; }
+    /* イベント「鍵の向こう側へ」(2026-11-02)のパンドラ。
+       peek … 箱のすきまから影がのぞく(ふっと出て、少し沈んだまま)。
+       splitL / splitR … 体のまんなか(鍵穴)で光がはじけたあと、悪魔側(左)と天使側(右)が左右へはじかれて離れ、それぞれの色の光をまとって揺れる。
+       mergeL / mergeR … 左右から寄って重なる(重なった所で鍵穴の光が強く光り、次の行で1つの立ち絵に戻る)。
+       fierce を付けると(第5話)離れ方と揺れが激しくなる */
+    [data-story-pose="peek"] { animation: storyMonPeek 1.2s ease-out both; filter: drop-shadow(0 0 2px rgba(233,213,255,.9)) drop-shadow(0 0 12px rgba(168,85,247,.85)); }
+    [data-story-pose="splitL"] { animation: storySplitL 1.1s cubic-bezier(.2,.9,.25,1.2) both, storySplitSway 2.6s ease-in-out 1.1s infinite; filter: drop-shadow(0 0 14px rgba(168,85,247,.95)) drop-shadow(0 0 4px rgba(88,28,135,.9)); }
+    [data-story-pose="splitR"] { animation: storySplitR 1.1s cubic-bezier(.2,.9,.25,1.2) both, storySplitSway 2.6s ease-in-out 1.4s infinite; filter: drop-shadow(0 0 14px rgba(255,255,255,.95)) drop-shadow(0 0 4px rgba(253,224,71,.8)); }
+    [data-story-pose="splitL"][data-story-fierce] { animation: storySplitL .7s cubic-bezier(.2,1.2,.3,1.4) both, storySplitShake .5s ease-in-out .7s 3, storySplitSway 2s ease-in-out 2.2s infinite; }
+    [data-story-pose="splitR"][data-story-fierce] { animation: storySplitR .7s cubic-bezier(.2,1.2,.3,1.4) both, storySplitShake .5s ease-in-out .75s 3, storySplitSway 2s ease-in-out 2.3s infinite; }
+    /* 戻るときは 悪魔側・天使側 の2つが真ん中へ寄って消え、同時に真ん中(重ねて置いた merged)のパンドラが光の中から現れる */
+    [data-story-pose="mergeL"] { animation: storyMergeL 1.3s ease-in both; filter: drop-shadow(0 0 14px rgba(168,85,247,.95)); }
+    [data-story-pose="mergeR"] { animation: storyMergeR 1.3s ease-in both; filter: drop-shadow(0 0 14px rgba(255,255,255,.95)); }
+    [data-story-pose="merged"] { position: absolute; left: 50%; bottom: 0; translate: -50% 0; animation: storyMerged 1.8s ease-out both; }
+    [data-story-monster^="Pandora"] { height: min(calc(100% / 1.14), 44vw, 250px); }
+    @keyframes storyMonPeek { 0% { opacity: 0; transform: translateY(18%) scale(.9); } 35% { opacity: .95; transform: translateY(4%); } 100% { opacity: .8; transform: translateY(6%); } }
+    @keyframes storySplitL { 0% { opacity: 0; transform: translateX(52%) scale(.9); filter: brightness(2.6); } 25% { opacity: 1; transform: translateX(46%) scale(1.04); } 100% { transform: translateX(-6%) rotate(-3deg); } }
+    @keyframes storySplitR { 0% { opacity: 0; transform: translateX(-52%) scale(.9); filter: brightness(2.6); } 25% { opacity: 1; transform: translateX(-46%) scale(1.04); } 100% { transform: translateX(6%) rotate(3deg); } }
+    @keyframes storySplitSway { 0%, 100% { translate: 0 0; } 50% { translate: 0 -4%; } }
+    @keyframes storySplitShake { 0%, 100% { translate: 0 0; } 25% { translate: -5% 1%; } 75% { translate: 5% -1%; } }
+    @keyframes storyMergeL { 0% { transform: translateX(-6%); } 70% { opacity: 1; transform: translateX(52%) scale(1.02); filter: brightness(1.6); } 100% { opacity: 0; transform: translateX(52%); filter: brightness(3); } }
+    @keyframes storyMergeR { 0% { transform: translateX(6%); } 70% { opacity: 1; transform: translateX(-52%) scale(1.02); filter: brightness(1.6); } 100% { opacity: 0; transform: translateX(-52%); filter: brightness(3); } }
+    @keyframes storyMerged { 0%, 62% { opacity: 0; transform: scale(.92); filter: brightness(3); } 80% { opacity: 1; transform: scale(1.06); filter: brightness(1.8); } 100% { opacity: 1; transform: none; filter: none; } }
+    /* 鍵穴の光(fx:'split' / 'merge')。白と紫の光が真ん中から走り、画面にひびのような光の筋が広がる */
+    [data-story-crack] { position: absolute; left: 50%; top: 46%; width: 0; height: 0; }
+    [data-story-crack] > i { position: absolute; left: 0; top: 0; width: 46vmax; height: 3px; transform-origin: 0 50%; border-radius: 3px; background: linear-gradient(90deg, rgba(255,255,255,1), rgba(216,180,254,.9) 40%, rgba(168,85,247,0)); box-shadow: 0 0 10px rgba(216,180,254,.9); animation: storyCrack .9s ease-out both; }
+    [data-story-crack] > i:nth-child(even) { background: linear-gradient(90deg, rgba(255,255,255,1), rgba(254,240,138,.9) 40%, rgba(255,255,255,0)); box-shadow: 0 0 10px rgba(255,255,255,.9); }
+    [data-story-keyhole] { position: absolute; left: 50%; top: 46%; width: 34vmin; height: 34vmin; margin: -17vmin 0 0 -17vmin; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,1) 0 12%, rgba(233,213,255,.85) 26%, rgba(147,51,234,.45) 48%, rgba(0,0,0,0) 70%); animation: storyKeyhole 1.1s ease-out both; }
+    @keyframes storyCrack { 0% { opacity: 0; scale: 0 1; } 20% { opacity: 1; } 55% { opacity: 1; scale: 1 1; } 100% { opacity: 0; scale: 1 .4; } }
+    @keyframes storyKeyhole { 0% { opacity: 0; transform: scale(.2); } 25% { opacity: 1; transform: scale(1.15); } 100% { opacity: 0; transform: scale(2.2); } }
+    /* 動きを減らす設定・軽量モードでは、光の筋は出さず、光だけを短く控えめに */
+    @media (prefers-reduced-motion: reduce) { [data-story-crack] { display: none; } [data-story-keyhole] { animation-duration: .5s; opacity: .5; } }
+    [data-lightweight="true"] [data-story-crack] { display: none; }
     @keyframes storyMonIn { 0% { opacity: 0; transform: translateY(14px) scale(.85); } 100% { opacity: 1; transform: none; } }
     @keyframes storyMonBack { 0% { transform: none; } 30% { transform: translateY(-8%) scale(.86); } 45% { transform: translate(-4%, -8%) scale(.86); } 60% { transform: translate(4%, -8%) scale(.86); } 75% { transform: translate(-2%, -8%) scale(.86); } 100% { transform: translateY(-8%) scale(.86); } }
     @keyframes storyMonFront { 0% { transform: none; } 100% { transform: scale(1.14); } }
