@@ -10740,7 +10740,7 @@ const PANDORA_WINGS_EP1 = [
   { who:'kyuko',    e:'normal',   t:'……静かに。' },
   { who:'pandora_shadow', e:'normal', fxText:'箱のふたが、ほんの少しだけ開いた', t:'……' },
   { who:'mua',      e:'surprise', t:'あ……！' },
-  { who:'momosuke', e:'troubled', fxText:'影は引っこみ、ふたが閉じた', t:'閉じちゃった……。ももたち、こわがらせちゃったかな' },
+  { who:'momosuke', e:'troubled', stage:'none', fxText:'影は引っこみ、ふたが閉じた', t:'閉じちゃった……。ももたち、こわがらせちゃったかな' },
   { who:'atsu',     e:'normal',   atsu:'with',    t:'見られたくなかったんじゃないかな。……無理には開けないほうがいい' },
   { who:'kiki',     e:'normal',   atsu:'without', t:'見られたくなかったのかもしれまつ。……無理に開けないほうがいいでつ' },
   { who:'kyuko',    e:'normal',   t:'うん。無理に開けるもんじゃないな' },
@@ -10749,6 +10749,50 @@ const PANDORA_WINGS_EP1 = [
 ];
 const PANDORA_WINGS_EP1_CALLS = { mua: 'きゅきゅ', kiki: 'きゅうこさん', momosuke: 'きゅうちゃん／ドラちゃん', dra: 'きゅうこちゃん', atsu: 'きゅうこちゃん', kyuko: 'みゅあねぇ／ききさん／ももすけ／ドラちゃん' };
 
+// 第2話「ひだりと、みぎ」(社長の「この文で」2026-11-02)。11/3 4:00 から HOME で1回流れる(data/rhythm-event.js の PANDORA_WINGS_STORIES)。
+// パンドラが出てくる所から先は笑・顔文字なし。パンドラは一人称「わたし」、言葉少なめで「……」が多い。
+// stage は話さずに真ん中の絵だけ出し替える(pandora_angel / pandora_devil で、ほめられた側を出す。none で消す)
+const PANDORA_WINGS_EP2 = [
+  // ---- 次の日・森の入り口 ----
+  { who:'momosuke', e:'troubled', t:'きゅうちゃん、ほんとにまた行くの？' },
+  { who:'kyuko',    e:'normal',   t:'行くって言ったからね。約束は守らないと' },
+  { who:'mua',      e:'excited',  t:'あたし、お菓子持ってきた！ 歌のお礼！' },
+  { who:'dra',      e:'happy',    t:'おでは毛布を持ってきたぞ。箱の中、寒いかもしれないからな' },
+  { who:'kiki',     e:'normal',   t:'わたくしは図鑑を持ってきまちた。何かわかるかもしれないでつ。' },
+  { who:'atsu',     e:'happy',    atsu:'with',    t:'みんな準備いいね笑 じゃ、行こっか' },
+  { who:'mua',      e:'happy',    atsu:'without', t:'みんな準備ばっちりだね〜。じゃ、行こっか！' },
+  // ---- 箱の前 ----
+  { who:'kyuko',    e:'normal',   t:'……来たよ。昨日の歌、聞かせてもらった者です' },
+  { who:'mua',      e:'normal',   fxText:'箱の鎖が、かすかに鳴った', t:'お菓子、ここに置いとくね。食べられたら食べて！' },
+  { who:'pandora_shadow', e:'normal', t:'……どうして、また来たの' },
+  { who:'momosuke', e:'surprise', t:'しゃべった……！' },
+  { who:'kyuko',    e:'normal',   t:'歌がきれいだったから。それだけ' },
+  { who:'pandora_shadow', e:'normal', t:'……きれい？ わたしの、歌が……？' },
+  { who:'pandora',  e:'normal',   fx:'rankup', fxText:'パンドラがあらわれた', t:'……' },
+  { who:'dra',      e:'surprise', t:'……！ 片方は白い翼で、もう片方は黒い翼だ' },
+  { who:'kiki',     e:'surprise', t:'あれま……。図鑑に載ってまつ。光と闇、ふたつの魔力をひとつの体に宿した、ピクシーのレアな種族……「パンドラ」でつ。' },
+  { who:'pandora',  e:'normal',   t:'……そう。わたしは、パンドラ' },
+  { who:'mua',      e:'surprise', t:'パンドラ……。イベントの名前の、パンドラだ……！' },
+  { who:'momosuke', e:'excited',  stage:'pandora_angel', t:'ねえねえ、白いほう、天使みたいでめっちゃかわいい！ 天使のほうのパンドラちゃん、最高！' },
+  { who:'dra',      e:'happy',    stage:'pandora_devil', t:'おでは黒いほうだな。悪魔の角と翼、かっけぇぞ。そっちのほうが強そうだ' },
+  { who:'pandora',  e:'normal',   t:'……' },
+  { who:'pandora',  e:'normal',   t:'……天使のほう。悪魔のほう' },
+  { who:'pandora',  e:'normal',   t:'……やっぱり、そうなんだ' },
+  { who:'mua',      e:'surprise', t:'え……？' },
+  { who:'pandora',  e:'normal',   t:'……どっちかだけなら、よかったのにね' },
+  { who:'momosuke', e:'troubled', stage:'none', fxText:'パンドラは箱へ戻り、ふたが閉じた', t:'あ……ま、まって！ ももたち、そんなつもりじゃ……' },
+  { who:'dra',      e:'troubled', t:'……おで、なにか、まずいこと言ったか' },
+  { who:'kiki',     e:'troubled', t:'……片方だけ、ほめられたのが、つらかったのかもしれないでつ。' },
+  { who:'atsu',     e:'troubled', atsu:'with',    t:'悪気がなくても、刺さるときは刺さるもんな' },
+  { who:'mua',      e:'troubled', atsu:'without', t:'悪気がなくても、刺さるときは刺さるよね……' },
+  { who:'momosuke', e:'troubled', t:'……あやまりたい。でも、もう出てきてくれないかも……' },
+  { who:'kyuko',    e:'normal',   t:'……' },
+  { who:'mua',      e:'surprise', t:'きゅきゅ？' },
+  { who:'kyuko',    e:'normal',   t:'いや。……さっきの顔、どっちのほうも、同じ顔してたなって思って' },
+  { who:'kyuko',    e:'normal',   t:'笑ってもない、怒ってもない。……あれは、慣れてる顔だ' },
+  { who:'kyuko',    e:'normal',   fxText:'箱の中は、静かなままだった', t:'……' },
+];
+const PANDORA_WINGS_EP2_CALLS = { mua: 'きゅきゅ', kiki: 'きゅうこさん', momosuke: 'きゅうちゃん', dra: 'きゅうこちゃん', atsu: 'きゅうこちゃん', kyuko: 'みゅあねぇ／ききさん／ももすけ／ドラちゃん' };
 const EVENT_REPLAYS = [
   // ぱんぷきん×ジャックのストーリー(2026-10-04・台本は docs/spec/RAID_JACK_STORY.md)。**公開するまでは回想にも出さない**(releaseFlag)。
   // 第1部(halloween_night_2026_part1)は時刻で流れる既存のもの。ここは第1.5部から終章まで。
@@ -10827,6 +10871,8 @@ const EVENT_REPLAYS = [
   //   あつを解放していない人には、あつのはじめての登場になる(atsuJoin)。あつは最初にしゃべる行まで顔を伏せる
   // イベント「鍵の向こう側へ」第1話(2026-11-02 12:00)。開幕のお話として流れる(60-app.jsx の RHYTHM_EVENT_STORY_BY_EVENT)。見たかは mh_rhythm_event_story_v1 の id
   { id: 'pandora_wings_2026_ep1', date: '2026-11-02 12:00', title: '鍵の向こう側へ 第1話 ～鎖の箱～', script: PANDORA_WINGS_EP1, calls: PANDORA_WINGS_EP1_CALLS, unlockedKey: 'pandoraWingsEp1Seen', group: 'pandora_wings' },
+  // 第2話(2026-11-03 4:00)。時刻で流れる(data/rhythm-event.js の pandoraWingsStoryIdsAt)
+  { id: 'pandora_wings_2026_ep2', date: '2026-11-03 04:00', title: '鍵の向こう側へ 第2話 ～ひだりと、みぎ～', script: PANDORA_WINGS_EP2, calls: PANDORA_WINGS_EP2_CALLS, unlockedKey: 'pandoraWingsEp2Seen', group: 'pandora_wings' },
   { id: 'card_cup_2026_10_31', date: '2026-10-31 12:00', title: 'みゅあ杯、はじまるよ！ ～個人杯～', script: ASSISTANT_CARD_CUP_STORY, calls: ASSISTANT_CARD_CUP_STORY_CALLS, unlockedKey: 'cardCupStorySeen', releaseFlag: 'cardCup', hideUntilFirstLine: ['atsu'], group: 'update' },
   { id: 'raid_jack_howto_2026_10_04', date: '2026-10-04 08:02', title: 'カボチャの大王ジャック ～レイドの遊び方～', script: ASSISTANT_RAID_JACK_HOWTO, calls: ASSISTANT_RAID_JACK_HOWTO_CALLS, unlockedKey: 'raidJackHowtoSeen', releaseFlag: 'raidJack', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, group: 'halloween' },
 ];
