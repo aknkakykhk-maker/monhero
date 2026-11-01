@@ -10833,7 +10833,7 @@ const PANDORA_WINGS_EP3_CALLS = { kyuko: 'パンドラ' };
 const PANDORA_WINGS_EP4 = [
   // ---- 広場・夕方 ----
   { who:'kyuko',    e:'normal',   t:'……ってわけで。パンドラ、おしゃれが好きなんだって' },
-  { who:'mua',      e:'excited',  t:'え、それ早く言ってよ〜！ あたしの出番じゃん！' },
+  { who:'mua',      e:'excited',  t:'え、それ早く言ってよ〜！ あたしの出番ぢゃん！' },
   { who:'momosuke', e:'excited',  t:'もももも！ ももも出番！ かわいいの、いっぱい持ってるもん♡' },
   { who:'kiki',     e:'happy',    t:'わたくしも、リボンなら少しありまつ。' },
   { who:'dra',      e:'normal',   t:'おではおしゃれはわからん。……荷物持ちならできるぞ' },
