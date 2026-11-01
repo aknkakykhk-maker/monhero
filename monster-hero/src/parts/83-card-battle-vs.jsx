@@ -160,6 +160,8 @@ const cardAssistantDeckName = (db, deck, who, level, rnd = Math.random) => {
 };
 // 画面。intro = { mode:'assistant'|'tutorial'|'pvp', foe:{ name, who?, icon?, line?, deckName?, monsters:[番号] }, me:{ name, icon?, deckName?, monsters } }
 const CARD_VS_CSS = `
+/* 背の低い縦の画面(390×600 など)では、相手の立ち絵とモンスターの絵を小さくして高さに収める(はみ出して頭が切れ、「あなた」と「タップで始める」が重なっていた。2026-11-01 見た目の点検) */
+@media (orientation: portrait) and (max-height: 700px) { [data-card-vs] { --mh-vs-foe-h: 18vh; --mh-vs-mon-h: 15vh; } }
 @keyframes mhVsFoeIn { from { transform: translateX(60%); opacity: 0 } to { transform: none; opacity: 1 } }
 @keyframes mhVsMonFoe { 0% { transform: translateX(140%) scale(.6); opacity: 0 } 70% { transform: translateX(-6%) scale(1.06); opacity: 1 } 100% { transform: none; opacity: 1 } }
 @keyframes mhVsMonMe { 0% { transform: translateX(-140%) scale(.6); opacity: 0 } 70% { transform: translateX(6%) scale(1.06); opacity: 1 } 100% { transform: none; opacity: 1 } }
@@ -219,10 +221,10 @@ const CardVsMonsters = ({ db, monsters, side, start, step }) => (
             ? (() => {
               // キラ・レアキラの光(CardVsArt の kira。対戦の場と同じ見た目)
               const kira = typeof cardKiraOf === 'function' ? cardKiraOf(db, no) : null;
-              const el = <CardVsArt src={art} alt={m.name} aspect={1} spread={1.1} kira={kira} onImgError={typeof cardArtOnError === 'function' ? cardArtOnError(art, CARD_IMG(m.img)) : null} className="drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]" style={{ width: 'min(100%, 19vh, 140px)' }}/>;
+              const el = <CardVsArt src={art} alt={m.name} aspect={1} spread={1.1} kira={kira} onImgError={typeof cardArtOnError === 'function' ? cardArtOnError(art, CARD_IMG(m.img)) : null} className="drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]" style={{ width: 'min(100%, var(--mh-vs-mon-h, 19vh), 140px)' }}/>;
               return el;
             })()
-            : <img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="w-full rounded-md object-cover" style={{ aspectRatio: '63 / 88', maxHeight: 'min(19vh, 140px)' }}/>}
+            : <img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="w-full rounded-md object-cover" style={{ aspectRatio: '63 / 88', maxHeight: 'min(var(--mh-vs-mon-h, 19vh), 140px)' }}/>}
           {/* 名前は「…」で切らず、幅に合わせて字を小さくして1行に収める(2026-10-31 社長「7文字以上のモンスター名…サイズで調整して」) */}
           <span data-card-vs-mon-name className="mt-0.5 block w-full text-center" style={{ containerType: 'inline-size' }}>
             <span className="whitespace-nowrap font-black text-white" style={{ fontSize: `min(10px, calc(100cqw / ${String(m.name).length + 0.5}))`, textShadow: '0 1px 2px #000' }}>{m.name}</span>
@@ -267,7 +269,7 @@ const CardVsIntro = ({ db, intro, onDone, meIcon = null }) => {
         {/* 相手(上・横向きでは右) */}
         <div data-card-vs-side="foe" className="flex min-h-0 flex-col items-center justify-end gap-1.5 px-3 pb-2 pt-3 landscape:flex-1 landscape:justify-center">
           <div className="flex w-full max-w-[420px] items-end gap-2">
-            <div className="mh-vs-foe shrink-0" style={{ width: 'min(34vw, 30vh, 150px)' }}>
+            <div className="mh-vs-foe shrink-0" style={{ width: 'min(34vw, var(--mh-vs-foe-h, 30vh), 150px)' }}>
               {who
                 ? <CardVsArt data-card-vs-foe-art src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} aspect={3 / 4}/>
                                 // マルチの相手: プロフィールと同じ部品(フレーム付き)。アイコンの id は絵に直す(字のまま出していた。91 の CardPvpAvatar)
