@@ -44,8 +44,8 @@ check('種族チャレンジの初回クリア報酬は160・INFERNOのあとに
   &&(()=>{const f=G('isSpeciesChallengeDifficultyUnlocked');return !f('COCYTUS',['ETERNAL'])&&f('COCYTUS',['INFERNO']);})());
 check('クイックにCOCYTUSを入れない',G('QUICK_EXTREME_SETTINGS').COCYTUS===undefined);
 check('デュラハンは1回・ムーは2回蘇る、ほかのWAVEは蘇らない',G('extremeRevivalCount')('COCYTUS',9)===1&&G('extremeRevivalCount')('COCYTUS',10)===2&&[3,5,7].every(w=>G('extremeRevivalCount')('COCYTUS',w)===0));
-check('ETERNALのルール(冥府・貫き・ライフ10倍)を引き継ぐ',[1,3,9,10].every(w=>{const a=rules(w),b=G('eternalStageRules')(w);return a.level===b.level&&a.enemyMultiplier===b.enemyMultiplier&&a.pierceRate===b.pierceRate&&a.minimumDamageDealt===b.minimumDamageDealt;})
-  &&G('extremeEnemyStatAdjust')('COCYTUS','Dino').lifeRate===10&&near(G('extremeEnemyStatAdjust')('COCYTUS','Durahan').lifeRate,13));
+check('ETERNALのルール(冥府・貫き)を引き継ぎ、敵のライフは50倍(2026-11-01 社長「さらに5倍」)',[1,3,9,10].every(w=>{const a=rules(w),b=G('eternalStageRules')(w);return a.level===b.level&&a.enemyMultiplier===b.enemyMultiplier&&a.pierceRate===b.pierceRate&&a.minimumDamageDealt===b.minimumDamageDealt;})
+  &&G('extremeEnemyStatAdjust')('COCYTUS','Dino').lifeRate===50&&near(G('extremeEnemyStatAdjust')('COCYTUS','Durahan').lifeRate,65));
 check('層の数はW1・2 4枚・W3〜8 5枚・W9 5枚・W10 5枚',[[1,4],[2,4],[3,5],[4,5],[5,5],[6,5],[7,5],[8,5],[9,5],[10,5]].every(([w,n])=>rules(w).shieldLayers===n));
 check('ボスの印はW3/5/7/9/10だけ',[3,5,7,9,10].every(w=>rules(w).bossWave===true)&&[1,2,4,6,8].every(w=>rules(w).bossWave===false));
 check('1枚目=最大ライフ×3(W9 3.8・W10 4.4)、+30%ずつ、ボスだけ本体に倍率',(()=>{const b=plan('COCYTUS',10,1000,500);const d=plan('COCYTUS',9,1000,500);const n=plan('COCYTUS',4,1000,500);const e=plan('COCYTUS',1,1000,500);
