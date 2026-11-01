@@ -2,6 +2,9 @@ const Audio_ = (() => {
   let Tone = null, ready = false, loading = null, started = false;
   let reverb = null, seBus = null;
   let audioCtx = null, bgmGain = null, masterOut = null, analyser = null, analyserData = null;
+  // 動画(お知らせの予告動画など)を再生しているあいだ、ゲームの音を出口(masterOut)で絞る(2026-11-02 社長「BGMを止めて公開」)。
+  // 曲は止めずに音量だけ0にするので、再生を終える・一時停止する・枠を閉じると、いま鳴っている曲がそのまま戻る
+  let videoHold = false;
   // AudioContextが「動いているつもりで止まっていないか」を見るための控え。
   // Androidでは state が running のままでも音が出なくなることがあり、state だけでは気づけない
   let ctxTimeMark = null, ctxRebuildCount = 0, toneLoadFailed = false;
@@ -218,7 +221,7 @@ const Audio_ = (() => {
   // 実際に流れている波形の大きさを設定画面から見られるようにする
   const buildAudioGraph = (ctx) => {
     masterOut = ctx.createGain();
-    masterOut.gain.value = 1;
+    masterOut.gain.value = videoHold ? 0 : 1;
     analyser = ctx.createAnalyser();
     analyser.fftSize = 2048;
     analyser.smoothingTimeConstant = 0;
@@ -837,5 +840,15 @@ const Audio_ = (() => {
   };
   const se = Object.fromEntries(Object.entries(fgSe).map(([name, play]) => [name, (...args) => (backgroundSeQuiet ? Promise.resolve() : play(...args))]));
 
-  return { playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  const setVideoHold = (on) => {
+    videoHold = !!on;
+    if (!masterOut || !audioCtx) return;
+    try {
+      const at = audioCtx.currentTime;
+      masterOut.gain.cancelScheduledValues(at);
+      masterOut.gain.setValueAtTime(masterOut.gain.value, at);
+      masterOut.gain.linearRampToValueAtTime(videoHold ? 0 : 1, at + 0.25);
+    } catch (e) { masterOut.gain.value = videoHold ? 0 : 1; }
+  };
+  return { setVideoHold, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();

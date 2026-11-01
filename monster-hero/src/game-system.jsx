@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: abaa976cf63725ca
+// generated-sha256: c2a3dc599161ca83
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -5577,6 +5577,9 @@ const Audio_ = (() => {
   let Tone = null, ready = false, loading = null, started = false;
   let reverb = null, seBus = null;
   let audioCtx = null, bgmGain = null, masterOut = null, analyser = null, analyserData = null;
+  // 動画(お知らせの予告動画など)を再生しているあいだ、ゲームの音を出口(masterOut)で絞る(2026-11-02 社長「BGMを止めて公開」)。
+  // 曲は止めずに音量だけ0にするので、再生を終える・一時停止する・枠を閉じると、いま鳴っている曲がそのまま戻る
+  let videoHold = false;
   // AudioContextが「動いているつもりで止まっていないか」を見るための控え。
   // Androidでは state が running のままでも音が出なくなることがあり、state だけでは気づけない
   let ctxTimeMark = null, ctxRebuildCount = 0, toneLoadFailed = false;
@@ -5793,7 +5796,7 @@ const Audio_ = (() => {
   // 実際に流れている波形の大きさを設定画面から見られるようにする
   const buildAudioGraph = (ctx) => {
     masterOut = ctx.createGain();
-    masterOut.gain.value = 1;
+    masterOut.gain.value = videoHold ? 0 : 1;
     analyser = ctx.createAnalyser();
     analyser.fftSize = 2048;
     analyser.smoothingTimeConstant = 0;
@@ -6412,7 +6415,17 @@ const Audio_ = (() => {
   };
   const se = Object.fromEntries(Object.entries(fgSe).map(([name, play]) => [name, (...args) => (backgroundSeQuiet ? Promise.resolve() : play(...args))]));
 
-  return { playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  const setVideoHold = (on) => {
+    videoHold = !!on;
+    if (!masterOut || !audioCtx) return;
+    try {
+      const at = audioCtx.currentTime;
+      masterOut.gain.cancelScheduledValues(at);
+      masterOut.gain.setValueAtTime(masterOut.gain.value, at);
+      masterOut.gain.linearRampToValueAtTime(videoHold ? 0 : 1, at + 0.25);
+    } catch (e) { masterOut.gain.value = videoHold ? 0 : 1; }
+  };
+  return { setVideoHold, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();
 
 // ---- part: 15-dye-and-art.jsx ----
@@ -22305,6 +22318,18 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
 // 動画は data/rhythm-mode.js の RHYTHM_HELL_GUIDE_VIDEOS から名前で引く(説明の video と、ヘルプの {t:'video'})。
 // 無音・自動再生・繰り返し(iPhone でも自動で流れるよう muted playsInline)。sound のある動画だけ「音ありで見る」を出し、押すと音つきで最初から。
 // 読み込み前は暗い枠、読めなかったら枠ごと出さない(文だけの今の形に戻る)
+// ===== お知らせの予告動画(2026-11-02 イベント「鍵の向こう側へ」・社長「BGMを止めて公開」) =====
+// 押すまで読み込まない(preload none)。再生しているあいだだけゲームの音を絞り(Audio_.setVideoHold)、
+// 終わる・一時停止する・枠を閉じる(この部品が消える)と元に戻す。読めなかったら外枠(figure)ごと消す
+const ChangelogVideo=({src,poster})=>{
+  const ref=useRef(null);
+  const hold=(on)=>{try{if(typeof Audio_!=='undefined'&&Audio_&&typeof Audio_.setVideoHold==='function')Audio_.setVideoHold(on);}catch(e){}};
+  useEffect(()=>()=>{try{if(ref.current)ref.current.pause();}catch(e){}hold(false);},[]);
+  return <video ref={ref} src={src} poster={poster} controls playsInline preload="none"
+    onPlay={()=>hold(true)} onPause={()=>hold(false)} onEnded={()=>hold(false)}
+    onError={e=>{hold(false);const f=e.currentTarget.closest('figure');if(f)f.style.display='none';}}
+    style={{display:'block',width:'100%',maxWidth:'320px',margin:'0 auto',borderRadius:'12px',background:'#000'}}/>;
+};
 const rhythmHellGuideVideo=(id)=>{try{const v=typeof RHYTHM_HELL_GUIDE_VIDEOS!=='undefined'&&RHYTHM_HELL_GUIDE_VIDEOS?RHYTHM_HELL_GUIDE_VIDEOS[id]:null;return v&&typeof v.src==='string'&&Number(v.w)>0&&Number(v.h)>0?v:null;}catch(e){return null;}};
 const RhythmHellVideo=({id})=>{
   const info=rhythmHellGuideVideo(id);
@@ -91898,6 +91923,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       {c.image&&<img data-changelog-image src={c.image} alt={`${c.title}のお知らせ`}
                         onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
                         style={{width:'100%',borderRadius:'12px',margin:'6px 0'}}/>}
+                      {/* 予告動画(2026-11-02 社長「告知にストーリーの一部の予告動画もほしい」)。video:'movies/…mp4' と書いたときだけ出す。
+                          押すまで読み込まない(preload none)。videoPoster は押す前に見せる絵。読めなかったら黙って消す */}
+                      {typeof c.video==='string'&&c.video&&<figure data-changelog-video style={{margin:'6px 0'}}>
+                        <figcaption style={{fontWeight:900,margin:'0 0 4px'}}>▶ 予告動画</figcaption>
+                        <ChangelogVideo src={c.video} poster={typeof c.videoPoster==='string'?c.videoPoster:undefined}/>
+                      </figure>}
                       {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
                       {/* 本文の下に並べる見本の絵(2026-09-28・ユーザー提案「こんな感じに染色イメージを出したりしたらどう？」)。
                           gallery:[{ caption, image }] と書いたときだけ、見出しと絵を順に出す。
