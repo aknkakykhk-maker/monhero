@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>軽さ・演出 案</title>
+<style>
+:root{--bg:#0b1020;--card:#151c33;--card2:#1c2545;--line:#2c3866;--txt:#eef2ff;--sub:#9aa6d8;--acc:#e879f9;--on:#10b981;--warn:#f59e0b;--heavy:#ef4444}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font-family:"Hiragino Sans","Noto Sans JP",sans-serif}
+.frame{width:var(--w);height:var(--h);overflow:hidden;display:flex;flex-direction:column;background:linear-gradient(160deg,#0b1020,#1a1035)}
+header{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line)}
+header b{font-size:15px}.back{width:30px;height:30px;border-radius:8px;background:var(--card);display:grid;place-items:center;color:var(--sub)}
+.tabs{display:flex;gap:4px;padding:6px 8px}.tab{flex:1;text-align:center;font-size:12px;font-weight:800;padding:6px 0;border-radius:8px;background:var(--card);color:var(--sub)}
+.tab.on{background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff}
+.preset{margin:6px 8px;padding:8px;border-radius:12px;background:var(--card2);border:1px solid var(--acc)}
+.preset h4{margin:0 0 6px;font-size:11px;color:var(--acc)}
+.seg{display:flex;gap:3px}.seg span{flex:1;text-align:center;font-size:11px;font-weight:800;padding:6px 0;border-radius:7px;background:#0e1430;color:var(--sub)}
+.seg span.on{background:#7c3aed;color:#fff}
+.row2{display:flex;gap:6px;margin-top:6px;align-items:center;font-size:11px;color:var(--sub)}
+.sw{margin-left:auto;padding:3px 8px;border-radius:999px;background:#334155;color:#cbd5e1;font-weight:800;font-size:10px}.sw.on{background:var(--on);color:#fff}
+.group{margin:6px 8px;border-radius:12px;background:var(--card);border:1px solid var(--line)}
+.gh{display:flex;align-items:center;gap:6px;padding:8px 10px;font-size:13px;font-weight:800}
+.gh small{margin-left:auto;font-size:10px;color:var(--sub);font-weight:700}.gh .chev{color:var(--sub)}
+.badge{font-size:9px;padding:1px 6px;border-radius:999px;background:#7c3aed33;color:#e9d5ff}
+.items{padding:0 10px 8px}
+.it{display:flex;align-items:center;gap:6px;padding:6px 0;border-top:1px solid #ffffff0d;font-size:12px}
+.it .w{font-size:9px;padding:1px 5px;border-radius:5px;font-weight:800}
+.w.l{background:#10b98133;color:#6ee7b7}.w.m{background:#f59e0b33;color:#fcd34d}.w.h{background:#ef444433;color:#fca5a5}
+.it .v{margin-left:auto;display:flex;gap:3px}.it .v span{font-size:10px;padding:3px 6px;border-radius:6px;background:#0e1430;color:var(--sub);font-weight:700}
+.it .v span.on{background:#7c3aed;color:#fff}.it .v span.auto{background:#334155;color:#e2e8f0}
+.foot{margin-top:auto;display:flex;gap:6px;padding:8px}.foot div{flex:1;text-align:center;padding:9px 0;border-radius:10px;font-weight:800;font-size:13px}
+.save{background:linear-gradient(135deg,#7c3aed,#db2777)}.cancel{background:var(--card);color:var(--sub)}
+.note{font-size:9px;color:var(--sub);padding:0 10px 4px}
+/* 横 */
+.land .body{flex:1;display:flex;min-height:0}
+.land .side{width:150px;border-right:1px solid var(--line);padding:6px;display:flex;flex-direction:column;gap:4px}
+.land .side div{font-size:12px;font-weight:800;padding:8px;border-radius:9px;background:var(--card);color:var(--sub);display:flex;gap:4px;align-items:center}
+.land .side div small{margin-left:auto;font-size:9px}.land .side div.on{background:var(--card2);color:#fff;border:1px solid var(--acc)}
+.land .main{flex:1;overflow:hidden;padding:4px 6px}
+.land .grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.land .tabs{padding:4px 8px}
+</style></head><body>
+<div id="out"></div>
+<script>
+const W=(t)=>`<span class="w ${t}">${{l:'軽',m:'中',h:'重'}[t]}</span>`;
+const V=(opts,on)=>`<div class="v">${opts.map((o,i)=>`<span class="${i===on?(o==='おまかせ'?'auto':'on'):''}">${o}</span>`).join('')}</div>`;
+const groups=[
+ ['🌌 背景','おまかせ',[['ジャケットのぼかし','m',['おまかせ','強','弱','なし'],0],['背景の明るさ','l',['おまかせ','100%','70%','40%'],0],['サーチライト','m',['おまかせ','出す','出さない'],0],['光の粒','m',['おまかせ','多い','少ない','なし'],0],['レーザー','h',['おまかせ','出す','出さない'],0],['観客のペンライト','h',['おまかせ','多い','少ない','なし'],0]]],
+ ['🛣 道','1つ変更',[['拍の線','l',['おまかせ','出す','出さない'],1],['道のふちの光','l',['おまかせ','出す','出さない'],0],['奥のもや・脈打ち','m',['おまかせ','出す','出さない'],0],['レーンの区切り線の濃さ','l',['おまかせ','濃い','標準','薄い'],0]]],
+ ['🎵 ノーツ','おまかせ',[['ノーツの光の強さ','l',['おまかせ','強','標準','弱'],0],['にじむ光','m',['おまかせ','出す','出さない'],0],['フリックの矢印の動き','l',['おまかせ','出す','出さない'],0],['スライドの光の波','l',['おまかせ','出す','出さない'],0]]],
+ ['✨ 判定','2つ変更',[['判定文字の大きさ','l',['おまかせ','大','標準','小'],2],['判定文字の金・虹の流れ','m',['おまかせ','出す','出さない'],2],['判定ラインの脈打ち','l',['おまかせ','出す','出さない'],0],['判定ラインで弾ける光','m',['おまかせ','大','標準','小','なし'],0],['画面のフラッシュ','l',['おまかせ','出す','出さない'],0]]],
+ ['🔥 コンボ','おまかせ',[['コンボ数の跳ね','l',['おまかせ','出す','出さない'],0],['100コンボのお祝い','l',['おまかせ','出す','出さない'],0],['フルコンボの大きな表示','l',['おまかせ','出す','出さない'],0]]],
+ ['📱 端末','',[]],
+];
+const itemsHtml=(g,open)=>open?`<div class="items">${g[2].map(([n,w,o,on])=>`<div class="it">${W(w)}<span>${n}</span>${V(o,on)}</div>`).join('')}</div>`:'';
+const preset=`<div class="preset"><h4>まとめて決める(いまの「演出量」と同じ)</h4><div class="seg"><span>最大</span><span>多め</span><span class="on">標準</span><span>最小</span><span>軽量</span></div>
+<div class="row2">下の項目を「おまかせ」にしたものは、ここに合わせて決まります<span class="sw on">重いときは自動で控えめ ON</span></div></div>`;
+const head=`<header><span class="back">←</span><b>オプション</b></header><div class="tabs"><span class="tab">演奏</span><span class="tab">表示</span><span class="tab">音</span><span class="tab on">軽さ・演出</span></div>`;
+const foot=`<div class="foot"><div class="cancel">戻る</div><div class="save">保存</div></div>`;
+function portrait(){return `<div class="frame" style="--w:390px;--h:844px">${head}${preset}
+${groups.map((g,i)=>`<div class="group"><div class="gh"><span class="chev">${i===3?'▼':'▶'}</span>${g[0]}${g[1]?`<span class="badge">${g[1]}</span>`:''}<small>${g[2].length?g[2].length+'項目':'描く回数・画質・描画方式'}</small></div>${itemsHtml(g,i===3)}</div>`).join('')}
+<div class="note">▶ を押すと開きます。開いていない組も「おまかせ/◯つ変更」で中身が分かります。軽・中・重 は端末への重さの目安。</div>${foot}</div>`;}
+function landscape(){const sel=3;return `<div class="frame land" style="--w:844px;--h:390px">${head.replace('<header>','<header style="padding:5px 10px">')}
+<div class="body"><div class="side">${groups.map((g,i)=>`<div class="${i===sel?'on':''}">${g[0]}<small>${g[1]}</small></div>`).join('')}</div>
+<div class="main">${preset.replace('class="preset"','class="preset" style="margin:2px 0 6px"')}<div class="group" style="margin:0"><div class="gh">${groups[sel][0]}<span class="badge">${groups[sel][1]}</span></div>
+<div class="items grid">${groups[sel][2].map(([n,w,o,on])=>`<div class="it">${W(w)}<span>${n}</span>${V(o,on)}</div>`).join('')}</div></div></div></div></div>`;}
+document.getElementById('out').innerHTML=location.hash==='#land'?landscape():portrait();
+</script></body></html>
