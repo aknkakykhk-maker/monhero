@@ -51070,7 +51070,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // holdTrace … ホールド・スライドを押せている間、帯を指の所からなぞるように光らせる(2026-11-02・設定 holdTrace)
   let motionFlick=false,motionSlide=false,glowLevel='NORMAL',hitLevel='FULL',hitLight=false,hitScale=1,holdTrace=false;
   // なぞる光が ON のとき、左右のはしの光の柱も残すか(案A=false・案B=true)
-  const HOLD_TRACE_KEEP_PILLARS=false;
+  const HOLD_TRACE_KEEP_PILLARS=true;
   // 何も映らないフレームは描き直さない(2026-09-27・ユーザー指示「見た目を変えずに軽く」)。
   // begin() では消さずに「消す予定」だけ立て、最初に何かを描く瞬間に消す(touch)。最後まで何も描かなかったフレームは、
   // 前のフレームがもう空(blank)なら何もしない。前奏・間奏・曲の終わりで、canvas の消去・GPU への命令・画面の合成し直しがなくなる
