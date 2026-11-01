@@ -51,6 +51,8 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   light_player_short:{marker:'light-player-short-v3',zero:1116.6,beat:319.1574,levelRe:/const lightPlayerShortHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   tsuki_ga_michiru_mae_ni:{marker:'tsuki-ga-michiru-mae-ni-v3',zero:799.9,beat:319.1489,levelRe:/const tsukiGaMichiruMaeNiHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   tsuki_ga_michiru_mae_ni_short:{marker:'tsuki-ga-michiru-mae-ni-short-v3',zero:849.9,beat:319.1489,levelRe:/const tsukiGaMichiruMaeNiShortHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  // Rebellion ～Beyond the Lock～(オリジナル・2026-11-01)。拍のずれの曲線(warpPoints)がある曲
+  rebellion:{marker:'rebellion-v3',zero:2010.5,beat:310.0775,levelRe:/const rebellionHellChart=mhChart\((\d+),/,source:'audio',variant:0,uncross:true,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   // Toward the Stars, Paradise or Truth short ver.(hitoyakyuko・2026-10-19・新曲は基本 HELL あり)
   // 全曲ヘル(2026-10-21 社長「全曲ヘルを実装して」)。marker・track は rhythm-runtime-notes.js の RELEASED_MARKERS・RELEASED_TRACKS、拍の頭と1拍は解析の timing
   mf_ichika_mix:{marker:'atsu-cup-theme-v3',track:'atsu_cup_theme',zero:40,beat:355.0296,levelRe:/const mfIchikaMixHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
@@ -186,7 +188,7 @@ const peakWindows=master=>{const ts=master.map(startOf).sort((a,b)=>a-b);if(!ts.
   const len=(Math.max(...master.map(endOf))-ts[0])*PEAK_SHARE;let best=[ts[0],ts[0]+len],bestN=0;
   for(let i=0,j=0;i<ts.length;i++){while(j<ts.length&&ts[j]<=ts[i]+len)j++;if(j-i>bestN){bestN=j-i;best=[ts[i],ts[i]+len];}}
   return [best.map(Math.round)];};
-const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDepth=null,audio=null,drawersOn=false,drawerIds=null,phrases=null,mixedWindows=null,keepMixed=false})=>{
+const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDepth=null,audio=null,drawersOn=false,drawerIds=null,phrases=null,mixedWindows=null,keepMixed=false,uncross=false})=>{
   const want=id=>drawersOn&&audio&&(!drawerIds||drawerIds.includes(id));
   // 格子へ寄せる。元の譜面に近い時刻(3ms以内)があればその時刻を使う(丸め方が1ms違うと、2本のスライドの間がその瞬間だけ詰まる)
   const chartTimes=[...new Set(master.flatMap(n=>n.k==='s'?n.pts.map(p=>p[0]):[n.t,n.end].filter(x=>x!=null)))].sort((a,b)=>a-b);
@@ -472,8 +474,15 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDept
     if(k<0)k=notes.findIndex(n=>n.k==='s'&&startOf(n)<bad.t&&bad.t<=endOf(n));
     if(k<0)break;
     notes.splice(k,1);}
+  // 指の交差を、押す位置(レーン)の並べ方だけで減らす(2026-11-01 社長「重さはそのまま、交差をなくす」・Rebellion。uncross:true の曲だけ)。
+  //   横持ちの親指2本のモデルで「交差」と出たノーツを、時刻・種類・幅・高さはそのまま、別のレーンへ動かす候補を全部試し(スライドは形のまま横へずらす)、
+  //   前後3秒の点数(押せない・交差・届きにくい・帯の中・水平クロス)がいちばん下がるものを選ぶ。下がらなければ動かさない(音は減らさない)
+  const uncrossPass=()=>uncrossNotes(notes,{beat,crossWindows});
+  if(uncross)uncrossPass();
   // 上の手直しで高さや置き場所が変わって、帯の中のノーツがまた出ていれば、もう一度外へ出す
   bandFix();
+  // 帯の外へ出したあとに交差が戻っていれば、もう一度だけ並べ直す(uncross の曲だけ)
+  if(uncross){uncrossPass();bandFix();}
   for(const n of notes)delete n.mirrored;
   notes.crossWindows=crossWindows;
   // 引き出しが手直しのあとまで残ったか(空中の点がある本数)
@@ -483,6 +492,43 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDept
   return notes;
 };
 
+// 指の交差を、押す位置(レーン)の並べ方だけで減らす(2026-11-01 社長「重さはそのまま、交差をなくす」・Rebellion。uncross:true の曲だけ)。
+//   横持ちの親指2本のモデルで「交差」「押せない」と出た所の、その時刻のノーツ(無ければ手前1拍半のノーツ)を、時刻・種類・幅・高さはそのまま、
+//   別のレーンへ動かす候補を全部試し(スライドは形のまま横へずらす)、前後3秒の点数(押せない・交差・届きにくい・帯の中・水平クロス・見分けにくい所・
+//   両手のシミュレートで押せない・指が同じ位置に来る形)がいちばん下がるものを選ぶ。下がらなければ動かさない(音は減らさない)。モンスターノーツは動かさない
+const uncrossNotes=(notes,{beat,crossWindows=[],samePlaceWeight=50})=>{const HR=require('./rhythm-chart-hand-rules.js'),Wt={impossible:100,cross:60,reach:40,busy:0};
+    const inCross=t=>crossWindows.some(([a,b])=>t>=a&&t<=b);
+    const local=(t,swap,v)=>notes.filter(n=>endOf(n)>=t-3000&&startOf(n)<=t+3000).map(n=>n===swap?v:n);
+    const scoreOf=list=>{const rt=toRuntime(list);return thumbCheck(list.slice().sort((a,b)=>startOf(a)-startOf(b)),HELL_LANDSCAPE,beat).issues.reduce((a,i)=>a+Wt[i.kind],0)
+      +HR.heldBandBlocked(rt).length*100+HR.flatCross(rt).length*100+HR.skyConfusable(rt).length*100
+      +HR.samePlace(rt).filter(x=>x.kind==='skyPath'||x.kind==='stacked').length*samePlaceWeight
+      +simulateRuntime(rt.filter(n=>!(n.skyHeight>0)&&!(n.slidePoints&&n.slidePoints.some(p=>p.sky>0)))).impossible*100;};
+    const xOf=n=>n.k==='s'?n.pts[0][1]+0.5:(n.sub+n.w/2)/2;
+    const tried=new Set();let moved=0;
+    for(let r=0;r<3000;r++){
+      const iss=thumbCheck(notes.slice().sort((a,b)=>startOf(a)-startOf(b)),HELL_LANDSCAPE,beat).issues.filter(i=>(i.kind==='cross'||i.kind==='impossible')&&!inCross(i.t)&&!tried.has(Math.round(i.t)+'|'+i.what));
+      if(!iss.length)break;const i0=iss[0];tried.add(Math.round(i0.t)+'|'+i0.what);
+      // その時刻に始まる・かかっているノーツ(近い位置から)を先に、次にその手前1拍半のノーツ(近い時刻から)を試す(交差は前のノーツとの並びで起きるので)
+      const at=n=>Math.abs(startOf(n)-i0.t)<=5||((n.k==='s'||n.k==='h')&&startOf(n)<i0.t&&i0.t<=endOf(n)+5);
+      const cands=[...notes.filter(at).sort((a,b)=>Math.abs(xOf(a)-i0.x)-Math.abs(xOf(b)-i0.x)),
+        ...notes.filter(n=>!at(n)&&startOf(n)<i0.t&&startOf(n)>=i0.t-beat*1.5).sort((a,b)=>startOf(b)-startOf(a))].filter(n=>!n.mon);
+      let done=false;
+      for(const n of cands){if(done)break;const t=startOf(n),base=scoreOf(local(t,null));
+        const vs=[];
+        if(n.k==='s'){for(const d of [-0.5,0.5,-1,1,-1.5,1.5,-2,2,-2.5,2.5,-3,3]){const v=JSON.parse(JSON.stringify(n));let ok=true;
+          for(const pt of v.pts){pt[1]+=d;if(pt[1]<-1e-9||pt[1]+pt[2]/2>6+1e-9)ok=false;}if(ok)vs.push(v);}}
+        else{for(let sub=0;sub+n.w<=12;sub++)if(sub!==n.sub)vs.push({...n,sub,lane:Math.floor(sub/2),hand:(sub+n.w/2)/2<3?'L':'R'});}
+        let best=null;for(const v of vs){const sc=scoreOf(local(t,n,v));if(sc<base&&(!best||sc<best.sc))best={sc,v};}
+        if(best){Object.assign(n,best.v);if(n.k==='s')n.pts=best.v.pts;if(n.k==='f'&&n.args)n.args=[n.t,n.sub,n.w,...n.args.slice(3)];done=true;moved++;}}}
+    return moved;};
+// 書いた HELL のマーカーの内側を、下書きの形で読む(空中のノーツも読む。uncross の後直し用)
+const readHellBlock=(source,marker)=>{const block=rt0.markerBlock(source,marker);if(!block)throw new Error(`<${marker}-notes> が無い`);const notes=[];
+  const tap=sky=>(at,sub,w,x)=>notes.push({k:'t',t:at,sub,w,sky,...(!sky&&x?{mon:x}:{})});
+  const f=(at,sub,w,...rest)=>notes.push({k:'f',t:at,sub,w,args:[at,sub,w,...rest],sky:0});
+  const S=(at,end,pts,ef,hand)=>notes.push({k:'s',hand:hand||null,endFlick:!!ef,pts:pts.map(p=>[p[0],p[1],p[2]??2,p[3]||0,p[4]||0])});
+  const h=(at,sub,w,end)=>notes.push({k:'h',t:at,sub,w,end,sky:0});
+  const bad=()=>{throw new Error('空中のフリックは読めない');};
+  new Function('t','h','f','s','T','F','S','return ['+block.body+']')(tap(0),h,f,S,tap(1),bad,S);return {notes,block};};
 // 段を変える間の違反(同じ親指で、前のノーツの終わりから1.5拍未満に段が変わる)
 const levelSwitchViolations=(notes,beat)=>{const out=[];
   const startLv=n=>n.k==='s'?(n.pts[0][3]>=0.5?1:0):(n.sky?1:0),endLv=n=>n.k==='s'?(n.pts[n.pts.length-1][3]>=0.5?1:0):(n.sky?1:0);
@@ -601,6 +647,17 @@ if(require.main===module){
         console.log(`指が同じ位置に来る形: ${row.before}→${row.after}件(許す${row.allow}) ずらす${SP.howCount(row,'ずらす')} 下ろす${SP.howCount(row,'下ろす')} 抜く${SP.howCount(row,'抜く')}`);}
       else if(row)console.log(`指が同じ位置に来る形: ${row.before}件(許す${row.allow})。直すところは無い`);}
     catch(e){if(/HELL が無い/.test(e.message))console.log('指が同じ位置に来る形: この曲の HELL がまだ一覧(RHYTHM_HELL_CHARTS)に無いので、ここでは直していない。一覧に足したら rhythm-hell-sameplace-fix.js --song で直す');else throw e;}
+    // 指が同じ位置に来る形を直したときに横へずらした所で、指の交差が戻ることがある(2026-11-01 Rebellion で4→9件)。uncross の曲は、書いた譜面を読み直して
+    //   同じ並べ直しをもう一度かける(指が同じ位置に来る形は増やさない重みで)。ほかのマーカーは1バイトも変えない
+    if(conf.uncross){const cur=fs.readFileSync(rt0.RUNTIME,'utf8'),{notes:wn,block}=readHellBlock(cur,`${conf.marker}-hell`);
+      const moved=uncrossNotes(wn,{beat:conf.beat,crossWindows:hell.crossWindows||[],samePlaceWeight:200});
+      if(moved){const nx=cur.slice(0,block.from)+render(wn)+cur.slice(block.to);
+        const names=t=>[...t.matchAll(/\/\/ <([a-z0-9-]+)-notes>/g)].map(m=>m[1]).filter(n=>n!==`${conf.marker}-hell`);
+        const bad2=names(cur).filter(n=>(rt0.markerBlock(cur,n)||{}).body!==(rt0.markerBlock(nx,n)||{}).body);
+        if(bad2.length)throw new Error(`HELL のほかのマーカーまで変わりそうなので止めた: ${bad2.join(' ')}`);
+        fs.writeFileSync(rt0.RUNTIME,nx);}
+      const th2=thumbCheck(wn.slice().sort((a,b)=>startOf(a)-startOf(b)),HELL_LANDSCAPE,conf.beat).issues.filter(i=>!(hell.crossWindows||[]).some(([a,b])=>i.t>=a&&i.t<=b));
+      console.log(`指の交差の後直し: ${moved}か所を動かした → 交差${th2.filter(i=>i.kind==='cross').length}・押せない${th2.filter(i=>i.kind==='impossible').length}(交差の区間の外・ノーツ ${wn.length})`);}
     // Lv. はゲームに読み込んだ形(道の上へ置き直したあと)で式を通した値にする。社長の値(rhythm-chart-level.js の LEVEL_OVERRIDES)があればそちら(rhythm-chart-level-check.js が同じ値か見る)
     const {spawnSync}=require('child_process');
     const probe=spawnSync(process.execPath,['-e',`const {loadRuntimeSongs,chartLevel}=require(${JSON.stringify(path.join(__dirname,'rhythm-chart-level.js'))});
