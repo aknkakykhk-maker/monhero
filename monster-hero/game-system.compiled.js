@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 713a6a3958c36333
+// source-sha256: 4408076f0a44866d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -75128,6 +75128,7 @@ function BattleScreen({
   return React.createElement("div", {
     className: "flex-1 flex flex-col h-full relative",
     "data-battle-speed": battleSpeed,
+    "data-fx-load": fxLoad,
     "data-enemy-down": enemyDefeating ? 'true' : undefined,
     "data-eco-view": ultraBattleView ? 'ultra' : liteBattleView ? 'lite' : 'off',
     "data-tactics-look": tacticsNewLayout ? liteBattleView || ecoBattleView || idleMotionOff ? 'calm' : 'rich' : undefined,
@@ -78239,6 +78240,159 @@ function UltimateDistanceBreakReveal({
     className: "font-black"
   }, ultimateDistanceBreakLevels.map((level, index) => level > 0 ? `${RANGE_LABELS[index]} Lv${level}` : null).filter(Boolean).join(' / ') || 'なし'))));
 }
+const COCYTUS_REVIVE_TIER = Object.freeze({
+  durahan: 1,
+  moo1: 2,
+  moo2: 3
+});
+const COCYTUS_REVIVE_FX_MS = 3000;
+const COCYTUS_REVIVE_CSS = `
+@keyframes mhIceFrost{0%{opacity:0}35%{opacity:1}100%{opacity:1}}
+@keyframes mhIceBlock{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}30%{opacity:1;transform:translate(-50%,-50%) scale(1.04)}45%{transform:translate(-50%,-50%) scale(1)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes mhIceFlash{0%{opacity:0}15%{opacity:1}100%{opacity:0}}
+@keyframes mhIceRing{0%{opacity:.95;transform:translate(-50%,-50%) scale(.3)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.7)}}
+@keyframes mhIceShard{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--rot))}}
+@keyframes mhIceWord{0%{opacity:0;transform:translateX(-50%) rotate(-5deg) scale(2.1)}20%{opacity:1;transform:translateX(-50%) rotate(-5deg) scale(.95)}30%{transform:translateX(-50%) rotate(-5deg) scale(1)}80%{opacity:1}100%{opacity:0}}
+@keyframes mhIceAura{0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}40%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}}
+@keyframes mhIceBand{0%{opacity:0;transform:translateX(-30%)}15%{opacity:1;transform:translateX(0)}100%{opacity:1;transform:translateX(0)}}
+`;
+function CocytusReviveFx({
+  stage,
+  lite,
+  name
+}) {
+  const tier = COCYTUS_REVIVE_TIER[stage] || 1;
+  const big = tier === 3;
+  const who = String(name || '');
+  const title = tier === 3 ? `❄ ${who} 真・覚醒!` : `❄ ${who} 復活!`;
+  const shards = lite ? [] : Array.from({
+    length: 14 + tier * 10
+  }, (_, k) => {
+    const n = 14 + tier * 10;
+    const ang = k / n * Math.PI * 2 + k % 2 * 0.3;
+    const d = 70 + k * 37 % (120 + tier * 40);
+    return {
+      k,
+      dx: `${Math.round(Math.cos(ang) * d)}px`,
+      dy: `${Math.round(Math.sin(ang) * d)}px`,
+      rot: `${k * 53 % 360}deg`,
+      w: 14 + k * 13 % 30,
+      h: 10 + k * 7 % 16
+    };
+  });
+  const ringCols = ['rgba(103,232,249,.95)', 'rgba(255,255,255,.9)', 'rgba(250,204,21,.85)'];
+  return React.createElement("div", {
+    "data-cocytus-revive-fx": stage,
+    "data-cocytus-revive-tier": tier,
+    className: "pointer-events-none fixed inset-0 overflow-hidden",
+    style: {
+      zIndex: 91001
+    }
+  }, React.createElement("style", null, COCYTUS_REVIVE_CSS), !lite && React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      boxShadow: `inset 0 0 ${60 + tier * 30}px ${20 + tier * 14}px rgba(165,243,252,${.45 + tier * .12})`,
+      animation: 'mhIceFrost 1s ease-out both'
+    }
+  }), React.createElement("div", {
+    className: "absolute left-1/2 top-[30%]",
+    style: {
+      width: 'min(58vw,240px)',
+      height: 'min(58vw,240px)',
+      borderRadius: big ? '18%' : '28%',
+      background: 'linear-gradient(135deg,rgba(236,254,255,.55),rgba(103,232,249,.25) 45%,rgba(14,116,144,.35))',
+      border: '3px solid rgba(207,250,254,.9)',
+      boxShadow: '0 0 30px rgba(103,232,249,.9),inset 0 0 30px rgba(255,255,255,.6)',
+      clipPath: 'polygon(8% 12%,40% 0,72% 8%,100% 30%,94% 70%,70% 100%,28% 96%,0 66%)',
+      animation: 'mhIceBlock 1s ease-out both,mhIceFlash .4s .95s reverse both'
+    }
+  }), React.createElement("div", {
+    className: "absolute left-1/2 top-[48%] whitespace-nowrap font-black italic",
+    style: {
+      transform: 'translateX(-50%)',
+      fontSize: big ? 26 : 22,
+      color: '#ecfeff',
+      WebkitTextStroke: '1px #0e7490',
+      textShadow: '0 0 12px #22d3ee',
+      animation: 'mhIceFlash 1s .1s ease-out both'
+    }
+  }, "……ピキ…ピキキ…"), React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      background: `radial-gradient(circle at 50% 30%,rgba(255,255,255,.97),rgba(165,243,252,${.6 + tier * .1}) ${25 + tier * 5}%,rgba(8,47,73,${.3 + tier * .15}) 80%)`,
+      animation: 'mhIceFlash .9s 1s ease-out both'
+    }
+  }), Array.from({
+    length: tier
+  }, (_, n) => React.createElement("div", {
+    key: n,
+    className: "absolute left-1/2 top-[30%] rounded-full",
+    style: {
+      width: `${200 + n * 90}px`,
+      height: `${200 + n * 90}px`,
+      border: `${6 - n}px solid ${ringCols[n]}`,
+      boxShadow: `0 0 30px 10px ${ringCols[n]}`,
+      animation: `mhIceRing 1s ${1 + n * .12}s ease-out both`
+    }
+  })), React.createElement("div", {
+    className: "absolute left-1/2 top-[30%]",
+    style: {
+      width: 0,
+      height: 0
+    }
+  }, shards.map(s => React.createElement("i", {
+    key: s.k,
+    className: "absolute block",
+    style: {
+      '--dx': s.dx,
+      '--dy': s.dy,
+      '--rot': s.rot,
+      width: `${s.w}px`,
+      height: `${s.h}px`,
+      background: 'linear-gradient(135deg,#ffffff,#a5f3fc 50%,#0891b2)',
+      clipPath: 'polygon(0 30%,70% 0,100% 60%,30% 100%)',
+      boxShadow: '0 0 8px #67e8f9',
+      animation: 'mhIceShard 1s 1s cubic-bezier(.2,.7,.3,1) both'
+    }
+  }))), React.createElement("div", {
+    className: "absolute left-1/2 top-[24%] whitespace-nowrap text-center font-black italic leading-none text-white",
+    style: {
+      fontSize: big ? 'min(46px,12vw)' : 'min(40px,10.5vw)',
+      WebkitTextStroke: '2px #0e7490',
+      textShadow: '0 0 18px #22d3ee,0 0 40px #0891b2',
+      animation: 'mhIceWord 1.3s 1s ease-out both'
+    }
+  }, big ? React.createElement(React.Fragment, null, "ABSOLUTE", React.createElement("br", null), "ZERO!!") : React.createElement(React.Fragment, null, "FROZEN", React.createElement("br", null), "BREAK!!")), Array.from({
+    length: tier
+  }, (_, n) => React.createElement("div", {
+    key: `a${n}`,
+    className: "absolute left-1/2 top-[36%] rounded-[50%]",
+    style: {
+      width: `${180 + n * 60}px`,
+      height: `${50 + n * 16}px`,
+      border: `3px solid ${ringCols[n]}`,
+      boxShadow: `0 0 22px ${ringCols[n]}`,
+      animation: `mhIceAura .7s ${1.9 + n * .1}s ease-out both`
+    }
+  }))), React.createElement("div", {
+    "data-cocytus-revive-band": tier,
+    className: "absolute inset-x-0 top-[42%] px-3.5 py-2.5",
+    style: {
+      background: 'linear-gradient(90deg,rgba(8,47,73,.97),rgba(14,116,144,.97) 50%,rgba(8,47,73,.97))',
+      borderTop: `3px solid ${big ? '#facc15' : '#a5f3fc'}`,
+      borderBottom: `3px solid ${big ? '#facc15' : '#a5f3fc'}`,
+      boxShadow: '0 0 26px rgba(34,211,238,.85)',
+      animation: `mhIceBand .5s ${lite ? 0 : 1.9}s ease-out both`
+    }
+  }, React.createElement("div", {
+    className: "font-black italic",
+    style: {
+      fontSize: big ? 22 : 20,
+      color: big ? '#fef08a' : '#ecfeff',
+      textShadow: '0 2px 0 #164e63'
+    }
+  }, title)));
+}
 function EnemyRevivalReveal({
   difficulty,
   enemyRevivalReveal,
@@ -78246,6 +78400,24 @@ function EnemyRevivalReveal({
   extremeRunRef,
   runMode
 }) {
+  const stage = enemyRevivalReveal && enemyRevivalReveal.stage;
+  const [fxDone, setFxDone] = useState(!stage);
+  useEffect(() => {
+    if (!stage) return undefined;
+    setFxDone(false);
+    const t = setTimeout(() => setFxDone(true), COCYTUS_REVIVE_FX_MS);
+    return () => clearTimeout(t);
+  }, [stage, enemyRevivalReveal && enemyRevivalReveal.revivalNumber]);
+  if (stage && !fxDone) {
+    const root = typeof document !== 'undefined' ? document.querySelector('[data-fx-load]') : null;
+    const lite = !!root && (root.getAttribute('data-fx-load') === 'LIGHT' || root.getAttribute('data-fx-load') === 'MINIMAL' || (root.getAttribute('data-eco-view') || 'off') !== 'off');
+    const enemyName = typeof document !== 'undefined' ? document.querySelector('[data-enemy-bar] .truncate')?.textContent || '' : '';
+    return React.createElement(CocytusReviveFx, {
+      stage: stage,
+      lite: lite,
+      name: enemyName
+    });
+  }
   return React.createElement("div", {
     "data-extreme-revival-reveal": true,
     className: "fixed inset-0 flex items-center justify-center p-5 text-center",
