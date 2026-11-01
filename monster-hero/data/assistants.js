@@ -10871,6 +10871,73 @@ const PANDORA_WINGS_EP4 = [
   { who:'kyuko',    e:'surprise', stage:'none', monsters:[], fxText:'帰り道、きゅうこだけが、パンドラのお腹の鍵穴の模様が、かすかに光っていたのに気づいていた', t:'……' },
 ];
 const PANDORA_WINGS_EP4_CALLS = { mua: 'どれみふぁソラシド〜♪', kiki: 'パンドラさん', momosuke: 'パンドラちゃん', dra: 'パンドラ', atsu: 'パンドラ', kyuko: 'パンドラ', sorashido: 'パンドラ' };
+// 第5話「均衡の要」(社長の「この文で」2026-11-02)。11/6 4:00。全編シリアス(笑・顔文字なし)。
+// 「ぶつかってる」で悪魔側と天使側が激しく離れる(fierce)。箱へ戻ると絵が消える
+const PANDORA_WINGS_EP5 = [
+  // ---- 昼・森の奥。パンドラがみんなと話している ----
+  { who:'mua',      e:'happy',    monsters:[{ id:'Pandora', pose:'idle' }], t:'パンドラ、今日もその飾りつけてくれてる！' },
+  { who:'pandora',  e:'normal',   t:'……うん。気に入ってるから' },
+  { who:'momosuke', e:'happy',    t:'えへへ……ももが選んだやつ〜' },
+  { who:'kiki',     e:'normal',   t:'パンドラさん、きのうより顔色がいいでつね。' },
+  { who:'pandora',  e:'normal',   t:'……そう、かも。……ここ、あったかいから' },
+  { who:'dra',      e:'happy',    t:'毛布も役に立ったか。よかったぞ' },
+  { who:'pandora',  e:'normal',   fx:'merge', fxText:'パンドラのお腹の鍵穴の模様が、強く光った', t:'……っ' },
+  { who:'kyuko',    e:'surprise', t:'パンドラ？' },
+  { who:'pandora',  e:'normal',   monsters:[{ id:'PandoraDevil', pose:'splitL', fierce:true }, { id:'PandoraAngel', pose:'splitR', fierce:true }], fx:'split', t:'……だめ。……中で、ふたりが、ぶつかってる' },
+  { who:'kiki',     e:'surprise', t:'お腹の模様……封印の紋でつか！？ まんなかの鍵穴が、きしんでまつ……！' },
+  { who:'pandora',  e:'normal',   t:'光と闇が、ずっと、つり合ってたの。この鍵穴が、ふたりをつないでて……' },
+  { who:'pandora',  e:'normal',   t:'……でも、うれしいことがあると、光のほうが強くなって。……つり合いが、くずれるの' },
+  { who:'mua',      e:'troubled', t:'うれしいことがあると……？ そんなの、ひどいよ……！' },
+  { who:'atsu',     e:'troubled', atsu:'with',    t:'パンドラ、落ち着いて。ゆっくり息して' },
+  { who:'dra',      e:'troubled', atsu:'without', t:'パンドラ、落ち着け。ゆっくり息をしろ' },
+  { who:'pandora',  e:'normal',   t:'……近づかないで' },
+  { who:'momosuke', e:'surprise', t:'え……' },
+  { who:'pandora',  e:'normal',   t:'ふたつの力が、いっしょに外に出たら……わたし、止められない。……みんなを、傷つける' },
+  { who:'dra',      e:'normal',   t:'おでは丈夫だ。大丈夫だぞ' },
+  { who:'pandora',  e:'normal',   t:'……大丈夫じゃ、ない。……わたしが、こわいの' },
+  { who:'mua',      e:'troubled', stage:'none', monsters:[], fx:'transform', fxText:'内側から、鎖が何重にも巻きついた', t:'パンドラ！ ……ねえ、開けて！' },
+  { who:'momosuke', e:'troubled', t:'やだ……せっかく、笑ってくれたのに……' },
+  { who:'kiki',     e:'troubled', t:'……鎖を、自分で内側からかけたんでつ。……自分を、閉じこめるために。' },
+  { who:'kyuko',    e:'normal',   t:'……' },
+  { who:'kyuko',    e:'normal',   t:'……あの子、ずっとこうしてきたんだな。ひとりで、箱の中で' },
+  { who:'kyuko',    e:'normal',   fxText:'箱の中から、歌は聞こえなかった', t:'……' },
+];
+const PANDORA_WINGS_EP5_CALLS = { mua: 'パンドラ', kiki: 'パンドラさん', momosuke: 'パンドラちゃん', dra: 'パンドラ', atsu: 'パンドラ', kyuko: 'パンドラ' };
+// 第6話「閉ざされた運命」(社長の「この文で」2026-11-02)。11/7 4:00。前半はシリアス、作戦が決まってからは少しだけ前向きに。
+// あつを解放していない人には、ドラの「おでとあっくんで」を「おでが前に立って」に差し替える。{name} はプレイヤーの呼び名
+const PANDORA_WINGS_EP6 = [
+  // ---- 朝・箱の前。鎖が増えている ----
+  { who:'momosuke', e:'troubled', t:'……鎖、きのうより増えてる' },
+  { who:'mua',      e:'troubled', t:'パンドラ、聞こえる？ ……ごはん、置いとくね' },
+  { who:'dra',      e:'angry',    fxText:'返事はない', t:'おでが力いっぱい引っぱれば、鎖くらい……' },
+  { who:'kiki',     e:'surprise', t:'ドラさん、待ってくだしゃい。……この鎖、ふつうの鎖じゃないでつ。' },
+  { who:'kiki',     e:'normal',   t:'古い言い伝えで、読んだことがありまつ。自分で自分を閉じこめた箱の鍵は、外からは決して開かない……って。' },
+  { who:'dra',      e:'troubled', t:'……外からは、開かない' },
+  { who:'mua',      e:'troubled', t:'じゃあ、どうすればいいの……？ このまま、ずっと……？' },
+  { who:'momosuke', e:'troubled', t:'やだよ……そんなの……' },
+  { who:'kyuko',    e:'normal',   t:'……外から開かないなら' },
+  { who:'kyuko',    e:'normal',   t:'中から、開けたくなるようにすればいい' },
+  { who:'mua',      e:'surprise', t:'中から……？' },
+  { who:'kyuko',    e:'normal',   t:'最初の日、俺たちがここに来たのは、パンドラの歌が聞こえたからだよね' },
+  { who:'kyuko',    e:'normal',   t:'声は、ちゃんと箱をこえて届く。……だったら、こっちからも届けられる' },
+  { who:'kiki',     e:'surprise', t:'……音楽で、呼びかけるんでつね。' },
+  { who:'sorashido', e:'excited', t:'それ、乗った！ 届くまで鳴らせばいいってことでしょ笑' },
+  { who:'sorashido', e:'normal',  t:'ちょっと待って、箱の大きさと森の広さから、音がいちばん届く場所……よし、ここ！ 箱の正面、3歩うしろ！' },
+  { who:'atsu',     e:'normal',   atsu:'with',    t:'曲はどうする？ パンドラがいつも歌ってた、あのさみしいやつかな' },
+  { who:'dra',      e:'normal',   atsu:'without', t:'曲はどうする。パンドラがいつも歌ってた、あのさみしい曲か' },
+  { who:'mua',      e:'normal',   t:'うん。まずはあの歌。パンドラの歌を、今度はあたしたちが歌い返すの' },
+  { who:'kyuko',    e:'normal',   t:'それから、もう1曲。……あの子が自分で鍵を回したくなるような、強い曲' },
+  { who:'dra',      e:'happy',    atsu:'with',    t:'おでとあっくんで、テンポを引っぱる。こういうのは、慣れてるやつが前に立つもんだ' },
+  { who:'dra',      e:'happy',    atsu:'without', t:'おでが前に立って、テンポを引っぱる。こういうのは、慣れてるやつがやるもんだ' },
+  { who:'momosuke', e:'excited',  t:'ももも、いっぱい叩く！ 指が痛くなっても叩く！' },
+  { who:'sorashido', e:'happy',   t:'じゃあ俺は三線で入るよ。音、重ねたほうが届くっしょ' },
+  { who:'kiki',     e:'normal',   t:'わたくしは……' },
+  { who:'kiki',     e:'normal',   t:'……パンドラさんに聞こえるように、いちばん前で、名前を呼びまつ。' },
+  { who:'mua',      e:'excited',  t:'{name}も、手伝ってくれる？ いっしょに、叩こう！' },
+  { who:'kyuko',    e:'normal',   t:'……待ってて、パンドラ。明日、迎えにくるから' },
+  { who:'kyuko',    e:'normal',   fxText:'箱の中で、鎖がかすかに鳴った気がした', t:'……' },
+];
+const PANDORA_WINGS_EP6_CALLS = { mua: 'どれみふぁソラシド〜♪', kiki: 'ドラさん', momosuke: 'パンドラちゃん', dra: 'あっくん', atsu: 'パンドラ', kyuko: 'パンドラ', sorashido: 'パンドラ' };
 const EVENT_REPLAYS = [
   // ぱんぷきん×ジャックのストーリー(2026-10-04・台本は docs/spec/RAID_JACK_STORY.md)。**公開するまでは回想にも出さない**(releaseFlag)。
   // 第1部(halloween_night_2026_part1)は時刻で流れる既存のもの。ここは第1.5部から終章まで。
@@ -10953,6 +11020,8 @@ const EVENT_REPLAYS = [
   { id: 'pandora_wings_2026_ep2', date: '2026-11-03 04:00', title: '鍵の向こう側へ 第2話 ～ひだりと、みぎ～', script: PANDORA_WINGS_EP2, calls: PANDORA_WINGS_EP2_CALLS, unlockedKey: 'pandoraWingsEp2Seen', group: 'pandora_wings' },
   { id: 'pandora_wings_2026_ep3', date: '2026-11-04 04:00', title: '鍵の向こう側へ 第3話 ～大嫌いで、大好き～', script: PANDORA_WINGS_EP3, calls: PANDORA_WINGS_EP3_CALLS, unlockedKey: 'pandoraWingsEp3Seen', group: 'pandora_wings' },
   { id: 'pandora_wings_2026_ep4', date: '2026-11-05 04:00', title: '鍵の向こう側へ 第4話 ～おめかしの夜～', script: PANDORA_WINGS_EP4, calls: PANDORA_WINGS_EP4_CALLS, unlockedKey: 'pandoraWingsEp4Seen', group: 'pandora_wings' },
+  { id: 'pandora_wings_2026_ep5', date: '2026-11-06 04:00', title: '鍵の向こう側へ 第5話 ～均衡の要～', script: PANDORA_WINGS_EP5, calls: PANDORA_WINGS_EP5_CALLS, unlockedKey: 'pandoraWingsEp5Seen', group: 'pandora_wings' },
+  { id: 'pandora_wings_2026_ep6', date: '2026-11-07 04:00', title: '鍵の向こう側へ 第6話 ～閉ざされた運命～', script: PANDORA_WINGS_EP6, calls: PANDORA_WINGS_EP6_CALLS, unlockedKey: 'pandoraWingsEp6Seen', group: 'pandora_wings' },
   { id: 'card_cup_2026_10_31', date: '2026-10-31 12:00', title: 'みゅあ杯、はじまるよ！ ～個人杯～', script: ASSISTANT_CARD_CUP_STORY, calls: ASSISTANT_CARD_CUP_STORY_CALLS, unlockedKey: 'cardCupStorySeen', releaseFlag: 'cardCup', hideUntilFirstLine: ['atsu'], group: 'update' },
   { id: 'raid_jack_howto_2026_10_04', date: '2026-10-04 08:02', title: 'カボチャの大王ジャック ～レイドの遊び方～', script: ASSISTANT_RAID_JACK_HOWTO, calls: ASSISTANT_RAID_JACK_HOWTO_CALLS, unlockedKey: 'raidJackHowtoSeen', releaseFlag: 'raidJack', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, group: 'halloween' },
 ];
