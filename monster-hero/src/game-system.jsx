@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6a4d2be4da6dcad9
+// generated-sha256: 9cc3ffd110449589
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -44414,7 +44414,12 @@ function BattleScreen({
             if(getPermaBuff('globalComboDmgPct')>0) chip('globalCombo',<Sword size={9}/>,'全体連撃',`+${Math.round(getPermaBuff('globalComboDmgPct')*100)}%`,'text-sky-300 border-sky-300/50');
             if(kikiCardBonus>0) chip('kikiCard',<PlusCircle size={9}/>,'カード上限',`+1（残り${Math.ceil(getPermaBuff('kikiCardBonusTurns'))}T）`,'text-violet-300 border-violet-300/50',{short:'+1'});
             // きゅうこの譜面(2026-10-22)。受けるダメージダウンの残りターン(タクティクスは使った子だけに効く)
-            if(getPermaBuff('kyukoCutTurns')>0&&getPermaBuff('kyukoCutRate')>0) chip('kyukoCut',<Shield size={9}/>,'被ダメ',`-${Math.round(getPermaBuff('kyukoCutRate')*100)}%（残り${Math.ceil(getPermaBuff('kyukoCutTurns'))}T）`,'text-pink-300 border-pink-300/50',{short:`-${Math.round(getPermaBuff('kyukoCutRate')*100)}%`});
+            // きゅうこの譜面の被ダメ減。タクティクスは使った子だけに効くので、その子の名前を添える(2026-11-01 社長「どの子に効いているか」)
+            if(getPermaBuff('kyukoCutTurns')>0&&getPermaBuff('kyukoCutRate')>0){
+              const ks=getPermaBuff('kyukoCutSlot'); const kName=Array.isArray(tacticsUnits)&&Number.isInteger(ks)&&ks>=0?(slots[ks]?.name||''):'';
+              const kPct=Math.round(getPermaBuff('kyukoCutRate')*100);
+              chip('kyukoCut',<Shield size={9}/>,kName?`${kName}の被ダメ`:'被ダメ',`-${kPct}%（残り${Math.ceil(getPermaBuff('kyukoCutTurns'))}T）`,'text-pink-300 border-pink-300/50',{short:kName?`${[...kName].slice(0,4).join('')} -${kPct}%`:`-${kPct}%`,...(kName?{owner:ks}:{})});
+            }
             // ソードスキル(剣士モッチー)。連撃パワーは3たまるごとに永久追加連撃へ変わるので、
             // 両方が見えないと進み具合が分からない
             if(getPermaBuff('kenshiComboPower')>0||getPermaBuff('kenshiExtraCombo')>0){
@@ -44754,14 +44759,23 @@ function BattleScreen({
   //   ほかの技と違って targetName を持たない。予告を見ても間合いしか分からなかった。
   // ★数え方は本番と同じ tacticsIntentTargets を通す。別に書くと、距離撃でずらしたときに
   //   予告と実際がずれる(「当たらないはずの枠が光る」)
-  const rawAimedSlots = Array.isArray(tacticsUnits) && enemyIntent
+  // ★きゅうこの譜面を枠に置いたら、単体攻撃の🎯を置いた子へ移して見せる(2026-11-01 社長)。
+  //   本番の当たり先(60 の tacticsTargetsNow)と同じ redirectTacticsSingleTarget を通すので、全体攻撃・置いた子が倒れているときは元のまま
+  const kyukoPlacedSlot = Array.isArray(tacticsUnits) && Array.isArray(selectedCards)
+    ? (selectedCards.map(idx => ({ card: hand?.[idx], slot: cardAssignments?.[idx] })).find(e => e.card && e.card.subType === 'cover_kyuko' && Number.isInteger(e.slot))?.slot ?? null)
+    : null;
+  const baseAimedSlots = Array.isArray(tacticsUnits) && enemyIntent
     ? tacticsIntentTargets(enemyIntent, tacticsUnits, enemyDist) : [];
+  const rawAimedSlots = Number.isInteger(kyukoPlacedSlot) && enemyIntent
+    ? redirectTacticsSingleTarget(baseAimedSlots, enemyIntent, kyukoPlacedSlot, tacticsUnits) : baseAimedSlots;
+  const kyukoAimMoved = rawAimedSlots !== baseAimedSlots && rawAimedSlots.length === 1 && rawAimedSlots[0] !== baseAimedSlots[0];
   // ★EX「みんなをかばう」が効いているターンは、狙いがかばう子へまとまる(本番と同じ coverTacticsTargets)。
   //   全体攻撃なら、本来当たるはずだった人数ぶんをその子が受ける
   const coverActive = Number.isInteger(tacticsCoverSlot) && rawAimedSlots.length > 0;
   const coverHitCount = coverActive ? rawAimedSlots.length : 1;
   const aimedSlots = coverActive ? [tacticsCoverSlot] : rawAimedSlots;
   const aimedName = (coverActive ? `${tacticsTargetName(tacticsUnits, tacticsCoverSlot)}（かばう）` : null)
+    || (kyukoAimMoved ? `${tacticsTargetName(tacticsUnits, rawAimedSlots[0])}（譜面）` : null)
     || enemyIntent?.targetName
     || (aimedSlots.length ? aimedSlots.map(idx => tacticsTargetName(tacticsUnits, idx)).join('・')
       : (enemyIntent?.variant === 'sweep' ? 'だれもいない' : ''));
@@ -45178,7 +45192,7 @@ function BattleScreen({
             // 出すと必ず0になり、ガードを構える判断の邪魔になる
             // 新モードは「狙われた子の丈夫さ」で受け、「その子が構えたガード」だけが効く。
             // ★targetSlot が無いモードでは今までどおりパーティの値で出る
-            const aimedSlot=coverActive?tacticsCoverSlot:(Number.isInteger(enemyIntent.targetSlot)?enemyIntent.targetSlot:null);
+            const aimedSlot=coverActive?tacticsCoverSlot:kyukoAimMoved?rawAimedSlots[0]:(Number.isInteger(enemyIntent.targetSlot)?enemyIntent.targetSlot:null);
             const rawDmg=getIncomingDamageBeforeTurnReduction(enemyIntent,aimedSlot);
             // ★数え方は plannedDamageFor に1か所だけ置く(枠ごとの表示と同じ関数を通す)。
             //   2か所に書くと、ガードの数え方を直したときに片方だけ古くなる
