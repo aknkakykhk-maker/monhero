@@ -1,0 +1,98 @@
+[
+ {
+  "size": "縦",
+  "match": "kyuko-sora",
+  "winner": 0,
+  "turn": 21,
+  "n": 64,
+  "errors": [],
+  "bad": [],
+  "over": []
+ },
+ {
+  "size": "縦",
+  "match": "new-mons",
+  "winner": 1,
+  "turn": 39,
+  "n": 79,
+  "errors": [],
+  "bad": [],
+  "over": [
+   "画面の外「エーのターン」244..455"
+  ]
+ },
+ {
+  "size": "縦",
+  "match": "sora-mua",
+  "winner": 1,
+  "turn": 18,
+  "n": 65,
+  "errors": [],
+  "bad": [],
+  "over": []
+ },
+ {
+  "size": "横",
+  "match": "kyuko-sora",
+  "winner": 0,
+  "turn": 21,
+  "n": 64,
+  "errors": [],
+  "bad": [],
+  "over": []
+ },
+ {
+  "size": "横",
+  "match": "new-mons",
+  "winner": 1,
+  "turn": 39,
+  "n": 79,
+  "errors": [],
+  "bad": [],
+  "over": [
+   "画面の外「エーのターン」638..877"
+  ]
+ },
+ {
+  "size": "横",
+  "match": "sora-mua",
+  "winner": 1,
+  "turn": 18,
+  "n": 65,
+  "errors": [],
+  "bad": [],
+  "over": []
+ },
+ {
+  "size": "低い",
+  "match": "kyuko-sora",
+  "winner": 0,
+  "turn": 21,
+  "n": 64,
+  "errors": [],
+  "bad": [],
+  "over": []
+ },
+ {
+  "size": "低い",
+  "match": "new-mons",
+  "winner": 1,
+  "turn": 39,
+  "n": 79,
+  "errors": [],
+  "bad": [],
+  "over": [
+   "画面の外「エーのターン」244..455"
+  ]
+ },
+ {
+  "size": "低い",
+  "match": "sora-mua",
+  "winner": 1,
+  "turn": 18,
+  "n": 65,
+  "errors": [],
+  "bad": [],
+  "over": []
+ }
+]

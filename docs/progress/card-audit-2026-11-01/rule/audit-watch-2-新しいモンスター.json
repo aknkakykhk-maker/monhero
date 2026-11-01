@@ -1,0 +1,32 @@
+[
+ {
+  "size": "縦",
+  "match": "new-mons",
+  "winner": 1,
+  "turn": 22,
+  "n": 85,
+  "errors": [],
+  "bad": [],
+  "over": []
+ },
+ {
+  "size": "横",
+  "match": "new-mons",
+  "winner": 1,
+  "turn": 22,
+  "n": 85,
+  "errors": [],
+  "bad": [],
+  "over": []
+ },
+ {
+  "size": "低い",
+  "match": "new-mons",
+  "winner": 1,
+  "turn": 22,
+  "n": 85,
+  "errors": [],
+  "bad": [],
+  "over": []
+ }
+]
