@@ -2457,6 +2457,9 @@ function MonsterHeroGame() {
   // 「少ないターンで終えた」ように見えてしまうため、クリア以外は入れない。
   const runEndWaveRef = useRef(null);
   const runClearTurnsRef = useRef(null);
+  // その回で遊んだ累計ターン数(クリアでも負けでも入れる・2026-11-01 社長「負けたときもターン数を記録して」)。
+  // turns(クリアしたときだけ)とは別の列 played_turns へ送る。turns の意味は変えない
+  const runPlayedTurnsRef = useRef(null);
   // totalTurnCount のstateは描画のため。送信はレンダーを挟まず読むことがあるので、
   // 加算のたびに同じ値をこのrefへも書き、1周ぶん古い値を送らないようにする
   const totalTurnCountRef = useRef(0);
@@ -7393,6 +7396,9 @@ function MonsterHeroGame() {
     const reachedWave = Number.isFinite(Number(runEndWaveRef.current)) ? Number(runEndWaveRef.current) : null;
     const clearTurns = Number.isFinite(Number(runClearTurnsRef.current)) && Number(runClearTurnsRef.current) > 0
       ? Number(runClearTurnsRef.current) : null;
+    // 遊んだ累計ターン数(クリアでも負けでも)。取れないときは列ごと付けない
+    const playedTurns = Number.isFinite(Number(runPlayedTurnsRef.current)) && Number(runPlayedTurnsRef.current) > 0
+      ? Number(runPlayedTurnsRef.current) : null;
     // プロフィールフレーム(2026-09-15)。フレームなしのときは列ごと付けない
     const profileFrame = rankingProfileFrameValue(profileFrameId);
     // ブリーダーID(2026-09-16)。これまでバトルの記録には付けていなかったため、
@@ -7411,7 +7417,8 @@ function MonsterHeroGame() {
       ...(breederId ? { breeder_id: breederId } : {}),
       ...(reachedWave != null ? { reached_wave: reachedWave } : {}),
       ...(profileFrame ? { profile_frame: profileFrame } : {}),
-      ...(clearTurns != null ? { turns: clearTurns } : {}) };
+      ...(clearTurns != null ? { turns: clearTurns } : {}),
+      ...(playedTurns != null ? { played_turns: playedTurns } : {}) };
     // 絆Lvの正本テーブルへも同じ内容を書く(1人1個体1行で上書き)。
     // 結果画面はスコア送信の完了を待つので、こちらは待たせない(待つと最大8秒ぶん
     // リザルトが遅れる)。書けなくても次の周回で書き直されるし、一覧は記録側の
@@ -7433,6 +7440,7 @@ function MonsterHeroGame() {
         const entry = { userName: name, hero: heroName, party, score: finalScore, diff, level, icon, clearId, at: Date.now(),
           ...(profileFrame ? { profileFrame } : {}),
           ...(reachedWave != null ? { reachedWave } : {}), ...(clearTurns != null ? { turns: clearTurns } : {}),
+          ...(playedTurns != null ? { playedTurns } : {}),
           nationalSaved: false, nationalError: { message: error?.message || String(error), status: error?.status || null, code: error?.code || null, body: error?.body || null } };
         const rows = await storeGet(`mh_rank_${diff}`, [], false);
         const list = Array.isArray(rows) ? rows.slice() : [];
@@ -10802,6 +10810,7 @@ function MonsterHeroGame() {
           // 敗北。倒しきれなかったWAVEがあるのでターン数は残さず、どこまで来たかだけ残す
           runEndWaveRef.current = wave;
           runClearTurnsRef.current = null;
+          runPlayedTurnsRef.current = (Number(totalTurnCountRef.current)||0) + (Number(turnCount)||0);
           await awardRunRewards(Math.max(0, wave - 1));
         } catch (e) { console.error('[result] award rewards failed:', e && e.message ? e.message : e); }
         // リザルト自体は背面に表示するが、ランキング保存の成否が確定するまでは全面ロックを
@@ -11031,6 +11040,7 @@ function MonsterHeroGame() {
     try{
       runEndWaveRef.current=10;
       runClearTurnsRef.current=clearTurns;
+      runPlayedTurnsRef.current=clearTurns;
       await awardRunRewards(10);
       await recordClearOnce();
     }catch(e){
@@ -11972,6 +11982,7 @@ function MonsterHeroGame() {
     // リタイア。敗北と同じく、到達WAVEだけを残す
     runEndWaveRef.current = wave;
     runClearTurnsRef.current = null;
+    runPlayedTurnsRef.current = (Number(totalTurnCountRef.current)||0) + (Number(turnCount)||0);
     try { await awardRunRewards(Math.max(0, wave - 1)); } catch {}
     setShowQuitConfirm(false);
     if (!silent) setGaveUp(true);
@@ -15640,6 +15651,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // クリア。全WAVEを倒しきったので、かかった累計ターン数を記録に残す
         runEndWaveRef.current = 10;
         runClearTurnsRef.current = totalTurnCountRef.current;
+        runPlayedTurnsRef.current = totalTurnCountRef.current;
         await awardRunRewards(10);
         await recordClearOnce();
       } catch (e) { console.error('[result] award rewards failed:', e && e.message ? e.message : e); }
@@ -16056,6 +16068,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       totalTurnCountRef.current = 0;
       runEndWaveRef.current = null;
       runClearTurnsRef.current = null;
+      runPlayedTurnsRef.current = null;
       ultimateDistanceBreakLevelsRef.current=[0,0,0,0]; setUltimateDistanceBreakLevels([0,0,0,0]);
       ultimateDistanceBreakPendingRef.current=null; setUltimateDistanceBreakPending(null); setUltimateDistanceBreakReveal(null);
     }

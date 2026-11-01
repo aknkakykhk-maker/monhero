@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 16a755a61eac52eb
+// generated-sha256: 27455ad3796b58dd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -17843,6 +17843,17 @@ const _isMissingColumnError = (status, body) => {
   if (!/turns|reached_wave/i.test(text)) return false;
   return /PGRST204|PGRST100|42703|does not exist|Could not find the/i.test(text);
 };
+// 遊んだ累計ターン数の列 played_turns(2026-11-01 社長「負けたときもターン数を記録して」)。
+// turns は「クリアしたときのターン数」で最速クリアの表示・並びに使うので意味を変えず、
+// クリアでも負けでも入る値は別の列へ送る。送るだけで、取得・表示には使わない。
+// 列がまだ無い環境(SQL適用前)では400になるので、一度気付いたら以後は外して送る(記録を落とさない)
+let _rankingPlayedTurnsUnavailable = false;
+const _isMissingPlayedTurnsError = (status, body) => {
+  if (status !== 400) return false;
+  const text = String(body || '');
+  if (!/played_turns/i.test(text)) return false;
+  return /PGRST204|PGRST100|42703|does not exist|Could not find the/i.test(text);
+};
 // 取得する列。ターン数を使う一覧(スコア)にだけ足す。ブリーダーLvの一覧は
 // 全件をページ送りで読むので、使わない列を運ばせない
 const rankingSelectWithRunStats = (base) =>
@@ -18326,6 +18337,7 @@ const sbInsertScore = async (row) => {
   if (_rankingRunStatsUnavailable) { delete normalizedRow.turns; delete normalizedRow.reached_wave; }
   // プロフィールフレームの列も同じ。無いと分かっている間は最初から外して送る
   if (_rankingProfileFrameUnavailable) delete normalizedRow.profile_frame;
+  if (_rankingPlayedTurnsUnavailable) delete normalizedRow.played_turns;
   const requestId = `insert-${normalizedRow.difficulty}-${Date.now()}`;
   const query = '?on_conflict=clear_id';
   const prefer = 'resolution=ignore-duplicates,return=minimal';
@@ -18353,6 +18365,15 @@ const sbInsertScore = async (row) => {
       errorCode, isUniqueViolation, error: res.ok ? null : (body || res.statusText)
     });
     if (!res.ok) {
+      // 遊んだターン数の列がまだ無い環境。その列だけを外して送り直す。
+      // ★turns の判定(_isMissingColumnError)は「turns」を含む応答に反応するので、必ずこちらを先に見る
+      if (!_rankingPlayedTurnsUnavailable && normalizedRow.played_turns !== undefined
+          && _isMissingPlayedTurnsError(res.status, body)) {
+        _rankingPlayedTurnsUnavailable = true;
+        rankingLog(requestId, 'played-turns-column-missing', { status: res.status });
+        const { played_turns, ...withoutPlayedTurns } = normalizedRow;
+        return sbInsertScore(withoutPlayedTurns);
+      }
       // プロフィールフレームの列がまだ無い環境。飾り枠のためにスコアを落とさない。
       // その列だけを外して必ず送り直す(一度気付けば以後は最初から外して送る)
       if (!_rankingProfileFrameUnavailable && normalizedRow.profile_frame !== undefined
@@ -18476,6 +18497,7 @@ const rankingRowFromLocalEntry = (entry, difficulty) => {
   if (!diff) return null;
   const reachedWave = Number(entry.reachedWave);
   const turns = Number(entry.turns);
+  const playedTurns = Number(entry.playedTurns);
   const level = Number(entry.level);
   const createdAt = rankingCreatedAtFromLocal(entry.at);
   return {
@@ -18489,6 +18511,7 @@ const rankingRowFromLocalEntry = (entry, difficulty) => {
     clear_id: entry.clearId,
     ...(Number.isFinite(reachedWave) && reachedWave > 0 ? { reached_wave: reachedWave } : {}),
     ...(Number.isFinite(turns) && turns > 0 ? { turns } : {}),
+    ...(Number.isFinite(playedTurns) && playedTurns > 0 ? { played_turns: playedTurns } : {}),
     ...(entry.breederId ? { breeder_id: entry.breederId } : {}),
     // プロフィールフレーム。退避した時点で選んでいたものをそのまま送り直す
     // (未選択・古い退避データには入っていないので、その場合は列ごと付けない)
@@ -75763,6 +75786,9 @@ function MonsterHeroGame() {
   // 「少ないターンで終えた」ように見えてしまうため、クリア以外は入れない。
   const runEndWaveRef = useRef(null);
   const runClearTurnsRef = useRef(null);
+  // その回で遊んだ累計ターン数(クリアでも負けでも入れる・2026-11-01 社長「負けたときもターン数を記録して」)。
+  // turns(クリアしたときだけ)とは別の列 played_turns へ送る。turns の意味は変えない
+  const runPlayedTurnsRef = useRef(null);
   // totalTurnCount のstateは描画のため。送信はレンダーを挟まず読むことがあるので、
   // 加算のたびに同じ値をこのrefへも書き、1周ぶん古い値を送らないようにする
   const totalTurnCountRef = useRef(0);
@@ -80699,6 +80725,9 @@ function MonsterHeroGame() {
     const reachedWave = Number.isFinite(Number(runEndWaveRef.current)) ? Number(runEndWaveRef.current) : null;
     const clearTurns = Number.isFinite(Number(runClearTurnsRef.current)) && Number(runClearTurnsRef.current) > 0
       ? Number(runClearTurnsRef.current) : null;
+    // 遊んだ累計ターン数(クリアでも負けでも)。取れないときは列ごと付けない
+    const playedTurns = Number.isFinite(Number(runPlayedTurnsRef.current)) && Number(runPlayedTurnsRef.current) > 0
+      ? Number(runPlayedTurnsRef.current) : null;
     // プロフィールフレーム(2026-09-15)。フレームなしのときは列ごと付けない
     const profileFrame = rankingProfileFrameValue(profileFrameId);
     // ブリーダーID(2026-09-16)。これまでバトルの記録には付けていなかったため、
@@ -80717,7 +80746,8 @@ function MonsterHeroGame() {
       ...(breederId ? { breeder_id: breederId } : {}),
       ...(reachedWave != null ? { reached_wave: reachedWave } : {}),
       ...(profileFrame ? { profile_frame: profileFrame } : {}),
-      ...(clearTurns != null ? { turns: clearTurns } : {}) };
+      ...(clearTurns != null ? { turns: clearTurns } : {}),
+      ...(playedTurns != null ? { played_turns: playedTurns } : {}) };
     // 絆Lvの正本テーブルへも同じ内容を書く(1人1個体1行で上書き)。
     // 結果画面はスコア送信の完了を待つので、こちらは待たせない(待つと最大8秒ぶん
     // リザルトが遅れる)。書けなくても次の周回で書き直されるし、一覧は記録側の
@@ -80739,6 +80769,7 @@ function MonsterHeroGame() {
         const entry = { userName: name, hero: heroName, party, score: finalScore, diff, level, icon, clearId, at: Date.now(),
           ...(profileFrame ? { profileFrame } : {}),
           ...(reachedWave != null ? { reachedWave } : {}), ...(clearTurns != null ? { turns: clearTurns } : {}),
+          ...(playedTurns != null ? { playedTurns } : {}),
           nationalSaved: false, nationalError: { message: error?.message || String(error), status: error?.status || null, code: error?.code || null, body: error?.body || null } };
         const rows = await storeGet(`mh_rank_${diff}`, [], false);
         const list = Array.isArray(rows) ? rows.slice() : [];
@@ -84108,6 +84139,7 @@ function MonsterHeroGame() {
           // 敗北。倒しきれなかったWAVEがあるのでターン数は残さず、どこまで来たかだけ残す
           runEndWaveRef.current = wave;
           runClearTurnsRef.current = null;
+          runPlayedTurnsRef.current = (Number(totalTurnCountRef.current)||0) + (Number(turnCount)||0);
           await awardRunRewards(Math.max(0, wave - 1));
         } catch (e) { console.error('[result] award rewards failed:', e && e.message ? e.message : e); }
         // リザルト自体は背面に表示するが、ランキング保存の成否が確定するまでは全面ロックを
@@ -84337,6 +84369,7 @@ function MonsterHeroGame() {
     try{
       runEndWaveRef.current=10;
       runClearTurnsRef.current=clearTurns;
+      runPlayedTurnsRef.current=clearTurns;
       await awardRunRewards(10);
       await recordClearOnce();
     }catch(e){
@@ -85278,6 +85311,7 @@ function MonsterHeroGame() {
     // リタイア。敗北と同じく、到達WAVEだけを残す
     runEndWaveRef.current = wave;
     runClearTurnsRef.current = null;
+    runPlayedTurnsRef.current = (Number(totalTurnCountRef.current)||0) + (Number(turnCount)||0);
     try { await awardRunRewards(Math.max(0, wave - 1)); } catch {}
     setShowQuitConfirm(false);
     if (!silent) setGaveUp(true);
@@ -88946,6 +88980,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // クリア。全WAVEを倒しきったので、かかった累計ターン数を記録に残す
         runEndWaveRef.current = 10;
         runClearTurnsRef.current = totalTurnCountRef.current;
+        runPlayedTurnsRef.current = totalTurnCountRef.current;
         await awardRunRewards(10);
         await recordClearOnce();
       } catch (e) { console.error('[result] award rewards failed:', e && e.message ? e.message : e); }
@@ -89362,6 +89397,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       totalTurnCountRef.current = 0;
       runEndWaveRef.current = null;
       runClearTurnsRef.current = null;
+      runPlayedTurnsRef.current = null;
       ultimateDistanceBreakLevelsRef.current=[0,0,0,0]; setUltimateDistanceBreakLevels([0,0,0,0]);
       ultimateDistanceBreakPendingRef.current=null; setUltimateDistanceBreakPending(null); setUltimateDistanceBreakReveal(null);
     }
