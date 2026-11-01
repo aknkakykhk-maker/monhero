@@ -286,6 +286,17 @@ const _isMissingColumnError = (status, body) => {
   if (!/turns|reached_wave/i.test(text)) return false;
   return /PGRST204|PGRST100|42703|does not exist|Could not find the/i.test(text);
 };
+// 遊んだ累計ターン数の列 played_turns(2026-11-01 社長「負けたときもターン数を記録して」)。
+// turns は「クリアしたときのターン数」で最速クリアの表示・並びに使うので意味を変えず、
+// クリアでも負けでも入る値は別の列へ送る。送るだけで、取得・表示には使わない。
+// 列がまだ無い環境(SQL適用前)では400になるので、一度気付いたら以後は外して送る(記録を落とさない)
+let _rankingPlayedTurnsUnavailable = false;
+const _isMissingPlayedTurnsError = (status, body) => {
+  if (status !== 400) return false;
+  const text = String(body || '');
+  if (!/played_turns/i.test(text)) return false;
+  return /PGRST204|PGRST100|42703|does not exist|Could not find the/i.test(text);
+};
 // 取得する列。ターン数を使う一覧(スコア)にだけ足す。ブリーダーLvの一覧は
 // 全件をページ送りで読むので、使わない列を運ばせない
 const rankingSelectWithRunStats = (base) =>
@@ -769,6 +780,7 @@ const sbInsertScore = async (row) => {
   if (_rankingRunStatsUnavailable) { delete normalizedRow.turns; delete normalizedRow.reached_wave; }
   // プロフィールフレームの列も同じ。無いと分かっている間は最初から外して送る
   if (_rankingProfileFrameUnavailable) delete normalizedRow.profile_frame;
+  if (_rankingPlayedTurnsUnavailable) delete normalizedRow.played_turns;
   const requestId = `insert-${normalizedRow.difficulty}-${Date.now()}`;
   const query = '?on_conflict=clear_id';
   const prefer = 'resolution=ignore-duplicates,return=minimal';
@@ -796,6 +808,15 @@ const sbInsertScore = async (row) => {
       errorCode, isUniqueViolation, error: res.ok ? null : (body || res.statusText)
     });
     if (!res.ok) {
+      // 遊んだターン数の列がまだ無い環境。その列だけを外して送り直す。
+      // ★turns の判定(_isMissingColumnError)は「turns」を含む応答に反応するので、必ずこちらを先に見る
+      if (!_rankingPlayedTurnsUnavailable && normalizedRow.played_turns !== undefined
+          && _isMissingPlayedTurnsError(res.status, body)) {
+        _rankingPlayedTurnsUnavailable = true;
+        rankingLog(requestId, 'played-turns-column-missing', { status: res.status });
+        const { played_turns, ...withoutPlayedTurns } = normalizedRow;
+        return sbInsertScore(withoutPlayedTurns);
+      }
       // プロフィールフレームの列がまだ無い環境。飾り枠のためにスコアを落とさない。
       // その列だけを外して必ず送り直す(一度気付けば以後は最初から外して送る)
       if (!_rankingProfileFrameUnavailable && normalizedRow.profile_frame !== undefined
@@ -919,6 +940,7 @@ const rankingRowFromLocalEntry = (entry, difficulty) => {
   if (!diff) return null;
   const reachedWave = Number(entry.reachedWave);
   const turns = Number(entry.turns);
+  const playedTurns = Number(entry.playedTurns);
   const level = Number(entry.level);
   const createdAt = rankingCreatedAtFromLocal(entry.at);
   return {
@@ -932,6 +954,7 @@ const rankingRowFromLocalEntry = (entry, difficulty) => {
     clear_id: entry.clearId,
     ...(Number.isFinite(reachedWave) && reachedWave > 0 ? { reached_wave: reachedWave } : {}),
     ...(Number.isFinite(turns) && turns > 0 ? { turns } : {}),
+    ...(Number.isFinite(playedTurns) && playedTurns > 0 ? { played_turns: playedTurns } : {}),
     ...(entry.breederId ? { breeder_id: entry.breederId } : {}),
     // プロフィールフレーム。退避した時点で選んでいたものをそのまま送り直す
     // (未選択・古い退避データには入っていないので、その場合は列ごと付けない)

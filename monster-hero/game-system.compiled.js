@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 21e2b88414baab92
+// source-sha256: 243fdb768001946d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -29246,6 +29246,13 @@ const _isMissingColumnError = (status, body) => {
   if (!/turns|reached_wave/i.test(text)) return false;
   return /PGRST204|PGRST100|42703|does not exist|Could not find the/i.test(text);
 };
+let _rankingPlayedTurnsUnavailable = false;
+const _isMissingPlayedTurnsError = (status, body) => {
+  if (status !== 400) return false;
+  const text = String(body || '');
+  if (!/played_turns/i.test(text)) return false;
+  return /PGRST204|PGRST100|42703|does not exist|Could not find the/i.test(text);
+};
 const rankingSelectWithRunStats = base => _rankingRunStatsUnavailable || !base || !base.includes('score') ? base : `${base},${RANKING_RUN_STATS_COLUMNS}`;
 const RANKING_PROFILE_FRAME_COLUMN = 'profile_frame';
 let _rankingProfileFrameUnavailable = false;
@@ -29666,6 +29673,7 @@ const sbInsertScore = async row => {
     delete normalizedRow.reached_wave;
   }
   if (_rankingProfileFrameUnavailable) delete normalizedRow.profile_frame;
+  if (_rankingPlayedTurnsUnavailable) delete normalizedRow.played_turns;
   const requestId = `insert-${normalizedRow.difficulty}-${Date.now()}`;
   const query = '?on_conflict=clear_id';
   const prefer = 'resolution=ignore-duplicates,return=minimal';
@@ -29711,6 +29719,17 @@ const sbInsertScore = async row => {
       error: res.ok ? null : body || res.statusText
     });
     if (!res.ok) {
+      if (!_rankingPlayedTurnsUnavailable && normalizedRow.played_turns !== undefined && _isMissingPlayedTurnsError(res.status, body)) {
+        _rankingPlayedTurnsUnavailable = true;
+        rankingLog(requestId, 'played-turns-column-missing', {
+          status: res.status
+        });
+        const {
+          played_turns,
+          ...withoutPlayedTurns
+        } = normalizedRow;
+        return sbInsertScore(withoutPlayedTurns);
+      }
       if (!_rankingProfileFrameUnavailable && normalizedRow.profile_frame !== undefined && _isMissingProfileFrameError(res.status, body)) {
         _rankingProfileFrameUnavailable = true;
         rankingLog(requestId, 'profile-frame-column-missing', {
@@ -29809,6 +29828,7 @@ const rankingRowFromLocalEntry = (entry, difficulty) => {
   if (!diff) return null;
   const reachedWave = Number(entry.reachedWave);
   const turns = Number(entry.turns);
+  const playedTurns = Number(entry.playedTurns);
   const level = Number(entry.level);
   const createdAt = rankingCreatedAtFromLocal(entry.at);
   return {
@@ -29829,6 +29849,9 @@ const rankingRowFromLocalEntry = (entry, difficulty) => {
     } : {}),
     ...(Number.isFinite(turns) && turns > 0 ? {
       turns
+    } : {}),
+    ...(Number.isFinite(playedTurns) && playedTurns > 0 ? {
+      played_turns: playedTurns
     } : {}),
     ...(entry.breederId ? {
       breeder_id: entry.breederId
@@ -127505,6 +127528,7 @@ function MonsterHeroGame() {
   const runHeroBondLevelRef = useRef(null);
   const runEndWaveRef = useRef(null);
   const runClearTurnsRef = useRef(null);
+  const runPlayedTurnsRef = useRef(null);
   const totalTurnCountRef = useRef(0);
   const [finalRewardSummary, setFinalRewardSummary] = useState(null);
   const [championPresentationComplete, setChampionPresentationComplete] = useState(false);
@@ -132384,6 +132408,7 @@ function MonsterHeroGame() {
     const icon = breederIcon;
     const reachedWave = Number.isFinite(Number(runEndWaveRef.current)) ? Number(runEndWaveRef.current) : null;
     const clearTurns = Number.isFinite(Number(runClearTurnsRef.current)) && Number(runClearTurnsRef.current) > 0 ? Number(runClearTurnsRef.current) : null;
+    const playedTurns = Number.isFinite(Number(runPlayedTurnsRef.current)) && Number(runPlayedTurnsRef.current) > 0 ? Number(runPlayedTurnsRef.current) : null;
     const profileFrame = rankingProfileFrameValue(profileFrameId);
     const breederId = await ensureBreederId();
     if (tacticsProLogRef.current) {
@@ -132419,6 +132444,9 @@ function MonsterHeroGame() {
       } : {}),
       ...(clearTurns != null ? {
         turns: clearTurns
+      } : {}),
+      ...(playedTurns != null ? {
+        played_turns: playedTurns
       } : {})
     };
     try {
@@ -132453,6 +132481,9 @@ function MonsterHeroGame() {
           } : {}),
           ...(clearTurns != null ? {
             turns: clearTurns
+          } : {}),
+          ...(playedTurns != null ? {
+            playedTurns
           } : {}),
           nationalSaved: false,
           nationalError: {
@@ -137245,6 +137276,7 @@ function MonsterHeroGame() {
         try {
           runEndWaveRef.current = wave;
           runClearTurnsRef.current = null;
+          runPlayedTurnsRef.current = (Number(totalTurnCountRef.current) || 0) + (Number(turnCount) || 0);
           await awardRunRewards(Math.max(0, wave - 1));
         } catch (e) {
           console.error('[result] award rewards failed:', e && e.message ? e.message : e);
@@ -137528,6 +137560,7 @@ function MonsterHeroGame() {
     try {
       runEndWaveRef.current = 10;
       runClearTurnsRef.current = clearTurns;
+      runPlayedTurnsRef.current = clearTurns;
       await awardRunRewards(10);
       await recordClearOnce();
     } catch (e) {
@@ -138795,6 +138828,7 @@ function MonsterHeroGame() {
     setResultProcessing(true);
     runEndWaveRef.current = wave;
     runClearTurnsRef.current = null;
+    runPlayedTurnsRef.current = (Number(totalTurnCountRef.current) || 0) + (Number(turnCount) || 0);
     try {
       await awardRunRewards(Math.max(0, wave - 1));
     } catch {}
@@ -142950,6 +142984,7 @@ function MonsterHeroGame() {
       try {
         runEndWaveRef.current = 10;
         runClearTurnsRef.current = totalTurnCountRef.current;
+        runPlayedTurnsRef.current = totalTurnCountRef.current;
         await awardRunRewards(10);
         await recordClearOnce();
       } catch (e) {
@@ -143503,6 +143538,7 @@ function MonsterHeroGame() {
       totalTurnCountRef.current = 0;
       runEndWaveRef.current = null;
       runClearTurnsRef.current = null;
+      runPlayedTurnsRef.current = null;
       ultimateDistanceBreakLevelsRef.current = [0, 0, 0, 0];
       setUltimateDistanceBreakLevels([0, 0, 0, 0]);
       ultimateDistanceBreakPendingRef.current = null;
