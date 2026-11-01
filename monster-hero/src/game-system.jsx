@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7d2a4f638e951a08
+// generated-sha256: d4ac29521db48632
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -5730,11 +5730,11 @@ const Audio_ = (() => {
     "audio/bgm-haruka.mp3": "7a7164dbf152",
     "audio/bgm-home-ichika.mp3": "29295336d1af",
     "audio/bgm-journey.mp3": "816f0cdab93e",
-    "audio/bgm-kaze-ga-soyogu-basho.mp3": "9cc789151e7e",
+    "audio/bgm-kaze-ga-soyogu-basho.mp3": "e986277401a6",
     "audio/bgm-kiki-issen-short.mp3": "1dc188dbb7a7",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
-    "audio/bgm-light-player-short.mp3": "785e78c69005",
-    "audio/bgm-light-player.mp3": "6656f3a71344",
+    "audio/bgm-light-player-short.mp3": "5d59fb7eb1fb",
+    "audio/bgm-light-player.mp3": "c07830c2e774",
     "audio/bgm-makutsu-no-senritsu.mp3": "8db199451f0b",
     "audio/bgm-market.mp3": "a85ba65f90e7",
     "audio/bgm-menu.mp3": "a6aef603fd6a",
@@ -5772,8 +5772,8 @@ const Audio_ = (() => {
     "audio/bgm-title.mp3": "b7bdc68bb0c0",
     "audio/bgm-toriko.mp3": "3870d26f6322",
     "audio/bgm-toward-the-stars-short.mp3": "f3160c5d2a44",
-    "audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3": "f2e9585907f2",
-    "audio/bgm-tsuki-ga-michiru-mae-ni.mp3": "2ee86e1947fd",
+    "audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3": "fe27c9332589",
+    "audio/bgm-tsuki-ga-michiru-mae-ni.mp3": "74eb2d433abd",
     "audio/bgm-wrath-of-the-thorn-king.mp3": "d1ea326a4ee2",
     "audio/jingle-victory.mp3": "689c9715a824",
     "audio/se-awakened-moo-apocalypse.mp3": "3ed18e30e8e7",

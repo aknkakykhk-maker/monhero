@@ -128,6 +128,8 @@ A〜D の字を付けた1枚にして送り、`AskUserQuestion` で選んでも�
 | --- | --- |
 | 2026-11-02 | Rebellion(原曲・short ver.) |
 | 2026-11-02 | Against My Own Shadow・Grievous Lady・Journey・Sheriruth・ROSE(原曲・short ver.)・Toward the Stars, Paradise or Truth short ver. |
+| 2026-11-02 | light player(原曲・short ver.)・月が満ちる前に(原曲・short ver.)… 届いた m4a(44.1kHz / 98kbps の AAC)から。風がそよぐ場所 … 過去の 44.1kHz / 96kbps の版から(どちらも元の音源ではないので、元の音源が届いたら作り直す) |
 | 作り直さない | 綺季一閃(原曲)… もとから 48kHz / 185kbps のまま入っている |
+| 作り直さない(元の音源待ち) | Monster Hero・Monster Hero -Another-・戦場の疾風・魔窟の旋律 … 今のファイルがすでに 44.1kHz / 96kbps で、それより良い音源が残っていない |
 
 元の音源の置き場所: `tools/art-sources/song-audio/<songId>/`(曲を入れるときに必ず残す)
