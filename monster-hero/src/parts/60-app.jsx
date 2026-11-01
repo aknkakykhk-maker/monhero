@@ -13145,16 +13145,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 撃破ロック(enemyDefeatResolvedRef)はまだ立てない。ここで立てると、起き上がった敵を
     // もう一度倒したときにWAVEクリアが確定しなくなる。
     const revivalDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
-    const revived=extremeRevivedEnemyStats(enemy,revivalDifficulty,wave,enemyRevivalUsedRef.current);
+    // そのターンに割れた枚数や、前の蘇りで大きくなった最大ライフ(COCYTUS)は、描くたびに追いつく控えから読む
+    const revived=extremeRevivedEnemyStats(enemyLiveRef.current||enemy,revivalDifficulty,wave,enemyRevivalUsedRef.current);
     if (revived) {
       enemyRevivalUsedRef.current=revived.revivalNumber;
       setEnemyRevivalUsed(revived.revivalNumber);
       enemyRevivedHpRef.current=revived.hp;
       setEnemySkillName(null);
       Audio_.se.enemySpecial();
-      setEnemy(prev=>prev?{...prev,hp:revived.hp,atk:revived.atk,atkBeforeRoar:revived.atk}:prev); // 復活後の攻撃力を、詳細に出す元の値にもする
-      setEnemyRevivalReveal({revivalNumber:revived.revivalNumber,remaining:revived.remaining});
-      addPopup('死者の再起！','enemy','text-slate-100 font-black text-3xl drop-shadow-[0_0_18px_rgba(148,163,184,0.9)]');
+      setEnemy(prev=>prev?{...prev,hp:revived.hp,atk:revived.atk,atkBeforeRoar:revived.atk,...(revived.maxHp?{maxHp:revived.maxHp}:{})}:prev); // 復活後の攻撃力を、詳細に出す元の値にもする。COCYTUSは最大ライフも大きくなる
+      // COCYTUSは札に出す名前・説明と、見た目の段(stage: durahan / moo1 / moo2)を渡す。無ければ今までの「死者の再起」
+      setEnemyRevivalReveal({revivalNumber:revived.revivalNumber,remaining:revived.remaining,...(revived.reveal?{name:revived.reveal.name,desc:revived.reveal.desc,stage:revived.reveal.stage}:{})});
+      addPopup(revived.reveal?`${revived.reveal.name}！`:'死者の再起！','enemy','text-slate-100 font-black text-3xl drop-shadow-[0_0_18px_rgba(148,163,184,0.9)]');
       triggerShake(true);
       await battleWait(1600);
       setEnemyRevivalReveal(null);
