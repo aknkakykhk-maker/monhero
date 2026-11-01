@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // MFバトルカードの対戦の立ち絵が、通信が遅い・失敗するときにも出るか(2026-10-31 社長「対戦時に出る立ち絵モンスターが表示されないときがある」)。
 //   node tools/card/card-art-preload-browser-check.js
-//   ① 立ち絵(images/monsters/)を1.5秒遅らせても、対戦開始の画面(CardVsIntro)は読み終えてから出て、3体ずつの絵が全部描ける
+//   ① 立ち絵(images/monsters/)を0.8秒遅らせても、対戦開始の画面(CardVsIntro)は読み終えてから出て、3体ずつの絵が全部描ける
 //   ② 立ち絵の通信を失敗させても、真っ白にならずカードの絵で出る(読み直し→カードの絵)
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -26,9 +26,12 @@ const run = async (mode) => {
     put('mh_inherited_unique_level_compensation_v1', true); put('mh_inherited_unique_level_compensation_pending_v1', false);
   });
   // 立ち絵だけ遅らせる / 失敗させる(カードの絵 images/card-battle/ はそのまま)
+  // ★本体は「長くても2.5秒」待って出す(83 の cardArtPreload の capMs)。1.5秒遅らせると、ほかの検査やビルドが同時に走って
+  //   重いときに2.5秒を超え、決めたとおり先に出て①が落ちた(2026-11-01 ビート部)。待つ上限に余裕を残して0.8秒にする
+  //   (読み終えるのを待たずに出す作りなら、0.8秒でも絵は描けていないので①で分かる)
   await page.route(/\/images\/monsters\/[^/]+\.(png|webp)/i, async (route) => {
     if (mode === 'fail') return route.abort();
-    await new Promise((r) => setTimeout(r, 1500)); return route.continue();
+    await new Promise((r) => setTimeout(r, 800)); return route.continue();
   });
   await page.addInitScript(quiet.eventStorySeed()); await page.addInitScript(quiet.updateNoticeSeed());
   await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
@@ -62,7 +65,7 @@ const run = async (mode) => {
 };
 (async () => {
   const slow = await run('slow');
-  check('① 立ち絵を1.5秒遅らせても、対戦開始の画面が出たときに6体ぶんの絵が全部描けている(読み終えてから出す)',
+  check('① 立ち絵を0.8秒遅らせても、対戦開始の画面が出たときに6体ぶんの絵が全部描けている(読み終えてから出す)',
     slow.vs && slow.arts.length === 6 && slow.arts.every((x) => x.ok) && slow.arts.some((x) => /images\/monsters\//.test(x.src)), JSON.stringify(slow.arts.map((x) => `${x.ok ? 'o' : 'x'}${x.src.split('/').pop()}`)));
   const fail = await run('fail');
   check('② 立ち絵の通信が失敗しても、真っ白にならず、カードの絵で6体とも出る', fail.vs && fail.arts.length === 6 && fail.arts.every((x) => x.ok) && fail.arts.every((x) => /card-battle/.test(x.src)),
