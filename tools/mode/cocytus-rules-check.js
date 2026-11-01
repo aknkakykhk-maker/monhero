@@ -67,5 +67,5 @@ check('蘇り: 全回復・最大ライフ1.5倍、攻撃は層1枚ぶん(+20%)�
 check('ムーの2回目は掛け算で元の2.25倍・攻撃は+20%をもう1つ',(()=>{const a=revive(boss(),'COCYTUS',10,0);const b=revive(boss({maxHp:a.maxHp,atk:a.atk}),'COCYTUS',10,1);
   return a.maxHp===1500&&a.reveal.stage==='moo1'&&b.maxHp===2250&&b.hp===2250&&b.atk===240&&b.reveal.stage==='moo2'&&b.remaining===0&&revive(boss(),'COCYTUS',10,2)===null;})());
 check('ETERNALまでの起き上がりは今までどおり(半分で起き上がり・攻撃+60%・最大ライフは変えない)',(()=>{const r=revive({maxHp:1000,atk:100},'ETERNAL',10,0);return r.hp===500&&r.atk===160&&r.maxHp===undefined&&r.reveal===undefined;})());
-check('本体: 蘇りの最大ライフ・文・段を渡す',source.includes('...(revived.maxHp?{maxHp:revived.maxHp}:{})')&&source.includes('name:revived.reveal.name,desc:revived.reveal.desc,stage:revived.reveal.stage'));
+check('本体: 蘇りの最大ライフ・文・段を渡す',source.includes('...(revived.maxHp?{maxHp:revived.maxHp}:{})')&&source.includes('name:revived.reveal.name,desc:revived.reveal.desc,stage:revived.reveal.stage,rule:revivalDifficulty,enemyId:(enemyLiveRef.current||enemy)?.id'));
 process.exit(failed?1:0);

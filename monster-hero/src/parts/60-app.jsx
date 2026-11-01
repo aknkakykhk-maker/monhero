@@ -13154,8 +13154,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       setEnemySkillName(null);
       Audio_.se.enemySpecial();
       setEnemy(prev=>prev?{...prev,hp:revived.hp,atk:revived.atk,atkBeforeRoar:revived.atk,...(revived.maxHp?{maxHp:revived.maxHp}:{})}:prev); // 復活後の攻撃力を、詳細に出す元の値にもする。COCYTUSは最大ライフも大きくなる
-      // COCYTUSは札に出す名前・説明と、見た目の段(stage: durahan / moo1 / moo2)を渡す。無ければ今までの「死者の再起」
-      setEnemyRevivalReveal({revivalNumber:revived.revivalNumber,remaining:revived.remaining,...(revived.reveal?{name:revived.reveal.name,desc:revived.reveal.desc,stage:revived.reveal.stage}:{})});
+      // COCYTUSは札に出す名前・説明と、見た目の段(stage: durahan / moo1 / moo2)、難易度(rule)と敵(enemyId)を渡す(71 は rule と enemyId・revivalNumber で段を決める)。無ければ今までの「死者の再起」
+      setEnemyRevivalReveal({revivalNumber:revived.revivalNumber,remaining:revived.remaining,...(revived.reveal?{name:revived.reveal.name,desc:revived.reveal.desc,stage:revived.reveal.stage,rule:revivalDifficulty,enemyId:(enemyLiveRef.current||enemy)?.id}:{})});
       addPopup(revived.reveal?`${revived.reveal.name}！`:'死者の再起！','enemy','text-slate-100 font-black text-3xl drop-shadow-[0_0_18px_rgba(148,163,184,0.9)]');
       triggerShake(true);
       await battleWait(1600);
