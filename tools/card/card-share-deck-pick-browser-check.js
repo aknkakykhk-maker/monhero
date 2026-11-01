@@ -105,6 +105,9 @@ const browser = async () => {
     check('⑤ 「詳細」で、名前・3体の絵・全カード(合わせて50枚)・賢さ・「戦う」が出る',
       !!info && /検査の相手/.test(info.name) && info.mons === 3 && info.cards === 50 && info.sum === 50 && info.smart && info.fight, JSON.stringify(info));
     check('⑦ 「詳細」の戦績: 2勝1敗(勝ち 67%)と、最近の試合の勝ち・負け(新しい順)が出る', !!info && /2勝1敗/.test(info.stats) && /67%/.test(info.stats) && info.rows === 'won,lost,won', JSON.stringify(info && { stats: info.stats, rows: info.rows }));
+    // 最近の試合の日時は日本時間(この検査のブラウザは日本時間ではない。2026-10-31T03:00Z → 10/31 12:00)
+    const recText = await det.evaluate((el) => [...el.querySelectorAll('[data-card-share-detail-record-row]')].map((x) => x.textContent).join(' / '));
+    check('⑦ 最近の試合の日時は、端末の時計でなく日本時間で出る', /10\/31 12:00 勝ち/.test(recText) && /10\/30 21:00 負け/.test(recText) && /10\/29 18:30 勝ち/.test(recText), recText);
     if (process.env.SHARE_SHOT) await page.screenshot({ path: process.env.SHARE_SHOT });
     const fitD = await det.evaluate((el) => { const box = el.firstElementChild.getBoundingClientRect(); return { right: Math.round(box.right), w: window.innerWidth, over: [...el.querySelectorAll('*')].filter((c) => c.scrollWidth > c.clientWidth + 1 && getComputedStyle(c).overflowX !== 'auto').length }; }).catch(() => null);
     check('⑤ 詳細の窓が画面からはみ出さない', !!fitD && fitD.right <= fitD.w && fitD.over === 0, JSON.stringify(fitD));
