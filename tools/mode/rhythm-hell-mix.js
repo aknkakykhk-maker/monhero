@@ -52,7 +52,7 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   tsuki_ga_michiru_mae_ni:{marker:'tsuki-ga-michiru-mae-ni-v3',zero:799.9,beat:319.1489,levelRe:/const tsukiGaMichiruMaeNiHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   tsuki_ga_michiru_mae_ni_short:{marker:'tsuki-ga-michiru-mae-ni-short-v3',zero:849.9,beat:319.1489,levelRe:/const tsukiGaMichiruMaeNiShortHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   // Rebellion ～Beyond the Lock～(オリジナル・2026-11-01)。拍のずれの曲線(warpPoints)がある曲
-  rebellion:{marker:'rebellion-v3',zero:2010.5,beat:310.0775,levelRe:/const rebellionHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  rebellion:{marker:'rebellion-v3',zero:2010.5,beat:310.0775,levelRe:/const rebellionHellChart=mhChart\((\d+),/,source:'audio',variant:0,uncross:true,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   // Toward the Stars, Paradise or Truth short ver.(hitoyakyuko・2026-10-19・新曲は基本 HELL あり)
   // 全曲ヘル(2026-10-21 社長「全曲ヘルを実装して」)。marker・track は rhythm-runtime-notes.js の RELEASED_MARKERS・RELEASED_TRACKS、拍の頭と1拍は解析の timing
   mf_ichika_mix:{marker:'atsu-cup-theme-v3',track:'atsu_cup_theme',zero:40,beat:355.0296,levelRe:/const mfIchikaMixHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1},
@@ -188,7 +188,7 @@ const peakWindows=master=>{const ts=master.map(startOf).sort((a,b)=>a-b);if(!ts.
   const len=(Math.max(...master.map(endOf))-ts[0])*PEAK_SHARE;let best=[ts[0],ts[0]+len],bestN=0;
   for(let i=0,j=0;i<ts.length;i++){while(j<ts.length&&ts[j]<=ts[i]+len)j++;if(j-i>bestN){bestN=j-i;best=[ts[i],ts[i]+len];}}
   return [best.map(Math.round)];};
-const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDepth=null,audio=null,drawersOn=false,drawerIds=null,phrases=null,mixedWindows=null,keepMixed=false})=>{
+const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDepth=null,audio=null,drawersOn=false,drawerIds=null,phrases=null,mixedWindows=null,keepMixed=false,uncross=false})=>{
   const want=id=>drawersOn&&audio&&(!drawerIds||drawerIds.includes(id));
   // 格子へ寄せる。元の譜面に近い時刻(3ms以内)があればその時刻を使う(丸め方が1ms違うと、2本のスライドの間がその瞬間だけ詰まる)
   const chartTimes=[...new Set(master.flatMap(n=>n.k==='s'?n.pts.map(p=>p[0]):[n.t,n.end].filter(x=>x!=null)))].sort((a,b)=>a-b);
@@ -474,8 +474,35 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDept
     if(k<0)k=notes.findIndex(n=>n.k==='s'&&startOf(n)<bad.t&&bad.t<=endOf(n));
     if(k<0)break;
     notes.splice(k,1);}
+  // 指の交差を、押す位置(レーン)の並べ方だけで減らす(2026-11-01 社長「重さはそのまま、交差をなくす」・Rebellion。uncross:true の曲だけ)。
+  //   横持ちの親指2本のモデルで「交差」と出たノーツを、時刻・種類・幅・高さはそのまま、別のレーンへ動かす候補を全部試し(スライドは形のまま横へずらす)、
+  //   前後3秒の点数(押せない・交差・届きにくい・帯の中・水平クロス)がいちばん下がるものを選ぶ。下がらなければ動かさない(音は減らさない)
+  const uncrossPass=()=>{const HR=require('./rhythm-chart-hand-rules.js'),Wt={impossible:100,cross:60,reach:40,busy:0};
+    const inCross=t=>crossWindows.some(([a,b])=>t>=a&&t<=b);
+    const local=(t,swap,v)=>notes.filter(n=>endOf(n)>=t-3000&&startOf(n)<=t+3000).map(n=>n===swap?v:n);
+    const scoreOf=list=>{const rt=toRuntime(list);return thumbCheck(list.slice().sort((a,b)=>startOf(a)-startOf(b)),HELL_LANDSCAPE,beat).issues.reduce((a,i)=>a+Wt[i.kind],0)
+      +HR.heldBandBlocked(rt).length*100+HR.flatCross(rt).length*100+HR.skyConfusable(rt).length*100
+      +simulateRuntime(rt.filter(n=>!(n.skyHeight>0)&&!(n.slidePoints&&n.slidePoints.some(p=>p.sky>0)))).impossible*100;};
+    const xOf=n=>n.k==='s'?n.pts[0][1]+0.5:(n.sub+n.w/2)/2;
+    const tried=new Set();
+    for(let r=0;r<3000;r++){
+      const iss=thumbCheck(notes.slice().sort((a,b)=>startOf(a)-startOf(b)),HELL_LANDSCAPE,beat).issues.filter(i=>i.kind==='cross'&&!inCross(i.t)&&!tried.has(Math.round(i.t)+'|'+i.what));
+      if(!iss.length)break;const i0=iss[0];tried.add(Math.round(i0.t)+'|'+i0.what);
+      // その時刻に始まる・かかっているノーツ(近い位置から)を順に試す
+      const cands=notes.filter(n=>Math.abs(startOf(n)-i0.t)<=5||(n.k==='s'&&startOf(n)<i0.t&&i0.t<=endOf(n)+5)).sort((a,b)=>Math.abs(xOf(a)-i0.x)-Math.abs(xOf(b)-i0.x));
+      let done=false;
+      for(const n of cands){if(done)break;const t=startOf(n),base=scoreOf(local(t,null));
+        const vs=[];
+        if(n.k==='s'){for(const d of [-0.5,0.5,-1,1,-1.5,1.5,-2,2,-2.5,2.5,-3,3]){const v=JSON.parse(JSON.stringify(n));let ok=true;
+          for(const pt of v.pts){pt[1]+=d;if(pt[1]<-1e-9||pt[1]+pt[2]/2>6+1e-9)ok=false;}if(ok)vs.push(v);}}
+        else{for(let sub=0;sub+n.w<=12;sub++)if(sub!==n.sub)vs.push({...n,sub,lane:Math.floor(sub/2),hand:(sub+n.w/2)/2<3?'L':'R'});}
+        let best=null;for(const v of vs){const sc=scoreOf(local(t,n,v));if(sc<base&&(!best||sc<best.sc))best={sc,v};}
+        if(best){Object.assign(n,best.v);if(n.k==='s')n.pts=best.v.pts;done=true;}}}};
+  if(uncross)uncrossPass();
   // 上の手直しで高さや置き場所が変わって、帯の中のノーツがまた出ていれば、もう一度外へ出す
   bandFix();
+  // 帯の外へ出したあとに交差が戻っていれば、もう一度だけ並べ直す(uncross の曲だけ)
+  if(uncross){uncrossPass();bandFix();}
   for(const n of notes)delete n.mirrored;
   notes.crossWindows=crossWindows;
   // 引き出しが手直しのあとまで残ったか(空中の点がある本数)
