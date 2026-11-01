@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 469761c88f74b0c4
+// source-sha256: 674614fec4712e0b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -124977,10 +124977,25 @@ const CardCupPrizePanel = ({
     className: "flex items-center justify-between text-[13px] font-black text-white"
   }, React.createElement("span", null, cardCupItemText(p.item, 0).replace(/ 0$/, '')), React.createElement("span", {
     className: "text-amber-200"
-  }, p.total.toLocaleString()))), prize.givers.length > 0 && React.createElement("p", {
-    className: "text-[11px] font-bold text-slate-400",
-    style: JA_WRAP_STYLE
-  }, jaWrap(`出した人: ${prize.givers.map(g => `${g.name} ${cardCupItemText(g.item, g.amount)}`).join('・')}`)), prize.fee && React.createElement("p", {
+  }, p.total.toLocaleString()))), prize.givers.length > 0 && React.createElement("div", {
+    "data-card-cup-givers": true,
+    className: "text-[11px] font-bold text-slate-400"
+  }, React.createElement("p", null, "出した人"), React.createElement("ul", {
+    className: "mt-0.5 space-y-0.5"
+  }, prize.givers.map((g, i) => React.createElement("li", {
+    key: i,
+    "data-card-cup-giver": true,
+    className: "flex items-center gap-1.5"
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "w-4 shrink-0 text-center"
+  }, g.icon || '🙂'), React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-slate-300"
+  }, g.name), g.host && React.createElement("span", {
+    className: "shrink-0 rounded bg-amber-400/20 px-1 text-[10px] text-amber-200"
+  }, "主催"), React.createElement("span", {
+    className: "shrink-0 whitespace-nowrap text-slate-200"
+  }, cardCupItemText(g.item, g.amount)))))), prize.fee && React.createElement("p", {
     "data-card-cup-fee": true,
     className: "text-[12px] font-black text-sky-100"
   }, `参加費 ${cardCupItemText(prize.fee.item, prize.fee.amount)}(主催・主催仲間は払いません)`), (prize.pool.length > 0 || prize.fee) && React.createElement("div", {
