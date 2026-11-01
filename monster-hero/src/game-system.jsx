@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 588b42a0f3f453c3
+// generated-sha256: 11d7be226a002ec9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -21278,7 +21278,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 {field('レーン発光',segments('laneGlow',RHYTHM_LANE_GLOW_LABELS),null,{full:true})}
 {/* ホールド・スライドをなぞる光(2026-11-02 社長「押せてるときは道の押した光が出なくてホールドとかを綺麗になぞってるように」)。既定は ON */}
 {field('ホールド・スライドをなぞる光',toggle('holdTrace'),
-              'ホールド・スライドを押せているあいだ、押している指の道の光を出さず、代わりに帯そのものを指の所から奥へなぞるように光らせます。既定は「ON」です。\n指が帯から外れると、帯の光も止まります。タップ・フリック・何もない所を押したときの道の光は、これまでどおりです。演出量「最小」や軽量モードでも出ます。判定・スコアは変わりません。\n「OFF」にすると、これまでの見た目(押している所の道が光る)に戻ります。')}
+              'ホールド・スライドを押せているあいだ、押している指の道の光を出さず、代わりに帯そのものを指の所から奥へなぞるように光らせ、指の所に光の玉を出します。上へ立ちのぼる光と左右の光の柱はそのまま出ます。既定は「ON」です。\n指が帯から外れると、帯の光も止まります。タップ・フリック・何もない所を押したときの道の光は、これまでどおりです。演出量「最小」や軽量モードでも出ます。判定・スコアは変わりません。\n「OFF」にすると、これまでの見た目(押している所の道が光る)に戻ります。')}
 {hellReleased&&field('空中の道の見え方',hellSegments('lane',[['em','はっきり'],['el','控えめ'],['none','なし']]),
   'HELL で、空中のノーツが流れてくる空中の道をどれくらいはっきり出すかです。既定は「はっきり」です。「なし」にすると、空中の判定線だけになります。判定・スコアは変わりません。',{full:true})}
 {/* 空中のノーツの見た目(2026-10-17 社長「空中を本物の3D(段階A)が1番見やすかった。これと今のを設定で選べるようにする」)。既定は「いつもの」 */}
@@ -24980,7 +24980,9 @@ for(let i=scanFrom;i<notes.length;i++){
   if(run.notesReady&&run.notesAscending&&(scrollTable?rhythmScrollMinAfter(note.timeMs)>scanHorizonScroll:note.timeMs>scanHorizonMs))break;
   perfScanned++;
   visitNote(note);
-  if(!note.done&&note.activePointerId!==null&&note.type==='HOLD'&&rhythmNoteHasBody(note))heldNotes.push(note);
+  // 指が帯から外れている間は、押さえている間の音を止める(2026-11-02 社長「外れても すーって音がなってて判定に入ってるように感じる」)。
+  // 外れの判断は判定と同じ所(RHYTHM_GESTURE_RUNTIME の trackingBadSincePerf)を読む。戻ればまた一覧に入って鳴る
+  if(!note.done&&note.activePointerId!==null&&note.type==='HOLD'&&rhythmNoteHasBody(note)&&!RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index))heldNotes.push(note);
 }
 RHYTHM_NOTE_SE_RUNTIME.holdSync(heldNotes);
 // 刻みの数え方: 押さえている帯の刻みを判定・コンボ・スコアへ入れる(comboTicksRef。押し終わりは判定の処理が残りを清算する)

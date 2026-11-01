@@ -2556,7 +2556,9 @@ for(let i=scanFrom;i<notes.length;i++){
   if(run.notesReady&&run.notesAscending&&(scrollTable?rhythmScrollMinAfter(note.timeMs)>scanHorizonScroll:note.timeMs>scanHorizonMs))break;
   perfScanned++;
   visitNote(note);
-  if(!note.done&&note.activePointerId!==null&&note.type==='HOLD'&&rhythmNoteHasBody(note))heldNotes.push(note);
+  // 指が帯から外れている間は、押さえている間の音を止める(2026-11-02 社長「外れても すーって音がなってて判定に入ってるように感じる」)。
+  // 外れの判断は判定と同じ所(RHYTHM_GESTURE_RUNTIME の trackingBadSincePerf)を読む。戻ればまた一覧に入って鳴る
+  if(!note.done&&note.activePointerId!==null&&note.type==='HOLD'&&rhythmNoteHasBody(note)&&!RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index))heldNotes.push(note);
 }
 RHYTHM_NOTE_SE_RUNTIME.holdSync(heldNotes);
 // 刻みの数え方: 押さえている帯の刻みを判定・コンボ・スコアへ入れる(comboTicksRef。押し終わりは判定の処理が残りを清算する)
