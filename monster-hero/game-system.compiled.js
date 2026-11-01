@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a8e8154996ae5196
+// source-sha256: ae922f202e9091eb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -5524,6 +5524,20 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_altar_world_tree',
+  name: 'Altar of the World Tree, Beneath the White Night',
+  creator: '仙夜玖子',
+  src: 'audio/bgm-altar-world-tree.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_altar_world_tree_short',
+  name: 'Altar of the World Tree, Beneath the White Night short ver.',
+  creator: '仙夜玖子',
+  src: 'audio/bgm-altar-world-tree-short.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_tsuki_ga_michiru_mae_ni_short',
   name: '月が満ちる前に short ver.',
   creator: 'Fuki Commune',
@@ -7232,6 +7246,8 @@ const Audio_ = (() => {
   const AUDIO_CACHE_KEYS = {
     "audio/bgm-4u-hitasura.mp3": "f4fb42472438",
     "audio/bgm-against-my-own-shadow.mp3": "ddce743e94fa",
+    "audio/bgm-altar-world-tree-short.mp3": "016a720f2287",
+    "audio/bgm-altar-world-tree.mp3": "07d3aa751b64",
     "audio/bgm-anima.mp3": "c81adf3d2fff",
     "audio/bgm-atsu-cup-theme.mp3": "e93502c4df76",
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",

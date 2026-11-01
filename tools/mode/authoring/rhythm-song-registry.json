@@ -1317,6 +1317,34 @@
     "subdivisionsPerBeat": 4,
     "source": "command"
    }
+  },
+  "altar_world_tree": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-altar-world-tree.mp3",
+   "chartRevision": 33,
+   "audioSha256": "07d3aa751b645b402caa49e3f3ab0919530985e23a05100aee014d09459d6471",
+   "durationMs": 385164,
+   "analyzedTiming": {
+    "bpm": 163.97,
+    "beatZeroMs": 2895,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "altar_world_tree_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-altar-world-tree-short.mp3",
+   "chartRevision": 33,
+   "audioSha256": "016a720f2287be3d8ad5b270adee43f5e2fcb71592d5b8752a7d89a5f91dfee1",
+   "durationMs": 138024,
+   "analyzedTiming": {
+    "bpm": 163.97,
+    "beatZeroMs": 2895,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
   }
  }
 }

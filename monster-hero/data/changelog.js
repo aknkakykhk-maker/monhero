@@ -35,6 +35,18 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-02 01:16", type:'update', title:'新曲「Altar of the World Tree, Beneath the White Night」を追加しました', status:'new', group:'rhythm',
+    image:'images/song-art/altar-world-tree.jpg?v=8c7e3102a11f',
+    items:[
+      '新曲「Altar of the World Tree, Beneath the White Night」(6分25秒)と、その short ver.(2分18秒)を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.13 ／ EXPERT Lv.20 ／ MASTER Lv.24 ／ HELL Lv.46 です。',
+      'ノーツ数は 597 ／ 680 ／ 940 ／ 1145 ／ 1295 ／ 1551 です。',
+      'short ver. のレベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.20 ／ MASTER Lv.27 ／ HELL Lv.53 です。',
+      'short ver. のノーツ数は 227 ／ 264 ／ 354 ／ 434 ／ 500 ／ 570 です。',
+    ],
+    assistantNotice:{ id:'update_notice_altar_world_tree_v1', type:'content' },
+  },
+  {
     // 2026-11-01 社長「演出量とか背景を別に細かく設定したい」→ 文は社長「この文で公開」
     date: "2026-11-02 00:10", type:'update', group:'rhythm', title:'モンヒロビートの演出を1つずつ選べるようになりました', status:'new',
     items:[
