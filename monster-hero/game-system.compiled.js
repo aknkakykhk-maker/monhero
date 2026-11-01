@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 469761c88f74b0c4
+// source-sha256: 60e5a9cdfd282975
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93077,6 +93077,11 @@ const CARD_AI_BUILD = Object.freeze({
     lastTop: 2
   }
 });
+const CARD_AI_SECOND_TOP = Object.freeze({
+  kyuko: {
+    master: 2
+  }
+});
 const CARD_AI_DECK_TUNE = Object.freeze({
   mua: {
     easy: -0.7,
@@ -93319,7 +93324,10 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
     } : x);
     if (!left.length) break;
     let pick;
-    if (cfg.stray > 0 && rand() < cfg.stray) pick = left[Math.floor(rand() * left.length) % left.length];else if (cfg.best && k === 1 && cfg.lastTop > 1) {
+    if (cfg.stray > 0 && rand() < cfg.stray) pick = left[Math.floor(rand() * left.length) % left.length];else if (cfg.best && k === 0 && ((CARD_AI_SECOND_TOP[who] || {})[levelId] || 0) > 1) {
+      const top = left.slice().sort((x, y) => y.v - x.v || (x.m.no < y.m.no ? -1 : 1)).slice(0, CARD_AI_SECOND_TOP[who][levelId]);
+      pick = top[cardAiPickIndex(top.map((_, i) => i === 0 ? 2 : 1), rand)];
+    } else if (cfg.best && k === 1 && cfg.lastTop > 1) {
       const top = left.slice().sort((x, y) => y.v - x.v || (x.m.no < y.m.no ? -1 : 1)).slice(0, cfg.lastTop);
       pick = top[cardAiPickIndex(top.map((_, i) => i === 0 ? 2 : 1), rand)];
     } else if (cfg.best) pick = left.reduce((x, y) => y.v > x.v ? y : x);else {

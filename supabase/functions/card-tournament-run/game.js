@@ -1871,6 +1871,9 @@ const CARD_AI_BUILD = Object.freeze({
   //   2体目はいちばん強い子のまま。上位4組からえらぶ形や3体目を上位3体からにすると、点は近くても勝率が9〜17点下がる助手が出た(card-ai-balance で測った)
   master: { maxWave: 99, noise: 0.05, temp: 0.2, stray: 0, best: true, lastTop: 2 },  // いちばん強い組み合わせで本気・相手のデッキを見て選び直す
 });
+// 助手ごとに、MASTER の2体目も上位◯体から毎試合えらぶ(いちばんの子は2倍えらばれやすい)。書いていない助手は2体目がいちばん強い子のまま。
+//   2026-11-01 社長「きゅうこ MASTER の3体が毎回ほぼ同じ」(点検 L)→ きゅうこだけ2体目を上位2体から(勝率は tools で測ってそろえの中)
+const CARD_AI_SECOND_TOP = Object.freeze({ kyuko: { master: 2 } });
 // 助手ごとの強さのそろえ(カードの選び方の雑さに足す値。+ で弱く・- で強く。0 より下にはならない)。
 // tools/card/card-ai-balance.js で、プレイヤー役(スターター)への勝率が強さごとにそろうように決めた(2026-10-25)
 const CARD_AI_DECK_TUNE = Object.freeze({
@@ -2082,6 +2085,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
     if (!left.length) break;
     let pick;
     if (cfg.stray > 0 && rand() < cfg.stray) pick = left[Math.floor(rand() * left.length) % left.length];   // 気まぐれ
+    else if (cfg.best && k === 0 && (((CARD_AI_SECOND_TOP[who] || {})[levelId]) || 0) > 1) { const top = left.slice().sort((x, y) => y.v - x.v || (x.m.no < y.m.no ? -1 : 1)).slice(0, CARD_AI_SECOND_TOP[who][levelId]); pick = top[cardAiPickIndex(top.map((_, i) => (i === 0 ? 2 : 1)), rand)]; }
     else if (cfg.best && k === 1 && cfg.lastTop > 1) { const top = left.slice().sort((x, y) => y.v - x.v || (x.m.no < y.m.no ? -1 : 1)).slice(0, cfg.lastTop); pick = top[cardAiPickIndex(top.map((_, i) => (i === 0 ? 2 : 1)), rand)]; }
     else if (cfg.best) pick = left.reduce((x, y) => (y.v > x.v ? y : x));
     else { const top = Math.max(...left.map((x) => x.v)); pick = left[cardAiPickIndex(left.map((x) => Math.exp((x.v - top) / cfg.temp)), rand)]; }
