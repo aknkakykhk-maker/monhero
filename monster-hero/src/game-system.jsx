@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2d0b047e059976cb
+// generated-sha256: 12bfb0ef05c0c296
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -5696,8 +5696,8 @@ const Audio_ = (() => {
 // <audio-cache-keys>
     "audio/bgm-4u-hitasura.mp3": "f4fb42472438",
     "audio/bgm-against-my-own-shadow.mp3": "a58782a4c46f",
-    "audio/bgm-altar-world-tree-short.mp3": "016a720f2287",
-    "audio/bgm-altar-world-tree.mp3": "07d3aa751b64",
+    "audio/bgm-altar-world-tree-short.mp3": "45860ac8bd1d",
+    "audio/bgm-altar-world-tree.mp3": "2dda9c70f027",
     "audio/bgm-anima.mp3": "c81adf3d2fff",
     "audio/bgm-atsu-cup-theme.mp3": "e93502c4df76",
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
@@ -5766,7 +5766,7 @@ const Audio_ = (() => {
     "audio/bgm-six-eternel-remix-beat.mp3": "b1a024d5b16f",
     "audio/bgm-six-eternel-remix.mp3": "5f56c89739f8",
     "audio/bgm-six-eternel.mp3": "e26412179f3a",
-    "audio/bgm-stay-with-me-short.mp3": "54a59963e979",
+    "audio/bgm-stay-with-me-short.mp3": "d836a069998d",
     "audio/bgm-the-city-beneath-the-comets.mp3": "900fda0dc05e",
     "audio/bgm-title-theme.mp3": "8af0684e79e7",
     "audio/bgm-title.mp3": "b7bdc68bb0c0",
