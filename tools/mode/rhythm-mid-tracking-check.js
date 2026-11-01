@@ -363,5 +363,28 @@ function RHYTHM_HOLD_TRACKING_MARGIN_LANES_VALUE(text){return Number(text.match(
   runtime.clear();
 }
 
+// --- 終点の離し: 帯から外れたまま猶予以上たって離したら、タイミングが合っていても MISS(2026-11-02 社長「ずれていたら MISS にする」) ---
+{
+  const releaseWith=(kind,offLanes,offFromSong)=>{
+    const base={index:9,timeMs:1000,endTimeMs:3000,lane:2,subLane:4,subLaneWidth:2,activePointerId:'p1',holdJudgment:'MARVELOUS',holdDeltaMs:0,done:false,
+      _rhythmTickRules:true,_rhythmComboTicks:[1500,2000,2500],_rhythmTrackingGraceMs:120,_rhythmSlideToleranceBonusLanes:0};
+    const note=kind==='HOLD'?{...base,type:'HOLD'}:{...base,type:'SLIDE',endLane:2,slidePoints:[{timeMs:1000,lane:2,subLaneWidth:2},{timeMs:3000,lane:2,subLaneWidth:2}]};
+    now=0;runtime.clear();
+    runtime.record('touch:1',clientXFor(2),clientY);
+    runtime.bind('touch:1',note,kind,1000,0);
+    // 曲の時刻 = 1000 + now。2990ms(終わりの10ms前)で離す
+    while(now<1990){advance(10);const song=1000+now;runtime.record('touch:1',clientXFor(2+(song>=offFromSong?offLanes:0)),clientY);}
+    runtime.release('touch:1');
+    const r={hold:note.holdJudgment,end:note._rhythmReleaseJudgment};runtime.clear();return r;
+  };
+  for(const kind of ['HOLD','SLIDE']){
+    const inside=releaseWith(kind,0,0),off=releaseWith(kind,2,2700),edge=releaseWith(kind,2,2920),near=releaseWith(kind,.8,2700);
+    check(`${kind}: 帯の上で時刻どおりに離せば、離しは MARVELOUS`,inside.end==='MARVELOUS',JSON.stringify(inside));
+    check(`${kind}: 2レーン外れたまま0.29秒たって離すと、時刻が合っていても離しは MISS`,off.end==='MISS'&&off.hold==='MISS',JSON.stringify(off));
+    check(`${kind}: 外れが猶予(0.12秒)より短いうちに離せば、今までどおり時刻で決まる`,edge.end==='MARVELOUS',JSON.stringify(edge));
+    check(`${kind}: 受付の内側(0.8レーン)のずれなら、離しは今までどおり`,near.end==='MARVELOUS',JSON.stringify(near));
+  }
+}
+
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);

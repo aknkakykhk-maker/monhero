@@ -3839,7 +3839,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       }
     }
     const chartNow=estimatedSongMs(session)-session.offsetMs;
-    let bad;
+    let bad,endRawBad=null;
     if(session.kind==='SLIDE'){
       // SLIDEは動く的を追うので、これまでどおり判定ラインの高さに直した位置で測る。
       // 加えて、指のその場の高さ(タップと同じ測り方)で測った位置も的の中なら、外れとは数えない。
@@ -3847,13 +3847,13 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       const areaBox=areaRect();
       bad=slideFingerOff(session,pos,chartNow);
       // 交差の持ち替え(slideSwapAcrossFingers): 外れたのが、2本の帯が入れ替わって相手の指の上へ移っただけなら、指と帯を結び直して外れにしない
-      if(bad&&slideSwapAcrossFingers(session))return;
+      if(bad&&slideSwapAcrossFingers(session)){session.releaseOffSincePerf=null;return;}
       // 描き分け用(試作): いま指が帯から外れているか・指の位置(プレイエリアの中の px)。印の見せ方が読む(判定には使わない)
       if(session.note&&rhythmSlideHasSky(session.note)){session.note._trackOff=!!bad;session.note._trackFinger=areaBox?{x:Number(pos.clientX)-areaBox.left,y:Number(pos.clientY)-areaBox.top}:null;}
-    }else if(chartNow>=Number(session.note?.endTimeMs)-RHYTHM_HOLD_END_TRACKING_SKIP_MS){
-      // 終わりの100msは外れを見ない。指を離すときに接点が動く・もう成立する時間なので、ここで外れ扱いにしない。
-      bad=false;
     }else{
+      // 終わりの100msは外れを見ない(刻み・帯を暗くする合図には使わない)。指を離すときに接点が動く・もう成立する時間なので、ここで外れ扱いにしない。
+      // ただし離しの判定(release)のために、外れていたかどうかだけは endRawBad に残す(2026-11-02 社長「ずれていたら MISS にする」)
+      const endSkip=chartNow>=Number(session.note?.endTimeMs)-RHYTHM_HOLD_END_TRACKING_SKIP_MS;
       // HOLDは、押し始めのタップと**同じ測り方・同じ受付の広がり(タップ範囲)**で見る。
       // 【2026-10-06・ユーザー報告「ハルカのホールドで、実際に押している所とゲームが押したと見ている所が半レーンほど左にずれる」】
       // 追従だけが「判定ラインの高さに直した位置」で測っていたので、判定ラインより奥を押さえた指が中央寄りへずれて見え、
@@ -3875,6 +3875,14 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       const limit=half+rhythmHoldTrackingMarginLanes(tracked.half*4);
       const off=value=>value===null||Math.abs(value-tracked.center)>limit;
       bad=off(actual)&&off(atLine);
+      if(endSkip){endRawBad=bad;bad=false;}
+    }
+    // 離しの判定のための外れの記録(releaseOffSincePerf)。刻みと同じ基準で、HOLDの終わりの100msも測り続ける。
+    // 外れ始めの時刻は、刻みの記録(trackingBadSincePerf)が先に始まっていればそれを引き継ぐ
+    {
+      const releaseOff=endRawBad!==null?endRawBad:bad;
+      if(!releaseOff)session.releaseOffSincePerf=null;
+      else if(session.releaseOffSincePerf==null)session.releaseOffSincePerf=session.trackingBadSincePerf!=null?session.trackingBadSincePerf:pos.perfMs;
     }
     if(!bad){session.trackingBadSincePerf=null;return;}
     // 空中のスライドは外れ始めも「いまの時刻」で記録する(止まっていた指が外れた瞬間に、猶予なしで切れないように)
@@ -4022,8 +4030,16 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
         return;
       }
       // 終点フリックのノーツは、フリックしないまま離してもMISS。判定窓そのものは変えない。
+      // 【2026-11-02 社長「終点で離すときも、レーンからずれてても、放したタイミングがあってれば、あってる判定になる」→「ずれていたら MISS にする」】
+      // 離した瞬間に、指が帯の受付(途中の刻みと同じ基準)の外に猶予(難易度ごとの _rhythmTrackingGraceMs)以上いたら、離しは MISS。
+      // 受付の中、または外れて猶予以内なら、今までどおりタイミングで決める。終点フリックの受付中は見ない(刻みと同じ)
+      const releaseGraceMs=Number(session.note?._rhythmTrackingGraceMs)>0?Number(session.note._rhythmTrackingGraceMs):RHYTHM_MID_TRACKING_GRACE_MS;
+      const releasedOff=!session.endFlickArmed&&session.releaseOffSincePerf!=null
+        &&nowPerf()-Math.max(0,Number(ageMs)||0)-session.releaseOffSincePerf>=releaseGraceMs;
+      if(releasedOff&&typeof RHYTHM_INPUT_REC!=='undefined')RHYTHM_INPUT_REC.event('release-off',{note:session.note.index,key:session.key,kind:session.kind});
       const endJudgment=cancelled?'MISS'
         :session.endFlickRequired&&!session.endFlickDone?'MISS'
+        :releasedOff?'MISS'
         :rhythmJudgeReleaseLenient(releaseDelta);
       const startJudgment=session.startJudgment||session.note.holdJudgment||'MISS';
       // 途中のチェックポイントの通過率を「これより良くはならない」押さえとして掛ける。
