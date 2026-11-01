@@ -344,5 +344,24 @@ function RHYTHM_HOLD_TRACKING_MARGIN_LANES_VALUE(text){return Number(text.match(
     /rhythmSubLaneCoordinateAtLineIfBelow\(pos\.clientX,pos\.clientY,areaBox\)/.test(holdBranch)&&/bad=off\(actual\)&&off\(atLine\)/.test(holdBranch));
 }
 
+// --- HOLD: 指が帯から外れている間は、外れの合図(帯を暗くする)が出る(2026-11-02 社長「だいぶ外した状態で押しっぱでも判定切れてなかったよ」) ---
+// 刻みの数え方ではHOLDは外れても切れない(外れていた間の刻みだけMISS)。合図が SLIDE だけだと、HOLDは外れても光ったままで「外れてもOK」に見えていた
+{
+  const note={type:'HOLD',index:7,timeMs:1000,endTimeMs:3000,lane:2,subLane:4,subLaneWidth:2,activePointerId:'p1',holdJudgment:'MARVELOUS',holdDeltaMs:0,done:false,
+    _rhythmTickRules:true,_rhythmComboTicks:[1100,1200,1300,1400,1500,1600,1700,1800,1900],_rhythmTrackingGraceMs:120};
+  now=0;runtime.clear();
+  runtime.record('touch:1',clientXFor(2),clientY);
+  runtime.bind('touch:1',note,'HOLD',1000,0);
+  for(let i=0;i<5;i++){advance(20);runtime.record('touch:1',clientXFor(2),clientY);}
+  const onBefore=runtime.slideOffForIndex(7);
+  for(let i=0;i<20;i++){advance(20);runtime.record('touch:1',clientXFor(4),clientY);}
+  const offWhile=runtime.slideOffForIndex(7),dropped=Number(note._rhythmComboDrop)||0;
+  for(let i=0;i<10;i++){advance(20);runtime.record('touch:1',clientXFor(2),clientY);}
+  const onAfter=runtime.slideOffForIndex(7);
+  check('HOLD: 帯から2レーン外れている間は外れの合図が出て、戻すと消える(刻みの数え方)',onBefore===false&&offWhile===true&&onAfter===false,`前=${onBefore} 外れ=${offWhile} 戻し=${onAfter}`);
+  check('HOLD: 外れていた間の刻みはMISSに数える',dropped>0,`落とした刻み=${dropped}`);
+  runtime.clear();
+}
+
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
