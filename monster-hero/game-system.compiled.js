@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 823be6009697378e
+// source-sha256: 31949c1672384c50
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93004,16 +93004,13 @@ const CARD_AI_DECKS = Object.freeze({
     field: ['興奮のるつぼ', '必殺技の封印']
   },
   kyuko: {
-    monsters: ['C-007', 'C-005', 'C-009'],
     field: ['必殺技の応酬']
   },
   atsu: {
-    monsters: ['C-003', 'C-001', 'C-002'],
     prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード'],
     field: ['必殺技の応酬', '灼熱の地']
   },
   sorashido: {
-    monsters: ['C-008', 'C-001', 'C-003'],
     prefer: ['大混乱', '時間稼ぎ', '大鎌', 'ハテナマーク', 'ニャーにゃー']
   }
 });
