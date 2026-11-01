@@ -4380,6 +4380,8 @@ const createAnimationStyle = () => {
     .mh-card-down-band { animation: mhCardDownBand 1.1s ease-out both; }
     @keyframes mhCardDownBand { 0% { opacity: 0; transform: scaleY(.2); } 15% { opacity: 1; transform: scaleY(1.08); } 25% { transform: scaleY(1); } 82% { opacity: 1; } 100% { opacity: 0; } }
     @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash, .mh-card-dmg-pop, .mh-card-down-band, .mh-card-guard-result { animation: none; } }
+    /* 受けた瞬間の白い光は、動きを止めると白い四角が絵を隠したまま残る(2026-11-01 点検)ので、動きを減らす設定では出さない */
+    @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash { display: none; } }
     /* キラ・レアキラの立ち絵の光(84 の CardKiraAura・cardKiraWrap。2026-10-30 社長「この形で入れて」→
        2026-10-31「バトル中の立ち絵も強化して」「もっとわかりやすく。センター位置をちゃんと合わせて」)。CSS だけ。動かすのは transform と opacity
        (ふちの光の filter だけは色を移すため動かす。ふちの光の中には動く物を入れない)。光の中心・大きさは 84 が体の範囲から決めて style で渡す */
