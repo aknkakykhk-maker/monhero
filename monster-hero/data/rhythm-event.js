@@ -157,6 +157,7 @@ const RHYTHM_EVENTS = Object.freeze([
   // 第3回(2026-11-01・社長)。「鍵の向こう側へ ～パンドラとふたつの翼～」。11/2(月) 12:00 〜 11/9(月) 4:00(画面は 3:59 まで)。
   // (2026-11-02 社長: 開始を 4:00 から 12:00 へ遅らせた)
   // ★報酬は今までのイベントと同じ(順位ごとの個数・プシュケーは共通の決めごと)。超越の実は3曲ともピクシー(パンドラの主血統)。
+  // ★3曲目は「月が満ちる前に」から新曲「Altar of the World Tree, Beneath the White Night」へ差し替えた(2026-11-02 社長)。
   // ★原曲とショート版を「同じ曲」として数える(社長「イベント用のランキングだけ、原曲とショートを一緒に」)。
   //   songIds は原曲だけ(部門も3つ)。songVersions にショート版の id を書くと、
   //   ①集計の関数へショート版の id も渡し(サーバーは末尾の _short を外して1曲にまとめる・RHYTHM_EVENT_SONG_VERSIONS_APPLY.sql)
@@ -169,16 +170,16 @@ const RHYTHM_EVENTS = Object.freeze([
     startAt: '2026-11-02T12:00:00+09:00',
     endAt: '2026-11-09T04:00:00+09:00',
     banner: 'images/events/pandora-wings-2026-wide.jpg?v=f5e3cb59d945',
-    songIds: Object.freeze(['stay_with_me', 'rebellion', 'tsuki_ga_michiru_mae_ni']),
+    songIds: Object.freeze(['stay_with_me', 'rebellion', 'altar_world_tree']),
     songVersions: Object.freeze({
       stay_with_me: Object.freeze(['stay_with_me_short']),
       rebellion: Object.freeze(['rebellion_short']),
-      tsuki_ga_michiru_mae_ni: Object.freeze(['tsuki_ga_michiru_mae_ni_short']),
+      altar_world_tree: Object.freeze(['altar_world_tree_short']),
     }),
     rewardLineageBySongId: Object.freeze({
       stay_with_me: 'pixie',
       rebellion: 'pixie',
-      tsuki_ga_michiru_mae_ni: 'pixie',
+      altar_world_tree: 'pixie',
     }),
     totalReward: 'heroProof',
     playBonus: true,
