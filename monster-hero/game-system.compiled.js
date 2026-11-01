@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c8a379d215bfd6ea
+// source-sha256: cdf506b9d293c95c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -693,7 +693,7 @@ const BATTLE_SYSTEM_CLASSIC = 'systemClassic';
 const BATTLE_SYSTEM_TACTICS = 'systemTactics';
 const BATTLE_SYSTEM_QUICK = 'systemQuick';
 const BATTLE_SELECT_ASSIST_KEY = 'mh_battle_select_assist_v1';
-const BATTLE_DIFFICULTY_DARK_LOOKS = new Set(['Expert', 'Master', 'GrandMaster', 'Hell', 'EXTREME', 'NIGHTMARE', 'CHAOS', 'ULTIMATE', 'INFINITY', 'GOD', 'RAGNAROK', 'HELHEIM', 'ETERNAL', 'INFERNO']);
+const BATTLE_DIFFICULTY_DARK_LOOKS = new Set(['Expert', 'Master', 'GrandMaster', 'Hell', 'EXTREME', 'NIGHTMARE', 'CHAOS', 'ULTIMATE', 'INFINITY', 'GOD', 'RAGNAROK', 'HELHEIM', 'ETERNAL', 'INFERNO', 'COCYTUS']);
 const BATTLE_SYSTEMS = Object.freeze([Object.freeze({
   id: BATTLE_SYSTEM_CLASSIC,
   label: 'クラシックバトル',
@@ -2153,14 +2153,16 @@ const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
     RAGNAROK: 2,
     HELHEIM: 3,
     ETERNAL: 4,
-    INFERNO: 5
+    INFERNO: 5,
+    COCYTUS: 6
   }),
   speciesChallenge: Object.freeze({
     GOD: 1,
     RAGNAROK: 2,
     HELHEIM: 3,
     ETERNAL: 4,
-    INFERNO: 5
+    INFERNO: 5,
+    COCYTUS: 6
   }),
   pro: Object.freeze({
     Master: 1,
@@ -15190,7 +15192,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
     })
   })
 }]);
-const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...EXTREME_DIFFICULTIES.map(setting => setting.id), 'GOD', 'RAGNAROK', 'HELHEIM', 'ETERNAL', 'INFERNO']);
+const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...EXTREME_DIFFICULTIES.map(setting => setting.id), 'GOD', 'RAGNAROK', 'HELHEIM', 'ETERNAL', 'INFERNO', 'COCYTUS']);
 const TACTICS_DIFFICULTY_IDS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...EXTREME_DIFFICULTIES.map(setting => setting.id)]);
 const TACTICS_EXTREME_UNLOCK_DIFFICULTIES = Object.freeze(['Master', 'GrandMaster', 'Hell', 'Legend']);
 const TACTICS_EXTREME_UNLOCK_TEXT = 'タクティクス Master以上クリアで解放';
@@ -15500,7 +15502,8 @@ const SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS = Object.freeze({
   RAGNAROK: 80,
   HELHEIM: 100,
   ETERNAL: 120,
-  INFERNO: 140
+  INFERNO: 140,
+  COCYTUS: 160
 });
 const speciesChallengeFirstClearReward = difficultyId => Object.prototype.hasOwnProperty.call(SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS, difficultyId) ? SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS[difficultyId] : 0;
 const speciesChallengeRewardPendingKey = (speciesId, difficultyId) => `${speciesId}:${difficultyId}`;
@@ -15844,6 +15847,7 @@ const INFERNO_SETTING = Object.freeze({
   id: 'INFERNO',
   label: 'INFERNO',
   japanese: 'インフェルノ',
+  tab: 'underworld',
   available: true,
   debugAvailable: true,
   power: 400,
@@ -15888,7 +15892,81 @@ const INFERNO_SETTING = Object.freeze({
     })
   })
 });
-const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES, GOD_SETTING, RAGNAROK_SETTING, HELHEIM_SETTING, ETERNAL_SETTING, INFERNO_SETTING]);
+const COCYTUS_SETTING = Object.freeze({
+  id: 'COCYTUS',
+  label: 'COCYTUS',
+  japanese: 'コキュートス',
+  tab: 'underworld',
+  available: true,
+  debugAvailable: true,
+  power: 500,
+  score: 20,
+  xp: 160,
+  gold: 140,
+  psyche: 250,
+  waveCount: 10,
+  unlockRequirement: 'INFERNO',
+  rankingId: 'ExtremeCOCYTUS',
+  recordId: 'COCYTUS',
+  description: 'どの敵も何枚もの厚いシールドをまとって現れる。1枚割るごとに敵は強くなり、デュラハンとムーは倒しても大きくなって蘇る、極限チャレンジの最奥の難易度。',
+  cardDescription: 'どの敵も4〜5枚の厚いシールドをまとい、割るたびに攻撃が上がる。デュラハンは1回・ムーは2回、全回復して大きくなって蘇る。冥府・貫き・敵ライフ10倍はインフェルノのまま。',
+  specialRules: Object.freeze({
+    assistCardEffect: 0.30,
+    positiveModifier: 0.30,
+    negativeModifier: 3.0,
+    distanceEnhancement: 0.10,
+    gutsCost: 2.0,
+    enemyTurnRate: 0.0125,
+    allyJoinPenaltyRate: 0.0125,
+    minimumAllyJoinBonus: 0.03,
+    damageTurnRate: 0.0175,
+    minimumDamageDealt: 0.15,
+    awakeningPenaltyRate: 0.01,
+    awakeningZeroTurns: 12,
+    awakeningPenaltyExcludes: Object.freeze(['distance']),
+    distanceBreak: Object.freeze({
+      interval: 12,
+      damageDealtPerLevel: 0.5,
+      safeDistanceCount: 0,
+      persistsForRun: true
+    }),
+    revival: Object.freeze({
+      waves: Object.freeze({
+        9: 1,
+        10: 2
+      }),
+      hpRate: 1,
+      maxHpRatePerRevival: 1.5,
+      atkStepsWithLayers: true,
+      reveal: Object.freeze({
+        9: Object.freeze([Object.freeze({
+          stage: 'durahan',
+          name: '凍土の再起',
+          desc: 'ライフ全回復・最大ライフ1.5倍で復活'
+        })]),
+        10: Object.freeze([Object.freeze({
+          stage: 'moo1',
+          name: '凍土の再起',
+          desc: 'ライフ全回復・最大ライフ1.5倍で復活'
+        }), Object.freeze({
+          stage: 'moo2',
+          name: '凍土の再起',
+          desc: 'ライフ全回復・最大ライフ2.25倍で復活'
+        })])
+      })
+    }),
+    enemyAdjust: Object.freeze({
+      lifeRate: 10,
+      byEnemy: Object.freeze({
+        Durahan: Object.freeze({
+          lifeRate: 1.3,
+          atkRate: 1.3
+        })
+      })
+    })
+  })
+});
+const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES, GOD_SETTING, RAGNAROK_SETTING, HELHEIM_SETTING, ETERNAL_SETTING, INFERNO_SETTING, COCYTUS_SETTING]);
 const EXTREME_DIFFICULTY_THEMES = Object.freeze({
   EXTREME: Object.freeze({
     accent: '#f0abfc',
@@ -15999,10 +16077,25 @@ const EXTREME_DIFFICULTY_THEMES = Object.freeze({
     titleGlow: 0.96,
     actionGlow: 0.74,
     shadowBlur: 60
+  }),
+  COCYTUS: Object.freeze({
+    accent: '#a5f3fc',
+    rgb: '103,232,249',
+    background: 'linear-gradient(180deg,#082f49,#020617)',
+    action: 'linear-gradient(135deg,#0891b2,#e0f2fe)',
+    actionText: '#082f49',
+    glow: 0.78,
+    titleGlow: 0.98,
+    actionGlow: 0.78,
+    shadowBlur: 64
   })
 });
 const extremeDifficultyTheme = difficultyId => EXTREME_DIFFICULTY_THEMES[difficultyId] || EXTREME_DIFFICULTY_THEMES.EXTREME;
 const PUBLIC_EXTREME_DIFFICULTIES = Object.freeze(ALL_EXTREME_DIFFICULTIES.filter(setting => setting.available));
+const UNDERWORLD_TAB_ID = 'underworld';
+const isUnderworldDifficultyId = difficultyId => extremeRuleSetting(difficultyId)?.tab === UNDERWORLD_TAB_ID;
+const PUBLIC_EXTREME_TAB_DIFFICULTIES = Object.freeze(PUBLIC_EXTREME_DIFFICULTIES.filter(setting => setting.tab !== UNDERWORLD_TAB_ID));
+const PUBLIC_UNDERWORLD_DIFFICULTIES = Object.freeze(PUBLIC_EXTREME_DIFFICULTIES.filter(setting => setting.tab === UNDERWORLD_TAB_ID));
 const extremeWaveStageLevel = waveNumber => Math.max(1, Math.min(5, Math.floor((Math.max(1, Number(waveNumber) || 1) - 1) / 2) + 1));
 const godDivinityLevel = waveNumber => extremeWaveStageLevel(waveNumber);
 const godDivinityRules = waveNumber => {
@@ -16075,16 +16168,49 @@ const INFERNO_RUSH_AT_BROKEN = Object.freeze({
     5: 3
   })
 });
+const INFERNO_BOSS_WAVES = Object.freeze([3, 5, 7, 9, 10]);
 const infernoStageRules = waveNumber => {
   const base = eternalStageRules(waveNumber);
   const w = Math.floor(Number(waveNumber) || 0);
   return Object.freeze({
     ...base,
     shieldLayers: INFERNO_SHIELD_LAYERS[w] || 0,
+    bossWave: INFERNO_BOSS_WAVES.includes(w),
     layerGrowth: 0.3,
     layerAtkGain: 0.6,
     layerBasePower: ETERNAL_SETTING.power,
     rushAtBroken: INFERNO_RUSH_AT_BROKEN[w] || null
+  });
+};
+const COCYTUS_SHIELD_LAYERS = Object.freeze({
+  1: 4,
+  2: 4,
+  3: 5,
+  4: 5,
+  5: 5,
+  6: 5,
+  7: 5,
+  8: 5,
+  9: 5,
+  10: 5
+});
+const COCYTUS_FIRST_LAYER_RATE = Object.freeze({
+  9: 3.8,
+  10: 4.4
+});
+const COCYTUS_RUSH_AT_BROKEN = INFERNO_RUSH_AT_BROKEN;
+const cocytusStageRules = waveNumber => {
+  const base = eternalStageRules(waveNumber);
+  const w = Math.floor(Number(waveNumber) || 0);
+  return Object.freeze({
+    ...base,
+    shieldLayers: COCYTUS_SHIELD_LAYERS[w] || 0,
+    bossWave: INFERNO_BOSS_WAVES.includes(w),
+    layerGrowth: 0.3,
+    layerAtkGain: 0.2,
+    layerFirstRate: COCYTUS_FIRST_LAYER_RATE[w] || 3.0,
+    layerBodyBossOnly: true,
+    rushAtBroken: COCYTUS_RUSH_AT_BROKEN[w] || null
   });
 };
 const EXTREME_WAVE_STAGES = Object.freeze({
@@ -16107,6 +16233,10 @@ const EXTREME_WAVE_STAGES = Object.freeze({
   INFERNO: Object.freeze({
     label: '冥府',
     rules: infernoStageRules
+  }),
+  COCYTUS: Object.freeze({
+    label: '冥府',
+    rules: cocytusStageRules
   })
 });
 const extremeWaveStage = difficultyId => EXTREME_WAVE_STAGES[difficultyId] || null;
@@ -16304,14 +16434,18 @@ const extremeShieldLayerPlan = (difficultyId, waveNumber, maxHp, power) => {
     p = Number(power);
   if (!(count > 0) || !(hp > 0) || !(p > 0)) return null;
   const growth = Math.max(0, Number(rules.layerGrowth) || 0);
-  const first = hp * Math.max(0, Number(rules.layerBasePower) || p) / p;
+  const firstRate = Number(rules.layerFirstRate);
+  const first = Number.isFinite(firstRate) && firstRate > 0 ? hp * firstRate : hp * Math.max(0, Number(rules.layerBasePower) || p) / p;
   const layers = Array.from({
     length: count
   }, (_, k) => Math.max(1, Math.floor(first * (1 + growth * k))));
+  const boss = rules.bossWave === true;
+  const bodyRate = rules.layerBodyBossOnly && !boss ? 1 : 1 + growth * count;
   return {
     layers,
-    bodyRate: 1 + growth * count,
-    atkGain: Math.max(0, Number(rules.layerAtkGain) || 0)
+    bodyRate,
+    atkGain: Math.max(0, Number(rules.layerAtkGain) || 0),
+    boss
   };
 };
 const extremeLayerRushHits = (difficultyId, waveNumber, broken) => {
@@ -16331,7 +16465,8 @@ const enemyShellView = enemy => {
     current: Math.max(0, Number(enemy?.shell) || 0),
     currentMax: Math.max(0, Number(enemy?.maxShell) || 0),
     layers: [],
-    breakSeq: 0
+    breakSeq: 0,
+    boss: false
   };
   const broken = Math.min(total, Math.max(0, Math.floor(Number(enemy.shellBroken) || 0)));
   const maxes = Array.isArray(enemy.shellLayerMaxes) ? enemy.shellLayerMaxes : [];
@@ -16349,7 +16484,8 @@ const enemyShellView = enemy => {
     current,
     currentMax: Math.max(0, Number(enemy.maxShell) || 0),
     layers,
-    breakSeq: Math.max(0, Math.floor(Number(enemy.shellBreakSeq) || 0))
+    breakSeq: Math.max(0, Math.floor(Number(enemy.shellBreakSeq) || 0)),
+    boss: enemy.shellBoss === true
   };
 };
 const markShellAbsorbedHits = (hits, startShell) => {
@@ -16399,9 +16535,21 @@ const extremeRevivedEnemyStats = (enemy, difficultyId, waveNumber, usedCount = 0
   const hpRate = Number.isFinite(rawHpRate) ? Math.max(0, Math.min(1, rawHpRate)) : 0.5;
   const rawBoost = Number(rule.atkBoostPerRevival);
   const boost = Number.isFinite(rawBoost) ? Math.max(0, rawBoost) : 0;
+  const rawMaxRate = Number(rule.maxHpRatePerRevival);
+  const newMaxHp = Number.isFinite(rawMaxRate) && rawMaxRate > 0 ? Math.max(1, Math.floor(maxHp * rawMaxRate)) : maxHp;
+  const layerAtkBase = Number(enemy.layerAtkBase),
+    layerAtkGain = Number(enemy.layerAtkGain);
+  const atk = rule.atkStepsWithLayers && Number.isFinite(layerAtkBase) && Number.isFinite(layerAtkGain) ? Math.floor(layerAtkBase * (1 + layerAtkGain * (Math.max(0, Math.floor(Number(enemy.shellBroken) || 0)) + used + 1))) : Math.floor(Math.max(0, Number(enemy.atk) || 0) * (1 + boost));
+  const reveal = rule.reveal?.[Math.floor(Number(waveNumber) || 0)]?.[used] || null;
   return {
-    hp: Math.max(1, Math.floor(maxHp * hpRate)),
-    atk: Math.floor(Math.max(0, Number(enemy.atk) || 0) * (1 + boost)),
+    hp: Math.max(1, Math.floor(newMaxHp * hpRate)),
+    atk,
+    ...(newMaxHp !== maxHp ? {
+      maxHp: newMaxHp
+    } : {}),
+    ...(reveal ? {
+      reveal
+    } : {}),
     revivalNumber: used + 1,
     remaining: extremeRevivalCount(difficultyId, waveNumber) - (used + 1)
   };
@@ -16453,14 +16601,15 @@ const extremeRuleDetailGroups = (difficultyId, quick = false) => {
   };
   if (difficultyId === GOD_SETTING.id) push('神威', [['進行', '2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'], ['敵ライフ/攻撃力', '神威Lvごと +15% / +30% / +45% / +60% / +75%'], ['Lv5', '与ダメ低下 -1.5pt/T・最低20%、次のBREAKから安全距離なし']]);
   if (difficultyId === RAGNAROK_SETTING.id) push('黄昏', [['進行', '2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'], ['敵ライフ/攻撃力', '黄昏Lvごと +20% / +40% / +60% / +80% / +100%'], ['Lv2', '距離強化 35%→25%'], ['Lv3', '消費ガッツ 175%→200%'], ['Lv4', '＋補正 35%→25%・−補正 250%→300%'], ['Lv5', '与ダメ低下 -1.75pt/T・最低15%']]);
-  if (difficultyId === HELHEIM_SETTING.id || difficultyId === ETERNAL_SETTING.id || difficultyId === INFERNO_SETTING.id) {
+  if (difficultyId === HELHEIM_SETTING.id || difficultyId === ETERNAL_SETTING.id || difficultyId === INFERNO_SETTING.id || difficultyId === COCYTUS_SETTING.id) {
     const adjust = rules.enemyAdjust || {};
     const durahan = adjust.byEnemy?.Durahan;
     push('冥府', [['進行', '2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'], ['敵ライフ/攻撃力', '冥府Lvごと +30% / +60% / +90% / +120% / +150%'], ['味方の最大ライフ', '冥府Lvごと -5%（Lv5で-25%）'], ['Lv3', '消費ガッツ 200%→225%'], ['Lv4', '＋補正 30%→20%・−補正 300%→350%'], ['Lv5', '与ダメ低下 -2.0pt/T・最低10%']]);
     push('敵の強さ', [adjust.lifeRate > 1 && ['敵ライフ', `すべての敵が${adjust.lifeRate}倍`], durahan && ['デュラハン', `ライフ・攻撃力が さらに${durahan.lifeRate}倍`]]);
     push('距離強化', [['WAVEごとに薄れる', 'WAVE1で10%、1WAVEごとに1%ずつ下がり、WAVE10で1%']]);
     if (difficultyId === INFERNO_SETTING.id) push('ボスの層のシールド', [['起き上がり', 'ボスは起き上がらない'], ['層の数', 'W3・W5・W7のボス 3枚 / W9 デュラハン 4枚 / W10 ムー 5枚'], ['シールドの量', '1枚目はエターナルのそのボスのライフと同じ。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率'], ['割れるたび', 'ボスの攻撃力 +60%(最後の1枚も)'], ['連撃', 'デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)']]);
-    if (difficultyId === ETERNAL_SETTING.id || difficultyId === INFERNO_SETTING.id) push('シールドと貫き', [['シールド', 'WAVEの始めに、敵が最大ライフ50%ぶんのシールドをまとう。シールドを割るまで敵のライフは減らない'], ['シールドと距離強化', 'シールドに当てたダメージは、距離強化(間合いのボーナス)に数えない'], ['貫き', '敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）']]);
+    if (difficultyId === COCYTUS_SETTING.id) push('層のシールド', [['蘇り', 'デュラハンは1回・ムーは2回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る(ムーの2回目は2.25倍)。シールドは張り直さない'], ['層の数', 'W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'], ['WAVEのはじめのシールド', 'エターナルの50%のシールドは、層のシールドに置き換わる'], ['シールドの量', '1枚目はその敵の最大ライフの3倍(デュラハン3.8倍・ムー4.4倍)。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフはそのまま)'], ['割れるたび', '敵の攻撃力 +20%(最後の1枚も。蘇るたびにも+20%)'], ['連撃', 'デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)']]);
+    if (difficultyId === ETERNAL_SETTING.id || difficultyId === INFERNO_SETTING.id || difficultyId === COCYTUS_SETTING.id) push('シールドと貫き', [['シールド', 'WAVEの始めに、敵が最大ライフ50%ぶんのシールドをまとう。シールドを割るまで敵のライフは減らない'], ['シールドと距離強化', 'シールドに当てたダメージは、距離強化(間合いのボーナス)に数えない'], ['貫き', '敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）']]);
   }
   push('カード', [rules.assistCardEffect != null && ['アシストカード効果', specialRulePercent(rules.assistCardEffect)]]);
   push('補正', [rules.waveEnhancement != null && ['WAVE後強化', specialRulePercent(rules.waveEnhancement)], rules.positiveModifier != null && ['＋補正', specialRulePercent(rules.positiveModifier)], rules.negativeModifier != null && ['－補正', specialRulePercent(rules.negativeModifier)], rules.distanceEnhancement != null && ['距離強化', specialRulePercent(rules.distanceEnhancement)]]);
@@ -16470,7 +16619,11 @@ const extremeRuleDetailGroups = (difficultyId, quick = false) => {
   const breakRule = extremeDistanceBreakRule(difficultyId);
   if (breakRule) push('DISTANCE BREAK', [['進行', `累計${breakRule.interval}ターンごとに1距離の弱体Lv上昇`], ['弱体倍率', `Lv1 ${specialRulePercent(breakRule.damageDealtPerLevel)} / Lv2 ${specialRulePercent(breakRule.damageDealtPerLevel ** 2)} / Lv3 ${compactPercent(breakRule.damageDealtPerLevel ** 3)}（以降も半減）`], ['安全距離', breakRule.safeDistanceCount > 0 ? `${breakRule.safeDistanceCount}距離は最後まで弱体化しない` : 'なし（4距離すべて弱体化する）']]);
   const revivalRule = extremeRevivalRule(difficultyId);
-  if (revivalRule) push('不死（死者の再起）', [['対象', Object.entries(revivalRule.waves).map(([waveNumber, count]) => `WAVE${waveNumber}（${count}回）`).join(' / ')], ['復活時', `ライフ${specialRulePercent(revivalRule.hpRate)}で起き上がる（最大ライフは変わらない）`], ['起き上がるたび', `敵の攻撃力 +${specialRulePercent(revivalRule.atkBoostPerRevival)}`]]);
+  if (revivalRule && !(Number(revivalRule.maxHpRatePerRevival) > 0)) push('不死（死者の再起）', [['対象', Object.entries(revivalRule.waves).map(([waveNumber, count]) => `WAVE${waveNumber}（${count}回）`).join(' / ')], ['復活時', `ライフ${specialRulePercent(revivalRule.hpRate)}で起き上がる（最大ライフは変わらない）`], ['起き上がるたび', `敵の攻撃力 +${specialRulePercent(revivalRule.atkBoostPerRevival)}`]]);
+  if (isUnderworldDifficultyId(difficultyId)) {
+    const first = groups.findIndex(g => g.title === 'ボスの層のシールド' || g.title === '層のシールド');
+    if (first > 0) groups.unshift(...groups.splice(first, 1));
+  }
   return groups;
 };
 const extremeRuleSummaryText = difficultyId => extremeRuleDetailGroups(difficultyId).length >= 4 ? '複合特殊ルールあり' : '特殊ルールあり';
@@ -16687,6 +16840,17 @@ const isRagnarokUnlocked = godClearCount => (Number(godClearCount) || 0) > 0;
 const isHelheimUnlocked = ragnarokClearCount => (Number(ragnarokClearCount) || 0) > 0;
 const isEternalUnlocked = helheimClearCount => (Number(helheimClearCount) || 0) > 0;
 const isInfernoUnlocked = eternalClearCount => (Number(eternalClearCount) || 0) > 0;
+const isCocytusUnlocked = infernoClearCount => (Number(infernoClearCount) || 0) > 0;
+const isUnderworldUnlocked = eternalClearCount => (Number(eternalClearCount) || 0) > 0;
+const underworldShieldLayerRange = difficultyId => {
+  const counts = Array.from({
+    length: 10
+  }, (_, i) => Math.floor(Number(extremeWaveStageRules(difficultyId, i + 1)?.shieldLayers) || 0)).filter(n => n > 0);
+  if (!counts.length) return '';
+  const min = Math.min(...counts),
+    max = Math.max(...counts);
+  return min === max ? String(min) : `${min}〜${max}`;
+};
 const normalizeBattleDifficulty = value => quickDifficultySetting(value) ? value : 'Normal';
 const BATTLE_DEFAULT_DIFFICULTY = 'Normal';
 const CLEAR_PSYCHE_REWARD = Object.freeze({
@@ -59558,29 +59722,35 @@ function ProfileScreen({
       className: "font-black text-[13px]"
     }, selected.label, "の記録")), React.createElement("div", {
       className: "flex flex-col gap-2"
-    }, selected.id === EXTREME_MODE.id ? PUBLIC_EXTREME_DIFFICULTIES.map(setting => {
-      const score = extremeBestScores[setting.id] || 0;
-      const clears = extremeClearCounts[setting.id] || 0;
-      const played = score > 0 || clears > 0;
-      return React.createElement("div", {
-        key: setting.id,
-        className: "rounded-xl border border-white/10 bg-black/30 p-3"
-      }, React.createElement("b", {
-        className: "block text-[13px] text-fuchsia-200"
-      }, setting.label), played ? React.createElement("div", {
-        className: "mt-2 grid grid-cols-2 gap-2 text-center"
-      }, React.createElement("div", null, React.createElement("small", {
-        className: "block text-[10px] text-slate-400"
-      }, "最高スコア"), React.createElement("strong", {
-        className: "text-[12px] text-amber-300"
-      }, score.toLocaleString(), " pt")), React.createElement("div", null, React.createElement("small", {
-        className: "block text-[10px] text-slate-400"
-      }, "クリア回数"), React.createElement("strong", {
-        className: "text-[12px] text-emerald-300"
-      }, clears, "回"))) : React.createElement("div", {
-        className: "mt-2 text-center text-[11px] font-black text-slate-400"
-      }, "未記録"));
-    }) : (isTacticsMode(selected.id) ? TACTICS_DIFFICULTY_IDS.map(id => [id, DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING]) : Object.entries(DIFFICULTY_SETTINGS)).map(([key, setting]) => {
+    }, selected.id === EXTREME_MODE.id ? (() => {
+      const row = setting => {
+        const score = extremeBestScores[setting.id] || 0;
+        const clears = extremeClearCounts[setting.id] || 0;
+        const played = score > 0 || clears > 0;
+        return React.createElement("div", {
+          key: setting.id,
+          className: "rounded-xl border border-white/10 bg-black/30 p-3"
+        }, React.createElement("b", {
+          className: "block text-[13px] text-fuchsia-200"
+        }, setting.label), played ? React.createElement("div", {
+          className: "mt-2 grid grid-cols-2 gap-2 text-center"
+        }, React.createElement("div", null, React.createElement("small", {
+          className: "block text-[10px] text-slate-400"
+        }, "最高スコア"), React.createElement("strong", {
+          className: "text-[12px] text-amber-300"
+        }, score.toLocaleString(), " pt")), React.createElement("div", null, React.createElement("small", {
+          className: "block text-[10px] text-slate-400"
+        }, "クリア回数"), React.createElement("strong", {
+          className: "text-[12px] text-emerald-300"
+        }, clears, "回"))) : React.createElement("div", {
+          className: "mt-2 text-center text-[11px] font-black text-slate-400"
+        }, "未記録"));
+      };
+      return React.createElement(React.Fragment, null, PUBLIC_EXTREME_TAB_DIFFICULTIES.map(row), PUBLIC_UNDERWORLD_DIFFICULTIES.length > 0 && React.createElement("p", {
+        "data-profile-underworld": true,
+        className: "mt-1 text-[11px] font-black text-cyan-200"
+      }, "🛡 冥界チャレンジ"), PUBLIC_UNDERWORLD_DIFFICULTIES.map(row));
+    })() : (isTacticsMode(selected.id) ? TACTICS_DIFFICULTY_IDS.map(id => [id, DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING]) : Object.entries(DIFFICULTY_SETTINGS)).map(([key, setting]) => {
       const record = modeRecordFor(selected.id, key);
       const quick = isQuickMode(selected.id);
       const challenge = selected.id === BATTLE_MODE_CHALLENGE;
@@ -75587,7 +75757,7 @@ function BattleScreen({
     className: "mt-0.5 text-[15px] font-black leading-snug"
   }, helpWrap(b.result))))), document.body), enemy && enemyIntent && !isBusy && !enemyAttackFx && !Array.isArray(tacticsUnits) && enemyIntent.type === 'SPECIAL' && React.createElement("div", {
     "data-battle-float": true,
-    className: `fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift ? ' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+16px)]' : ''}`,
+    className: `fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift ? ' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+56px)]' : ''}`,
     style: {
       top: infernoFloatTop,
       zIndex: 65000,
@@ -75599,7 +75769,7 @@ function BattleScreen({
     className: "px-3 py-1 rounded-lg bg-gradient-to-r from-purple-900 via-fuchsia-700 to-purple-900 border-2 border-fuchsia-300 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(217,70,239,0.9)]"
   }, "必 殺 技")), enemy && enemyIntent && !isBusy && !enemyAttackFx && !Array.isArray(tacticsUnits) && enemyIntent.type === 'CHARGE' && React.createElement("div", {
     "data-battle-float": true,
-    className: `fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift ? ' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+16px)]' : ''}`,
+    className: `fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift ? ' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+56px)]' : ''}`,
     style: {
       top: infernoFloatTop,
       zIndex: 65000,
@@ -75611,7 +75781,7 @@ function BattleScreen({
     className: "px-3 py-1 rounded-lg bg-gradient-to-r from-amber-900 via-amber-600 to-amber-900 border-2 border-amber-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(251,191,36,0.9)]"
   }, "た め る")), enemy && enemyIntent && !isBusy && !enemyAttackFx && !Array.isArray(tacticsUnits) && enemyIntent.type === 'PIERCE_CHARGE' && React.createElement("div", {
     "data-battle-float": true,
-    className: `fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift ? ' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+16px)]' : ''}`,
+    className: `fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift ? ' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+56px)]' : ''}`,
     style: {
       top: infernoFloatTop,
       zIndex: 65000,
@@ -83542,12 +83712,13 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhbt-d-NIGHTMARE{--d-name:#c7d2fe;--d-bg:radial-gradient(90% 55% at 50% 0%,rgba(129,140,248,.45),transparent 62%),linear-gradient(160deg,#1e1b4b,#0b0a24 60%,#020210);--d-mark:rgba(165,180,252,.22);--d-shine:2.4s;--d-ring:#818cf8;--d-ringw:4px;--d-eyebrow:#c7d2fe;--d-go:#c7d2fe}
 .mhbt-d-CHAOS{--d-name:#fbcfe8;--d-bg:radial-gradient(70% 50% at 15% 10%,rgba(236,72,153,.55),transparent 65%),radial-gradient(70% 50% at 90% 95%,rgba(34,211,238,.5),transparent 65%),linear-gradient(160deg,#1a0420,#05010a);--d-mark:rgba(255,255,255,.18);--d-shine:2.1s;--d-ring:#f472b6;--d-ringw:4px;--d-eyebrow:#a5f3fc;--d-go:#fbcfe8}
 .mhbt-d-ULTIMATE{--d-name:#f1f5f9;--d-bg:radial-gradient(90% 55% at 50% 0%,rgba(255,255,255,.35),transparent 60%),linear-gradient(160deg,#334155,#0f172a 55%,#000);--d-mark:rgba(255,255,255,.22);--d-shine:1.9s;--d-ring:#f8fafc;--d-ringw:4px;--d-eyebrow:#e2e8f0;--d-sheen:rgba(255,255,255,.55);--d-go:#e2e8f0}
-.mhbt-d-INFINITY,.mhbt-d-GOD,.mhbt-d-RAGNAROK,.mhbt-d-HELHEIM,.mhbt-d-ETERNAL,.mhbt-d-INFERNO{--d-name:#fef08a;--d-name:#99f6e4;--d-deep:rgba(250,204,21,.25);--d-bg:radial-gradient(2px 2px at 20% 30%,#fff,transparent),radial-gradient(1.5px 1.5px at 70% 20%,#fff,transparent),radial-gradient(1.5px 1.5px at 40% 75%,#fff,transparent),radial-gradient(90% 60% at 50% 0%,rgba(250,204,21,.4),transparent 60%),linear-gradient(160deg,#0c1445,#020617 60%,#000);--d-mark:rgba(253,224,71,.24);--d-shine:1.7s;--d-ring:#facc15;--d-ringw:5px;--d-eyebrow:#fde68a;--d-sheen:rgba(253,224,71,.5);--d-go:#fde68a}
+.mhbt-d-INFINITY,.mhbt-d-GOD,.mhbt-d-RAGNAROK,.mhbt-d-HELHEIM,.mhbt-d-ETERNAL,.mhbt-d-INFERNO,.mhbt-d-COCYTUS{--d-name:#fef08a;--d-name:#99f6e4;--d-deep:rgba(250,204,21,.25);--d-bg:radial-gradient(2px 2px at 20% 30%,#fff,transparent),radial-gradient(1.5px 1.5px at 70% 20%,#fff,transparent),radial-gradient(1.5px 1.5px at 40% 75%,#fff,transparent),radial-gradient(90% 60% at 50% 0%,rgba(250,204,21,.4),transparent 60%),linear-gradient(160deg,#0c1445,#020617 60%,#000);--d-mark:rgba(253,224,71,.24);--d-shine:1.7s;--d-ring:#facc15;--d-ringw:5px;--d-eyebrow:#fde68a;--d-sheen:rgba(253,224,71,.5);--d-go:#fde68a}
 .mhbt-d-GOD{--d-name:#fffbeb;--d-bg:radial-gradient(90% 60% at 50% 0%,rgba(255,255,255,.55),transparent 55%),radial-gradient(80% 50% at 50% 100%,rgba(250,204,21,.45),transparent 65%),linear-gradient(160deg,#78350f,#1c1003 55%,#000);--d-ring:#fff7d6;--d-ringw:6px;--d-shine:1.5s;--d-sheen:rgba(255,255,255,.7);--d-mark:rgba(255,247,214,.28)}
 .mhbt-d-RAGNAROK{--d-name:#fed7aa;--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(239,68,68,.75),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(250,204,21,.45),transparent 65%),linear-gradient(170deg,#3b0505,#120000 55%,#000);--d-ring:#f59e0b;--d-ringw:6px;--d-shine:1.3s;--d-sheen:rgba(254,215,170,.65);--d-mark:rgba(252,165,165,.28);--d-eyebrow:#fed7aa;--d-go:#fed7aa}
 .mhbt-d-HELHEIM{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(45,212,191,.55),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(167,139,250,.45),transparent 65%),linear-gradient(170deg,#042f2e,#020617 55%,#000);--d-ring:#5eead4;--d-ringw:6px;--d-shine:1.2s;--d-sheen:rgba(204,251,241,.6);--d-mark:rgba(153,246,228,.26);--d-eyebrow:#99f6e4;--d-go:#ccfbf1}
 .mhbt-d-ETERNAL{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(236,72,153,.55),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(249,168,212,.45),transparent 65%),linear-gradient(170deg,#3b0a2a,#12030d 55%,#000);--d-ring:#f9a8d4;--d-ringw:6px;--d-shine:1.1s;--d-sheen:rgba(252,231,243,.6);--d-mark:rgba(249,168,212,.26);--d-eyebrow:#f9a8d4;--d-go:#fce7f3}
 .mhbt-d-INFERNO{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(249,115,22,.6),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(253,186,116,.45),transparent 65%),linear-gradient(170deg,#431407,#120502 55%,#000);--d-ring:#fdba74;--d-ringw:6px;--d-shine:1.0s;--d-sheen:rgba(255,237,213,.6);--d-mark:rgba(253,186,116,.28);--d-eyebrow:#fdba74;--d-go:#ffedd5}
+.mhbt-d-COCYTUS{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(103,232,249,.5),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(224,242,254,.45),transparent 65%),linear-gradient(170deg,#082f49,#020617 55%,#000);--d-ring:#a5f3fc;--d-ringw:6px;--d-shine:0.9s;--d-sheen:rgba(240,249,255,.65);--d-mark:rgba(165,243,252,.3);--d-eyebrow:#a5f3fc;--d-go:#e0f2fe}
 @keyframes mhbtRainbow{from{background-position:0% 0}to{background-position:300% 0}}
 @media (prefers-reduced-motion:reduce){.mhbt-tile::after,.mhbt-d-Legend::before{animation:none!important}}
 .mhbt-go::after{content:" ▶";font-size:11px;font-style:normal}
@@ -89095,9 +89266,10 @@ const assistantChatMonsterIds = (text, prevUserText) => {
   return out.slice(0, ASSISTANT_CHAT_MONSTER_MAX);
 };
 const ASSISTANT_CHAT_RANKING_TOPIC = /ランキング|ランク(?:イン|上位)|順位|何位|なんい|[0-9０-９一二三四五]+位|トップ|上位|首位|一番(?:上|強い|高い)|いちばん(?:上|強い|高い)/;
-const ASSISTANT_CHAT_RANKING_MAX = 19;
+const ASSISTANT_CHAT_RANKING_MAX = 20;
 const ASSISTANT_CHAT_RANKING_PREV = 2;
 const ASSISTANT_CHAT_RANKING_EXTREME_WORD = /エクストリーム|極限/;
+const ASSISTANT_CHAT_RANKING_UNDERWORLD_WORD = /冥界/;
 const ASSISTANT_CHAT_RANKING_ALL_WORD = /全部|ぜんぶ|全難易度|全ての難易度|すべての難易度|難易度(?:ごと|別|全部)|全部の難易度/;
 const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
   const text = String(rawText || '');
@@ -89149,7 +89321,8 @@ const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
       const hits = modeWords.filter(x => has(x.w));
       const other = hits.find(x => !extremeMode || x.m.id !== extremeMode.id);
       const modeHit = other ? other.m : hits[0] ? hits[0].m : null;
-      const extreme = ASSISTANT_CHAT_RANKING_EXTREME_WORD.test(raw);
+      const underworld = ASSISTANT_CHAT_RANKING_UNDERWORLD_WORD.test(raw);
+      const extreme = ASSISTANT_CHAT_RANKING_EXTREME_WORD.test(raw) || underworld;
       const all = ASSISTANT_CHAT_RANKING_ALL_WORD.test(raw);
       const diffHit = rhythm && !/バトル/.test(raw) ? null : diffChoices.find(d => has(d.label)) || null;
       const lineage = lineages.find(l => has(`${l.name}種`)) || lineages.find(l => has(l.name)) || null;
@@ -89160,6 +89333,7 @@ const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
         rhythmDiff,
         modeHit,
         extreme,
+        underworld,
         all,
         diffHit,
         lineage,
@@ -89189,6 +89363,7 @@ const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
           lineage: now.lineage || base.lineage,
           diffHit: own ? now.diffHit : base.diffHit,
           extreme: own ? now.extreme : base.extreme,
+          underworld: own ? now.underworld : base.underworld,
           all: own ? now.all : base.all,
           rhythmDiff: now.rhythmDiff || base.rhythmDiff,
           inherited: true
@@ -89283,7 +89458,10 @@ const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
         tabs = rankingDiffIds(mode);
       }
       let ids;
-      if (c.diffHit) ids = [c.diffHit.id];else if (c.extreme) ids = tabs.filter(isExtremeId);else if (c.all || c.modeHit) ids = tabs;else ids = tabs.filter(id => id === 'Normal' || id === 'Master' || id === 'Legend');
+      if (c.diffHit) ids = [c.diffHit.id];else if (c.extreme) {
+        const isUw = id => typeof isUnderworldDifficultyId === 'function' && isUnderworldDifficultyId(id);
+        ids = tabs.filter(isExtremeId).filter(id => c.underworld ? isUw(id) : !isUw(id));
+      } else if (c.all || c.modeHit) ids = tabs;else ids = tabs.filter(id => id === 'Normal' || id === 'Master' || id === 'Legend');
       const isSpecies = mode && (mode.id === BATTLE_MODE_SPECIES_CHALLENGE || mode.id === BATTLE_MODE_TACTICS_SPECIES);
       for (const id of ids) {
         let keys = [];
@@ -128341,6 +128519,22 @@ function MonsterHeroGame() {
   const extremeRunRef = useRef(false);
   const [extremeRuleOpen, setExtremeRuleOpen] = useState(false);
   const [extremeDifficulty, setExtremeDifficulty] = useState('EXTREME');
+  const UNDERWORLD_TAB_SEEN_KEY = 'mh_underworld_tab_seen_v1';
+  const [underworldTabSeen, setUnderworldTabSeen] = useState(true);
+  useEffect(() => {
+    (async () => {
+      try {
+        setUnderworldTabSeen((await storeGet(UNDERWORLD_TAB_SEEN_KEY, false, false)) === true);
+      } catch (e) {
+        setUnderworldTabSeen(true);
+      }
+    })();
+  }, []);
+  const markUnderworldTabSeen = () => {
+    if (underworldTabSeen) return;
+    setUnderworldTabSeen(true);
+    storeSet(UNDERWORLD_TAB_SEEN_KEY, true, false);
+  };
   const tacticsRecordDifficulty = () => extremeRunRef.current ? extremeDifficulty : difficulty;
   const [debugEnemyKey, setDebugEnemyKey] = useState(null);
   const [debugBattleModeId, setDebugBattleModeId] = useState('challenge');
@@ -128678,7 +128872,14 @@ function MonsterHeroGame() {
   const eternalUnlocked = useMemo(() => isEternalUnlocked(helheimClearCount), [helheimClearCount]);
   const eternalClearCount = extremeClearCounts[ETERNAL_SETTING.id] || 0;
   const infernoUnlocked = useMemo(() => isInfernoUnlocked(eternalClearCount), [eternalClearCount]);
-  const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
+  const infernoClearCount = extremeClearCounts[INFERNO_SETTING.id] || 0;
+  const cocytusUnlocked = useMemo(() => isCocytusUnlocked(infernoClearCount), [infernoClearCount]);
+  const underworldUnlocked = useMemo(() => isUnderworldUnlocked(eternalClearCount), [eternalClearCount]);
+  const [underworldIntroDone, setUnderworldIntroDone] = useState(false);
+  useEffect(() => {
+    if (extremeDifficulty !== 'INFERNO') setUnderworldIntroDone(true);
+  }, [extremeDifficulty]);
+  const extremeDifficultyAssistantScene = isUnderworldDifficultyId(extremeDifficulty) && !underworldIntroDone ? 'underworldTab' : `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
   const activeExtremeBattleSetting = activeExtremeSetting;
   const activeDifficultySetting = quickDifficultySetting(safeDifficulty);
@@ -140102,7 +140303,7 @@ function MonsterHeroGame() {
     if (remainingHp > 0 || enemyDefeatResolvedRef.current) return false;
     const defeatGeneration = runGenerationRef.current;
     const revivalDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-    const revived = extremeRevivedEnemyStats(enemy, revivalDifficulty, wave, enemyRevivalUsedRef.current);
+    const revived = extremeRevivedEnemyStats(enemyLiveRef.current || enemy, revivalDifficulty, wave, enemyRevivalUsedRef.current);
     if (revived) {
       enemyRevivalUsedRef.current = revived.revivalNumber;
       setEnemyRevivalUsed(revived.revivalNumber);
@@ -140113,15 +140314,25 @@ function MonsterHeroGame() {
         ...prev,
         hp: revived.hp,
         atk: revived.atk,
-        atkBeforeRoar: revived.atk
+        atkBeforeRoar: revived.atk,
+        ...(revived.maxHp ? {
+          maxHp: revived.maxHp
+        } : {})
       } : prev);
       setEnemyRevivalReveal({
         revivalNumber: revived.revivalNumber,
-        remaining: revived.remaining
+        remaining: revived.remaining,
+        ...(revived.reveal ? {
+          name: revived.reveal.name,
+          desc: revived.reveal.desc,
+          stage: revived.reveal.stage,
+          rule: revivalDifficulty,
+          enemyId: (enemyLiveRef.current || enemy)?.id
+        } : {})
       });
-      addPopup('死者の再起！', 'enemy', 'text-slate-100 font-black text-3xl drop-shadow-[0_0_18px_rgba(148,163,184,0.9)]');
+      addPopup(revived.reveal ? `${revived.reveal.name}！` : '死者の再起！', 'enemy', 'text-slate-100 font-black text-3xl drop-shadow-[0_0_18px_rgba(148,163,184,0.9)]');
       triggerShake(true);
-      await battleWait(1600);
+      await battleWait(revived.reveal ? 4600 : 1600);
       setEnemyRevivalReveal(null);
       return false;
     }
@@ -143474,6 +143685,7 @@ function MonsterHeroGame() {
       newEnemy.shellBreakSeq = 0;
       newEnemy.layerAtkBase = newEnemy.atk;
       newEnemy.layerAtkGain = layerPlan.atkGain;
+      newEnemy.shellBoss = layerPlan.boss;
     } else {
       const shell = raidRun || scenario ? 0 : extremeEnemyShellAmount(newEnemy.maxHp, specialRuleDifficulty, w);
       if (shell > 0) {
@@ -147505,8 +147717,11 @@ function MonsterHeroGame() {
         style: extremeTab ? {
           backgroundColor: extremeDifficultyTheme(d).accent,
           color: '#0f172a'
-        } : difficultyStyle(st, on)
-      }, st.label);
+        } : difficultyStyle(st, on),
+        "data-underworld-rank": isUnderworldDifficultyId(d) ? '1' : undefined
+      }, isUnderworldDifficultyId(d) && React.createElement("span", {
+        "aria-hidden": "true"
+      }, "🛡"), st.label);
     })), React.createElement("div", {
       className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
     }, status.refreshing && React.createElement("div", {
@@ -149835,7 +150050,7 @@ function MonsterHeroGame() {
           extremeLocked = isExtreme && !extremeUnlocked && !debugBattle,
           speciesLocked = isSpecies && !speciesChallengeUnlocked && !debugBattle,
           rec = isExtreme ? {
-            score: highestModeScore(extremeBestScores, PUBLIC_EXTREME_DIFFICULTIES.map(setting => setting.id)),
+            score: highestModeScore(extremeBestScores, PUBLIC_EXTREME_TAB_DIFFICULTIES.map(setting => setting.id)),
             wave: 0,
             clears: extremeClearCount
           } : modeRecordFor(m.id, safeDifficulty),
@@ -149957,7 +150172,9 @@ function MonsterHeroGame() {
         compact: true
       })), renderPowerRankingBody())));
     })(), gameState === 'EXTREME_DIFFICULTY_SELECT' && (() => {
-      const difficulties = ALL_EXTREME_DIFFICULTIES.filter(setting => setting.available || debugBattle && setting.debugAvailable);
+      const underworldTab = isUnderworldDifficultyId(extremeDifficulty);
+      const difficulties = ALL_EXTREME_DIFFICULTIES.filter(setting => (setting.available || debugBattle && setting.debugAvailable) && isUnderworldDifficultyId(setting.id) === underworldTab);
+      const underworldOpen = underworldUnlocked || debugBattle;
       const selectedIndex = Math.max(0, difficulties.findIndex(setting => setting.id === extremeDifficulty));
       const selectDifficultyIndex = (index, behavior = 'smooth') => {
         const safe = Math.max(0, Math.min(difficulties.length - 1, index));
@@ -149968,6 +150185,7 @@ function MonsterHeroGame() {
         "data-mh-screen": true,
         className: "mhms-stage mhbs-screen relative overflow-hidden flex-1 flex flex-col h-full min-h-0 px-4 text-white",
         "data-extreme-difficulties": true,
+        "data-underworld": underworldTab ? '1' : undefined,
         style: {
           paddingTop: '.35rem',
           paddingBottom: '.35rem'
@@ -149975,9 +150193,9 @@ function MonsterHeroGame() {
       }, React.createElement(RhythmModeSelectStage, {
         notes: false
       }), React.createElement(BattleScreenHead, {
-        eyebrow: "EXTREME CHALLENGE ・ SELECT LEVEL",
-        title: "極限チャレンジ",
-        accent: "text-fuchsia-300",
+        eyebrow: underworldTab ? 'UNDERWORLD CHALLENGE ・ SELECT LEVEL' : 'EXTREME CHALLENGE ・ SELECT LEVEL',
+        title: underworldTab ? '冥界チャレンジ' : '極限チャレンジ',
+        accent: underworldTab ? 'text-cyan-200' : 'text-fuchsia-300',
         onBack: () => setGameState('BATTLE_MODE_SELECT'),
         right: React.createElement("button", {
           "data-extreme-mode-info": true,
@@ -149993,22 +150211,39 @@ function MonsterHeroGame() {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
       }, React.createElement("div", {
         "data-difficulty-tabs": true,
-        className: "mhbs-tabs grid-cols-2 w-full shrink-0 mb-1.5"
-      }, [[DIFFICULTY_TAB_NORMAL, '通常'], [DIFFICULTY_TAB_EXTREME, '極限']].map(([tabId, tabLabel]) => {
-        const on = tabId === DIFFICULTY_TAB_EXTREME;
+        className: "mhbs-tabs grid-cols-3 w-full shrink-0 mb-1.5"
+      }, [[DIFFICULTY_TAB_NORMAL, '通常'], [DIFFICULTY_TAB_EXTREME, '極限'], [UNDERWORLD_TAB_ID, '冥界']].map(([tabId, tabLabel]) => {
+        const isUw = tabId === UNDERWORLD_TAB_ID;
+        const on = isUw ? underworldTab : tabId === DIFFICULTY_TAB_EXTREME && !underworldTab;
+        const locked = isUw && !underworldOpen;
+        const count = tabId === DIFFICULTY_TAB_NORMAL ? Object.keys(DIFFICULTY_SETTINGS).length : isUw ? PUBLIC_UNDERWORLD_DIFFICULTIES.length : PUBLIC_EXTREME_TAB_DIFFICULTIES.length;
         return React.createElement("button", {
           key: tabId,
           "aria-pressed": on,
+          disabled: locked,
+          "data-difficulty-tab": tabId,
+          "data-underworld-new": isUw && underworldOpen && !underworldTabSeen ? '1' : undefined,
           onClick: () => {
-            if (on) return;
-            battleEntryStateRef.current = 'BATTLE_DIFFICULTY_SELECT';
-            setBattleMode(BATTLE_MODE_CHALLENGE);
-            setGameState('BATTLE_DIFFICULTY_SELECT');
+            if (on || locked) return;
+            if (tabId === DIFFICULTY_TAB_NORMAL) {
+              battleEntryStateRef.current = 'BATTLE_DIFFICULTY_SELECT';
+              setBattleMode(BATTLE_MODE_CHALLENGE);
+              setGameState('BATTLE_DIFFICULTY_SELECT');
+              return;
+            }
+            if (isUw) {
+              markUnderworldTabSeen();
+              setExtremeDifficulty(PUBLIC_UNDERWORLD_DIFFICULTIES[0]?.id || 'INFERNO');
+            } else setExtremeDifficulty(PUBLIC_EXTREME_TAB_DIFFICULTIES[PUBLIC_EXTREME_TAB_DIFFICULTIES.length - 1]?.id || 'EXTREME');
+            requestAnimationFrame(() => centerCarouselChild(modeDifficultyCarouselRef.current, isUw ? 0 : PUBLIC_EXTREME_TAB_DIFFICULTIES.length - 1, 'auto'));
           },
-          className: `mhbs-tab text-[12px] active:scale-95 ${on ? 'on x' : ''}`
-        }, tabLabel, React.createElement("span", {
+          className: `mhbs-tab text-[12px] active:scale-95 disabled:opacity-40 ${isUw ? 'uw' : ''} ${on ? 'on x' : ''}`
+        }, isUw && React.createElement("span", {
+          "aria-hidden": "true",
+          className: "mr-0.5"
+        }, "🛡"), tabLabel, React.createElement("span", {
           className: "ml-1 text-[9px] opacity-75"
-        }, on ? difficulties.length : Object.keys(DIFFICULTY_SETTINGS).length));
+        }, locked ? '🔒' : count));
       })), React.createElement("div", {
         className: "mhbs-hint mt-auto mb-1 shrink-0"
       }, "左右にスワイプして難易度をえらぶ"), React.createElement("div", {
@@ -150044,7 +150279,7 @@ function MonsterHeroGame() {
         }
       }, difficulties.map(setting => {
         const active = setting.id === extremeDifficulty;
-        const unlocked = debugBattle || (setting.id === 'EXTREME' ? extremeUnlocked : setting.id === 'NIGHTMARE' ? nightmareUnlocked : setting.id === 'CHAOS' ? chaosUnlocked : setting.id === 'ULTIMATE' ? ultimateUnlocked : setting.id === 'INFINITY' ? infinityUnlocked : setting.id === 'GOD' ? godUnlocked : setting.id === 'RAGNAROK' ? ragnarokUnlocked : setting.id === 'HELHEIM' ? helheimUnlocked : setting.id === 'ETERNAL' ? eternalUnlocked : setting.id === 'INFERNO' ? infernoUnlocked : false);
+        const unlocked = debugBattle || (setting.id === 'EXTREME' ? extremeUnlocked : setting.id === 'NIGHTMARE' ? nightmareUnlocked : setting.id === 'CHAOS' ? chaosUnlocked : setting.id === 'ULTIMATE' ? ultimateUnlocked : setting.id === 'INFINITY' ? infinityUnlocked : setting.id === 'GOD' ? godUnlocked : setting.id === 'RAGNAROK' ? ragnarokUnlocked : setting.id === 'HELHEIM' ? helheimUnlocked : setting.id === 'ETERNAL' ? eternalUnlocked : setting.id === 'INFERNO' ? infernoUnlocked : setting.id === 'COCYTUS' ? cocytusUnlocked : false);
         const previewable = (setting.available || debugBattle && setting.debugAvailable) && unlocked;
         const theme = extremeDifficultyTheme(setting.id);
         const heroProofReward = heroProofClearReward({
@@ -150054,6 +150289,8 @@ function MonsterHeroGame() {
           key: setting.id,
           "aria-disabled": !previewable,
           "data-extreme-difficulty-card": setting.id,
+          "data-underworld-card": underworldTab ? setting.id : undefined,
+          "data-shield-layers": underworldTab ? underworldShieldLayerRange(setting.id) : undefined,
           className: `mhbt-tile mhbt-d-${setting.id} dark snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[400px] flex flex-col px-4 pt-3 pb-2.5 transition-all ${active ? 'on scale-100 opacity-100' : 'scale-[.92] opacity-45'} ${previewable ? '' : 'dim'}`,
           style: {
             '--acc': theme.accent
@@ -150073,7 +150310,7 @@ function MonsterHeroGame() {
           className: "block text-right text-base italic leading-tight text-white"
         }, setting.available && unlocked ? `${(extremeBestScores[setting.id] || 0).toLocaleString()} pt` : '？？？'), React.createElement("span", {
           className: "block text-right text-[9px] text-amber-300"
-        }, setting.available && unlocked ? `クリア ${extremeClearCounts[setting.id] || 0}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : setting.id === 'CHAOS' ? 'NIGHTMAREクリアで解放' : setting.id === 'ULTIMATE' && !ultimateUnlocked ? 'CHAOSクリアで解放' : setting.id === 'INFINITY' && !infinityUnlocked ? 'ULTIMATEクリアで解放' : setting.id === 'GOD' && !godUnlocked ? 'INFINITYクリアで解放' : setting.id === 'RAGNAROK' && !ragnarokUnlocked ? 'GODクリアで解放' : setting.id === 'HELHEIM' && !helheimUnlocked ? 'RAGNAROKクリアで解放' : setting.id === 'ETERNAL' && !eternalUnlocked ? 'HELHEIMクリアで解放' : setting.id === 'INFERNO' && !infernoUnlocked ? 'ETERNALクリアで解放' : '選択できません')), previewable ? React.createElement(React.Fragment, null, React.createElement("div", {
+        }, setting.available && unlocked ? `クリア ${extremeClearCounts[setting.id] || 0}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : setting.id === 'CHAOS' ? 'NIGHTMAREクリアで解放' : setting.id === 'ULTIMATE' && !ultimateUnlocked ? 'CHAOSクリアで解放' : setting.id === 'INFINITY' && !infinityUnlocked ? 'ULTIMATEクリアで解放' : setting.id === 'GOD' && !godUnlocked ? 'INFINITYクリアで解放' : setting.id === 'RAGNAROK' && !ragnarokUnlocked ? 'GODクリアで解放' : setting.id === 'HELHEIM' && !helheimUnlocked ? 'RAGNAROKクリアで解放' : setting.id === 'ETERNAL' && !eternalUnlocked ? 'HELHEIMクリアで解放' : setting.id === 'INFERNO' && !infernoUnlocked ? 'ETERNALクリアで解放' : setting.id === 'COCYTUS' && !cocytusUnlocked ? 'INFERNOクリアで解放' : '選択できません')), previewable ? React.createElement(React.Fragment, null, React.createElement("div", {
           className: "grid grid-cols-3 gap-1 mt-1"
         }, [['敵強度', `×${setting.power}`], ['スコア', setting.score ? `×${setting.score}` : '対象外'], ['ダイヤ', setting.gold ? `×${setting.gold}` : '対象外']].map(([label, value]) => React.createElement("div", {
           key: label,
@@ -150253,20 +150490,27 @@ function MonsterHeroGame() {
         className: "mt-1 text-center text-[8px] font-black text-slate-400"
       }, "同じ難易度をチャレンジ・プロ・極限のどれかでクリアすると解放")), hasExtremeTab && React.createElement("div", {
         "data-difficulty-tabs": true,
-        className: "mhbs-tabs grid-cols-2 w-full shrink-0 mb-1.5"
-      }, [[DIFFICULTY_TAB_NORMAL, '通常'], [DIFFICULTY_TAB_EXTREME, '極限']].map(([tabId, tabLabel]) => {
+        className: `mhbs-tabs ${challengeExtremeTab ? 'grid-cols-3' : 'grid-cols-2'} w-full shrink-0 mb-1.5`
+      }, [[DIFFICULTY_TAB_NORMAL, '通常'], [DIFFICULTY_TAB_EXTREME, '極限'], ...(challengeExtremeTab ? [[UNDERWORLD_TAB_ID, '冥界']] : [])].map(([tabId, tabLabel]) => {
         const on = activeDifficultyTab === tabId;
+        const isUw = tabId === UNDERWORLD_TAB_ID;
         const toExtreme = tabId === DIFFICULTY_TAB_EXTREME;
         const group = toExtreme ? difficultyGroups.extreme : difficultyGroups.normal;
-        const jumps = challengeExtremeTab && toExtreme;
-        const locked = jumps && !extremeUnlocked && !debugBattle;
-        const count = jumps ? PUBLIC_EXTREME_DIFFICULTIES.length : group.length;
+        const jumps = challengeExtremeTab && (toExtreme || isUw);
+        const locked = jumps && (isUw ? !underworldUnlocked : !extremeUnlocked) && !debugBattle;
+        const count = isUw ? PUBLIC_UNDERWORLD_DIFFICULTIES.length : jumps ? PUBLIC_EXTREME_TAB_DIFFICULTIES.length : group.length;
         return React.createElement("button", {
           key: tabId,
           "aria-pressed": on,
           disabled: locked,
+          "data-difficulty-tab": tabId,
+          "data-underworld-new": isUw && (underworldUnlocked || debugBattle) && !underworldTabSeen ? '1' : undefined,
           onClick: () => {
             if (jumps) {
+              if (isUw) {
+                markUnderworldTabSeen();
+                if (!isUnderworldDifficultyId(extremeDifficulty)) setExtremeDifficulty(PUBLIC_UNDERWORLD_DIFFICULTIES[0]?.id || 'INFERNO');
+              } else if (isUnderworldDifficultyId(extremeDifficulty)) setExtremeDifficulty(PUBLIC_EXTREME_TAB_DIFFICULTIES[PUBLIC_EXTREME_TAB_DIFFICULTIES.length - 1]?.id || 'EXTREME');
               battleEntryStateRef.current = 'BATTLE_DIFFICULTY_SELECT';
               setGameState('EXTREME_DIFFICULTY_SELECT');
               return;
@@ -150275,8 +150519,11 @@ function MonsterHeroGame() {
             setDifficultySelectTab(tabId);
             if (group[0]) chooseDifficulty(group[0][0]);
           },
-          className: `mhbs-tab text-[12px] active:scale-95 disabled:opacity-40 ${on ? toExtreme ? 'on x' : 'on' : ''}`
-        }, tabLabel, React.createElement("span", {
+          className: `mhbs-tab text-[12px] active:scale-95 disabled:opacity-40 ${isUw ? 'uw' : ''} ${on ? toExtreme ? 'on x' : 'on' : ''}`
+        }, isUw && React.createElement("span", {
+          "aria-hidden": "true",
+          className: "mr-0.5"
+        }, "🛡"), tabLabel, React.createElement("span", {
           className: "ml-1 text-[9px] opacity-75"
         }, locked ? '🔒' : count));
       })), challengeExtremeTab && !extremeUnlocked && !debugBattle && React.createElement("p", {

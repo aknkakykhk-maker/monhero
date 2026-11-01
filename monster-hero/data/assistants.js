@@ -1394,6 +1394,21 @@ const ASSISTANT_SCENES = {
     help: 'basics/extreme-challenge',
     lines: [],
   },
+  cocytusDifficulty: {
+    help: 'basics/extreme-challenge',
+    lines: [],
+  },
+  // 冥界チャレンジのタブを開いたときの一言(2026-11-01 社長「みゅあの一言」)。カードを動かすと難易度ごとのセリフに戻る
+  underworldTab: {
+    help: 'basics/extreme-challenge',
+    lines: [
+      { e:'surprise', t:'ここから先は冥界…シールドの世界だよ。敵が何枚も盾をまとってくるの' },
+      { e:'troubled', t:'シールドは割るたびに敵が強くなるの。ためるの予告を見たら、ガードは2枚ね〜' },
+      { e:'wink',     t:'冥界にようこそ〜。極限を越えたキミなら、きっと大丈夫！' },
+      { e:'normal',   t:'冥界の記録やランキングは、極限とは別に分かれてるよ〜' },
+      { e:'excited',  t:'炎のインフェルノと、氷のコキュートス。どっちから行く？' },
+    ],
+  },
   // 種族チャレンジの選択画面。種族→勇者→供モン→確認の各段で言うことが変わるので、
   // 画面から condition(いまの段)を渡す。セリフ本体は speciesChallengeGuide の束から合流する
   speciesChallenge: {
@@ -2553,6 +2568,15 @@ addAssistantLinePack({
       { e:'troubled', t:'1枚割るたびにボスが強くなるよ〜。ムーは最後に連撃までしてくるって' },
       { e:'wink', t:'ためるの予告を見たら、ガードは2枚がおすすめだよ〜' },
     ],
+    cocytusDifficulty: [
+      { e:'surprise', t:'COCYTUSはINFERNOのさらに下…どの敵も厚いシールドを何枚もまとってるの' },
+      { e:'troubled', t:'割っても割っても次の1枚が出てくるよ〜。シールドを削っても距離強化は伸びないの' },
+      { e:'wink', t:'いちばんきたえたパーティで、じっくり行こ〜' },
+    ],
+    underworldTab: [
+      { e:'surprise', t:'冥界のタブ、開いちゃったね…ここからは盾を割る戦いだよ' },
+      { e:'happy', t:'インフェルノもコキュートスも、まずはじっくり様子見しよ〜' },
+    ],
   },
 });
 
@@ -3346,6 +3370,16 @@ addAssistantLinePack({
       { e:'troubled', t:'割るたびにボスの攻撃が上がりまつ。デュラハンとムーは連撃になりまつ。' },
       { e:'wink', t:'報酬は虹のプシュケー220個。きたえ抜いてから挑も♪' },
     ],
+    cocytusDifficulty: [
+      { e:'surprise', t:'COCYTUSは、どの敵も厚いシールドを何枚もまとってきまつ…！' },
+      { e:'troubled', t:'1枚割るごとに敵の攻撃が上がりまつ。デュラハンとムーは連撃になりまつ。' },
+      { e:'wink', t:'報酬は虹のプシュケー250個。きたえ抜いてから挑も♪' },
+    ],
+    underworldTab: [
+      { e:'surprise', t:'ここから先は冥界でつ。シールドの世界でつよ…！' },
+      { e:'wink', t:'炎のインフェルノと氷のコキュートス、どっちから行きまつ？' },
+      { e:'troubled', t:'ききはちょっと寒いのが苦手でつ…。でもいっしょに行きまつ！' },
+    ],
     // ---- はじめて ----
     onboarding: [
       { e:'happy',   t:'はじめまして。私はきき、このゲームの助手でつ (´ω`)' },
@@ -3985,6 +4019,15 @@ addAssistantLinePack({
       { e:'surprise', t:'ETERNALの上！？ INFERNOのボス、シールドが何枚もあるんだって！' },
       { e:'troubled', t:'割るたびに強くなって、最後は必殺技が連撃になるんだよ。' },
       { e:'excited', t:'報酬は虹のプシュケー220個。……キミなら、行くよね？♡' },
+    ],
+    cocytusDifficulty: [
+      { e:'surprise', t:'INFERNOの上！？ COCYTUS、ふつうの敵までシールドが何枚もあるんだって！' },
+      { e:'troubled', t:'割っても割っても終わらないの。根気がいるよ。' },
+      { e:'excited', t:'報酬は虹のプシュケー250個。……キミなら、行くよね？♡' },
+    ],
+    underworldTab: [
+      { e:'surprise', t:'ここが冥界！？ シールドだらけの世界なんだって！' },
+      { e:'excited', t:'極限を越えたキミなら、行けるよね？♡' },
     ],
     // ---- はじめての設定 ----
     onboarding: [
@@ -4812,6 +4855,15 @@ addAssistantLinePack({
       { e:'troubled', t:'シールドを割るたびにボスが強くなる。最後の連撃はガード2枚で受けろよ' },
       { e:'excited', t:'ここを越えたら、おで本気で拝むわ' },
     ],
+    cocytusDifficulty: [
+      { e:'normal', t:'コキュートス。地獄のいちばん下ってわけか' },
+      { e:'troubled', t:'どいつもこいつも分厚い盾を何枚も重ねてる。削りきる火力が要るぞ' },
+      { e:'excited', t:'ここを越えたら、おで本気で拝むわ' },
+    ],
+    underworldTab: [
+      { e:'normal', t:'冥界か。ここから先は盾を割る戦いだ' },
+      { e:'troubled', t:'割るたびに敵が強くなる。ガードを重ねる用意をしとけ' },
+    ],
     speciesChallenge: [
       { e:'normal',   t:'ひとつの種族だけで10WAVEな。しばりプレイだよ' },
       { e:'happy',    t:'{name}、育ててる種族から挑むと入りやすいわ' },
@@ -5289,6 +5341,15 @@ addAssistantLinePack({
       { e:'troubled', t:'割るたびに強うなる。ムーの連撃はガードを重ねて受けや' },
       { e:'happy', t:'しっかりきたえてからでええ。焦らんでな' },
     ],
+    cocytusDifficulty: [
+      { e:'normal', t:'インフェルノのさらに下や。どの敵も厚い盾を何枚も張ってくるで' },
+      { e:'troubled', t:'割っても割っても次が出てくる。長期戦の覚悟しとき' },
+      { e:'happy', t:'しっかりきたえてからでええ。焦らんでな' },
+    ],
+    underworldTab: [
+      { e:'normal', t:'ここからは冥界や。盾を割っていく戦いになるで' },
+      { e:'happy', t:'極限を越えたんや、胸張って行き' },
+    ],
     speciesChallenge: [
       { e:'normal',   t:'同じ種族だけで組むと、弱いとこがはっきり出るな' },
       { e:'happy',    t:'初クリアで超越の実。その種族のやつがもらえるよ' },
@@ -5589,6 +5650,15 @@ addAssistantLinePack({
       { e:'troubled', t:'割るたびに強くなって、最後は連撃なの💦 ガードは2枚で受けてね。' },
       { e:'happy', t:'きたえ抜いてからでいいからね(〃´o｀)ﾌｩ…' },
     ],
+    cocytusDifficulty: [
+      { e:'normal', t:'インフェルノのさらに下。どの敵も厚いシールドを何枚もまとってるよ。' },
+      { e:'troubled', t:'割っても割っても終わらないの💦 根気よくいこうね。' },
+      { e:'happy', t:'きたえ抜いてからでいいからね(〃´o｀)ﾌｩ…' },
+    ],
+    underworldTab: [
+      { e:'normal', t:'ここから先は冥界。シールドの世界だよ。' },
+      { e:'troubled', t:'割るたびに敵が強くなるの💦 ガードは2枚でね。' },
+    ],
     speciesChallenge: [
       { e:'normal',  t:'同じ種族だけで組むと、弱点がはっきり出るよ。' },
       { e:'happy',   t:'超越の実は、その種族のぶんがもらえるよ〜' },
@@ -5712,6 +5782,15 @@ addAssistantLinePack({
       { e:'excited', t:'シールド何枚も重ねて、割るたび強くなる。もう笑うしかないねw' },
       { e:'troubled', t:'ムーの最後は3連撃なんだって。容赦ないよ。' },
       { e:'happy', t:'ここまで来たなら、とことん付き合うよ♡' },
+    ],
+    cocytusDifficulty: [
+      { e:'excited', t:'ふつうの敵までシールド何枚も。もう笑うしかないねw' },
+      { e:'troubled', t:'割るたびに強くなるし、ムーは最後に3連撃なんだって。' },
+      { e:'happy', t:'ここまで来たなら、とことん付き合うよ♡' },
+    ],
+    underworldTab: [
+      { e:'excited', t:'冥界とか名前からしてヤバいねw シールドだらけだよ' },
+      { e:'happy', t:'ここまで来たキミ、ほんとすごいよ♡' },
     ],
     speciesChallenge: [
       { e:'wink',    t:'1種族しばり。縛るの好きだねえw' },
@@ -6039,6 +6118,15 @@ addAssistantLinePack({
       { e:'normal', t:'エターナルのさらに先でつ。ボスはシールドを何枚もまとってきまつ。' },
       { e:'troubled', t:'割るたびにボスが強くなりまつ。連撃はガード2枚で受けてくだしゃい。' },
       { e:'happy', t:'きたえ抜いてから挑めば大丈夫でつよ。' },
+    ],
+    cocytusDifficulty: [
+      { e:'normal', t:'インフェルノのさらに下でつ。どの敵も厚いシールドをまとってきまつ。' },
+      { e:'troubled', t:'割っても割っても次の1枚がありまつ。根気が要りまつね。' },
+      { e:'happy', t:'きたえ抜いてから挑めば大丈夫でつよ。' },
+    ],
+    underworldTab: [
+      { e:'normal', t:'ここから先は冥界でつ。シールドの世界でつね。' },
+      { e:'happy', t:'極限を越えたあなたなら、大丈夫でつよ。' },
     ],
     speciesChallenge: [
       { e:'normal',   t:'同じ種族だけで組むと、弱点がはっきり出まつね。' },
@@ -6525,6 +6613,15 @@ addAssistantLinePack({
       { e:'surprise', t:'インフェルノ！ エターナルの先とか、まじで燃える！' },
       { e:'troubled', t:'シールドを割るたびにボスが強くなる。最後の連撃、えぐいね…' },
       { e:'excited', t:'ここ通ったら、{name}は伝説の勇者だよ！' },
+    ],
+    cocytusDifficulty: [
+      { e:'surprise', t:'コキュートス！ インフェルノの下とか、まじで燃える！' },
+      { e:'troubled', t:'どの敵もシールドが何枚もあって、割るたびに強くなる。えぐいね…' },
+      { e:'excited', t:'ここ通ったら、{name}は伝説の勇者だよ！' },
+    ],
+    underworldTab: [
+      { e:'surprise', t:'冥界！ ここからはシールドを割る戦いだよ！' },
+      { e:'excited', t:'{name}なら、冥界でも勝てるって！' },
     ],
     speciesChallenge: [
       { e:'normal',   t:'ひとつの種族だけで10WAVE。しばりプレイだよ！' },
@@ -7263,6 +7360,15 @@ addAssistantLinePack({
       { e:'surprise', t:'インフェルノかぁ。エターナルの先とか、ちょっとわくわくするわ' },
       { e:'troubled', t:'割るたびに強くなって、最後は連撃だよ😭' },
       { e:'excited', t:'ここ通ったら、{name}は伝説のランカーだよ。ふふん' },
+    ],
+    cocytusDifficulty: [
+      { e:'surprise', t:'コキュートスかぁ。インフェルノの下とか、ちょっとわくわくするわ' },
+      { e:'troubled', t:'どの敵もシールドが分厚くて、割っても割っても終わらないよ😭' },
+      { e:'excited', t:'ここ通ったら、{name}は伝説のランカーだよ。ふふん' },
+    ],
+    underworldTab: [
+      { e:'surprise', t:'冥界かぁ。シールドの世界、ちょっとわくわくするわ' },
+      { e:'wink', t:'記録もランキングも、極限とは別だよ。ふふん' },
     ],
     speciesChallenge: [
       { e:'normal',   t:'ひとつの種族だけで10WAVE。しばりの遊びだよぉ' },
@@ -8132,6 +8238,15 @@ addAssistantLinePack({
       { e:'surprise', t:'インフェルノ!? エターナルの先とか、うぉぉぉ……' },
       { e:'troubled', t:'シールドを割るたびにボスが強くなる。ムーの連撃はガード2枚で' },
       { e:'excited', t:'ここを通ったら、{name}は伝説だぜ・・・！' },
+    ],
+    cocytusDifficulty: [
+      { e:'surprise', t:'コキュートス!? インフェルノの下とか、うぉぉぉ……' },
+      { e:'troubled', t:'どの敵も盾が何枚も。割るたびに強くなるから気をつけて' },
+      { e:'excited', t:'ここを通ったら、{name}は伝説だぜ・・・！' },
+    ],
+    underworldTab: [
+      { e:'surprise', t:'冥界!? ここからシールドの世界とか、うぉぉぉ……' },
+      { e:'excited', t:'{name}、冥界も全力で応援するぜ・・・！' },
     ],
     speciesChallenge: [
       { e:'normal',   t:'ひとつの種族だけで10WAVE。しばりの遊びだよ' },

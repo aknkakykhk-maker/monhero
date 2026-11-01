@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1a125bbf49c6820f
+// generated-sha256: ca04bd88db7225b7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -834,7 +834,7 @@ const BATTLE_SYSTEM_QUICK = 'systemQuick';
 const BATTLE_SELECT_ASSIST_KEY = 'mh_battle_select_assist_v1';
 // 難易度えらびの札で、地が暗いので白い文字にする難易度(2026-10-09 ユーザー指示「難易度にあった色合いで、強弱を」)。
 // 色そのものは 77-screen-rhythm-multi.jsx の .mhbt-d-<難易度> にまとめてある
-const BATTLE_DIFFICULTY_DARK_LOOKS = new Set(['Expert','Master','GrandMaster','Hell','EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY','GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO']);
+const BATTLE_DIFFICULTY_DARK_LOOKS = new Set(['Expert','Master','GrandMaster','Hell','EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY','GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO','COCYTUS']);
 const BATTLE_SYSTEMS = Object.freeze([
   Object.freeze({
     id: BATTLE_SYSTEM_CLASSIC, label: 'クラシックバトル', short: 'クラシック', emoji: '⚔️', color: '#818cf8',
@@ -2174,8 +2174,8 @@ const buildSoulTraitRespec = (masu, ownedItems) => {
   return { ok:true, refundedPoints, refundedCrystals, nextMasu:{ ...rest, soulTraitLevels:{} }, ownedItems:nextItems };
 };
 const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
-  extreme:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5 }),
-  speciesChallenge:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5 }),
+  extreme:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5, COCYTUS:6 }),
+  speciesChallenge:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5, COCYTUS:6 }),
   pro:Object.freeze({ Master:1, GrandMaster:2, Hell:3, Legend:4 }),
 });
 const heroProofClearReward = ({
@@ -10643,13 +10643,13 @@ const EXTREME_DIFFICULTIES = Object.freeze([
   { id:'INFINITY', label:'INFINITY', japanese:'インフィニティ', available:true, power:50, score:20, xp:45, gold:30, psyche:80, unlockRequirement:'ULTIMATE', description:'これまでの極限ルールを統合し、ターン経過による圧力がさらに強化された10WAVE最終難易度。', cardDescription:'極限ルールを統合。与ダメ低下とDISTANCE BREAKがさらに苛烈になる最上位10WAVE。', specialRules:Object.freeze({ assistCardEffect:0.5, positiveModifier:0.5, negativeModifier:2.0, distanceEnhancement:0.5, gutsCost:1.5, enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, minimumAllyJoinBonus:0.10, damageTurnRate:0.01, minimumDamageDealt:0.30, awakeningPenaltyRate:0.0075, awakeningZeroTurns:20, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:25, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
 ]);
 // 種族チャレンジは既存の通常・極限難易度定義を複製せず、IDの順序だけを参照する。
-// 極限チャレンジと同じく、いちばん奥(GOD・RAGNAROK・HELHEIM・ETERNAL・INFERNO)まで遊べる(2026-10-03 ユーザー指示・ETERNAL は 2026-10-29・INFERNO は 2026-10-31)。
+// 極限チャレンジと同じく、いちばん奥(GOD・RAGNAROK・HELHEIM・ETERNAL・INFERNO・COCYTUS)まで遊べる(2026-10-03 ユーザー指示・ETERNAL は 2026-10-29・INFERNO は 2026-10-31・COCYTUS は 2026-11-01)。
 // ★GOD以降の定義(ALL_EXTREME_DIFFICULTIES)はこの下で作られるので、ここではIDだけを並べる。
 //   極限の難易度を足したら、ここへも足すこと。ずれていないかは tools/mode/helheim-rules-check.js が見る
 const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([
   ...Object.keys(DIFFICULTY_SETTINGS),
   ...EXTREME_DIFFICULTIES.map(setting=>setting.id),
-  'GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO',
+  'GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO','COCYTUS',
 ]);
 // タクティクスバトルも、難易度の定義を複製せずIDの順序だけを参照する(種族チャレンジと同じ)。
 // 通常9段階＋極限5段階の14段階。GOD / RAGNAROK は極限チャレンジ専用なので入れない
@@ -10912,7 +10912,7 @@ const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds
 const SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS = Object.freeze({
   Beginner:1, Easy:2, Normal:3, Hard:4, Expert:5, Master:6, GrandMaster:8,
   Hell:10, Legend:12, EXTREME:15, NIGHTMARE:20, CHAOS:25, ULTIMATE:30, INFINITY:40,
-  GOD:60, RAGNAROK:80, HELHEIM:100, ETERNAL:120, INFERNO:140,
+  GOD:60, RAGNAROK:80, HELHEIM:100, ETERNAL:120, INFERNO:140, COCYTUS:160,
 });
 const speciesChallengeFirstClearReward = (difficultyId) =>
   Object.prototype.hasOwnProperty.call(SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS,difficultyId)
@@ -11023,8 +11023,12 @@ const HELHEIM_SETTING = Object.freeze({ id:'HELHEIM', label:'HELHEIM', japanese:
 const ETERNAL_SETTING = Object.freeze({ id:'ETERNAL', label:'ETERNAL', japanese:'エターナル', available:true, debugAvailable:true, power:300, score:20, xp:120, gold:100, psyche:190, waveCount:10, unlockRequirement:'HELHEIM', rankingId:'ExtremeETERNAL', recordId:'ETERNAL', description:'冥府の上に、敵がシールドをまとい、攻撃の一部が丈夫さを貫いてくる。戦いは長く続き、ターンとともに重くなる、極限チャレンジの最奥の難易度。', cardDescription:'WAVEの始めに敵が最大ライフ50%のシールドをまとい、攻撃の30〜50%が丈夫さを貫く。冥府・ボス復活・敵ライフ10倍はヘルヘイムのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 3:1, 5:2, 7:2, 9:1, 10:4 }), hpRate:0.5, atkBoostPerRevival:0.6 }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
 // INFERNOはETERNALの次の極限難易度(2026-10-31 社長の決定)。冥府・ふつうのWAVEのシールド・貫き・敵ライフ10倍・デュラハンの上乗せはETERNALのまま。
 // ボスは起き上がらない(revival なし)。かわりにボスのWAVEは何枚ものシールド(層)をまとって出てくる。層の決まりは infernoStageRules
-const INFERNO_SETTING = Object.freeze({ id:'INFERNO', label:'INFERNO', japanese:'インフェルノ', available:true, debugAvailable:true, power:400, score:20, xp:140, gold:120, psyche:220, waveCount:10, unlockRequirement:'ETERNAL', rankingId:'ExtremeINFERNO', recordId:'INFERNO', description:'ボスは起き上がらないかわりに、何枚ものシールドをまとって現れる。1枚割るごとにボスは強くなり、最後は必殺技が連撃になる、極限チャレンジの最奥の難易度。', cardDescription:'ボスは3〜5枚のシールドをまとい、割るたびに攻撃が上がる。デュラハンとムーは必殺技が連撃に。冥府・シールド・貫き・敵ライフ10倍はエターナルのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
-const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES,GOD_SETTING,RAGNAROK_SETTING,HELHEIM_SETTING,ETERNAL_SETTING,INFERNO_SETTING]);
+const INFERNO_SETTING = Object.freeze({ id:'INFERNO', label:'INFERNO', japanese:'インフェルノ', tab:'underworld', available:true, debugAvailable:true, power:400, score:20, xp:140, gold:120, psyche:220, waveCount:10, unlockRequirement:'ETERNAL', rankingId:'ExtremeINFERNO', recordId:'INFERNO', description:'ボスは起き上がらないかわりに、何枚ものシールドをまとって現れる。1枚割るごとにボスは強くなり、最後は必殺技が連撃になる、極限チャレンジの最奥の難易度。', cardDescription:'ボスは3〜5枚のシールドをまとい、割るたびに攻撃が上がる。デュラハンとムーは必殺技が連撃に。冥府・シールド・貫き・敵ライフ10倍はエターナルのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
+// COCYTUSはINFERNOの次の極限難易度(2026-11-01 社長の決定)。冥府・貫き・敵ライフ10倍・デュラハンの上乗せはINFERNOのまま。
+// デュラハンは1回・ムーは2回、本体を倒すと全回復+最大ライフ1.5倍(掛け算)で蘇る(シールドは張り直さない)。蘇るたびに攻撃も+20%(層1枚ぶんと同じ)。
+// ふつうの敵も層のシールドをまとい(WAVEのはじめの50%は層に置き換え)、層は厚く・枚数は多い。層の決まりは cocytusStageRules
+const COCYTUS_SETTING = Object.freeze({ id:'COCYTUS', label:'COCYTUS', japanese:'コキュートス', tab:'underworld', available:true, debugAvailable:true, power:500, score:20, xp:160, gold:140, psyche:250, waveCount:10, unlockRequirement:'INFERNO', rankingId:'ExtremeCOCYTUS', recordId:'COCYTUS', description:'どの敵も何枚もの厚いシールドをまとって現れる。1枚割るごとに敵は強くなり、デュラハンとムーは倒しても大きくなって蘇る、極限チャレンジの最奥の難易度。', cardDescription:'どの敵も4〜5枚の厚いシールドをまとい、割るたびに攻撃が上がる。デュラハンは1回・ムーは2回、全回復して大きくなって蘇る。冥府・貫き・敵ライフ10倍はインフェルノのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 9:1, 10:2 }), hpRate:1, maxHpRatePerRevival:1.5, atkStepsWithLayers:true, reveal:Object.freeze({ 9:Object.freeze([Object.freeze({ stage:'durahan', name:'凍土の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' })]), 10:Object.freeze([Object.freeze({ stage:'moo1', name:'凍土の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' }),Object.freeze({ stage:'moo2', name:'凍土の再起', desc:'ライフ全回復・最大ライフ2.25倍で復活' })]) }) }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
+const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES,GOD_SETTING,RAGNAROK_SETTING,HELHEIM_SETTING,ETERNAL_SETTING,INFERNO_SETTING,COCYTUS_SETTING]);
 // 極限チャレンジの難易度カラー。カード構造は共通のまま、上位ほど発光を少しずつ強める。
 // 常時アニメーションは使わず、iPhone縦画面でも視認性と軽さを優先する。
 const EXTREME_DIFFICULTY_THEMES = Object.freeze({
@@ -11045,9 +11049,19 @@ const EXTREME_DIFFICULTY_THEMES = Object.freeze({
   // 冥府(緑)の先は、終わらない時を思わせる明るい桃紫。ほかの極限(紫・赤・橙・青・金・氷・緑)とかぶらない
   ETERNAL:Object.freeze({accent:'#f9a8d4',rgb:'236,72,153',background:'linear-gradient(180deg,#3b0a2a,#12030d)',action:'linear-gradient(135deg,#db2777,#f9a8d4)',actionText:'#3b0a2a',glow:0.70,titleGlow:0.94,actionGlow:0.70,shadowBlur:56}),
   INFERNO:Object.freeze({accent:'#fb923c',rgb:'249,115,22',background:'linear-gradient(180deg,#431407,#120502)',action:'linear-gradient(135deg,#ea580c,#fdba74)',actionText:'#431407',glow:0.74,titleGlow:0.96,actionGlow:0.74,shadowBlur:60}),
+  COCYTUS:Object.freeze({accent:'#a5f3fc',rgb:'103,232,249',background:'linear-gradient(180deg,#082f49,#020617)',action:'linear-gradient(135deg,#0891b2,#e0f2fe)',actionText:'#082f49',glow:0.78,titleGlow:0.98,actionGlow:0.78,shadowBlur:64}),
 });
 const extremeDifficultyTheme = (difficultyId) => EXTREME_DIFFICULTY_THEMES[difficultyId] || EXTREME_DIFFICULTY_THEMES.EXTREME;
 const PUBLIC_EXTREME_DIFFICULTIES = Object.freeze(ALL_EXTREME_DIFFICULTIES.filter(setting=>setting.available));
+// 冥界チャレンジ(2026-11-01 社長の決定)。INFERNO・COCYTUS は難易度選びのタブだけ「冥界」へ移す。
+// ★難易度の名前・極限の一覧(ALL_EXTREME_DIFFICULTIES)の並び・保存キー(mh_extreme_hs_/clears_<id>)・ランキングの枠(Extreme<id>)は変えない。
+//   表示の分け方だけを、設定の tab:'underworld' の印で決める
+const UNDERWORLD_TAB_ID = 'underworld';
+const isUnderworldDifficultyId = (difficultyId) => extremeRuleSetting(difficultyId)?.tab === UNDERWORLD_TAB_ID;
+// 極限タブに出す難易度(EXTREME〜ETERNAL の9つ)。極限の「全部クリア」を数えるときもこの9つ(2026-11-01 社長)
+const PUBLIC_EXTREME_TAB_DIFFICULTIES = Object.freeze(PUBLIC_EXTREME_DIFFICULTIES.filter(setting=>setting.tab!==UNDERWORLD_TAB_ID));
+// 冥界タブに出す難易度(INFERNO・COCYTUS)
+const PUBLIC_UNDERWORLD_DIFFICULTIES = Object.freeze(PUBLIC_EXTREME_DIFFICULTIES.filter(setting=>setting.tab===UNDERWORLD_TAB_ID));
 // 2WAVEごとに1段上がる段階(Lv1〜5)。GODの「神威」もRAGNAROKの「黄昏」も刻み方は同じで、
 // 段ごとに何を締めるかだけが違う。刻み方をここへ1つだけ置き、難易度側は中身の表だけを持つ。
 const extremeWaveStageLevel = (waveNumber) => Math.max(1,Math.min(5,Math.floor((Math.max(1,Number(waveNumber)||1)-1)/2)+1));
@@ -11117,11 +11131,27 @@ const eternalStageRules = (waveNumber) => {
 //   rushAtBroken … 割れた枚数ごとの必殺技の連撃の回数(合計の倍率は変えずに分ける)。書いていない枚数・WAVEは1発のまま
 const INFERNO_SHIELD_LAYERS = Object.freeze({ 3:3, 5:3, 7:3, 9:4, 10:5 });
 const INFERNO_RUSH_AT_BROKEN = Object.freeze({ 9:Object.freeze({ 4:2 }), 10:Object.freeze({ 4:2, 5:3 }) });
+// ボスのWAVE(ETERNALで起き上がっていたWAVE)。見た目がボスかどうかを見分ける印(bossWave)と、COCYTUSの本体ライフの決まりに使う
+const INFERNO_BOSS_WAVES = Object.freeze([3,5,7,9,10]);
 const infernoStageRules = (waveNumber) => {
   const base=eternalStageRules(waveNumber);
   const w=Math.floor(Number(waveNumber)||0);
-  return Object.freeze({ ...base, shieldLayers:INFERNO_SHIELD_LAYERS[w]||0, layerGrowth:0.3, layerAtkGain:0.6, layerBasePower:ETERNAL_SETTING.power,
+  return Object.freeze({ ...base, shieldLayers:INFERNO_SHIELD_LAYERS[w]||0, bossWave:INFERNO_BOSS_WAVES.includes(w), layerGrowth:0.3, layerAtkGain:0.6, layerBasePower:ETERNAL_SETTING.power,
     rushAtBroken:INFERNO_RUSH_AT_BROKEN[w]||null });
+};
+// COCYTUSの段階ルール(2026-11-01 社長の決定)。ETERNAL(冥府・貫き)の上に、ふつうの敵もボスも層のシールドを足す。
+//   shieldLayers … W1・2 4枚 / W3〜8 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚。層を持つ敵はWAVEのはじめの50%のシールドを持たない
+//   layerFirstRate … 1枚目のシールド=敵の最大ライフのこの倍率(W1〜8 3.0倍・W9 3.8倍・W10 4.4倍。INFERNOの「ETERNALのライフと同じ」とは決め方が違う)。割るたびに+30%
+//   layerBodyBossOnly … 割りきったあとの本体のライフに倍率(1+0.3×枚数)を掛けるのはボスだけ。ふつうの敵の本体は元のまま
+//   layerAtkGain … 1枚割るごとに攻撃+20%(足し算・最後の1枚も)
+const COCYTUS_SHIELD_LAYERS = Object.freeze({ 1:4, 2:4, 3:5, 4:5, 5:5, 6:5, 7:5, 8:5, 9:5, 10:5 });
+const COCYTUS_FIRST_LAYER_RATE = Object.freeze({ 9:3.8, 10:4.4 });
+const COCYTUS_RUSH_AT_BROKEN = INFERNO_RUSH_AT_BROKEN; // 連撃はINFERNOと同じ(デュラハン4枚目で2・ムー4枚目で2/5枚目で3)
+const cocytusStageRules = (waveNumber) => {
+  const base=eternalStageRules(waveNumber);
+  const w=Math.floor(Number(waveNumber)||0);
+  return Object.freeze({ ...base, shieldLayers:COCYTUS_SHIELD_LAYERS[w]||0, bossWave:INFERNO_BOSS_WAVES.includes(w), layerGrowth:0.3, layerAtkGain:0.2,
+    layerFirstRate:COCYTUS_FIRST_LAYER_RATE[w]||3.0, layerBodyBossOnly:true, rushAtBroken:COCYTUS_RUSH_AT_BROKEN[w]||null });
 };
 // 「WAVEで段階が動く難易度」の一覧。ここに1行足せば、実効倍率・与ダメ・BREAK・表示まで
 // すべて同じ経路を通るので、難易度名の分岐を各所へ書き足さなくてよい。
@@ -11131,6 +11161,7 @@ const EXTREME_WAVE_STAGES = Object.freeze({
   HELHEIM:Object.freeze({ label:'冥府', rules:helheimUnderworldRules }),
   ETERNAL:Object.freeze({ label:'冥府', rules:eternalStageRules }),
   INFERNO:Object.freeze({ label:'冥府', rules:infernoStageRules }),
+  COCYTUS:Object.freeze({ label:'冥府', rules:cocytusStageRules }),
 });
 const extremeWaveStage = (difficultyId) => EXTREME_WAVE_STAGES[difficultyId] || null;
 const extremeWaveStageRules = (difficultyId,waveNumber=1) => extremeWaveStage(difficultyId)?.rules(waveNumber) || null;
@@ -11262,16 +11293,21 @@ const enemyShellPool = (enemy) => {
   return Math.max(0,Number(enemy.shell)||0)+rest;
 };
 // 層のシールドの計画(INFERNOのボスのWAVEだけ)。maxHp は上乗せ(ライフ10倍・デュラハン)まで掛けた、強度 power のボスのライフ。
-// 返り値 { layers:[1枚目,2枚目,…], bodyRate, atkGain }。層を持たないWAVE・難易度では null
+// 1枚目は layerFirstRate があれば「最大ライフ×その倍率」(COCYTUS)、なければ「強度 layerBasePower のときのライフ」(INFERNO)。
+// 本体の倍率は layerBodyBossOnly のときボスのWAVEだけに掛ける。
+// 返り値 { layers:[1枚目,2枚目,…], bodyRate, atkGain, boss }。層を持たないWAVE・難易度では null
 const extremeShieldLayerPlan = (difficultyId,waveNumber,maxHp,power) => {
   const rules=extremeWaveStageRules(difficultyId,waveNumber);
   const count=Math.floor(Number(rules?.shieldLayers)||0);
   const hp=Number(maxHp), p=Number(power);
   if (!(count>0)||!(hp>0)||!(p>0)) return null;
   const growth=Math.max(0,Number(rules.layerGrowth)||0);
-  const first=hp*Math.max(0,Number(rules.layerBasePower)||p)/p;
+  const firstRate=Number(rules.layerFirstRate);
+  const first=Number.isFinite(firstRate)&&firstRate>0 ? hp*firstRate : hp*Math.max(0,Number(rules.layerBasePower)||p)/p;
   const layers=Array.from({length:count},(_,k)=>Math.max(1,Math.floor(first*(1+growth*k))));
-  return { layers, bodyRate:1+growth*count, atkGain:Math.max(0,Number(rules.layerAtkGain)||0) };
+  const boss=rules.bossWave===true;
+  const bodyRate=rules.layerBodyBossOnly&&!boss ? 1 : 1+growth*count;
+  return { layers, bodyRate, atkGain:Math.max(0,Number(rules.layerAtkGain)||0), boss };
 };
 // 割れた枚数に応じた必殺技の連撃の回数(INFERNOのデュラハン・ムー)。連撃にならないときは1
 const extremeLayerRushHits = (difficultyId,waveNumber,broken) => {
@@ -11284,15 +11320,15 @@ const extremeLayerRushHits = (difficultyId,waveNumber,broken) => {
 };
 // 見た目が読むシールドの状態(2026-10-31 レフェリーくんと取り決め)。層を持たない敵は total 0
 //   { total:全部の枚数, broken:割れた枚数, left:残りの枚数(いまの1枚を含む), current:いまの1枚の残り, currentMax:いまの1枚の最大,
-//     layers:[{ max, now }](上から順・割れた層は now 0), breakSeq:割れた合図の通し番号(増えたら割れた瞬間) }
+//     layers:[{ max, now }](上から順・割れた層は now 0), breakSeq:割れた合図の通し番号(増えたら割れた瞬間), boss:ボスのWAVEの敵か }
 const enemyShellView = (enemy) => {
   const total=Math.max(0,Math.floor(Number(enemy?.shellLayerTotal)||0));
-  if (!enemy||!(total>0)) return { total:0, broken:0, left:0, current:Math.max(0,Number(enemy?.shell)||0), currentMax:Math.max(0,Number(enemy?.maxShell)||0), layers:[], breakSeq:0 };
+  if (!enemy||!(total>0)) return { total:0, broken:0, left:0, current:Math.max(0,Number(enemy?.shell)||0), currentMax:Math.max(0,Number(enemy?.maxShell)||0), layers:[], breakSeq:0, boss:false };
   const broken=Math.min(total,Math.max(0,Math.floor(Number(enemy.shellBroken)||0)));
   const maxes=Array.isArray(enemy.shellLayerMaxes)?enemy.shellLayerMaxes:[];
   const current=Math.max(0,Number(enemy.shell)||0);
   const layers=Array.from({length:total},(_,k)=>({ max:Math.max(0,Number(maxes[k])||0), now:k<broken?0:(k===broken?current:Math.max(0,Number(maxes[k])||0)) }));
-  return { total, broken, left:total-broken, current, currentMax:Math.max(0,Number(enemy.maxShell)||0), layers, breakSeq:Math.max(0,Math.floor(Number(enemy.shellBreakSeq)||0)) };
+  return { total, broken, left:total-broken, current, currentMax:Math.max(0,Number(enemy.maxShell)||0), layers, breakSeq:Math.max(0,Math.floor(Number(enemy.shellBreakSeq)||0)), boss:enemy.shellBoss===true };
 };
 // 1ターンぶんのヒットを順にシールドへ当て、各ヒットに shellAbsorbed(シールドが受けたぶん)を書き込む。シールドが受けた合計を返す
 const markShellAbsorbedHits = (hits,startShell) => {
@@ -11343,9 +11379,20 @@ const extremeRevivedEnemyStats = (enemy,difficultyId,waveNumber,usedCount=0) => 
   const hpRate=Number.isFinite(rawHpRate)?Math.max(0,Math.min(1,rawHpRate)):0.5;
   const rawBoost=Number(rule.atkBoostPerRevival);
   const boost=Number.isFinite(rawBoost)?Math.max(0,rawBoost):0;
+  // COCYTUS: 最大ライフを1回ごとに maxHpRatePerRevival 倍(掛け算)にして全回復し、攻撃は「元の攻撃力×(1+層1枚ぶん×(割れた枚数+蘇った回数))」。
+  //   見た目へ渡す文と段(reveal)も返す。決まりを持たない難易度(ETERNALまで)は今までどおり
+  const rawMaxRate=Number(rule.maxHpRatePerRevival);
+  const newMaxHp=Number.isFinite(rawMaxRate)&&rawMaxRate>0 ? Math.max(1,Math.floor(maxHp*rawMaxRate)) : maxHp;
+  const layerAtkBase=Number(enemy.layerAtkBase), layerAtkGain=Number(enemy.layerAtkGain);
+  const atk=rule.atkStepsWithLayers&&Number.isFinite(layerAtkBase)&&Number.isFinite(layerAtkGain)
+    ? Math.floor(layerAtkBase*(1+layerAtkGain*(Math.max(0,Math.floor(Number(enemy.shellBroken)||0))+used+1)))
+    : Math.floor(Math.max(0,Number(enemy.atk)||0)*(1+boost));
+  const reveal=rule.reveal?.[Math.floor(Number(waveNumber)||0)]?.[used]||null;
   return {
-    hp:Math.max(1,Math.floor(maxHp*hpRate)),
-    atk:Math.floor(Math.max(0,Number(enemy.atk)||0)*(1+boost)),
+    hp:Math.max(1,Math.floor(newMaxHp*hpRate)),
+    atk,
+    ...(newMaxHp!==maxHp?{ maxHp:newMaxHp }:{}),
+    ...(reveal?{ reveal }:{}),
     revivalNumber:used+1,
     remaining:extremeRevivalCount(difficultyId,waveNumber)-(used+1),
   };
@@ -11424,7 +11471,7 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     ['Lv5','与ダメ低下 -1.75pt/T・最低15%'],
   ]);
   // ETERNALは冥府(HELHEIM)をそのまま引き継ぐので、同じ説明にシールドと貫きを足す
-  if(difficultyId===HELHEIM_SETTING.id||difficultyId===ETERNAL_SETTING.id||difficultyId===INFERNO_SETTING.id){
+  if(difficultyId===HELHEIM_SETTING.id||difficultyId===ETERNAL_SETTING.id||difficultyId===INFERNO_SETTING.id||difficultyId===COCYTUS_SETTING.id){
     const adjust=rules.enemyAdjust||{};
     const durahan=adjust.byEnemy?.Durahan;
     push('冥府',[
@@ -11449,7 +11496,15 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
       ['割れるたび','ボスの攻撃力 +60%(最後の1枚も)'],
       ['連撃','デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)'],
     ]);
-    if(difficultyId===ETERNAL_SETTING.id||difficultyId===INFERNO_SETTING.id) push('シールドと貫き',[
+    if(difficultyId===COCYTUS_SETTING.id) push('層のシールド',[
+      ['蘇り','デュラハンは1回・ムーは2回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る(ムーの2回目は2.25倍)。シールドは張り直さない'],
+      ['層の数','W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'],
+      ['WAVEのはじめのシールド','エターナルの50%のシールドは、層のシールドに置き換わる'],
+      ['シールドの量','1枚目はその敵の最大ライフの3倍(デュラハン3.8倍・ムー4.4倍)。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフはそのまま)'],
+      ['割れるたび','敵の攻撃力 +20%(最後の1枚も。蘇るたびにも+20%)'],
+      ['連撃','デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)'],
+    ]);
+    if(difficultyId===ETERNAL_SETTING.id||difficultyId===INFERNO_SETTING.id||difficultyId===COCYTUS_SETTING.id) push('シールドと貫き',[
       ['シールド','WAVEの始めに、敵が最大ライフ50%ぶんのシールドをまとう。シールドを割るまで敵のライフは減らない'],
       ['シールドと距離強化','シールドに当てたダメージは、距離強化(間合いのボーナス)に数えない'],
       ['貫き','敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）'],
@@ -11489,11 +11544,18 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     ['安全距離',breakRule.safeDistanceCount>0?`${breakRule.safeDistanceCount}距離は最後まで弱体化しない`:'なし（4距離すべて弱体化する）'],
   ]);
   const revivalRule=extremeRevivalRule(difficultyId);
-  if(revivalRule)push('不死（死者の再起）',[
+  // COCYTUSの蘇り(全回復・最大ライフが増える)は「層のシールド」の欄に書くので、ここ(半分で起き上がる形)には出さない
+  if(revivalRule&&!(Number(revivalRule.maxHpRatePerRevival)>0))push('不死（死者の再起）',[
     ['対象',Object.entries(revivalRule.waves).map(([waveNumber,count])=>`WAVE${waveNumber}（${count}回）`).join(' / ')],
     ['復活時',`ライフ${specialRulePercent(revivalRule.hpRate)}で起き上がる（最大ライフは変わらない）`],
     ['起き上がるたび',`敵の攻撃力 +${specialRulePercent(revivalRule.atkBoostPerRevival)}`],
   ]);
+  // 冥界チャレンジ(INFERNO・COCYTUS)は、ルール詳細の先頭にシールドの1枚を置く(2026-11-01 社長「ルール詳細の先頭にシールドの1枚」)。
+  // 冥府などの引き継ぎは、そのうしろへ回す
+  if(isUnderworldDifficultyId(difficultyId)){
+    const first=groups.findIndex(g=>g.title==='ボスの層のシールド'||g.title==='層のシールド');
+    if(first>0)groups.unshift(...groups.splice(first,1));
+  }
   return groups;
 };
 // カードには中身を並べず、特殊ルールがあることだけを出す(INFINITYは種類が多いので複合と書く)
@@ -11735,6 +11797,16 @@ const isRagnarokUnlocked = (godClearCount) => (Number(godClearCount) || 0) > 0;
 const isHelheimUnlocked = (ragnarokClearCount) => (Number(ragnarokClearCount) || 0) > 0;
 const isEternalUnlocked = (helheimClearCount) => (Number(helheimClearCount) || 0) > 0;
 const isInfernoUnlocked = (eternalClearCount) => (Number(eternalClearCount) || 0) > 0;
+const isCocytusUnlocked = (infernoClearCount) => (Number(infernoClearCount) || 0) > 0;
+// 冥界チャレンジのタブは ETERNAL を1回以上クリアすると開く(今の INFERNO の解放と同じ)
+const isUnderworldUnlocked = (eternalClearCount) => (Number(eternalClearCount) || 0) > 0;
+// 難易度のシールドの枚数の幅(見た目のカードの「🛡×3〜5」に使う)。層を持たない難易度は ''
+const underworldShieldLayerRange = (difficultyId) => {
+  const counts=Array.from({length:10},(_,i)=>Math.floor(Number(extremeWaveStageRules(difficultyId,i+1)?.shieldLayers)||0)).filter(n=>n>0);
+  if(!counts.length)return '';
+  const min=Math.min(...counts), max=Math.max(...counts);
+  return min===max?String(min):`${min}〜${max}`;
+};
 const normalizeBattleDifficulty = (value) => quickDifficultySetting(value) ? value : 'Normal';
 // 難易度選択を開いたときの既定位置。前に遊んだ難易度を引きずらず、いつでもノーマルから始める
 const BATTLE_DEFAULT_DIFFICULTY = 'Normal';
@@ -37104,7 +37176,9 @@ function ProfileScreen({
                 <button type="button" onClick={()=>onSelectBattleMode(null)} className={`${SCREEN_PANEL_FLAT_CLASS} mb-3 flex min-h-[44px] w-full items-center gap-2 text-left active:scale-[.98]`}><ArrowLeft size={16} className="shrink-0 text-slate-400"/><span className="text-lg" aria-hidden="true">{selected.emoji}</span><span className="font-black text-[13px]">{selected.label}の記録</span></button>
                 <div className="flex flex-col gap-2">
                   {selected.id===EXTREME_MODE.id
-                    ? PUBLIC_EXTREME_DIFFICULTIES.map(setting=>{const score=extremeBestScores[setting.id]||0;const clears=extremeClearCounts[setting.id]||0;const played=score>0||clears>0;return <div key={setting.id} className="rounded-xl border border-white/10 bg-black/30 p-3"><b className="block text-[13px] text-fuchsia-200">{setting.label}</b>{played?<div className="mt-2 grid grid-cols-2 gap-2 text-center"><div><small className="block text-[10px] text-slate-400">最高スコア</small><strong className="text-[12px] text-amber-300">{score.toLocaleString()} pt</strong></div><div><small className="block text-[10px] text-slate-400">クリア回数</small><strong className="text-[12px] text-emerald-300">{clears}回</strong></div></div>:<div className="mt-2 text-center text-[11px] font-black text-slate-400">未記録</div>}</div>})
+                    ? (()=>{const row=(setting)=>{const score=extremeBestScores[setting.id]||0;const clears=extremeClearCounts[setting.id]||0;const played=score>0||clears>0;return <div key={setting.id} className="rounded-xl border border-white/10 bg-black/30 p-3"><b className="block text-[13px] text-fuchsia-200">{setting.label}</b>{played?<div className="mt-2 grid grid-cols-2 gap-2 text-center"><div><small className="block text-[10px] text-slate-400">最高スコア</small><strong className="text-[12px] text-amber-300">{score.toLocaleString()} pt</strong></div><div><small className="block text-[10px] text-slate-400">クリア回数</small><strong className="text-[12px] text-emerald-300">{clears}回</strong></div></div>:<div className="mt-2 text-center text-[11px] font-black text-slate-400">未記録</div>}</div>};
+                      // 冥界チャレンジ(INFERNO・COCYTUS)は見出しを付けて分ける(2026-11-01)。読むキーは同じ
+                      return <>{PUBLIC_EXTREME_TAB_DIFFICULTIES.map(row)}{PUBLIC_UNDERWORLD_DIFFICULTIES.length>0&&<p data-profile-underworld className="mt-1 text-[11px] font-black text-cyan-200">🛡 冥界チャレンジ</p>}{PUBLIC_UNDERWORLD_DIFFICULTIES.map(row)}</>;})()
                     : (isTacticsMode(selected.id)?TACTICS_DIFFICULTY_IDS.map(id=>[id,DIFFICULTY_SETTINGS[id]||EXTREME_DIFFICULTIES.find(setting=>setting.id===id)||EXTREME_SETTING]):Object.entries(DIFFICULTY_SETTINGS)).map(([key,setting])=>{const record=modeRecordFor(selected.id,key);const quick=isQuickMode(selected.id);const challenge=selected.id===BATTLE_MODE_CHALLENGE;const attempts=challenge?(attemptCounts[key]||0):0;const played=record.score>0||record.wave>0||record.clears>0||attempts>0;return <div key={key} className="rounded-xl border border-white/10 bg-black/30 p-3"><div className="px-2 py-1 rounded-xl text-[11px] font-black text-center" style={difficultyStyle(setting,true)}>{setting.label}</div>{played?<div className={`mt-2 grid gap-2 text-center ${quick?'grid-cols-2':challenge?'grid-cols-2':'grid-cols-3'}`}>{challenge&&<div><small className="block text-[10px] text-slate-400">挑戦回数</small><strong className="text-[12px] text-white">{attempts}回</strong></div>}{!quick&&<div><small className="block text-[10px] text-slate-400">最高スコア</small><strong className="text-[12px] text-amber-300">{record.score.toLocaleString()} pt</strong></div>}<div><small className="block text-[10px] text-slate-400">最高到達WAVE</small><strong className="text-[12px] text-indigo-200">WAVE {record.wave}</strong></div><div><small className="block text-[10px] text-slate-400">クリア回数</small><strong className="text-[12px] text-emerald-300">{record.clears}回</strong></div></div>:<div className="mt-2 text-center text-[11px] font-black text-slate-400">未記録</div>}</div>})}
                 </div>
               </div>
@@ -44503,7 +44577,7 @@ function BattleScreen({
   const infernoShellRule = specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
   const [infernoShellFx, setInfernoShellFx] = useState(null);
   // 必殺技・ためる・貫通の予告の札(画面の上から11%に固定)は、層のゲージと同じ高さに来るので、ゲージが出ている間はゲージの高さぶん下げる
-  //   (2026-10-31 社長「ゲージの下の層にかからないように」)。背の低い画面・横向きはゲージがライフの帯の中の細い1本なので、その分だけ下げる
+  //   (2026-10-31 社長「ゲージの下の層にかからないように」)。背の低い画面はゲージがライフの帯の中の細い1本なので16pxだけ、横向きは画面が低く上の飾り(✨☠️)が細い1本にかかるので56px下げる
   const infernoFloatShift = infernoShellView?.total>0 ? infernoShellView.total*15+8 : 0;
   const infernoFloatTop = infernoFloatShift ? `calc(11% + ${infernoFloatShift}px)` : '11%';
   const infernoShellSeqRef = useRef({ key:null, seq:0 });
@@ -45167,13 +45241,13 @@ function BattleScreen({
               </div>,document.body
             )}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='SPECIAL'&&(
-              <div data-battle-float className={`fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift?' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+16px)]':''}`} style={{top:infernoFloatTop,zIndex:65000,animation:'specialWarnFlash 500ms ease-in-out infinite'}}>
+              <div data-battle-float className={`fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift?' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+56px)]':''}`} style={{top:infernoFloatTop,zIndex:65000,animation:'specialWarnFlash 500ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(217,70,239,1)]">☠️</div>
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-purple-900 via-fuchsia-700 to-purple-900 border-2 border-fuchsia-300 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(217,70,239,0.9)]">必 殺 技</div>
               </div>
             )}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='CHARGE'&&(
-              <div data-battle-float className={`fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift?' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+16px)]':''}`} style={{top:infernoFloatTop,zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
+              <div data-battle-float className={`fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift?' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+56px)]':''}`} style={{top:infernoFloatTop,zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(251,191,36,1)]">✨</div>
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-900 via-amber-600 to-amber-900 border-2 border-amber-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(251,191,36,0.9)]">た め る</div>
               </div>
@@ -45185,7 +45259,7 @@ function BattleScreen({
                 貫通技準備とかがいいかな？」)。予告の帯には敵ごとの技名(「◯◯の構え」)が
                 出るので、そこへ種別の「構え」を重ねると同じ言葉が2つ並んで読みにくかった */}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='PIERCE_CHARGE'&&(
-              <div data-battle-float className={`fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift?' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+16px)]':''}`} style={{top:infernoFloatTop,zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
+              <div data-battle-float className={`fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift?' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+56px)]':''}`} style={{top:infernoFloatTop,zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(244,63,94,1)]">⚔️</div>
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-rose-900 via-rose-600 to-rose-900 border-2 border-rose-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(244,63,94,0.9)]">貫 通 技 準 備</div>
               </div>
@@ -50365,12 +50439,13 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhbt-d-NIGHTMARE{--d-name:#c7d2fe;--d-bg:radial-gradient(90% 55% at 50% 0%,rgba(129,140,248,.45),transparent 62%),linear-gradient(160deg,#1e1b4b,#0b0a24 60%,#020210);--d-mark:rgba(165,180,252,.22);--d-shine:2.4s;--d-ring:#818cf8;--d-ringw:4px;--d-eyebrow:#c7d2fe;--d-go:#c7d2fe}
 .mhbt-d-CHAOS{--d-name:#fbcfe8;--d-bg:radial-gradient(70% 50% at 15% 10%,rgba(236,72,153,.55),transparent 65%),radial-gradient(70% 50% at 90% 95%,rgba(34,211,238,.5),transparent 65%),linear-gradient(160deg,#1a0420,#05010a);--d-mark:rgba(255,255,255,.18);--d-shine:2.1s;--d-ring:#f472b6;--d-ringw:4px;--d-eyebrow:#a5f3fc;--d-go:#fbcfe8}
 .mhbt-d-ULTIMATE{--d-name:#f1f5f9;--d-bg:radial-gradient(90% 55% at 50% 0%,rgba(255,255,255,.35),transparent 60%),linear-gradient(160deg,#334155,#0f172a 55%,#000);--d-mark:rgba(255,255,255,.22);--d-shine:1.9s;--d-ring:#f8fafc;--d-ringw:4px;--d-eyebrow:#e2e8f0;--d-sheen:rgba(255,255,255,.55);--d-go:#e2e8f0}
-.mhbt-d-INFINITY,.mhbt-d-GOD,.mhbt-d-RAGNAROK,.mhbt-d-HELHEIM,.mhbt-d-ETERNAL,.mhbt-d-INFERNO{--d-name:#fef08a;--d-name:#99f6e4;--d-deep:rgba(250,204,21,.25);--d-bg:radial-gradient(2px 2px at 20% 30%,#fff,transparent),radial-gradient(1.5px 1.5px at 70% 20%,#fff,transparent),radial-gradient(1.5px 1.5px at 40% 75%,#fff,transparent),radial-gradient(90% 60% at 50% 0%,rgba(250,204,21,.4),transparent 60%),linear-gradient(160deg,#0c1445,#020617 60%,#000);--d-mark:rgba(253,224,71,.24);--d-shine:1.7s;--d-ring:#facc15;--d-ringw:5px;--d-eyebrow:#fde68a;--d-sheen:rgba(253,224,71,.5);--d-go:#fde68a}
+.mhbt-d-INFINITY,.mhbt-d-GOD,.mhbt-d-RAGNAROK,.mhbt-d-HELHEIM,.mhbt-d-ETERNAL,.mhbt-d-INFERNO,.mhbt-d-COCYTUS{--d-name:#fef08a;--d-name:#99f6e4;--d-deep:rgba(250,204,21,.25);--d-bg:radial-gradient(2px 2px at 20% 30%,#fff,transparent),radial-gradient(1.5px 1.5px at 70% 20%,#fff,transparent),radial-gradient(1.5px 1.5px at 40% 75%,#fff,transparent),radial-gradient(90% 60% at 50% 0%,rgba(250,204,21,.4),transparent 60%),linear-gradient(160deg,#0c1445,#020617 60%,#000);--d-mark:rgba(253,224,71,.24);--d-shine:1.7s;--d-ring:#facc15;--d-ringw:5px;--d-eyebrow:#fde68a;--d-sheen:rgba(253,224,71,.5);--d-go:#fde68a}
 .mhbt-d-GOD{--d-name:#fffbeb;--d-bg:radial-gradient(90% 60% at 50% 0%,rgba(255,255,255,.55),transparent 55%),radial-gradient(80% 50% at 50% 100%,rgba(250,204,21,.45),transparent 65%),linear-gradient(160deg,#78350f,#1c1003 55%,#000);--d-ring:#fff7d6;--d-ringw:6px;--d-shine:1.5s;--d-sheen:rgba(255,255,255,.7);--d-mark:rgba(255,247,214,.28)}
 .mhbt-d-RAGNAROK{--d-name:#fed7aa;--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(239,68,68,.75),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(250,204,21,.45),transparent 65%),linear-gradient(170deg,#3b0505,#120000 55%,#000);--d-ring:#f59e0b;--d-ringw:6px;--d-shine:1.3s;--d-sheen:rgba(254,215,170,.65);--d-mark:rgba(252,165,165,.28);--d-eyebrow:#fed7aa;--d-go:#fed7aa}
 .mhbt-d-HELHEIM{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(45,212,191,.55),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(167,139,250,.45),transparent 65%),linear-gradient(170deg,#042f2e,#020617 55%,#000);--d-ring:#5eead4;--d-ringw:6px;--d-shine:1.2s;--d-sheen:rgba(204,251,241,.6);--d-mark:rgba(153,246,228,.26);--d-eyebrow:#99f6e4;--d-go:#ccfbf1}
 .mhbt-d-ETERNAL{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(236,72,153,.55),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(249,168,212,.45),transparent 65%),linear-gradient(170deg,#3b0a2a,#12030d 55%,#000);--d-ring:#f9a8d4;--d-ringw:6px;--d-shine:1.1s;--d-sheen:rgba(252,231,243,.6);--d-mark:rgba(249,168,212,.26);--d-eyebrow:#f9a8d4;--d-go:#fce7f3}
 .mhbt-d-INFERNO{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(249,115,22,.6),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(253,186,116,.45),transparent 65%),linear-gradient(170deg,#431407,#120502 55%,#000);--d-ring:#fdba74;--d-ringw:6px;--d-shine:1.0s;--d-sheen:rgba(255,237,213,.6);--d-mark:rgba(253,186,116,.28);--d-eyebrow:#fdba74;--d-go:#ffedd5}
+.mhbt-d-COCYTUS{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(103,232,249,.5),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(224,242,254,.45),transparent 65%),linear-gradient(170deg,#082f49,#020617 55%,#000);--d-ring:#a5f3fc;--d-ringw:6px;--d-shine:0.9s;--d-sheen:rgba(240,249,255,.65);--d-mark:rgba(165,243,252,.3);--d-eyebrow:#a5f3fc;--d-go:#e0f2fe}
 @keyframes mhbtRainbow{from{background-position:0% 0}to{background-position:300% 0}}
 @media (prefers-reduced-motion:reduce){.mhbt-tile::after,.mhbt-d-Legend::before{animation:none!important}}
 .mhbt-go::after{content:" ▶";font-size:11px;font-style:normal}
@@ -53683,12 +53758,14 @@ const assistantChatMonsterIds = (text, prevUserText) => {
 //   ・その発言にランキングの言葉やモードが無ければ、すぐ前のプレイヤーの発言(2つまで)から話題・モード・難易度を引き継ぐ
 //     (中継役も、すぐ前の発言にランキングの言葉があれば読む。ranking.js の rankingTopicOf)
 const ASSISTANT_CHAT_RANKING_TOPIC = /ランキング|ランク(?:イン|上位)|順位|何位|なんい|[0-9０-９一二三四五]+位|トップ|上位|首位|一番(?:上|強い|高い)|いちばん(?:上|強い|高い)/;
-// 1回に読むランキングの数。チャレンジの全部(通常9+極限10)が入る数。中継役の RANKING_PLAN_MAX と同じ
-const ASSISTANT_CHAT_RANKING_MAX = 19;
+// 1回に読むランキングの数。チャレンジの全部(通常9+極限11)が入る数。中継役の RANKING_PLAN_MAX と同じ
+const ASSISTANT_CHAT_RANKING_MAX = 20;
 // 引き継ぐ前の発言の数
 const ASSISTANT_CHAT_RANKING_PREV = 2;
 // 「その種類の難易度を全部」の言葉。英字の EXTREME は難易度そのものの名前なので、ここには入れない(カタカナ・漢字だけ)
 const ASSISTANT_CHAT_RANKING_EXTREME_WORD = /エクストリーム|極限/;
+// 冥界チャレンジ(INFERNO・COCYTUS。2026-11-01)。「冥界のランキング」は冥界の2つ、「極限のランキング」は ETERNAL までの9つを読む
+const ASSISTANT_CHAT_RANKING_UNDERWORLD_WORD = /冥界/;
 const ASSISTANT_CHAT_RANKING_ALL_WORD = /全部|ぜんぶ|全難易度|全ての難易度|すべての難易度|難易度(?:ごと|別|全部)|全部の難易度/;
 const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
   const text = String(rawText || '');
@@ -53747,13 +53824,14 @@ const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
       const hits = modeWords.filter(x => has(x.w));
       const other = hits.find(x => !extremeMode || x.m.id !== extremeMode.id);
       const modeHit = other ? other.m : (hits[0] ? hits[0].m : null);
-      const extreme = ASSISTANT_CHAT_RANKING_EXTREME_WORD.test(raw);
+      const underworld = ASSISTANT_CHAT_RANKING_UNDERWORLD_WORD.test(raw);
+      const extreme = ASSISTANT_CHAT_RANKING_EXTREME_WORD.test(raw) || underworld;
       const all = ASSISTANT_CHAT_RANKING_ALL_WORD.test(raw);
       const diffHit = rhythm && !/バトル/.test(raw) ? null : (diffChoices.find(d => has(d.label)) || null);
       const lineage = lineages.find(l => has(`${l.name}種`)) || lineages.find(l => has(l.name)) || null;
       const battle = /バトル|スコア|チャレンジ|難易度/.test(raw) || !!modeHit || !!diffHit || extreme;
       return {
-        song, rhythm, rhythmDiff, modeHit, extreme, all, diffHit, lineage,
+        song, rhythm, rhythmDiff, modeHit, extreme, underworld, all, diffHit, lineage,
         battle: battle && !(rhythm && !modeHit && !diffHit && !extreme),
         week: /週間|今週/.test(raw), event: /イベント/.test(raw), total: /合算|全曲|総合/.test(raw),
         raid: /ジャック|レイド/.test(raw), breeder: /ブリーダー\s*(?:lv|ＬＶ|レベル)|ブリーダーlv/i.test(String(raw).normalize('NFKC')),
@@ -53775,7 +53853,7 @@ const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
         // 前の話題の種類を使い、難易度の指定はいまの発言を優先する(いまの発言に指定が無ければ前のまま)
         const own = ownSelector;
         c = { ...base, lineage: now.lineage || base.lineage,
-          diffHit: own ? now.diffHit : base.diffHit, extreme: own ? now.extreme : base.extreme, all: own ? now.all : base.all,
+          diffHit: own ? now.diffHit : base.diffHit, extreme: own ? now.extreme : base.extreme, underworld: own ? now.underworld : base.underworld, all: own ? now.all : base.all,
           rhythmDiff: now.rhythmDiff || base.rhythmDiff, inherited: true };
       } else if (!topicNow && !(ownSelector && prevs.some(t => ASSISTANT_CHAT_RANKING_TOPIC.test(t)))) return null;
       // 前の話題に種類が無くても、ランキングの話の続きで「エクストリーム」「全部」などと言われたら、その指定で読む(モードが無ければ下でバトルの既定へ)
@@ -53824,7 +53902,11 @@ const assistantChatRankingPlan = (rawText, prevUserTexts = []) => {
       if (c.extreme && !c.diffHit && !tabs.some(isExtremeId) && extremeMode && modes.some(m => m.id === extremeMode.id)) { mode = extremeMode; tabs = rankingDiffIds(mode); }
       let ids;
       if (c.diffHit) ids = [c.diffHit.id];
-      else if (c.extreme) ids = tabs.filter(isExtremeId);
+      else if (c.extreme) {
+        // 冥界と言われたら INFERNO・COCYTUS、極限だけなら ETERNAL までの9つ(冥界チャレンジは別のタブなので混ぜない)
+        const isUw = (id) => typeof isUnderworldDifficultyId === 'function' && isUnderworldDifficultyId(id);
+        ids = tabs.filter(isExtremeId).filter(id => (c.underworld ? isUw(id) : !isUw(id)));
+      }
       else if (c.all || c.modeHit) ids = tabs;
       else ids = tabs.filter(id => id === 'Normal' || id === 'Master' || id === 'Legend');
       const isSpecies = mode && (mode.id === BATTLE_MODE_SPECIES_CHALLENGE || mode.id === BATTLE_MODE_TACTICS_SPECIES);
@@ -76554,6 +76636,13 @@ function MonsterHeroGame() {
   const extremeRunRef = useRef(false);
   const [extremeRuleOpen, setExtremeRuleOpen] = useState(false);
   const [extremeDifficulty, setExtremeDifficulty] = useState('EXTREME');
+  // 冥界チャレンジのタブを開いたか(一度きりの NEW の札に使う・2026-11-01 の新しいキー)。読み込むまでは見たことにして、札を出しっぱなしにしない
+  const UNDERWORLD_TAB_SEEN_KEY = 'mh_underworld_tab_seen_v1';
+  const [underworldTabSeen, setUnderworldTabSeen] = useState(true);
+  useEffect(() => { (async () => {
+    try { setUnderworldTabSeen((await storeGet(UNDERWORLD_TAB_SEEN_KEY, false, false)) === true); } catch (e) { setUnderworldTabSeen(true); }
+  })(); }, []);
+  const markUnderworldTabSeen = () => { if (underworldTabSeen) return; setUnderworldTabSeen(true); storeSet(UNDERWORLD_TAB_SEEN_KEY, true, false); };
   // ★タクティクスバトルの記録を分ける難易度。極限で遊ぶと difficulty は 'Normal' へ
   //   置き換わる(極限チャレンジ・種族チャレンジと同じ作り)ので、そのときだけ
   //   extremeDifficulty を使う。自己ベスト・クリア回数・最高到達WAVE・ランキングの
@@ -76814,8 +76903,15 @@ function MonsterHeroGame() {
   const eternalUnlocked = useMemo(() => isEternalUnlocked(helheimClearCount), [helheimClearCount]);
   const eternalClearCount = extremeClearCounts[ETERNAL_SETTING.id] || 0;
   const infernoUnlocked = useMemo(() => isInfernoUnlocked(eternalClearCount), [eternalClearCount]);
+  const infernoClearCount = extremeClearCounts[INFERNO_SETTING.id] || 0;
+  const cocytusUnlocked = useMemo(() => isCocytusUnlocked(infernoClearCount), [infernoClearCount]);
+  // 冥界チャレンジのタブ(INFERNO・COCYTUS)は ETERNAL クリアで開く
+  const underworldUnlocked = useMemo(() => isUnderworldUnlocked(eternalClearCount), [eternalClearCount]);
   // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
-  const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
+  // 冥界チャレンジのタブを開いた最初の1回は「冥界の一言」(underworldTab)。カードを INFERNO から動かすか、タブを離れたら難易度ごとのセリフへ
+  const [underworldIntroDone, setUnderworldIntroDone] = useState(false);
+  useEffect(() => { if (extremeDifficulty !== 'INFERNO') setUnderworldIntroDone(true); }, [extremeDifficulty]);
+  const extremeDifficultyAssistantScene = isUnderworldDifficultyId(extremeDifficulty) && !underworldIntroDone ? 'underworldTab' : `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
   const activeExtremeBattleSetting = activeExtremeSetting;
   // クイックのEXTREME/NIGHTMAREは通常難易度表に存在しない。カルーセルのonScrollで
@@ -86474,18 +86570,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 撃破ロック(enemyDefeatResolvedRef)はまだ立てない。ここで立てると、起き上がった敵を
     // もう一度倒したときにWAVEクリアが確定しなくなる。
     const revivalDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
-    const revived=extremeRevivedEnemyStats(enemy,revivalDifficulty,wave,enemyRevivalUsedRef.current);
+    // そのターンに割れた枚数や、前の蘇りで大きくなった最大ライフ(COCYTUS)は、描くたびに追いつく控えから読む
+    const revived=extremeRevivedEnemyStats(enemyLiveRef.current||enemy,revivalDifficulty,wave,enemyRevivalUsedRef.current);
     if (revived) {
       enemyRevivalUsedRef.current=revived.revivalNumber;
       setEnemyRevivalUsed(revived.revivalNumber);
       enemyRevivedHpRef.current=revived.hp;
       setEnemySkillName(null);
       Audio_.se.enemySpecial();
-      setEnemy(prev=>prev?{...prev,hp:revived.hp,atk:revived.atk,atkBeforeRoar:revived.atk}:prev); // 復活後の攻撃力を、詳細に出す元の値にもする
-      setEnemyRevivalReveal({revivalNumber:revived.revivalNumber,remaining:revived.remaining});
-      addPopup('死者の再起！','enemy','text-slate-100 font-black text-3xl drop-shadow-[0_0_18px_rgba(148,163,184,0.9)]');
+      setEnemy(prev=>prev?{...prev,hp:revived.hp,atk:revived.atk,atkBeforeRoar:revived.atk,...(revived.maxHp?{maxHp:revived.maxHp}:{})}:prev); // 復活後の攻撃力を、詳細に出す元の値にもする。COCYTUSは最大ライフも大きくなる
+      // COCYTUSは札に出す名前・説明と、見た目の段(stage: durahan / moo1 / moo2)、難易度(rule)と敵(enemyId)を渡す(71 は rule と enemyId・revivalNumber で段を決める)。無ければ今までの「死者の再起」
+      setEnemyRevivalReveal({revivalNumber:revived.revivalNumber,remaining:revived.remaining,...(revived.reveal?{name:revived.reveal.name,desc:revived.reveal.desc,stage:revived.reveal.stage,rule:revivalDifficulty,enemyId:(enemyLiveRef.current||enemy)?.id}:{})});
+      addPopup(revived.reveal?`${revived.reveal.name}！`:'死者の再起！','enemy','text-slate-100 font-black text-3xl drop-shadow-[0_0_18px_rgba(148,163,184,0.9)]');
       triggerShake(true);
-      await battleWait(1600);
+      await battleWait(revived.reveal?4600:1600); // COCYTUSは氷の3段の演出(3秒・71 の COCYTUS_REVIVE_FX_MS)のあとに札を出すので、そのぶん待つ
       setEnemyRevivalReveal(null);
       return false;
     }
@@ -89328,7 +89426,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       newEnemy.shell=layerPlan.layers[0]; newEnemy.maxShell=layerPlan.layers[0];
       newEnemy.shellLayers=layerPlan.layers.slice(1); newEnemy.shellLayerMaxes=layerPlan.layers;
       newEnemy.shellLayerTotal=layerPlan.layers.length; newEnemy.shellBroken=0; newEnemy.shellBreakSeq=0;
-      newEnemy.layerAtkBase=newEnemy.atk; newEnemy.layerAtkGain=layerPlan.atkGain;
+      newEnemy.layerAtkBase=newEnemy.atk; newEnemy.layerAtkGain=layerPlan.atkGain; newEnemy.shellBoss=layerPlan.boss;
     } else {
       const shell=raidRun||scenario?0:extremeEnemyShellAmount(newEnemy.maxHp,specialRuleDifficulty,w);
       if (shell>0) { newEnemy.shell=shell; newEnemy.maxShell=shell; }
@@ -91701,7 +91799,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       <div data-score-ranking-tabs className="flex gap-1.5 overflow-x-auto pb-2 shrink-0">{rankingTabs.map(([d,st])=>{
         const on=rankingViewDiff===d;
         const extremeTab=isExtremeDifficultyId(d);
-        return <button key={d} onClick={()=>{setRankingViewDiff(d);loadRankings(keyOf(d));}} className={`px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${on?'ring-2 ring-white':'border border-white/10'}`} style={extremeTab?{backgroundColor:extremeDifficultyTheme(d).accent,color:'#0f172a'}:difficultyStyle(st,on)}>{st.label}</button>;
+        return <button key={d} onClick={()=>{setRankingViewDiff(d);loadRankings(keyOf(d));}} className={`px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${on?'ring-2 ring-white':'border border-white/10'}`} style={extremeTab?{backgroundColor:extremeDifficultyTheme(d).accent,color:'#0f172a'}:difficultyStyle(st,on)} data-underworld-rank={isUnderworldDifficultyId(d)?'1':undefined}>{isUnderworldDifficultyId(d)&&<span aria-hidden="true">🛡</span>}{st.label}</button>;
       })}</div>
       <div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{status.refreshing&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{status.error&&status.fetched&&<div className="text-center text-[9px] text-amber-300">{status.error}</div>}{rows.map(renderScoreRankingEntry)}{rows.length===0&&(status.loading?<div className="text-center text-slate-400 py-8">Loading...</div>:status.error&&!status.fetched?rankingRetryButton(()=>loadRankings(viewKey,false,true)):rankingEmptyText)}</div>
     </>;
@@ -92664,7 +92762,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className={`relative shrink-0${battleTutorialSpotClass('modeCards')}`}>
                   <button aria-label="前のモード" onClick={()=>stepMode(-1)} className="mhbs-arrow absolute left-0 top-[42%] z-20"><ChevronLeft size={18}/></button>
                   <div ref={modeCarouselRef} onScroll={()=>{const index=centeredLoopIndex();const picked=loopModes[index];if(picked&&picked.id!==current.id)setBattleMode(picked.id);if(modeLoopTimerRef.current)clearTimeout(modeLoopTimerRef.current);modeLoopTimerRef.current=setTimeout(recenterModeLoop,180);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain pt-1 pb-4 mh-scroll max-[359px]:!px-[4%]" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-                    {loopModes.map((m,loopIndex)=>{const active=m.id===current.id,isExtreme=m.id===EXTREME_MODE.id,isSpecies=isSpeciesChallengeMode(m.id),modeSoon=battleModeComingSoon(m.id,{debugBattle}),extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle,speciesLocked=isSpecies&&!speciesChallengeUnlocked&&!debugBattle,rec=isExtreme?{score:highestModeScore(extremeBestScores,PUBLIC_EXTREME_DIFFICULTIES.map(setting=>setting.id)),wave:0,clears:extremeClearCount}:modeRecordFor(m.id,safeDifficulty),ranked=!isExtreme&&!isSpecies&&modeHasRanking(m.id),modeBestScore=ranked?highestModeScore(isTacticsMode(m.id)?tacticsRecordsOf(m.id).hs:isProMode(m.id)?proHighScores:highScores,isTacticsMode(m.id)?TACTICS_DIFFICULTY_IDS:Object.keys(DIFFICULTY_SETTINGS)):rec.score;return (
+                    {loopModes.map((m,loopIndex)=>{const active=m.id===current.id,isExtreme=m.id===EXTREME_MODE.id,isSpecies=isSpeciesChallengeMode(m.id),modeSoon=battleModeComingSoon(m.id,{debugBattle}),extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle,speciesLocked=isSpecies&&!speciesChallengeUnlocked&&!debugBattle,rec=isExtreme?{score:highestModeScore(extremeBestScores,PUBLIC_EXTREME_TAB_DIFFICULTIES.map(setting=>setting.id)),wave:0,clears:extremeClearCount}:modeRecordFor(m.id,safeDifficulty),ranked=!isExtreme&&!isSpecies&&modeHasRanking(m.id),modeBestScore=ranked?highestModeScore(isTacticsMode(m.id)?tacticsRecordsOf(m.id).hs:isProMode(m.id)?proHighScores:highScores,isTacticsMode(m.id)?TACTICS_DIFFICULTY_IDS:Object.keys(DIFFICULTY_SETTINGS)):rec.score;return (
                       <article key={`${m.id}-${loopIndex}`} data-battle-mode={m.id} className={`mhbt-tile snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[366px] px-4 pt-3.5 pb-4 [@media(orientation:landscape)_and_(max-height:520px)]:h-auto [@media(orientation:landscape)_and_(max-height:520px)]:pt-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:pb-3 [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:520px)]:content-start transition-all flex flex-col ${active?'on scale-100 opacity-100':'scale-[.92] opacity-45'}`} style={{'--acc':m.color}}>
                         <span aria-hidden="true" className="mhbt-mark">{String(m.id).replace(/([A-Z])/g,' $1').toUpperCase()}</span>
                         <div className="mhbt-eyebrow">BATTLE MODE</div>
@@ -92709,16 +92807,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {gameState==='EXTREME_DIFFICULTY_SELECT'&&(()=>{
           // 公開中の極限難易度を並べる。バトルデバッグも同じ導線を使い、保存だけを無効化する。
-          const difficulties=ALL_EXTREME_DIFFICULTIES.filter(setting=>setting.available||(debugBattle&&setting.debugAvailable));
+          // ★冥界チャレンジ(INFERNO・COCYTUS)は同じ画面で「冥界」タブとして出す。どちらのタブかは選んでいる難易度で決める
+          //   (状態を別に持たない。戻ってきたときも前のタブのまま開く)。記録・ランキングは難易度の名前のままなので変わらない
+          const underworldTab=isUnderworldDifficultyId(extremeDifficulty);
+          const difficulties=ALL_EXTREME_DIFFICULTIES.filter(setting=>(setting.available||(debugBattle&&setting.debugAvailable))&&isUnderworldDifficultyId(setting.id)===underworldTab);
+          const underworldOpen=underworldUnlocked||debugBattle;
           const selectedIndex=Math.max(0,difficulties.findIndex(setting=>setting.id===extremeDifficulty));
           const selectDifficultyIndex=(index,behavior='smooth')=>{const safe=Math.max(0,Math.min(difficulties.length-1,index));setExtremeDifficulty(difficulties[safe].id);centerCarouselChild(modeDifficultyCarouselRef.current,safe,behavior);};
           return (
-          <div data-mh-screen className="mhms-stage mhbs-screen relative overflow-hidden flex-1 flex flex-col h-full min-h-0 px-4 text-white" data-extreme-difficulties style={{paddingTop:'.35rem',paddingBottom:'.35rem'}}>
+          <div data-mh-screen className="mhms-stage mhbs-screen relative overflow-hidden flex-1 flex flex-col h-full min-h-0 px-4 text-white" data-extreme-difficulties data-underworld={underworldTab?'1':undefined} style={{paddingTop:'.35rem',paddingBottom:'.35rem'}}>
             <RhythmModeSelectStage notes={false}/>
             {/* ★極限チャレンジがモードのカードだった頃は、カードの「このモードの説明」から読めた。
                  チャレンジの極限タブへ入れ込んだとき(2026-09-19)に入口ごと無くなっていたので、ここへ置き直す。
                  説明の中身は EXTREME_MODE の points。モードの説明モーダルをそのまま使う */}
-            <BattleScreenHead eyebrow="EXTREME CHALLENGE ・ SELECT LEVEL" title="極限チャレンジ" accent="text-fuchsia-300" onBack={()=>setGameState('BATTLE_MODE_SELECT')}
+            <BattleScreenHead eyebrow={underworldTab?'UNDERWORLD CHALLENGE ・ SELECT LEVEL':'EXTREME CHALLENGE ・ SELECT LEVEL'} title={underworldTab?'冥界チャレンジ':'極限チャレンジ'} accent={underworldTab?'text-cyan-200':'text-fuchsia-300'} onBack={()=>setGameState('BATTLE_MODE_SELECT')}
               right={<button data-extreme-mode-info aria-label="極限チャレンジの説明を開く" onClick={()=>setModeInfoId(EXTREME_MODE.id)} className="shrink-0 min-h-[38px] px-3 max-[359px]:px-2.5 rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-95">{/* 幅の狭い画面では「説明」だけにして、見出しの「極限チャレンジ」を切らない(320 で「極限チャレ…」。2026-10-27 ジン部長の見回り) */}<span className="max-[359px]:hidden">このモードの</span>説明</button>}/>
             {/* 横向きの背の低い画面(844×390 など)では、札を左右2列(左=記録・倍率/右=説明・特殊ルール・ボタン)にして、
                 「この難易度で挑戦」まで最初から見えるようにする(画面の下へ出て押せなかった。難易度えらび #3790 と同じ形。2026-10-27 ジン部長の見回り) */}
@@ -92728,30 +92830,41 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     極限チャレンジはチャレンジの極限タブとして入れ込んだので、
                     ここから通常の9段階へ戻れないと行き来できない(2026-09-19 ユーザー指示)。
                     どちらの画面も同じ横カルーセルなので、遊ぶ側にはタブの切り替えに見える */}
-                <div data-difficulty-tabs className="mhbs-tabs grid-cols-2 w-full shrink-0 mb-1.5">
-                  {[[DIFFICULTY_TAB_NORMAL,'通常'],[DIFFICULTY_TAB_EXTREME,'極限']].map(([tabId,tabLabel])=>{
-                    const on=tabId===DIFFICULTY_TAB_EXTREME;
-                    return <button key={tabId} aria-pressed={on} onClick={()=>{
-                      if(on)return;
-                      battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';
-                      setBattleMode(BATTLE_MODE_CHALLENGE);
-                      setGameState('BATTLE_DIFFICULTY_SELECT');
-                    }} className={`mhbs-tab text-[12px] active:scale-95 ${on?'on x':''}`}>{tabLabel}<span className="ml-1 text-[9px] opacity-75">{on?difficulties.length:Object.keys(DIFFICULTY_SETTINGS).length}</span></button>;
+                {/* 冥界チャレンジ(2026-11-01 社長の決定・案1)で「通常 / 極限 / 冥界」の3つにした。
+                    冥界は ETERNAL クリアで開く。開く前もタブは出して押せなくする(何があるのか分かるように) */}
+                <div data-difficulty-tabs className="mhbs-tabs grid-cols-3 w-full shrink-0 mb-1.5">
+                  {[[DIFFICULTY_TAB_NORMAL,'通常'],[DIFFICULTY_TAB_EXTREME,'極限'],[UNDERWORLD_TAB_ID,'冥界']].map(([tabId,tabLabel])=>{
+                    const isUw=tabId===UNDERWORLD_TAB_ID;
+                    const on=isUw?underworldTab:(tabId===DIFFICULTY_TAB_EXTREME&&!underworldTab);
+                    const locked=isUw&&!underworldOpen;
+                    const count=tabId===DIFFICULTY_TAB_NORMAL?Object.keys(DIFFICULTY_SETTINGS).length:isUw?PUBLIC_UNDERWORLD_DIFFICULTIES.length:PUBLIC_EXTREME_TAB_DIFFICULTIES.length;
+                    return <button key={tabId} aria-pressed={on} disabled={locked} data-difficulty-tab={tabId} data-underworld-new={isUw&&underworldOpen&&!underworldTabSeen?'1':undefined} onClick={()=>{
+                      if(on||locked)return;
+                      if(tabId===DIFFICULTY_TAB_NORMAL){
+                        battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';
+                        setBattleMode(BATTLE_MODE_CHALLENGE);
+                        setGameState('BATTLE_DIFFICULTY_SELECT');
+                        return;
+                      }
+                      if(isUw){ markUnderworldTabSeen(); setExtremeDifficulty(PUBLIC_UNDERWORLD_DIFFICULTIES[0]?.id||'INFERNO'); }
+                      else setExtremeDifficulty(PUBLIC_EXTREME_TAB_DIFFICULTIES[PUBLIC_EXTREME_TAB_DIFFICULTIES.length-1]?.id||'EXTREME');
+                      requestAnimationFrame(()=>centerCarouselChild(modeDifficultyCarouselRef.current,isUw?0:PUBLIC_EXTREME_TAB_DIFFICULTIES.length-1,'auto'));
+                    }} className={`mhbs-tab text-[12px] active:scale-95 disabled:opacity-40 ${isUw?'uw':''} ${on?'on x':''}`}>{isUw&&<span aria-hidden="true" className="mr-0.5">🛡</span>}{tabLabel}<span className="ml-1 text-[9px] opacity-75">{locked?'🔒':count}</span></button>;
                   })}
                 </div>
                 <div className="mhbs-hint mt-auto mb-1 shrink-0">左右にスワイプして難易度をえらぶ</div>
                 <div className="relative shrink-0">
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="mhbs-arrow absolute left-0 top-[42%] z-20 disabled:opacity-20"><ChevronLeft size={18}/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.id!==extremeDifficulty)setExtremeDifficulty(difficulties[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll max-[359px]:!px-[4%]" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:setting.id==='HELHEIM'?helheimUnlocked:setting.id==='ETERNAL'?eternalUnlocked:setting.id==='INFERNO'?infernoUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;const theme=extremeDifficultyTheme(setting.id);const heroProofReward=heroProofClearReward({extremeDifficulty:setting.id});return (
-                      <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} className={`mhbt-tile mhbt-d-${setting.id} dark snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[400px] flex flex-col px-4 pt-3 pb-2.5 transition-all ${active?'on scale-100 opacity-100':'scale-[.92] opacity-45'} ${previewable?'':'dim'}`} style={{'--acc':theme.accent}}>
+                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:setting.id==='HELHEIM'?helheimUnlocked:setting.id==='ETERNAL'?eternalUnlocked:setting.id==='INFERNO'?infernoUnlocked:setting.id==='COCYTUS'?cocytusUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;const theme=extremeDifficultyTheme(setting.id);const heroProofReward=heroProofClearReward({extremeDifficulty:setting.id});return (
+                      <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} data-underworld-card={underworldTab?setting.id:undefined} data-shield-layers={underworldTab?underworldShieldLayerRange(setting.id):undefined} className={`mhbt-tile mhbt-d-${setting.id} dark snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[400px] flex flex-col px-4 pt-3 pb-2.5 transition-all ${active?'on scale-100 opacity-100':'scale-[.92] opacity-45'} ${previewable?'':'dim'}`} style={{'--acc':theme.accent}}>
                         <span aria-hidden="true" className="mhbt-mark">{setting.label}</span>
                         <div className="mhbt-eyebrow">EXTREME DIFFICULTY</div>
                         <h3 className="mhbt-name truncate text-[22px]">{setting.label}</h3>
                         <div className="mt-1 h-[42px] shrink-0 rounded-xl bg-black/40 px-2.5 py-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,.12)]">
                           <small className="block text-[8px] text-white/70 font-black">{setting.available?`${setting.label}の記録`:'難易度情報'}</small>
                           <b className="block text-right text-base italic leading-tight text-white">{setting.available&&unlocked?`${(extremeBestScores[setting.id]||0).toLocaleString()} pt`:'？？？'}</b>
-                          <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':setting.id==='ULTIMATE'&&!ultimateUnlocked?'CHAOSクリアで解放':setting.id==='INFINITY'&&!infinityUnlocked?'ULTIMATEクリアで解放':setting.id==='GOD'&&!godUnlocked?'INFINITYクリアで解放':setting.id==='RAGNAROK'&&!ragnarokUnlocked?'GODクリアで解放':setting.id==='HELHEIM'&&!helheimUnlocked?'RAGNAROKクリアで解放':setting.id==='ETERNAL'&&!eternalUnlocked?'HELHEIMクリアで解放':setting.id==='INFERNO'&&!infernoUnlocked?'ETERNALクリアで解放':'選択できません'}</span>
+                          <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':setting.id==='ULTIMATE'&&!ultimateUnlocked?'CHAOSクリアで解放':setting.id==='INFINITY'&&!infinityUnlocked?'ULTIMATEクリアで解放':setting.id==='GOD'&&!godUnlocked?'INFINITYクリアで解放':setting.id==='RAGNAROK'&&!ragnarokUnlocked?'GODクリアで解放':setting.id==='HELHEIM'&&!helheimUnlocked?'RAGNAROKクリアで解放':setting.id==='ETERNAL'&&!eternalUnlocked?'HELHEIMクリアで解放':setting.id==='INFERNO'&&!infernoUnlocked?'ETERNALクリアで解放':setting.id==='COCYTUS'&&!cocytusUnlocked?'INFERNOクリアで解放':'選択できません'}</span>
                         </div>
                         {previewable?<>
                           <div className="grid grid-cols-3 gap-1 mt-1">{[['敵強度',`×${setting.power}`],['スコア',setting.score?`×${setting.score}`:'対象外'],['ダイヤ',setting.gold?`×${setting.gold}`:'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
@@ -92852,18 +92965,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {/* 難易度の「通常 / 極限」タブ。クイックは15段階、種族チャレンジは14段階あり、
                     一続きに並べると目当ての難易度まで遠い(2026-09-19 ユーザー指示)。
                     極限を持たないモードでは出さないので、これまでどおり1つの並びに見える */}
-                {hasExtremeTab&&<div data-difficulty-tabs className="mhbs-tabs grid-cols-2 w-full shrink-0 mb-1.5">
-                  {[[DIFFICULTY_TAB_NORMAL,'通常'],[DIFFICULTY_TAB_EXTREME,'極限']].map(([tabId,tabLabel])=>{
+                {/* チャレンジは「通常 / 極限 / 冥界」の3つ(冥界チャレンジ・2026-11-01)。ほかのモードは今までどおり2つ */}
+                {hasExtremeTab&&<div data-difficulty-tabs className={`mhbs-tabs ${challengeExtremeTab?'grid-cols-3':'grid-cols-2'} w-full shrink-0 mb-1.5`}>
+                  {[[DIFFICULTY_TAB_NORMAL,'通常'],[DIFFICULTY_TAB_EXTREME,'極限'],...(challengeExtremeTab?[[UNDERWORLD_TAB_ID,'冥界']]:[])].map(([tabId,tabLabel])=>{
                     const on=activeDifficultyTab===tabId;
+                    const isUw=tabId===UNDERWORLD_TAB_ID;
                     const toExtreme=tabId===DIFFICULTY_TAB_EXTREME;
                     const group=toExtreme?difficultyGroups.extreme:difficultyGroups.normal;
-                    // チャレンジの極限は専用画面へ移る。解放前は押せないが、タブ自体は出す
+                    // チャレンジの極限・冥界は専用画面へ移る。解放前は押せないが、タブ自体は出す
                     // (何があるのか分かるようにするため。モードのカードもそうしていた)
-                    const jumps=challengeExtremeTab&&toExtreme;
-                    const locked=jumps&&!extremeUnlocked&&!debugBattle;
-                    const count=jumps?PUBLIC_EXTREME_DIFFICULTIES.length:group.length;
-                    return <button key={tabId} aria-pressed={on} disabled={locked} onClick={()=>{
+                    const jumps=challengeExtremeTab&&(toExtreme||isUw);
+                    const locked=jumps&&(isUw?!underworldUnlocked:!extremeUnlocked)&&!debugBattle;
+                    const count=isUw?PUBLIC_UNDERWORLD_DIFFICULTIES.length:jumps?PUBLIC_EXTREME_TAB_DIFFICULTIES.length:group.length;
+                    return <button key={tabId} aria-pressed={on} disabled={locked} data-difficulty-tab={tabId} data-underworld-new={isUw&&(underworldUnlocked||debugBattle)&&!underworldTabSeen?'1':undefined} onClick={()=>{
                       if(jumps){
+                        // どちらのタブを開くかは選んでいる難易度で決まる(極限の画面と同じ)。押したタブの難易度へそろえてから移る
+                        if(isUw){ markUnderworldTabSeen(); if(!isUnderworldDifficultyId(extremeDifficulty))setExtremeDifficulty(PUBLIC_UNDERWORLD_DIFFICULTIES[0]?.id||'INFERNO'); }
+                        else if(isUnderworldDifficultyId(extremeDifficulty))setExtremeDifficulty(PUBLIC_EXTREME_TAB_DIFFICULTIES[PUBLIC_EXTREME_TAB_DIFFICULTIES.length-1]?.id||'EXTREME');
                         battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';
                         setGameState('EXTREME_DIFFICULTY_SELECT');
                         return;
@@ -92873,7 +92991,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       // 切り替えた先の先頭を選ぶ。選びっぱなしにすると、見えていない難易度のまま
                       // 「この難易度で挑戦」を押せてしまう
                       if(group[0])chooseDifficulty(group[0][0]);
-                    }} className={`mhbs-tab text-[12px] active:scale-95 disabled:opacity-40 ${on?(toExtreme?'on x':'on'):''}`}>{tabLabel}<span className="ml-1 text-[9px] opacity-75">{locked?'🔒':count}</span></button>;
+                    }} className={`mhbs-tab text-[12px] active:scale-95 disabled:opacity-40 ${isUw?'uw':''} ${on?(toExtreme?'on x':'on'):''}`}>{isUw&&<span aria-hidden="true" className="mr-0.5">🛡</span>}{tabLabel}<span className="ml-1 text-[9px] opacity-75">{locked?'🔒':count}</span></button>;
                   })}
                 </div>}
                 {/* 極限タブが押せない理由を出す。タブの中は「極限 🔒」しか入らないので、

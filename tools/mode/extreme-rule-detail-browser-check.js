@@ -95,7 +95,8 @@ const cardsInfo = () => [...document.querySelectorAll('[data-extreme-difficulty-
     // カードは未解放のぶんも「？？？」で並ぶ。枚数は公開中の難易度の数と一致していればよい
     // (難易度が増えるたびに数字を書き換えなくて済むよう、実装の一覧から数える)
     const publicIds = (source.match(/const EXTREME_DIFFICULTIES = Object\.freeze\(\[[\s\S]*?const ALL_EXTREME_DIFFICULTIES = [^\n]+/) || [''])[0]
-      .match(/\{ id:'([A-Z]+)'[^\n]*available:true/g)?.map(text => text.match(/id:'([A-Z]+)'/)[1]) || [];
+      .match(/\{ id:'([A-Z]+)'[^\n]*available:true/g)?.filter(text => !text.includes("tab:'underworld'")).map(text => text.match(/id:'([A-Z]+)'/)[1]) || [];
+// ↑ 2026-11-01 冥界チャレンジ: tab:'underworld' の難易度(INFERNO・COCYTUS)は冥界タブへ分けたので、極限の並びから除く
     check(`極限の難易度カードが${publicIds.length}枚出る`, cards.length === publicIds.length, cards.map(c => c.id).join(', '));
     check('INFINITYのカードがある', cards.some(c => c.id === 'INFINITY'));
     check('ULTIMATEクリア済みならINFINITYのルール詳細を押せる',
