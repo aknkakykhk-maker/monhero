@@ -9909,6 +9909,12 @@ const STORY_GUEST_SPEAKERS = [
   // ソラシドの加入のお話(2026-10-27)に出る新モンスター2体。絵は data/images/images-ally.js の全身の絵。人の言葉は話さず、鳴き声としぐさだけ
   { id: 'kyubi', name: 'キュービ', role: 'ゲスト', emoji: '🦊', accent: '#f59e0b', image: (typeof KYUBI_IMG !== 'undefined' ? KYUBI_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
   { id: 'orihime', name: 'オリヒメ', role: 'ゲスト', emoji: '🎐', accent: '#93c5fd', image: (typeof ORIHIME_IMG !== 'undefined' ? ORIHIME_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
+  // イベント「鍵の向こう側へ ～パンドラとふたつの翼～」(2026-11-02)のパンドラ。立ち絵はゲームのモンスターの全身の絵。
+  //   pandora_shadow … 正体が分かる前の影(名前は「？？？」)。pandora_angel / pandora_devil … 天使側・悪魔側に分かれる場面の全身の絵
+  { id: 'pandora', name: 'パンドラ', role: 'ゲスト', emoji: '🗝️', accent: '#c084fc', image: (typeof PANDORA_IMG !== 'undefined' ? PANDORA_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
+  { id: 'pandora_shadow', name: '？？？', role: 'ゲスト', emoji: '🗝️', accent: '#6b21a8', image: (typeof PANDORA_SHADOW_IMG !== 'undefined' ? PANDORA_SHADOW_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
+  { id: 'pandora_angel', name: 'パンドラ', role: 'ゲスト', emoji: '🤍', accent: '#fde68a', image: (typeof PANDORA_ANGEL_IMG !== 'undefined' ? PANDORA_ANGEL_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
+  { id: 'pandora_devil', name: 'パンドラ', role: 'ゲスト', emoji: '🖤', accent: '#7c3aed', image: (typeof PANDORA_DEVIL_IMG !== 'undefined' ? PANDORA_DEVIL_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
 ];
 
 // ===== ぱんぷきん×ジャックのストーリー(第1.5部〜終章) =====

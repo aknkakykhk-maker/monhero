@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "72526afb209d",
-  "packs": {"beat":{"bytes":112353991,"count":96},"battle":{"bytes":121361773,"count":749},"card":{"bytes":34095815,"count":962},"all":{"bytes":267811579,"count":1807},"core":{"bytes":15896981,"count":22}},
+  "id": "66ae9913bcdf",
+  "packs": {"beat":{"bytes":112353991,"count":96},"battle":{"bytes":121402378,"count":750},"card":{"bytes":34095815,"count":962},"all":{"bytes":267852184,"count":1808},"core":{"bytes":15901419,"count":22}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -1332,7 +1332,7 @@
     "images/events/monbeat-event-2026-09-17.jpg": {"v":"29df7296db9b","size":146816,"pack":"battle"},
     "images/events/orihime-dye-preview.jpg": {"v":"fee8c692d78b","size":119964,"pack":"battle"},
     "images/events/orihime-profile.jpg": {"v":"901fad80f508","size":135278,"pack":"battle"},
-    "images/events/pandora-wings-2026-wide.jpg": {"v":"91a40957576b","size":136074,"pack":"battle"},
+    "images/events/pandora-wings-2026-wide.jpg": {"v":"f5e3cb59d945","size":136239,"pack":"battle"},
     "images/events/pandora-wings-2026.jpg": {"v":"7b0d6c712d52","size":160196,"pack":"battle"},
     "images/events/raid-jack-2026.jpg": {"v":"457b5b91355d","size":118640,"pack":"battle"},
     "images/events/spooky-dye-preview.jpg": {"v":"5f2023b32279","size":67687,"pack":"battle"},
@@ -1659,6 +1659,7 @@
     "images/monsters/pandora-angel.PNG": {"v":"d3dedf0b3d90","size":97696,"pack":"battle"},
     "images/monsters/pandora-devil.PNG": {"v":"5ce010729f00","size":91813,"pack":"battle"},
     "images/monsters/pandora-dye-mask.PNG": {"v":"3bacac1187f6","size":32072,"pack":"battle"},
+    "images/monsters/pandora-shadow.png": {"v":"3883210975c5","size":40440,"pack":"battle"},
     "images/monsters/pandora.PNG": {"v":"f8009b5d2b5e","size":290525,"pack":"battle"},
     "images/monsters/phoenix.png": {"v":"c9a5b27b642f","size":135110,"pack":"battle"},
     "images/monsters/pixie.png": {"v":"ecd7433b3190","size":135668,"pack":"battle"},
@@ -1812,8 +1813,8 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"dd3787c2d308","size":278423,"pack":"core"},
-    "data/images/images-ally.js": {"v":"3f1b217d1e16","size":70535,"pack":"core"},
+    "tailwind.css": {"v":"394a616f89bc","size":278423,"pack":"core"},
+    "data/images/images-ally.js": {"v":"c846c18f9b7e","size":70760,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"f908809f4b48","size":60701,"pack":"core"},
     "data/lineages.js": {"v":"81f342c471d9","size":26476,"pack":"core"},
@@ -1824,13 +1825,13 @@
     "data/rhythm-lane-svg.js": {"v":"ad47da271965","size":11949,"pack":"core"},
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
-    "data/rhythm-event.js": {"v":"0d110bfcc632","size":82751,"pack":"core"},
+    "data/rhythm-event.js": {"v":"06525bd20990","size":85010,"pack":"core"},
     "data/changelog.js": {"v":"51433ac3cc5d","size":1545815,"pack":"core"},
     "data/help.js": {"v":"0931290b1905","size":692776,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":9047,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
-    "data/assistants.js": {"v":"a73e7f49a073","size":971838,"pack":"core"},
+    "data/assistants.js": {"v":"55b9a4780381","size":973157,"pack":"core"},
     "data/card-battle-cards.js": {"v":"9c6a8274b2f6","size":114416,"pack":"core"},
-    "game-system.compiled.js": {"v":"73b1a3cb0ae6","size":7645525,"pack":"core"}
+    "game-system.compiled.js": {"v":"77c75d2a0cbf","size":7646160,"pack":"core"}
   }
 }

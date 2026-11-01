@@ -154,21 +154,21 @@ const RHYTHM_EVENTS = Object.freeze([
     // 参加報酬。対象3曲を**すべて**遊べば、入賞しなくてももらえる
     participationReward: Object.freeze({ songs: 3, gold: 3000, psyche: 50 }),
   }),
-  // 第3回(2026-11-01・社長)。「鍵の向こう側へ ～パンドラとふたつの翼～」。11/2(月) 4:00 〜 11/9(月) 4:00(画面は 3:59 まで)。
+  // 第3回(2026-11-01・社長)。「鍵の向こう側へ ～パンドラとふたつの翼～」。11/2(月) 12:00 〜 11/9(月) 4:00(画面は 3:59 まで)。
+  // (2026-11-02 社長: 開始を 4:00 から 12:00 へ遅らせた)
   // ★報酬は今までのイベントと同じ(順位ごとの個数・プシュケーは共通の決めごと)。超越の実は3曲ともピクシー(パンドラの主血統)。
   // ★原曲とショート版を「同じ曲」として数える(社長「イベント用のランキングだけ、原曲とショートを一緒に」)。
   //   songIds は原曲だけ(部門も3つ)。songVersions にショート版の id を書くと、
   //   ①集計の関数へショート版の id も渡し(サーバーは末尾の _short を外して1曲にまとめる・RHYTHM_EVENT_SONG_VERSIONS_APPLY.sql)
   //   ②ショート版を遊んでも対象曲として数える(ビートP・周回・イベントの曲の一覧)。
   //   ふだんの曲ごとのランキング・自己ベスト・週間は今までどおり別々。
-  // ★開始の 4:00 は週の区切り(月曜5:00)の1時間前。最初の1時間の記録だけ前の週の週間ランキングに入る(ハロウィンと同じ)
   Object.freeze({
     id: 'pandora_wings_2026_11_02',
     kind: 'limited',
     name: '鍵の向こう側へ ～パンドラとふたつの翼～',
-    startAt: '2026-11-02T04:00:00+09:00',
+    startAt: '2026-11-02T12:00:00+09:00',
     endAt: '2026-11-09T04:00:00+09:00',
-    banner: 'images/events/pandora-wings-2026-wide.jpg?v=91a40957576b',
+    banner: 'images/events/pandora-wings-2026-wide.jpg?v=f5e3cb59d945',
     songIds: Object.freeze(['stay_with_me', 'rebellion', 'tsuki_ga_michiru_mae_ni']),
     songVersions: Object.freeze({
       stay_with_me: Object.freeze(['stay_with_me_short']),
@@ -282,7 +282,7 @@ const RHYTHM_EVENT_POINT_CAMPAIGNS = Object.freeze([
   Object.freeze({
     id: 'pandora_wings_2026',
     name: '鍵の向こう側へ ～パンドラとふたつの翼～',
-    startAt: '2026-11-02T04:00:00+09:00',
+    startAt: '2026-11-02T12:00:00+09:00',
     endAt: '2026-11-09T04:00:00+09:00',
     displayEndAt: '2026-11-09T03:59:00+09:00',
     boost: 5,
@@ -303,6 +303,31 @@ const HALLOWEEN_NIGHT_STORIES = Object.freeze([
   // 第1.5部(ふくれあがる影)=レイド開始 / 第2〜6部=男爵〜大王を倒したあと / 終章=期間終了後。id・出し方は 35-raid-jack.jsx の RAID_JACK_STORY_IDS。
   // 旧い第2〜5部(時刻で流れる版)は、まだ誰も見ていない(10/11以降だった)ので、台本ごとやめた。第1部のidは変えない(見たかの記録があるため)
 ]);
+// 「鍵の向こう側へ ～パンドラとふたつの翼～」のお話(2026-11-01 社長「第1〜7話を毎朝4:00、第8話はイベントが終わる時」→ 11-02 第1話は開始の12:00へ)。
+//   第1話は開幕のお話(60-app.jsx の RHYTHM_EVENT_STORY_BY_EVENT)、第8話は閉幕のお話(RHYTHM_EVENT_THANKS_STORY_BY_EVENT)として流す。
+//   第2〜7話は時刻で流す(下の pandoraWingsStoryIdsAt)。見ていない話は古いほうから1つずつ。期間が終わっても回想から見られる。
+//   id は assistants.js の EVENT_REPLAYS の id と同じ。あとから変えない(見たかどうかの記録に使う)。
+//   ★本文は社長の「この文で」をもらった話から入れる。回想の一覧(EVENT_REPLAYS)に本文が入っている話だけを流す
+const PANDORA_WINGS_STORIES = Object.freeze([
+  Object.freeze({ id: 'pandora_wings_2026_ep1', part: 1, at: '2026-11-02T12:00:00+09:00' }),
+  Object.freeze({ id: 'pandora_wings_2026_ep2', part: 2, at: '2026-11-03T04:00:00+09:00' }),
+  Object.freeze({ id: 'pandora_wings_2026_ep3', part: 3, at: '2026-11-04T04:00:00+09:00' }),
+  Object.freeze({ id: 'pandora_wings_2026_ep4', part: 4, at: '2026-11-05T04:00:00+09:00' }),
+  Object.freeze({ id: 'pandora_wings_2026_ep5', part: 5, at: '2026-11-06T04:00:00+09:00' }),
+  Object.freeze({ id: 'pandora_wings_2026_ep6', part: 6, at: '2026-11-07T04:00:00+09:00' }),
+  Object.freeze({ id: 'pandora_wings_2026_ep7', part: 7, at: '2026-11-08T04:00:00+09:00' }),
+  Object.freeze({ id: 'pandora_wings_2026_ep8', part: 8, at: '2026-11-09T04:00:00+09:00' }),
+]);
+// いま流してよい第2〜7話のid(時刻が来ていて、本文が入っているもの)。古いほうから。見るたびに数え直す(CLAUDE.md ⑥-4)
+const pandoraWingsStoryIdsAt = (nowMs) => {
+  const now = (nowMs === null || nowMs === undefined || nowMs === '') ? NaN : Number(nowMs);
+  if (!Number.isFinite(now)) return [];
+  const replays = (typeof EVENT_REPLAYS !== 'undefined' && Array.isArray(EVENT_REPLAYS)) ? EVENT_REPLAYS : [];
+  return PANDORA_WINGS_STORIES
+    .filter(story => story.part >= 2 && story.part <= 7 && now >= Date.parse(story.at))
+    .filter(story => replays.some(replay => replay && replay.id === story.id && Array.isArray(replay.script) && replay.script.length > 0))
+    .map(story => story.id);
+};
 // いま読める(時刻が来ている)ハロウィン・ナイトの部のid。古いほうから
 const halloweenNightStoryIdsAt = (nowMs) => {
   const now = (nowMs === null || nowMs === undefined || nowMs === '') ? NaN : Number(nowMs);
