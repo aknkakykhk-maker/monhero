@@ -602,6 +602,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   monsterNoteEffect:'LIGHT',
   judgmentLineHeight:20,
   noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'LIGHT', lightweightMode:false,
+  // 演出を1つずつ選ぶ設定(2026-11-01)。おまかせ以外を選んだ項目だけ入る
+  fx:Object.freeze({}),
   // みんなで対戦のライブでは、演出を「軽さ優先」にそろえる(2026-10-03・ユーザー指示「マルチは演出量をデフォで下げたほうがいい」)。
   // ふだんの見た目の設定は書き換えない。対戦のあいだだけ上から重ねる
   multiLightLook:true,
@@ -747,7 +749,8 @@ const RHYTHM_FX_HELP = Object.freeze({
 });
 const normalizeRhythmFx = raw => {
   const source=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
-  return Object.fromEntries(RHYTHM_FX_ITEMS.map(item=>[item.key,item.options.some(([id])=>id===source[item.key])?source[item.key]:'AUTO']));
+  // おまかせ(AUTO)以外を選んだ項目だけ持つ(無い項目はおまかせ)。一覧に無い値・壊れた値は落とす
+  return Object.fromEntries(RHYTHM_FX_ITEMS.filter(item=>source[item.key]!=='AUTO'&&item.options.some(([id])=>id===source[item.key])).map(item=>[item.key,source[item.key]]));
 };
 // その項目の選んだ値(おまかせなら 'AUTO')
 const rhythmFxPick = (settings,key) => {const v=settings&&settings.fx&&settings.fx[key];return typeof v==='string'&&v?v:'AUTO';};

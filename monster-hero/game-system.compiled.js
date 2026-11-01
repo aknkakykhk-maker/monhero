@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7bd8ab71458115c9
+// source-sha256: 9ffd7756f3f2a93a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6122,6 +6122,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   vibrationEnabled: false,
   effectAmount: 'LIGHT',
   lightweightMode: false,
+  fx: Object.freeze({}),
   multiLightLook: true,
   multiLook: 'LIGHT',
   modeSelectArt: true,
@@ -6341,7 +6342,7 @@ const RHYTHM_FX_HELP = Object.freeze({
 });
 const normalizeRhythmFx = raw => {
   const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
-  return Object.fromEntries(RHYTHM_FX_ITEMS.map(item => [item.key, item.options.some(([id]) => id === source[item.key]) ? source[item.key] : 'AUTO']));
+  return Object.fromEntries(RHYTHM_FX_ITEMS.filter(item => source[item.key] !== 'AUTO' && item.options.some(([id]) => id === source[item.key])).map(item => [item.key, source[item.key]]));
 };
 const rhythmFxPick = (settings, key) => {
   const v = settings && settings.fx && settings.fx[key];
@@ -33718,7 +33719,7 @@ const RhythmOptions = ({
     className: "inline-flex items-center gap-1.5"
   }, React.createElement("span", {
     "data-rhythm-fx-weight": item.weight,
-    className: `rounded px-1 text-[9px] font-black ${FX_WEIGHT[item.weight][1]}`
+    className: `rounded px-1 text-[10px] font-black ${FX_WEIGHT[item.weight][1]}`
   }, FX_WEIGHT[item.weight][0]), item.label), fxSegments(item), RHYTHM_FX_HELP[item.key]));
   const previewBgm = async () => {
     previewRef.current?.stop();
@@ -34287,9 +34288,9 @@ const RhythmOptions = ({
     "data-rhythm-fx-group-tab": id,
     "aria-pressed": fxGroupNow === id,
     onClick: () => setFxGroup(id),
-    className: `flex min-h-[40px] items-center gap-1 rounded-xl border px-2 text-left text-[12px] font-black ${fxGroupNow === id ? 'border-fuchsia-300 bg-slate-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
+    className: `flex min-h-[44px] items-center gap-1 rounded-xl border px-2 text-left text-[12px] font-black ${fxGroupNow === id ? 'border-fuchsia-300 bg-slate-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
   }, React.createElement("span", null, RHYTHM_FX_GROUP_ICONS[id], " ", name), React.createElement("small", {
-    className: "ml-auto text-[9px] font-bold text-slate-400"
+    className: "ml-auto text-[10px] font-bold text-slate-400"
   }, fxGroupSummary(id))))), React.createElement("div", {
     className: wide ? 'min-w-0 flex-1 space-y-2' : 'space-y-3'
   }, fxGroupShown('stage') && React.createElement("section", {
@@ -35019,7 +35020,7 @@ const RhythmSongSelect = ({
     "data-rhythm-genre-current": genre ? genre.id : 'all',
     className: "min-w-0 truncate landscape:flex landscape:flex-col landscape:items-start landscape:leading-tight"
   }, React.createElement("small", {
-    className: "text-[11px] font-black max-[359px]:hidden landscape:text-[9px] landscape:text-slate-400"
+    className: "text-[11px] font-black max-[359px]:hidden landscape:text-[10px] landscape:text-slate-400"
   }, "ジャンル", React.createElement("span", {
     className: "landscape:hidden"
   }, "：")), React.createElement("b", {
@@ -35035,7 +35036,7 @@ const RhythmSongSelect = ({
   }, React.createElement("span", {
     className: "min-w-0 truncate landscape:flex landscape:flex-col landscape:items-start landscape:leading-tight"
   }, React.createElement("small", {
-    className: "text-[11px] font-black max-[359px]:hidden landscape:text-[9px] landscape:text-slate-400"
+    className: "text-[11px] font-black max-[359px]:hidden landscape:text-[10px] landscape:text-slate-400"
   }, "並べ替え", React.createElement("span", {
     className: "landscape:hidden"
   }, "：")), React.createElement("b", {
@@ -35064,7 +35065,7 @@ const RhythmSongSelect = ({
     "aria-hidden": "true"
   }, noticeOpen ? '▲' : '▼'), !noticeOpen && noticeHidden > 0 && React.createElement("b", {
     "data-rhythm-song-notice-badge": true,
-    className: "absolute -right-1 -top-1 min-w-[16px] rounded-full bg-fuchsia-400 px-1 text-[9px] leading-4 text-slate-950"
+    className: "absolute -right-1 -top-1 min-w-[16px] rounded-full bg-fuchsia-400 px-1 text-[10px] leading-4 text-slate-950"
   }, noticeHidden)), toolbarExtra), React.createElement("div", {
     ref: listRef,
     onScroll: handleListScroll,
@@ -35154,7 +35155,7 @@ const RhythmSongSelect = ({
       return React.createElement("small", _extends({}, main ? {
         'data-rhythm-song-row-rank': played ? rank : ''
       } : {}, {
-        className: "ml-1 flex min-w-0 items-baseline gap-1 text-[9px] font-bold text-slate-400"
+        className: "ml-1 flex min-w-0 items-baseline gap-1 text-[10px] font-bold text-slate-400"
       }), rowId && React.createElement("span", {
         className: `shrink-0 font-black [@container(max-width:350px)]:hidden ${rhythmDifficultyTextColor(rowId)}`
       }, rowId), (() => {
@@ -35176,7 +35177,7 @@ const RhythmSongSelect = ({
     })(), row.versions > 1 && React.createElement("small", _extends({}, main ? {
       'data-rhythm-song-row-version-count': row.versions
     } : {}, {
-      className: "ml-1 shrink-0 rounded-md border border-sky-300/40 bg-sky-500/10 px-1 py-0.5 text-[9px] font-black leading-none text-sky-200"
+      className: "ml-1 shrink-0 rounded-md border border-sky-300/40 bg-sky-500/10 px-1 py-0.5 text-[10px] font-black leading-none text-sky-200"
     }), row.versions, "つの版"), favoriteIds.has(entry.songId) && React.createElement("small", _extends({}, main ? {
       'data-rhythm-song-row-favorite': ''
     } : {}, {
@@ -35185,7 +35186,7 @@ const RhythmSongSelect = ({
     }), "♥"), eventSong && React.createElement("small", _extends({}, main ? {
       'data-rhythm-song-event': entry.songId
     } : {}, {
-      className: "ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-black text-amber-200"
+      className: "ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200"
     }), "🏆", React.createElement("span", {
       className: "[@container(max-width:380px)]:hidden"
     }, " イベント対象"))))));
@@ -35267,7 +35268,7 @@ const RhythmSongSelect = ({
   }, React.createElement("div", {
     className: "min-w-0 [container-type:inline-size]"
   }, React.createElement("small", {
-    className: "block text-[9px] font-black tracking-[.15em] text-slate-400"
+    className: "block text-[10px] font-black tracking-[.15em] text-slate-400"
   }, "HIGH SCORE", best && difficulty && rhythmBestShowsLegacy(song.songId, difficulty.id) && React.createElement("span", {
     "data-rhythm-demo-legacy-best": true,
     className: "ml-1 rounded bg-slate-500/30 px-1 tracking-normal text-slate-200"
@@ -35282,7 +35283,7 @@ const RhythmSongSelect = ({
     }
   }, best && best.played ? best.bestScore.toLocaleString() : React.createElement(React.Fragment, null, "まだ", React.createElement("wbr", null), "遊んでいません")), React.createElement("span", {
     "data-rhythm-demo-combo": true,
-    className: "block whitespace-nowrap text-[9px] font-black text-slate-400"
+    className: "block whitespace-nowrap text-[10px] font-black text-slate-400"
   }, React.createElement("span", {
     className: "[@container(max-width:120px)]:hidden"
   }, "MAX "), "COMBO ", React.createElement("b", {
