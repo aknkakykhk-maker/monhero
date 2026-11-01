@@ -63,6 +63,9 @@ const CHANGELOG = [
     // 期間・倍率・ランキングは data/rhythm-event.js、お話は assistants.js が受け持つ(このあと入れる)。お話の中身は書かない(ネタバレ)
     date: "2026-11-01 18:53", type:'event', group:'rhythm', title:'【期間限定】鍵の向こう側へ ～パンドラとふたつの翼～ を開催します', status:'new',
     visibleFrom:'2026-11-01T18:53:00+09:00',
+    // 予告動画(2026-11-02 社長)。第1話〜第2話の範囲だけ(ネタバレしない)
+    video: 'movies/pandora-wings-trailer.mp4?v=a003de0d3577',
+    videoPoster: 'images/events/pandora-wings-trailer-poster.jpg?v=ec3f66f0c0ad',
     image: 'images/events/pandora-wings-2026.jpg?v=5ada391b4929',
     assistantNotice: {
       id:'update_notice_pandora_wings_2026_v2', type:'content',

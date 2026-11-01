@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: abaa976cf63725ca
+// generated-sha256: ee882214c900a0e4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -91898,6 +91898,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       {c.image&&<img data-changelog-image src={c.image} alt={`${c.title}のお知らせ`}
                         onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
                         style={{width:'100%',borderRadius:'12px',margin:'6px 0'}}/>}
+                      {/* 予告動画(2026-11-02 社長「告知にストーリーの一部の予告動画もほしい」)。video:'movies/…mp4' と書いたときだけ出す。
+                          押すまで読み込まない(preload none)。videoPoster は押す前に見せる絵。読めなかったら黙って消す */}
+                      {typeof c.video==='string'&&c.video&&<figure data-changelog-video style={{margin:'6px 0'}}>
+                        <figcaption style={{fontWeight:900,margin:'0 0 4px'}}>▶ 予告動画</figcaption>
+                        <video src={c.video} poster={typeof c.videoPoster==='string'?c.videoPoster:undefined} controls playsInline preload="none"
+                          onError={e=>{const f=e.currentTarget.closest('figure');if(f)f.style.display='none';}}
+                          style={{display:'block',width:'100%',maxWidth:'320px',margin:'0 auto',borderRadius:'12px',background:'#000'}}/>
+                      </figure>}
                       {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
                       {/* 本文の下に並べる見本の絵(2026-09-28・ユーザー提案「こんな感じに染色イメージを出したりしたらどう？」)。
                           gallery:[{ caption, image }] と書いたときだけ、見出しと絵を順に出す。

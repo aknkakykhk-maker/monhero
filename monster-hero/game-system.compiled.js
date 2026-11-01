@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2f80b59cff7b24c6
+// source-sha256: ff2ce32229547839
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -147794,7 +147794,35 @@ function MonsterHeroGame() {
           borderRadius: '12px',
           margin: '6px 0'
         }
-      }), (c.items || []).map((x, j) => React.createElement("p", {
+      }), typeof c.video === 'string' && c.video && React.createElement("figure", {
+        "data-changelog-video": true,
+        style: {
+          margin: '6px 0'
+        }
+      }, React.createElement("figcaption", {
+        style: {
+          fontWeight: 900,
+          margin: '0 0 4px'
+        }
+      }, "▶ 予告動画"), React.createElement("video", {
+        src: c.video,
+        poster: typeof c.videoPoster === 'string' ? c.videoPoster : undefined,
+        controls: true,
+        playsInline: true,
+        preload: "none",
+        onError: e => {
+          const f = e.currentTarget.closest('figure');
+          if (f) f.style.display = 'none';
+        },
+        style: {
+          display: 'block',
+          width: '100%',
+          maxWidth: '320px',
+          margin: '0 auto',
+          borderRadius: '12px',
+          background: '#000'
+        }
+      })), (c.items || []).map((x, j) => React.createElement("p", {
         key: j
       }, "・", x)), (Array.isArray(c.gallery) ? c.gallery : []).filter(g => g && typeof g.image === 'string' && g.image).map((g, j) => React.createElement("figure", {
         key: `g${j}`,
