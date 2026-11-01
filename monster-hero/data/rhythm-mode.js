@@ -4084,9 +4084,13 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     return null;
   };
   // 押さえ始めたスライドで、指がいま帯から外れているか(見た目だけ。判定には使わない)。外れ始めからグレース前でも true
+  // 押さえている帯から指が外れているか(帯を暗くする見た目の合図・判定には使わない)。
+  // 【2026-11-02 社長「だいぶ外した状態で押しっぱでも判定切れてなかったよ」】それまでSLIDEだけを見ていて、HOLDは外れても
+  // 光ったまま(押せている見た目)だった。刻みの数え方ではHOLDも外れで切れず、外れていた間の刻みだけMISSになるので、
+  // 見た目に何も出ないと「外れてもOK」に見える。HOLDもSLIDEと同じく、外れている間は帯を暗くする
   const slideOffForIndex=index=>{
     for(const session of sessions.values()){
-      if(session.kind==='SLIDE'&&session.note?.index===index&&!session.note.done)return session.trackingBadSincePerf!=null;
+      if((session.kind==='SLIDE'||session.kind==='HOLD')&&session.note?.index===index&&!session.note.done)return session.trackingBadSincePerf!=null;
     }
     return false;
   };
