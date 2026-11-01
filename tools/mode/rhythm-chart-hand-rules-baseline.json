@@ -1841,6 +1841,41 @@
    "besideHeldBand": 0,
    "fastSameSide": 71,
    "heldHandSwitch": 0
+  },
+  "rebellion/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "rebellion/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "rebellion/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 31,
+   "heldHandSwitch": 0
+  },
+  "rebellion/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 60,
+   "heldHandSwitch": 0
+  },
+  "rebellion/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 82,
+   "heldHandSwitch": 0
   }
  },
  "history": [
@@ -1878,6 +1913,11 @@
    "at": "2026-10-23T20:35",
    "reason": "新曲 light player・月が満ちる前に(全編と short ver.)の行だけを足す",
    "changed": 20
+  },
+  {
+   "at": "2026-11-01T02:25",
+   "reason": "新曲 Rebellion ～Beyond the Lock～ の行だけを足す",
+   "changed": 5
   }
  ]
 }
