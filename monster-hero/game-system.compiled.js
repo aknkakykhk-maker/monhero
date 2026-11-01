@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cdf506b9d293c95c
+// source-sha256: f9c2e061cb0606e4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -74047,7 +74047,13 @@ function InfernoShieldGauge({
     }
   }, React.createElement("div", {
     className: "mt-[1px] flex flex-col items-end gap-[1px] leading-none"
-  }, React.createElement("span", {
+  }, view.boss && React.createElement("span", {
+    "data-inferno-shield-boss": true,
+    className: "whitespace-nowrap text-[10px] font-black italic text-yellow-300",
+    style: {
+      textShadow: '0 0 6px #f59e0b,0 1px 2px #000'
+    }
+  }, "👑 BOSS"), React.createElement("span", {
     className: "whitespace-nowrap text-[9px] font-black text-amber-200",
     style: {
       textShadow: '0 1px 2px #000'
@@ -74119,27 +74125,52 @@ function InfernoShieldCompact({
     className: "mr-auto pl-[3px] not-italic"
   }, INFERNO_SHIELD_MARKS[view.broken] || view.broken + 1), Math.floor(cur.now).toLocaleString(), " / ", Math.floor(cur.max).toLocaleString())));
 }
+const SHIELD_BADGE_THEME = Object.freeze({
+  INFERNO: Object.freeze({
+    title: '🔥 INFERNO',
+    titleColor: '#fde68a',
+    titleGlow: '#f97316',
+    bg: 'linear-gradient(180deg,#1c0a0a,#0c0a09)',
+    sub: '#fecaca'
+  }),
+  COCYTUS: Object.freeze({
+    title: '❄ COCYTUS',
+    titleColor: '#cffafe',
+    titleGlow: '#22d3ee',
+    bg: 'linear-gradient(180deg,#082f49,#020617)',
+    sub: '#a5f3fc',
+    ring: '#a5f3fc'
+  })
+});
 function InfernoShieldBadge({
-  view
+  view,
+  rule = 'INFERNO',
+  growthPct = 30
 }) {
-  if (!view || !(view.total > 0)) return null;
+  if (!view || !(view.total > 0) || !view.boss) return null;
+  const theme = SHIELD_BADGE_THEME[rule] || SHIELD_BADGE_THEME.INFERNO;
   const col = view.left > 0 ? infernoShieldColorAt(view.broken) : ['#e7e5e4', '#78716c', '#a8a29e'];
   return React.createElement("div", {
     "data-inferno-shield-badge": view.left,
     "aria-hidden": "true",
     className: "pointer-events-none absolute left-2 top-[96px] z-[43] w-[84px] rounded-[14px] px-1 pb-1 pt-1.5 text-center [@media(max-height:640px)]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden",
+    "data-shield-badge-theme": rule,
     style: {
-      background: 'linear-gradient(180deg,#1c0a0a,#0c0a09)',
+      background: theme.bg,
       border: `2px solid ${col[1]}`,
-      boxShadow: `0 0 12px ${col[1]}`
+      boxShadow: `0 0 12px ${col[1]}${theme.ring ? `,0 0 0 1px ${theme.ring} inset` : ''}`
     }
   }, React.createElement("div", {
-    className: "text-[10px] font-black tracking-wide text-amber-200",
+    className: "text-[10px] font-black tracking-wide",
     style: {
-      textShadow: '0 0 6px #f97316'
+      color: theme.titleColor,
+      textShadow: `0 0 6px ${theme.titleGlow}`
     }
-  }, "🔥 INFERNO"), React.createElement("div", {
-    className: "mt-[1px] text-[8px] font-black text-red-200"
+  }, theme.title), React.createElement("div", {
+    className: "mt-[1px] text-[8px] font-black",
+    style: {
+      color: theme.sub
+    }
   }, "のこりシールド"), React.createElement("div", {
     className: "mt-0.5 text-[30px] font-black leading-none text-white",
     style: {
@@ -74150,9 +74181,9 @@ function InfernoShieldBadge({
     style: {
       color: col[0]
     }
-  }, "いま ", INFERNO_SHIELD_MARKS[view.broken] || view.broken + 1), view.left > 1 && React.createElement("div", {
+  }, "いま ", INFERNO_SHIELD_MARKS[view.broken] || view.broken + 1), view.left > 1 && growthPct > 0 && React.createElement("div", {
     className: "mt-[1px] text-[8px] font-extrabold text-amber-200"
-  }, "次の1枚 +30%"));
+  }, "次の1枚 +", growthPct, "%"));
 }
 function InfernoShieldBreakFx({
   fx,
@@ -74825,7 +74856,7 @@ function BattleScreen({
     const hitsNow = extremeLayerRushHits(infernoShellRule, wave, broken);
     const hitsBefore = extremeLayerRushHits(infernoShellRule, wave, Math.max(0, broken - (seq - prev.seq)));
     const gain = Number(extremeWaveStageRules(infernoShellRule, wave)?.layerAtkGain) || 0;
-    const kind = broken >= 5 ? 'final' : hitsNow > hitsBefore ? 'rush' : 'mid';
+    const kind = hitsNow > hitsBefore ? hitsNow >= 3 ? 'final' : 'rush' : 'mid';
     setInfernoShellFx({
       id: `${key}:${seq}`,
       kind,
@@ -75131,6 +75162,7 @@ function BattleScreen({
   return React.createElement("div", {
     className: "flex-1 flex flex-col h-full relative",
     "data-battle-speed": battleSpeed,
+    "data-fx-load": fxLoad,
     "data-enemy-down": enemyDefeating ? 'true' : undefined,
     "data-eco-view": ultraBattleView ? 'ultra' : liteBattleView ? 'lite' : 'off',
     "data-tactics-look": tacticsNewLayout ? liteBattleView || ecoBattleView || idleMotionOff ? 'calm' : 'rich' : undefined,
@@ -75423,7 +75455,10 @@ function BattleScreen({
     className: "shrink-0"
   }), React.createElement("span", {
     className: "max-w-[34vw] truncate pr-[3px]"
-  }, enemy.name), React.createElement("span", {
+  }, enemy.name), infernoShellView?.boss && React.createElement("span", {
+    "data-inferno-boss-name": true,
+    className: "hidden shrink-0 rounded-full bg-gradient-to-r from-yellow-300 to-amber-500 px-1.5 py-[1px] text-[9px] font-black not-italic tracking-wider text-amber-950 shadow-[0_0_8px_#f59e0b] [@media(max-height:640px)]:inline [@media(orientation:landscape)_and_(max-height:520px)]:inline"
+  }, "BOSS"), React.createElement("span", {
     className: `shrink-0 px-1.5 py-0.5 rounded-full text-[10px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`
   }, RANGE_LABELS[enemyDist]), Array.isArray(enemyDebuffs) && enemyDebuffs.length > 0 && React.createElement("button", {
     type: "button",
@@ -75642,7 +75677,9 @@ function BattleScreen({
   })(), infernoShellView?.total > 0 && React.createElement(InfernoShieldGauge, {
     view: infernoShellView
   }), infernoShellView?.total > 0 && !copyFloat && React.createElement(InfernoShieldBadge, {
-    view: infernoShellView
+    view: infernoShellView,
+    rule: infernoShellRule,
+    growthPct: Math.round((Number(extremeWaveStageRules(infernoShellRule, wave)?.layerGrowth) || 0) * 100)
   }), infernoShellFx && React.createElement(InfernoShieldBreakFx, {
     key: infernoShellFx.id,
     fx: infernoShellFx,
@@ -78237,6 +78274,159 @@ function UltimateDistanceBreakReveal({
     className: "font-black"
   }, ultimateDistanceBreakLevels.map((level, index) => level > 0 ? `${RANGE_LABELS[index]} Lv${level}` : null).filter(Boolean).join(' / ') || 'なし'))));
 }
+const COCYTUS_REVIVE_TIER = Object.freeze({
+  durahan: 1,
+  moo1: 2,
+  moo2: 3
+});
+const COCYTUS_REVIVE_FX_MS = 3000;
+const COCYTUS_REVIVE_CSS = `
+@keyframes mhIceFrost{0%{opacity:0}35%{opacity:1}100%{opacity:1}}
+@keyframes mhIceBlock{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}30%{opacity:1;transform:translate(-50%,-50%) scale(1.04)}45%{transform:translate(-50%,-50%) scale(1)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes mhIceFlash{0%{opacity:0}15%{opacity:1}100%{opacity:0}}
+@keyframes mhIceRing{0%{opacity:.95;transform:translate(-50%,-50%) scale(.3)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.7)}}
+@keyframes mhIceShard{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--rot))}}
+@keyframes mhIceWord{0%{opacity:0;transform:translateX(-50%) rotate(-5deg) scale(2.1)}20%{opacity:1;transform:translateX(-50%) rotate(-5deg) scale(.95)}30%{transform:translateX(-50%) rotate(-5deg) scale(1)}80%{opacity:1}100%{opacity:0}}
+@keyframes mhIceAura{0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}40%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}}
+@keyframes mhIceBand{0%{opacity:0;transform:translateX(-30%)}15%{opacity:1;transform:translateX(0)}100%{opacity:1;transform:translateX(0)}}
+`;
+function CocytusReviveFx({
+  stage,
+  lite,
+  name
+}) {
+  const tier = COCYTUS_REVIVE_TIER[stage] || 1;
+  const big = tier === 3;
+  const who = String(name || '');
+  const title = tier === 3 ? `❄ ${who} 真・覚醒!` : `❄ ${who} 復活!`;
+  const shards = lite ? [] : Array.from({
+    length: 14 + tier * 10
+  }, (_, k) => {
+    const n = 14 + tier * 10;
+    const ang = k / n * Math.PI * 2 + k % 2 * 0.3;
+    const d = 70 + k * 37 % (120 + tier * 40);
+    return {
+      k,
+      dx: `${Math.round(Math.cos(ang) * d)}px`,
+      dy: `${Math.round(Math.sin(ang) * d)}px`,
+      rot: `${k * 53 % 360}deg`,
+      w: 14 + k * 13 % 30,
+      h: 10 + k * 7 % 16
+    };
+  });
+  const ringCols = ['rgba(103,232,249,.95)', 'rgba(255,255,255,.9)', 'rgba(250,204,21,.85)'];
+  return React.createElement("div", {
+    "data-cocytus-revive-fx": stage,
+    "data-cocytus-revive-tier": tier,
+    className: "pointer-events-none fixed inset-0 overflow-hidden",
+    style: {
+      zIndex: 91001
+    }
+  }, React.createElement("style", null, COCYTUS_REVIVE_CSS), !lite && React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      boxShadow: `inset 0 0 ${60 + tier * 30}px ${20 + tier * 14}px rgba(165,243,252,${.45 + tier * .12})`,
+      animation: 'mhIceFrost 1s ease-out both'
+    }
+  }), React.createElement("div", {
+    className: "absolute left-1/2 top-[30%]",
+    style: {
+      width: 'min(58vw,240px)',
+      height: 'min(58vw,240px)',
+      borderRadius: big ? '18%' : '28%',
+      background: 'linear-gradient(135deg,rgba(236,254,255,.55),rgba(103,232,249,.25) 45%,rgba(14,116,144,.35))',
+      border: '3px solid rgba(207,250,254,.9)',
+      boxShadow: '0 0 30px rgba(103,232,249,.9),inset 0 0 30px rgba(255,255,255,.6)',
+      clipPath: 'polygon(8% 12%,40% 0,72% 8%,100% 30%,94% 70%,70% 100%,28% 96%,0 66%)',
+      animation: 'mhIceBlock 1s ease-out both,mhIceFlash .4s .95s reverse both'
+    }
+  }), React.createElement("div", {
+    className: "absolute left-1/2 top-[48%] whitespace-nowrap font-black italic",
+    style: {
+      transform: 'translateX(-50%)',
+      fontSize: big ? 26 : 22,
+      color: '#ecfeff',
+      WebkitTextStroke: '1px #0e7490',
+      textShadow: '0 0 12px #22d3ee',
+      animation: 'mhIceFlash 1s .1s ease-out both'
+    }
+  }, "……ピキ…ピキキ…"), React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      background: `radial-gradient(circle at 50% 30%,rgba(255,255,255,.97),rgba(165,243,252,${.6 + tier * .1}) ${25 + tier * 5}%,rgba(8,47,73,${.3 + tier * .15}) 80%)`,
+      animation: 'mhIceFlash .9s 1s ease-out both'
+    }
+  }), Array.from({
+    length: tier
+  }, (_, n) => React.createElement("div", {
+    key: n,
+    className: "absolute left-1/2 top-[30%] rounded-full",
+    style: {
+      width: `${200 + n * 90}px`,
+      height: `${200 + n * 90}px`,
+      border: `${6 - n}px solid ${ringCols[n]}`,
+      boxShadow: `0 0 30px 10px ${ringCols[n]}`,
+      animation: `mhIceRing 1s ${1 + n * .12}s ease-out both`
+    }
+  })), React.createElement("div", {
+    className: "absolute left-1/2 top-[30%]",
+    style: {
+      width: 0,
+      height: 0
+    }
+  }, shards.map(s => React.createElement("i", {
+    key: s.k,
+    className: "absolute block",
+    style: {
+      '--dx': s.dx,
+      '--dy': s.dy,
+      '--rot': s.rot,
+      width: `${s.w}px`,
+      height: `${s.h}px`,
+      background: 'linear-gradient(135deg,#ffffff,#a5f3fc 50%,#0891b2)',
+      clipPath: 'polygon(0 30%,70% 0,100% 60%,30% 100%)',
+      boxShadow: '0 0 8px #67e8f9',
+      animation: 'mhIceShard 1s 1s cubic-bezier(.2,.7,.3,1) both'
+    }
+  }))), React.createElement("div", {
+    className: "absolute left-1/2 top-[24%] whitespace-nowrap text-center font-black italic leading-none text-white",
+    style: {
+      fontSize: big ? 'min(46px,12vw)' : 'min(40px,10.5vw)',
+      WebkitTextStroke: '2px #0e7490',
+      textShadow: '0 0 18px #22d3ee,0 0 40px #0891b2',
+      animation: 'mhIceWord 1.3s 1s ease-out both'
+    }
+  }, big ? React.createElement(React.Fragment, null, "ABSOLUTE", React.createElement("br", null), "ZERO!!") : React.createElement(React.Fragment, null, "FROZEN", React.createElement("br", null), "BREAK!!")), Array.from({
+    length: tier
+  }, (_, n) => React.createElement("div", {
+    key: `a${n}`,
+    className: "absolute left-1/2 top-[36%] rounded-[50%]",
+    style: {
+      width: `${180 + n * 60}px`,
+      height: `${50 + n * 16}px`,
+      border: `3px solid ${ringCols[n]}`,
+      boxShadow: `0 0 22px ${ringCols[n]}`,
+      animation: `mhIceAura .7s ${1.9 + n * .1}s ease-out both`
+    }
+  }))), React.createElement("div", {
+    "data-cocytus-revive-band": tier,
+    className: "absolute inset-x-0 top-[42%] px-3.5 py-2.5",
+    style: {
+      background: 'linear-gradient(90deg,rgba(8,47,73,.97),rgba(14,116,144,.97) 50%,rgba(8,47,73,.97))',
+      borderTop: `3px solid ${big ? '#facc15' : '#a5f3fc'}`,
+      borderBottom: `3px solid ${big ? '#facc15' : '#a5f3fc'}`,
+      boxShadow: '0 0 26px rgba(34,211,238,.85)',
+      animation: `mhIceBand .5s ${lite ? 0 : 1.9}s ease-out both`
+    }
+  }, React.createElement("div", {
+    className: "font-black italic",
+    style: {
+      fontSize: big ? 22 : 20,
+      color: big ? '#fef08a' : '#ecfeff',
+      textShadow: '0 2px 0 #164e63'
+    }
+  }, title)));
+}
 function EnemyRevivalReveal({
   difficulty,
   enemyRevivalReveal,
@@ -78244,6 +78434,24 @@ function EnemyRevivalReveal({
   extremeRunRef,
   runMode
 }) {
+  const stage = enemyRevivalReveal && enemyRevivalReveal.stage;
+  const [fxDone, setFxDone] = useState(!stage);
+  useEffect(() => {
+    if (!stage) return undefined;
+    setFxDone(false);
+    const t = setTimeout(() => setFxDone(true), COCYTUS_REVIVE_FX_MS);
+    return () => clearTimeout(t);
+  }, [stage, enemyRevivalReveal && enemyRevivalReveal.revivalNumber]);
+  if (stage && !fxDone) {
+    const root = typeof document !== 'undefined' ? document.querySelector('[data-fx-load]') : null;
+    const lite = !!root && (root.getAttribute('data-fx-load') === 'LIGHT' || root.getAttribute('data-fx-load') === 'MINIMAL' || (root.getAttribute('data-eco-view') || 'off') !== 'off');
+    const enemyName = typeof document !== 'undefined' ? document.querySelector('[data-enemy-bar] .truncate')?.textContent || '' : '';
+    return React.createElement(CocytusReviveFx, {
+      stage: stage,
+      lite: lite,
+      name: enemyName
+    });
+  }
   return React.createElement("div", {
     "data-extreme-revival-reveal": true,
     className: "fixed inset-0 flex items-center justify-center p-5 text-center",
@@ -78265,9 +78473,9 @@ function EnemyRevivalReveal({
     className: "mt-2 text-2xl font-black italic tracking-wider text-slate-100"
   }, "DEAD RISING"), React.createElement("div", {
     className: "mt-5 text-xl font-black text-white"
-  }, "死者の再起 ", enemyRevivalReveal.revivalNumber, "回目"), React.createElement("div", {
+  }, enemyRevivalReveal.name || '死者の再起', " ", enemyRevivalReveal.revivalNumber, "回目"), React.createElement("div", {
     className: "mt-2 rounded-xl border border-slate-300/50 bg-black/40 py-2 text-sm font-black text-slate-200"
-  }, "ライフ半分で起き上がり、攻撃力+50%"), React.createElement("div", {
+  }, enemyRevivalReveal.desc || 'ライフ半分で起き上がり、攻撃力+50%'), React.createElement("div", {
     className: "mt-4 border-t border-slate-300/20 pt-3 text-[10px] text-slate-300"
   }, React.createElement("span", {
     className: "font-black text-slate-400"
@@ -163671,6 +163879,33 @@ const createAnimationStyle = () => {
     [data-tactics-look][data-fx-level="STANDARD"] [data-slot-circle] { animation: none !important; }
     /* バトルの枠の魂格オーラ(SoulRankAura is-battle)。大きさは枠の絵に合わせて小さめ。標準では動きを止める(2026-10-29) */
     .mh-reincarnate-aura.is-battle{inset:-24%}
+    /* 冥界チャレンジ(INFERNO・COCYTUS のタブ・2026-11-01 社長の決定)。目印は 60 が付ける(セコンドくん):
+       data-underworld="1"(難易度選びの画面の外枠)/ data-difficulty-tab="underworld"(タブ)/ data-underworld-new="1"(初めて開けるようになった時)/
+       data-underworld-card="INFERNO|COCYTUS" と data-shield-layers(カード)。背景は炎(左下の橙)と氷(右上の水色)+シールドのひび。専用BGMは無し */
+    [data-underworld="1"]{position:relative;isolation:isolate}
+    [data-underworld="1"]::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse at 12% 88%,rgba(234,88,12,.55),transparent 55%),radial-gradient(ellipse at 88% 12%,rgba(34,211,238,.45),transparent 55%),linear-gradient(160deg,#1c0a0a,#0b1120 55%,#082f49)}
+    [data-underworld="1"]::after{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.32;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cg stroke='%23e0f2fe' stroke-width='.25' fill='none'%3E%3Cpolyline points='0,40 18,46 24,38 40,44 52,36 70,42 84,34 100,38'/%3E%3Cpolyline points='24,38 22,26 30,18'/%3E%3Cpolyline points='52,36 56,24 50,12'/%3E%3Cpolyline points='70,42 74,56 66,70'/%3E%3Cpolyline points='40,44 36,60 44,74'/%3E%3C/g%3E%3C/svg%3E") center/100% 100% no-repeat}
+    [data-underworld="1"] > *{position:relative;z-index:1}
+    .mhbs-tab[data-difficulty-tab="underworld"]{position:relative;color:#a5f3fc;border:1px solid rgba(165,243,252,.35)}
+    .mhbs-tabs .mhbs-tab[data-difficulty-tab="underworld"]:is(.on,[aria-pressed="true"]){color:#fff !important;background:linear-gradient(100deg,#7f1d1d 0%,#c2410c 30%,#0e7490 70%,#164e63 100%) !important;border-color:rgba(165,243,252,.8);box-shadow:0 0 16px rgba(34,211,238,.55),0 0 16px rgba(249,115,22,.45) !important}
+    /* 初めて開けるようになった時: タブにひびが走って割れて開き、NEW の札(押すまで光る) */
+    .mhbs-tab[data-difficulty-tab="underworld"][data-underworld-new="1"]{animation:mhUwTabOpen 1.6s ease-out both,mhUwTabGlow 1.8s 1.6s ease-in-out infinite;overflow:visible}
+    .mhbs-tab[data-difficulty-tab="underworld"][data-underworld-new="1"]::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40' preserveAspectRatio='none'%3E%3Cg stroke='%23ffffff' stroke-width='1.4' fill='none'%3E%3Cpolyline points='8,0 20,14 14,22 30,40'/%3E%3Cpolyline points='50,0 46,16 58,24 52,40'/%3E%3Cpolyline points='80,0 72,18 86,28 78,40'/%3E%3C/g%3E%3C/svg%3E") center/100% 100% no-repeat;animation:mhUwCrack 1.6s ease-out both}
+    .mhbs-tab[data-difficulty-tab="underworld"][data-underworld-new="1"]::after{content:"NEW";position:absolute;top:-8px;right:-4px;padding:1px 6px;border-radius:999px;font:900 9px/1.3 sans-serif;letter-spacing:.06em;color:#082f49;background:linear-gradient(90deg,#fde68a,#a5f3fc);box-shadow:0 0 10px rgba(165,243,252,.9);animation:mhUwNew .5s 1.3s ease-out both}
+    @keyframes mhUwCrack{0%{opacity:0;clip-path:inset(0 100% 0 0)}35%{opacity:1;clip-path:inset(0 0 0 0)}75%{opacity:1}100%{opacity:0}}
+    @keyframes mhUwTabOpen{0%{filter:brightness(.4) grayscale(1);transform:scale(.96)}55%{filter:brightness(.6) grayscale(.6);transform:scale(.96) translateX(-1px)}62%{transform:scale(.96) translateX(2px)}70%{filter:brightness(2.2);transform:scale(1.06)}100%{filter:none;transform:scale(1)}}
+    @keyframes mhUwTabGlow{0%,100%{box-shadow:0 0 6px rgba(165,243,252,.35)}50%{box-shadow:0 0 18px rgba(165,243,252,.9),0 0 10px rgba(249,115,22,.6)}}
+    @keyframes mhUwNew{0%{opacity:0;transform:scale(2)}100%{opacity:1;transform:scale(1)}}
+    /* カードの枠: INFERNO は燃える橙、COCYTUS は氷の水色。右上に「🛡×3〜5」(data-shield-layers の文字をそのまま出す) */
+    [data-underworld-card]{position:relative}
+    [data-underworld-card="INFERNO"]{box-shadow:0 0 0 2px #fb923c,0 0 22px rgba(249,115,22,.65) !important}
+    [data-underworld-card="COCYTUS"]{box-shadow:0 0 0 2px #a5f3fc,0 0 22px rgba(34,211,238,.6) !important}
+    [data-underworld-card][data-shield-layers]::after{content:"🛡×" attr(data-shield-layers);position:absolute;top:30px;right:10px;left:auto;bottom:auto;width:auto;height:auto;white-space:nowrap;z-index:30;font-style:normal;padding:2px 8px;border-radius:999px;font:900 11px/1.3 sans-serif;color:#fff;pointer-events:none}
+    [data-underworld-card="INFERNO"][data-shield-layers]::after{background:linear-gradient(90deg,#7f1d1d,#ea580c) !important;box-shadow:0 0 10px rgba(249,115,22,.8) !important;opacity:1 !important;filter:none !important}
+    [data-underworld-card="COCYTUS"][data-shield-layers]::after{background:linear-gradient(90deg,#164e63,#0891b2) !important;box-shadow:0 0 10px rgba(34,211,238,.8) !important;opacity:1 !important;filter:none !important}
+    /* 横向きはカードが2列になり、右の説明の欄の下に隠れるので札は出さない(説明の文にシールドの枚数がある) */
+    @media (orientation:landscape) and (max-height:520px){[data-underworld-card][data-shield-layers]::after{display:none}}
+    @media (prefers-reduced-motion: reduce){.mhbs-tab[data-difficulty-tab="underworld"][data-underworld-new="1"],.mhbs-tab[data-difficulty-tab="underworld"][data-underworld-new="1"]::before,.mhbs-tab[data-difficulty-tab="underworld"][data-underworld-new="1"]::after{animation:none}}
     .mh-reincarnate-aura.is-battle.is-still, .mh-reincarnate-aura.is-battle.is-still *, .mh-reincarnate-aura.is-battle.is-still *::before, .mh-reincarnate-aura.is-battle.is-still *::after { animation: none !important; }
     [data-tactics-look]:is([data-fx-level="LIGHT"], [data-fx-level="MINIMAL"]) * { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
     /* 最軽量は、次の行動の札・狙われている枠の点滅(animate-pulse)も止め、何も動き続けない画面にする */

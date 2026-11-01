@@ -2643,6 +2643,33 @@ const createAnimationStyle = () => {
     [data-tactics-look][data-fx-level="STANDARD"] [data-slot-circle] { animation: none !important; }
     /* バトルの枠の魂格オーラ(SoulRankAura is-battle)。大きさは枠の絵に合わせて小さめ。標準では動きを止める(2026-10-29) */
     .mh-reincarnate-aura.is-battle{inset:-24%}
+    /* 冥界チャレンジ(INFERNO・COCYTUS のタブ・2026-11-01 社長の決定)。目印は 60 が付ける(セコンドくん):
+       data-underworld="1"(難易度選びの画面の外枠)/ data-difficulty-tab="underworld"(タブ)/ data-underworld-new="1"(初めて開けるようになった時)/
+       data-underworld-card="INFERNO|COCYTUS" と data-shield-layers(カード)。背景は炎(左下の橙)と氷(右上の水色)+シールドのひび。専用BGMは無し */
+    [data-underworld="1"]{position:relative;isolation:isolate}
+    [data-underworld="1"]::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse at 12% 88%,rgba(234,88,12,.55),transparent 55%),radial-gradient(ellipse at 88% 12%,rgba(34,211,238,.45),transparent 55%),linear-gradient(160deg,#1c0a0a,#0b1120 55%,#082f49)}
+    [data-underworld="1"]::after{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.32;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cg stroke='%23e0f2fe' stroke-width='.25' fill='none'%3E%3Cpolyline points='0,40 18,46 24,38 40,44 52,36 70,42 84,34 100,38'/%3E%3Cpolyline points='24,38 22,26 30,18'/%3E%3Cpolyline points='52,36 56,24 50,12'/%3E%3Cpolyline points='70,42 74,56 66,70'/%3E%3Cpolyline points='40,44 36,60 44,74'/%3E%3C/g%3E%3C/svg%3E") center/100% 100% no-repeat}
+    [data-underworld="1"] > *{position:relative;z-index:1}
+    .mhbs-tab[data-difficulty-tab="underworld"]{position:relative;color:#a5f3fc;border:1px solid rgba(165,243,252,.35)}
+    .mhbs-tabs .mhbs-tab[data-difficulty-tab="underworld"]:is(.on,[aria-pressed="true"]){color:#fff !important;background:linear-gradient(100deg,#7f1d1d 0%,#c2410c 30%,#0e7490 70%,#164e63 100%) !important;border-color:rgba(165,243,252,.8);box-shadow:0 0 16px rgba(34,211,238,.55),0 0 16px rgba(249,115,22,.45) !important}
+    /* 初めて開けるようになった時: タブにひびが走って割れて開き、NEW の札(押すまで光る) */
+    .mhbs-tab[data-difficulty-tab="underworld"][data-underworld-new="1"]{animation:mhUwTabOpen 1.6s ease-out both,mhUwTabGlow 1.8s 1.6s ease-in-out infinite;overflow:visible}
+    .mhbs-tab[data-difficulty-tab="underworld"][data-underworld-new="1"]::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40' preserveAspectRatio='none'%3E%3Cg stroke='%23ffffff' stroke-width='1.4' fill='none'%3E%3Cpolyline points='8,0 20,14 14,22 30,40'/%3E%3Cpolyline points='50,0 46,16 58,24 52,40'/%3E%3Cpolyline points='80,0 72,18 86,28 78,40'/%3E%3C/g%3E%3C/svg%3E") center/100% 100% no-repeat;animation:mhUwCrack 1.6s ease-out both}
+    .mhbs-tab[data-difficulty-tab="underworld"][data-underworld-new="1"]::after{content:"NEW";position:absolute;top:-8px;right:-4px;padding:1px 6px;border-radius:999px;font:900 9px/1.3 sans-serif;letter-spacing:.06em;color:#082f49;background:linear-gradient(90deg,#fde68a,#a5f3fc);box-shadow:0 0 10px rgba(165,243,252,.9);animation:mhUwNew .5s 1.3s ease-out both}
+    @keyframes mhUwCrack{0%{opacity:0;clip-path:inset(0 100% 0 0)}35%{opacity:1;clip-path:inset(0 0 0 0)}75%{opacity:1}100%{opacity:0}}
+    @keyframes mhUwTabOpen{0%{filter:brightness(.4) grayscale(1);transform:scale(.96)}55%{filter:brightness(.6) grayscale(.6);transform:scale(.96) translateX(-1px)}62%{transform:scale(.96) translateX(2px)}70%{filter:brightness(2.2);transform:scale(1.06)}100%{filter:none;transform:scale(1)}}
+    @keyframes mhUwTabGlow{0%,100%{box-shadow:0 0 6px rgba(165,243,252,.35)}50%{box-shadow:0 0 18px rgba(165,243,252,.9),0 0 10px rgba(249,115,22,.6)}}
+    @keyframes mhUwNew{0%{opacity:0;transform:scale(2)}100%{opacity:1;transform:scale(1)}}
+    /* カードの枠: INFERNO は燃える橙、COCYTUS は氷の水色。右上に「🛡×3〜5」(data-shield-layers の文字をそのまま出す) */
+    [data-underworld-card]{position:relative}
+    [data-underworld-card="INFERNO"]{box-shadow:0 0 0 2px #fb923c,0 0 22px rgba(249,115,22,.65) !important}
+    [data-underworld-card="COCYTUS"]{box-shadow:0 0 0 2px #a5f3fc,0 0 22px rgba(34,211,238,.6) !important}
+    [data-underworld-card][data-shield-layers]::after{content:"🛡×" attr(data-shield-layers);position:absolute;top:30px;right:10px;left:auto;bottom:auto;width:auto;height:auto;white-space:nowrap;z-index:30;font-style:normal;padding:2px 8px;border-radius:999px;font:900 11px/1.3 sans-serif;color:#fff;pointer-events:none}
+    [data-underworld-card="INFERNO"][data-shield-layers]::after{background:linear-gradient(90deg,#7f1d1d,#ea580c) !important;box-shadow:0 0 10px rgba(249,115,22,.8) !important;opacity:1 !important;filter:none !important}
+    [data-underworld-card="COCYTUS"][data-shield-layers]::after{background:linear-gradient(90deg,#164e63,#0891b2) !important;box-shadow:0 0 10px rgba(34,211,238,.8) !important;opacity:1 !important;filter:none !important}
+    /* 横向きはカードが2列になり、右の説明の欄の下に隠れるので札は出さない(説明の文にシールドの枚数がある) */
+    @media (orientation:landscape) and (max-height:520px){[data-underworld-card][data-shield-layers]::after{display:none}}
+    @media (prefers-reduced-motion: reduce){.mhbs-tab[data-difficulty-tab="underworld"][data-underworld-new="1"],.mhbs-tab[data-difficulty-tab="underworld"][data-underworld-new="1"]::before,.mhbs-tab[data-difficulty-tab="underworld"][data-underworld-new="1"]::after{animation:none}}
     .mh-reincarnate-aura.is-battle.is-still, .mh-reincarnate-aura.is-battle.is-still *, .mh-reincarnate-aura.is-battle.is-still *::before, .mh-reincarnate-aura.is-battle.is-still *::after { animation: none !important; }
     [data-tactics-look]:is([data-fx-level="LIGHT"], [data-fx-level="MINIMAL"]) * { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
     /* 最軽量は、次の行動の札・狙われている枠の点滅(animate-pulse)も止め、何も動き続けない画面にする */
