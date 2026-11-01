@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7cc3ac57eac98b59
+// source-sha256: 1e1f0ed6a8d42315
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -140270,7 +140270,7 @@ function MonsterHeroGame() {
       });
       addPopup(revived.reveal ? `${revived.reveal.name}！` : '死者の再起！', 'enemy', 'text-slate-100 font-black text-3xl drop-shadow-[0_0_18px_rgba(148,163,184,0.9)]');
       triggerShake(true);
-      await battleWait(1600);
+      await battleWait(revived.reveal ? 4600 : 1600);
       setEnemyRevivalReveal(null);
       return false;
     }

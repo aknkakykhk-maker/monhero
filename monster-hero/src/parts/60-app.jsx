@@ -13158,7 +13158,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       setEnemyRevivalReveal({revivalNumber:revived.revivalNumber,remaining:revived.remaining,...(revived.reveal?{name:revived.reveal.name,desc:revived.reveal.desc,stage:revived.reveal.stage,rule:revivalDifficulty,enemyId:(enemyLiveRef.current||enemy)?.id}:{})});
       addPopup(revived.reveal?`${revived.reveal.name}！`:'死者の再起！','enemy','text-slate-100 font-black text-3xl drop-shadow-[0_0_18px_rgba(148,163,184,0.9)]');
       triggerShake(true);
-      await battleWait(1600);
+      await battleWait(revived.reveal?4600:1600); // COCYTUSは氷の3段の演出(3秒・71 の COCYTUS_REVIVE_FX_MS)のあとに札を出すので、そのぶん待つ
       setEnemyRevivalReveal(null);
       return false;
     }
