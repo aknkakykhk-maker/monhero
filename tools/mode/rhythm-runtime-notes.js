@@ -224,6 +224,7 @@ const RELEASED_MARKERS=Object.freeze({
   tsuki_ga_michiru_mae_ni:'tsuki-ga-michiru-mae-ni-v3',
   tsuki_ga_michiru_mae_ni_short:'tsuki-ga-michiru-mae-ni-short-v3',
   rebellion:'rebellion-v3',
+  rebellion_short:'rebellion-short-v3',
 });
 
 // 曲id → 音源の一覧(tools/mode/authoring/rhythm-song-registry.json)のid。
@@ -281,6 +282,7 @@ const RELEASED_TRACKS=Object.freeze({
   tsuki_ga_michiru_mae_ni:'tsuki_ga_michiru_mae_ni',
   tsuki_ga_michiru_mae_ni_short:'tsuki_ga_michiru_mae_ni_short',
   rebellion:'rebellion',
+  rebellion_short:'rebellion_short',
 });
 
 module.exports={SLIDE_EASE_CODES,FLICK_DIR_CODES,heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,
