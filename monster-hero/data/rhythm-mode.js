@@ -41096,7 +41096,7 @@ const RHYTHM_CHART_LEVELS = Object.freeze({
   rebellion:Object.freeze({EASY:9,NORMAL:11,HARD:16,EXPERT:25,MASTER:44}),
   rebellion_short:Object.freeze({EASY:8,NORMAL:11,HARD:16,EXPERT:26,MASTER:42}),
   altar_world_tree:Object.freeze({EASY:8,NORMAL:9,HARD:13,EXPERT:20,MASTER:24}),
-  altar_world_tree_short:Object.freeze({EASY:8,NORMAL:9,HARD:14,EXPERT:21,MASTER:27}),
+  altar_world_tree_short:Object.freeze({EASY:8,NORMAL:9,HARD:14,EXPERT:20,MASTER:27}),
   atsu_cup_theme_debug_short:Object.freeze({HARD:9}),
 // </rhythm-chart-levels>
 });
