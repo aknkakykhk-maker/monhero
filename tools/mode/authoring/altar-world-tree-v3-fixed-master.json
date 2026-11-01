@@ -12319,9 +12319,9 @@
   {
    "type": "TAP",
    "grid": 1403,
-   "lane": 3,
-   "subLane": 6,
-   "subLaneWidth": 2,
+   "lane": 0,
+   "subLane": 0,
+   "subLaneWidth": 1,
    "sourceStrength": 0.86,
    "sourcePeakOffsetMs": 16.02,
    "sourceCharacter": "FULL",
