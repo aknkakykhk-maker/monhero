@@ -4,7 +4,7 @@
 //   node tools/mode/rhythm-chart-flow-fix.js --song rebellion --difficulty MASTER --write    # 目印の内側を書き換える
 //
 // 【何を見るか】横持ちの親指2本のモデル(rhythm-ref-tiers.js の thumbCheck)の「押せない」「指が交差」「届きにくい(真ん中を越える)」「忙しい」と、
-//   手の決まり(rhythm-chart-hand-rules.js)の「真ん中で左右が同じ所」「地上の帯のすぐ横」「同時押しが隣り合う」「帯の中」「水平クロス」、両手のシミュレートの「押せない」。
+//   手の決まり(rhythm-chart-hand-rules.js)の「同じ側の押し始めが90ms未満」「真ん中で左右が同じ所」「地上の帯のすぐ横」「同時押しが隣り合う」「帯の中」「水平クロス」、両手のシミュレートの「押せない」。
 //   交差の数え方(押さえている指を越える所)に入らない、「左右の手が入れ替わる流れ」「同じ指の速い横移動」も、真ん中越え・忙しいとして数える。
 // 【直し方】そういう形が出た所のタップ・フリック(無ければ手前1拍半のもの)を、時刻・種類・幅はそのまま、別のレーンへ動かす候補を全部試し、
 //   前後3秒の点数がいちばん下がるものを選ぶ。下がらなければ動かさない。ホールド・スライド・モンスターノーツは動かさない(音は1つも減らさない・増やさない)。
@@ -32,11 +32,11 @@ const SP_W={centerSwap:40,beside:20,chord:40,skyPath:40,stacked:40};
 const score=(list,prof,beat)=>{const rt=toRuntime(list);
   return thumbCheck(list.slice().sort((a,b)=>startOf(a)-startOf(b)),prof,beat).issues.reduce((a,i)=>a+W[i.kind],0)
     +HR.samePlace(rt).reduce((a,x)=>a+(SP_W[x.kind]||0),0)
-    +HR.heldBandBlocked(rt).length*100+HR.flatCross(rt).length*100
+    +HR.heldBandBlocked(rt).length*100+HR.flatCross(rt).length*100+HR.fastSameSide(rt).length*30
     +simulateRuntime(rt.filter(n=>!(n.skyHeight>0))).impossible*100;};
 const counts=(list,prof,beat)=>{const c={cross:0,reach:0,busy:0,impossible:0};for(const i of thumbCheck(list.slice().sort((a,b)=>startOf(a)-startOf(b)),prof,beat).issues)c[i.kind]++;
   const rt=toRuntime(list),sp={};for(const x of HR.samePlace(rt))sp[x.kind]=(sp[x.kind]||0)+1;
-  return {交差:c.cross,真ん中越え:c.reach,忙しい:c.busy,押せない:c.impossible,真ん中で入れ替わり:sp.centerSwap||0,帯のすぐ横:sp.beside||0,隣り合う同時押し:sp.chord||0,帯の中:HR.heldBandBlocked(rt).length};};
+  return {同じ側の速い押し始め:HR.fastSameSide(rt).length,交差:c.cross,真ん中越え:c.reach,忙しい:c.busy,押せない:c.impossible,真ん中で入れ替わり:sp.centerSwap||0,帯のすぐ横:sp.beside||0,隣り合う同時押し:sp.chord||0,帯の中:HR.heldBandBlocked(rt).length};};
 // 並べ直す本体。直した数を返す
 const flowFix=(notes,{prof=THUMB_PROFILES.landscape,beat})=>{
   const local=(t,swap,v)=>notes.filter(n=>endOf(n)>=t-3000&&startOf(n)<=t+3000).map(n=>n===swap?v:n);
@@ -44,7 +44,8 @@ const flowFix=(notes,{prof=THUMB_PROFILES.landscape,beat})=>{
   const targets=()=>{const rt=toRuntime(notes);
     const th=thumbCheck(notes.slice().sort((a,b)=>startOf(a)-startOf(b)),prof,beat).issues.filter(i=>i.kind!=='busy').map(i=>({t:i.t,x:i.x,key:`${Math.round(i.t)}|${i.kind}|${i.what}`}));
     const sp=HR.samePlace(rt).filter(x=>SP_W[x.kind]).map(x=>({t:x.at,x:null,key:`${Math.round(x.at)}|${x.kind}`}));
-    return [...th,...sp].filter(x=>!tried.has(x.key)).sort((a,b)=>a.t-b.t);};
+    const fs1=HR.fastSameSide(rt).map(x=>({t:x.at,x:null,key:`${Math.round(x.at)}|fast`}));
+    return [...th,...sp,...fs1].filter(x=>!tried.has(x.key)).sort((a,b)=>a.t-b.t);};
   for(let r=0;r<5000;r++){const list=targets();if(!list.length)break;const i0=list[0];tried.add(i0.key);
     const at=n=>Math.abs(startOf(n)-i0.t)<=5;
     const cands=[...notes.filter(at).sort((a,b)=>i0.x==null?0:Math.abs(xOf(a)-i0.x)-Math.abs(xOf(b)-i0.x)),

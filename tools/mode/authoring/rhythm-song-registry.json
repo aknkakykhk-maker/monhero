@@ -1175,7 +1175,8 @@
    "chartIntensityByDifficulty": {
     "MASTER": "strong"
    },
-   "hellDensity": 1.3
+   "hellDensity": 1.3,
+   "masterDensity": 1.3
   },
   "rebellion_short": {
    "flowPlacement": true,
