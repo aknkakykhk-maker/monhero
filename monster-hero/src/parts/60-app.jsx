@@ -12912,7 +12912,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const cardScopeLabel = (card) => {
     if (!card || !isTacticsMode(runMode)) return null;
     if (isAttackCard(card)) return '敵へ';
-    if (card.type === 'guard' || card.type === 'weak_guard' || card.subType === 'buff_myaru') return '単体';
+    // きゅうこの譜面(2026-10-22)も、タクティクスでは置いた子が単体攻撃を引き受け、その子だけ被ダメが減る(2026-11-01 点検で直した)
+    if (card.type === 'guard' || card.type === 'weak_guard' || card.subType === 'buff_myaru' || card.subType === 'cover_kyuko') return '単体';
     return '全体';
   };
   // 色は「見た目だけ」。Tailwindは静的化してあるので、組み立てずにそのまま書く
