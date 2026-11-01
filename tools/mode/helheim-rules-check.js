@@ -38,12 +38,12 @@ check('IDと動的キー',h.recordId==='HELHEIM'&&h.rankingId==='ExtremeHELHEIM'
 check('RAGNAROKクリアで解放',!G('isHelheimUnlocked')(0)&&G('isHelheimUnlocked')(1)&&!G('isHelheimUnlocked')(undefined));
 check('ランキングキーへ追加され既存キーを崩さない',(()=>{const keys=G('RANKING_DIFFICULTY_KEYS');
   return keys.includes('ExtremeHELHEIM')&&keys.includes('ExtremeRAGNAROK')&&keys.includes('ExtremeGOD')&&new Set(keys).size===keys.length;})());
-check('難易度一覧の末尾に並ぶ',G('ALL_EXTREME_DIFFICULTIES').map(x=>x.id).slice(-5).join()==='GOD,RAGNAROK,HELHEIM,ETERNAL,INFERNO');
+check('難易度一覧の末尾に並ぶ',G('ALL_EXTREME_DIFFICULTIES').map(x=>x.id).slice(-6).join()==='GOD,RAGNAROK,HELHEIM,ETERNAL,INFERNO,COCYTUS');
 
 // 種族チャレンジは極限チャレンジと同じ難易度まで出す。GOD以降のIDは本体で手書きしているので、ずれていないか見る
-check('種族チャレンジの難易度が極限の全難易度(INFERNOまで)と一致する',
+check('種族チャレンジの難易度が極限の全難易度(COCYTUSまで)と一致する',
   JSON.stringify(G('SPECIES_CHALLENGE_DIFFICULTY_IDS'))===JSON.stringify([...Object.keys(G('DIFFICULTY_SETTINGS')),...G('ALL_EXTREME_DIFFICULTIES').map(x=>x.id)])
-  &&G('SPECIES_CHALLENGE_DIFFICULTY_IDS').slice(-5).join()==='GOD,RAGNAROK,HELHEIM,ETERNAL,INFERNO');
+  &&G('SPECIES_CHALLENGE_DIFFICULTY_IDS').slice(-6).join()==='GOD,RAGNAROK,HELHEIM,ETERNAL,INFERNO,COCYTUS');
 check('種族チャレンジの初回クリア報酬(超越の実)',[['INFINITY',40],['GOD',60],['RAGNAROK',80],['HELHEIM',100],['Beginner',1]].every(([id,n])=>G('speciesChallengeFirstClearReward')(id)===n));
 check('種族チャレンジはRAGNAROKを先にクリアするとHELHEIMが開く',(()=>{const f=G('isSpeciesChallengeDifficultyUnlocked');return !f('HELHEIM',['GOD'])&&f('HELHEIM',['RAGNAROK'])&&f('GOD',['INFINITY']);})());
 
@@ -108,7 +108,7 @@ check('通常UIへ公開しRAGNAROKクリアで解放',source.includes("setting.
 check('クイックにHELHEIMを入れない',G('QUICK_EXTREME_SETTINGS').HELHEIM===undefined);
 check('既存難易度の値を動かしていない',G('RAGNAROK_SETTING').power===200&&G('GOD_SETTING').power===100
   &&near(G('ragnarokTwilightRules')(9).enemyMultiplier,2.0)&&G('ragnarokTwilightRules')(1).distanceEnhancement===0.35);
-check('勇者の証はHELHEIMで3個',/extreme:Object\.freeze\(\{ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5 \}\)/.test(source));
+check('勇者の証はHELHEIMで3個',/extreme:Object\.freeze\(\{ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5, COCYTUS:6 \}\)/.test(source));
 check('ヘルプにHELHEIMの案内がある',help.includes('HELHEIM専用ルール「冥府」')&&help.includes('HELHEIMの記録と報酬'));
 check('更新履歴にHELHEIM追加が載っている',changelog.includes("update_notice_helheim_v1"));
 process.exit(failed?1:0);

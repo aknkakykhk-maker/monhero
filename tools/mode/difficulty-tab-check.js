@@ -224,7 +224,8 @@ const serve = () => new Promise((resolve) => {
     await openDifficulty('チャレンジモード');
     check('チャレンジの難易度選択が開ける（エラー画面に落ちていない）', await difficultyScreenOk());
     const challengeTabs = await tabLabels();
-    check('チャレンジにも「通常 / 極限」タブが出る', challengeTabs.length === 2, challengeTabs.join(' | '));
+    // 2026-11-01 冥界チャレンジ: チャレンジだけ「通常 / 極限 / 冥界」の3つ(冥界は ETERNAL クリアまで鍵つき)
+    check('チャレンジにも「通常 / 極限 / 冥界」タブが出る', challengeTabs.length === 3 && /冥界/.test(challengeTabs[2]), challengeTabs.join(' | '));
     await page.evaluate(() => {
       [...document.querySelectorAll('[data-difficulty-tabs] button')].find(b => b.textContent.includes('極限'))?.click();
     });
@@ -237,7 +238,7 @@ const serve = () => new Promise((resolve) => {
       jumped ? '移れた' : lockedTab ? '未解放なので押せない' : 'どちらでもない');
     if (jumped) {
       const backTabs = await tabLabels();
-      check('極限の画面にも同じタブが出る', backTabs.length === 2, backTabs.join(' | '));
+      check('極限の画面にも同じタブが出る', backTabs.length === 3 && /冥界/.test(backTabs[2]), backTabs.join(' | '));
       await page.evaluate(() => {
         [...document.querySelectorAll('[data-difficulty-tabs] button')].find(b => b.textContent.includes('通常'))?.click();
       });
@@ -262,7 +263,8 @@ const serve = () => new Promise((resolve) => {
     check('同じ並びに極限の段階も続く',
       ['EXTREME', 'GOD', 'RAGNAROK', 'HELHEIM'].every(label => rankTabs.includes(label)),
       rankTabs.slice(-4).join(','));
-    check('タブは18段階', rankTabs.length === 18, `${rankTabs.length}枚`);
+    // 2026-11-01: 通常9＋極限9＋冥界2(INFERNO・COCYTUS は🛡つきで同じ並びに続く)
+    check('タブは20段階', rankTabs.length === 20, `${rankTabs.length}枚`);
     // 極限のタブを押しても画面が落ちない(押した先で引くキーが ExtremeGOD などになる)
     await page.evaluate(() => {
       [...document.querySelectorAll('[data-score-ranking-tabs] button')].find(b => b.textContent.trim() === 'GOD')?.click();
