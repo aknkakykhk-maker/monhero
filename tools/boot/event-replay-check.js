@@ -68,7 +68,8 @@ check('一覧の各行に日付を出す', (source.match(/data-event-replay-date
   const { groups, ids, fb } = c3.__g;
   check('各イベントが、既知のまとまり(group)を持つ(足すときの書き忘れよけ)',
     list.every(ev => ids.includes(ev.group)), list.filter(ev => !ids.includes(ev.group)).map(ev => ev.id).join(', '));
-  check('まとまりの並びは、いま開いているイベント(ハロウィン・ナイト)が先頭', groups[0] && groups[0].id === 'halloween', groups.map(g => g.id).join(' > '));
+  // 2026-11-02 いま開いているイベントは「鍵の向こう側へ」(前はハロウィン・ナイト)
+  check('まとまりの並びは、いま開いているイベント(鍵の向こう側へ)が先頭', groups[0] && groups[0].id === 'pandora_wings', groups.map(g => g.id).join(' > '));
   check('すべてのイベントが、どれか1つのまとまりにちょうど1回ずつ入る(一覧から消えない・重ならない)',
     groups.flatMap(g => g.events.map(ev => ev.id)).sort().join() === list.map(ev => ev.id).sort().join());
   const msOf = (ev) => Date.parse(ev.date.replace(' ', 'T') + ':00+09:00');

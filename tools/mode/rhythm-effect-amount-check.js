@@ -42,9 +42,10 @@ ok('既定は「標準」の段',game.includes("effectAmount:'LIGHT'"));
 // コンボ数は200コンボ以上、マスモンは設定している人にしか出ないので、実画面では作れない。
 const html=fs.readFileSync(path.join(ROOT,'monster-hero/index.html'),'utf8');
 const data=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),'utf8');
-const stopsAt=(source,selector,level)=>new RegExp(`\\[data-rhythm-effect="${level}"\\] ${selector.replace(/[[\]]/g,ch=>'\\'+ch)}[^{]*\\{[^}]*animation:none`).test(source);
+// 2026-11-01 演出を1つずつ選べるようにし、判定文字・判定ライン・コンボの止め方は data-fx-<項目>(おまかせなら演出量と同じ値)へ付け替えた。attr でどの印を見るかを渡す
+const stopsAt=(source,selector,level,attr='data-rhythm-effect')=>new RegExp(`\\[${attr}="${level}"\\] ${selector.replace(/[[\]]/g,ch=>'\\'+ch)}[^{]*\\{[^}]*animation:none`).test(source);
 ok('「標準」でコンボ数の脈打ちと跳ねが止まる',
-  stopsAt(html,'[data-rhythm-combo-box]','LIGHT')&&stopsAt(html,'[data-rhythm-combo]','LIGHT'));
+  stopsAt(html,'[data-rhythm-combo-box]','LIGHT','data-fx-combo-bounce')&&stopsAt(html,'[data-rhythm-combo]','LIGHT','data-fx-combo-bounce'));
 // ★マスモンの動きには専用の設定(両サイドのマスモン｜動き)がある。演出量で横取りしない
 //   (2026-09-13・ユーザー指摘「マスモンの動きが演出量で制御されてる /
 //    マスモンの動きは別に設定がある」)。止めてよいのは軽量モードだけ。
@@ -55,9 +56,9 @@ ok('マスモンの動きを演出量で止めていない(専用の設定に任
 ok('軽量モードでは止まる(重いものを一括で止めるスイッチなので)',
   /\[data-rhythm-lightweight="true"\] \[data-rhythm-side-monster\][^{]*\{[^}]*animation:none/.test(data));
 ok('「標準」で判定文字が弾む動きが止まる',
-  stopsAt(data,'[data-rhythm-judgment-text]','LIGHT'));
+  stopsAt(data,'[data-rhythm-judgment-text]','LIGHT','data-fx-judge-flow'));
 ok('「標準」で判定ラインの脈打ちが止まる',
-  stopsAt(data,'[data-rhythm-judgment-line]','LIGHT'));
+  stopsAt(data,'[data-rhythm-judgment-line]','LIGHT','data-fx-judge-line-pulse'));
 ok('「標準」でノーツを取り切ったときの光を出さない',
   game.includes("if(!settings.lightweightMode&&!rhythmEffectAtMost(settings.effectAmount,'LIGHT'))note._rhythmClearAt="));
 // 「最大」では止まっていないこと(段の差が本物であることの裏取り)
@@ -103,11 +104,13 @@ ok('「最大」ではどれも止まっていない',
       const line=document.querySelector('[data-rhythm-judgment-line]');
       const text=document.querySelector('[data-rhythm-judgment-text]');
       if(!main||!area||!line||!text)return null;
-      const keepMain=main.getAttribute('data-rhythm-effect'),keepArea=area.getAttribute('data-rhythm-effect');
+      // 演出量の段と、おまかせのときに同じ値が入る data-fx-<項目> をそろえて替える(2026-11-01)
+      const ATTRS=['data-rhythm-effect','data-fx-judge-flow','data-fx-judge-line-pulse','data-fx-combo-bounce','data-fx-burst','data-fx-flash'];
+      const keep=[main,area].map(el=>ATTRS.map(a=>el.getAttribute(a)));
       text.setAttribute('data-judgment','MARVELOUS');
       const out={};
       for(const level of ['NORMAL','LOW','LIGHT','MINIMAL']){
-        main.setAttribute('data-rhythm-effect',level);area.setAttribute('data-rhythm-effect',level);
+        for(const el of [main,area])for(const a of ATTRS)el.setAttribute(a,level);
         const lineStyle=getComputedStyle(line),textStyle=getComputedStyle(text);
         out[level]={
           line:lineStyle.animationName,
@@ -115,7 +118,7 @@ ok('「最大」ではどれも止まっていない',
           blurs:(textStyle.filter.match(/drop-shadow/g)||[]).length,
         };
       }
-      main.setAttribute('data-rhythm-effect',keepMain);area.setAttribute('data-rhythm-effect',keepArea);
+      [main,area].forEach((el,i)=>ATTRS.forEach((a,j)=>{const v=keep[i][j];if(v===null)el.removeAttribute(a);else el.setAttribute(a,v);}));
       text.removeAttribute('data-judgment');
       return out;
     });

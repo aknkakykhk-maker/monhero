@@ -85,10 +85,11 @@ check('幅1 SLIDEを中心で開始できる',!!result[0].target);
 RHYTHM_GESTURE_RUNTIME.clear();
 // 入力側の余白は 2026-09-05 にゆるくした（幅1は .45 サブレーン）。
 // 幅1 SLIDEの開始範囲は 1.5〜2.5 なので、2.95 までが余白の内側、それより外は取らない。
+// 2026-11-02 社長「全部+0.25」で余白が .45→.95 サブレーンになったので、外側の見本は 3.45 より外(3.55)へ動かす。
 result=rhythmMatchInputBatch([makeSlide({subLaneWidth:1})],[{inputKey:'narrow-margin',lane:1,subLaneCoordinate:2.9}],1000,0);
 check('幅1 SLIDEは余白の内側なら開始できる',!!result[0].target);
 RHYTHM_GESTURE_RUNTIME.clear();
-result=rhythmMatchInputBatch([makeSlide({subLaneWidth:1})],[{inputKey:'narrow-outside',lane:1,subLaneCoordinate:3.05}],1000,0);
+result=rhythmMatchInputBatch([makeSlide({subLaneWidth:1})],[{inputKey:'narrow-outside',lane:1,subLaneCoordinate:3.55}],1000,0);
 check('幅1 SLIDEの開始範囲外は取得しない',!result[0].target);
 RHYTHM_GESTURE_RUNTIME.clear();
 result=rhythmMatchInputBatch([makeSlide({subLaneWidth:4})],[{inputKey:'wide-edge',lane:0,subLaneCoordinate:.01}],1000,0);
@@ -104,7 +105,8 @@ check('旧幅SLIDEは余白の内側なら開始できる',!!result[0].target);
 RHYTHM_GESTURE_RUNTIME.clear();
 // 2026-09-05、押す場所の余白を 幅2以上で .35→.60 へ広げた(ユーザー指示「まだ全然むずい」)。
 // 見張りたいのは「余白の外は取れない」ことなので、見本の位置を新しい余白の外へ動かす。
-result=rhythmMatchInputBatch([makeSlide()],[{inputKey:'half-outside',lane:1,subLaneCoordinate:3.7}],1000,0);
+// 2026-11-02 さらに .60→1.10 へ広げた(社長「全部+0.25」)ので 3.7→4.2 へ(帯の右端3+1.1=4.1の外)。
+result=rhythmMatchInputBatch([makeSlide()],[{inputKey:'half-outside',lane:1,subLaneCoordinate:4.2}],1000,0);
 check('旧幅SLIDE開始範囲の外側は取得しない',!result[0].target);
 RHYTHM_GESTURE_RUNTIME.clear();
 const legacy={type:'SLIDE',timeMs:1000,endTimeMs:2000,lane:2,endLane:3,done:false,activePointerId:null,slidePoints:[{timeMs:1000,lane:2},{timeMs:2000,lane:3}]};
