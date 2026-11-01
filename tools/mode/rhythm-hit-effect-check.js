@@ -156,7 +156,8 @@ check('虹はぴったりのMARVELOUSだけ',
   && source.includes("const rainbowHit=!monster&&precise&&judgment==='MARVELOUS';")
   && source.includes('--rhythm-spark-color-1'));
 check('演出を減らしても色と大きさは残す(止めるのは動きと強い光だけ)',
-  /\[data-rhythm-effect="MINIMAL"\] \[data-rhythm-judgment-text\]\{[\s\S]{0,200}animation:none/.test(html));
+  // 2026-11-01 判定文字の流れは data-fx-judge-flow(おまかせなら演出量と同じ値)で止める
+  /\[data-fx-judge-flow="MINIMAL"\] \[data-rhythm-judgment-text\]\{[\s\S]{0,200}animation:none/.test(html));
 // ===== ぴったりのMARVELOUS(2026-09-12・ユーザー指示) =====
 // 「マーベラスをさらに完璧なタイミングで踏んだマーベラスを判定の見ためだけさらによくしたい /
 //   scoreはかわらず」。
@@ -267,16 +268,19 @@ check('画面のフラッシュは opacity だけを動かす(あらかじめ置
   &&hitCss.includes('[data-rhythm-screen-flash]{position:absolute;inset:0;pointer-events:none;'));
 check('演出量MINIMAL・軽量モードでは出さない(音は鳴る)',
   // 設定「押したときの光」が「いつも出す」(data-rhythm-tap-light="1")のときだけは、光の層を残す(2026-10-15)
-  hitCss.includes('[data-rhythm-play-area][data-rhythm-effect="MINIMAL"]:not([data-rhythm-tap-light="1"]) [data-rhythm-hit-layer]')
-  &&hitCss.includes('[data-rhythm-play-area][data-rhythm-lightweight="true"]:not([data-rhythm-tap-light="1"]) [data-rhythm-hit-layer]')
-  &&hitCss.includes('[data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-screen-flash]')
+  // 2026-11-01 演出を1つずつ選べるようにし、光の層は data-fx-burst(-lw)、フラッシュは data-fx-flash(-lw) で止める(おまかせなら演出量・軽量モードと同じ値)
+  hitCss.includes('[data-rhythm-play-area][data-fx-burst="MINIMAL"]:not([data-rhythm-tap-light="1"]) [data-rhythm-hit-layer]')
+  &&hitCss.includes('[data-rhythm-play-area][data-fx-burst-lw="true"]:not([data-rhythm-tap-light="1"]) [data-rhythm-hit-layer]')
+  &&hitCss.includes('[data-rhythm-play-area][data-fx-flash-lw="true"] [data-rhythm-screen-flash]')
   &&hitCss.includes('display:none!important')
   // 音は演出量の外で鳴らす
   // 間に空中のノーツの「きらっ」の音(playSky・演出量の外)が入ってよい
   &&/if\(monsterHit(?:&&!monAbOff\('se'\))?\)(?:RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);|\{RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);RHYTHM_FRAME_DIAG\.cue\('se'\);\})\s*\n(?:\s*\/\/[^\n]*\n\s*if\(rhythmNoteSkyHeight\(note\)>0\)RHYTHM_NOTE_SE_RUNTIME\.playSky\(judgment\);\s*\n)?\s*if\(!settings\.lightweightMode/.test(game));
 // 設定「押したときの光」(2026-10-15)。既定は「おまかせ」(これまでどおり)で、新しい項目は正規化で補う。
 // 「いつも出す」の枝は判定ラインの光だけを出す(判定文字・コンボ数・フラッシュ・マスモンの跳ねには触らない)
-{const i=game.indexOf('}else if(rhythmTapLightOnly(settings)){'),branch=i>=0?game.slice(i,game.indexOf('\n}\n',i)):'';
+// 2026-11-01 枝は「最小・軽量のとき」の else の中の、弾ける光の if(rhythmFxOn(settings,'burst',rhythmTapLightOnly(settings)))。
+// 2026-11-02 演出量「最小」は、おまかせでもこの光を出す(rhythmTapLightOnly)
+{const i=game.indexOf("if(rhythmFxOn(settings,'burst',rhythmTapLightOnly(settings))){"),branch=i>=0?game.slice(i,game.indexOf('if(hitEffect)extra.push(hitEffect);}',i)):'';
 check('「押したときの光」: 既定はおまかせ・正規化で補う・「いつも出す」の枝は光だけ',
   game.includes("tapLight:'AUTO',")
   &&game.includes('tapLight:RHYTHM_TAP_LIGHT_MODES.includes(source.tapLight)?source.tapLight:DEFAULT_RHYTHM_SETTINGS.tapLight,')
@@ -407,7 +411,7 @@ const PAGE=`<!doctype html><html><head><meta charset="utf-8"><style>
 html,body{margin:0;background:#000}
 #area{position:relative;width:390px;height:700px;overflow:hidden}
 </style></head><body>
-<div id="area" data-rhythm-play-area data-rhythm-effect="NORMAL" data-rhythm-lightweight="false">
+<div id="area" data-rhythm-play-area data-rhythm-effect="NORMAL" data-rhythm-lightweight="false" data-fx-burst="NORMAL" data-fx-burst-lw="false" data-fx-flash="NORMAL" data-fx-flash-lw="false">
 <i data-rhythm-judgment-line style="position:absolute;bottom:12%;left:0;right:0;height:3px"></i></div>
 <script src="/monster-hero/data/rhythm-mode.js"><\/script>
 </body></html>`;
@@ -484,7 +488,7 @@ html,body{margin:0;background:#000}
     // 軽量モードでは出ない
     const lightweight=await page.evaluate(()=>{
       const area=document.querySelector('[data-rhythm-play-area]');
-      area.dataset.rhythmLightweight='true';
+      area.dataset.rhythmLightweight='true';area.dataset.fxBurstLw='true';area.dataset.fxFlashLw='true';
       const layer=area.querySelector('[data-rhythm-hit-layer]');
       return getComputedStyle(layer).display;
     });
@@ -497,6 +501,7 @@ html,body{margin:0;background:#000}
       const layer=area.querySelector('[data-rhythm-hit-layer]');
       const out={lightweight:getComputedStyle(layer).display,flash:getComputedStyle(flash).display};
       area.dataset.rhythmLightweight='false';area.dataset.rhythmEffect='MINIMAL';
+      area.dataset.fxBurstLw='false';area.dataset.fxFlashLw='false';area.dataset.fxBurst='MINIMAL';area.dataset.fxFlash='MINIMAL';
       out.minimal=getComputedStyle(layer).display;out.minimalFlash=getComputedStyle(flash).display;
       return out;
     });
