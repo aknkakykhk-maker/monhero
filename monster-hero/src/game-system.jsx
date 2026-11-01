@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 544650adcf2b5eab
+// generated-sha256: f84e4cf60e93a1e8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -44070,7 +44070,7 @@ function AiCopyGutsMeter({ guts, maxGuts }) {
   );
 }
 // ===== INFERNOのボスの層のシールド(2026-10-31 社長の決定・見本 docs/progress/inferno/shield-README.md) =====
-// ゲージは層の数だけ(ムー5・デュラハン4・ほか3)。下の層(1枚目)から割れ、割れた層はひびが入った灰色で残る(残り方1)。
+// ゲージは層の数だけ(ムー5・デュラハン4・W3〜8の敵3・W1〜2の敵2。2026-11-01 ふつうの敵にも層)。ボスだけ見出しに「👑 BOSS」と左の大きな札。下の層(1枚目)から割れ、割れた層はひびが入った灰色で残る(残り方1)。
 // 色は案2: 1枚目の淡い黄 → 黄 → 橙 → 赤 → 深紅。後の層ほど少し長く太い。本体のライフは別の色(紫)。
 // 色が見分けにくい人のために、各層に ①〜⑤ の印と「残り / 最大」の数も出す。
 // 状態は 19 の enemyShellView(enemy) を読むだけ(数と決まりはセコンドくんの側)
@@ -44127,6 +44127,7 @@ function InfernoShieldGauge({ view }) {
     <div data-inferno-shield-gauge={view.total} data-inferno-shield-left={view.left} aria-label={`シールド 残り${view.left}枚(全${view.total}枚)`}
       className="pointer-events-none absolute left-1/2 top-1 z-[44] flex items-start gap-1.5 [@media(max-height:640px)]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden" style={{ transform: 'translateX(-50%)' }}>
       <div className="mt-[1px] flex flex-col items-end gap-[1px] leading-none">
+        {view.boss && <span data-inferno-shield-boss className="whitespace-nowrap text-[10px] font-black italic text-yellow-300" style={{ textShadow: '0 0 6px #f59e0b,0 1px 2px #000' }}>👑 BOSS</span>}
         <span className="whitespace-nowrap text-[9px] font-black text-amber-200" style={{ textShadow: '0 1px 2px #000' }}>🛡 シールド</span>
         <span className="text-[15px] font-black text-white" style={{ textShadow: `0 0 6px ${curColor},0 1px 2px #000` }}>{view.left}<small className="text-[9px] text-amber-300">/{view.total}</small></span>
       </div>
@@ -44155,8 +44156,9 @@ function InfernoShieldCompact({ view }) {
   );
 }
 // 大きな札(案B)。のこりの枚数をひと目で。縁は、いま削っている層の色
+//   ふつうの敵(W1〜8 のボスでない敵)には出さない。ゲージだけで残りの枚数が分かる(2026-11-01 社長「案2」)
 function InfernoShieldBadge({ view }) {
-  if (!view || !(view.total > 0)) return null;
+  if (!view || !(view.total > 0) || !view.boss) return null;
   const col = view.left > 0 ? infernoShieldColorAt(view.broken) : ['#e7e5e4', '#78716c', '#a8a29e'];
   return (
     <div data-inferno-shield-badge={view.left} aria-hidden="true"
@@ -44468,7 +44470,7 @@ function BattleScreen({
   const infernoShellRule = specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
   const [infernoShellFx, setInfernoShellFx] = useState(null);
   // 必殺技・ためる・貫通の予告の札(画面の上から11%に固定)は、層のゲージと同じ高さに来るので、ゲージが出ている間はゲージの高さぶん下げる
-  //   (2026-10-31 社長「ゲージの下の層にかからないように」)。背の低い画面・横向きはゲージがライフの帯の中の細い1本なので、その分だけ下げる
+  //   (2026-10-31 社長「ゲージの下の層にかからないように」)。背の低い画面はゲージがライフの帯の中の細い1本なので16pxだけ、横向きは画面が低く上の飾り(✨☠️)が細い1本にかかるので56px下げる
   const infernoFloatShift = infernoShellView?.total>0 ? infernoShellView.total*15+8 : 0;
   const infernoFloatTop = infernoFloatShift ? `calc(11% + ${infernoFloatShift}px)` : '11%';
   const infernoShellSeqRef = useRef({ key:null, seq:0 });
@@ -44906,7 +44908,7 @@ function BattleScreen({
         {enemy&&(
           <div data-enemy-bar className={`shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`}>
             <div className="flex justify-between items-center text-[11px] font-black italic uppercase tracking-tighter mb-0.5">
-              <span className={`flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-none ${wave===10?'text-red-500 animate-pulse':'text-slate-200'}`}><Skull size={11} className="shrink-0"/>{/* 斜体の最後の字の傾きが truncate の枠で欠ける(「ディノ」の「ノ」)ので右に少し余白 */}<span className="max-w-[34vw] truncate pr-[3px]">{enemy.name}</span><span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`}>{RANGE_LABELS[enemyDist]}</span>{Array.isArray(enemyDebuffs)&&enemyDebuffs.length>0&&<button type="button" data-enemy-debuffs={enemyDebuffs.length} aria-expanded={enemyDebuffOpen} aria-label={`敵の状態 ${enemyDebuffs.map(d=>`${d.label} ${d.value}`).join('、')}（押すと詳細）`} onClick={()=>setEnemyDebuffOpen(v=>!v)} className="mh-hit-expand relative shrink-0 inline-flex items-center gap-1 rounded-full border border-white/25 bg-black/60 px-1.5 py-0.5 text-[10px] not-italic font-black leading-none tracking-normal normal-case text-slate-100 active:scale-95">{enemyDebuffs.map(d=>(<span key={d.key} data-enemy-debuff={d.key} aria-label={`${d.label} ${d.value}`} className={`inline-flex items-center gap-px ${d.tone.split(' ')[0]}`}><span aria-hidden="true">{d.mark}</span>{d.short?<span className="font-mono">{d.short}</span>:null}</span>))}<span aria-hidden="true" className="text-slate-300">{enemyDebuffOpen?'▲':'▼'}</span></button>}</span>
+              <span className={`flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-none ${wave===10?'text-red-500 animate-pulse':'text-slate-200'}`}><Skull size={11} className="shrink-0"/>{/* 斜体の最後の字の傾きが truncate の枠で欠ける(「ディノ」の「ノ」)ので右に少し余白 */}<span className="max-w-[34vw] truncate pr-[3px]">{enemy.name}</span>{infernoShellView?.boss&&<span data-inferno-boss-name className="hidden shrink-0 rounded-full bg-gradient-to-r from-yellow-300 to-amber-500 px-1.5 py-[1px] text-[9px] font-black not-italic tracking-wider text-amber-950 shadow-[0_0_8px_#f59e0b] [@media(max-height:640px)]:inline [@media(orientation:landscape)_and_(max-height:520px)]:inline">BOSS</span>}<span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`}>{RANGE_LABELS[enemyDist]}</span>{Array.isArray(enemyDebuffs)&&enemyDebuffs.length>0&&<button type="button" data-enemy-debuffs={enemyDebuffs.length} aria-expanded={enemyDebuffOpen} aria-label={`敵の状態 ${enemyDebuffs.map(d=>`${d.label} ${d.value}`).join('、')}（押すと詳細）`} onClick={()=>setEnemyDebuffOpen(v=>!v)} className="mh-hit-expand relative shrink-0 inline-flex items-center gap-1 rounded-full border border-white/25 bg-black/60 px-1.5 py-0.5 text-[10px] not-italic font-black leading-none tracking-normal normal-case text-slate-100 active:scale-95">{enemyDebuffs.map(d=>(<span key={d.key} data-enemy-debuff={d.key} aria-label={`${d.label} ${d.value}`} className={`inline-flex items-center gap-px ${d.tone.split(' ')[0]}`}><span aria-hidden="true">{d.mark}</span>{d.short?<span className="font-mono">{d.short}</span>:null}</span>))}<span aria-hidden="true" className="text-slate-300">{enemyDebuffOpen?'▲':'▼'}</span></button>}</span>
               {/* ★敵に重なってかかっている状態(水牢・氷結・咆哮)を「マーク×数」で常に出す(2026-10-12 社長の依頼)。
                   敵の絵の隅は、技名の帯・次の行動の札と重なり、横持ちでは絵ごと隠れるので、どの画面でも見えるライフの帯の右端(数字の左)に置く */}
               <span className="flex shrink-0 items-center gap-1"><BattleStackMarks counts={enemyStackCounts} side="enemy" className="mh-stack-marks-enemy"/><span className="text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]">{Math.max(0,enemy.hp).toLocaleString()} / {enemy.maxHp.toLocaleString()}</span></span>
@@ -45132,13 +45134,13 @@ function BattleScreen({
               </div>,document.body
             )}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='SPECIAL'&&(
-              <div data-battle-float className={`fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift?' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+16px)]':''}`} style={{top:infernoFloatTop,zIndex:65000,animation:'specialWarnFlash 500ms ease-in-out infinite'}}>
+              <div data-battle-float className={`fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift?' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+56px)]':''}`} style={{top:infernoFloatTop,zIndex:65000,animation:'specialWarnFlash 500ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(217,70,239,1)]">☠️</div>
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-purple-900 via-fuchsia-700 to-purple-900 border-2 border-fuchsia-300 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(217,70,239,0.9)]">必 殺 技</div>
               </div>
             )}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='CHARGE'&&(
-              <div data-battle-float className={`fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift?' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+16px)]':''}`} style={{top:infernoFloatTop,zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
+              <div data-battle-float className={`fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift?' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+56px)]':''}`} style={{top:infernoFloatTop,zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(251,191,36,1)]">✨</div>
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-900 via-amber-600 to-amber-900 border-2 border-amber-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(251,191,36,0.9)]">た め る</div>
               </div>
@@ -45150,7 +45152,7 @@ function BattleScreen({
                 貫通技準備とかがいいかな？」)。予告の帯には敵ごとの技名(「◯◯の構え」)が
                 出るので、そこへ種別の「構え」を重ねると同じ言葉が2つ並んで読みにくかった */}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='PIERCE_CHARGE'&&(
-              <div data-battle-float className={`fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift?' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+16px)]':''}`} style={{top:infernoFloatTop,zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
+              <div data-battle-float className={`fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift?' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+56px)]':''}`} style={{top:infernoFloatTop,zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(244,63,94,1)]">⚔️</div>
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-rose-900 via-rose-600 to-rose-900 border-2 border-rose-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(244,63,94,0.9)]">貫 通 技 準 備</div>
               </div>

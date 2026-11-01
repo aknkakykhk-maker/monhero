@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ab86ea30e1905cbc
+// source-sha256: f31b7a67cd27de27
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -73848,7 +73848,13 @@ function InfernoShieldGauge({
     }
   }, React.createElement("div", {
     className: "mt-[1px] flex flex-col items-end gap-[1px] leading-none"
-  }, React.createElement("span", {
+  }, view.boss && React.createElement("span", {
+    "data-inferno-shield-boss": true,
+    className: "whitespace-nowrap text-[10px] font-black italic text-yellow-300",
+    style: {
+      textShadow: '0 0 6px #f59e0b,0 1px 2px #000'
+    }
+  }, "👑 BOSS"), React.createElement("span", {
     className: "whitespace-nowrap text-[9px] font-black text-amber-200",
     style: {
       textShadow: '0 1px 2px #000'
@@ -73923,7 +73929,7 @@ function InfernoShieldCompact({
 function InfernoShieldBadge({
   view
 }) {
-  if (!view || !(view.total > 0)) return null;
+  if (!view || !(view.total > 0) || !view.boss) return null;
   const col = view.left > 0 ? infernoShieldColorAt(view.broken) : ['#e7e5e4', '#78716c', '#a8a29e'];
   return React.createElement("div", {
     "data-inferno-shield-badge": view.left,
@@ -75224,7 +75230,10 @@ function BattleScreen({
     className: "shrink-0"
   }), React.createElement("span", {
     className: "max-w-[34vw] truncate pr-[3px]"
-  }, enemy.name), React.createElement("span", {
+  }, enemy.name), infernoShellView?.boss && React.createElement("span", {
+    "data-inferno-boss-name": true,
+    className: "hidden shrink-0 rounded-full bg-gradient-to-r from-yellow-300 to-amber-500 px-1.5 py-[1px] text-[9px] font-black not-italic tracking-wider text-amber-950 shadow-[0_0_8px_#f59e0b] [@media(max-height:640px)]:inline [@media(orientation:landscape)_and_(max-height:520px)]:inline"
+  }, "BOSS"), React.createElement("span", {
     className: `shrink-0 px-1.5 py-0.5 rounded-full text-[10px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`
   }, RANGE_LABELS[enemyDist]), Array.isArray(enemyDebuffs) && enemyDebuffs.length > 0 && React.createElement("button", {
     type: "button",
@@ -75558,7 +75567,7 @@ function BattleScreen({
     className: "mt-0.5 text-[15px] font-black leading-snug"
   }, helpWrap(b.result))))), document.body), enemy && enemyIntent && !isBusy && !enemyAttackFx && !Array.isArray(tacticsUnits) && enemyIntent.type === 'SPECIAL' && React.createElement("div", {
     "data-battle-float": true,
-    className: `fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift ? ' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+16px)]' : ''}`,
+    className: `fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift ? ' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+56px)]' : ''}`,
     style: {
       top: infernoFloatTop,
       zIndex: 65000,
@@ -75570,7 +75579,7 @@ function BattleScreen({
     className: "px-3 py-1 rounded-lg bg-gradient-to-r from-purple-900 via-fuchsia-700 to-purple-900 border-2 border-fuchsia-300 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(217,70,239,0.9)]"
   }, "必 殺 技")), enemy && enemyIntent && !isBusy && !enemyAttackFx && !Array.isArray(tacticsUnits) && enemyIntent.type === 'CHARGE' && React.createElement("div", {
     "data-battle-float": true,
-    className: `fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift ? ' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+16px)]' : ''}`,
+    className: `fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift ? ' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+56px)]' : ''}`,
     style: {
       top: infernoFloatTop,
       zIndex: 65000,
@@ -75582,7 +75591,7 @@ function BattleScreen({
     className: "px-3 py-1 rounded-lg bg-gradient-to-r from-amber-900 via-amber-600 to-amber-900 border-2 border-amber-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(251,191,36,0.9)]"
   }, "た め る")), enemy && enemyIntent && !isBusy && !enemyAttackFx && !Array.isArray(tacticsUnits) && enemyIntent.type === 'PIERCE_CHARGE' && React.createElement("div", {
     "data-battle-float": true,
-    className: `fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift ? ' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+16px)]' : ''}`,
+    className: `fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1${infernoFloatShift ? ' [@media(max-height:640px)]:!top-[calc(11%+16px)] [@media(orientation:landscape)_and_(max-height:520px)]:!top-[calc(11%+56px)]' : ''}`,
     style: {
       top: infernoFloatTop,
       zIndex: 65000,
