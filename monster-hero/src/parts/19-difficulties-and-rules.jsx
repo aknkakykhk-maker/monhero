@@ -443,9 +443,10 @@ const ETERNAL_SETTING = Object.freeze({ id:'ETERNAL', label:'ETERNAL', japanese:
 // INFERNOはETERNALの次の極限難易度(2026-10-31 社長の決定)。冥府・ふつうのWAVEのシールド・貫き・敵ライフ10倍・デュラハンの上乗せはETERNALのまま。
 // ボスは起き上がらない(revival なし)。かわりにボスのWAVEは何枚ものシールド(層)をまとって出てくる。層の決まりは infernoStageRules
 const INFERNO_SETTING = Object.freeze({ id:'INFERNO', label:'INFERNO', japanese:'インフェルノ', available:true, debugAvailable:true, power:400, score:20, xp:140, gold:120, psyche:220, waveCount:10, unlockRequirement:'ETERNAL', rankingId:'ExtremeINFERNO', recordId:'INFERNO', description:'ボスは起き上がらないかわりに、何枚ものシールドをまとって現れる。1枚割るごとにボスは強くなり、最後は必殺技が連撃になる、極限チャレンジの最奥の難易度。', cardDescription:'ボスは3〜5枚のシールドをまとい、割るたびに攻撃が上がる。デュラハンとムーは必殺技が連撃に。冥府・シールド・貫き・敵ライフ10倍はエターナルのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
-// COCYTUSはINFERNOの次の極限難易度(2026-11-01 社長の決定)。冥府・貫き・敵ライフ10倍・デュラハンの上乗せはINFERNOのまま、ボスは起き上がらない。
+// COCYTUSはINFERNOの次の極限難易度(2026-11-01 社長の決定)。冥府・貫き・敵ライフ10倍・デュラハンの上乗せはINFERNOのまま。
+// デュラハンは1回・ムーは2回、本体を倒すと全回復+最大ライフ1.5倍(掛け算)で蘇る(シールドは張り直さない)。蘇るたびに攻撃も+20%(層1枚ぶんと同じ)。
 // ふつうの敵も層のシールドをまとい(WAVEのはじめの50%は層に置き換え)、層は厚く・枚数は多い。層の決まりは cocytusStageRules
-const COCYTUS_SETTING = Object.freeze({ id:'COCYTUS', label:'COCYTUS', japanese:'コキュートス', available:true, debugAvailable:true, power:500, score:20, xp:160, gold:140, psyche:250, waveCount:10, unlockRequirement:'INFERNO', rankingId:'ExtremeCOCYTUS', recordId:'COCYTUS', description:'どの敵も何枚もの厚いシールドをまとって現れる。割っても割っても次の1枚が待ち、1枚割るごとに敵は強くなる、極限チャレンジの最奥の難易度。', cardDescription:'どの敵も4〜7枚の厚いシールドをまとい、割るたびに攻撃が上がる。デュラハンとムーは必殺技が連撃に。冥府・貫き・敵ライフ10倍はインフェルノのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
+const COCYTUS_SETTING = Object.freeze({ id:'COCYTUS', label:'COCYTUS', japanese:'コキュートス', available:true, debugAvailable:true, power:500, score:20, xp:160, gold:140, psyche:250, waveCount:10, unlockRequirement:'INFERNO', rankingId:'ExtremeCOCYTUS', recordId:'COCYTUS', description:'どの敵も何枚もの厚いシールドをまとって現れる。1枚割るごとに敵は強くなり、デュラハンとムーは倒しても大きくなって蘇る、極限チャレンジの最奥の難易度。', cardDescription:'どの敵も4〜5枚の厚いシールドをまとい、割るたびに攻撃が上がる。デュラハンは1回・ムーは2回、全回復して大きくなって蘇る。冥府・貫き・敵ライフ10倍はインフェルノのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 9:1, 10:2 }), hpRate:1, maxHpRatePerRevival:1.5, atkStepsWithLayers:true, reveal:Object.freeze({ 9:Object.freeze([Object.freeze({ stage:'durahan', name:'凍土の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' })]), 10:Object.freeze([Object.freeze({ stage:'moo1', name:'凍土の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' }),Object.freeze({ stage:'moo2', name:'凍土の再起', desc:'ライフ全回復・最大ライフ2.25倍で復活' })]) }) }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
 const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES,GOD_SETTING,RAGNAROK_SETTING,HELHEIM_SETTING,ETERNAL_SETTING,INFERNO_SETTING,COCYTUS_SETTING]);
 // 極限チャレンジの難易度カラー。カード構造は共通のまま、上位ほど発光を少しずつ強める。
 // 常時アニメーションは使わず、iPhone縦画面でも視認性と軽さを優先する。
@@ -549,17 +550,18 @@ const infernoStageRules = (waveNumber) => {
     rushAtBroken:INFERNO_RUSH_AT_BROKEN[w]||null });
 };
 // COCYTUSの段階ルール(2026-11-01 社長の決定)。ETERNAL(冥府・貫き)の上に、ふつうの敵もボスも層のシールドを足す。
-//   shieldLayers … W1・2 4枚 / W3〜8 5枚 / W9 デュラハン 6枚 / W10 ムー 7枚。層を持つ敵はWAVEのはじめの50%のシールドを持たない
-//   layerFirstRate … 1枚目のシールド=敵の最大ライフのこの倍率(INFERNOの「ETERNALのライフと同じ」とは決め方が違う)。割るたびに+30%
+//   shieldLayers … W1・2 4枚 / W3〜8 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚。層を持つ敵はWAVEのはじめの50%のシールドを持たない
+//   layerFirstRate … 1枚目のシールド=敵の最大ライフのこの倍率(W1〜8 3.0倍・W9 3.8倍・W10 4.4倍。INFERNOの「ETERNALのライフと同じ」とは決め方が違う)。割るたびに+30%
 //   layerBodyBossOnly … 割りきったあとの本体のライフに倍率(1+0.3×枚数)を掛けるのはボスだけ。ふつうの敵の本体は元のまま
 //   layerAtkGain … 1枚割るごとに攻撃+20%(足し算・最後の1枚も)
-const COCYTUS_SHIELD_LAYERS = Object.freeze({ 1:4, 2:4, 3:5, 4:5, 5:5, 6:5, 7:5, 8:5, 9:6, 10:7 });
-const COCYTUS_RUSH_AT_BROKEN = Object.freeze({ 9:Object.freeze({ 6:2 }), 10:Object.freeze({ 6:2, 7:3 }) });
+const COCYTUS_SHIELD_LAYERS = Object.freeze({ 1:4, 2:4, 3:5, 4:5, 5:5, 6:5, 7:5, 8:5, 9:5, 10:5 });
+const COCYTUS_FIRST_LAYER_RATE = Object.freeze({ 9:3.8, 10:4.4 });
+const COCYTUS_RUSH_AT_BROKEN = INFERNO_RUSH_AT_BROKEN; // 連撃はINFERNOと同じ(デュラハン4枚目で2・ムー4枚目で2/5枚目で3)
 const cocytusStageRules = (waveNumber) => {
   const base=eternalStageRules(waveNumber);
   const w=Math.floor(Number(waveNumber)||0);
   return Object.freeze({ ...base, shieldLayers:COCYTUS_SHIELD_LAYERS[w]||0, bossWave:INFERNO_BOSS_WAVES.includes(w), layerGrowth:0.3, layerAtkGain:0.2,
-    layerFirstRate:3.0, layerBodyBossOnly:true, rushAtBroken:COCYTUS_RUSH_AT_BROKEN[w]||null });
+    layerFirstRate:COCYTUS_FIRST_LAYER_RATE[w]||3.0, layerBodyBossOnly:true, rushAtBroken:COCYTUS_RUSH_AT_BROKEN[w]||null });
 };
 // 「WAVEで段階が動く難易度」の一覧。ここに1行足せば、実効倍率・与ダメ・BREAK・表示まで
 // すべて同じ経路を通るので、難易度名の分岐を各所へ書き足さなくてよい。
@@ -787,9 +789,20 @@ const extremeRevivedEnemyStats = (enemy,difficultyId,waveNumber,usedCount=0) => 
   const hpRate=Number.isFinite(rawHpRate)?Math.max(0,Math.min(1,rawHpRate)):0.5;
   const rawBoost=Number(rule.atkBoostPerRevival);
   const boost=Number.isFinite(rawBoost)?Math.max(0,rawBoost):0;
+  // COCYTUS: 最大ライフを1回ごとに maxHpRatePerRevival 倍(掛け算)にして全回復し、攻撃は「元の攻撃力×(1+層1枚ぶん×(割れた枚数+蘇った回数))」。
+  //   見た目へ渡す文と段(reveal)も返す。決まりを持たない難易度(ETERNALまで)は今までどおり
+  const rawMaxRate=Number(rule.maxHpRatePerRevival);
+  const newMaxHp=Number.isFinite(rawMaxRate)&&rawMaxRate>0 ? Math.max(1,Math.floor(maxHp*rawMaxRate)) : maxHp;
+  const layerAtkBase=Number(enemy.layerAtkBase), layerAtkGain=Number(enemy.layerAtkGain);
+  const atk=rule.atkStepsWithLayers&&Number.isFinite(layerAtkBase)&&Number.isFinite(layerAtkGain)
+    ? Math.floor(layerAtkBase*(1+layerAtkGain*(Math.max(0,Math.floor(Number(enemy.shellBroken)||0))+used+1)))
+    : Math.floor(Math.max(0,Number(enemy.atk)||0)*(1+boost));
+  const reveal=rule.reveal?.[Math.floor(Number(waveNumber)||0)]?.[used]||null;
   return {
-    hp:Math.max(1,Math.floor(maxHp*hpRate)),
-    atk:Math.floor(Math.max(0,Number(enemy.atk)||0)*(1+boost)),
+    hp:Math.max(1,Math.floor(newMaxHp*hpRate)),
+    atk,
+    ...(newMaxHp!==maxHp?{ maxHp:newMaxHp }:{}),
+    ...(reveal?{ reveal }:{}),
     revivalNumber:used+1,
     remaining:extremeRevivalCount(difficultyId,waveNumber)-(used+1),
   };
@@ -894,12 +907,12 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
       ['連撃','デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)'],
     ]);
     if(difficultyId===COCYTUS_SETTING.id) push('層のシールド',[
-      ['起き上がり','ボスは起き上がらない'],
-      ['層の数','W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 6枚 / W10 ムー 7枚'],
+      ['蘇り','デュラハンは1回・ムーは2回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る(ムーの2回目は2.25倍)。シールドは張り直さない'],
+      ['層の数','W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'],
       ['WAVEのはじめのシールド','エターナルの50%のシールドは、層のシールドに置き換わる'],
-      ['シールドの量','1枚目はその敵の最大ライフの3倍。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフはそのまま)'],
-      ['割れるたび','敵の攻撃力 +20%(最後の1枚も)'],
-      ['連撃','デュラハンは6枚目が割れたら必殺技が2連撃、ムーは6枚目で2連撃・7枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)'],
+      ['シールドの量','1枚目はその敵の最大ライフの3倍(デュラハン3.8倍・ムー4.4倍)。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフはそのまま)'],
+      ['割れるたび','敵の攻撃力 +20%(最後の1枚も。蘇るたびにも+20%)'],
+      ['連撃','デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)'],
     ]);
     if(difficultyId===ETERNAL_SETTING.id||difficultyId===INFERNO_SETTING.id||difficultyId===COCYTUS_SETTING.id) push('シールドと貫き',[
       ['シールド','WAVEの始めに、敵が最大ライフ50%ぶんのシールドをまとう。シールドを割るまで敵のライフは減らない'],

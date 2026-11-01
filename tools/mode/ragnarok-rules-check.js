@@ -96,7 +96,7 @@ check('敵生成は段階倍率を掛けて1つの経路で作る',source.includ
 check('消費ガッツ・与ダメ・適性は段階の有無で分岐する',source.includes("if(extremeWaveStage(specialRuleDifficulty))return Math.floor(cost*effectiveExtremeSpecialRule(specialRuleDifficulty,'gutsCost',wave)*soulGutsMultiplier);")
   &&source.includes('distanceBrokenDmg=applyExtremeStagedDamage(finalDmg,elapsedTotalTurns,slotIdx,ultimateDistanceBreakLevels,specialRuleDifficulty,wave,card.type);')
   &&source.includes('if(extremeWaveStage(specialRuleDifficulty)){const effectiveApt=getMonsterAptPct(m,specialRuleDifficulty,wave);'));
-check('撃破処理の前に不死を判定し撃破ロックを立てない',(()=>{const at=source.indexOf('const revived=extremeRevivedEnemyStats(enemy,revivalDifficulty,wave,enemyRevivalUsedRef.current);');
+check('撃破処理の前に不死を判定し撃破ロックを立てない',(()=>{const at=source.indexOf('const revived=extremeRevivedEnemyStats(enemyLiveRef.current||enemy,revivalDifficulty,wave,enemyRevivalUsedRef.current);');
   const lock=source.indexOf('enemyDefeatResolvedRef.current = true;',at);
   return at>0&&lock>at&&source.slice(at,lock).includes('return false;');})());
 check('起き上がったライフを敵の行動へ渡す',source.includes('let enemyHpAfterOurAttacks=Math.max(0,(enemy?.hp??0)-(totalDmg-shellAbsorbedTotal));')

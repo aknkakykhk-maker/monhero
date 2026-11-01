@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 84ff35cdefbf7960
+// source-sha256: a44c02560ea8cb31
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -15898,8 +15898,8 @@ const COCYTUS_SETTING = Object.freeze({
   unlockRequirement: 'INFERNO',
   rankingId: 'ExtremeCOCYTUS',
   recordId: 'COCYTUS',
-  description: 'どの敵も何枚もの厚いシールドをまとって現れる。割っても割っても次の1枚が待ち、1枚割るごとに敵は強くなる、極限チャレンジの最奥の難易度。',
-  cardDescription: 'どの敵も4〜7枚の厚いシールドをまとい、割るたびに攻撃が上がる。デュラハンとムーは必殺技が連撃に。冥府・貫き・敵ライフ10倍はインフェルノのまま。',
+  description: 'どの敵も何枚もの厚いシールドをまとって現れる。1枚割るごとに敵は強くなり、デュラハンとムーは倒しても大きくなって蘇る、極限チャレンジの最奥の難易度。',
+  cardDescription: 'どの敵も4〜5枚の厚いシールドをまとい、割るたびに攻撃が上がる。デュラハンは1回・ムーは2回、全回復して大きくなって蘇る。冥府・貫き・敵ライフ10倍はインフェルノのまま。',
   specialRules: Object.freeze({
     assistCardEffect: 0.30,
     positiveModifier: 0.30,
@@ -15919,6 +15919,31 @@ const COCYTUS_SETTING = Object.freeze({
       damageDealtPerLevel: 0.5,
       safeDistanceCount: 0,
       persistsForRun: true
+    }),
+    revival: Object.freeze({
+      waves: Object.freeze({
+        9: 1,
+        10: 2
+      }),
+      hpRate: 1,
+      maxHpRatePerRevival: 1.5,
+      atkStepsWithLayers: true,
+      reveal: Object.freeze({
+        9: Object.freeze([Object.freeze({
+          stage: 'durahan',
+          name: '凍土の再起',
+          desc: 'ライフ全回復・最大ライフ1.5倍で復活'
+        })]),
+        10: Object.freeze([Object.freeze({
+          stage: 'moo1',
+          name: '凍土の再起',
+          desc: 'ライフ全回復・最大ライフ1.5倍で復活'
+        }), Object.freeze({
+          stage: 'moo2',
+          name: '凍土の再起',
+          desc: 'ライフ全回復・最大ライフ2.25倍で復活'
+        })])
+      })
     }),
     enemyAdjust: Object.freeze({
       lifeRate: 10,
@@ -16152,18 +16177,14 @@ const COCYTUS_SHIELD_LAYERS = Object.freeze({
   6: 5,
   7: 5,
   8: 5,
-  9: 6,
-  10: 7
+  9: 5,
+  10: 5
 });
-const COCYTUS_RUSH_AT_BROKEN = Object.freeze({
-  9: Object.freeze({
-    6: 2
-  }),
-  10: Object.freeze({
-    6: 2,
-    7: 3
-  })
+const COCYTUS_FIRST_LAYER_RATE = Object.freeze({
+  9: 3.8,
+  10: 4.4
 });
+const COCYTUS_RUSH_AT_BROKEN = INFERNO_RUSH_AT_BROKEN;
 const cocytusStageRules = waveNumber => {
   const base = eternalStageRules(waveNumber);
   const w = Math.floor(Number(waveNumber) || 0);
@@ -16173,7 +16194,7 @@ const cocytusStageRules = waveNumber => {
     bossWave: INFERNO_BOSS_WAVES.includes(w),
     layerGrowth: 0.3,
     layerAtkGain: 0.2,
-    layerFirstRate: 3.0,
+    layerFirstRate: COCYTUS_FIRST_LAYER_RATE[w] || 3.0,
     layerBodyBossOnly: true,
     rushAtBroken: COCYTUS_RUSH_AT_BROKEN[w] || null
   });
@@ -16500,9 +16521,21 @@ const extremeRevivedEnemyStats = (enemy, difficultyId, waveNumber, usedCount = 0
   const hpRate = Number.isFinite(rawHpRate) ? Math.max(0, Math.min(1, rawHpRate)) : 0.5;
   const rawBoost = Number(rule.atkBoostPerRevival);
   const boost = Number.isFinite(rawBoost) ? Math.max(0, rawBoost) : 0;
+  const rawMaxRate = Number(rule.maxHpRatePerRevival);
+  const newMaxHp = Number.isFinite(rawMaxRate) && rawMaxRate > 0 ? Math.max(1, Math.floor(maxHp * rawMaxRate)) : maxHp;
+  const layerAtkBase = Number(enemy.layerAtkBase),
+    layerAtkGain = Number(enemy.layerAtkGain);
+  const atk = rule.atkStepsWithLayers && Number.isFinite(layerAtkBase) && Number.isFinite(layerAtkGain) ? Math.floor(layerAtkBase * (1 + layerAtkGain * (Math.max(0, Math.floor(Number(enemy.shellBroken) || 0)) + used + 1))) : Math.floor(Math.max(0, Number(enemy.atk) || 0) * (1 + boost));
+  const reveal = rule.reveal?.[Math.floor(Number(waveNumber) || 0)]?.[used] || null;
   return {
-    hp: Math.max(1, Math.floor(maxHp * hpRate)),
-    atk: Math.floor(Math.max(0, Number(enemy.atk) || 0) * (1 + boost)),
+    hp: Math.max(1, Math.floor(newMaxHp * hpRate)),
+    atk,
+    ...(newMaxHp !== maxHp ? {
+      maxHp: newMaxHp
+    } : {}),
+    ...(reveal ? {
+      reveal
+    } : {}),
     revivalNumber: used + 1,
     remaining: extremeRevivalCount(difficultyId, waveNumber) - (used + 1)
   };
@@ -16561,7 +16594,7 @@ const extremeRuleDetailGroups = (difficultyId, quick = false) => {
     push('敵の強さ', [adjust.lifeRate > 1 && ['敵ライフ', `すべての敵が${adjust.lifeRate}倍`], durahan && ['デュラハン', `ライフ・攻撃力が さらに${durahan.lifeRate}倍`]]);
     push('距離強化', [['WAVEごとに薄れる', 'WAVE1で10%、1WAVEごとに1%ずつ下がり、WAVE10で1%']]);
     if (difficultyId === INFERNO_SETTING.id) push('ボスの層のシールド', [['起き上がり', 'ボスは起き上がらない'], ['層の数', 'W3・W5・W7のボス 3枚 / W9 デュラハン 4枚 / W10 ムー 5枚'], ['シールドの量', '1枚目はエターナルのそのボスのライフと同じ。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率'], ['割れるたび', 'ボスの攻撃力 +60%(最後の1枚も)'], ['連撃', 'デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)']]);
-    if (difficultyId === COCYTUS_SETTING.id) push('層のシールド', [['起き上がり', 'ボスは起き上がらない'], ['層の数', 'W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 6枚 / W10 ムー 7枚'], ['WAVEのはじめのシールド', 'エターナルの50%のシールドは、層のシールドに置き換わる'], ['シールドの量', '1枚目はその敵の最大ライフの3倍。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフはそのまま)'], ['割れるたび', '敵の攻撃力 +20%(最後の1枚も)'], ['連撃', 'デュラハンは6枚目が割れたら必殺技が2連撃、ムーは6枚目で2連撃・7枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)']]);
+    if (difficultyId === COCYTUS_SETTING.id) push('層のシールド', [['蘇り', 'デュラハンは1回・ムーは2回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る(ムーの2回目は2.25倍)。シールドは張り直さない'], ['層の数', 'W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'], ['WAVEのはじめのシールド', 'エターナルの50%のシールドは、層のシールドに置き換わる'], ['シールドの量', '1枚目はその敵の最大ライフの3倍(デュラハン3.8倍・ムー4.4倍)。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフはそのまま)'], ['割れるたび', '敵の攻撃力 +20%(最後の1枚も。蘇るたびにも+20%)'], ['連撃', 'デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)']]);
     if (difficultyId === ETERNAL_SETTING.id || difficultyId === INFERNO_SETTING.id || difficultyId === COCYTUS_SETTING.id) push('シールドと貫き', [['シールド', 'WAVEの始めに、敵が最大ライフ50%ぶんのシールドをまとう。シールドを割るまで敵のライフは減らない'], ['シールドと距離強化', 'シールドに当てたダメージは、距離強化(間合いのボーナス)に数えない'], ['貫き', '敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）']]);
   }
   push('カード', [rules.assistCardEffect != null && ['アシストカード効果', specialRulePercent(rules.assistCardEffect)]]);
@@ -140208,7 +140241,7 @@ function MonsterHeroGame() {
     if (remainingHp > 0 || enemyDefeatResolvedRef.current) return false;
     const defeatGeneration = runGenerationRef.current;
     const revivalDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-    const revived = extremeRevivedEnemyStats(enemy, revivalDifficulty, wave, enemyRevivalUsedRef.current);
+    const revived = extremeRevivedEnemyStats(enemyLiveRef.current || enemy, revivalDifficulty, wave, enemyRevivalUsedRef.current);
     if (revived) {
       enemyRevivalUsedRef.current = revived.revivalNumber;
       setEnemyRevivalUsed(revived.revivalNumber);
@@ -140219,13 +140252,21 @@ function MonsterHeroGame() {
         ...prev,
         hp: revived.hp,
         atk: revived.atk,
-        atkBeforeRoar: revived.atk
+        atkBeforeRoar: revived.atk,
+        ...(revived.maxHp ? {
+          maxHp: revived.maxHp
+        } : {})
       } : prev);
       setEnemyRevivalReveal({
         revivalNumber: revived.revivalNumber,
-        remaining: revived.remaining
+        remaining: revived.remaining,
+        ...(revived.reveal ? {
+          name: revived.reveal.name,
+          desc: revived.reveal.desc,
+          stage: revived.reveal.stage
+        } : {})
       });
-      addPopup('死者の再起！', 'enemy', 'text-slate-100 font-black text-3xl drop-shadow-[0_0_18px_rgba(148,163,184,0.9)]');
+      addPopup(revived.reveal ? `${revived.reveal.name}！` : '死者の再起！', 'enemy', 'text-slate-100 font-black text-3xl drop-shadow-[0_0_18px_rgba(148,163,184,0.9)]');
       triggerShake(true);
       await battleWait(1600);
       setEnemyRevivalReveal(null);
