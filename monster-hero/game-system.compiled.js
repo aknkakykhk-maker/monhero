@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9ffd7756f3f2a93a
+// source-sha256: a8e8154996ae5196
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -74825,6 +74825,14 @@ function InfernoShieldBreakFx({
     className: "mt-1 text-[13px] font-extrabold leading-snug text-white"
   }, band.sub))))), document.body);
 }
+const tacticsPopupShortText = text => {
+  const t = String(text == null ? '' : text);
+  if ([...t].length <= 9) return t;
+  const bang = t.match(/^(.+?[!！])/);
+  if (bang) return bang[1];
+  const k = t.search(/[\s　・、]/);
+  return k > 0 ? t.slice(0, k) : t;
+};
 function BattleScreen({
   battleOverlayOpen = false,
   applyTurnDamageReduction,
@@ -75312,6 +75320,25 @@ function BattleScreen({
   const infernoShellView = enemy ? enemyShellView(enemy) : null;
   const infernoShellRule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
   const [infernoShellFx, setInfernoShellFx] = useState(null);
+  const [heldLuckBanners, setHeldLuckBanners] = useState([]);
+  useEffect(() => {
+    if (!teachingFx || !Array.isArray(luckBanners) || !luckBanners.length) return;
+    setHeldLuckBanners(prev => {
+      const ids = new Set(prev.map(b => b.id));
+      const add = luckBanners.filter(b => b && !ids.has(b.id));
+      return add.length ? [...prev, ...add] : prev;
+    });
+  }, [teachingFx, luckBanners]);
+  useEffect(() => {
+    if (teachingFx || !heldLuckBanners.length) return undefined;
+    const t = setTimeout(() => setHeldLuckBanners([]), 2400);
+    return () => clearTimeout(t);
+  }, [teachingFx, heldLuckBanners.length]);
+  const shownLuckBanners = teachingFx ? [] : (() => {
+    const live = Array.isArray(luckBanners) ? luckBanners : [];
+    const ids = new Set(live.map(b => b.id));
+    return [...heldLuckBanners.filter(b => !ids.has(b.id)), ...live];
+  })();
   const infernoFloatShift = infernoShellView?.total > 0 ? infernoShellView.total * 15 + 8 : 0;
   const infernoFloatTop = infernoFloatShift ? `calc(11% + ${infernoFloatShift}px)` : '11%';
   const infernoShellSeqRef = useRef({
@@ -76246,7 +76273,7 @@ function BattleScreen({
     }
   }, React.createElement("div", {
     className: "px-4 py-1.5 rounded-xl font-black text-[13px] bg-red-700 border-2 border-red-200 text-white shadow-[0_2px_16px_rgba(0,0,0,0.9)] flex items-center gap-2"
-  }, React.createElement("span", null, cardIconNode(enemySkillName.icon, 16)), enemySkillName.label)), document.body), Array.isArray(luckBanners) && luckBanners.length > 0 && ReactDOM.createPortal(React.createElement("div", {
+  }, React.createElement("span", null, cardIconNode(enemySkillName.icon, 16)), enemySkillName.label)), document.body), shownLuckBanners.length > 0 && ReactDOM.createPortal(React.createElement("div", {
     "data-battle-luck-banners": true,
     "data-battle-float": true,
     className: "fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1.5",
@@ -76255,7 +76282,7 @@ function BattleScreen({
       zIndex: 65001,
       width: 'min(92vw, 360px)'
     }
-  }, luckBanners.map(b => React.createElement("div", {
+  }, shownLuckBanners.map(b => React.createElement("div", {
     key: b.id,
     "data-battle-luck-banner": b.tone,
     className: `w-full rounded-2xl border-2 px-3 py-1.5 text-center shadow-[0_4px_20px_rgba(0,0,0,.85)] ${b.tone === 'bad' ? 'bg-slate-800/95 border-slate-300 text-slate-100' : b.tone === 'enemy' ? 'bg-violet-800/95 border-violet-200 text-white' : 'bg-amber-600/95 border-amber-100 text-white'}`,
@@ -76732,27 +76759,46 @@ function BattleScreen({
   }, "💫"), (() => {
     const enemyPopups = popups.filter(p => p.side === 'enemy' && !p.fx);
     const enemyFxPopups = popups.filter(p => p.side === 'enemy' && p.fx).slice(-3);
-    const wrapEnemyPopups = !liteBattleView && enemyPopups.length > 4;
-    const popupColumns = wrapEnemyPopups ? Math.ceil(enemyPopups.length / 4) : 1;
-    const popupGridStyle = wrapEnemyPopups ? {
+    const isSumPopup = p => /^合計/.test(String(p.text || ''));
+    const hitPopups = enemyPopups.filter(p => !isSumPopup(p));
+    const popupCols = !liteBattleView && hitPopups.length >= 4 ? 2 : 1;
+    const popupRows = Math.ceil(hitPopups.length / popupCols) + (enemyPopups.length - hitPopups.length);
+    const popupBaseRem = c => /text-6xl/.test(c) ? 3.75 : /text-5xl/.test(c) ? 3 : /text-4xl/.test(c) ? 2.25 : /text-3xl/.test(c) ? 1.875 : /text-2xl/.test(c) ? 1.5 : /text-xl/.test(c) ? 1.25 : /text-lg/.test(c) ? 1.125 : 1;
+    const popupTop = popupRows >= 2 ? 22 : 4;
+    const popupFit = p => {
+      if (liteBattleView || popupRows < 2) return {
+        gridColumn: '1 / -1',
+        justifySelf: 'center'
+      };
+      const hi = hitPopups.indexOf(p);
+      const firstRow = hi >= 0 && Math.floor(hi / popupCols) === 0;
+      const fit = `calc((100cqh - ${enemyFxPopups.length * 26 + popupTop + 6}px) / ${(popupRows * 1.36).toFixed(2)})`;
+      return {
+        fontSize: `min(${popupBaseRem(p.color)}rem, ${fit})`,
+        lineHeight: 1.05,
+        marginTop: firstRow ? 0 : '.28em',
+        ...(hi < 0 ? {
+          gridColumn: '1 / -1',
+          justifySelf: 'center'
+        } : {
+          justifySelf: popupCols === 2 ? hi % 2 === 0 ? 'end' : 'start' : 'center'
+        }),
+        paddingLeft: popupCols === 2 ? '.12em' : undefined,
+        paddingRight: popupCols === 2 ? '.12em' : undefined
+      };
+    };
+    const popupGridStyle = {
       display: 'grid',
-      gridAutoFlow: 'column',
-      gridTemplateRows: 'repeat(4, auto)',
-      gridAutoColumns: 'max-content',
+      gridTemplateColumns: `repeat(${popupCols}, max-content)`,
       justifyContent: 'center',
       alignContent: 'start',
-      columnGap: popupColumns >= 3 ? '0px' : '4px',
-      rowGap: '2px',
-      paddingTop: '4px'
-    } : undefined;
-    const compactPopupStyle = wrapEnemyPopups ? {
-      fontSize: popupColumns >= 3 ? 'clamp(1.4rem, 5.8vw, 1.85rem)' : 'clamp(1.75rem, 7.5vw, 2.25rem)',
-      lineHeight: 1.05,
-      paddingLeft: '2px',
-      paddingRight: '2px'
-    } : undefined;
+      columnGap: '.35em',
+      rowGap: 0,
+      paddingTop: `${popupTop}px`
+    };
     return React.createElement("div", {
-      className: "absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-start pt-1 gap-0.5"
+      "data-enemy-popups": true,
+      className: "absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-start pt-1 gap-0.5 [container-type:size]"
     }, enemyFxPopups.length > 0 && React.createElement("div", {
       "data-enemy-fx-chips": true,
       className: "flex flex-col items-center gap-0.5 px-2"
@@ -76761,13 +76807,14 @@ function BattleScreen({
       "data-enemy-fx-chip": true,
       className: `max-w-full truncate rounded-full border border-white/25 bg-slate-950/85 px-2.5 py-0.5 text-[12px] font-black leading-tight shadow-[0_2px_8px_rgba(0,0,0,.7)] ${enemyFxChipTone(p.color)}`
     }, p.text))), React.createElement("div", {
-      className: `${wrapEnemyPopups ? '' : 'flex flex-col items-center justify-start gap-0.5'}`,
+      "data-enemy-popup-grid": popupCols,
       style: popupGridStyle
-    }, enemyPopups.map(p => React.createElement("div", {
+    }, enemyPopups.map((p, idx) => React.createElement("div", {
       key: p.id,
       "data-lite-damage": liteBattleView ? 'true' : undefined,
-      style: compactPopupStyle,
-      className: `text-center ${p.color} font-black whitespace-nowrap px-4 ${liteBattleView ? 'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base' : 'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`
+      "data-enemy-popup": idx,
+      style: popupFit(p),
+      className: `text-center ${p.color} font-black whitespace-nowrap ${popupCols === 2 ? '' : 'px-4'} ${liteBattleView ? 'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base' : 'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`
     }, p.text))));
   })())), !tacticsNewLayout && Array.isArray(tacticsUnits) && enemy && (() => {
     const moveTo = enemyNextIntent && enemyNextIntent.type === 'MOVE' && Number.isFinite(enemyNextIntent.targetDist) ? enemyNextIntent.targetDist : null;
@@ -77026,14 +77073,14 @@ function BattleScreen({
     }
   }, tacticsNewLayout ? React.createElement("div", {
     "data-tactics-board-popups": true,
-    className: "absolute inset-x-0 bottom-full mb-1 flex flex-col items-center justify-end gap-0.5 pointer-events-none",
+    className: "absolute inset-x-0 bottom-full mb-[30px] flex flex-col items-center justify-end gap-0.5 pointer-events-none",
     style: {
       zIndex: 200
     }
   }, popups.filter(p => ['hero', 'life', 'guts'].includes(p.side) && !Number.isInteger(p.slot)).slice(-3).map(p => React.createElement("div", {
     key: p.id,
     "data-lite-damage": liteBattleView ? 'true' : undefined,
-    className: `${tacticsPopupTone(p.color)} max-w-[92%] truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-3 py-0.5 text-[15px] font-black leading-tight shadow-[0_4px_14px_rgba(0,0,0,.6)]`,
+    className: `${tacticsPopupTone(p.color)} max-w-[92%] truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-3 py-0.5 text-[13px] font-black leading-tight shadow-[0_4px_14px_rgba(0,0,0,.6)]`,
     style: {
       animation: liteBattleView ? undefined : 'tacticsPopupRise 240ms ease-out'
     }
@@ -77618,13 +77665,19 @@ function BattleScreen({
         style: {
           animation: liteBattleView ? undefined : 'tacticsPopupRise 220ms ease-out'
         }
-      }, skillHere.name), slotFxEl, ownPopups.map(p => React.createElement("div", {
-        key: p.id,
-        className: `${tacticsPopupTone(p.color)} max-w-full truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-2 py-0.5 text-[11px] font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,.6)]`,
-        style: {
-          animation: liteBattleView ? undefined : 'tacticsPopupRise 240ms ease-out'
-        }
-      }, p.text)));
+      }, skillHere.name), slotFxEl, ownPopups.map(p => {
+        const short = tacticsPopupShortText(p.text);
+        return React.createElement("div", {
+          key: p.id,
+          className: `${tacticsPopupTone(p.color)} max-w-full truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-2 py-0.5 text-[11px] font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,.6)]`,
+          style: {
+            animation: liteBattleView ? undefined : 'tacticsPopupRise 240ms ease-out'
+          }
+        }, short !== p.text ? React.createElement("span", {
+          "data-tactics-popup-short": true,
+          title: p.text
+        }, short) : p.text);
+      }));
     })(), slotAimed && React.createElement("div", {
       "data-tactics-aimed-ring": true,
       className: "absolute inset-[2px] rounded-lg border-2 border-red-400/80 pointer-events-none z-[44] animate-pulse",
@@ -77990,17 +78043,17 @@ function BattleScreen({
         className: `${tacticsNewLayout ? `absolute right-0 bottom-[3px] w-[60%] min-w-0 border-l flex flex-col justify-end py-px px-2 gap-0 backdrop-blur-sm` : 'shrink-0 border-t px-1'} z-20 border-white/[.06] bg-[linear-gradient(90deg,rgba(8,15,31,.86),rgba(15,23,42,.72))]${battleTutorialSpotClass('tacticsParty')}`
       }, React.createElement("div", {
         className: "flex h-[10px] items-center justify-between leading-none"
-      }, React.createElement("span", {
+      }, Array.isArray(tacticsShields) && tacticsShields[i] > 0 ? React.createElement("span", {
+        "data-tactics-shield": tacticsShields[i],
+        className: "mr-1 shrink-0 whitespace-nowrap text-[9px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[8px] font-black leading-none text-sky-200"
+      }, "🛡️", tacticsShields[i]) : React.createElement("span", {
         className: "shrink-0 whitespace-nowrap text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] font-black tracking-wider [@media(orientation:landscape)_and_(max-height:520px)]:tracking-normal text-pink-300"
       }, "ライフ"), React.createElement("span", {
-        className: "font-mono leading-none"
-      }, Array.isArray(tacticsShields) && tacticsShields[i] > 0 && React.createElement("span", {
-        "data-tactics-shield": tacticsShields[i],
-        className: "mr-1 text-[9px] font-black text-sky-200"
-      }, "🛡️", tacticsShields[i]), React.createElement("span", {
+        className: "whitespace-nowrap font-mono leading-none"
+      }, React.createElement("span", {
         className: "text-[11px] font-black text-white"
       }, tacticsUnit.hp), React.createElement("span", {
-        className: "text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] text-slate-400"
+        className: `text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] text-slate-400${Array.isArray(tacticsShields) && tacticsShields[i] > 0 ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
       }, "/", tacticsUnit.maxHp))), React.createElement("div", {
         className: "relative h-[2px] overflow-hidden rounded-full bg-black/60",
         style: {
@@ -93405,16 +93458,13 @@ const CARD_AI_DECKS = Object.freeze({
     field: ['興奮のるつぼ', '必殺技の封印']
   },
   kyuko: {
-    monsters: ['C-007', 'C-005', 'C-009'],
     field: ['必殺技の応酬']
   },
   atsu: {
-    monsters: ['C-003', 'C-001', 'C-002'],
     prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード'],
     field: ['必殺技の応酬', '灼熱の地']
   },
   sorashido: {
-    monsters: ['C-008', 'C-001', 'C-003'],
     prefer: ['大混乱', '時間稼ぎ', '大鎌', 'ハテナマーク', 'ニャーにゃー']
   }
 });
@@ -97921,6 +97971,8 @@ const cardAssistantDeckName = (db, deck, who, level, rnd = Math.random) => {
   return strong.length <= CARD_DECK_NAME_MAX ? strong : plain;
 };
 const CARD_VS_CSS = `
+/* 背の低い縦の画面(390×600 など)では、相手の立ち絵とモンスターの絵を小さくして高さに収める(はみ出して頭が切れ、「あなた」と「タップで始める」が重なっていた。2026-11-01 見た目の点検) */
+@media (orientation: portrait) and (max-height: 700px) { [data-card-vs] { --mh-vs-foe-h: 18vh; --mh-vs-mon-h: 15vh; } }
 @keyframes mhVsFoeIn { from { transform: translateX(60%); opacity: 0 } to { transform: none; opacity: 1 } }
 @keyframes mhVsMonFoe { 0% { transform: translateX(140%) scale(.6); opacity: 0 } 70% { transform: translateX(-6%) scale(1.06); opacity: 1 } 100% { transform: none; opacity: 1 } }
 @keyframes mhVsMonMe { 0% { transform: translateX(-140%) scale(.6); opacity: 0 } 70% { transform: translateX(6%) scale(1.06); opacity: 1 } 100% { transform: none; opacity: 1 } }
@@ -98050,7 +98102,7 @@ const CardVsMonsters = ({
       onImgError: typeof cardArtOnError === 'function' ? cardArtOnError(art, CARD_IMG(m.img)) : null,
       className: "drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]",
       style: {
-        width: 'min(100%, 19vh, 140px)'
+        width: 'min(100%, var(--mh-vs-mon-h, 19vh), 140px)'
       }
     });
     return el;
@@ -98061,7 +98113,7 @@ const CardVsMonsters = ({
     className: "w-full rounded-md object-cover",
     style: {
       aspectRatio: '63 / 88',
-      maxHeight: 'min(19vh, 140px)'
+      maxHeight: 'min(var(--mh-vs-mon-h, 19vh), 140px)'
     }
   }), React.createElement("span", {
     "data-card-vs-mon-name": true,
@@ -98165,7 +98217,7 @@ const CardVsIntro = ({
   }, React.createElement("div", {
     className: "mh-vs-foe shrink-0",
     style: {
-      width: 'min(34vw, 30vh, 150px)'
+      width: 'min(34vw, var(--mh-vs-foe-h, 30vh), 150px)'
     }
   }, who ? React.createElement(CardVsArt, {
     "data-card-vs-foe-art": true,
@@ -100624,7 +100676,7 @@ const CardDetailModal = ({
     }, React.createElement("img", {
       src: CARD_IMG(c ? c.img : m ? m.img : no, 'l'),
       alt: c ? c.name : m ? m.name : '',
-      className: "w-[min(78vw,300px)] rounded-xl shadow-2xl"
+      className: "w-[min(78vw,300px)] rounded-xl shadow-2xl landscape:h-[32vh] landscape:w-auto"
     })), c && React.createElement("div", {
       className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100"
     }, React.createElement("div", {
@@ -103169,9 +103221,9 @@ const CardBattleBoard = ({
       className: `pointer-events-none absolute left-1/2 top-0 z-[2] -translate-x-1/2 -translate-y-1/3 whitespace-nowrap rounded-md px-1 ${handTiny ? 'text-[9px]' : 'text-[10px]'} font-black leading-tight shadow-[0_2px_4px_#000] ${pickTag === '候補' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-slate-950'}`
     }, pickTag), why && React.createElement("span", {
       "data-card-why": true,
-      className: `pointer-events-none absolute left-1/2 top-[22%] z-[2] max-w-[110%] -translate-x-1/2 rounded-md border border-rose-300/80 bg-rose-950/95 px-1 py-px text-center ${handTiny ? 'text-[9px]' : 'text-[10px]'} font-black leading-tight text-rose-100 shadow-[0_2px_4px_#000]`,
+      className: `pointer-events-none absolute left-1/2 top-[22%] z-[2] w-max max-w-[110%] -translate-x-1/2 rounded-md border border-rose-300/80 bg-rose-950/95 px-1 py-px text-center ${handTiny ? 'text-[9px]' : 'text-[10px]'} font-black leading-tight text-rose-100 shadow-[0_2px_4px_#000]`,
       style: JA_WRAP_STYLE
-    }, why), !(replay && boardFit >= 3) && React.createElement("div", {
+    }, jaWrap(why)), !(replay && boardFit >= 3) && React.createElement("div", {
       className: `mt-0.5 w-full rounded-md bg-black/60 ${handTiny ? 'py-px' : 'py-0.5'} text-center leading-tight`
     }, React.createElement(CardNameFit, {
       name: c ? c.name : no,
@@ -125404,13 +125456,21 @@ const CardCupPrizePanel = ({
     className: "space-y-0.5 text-[12px] font-bold text-slate-200"
   }, prize.split.map((pct, i) => React.createElement("div", {
     key: i,
-    className: "flex justify-between"
-  }, React.createElement("span", null, `${i + 1}位 ${pct}%`), React.createElement("span", {
-    className: "text-slate-300"
-  }, poolFull.map(p => {
-    const s = shares(p.total)[i] || 0;
-    return s > 0 ? cardCupItemText(p.item, s) : null;
-  }).filter(Boolean).join('・') || '−'))), React.createElement("p", {
+    className: "flex justify-between gap-2"
+  }, React.createElement("span", {
+    className: "shrink-0 whitespace-nowrap"
+  }, `${i + 1}位 ${pct}%`), React.createElement("span", {
+    className: "min-w-0 text-right text-slate-300"
+  }, (() => {
+    const t = poolFull.map(p => {
+      const s = shares(p.total)[i] || 0;
+      return s > 0 ? cardCupItemText(p.item, s) : null;
+    }).filter(Boolean);
+    return t.length ? t.map((x, k) => React.createElement("span", {
+      key: k,
+      className: "whitespace-nowrap"
+    }, `${x}${k < t.length - 1 ? '・' : ''}`)) : '−';
+  })()))), React.createElement("p", {
     className: "text-[11px] text-slate-400"
   }, `${players}人そろったときの見込み。主催・主催仲間は受け取りません(その分は次の順位の人へ)`)), prize.me.invited && open && React.createElement("div", {
     "data-card-cup-invited": true,
@@ -140740,7 +140800,7 @@ function MonsterHeroGame() {
   const cardScopeLabel = card => {
     if (!card || !isTacticsMode(runMode)) return null;
     if (isAttackCard(card)) return '敵へ';
-    if (card.type === 'guard' || card.type === 'weak_guard' || card.subType === 'buff_myaru') return '単体';
+    if (card.type === 'guard' || card.type === 'weak_guard' || card.subType === 'buff_myaru' || card.subType === 'cover_kyuko') return '単体';
     return '全体';
   };
   const CARD_GENRE_TONE = {
@@ -144416,6 +144476,11 @@ function MonsterHeroGame() {
     resetDreamPain();
     clearKyubiKageroWait();
     setWaveBuffs({});
+    kyukoRedirectRef.current = null;
+    writePermaBuffs(p => p.kyukoCutTurns > 0 ? {
+      ...p,
+      kyukoCutTurns: 0
+    } : p);
     resetFateWheel();
     resetEnemyConfuse();
     return dist;
@@ -166093,6 +166158,8 @@ const createAnimationStyle = () => {
     .mh-card-down-band { animation: mhCardDownBand 1.1s ease-out both; }
     @keyframes mhCardDownBand { 0% { opacity: 0; transform: scaleY(.2); } 15% { opacity: 1; transform: scaleY(1.08); } 25% { transform: scaleY(1); } 82% { opacity: 1; } 100% { opacity: 0; } }
     @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash, .mh-card-dmg-pop, .mh-card-down-band, .mh-card-guard-result { animation: none; } }
+    /* 受けた瞬間の白い光は、動きを止めると白い四角が絵を隠したまま残る(2026-11-01 点検)ので、動きを減らす設定では出さない */
+    @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash { display: none; } }
     /* キラ・レアキラの立ち絵の光(84 の CardKiraAura・cardKiraWrap。2026-10-30 社長「この形で入れて」→
        2026-10-31「バトル中の立ち絵も強化して」「もっとわかりやすく。センター位置をちゃんと合わせて」)。CSS だけ。動かすのは transform と opacity
        (ふちの光の filter だけは色を移すため動かす。ふちの光の中には動く物を入れない)。光の中心・大きさは 84 が体の範囲から決めて style で渡す */

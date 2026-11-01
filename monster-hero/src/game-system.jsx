@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b4fcb99ccb5935ea
+// generated-sha256: 996e8b7eb0c0b307
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -44531,6 +44531,15 @@ function InfernoShieldBreakFx({ fx, lite, onDone }) {
     document.body
   );
 }
+// 枠の吹き出しの短い形(背の低い画面・横向き用)。9字までならそのまま。「!」があればそこまで、無ければ最初の空白・「・」「、」の前まで
+const tacticsPopupShortText = (text) => {
+  const t = String(text == null ? '' : text);
+  if ([...t].length <= 9) return t;
+  const bang = t.match(/^(.+?[!！])/);
+  if (bang) return bang[1];
+  const k = t.search(/[\s　・、]/);
+  return k > 0 ? t.slice(0, k) : t;
+};
 function BattleScreen({
   battleOverlayOpen = false, applyTurnDamageReduction, attackAnim, autoBattle, autoBattleRef, autoRepeat, battleFxSettings, onBattleFxAutoStep, battleIntimidate,
   battleScenarioRef, battleScreenActive, battleScreenStyle, battleSoulMasus, battleSpeed, battleTutorial,
@@ -44775,6 +44784,19 @@ function BattleScreen({
   const infernoShellView = enemy ? enemyShellView(enemy) : null;
   const infernoShellRule = specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
   const [infernoShellFx, setInfernoShellFx] = useState(null);
+  // 運の帯(眼力・運命のコインなど)は、アシカ(教えカード)の演出の間は出さず、終わってから出す(2026-11-01 社長「アシカの演出の間はほかの帯を後回し」)。
+  //   演出の間に来た帯はここで預かり、演出が終わってから2.4秒だけ出す(60 の側で先に消えても見られるように)
+  const [heldLuckBanners, setHeldLuckBanners] = useState([]);
+  useEffect(()=>{
+    if(!teachingFx||!Array.isArray(luckBanners)||!luckBanners.length) return;
+    setHeldLuckBanners(prev=>{const ids=new Set(prev.map(b=>b.id));const add=luckBanners.filter(b=>b&&!ids.has(b.id));return add.length?[...prev,...add]:prev;});
+  },[teachingFx,luckBanners]);
+  useEffect(()=>{
+    if(teachingFx||!heldLuckBanners.length) return undefined;
+    const t=setTimeout(()=>setHeldLuckBanners([]),2400);
+    return ()=>clearTimeout(t);
+  },[teachingFx,heldLuckBanners.length]);
+  const shownLuckBanners = teachingFx ? [] : (()=>{const live=Array.isArray(luckBanners)?luckBanners:[];const ids=new Set(live.map(b=>b.id));return [...heldLuckBanners.filter(b=>!ids.has(b.id)),...live];})();
   // 必殺技・ためる・貫通の予告の札(画面の上から11%に固定)は、層のゲージと同じ高さに来るので、ゲージが出ている間はゲージの高さぶん下げる
   //   (2026-10-31 社長「ゲージの下の層にかからないように」)。背の低い画面はゲージがライフの帯の中の細い1本なので16pxだけ、横向きは画面が低く上の飾り(✨☠️)が細い1本にかかるので56px下げる
   const infernoFloatShift = infernoShellView?.total>0 ? infernoShellView.total*15+8 : 0;
@@ -45430,9 +45452,9 @@ function BattleScreen({
             {/* 運しだいで決まった結果の帯(運命のコイン・運命の輪・トリックスタート・乱心・眼力。2026-10-06 ユーザー指摘
                 「ランダム効果のものが何が発動したかわからない」)。技名の札(上の14%)と重ならないよう、その下へ縦に並べる。
                 押せる場所は塞がない。body へ出すのは技名の札と同じ理由(画面の揺れで位置がずれないように) */}
-            {Array.isArray(luckBanners)&&luckBanners.length>0&&ReactDOM.createPortal(
+            {shownLuckBanners.length>0&&ReactDOM.createPortal(
               <div data-battle-luck-banners data-battle-float className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1.5" style={{top:'21%',zIndex:65001,width:'min(92vw, 360px)'}}>
-                {luckBanners.map(b=>(<div key={b.id} data-battle-luck-banner={b.tone}
+                {shownLuckBanners.map(b=>(<div key={b.id} data-battle-luck-banner={b.tone}
                   className={`w-full rounded-2xl border-2 px-3 py-1.5 text-center shadow-[0_4px_20px_rgba(0,0,0,.85)] ${b.tone==='bad'?'bg-slate-800/95 border-slate-300 text-slate-100':b.tone==='enemy'?'bg-violet-800/95 border-violet-200 text-white':'bg-amber-600/95 border-amber-100 text-white'}`}
                   style={{animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
                   <div data-battle-luck-title className="text-[11px] font-black leading-tight opacity-90">{cardIconNode(b.icon,14)} {b.title}</div>
@@ -45672,34 +45694,36 @@ function BattleScreen({
             {(() => {
     const enemyPopups=popups.filter(p=>p.side==='enemy'&&!p.fx);
     const enemyFxPopups=popups.filter(p=>p.side==='enemy'&&p.fx).slice(-3);
-    const wrapEnemyPopups=!liteBattleView&&enemyPopups.length>4;
-    const popupColumns=wrapEnemyPopups?Math.ceil(enemyPopups.length/4):1;
-    const popupGridStyle=wrapEnemyPopups?{
-      display:'grid',
-      gridAutoFlow:'column',
-      gridTemplateRows:'repeat(4, auto)',
-      gridAutoColumns:'max-content',
-      justifyContent:'center',
-      alignContent:'start',
-      columnGap:popupColumns>=3?'0px':'4px',
-      rowGap:'2px',
-      paddingTop:'4px'
-    }:undefined;
-    const compactPopupStyle=wrapEnemyPopups?{
-      fontSize:popupColumns>=3?'clamp(1.4rem, 5.8vw, 1.85rem)':'clamp(1.75rem, 7.5vw, 2.25rem)',
-      lineHeight:1.05,
-      paddingLeft:'2px',
-      paddingRight:'2px'
-    }:undefined;
+    // ★連撃の数字が重なる(2026-11-01 社長「1発ずつは残して、互いに重ならない・合計と重ならない・桁が欠けないように」)。
+    //   原因: 1発ずつの数字が2pxの間で縦に並び、それぞれが弾む(animate-bounce・自分の高さの25%上へ)ので上の数字にかぶっていた。
+    //   5つを超えると4段の列で横に折り返し、「合計」が数字の横へ詰まっていた。横向き・背の低い画面は敵の段が低く入り切らなかった。
+    //   直し方: 1発ずつの数字は4発以上なら2列、「合計」はその下の段に1つで横いっぱい。2段目からは上に .28em あけ(弾んでも届かない)、
+    //   大きさは「敵の段の高さ ÷ 段の数」まで縮める(cqh)。1段目は敵の円の上の札(通常攻撃!など)の下から始める
+    const isSumPopup=(p)=>/^合計/.test(String(p.text||''));
+    const hitPopups=enemyPopups.filter(p=>!isSumPopup(p));
+    const popupCols=!liteBattleView&&hitPopups.length>=4?2:1;
+    const popupRows=Math.ceil(hitPopups.length/popupCols)+(enemyPopups.length-hitPopups.length);
+    const popupBaseRem=(c)=>/text-6xl/.test(c)?3.75:/text-5xl/.test(c)?3:/text-4xl/.test(c)?2.25:/text-3xl/.test(c)?1.875:/text-2xl/.test(c)?1.5:/text-xl/.test(c)?1.25:/text-lg/.test(c)?1.125:1;
+    const popupTop=popupRows>=2?22:4;
+    const popupFit=(p)=>{
+      if(liteBattleView||popupRows<2) return {gridColumn:'1 / -1',justifySelf:'center'};
+      const hi=hitPopups.indexOf(p);
+      const firstRow=hi>=0&&Math.floor(hi/popupCols)===0;
+      const fit=`calc((100cqh - ${enemyFxPopups.length*26+popupTop+6}px) / ${(popupRows*1.36).toFixed(2)})`;
+      return {fontSize:`min(${popupBaseRem(p.color)}rem, ${fit})`,lineHeight:1.05,marginTop:firstRow?0:'.28em',
+        ...(hi<0?{gridColumn:'1 / -1',justifySelf:'center'}:{justifySelf:popupCols===2?(hi%2===0?'end':'start'):'center'}),
+        paddingLeft:popupCols===2?'.12em':undefined,paddingRight:popupCols===2?'.12em':undefined};
+    };
+    const popupGridStyle={display:'grid',gridTemplateColumns:`repeat(${popupCols}, max-content)`,justifyContent:'center',alignContent:'start',columnGap:'.35em',rowGap:0,paddingTop:`${popupTop}px`};
     // ★効果の小さな札は上の端へ1列に並べ、大きなダメージの数字はその下へ置く。縦の流れにするので重ならない
     //   (下の端へ置くと、盤面の上の縁に出る「合計DMG」の予測や味方の枠の裏に隠れた)
     return (
-      <div className="absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-start pt-1 gap-0.5">
+      <div data-enemy-popups className="absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-start pt-1 gap-0.5 [container-type:size]">
         {enemyFxPopups.length>0&&<div data-enemy-fx-chips className="flex flex-col items-center gap-0.5 px-2">
           {enemyFxPopups.map(p=>(<div key={p.id} data-enemy-fx-chip className={`max-w-full truncate rounded-full border border-white/25 bg-slate-950/85 px-2.5 py-0.5 text-[12px] font-black leading-tight shadow-[0_2px_8px_rgba(0,0,0,.7)] ${enemyFxChipTone(p.color)}`}>{p.text}</div>))}
         </div>}
-        <div className={`${wrapEnemyPopups?'':'flex flex-col items-center justify-start gap-0.5'}`} style={popupGridStyle}>
-          {enemyPopups.map(p=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined} style={compactPopupStyle} className={`text-center ${p.color} font-black whitespace-nowrap px-4 ${liteBattleView?'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base':'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`}>{p.text}</div>))}
+        <div data-enemy-popup-grid={popupCols} style={popupGridStyle}>
+          {enemyPopups.map((p,idx)=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined} data-enemy-popup={idx} style={popupFit(p)} className={`text-center ${p.color} font-black whitespace-nowrap ${popupCols===2?'':'px-4'} ${liteBattleView?'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base':'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`}>{p.text}</div>))}
         </div>
       </div>
     );
@@ -45965,9 +45989,11 @@ function BattleScreen({
               誰のものでもないもの(合計・回避の名乗り・AUTO停止など)は盤面の**上の縁**へ出す。
               上へ積むので、何個出ても盤面には降りてこない */}
           {tacticsNewLayout?(
-            <div data-tactics-board-popups className="absolute inset-x-0 bottom-full mb-1 flex flex-col items-center justify-end gap-0.5 pointer-events-none" style={{zIndex:200}}>
+            <div data-tactics-board-popups className="absolute inset-x-0 bottom-full mb-[30px] flex flex-col items-center justify-end gap-0.5 pointer-events-none" style={{zIndex:200}}>
+              {/* 誰のものでもない知らせ(回避の名乗り・合計など)。上へ積むと2枚目が強化の札の列(♥20%・⚡15%・詳細)に重なっていた(2026-11-01 イルミネの回避)。
+                  強化の札の列の上(盤面の上の縁から30px上)から上へ積む。横1列にすると左右の「ステータス」「次の行動」の札にかかるので縦のまま */}
               {popups.filter(p=>['hero','life','guts'].includes(p.side)&&!Number.isInteger(p.slot)).slice(-3).map((p)=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined}
-                className={`${tacticsPopupTone(p.color)} max-w-[92%] truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-3 py-0.5 text-[15px] font-black leading-tight shadow-[0_4px_14px_rgba(0,0,0,.6)]`}
+                className={`${tacticsPopupTone(p.color)} max-w-[92%] truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-3 py-0.5 text-[13px] font-black leading-tight shadow-[0_4px_14px_rgba(0,0,0,.6)]`}
                 style={{animation:liteBattleView?undefined:'tacticsPopupRise 240ms ease-out'}}>{p.text}</div>))}
             </div>
           ):(
@@ -46334,8 +46360,10 @@ function BattleScreen({
                   {skillHere&&<div data-tactics-slot-skill={i} className={`max-w-full truncate rounded-lg border px-2 py-0.5 text-[11px] font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,.7)] ${skillHere.type==='unique'?'bg-purple-700 border-purple-200 text-white':skillHere.type==='special'?'bg-amber-600 border-amber-200 text-white':'bg-red-700 border-red-200 text-white'}`}
                     style={{animation:liteBattleView?undefined:'tacticsPopupRise 220ms ease-out'}}>{skillHere.name}</div>}
                   {slotFxEl}
-                  {ownPopups.map(p=>(<div key={p.id} className={`${tacticsPopupTone(p.color)} max-w-full truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-2 py-0.5 text-[11px] font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,.6)]`}
-                    style={{animation:liteBattleView?undefined:'tacticsPopupRise 240ms ease-out'}}>{p.text}</div>))}
+                  {/* 枠が狭く、長い吹き出し(「セレーネチェイサー! 連撃…」「会心率+1.0% 会心ダメ+1…」)が途中で切れていた(ふつうの縦でも)。
+                      最初の区切りまで(技名・最初の効果)だけ出す。全部の文はバトルの記録で読める(2026-11-01 社長「技名だけにする案でよい」) */}
+                  {ownPopups.map(p=>{const short=tacticsPopupShortText(p.text);return(<div key={p.id} className={`${tacticsPopupTone(p.color)} max-w-full truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-2 py-0.5 text-[11px] font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,.6)]`}
+                    style={{animation:liteBattleView?undefined:'tacticsPopupRise 240ms ease-out'}}>{short!==p.text?<span data-tactics-popup-short title={p.text}>{short}</span>:p.text}</div>);})}
                 </div>);
                 })()}
                 {/* ★数字の札は下の「枠の中の札」へまとめてある。ここは輪だけ。
@@ -46533,10 +46561,13 @@ function BattleScreen({
                           (2026-09-22 ユーザー指摘「カードも距離枠も全て安っぽくない？」)。
                           読む順が「何の値か → いくつか」で固定され、4枚並べたときに縦がそろう */}
                       <div className="flex h-[10px] items-center justify-between leading-none">
-                        <span className="shrink-0 whitespace-nowrap text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] font-black tracking-wider [@media(orientation:landscape)_and_(max-height:520px)]:tracking-normal text-pink-300">ライフ</span>
-                        <span className="font-mono leading-none">{/* ★ミルフィーシールド(ドリーミィのEX)の残り。ライフの数字の前に出す */}
-                          {Array.isArray(tacticsShields)&&tacticsShields[i]>0&&<span data-tactics-shield={tacticsShields[i]} className="mr-1 text-[9px] font-black text-sky-200">🛡️{tacticsShields[i]}</span>}
-                          <span className="text-[11px] font-black text-white">{tacticsUnit.hp}</span><span className="text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] text-slate-400">/{tacticsUnit.maxHp}</span></span>
+                        {/* ★ミルフィーシールド(ドリーミィのEX)の残りは、「ライフ」の文字の代わりに出す。ライフの数字の前に足すと、
+                            狭い枠(375幅など)で行に入り切らず折り返して、下の GUTS の行に重なっていた(2026-11-01 タクティクスの点検) */}
+                        {Array.isArray(tacticsShields)&&tacticsShields[i]>0
+                          ?<span data-tactics-shield={tacticsShields[i]} className="mr-1 shrink-0 whitespace-nowrap text-[9px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[8px] font-black leading-none text-sky-200">🛡️{tacticsShields[i]}</span>
+                          :<span className="shrink-0 whitespace-nowrap text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] font-black tracking-wider [@media(orientation:landscape)_and_(max-height:520px)]:tracking-normal text-pink-300">ライフ</span>}
+                        <span className="whitespace-nowrap font-mono leading-none">
+                          <span className="text-[11px] font-black text-white">{tacticsUnit.hp}</span><span className={`text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] text-slate-400${Array.isArray(tacticsShields)&&tacticsShields[i]>0?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}>/{tacticsUnit.maxHp}</span></span>
                       </div>
                       <div className="relative h-[2px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
                         <div data-tactics-hp-bar className={`h-full w-full origin-left transition-transform duration-1000 ${tacticsUnit.downed?'bg-gradient-to-r from-emerald-500 to-teal-300':'bg-gradient-to-r from-rose-500 to-pink-300'}`} style={{transform:`scaleX(${Math.min(100,Math.max(0,hpPct))/100})`,boxShadow:'0 0 6px rgba(244,114,182,.55)'}}></div>
@@ -56289,14 +56320,17 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
 // HARD より上は、同じ3体で組み直す(HARD は第1弾のカードだけ・EXPERT と MASTER は全部の弾)
 // field … 助手ごとの全体カード(HARD から2枚ずつ入れる。第2弾より後の札は、弾の制限が外れる EXPERT から)。
 //   入れたい度の点だけで組むと全体カードは入らなかった(2026-10-30 社長「助手ごとに入れる」)
+// prefer … 助手らしさの札(HARD から3枚ずつ。その3体で使えるものだけ入る)
+// ★3体はここでは決めない。好きな子(CARD_AI_FAVORITE)とその仲間から cardAiPickTrio が毎試合選ぶ
+//   (前はきゅうこ・あつ・ソラシドに monsters を書いていたが、どこからも読まれていなかったので消した。2026-11-01 点検)
 const CARD_AI_DECKS = Object.freeze({
   mua:      { kit: 'speed', field: ['ホリィの声援', '飛び散る火花'] },     // 速攻。技を安く・特殊攻撃を強く
   momosuke: { kit: 'miracle', field: ['冷静な判断', 'がんじがらめ'] },     // 手札を整え、相手の特殊技を封じる
   kiki:     { kit: 'powerful', field: ['必殺技の応酬', '長期戦の予感'] },  // 小技を封じ、ガッツをためて大技
   dra:      { kit: 'powerful', field: ['興奮のるつぼ', '必殺技の封印'] },  // 守り。受けるダメージを減らす場
-  kyuko:    { monsters: ['C-007', 'C-005', 'C-009'], field: ['必殺技の応酬'] },  // 小技を封じる。2種入れると MASTER で7点下がったので1種(2026-10-30)。ナーガ・ピクシー・モッチー
-  atsu:     { monsters: ['C-003', 'C-001', 'C-002'], prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード'], field: ['必殺技の応酬', '灼熱の地'] },  // 全体カードは大技で押す場と焼ける場。ゴーレム・ライガー・ガリ。全体攻撃を集める
-  sorashido: { monsters: ['C-008', 'C-001', 'C-003'], prefer: ['大混乱', '時間稼ぎ', '大鎌', 'ハテナマーク', 'ニャーにゃー'] },  // 山札とガッツを削る札(その3体で使えるものだけ入る)  // ハム・ライガー・ゴーレム(ルールくんが測った試合でいちばん多かった3体。3体は好きな子ハムから毎試合選ぶ)。prefer はまだ無い
+  kyuko:    { field: ['必殺技の応酬'] },  // 小技を封じる。2種入れると MASTER で7点下がったので1種(2026-10-30)
+  atsu:     { prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード'], field: ['必殺技の応酬', '灼熱の地'] },  // 全体攻撃を集める。全体カードは大技で押す場と焼ける場
+  sorashido: { prefer: ['大混乱', '時間稼ぎ', '大鎌', 'ハテナマーク', 'ニャーにゃー'] },  // 山札とガッツを削る札(その3体で使えるものだけ入る)
 });
 // 助手の好きなモンスター(1体。2026-10-25 社長「1体だけ好きなモンスターを決めて、あとは好みのバランスでデッキ組む」)。
 // 名前ではなく主血統(種族)で決める(「モッチーだけどジェントル使うとかはあり」)。その種族の通常・キラ・別絵キラと、
@@ -58818,6 +58852,8 @@ const cardAssistantDeckName = (db, deck, who, level, rnd = Math.random) => {
 };
 // 画面。intro = { mode:'assistant'|'tutorial'|'pvp', foe:{ name, who?, icon?, line?, deckName?, monsters:[番号] }, me:{ name, icon?, deckName?, monsters } }
 const CARD_VS_CSS = `
+/* 背の低い縦の画面(390×600 など)では、相手の立ち絵とモンスターの絵を小さくして高さに収める(はみ出して頭が切れ、「あなた」と「タップで始める」が重なっていた。2026-11-01 見た目の点検) */
+@media (orientation: portrait) and (max-height: 700px) { [data-card-vs] { --mh-vs-foe-h: 18vh; --mh-vs-mon-h: 15vh; } }
 @keyframes mhVsFoeIn { from { transform: translateX(60%); opacity: 0 } to { transform: none; opacity: 1 } }
 @keyframes mhVsMonFoe { 0% { transform: translateX(140%) scale(.6); opacity: 0 } 70% { transform: translateX(-6%) scale(1.06); opacity: 1 } 100% { transform: none; opacity: 1 } }
 @keyframes mhVsMonMe { 0% { transform: translateX(-140%) scale(.6); opacity: 0 } 70% { transform: translateX(6%) scale(1.06); opacity: 1 } 100% { transform: none; opacity: 1 } }
@@ -58877,10 +58913,10 @@ const CardVsMonsters = ({ db, monsters, side, start, step }) => (
             ? (() => {
               // キラ・レアキラの光(CardVsArt の kira。対戦の場と同じ見た目)
               const kira = typeof cardKiraOf === 'function' ? cardKiraOf(db, no) : null;
-              const el = <CardVsArt src={art} alt={m.name} aspect={1} spread={1.1} kira={kira} onImgError={typeof cardArtOnError === 'function' ? cardArtOnError(art, CARD_IMG(m.img)) : null} className="drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]" style={{ width: 'min(100%, 19vh, 140px)' }}/>;
+              const el = <CardVsArt src={art} alt={m.name} aspect={1} spread={1.1} kira={kira} onImgError={typeof cardArtOnError === 'function' ? cardArtOnError(art, CARD_IMG(m.img)) : null} className="drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]" style={{ width: 'min(100%, var(--mh-vs-mon-h, 19vh), 140px)' }}/>;
               return el;
             })()
-            : <img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="w-full rounded-md object-cover" style={{ aspectRatio: '63 / 88', maxHeight: 'min(19vh, 140px)' }}/>}
+            : <img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="w-full rounded-md object-cover" style={{ aspectRatio: '63 / 88', maxHeight: 'min(var(--mh-vs-mon-h, 19vh), 140px)' }}/>}
           {/* 名前は「…」で切らず、幅に合わせて字を小さくして1行に収める(2026-10-31 社長「7文字以上のモンスター名…サイズで調整して」) */}
           <span data-card-vs-mon-name className="mt-0.5 block w-full text-center" style={{ containerType: 'inline-size' }}>
             <span className="whitespace-nowrap font-black text-white" style={{ fontSize: `min(10px, calc(100cqw / ${String(m.name).length + 0.5}))`, textShadow: '0 1px 2px #000' }}>{m.name}</span>
@@ -58925,7 +58961,7 @@ const CardVsIntro = ({ db, intro, onDone, meIcon = null }) => {
         {/* 相手(上・横向きでは右) */}
         <div data-card-vs-side="foe" className="flex min-h-0 flex-col items-center justify-end gap-1.5 px-3 pb-2 pt-3 landscape:flex-1 landscape:justify-center">
           <div className="flex w-full max-w-[420px] items-end gap-2">
-            <div className="mh-vs-foe shrink-0" style={{ width: 'min(34vw, 30vh, 150px)' }}>
+            <div className="mh-vs-foe shrink-0" style={{ width: 'min(34vw, var(--mh-vs-foe-h, 30vh), 150px)' }}>
               {who
                 ? <CardVsArt data-card-vs-foe-art src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} aspect={3 / 4}/>
                                 // マルチの相手: プロフィールと同じ部品(フレーム付き)。アイコンの id は絵に直す(字のまま出していた。91 の CardPvpAvatar)
@@ -60460,6 +60496,8 @@ const cardPlainEffectText = (c) => {
   if ((c.kind === 'pow' || c.kind === 'int') && Number.isFinite(Number(c.damage))) return `相手のモンスター1体に、${c.damage}ダメージを与える${c.kind === 'pow' ? 'ちから技' : 'かしこさ技'}です。`;
   return '';
 };
+// 横の画面では、絵の高さを図鑑から開いたとき(nav)と同じ 32vh にそろえる(対戦中に開くと絵が 300px 幅のまま縦にはみ出し、
+//   上が切れて「閉じる」も画面の外だった・場のモンスターは説明の欄に下半分が隠れた。2026-11-01 見た目の点検)
 const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexInfo = null, nav = null }) => {
   const dexLine = dexInfo ? (
     <div data-card-detail-dex className="mt-1.5 flex flex-wrap gap-1.5 text-[12px] font-bold">
@@ -60483,7 +60521,7 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
           </div>
           <span data-card-detail-pos className="text-[12px] font-bold text-slate-400">{nav.pos}</span>
         </div>
-      ) : <CardShine kind={cardShineOf(db, no)} className="w-fit rounded-xl"><img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(78vw,300px)] rounded-xl shadow-2xl"/></CardShine>}
+      ) : <CardShine kind={cardShineOf(db, no)} className="w-fit rounded-xl"><img src={CARD_IMG(c ? c.img : m ? m.img : no, 'l')} alt={c ? c.name : m ? m.name : ''} className="w-[min(78vw,300px)] rounded-xl shadow-2xl landscape:h-[32vh] landscape:w-auto"/></CardShine>}
       {c && (
         <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900/90 p-3 text-slate-100">
           <div className="text-lg font-black">{c.name}</div>
@@ -62054,12 +62092,14 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           const cand = mode === 'attack' && pickCands.includes(i);
           const pickTag = mode !== 'attack' || !sel ? null : sel.hand === i ? '選んだ' : pickSet.includes(i) ? '足した' : cand ? '候補' : null;
           // 守りの番: 使えない回避・防御の札に、理由を短く重ねる(「ガッツ不足」「ナーガ専用」など。案C)
+          // 理由の札は字の幅で出し(w-max。left-1/2 だと札の半分の幅しか使えず「守り/に使/う」「(あと1/)」と細かく折れていた)、
+          //   折るのは言葉の切れ目(jaWrap)。2026-11-01 見た目の点検
           const why = tutorial || on ? null : mode === 'guard' ? cardGuardWhyShort(db, st, c) : mode === 'attack' && myTurn && !sel ? ((w) => (w === '今は使えない' ? null : w))(attackWhyShort(i)) : null;
           return (
             <div key={`${no}-${i}`} data-card-hand-card={i} data-card-press onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${wide ? 'max-w-[72px]' : handTiny ? (boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]') : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${replay && boardFit >= 4 ? '!max-w-[38px]' : ''} ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? (why ? 'relative [&>*:not([data-card-why])]:opacity-45' : 'opacity-45') : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
               <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} draggable={false} style={{ WebkitUserDrag: 'none' }} className={`w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : cand ? 'outline outline-[3px] outline-emerald-400 shadow-[0_0_12px_#34d399]' : ''}`}/>
               {pickTag && <span data-card-hand-pick={pickTag} className={`pointer-events-none absolute left-1/2 top-0 z-[2] -translate-x-1/2 -translate-y-1/3 whitespace-nowrap rounded-md px-1 ${handTiny ? 'text-[9px]' : 'text-[10px]'} font-black leading-tight shadow-[0_2px_4px_#000] ${pickTag === '候補' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-slate-950'}`}>{pickTag}</span>}
-              {why && <span data-card-why className={`pointer-events-none absolute left-1/2 top-[22%] z-[2] max-w-[110%] -translate-x-1/2 rounded-md border border-rose-300/80 bg-rose-950/95 px-1 py-px text-center ${handTiny ? 'text-[9px]' : 'text-[10px]'} font-black leading-tight text-rose-100 shadow-[0_2px_4px_#000]`} style={JA_WRAP_STYLE}>{why}</span>}
+              {why && <span data-card-why className={`pointer-events-none absolute left-1/2 top-[22%] z-[2] w-max max-w-[110%] -translate-x-1/2 rounded-md border border-rose-300/80 bg-rose-950/95 px-1 py-px text-center ${handTiny ? 'text-[9px]' : 'text-[10px]'} font-black leading-tight text-rose-100 shadow-[0_2px_4px_#000]`} style={JA_WRAP_STYLE}>{jaWrap(why)}</span>}
               {/* 小さい段(tiny)は名前が2行になることがあるので、字の行間と上下の余白を詰めて、下のボタンを画面に残す(320×568 の守りの番) */}
               {!(replay && boardFit >= 3) && <div className={`mt-0.5 w-full rounded-md bg-black/60 ${handTiny ? 'py-px' : 'py-0.5'} text-center leading-tight`}>
                 <CardNameFit name={c ? c.name : no} size={handLarge ? (compact ? 12 : 13) : compact ? 10 : 11} className="font-bold leading-tight" twoLine/>
@@ -73504,7 +73544,7 @@ const CardCupPrizePanel = ({ c, v, now, selfId, prize, reload, getAdapters }) =>
       {prize.fee && <p data-card-cup-fee className="text-[12px] font-black text-sky-100">{`参加費 ${cardCupItemText(prize.fee.item, prize.fee.amount)}(主催・主催仲間は払いません)`}</p>}
       {(prize.pool.length > 0 || prize.fee) && (
         <div data-card-cup-split className="space-y-0.5 text-[12px] font-bold text-slate-200">
-          {prize.split.map((pct, i) => <div key={i} className="flex justify-between"><span>{`${i + 1}位 ${pct}%`}</span><span className="text-slate-300">{poolFull.map((p) => { const s = shares(p.total)[i] || 0; return s > 0 ? cardCupItemText(p.item, s) : null; }).filter(Boolean).join('・') || '−'}</span></div>)}
+          {prize.split.map((pct, i) => <div key={i} className="flex justify-between gap-2"><span className="shrink-0 whitespace-nowrap">{`${i + 1}位 ${pct}%`}</span><span className="min-w-0 text-right text-slate-300">{(() => { const t = poolFull.map((p) => { const s = shares(p.total)[i] || 0; return s > 0 ? cardCupItemText(p.item, s) : null; }).filter(Boolean); return t.length ? t.map((x, k) => <span key={k} className="whitespace-nowrap">{`${x}${k < t.length - 1 ? '・' : ''}`}</span>) : '−'; })()}</span></div>)}
           <p className="text-[11px] text-slate-400">{`${players}人そろったときの見込み。主催・主催仲間は受け取りません(その分は次の順位の人へ)`}</p>
         </div>
       )}
@@ -86585,7 +86625,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const cardScopeLabel = (card) => {
     if (!card || !isTacticsMode(runMode)) return null;
     if (isAttackCard(card)) return '敵へ';
-    if (card.type === 'guard' || card.type === 'weak_guard' || card.subType === 'buff_myaru') return '単体';
+    // きゅうこの譜面(2026-10-22)も、タクティクスでは置いた子が単体攻撃を引き受け、その子だけ被ダメが減る(2026-11-01 点検で直した)
+    if (card.type === 'guard' || card.type === 'weak_guard' || card.subType === 'buff_myaru' || card.subType === 'cover_kyuko') return '単体';
     return '全体';
   };
   // 色は「見た目だけ」。Tailwindは静的化してあるので、組み立てずにそのまま書く
@@ -89709,7 +89750,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // バトルの記録もWAVEの区切りを入れる。ランの1WAVE目では前のランのぶんを消す
     if (w === 1) { setBattleLog([]); battleLogSeqRef.current = 0; }
     pushBattleLog(isRaidJackMode(runMode)?`── ${battleModeInfo(runMode).short}：${newEnemy.name} ──`:`── WAVE ${w}：${newEnemy.name} ──`, 'turn');
-    setTurnCount(1); setSelectedCards([]); setDiscardCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); resetKusabi(); resetDreamPain(); clearKyubiKageroWait(); setWaveBuffs({}); resetFateWheel(); resetEnemyConfuse(); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
+    setTurnCount(1); setSelectedCards([]); setDiscardCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); resetKusabi(); resetDreamPain(); clearKyubiKageroWait(); setWaveBuffs({});
+    // きゅうこの譜面の被ダメ減・引き受けは WAVE をまたいで持ち越さない(2026-11-01 社長の決め。使ったターンに敵を倒すと、
+    //   敵の番の前で処理が終わって残りターンが減らず、次の WAVE へそのまま残っていた)
+    kyukoRedirectRef.current=null; writePermaBuffs(p=>p.kyukoCutTurns>0?({...p,kyukoCutTurns:0}):p);
+    resetFateWheel(); resetEnemyConfuse(); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
   }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, tacticsRecords, runMode]);
   // 勇者特性「トリックスタート」(ゴースト・スプーキー)の抽選。WAVEの1ターン目と、そこから3ターンごと。
@@ -102496,6 +102541,8 @@ const createAnimationStyle = () => {
     .mh-card-down-band { animation: mhCardDownBand 1.1s ease-out both; }
     @keyframes mhCardDownBand { 0% { opacity: 0; transform: scaleY(.2); } 15% { opacity: 1; transform: scaleY(1.08); } 25% { transform: scaleY(1); } 82% { opacity: 1; } 100% { opacity: 0; } }
     @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash, .mh-card-dmg-pop, .mh-card-down-band, .mh-card-guard-result { animation: none; } }
+    /* 受けた瞬間の白い光は、動きを止めると白い四角が絵を隠したまま残る(2026-11-01 点検)ので、動きを減らす設定では出さない */
+    @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash { display: none; } }
     /* キラ・レアキラの立ち絵の光(84 の CardKiraAura・cardKiraWrap。2026-10-30 社長「この形で入れて」→
        2026-10-31「バトル中の立ち絵も強化して」「もっとわかりやすく。センター位置をちゃんと合わせて」)。CSS だけ。動かすのは transform と opacity
        (ふちの光の filter だけは色を移すため動かす。ふちの光の中には動く物を入れない)。光の中心・大きさは 84 が体の範囲から決めて style で渡す */

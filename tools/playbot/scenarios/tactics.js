@@ -467,7 +467,11 @@ async function tacticsScenario(s, { maxMs = 360000, modes = ['tactics', 'tactics
   // 勝ち負け: 最後の WAVE まで着いて決着した=クリア / 途中で決着=負け(ターン切れか全員倒れた) / 時間切れ=打ち切り
   const lastWave = log.data.waves[log.data.waves.length - 1];
   if (stats.finished) {
-    const cleared = !!lastWave && lastWave.result === 'clear' && stats.waveReached >= (stats.waveMax || 10);
+    // ★最後の WAVE で敵を倒すと、その場で結果の画面(CHAMPION)へ移り、最後の WAVE の勝ち負けが記録されないまま
+    //   「全員倒れた」で埋まっていた(2026-11-01 点検: 覚醒ムーを倒して CHAMPION なのに wipe)。結果の画面の見出しでも見る
+    const championScreen = /CHAMPION/.test(endText);
+    if (championScreen && lastWave && !lastWave.result) lastWave.result = 'clear';
+    const cleared = championScreen || (!!lastWave && lastWave.result === 'clear' && stats.waveReached >= (stats.waveMax || 10));
     stats.result = cleared ? 'clear' : (lastWave && lastWave.turns >= 20 ? 'timeout' : 'wipe');
   } else stats.result = 'stopped';
   log.finish(stats.result, stats.result === 'stopped' ? `時間の上限(${Math.round(maxMs / 60000)}分)で打ち切った` : '');

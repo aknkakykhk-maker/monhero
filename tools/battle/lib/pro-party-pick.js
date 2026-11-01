@@ -2,6 +2,15 @@
 // 2026-10-19 から「① 上の枠へ好きな順で入れる → ② 入れた子から勇者モンを選ぶ」になった(社長「プロモードもこの仕様のほうが見やすい」)。
 // heroName を勇者モンにし、残りの枠は一覧の先頭から順に埋める。うまくいけば null、だめなら理由の文字を返す。
 async function pickProParty(page, heroName) {
+  // HOME で流れ始めたお話(個人杯など。公開のあとの最初の HOME で1回だけ流れる)が、すぐバトルへ進んだ検査では
+  // 編成の画面の上に残り、「枠に入れる」が押せなくなる(2026-11-01 点検)。開いていたら「スキップ」で閉じてから進める。
+  // 人が遊ぶときは HOME でお話が開くので、ゲームの側は変えない
+  for (let i = 0; i < 4; i++) {
+    const skip = page.getByRole('button', { name: 'スキップ', exact: true }).first();
+    if (await skip.count() === 0 || !(await skip.isVisible().catch(() => false))) break;
+    await skip.click().catch(() => {});
+    await page.waitForTimeout(600);
+  }
   try { await page.waitForSelector('[data-pro-party]', { timeout: 15000 }); } catch (e) { return 'プロモードの編成の枠が出ない'; }
   // 前回使った子が入っていれば、いったん全部外す(どの子が入るかを検査で決める)
   for (let i = 0; i < 12; i++) {

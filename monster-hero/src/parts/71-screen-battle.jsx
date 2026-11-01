@@ -1401,6 +1401,15 @@ function InfernoShieldBreakFx({ fx, lite, onDone }) {
     document.body
   );
 }
+// 枠の吹き出しの短い形(背の低い画面・横向き用)。9字までならそのまま。「!」があればそこまで、無ければ最初の空白・「・」「、」の前まで
+const tacticsPopupShortText = (text) => {
+  const t = String(text == null ? '' : text);
+  if ([...t].length <= 9) return t;
+  const bang = t.match(/^(.+?[!！])/);
+  if (bang) return bang[1];
+  const k = t.search(/[\s　・、]/);
+  return k > 0 ? t.slice(0, k) : t;
+};
 function BattleScreen({
   battleOverlayOpen = false, applyTurnDamageReduction, attackAnim, autoBattle, autoBattleRef, autoRepeat, battleFxSettings, onBattleFxAutoStep, battleIntimidate,
   battleScenarioRef, battleScreenActive, battleScreenStyle, battleSoulMasus, battleSpeed, battleTutorial,
@@ -1645,6 +1654,19 @@ function BattleScreen({
   const infernoShellView = enemy ? enemyShellView(enemy) : null;
   const infernoShellRule = specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
   const [infernoShellFx, setInfernoShellFx] = useState(null);
+  // 運の帯(眼力・運命のコインなど)は、アシカ(教えカード)の演出の間は出さず、終わってから出す(2026-11-01 社長「アシカの演出の間はほかの帯を後回し」)。
+  //   演出の間に来た帯はここで預かり、演出が終わってから2.4秒だけ出す(60 の側で先に消えても見られるように)
+  const [heldLuckBanners, setHeldLuckBanners] = useState([]);
+  useEffect(()=>{
+    if(!teachingFx||!Array.isArray(luckBanners)||!luckBanners.length) return;
+    setHeldLuckBanners(prev=>{const ids=new Set(prev.map(b=>b.id));const add=luckBanners.filter(b=>b&&!ids.has(b.id));return add.length?[...prev,...add]:prev;});
+  },[teachingFx,luckBanners]);
+  useEffect(()=>{
+    if(teachingFx||!heldLuckBanners.length) return undefined;
+    const t=setTimeout(()=>setHeldLuckBanners([]),2400);
+    return ()=>clearTimeout(t);
+  },[teachingFx,heldLuckBanners.length]);
+  const shownLuckBanners = teachingFx ? [] : (()=>{const live=Array.isArray(luckBanners)?luckBanners:[];const ids=new Set(live.map(b=>b.id));return [...heldLuckBanners.filter(b=>!ids.has(b.id)),...live];})();
   // 必殺技・ためる・貫通の予告の札(画面の上から11%に固定)は、層のゲージと同じ高さに来るので、ゲージが出ている間はゲージの高さぶん下げる
   //   (2026-10-31 社長「ゲージの下の層にかからないように」)。背の低い画面はゲージがライフの帯の中の細い1本なので16pxだけ、横向きは画面が低く上の飾り(✨☠️)が細い1本にかかるので56px下げる
   const infernoFloatShift = infernoShellView?.total>0 ? infernoShellView.total*15+8 : 0;
@@ -2300,9 +2322,9 @@ function BattleScreen({
             {/* 運しだいで決まった結果の帯(運命のコイン・運命の輪・トリックスタート・乱心・眼力。2026-10-06 ユーザー指摘
                 「ランダム効果のものが何が発動したかわからない」)。技名の札(上の14%)と重ならないよう、その下へ縦に並べる。
                 押せる場所は塞がない。body へ出すのは技名の札と同じ理由(画面の揺れで位置がずれないように) */}
-            {Array.isArray(luckBanners)&&luckBanners.length>0&&ReactDOM.createPortal(
+            {shownLuckBanners.length>0&&ReactDOM.createPortal(
               <div data-battle-luck-banners data-battle-float className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1.5" style={{top:'21%',zIndex:65001,width:'min(92vw, 360px)'}}>
-                {luckBanners.map(b=>(<div key={b.id} data-battle-luck-banner={b.tone}
+                {shownLuckBanners.map(b=>(<div key={b.id} data-battle-luck-banner={b.tone}
                   className={`w-full rounded-2xl border-2 px-3 py-1.5 text-center shadow-[0_4px_20px_rgba(0,0,0,.85)] ${b.tone==='bad'?'bg-slate-800/95 border-slate-300 text-slate-100':b.tone==='enemy'?'bg-violet-800/95 border-violet-200 text-white':'bg-amber-600/95 border-amber-100 text-white'}`}
                   style={{animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
                   <div data-battle-luck-title className="text-[11px] font-black leading-tight opacity-90">{cardIconNode(b.icon,14)} {b.title}</div>
@@ -2542,34 +2564,36 @@ function BattleScreen({
             {(() => {
     const enemyPopups=popups.filter(p=>p.side==='enemy'&&!p.fx);
     const enemyFxPopups=popups.filter(p=>p.side==='enemy'&&p.fx).slice(-3);
-    const wrapEnemyPopups=!liteBattleView&&enemyPopups.length>4;
-    const popupColumns=wrapEnemyPopups?Math.ceil(enemyPopups.length/4):1;
-    const popupGridStyle=wrapEnemyPopups?{
-      display:'grid',
-      gridAutoFlow:'column',
-      gridTemplateRows:'repeat(4, auto)',
-      gridAutoColumns:'max-content',
-      justifyContent:'center',
-      alignContent:'start',
-      columnGap:popupColumns>=3?'0px':'4px',
-      rowGap:'2px',
-      paddingTop:'4px'
-    }:undefined;
-    const compactPopupStyle=wrapEnemyPopups?{
-      fontSize:popupColumns>=3?'clamp(1.4rem, 5.8vw, 1.85rem)':'clamp(1.75rem, 7.5vw, 2.25rem)',
-      lineHeight:1.05,
-      paddingLeft:'2px',
-      paddingRight:'2px'
-    }:undefined;
+    // ★連撃の数字が重なる(2026-11-01 社長「1発ずつは残して、互いに重ならない・合計と重ならない・桁が欠けないように」)。
+    //   原因: 1発ずつの数字が2pxの間で縦に並び、それぞれが弾む(animate-bounce・自分の高さの25%上へ)ので上の数字にかぶっていた。
+    //   5つを超えると4段の列で横に折り返し、「合計」が数字の横へ詰まっていた。横向き・背の低い画面は敵の段が低く入り切らなかった。
+    //   直し方: 1発ずつの数字は4発以上なら2列、「合計」はその下の段に1つで横いっぱい。2段目からは上に .28em あけ(弾んでも届かない)、
+    //   大きさは「敵の段の高さ ÷ 段の数」まで縮める(cqh)。1段目は敵の円の上の札(通常攻撃!など)の下から始める
+    const isSumPopup=(p)=>/^合計/.test(String(p.text||''));
+    const hitPopups=enemyPopups.filter(p=>!isSumPopup(p));
+    const popupCols=!liteBattleView&&hitPopups.length>=4?2:1;
+    const popupRows=Math.ceil(hitPopups.length/popupCols)+(enemyPopups.length-hitPopups.length);
+    const popupBaseRem=(c)=>/text-6xl/.test(c)?3.75:/text-5xl/.test(c)?3:/text-4xl/.test(c)?2.25:/text-3xl/.test(c)?1.875:/text-2xl/.test(c)?1.5:/text-xl/.test(c)?1.25:/text-lg/.test(c)?1.125:1;
+    const popupTop=popupRows>=2?22:4;
+    const popupFit=(p)=>{
+      if(liteBattleView||popupRows<2) return {gridColumn:'1 / -1',justifySelf:'center'};
+      const hi=hitPopups.indexOf(p);
+      const firstRow=hi>=0&&Math.floor(hi/popupCols)===0;
+      const fit=`calc((100cqh - ${enemyFxPopups.length*26+popupTop+6}px) / ${(popupRows*1.36).toFixed(2)})`;
+      return {fontSize:`min(${popupBaseRem(p.color)}rem, ${fit})`,lineHeight:1.05,marginTop:firstRow?0:'.28em',
+        ...(hi<0?{gridColumn:'1 / -1',justifySelf:'center'}:{justifySelf:popupCols===2?(hi%2===0?'end':'start'):'center'}),
+        paddingLeft:popupCols===2?'.12em':undefined,paddingRight:popupCols===2?'.12em':undefined};
+    };
+    const popupGridStyle={display:'grid',gridTemplateColumns:`repeat(${popupCols}, max-content)`,justifyContent:'center',alignContent:'start',columnGap:'.35em',rowGap:0,paddingTop:`${popupTop}px`};
     // ★効果の小さな札は上の端へ1列に並べ、大きなダメージの数字はその下へ置く。縦の流れにするので重ならない
     //   (下の端へ置くと、盤面の上の縁に出る「合計DMG」の予測や味方の枠の裏に隠れた)
     return (
-      <div className="absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-start pt-1 gap-0.5">
+      <div data-enemy-popups className="absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-start pt-1 gap-0.5 [container-type:size]">
         {enemyFxPopups.length>0&&<div data-enemy-fx-chips className="flex flex-col items-center gap-0.5 px-2">
           {enemyFxPopups.map(p=>(<div key={p.id} data-enemy-fx-chip className={`max-w-full truncate rounded-full border border-white/25 bg-slate-950/85 px-2.5 py-0.5 text-[12px] font-black leading-tight shadow-[0_2px_8px_rgba(0,0,0,.7)] ${enemyFxChipTone(p.color)}`}>{p.text}</div>))}
         </div>}
-        <div className={`${wrapEnemyPopups?'':'flex flex-col items-center justify-start gap-0.5'}`} style={popupGridStyle}>
-          {enemyPopups.map(p=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined} style={compactPopupStyle} className={`text-center ${p.color} font-black whitespace-nowrap px-4 ${liteBattleView?'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base':'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`}>{p.text}</div>))}
+        <div data-enemy-popup-grid={popupCols} style={popupGridStyle}>
+          {enemyPopups.map((p,idx)=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined} data-enemy-popup={idx} style={popupFit(p)} className={`text-center ${p.color} font-black whitespace-nowrap ${popupCols===2?'':'px-4'} ${liteBattleView?'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base':'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`}>{p.text}</div>))}
         </div>
       </div>
     );
@@ -2835,9 +2859,11 @@ function BattleScreen({
               誰のものでもないもの(合計・回避の名乗り・AUTO停止など)は盤面の**上の縁**へ出す。
               上へ積むので、何個出ても盤面には降りてこない */}
           {tacticsNewLayout?(
-            <div data-tactics-board-popups className="absolute inset-x-0 bottom-full mb-1 flex flex-col items-center justify-end gap-0.5 pointer-events-none" style={{zIndex:200}}>
+            <div data-tactics-board-popups className="absolute inset-x-0 bottom-full mb-[30px] flex flex-col items-center justify-end gap-0.5 pointer-events-none" style={{zIndex:200}}>
+              {/* 誰のものでもない知らせ(回避の名乗り・合計など)。上へ積むと2枚目が強化の札の列(♥20%・⚡15%・詳細)に重なっていた(2026-11-01 イルミネの回避)。
+                  強化の札の列の上(盤面の上の縁から30px上)から上へ積む。横1列にすると左右の「ステータス」「次の行動」の札にかかるので縦のまま */}
               {popups.filter(p=>['hero','life','guts'].includes(p.side)&&!Number.isInteger(p.slot)).slice(-3).map((p)=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined}
-                className={`${tacticsPopupTone(p.color)} max-w-[92%] truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-3 py-0.5 text-[15px] font-black leading-tight shadow-[0_4px_14px_rgba(0,0,0,.6)]`}
+                className={`${tacticsPopupTone(p.color)} max-w-[92%] truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-3 py-0.5 text-[13px] font-black leading-tight shadow-[0_4px_14px_rgba(0,0,0,.6)]`}
                 style={{animation:liteBattleView?undefined:'tacticsPopupRise 240ms ease-out'}}>{p.text}</div>))}
             </div>
           ):(
@@ -3204,8 +3230,10 @@ function BattleScreen({
                   {skillHere&&<div data-tactics-slot-skill={i} className={`max-w-full truncate rounded-lg border px-2 py-0.5 text-[11px] font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,.7)] ${skillHere.type==='unique'?'bg-purple-700 border-purple-200 text-white':skillHere.type==='special'?'bg-amber-600 border-amber-200 text-white':'bg-red-700 border-red-200 text-white'}`}
                     style={{animation:liteBattleView?undefined:'tacticsPopupRise 220ms ease-out'}}>{skillHere.name}</div>}
                   {slotFxEl}
-                  {ownPopups.map(p=>(<div key={p.id} className={`${tacticsPopupTone(p.color)} max-w-full truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-2 py-0.5 text-[11px] font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,.6)]`}
-                    style={{animation:liteBattleView?undefined:'tacticsPopupRise 240ms ease-out'}}>{p.text}</div>))}
+                  {/* 枠が狭く、長い吹き出し(「セレーネチェイサー! 連撃…」「会心率+1.0% 会心ダメ+1…」)が途中で切れていた(ふつうの縦でも)。
+                      最初の区切りまで(技名・最初の効果)だけ出す。全部の文はバトルの記録で読める(2026-11-01 社長「技名だけにする案でよい」) */}
+                  {ownPopups.map(p=>{const short=tacticsPopupShortText(p.text);return(<div key={p.id} className={`${tacticsPopupTone(p.color)} max-w-full truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-2 py-0.5 text-[11px] font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,.6)]`}
+                    style={{animation:liteBattleView?undefined:'tacticsPopupRise 240ms ease-out'}}>{short!==p.text?<span data-tactics-popup-short title={p.text}>{short}</span>:p.text}</div>);})}
                 </div>);
                 })()}
                 {/* ★数字の札は下の「枠の中の札」へまとめてある。ここは輪だけ。
@@ -3403,10 +3431,13 @@ function BattleScreen({
                           (2026-09-22 ユーザー指摘「カードも距離枠も全て安っぽくない？」)。
                           読む順が「何の値か → いくつか」で固定され、4枚並べたときに縦がそろう */}
                       <div className="flex h-[10px] items-center justify-between leading-none">
-                        <span className="shrink-0 whitespace-nowrap text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] font-black tracking-wider [@media(orientation:landscape)_and_(max-height:520px)]:tracking-normal text-pink-300">ライフ</span>
-                        <span className="font-mono leading-none">{/* ★ミルフィーシールド(ドリーミィのEX)の残り。ライフの数字の前に出す */}
-                          {Array.isArray(tacticsShields)&&tacticsShields[i]>0&&<span data-tactics-shield={tacticsShields[i]} className="mr-1 text-[9px] font-black text-sky-200">🛡️{tacticsShields[i]}</span>}
-                          <span className="text-[11px] font-black text-white">{tacticsUnit.hp}</span><span className="text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] text-slate-400">/{tacticsUnit.maxHp}</span></span>
+                        {/* ★ミルフィーシールド(ドリーミィのEX)の残りは、「ライフ」の文字の代わりに出す。ライフの数字の前に足すと、
+                            狭い枠(375幅など)で行に入り切らず折り返して、下の GUTS の行に重なっていた(2026-11-01 タクティクスの点検) */}
+                        {Array.isArray(tacticsShields)&&tacticsShields[i]>0
+                          ?<span data-tactics-shield={tacticsShields[i]} className="mr-1 shrink-0 whitespace-nowrap text-[9px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[8px] font-black leading-none text-sky-200">🛡️{tacticsShields[i]}</span>
+                          :<span className="shrink-0 whitespace-nowrap text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] font-black tracking-wider [@media(orientation:landscape)_and_(max-height:520px)]:tracking-normal text-pink-300">ライフ</span>}
+                        <span className="whitespace-nowrap font-mono leading-none">
+                          <span className="text-[11px] font-black text-white">{tacticsUnit.hp}</span><span className={`text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] text-slate-400${Array.isArray(tacticsShields)&&tacticsShields[i]>0?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}>/{tacticsUnit.maxHp}</span></span>
                       </div>
                       <div className="relative h-[2px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
                         <div data-tactics-hp-bar className={`h-full w-full origin-left transition-transform duration-1000 ${tacticsUnit.downed?'bg-gradient-to-r from-emerald-500 to-teal-300':'bg-gradient-to-r from-rose-500 to-pink-300'}`} style={{transform:`scaleX(${Math.min(100,Math.max(0,hpPct))/100})`,boxShadow:'0 0 6px rgba(244,114,182,.55)'}}></div>
