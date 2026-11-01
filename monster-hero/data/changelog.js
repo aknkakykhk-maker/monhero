@@ -35,12 +35,21 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
-    date: "2026-11-01 13:59", type:'update', title:'「Rebellion ～Beyond the Lock～」に short ver. を追加しました', status:'new', group:'rhythm',
+    date: "2026-11-01 15:11", type:'update', title:'「Rebellion ～Beyond the Lock～」の MASTER と HELL の譜面を作り直しました', status:'new', group:'rhythm',
+    items:[
+      '指が交差したり、左右の手が入れ替わったりする場面を減らし、テンポに合わせて速いノーツを左右交互に押し続ける譜面にしました。',
+      'MASTER は Lv.34 → Lv.44、ノーツ数は 957 → 1299 です。',
+      'HELL は Lv.57 → Lv.48、ノーツ数は 1168 のままです(押しにくい形を減らしたので、レベルは下がりました)。',
+      'これまでのランキングの記録は、そのまま残ります。',
+    ],
+  },
+  {
+    date: "2026-11-01 15:11", type:'update', title:'「Rebellion ～Beyond the Lock～」に short ver. を追加しました', status:'new', group:'rhythm',
     image:'images/song-art/rebellion.jpg?v=ef38f7ab2382',
     items:[
       '「Rebellion ～Beyond the Lock～」の short ver.(2分32秒)を追加しました。曲えらびで、原曲と切り替えて遊べます。',
-      'レベルは EASY Lv.8 ／ NORMAL Lv.11 ／ HARD Lv.16 ／ EXPERT Lv.26 ／ MASTER Lv.32 ／ HELL Lv.54 です。',
-      'ノーツ数は 268 ／ 309 ／ 419 ／ 507 ／ 572 ／ 720 です。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.11 ／ HARD Lv.16 ／ EXPERT Lv.26 ／ MASTER Lv.42 ／ HELL Lv.49 です。',
+      'ノーツ数は 268 ／ 309 ／ 419 ／ 507 ／ 772 ／ 720 です。',
     ],
   },
   {
@@ -63,8 +72,8 @@ const CHANGELOG = [
     image:'images/song-art/rebellion.jpg?v=ef38f7ab2382',
     items:[
       '「Stay With Me ～Locked Fate～」の続きのお話、「Rebellion ～Beyond the Lock～」(4分14秒)を追加しました。曲えらびからすぐ遊べます。',
-      'レベルは EASY Lv.9 ／ NORMAL Lv.11 ／ HARD Lv.16 ／ EXPERT Lv.25 ／ MASTER Lv.34 ／ HELL Lv.57 です。',
-      'ノーツ数は 430 ／ 499 ／ 675 ／ 826 ／ 957 ／ 1168 です。',
+      'レベルは EASY Lv.9 ／ NORMAL Lv.11 ／ HARD Lv.16 ／ EXPERT Lv.25 ／ MASTER Lv.44 ／ HELL Lv.48 です。',
+      'ノーツ数は 430 ／ 499 ／ 675 ／ 826 ／ 1299 ／ 1168 です。',
       'テンポに合わせて、速いノーツを押し続ける譜面です。',
     ],
     assistantNotice:{ id:'update_notice_rebellion_v1', type:'content' },
