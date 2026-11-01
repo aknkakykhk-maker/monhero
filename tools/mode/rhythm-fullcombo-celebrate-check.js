@@ -34,8 +34,9 @@ check('称号の優先順はリザルト画面の表示と同じ(ALL MARVELOUS >
   finishBlock.includes("const celebrateTitle=achievements.allMarvelous?'ALL MARVELOUS!!':achievements.allExcellent?'ALL EXCELLENT!!':achievements.fullCombo?'FULL COMBO!':null;"));
 check('celebrateTitleが無い(何も達成していない)ときは今までどおりresultへ直行する',
   finishBlock.includes('status:showCelebrate?\'celebrate\':\'result\''));
+// 2026-11-01 「フルコンボの大きな表示」を1つずつ選べるようにした。おまかせ(既定)はこれまでどおり MINIMAL・軽量モードで出さない
 check('演出量MINIMAL・軽量モードではcelebrate画面を出さない(重くしないため)',
-  finishBlock.includes("const showCelebrate=!!celebrateTitle&&!failed&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';"));
+  finishBlock.includes("const showCelebrate=!!celebrateTitle&&!failed&&rhythmFxOn(settings,'fullComboBig',!settings.lightweightMode&&settings.effectAmount!=='MINIMAL');"));
 // 2026-09-12・ユーザー指示「終了後にクリアか失敗かもわかるようにして」。
 // 失敗(ライフ0のまま完走)でお祝いの画面が出ることはない。
 // ※BAD・MISSが1つも無いとライフは減らないので理屈上は重ならないが、

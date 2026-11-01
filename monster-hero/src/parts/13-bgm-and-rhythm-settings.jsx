@@ -450,6 +450,9 @@ const RHYTHM_LOOK_PRESETS = Object.freeze([
 // 演出の自動調整(設定「重いときは演出を自動で控えめに」・2026-09-27)で下げる順番。重いものから。
 // 段 n では 1〜n 番目を当てる(当てるものが無い段は飛ばす)。演奏中の見た目だけを変え、保存してある設定は変えない
 const RHYTHM_AUTO_EFFECT_STEPS = Object.freeze([
+  // 演出を1つずつ選ぶ設定(fx・2026-11-01)で「出す」「多い」「強」「大」などにした項目を、まず「おまかせ」へ戻す(「出さない」「なし」はそのまま)
+  s=>{const up=['ON','MANY','STRONG','L','DARK'],fx=s.fx||{};const keys=Object.keys(fx).filter(key=>up.includes(fx[key]));
+    return keys.length?{fx:{...fx,...Object.fromEntries(keys.map(key=>[key,'AUTO']))}}:null;},
   s=>s.noteBloom?{noteBloom:false}:null,
   s=>s.stageEffect==='LIVE'?{stageEffect:'VIVID'}:null,
   s=>s.roadFx||s.noteMotionFx||s.climaxFx?{roadFx:false,noteMotionFx:false,climaxFx:false}:null,
@@ -601,6 +604,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   monsterNoteEffect:'LIGHT',
   judgmentLineHeight:20,
   noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'LIGHT', lightweightMode:false,
+  // 演出を1つずつ選ぶ設定(2026-11-01)。おまかせ以外を選んだ項目だけ入る
+  fx:Object.freeze({}),
   // みんなで対戦のライブでは、演出を「軽さ優先」にそろえる(2026-10-03・ユーザー指示「マルチは演出量をデフォで下げたほうがいい」)。
   // ふだんの見た目の設定は書き換えない。対戦のあいだだけ上から重ねる
   multiLightLook:true,
@@ -685,6 +690,114 @@ const rhythmFiniteStep = (value,min,max,step,fallback) => {
   // 0.1刻みのような小数stepでも 6.300000000000001 のような値を残さない。
   return Math.round((Math.round((number-min)/step)*step+min)*1000)/1000;
 };
+// ===== 演出を1つずつ選ぶ(2026-11-01 社長「演出量とか背景を別に細かく設定したい」) =====
+// 演出量・軽量モード・ライブ背景がまとめて出し入れしているものを、1つずつ選べるようにする。
+// 保存は設定に fx を1つ足すだけ(既存のキーは名前も値も変えない・CLAUDE.md ⑦)。どの項目も既定は「おまかせ」(AUTO)で、
+// おまかせ = いまの演出量・軽量モード・ライブ背景・各スイッチどおり(見た目は1つも変わらない)。
+// おまかせ以外を選んだ項目は、演出量「最小」・軽量モードのときも選んだとおりにする(社長の決定)。
+// weight は端末への重さの目安(オプションの札): l=軽 m=中 h=重
+const RHYTHM_FX_ON_OFF = Object.freeze([['AUTO','おまかせ'],['ON','出す'],['OFF','出さない']]);
+const RHYTHM_FX_GROUPS = Object.freeze([['stage','背景'],['road','道'],['note','ノーツ'],['judge','判定'],['combo','コンボ']]);
+const RHYTHM_FX_ITEMS = Object.freeze([
+  {key:'stageBlur',group:'stage',label:'ジャケットのぼかし',weight:'m',options:[['AUTO','おまかせ'],['STRONG','強'],['WEAK','弱'],['NONE','なし']]},
+  {key:'stageBright',group:'stage',label:'背景の明るさ',weight:'l',options:[['AUTO','おまかせ'],['100','100%'],['70','70%'],['40','40%']]},
+  {key:'searchlight',group:'stage',label:'サーチライト',weight:'m',options:RHYTHM_FX_ON_OFF},
+  {key:'sparks',group:'stage',label:'光の粒',weight:'m',options:[['AUTO','おまかせ'],['MANY','多い'],['FEW','少ない'],['NONE','なし']]},
+  {key:'laser',group:'stage',label:'レーザー',weight:'h',options:RHYTHM_FX_ON_OFF},
+  {key:'penlight',group:'stage',label:'観客のペンライト',weight:'h',options:[['AUTO','おまかせ'],['MANY','多い'],['FEW','少ない'],['NONE','なし']]},
+  {key:'timingLight',group:'stage',label:'タイミングの光',weight:'l',options:RHYTHM_FX_ON_OFF},
+  {key:'beatLine',group:'road',label:'拍の線',weight:'l',options:RHYTHM_FX_ON_OFF},
+  {key:'roadEdge',group:'road',label:'道のふちの光',weight:'l',options:RHYTHM_FX_ON_OFF},
+  {key:'roadFog',group:'road',label:'奥のもや・脈打ち',weight:'m',options:RHYTHM_FX_ON_OFF},
+  {key:'laneLine',group:'road',label:'レーンの区切り線の濃さ',weight:'l',options:[['AUTO','おまかせ'],['DARK','濃い'],['NORMAL','標準'],['LIGHT','薄い']]},
+  {key:'noteGlow',group:'note',label:'ノーツの光の強さ',weight:'l',options:[['AUTO','おまかせ'],['STRONG','強'],['NORMAL','標準'],['WEAK','弱']]},
+  {key:'flickMotion',group:'note',label:'フリックの矢印の動き',weight:'l',options:RHYTHM_FX_ON_OFF},
+  {key:'slideWave',group:'note',label:'スライドの光の波',weight:'l',options:RHYTHM_FX_ON_OFF},
+  {key:'judgeSize',group:'judge',label:'判定文字の大きさ',weight:'l',options:[['AUTO','おまかせ'],['L','大'],['M','標準'],['S','小']]},
+  {key:'judgeFlow',group:'judge',label:'判定文字の金・虹の流れ',weight:'m',options:RHYTHM_FX_ON_OFF},
+  {key:'judgeLinePulse',group:'judge',label:'判定ラインの脈打ち',weight:'l',options:RHYTHM_FX_ON_OFF},
+  {key:'burst',group:'judge',label:'判定ラインで弾ける光',weight:'m',options:[['AUTO','おまかせ'],['L','大'],['M','標準'],['S','小'],['NONE','なし']]},
+  {key:'flash',group:'judge',label:'画面のフラッシュ',weight:'l',options:RHYTHM_FX_ON_OFF},
+  {key:'comboBounce',group:'combo',label:'コンボ数の跳ね',weight:'l',options:RHYTHM_FX_ON_OFF},
+  {key:'combo100',group:'combo',label:'100コンボのお祝い',weight:'l',options:RHYTHM_FX_ON_OFF},
+  {key:'fullComboBig',group:'combo',label:'フルコンボの大きな表示',weight:'l',options:RHYTHM_FX_ON_OFF},
+]);
+const RHYTHM_FX_KEYS = Object.freeze(RHYTHM_FX_ITEMS.map(item=>item.key));
+const RHYTHM_FX_GROUP_ICONS = Object.freeze({stage:'🌌',road:'🛣',note:'🎵',judge:'✨',combo:'🔥'});
+// オプションの「▸ 詳しく」の文。どの項目も「おまかせ」は上の「まとめて決める」(演出量・軽量モード)と、組の頭のスイッチどおり
+const RHYTHM_FX_HELP = Object.freeze({
+  stageBlur:'ライブ背景に敷く曲のジャケットを、どれだけぼかすかです。既定は「おまかせ」（これまでどおり「強」）。\n「なし」はジャケットをくっきり出します。判定・スコアは変わりません。',
+  stageBright:'ライブ背景の明るさです。既定は「おまかせ」（これまでどおり100%）。ノーツが背景に紛れて見づらいときは下げてください。',
+  searchlight:'左右から揺れるサーチライトを出すかです。既定は「おまかせ」（ライブ背景が「派手」「ライブ」で、演出量が「最小」でないときに出ます）。\n「出す」を選ぶと、ライブ背景・演出量・軽量モードに関係なく出ます。',
+  sparks:'背景に舞う光の粒の量です。既定は「おまかせ」（サーチライトと同じときに出ます）。「少ない」は手前の粒だけにします。',
+  laser:'「ライブ」の背景で、小節ごとに向きと色を変えて走るレーザーです。既定は「おまかせ」。\n絵を描くのが得意な専用の部分（GPU）が無い端末では出せません。いちばん重い演出の1つです。',
+  penlight:'「ライブ」の背景で、道の両側に並ぶ観客のペンライトの量です。既定は「おまかせ」。「少ない」は本数を半分ほどにします。\nGPU が無い端末では出せません。重い演出の1つです。',
+  timingLight:'ノーツが判定ラインへ来るタイミングで、背景が光る演出です。既定は「おまかせ」（ライブ背景が「シンプル」以外のときに出ます）。',
+  beatLine:'曲の拍ごとに、細い線が道の奥から流れてくる演出です。小節の頭では明るい線になります。既定は「おまかせ」（「道の演出」どおり）。',
+  roadEdge:'道の左右のふちが、拍に合わせて光る演出です。既定は「おまかせ」（「道の演出」どおり）。',
+  roadFog:'道の奥のもやと、その先の光が小節ごとに脈打つ演出です。既定は「おまかせ」（「道の演出」どおり）。',
+  laneLine:'レーンとレーンのあいだの線の濃さです。既定は「おまかせ」（これまでどおり「標準」）。「濃い」は線を太く、「薄い」は線を薄くします。',
+  noteGlow:'ノーツのまわりの光の強さです。既定は「おまかせ」（演出量「最小」と軽量モードでは「弱」、それ以外は「標準」）。',
+  flickMotion:'フリックの矢印に付ける動きです。上へ払うフリックは矢印が3段に重なって光が流れ、横へ払うフリックは払う向きへ残像が流れます。既定は「おまかせ」（「ノーツの動き」どおり）。',
+  slideWave:'SLIDE の帯の上を、判定ラインへ向かって光の波が流れる演出です。既定は「おまかせ」（「ノーツの動き」どおり）。',
+  judgeSize:'判定の文字（MARVELOUS・GREAT など）の大きさです。既定は「おまかせ」（これまでどおり「標準」）。文字の後ろの光も一緒に大きさが変わります。',
+  judgeFlow:'判定の文字の金色の帯・虹が流れる動きと、文字が出た瞬間に弾む動き、文字のまわりの強い光です。既定は「おまかせ」（演出量が「最大」のときに出ます）。\n毎フレーム文字を塗り直すので、カクつく端末ではここを「出さない」にすると効きます。色と大きさはどれでも残ります。',
+  judgeLinePulse:'判定ラインが拍に合わせて脈打つ動きです。既定は「おまかせ」（演出量が「最大」「多め」のときに出ます）。',
+  burst:'ノーツを取った瞬間に判定ラインで弾ける光の大きさです。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません。「押したときの光」を「いつも出す」にすると出ます）。\n「大」「標準」「小」を選ぶと、演出量・軽量モードに関係なく、その大きさで出ます。',
+  flash:'モンスターノーツを取ったときに画面全体が光る演出です。既定は「おまかせ」。まぶしいときは「出さない」にしてください。',
+  comboBounce:'コンボ数が増えるたびに数字が跳ねる動きと、枠の脈打ちです。既定は「おまかせ」（演出量が「最大」「多め」のときに出ます）。',
+  combo100:'コンボが100のくぎりに届いたときのお祝いの表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
+  fullComboBig:'曲の終わりにフルコンボ・ALL MARVELOUS を取ったときの大きな表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
+});
+const normalizeRhythmFx = raw => {
+  const source=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
+  // おまかせ(AUTO)以外を選んだ項目だけ持つ(無い項目はおまかせ)。一覧に無い値・壊れた値は落とす
+  return Object.fromEntries(RHYTHM_FX_ITEMS.filter(item=>source[item.key]!=='AUTO'&&item.options.some(([id])=>id===source[item.key])).map(item=>[item.key,source[item.key]]));
+};
+// その項目の選んだ値(おまかせなら 'AUTO')
+const rhythmFxPick = (settings,key) => {const v=settings&&settings.fx&&settings.fx[key];return typeof v==='string'&&v?v:'AUTO';};
+// CSS の段(演奏画面のプレイエリアの data-fx-<項目> と data-fx-<項目>-lw)。いまの data-rhythm-effect・data-rhythm-lightweight と同じ値の組を、項目ごとに持つ。
+// おまかせは「演出量の値・軽量モードかどうか」そのまま(= これまでと同じ止まり方)。出す・強・大 は「最大・軽量でない」、出さない・なし は「最小・軽量」
+const rhythmFxLevel = (settings,key) => {
+  const v=rhythmFxPick(settings,key);
+  if(v==='AUTO')return RHYTHM_EFFECT_LEVELS.includes(settings&&settings.effectAmount)?settings.effectAmount:DEFAULT_RHYTHM_SETTINGS.effectAmount;
+  return v==='OFF'||v==='NONE'?'MINIMAL':'NORMAL';
+};
+const rhythmFxLight = (settings,key) => {const v=rhythmFxPick(settings,key);return v==='AUTO'?!!(settings&&settings.lightweightMode):v==='OFF'||v==='NONE';};
+// 演奏画面の要素に付ける属性(CSS の付け替えた規則が見る)
+const RHYTHM_FX_CSS_KEYS = Object.freeze(['searchlight','sparks','comboBounce','judgeFlow','burst','flash','judgeLinePulse']);
+const rhythmFxAttrs = settings => Object.fromEntries(RHYTHM_FX_CSS_KEYS.flatMap(key=>{const name='data-fx-'+key.replace(/[A-Z]/g,c=>'-'+c.toLowerCase());
+  return [[name,rhythmFxLevel(settings,key)],[name+'-lw',rhythmFxLight(settings,key)?'true':'false']];}));
+// 出す・出さないの項目を真偽で。auto はおまかせのときの答え(呼ぶ側が、いまの決まりどおりの値を渡す)
+const rhythmFxOn = (settings,key,auto) => {const v=rhythmFxPick(settings,key);return v==='AUTO'?!!auto:!(v==='OFF'||v==='NONE');};
+// ノーツの描き手(RHYTHM_CANVAS_RENDERER.begin)へ渡す値。live は演奏中に変わる設定(にじむ光・ノーツの動き)を読む先。
+// おまかせの項目は描き手が演出量・軽量モードから決めるので、渡す値もこれまでと同じになる
+const rhythmFxRenderOptions = (settings,live=settings) => {
+  const base=!!settings&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
+  const motionAuto=!!live&&live.noteMotionFx===true&&base;
+  const glow=rhythmFxPick(settings,'noteGlow'),burst=rhythmFxPick(settings,'burst');
+  return {motionFlick:rhythmFxOn(settings,'flickMotion',motionAuto),motionSlide:rhythmFxOn(settings,'slideWave',motionAuto),
+    glowLevel:glow==='AUTO'?undefined:glow,hitLevel:rhythmFxLevel(settings,'burst'),hitLight:rhythmFxLight(settings,'burst'),
+    hitScale:burst==='L'?1.35:burst==='S'?.7:1};
+};
+// 判定文字の大きさ(設定 fx「判定文字の大きさ」)。判定文字の枠ごと、下のふちを軸に広げ・縮める(文字の後ろの光・ずれメーターも一緒に)。
+// 枠は translate で中央へ寄せているので、別の指定の scale を使う(transform を上書きしない)。おまかせ・標準は何も付けない
+const rhythmJudgeScaleStyle = settings => {const v=rhythmFxPick(settings,'judgeSize');return v==='L'?{scale:'1.3',transformOrigin:'50% 100%'}:v==='S'?{scale:'.75',transformOrigin:'50% 100%'}:{};};
+// 背景の段(rhythmStageLevel の答え)を、出すを選んだ背景の項目が出る段まで上げる(下げはしない。下げるのは項目ごとの「出さない」)
+const RHYTHM_STAGE_ORDER = Object.freeze(['SIMPLE','CALM','VIVID','LIVE']);
+const rhythmFxStageLevel = (settings,base) => {
+  const want=key=>{const v=rhythmFxPick(settings,key);return v!=='AUTO'&&v!=='OFF'&&v!=='NONE';};
+  const need=want('laser')||want('penlight')?'LIVE':want('searchlight')||want('sparks')?'VIVID'
+    :want('timingLight')||want('stageBlur')||['70','40','100'].includes(rhythmFxPick(settings,'stageBright'))?'CALM':'SIMPLE';
+  return RHYTHM_STAGE_ORDER.indexOf(need)>RHYTHM_STAGE_ORDER.indexOf(base)?need:base;
+};
+// 背景の明るさ(設定 fx「背景の明るさ」)。背景の層ごと薄くして暗い地を透かす。おまかせ・100% は何も付けない
+const rhythmFxStageStyle = settings => {const v=rhythmFxPick(settings,'stageBright');return v==='70'?{opacity:.7}:v==='40'?{opacity:.4}:undefined;};
+// ジャケットのぼかし(設定 fx「ジャケットのぼかし」)。ジャケットを縮めてから引き伸ばしてぼかすので、縮める大きさで強さが変わる(強=これまでの 24)
+const rhythmFxArtSize = settings => {const v=rhythmFxPick(settings,'stageBlur');return v==='WEAK'?64:v==='NONE'?256:24;};
+// どれか1つでも「おまかせ」以外を選んでいるか(オプションの組の見出し・重いときの自動の控えめに使う)
+const rhythmFxChangedCount = (settings,keys=RHYTHM_FX_KEYS) => keys.filter(key=>rhythmFxPick(settings,key)!=='AUTO').length;
+
 const normalizeRhythmSettings = value => {
   const source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
   const bool=(key)=>typeof source[key]==='boolean'?source[key]:DEFAULT_RHYTHM_SETTINGS[key];
@@ -749,6 +862,8 @@ const normalizeRhythmSettings = value => {
     timingDisplay:RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay)?source.timingDisplay:DEFAULT_RHYTHM_SETTINGS.timingDisplay,
     comboStatusDisplay:bool('comboStatusDisplay'), paceDisplay:bool('paceDisplay'),
     assistMode:bool('assistMode'), mirrorChart:bool('mirrorChart'), luckyRush:bool('luckyRush'),
+    // 演出を1つずつ(2026-11-01)。無い・壊れた値は全部「おまかせ」
+    fx:normalizeRhythmFx(source.fx),
   };
 };
 const emptyRhythmBestRecord = () => ({bestScore:0,maxCombo:0,played:false,clear:false,fullCombo:false,allExcellent:false,allMarvelous:false,judgments:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]))});
