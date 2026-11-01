@@ -41836,7 +41836,7 @@ const RHYTHM_SONG_ENTRIES = [
     subtitle:'',
     bgmTrackId:'melo_altar_world_tree',
     // 2026-11-01 追加。世界樹の絵のジャケット
-    artwork:'images/song-art/altar-world-tree.jpg',
+    artwork:'images/song-art/altar-world-tree.jpg?v=8c7e3102a11f',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,altarWorldTreeCharts[id]||emptyRhythmChart()
     ])))
@@ -41847,7 +41847,7 @@ const RHYTHM_SONG_ENTRIES = [
     subtitle:'short ver.',
     bgmTrackId:'melo_altar_world_tree_short',
     // 2026-11-01 追加。Altar of the World Tree, Beneath the White Night の短い版(全編の頭から約136秒。ジャケットは全編と同じ)
-    artwork:'images/song-art/altar-world-tree.jpg',
+    artwork:'images/song-art/altar-world-tree.jpg?v=8c7e3102a11f',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,altarWorldTreeShortCharts[id]||emptyRhythmChart()
     ])))
