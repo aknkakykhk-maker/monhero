@@ -1625,7 +1625,7 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
   return { type: 'guts', hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, policy.playerRole ? 99 : cardAiGutsCap(me)) };
 };
 const CARD_AI_STUCK_KEEP = 2;           // 手が詰まった番に残す守りの札
-const CARD_TACTIC_KEEP_GUARD_MAX = 3;   // 戦術カード「守りのカードは3枚まで残す」の枚数
+const CARD_TACTIC_KEEP_GUARD_MAX = 3;   // 戦術カード「守りのカードを3枚まで残す」の枚数
 // ガッツにしてよい枚数の上限(次の番に引く枚数が山札を超えないように)。山札が5枚以上あれば上限なし
 const cardAiGutsCap = (me) => (me.deck.length >= CARD_BATTLE_HAND_MAX ? 99 : Math.max(0, me.hand.length - (CARD_BATTLE_HAND_MAX - me.deck.length)));
 
