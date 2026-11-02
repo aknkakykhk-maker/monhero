@@ -150,7 +150,8 @@ section('TAP: 高速・交互・隣接・端');
 {
   reset();
   const run=makeRun([tap(1000,2,2),tap(1000,6,2)]);
-  starts(run,[at('touch:1',9)],1000);
+  // 2026-11-02 受付が帯の外1.1サブレーンまでになった(社長「全部+0.25」)ので、帯(6〜8)から1.5離れた9.5を押す
+  starts(run,[at('touch:1',9.5)],1000);
   check('関係ない場所を押しても取れない(空打ち)',run.empty===1&&!judgmentOf(run,0)&&!judgmentOf(run,1));
 }
 

@@ -111,8 +111,10 @@ const advance=ms=>{
   };
   check('HOLD: 奥を押さえた指が端のレーンの帯の上に居続けても失敗しない(幅2)',run(4,8,2)==='MARVELOUS','holdJudgment='+run(4,8,2));
   check('HOLD: 奥を押さえた指が端のレーンの細い帯(幅1)の上に居続けても失敗しない',run(4,9,1)==='MARVELOUS','holdJudgment='+run(4,9,1));
-  check('HOLD: 追従の許容は押し始めのタップの受付と同じ広がり(細い帯 .45 / それ以外 .6 サブレーン)',
-    context.margin(1)===.45/2&&context.margin(2)===.6/2,'細い='+context.margin(1)+' ふつう='+context.margin(2));
+  // 2026-11-02 社長「全部+0.25」で、タップの受付は 細い帯 .95 / それ以外 1.10 サブレーンになった(押さえ中も同じ値を使う)
+  const near=(a,b)=>Math.abs(a-b)<1e-9;
+  check('HOLD: 追従の許容は押し始めのタップの受付と同じ広がり(細い帯 .95 / それ以外 1.10 サブレーン)',
+    near(context.margin(1),.95/2)&&near(context.margin(2),1.1/2),'細い='+context.margin(1)+' ふつう='+context.margin(2));
 }
 
 // --- HOLD: 終わりの100msは外れを見ない(離すときの接点の動きで外れ扱いにしない・2026-10-07) ---
@@ -340,6 +342,48 @@ function RHYTHM_HOLD_TRACKING_MARGIN_LANES_VALUE(text){return Number(text.match(
   const holdBranch=src.slice(src.indexOf('// 終わりの100msは外れを見ない'),src.indexOf('if(!bad){session.trackingBadSincePerf=null;return;}'));
   check('HOLDの追従が、判定ラインより下では判定ラインの高さに直した位置でも見る(押し始めと同じ)',
     /rhythmSubLaneCoordinateAtLineIfBelow\(pos\.clientX,pos\.clientY,areaBox\)/.test(holdBranch)&&/bad=off\(actual\)&&off\(atLine\)/.test(holdBranch));
+}
+
+// --- HOLD: 指が帯から外れている間は、外れの合図(帯を暗くする)が出る(2026-11-02 社長「だいぶ外した状態で押しっぱでも判定切れてなかったよ」) ---
+// 刻みの数え方ではHOLDは外れても切れない(外れていた間の刻みだけMISS)。合図が SLIDE だけだと、HOLDは外れても光ったままで「外れてもOK」に見えていた
+{
+  const note={type:'HOLD',index:7,timeMs:1000,endTimeMs:3000,lane:2,subLane:4,subLaneWidth:2,activePointerId:'p1',holdJudgment:'MARVELOUS',holdDeltaMs:0,done:false,
+    _rhythmTickRules:true,_rhythmComboTicks:[1100,1200,1300,1400,1500,1600,1700,1800,1900],_rhythmTrackingGraceMs:120};
+  now=0;runtime.clear();
+  runtime.record('touch:1',clientXFor(2),clientY);
+  runtime.bind('touch:1',note,'HOLD',1000,0);
+  for(let i=0;i<5;i++){advance(20);runtime.record('touch:1',clientXFor(2),clientY);}
+  const onBefore=runtime.slideOffForIndex(7);
+  for(let i=0;i<20;i++){advance(20);runtime.record('touch:1',clientXFor(4),clientY);}
+  const offWhile=runtime.slideOffForIndex(7),dropped=Number(note._rhythmComboDrop)||0;
+  for(let i=0;i<10;i++){advance(20);runtime.record('touch:1',clientXFor(2),clientY);}
+  const onAfter=runtime.slideOffForIndex(7);
+  check('HOLD: 帯から2レーン外れている間は外れの合図が出て、戻すと消える(刻みの数え方)',onBefore===false&&offWhile===true&&onAfter===false,`前=${onBefore} 外れ=${offWhile} 戻し=${onAfter}`);
+  check('HOLD: 外れていた間の刻みはMISSに数える',dropped>0,`落とした刻み=${dropped}`);
+  runtime.clear();
+}
+
+// --- 終点の離し: 帯から外れたまま猶予以上たって離したら、タイミングが合っていても MISS(2026-11-02 社長「ずれていたら MISS にする」) ---
+{
+  const releaseWith=(kind,offLanes,offFromSong)=>{
+    const base={index:9,timeMs:1000,endTimeMs:3000,lane:2,subLane:4,subLaneWidth:2,activePointerId:'p1',holdJudgment:'MARVELOUS',holdDeltaMs:0,done:false,
+      _rhythmTickRules:true,_rhythmComboTicks:[1500,2000,2500],_rhythmTrackingGraceMs:120,_rhythmSlideToleranceBonusLanes:0};
+    const note=kind==='HOLD'?{...base,type:'HOLD'}:{...base,type:'SLIDE',endLane:2,slidePoints:[{timeMs:1000,lane:2,subLaneWidth:2},{timeMs:3000,lane:2,subLaneWidth:2}]};
+    now=0;runtime.clear();
+    runtime.record('touch:1',clientXFor(2),clientY);
+    runtime.bind('touch:1',note,kind,1000,0);
+    // 曲の時刻 = 1000 + now。2990ms(終わりの10ms前)で離す
+    while(now<1990){advance(10);const song=1000+now;runtime.record('touch:1',clientXFor(2+(song>=offFromSong?offLanes:0)),clientY);}
+    runtime.release('touch:1');
+    const r={hold:note.holdJudgment,end:note._rhythmReleaseJudgment};runtime.clear();return r;
+  };
+  for(const kind of ['HOLD','SLIDE']){
+    const inside=releaseWith(kind,0,0),off=releaseWith(kind,2,2700),edge=releaseWith(kind,2,2920),near=releaseWith(kind,.8,2700);
+    check(`${kind}: 帯の上で時刻どおりに離せば、離しは MARVELOUS`,inside.end==='MARVELOUS',JSON.stringify(inside));
+    check(`${kind}: 2レーン外れたまま0.29秒たって離すと、時刻が合っていても離しは MISS`,off.end==='MISS'&&off.hold==='MISS',JSON.stringify(off));
+    check(`${kind}: 外れが猶予(0.12秒)より短いうちに離せば、今までどおり時刻で決まる`,edge.end==='MARVELOUS',JSON.stringify(edge));
+    check(`${kind}: 受付の内側(0.8レーン)のずれなら、離しは今までどおり`,near.end==='MARVELOUS',JSON.stringify(near));
+  }
 }
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
