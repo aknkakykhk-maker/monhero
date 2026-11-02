@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: eae1a1f85de37c92
+// source-sha256: 3d6d082b02a42f57
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93141,6 +93141,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
   const main = cardOf(db, me.hand[opt.hand[0]]);
   const cost = cardActionCost(db, st, p, me.hand, opt.hand);
   let score = 0;
+  let hurts = true;
   if (main.kind === 'fld') return cardAiScoreField(db, st, p, main, cost, habit) + (policy.fields && policy.fields.includes(main.name) && !(st.field && st.field.p === p) ? CARD_AI_FIELD_LIKE : 0);
   if (main.kind === 'spe') {
     (main.effects || []).forEach(e => {
@@ -93245,6 +93246,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       m: j
     } : null).filter(Boolean) : cardHasEff(main, 'area') ? cardAreaTargets(st, p, opt.mon, main) : [opt.target];
     let drained = 0;
+    hurts = false;
     let kills = 0;
     const per = dmg / Math.max(1, main.damage || 1);
     targets.forEach(t => {
@@ -93252,12 +93254,14 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       let d = opt.split ? Math.round(opt.split[t.m] * per) : dmg;
       const mv = cardEff(main, 'multVs');
       if (mv && cardMonType(tm, st.turn) === mv.type) d *= mv.n;
+      if (d > 0) d = Math.max(0, d + cardFieldDmgAdd(st, main));
       if (cardHasEff(main, 'nonLethal')) d = Math.min(d, tm.life - 1);
       if (t.p !== p && d <= 0 && cardHasEff(main, 'nonLethal')) {
         score -= 2;
         return;
       }
       if (t.p !== p && d >= tm.life) kills += 1;
+      if (t.p !== p && d > 0) hurts = true;
       const ev = cardAiEvadeChance(db, st, p, main, t, level, mods.flags, mon) * (opt.hand.some(i => cardHasEff(cardOf(db, me.hand[i]), 'attachBind')) ? 0.5 : 1);
       const half = cardHasEff(main, 'halfOnEvade') ? Math.ceil(d / 2) : 0;
       const exp = d * (1 - ev) + half * ev;
@@ -93270,8 +93274,8 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       }
       if (t.p !== p && d >= tm.life) score += (1 - ev) * 4 * habit.finish;
       const gl = cardEff(main, 'gutsLossOnHit');
-      if (gl && t.p !== p) score += (1 - ev) * (gl.n === 'all' ? st.players[t.p].guts.length : Math.min(gl.n, st.players[t.p].guts.length)) * 0.8 * habit.disrupt;
-      if (cardHasEff(main, 'stunOnHit') && t.p !== p) score += (1 - ev) * 1.2;
+      if (gl && t.p !== p && d > 0) score += (1 - ev) * (gl.n === 'all' ? st.players[t.p].guts.length : Math.min(gl.n, st.players[t.p].guts.length)) * 0.8 * habit.disrupt;
+      if (cardHasEff(main, 'stunOnHit') && t.p !== p && d > 0) score += (1 - ev) * 1.2;
     });
     if (targets.length > 1) score *= 1 + 0.15 * (habit.area - 1);
     if (cost >= 5) score *= 1 + 0.12 * (habit.big - 1);
@@ -93288,7 +93292,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
   const cheapGuard = Math.min(9, ...me.hand.filter((_, i) => !opt.hand.includes(i)).map(n => cardOf(db, n)).filter(c => c && cardIsGuardKind(c.kind)).map(c => c.guts));
   if (level.depth >= 1 && cheapGuard < 9 && left < cheapGuard) score -= 1.2 * habit.keepGuard;
   score -= cost * 0.12 * habit.saveGuts * (level.depth >= 2 ? 1.2 : 1);
-  if (level.depth >= 2 && opt.target && opt.target.p !== p) {
+  if (level.depth >= 2 && opt.target && opt.target.p !== p && hurts) {
     const tm = st.players[opt.target.p].mons[opt.target.m];
     score += (tm.max - tm.life) * 0.15 + (tm.life <= 3 ? 0.8 : 0);
   }
