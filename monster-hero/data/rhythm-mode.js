@@ -1041,14 +1041,45 @@ const RHYTHM_VIEW_ROTATION=(()=>{
   // 0 = 回していない / 90 = 右へ90度 / 270 = 左へ90度
   let angle=0;
   const listeners=new Set();
-  const vw=()=>(typeof window==='undefined')?0:(window.innerWidth||0);
-  const vh=()=>(typeof window==='undefined')?0:(window.innerHeight||0);
+  // 画面の大きさは、器の大きさ(frameStyle)と押した点の直し(point/unpoint/rect)で**同じ時に測った値**を使う(2026-11-02 社長の決定 B)。
+  // それまでは、器は描いたときの大きさ・押した点の直しは押したときの大きさを、その場その場で読んでいた。
+  // iPhone は回転のあと画面の大きさを少し遅れて直すことがあり、そのあいだ2つが食い違うと、押した点が回転の分だけずれる。
+  // 測るのは: 回すとき・resize/orientationchange のたびと、その0.1秒・0.3秒・0.8秒あと(iOS の遅れの分)。
+  // 測り直して大きさが変わっていたら、resize を鳴らして描き直させる(器・レーン・当たりの箱が同じ道で測り直される)。
+  const liveW=()=>(typeof window==='undefined')?0:(window.innerWidth||0);
+  const liveH=()=>(typeof window==='undefined')?0:(window.innerHeight||0);
+  let size={w:liveW(),h:liveH()};
+  let remeasureTimers=[];
+  let firing=false;
+  const remeasure=(notify=true)=>{
+    const next={w:liveW(),h:liveH()};
+    if(next.w===size.w&&next.h===size.h)return false;
+    size=next;
+    if(notify&&angle!==0&&!firing&&typeof window!=='undefined'&&typeof window.dispatchEvent==='function'){
+      firing=true;try{window.dispatchEvent(new Event('resize'));}catch(_){}finally{firing=false;}
+    }
+    return true;
+  };
+  const scheduleRemeasure=()=>{
+    remeasure(false);
+    if(typeof setTimeout!=='function')return;
+    if(typeof clearTimeout==='function')remeasureTimers.forEach(clearTimeout);
+    remeasureTimers=[100,300,800].map(ms=>setTimeout(()=>remeasure(true),ms));
+  };
+  if(typeof window!=='undefined'&&typeof window.addEventListener==='function'){
+    window.addEventListener('resize',()=>{if(!firing)scheduleRemeasure();},{passive:true,capture:true});
+    window.addEventListener('orientationchange',scheduleRemeasure,{passive:true,capture:true});
+  }
+  const vw=()=>size.w;
+  const vh=()=>size.h;
   const get=()=>angle;
   const active=()=>angle===90||angle===270;
   const set=next=>{
     const value=(next===90||next===270)?next:0;
     if(value===angle)return angle;
     angle=value;
+    remeasure(false);
+    scheduleRemeasure();
     listeners.forEach(fn=>{try{fn(angle);}catch(_){}});
     // 自前で回しても端末は回っていないので resize は鳴らない。
     // ところが「測り直す」しくみ(レーンの形・判定ラインの左右・当たり判定の箱・

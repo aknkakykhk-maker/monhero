@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2d9fd12f83160891
+// source-sha256: a7a4edc1608f87e4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13,6 +13,46 @@ const {
   useRef,
   useContext
 } = React;
+(() => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  const editing = () => {
+    const el = document.activeElement;
+    if (!el) return false;
+    const tag = String(el.tagName || '').toUpperCase();
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable === true;
+  };
+  const reset = () => {
+    if (editing()) return;
+    try {
+      if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
+      for (const el of [document.scrollingElement, document.documentElement, document.body]) {
+        if (el && (el.scrollTop || el.scrollLeft)) {
+          el.scrollTop = 0;
+          el.scrollLeft = 0;
+        }
+      }
+    } catch (_) {}
+  };
+  let timers = [];
+  const soon = () => {
+    timers.forEach(clearTimeout);
+    timers = [0, 150, 500].map(ms => setTimeout(reset, ms));
+  };
+  const passive = {
+    passive: true
+  };
+  window.addEventListener('resize', soon, passive);
+  window.addEventListener('orientationchange', soon, passive);
+  if (window.visualViewport && typeof window.visualViewport.addEventListener === 'function') {
+    window.visualViewport.addEventListener('resize', soon, passive);
+    window.visualViewport.addEventListener('scroll', soon, passive);
+  }
+  document.addEventListener('focusout', () => setTimeout(() => {
+    if (!editing()) soon();
+  }, 60), true);
+  ['fullscreenchange', 'webkitfullscreenchange'].forEach(type => document.addEventListener(type, soon));
+  document.addEventListener('webkitendfullscreen', soon, true);
+})();
 const _LI = {};
 const _ICON_PATHS = {
   Heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.5 4.04 3 5.5l7 7Z"/>',
