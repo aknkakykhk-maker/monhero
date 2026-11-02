@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9cc87f88b4ad7e3f
+// generated-sha256: 2c6fc289202ba723
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -21084,7 +21084,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
   // ★横向きは高さが足りないので、帯と余白を詰め、説明(▸ くわしく)は出さない。
   //   説明は縦向きで読めるので、消したわけではない。
   const field=(title,control,description=null,{full=false}={})=><div data-rhythm-option-field className={`${full&&!wide?'col-span-2':''} rounded-xl border border-cyan-400/20 bg-slate-950/55 ${wide?'p-1.5':'p-2.5'}`}>
-    <p className={`rounded-lg bg-cyan-700/70 px-2 text-center ${label} ${wide?'mb-1 py-0.5 text-[11px]':'mb-2 py-1'}`}>{title}</p>
+    <p className={`rounded-lg bg-cyan-700/70 px-2 text-center ${label} ${wide?'mb-1 py-0.5 text-[11px]':'mb-2 py-1'}`} style={JA_WRAP_STYLE}>{typeof title==='string'?jaWrap(title):title}</p>
     {control}
     {description&&!wide&&<details data-rhythm-option-help className="mt-2">
       <summary className="min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ 詳しく</summary>
