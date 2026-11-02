@@ -2178,7 +2178,9 @@ function MonsterHeroGame() {
       const raw = await storeGet(BEAT_RANK_KEY, null, false);
       const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
       const gain = beatRankAfter(raw, { difficultyId: play && play.difficulty && play.difficulty.id, cleared: result?.cleared !== false,
-        fullCombo: result?.fullCombo === true, allMarvelous: result?.allMarvelous === true, multi: play && play.from === 'multi', today });
+        fullCombo: result?.fullCombo === true, allMarvelous: result?.allMarvelous === true, multi: play && play.from === 'multi', today,
+        // 曲の長さ(経験値は 長さ÷2:00 倍。2026-11-02)。読めないときは0で、今までどおりの値になる
+        durationMs: play && play.song ? rhythmPlaySongDurationMs(play.song, play.difficulty) : 0 });
       if (!gain.add) return;
       const next = { ...gain.next, k: gain.next.k || beatRankNewKey() };
       await storeSet(BEAT_RANK_KEY, next, false);
