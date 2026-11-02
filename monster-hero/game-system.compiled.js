@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 815afa024f38f1b9
+// source-sha256: c4b3d6a437aaacd9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -61507,14 +61507,16 @@ function RhythmSongSelectScreen({
     "data-rhythm-beat-point-active-side": true,
     className: "rounded-xl border border-violet-400/30 bg-violet-950/25 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-violet-100"
   }, React.createElement("span", {
+    style: JA_WRAP_STYLE,
     className: "block"
-  }, "🎟️ ビートP獲得期間中"), eventLoopCampaign && React.createElement("span", {
+  }, jaWrap('🎟️ ビートP獲得期間中')), eventLoopCampaign && React.createElement("span", {
     className: "block text-amber-200"
   }, "周回 ", eventLoopCampaign.loopBoost, "倍"), React.createElement("span", {
     style: JA_WRAP_STYLE,
     className: "mt-0.5 block text-violet-200/80"
-  }, beatPointTargetSong ? jaWrap('選択中のイベント対象曲は1.5倍') : '公開曲なら獲得できます')) : null;
+  }, beatPointTargetSong ? jaWrap('選択中のイベント対象曲は1.5倍') : jaWrap('公開曲なら獲得できます'))) : null;
   const [beatPointBalance, setBeatPointBalance] = React.useState(null);
+  const [eventNoticeOpen, setEventNoticeOpen] = React.useState(false);
   React.useEffect(() => {
     if (!beatPointReleased) return undefined;
     let alive = true;
@@ -61781,14 +61783,42 @@ function RhythmSongSelectScreen({
     "data-quick-run-stop": true,
     onClick: () => setQuickRunStopConfirm(true),
     className: "mt-1.5 min-h-[44px] w-full rounded-xl border border-white/15 text-[10px] font-black text-slate-400 active:scale-[.98]"
-  }, "⏹ ここで周回をやめる")))), selectNoticesOpen && rhythmEventNotice && React.createElement("div", {
+  }, "⏹ ここで周回をやめる")))), selectNoticesOpen && rhythmEventNotice && !eventNoticeOpen && React.createElement("div", {
     "data-rhythm-event-notice": true,
+    "data-rhythm-event-notice-folded": true,
+    className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2"
+  }, React.createElement("div", {
+    className: "flex items-center gap-1"
+  }, React.createElement("button", {
+    style: JA_WRAP_STYLE,
+    type: "button",
+    "data-rhythm-event-notice-toggle": true,
+    "aria-expanded": "false",
+    onClick: () => setEventNoticeOpen(true),
+    className: "min-h-[44px] min-w-0 flex-1 text-left text-[11px] font-black leading-tight text-amber-200 active:scale-[.99]"
+  }, "🏆 ", rhythmEventNotice.kind === 'limited' ? React.createElement(React.Fragment, null, jaWrap(rhythmEventNotice.name), " 開催中！") : jaWrap('今週の対象曲'), React.createElement("span", {
+    className: "ml-1 text-[10px] text-fuchsia-200"
+  }, "▼ ひらく")), React.createElement("button", {
+    type: "button",
+    "data-rhythm-event-notice-close": true,
+    onClick: dismissRhythmEventNotice,
+    "aria-label": "この案内を閉じる",
+    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
+  }, "×"))), selectNoticesOpen && rhythmEventNotice && eventNoticeOpen && React.createElement("div", {
+    "data-rhythm-event-notice": true,
+    "data-rhythm-event-notice-open-body": true,
     className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1"
   }, React.createElement("div", {
     className: "flex items-start gap-1"
   }, React.createElement("div", {
     className: "min-w-0 flex-1"
-  }, React.createElement(AssistantBubble, {
+  }, React.createElement("button", {
+    type: "button",
+    "data-rhythm-event-notice-toggle": true,
+    "aria-expanded": "true",
+    onClick: () => setEventNoticeOpen(false),
+    className: "min-h-[44px] w-full rounded-lg text-left text-[10px] font-black text-fuchsia-200 active:scale-[.99]"
+  }, "▲ たたむ"), React.createElement(AssistantBubble, {
     scene: "rhythmWeeklyEvent",
     condition: rhythmEventNotice.kind === 'limited' ? 'limited' : null,
     compact: true
