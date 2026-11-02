@@ -489,7 +489,8 @@ check('期間×対象曲の集計は関数を呼ぶ',
 // ★行の文字列そのままを見ない。曲ごとのほうは party の取り直しを足したときに
 //   body を変数へ出したので、1行の形だけを見ていると中身が正しくても落ちる(2026-09-11)
 check('対象曲は配列で渡す(3曲でも5曲でも同じ関数)',
-  /song_ids: \[songId\],/.test(supa)&&/song_ids: songIds,/.test(supa));
+  // 2026-11-01 原曲とショート版を1曲として数えるイベントのため、期間で引いてショート版の id を足してから渡す(rhythmEventQuerySongIds)
+  /song_ids: rhythmEventQuerySongIds\(\[songId\], fromMs, toMs\),/.test(supa)&&/song_ids: rhythmEventQuerySongIds\(songIds, fromMs, toMs\),/.test(supa));
 check('並び順は点の降順、同点は先に到達したほうが上',
   supa.includes('order=score.desc,scored_at.asc')&&supa.includes('order=total_score.desc,last_scored_at.asc'));
 check('表示件数は50件',/const RHYTHM_EVENT_RANKING_DISPLAY_LIMIT = 50;/.test(supa));

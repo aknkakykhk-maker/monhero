@@ -32,6 +32,9 @@
       [data-rhythm-lane]::before,[data-rhythm-lane]::after{content:none!important;display:none!important}
       [data-rhythm-lane]>span{opacity:0!important}
       [data-rhythm-lane-svg]{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;overflow:visible}
+      /* レーンの区切り線の濃さ(設定 fx・2026-11-01)。おまかせ・標準は付けない(これまでの線のまま) */
+      [data-rhythm-play-area][data-fx-lane-line="DARK"] [data-lane-divider]{stroke-width:2.4}
+      [data-rhythm-play-area][data-fx-lane-line="LIGHT"] [data-lane-divider]{stroke-opacity:.4}
       [data-rhythm-sublane-feedback]{z-index:2!important}
       [data-rhythm-note]{z-index:4}
       [data-rhythm-note]{filter:none!important}
@@ -119,7 +122,9 @@
         points:edgePoints(boundary).join(' '), fill:'none',
         stroke:outer ? '#ffffff' : 'url(#rhythmLaneSvgDivider)',
         'stroke-opacity':'1',
-        'stroke-width':outer ? '3.2' : '1.4'
+        'stroke-width':outer ? '3.2' : '1.4',
+        // 内側の区切り線の印(設定 fx「レーンの区切り線の濃さ」で太さ・濃さを変える・2026-11-01)
+        ...(outer ? {} : { 'data-lane-divider':'' })
       }));
     }
 

@@ -29,8 +29,9 @@ check('表示外noteは重いprojectionとpolygon更新をskip',game.includes("i
 check('polygon DOMは不足分だけ追加し通過済み区間を非表示で再利用',source.includes("if(!segment){segment=document.createElementNS")&&source.includes("fill.childNodes[index].style.display='none'")&&!source.includes('body.lastChild.remove()'));
 check('同一polygon pointsのsetAttributeを省略',source.includes("if(segment._rhythmPoints!==points){segment.setAttribute('points',points);segment._rhythmPoints=points;}"));
 // 2026-10 の追従の見直し(b2439dc)で、的と許し幅を先に変数へ取り、判定ラインの高さの位置・指の位置の両方で同じ比べ方をする形になった。
-// 見ることは同じ: 幅2の許し幅 .82・その時刻の帯の中心(rhythmSlideExpectedLane)から許し幅(rhythmSlideTrackingTolerance)より離れたら外れ
-check('SLIDE幅2の許容値と現在幅を使う追従判定',source.includes('const RHYTHM_SLIDE_TOLERANCE_LANES = .82;')
+// 2026-11-02 社長「全部+0.25」で .82+.25 になった。
+// 見ることは同じ: 幅2の許し幅 .82+.25・その時刻の帯の中心(rhythmSlideExpectedLane)から許し幅(rhythmSlideTrackingTolerance)より離れたら外れ
+check('SLIDE幅2の許容値と現在幅を使う追従判定',source.includes('const RHYTHM_SLIDE_TOLERANCE_LANES = .82+.25;')
   &&source.includes('const target=rhythmSlideExpectedLane(session.note,chartNow),tolerance=rhythmSlideTrackingTolerance(session.note,chartNow);')
   // 2026-10-16: 空中の段のあるスライドだけ、帯が少し前(RHYTHM_SKY_SLIDE_FINGER_LAG_MS)にいた所も帯の上と見る(lagged)。空中の段の無い曲は lagged が null で今までどおり
   &&(source.includes('const off=actual=>actual===null||Math.abs(actual-target)>tolerance;')

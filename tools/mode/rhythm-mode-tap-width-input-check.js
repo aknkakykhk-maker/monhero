@@ -17,14 +17,20 @@ for(const width of [2,3,4]) assert.deepEqual(match([note(3,width)],[input(3+widt
 // 入力側の余白(2026-09-05に2回ゆるくした)。見えている帯のふちギリギリを押しても取れるが、
 // その外は取れない。幅1以外は .60 サブレーン、幅1は .45 サブレーン。
 // 幅1だけ据え置きなのは、幅1どうしが隣り合うと帯のふちから隣の中心まで0.5しかないため。
+// 2026-11-02 社長「全部+0.25」で、幅1以外 1.10 / 幅1 .95 サブレーンへ広げた(幅1も同じだけ足す決定)。
+// 広げたぶんは「ほかに取れるものが無いとき」だけ使うので、隣のノーツが並ぶときはその帯の中を押した指が隣を取る(下の確かめ)。
 assert.deepEqual(match([note(3,2)],[input(2.45)]),[0],'幅2の余白の内側なら取れる');
-assert.deepEqual(match([note(3,2)],[input(2.35)]),[null],'幅2の余白より外は取れない');
+assert.deepEqual(match([note(3,2)],[input(1.85)]),[null],'幅2の余白より外は取れない');
+assert.deepEqual(match([note(3,2)],[input(1.95)]),[0],'広げた余白(1.10)の内側なら、ほかに無いとき取れる');
 assert.deepEqual(match([note(0,1)],[input(.5)]),[0],'左端');
 assert.deepEqual(match([note(9,1)],[input(9.5)]),[0],'右端');
 assert.deepEqual(match([note(4,1)],[input(3.6)]),[0],'幅1の最小タッチ許容内');
 // 隣に幅1のノーツが並ぶとき、その中心はサブレーン3.5にある。
-// 余白がそこまで届くと「隣を狙ったのにこちらが取れる」ので、3.5では取れないこと。
-assert.deepEqual(match([note(4,1)],[input(3.5)]),[null],'細ノーツ許容を隣の中心までは広げない');
+// 2026-11-02 から幅1の余白は .95 なので、1つだけなら3.5でも取れる(社長の決定)。
+// ただし隣に幅1のノーツが並んでいるときは、隣の帯の中(3.5)を押した指は隣を取ること。
+assert.deepEqual(match([note(4,1)],[input(3.0)]),[null],'細ノーツの余白(.95)より外は取れない');
+assert.deepEqual(match([note(4,1,0),note(3,1,1)],[input(3.5)]),[1],'隣の細ノーツの帯の中を押したら隣を取る');
+assert.deepEqual(match([note(4,1,0,{timeMs:950}),note(3,1,1)],[input(3.5)]),[1],'時刻を過ぎた細ノーツが広げた余白にいても、帯の中のノーツを取る');
 assert.strictEqual(match([note(4,1,0),note(5,1,1)],[input(5)]).filter(x=>x!==null).length,1,'1入力1ノーツ');
 assert.deepEqual(match([note(4,1,0),note(5,1,1)],[input(4.5,'touch:1'),input(5.5,'touch:2')]),[0,1],'別指同時取得');
 // 判定の優先順は「時刻を過ぎたノーツが先 → 時間差 → 位置差」。
