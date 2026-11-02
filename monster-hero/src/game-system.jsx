@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c5a7dc13a7e9a20e
+// generated-sha256: b0b8cecd58a029b2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -659,6 +659,13 @@ const rhythmPlayRunLoopScale = (songId, event, campaign) => {
     ? (typeof rhythmEventPlaySongIds === 'function' ? rhythmEventPlaySongIds(event) : event.songIds) : null;
   const id = songId === null || songId === undefined ? '' : String(songId);
   return (id && ids && ids.includes(id)) ? RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE : RHYTHM_PLAY_RUN_LOOP_SCALE;
+};
+// 周回の倍率を上げているキャンペーン(loopScale・loopBoost を持つもの)。無ければ null。
+//   画面の案内(報酬の窓・曲えらびの帯・曲リザルト)が、実際に効く倍率(rhythmPlayRunLoopScale)とずれないように使う(2026-11-02)。
+//   公開フラグ(RELEASE_FLAGS.rhythmEventPoints)は呼ぶ側で見る(計算の rhythmPlayRunLoopCampaignNow と同じ)
+const rhythmLoopCampaignAt = (nowMs) => {
+  const c = typeof rhythmEventPointCampaignAt === 'function' ? rhythmEventPointCampaignAt(nowMs) : null;
+  return c && Number(c.loopScale) > 0 && Number(c.loopBoost) > 0 ? c : null;
 };
 // その難易度を「クイックで」通したことがあるか。
 // ★上の難易度を通していれば、その下も通したものとして扱う。下は上より必ずやさしいので、
@@ -25607,7 +25614,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   {gains&&<div data-rhythm-result-hero-gains className="relative w-full shrink-0 space-y-1.5 text-left">
     {runOk&&<div data-rhythm-result-hero-gains-run className="rounded-xl border border-fuchsia-400/40 bg-fuchsia-950/60 px-2 py-1.5">
       <div className="flex items-baseline justify-between gap-1"><span className="text-[9px] font-black text-fuchsia-200">クイック∞周回</span><b className="text-[15px] font-black leading-none text-white">+{quickRunAward.loops}周</b></div>
-      {quickRunAward.eventBoosted&&<div className="mt-0.5 text-[9px] font-black text-amber-200">{quickRunAward.scale>RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE?'🎃 キャンペーン中 ×':'🏆 イベント対象曲 ×'}{quickRunAward.scale}</div>}
+      {quickRunAward.eventBoosted&&<div className="mt-0.5 text-[9px] font-black text-amber-200">{quickRunAward.scale>RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE?`${(rhythmLoopCampaignAt(Date.now())?.banner?.emoji)||'🎟️'} キャンペーン中 ×`:'🏆 イベント対象曲 ×'}{quickRunAward.scale}</div>}
       {quickRunAward.multiScale>1&&<div className="mt-0.5 text-[9px] font-black text-cyan-200">👥 対戦ボーナス ×{quickRunAward.multiScale}</div>}
       <div className="mt-0.5 text-[9px] font-black text-slate-300">{quickRunAward.fromLoop}周目 → {quickRunAward.toLoop}周目</div>
       <div className="mt-0.5 flex flex-wrap gap-x-2 text-[9px] font-bold text-slate-300">
@@ -25748,7 +25755,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   </div>
   {/* イベントの対象曲だけ、ふだんの2倍ではなく3倍で入る(2026-09-11・ユーザー指示)。
       入った周回数だけでは「この曲だから多かった」と気づけないので、その場で言う */}
-  {quickRunAward.eventBoosted&&<div data-rhythm-result-quick-run-event className="mt-1.5 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 py-1 text-[10px] font-black text-amber-200">{quickRunAward.scale>RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE?'🎃 キャンペーン中 ×':'🏆 イベント対象曲 ×'}{quickRunAward.scale}（ふだんの曲は ×{RHYTHM_PLAY_RUN_LOOP_SCALE}）</div>}
+  {quickRunAward.eventBoosted&&<div data-rhythm-result-quick-run-event className="mt-1.5 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 py-1 text-[10px] font-black text-amber-200">{quickRunAward.scale>RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE?`${(rhythmLoopCampaignAt(Date.now())?.banner?.emoji)||'🎟️'} キャンペーン中 ×`:'🏆 イベント対象曲 ×'}{quickRunAward.scale}（ふだんの曲は ×{RHYTHM_PLAY_RUN_LOOP_SCALE}）</div>}
   {quickRunAward.multiScale>1&&<div data-rhythm-result-quick-run-multi className="mt-1.5 rounded-xl border border-cyan-300/50 bg-cyan-950/40 px-2 py-1 text-[10px] font-black text-cyan-200">👥 みんなで対戦のボーナス(人数・連続) ×{quickRunAward.multiScale}</div>}
   <div className="mt-1 text-[11px] font-black text-slate-200">{quickRunAward.fromLoop}周目 <span className="text-slate-500">→</span> {quickRunAward.toLoop}周目</div>
   <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] font-bold text-slate-300">
@@ -38114,6 +38121,8 @@ function RhythmSongSelectScreen({
       // ビートPアップキャンペーン(2026-09-28)。ランキングイベントと重なったときはイベントの帯を出す
       // (計算もイベントのほうを使う。rhythmEventPointAwardAt)。開いているあいだは描き直すたびに数え直す
       const beatPointCampaign=beatPointReleased&&!beatPointEvent?rhythmEventPointCampaignAt(Date.now()):null;
+      // イベントと周回キャンペーンが重なったときは、イベントの帯に「周回 ◯倍」を足す(キャンペーンの帯は出ないため。2026-11-02)
+      const eventLoopCampaign=beatPointEvent?rhythmLoopCampaignAt(Date.now()):null;
       // 横持ちの左の細い列(幅104px)へ入れる札。中身は縦持ちの帯と同じ
       const beatPointSideCard=beatPointCampaign
         ?<div data-rhythm-beat-band-landscape data-rhythm-beat-point-campaign-side className="rounded-xl border border-amber-300/40 bg-amber-500/10 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-amber-100">
@@ -38125,6 +38134,7 @@ function RhythmSongSelectScreen({
         :beatPointEvent
           ?<div data-rhythm-beat-band-landscape data-rhythm-beat-point-active-side className="rounded-xl border border-violet-400/30 bg-violet-950/25 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-violet-100">
             <span className="block">🎟️ ビートP獲得期間中</span>
+            {eventLoopCampaign&&<span className="block text-amber-200">周回 {eventLoopCampaign.loopBoost}倍</span>}
             <span style={JA_WRAP_STYLE} className="mt-0.5 block text-violet-200/80">{beatPointTargetSong?jaWrap('選択中のイベント対象曲は1.5倍'):'公開曲なら獲得できます'}</span>
           </div>
           :null;
@@ -38379,7 +38389,7 @@ function RhythmSongSelectScreen({
             <span className="flex min-w-0"><span className="min-w-0 truncate">{beatPointCampaign.name}</span><span className="shrink-0">{Number(beatPointCampaign.loopBoost)>0?`・周回 ${beatPointCampaign.loopBoost}倍`:'中'}</span></span>
             <span className="ml-auto shrink-0 text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.displayEndAt||beatPointCampaign.endAt))}</span>
           </div>}
-          {beatPointEvent&&<div style={JA_WRAP_STYLE} data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?jaWrap('・選択中のイベント対象曲は1.5倍'):jaWrap('・公開曲なら獲得できます')}</div>}
+          {beatPointEvent&&<div style={JA_WRAP_STYLE} data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?jaWrap('・選択中のイベント対象曲は1.5倍'):jaWrap('・公開曲なら獲得できます')}{eventLoopCampaign&&<span className="text-amber-200">{jaWrap(`・周回 ${eventLoopCampaign.loopBoost}倍`)}</span>}</div>}
         </div>}
         {/* 開催していないときの「ビートPはいつでも貯まります」の帯は外した(2026-09-26・ユーザー指示
             「ビートPがいつでももらえるはここに書く必要はない / この分でもスペース無駄にしてる」)。
@@ -39000,7 +39010,8 @@ function RhythmRankingScreen({
               {/* 期間はサーバーが決める。残り時間の見た目だけ端末の時計で数える */}
               <div data-rhythm-event-window className="mb-3 flex items-center gap-2 rounded-2xl border border-fuchsia-300/40 bg-slate-900/70 p-2">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[11px] font-black text-fuchsia-100">{eventDefinition.name}</p>
+                  {/* 長いイベント名(「鍵の向こう側へ ～パンドラとふたつの翼～」)が幅320で「…」に切れていた。切らずに折り返す(2026-11-02) */}
+                  <p style={JA_WRAP_STYLE} className="text-[11px] font-black leading-tight text-fuchsia-100">{jaWrap(eventDefinition.name)}</p>
                   {/* 週間は「毎週月曜5:00に切り替わります」、期間限定は開始と終了そのものを出す */}
                   <p data-rhythm-event-period className="text-[9px] text-slate-400">{rhythmEventPeriodText(eventDefinition,eventRange)}</p>
                 </div>
@@ -39215,7 +39226,10 @@ function RhythmRankingScreen({
                   報酬の表と同じ場所に置く。対象曲を遊ぶ理由が順位だけではなくなるため */}
               {!eventWeekly&&<p style={JA_WRAP_STYLE} data-rhythm-event-loop-bonus
                 className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2 text-[10px] leading-tight text-slate-200">
-                <b className="text-amber-200">∞周回 ×{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}</b>　{jaWrap('クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×')}{RHYTHM_PLAY_RUN_LOOP_SCALE}）の{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}倍になります
+                {/* 周回キャンペーン中は、そちらの倍率が曲を問わず効く(rhythmPlayRunLoopScale)。窓の案内も実際と同じにする(2026-11-02 社長「×3 と出ている」) */}
+                {rhythmLoopCampaignAt(Date.now())&&RELEASE_FLAGS.rhythmEventPoints===true
+                  ?<><b className="text-amber-200">∞周回 ×{rhythmLoopCampaignAt(Date.now()).loopScale}</b>　{jaWrap(`キャンペーン中は、クイックの∞周回を裏で回しながらモンヒロビートを演奏すると、どの曲でも入る周回数がいつもの${rhythmLoopCampaignAt(Date.now()).loopBoost}倍になります`)}</>
+                  :<><b className="text-amber-200">∞周回 ×{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}</b>　{jaWrap('クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×')}{RHYTHM_PLAY_RUN_LOOP_SCALE}）の{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}倍になります</>}
               </p>}
               {/* 回数ボーナス(2026-09-11・ユーザー指示)。遊んだ回数が順位に効くことは、
                   ランキングを見ているだけでは分からないので、報酬の表と同じ場所で伝える。
@@ -60925,6 +60939,27 @@ const CardFitLabel = ({ children, max = 14, min = 9 }) => {
   }, [children, max, min]);
   return <span ref={ref} data-card-fit-label className="block w-full overflow-hidden whitespace-nowrap px-1 leading-tight" style={{ fontSize: `${size}px` }}>{children}</span>;
 };
+// オートの「結果だけ見る」(2026-11-02 社長): 2人とも戦術カードの打ち方で最後まで一瞬で打ち(95 の cardShareAutoFinish)、そのまま結果へ。
+//   打ち方は盤面のオートと同じ(自分 … 選んだデッキの戦術カード / 相手 … 登録デッキの戦い方)。打った手は見返し用の記録に残す
+const CardAutoQuick = ({ db, game, onActLog = null, onFinish }) => {
+  const done = useRef(false);
+  useEffect(() => {
+    if (done.current) return undefined;
+    done.current = true;
+    const t = setTimeout(() => {
+      const pols = [cardSharePolicy(game.auto.tactics, game.auto.level, { sameBlood: !!game.auto.sameBlood }), cardSharePolicy(game.share.tactics, game.level, { sameBlood: !!game.cpuSameBlood })];
+      const r = cardShareAutoFinish(db, game.st, pols);
+      if (onActLog) r.acts.forEach(([by, act]) => onActLog(by, act));
+      void onFinish({ outcome: r.st.winner === CARD_ME ? 'win' : 'lose', st: r.st });
+    }, 50);
+    return () => { clearTimeout(t); };
+  }, []);
+  return (
+    <div data-mh-screen data-card-auto-quick className={`${SCREEN_SHELL_CLASS} items-center justify-center`}>
+      <p className="text-[16px] font-black text-amber-100">⏩ 結果を出しています…</p>
+    </div>
+  );
+};
 const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = null, meProfile = null, meIcon = null, onActLog = null }) => {
   // 演出の設定(オプション)。はやい … 相手が考える時間と、決着から結果までを短くする
   const settings = normalizeCardSettings(game.settings);
@@ -60934,6 +60969,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const autoGame = game.auto && game.auto.tactics && !game.replay && !game.pvp && !game.watch ? game.auto : null;
   const [autoOn, setAutoOn] = useState(!!autoGame);
   const [autoSpeed, setAutoSpeed] = useState(1);
+  // 「⏩ 結果へ」(2026-11-02 社長「オート対戦は結果だけを見るも追加して」): 確かめの窓と、飛ばしたあとに残っていた手を当てないための印
+  const [skipAsk, setSkipAsk] = useState(false);
+  const skippedRef = useRef(false);
   const pace = (CARD_THINK_PACE[settings.think] || 1) / (autoGame ? autoSpeed : 1);
   const pressMs = CARD_PRESS_MS[settings.press] || 450;
   // 確かめの窓は、人が遊んでいるときだけ。練習試合・動きの見本・マルチの検査の自動操作(window.__mhCardPvpAuto)では出さない(ブレイブくんとの決め)
@@ -60968,6 +61006,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     ))}
     <button type="button" data-card-auto-toggle onClick={() => { Audio_.fgSe.tap(); setAutoOn((v) => !v); }}
       className="min-h-[30px] shrink-0 rounded-lg border border-white/30 px-2 text-[12px] font-black text-white">{autoOn ? '🖐 自分で' : '🤖 オート'}</button>
+    <button type="button" data-card-auto-skip onClick={() => { Audio_.fgSe.tap(); setSkipAsk(true); }}
+      className="min-h-[30px] shrink-0 rounded-lg bg-amber-400 px-2 text-[12px] font-black text-slate-950">⏩ 結果へ</button>
   </>);
   // 縦の画面のオートの操作は、見出しの列(記録・番の帯・投了)に小さく入れる(2026-11-02 社長の実機: 別の帯にすると、その高さのぶん
   //   下の「攻撃おわり → ガッツへ」や手札の名前が画面の下で切れた)。速さは押すたびに ×1→×2→×4。オート中は番の帯の頭に 🤖
@@ -60976,6 +61016,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       className="min-h-[30px] shrink-0 rounded-lg bg-sky-300 px-1.5 text-[12px] font-black tabular-nums text-slate-950">{`×${autoSpeed}`}</button>
     <button type="button" data-card-auto-toggle onClick={() => { Audio_.fgSe.tap(); setAutoOn((v) => !v); }}
       className="min-h-[30px] shrink-0 whitespace-nowrap rounded-lg border border-white/30 px-1.5 text-[11px] font-black text-white">{autoOn ? '🖐自分で' : '🤖オート'}</button>
+    <button type="button" data-card-auto-skip aria-label="結果へ(ここから最後まで一瞬で戦う)" onClick={() => { Audio_.fgSe.tap(); setSkipAsk(true); }}
+      className="min-h-[30px] min-w-[30px] shrink-0 rounded-lg bg-amber-400 px-1 text-[13px] font-black text-slate-950">⏩</button>
   </>);
   const autoPolicy = useMemo(() => (autoGame && typeof cardSharePolicy === 'function' ? cardSharePolicy(autoGame.tactics, autoGame.level, { sameBlood: !!autoGame.sameBlood }) : null), [autoGame]);
   const [st, setSt] = useState(game.st);
@@ -61088,7 +61130,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   // 助手のおしゃべり(AI・83-card-battle-talk-ai.jsx): この試合で山場を聞いた回数と、それぞれの側がリードされたことがあるか(逆転の判定)
   const talk = useRef({ n: 0, behind: [false, false] });
   const press = useCardLongPress((no) => setDetail(no), pressMs);
-  const paused = !!detail || !!discard || quit;
+  const paused = !!detail || !!discard || quit || skipAsk;
 
   // ai … 山場なら { scene(AIに伝える場面), next(操作のあとの状態) }。決まった台詞を出したまま、間に合ったときだけAIのひとことに差しかえる
   const say = (scene, ai = null) => {
@@ -61200,6 +61242,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     motionTimers.current.push(setTimeout(() => setGutsFly((cur) => cur.filter((g) => !out.some((o) => o.key === g.key))), life));
   };
   const step = (act, forced = null, shown = false) => {
+    if (skippedRef.current) return false; // 「⏩ 結果へ」で最後まで打ったあと(大きく見せていた手などを、古い場に当てない)
     if (!forced && tutorial && cardDeciderOf(st) === CARD_ME && !tutAllow(act)) { tutWrongSay(); return false; }
     // 助手と対戦の自分の手: 先にカードを大きく出して、消えたら当てる(当てられる手かは先に確かめる。練習試合・見本は出さない)
     if (!forced && !shown && !pvp && !tutorial && !game.demo && bigMs > 0 && cardDeciderOf(st) === CARD_ME) {
@@ -61319,6 +61362,17 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     return true;
   };
 
+  // 「⏩ 結果へ」: いまの場から、2人とも戦術カードの打ち方で最後まで一瞬で打つ(95 の cardShareAutoFinish)。打った手は見返し用の記録にも残す
+  const skipToEnd = () => {
+    const cur = stRef.current || st;
+    if (!autoPolicy || typeof cardShareAutoFinish !== 'function' || cur.winner !== null || skippedRef.current) return;
+    const r = cardShareAutoFinish(db, cur, [autoPolicy, policy]);
+    if (onActLog) r.acts.forEach(([by, act]) => onActLog(by, act));
+    skippedRef.current = true;
+    setSel(null); setPicks([]); setBigCard(null);
+    stRef.current = r.st;
+    setSt(r.st);
+  };
   // オートの番(自分の側)。相手役と同じく、選んだデッキの戦術カードで決める。詳しい画面・捨て札・投了の確かめを見ているあいだは待つ
   useEffect(() => {
     if (!autoGame || !autoOn || !autoPolicy || st.winner !== null || paused) return undefined;
@@ -62536,6 +62590,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       )}
       {confirm && <ConfirmSheet title={confirm.label} message={confirm.kind === 'use' ? 'オプションで確かめないようにもできます' : ''} confirmLabel={confirm.kind === 'use' ? '使う' : '終わる'} onCancel={() => setConfirm(null)} onConfirm={confirmYes}/>}
       {quit && !tutorial && <ConfirmSheet title="投了しますか？" message={pvp ? '投了すると負けになります' : '投了すると負けになります(ビートPとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)'} confirmLabel="投了する" danger onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; if (pvp) CARD_PVP.surrender(); onFinish({ outcome: 'surrender', st }); }}/>}
+      {skipAsk && <ConfirmSheet title="結果へ進みますか？" message="ここから最後まで、2人とも戦術カードで一瞬で戦って、結果を出します(この対戦はあとから見返せます)" confirmLabel="結果へ" onCancel={() => setSkipAsk(false)} onConfirm={() => { setSkipAsk(false); skipToEnd(); }}/>}
       {quit && tutorial && <ConfirmSheet title="チュートリアルを飛ばしますか？" message={'ルールの画面からいつでもできます'} confirmLabel="飛ばす" onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; onFinish({ outcome: 'tutorialSkip', st }); }}/>}
     </div>
   );
@@ -62851,6 +62906,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const [deckPick, setDeckPick] = useState(null);
   // オートで挑む(案B・2026-11-02): ほかのブリーダーと戦う前のデッキ選びの切り替えと、今日のごほうびの残り回数(96 の cardAutoRewardLoad)
   const [shareAuto, setShareAuto] = useState(false);
+  const [shareQuick, setShareQuick] = useState(false); // オートの「結果だけ見る」(2026-11-02)
   const [autoLeft, setAutoLeft] = useState(null);
   useEffect(() => {
     if (view !== 'deckPick' || !(deckPick && deckPick.pick && deckPick.pick.share) || typeof cardAutoRewardLoad !== 'function') return undefined;
@@ -63187,6 +63243,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   };
 
   // 過去の対戦を見る(93-card-replay.jsx)。id … 試合の番号。back … とじたあとに戻る画面(view)
+  // 端末に保存していない試合(オートの結果。93 の記録の形)を見る
+  const openReplayRec = (rec, back = 'top') => {
+    const g = rec && db ? cardReplayGameOf(db, rec) : null;
+    if (!g) { setNotice('この対戦は見られません'); return; }
+    setGame({ ...g, settings: save ? save.settings : undefined, replay: { ...g.replay, back } });
+    onNavigate('CARD_BATTLE');
+  };
   const openReplay = async (id, back = 'top') => {
     const rec = await cardReplayGet(id);
     const g = rec && db ? cardReplayGameOf(db, rec) : null;
@@ -63249,11 +63312,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   if (!save) return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="MFバトルカード" onBack={onExit}/><ScreenEmpty emoji="⏳" lines={['読み込み中…']}/></div>;
 
   if (screen === 'CARD_BATTLE' && game) {
-    // 対戦開始の画面(83-card-battle-vs.jsx)。出し終わるかタップしたら、対戦の画面へ(場はもう作ってあり、見せるだけ)
-    if (game.intro) return <CardVsIntro key={`vs-${game.key}`} db={db} intro={game.intro} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} onDone={() => setGame((g) => (g && g.key === game.key ? { ...g, intro: null } : g))}/>;
-    // 大会の見返しは、下の人もその試合のブリーダー(見ている人のアイコンと名前は出さない)
-    const tourMe = game.replay && game.replay.tour ? { name: game.replay.tour.me.name, icon: game.replay.tour.me.icon || null } : null;
-    return <CardBattleBoard key={game.key} db={db} game={game} onProgress={cpuOpenProgress} onActLog={cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogAct : null} meProfile={tourMe || (rank && rank.profile)} meIcon={tourMe ? null : rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} quickRun={quickRun ? { loops: quickRun.loops, stopped: quickRun.stopped } : null} onFinish={async ({ outcome, st, comeback = false }) => {
+    // 対戦が終わったとき(盤面の onFinish)。オートの「結果だけ見る」(CardAutoQuick)も同じ処理を通す(2026-11-02)
+    const boardFinish = async ({ outcome, st, comeback = false }) => {
       // 過去の対戦を見る(93): 何も保存しない。開いた画面へ戻すだけ(1手ごとの場を持ったままにしない)
       if (game.replay) {
         const back = game.replay.back || 'top';
@@ -63329,10 +63389,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         const ok = await persist({ point: save.point + point + rankPoint }, fresh.raw, [...(levelGain.entries || []), ...(counted ? [cardAutoRewardEntry(ar)] : [])]);
         let quick = null;
         if (ok && loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(loops); } catch (_) { quick = null; } }
-        if (cpuLogRef.current && cpuLogRef.current.id === game.key) cpuLogRef.current = null;
-        const reward = { ...half, base: point, got: point, bonus: 0, total: point, full: Math.floor(half.full / 2), daily: fresh.daily };
+        // 見返し(この対戦を見る): 打った手の並びから、端末の中だけで作る(サーバへは送らない・過去の対戦の一覧にも足さない)
+        const autoLog = cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogRef.current : null;
+        if (autoLog) cpuLogRef.current = null;
+        const replayRec = autoLog && typeof cardReplayFromCpu === 'function' ? cardReplayFromCpu(db, { id: `a${autoLog.id}`, at: Date.now(), myDeck: autoLog.decks[0], cpuDeck: autoLog.decks[1],
+          seed: autoLog.seed, first: autoLog.first, history: autoLog.acts, foe: { name: game.share.name }, outcome, reason: '' }) : null;
+        const reward = { ...half, base: point, got: point, bonus: 0, total: point, full: paid ? Math.floor(half.full / 2) : 0, daily: fresh.daily }; // ごほうびなしの日は「満額 → 0」と減った理由を出さない
         setResult({ outcome, reward, opened: null, saved: ok, who: null, level: game.level, loops, quick, facts, talk: null, replay: null, share: game.share, rankGain: ok ? levelGain.gain : null,
-          auto: { tactics: game.auto.tactics, paid, left: Math.max(0, ar.left - (ok && counted ? 1 : 0)) } });
+          replayRec: replayRec || null, auto: { tactics: game.auto.tactics, quick: !!game.auto.quick, paid, left: Math.max(0, ar.left - (ok && counted ? 1 : 0)) } });
         onBgm && onBgm(cardBgmOf(save.bgm.top));
         onNavigate('CARD_TOP');
         setView('result');
@@ -63447,7 +63511,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       onBgm && onBgm(cardBgmOf(save.bgm.top));
       onNavigate('CARD_TOP');
       setView('result');
-    }}/>;
+    };
+    // 対戦開始の画面(83-card-battle-vs.jsx)。出し終わるかタップしたら、対戦の画面へ(場はもう作ってあり、見せるだけ)
+    if (game.intro) return <CardVsIntro key={`vs-${game.key}`} db={db} intro={game.intro} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} onDone={() => setGame((g) => (g && g.key === game.key ? { ...g, intro: null } : g))}/>;
+    // オートの「結果だけ見る」: 対戦の画面を出さずに、一瞬で最後まで打って結果へ(対戦開始の画面も出さない)
+    if (game.auto && game.auto.quick && game.share && !game.replay) return <CardAutoQuick key={`quick-${game.key}`} db={db} game={game} onActLog={cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogAct : null} onFinish={boardFinish}/>;
+    // 大会の見返しは、下の人もその試合のブリーダー(見ている人のアイコンと名前は出さない)
+    const tourMe = game.replay && game.replay.tour ? { name: game.replay.tour.me.name, icon: game.replay.tour.me.icon || null } : null;
+    return <CardBattleBoard key={game.key} db={db} game={game} onProgress={cpuOpenProgress} onActLog={cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogAct : null} meProfile={tourMe || (rank && rank.profile)} meIcon={tourMe ? null : rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} quickRun={quickRun ? { loops: quickRun.loops, stopped: quickRun.stopped } : null} onFinish={boardFinish}/>;
   }
 
   const allAssistants = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS : [];
@@ -63504,8 +63575,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } } : { mode: 'assistant',
       foe: { who: pick.who, name: assistant ? assistant.name : 'あいて', line: (CARD_VS_LINES[pick.who] || {})[pick.level] || null, deckName: cardAssistantDeckName(db, cpuDeck, pick.who, pick.level), monsters: vsMons(st, CARD_CPU) },
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } };
-    const auto = autoIn ? { tactics: autoIn.tactics, level: typeof cardShareFightLevel === 'function' ? cardShareFightLevel(autoIn.tactics) : 'master', sameBlood: !!cardShareSameBlood(db, activeDeck) } : null;
-    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(share ? { share } : {}), ...(cup ? { cup } : {}), ...(auto ? { auto } : {}),
+    const auto = autoIn ? { tactics: autoIn.tactics, level: typeof cardShareFightLevel === 'function' ? cardShareFightLevel(autoIn.tactics) : 'master', sameBlood: !!cardShareSameBlood(db, activeDeck), quick: !!autoIn.quick } : null;
+    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro: auto && auto.quick ? null : intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(share ? { share } : {}), ...(cup ? { cup } : {}), ...(auto ? { auto } : {}),
       ...(rented ? { rented: { ownerId: rented.ownerId, version: rented.version, name: rented.owner } } : {}) });
     const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
     cpuLogRef.current = scene ? null : { id: gameKey, seed, first, decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], foeName: intro.foe.name, deckName: intro.foe.deckName || null, acts: [] };
@@ -63723,7 +63794,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       note={toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います'}
       onBack={() => { const back = deckPick.back; setDeckPick(null); if (toPvp && CARD_PVP_NEXT.take()) { setView('pvp'); return; } setView(toPvp ? 'mode' : back || 'foe'); }}
       allowRented={!toPvp && !sharePick} rentTab={shareForm && !toPvp && !sharePick}
-      auto={sharePick && typeof cardTacticsAutoOf === 'function' ? { on: shareAuto, onChange: setShareAuto, left: autoLeft } : null}
+      auto={sharePick && typeof cardTacticsAutoOf === 'function' ? { on: shareAuto, onChange: setShareAuto, left: autoLeft, quick: shareQuick, onQuick: typeof cardShareAutoFinish === 'function' ? setShareQuick : null } : null}
       onPick={async (c) => {
         // 借りたデッキ(みんなのデッキ・95): 自分のデッキの active は書き換えない
         if (c.kind === 'rent') { const next = deckPick; setDeckPick(null); if (next.next !== 'pvp') startBattle(next.pick, c.deck, { rented: c }); return; }
@@ -63739,7 +63810,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         const next = deckPick;
         setDeckPick(null);
         if (next.next === 'pvp') { setView('pvp'); return; }
-        startBattle(next.pick, deck, autoT ? { auto: { tactics: autoT } } : {});
+        startBattle(next.pick, deck, autoT ? { auto: { tactics: autoT, quick: shareQuick && typeof cardShareAutoFinish === 'function' } } : {});
       }}/>;
   }
 
@@ -63976,8 +64047,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           </div>
         </div>
         <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2`}>
+          {!result.replay && result.replayRec && <button type="button" data-card-result-replay="auto" className={`${btn} mh-button-secondary col-span-2 border border-sky-300/40 bg-slate-800`} onClick={() => { Audio_.fgSe.tap(); openReplayRec(result.replayRec, 'result'); }}>この対戦を見る</button>}
           {result.replay && <button type="button" data-card-result-replay className={`${btn} mh-button-secondary col-span-2 border border-sky-300/40 bg-slate-800`} onClick={() => { Audio_.fgSe.tap(); void openReplay(result.replay, 'result'); }}>この対戦を見る</button>}
-          <button type="button" className={`${btn} mh-button-primary`} onClick={() => { if (result.share) { startBattle({ who: result.share.tactics.habit, level: result.level, share: result.share }, activeDeck, result.auto ? { auto: { tactics: result.auto.tactics } } : {}); return; } const again = { who: result.who, level: result.level }; setFoe(again); setDeckPick({ next: 'cpu', pick: again }); setView('deckPick'); }}>もう一度</button>
+          <button type="button" className={`${btn} mh-button-primary`} onClick={() => { if (result.share) { startBattle({ who: result.share.tactics.habit, level: result.level, share: result.share }, activeDeck, result.auto ? { auto: { tactics: result.auto.tactics, quick: !!result.auto.quick } } : {}); return; } const again = { who: result.who, level: result.level }; setFoe(again); setDeckPick({ next: 'cpu', pick: again }); setView('deckPick'); }}>もう一度</button>
           <button type="button" className={`${btn} mh-button-secondary border border-white/20 bg-slate-800`} onClick={() => setView(result.share ? 'share' : 'foe')}>相手をえらぶ</button>
         </div>
       </div>
@@ -65543,7 +65615,7 @@ const cardDeckPickChoices = (db, decks, collection, opts = {}) => {
 // allowRented … 借りたデッキも並べる(助手と対戦のとき。マルチでは並べない)
 // rentTab … 「自分のデッキ/借りたデッキ」のタブにし、借りたデッキのタブで借りる・返すをする(2026-10-29 社長の作り直し「借りるのは対戦前のデッキを選ぶ画面のタブで」)。
 //   公開の印(cardShareOpen)までは、デバッグの人だけ(84 が決める)。借りられるのは1組・マルチでは使えない、は今のまま
-// auto … ほかのブリーダーと戦うときだけ { on, onChange, left }(オートで挑む・案B 2026-11-02)。left … 今日のごほうびの残り回数(読めていなければ null)
+// auto … ほかのブリーダーと戦うときだけ { on, onChange, left, quick, onQuick }(quick … 結果だけ見る。2026-11-02)(オートで挑む・案B 2026-11-02)。left … 今日のごほうびの残り回数(読めていなければ null)
 const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', note = '', onPick, onBack, allowRented = false, rentTab = false, auto = null }) => {
   const [rented, setRented] = useState(null);
   const [tab, setTab] = useState('own'); // own / rent
@@ -65611,6 +65683,13 @@ const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', 
                   className={`min-h-[44px] flex-1 rounded-xl px-1 text-[13px] font-black ${auto.on === v ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`}>{label}</button>
               ))}
             </div>
+            {auto.on && typeof auto.onQuick === 'function' && (
+              <button type="button" role="switch" aria-checked={!!auto.quick} data-card-deck-pick-quick={auto.quick ? 'on' : 'off'} onClick={() => { Audio_.fgSe.tap(); auto.onQuick(!auto.quick); }}
+                className={`flex min-h-[40px] w-full items-center gap-2 rounded-xl border px-2.5 text-left text-[12px] font-black ${auto.quick ? 'border-amber-300 bg-amber-950/40 text-amber-100' : 'border-slate-600 bg-slate-900 text-slate-200'}`}>
+                <span aria-hidden="true" className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${auto.quick ? 'border-amber-300 bg-amber-400 text-slate-950' : 'border-slate-400'}`}>{auto.quick ? '✓' : ''}</span>
+                <span className="min-w-0 flex-1" style={JA_WRAP_STYLE}>{jaWrap('⏩ 結果だけ見る(対戦の画面を出さずに、一瞬で最後まで戦う)')}</span>
+              </button>
+            )}
             {auto.on && <p data-card-deck-pick-auto-note className="rounded-xl bg-slate-900/80 px-2.5 py-2 text-[11px] font-bold leading-snug text-slate-200" style={JA_WRAP_STYLE}>
               {jaWrap('選んだデッキの戦術カードで、あなたの側も自動で戦います。試合の途中で「自分で」に切り替えられます')}
               <span data-card-deck-pick-auto-left={auto.left === null ? '' : auto.left} className={`mt-1 block ${auto.left ? 'text-emerald-200' : 'text-amber-200'}`}>
@@ -70096,6 +70175,33 @@ const cardShareReplayGet = async (ownerId, slot) => {
   if (!key || typeof ownerId !== 'string' || !Number.isInteger(slot)) return null;
   const row = await cardShareReplayRpc('card_deck_replay_get', { p_owner: ownerId, p_key: key, p_slot: slot });
   return row && typeof row === 'object' && !Array.isArray(row) ? row : null;
+};
+// オートの「結果だけ見る」(2026-11-02 社長「オート対戦は結果だけを見るも追加して」)。いまの場から、2人とも戦術カードの打ち方で最後まで一瞬で打つ。
+//   pols … [自分(0)の打ち方, 相手(1)の打ち方]。打ち方・出せない手の替え方・手数の上限と決め方は大会の自動対戦(82 の cardTourPlay)と同じ。
+//   山札が尽きれば山札切れで決着するので、ふつうは上限に届かない(助手 MASTER 同士 2,000試合で最長 84ターン・171手)。
+//   上限まで決まらなければ「倒した数 → 残りのライフ → 後攻」で決める(必ず終わる)。返り値 { st(決着した場), acts:[[打った人, 手]], limit }
+const cardShareAutoFinish = (db, st0, pols, { max = typeof CARD_TOUR_MAX_STEPS === 'number' ? CARD_TOUR_MAX_STEPS : 4000, rand = Math.random } = {}) => {
+  let st = cardClone(st0);
+  const acts = [];
+  for (let steps = 0; steps < max && st.winner === null; steps++) {
+    const who = st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? cardOther(st.first) : cardDecider(st);
+    let act = cardAiChooseAction(db, st, pols[who], rand);
+    let next = act && cardApplyAction(db, st, act);
+    if (!next) {
+      act = st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : st.phase === 'guts' ? { type: 'guts', hand: [] } : null;
+      next = act && cardApplyAction(db, st, act);
+      if (!next) break;
+    }
+    acts.push([who, act]);
+    st = next;
+  }
+  if (st.winner !== null) return { st, acts, limit: false };
+  const kos = [cardKoCount(st, 0), cardKoCount(st, 1)];
+  const life = (p) => st.players[p].mons.reduce((a, m) => a + Math.max(0, m.ko ? 0 : m.life), 0);
+  const winner = kos[0] !== kos[1] ? (kos[0] > kos[1] ? 0 : 1) : life(0) !== life(1) ? (life(0) > life(1) ? 0 : 1) : cardOther(st.first);
+  const end = cardClone(st);
+  cardGameOver(end, winner, '手数の上限');
+  return { st: end, acts, limit: true };
 };
 const cardShareSameBlood = (db, deck) => {
   const ms = (deck && Array.isArray(deck.monsters) ? deck.monsters : []).map((no) => cardMonsterOf(db, no)).filter(Boolean);
