@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c7e1901160162a41
+// source-sha256: 47b0bb4c07afb384
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -35635,8 +35635,9 @@ const RhythmSongSelect = ({
         "aria-label": "次のページ",
         className: "min-h-[44px] min-w-[44px] rounded-xl bg-white/10 text-sm font-black text-white disabled:opacity-30"
       }, "▶")), React.createElement("p", {
+        style: JA_WRAP_STYLE,
         className: "text-[10px] font-bold text-slate-400"
-      }, cur === 0 ? '横に送ると歌詞カード' : '歌詞カードを押すと大きく見られます'));
+      }, jaWrap(cur === 0 ? '横に送ると歌詞カード' : '歌詞カードを押すと大きく見られます')));
     })(), React.createElement("div", {
       className: "flex w-full max-w-[92%] flex-col items-center landscape:w-auto landscape:max-w-[38%]"
     }, React.createElement("b", {
