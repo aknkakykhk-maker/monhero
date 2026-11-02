@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 00b5349121c4ea12
+// source-sha256: 466212691fc640cd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -62634,8 +62634,9 @@ function RhythmRankingScreen({
   }, React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement("p", {
-    className: "truncate text-[11px] font-black text-fuchsia-100"
-  }, eventDefinition.name), React.createElement("p", {
+    style: JA_WRAP_STYLE,
+    className: "text-[11px] font-black leading-tight text-fuchsia-100"
+  }, jaWrap(eventDefinition.name)), React.createElement("p", {
     "data-rhythm-event-period": true,
     className: "text-[9px] text-slate-400"
   }, rhythmEventPeriodText(eventDefinition, eventRange))), React.createElement("p", {
