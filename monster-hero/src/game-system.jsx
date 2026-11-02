@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 223b59878b8b7139
+// generated-sha256: 2e35f0b8f262a847
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -56284,6 +56284,8 @@ const cardAiChooseGuard = (db, st, policy, rand, gopt = null) => {
   let best = null;
   opts.forEach((o) => {
     const { after, extra, back, cost, c } = cardAiGuardEstimate(db, st, o, dmg);
+    // 守っても倒れるのが変わらず、はね返し・まとめて回避などの得も無い守りは出さない(戦術カードの「守る」で必ず守るときも。2026-11-02 社長)
+    if (target.life <= after && back <= 0 && extra - (cardHasEff(c, 'takeMult') ? 1.2 : 0) <= 0) return;
     const saved = Math.min(dmg, target.life) - Math.min(after, target.life);
     const ko = target.life <= dmg && target.life > after ? 5 : 0;
     const lostAll = cardHasEff(c, 'selfGutsAll') ? me.guts.length - cost : 0; // 緊急回避: 残りのガッツも全部なくなる
@@ -56315,12 +56317,15 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
     if (!c) return -9;
     const usable = c.user === 'breeder' || me.mons.some((m) => !m.ko && cardUsableBy(c, m)); // 倒れた子しか使えない札は使えない
     if (!usable) return -10;
-    if (cardIsGuardKind(c.kind)) return 2 * habit.keepGuard - c.guts * 0.2;
-    return (c.damage || 1) * 0.5 - Math.max(0, c.guts - (me.guts.length + 2)) * 0.8;
+    // 使える守りは、攻めの札よりなるべく残す(2026-11-02 社長「防御系ガンガン捨てるくせに、もう死んでるモンスターのカードは残したりする」)
+    if (cardIsGuardKind(c.kind)) return 2 * habit.keepGuard - c.guts * 0.2 + CARD_AI_GUARD_KEEP_ADD;
+    // 付ける札は、手札に付ける先(場の子が使える攻めの技)が無ければ先にガッツへ
+    const noHost = cardHasEff(c, 'attach') && !me.hand.some((n2) => n2 !== no && (() => { const h = cardOf(db, n2); return !!h && cardIsAttackKind(h.kind) && h.kind !== 'spe' && me.mons.some((m) => !m.ko && cardUsableBy(h, m)); })());
+    return (c.damage || 1) * 0.5 - Math.max(0, c.guts - (me.guts.length + 2)) * 0.8 - (noHost ? 2 : 0);
   };
   // 切り札(policy.aces・みんなのデッキ)はガッツにしない(手札に残す)。aces が無ければ今と同じ
   const aceKeep = (no) => (policy && Array.isArray(policy.aces) && policy.aces.includes(no) ? 10 : 0);
-  const ks = me.hand.map((no, i) => ({ i, k: keep(no) + aceKeep(no), g: cardIsGuardKind((cardOf(db, no) || {}).kind) }));
+  const ks = me.hand.map((no, i) => ({ i, k: keep(no) + (keep(no) > -9 ? aceKeep(no) : 0), g: cardIsGuardKind((cardOf(db, no) || {}).kind) }));
   // 守りの札を1枚は手元に残す(2026-10-29 社長「ガード軽視が目立つ」: 守りの札を全部ガッツにして、次の相手の番に守れない)
   //   いちばん残したい守りの札を、攻めの札より後(ガッツにしない側)へ回す
   //   守りを残すくせが低い子(みゅあ)も1枚は残す。残さないと NORMAL 62→50%・MASTER 48→35% に落ちた(2026-10-29 小さく測った)。
@@ -56355,6 +56360,7 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
   //   次の自分の番に引く枚数(手札が5枚なら1枚・それ未満なら5枚まで)が山札より多くなるほど、手札をガッツにしない
   return { type: 'guts', hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, policy.playerRole ? 99 : cardAiGutsCap(me)) };
 };
+const CARD_AI_GUARD_KEEP_ADD = 1.5;   // ガッツにする札を選ぶとき、使える守りの札に足す「残したさ」(2026-11-02 社長「防御系ガンガン捨てる」)
 const CARD_AI_STUCK_KEEP = 2;           // 手が詰まった番に残す守りの札
 const CARD_TACTIC_KEEP_GUARD_MAX = 3;   // 戦術カード「守りのカードを3枚まで残す」の枚数
 // ガッツにしてよい枚数の上限(次の番に引く枚数が山札を超えないように)。山札が5枚以上あれば上限なし
@@ -56450,17 +56456,22 @@ const cardAiAttackScored = (db, st, opts, policy) => opts.map((o) => ({ o, s: ca
 // policy.search … { k, r, h, eval } / 助手と対戦(cardAiPolicy)には付かない。付けるのは 82-card-share-core の cardSharePolicy だけ
 // 1回の判断で試しに進める手の数に上限を持たせる(スマホで重くしない)。上限に届いたら、そこまでの結果で選ぶ
 const CARD_AI_SEARCH_STEP_MAX = 1500;
+// 先読みの見積もりに足す MASTER の点の重み(2026-11-02 社長 ウ「先読みの見積もりを MASTER の点の付け方にそろえる」)
+const CARD_AI_SEARCH_PRIOR = 2;
+const CARD_AI_SEARCH_MILL_W = 0.5;
 const cardAiSearchLife = (st, p) => { let a = 0, b = 0; st.players[p].mons.forEach((m) => { if (!m.ko) a += Math.max(0, m.life); b += m.max; }); return b ? a / b : 0; };
 // 場の良さ(大きいほど me に良い)。'alive' … 残っているモンスターの数とライフを重く見る(LEGEND)
-const cardAiSearchEval = (st, me, kind) => {
+const cardAiSearchEval = (st, me, kind, mill = 0) => {
   if (st.winner === me) return 100;
   if (st.winner !== null) return -100;
   const op = cardOther(me), P = st.players[me], O = st.players[op];
+  // 持久型(山札切れで勝つくせ)は、山札の残りの差も見る(MASTER の点が山札を削る手を高く見るのとそろえる。2026-11-02 社長 ウ)
+  const deck = mill ? CARD_AI_SEARCH_MILL_W * mill * (P.deck.length - O.deck.length) : 0;
   if (kind === 'alive') {
     const alive = (x) => x.mons.filter((m) => !m.ko).length;
-    return 12 * (alive(P) - alive(O)) + 8 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.4 * (P.hand.length - O.hand.length) + 0.4 * (P.guts.length - O.guts.length);
+    return deck + 12 * (alive(P) - alive(O)) + 8 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.4 * (P.hand.length - O.hand.length) + 0.4 * (P.guts.length - O.guts.length);
   }
-  return 10 * (cardKoCount(st, me) - cardKoCount(st, op)) + 4 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.3 * (P.hand.length - O.hand.length);
+  return deck + 10 * (cardKoCount(st, me) - cardKoCount(st, op)) + 4 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.3 * (P.hand.length - O.hand.length);
 };
 const cardAiSearchShuffle = (list, rand) => { for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; } };
 const cardAiSearchRollout = (db, st0, act, me, pols, rand, cfg, budget) => {
@@ -56477,7 +56488,7 @@ const cardAiSearchRollout = (db, st0, act, me, pols, rand, cfg, budget) => {
     if (!n) { a = st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : st.phase === 'guts' ? { type: 'guts', hand: [] } : null; n = a && cardApplyAction(db, st, a); if (!n) break; }
     st = n; st.log = [];
   }
-  return cardAiSearchEval(st, me, cfg.eval);
+  return cardAiSearchEval(st, me, cfg.eval, cfg.mill || 0);
 };
 let _cardAiSearchFoe = null; // 先読みの中で相手が打つ考え方(くせの無い MASTER)
 const cardAiSearchPick = (db, st, scored, policy, rand) => {
@@ -56489,12 +56500,15 @@ const cardAiSearchPick = (db, st, scored, policy, rand) => {
   const self = { ...policy, search: null, gambit: null };
   const pols = [null, null]; pols[me] = self; pols[cardOther(me)] = _cardAiSearchFoe;
   const budget = { left: CARD_AI_SEARCH_STEP_MAX };
+  const ecfg = { ...cfg, mill: (policy.habit && policy.habit.mill) || 0 };
   let best = cands[0], bestV = -Infinity;
+  const prior = scored.slice(0, cfg.k).filter((x) => x.s > 0.3).map((x) => x.s).concat([0.3]);
   for (let i = 0; i < cands.length && budget.left > 0; i++) {
     let v = 0, n = 0;
-    for (let r = 0; r < cfg.r && budget.left > 0; r++) { v += cardAiSearchRollout(db, st, cands[i], me, pols, rand, cfg, budget); n += 1; }
+    for (let r = 0; r < cfg.r && budget.left > 0; r++) { v += cardAiSearchRollout(db, st, cands[i], me, pols, rand, ecfg, budget); n += 1; }
     if (!n) break;
-    v = v / n + (i === 0 ? 0.5 : 0); // 並んだときは、もとの点がいちばん高い手
+    // 先の場の良さに、MASTER の点(その手の点)も足して比べる。先読みで大きく良くなる手のときだけ、MASTER の手を変える(2026-11-02 社長 ウ)
+    v = v / n + CARD_AI_SEARCH_PRIOR * prior[i] + (i === 0 ? 0.5 : 0); // 並んだときは、もとの点がいちばん高い手
     if (v > bestV) { bestV = v; best = cands[i]; }
   }
   return best;
@@ -56535,9 +56549,14 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   if (st.pending) return sloppy ? { type: 'pass' } : cardAiChooseGuard(db, st, policy, rand);
   if (st.phase === 'guts') {
     if (!sloppy) return cardAiChooseGuts(db, st, policy);
-    const hand = st.players[st.active].hand;
+    const me = st.players[st.active], hand = me.hand;
     const gm = cardFieldEff(st, 'fieldGutsMax');
-    return { type: 'guts', hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, Math.min(gm ? gm.n : 99, policy.playerRole ? 99 : cardAiGutsCap(st.players[st.active]))) };
+    // 雑な手でも、もう出せない札(倒れた子の札)は先にガッツへ。使える守りはでたらめに捨てない(2026-11-02 社長)
+    const dead = (i) => { const c = cardOf(db, hand[i]); return !c || (c.user !== 'breeder' && !me.mons.some((m) => !m.ko && cardUsableBy(c, m))); };
+    const isGuard = (i) => cardIsGuardKind((cardOf(db, hand[i]) || {}).kind);
+    const idx = hand.map((_, i) => i);
+    const pickS = [...idx.filter(dead), ...idx.filter((i) => !dead(i) && !isGuard(i) && rand() < 0.4)];
+    return { type: 'guts', hand: pickS.slice(0, Math.min(gm ? gm.n : 99, policy.playerRole ? 99 : cardAiGutsCap(me))) };
   }
   const opts = cardAiAttackChoices(db, st, policy);
   if (!opts.length) return { type: 'endAttacks' };
@@ -57647,7 +57666,7 @@ incomingArea:()=>['全体攻撃を受けた','受けた攻撃が、全員に当�
 // ---- 基本カード(どの手にも当てはまらないときの打ち方) ----
 tBalance:()=>['バランス型','攻め・守り・ガッツ・大技・崩し・全体を同じくらいに見て、いちばん得になるカードを出す。とどめだけ少し優先する'],
 tAttack:()=>['攻め型','攻撃をふだんの1.5倍選びやすくする。ガッツはためず、守りのカードも手札に残さない。守るのは、受けると倒れるときだけ'],
-tGuard:()=>['守り型','守りのカードを手札に残しやすく(ふだんの1.5倍)、攻撃は控えめ(0.7倍)にする。攻撃を受けたら、守れるときはいつも守る'],
+tGuard:()=>['守り型','守りのカードを手札に残しやすく(ふだんの1.5倍)、攻撃は控えめ(0.7倍)にする。攻撃を受けたら、守れるときはいつも守る(守っても倒れるのが変わらないときは除く)'],
 tSave:()=>['溜め型','ガッツを多めにため(ふだんの1.6倍)、大技を選びやすくする(1.8倍)'],
 tDisrupt:()=>['崩し型','相手の手札・山札・ガッツを減らすカードを選びやすくする(ふだんの1.8倍)'],
 tBig:()=>['大技型','ダメージの大きい技を選びやすくする(ふだんの1.6倍)'],
@@ -57676,11 +57695,11 @@ attachKind:(v)=>[`付けるカード(${v})といっしょに攻撃`,`「${v}」�
 spe:(v)=>{const d={味方を回復:'味方のライフを回復する',引く:'カードを引く',空中になる:'空中に上がる',安全になる:'次の攻撃を受けなくなる',まゆと羽化:'まゆになる・羽化する',のりうつる:'相手にのりうつる'}[v];return [`特殊技で${d}`,`このモンスターの特殊技のうち、${d}技を出す`];},
 stance:(v)=>({この子から攻める:['このモンスターから攻める','当てはまったら、このモンスターで、いちばん得な攻撃をする'],この子は攻撃しない:['このモンスターは攻撃しない','当てはまったら、このターンはこのモンスターに攻撃させない(このあとの戦術カード・基本カードでも攻撃させない)'],ライフの多い子が先に:['いちばん元気なら攻める','このモンスターが味方の中でいちばんライフが多いときだけ、このモンスターで、いちばん得な攻撃をする'],ライフの少ない子は温存:['いちばん弱っていたら休む','味方が2体以上いて、このモンスターのライフがいちばん少ないときは、このターンは攻撃させない(休ませる)'],攻撃は1回だけ:['攻撃は1回だけ','このターンにまだ攻撃していなければ攻撃する。1回攻撃したら、このターンはもう攻撃させない'],何回でも攻める:['何回でも攻める','少し損な攻撃でも出して、このモンスターで攻撃を続ける']})[v],
 disrupt:(v)=>({手札を捨てさせる:['相手の手札を捨てさせる','相手の手札を捨てさせる・山札の下へ戻すカードを使う'],山札を削る:['相手の山札を削る','相手の山札を削るカードを使う'],ガッツを減らす:['相手のガッツを減らす','相手のガッツを減らす・0にするカードを使う'],番を飛ばす:['相手のターンを飛ばす','相手の次のターンを飛ばすカードを使う']})[v],
-guard:()=>['守る','このモンスターが攻撃を受けたら、手札の守りのカードでいちばん良い守り方をする'],
-guardFirst:(v)=>[`${v}で守る`,`このモンスターが攻撃を受けたら、${v==='回避'||v==='防御'?v+'のカード':'「'+v+'」のカード'}だけで守る(そのカードが無ければ、次の戦術カードへ進む)`],
+guard:()=>['守る','このモンスターが攻撃を受けたら、手札の守りのカードでいちばん良い守り方をする。守っても倒れるのが変わらないときは、守らずに受ける'],
+guardFirst:(v)=>[`${v}で守る`,`このモンスターが攻撃を受けたら、${v==='回避'||v==='防御'?v+'のカード':'「'+v+'」のカード'}だけで守る(そのカードが無ければ、次の戦術カードへ進む)。守っても倒れるのが変わらないときは、守らずに受ける`],
 guardOver:(v)=>[`ダメージ${v}以上だけ守る`,`このモンスターが攻撃を受けたとき、受けるダメージの見込みが${v}より小さければ守らずに受ける。${v}以上なら守る`],
-guardDie:()=>['倒れるときだけ守る','このモンスターが攻撃を受けたとき、受けても倒れなければ守らずに受ける。倒れるときだけ守る'],
-cover:()=>['かばうカードで守る','このモンスターが攻撃を受けたら、かばう・身代わりのカードで守る'],
+guardDie:()=>['倒れるときだけ守る','このモンスターが攻撃を受けたとき、受けても倒れなければ守らずに受ける。倒れるときだけ守る。守っても倒れるのが変わらないときは、守らずに受ける'],
+cover:()=>['かばうカードで守る','このモンスターが攻撃を受けたら、かばう・身代わりのカードで守る。守っても倒れるのが変わらないときは、守らずに受ける'],
 noGuard:()=>['守らない','このモンスターが攻撃を受けても、守りのカードを使わずに受ける(守りのカードは手札に残す)'],
 charge:()=>['溜め技を使う','次の技のダメージを何倍にもするカード(溜め・怒り・次のターンの技を倍)を使う'],
 chargeKind:(v)=>((w)=>[`溜め(${w})を使う`,`「${w}」の溜めのカードを使う`])(v==='次の番の技を倍'?'次のターンの技を倍':v), // 段の値(保存に書く)は「次の番の技を倍」のまま。見せる言葉だけ「ターン」(2026-10-30 社長)
@@ -57917,6 +57936,11 @@ const cardTacticRandomAct = (db, st, policy, rand = Math.random) => {
 //   慎重型 … ほかの型の効きを半分に(サブなら6分の1減らす)/ 臨機応変型・持久型 … メインならいつも、サブなら3回に1回の番
 const CARD_TACTIC_DIMS = Object.freeze(['attack', 'keepGuard', 'saveGuts', 'big', 'disrupt', 'area', 'finish']);
 const CARD_TACTIC_SUB_W = 1 / 3;
+// 登録デッキ(cardSharePolicy の gambitOnHabit): 基本カードは、くせ(メインの基本カードの型。強さごとの調整ずみ)の上に足す(2026-11-02 社長 ア)
+// 登録したくせと同じ型の基本カード(例: くせ みゅあ に攻め型)は、くせにもう入っているので二重に足さない(足すと「守るのは倒れるときだけ」が重なり、みゅあの MASTER が 50→36%)
+const cardTacticSameAsHabit = (c, habitId) => !!habitId && !!c && ((CARD_TACTIC_GROUPS.find((x) => x.id === c.g) || {}).habit === habitId);
+// 行に当たっても、MASTER の点で、いちばん良い手よりこれ以上低い手は出さない(行は「強く勧める」。2026-11-02 社長 イ)
+const CARD_TACTIC_ROW_LOSS_MAX = 2;
 const cardTacticPresetOf = (card) => {
   const g = CARD_TACTIC_GROUPS.find((x) => x.id === card.g) || {};
   if (g.habit) return { ...(CARD_AI_HABITS[g.habit] || {}) };
@@ -57925,14 +57949,14 @@ const cardTacticPresetOf = (card) => {
 };
 // mainHabit … 助手の EXPERT・MASTER(cardAiPolicy の gambitKeepMain): メインの型は今のくせ(強さごとの調整ずみ)をそのまま使い、サブだけを足す
 //   when … 助手の EXPERT・MASTER: サブごとの「効く場面」(CARD_AI_TACTIC_WHEN の名前)。その場面では、サブを3分の1でなく丸ごと効かせる
-const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null, when = null) => {
+const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null, when = null, onHabit = false, habitId = null) => {
   const subW = (i) => (st && Array.isArray(when) && typeof when[i] === 'string' && typeof cardAiTacticWhenHit === 'function' && cardAiTacticWhenHit(when[i], st, p) ? 1 : CARD_TACTIC_SUB_W);
   const list = (Array.isArray(base) ? base : []).map((id, i) => ({ c: cardTacticOf(id), w: i === 0 ? 1 : subW(i), main: i === 0 })).filter((x) => x.c && x.c.cat === 'base');
   if (!list.length) return null;
   const h = Object.fromEntries(CARD_TACTIC_DIMS.map((d) => [d, mainHabit && Number.isFinite(mainHabit[d]) ? mainHabit[d] : 1]));
   if (mainHabit && mainHabit.flex) h.flex = true;
   if (mainHabit && mainHabit.mill) h.mill = mainHabit.mill;
-  list.forEach(({ c, w, main }) => { if (mainHabit && main) return; const pre = cardTacticPresetOf(c); CARD_TACTIC_DIMS.forEach((d) => { if (Number.isFinite(pre[d])) h[d] *= 1 + (pre[d] - 1) * w; }); });
+  list.forEach(({ c, w, main }) => { if (mainHabit && main && !onHabit) return; if (onHabit && cardTacticSameAsHabit(c, habitId)) return; const pre = cardTacticPresetOf(c); CARD_TACTIC_DIMS.forEach((d) => { if (Number.isFinite(pre[d])) h[d] *= 1 + (pre[d] - 1) * w; }); });
   const calm = list.filter((x) => x.c.g === 'tCalm').reduce((a, x) => a * (1 - 0.5 * x.w), 1);
   CARD_TACTIC_DIMS.forEach((d) => { h[d] = Math.min(2, Math.max(0.3, 1 + (h[d] - 1) * calm)); });
   const turn = st ? cardTacticOwnTurn(st, p) : 0;
@@ -57954,12 +57978,12 @@ const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null, when = null
 // 基本カードの細かいくせ(knob)。メインはいつも、サブは3回に1回の番(臨機応変型・持久型と同じ)
 //   skipMain … 助手の EXPERT・MASTER: メインの型は今の打ち方のままなので、メインの細かいくせは足さない
 //   (足すと、みゅあ(攻め型: 倒れるときだけ守る)が MASTER 50→28%・ドラ(守り型: いつも守る)が EXPERT 53→39% に落ちた。2026-10-29 60戦で測った)
-const cardTacticKnobsOf = (base, st = null, p = 0, skipMain = false) => {
+const cardTacticKnobsOf = (base, st = null, p = 0, skipMain = false, habitId = null) => {
   const turn = st ? cardTacticOwnTurn(st, p) : 0;
   const out = {};
   (Array.isArray(base) ? base : []).forEach((id, i) => {
     const c = cardTacticOf(id);
-    if (!c || c.cat !== 'base' || (i > 0 && turn % 3 !== 0) || (i === 0 && skipMain)) return;
+    if (!c || c.cat !== 'base' || (i > 0 && turn % 3 !== 0) || (i === 0 && skipMain) || cardTacticSameAsHabit(c, habitId)) return;
     const g = CARD_TACTIC_GROUPS.find((x) => x.id === c.g) || {};
     Object.assign(out, g.knob || {});
   });
@@ -58145,7 +58169,11 @@ const cardTacticRowAct = (db, st, policy, phase, row, aim, ctx) => {
   const usable = (o) => !(o.type === 'attack' && ctx.skip.has(o.mon)) && !(ctx.noBreeder && (o.type === 'breeder' || o.hand.some((i) => (cardOf(db, me.hand[i]) || {}).user === 'breeder')));
   const pickBest = (fits, floor = 0) => {
     const best = ctx.scored().find((x) => x.s > floor && usable(x.o) && fits(x.o) && cardTacticAimsAt(st, x.o, aim.foes));
-    return best ? { act: cardAiFillBind(db, st, best.o, policy) } : null;
+    if (!best) return null;
+    // MASTER の点で、出せるいちばん良い手より大きく損な手なら、この行は出さずに次の行・基本カードの型へ(2026-11-02 社長 イ)
+    const top = ctx.scored().find((x) => usable(x.o));
+    if (policy.gambitOnHabit && top && best.s < top.s - CARD_TACTIC_ROW_LOSS_MAX) return null;
+    return { act: cardAiFillBind(db, st, best.o, policy) };
   };
   if (act.g === 'ace') {
     const aces = Array.isArray(policy.aces) ? policy.aces : [];
@@ -58243,8 +58271,9 @@ const cardTacticDecide = (db, st, policy) => {
   if (!phase) return null;
   if (policy.gambitRandom && cardTacticSmartLevel(frames) === 'random') return { act: cardTacticRandomAct(db, st, policy) };
   const p = phase === 'guard' ? st.pending.defender : st.active;
-  const habit = cardTacticHabitOf(frames.base, st, p, policy.gambitKeepMain ? policy.habit : null, policy.gambitWhen || null);
-  const knobs = cardTacticKnobsOf(frames.base, st, p, !!policy.gambitKeepMain);
+  const sameId = policy.gambitOnHabit ? policy.gambitHabitId || null : null;
+  const habit = cardTacticHabitOf(frames.base, st, p, policy.gambitKeepMain || policy.gambitOnHabit ? policy.habit : null, policy.gambitWhen || null, !!policy.gambitOnHabit, sameId);
+  const knobs = cardTacticKnobsOf(frames.base, st, p, !!policy.gambitKeepMain, sameId);
   const pol = habit ? { ...policy, habit } : policy;
   let scored = null;
   const ctx = { mi: null, skip: new Set(), noBreeder: false, scored: () => { if (!scored) scored = cardAiAttackScored(db, st, cardAiAttackChoices(db, st, pol), pol); return scored; } };
@@ -58396,7 +58425,7 @@ const cardSharePolicy = (tactics, levelId, opts = {}) => {
   if (t.f) {
     const frames = cardTacticUnpackFrames(t.f);
     const base = cardAiPolicy(t.habit, cardShareFightLevel(t), { ...opts, noTactics: true });
-    return { ...base, gambit: frames, aces: t.aces.slice(), ...(search ? { search } : {}) };
+    return { ...base, gambit: frames, gambitOnHabit: true, gambitHabitId: t.habit, aces: t.aces.slice(), ...(search ? { search } : {}) };
   }
   const base = cardAiPolicy(t.habit, cardShareFightLevel(t), { ...opts, noTactics: true });
   const habit = { ...base.habit };

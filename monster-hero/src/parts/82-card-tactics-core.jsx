@@ -183,7 +183,7 @@ incomingArea:()=>['全体攻撃を受けた','受けた攻撃が、全員に当�
 // ---- 基本カード(どの手にも当てはまらないときの打ち方) ----
 tBalance:()=>['バランス型','攻め・守り・ガッツ・大技・崩し・全体を同じくらいに見て、いちばん得になるカードを出す。とどめだけ少し優先する'],
 tAttack:()=>['攻め型','攻撃をふだんの1.5倍選びやすくする。ガッツはためず、守りのカードも手札に残さない。守るのは、受けると倒れるときだけ'],
-tGuard:()=>['守り型','守りのカードを手札に残しやすく(ふだんの1.5倍)、攻撃は控えめ(0.7倍)にする。攻撃を受けたら、守れるときはいつも守る'],
+tGuard:()=>['守り型','守りのカードを手札に残しやすく(ふだんの1.5倍)、攻撃は控えめ(0.7倍)にする。攻撃を受けたら、守れるときはいつも守る(守っても倒れるのが変わらないときは除く)'],
 tSave:()=>['溜め型','ガッツを多めにため(ふだんの1.6倍)、大技を選びやすくする(1.8倍)'],
 tDisrupt:()=>['崩し型','相手の手札・山札・ガッツを減らすカードを選びやすくする(ふだんの1.8倍)'],
 tBig:()=>['大技型','ダメージの大きい技を選びやすくする(ふだんの1.6倍)'],
@@ -212,11 +212,11 @@ attachKind:(v)=>[`付けるカード(${v})といっしょに攻撃`,`「${v}」�
 spe:(v)=>{const d={味方を回復:'味方のライフを回復する',引く:'カードを引く',空中になる:'空中に上がる',安全になる:'次の攻撃を受けなくなる',まゆと羽化:'まゆになる・羽化する',のりうつる:'相手にのりうつる'}[v];return [`特殊技で${d}`,`このモンスターの特殊技のうち、${d}技を出す`];},
 stance:(v)=>({この子から攻める:['このモンスターから攻める','当てはまったら、このモンスターで、いちばん得な攻撃をする'],この子は攻撃しない:['このモンスターは攻撃しない','当てはまったら、このターンはこのモンスターに攻撃させない(このあとの戦術カード・基本カードでも攻撃させない)'],ライフの多い子が先に:['いちばん元気なら攻める','このモンスターが味方の中でいちばんライフが多いときだけ、このモンスターで、いちばん得な攻撃をする'],ライフの少ない子は温存:['いちばん弱っていたら休む','味方が2体以上いて、このモンスターのライフがいちばん少ないときは、このターンは攻撃させない(休ませる)'],攻撃は1回だけ:['攻撃は1回だけ','このターンにまだ攻撃していなければ攻撃する。1回攻撃したら、このターンはもう攻撃させない'],何回でも攻める:['何回でも攻める','少し損な攻撃でも出して、このモンスターで攻撃を続ける']})[v],
 disrupt:(v)=>({手札を捨てさせる:['相手の手札を捨てさせる','相手の手札を捨てさせる・山札の下へ戻すカードを使う'],山札を削る:['相手の山札を削る','相手の山札を削るカードを使う'],ガッツを減らす:['相手のガッツを減らす','相手のガッツを減らす・0にするカードを使う'],番を飛ばす:['相手のターンを飛ばす','相手の次のターンを飛ばすカードを使う']})[v],
-guard:()=>['守る','このモンスターが攻撃を受けたら、手札の守りのカードでいちばん良い守り方をする'],
-guardFirst:(v)=>[`${v}で守る`,`このモンスターが攻撃を受けたら、${v==='回避'||v==='防御'?v+'のカード':'「'+v+'」のカード'}だけで守る(そのカードが無ければ、次の戦術カードへ進む)`],
+guard:()=>['守る','このモンスターが攻撃を受けたら、手札の守りのカードでいちばん良い守り方をする。守っても倒れるのが変わらないときは、守らずに受ける'],
+guardFirst:(v)=>[`${v}で守る`,`このモンスターが攻撃を受けたら、${v==='回避'||v==='防御'?v+'のカード':'「'+v+'」のカード'}だけで守る(そのカードが無ければ、次の戦術カードへ進む)。守っても倒れるのが変わらないときは、守らずに受ける`],
 guardOver:(v)=>[`ダメージ${v}以上だけ守る`,`このモンスターが攻撃を受けたとき、受けるダメージの見込みが${v}より小さければ守らずに受ける。${v}以上なら守る`],
-guardDie:()=>['倒れるときだけ守る','このモンスターが攻撃を受けたとき、受けても倒れなければ守らずに受ける。倒れるときだけ守る'],
-cover:()=>['かばうカードで守る','このモンスターが攻撃を受けたら、かばう・身代わりのカードで守る'],
+guardDie:()=>['倒れるときだけ守る','このモンスターが攻撃を受けたとき、受けても倒れなければ守らずに受ける。倒れるときだけ守る。守っても倒れるのが変わらないときは、守らずに受ける'],
+cover:()=>['かばうカードで守る','このモンスターが攻撃を受けたら、かばう・身代わりのカードで守る。守っても倒れるのが変わらないときは、守らずに受ける'],
 noGuard:()=>['守らない','このモンスターが攻撃を受けても、守りのカードを使わずに受ける(守りのカードは手札に残す)'],
 charge:()=>['溜め技を使う','次の技のダメージを何倍にもするカード(溜め・怒り・次のターンの技を倍)を使う'],
 chargeKind:(v)=>((w)=>[`溜め(${w})を使う`,`「${w}」の溜めのカードを使う`])(v==='次の番の技を倍'?'次のターンの技を倍':v), // 段の値(保存に書く)は「次の番の技を倍」のまま。見せる言葉だけ「ターン」(2026-10-30 社長)
@@ -453,6 +453,11 @@ const cardTacticRandomAct = (db, st, policy, rand = Math.random) => {
 //   慎重型 … ほかの型の効きを半分に(サブなら6分の1減らす)/ 臨機応変型・持久型 … メインならいつも、サブなら3回に1回の番
 const CARD_TACTIC_DIMS = Object.freeze(['attack', 'keepGuard', 'saveGuts', 'big', 'disrupt', 'area', 'finish']);
 const CARD_TACTIC_SUB_W = 1 / 3;
+// 登録デッキ(cardSharePolicy の gambitOnHabit): 基本カードは、くせ(メインの基本カードの型。強さごとの調整ずみ)の上に足す(2026-11-02 社長 ア)
+// 登録したくせと同じ型の基本カード(例: くせ みゅあ に攻め型)は、くせにもう入っているので二重に足さない(足すと「守るのは倒れるときだけ」が重なり、みゅあの MASTER が 50→36%)
+const cardTacticSameAsHabit = (c, habitId) => !!habitId && !!c && ((CARD_TACTIC_GROUPS.find((x) => x.id === c.g) || {}).habit === habitId);
+// 行に当たっても、MASTER の点で、いちばん良い手よりこれ以上低い手は出さない(行は「強く勧める」。2026-11-02 社長 イ)
+const CARD_TACTIC_ROW_LOSS_MAX = 2;
 const cardTacticPresetOf = (card) => {
   const g = CARD_TACTIC_GROUPS.find((x) => x.id === card.g) || {};
   if (g.habit) return { ...(CARD_AI_HABITS[g.habit] || {}) };
@@ -461,14 +466,14 @@ const cardTacticPresetOf = (card) => {
 };
 // mainHabit … 助手の EXPERT・MASTER(cardAiPolicy の gambitKeepMain): メインの型は今のくせ(強さごとの調整ずみ)をそのまま使い、サブだけを足す
 //   when … 助手の EXPERT・MASTER: サブごとの「効く場面」(CARD_AI_TACTIC_WHEN の名前)。その場面では、サブを3分の1でなく丸ごと効かせる
-const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null, when = null) => {
+const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null, when = null, onHabit = false, habitId = null) => {
   const subW = (i) => (st && Array.isArray(when) && typeof when[i] === 'string' && typeof cardAiTacticWhenHit === 'function' && cardAiTacticWhenHit(when[i], st, p) ? 1 : CARD_TACTIC_SUB_W);
   const list = (Array.isArray(base) ? base : []).map((id, i) => ({ c: cardTacticOf(id), w: i === 0 ? 1 : subW(i), main: i === 0 })).filter((x) => x.c && x.c.cat === 'base');
   if (!list.length) return null;
   const h = Object.fromEntries(CARD_TACTIC_DIMS.map((d) => [d, mainHabit && Number.isFinite(mainHabit[d]) ? mainHabit[d] : 1]));
   if (mainHabit && mainHabit.flex) h.flex = true;
   if (mainHabit && mainHabit.mill) h.mill = mainHabit.mill;
-  list.forEach(({ c, w, main }) => { if (mainHabit && main) return; const pre = cardTacticPresetOf(c); CARD_TACTIC_DIMS.forEach((d) => { if (Number.isFinite(pre[d])) h[d] *= 1 + (pre[d] - 1) * w; }); });
+  list.forEach(({ c, w, main }) => { if (mainHabit && main && !onHabit) return; if (onHabit && cardTacticSameAsHabit(c, habitId)) return; const pre = cardTacticPresetOf(c); CARD_TACTIC_DIMS.forEach((d) => { if (Number.isFinite(pre[d])) h[d] *= 1 + (pre[d] - 1) * w; }); });
   const calm = list.filter((x) => x.c.g === 'tCalm').reduce((a, x) => a * (1 - 0.5 * x.w), 1);
   CARD_TACTIC_DIMS.forEach((d) => { h[d] = Math.min(2, Math.max(0.3, 1 + (h[d] - 1) * calm)); });
   const turn = st ? cardTacticOwnTurn(st, p) : 0;
@@ -490,12 +495,12 @@ const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null, when = null
 // 基本カードの細かいくせ(knob)。メインはいつも、サブは3回に1回の番(臨機応変型・持久型と同じ)
 //   skipMain … 助手の EXPERT・MASTER: メインの型は今の打ち方のままなので、メインの細かいくせは足さない
 //   (足すと、みゅあ(攻め型: 倒れるときだけ守る)が MASTER 50→28%・ドラ(守り型: いつも守る)が EXPERT 53→39% に落ちた。2026-10-29 60戦で測った)
-const cardTacticKnobsOf = (base, st = null, p = 0, skipMain = false) => {
+const cardTacticKnobsOf = (base, st = null, p = 0, skipMain = false, habitId = null) => {
   const turn = st ? cardTacticOwnTurn(st, p) : 0;
   const out = {};
   (Array.isArray(base) ? base : []).forEach((id, i) => {
     const c = cardTacticOf(id);
-    if (!c || c.cat !== 'base' || (i > 0 && turn % 3 !== 0) || (i === 0 && skipMain)) return;
+    if (!c || c.cat !== 'base' || (i > 0 && turn % 3 !== 0) || (i === 0 && skipMain) || cardTacticSameAsHabit(c, habitId)) return;
     const g = CARD_TACTIC_GROUPS.find((x) => x.id === c.g) || {};
     Object.assign(out, g.knob || {});
   });
@@ -681,7 +686,11 @@ const cardTacticRowAct = (db, st, policy, phase, row, aim, ctx) => {
   const usable = (o) => !(o.type === 'attack' && ctx.skip.has(o.mon)) && !(ctx.noBreeder && (o.type === 'breeder' || o.hand.some((i) => (cardOf(db, me.hand[i]) || {}).user === 'breeder')));
   const pickBest = (fits, floor = 0) => {
     const best = ctx.scored().find((x) => x.s > floor && usable(x.o) && fits(x.o) && cardTacticAimsAt(st, x.o, aim.foes));
-    return best ? { act: cardAiFillBind(db, st, best.o, policy) } : null;
+    if (!best) return null;
+    // MASTER の点で、出せるいちばん良い手より大きく損な手なら、この行は出さずに次の行・基本カードの型へ(2026-11-02 社長 イ)
+    const top = ctx.scored().find((x) => usable(x.o));
+    if (policy.gambitOnHabit && top && best.s < top.s - CARD_TACTIC_ROW_LOSS_MAX) return null;
+    return { act: cardAiFillBind(db, st, best.o, policy) };
   };
   if (act.g === 'ace') {
     const aces = Array.isArray(policy.aces) ? policy.aces : [];
@@ -779,8 +788,9 @@ const cardTacticDecide = (db, st, policy) => {
   if (!phase) return null;
   if (policy.gambitRandom && cardTacticSmartLevel(frames) === 'random') return { act: cardTacticRandomAct(db, st, policy) };
   const p = phase === 'guard' ? st.pending.defender : st.active;
-  const habit = cardTacticHabitOf(frames.base, st, p, policy.gambitKeepMain ? policy.habit : null, policy.gambitWhen || null);
-  const knobs = cardTacticKnobsOf(frames.base, st, p, !!policy.gambitKeepMain);
+  const sameId = policy.gambitOnHabit ? policy.gambitHabitId || null : null;
+  const habit = cardTacticHabitOf(frames.base, st, p, policy.gambitKeepMain || policy.gambitOnHabit ? policy.habit : null, policy.gambitWhen || null, !!policy.gambitOnHabit, sameId);
+  const knobs = cardTacticKnobsOf(frames.base, st, p, !!policy.gambitKeepMain, sameId);
   const pol = habit ? { ...policy, habit } : policy;
   let scored = null;
   const ctx = { mi: null, skip: new Set(), noBreeder: false, scored: () => { if (!scored) scored = cardAiAttackScored(db, st, cardAiAttackChoices(db, st, pol), pol); return scored; } };
