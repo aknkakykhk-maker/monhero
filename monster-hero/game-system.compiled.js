@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d33b550f36c03e17
+// source-sha256: 38c4dd7067e55395
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -61507,13 +61507,14 @@ function RhythmSongSelectScreen({
     "data-rhythm-beat-point-active-side": true,
     className: "rounded-xl border border-violet-400/30 bg-violet-950/25 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-violet-100"
   }, React.createElement("span", {
+    style: JA_WRAP_STYLE,
     className: "block"
-  }, "🎟️ ビートP獲得期間中"), eventLoopCampaign && React.createElement("span", {
+  }, jaWrap('🎟️ ビートP獲得期間中')), eventLoopCampaign && React.createElement("span", {
     className: "block text-amber-200"
   }, "周回 ", eventLoopCampaign.loopBoost, "倍"), React.createElement("span", {
     style: JA_WRAP_STYLE,
     className: "mt-0.5 block text-violet-200/80"
-  }, beatPointTargetSong ? jaWrap('選択中のイベント対象曲は1.5倍') : '公開曲なら獲得できます')) : null;
+  }, beatPointTargetSong ? jaWrap('選択中のイベント対象曲は1.5倍') : jaWrap('公開曲なら獲得できます'))) : null;
   const [beatPointBalance, setBeatPointBalance] = React.useState(null);
   const [eventNoticeOpen, setEventNoticeOpen] = React.useState(false);
   React.useEffect(() => {
@@ -61816,7 +61817,7 @@ function RhythmSongSelectScreen({
     "data-rhythm-event-notice-toggle": true,
     "aria-expanded": "true",
     onClick: () => setEventNoticeOpen(false),
-    className: "mb-1 min-h-[32px] w-full rounded-lg text-left text-[10px] font-black text-fuchsia-200 active:scale-[.99]"
+    className: "min-h-[44px] w-full rounded-lg text-left text-[10px] font-black text-fuchsia-200 active:scale-[.99]"
   }, "▲ たたむ"), React.createElement(AssistantBubble, {
     scene: "rhythmWeeklyEvent",
     condition: rhythmEventNotice.kind === 'limited' ? 'limited' : null,

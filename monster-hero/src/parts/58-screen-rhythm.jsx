@@ -101,9 +101,9 @@ function RhythmSongSelectScreen({
         </div>
         :beatPointEvent
           ?<div data-rhythm-beat-band-landscape data-rhythm-beat-point-active-side className="rounded-xl border border-violet-400/30 bg-violet-950/25 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-violet-100">
-            <span className="block">🎟️ ビートP獲得期間中</span>
+            <span style={JA_WRAP_STYLE} className="block">{jaWrap('🎟️ ビートP獲得期間中')}</span>
             {eventLoopCampaign&&<span className="block text-amber-200">周回 {eventLoopCampaign.loopBoost}倍</span>}
-            <span style={JA_WRAP_STYLE} className="mt-0.5 block text-violet-200/80">{beatPointTargetSong?jaWrap('選択中のイベント対象曲は1.5倍'):'公開曲なら獲得できます'}</span>
+            <span style={JA_WRAP_STYLE} className="mt-0.5 block text-violet-200/80">{beatPointTargetSong?jaWrap('選択中のイベント対象曲は1.5倍'):jaWrap('公開曲なら獲得できます')}</span>
           </div>
           :null;
       // 所持ビートP(2026-09-28・ユーザー指示「曲選択画面で邪魔にならないところにビートPの表示を作って」)。
@@ -344,7 +344,7 @@ function RhythmSongSelectScreen({
           <div className="flex items-start gap-1">
             <div className="min-w-0 flex-1">
               <button type="button" data-rhythm-event-notice-toggle aria-expanded="true" onClick={()=>setEventNoticeOpen(false)}
-                className="mb-1 min-h-[32px] w-full rounded-lg text-left text-[10px] font-black text-fuchsia-200 active:scale-[.99]">▲ たたむ</button>
+                className="min-h-[44px] w-full rounded-lg text-left text-[10px] font-black text-fuchsia-200 active:scale-[.99]">▲ たたむ</button>
               <AssistantBubble scene="rhythmWeeklyEvent" condition={rhythmEventNotice.kind==='limited'?'limited':null} compact/>
               {/* 期間限定のときはイベントの名前を出す。「今週の対象曲」のままだと、
                   週間ランキングが動いていると誤解される */}
