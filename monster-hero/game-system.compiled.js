@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c4b3d6a437aaacd9
+// source-sha256: 9a34a609a27c664e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -34880,6 +34880,23 @@ const RhythmSongSelect = ({
   const [sortOpen, setSortOpen] = React.useState(false);
   const [genreOpen, setGenreOpen] = React.useState(false);
   const [artZoom, setArtZoom] = React.useState(false);
+  const [artPage, setArtPage] = React.useState(0);
+  const [lyricFull, setLyricFull] = React.useState(null);
+  const artPagesRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!artZoom) {
+      setArtPage(0);
+      setLyricFull(null);
+    }
+  }, [artZoom]);
+  const goArtPage = i => {
+    const el = artPagesRef.current;
+    if (!el) return;
+    el.scrollTo({
+      left: i * el.clientWidth,
+      behavior: 'smooth'
+    });
+  };
   const playable = (songs || []).filter(song => (difficulties || []).some(difficulty => rhythmChartPlayable(song, difficulty.id)));
   const setSongId = id => {
     if (typeof onSongId === 'function') onSongId(id);
@@ -35478,15 +35495,94 @@ const RhythmSongSelect = ({
         alignItems: 'center',
         justifyContent: 'center',
         overflowY: 'auto',
-        '--mh-art-max-h': `min(74%, calc(100% - ${reserve}px))`
+        '--mh-art-max-h': `min(74%, calc(100% - ${reserve}px))`,
+        containerType: 'size',
+        '--mh-art-page-h': `min(66cqh, calc(100cqh - ${reserve + 70}px))`
       },
       onClick: () => setArtZoom(false)
-    }, React.createElement("img", {
-      src: typeof rhythmSongArtSrc !== 'undefined' ? rhythmSongArtSrc(song) : song.artwork,
-      alt: `${rhythmSongFullName(song)}のジャケット`,
-      onClick: e => e.stopPropagation(),
-      className: "max-h-[var(--mh-art-max-h)] min-h-[120px] w-auto max-w-[92%] shrink-0 rounded-2xl border border-white/25 object-contain landscape:max-h-[88%] landscape:max-w-[55%]"
-    }), React.createElement("div", {
+    }, (() => {
+      const artSrc = typeof rhythmSongArtSrc !== 'undefined' ? rhythmSongArtSrc(song) : song.artwork;
+      const lyrics = typeof rhythmSongLyricCards === 'function' ? rhythmSongLyricCards(song) : [];
+      if (!lyrics.length) return React.createElement("img", {
+        src: artSrc,
+        alt: `${rhythmSongFullName(song)}のジャケット`,
+        onClick: e => e.stopPropagation(),
+        className: "max-h-[var(--mh-art-max-h)] min-h-[120px] w-auto max-w-[92%] shrink-0 rounded-2xl border border-white/25 object-contain landscape:max-h-[88%] landscape:max-w-[55%]"
+      });
+      const pages = [{
+        src: artSrc,
+        alt: `${rhythmSongFullName(song)}のジャケット`
+      }, ...lyrics.map((src, i) => ({
+        src,
+        alt: `${rhythmSongFullName(song)}の歌詞カード${lyrics.length > 1 ? ` ${i + 1}` : ''}`,
+        lyric: true
+      }))];
+      const cur = Math.min(artPage, pages.length - 1);
+      return React.createElement("div", {
+        "data-rhythm-song-art-pages": true,
+        onClick: e => e.stopPropagation(),
+        className: "flex w-full max-w-[92%] shrink-0 flex-col items-center landscape:max-w-[55%]"
+      }, React.createElement("div", {
+        ref: artPagesRef,
+        "data-rhythm-song-art-pager": true,
+        onScroll: e => {
+          const el = e.currentTarget;
+          const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
+          if (i !== artPage) setArtPage(i);
+        },
+        className: "flex w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain",
+        style: {
+          scrollbarWidth: 'none',
+          WebkitOverflowScrolling: 'touch'
+        }
+      }, pages.map((page, i) => React.createElement("div", {
+        key: page.src,
+        "data-rhythm-song-art-page": page.lyric ? 'lyric' : 'art',
+        className: "flex w-full shrink-0 snap-center items-center justify-center"
+      }, page.lyric ? React.createElement("button", {
+        type: "button",
+        "data-rhythm-song-lyric-open": true,
+        onClick: () => setLyricFull(page.src),
+        "aria-label": `${page.alt}を大きく見る`,
+        className: "relative"
+      }, React.createElement("img", {
+        src: page.src,
+        alt: page.alt,
+        className: "max-h-[var(--mh-art-page-h)] min-h-[120px] w-auto max-w-full rounded-2xl border border-white/25 object-contain"
+      }), React.createElement("span", {
+        className: "absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-1 text-[11px] font-black text-white"
+      }, "🔍 大きく見る")) : React.createElement("img", {
+        src: page.src,
+        alt: page.alt,
+        className: "max-h-[var(--mh-art-page-h)] min-h-[120px] w-auto max-w-full rounded-2xl border border-white/25 object-contain"
+      })))), React.createElement("div", {
+        "data-rhythm-song-art-dots": true,
+        className: "mt-2 flex items-center gap-2"
+      }, React.createElement("button", {
+        type: "button",
+        "data-rhythm-song-art-prev": true,
+        disabled: cur <= 0,
+        onClick: () => goArtPage(cur - 1),
+        "aria-label": "前のページ",
+        className: "min-h-[44px] min-w-[44px] rounded-xl bg-white/10 text-sm font-black text-white disabled:opacity-30"
+      }, "◀"), pages.map((page, i) => React.createElement("button", {
+        key: page.src,
+        type: "button",
+        onClick: () => goArtPage(i),
+        "aria-label": `${i + 1}ページ目(${page.lyric ? '歌詞カード' : 'ジャケット'})`,
+        "aria-current": i === cur ? 'true' : undefined,
+        className: `min-h-[44px] px-1 text-base leading-none ${i === cur ? 'text-white' : 'text-white/40'}`
+      }, i === cur ? '●' : '○')), React.createElement("button", {
+        type: "button",
+        "data-rhythm-song-art-next": true,
+        disabled: cur >= pages.length - 1,
+        onClick: () => goArtPage(cur + 1),
+        "aria-label": "次のページ",
+        className: "min-h-[44px] min-w-[44px] rounded-xl bg-white/10 text-sm font-black text-white disabled:opacity-30"
+      }, "▶")), React.createElement("p", {
+        className: "text-[10px] font-bold text-slate-400"
+      }, cur === 0 ? '横に送ると歌詞カード' : '歌詞カードを押すと大きく見られます'));
+    })(), React.createElement("div", {
       className: "flex w-full max-w-[92%] flex-col items-center landscape:w-auto landscape:max-w-[38%]"
     }, React.createElement("b", {
       className: "mt-3 max-w-full text-center text-sm font-black leading-tight text-white landscape:mt-0"
@@ -35512,7 +35608,39 @@ const RhythmSongSelect = ({
         minHeight: '52px'
       }
     }, "閉じる")));
-  })(), genreOpen && React.createElement("div", {
+  })(), artZoom && lyricFull && React.createElement("div", {
+    "data-rhythm-song-lyric-full": true,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "歌詞カード",
+    className: "fixed inset-0 z-[9001] overflow-auto bg-black",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: 9001,
+      backgroundColor: '#000',
+      overflow: 'auto',
+      WebkitOverflowScrolling: 'touch'
+    }
+  }, React.createElement("img", {
+    src: lyricFull,
+    alt: "歌詞カード",
+    className: "block h-auto max-w-none",
+    style: {
+      width: 'max(100%, 900px)'
+    }
+  }), React.createElement("button", {
+    type: "button",
+    "data-rhythm-song-lyric-full-close": true,
+    onClick: () => setLyricFull(null),
+    className: "fixed right-3 top-3 min-h-[48px] rounded-xl bg-slate-800/90 px-4 text-sm font-black text-white",
+    style: {
+      position: 'fixed',
+      top: 'max(12px, env(safe-area-inset-top))',
+      right: 12,
+      minHeight: '48px'
+    }
+  }, "✕ もどる")), genreOpen && React.createElement("div", {
     "data-rhythm-genre-sheet": true,
     className: "fixed inset-0 z-[9000] flex items-end justify-center",
     style: {
