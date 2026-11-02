@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c04cf35ec77acede
+// source-sha256: 8bb70ceed1ab5ed5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -33729,8 +33729,9 @@ const RhythmOptions = ({
     "data-rhythm-option-field": true,
     className: `${full && !wide ? 'col-span-2' : ''} rounded-xl border border-cyan-400/20 bg-slate-950/55 ${wide ? 'p-1.5' : 'p-2.5'}`
   }, React.createElement("p", {
-    className: `rounded-lg bg-cyan-700/70 px-2 text-center ${label} ${wide ? 'mb-1 py-0.5 text-[11px]' : 'mb-2 py-1'}`
-  }, title), control, description && !wide && React.createElement("details", {
+    className: `rounded-lg bg-cyan-700/70 px-2 text-center ${label} ${wide ? 'mb-1 py-0.5 text-[11px]' : 'mb-2 py-1'}`,
+    style: JA_WRAP_STYLE
+  }, typeof title === 'string' ? jaWrap(title) : title), control, description && !wide && React.createElement("details", {
     "data-rhythm-option-help": true,
     className: "mt-2"
   }, React.createElement("summary", {
@@ -54965,7 +54966,7 @@ const jaWrapPoints = text => {
     for (const {
       segment
     } of _jaSegmenter.segment(s)) {
-      if (/^は[ぁ-ゖ]/.test(segment) && /^(?:これ|それ|あれ|どれ|ここ|そこ|あそこ|わたし|あたし|ワシ|吾輩|余)$/.test(segs[segs.length - 1] || '')) segs.push('は', segment.slice(1));else segs.push(segment);
+      if (/^は[ぁ-ゖ]/.test(segment) && /^(?:これ|それ|あれ|どれ|ここ|そこ|あそこ|わたし|あたし|ワシ|吾輩|余)$/.test(segs[segs.length - 1] || '')) segs.push('は', segment.slice(1));else if (segment === 'どういたしまして') segs.push('どう', 'いたしまして');else segs.push(segment);
     }
     const groups = [];
     let pos = 0;

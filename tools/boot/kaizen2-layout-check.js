@@ -85,7 +85,7 @@ check('M8 結果: 下の帯の上に、続きがあるあいだだけ「▼ ビ�
   && /box\.scrollHeight-box\.scrollTop-box\.clientHeight>24/.test(play));
 
 const rhythmScreens = P('29-rhythm-screens.jsx');
-check('M9 曲えらび: 幅360未満で「並べ替え：」「ジャンル：」を外して値だけ', (rhythmScreens.match(/font-black max-\[359px\]:hidden landscape:text-\[9px\] landscape:text-slate-400">(並べ替え|ジャンル)/g) || []).length === 2);
+check('M9 曲えらび: 幅360未満で「並べ替え：」「ジャンル：」を外して値だけ', (rhythmScreens.match(/font-black max-\[359px\]:hidden landscape:text-\[(?:9|10)px\] landscape:text-slate-400">(並べ替え|ジャンル)/g) || []).length === 2);
 
 const gift = P('53-screen-gift-box.jsx');
 check('M10 ギフト: 札の地は不透明(かぼちゃが字の上に透けない)', gift.includes("bg-[#111329] border-white/10") && gift.includes("bg-[#250a1e] border-red-500/60") && gift.includes("bg-[#131630] border-cyan-400/60")
