@@ -83,6 +83,9 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
           await toModeSelect();
           await clickText('ソロライブ');
           await page.waitForSelector('[data-rhythm-demo-start]', { timeout: 30000 }); await page.waitForTimeout(600); await closeAll();
+          // イベント開催中は、その週の初回だけ出る案内(絵・対象曲・ランキングへ)が曲の一覧を押し下げ、390×844 では一覧が下の欄の裏に隠れる。
+          // 見たいのは演奏中の画面なので、プレイヤーと同じく×で閉じてから曲を選ぶ(2026-11-02 パンドライベントの開始で落ちた)
+          await page.evaluate(() => document.querySelector('[data-rhythm-event-notice-close]')?.click()); await page.waitForTimeout(300);
           if (songId) {
             // 版をまとめた行を押してから、版の切り替えで選ぶ(行の目印は代表の版の id のことがある)
             const base = songId.replace(/_(short|full)$/, '');
