@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4b0d7416ae4a462f
+// source-sha256: b2f48e37ee9ef524
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99874,7 +99874,8 @@ const CardNameFit = ({
   min = 7,
   className = '',
   style = null,
-  twoLine = false
+  twoLine = false,
+  tall = false
 }) => {
   const text = String(name == null ? '' : name);
   const m = /^(.+?)([(（].+)$/.exec(text);
@@ -99892,9 +99893,10 @@ const CardNameFit = ({
     }
   }, t);
   return React.createElement("span", {
-    className: `block w-full ${className}`,
+    className: `block w-full ${two ? `mh-nf-n${Math.min(10, [...text].length)}` : ''} ${twoLine && tall ? 'mh-nf-tall' : ''} ${className}`,
     style: {
       containerType: 'inline-size',
+      '--nf-2l': `${Math.round(size * 2.1)}px`,
       ...(style || {})
     }
   }, React.createElement("span", {
@@ -101060,6 +101062,7 @@ const CardMonSlot = ({
   compact = false,
   tiny = false,
   wide = false,
+  grow = false,
   motion = null,
   calm = false,
   guardTag = '',
@@ -101117,6 +101120,7 @@ const CardMonSlot = ({
     className: `inline-block whitespace-nowrap rounded bg-rose-900 font-bold ${tiny ? 'px-0.5 text-[9px] leading-tight' : 'ml-0.5 px-1 text-[10px]'}`
   }, "攻撃できない")));
   const wideArtH = 'clamp(40px, calc((var(--mh-vh, 100svh) - 262px) / 2), 64px)';
+  const growH = grow && !wide && (tiny || compact) ? tiny ? 'clamp(44px, calc((var(--mh-vh, 100svh) - 576px) / 2 + 44px), 76px)' : `clamp(56px, calc((var(--mh-vh, 100svh) - 640px) / 2 + 56px), ${opp ? 84 : 96}px)` : null;
   const artSize = wide ? 'max-w-[88px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : opp ? 'max-h-[78px] max-w-[96px]' : 'max-h-[106px] max-w-[126px]';
   const artFit = art ? cardFieldArtTransform(art, opp) : null;
   const kira = art && !mon.ko ? cardKiraOf(db, mon.no) : null;
@@ -101127,6 +101131,10 @@ const CardMonSlot = ({
     style: {
       ...(wide ? {
         maxHeight: wideArtH
+      } : null),
+      ...(growH ? {
+        maxHeight: growH,
+        maxWidth: `calc(${growH} * 1.36)`
       } : null),
       ...(artFit ? {
         transform: artFit
@@ -101173,6 +101181,9 @@ const CardMonSlot = ({
       isolation: 'isolate',
       ...(wide ? {
         height: wideArtH
+      } : null),
+      ...(growH ? {
+        height: growH
       } : null),
       ...(mv && mv.type === 'attack' ? {
         '--atk-dx': `${mv.dx}px`,
@@ -102267,6 +102278,10 @@ const CardBattleBoard = ({
   })();
   const handLarge = settings.handText === 'LARGE' && !tiny;
   const handTiny = tiny && !wide;
+  const handLongName = me.hand.some(no => {
+    const c = cardOf(db, no);
+    return [...String(c ? c.name : no)].length >= 7;
+  });
   const tapHand = i => {
     Audio_.fgSe.tap();
     if (tutorial && myTurn && (!cardTutorialHandOk(tutStage.id, st, i) || tutStage.next || tutQ.length > 1)) {
@@ -103075,6 +103090,7 @@ const CardBattleBoard = ({
     compact: compact,
     tiny: tiny,
     wide: wide,
+    grow: !tutorial && !replay,
     calm: settings.shake === 'OFF',
     motion: motions[`1-${m}`] || null
   }))), React.createElement("div", {
@@ -103291,6 +103307,7 @@ const CardBattleBoard = ({
     compact: compact,
     tiny: tiny,
     wide: wide,
+    grow: !tutorial && !replay,
     calm: settings.shake === 'OFF',
     motion: motions[`0-${m}`] || null
   }))), React.createElement("div", {
@@ -103401,7 +103418,8 @@ const CardBattleBoard = ({
       name: c ? c.name : no,
       size: handLarge ? compact ? 12 : 13 : compact ? 10 : 11,
       className: "font-bold leading-tight",
-      twoLine: true
+      twoLine: true,
+      tall: handLongName
     }), handTiny ? React.createElement(React.Fragment, null, React.createElement(CardNameFit, {
       name: `ガッツ${c ? c.guts : '-'}`,
       size: 10,
@@ -103839,7 +103857,7 @@ const CardBattleBoard = ({
     className: "text-[15px] font-black",
     style: JA_LABEL_STYLE
   }, jaWrap(`${choice.from ? `${choice.from}: ` : ''}${choice.title}`)), React.createElement("div", {
-    className: "mt-2 grid max-h-[55vh] gap-1.5 overflow-y-auto"
+    className: "mt-2 grid max-h-[55vh] gap-1.5 overflow-y-auto [@media(orientation:portrait)_and_(max-height:700px)]:grid-cols-2"
   }, choice.items.map(({
     i,
     no,
@@ -106378,7 +106396,7 @@ const CardBattleScreen = ({
       alt: a.name,
       className: "w-[42%]",
       style: {
-        height: 'min(150px, max(17vh, 28vmin))'
+        height: 'var(--mh-foe-art-h, min(150px, max(17vh, 28vmin)))'
       }
     }), React.createElement("div", {
       className: "min-w-0 flex-1 pb-2"
@@ -107655,7 +107673,9 @@ const CardDeckPickTile = ({
     className: "mt-0.5 flex items-center gap-0.5"
   }, React.createElement(CardNameFit, {
     name: name,
-    className: "min-w-0 flex-1 font-bold leading-tight text-slate-100"
+    className: "min-w-0 flex-1 font-bold leading-tight text-slate-100",
+    twoLine: true,
+    tall: true
   }), onDetail && React.createElement("button", {
     type: "button",
     "data-card-deck-info": no,
@@ -166500,7 +166520,15 @@ const createAnimationStyle = () => {
     @keyframes mhCardFlip { 0% { transform: rotateY(0); } 100% { transform: rotateY(180deg); } }
     /* 手札の名前(84 の CardNameFit twoLine): 箱が 56px 以下のときだけ、長い名前を言葉の切れ目で2行に折る。切れ目の無い1語は字の間を詰めて1行(mh-nf-squeeze)。短い名前も2行ぶんの高さを取ってそろえる */
     .mh-nf-b { display: none; }
+    /* フリー対戦(84 の view 'foe')・背の低い縦の画面: 助手の顔と紹介の立ち絵を小さくして、紹介の欄を下の「対戦する」の帯に隠さない(2026-11-01 見た目の点検 D。390×600 で 26px 隠れていた) */
+    @media (orientation: portrait) and (max-height: 700px) { [data-card-top="foe"] { --mh-foe-art-h: 12vh; } [data-card-top="foe"] [data-card-foe] > img { height: 40px; width: 40px; } }
     @container (max-width: 56px) { .mh-nf-a, .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: 20px; line-height: 1; } .mh-nf-a.mh-nf-hide { display: none; } .mh-nf-squeeze { letter-spacing: -0.07em; } }
+    /* 2行に折る幅を名前の長さで決める(84 の CardNameFit。1行のまま 11px で入らない幅から2行へ。2026-11-01 見た目の点検 C)。tall は短い名前も2行ぶんの高さ。56px 以下は上の決まりのまま */
+    @container (min-width: 57px) and (max-width: 115px) { .mh-nf-tall > .mh-nf-a { display: flex; flex-direction: column; justify-content: center; min-height: var(--nf-2l, 20px); line-height: 1.05; } }
+    @container (min-width: 57px) and (max-width: 80px) { .mh-nf-n7 > .mh-nf-a.mh-nf-hide { display: none; } .mh-nf-n7 > .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: var(--nf-2l, 20px); line-height: 1.05; } }
+    @container (min-width: 57px) and (max-width: 92px) { .mh-nf-n8 > .mh-nf-a.mh-nf-hide { display: none; } .mh-nf-n8 > .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: var(--nf-2l, 20px); line-height: 1.05; } }
+    @container (min-width: 57px) and (max-width: 103px) { .mh-nf-n9 > .mh-nf-a.mh-nf-hide { display: none; } .mh-nf-n9 > .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: var(--nf-2l, 20px); line-height: 1.05; } }
+    @container (min-width: 57px) and (max-width: 115px) { .mh-nf-n10 > .mh-nf-a.mh-nf-hide { display: none; } .mh-nf-n10 > .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: var(--nf-2l, 20px); line-height: 1.05; } }
     .mh-card-jump { animation: mhCardJump .9s ease-out both; }
     .mh-card-afterimage { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; pointer-events: none; filter: grayscale(.4) brightness(1.4) drop-shadow(0 0 6px rgba(125,211,252,.9)); animation: mhCardAfter .62s ease-out both; }
     .mh-card-air-mark { position: absolute; top: -2px; left: 50%; margin-left: -18px; width: 36px; border-radius: 6px; background: rgba(8,145,178,.92); color: #ecfeff; font-size: 11px; font-weight: 900; text-align: center; pointer-events: none; animation: mhCardPop .9s ease-out both; }
