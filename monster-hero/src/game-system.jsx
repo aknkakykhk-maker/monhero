@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7815e94545bb57d9
+// generated-sha256: f510dfd8a08e10d4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -70309,7 +70309,8 @@ const CardShareDeckDetail = ({ entry, onClose, fight = null, rent = null }) => {
   const [record, setRecord] = useState(undefined);
   useEffect(() => { let alive = true; void cardShareRecordOf(entry.ownerId).then((r) => { if (alive) setRecord(r); }).catch(() => { if (alive) setRecord(null); }); return () => { alive = false; }; }, [entry.ownerId]);
   const losses = Math.max(0, (entry.battles || 0) - (entry.deckWins || 0));
-  const dayText = (ms) => { const d = new Date(ms); return Number.isFinite(d.getTime()) ? `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : ''; };
+  // 日時は日本時間で出す(戦われた試合・見返しの一覧の cardReplayWhen と同じ。2026-11-01 点検で、ここだけ端末の時計だった)
+  const dayText = (ms) => { if (!Number.isFinite(ms) || ms <= 0) return ''; const d = new Date(ms + 9 * 3600 * 1000); return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`; };
   return (
     <div data-card-share-deck-detail className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={onClose}>
       <div className="max-h-[86vh] w-full max-w-[440px] overflow-y-auto rounded-2xl border-2 border-amber-600/60 bg-slate-950 p-3" onClick={(e) => e.stopPropagation()}>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9c9f541e2af48373
+// source-sha256: 0d6a0ba6091ec2b6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -118822,8 +118822,9 @@ const CardShareDeckDetail = ({
   }, [entry.ownerId]);
   const losses = Math.max(0, (entry.battles || 0) - (entry.deckWins || 0));
   const dayText = ms => {
-    const d = new Date(ms);
-    return Number.isFinite(d.getTime()) ? `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : '';
+    if (!Number.isFinite(ms) || ms <= 0) return '';
+    const d = new Date(ms + 9 * 3600 * 1000);
+    return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
   };
   return React.createElement("div", {
     "data-card-share-deck-detail": true,
