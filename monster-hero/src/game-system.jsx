@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e72232459f91c5e2
+// generated-sha256: 40f810430132642d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -22354,7 +22354,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
             <button type="button" data-rhythm-song-art-next disabled={cur>=pages.length-1} onClick={()=>goArtPage(cur+1)} aria-label="次のページ"
               className="min-h-[44px] min-w-[44px] rounded-xl bg-white/10 text-sm font-black text-white disabled:opacity-30">▶</button>
           </div>
-          <p className="text-[10px] font-bold text-slate-400">{cur===0?'横に送ると歌詞カード':'歌詞カードを押すと大きく見られます'}</p>
+          <p style={JA_WRAP_STYLE} className="text-[10px] font-bold text-slate-400">{jaWrap(cur===0?'横に送ると歌詞カード':'歌詞カードを押すと大きく見られます')}</p>
         </div>;
       })()}
       <div className="flex w-full max-w-[92%] flex-col items-center landscape:w-auto landscape:max-w-[38%]">
@@ -97668,12 +97668,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 (2026-10-23 社長「枠からはみ出してる。縦のスペース空いてるんだから2列にするとかしてちゃんと見た目よくして」。
                 きゅうこの加入のお話は7人で、話している子が大きくなると左右の端が枠の外へ切れていた)。
                 ★1人ぶんの枠は話している子の大きさで固定し、大きくなっても段の幅も高さも変わらない(端の子でもはみ出さない) */}
-            {(()=>{const many=cast.length>4;const big=many?60:84,small=many?48:64;return(
-            <div data-story-cast={cast.length} className={`mb-3 flex items-end justify-center ${many?'flex-wrap gap-x-1 gap-y-1.5':'gap-3'}`}>
+            {/* 真ん中にモンスターが出ている行は、顔の列を1段・小さめにして、モンスターの置き場を空ける
+                (2026-11-02 社長「立ち絵が小さすぎる」。iPhone の縦では顔の列が2段で窓が高くなり、パンドラが背丈50px ほどに縮んでいた) */}
+            {(()=>{const compact=storyMonsters.length>0;const many=!compact&&cast.length>4;const big=compact?44:many?60:84,small=compact?36:many?48:64;return(
+            <div data-story-cast={cast.length} data-story-cast-compact={compact?'':undefined} className={`${compact?'mb-2 flex-nowrap gap-1.5':'mb-3'} flex items-end justify-center ${many?'flex-wrap gap-x-1 gap-y-1.5':compact?'':'gap-3'}`}>
               {cast.map(who=>{
                 const talking=!speakingGuest&&who.id===line.who;
                 return(
-                  <div key={who.id} data-story-cast-member={who.id} className={`flex min-w-0 flex-col items-center justify-end gap-1 ${talking?'':'opacity-35'}`} style={{width:many?'calc(25% - 4px)':undefined,height:many?big+16:undefined,transform:talking||many?'scale(1)':'scale(.86)',transition:'opacity .18s, transform .18s'}}>
+                  <div key={who.id} data-story-cast-member={who.id} className={`flex min-w-0 flex-col items-center justify-end gap-1 ${talking?'':'opacity-35'}`} style={{width:many?'calc(25% - 4px)':undefined,height:many||compact?big+16:undefined,transform:talking||many||compact?'scale(1)':'scale(.86)',transition:'opacity .18s, transform .18s'}}>
                     <span style={{display:'block',filter:talking?`drop-shadow(0 0 10px ${who.accent})`:'none',transition:'filter .2s'}}><AssistantFace who={who} size={talking?big:small} accent={who.accent} expression={talking?line.e:'normal'}/></span>
                     <span className="max-w-full truncate text-[9px] font-black leading-none" style={{color:talking?who.accent:'#64748b'}}>{talking&&line.name?line.name:who.name}</span>
                   </div>

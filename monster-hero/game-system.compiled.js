@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3d6d082b02a42f57
+// source-sha256: 47b0bb4c07afb384
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -35635,8 +35635,9 @@ const RhythmSongSelect = ({
         "aria-label": "次のページ",
         className: "min-h-[44px] min-w-[44px] rounded-xl bg-white/10 text-sm font-black text-white disabled:opacity-30"
       }, "▶")), React.createElement("p", {
+        style: JA_WRAP_STYLE,
         className: "text-[10px] font-bold text-slate-400"
-      }, cur === 0 ? '横に送ると歌詞カード' : '歌詞カードを押すと大きく見られます'));
+      }, jaWrap(cur === 0 ? '横に送ると歌詞カード' : '歌詞カードを押すと大きく見られます')));
     })(), React.createElement("div", {
       className: "flex w-full max-w-[92%] flex-col items-center landscape:w-auto landscape:max-w-[38%]"
     }, React.createElement("b", {
@@ -160431,12 +160432,14 @@ function MonsterHeroGame() {
       }, React.createElement("p", {
         className: "mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300"
       }, eventReplay.live ? '' : '回想・', event?.title || ''), (() => {
-        const many = cast.length > 4;
-        const big = many ? 60 : 84,
-          small = many ? 48 : 64;
+        const compact = storyMonsters.length > 0;
+        const many = !compact && cast.length > 4;
+        const big = compact ? 44 : many ? 60 : 84,
+          small = compact ? 36 : many ? 48 : 64;
         return React.createElement("div", {
           "data-story-cast": cast.length,
-          className: `mb-3 flex items-end justify-center ${many ? 'flex-wrap gap-x-1 gap-y-1.5' : 'gap-3'}`
+          "data-story-cast-compact": compact ? '' : undefined,
+          className: `${compact ? 'mb-2 flex-nowrap gap-1.5' : 'mb-3'} flex items-end justify-center ${many ? 'flex-wrap gap-x-1 gap-y-1.5' : compact ? '' : 'gap-3'}`
         }, cast.map(who => {
           const talking = !speakingGuest && who.id === line.who;
           return React.createElement("div", {
@@ -160445,8 +160448,8 @@ function MonsterHeroGame() {
             className: `flex min-w-0 flex-col items-center justify-end gap-1 ${talking ? '' : 'opacity-35'}`,
             style: {
               width: many ? 'calc(25% - 4px)' : undefined,
-              height: many ? big + 16 : undefined,
-              transform: talking || many ? 'scale(1)' : 'scale(.86)',
+              height: many || compact ? big + 16 : undefined,
+              transform: talking || many || compact ? 'scale(1)' : 'scale(.86)',
               transition: 'opacity .18s, transform .18s'
             }
           }, React.createElement("span", {

@@ -1339,7 +1339,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
             <button type="button" data-rhythm-song-art-next disabled={cur>=pages.length-1} onClick={()=>goArtPage(cur+1)} aria-label="次のページ"
               className="min-h-[44px] min-w-[44px] rounded-xl bg-white/10 text-sm font-black text-white disabled:opacity-30">▶</button>
           </div>
-          <p className="text-[10px] font-bold text-slate-400">{cur===0?'横に送ると歌詞カード':'歌詞カードを押すと大きく見られます'}</p>
+          <p style={JA_WRAP_STYLE} className="text-[10px] font-bold text-slate-400">{jaWrap(cur===0?'横に送ると歌詞カード':'歌詞カードを押すと大きく見られます')}</p>
         </div>;
       })()}
       <div className="flex w-full max-w-[92%] flex-col items-center landscape:w-auto landscape:max-w-[38%]">
