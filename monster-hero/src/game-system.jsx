@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c5bf3e1b434acc5b
+// generated-sha256: 13282008d713d354
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10379,13 +10379,29 @@ const normalizeBeatRank = (raw) => {
   return { v: 1, xp: playerRankSafeXp(r.xp), day: typeof r.day === 'string' ? r.day.slice(0, 10) : '', dayFirst: r.dayFirst === true, got, k };
 };
 
+// 曲の長さで経験値を変える(2026-11-02 社長「時間の長さで変動するように」・案A 比例・「2分を今までと同じに」)。
+//   難易度の基本の値 × 曲の長さ÷2:00。上限・下限なし。端数は四捨五入・最低1。
+//   長さが分からないとき(0・壊れた値)は今までどおり(×1)。これまでにたまった経験値はさかのぼらない(保存の形も変えない)
+const BEAT_RANK_BASE_MS = 120000;
+const beatRankLengthRate = (durationMs) => {
+  const ms = Number(durationMs);
+  return Number.isFinite(ms) && ms > 0 ? ms / BEAT_RANK_BASE_MS : 1;
+};
+// 内わけに出す長さ(「4:34」)
+const beatRankLengthText = (durationMs) => {
+  const sec = Math.round(Number(durationMs) / 1000);
+  return Number.isFinite(sec) && sec > 0 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` : '';
+};
 // 1曲ぶんの経験値と内わけ(その日はじめての +30 は入れない)。経験値の入らない難易度なら { xp:0 }
-const beatRankPlayXp = ({ difficultyId, cleared = true, fullCombo = false, allMarvelous = false, multi = false }) => {
-  const base = BEAT_RANK_XP[difficultyId];
-  if (!base) return { xp: 0, parts: [] };
+const beatRankPlayXp = ({ difficultyId, cleared = true, fullCombo = false, allMarvelous = false, multi = false, durationMs = 0 }) => {
+  const base0 = BEAT_RANK_XP[difficultyId];
+  if (!base0) return { xp: 0, parts: [] };
+  const rate = beatRankLengthRate(durationMs);
+  const base = base0 * rate;
   const parts = [];
-  let xp = cleared ? base : Math.max(1, Math.round(base * BEAT_RANK_BONUS.failRate));
-  parts.push({ label: cleared ? difficultyId : `${difficultyId}(ライフが尽きた)`, xp });
+  let xp = cleared ? Math.max(1, Math.round(base)) : Math.max(1, Math.round(base * BEAT_RANK_BONUS.failRate));
+  const len = beatRankLengthText(durationMs);
+  parts.push({ label: `${difficultyId}${len ? `・${len}` : ''}${cleared ? '' : '(ライフが尽きた)'}`, xp });
   if (cleared && allMarvelous) { xp += BEAT_RANK_BONUS.allMarvelous; parts.push({ label: '全部 MARVELOUS', xp: BEAT_RANK_BONUS.allMarvelous }); }
   else if (cleared && fullCombo) { xp += BEAT_RANK_BONUS.fullCombo; parts.push({ label: 'フルコンボ', xp: BEAT_RANK_BONUS.fullCombo }); }
   if (multi) { const scaled = Math.round(xp * BEAT_RANK_BONUS.multiScale); parts.push({ label: 'みんなで対戦 ×1.5', xp: scaled - xp }); xp = scaled; }
@@ -10394,10 +10410,10 @@ const beatRankPlayXp = ({ difficultyId, cleared = true, fullCombo = false, allMa
 
 // 経験値を足した次の値と、新しくもらうごほうび。today は日本時間の 'YYYY-MM-DD'(呼ぶ側が渡す)
 // 返り値: { next, add, parts, from, to, tickets, beatPoints, bonusTickets, bonusPoints }(bonus* は5ランクごとのおまけの分。tickets・beatPoints に含む)
-const beatRankAfter = (prev, { difficultyId, cleared = true, fullCombo, allMarvelous, multi, today }) => {
+const beatRankAfter = (prev, { difficultyId, cleared = true, fullCombo, allMarvelous, multi, today, durationMs = 0 }) => {
   const cur = normalizeBeatRank(prev);
   const from = playerRankInfo(cur.xp).rank;
-  const play = beatRankPlayXp({ difficultyId, cleared, fullCombo, allMarvelous, multi });
+  const play = beatRankPlayXp({ difficultyId, cleared, fullCombo, allMarvelous, multi, durationMs });
   if (!play.xp) return { next: cur, add: 0, parts: [], from, to: from, tickets: 0, beatPoints: 0 };
   const day = typeof today === 'string' ? today.slice(0, 10) : '';
   const first = cleared !== false && !!day && !(cur.day === day && cur.dayFirst);
@@ -76438,7 +76454,9 @@ function MonsterHeroGame() {
       const raw = await storeGet(BEAT_RANK_KEY, null, false);
       const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
       const gain = beatRankAfter(raw, { difficultyId: play && play.difficulty && play.difficulty.id, cleared: result?.cleared !== false,
-        fullCombo: result?.fullCombo === true, allMarvelous: result?.allMarvelous === true, multi: play && play.from === 'multi', today });
+        fullCombo: result?.fullCombo === true, allMarvelous: result?.allMarvelous === true, multi: play && play.from === 'multi', today,
+        // 曲の長さ(経験値は 長さ÷2:00 倍。2026-11-02)。読めないときは0で、今までどおりの値になる
+        durationMs: play && play.song ? rhythmPlaySongDurationMs(play.song, play.difficulty) : 0 });
       if (!gain.add) return;
       const next = { ...gain.next, k: gain.next.k || beatRankNewKey() };
       await storeSet(BEAT_RANK_KEY, next, false);

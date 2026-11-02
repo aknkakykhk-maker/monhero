@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9a34a609a27c664e
+// source-sha256: 2d9fd12f83160891
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -14856,22 +14856,35 @@ const normalizeBeatRank = raw => {
     k
   };
 };
+const BEAT_RANK_BASE_MS = 120000;
+const beatRankLengthRate = durationMs => {
+  const ms = Number(durationMs);
+  return Number.isFinite(ms) && ms > 0 ? ms / BEAT_RANK_BASE_MS : 1;
+};
+const beatRankLengthText = durationMs => {
+  const sec = Math.round(Number(durationMs) / 1000);
+  return Number.isFinite(sec) && sec > 0 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` : '';
+};
 const beatRankPlayXp = ({
   difficultyId,
   cleared = true,
   fullCombo = false,
   allMarvelous = false,
-  multi = false
+  multi = false,
+  durationMs = 0
 }) => {
-  const base = BEAT_RANK_XP[difficultyId];
-  if (!base) return {
+  const base0 = BEAT_RANK_XP[difficultyId];
+  if (!base0) return {
     xp: 0,
     parts: []
   };
+  const rate = beatRankLengthRate(durationMs);
+  const base = base0 * rate;
   const parts = [];
-  let xp = cleared ? base : Math.max(1, Math.round(base * BEAT_RANK_BONUS.failRate));
+  let xp = cleared ? Math.max(1, Math.round(base)) : Math.max(1, Math.round(base * BEAT_RANK_BONUS.failRate));
+  const len = beatRankLengthText(durationMs);
   parts.push({
-    label: cleared ? difficultyId : `${difficultyId}(ライフが尽きた)`,
+    label: `${difficultyId}${len ? `・${len}` : ''}${cleared ? '' : '(ライフが尽きた)'}`,
     xp
   });
   if (cleared && allMarvelous) {
@@ -14906,7 +14919,8 @@ const beatRankAfter = (prev, {
   fullCombo,
   allMarvelous,
   multi,
-  today
+  today,
+  durationMs = 0
 }) => {
   const cur = normalizeBeatRank(prev);
   const from = playerRankInfo(cur.xp).rank;
@@ -14915,7 +14929,8 @@ const beatRankAfter = (prev, {
     cleared,
     fullCombo,
     allMarvelous,
-    multi
+    multi,
+    durationMs
   });
   if (!play.xp) return {
     next: cur,
@@ -129158,7 +129173,8 @@ function MonsterHeroGame() {
         fullCombo: result?.fullCombo === true,
         allMarvelous: result?.allMarvelous === true,
         multi: play && play.from === 'multi',
-        today
+        today,
+        durationMs: play && play.song ? rhythmPlaySongDurationMs(play.song, play.difficulty) : 0
       });
       if (!gain.add) return;
       const next = {
