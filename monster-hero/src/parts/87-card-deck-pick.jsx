@@ -19,7 +19,8 @@ const cardDeckPickChoices = (db, decks, collection, opts = {}) => {
 // allowRented … 借りたデッキも並べる(助手と対戦のとき。マルチでは並べない)
 // rentTab … 「自分のデッキ/借りたデッキ」のタブにし、借りたデッキのタブで借りる・返すをする(2026-10-29 社長の作り直し「借りるのは対戦前のデッキを選ぶ画面のタブで」)。
 //   公開の印(cardShareOpen)までは、デバッグの人だけ(84 が決める)。借りられるのは1組・マルチでは使えない、は今のまま
-const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', note = '', onPick, onBack, allowRented = false, rentTab = false }) => {
+// auto … ほかのブリーダーと戦うときだけ { on, onChange, left }(オートで挑む・案B 2026-11-02)。left … 今日のごほうびの残り回数(読めていなければ null)
+const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', note = '', onPick, onBack, allowRented = false, rentTab = false, auto = null }) => {
   const [rented, setRented] = useState(null);
   const [tab, setTab] = useState('own'); // own / rent
   const [cands, setCands] = useState(null); // 借りるデッキの候補(おすすめ・よく戦われている)
@@ -75,6 +76,22 @@ const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', 
               <button key={id} type="button" role="tab" aria-selected={tab === id} data-card-deck-pick-tab={id} onClick={() => { Audio_.fgSe.tap(); setTab(id); }}
                 className={`flex-1 rounded-xl py-2 text-[13px] font-black ${tab === id ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`}>{label}</button>
             ))}
+          </div>
+        )}
+        {auto && tab === 'own' && (
+          <div data-card-deck-pick-auto={auto.on ? 'auto' : 'hand'} className="space-y-1.5">
+            <div className="flex gap-1.5" role="radiogroup" aria-label="戦い方">
+              {[[false, '🖐 自分で操作'], [true, '🤖 オート(戦術カード)']].map(([v, label]) => (
+                <button key={String(v)} type="button" role="radio" aria-checked={auto.on === v} data-card-deck-pick-mode={v ? 'auto' : 'hand'}
+                  onClick={() => { Audio_.fgSe.tap(); auto.onChange(v); }}
+                  className={`min-h-[44px] flex-1 rounded-xl px-1 text-[13px] font-black ${auto.on === v ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`}>{label}</button>
+              ))}
+            </div>
+            {auto.on && <p data-card-deck-pick-auto-note className="rounded-xl bg-slate-900/80 px-2.5 py-2 text-[11px] font-bold leading-snug text-slate-200" style={JA_WRAP_STYLE}>
+              {jaWrap('選んだデッキの戦術カードで、あなたの側も自動で戦います。試合の途中で「自分で」に切り替えられます')}
+              <span data-card-deck-pick-auto-left={auto.left === null ? '' : auto.left} className={`mt-1 block ${auto.left ? 'text-emerald-200' : 'text-amber-200'}`}>
+                {auto.left === null ? '' : auto.left > 0 ? `今日のごほうびはあと${auto.left}回(自分で戦うときの半分)` : '今日のごほうびは終わりました。ごほうびなしで遊べます'}</span>
+            </p>}
           </div>
         )}
         {note && tab === 'own' && <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{note}</p>}

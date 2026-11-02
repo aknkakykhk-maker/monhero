@@ -410,7 +410,8 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
   const [opening, setOpening] = useState(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
-  const reload = async () => { const d = await cardTacticsLoad(); setData(d); return d; };
+  const [deckBox, setDeckBox] = useState(null); // デッキごとの戦術カード(96 の cardTacticsDeckLoad().box。2026-11-02)
+  const reload = async () => { const [d, byDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]); setDeckBox(byDeck.box); setData(d); return d; };
   useEffect(() => { void reload(); }, []);
   if (!data) return <div data-mh-screen data-card-tactics className={SCREEN_SHELL_CLASS}><ScreenHead title={screenTitle} accent="text-amber-200" onBack={onBack}/></div>;
   if (opening) return <CardTacticPackOpen packs={opening} onDone={() => setOpening(null)}/>;
@@ -421,14 +422,17 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
   const deck = ((decks && decks.decks) || []).find((d) => d.id === (decks && decks.active)) || ((decks && decks.decks) || [])[0] || null;
   const monOf = (i) => (deck ? cardMonsterOf(db, deck.monsters[i]) : null);
   // 枠を書いて保存(この画面だけが書く。ほかの項目は読み直した値のまま)
+  //   いま使うデッキの分は、デッキごとの戦術カード(mh_card_tactics_by_deck_v1)にも書く(2026-11-02)
   const saveFrames = async (frames) => {
-    const fresh = await cardTacticsLoad();
+    const [fresh, freshDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]);
     const next = { ...fresh.tactics, frames: cardTacticNormalizeFrames(frames) };
-    const ok = await saveStoredValuesOrRollback([{ key: CARD_TACTICS_KEY, before: fresh.rawT, next }], storeGet, storeSet);
+    const deckEntry = deck ? cardTacticsDeckEntry(freshDeck, deck.id, frames, { seed: { ids: ((decks && decks.decks) || []).map((x) => x.id), frames: fresh.tactics.frames } }) : null;
+    const ok = await saveStoredValuesOrRollback([{ key: CARD_TACTICS_KEY, before: fresh.rawT, next }, ...(deckEntry ? [deckEntry] : [])], storeGet, storeSet);
     if (!ok) { setNotice('保存できませんでした'); return; }
+    if (deckEntry) setDeckBox(cardTacticsDeckNormalize(deckEntry.next));
     setData({ ...fresh, tactics: next, rawT: next });
   };
-  const f = t.frames;
+  const f = cardTacticsFramesOfDeck(deckBox, t, deck && deck.id);
   // 賢さに数えないセットの理由(82-card-tactics-core の cardTacticUncounted。ルールくん 2026-10-29「ちゃんと効く戦術カードだけ数える」)
   const uncounted = cardTacticUncounted(f);
   const whyOf = (k, i) => { const list = k === 'breeder' ? uncounted.breeder : uncounted.mons[k]; return (list && list[i]) || ''; };

@@ -350,6 +350,9 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
   const [draft, setDraft] = useState(null);     // 戦い方(枠の形)
   const [styleId, setStyleId] = useState(null);
   const [aces, setAces] = useState('auto');     // 'auto' か カード番号の配列
+  const [deckBox, setDeckBox] = useState(null); // デッキごとの戦術カード(96 の cardTacticsDeckLoad().box。2026-11-02)
+  const [rowAces, setRowAces] = useState(null); // 登録中のデッキの切り札({ id, aces }。デッキごとの覚えが無いときに使う)
+  const deckDrafts = useRef({}); // この画面で組みかけた戦い方(デッキを切り替えて戻っても、組みかけを残す)
   const [sheet, setSheet] = useState(null);     // { where, k }
   const [custom, setCustom] = useState(null);   // { k, c? } 自分で組み合わせる
   const [trial, setTrial] = useState(false); // ためしに戦わせる(CardRegTrialSheet)
@@ -363,7 +366,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
   useEffect(() => {
     let alive = true;
     void (async () => {
-      const d = await cardTacticsLoad();
+      const [d, byDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]);
       const [name, icon] = await Promise.all([storeGet('mh_breeder_name', 'ブリーダー', false), storeGet('mh_breeder_icon', '🙂', false)]).catch(() => ['ブリーダー', '🙂']);
       const id = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
       const row = typeof id === 'string' ? await cardShareFetchMine(id).catch(() => null) : null;
@@ -371,10 +374,18 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
       setData(d); setSelfId(typeof id === 'string' ? id : null); setMine(row || null);
       setProfile({ name: typeof name === 'string' && name ? name : 'ブリーダー', icon: typeof icon === 'string' && icon ? icon : '🙂' });
       const same = row ? list.find((x) => JSON.stringify(x.monsters) === JSON.stringify(row.deck.monsters) && JSON.stringify(x.cards) === JSON.stringify(row.deck.cards)) : null;
-      setDeckId((same || list.find((x) => issuesOf(x).length === 0) || list[0] || {}).id || null);
-      setDraft(cardTacticNormalizeFrames(d.tactics.frames));
+      const firstId = (same || list.find((x) => issuesOf(x).length === 0) || list[0] || {}).id || null;
+      setDeckId(firstId);
+      setDeckBox(byDeck.box);
+      // そのデッキで最後に使った戦術カード(覚えていなければ共通の戦術カード)
+      setDraft(cardTacticsFramesOfDeck(byDeck.box, d.tactics, firstId));
       const t = row ? cardShareNormalizeTactics(row.tactics) : null;
-      if (t && t.aces.length) setAces(t.aces);
+      const ra = t && t.aces.length && same ? { id: same.id, aces: t.aces } : null;
+      setRowAces(ra);
+      const keptAces = cardTacticsAcesOfDeck(byDeck.box, firstId);
+      if (keptAces && keptAces.length) setAces(keptAces);
+      else if (ra && ra.id === firstId) setAces(ra.aces);
+      else if (t && t.aces.length && !same) setAces(t.aces);
     })();
     return () => { alive = false; };
   }, []);
@@ -392,14 +403,31 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
   const setRows = (k, rows) => setDraft((f) => (k === 'breeder' ? { ...f, breeder: rows } : { ...f, mons: f.mons.map((r, i) => (i === k ? rows : r)) }));
   const rowsOf = (k) => (k === 'breeder' ? draft.breeder : draft.mons[k]);
   const maxOf = (k) => (k === 'breeder' ? open.breeder : open.mon);
+  // デッキを切り替えると、そのデッキの戦術カード(この画面で組みかけ → 覚えている物 → 共通)に入れ替える
+  const pickDeck = (id) => {
+    if (id === deckId) return;
+    if (deckId) deckDrafts.current[deckId] = { draft, aces, styleId };
+    const kept = deckDrafts.current[id];
+    if (kept) { setDraft(kept.draft); setAces(kept.aces); setStyleId(kept.styleId); }
+    else {
+      setDraft(cardTacticsFramesOfDeck(deckBox, tactics, id));
+      const ka = cardTacticsAcesOfDeck(deckBox, id);
+      setAces(ka && ka.length ? ka : rowAces && rowAces.id === id ? rowAces.aces : 'auto');
+      setStyleId(null);
+    }
+    setDeckId(id);
+  };
   const register = async () => {
     if (!deck || issuesOf(deck).length || !selfId || busy) return;
     setBusy(true); setMsg('');
     try {
       // 戦い方は持ち物(mh_card_tactics_v1)にも残す(次に開いたとき・プロフィール)。読み直した値に、セットだけを書く
-      const fresh = await cardTacticsLoad();
+      //   デッキごとの戦術カード(mh_card_tactics_by_deck_v1)にも、このデッキの分を書く(2026-11-02)
+      const [fresh, freshDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]);
       const nextT = { ...fresh.tactics, frames: cardTacticNormalizeFrames(draft) };
-      await saveStoredValuesOrRollback([{ key: CARD_TACTICS_KEY, before: fresh.rawT, next: nextT }], storeGet, storeSet);
+      const deckEntry = cardTacticsDeckEntry(freshDeck, deck.id, draft, { aces: aces === 'auto' ? null : aces, seed: { ids: list.map((x) => x.id), frames: fresh.tactics.frames } });
+      const savedT = await saveStoredValuesOrRollback([{ key: CARD_TACTICS_KEY, before: fresh.rawT, next: nextT }, ...(deckEntry ? [deckEntry] : [])], storeGet, storeSet);
+      if (savedT && deckEntry) { setDeckBox(cardTacticsDeckNormalize(deckEntry.next)); delete deckDrafts.current[deck.id]; }
       const f = cardTacticPackFrames(cardTacticsFramesForBattle(nextT, lv));
       const r = await cardShareRegister({ ownerId: selfId, name: profile.name, icon: profile.icon, frame, deck,
         tactics: { name: deck.name, habit: cardShareMainHabit(cardTacticUnpackFrames(f), 'kyuko'), aces: acesNow, f } });
@@ -441,7 +469,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
           {list.map((d) => {
             const why = issuesOf(d);
             return (
-              <button key={d.id} type="button" data-card-reg-deck={d.id} disabled={why.length > 0} onClick={() => { Audio_.fgSe.tap(); setDeckId(d.id); }}
+              <button key={d.id} type="button" data-card-reg-deck={d.id} disabled={why.length > 0} onClick={() => { Audio_.fgSe.tap(); pickDeck(d.id); }}
                 className={`flex w-full items-center gap-3 rounded-2xl border-2 p-2 text-left ${deckId === d.id ? 'border-amber-300 bg-amber-950/30' : 'border-slate-700 bg-slate-900'} ${why.length ? 'opacity-50' : ''}`}>
                 <CardRegThumbs db={db} deck={d}/>
                 <span className="min-w-0 flex-1"><b className="block truncate text-[14px] font-black text-white">{d.name}</b>
