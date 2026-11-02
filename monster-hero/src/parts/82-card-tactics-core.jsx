@@ -760,7 +760,7 @@ const cardTacticBaseAttack = (db, st, policy, knobs, ctx) => {
     if (ctx.noBreeder && (o.type === 'breeder' || o.hand.some((i) => (cardOf(db, me.hand[i]) || {}).user === 'breeder'))) return false;
     const e = effs(o);
     if (knobs.light && o.type === 'attack' && cardActionCost(db, st, p, me.hand, o.hand) > 1) return false;
-    if (knobs.safe && e.some((t) => /^selfDamage|^attachSelfIfHit$|^selfHurt$/.test(t))) return false;
+    if (knobs.safe && e.some((t) => /^selfDamage|^attachSelfIfHit$|^selfHurt$/.test(t)) && !cardAiWinsBy(db, st, o, p)) return false; // 当たれば勝ちの一撃は、堅実型でも打つ(2026-11-02 社長)
     if (knobs.noDraw && e.some((t) => ['draw', 'rush', 'deckToGuts', 'refresh', 'oppDraw'].includes(t))) return false;
     if (knobs.keepHand && me.hand.length - o.hand.length < knobs.keepHand) return false;
     if (knobs.areaMin2 && foes.length < 2 && e.includes('area')) return false;

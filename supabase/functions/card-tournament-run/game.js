@@ -1437,6 +1437,8 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
     if (cost >= 5) score *= 1 + 0.12 * (habit.big - 1);
     // 相手の残りを全部倒せる手は、自分も倒れても勝ち(同時に全滅=攻撃した側の勝ち)。自分へのダメージを引かない(2026-10-27 見回り: 相打ちで勝てるのに攻撃をやめていた)
     const winsNow = kills > 0 && kills >= st.players[cardOther(p)].mons.filter((m) => !m.ko).length;
+    // 相手の最後の子まで倒せる手(当たれば勝ち)は、回避されそうでも、自分が傷つく技でも打つ(2026-11-02 社長「勝ちになる攻撃は打つ」)
+    if (winsNow) score += CARD_AI_WIN_STRIKE_ADD;
     const sh = cardEff(main, 'selfDamageIfHit'); if (sh && mon && !winsNow) score -= sh.n * (mon.life <= sh.n ? 3 : 0.6);
     const si = mods.flags.selfIfHit; if (si && mon && !winsNow) score -= si * (mon.life <= si ? 3 : 0.6); // 捨て身
     const sa = cardEff(main, 'selfDamage'); if (sa && mon && !winsNow) score -= sa.n * (mon.life <= sa.n ? 3 : 0.6);
@@ -1650,6 +1652,13 @@ const cardAiGutsCap = (me) => (me.deck.length >= CARD_BATTLE_HAND_MAX ? 99 : Mat
 // 危ない部品を持つ手だけ、ためしに打って(相手は守らない・選ぶ段は先頭)、次のどれかになる手は選ばない(どの強さでも。雑な手のときも)
 //   ・その手で自分のモンスターが全員倒れて負ける(相手も同時に全滅して勝てるなら選んでよい。攻撃した側の勝ち・ルール⑧)
 //   ・その手で山札が減り、次の自分の番に引く枚数より山札が少なくなる(もともと足りないときは、その手のせいではないので数えない)
+// 当たれば勝ちになる攻撃に足す点(2026-11-02 社長)
+const CARD_AI_WIN_STRIKE_ADD = 3;
+// その手で、相手が守らなければ勝つか(相手の最後の子まで倒せる)。p … 手を出す人
+const cardAiWinsBy = (db, st, opt, p = st.active) => {
+  if (!opt || opt.type !== 'attack') return false;
+  try { const s = cardAiSettle(db, cardApplyAction(db, st, opt)); return !!s && s.winner === p; } catch (_) { return false; }
+};
 const CARD_AI_RISKY_EFFS = ['selfDamage', 'selfDamageIfHit', 'selfDamageIfEvaded', 'attachSelfIfHit', 'lastWish', 'selfHurt', 'fuse',
   'draw', 'deckToGuts', 'rush', 'refresh', 'choose', 'fieldMill', 'fieldDrawOnPlay', 'fieldBurn'];
 const cardAiDrawNeed = (pl) => (pl.hand.length >= CARD_BATTLE_HAND_MAX ? 1 : CARD_BATTLE_HAND_MAX - pl.hand.length);
@@ -1839,7 +1848,12 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   }
   const opts = cardAiAttackChoices(db, st, policy);
   if (!opts.length) return { type: 'endAttacks' };
-  if (sloppy) return rand() < 0.25 ? { type: 'endAttacks' } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
+  if (sloppy) {
+    // 雑な手の番でも、当たれば勝ちの一撃があれば打つ(2026-11-02 社長「勝ちになる攻撃は打つ」)
+    const win = opts.find((o) => cardAiWinsBy(db, st, o));
+    if (win) return cardAiFillBind(db, st, win, policy);
+    return rand() < 0.25 ? { type: 'endAttacks' } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
+  }
   const scored = cardAiAttackScored(db, st, opts, policy);
   if (policy.search) return cardAiSearchPick(db, st, scored, policy, rand);
   if (scored[0].s <= 0.3) return { type: 'endAttacks' };
@@ -3523,7 +3537,7 @@ const cardTacticBaseAttack = (db, st, policy, knobs, ctx) => {
     if (ctx.noBreeder && (o.type === 'breeder' || o.hand.some((i) => (cardOf(db, me.hand[i]) || {}).user === 'breeder'))) return false;
     const e = effs(o);
     if (knobs.light && o.type === 'attack' && cardActionCost(db, st, p, me.hand, o.hand) > 1) return false;
-    if (knobs.safe && e.some((t) => /^selfDamage|^attachSelfIfHit$|^selfHurt$/.test(t))) return false;
+    if (knobs.safe && e.some((t) => /^selfDamage|^attachSelfIfHit$|^selfHurt$/.test(t)) && !cardAiWinsBy(db, st, o, p)) return false; // 当たれば勝ちの一撃は、堅実型でも打つ(2026-11-02 社長)
     if (knobs.noDraw && e.some((t) => ['draw', 'rush', 'deckToGuts', 'refresh', 'oppDraw'].includes(t))) return false;
     if (knobs.keepHand && me.hand.length - o.hand.length < knobs.keepHand) return false;
     if (knobs.areaMin2 && foes.length < 2 && e.includes('area')) return false;
