@@ -1323,6 +1323,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
   const main = cardOf(db, me.hand[opt.hand[0]]);
   const cost = cardActionCost(db, st, p, me.hand, opt.hand);
   let score = 0;
+  let hurts = true; // 相手にダメージが入る見込み(攻めの技だけ下で見直す)
   if (main.kind === 'fld') return cardAiScoreField(db, st, p, main, cost, habit) + (policy.fields && policy.fields.includes(main.name) && !(st.field && st.field.p === p) ? CARD_AI_FIELD_LIKE : 0);
   if (main.kind === 'spe') {
     (main.effects || []).forEach((e) => {
@@ -1410,16 +1411,20 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
     if (mon && mon.charge && mon.charge.kinds.includes(main.kind)) dmg *= mon.charge.n;
     const targets = opt.split ? opt.split.map((x, j) => (x > 0 ? { p: cardOther(p), m: j } : null)).filter(Boolean) : cardHasEff(main, 'area') ? cardAreaTargets(st, p, opt.mon, main) : [opt.target];
     let drained = 0; // ドレインで回復すると見込んだ合計(全員に当たる技でも、減っている分までしか回復しない)
+    hurts = false; // 相手にダメージが1以上入る見込みがあるか(全体カードで0になる技は、狙う相手の良さも数えない)
     let kills = 0; // 倒せる相手の数(相手の最後の子まで倒せるなら、自分へのダメージは気にしない)
     const per = dmg / Math.max(1, main.damage || 1); // ショットガン: 割り振った点に、付けた札・倍の割合を掛ける
     targets.forEach((t) => {
       const tm = st.players[t.p].mons[t.m];
       let d = opt.split ? Math.round(opt.split[t.m] * per) : dmg;
       const mv = cardEff(main, 'multVs'); if (mv && cardMonType(tm, st.turn) === mv.type) d *= mv.n;
+      // 全体カードのダメージの足し引き(興奮のるつぼ -2 など)も入れる。ルールと同じく最後に足す(2026-11-02 社長)
+      if (d > 0) d = Math.max(0, d + cardFieldDmgAdd(st, main));
       if (cardHasEff(main, 'nonLethal')) d = Math.min(d, tm.life - 1);
       // とどめにならない技(加勢)をライフ1の子に撃っても0ダメージ。撃たない(2026-10-27 見回り)
       if (t.p !== p && d <= 0 && cardHasEff(main, 'nonLethal')) { score -= 2; return; }
       if (t.p !== p && d >= tm.life) kills += 1;
+      if (t.p !== p && d > 0) hurts = true;
       // 影縛り: 名指しで当たりやすくなる見込み(半分)
       const ev = cardAiEvadeChance(db, st, p, main, t, level, mods.flags, mon) * (opt.hand.some((i) => cardHasEff(cardOf(db, me.hand[i]), 'attachBind')) ? 0.5 : 1);
       const half = cardHasEff(main, 'halfOnEvade') ? Math.ceil(d / 2) : 0;
@@ -1430,8 +1435,9 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (cardHasEff(main, 'drain') && mon && t.p !== p) { const heal = Math.min(Math.min(exp, tm.life), Math.max(0, mon.max - mon.life - drained)); drained += heal; score += heal * 0.5; }
       if (t.p !== p && d >= tm.life) score += (1 - ev) * 4 * habit.finish;
       const gl = cardEff(main, 'gutsLossOnHit');
-      if (gl && t.p !== p) score += (1 - ev) * (gl.n === 'all' ? st.players[t.p].guts.length : Math.min(gl.n, st.players[t.p].guts.length)) * 0.8 * habit.disrupt;
-      if (cardHasEff(main, 'stunOnHit') && t.p !== p) score += (1 - ev) * 1.2;
+      // ダメージが0になる技は、「当たれば〜」の効果も出ないので数えない
+      if (gl && t.p !== p && d > 0) score += (1 - ev) * (gl.n === 'all' ? st.players[t.p].guts.length : Math.min(gl.n, st.players[t.p].guts.length)) * 0.8 * habit.disrupt;
+      if (cardHasEff(main, 'stunOnHit') && t.p !== p && d > 0) score += (1 - ev) * 1.2;
     });
     if (targets.length > 1) score *= 1 + 0.15 * (habit.area - 1);
     if (cost >= 5) score *= 1 + 0.12 * (habit.big - 1);
@@ -1449,7 +1455,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
   if (level.depth >= 1 && cheapGuard < 9 && left < cheapGuard) score -= 1.2 * habit.keepGuard;
   score -= cost * 0.12 * habit.saveGuts * (level.depth >= 2 ? 1.2 : 1);
   // 先読み2以上: 相手のいちばん強い子(残りライフあたりの火力)を先に落とす
-  if (level.depth >= 2 && opt.target && opt.target.p !== p) {
+  if (level.depth >= 2 && opt.target && opt.target.p !== p && hurts) {
     const tm = st.players[opt.target.p].mons[opt.target.m];
     score += (tm.max - tm.life) * 0.15 + (tm.life <= 3 ? 0.8 : 0);
   }
