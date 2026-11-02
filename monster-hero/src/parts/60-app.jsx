@@ -23205,7 +23205,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         };
         const storyCurPages=storyPagesOf(step);
         const storyCurSub=Math.min(storySub,storyCurPages.length-1);
-        if(storyZones) last=last&&storyCurSub>=storyCurPages.length-1;
+        // 3つのゾーンのお話: 分けた台詞の次のページがあるあいだは、「次へ」で行は進めずにページだけ送る(next)
+        const storyMore=storyZones&&storyCurSub<storyCurPages.length-1;
+        if(storyMore) last=false;
         // 行 i に出す字。いま見ている行はそのページ、前の行(薄く残すぶん)は最後のページ
         const storyTextAt=(i,w)=>{
           if(!storyZones) return speakText(script[i],w);
@@ -23225,9 +23227,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const next=()=>{
           const holdMs=Number(line.holdMs);
           if(Number.isFinite(holdMs)&&holdMs>0&&Date.now()-(Number(eventReplay.shownAt)||0)<holdMs) return;
-          // 3つのゾーンのお話: 分けた台詞の次のページがあれば、行は進めずにページだけ送る
-          if(storyZones&&storyCurSub<storyCurPages.length-1){ setEventReplay(r=>r&&({...r,sub:storyCurSub+1,shownAt:Date.now()})); return; }
-          if(!last){ setEventReplay(r=>r&&({...r,step:r.step+1,sub:0,shownAt:Date.now()})); return; }
+          if(!last){ setEventReplay(r=>r&&({...r,shownAt:Date.now(),...(storyMore?{sub:storyCurSub+1}:{step:r.step+1,sub:0})})); return; }
           if(event&&event.id==='momosuke_intro'&&!eventReplay.debug) markMomosukeIntroSeen();
           if(event&&event.id==='tactics_intro'&&!eventReplay.debug) markTacticsIntroSeen();
           // イベントの会話も、最後まで見たら「見た」にする(次の起動で重ねて流さない)
@@ -23364,7 +23364,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* 3つのゾーンのお話では、台詞の欄は3行ぶんの高さで固定(70-bootstrap.jsx の [data-story-zones] [data-story-line-box])。
                 台詞の長さで窓の高さが変わり、モンスターの大きさが行ごとに伸び縮みしていた(2026-11-02 社長「文字量によってサイズが変動してる」)。
                 収まらない台詞は、上の storyPagesOf でページに分ける */}
-            {bottomLine?<div key={speakingGuest?'keep':`x${step}-${storyCurSub}`} data-story-pop={speakingGuest?undefined:'1'} data-story-line-box className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:bottomSpeaker.accent,opacity:speakingGuest?.4:1,boxShadow:speakingGuest?'none':`0 0 16px ${bottomSpeaker.accent}55`,transition:'opacity .18s',animation:speakingGuest?undefined:'storyPop .28s ease-out both'}}>
+            {bottomLine?<div key={speakingGuest?'keep':`x${step}-${storyCurSub}`} data-story-pop={speakingGuest?undefined:'1'} className="rounded-2xl border-2 bg-slate-900 px-3 py-3" data-story-line-box style={{borderColor:bottomSpeaker.accent,opacity:speakingGuest?.4:1,boxShadow:speakingGuest?'none':`0 0 16px ${bottomSpeaker.accent}55`,transition:'opacity .18s',animation:speakingGuest?undefined:'storyPop .28s ease-out both'}}>
               <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
               {/* ★{name} は、そのとき話している助手の呼び方へ置き換える。
                   ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた

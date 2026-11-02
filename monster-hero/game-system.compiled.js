@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ec107abc29093bf3
+// source-sha256: 4b74346c7c45b483
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -160223,7 +160223,8 @@ function MonsterHeroGame() {
       };
       const storyCurPages = storyPagesOf(step);
       const storyCurSub = Math.min(storySub, storyCurPages.length - 1);
-      if (storyZones) last = last && storyCurSub >= storyCurPages.length - 1;
+      const storyMore = storyZones && storyCurSub < storyCurPages.length - 1;
+      if (storyMore) last = false;
       const storyTextAt = (i, w) => {
         if (!storyZones) return speakText(script[i], w);
         const pages = storyPagesOf(i);
@@ -160243,20 +160244,16 @@ function MonsterHeroGame() {
       const next = () => {
         const holdMs = Number(line.holdMs);
         if (Number.isFinite(holdMs) && holdMs > 0 && Date.now() - (Number(eventReplay.shownAt) || 0) < holdMs) return;
-        if (storyZones && storyCurSub < storyCurPages.length - 1) {
-          setEventReplay(r => r && {
-            ...r,
-            sub: storyCurSub + 1,
-            shownAt: Date.now()
-          });
-          return;
-        }
         if (!last) {
           setEventReplay(r => r && {
             ...r,
-            step: r.step + 1,
-            sub: 0,
-            shownAt: Date.now()
+            shownAt: Date.now(),
+            ...(storyMore ? {
+              sub: storyCurSub + 1
+            } : {
+              step: r.step + 1,
+              sub: 0
+            })
           });
           return;
         }
@@ -160542,8 +160539,8 @@ function MonsterHeroGame() {
       })(), bottomLine ? React.createElement("div", {
         key: speakingGuest ? 'keep' : `x${step}-${storyCurSub}`,
         "data-story-pop": speakingGuest ? undefined : '1',
-        "data-story-line-box": true,
         className: "rounded-2xl border-2 bg-slate-900 px-3 py-3",
+        "data-story-line-box": true,
         style: {
           borderColor: bottomSpeaker.accent,
           opacity: speakingGuest ? .4 : 1,
