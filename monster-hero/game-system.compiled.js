@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ad17b827cf30fa4c
+// source-sha256: aecd22142806fdc0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -92775,6 +92775,9 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
     expert: -0.06,
     master: 0
   },
+  sorashido: {
+    master: 0.06
+  },
   atsu: {
     easy: 0.05,
     normal: 0,
@@ -93294,7 +93297,18 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
     pick.splice(0, pick.length, ...order.map(o => o.i).slice(0, gopt.count));
   }
   if (gopt && gopt.keepGuards) {
-    for (let k = pick.length - 1; k >= 0; k--) if (cardIsGuardKind((cardOf(db, me.hand[pick[k]]) || {}).kind)) pick.splice(k, 1);
+    const keepSet = new Set(order.filter(o => o.g && o.k > -9).sort((a, b) => b.k - a.k).slice(0, CARD_TACTIC_KEEP_GUARD_MAX).map(o => o.i));
+    for (let k = pick.length - 1; k >= 0; k--) if (keepSet.has(pick[k])) pick.splice(k, 1);
+  }
+  const live = me.mons.filter(m => !m.ko);
+  const idle = !me.breederUsed && me.mons.every(m => !m.attacks);
+  if (live.length && me.hand.length >= CARD_BATTLE_HAND_MAX && idle && pick.length === 0) {
+    const keepN = gopt && gopt.keepGuards ? CARD_TACTIC_KEEP_GUARD_MAX : CARD_AI_STUCK_KEEP;
+    const keepG = new Set(order.filter(o => o.g && o.k > -9).sort((a, b) => b.k - a.k).slice(0, keepN).map(o => o.i));
+    const isAce = i => policy && Array.isArray(policy.aces) && policy.aces.includes(me.hand[i]);
+    const tossG = order.filter(o => o.g && !keepG.has(o.i) && !isAce(o.i)).map(o => o.i);
+    const tossO = order.filter(o => !o.g && !isAce(o.i)).map(o => o.i);
+    pick.push(...tossG, ...tossO.slice(0, Math.max(tossG.length ? 0 : 1, tossO.length - 1)));
   }
   const gm = cardFieldEff(st, 'fieldGutsMax');
   return {
@@ -93302,6 +93316,8 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
     hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, policy.playerRole ? 99 : cardAiGutsCap(me))
   };
 };
+const CARD_AI_STUCK_KEEP = 2;
+const CARD_TACTIC_KEEP_GUARD_MAX = 3;
 const cardAiGutsCap = me => me.deck.length >= CARD_BATTLE_HAND_MAX ? 99 : Math.max(0, me.hand.length - (CARD_BATTLE_HAND_MAX - me.deck.length));
 const CARD_AI_RISKY_EFFS = ['selfDamage', 'selfDamageIfHit', 'selfDamageIfEvaded', 'attachSelfIfHit', 'lastWish', 'selfHurt', 'fuse', 'draw', 'deckToGuts', 'rush', 'refresh', 'choose', 'fieldMill', 'fieldDrawOnPlay', 'fieldBurn'];
 const cardAiDrawNeed = pl => pl.hand.length >= CARD_BATTLE_HAND_MAX ? 1 : CARD_BATTLE_HAND_MAX - pl.hand.length;
@@ -93729,7 +93745,7 @@ const CARD_AI_DECK_TUNE = Object.freeze({
 });
 const CARD_AI_LANE_MIN_DEFAULT = 0.8;
 const CARD_AI_LANE_MIN = Object.freeze({
-  momosuke: 1.5,
+  momosuke: 2.0,
   dra: 0.8,
   kyuko: 2.0,
   atsu: 1.5,
@@ -95771,9 +95787,9 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   cat: 'breeder',
   sec: 'ガッツ',
   phase: 'guts',
-  name: '守り札を残して置く',
+  name: '守り札を3枚まで残す',
   tiers: [['', 'R']],
-  desc: '回避・防御はガッツにしない'
+  desc: '回避・防御は3枚までガッツにしない'
 }, {
   id: 'gutsOrder',
   cat: 'breeder',
@@ -95980,8 +95996,8 @@ const CARD_TACTIC_TEXT = Object.freeze({
   fieldCard: () => ['全体カードを出す', '手札の全体カード(場に残るカード)を出す'],
   fieldKind: v => [`全体カード: ${v}`, `手札の全体カードのうち、「${v}」の全体カードを場に出す`],
   save: () => ['ガッツを多めにためる', 'ガッツを置くときに、ふだんより多くの手札をガッツに置く'],
-  gutsN: v => [`ガッツを${v}枚置く`, `ガッツを置くときに、手札から${v}枚だけガッツに置く`],
-  keepGuard: () => ['守りのカードは置かない', 'ガッツを置くときに、回避・防御のカードはガッツに置かない'],
+  gutsN: v => Number(v) === 0 ? ['なるべくガッツを置かない', 'ガッツを置くときに、手札をガッツに置かない。ただし、何も使えなかったターンは、守りのカード2枚と切りカードだけ残して、ほかをガッツに置く'] : [`ガッツを${v}枚置く`, `ガッツを置くときに、手札から${v}枚だけガッツに置く`],
+  keepGuard: () => ['守りのカードは3枚まで残す', 'ガッツを置くときに、回避・防御のカードは3枚まで手札に残す(4枚目からはふだんどおり置く)。何も使えなかったターンは、守りのカード3枚と切りカードだけ残して、ほかをガッツに置く'],
   gutsOrder: v => [v === '重い札' ? '重いカードからガッツに置く' : '使えないカードからガッツに置く', v === '重い札' ? 'ガッツに置く枚数はふだんどおり。払うガッツの大きいカードから先に置く' : 'ガッツに置く枚数はふだんどおり。場のモンスターが使えないカードから先に置く'],
   stop: () => ['このターンの攻撃をやめる', '当てはまったら、このターンの攻撃をここで終える'],
   ace: () => ['切りカードを出す', '登録で選んだ切りカードが手札にあれば、それを先に使う'],
@@ -96101,8 +96117,8 @@ const CARD_TACTIC_LINE = Object.freeze({
   fieldCard: () => '全体カードを場に出す',
   fieldKind: v => `全体カード「${v}」を場に出す`,
   save: () => 'ガッツを多めにためる',
-  gutsN: v => `ガッツを${v}枚だけ置く`,
-  keepGuard: () => '守りのカードはガッツに置かずにとっておく',
+  gutsN: v => Number(v) === 0 ? 'なるべくガッツを置かない(手が詰まったら入れかえる)' : `ガッツを${v}枚だけ置く`,
+  keepGuard: () => '守りのカードは3枚まで、ガッツに置かずにとっておく',
   gutsOrder: v => v === '重い札' ? '重いカードからガッツに置く' : '使えないカードからガッツに置く',
   stop: () => 'このターンの攻撃をやめる',
   ace: () => '切りカードを先に出す',

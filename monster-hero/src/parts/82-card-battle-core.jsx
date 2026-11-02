@@ -1198,6 +1198,7 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
   momosuke: { easy: 0.12, normal: 0.06, hard: 0, expert: 0.04, master: 0 },   // 全体カードを入れた(2026-10-30)ぶん EXPERT 0.1 → 0.04・MASTER 0.05 → 0。   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.165 → 0.14。混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 0.05
   kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: -0.08, master: 0 },   // 全体カードを入れた(2026-10-30)ぶん EXPERT 0 → -0.08・MASTER 0.1 → 0   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.345 → 0.3。意味不明(277)・混血の直し(2026-10-27)のあと 0.1
   dra: { easy: -0.075, normal: -0.075, hard: 0.03, expert: -0.06, master: 0 },
+  sorashido: { master: 0.06 },   // 手が詰まったときの入れ替え(2026-11-02 案A)で MASTER 54→71% に上がったので雑さを足した(450試合で 50%)
   atsu: { easy: 0.05, normal: 0, hard: 0.02, expert: 0.06, master: 0 },   // 臨機応変(2026-10-29)で強くなった(NORMAL 55→69%・EASY 73%・EXPERT 69%)ので、各強さで雑さを足した(40戦で測った)   // EXPERT は同じ血統(弱い)でも組むようになった(2026-10-26)ので 0.03 → 0
 });
 // 同じ血統で組んだ試合だけの、カードの出し方の雑さの足し引き(2026-10-26。HARD から上でも同じ血統で組むようにしたぶん)。
@@ -1568,7 +1569,10 @@ const cardAiChooseGuard = (db, st, policy, rand, gopt = null) => {
 };
 
 // 手札をガッツへ: 使えない札(持ち主が KO)・使えそうにない重い札から。くせ「ガッツをためる」でためる量が増える
-// gopt … 戦術カードから: count(この枚数だけ置く)・keepGuards(回避・防御の札はガッツにしない)。無ければ今のまま
+// gopt … 戦術カードから: count(この枚数だけ置く)・keepGuards(回避・防御の札を CARD_TACTIC_KEEP_GUARD_MAX 枚まで残す)。無ければ今のまま
+// 手が詰まったとき(2026-11-02 社長「案A + 案B」・点検): その番に技もブリーダーのカードも1枚も使わず手札が5枚なら、ガッツが足りていても入れ替える。
+//   守りの札は CARD_AI_STUCK_KEEP 枚(「守りを残す」の札なら CARD_TACTIC_KEEP_GUARD_MAX 枚)まで・切り札は残し、ほかの札をガッツへ(最低1枚)。
+//   前は、ガッツがたまると手札を置かず、守りの札・付ける先の無い札で手札が埋まると、山札切れまで何もしない番が続いた(オートで挑むの不具合)
 const cardAiChooseGuts = (db, st, policy, gopt = null) => {
   const p = st.active;
   const me = st.players[p];
@@ -1599,12 +1603,29 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
   if (gopt && Number.isInteger(gopt.count)) {
     pick.splice(0, pick.length, ...order.map((o) => o.i).slice(0, gopt.count));
   }
-  if (gopt && gopt.keepGuards) { for (let k = pick.length - 1; k >= 0; k--) if (cardIsGuardKind((cardOf(db, me.hand[pick[k]]) || {}).kind)) pick.splice(k, 1); }
+  if (gopt && gopt.keepGuards) {
+    // 守りの札は、いちばん残したい物から CARD_TACTIC_KEEP_GUARD_MAX 枚までガッツにしない(4枚目からはふだんどおり)
+    const keepSet = new Set(order.filter((o) => o.g && o.k > -9).sort((a, b) => b.k - a.k).slice(0, CARD_TACTIC_KEEP_GUARD_MAX).map((o) => o.i));
+    for (let k = pick.length - 1; k >= 0; k--) if (keepSet.has(pick[k])) pick.splice(k, 1);
+  }
+  const live = me.mons.filter((m) => !m.ko);
+  const idle = !me.breederUsed && me.mons.every((m) => !m.attacks);   // この番に技もブリーダーのカードも使っていない
+  if (live.length && me.hand.length >= CARD_BATTLE_HAND_MAX && idle && pick.length === 0) {
+    const keepN = gopt && gopt.keepGuards ? CARD_TACTIC_KEEP_GUARD_MAX : CARD_AI_STUCK_KEEP;
+    const keepG = new Set(order.filter((o) => o.g && o.k > -9).sort((a, b) => b.k - a.k).slice(0, keepN).map((o) => o.i));
+    const isAce = (i) => policy && Array.isArray(policy.aces) && policy.aces.includes(me.hand[i]);
+    // 決めた枚数より多い守りの札は、全部ガッツへ。守り以外は、いちばん残したい1枚だけ手元に残す(order は残したくない順)
+    const tossG = order.filter((o) => o.g && !keepG.has(o.i) && !isAce(o.i)).map((o) => o.i);
+    const tossO = order.filter((o) => !o.g && !isAce(o.i)).map((o) => o.i);
+    pick.push(...tossG, ...tossO.slice(0, Math.max(tossG.length ? 0 : 1, tossO.length - 1)));
+  }
   const gm = cardFieldEff(st, 'fieldGutsMax'); // 長期戦の予感
   // 山札切れを自分から呼ばない(2026-10-27 あつさん「山札を気にせず負ける」):
   //   次の自分の番に引く枚数(手札が5枚なら1枚・それ未満なら5枚まで)が山札より多くなるほど、手札をガッツにしない
   return { type: 'guts', hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, policy.playerRole ? 99 : cardAiGutsCap(me)) };
 };
+const CARD_AI_STUCK_KEEP = 2;           // 手が詰まった番に残す守りの札
+const CARD_TACTIC_KEEP_GUARD_MAX = 3;   // 戦術カード「守りのカードは3枚まで残す」の枚数
 // ガッツにしてよい枚数の上限(次の番に引く枚数が山札を超えないように)。山札が5枚以上あれば上限なし
 const cardAiGutsCap = (me) => (me.deck.length >= CARD_BATTLE_HAND_MAX ? 99 : Math.max(0, me.hand.length - (CARD_BATTLE_HAND_MAX - me.deck.length)));
 
@@ -1878,7 +1899,7 @@ const CARD_AI_DECK_TUNE = Object.freeze({
 // 組み直すデッキで、順番の枠に入れてよい「入れたい度」の下限(cardAiCardValue の値)。助手ごとの違いは、
 //   EXPERT・MASTER でプレイヤー役との勝率がそろうように tools/card/card-ai-balance.js で決めた
 const CARD_AI_LANE_MIN_DEFAULT = 0.8;
-const CARD_AI_LANE_MIN = Object.freeze({ momosuke: 1.5, dra: 0.8, kyuko: 2.0, atsu: 1.5, sorashido: 1.5 });   // きゅうこは混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 1.5。ドラは不自然な手の直し(2026-10-27)で MASTER が 38% を割ったので 0.3 → 0.8(1 より上だと好きな子の技が入らないことがある)
+const CARD_AI_LANE_MIN = Object.freeze({ momosuke: 2.0, dra: 0.8, kyuko: 2.0, atsu: 1.5, sorashido: 1.5 });   // きゅうこは混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 1.5。ドラは不自然な手の直し(2026-10-27)で MASTER が 38% を割ったので 0.3 → 0.8(1 より上だと好きな子の技が入らないことがある)   // ももすけは手が詰まったときの入れ替え(2026-11-02 案A)で MASTER 39.8→36.7% に下がったので 1.5 → 2.0(450試合で 40.4%)
 const CARD_DECK_COPY_MAX = 3; // 同じカード(同じ番号)の技・全体・ブリーダーカードは3枚まで。名前が同じでも番号がちがう(使うモンスターがちがう)カードは別に数える(2026-10-31 社長「ゴーレムのキックとヘンガーのキック」)
 const CARD_AI_ATTACH_MAX = 6;
 const CARD_AI_FIELD_LIKE = 1; // 得意な全体カードを出すときに足す点(cardAiScoreAttack)

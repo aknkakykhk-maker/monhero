@@ -163,6 +163,18 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
     const keep2 = E.cardAiChooseAction(db, st, polB([{ c: 'any', a: 'keepGuard' }]), zero);
     check('F 守り札を残して置く(守りの札をガッツにしない)', keep2.type === 'guts' && !keep2.hand.includes(2), J(keep2));
     check('F ガッツをためる', keep.type === 'guts', J(keep));
+    // 手が詰まったとき(2026-11-02 社長「案A + 案B」): その番に何も使わず手札が5枚なら、ガッツが足りていても入れ替える
+    const guardsAny = Object.values(db.cards).filter((c) => (c.kind === 'blk' || c.kind === 'dge') && c.user === 'any' && c.ready).map((c) => c.no);
+    const stuck = JSON.parse(JSON.stringify(st));
+    stuck.players[0].hand = guardsAny.slice(0, 5);
+    stuck.players[0].guts = Array(20).fill('100');
+    const nGuard = (act) => stuck.players[0].hand.filter((_, i) => !act.hand.includes(i)).length;
+    const z0 = E.cardAiChooseAction(db, stuck, polB([{ c: 'any', a: 'gutsN.0' }]), zero);
+    check('F2 なるべくガッツを置かない: 守りの札だけで手札5枚・何も使えなかった番は、守り2枚だけ残して入れ替える', z0.type === 'guts' && z0.hand.length >= 1 && nGuard(z0) === 2, J(z0));
+    const kg = E.cardAiChooseAction(db, stuck, polB([{ c: 'any', a: 'keepGuard' }]), zero);
+    check('F2 守りのカードは3枚まで残す: 守りの札だけで手札5枚・何も使えなかった番は、守り3枚だけ残す', kg.type === 'guts' && nGuard(kg) === 3, J(kg));
+    const plain = E.cardAiChooseAction(db, stuck, E.cardAiPolicy('kyuko', 'master'), zero);
+    check('F2 戦術カードの無い AI も、ガッツがたまっていても、何も使えなかった番は入れ替える', plain.type === 'guts' && plain.hand.length >= 1, J(plain));
   } else {
     check('F ガッツの番を作れる', false, st.phase);
   }
