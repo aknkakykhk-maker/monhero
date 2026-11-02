@@ -48027,6 +48027,18 @@ const rhythmSongArtSrc=song=>{
   const own=song&&typeof song.artwork==='string'?song.artwork.trim():'';
   return own||'';
 };
+// 歌詞カード(2026-11-02 社長「ジャケット拡大画面で歌詞カードがある曲は、それもスクロールか次ページかで見れるようにして」)。
+//   社長から届いた絵だけを置く(images/song-lyrics/)。ショート版・確かめ用の版も、元の曲と同じカードを出す。
+//   ここに無い曲は、ジャケットの拡大画面が今までどおり(歌詞のページは出ない)
+const RHYTHM_SONG_LYRIC_CARDS=Object.freeze({
+  rebellion:Object.freeze(['images/song-lyrics/rebellion-1.jpg?v=91279274a51d']),
+  stay_with_me:Object.freeze(['images/song-lyrics/stay_with_me-1.jpg?v=0a877cbeae9b']),
+});
+const rhythmSongLyricCards=song=>{
+  const id=song&&typeof song.songId==='string'?song.songId.replace(/_hell_debug$/,'').replace(/_short$/,''):'';
+  const list=id&&Object.prototype.hasOwnProperty.call(RHYTHM_SONG_LYRIC_CARDS,id)?RHYTHM_SONG_LYRIC_CARDS[id]:null;
+  return Array.isArray(list)?list.filter(src=>typeof src==='string'&&src):[];
+};
 
 const RHYTHM_DEMO_SONG_IDS=Object.freeze([
   'mf_ichika_mix',
