@@ -3309,6 +3309,26 @@ const createAnimationStyle = () => {
       [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 8px) !important; bottom: calc(env(safe-area-inset-bottom) + 8px); align-items: center; justify-content: space-between; gap: 0; padding: 0 14px; }
       [data-story-monster] { height: min(70%, calc(((100vw - 28rem) / 2 - 30px) / 1.14), 176px); }
     }
+    /* 3つのゾーン(上部=ステージ/立ち絵=モンスター/下部=窓)を固定する形(2026-11-02 社長「立ち絵ゾーン固定したほうがいいよ」「上部ゾーン/立ち絵/下部ゾーンで」)。
+       真ん中にモンスターが出るお話([data-story-zones]・60-app.jsx)だけ。高さは台詞の長さ・顔の数で変えない。
+       縦: 上部ゾーン = 上の端から 10px + ステージ(顔 96px・吹き出し 3行ぶん 112px)。下部ゾーン = 窓 336px(+下の安全域)。立ち絵ゾーン = そのあいだ(上の端から 150px 〜 窓の 8px 上)。
+       収まらない台詞は窓を伸ばさず、ページに分けて「次へ」で送る(60-app.jsx の storyPagesOf) */
+    @media (orientation: portrait), (min-height: 501px) {
+      [data-event-story][data-story-zones] [data-story-stage][data-story-stage] { top: calc(env(safe-area-inset-top) + 10px) !important; }
+      [data-event-story][data-story-zones] [data-story-guest-bubble] { height: 112px; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-sheet][data-story-sheet] { height: calc(336px + env(safe-area-inset-bottom)); max-height: none; justify-content: flex-end; }
+      [data-event-story][data-story-zones] [data-story-line-box] { height: 120px; flex-shrink: 0; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 150px) !important; bottom: calc(336px + env(safe-area-inset-bottom) + 8px); align-items: center; }
+      [data-event-story][data-story-zones] [data-story-monster] { height: min(calc(100% / 1.14), 50vw, 230px); }
+      [data-event-story][data-story-zones] [data-story-monsters="2"] [data-story-monster] { height: min(calc(100% / 1.14), 44vw, 210px); }
+    }
+    /* 横の低い画面: 上部ゾーン = 上の端から 6px + ステージ(顔は 0.6倍・吹き出し 3行ぶん 84px)。下部ゾーン = その下ぜんぶ(窓の高さを固定)。
+       モンスターは窓の左右の空き(上の横向きの決まりのまま) */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-event-story][data-story-zones] [data-story-guest-bubble] { height: 84px; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-sheet][data-story-sheet] { height: calc(var(--mh-vh) - 96px - env(safe-area-inset-top)) !important; max-height: none !important; justify-content: flex-end; }
+      [data-event-story][data-story-zones] [data-story-line-box] { height: 116px; flex-shrink: 0; overflow: hidden; }
+    }
     @media (prefers-reduced-motion: reduce) { [data-story-monster] { animation: none !important; } }
     @keyframes storyShrink { 0% { opacity: 0; transform: scale(1.7); filter: brightness(1.9); } 50% { opacity: 1; } 100% { transform: scale(1); filter: brightness(1); } }
     @keyframes storyBanner { 0% { opacity: 0; transform: translate(-50%, -8px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.06); } 22% { transform: translate(-50%, 0) scale(1); } 82% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, 0) scale(1); } }

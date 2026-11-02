@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b9c99f7c8749a5bb
+// generated-sha256: e94771e51e8dd2c2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -13122,6 +13122,32 @@ const STORY_MONSTER_ART = Object.freeze({
   PandoraAngel: typeof PANDORA_ANGEL_IMG !== 'undefined' ? PANDORA_ANGEL_IMG : null,
   PandoraDevil: typeof PANDORA_DEVIL_IMG !== 'undefined' ? PANDORA_DEVIL_IMG : null,
 });
+// お話の台詞を、決まった行数に収まるページへ分ける(2026-11-02 社長「セリフが長ければページ数増やせばいいだけ」)。
+//   上部ゾーン(ゲストの吹き出し)・下部ゾーン(台詞の欄)の高さを固定にしたので、収まらない台詞は「次へ」で送る次のページにする。
+//   分けるのは文の切れ目(「。」「！」「？」のあと)。1文で収まらないときだけ「、」のあと。言葉の途中では切らない。台本の字は変えない(表示のときだけ)
+//   cpl … 1行に入る字数の見込み(全角1・半角0.55で数える) / maxLines … 行数
+const storyTextUnits = (s) => [...String(s)].reduce((a, ch) => a + (/[\x20-\x7e｡-ﾟ]/.test(ch) ? 0.55 : 1), 0);
+const storyTextLines = (s, cpl) => String(s).split('\n').reduce((a, seg) => a + Math.max(1, Math.ceil(storyTextUnits(seg) / Math.max(1, cpl))), 0);
+const storySplitPages = (text, cpl, maxLines) => {
+  const s = String(text ?? '');
+  if (!s || storyTextLines(s, cpl) <= maxLines) return [s];
+  const tidy = (t) => t.replace(/^[\s\n]+|[\s\n]+$/g, '');
+  const pack = (pieces) => {
+    const out = [];
+    let cur = '';
+    for (const piece of pieces) {
+      const cand = cur + piece;
+      if (tidy(cur) && storyTextLines(tidy(cand), cpl) > maxLines) { out.push(cur); cur = piece; } else cur = cand;
+    }
+    if (tidy(cur)) out.push(cur);
+    return out;
+  };
+  const sentences = (s.match(/[^。！？!?\n]*(?:[。！？!?]+[」』）)♪♡〜～ｗw…]*|\n|$)/g) || [s]).filter(Boolean);
+  const pages = pack(sentences).flatMap((page) => (storyTextLines(tidy(page), cpl) > maxLines
+    ? pack((page.match(/[^、，,\n]*(?:[、，,]+|\n|$)/g) || [page]).filter(Boolean)) : [page]));
+  const out = pages.map(tidy).filter((t) => t.length);
+  return out.length ? out : [s];
+};
 // お話の層の位置を測って、いちばん外側の箱([data-event-story])の CSS 変数へ書く ref。
 // 上のステージの下端(--story-stage-bottom)と下の窓の高さ(--story-sheet-h)で、真ん中のモンスターの置き場を決める。
 // ★動きの途中(登場・揺れ)のずれを拾わないよう、transform の効かない offsetTop / offsetHeight で測る。大きさが変わったら測り直す
@@ -97502,7 +97528,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const step=Math.max(0,Math.min(eventReplay.step,script.length-1));
         const line=script[step];
         const speaker=assistantById(line.who);
-        const last=step===script.length-1;
+        // 真ん中にモンスターが出るお話は、画面を「上部ゾーン(ステージ)/立ち絵ゾーン(モンスター)/下部ゾーン(窓)」の3つに固定で分ける
+        //   (2026-11-02 社長「立ち絵ゾーン固定したほうがいいよ」「上部ゾーン/立ち絵/下部ゾーンで」)。高さは台詞の長さ・顔の数で変えない(70-bootstrap.jsx の [data-story-zones])。
+        //   収まらない台詞は、文の切れ目で次のページに分けて「次へ」で送る(社長「セリフが長ければページ数増やせばいいだけ」)。
+        //   step は台本の行のまま(BGM の切り替えなども行で数える)。sub はその行の何ページ目か
+        const storyZones=script.some(l=>l&&Array.isArray(l.monsters));
+        const storySub=storyZones?Math.max(0,Math.floor(Number(eventReplay.sub)||0)):0;
+        let last=step===script.length-1;
         // ゲスト(ジャック・ぱんぷきん)は、下の助手の列には入れない。初めて話す行(か stage で呼ばれる行)から、画面の上部の「ステージ」に出る
         //  (2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」)
         const isGuestWho=(id)=>{const w=assistantById(id);return !!w&&w.role==='ゲスト';};
@@ -97525,7 +97557,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ジャックが話しているあいだ、下の箱には直前の助手の台詞を薄く残す(流れが分かる)。まだ助手が話していなければ案内を出す
         const bottomLine=speakingGuest?(assistIdx>=0?script[assistIdx]:null):line;
         const bottomSpeaker=bottomLine?assistantById(bottomLine.who):speaker;
-        const fx=line.fx||null;
+        const fx=(storyZones&&storySub>0)?null:(line.fx||null);
         // ★お話の真ん中に出すモンスター(2026-10-27 社長「推しに会える夜」)。台本の行の monsters:[{ id, pose }] は、次に monsters を書いた行まで続く(monsters:[] で消す)。
         //   pose: in(ふわっと現れる)/idle(待機アニメ)/back(後ずさって揺れる)/front(前に出て大きくなる)/approach(下のソラシドの側へ寄る)/hop(跳ねる)/hide(出さない)。
         //   上のステージ(ゲストの顔)とは別の層。縦の画面はステージと下の窓のあいだ、横の低い画面は窓の左右の空きに出す(70-bootstrap.jsx の [data-story-monsters])
@@ -97540,6 +97572,36 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         };
         // 台詞の「\n」は、そこで改行する(2026-10-25。チーム名を3つ並べる台詞で「すばやく攻める／チーム」と名前の途中で折れた)。行ごとに jaWrap を通す
         const bubbleLines=(text)=>(typeof text==='string'&&text.includes('\n'))?text.split('\n').map((x,i)=><React.Fragment key={i}>{i>0&&<br/>}{bubbleWrap(x)}</React.Fragment>):bubbleWrap(text);
+        // 3つのゾーンのお話: 行ごとのページ(上部の吹き出し/下部の台詞の欄、それぞれ3行に収まるように分ける)。
+        //   1行の字数は画面の幅から見込む(縦: 窓の幅、横の低い画面: 窓は 28rem まで・吹き出しの字は 12px)。見込みは少し控えめにして、はみ出さないようにする
+        const storyLand=typeof window!=='undefined'&&window.innerWidth>window.innerHeight&&window.innerHeight<=500;
+        const storyBoxW=typeof window!=='undefined'?Math.min(window.innerWidth,448):390;
+        const storyCplBottom=Math.max(8,Math.floor((storyBoxW-64)/13)-2);
+        const storyCplBubble=Math.max(6,storyLand?Math.floor((storyBoxW-118)/12)-2:Math.floor((storyBoxW-156)/14)-2);
+        const storyPageCache=[];
+        const storyPagesOf=(i)=>{
+          if(storyPageCache[i]) return storyPageCache[i];
+          const l=script[i];
+          const w=l?assistantById(l.who):null;
+          const text=l&&w?speakText(l,w):'';
+          const pages=storyZones&&typeof storySplitPages==='function'?storySplitPages(text,isGuestWho(l&&l.who)?storyCplBubble:storyCplBottom,3):[text];
+          storyPageCache[i]=pages;
+          return pages;
+        };
+        const storyCurPages=storyPagesOf(step);
+        const storyCurSub=Math.min(storySub,storyCurPages.length-1);
+        if(storyZones) last=last&&storyCurSub>=storyCurPages.length-1;
+        // 行 i に出す字。いま見ている行はそのページ、前の行(薄く残すぶん)は最後のページ
+        const storyTextAt=(i,w)=>{
+          if(!storyZones) return speakText(script[i],w);
+          const pages=storyPagesOf(i);
+          return i===step?pages[storyCurSub]:pages[pages.length-1];
+        };
+        let storyPageNo=step+1,storyPageTotal=script.length;
+        if(storyZones){
+          storyPageTotal=0;storyPageNo=storyCurSub+1;
+          for(let i=0;i<script.length;i++){const n=storyPagesOf(i).length;storyPageTotal+=n;if(i<step)storyPageNo+=n;}
+        }
         // 回想でも最後まで見たら「見たことがある」として扱う。
         // ももすけ登場を本編より先にここで見た人は、この時点でももすけが解放され、
         // あとから本編で同じ会話が重ねて流れることもなくなる
@@ -97548,7 +97610,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const next=()=>{
           const holdMs=Number(line.holdMs);
           if(Number.isFinite(holdMs)&&holdMs>0&&Date.now()-(Number(eventReplay.shownAt)||0)<holdMs) return;
-          if(!last){ setEventReplay(r=>r&&({...r,step:r.step+1,shownAt:Date.now()})); return; }
+          // 3つのゾーンのお話: 分けた台詞の次のページがあれば、行は進めずにページだけ送る
+          if(storyZones&&storyCurSub<storyCurPages.length-1){ setEventReplay(r=>r&&({...r,sub:storyCurSub+1,shownAt:Date.now()})); return; }
+          if(!last){ setEventReplay(r=>r&&({...r,step:r.step+1,sub:0,shownAt:Date.now()})); return; }
           if(event&&event.id==='momosuke_intro'&&!eventReplay.debug) markMomosukeIntroSeen();
           if(event&&event.id==='tactics_intro'&&!eventReplay.debug) markTacticsIntroSeen();
           // イベントの会話も、最後まで見たら「見た」にする(次の起動で重ねて流さない)
@@ -97604,7 +97668,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setEventReplay(null);
         };
         return(
-        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
+        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-zones={storyZones?'':undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
           {/* ★会話の紙は「タップを受け取る側」にしておく(2026-09-17・ユーザー報告
                 「イベント中のスキップを押してもスキップ出来ない／次のセリフへ進むだけ」)。
@@ -97626,11 +97690,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:speakingGuest?'#0f172a':stageGuest.accent,background:speakingGuest?stageGuest.accent:'rgba(15,23,42,.8)',transition:'background .2s, color .2s'}}>{stageName}</span>
                 </div>
                 {bubbleLine&&(
-                  <div key={`b${bubbleIdx}`} data-story-guest-bubble data-story-pop={speakingGuest?'1':undefined} className="relative min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2" style={{borderColor:stageGuest.accent,opacity:speakingGuest?1:.4,boxShadow:speakingGuest?`0 0 0 2px ${stageGuest.accent}55, 0 0 20px ${stageGuest.accent}88`:'none',marginTop:8,animation:speakingGuest?'storyPop .3s ease-out both':undefined}}>
+                  <div key={`b${bubbleIdx}${bubbleIdx===step?`-${storyCurSub}`:''}`} data-story-guest-bubble data-story-pop={speakingGuest?'1':undefined} className="relative min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2" style={{borderColor:stageGuest.accent,opacity:speakingGuest?1:.4,boxShadow:speakingGuest?`0 0 0 2px ${stageGuest.accent}55, 0 0 20px ${stageGuest.accent}88`:'none',marginTop:8,animation:speakingGuest?'storyPop .3s ease-out both':undefined}}>
                     {/* 話している人の顔を指すしっぽ */}
                     <span aria-hidden="true" style={{position:'absolute',left:-9,top:22,width:0,height:0,borderTop:'8px solid transparent',borderBottom:'8px solid transparent',borderRight:`9px solid ${stageGuest.accent}`}}/>
                     <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:stageGuest.accent}}>{bubbleLine.name||stageGuest.name}</span>
-                    <span className="mt-1 block text-[14px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleLines(speakText(bubbleLine,stageGuest))}</span>
+                    <span className="mt-1 block text-[14px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleLines(storyZones?storyTextAt(bubbleIdx,stageGuest):speakText(bubbleLine,stageGuest))}</span>
                   </div>
                 )}
               </div>
@@ -97670,7 +97734,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 ★1人ぶんの枠は話している子の大きさで固定し、大きくなっても段の幅も高さも変わらない(端の子でもはみ出さない) */}
             {/* 真ん中にモンスターが出ている行は、顔の列を1段・小さめにして、モンスターの置き場を空ける
                 (2026-11-02 社長「立ち絵が小さすぎる」。iPhone の縦では顔の列が2段で窓が高くなり、パンドラが背丈50px ほどに縮んでいた) */}
-            {(()=>{const compact=storyMonsters.length>0;const many=!compact&&cast.length>4;const big=compact?44:many?60:84,small=compact?36:many?48:64;return(
+            {(()=>{const compact=storyZones||storyMonsters.length>0;const many=!compact&&cast.length>4;const big=compact?44:many?60:84,small=compact?36:many?48:64;return(
             <div data-story-cast={cast.length} data-story-cast-compact={compact?'':undefined} className={`${compact?'mb-2 flex-nowrap gap-1.5':'mb-3'} flex items-end justify-center ${many?'flex-wrap gap-x-1 gap-y-1.5':compact?'':'gap-3'}`}>
               {cast.map(who=>{
                 const talking=!speakingGuest&&who.id===line.who;
@@ -97682,18 +97746,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 );
               })}
             </div>);})()}
-            {/* 真ん中にモンスターが出ているあいだは、台詞の欄を3行ぶんの高さにそろえる。台詞の長さで窓の高さが変わり、
-                モンスターの大きさが行ごとに伸び縮みしていた(2026-11-02 社長「文字量によってサイズが変動してる」)。4行以上の台詞だけは伸びる */}
-            {bottomLine?<div key={speakingGuest?'keep':`x${step}`} data-story-pop={speakingGuest?undefined:'1'} data-story-line-box className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{minHeight:storyMonsters.length>0?120:undefined,borderColor:bottomSpeaker.accent,opacity:speakingGuest?.4:1,boxShadow:speakingGuest?'none':`0 0 16px ${bottomSpeaker.accent}55`,transition:'opacity .18s',animation:speakingGuest?undefined:'storyPop .28s ease-out both'}}>
+            {/* 3つのゾーンのお話では、台詞の欄は3行ぶんの高さで固定(70-bootstrap.jsx の [data-story-zones] [data-story-line-box])。
+                台詞の長さで窓の高さが変わり、モンスターの大きさが行ごとに伸び縮みしていた(2026-11-02 社長「文字量によってサイズが変動してる」)。
+                収まらない台詞は、上の storyPagesOf でページに分ける */}
+            {bottomLine?<div key={speakingGuest?'keep':`x${step}-${storyCurSub}`} data-story-pop={speakingGuest?undefined:'1'} data-story-line-box className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:bottomSpeaker.accent,opacity:speakingGuest?.4:1,boxShadow:speakingGuest?'none':`0 0 16px ${bottomSpeaker.accent}55`,transition:'opacity .18s',animation:speakingGuest?undefined:'storyPop .28s ease-out both'}}>
               <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
               {/* ★{name} は、そのとき話している助手の呼び方へ置き換える。
                   ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた
                   (2026-09-11・ユーザー指摘「名前呼びのとこが変換されてない」)。
                   呼び方も絆Lvも助手ごとに違うので、選んでいる助手ではなく「話している助手」から引く */}
-              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={bubbleWrapStyle()}>{bubbleLines(speakText(bottomLine,bottomSpeaker))}</span>
-            </div>:<div data-story-line-box className="flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400" style={{minHeight:storyMonsters.length>0?120:undefined}}>▲ 上のことばを読んでね</div>}
+              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={bubbleWrapStyle()}>{bubbleLines(storyZones?storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker):speakText(bottomLine,bottomSpeaker))}</span>
+            </div>:<div data-story-line-box className="flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400">▲ 上のことばを読んでね</div>}
             <p className="mt-2 text-center text-[11px] font-bold tabular-nums text-slate-300">
-              {step+1} / {script.length}
+              {storyPageNo} / {storyPageTotal}
               {/* 「○○は「…」と呼び合います」の案内は出さない(2026-10-22 社長「ストーリー上に出さないでほしい」)。呼び方の表(EVENT_REPLAYS の calls)は台本を書く人の控えとしてデータに残す */}
             </p>
             </div>
@@ -102149,6 +102214,26 @@ const createAnimationStyle = () => {
     @media (orientation: landscape) and (max-height: 500px) {
       [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 8px) !important; bottom: calc(env(safe-area-inset-bottom) + 8px); align-items: center; justify-content: space-between; gap: 0; padding: 0 14px; }
       [data-story-monster] { height: min(70%, calc(((100vw - 28rem) / 2 - 30px) / 1.14), 176px); }
+    }
+    /* 3つのゾーン(上部=ステージ/立ち絵=モンスター/下部=窓)を固定する形(2026-11-02 社長「立ち絵ゾーン固定したほうがいいよ」「上部ゾーン/立ち絵/下部ゾーンで」)。
+       真ん中にモンスターが出るお話([data-story-zones]・60-app.jsx)だけ。高さは台詞の長さ・顔の数で変えない。
+       縦: 上部ゾーン = 上の端から 10px + ステージ(顔 96px・吹き出し 3行ぶん 112px)。下部ゾーン = 窓 336px(+下の安全域)。立ち絵ゾーン = そのあいだ(上の端から 150px 〜 窓の 8px 上)。
+       収まらない台詞は窓を伸ばさず、ページに分けて「次へ」で送る(60-app.jsx の storyPagesOf) */
+    @media (orientation: portrait), (min-height: 501px) {
+      [data-event-story][data-story-zones] [data-story-stage][data-story-stage] { top: calc(env(safe-area-inset-top) + 10px) !important; }
+      [data-event-story][data-story-zones] [data-story-guest-bubble] { height: 112px; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-sheet][data-story-sheet] { height: calc(336px + env(safe-area-inset-bottom)); max-height: none; justify-content: flex-end; }
+      [data-event-story][data-story-zones] [data-story-line-box] { height: 120px; flex-shrink: 0; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 150px) !important; bottom: calc(336px + env(safe-area-inset-bottom) + 8px); align-items: center; }
+      [data-event-story][data-story-zones] [data-story-monster] { height: min(calc(100% / 1.14), 50vw, 230px); }
+      [data-event-story][data-story-zones] [data-story-monsters="2"] [data-story-monster] { height: min(calc(100% / 1.14), 44vw, 210px); }
+    }
+    /* 横の低い画面: 上部ゾーン = 上の端から 6px + ステージ(顔は 0.6倍・吹き出し 3行ぶん 84px)。下部ゾーン = その下ぜんぶ(窓の高さを固定)。
+       モンスターは窓の左右の空き(上の横向きの決まりのまま) */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-event-story][data-story-zones] [data-story-guest-bubble] { height: 84px; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-sheet][data-story-sheet] { height: calc(var(--mh-vh) - 96px - env(safe-area-inset-top)) !important; max-height: none !important; justify-content: flex-end; }
+      [data-event-story][data-story-zones] [data-story-line-box] { height: 116px; flex-shrink: 0; overflow: hidden; }
     }
     @media (prefers-reduced-motion: reduce) { [data-story-monster] { animation: none !important; } }
     @keyframes storyShrink { 0% { opacity: 0; transform: scale(1.7); filter: brightness(1.9); } 50% { opacity: 1; } 100% { transform: scale(1); filter: brightness(1); } }

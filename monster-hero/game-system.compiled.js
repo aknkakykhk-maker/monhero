@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fe8ecd1f9233e296
+// source-sha256: 810eca0ab2283f23
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -18672,6 +18672,30 @@ const STORY_MONSTER_ART = Object.freeze({
   PandoraAngel: typeof PANDORA_ANGEL_IMG !== 'undefined' ? PANDORA_ANGEL_IMG : null,
   PandoraDevil: typeof PANDORA_DEVIL_IMG !== 'undefined' ? PANDORA_DEVIL_IMG : null
 });
+const storyTextUnits = s => [...String(s)].reduce((a, ch) => a + (/[\x20-\x7e｡-ﾟ]/.test(ch) ? 0.55 : 1), 0);
+const storyTextLines = (s, cpl) => String(s).split('\n').reduce((a, seg) => a + Math.max(1, Math.ceil(storyTextUnits(seg) / Math.max(1, cpl))), 0);
+const storySplitPages = (text, cpl, maxLines) => {
+  const s = String(text ?? '');
+  if (!s || storyTextLines(s, cpl) <= maxLines) return [s];
+  const tidy = t => t.replace(/^[\s\n]+|[\s\n]+$/g, '');
+  const pack = pieces => {
+    const out = [];
+    let cur = '';
+    for (const piece of pieces) {
+      const cand = cur + piece;
+      if (tidy(cur) && storyTextLines(tidy(cand), cpl) > maxLines) {
+        out.push(cur);
+        cur = piece;
+      } else cur = cand;
+    }
+    if (tidy(cur)) out.push(cur);
+    return out;
+  };
+  const sentences = (s.match(/[^。！？!?\n]*(?:[。！？!?]+[」』）)♪♡〜～ｗw…]*|\n|$)/g) || [s]).filter(Boolean);
+  const pages = pack(sentences).flatMap(page => storyTextLines(tidy(page), cpl) > maxLines ? pack((page.match(/[^、，,\n]*(?:[、，,]+|\n|$)/g) || [page]).filter(Boolean)) : [page]);
+  const out = pages.map(tidy).filter(t => t.length);
+  return out.length ? out : [s];
+};
 const storyMeasureRef = (name, kind) => el => {
   if (!el) return;
   const root = el.closest('[data-event-story]');
@@ -160116,7 +160140,9 @@ function MonsterHeroGame() {
       const step = Math.max(0, Math.min(eventReplay.step, script.length - 1));
       const line = script[step];
       const speaker = assistantById(line.who);
-      const last = step === script.length - 1;
+      const storyZones = script.some(l => l && Array.isArray(l.monsters));
+      const storySub = storyZones ? Math.max(0, Math.floor(Number(eventReplay.sub) || 0)) : 0;
+      let last = step === script.length - 1;
       const isGuestWho = id => {
         const w = assistantById(id);
         return !!w && w.role === 'ゲスト';
@@ -160157,7 +160183,7 @@ function MonsterHeroGame() {
       }
       const bottomLine = speakingGuest ? assistIdx >= 0 ? script[assistIdx] : null : line;
       const bottomSpeaker = bottomLine ? assistantById(bottomLine.who) : speaker;
-      const fx = line.fx || null;
+      const fx = storyZones && storySub > 0 ? null : line.fx || null;
       let monstersIdx = -1;
       for (let i = step; i >= 0; i--) {
         if (Array.isArray(script[i].monsters)) {
@@ -160181,13 +160207,55 @@ function MonsterHeroGame() {
       const bubbleLines = text => typeof text === 'string' && text.includes('\n') ? text.split('\n').map((x, i) => React.createElement(React.Fragment, {
         key: i
       }, i > 0 && React.createElement("br", null), bubbleWrap(x))) : bubbleWrap(text);
+      const storyLand = typeof window !== 'undefined' && window.innerWidth > window.innerHeight && window.innerHeight <= 500;
+      const storyBoxW = typeof window !== 'undefined' ? Math.min(window.innerWidth, 448) : 390;
+      const storyCplBottom = Math.max(8, Math.floor((storyBoxW - 64) / 13) - 2);
+      const storyCplBubble = Math.max(6, storyLand ? Math.floor((storyBoxW - 118) / 12) - 2 : Math.floor((storyBoxW - 156) / 14) - 2);
+      const storyPageCache = [];
+      const storyPagesOf = i => {
+        if (storyPageCache[i]) return storyPageCache[i];
+        const l = script[i];
+        const w = l ? assistantById(l.who) : null;
+        const text = l && w ? speakText(l, w) : '';
+        const pages = storyZones && typeof storySplitPages === 'function' ? storySplitPages(text, isGuestWho(l && l.who) ? storyCplBubble : storyCplBottom, 3) : [text];
+        storyPageCache[i] = pages;
+        return pages;
+      };
+      const storyCurPages = storyPagesOf(step);
+      const storyCurSub = Math.min(storySub, storyCurPages.length - 1);
+      if (storyZones) last = last && storyCurSub >= storyCurPages.length - 1;
+      const storyTextAt = (i, w) => {
+        if (!storyZones) return speakText(script[i], w);
+        const pages = storyPagesOf(i);
+        return i === step ? pages[storyCurSub] : pages[pages.length - 1];
+      };
+      let storyPageNo = step + 1,
+        storyPageTotal = script.length;
+      if (storyZones) {
+        storyPageTotal = 0;
+        storyPageNo = storyCurSub + 1;
+        for (let i = 0; i < script.length; i++) {
+          const n = storyPagesOf(i).length;
+          storyPageTotal += n;
+          if (i < step) storyPageNo += n;
+        }
+      }
       const next = () => {
         const holdMs = Number(line.holdMs);
         if (Number.isFinite(holdMs) && holdMs > 0 && Date.now() - (Number(eventReplay.shownAt) || 0) < holdMs) return;
+        if (storyZones && storyCurSub < storyCurPages.length - 1) {
+          setEventReplay(r => r && {
+            ...r,
+            sub: storyCurSub + 1,
+            shownAt: Date.now()
+          });
+          return;
+        }
         if (!last) {
           setEventReplay(r => r && {
             ...r,
             step: r.step + 1,
+            sub: 0,
             shownAt: Date.now()
           });
           return;
@@ -160244,6 +160312,7 @@ function MonsterHeroGame() {
       return React.createElement("div", {
         "data-event-story": eventReplay.id,
         "data-story-has-stage": stageGuest ? '1' : undefined,
+        "data-story-zones": storyZones ? '' : undefined,
         className: "fixed inset-0 flex items-end justify-center",
         style: {
           position: 'fixed',
@@ -160318,7 +160387,7 @@ function MonsterHeroGame() {
           transition: 'background .2s, color .2s'
         }
       }, stageName)), bubbleLine && React.createElement("div", {
-        key: `b${bubbleIdx}`,
+        key: `b${bubbleIdx}${bubbleIdx === step ? `-${storyCurSub}` : ''}`,
         "data-story-guest-bubble": true,
         "data-story-pop": speakingGuest ? '1' : undefined,
         className: "relative min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2",
@@ -160350,7 +160419,7 @@ function MonsterHeroGame() {
       }, bubbleLine.name || stageGuest.name), React.createElement("span", {
         className: "mt-1 block text-[14px] font-bold leading-relaxed text-white",
         style: bubbleWrapStyle()
-      }, bubbleLines(speakText(bubbleLine, stageGuest)))))), storyMonsters.length > 0 && React.createElement("div", {
+      }, bubbleLines(storyZones ? storyTextAt(bubbleIdx, stageGuest) : speakText(bubbleLine, stageGuest)))))), storyMonsters.length > 0 && React.createElement("div", {
         "data-story-monsters": storyMonsters.length,
         "aria-hidden": "true",
         className: "pointer-events-none",
@@ -160432,7 +160501,7 @@ function MonsterHeroGame() {
       }, React.createElement("p", {
         className: "mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300"
       }, eventReplay.live ? '' : '回想・', event?.title || ''), (() => {
-        const compact = storyMonsters.length > 0;
+        const compact = storyZones || storyMonsters.length > 0;
         const many = !compact && cast.length > 4;
         const big = compact ? 44 : many ? 60 : 84,
           small = compact ? 36 : many ? 48 : 64;
@@ -160471,12 +160540,11 @@ function MonsterHeroGame() {
           }, talking && line.name ? line.name : who.name));
         }));
       })(), bottomLine ? React.createElement("div", {
-        key: speakingGuest ? 'keep' : `x${step}`,
+        key: speakingGuest ? 'keep' : `x${step}-${storyCurSub}`,
         "data-story-pop": speakingGuest ? undefined : '1',
         "data-story-line-box": true,
         className: "rounded-2xl border-2 bg-slate-900 px-3 py-3",
         style: {
-          minHeight: storyMonsters.length > 0 ? 116 : undefined,
           borderColor: bottomSpeaker.accent,
           opacity: speakingGuest ? .4 : 1,
           boxShadow: speakingGuest ? 'none' : `0 0 16px ${bottomSpeaker.accent}55`,
@@ -160492,15 +160560,12 @@ function MonsterHeroGame() {
       }, bottomLine.name || bottomSpeaker.name), React.createElement("span", {
         className: "block text-[13px] font-bold leading-relaxed text-white mt-1",
         style: bubbleWrapStyle()
-      }, bubbleLines(speakText(bottomLine, bottomSpeaker)))) : React.createElement("div", {
+      }, bubbleLines(storyZones ? storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker) : speakText(bottomLine, bottomSpeaker)))) : React.createElement("div", {
         "data-story-line-box": true,
-        className: "flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400",
-        style: {
-          minHeight: storyMonsters.length > 0 ? 116 : undefined
-        }
+        className: "flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400"
       }, "▲ 上のことばを読んでね"), React.createElement("p", {
         className: "mt-2 text-center text-[11px] font-bold tabular-nums text-slate-300"
-      }, step + 1, " / ", script.length)), React.createElement("div", {
+      }, storyPageNo, " / ", storyPageTotal)), React.createElement("div", {
         "data-story-buttons": true,
         className: `relative mt-3 grid shrink-0 ${last ? 'grid-cols-1' : 'grid-cols-[1fr_2fr]'} gap-2`,
         style: {
@@ -166222,6 +166287,26 @@ const createAnimationStyle = () => {
     @media (orientation: landscape) and (max-height: 500px) {
       [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 8px) !important; bottom: calc(env(safe-area-inset-bottom) + 8px); align-items: center; justify-content: space-between; gap: 0; padding: 0 14px; }
       [data-story-monster] { height: min(70%, calc(((100vw - 28rem) / 2 - 30px) / 1.14), 176px); }
+    }
+    /* 3つのゾーン(上部=ステージ/立ち絵=モンスター/下部=窓)を固定する形(2026-11-02 社長「立ち絵ゾーン固定したほうがいいよ」「上部ゾーン/立ち絵/下部ゾーンで」)。
+       真ん中にモンスターが出るお話([data-story-zones]・60-app.jsx)だけ。高さは台詞の長さ・顔の数で変えない。
+       縦: 上部ゾーン = 上の端から 10px + ステージ(顔 96px・吹き出し 3行ぶん 112px)。下部ゾーン = 窓 336px(+下の安全域)。立ち絵ゾーン = そのあいだ(上の端から 150px 〜 窓の 8px 上)。
+       収まらない台詞は窓を伸ばさず、ページに分けて「次へ」で送る(60-app.jsx の storyPagesOf) */
+    @media (orientation: portrait), (min-height: 501px) {
+      [data-event-story][data-story-zones] [data-story-stage][data-story-stage] { top: calc(env(safe-area-inset-top) + 10px) !important; }
+      [data-event-story][data-story-zones] [data-story-guest-bubble] { height: 112px; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-sheet][data-story-sheet] { height: calc(336px + env(safe-area-inset-bottom)); max-height: none; justify-content: flex-end; }
+      [data-event-story][data-story-zones] [data-story-line-box] { height: 120px; flex-shrink: 0; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 150px) !important; bottom: calc(336px + env(safe-area-inset-bottom) + 8px); align-items: center; }
+      [data-event-story][data-story-zones] [data-story-monster] { height: min(calc(100% / 1.14), 50vw, 230px); }
+      [data-event-story][data-story-zones] [data-story-monsters="2"] [data-story-monster] { height: min(calc(100% / 1.14), 44vw, 210px); }
+    }
+    /* 横の低い画面: 上部ゾーン = 上の端から 6px + ステージ(顔は 0.6倍・吹き出し 3行ぶん 84px)。下部ゾーン = その下ぜんぶ(窓の高さを固定)。
+       モンスターは窓の左右の空き(上の横向きの決まりのまま) */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-event-story][data-story-zones] [data-story-guest-bubble] { height: 84px; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-sheet][data-story-sheet] { height: calc(var(--mh-vh) - 96px - env(safe-area-inset-top)) !important; max-height: none !important; justify-content: flex-end; }
+      [data-event-story][data-story-zones] [data-story-line-box] { height: 116px; flex-shrink: 0; overflow: hidden; }
     }
     @media (prefers-reduced-motion: reduce) { [data-story-monster] { animation: none !important; } }
     @keyframes storyShrink { 0% { opacity: 0; transform: scale(1.7); filter: brightness(1.9); } 50% { opacity: 1; } 100% { transform: scale(1); filter: brightness(1); } }
