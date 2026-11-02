@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 85081e995db02083
+// source-sha256: c04cf35ec77acede
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -105882,14 +105882,14 @@ const CardBattleScreen = ({
       onClick: closeShareGuide,
       className: "mt-1.5 rounded-lg bg-amber-400 px-3 py-1 text-[12px] font-black text-slate-950"
     }, "わかった"))), React.createElement("div", {
-      className: `${SCREEN_LIST_CLASS} relative z-[1] flex flex-col space-y-3 pb-4`
+      className: `${SCREEN_LIST_CLASS} relative z-[1] flex flex-col space-y-3 pb-4 landscape:grid landscape:grid-cols-2 landscape:auto-rows-max landscape:content-start landscape:gap-2 landscape:space-y-0 landscape:pb-1`
     }, React.createElement("div", {
       "aria-hidden": "true",
-      className: "flex-1"
+      className: "flex-1 landscape:hidden"
     }), React.createElement("button", {
       type: "button",
       "data-card-mode-assistant": true,
-      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-orange-200 via-orange-400 to-rose-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]",
+      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 landscape:min-h-[84px] landscape:gap-1 bg-gradient-to-br from-orange-200 via-orange-400 to-rose-500 px-4 py-3 text-left text-slate-950 landscape:px-3 landscape:py-2 active:scale-[.98]",
       onClick: () => {
         Audio_.fgSe.tap();
         setView('foe');
@@ -105901,9 +105901,9 @@ const CardBattleScreen = ({
       className: "relative flex items-center gap-2"
     }, React.createElement("span", {
       "aria-hidden": "true",
-      className: "text-3xl leading-none"
+      className: "text-3xl leading-none landscape:text-2xl"
     }, "⚔️"), React.createElement("span", null, React.createElement("b", {
-      className: "block text-[22px] font-black italic leading-tight"
+      className: "block text-[22px] font-black italic leading-tight landscape:text-[17px]"
     }, shareForm ? 'フリー対戦' : '助手と対戦'), React.createElement("small", {
       className: "block text-[11px] font-black text-slate-900/80"
     }, shareForm ? '助手や、ほかのブリーダーのデッキと戦う' : '助手のみんなと戦う・強さは5段'))), React.createElement("span", {
@@ -105913,7 +105913,7 @@ const CardBattleScreen = ({
       key: x.id,
       src: assistantFaceImage(x, 'normal'),
       alt: "",
-      className: "h-8 w-8 rounded-full border-2 border-white/80 bg-slate-900 object-cover object-top shadow"
+      className: "h-8 w-8 rounded-full border-2 landscape:h-6 landscape:w-6 border-white/80 bg-slate-900 object-cover object-top shadow"
     })))), React.createElement("button", {
       type: "button",
       "data-card-mode-multi": true,
@@ -105922,7 +105922,7 @@ const CardBattleScreen = ({
         Audio_.fgSe.tap();
         setView('pvp');
       },
-      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50",
+      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 landscape:min-h-[84px] landscape:gap-1 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 landscape:px-3 landscape:py-2 active:scale-[.98] disabled:opacity-50",
       style: {
         animationDelay: '60ms'
       }
@@ -105933,9 +105933,9 @@ const CardBattleScreen = ({
       className: "relative flex items-center gap-2"
     }, React.createElement("span", {
       "aria-hidden": "true",
-      className: "text-3xl leading-none"
+      className: "text-3xl leading-none landscape:text-2xl"
     }, "🎮"), React.createElement("span", null, React.createElement("b", {
-      className: "block text-[22px] font-black italic leading-tight"
+      className: "block text-[22px] font-black italic leading-tight landscape:text-[17px]"
     }, "マルチ対戦"), React.createElement("small", {
       className: "block text-[11px] font-black text-slate-900/80"
     }, "ブリーダーどうしで戦う"))), !cardPvpOpen() && React.createElement("span", {
@@ -105948,7 +105948,7 @@ const CardBattleScreen = ({
         setTacticsBack('mode');
         setView('tactics');
       },
-      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-amber-200 via-amber-400 to-orange-600 px-4 py-3 text-left text-slate-950 active:scale-[.98]"
+      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 landscape:min-h-[84px] landscape:gap-1 bg-gradient-to-br from-amber-200 via-amber-400 to-orange-600 px-4 py-3 text-left text-slate-950 landscape:px-3 landscape:py-2 active:scale-[.98]"
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "mhms-mark"
@@ -105956,9 +105956,9 @@ const CardBattleScreen = ({
       className: "relative flex items-center gap-2"
     }, React.createElement("span", {
       "aria-hidden": "true",
-      className: "text-3xl leading-none"
+      className: "text-3xl leading-none landscape:text-2xl"
     }, "🗂️"), React.createElement("span", null, React.createElement("b", {
-      className: "block text-[22px] font-black italic leading-tight"
+      className: "block text-[22px] font-black italic leading-tight landscape:text-[17px]"
     }, "デッキ登録"), React.createElement("small", {
       className: "block text-[11px] font-black text-slate-900/80"
     }, "デッキを登録する・戦術カードを組む・引く"))), !cardShareOpen() && React.createElement("span", {
@@ -105970,7 +105970,7 @@ const CardBattleScreen = ({
         Audio_.fgSe.tap();
         setView('tour');
       },
-      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-yellow-100 via-yellow-300 to-amber-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]"
+      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 landscape:min-h-[84px] landscape:gap-1 bg-gradient-to-br from-yellow-100 via-yellow-300 to-amber-500 px-4 py-3 text-left text-slate-950 landscape:px-3 landscape:py-2 active:scale-[.98]"
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "mhms-mark"
@@ -105978,9 +105978,9 @@ const CardBattleScreen = ({
       className: "relative flex items-center gap-2"
     }, React.createElement("span", {
       "aria-hidden": "true",
-      className: "text-3xl leading-none"
+      className: "text-3xl leading-none landscape:text-2xl"
     }, "🏆"), React.createElement("span", null, React.createElement("b", {
-      className: "block text-[22px] font-black italic leading-tight"
+      className: "block text-[22px] font-black italic leading-tight landscape:text-[17px]"
     }, "大会"), React.createElement("small", {
       className: "block text-[11px] font-black text-slate-900/80"
     }, "登録したデッキで出る・毎日自動で対戦"))), React.createElement("span", {
@@ -105992,7 +105992,7 @@ const CardBattleScreen = ({
         Audio_.fgSe.tap();
         setView('cup');
       },
-      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-lime-100 via-emerald-300 to-teal-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]"
+      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 landscape:min-h-[84px] landscape:gap-1 bg-gradient-to-br from-lime-100 via-emerald-300 to-teal-500 px-4 py-3 text-left text-slate-950 landscape:px-3 landscape:py-2 active:scale-[.98]"
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "mhms-mark"
@@ -106000,16 +106000,16 @@ const CardBattleScreen = ({
       className: "relative flex items-center gap-2"
     }, React.createElement("span", {
       "aria-hidden": "true",
-      className: "text-3xl leading-none"
+      className: "text-3xl leading-none landscape:text-2xl"
     }, "🎌"), React.createElement("span", null, React.createElement("b", {
-      className: "block text-[22px] font-black italic leading-tight"
+      className: "block text-[22px] font-black italic leading-tight landscape:text-[17px]"
     }, "個人杯"), React.createElement("small", {
       className: "block text-[11px] font-black text-slate-900/80"
     }, "自分で大会を開く・仲間の大会に出る"))), !cardCupOpen() && React.createElement("span", {
       className: "relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white"
     }, "つくっている途中(デバッグ)")), React.createElement("div", {
       "aria-hidden": "true",
-      className: "flex-1"
+      className: "flex-1 landscape:hidden"
     })));
   }
   const tacticsBackTo = () => {
@@ -107126,7 +107126,7 @@ const CardBattleScreen = ({
       }, React.createElement("span", {
         className: "block whitespace-pre-line text-center"
       }, o.label), React.createElement("small", {
-        className: "mt-0.5 block text-center text-[9px] font-bold leading-tight opacity-80"
+        className: "mt-0.5 block text-center text-[11px] font-bold leading-tight opacity-80"
       }, o.note));
     })));
     const quickAutoPanel = React.createElement("div", {
@@ -107297,7 +107297,7 @@ const CardBattleScreen = ({
       }, React.createElement("span", {
         className: "block whitespace-pre-line text-center"
       }, o.label), React.createElement("small", {
-        className: "mt-0.5 block text-center text-[9px] font-bold leading-tight opacity-80"
+        className: "mt-0.5 block text-center text-[11px] font-bold leading-tight opacity-80"
       }, o.note)))));
     }), g.title === '演出' && packFxPanel, g.title === '自動' && quickAutoPanel, g.title === '助手' && startLevelPanel)))));
   }
@@ -167023,7 +167023,8 @@ const createAnimationStyle = () => {
     @keyframes mhPackCFlash { 0%, 20% { opacity: 1; } 100% { opacity: 0; } }
     .mh-pack-label-big { font-size: 40px; padding: 2px 24px; font-style: italic; letter-spacing: 2px; overflow: hidden; -webkit-text-stroke: 1.5px rgba(0,0,0,.3);
       box-shadow: 0 0 18px rgba(255,200,0,.9); animation: mhPackLabelIn .45s cubic-bezier(.2,1.6,.4,1) both; }
-    .mh-pack-label-big.alt { font-size: 46px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.6); box-shadow: 0 0 30px 8px rgba(255,255,255,.95), 0 0 70px 20px rgba(255,80,200,.6);
+    /* レアキラ!! の字は濃い紫で縁取る(白い字が虹色の帯の上で読みにくかった。2026-11-01 見た目の点検 H)。縁は影を8方向に重ねて作る(text-stroke は字の内側を削るため) */
+    .mh-pack-label-big.alt { font-size: 46px; color: #fff; -webkit-text-stroke: 0; text-shadow: -2px -2px 0 #3b0764, 2px -2px 0 #3b0764, -2px 2px 0 #3b0764, 2px 2px 0 #3b0764, 0px -2px 0 #3b0764, 0px 2px 0 #3b0764, -2px 0px 0 #3b0764, 2px 0px 0 #3b0764, 0 4px 6px rgba(0,0,0,.6); box-shadow: 0 0 30px 8px rgba(255,255,255,.95), 0 0 70px 20px rgba(255,80,200,.6);
       animation: mhPackLabelIn .45s cubic-bezier(.2,1.6,.4,1) both, mhPackRainbowMove 1s linear infinite; }
     .mh-pack-label-big::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.9) 50%, transparent 60%); background-size: 250% 100%; animation: mhPackLabelSheen 1.1s ease-in-out infinite; }
     @keyframes mhPackLabelIn { 0% { opacity: 0; transform: scale(2.6) rotate(-14deg); } 100% { opacity: 1; transform: scale(1) rotate(-6deg); } }
