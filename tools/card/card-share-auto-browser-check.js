@@ -2,7 +2,7 @@
 //   node tools/card/card-share-auto-browser-check.js  (2〜3分)
 //   VIDEO_DIR=<フォルダ> を付けると、動く様子を動画(webm)で残す
 // ① 「ほかのブリーダー」→「戦う」のデッキ選びに「🖐 自分で操作/🤖 オート(戦術カード)」があり、オートにすると今日のごほうびの残り(3回)が出る
-// ② オートで始めると、上にオートの帯(×1/×2/×4・🖐 自分で)が出て、自分の側も手を触らずに最後まで戦う
+// ② オートで始めると、見出しの列にオートの操作(縦は ×1→×2→×4 の1つ・横は ×1/×2/×4、🖐 自分で)が出て、自分の側も手を触らずに最後まで戦う
 // ③ 結果: ビートPは自分で戦うときの半分(勝ち100・負けは自分の番の数で減らした半分)。その日はじめての勝ちの +50 は付かない。
 //    その日の数(daily)は変えず、ごほうびの回数(mh_card_auto_reward_v1)が1つ増え、結果に「あと◯回」が出る
 // ④ 今日の3回を使い切っていると、ごほうびなし(ビートPも回数も変わらない)。結果に「ごほうびなしで遊べます」
@@ -93,6 +93,12 @@ const browser = async () => {
     await shot('deck-pick');
     if (process.env.VIDEO_DIR) await page.waitForTimeout(2500); // 動画: デッキ選びの切り替えを見せる
     check('① デッキ選びに「自分で操作/オート」があり、オートにすると今日のごほうびの残り(3回)が出る', modes === 2 && /あと3回/.test(leftText), `${modes} / ${leftText}`);
+    // 速さを ×4 に。縦の画面は見出しの列の「×1→×2→×4」のボタン(押すたびに変わる)、横の画面は ×1/×2/×4 の3つ(2026-11-02)
+    const speed4 = async () => {
+      const cyc = page.locator('[data-card-auto-speed-cycle]');
+      if (await cyc.count()) { for (let i = 0; i < 3 && (await cyc.getAttribute('data-card-auto-speed')) !== '4'; i++) await cyc.click(); return; }
+      await page.locator('[data-card-auto-speed="4"]').click();
+    };
     const getS = (k) => page.evaluate(async (key) => storeGet(key === 'point' ? CARD_POINT_STORE_KEY : key, null, false), k);
     const lvBefore = await getS('mh_card_level_v1');
     const before = { point: await getS('point'), daily: JSON.stringify(await getS('mh_card_daily_v1')) };
@@ -104,7 +110,7 @@ const browser = async () => {
       await page.locator('[data-card-auto-bar="auto"]').waitFor({ timeout: 10000 });
       await page.waitForTimeout(2500);
       await shot('battle');
-      await page.locator('[data-card-auto-speed="4"]').click();
+      await speed4();
       const end = await page.locator('[data-card-top="result"]').waitFor({ timeout: 240000 }).then(() => true).catch(() => false);
       return end;
     };
@@ -130,7 +136,7 @@ const browser = async () => {
     await page.locator('[data-card-result-again], [data-card-top="result"] .mh-button-primary').first().click().catch(() => {});
     let end2 = false;
     if (await page.locator('[data-card-battle]').waitFor({ timeout: 15000 }).then(() => true).catch(() => false)) {
-      await page.locator('[data-card-auto-speed="4"]').click().catch(() => {});
+      await speed4().catch(() => {});
       // ⑥ 手に切り替えて、また戻す
       await page.locator('[data-card-auto-toggle]').click();
       const hand = (await page.locator('[data-card-auto-bar="hand"]').count()) === 1;
