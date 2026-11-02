@@ -1036,7 +1036,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const share = game.share || null;
   const who = pvp ? { id: 'pvp', name: pvp.name, accent: '#38bdf8' } : share ? { id: 'share', name: share.name, accent: '#34d399' } : (ASSISTANTS.find((a) => a.id === game.who) || ASSISTANTS[0]);
   const policy = useMemo(() => (share && typeof cardSharePolicy === 'function' ? cardSharePolicy(share.tactics, game.level, { sameBlood: !!game.cpuSameBlood }) : cardAiPolicy(game.who, game.level, { sameBlood: !!game.cpuSameBlood })), [game.who, game.level, game.cpuSameBlood]);
-  // オートの操作(×1/×2/×4・自分で/オート)。label … 「オートで戦っています」の文も出すか(縦の帯だけ)
+  // オートの操作(×1/×2/×4・自分で/オート)。横の画面の見出しの列に出す。label … 「オートで戦っています」の文も出すか
   const autoControls = (label) => (<>
     {label && <span className="min-w-0 flex-1 truncate text-[12px] font-black text-sky-100">{autoOn ? '🤖 オートで戦っています' : '🖐 自分で操作しています'}</span>}
     {[1, 2, 4].map((x) => (
@@ -1045,6 +1045,14 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     ))}
     <button type="button" data-card-auto-toggle onClick={() => { Audio_.fgSe.tap(); setAutoOn((v) => !v); }}
       className="min-h-[30px] shrink-0 rounded-lg border border-white/30 px-2 text-[12px] font-black text-white">{autoOn ? '🖐 自分で' : '🤖 オート'}</button>
+  </>);
+  // 縦の画面のオートの操作は、見出しの列(記録・番の帯・投了)に小さく入れる(2026-11-02 社長の実機: 別の帯にすると、その高さのぶん
+  //   下の「攻撃おわり → ガッツへ」や手札の名前が画面の下で切れた)。速さは押すたびに ×1→×2→×4。オート中は番の帯の頭に 🤖
+  const autoCompact = (<>
+    <button type="button" data-card-auto-speed={autoSpeed} data-card-auto-speed-cycle aria-label={`速さ ×${autoSpeed}(押すと変わる)`} onClick={() => { Audio_.fgSe.tap(); setAutoSpeed((v) => (v === 1 ? 2 : v === 2 ? 4 : 1)); }}
+      className="min-h-[30px] shrink-0 rounded-lg bg-sky-300 px-1.5 text-[12px] font-black tabular-nums text-slate-950">{`×${autoSpeed}`}</button>
+    <button type="button" data-card-auto-toggle onClick={() => { Audio_.fgSe.tap(); setAutoOn((v) => !v); }}
+      className="min-h-[30px] shrink-0 whitespace-nowrap rounded-lg border border-white/30 px-1.5 text-[11px] font-black text-white">{autoOn ? '🖐自分で' : '🤖オート'}</button>
   </>);
   const autoPolicy = useMemo(() => (autoGame && typeof cardSharePolicy === 'function' ? cardSharePolicy(autoGame.tactics, autoGame.level, { sameBlood: !!autoGame.sameBlood }) : null), [autoGame]);
   const [st, setSt] = useState(game.st);
@@ -2137,6 +2145,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
               className={`mx-auto min-w-0 max-w-[440px] flex-1 truncate whitespace-nowrap rounded-full px-2 py-1 text-center ${sig ? 'text-[11px]' : tiny ? 'text-[12px]' : 'text-[13px]'} font-black leading-tight tabular-nums ${tone}`}>
               {sig ? (pvpClock.offline ? '電波が途切れています。つなぎ直しています…' : `相手の電波が途切れています(あと${pvpClock.foeQuietSec}秒)`) : <>
                 {!(headSt.phase === 'setup' && replay) && !(pvpLive && (tiny || headSt.active !== cardDeciderOf(headSt))) && <span className="mr-1 text-[11px] font-bold opacity-75">ターン{Math.max(1, headSt.turn)}</span>}
+                {autoGame && autoOn && !wide && <span aria-label="オートで戦っています" className="mr-0.5">🤖</span>}
                 {turnTxt}
                 {/* 守りを考えている間(番の人と考える人が違う)は、だれの守りの時間かを添える */}
                 {pvpLive && ` · ${headSt.active !== cardDeciderOf(headSt) ? (pvpClock.mine ? '守り 残り' : '相手の守り') : pvpClock.mine ? '残り' : ''}${pvpClock.left}秒`}
@@ -2149,12 +2158,11 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         {/* 観戦している人の数(94-card-spectate.jsx)。いないときは出さない */}
         {pvpLive && pvpClock.eyes > 0 && <span data-card-pvp-eyes={pvpClock.eyes} aria-label={`${pvpClock.eyes}人が観戦しています`} className="shrink-0 whitespace-nowrap rounded-full bg-violet-500/25 px-1.5 py-0.5 text-[11px] font-black text-violet-100 tabular-nums">{tiny ? `👀${pvpClock.eyes}` : `👀観戦${pvpClock.eyes}`}</span>}
         {/* 投了は右端へ離し、赤い縁(押しまちがえやすい所から離す)。観戦では出さない(下の「観戦をやめる」と2つ並んでいた。2026-10-27 部長) */}
-        {autoGame && wide && <span data-card-auto-bar={autoOn ? 'auto' : 'hand'} className="flex shrink-0 items-center gap-1">{autoControls(false)}</span>}
+        {autoGame && <span data-card-auto-bar={autoOn ? 'auto' : 'hand'} className="flex shrink-0 items-center gap-1">{wide ? autoControls(false) : autoCompact}</span>}
         {!watch && <button type="button" data-card-quit data-card-replay-exit={replay ? '' : undefined} onClick={() => (replay ? onFinish({ outcome: 'replayExit', st }) : setQuit(true))} className={`shrink-0 rounded-lg border px-2 py-1 text-[12px] font-black ${replay || tutorial ? 'border-white/20 text-slate-200' : 'border-rose-400/80 text-rose-200'}`}>{replay ? 'とじる' : tutorial ? '飛ばす' : '投了'}</button>}
         {/* マルチの持ち時間の線(帯のいちばん下。減っていく) */}
         {pvpLive && <span aria-hidden="true" data-card-pvp-bar className={`pointer-events-none absolute bottom-0 left-0 h-[3px] transition-[width] duration-1000 ease-linear ${(pvpClock.offline || pvpClock.foeQuietSec > 0) ? 'bg-amber-500' : pvpClock.mine ? 'bg-amber-300' : 'bg-slate-400/60'}`} style={{ width: `${Math.max(0, Math.min(100, (pvpClock.left * 1000 / Math.max(1, cardPvpLimitMs(st))) * 100))}%` }}/>}
       </div>
-      {autoGame && !wide && <div data-card-auto-bar={autoOn ? 'auto' : 'hand'} className="flex shrink-0 items-center gap-1.5 bg-sky-950/80 px-2 py-1">{autoControls(true)}</div>}
       {/* 横画面(④): 左に「相手の帯〜自分の帯」、右に「案内〜手札〜下のボタン」。縦のときは2つの箱を display:contents にして、今までと同じ縦の並び */}
       <div data-card-wide-row className={wide ? 'flex min-h-0 flex-1 flex-row' : 'contents'}>
       <div data-card-field className={wide ? 'flex min-h-0 min-w-0 flex-1 flex-col' : 'contents'}>
