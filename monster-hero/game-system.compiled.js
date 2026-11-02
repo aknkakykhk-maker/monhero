@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b1ec39a5387eb125
+// source-sha256: bb503e1a438fc88e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -101489,7 +101489,16 @@ const CardBattleBoard = ({
       setAutoOn(v => !v);
     },
     className: "min-h-[30px] shrink-0 whitespace-nowrap rounded-lg border border-white/30 px-1.5 text-[11px] font-black text-white"
-  }, autoOn ? '🖐自分で' : '🤖オート'));
+  }, autoOn ? '🖐自分で' : '🤖オート'), React.createElement("button", {
+    type: "button",
+    "data-card-auto-skip": true,
+    "aria-label": "結果へ(ここから最後まで一瞬で戦う)",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setSkipAsk(true);
+    },
+    className: "min-h-[30px] min-w-[30px] shrink-0 rounded-lg bg-amber-400 px-1 text-[13px] font-black text-slate-950"
+  }, "⏩"));
   const autoPolicy = useMemo(() => autoGame && typeof cardSharePolicy === 'function' ? cardSharePolicy(autoGame.tactics, autoGame.level, {
     sameBlood: !!autoGame.sameBlood
   }) : null, [autoGame]);

@@ -1079,6 +1079,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       className="min-h-[30px] shrink-0 rounded-lg bg-sky-300 px-1.5 text-[12px] font-black tabular-nums text-slate-950">{`×${autoSpeed}`}</button>
     <button type="button" data-card-auto-toggle onClick={() => { Audio_.fgSe.tap(); setAutoOn((v) => !v); }}
       className="min-h-[30px] shrink-0 whitespace-nowrap rounded-lg border border-white/30 px-1.5 text-[11px] font-black text-white">{autoOn ? '🖐自分で' : '🤖オート'}</button>
+    <button type="button" data-card-auto-skip aria-label="結果へ(ここから最後まで一瞬で戦う)" onClick={() => { Audio_.fgSe.tap(); setSkipAsk(true); }}
+      className="min-h-[30px] min-w-[30px] shrink-0 rounded-lg bg-amber-400 px-1 text-[13px] font-black text-slate-950">⏩</button>
   </>);
   const autoPolicy = useMemo(() => (autoGame && typeof cardSharePolicy === 'function' ? cardSharePolicy(autoGame.tactics, autoGame.level, { sameBlood: !!autoGame.sameBlood }) : null), [autoGame]);
   const [st, setSt] = useState(game.st);
