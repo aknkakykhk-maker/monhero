@@ -3311,11 +3311,11 @@ const createAnimationStyle = () => {
     }
     /* 3つのゾーン(上部=ステージ/立ち絵=モンスター/下部=窓)を固定する形(2026-11-02 社長「立ち絵ゾーン固定したほうがいいよ」「上部ゾーン/立ち絵/下部ゾーンで」)。
        真ん中にモンスターが出るお話([data-story-zones]・60-app.jsx)だけ。高さは台詞の長さ・顔の数で変えない。
-       縦: 上部ゾーン = 上の端から 10px + ステージ(顔 96px・吹き出し 3行ぶん 112px)。下部ゾーン = 窓 336px(+下の安全域)。立ち絵ゾーン = そのあいだ(上の端から 150px 〜 窓の 8px 上)。
+       縦: 上部ゾーン = 上の端から 10px + ステージ(顔 96px・吹き出し 3行ぶん 116px)。下部ゾーン = 窓 336px(+下の安全域)。立ち絵ゾーン = そのあいだ(上の端から 150px 〜 窓の 8px 上)。
        収まらない台詞は窓を伸ばさず、ページに分けて「次へ」で送る(60-app.jsx の storyPagesOf) */
     @media (orientation: portrait), (min-height: 501px) {
       [data-event-story][data-story-zones] [data-story-stage][data-story-stage] { top: calc(env(safe-area-inset-top) + 10px) !important; }
-      [data-event-story][data-story-zones] [data-story-guest-bubble] { height: 112px; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-guest-bubble] { height: 116px; overflow: hidden; }
       [data-event-story][data-story-zones] [data-story-sheet][data-story-sheet] { height: calc(336px + env(safe-area-inset-bottom)); max-height: none; justify-content: flex-end; }
       [data-event-story][data-story-zones] [data-story-line-box] { height: 120px; flex-shrink: 0; overflow: hidden; }
       [data-event-story][data-story-zones] [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 150px) !important; bottom: calc(336px + env(safe-area-inset-bottom) + 8px); align-items: center; }

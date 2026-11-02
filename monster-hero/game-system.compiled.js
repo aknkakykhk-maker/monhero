@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 810eca0ab2283f23
+// source-sha256: ec107abc29093bf3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -18692,7 +18692,7 @@ const storySplitPages = (text, cpl, maxLines) => {
     return out;
   };
   const sentences = (s.match(/[^。！？!?\n]*(?:[。！？!?]+[」』）)♪♡〜～ｗw…]*|\n|$)/g) || [s]).filter(Boolean);
-  const pages = pack(sentences).flatMap(page => storyTextLines(tidy(page), cpl) > maxLines ? pack((page.match(/[^、，,\n]*(?:[、，,]+|\n|$)/g) || [page]).filter(Boolean)) : [page]);
+  const pages = pack(sentences).flatMap(page => storyTextLines(tidy(page), cpl) > maxLines ? pack((page.match(/[^、，\n]*(?:[、，]+|\n|$)/g) || [page]).filter(Boolean)) : [page]);
   const out = pages.map(tidy).filter(t => t.length);
   return out.length ? out : [s];
 };
@@ -160210,7 +160210,7 @@ function MonsterHeroGame() {
       const storyLand = typeof window !== 'undefined' && window.innerWidth > window.innerHeight && window.innerHeight <= 500;
       const storyBoxW = typeof window !== 'undefined' ? Math.min(window.innerWidth, 448) : 390;
       const storyCplBottom = Math.max(8, Math.floor((storyBoxW - 64) / 13) - 2);
-      const storyCplBubble = Math.max(6, storyLand ? Math.floor((storyBoxW - 118) / 12) - 2 : Math.floor((storyBoxW - 156) / 14) - 2);
+      const storyCplBubble = Math.max(6, storyLand ? Math.floor((storyBoxW - 118) / 12) - 3 : Math.floor((storyBoxW - 156) / 14) - 4);
       const storyPageCache = [];
       const storyPagesOf = i => {
         if (storyPageCache[i]) return storyPageCache[i];
@@ -166290,11 +166290,11 @@ const createAnimationStyle = () => {
     }
     /* 3つのゾーン(上部=ステージ/立ち絵=モンスター/下部=窓)を固定する形(2026-11-02 社長「立ち絵ゾーン固定したほうがいいよ」「上部ゾーン/立ち絵/下部ゾーンで」)。
        真ん中にモンスターが出るお話([data-story-zones]・60-app.jsx)だけ。高さは台詞の長さ・顔の数で変えない。
-       縦: 上部ゾーン = 上の端から 10px + ステージ(顔 96px・吹き出し 3行ぶん 112px)。下部ゾーン = 窓 336px(+下の安全域)。立ち絵ゾーン = そのあいだ(上の端から 150px 〜 窓の 8px 上)。
+       縦: 上部ゾーン = 上の端から 10px + ステージ(顔 96px・吹き出し 3行ぶん 116px)。下部ゾーン = 窓 336px(+下の安全域)。立ち絵ゾーン = そのあいだ(上の端から 150px 〜 窓の 8px 上)。
        収まらない台詞は窓を伸ばさず、ページに分けて「次へ」で送る(60-app.jsx の storyPagesOf) */
     @media (orientation: portrait), (min-height: 501px) {
       [data-event-story][data-story-zones] [data-story-stage][data-story-stage] { top: calc(env(safe-area-inset-top) + 10px) !important; }
-      [data-event-story][data-story-zones] [data-story-guest-bubble] { height: 112px; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-guest-bubble] { height: 116px; overflow: hidden; }
       [data-event-story][data-story-zones] [data-story-sheet][data-story-sheet] { height: calc(336px + env(safe-area-inset-bottom)); max-height: none; justify-content: flex-end; }
       [data-event-story][data-story-zones] [data-story-line-box] { height: 120px; flex-shrink: 0; overflow: hidden; }
       [data-event-story][data-story-zones] [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 150px) !important; bottom: calc(336px + env(safe-area-inset-bottom) + 8px); align-items: center; }

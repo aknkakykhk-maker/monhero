@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e94771e51e8dd2c2
+// generated-sha256: 4eb0b877cbfc24d9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -13144,7 +13144,8 @@ const storySplitPages = (text, cpl, maxLines) => {
   };
   const sentences = (s.match(/[^。！？!?\n]*(?:[。！？!?]+[」』）)♪♡〜～ｗw…]*|\n|$)/g) || [s]).filter(Boolean);
   const pages = pack(sentences).flatMap((page) => (storyTextLines(tidy(page), cpl) > maxLines
-    ? pack((page.match(/[^、，,\n]*(?:[、，,]+|\n|$)/g) || [page]).filter(Boolean)) : [page]));
+    // 半角の「,」では分けない(曲名「Altar of the World Tree, Beneath …」の途中で切れた)
+    ? pack((page.match(/[^、，\n]*(?:[、，]+|\n|$)/g) || [page]).filter(Boolean)) : [page]));
   const out = pages.map(tidy).filter((t) => t.length);
   return out.length ? out : [s];
 };
@@ -97577,7 +97578,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const storyLand=typeof window!=='undefined'&&window.innerWidth>window.innerHeight&&window.innerHeight<=500;
         const storyBoxW=typeof window!=='undefined'?Math.min(window.innerWidth,448):390;
         const storyCplBottom=Math.max(8,Math.floor((storyBoxW-64)/13)-2);
-        const storyCplBubble=Math.max(6,storyLand?Math.floor((storyBoxW-118)/12)-2:Math.floor((storyBoxW-156)/14)-2);
+        // 吹き出しは幅が狭く、言葉の切れ目で折ると行の終わりが空きやすいので、さらに控えめに見込む(縦の 390 幅で1行12字)
+        const storyCplBubble=Math.max(6,storyLand?Math.floor((storyBoxW-118)/12)-3:Math.floor((storyBoxW-156)/14)-4);
         const storyPageCache=[];
         const storyPagesOf=(i)=>{
           if(storyPageCache[i]) return storyPageCache[i];
@@ -102217,11 +102219,11 @@ const createAnimationStyle = () => {
     }
     /* 3つのゾーン(上部=ステージ/立ち絵=モンスター/下部=窓)を固定する形(2026-11-02 社長「立ち絵ゾーン固定したほうがいいよ」「上部ゾーン/立ち絵/下部ゾーンで」)。
        真ん中にモンスターが出るお話([data-story-zones]・60-app.jsx)だけ。高さは台詞の長さ・顔の数で変えない。
-       縦: 上部ゾーン = 上の端から 10px + ステージ(顔 96px・吹き出し 3行ぶん 112px)。下部ゾーン = 窓 336px(+下の安全域)。立ち絵ゾーン = そのあいだ(上の端から 150px 〜 窓の 8px 上)。
+       縦: 上部ゾーン = 上の端から 10px + ステージ(顔 96px・吹き出し 3行ぶん 116px)。下部ゾーン = 窓 336px(+下の安全域)。立ち絵ゾーン = そのあいだ(上の端から 150px 〜 窓の 8px 上)。
        収まらない台詞は窓を伸ばさず、ページに分けて「次へ」で送る(60-app.jsx の storyPagesOf) */
     @media (orientation: portrait), (min-height: 501px) {
       [data-event-story][data-story-zones] [data-story-stage][data-story-stage] { top: calc(env(safe-area-inset-top) + 10px) !important; }
-      [data-event-story][data-story-zones] [data-story-guest-bubble] { height: 112px; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-guest-bubble] { height: 116px; overflow: hidden; }
       [data-event-story][data-story-zones] [data-story-sheet][data-story-sheet] { height: calc(336px + env(safe-area-inset-bottom)); max-height: none; justify-content: flex-end; }
       [data-event-story][data-story-zones] [data-story-line-box] { height: 120px; flex-shrink: 0; overflow: hidden; }
       [data-event-story][data-story-zones] [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 150px) !important; bottom: calc(336px + env(safe-area-inset-bottom) + 8px); align-items: center; }

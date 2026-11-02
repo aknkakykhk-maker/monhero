@@ -48,7 +48,8 @@ const storySplitPages = (text, cpl, maxLines) => {
   };
   const sentences = (s.match(/[^。！？!?\n]*(?:[。！？!?]+[」』）)♪♡〜～ｗw…]*|\n|$)/g) || [s]).filter(Boolean);
   const pages = pack(sentences).flatMap((page) => (storyTextLines(tidy(page), cpl) > maxLines
-    ? pack((page.match(/[^、，,\n]*(?:[、，,]+|\n|$)/g) || [page]).filter(Boolean)) : [page]));
+    // 半角の「,」では分けない(曲名「Altar of the World Tree, Beneath …」の途中で切れた)
+    ? pack((page.match(/[^、，\n]*(?:[、，]+|\n|$)/g) || [page]).filter(Boolean)) : [page]));
   const out = pages.map(tidy).filter((t) => t.length);
   return out.length ? out : [s];
 };

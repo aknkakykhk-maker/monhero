@@ -23191,7 +23191,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const storyLand=typeof window!=='undefined'&&window.innerWidth>window.innerHeight&&window.innerHeight<=500;
         const storyBoxW=typeof window!=='undefined'?Math.min(window.innerWidth,448):390;
         const storyCplBottom=Math.max(8,Math.floor((storyBoxW-64)/13)-2);
-        const storyCplBubble=Math.max(6,storyLand?Math.floor((storyBoxW-118)/12)-2:Math.floor((storyBoxW-156)/14)-2);
+        // 吹き出しは幅が狭く、言葉の切れ目で折ると行の終わりが空きやすいので、さらに控えめに見込む(縦の 390 幅で1行12字)
+        const storyCplBubble=Math.max(6,storyLand?Math.floor((storyBoxW-118)/12)-3:Math.floor((storyBoxW-156)/14)-4);
         const storyPageCache=[];
         const storyPagesOf=(i)=>{
           if(storyPageCache[i]) return storyPageCache[i];
