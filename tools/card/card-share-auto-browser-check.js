@@ -8,6 +8,8 @@
 // ④ 今日の3回を使い切っていると、ごほうびなし(ビートPも回数も変わらない)。結果に「ごほうびなしで遊べます」
 // ⑤ サーバへは何も書かない(「戦った」の知らせ・見返し・カードランクを送らない。登録デッキの一覧を読むだけ)
 // ⑥ 「🖐 自分で」で手に切り替えられる
+// ⑧ 「⏩ 結果だけ見る」: 対戦の画面を出さずに一瞬で結果。ごほうびの扱いはふつうのオートと同じ。結果の「この対戦を見る」で1手ずつ見られ、とじると結果へ戻る
+// ⑨ 対戦中の「⏩ 結果へ」: 確かめの窓のあと、その場から最後まで一瞬で打って結果へ
 // ⑦ 画面でエラーが出ない
 const fs = require('fs');
 const path = require('path');
@@ -144,6 +146,47 @@ const browser = async () => {
     const p3 = await getS('point');
     const auto3 = await getS('mh_card_auto_reward_v1');
     check('④ 今日の3回を使い切っていると、ごほうびなし(ビートPも回数も変わらない)・「ごほうびなしで遊べます」', end2 && free === 'free' && p3 === p2 && auto3.n === 3 && /ごほうびなしで遊べます/.test(note2), JSON.stringify({ end2, free, p2, p3, auto3 }));
+    // ⑧ 結果だけ見る
+    const toPick = async () => {
+      await page.getByRole('button', { name: '相手をえらぶ' }).click();
+      await page.locator('[data-card-share-fight="check-breeder-1"]').click();
+      await page.locator('[data-card-deck-pick-go]').waitFor({ timeout: 8000 });
+      if ((await page.locator('[data-card-deck-pick-auto="auto"]').count()) === 0) await page.locator('[data-card-deck-pick-mode="auto"]').click();
+    };
+    await toPick();
+    await page.locator('[data-card-deck-pick-quick="off"]').click();
+    await shot('deck-pick-quick');
+    const t0 = Date.now();
+    await page.locator('[data-card-deck-pick-go]').click();
+    const quickEnd = await page.locator('[data-card-top="result"]').waitFor({ timeout: 30000 }).then(() => true).catch(() => false);
+    const quickMs = Date.now() - t0;
+    const sawBoard = await page.evaluate(() => !!document.querySelector('[data-card-battle]'));
+    const quickAuto = await page.locator('[data-card-result-auto]').getAttribute('data-card-result-auto').catch(() => '');
+    check('⑧ 「結果だけ見る」で、対戦の画面を出さずに結果が出る(ごほうびの扱いはオートと同じ)', quickEnd && !sawBoard && quickMs < 20000 && quickAuto === 'free', `${quickMs}ms ${quickAuto}`);
+    await page.waitForTimeout(1500);
+    await shot('result-quick');
+    const rp = page.locator('[data-card-result-replay="auto"]');
+    let replayOk = false, replayBack = false;
+    if (await rp.count()) {
+      await rp.click();
+      replayOk = await page.locator('[data-card-replay-bar]').waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+      if (replayOk) { await page.locator('[data-card-replay-next-turn]').click(); await page.waitForTimeout(600); await shot('replay-quick'); }
+      await page.locator('[data-card-replay-exit]').click().catch(() => {});
+      replayBack = await page.locator('[data-card-top="result"]').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    }
+    check('⑧ 結果の「この対戦を見る」で1手ずつ見られ、とじると結果へ戻る', replayOk && replayBack);
+    // ⑨ 対戦中の「⏩ 結果へ」
+    await toPick();
+    await page.locator('[data-card-deck-pick-quick="on"]').click();
+    await page.locator('[data-card-deck-pick-go]').click();
+    await page.locator('[data-card-battle]').waitFor({ timeout: 30000 });
+    await page.locator('[data-card-auto-skip]').first().waitFor({ timeout: 10000 });
+    await page.waitForTimeout(1500);
+    await page.locator('[data-card-auto-skip]').first().click();
+    await shot('skip-confirm');
+    await page.getByRole('button', { name: '結果へ' }).last().click();
+    const skipEnd = await page.locator('[data-card-top="result"]').waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
+    check('⑨ 対戦中の「⏩ 結果へ」で、確かめのあと一瞬で最後まで打って結果へ', skipEnd && (await page.locator('[data-card-result-auto]').count()) === 1);
     const writes = sent.slice(sentBefore).filter((x) => !/^GET /.test(x) && !/card_deck_record_of/.test(x));
     check('⑤ オートの試合では、サーバへ何も書かない(戦った・見返し・カードランクを送らない)', writes.length === 0, writes.slice(0, 5).join(' / '));
     check('⑦ 画面でエラーが出ない', errors.length === 0, errors.slice(0, 2).join(' / '));
