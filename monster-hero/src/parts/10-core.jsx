@@ -1,6 +1,41 @@
 
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const { useState, useEffect, useCallback, useMemo, useRef, useContext } = React;
+// ==== 見えないページのずれを戻す(全画面) ====
+// 【2026-11-02 社長「押した所と反応する所がたまにずれる。横向きにしたり、更新情報の窓を開いたりしたあとになる気がする」→ 決定「A+B 両方入れる」】
+// iPhone(とくにホーム画面のアプリ)では、回転・キーボードの出し入れ・動画の全画面との行き来のあとに、
+// ページ(window・html/body)が見えない分だけスクロールしたまま残ることがある。すると見た目と、押した位置の数え方が食い違う。
+// このゲームはページそのものをスクロールさせない作り(#root が overflow:hidden・画面の中の箱だけがスクロールする)なので、
+// 画面の大きさが変わった・visualViewport が動いた・入力欄から離れた・全画面が終わった ときに、0でなければ0へ戻す。
+// 文字を入力している間(キーボードが出ている間)は戻さない(入力欄が隠れないように)。フォーカスが外れたあとで戻す。
+(()=>{
+  if(typeof window==='undefined'||typeof document==='undefined')return;
+  const editing=()=>{const el=document.activeElement;if(!el)return false;const tag=String(el.tagName||'').toUpperCase();return tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||el.isContentEditable===true;};
+  const reset=()=>{
+    if(editing())return;
+    try{
+      if(window.scrollX||window.scrollY)window.scrollTo(0,0);
+      for(const el of [document.scrollingElement,document.documentElement,document.body]){
+        if(el&&(el.scrollTop||el.scrollLeft)){el.scrollTop=0;el.scrollLeft=0;}
+      }
+    }catch(_){}
+  };
+  // iOS は大きさや位置を少し遅れて直すことがあるので、すぐ・少しあと・もう少しあとの3回見る
+  let timers=[];
+  const soon=()=>{timers.forEach(clearTimeout);timers=[0,150,500].map(ms=>setTimeout(reset,ms));};
+  const passive={passive:true};
+  window.addEventListener('resize',soon,passive);
+  window.addEventListener('orientationchange',soon,passive);
+  if(window.visualViewport&&typeof window.visualViewport.addEventListener==='function'){
+    window.visualViewport.addEventListener('resize',soon,passive);
+    window.visualViewport.addEventListener('scroll',soon,passive);
+  }
+  // 入力欄から離れた(キーボードが閉じる)あと。次の入力欄へ移っただけのときは戻さない
+  document.addEventListener('focusout',()=>setTimeout(()=>{if(!editing())soon();},60),true);
+  // 動画の全画面が終わったとき(iPhone の動画は webkitendfullscreen。泡立たないので document の捕まえる段で受ける)
+  ['fullscreenchange','webkitfullscreenchange'].forEach(type=>document.addEventListener(type,soon));
+  document.addEventListener('webkitendfullscreen',soon,true);
+})();
 // ==== アイコン: lucide-react UMDが不安定なため、インラインSVGで自己完結 ====
 const _LI = {};
 // lucide公式のSVGパス(strokeベース)。無いものは汎用ドットにフォールバック
