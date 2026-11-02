@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 47b0bb4c07afb384
+// source-sha256: fe8ecd1f9233e296
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -160473,8 +160473,10 @@ function MonsterHeroGame() {
       })(), bottomLine ? React.createElement("div", {
         key: speakingGuest ? 'keep' : `x${step}`,
         "data-story-pop": speakingGuest ? undefined : '1',
+        "data-story-line-box": true,
         className: "rounded-2xl border-2 bg-slate-900 px-3 py-3",
         style: {
+          minHeight: storyMonsters.length > 0 ? 116 : undefined,
           borderColor: bottomSpeaker.accent,
           opacity: speakingGuest ? .4 : 1,
           boxShadow: speakingGuest ? 'none' : `0 0 16px ${bottomSpeaker.accent}55`,
@@ -160491,7 +160493,11 @@ function MonsterHeroGame() {
         className: "block text-[13px] font-bold leading-relaxed text-white mt-1",
         style: bubbleWrapStyle()
       }, bubbleLines(speakText(bottomLine, bottomSpeaker)))) : React.createElement("div", {
-        className: "rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400"
+        "data-story-line-box": true,
+        className: "flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400",
+        style: {
+          minHeight: storyMonsters.length > 0 ? 116 : undefined
+        }
       }, "▲ 上のことばを読んでね"), React.createElement("p", {
         className: "mt-2 text-center text-[11px] font-bold tabular-nums text-slate-300"
       }, step + 1, " / ", script.length)), React.createElement("div", {
