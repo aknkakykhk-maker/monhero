@@ -1,0 +1,224 @@
+{
+ "mode": "tactics",
+ "games": 600,
+ "locked": 0,
+ "lockByAct": {},
+ "long50": 5,
+ "cap": 0,
+ "median": 22,
+ "p95": 42,
+ "max": 60,
+ "rateByAct": {
+  "ace": "1/78",
+  "bEff.回復する": "2/79",
+  "bEff.守りを名指しで封じる": "1/70",
+  "bEff.小さく攻撃する": "1/47",
+  "bEff.攻撃できないを消す": "1/78",
+  "bEff.相手のガッツを減らす": "1/66",
+  "bEff.相手を攻撃できなくする": "2/65",
+  "fieldKind.じわじわ減らす": "1/69",
+  "fieldKind.ガッツの上限": "1/76",
+  "fieldKind.ダメージを足す": "1/57",
+  "fieldKind.持ちょうを変える": "1/65",
+  "gutsN.0": "2/50",
+  "gutsN.1": "3/76",
+  "gutsOrder.使えない札": "1/66",
+  "save": "3/79",
+  "stop": "2/88"
+ },
+ "examples": [
+  {
+   "g": 23,
+   "who": [
+    "dra",
+    "momosuke"
+   ],
+   "turn": 50,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "盾で受ける(blk)",
+     "ドラゴンラッシュ(pow)",
+     "盾で受ける(blk)",
+     "ぐるぐるプレス(pow)",
+     "ドラゴンラッシュ(pow)"
+    ],
+    [
+     "フットワーク(dge)",
+     "フットワーク(dge)",
+     "メタルコート(blk)",
+     "光の盾(blk)"
+    ]
+   ],
+   "guts": [
+    33,
+    44
+   ],
+   "frames": [
+    [
+     "myDiscard.20→ace",
+     "any→bEff.守りを名指しで封じる",
+     "any→save"
+    ],
+    [
+     "myDeck.10→gutsN.1",
+     "field.相手の→stop",
+     "any→bEff.回復する"
+    ]
+   ]
+  },
+  {
+   "g": 40,
+   "who": [
+    "sorashido",
+    "sorashido"
+   ],
+   "turn": 50,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "緊急回避(dge)",
+     "みんな下がれ(dge)",
+     "右爪(pow)",
+     "大混乱(fld)"
+    ],
+    [
+     "フットワーク(dge)",
+     "フットワーク(dge)",
+     "ハガネのウロコ(blk)",
+     "緊急回避(dge)",
+     "ファイナルソード(int)"
+    ]
+   ],
+   "guts": [
+    17,
+    6
+   ],
+   "frames": [
+    [
+     "lowest→gutsN.1",
+     "incoming.10→fieldKind.ダメージを足す",
+     "selfLife.20→bEff.回復する"
+    ],
+    [
+     "turnLe.2→bEff.攻撃できないを消す",
+     "any→bEff.相手のガッツを減らす",
+     "myKo→bEff.相手を攻撃できなくする"
+    ]
+   ]
+  },
+  {
+   "g": 402,
+   "who": [
+    "dra",
+    "kiki"
+   ],
+   "turn": 60,
+   "reason": "全員KO",
+   "hands": [
+    [
+     "ドラゴンラッシュ(pow)",
+     "ドラゴンラッシュ(pow)",
+     "盾で受ける(blk)",
+     "盾で受ける(blk)"
+    ],
+    [
+     "ドラゴンラッシュ(pow)",
+     "ぐるぐるアタック(pow)",
+     "ドラゴンラッシュ(pow)",
+     "ハガネのウロコ(blk)"
+    ]
+   ],
+   "guts": [
+    30,
+    3
+   ],
+   "frames": [
+    [
+     "type.地上→stop",
+     "selfType.水中→fieldKind.持ちょうを変える",
+     "any→gutsN.1"
+    ],
+    [
+     "incoming.5→bEff.小さく攻撃する",
+     "any→gutsN.1",
+     "highest→fieldKind.じわじわ減らす"
+    ]
+   ]
+  },
+  {
+   "g": 495,
+   "who": [
+    "kiki",
+    "momosuke"
+   ],
+   "turn": 50,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "緊急回避(dge)",
+     "ドラゴンラッシュ(pow)",
+     "ハガネのウロコ(blk)",
+     "かみつき(pow)",
+     "ドラゴンラッシュ(pow)"
+    ],
+    [
+     "フットワーク(dge)",
+     "メタルコート(blk)",
+     "メタルコート(blk)",
+     "左掌(pow)",
+     "冷静な判断(fld)"
+    ]
+   ],
+   "guts": [
+    28,
+    28
+   ],
+   "frames": [
+    [
+     "myLife.40→save"
+    ],
+    [
+     "any→bEff.相手を攻撃できなくする",
+     "selfType.水中→gutsN.0"
+    ]
+   ]
+  },
+  {
+   "g": 583,
+   "who": [
+    "dra",
+    "sorashido"
+   ],
+   "turn": 54,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "ぐるぐるプレス(pow)",
+     "ボディプレス(pow)",
+     "盾で受ける(blk)"
+    ],
+    [
+     "みんな下がれ(dge)",
+     "みんな下がれ(dge)",
+     "大混乱(fld)",
+     "タックル(pow)"
+    ]
+   ],
+   "guts": [
+    0,
+    31
+   ],
+   "frames": [
+    [
+     "any→gutsN.0",
+     "foeGutsGe.7→gutsOrder.使えない札",
+     "foeHandGe.5→fieldKind.ガッツの上限"
+    ],
+    [
+     "guardN.1→save"
+    ]
+   ]
+  }
+ ]
+}

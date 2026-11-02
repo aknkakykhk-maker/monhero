@@ -1610,11 +1610,24 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
     pick.splice(0, pick.length, ...order.map((o) => o.i).slice(0, gopt.count));
   }
   if (gopt && gopt.keepGuards) { for (let k = pick.length - 1; k >= 0; k--) if (cardIsGuardKind((cardOf(db, me.hand[pick[k]]) || {}).kind)) pick.splice(k, 1); }
+  // 【試し作り・案A】手札が固まったとき(手札が5枚で、今のガッツで使える攻めの札が1枚も無い)は、ガッツが足りていても入れ替える:
+  //   守りの札は CARD_AI_STUCK_KEEP 枚まで残し、残りのいちばん要らない札から最低1枚をガッツへ(戦術カードの「置かない」より先に効く抜け道)
+  {
+    const live = me.mons.filter((m) => !m.ko);
+    const idle = !me.breederUsed && me.mons.every((m) => !m.attacks);   // この番に技もブリーダーのカードも使っていない
+    if (live.length && me.hand.length >= CARD_BATTLE_HAND_MAX && idle && pick.length === 0) {
+      const guards = order.filter((o) => o.g).map((o) => o.i);
+      const keepG = new Set(guards.slice(-CARD_AI_STUCK_KEEP));
+      const toss = order.map((o) => o.i).filter((i) => !keepG.has(i) && !(policy && Array.isArray(policy.aces) && policy.aces.includes(me.hand[i])));
+      pick.push(...toss.slice(0, Math.max(1, toss.length - 1)));
+    }
+  }
   const gm = cardFieldEff(st, 'fieldGutsMax'); // 長期戦の予感
   // 山札切れを自分から呼ばない(2026-10-27 あつさん「山札を気にせず負ける」):
   //   次の自分の番に引く枚数(手札が5枚なら1枚・それ未満なら5枚まで)が山札より多くなるほど、手札をガッツにしない
   return { type: 'guts', hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, policy.playerRole ? 99 : cardAiGutsCap(me)) };
 };
+const CARD_AI_STUCK_KEEP = 2;
 // ガッツにしてよい枚数の上限(次の番に引く枚数が山札を超えないように)。山札が5枚以上あれば上限なし
 const cardAiGutsCap = (me) => (me.deck.length >= CARD_BATTLE_HAND_MAX ? 99 : Math.max(0, me.hand.length - (CARD_BATTLE_HAND_MAX - me.deck.length)));
 

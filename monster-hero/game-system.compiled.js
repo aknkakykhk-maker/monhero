@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8bb70ceed1ab5ed5
+// source-sha256: 0954deb9552c620c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93296,12 +93296,23 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
   if (gopt && gopt.keepGuards) {
     for (let k = pick.length - 1; k >= 0; k--) if (cardIsGuardKind((cardOf(db, me.hand[pick[k]]) || {}).kind)) pick.splice(k, 1);
   }
+  {
+    const live = me.mons.filter(m => !m.ko);
+    const idle = !me.breederUsed && me.mons.every(m => !m.attacks);
+    if (live.length && me.hand.length >= CARD_BATTLE_HAND_MAX && idle && pick.length === 0) {
+      const guards = order.filter(o => o.g).map(o => o.i);
+      const keepG = new Set(guards.slice(-CARD_AI_STUCK_KEEP));
+      const toss = order.map(o => o.i).filter(i => !keepG.has(i) && !(policy && Array.isArray(policy.aces) && policy.aces.includes(me.hand[i])));
+      pick.push(...toss.slice(0, Math.max(1, toss.length - 1)));
+    }
+  }
   const gm = cardFieldEff(st, 'fieldGutsMax');
   return {
     type: 'guts',
     hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, policy.playerRole ? 99 : cardAiGutsCap(me))
   };
 };
+const CARD_AI_STUCK_KEEP = 2;
 const cardAiGutsCap = me => me.deck.length >= CARD_BATTLE_HAND_MAX ? 99 : Math.max(0, me.hand.length - (CARD_BATTLE_HAND_MAX - me.deck.length));
 const CARD_AI_RISKY_EFFS = ['selfDamage', 'selfDamageIfHit', 'selfDamageIfEvaded', 'attachSelfIfHit', 'lastWish', 'selfHurt', 'fuse', 'draw', 'deckToGuts', 'rush', 'refresh', 'choose', 'fieldMill', 'fieldDrawOnPlay', 'fieldBurn'];
 const cardAiDrawNeed = pl => pl.hand.length >= CARD_BATTLE_HAND_MAX ? 1 : CARD_BATTLE_HAND_MAX - pl.hand.length;

@@ -1,0 +1,179 @@
+{
+ "mode": "assist",
+ "games": 300,
+ "locked": 39,
+ "lockByAct": {},
+ "long50": 24,
+ "cap": 0,
+ "median": 24,
+ "p95": 64,
+ "max": 78,
+ "rateByAct": {},
+ "examples": [
+  {
+   "g": 2,
+   "who": [
+    "dra",
+    "momosuke"
+   ],
+   "turn": 52,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "バック転(dge)",
+     "興奮のるつぼ(fld)",
+     "怒り(spe)",
+     "ジャンプ(dge)",
+     "緊急回避(dge)"
+    ],
+    [
+     "フットワーク(dge)",
+     "魔法反射(blk)",
+     "左爪(pow)",
+     "メタルコート(blk)",
+     "突き刺し(pow)"
+    ]
+   ],
+   "guts": [
+    22,
+    21
+   ],
+   "frames": [
+    null,
+    null
+   ]
+  },
+  {
+   "g": 34,
+   "who": [
+    "momosuke",
+    "kiki"
+   ],
+   "turn": 68,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "フットワーク(dge)",
+     "光の盾(blk)",
+     "光の盾(blk)",
+     "メタルガード(blk)",
+     "右爪(pow)"
+    ],
+    [
+     "ハガネのウロコ(blk)",
+     "光の盾(blk)",
+     "堅い守り(blk)",
+     "友をかばう(blk)",
+     "ジョイのサポート(spe)"
+    ]
+   ],
+   "guts": [
+    34,
+    35
+   ],
+   "frames": [
+    null,
+    null
+   ]
+  },
+  {
+   "g": 35,
+   "who": [
+    "dra",
+    "dra"
+   ],
+   "turn": 64,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "光の盾(blk)",
+     "我慢(blk)",
+     "剣で受ける(blk)",
+     "盾で受ける(blk)",
+     "我慢(blk)"
+    ],
+    [
+     "光の盾(blk)",
+     "盾で受ける(blk)",
+     "ドラゴンラッシュ(pow)",
+     "盾で受ける(blk)",
+     "冥王剣(pow)"
+    ]
+   ],
+   "guts": [
+    30,
+    31
+   ],
+   "frames": [
+    null,
+    null
+   ]
+  },
+  {
+   "g": 36,
+   "who": [
+    "sorashido",
+    "momosuke"
+   ],
+   "turn": 68,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "ファイナルソード(int)",
+     "飛び上がる(dge)",
+     "大混乱(fld)",
+     "みんな下がれ(dge)",
+     "ハガネのウロコ(blk)"
+    ],
+    [
+     "メタルコート(blk)",
+     "突き刺し(pow)",
+     "光の盾(blk)",
+     "光の盾(blk)",
+     "メタルガード(blk)"
+    ]
+   ],
+   "guts": [
+    35,
+    33
+   ],
+   "frames": [
+    null,
+    null
+   ]
+  },
+  {
+   "g": 48,
+   "who": [
+    "sorashido",
+    "kyuko"
+   ],
+   "turn": 76,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "緊急回避(dge)",
+     "ハガネのウロコ(blk)",
+     "光の盾(blk)",
+     "ファイナルソード(int)",
+     "みんな下がれ(dge)"
+    ],
+    [
+     "にげるニャ(dge)",
+     "ジャンプ(dge)",
+     "がまんニャ(blk)",
+     "体当たり(pow)",
+     "バック転(dge)"
+    ]
+   ],
+   "guts": [
+    37,
+    37
+   ],
+   "frames": [
+    null,
+    null
+   ]
+  }
+ ]
+}
