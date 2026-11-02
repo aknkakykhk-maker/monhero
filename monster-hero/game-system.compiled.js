@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 466212691fc640cd
+// source-sha256: c5e5dfef62029ff1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -101375,6 +101375,41 @@ const CardFitLabel = ({
     }
   }, children);
 };
+const CardAutoQuick = ({
+  db,
+  game,
+  onActLog = null,
+  onFinish
+}) => {
+  const done = useRef(false);
+  useEffect(() => {
+    if (done.current) return undefined;
+    done.current = true;
+    const t = setTimeout(() => {
+      const pols = [cardSharePolicy(game.auto.tactics, game.auto.level, {
+        sameBlood: !!game.auto.sameBlood
+      }), cardSharePolicy(game.share.tactics, game.level, {
+        sameBlood: !!game.cpuSameBlood
+      })];
+      const r = cardShareAutoFinish(db, game.st, pols);
+      if (onActLog) r.acts.forEach(([by, act]) => onActLog(by, act));
+      void onFinish({
+        outcome: r.st.winner === CARD_ME ? 'win' : 'lose',
+        st: r.st
+      });
+    }, 50);
+    return () => {
+      clearTimeout(t);
+    };
+  }, []);
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-card-auto-quick": true,
+    className: `${SCREEN_SHELL_CLASS} items-center justify-center`
+  }, React.createElement("p", {
+    className: "text-[16px] font-black text-amber-100"
+  }, "⏩ 結果を出しています…"));
+};
 const CardBattleBoard = ({
   db,
   game,
@@ -101389,6 +101424,8 @@ const CardBattleBoard = ({
   const autoGame = game.auto && game.auto.tactics && !game.replay && !game.pvp && !game.watch ? game.auto : null;
   const [autoOn, setAutoOn] = useState(!!autoGame);
   const [autoSpeed, setAutoSpeed] = useState(1);
+  const [skipAsk, setSkipAsk] = useState(false);
+  const skippedRef = useRef(false);
   const pace = (CARD_THINK_PACE[settings.think] || 1) / (autoGame ? autoSpeed : 1);
   const pressMs = CARD_PRESS_MS[settings.press] || 450;
   const confirmOn = key => settings[key] === 'ON' && !game.tutorial && !game.demo && !(typeof window !== 'undefined' && window.__mhCardPvpAuto);
@@ -101437,7 +101474,15 @@ const CardBattleBoard = ({
       setAutoOn(v => !v);
     },
     className: "min-h-[30px] shrink-0 rounded-lg border border-white/30 px-2 text-[12px] font-black text-white"
-  }, autoOn ? '🖐 自分で' : '🤖 オート'));
+  }, autoOn ? '🖐 自分で' : '🤖 オート'), React.createElement("button", {
+    type: "button",
+    "data-card-auto-skip": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setSkipAsk(true);
+    },
+    className: "min-h-[30px] shrink-0 rounded-lg bg-amber-400 px-2 text-[12px] font-black text-slate-950"
+  }, "⏩ 結果へ"));
   const autoCompact = React.createElement(React.Fragment, null, React.createElement("button", {
     type: "button",
     "data-card-auto-speed": autoSpeed,
@@ -101456,7 +101501,16 @@ const CardBattleBoard = ({
       setAutoOn(v => !v);
     },
     className: "min-h-[30px] shrink-0 whitespace-nowrap rounded-lg border border-white/30 px-1.5 text-[11px] font-black text-white"
-  }, autoOn ? '🖐自分で' : '🤖オート'));
+  }, autoOn ? '🖐自分で' : '🤖オート'), React.createElement("button", {
+    type: "button",
+    "data-card-auto-skip": true,
+    "aria-label": "結果へ(ここから最後まで一瞬で戦う)",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setSkipAsk(true);
+    },
+    className: "min-h-[30px] min-w-[30px] shrink-0 rounded-lg bg-amber-400 px-1 text-[13px] font-black text-slate-950"
+  }, "⏩"));
   const autoPolicy = useMemo(() => autoGame && typeof cardSharePolicy === 'function' ? cardSharePolicy(autoGame.tactics, autoGame.level, {
     sameBlood: !!autoGame.sameBlood
   }) : null, [autoGame]);
@@ -101593,7 +101647,7 @@ const CardBattleBoard = ({
     behind: [false, false]
   });
   const press = useCardLongPress(no => setDetail(no), pressMs);
-  const paused = !!detail || !!discard || quit;
+  const paused = !!detail || !!discard || quit || skipAsk;
   const say = (scene, ai = null) => {
     if (!scene || pvp || share || settings.bubble === 'OFF') return;
     const turn = st.turn;
@@ -101771,6 +101825,7 @@ const CardBattleBoard = ({
     motionTimers.current.push(setTimeout(() => setGutsFly(cur => cur.filter(g => !out.some(o => o.key === g.key))), life));
   };
   const step = (act, forced = null, shown = false) => {
+    if (skippedRef.current) return false;
     if (!forced && tutorial && cardDeciderOf(st) === CARD_ME && !tutAllow(act)) {
       tutWrongSay();
       return false;
@@ -101948,6 +102003,18 @@ const CardBattleBoard = ({
       next
     });
     return true;
+  };
+  const skipToEnd = () => {
+    const cur = stRef.current || st;
+    if (!autoPolicy || typeof cardShareAutoFinish !== 'function' || cur.winner !== null || skippedRef.current) return;
+    const r = cardShareAutoFinish(db, cur, [autoPolicy, policy]);
+    if (onActLog) r.acts.forEach(([by, act]) => onActLog(by, act));
+    skippedRef.current = true;
+    setSel(null);
+    setPicks([]);
+    setBigCard(null);
+    stRef.current = r.st;
+    setSt(r.st);
   };
   useEffect(() => {
     if (!autoGame || !autoOn || !autoPolicy || st.winner !== null || paused) return undefined;
@@ -104021,6 +104088,15 @@ const CardBattleBoard = ({
         st
       });
     }
+  }), skipAsk && React.createElement(ConfirmSheet, {
+    title: "結果へ進みますか？",
+    message: "ここから最後まで、2人とも戦術カードで一瞬で戦って、結果を出します(この対戦はあとから見返せます)",
+    confirmLabel: "結果へ",
+    onCancel: () => setSkipAsk(false),
+    onConfirm: () => {
+      setSkipAsk(false);
+      skipToEnd();
+    }
   }), quit && tutorial && React.createElement(ConfirmSheet, {
     title: "チュートリアルを飛ばしますか？",
     message: 'ルールの画面からいつでもできます',
@@ -104519,6 +104595,7 @@ const CardBattleScreen = ({
   }, []);
   const [deckPick, setDeckPick] = useState(null);
   const [shareAuto, setShareAuto] = useState(false);
+  const [shareQuick, setShareQuick] = useState(false);
   const [autoLeft, setAutoLeft] = useState(null);
   useEffect(() => {
     if (view !== 'deckPick' || !(deckPick && deckPick.pick && deckPick.pick.share) || typeof cardAutoRewardLoad !== 'function') return undefined;
@@ -105033,6 +105110,22 @@ const CardBattleScreen = ({
       setDeckRewardBusy(false);
     }
   };
+  const openReplayRec = (rec, back = 'top') => {
+    const g = rec && db ? cardReplayGameOf(db, rec) : null;
+    if (!g) {
+      setNotice('この対戦は見られません');
+      return;
+    }
+    setGame({
+      ...g,
+      settings: save ? save.settings : undefined,
+      replay: {
+        ...g.replay,
+        back
+      }
+    });
+    onNavigate('CARD_BATTLE');
+  };
   const openReplay = async (id, back = 'top') => {
     const rec = await cardReplayGet(id);
     const g = rec && db ? cardReplayGameOf(db, rec) : null;
@@ -105195,6 +105288,419 @@ const CardBattleScreen = ({
     lines: ['読み込み中…']
   }));
   if (screen === 'CARD_BATTLE' && game) {
+    const boardFinish = async ({
+      outcome,
+      st,
+      comeback = false
+    }) => {
+      if (game.replay) {
+        const back = game.replay.back || 'top';
+        setGame(null);
+        onNavigate('CARD_TOP');
+        setView(back);
+        return;
+      }
+      if (game.pvp) {
+        CARD_PVP.finish(outcome, st);
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView('pvp');
+        return;
+      }
+      if (game.cup) {
+        const cup = game.cup;
+        const log = cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogRef.current : null;
+        if (log) cpuLogRef.current = null;
+        const acts = log ? log.acts.map(x => [x.by, x.act]) : null;
+        const kosMe = [cardKoCount(st, CARD_ME), cardKoCount(st, CARD_CPU)];
+        const winnerSide = outcome === 'win' ? cup.side : 1 - cup.side;
+        const key = typeof cardShareOwnerKey === 'function' ? await cardShareOwnerKey(false) : null;
+        const r = key && typeof cardTourRpc === 'function' ? await cardTourRpc('card_cup_live_report', {
+          p_match: cup.matchId,
+          p_owner: cup.selfId,
+          p_key: key,
+          p_winner: winnerSide,
+          p_how: 'absent',
+          p_verified: false,
+          p_kos: cup.side === 0 ? kosMe : [kosMe[1], kosMe[0]],
+          p_acts: acts && acts.length ? cup.side === 0 ? acts : {
+            order: 'ba',
+            acts
+          } : null,
+          p_rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null
+        }) : null;
+        setGame(null);
+        setNotice(r === 'ok' || r === 'done' ? outcome === 'win' ? '勝ちました。結果を杯に送りました' : '負けました。結果を杯に送りました' : '結果を送れませんでした。杯の画面を開き直してください');
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView('cup');
+        return;
+      }
+      if (game.demo) {
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView('top');
+        return;
+      }
+      if (game.tutorial) {
+        const fin = cardTutorialFinish(save.tutorial, outcome === 'tutorialDone' ? 'done' : 'skip', Date.now());
+        const ok = await persist({
+          tutorial: fin.tutorial,
+          point: save.point + fin.reward
+        });
+        setResult({
+          tutorial: true,
+          done: outcome === 'tutorialDone',
+          reward: ok ? fin.reward : 0,
+          saved: ok
+        });
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView('result');
+        return;
+      }
+      if (game.share && game.auto && typeof cardAutoRewardLoad === 'function') {
+        const facts = cardResultFacts(st, CARD_ME);
+        const fresh = await freshCardSave();
+        const ar = await cardAutoRewardLoad();
+        const paid = ar.left > 0;
+        const half = cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts);
+        const point = paid ? Math.floor(half.base / 2) : 0;
+        const loops = paid ? Math.floor(cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts) / 2) : 0;
+        const levelGain = paid && typeof cardLevelEntries === 'function' ? await cardLevelEntries({
+          kind: 'cpu',
+          level: CARD_SHARE_REWARD_LEVEL,
+          outcome,
+          debug,
+          auto: true
+        }) : {
+          entries: []
+        };
+        const rankPoint = levelGain.gain && levelGain.gain.points || 0;
+        const counted = paid && (point > 0 || loops > 0 || levelGain.gain && levelGain.gain.add > 0);
+        const ok = await persist({
+          point: save.point + point + rankPoint
+        }, fresh.raw, [...(levelGain.entries || []), ...(counted ? [cardAutoRewardEntry(ar)] : [])]);
+        let quick = null;
+        if (ok && loops > 0 && onQuickLoops) {
+          try {
+            quick = await onQuickLoops(loops);
+          } catch (_) {
+            quick = null;
+          }
+        }
+        const autoLog = cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogRef.current : null;
+        if (autoLog) cpuLogRef.current = null;
+        const replayRec = autoLog && typeof cardReplayFromCpu === 'function' ? cardReplayFromCpu(db, {
+          id: `a${autoLog.id}`,
+          at: Date.now(),
+          myDeck: autoLog.decks[0],
+          cpuDeck: autoLog.decks[1],
+          seed: autoLog.seed,
+          first: autoLog.first,
+          history: autoLog.acts,
+          foe: {
+            name: game.share.name
+          },
+          outcome,
+          reason: ''
+        }) : null;
+        const reward = {
+          ...half,
+          base: point,
+          got: point,
+          bonus: 0,
+          total: point,
+          full: paid ? Math.floor(half.full / 2) : 0,
+          daily: fresh.daily
+        };
+        setResult({
+          outcome,
+          reward,
+          opened: null,
+          saved: ok,
+          who: null,
+          level: game.level,
+          loops,
+          quick,
+          facts,
+          talk: null,
+          replay: null,
+          share: game.share,
+          rankGain: ok ? levelGain.gain : null,
+          replayRec: replayRec || null,
+          auto: {
+            tactics: game.auto.tactics,
+            quick: !!game.auto.quick,
+            paid,
+            left: Math.max(0, ar.left - (ok && counted ? 1 : 0))
+          }
+        });
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView('result');
+        return;
+      }
+      if (game.share) {
+        const facts = cardResultFacts(st, CARD_ME);
+        const fresh = await freshCardSave();
+        const reward = cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts);
+        const loops = cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts);
+        const levelGain = typeof cardLevelEntries === 'function' ? await cardLevelEntries({
+          kind: 'cpu',
+          level: CARD_SHARE_REWARD_LEVEL,
+          outcome,
+          debug
+        }) : {
+          entries: []
+        };
+        const rankPoint = levelGain.gain && levelGain.gain.points || 0;
+        const ok = await persist({
+          point: save.point + reward.total + rankPoint,
+          daily: reward.daily
+        }, fresh.raw, levelGain.entries);
+        if (ok && levelGain.gain && levelGain.gain.to > levelGain.gain.from && !debug) void cardRankPut(rank && rank.profile);
+        let quick = null;
+        if (ok && loops > 0 && onQuickLoops) {
+          try {
+            quick = await onQuickLoops(loops);
+          } catch (_) {
+            quick = null;
+          }
+        }
+        if (ok && quick) await persist({
+          daily: {
+            ...reward.daily,
+            quickLoops: (reward.daily.quickLoops || 0) + loops
+          }
+        }, {
+          daily: reward.daily
+        });
+        const shareLog = cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogRef.current : null;
+        if (shareLog) cpuLogRef.current = null;
+        const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+        if (typeof selfId === 'string' && typeof cardShareReportUse === 'function') {
+          const match = `share-${game.key}-${Date.now().toString(36)}`;
+          const deckWon = outcome !== 'win';
+          const replayRec = shareLog && typeof cardReplayFromCpu === 'function' ? cardReplayFromCpu(db, {
+            id: `s${shareLog.id}`,
+            at: Date.now(),
+            myDeck: shareLog.decks[0],
+            cpuDeck: shareLog.decks[1],
+            seed: shareLog.seed,
+            first: shareLog.first,
+            history: shareLog.acts,
+            foe: {
+              name: game.share.name
+            },
+            outcome,
+            reason: ''
+          }) : null;
+          void (async () => {
+            const used = await cardShareReportUse({
+              match,
+              ownerId: game.share.ownerId,
+              userId: selfId,
+              kind: 'battle',
+              deckWon,
+              version: game.share.version
+            });
+            if (used !== 'ok' || !replayRec || typeof cardShareReplayPut !== 'function') return;
+            const me = rank && rank.profile ? rank.profile : {};
+            await cardShareReplayPut({
+              match,
+              ownerId: game.share.ownerId,
+              userId: selfId,
+              name: me.name || '',
+              icon: me.icon || null,
+              frame: me.frame || null,
+              rec: replayRec,
+              deckWon
+            });
+          })().catch(() => {});
+        }
+        setResult({
+          outcome,
+          reward,
+          opened: null,
+          saved: ok,
+          who: null,
+          level: game.level,
+          loops,
+          quick,
+          facts,
+          talk: null,
+          replay: null,
+          share: game.share,
+          rankGain: ok ? levelGain.gain : null
+        });
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView('result');
+        return;
+      }
+      const openExtra = [];
+      if (openIdRef.current === game.key) {
+        let raw = null;
+        try {
+          raw = await storeGet(CARD_CPU_OPEN_KEY, null);
+        } catch (_) {
+          raw = null;
+        }
+        const open = cardNormalizeCpuOpen(raw);
+        if (!open || open.id !== game.key) {
+          openIdRef.current = null;
+          openRef.current = null;
+          setNotice('この対戦は、ほかの画面で投了として数えました');
+          onBgm && onBgm(cardBgmOf(save.bgm.top));
+          onNavigate('CARD_TOP');
+          setView('top');
+          return;
+        }
+        openExtra.push({
+          key: CARD_CPU_OPEN_KEY,
+          next: null,
+          before: raw
+        });
+      }
+      const facts = cardResultFacts(st, CARD_ME);
+      const fresh = await freshCardSave();
+      const reward = cardCpuReward(fresh.daily, game.level, outcome, facts);
+      const loops = cardCpuLoops(game.level, outcome, facts);
+      const rankable = !!(rank && rank.send) && !debug;
+      const nextRecord = cardRecordAfter(fresh.record, {
+        who: game.who,
+        level: game.level,
+        outcome,
+        at: Date.now(),
+        rankable
+      });
+      const nextUnlocked = outcome === 'win' ? cardUnlockAfterWin(fresh.unlocked, game.level) : fresh.unlocked;
+      const opened = CARD_LEVEL_ORDER.find(lv => nextUnlocked[lv] && !fresh.unlocked[lv]) || null;
+      const log = cpuLogRef.current;
+      const replayRec = log && log.id === game.key ? cardReplayFromCpu(db, {
+        id: `c${log.id}`,
+        at: Date.now(),
+        myDeck: log.decks[0],
+        cpuDeck: log.decks[1],
+        seed: log.seed,
+        first: log.first,
+        history: log.acts,
+        foe: {
+          name: log.foeName,
+          who: game.who,
+          deckName: log.deckName
+        },
+        outcome,
+        reason: '',
+        level: game.level
+      }) : null;
+      if (log && log.id === game.key) cpuLogRef.current = null;
+      const usedDeck = save.decks.decks.find(d => d.id === save.decks.active) || null;
+      const usedMons = log && log.decks[0] ? log.decks[0].monsters : (st && st.players && st.players[CARD_ME] && st.players[CARD_ME].mons || []).map(m => m.no);
+      const detailEntry = game.demo ? null : await cardRecordDetailEntry(fresh.record, d => cardRecordDetailAfter(d, {
+        who: game.who,
+        level: game.level,
+        outcome,
+        turns: facts.ownTurns,
+        deck: usedDeck ? {
+          id: usedDeck.id,
+          name: usedDeck.name
+        } : null,
+        mons: usedMons,
+        moves: cardRecordMovesOf(db, replayRec),
+        today: cardTodayJst()
+      }));
+      const levelGain = !game.demo && typeof cardLevelEntries === 'function' ? await cardLevelEntries({
+        kind: 'cpu',
+        level: game.level,
+        outcome,
+        debug
+      }) : {
+        entries: []
+      };
+      const rankPoint = levelGain.gain && levelGain.gain.points || 0;
+      const ok = await persist({
+        point: save.point + reward.total + rankPoint,
+        daily: reward.daily,
+        record: nextRecord,
+        unlocked: nextUnlocked
+      }, fresh.raw, [...openExtra, ...(detailEntry ? [detailEntry] : []), ...levelGain.entries]);
+      if (ok && openExtra.length) {
+        openIdRef.current = null;
+        openRef.current = null;
+      }
+      if (ok && game.rented && typeof cardShareReportUse === 'function') {
+        const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+        if (typeof selfId === 'string') void cardShareReportUse({
+          match: `rent-${game.key}-${Date.now().toString(36)}`,
+          ownerId: game.rented.ownerId,
+          userId: selfId,
+          kind: 'rent',
+          version: game.rented.version
+        });
+      }
+      if (ok && rankable) void cardRankSync(db, {
+        record: nextRecord,
+        collection: save.collection,
+        profile: rank.profile
+      });
+      if (ok && !debug && levelGain.gain && levelGain.gain.to > levelGain.gain.from) void cardRankPut(rank && rank.profile);
+      if (ok && outcome === 'win' && !debug) {
+        try {
+          const unlockEntry = assistantCostumeUnlockEntry(await storeGet(ASSISTANT_COSTUME_UNLOCKED_KEY, null), {
+            who: game.who,
+            level: game.level,
+            outcome
+          });
+          if (unlockEntry && (await storeSet(unlockEntry.key, unlockEntry.next))) addAssistantCostumeUnlockedNow(unlockEntry.next);
+        } catch (_) {}
+      }
+      let quick = null;
+      if (loops > 0 && onQuickLoops) {
+        try {
+          quick = await onQuickLoops(loops);
+        } catch (_) {
+          quick = null;
+        }
+      }
+      if (ok && quick) await persist({
+        daily: {
+          ...reward.daily,
+          quickLoops: (reward.daily.quickLoops || 0) + loops
+        }
+      }, {
+        daily: reward.daily
+      }, [await cardRecordDetailEntry(nextRecord, d => ({
+        ...d,
+        quick: d.quick + loops
+      }))]);
+      const talkFacts = !game.demo && !game.pvp ? cardTalkAfterFacts(db, st, {
+        cpu: CARD_CPU,
+        outcome,
+        level: game.level,
+        comeback
+      }) : null;
+      let replayId = null;
+      if (replayRec && (await cardReplaySave(replayRec))) replayId = replayRec.id;
+      setResult({
+        outcome,
+        reward,
+        opened,
+        saved: ok,
+        who: game.who,
+        level: game.level,
+        loops,
+        quick,
+        facts,
+        talk: talkFacts,
+        replay: replayId,
+        rankGain: ok ? levelGain.gain : null
+      });
+      onBgm && onBgm(cardBgmOf(save.bgm.top));
+      onNavigate('CARD_TOP');
+      setView('result');
+    };
     if (game.intro) return React.createElement(CardVsIntro, {
       key: `vs-${game.key}`,
       db: db,
@@ -105204,6 +105710,13 @@ const CardBattleScreen = ({
         ...g,
         intro: null
       } : g)
+    });
+    if (game.auto && game.auto.quick && game.share && !game.replay) return React.createElement(CardAutoQuick, {
+      key: `quick-${game.key}`,
+      db: db,
+      game: game,
+      onActLog: cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogAct : null,
+      onFinish: boardFinish
     });
     const tourMe = game.replay && game.replay.tour ? {
       name: game.replay.tour.me.name,
@@ -105221,402 +105734,7 @@ const CardBattleScreen = ({
         loops: quickRun.loops,
         stopped: quickRun.stopped
       } : null,
-      onFinish: async ({
-        outcome,
-        st,
-        comeback = false
-      }) => {
-        if (game.replay) {
-          const back = game.replay.back || 'top';
-          setGame(null);
-          onNavigate('CARD_TOP');
-          setView(back);
-          return;
-        }
-        if (game.pvp) {
-          CARD_PVP.finish(outcome, st);
-          onBgm && onBgm(cardBgmOf(save.bgm.top));
-          onNavigate('CARD_TOP');
-          setView('pvp');
-          return;
-        }
-        if (game.cup) {
-          const cup = game.cup;
-          const log = cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogRef.current : null;
-          if (log) cpuLogRef.current = null;
-          const acts = log ? log.acts.map(x => [x.by, x.act]) : null;
-          const kosMe = [cardKoCount(st, CARD_ME), cardKoCount(st, CARD_CPU)];
-          const winnerSide = outcome === 'win' ? cup.side : 1 - cup.side;
-          const key = typeof cardShareOwnerKey === 'function' ? await cardShareOwnerKey(false) : null;
-          const r = key && typeof cardTourRpc === 'function' ? await cardTourRpc('card_cup_live_report', {
-            p_match: cup.matchId,
-            p_owner: cup.selfId,
-            p_key: key,
-            p_winner: winnerSide,
-            p_how: 'absent',
-            p_verified: false,
-            p_kos: cup.side === 0 ? kosMe : [kosMe[1], kosMe[0]],
-            p_acts: acts && acts.length ? cup.side === 0 ? acts : {
-              order: 'ba',
-              acts
-            } : null,
-            p_rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null
-          }) : null;
-          setGame(null);
-          setNotice(r === 'ok' || r === 'done' ? outcome === 'win' ? '勝ちました。結果を杯に送りました' : '負けました。結果を杯に送りました' : '結果を送れませんでした。杯の画面を開き直してください');
-          onBgm && onBgm(cardBgmOf(save.bgm.top));
-          onNavigate('CARD_TOP');
-          setView('cup');
-          return;
-        }
-        if (game.demo) {
-          onBgm && onBgm(cardBgmOf(save.bgm.top));
-          onNavigate('CARD_TOP');
-          setView('top');
-          return;
-        }
-        if (game.tutorial) {
-          const fin = cardTutorialFinish(save.tutorial, outcome === 'tutorialDone' ? 'done' : 'skip', Date.now());
-          const ok = await persist({
-            tutorial: fin.tutorial,
-            point: save.point + fin.reward
-          });
-          setResult({
-            tutorial: true,
-            done: outcome === 'tutorialDone',
-            reward: ok ? fin.reward : 0,
-            saved: ok
-          });
-          onBgm && onBgm(cardBgmOf(save.bgm.top));
-          onNavigate('CARD_TOP');
-          setView('result');
-          return;
-        }
-        if (game.share && game.auto && typeof cardAutoRewardLoad === 'function') {
-          const facts = cardResultFacts(st, CARD_ME);
-          const fresh = await freshCardSave();
-          const ar = await cardAutoRewardLoad();
-          const paid = ar.left > 0;
-          const half = cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts);
-          const point = paid ? Math.floor(half.base / 2) : 0;
-          const loops = paid ? Math.floor(cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts) / 2) : 0;
-          const levelGain = paid && typeof cardLevelEntries === 'function' ? await cardLevelEntries({
-            kind: 'cpu',
-            level: CARD_SHARE_REWARD_LEVEL,
-            outcome,
-            debug,
-            auto: true
-          }) : {
-            entries: []
-          };
-          const rankPoint = levelGain.gain && levelGain.gain.points || 0;
-          const counted = paid && (point > 0 || loops > 0 || levelGain.gain && levelGain.gain.add > 0);
-          const ok = await persist({
-            point: save.point + point + rankPoint
-          }, fresh.raw, [...(levelGain.entries || []), ...(counted ? [cardAutoRewardEntry(ar)] : [])]);
-          let quick = null;
-          if (ok && loops > 0 && onQuickLoops) {
-            try {
-              quick = await onQuickLoops(loops);
-            } catch (_) {
-              quick = null;
-            }
-          }
-          if (cpuLogRef.current && cpuLogRef.current.id === game.key) cpuLogRef.current = null;
-          const reward = {
-            ...half,
-            base: point,
-            got: point,
-            bonus: 0,
-            total: point,
-            full: Math.floor(half.full / 2),
-            daily: fresh.daily
-          };
-          setResult({
-            outcome,
-            reward,
-            opened: null,
-            saved: ok,
-            who: null,
-            level: game.level,
-            loops,
-            quick,
-            facts,
-            talk: null,
-            replay: null,
-            share: game.share,
-            rankGain: ok ? levelGain.gain : null,
-            auto: {
-              tactics: game.auto.tactics,
-              paid,
-              left: Math.max(0, ar.left - (ok && counted ? 1 : 0))
-            }
-          });
-          onBgm && onBgm(cardBgmOf(save.bgm.top));
-          onNavigate('CARD_TOP');
-          setView('result');
-          return;
-        }
-        if (game.share) {
-          const facts = cardResultFacts(st, CARD_ME);
-          const fresh = await freshCardSave();
-          const reward = cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts);
-          const loops = cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts);
-          const levelGain = typeof cardLevelEntries === 'function' ? await cardLevelEntries({
-            kind: 'cpu',
-            level: CARD_SHARE_REWARD_LEVEL,
-            outcome,
-            debug
-          }) : {
-            entries: []
-          };
-          const rankPoint = levelGain.gain && levelGain.gain.points || 0;
-          const ok = await persist({
-            point: save.point + reward.total + rankPoint,
-            daily: reward.daily
-          }, fresh.raw, levelGain.entries);
-          if (ok && levelGain.gain && levelGain.gain.to > levelGain.gain.from && !debug) void cardRankPut(rank && rank.profile);
-          let quick = null;
-          if (ok && loops > 0 && onQuickLoops) {
-            try {
-              quick = await onQuickLoops(loops);
-            } catch (_) {
-              quick = null;
-            }
-          }
-          if (ok && quick) await persist({
-            daily: {
-              ...reward.daily,
-              quickLoops: (reward.daily.quickLoops || 0) + loops
-            }
-          }, {
-            daily: reward.daily
-          });
-          const shareLog = cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogRef.current : null;
-          if (shareLog) cpuLogRef.current = null;
-          const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
-          if (typeof selfId === 'string' && typeof cardShareReportUse === 'function') {
-            const match = `share-${game.key}-${Date.now().toString(36)}`;
-            const deckWon = outcome !== 'win';
-            const replayRec = shareLog && typeof cardReplayFromCpu === 'function' ? cardReplayFromCpu(db, {
-              id: `s${shareLog.id}`,
-              at: Date.now(),
-              myDeck: shareLog.decks[0],
-              cpuDeck: shareLog.decks[1],
-              seed: shareLog.seed,
-              first: shareLog.first,
-              history: shareLog.acts,
-              foe: {
-                name: game.share.name
-              },
-              outcome,
-              reason: ''
-            }) : null;
-            void (async () => {
-              const used = await cardShareReportUse({
-                match,
-                ownerId: game.share.ownerId,
-                userId: selfId,
-                kind: 'battle',
-                deckWon,
-                version: game.share.version
-              });
-              if (used !== 'ok' || !replayRec || typeof cardShareReplayPut !== 'function') return;
-              const me = rank && rank.profile ? rank.profile : {};
-              await cardShareReplayPut({
-                match,
-                ownerId: game.share.ownerId,
-                userId: selfId,
-                name: me.name || '',
-                icon: me.icon || null,
-                frame: me.frame || null,
-                rec: replayRec,
-                deckWon
-              });
-            })().catch(() => {});
-          }
-          setResult({
-            outcome,
-            reward,
-            opened: null,
-            saved: ok,
-            who: null,
-            level: game.level,
-            loops,
-            quick,
-            facts,
-            talk: null,
-            replay: null,
-            share: game.share,
-            rankGain: ok ? levelGain.gain : null
-          });
-          onBgm && onBgm(cardBgmOf(save.bgm.top));
-          onNavigate('CARD_TOP');
-          setView('result');
-          return;
-        }
-        const openExtra = [];
-        if (openIdRef.current === game.key) {
-          let raw = null;
-          try {
-            raw = await storeGet(CARD_CPU_OPEN_KEY, null);
-          } catch (_) {
-            raw = null;
-          }
-          const open = cardNormalizeCpuOpen(raw);
-          if (!open || open.id !== game.key) {
-            openIdRef.current = null;
-            openRef.current = null;
-            setNotice('この対戦は、ほかの画面で投了として数えました');
-            onBgm && onBgm(cardBgmOf(save.bgm.top));
-            onNavigate('CARD_TOP');
-            setView('top');
-            return;
-          }
-          openExtra.push({
-            key: CARD_CPU_OPEN_KEY,
-            next: null,
-            before: raw
-          });
-        }
-        const facts = cardResultFacts(st, CARD_ME);
-        const fresh = await freshCardSave();
-        const reward = cardCpuReward(fresh.daily, game.level, outcome, facts);
-        const loops = cardCpuLoops(game.level, outcome, facts);
-        const rankable = !!(rank && rank.send) && !debug;
-        const nextRecord = cardRecordAfter(fresh.record, {
-          who: game.who,
-          level: game.level,
-          outcome,
-          at: Date.now(),
-          rankable
-        });
-        const nextUnlocked = outcome === 'win' ? cardUnlockAfterWin(fresh.unlocked, game.level) : fresh.unlocked;
-        const opened = CARD_LEVEL_ORDER.find(lv => nextUnlocked[lv] && !fresh.unlocked[lv]) || null;
-        const log = cpuLogRef.current;
-        const replayRec = log && log.id === game.key ? cardReplayFromCpu(db, {
-          id: `c${log.id}`,
-          at: Date.now(),
-          myDeck: log.decks[0],
-          cpuDeck: log.decks[1],
-          seed: log.seed,
-          first: log.first,
-          history: log.acts,
-          foe: {
-            name: log.foeName,
-            who: game.who,
-            deckName: log.deckName
-          },
-          outcome,
-          reason: '',
-          level: game.level
-        }) : null;
-        if (log && log.id === game.key) cpuLogRef.current = null;
-        const usedDeck = save.decks.decks.find(d => d.id === save.decks.active) || null;
-        const usedMons = log && log.decks[0] ? log.decks[0].monsters : (st && st.players && st.players[CARD_ME] && st.players[CARD_ME].mons || []).map(m => m.no);
-        const detailEntry = game.demo ? null : await cardRecordDetailEntry(fresh.record, d => cardRecordDetailAfter(d, {
-          who: game.who,
-          level: game.level,
-          outcome,
-          turns: facts.ownTurns,
-          deck: usedDeck ? {
-            id: usedDeck.id,
-            name: usedDeck.name
-          } : null,
-          mons: usedMons,
-          moves: cardRecordMovesOf(db, replayRec),
-          today: cardTodayJst()
-        }));
-        const levelGain = !game.demo && typeof cardLevelEntries === 'function' ? await cardLevelEntries({
-          kind: 'cpu',
-          level: game.level,
-          outcome,
-          debug
-        }) : {
-          entries: []
-        };
-        const rankPoint = levelGain.gain && levelGain.gain.points || 0;
-        const ok = await persist({
-          point: save.point + reward.total + rankPoint,
-          daily: reward.daily,
-          record: nextRecord,
-          unlocked: nextUnlocked
-        }, fresh.raw, [...openExtra, ...(detailEntry ? [detailEntry] : []), ...levelGain.entries]);
-        if (ok && openExtra.length) {
-          openIdRef.current = null;
-          openRef.current = null;
-        }
-        if (ok && game.rented && typeof cardShareReportUse === 'function') {
-          const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
-          if (typeof selfId === 'string') void cardShareReportUse({
-            match: `rent-${game.key}-${Date.now().toString(36)}`,
-            ownerId: game.rented.ownerId,
-            userId: selfId,
-            kind: 'rent',
-            version: game.rented.version
-          });
-        }
-        if (ok && rankable) void cardRankSync(db, {
-          record: nextRecord,
-          collection: save.collection,
-          profile: rank.profile
-        });
-        if (ok && !debug && levelGain.gain && levelGain.gain.to > levelGain.gain.from) void cardRankPut(rank && rank.profile);
-        if (ok && outcome === 'win' && !debug) {
-          try {
-            const unlockEntry = assistantCostumeUnlockEntry(await storeGet(ASSISTANT_COSTUME_UNLOCKED_KEY, null), {
-              who: game.who,
-              level: game.level,
-              outcome
-            });
-            if (unlockEntry && (await storeSet(unlockEntry.key, unlockEntry.next))) addAssistantCostumeUnlockedNow(unlockEntry.next);
-          } catch (_) {}
-        }
-        let quick = null;
-        if (loops > 0 && onQuickLoops) {
-          try {
-            quick = await onQuickLoops(loops);
-          } catch (_) {
-            quick = null;
-          }
-        }
-        if (ok && quick) await persist({
-          daily: {
-            ...reward.daily,
-            quickLoops: (reward.daily.quickLoops || 0) + loops
-          }
-        }, {
-          daily: reward.daily
-        }, [await cardRecordDetailEntry(nextRecord, d => ({
-          ...d,
-          quick: d.quick + loops
-        }))]);
-        const talkFacts = !game.demo && !game.pvp ? cardTalkAfterFacts(db, st, {
-          cpu: CARD_CPU,
-          outcome,
-          level: game.level,
-          comeback
-        }) : null;
-        let replayId = null;
-        if (replayRec && (await cardReplaySave(replayRec))) replayId = replayRec.id;
-        setResult({
-          outcome,
-          reward,
-          opened,
-          saved: ok,
-          who: game.who,
-          level: game.level,
-          loops,
-          quick,
-          facts,
-          talk: talkFacts,
-          replay: replayId,
-          rankGain: ok ? levelGain.gain : null
-        });
-        onBgm && onBgm(cardBgmOf(save.bgm.top));
-        onNavigate('CARD_TOP');
-        setView('result');
-      }
+      onFinish: boardFinish
     });
   }
   const allAssistants = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS : [];
@@ -105739,7 +105857,8 @@ const CardBattleScreen = ({
     const auto = autoIn ? {
       tactics: autoIn.tactics,
       level: typeof cardShareFightLevel === 'function' ? cardShareFightLevel(autoIn.tactics) : 'master',
-      sameBlood: !!cardShareSameBlood(db, activeDeck)
+      sameBlood: !!cardShareSameBlood(db, activeDeck),
+      quick: !!autoIn.quick
     } : null;
     setGame({
       key: gameKey,
@@ -105747,7 +105866,7 @@ const CardBattleScreen = ({
       who: pick.who,
       level: pick.level,
       settings: save.settings,
-      intro,
+      intro: auto && auto.quick ? null : intro,
       cpuSameBlood: !!cpuDeck.sameBlood,
       ...(share ? {
         share
@@ -106292,7 +106411,9 @@ const CardBattleScreen = ({
       auto: sharePick && typeof cardTacticsAutoOf === 'function' ? {
         on: shareAuto,
         onChange: setShareAuto,
-        left: autoLeft
+        left: autoLeft,
+        quick: shareQuick,
+        onQuick: typeof cardShareAutoFinish === 'function' ? setShareQuick : null
       } : null,
       onPick: async c => {
         if (c.kind === 'rent') {
@@ -106330,7 +106451,8 @@ const CardBattleScreen = ({
         }
         startBattle(next.pick, deck, autoT ? {
           auto: {
-            tactics: autoT
+            tactics: autoT,
+            quick: shareQuick && typeof cardShareAutoFinish === 'function'
           }
         } : {});
       }
@@ -106882,7 +107004,15 @@ const CardBattleScreen = ({
       className: "mt-1 text-[11px] font-bold text-slate-400"
     }, "(デバッグの見本です。何も保存していません)"))), React.createElement("div", {
       className: `${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2`
-    }, result.replay && React.createElement("button", {
+    }, !result.replay && result.replayRec && React.createElement("button", {
+      type: "button",
+      "data-card-result-replay": "auto",
+      className: `${btn} mh-button-secondary col-span-2 border border-sky-300/40 bg-slate-800`,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        openReplayRec(result.replayRec, 'result');
+      }
+    }, "この対戦を見る"), result.replay && React.createElement("button", {
       type: "button",
       "data-card-result-replay": true,
       className: `${btn} mh-button-secondary col-span-2 border border-sky-300/40 bg-slate-800`,
@@ -106901,7 +107031,8 @@ const CardBattleScreen = ({
             share: result.share
           }, activeDeck, result.auto ? {
             auto: {
-              tactics: result.auto.tactics
+              tactics: result.auto.tactics,
+              quick: !!result.auto.quick
             }
           } : {});
           return;
@@ -110435,7 +110566,23 @@ const CardDeckPick = ({
       auto.onChange(v);
     },
     className: `min-h-[44px] flex-1 rounded-xl px-1 text-[13px] font-black ${auto.on === v ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`
-  }, label))), auto.on && React.createElement("p", {
+  }, label))), auto.on && typeof auto.onQuick === 'function' && React.createElement("button", {
+    type: "button",
+    role: "switch",
+    "aria-checked": !!auto.quick,
+    "data-card-deck-pick-quick": auto.quick ? 'on' : 'off',
+    onClick: () => {
+      Audio_.fgSe.tap();
+      auto.onQuick(!auto.quick);
+    },
+    className: `flex min-h-[40px] w-full items-center gap-2 rounded-xl border px-2.5 text-left text-[12px] font-black ${auto.quick ? 'border-amber-300 bg-amber-950/40 text-amber-100' : 'border-slate-600 bg-slate-900 text-slate-200'}`
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: `flex h-5 w-5 shrink-0 items-center justify-center rounded border ${auto.quick ? 'border-amber-300 bg-amber-400 text-slate-950' : 'border-slate-400'}`
+  }, auto.quick ? '✓' : ''), React.createElement("span", {
+    className: "min-w-0 flex-1",
+    style: JA_WRAP_STYLE
+  }, jaWrap('⏩ 結果だけ見る(対戦の画面を出さずに、一瞬で最後まで戦う)'))), auto.on && React.createElement("p", {
     "data-card-deck-pick-auto-note": true,
     className: "rounded-xl bg-slate-900/80 px-2.5 py-2 text-[11px] font-bold leading-snug text-slate-200",
     style: JA_WRAP_STYLE
@@ -118391,6 +118538,47 @@ const cardShareReplayGet = async (ownerId, slot) => {
     p_slot: slot
   });
   return row && typeof row === 'object' && !Array.isArray(row) ? row : null;
+};
+const cardShareAutoFinish = (db, st0, pols, {
+  max = typeof CARD_TOUR_MAX_STEPS === 'number' ? CARD_TOUR_MAX_STEPS : 4000,
+  rand = Math.random
+} = {}) => {
+  let st = cardClone(st0);
+  const acts = [];
+  for (let steps = 0; steps < max && st.winner === null; steps++) {
+    const who = st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? cardOther(st.first) : cardDecider(st);
+    let act = cardAiChooseAction(db, st, pols[who], rand);
+    let next = act && cardApplyAction(db, st, act);
+    if (!next) {
+      act = st.pending ? {
+        type: 'pass'
+      } : st.phase === 'main' ? {
+        type: 'endAttacks'
+      } : st.phase === 'guts' ? {
+        type: 'guts',
+        hand: []
+      } : null;
+      next = act && cardApplyAction(db, st, act);
+      if (!next) break;
+    }
+    acts.push([who, act]);
+    st = next;
+  }
+  if (st.winner !== null) return {
+    st,
+    acts,
+    limit: false
+  };
+  const kos = [cardKoCount(st, 0), cardKoCount(st, 1)];
+  const life = p => st.players[p].mons.reduce((a, m) => a + Math.max(0, m.ko ? 0 : m.life), 0);
+  const winner = kos[0] !== kos[1] ? kos[0] > kos[1] ? 0 : 1 : life(0) !== life(1) ? life(0) > life(1) ? 0 : 1 : cardOther(st.first);
+  const end = cardClone(st);
+  cardGameOver(end, winner, '手数の上限');
+  return {
+    st: end,
+    acts,
+    limit: true
+  };
 };
 const cardShareSameBlood = (db, deck) => {
   const ms = (deck && Array.isArray(deck.monsters) ? deck.monsters : []).map(no => cardMonsterOf(db, no)).filter(Boolean);

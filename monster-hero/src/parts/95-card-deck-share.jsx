@@ -211,6 +211,33 @@ const cardShareReplayGet = async (ownerId, slot) => {
   const row = await cardShareReplayRpc('card_deck_replay_get', { p_owner: ownerId, p_key: key, p_slot: slot });
   return row && typeof row === 'object' && !Array.isArray(row) ? row : null;
 };
+// オートの「結果だけ見る」(2026-11-02 社長「オート対戦は結果だけを見るも追加して」)。いまの場から、2人とも戦術カードの打ち方で最後まで一瞬で打つ。
+//   pols … [自分(0)の打ち方, 相手(1)の打ち方]。打ち方・出せない手の替え方・手数の上限と決め方は大会の自動対戦(82 の cardTourPlay)と同じ。
+//   山札が尽きれば山札切れで決着するので、ふつうは上限に届かない(助手 MASTER 同士 2,000試合で最長 84ターン・171手)。
+//   上限まで決まらなければ「倒した数 → 残りのライフ → 後攻」で決める(必ず終わる)。返り値 { st(決着した場), acts:[[打った人, 手]], limit }
+const cardShareAutoFinish = (db, st0, pols, { max = typeof CARD_TOUR_MAX_STEPS === 'number' ? CARD_TOUR_MAX_STEPS : 4000, rand = Math.random } = {}) => {
+  let st = cardClone(st0);
+  const acts = [];
+  for (let steps = 0; steps < max && st.winner === null; steps++) {
+    const who = st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? cardOther(st.first) : cardDecider(st);
+    let act = cardAiChooseAction(db, st, pols[who], rand);
+    let next = act && cardApplyAction(db, st, act);
+    if (!next) {
+      act = st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : st.phase === 'guts' ? { type: 'guts', hand: [] } : null;
+      next = act && cardApplyAction(db, st, act);
+      if (!next) break;
+    }
+    acts.push([who, act]);
+    st = next;
+  }
+  if (st.winner !== null) return { st, acts, limit: false };
+  const kos = [cardKoCount(st, 0), cardKoCount(st, 1)];
+  const life = (p) => st.players[p].mons.reduce((a, m) => a + Math.max(0, m.ko ? 0 : m.life), 0);
+  const winner = kos[0] !== kos[1] ? (kos[0] > kos[1] ? 0 : 1) : life(0) !== life(1) ? (life(0) > life(1) ? 0 : 1) : cardOther(st.first);
+  const end = cardClone(st);
+  cardGameOver(end, winner, '手数の上限');
+  return { st: end, acts, limit: true };
+};
 const cardShareSameBlood = (db, deck) => {
   const ms = (deck && Array.isArray(deck.monsters) ? deck.monsters : []).map((no) => cardMonsterOf(db, no)).filter(Boolean);
   return ms.length > 0 && ms.filter((m) => cardAiBloodOf(m) === cardAiBloodOf(ms[0])).length >= 2;
