@@ -54,7 +54,7 @@ const cardSharePolicy = (tactics, levelId, opts = {}) => {
   if (t.f) {
     const frames = cardTacticUnpackFrames(t.f);
     const base = cardAiPolicy(t.habit, cardShareFightLevel(t), { ...opts, noTactics: true });
-    return { ...base, gambit: frames, aces: t.aces.slice(), ...(search ? { search } : {}) };
+    return { ...base, gambit: frames, gambitOnHabit: true, gambitHabitId: t.habit, aces: t.aces.slice(), ...(search ? { search } : {}) };
   }
   const base = cardAiPolicy(t.habit, cardShareFightLevel(t), { ...opts, noTactics: true });
   const habit = { ...base.habit };

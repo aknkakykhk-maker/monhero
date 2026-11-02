@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2d9fd12f83160891
+// source-sha256: 088cead7af32e055
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93430,6 +93430,7 @@ const cardAiChooseGuard = (db, st, policy, rand, gopt = null) => {
       cost,
       c
     } = cardAiGuardEstimate(db, st, o, dmg);
+    if (target.life <= after && back <= 0 && extra - (cardHasEff(c, 'takeMult') ? 1.2 : 0) <= 0) return;
     const saved = Math.min(dmg, target.life) - Math.min(after, target.life);
     const ko = target.life <= dmg && target.life > after ? 5 : 0;
     const lostAll = cardHasEff(c, 'selfGutsAll') ? me.guts.length - cost : 0;
@@ -93598,6 +93599,8 @@ const cardAiAttackScored = (db, st, opts, policy) => opts.map(o => ({
   s: cardAiScoreAttack(db, st, o, policy) + (cardAiAceHit(policy, st.players[st.active].hand, o.hand) ? 2 : 0)
 })).sort((a, b) => b.s - a.s);
 const CARD_AI_SEARCH_STEP_MAX = 1500;
+const CARD_AI_SEARCH_PRIOR = 2;
+const CARD_AI_SEARCH_MILL_W = 0.5;
 const cardAiSearchLife = (st, p) => {
   let a = 0,
     b = 0;
@@ -93607,17 +93610,18 @@ const cardAiSearchLife = (st, p) => {
   });
   return b ? a / b : 0;
 };
-const cardAiSearchEval = (st, me, kind) => {
+const cardAiSearchEval = (st, me, kind, mill = 0) => {
   if (st.winner === me) return 100;
   if (st.winner !== null) return -100;
   const op = cardOther(me),
     P = st.players[me],
     O = st.players[op];
+  const deck = mill ? CARD_AI_SEARCH_MILL_W * mill * (P.deck.length - O.deck.length) : 0;
   if (kind === 'alive') {
     const alive = x => x.mons.filter(m => !m.ko).length;
-    return 12 * (alive(P) - alive(O)) + 8 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.4 * (P.hand.length - O.hand.length) + 0.4 * (P.guts.length - O.guts.length);
+    return deck + 12 * (alive(P) - alive(O)) + 8 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.4 * (P.hand.length - O.hand.length) + 0.4 * (P.guts.length - O.guts.length);
   }
-  return 10 * (cardKoCount(st, me) - cardKoCount(st, op)) + 4 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.3 * (P.hand.length - O.hand.length);
+  return deck + 10 * (cardKoCount(st, me) - cardKoCount(st, op)) + 4 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.3 * (P.hand.length - O.hand.length);
 };
 const cardAiSearchShuffle = (list, rand) => {
   for (let i = list.length - 1; i > 0; i--) {
@@ -93655,7 +93659,7 @@ const cardAiSearchRollout = (db, st0, act, me, pols, rand, cfg, budget) => {
     st = n;
     st.log = [];
   }
-  return cardAiSearchEval(st, me, cfg.eval);
+  return cardAiSearchEval(st, me, cfg.eval, cfg.mill || 0);
 };
 let _cardAiSearchFoe = null;
 const cardAiSearchPick = (db, st, scored, policy, rand) => {
@@ -93679,17 +93683,22 @@ const cardAiSearchPick = (db, st, scored, policy, rand) => {
   const budget = {
     left: CARD_AI_SEARCH_STEP_MAX
   };
+  const ecfg = {
+    ...cfg,
+    mill: policy.habit && policy.habit.mill || 0
+  };
   let best = cands[0],
     bestV = -Infinity;
+  const prior = scored.slice(0, cfg.k).filter(x => x.s > 0.3).map(x => x.s).concat([0.3]);
   for (let i = 0; i < cands.length && budget.left > 0; i++) {
     let v = 0,
       n = 0;
     for (let r = 0; r < cfg.r && budget.left > 0; r++) {
-      v += cardAiSearchRollout(db, st, cands[i], me, pols, rand, cfg, budget);
+      v += cardAiSearchRollout(db, st, cands[i], me, pols, rand, ecfg, budget);
       n += 1;
     }
     if (!n) break;
-    v = v / n + (i === 0 ? 0.5 : 0);
+    v = v / n + CARD_AI_SEARCH_PRIOR * prior[i] + (i === 0 ? 0.5 : 0);
     if (v > bestV) {
       bestV = v;
       best = cands[i];
@@ -96461,6 +96470,8 @@ const cardTacticRandomAct = (db, st, policy, rand = Math.random) => {
 };
 const CARD_TACTIC_DIMS = Object.freeze(['attack', 'keepGuard', 'saveGuts', 'big', 'disrupt', 'area', 'finish']);
 const CARD_TACTIC_SUB_W = 1 / 3;
+const cardTacticSameAsHabit = (c, habitId) => !!habitId && !!c && (CARD_TACTIC_GROUPS.find(x => x.id === c.g) || {}).habit === habitId;
+const CARD_TACTIC_ROW_LOSS_MAX = 2;
 const cardTacticPresetOf = card => {
   const g = CARD_TACTIC_GROUPS.find(x => x.id === card.g) || {};
   if (g.habit) return {
@@ -96471,7 +96482,7 @@ const cardTacticPresetOf = card => {
   };
   return {};
 };
-const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null, when = null) => {
+const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null, when = null, onHabit = false, habitId = null) => {
   const subW = i => st && Array.isArray(when) && typeof when[i] === 'string' && typeof cardAiTacticWhenHit === 'function' && cardAiTacticWhenHit(when[i], st, p) ? 1 : CARD_TACTIC_SUB_W;
   const list = (Array.isArray(base) ? base : []).map((id, i) => ({
     c: cardTacticOf(id),
@@ -96487,7 +96498,8 @@ const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null, when = null
     w,
     main
   }) => {
-    if (mainHabit && main) return;
+    if (mainHabit && main && !onHabit) return;
+    if (onHabit && cardTacticSameAsHabit(c, habitId)) return;
     const pre = cardTacticPresetOf(c);
     CARD_TACTIC_DIMS.forEach(d => {
       if (Number.isFinite(pre[d])) h[d] *= 1 + (pre[d] - 1) * w;
@@ -96522,12 +96534,12 @@ const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null, when = null
   }
   return h;
 };
-const cardTacticKnobsOf = (base, st = null, p = 0, skipMain = false) => {
+const cardTacticKnobsOf = (base, st = null, p = 0, skipMain = false, habitId = null) => {
   const turn = st ? cardTacticOwnTurn(st, p) : 0;
   const out = {};
   (Array.isArray(base) ? base : []).forEach((id, i) => {
     const c = cardTacticOf(id);
-    if (!c || c.cat !== 'base' || i > 0 && turn % 3 !== 0 || i === 0 && skipMain) return;
+    if (!c || c.cat !== 'base' || i > 0 && turn % 3 !== 0 || i === 0 && skipMain || cardTacticSameAsHabit(c, habitId)) return;
     const g = CARD_TACTIC_GROUPS.find(x => x.id === c.g) || {};
     Object.assign(out, g.knob || {});
   });
@@ -96858,9 +96870,12 @@ const cardTacticRowAct = (db, st, policy, phase, row, aim, ctx) => {
   const usable = o => !(o.type === 'attack' && ctx.skip.has(o.mon)) && !(ctx.noBreeder && (o.type === 'breeder' || o.hand.some(i => (cardOf(db, me.hand[i]) || {}).user === 'breeder')));
   const pickBest = (fits, floor = 0) => {
     const best = ctx.scored().find(x => x.s > floor && usable(x.o) && fits(x.o) && cardTacticAimsAt(st, x.o, aim.foes));
-    return best ? {
+    if (!best) return null;
+    const top = ctx.scored().find(x => usable(x.o));
+    if (policy.gambitOnHabit && top && best.s < top.s - CARD_TACTIC_ROW_LOSS_MAX) return null;
+    return {
       act: cardAiFillBind(db, st, best.o, policy)
-    } : null;
+    };
   };
   if (act.g === 'ace') {
     const aces = Array.isArray(policy.aces) ? policy.aces : [];
@@ -97027,8 +97042,9 @@ const cardTacticDecide = (db, st, policy) => {
     act: cardTacticRandomAct(db, st, policy)
   };
   const p = phase === 'guard' ? st.pending.defender : st.active;
-  const habit = cardTacticHabitOf(frames.base, st, p, policy.gambitKeepMain ? policy.habit : null, policy.gambitWhen || null);
-  const knobs = cardTacticKnobsOf(frames.base, st, p, !!policy.gambitKeepMain);
+  const sameId = policy.gambitOnHabit ? policy.gambitHabitId || null : null;
+  const habit = cardTacticHabitOf(frames.base, st, p, policy.gambitKeepMain || policy.gambitOnHabit ? policy.habit : null, policy.gambitWhen || null, !!policy.gambitOnHabit, sameId);
+  const knobs = cardTacticKnobsOf(frames.base, st, p, !!policy.gambitKeepMain, sameId);
   const pol = habit ? {
     ...policy,
     habit
@@ -97346,6 +97362,8 @@ const cardSharePolicy = (tactics, levelId, opts = {}) => {
     return {
       ...base,
       gambit: frames,
+      gambitOnHabit: true,
+      gambitHabitId: t.habit,
       aces: t.aces.slice(),
       ...(search ? {
         search

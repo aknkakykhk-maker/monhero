@@ -19,6 +19,7 @@ const V={
   基本3枚だけ:tac(base3,[[],[],[]]),
   基本2枚と良い行:tac(base3.slice(0,2),[good,good2,good3]),
   基本3枚と良い行:tac(base3,[good,good2,good3]),
+  基本3枚と良い行_先読みなし:{...tac(base3,[good,good2,good3]),nosearch:true},
 };
 for(const [name,t] of Object.entries(V)){
   if(ONLY.length&&!ONLY.includes(name))continue;
@@ -27,7 +28,7 @@ for(const [name,t] of Object.entries(V)){
     const rnd=E.cardAiSeededRand(`${W}:om:${g}`);
     const dP=E.cardAiBuildDeck(db,W,'master',rnd);
     const dO=E.cardAiBuildDeck(db,W,'master',rnd,{playerDeck:dP});
-    const pP=t==='helper'?E.cardAiPolicy(W,'master',{sameBlood:!!dP.sameBlood}):E.cardSharePolicy(t,null);
+    const pP=t==='helper'?E.cardAiPolicy(W,'master',{sameBlood:!!dP.sameBlood}):(t.nosearch?{...E.cardSharePolicy(t,null),search:null}:E.cardSharePolicy(t,null));
     const pO=E.cardAiPolicy(W,'master',{sameBlood:!!dO.sameBlood});
     const st=E.cardSimulate(db,{decks:[dP,dO],policies:[pP,pO],seed:9100+g,first:g%2});
     if(st.winner===0)win++;else if(st.winner===1)lose++;

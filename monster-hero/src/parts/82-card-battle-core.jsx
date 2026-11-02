@@ -1553,6 +1553,8 @@ const cardAiChooseGuard = (db, st, policy, rand, gopt = null) => {
   let best = null;
   opts.forEach((o) => {
     const { after, extra, back, cost, c } = cardAiGuardEstimate(db, st, o, dmg);
+    // 守っても倒れるのが変わらず、はね返し・まとめて回避などの得も無い守りは出さない(戦術カードの「守る」で必ず守るときも。2026-11-02 社長)
+    if (target.life <= after && back <= 0 && extra - (cardHasEff(c, 'takeMult') ? 1.2 : 0) <= 0) return;
     const saved = Math.min(dmg, target.life) - Math.min(after, target.life);
     const ko = target.life <= dmg && target.life > after ? 5 : 0;
     const lostAll = cardHasEff(c, 'selfGutsAll') ? me.guts.length - cost : 0; // 緊急回避: 残りのガッツも全部なくなる
@@ -1719,17 +1721,22 @@ const cardAiAttackScored = (db, st, opts, policy) => opts.map((o) => ({ o, s: ca
 // policy.search … { k, r, h, eval } / 助手と対戦(cardAiPolicy)には付かない。付けるのは 82-card-share-core の cardSharePolicy だけ
 // 1回の判断で試しに進める手の数に上限を持たせる(スマホで重くしない)。上限に届いたら、そこまでの結果で選ぶ
 const CARD_AI_SEARCH_STEP_MAX = 1500;
+// 先読みの見積もりに足す MASTER の点の重み(2026-11-02 社長 ウ「先読みの見積もりを MASTER の点の付け方にそろえる」)
+const CARD_AI_SEARCH_PRIOR = 2;
+const CARD_AI_SEARCH_MILL_W = 0.5;
 const cardAiSearchLife = (st, p) => { let a = 0, b = 0; st.players[p].mons.forEach((m) => { if (!m.ko) a += Math.max(0, m.life); b += m.max; }); return b ? a / b : 0; };
 // 場の良さ(大きいほど me に良い)。'alive' … 残っているモンスターの数とライフを重く見る(LEGEND)
-const cardAiSearchEval = (st, me, kind) => {
+const cardAiSearchEval = (st, me, kind, mill = 0) => {
   if (st.winner === me) return 100;
   if (st.winner !== null) return -100;
   const op = cardOther(me), P = st.players[me], O = st.players[op];
+  // 持久型(山札切れで勝つくせ)は、山札の残りの差も見る(MASTER の点が山札を削る手を高く見るのとそろえる。2026-11-02 社長 ウ)
+  const deck = mill ? CARD_AI_SEARCH_MILL_W * mill * (P.deck.length - O.deck.length) : 0;
   if (kind === 'alive') {
     const alive = (x) => x.mons.filter((m) => !m.ko).length;
-    return 12 * (alive(P) - alive(O)) + 8 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.4 * (P.hand.length - O.hand.length) + 0.4 * (P.guts.length - O.guts.length);
+    return deck + 12 * (alive(P) - alive(O)) + 8 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.4 * (P.hand.length - O.hand.length) + 0.4 * (P.guts.length - O.guts.length);
   }
-  return 10 * (cardKoCount(st, me) - cardKoCount(st, op)) + 4 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.3 * (P.hand.length - O.hand.length);
+  return deck + 10 * (cardKoCount(st, me) - cardKoCount(st, op)) + 4 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.3 * (P.hand.length - O.hand.length);
 };
 const cardAiSearchShuffle = (list, rand) => { for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; } };
 const cardAiSearchRollout = (db, st0, act, me, pols, rand, cfg, budget) => {
@@ -1746,7 +1753,7 @@ const cardAiSearchRollout = (db, st0, act, me, pols, rand, cfg, budget) => {
     if (!n) { a = st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : st.phase === 'guts' ? { type: 'guts', hand: [] } : null; n = a && cardApplyAction(db, st, a); if (!n) break; }
     st = n; st.log = [];
   }
-  return cardAiSearchEval(st, me, cfg.eval);
+  return cardAiSearchEval(st, me, cfg.eval, cfg.mill || 0);
 };
 let _cardAiSearchFoe = null; // 先読みの中で相手が打つ考え方(くせの無い MASTER)
 const cardAiSearchPick = (db, st, scored, policy, rand) => {
@@ -1758,12 +1765,15 @@ const cardAiSearchPick = (db, st, scored, policy, rand) => {
   const self = { ...policy, search: null, gambit: null };
   const pols = [null, null]; pols[me] = self; pols[cardOther(me)] = _cardAiSearchFoe;
   const budget = { left: CARD_AI_SEARCH_STEP_MAX };
+  const ecfg = { ...cfg, mill: (policy.habit && policy.habit.mill) || 0 };
   let best = cands[0], bestV = -Infinity;
+  const prior = scored.slice(0, cfg.k).filter((x) => x.s > 0.3).map((x) => x.s).concat([0.3]);
   for (let i = 0; i < cands.length && budget.left > 0; i++) {
     let v = 0, n = 0;
-    for (let r = 0; r < cfg.r && budget.left > 0; r++) { v += cardAiSearchRollout(db, st, cands[i], me, pols, rand, cfg, budget); n += 1; }
+    for (let r = 0; r < cfg.r && budget.left > 0; r++) { v += cardAiSearchRollout(db, st, cands[i], me, pols, rand, ecfg, budget); n += 1; }
     if (!n) break;
-    v = v / n + (i === 0 ? 0.5 : 0); // 並んだときは、もとの点がいちばん高い手
+    // 先の場の良さに、MASTER の点(その手の点)も足して比べる。先読みで大きく良くなる手のときだけ、MASTER の手を変える(2026-11-02 社長 ウ)
+    v = v / n + CARD_AI_SEARCH_PRIOR * prior[i] + (i === 0 ? 0.5 : 0); // 並んだときは、もとの点がいちばん高い手
     if (v > bestV) { bestV = v; best = cands[i]; }
   }
   return best;

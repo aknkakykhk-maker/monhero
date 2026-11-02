@@ -319,5 +319,29 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
   check('K メインの細かいくせは足さない(攻め型の「倒れるときだけ守る」が助手に付かない)', !E.cardTacticKnobsOf(['tAttack', null, null], null, 0, true).guardDieOnly && E.cardTacticKnobsOf(['tAttack', null, null], null, 0, false).guardDieOnly === true);
 }
 
+// ---- M. 登録デッキの打ち方(2026-11-02 社長 ア+イ+ウ+「倒れるのに守る」) ----
+{
+  // ア: 基本カードは、登録したくせの上に足す。くせと同じ型の基本カード(くせ みゅあ に攻め型)は二重に足さない
+  const mua = E.cardAiPolicy('mua', 'master', { noTactics: true }).habit;
+  const keep = E.cardTacticHabitOf(['tAttack', 'tFinish', 'tBig'], null, 0, mua);
+  const on = E.cardTacticHabitOf(['tAttack', 'tFinish', 'tBig'], null, 0, mua, null, true, 'mua');
+  check('M くせ みゅあ に攻め型・仕留め型・大技型を足すと、助手 MASTER と同じくせになる', ['attack', 'keepGuard', 'saveGuts', 'big', 'disrupt', 'area', 'finish'].every((d) => Math.abs(keep[d] - on[d]) < 1e-9), J({ keep, on }));
+  const onDra = E.cardTacticHabitOf(['tAttack', null, null], null, 0, E.cardAiPolicy('dra', 'master', { noTactics: true }).habit, null, true, 'dra');
+  check('M くせ ドラ に攻め型を入れると、攻めが強くなる(くせの上に足す)', onDra.attack > E.cardAiPolicy('dra', 'master', { noTactics: true }).habit.attack, J(onDra));
+  check('M くせと同じ型の細かいくせは二重に付けない(くせ みゅあ の攻め型に「倒れるときだけ守る」を付けない)', !E.cardTacticKnobsOf(['tAttack', null, null], null, 0, false, 'mua').guardDieOnly && !!E.cardTacticKnobsOf(['tAttack', null, null], null, 0, false, 'dra').guardDieOnly);
+  // 倒れるのに守る: 守っても倒れるのが変わらない守り(光の盾で3を1減らしても、ライフ1の子は倒れる)は、「守る」の行でも出さない
+  let st = scene();
+  st.players[1].hand = ['350'];
+  st.players[1].mons[0].life = 1;
+  st = E.cardApplyAction(db, st, { type: 'attack', mon: 0, hand: [st.players[0].hand.indexOf('100')], target: { p: 1, m: 0 } });
+  if (st && st.pending && E.cardGuardOptions(db, st).length) {
+    const a = E.cardAiChooseAction(db, st, pol([{ c: 'any', a: 'guard' }]), zero);
+    check('M 守っても倒れるのが変わらない守りは、「守る」の行でも出さずに受ける', a.type === 'pass', J(a));
+    st.players[1].mons[0].life = 3;
+    const b = E.cardAiChooseAction(db, st, pol([{ c: 'any', a: 'guard' }]), zero);
+    check('M 守れば倒れないなら守る(ライフ3に3を1減らす)', b.type === 'guard', J(b));
+  } else check('M 守りの場を作れる', false, '場を作れなかった');
+}
+
 console.log(`card-tactics-gambit-check: ${passed} OK / ${fails.length} NG`);
 if (fails.length) { fails.forEach((f) => console.log(`NG: ${f}`)); process.exit(1); }
