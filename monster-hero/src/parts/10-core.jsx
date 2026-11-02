@@ -653,6 +653,13 @@ const rhythmPlayRunLoopScale = (songId, event, campaign) => {
   const id = songId === null || songId === undefined ? '' : String(songId);
   return (id && ids && ids.includes(id)) ? RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE : RHYTHM_PLAY_RUN_LOOP_SCALE;
 };
+// 周回の倍率を上げているキャンペーン(loopScale・loopBoost を持つもの)。無ければ null。
+//   画面の案内(報酬の窓・曲えらびの帯・曲リザルト)が、実際に効く倍率(rhythmPlayRunLoopScale)とずれないように使う(2026-11-02)。
+//   公開フラグ(RELEASE_FLAGS.rhythmEventPoints)は呼ぶ側で見る(計算の rhythmPlayRunLoopCampaignNow と同じ)
+const rhythmLoopCampaignAt = (nowMs) => {
+  const c = typeof rhythmEventPointCampaignAt === 'function' ? rhythmEventPointCampaignAt(nowMs) : null;
+  return c && Number(c.loopScale) > 0 && Number(c.loopBoost) > 0 ? c : null;
+};
 // その難易度を「クイックで」通したことがあるか。
 // ★上の難易度を通していれば、その下も通したものとして扱う。下は上より必ずやさしいので、
 //   上を通せた人にわざわざ下を踏ませる意味がないため(2026-09-12・ユーザー指示の考え方を
