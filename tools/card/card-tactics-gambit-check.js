@@ -361,5 +361,26 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
   check('N 雑な手の番でも、倒れた子の札はガッツにして、使える守りはでたらめに捨てない', b.type === 'guts' && b.hand.includes(0) && !b.hand.includes(1), J(b));
 }
 
+// ---- O. 勝ちになる一撃(2026-11-02 社長「勝ちになる攻撃は、自分が傷つく技でも打つ」) ----
+{
+  const winScene = (life) => {
+    const st = scene();
+    st.players[0].hand = ['101']; // もっちゃん(5・当たると自分に1)
+    st.players[1].mons.forEach((m, i) => { if (i > 0) { m.ko = true; m.life = 0; } });
+    st.players[1].mons[0].life = life;
+    st.players[1].hand = [];
+    return st;
+  };
+  const steady = { ...E.cardAiPolicy('kyuko', 'master', { noTactics: true }), gambit: { base: ['tSteady', null, null], mons: [[], [], []] } };
+  const a = E.cardAiChooseAction(db, winScene(5), steady, zero);
+  check('O 堅実型でも、当たれば勝ちの一撃(自分も傷つく技)は打つ', a.type === 'attack', J(a));
+  const b = E.cardAiChooseAction(db, winScene(20), steady, zero);
+  check('O 堅実型は、勝ちにならないときは自分も傷つく技を出さない', b.type !== 'attack', J(b));
+  const sl = { ...E.cardAiPolicy('kyuko', 'master', { noTactics: true }) };
+  sl.level = { ...sl.level, sloppy: 1 };
+  const c = E.cardAiChooseAction(db, winScene(5), sl, zero);
+  check('O 雑な手の番でも、当たれば勝ちの一撃は打つ', c.type === 'attack', J(c));
+}
+
 console.log(`card-tactics-gambit-check: ${passed} OK / ${fails.length} NG`);
 if (fails.length) { fails.forEach((f) => console.log(`NG: ${f}`)); process.exit(1); }

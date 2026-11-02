@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2b11372e0659b22d
+// source-sha256: eae1a1f85de37c92
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93276,6 +93276,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
     if (targets.length > 1) score *= 1 + 0.15 * (habit.area - 1);
     if (cost >= 5) score *= 1 + 0.12 * (habit.big - 1);
     const winsNow = kills > 0 && kills >= st.players[cardOther(p)].mons.filter(m => !m.ko).length;
+    if (winsNow) score += CARD_AI_WIN_STRIKE_ADD;
     const sh = cardEff(main, 'selfDamageIfHit');
     if (sh && mon && !winsNow) score -= sh.n * (mon.life <= sh.n ? 3 : 0.6);
     const si = mods.flags.selfIfHit;
@@ -93550,6 +93551,16 @@ const CARD_AI_GUARD_KEEP_ADD = 1.5;
 const CARD_AI_STUCK_KEEP = 2;
 const CARD_TACTIC_KEEP_GUARD_MAX = 3;
 const cardAiGutsCap = me => me.deck.length >= CARD_BATTLE_HAND_MAX ? 99 : Math.max(0, me.hand.length - (CARD_BATTLE_HAND_MAX - me.deck.length));
+const CARD_AI_WIN_STRIKE_ADD = 3;
+const cardAiWinsBy = (db, st, opt, p = st.active) => {
+  if (!opt || opt.type !== 'attack') return false;
+  try {
+    const s = cardAiSettle(db, cardApplyAction(db, st, opt));
+    return !!s && s.winner === p;
+  } catch (_) {
+    return false;
+  }
+};
 const CARD_AI_RISKY_EFFS = ['selfDamage', 'selfDamageIfHit', 'selfDamageIfEvaded', 'attachSelfIfHit', 'lastWish', 'selfHurt', 'fuse', 'draw', 'deckToGuts', 'rush', 'refresh', 'choose', 'fieldMill', 'fieldDrawOnPlay', 'fieldBurn'];
 const cardAiDrawNeed = pl => pl.hand.length >= CARD_BATTLE_HAND_MAX ? 1 : CARD_BATTLE_HAND_MAX - pl.hand.length;
 const cardAiSettle = (db, st) => {
@@ -93831,9 +93842,13 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   if (!opts.length) return {
     type: 'endAttacks'
   };
-  if (sloppy) return rand() < 0.25 ? {
-    type: 'endAttacks'
-  } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
+  if (sloppy) {
+    const win = opts.find(o => cardAiWinsBy(db, st, o));
+    if (win) return cardAiFillBind(db, st, win, policy);
+    return rand() < 0.25 ? {
+      type: 'endAttacks'
+    } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
+  }
   const scored = cardAiAttackScored(db, st, opts, policy);
   if (policy.search) return cardAiSearchPick(db, st, scored, policy, rand);
   if (scored[0].s <= 0.3) return {
@@ -97058,7 +97073,7 @@ const cardTacticBaseAttack = (db, st, policy, knobs, ctx) => {
     if (ctx.noBreeder && (o.type === 'breeder' || o.hand.some(i => (cardOf(db, me.hand[i]) || {}).user === 'breeder'))) return false;
     const e = effs(o);
     if (knobs.light && o.type === 'attack' && cardActionCost(db, st, p, me.hand, o.hand) > 1) return false;
-    if (knobs.safe && e.some(t => /^selfDamage|^attachSelfIfHit$|^selfHurt$/.test(t))) return false;
+    if (knobs.safe && e.some(t => /^selfDamage|^attachSelfIfHit$|^selfHurt$/.test(t)) && !cardAiWinsBy(db, st, o, p)) return false;
     if (knobs.noDraw && e.some(t => ['draw', 'rush', 'deckToGuts', 'refresh', 'oppDraw'].includes(t))) return false;
     if (knobs.keepHand && me.hand.length - o.hand.length < knobs.keepHand) return false;
     if (knobs.areaMin2 && foes.length < 2 && e.includes('area')) return false;
