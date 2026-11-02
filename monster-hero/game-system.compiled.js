@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 694c84225ca9f7d0
+// source-sha256: 074613811350b639
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -101365,7 +101365,10 @@ const CardBattleBoard = ({
   onActLog = null
 }) => {
   const settings = normalizeCardSettings(game.settings);
-  const pace = CARD_THINK_PACE[settings.think] || 1;
+  const autoGame = game.auto && game.auto.tactics && !game.replay && !game.pvp && !game.watch ? game.auto : null;
+  const [autoOn, setAutoOn] = useState(!!autoGame);
+  const [autoSpeed, setAutoSpeed] = useState(1);
+  const pace = (CARD_THINK_PACE[settings.think] || 1) / (autoGame ? autoSpeed : 1);
   const pressMs = CARD_PRESS_MS[settings.press] || 450;
   const confirmOn = key => settings[key] === 'ON' && !game.tutorial && !game.demo && !(typeof window !== 'undefined' && window.__mhCardPvpAuto);
   const replay = game.replay || null;
@@ -101393,6 +101396,30 @@ const CardBattleBoard = ({
   }) : cardAiPolicy(game.who, game.level, {
     sameBlood: !!game.cpuSameBlood
   }), [game.who, game.level, game.cpuSameBlood]);
+  const autoControls = label => React.createElement(React.Fragment, null, label && React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-[12px] font-black text-sky-100"
+  }, autoOn ? '🤖 オートで戦っています' : '🖐 自分で操作しています'), [1, 2, 4].map(x => React.createElement("button", {
+    key: x,
+    type: "button",
+    "data-card-auto-speed": x,
+    "aria-pressed": autoSpeed === x,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setAutoSpeed(x);
+    },
+    className: `min-h-[30px] rounded-lg px-2 text-[12px] font-black ${autoSpeed === x ? 'bg-sky-300 text-slate-950' : 'bg-slate-800 text-slate-200'}`
+  }, `×${x}`)), React.createElement("button", {
+    type: "button",
+    "data-card-auto-toggle": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setAutoOn(v => !v);
+    },
+    className: "min-h-[30px] shrink-0 rounded-lg border border-white/30 px-2 text-[12px] font-black text-white"
+  }, autoOn ? '🖐 自分で' : '🤖 オート'));
+  const autoPolicy = useMemo(() => autoGame && typeof cardSharePolicy === 'function' ? cardSharePolicy(autoGame.tactics, autoGame.level, {
+    sameBlood: !!autoGame.sameBlood
+  }) : null, [autoGame]);
   const [st, setSt] = useState(game.st);
   useEffect(() => {
     if (onProgress) onProgress(st);
@@ -101882,6 +101909,27 @@ const CardBattleBoard = ({
     });
     return true;
   };
+  useEffect(() => {
+    if (!autoGame || !autoOn || !autoPolicy || st.winner !== null || paused) return undefined;
+    if (cardDeciderOf(st) !== CARD_ME) return undefined;
+    const wait = Math.round((st.pending ? 700 : st.phase === 'guts' ? 500 : 750) * pace);
+    const t = setTimeout(() => {
+      setSel(null);
+      setPicks([]);
+      const act = cardAiChooseAction(db, st, autoPolicy);
+      if (!act || !step(act)) step(st.pending ? {
+        type: 'pass'
+      } : st.phase === 'main' ? {
+        type: 'endAttacks'
+      } : {
+        type: 'guts',
+        hand: []
+      });
+    }, wait);
+    return () => {
+      clearTimeout(t);
+    };
+  }, [st, autoOn, paused, autoSpeed]);
   useEffect(() => {
     if (st.winner !== null || paused || game.demo || pvp || replay) return undefined;
     if (tutorial && !cardTutorialCpu(db, tutStage.id, st)) return undefined;
@@ -103003,7 +103051,10 @@ const CardBattleBoard = ({
     "data-card-pvp-eyes": pvpClock.eyes,
     "aria-label": `${pvpClock.eyes}人が観戦しています`,
     className: "shrink-0 whitespace-nowrap rounded-full bg-violet-500/25 px-1.5 py-0.5 text-[11px] font-black text-violet-100 tabular-nums"
-  }, tiny ? `👀${pvpClock.eyes}` : `👀観戦${pvpClock.eyes}`), !watch && React.createElement("button", {
+  }, tiny ? `👀${pvpClock.eyes}` : `👀観戦${pvpClock.eyes}`), autoGame && wide && React.createElement("span", {
+    "data-card-auto-bar": autoOn ? 'auto' : 'hand',
+    className: "flex shrink-0 items-center gap-1"
+  }, autoControls(false)), !watch && React.createElement("button", {
     type: "button",
     "data-card-quit": true,
     "data-card-replay-exit": replay ? '' : undefined,
@@ -103019,7 +103070,10 @@ const CardBattleBoard = ({
     style: {
       width: `${Math.max(0, Math.min(100, pvpClock.left * 1000 / Math.max(1, cardPvpLimitMs(st)) * 100))}%`
     }
-  })), React.createElement("div", {
+  })), autoGame && !wide && React.createElement("div", {
+    "data-card-auto-bar": autoOn ? 'auto' : 'hand',
+    className: "flex shrink-0 items-center gap-1.5 bg-sky-950/80 px-2 py-1"
+  }, autoControls(true)), React.createElement("div", {
     "data-card-wide-row": true,
     className: wide ? 'flex min-h-0 flex-1 flex-row' : 'contents'
   }, React.createElement("div", {
@@ -104424,6 +104478,19 @@ const CardBattleScreen = ({
     return CARD_PVP_BACK.on(go);
   }, []);
   const [deckPick, setDeckPick] = useState(null);
+  const [shareAuto, setShareAuto] = useState(false);
+  const [autoLeft, setAutoLeft] = useState(null);
+  useEffect(() => {
+    if (view !== 'deckPick' || !(deckPick && deckPick.pick && deckPick.pick.share) || typeof cardAutoRewardLoad !== 'function') return undefined;
+    let alive = true;
+    setAutoLeft(null);
+    void cardAutoRewardLoad().then(r => {
+      if (alive) setAutoLeft(r.left);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [view, deckPick]);
   const [kitPick, setKitPick] = useState(null);
   const [kitView, setKitView] = useState(null);
   const [starterOpen, setStarterOpen] = useState(null);
@@ -105185,6 +105252,71 @@ const CardBattleScreen = ({
           setView('result');
           return;
         }
+        if (game.share && game.auto && typeof cardAutoRewardLoad === 'function') {
+          const facts = cardResultFacts(st, CARD_ME);
+          const fresh = await freshCardSave();
+          const ar = await cardAutoRewardLoad();
+          const paid = ar.left > 0;
+          const half = cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts);
+          const point = paid ? Math.floor(half.base / 2) : 0;
+          const loops = paid ? Math.floor(cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts) / 2) : 0;
+          const levelGain = paid && typeof cardLevelEntries === 'function' ? await cardLevelEntries({
+            kind: 'cpu',
+            level: CARD_SHARE_REWARD_LEVEL,
+            outcome,
+            debug,
+            auto: true
+          }) : {
+            entries: []
+          };
+          const rankPoint = levelGain.gain && levelGain.gain.points || 0;
+          const counted = paid && (point > 0 || loops > 0 || levelGain.gain && levelGain.gain.add > 0);
+          const ok = await persist({
+            point: save.point + point + rankPoint
+          }, fresh.raw, [...(levelGain.entries || []), ...(counted ? [cardAutoRewardEntry(ar)] : [])]);
+          let quick = null;
+          if (ok && loops > 0 && onQuickLoops) {
+            try {
+              quick = await onQuickLoops(loops);
+            } catch (_) {
+              quick = null;
+            }
+          }
+          if (cpuLogRef.current && cpuLogRef.current.id === game.key) cpuLogRef.current = null;
+          const reward = {
+            ...half,
+            base: point,
+            got: point,
+            bonus: 0,
+            total: point,
+            full: Math.floor(half.full / 2),
+            daily: fresh.daily
+          };
+          setResult({
+            outcome,
+            reward,
+            opened: null,
+            saved: ok,
+            who: null,
+            level: game.level,
+            loops,
+            quick,
+            facts,
+            talk: null,
+            replay: null,
+            share: game.share,
+            rankGain: ok ? levelGain.gain : null,
+            auto: {
+              tactics: game.auto.tactics,
+              paid,
+              left: Math.max(0, ar.left - (ok && counted ? 1 : 0))
+            }
+          });
+          onBgm && onBgm(cardBgmOf(save.bgm.top));
+          onNavigate('CARD_TOP');
+          setView('result');
+          return;
+        }
         if (game.share) {
           const facts = cardResultFacts(st, CARD_ME);
           const fresh = await freshCardSave();
@@ -105499,6 +105631,7 @@ const CardBattleScreen = ({
   const startBattle = (pick = foe, deck = activeDeck, opts = {}) => {
     const rented = opts && opts.rented ? opts.rented : null;
     const cup = opts && opts.cup ? opts.cup : null;
+    const autoIn = opts && opts.auto && opts.auto.tactics && pick.share ? opts.auto : null;
     const issues = deck ? rented || cup ? cardDeckProblems(db, deck) : [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)] : ['デッキがありません'];
     if (!deck || issues.length) {
       setNotice(issues.join('・'));
@@ -105563,6 +105696,11 @@ const CardBattleScreen = ({
         monsters: vsMons(st, CARD_ME)
       }
     };
+    const auto = autoIn ? {
+      tactics: autoIn.tactics,
+      level: typeof cardShareFightLevel === 'function' ? cardShareFightLevel(autoIn.tactics) : 'master',
+      sameBlood: !!cardShareSameBlood(db, activeDeck)
+    } : null;
     setGame({
       key: gameKey,
       st,
@@ -105576,6 +105714,9 @@ const CardBattleScreen = ({
       } : {}),
       ...(cup ? {
         cup
+      } : {}),
+      ...(auto ? {
+        auto
       } : {}),
       ...(rented ? {
         rented: {
@@ -106108,6 +106249,11 @@ const CardBattleScreen = ({
       },
       allowRented: !toPvp && !sharePick,
       rentTab: shareForm && !toPvp && !sharePick,
+      auto: sharePick && typeof cardTacticsAutoOf === 'function' ? {
+        on: shareAuto,
+        onChange: setShareAuto,
+        left: autoLeft
+      } : null,
       onPick: async c => {
         if (c.kind === 'rent') {
           const next = deckPick;
@@ -106131,13 +106277,22 @@ const CardBattleScreen = ({
             return;
           }
         }
+        const autoT = sharePick && shareAuto && typeof cardTacticsAutoOf === 'function' ? await cardTacticsAutoOf(db, deck).catch(() => null) : null;
+        if (sharePick && shareAuto && !autoT) {
+          setNotice('戦術カードを読めませんでした');
+          return;
+        }
         const next = deckPick;
         setDeckPick(null);
         if (next.next === 'pvp') {
           setView('pvp');
           return;
         }
-        startBattle(next.pick, deck);
+        startBattle(next.pick, deck, autoT ? {
+          auto: {
+            tactics: autoT
+          }
+        } : {});
       }
     });
   }
@@ -106672,7 +106827,11 @@ const CardBattleScreen = ({
     }, "裏のクイック周回(", result.quick.quickDifficulty && String(quickDifficultySetting(result.quick.quickDifficulty)?.label || '').toUpperCase() || 'AUTO設定', ")が", result.loops, "周ぶん進みました"), result.quick.live && Number(result.quick.toLoop) > Number(result.quick.fromLoop) && React.createElement("div", {
       "data-card-quick-loops-range": true,
       className: "mt-0.5 text-[11px] font-bold text-sky-100"
-    }, result.quick.fromLoop, "周目 → ", result.quick.toLoop, "周目"))), React.createElement("div", {
+    }, result.quick.fromLoop, "周目 → ", result.quick.toLoop, "周目"))), result.auto && React.createElement("div", {
+      "data-card-result-auto": result.auto.paid ? 'paid' : 'free',
+      className: "mt-1 text-[12px] font-black text-sky-200",
+      style: JA_LABEL_STYLE
+    }, jaWrap(result.auto.paid ? `🤖 オートで挑みました(ごほうびは自分で戦うときの半分)。今日のごほうびはあと${result.auto.left}回` : '🤖 オートで挑みました。今日のごほうびは終わっています(ごほうびなしで遊べます)')), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
     }, "いまのビートP: ", save.point), result.opened && React.createElement("div", {
       className: "mt-1 text-[13px] font-black text-emerald-300"
@@ -106700,7 +106859,11 @@ const CardBattleScreen = ({
             who: result.share.tactics.habit,
             level: result.level,
             share: result.share
-          });
+          }, activeDeck, result.auto ? {
+            auto: {
+              tactics: result.auto.tactics
+            }
+          } : {});
           return;
         }
         const again = {
@@ -110113,7 +110276,8 @@ const CardDeckPick = ({
   onPick,
   onBack,
   allowRented = false,
-  rentTab = false
+  rentTab = false,
+  auto = null
 }) => {
   const [rented, setRented] = useState(null);
   const [tab, setTab] = useState('own');
@@ -110213,7 +110377,32 @@ const CardDeckPick = ({
       setTab(id);
     },
     className: `flex-1 rounded-xl py-2 text-[13px] font-black ${tab === id ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`
-  }, label))), note && tab === 'own' && React.createElement("p", {
+  }, label))), auto && tab === 'own' && React.createElement("div", {
+    "data-card-deck-pick-auto": auto.on ? 'auto' : 'hand',
+    className: "space-y-1.5"
+  }, React.createElement("div", {
+    className: "flex gap-1.5",
+    role: "radiogroup",
+    "aria-label": "戦い方"
+  }, [[false, '🖐 自分で操作'], [true, '🤖 オート(戦術カード)']].map(([v, label]) => React.createElement("button", {
+    key: String(v),
+    type: "button",
+    role: "radio",
+    "aria-checked": auto.on === v,
+    "data-card-deck-pick-mode": v ? 'auto' : 'hand',
+    onClick: () => {
+      Audio_.fgSe.tap();
+      auto.onChange(v);
+    },
+    className: `min-h-[44px] flex-1 rounded-xl px-1 text-[13px] font-black ${auto.on === v ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`
+  }, label))), auto.on && React.createElement("p", {
+    "data-card-deck-pick-auto-note": true,
+    className: "rounded-xl bg-slate-900/80 px-2.5 py-2 text-[11px] font-bold leading-snug text-slate-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap('選んだデッキの戦術カードで、あなたの側も自動で戦います。試合の途中で「自分で」に切り替えられます'), React.createElement("span", {
+    "data-card-deck-pick-auto-left": auto.left === null ? '' : auto.left,
+    className: `mt-1 block ${auto.left ? 'text-emerald-200' : 'text-amber-200'}`
+  }, auto.left === null ? '' : auto.left > 0 ? `今日のごほうびはあと${auto.left}回(自分で戦うときの半分)` : '今日のごほうびは終わりました。ごほうびなしで遊べます'))), note && tab === 'own' && React.createElement("p", {
     className: "text-[11px] font-bold text-slate-400",
     style: JA_WRAP_STYLE
   }, note), choices.map(c => {
@@ -119352,11 +119541,16 @@ const cardLevelAfter = (prev, {
   kind,
   level,
   outcome,
-  today
+  today,
+  auto = false
 }) => {
   const cur = cardNormalizeLevel(prev);
   const lv0 = cardLevelInfo(cur.xp).level;
-  const base = cardLevelXpOf({
+  const base = auto ? Math.floor(cardLevelXpOf({
+    kind,
+    level,
+    outcome
+  }) / 2) : cardLevelXpOf({
     kind,
     level,
     outcome
@@ -119373,7 +119567,7 @@ const cardLevelAfter = (prev, {
     gains: []
   };
   const sameDay = cur.day === today;
-  const first = outcome === 'win' && !(sameDay && cur.dayWin);
+  const first = !auto && outcome === 'win' && !(sameDay && cur.dayWin);
   const add = base + (first ? CARD_LEVEL_XP.firstWin : 0);
   const parts = [{
     label: outcome === 'win' ? '勝ち' : '負け',
@@ -119404,12 +119598,18 @@ const cardLevelAfter = (prev, {
     icon: '🧠',
     text: cardLevelFrameText(f)
   }))];
+  const dayNext = auto ? {
+    day: cur.day,
+    dayWin: cur.dayWin
+  } : {
+    day: today,
+    dayWin: sameDay && cur.dayWin || outcome === 'win'
+  };
   return {
     next: {
       ...cur,
       xp,
-      day: today,
-      dayWin: sameDay && cur.dayWin || outcome === 'win',
+      ...dayNext,
       got
     },
     tickets,
@@ -119632,11 +119832,62 @@ const cardTacticsDeckEntry = (loaded, deckId, frames, {
     }
   };
 };
+const cardTacticsAutoOf = async (db, deck) => {
+  if (!deck) return null;
+  const [d, byDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]);
+  const frames = cardTacticsFramesOfDeck(byDeck.box, d.tactics, deck.id);
+  const f = cardTacticPackFrames(cardTacticsFramesForBattle({
+    ...d.tactics,
+    frames
+  }, d.info.level));
+  const kept = cardTacticsAcesOfDeck(byDeck.box, deck.id);
+  const aces = kept && kept.length ? kept : typeof cardRegAutoAces === 'function' ? cardRegAutoAces(db, deck) : [];
+  return cardShareNormalizeTactics({
+    name: deck.name,
+    habit: cardShareMainHabit(cardTacticUnpackFrames(f), 'kyuko'),
+    aces,
+    f
+  }, deck);
+};
+const CARD_AUTO_REWARD_KEY = 'mh_card_auto_reward_v1';
+const CARD_AUTO_REWARD_DAY_MAX = 3;
+const cardAutoRewardNormalize = (raw, today) => {
+  const day = raw && typeof raw === 'object' && typeof raw.day === 'string' ? raw.day : '';
+  const n = raw && Number.isInteger(raw.n) && raw.n >= 0 && raw.n < 10000 ? raw.n : 0;
+  return {
+    day: today,
+    n: day === today ? n : 0
+  };
+};
+const cardAutoRewardLoad = async () => {
+  let raw = null;
+  try {
+    raw = await storeGet(CARD_AUTO_REWARD_KEY, null);
+  } catch (_) {}
+  const today = typeof cardTodayJst === 'function' ? cardTodayJst() : '';
+  const c = cardAutoRewardNormalize(raw, today);
+  return {
+    raw,
+    today,
+    n: c.n,
+    left: Math.max(0, CARD_AUTO_REWARD_DAY_MAX - c.n)
+  };
+};
+const cardAutoRewardEntry = loaded => ({
+  key: CARD_AUTO_REWARD_KEY,
+  before: loaded.raw,
+  next: {
+    v: 1,
+    day: loaded.today,
+    n: loaded.n + 1
+  }
+});
 const cardLevelEntries = async ({
   kind,
   level,
   outcome,
-  debug = false
+  debug = false,
+  auto = false
 }) => {
   if (!cardTacticsOpen() && !debug) return {
     entries: [],
@@ -119656,6 +119907,7 @@ const cardLevelEntries = async ({
     kind,
     level,
     outcome,
+    auto,
     today: typeof cardTodayJst === 'function' ? cardTodayJst() : ''
   });
   if (!gain.add) return {
