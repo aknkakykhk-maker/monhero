@@ -124,7 +124,8 @@ check('images/ に使われていない画像が残っていない', orphans.len
 // --- ⑤ ムービー(movies/*.mp4)も、実在・キャッシュキー・置きっぱなしを同じように見る ---
 // 覚醒ムーの必殺技ムービー(2026-09-25)。敵データの specialMovie から参照し、?v= は stamp-version.js が付ける
 // HELL の説明の動画(2026-10-13・mp4 と webm)は data/rhythm-mode.js の RHYTHM_HELL_GUIDE_VIDEOS から
-const movieHost = ['data/enemy-monsters.js', 'data/rhythm-mode.js'].map((rel) => fs.readFileSync(path.join(WEB_ROOT, rel), 'utf8')).join('\n');
+// 予告動画(2026-11-02)は data/changelog.js の video から
+const movieHost = ['data/enemy-monsters.js', 'data/rhythm-mode.js', 'data/changelog.js'].map((rel) => fs.readFileSync(path.join(WEB_ROOT, rel), 'utf8')).join('\n');
 const movieRefs = [...movieHost.matchAll(/["'](movies\/[^"'?]+\.(?:mp4|webm))(?:\?v=([0-9a-f]*))?["']/g)];
 const movieMissing = [], movieStale = [];
 for (const [, rel, key] of movieRefs) {
