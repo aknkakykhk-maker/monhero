@@ -89,6 +89,8 @@ function RhythmSongSelectScreen({
       // ビートPアップキャンペーン(2026-09-28)。ランキングイベントと重なったときはイベントの帯を出す
       // (計算もイベントのほうを使う。rhythmEventPointAwardAt)。開いているあいだは描き直すたびに数え直す
       const beatPointCampaign=beatPointReleased&&!beatPointEvent?rhythmEventPointCampaignAt(Date.now()):null;
+      // イベントと周回キャンペーンが重なったときは、イベントの帯に「周回 ◯倍」を足す(キャンペーンの帯は出ないため。2026-11-02)
+      const eventLoopCampaign=beatPointEvent?rhythmLoopCampaignAt(Date.now()):null;
       // 横持ちの左の細い列(幅104px)へ入れる札。中身は縦持ちの帯と同じ
       const beatPointSideCard=beatPointCampaign
         ?<div data-rhythm-beat-band-landscape data-rhythm-beat-point-campaign-side className="rounded-xl border border-amber-300/40 bg-amber-500/10 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-amber-100">
@@ -100,6 +102,7 @@ function RhythmSongSelectScreen({
         :beatPointEvent
           ?<div data-rhythm-beat-band-landscape data-rhythm-beat-point-active-side className="rounded-xl border border-violet-400/30 bg-violet-950/25 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-violet-100">
             <span className="block">🎟️ ビートP獲得期間中</span>
+            {eventLoopCampaign&&<span className="block text-amber-200">周回 {eventLoopCampaign.loopBoost}倍</span>}
             <span style={JA_WRAP_STYLE} className="mt-0.5 block text-violet-200/80">{beatPointTargetSong?jaWrap('選択中のイベント対象曲は1.5倍'):'公開曲なら獲得できます'}</span>
           </div>
           :null;
@@ -354,7 +357,7 @@ function RhythmSongSelectScreen({
             <span className="flex min-w-0"><span className="min-w-0 truncate">{beatPointCampaign.name}</span><span className="shrink-0">{Number(beatPointCampaign.loopBoost)>0?`・周回 ${beatPointCampaign.loopBoost}倍`:'中'}</span></span>
             <span className="ml-auto shrink-0 text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.displayEndAt||beatPointCampaign.endAt))}</span>
           </div>}
-          {beatPointEvent&&<div style={JA_WRAP_STYLE} data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?jaWrap('・選択中のイベント対象曲は1.5倍'):jaWrap('・公開曲なら獲得できます')}</div>}
+          {beatPointEvent&&<div style={JA_WRAP_STYLE} data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?jaWrap('・選択中のイベント対象曲は1.5倍'):jaWrap('・公開曲なら獲得できます')}{eventLoopCampaign&&<span className="text-amber-200">{jaWrap(`・周回 ${eventLoopCampaign.loopBoost}倍`)}</span>}</div>}
         </div>}
         {/* 開催していないときの「ビートPはいつでも貯まります」の帯は外した(2026-09-26・ユーザー指示
             「ビートPがいつでももらえるはここに書く必要はない / この分でもスペース無駄にしてる」)。
@@ -1190,7 +1193,10 @@ function RhythmRankingScreen({
                   報酬の表と同じ場所に置く。対象曲を遊ぶ理由が順位だけではなくなるため */}
               {!eventWeekly&&<p style={JA_WRAP_STYLE} data-rhythm-event-loop-bonus
                 className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2 text-[10px] leading-tight text-slate-200">
-                <b className="text-amber-200">∞周回 ×{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}</b>　{jaWrap('クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×')}{RHYTHM_PLAY_RUN_LOOP_SCALE}）の{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}倍になります
+                {/* 周回キャンペーン中は、そちらの倍率が曲を問わず効く(rhythmPlayRunLoopScale)。窓の案内も実際と同じにする(2026-11-02 社長「×3 と出ている」) */}
+                {rhythmLoopCampaignAt(Date.now())&&RELEASE_FLAGS.rhythmEventPoints===true
+                  ?<><b className="text-amber-200">∞周回 ×{rhythmLoopCampaignAt(Date.now()).loopScale}</b>　{jaWrap(`キャンペーン中は、クイックの∞周回を裏で回しながらモンヒロビートを演奏すると、どの曲でも入る周回数がいつもの${rhythmLoopCampaignAt(Date.now()).loopBoost}倍になります`)}</>
+                  :<><b className="text-amber-200">∞周回 ×{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}</b>　{jaWrap('クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×')}{RHYTHM_PLAY_RUN_LOOP_SCALE}）の{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}倍になります</>}
               </p>}
               {/* 回数ボーナス(2026-09-11・ユーザー指示)。遊んだ回数が順位に効くことは、
                   ランキングを見ているだけでは分からないので、報酬の表と同じ場所で伝える。

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ad17b827cf30fa4c
+// source-sha256: 00b5349121c4ea12
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -639,6 +639,10 @@ const rhythmPlayRunLoopScale = (songId, event, campaign) => {
   const ids = event && Array.isArray(event.songIds) ? typeof rhythmEventPlaySongIds === 'function' ? rhythmEventPlaySongIds(event) : event.songIds : null;
   const id = songId === null || songId === undefined ? '' : String(songId);
   return id && ids && ids.includes(id) ? RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE : RHYTHM_PLAY_RUN_LOOP_SCALE;
+};
+const rhythmLoopCampaignAt = nowMs => {
+  const c = typeof rhythmEventPointCampaignAt === 'function' ? rhythmEventPointCampaignAt(nowMs) : null;
+  return c && Number(c.loopScale) > 0 && Number(c.loopBoost) > 0 ? c : null;
 };
 const isQuickModeClearedAtOrAbove = (difficulty, quickClears) => quickDifficultiesAtOrAbove(difficulty).some(id => (Number(quickClears?.[id]) || 0) > 0);
 const rhythmPlayRunLoopsAllowed = (difficulty, quickClears) => isQuickModeClearedAtOrAbove(difficulty, quickClears);
@@ -42381,7 +42385,7 @@ const RhythmTapTest = ({
         className: "text-[15px] font-black leading-none text-white"
       }, "+", quickRunAward.loops, "周")), quickRunAward.eventBoosted && React.createElement("div", {
         className: "mt-0.5 text-[9px] font-black text-amber-200"
-      }, quickRunAward.scale > RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE ? '🎃 キャンペーン中 ×' : '🏆 イベント対象曲 ×', quickRunAward.scale), quickRunAward.multiScale > 1 && React.createElement("div", {
+      }, quickRunAward.scale > RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE ? `${rhythmLoopCampaignAt(Date.now())?.banner?.emoji || '🎟️'} キャンペーン中 ×` : '🏆 イベント対象曲 ×', quickRunAward.scale), quickRunAward.multiScale > 1 && React.createElement("div", {
         className: "mt-0.5 text-[9px] font-black text-cyan-200"
       }, "👥 対戦ボーナス ×", quickRunAward.multiScale), React.createElement("div", {
         className: "mt-0.5 text-[9px] font-black text-slate-300"
@@ -42734,7 +42738,7 @@ const RhythmTapTest = ({
     }, "+", quickRunAward.loops, "周")), quickRunAward.eventBoosted && React.createElement("div", {
       "data-rhythm-result-quick-run-event": true,
       className: "mt-1.5 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 py-1 text-[10px] font-black text-amber-200"
-    }, quickRunAward.scale > RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE ? '🎃 キャンペーン中 ×' : '🏆 イベント対象曲 ×', quickRunAward.scale, "（ふだんの曲は ×", RHYTHM_PLAY_RUN_LOOP_SCALE, "）"), quickRunAward.multiScale > 1 && React.createElement("div", {
+    }, quickRunAward.scale > RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE ? `${rhythmLoopCampaignAt(Date.now())?.banner?.emoji || '🎟️'} キャンペーン中 ×` : '🏆 イベント対象曲 ×', quickRunAward.scale, "（ふだんの曲は ×", RHYTHM_PLAY_RUN_LOOP_SCALE, "）"), quickRunAward.multiScale > 1 && React.createElement("div", {
       "data-rhythm-result-quick-run-multi": true,
       className: "mt-1.5 rounded-xl border border-cyan-300/50 bg-cyan-950/40 px-2 py-1 text-[10px] font-black text-cyan-200"
     }, "👥 みんなで対戦のボーナス(人数・連続) ×", quickRunAward.multiScale), React.createElement("div", {
@@ -61485,6 +61489,7 @@ function RhythmSongSelectScreen({
   const beatPointEvent = beatPointReleased ? rhythmLimitedEventAt(Date.now()) : null;
   const beatPointTargetSong = !!beatPointEvent && rhythmEventHasSong(beatPointEvent, rhythmSelectedSongId);
   const beatPointCampaign = beatPointReleased && !beatPointEvent ? rhythmEventPointCampaignAt(Date.now()) : null;
+  const eventLoopCampaign = beatPointEvent ? rhythmLoopCampaignAt(Date.now()) : null;
   const beatPointSideCard = beatPointCampaign ? React.createElement("div", {
     "data-rhythm-beat-band-landscape": true,
     "data-rhythm-beat-point-campaign-side": true,
@@ -61503,7 +61508,9 @@ function RhythmSongSelectScreen({
     className: "rounded-xl border border-violet-400/30 bg-violet-950/25 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-violet-100"
   }, React.createElement("span", {
     className: "block"
-  }, "🎟️ ビートP獲得期間中"), React.createElement("span", {
+  }, "🎟️ ビートP獲得期間中"), eventLoopCampaign && React.createElement("span", {
+    className: "block text-amber-200"
+  }, "周回 ", eventLoopCampaign.loopBoost, "倍"), React.createElement("span", {
     style: JA_WRAP_STYLE,
     className: "mt-0.5 block text-violet-200/80"
   }, beatPointTargetSong ? jaWrap('選択中のイベント対象曲は1.5倍') : '公開曲なら獲得できます')) : null;
@@ -61825,7 +61832,9 @@ function RhythmSongSelectScreen({
     "data-rhythm-beat-point-active": true,
     "data-target-song": beatPointTargetSong ? 'true' : 'false',
     className: "shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100"
-  }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? jaWrap('・選択中のイベント対象曲は1.5倍') : jaWrap('・公開曲なら獲得できます'))), selectNoticesOpen && rhythmSixLaneIntroVisible && React.createElement("div", {
+  }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? jaWrap('・選択中のイベント対象曲は1.5倍') : jaWrap('・公開曲なら獲得できます'), eventLoopCampaign && React.createElement("span", {
+    className: "text-amber-200"
+  }, jaWrap(`・周回 ${eventLoopCampaign.loopBoost}倍`)))), selectNoticesOpen && rhythmSixLaneIntroVisible && React.createElement("div", {
     "data-rhythm-six-lane-intro": true,
     className: "shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1"
   }, React.createElement("div", {
@@ -62913,9 +62922,11 @@ function RhythmRankingScreen({
     style: JA_WRAP_STYLE,
     "data-rhythm-event-loop-bonus": true,
     className: "rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2 text-[10px] leading-tight text-slate-200"
-  }, React.createElement("b", {
+  }, rhythmLoopCampaignAt(Date.now()) && RELEASE_FLAGS.rhythmEventPoints === true ? React.createElement(React.Fragment, null, React.createElement("b", {
     className: "text-amber-200"
-  }, "∞周回 ×", RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE), "\u3000", jaWrap('クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×'), RHYTHM_PLAY_RUN_LOOP_SCALE, "）の", RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE, "倍になります"), rhythmEventPlayBonusRates(eventDefinition) && React.createElement("div", {
+  }, "∞周回 ×", rhythmLoopCampaignAt(Date.now()).loopScale), "\u3000", jaWrap(`キャンペーン中は、クイックの∞周回を裏で回しながらモンヒロビートを演奏すると、どの曲でも入る周回数がいつもの${rhythmLoopCampaignAt(Date.now()).loopBoost}倍になります`)) : React.createElement(React.Fragment, null, React.createElement("b", {
+    className: "text-amber-200"
+  }, "∞周回 ×", RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE), "\u3000", jaWrap('クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×'), RHYTHM_PLAY_RUN_LOOP_SCALE, "）の", RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE, "倍になります")), rhythmEventPlayBonusRates(eventDefinition) && React.createElement("div", {
     style: JA_WRAP_STYLE,
     "data-rhythm-event-play-bonus": true,
     className: "rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200"
