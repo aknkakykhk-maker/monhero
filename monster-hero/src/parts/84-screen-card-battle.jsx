@@ -1006,7 +1006,12 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   // 演出の設定(オプション)。はやい … 相手が考える時間と、決着から結果までを短くする
   const settings = normalizeCardSettings(game.settings);
   // 対戦中の設定(オプション・社長 2026-10-25)。既定はどれも足す前の動きと同じ。練習試合は game.settings を持たないので既定のまま
-  const pace = CARD_THINK_PACE[settings.think] || 1;
+  // オートで挑む(案B・2026-11-02): game.auto … { tactics(自分のデッキの戦術カード), level, sameBlood }。自分の側も相手役と同じ仕組み(cardSharePolicy)で動く。
+  //   ×1/×2/×4 は、相手が考える時間・カードを大きく見せる時間を縮める。「🖐 自分で」で手に切り替えられる(戻すこともできる)。ごほうびの扱いはオートのまま(84 の結果)
+  const autoGame = game.auto && game.auto.tactics && !game.replay && !game.pvp && !game.watch ? game.auto : null;
+  const [autoOn, setAutoOn] = useState(!!autoGame);
+  const [autoSpeed, setAutoSpeed] = useState(1);
+  const pace = (CARD_THINK_PACE[settings.think] || 1) / (autoGame ? autoSpeed : 1);
   const pressMs = CARD_PRESS_MS[settings.press] || 450;
   // 確かめの窓は、人が遊んでいるときだけ。練習試合・動きの見本・マルチの検査の自動操作(window.__mhCardPvpAuto)では出さない(ブレイブくんとの決め)
   const confirmOn = (key) => settings[key] === 'ON' && !game.tutorial && !game.demo && !(typeof window !== 'undefined' && window.__mhCardPvpAuto);
@@ -1031,6 +1036,17 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const share = game.share || null;
   const who = pvp ? { id: 'pvp', name: pvp.name, accent: '#38bdf8' } : share ? { id: 'share', name: share.name, accent: '#34d399' } : (ASSISTANTS.find((a) => a.id === game.who) || ASSISTANTS[0]);
   const policy = useMemo(() => (share && typeof cardSharePolicy === 'function' ? cardSharePolicy(share.tactics, game.level, { sameBlood: !!game.cpuSameBlood }) : cardAiPolicy(game.who, game.level, { sameBlood: !!game.cpuSameBlood })), [game.who, game.level, game.cpuSameBlood]);
+  // オートの操作(×1/×2/×4・自分で/オート)。label … 「オートで戦っています」の文も出すか(縦の帯だけ)
+  const autoControls = (label) => (<>
+    {label && <span className="min-w-0 flex-1 truncate text-[12px] font-black text-sky-100">{autoOn ? '🤖 オートで戦っています' : '🖐 自分で操作しています'}</span>}
+    {[1, 2, 4].map((x) => (
+      <button key={x} type="button" data-card-auto-speed={x} aria-pressed={autoSpeed === x} onClick={() => { Audio_.fgSe.tap(); setAutoSpeed(x); }}
+        className={`min-h-[30px] rounded-lg px-2 text-[12px] font-black ${autoSpeed === x ? 'bg-sky-300 text-slate-950' : 'bg-slate-800 text-slate-200'}`}>{`×${x}`}</button>
+    ))}
+    <button type="button" data-card-auto-toggle onClick={() => { Audio_.fgSe.tap(); setAutoOn((v) => !v); }}
+      className="min-h-[30px] shrink-0 rounded-lg border border-white/30 px-2 text-[12px] font-black text-white">{autoOn ? '🖐 自分で' : '🤖 オート'}</button>
+  </>);
+  const autoPolicy = useMemo(() => (autoGame && typeof cardSharePolicy === 'function' ? cardSharePolicy(autoGame.tactics, autoGame.level, { sameBlood: !!autoGame.sameBlood }) : null), [autoGame]);
   const [st, setSt] = useState(game.st);
   useEffect(() => { if (onProgress) onProgress(st); }, [st]);
   const [sel, setSel] = useState(null);      // 攻撃: { hand, mon, add } / 守り: { hand }。add … 自分で足した札(勝手には足さない)
@@ -1371,6 +1387,19 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (scene && next.winner === null) say(scene, { scene: flip || scene, next });
     return true;
   };
+
+  // オートの番(自分の側)。相手役と同じく、選んだデッキの戦術カードで決める。詳しい画面・捨て札・投了の確かめを見ているあいだは待つ
+  useEffect(() => {
+    if (!autoGame || !autoOn || !autoPolicy || st.winner !== null || paused) return undefined;
+    if (cardDeciderOf(st) !== CARD_ME) return undefined;
+    const wait = Math.round((st.pending ? 700 : st.phase === 'guts' ? 500 : 750) * pace);
+    const t = setTimeout(() => {
+      setSel(null); setPicks([]);
+      const act = cardAiChooseAction(db, st, autoPolicy);
+      if (!act || !step(act)) step(st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : { type: 'guts', hand: [] });
+    }, wait);
+    return () => { clearTimeout(t); };
+  }, [st, autoOn, paused, autoSpeed]);
 
   // コンピューターの番(守りの番・始める前・捨てる番も)。詳しい画面や捨て札を見ているあいだは待つ
   useEffect(() => {
@@ -2086,6 +2115,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       )}
       {/* 上の帯(2026-10-29 社長・案B): 左「記録」「💬」/ まんなかに番の札ひとつ(ターン・だれの番・マルチの持ち時間・電波)/ 右に観戦の数と、右端に「投了」。
           1段・高さ固定で、どの番でも盤が動かない。電波が途切れたときも段を増やさず、番の札が橙になる。難易度は助手の名前の下にあるので帯には出さない */}
+      {/* オートの帯: 縦は見出しの下に1列、横は見出しの列の中(盤面の高さを削らない) */}
       <div data-card-head className={`relative flex ${compact ? 'h-[36px]' : 'h-[44px]'} shrink-0 items-center gap-1.5 bg-black/35 px-2`}>
         {!tutorial && <button type="button" data-card-log-open onClick={() => setLogSheet(true)} className="shrink-0 rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200" aria-label="ターンの記録を見る">記録</button>}
         {/* 💬 コメント(定型と自由文・ログ。2026-10-30 社長「マルチと観戦で自由文のコメントも」。91 の CardChatButton) */}
@@ -2119,10 +2149,12 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         {/* 観戦している人の数(94-card-spectate.jsx)。いないときは出さない */}
         {pvpLive && pvpClock.eyes > 0 && <span data-card-pvp-eyes={pvpClock.eyes} aria-label={`${pvpClock.eyes}人が観戦しています`} className="shrink-0 whitespace-nowrap rounded-full bg-violet-500/25 px-1.5 py-0.5 text-[11px] font-black text-violet-100 tabular-nums">{tiny ? `👀${pvpClock.eyes}` : `👀観戦${pvpClock.eyes}`}</span>}
         {/* 投了は右端へ離し、赤い縁(押しまちがえやすい所から離す)。観戦では出さない(下の「観戦をやめる」と2つ並んでいた。2026-10-27 部長) */}
+        {autoGame && wide && <span data-card-auto-bar={autoOn ? 'auto' : 'hand'} className="flex shrink-0 items-center gap-1">{autoControls(false)}</span>}
         {!watch && <button type="button" data-card-quit data-card-replay-exit={replay ? '' : undefined} onClick={() => (replay ? onFinish({ outcome: 'replayExit', st }) : setQuit(true))} className={`shrink-0 rounded-lg border px-2 py-1 text-[12px] font-black ${replay || tutorial ? 'border-white/20 text-slate-200' : 'border-rose-400/80 text-rose-200'}`}>{replay ? 'とじる' : tutorial ? '飛ばす' : '投了'}</button>}
         {/* マルチの持ち時間の線(帯のいちばん下。減っていく) */}
         {pvpLive && <span aria-hidden="true" data-card-pvp-bar className={`pointer-events-none absolute bottom-0 left-0 h-[3px] transition-[width] duration-1000 ease-linear ${(pvpClock.offline || pvpClock.foeQuietSec > 0) ? 'bg-amber-500' : pvpClock.mine ? 'bg-amber-300' : 'bg-slate-400/60'}`} style={{ width: `${Math.max(0, Math.min(100, (pvpClock.left * 1000 / Math.max(1, cardPvpLimitMs(st))) * 100))}%` }}/>}
       </div>
+      {autoGame && !wide && <div data-card-auto-bar={autoOn ? 'auto' : 'hand'} className="flex shrink-0 items-center gap-1.5 bg-sky-950/80 px-2 py-1">{autoControls(true)}</div>}
       {/* 横画面(④): 左に「相手の帯〜自分の帯」、右に「案内〜手札〜下のボタン」。縦のときは2つの箱を display:contents にして、今までと同じ縦の並び */}
       <div data-card-wide-row className={wide ? 'flex min-h-0 flex-1 flex-row' : 'contents'}>
       <div data-card-field className={wide ? 'flex min-h-0 min-w-0 flex-1 flex-col' : 'contents'}>
@@ -2886,6 +2918,16 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   useEffect(() => { const go = () => { if (CARD_PVP_BACK.take()) setView('pvp'); }; go(); return CARD_PVP_BACK.on(go); }, []);
   // 対戦の前のデッキ選び(87-card-deck-pick.jsx)。next … 'cpu'(助手と対戦。pick は相手と難易度) / 'pvp'(マルチの入口へ)
   const [deckPick, setDeckPick] = useState(null);
+  // オートで挑む(案B・2026-11-02): ほかのブリーダーと戦う前のデッキ選びの切り替えと、今日のごほうびの残り回数(96 の cardAutoRewardLoad)
+  const [shareAuto, setShareAuto] = useState(false);
+  const [autoLeft, setAutoLeft] = useState(null);
+  useEffect(() => {
+    if (view !== 'deckPick' || !(deckPick && deckPick.pick && deckPick.pick.share) || typeof cardAutoRewardLoad !== 'function') return undefined;
+    let alive = true;
+    setAutoLeft(null);
+    void cardAutoRewardLoad().then((r) => { if (alive) setAutoLeft(r.left); }).catch(() => {});
+    return () => { alive = false; };
+  }, [view, deckPick]);
   // マルチは、入口で相手を決めたあとにデッキ選びを挟む(2026-10-30 社長「相手を選んだあとにして」。91 の CARD_PVP_NEXT)。
   //   試合のあとに部屋を出て入口へ戻るとき(over → idle)は挟まない(次に相手を決めたときに選ぶ)。「もう1戦」は同じ部屋・同じデッキのまま
   const [kitPick, setKitPick] = useState(null);
@@ -3338,6 +3380,33 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       //   記録(助手ごとの勝ち数)・ランキング・強さの解放・着替えの解放・助手のひとことは通らない(助手と戦ったのではないため)
       //   もらえる物(ビートP・クイック周回・カードランクの経験値)は、相手の賢さにかかわらず助手と対戦 MASTER と同じ
       //   (2026-10-30 社長「ブリーダーのデッキとの対戦は難易度低いとやる意味なくなるから、経験値等はマスターと同等にして」)。相手の打ち方の強さは賢さ(game.level)のまま
+      // オートで挑んだ試合(案B・2026-11-02 社長・案3): 1日はじめの3回だけ手の半分(ビートP・クイック周回・経験値)。4回目からは無し。
+      //   その日はじめての勝ちの +50 は付けない。途中で手に切り替えた試合もオートの扱い。
+      //   ランキング・カードランクの送信・その日の数(daily)・相手の戦績(「戦った」の知らせ・見返し)には入れない。サーバへは何も送らない
+      if (game.share && game.auto && typeof cardAutoRewardLoad === 'function') {
+        const facts = cardResultFacts(st, CARD_ME);
+        const fresh = await freshCardSave();
+        const ar = await cardAutoRewardLoad();
+        const paid = ar.left > 0;
+        const half = cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts);
+        const point = paid ? Math.floor(half.base / 2) : 0;
+        const loops = paid ? Math.floor(cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts) / 2) : 0;
+        const levelGain = paid && typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: CARD_SHARE_REWARD_LEVEL, outcome, debug, auto: true }) : { entries: [] };
+        const rankPoint = (levelGain.gain && levelGain.gain.points) || 0;
+        // ごほうびが出た試合だけ、その日の回数に数える(自分の番が少なく0になった試合では回数を使わない)
+        const counted = paid && (point > 0 || loops > 0 || (levelGain.gain && levelGain.gain.add > 0));
+        const ok = await persist({ point: save.point + point + rankPoint }, fresh.raw, [...(levelGain.entries || []), ...(counted ? [cardAutoRewardEntry(ar)] : [])]);
+        let quick = null;
+        if (ok && loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(loops); } catch (_) { quick = null; } }
+        if (cpuLogRef.current && cpuLogRef.current.id === game.key) cpuLogRef.current = null;
+        const reward = { ...half, base: point, got: point, bonus: 0, total: point, full: Math.floor(half.full / 2), daily: fresh.daily };
+        setResult({ outcome, reward, opened: null, saved: ok, who: null, level: game.level, loops, quick, facts, talk: null, replay: null, share: game.share, rankGain: ok ? levelGain.gain : null,
+          auto: { tactics: game.auto.tactics, paid, left: Math.max(0, ar.left - (ok && counted ? 1 : 0)) } });
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView('result');
+        return;
+      }
       if (game.share) {
         const facts = cardResultFacts(st, CARD_ME);
         const fresh = await freshCardSave();
@@ -3480,6 +3549,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const rented = opts && opts.rented ? opts.rented : null;
     // 個人杯のリアルタイム杯(④): 自分も相手も、始まる時刻に取った登録デッキの写し。種と先攻は杯の試合のもの(見返しで同じ試合になる)
     const cup = opts && opts.cup ? opts.cup : null;
+    // オートで挑む(案B): ほかのブリーダーの登録デッキと戦うときだけ。自分の側の打ち方は、選んだデッキの戦術カード(相手役と同じ cardSharePolicy)
+    const autoIn = opts && opts.auto && opts.auto.tactics && pick.share ? opts.auto : null;
     const issues = deck ? (rented || cup ? cardDeckProblems(db, deck) : [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)]) : ['デッキがありません'];
     if (!deck || issues.length) { setNotice(issues.join('・')); return; }
     const activeDeck = deck; // 下は選んだデッキで組む(デッキ選びで書き換えた active は、この描画ではまだ古いので受け取った物を使う)
@@ -3502,7 +3573,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } } : { mode: 'assistant',
       foe: { who: pick.who, name: assistant ? assistant.name : 'あいて', line: (CARD_VS_LINES[pick.who] || {})[pick.level] || null, deckName: cardAssistantDeckName(db, cpuDeck, pick.who, pick.level), monsters: vsMons(st, CARD_CPU) },
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } };
-    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(share ? { share } : {}), ...(cup ? { cup } : {}),
+    const auto = autoIn ? { tactics: autoIn.tactics, level: typeof cardShareFightLevel === 'function' ? cardShareFightLevel(autoIn.tactics) : 'master', sameBlood: !!cardShareSameBlood(db, activeDeck) } : null;
+    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(share ? { share } : {}), ...(cup ? { cup } : {}), ...(auto ? { auto } : {}),
       ...(rented ? { rented: { ownerId: rented.ownerId, version: rented.version, name: rented.owner } } : {}) });
     const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
     cpuLogRef.current = scene ? null : { id: gameKey, seed, first, decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], foeName: intro.foe.name, deckName: intro.foe.deckName || null, acts: [] };
@@ -3720,6 +3792,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       note={toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います'}
       onBack={() => { const back = deckPick.back; setDeckPick(null); if (toPvp && CARD_PVP_NEXT.take()) { setView('pvp'); return; } setView(toPvp ? 'mode' : back || 'foe'); }}
       allowRented={!toPvp && !sharePick} rentTab={shareForm && !toPvp && !sharePick}
+      auto={sharePick && typeof cardTacticsAutoOf === 'function' ? { on: shareAuto, onChange: setShareAuto, left: autoLeft } : null}
       onPick={async (c) => {
         // 借りたデッキ(みんなのデッキ・95): 自分のデッキの active は書き換えない
         if (c.kind === 'rent') { const next = deckPick; setDeckPick(null); if (next.next !== 'pvp') startBattle(next.pick, c.deck, { rented: c }); return; }
@@ -3729,10 +3802,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           const ok = await persist({ decks: { ...save.decks, active: deck.id } });
           if (!ok) { setNotice('保存できませんでした'); return; }
         }
+        // オート: 選んだデッキの戦術カード(96 の cardTacticsAutoOf)で、自分の側も動かす
+        const autoT = sharePick && shareAuto && typeof cardTacticsAutoOf === 'function' ? await cardTacticsAutoOf(db, deck).catch(() => null) : null;
+        if (sharePick && shareAuto && !autoT) { setNotice('戦術カードを読めませんでした'); return; }
         const next = deckPick;
         setDeckPick(null);
         if (next.next === 'pvp') { setView('pvp'); return; }
-        startBattle(next.pick, deck);
+        startBattle(next.pick, deck, autoT ? { auto: { tactics: autoT } } : {});
       }}/>;
   }
 
@@ -3960,6 +4036,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                   </>}
               </div>
             )}
+            {result.auto && <div data-card-result-auto={result.auto.paid ? 'paid' : 'free'} className="mt-1 text-[12px] font-black text-sky-200" style={JA_LABEL_STYLE}>
+              {jaWrap(result.auto.paid ? `🤖 オートで挑みました(ごほうびは自分で戦うときの半分)。今日のごほうびはあと${result.auto.left}回` : '🤖 オートで挑みました。今日のごほうびは終わっています(ごほうびなしで遊べます)')}</div>}
             <div className="mt-1 text-[12px] font-bold text-slate-300">いまのビートP: {save.point}</div>
             {result.opened && <div className="mt-1 text-[13px] font-black text-emerald-300">{CARD_LEVEL_LABEL[result.opened]}が選べるようになりました！</div>}
             {!result.saved && <div className="mt-1 text-[12px] font-bold text-rose-300" style={JA_LABEL_STYLE}>{jaWrap('保存できませんでした(ビートPは増えていません)')}</div>}
@@ -3968,7 +4046,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         </div>
         <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2`}>
           {result.replay && <button type="button" data-card-result-replay className={`${btn} mh-button-secondary col-span-2 border border-sky-300/40 bg-slate-800`} onClick={() => { Audio_.fgSe.tap(); void openReplay(result.replay, 'result'); }}>この対戦を見る</button>}
-          <button type="button" className={`${btn} mh-button-primary`} onClick={() => { if (result.share) { startBattle({ who: result.share.tactics.habit, level: result.level, share: result.share }); return; } const again = { who: result.who, level: result.level }; setFoe(again); setDeckPick({ next: 'cpu', pick: again }); setView('deckPick'); }}>もう一度</button>
+          <button type="button" className={`${btn} mh-button-primary`} onClick={() => { if (result.share) { startBattle({ who: result.share.tactics.habit, level: result.level, share: result.share }, activeDeck, result.auto ? { auto: { tactics: result.auto.tactics } } : {}); return; } const again = { who: result.who, level: result.level }; setFoe(again); setDeckPick({ next: 'cpu', pick: again }); setView('deckPick'); }}>もう一度</button>
           <button type="button" className={`${btn} mh-button-secondary border border-white/20 bg-slate-800`} onClick={() => setView(result.share ? 'share' : 'foe')}>相手をえらぶ</button>
         </div>
       </div>

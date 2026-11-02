@@ -270,8 +270,11 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
   const [foeFilter, setFoeFilter] = useState('all'); // 一覧の絞り込み(すべて/おすすめ/フレンド/人気。2026-10-30 社長・案C)
   // 戦術カード(96・97): 登録するときに載せる枠(レベルで開いている枠・持っているカードだけ)
   const [tacticsSave, setTacticsSave] = useState(null);
-  useEffect(() => { if (typeof cardTacticsLoad === 'function') void cardTacticsLoad().then(setTacticsSave).catch(() => {}); }, []);
-  const framesNow = tacticsSave && typeof cardTacticsFramesForBattle === 'function' ? cardTacticsFramesForBattle(tacticsSave.tactics, tacticsSave.info.level) : null;
+  const [tacticsDeckBox, setTacticsDeckBox] = useState(null); // デッキごとの戦術カード(96 の cardTacticsDeckLoad。2026-11-02)
+  useEffect(() => {
+    if (typeof cardTacticsLoad === 'function') void cardTacticsLoad().then(setTacticsSave).catch(() => {});
+    if (typeof cardTacticsDeckLoad === 'function') void cardTacticsDeckLoad().then((r) => setTacticsDeckBox(r.box)).catch(() => {});
+  }, []);
   const [rented, setRented] = useState(null);         // 借りているデッキ(cardRentedDeckGet)
   useEffect(() => { void cardRentedDeckGet().then(setRented); }, []);
   const rent = async (e) => {
@@ -299,6 +302,9 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
   const deckOf = (id) => list.find((d) => d.id === id) || null;
   const issuesOf = (d) => (d ? [...cardDeckProblems(db, d), ...cardDeckOwnProblems(db, d, collection)] : ['デッキがありません']);
   const picked = deckOf(pick);
+  // 登録に載せる戦術カードは、選んだデッキで最後に使った物(覚えていなければ共通の戦術カード)
+  const framesNow = tacticsSave && typeof cardTacticsFramesForBattle === 'function'
+    ? cardTacticsFramesForBattle({ ...tacticsSave.tactics, frames: typeof cardTacticsFramesOfDeck === 'function' ? cardTacticsFramesOfDeck(tacticsDeckBox, tacticsSave.tactics, picked && picked.id) : tacticsSave.tactics.frames }, tacticsSave.info.level) : null;
   useEffect(() => {
     let alive = true;
     (async () => {
