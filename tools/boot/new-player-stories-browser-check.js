@@ -129,8 +129,9 @@ const SETUP = [/^名前を決める$/, /^アイコンを選ぶ$/];
     // 目印の無い古い作り(直す前)と比べるときのために、題でも見分ける
     const PAST_TITLE = /きゅうこ登場|ことのはの鈴|4人のタイプ|物置の古い箱/;
     const pastPlayed = played.filter((id) => Object.values(PAST).includes(id) || PAST_TITLE.test(id));
-    const live = played.filter((id) => /^halloween|^raid_jack|ハロウィン・ナイト/.test(id));
-    check('開催中のイベント(ハロウィン・ナイト)のお話は流れる', live.length > 0, `流れたお話: ${played.join(' → ') || 'なし'}`);
+    // 開催中のイベントのお話(ハロウィン・ナイトは 11/1 に終わり、11/2 12:00 からパンドライベント。時刻で入れ替わるので両方を数える)
+    const live = played.filter((id) => /^halloween|^raid_jack|ハロウィン・ナイト|^pandora_wings/.test(id));
+    check('開催中のイベント(ハロウィン・ナイト・パンドラ)のお話は流れる', live.length > 0, `流れたお話: ${played.join(' → ') || 'なし'}`);
     check('HOME のあとに流れたお話に、昔のお知らせのお話が無い', pastPlayed.length === 0, `流れたお話: ${played.join(' → ') || 'なし'}`);
     check('ログインボーナスの窓とお話の窓が同時に出ていない', overlap === 0, overlap ? `${overlap}回重なった` : '');
     const marks = await page.evaluate(({ kyuko, keys }) => {

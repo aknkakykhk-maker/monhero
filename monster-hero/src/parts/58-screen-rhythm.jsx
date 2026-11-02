@@ -89,6 +89,8 @@ function RhythmSongSelectScreen({
       // ビートPアップキャンペーン(2026-09-28)。ランキングイベントと重なったときはイベントの帯を出す
       // (計算もイベントのほうを使う。rhythmEventPointAwardAt)。開いているあいだは描き直すたびに数え直す
       const beatPointCampaign=beatPointReleased&&!beatPointEvent?rhythmEventPointCampaignAt(Date.now()):null;
+      // イベントと周回キャンペーンが重なったときは、イベントの帯に「周回 ◯倍」を足す(キャンペーンの帯は出ないため。2026-11-02)
+      const eventLoopCampaign=beatPointEvent?rhythmLoopCampaignAt(Date.now()):null;
       // 横持ちの左の細い列(幅104px)へ入れる札。中身は縦持ちの帯と同じ
       const beatPointSideCard=beatPointCampaign
         ?<div data-rhythm-beat-band-landscape data-rhythm-beat-point-campaign-side className="rounded-xl border border-amber-300/40 bg-amber-500/10 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-amber-100">
@@ -99,14 +101,18 @@ function RhythmSongSelectScreen({
         </div>
         :beatPointEvent
           ?<div data-rhythm-beat-band-landscape data-rhythm-beat-point-active-side className="rounded-xl border border-violet-400/30 bg-violet-950/25 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-violet-100">
-            <span className="block">🎟️ ビートP獲得期間中</span>
-            <span style={JA_WRAP_STYLE} className="mt-0.5 block text-violet-200/80">{beatPointTargetSong?jaWrap('選択中のイベント対象曲は1.5倍'):'公開曲なら獲得できます'}</span>
+            <span style={JA_WRAP_STYLE} className="block">{jaWrap('🎟️ ビートP獲得期間中')}</span>
+            {eventLoopCampaign&&<span className="block text-amber-200">周回 {eventLoopCampaign.loopBoost}倍</span>}
+            <span style={JA_WRAP_STYLE} className="mt-0.5 block text-violet-200/80">{beatPointTargetSong?jaWrap('選択中のイベント対象曲は1.5倍'):jaWrap('公開曲なら獲得できます')}</span>
           </div>
           :null;
       // 所持ビートP(2026-09-28・ユーザー指示「曲選択画面で邪魔にならないところにビートPの表示を作って」)。
       // 題名の下に小さく1行だけ出す。ヘッダーの高さはボタン(44px)で決まっているので、この1行を足しても高さは変わらず、曲の一覧も減らない。
       // 画面を開くたびに保存値から読み直す(演奏から戻るとこの部品は作り直されるので、そのたびに最新になる)。読めないあいだは出さない
       const [beatPointBalance,setBeatPointBalance]=React.useState(null);
+      // 曲えらびの上のイベント案内は、最初はたたんだ帯で出す(2026-11-02 社長「C たたんだ形で出す」。
+      //   開いた形だと縦画面 390×844 で曲の一覧が下の欄の裏に隠れた)。押すと開く。保存はしない(開くたびにたたんだ形から)
+      const [eventNoticeOpen,setEventNoticeOpen]=React.useState(false);
       React.useEffect(()=>{
         if(!beatPointReleased)return undefined;
         let alive=true;
@@ -325,9 +331,20 @@ function RhythmSongSelectScreen({
         {/* 週間ランキングの「今週の対象曲」案内(docs/spec/RHYTHM_RANKING.md §10.2)。
             その週の初回に1度だけ出す。閉じるか、その週にもう一度見たら出ない。
             ★ヘルプと更新履歴は探しに行った人しか読まないので、画面のなかでも伝える(CLAUDE.md ⑤) */}
-        {selectNoticesOpen&&rhythmEventNotice&&<div data-rhythm-event-notice className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1">
+        {selectNoticesOpen&&rhythmEventNotice&&!eventNoticeOpen&&<div data-rhythm-event-notice data-rhythm-event-notice-folded className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2">
+          <div className="flex items-center gap-1">
+            <button style={JA_WRAP_STYLE} type="button" data-rhythm-event-notice-toggle aria-expanded="false" onClick={()=>setEventNoticeOpen(true)}
+              className="min-h-[44px] min-w-0 flex-1 text-left text-[11px] font-black leading-tight text-amber-200 active:scale-[.99]">
+              🏆 {rhythmEventNotice.kind==='limited'?<>{jaWrap(rhythmEventNotice.name)} 開催中！</>:jaWrap('今週の対象曲')}<span className="ml-1 text-[10px] text-fuchsia-200">▼ ひらく</span>
+            </button>
+            <button type="button" data-rhythm-event-notice-close onClick={dismissRhythmEventNotice} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
+          </div>
+        </div>}
+        {selectNoticesOpen&&rhythmEventNotice&&eventNoticeOpen&&<div data-rhythm-event-notice data-rhythm-event-notice-open-body className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1">
           <div className="flex items-start gap-1">
             <div className="min-w-0 flex-1">
+              <button type="button" data-rhythm-event-notice-toggle aria-expanded="true" onClick={()=>setEventNoticeOpen(false)}
+                className="min-h-[44px] w-full rounded-lg text-left text-[10px] font-black text-fuchsia-200 active:scale-[.99]">▲ たたむ</button>
               <AssistantBubble scene="rhythmWeeklyEvent" condition={rhythmEventNotice.kind==='limited'?'limited':null} compact/>
               {/* 期間限定のときはイベントの名前を出す。「今週の対象曲」のままだと、
                   週間ランキングが動いていると誤解される */}
@@ -354,7 +371,7 @@ function RhythmSongSelectScreen({
             <span className="flex min-w-0"><span className="min-w-0 truncate">{beatPointCampaign.name}</span><span className="shrink-0">{Number(beatPointCampaign.loopBoost)>0?`・周回 ${beatPointCampaign.loopBoost}倍`:'中'}</span></span>
             <span className="ml-auto shrink-0 text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.displayEndAt||beatPointCampaign.endAt))}</span>
           </div>}
-          {beatPointEvent&&<div style={JA_WRAP_STYLE} data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?jaWrap('・選択中のイベント対象曲は1.5倍'):jaWrap('・公開曲なら獲得できます')}</div>}
+          {beatPointEvent&&<div style={JA_WRAP_STYLE} data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?jaWrap('・選択中のイベント対象曲は1.5倍'):jaWrap('・公開曲なら獲得できます')}{eventLoopCampaign&&<span className="text-amber-200">{jaWrap(`・周回 ${eventLoopCampaign.loopBoost}倍`)}</span>}</div>}
         </div>}
         {/* 開催していないときの「ビートPはいつでも貯まります」の帯は外した(2026-09-26・ユーザー指示
             「ビートPがいつでももらえるはここに書く必要はない / この分でもスペース無駄にしてる」)。
@@ -975,7 +992,8 @@ function RhythmRankingScreen({
               {/* 期間はサーバーが決める。残り時間の見た目だけ端末の時計で数える */}
               <div data-rhythm-event-window className="mb-3 flex items-center gap-2 rounded-2xl border border-fuchsia-300/40 bg-slate-900/70 p-2">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[11px] font-black text-fuchsia-100">{eventDefinition.name}</p>
+                  {/* 長いイベント名(「鍵の向こう側へ ～パンドラとふたつの翼～」)が幅320で「…」に切れていた。切らずに折り返す(2026-11-02) */}
+                  <p style={JA_WRAP_STYLE} className="text-[11px] font-black leading-tight text-fuchsia-100">{jaWrap(eventDefinition.name)}</p>
                   {/* 週間は「毎週月曜5:00に切り替わります」、期間限定は開始と終了そのものを出す */}
                   <p data-rhythm-event-period className="text-[9px] text-slate-400">{rhythmEventPeriodText(eventDefinition,eventRange)}</p>
                 </div>
@@ -1190,7 +1208,10 @@ function RhythmRankingScreen({
                   報酬の表と同じ場所に置く。対象曲を遊ぶ理由が順位だけではなくなるため */}
               {!eventWeekly&&<p style={JA_WRAP_STYLE} data-rhythm-event-loop-bonus
                 className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2 text-[10px] leading-tight text-slate-200">
-                <b className="text-amber-200">∞周回 ×{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}</b>　{jaWrap('クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×')}{RHYTHM_PLAY_RUN_LOOP_SCALE}）の{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}倍になります
+                {/* 周回キャンペーン中は、そちらの倍率が曲を問わず効く(rhythmPlayRunLoopScale)。窓の案内も実際と同じにする(2026-11-02 社長「×3 と出ている」) */}
+                {rhythmLoopCampaignAt(Date.now())&&RELEASE_FLAGS.rhythmEventPoints===true
+                  ?<><b className="text-amber-200">∞周回 ×{rhythmLoopCampaignAt(Date.now()).loopScale}</b>　{jaWrap(`キャンペーン中は、クイックの∞周回を裏で回しながらモンヒロビートを演奏すると、どの曲でも入る周回数がいつもの${rhythmLoopCampaignAt(Date.now()).loopBoost}倍になります`)}</>
+                  :<><b className="text-amber-200">∞周回 ×{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}</b>　{jaWrap('クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×')}{RHYTHM_PLAY_RUN_LOOP_SCALE}）の{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}倍になります</>}
               </p>}
               {/* 回数ボーナス(2026-09-11・ユーザー指示)。遊んだ回数が順位に効くことは、
                   ランキングを見ているだけでは分からないので、報酬の表と同じ場所で伝える。

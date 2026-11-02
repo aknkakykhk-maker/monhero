@@ -256,6 +256,8 @@ const jaWrapPoints = (text) => {
     for (const { segment } of _jaSegmenter.segment(s)) {
       // 道具は「これは|いけません」を「これ|はい|けませ」と、返事の「はい」に読むことがある。指す言葉のあとの「は〜」は「は」で分け直す
       if (/^は[ぁ-ゖ]/.test(segment) && /^(?:これ|それ|あれ|どれ|ここ|そこ|あそこ|わたし|あたし|ワシ|吾輩|余)$/.test(segs[segs.length - 1] || '')) segs.push('は', segment.slice(1));
+      // 道具が1語にする長いあいさつ(8字)は、あとに「。……」が付くと1行に入らず途中で折れる(「……どうい／たしまし」2026-11-02)。言葉の切れ目で分けておく
+      else if (segment === 'どういたしまして') segs.push('どう', 'いたしまして');
       else segs.push(segment);
     }
     // ① 文節ごとにまとめる。かたまりは区切りの並び(parts)と、区切りごとの「固い(hard)・柔らかい(soft)」を持つ。

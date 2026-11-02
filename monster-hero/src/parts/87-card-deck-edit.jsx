@@ -50,7 +50,8 @@ const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemov
       </button>
       {/* 名前の行の右はしに「i」(カードの絵の上に置くと、右上の地上・空中の札に重なった) */}
       <div className="mt-0.5 flex items-center gap-0.5">
-        <CardNameFit name={name} className="min-w-0 flex-1 font-bold leading-tight text-slate-100"/>
+        {/* 長い名前は2行まで折る(2026-11-01 見た目の点検 C。狭い列で 7px まで縮んでいた)。高さは2行ぶんでそろえる */}
+        <CardNameFit name={name} className="min-w-0 flex-1 font-bold leading-tight text-slate-100" twoLine tall/>
         {onDetail && <button type="button" data-card-deck-info={no} onClick={(e) => { e.stopPropagation(); Audio_.fgSe.tap(); onDetail(); }} aria-label={`${name}の詳細`} className="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-full border border-white/50 bg-slate-950/80 font-serif text-[11px] font-black italic leading-none text-white active:scale-90">i</button>}
       </div>
       <div className="mt-0.5 flex items-center justify-between gap-0.5">

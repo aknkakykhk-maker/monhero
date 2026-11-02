@@ -211,6 +211,33 @@ const cardShareReplayGet = async (ownerId, slot) => {
   const row = await cardShareReplayRpc('card_deck_replay_get', { p_owner: ownerId, p_key: key, p_slot: slot });
   return row && typeof row === 'object' && !Array.isArray(row) ? row : null;
 };
+// オートの「結果だけ見る」(2026-11-02 社長「オート対戦は結果だけを見るも追加して」)。いまの場から、2人とも戦術カードの打ち方で最後まで一瞬で打つ。
+//   pols … [自分(0)の打ち方, 相手(1)の打ち方]。打ち方・出せない手の替え方・手数の上限と決め方は大会の自動対戦(82 の cardTourPlay)と同じ。
+//   山札が尽きれば山札切れで決着するので、ふつうは上限に届かない(助手 MASTER 同士 2,000試合で最長 84ターン・171手)。
+//   上限まで決まらなければ「倒した数 → 残りのライフ → 後攻」で決める(必ず終わる)。返り値 { st(決着した場), acts:[[打った人, 手]], limit }
+const cardShareAutoFinish = (db, st0, pols, { max = typeof CARD_TOUR_MAX_STEPS === 'number' ? CARD_TOUR_MAX_STEPS : 4000, rand = Math.random } = {}) => {
+  let st = cardClone(st0);
+  const acts = [];
+  for (let steps = 0; steps < max && st.winner === null; steps++) {
+    const who = st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? cardOther(st.first) : cardDecider(st);
+    let act = cardAiChooseAction(db, st, pols[who], rand);
+    let next = act && cardApplyAction(db, st, act);
+    if (!next) {
+      act = st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : st.phase === 'guts' ? { type: 'guts', hand: [] } : null;
+      next = act && cardApplyAction(db, st, act);
+      if (!next) break;
+    }
+    acts.push([who, act]);
+    st = next;
+  }
+  if (st.winner !== null) return { st, acts, limit: false };
+  const kos = [cardKoCount(st, 0), cardKoCount(st, 1)];
+  const life = (p) => st.players[p].mons.reduce((a, m) => a + Math.max(0, m.ko ? 0 : m.life), 0);
+  const winner = kos[0] !== kos[1] ? (kos[0] > kos[1] ? 0 : 1) : life(0) !== life(1) ? (life(0) > life(1) ? 0 : 1) : cardOther(st.first);
+  const end = cardClone(st);
+  cardGameOver(end, winner, '手数の上限');
+  return { st: end, acts, limit: true };
+};
 const cardShareSameBlood = (db, deck) => {
   const ms = (deck && Array.isArray(deck.monsters) ? deck.monsters : []).map((no) => cardMonsterOf(db, no)).filter(Boolean);
   return ms.length > 0 && ms.filter((m) => cardAiBloodOf(m) === cardAiBloodOf(ms[0])).length >= 2;
@@ -270,8 +297,11 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
   const [foeFilter, setFoeFilter] = useState('all'); // 一覧の絞り込み(すべて/おすすめ/フレンド/人気。2026-10-30 社長・案C)
   // 戦術カード(96・97): 登録するときに載せる枠(レベルで開いている枠・持っているカードだけ)
   const [tacticsSave, setTacticsSave] = useState(null);
-  useEffect(() => { if (typeof cardTacticsLoad === 'function') void cardTacticsLoad().then(setTacticsSave).catch(() => {}); }, []);
-  const framesNow = tacticsSave && typeof cardTacticsFramesForBattle === 'function' ? cardTacticsFramesForBattle(tacticsSave.tactics, tacticsSave.info.level) : null;
+  const [tacticsDeckBox, setTacticsDeckBox] = useState(null); // デッキごとの戦術カード(96 の cardTacticsDeckLoad。2026-11-02)
+  useEffect(() => {
+    if (typeof cardTacticsLoad === 'function') void cardTacticsLoad().then(setTacticsSave).catch(() => {});
+    if (typeof cardTacticsDeckLoad === 'function') void cardTacticsDeckLoad().then((r) => setTacticsDeckBox(r.box)).catch(() => {});
+  }, []);
   const [rented, setRented] = useState(null);         // 借りているデッキ(cardRentedDeckGet)
   useEffect(() => { void cardRentedDeckGet().then(setRented); }, []);
   const rent = async (e) => {
@@ -299,6 +329,9 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
   const deckOf = (id) => list.find((d) => d.id === id) || null;
   const issuesOf = (d) => (d ? [...cardDeckProblems(db, d), ...cardDeckOwnProblems(db, d, collection)] : ['デッキがありません']);
   const picked = deckOf(pick);
+  // 登録に載せる戦術カードは、選んだデッキで最後に使った物(覚えていなければ共通の戦術カード)
+  const framesNow = tacticsSave && typeof cardTacticsFramesForBattle === 'function'
+    ? cardTacticsFramesForBattle({ ...tacticsSave.tactics, frames: typeof cardTacticsFramesOfDeck === 'function' ? cardTacticsFramesOfDeck(tacticsDeckBox, tacticsSave.tactics, picked && picked.id) : tacticsSave.tactics.frames }, tacticsSave.info.level) : null;
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -551,7 +584,8 @@ const CardShareDeckDetail = ({ entry, onClose, fight = null, rent = null }) => {
   const [record, setRecord] = useState(undefined);
   useEffect(() => { let alive = true; void cardShareRecordOf(entry.ownerId).then((r) => { if (alive) setRecord(r); }).catch(() => { if (alive) setRecord(null); }); return () => { alive = false; }; }, [entry.ownerId]);
   const losses = Math.max(0, (entry.battles || 0) - (entry.deckWins || 0));
-  const dayText = (ms) => { const d = new Date(ms); return Number.isFinite(d.getTime()) ? `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : ''; };
+  // 日時は日本時間で出す(戦われた試合・見返しの一覧の cardReplayWhen と同じ。2026-11-01 点検で、ここだけ端末の時計だった)
+  const dayText = (ms) => { if (!Number.isFinite(ms) || ms <= 0) return ''; const d = new Date(ms + 9 * 3600 * 1000); return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`; };
   return (
     <div data-card-share-deck-detail className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={onClose}>
       <div className="max-h-[86vh] w-full max-w-[440px] overflow-y-auto rounded-2xl border-2 border-amber-600/60 bg-slate-950 p-3" onClick={(e) => e.stopPropagation()}>
