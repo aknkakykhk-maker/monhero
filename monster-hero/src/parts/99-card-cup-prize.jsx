@@ -295,7 +295,17 @@ const CardCupPrizePanel = ({ c, v, now, selfId, prize, reload, getAdapters }) =>
       <b className="block text-[13px] font-black text-amber-200">ごほうび</b>
       {!prize.pool.length && !prize.fee && <p className="text-[12px] font-bold text-slate-400">この個人杯にはごほうびはありません(ランキングにも入りません)</p>}
       {prize.pool.map((p) => <div key={p.item} data-card-cup-pool={p.item} className="flex items-center justify-between text-[13px] font-black text-white"><span>{cardCupItemText(p.item, 0).replace(/ 0$/, '')}</span><span className="text-amber-200">{p.total.toLocaleString()}</span></div>)}
-      {prize.givers.length > 0 && <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`出した人: ${prize.givers.map((g) => `${g.name} ${cardCupItemText(g.item, g.amount)}`).join('・')}`)}</p>}
+      {/* 出した人は1人1行(2026-11-01 点検。1行につなげると名前と品の切れ目が分かりにくかった) */}
+      {prize.givers.length > 0 && <div data-card-cup-givers className="text-[11px] font-bold text-slate-400">
+        <p>出した人</p>
+        <ul className="mt-0.5 space-y-0.5">{prize.givers.map((g, i) => (
+          <li key={i} data-card-cup-giver className="flex items-center gap-1.5">
+            <span aria-hidden="true" className="w-4 shrink-0 text-center">{g.icon || '🙂'}</span>
+            <span className="min-w-0 flex-1 truncate text-slate-300">{g.name}</span>
+            {g.host && <span className="shrink-0 rounded bg-amber-400/20 px-1 text-[10px] text-amber-200">主催</span>}
+            <span className="shrink-0 whitespace-nowrap text-slate-200">{cardCupItemText(g.item, g.amount)}</span>
+          </li>))}</ul>
+      </div>}
       {prize.fee && <p data-card-cup-fee className="text-[12px] font-black text-sky-100">{`参加費 ${cardCupItemText(prize.fee.item, prize.fee.amount)}(主催・主催仲間は払いません)`}</p>}
       {(prize.pool.length > 0 || prize.fee) && (
         <div data-card-cup-split className="space-y-0.5 text-[12px] font-bold text-slate-200">

@@ -140,6 +140,9 @@ check(`1試合の記録の大きさ(最大 ${(maxBytes / 1024).toFixed(1)}KB・�
   check('新しい試合が先頭', saved.list[0].id === many[many.length - 1].id);
   check(`合わせた大きさが上限以下(${(JSON.stringify(saved).length / 1024).toFixed(1)}KB)`, JSON.stringify(saved).length <= E.CARD_REPLAY_BYTES_MAX);
   check('最後の番が記録に入る(一覧の「◯番まで」)', saved.list.every((r) => Number.isInteger(r.turn) && r.turn >= 1));
+  // 「◯番まで」は最後の手を打った番(見返しの最後の帯と同じ)。山札切れなど手番が移ったところで決まる試合でも、1つ先の番を出さない(2026-11-01 点検)
+  check('「◯番まで」は見返しの最後の帯の番と同じ', many.every((r) => { const st = E.cardReplayBuild(db, r).states; return r.turn === st[Math.max(0, st.length - 2)].turn; }));
+  check('「◯番まで」は最後の盤面の番を越えない', many.every((r) => { const st = E.cardReplayBuild(db, r).states; return r.turn <= st[st.length - 1].turn; }));
   const old = E.cardReplayNormalizeOne({ ...many[0], turn: undefined });
   check('最後の番の無い前の記録も読める', old && old.turn === null);
   const again = E.cardReplayAdd(saved, many[many.length - 1]);
