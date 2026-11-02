@@ -1,0 +1,181 @@
+{
+ "side": {
+  "keepyN": 0,
+  "keepyLock": 0,
+  "plainN": 600,
+  "plainLock": 0
+ },
+ "streaks": {
+  "0": 594,
+  "1": 6
+ },
+ "smode": "S1",
+ "mode": "assist",
+ "games": 300,
+ "locked": 0,
+ "lockByAct": {},
+ "long50": 11,
+ "cap": 0,
+ "median": 23,
+ "p95": 45,
+ "max": 69,
+ "rateByAct": {},
+ "examples": [
+  {
+   "g": 24,
+   "who": [
+    "dra",
+    "atsu"
+   ],
+   "turn": 63,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "ドラゴンラッシュ(pow)",
+     "ドラゴンラッシュ(pow)",
+     "盾で受ける(blk)",
+     "ふみつけ(pow)",
+     "ドラゴンラッシュ(pow)"
+    ],
+    [
+     "フットワーク(dge)",
+     "超電撃(int)",
+     "ふみつけ(pow)",
+     "超電撃(int)"
+    ]
+   ],
+   "guts": [
+    25,
+    21
+   ],
+   "frames": [
+    null,
+    null
+   ]
+  },
+  {
+   "g": 33,
+   "who": [
+    "kyuko",
+    "dra"
+   ],
+   "turn": 51,
+   "reason": "全員KO",
+   "hands": [
+    [
+     "フットワーク(dge)",
+     "フットワーク(dge)",
+     "フットワーク(dge)",
+     "体当たり(pow)",
+     "体当たり(pow)"
+    ],
+    [
+     "盾で受ける(blk)",
+     "盾で受ける(blk)",
+     "緊急回避(dge)",
+     "緊急回避(dge)"
+    ]
+   ],
+   "guts": [
+    27,
+    7
+   ],
+   "frames": [
+    null,
+    null
+   ]
+  },
+  {
+   "g": 34,
+   "who": [
+    "dra",
+    "dra"
+   ],
+   "turn": 55,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "盾で受ける(blk)",
+     "ボディプレス(pow)",
+     "ドラゴンラッシュ(pow)",
+     "肉を切らせて(blk)",
+     "盾で受ける(blk)"
+    ],
+    [
+     "盾で受ける(blk)",
+     "ドラゴンラッシュ(pow)",
+     "冥王剣(pow)",
+     "最終奥義(pow)"
+    ]
+   ],
+   "guts": [
+    22,
+    26
+   ],
+   "frames": [
+    null,
+    null
+   ]
+  },
+  {
+   "g": 42,
+   "who": [
+    "kiki",
+    "dra"
+   ],
+   "turn": 51,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "ドラゴンラッシュ(pow)",
+     "ハガネのウロコ(blk)",
+     "光の盾(blk)",
+     "ぐるぐるアタック(pow)",
+     "しっぽアタック(pow)"
+    ],
+    [
+     "みんな下がれ(dge)",
+     "バック転(dge)",
+     "ジャンプ(dge)"
+    ]
+   ],
+   "guts": [
+    2,
+    20
+   ],
+   "frames": [
+    null,
+    null
+   ]
+  },
+  {
+   "g": 166,
+   "who": [
+    "sorashido",
+    "sorashido"
+   ],
+   "turn": 58,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "うけとめる(blk)",
+     "ゲルコプター(int)"
+    ],
+    [
+     "みんな下がれ(dge)",
+     "みんな下がれ(dge)",
+     "ファイナルソード(int)",
+     "フットワーク(dge)"
+    ]
+   ],
+   "guts": [
+    4,
+    11
+   ],
+   "frames": [
+    null,
+    null
+   ]
+  }
+ ]
+}

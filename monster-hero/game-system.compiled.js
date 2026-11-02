@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0954deb9552c620c
+// source-sha256: d21f650a979d9e7c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93297,13 +93297,30 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
     for (let k = pick.length - 1; k >= 0; k--) if (cardIsGuardKind((cardOf(db, me.hand[pick[k]]) || {}).kind)) pick.splice(k, 1);
   }
   {
+    const mode = typeof globalThis !== 'undefined' && globalThis.__stuckMode || 'A';
     const live = me.mons.filter(m => !m.ko);
     const idle = !me.breederUsed && me.mons.every(m => !m.attacks);
-    if (live.length && me.hand.length >= CARD_BATTLE_HAND_MAX && idle && pick.length === 0) {
+    me.stall = idle && me.hand.length >= CARD_BATTLE_HAND_MAX ? (me.stall || 0) + 1 : 0;
+    const isAce = i => policy && Array.isArray(policy.aces) && policy.aces.includes(me.hand[i]);
+    if (mode === 'A' && live.length && me.hand.length >= CARD_BATTLE_HAND_MAX && idle && pick.length === 0) {
       const guards = order.filter(o => o.g).map(o => o.i);
       const keepG = new Set(guards.slice(-CARD_AI_STUCK_KEEP));
-      const toss = order.map(o => o.i).filter(i => !keepG.has(i) && !(policy && Array.isArray(policy.aces) && policy.aces.includes(me.hand[i])));
+      const toss = order.map(o => o.i).filter(i => !keepG.has(i) && !isAce(i));
       pick.push(...toss.slice(0, Math.max(1, toss.length - 1)));
+    }
+    if (mode === 'S1' && live.length && me.stall >= 2 && pick.length === 0) {
+      const t = order.map(o => o.i).find(i => !isAce(i));
+      if (t !== undefined) pick.push(t);
+      me.stall = 0;
+    }
+    if (mode === 'S2' && live.length && me.hand.length >= CARD_BATTLE_HAND_MAX && idle && pick.length === 0) {
+      const t = me.hand.map((_, i) => i).find(i => !isAce(i));
+      if (t !== undefined) pick.push(t);
+    }
+    if (mode === 'S3' && gopt && gopt.keepGuards) {
+      const guards = order.filter(o => o.g).map(o => o.i);
+      const extra = guards.slice(0, Math.max(0, guards.length - 3)).filter(i => !pick.includes(i));
+      pick.push(...extra);
     }
   }
   const gm = cardFieldEff(st, 'fieldGutsMax');

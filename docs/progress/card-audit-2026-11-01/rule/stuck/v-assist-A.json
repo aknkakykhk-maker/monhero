@@ -1,0 +1,23 @@
+{
+ "side": {
+  "keepyN": 0,
+  "keepyLock": 0,
+  "plainN": 600,
+  "plainLock": 0
+ },
+ "streaks": {
+  "0": 600
+ },
+ "smode": "A",
+ "mode": "assist",
+ "games": 300,
+ "locked": 0,
+ "lockByAct": {},
+ "long50": 0,
+ "cap": 0,
+ "median": 22,
+ "p95": 36,
+ "max": 44,
+ "rateByAct": {},
+ "examples": []
+}

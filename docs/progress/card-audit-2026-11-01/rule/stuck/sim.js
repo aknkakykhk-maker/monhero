@@ -1,9 +1,9 @@
 // 点検: 手札が固まって決着しない試合を数える(ブラウザなし)。node sim.js <リポジトリ> <モード assist|tactics> <試合数>
 const fs = require('fs'), path = require('path'), vm = require('vm');
-const [root, mode, N0] = process.argv.slice(2);
+const [root, mode, N0, smode] = process.argv.slice(2);
 const N = Number(N0 || 300);
 const G = path.join(root, 'monster-hero');
-const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
+const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map, __stuckMode: smode || 'none' });
 const rd = (f) => fs.readFileSync(path.join(G, f), 'utf8');
 vm.runInContext(`${rd('data/card-battle-cards.js')}\n;\n${rd('src/parts/82-card-battle-core.jsx')}\n;\n${rd('src/parts/82-card-tactics-core.jsx')}\n;\n`
   + 'this.E = { CARD_BATTLE_DATA, CARD_TACTIC_CARDS, cardTacticNormalizeFrames, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardCreateGame, cardAiChooseAction, cardApplyAction, cardDecider, cardOther, cardRngNext, cardOf, cardIsGuardKind, cardUsableBy };', ctx);
@@ -48,6 +48,9 @@ for (let g = 0; g < N; g++) {
   }
   res.games++; res.turns.push(st.turn);
   const locked = Math.max(...maxStreak) >= 5; if (locked) res.locked = (res.locked || 0) + 1;
+  [0, 1].forEach((p) => { const has = frames[p] ? frames[p].breeder.map((r) => r.a) : []; const keepy = has.some((a) => /keepGuard|gutsN\.0|stop|holdBreeder|save/.test(a));
+    res.side = res.side || { keepyN: 0, keepyLock: 0, plainN: 0, plainLock: 0 }; if (keepy) { res.side.keepyN++; if (maxStreak[p] >= 5) res.side.keepyLock++; } else { res.side.plainN++; if (maxStreak[p] >= 5) res.side.plainLock++; }
+    res.streaks = res.streaks || {}; const k = Math.min(10, maxStreak[p]); res.streaks[k] = (res.streaks[k] || 0) + 1; });
   if (locked) acts0(frames).forEach((a) => { res.lockByAct[a] = (res.lockByAct[a] || 0) + 1; });
   if (st.winner === null) res.cap++;
   const acts = new Set(frames.flatMap((f) => (f ? f.breeder.map((r) => r.a) : [])));
@@ -59,5 +62,5 @@ for (let g = 0; g < N; g++) {
   }
 }
 const t = res.turns.slice().sort((a, b) => a - b);
-console.log(JSON.stringify({ diag: res.diag, mode, games: res.games, locked: res.locked || 0, lockByAct: Object.fromEntries(Object.entries(res.lockByAct).filter(([, v]) => v >= 3).map(([a, v]) => [a, `${v}/${res.byAct[a]}`])), long50: res.long, cap: res.cap, median: t[Math.floor(t.length / 2)], p95: t[Math.floor(t.length * 0.95)], max: t[t.length - 1],
+console.log(JSON.stringify({ side: res.side, streaks: res.streaks, smode, diag: res.diag, mode, games: res.games, locked: res.locked || 0, lockByAct: Object.fromEntries(Object.entries(res.lockByAct).filter(([, v]) => v >= 3).map(([a, v]) => [a, `${v}/${res.byAct[a]}`])), long50: res.long, cap: res.cap, median: t[Math.floor(t.length / 2)], p95: t[Math.floor(t.length * 0.95)], max: t[t.length - 1],
   rateByAct: Object.fromEntries(Object.entries(res.longByAct).map(([a, v]) => [a, `${v}/${res.byAct[a]}`]).sort()), examples: res.longExamples }, null, 1));

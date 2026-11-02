@@ -1610,16 +1610,25 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
     pick.splice(0, pick.length, ...order.map((o) => o.i).slice(0, gopt.count));
   }
   if (gopt && gopt.keepGuards) { for (let k = pick.length - 1; k >= 0; k--) if (cardIsGuardKind((cardOf(db, me.hand[pick[k]]) || {}).kind)) pick.splice(k, 1); }
-  // 【試し作り・案A】手札が固まったとき(手札が5枚で、今のガッツで使える攻めの札が1枚も無い)は、ガッツが足りていても入れ替える:
-  //   守りの札は CARD_AI_STUCK_KEEP 枚まで残し、残りのいちばん要らない札から最低1枚をガッツへ(戦術カードの「置かない」より先に効く抜け道)
+  // 【試し作り・測るときだけ切り替える】globalThis.__stuckMode … 'none' | 'A' | 'S1'(何も使えない番が2回続いたら1枚) | 'S2'(5枚とも温存なら古い1枚) | 'S3'(守りは3枚まで)
   {
+    const mode = (typeof globalThis !== 'undefined' && globalThis.__stuckMode) || 'A';
     const live = me.mons.filter((m) => !m.ko);
-    const idle = !me.breederUsed && me.mons.every((m) => !m.attacks);   // この番に技もブリーダーのカードも使っていない
-    if (live.length && me.hand.length >= CARD_BATTLE_HAND_MAX && idle && pick.length === 0) {
+    const idle = !me.breederUsed && me.mons.every((m) => !m.attacks);
+    me.stall = idle && me.hand.length >= CARD_BATTLE_HAND_MAX ? (me.stall || 0) + 1 : 0;
+    const isAce = (i) => policy && Array.isArray(policy.aces) && policy.aces.includes(me.hand[i]);
+    if (mode === 'A' && live.length && me.hand.length >= CARD_BATTLE_HAND_MAX && idle && pick.length === 0) {
       const guards = order.filter((o) => o.g).map((o) => o.i);
       const keepG = new Set(guards.slice(-CARD_AI_STUCK_KEEP));
-      const toss = order.map((o) => o.i).filter((i) => !keepG.has(i) && !(policy && Array.isArray(policy.aces) && policy.aces.includes(me.hand[i])));
+      const toss = order.map((o) => o.i).filter((i) => !keepG.has(i) && !isAce(i));
       pick.push(...toss.slice(0, Math.max(1, toss.length - 1)));
+    }
+    if (mode === 'S1' && live.length && me.stall >= 2 && pick.length === 0) { const t = order.map((o) => o.i).find((i) => !isAce(i)); if (t !== undefined) pick.push(t); me.stall = 0; }
+    if (mode === 'S2' && live.length && me.hand.length >= CARD_BATTLE_HAND_MAX && idle && pick.length === 0) { const t = me.hand.map((_, i) => i).find((i) => !isAce(i)); if (t !== undefined) pick.push(t); }
+    if (mode === 'S3' && gopt && gopt.keepGuards) {
+      const guards = order.filter((o) => o.g).map((o) => o.i);
+      const extra = guards.slice(0, Math.max(0, guards.length - 3)).filter((i) => !pick.includes(i));
+      pick.push(...extra);
     }
   }
   const gm = cardFieldEff(st, 'fieldGutsMax'); // 長期戦の予感

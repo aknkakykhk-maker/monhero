@@ -1,0 +1,249 @@
+{
+ "side": {
+  "keepyN": 341,
+  "keepyLock": 0,
+  "plainN": 859,
+  "plainLock": 0
+ },
+ "streaks": {
+  "0": 1200
+ },
+ "smode": "S2",
+ "mode": "tactics",
+ "games": 600,
+ "locked": 0,
+ "lockByAct": {},
+ "long50": 21,
+ "cap": 0,
+ "median": 24,
+ "p95": 46,
+ "max": 74,
+ "rateByAct": {
+  "ace": "1/78",
+  "bEff.カードを引く": "2/68",
+  "bEff.両方のガッツを0にする": "4/76",
+  "bEff.付ける札をただにする": "2/86",
+  "bEff.倒れた子を戻す": "1/72",
+  "bEff.合体する": "2/74",
+  "bEff.回復する": "3/61",
+  "bEff.守りを名指しで封じる": "1/75",
+  "bEff.小さく攻撃する": "3/76",
+  "bEff.山札からガッツへ": "4/83",
+  "bEff.手札を引き直す": "2/71",
+  "bEff.捨て札から拾う": "2/62",
+  "bEff.捨て札を山札に戻す": "3/73",
+  "bEff.攻撃できないを消す": "5/61",
+  "bEff.相手のガッツを減らす": "1/67",
+  "bEff.相手を攻撃できなくする": "2/68",
+  "fieldCard": "3/62",
+  "fieldKind.じわじわ減らす": "2/72",
+  "fieldKind.ガッツの上限": "1/74",
+  "fieldKind.ダメージを足す": "2/67",
+  "fieldKind.出すと引く": "1/71",
+  "fieldKind.大きいダメージを封じる": "2/74",
+  "fieldKind.山札を削る": "3/72",
+  "fieldKind.払うガッツを変える": "1/81",
+  "fieldKind.技の種類を封じる": "3/74",
+  "fieldKind.持ちょうを変える": "2/61",
+  "fieldKind.純血のプライド": "1/71",
+  "gutsN.0": "5/68",
+  "gutsN.1": "6/86",
+  "gutsN.2": "1/68",
+  "gutsN.3": "2/58",
+  "gutsOrder.使えない札": "3/84",
+  "holdBreeder": "5/68",
+  "keepGuard": "6/69",
+  "stop": "4/68"
+ },
+ "examples": [
+  {
+   "g": 6,
+   "who": [
+    "sorashido",
+    "dra"
+   ],
+   "turn": 56,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "ゲルコプター(int)",
+     "時間稼ぎ(spe)",
+     "ハテナマーク(spe)",
+     "ハテナマーク(spe)"
+    ],
+    [
+     "雷神剣(int)",
+     "冥王剣(pow)",
+     "光の盾(blk)",
+     "リフレッシュ(spe)",
+     "ぐるぐるプレス(pow)"
+    ]
+   ],
+   "guts": [
+    8,
+    23
+   ],
+   "frames": [
+    [
+     "turnGe.15→bEff.相手を攻撃できなくする",
+     "myLife.80→bEff.相手を攻撃できなくする"
+    ],
+    [
+     "foeHandGe.4→bEff.両方のガッツを0にする",
+     "any→bEff.捨て札から拾う",
+     "any→stop"
+    ]
+   ]
+  },
+  {
+   "g": 20,
+   "who": [
+    "kiki",
+    "kiki"
+   ],
+   "turn": 70,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "しっぽアタック(pow)",
+     "ダブルチョップ(pow)",
+     "ドラゴンラッシュ(pow)",
+     "光の盾(blk)"
+    ],
+    [
+     "光の盾(blk)",
+     "光の盾(blk)",
+     "ドラゴンパンチ(pow)",
+     "ドラゴンラッシュ(pow)"
+    ]
+   ],
+   "guts": [
+    3,
+    0
+   ],
+   "frames": [
+    [
+     "type.水中→fieldCard",
+     "any→gutsN.0",
+     "any→bEff.捨て札を山札に戻す"
+    ],
+    [
+     "any→keepGuard",
+     "myDiscard.20→bEff.小さく攻撃する",
+     "any→fieldKind.ダメージを足す"
+    ]
+   ]
+  },
+  {
+   "g": 37,
+   "who": [
+    "dra",
+    "dra"
+   ],
+   "turn": 69,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "緊急回避(dge)",
+     "緊急回避(dge)",
+     "静の構え(spe)"
+    ],
+    [
+     "最終奥義(pow)",
+     "気にしない(blk)",
+     "大津波(int)"
+    ]
+   ],
+   "guts": [
+    20,
+    27
+   ],
+   "frames": [
+    [
+     "any→bEff.攻撃できないを消す"
+    ],
+    [
+     "type.空中→holdBreeder",
+     "incoming.5→bEff.両方のガッツを0にする"
+    ]
+   ]
+  },
+  {
+   "g": 46,
+   "who": [
+    "dra",
+    "sorashido"
+   ],
+   "turn": 60,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "緊急回避(dge)",
+     "光の盾(blk)",
+     "ドラゴンラッシュ(pow)",
+     "剣で受ける(blk)"
+    ],
+    [
+     "みんな下がれ(dge)",
+     "飛び上がる(dge)",
+     "ファイナルソード(int)",
+     "フットワーク(dge)"
+    ]
+   ],
+   "guts": [
+    16,
+    18
+   ],
+   "frames": [
+    [
+     "selfLife.40→gutsN.3",
+     "any→fieldKind.持ちょうを変える",
+     "any→fieldKind.技の種類を封じる"
+    ],
+    [
+     "myGuts.3→bEff.カードを引く",
+     "any→holdBreeder",
+     "incoming.7→bEff.倒れた子を戻す"
+    ]
+   ]
+  },
+  {
+   "g": 133,
+   "who": [
+    "atsu",
+    "dra"
+   ],
+   "turn": 57,
+   "reason": "全員KO",
+   "hands": [
+    [
+     "かみつき(pow)",
+     "ドラゴンラッシュ(pow)",
+     "必殺技の応酬(fld)",
+     "ドラゴンラッシュ(pow)"
+    ],
+    [
+     "盾で受ける(blk)",
+     "ドラゴンラッシュ(pow)",
+     "ボディプレス(pow)",
+     "ぐるぐるプレス(pow)"
+    ]
+   ],
+   "guts": [
+    28,
+    0
+   ],
+   "frames": [
+    [
+     "any→fieldKind.ダメージを足す",
+     "any→bEff.山札からガッツへ"
+    ],
+    [
+     "any→gutsN.1",
+     "myGuts.5→keepGuard",
+     "any→bEff.付ける札をただにする"
+    ]
+   ]
+  }
+ ]
+}

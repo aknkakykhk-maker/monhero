@@ -1,0 +1,180 @@
+{
+ "side": {
+  "keepyN": 0,
+  "keepyLock": 0,
+  "plainN": 600,
+  "plainLock": 0
+ },
+ "streaks": {
+  "0": 600
+ },
+ "smode": "S2",
+ "mode": "assist",
+ "games": 300,
+ "locked": 0,
+ "lockByAct": {},
+ "long50": 9,
+ "cap": 0,
+ "median": 23,
+ "p95": 39,
+ "max": 66,
+ "rateByAct": {},
+ "examples": [
+  {
+   "g": 17,
+   "who": [
+    "atsu",
+    "dra"
+   ],
+   "turn": 63,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "灼熱の地(fld)",
+     "盾で受ける(blk)",
+     "盾で受ける(blk)",
+     "ふみつけ(pow)"
+    ],
+    [
+     "はねかえす(blk)",
+     "最終奥義(pow)",
+     "ボディプレス(pow)",
+     "ぐるぐるプレス(pow)"
+    ]
+   ],
+   "guts": [
+    20,
+    24
+   ],
+   "frames": [
+    null,
+    null
+   ]
+  },
+  {
+   "g": 19,
+   "who": [
+    "dra",
+    "kyuko"
+   ],
+   "turn": 64,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "我慢(blk)",
+     "最後の切札(spe)",
+     "興奮のるつぼ(fld)",
+     "我慢(blk)",
+     "緊急回避(dge)"
+    ],
+    [
+     "光の盾(blk)",
+     "ポカポカ(pow)",
+     "体当たり(pow)",
+     "がまんニャ(blk)"
+    ]
+   ],
+   "guts": [
+    29,
+    26
+   ],
+   "frames": [
+    null,
+    null
+   ]
+  },
+  {
+   "g": 32,
+   "who": [
+    "atsu",
+    "dra"
+   ],
+   "turn": 52,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "フットワーク(dge)",
+     "フットワーク(dge)"
+    ],
+    [
+     "みんな下がれ(dge)",
+     "しっぽビンタ(pow)",
+     "しっぽビンタ(pow)",
+     "光の盾(blk)"
+    ]
+   ],
+   "guts": [
+    2,
+    2
+   ],
+   "frames": [
+    null,
+    null
+   ]
+  },
+  {
+   "g": 46,
+   "who": [
+    "dra",
+    "kyuko"
+   ],
+   "turn": 66,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "緊急回避(dge)",
+     "光の盾(blk)",
+     "ドラゴンラッシュ(pow)",
+     "剣で受ける(blk)",
+     "ぐるぐるプレス(pow)"
+    ],
+    [
+     "光の盾(blk)",
+     "メーム(int)",
+     "体当たり(pow)",
+     "にげるニャ(dge)",
+     "突き刺し(pow)"
+    ]
+   ],
+   "guts": [
+    24,
+    22
+   ],
+   "frames": [
+    null,
+    null
+   ]
+  },
+  {
+   "g": 52,
+   "who": [
+    "mua",
+    "dra"
+   ],
+   "turn": 51,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "フットワーク(dge)",
+     "もっちゃん(pow)",
+     "ふせる(dge)",
+     "ツノ(pow)"
+    ],
+    [
+     "盾で受ける(blk)",
+     "剣で受ける(blk)",
+     "ジョイのサポート(spe)",
+     "夏美草(spe)"
+    ]
+   ],
+   "guts": [
+    7,
+    8
+   ],
+   "frames": [
+    null,
+    null
+   ]
+  }
+ ]
+}

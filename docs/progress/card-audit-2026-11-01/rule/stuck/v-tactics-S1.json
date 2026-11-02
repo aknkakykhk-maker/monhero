@@ -1,0 +1,252 @@
+{
+ "side": {
+  "keepyN": 350,
+  "keepyLock": 0,
+  "plainN": 850,
+  "plainLock": 0
+ },
+ "streaks": {
+  "0": 1185,
+  "1": 15
+ },
+ "smode": "S1",
+ "mode": "tactics",
+ "games": 600,
+ "locked": 0,
+ "lockByAct": {},
+ "long50": 39,
+ "cap": 0,
+ "median": 24,
+ "p95": 55,
+ "max": 84,
+ "rateByAct": {
+  "ace": "2/77",
+  "bEff.もう1回攻撃させる": "5/71",
+  "bEff.カードを引く": "5/82",
+  "bEff.両方のガッツを0にする": "5/57",
+  "bEff.付ける札をただにする": "6/91",
+  "bEff.倒れた子を戻す": "5/83",
+  "bEff.合体する": "3/67",
+  "bEff.回復する": "4/66",
+  "bEff.守りを名指しで封じる": "3/71",
+  "bEff.小さく攻撃する": "1/75",
+  "bEff.山札からガッツへ": "5/77",
+  "bEff.手札を引き直す": "5/75",
+  "bEff.捨て札から拾う": "2/63",
+  "bEff.捨て札を山札に戻す": "2/69",
+  "bEff.攻撃できないを消す": "3/60",
+  "bEff.相手のガッツを減らす": "3/65",
+  "bEff.相手を攻撃できなくする": "3/82",
+  "fieldCard": "6/73",
+  "fieldKind.じわじわ減らす": "5/73",
+  "fieldKind.ガッツの上限": "3/64",
+  "fieldKind.ダメージを足す": "8/86",
+  "fieldKind.出すと引く": "4/67",
+  "fieldKind.大きいダメージを封じる": "2/70",
+  "fieldKind.山札を削る": "5/70",
+  "fieldKind.払うガッツを変える": "9/55",
+  "fieldKind.技の種類を封じる": "1/71",
+  "fieldKind.持ちょうを変える": "7/77",
+  "fieldKind.純血のプライド": "7/82",
+  "gutsN.0": "5/69",
+  "gutsN.1": "4/68",
+  "gutsN.2": "2/68",
+  "gutsN.3": "3/63",
+  "gutsOrder.使えない札": "5/76",
+  "gutsOrder.重い札": "4/79",
+  "holdBreeder": "9/85",
+  "keepGuard": "9/66",
+  "save": "4/74",
+  "stop": "10/78"
+ },
+ "examples": [
+  {
+   "g": 5,
+   "who": [
+    "dra",
+    "mua"
+   ],
+   "turn": 56,
+   "reason": "全員KO",
+   "hands": [
+    [
+     "静の構え(spe)",
+     "冥王剣(pow)",
+     "カララギマンゴー(spe)",
+     "気にしない(blk)"
+    ],
+    [
+     "みんな下がれ(dge)"
+    ]
+   ],
+   "guts": [
+    1,
+    24
+   ],
+   "frames": [
+    [
+     "any→gutsOrder.重い札",
+     "incoming.5→bEff.カードを引く"
+    ],
+    [
+     "any→holdBreeder"
+    ]
+   ]
+  },
+  {
+   "g": 9,
+   "who": [
+    "mua",
+    "dra"
+   ],
+   "turn": 70,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "バック転(dge)",
+     "左爪(pow)",
+     "加勢(pow)",
+     "モッチー砲(int)",
+     "飛び散る火花(fld)"
+    ],
+    [
+     "盾で受ける(blk)",
+     "ドラゴンラッシュ(pow)",
+     "ドラゴンラッシュ(pow)",
+     "最終奥義(pow)",
+     "盾で受ける(blk)"
+    ]
+   ],
+   "guts": [
+    29,
+    6
+   ],
+   "frames": [
+    [
+     "foeHandGe.3→stop",
+     "foeLife.20→bEff.合体する",
+     "any→bEff.捨て札を山札に戻す"
+    ],
+    [
+     "any→gutsN.0",
+     "any→bEff.付ける札をただにする"
+    ]
+   ]
+  },
+  {
+   "g": 12,
+   "who": [
+    "dra",
+    "momosuke"
+   ],
+   "turn": 60,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "盾で受ける(blk)",
+     "ドラゴンラッシュ(pow)",
+     "緊急回避(dge)",
+     "光の盾(blk)"
+    ],
+    [
+     "メタルコート(blk)",
+     "フットワーク(dge)",
+     "光の盾(blk)",
+     "光の盾(blk)",
+     "光の盾(blk)"
+    ]
+   ],
+   "guts": [
+    5,
+    7
+   ],
+   "frames": [
+    [
+     "any→gutsN.1",
+     "any→keepGuard"
+    ],
+    [
+     "turnGe.5→keepGuard",
+     "any→fieldKind.持ちょうを変える"
+    ]
+   ]
+  },
+  {
+   "g": 14,
+   "who": [
+    "dra",
+    "dra"
+   ],
+   "turn": 56,
+   "reason": "全員KO",
+   "hands": [
+    [
+     "盾で受ける(blk)",
+     "最終奥義(pow)",
+     "意味不明(spe)"
+    ],
+    [
+     "剣で受ける(blk)",
+     "剣で受ける(blk)",
+     "ぐるぐるプレス(pow)",
+     "光の盾(blk)"
+    ]
+   ],
+   "guts": [
+    22,
+    9
+   ],
+   "frames": [
+    [
+     "any→fieldKind.ガッツの上限",
+     "turnGe.10→holdBreeder",
+     "any→holdBreeder"
+    ],
+    [
+     "any→gutsN.0",
+     "myDeck.10→gutsN.1",
+     "any→bEff.両方のガッツを0にする"
+    ]
+   ]
+  },
+  {
+   "g": 26,
+   "who": [
+    "momosuke",
+    "kyuko"
+   ],
+   "turn": 50,
+   "reason": "山札切れ",
+   "hands": [
+    [
+     "光の盾(blk)",
+     "体当たり(pow)",
+     "突き刺し(pow)",
+     "体当たり(pow)"
+    ],
+    [
+     "フットワーク(dge)",
+     "光の盾(blk)",
+     "ぐるぐる(pow)",
+     "舞い上がる(dge)"
+    ]
+   ],
+   "guts": [
+    20,
+    15
+   ],
+   "frames": [
+    [
+     "any→fieldKind.ガッツの上限",
+     "any→keepGuard",
+     "selfType.地上→stop"
+    ],
+    [
+     "myLife.50→fieldKind.ガッツの上限",
+     "any→bEff.回復する",
+     "any→bEff.倒れた子を戻す"
+    ]
+   ]
+  }
+ ]
+}
