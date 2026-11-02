@@ -343,5 +343,23 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
   } else check('M 守りの場を作れる', false, '場を作れなかった');
 }
 
+// ---- N. ガッツにする順(2026-11-02 社長「防御系ガンガン捨てるくせに、もう死んでるモンスターのカードは残したりする」) ----
+{
+  const gutsScene = () => {
+    const st = scene();
+    st.phase = 'guts'; st.active = 0; st.pending = null;
+    st.players[0].mons[0].ko = true; st.players[0].mons[0].life = 0; // モッチーが倒れた: もちき(100)はもう出せない
+    st.players[0].guts = [];
+    st.players[0].hand = ['100', '350']; // もちき(出せない)・光の盾(だれでも使える守り)
+    return st;
+  };
+  const a = E.cardAiChooseAction(db, gutsScene(), E.cardAiPolicy('kyuko', 'master', { noTactics: true }), zero);
+  check('N 倒れた子の札を先にガッツにして、使える守りは残す', a.type === 'guts' && a.hand.includes(0) && !a.hand.includes(1), J(a));
+  const sloppy = { ...E.cardAiPolicy('kyuko', 'master', { noTactics: true }) };
+  sloppy.level = { ...sloppy.level, sloppy: 1 };
+  const b = E.cardAiChooseAction(db, gutsScene(), sloppy, zero);
+  check('N 雑な手の番でも、倒れた子の札はガッツにして、使える守りはでたらめに捨てない', b.type === 'guts' && b.hand.includes(0) && !b.hand.includes(1), J(b));
+}
+
 console.log(`card-tactics-gambit-check: ${passed} OK / ${fails.length} NG`);
 if (fails.length) { fails.forEach((f) => console.log(`NG: ${f}`)); process.exit(1); }

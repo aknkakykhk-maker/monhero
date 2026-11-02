@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 088cead7af32e055
+// source-sha256: 3a2c4425d17fc7b3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93459,13 +93459,17 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
     if (!c) return -9;
     const usable = c.user === 'breeder' || me.mons.some(m => !m.ko && cardUsableBy(c, m));
     if (!usable) return -10;
-    if (cardIsGuardKind(c.kind)) return 2 * habit.keepGuard - c.guts * 0.2;
-    return (c.damage || 1) * 0.5 - Math.max(0, c.guts - (me.guts.length + 2)) * 0.8;
+    if (cardIsGuardKind(c.kind)) return 2 * habit.keepGuard - c.guts * 0.2 + CARD_AI_GUARD_KEEP_ADD;
+    const noHost = cardHasEff(c, 'attach') && !me.hand.some(n2 => n2 !== no && (() => {
+      const h = cardOf(db, n2);
+      return !!h && cardIsAttackKind(h.kind) && h.kind !== 'spe' && me.mons.some(m => !m.ko && cardUsableBy(h, m));
+    })());
+    return (c.damage || 1) * 0.5 - Math.max(0, c.guts - (me.guts.length + 2)) * 0.8 - (noHost ? 2 : 0);
   };
   const aceKeep = no => policy && Array.isArray(policy.aces) && policy.aces.includes(no) ? 10 : 0;
   const ks = me.hand.map((no, i) => ({
     i,
-    k: keep(no) + aceKeep(no),
+    k: keep(no) + (keep(no) > -9 ? aceKeep(no) : 0),
     g: cardIsGuardKind((cardOf(db, no) || {}).kind)
   }));
   const guardKeep = ks.filter(x => x.g && x.k > -9).sort((a, b) => b.k - a.k)[0];
@@ -93502,6 +93506,7 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
     hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, policy.playerRole ? 99 : cardAiGutsCap(me))
   };
 };
+const CARD_AI_GUARD_KEEP_ADD = 1.5;
 const CARD_AI_STUCK_KEEP = 2;
 const CARD_TACTIC_KEEP_GUARD_MAX = 3;
 const cardAiGutsCap = me => me.deck.length >= CARD_BATTLE_HAND_MAX ? 99 : Math.max(0, me.hand.length - (CARD_BATTLE_HAND_MAX - me.deck.length));
@@ -93767,11 +93772,19 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   } : cardAiChooseGuard(db, st, policy, rand);
   if (st.phase === 'guts') {
     if (!sloppy) return cardAiChooseGuts(db, st, policy);
-    const hand = st.players[st.active].hand;
+    const me = st.players[st.active],
+      hand = me.hand;
     const gm = cardFieldEff(st, 'fieldGutsMax');
+    const dead = i => {
+      const c = cardOf(db, hand[i]);
+      return !c || c.user !== 'breeder' && !me.mons.some(m => !m.ko && cardUsableBy(c, m));
+    };
+    const isGuard = i => cardIsGuardKind((cardOf(db, hand[i]) || {}).kind);
+    const idx = hand.map((_, i) => i);
+    const pickS = [...idx.filter(dead), ...idx.filter(i => !dead(i) && !isGuard(i) && rand() < 0.4)];
     return {
       type: 'guts',
-      hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, Math.min(gm ? gm.n : 99, policy.playerRole ? 99 : cardAiGutsCap(st.players[st.active])))
+      hand: pickS.slice(0, Math.min(gm ? gm.n : 99, policy.playerRole ? 99 : cardAiGutsCap(me)))
     };
   }
   const opts = cardAiAttackChoices(db, st, policy);
@@ -96089,7 +96102,7 @@ const CARD_TACTIC_TEXT = Object.freeze({
   incomingArea: () => ['全体攻撃を受けた', '受けた攻撃が、全員に当たる攻撃なら(守るかどうかを決めるときだけ見る)'],
   tBalance: () => ['バランス型', '攻め・守り・ガッツ・大技・崩し・全体を同じくらいに見て、いちばん得になるカードを出す。とどめだけ少し優先する'],
   tAttack: () => ['攻め型', '攻撃をふだんの1.5倍選びやすくする。ガッツはためず、守りのカードも手札に残さない。守るのは、受けると倒れるときだけ'],
-  tGuard: () => ['守り型', '守りのカードを手札に残しやすく(ふだんの1.5倍)、攻撃は控えめ(0.7倍)にする。攻撃を受けたら、守れるときはいつも守る'],
+  tGuard: () => ['守り型', '守りのカードを手札に残しやすく(ふだんの1.5倍)、攻撃は控えめ(0.7倍)にする。攻撃を受けたら、守れるときはいつも守る(守っても倒れるのが変わらないときは除く)'],
   tSave: () => ['溜め型', 'ガッツを多めにため(ふだんの1.6倍)、大技を選びやすくする(1.8倍)'],
   tDisrupt: () => ['崩し型', '相手の手札・山札・ガッツを減らすカードを選びやすくする(ふだんの1.8倍)'],
   tBig: () => ['大技型', 'ダメージの大きい技を選びやすくする(ふだんの1.6倍)'],
@@ -96159,11 +96172,11 @@ const CARD_TACTIC_TEXT = Object.freeze({
     ガッツを減らす: ['相手のガッツを減らす', '相手のガッツを減らす・0にするカードを使う'],
     番を飛ばす: ['相手のターンを飛ばす', '相手の次のターンを飛ばすカードを使う']
   })[v],
-  guard: () => ['守る', 'このモンスターが攻撃を受けたら、手札の守りのカードでいちばん良い守り方をする'],
-  guardFirst: v => [`${v}で守る`, `このモンスターが攻撃を受けたら、${v === '回避' || v === '防御' ? v + 'のカード' : '「' + v + '」のカード'}だけで守る(そのカードが無ければ、次の戦術カードへ進む)`],
+  guard: () => ['守る', 'このモンスターが攻撃を受けたら、手札の守りのカードでいちばん良い守り方をする。守っても倒れるのが変わらないときは、守らずに受ける'],
+  guardFirst: v => [`${v}で守る`, `このモンスターが攻撃を受けたら、${v === '回避' || v === '防御' ? v + 'のカード' : '「' + v + '」のカード'}だけで守る(そのカードが無ければ、次の戦術カードへ進む)。守っても倒れるのが変わらないときは、守らずに受ける`],
   guardOver: v => [`ダメージ${v}以上だけ守る`, `このモンスターが攻撃を受けたとき、受けるダメージの見込みが${v}より小さければ守らずに受ける。${v}以上なら守る`],
-  guardDie: () => ['倒れるときだけ守る', 'このモンスターが攻撃を受けたとき、受けても倒れなければ守らずに受ける。倒れるときだけ守る'],
-  cover: () => ['かばうカードで守る', 'このモンスターが攻撃を受けたら、かばう・身代わりのカードで守る'],
+  guardDie: () => ['倒れるときだけ守る', 'このモンスターが攻撃を受けたとき、受けても倒れなければ守らずに受ける。倒れるときだけ守る。守っても倒れるのが変わらないときは、守らずに受ける'],
+  cover: () => ['かばうカードで守る', 'このモンスターが攻撃を受けたら、かばう・身代わりのカードで守る。守っても倒れるのが変わらないときは、守らずに受ける'],
   noGuard: () => ['守らない', 'このモンスターが攻撃を受けても、守りのカードを使わずに受ける(守りのカードは手札に残す)'],
   charge: () => ['溜め技を使う', '次の技のダメージを何倍にもするカード(溜め・怒り・次のターンの技を倍)を使う'],
   chargeKind: v => (w => [`溜め(${w})を使う`, `「${w}」の溜めのカードを使う`])(v === '次の番の技を倍' ? '次のターンの技を倍' : v),
