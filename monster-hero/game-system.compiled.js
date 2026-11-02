@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8bb70ceed1ab5ed5
+// source-sha256: ad17b827cf30fa4c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -101426,6 +101426,25 @@ const CardBattleBoard = ({
     },
     className: "min-h-[30px] shrink-0 rounded-lg border border-white/30 px-2 text-[12px] font-black text-white"
   }, autoOn ? '🖐 自分で' : '🤖 オート'));
+  const autoCompact = React.createElement(React.Fragment, null, React.createElement("button", {
+    type: "button",
+    "data-card-auto-speed": autoSpeed,
+    "data-card-auto-speed-cycle": true,
+    "aria-label": `速さ ×${autoSpeed}(押すと変わる)`,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setAutoSpeed(v => v === 1 ? 2 : v === 2 ? 4 : 1);
+    },
+    className: "min-h-[30px] shrink-0 rounded-lg bg-sky-300 px-1.5 text-[12px] font-black tabular-nums text-slate-950"
+  }, `×${autoSpeed}`), React.createElement("button", {
+    type: "button",
+    "data-card-auto-toggle": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setAutoOn(v => !v);
+    },
+    className: "min-h-[30px] shrink-0 whitespace-nowrap rounded-lg border border-white/30 px-1.5 text-[11px] font-black text-white"
+  }, autoOn ? '🖐自分で' : '🤖オート'));
   const autoPolicy = useMemo(() => autoGame && typeof cardSharePolicy === 'function' ? cardSharePolicy(autoGame.tactics, autoGame.level, {
     sameBlood: !!autoGame.sameBlood
   }) : null, [autoGame]);
@@ -103051,7 +103070,10 @@ const CardBattleBoard = ({
       className: `mx-auto min-w-0 max-w-[440px] flex-1 truncate whitespace-nowrap rounded-full px-2 py-1 text-center ${sig ? 'text-[11px]' : tiny ? 'text-[12px]' : 'text-[13px]'} font-black leading-tight tabular-nums ${tone}`
     }, sig ? pvpClock.offline ? '電波が途切れています。つなぎ直しています…' : `相手の電波が途切れています(あと${pvpClock.foeQuietSec}秒)` : React.createElement(React.Fragment, null, !(headSt.phase === 'setup' && replay) && !(pvpLive && (tiny || headSt.active !== cardDeciderOf(headSt))) && React.createElement("span", {
       className: "mr-1 text-[11px] font-bold opacity-75"
-    }, "ターン", Math.max(1, headSt.turn)), turnTxt, pvpLive && ` · ${headSt.active !== cardDeciderOf(headSt) ? pvpClock.mine ? '守り 残り' : '相手の守り' : pvpClock.mine ? '残り' : ''}${pvpClock.left}秒`, pvpLive && pvpClock.mine && pvpClock.timeouts > 0 && ` ⚠${pvpClock.timeouts}/${CARD_PVP_TIMEOUT_LOSE}`));
+    }, "ターン", Math.max(1, headSt.turn)), autoGame && autoOn && !wide && React.createElement("span", {
+      "aria-label": "オートで戦っています",
+      className: "mr-0.5"
+    }, "🤖"), turnTxt, pvpLive && ` · ${headSt.active !== cardDeciderOf(headSt) ? pvpClock.mine ? '守り 残り' : '相手の守り' : pvpClock.mine ? '残り' : ''}${pvpClock.left}秒`, pvpLive && pvpClock.mine && pvpClock.timeouts > 0 && ` ⚠${pvpClock.timeouts}/${CARD_PVP_TIMEOUT_LOSE}`));
   })(), quickRun && React.createElement("span", {
     "data-card-battle-quick-run": quickRun.stopped ? 'stopped' : 'live',
     "aria-label": quickRun.stopped ? '裏のクイック周回は止まっています' : `裏のクイック周回 ${quickRun.loops}周目`,
@@ -103060,10 +103082,10 @@ const CardBattleBoard = ({
     "data-card-pvp-eyes": pvpClock.eyes,
     "aria-label": `${pvpClock.eyes}人が観戦しています`,
     className: "shrink-0 whitespace-nowrap rounded-full bg-violet-500/25 px-1.5 py-0.5 text-[11px] font-black text-violet-100 tabular-nums"
-  }, tiny ? `👀${pvpClock.eyes}` : `👀観戦${pvpClock.eyes}`), autoGame && wide && React.createElement("span", {
+  }, tiny ? `👀${pvpClock.eyes}` : `👀観戦${pvpClock.eyes}`), autoGame && React.createElement("span", {
     "data-card-auto-bar": autoOn ? 'auto' : 'hand',
     className: "flex shrink-0 items-center gap-1"
-  }, autoControls(false)), !watch && React.createElement("button", {
+  }, wide ? autoControls(false) : autoCompact), !watch && React.createElement("button", {
     type: "button",
     "data-card-quit": true,
     "data-card-replay-exit": replay ? '' : undefined,
@@ -103079,10 +103101,7 @@ const CardBattleBoard = ({
     style: {
       width: `${Math.max(0, Math.min(100, pvpClock.left * 1000 / Math.max(1, cardPvpLimitMs(st)) * 100))}%`
     }
-  })), autoGame && !wide && React.createElement("div", {
-    "data-card-auto-bar": autoOn ? 'auto' : 'hand',
-    className: "flex shrink-0 items-center gap-1.5 bg-sky-950/80 px-2 py-1"
-  }, autoControls(true)), React.createElement("div", {
+  })), React.createElement("div", {
     "data-card-wide-row": true,
     className: wide ? 'flex min-h-0 flex-1 flex-row' : 'contents'
   }, React.createElement("div", {
