@@ -222,7 +222,8 @@ const cardReplayMake = (db, { kind, match, at, decks, seeds, first, history, foe
   const built = cardReplayBuild(db, one);
   if (built.stop !== null) return null;
   one.prints = built.states.slice(1).map(cardReplayPrint).join('');
-  one.turn = built.states[built.states.length - 1].turn;
+  // 「ターン◯まで」は最後の手を打ったターン(見返しの最後の帯と同じ)。山札切れのように、手番が移ったところで決まる試合は最後の盤面のターンが1つ先へ進んでいる(2026-11-01 点検)
+  one.turn = built.states[Math.max(0, built.states.length - 2)].turn;
   return one;
 };
 // マルチの試合から(91 の tryVerify で、なぞり直しが通ったときだけ)

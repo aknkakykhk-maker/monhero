@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d256c02e7d7cb198
+// generated-sha256: 121f918fc8ff7fde
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -56413,7 +56413,7 @@ const CARD_AI_DECKS = Object.freeze({
   dra:      { kit: 'powerful', field: ['興奮のるつぼ', '必殺技の封印'] },  // 守り。受けるダメージを減らす場
   kyuko:    { field: ['必殺技の応酬'] },  // 小技を封じる。2種入れると MASTER で7点下がったので1種(2026-10-30)
   atsu:     { prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード'], field: ['必殺技の応酬', '灼熱の地'] },  // 全体攻撃を集める。全体カードは大技で押す場と焼ける場
-  sorashido: { prefer: ['大混乱', '時間稼ぎ', '大鎌', 'ハテナマーク', 'ニャーにゃー'] },  // 山札とガッツを削る札(その3体で使えるものだけ入る)
+  sorashido: { prefer: ['大混乱', '時間稼ぎ', '大声', 'ハテナマーク', 'ニャーにゃー'] },  // 山札とガッツを削る札(その3体で使えるものだけ入る)。大鎌(ジョーカーの技・ソラシドの3体では使えず入らなかった)を、ハムの「大声」に入れかえ(2026-11-02 社長 案A)
 });
 // 助手の好きなモンスター(1体。2026-10-25 社長「1体だけ好きなモンスターを決めて、あとは好みのバランスでデッキ組む」)。
 // 名前ではなく主血統(種族)で決める(「モッチーだけどジェントル使うとかはあり」)。その種族の通常・キラ・別絵キラと、
@@ -56459,6 +56459,9 @@ const CARD_AI_BUILD = Object.freeze({
   //   2体目はいちばん強い子のまま。上位4組からえらぶ形や3体目を上位3体からにすると、点は近くても勝率が9〜17点下がる助手が出た(card-ai-balance で測った)
   master: { maxWave: 99, noise: 0.05, temp: 0.2, stray: 0, best: true, lastTop: 2 },  // いちばん強い組み合わせで本気・相手のデッキを見て選び直す
 });
+// 助手ごとに、MASTER の2体目も上位◯体から毎試合えらぶ(いちばんの子は2倍えらばれやすい)。書いていない助手は2体目がいちばん強い子のまま。
+//   2026-11-01 社長「きゅうこ MASTER の3体が毎回ほぼ同じ」(点検 L)→ きゅうこだけ2体目を上位2体から(勝率は tools で測ってそろえの中)
+const CARD_AI_SECOND_TOP = Object.freeze({ kyuko: { master: 2 } });
 // 助手ごとの強さのそろえ(カードの選び方の雑さに足す値。+ で弱く・- で強く。0 より下にはならない)。
 // tools/card/card-ai-balance.js で、プレイヤー役(スターター)への勝率が強さごとにそろうように決めた(2026-10-25)
 const CARD_AI_DECK_TUNE = Object.freeze({
@@ -56670,6 +56673,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
     if (!left.length) break;
     let pick;
     if (cfg.stray > 0 && rand() < cfg.stray) pick = left[Math.floor(rand() * left.length) % left.length];   // 気まぐれ
+    else if (cfg.best && k === 0 && (((CARD_AI_SECOND_TOP[who] || {})[levelId]) || 0) > 1) { const top = left.slice().sort((x, y) => y.v - x.v || (x.m.no < y.m.no ? -1 : 1)).slice(0, CARD_AI_SECOND_TOP[who][levelId]); pick = top[cardAiPickIndex(top.map((_, i) => (i === 0 ? 2 : 1)), rand)]; }
     else if (cfg.best && k === 1 && cfg.lastTop > 1) { const top = left.slice().sort((x, y) => y.v - x.v || (x.m.no < y.m.no ? -1 : 1)).slice(0, cfg.lastTop); pick = top[cardAiPickIndex(top.map((_, i) => (i === 0 ? 2 : 1)), rand)]; }
     else if (cfg.best) pick = left.reduce((x, y) => (y.v > x.v ? y : x));
     else { const top = Math.max(...left.map((x) => x.v)); pick = left[cardAiPickIndex(left.map((x) => Math.exp((x.v - top) / cfg.temp)), rand)]; }
@@ -68958,7 +68962,8 @@ const cardReplayMake = (db, { kind, match, at, decks, seeds, first, history, foe
   const built = cardReplayBuild(db, one);
   if (built.stop !== null) return null;
   one.prints = built.states.slice(1).map(cardReplayPrint).join('');
-  one.turn = built.states[built.states.length - 1].turn;
+  // 「ターン◯まで」は最後の手を打ったターン(見返しの最後の帯と同じ)。山札切れのように、手番が移ったところで決まる試合は最後の盤面のターンが1つ先へ進んでいる(2026-11-01 点検)
+  one.turn = built.states[Math.max(0, built.states.length - 2)].turn;
   return one;
 };
 // マルチの試合から(91 の tryVerify で、なぞり直しが通ったときだけ)
@@ -70405,7 +70410,8 @@ const CardShareDeckDetail = ({ entry, onClose, fight = null, rent = null }) => {
   const [record, setRecord] = useState(undefined);
   useEffect(() => { let alive = true; void cardShareRecordOf(entry.ownerId).then((r) => { if (alive) setRecord(r); }).catch(() => { if (alive) setRecord(null); }); return () => { alive = false; }; }, [entry.ownerId]);
   const losses = Math.max(0, (entry.battles || 0) - (entry.deckWins || 0));
-  const dayText = (ms) => { const d = new Date(ms); return Number.isFinite(d.getTime()) ? `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : ''; };
+  // 日時は日本時間で出す(戦われた試合・見返しの一覧の cardReplayWhen と同じ。2026-11-01 点検で、ここだけ端末の時計だった)
+  const dayText = (ms) => { if (!Number.isFinite(ms) || ms <= 0) return ''; const d = new Date(ms + 9 * 3600 * 1000); return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`; };
   return (
     <div data-card-share-deck-detail className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={onClose}>
       <div className="max-h-[86vh] w-full max-w-[440px] overflow-y-auto rounded-2xl border-2 border-amber-600/60 bg-slate-950 p-3" onClick={(e) => e.stopPropagation()}>
