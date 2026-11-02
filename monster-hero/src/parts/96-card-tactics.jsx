@@ -154,6 +154,60 @@ const cardTacticsLoad = async () => {
   const level = cardNormalizeLevel(rawL);
   return { tactics: cardNormalizeTactics(rawT), level, info: cardLevelInfo(level.xp), rawT, rawL };
 };
+// ---- デッキごとの戦術カード(2026-11-02 テスターさんの要望・社長「デッキごとに戦術カードを記憶させたい」) ----
+//   新しいキー mh_card_tactics_by_deck_v1 = { v:1, decks: { デッキのid: { frames, aces, at } } }(新しい40組まで)
+//   ・mh_card_tactics_v1 の frames は今までどおり「最後に使った戦術カード」。消さない・意味を変えない(書くときは両方に書く)
+//   ・まだ覚えていないデッキは mh_card_tactics_v1 の frames から始める(今の組み合わせが消えないように)
+//   ・はじめてこのキーを書くとき(キーがまだ無い=一度だけ)、ほかのデッキにも「書く前の共通の戦術カード」を入れておく。
+//     入れないと、1つ目のデッキを組み直したとたん、ほかのデッキが組み直した物で始まってしまう。キーがあれば二度と走らない
+//   ・オート(あとで作る)はデッキの id から cardTacticsFramesOfDeck で引く
+const CARD_TACTICS_DECK_KEY = 'mh_card_tactics_by_deck_v1';
+const CARD_TACTICS_DECK_MAX = 40;
+const cardTacticsDeckIdOk = (id) => typeof id === 'string' && id.length > 0 && id.length <= 64;
+const cardTacticsDeckNormalize = (raw) => {
+  const decks = {};
+  const src = raw && typeof raw === 'object' && raw.decks && typeof raw.decks === 'object' && !Array.isArray(raw.decks) ? raw.decks : {};
+  Object.keys(src).filter(cardTacticsDeckIdOk).forEach((id) => {
+    const e = src[id];
+    if (!e || typeof e !== 'object' || !e.frames || typeof e.frames !== 'object') return;
+    decks[id] = { frames: cardTacticNormalizeFrames(e.frames),
+      aces: Array.isArray(e.aces) ? e.aces.filter((x) => typeof x === 'string' && x.length <= 16).slice(0, CARD_SHARE_ACES_MAX) : null,
+      at: Number.isFinite(e.at) && e.at > 0 ? e.at : 0 };
+  });
+  return { v: 1, decks };
+};
+const cardTacticsDeckLoad = async () => {
+  let raw = null;
+  try { raw = await storeGet(CARD_TACTICS_DECK_KEY, null); } catch (_) { /* 読めなければ覚えていない扱い */ }
+  return { raw, box: cardTacticsDeckNormalize(raw) };
+};
+// そのデッキの戦術カード(覚えていなければ共通の frames)
+const cardTacticsFramesOfDeck = (box, tactics, deckId) => {
+  const e = box && cardTacticsDeckIdOk(deckId) ? box.decks[deckId] : null;
+  return cardTacticNormalizeFrames(e ? e.frames : tactics && tactics.frames);
+};
+// そのデッキの切り札(覚えていなければ null)
+const cardTacticsAcesOfDeck = (box, deckId) => {
+  const e = box && cardTacticsDeckIdOk(deckId) ? box.decks[deckId] : null;
+  return e && Array.isArray(e.aces) ? e.aces.slice() : null;
+};
+// 書く項目(saveStoredValuesOrRollback へ渡す)。loaded … cardTacticsDeckLoad の値(書く直前に読み直したもの)
+//   aces … 切り札(undefined なら前のまま)/ seed … { ids: いまあるデッキのid, frames: 書く前の共通の frames }(はじめて書くときだけ使う)
+const cardTacticsDeckEntry = (loaded, deckId, frames, { aces, seed = null } = {}) => {
+  if (!cardTacticsDeckIdOk(deckId)) return null;
+  const box = cardTacticsDeckNormalize(loaded && loaded.raw);
+  const decks = { ...box.decks };
+  const now = Date.now();
+  if (!(loaded && loaded.raw) && seed && Array.isArray(seed.ids)) {
+    seed.ids.filter((id) => cardTacticsDeckIdOk(id) && id !== deckId && !decks[id]).forEach((id, i) => {
+      decks[id] = { frames: cardTacticNormalizeFrames(seed.frames), aces: null, at: now - 1000 - i };
+    });
+  }
+  const before = decks[deckId];
+  decks[deckId] = { frames: cardTacticNormalizeFrames(frames), aces: aces === undefined ? (before ? before.aces : null) : (Array.isArray(aces) ? aces.slice(0, CARD_SHARE_ACES_MAX) : null), at: now };
+  const keep = Object.keys(decks).sort((a, b) => decks[b].at - decks[a].at).slice(0, CARD_TACTICS_DECK_MAX);
+  return { key: CARD_TACTICS_DECK_KEY, before: loaded ? loaded.raw : null, next: { v: 1, decks: Object.fromEntries(keep.map((id) => [id, decks[id]])) } };
+};
 // 1試合ぶんの経験値の保存の項目(84 の結果の取引に足す)。経験値を入れない人(公開前・デバッグでない)は空
 const cardLevelEntries = async ({ kind, level, outcome, debug = false }) => {
   if (!cardTacticsOpen() && !debug) return { entries: [], gain: null };

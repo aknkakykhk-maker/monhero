@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6df53828fe7c253c
+// generated-sha256: 731807b7906a413d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -70023,8 +70023,11 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
   const [foeFilter, setFoeFilter] = useState('all'); // 一覧の絞り込み(すべて/おすすめ/フレンド/人気。2026-10-30 社長・案C)
   // 戦術カード(96・97): 登録するときに載せる枠(レベルで開いている枠・持っているカードだけ)
   const [tacticsSave, setTacticsSave] = useState(null);
-  useEffect(() => { if (typeof cardTacticsLoad === 'function') void cardTacticsLoad().then(setTacticsSave).catch(() => {}); }, []);
-  const framesNow = tacticsSave && typeof cardTacticsFramesForBattle === 'function' ? cardTacticsFramesForBattle(tacticsSave.tactics, tacticsSave.info.level) : null;
+  const [tacticsDeckBox, setTacticsDeckBox] = useState(null); // デッキごとの戦術カード(96 の cardTacticsDeckLoad。2026-11-02)
+  useEffect(() => {
+    if (typeof cardTacticsLoad === 'function') void cardTacticsLoad().then(setTacticsSave).catch(() => {});
+    if (typeof cardTacticsDeckLoad === 'function') void cardTacticsDeckLoad().then((r) => setTacticsDeckBox(r.box)).catch(() => {});
+  }, []);
   const [rented, setRented] = useState(null);         // 借りているデッキ(cardRentedDeckGet)
   useEffect(() => { void cardRentedDeckGet().then(setRented); }, []);
   const rent = async (e) => {
@@ -70052,6 +70055,9 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
   const deckOf = (id) => list.find((d) => d.id === id) || null;
   const issuesOf = (d) => (d ? [...cardDeckProblems(db, d), ...cardDeckOwnProblems(db, d, collection)] : ['デッキがありません']);
   const picked = deckOf(pick);
+  // 登録に載せる戦術カードは、選んだデッキで最後に使った物(覚えていなければ共通の戦術カード)
+  const framesNow = tacticsSave && typeof cardTacticsFramesForBattle === 'function'
+    ? cardTacticsFramesForBattle({ ...tacticsSave.tactics, frames: typeof cardTacticsFramesOfDeck === 'function' ? cardTacticsFramesOfDeck(tacticsDeckBox, tacticsSave.tactics, picked && picked.id) : tacticsSave.tactics.frames }, tacticsSave.info.level) : null;
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -70695,6 +70701,60 @@ const cardTacticsLoad = async () => {
   const level = cardNormalizeLevel(rawL);
   return { tactics: cardNormalizeTactics(rawT), level, info: cardLevelInfo(level.xp), rawT, rawL };
 };
+// ---- デッキごとの戦術カード(2026-11-02 テスターさんの要望・社長「デッキごとに戦術カードを記憶させたい」) ----
+//   新しいキー mh_card_tactics_by_deck_v1 = { v:1, decks: { デッキのid: { frames, aces, at } } }(新しい40組まで)
+//   ・mh_card_tactics_v1 の frames は今までどおり「最後に使った戦術カード」。消さない・意味を変えない(書くときは両方に書く)
+//   ・まだ覚えていないデッキは mh_card_tactics_v1 の frames から始める(今の組み合わせが消えないように)
+//   ・はじめてこのキーを書くとき(キーがまだ無い=一度だけ)、ほかのデッキにも「書く前の共通の戦術カード」を入れておく。
+//     入れないと、1つ目のデッキを組み直したとたん、ほかのデッキが組み直した物で始まってしまう。キーがあれば二度と走らない
+//   ・オート(あとで作る)はデッキの id から cardTacticsFramesOfDeck で引く
+const CARD_TACTICS_DECK_KEY = 'mh_card_tactics_by_deck_v1';
+const CARD_TACTICS_DECK_MAX = 40;
+const cardTacticsDeckIdOk = (id) => typeof id === 'string' && id.length > 0 && id.length <= 64;
+const cardTacticsDeckNormalize = (raw) => {
+  const decks = {};
+  const src = raw && typeof raw === 'object' && raw.decks && typeof raw.decks === 'object' && !Array.isArray(raw.decks) ? raw.decks : {};
+  Object.keys(src).filter(cardTacticsDeckIdOk).forEach((id) => {
+    const e = src[id];
+    if (!e || typeof e !== 'object' || !e.frames || typeof e.frames !== 'object') return;
+    decks[id] = { frames: cardTacticNormalizeFrames(e.frames),
+      aces: Array.isArray(e.aces) ? e.aces.filter((x) => typeof x === 'string' && x.length <= 16).slice(0, CARD_SHARE_ACES_MAX) : null,
+      at: Number.isFinite(e.at) && e.at > 0 ? e.at : 0 };
+  });
+  return { v: 1, decks };
+};
+const cardTacticsDeckLoad = async () => {
+  let raw = null;
+  try { raw = await storeGet(CARD_TACTICS_DECK_KEY, null); } catch (_) { /* 読めなければ覚えていない扱い */ }
+  return { raw, box: cardTacticsDeckNormalize(raw) };
+};
+// そのデッキの戦術カード(覚えていなければ共通の frames)
+const cardTacticsFramesOfDeck = (box, tactics, deckId) => {
+  const e = box && cardTacticsDeckIdOk(deckId) ? box.decks[deckId] : null;
+  return cardTacticNormalizeFrames(e ? e.frames : tactics && tactics.frames);
+};
+// そのデッキの切り札(覚えていなければ null)
+const cardTacticsAcesOfDeck = (box, deckId) => {
+  const e = box && cardTacticsDeckIdOk(deckId) ? box.decks[deckId] : null;
+  return e && Array.isArray(e.aces) ? e.aces.slice() : null;
+};
+// 書く項目(saveStoredValuesOrRollback へ渡す)。loaded … cardTacticsDeckLoad の値(書く直前に読み直したもの)
+//   aces … 切り札(undefined なら前のまま)/ seed … { ids: いまあるデッキのid, frames: 書く前の共通の frames }(はじめて書くときだけ使う)
+const cardTacticsDeckEntry = (loaded, deckId, frames, { aces, seed = null } = {}) => {
+  if (!cardTacticsDeckIdOk(deckId)) return null;
+  const box = cardTacticsDeckNormalize(loaded && loaded.raw);
+  const decks = { ...box.decks };
+  const now = Date.now();
+  if (!(loaded && loaded.raw) && seed && Array.isArray(seed.ids)) {
+    seed.ids.filter((id) => cardTacticsDeckIdOk(id) && id !== deckId && !decks[id]).forEach((id, i) => {
+      decks[id] = { frames: cardTacticNormalizeFrames(seed.frames), aces: null, at: now - 1000 - i };
+    });
+  }
+  const before = decks[deckId];
+  decks[deckId] = { frames: cardTacticNormalizeFrames(frames), aces: aces === undefined ? (before ? before.aces : null) : (Array.isArray(aces) ? aces.slice(0, CARD_SHARE_ACES_MAX) : null), at: now };
+  const keep = Object.keys(decks).sort((a, b) => decks[b].at - decks[a].at).slice(0, CARD_TACTICS_DECK_MAX);
+  return { key: CARD_TACTICS_DECK_KEY, before: loaded ? loaded.raw : null, next: { v: 1, decks: Object.fromEntries(keep.map((id) => [id, decks[id]])) } };
+};
 // 1試合ぶんの経験値の保存の項目(84 の結果の取引に足す)。経験値を入れない人(公開前・デバッグでない)は空
 const cardLevelEntries = async ({ kind, level, outcome, debug = false }) => {
   if (!cardTacticsOpen() && !debug) return { entries: [], gain: null };
@@ -71138,7 +71198,8 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
   const [opening, setOpening] = useState(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
-  const reload = async () => { const d = await cardTacticsLoad(); setData(d); return d; };
+  const [deckBox, setDeckBox] = useState(null); // デッキごとの戦術カード(96 の cardTacticsDeckLoad().box。2026-11-02)
+  const reload = async () => { const [d, byDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]); setDeckBox(byDeck.box); setData(d); return d; };
   useEffect(() => { void reload(); }, []);
   if (!data) return <div data-mh-screen data-card-tactics className={SCREEN_SHELL_CLASS}><ScreenHead title={screenTitle} accent="text-amber-200" onBack={onBack}/></div>;
   if (opening) return <CardTacticPackOpen packs={opening} onDone={() => setOpening(null)}/>;
@@ -71149,14 +71210,17 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
   const deck = ((decks && decks.decks) || []).find((d) => d.id === (decks && decks.active)) || ((decks && decks.decks) || [])[0] || null;
   const monOf = (i) => (deck ? cardMonsterOf(db, deck.monsters[i]) : null);
   // 枠を書いて保存(この画面だけが書く。ほかの項目は読み直した値のまま)
+  //   いま使うデッキの分は、デッキごとの戦術カード(mh_card_tactics_by_deck_v1)にも書く(2026-11-02)
   const saveFrames = async (frames) => {
-    const fresh = await cardTacticsLoad();
+    const [fresh, freshDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]);
     const next = { ...fresh.tactics, frames: cardTacticNormalizeFrames(frames) };
-    const ok = await saveStoredValuesOrRollback([{ key: CARD_TACTICS_KEY, before: fresh.rawT, next }], storeGet, storeSet);
+    const deckEntry = deck ? cardTacticsDeckEntry(freshDeck, deck.id, frames, { seed: { ids: ((decks && decks.decks) || []).map((x) => x.id), frames: fresh.tactics.frames } }) : null;
+    const ok = await saveStoredValuesOrRollback([{ key: CARD_TACTICS_KEY, before: fresh.rawT, next }, ...(deckEntry ? [deckEntry] : [])], storeGet, storeSet);
     if (!ok) { setNotice('保存できませんでした'); return; }
+    if (deckEntry) setDeckBox(cardTacticsDeckNormalize(deckEntry.next));
     setData({ ...fresh, tactics: next, rawT: next });
   };
-  const f = t.frames;
+  const f = cardTacticsFramesOfDeck(deckBox, t, deck && deck.id);
   // 賢さに数えないセットの理由(82-card-tactics-core の cardTacticUncounted。ルールくん 2026-10-29「ちゃんと効く戦術カードだけ数える」)
   const uncounted = cardTacticUncounted(f);
   const whyOf = (k, i) => { const list = k === 'breeder' ? uncounted.breeder : uncounted.mons[k]; return (list && list[i]) || ''; };
@@ -71901,6 +71965,9 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
   const [draft, setDraft] = useState(null);     // 戦い方(枠の形)
   const [styleId, setStyleId] = useState(null);
   const [aces, setAces] = useState('auto');     // 'auto' か カード番号の配列
+  const [deckBox, setDeckBox] = useState(null); // デッキごとの戦術カード(96 の cardTacticsDeckLoad().box。2026-11-02)
+  const [rowAces, setRowAces] = useState(null); // 登録中のデッキの切り札({ id, aces }。デッキごとの覚えが無いときに使う)
+  const deckDrafts = useRef({}); // この画面で組みかけた戦い方(デッキを切り替えて戻っても、組みかけを残す)
   const [sheet, setSheet] = useState(null);     // { where, k }
   const [custom, setCustom] = useState(null);   // { k, c? } 自分で組み合わせる
   const [trial, setTrial] = useState(false); // ためしに戦わせる(CardRegTrialSheet)
@@ -71914,7 +71981,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
   useEffect(() => {
     let alive = true;
     void (async () => {
-      const d = await cardTacticsLoad();
+      const [d, byDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]);
       const [name, icon] = await Promise.all([storeGet('mh_breeder_name', 'ブリーダー', false), storeGet('mh_breeder_icon', '🙂', false)]).catch(() => ['ブリーダー', '🙂']);
       const id = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
       const row = typeof id === 'string' ? await cardShareFetchMine(id).catch(() => null) : null;
@@ -71922,10 +71989,18 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
       setData(d); setSelfId(typeof id === 'string' ? id : null); setMine(row || null);
       setProfile({ name: typeof name === 'string' && name ? name : 'ブリーダー', icon: typeof icon === 'string' && icon ? icon : '🙂' });
       const same = row ? list.find((x) => JSON.stringify(x.monsters) === JSON.stringify(row.deck.monsters) && JSON.stringify(x.cards) === JSON.stringify(row.deck.cards)) : null;
-      setDeckId((same || list.find((x) => issuesOf(x).length === 0) || list[0] || {}).id || null);
-      setDraft(cardTacticNormalizeFrames(d.tactics.frames));
+      const firstId = (same || list.find((x) => issuesOf(x).length === 0) || list[0] || {}).id || null;
+      setDeckId(firstId);
+      setDeckBox(byDeck.box);
+      // そのデッキで最後に使った戦術カード(覚えていなければ共通の戦術カード)
+      setDraft(cardTacticsFramesOfDeck(byDeck.box, d.tactics, firstId));
       const t = row ? cardShareNormalizeTactics(row.tactics) : null;
-      if (t && t.aces.length) setAces(t.aces);
+      const ra = t && t.aces.length && same ? { id: same.id, aces: t.aces } : null;
+      setRowAces(ra);
+      const keptAces = cardTacticsAcesOfDeck(byDeck.box, firstId);
+      if (keptAces && keptAces.length) setAces(keptAces);
+      else if (ra && ra.id === firstId) setAces(ra.aces);
+      else if (t && t.aces.length && !same) setAces(t.aces);
     })();
     return () => { alive = false; };
   }, []);
@@ -71943,14 +72018,31 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
   const setRows = (k, rows) => setDraft((f) => (k === 'breeder' ? { ...f, breeder: rows } : { ...f, mons: f.mons.map((r, i) => (i === k ? rows : r)) }));
   const rowsOf = (k) => (k === 'breeder' ? draft.breeder : draft.mons[k]);
   const maxOf = (k) => (k === 'breeder' ? open.breeder : open.mon);
+  // デッキを切り替えると、そのデッキの戦術カード(この画面で組みかけ → 覚えている物 → 共通)に入れ替える
+  const pickDeck = (id) => {
+    if (id === deckId) return;
+    if (deckId) deckDrafts.current[deckId] = { draft, aces, styleId };
+    const kept = deckDrafts.current[id];
+    if (kept) { setDraft(kept.draft); setAces(kept.aces); setStyleId(kept.styleId); }
+    else {
+      setDraft(cardTacticsFramesOfDeck(deckBox, tactics, id));
+      const ka = cardTacticsAcesOfDeck(deckBox, id);
+      setAces(ka && ka.length ? ka : rowAces && rowAces.id === id ? rowAces.aces : 'auto');
+      setStyleId(null);
+    }
+    setDeckId(id);
+  };
   const register = async () => {
     if (!deck || issuesOf(deck).length || !selfId || busy) return;
     setBusy(true); setMsg('');
     try {
       // 戦い方は持ち物(mh_card_tactics_v1)にも残す(次に開いたとき・プロフィール)。読み直した値に、セットだけを書く
-      const fresh = await cardTacticsLoad();
+      //   デッキごとの戦術カード(mh_card_tactics_by_deck_v1)にも、このデッキの分を書く(2026-11-02)
+      const [fresh, freshDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]);
       const nextT = { ...fresh.tactics, frames: cardTacticNormalizeFrames(draft) };
-      await saveStoredValuesOrRollback([{ key: CARD_TACTICS_KEY, before: fresh.rawT, next: nextT }], storeGet, storeSet);
+      const deckEntry = cardTacticsDeckEntry(freshDeck, deck.id, draft, { aces: aces === 'auto' ? null : aces, seed: { ids: list.map((x) => x.id), frames: fresh.tactics.frames } });
+      const savedT = await saveStoredValuesOrRollback([{ key: CARD_TACTICS_KEY, before: fresh.rawT, next: nextT }, ...(deckEntry ? [deckEntry] : [])], storeGet, storeSet);
+      if (savedT && deckEntry) { setDeckBox(cardTacticsDeckNormalize(deckEntry.next)); delete deckDrafts.current[deck.id]; }
       const f = cardTacticPackFrames(cardTacticsFramesForBattle(nextT, lv));
       const r = await cardShareRegister({ ownerId: selfId, name: profile.name, icon: profile.icon, frame, deck,
         tactics: { name: deck.name, habit: cardShareMainHabit(cardTacticUnpackFrames(f), 'kyuko'), aces: acesNow, f } });
@@ -71992,7 +72084,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
           {list.map((d) => {
             const why = issuesOf(d);
             return (
-              <button key={d.id} type="button" data-card-reg-deck={d.id} disabled={why.length > 0} onClick={() => { Audio_.fgSe.tap(); setDeckId(d.id); }}
+              <button key={d.id} type="button" data-card-reg-deck={d.id} disabled={why.length > 0} onClick={() => { Audio_.fgSe.tap(); pickDeck(d.id); }}
                 className={`flex w-full items-center gap-3 rounded-2xl border-2 p-2 text-left ${deckId === d.id ? 'border-amber-300 bg-amber-950/30' : 'border-slate-700 bg-slate-900'} ${why.length ? 'opacity-50' : ''}`}>
                 <CardRegThumbs db={db} deck={d}/>
                 <span className="min-w-0 flex-1"><b className="block truncate text-[14px] font-black text-white">{d.name}</b>

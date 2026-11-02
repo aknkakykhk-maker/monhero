@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e31ce3e2a4408386
+// source-sha256: 694c84225ca9f7d0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -118256,10 +118256,11 @@ const CardDeckShare = ({
   const [foeDetail, setFoeDetail] = useState(null);
   const [foeFilter, setFoeFilter] = useState('all');
   const [tacticsSave, setTacticsSave] = useState(null);
+  const [tacticsDeckBox, setTacticsDeckBox] = useState(null);
   useEffect(() => {
     if (typeof cardTacticsLoad === 'function') void cardTacticsLoad().then(setTacticsSave).catch(() => {});
+    if (typeof cardTacticsDeckLoad === 'function') void cardTacticsDeckLoad().then(r => setTacticsDeckBox(r.box)).catch(() => {});
   }, []);
-  const framesNow = tacticsSave && typeof cardTacticsFramesForBattle === 'function' ? cardTacticsFramesForBattle(tacticsSave.tactics, tacticsSave.info.level) : null;
   const [rented, setRented] = useState(null);
   useEffect(() => {
     void cardRentedDeckGet().then(setRented);
@@ -118298,6 +118299,10 @@ const CardDeckShare = ({
   const deckOf = id => list.find(d => d.id === id) || null;
   const issuesOf = d => d ? [...cardDeckProblems(db, d), ...cardDeckOwnProblems(db, d, collection)] : ['デッキがありません'];
   const picked = deckOf(pick);
+  const framesNow = tacticsSave && typeof cardTacticsFramesForBattle === 'function' ? cardTacticsFramesForBattle({
+    ...tacticsSave.tactics,
+    frames: typeof cardTacticsFramesOfDeck === 'function' ? cardTacticsFramesOfDeck(tacticsDeckBox, tacticsSave.tactics, picked && picked.id) : tacticsSave.tactics.frames
+  }, tacticsSave.info.level) : null;
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -119554,6 +119559,79 @@ const cardTacticsLoad = async () => {
     rawL
   };
 };
+const CARD_TACTICS_DECK_KEY = 'mh_card_tactics_by_deck_v1';
+const CARD_TACTICS_DECK_MAX = 40;
+const cardTacticsDeckIdOk = id => typeof id === 'string' && id.length > 0 && id.length <= 64;
+const cardTacticsDeckNormalize = raw => {
+  const decks = {};
+  const src = raw && typeof raw === 'object' && raw.decks && typeof raw.decks === 'object' && !Array.isArray(raw.decks) ? raw.decks : {};
+  Object.keys(src).filter(cardTacticsDeckIdOk).forEach(id => {
+    const e = src[id];
+    if (!e || typeof e !== 'object' || !e.frames || typeof e.frames !== 'object') return;
+    decks[id] = {
+      frames: cardTacticNormalizeFrames(e.frames),
+      aces: Array.isArray(e.aces) ? e.aces.filter(x => typeof x === 'string' && x.length <= 16).slice(0, CARD_SHARE_ACES_MAX) : null,
+      at: Number.isFinite(e.at) && e.at > 0 ? e.at : 0
+    };
+  });
+  return {
+    v: 1,
+    decks
+  };
+};
+const cardTacticsDeckLoad = async () => {
+  let raw = null;
+  try {
+    raw = await storeGet(CARD_TACTICS_DECK_KEY, null);
+  } catch (_) {}
+  return {
+    raw,
+    box: cardTacticsDeckNormalize(raw)
+  };
+};
+const cardTacticsFramesOfDeck = (box, tactics, deckId) => {
+  const e = box && cardTacticsDeckIdOk(deckId) ? box.decks[deckId] : null;
+  return cardTacticNormalizeFrames(e ? e.frames : tactics && tactics.frames);
+};
+const cardTacticsAcesOfDeck = (box, deckId) => {
+  const e = box && cardTacticsDeckIdOk(deckId) ? box.decks[deckId] : null;
+  return e && Array.isArray(e.aces) ? e.aces.slice() : null;
+};
+const cardTacticsDeckEntry = (loaded, deckId, frames, {
+  aces,
+  seed = null
+} = {}) => {
+  if (!cardTacticsDeckIdOk(deckId)) return null;
+  const box = cardTacticsDeckNormalize(loaded && loaded.raw);
+  const decks = {
+    ...box.decks
+  };
+  const now = Date.now();
+  if (!(loaded && loaded.raw) && seed && Array.isArray(seed.ids)) {
+    seed.ids.filter(id => cardTacticsDeckIdOk(id) && id !== deckId && !decks[id]).forEach((id, i) => {
+      decks[id] = {
+        frames: cardTacticNormalizeFrames(seed.frames),
+        aces: null,
+        at: now - 1000 - i
+      };
+    });
+  }
+  const before = decks[deckId];
+  decks[deckId] = {
+    frames: cardTacticNormalizeFrames(frames),
+    aces: aces === undefined ? before ? before.aces : null : Array.isArray(aces) ? aces.slice(0, CARD_SHARE_ACES_MAX) : null,
+    at: now
+  };
+  const keep = Object.keys(decks).sort((a, b) => decks[b].at - decks[a].at).slice(0, CARD_TACTICS_DECK_MAX);
+  return {
+    key: CARD_TACTICS_DECK_KEY,
+    before: loaded ? loaded.raw : null,
+    next: {
+      v: 1,
+      decks: Object.fromEntries(keep.map(id => [id, decks[id]]))
+    }
+  };
+};
 const cardLevelEntries = async ({
   kind,
   level,
@@ -120491,8 +120569,10 @@ const CardTacticsScreen = ({
   const [opening, setOpening] = useState(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [deckBox, setDeckBox] = useState(null);
   const reload = async () => {
-    const d = await cardTacticsLoad();
+    const [d, byDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]);
+    setDeckBox(byDeck.box);
     setData(d);
     return d;
   };
@@ -120519,27 +120599,34 @@ const CardTacticsScreen = ({
   const deck = (decks && decks.decks || []).find(d => d.id === (decks && decks.active)) || (decks && decks.decks || [])[0] || null;
   const monOf = i => deck ? cardMonsterOf(db, deck.monsters[i]) : null;
   const saveFrames = async frames => {
-    const fresh = await cardTacticsLoad();
+    const [fresh, freshDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]);
     const next = {
       ...fresh.tactics,
       frames: cardTacticNormalizeFrames(frames)
     };
+    const deckEntry = deck ? cardTacticsDeckEntry(freshDeck, deck.id, frames, {
+      seed: {
+        ids: (decks && decks.decks || []).map(x => x.id),
+        frames: fresh.tactics.frames
+      }
+    }) : null;
     const ok = await saveStoredValuesOrRollback([{
       key: CARD_TACTICS_KEY,
       before: fresh.rawT,
       next
-    }], storeGet, storeSet);
+    }, ...(deckEntry ? [deckEntry] : [])], storeGet, storeSet);
     if (!ok) {
       setNotice('保存できませんでした');
       return;
     }
+    if (deckEntry) setDeckBox(cardTacticsDeckNormalize(deckEntry.next));
     setData({
       ...fresh,
       tactics: next,
       rawT: next
     });
   };
-  const f = t.frames;
+  const f = cardTacticsFramesOfDeck(deckBox, t, deck && deck.id);
   const uncounted = cardTacticUncounted(f);
   const whyOf = (k, i) => {
     const list = k === 'breeder' ? uncounted.breeder : uncounted.mons[k];
@@ -122196,6 +122283,9 @@ const CardDeckRegister = ({
   const [draft, setDraft] = useState(null);
   const [styleId, setStyleId] = useState(null);
   const [aces, setAces] = useState('auto');
+  const [deckBox, setDeckBox] = useState(null);
+  const [rowAces, setRowAces] = useState(null);
+  const deckDrafts = useRef({});
   const [sheet, setSheet] = useState(null);
   const [custom, setCustom] = useState(null);
   const [trial, setTrial] = useState(false);
@@ -122209,7 +122299,7 @@ const CardDeckRegister = ({
   useEffect(() => {
     let alive = true;
     void (async () => {
-      const d = await cardTacticsLoad();
+      const [d, byDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]);
       const [name, icon] = await Promise.all([storeGet('mh_breeder_name', 'ブリーダー', false), storeGet('mh_breeder_icon', '🙂', false)]).catch(() => ['ブリーダー', '🙂']);
       const id = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
       const row = typeof id === 'string' ? await cardShareFetchMine(id).catch(() => null) : null;
@@ -122222,10 +122312,18 @@ const CardDeckRegister = ({
         icon: typeof icon === 'string' && icon ? icon : '🙂'
       });
       const same = row ? list.find(x => JSON.stringify(x.monsters) === JSON.stringify(row.deck.monsters) && JSON.stringify(x.cards) === JSON.stringify(row.deck.cards)) : null;
-      setDeckId((same || list.find(x => issuesOf(x).length === 0) || list[0] || {}).id || null);
-      setDraft(cardTacticNormalizeFrames(d.tactics.frames));
+      const firstId = (same || list.find(x => issuesOf(x).length === 0) || list[0] || {}).id || null;
+      setDeckId(firstId);
+      setDeckBox(byDeck.box);
+      setDraft(cardTacticsFramesOfDeck(byDeck.box, d.tactics, firstId));
       const t = row ? cardShareNormalizeTactics(row.tactics) : null;
-      if (t && t.aces.length) setAces(t.aces);
+      const ra = t && t.aces.length && same ? {
+        id: same.id,
+        aces: t.aces
+      } : null;
+      setRowAces(ra);
+      const keptAces = cardTacticsAcesOfDeck(byDeck.box, firstId);
+      if (keptAces && keptAces.length) setAces(keptAces);else if (ra && ra.id === firstId) setAces(ra.aces);else if (t && t.aces.length && !same) setAces(t.aces);
     })();
     return () => {
       alive = false;
@@ -122266,21 +122364,52 @@ const CardDeckRegister = ({
   });
   const rowsOf = k => k === 'breeder' ? draft.breeder : draft.mons[k];
   const maxOf = k => k === 'breeder' ? open.breeder : open.mon;
+  const pickDeck = id => {
+    if (id === deckId) return;
+    if (deckId) deckDrafts.current[deckId] = {
+      draft,
+      aces,
+      styleId
+    };
+    const kept = deckDrafts.current[id];
+    if (kept) {
+      setDraft(kept.draft);
+      setAces(kept.aces);
+      setStyleId(kept.styleId);
+    } else {
+      setDraft(cardTacticsFramesOfDeck(deckBox, tactics, id));
+      const ka = cardTacticsAcesOfDeck(deckBox, id);
+      setAces(ka && ka.length ? ka : rowAces && rowAces.id === id ? rowAces.aces : 'auto');
+      setStyleId(null);
+    }
+    setDeckId(id);
+  };
   const register = async () => {
     if (!deck || issuesOf(deck).length || !selfId || busy) return;
     setBusy(true);
     setMsg('');
     try {
-      const fresh = await cardTacticsLoad();
+      const [fresh, freshDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]);
       const nextT = {
         ...fresh.tactics,
         frames: cardTacticNormalizeFrames(draft)
       };
-      await saveStoredValuesOrRollback([{
+      const deckEntry = cardTacticsDeckEntry(freshDeck, deck.id, draft, {
+        aces: aces === 'auto' ? null : aces,
+        seed: {
+          ids: list.map(x => x.id),
+          frames: fresh.tactics.frames
+        }
+      });
+      const savedT = await saveStoredValuesOrRollback([{
         key: CARD_TACTICS_KEY,
         before: fresh.rawT,
         next: nextT
-      }], storeGet, storeSet);
+      }, ...(deckEntry ? [deckEntry] : [])], storeGet, storeSet);
+      if (savedT && deckEntry) {
+        setDeckBox(cardTacticsDeckNormalize(deckEntry.next));
+        delete deckDrafts.current[deck.id];
+      }
       const f = cardTacticPackFrames(cardTacticsFramesForBattle(nextT, lv));
       const r = await cardShareRegister({
         ownerId: selfId,
@@ -122406,7 +122535,7 @@ const CardDeckRegister = ({
       disabled: why.length > 0,
       onClick: () => {
         Audio_.fgSe.tap();
-        setDeckId(d.id);
+        pickDeck(d.id);
       },
       className: `flex w-full items-center gap-3 rounded-2xl border-2 p-2 text-left ${deckId === d.id ? 'border-amber-300 bg-amber-950/30' : 'border-slate-700 bg-slate-900'} ${why.length ? 'opacity-50' : ''}`
     }, React.createElement(CardRegThumbs, {
