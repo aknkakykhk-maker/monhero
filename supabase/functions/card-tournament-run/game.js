@@ -1966,7 +1966,7 @@ const CARD_AI_DECK_TUNE = Object.freeze({
   kyuko: { easy: -1.5, normal: -1.5, hard: -1.5, expert: 0, master: -0.05 },   // MASTER は派生25枚(ママニャーなど)で好きな子の幅が広がり強くなったので 0.1 → 1(2026-10-25)
   dra: { easy: -1.5, normal: -1.5, expert: 0.5, master: 0.5 },   // EXPERT はカウンターの直し(半分返して残りを受ける・2026-10-27)で 38% を下回ったので揺らぎを足した(57%)。MASTER は混血のメイン・サブの直し(2026-10-27)のあと、card-rules-check の強さの範囲に入るように 0.5
   atsu: { easy: -1.5, normal: -3, hard: -2.1 },
-  sorashido: { easy: -1.5, normal: -1.5, hard: -1.5, master: -0.05 },   // 2026-10-27 ルールくん(プレイヤー役への勝率 EASY 42.7・NORMAL 48.7・HARD 50.2・EXPERT 47.6・MASTER 47.8%)
+  sorashido: { easy: -1.5, normal: -1.5, hard: -1.5, master: 0.5 },   // MASTER は雑な手を0にした(2026-11-03 社長 A)ぶん、強さはデッキの揺らぎで合わせる(-0.05 → 0.5・プレイヤー役への勝率 74→52%)。2026-10-27 ルールくん(プレイヤー役への勝率 EASY 42.7・NORMAL 48.7・HARD 50.2・EXPERT 47.6・MASTER 47.8%)
 });
 // 組み直すデッキで、順番の枠に入れてよい「入れたい度」の下限(cardAiCardValue の値)。助手ごとの違いは、
 //   EXPERT・MASTER でプレイヤー役との勝率がそろうように tools/card/card-ai-balance.js で決めた
@@ -3741,7 +3741,7 @@ const CARD_SHARE_SMART_LABEL = Object.freeze({ expert: 'EXPERT', master: 'MASTER
 const CARD_SHARE_SEARCH = Object.freeze({
   // 深さは GRAND MASTER < HELL < LEGEND の順(2026-11-03 社長 D。MASTER の助手への勝率 55・58・65% の見込み)
   grandmaster: Object.freeze({ k: 3, r: 1, h: 1, eval: 'ko' }),
-  hell: Object.freeze({ k: 4, r: 2, h: 2, eval: 'ko' }),
+  hell: Object.freeze({ k: 3, r: 1, h: 2, eval: 'ko' }),
   legend: Object.freeze({ k: 4, r: 2, h: 4, eval: 'alive' }),
 });
 // 土台のくせ(メインの基本カードが助手の型ならその助手。前の形の登録や画面の名前に使う)
