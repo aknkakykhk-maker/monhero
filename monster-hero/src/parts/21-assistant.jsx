@@ -38,9 +38,14 @@ const STORY_BOTTOM_KEEP_ROW = true;
 //   'card' = 終わりの札 / 'next' = 札 + 次のお話の予告 + 次にやることのボタン / 'pull' = 最後の場面を引いて暗転してから 'next' / 'none' = 出さない
 const STORY_ENDING_STYLE = 'pull';
 // 題(「鍵の向こう側へ 第3話 ～大嫌いで、大好き～」)を、シリーズ名・何話・副題に分ける
+//   続きもの(「第◯話」「第◯部」「終章」がある題)は { series, ep, sub, serial:true }。単発のお話(「MFバトルカード ～物置の古い箱～」)は ep に題の前半、sub に「～…～」
+//   final … 「終章」(ハロウィンのエンディングA/B・パンドラ第8話)。次のお話は出さず「おしまい」にする
 const storyEpisodeTitleParts = (title) => {
-  const m = String(title || '').match(/^(.*?)\s*(第\d+話[^～\s]*)\s*(～.*～)?\s*$/);
-  return m ? { series: m[1] || '', ep: m[2] || '', sub: m[3] || '' } : { series: '', ep: String(title || ''), sub: '' };
+  const t = String(title || '').trim();
+  const m = t.match(/^(.*?)\s*(第[\d.]+[話部][^～\s]*|終章)\s*(～.*～)?\s*$/);
+  if (m) return { series: m[1] || '', ep: m[2] || '', sub: m[3] || '', serial: true, final: /終章/.test(m[2] || '') };
+  const s = t.match(/^(.*?)\s*(～.*～)\s*$/);
+  return s ? { series: '', ep: s[1] || t, sub: s[2] || '', serial: false, final: false } : { series: '', ep: t, sub: '', serial: false, final: false };
 };
 // 'YYYY-MM-DD HH:MM'(日本時間)を時刻へ。読めなければ NaN
 const storyJstMs = (text) => Date.parse(`${String(text || '').trim().replace(' ', 'T')}:00+09:00`);
