@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8a31ba06c227714a
+// source-sha256: 66c00d9e6cd5f9a4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -18689,15 +18689,28 @@ const STORY_MONSTER_ART = Object.freeze({
 const STORY_BOTTOM_KEEP_ROW = true;
 const STORY_ENDING_STYLE = 'pull';
 const storyEpisodeTitleParts = title => {
-  const m = String(title || '').match(/^(.*?)\s*(第\d+話[^～\s]*)\s*(～.*～)?\s*$/);
-  return m ? {
+  const t = String(title || '').trim();
+  const m = t.match(/^(.*?)\s*(第[\d.]+[話部][^～\s]*|終章)\s*(～.*～)?\s*$/);
+  if (m) return {
     series: m[1] || '',
     ep: m[2] || '',
-    sub: m[3] || ''
+    sub: m[3] || '',
+    serial: true,
+    final: /終章/.test(m[2] || '')
+  };
+  const s = t.match(/^(.*?)\s*(～.*～)\s*$/);
+  return s ? {
+    series: '',
+    ep: s[1] || t,
+    sub: s[2] || '',
+    serial: false,
+    final: false
   } : {
     series: '',
-    ep: String(title || ''),
-    sub: ''
+    ep: t,
+    sub: '',
+    serial: false,
+    final: false
   };
 };
 const storyJstMs = text => Date.parse(`${String(text || '').trim().replace(' ', 'T')}:00+09:00`);
@@ -160234,10 +160247,11 @@ function MonsterHeroGame() {
       const step = Math.max(0, Math.min(eventReplay.step, script.length - 1));
       const line = script[step];
       const speaker = assistantById(line.who);
-      const storyZones = script.some(l => l && Array.isArray(l.monsters));
+      const storyZones = script.length > 0;
       const storySub = storyZones ? Math.max(0, Math.floor(Number(eventReplay.sub) || 0)) : 0;
+      const storyKeepRow = typeof STORY_BOTTOM_KEEP_ROW === 'undefined' ? true : !!STORY_BOTTOM_KEEP_ROW;
       let last = step === script.length - 1;
-      const storyEnding = !!event && /_ep\d+$/.test(event.id) && typeof STORY_ENDING_STYLE !== 'undefined' && STORY_ENDING_STYLE !== 'none';
+      const storyEnding = !!event && typeof STORY_ENDING_STYLE !== 'undefined' && STORY_ENDING_STYLE !== 'none';
       const isGuestWho = id => {
         const w = assistantById(id);
         return !!w && w.role === 'ゲスト';
@@ -160304,7 +160318,7 @@ function MonsterHeroGame() {
       }, i > 0 && React.createElement("br", null), bubbleWrap(x))) : bubbleWrap(text);
       const storyLand = typeof window !== 'undefined' && window.innerWidth > window.innerHeight && window.innerHeight <= 500;
       const storyBoxW = typeof window !== 'undefined' ? Math.min(window.innerWidth, 448) : 390;
-      const storyCplBottom = Math.max(8, Math.floor((storyBoxW - 64 - (storyZones ? storyLand ? 62 : 100 : 0)) / 13) - (storyZones ? 3 : 2));
+      const storyCplBottom = Math.max(8, Math.floor((storyBoxW - 64 - (storyZones ? storyLand ? 62 : 100 : 0)) / 13) - (storyZones ? 4 : 2));
       const storyCplBubble = Math.max(6, storyLand ? Math.floor((storyBoxW - 118) / 12) - 3 : Math.floor((storyBoxW - 156) / 14) - 4);
       const storyPageCache = [];
       const storyPagesOf = i => {
@@ -160414,7 +160428,7 @@ function MonsterHeroGame() {
         "data-event-story": eventReplay.id,
         "data-story-has-stage": stageGuest ? '1' : undefined,
         "data-story-step": step,
-        "data-story-zones": storyZones ? STORY_BOTTOM_KEEP_ROW ? 'facerow' : 'face' : undefined,
+        "data-story-zones": storyZones ? storyKeepRow ? 'facerow' : 'face' : undefined,
         "data-story-ending-pull": eventReplay.ending && STORY_ENDING_STYLE === 'pull' ? '' : undefined,
         className: "fixed inset-0 flex items-end justify-center",
         style: {
@@ -160604,7 +160618,7 @@ function MonsterHeroGame() {
       }, React.createElement("p", {
         className: "mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300"
       }, eventReplay.live ? '' : '回想・', event?.title || ''), (() => {
-        if (storyZones && !STORY_BOTTOM_KEEP_ROW) return null;
+        if (storyZones && !storyKeepRow) return null;
         const tiny = storyZones;
         const atStart = Array.isArray(event && event.castAtStart) ? event.castAtStart : [];
         const rowCast = tiny ? cast.filter(who => atStart.includes(who.id) || script.slice(0, step + 1).some(l => l && l.who === who.id)) : cast;
@@ -160639,7 +160653,7 @@ function MonsterHeroGame() {
           }, React.createElement("span", {
             style: {
               display: 'block',
-              filter: talking ? `drop-shadow(0 0 10px ${who.accent})` : 'none',
+              filter: talking && !tiny ? `drop-shadow(0 0 10px ${who.accent})` : 'none',
               transition: 'filter .2s'
             }
           }, React.createElement(AssistantFace, {
@@ -160731,18 +160745,22 @@ function MonsterHeroGame() {
         const pull = STORY_ENDING_STYLE === 'pull';
         const rich = STORY_ENDING_STYLE !== 'card';
         const delay = pull ? 1.1 : 0;
-        const nextId = event.id.replace(/_ep(\d+)$/, (m, n) => `_ep${Number(n) + 1}`);
-        const nextEv = (typeof EVENT_REPLAYS !== 'undefined' ? EVENT_REPLAYS : []).find(ev => ev && ev.id === nextId) || null;
+        const allEv = (typeof EVENT_REPLAYS !== 'undefined' ? EVENT_REPLAYS : []).filter(ev => ev && ev.id && ev.title);
+        const series = parts.serial ? allEv.filter(ev => ev.group === event.group && storyEpisodeTitleParts(ev.title).serial && storyEpisodeTitleParts(ev.title).series === parts.series).sort((a, b) => String(a.date || '').localeCompare(String(b.date || ''))) : [];
+        const nextEv = parts.serial && !parts.final ? series[series.findIndex(ev => ev.id === event.id) + 1] || null : null;
         const nextParts = nextEv ? storyEpisodeTitleParts(nextEv.title) : null;
+        if (nextParts && nextParts.final && series.filter(ev => storyEpisodeTitleParts(ev.title).final).length > 1) nextParts.sub = '';
         const nextAt = nextEv ? storyJstMs(nextEv.date) : NaN;
         const now = Date.now();
         const jst = Number.isFinite(nextAt) ? new Date(nextAt + 9 * 3600 * 1000) : null;
         const when = jst ? `${jst.getUTCMonth() + 1}/${jst.getUTCDate()}(${'日月火水木金土'[jst.getUTCDay()]}) ${jst.getUTCHours()}:${String(jst.getUTCMinutes()).padStart(2, '0')}` : '';
         const left = Number.isFinite(nextAt) && nextAt > now ? nextAt - now : 0;
         const leftText = left > 0 ? left >= 3600000 ? `あと${Math.floor(left / 3600000)}時間${Math.floor(left % 3600000 / 60000)}分` : `あと${Math.max(1, Math.ceil(left / 60000))}分` : '';
-        const groupIds = (typeof EVENT_REPLAYS !== 'undefined' ? EVENT_REPLAYS : []).filter(ev => ev && ev.id.replace(/_ep\d+$/, '') === event.id.replace(/_ep\d+$/, '')).map(ev => ev.id);
+        const groupIds = series.filter(ev => !storyEpisodeTitleParts(ev.title).final).map(ev => ev.id);
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeen);
-        const allSeen = !nextEv && groupIds.length > 1 && groupIds.every(id => id === event.id || seenNow.includes(id));
+        const allSeen = parts.final && groupIds.length > 1 && groupIds.every(id => id === event.id || seenNow.includes(id));
+        const allCount = groupIds.length + 1;
+        const allUnit = /部/.test(parts.ep) || series.some(ev => /第[\d.]+部/.test(ev.title)) ? '部' : '話';
         const canClose = () => Date.now() - (Number(eventReplay.endingAt) || 0) > (delay + 1.2) * 1000;
         const go = fn => e => {
           e.stopPropagation();
@@ -160793,7 +160811,7 @@ function MonsterHeroGame() {
             backgroundClip: 'text',
             color: 'transparent'
           }
-        }, nextEv || !rich ? 'おわり' : 'おしまい'), rich && nextEv && React.createElement("div", {
+        }, parts.final ? 'おしまい' : 'おわり'), rich && nextEv && React.createElement("div", {
           "data-story-ending-next": true,
           className: "mx-auto mt-5 rounded-2xl border border-fuchsia-300/40 bg-slate-900/80 px-3 py-2",
           style: {
@@ -160803,7 +160821,7 @@ function MonsterHeroGame() {
           className: "text-[11px] font-black text-fuchsia-200"
         }, "次のお話"), React.createElement("p", {
           className: "text-[14px] font-black text-white"
-        }, nextParts.ep, " ", nextParts.sub), React.createElement("p", {
+        }, nextParts.series && nextParts.series !== parts.series ? `${nextParts.series} ` : '', nextParts.ep, " ", nextParts.sub), eventReplay.live && React.createElement("p", {
           className: "text-[12px] font-bold text-slate-300"
         }, left > 0 ? React.createElement(React.Fragment, null, when, " から ", React.createElement("b", {
           className: "text-amber-200"
@@ -160813,7 +160831,7 @@ function MonsterHeroGame() {
           style: {
             animation: `storyEndCard 1s ease-out ${delay + 1.5}s both`
           }
-        }, "🔑 全", groupIds.length, "話 ぜんぶ見た！"), rich && eventReplay.live && !eventReplay.debug && React.createElement("div", {
+        }, "🔑 全", allCount, allUnit, " ぜんぶ見た！"), rich && eventReplay.live && !eventReplay.debug && /^pandora_wings_/.test(event.id) && React.createElement("div", {
           "data-story-ending-actions": true,
           className: "mt-4 grid grid-cols-2 gap-2",
           style: {
