@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3226f0a4afb74804
+// generated-sha256: ceb46744f54bb119
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -97658,7 +97658,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const storyLand=typeof window!=='undefined'&&window.innerWidth>window.innerHeight&&window.innerHeight<=500;
         const storyBoxW=typeof window!=='undefined'?Math.min(window.innerWidth,448):390;
         // 下部ゾーンは台詞の欄の左に話している助手の顔(縦 92px・横の低い画面は 0.6倍)があるので、そのぶん狭い
-        const storyCplBottom=Math.max(8,Math.floor((storyBoxW-64-(storyZones?(storyLand?62:100):0))/13)-(storyZones?3:2));
+        const storyCplBottom=Math.max(8,Math.floor((storyBoxW-64-(storyZones?(storyLand?62:100):0))/13)-(storyZones?4:2));
         // 吹き出しは幅が狭く、言葉の切れ目で折ると行の終わりが空きやすいので、さらに控えめに見込む(縦の 390 幅で1行12字)
         const storyCplBubble=Math.max(6,storyLand?Math.floor((storyBoxW-118)/12)-3:Math.floor((storyBoxW-156)/14)-4);
         const storyPageCache=[];
@@ -97879,8 +97879,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))):[];
             const nextEv=parts.serial&&!parts.final?(series[series.findIndex(ev=>ev.id===event.id)+1]||null):null;
             const nextParts=nextEv?storyEpisodeTitleParts(nextEv.title):null;
-            // 次が「終章」(結果で分かれるエンディング)なら、副題は出さない(どちらになるかを先に見せない)
-            if(nextParts&&nextParts.final) nextParts.sub='';
+            // 次が「終章」で、結果で分かれる(終章が2つある)ときは、副題を出さない(どちらになるかを先に見せない)
+            if(nextParts&&nextParts.final&&series.filter(ev=>storyEpisodeTitleParts(ev.title).final).length>1) nextParts.sub='';
             const nextAt=nextEv?storyJstMs(nextEv.date):NaN;
             const now=Date.now();
             const jst=Number.isFinite(nextAt)?new Date(nextAt+9*3600*1000):null;
@@ -97891,6 +97891,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const groupIds=series.filter(ev=>!storyEpisodeTitleParts(ev.title).final).map(ev=>ev.id);
             const seenNow=normalizeRhythmEventRewardClaims(rhythmEventStorySeen);
             const allSeen=parts.final&&groupIds.length>1&&groupIds.every(id=>id===event.id||seenNow.includes(id));
+            // 全◯話: 終章までを数える(結果で分かれる終章は1つと数える)。「第◯部」で数えるお話は「部」
+            const allCount=groupIds.length+1;
+            const allUnit=/部/.test(parts.ep)||series.some(ev=>/第[\d.]+部/.test(ev.title))?'部':'話';
             const canClose=()=>Date.now()-(Number(eventReplay.endingAt)||0)>(delay+1.2)*1000;
             const go=(fn)=>(e)=>{e.stopPropagation();next();fn();};
             return(
@@ -97907,7 +97910,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* 残り時間は本編(HOME で流れたとき)だけ。回想では題名だけ(2026-11-03 社長) */}
                   {eventReplay.live&&<p className="text-[12px] font-bold text-slate-300">{left>0?<>{when} から <b className="text-amber-200">{leftText}</b></>:'もう見られます(プロフィールの「イベント回想」)'}</p>}
                 </div>}
-                {rich&&!nextEv&&allSeen&&<p data-story-ending-all className="mx-auto mt-4 inline-block rounded-full border border-amber-300/60 bg-amber-500/15 px-4 py-1 text-[13px] font-black text-amber-100" style={{animation:`storyEndCard 1s ease-out ${delay+1.5}s both`}}>🔑 全{groupIds.length}話 ぜんぶ見た！</p>}
+                {rich&&!nextEv&&allSeen&&<p data-story-ending-all className="mx-auto mt-4 inline-block rounded-full border border-amber-300/60 bg-amber-500/15 px-4 py-1 text-[13px] font-black text-amber-100" style={{animation:`storyEndCard 1s ease-out ${delay+1.5}s both`}}>🔑 全{allCount}{allUnit} ぜんぶ見た！</p>}
                 {rich&&eventReplay.live&&!eventReplay.debug&&/^pandora_wings_/.test(event.id)&&<div data-story-ending-actions className="mt-4 grid grid-cols-2 gap-2" style={{animation:`storyEndCard 1s ease-out ${delay+1.8}s both`}}>
                   <button type="button" onClick={go(()=>setGameState('RHYTHM_DEMO_HOME'))} className="min-h-[48px] rounded-2xl bg-fuchsia-500 text-[13px] font-black text-slate-950 active:scale-[.98]">🎵 イベントの曲を遊ぶ</button>
                   <button type="button" onClick={go(()=>{setRhythmRankingTab('event');loadRhythmEventRanking('limited',rhythmEventDivision.limited);setGameState('RHYTHM_RANKING');})} className="min-h-[48px] rounded-2xl border border-fuchsia-300/60 bg-slate-900 text-[13px] font-black text-fuchsia-100 active:scale-[.98]">🏆 ランキングを見る</button>
