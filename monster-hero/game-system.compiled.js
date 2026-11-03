@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 46ea24dd2f54db08
+// source-sha256: b2c76e74475a5619
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13349,6 +13349,8 @@ const changelogEventLive = (entry, nowMs = Date.now()) => {
   if (!notice || !notice.notifyUntil) return false;
   const from = Date.parse(notice.notifyFrom || entry.visibleFrom || '');
   const until = Date.parse(notice.notifyUntil);
+  const pinUntil = Date.parse(entry.pinUntil || '');
+  if (Number.isFinite(pinUntil) && nowMs >= pinUntil) return false;
   return Number.isFinite(until) && nowMs < until && (!Number.isFinite(from) || nowMs >= from);
 };
 const changelogSafeLink = link => {
@@ -148807,7 +148809,7 @@ function MonsterHeroGame() {
         padding: '1px 8px',
         fontSize: 11
       }
-    }, "🎃 開催中"), React.createElement("span", {
+    }, typeof c.pinEmoji === 'string' && c.pinEmoji ? c.pinEmoji : '🎉', " 開催中"), React.createElement("span", {
       "data-changelog-pinned-title": true,
       style: {
         flex: 1,
@@ -148836,7 +148838,22 @@ function MonsterHeroGame() {
         borderRadius: 12,
         margin: '8px 0 4px'
       }
-    }), (c.items || []).map((x, j) => React.createElement("p", {
+    }), typeof c.video === 'string' && c.video && React.createElement("figure", {
+      "data-changelog-pinned-video": true,
+      style: {
+        margin: '6px 0'
+      }
+    }, React.createElement("figcaption", {
+      style: {
+        fontWeight: 900,
+        fontSize: 12,
+        color: '#ffedd5',
+        margin: '0 0 4px'
+      }
+    }, "▶ 予告動画"), React.createElement(ChangelogVideo, {
+      src: c.video,
+      poster: typeof c.videoPoster === 'string' ? c.videoPoster : undefined
+    })), (c.items || []).map((x, j) => React.createElement("p", {
       key: j,
       style: {
         fontSize: 12,
