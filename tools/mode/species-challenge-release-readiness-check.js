@@ -53,8 +53,17 @@ check('チャレンジ・極限の通算クリア数を書き換えない',
 // ===== ② 全国ランキングの識別(種族×難易度) =====
 const lineages = api.dexMainLineages();
 const difficulties = api.SPECIES_CHALLENGE_DIFFICULTY_IDS;
-// 2026-10-29 極限チャレンジに ETERNAL を足したので、種族チャレンジの難易度も17→18(#4232)
-check('主血統と18難易度が読める', lineages.length > 0 && difficulties.length === 18, `${lineages.length}種族 × ${difficulties.length}難易度`);
+// 種族チャレンジの難易度は「ふつうの難易度(DIFFICULTY_SETTINGS)+極限チャレンジの難易度」と同じ並び。
+// 数を書き写すと、極限に難易度が増えるたびに古くなる(ETERNAL で17→18・冥界の INFERNO・COCYTUS で18→20 になったのに残っていた)。
+// なので、既存のランキングの難易度の一覧(Extreme〜)から数えて、同じ顔ぶれかを見る
+const expectedDifficulties = [
+  ...Object.keys(api.DIFFICULTY_SETTINGS),
+  ...api.RANKING_DIFFICULTY_KEYS.filter(key => key.startsWith('Extreme')).map(key => key.slice('Extreme'.length)),
+];
+check('主血統と、ふつう+極限の全難易度が読める',
+  lineages.length > 0 && new Set(difficulties).size === difficulties.length
+  && difficulties.length === expectedDifficulties.length && expectedDifficulties.every(id => difficulties.includes(id)),
+  `${lineages.length}種族 × ${difficulties.length}難易度(期待 ${expectedDifficulties.length}: ${expectedDifficulties.filter(id => !difficulties.includes(id)).join(',') || '不足なし'})`);
 const speciesKeys = [];
 for (const lineage of lineages) for (const difficultyId of difficulties) {
   const key = api.speciesChallengeRankingDifficulty(lineage.id, difficultyId);
