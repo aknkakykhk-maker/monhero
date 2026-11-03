@@ -32,10 +32,11 @@ const STORY_MONSTER_ART = Object.freeze({
 //   cpl … 1行に入る字数の見込み(全角1・半角0.55で数える) / maxLines … 行数
 // 3つのゾーンのお話の下部ゾーンで、話していない助手の顔の列も小さく1行で残すか(2026-11-03 社長「下部を喋る人を下部横において」の案。
 //   false = 顔の列は出さず、話している助手の顔だけを台詞の欄の左に置く / true = その上に小さい顔の列を1行残す)
-const STORY_BOTTOM_KEEP_ROW = false;
+// 2026-11-03 社長が案B(小さい顔の列を残す)を選んだ。列に並べるのは「その場面にいる人」だけ(60-app.jsx の storyCastNow)
+const STORY_BOTTOM_KEEP_ROW = true;
 // お話の締め(2026-11-03 社長「ストーリーイベントの最後のページが終わるとあっけないから工夫がほしい」)。続きもののお話(id が …_ep1 〜)だけ。
 //   'card' = 終わりの札 / 'next' = 札 + 次のお話の予告 + 次にやることのボタン / 'pull' = 最後の場面を引いて暗転してから 'next' / 'none' = 出さない
-const STORY_ENDING_STYLE = 'next';
+const STORY_ENDING_STYLE = 'none';
 // 題(「鍵の向こう側へ 第3話 ～大嫌いで、大好き～」)を、シリーズ名・何話・副題に分ける
 const storyEpisodeTitleParts = (title) => {
   const m = String(title || '').match(/^(.*?)\s*(第\d+話[^～\s]*)\s*(～.*～)?\s*$/);

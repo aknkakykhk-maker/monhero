@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1a83d861e8454c9c
+// source-sha256: 6c3c55734b558621
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -18686,8 +18686,8 @@ const STORY_MONSTER_ART = Object.freeze({
   PandoraAngel: typeof PANDORA_ANGEL_IMG !== 'undefined' ? PANDORA_ANGEL_IMG : null,
   PandoraDevil: typeof PANDORA_DEVIL_IMG !== 'undefined' ? PANDORA_DEVIL_IMG : null
 });
-const STORY_BOTTOM_KEEP_ROW = false;
-const STORY_ENDING_STYLE = 'next';
+const STORY_BOTTOM_KEEP_ROW = true;
+const STORY_ENDING_STYLE = 'none';
 const storyEpisodeTitleParts = title => {
   const m = String(title || '').match(/^(.*?)\s*(第\d+話[^～\s]*)\s*(～.*～)?\s*$/);
   return m ? {
@@ -160605,6 +160605,15 @@ function MonsterHeroGame() {
       }, eventReplay.live ? '' : '回想・', event?.title || ''), (() => {
         if (storyZones && !STORY_BOTTOM_KEEP_ROW) return null;
         const tiny = storyZones;
+        const atStart = Array.isArray(event && event.castAtStart) ? event.castAtStart : [];
+        const rowCast = tiny ? cast.filter(who => atStart.includes(who.id) || script.slice(0, step + 1).some(l => l && l.who === who.id)) : cast;
+        if (tiny && rowCast.length === 0) return React.createElement("div", {
+          "data-story-cast-tiny-empty": true,
+          style: {
+            height: 28,
+            marginBottom: 6
+          }
+        });
         const compact = !tiny && storyMonsters.length > 0;
         const many = !compact && !tiny && cast.length > 4;
         const big = tiny ? 28 : compact ? 44 : many ? 60 : 84,
@@ -160614,7 +160623,7 @@ function MonsterHeroGame() {
           "data-story-cast-compact": compact || tiny ? '' : undefined,
           "data-story-cast-tiny": tiny ? '' : undefined,
           className: `${tiny ? 'mb-1.5 flex-nowrap gap-1' : compact ? 'mb-2 flex-nowrap gap-1.5' : 'mb-3'} flex items-end justify-center ${many ? 'flex-wrap gap-x-1 gap-y-1.5' : compact || tiny ? '' : 'gap-3'}`
-        }, cast.map(who => {
+        }, rowCast.map(who => {
           const talking = !speakingGuest && who.id === line.who;
           return React.createElement("div", {
             key: who.id,
