@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f507fee9e13676a6
+// source-sha256: 1a83d861e8454c9c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -9230,8 +9230,20 @@ const Audio_ = (() => {
       masterOut.gain.value = videoHold ? 0 : 1;
     }
   };
+  const setStoryEndFade = on => {
+    if (!masterOut || !audioCtx) return;
+    try {
+      const at = audioCtx.currentTime;
+      masterOut.gain.cancelScheduledValues(at);
+      masterOut.gain.setValueAtTime(masterOut.gain.value, at);
+      masterOut.gain.linearRampToValueAtTime(on || videoHold ? 0 : 1, at + (on ? 2.5 : 0.25));
+    } catch (e) {
+      masterOut.gain.value = on || videoHold ? 0 : 1;
+    }
+  };
   return {
     setVideoHold,
+    setStoryEndFade,
     playSeFile,
     preloadSE,
     playBGM,
@@ -18675,8 +18687,22 @@ const STORY_MONSTER_ART = Object.freeze({
   PandoraDevil: typeof PANDORA_DEVIL_IMG !== 'undefined' ? PANDORA_DEVIL_IMG : null
 });
 const STORY_BOTTOM_KEEP_ROW = false;
+const STORY_ENDING_STYLE = 'next';
+const storyEpisodeTitleParts = title => {
+  const m = String(title || '').match(/^(.*?)\s*(第\d+話[^～\s]*)\s*(～.*～)?\s*$/);
+  return m ? {
+    series: m[1] || '',
+    ep: m[2] || '',
+    sub: m[3] || ''
+  } : {
+    series: '',
+    ep: String(title || ''),
+    sub: ''
+  };
+};
+const storyJstMs = text => Date.parse(`${String(text || '').trim().replace(' ', 'T')}:00+09:00`);
 const storyTextUnits = s => [...String(s)].reduce((a, ch) => a + (/[\x20-\x7e｡-ﾟ]/.test(ch) ? 0.55 : 1), 0);
-const storyTextLines = (s, cpl) => String(s).split('\n').reduce((a, seg) => a + Math.max(1, Math.ceil(storyTextUnits(seg) / Math.max(1, cpl))), 0);
+const storyTextLines = (s, cpl) => String(s).split('\n').reduce((a, seg) => a + Math.max(1, Math.ceil((storyTextUnits(seg) + 1.5) / Math.max(1, cpl))), 0);
 const storySplitPages = (text, cpl, maxLines) => {
   const s = String(text ?? '');
   if (!s || storyTextLines(s, cpl) <= maxLines) return [s];
@@ -129888,6 +129914,10 @@ function MonsterHeroGame() {
   const [showEventReplayList, setShowEventReplayList] = useState(false);
   const [eventReplayGroupId, setEventReplayGroupId] = useState(null);
   const [eventReplay, setEventReplay] = useState(null);
+  const eventReplayEnding = !!(eventReplay && eventReplay.ending);
+  useEffect(() => {
+    if (!eventReplayEnding && typeof Audio_ !== 'undefined' && Audio_.setStoryEndFade) Audio_.setStoryEndFade(false);
+  }, [eventReplayEnding]);
   const [showDebugStoryList, setShowDebugStoryList] = useState(false);
   setAssistantCostumeStoryNow(eventReplay ? ((eventReplay.debug ? eventReplayAllList() : eventReplayList()).find(ev => ev.id === eventReplay.id) || {}).costumes || null : null);
   const [breederPoints, setBreederPoints] = useState(0);
@@ -160207,6 +160237,7 @@ function MonsterHeroGame() {
       const storyZones = script.some(l => l && Array.isArray(l.monsters));
       const storySub = storyZones ? Math.max(0, Math.floor(Number(eventReplay.sub) || 0)) : 0;
       let last = step === script.length - 1;
+      const storyEnding = !!event && /_ep\d+$/.test(event.id) && typeof STORY_ENDING_STYLE !== 'undefined' && STORY_ENDING_STYLE !== 'none';
       const isGuestWho = id => {
         const w = assistantById(id);
         return !!w && w.role === 'ゲスト';
@@ -160273,7 +160304,7 @@ function MonsterHeroGame() {
       }, i > 0 && React.createElement("br", null), bubbleWrap(x))) : bubbleWrap(text);
       const storyLand = typeof window !== 'undefined' && window.innerWidth > window.innerHeight && window.innerHeight <= 500;
       const storyBoxW = typeof window !== 'undefined' ? Math.min(window.innerWidth, 448) : 390;
-      const storyCplBottom = Math.max(8, Math.floor((storyBoxW - 64 - (storyZones ? storyLand ? 62 : 100 : 0)) / 13) - 2);
+      const storyCplBottom = Math.max(8, Math.floor((storyBoxW - 64 - (storyZones ? storyLand ? 62 : 100 : 0)) / 13) - (storyZones ? 3 : 2));
       const storyCplBubble = Math.max(6, storyLand ? Math.floor((storyBoxW - 118) / 12) - 3 : Math.floor((storyBoxW - 156) / 14) - 4);
       const storyPageCache = [];
       const storyPagesOf = i => {
@@ -160319,6 +160350,15 @@ function MonsterHeroGame() {
               sub: 0
             })
           });
+          return;
+        }
+        if (storyEnding && !eventReplay.ending) {
+          setEventReplay(r => r && {
+            ...r,
+            ending: true,
+            endingAt: Date.now()
+          });
+          if (typeof Audio_ !== 'undefined' && Audio_.setStoryEndFade) Audio_.setStoryEndFade(true);
           return;
         }
         if (event && event.id === 'momosuke_intro' && !eventReplay.debug) markMomosukeIntroSeen();
@@ -160374,6 +160414,7 @@ function MonsterHeroGame() {
         "data-event-story": eventReplay.id,
         "data-story-has-stage": stageGuest ? '1' : undefined,
         "data-story-zones": storyZones ? STORY_BOTTOM_KEEP_ROW ? 'facerow' : 'face' : undefined,
+        "data-story-ending-pull": eventReplay.ending && STORY_ENDING_STYLE === 'pull' ? '' : undefined,
         className: "fixed inset-0 flex items-end justify-center",
         style: {
           position: 'fixed',
@@ -160675,7 +160716,124 @@ function MonsterHeroGame() {
           next();
         },
         className: "min-h-[50px] rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]"
-      }, last ? '閉じる' : '次へ'))));
+      }, last && !(storyEnding && !eventReplay.ending) ? '閉じる' : '次へ'))), eventReplay.ending && (() => {
+        const parts = storyEpisodeTitleParts(event?.title);
+        const pull = STORY_ENDING_STYLE === 'pull';
+        const rich = STORY_ENDING_STYLE !== 'card';
+        const delay = pull ? 1.1 : 0;
+        const nextId = event.id.replace(/_ep(\d+)$/, (m, n) => `_ep${Number(n) + 1}`);
+        const nextEv = (typeof EVENT_REPLAYS !== 'undefined' ? EVENT_REPLAYS : []).find(ev => ev && ev.id === nextId) || null;
+        const nextParts = nextEv ? storyEpisodeTitleParts(nextEv.title) : null;
+        const nextAt = nextEv ? storyJstMs(nextEv.date) : NaN;
+        const now = Date.now();
+        const jst = Number.isFinite(nextAt) ? new Date(nextAt + 9 * 3600 * 1000) : null;
+        const when = jst ? `${jst.getUTCMonth() + 1}/${jst.getUTCDate()}(${'日月火水木金土'[jst.getUTCDay()]}) ${jst.getUTCHours()}:${String(jst.getUTCMinutes()).padStart(2, '0')}` : '';
+        const left = Number.isFinite(nextAt) && nextAt > now ? nextAt - now : 0;
+        const leftText = left > 0 ? left >= 3600000 ? `あと${Math.floor(left / 3600000)}時間${Math.floor(left % 3600000 / 60000)}分` : `あと${Math.max(1, Math.ceil(left / 60000))}分` : '';
+        const groupIds = (typeof EVENT_REPLAYS !== 'undefined' ? EVENT_REPLAYS : []).filter(ev => ev && ev.id.replace(/_ep\d+$/, '') === event.id.replace(/_ep\d+$/, '')).map(ev => ev.id);
+        const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeen);
+        const allSeen = !nextEv && groupIds.length > 1 && groupIds.every(id => id === event.id || seenNow.includes(id));
+        const canClose = () => Date.now() - (Number(eventReplay.endingAt) || 0) > (delay + 1.2) * 1000;
+        const go = fn => e => {
+          e.stopPropagation();
+          next();
+          fn();
+        };
+        return React.createElement("div", {
+          "data-story-ending": STORY_ENDING_STYLE,
+          onClick: e => {
+            e.stopPropagation();
+            if (canClose()) next();
+          },
+          style: {
+            position: 'absolute',
+            inset: 0,
+            zIndex: 20,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'auto',
+            animation: `storyEndDim .9s ease-out ${delay}s both`
+          }
+        }, React.createElement("div", {
+          className: "w-full max-w-sm px-6 text-center"
+        }, React.createElement("p", {
+          className: "text-[12px] font-black tracking-[.3em] text-fuchsia-200/80",
+          style: {
+            animation: `storyEndCard 1s ease-out ${delay + .2}s both`
+          }
+        }, parts.series), React.createElement("p", {
+          className: "mt-2 text-[30px] font-black leading-tight text-white",
+          style: {
+            animation: `storyEndCard 1s ease-out ${delay + .35}s both`,
+            textShadow: '0 0 18px rgba(192,132,252,.8)'
+          }
+        }, parts.ep), parts.sub && React.createElement("p", {
+          className: "mt-1 text-[16px] font-black text-fuchsia-100",
+          style: {
+            animation: `storyEndCard 1s ease-out ${delay + .5}s both`
+          }
+        }, parts.sub), React.createElement("p", {
+          "data-story-ending-fin": true,
+          className: "mt-5 text-[38px] font-black tracking-[.4em]",
+          style: {
+            animation: `storyEndFin 1.4s ease-out ${delay + .9}s both`,
+            background: 'linear-gradient(180deg,#fde68a,#f0abfc)',
+            WebkitBackgroundClip: 'text',
+            backgroundClip: 'text',
+            color: 'transparent'
+          }
+        }, nextEv || !rich ? 'おわり' : 'おしまい'), rich && nextEv && React.createElement("div", {
+          "data-story-ending-next": true,
+          className: "mx-auto mt-5 rounded-2xl border border-fuchsia-300/40 bg-slate-900/80 px-3 py-2",
+          style: {
+            animation: `storyEndCard 1s ease-out ${delay + 1.5}s both`
+          }
+        }, React.createElement("p", {
+          className: "text-[11px] font-black text-fuchsia-200"
+        }, "次のお話"), React.createElement("p", {
+          className: "text-[14px] font-black text-white"
+        }, nextParts.ep, " ", nextParts.sub), React.createElement("p", {
+          className: "text-[12px] font-bold text-slate-300"
+        }, left > 0 ? React.createElement(React.Fragment, null, when, " から ", React.createElement("b", {
+          className: "text-amber-200"
+        }, leftText)) : 'もう見られます(プロフィールの「イベント回想」)')), rich && !nextEv && allSeen && React.createElement("p", {
+          "data-story-ending-all": true,
+          className: "mx-auto mt-4 inline-block rounded-full border border-amber-300/60 bg-amber-500/15 px-4 py-1 text-[13px] font-black text-amber-100",
+          style: {
+            animation: `storyEndCard 1s ease-out ${delay + 1.5}s both`
+          }
+        }, "🔑 全", groupIds.length, "話 ぜんぶ見た！"), rich && eventReplay.live && !eventReplay.debug && React.createElement("div", {
+          "data-story-ending-actions": true,
+          className: "mt-4 grid grid-cols-2 gap-2",
+          style: {
+            animation: `storyEndCard 1s ease-out ${delay + 1.8}s both`
+          }
+        }, React.createElement("button", {
+          type: "button",
+          onClick: go(() => setGameState('RHYTHM_DEMO_HOME')),
+          className: "min-h-[48px] rounded-2xl bg-fuchsia-500 text-[13px] font-black text-slate-950 active:scale-[.98]"
+        }, "🎵 イベントの曲を遊ぶ"), React.createElement("button", {
+          type: "button",
+          onClick: go(() => {
+            setRhythmRankingTab('event');
+            loadRhythmEventRanking('limited', rhythmEventDivision.limited);
+            setGameState('RHYTHM_RANKING');
+          }),
+          className: "min-h-[48px] rounded-2xl border border-fuchsia-300/60 bg-slate-900 text-[13px] font-black text-fuchsia-100 active:scale-[.98]"
+        }, "🏆 ランキングを見る")), React.createElement("button", {
+          type: "button",
+          "data-story-ending-close": true,
+          onClick: e => {
+            e.stopPropagation();
+            next();
+          },
+          className: "mt-4 min-h-[48px] w-full rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]",
+          style: {
+            animation: `storyEndCard 1s ease-out ${delay + (rich ? 2 : 1.4)}s both`
+          }
+        }, "閉じる")));
+      })());
     })(), dailyMasuAdvice && (() => {
       const who = activeAssistant;
       const lines = assistantSceneLinesFor(dailyMasuAdvice.shortcut === false ? 'dailyMasuAdviceBasic' : 'dailyMasuAdvice');
@@ -166403,6 +166561,13 @@ const createAnimationStyle = () => {
       [data-event-story][data-story-zones] [data-story-speaker] { zoom: .6; }
     }
     @media (prefers-reduced-motion: reduce) { [data-story-monster] { animation: none !important; } }
+    /* お話の締め(終わりの札。2026-11-03)。暗くして、題字のように「第◯話 ～副題～ おわり」を出す。'pull' は最後の場面を引いて暗くしてから */
+    @keyframes storyEndDim { 0% { background: rgba(2,6,23,0); } 100% { background: rgba(2,6,23,.9); } }
+    @keyframes storyEndCard { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: none; } }
+    @keyframes storyEndFin { 0% { opacity: 0; transform: scale(1.35); filter: blur(8px); letter-spacing: .9em; } 100% { opacity: 1; transform: none; filter: none; } }
+    [data-event-story] > :not([data-story-ending]) { transition: transform 1.6s ease-out, filter 1.6s ease-out; }
+    [data-event-story][data-story-ending-pull] > :not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
+    @media (prefers-reduced-motion: reduce) { [data-story-ending] *, [data-story-ending] { animation-duration: .01s !important; animation-delay: 0s !important; } }
     @keyframes storyShrink { 0% { opacity: 0; transform: scale(1.7); filter: brightness(1.9); } 50% { opacity: 1; } 100% { transform: scale(1); filter: brightness(1); } }
     @keyframes storyBanner { 0% { opacity: 0; transform: translate(-50%, -8px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.06); } 22% { transform: translate(-50%, 0) scale(1); } 82% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, 0) scale(1); } }
     @keyframes storyShakeA { 0%, 100% { transform: translate(0,0); } 12% { transform: translate(-6px,3px); } 24% { transform: translate(6px,-4px); } 36% { transform: translate(-5px,-3px); } 48% { transform: translate(5px,3px); } 62% { transform: translate(-3px,2px); } 78% { transform: translate(3px,-2px); } }

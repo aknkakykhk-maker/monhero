@@ -3335,6 +3335,13 @@ const createAnimationStyle = () => {
       [data-event-story][data-story-zones] [data-story-speaker] { zoom: .6; }
     }
     @media (prefers-reduced-motion: reduce) { [data-story-monster] { animation: none !important; } }
+    /* お話の締め(終わりの札。2026-11-03)。暗くして、題字のように「第◯話 ～副題～ おわり」を出す。'pull' は最後の場面を引いて暗くしてから */
+    @keyframes storyEndDim { 0% { background: rgba(2,6,23,0); } 100% { background: rgba(2,6,23,.9); } }
+    @keyframes storyEndCard { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: none; } }
+    @keyframes storyEndFin { 0% { opacity: 0; transform: scale(1.35); filter: blur(8px); letter-spacing: .9em; } 100% { opacity: 1; transform: none; filter: none; } }
+    [data-event-story] > :not([data-story-ending]) { transition: transform 1.6s ease-out, filter 1.6s ease-out; }
+    [data-event-story][data-story-ending-pull] > :not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
+    @media (prefers-reduced-motion: reduce) { [data-story-ending] *, [data-story-ending] { animation-duration: .01s !important; animation-delay: 0s !important; } }
     @keyframes storyShrink { 0% { opacity: 0; transform: scale(1.7); filter: brightness(1.9); } 50% { opacity: 1; } 100% { transform: scale(1); filter: brightness(1); } }
     @keyframes storyBanner { 0% { opacity: 0; transform: translate(-50%, -8px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.06); } 22% { transform: translate(-50%, 0) scale(1); } 82% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, 0) scale(1); } }
     @keyframes storyShakeA { 0%, 100% { transform: translate(0,0); } 12% { transform: translate(-6px,3px); } 24% { transform: translate(6px,-4px); } 36% { transform: translate(-5px,-3px); } 48% { transform: translate(5px,3px); } 62% { transform: translate(-3px,2px); } 78% { transform: translate(3px,-2px); } }

@@ -2768,6 +2768,9 @@ function MonsterHeroGame() {
   // イベント回想の2ページ目に開いているまとまりの id(null なら1ページ目=パネルの一覧)
   const [eventReplayGroupId, setEventReplayGroupId] = useState(null);
   const [eventReplay, setEventReplay] = useState(null);
+  // お話の締め(終わりの札)が出ていないときは、音を元に戻す(札のあいだだけ小さくする。閉じ方を問わず戻す)
+  const eventReplayEnding = !!(eventReplay && eventReplay.ending);
+  useEffect(() => { if (!eventReplayEnding && typeof Audio_ !== 'undefined' && Audio_.setStoryEndFade) Audio_.setStoryEndFade(false); }, [eventReplayEnding]);
   const [showDebugStoryList, setShowDebugStoryList] = useState(false);   // デバッグ設定の「全ストーリーを確認」の一覧(公開前も含めて全部。見たことにはしない)
   // イベントの会話が指定した服(ハロウィン・ナイトの衣装)を、会話のあいだだけ助手に着せる。閉じたら元へ戻る
   setAssistantCostumeStoryNow(eventReplay ? (((eventReplay.debug ? eventReplayAllList() : eventReplayList()).find(ev => ev.id === eventReplay.id) || {}).costumes || null) : null);
@@ -23155,6 +23158,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const storyZones=script.some(l=>l&&Array.isArray(l.monsters));
         const storySub=storyZones?Math.max(0,Math.floor(Number(eventReplay.sub)||0)):0;
         let last=step===script.length-1;
+        // お話の締め(終わりの札)を出すお話か。続きもの(…_ep1 〜)だけ。スキップしたときは出さない(skip は札を通らない)
+        const storyEnding=!!event&&/_ep\d+$/.test(event.id)&&typeof STORY_ENDING_STYLE!=='undefined'&&STORY_ENDING_STYLE!=='none';
         // ゲスト(ジャック・ぱんぷきん)は、下の助手の列には入れない。初めて話す行(か stage で呼ばれる行)から、画面の上部の「ステージ」に出る
         //  (2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」)
         const isGuestWho=(id)=>{const w=assistantById(id);return !!w&&w.role==='ゲスト';};
@@ -23235,6 +23240,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const holdMs=Number(line.holdMs);
           if(Number.isFinite(holdMs)&&holdMs>0&&Date.now()-(Number(eventReplay.shownAt)||0)<holdMs) return;
           if(!last){ setEventReplay(r=>r&&({...r,shownAt:Date.now(),...(storyMore?{sub:storyCurSub+1}:{step:r.step+1,sub:0})})); return; }
+          // お話の締め: 続きもののお話は、最後のページのあとに終わりの札を出す(札の「閉じる」で、もう一度ここへ来て閉じる)
+          if(storyEnding&&!eventReplay.ending){ setEventReplay(r=>r&&({...r,ending:true,endingAt:Date.now()})); if(typeof Audio_!=='undefined'&&Audio_.setStoryEndFade) Audio_.setStoryEndFade(true); return; }
           if(event&&event.id==='momosuke_intro'&&!eventReplay.debug) markMomosukeIntroSeen();
           if(event&&event.id==='tactics_intro'&&!eventReplay.debug) markTacticsIntroSeen();
           // イベントの会話も、最後まで見たら「見た」にする(次の起動で重ねて流さない)
@@ -23290,7 +23297,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setEventReplay(null);
         };
         return(
-        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-zones={storyZones?(STORY_BOTTOM_KEEP_ROW?'facerow':'face'):undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
+        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-zones={storyZones?(STORY_BOTTOM_KEEP_ROW?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
           {/* ★会話の紙は「タップを受け取る側」にしておく(2026-09-17・ユーザー報告
                 「イベント中のスキップを押してもスキップ出来ない／次のセリフへ進むだけ」)。
@@ -23395,9 +23402,52 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
             <div data-story-buttons className={`relative mt-3 grid shrink-0 ${last?'grid-cols-1':'grid-cols-[1fr_2fr]'} gap-2`} style={{pointerEvents:'auto',zIndex:2}}>
               {!last&&<button type="button" onClick={(e)=>{e.stopPropagation();skip();}} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]">スキップ</button>}
-              <button type="button" onClick={(e)=>{e.stopPropagation();next();}} className="min-h-[50px] rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]">{last?'閉じる':'次へ'}</button>
+              <button type="button" onClick={(e)=>{e.stopPropagation();next();}} className="min-h-[50px] rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]">{last&&!(storyEnding&&!eventReplay.ending)?'閉じる':'次へ'}</button>
             </div>
           </div>
+          {/* お話の締め(終わりの札)。題字のように「第◯話 ～副題～ おわり」を出し、音はゆっくり小さくする。
+              'next'・'pull' は、次のお話の予告(題と公開の時刻)と、次にやることのボタン(本編で流したときだけ)も出す。最終話は「おしまい」と、全話を見た印 */}
+          {eventReplay.ending&&(()=>{
+            const parts=storyEpisodeTitleParts(event?.title);
+            const pull=STORY_ENDING_STYLE==='pull';
+            const rich=STORY_ENDING_STYLE!=='card';
+            const delay=pull?1.1:0;
+            const nextId=event.id.replace(/_ep(\d+)$/,(m,n)=>`_ep${Number(n)+1}`);
+            const nextEv=(typeof EVENT_REPLAYS!=='undefined'?EVENT_REPLAYS:[]).find(ev=>ev&&ev.id===nextId)||null;
+            const nextParts=nextEv?storyEpisodeTitleParts(nextEv.title):null;
+            const nextAt=nextEv?storyJstMs(nextEv.date):NaN;
+            const now=Date.now();
+            const jst=Number.isFinite(nextAt)?new Date(nextAt+9*3600*1000):null;
+            const when=jst?`${jst.getUTCMonth()+1}/${jst.getUTCDate()}(${'日月火水木金土'[jst.getUTCDay()]}) ${jst.getUTCHours()}:${String(jst.getUTCMinutes()).padStart(2,'0')}`:'';
+            const left=Number.isFinite(nextAt)&&nextAt>now?nextAt-now:0;
+            const leftText=left>0?(left>=3600000?`あと${Math.floor(left/3600000)}時間${Math.floor(left%3600000/60000)}分`:`あと${Math.max(1,Math.ceil(left/60000))}分`):'';
+            const groupIds=(typeof EVENT_REPLAYS!=='undefined'?EVENT_REPLAYS:[]).filter(ev=>ev&&ev.id.replace(/_ep\d+$/,'')===event.id.replace(/_ep\d+$/,'')).map(ev=>ev.id);
+            const seenNow=normalizeRhythmEventRewardClaims(rhythmEventStorySeen);
+            const allSeen=!nextEv&&groupIds.length>1&&groupIds.every(id=>id===event.id||seenNow.includes(id));
+            const canClose=()=>Date.now()-(Number(eventReplay.endingAt)||0)>(delay+1.2)*1000;
+            const go=(fn)=>(e)=>{e.stopPropagation();next();fn();};
+            return(
+            <div data-story-ending={STORY_ENDING_STYLE} onClick={(e)=>{e.stopPropagation();if(canClose())next();}}
+              style={{position:'absolute',inset:0,zIndex:20,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'auto',animation:`storyEndDim .9s ease-out ${delay}s both`}}>
+              <div className="w-full max-w-sm px-6 text-center">
+                <p className="text-[12px] font-black tracking-[.3em] text-fuchsia-200/80" style={{animation:`storyEndCard 1s ease-out ${delay+.2}s both`}}>{parts.series}</p>
+                <p className="mt-2 text-[30px] font-black leading-tight text-white" style={{animation:`storyEndCard 1s ease-out ${delay+.35}s both`,textShadow:'0 0 18px rgba(192,132,252,.8)'}}>{parts.ep}</p>
+                {parts.sub&&<p className="mt-1 text-[16px] font-black text-fuchsia-100" style={{animation:`storyEndCard 1s ease-out ${delay+.5}s both`}}>{parts.sub}</p>}
+                <p data-story-ending-fin className="mt-5 text-[38px] font-black tracking-[.4em]" style={{animation:`storyEndFin 1.4s ease-out ${delay+.9}s both`,background:'linear-gradient(180deg,#fde68a,#f0abfc)',WebkitBackgroundClip:'text',backgroundClip:'text',color:'transparent'}}>{nextEv||!rich?'おわり':'おしまい'}</p>
+                {rich&&nextEv&&<div data-story-ending-next className="mx-auto mt-5 rounded-2xl border border-fuchsia-300/40 bg-slate-900/80 px-3 py-2" style={{animation:`storyEndCard 1s ease-out ${delay+1.5}s both`}}>
+                  <p className="text-[11px] font-black text-fuchsia-200">次のお話</p>
+                  <p className="text-[14px] font-black text-white">{nextParts.ep} {nextParts.sub}</p>
+                  <p className="text-[12px] font-bold text-slate-300">{left>0?<>{when} から <b className="text-amber-200">{leftText}</b></>:'もう見られます(プロフィールの「イベント回想」)'}</p>
+                </div>}
+                {rich&&!nextEv&&allSeen&&<p data-story-ending-all className="mx-auto mt-4 inline-block rounded-full border border-amber-300/60 bg-amber-500/15 px-4 py-1 text-[13px] font-black text-amber-100" style={{animation:`storyEndCard 1s ease-out ${delay+1.5}s both`}}>🔑 全{groupIds.length}話 ぜんぶ見た！</p>}
+                {rich&&eventReplay.live&&!eventReplay.debug&&<div data-story-ending-actions className="mt-4 grid grid-cols-2 gap-2" style={{animation:`storyEndCard 1s ease-out ${delay+1.8}s both`}}>
+                  <button type="button" onClick={go(()=>setGameState('RHYTHM_DEMO_HOME'))} className="min-h-[48px] rounded-2xl bg-fuchsia-500 text-[13px] font-black text-slate-950 active:scale-[.98]">🎵 イベントの曲を遊ぶ</button>
+                  <button type="button" onClick={go(()=>{setRhythmRankingTab('event');loadRhythmEventRanking('limited',rhythmEventDivision.limited);setGameState('RHYTHM_RANKING');})} className="min-h-[48px] rounded-2xl border border-fuchsia-300/60 bg-slate-900 text-[13px] font-black text-fuchsia-100 active:scale-[.98]">🏆 ランキングを見る</button>
+                </div>}
+                <button type="button" data-story-ending-close onClick={(e)=>{e.stopPropagation();next();}} className="mt-4 min-h-[48px] w-full rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]" style={{animation:`storyEndCard 1s ease-out ${delay+(rich?2:1.4)}s both`}}>閉じる</button>
+              </div>
+            </div>);
+          })()}
         </div>);
       })()}
 

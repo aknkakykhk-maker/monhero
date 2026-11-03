@@ -850,5 +850,16 @@ const Audio_ = (() => {
       masterOut.gain.linearRampToValueAtTime(videoHold ? 0 : 1, at + 0.25);
     } catch (e) { masterOut.gain.value = videoHold ? 0 : 1; }
   };
-  return { setVideoHold, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  // お話の締め(終わりの札)のあいだ、BGM も効果音もゆっくり小さくする(2026-11-03 社長「最後のページが終わるとあっけない」)。
+  //   on で 2.5秒かけて 0 へ、off で 0.25秒で元へ。予告動画の setVideoHold と同じ出口(masterOut)を使う
+  const setStoryEndFade = (on) => {
+    if (!masterOut || !audioCtx) return;
+    try {
+      const at = audioCtx.currentTime;
+      masterOut.gain.cancelScheduledValues(at);
+      masterOut.gain.setValueAtTime(masterOut.gain.value, at);
+      masterOut.gain.linearRampToValueAtTime(on || videoHold ? 0 : 1, at + (on ? 2.5 : 0.25));
+    } catch (e) { masterOut.gain.value = on || videoHold ? 0 : 1; }
+  };
+  return { setVideoHold, setStoryEndFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();
