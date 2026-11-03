@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cf19845e08fd1aca
+// generated-sha256: 37ddcfa362e02e46
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -97746,7 +97746,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setEventReplay(null);
         };
         return(
-        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-zones={storyZones?(STORY_BOTTOM_KEEP_ROW?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
+        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-step={step} data-story-zones={storyZones?(STORY_BOTTOM_KEEP_ROW?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
           {/* ★会話の紙は「タップを受け取る側」にしておく(2026-09-17・ユーザー報告
                 「イベント中のスキップを押してもスキップ出来ない／次のセリフへ進むだけ」)。
