@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 99d6e9d165959ccb
+// source-sha256: 8a31ba06c227714a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -18687,7 +18687,7 @@ const STORY_MONSTER_ART = Object.freeze({
   PandoraDevil: typeof PANDORA_DEVIL_IMG !== 'undefined' ? PANDORA_DEVIL_IMG : null
 });
 const STORY_BOTTOM_KEEP_ROW = true;
-const STORY_ENDING_STYLE = 'none';
+const STORY_ENDING_STYLE = 'pull';
 const storyEpisodeTitleParts = title => {
   const m = String(title || '').match(/^(.*?)\s*(第\d+話[^～\s]*)\s*(～.*～)?\s*$/);
   return m ? {

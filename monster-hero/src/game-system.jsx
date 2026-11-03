@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 37ddcfa362e02e46
+// generated-sha256: 9242fa65d93524a2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -13146,7 +13146,7 @@ const STORY_MONSTER_ART = Object.freeze({
 const STORY_BOTTOM_KEEP_ROW = true;
 // お話の締め(2026-11-03 社長「ストーリーイベントの最後のページが終わるとあっけないから工夫がほしい」)。続きもののお話(id が …_ep1 〜)だけ。
 //   'card' = 終わりの札 / 'next' = 札 + 次のお話の予告 + 次にやることのボタン / 'pull' = 最後の場面を引いて暗転してから 'next' / 'none' = 出さない
-const STORY_ENDING_STYLE = 'none';
+const STORY_ENDING_STYLE = 'pull';
 // 題(「鍵の向こう側へ 第3話 ～大嫌いで、大好き～」)を、シリーズ名・何話・副題に分ける
 const storyEpisodeTitleParts = (title) => {
   const m = String(title || '').match(/^(.*?)\s*(第\d+話[^～\s]*)\s*(～.*～)?\s*$/);
