@@ -1204,11 +1204,11 @@ const CARD_AI_HABIT_BLEND = Object.freeze({ expert: { mua: 0.6 }, master: { mua:
 // ★きゅうこは足さない(プレイヤー役の考え方にも使うので。きゅうこはデッキ側の CARD_AI_DECK_TUNE だけで合わせる)
 const CARD_AI_PLAY_TUNE = Object.freeze({
   // EASY・NORMAL で同じ血統(モッチーの仲間)でも組むようになって強くなった(2026-10-26)ぶん、みゅあの雑さを戻した(前は easy -0.035・normal -0.105)
-  mua: { easy: 0.1, normal: -0.04, hard: -0.11, expert: 0.03, master: 0.12 },
+  mua: { easy: 0.1, normal: -0.04, hard: -0.11, expert: 0.03, master: 0 },   // MASTER はいつも本気(雑な手0%。2026-11-03 社長 A)
   momosuke: { easy: 0.12, normal: 0.06, hard: 0, expert: 0.04, master: 0 },   // 全体カードを入れた(2026-10-30)ぶん EXPERT 0.1 → 0.04・MASTER 0.05 → 0。   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.165 → 0.14。混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 0.05
   kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: -0.08, master: 0 },   // 全体カードを入れた(2026-10-30)ぶん EXPERT 0 → -0.08・MASTER 0.1 → 0   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.345 → 0.3。意味不明(277)・混血の直し(2026-10-27)のあと 0.1
   dra: { easy: -0.075, normal: -0.075, hard: 0.03, expert: -0.06, master: 0 },
-  sorashido: { master: 0.06 },   // 手が詰まったときの入れ替え(2026-11-02 案A)で MASTER 54→71% に上がったので雑さを足した(450試合で 50%)
+  sorashido: { master: 0 },   // MASTER はいつも本気(2026-11-03 社長 A。前は 0.06)   // 手が詰まったときの入れ替え(2026-11-02 案A)で MASTER 54→71% に上がったので雑さを足した(450試合で 50%)
   atsu: { easy: 0.05, normal: 0, hard: 0.02, expert: 0.06, master: 0 },   // 臨機応変(2026-10-29)で強くなった(NORMAL 55→69%・EASY 73%・EXPERT 69%)ので、各強さで雑さを足した(40戦で測った)   // EXPERT は同じ血統(弱い)でも組むようになった(2026-10-26)ので 0.03 → 0
 });
 // 同じ血統で組んだ試合だけの、カードの出し方の雑さの足し引き(2026-10-26。HARD から上でも同じ血統で組むようにしたぶん)。
@@ -1753,6 +1753,8 @@ const CARD_AI_SEARCH_STEP_MAX = 1500;
 // 先読みの見積もりに足す MASTER の点の重み(2026-11-02 社長 ウ「先読みの見積もりを MASTER の点の付け方にそろえる」)
 const CARD_AI_SEARCH_PRIOR = 2;
 const CARD_AI_SEARCH_MILL_W = 0.5;
+// 先読みの候補で、当たった戦術カードの行の手に足す点(行は「強く勧める」。2026-11-03 社長 D)
+const CARD_AI_SEARCH_HINT_ADD = 1;
 const cardAiSearchLife = (st, p) => { let a = 0, b = 0; st.players[p].mons.forEach((m) => { if (!m.ko) a += Math.max(0, m.life); b += m.max; }); return b ? a / b : 0; };
 // 場の良さ(大きいほど me に良い)。'alive' … 残っているモンスターの数とライフを重く見る(LEGEND)
 const cardAiSearchEval = (st, me, kind, mill = 0) => {
@@ -1788,15 +1790,28 @@ let _cardAiSearchFoe = null; // 先読みの中で相手が打つ考え方(く�
 const cardAiSearchPick = (db, st, scored, policy, rand) => {
   const cfg = policy.search;
   const me = st.active;
-  const cands = scored.slice(0, cfg.k).filter((x) => x.s > 0.3).map((x) => cardAiFillBind(db, st, x.o, policy));
+  const me0 = st.players[st.active];
+  const skip = new Set(policy.searchSkip || []);
+  const ok = (o) => !(o.type === 'attack' && skip.has(o.mon)) && !(policy.searchNoBreeder && (o.type === 'breeder' || o.hand.some((i) => (cardOf(db, me0.hand[i]) || {}).user === 'breeder')));
+  scored = scored.filter((x) => ok(x.o));
+  // 勝ちの一撃は先読みせずに打つ(2026-11-03 社長 C)
+  const winNow = scored.find((x) => cardAiWinsBy(db, st, x.o));
+  if (winNow) return cardAiFillBind(db, st, winNow.o, policy);
+  const top = scored.slice(0, cfg.k).filter((x) => x.s > 0.3);
+  // 当たった戦術カードの行の手(強く勧める手)も候補に入れ、MASTER の点に少し足して比べる
+  const hint = policy.searchHint || null;
+  const same = (a, o) => a && o && a.type === o.type && a.mon === o.mon && JSON.stringify(a.hand) === JSON.stringify(o.hand) && JSON.stringify(a.target || null) === JSON.stringify(o.target || null);
+  const hintAt = hint && hint.type !== 'endAttacks' ? scored.find((x) => same(hint, x.o)) : null;
+  if (hintAt && !top.includes(hintAt)) top.push(hintAt);
+  const cands = top.map((x) => cardAiFillBind(db, st, x.o, policy));
   cands.push({ type: 'endAttacks' });
+  const prior = top.map((x) => x.s + (x === hintAt ? CARD_AI_SEARCH_HINT_ADD : 0)).concat([0.3 + (hint && hint.type === 'endAttacks' ? CARD_AI_SEARCH_HINT_ADD : 0)]);
   if (!_cardAiSearchFoe) _cardAiSearchFoe = cardAiPolicy('kyuko', 'master', { noTactics: true });
   const self = { ...policy, search: null, gambit: null };
   const pols = [null, null]; pols[me] = self; pols[cardOther(me)] = _cardAiSearchFoe;
   const budget = { left: CARD_AI_SEARCH_STEP_MAX };
   const ecfg = { ...cfg, mill: (policy.habit && policy.habit.mill) || 0 };
   let best = cands[0], bestV = -Infinity;
-  const prior = scored.slice(0, cfg.k).filter((x) => x.s > 0.3).map((x) => x.s).concat([0.3]);
   for (let i = 0; i < cands.length && budget.left > 0; i++) {
     let v = 0, n = 0;
     for (let r = 0; r < cfg.r && budget.left > 0; r++) { v += cardAiSearchRollout(db, st, cands[i], me, pols, rand, ecfg, budget); n += 1; }
@@ -1805,6 +1820,8 @@ const cardAiSearchPick = (db, st, scored, policy, rand) => {
     v = v / n + CARD_AI_SEARCH_PRIOR * prior[i] + (i === 0 ? 0.5 : 0); // 並んだときは、もとの点がいちばん高い手
     if (v > bestV) { bestV = v; best = cands[i]; }
   }
+  // 選んだ手が行の手なら、その戦術カードを光らせる(記録にも残る)
+  if (hintAt && best === cands[top.indexOf(hintAt)] && typeof cardTacticLastWhy !== 'undefined') cardTacticLastWhy = policy.searchHintWhy || null;
   return best;
 };
 const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
@@ -1834,6 +1851,12 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
     return { type: 'setupGuts', hand: order.slice(0, CARD_BATTLE_SETUP_GUTS_MAX) };
   }
   const sloppy = rand() < (policy.level.sloppy || 0);
+  // 勝ちの一撃(相手の最後の子まで倒せる攻撃)は、どの段でも、戦術カードの行より先に打つ(2026-11-03 社長 C)。
+  //   相手の残りが2体以下のときだけ試す(重くしない)
+  if (st.phase === 'main' && !st.pending && st.players[cardOther(st.active)].mons.filter((m) => !m.ko).length <= 2) {
+    const win = cardAiAttackChoices(db, st, policy).find((o) => cardAiWinsBy(db, st, o));
+    if (win) return cardAiFillBind(db, st, win, policy);
+  }
   // 戦術カード(みんなのデッキ・82-card-tactics-core)。並びが無い・雑な手のときは今のまま
   if (!sloppy && policy.gambit && typeof cardTacticDecide === 'function') {
     const tac = cardTacticDecide(db, st, policy);
@@ -3581,7 +3604,11 @@ const cardTacticDecide = (db, st, policy) => {
   if (phase === 'attack') { [0, 1, 2].forEach((mi) => order.push({ rows: frames.mons[mi], mi })); order.push({ rows: frames.breeder, mi: null }); }
   if (phase === 'guard') { const t = st.pending.targets[st.pending.ti]; if (t && t.p === p) order.push({ rows: frames.mons[t.m] || [], mi: t.m }); }
   if (phase === 'guts') order.push({ rows: frames.breeder, mi: null });
+  // GRAND MASTER 以上(先読みつき)は、攻めるときに先読みを先に。当たった行の手は「強く勧める手」として先読みの候補に足して比べる(2026-11-03 社長 D)
+  const searchFirst = phase === 'attack' && !!policy.search;
+  let hint = null, hintWhy = null;
   for (const fr of order) {
+    if (hint) break;
     if (phase === 'attack' && fr.mi !== null && st.players[p].mons[fr.mi] && st.players[p].mons[fr.mi].ko) continue;
     for (const row of fr.rows) {
       if (!row.on) continue;
@@ -3589,8 +3616,13 @@ const cardTacticDecide = (db, st, policy) => {
       if (!aim) continue;
       ctx.mi = fr.mi;
       const got = cardTacticRowAct(db, st, pol, phase, row, aim, ctx);
+      if (got && searchFirst) { hint = got.act; hintWhy = { c: row.c, a: row.a, mi: fr.mi, phase }; break; }
       if (got) { cardTacticLastWhy = { c: row.c, a: row.a, mi: fr.mi, phase }; return got; }
     }
+  }
+  if (searchFirst) {
+    if (!hint && (ctx.skip.size || ctx.noBreeder || ['light', 'safe', 'noDraw', 'keepHand', 'focus', 'spread', 'areaMin2'].some((k) => knobs[k]))) { const b = cardTacticBaseAttack(db, st, pol, knobs, ctx); hint = b && b.act; }
+    return { policy: { ...pol, searchHint: hint || null, searchHintWhy: hintWhy, searchSkip: [...ctx.skip], searchNoBreeder: ctx.noBreeder } };
   }
   // どの行にも当たらない: 基本カードの型で打つ(細かいくせ・立ち回りで外した子・温存したブリーダーのカードも守る)
   if (phase === 'attack' && (ctx.skip.size || ctx.noBreeder || ['light', 'safe', 'noDraw', 'keepHand', 'focus', 'spread', 'areaMin2'].some((k) => knobs[k]))) return cardTacticBaseAttack(db, st, pol, knobs, ctx);
@@ -3707,8 +3739,9 @@ const CARD_SHARE_SMART_LABEL = Object.freeze({ expert: 'EXPERT', master: 'MASTER
 // MASTER を超える段の先読み(82 の cardAiSearchPick)。k … 試す手の数 / r … 1つの手を試す回数 / h … 何手番先まで進めるか / eval … 場の見方
 //   2026-10-30 に MASTER の助手と測った: GRAND MASTER 66% / HELL 71% / LEGEND は下の値(docs/progress/card-tournament/share-ai/README.md)
 const CARD_SHARE_SEARCH = Object.freeze({
+  // 深さは GRAND MASTER < HELL < LEGEND の順(2026-11-03 社長 D。MASTER の助手への勝率 55・58・65% の見込み)
   grandmaster: Object.freeze({ k: 3, r: 1, h: 1, eval: 'ko' }),
-  hell: Object.freeze({ k: 4, r: 2, h: 4, eval: 'ko' }),
+  hell: Object.freeze({ k: 4, r: 2, h: 2, eval: 'ko' }),
   legend: Object.freeze({ k: 4, r: 2, h: 4, eval: 'alive' }),
 });
 // 土台のくせ(メインの基本カードが助手の型ならその助手。前の形の登録や画面の名前に使う)
