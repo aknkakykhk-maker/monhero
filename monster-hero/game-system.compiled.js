@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b2c76e74475a5619
+// source-sha256: f507fee9e13676a6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -18674,6 +18674,7 @@ const STORY_MONSTER_ART = Object.freeze({
   PandoraAngel: typeof PANDORA_ANGEL_IMG !== 'undefined' ? PANDORA_ANGEL_IMG : null,
   PandoraDevil: typeof PANDORA_DEVIL_IMG !== 'undefined' ? PANDORA_DEVIL_IMG : null
 });
+const STORY_BOTTOM_KEEP_ROW = false;
 const storyTextUnits = s => [...String(s)].reduce((a, ch) => a + (/[\x20-\x7e｡-ﾟ]/.test(ch) ? 0.55 : 1), 0);
 const storyTextLines = (s, cpl) => String(s).split('\n').reduce((a, seg) => a + Math.max(1, Math.ceil(storyTextUnits(seg) / Math.max(1, cpl))), 0);
 const storySplitPages = (text, cpl, maxLines) => {
@@ -160272,7 +160273,7 @@ function MonsterHeroGame() {
       }, i > 0 && React.createElement("br", null), bubbleWrap(x))) : bubbleWrap(text);
       const storyLand = typeof window !== 'undefined' && window.innerWidth > window.innerHeight && window.innerHeight <= 500;
       const storyBoxW = typeof window !== 'undefined' ? Math.min(window.innerWidth, 448) : 390;
-      const storyCplBottom = Math.max(8, Math.floor((storyBoxW - 64) / 13) - 2);
+      const storyCplBottom = Math.max(8, Math.floor((storyBoxW - 64 - (storyZones ? storyLand ? 62 : 100 : 0)) / 13) - 2);
       const storyCplBubble = Math.max(6, storyLand ? Math.floor((storyBoxW - 118) / 12) - 3 : Math.floor((storyBoxW - 156) / 14) - 4);
       const storyPageCache = [];
       const storyPagesOf = i => {
@@ -160372,7 +160373,7 @@ function MonsterHeroGame() {
       return React.createElement("div", {
         "data-event-story": eventReplay.id,
         "data-story-has-stage": stageGuest ? '1' : undefined,
-        "data-story-zones": storyZones ? '' : undefined,
+        "data-story-zones": storyZones ? STORY_BOTTOM_KEEP_ROW ? 'facerow' : 'face' : undefined,
         className: "fixed inset-0 flex items-end justify-center",
         style: {
           position: 'fixed',
@@ -160561,14 +160562,17 @@ function MonsterHeroGame() {
       }, React.createElement("p", {
         className: "mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300"
       }, eventReplay.live ? '' : '回想・', event?.title || ''), (() => {
-        const compact = storyZones || storyMonsters.length > 0;
-        const many = !compact && cast.length > 4;
-        const big = compact ? 44 : many ? 60 : 84,
-          small = compact ? 36 : many ? 48 : 64;
+        if (storyZones && !STORY_BOTTOM_KEEP_ROW) return null;
+        const tiny = storyZones;
+        const compact = !tiny && storyMonsters.length > 0;
+        const many = !compact && !tiny && cast.length > 4;
+        const big = tiny ? 28 : compact ? 44 : many ? 60 : 84,
+          small = tiny ? 24 : compact ? 36 : many ? 48 : 64;
         return React.createElement("div", {
           "data-story-cast": cast.length,
-          "data-story-cast-compact": compact ? '' : undefined,
-          className: `${compact ? 'mb-2 flex-nowrap gap-1.5' : 'mb-3'} flex items-end justify-center ${many ? 'flex-wrap gap-x-1 gap-y-1.5' : compact ? '' : 'gap-3'}`
+          "data-story-cast-compact": compact || tiny ? '' : undefined,
+          "data-story-cast-tiny": tiny ? '' : undefined,
+          className: `${tiny ? 'mb-1.5 flex-nowrap gap-1' : compact ? 'mb-2 flex-nowrap gap-1.5' : 'mb-3'} flex items-end justify-center ${many ? 'flex-wrap gap-x-1 gap-y-1.5' : compact || tiny ? '' : 'gap-3'}`
         }, cast.map(who => {
           const talking = !speakingGuest && who.id === line.who;
           return React.createElement("div", {
@@ -160577,8 +160581,8 @@ function MonsterHeroGame() {
             className: `flex min-w-0 flex-col items-center justify-end gap-1 ${talking ? '' : 'opacity-35'}`,
             style: {
               width: many ? 'calc(25% - 4px)' : undefined,
-              height: many || compact ? big + 16 : undefined,
-              transform: talking || many || compact ? 'scale(1)' : 'scale(.86)',
+              height: tiny ? big : many || compact ? big + 16 : undefined,
+              transform: talking || many || compact || tiny ? 'scale(1)' : 'scale(.86)',
               transition: 'opacity .18s, transform .18s'
             }
           }, React.createElement("span", {
@@ -160592,17 +160596,42 @@ function MonsterHeroGame() {
             size: talking ? big : small,
             accent: who.accent,
             expression: talking ? line.e : 'normal'
-          })), React.createElement("span", {
+          })), !tiny && React.createElement("span", {
             className: "max-w-full truncate text-[9px] font-black leading-none",
             style: {
               color: talking ? who.accent : '#64748b'
             }
           }, talking && line.name ? line.name : who.name));
         }));
-      })(), bottomLine ? React.createElement("div", {
+      })(), React.createElement("div", {
+        "data-story-speaker-row": storyZones ? '' : undefined,
+        className: storyZones ? 'flex items-start gap-2' : undefined
+      }, storyZones && bottomLine && React.createElement("div", {
+        key: `face-${bottomSpeaker.id}`,
+        "data-story-speaker": bottomSpeaker.id,
+        className: "shrink-0 text-center"
+      }, React.createElement("span", {
+        style: {
+          display: 'block',
+          opacity: speakingGuest ? .55 : 1,
+          filter: speakingGuest ? 'brightness(.7)' : `drop-shadow(0 0 10px ${bottomSpeaker.accent})`,
+          transition: 'opacity .2s, filter .2s'
+        }
+      }, React.createElement(AssistantFace, {
+        who: bottomSpeaker,
+        size: 92,
+        accent: bottomSpeaker.accent,
+        expression: !speakingGuest && bottomLine === line ? line.e : 'normal'
+      })), React.createElement("span", {
+        className: "mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black",
+        style: {
+          color: speakingGuest ? bottomSpeaker.accent : '#0f172a',
+          background: speakingGuest ? 'rgba(15,23,42,.8)' : bottomSpeaker.accent
+        }
+      }, bottomLine.name || bottomSpeaker.name)), bottomLine ? React.createElement("div", {
         key: speakingGuest ? 'keep' : `x${step}-${storyCurSub}`,
         "data-story-pop": speakingGuest ? undefined : '1',
-        className: "rounded-2xl border-2 bg-slate-900 px-3 py-3",
+        className: `rounded-2xl border-2 bg-slate-900 px-3 py-3${storyZones ? ' min-w-0 flex-1' : ''}`,
         "data-story-line-box": true,
         style: {
           borderColor: bottomSpeaker.accent,
@@ -160622,8 +160651,8 @@ function MonsterHeroGame() {
         style: bubbleWrapStyle()
       }, bubbleLines(storyZones ? storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker) : speakText(bottomLine, bottomSpeaker)))) : React.createElement("div", {
         "data-story-line-box": true,
-        className: "flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400"
-      }, "▲ 上のことばを読んでね"), React.createElement("p", {
+        className: `flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400${storyZones ? ' min-w-0 flex-1' : ''}`
+      }, "▲ 上のことばを読んでね")), React.createElement("p", {
         className: "mt-2 text-center text-[11px] font-bold tabular-nums text-slate-300"
       }, storyPageNo, " / ", storyPageTotal)), React.createElement("div", {
         "data-story-buttons": true,
@@ -166355,9 +166384,12 @@ const createAnimationStyle = () => {
     @media (orientation: portrait), (min-height: 501px) {
       [data-event-story][data-story-zones] [data-story-stage][data-story-stage] { top: calc(env(safe-area-inset-top) + 10px) !important; }
       [data-event-story][data-story-zones] [data-story-guest-bubble] { height: 116px; overflow: hidden; }
-      [data-event-story][data-story-zones] [data-story-sheet][data-story-sheet] { height: calc(336px + env(safe-area-inset-bottom)); max-height: none; justify-content: flex-end; }
+      /* 下部ゾーンの高さ: 話している助手の顔を台詞の欄の左に置く形(face)は 266px、小さい顔の列も残す形(facerow)は 300px(2026-11-03) */
+      [data-event-story][data-story-zones] { --story-bottom-h: 266px; }
+      [data-event-story][data-story-zones="facerow"] { --story-bottom-h: 300px; }
+      [data-event-story][data-story-zones] [data-story-sheet][data-story-sheet] { height: calc(var(--story-bottom-h) + env(safe-area-inset-bottom)); max-height: none; justify-content: flex-end; }
       [data-event-story][data-story-zones] [data-story-line-box] { height: 120px; flex-shrink: 0; overflow: hidden; }
-      [data-event-story][data-story-zones] [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 150px) !important; bottom: calc(336px + env(safe-area-inset-bottom) + 8px); align-items: center; }
+      [data-event-story][data-story-zones] [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 150px) !important; bottom: calc(var(--story-bottom-h) + env(safe-area-inset-bottom) + 8px); align-items: center; }
       [data-event-story][data-story-zones] [data-story-monster] { height: min(calc(100% / 1.14), 50vw, 230px); }
       [data-event-story][data-story-zones] [data-story-monsters="2"] [data-story-monster] { height: min(calc(100% / 1.14), 44vw, 210px); }
     }
@@ -166366,7 +166398,9 @@ const createAnimationStyle = () => {
     @media (orientation: landscape) and (max-height: 500px) {
       [data-event-story][data-story-zones] [data-story-guest-bubble] { height: 84px; overflow: hidden; }
       [data-event-story][data-story-zones] [data-story-sheet][data-story-sheet] { height: calc(var(--mh-vh) - 96px - env(safe-area-inset-top)) !important; max-height: none !important; justify-content: flex-end; }
-      [data-event-story][data-story-zones] [data-story-line-box] { height: 116px; flex-shrink: 0; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-line-box] { height: 120px; flex-shrink: 0; overflow: hidden; }
+      /* 話している助手の顔も、上部ゾーンのゲストの顔と同じく 0.6倍 */
+      [data-event-story][data-story-zones] [data-story-speaker] { zoom: .6; }
     }
     @media (prefers-reduced-motion: reduce) { [data-story-monster] { animation: none !important; } }
     @keyframes storyShrink { 0% { opacity: 0; transform: scale(1.7); filter: brightness(1.9); } 50% { opacity: 1; } 100% { transform: scale(1); filter: brightness(1); } }

@@ -23196,7 +23196,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   1行の字数は画面の幅から見込む(縦: 窓の幅、横の低い画面: 窓は 28rem まで・吹き出しの字は 12px)。見込みは少し控えめにして、はみ出さないようにする
         const storyLand=typeof window!=='undefined'&&window.innerWidth>window.innerHeight&&window.innerHeight<=500;
         const storyBoxW=typeof window!=='undefined'?Math.min(window.innerWidth,448):390;
-        const storyCplBottom=Math.max(8,Math.floor((storyBoxW-64)/13)-2);
+        // 下部ゾーンは台詞の欄の左に話している助手の顔(縦 92px・横の低い画面は 0.6倍)があるので、そのぶん狭い
+        const storyCplBottom=Math.max(8,Math.floor((storyBoxW-64-(storyZones?(storyLand?62:100):0))/13)-(storyZones?3:2));
         // 吹き出しは幅が狭く、言葉の切れ目で折ると行の終わりが空きやすいので、さらに控えめに見込む(縦の 390 幅で1行12字)
         const storyCplBubble=Math.max(6,storyLand?Math.floor((storyBoxW-118)/12)-3:Math.floor((storyBoxW-156)/14)-4);
         const storyPageCache=[];
@@ -23289,7 +23290,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setEventReplay(null);
         };
         return(
-        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-zones={storyZones?'':undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
+        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-zones={storyZones?(STORY_BOTTOM_KEEP_ROW?'facerow':'face'):undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
           {/* ★会話の紙は「タップを受け取る側」にしておく(2026-09-17・ユーザー報告
                 「イベント中のスキップを押してもスキップ出来ない／次のセリフへ進むだけ」)。
@@ -23355,14 +23356,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 ★1人ぶんの枠は話している子の大きさで固定し、大きくなっても段の幅も高さも変わらない(端の子でもはみ出さない) */}
             {/* 真ん中にモンスターが出ている行は、顔の列を1段・小さめにして、モンスターの置き場を空ける
                 (2026-11-02 社長「立ち絵が小さすぎる」。iPhone の縦では顔の列が2段で窓が高くなり、パンドラが背丈50px ほどに縮んでいた) */}
-            {(()=>{const compact=storyZones||storyMonsters.length>0;const many=!compact&&cast.length>4;const big=compact?44:many?60:84,small=compact?36:many?48:64;return(
-            <div data-story-cast={cast.length} data-story-cast-compact={compact?'':undefined} className={`${compact?'mb-2 flex-nowrap gap-1.5':'mb-3'} flex items-end justify-center ${many?'flex-wrap gap-x-1 gap-y-1.5':compact?'':'gap-3'}`}>
+            {/* 3つのゾーンのお話は、話している助手の顔を台詞の欄の左に置く(下の data-story-speaker-row)。顔の列は出さないか(STORY_BOTTOM_KEEP_ROW が false)、
+                小さく1行で残す(true)。2026-11-03 社長「上部と同じように、下部を喋る人を下部横において」 */}
+            {(()=>{if(storyZones&&!STORY_BOTTOM_KEEP_ROW)return null;const tiny=storyZones;const compact=!tiny&&storyMonsters.length>0;const many=!compact&&!tiny&&cast.length>4;const big=tiny?28:compact?44:many?60:84,small=tiny?24:compact?36:many?48:64;return(
+            <div data-story-cast={cast.length} data-story-cast-compact={compact||tiny?'':undefined} data-story-cast-tiny={tiny?'':undefined} className={`${tiny?'mb-1.5 flex-nowrap gap-1':compact?'mb-2 flex-nowrap gap-1.5':'mb-3'} flex items-end justify-center ${many?'flex-wrap gap-x-1 gap-y-1.5':compact||tiny?'':'gap-3'}`}>
               {cast.map(who=>{
                 const talking=!speakingGuest&&who.id===line.who;
                 return(
-                  <div key={who.id} data-story-cast-member={who.id} className={`flex min-w-0 flex-col items-center justify-end gap-1 ${talking?'':'opacity-35'}`} style={{width:many?'calc(25% - 4px)':undefined,height:many||compact?big+16:undefined,transform:talking||many||compact?'scale(1)':'scale(.86)',transition:'opacity .18s, transform .18s'}}>
+                  <div key={who.id} data-story-cast-member={who.id} className={`flex min-w-0 flex-col items-center justify-end gap-1 ${talking?'':'opacity-35'}`} style={{width:many?'calc(25% - 4px)':undefined,height:tiny?big:many||compact?big+16:undefined,transform:talking||many||compact||tiny?'scale(1)':'scale(.86)',transition:'opacity .18s, transform .18s'}}>
                     <span style={{display:'block',filter:talking?`drop-shadow(0 0 10px ${who.accent})`:'none',transition:'filter .2s'}}><AssistantFace who={who} size={talking?big:small} accent={who.accent} expression={talking?line.e:'normal'}/></span>
-                    <span className="max-w-full truncate text-[9px] font-black leading-none" style={{color:talking?who.accent:'#64748b'}}>{talking&&line.name?line.name:who.name}</span>
+                    {!tiny&&<span className="max-w-full truncate text-[9px] font-black leading-none" style={{color:talking?who.accent:'#64748b'}}>{talking&&line.name?line.name:who.name}</span>}
                   </div>
                 );
               })}
@@ -23370,14 +23373,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* 3つのゾーンのお話では、台詞の欄は3行ぶんの高さで固定(70-bootstrap.jsx の [data-story-zones] [data-story-line-box])。
                 台詞の長さで窓の高さが変わり、モンスターの大きさが行ごとに伸び縮みしていた(2026-11-02 社長「文字量によってサイズが変動してる」)。
                 収まらない台詞は、上の storyPagesOf でページに分ける */}
-            {bottomLine?<div key={speakingGuest?'keep':`x${step}-${storyCurSub}`} data-story-pop={speakingGuest?undefined:'1'} className="rounded-2xl border-2 bg-slate-900 px-3 py-3" data-story-line-box style={{borderColor:bottomSpeaker.accent,opacity:speakingGuest?.4:1,boxShadow:speakingGuest?'none':`0 0 16px ${bottomSpeaker.accent}55`,transition:'opacity .18s',animation:speakingGuest?undefined:'storyPop .28s ease-out both'}}>
+            <div data-story-speaker-row={storyZones?'':undefined} className={storyZones?'flex items-start gap-2':undefined}>
+            {/* 話している助手の顔(上部ゾーンのゲストと同じ大きさ・名前の札は顔の下)。ゲストが話しているあいだは、直前の助手を暗く残す */}
+            {storyZones&&bottomLine&&<div key={`face-${bottomSpeaker.id}`} data-story-speaker={bottomSpeaker.id} className="shrink-0 text-center">
+              <span style={{display:'block',opacity:speakingGuest?.55:1,filter:speakingGuest?'brightness(.7)':`drop-shadow(0 0 10px ${bottomSpeaker.accent})`,transition:'opacity .2s, filter .2s'}}><AssistantFace who={bottomSpeaker} size={92} accent={bottomSpeaker.accent} expression={!speakingGuest&&bottomLine===line?line.e:'normal'}/></span>
+              <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:speakingGuest?bottomSpeaker.accent:'#0f172a',background:speakingGuest?'rgba(15,23,42,.8)':bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
+            </div>}
+            {bottomLine?<div key={speakingGuest?'keep':`x${step}-${storyCurSub}`} data-story-pop={speakingGuest?undefined:'1'} className={`rounded-2xl border-2 bg-slate-900 px-3 py-3${storyZones?' min-w-0 flex-1':''}`} data-story-line-box style={{borderColor:bottomSpeaker.accent,opacity:speakingGuest?.4:1,boxShadow:speakingGuest?'none':`0 0 16px ${bottomSpeaker.accent}55`,transition:'opacity .18s',animation:speakingGuest?undefined:'storyPop .28s ease-out both'}}>
               <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
               {/* ★{name} は、そのとき話している助手の呼び方へ置き換える。
                   ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた
                   (2026-09-11・ユーザー指摘「名前呼びのとこが変換されてない」)。
                   呼び方も絆Lvも助手ごとに違うので、選んでいる助手ではなく「話している助手」から引く */}
               <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={bubbleWrapStyle()}>{bubbleLines(storyZones?storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker):speakText(bottomLine,bottomSpeaker))}</span>
-            </div>:<div data-story-line-box className="flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400">▲ 上のことばを読んでね</div>}
+            </div>:<div data-story-line-box className={`flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400${storyZones?' min-w-0 flex-1':''}`}>▲ 上のことばを読んでね</div>}
+            </div>
             <p className="mt-2 text-center text-[11px] font-bold tabular-nums text-slate-300">
               {storyPageNo} / {storyPageTotal}
               {/* 「○○は「…」と呼び合います」の案内は出さない(2026-10-22 社長「ストーリー上に出さないでほしい」)。呼び方の表(EVENT_REPLAYS の calls)は台本を書く人の控えとしてデータに残す */}
