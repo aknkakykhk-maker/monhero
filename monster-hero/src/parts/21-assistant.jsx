@@ -30,8 +30,23 @@ const STORY_MONSTER_ART = Object.freeze({
 //   上部ゾーン(ゲストの吹き出し)・下部ゾーン(台詞の欄)の高さを固定にしたので、収まらない台詞は「次へ」で送る次のページにする。
 //   分けるのは文の切れ目(「。」「！」「？」のあと)。1文で収まらないときだけ「、」のあと。言葉の途中では切らない。台本の字は変えない(表示のときだけ)
 //   cpl … 1行に入る字数の見込み(全角1・半角0.55で数える) / maxLines … 行数
+// 3つのゾーンのお話の下部ゾーンで、話していない助手の顔の列も小さく1行で残すか(2026-11-03 社長「下部を喋る人を下部横において」の案。
+//   false = 顔の列は出さず、話している助手の顔だけを台詞の欄の左に置く / true = その上に小さい顔の列を1行残す)
+// 2026-11-03 社長が案B(小さい顔の列を残す)を選んだ。列に並べるのは「その場面にいる人」だけ(60-app.jsx の storyCastNow)
+const STORY_BOTTOM_KEEP_ROW = true;
+// お話の締め(2026-11-03 社長「ストーリーイベントの最後のページが終わるとあっけないから工夫がほしい」)。続きもののお話(id が …_ep1 〜)だけ。
+//   'card' = 終わりの札 / 'next' = 札 + 次のお話の予告 + 次にやることのボタン / 'pull' = 最後の場面を引いて暗転してから 'next' / 'none' = 出さない
+const STORY_ENDING_STYLE = 'none';
+// 題(「鍵の向こう側へ 第3話 ～大嫌いで、大好き～」)を、シリーズ名・何話・副題に分ける
+const storyEpisodeTitleParts = (title) => {
+  const m = String(title || '').match(/^(.*?)\s*(第\d+話[^～\s]*)\s*(～.*～)?\s*$/);
+  return m ? { series: m[1] || '', ep: m[2] || '', sub: m[3] || '' } : { series: '', ep: String(title || ''), sub: '' };
+};
+// 'YYYY-MM-DD HH:MM'(日本時間)を時刻へ。読めなければ NaN
+const storyJstMs = (text) => Date.parse(`${String(text || '').trim().replace(' ', 'T')}:00+09:00`);
 const storyTextUnits = (s) => [...String(s)].reduce((a, ch) => a + (/[\x20-\x7e｡-ﾟ]/.test(ch) ? 0.55 : 1), 0);
-const storyTextLines = (s, cpl) => String(s).split('\n').reduce((a, seg) => a + Math.max(1, Math.ceil(storyTextUnits(seg) / Math.max(1, cpl))), 0);
+// ちょうど行の終わりで割り切れる字数は、言葉の切れ目で折ると1行増えやすい(第1話「遊んだ回数も…報われるわけだ」42字が14字×3行で4行になった)。1.5字ぶん余分に見込む
+const storyTextLines = (s, cpl) => String(s).split('\n').reduce((a, seg) => a + Math.max(1, Math.ceil((storyTextUnits(seg) + 1.5) / Math.max(1, cpl))), 0);
 const storySplitPages = (text, cpl, maxLines) => {
   const s = String(text ?? '');
   if (!s || storyTextLines(s, cpl) <= maxLines) return [s];
