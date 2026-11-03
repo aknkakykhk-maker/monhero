@@ -23158,6 +23158,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   2026-11-03 社長「ハロウィン以外にも全てのイベントを変えてほしい」: イベント回想に並ぶお話すべて(モンスターが出ないお話も)をこの形にする
         const storyZones=script.length>0;
         const storySub=storyZones?Math.max(0,Math.floor(Number(eventReplay.sub)||0)):0;
+        // 下の窓に小さい顔の列を残すか(21-assistant.jsx の STORY_BOTTOM_KEEP_ROW。読めないときは残す=いまの形)
+        const storyKeepRow=typeof STORY_BOTTOM_KEEP_ROW==='undefined'?true:!!STORY_BOTTOM_KEEP_ROW;
         let last=step===script.length-1;
         // お話の締め(終わりの札)を出すお話か。続きもの(…_ep1 〜)だけ。スキップしたときは出さない(skip は札を通らない)
         //   2026-11-03 社長「全てのイベントを変えてほしい」: イベント回想に並ぶお話すべてに出す(続きものは次のお話の題名も。単発は「おわり」だけ)
@@ -23299,7 +23301,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setEventReplay(null);
         };
         return(
-        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-step={step} data-story-zones={storyZones?(STORY_BOTTOM_KEEP_ROW?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
+        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-step={step} data-story-zones={storyZones?(storyKeepRow?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
           {/* ★会話の紙は「タップを受け取る側」にしておく(2026-09-17・ユーザー報告
                 「イベント中のスキップを押してもスキップ出来ない／次のセリフへ進むだけ」)。
@@ -23367,7 +23369,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 (2026-11-02 社長「立ち絵が小さすぎる」。iPhone の縦では顔の列が2段で窓が高くなり、パンドラが背丈50px ほどに縮んでいた) */}
             {/* 3つのゾーンのお話は、話している助手の顔を台詞の欄の左に置く(下の data-story-speaker-row)。顔の列は出さないか(STORY_BOTTOM_KEEP_ROW が false)、
                 小さく1行で残す(true)。2026-11-03 社長「上部と同じように、下部を喋る人を下部横において」 */}
-            {(()=>{if(storyZones&&!STORY_BOTTOM_KEEP_ROW)return null;const tiny=storyZones;
+            {(()=>{if(storyZones&&!storyKeepRow)return null;const tiny=storyZones;
               // 小さい顔の列には、その場面にいる人だけを並べる(2026-11-03 社長「いない人は出さない」「あとから現れる人は、現れたときまで出さない」)。
               //   そのページまでに一度でも話した人。最初からいるのにしばらく話さない人は、その話の castAtStart に書けば1ページ目から並ぶ
               const atStart=Array.isArray(event&&event.castAtStart)?event.castAtStart:[];
@@ -23378,7 +23380,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 const talking=!speakingGuest&&who.id===line.who;
                 return(
                   <div key={who.id} data-story-cast-member={who.id} className={`flex min-w-0 flex-col items-center justify-end gap-1 ${talking?'':'opacity-35'}`} style={{width:many?'calc(25% - 4px)':undefined,height:tiny?big:many||compact?big+16:undefined,transform:talking||many||compact||tiny?'scale(1)':'scale(.86)',transition:'opacity .18s, transform .18s'}}>
-                    <span style={{display:'block',filter:talking?`drop-shadow(0 0 10px ${who.accent})`:'none',transition:'filter .2s'}}><AssistantFace who={who} size={talking?big:small} accent={who.accent} expression={talking?line.e:'normal'}/></span>
+                    {/* 小さい顔の列(tiny)では光らせない。話している子は横の大きい顔が光るので、ここは明るさだけで分ける */}
+                    <span style={{display:'block',filter:talking&&!tiny?`drop-shadow(0 0 10px ${who.accent})`:'none',transition:'filter .2s'}}><AssistantFace who={who} size={talking?big:small} accent={who.accent} expression={talking?line.e:'normal'}/></span>
                     {!tiny&&<span className="max-w-full truncate text-[9px] font-black leading-none" style={{color:talking?who.accent:'#64748b'}}>{talking&&line.name?line.name:who.name}</span>}
                   </div>
                 );

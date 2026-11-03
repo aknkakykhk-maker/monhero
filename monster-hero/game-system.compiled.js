@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f2253fbc809160db
+// source-sha256: 66c00d9e6cd5f9a4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -160249,6 +160249,7 @@ function MonsterHeroGame() {
       const speaker = assistantById(line.who);
       const storyZones = script.length > 0;
       const storySub = storyZones ? Math.max(0, Math.floor(Number(eventReplay.sub) || 0)) : 0;
+      const storyKeepRow = typeof STORY_BOTTOM_KEEP_ROW === 'undefined' ? true : !!STORY_BOTTOM_KEEP_ROW;
       let last = step === script.length - 1;
       const storyEnding = !!event && typeof STORY_ENDING_STYLE !== 'undefined' && STORY_ENDING_STYLE !== 'none';
       const isGuestWho = id => {
@@ -160427,7 +160428,7 @@ function MonsterHeroGame() {
         "data-event-story": eventReplay.id,
         "data-story-has-stage": stageGuest ? '1' : undefined,
         "data-story-step": step,
-        "data-story-zones": storyZones ? STORY_BOTTOM_KEEP_ROW ? 'facerow' : 'face' : undefined,
+        "data-story-zones": storyZones ? storyKeepRow ? 'facerow' : 'face' : undefined,
         "data-story-ending-pull": eventReplay.ending && STORY_ENDING_STYLE === 'pull' ? '' : undefined,
         className: "fixed inset-0 flex items-end justify-center",
         style: {
@@ -160617,7 +160618,7 @@ function MonsterHeroGame() {
       }, React.createElement("p", {
         className: "mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300"
       }, eventReplay.live ? '' : '回想・', event?.title || ''), (() => {
-        if (storyZones && !STORY_BOTTOM_KEEP_ROW) return null;
+        if (storyZones && !storyKeepRow) return null;
         const tiny = storyZones;
         const atStart = Array.isArray(event && event.castAtStart) ? event.castAtStart : [];
         const rowCast = tiny ? cast.filter(who => atStart.includes(who.id) || script.slice(0, step + 1).some(l => l && l.who === who.id)) : cast;
@@ -160652,7 +160653,7 @@ function MonsterHeroGame() {
           }, React.createElement("span", {
             style: {
               display: 'block',
-              filter: talking ? `drop-shadow(0 0 10px ${who.accent})` : 'none',
+              filter: talking && !tiny ? `drop-shadow(0 0 10px ${who.accent})` : 'none',
               transition: 'filter .2s'
             }
           }, React.createElement(AssistantFace, {
