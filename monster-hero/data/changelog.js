@@ -35,6 +35,14 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-03 23:31", type:'update', group:'cardBattle', title:'GRAND MASTER から上の賢さが、段ごとにはっきり強くなりました', status:'new',
+    items:[
+      'GRAND MASTER・HELL・LEGEND のデッキは、攻めるときに先を試してから手を決めるようになりました。戦術カードに当てはまった手も、試して比べます。先を試す深さは GRAND MASTER・HELL・LEGEND の順に深くなります',
+      'どの難易度でも、勝ちになる攻撃は必ず打つようになりました',
+      'MASTER の助手は、いつも本気で戦うようになりました',
+    ],
+  },
+  {
     date: "2026-11-02 21:15", type:'update', group:'cardBattle', title:'戦術カードで組んだデッキが、より賢く戦うようになりました', status:'new',
     items:[
       '戦術カードに当てはまっても、その手が、いちばん良い手よりはっきり損なときは出さずに、次の戦術カードへ進むようになりました',

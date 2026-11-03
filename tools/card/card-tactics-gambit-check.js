@@ -382,5 +382,29 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
   check('O 雑な手の番でも、当たれば勝ちの一撃は打つ', c.type === 'attack', J(c));
 }
 
+// ---- P. 勝ちの一撃はどの段でも行より先に・GRAND MASTER 以上は攻めを先読み先に(2026-11-03 社長 C・D) ----
+{
+  const winScene = () => {
+    const st = scene();
+    st.players[0].hand = ['100']; // もちき(3)
+    st.players[1].mons.forEach((m, i) => { if (i > 0) { m.ko = true; m.life = 0; } });
+    st.players[1].mons[0].life = 3;
+    st.players[1].hand = [];
+    return st;
+  };
+  const stopFirst = pol([{ c: 'any', a: 'stop' }]);
+  const a = E.cardAiChooseAction(db, winScene(), stopFirst, zero);
+  check('P 「攻撃をやめる」の行があっても、勝ちの一撃は先に打つ', a.type === 'attack', J(a));
+  const easy = E.cardAiChooseAction(db, winScene(), E.cardAiPolicy('kyuko', 'easy'), zero);
+  check('P EASY でも勝ちの一撃は打つ', easy.type === 'attack', J(easy));
+  // 先読みつき: 攻める段は、当たった行の手を「勧める手」にして先読みへ回す(行の手をそのまま返さない)
+  const st = scene();
+  const sp = { ...pol([{ c: 'any', a: 'atk' }]), search: { k: 3, r: 1, h: 1, eval: 'ko' } };
+  const d = E.cardTacticDecide(db, st, sp);
+  check('P 先読みつきは、攻める段で行の手を先読みの候補として渡す', !!d && !d.act && !!d.policy && !!d.policy.searchHint, J(d && { act: d.act, hint: d.policy && d.policy.searchHint }));
+  const g = E.cardAiChooseAction(db, scene(), sp, () => 0.5);
+  check('P 先読みつきで、攻める手を出せる', g.type === 'attack' || g.type === 'endAttacks', J(g));
+}
+
 console.log(`card-tactics-gambit-check: ${passed} OK / ${fails.length} NG`);
 if (fails.length) { fails.forEach((f) => console.log(`NG: ${f}`)); process.exit(1); }

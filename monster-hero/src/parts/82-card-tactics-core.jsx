@@ -798,7 +798,11 @@ const cardTacticDecide = (db, st, policy) => {
   if (phase === 'attack') { [0, 1, 2].forEach((mi) => order.push({ rows: frames.mons[mi], mi })); order.push({ rows: frames.breeder, mi: null }); }
   if (phase === 'guard') { const t = st.pending.targets[st.pending.ti]; if (t && t.p === p) order.push({ rows: frames.mons[t.m] || [], mi: t.m }); }
   if (phase === 'guts') order.push({ rows: frames.breeder, mi: null });
+  // GRAND MASTER 以上(先読みつき)は、攻めるときに先読みを先に。当たった行の手は「強く勧める手」として先読みの候補に足して比べる(2026-11-03 社長 D)
+  const searchFirst = phase === 'attack' && !!policy.search;
+  let hint = null, hintWhy = null;
   for (const fr of order) {
+    if (hint) break;
     if (phase === 'attack' && fr.mi !== null && st.players[p].mons[fr.mi] && st.players[p].mons[fr.mi].ko) continue;
     for (const row of fr.rows) {
       if (!row.on) continue;
@@ -806,8 +810,13 @@ const cardTacticDecide = (db, st, policy) => {
       if (!aim) continue;
       ctx.mi = fr.mi;
       const got = cardTacticRowAct(db, st, pol, phase, row, aim, ctx);
+      if (got && searchFirst) { hint = got.act; hintWhy = { c: row.c, a: row.a, mi: fr.mi, phase }; break; }
       if (got) { cardTacticLastWhy = { c: row.c, a: row.a, mi: fr.mi, phase }; return got; }
     }
+  }
+  if (searchFirst) {
+    if (!hint && (ctx.skip.size || ctx.noBreeder || ['light', 'safe', 'noDraw', 'keepHand', 'focus', 'spread', 'areaMin2'].some((k) => knobs[k]))) { const b = cardTacticBaseAttack(db, st, pol, knobs, ctx); hint = b && b.act; }
+    return { policy: { ...pol, searchHint: hint || null, searchHintWhy: hintWhy, searchSkip: [...ctx.skip], searchNoBreeder: ctx.noBreeder } };
   }
   // どの行にも当たらない: 基本カードの型で打つ(細かいくせ・立ち回りで外した子・温存したブリーダーのカードも守る)
   if (phase === 'attack' && (ctx.skip.size || ctx.noBreeder || ['light', 'safe', 'noDraw', 'keepHand', 'focus', 'spread', 'areaMin2'].some((k) => knobs[k]))) return cardTacticBaseAttack(db, st, pol, knobs, ctx);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4b74346c7c45b483
+// source-sha256: 46ea24dd2f54db08
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93002,7 +93002,7 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
     normal: -0.04,
     hard: -0.11,
     expert: 0.03,
-    master: 0.12
+    master: 0
   },
   momosuke: {
     easy: 0.12,
@@ -93026,7 +93026,7 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
     master: 0
   },
   sorashido: {
-    master: 0.06
+    master: 0
   },
   atsu: {
     easy: 0.05,
@@ -93686,6 +93686,7 @@ const cardAiAttackScored = (db, st, opts, policy) => opts.map(o => ({
 const CARD_AI_SEARCH_STEP_MAX = 1500;
 const CARD_AI_SEARCH_PRIOR = 2;
 const CARD_AI_SEARCH_MILL_W = 0.5;
+const CARD_AI_SEARCH_HINT_ADD = 1;
 const cardAiSearchLife = (st, p) => {
   let a = 0,
     b = 0;
@@ -93750,10 +93751,22 @@ let _cardAiSearchFoe = null;
 const cardAiSearchPick = (db, st, scored, policy, rand) => {
   const cfg = policy.search;
   const me = st.active;
-  const cands = scored.slice(0, cfg.k).filter(x => x.s > 0.3).map(x => cardAiFillBind(db, st, x.o, policy));
+  const me0 = st.players[st.active];
+  const skip = new Set(policy.searchSkip || []);
+  const ok = o => !(o.type === 'attack' && skip.has(o.mon)) && !(policy.searchNoBreeder && (o.type === 'breeder' || o.hand.some(i => (cardOf(db, me0.hand[i]) || {}).user === 'breeder')));
+  scored = scored.filter(x => ok(x.o));
+  const winNow = scored.find(x => cardAiWinsBy(db, st, x.o));
+  if (winNow) return cardAiFillBind(db, st, winNow.o, policy);
+  const top = scored.slice(0, cfg.k).filter(x => x.s > 0.3);
+  const hint = policy.searchHint || null;
+  const same = (a, o) => a && o && a.type === o.type && a.mon === o.mon && JSON.stringify(a.hand) === JSON.stringify(o.hand) && JSON.stringify(a.target || null) === JSON.stringify(o.target || null);
+  const hintAt = hint && hint.type !== 'endAttacks' ? scored.find(x => same(hint, x.o)) : null;
+  if (hintAt && !top.includes(hintAt)) top.push(hintAt);
+  const cands = top.map(x => cardAiFillBind(db, st, x.o, policy));
   cands.push({
     type: 'endAttacks'
   });
+  const prior = top.map(x => x.s + (x === hintAt ? CARD_AI_SEARCH_HINT_ADD : 0)).concat([0.3 + (hint && hint.type === 'endAttacks' ? CARD_AI_SEARCH_HINT_ADD : 0)]);
   if (!_cardAiSearchFoe) _cardAiSearchFoe = cardAiPolicy('kyuko', 'master', {
     noTactics: true
   });
@@ -93774,7 +93787,6 @@ const cardAiSearchPick = (db, st, scored, policy, rand) => {
   };
   let best = cands[0],
     bestV = -Infinity;
-  const prior = scored.slice(0, cfg.k).filter(x => x.s > 0.3).map(x => x.s).concat([0.3]);
   for (let i = 0; i < cands.length && budget.left > 0; i++) {
     let v = 0,
       n = 0;
@@ -93789,6 +93801,7 @@ const cardAiSearchPick = (db, st, scored, policy, rand) => {
       best = cands[i];
     }
   }
+  if (hintAt && best === cands[top.indexOf(hintAt)] && typeof cardTacticLastWhy !== 'undefined') cardTacticLastWhy = policy.searchHintWhy || null;
   return best;
 };
 const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
@@ -93842,6 +93855,10 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
     };
   }
   const sloppy = rand() < (policy.level.sloppy || 0);
+  if (st.phase === 'main' && !st.pending && st.players[cardOther(st.active)].mons.filter(m => !m.ko).length <= 2) {
+    const win = cardAiAttackChoices(db, st, policy).find(o => cardAiWinsBy(db, st, o));
+    if (win) return cardAiFillBind(db, st, win, policy);
+  }
   if (!sloppy && policy.gambit && typeof cardTacticDecide === 'function') {
     const tac = cardTacticDecide(db, st, policy);
     if (tac && tac.act) return tac.act;
@@ -94031,7 +94048,7 @@ const CARD_AI_DECK_TUNE = Object.freeze({
     easy: -1.5,
     normal: -1.5,
     hard: -1.5,
-    master: -0.05
+    master: 0.5
   }
 });
 const CARD_AI_LANE_MIN_DEFAULT = 0.8;
@@ -97178,7 +97195,11 @@ const cardTacticDecide = (db, st, policy) => {
     rows: frames.breeder,
     mi: null
   });
+  const searchFirst = phase === 'attack' && !!policy.search;
+  let hint = null,
+    hintWhy = null;
   for (const fr of order) {
+    if (hint) break;
     if (phase === 'attack' && fr.mi !== null && st.players[p].mons[fr.mi] && st.players[p].mons[fr.mi].ko) continue;
     for (const row of fr.rows) {
       if (!row.on) continue;
@@ -97189,6 +97210,16 @@ const cardTacticDecide = (db, st, policy) => {
       if (!aim) continue;
       ctx.mi = fr.mi;
       const got = cardTacticRowAct(db, st, pol, phase, row, aim, ctx);
+      if (got && searchFirst) {
+        hint = got.act;
+        hintWhy = {
+          c: row.c,
+          a: row.a,
+          mi: fr.mi,
+          phase
+        };
+        break;
+      }
       if (got) {
         cardTacticLastWhy = {
           c: row.c,
@@ -97199,6 +97230,21 @@ const cardTacticDecide = (db, st, policy) => {
         return got;
       }
     }
+  }
+  if (searchFirst) {
+    if (!hint && (ctx.skip.size || ctx.noBreeder || ['light', 'safe', 'noDraw', 'keepHand', 'focus', 'spread', 'areaMin2'].some(k => knobs[k]))) {
+      const b = cardTacticBaseAttack(db, st, pol, knobs, ctx);
+      hint = b && b.act;
+    }
+    return {
+      policy: {
+        ...pol,
+        searchHint: hint || null,
+        searchHintWhy: hintWhy,
+        searchSkip: [...ctx.skip],
+        searchNoBreeder: ctx.noBreeder
+      }
+    };
   }
   if (phase === 'attack' && (ctx.skip.size || ctx.noBreeder || ['light', 'safe', 'noDraw', 'keepHand', 'focus', 'spread', 'areaMin2'].some(k => knobs[k]))) return cardTacticBaseAttack(db, st, pol, knobs, ctx);
   if (phase === 'guard') {
@@ -97429,9 +97475,9 @@ const CARD_SHARE_SEARCH = Object.freeze({
     eval: 'ko'
   }),
   hell: Object.freeze({
-    k: 4,
-    r: 2,
-    h: 4,
+    k: 3,
+    r: 1,
+    h: 2,
     eval: 'ko'
   }),
   legend: Object.freeze({
