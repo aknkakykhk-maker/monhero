@@ -97,6 +97,10 @@ const CHANGELOG = [
     // 2026-11-02 社長「イベント開始の更新がない」。予告(11/1 18:53)は残したまま、開始に合わせたお知らせを足す。お話の中身・敵の数字は書かない
     date: "2026-11-02 12:01", type:'event', group:'rhythm', title:'【開催中】鍵の向こう側へ ～パンドラとふたつの翼～ がはじまりました', status:'new',
     visibleFrom:'2026-11-02T12:00:00+09:00',
+    // 上の「開催中」の札はこの項目だけ(予告は pinUntil で開始から外す)。予告動画と告知の絵も、ここで見られるようにする(2026-11-03 社長)
+    pinEmoji:'🔑',
+    video: 'movies/pandora-wings-trailer.mp4?v=a003de0d3577',
+    videoPoster: 'images/events/pandora-wings-trailer-poster.jpg?v=ec3f66f0c0ad',
     image: 'images/events/pandora-wings-2026.jpg?v=5ada391b4929',
     assistantNotice: {
       id:'update_notice_pandora_wings_2026_start_v1', type:'content',
@@ -162,6 +166,9 @@ const CHANGELOG = [
     // 期間・倍率・ランキングは data/rhythm-event.js、お話は assistants.js が受け持つ(このあと入れる)。お話の中身は書かない(ネタバレ)
     date: "2026-11-01 18:53", type:'event', group:'rhythm', title:'【期間限定】鍵の向こう側へ ～パンドラとふたつの翼～ を開催します', status:'new',
     visibleFrom:'2026-11-01T18:53:00+09:00',
+    // 開始(11/2 12:00)からは上の「開催中」の札に出さない(開始のお知らせだけを札にする)。項目は下の一覧にふつうに残る
+    pinUntil:'2026-11-02T12:00:00+09:00',
+    pinEmoji:'🔑',
     // 予告動画(2026-11-02 社長)。第1話〜第2話の範囲だけ(ネタバレしない)
     video: 'movies/pandora-wings-trailer.mp4?v=a003de0d3577',
     videoPoster: 'images/events/pandora-wings-trailer-poster.jpg?v=ec3f66f0c0ad',
