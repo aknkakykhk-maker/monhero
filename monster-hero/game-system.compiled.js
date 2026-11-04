@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 00ab65f1ee0f17a2
+// source-sha256: 5e6f1c7f50a67bca
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -97160,8 +97160,8 @@ const cardTacticSmartLevel = frames => {
   const base = f.base.filter(Boolean).length;
   const rows = cardTacticCountedRows(f);
   if (base >= 3 && rows >= 10) return 'legend';
-  if (base >= 3 && rows >= 7) return 'hell';
-  if (base >= 3 && rows >= 4) return 'grandmaster';
+  if (base >= 2 && rows >= 9) return 'hell';
+  if (base >= 2 && rows >= 6) return 'grandmaster';
   if (base >= 2 || rows >= 4) return 'master';
   return 'expert';
 };
@@ -123262,6 +123262,29 @@ const cardRegRowText = row => {
   if (row.c === 'any') return `いつでも → ${a ? a.line || a.name : '?'}`;
   return `${c ? c.line || c.name : '?'} → ${a ? a.line || a.name : '?'}`;
 };
+const cardRegSmartNextText = (frames, lv) => {
+  const f = cardTacticNormalizeFrames(frames);
+  const base = f.base.filter(Boolean).length;
+  const rows = cardTacticCountedRows(f);
+  const now = cardTacticSmartLevel(f);
+  if (now === 'legend') return 'いちばん上の LEGEND です。';
+  const next = CARD_TACTIC_SMART[CARD_TACTIC_SMART.indexOf(now) + 1];
+  const label = CARD_SHARE_SMART_LABEL[next];
+  if (next === 'master') return `次の ${label} まで: 基本カードをあと${2 - base}枚、または、ちゃんと効く戦術カードをあと${Math.max(1, 4 - rows)}枚。`;
+  const needRows = {
+    grandmaster: 6,
+    hell: 9,
+    legend: 10
+  }[next];
+  const needBase = next === 'legend' ? 3 : 2;
+  const needs = [];
+  if (base < needBase) needs.push(`基本カードをあと${needBase - base}枚`);
+  if (rows < needRows) needs.push(`ちゃんと効く戦術カードをあと${needRows - rows}枚`);
+  const opened = cardLevelFrames(lv).base || 1;
+  const locked = CARD_LEVEL_FRAMES.filter(x => x.base && x.base > opened && x.base <= needBase).map(x => `${x.base}枚目はカードランク${x.at}`);
+  const rank = base < needBase && locked.length ? `(基本カードの${locked.join('、')}でセットできるようになります)` : '';
+  return `次の ${label} まで: ${needs.join('と')}。${rank}`;
+};
 const cardRegApplyStyle = (style, tactics, open) => {
   const owns = id => cardTacticsOwns(tactics, id);
   const cands = list => list.filter(([c, a]) => owns(c) && owns(a)).map(([c, a]) => ({
@@ -123965,6 +123988,7 @@ const CardDeckRegister = ({
   const smartText = cardShareSmartText({
     f: cardTacticPackFrames(battle)
   });
+  const smartNext = cardRegSmartNextText(battle, lv);
   const uncounted = cardTacticUncounted(battle);
   const acesNow = aces === 'auto' ? cardRegAutoAces(db, deck) : aces;
   const setRows = (k, rows) => setDraft(f => k === 'breeder' ? {
@@ -124253,7 +124277,7 @@ const CardDeckRegister = ({
   })), React.createElement("p", {
     className: "mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100",
     style: JA_WRAP_STYLE
-  }, jaWrap('入れると: 賢さの上限が上がります(1枚 HARD まで・2枚 EXPERT・3枚 MASTER)。サブは、型を3分の1だけ足します。'))), React.createElement("section", {
+  }, jaWrap('入れると: 賢さが上がります(基本2枚で MASTER。基本2枚と、ちゃんと効く戦術カード6枚で GRAND MASTER・9枚で HELL。LEGEND は基本3枚と10枚)。サブは、型を3分の1だけ足します。'))), React.createElement("section", {
     "data-card-reg-sec": "breeder",
     className: "rounded-2xl border-2 border-violet-400 bg-slate-900/90 p-2.5"
   }, React.createElement(CardRegSecHead, {
@@ -124378,7 +124402,11 @@ const CardDeckRegister = ({
   })), React.createElement("small", {
     className: "mt-1 block text-[11px] font-bold text-slate-400",
     style: JA_WRAP_STYLE
-  }, "賢さは、ほかのブリーダーがこのデッキと戦うときの相手の強さです。ちゃんと効く戦術カードが多いほど上がります。")), React.createElement("div", {
+  }, "賢さは、ほかのブリーダーがこのデッキと戦うときの相手の強さです。ちゃんと効く戦術カードが多いほど上がります。"), smartNext && React.createElement("p", {
+    "data-card-reg-smart-next": true,
+    className: "mt-1 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(smartNext))), React.createElement("div", {
     "data-card-reg-aces": true,
     className: `${SCREEN_PANEL_CLASS} py-2`
   }, React.createElement("div", {
