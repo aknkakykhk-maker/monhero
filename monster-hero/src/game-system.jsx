@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 851b524c0e9eb4cd
+// generated-sha256: 900dc1ff01fb7b18
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -879,7 +879,7 @@ const BATTLE_SYSTEM_QUICK = 'systemQuick';
 const BATTLE_SELECT_ASSIST_KEY = 'mh_battle_select_assist_v1';
 // 難易度えらびの札で、地が暗いので白い文字にする難易度(2026-10-09 ユーザー指示「難易度にあった色合いで、強弱を」)。
 // 色そのものは 77-screen-rhythm-multi.jsx の .mhbt-d-<難易度> にまとめてある
-const BATTLE_DIFFICULTY_DARK_LOOKS = new Set(['Expert','Master','GrandMaster','Hell','EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY','GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO','COCYTUS']);
+const BATTLE_DIFFICULTY_DARK_LOOKS = new Set(['Expert','Master','GrandMaster','Hell','EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY','GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO','EREBUS','COCYTUS']);
 const BATTLE_SYSTEMS = Object.freeze([
   Object.freeze({
     id: BATTLE_SYSTEM_CLASSIC, label: 'クラシックバトル', short: 'クラシック', emoji: '⚔️', color: '#818cf8',
@@ -2219,8 +2219,8 @@ const buildSoulTraitRespec = (masu, ownedItems) => {
   return { ok:true, refundedPoints, refundedCrystals, nextMasu:{ ...rest, soulTraitLevels:{} }, ownedItems:nextItems };
 };
 const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
-  extreme:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5, COCYTUS:6 }),
-  speciesChallenge:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5, COCYTUS:6 }),
+  extreme:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5, EREBUS:5, COCYTUS:6 }),
+  speciesChallenge:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5, EREBUS:5, COCYTUS:6 }),
   pro:Object.freeze({ Master:1, GrandMaster:2, Hell:3, Legend:4 }),
 });
 const heroProofClearReward = ({
@@ -10875,13 +10875,13 @@ const EXTREME_DIFFICULTIES = Object.freeze([
   { id:'INFINITY', label:'INFINITY', japanese:'インフィニティ', available:true, power:50, score:20, xp:45, gold:30, psyche:80, unlockRequirement:'ULTIMATE', description:'これまでの極限ルールを統合し、ターン経過による圧力がさらに強化された10WAVE最終難易度。', cardDescription:'極限ルールを統合。与ダメ低下とDISTANCE BREAKがさらに苛烈になる最上位10WAVE。', specialRules:Object.freeze({ assistCardEffect:0.5, positiveModifier:0.5, negativeModifier:2.0, distanceEnhancement:0.5, gutsCost:1.5, enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, minimumAllyJoinBonus:0.10, damageTurnRate:0.01, minimumDamageDealt:0.30, awakeningPenaltyRate:0.0075, awakeningZeroTurns:20, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:25, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
 ]);
 // 種族チャレンジは既存の通常・極限難易度定義を複製せず、IDの順序だけを参照する。
-// 極限チャレンジと同じく、いちばん奥(GOD・RAGNAROK・HELHEIM・ETERNAL・INFERNO・COCYTUS)まで遊べる(2026-10-03 ユーザー指示・ETERNAL は 2026-10-29・INFERNO は 2026-10-31・COCYTUS は 2026-11-01)。
+// 極限チャレンジと同じく、いちばん奥(GOD・RAGNAROK・HELHEIM・ETERNAL・INFERNO・COCYTUS)まで遊べる(2026-10-03 ユーザー指示・ETERNAL は 2026-10-29・INFERNO は 2026-10-31・COCYTUS は 2026-11-01・INFERNO と COCYTUS のあいだの EREBUS は 2026-11-04)。
 // ★GOD以降の定義(ALL_EXTREME_DIFFICULTIES)はこの下で作られるので、ここではIDだけを並べる。
 //   極限の難易度を足したら、ここへも足すこと。ずれていないかは tools/mode/helheim-rules-check.js が見る
 const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([
   ...Object.keys(DIFFICULTY_SETTINGS),
   ...EXTREME_DIFFICULTIES.map(setting=>setting.id),
-  'GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO','COCYTUS',
+  'GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO','EREBUS','COCYTUS',
 ]);
 // タクティクスバトルも、難易度の定義を複製せずIDの順序だけを参照する(種族チャレンジと同じ)。
 // 通常9段階＋極限5段階の14段階。GOD / RAGNAROK は極限チャレンジ専用なので入れない
@@ -11133,9 +11133,11 @@ const SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT = 5;
 const TACTICS_SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT = TACTICS_DIFFICULTY_INITIAL_UNLOCK_COUNT;
 const speciesChallengeInitialUnlockCountOf = (mode) => (typeof isTacticsMode === 'function' && isTacticsMode(mode)
   ? TACTICS_SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT : SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT);
-const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds=[], initialUnlockCount=SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT) => {
+// keptOpenIds … 段を間に足す前に開いていた段(2026-11-04 EREBUS を足したときの COCYTUS。cocytusKeptOpenIdsFor)。前の段のクリアが無くても開いたまま
+const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds=[], initialUnlockCount=SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT, keptOpenIds=[]) => {
   const index=SPECIES_CHALLENGE_DIFFICULTY_IDS.indexOf(difficultyId);
   if(index<0)return false;
+  if(Array.isArray(keptOpenIds)&&keptOpenIds.includes(difficultyId))return true;
   const initial=Number.isFinite(initialUnlockCount)?initialUnlockCount:SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT;
   if(index<initial)return true;
   const cleared=new Set(Array.isArray(clearedDifficultyIds)?clearedDifficultyIds:[]);
@@ -11144,7 +11146,7 @@ const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds
 const SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS = Object.freeze({
   Beginner:1, Easy:2, Normal:3, Hard:4, Expert:5, Master:6, GrandMaster:8,
   Hell:10, Legend:12, EXTREME:15, NIGHTMARE:20, CHAOS:25, ULTIMATE:30, INFINITY:40,
-  GOD:60, RAGNAROK:80, HELHEIM:100, ETERNAL:120, INFERNO:140, COCYTUS:160,
+  GOD:60, RAGNAROK:80, HELHEIM:100, ETERNAL:120, INFERNO:140, EREBUS:150, COCYTUS:160,
 });
 const speciesChallengeFirstClearReward = (difficultyId) =>
   Object.prototype.hasOwnProperty.call(SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS,difficultyId)
@@ -11256,12 +11258,16 @@ const ETERNAL_SETTING = Object.freeze({ id:'ETERNAL', label:'ETERNAL', japanese:
 // INFERNOはETERNALの次の極限難易度(2026-10-31 社長の決定)。冥府・ふつうのWAVEのシールド・貫き・敵ライフ10倍・デュラハンの上乗せはETERNALのまま。
 // ボスは起き上がらない(revival なし)。かわりにボスのWAVEは何枚ものシールド(層)をまとって出てくる。層の決まりは infernoStageRules
 const INFERNO_SETTING = Object.freeze({ id:'INFERNO', label:'INFERNO', japanese:'インフェルノ', tab:'underworld', available:true, debugAvailable:true, power:400, score:20, xp:140, gold:120, psyche:220, waveCount:10, unlockRequirement:'ETERNAL', rankingId:'ExtremeINFERNO', recordId:'INFERNO', description:'ボスは起き上がらないかわりに、何枚ものシールドをまとって現れる。1枚割るごとにボスは強くなり、最後は必殺技が連撃になる、極限チャレンジの最奥の難易度。', cardDescription:'ボスは3〜5枚のシールドをまとい、割るたびに攻撃が上がる。デュラハンとムーは必殺技が連撃に。冥府・シールド・貫き・敵ライフ10倍はエターナルのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
+// EREBUS(エレボス・冥界の闇。2026-11-04 社長が名前を決定)は INFERNO と COCYTUS のあいだの段(2026-11-04 社長の決定「最新とその下の中間ぐらい」)。
+//   固さは INFERNO の約6倍(掛け算の中間)。強度450・敵ライフ15倍。層のシールドの枚数は COCYTUS と同じ(どの敵も W1・2 4枚 / W3〜10 5枚)で、
+//   1枚目は最大ライフの1.8倍(デュラハン2.6倍・ムー3.0倍)。割るたびの攻撃はふつう+20%・ボス+30%。蘇りはムーだけ1回(全回復・最大ライフ1.5倍)。
+const EREBUS_SETTING = Object.freeze({ id:'EREBUS', label:'EREBUS', japanese:'エレボス', tab:'underworld', available:true, debugAvailable:true, power:450, score:20, xp:150, gold:130, psyche:235, waveCount:10, unlockRequirement:'INFERNO', rankingId:'ExtremeEREBUS', recordId:'EREBUS', description:'どの敵も何枚ものシールドをまとって現れる。1枚割るごとに敵は強くなり、ムーは倒しても大きくなって1回蘇る、インフェルノとコキュートスのあいだの難易度。', cardDescription:'どの敵も4〜5枚のシールドをまとい、割るたびに攻撃が上がる。ムーは1回、全回復して大きくなって蘇る。冥府・貫きはインフェルノのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 10:1 }), hpRate:1, maxHpRatePerRevival:1.5, atkStepsWithLayers:true, reveal:Object.freeze({ 10:Object.freeze([Object.freeze({ stage:'moo1', name:'常闇の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' })]) }) }), enemyAdjust:Object.freeze({ lifeRate:15, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
 // COCYTUSはINFERNOの次の極限難易度(2026-11-01 社長の決定)。冥府・貫き・デュラハンの上乗せはINFERNOのまま。
 // 敵のライフの上乗せは 10倍→50倍(2026-11-01 社長「ライフをさらに5倍ぐらいに」。1枚目は最大ライフ×3.0/3.8/4.4 のままなのでシールドも同じだけ厚くなる)。
 // デュラハンは1回・ムーは2回、本体を倒すと全回復+最大ライフ1.5倍(掛け算)で蘇る(シールドは張り直さない)。蘇るたびに攻撃も+20%(層1枚ぶんと同じ)。
 // ふつうの敵も層のシールドをまとい(WAVEのはじめの50%は層に置き換え)、層は厚く・枚数は多い。層の決まりは cocytusStageRules
-const COCYTUS_SETTING = Object.freeze({ id:'COCYTUS', label:'COCYTUS', japanese:'コキュートス', tab:'underworld', available:true, debugAvailable:true, power:500, score:20, xp:160, gold:140, psyche:250, waveCount:10, unlockRequirement:'INFERNO', rankingId:'ExtremeCOCYTUS', recordId:'COCYTUS', description:'どの敵も何枚もの厚いシールドをまとって現れる。1枚割るごとに敵は強くなり、デュラハンとムーは倒しても大きくなって蘇る、極限チャレンジの最奥の難易度。', cardDescription:'どの敵も4〜5枚の厚いシールドをまとい、割るたびに攻撃が上がる。デュラハンは1回・ムーは2回、全回復して大きくなって蘇る。冥府・貫き・敵ライフ10倍はインフェルノのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 9:1, 10:2 }), hpRate:1, maxHpRatePerRevival:1.5, atkStepsWithLayers:true, reveal:Object.freeze({ 9:Object.freeze([Object.freeze({ stage:'durahan', name:'凍土の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' })]), 10:Object.freeze([Object.freeze({ stage:'moo1', name:'凍土の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' }),Object.freeze({ stage:'moo2', name:'凍土の再起', desc:'ライフ全回復・最大ライフ2.25倍で復活' })]) }) }), enemyAdjust:Object.freeze({ lifeRate:50, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
-const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES,GOD_SETTING,RAGNAROK_SETTING,HELHEIM_SETTING,ETERNAL_SETTING,INFERNO_SETTING,COCYTUS_SETTING]);
+const COCYTUS_SETTING = Object.freeze({ id:'COCYTUS', label:'COCYTUS', japanese:'コキュートス', tab:'underworld', available:true, debugAvailable:true, power:500, score:20, xp:160, gold:140, psyche:250, waveCount:10, unlockRequirement:'EREBUS', rankingId:'ExtremeCOCYTUS', recordId:'COCYTUS', description:'どの敵も何枚もの厚いシールドをまとって現れる。1枚割るごとに敵は強くなり、デュラハンとムーは倒しても大きくなって蘇る、極限チャレンジの最奥の難易度。', cardDescription:'どの敵も4〜5枚の厚いシールドをまとい、割るたびに攻撃が上がる。デュラハンは1回・ムーは2回、全回復して大きくなって蘇る。冥府・貫き・敵ライフ10倍はインフェルノのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 9:1, 10:2 }), hpRate:1, maxHpRatePerRevival:1.5, atkStepsWithLayers:true, reveal:Object.freeze({ 9:Object.freeze([Object.freeze({ stage:'durahan', name:'凍土の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' })]), 10:Object.freeze([Object.freeze({ stage:'moo1', name:'凍土の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' }),Object.freeze({ stage:'moo2', name:'凍土の再起', desc:'ライフ全回復・最大ライフ2.25倍で復活' })]) }) }), enemyAdjust:Object.freeze({ lifeRate:50, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
+const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES,GOD_SETTING,RAGNAROK_SETTING,HELHEIM_SETTING,ETERNAL_SETTING,INFERNO_SETTING,EREBUS_SETTING,COCYTUS_SETTING]);
 // 極限チャレンジの難易度カラー。カード構造は共通のまま、上位ほど発光を少しずつ強める。
 // 常時アニメーションは使わず、iPhone縦画面でも視認性と軽さを優先する。
 const EXTREME_DIFFICULTY_THEMES = Object.freeze({
@@ -11282,6 +11288,7 @@ const EXTREME_DIFFICULTY_THEMES = Object.freeze({
   // 冥府(緑)の先は、終わらない時を思わせる明るい桃紫。ほかの極限(紫・赤・橙・青・金・氷・緑)とかぶらない
   ETERNAL:Object.freeze({accent:'#f9a8d4',rgb:'236,72,153',background:'linear-gradient(180deg,#3b0a2a,#12030d)',action:'linear-gradient(135deg,#db2777,#f9a8d4)',actionText:'#3b0a2a',glow:0.70,titleGlow:0.94,actionGlow:0.70,shadowBlur:56}),
   INFERNO:Object.freeze({accent:'#fb923c',rgb:'249,115,22',background:'linear-gradient(180deg,#431407,#120502)',action:'linear-gradient(135deg,#ea580c,#fdba74)',actionText:'#431407',glow:0.74,titleGlow:0.96,actionGlow:0.74,shadowBlur:60}),
+  EREBUS:Object.freeze({accent:'#f9a8d4',rgb:'236,72,153',background:'linear-gradient(180deg,#4a044e,#0b0418)',action:'linear-gradient(135deg,#be185d,#fbcfe8)',actionText:'#4a044e',glow:0.76,titleGlow:0.97,actionGlow:0.76,shadowBlur:62}),
   COCYTUS:Object.freeze({accent:'#a5f3fc',rgb:'103,232,249',background:'linear-gradient(180deg,#082f49,#020617)',action:'linear-gradient(135deg,#0891b2,#e0f2fe)',actionText:'#082f49',glow:0.78,titleGlow:0.98,actionGlow:0.78,shadowBlur:64}),
 });
 const extremeDifficultyTheme = (difficultyId) => EXTREME_DIFFICULTY_THEMES[difficultyId] || EXTREME_DIFFICULTY_THEMES.EXTREME;
@@ -11386,6 +11393,17 @@ const cocytusStageRules = (waveNumber) => {
   return Object.freeze({ ...base, shieldLayers:COCYTUS_SHIELD_LAYERS[w]||0, bossWave:INFERNO_BOSS_WAVES.includes(w), layerGrowth:0.3, layerAtkGain:0.2,
     layerFirstRate:COCYTUS_FIRST_LAYER_RATE[w]||3.0, layerBodyBossOnly:true, rushAtBroken:COCYTUS_RUSH_AT_BROKEN[w]||null });
 };
+// EREBUS の段階ルール(2026-11-04 社長の決定)。層の枚数は COCYTUS と同じ。1枚目は最大ライフの1.8倍(W9 2.6倍・W10 3.0倍)。
+//   割るたびの攻撃は、ふつうの敵 +20%・ボス +30%(INFERNO の+60% と COCYTUS の+20% のあいだ。1 WAVE に敵は1体なので WAVE で分ける)
+const EREBUS_SHIELD_LAYERS = COCYTUS_SHIELD_LAYERS;
+const EREBUS_FIRST_LAYER_RATE = Object.freeze({ 9:2.6, 10:3.0 });
+const erebusStageRules = (waveNumber) => {
+  const base=eternalStageRules(waveNumber);
+  const w=Math.floor(Number(waveNumber)||0);
+  const boss=INFERNO_BOSS_WAVES.includes(w);
+  return Object.freeze({ ...base, shieldLayers:EREBUS_SHIELD_LAYERS[w]||0, bossWave:boss, layerGrowth:0.3, layerAtkGain:boss?0.3:0.2,
+    layerFirstRate:EREBUS_FIRST_LAYER_RATE[w]||1.8, layerBodyBossOnly:true, rushAtBroken:COCYTUS_RUSH_AT_BROKEN[w]||null });
+};
 // 「WAVEで段階が動く難易度」の一覧。ここに1行足せば、実効倍率・与ダメ・BREAK・表示まで
 // すべて同じ経路を通るので、難易度名の分岐を各所へ書き足さなくてよい。
 const EXTREME_WAVE_STAGES = Object.freeze({
@@ -11394,6 +11412,7 @@ const EXTREME_WAVE_STAGES = Object.freeze({
   HELHEIM:Object.freeze({ label:'冥府', rules:helheimUnderworldRules }),
   ETERNAL:Object.freeze({ label:'冥府', rules:eternalStageRules }),
   INFERNO:Object.freeze({ label:'冥府', rules:infernoStageRules }),
+  EREBUS:Object.freeze({ label:'冥府', rules:erebusStageRules }),
   COCYTUS:Object.freeze({ label:'冥府', rules:cocytusStageRules }),
 });
 const extremeWaveStage = (difficultyId) => EXTREME_WAVE_STAGES[difficultyId] || null;
@@ -11704,7 +11723,7 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     ['Lv5','与ダメ低下 -1.75pt/T・最低15%'],
   ]);
   // ETERNALは冥府(HELHEIM)をそのまま引き継ぐので、同じ説明にシールドと貫きを足す
-  if(difficultyId===HELHEIM_SETTING.id||difficultyId===ETERNAL_SETTING.id||difficultyId===INFERNO_SETTING.id||difficultyId===COCYTUS_SETTING.id){
+  if(difficultyId===HELHEIM_SETTING.id||difficultyId===ETERNAL_SETTING.id||difficultyId===INFERNO_SETTING.id||difficultyId===EREBUS_SETTING.id||difficultyId===COCYTUS_SETTING.id){
     const adjust=rules.enemyAdjust||{};
     const durahan=adjust.byEnemy?.Durahan;
     push('冥府',[
@@ -11729,6 +11748,14 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
       ['割れるたび','ボスの攻撃力 +60%(最後の1枚も)'],
       ['連撃','デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)'],
     ]);
+    if(difficultyId===EREBUS_SETTING.id) push('層のシールド',[
+      ['蘇り','ムーだけ1回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る。シールドは張り直さない'],
+      ['層の数','W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'],
+      ['WAVEのはじめのシールド','エターナルの50%のシールドは、層のシールドに置き換わる'],
+      ['シールドの量','1枚目はその敵の最大ライフの1.8倍(デュラハン2.6倍・ムー3倍)。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフは元のまま)'],
+      ['割れるたび','ふつうの敵の攻撃力 +20%・ボスの攻撃力 +30%(最後の1枚も。ムーは蘇るときにも+30%)'],
+      ['連撃','デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)'],
+    ]);
     if(difficultyId===COCYTUS_SETTING.id) push('層のシールド',[
       ['蘇り','デュラハンは1回・ムーは2回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る(ムーの2回目は2.25倍)。シールドは張り直さない'],
       ['層の数','W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'],
@@ -11737,7 +11764,7 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
       ['割れるたび','敵の攻撃力 +20%(最後の1枚も。蘇るたびにも+20%)'],
       ['連撃','デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)'],
     ]);
-    if(difficultyId===ETERNAL_SETTING.id||difficultyId===INFERNO_SETTING.id||difficultyId===COCYTUS_SETTING.id) push('シールドと貫き',[
+    if(difficultyId===ETERNAL_SETTING.id||difficultyId===INFERNO_SETTING.id||difficultyId===EREBUS_SETTING.id||difficultyId===COCYTUS_SETTING.id) push('シールドと貫き',[
       ['シールド','WAVEの始めに、敵が最大ライフ50%ぶんのシールドをまとう。シールドを割るまで敵のライフは減らない'],
       ['シールドと距離強化','シールドに当てたダメージは、距離強化(間合いのボーナス)に数えない'],
       ['貫き','敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）'],
@@ -12030,7 +12057,29 @@ const isRagnarokUnlocked = (godClearCount) => (Number(godClearCount) || 0) > 0;
 const isHelheimUnlocked = (ragnarokClearCount) => (Number(ragnarokClearCount) || 0) > 0;
 const isEternalUnlocked = (helheimClearCount) => (Number(helheimClearCount) || 0) > 0;
 const isInfernoUnlocked = (eternalClearCount) => (Number(eternalClearCount) || 0) > 0;
-const isCocytusUnlocked = (infernoClearCount) => (Number(infernoClearCount) || 0) > 0;
+// EREBUS(INFERNO と COCYTUS のあいだ・2026-11-04)は INFERNO を1回以上クリアすると開く
+const isErebusUnlocked = (infernoClearCount) => (Number(infernoClearCount) || 0) > 0;
+// COCYTUS は EREBUS を1回以上クリアすると開く。★EREBUS を足す前に COCYTUS が開いていた人は閉じない(2026-11-04 社長の決め)。
+//   開いていたかは、公開のあと最初の読み込みで1回だけ作る印 mh_cocytus_open_kept_v1(cocytusOpenKept)で見る。COCYTUS の記録がある人も開いたまま
+const isCocytusUnlocked = (erebusClearCount, kept = null, cocytusRecord = 0) => (Number(erebusClearCount) || 0) > 0
+  || normalizeCocytusOpenKept(kept).extreme === true || (Number(cocytusRecord) || 0) > 0;
+// 印の中身: { version:1, extreme: 極限で INFERNO をクリアしていたか, species: 種族チャレンジで INFERNO をクリアしていた種族の id }。
+//   読めない・壊れているときは「どれも開いていなかった」(閉じる側)ではなく、作り直さずに既定の空として読む(作るのは読み込みの1回だけ)
+const COCYTUS_OPEN_KEPT_KEY = 'mh_cocytus_open_kept_v1';
+const normalizeCocytusOpenKept = (value) => {
+  const v = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const species = Array.isArray(v.species) ? [...new Set(v.species.filter(id => typeof id === 'string' && id))] : [];
+  return { version: 1, extreme: v.extreme === true, species };
+};
+// 公開のあと最初の読み込みで、いまの記録から印を作る(INFERNO のクリアがあれば、そこで COCYTUS が開いていた)
+const buildCocytusOpenKept = (extremeClearCounts, speciesProgress) => {
+  const extreme = (Number(extremeClearCounts?.[INFERNO_SETTING.id]) || 0) > 0;
+  const species = Object.entries(normalizeSpeciesChallengeProgress(speciesProgress).species)
+    .filter(([, entry]) => entry?.cleared?.[INFERNO_SETTING.id] === true).map(([id]) => id);
+  return normalizeCocytusOpenKept({ extreme, species });
+};
+// 種族チャレンジで、その種族の COCYTUS を印で開いたままにするか(isSpeciesChallengeDifficultyUnlocked の keptOpenIds に渡す)
+const cocytusKeptOpenIdsFor = (kept, speciesId) => normalizeCocytusOpenKept(kept).species.includes(speciesId) ? [COCYTUS_SETTING.id] : [];
 // 冥界チャレンジのタブは ETERNAL を1回以上クリアすると開く(今の INFERNO の解放と同じ)
 const isUnderworldUnlocked = (eternalClearCount) => (Number(eternalClearCount) || 0) > 0;
 // 難易度のシールドの枚数の幅(見た目のカードの「🛡×3〜5」に使う)。層を持たない難易度は ''
@@ -44659,7 +44708,17 @@ const INFERNO_SHIELD_COLORS = Object.freeze([
 ]);
 const INFERNO_SHIELD_MARKS = Object.freeze(['①', '②', '③', '④', '⑤', '⑥', '⑦']);
 const INFERNO_BODY_HP_GRADIENT = 'linear-gradient(180deg,#f3e8ff 0%,#c084fc 34%,#7c3aed 70%,#3b0764 100%)';
-const infernoShieldColorAt = (k) => INFERNO_SHIELD_COLORS[Math.max(0, Math.min(INFERNO_SHIELD_COLORS.length - 1, k))];
+// EREBUS(冥界の闇・2026-11-04)は層を淡い紫 → 黒に近い紫に。本体のライフは赤(シールドが紫なので、ライフまで紫だと見分けにくい)
+const EREBUS_SHIELD_COLORS = Object.freeze([
+  Object.freeze(['#f5f3ff', '#c4b5fd', '#ede9fe']),
+  Object.freeze(['#ede9fe', '#a78bfa', '#ddd6fe']),
+  Object.freeze(['#ddd6fe', '#7c3aed', '#c4b5fd']),
+  Object.freeze(['#c4b5fd', '#5b21b6', '#a78bfa']),
+  Object.freeze(['#a78bfa', '#2e1065', '#8b5cf6']),
+]);
+const EREBUS_BODY_HP_GRADIENT = 'linear-gradient(180deg,#fecaca 0%,#f87171 34%,#dc2626 70%,#7f1d1d 100%)';
+const shieldBodyHpGradient = (rule) => (rule === 'EREBUS' ? EREBUS_BODY_HP_GRADIENT : INFERNO_BODY_HP_GRADIENT);
+const infernoShieldColorAt = (k, rule) => { const pal = rule === 'EREBUS' ? EREBUS_SHIELD_COLORS : INFERNO_SHIELD_COLORS; return pal[Math.max(0, Math.min(pal.length - 1, k))]; };
 const INFERNO_SHIELD_CSS = `
 [data-inferno-shield-gauge]{--mh-shield-w:min(150px,38vw)}
 @keyframes mhShieldFlash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
@@ -44671,9 +44730,19 @@ const INFERNO_SHIELD_CSS = `
 @keyframes mhShieldBand{0%{opacity:0;transform:translateX(-30%)}12%{opacity:1;transform:translateX(0)}86%{opacity:1;transform:translateX(0)}100%{opacity:0;transform:translateX(12%)}}
 @keyframes mhShieldShake{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,3px) rotate(-.6deg)}40%{transform:translate(5px,-3px) rotate(.5deg)}60%{transform:translate(-4px,2px)}80%{transform:translate(3px,-2px)}}
 [data-inferno-shield-fx] *{pointer-events:none}
+@keyframes mhShieldDarkCreep{0%{opacity:0;transform:translateX(var(--from))}45%{opacity:1;transform:translateX(0)}80%{opacity:1}100%{opacity:0}}
+@keyframes mhShieldHole{0%{opacity:0;transform:translate(-50%,-50%) scale(0)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}30%{transform:translate(-50%,-50%) scale(1)}75%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(0)}}
+@keyframes mhShieldSuck{0%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--rot)) skewX(-28deg)}15%{opacity:1}100%{opacity:0;transform:translate(0,0) rotate(0deg) skewX(-28deg) scale(.2)}}
+@keyframes mhShieldRingIn{0%{opacity:0;transform:translate(-50%,-50%) scale(1.7)}25%{opacity:.85}100%{opacity:0;transform:translate(-50%,-50%) scale(.2)}}
+@keyframes mhShieldPop{0%{opacity:0;transform:skewX(-28deg) scaleX(.2)}60%{opacity:1;transform:skewX(-28deg) scaleX(1.08)}100%{opacity:1;transform:skewX(-28deg) scaleX(1)}}
+[data-inferno-shield-gauge][data-shield-entry] [data-inferno-shield-layer]{animation:mhShieldPop .26s ease-out both}
+@keyframes mhShieldEntryBar{0%{opacity:0;clip-path:inset(0 100% 0 0)}100%{opacity:1;clip-path:inset(0 0 0 0)}}
+@keyframes mhShieldEntryGather{0%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.3)}20%{opacity:1}100%{opacity:0;transform:translate(0,0) scale(.3)}}
+@keyframes mhShieldEntryShell{0%{opacity:0;transform:translate(-50%,-50%) scale(1.3)}30%{opacity:1;transform:translate(-50%,-50%) scale(1)}70%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
+@keyframes mhShieldEntryRing{0%{opacity:.95;transform:translate(-50%,-50%) scale(.6)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.45)}}
 `;
 // 層のゲージ(敵の段のいちばん上の真ん中)。上の行ほど後の層。いちばん下の残った層が、いま削っている層
-function InfernoShieldGauge({ view }) {
+function InfernoShieldGauge({ view, rule, entry = false }) {
   if (!view || !(view.total > 0)) return null;
   const rows = [];
   for (let row = 0; row < view.total; row += 1) {
@@ -44681,7 +44750,7 @@ function InfernoShieldGauge({ view }) {
     const layer = view.layers[k] || { max: 0, now: 0 };
     const alive = k >= view.broken;
     const active = k === view.broken;
-    const [c1, c2, edge] = infernoShieldColorAt(k);
+    const [c1, c2, edge] = infernoShieldColorAt(k, rule);
     const pct = layer.max > 0 ? Math.max(0, Math.min(1, layer.now / layer.max)) : 0;
     const h = 11 + Math.min(4, k);
     rows.push(
@@ -44697,10 +44766,10 @@ function InfernoShieldGauge({ view }) {
       </div>
     );
   }
-  const curColor = view.left > 0 ? infernoShieldColorAt(view.broken)[1] : '#a8a29e';
+  const curColor = view.left > 0 ? infernoShieldColorAt(view.broken, rule)[1] : '#a8a29e';
   return (<>
     <style>{INFERNO_SHIELD_CSS}</style>
-    <div data-inferno-shield-gauge={view.total} data-inferno-shield-left={view.left} aria-label={`シールド 残り${view.left}枚(全${view.total}枚)`}
+    <div data-inferno-shield-gauge={view.total} data-shield-entry={entry ? '1' : undefined} data-inferno-shield-left={view.left} aria-label={`シールド 残り${view.left}枚(全${view.total}枚)`}
       className="pointer-events-none absolute left-1/2 top-1 z-[44] flex items-start gap-1.5 [@media(max-height:640px)]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden" style={{ transform: 'translateX(-50%)' }}>
       <div className="mt-[1px] flex flex-col items-end gap-[1px] leading-none">
         {view.boss && <span data-inferno-shield-boss className="whitespace-nowrap text-[10px] font-black italic text-yellow-300" style={{ textShadow: '0 0 6px #f59e0b,0 1px 2px #000' }}>👑 BOSS</span>}
@@ -44713,17 +44782,17 @@ function InfernoShieldGauge({ view }) {
 }
 // 狭い画面(背の低い縦・横向き)のシールド: 敵のライフの棒のすぐ下に細い1本(残りの枚数・各層の小さな印・今の層の「残り / 最大」)。
 //   舞台の上に重ねると、敵の頭の上の吹き出し(「3連撃!」など)とぶつかるので、ライフの帯の中に並べる。右には敵の移動の予告が出るので左に寄せる(2026-10-31 社長「狭いときも見えるように」)
-function InfernoShieldCompact({ view }) {
+function InfernoShieldCompact({ view, rule }) {
   if (!view || !(view.total > 0)) return null;
-  const curColor = view.left > 0 ? infernoShieldColorAt(view.broken)[1] : '#a8a29e';
+  const curColor = view.left > 0 ? infernoShieldColorAt(view.broken, rule)[1] : '#a8a29e';
   const cur = view.layers[view.broken] || null;
-  const [cc1, cc2, cEdge] = view.left > 0 ? infernoShieldColorAt(view.broken) : ['#a8a29e', '#57534e', 'rgba(168,162,158,.5)'];
+  const [cc1, cc2, cEdge] = view.left > 0 ? infernoShieldColorAt(view.broken, rule) : ['#a8a29e', '#57534e', 'rgba(168,162,158,.5)'];
   const curPct = cur && cur.max > 0 ? Math.max(0, Math.min(1, cur.now / cur.max)) : 0;
   return (
     <div data-inferno-shield-compact={view.total} data-inferno-shield-left={view.left} aria-label={`シールド 残り${view.left}枚(全${view.total}枚)`}
       className="pointer-events-none mt-[3px] hidden w-max max-w-full items-center gap-1 rounded-full border border-white/15 bg-black/70 py-[1px] pl-1.5 pr-1 not-italic normal-case tracking-normal [@media(max-height:640px)]:flex [@media(orientation:landscape)_and_(max-height:520px)]:flex">
       <span className="whitespace-nowrap text-[10px] font-black leading-none text-white" style={{ textShadow: `0 0 5px ${curColor},0 1px 2px #000` }}>🛡{view.left}<small className="text-[8px] text-amber-300">/{view.total}</small></span>
-      <span className="flex items-center gap-[2px]">{view.layers.map((l, k) => { const c = infernoShieldColorAt(k); const alive = k >= view.broken; return <i key={k} data-inferno-shield-pip={k + 1} className="block h-[8px] w-[5px] rounded-[1px]" style={{ transform: 'skewX(-20deg)', background: alive ? c[1] : 'rgba(120,113,108,.6)', boxShadow: k === view.broken ? `0 0 5px ${c[1]}` : 'none' }}/>; })}</span>
+      <span className="flex items-center gap-[2px]">{view.layers.map((l, k) => { const c = infernoShieldColorAt(k, rule); const alive = k >= view.broken; return <i key={k} data-inferno-shield-pip={k + 1} className="block h-[8px] w-[5px] rounded-[1px]" style={{ transform: 'skewX(-20deg)', background: alive ? c[1] : 'rgba(120,113,108,.6)', boxShadow: k === view.broken ? `0 0 5px ${c[1]}` : 'none' }}/>; })}</span>
       {cur && view.left > 0 && <span className="relative block h-[11px] w-[min(118px,30vw)] overflow-hidden rounded-[3px]" style={{ background: 'rgba(15,10,20,.85)', border: `1px solid ${cEdge}` }}>
         <span className="absolute inset-y-0 left-0 block transition-[width] duration-500" style={{ width: `${curPct * 100}%`, background: `linear-gradient(90deg,${cc1},${cc2})` }}/>
         <span className="absolute inset-0 flex items-center justify-end whitespace-nowrap pr-1 font-mono text-[8px] font-black italic leading-none tabular-nums text-white" style={{ textShadow: '0 1px 2px #000,0 0 3px #000' }}><span className="mr-auto pl-[3px] not-italic">{INFERNO_SHIELD_MARKS[view.broken] || view.broken + 1}</span>{Math.floor(cur.now).toLocaleString()} / {Math.floor(cur.max).toLocaleString()}</span>
@@ -44736,12 +44805,13 @@ function InfernoShieldCompact({ view }) {
 //   見出しは難易度ごと(INFERNO=燃える橙 / COCYTUS=氷の水色・2026-11-01 社長「これで」)。growthPct は次の1枚が大きくなる割合(難易度の決まりから)
 const SHIELD_BADGE_THEME = Object.freeze({
   INFERNO: Object.freeze({ title: '🔥 INFERNO', titleColor: '#fde68a', titleGlow: '#f97316', bg: 'linear-gradient(180deg,#1c0a0a,#0c0a09)', sub: '#fecaca' }),
+  EREBUS: Object.freeze({ title: '🌑 EREBUS', titleColor: '#fbcfe8', titleGlow: '#db2777', bg: 'linear-gradient(180deg,#2e1065,#09090b)', sub: '#f9a8d4', ring: '#c4b5fd' }),
   COCYTUS: Object.freeze({ title: '❄ COCYTUS', titleColor: '#cffafe', titleGlow: '#22d3ee', bg: 'linear-gradient(180deg,#082f49,#020617)', sub: '#a5f3fc', ring: '#a5f3fc' }),
 });
 function InfernoShieldBadge({ view, rule = 'INFERNO', growthPct = 30 }) {
   if (!view || !(view.total > 0) || !view.boss) return null;
   const theme = SHIELD_BADGE_THEME[rule] || SHIELD_BADGE_THEME.INFERNO;
-  const col = view.left > 0 ? infernoShieldColorAt(view.broken) : ['#e7e5e4', '#78716c', '#a8a29e'];
+  const col = view.left > 0 ? infernoShieldColorAt(view.broken, rule) : ['#e7e5e4', '#78716c', '#a8a29e'];
   return (
     <div data-inferno-shield-badge={view.left} aria-hidden="true"
       className="pointer-events-none absolute left-2 top-[96px] z-[43] w-[84px] rounded-[14px] px-1 pb-1 pt-1.5 text-center [@media(max-height:640px)]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
@@ -44755,9 +44825,66 @@ function InfernoShieldBadge({ view, rule = 'INFERNO', growthPct = 30 }) {
     </div>
   );
 }
+// 登場の演出(2026-11-04 社長「モンスターが現れてライフが表示されてシールドを纏って順にシールドゲージが増えてく」)。冥界の段(INFERNO・EREBUS・COCYTUS)の層のシールドを持つ敵が出たとき。
+//   long: ライフの棒が伸びる → 段の色の光が集まって敵を包む殻になる → 層が1枚ずつ積み上がる(約3秒)。最初のWAVEとボスのWAVEだけ。画面をタップしたら短い形へ飛ぶ
+//   short: ほかのWAVE・クイック・オート。層が一度に出て、光の輪が1回広がるだけ(約0.6秒)
+//   軽め・最軽量・省エネ表示では出さない(呼ぶ側が出さない)。積み上がった枚数は onShown で呼ぶ側へ返し、ゲージはその枚数だけ描く
+const SHIELD_ENTRY_LOOK = Object.freeze({
+  INFERNO: Object.freeze({ glow: '#f97316', light: '#fde68a', dim: 'rgba(127,29,29,.75)' }),
+  EREBUS: Object.freeze({ glow: '#db2777', light: '#f9a8d4', dim: 'rgba(20,2,16,.82)' }),
+  COCYTUS: Object.freeze({ glow: '#22d3ee', light: '#ecfeff', dim: 'rgba(8,47,73,.75)' }),
+});
+const SHIELD_ENTRY_LAYER_MS = 260;
+const SHIELD_ENTRY_LAYER_START_MS = 1400;
+function ShieldEntryFx({ entry, onShown, onDone }) {
+  const look = SHIELD_ENTRY_LOOK[entry.rule] || SHIELD_ENTRY_LOOK.INFERNO;
+  const [mode, setMode] = React.useState(null); // 説明の窓(極限ルール発動など)が開いている間は始めない
+  const [center, setCenter] = React.useState(null);
+  const timersRef = React.useRef([]);
+  const clearTimers = () => { timersRef.current.forEach(t => clearTimeout(t)); timersRef.current = []; };
+  const later = (ms, f) => { timersRef.current.push(setTimeout(f, ms)); };
+  React.useEffect(() => {
+    let waited = 0;
+    const tryStart = () => {
+      const blocking = typeof document !== 'undefined' && document.querySelector('[role="dialog"][aria-modal="true"]');
+      if (blocking && waited < 30000) { waited += 250; later(250, tryStart); return; }
+      const ring = typeof document !== 'undefined' ? document.querySelector('[data-enemy-ring]') : null;
+      const r = ring && ring.getBoundingClientRect();
+      setCenter(r && r.width > 0 ? { x: r.left + r.width / 2, y: r.top + r.height / 2, w: Math.max(120, r.width) } : { x: (typeof window !== 'undefined' ? window.innerWidth : 390) / 2, y: (typeof window !== 'undefined' ? window.innerHeight : 800) * 0.3, w: 180 });
+      const m = waited >= 30000 ? 'short' : entry.mode;
+      setMode(m);
+      if (m === 'short') { onShown(entry.total); later(650, () => onDone(entry.id)); return; }
+      for (let n = 1; n <= entry.total; n += 1) later(SHIELD_ENTRY_LAYER_START_MS + (n - 1) * SHIELD_ENTRY_LAYER_MS, () => onShown(n));
+      later(SHIELD_ENTRY_LAYER_START_MS + entry.total * SHIELD_ENTRY_LAYER_MS + 350, () => onDone(entry.id));
+    };
+    tryStart();
+    return clearTimers;
+  }, [entry.id]);
+  const skip = () => { clearTimers(); onShown(entry.total); setMode('short'); later(650, () => onDone(entry.id)); };
+  if (!mode || !center) return null;
+  const gather = mode === 'long' ? Array.from({ length: 14 }, (_, k) => { const a = k / 14 * Math.PI * 2; const d = center.w * 1.1; return { k, dx: `${Math.round(Math.cos(a) * d)}px`, dy: `${Math.round(Math.sin(a) * d * 0.8)}px` }; }) : [];
+  return ReactDOM.createPortal(
+    <div data-shield-entry-fx={mode} data-shield-entry-rule={entry.rule} className="fixed inset-0 z-[9300] overflow-hidden" style={{ pointerEvents: mode === 'long' ? 'auto' : 'none' }}
+      onPointerDown={mode === 'long' ? (e) => { e.stopPropagation(); skip(); } : undefined} aria-hidden="true">
+      <style>{INFERNO_SHIELD_CSS}</style>
+      {mode === 'long' && <>
+        <style>{'[data-enemy-bar]{animation:mhShieldEntryBar .45s ease-out both}'}</style>
+        <div className="pointer-events-none absolute inset-0" style={{ boxShadow: `inset 0 0 90px 30px ${look.dim}`, animation: 'mhShieldVignette 1.4s .45s ease-out both' }}/>
+        <div className="pointer-events-none absolute" style={{ left: center.x, top: center.y, width: 0, height: 0 }}>
+          {gather.map(g => <i key={g.k} className="absolute block h-[10px] w-[10px] rounded-full" style={{ '--dx': g.dx, '--dy': g.dy, background: look.light, boxShadow: `0 0 12px 4px ${look.glow}`, animation: 'mhShieldEntryGather .5s .5s ease-in both' }}/>)}
+        </div>
+        <div className="pointer-events-none absolute" style={{ left: center.x, top: center.y, width: center.w * 1.2, height: center.w * 1.15, borderRadius: '46%', border: `3px solid ${look.light}`, background: `radial-gradient(ellipse,transparent 55%,${look.glow}55)`, boxShadow: `0 0 26px ${look.glow},inset 0 0 22px ${look.glow}`, animation: 'mhShieldEntryShell 1.2s .9s ease-out both' }}/>
+      </>}
+      {mode === 'short' && <div className="pointer-events-none absolute rounded-full" style={{ left: center.x, top: center.y, width: center.w * 1.3, height: center.w * 1.3, border: `3px solid ${look.light}`, boxShadow: `0 0 24px ${look.glow}`, animation: 'mhShieldEntryRing .5s ease-out both' }}/>}
+    </div>,
+    document.body
+  );
+}
 // 割れた瞬間の演出。kind: mid(1〜3枚目・攻撃が上がる)/ rush(必殺技が連撃に)/ final(5枚目・最終形態)
 //   軽め・最軽量・省エネ表示では、溜めと破片を出さず帯だけ
-function InfernoShieldBreakFx({ fx, lite, onDone }) {
+function InfernoShieldBreakFx({ fx, lite, onDone, rule }) {
+  // EREBUS は「闇に呑まれる」(2026-11-04 社長「案1」): 白く光らず、縁から黒い靄 → 黒い穴に吸い込まれて砕ける → 黒紫の帯
+  const dark = rule === 'EREBUS';
   const dur = lite ? 1700 : fx.kind === 'final' ? 3600 : fx.kind === 'rush' ? 3300 : 2900;
   React.useEffect(() => { const t = setTimeout(() => onDone && onDone(fx.id), dur); return () => clearTimeout(t); }, [fx.id]);
   const final = fx.kind === 'final';
@@ -44776,10 +44903,31 @@ function InfernoShieldBreakFx({ fx, lite, onDone }) {
           title: `🔥 ${fx.name} 最終形態!`, sub: `シールドが全部割れた。必殺技が${fx.hits}連撃に・攻撃力 +${fx.atkPct}%`, big: null }
       : { cls: 'mh-shield-band-mid', bg: 'linear-gradient(90deg,rgba(69,10,10,.96),rgba(185,28,28,.96) 50%,rgba(69,10,10,.96))', line: '#fb923c', glow: 'rgba(239,68,68,.8)',
           title: `🔥 ${fx.name}が怒った!`, sub: `${fx.left === 0 ? 'シールドが全部割れた。' : ''}攻撃力 +${fx.atkPct}%`, big: null };
+  const darkBand = !dark ? null : fx.kind === 'rush'
+    ? { bg: 'linear-gradient(90deg,rgba(2,0,12,.97),rgba(91,33,182,.97) 50%,rgba(2,0,12,.97))', line: '#c4b5fd', glow: 'rgba(124,58,237,.9)' }
+    : final
+      ? { bg: 'linear-gradient(90deg,rgba(2,0,12,.98),rgba(112,26,117,.97) 50%,rgba(2,0,12,.98))', line: '#facc15', glow: 'rgba(219,39,119,.85)', title: `🌑 ${fx.name} 最終形態!` }
+      : { bg: 'linear-gradient(90deg,rgba(2,0,12,.97),rgba(76,29,149,.97) 50%,rgba(2,0,12,.97))', line: '#c4b5fd', glow: 'rgba(124,58,237,.9)', title: `🌑 ${fx.name}が闇をまとった!` };
+  const bandLook = darkBand ? { ...band, ...darkBand } : band;
+  const creep = dark && !lite ? Array.from({ length: 8 }, (_, k) => ({ k, left: k % 2 === 1, top: 8 + k * 11, len: 34 + (k * 37 % 22), h: 16 + (k % 3) * 8 })) : [];
   return ReactDOM.createPortal(
-    <div data-inferno-shield-fx={fx.kind} data-inferno-shield-broken={fx.broken} className="fixed inset-0 z-[9400] overflow-hidden pointer-events-none" aria-live="polite">
+    <div data-inferno-shield-fx={fx.kind} data-inferno-shield-look={dark ? 'EREBUS' : undefined} data-inferno-shield-broken={fx.broken} className="fixed inset-0 z-[9400] overflow-hidden pointer-events-none" aria-live="polite">
       <style>{INFERNO_SHIELD_CSS}</style>
-      {!lite && <>
+      {!lite && dark && <>
+        <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 120px 60px rgba(2,0,12,.92)', background: 'radial-gradient(ellipse at 50% 30%,transparent 30%,rgba(30,10,60,.55) 80%)', animation: 'mhShieldVignette 1.6s ease-out both' }}/>
+        {creep.map(c => <i key={c.k} className="absolute block rounded-full" style={{ top: `${c.top}%`, [c.left ? 'left' : 'right']: 0, width: `${c.len}vw`, height: `${c.h}px`, '--from': c.left ? '-100%' : '100%', background: `linear-gradient(${c.left ? 90 : 270}deg,rgba(2,0,12,.95),rgba(76,29,149,.7) 70%,rgba(167,139,250,0))`, filter: 'blur(3px)', animation: 'mhShieldDarkCreep 1.4s ease-out both' }}/>)}
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 50% 30%,rgba(2,0,12,.98) 0,rgba(2,0,12,.9) 12%,rgba(76,29,149,.55) 38%,rgba(2,0,12,.6) 85%)', animation: `mhShieldFlash ${final ? 1.3 : 1}s .8s ease-out both` }}/>
+        <div className="absolute left-1/2 top-[30%] rounded-full" style={{ width: final ? 150 : 110, height: final ? 150 : 110, background: '#000', boxShadow: `0 0 0 4px ${final ? '#facc15' : '#a78bfa'},0 0 40px 16px rgba(124,58,237,.95),inset 0 0 30px rgba(167,139,250,.6)`, animation: 'mhShieldHole 1.5s .7s ease-out both' }}/>
+        {[0, 1, 2, ...(final ? [3] : [])].map(n => <div key={n} className="absolute left-1/2 top-[30%] rounded-full" style={{ width: `${180 + n * 70}px`, height: `${180 + n * 70}px`, border: `2px dashed rgba(196,181,253,${.75 - n * .14})`, animation: `mhShieldRingIn 1s ${.8 + n * .1}s ease-in both` }}/>)}
+        <div className="absolute left-1/2 top-[30%]" style={{ width: 0, height: 0 }}>
+          {shards.map(s => <i key={s.k} className="absolute block" style={{ '--dx': s.dx, '--dy': s.dy, '--rot': s.rot, width: `${s.w}px`, height: `${s.h}px`, background: '#05020c', border: '1px solid #c4b5fd', boxShadow: '0 0 6px #7c3aed', animation: 'mhShieldSuck 1s .85s cubic-bezier(.5,0,.8,.4) both' }}/>)}
+        </div>
+        <div className="absolute left-1/2 top-[22%] whitespace-nowrap text-center font-black italic leading-none"
+          style={{ color: '#0b0614', fontSize: final ? 'min(46px,11.5vw)' : 'min(42px,11vw)', WebkitTextStroke: '2px #c4b5fd', textShadow: '0 0 18px #a855f7,0 0 40px #7c3aed', animation: `mhShieldWord 1.5s .9s ease-out both` }}>
+          {final ? <>ALL SHADOW<br/>BREAK!!</> : <>SHADOW<br/>BREAK!!</>}
+        </div>
+      </>}
+      {!lite && !dark && <>
         <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 90px 34px rgba(127,29,29,.8)', animation: 'mhShieldVignette 1.3s ease-out both' }}/>
         <div className="absolute left-1/2 top-[22%]" style={{ width: 0, height: 0 }}>
           {gather.map(g => <i key={g.k} className="absolute block h-[8px] w-[8px] rounded-full bg-white" style={{ '--dx': g.dx, '--dy': g.dy, boxShadow: '0 0 10px 4px #fbbf24', animation: 'mhShieldGather .6s .2s ease-in both' }}/>)}
@@ -44795,11 +44943,11 @@ function InfernoShieldBreakFx({ fx, lite, onDone }) {
         </div>
       </>}
       <div data-inferno-shield-band={fx.kind} className="absolute inset-x-0 top-[38%] px-3.5 py-2.5"
-        style={{ background: band.bg, borderTop: `3px solid ${band.line}`, borderBottom: `3px solid ${band.line}`, boxShadow: `0 0 26px ${band.glow}`, animation: `mhShieldBand ${bandLen}s ${bandDelay}s ease-out both` }}>
+        style={{ background: bandLook.bg, borderTop: `3px solid ${bandLook.line}`, borderBottom: `3px solid ${bandLook.line}`, boxShadow: `0 0 26px ${bandLook.glow}`, animation: `mhShieldBand ${bandLen}s ${bandDelay}s ease-out both` }}>
         <div className="flex items-center gap-2.5">
           {band.big && <div className="shrink-0 text-[42px] font-black italic leading-none text-white" style={{ WebkitTextStroke: '2px #701a75', textShadow: '0 0 16px #e879f9' }}>{band.big}</div>}
           <div className="min-w-0">
-            <div className="text-[20px] font-black italic leading-tight" style={{ color: final ? '#fef08a' : fx.kind === 'rush' ? '#fdf4ff' : '#fecaca', textShadow: '0 2px 0 #7c2d12' }}>{band.title}</div>
+            <div className="text-[20px] font-black italic leading-tight" style={{ color: final ? '#fef08a' : fx.kind === 'rush' || dark ? '#fdf4ff' : '#fecaca', textShadow: `0 2px 0 ${dark ? '#1e1b4b' : '#7c2d12'}` }}>{bandLook.title}</div>
             <div className="mt-1 text-[13px] font-extrabold leading-snug text-white">{band.sub}</div>
           </div>
         </div>
@@ -45078,6 +45226,26 @@ function BattleScreen({
   //   (2026-10-31 社長「ゲージの下の層にかからないように」)。背の低い画面はゲージがライフの帯の中の細い1本なので16pxだけ、横向きは画面が低く上の飾り(✨☠️)が細い1本にかかるので56px下げる
   const infernoFloatShift = infernoShellView?.total>0 ? infernoShellView.total*15+8 : 0;
   const infernoFloatTop = infernoFloatShift ? `calc(11% + ${infernoFloatShift}px)` : '11%';
+  // 登場の演出(ShieldEntryFx)。敵が替わったら1回。途中から(再開など・もう割れている)・軽め/最軽量/省エネ表示では出さない
+  const shellEntryLiteView = !!(ecoBattleView||liteBattleView||fxLoad==='LIGHT'||fxLoad==='MINIMAL');
+  const [shellEntry, setShellEntry] = useState(null);
+  const [shellEntryShown, setShellEntryShown] = useState(0);
+  const shellEntryKeyRef = useRef(null);
+  useEffect(()=>{
+    const view=infernoShellView;
+    if(!(view?.total>0)) return;
+    const key=`${wave}:${enemy?.id||''}`;
+    if(shellEntryKeyRef.current===key) return;
+    shellEntryKeyRef.current=key;
+    if(shellEntryLiteView||view.broken>0||!SHIELD_ENTRY_LOOK[infernoShellRule]) return;
+    const mode=(isQuickMode(runMode)||autoBattle)?'short':((wave===1||view.boss)?'long':'short');
+    setShellEntryShown(0);
+    setShellEntry({ id:key, mode, total:view.total, rule:infernoShellRule });
+  },[infernoShellView?.total,wave,enemy?.id]);
+  const shellEntryActive = !!shellEntry && shellEntry.id===`${wave}:${enemy?.id||''}` && shellEntryShown<(infernoShellView?.total||0);
+  const shellGaugeView = shellEntryActive && infernoShellView
+    ? { ...infernoShellView, total:shellEntryShown, layers:infernoShellView.layers.slice(0,shellEntryShown), left:Math.max(0,shellEntryShown-infernoShellView.broken), boss:false }
+    : infernoShellView;
   const infernoShellSeqRef = useRef({ key:null, seq:0 });
   useEffect(()=>{
     const view=infernoShellView;
@@ -45526,10 +45694,10 @@ function BattleScreen({
             <div data-enemy-hpbar className="relative h-[14px] overflow-hidden rounded-full border-2 border-white/25 bg-slate-950" style={{boxShadow:'inset 0 2px 6px rgba(0,0,0,.85)'}}>
               {/* ★幅(width)ではなく横の縮み(scaleX)で減らす。幅を変えると1秒のあいだ毎コマ組み直しが起き、スマホでライフの減り方がかくつく
                   (2026-09-24 ユーザー指摘「敵のライフの減り方とかかくつき」) */}
-              <div className="h-full w-full origin-left transition-transform duration-1000" data-enemy-hp-tone={infernoShellView?.total>0?'inferno-body':undefined} style={{transform:`scaleX(${Math.min(1,Math.max(0,enemy.hp)/(enemy.maxHp||1))})`,backgroundImage:infernoShellView?.total>0?INFERNO_BODY_HP_GRADIENT:'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'}}></div>
+              <div className="h-full w-full origin-left transition-transform duration-1000" data-enemy-hp-tone={infernoShellView?.total>0?'inferno-body':undefined} style={{transform:`scaleX(${Math.min(1,Math.max(0,enemy.hp)/(enemy.maxHp||1))})`,backgroundImage:infernoShellView?.total>0?shieldBodyHpGradient(infernoShellRule):'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'}}></div>
               <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1/2" style={{background:'linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))'}}></div>
             </div>
-            {infernoShellView?.total>0&&<InfernoShieldCompact view={infernoShellView}/>}
+            {shellGaugeView?.total>0&&<InfernoShieldCompact view={shellGaugeView} rule={infernoShellRule}/>}
             {/* 敵にかかっているデバフの詳細(2026-10-06 ユーザー指示「全部ウンディーネの絶氷の位置にまとめて、簡易表示して押したら詳細が見える」)。
                 名前の横の簡易表示を押したときだけ開く。デバフが無くなったら、開いたままでも何も出さない */}
             {enemyDebuffOpen&&Array.isArray(enemyDebuffs)&&enemyDebuffs.length>0&&(
@@ -45622,9 +45790,10 @@ function BattleScreen({
               lift={battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)}/>;
           })()}
           {/* INFERNOのボスの層のシールド: ゲージ(上の真ん中)と大きな札(左)。AIコピーの小窓が出ている間は札を出さない(同じ左に重なるので) */}
-          {infernoShellView?.total>0&&<InfernoShieldGauge view={infernoShellView}/>}
-          {infernoShellView?.total>0&&!copyFloat&&<InfernoShieldBadge view={infernoShellView} rule={infernoShellRule} growthPct={Math.round((Number(extremeWaveStageRules(infernoShellRule,wave)?.layerGrowth)||0)*100)}/>}
-          {infernoShellFx&&<InfernoShieldBreakFx key={infernoShellFx.id} fx={infernoShellFx} lite={!!(ecoBattleView||liteBattleView||fxLoad==='LIGHT'||fxLoad==='MINIMAL')} onDone={(id)=>setInfernoShellFx(cur=>cur&&cur.id===id?null:cur)}/>}
+          {shellGaugeView?.total>0&&<InfernoShieldGauge view={shellGaugeView} rule={infernoShellRule} entry={shellEntryActive}/>}
+          {shellEntry&&<ShieldEntryFx key={shellEntry.id} entry={shellEntry} onShown={(n)=>setShellEntryShown(v=>Math.max(v,n))} onDone={(id)=>setShellEntry(cur=>cur&&cur.id===id?null:cur)}/>}
+          {infernoShellView?.total>0&&!shellEntryActive&&!copyFloat&&<InfernoShieldBadge view={infernoShellView} rule={infernoShellRule} growthPct={Math.round((Number(extremeWaveStageRules(infernoShellRule,wave)?.layerGrowth)||0)*100)}/>}
+          {infernoShellFx&&<InfernoShieldBreakFx key={infernoShellFx.id} fx={infernoShellFx} rule={infernoShellRule} lite={!!(ecoBattleView||liteBattleView||fxLoad==='LIGHT'||fxLoad==='MINIMAL')} onDone={(id)=>setInfernoShellFx(cur=>cur&&cur.id===id?null:cur)}/>}
           {battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)&&<button data-soul-battle-effects-button type="button" onClick={()=>setShowSoulBattleEffects(true)} aria-label="魂格効果" className="absolute right-2 top-[56px] z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7 [@media(max-height:640px)]:rounded-full [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:top-auto [@media(max-height:640px)]:bottom-1 [@media(max-height:640px)]:right-auto [@media(max-height:640px)]:left-2" style={{boxShadow:'0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'}}><Sparkles size={17} className="text-sky-300"/><span className="text-[10px] font-black leading-none text-white [@media(max-height:640px)]:sr-only">魂格効果</span></button>}
           {/* 敵が次に何をしてくるかの札(2026-09-19・ユーザー指摘「敵の行動予測が見えない」)。
               ★置き場所は**敵の絵の右下**(2026-09-22 ユーザー指示「敵の行動予測は右下に出るほうが
@@ -47193,34 +47362,40 @@ const COCYTUS_REVIVE_CSS = `
 @keyframes mhIceAura{0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}40%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}}
 @keyframes mhIceBand{0%{opacity:0;transform:translateX(-30%)}15%{opacity:1;transform:translateX(0)}100%{opacity:1;transform:translateX(0)}}
 `;
-function CocytusReviveFx({ stage, lite, name }) {
+// EREBUS のムーの蘇り(2026-11-04)は、同じ3段の形を冥界の闇の色で出す(凍る → 闇に呑まれる・砕ける → 蘇る)
+const REVIVE_FX_LOOK = Object.freeze({
+  COCYTUS: Object.freeze({ icon: '❄', frost: '165,243,252', block: 'linear-gradient(135deg,rgba(236,254,255,.55),rgba(103,232,249,.25) 45%,rgba(14,116,144,.35))', blockEdge: 'rgba(207,250,254,.9)', blockGlow: '0 0 30px rgba(103,232,249,.9),inset 0 0 30px rgba(255,255,255,.6)', sfx: '……ピキ…ピキキ…', sfxColor: '#ecfeff', sfxStroke: '#0e7490', sfxGlow: '#22d3ee', flash: (t) => `radial-gradient(circle at 50% 30%,rgba(255,255,255,.97),rgba(165,243,252,${.6 + t * .1}) ${25 + t * 5}%,rgba(8,47,73,${.3 + t * .15}) 80%)`, rings: ['rgba(103,232,249,.95)', 'rgba(255,255,255,.9)', 'rgba(250,204,21,.85)'], shard: 'linear-gradient(135deg,#ffffff,#a5f3fc 50%,#0891b2)', shardGlow: '#67e8f9', word: ['FROZEN', 'BREAK!!'], bigWord: ['ABSOLUTE', 'ZERO!!'], wordStroke: '#0e7490', wordGlow: '0 0 18px #22d3ee,0 0 40px #0891b2', wordColor: '#fff', band: 'linear-gradient(90deg,rgba(8,47,73,.97),rgba(14,116,144,.97) 50%,rgba(8,47,73,.97))', bandEdge: '#a5f3fc', bandGlow: 'rgba(34,211,238,.85)', bandTitle: '#ecfeff', bandShadow: '#164e63' }),
+  EREBUS: Object.freeze({ icon: '🌑', frost: '46,16,101', block: 'radial-gradient(circle,rgba(2,0,12,.92),rgba(46,16,101,.75) 60%,rgba(219,39,119,.35))', blockEdge: 'rgba(249,168,212,.9)', blockGlow: '0 0 30px rgba(219,39,119,.8),inset 0 0 30px rgba(124,58,237,.7)', sfx: '……ズズ…ズズズ…', sfxColor: '#fbcfe8', sfxStroke: '#2e1065', sfxGlow: '#db2777', flash: (t) => `radial-gradient(circle at 50% 30%,rgba(2,0,12,.98),rgba(76,29,149,${.6 + t * .1}) ${25 + t * 5}%,rgba(80,7,36,${.35 + t * .15}) 80%)`, rings: ['rgba(249,168,212,.95)', 'rgba(167,139,250,.9)', 'rgba(250,204,21,.85)'], shard: 'linear-gradient(135deg,#1e1b4b,#05020c 60%,#500724)', shardGlow: '#db2777', word: ['SHADOW', 'BREAK!!'], bigWord: ['SHADOW', 'BREAK!!'], wordStroke: '#f9a8d4', wordGlow: '0 0 18px #db2777,0 0 40px #7c3aed', wordColor: '#0b0614', band: 'linear-gradient(90deg,rgba(2,0,12,.97),rgba(112,26,117,.97) 50%,rgba(2,0,12,.97))', bandEdge: '#f9a8d4', bandGlow: 'rgba(219,39,119,.85)', bandTitle: '#fce7f3', bandShadow: '#2e1065' }),
+});
+function CocytusReviveFx({ stage, lite, name, rule }) {
+  const L = REVIVE_FX_LOOK[rule] || REVIVE_FX_LOOK.COCYTUS;
   const tier = COCYTUS_REVIVE_TIER[stage] || 1;
   const big = tier === 3;
   const who = String(name || '');
-  const title = tier === 3 ? `❄ ${who} 真・覚醒!` : `❄ ${who} 復活!`;
+  const title = tier === 3 ? `${L.icon} ${who} 真・覚醒!` : `${L.icon} ${who} 復活!`;
   const shards = lite ? [] : Array.from({ length: 14 + tier * 10 }, (_, k) => {
     const n = 14 + tier * 10; const ang = k / n * Math.PI * 2 + (k % 2) * 0.3; const d = 70 + (k * 37 % (120 + tier * 40));
     return { k, dx: `${Math.round(Math.cos(ang) * d)}px`, dy: `${Math.round(Math.sin(ang) * d)}px`, rot: `${(k * 53) % 360}deg`, w: 14 + (k * 13 % 30), h: 10 + (k * 7 % 16) };
   });
-  const ringCols = ['rgba(103,232,249,.95)', 'rgba(255,255,255,.9)', 'rgba(250,204,21,.85)'];
+  const ringCols = L.rings;
   return (
-    <div data-cocytus-revive-fx={stage} data-cocytus-revive-tier={tier} className="pointer-events-none fixed inset-0 overflow-hidden" style={{ zIndex: 91001 }}>
+    <div data-cocytus-revive-fx={stage} data-cocytus-revive-tier={tier} data-revive-fx-look={rule === 'EREBUS' ? 'EREBUS' : 'COCYTUS'} className="pointer-events-none fixed inset-0 overflow-hidden" style={{ zIndex: 91001 }}>
       <style>{COCYTUS_REVIVE_CSS}</style>
       {!lite && <>
-        <div className="absolute inset-0" style={{ boxShadow: `inset 0 0 ${60 + tier * 30}px ${20 + tier * 14}px rgba(165,243,252,${.45 + tier * .12})`, animation: 'mhIceFrost 1s ease-out both' }}/>
-        <div className="absolute left-1/2 top-[30%]" style={{ width: 'min(58vw,240px)', height: 'min(58vw,240px)', borderRadius: big ? '18%' : '28%', background: 'linear-gradient(135deg,rgba(236,254,255,.55),rgba(103,232,249,.25) 45%,rgba(14,116,144,.35))', border: '3px solid rgba(207,250,254,.9)', boxShadow: '0 0 30px rgba(103,232,249,.9),inset 0 0 30px rgba(255,255,255,.6)', clipPath: 'polygon(8% 12%,40% 0,72% 8%,100% 30%,94% 70%,70% 100%,28% 96%,0 66%)', animation: 'mhIceBlock 1s ease-out both,mhIceFlash .4s .95s reverse both' }}/>
-        <div className="absolute left-1/2 top-[48%] whitespace-nowrap font-black italic" style={{ transform: 'translateX(-50%)', fontSize: big ? 26 : 22, color: '#ecfeff', WebkitTextStroke: '1px #0e7490', textShadow: '0 0 12px #22d3ee', animation: 'mhIceFlash 1s .1s ease-out both' }}>……ピキ…ピキキ…</div>
-        <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 50% 30%,rgba(255,255,255,.97),rgba(165,243,252,${.6 + tier * .1}) ${25 + tier * 5}%,rgba(8,47,73,${.3 + tier * .15}) 80%)`, animation: 'mhIceFlash .9s 1s ease-out both' }}/>
+        <div className="absolute inset-0" style={{ boxShadow: `inset 0 0 ${60 + tier * 30}px ${20 + tier * 14}px rgba(${L.frost},${.45 + tier * .12})`, animation: 'mhIceFrost 1s ease-out both' }}/>
+        <div className="absolute left-1/2 top-[30%]" style={{ width: 'min(58vw,240px)', height: 'min(58vw,240px)', borderRadius: big ? '18%' : '28%', background: L.block, border: `3px solid ${L.blockEdge}`, boxShadow: L.blockGlow, clipPath: 'polygon(8% 12%,40% 0,72% 8%,100% 30%,94% 70%,70% 100%,28% 96%,0 66%)', animation: 'mhIceBlock 1s ease-out both,mhIceFlash .4s .95s reverse both' }}/>
+        <div className="absolute left-1/2 top-[48%] whitespace-nowrap font-black italic" style={{ transform: 'translateX(-50%)', fontSize: big ? 26 : 22, color: L.sfxColor, WebkitTextStroke: `1px ${L.sfxStroke}`, textShadow: `0 0 12px ${L.sfxGlow}`, animation: 'mhIceFlash 1s .1s ease-out both' }}>{L.sfx}</div>
+        <div className="absolute inset-0" style={{ background: L.flash(tier), animation: 'mhIceFlash .9s 1s ease-out both' }}/>
         {Array.from({ length: tier }, (_, n) => <div key={n} className="absolute left-1/2 top-[30%] rounded-full" style={{ width: `${200 + n * 90}px`, height: `${200 + n * 90}px`, border: `${6 - n}px solid ${ringCols[n]}`, boxShadow: `0 0 30px 10px ${ringCols[n]}`, animation: `mhIceRing 1s ${1 + n * .12}s ease-out both` }}/>)}
         <div className="absolute left-1/2 top-[30%]" style={{ width: 0, height: 0 }}>
-          {shards.map(s => <i key={s.k} className="absolute block" style={{ '--dx': s.dx, '--dy': s.dy, '--rot': s.rot, width: `${s.w}px`, height: `${s.h}px`, background: 'linear-gradient(135deg,#ffffff,#a5f3fc 50%,#0891b2)', clipPath: 'polygon(0 30%,70% 0,100% 60%,30% 100%)', boxShadow: '0 0 8px #67e8f9', animation: 'mhIceShard 1s 1s cubic-bezier(.2,.7,.3,1) both' }}/>)}
+          {shards.map(s => <i key={s.k} className="absolute block" style={{ '--dx': s.dx, '--dy': s.dy, '--rot': s.rot, width: `${s.w}px`, height: `${s.h}px`, background: L.shard, clipPath: 'polygon(0 30%,70% 0,100% 60%,30% 100%)', boxShadow: `0 0 8px ${L.shardGlow}`, animation: 'mhIceShard 1s 1s cubic-bezier(.2,.7,.3,1) both' }}/>)}
         </div>
-        <div className="absolute left-1/2 top-[24%] whitespace-nowrap text-center font-black italic leading-none text-white" style={{ fontSize: big ? 'min(46px,12vw)' : 'min(40px,10.5vw)', WebkitTextStroke: '2px #0e7490', textShadow: '0 0 18px #22d3ee,0 0 40px #0891b2', animation: 'mhIceWord 1.3s 1s ease-out both' }}>{big ? <>ABSOLUTE<br/>ZERO!!</> : <>FROZEN<br/>BREAK!!</>}</div>
+        <div className="absolute left-1/2 top-[24%] whitespace-nowrap text-center font-black italic leading-none" style={{ color: L.wordColor, fontSize: big ? 'min(46px,12vw)' : 'min(40px,10.5vw)', WebkitTextStroke: `2px ${L.wordStroke}`, textShadow: L.wordGlow, animation: 'mhIceWord 1.3s 1s ease-out both' }}>{(big ? L.bigWord : L.word)[0]}<br/>{(big ? L.bigWord : L.word)[1]}</div>
         {Array.from({ length: tier }, (_, n) => <div key={`a${n}`} className="absolute left-1/2 top-[36%] rounded-[50%]" style={{ width: `${180 + n * 60}px`, height: `${50 + n * 16}px`, border: `3px solid ${ringCols[n]}`, boxShadow: `0 0 22px ${ringCols[n]}`, animation: `mhIceAura .7s ${1.9 + n * .1}s ease-out both` }}/>)}
       </>}
       <div data-cocytus-revive-band={tier} className="absolute inset-x-0 top-[42%] px-3.5 py-2.5"
-        style={{ background: 'linear-gradient(90deg,rgba(8,47,73,.97),rgba(14,116,144,.97) 50%,rgba(8,47,73,.97))', borderTop: `3px solid ${big ? '#facc15' : '#a5f3fc'}`, borderBottom: `3px solid ${big ? '#facc15' : '#a5f3fc'}`, boxShadow: '0 0 26px rgba(34,211,238,.85)', animation: `mhIceBand .5s ${lite ? 0 : 1.9}s ease-out both` }}>
-        <div className="font-black italic" style={{ fontSize: big ? 22 : 20, color: big ? '#fef08a' : '#ecfeff', textShadow: '0 2px 0 #164e63' }}>{title}</div>
+        style={{ background: L.band, borderTop: `3px solid ${big ? '#facc15' : L.bandEdge}`, borderBottom: `3px solid ${big ? '#facc15' : L.bandEdge}`, boxShadow: `0 0 26px ${L.bandGlow}`, animation: `mhIceBand .5s ${lite ? 0 : 1.9}s ease-out both` }}>
+        <div className="font-black italic" style={{ fontSize: big ? 22 : 20, color: big ? '#fef08a' : L.bandTitle, textShadow: `0 2px 0 ${L.bandShadow}` }}>{title}</div>
       </div>
     </div>
   );
@@ -47237,7 +47412,7 @@ function EnemyRevivalReveal({
     const root = typeof document !== 'undefined' ? document.querySelector('[data-fx-load]') : null;
     const lite = !!root && (root.getAttribute('data-fx-load') === 'LIGHT' || root.getAttribute('data-fx-load') === 'MINIMAL' || (root.getAttribute('data-eco-view') || 'off') !== 'off');
     const enemyName = typeof document !== 'undefined' ? (document.querySelector('[data-enemy-bar] .truncate')?.textContent || '') : '';
-    return <CocytusReviveFx stage={stage} lite={lite} name={enemyName}/>;
+    return <CocytusReviveFx stage={stage} lite={lite} name={enemyName} rule={enemyRevivalReveal.rule || specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty)}/>;
   }
   return (
 <div data-extreme-revival-reveal className="fixed inset-0 flex items-center justify-center p-5 text-center" style={{zIndex:91000,background:'radial-gradient(circle,rgba(51,65,85,.82),rgba(2,6,23,.98))'}} role="dialog" aria-modal="true" aria-label="死者の再起">
@@ -51006,12 +51181,13 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhbt-d-NIGHTMARE{--d-name:#c7d2fe;--d-bg:radial-gradient(90% 55% at 50% 0%,rgba(129,140,248,.45),transparent 62%),linear-gradient(160deg,#1e1b4b,#0b0a24 60%,#020210);--d-mark:rgba(165,180,252,.22);--d-shine:2.4s;--d-ring:#818cf8;--d-ringw:4px;--d-eyebrow:#c7d2fe;--d-go:#c7d2fe}
 .mhbt-d-CHAOS{--d-name:#fbcfe8;--d-bg:radial-gradient(70% 50% at 15% 10%,rgba(236,72,153,.55),transparent 65%),radial-gradient(70% 50% at 90% 95%,rgba(34,211,238,.5),transparent 65%),linear-gradient(160deg,#1a0420,#05010a);--d-mark:rgba(255,255,255,.18);--d-shine:2.1s;--d-ring:#f472b6;--d-ringw:4px;--d-eyebrow:#a5f3fc;--d-go:#fbcfe8}
 .mhbt-d-ULTIMATE{--d-name:#f1f5f9;--d-bg:radial-gradient(90% 55% at 50% 0%,rgba(255,255,255,.35),transparent 60%),linear-gradient(160deg,#334155,#0f172a 55%,#000);--d-mark:rgba(255,255,255,.22);--d-shine:1.9s;--d-ring:#f8fafc;--d-ringw:4px;--d-eyebrow:#e2e8f0;--d-sheen:rgba(255,255,255,.55);--d-go:#e2e8f0}
-.mhbt-d-INFINITY,.mhbt-d-GOD,.mhbt-d-RAGNAROK,.mhbt-d-HELHEIM,.mhbt-d-ETERNAL,.mhbt-d-INFERNO,.mhbt-d-COCYTUS{--d-name:#fef08a;--d-name:#99f6e4;--d-deep:rgba(250,204,21,.25);--d-bg:radial-gradient(2px 2px at 20% 30%,#fff,transparent),radial-gradient(1.5px 1.5px at 70% 20%,#fff,transparent),radial-gradient(1.5px 1.5px at 40% 75%,#fff,transparent),radial-gradient(90% 60% at 50% 0%,rgba(250,204,21,.4),transparent 60%),linear-gradient(160deg,#0c1445,#020617 60%,#000);--d-mark:rgba(253,224,71,.24);--d-shine:1.7s;--d-ring:#facc15;--d-ringw:5px;--d-eyebrow:#fde68a;--d-sheen:rgba(253,224,71,.5);--d-go:#fde68a}
+.mhbt-d-INFINITY,.mhbt-d-GOD,.mhbt-d-RAGNAROK,.mhbt-d-HELHEIM,.mhbt-d-ETERNAL,.mhbt-d-INFERNO,.mhbt-d-EREBUS,.mhbt-d-COCYTUS{--d-name:#fef08a;--d-name:#99f6e4;--d-deep:rgba(250,204,21,.25);--d-bg:radial-gradient(2px 2px at 20% 30%,#fff,transparent),radial-gradient(1.5px 1.5px at 70% 20%,#fff,transparent),radial-gradient(1.5px 1.5px at 40% 75%,#fff,transparent),radial-gradient(90% 60% at 50% 0%,rgba(250,204,21,.4),transparent 60%),linear-gradient(160deg,#0c1445,#020617 60%,#000);--d-mark:rgba(253,224,71,.24);--d-shine:1.7s;--d-ring:#facc15;--d-ringw:5px;--d-eyebrow:#fde68a;--d-sheen:rgba(253,224,71,.5);--d-go:#fde68a}
 .mhbt-d-GOD{--d-name:#fffbeb;--d-bg:radial-gradient(90% 60% at 50% 0%,rgba(255,255,255,.55),transparent 55%),radial-gradient(80% 50% at 50% 100%,rgba(250,204,21,.45),transparent 65%),linear-gradient(160deg,#78350f,#1c1003 55%,#000);--d-ring:#fff7d6;--d-ringw:6px;--d-shine:1.5s;--d-sheen:rgba(255,255,255,.7);--d-mark:rgba(255,247,214,.28)}
 .mhbt-d-RAGNAROK{--d-name:#fed7aa;--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(239,68,68,.75),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(250,204,21,.45),transparent 65%),linear-gradient(170deg,#3b0505,#120000 55%,#000);--d-ring:#f59e0b;--d-ringw:6px;--d-shine:1.3s;--d-sheen:rgba(254,215,170,.65);--d-mark:rgba(252,165,165,.28);--d-eyebrow:#fed7aa;--d-go:#fed7aa}
 .mhbt-d-HELHEIM{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(45,212,191,.55),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(167,139,250,.45),transparent 65%),linear-gradient(170deg,#042f2e,#020617 55%,#000);--d-ring:#5eead4;--d-ringw:6px;--d-shine:1.2s;--d-sheen:rgba(204,251,241,.6);--d-mark:rgba(153,246,228,.26);--d-eyebrow:#99f6e4;--d-go:#ccfbf1}
 .mhbt-d-ETERNAL{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(236,72,153,.55),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(249,168,212,.45),transparent 65%),linear-gradient(170deg,#3b0a2a,#12030d 55%,#000);--d-ring:#f9a8d4;--d-ringw:6px;--d-shine:1.1s;--d-sheen:rgba(252,231,243,.6);--d-mark:rgba(249,168,212,.26);--d-eyebrow:#f9a8d4;--d-go:#fce7f3}
 .mhbt-d-INFERNO{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(249,115,22,.6),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(253,186,116,.45),transparent 65%),linear-gradient(170deg,#431407,#120502 55%,#000);--d-ring:#fdba74;--d-ringw:6px;--d-shine:1.0s;--d-sheen:rgba(255,237,213,.6);--d-mark:rgba(253,186,116,.28);--d-eyebrow:#fdba74;--d-go:#ffedd5}
+.mhbt-d-EREBUS{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(219,39,119,.55),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(244,114,182,.45),transparent 65%),linear-gradient(170deg,#500724,#14020a 55%,#000);--d-ring:#f9a8d4;--d-ringw:6px;--d-shine:0.95s;--d-sheen:rgba(252,231,243,.6);--d-mark:rgba(249,168,212,.3);--d-eyebrow:#f9a8d4;--d-go:#fce7f3;--d-name:#fbcfe8}
 .mhbt-d-COCYTUS{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(103,232,249,.5),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(224,242,254,.45),transparent 65%),linear-gradient(170deg,#082f49,#020617 55%,#000);--d-ring:#a5f3fc;--d-ringw:6px;--d-shine:0.9s;--d-sheen:rgba(240,249,255,.65);--d-mark:rgba(165,243,252,.3);--d-eyebrow:#a5f3fc;--d-go:#e0f2fe}
 @keyframes mhbtRainbow{from{background-position:0% 0}to{background-position:300% 0}}
 @media (prefers-reduced-motion:reduce){.mhbt-tile::after,.mhbt-d-Legend::before{animation:none!important}}
@@ -54325,8 +54501,8 @@ const assistantChatMonsterIds = (text, prevUserText) => {
 //   ・その発言にランキングの言葉やモードが無ければ、すぐ前のプレイヤーの発言(2つまで)から話題・モード・難易度を引き継ぐ
 //     (中継役も、すぐ前の発言にランキングの言葉があれば読む。ranking.js の rankingTopicOf)
 const ASSISTANT_CHAT_RANKING_TOPIC = /ランキング|ランク(?:イン|上位)|順位|何位|なんい|[0-9０-９一二三四五]+位|トップ|上位|首位|一番(?:上|強い|高い)|いちばん(?:上|強い|高い)/;
-// 1回に読むランキングの数。チャレンジの全部(通常9+極限11)が入る数。中継役の RANKING_PLAN_MAX と同じ
-const ASSISTANT_CHAT_RANKING_MAX = 20;
+// 1回に読むランキングの数。チャレンジの全部(通常9+極限12・2026-11-04 EREBUS を足した)が入る数。中継役の RANKING_PLAN_MAX と同じ
+const ASSISTANT_CHAT_RANKING_MAX = 21;
 // 引き継ぐ前の発言の数
 const ASSISTANT_CHAT_RANKING_PREV = 2;
 // 「その種類の難易度を全部」の言葉。英字の EXTREME は難易度そのものの名前なので、ここには入れない(カタカナ・漢字だけ)
@@ -74912,6 +75088,8 @@ function MonsterHeroGame() {
   // 極限チャレンジ(EXTREME)の記録。チャレンジの mh_hs_* / mh_clears_* とは別のキーへ持つ
   const [extremeBestScores, setExtremeBestScores] = useState({});
   const [extremeClearCounts, setExtremeClearCounts] = useState({});
+  // EREBUS を足す前に COCYTUS が開いていたかの印(mh_cocytus_open_kept_v1・2026-11-04)。読み込みで1回だけ作る
+  const [cocytusOpenKept, setCocytusOpenKept] = useState(null);
   const [extremeDifficultyClearCounts, setExtremeDifficultyClearCounts] = useState({});
   const [onboarded, setOnboarded] = useState(true); // false=初回起動(プロフィール設定へ誘導)
   // 遊んだ時間を数える。画面が見えているあいだだけ進み、離れるときと60秒ごとに保存する。
@@ -77955,8 +78133,11 @@ function MonsterHeroGame() {
   const eternalClearCount = extremeClearCounts[ETERNAL_SETTING.id] || 0;
   const infernoUnlocked = useMemo(() => isInfernoUnlocked(eternalClearCount), [eternalClearCount]);
   const infernoClearCount = extremeClearCounts[INFERNO_SETTING.id] || 0;
-  const cocytusUnlocked = useMemo(() => isCocytusUnlocked(infernoClearCount), [infernoClearCount]);
-  // 冥界チャレンジのタブ(INFERNO・COCYTUS)は ETERNAL クリアで開く
+  const erebusUnlocked = useMemo(() => isErebusUnlocked(infernoClearCount), [infernoClearCount]);
+  const erebusClearCount = extremeClearCounts[EREBUS_SETTING.id] || 0;
+  const cocytusRecord = (extremeClearCounts[COCYTUS_SETTING.id] || 0) + (extremeBestScores[COCYTUS_SETTING.id] || 0);
+  const cocytusUnlocked = useMemo(() => isCocytusUnlocked(erebusClearCount, cocytusOpenKept, cocytusRecord), [erebusClearCount, cocytusOpenKept, cocytusRecord]);
+  // 冥界チャレンジのタブ(INFERNO・EREBUS・COCYTUS)は ETERNAL クリアで開く
   const underworldUnlocked = useMemo(() => isUnderworldUnlocked(eternalClearCount), [eternalClearCount]);
   // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
   // 冥界チャレンジのタブを開いた最初の1回は「冥界の一言」(underworldTab)。カードを INFERNO から動かすか、タブを離れたら難易度ごとのセリフへ
@@ -81528,8 +81709,20 @@ function MonsterHeroGame() {
       }));
       setExtremeBestScores(loadedExtremeScores);
       setExtremeClearCounts(loadedExtremeClears);
+      const loadedClassicSpeciesProgress = normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY,null,false));
+      // EREBUS(INFERNO と COCYTUS のあいだ・2026-11-04)を足す前に COCYTUS が開いていた人は閉じない。
+      //   印が無いときだけ、いまの記録(INFERNO のクリア)から1回だけ作って保存する。あるときは読むだけ(二度目は作らない)
+      try {
+        const keptRaw = await storeGet(COCYTUS_OPEN_KEPT_KEY, null, false);
+        if (keptRaw && typeof keptRaw === 'object' && !Array.isArray(keptRaw)) setCocytusOpenKept(normalizeCocytusOpenKept(keptRaw));
+        else {
+          const kept = buildCocytusOpenKept(loadedExtremeClears, loadedClassicSpeciesProgress);
+          setCocytusOpenKept(kept);
+          await storeSet(COCYTUS_OPEN_KEPT_KEY, kept, false);
+        }
+      } catch (e) { setCocytusOpenKept(buildCocytusOpenKept(loadedExtremeClears, loadedClassicSpeciesProgress)); }
       setSpeciesProgressByMode({
-        [BATTLE_MODE_SPECIES_CHALLENGE]:normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY,null,false)),
+        [BATTLE_MODE_SPECIES_CHALLENGE]:loadedClassicSpeciesProgress,
         [BATTLE_MODE_TACTICS_SPECIES]:normalizeSpeciesChallengeProgress(await storeGet(TACTICS_SPECIES_CHALLENGE_PROGRESS_KEY,null,false)),
       });
       setHighScores(scores);
@@ -93940,7 +94133,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="relative shrink-0">
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="mhbs-arrow absolute left-0 top-[42%] z-20 disabled:opacity-20"><ChevronLeft size={18}/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.id!==extremeDifficulty)setExtremeDifficulty(difficulties[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll max-[359px]:!px-[4%]" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:setting.id==='HELHEIM'?helheimUnlocked:setting.id==='ETERNAL'?eternalUnlocked:setting.id==='INFERNO'?infernoUnlocked:setting.id==='COCYTUS'?cocytusUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;const theme=extremeDifficultyTheme(setting.id);const heroProofReward=heroProofClearReward({extremeDifficulty:setting.id});return (
+                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:setting.id==='HELHEIM'?helheimUnlocked:setting.id==='ETERNAL'?eternalUnlocked:setting.id==='INFERNO'?infernoUnlocked:setting.id==='EREBUS'?erebusUnlocked:setting.id==='COCYTUS'?cocytusUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;const theme=extremeDifficultyTheme(setting.id);const heroProofReward=heroProofClearReward({extremeDifficulty:setting.id});return (
                       <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} data-underworld-card={underworldTab?setting.id:undefined} data-shield-layers={underworldTab?underworldShieldLayerRange(setting.id):undefined} className={`mhbt-tile mhbt-d-${setting.id} dark snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[400px] flex flex-col px-4 pt-3 pb-2.5 transition-all ${active?'on scale-100 opacity-100':'scale-[.92] opacity-45'} ${previewable?'':'dim'}`} style={{'--acc':theme.accent}}>
                         <span aria-hidden="true" className="mhbt-mark">{setting.label}</span>
                         <div className="mhbt-eyebrow">EXTREME DIFFICULTY</div>
@@ -93948,7 +94141,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <div className="mt-1 h-[42px] shrink-0 rounded-xl bg-black/40 px-2.5 py-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,.12)]">
                           <small className="block text-[8px] text-white/70 font-black">{setting.available?`${setting.label}の記録`:'難易度情報'}</small>
                           <b className="block text-right text-base italic leading-tight text-white">{setting.available&&unlocked?`${(extremeBestScores[setting.id]||0).toLocaleString()} pt`:'？？？'}</b>
-                          <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':setting.id==='ULTIMATE'&&!ultimateUnlocked?'CHAOSクリアで解放':setting.id==='INFINITY'&&!infinityUnlocked?'ULTIMATEクリアで解放':setting.id==='GOD'&&!godUnlocked?'INFINITYクリアで解放':setting.id==='RAGNAROK'&&!ragnarokUnlocked?'GODクリアで解放':setting.id==='HELHEIM'&&!helheimUnlocked?'RAGNAROKクリアで解放':setting.id==='ETERNAL'&&!eternalUnlocked?'HELHEIMクリアで解放':setting.id==='INFERNO'&&!infernoUnlocked?'ETERNALクリアで解放':setting.id==='COCYTUS'&&!cocytusUnlocked?'INFERNOクリアで解放':'選択できません'}</span>
+                          <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':setting.id==='ULTIMATE'&&!ultimateUnlocked?'CHAOSクリアで解放':setting.id==='INFINITY'&&!infinityUnlocked?'ULTIMATEクリアで解放':setting.id==='GOD'&&!godUnlocked?'INFINITYクリアで解放':setting.id==='RAGNAROK'&&!ragnarokUnlocked?'GODクリアで解放':setting.id==='HELHEIM'&&!helheimUnlocked?'RAGNAROKクリアで解放':setting.id==='ETERNAL'&&!eternalUnlocked?'HELHEIMクリアで解放':setting.id==='INFERNO'&&!infernoUnlocked?'ETERNALクリアで解放':setting.id==='EREBUS'&&!erebusUnlocked?'INFERNOクリアで解放':setting.id==='COCYTUS'&&!cocytusUnlocked?`${EREBUS_SETTING.label}クリアで解放`:'選択できません'}</span>
                         </div>
                         {previewable?<>
                           <div className="grid grid-cols-3 gap-1 mt-1">{[['敵強度',`×${setting.power}`],['スコア',setting.score?`×${setting.score}`:'対象外'],['ダイヤ',setting.gold?`×${setting.gold}`:'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
@@ -94085,7 +94278,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className={`relative shrink-0${battleTutorialSpotClass('difficulty')}`}>
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="mhbs-arrow absolute left-0 top-[42%] z-20 disabled:opacity-20"><ChevronLeft size={18}/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.[0]!==selectedDifficulty)chooseDifficulty(difficulties[best][0]);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll max-[359px]:!px-[4%]" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}} data-difficulty-carousel>
-                    {difficulties.map(([key,setting])=>{const active=key===selectedDifficulty,rec=modeRecordFor(battleMode,key);const quickUnlocked=species?isSpeciesChallengeDifficultyUnlocked(key,speciesChallengeClearedDifficultyIds(speciesChallengeProgress,speciesChallengeSelection.speciesId),speciesChallengeInitialUnlockCountOf(battleMode)):tacticsDiff?(debugBattle||isTacticsDifficultyUnlocked(key,tacticsRecordsOf(battleMode).clears)):(!quick||debugBattle||isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts));// ★タクティクスバトルの極限は、極限チャレンジ・種族チャレンジとまったく同じ作りで走らせる。
+                    {difficulties.map(([key,setting])=>{const active=key===selectedDifficulty,rec=modeRecordFor(battleMode,key);const quickUnlocked=species?isSpeciesChallengeDifficultyUnlocked(key,speciesChallengeClearedDifficultyIds(speciesChallengeProgress,speciesChallengeSelection.speciesId),speciesChallengeInitialUnlockCountOf(battleMode),battleMode===BATTLE_MODE_SPECIES_CHALLENGE?cocytusKeptOpenIdsFor(cocytusOpenKept,speciesChallengeSelection.speciesId):[]):tacticsDiff?(debugBattle||isTacticsDifficultyUnlocked(key,tacticsRecordsOf(battleMode).clears)):(!quick||debugBattle||isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts));// ★タクティクスバトルの極限は、極限チャレンジ・種族チャレンジとまったく同じ作りで走らせる。
                       //   difficulty は 'Normal' に置き換え、選んだ段階は extremeDifficulty が持つ。
                       //   記録は tacticsRecordDifficulty() がこの2つから選ぶので、混ざらない
                       const tacticsExtreme=tacticsDiff&&isExtremeDifficultyId(key);
@@ -95412,7 +95605,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <button data-species-real-run-start onClick={()=>{if(!window.confirm('実際の種族チャレンジ進行・所持品を変更します。よろしいですか？'))return;openSpeciesChallengeSelection({saveProgress:true,fromDebug:true});}} className="min-h-[46px] w-full rounded-xl bg-red-700 text-[10px] font-black text-white">実進行を保存する実戦を始める</button>
               </article>
               <article data-transcend-fruit-debug className="space-y-2 rounded-2xl border border-fuchsia-400/50 bg-fuchsia-950/20 p-3"><h3 className="text-[11px] font-black text-fuchsia-200">超越の実 → 超越ポイント確認</h3>{selectedMasu?<><label className="block text-[9px] font-black">所持マスモン<select aria-label="所持マスモン" value={selectedMasu.id} onChange={e=>{setTranscendFruitDebugMasuId(e.target.value);setTranscendFruitDebugItemId('');setTranscendFruitDebugResult(null);}} className="mt-1 block min-h-[44px] w-full rounded-xl bg-slate-900 px-3">{masuMons.map(m=><option key={m.id} value={m.id}>{m.name}／{ALL_PLAYER_MONSTERS[m.baseId]?.name||m.baseId}</option>)}</select></label><div className="grid grid-cols-2 gap-2 text-center text-[9px]"><span className="rounded-lg bg-slate-900 p-2">対応種族の実<br/><b>{transcendFruitOwnedCount(ownedItems,speciesFruitId)}</b></span><span className="rounded-lg bg-slate-900 p-2">虹の実<br/><b>{transcendFruitOwnedCount(ownedItems,RAINBOW_TRANSCEND_FRUIT_ITEM_ID)}</b></span></div><div className="grid grid-cols-2 gap-2"><button aria-pressed={selectedFruitId===speciesFruitId} onClick={()=>setTranscendFruitDebugItemId(speciesFruitId)} className={`min-h-[44px] rounded-xl text-[9px] font-black ${selectedFruitId===speciesFruitId?'bg-fuchsia-700 ring-2 ring-white':'bg-slate-800'}`}>対応種族の実を選択</button><button aria-pressed={selectedFruitId===RAINBOW_TRANSCEND_FRUIT_ITEM_ID} onClick={()=>setTranscendFruitDebugItemId(RAINBOW_TRANSCEND_FRUIT_ITEM_ID)} className={`min-h-[44px] rounded-xl text-[9px] font-black ${selectedFruitId===RAINBOW_TRANSCEND_FRUIT_ITEM_ID?'bg-fuchsia-700 ring-2 ring-white':'bg-slate-800'}`}>虹の実を選択</button></div><div>{!selectedFruitId&&<p className="text-center text-[8px] font-black text-amber-300">使う実を選んでください。</p>}</div><div className="grid grid-cols-3 gap-2"><button disabled={!selectedFruitId} onClick={()=>useFruit(1)} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">1</button><button disabled={!selectedFruitId} onClick={()=>useFruit(10)} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">10</button><button disabled={!selectedFruitId} onClick={()=>useFruit(transcendFruitOwnedCount(ownedItems,selectedFruitId))} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">MAX</button></div><div className="rounded-xl bg-black/30 p-2 text-center text-[10px]">超越P：{transcendFruitDebugResult?`${transcendFruitDebugResult.before} → ${transcendFruitDebugResult.after}${transcendFruitDebugResult.ok?'':'（失敗・変更なし）'}`:`${Math.max(0,Math.floor(Number(selectedMasu.transcendPoints)||0))} → ―`}</div><div className="grid grid-cols-2 gap-2"><button onClick={()=>grantFruit(speciesFruitId)} className="min-h-[40px] rounded-xl border border-fuchsia-500 text-[8px] font-black">対応種族の実 +10</button><button onClick={()=>grantFruit(RAINBOW_TRANSCEND_FRUIT_ITEM_ID)} className="min-h-[40px] rounded-xl border border-fuchsia-500 text-[8px] font-black">虹の実 +10</button></div></>:<p className="text-[9px] text-slate-400">所持マスモンがいません。</p>}</article>
-              {SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id=>{const unlocked=isSpeciesChallengeDifficultyUnlocked(id,clearedIds),cleared=isSpeciesChallengeCleared(speciesChallengeProgress,speciesId,id),claimed=isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress,speciesId,id);return <article key={id} data-species-difficulty={id} className={`rounded-xl border p-3 ${unlocked?'border-emerald-500/40 bg-slate-900':'border-white/10 bg-slate-950 opacity-65'}`}><div className="flex items-center justify-between gap-2"><b className="text-[11px]">{difficultyLabel(id)}</b><span className={`rounded-full px-2 py-1 text-[8px] font-black ${unlocked?'bg-emerald-900 text-emerald-200':'bg-slate-800 text-slate-400'}`}>{unlocked?'解放':'未解放'}</span></div><div className="mt-2 grid grid-cols-3 gap-1 text-center text-[8px]"><span className={cleared?'text-emerald-300':'text-slate-500'}>cleared<br/><b>{String(cleared)}</b></span><span className={claimed?'text-amber-300':'text-slate-500'}>firstRewardClaimed<br/><b>{String(claimed)}</b></span><span className="text-fuchsia-200">初回報酬<br/><b>超越の実 ×{speciesChallengeFirstClearReward(id)}</b></span></div>{/* 自己記録も種族×難易度ごとに独立していることをここで確認できる */}{(()=>{const record=speciesChallengeRecord(speciesChallengeProgress,speciesId,id);return <div data-species-record={id} className="mt-1 rounded-lg bg-black/30 px-2 py-1 text-center text-[8px] text-cyan-200">自己ベスト {record.bestScore.toLocaleString()}pt ／ 最短 {record.bestTurns!==null?`${record.bestTurns}T`:'—'} ／ クリア {record.clears}回</div>;})()}</article>;})}
+              {SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id=>{const unlocked=isSpeciesChallengeDifficultyUnlocked(id,clearedIds,undefined,cocytusKeptOpenIdsFor(cocytusOpenKept,speciesId)),cleared=isSpeciesChallengeCleared(speciesChallengeProgress,speciesId,id),claimed=isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress,speciesId,id);return <article key={id} data-species-difficulty={id} className={`rounded-xl border p-3 ${unlocked?'border-emerald-500/40 bg-slate-900':'border-white/10 bg-slate-950 opacity-65'}`}><div className="flex items-center justify-between gap-2"><b className="text-[11px]">{difficultyLabel(id)}</b><span className={`rounded-full px-2 py-1 text-[8px] font-black ${unlocked?'bg-emerald-900 text-emerald-200':'bg-slate-800 text-slate-400'}`}>{unlocked?'解放':'未解放'}</span></div><div className="mt-2 grid grid-cols-3 gap-1 text-center text-[8px]"><span className={cleared?'text-emerald-300':'text-slate-500'}>cleared<br/><b>{String(cleared)}</b></span><span className={claimed?'text-amber-300':'text-slate-500'}>firstRewardClaimed<br/><b>{String(claimed)}</b></span><span className="text-fuchsia-200">初回報酬<br/><b>超越の実 ×{speciesChallengeFirstClearReward(id)}</b></span></div>{/* 自己記録も種族×難易度ごとに独立していることをここで確認できる */}{(()=>{const record=speciesChallengeRecord(speciesChallengeProgress,speciesId,id);return <div data-species-record={id} className="mt-1 rounded-lg bg-black/30 px-2 py-1 text-center text-[8px] text-cyan-200">自己ベスト {record.bestScore.toLocaleString()}pt ／ 最短 {record.bestTurns!==null?`${record.bestTurns}T`:'—'} ／ クリア {record.clears}回</div>;})()}</article>;})}
             </section>
           </main>;
         })()}
@@ -101726,12 +101919,14 @@ const createAnimationStyle = () => {
     @keyframes mhUwTabOpen{0%{filter:brightness(.4) grayscale(1);transform:scale(.96)}55%{filter:brightness(.6) grayscale(.6);transform:scale(.96) translateX(-1px)}62%{transform:scale(.96) translateX(2px)}70%{filter:brightness(2.2);transform:scale(1.06)}100%{filter:none;transform:scale(1)}}
     @keyframes mhUwTabGlow{0%,100%{box-shadow:0 0 6px rgba(165,243,252,.35)}50%{box-shadow:0 0 18px rgba(165,243,252,.9),0 0 10px rgba(249,115,22,.6)}}
     @keyframes mhUwNew{0%{opacity:0;transform:scale(2)}100%{opacity:1;transform:scale(1)}}
-    /* カードの枠: INFERNO は燃える橙、COCYTUS は氷の水色。右上に「🛡×3〜5」(data-shield-layers の文字をそのまま出す) */
+    /* カードの枠: INFERNO は燃える橙、EREBUS は冥界の闇の赤紫(2026-11-04 社長「案1」)、COCYTUS は氷の水色。右上に「🛡×3〜5」(data-shield-layers の文字をそのまま出す) */
     [data-underworld-card]{position:relative}
     [data-underworld-card="INFERNO"]{box-shadow:0 0 0 2px #fb923c,0 0 22px rgba(249,115,22,.65) !important}
+    [data-underworld-card="EREBUS"]{box-shadow:0 0 0 2px #f9a8d4,0 0 22px rgba(219,39,119,.7) !important}
     [data-underworld-card="COCYTUS"]{box-shadow:0 0 0 2px #a5f3fc,0 0 22px rgba(34,211,238,.6) !important}
     [data-underworld-card][data-shield-layers]::after{content:"🛡×" attr(data-shield-layers);position:absolute;top:30px;right:10px;left:auto;bottom:auto;width:auto;height:auto;white-space:nowrap;z-index:30;font-style:normal;padding:2px 8px;border-radius:999px;font:900 11px/1.3 sans-serif;color:#fff;pointer-events:none}
     [data-underworld-card="INFERNO"][data-shield-layers]::after{background:linear-gradient(90deg,#7f1d1d,#ea580c) !important;box-shadow:0 0 10px rgba(249,115,22,.8) !important;opacity:1 !important;filter:none !important}
+    [data-underworld-card="EREBUS"][data-shield-layers]::after{background:linear-gradient(90deg,#500724,#db2777) !important;box-shadow:0 0 10px rgba(219,39,119,.8) !important;opacity:1 !important;filter:none !important}
     [data-underworld-card="COCYTUS"][data-shield-layers]::after{background:linear-gradient(90deg,#164e63,#0891b2) !important;box-shadow:0 0 10px rgba(34,211,238,.8) !important;opacity:1 !important;filter:none !important}
     /* 横向きはカードが2列になり、右の説明の欄の下に隠れるので札は出さない(説明の文にシールドの枚数がある) */
     @media (orientation:landscape) and (max-height:520px){[data-underworld-card][data-shield-layers]::after{display:none}}

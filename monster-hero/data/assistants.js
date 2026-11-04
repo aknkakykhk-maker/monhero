@@ -1394,6 +1394,11 @@ const ASSISTANT_SCENES = {
     help: 'basics/extreme-challenge',
     lines: [],
   },
+  // EREBUS(エレボス・INFERNO と COCYTUS のあいだ・2026-11-04)。セリフは助手ごとの表(erebusDifficulty)
+  erebusDifficulty: {
+    help: 'basics/extreme-challenge',
+    lines: [],
+  },
   cocytusDifficulty: {
     help: 'basics/extreme-challenge',
     lines: [],
@@ -2568,6 +2573,11 @@ addAssistantLinePack({
       { e:'troubled', t:'1枚割るたびにボスが強くなるよ〜。ムーは最後に連撃までしてくるって' },
       { e:'wink', t:'ためるの予告を見たら、ガードは2枚がおすすめだよ〜' },
     ],
+    erebusDifficulty: [
+      { e:'surprise', t:'EREBUSは冥界のまんなかの闇…どの敵もシールドを何枚もまとうよ' },
+      { e:'troubled', t:'ボスはシールドを割るたびに攻撃がぐんと上がるの。ムーは1回だけ蘇るから気をつけて〜' },
+      { e:'wink', t:'報酬は虹のプシュケー235個！ COCYTUSの前に、ここで力をつけよ〜' },
+    ],
     cocytusDifficulty: [
       { e:'surprise', t:'COCYTUSはINFERNOのさらに下…どの敵も厚いシールドを何枚もまとってるの' },
       { e:'troubled', t:'割っても割っても次の1枚が出てくるよ〜。シールドを削っても距離強化は伸びないの' },
@@ -3370,6 +3380,11 @@ addAssistantLinePack({
       { e:'troubled', t:'割るたびにボスの攻撃が上がりまつ。デュラハンとムーは連撃になりまつ。' },
       { e:'wink', t:'報酬は虹のプシュケー220個。きたえ抜いてから挑も♪' },
     ],
+    erebusDifficulty: [
+      { e:'surprise', t:'EREBUSは、INFERNOとCOCYTUSのあいだの段でつ…！' },
+      { e:'troubled', t:'どの敵もシールドを何枚もまとってきまつ。ムーは1回蘇りまつ。' },
+      { e:'wink', t:'報酬は虹のプシュケー235個。ここで力をつけてから先へ行こ♪' },
+    ],
     cocytusDifficulty: [
       { e:'surprise', t:'COCYTUSは、どの敵も厚いシールドを何枚もまとってきまつ…！' },
       { e:'troubled', t:'1枚割るごとに敵の攻撃が上がりまつ。デュラハンとムーは連撃になりまつ。' },
@@ -4019,6 +4034,11 @@ addAssistantLinePack({
       { e:'surprise', t:'ETERNALの上！？ INFERNOのボス、シールドが何枚もあるんだって！' },
       { e:'troubled', t:'割るたびに強くなって、最後は必殺技が連撃になるんだよ。' },
       { e:'excited', t:'報酬は虹のプシュケー220個。……キミなら、行くよね？♡' },
+    ],
+    erebusDifficulty: [
+      { e:'surprise', t:'冥界にもう1段！？ ふつうの敵までシールドがあるんだって' },
+      { e:'troubled', t:'ボスは割るたびに強くなるの。ムーは1回蘇るよ。' },
+      { e:'excited', t:'報酬は虹のプシュケー235個。……キミなら、行くよね？♡' },
     ],
     cocytusDifficulty: [
       { e:'surprise', t:'INFERNOの上！？ COCYTUS、ふつうの敵までシールドが何枚もあるんだって！' },
@@ -4855,6 +4875,11 @@ addAssistantLinePack({
       { e:'troubled', t:'シールドを割るたびにボスが強くなる。最後の連撃はガード2枚で受けろよ' },
       { e:'excited', t:'ここを越えたら、おで本気で拝むわ' },
     ],
+    erebusDifficulty: [
+      { e:'normal', t:'エレボス。冥界の闇ってわけか。コキュートスはこの先だ' },
+      { e:'troubled', t:'どいつもこいつも盾を何枚も重ねてる。ムーは一回起き上がるぞ' },
+      { e:'excited', t:'ここで鍛えときゃ、コキュートスも見えてくるわ' },
+    ],
     cocytusDifficulty: [
       { e:'normal', t:'コキュートス。地獄のいちばん下ってわけか' },
       { e:'troubled', t:'どいつもこいつも分厚い盾を何枚も重ねてる。削りきる火力が要るぞ' },
@@ -5341,6 +5366,11 @@ addAssistantLinePack({
       { e:'troubled', t:'割るたびに強うなる。ムーの連撃はガードを重ねて受けや' },
       { e:'happy', t:'しっかりきたえてからでええ。焦らんでな' },
     ],
+    erebusDifficulty: [
+      { e:'normal', t:'インフェルノとコキュートスのあいだの段や。どの敵も盾を何枚も張ってくる' },
+      { e:'troubled', t:'ボスは割るたびに攻撃が上がる。ムーは一回蘇るで' },
+      { e:'happy', t:'コキュートスの前の腕だめしや。焦らんでな' },
+    ],
     cocytusDifficulty: [
       { e:'normal', t:'インフェルノのさらに下や。どの敵も厚い盾を何枚も張ってくるで' },
       { e:'troubled', t:'割っても割っても次が出てくる。長期戦の覚悟しとき' },
@@ -5650,6 +5680,11 @@ addAssistantLinePack({
       { e:'troubled', t:'割るたびに強くなって、最後は連撃なの💦 ガードは2枚で受けてね。' },
       { e:'happy', t:'きたえ抜いてからでいいからね(〃´o｀)ﾌｩ…' },
     ],
+    erebusDifficulty: [
+      { e:'normal', t:'インフェルノとコキュートスのあいだの段だよ。どの敵もシールドをまとってるの' },
+      { e:'troubled', t:'ムーは1回蘇るんだって💦 ガードをしっかりね。' },
+      { e:'happy', t:'ここで力をつけたら、コキュートスも見えてくるよ(〃´o｀)ﾌｩ…' },
+    ],
     cocytusDifficulty: [
       { e:'normal', t:'インフェルノのさらに下。どの敵も厚いシールドを何枚もまとってるよ。' },
       { e:'troubled', t:'割っても割っても終わらないの💦 根気よくいこうね。' },
@@ -5782,6 +5817,11 @@ addAssistantLinePack({
       { e:'excited', t:'シールド何枚も重ねて、割るたび強くなる。もう笑うしかないねw' },
       { e:'troubled', t:'ムーの最後は3連撃なんだって。容赦ないよ。' },
       { e:'happy', t:'ここまで来たなら、とことん付き合うよ♡' },
+    ],
+    erebusDifficulty: [
+      { e:'excited', t:'あいだの段ができたってさ。ふつうの敵までシールド付きなのは変わらないねw' },
+      { e:'troubled', t:'ボスは割るたびに強くなるし、ムーは1回蘇るんだって。' },
+      { e:'happy', t:'コキュートスの前の練習台だね。とことん付き合うよ♡' },
     ],
     cocytusDifficulty: [
       { e:'excited', t:'ふつうの敵までシールド何枚も。もう笑うしかないねw' },
@@ -6118,6 +6158,11 @@ addAssistantLinePack({
       { e:'normal', t:'エターナルのさらに先でつ。ボスはシールドを何枚もまとってきまつ。' },
       { e:'troubled', t:'割るたびにボスが強くなりまつ。連撃はガード2枚で受けてくだしゃい。' },
       { e:'happy', t:'きたえ抜いてから挑めば大丈夫でつよ。' },
+    ],
+    erebusDifficulty: [
+      { e:'normal', t:'インフェルノとコキュートスのあいだの段でつ。どの敵もシールドをまとってきまつ。' },
+      { e:'troubled', t:'ボスは割るたびに強くなりまつ。ムーは1回蘇りまつ。' },
+      { e:'happy', t:'ここで力をつけてから、コキュートスへ行けば大丈夫でつよ。' },
     ],
     cocytusDifficulty: [
       { e:'normal', t:'インフェルノのさらに下でつ。どの敵も厚いシールドをまとってきまつ。' },
@@ -6613,6 +6658,11 @@ addAssistantLinePack({
       { e:'surprise', t:'インフェルノ！ エターナルの先とか、まじで燃える！' },
       { e:'troubled', t:'シールドを割るたびにボスが強くなる。最後の連撃、えぐいね…' },
       { e:'excited', t:'ここ通ったら、{name}は伝説の勇者だよ！' },
+    ],
+    erebusDifficulty: [
+      { e:'surprise', t:'エレボス！ インフェルノとコキュートスのあいだとか、まじで燃える！' },
+      { e:'troubled', t:'どの敵もシールドが何枚もあって、ボスは割るたびに強くなる。えぐい！' },
+      { e:'excited', t:'ここ通ったら、コキュートスまであと一歩だよ！' },
     ],
     cocytusDifficulty: [
       { e:'surprise', t:'コキュートス！ インフェルノの下とか、まじで燃える！' },
@@ -7360,6 +7410,11 @@ addAssistantLinePack({
       { e:'surprise', t:'インフェルノかぁ。エターナルの先とか、ちょっとわくわくするわ' },
       { e:'troubled', t:'割るたびに強くなって、最後は連撃だよ😭' },
       { e:'excited', t:'ここ通ったら、{name}は伝説のランカーだよ。ふふん' },
+    ],
+    erebusDifficulty: [
+      { e:'surprise', t:'エレボスかぁ。インフェルノとコキュートスのあいだとか、ちょっとわくわく' },
+      { e:'troubled', t:'どの敵もシールド付き。ムーは1回蘇るから、最後まで気を抜かないでね' },
+      { e:'excited', t:'ここ通ったら、{name}はコキュートスに手が届くよ。ふふん' },
     ],
     cocytusDifficulty: [
       { e:'surprise', t:'コキュートスかぁ。インフェルノの下とか、ちょっとわくわくするわ' },
@@ -8238,6 +8293,11 @@ addAssistantLinePack({
       { e:'surprise', t:'インフェルノ!? エターナルの先とか、うぉぉぉ……' },
       { e:'troubled', t:'シールドを割るたびにボスが強くなる。ムーの連撃はガード2枚で' },
       { e:'excited', t:'ここを通ったら、{name}は伝説だぜ・・・！' },
+    ],
+    erebusDifficulty: [
+      { e:'surprise', t:'エレボス!? インフェルノとコキュートスのあいだとか、うぉぉぉ……' },
+      { e:'troubled', t:'どの敵も盾が何枚も。ボスは割るたびに強くなるから気をつけて' },
+      { e:'excited', t:'ここを通ったら、コキュートスが見えてくるぜ・・・！' },
     ],
     cocytusDifficulty: [
       { e:'surprise', t:'コキュートス!? インフェルノの下とか、うぉぉぉ……' },
