@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: af18f80c21aebf3f
+// generated-sha256: b4aa7d0014242bd1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -60310,6 +60310,10 @@ const cardNameSplit = (text) => {
 //   切れ目の無い1語(フォーメーション など)は、字を小さく(5pxまで)・字の間を詰めて1行に収める(CSS の mh-nf-squeeze)。
 //   倍率は 94(字の幅が広い等幅フォントでも入るように。104 だと IPAゴシックで 58・76px の箱から2〜4px はみ出した。2026-10-25)
 //   狭いときは短い名前も2行ぶんの高さを取り、手札の絵の高さをそろえる(CSS の mh-nf-*。70-bootstrap.jsx)
+// 画面いっぱいに重ねる窓(fixed inset-0)の上下の余白。iPhone の時計・電池の帯(上)とホームバー(下)に中身がかからないよう、
+//   元の余白とセーフエリアの大きいほうを取る(2026-11-04 テスターさん: 戦術カードをえらぶ窓の「←戻る」が時計の帯に重なって押せなかった。
+//   fixed の窓は body のセーフエリアの余白の外まで広がるので、窓ごとに取る)。base … 元の上下の余白(クラスの p-3 なら '.75rem')
+const cardSafePad = (base = '0px') => ({ paddingTop: `max(${base}, env(safe-area-inset-top))`, paddingBottom: `max(${base}, env(safe-area-inset-bottom))` });
 // 2行に折る幅は名前の長さで決める(2026-11-01 見た目の点検 C「長い名前は2行まで折る・縮めるのは2行でも入らないときだけ」)。
 //   1行のまま 11px で入る幅(字数 × 11px ÷ 0.96)より箱が狭いときに2行へ。7字 80px・8字 92px・9字 103px・10字以上 115px(CSS の mh-nf-n*)。
 //   それまでは 56px 以下だけ折っていて、57〜115px の箱(390幅の手札・デッキを組む画面)では字が 7〜8px まで縮んでいた
@@ -60554,7 +60558,7 @@ const CardStatusList = ({ list }) => (!list || !list.length ? null : (
   </div>
 ));
 const CardStatusSheet = ({ name, list, onClose }) => (
-  <div data-card-status-sheet onClick={onClose} className="fixed inset-0 flex items-center justify-center bg-black/60 px-4" style={{ zIndex: MODAL_Z.dialog }}>
+  <div data-card-status-sheet onClick={onClose} className="fixed inset-0 flex items-center justify-center bg-black/60 px-4" style={{ ...cardSafePad('.5rem'), zIndex: MODAL_Z.dialog }}>
     <div className="w-full max-w-sm rounded-2xl border-2 border-amber-300/80 bg-slate-950/95 p-3 text-slate-100">
       <div className="mb-2 text-[15px] font-black" style={JA_WRAP_STYLE}>{name}にかかっている効果</div>
       <CardStatusList list={list}/>
@@ -60737,7 +60741,7 @@ const CARD_TEASER_NOTICE_ID = 'update_notice_card_battle_soon_v1';
 const CardBattleTeaser = ({ onClose }) => {
   const entry = (typeof CHANGELOG !== 'undefined' && Array.isArray(CHANGELOG) ? CHANGELOG : []).find((e) => e && e.assistantNotice && e.assistantNotice.id === CARD_TEASER_NOTICE_ID) || null;
   return (
-    <div data-card-teaser role="dialog" aria-modal="true" aria-label="MFバトルカード 近日公開" onClick={onClose} className="fixed inset-0 flex items-center justify-center overflow-y-auto p-4" style={{ zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.88)' }}>
+    <div data-card-teaser role="dialog" aria-modal="true" aria-label="MFバトルカード 近日公開" onClick={onClose} className="fixed inset-0 flex items-center justify-center overflow-y-auto p-4" style={{ ...cardSafePad('1rem'), zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.88)' }}>
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-[420px] rounded-3xl border-2 border-amber-300/80 bg-slate-950 p-3 text-white shadow-2xl landscape:max-w-[760px]">
         <div className="landscape:flex landscape:items-start landscape:gap-3">
           {entry && entry.image && <img src={entry.image} alt="MFバトルカード 近日公開" className="w-full rounded-2xl landscape:w-[46%] landscape:shrink-0"/>}
@@ -60901,7 +60905,7 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
   return (
     // 詳しい画面は、ほかの窓(捨て札・記録・チャットなど。どれも MODAL_Z.dialog)より手前に出す。同じ高さだと、
     //   画面の部品の並び順しだいで捨て札の窓の後ろに回っていた(2026-10-31 社長「すてふだからだと詳細カード画面が裏に回ってる」)。確かめの窓(confirm)よりは下
-    <div data-card-detail onClick={onClose} className="fixed inset-0 flex flex-col items-center justify-center gap-3 overflow-y-auto px-4 py-6" style={{ zIndex: MODAL_Z.dialog + 100, backgroundColor: 'rgba(2,6,23,0.94)' }} role="dialog" aria-label="カードの詳しい画面">
+    <div data-card-detail onClick={onClose} className="fixed inset-0 flex flex-col items-center justify-center gap-3 overflow-y-auto px-4 py-6" style={{ ...cardSafePad('1.5rem'), zIndex: MODAL_Z.dialog + 100, backgroundColor: 'rgba(2,6,23,0.94)' }} role="dialog" aria-label="カードの詳しい画面">
       {nav ? (
         <div data-card-detail-navrow className="flex w-full max-w-sm flex-col items-center gap-1">
           <div className="flex w-full items-center justify-center gap-2">
@@ -60996,7 +61000,7 @@ const CardTurnLogSheet = ({ st, meName, foeName, onClose, tac = [] }) => {
   tac.forEach((x) => { const t = turns.find((y) => y.turn === x.turn); if (t) t.tac.push(x.text); });
   const list = turns.filter((t) => t.lines.length || t.head).reverse();
   return (
-    <div data-card-log-sheet className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={onClose}>
+    <div data-card-log-sheet className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3 sm:items-center" style={cardSafePad('.75rem')} onClick={onClose}>
       <div className="flex max-h-[80%] w-full max-w-md flex-col rounded-2xl border border-white/15 bg-slate-950 p-3" onClick={(e) => e.stopPropagation()}>
         <div className="mb-2 text-[15px] font-black text-amber-200">ターンの記録</div>
         <div className="min-h-0 flex-1 space-y-2 overflow-y-auto mh-scroll">
@@ -62730,7 +62734,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       )}
       {discard && <CardDiscardModal db={db} st={st} initial={discard.tab} onDetail={(no) => setDetail(no)} onClose={() => setDiscard(null)}/>}
       {bindAsk && (
-        <div data-card-bind-pick className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" onClick={bindCancel}>
+        <div data-card-bind-pick className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" style={cardSafePad('.75rem')} onClick={bindCancel}>
           <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100" onClick={(e) => e.stopPropagation()}>
             <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap('影縛り: 使えなくする守りのカードを選ぶ')}</div>
             <div className="mt-1 text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('同じ名前のカードは全部、この技に使えなくなります。赤いのは、狙った相手が使える守りです')}</div>
@@ -62758,7 +62762,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         const pick = cardAttackOptions(db, st).find((x) => x.mon === base.mon && JSON.stringify(x.hand) === JSON.stringify(base.hand) && JSON.stringify(x.target) === JSON.stringify(base.target) && JSON.stringify(x.toss) === want);
         const toggle = (i) => setTossAsk((cur) => (cur ? { ...cur, picks: cur.picks.includes(i) ? cur.picks.filter((x) => x !== i) : [...cur.picks, i] } : cur));
         return (
-          <div data-card-toss-pick className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" onClick={() => setTossAsk(null)}>
+          <div data-card-toss-pick className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" style={cardSafePad('.75rem')} onClick={() => setTossAsk(null)}>
             <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100" onClick={(e) => e.stopPropagation()}>
               <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap(`「${main ? main.name : ''}」で捨てる手札を選ぶ`)}</div>
               <p className="mt-1 text-[12px] font-bold leading-snug text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('捨てた枚数だけ、ダメージが増えます(0枚でも使えます)')}</p>
@@ -62782,7 +62786,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         );
       })()}
       {splitAsk && (
-        <div data-card-split-pick className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" onClick={() => setSplitAsk(null)}>
+        <div data-card-split-pick className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" style={cardSafePad('.75rem')} onClick={() => setSplitAsk(null)}>
           <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100" onClick={(e) => e.stopPropagation()}>
             <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap(splitAsk.some((o) => o.fuse) ? '合体する2体を選ぶ(左がメイン・右がサブ)' : splitAsk.some((o) => o.emerge) ? '羽化して取りかえる先を選ぶ' : 'ダメージの割り振りを選ぶ')}</div>
             <div className="mt-2 grid max-h-[55vh] gap-1.5 overflow-y-auto">
@@ -62800,7 +62804,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {mode === 'pray' && prayUse && !bigCard && (() => {
         const fc = cardOf(db, st.pendingPray.no);
         return (
-          <div data-card-pray className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3">
+          <div data-card-pray className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" style={cardSafePad('.75rem')}>
             <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100">
               <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap(`相手が全体カード「${fc ? fc.name : ''}」を出しました`)}</div>
               {fc && <button type="button" onClick={() => setDetail(fc.no)} className="mt-1 block w-full rounded-xl bg-slate-800 px-2 py-1.5 text-left text-[12px] font-bold leading-snug text-slate-200" style={JA_WRAP_STYLE}>{fc.text}</button>}
@@ -62814,7 +62818,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         );
       })()}
       {choice && (
-        <div data-card-choose className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3">
+        <div data-card-choose className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" style={cardSafePad('.75rem')}>
           <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100">
             <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap(`${choice.from ? `${choice.from}: ` : ''}${choice.title}`)}</div>
             {/* 背の低い縦の画面では2列にして窓の背を低くし、自分の場を見ながら選べるようにする(2026-11-01 点検 F。390×600 で場をほぼ覆っていた) */}
@@ -62834,7 +62838,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         </div>
       )}
       {guardAsk && (
-        <div data-card-guard-ask className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 px-4" onClick={() => setGuardAsk(null)}>
+        <div data-card-guard-ask className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 px-4" style={cardSafePad('.5rem')} onClick={() => setGuardAsk(null)}>
           <div className="w-full max-w-[320px] rounded-2xl border-2 border-sky-300 bg-slate-900 p-3 text-center shadow-[0_8px_24px_#000]" onClick={(e) => e.stopPropagation()}>
             <div className="text-[14px] font-black text-white" style={JA_WRAP_STYLE}>{`「${guardAsk.name}」を使うと`}</div>
             {guardAsk.after !== null && guardAsk.before !== null ? (
@@ -63077,7 +63081,7 @@ const CardQuickRunDetail = ({ quickRun, autoReady, autoDifficulty, todayLoops = 
   );
   const wave = quickRun && quickRun.info && quickRun.info.wave;
   return (
-    <div data-card-quick-detail className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/80 p-4 landscape:py-2" role="dialog" aria-modal="true" aria-label="クイック周回" onClick={onClose}>
+    <div data-card-quick-detail className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/80 p-4 landscape:py-2" style={cardSafePad('.5rem')} role="dialog" aria-modal="true" aria-label="クイック周回" onClick={onClose}>
       <div className="w-full max-w-sm overflow-y-auto rounded-3xl border-2 border-fuchsia-400/60 bg-slate-900 p-4 text-white shadow-2xl landscape:p-3" style={{ maxHeight: 'calc(100% - 8px)' }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2">
           <span aria-hidden="true" className="text-xl">⚔</span>
@@ -64912,7 +64916,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
       </div>
       {!land && footer}
       {ask && (
-        <div data-card-deck-ask-sheet className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-2 sm:items-center" onClick={() => { if (!ask.busy) setAsk(null); }}>
+        <div data-card-deck-ask-sheet className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-2 sm:items-center" style={cardSafePad('.5rem')} onClick={() => { if (!ask.busy) setAsk(null); }}>
           <div className="w-full max-w-[420px] rounded-2xl border border-white/15 bg-slate-900 p-3" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start gap-2">
               {advisor.face && <img src={advisor.face} alt="" className="h-12 w-12 shrink-0 rounded-full border-2 object-cover" style={{ borderColor: advisor.accent }}/>}
@@ -65478,7 +65482,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
         const c = cards[spot.i]; const card = cardOf(db, c.no); const m = card ? null : cardMonsterOf(db, c.no);
         const alt = spot.rarity === 'alt';
         return (
-          <button type="button" data-card-pack-spot={spot.rarity} aria-label="並びへ戻す" onClick={spotOff} className="fixed inset-0 z-[72] flex flex-col items-center justify-center overflow-hidden bg-slate-950/70">
+          <button type="button" data-card-pack-spot={spot.rarity} aria-label="並びへ戻す" onClick={spotOff} className="fixed inset-0 z-[72] flex flex-col items-center justify-center overflow-hidden bg-slate-950/70" style={cardSafePad('0px')}>
             <div aria-hidden="true" className={`mh-pack-spot-rays ${alt ? 'mh-pack-spot-rays-alt' : ''}`}/>
             {fx && alt && !spot.leaving && <div aria-hidden="true" data-card-pack-pillar className="mh-pack-rpillar"/>}
             {fx && !spot.leaving && <div aria-hidden="true" className={`mh-pack-spot-burst ${alt ? 'alt' : ''}`}/>}
@@ -65538,7 +65542,7 @@ const cardPackDisplayRows = (db, pack, rows) => {
 // 詳しい画面は一覧の外に置く(中に置くと、詳しい画面を閉じるタップが一覧の背景まで届いて、一覧も閉じた)
 const CardShopSheet = ({ title, onClose, children, detail, setDetail, db, tag }) => (
   <>
-  <div data-card-shop-sheet={tag} role="dialog" aria-modal="true" aria-label={title} onClick={onClose} className="fixed inset-0 flex items-center justify-center p-3" style={{ zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.88)' }}>
+  <div data-card-shop-sheet={tag} role="dialog" aria-modal="true" aria-label={title} onClick={onClose} className="fixed inset-0 flex items-center justify-center p-3" style={{ ...cardSafePad('.75rem'), zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.88)' }}>
     <div onClick={(e) => e.stopPropagation()} className="flex max-h-full w-full max-w-[460px] flex-col rounded-3xl border-2 border-amber-300/70 bg-slate-950 text-white shadow-2xl landscape:max-w-[720px]">
       <div className="shrink-0 rounded-t-[22px] bg-amber-300/15 px-3 py-2 text-center text-[15px] font-black text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(title)}</div>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">{children}</div>
@@ -65741,7 +65745,7 @@ const CardCatalogSheet = ({ db, catalogs, collection, busy, onUse, onClose }) =>
   const pickName = pick ? nameOf(pick) : '';
   return (
     <>
-      <div data-card-catalog role="dialog" aria-modal="true" aria-label="バトルカードカタログ" onClick={onClose} className="fixed inset-0 flex items-center justify-center p-3" style={{ zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.88)' }}>
+      <div data-card-catalog role="dialog" aria-modal="true" aria-label="バトルカードカタログ" onClick={onClose} className="fixed inset-0 flex items-center justify-center p-3" style={{ ...cardSafePad('.75rem'), zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.88)' }}>
         <div onClick={(e) => e.stopPropagation()} className="flex max-h-full w-full max-w-[460px] flex-col rounded-3xl border-2 border-sky-300/70 bg-slate-950 text-white shadow-2xl landscape:max-w-[720px]">
           <div className="shrink-0 rounded-t-[22px] bg-sky-300/15 px-3 py-2 text-center text-[15px] font-black text-sky-100">📖 バトルカードカタログ</div>
           <div className="shrink-0 px-3 pt-2">
@@ -68763,7 +68767,7 @@ const CardChatPanel = ({ mode = 'pvp', onClose }) => {
     </button>
   );
   return (
-    <div data-card-chat-panel={mode} className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/40" onClick={onClose}>
+    <div data-card-chat-panel={mode} className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/40" style={cardSafePad('0px')} onClick={onClose}>
       <div className="mx-auto w-full max-w-[520px] rounded-t-2xl border-t-2 border-sky-400 bg-slate-950 px-3 pt-2 text-white" style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }} onClick={(e) => e.stopPropagation()}>
         <div className="mb-1 flex items-center">
           <b className="flex-1 text-[13px] text-sky-100">💬 コメント{mode === 'watch' ? '(観戦)' : ''}</b>
@@ -70812,7 +70816,7 @@ const CardShareDeckDetail = ({ entry, onClose, fight = null, rent = null }) => {
   // 日時は日本時間で出す(戦われた試合・見返しの一覧の cardReplayWhen と同じ。2026-11-01 点検で、ここだけ端末の時計だった)
   const dayText = (ms) => { if (!Number.isFinite(ms) || ms <= 0) return ''; const d = new Date(ms + 9 * 3600 * 1000); return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`; };
   return (
-    <div data-card-share-deck-detail className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={onClose}>
+    <div data-card-share-deck-detail className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60 p-3 sm:items-center" style={cardSafePad('.75rem')} onClick={onClose}>
       <div className="max-h-[86vh] w-full max-w-[440px] overflow-y-auto rounded-2xl border-2 border-amber-600/60 bg-slate-950 p-3" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2">
           {/* アイコンは絵文字のことも画像のことも(images/breeder-icons/…)ある。cardIconNode を通す(文字のまま出さない) */}
@@ -71355,7 +71359,7 @@ const CardTacticDetail = ({ card, onClose }) => {
   if (!card) return null;
   const st = CARD_TACTIC_CAT_STYLE[card.cat] || CARD_TACTIC_CAT_STYLE.cond;
   return (
-    <div data-card-tactic-detail={card.id} role="dialog" aria-modal="true" aria-label={card.name} onClick={onClose} className="fixed inset-0 z-[96] flex items-center justify-center bg-black/70 p-4">
+    <div data-card-tactic-detail={card.id} role="dialog" aria-modal="true" aria-label={card.name} onClick={onClose} className="fixed inset-0 z-[96] flex items-center justify-center bg-black/70 p-4" style={cardSafePad('1rem')}>
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-[340px] rounded-2xl border-2 border-white/70 p-4 text-white" style={{ background: st.bg }}>
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="rounded px-1.5 text-[13px] font-black" style={{ background: CARD_TACTIC_RARE_COLOR[card.r] }}>{card.r}</span>
@@ -71466,7 +71470,7 @@ const CardTacticPicker = ({ db, tactics, cat, title, onPick, onClose, allowNone 
   const pick = (id, spc) => { if (id) void cardTacticUseAdd(id); onPick(id, spc); };
   if (sp) {
     return (
-      <div data-card-tactic-species className="fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3">
+      <div data-card-tactic-species className="fixed inset-0 z-[80] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
         <ScreenHead title="種族をえらぶ" accent="text-amber-200" onBack={() => setSp(null)}/>
         <div className="grid min-h-0 flex-1 grid-cols-3 content-start gap-1.5 overflow-y-auto">
           {cardTacticSpeciesList(db).map((x) => (
@@ -71494,7 +71498,7 @@ const CardTacticPicker = ({ db, tactics, cat, title, onPick, onClose, allowNone 
     );
   };
   return (
-    <div data-card-tactic-picker={cat} className="fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3">
+    <div data-card-tactic-picker={cat} className="fixed inset-0 z-[80] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
       <ScreenHead title={title} accent="text-amber-200" onBack={onClose}/>
       <input data-card-tactic-search value={q} onChange={(e) => setQ(e.target.value.slice(0, 20))} placeholder="🔍 ことばでさがす(例: ライフ・大技・守る)" autoComplete="off"
         className="mb-1.5 min-h-[40px] w-full shrink-0 rounded-xl border-2 border-sky-400/60 bg-black/50 px-3 text-[14px] text-white"/>
@@ -71700,7 +71704,7 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
       {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-whiteout"/>}
       {flash > 0 && spot && <div key={flash} aria-hidden="true" className="mh-pack-flash"/>}
       {spotCard && (
-        <button type="button" data-card-tactic-spot aria-label="並びへ戻す" onClick={spotOff} className="fixed inset-0 z-[90] flex flex-col items-center justify-center bg-slate-950/70">
+        <button type="button" data-card-tactic-spot aria-label="並びへ戻す" onClick={spotOff} className="fixed inset-0 z-[90] flex flex-col items-center justify-center bg-slate-950/70" style={cardSafePad('0px')}>
           <div aria-hidden="true" className="mh-pack-spot-rays"/>
           <div className={`relative ${spot.leaving ? 'mh-pack-spot-out' : 'mh-pack-spot-in'}`} style={{ width: spotW }}>
             <div className="mh-pack-kira-front relative aspect-[5/7] w-full"><CardTacticFront card={spotCard} big/></div>
@@ -71903,7 +71907,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
         )}
       </div>
       {pick && pick.cat === 'all-missing' && (
-        <div data-card-tactic-picker="missing" className="fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3">
+        <div data-card-tactic-picker="missing" className="fixed inset-0 z-[80] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
           <ScreenHead title={pick.title} accent="text-amber-200" onBack={() => setPick(null)}/>
           <div className="grid min-h-0 flex-1 grid-cols-3 content-start gap-1.5 overflow-y-auto pb-3">
             {CARD_TACTIC_CARDS.filter((c) => !cardTacticsOwns(t, c.id)).map((c) => <CardTacticFace key={c.id} card={c} small onClick={() => { Audio_.fgSe.tap(); pick.onPick(c.id); }}/>)}
@@ -71978,7 +71982,7 @@ const CardTacticsBand = ({ point = 0, busy = false, onBuy, onExchange }) => {
       </div>
       {confirm && <ConfirmSheet title="戦術カードパックを1パック開けますか？" message={`カードパック券を1枚使います(いま ${tickets}枚)`} confirmLabel="券で開ける" onCancel={() => setConfirm(false)} onConfirm={() => { void useTicket(); }}/>}
       {picking && t && (
-        <div data-card-tactic-picker="missing" className="fixed inset-0 z-[85] flex flex-col bg-slate-950/95 p-3" style={{ paddingTop: 'max(.75rem, env(safe-area-inset-top))', paddingBottom: 'max(.75rem, env(safe-area-inset-bottom))' }}>
+        <div data-card-tactic-picker="missing" className="fixed inset-0 z-[85] flex flex-col bg-slate-950 p-3" style={{ paddingTop: 'max(.75rem, env(safe-area-inset-top))', paddingBottom: 'max(.75rem, env(safe-area-inset-bottom))' }}>
           <ScreenHead title="かけら10個で1枚えらぶ" accent="text-amber-200" onBack={() => setPicking(false)}/>
           <div className="grid min-h-0 flex-1 grid-cols-3 content-start gap-1.5 overflow-y-auto pb-3">
             {CARD_TACTIC_CARDS.filter((c) => !cardTacticsOwns(t, c.id)).map((c) => <CardTacticFace key={c.id} card={c} small onClick={() => { Audio_.fgSe.tap(); void exchange(c.id); }}/>)}
@@ -72233,7 +72237,7 @@ const CardRegComboSheet = ({ tactics, where, title, onPick, onCustom, onClose })
   const list = CARD_REG_COMBOS.filter((x) => x.where === where);
   const secs = [...new Set(list.map((x) => x.sec))];
   return (
-    <div data-card-reg-combos={where} className="fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3">
+    <div data-card-reg-combos={where} className="fixed inset-0 z-[80] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
       <ScreenHead title={title} accent="text-amber-200" onBack={onClose}/>
       <div className="min-h-0 flex-1 overflow-y-auto pb-2">
         {secs.map((s) => (
@@ -72321,7 +72325,7 @@ const CardRegRows = ({ rows, why = [], onRows, baseName = '', rest = '' }) => (
 const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, baseName = '', onRows, onSwitch, onClose, onAdd, onCopy, onAuto }) => {
   const m = deck && cardMonsterOf(db, deck.monsters[k]);
   return (
-    <div data-card-reg-mon-sheet={k} className="fixed inset-0 z-[78] flex flex-col justify-end bg-black/55" onClick={onClose}>
+    <div data-card-reg-mon-sheet={k} className="fixed inset-0 z-[78] flex flex-col justify-end bg-black/55" style={cardSafePad('0px')} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} className="max-h-[82%] overflow-y-auto rounded-t-3xl border-t-[3px] border-sky-400 bg-slate-950 p-3" style={{ paddingBottom: 'max(.75rem, env(safe-area-inset-bottom))' }}>
         <div className="flex items-center gap-2.5">
           {m && <img src={CARD_IMG(m.img)} alt="" className="aspect-[5/7] w-[52px] rounded-[8px] border-2 border-sky-400 object-cover"/>}
@@ -72402,7 +72406,7 @@ const CardRegTrialSheet = ({ db, deck, battle, aces, monName, onClose }) => {
   const max = Math.max(1, ...top.map((x) => used[x.k]));
   const wins = res.filter((r) => r.win).length;
   return (
-    <div data-card-reg-trial={done ? 'done' : 'run'} className="fixed inset-0 z-[82] flex flex-col bg-slate-950/95 p-3">
+    <div data-card-reg-trial={done ? 'done' : 'run'} className="fixed inset-0 z-[82] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
       <ScreenHead title="ためしに戦わせる" accent="text-violet-200" onBack={onClose} note={`いまの戦い方で、助手(MASTER)と${CARD_REG_TRIAL_GAMES}戦`}/>
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
         <div className={`${SCREEN_PANEL_CLASS} py-2 text-center`}>
@@ -72459,7 +72463,7 @@ const CardRegTemplateSheet = ({ db, deck, tactics, open, lv, aces, monName, onPi
     setTimeout(() => { const best = cardRegAutoPick(db, deck, tactics, open, lv, aces); onPick(best.frames, `おまかせ: 「${best.s.name}」がいちばん勝ちました(${CARD_REG_AUTO_GAMES}戦 ${best.wins}勝)`); }, 60);
   };
   return (
-    <div data-card-reg-templates className="fixed inset-0 z-[82] flex flex-col bg-slate-950/95 p-3">
+    <div data-card-reg-templates className="fixed inset-0 z-[82] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
       <ScreenHead title="おすすめの組み方" accent="text-amber-200" onBack={onClose} note="えらぶと、3体とブリーダーの戦い方がまとめて入ります(いまの戦い方は置きかわります)"/>
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
         <button type="button" data-card-reg-auto disabled={auto === 'run'} onClick={() => { Audio_.fgSe.tap(); runAuto(); }}
@@ -73296,7 +73300,7 @@ const cardTourFetchHistory = async (ownerId) => {
   return Array.isArray(rows) ? cardTourNormalizeHistory(rows) : null;
 };
 const CardTourHistoryList = ({ list, known, onOpen, onClose }) => (
-  <div data-card-tour-history className="fixed inset-0 z-[80] flex justify-center bg-slate-950">
+  <div data-card-tour-history className="fixed inset-0 z-[80] flex justify-center bg-slate-950" style={cardSafePad('0px')}>
     <div className={`${SCREEN_SHELL_CLASS} w-full max-w-[600px]`}>
       <ScreenHead title="公式杯の記録" accent="text-amber-200" onBack={onClose} note="終わった大会の結果と、試合の見返しを見られます。新しい順"/>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>

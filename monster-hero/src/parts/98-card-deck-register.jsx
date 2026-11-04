@@ -84,7 +84,7 @@ const CardRegComboSheet = ({ tactics, where, title, onPick, onCustom, onClose })
   const list = CARD_REG_COMBOS.filter((x) => x.where === where);
   const secs = [...new Set(list.map((x) => x.sec))];
   return (
-    <div data-card-reg-combos={where} className="fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3">
+    <div data-card-reg-combos={where} className="fixed inset-0 z-[80] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
       <ScreenHead title={title} accent="text-amber-200" onBack={onClose}/>
       <div className="min-h-0 flex-1 overflow-y-auto pb-2">
         {secs.map((s) => (
@@ -172,7 +172,7 @@ const CardRegRows = ({ rows, why = [], onRows, baseName = '', rest = '' }) => (
 const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, baseName = '', onRows, onSwitch, onClose, onAdd, onCopy, onAuto }) => {
   const m = deck && cardMonsterOf(db, deck.monsters[k]);
   return (
-    <div data-card-reg-mon-sheet={k} className="fixed inset-0 z-[78] flex flex-col justify-end bg-black/55" onClick={onClose}>
+    <div data-card-reg-mon-sheet={k} className="fixed inset-0 z-[78] flex flex-col justify-end bg-black/55" style={cardSafePad('0px')} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} className="max-h-[82%] overflow-y-auto rounded-t-3xl border-t-[3px] border-sky-400 bg-slate-950 p-3" style={{ paddingBottom: 'max(.75rem, env(safe-area-inset-bottom))' }}>
         <div className="flex items-center gap-2.5">
           {m && <img src={CARD_IMG(m.img)} alt="" className="aspect-[5/7] w-[52px] rounded-[8px] border-2 border-sky-400 object-cover"/>}
@@ -253,7 +253,7 @@ const CardRegTrialSheet = ({ db, deck, battle, aces, monName, onClose }) => {
   const max = Math.max(1, ...top.map((x) => used[x.k]));
   const wins = res.filter((r) => r.win).length;
   return (
-    <div data-card-reg-trial={done ? 'done' : 'run'} className="fixed inset-0 z-[82] flex flex-col bg-slate-950/95 p-3">
+    <div data-card-reg-trial={done ? 'done' : 'run'} className="fixed inset-0 z-[82] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
       <ScreenHead title="ためしに戦わせる" accent="text-violet-200" onBack={onClose} note={`いまの戦い方で、助手(MASTER)と${CARD_REG_TRIAL_GAMES}戦`}/>
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
         <div className={`${SCREEN_PANEL_CLASS} py-2 text-center`}>
@@ -310,7 +310,7 @@ const CardRegTemplateSheet = ({ db, deck, tactics, open, lv, aces, monName, onPi
     setTimeout(() => { const best = cardRegAutoPick(db, deck, tactics, open, lv, aces); onPick(best.frames, `おまかせ: 「${best.s.name}」がいちばん勝ちました(${CARD_REG_AUTO_GAMES}戦 ${best.wins}勝)`); }, 60);
   };
   return (
-    <div data-card-reg-templates className="fixed inset-0 z-[82] flex flex-col bg-slate-950/95 p-3">
+    <div data-card-reg-templates className="fixed inset-0 z-[82] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
       <ScreenHead title="おすすめの組み方" accent="text-amber-200" onBack={onClose} note="えらぶと、3体とブリーダーの戦い方がまとめて入ります(いまの戦い方は置きかわります)"/>
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
         <button type="button" data-card-reg-auto disabled={auto === 'run'} onClick={() => { Audio_.fgSe.tap(); runAuto(); }}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 66c00d9e6cd5f9a4
+// source-sha256: 1a8fe1f5ec83ed38
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -100274,6 +100274,10 @@ const cardNameSplit = text => {
   if (scriptTurn.length) return cut(near(scriptTurn));
   return null;
 };
+const cardSafePad = (base = '0px') => ({
+  paddingTop: `max(${base}, env(safe-area-inset-top))`,
+  paddingBottom: `max(${base}, env(safe-area-inset-bottom))`
+});
 const CardNameFit = ({
   name,
   size = 10,
@@ -100700,6 +100704,7 @@ const CardStatusSheet = ({
   onClick: onClose,
   className: "fixed inset-0 flex items-center justify-center bg-black/60 px-4",
   style: {
+    ...cardSafePad('.5rem'),
     zIndex: MODAL_Z.dialog
   }
 }, React.createElement("div", {
@@ -100926,6 +100931,7 @@ const CardBattleTeaser = ({
     onClick: onClose,
     className: "fixed inset-0 flex items-center justify-center overflow-y-auto p-4",
     style: {
+      ...cardSafePad('1rem'),
       zIndex: MODAL_Z.dialog,
       backgroundColor: 'rgba(2,6,23,0.88)'
     }
@@ -101207,6 +101213,7 @@ const CardDetailModal = ({
       onClick: onClose,
       className: "fixed inset-0 flex flex-col items-center justify-center gap-3 overflow-y-auto px-4 py-6",
       style: {
+        ...cardSafePad('1.5rem'),
         zIndex: MODAL_Z.dialog + 100,
         backgroundColor: 'rgba(2,6,23,0.94)'
       },
@@ -101376,6 +101383,7 @@ const CardTurnLogSheet = ({
   return React.createElement("div", {
     "data-card-log-sheet": true,
     className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3 sm:items-center",
+    style: cardSafePad('.75rem'),
     onClick: onClose
   }, React.createElement("div", {
     className: "flex max-h-[80%] w-full max-w-md flex-col rounded-2xl border border-white/15 bg-slate-950 p-3",
@@ -104241,6 +104249,7 @@ const CardBattleBoard = ({
   }), bindAsk && React.createElement("div", {
     "data-card-bind-pick": true,
     className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3",
+    style: cardSafePad('.75rem'),
     onClick: bindCancel
   }, React.createElement("div", {
     className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100",
@@ -104295,6 +104304,7 @@ const CardBattleBoard = ({
     return React.createElement("div", {
       "data-card-toss-pick": true,
       className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3",
+      style: cardSafePad('.75rem'),
       onClick: () => setTossAsk(null)
     }, React.createElement("div", {
       className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100",
@@ -104336,6 +104346,7 @@ const CardBattleBoard = ({
   })(), splitAsk && React.createElement("div", {
     "data-card-split-pick": true,
     className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3",
+    style: cardSafePad('.75rem'),
     onClick: () => setSplitAsk(null)
   }, React.createElement("div", {
     className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100",
@@ -104365,7 +104376,8 @@ const CardBattleBoard = ({
     const fc = cardOf(db, st.pendingPray.no);
     return React.createElement("div", {
       "data-card-pray": true,
-      className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3"
+      className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3",
+      style: cardSafePad('.75rem')
     }, React.createElement("div", {
       className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100"
     }, React.createElement("div", {
@@ -104396,7 +104408,8 @@ const CardBattleBoard = ({
     }, "使わない"))));
   })(), choice && React.createElement("div", {
     "data-card-choose": true,
-    className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3"
+    className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3",
+    style: cardSafePad('.75rem')
   }, React.createElement("div", {
     className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100"
   }, React.createElement("div", {
@@ -104428,6 +104441,7 @@ const CardBattleBoard = ({
   }, `ガッツ${c.guts}${c.damage !== null && c.damage !== undefined ? `・ダメージ${c.damage}` : ''}`))))))), guardAsk && React.createElement("div", {
     "data-card-guard-ask": true,
     className: "fixed inset-0 z-[80] flex items-center justify-center bg-black/45 px-4",
+    style: cardSafePad('.5rem'),
     onClick: () => setGuardAsk(null)
   }, React.createElement("div", {
     className: "w-full max-w-[320px] rounded-2xl border-2 border-sky-300 bg-slate-900 p-3 text-center shadow-[0_8px_24px_#000]",
@@ -104848,6 +104862,7 @@ const CardQuickRunDetail = ({
   return React.createElement("div", {
     "data-card-quick-detail": true,
     className: "fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/80 p-4 landscape:py-2",
+    style: cardSafePad('.5rem'),
     role: "dialog",
     "aria-modal": "true",
     "aria-label": "クイック周回",
@@ -108807,6 +108822,7 @@ const CardDeckEditor = ({
   }))), !land && footer, ask && React.createElement("div", {
     "data-card-deck-ask-sheet": true,
     className: "fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-2 sm:items-center",
+    style: cardSafePad('.5rem'),
     onClick: () => {
       if (!ask.busy) setAsk(null);
     }
@@ -109965,7 +109981,8 @@ const CardPackOpen = ({
       "data-card-pack-spot": spot.rarity,
       "aria-label": "並びへ戻す",
       onClick: spotOff,
-      className: "fixed inset-0 z-[72] flex flex-col items-center justify-center overflow-hidden bg-slate-950/70"
+      className: "fixed inset-0 z-[72] flex flex-col items-center justify-center overflow-hidden bg-slate-950/70",
+      style: cardSafePad('0px')
     }, React.createElement("div", {
       "aria-hidden": "true",
       className: `mh-pack-spot-rays ${alt ? 'mh-pack-spot-rays-alt' : ''}`
@@ -110098,6 +110115,7 @@ const CardShopSheet = ({
   onClick: onClose,
   className: "fixed inset-0 flex items-center justify-center p-3",
   style: {
+    ...cardSafePad('.75rem'),
     zIndex: MODAL_Z.dialog,
     backgroundColor: 'rgba(2,6,23,0.88)'
   }
@@ -110524,6 +110542,7 @@ const CardCatalogSheet = ({
     onClick: onClose,
     className: "fixed inset-0 flex items-center justify-center p-3",
     style: {
+      ...cardSafePad('.75rem'),
       zIndex: MODAL_Z.dialog,
       backgroundColor: 'rgba(2,6,23,0.88)'
     }
@@ -115994,6 +116013,7 @@ const CardChatPanel = ({
   return React.createElement("div", {
     "data-card-chat-panel": mode,
     className: "fixed inset-0 z-[60] flex flex-col justify-end bg-black/40",
+    style: cardSafePad('0px'),
     onClick: onClose
   }, React.createElement("div", {
     className: "mx-auto w-full max-w-[520px] rounded-t-2xl border-t-2 border-sky-400 bg-slate-950 px-3 pt-2 text-white",
@@ -119636,6 +119656,7 @@ const CardShareDeckDetail = ({
   return React.createElement("div", {
     "data-card-share-deck-detail": true,
     className: "fixed inset-0 z-[90] flex items-end justify-center bg-black/60 p-3 sm:items-center",
+    style: cardSafePad('.75rem'),
     onClick: onClose
   }, React.createElement("div", {
     className: "max-h-[86vh] w-full max-w-[440px] overflow-y-auto rounded-2xl border-2 border-amber-600/60 bg-slate-950 p-3",
@@ -120648,7 +120669,8 @@ const CardTacticDetail = ({
     "aria-modal": "true",
     "aria-label": card.name,
     onClick: onClose,
-    className: "fixed inset-0 z-[96] flex items-center justify-center bg-black/70 p-4"
+    className: "fixed inset-0 z-[96] flex items-center justify-center bg-black/70 p-4",
+    style: cardSafePad('1rem')
   }, React.createElement("div", {
     onClick: e => e.stopPropagation(),
     className: "w-full max-w-[340px] rounded-2xl border-2 border-white/70 p-4 text-white",
@@ -120863,7 +120885,8 @@ const CardTacticPicker = ({
   if (sp) {
     return React.createElement("div", {
       "data-card-tactic-species": true,
-      className: "fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3"
+      className: "fixed inset-0 z-[80] flex flex-col bg-slate-950 p-3",
+      style: cardSafePad('.75rem')
     }, React.createElement(ScreenHead, {
       title: "種族をえらぶ",
       accent: "text-amber-200",
@@ -120908,7 +120931,8 @@ const CardTacticPicker = ({
   };
   return React.createElement("div", {
     "data-card-tactic-picker": cat,
-    className: "fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3"
+    className: "fixed inset-0 z-[80] flex flex-col bg-slate-950 p-3",
+    style: cardSafePad('.75rem')
   }, React.createElement(ScreenHead, {
     title: title,
     accent: "text-amber-200",
@@ -121385,7 +121409,8 @@ const CardTacticPackOpen = ({
     "data-card-tactic-spot": true,
     "aria-label": "並びへ戻す",
     onClick: spotOff,
-    className: "fixed inset-0 z-[90] flex flex-col items-center justify-center bg-slate-950/70"
+    className: "fixed inset-0 z-[90] flex flex-col items-center justify-center bg-slate-950/70",
+    style: cardSafePad('0px')
   }, React.createElement("div", {
     "aria-hidden": "true",
     className: "mh-pack-spot-rays"
@@ -121873,7 +121898,8 @@ const CardTacticsScreen = ({
     }
   }))))))), pick && pick.cat === 'all-missing' && React.createElement("div", {
     "data-card-tactic-picker": "missing",
-    className: "fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3"
+    className: "fixed inset-0 z-[80] flex flex-col bg-slate-950 p-3",
+    style: cardSafePad('.75rem')
   }, React.createElement(ScreenHead, {
     title: pick.title,
     accent: "text-amber-200",
@@ -122024,7 +122050,7 @@ const CardTacticsBand = ({
     }
   }), picking && t && React.createElement("div", {
     "data-card-tactic-picker": "missing",
-    className: "fixed inset-0 z-[85] flex flex-col bg-slate-950/95 p-3",
+    className: "fixed inset-0 z-[85] flex flex-col bg-slate-950 p-3",
     style: {
       paddingTop: 'max(.75rem, env(safe-area-inset-top))',
       paddingBottom: 'max(.75rem, env(safe-area-inset-bottom))'
@@ -122602,7 +122628,8 @@ const CardRegComboSheet = ({
   const secs = [...new Set(list.map(x => x.sec))];
   return React.createElement("div", {
     "data-card-reg-combos": where,
-    className: "fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3"
+    className: "fixed inset-0 z-[80] flex flex-col bg-slate-950 p-3",
+    style: cardSafePad('.75rem')
   }, React.createElement(ScreenHead, {
     title: title,
     accent: "text-amber-200",
@@ -122789,6 +122816,7 @@ const CardRegMonSheet = ({
   return React.createElement("div", {
     "data-card-reg-mon-sheet": k,
     className: "fixed inset-0 z-[78] flex flex-col justify-end bg-black/55",
+    style: cardSafePad('0px'),
     onClick: onClose
   }, React.createElement("div", {
     onClick: e => e.stopPropagation(),
@@ -122982,7 +123010,8 @@ const CardRegTrialSheet = ({
   const wins = res.filter(r => r.win).length;
   return React.createElement("div", {
     "data-card-reg-trial": done ? 'done' : 'run',
-    className: "fixed inset-0 z-[82] flex flex-col bg-slate-950/95 p-3"
+    className: "fixed inset-0 z-[82] flex flex-col bg-slate-950 p-3",
+    style: cardSafePad('.75rem')
   }, React.createElement(ScreenHead, {
     title: "ためしに戦わせる",
     accent: "text-violet-200",
@@ -123085,7 +123114,8 @@ const CardRegTemplateSheet = ({
   };
   return React.createElement("div", {
     "data-card-reg-templates": true,
-    className: "fixed inset-0 z-[82] flex flex-col bg-slate-950/95 p-3"
+    className: "fixed inset-0 z-[82] flex flex-col bg-slate-950 p-3",
+    style: cardSafePad('.75rem')
   }, React.createElement(ScreenHead, {
     title: "おすすめの組み方",
     accent: "text-amber-200",
@@ -124720,7 +124750,8 @@ const CardTourHistoryList = ({
   onClose
 }) => React.createElement("div", {
   "data-card-tour-history": true,
-  className: "fixed inset-0 z-[80] flex justify-center bg-slate-950"
+  className: "fixed inset-0 z-[80] flex justify-center bg-slate-950",
+  style: cardSafePad('0px')
 }, React.createElement("div", {
   className: `${SCREEN_SHELL_CLASS} w-full max-w-[600px]`
 }, React.createElement(ScreenHead, {
