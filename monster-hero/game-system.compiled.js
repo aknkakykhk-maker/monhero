@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c6744004149fef29
+// source-sha256: 744209801ce0c9fd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -100298,6 +100298,18 @@ Object.entries(CARD_MOTION_SPECS).forEach(([kind, sp]) => {
 const CARD_MOTION_RULES = Object.freeze([[/コンビネーション|ラッシュ|連|乱れ|3段|三段|マシンガン|ダブル|ワンツー|ポカポカ|わらわら/, 'cardCombo'], [/ブレス/, 'cardBreath'], [/デス|死神|ドクロ|悪夢|冥|ソウル|シャドー|闇/, 'cardDark'], [/プレス|ふみつけ|ボディ|たおれこみ|ヒップ|ドロップ|メテオ/, 'cardPress'], [/ドリル|ニードル|針|ターン/, 'cardDrill'], [/ハンマー|げんこつ|たたき|ごっちん|ボンバ/, 'cardHammer'], [/剣|ソード|ブレード|スラッシュ|斬/, 'cardSword'], [/しっぽ/, 'cardTail'], [/キッス|ぺろ|なめ|ベロ|舌/, 'cardKiss'], [/歌|うた|ソング|音/, 'cardSong'], [/雷|電撃|ライトニング|サンダー|稲妻|放電/, 'cardThunder'], [/炎|火|ファイア|フレイム|熱|バーニング/, 'cardFire'], [/冷|氷|ブリザード|吹雪|凍/, 'cardIce'], [/水|泡|ツバ|しぶき|ウォーター/, 'cardWater'], [/ビーム|レーザー|キャノン|砲|光線/, 'cardBeam'], [/光|聖|ビッグバン/, 'cardLight'], [/魔空|ドレイン|弾|玉|波動|念/, 'cardOrb'], [/毒|ガス|おなら|胞子/, 'cardGas'], [/葉|花|さくら|種|つる/, 'cardLeaf'], [/岩|石|地震|ロック/, 'cardRock'], [/投げ/, 'cardThrow'], [/回転|ぐるぐる|竜巻|スピン|旋風|まわし/, 'cardSpin'], [/剣|斬|まっぷたつ|Vの字|居合|カッター/, 'cardBlade'], [/かみ|噛|かじ/, 'cardBite'], [/ひっかき|爪|ツノ|クロー|突き|つき|くしざし|ヤリ|槍/, 'cardClaw'], [/キック|けり|蹴|ひざ/, 'cardKick'], [/体当たり|タックル|頭つき|突進|ダッシュ|ころがる|転がる/, 'cardDash'], [/パンチ|チョップ|はたき|ソバット|ビンタ|でこぴん|こぶし|殴/, 'cardJab']]);
 const CARD_SPECIAL_MOTION_RULES = Object.freeze([[/歌|うた|ソング|音|笛|おどり|踊/, 'cardSpeSong'], [/偵察|にらむ|睨|見|挑発|のぞ|ガン/, 'cardSpeEye']]);
 const CARD_MOTION_BY_NO = Object.freeze({});
+const CARD_MOTION_KYUBI = Object.freeze({
+  '901': ['Kyubi-n5', 'Orihime-n5'],
+  '902': ['Kyubi-u5', 'Orihime-u3'],
+  '903': ['Kyubi-n2', 'Orihime-n2'],
+  '904': ['Kyubi-n1', 'Orihime-n1'],
+  '905': ['Kyubi-u2', 'Orihime-u2'],
+  '906': ['Kyubi-u1', 'Orihime-u1'],
+  '907': ['Kyubi-n6', 'Orihime-n6'],
+  '908': ['Kyubi-u7', 'Orihime-u8'],
+  '909': ['Kyubi-u3', 'Orihime-u4'],
+  '910': ['Kyubi-u8', 'Orihime-u6']
+});
 const CARD_MOTION_GAME_ID = Object.freeze({
   tiger: 'Tiger',
   golem: 'Golem',
@@ -100369,6 +100381,7 @@ const cardMotionBaseOf = (db, cardNo, mon) => {
   const c = cardOf(db, cardNo);
   if (!c || !cardIsAttackKind(c.kind) || c.user === 'breeder') return null;
   if (CARD_MOTION_BY_NO[c.no]) return CARD_MOTION_BY_NO[c.no];
+  if (CARD_MOTION_KYUBI[c.no]) return CARD_MOTION_KYUBI[c.no][mon && mon.no === 'C-951' ? 1 : 0];
   if (c.kind === 'spe') {
     const sp = CARD_SPECIAL_MOTION_RULES.find(([re]) => re.test(c.name));
     return sp ? sp[1] : 'cardSpeRing';
