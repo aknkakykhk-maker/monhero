@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3fe2f938c1dbcc58
+// generated-sha256: 569b1031b6de014b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -16029,7 +16029,7 @@ const SKM_ORIHIME = Object.freeze({
     { ...SKM_KYUBI.unique[3], c:'cosmic' },                                                                   // 神狐星火(キュービの神狐蒼火の動き・星空の色の炎)
     { ...SKM_KYUBI.unique[4], c:'sky' },                                                                      // 八鈴天衝(キュービの八嵐天衝の動き)
     { ...SKM_KYUBI.unique[8], c:'pink' },                                                                     // 炸裂気泡陣
-    { ...SKM_KYUBI.unique[6], c:'psy' },                                                                      // 煉獄九尾陣
+    { ...SKM_KYUBI.unique[6], c:'psy', tint:true },                                                           // 煉獄九尾陣(着弾の炎の柱も紫)
     { ...SKM_KYUBI.unique[7], c:'sky' }],                                                                     // 天河天翔
 });
 const SKILL_MOTION_SETS = Object.freeze({ ...SKILL_MOTION_SETS_MAIN, Yaobikuni:skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red'), Ghost:SKM_GHOST, Spooky:SKM_SPOOKY, Melody:SKM_MELODY, Kuromy:SKM_KUROMY,
