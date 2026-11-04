@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f9d2d11f87fb6865
+// generated-sha256: 0bcab33b8664e748
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -72441,6 +72441,27 @@ const cardRegRowText = (row) => {
   if (row.c === 'any') return `いつでも → ${a ? a.line || a.name : '?'}`;
   return `${c ? c.line || c.name : '?'} → ${a ? a.line || a.name : '?'}`; // 一文(2026-10-31 案A)。条件は「〜とき」で終わる
 };
+// 次の賢さの段まで、何が足りないか(2026-11-04 社長「みんな賢さがマスターになってるけどそれ以上上がるようになってないの?」)。
+//   段の決まりは 82 の cardTacticSmartLevel(基本2枚で MASTER・GRAND MASTER から上は基本3枚+効く戦術カード4・7・10枚)。
+//   基本カードの2枚目はカードランク10・3枚目は30でセットできるようになる(96 の CARD_LEVEL_FRAMES)ので、届いていないときはそれも書く
+const cardRegSmartNextText = (frames, lv) => {
+  const f = cardTacticNormalizeFrames(frames);
+  const base = f.base.filter(Boolean).length;
+  const rows = cardTacticCountedRows(f);
+  const now = cardTacticSmartLevel(f);
+  if (now === 'legend') return 'いちばん上の LEGEND です。';
+  const next = CARD_TACTIC_SMART[CARD_TACTIC_SMART.indexOf(now) + 1];
+  const label = CARD_SHARE_SMART_LABEL[next];
+  if (next === 'master') return `次の ${label} まで: 基本カードをあと${2 - base}枚、または、ちゃんと効く戦術カードをあと${Math.max(1, 4 - rows)}枚。`;
+  const needRows = { grandmaster: 4, hell: 7, legend: 10 }[next];
+  const needs = [];
+  if (base < 3) needs.push(`基本カードをあと${3 - base}枚`);
+  if (rows < needRows) needs.push(`ちゃんと効く戦術カードをあと${needRows - rows}枚`);
+  const opened = cardLevelFrames(lv).base || 1;
+  const locked = CARD_LEVEL_FRAMES.filter((x) => x.base && x.base > opened && x.base <= 3).map((x) => `${x.base}枚目はカードランク${x.at}`);
+  const rank = base < 3 && locked.length ? `(基本カードの${locked.join('、')}でセットできるようになります)` : '';
+  return `次の ${label} まで: ${needs.join('と')}。${rank}`;
+};
 // おすすめの戦い方を、持っているカード・開いている枚数で入れる。
 //   3体に同じカードを入れると賢さに1枚としか数えない(82 の cardTacticUncounted)ので、候補を上から順に3体へ配る(左・真ん中・右・左…)。
 //   候補が足りなければ、同じ物を重ねずに空けておく
@@ -72791,6 +72812,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
   const battle = cardTacticsFramesForBattle({ ...tactics, frames: draft }, lv);
   const smartLv = cardTacticSmartLevel(battle);
   const smartText = cardShareSmartText({ f: cardTacticPackFrames(battle) });
+  const smartNext = cardRegSmartNextText(battle, lv);
   const uncounted = cardTacticUncounted(battle);
   const acesNow = aces === 'auto' ? cardRegAutoAces(db, deck) : aces;
   const setRows = (k, rows) => setDraft((f) => (k === 'breeder' ? { ...f, breeder: rows } : { ...f, mons: f.mons.map((r, i) => (i === k ? rows : r)) }));
@@ -72912,7 +72934,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
                 );
               })}
             </div>
-            <p className="mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('入れると: 賢さの上限が上がります(1枚 HARD まで・2枚 EXPERT・3枚 MASTER)。サブは、型を3分の1だけ足します。')}</p>
+            <p className="mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('入れると: 賢さが上がります(基本2枚で MASTER。GRAND MASTER から上は、基本3枚と、ちゃんと効く戦術カード4枚・7枚・10枚)。サブは、型を3分の1だけ足します。')}</p>
           </section>
           <section data-card-reg-sec="breeder" className="rounded-2xl border-2 border-violet-400 bg-slate-900/90 p-2.5">
             <CardRegSecHead n="②" color="#a78bfa" title="ブリーダーの手" count={`${draft.breeder.length}枚 / 入れられる ${open.breeder}枚`}
@@ -72958,6 +72980,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
             <div className="flex items-center gap-2 text-[13px] font-black text-white">賢さ <span className="text-amber-200">{smartText}</span></div>
             <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-700"><i className="block h-full bg-gradient-to-r from-emerald-400 to-amber-300" style={{ width: `${((CARD_TACTIC_SMART.indexOf(smartLv) + 1) / CARD_TACTIC_SMART.length) * 100}%` }}/></div>
             <small className="mt-1 block text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>賢さは、ほかのブリーダーがこのデッキと戦うときの相手の強さです。ちゃんと効く戦術カードが多いほど上がります。</small>
+            {smartNext && <p data-card-reg-smart-next className="mt-1 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(smartNext)}</p>}
           </div>
           <div data-card-reg-aces className={`${SCREEN_PANEL_CLASS} py-2`}>
             <div className="flex items-center gap-2 text-[13px] font-black text-white">切り札 <span className="text-[12px] text-amber-200">{aces === 'auto' ? 'おまかせ' : '自分でえらぶ'}</span>
