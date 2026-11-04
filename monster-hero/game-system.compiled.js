@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b353b83b8e599c9e
+// source-sha256: 0aad92f9accc9fa8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99761,9 +99761,11 @@ const CARD_PACKS = Object.freeze([{
   id: 'p8',
   no: 8,
   species: ['arrowhead', 'centaur', 'colorpandora'],
+  hybrids: ['C-069', 'C-070'],
   color: '#ec4899'
 }].map(p => Object.freeze({
   ...p,
+  hybrids: Object.freeze(p.hybrids || []),
   name: `第${p.no}弾パック`,
   price: 300,
   bundle: Object.freeze({
@@ -99772,7 +99774,7 @@ const CARD_PACKS = Object.freeze([{
   }),
   tech: 7,
   mon: 1,
-  rarity: Object.freeze(p.no <= 3 || p.no === 5 || p.no === 7 ? {
+  rarity: Object.freeze(p.no <= 3 || p.no === 5 || p.no === 7 || p.no === 8 ? {
     normal: 85,
     kira: 12,
     alt: 3
@@ -99816,9 +99818,13 @@ const CARD_STARTER_SHOP_PRICE = 1500;
 const cardPackOf = id => CARD_PACKS.find(p => p.id === id) || null;
 const cardMonRarity = m => !m || !m.variant ? 'normal' : /別絵キラ/.test(m.variant) ? 'alt' : /キラ/.test(m.variant) ? 'kira' : 'normal';
 const cardPackIdOfSpecies = species => (CARD_PACKS.find(p => p.species.includes(species)) || {}).id || null;
+const cardPackIdOfHybrid = m => {
+  const base = String(m.species).replace(/^hybrid:/, '');
+  return (CARD_PACKS.find(p => p.hybrids.includes(base)) || {}).id || cardPackIdOfSpecies(m.main);
+};
 const cardPackIdOf = (db, no) => {
   const m = db.monsters[no];
-  if (m) return cardPackIdOfSpecies(String(m.wave) === 'hybrid' ? m.main : m.species);
+  if (m) return String(m.wave) === 'hybrid' ? cardPackIdOfHybrid(m) : cardPackIdOfSpecies(m.species);
   const c = db.cards[no];
   if (!c) return null;
   if (c.user === 'any' || c.user === 'breeder') return (Object.entries(CARD_PACK_SHARED).find(([, list]) => list.includes(no)) || [])[0] || null;

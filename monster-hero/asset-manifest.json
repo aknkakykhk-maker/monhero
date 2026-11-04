@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "b948772941e6",
-  "packs": {"beat":{"bytes":133178894,"count":99},"battle":{"bytes":122059057,"count":753},"card":{"bytes":35185202,"count":992},"all":{"bytes":290423153,"count":1844},"core":{"bytes":16327751,"count":22}},
+  "id": "d125f5f5fc6f",
+  "packs": {"beat":{"bytes":133178894,"count":99},"battle":{"bytes":122059057,"count":753},"card":{"bytes":35697793,"count":1004},"all":{"bytes":290935744,"count":1856},"core":{"bytes":16329672,"count":22}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -760,6 +760,12 @@
     "images/card-battle/l/C068.jpg": {"v":"f12c58bf89a6","size":61307,"pack":"card"},
     "images/card-battle/l/C068S.jpg": {"v":"c116963e4b69","size":75699,"pack":"card"},
     "images/card-battle/l/C068V.jpg": {"v":"2c4e5d0bfc37","size":82124,"pack":"card"},
+    "images/card-battle/l/C069.jpg": {"v":"58cf877eb696","size":50456,"pack":"card"},
+    "images/card-battle/l/C069S.jpg": {"v":"07cbf2be9d91","size":65051,"pack":"card"},
+    "images/card-battle/l/C069V.jpg": {"v":"babd1f04f36a","size":65747,"pack":"card"},
+    "images/card-battle/l/C070.jpg": {"v":"0a36c477b91b","size":55449,"pack":"card"},
+    "images/card-battle/l/C070S.jpg": {"v":"b6f1361ce6d2","size":69780,"pack":"card"},
+    "images/card-battle/l/C070V.jpg": {"v":"63a25a032442","size":74153,"pack":"card"},
     "images/card-battle/l/C208.jpg": {"v":"d0d1c6b27df5","size":60687,"pack":"card"},
     "images/card-battle/l/C208S.jpg": {"v":"4300808d6a84","size":82123,"pack":"card"},
     "images/card-battle/l/C208V.jpg": {"v":"7f864b939f28","size":88220,"pack":"card"},
@@ -1264,6 +1270,12 @@
     "images/card-battle/s/C068.jpg": {"v":"1cd93e7298aa","size":22069,"pack":"card"},
     "images/card-battle/s/C068S.jpg": {"v":"901207f4ac98","size":25244,"pack":"card"},
     "images/card-battle/s/C068V.jpg": {"v":"efc7bf086c5d","size":26677,"pack":"card"},
+    "images/card-battle/s/C069.jpg": {"v":"0b6a3efcbb0d","size":18600,"pack":"card"},
+    "images/card-battle/s/C069S.jpg": {"v":"9b24ac27da1a","size":22699,"pack":"card"},
+    "images/card-battle/s/C069V.jpg": {"v":"c44d42ec789f","size":22561,"pack":"card"},
+    "images/card-battle/s/C070.jpg": {"v":"1bee744c5dfa","size":20187,"pack":"card"},
+    "images/card-battle/s/C070S.jpg": {"v":"fe3828a4bc97","size":23342,"pack":"card"},
+    "images/card-battle/s/C070V.jpg": {"v":"7475db511600","size":24566,"pack":"card"},
     "images/card-battle/s/C208.jpg": {"v":"fe9595e338e2","size":21217,"pack":"card"},
     "images/card-battle/s/C208S.jpg": {"v":"a99b67af1743","size":26431,"pack":"card"},
     "images/card-battle/s/C208V.jpg": {"v":"5b989a876f4f","size":27887,"pack":"card"},
@@ -1849,8 +1861,8 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"4de9b7e46a3b","size":279495,"pack":"core"},
-    "data/images/images-ally.js": {"v":"9b718ad89226","size":71134,"pack":"core"},
+    "tailwind.css": {"v":"e2a9b01ab0da","size":279495,"pack":"core"},
+    "data/images/images-ally.js": {"v":"b9c600f05e9c","size":71638,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"f908809f4b48","size":60701,"pack":"core"},
     "data/lineages.js": {"v":"81f342c471d9","size":26476,"pack":"core"},
@@ -1867,7 +1879,7 @@
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":9047,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
     "data/assistants.js": {"v":"a91be830e0a2","size":1016509,"pack":"core"},
-    "data/card-battle-cards.js": {"v":"70868d2e2821","size":118324,"pack":"core"},
-    "game-system.compiled.js": {"v":"303a6b85d0af","size":7781144,"pack":"core"}
+    "data/card-battle-cards.js": {"v":"b80431342e4d","size":119444,"pack":"core"},
+    "game-system.compiled.js": {"v":"619305596870","size":7781441,"pack":"core"}
   }
 }

@@ -8,6 +8,11 @@
 //   字体はリポジトリに入れない。使うときに取ってくる:
 //     npm pack @fontsource/m-plus-rounded-1c@5.0.13 && tar xzf fontsource-m-plus-rounded-1c-5.0.13.tgz → package/files/
 //   --weight <太さ>(既定 700)・--stroke <ふちの太さ px>(既定 5.2)で、原本の字が太いときに合わせる(ピンクグジラは「XXX」→「068」を 900・8)
+//   --color <r,g,b>(既定 40,2,4 = 暗い赤)で、ふちの色を原本に合わせる(スプーキーは紺のふち)
+//   --suffix <数>(既定 0)で、番号のあとに続く字(キラの「S」・別絵キラの「R」など)の数を飛ばして、その前の字を番号として数える
+//     例: スプーキーのキラ「No.C-0??S」→ --suffix 1 で「0??」を 069 などへ
+//   --box <x0,y0,x1,y1> で、番号の字(変えない「0」も含めて)だけが入る四角を指定する。キラの模様や明るい地で、
+//     右下から自動で探すと外れるとき(スプーキーのように地が白に近いとき)に使う。--white <値>(既定 215)は白い字とみなす明るさ
 //   --test を付けると、変えない字(同じ数字)の上にも描いて、原本と重なるかを見る絵を <元の絵>.test.png に書き出す(元の絵は変えない)
 //
 // やり方
@@ -26,14 +31,36 @@ const font = fi >= 0 ? args.splice(fi, 2)[1] : null;
 const opt = (name, def) => { const i = args.indexOf(name); return i >= 0 ? Number(args.splice(i, 2)[1]) : def; };
 const weight = opt('--weight', 700);
 const stroke = opt('--stroke', 5.2);
+const suffix = opt('--suffix', 0);
+const ci = args.indexOf('--color');
+const strokeColor = ci >= 0 ? `rgb(${args.splice(ci, 2)[1]})` : 'rgb(40,2,4)';
+const bi = args.indexOf('--box');
+const box = bi >= 0 ? args.splice(bi, 2)[1].split(',').map(Number) : null;
+const whiteMin = opt('--white', 215);
 const test = args.includes('--test');
 const [file, from, to] = args.filter((a) => a !== '--test');
 
 // 番号の段を探す: 右下(x 500〜720)で、白い点がある行のまとまりのうち、いちばん下のもの
-const findDigits = async (img, n) => {
+const findDigits = async (img, n, skip = 0) => {
   const { data, info } = await sharp(img).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   const W = info.width, ch = info.channels;
-  const white = (x, y) => { const i = (y * W + x) * ch; return Math.min(data[i], data[i + 1], data[i + 2]) > 215; };
+  const white = (x, y) => { const i = (y * W + x) * ch; return Math.min(data[i], data[i + 1], data[i + 2]) > whiteMin; };
+  if (box) {
+    // 指定の四角の中の白い点の上下の端と、列のまとまり(字)
+    const [bx0, by0, bx1, by1] = box;
+    let t = -1, b = -1;
+    for (let y = by0; y <= by1; y++) { let k = 0; for (let x = bx0; x <= bx1; x++) if (white(x, y)) k++; if (k > 0) { if (t < 0) t = y; b = y; } }
+    const rs = []; let st = -1;
+    for (let x = bx0; x <= bx1 + 1; x++) {
+      let k = 0; if (x <= bx1) for (let y = t; y <= b; y++) if (white(x, y)) k++;
+      if (k > 0 && st < 0) st = x;
+      if (k === 0 && st >= 0) { rs.push([st, x - 1]); st = -1; }
+    }
+    // 幅3列以下のかけら(明るい地で字のふちが途切れた所など)は、左の字につなぐ
+    for (let k = rs.length - 1; k > 0; k--) if (rs[k][1] - rs[k][0] < 3) { rs[k - 1][1] = rs[k][1]; rs.splice(k, 1); }
+    if (rs.length !== n) throw new Error(`四角の中の字の数が ${rs.length}(${n} のはず): ${JSON.stringify(rs)}`);
+    return { top: t, bot: b, digits: rs };
+  }
   const rows = [];
   for (let y = 860; y < 1010; y++) { let k = 0; for (let x = 500; x < 720; x++) if (white(x, y)) k++; rows.push(k); }
   const bands = []; let bs = -1;
@@ -53,22 +80,22 @@ const findDigits = async (img, n) => {
   for (let i = bands.length - 1; i >= 0; i--) {
     const [t, b] = bands[i];
     const r = b - t + 1 <= 40 ? runsOf(t, b) : [];
-    if (r.length >= n + 2) { top = t; bot = b; runs = r; break; }
+    if (r.length >= n + skip + 2) { top = t; bot = b; runs = r; break; }
   }
-  if (runs.length < n) throw new Error(`番号の字が見つかりません(${runs.length}個)`);
-  return { top, bot, digits: runs.slice(-n) };
+  if (runs.length < n + skip) throw new Error(`番号の字が見つかりません(${runs.length}個)`);
+  return { top, bot, digits: runs.slice(runs.length - skip - n, runs.length - skip) };
 };
 
 (async () => {
   if (!font || !file || !from || !to || from.length !== to.length) throw new Error('使い方: node tools/card/card-number-redraw.js --font <woff2> <元の絵> <今の番号> <新しい番号>(同じ桁数)');
-  const { top, bot, digits } = await findDigits(file, from.length);
+  const { top, bot, digits } = await findDigits(file, from.length, suffix);
   const jobs = digits.map(([x0, x1], i) => ({ x0, x1, ch: to[i], same: from[i] === to[i] })).filter((j) => test || !j.same);
   const ref = digits[from.indexOf('0') >= 0 ? from.indexOf('0') : 0]; // 大きさを合わせる手本(原本の「0」)
   const playwright = require('playwright');
   const b = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   try {
     const page = await b.newPage();
-    const url = await page.evaluate(async ({ fontUrl, imgUrl, top, bot, jobs, ref, test, weight, stroke }) => {
+    const url = await page.evaluate(async ({ fontUrl, imgUrl, top, bot, jobs, ref, test, weight, stroke, strokeColor }) => {
       const f = new FontFace('R', `url(${fontUrl})`, { weight: String(weight) });
       await f.load(); document.fonts.add(f);
       const im = new Image(); await new Promise((r) => { im.onload = r; im.src = imgUrl; });
@@ -106,7 +133,7 @@ const findDigits = async (img, n) => {
         x.font = `${weight} 100px R`; x.textBaseline = 'alphabetic'; x.lineJoin = 'round';
         const left = -(m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2 - m.actualBoundingBoxLeft * 0;
         const dx = -((m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2);
-        x.lineWidth = stroke / sx; x.strokeStyle = 'rgb(40,2,4)';
+        x.lineWidth = stroke / sx; x.strokeStyle = strokeColor;
         x.strokeText(ch, dx, 0);
         x.fillStyle = test && same ? 'rgba(80,200,255,.75)' : '#fff';
         x.fillText(ch, dx, 0);
@@ -116,6 +143,7 @@ const findDigits = async (img, n) => {
       jobs.forEach(draw);
       return cv.toDataURL(test ? 'image/png' : 'image/jpeg', 0.95);
     }, {
+      strokeColor,
       fontUrl: `data:font/woff2;base64,${fs.readFileSync(font).toString('base64')}`,
       imgUrl: `data:image/jpeg;base64,${fs.readFileSync(file).toString('base64')}`,
       top, bot, jobs, ref, test, weight, stroke,

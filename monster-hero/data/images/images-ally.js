@@ -302,6 +302,9 @@ const HYBRID_MONSTER_IMGS = Object.freeze({
   'C-208': OBORO_IMG, 'C-208S': OBORO_IMG, 'C-208V': OBORO_IMG,
   // ピンクグジラ(2026-10-30)。キラ・別絵キラも同じ立ち絵
   'C-068': HYBRID_C068_IMG, 'C-068S': HYBRID_C068_IMG, 'C-068V': HYBRID_C068_IMG,
+  // ミーア・スプーキー(2026-11-04 第8弾に追加)。立ち絵はゲームのモンスターのもの。キラ・別絵キラも同じ
+  'C-069': MIA_IMG, 'C-069S': MIA_IMG, 'C-069V': MIA_IMG,
+  'C-070': SPOOKY_IMG, 'C-070S': SPOOKY_IMG, 'C-070V': SPOOKY_IMG,
   // キュービ種の混血オリヒメ(番号 C-951・カードの絵は C-K02。メイン キュービ・サブ ？？？。2026-11-04 新血統キュービ)。本編の立ち絵をそのまま使う
   'C-951': ORIHIME_IMG,
 });
@@ -481,6 +484,9 @@ const HYBRID_MONSTER_FACE_ICONS = Object.freeze({
   'C-067': PANDORA_FACE_ICON, 'C-067S': PANDORA_FACE_ICON, 'C-067V': PANDORA_FACE_ICON,
   'C-208': OBORO_FACE_ICON, 'C-208S': OBORO_FACE_ICON, 'C-208V': OBORO_FACE_ICON,
   'C-068': HYBRID_C068_FACE_ICON, 'C-068S': HYBRID_C068_FACE_ICON, 'C-068V': HYBRID_C068_FACE_ICON,
+  // ミーア・スプーキー(2026-11-04)。顔はゲームと同じ
+  'C-069': MIA_FACE_ICON, 'C-069S': MIA_FACE_ICON, 'C-069V': MIA_FACE_ICON,
+  'C-070': SPOOKY_FACE_ICON, 'C-070S': SPOOKY_FACE_ICON, 'C-070V': SPOOKY_FACE_ICON,
 });
 
 // 血統別のアイコン(エンブレム・144x146・金の枠つき)。2026-10-05・ユーザー提供の37個(blood-icons.zip)。

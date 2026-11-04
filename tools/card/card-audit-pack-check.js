@@ -45,11 +45,11 @@ check('A 弾は8つ(第1〜8弾)', E.CARD_PACKS.length === 8 && E.CARD_PACKS.eve
 E.CARD_PACKS.forEach((p) => {
   check(`A ${p.name}: 1パック 300・5パックまとめ 1,350`, p.price === 300 && p.bundle && p.bundle.n === 5 && p.bundle.price === 1350, `${p.price}・${JSON.stringify(p.bundle)}`);
   check(`A ${p.name}: 8枚(技など7・モンスター1)`, p.tech === 7 && p.mon === 1);
-  const want = (p.no <= 3 || p.no === 5 || p.no === 7) ? { normal: 85, kira: 12, alt: 3 } : { normal: 85, kira: 15, alt: 0 };
+  const want = (p.no <= 3 || p.no === 5 || p.no === 7 || p.no === 8) ? { normal: 85, kira: 12, alt: 3 } : { normal: 85, kira: 15, alt: 0 };
   check(`A ${p.name}: レア度 ${want.normal}/${want.kira}/${want.alt}`, JSON.stringify(p.rarity) === JSON.stringify(want), JSON.stringify(p.rarity));
   check(`A ${p.name}: 天井あり`, p.pity === true);
   check(`A ${p.name}: 種族が台帳どおり(${WANT_SPECIES[p.id].join('・')})`, JSON.stringify(p.species) === JSON.stringify(WANT_SPECIES[p.id]), p.species.join('・'));
-  if (p.no > 3 && p.no !== 5 && p.no !== 7) check(`A ${p.name}: 別絵キラは出ない(第1〜3・5・7弾だけ)`, E.cardPackMonPool(db, p, 'alt').length === 0);
+  if (p.no > 3 && p.no !== 5 && p.no !== 7 && p.no !== 8) check(`A ${p.name}: 別絵キラは出ない(第1〜3・5・7・8弾だけ。第8弾はミーア・スプーキーの別絵キラ 2026-11-04)`, E.cardPackMonPool(db, p, 'alt').length === 0);
   const techN = E.cardPackTechPool(db, p).length;
   const monN = ['normal', 'kira', 'alt'].reduce((a, k) => a + E.cardPackMonPool(db, p, k).length, 0);
   notes.push(`${p.name}: 技など ${techN}種・モンスター ${monN}枚(通常 ${E.cardPackMonPool(db, p, 'normal').length}・キラ ${E.cardPackMonPool(db, p, 'kira').length}・別絵キラ ${E.cardPackMonPool(db, p, 'alt').length})`);
@@ -71,11 +71,13 @@ check('A ファンの描いた C-060C は出ない', !db.monsters['C-060C'] || !
 // 混血はメインの種族の弾(キラの無い通常のモンスター)
 const hybrids = mons.filter((m) => String(m.wave) === 'hybrid');
 // 剣士モッチー・パンドラ・オボロゲソウ・ピンクグジラ(C-066・C-067・C-208・C-068)は、台帳でキラ・別絵キラも作った子。それ以外の混血はキラの無い通常
-const WITH_KIRA = ['C-066', 'C-067', 'C-208', 'C-068']; // C-068 ピンクグジラ(2026-10-30)
-hybrids.forEach((m) => check(`A 混血 ${m.no} ${m.name}: メイン(${m.main})の弾${WITH_KIRA.some((k) => m.no.startsWith(k)) ? '' : '・通常'}`, packOf(m.no) === (E.CARD_PACKS.find((p) => p.species.includes(m.main)) || {}).id && (WITH_KIRA.some((k) => m.no.startsWith(k)) || E.cardMonRarity(m) === 'normal'), `${packOf(m.no)}・${E.cardMonRarity(m)}`));
+const WITH_KIRA = ['C-066', 'C-067', 'C-208', 'C-068', 'C-069', 'C-070']; // C-068 ピンクグジラ(2026-10-30)・C-069 ミーア・C-070 スプーキー(2026-11-04)
+// 弾を指名した混血(CARD_PACKS の hybrids。ミーア・スプーキーは第8弾)は、メインの種族の弾ではなく指名の弾
+const wantPackOfHybrid = (m) => (E.CARD_PACKS.find((p) => (p.hybrids || []).includes(String(m.species).replace(/^hybrid:/, ''))) || E.CARD_PACKS.find((p) => p.species.includes(m.main)) || {}).id;
+hybrids.forEach((m) => check(`A 混血 ${m.no} ${m.name}: メイン(${m.main})の弾${WITH_KIRA.some((k) => m.no.startsWith(k)) ? '' : '・通常'}`, packOf(m.no) === wantPackOfHybrid(m) && (WITH_KIRA.some((k) => m.no.startsWith(k)) || E.cardMonRarity(m) === 'normal'), `${packOf(m.no)}・${E.cardMonRarity(m)}`));
 notes.push(`混血 ${hybrids.length}体`);
 // 剣士モッチー(C-066)は第1弾・パンドラ(C-067)は第2弾・ゴーストは第4弾(台帳)
-[['C-066', 'p1'], ['C-067', 'p2'], ['C-208', 'p5'], ['C-068', 'p7']].forEach(([no, id]) => check(`A ${no} ${(db.monsters[no] || {}).name}: ${id} から出る(キラ・別絵キラも)`, !!db.monsters[no] && [no, `${no}S`, `${no}V`].every((x) => !db.monsters[x] || packOf(x) === id)));
+[['C-066', 'p1'], ['C-067', 'p2'], ['C-208', 'p5'], ['C-068', 'p7'], ['C-069', 'p8'], ['C-070', 'p8']].forEach(([no, id]) => check(`A ${no} ${(db.monsters[no] || {}).name}: ${id} から出る(キラ・別絵キラも)`, !!db.monsters[no] && [no, `${no}S`, `${no}V`].every((x) => !db.monsters[x] || packOf(x) === id)));
 check('A ゴーストの技とモンスターは第4弾', Object.values(db.cards).filter((c) => c.user === 'ghost').every((c) => packOf(c.no) === 'p4') && mons.filter((m) => m.species === 'ghost').every((m) => packOf(m.no) === 'p4'));
 
 // ==== B. 何万回か開けて割合を出す ====
