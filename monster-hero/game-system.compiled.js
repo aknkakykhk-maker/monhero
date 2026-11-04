@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1a8fe1f5ec83ed38
+// source-sha256: 463ce40d2d33fb01
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -100342,7 +100342,8 @@ const CARD_SPECIES_ART = Object.freeze({
   mocchi: 'Mocchi',
   monol: 'Monol',
   plant: 'Plant',
-  ghost: 'Ghost'
+  ghost: 'Ghost',
+  kyubi: 'Kyubi'
 });
 const cardNewSpeciesArt = () => ({
   dino: typeof MF_DINO_IMG !== 'undefined' ? MF_DINO_IMG : null,
