@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 49feacf865d19005
+// source-sha256: 54f8292c8cc4199c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -120030,16 +120030,14 @@ const CardDeckShare = ({
     }, React.createElement("span", {
       className: "flex shrink-0 flex-col items-center gap-1"
     }, React.createElement("span", {
-      className: "flex"
+      "data-card-share-foe-cards": true,
+      className: "flex gap-0.5"
     }, mons.map((m, i) => React.createElement("img", {
       key: i,
       src: CARD_IMG(m.img),
       alt: m.name,
       loading: "lazy",
-      className: `h-9 w-9 rounded-full border-2 border-amber-200 bg-slate-900 object-cover ${i ? '-ml-2' : ''}`,
-      style: {
-        objectPosition: '50% 18%'
-      }
+      className: "h-[42px] w-[30px] rounded-[3px] bg-slate-900 object-cover shadow-[0_1px_2px_rgba(0,0,0,.6)]"
     }))), React.createElement("span", {
       "data-card-share-foe-tag": true,
       className: "flex gap-0.5"
@@ -120049,18 +120047,26 @@ const CardDeckShare = ({
     }, label)))), React.createElement("span", {
       className: "min-w-0 flex-1"
     }, React.createElement("b", {
-      className: "block truncate text-[13px] font-black leading-tight text-white"
-    }, e.name), React.createElement("small", {
+      className: "block text-[13px] font-black leading-tight text-white",
+      style: JA_WRAP_STYLE
+    }, jaWrap(e.name)), React.createElement("small", {
       "data-card-share-deck-name": true,
-      className: "block truncate text-[11.5px] font-black leading-tight text-amber-100"
-    }, "「", e.tactics.name || 'デッキ', "」"), React.createElement("small", {
-      className: "block truncate text-[10.5px] font-bold text-slate-300"
-    }, mons.map(m => m.name).join('・')), React.createElement("small", {
+      className: "block text-[11.5px] font-black leading-tight text-amber-100",
+      style: JA_WRAP_STYLE
+    }, jaWrap(`「${e.tactics.name || 'デッキ'}」`)), React.createElement("small", {
+      className: "block text-[10.5px] font-bold leading-snug text-slate-300",
+      style: JA_WRAP_STYLE
+    }, jaWrap(mons.map(m => m.name).join('・'))), React.createElement("small", {
       "data-card-share-smart": cardShareSmartLevel(e.tactics),
       className: "block truncate whitespace-nowrap text-[11px] font-black text-amber-200"
     }, `賢さ ${cardShareSmartText(e.tactics)}`), React.createElement("small", {
-      className: "block truncate text-[10.5px] font-bold text-sky-200 tabular-nums"
-    }, e.battles ? `戦われた ${e.battles}回・勝ち ${Math.round(e.deckWins / e.battles * 100)}%` : 'まだ戦われていません')), React.createElement("span", {
+      className: "block text-[10.5px] font-bold leading-snug text-sky-200 tabular-nums",
+      style: JA_WRAP_STYLE
+    }, e.battles ? React.createElement(React.Fragment, null, React.createElement("span", {
+      className: "inline-block whitespace-nowrap"
+    }, `戦われた ${e.battles}回・`), React.createElement("span", {
+      className: "inline-block whitespace-nowrap"
+    }, `勝ち ${Math.round(e.deckWins / e.battles * 100)}%`)) : 'まだ戦われていません')), React.createElement("span", {
       className: "flex shrink-0 flex-col gap-1"
     }, React.createElement("button", {
       type: "button",

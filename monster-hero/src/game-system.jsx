@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 31f36911107ef42c
+// generated-sha256: f06e3c1288a5129a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -70950,17 +70950,19 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
     const mons = e.deck.monsters.map((no) => cardMonsterOf(db, no) || { no, name: no, img: no });
     return (
       <li key={e.ownerId} data-card-share-foe={e.ownerId} data-card-share-foe-tags={tags.join(' ')} className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-2 py-2">
-        {/* 3体の丸い顔(カードの絵の上のほう)と、どの並びに入るかの印 */}
+        {/* 3体のモンスターカード(縦長のカードの絵をそのまま小さく並べる。キラ・レアキラはその絵)と、どの並びに入るかの印
+            (前は丸く切り抜いて重ねていた。2026-11-05 社長「普通にカードを出すようにして」) */}
         <span className="flex shrink-0 flex-col items-center gap-1">
-          <span className="flex">{mons.map((m, i) => <img key={i} src={CARD_IMG(m.img)} alt={m.name} loading="lazy" className={`h-9 w-9 rounded-full border-2 border-amber-200 bg-slate-900 object-cover ${i ? '-ml-2' : ''}`} style={{ objectPosition: '50% 18%' }}/>)}</span>
+          <span data-card-share-foe-cards className="flex gap-0.5">{mons.map((m, i) => <img key={i} src={CARD_IMG(m.img)} alt={m.name} loading="lazy" className="h-[42px] w-[30px] rounded-[3px] bg-slate-900 object-cover shadow-[0_1px_2px_rgba(0,0,0,.6)]"/>)}</span>
           <span data-card-share-foe-tag className="flex gap-0.5">{CARD_SHARE_FOE_TAGS.filter(([k]) => tags.includes(k)).map(([k, label, tone]) => <span key={k} className={`whitespace-nowrap rounded px-1 text-[9px] font-black ${tone}`}>{label}</span>)}</span>
         </span>
         <span className="min-w-0 flex-1">
-          <b className="block truncate text-[13px] font-black leading-tight text-white">{e.name}</b>
-          <small data-card-share-deck-name className="block truncate text-[11.5px] font-black leading-tight text-amber-100">「{e.tactics.name || 'デッキ'}」</small>
-          <small className="block truncate text-[10.5px] font-bold text-slate-300">{mons.map((m) => m.name).join('・')}</small>
+          {/* 名前・デッキ名・3体の名前・成績は、狭い画面(320幅)では切らずに折り返す(2026-11-05。前は「…」で切れていた) */}
+          <b className="block text-[13px] font-black leading-tight text-white" style={JA_WRAP_STYLE}>{jaWrap(e.name)}</b>
+          <small data-card-share-deck-name className="block text-[11.5px] font-black leading-tight text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(`「${e.tactics.name || 'デッキ'}」`)}</small>
+          <small className="block text-[10.5px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(mons.map((m) => m.name).join('・'))}</small>
           <small data-card-share-smart={cardShareSmartLevel(e.tactics)} className="block truncate whitespace-nowrap text-[11px] font-black text-amber-200">{`賢さ ${cardShareSmartText(e.tactics)}`}</small>
-          <small className="block truncate text-[10.5px] font-bold text-sky-200 tabular-nums">{e.battles ? `戦われた ${e.battles}回・勝ち ${Math.round((e.deckWins / e.battles) * 100)}%` : 'まだ戦われていません'}</small>
+          <small className="block text-[10.5px] font-bold leading-snug text-sky-200 tabular-nums" style={JA_WRAP_STYLE}>{e.battles ? <><span className="inline-block whitespace-nowrap">{`戦われた ${e.battles}回・`}</span><span className="inline-block whitespace-nowrap">{`勝ち ${Math.round((e.deckWins / e.battles) * 100)}%`}</span></> : 'まだ戦われていません'}</small>
         </span>
         <span className="flex shrink-0 flex-col gap-1">
           <button type="button" data-card-share-fight={e.ownerId} disabled={!onFight || fightIssues.length > 0} className="mh-button mh-button-primary min-h-[40px] rounded-lg px-2.5 text-[13px] font-black disabled:opacity-50"
