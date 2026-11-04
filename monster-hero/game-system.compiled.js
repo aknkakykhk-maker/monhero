@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b353b83b8e599c9e
+// source-sha256: 6d8d3b3f7f7eb106
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -24793,7 +24793,8 @@ const SKM_KYUBI = Object.freeze({
     c: 'blue',
     fx: skmFx('orbit', 'fire', 5),
     burst: 'star',
-    form: 'fire'
+    form: 'fire',
+    tint: true
   }), skm('kick', {
     c: 'red',
     over: 'fist',
@@ -24813,7 +24814,7 @@ const SKM_KYUBI = Object.freeze({
     over: 'boom',
     burst: 'star'
   }), skm('roll', {
-    c: 'fire',
+    c: ['#fed7aa', '#dc2626'],
     fx: skmFx('orbit', 'flame', 8),
     over: 'boom',
     burst: 'spark',
@@ -24843,13 +24844,17 @@ const SKM_KYUBI = Object.freeze({
     fx: skmFx('orbit', 'fire', 9),
     over: 'pillar',
     burst: 'star',
-    form: 'fire'
+    form: 'fire',
+    tint: true
   }), skm('gather', {
     c: 'blue',
-    fx: skmFx('fall', 'flame', 10),
+    fx: skmFx('fall', 'flame', 10, {
+      s: 1.6
+    }),
     over: 'pillar',
     burst: 'spark',
-    form: 'fire'
+    form: 'fire',
+    tint: true
   }), skm('spin', {
     c: 'wind',
     over: 'tornado',
@@ -24901,7 +24906,7 @@ const SKM_ORIHIME = Object.freeze({
     c: 'cosmic'
   }, {
     ...SKM_KYUBI.unique[3],
-    c: 'sky'
+    c: 'cosmic'
   }, {
     ...SKM_KYUBI.unique[4],
     c: 'sky'
@@ -25143,6 +25148,7 @@ const skmNormalize = (sp0, isUnique = false) => {
     c1,
     c2,
     form: sp.form || skmFormOf(sp.c),
+    tint: sp.tint === true,
     hit: Math.round(hit),
     ...(sp.hit2 ? {
       hit2: Math.round(hit + 180)
@@ -25295,6 +25301,7 @@ const SkillFxMotion = ({
     className: "thm-atk__ring"
   })), (uex || impactOnly) && React.createElement(UniqueFxImpact, {
     form: spec.form || 'burst',
+    tint: spec.tint ? [spec.c1, spec.c2] : null,
     offset: (spec.hit || 0) - 240
   }));
 };
@@ -25619,14 +25626,16 @@ const UNIQUE_IMPACT_PALETTE = Object.freeze({
 });
 const UniqueFxImpact = ({
   form = 'light',
-  offset = 0
+  offset = 0,
+  tint = null
 }) => {
   const parts = UNIQUE_IMPACT_FORMS[form];
-  const pal = UNIQUE_IMPACT_PALETTE[form];
+  const pal = tint || UNIQUE_IMPACT_PALETTE[form];
   return React.createElement("span", {
     className: "thm-atk__hit uex-impact",
     "aria-hidden": "true",
     "data-impact-form": form,
+    "data-impact-tint": tint ? '1' : undefined,
     style: {
       '--spm-c1': pal ? pal[0] : 'var(--c1, #fff)',
       '--spm-c2': pal ? pal[1] : 'var(--c2, #c026d3)'
@@ -165486,7 +165495,8 @@ const createAnimationStyle = () => {
       background:radial-gradient(circle,#fff 0 20%,#fde047 45%,#f59e0b);
       clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); }
     .skfx-p--flame { width:14px; height:20px; margin:-10px 0 0 -7px; border-radius:50% 50% 50% 50% / 65% 65% 35% 35%;
-      background:radial-gradient(circle at 50% 70%,#fff 0 15%,#bef264 35%,#65a30d 70%,rgba(101,163,13,0)); box-shadow:0 0 10px #84cc16; }
+      background:radial-gradient(circle at 50% 70%,#fff 0 14%,var(--c1,#fde68a) 32%,var(--c2,#f97316) 66%,rgba(0,0,0,0)); box-shadow:0 0 10px var(--c2,#f97316); }
+    /* ↑ 炎は技の色(--c1・--c2)で塗る(2026-11-04 まで黄緑に固定されていて、火炎車・神狐蒼火などの炎が黄緑に見えていた) */
     .skfx-p--leaf { width:16px; height:9px; margin:-4px 0 0 -8px; border-radius:0 100% 0 100%;
       background:linear-gradient(135deg,#bbf7d0,#22c55e 60%,#15803d); box-shadow:0 0 6px rgba(34,197,94,.8); }
     .skfx-p--rice { width:6px; height:10px; margin:-5px 0 0 -3px; border-radius:50%; background:#fffdf5; box-shadow:0 0 4px #fde68a; }
@@ -166109,6 +166119,8 @@ const createAnimationStyle = () => {
     .fin-shape--drop { width:10px; height:16px; border-radius:50% 50% 50% 50% / 70% 70% 30% 30%; background:linear-gradient(180deg, #fff, var(--spm-c1) 50%, var(--spm-c2)); }
     .fin-shape--leaf { width:18px; height:10px; border-radius:90% 0 90% 0; background:linear-gradient(135deg, #bbf7d0, #16a34a); box-shadow:0 0 6px #22c55e; }
     .fin-shape--flame { width:16px; height:22px; border-radius:50% 50% 50% 50% / 70% 70% 30% 30%; background:radial-gradient(ellipse at 50% 80%, #fff 0 14%, #fde047 36%, #f97316 62%, rgba(220,38,38,0)); box-shadow:0 0 8px #f97316; }
+    /* 技の色で塗る固有技(青い狐火など・24 の tint)では、着弾で散る炎も技の色に */
+    [data-impact-tint] .fin-shape--flame { background:radial-gradient(ellipse at 50% 80%, #fff 0 14%, var(--spm-c1) 36%, var(--spm-c2) 62%, rgba(0,0,0,0)); box-shadow:0 0 8px var(--spm-c2); }
     .fin-shape--note { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
     .fin-shape--note::before { content:'♪'; }
     .fin-shape--heart { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
