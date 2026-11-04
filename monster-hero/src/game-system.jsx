@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 843783a96aab4314
+// generated-sha256: e1e6c14f49e224ce
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -56607,7 +56607,12 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
     if (cardIsGuardKind(c.kind)) return 2 * habit.keepGuard - c.guts * 0.2 + CARD_AI_GUARD_KEEP_ADD;
     // 付ける札は、手札に付ける先(場の子が使える攻めの技)が無ければ先にガッツへ
     const noHost = cardHasEff(c, 'attach') && !me.hand.some((n2) => n2 !== no && (() => { const h = cardOf(db, n2); return !!h && cardIsAttackKind(h.kind) && h.kind !== 'spe' && me.mons.some((m) => !m.ko && cardUsableBy(h, m)); })());
-    return (c.damage || 1) * 0.5 - Math.max(0, c.guts - (me.guts.length + 2)) * 0.8 - (noHost ? 2 : 0);
+    const value = (c.damage || 1) * 0.5 - Math.max(0, cardFieldCostOf(st, c.guts || 0) - (me.guts.length + 2)) * 0.8 - (noHost ? 2 : 0);
+    // 場の全体カードで使えない技(必殺技の封印・応酬・がんじがらめ)は、場が替わるまで使えない。使える札より先にガッツへ
+    //   (2026-11-04 社長「必殺技の封印を使われてるのに、威力が高い技を温存して、ほかをガッツにする」)。
+    //   場は、どちらかが別の全体カードを置くまで残る。自分の手札に全体カードがあれば外せる見込みがあるので、少しだけ残す
+    if (cardAiFieldBlocked(db, st, p, no)) return CARD_AI_BLOCKED_KEEP + (me.hand.some((n2) => n2 !== no && (cardOf(db, n2) || {}).kind === 'fld') ? value * CARD_AI_BLOCKED_HOPE : 0);
+    return value;
   };
   // 切り札(policy.aces・みんなのデッキ)はガッツにしない(手札に残す)。aces が無ければ今と同じ
   const aceKeep = (no) => (policy && Array.isArray(policy.aces) && policy.aces.includes(no) ? 10 : 0);
@@ -56646,6 +56651,19 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
   //   次の自分の番に引く枚数(手札が5枚なら1枚・それ未満なら5枚まで)が山札より多くなるほど、手札をガッツにしない
   return { type: 'guts', hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, policy.playerRole ? 99 : cardAiGutsCap(me)) };
 };
+// 場の全体カードで、この札がいま使えないか(使える子全員で。ブリーダーのカードはブリーダーとして)。攻めの技・特殊技だけを見る
+const cardAiFieldBlocked = (db, st, p, no) => {
+  const c = cardOf(db, no);
+  if (!st.field || !c || !cardIsAttackKind(c.kind)) return false;
+  const me = st.players[p];
+  const at = me.hand.indexOf(no);
+  const idxs = at >= 0 ? [at] : [];
+  if (c.user === 'breeder') return cardFieldBanned(db, st, p, -1, c, idxs);
+  const users = me.mons.map((m, mi) => ({ m, mi })).filter(({ m }) => !m.ko && cardUsableBy(c, m));
+  return users.length > 0 && users.every(({ mi }) => cardFieldBanned(db, st, p, mi, c, idxs));
+};
+const CARD_AI_BLOCKED_KEEP = -1.5;    // 場で使えない技の「残したさ」(使える札よりガッツにしやすく。使えない札(-10)よりは残す)
+const CARD_AI_BLOCKED_HOPE = 0.3;     // 自分の手札に全体カードがあって、場を替えられる見込みがあるとき、元の値打ちのうち残す割合
 const CARD_AI_GUARD_KEEP_ADD = 1.5;   // ガッツにする札を選ぶとき、使える守りの札に足す「残したさ」(2026-11-02 社長「防御系ガンガン捨てる」)
 const CARD_AI_STUCK_KEEP = 2;           // 手が詰まった番に残す守りの札
 const CARD_TACTIC_KEEP_GUARD_MAX = 3;   // 戦術カード「守りのカードを3枚まで残す」の枚数
@@ -58194,7 +58212,8 @@ const cardTacticFilled = (frames) => {
 
 // ---- 賢さ(2026-10-30 社長「戦術カードなしでエキスパートクラスで、そこから上がっていってマスター超え」・段の名前は本編のチャレンジモード)----
 //   EXPERT … 何もセットしない〜基本1枚 / MASTER … 基本2枚以上、またはちゃんと効く戦術カード4枚以上 /
-//   GRAND MASTER … 基本3枚+効く4枚以上 / HELL … 基本3枚+効く7枚以上 / LEGEND … 基本3枚+効く10枚以上
+//   GRAND MASTER … 基本2枚+効く6枚以上 / HELL … 基本2枚+効く9枚以上 / LEGEND … 基本3枚+効く10枚以上
+//   (2026-11-04 社長 案B。前は GRAND MASTER・HELL も基本3枚で、3枚目はカードランク30まで開かないので、みんな MASTER で止まっていた)
 //   (前は EASY〜MASTER と、何も入れていないときの「でたらめ」だった)。MASTER を超える段は先読みで強くする(82-card-share-core の CARD_SHARE_SEARCH)
 const CARD_TACTIC_SMART = Object.freeze(['expert', 'master', 'grandmaster', 'hell', 'legend']);
 // ---- 賢さに数えないセット(2026-10-29 社長 案A「ちゃんと効くカードだけ数える」) ----
@@ -58235,8 +58254,8 @@ const cardTacticSmartLevel = (frames) => {
   const base = f.base.filter(Boolean).length;
   const rows = cardTacticCountedRows(f);
   if (base >= 3 && rows >= 10) return 'legend';
-  if (base >= 3 && rows >= 7) return 'hell';
-  if (base >= 3 && rows >= 4) return 'grandmaster';
+  if (base >= 2 && rows >= 9) return 'hell';
+  if (base >= 2 && rows >= 6) return 'grandmaster';
   if (base >= 2 || rows >= 4) return 'master';
   return 'expert';
 };
@@ -60243,20 +60262,32 @@ const CARD_SPECIAL_MOTION_RULES = Object.freeze([
 ]);
 // カード番号ごとの上書き(社長が見て「この技はこう動いてほしい」と言ったら、その1枚だけここに足す)
 const CARD_MOTION_BY_NO = Object.freeze({});
-// キュービの専用技(901〜913)は、モンヒロの本編のキュービの技の動きをそのまま当てる(2026-11-04 社長「キュービはモンバトで技モーション細かく作ったからいけるとはおもってる」)
-//   [キュービが出すとき, オリヒメ(C-951)が出すとき]。オリヒメは本編のオリヒメの同じ技(星空の色)。守る・よける・特殊(911〜913)は、ほかの血統と同じ共通の動き
-const CARD_MOTION_KYUBI = Object.freeze({
-  '901': ['Kyubi-n5', 'Orihime-n5'], // 提灯落とし
-  '902': ['Kyubi-u5', 'Orihime-u3'], // 陽炎
-  '903': ['Kyubi-n2', 'Orihime-n2'], // 狐火
-  '904': ['Kyubi-n1', 'Orihime-n1'], // ひのこ
-  '905': ['Kyubi-u2', 'Orihime-u2'], // 超狐火(オリヒメは 超狐火・星)
-  '906': ['Kyubi-u1', 'Orihime-u1'], // なめろう(オリヒメは 織姫のくちづけの動き)
-  '907': ['Kyubi-n6', 'Orihime-n6'], // 火炎車
-  '908': ['Kyubi-u7', 'Orihime-u8'], // 天河天翔
-  '909': ['Kyubi-u3', 'Orihime-u4'], // 神狐蒼火(オリヒメは 神狐星火)
-  '910': ['Kyubi-u8', 'Orihime-u6'], // 炸裂気泡陣
+// キュービの専用技(901〜910)の動き。本編のキュービの技の動き(24 の SKM_KYUBI)をもとに、技カードの絵に寄せた(本編の動きは変えない)
+//   2026-11-04 社長「キュービはモンバトで技モーション細かく作ったからいけるとはおもってる」→ 本編につなぐ
+//   → 同日 社長「キュービの技アクションで技カードの見た目をも参考にして」→ カードの絵の色・形・飛ぶものに寄せた(見比べ: docs/progress/card-kyubi-motion)
+//   オリヒメ(C-951)が出すときは、同じ形を星空の色で(本編のオリヒメと同じ考え)。守る・よける・特殊(911〜913)は、ほかの血統と同じ共通の動き
+//   [技の名前, 大技の飾り(オーラと残像)を付けるか, 色の組 → 動き]
+const CARD_KYUBI_PALETTE = Object.freeze({
+  Kyubi:   { blue:'blue', bh:205, fire:'fire',   fh:22,  star:'gold' },
+  Orihime: { blue:'sky',  bh:195, fire:'cosmic', fh:265, star:'cosmic' },
 });
+const CARD_KYUBI_LOOK = Object.freeze({
+  '901': ['提灯落とし', false, (p) => skm('jump', { c:p.fire, fx:skmFx('fall', 'orb', 1, { s:2.4, h:p.fh }), over:'boom', burst:'spark', form:'fire' })],   // 大きな提灯が降ってくる
+  '902': ['陽炎', true, (p) => skm('warp', { c:p.blue, over:'claw', burst:'spark', hit2:true, form:'slash' })],                                         // 青い分身(残像)が爪で裂く
+  '903': ['狐火', false, (p) => skm('cast', { c:p.blue, fx:skmFx('shot', 'fire', 3, { s:1.6, h:p.bh, step:70 }), burst:'spark', form:'fire' })],          // 青い火の玉が3つまっすぐ飛ぶ
+  '904': ['ひのこ', false, (p) => skm('cast', { c:p.fire, fx:skmFx('shot', 'fire', 7, { step:28, h:p.fh }), over:'boom', burst:'spark', form:'fire' })],   // 提灯の口から火を吹く
+  '905': ['超狐火', true, (p) => skm('cast', { c:p.blue, fx:skmFx('orbit', 'fire', 9, { s:1.4, h:p.bh }), over:'pillar', burst:'star', form:'fire' })],   // まわりに青い炎がたくさん浮かんで飛ぶ
+  '906': ['なめろう', false, (p) => skm('lick', { c:'gold', line:'tongue', over:'boom', burst:'spark' })],                                                 // 黄色い提灯から大きな舌
+  '907': ['火炎車', true, (p) => skm('roll', { c:p.fire, fx:skmFx('orbit', 'fire', 10, { s:1.3, h:p.fh }), over:'tornado', burst:'spark', form:'fire' })], // 炎の渦
+  '908': ['天河天翔', true, (p) => skm('float', { c:p.star, fx:skmFx('fall', 'meteor', 14, { w:150 }), over:'aurora', burst:'star', form:'light' })],      // 夜空から星の川(流れ星)が降る
+  '909': ['神狐蒼火', true, (p) => skm('gather', { c:p.blue, fx:skmFx('fall', 'fire', 12, { s:1.7, h:p.bh }), over:'pillar', burst:'spark', form:'fire' })], // 上から青い大きな炎が落ちて火柱
+  '910': ['炸裂気泡陣', true, (p) => skm('cast', { c:p.fire, fx:skmFx('orbit', 'orb', 10, { s:1.9, h:p.fh }), over:'boom', burst:'spark', form:'fire' })], // 燃える泡が次々にはじける
+});
+// 動きを SkillFxMotion の入れ物へ入れておく(名前は 'cardKyubi902' / 'cardOrihime902')
+Object.entries(CARD_KYUBI_PALETTE).forEach(([who, pal]) => Object.entries(CARD_KYUBI_LOOK).forEach(([no, [, big, make]]) => {
+  const norm = skmNormalize(make(pal), big);
+  SKILL_FX_SPEC_CACHE[`card${who}${no}`] = big ? { ...norm, uex:true } : { ...norm, impact:true };
+}));
 const CARD_MOTION_GAME_ID = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant', ghost: 'Ghost' });
 
 // ---- 技の重さの段(2026-10-31 社長「各カードアクションをもっと一新して」 → 案A) ----
@@ -60294,7 +60325,7 @@ const cardMotionBaseOf = (db, cardNo, mon) => {
   const c = cardOf(db, cardNo);
   if (!c || !cardIsAttackKind(c.kind) || c.user === 'breeder') return null;
   if (CARD_MOTION_BY_NO[c.no]) return CARD_MOTION_BY_NO[c.no];
-  if (CARD_MOTION_KYUBI[c.no]) return CARD_MOTION_KYUBI[c.no][mon && mon.no === 'C-951' ? 1 : 0];
+  if (CARD_KYUBI_LOOK[c.no]) return `card${mon && mon.no === 'C-951' ? 'Orihime' : 'Kyubi'}${c.no}`;
   if (c.kind === 'spe') { const sp = CARD_SPECIAL_MOTION_RULES.find(([re]) => re.test(c.name)); return sp ? sp[1] : 'cardSpeRing'; }
   // 1. モンヒロに同じ名前の技がある(スエゾーのかみつき・モッチーのもっちゃん など)
   const id = mon && (CARD_MOTION_GAME_ID[mon.species] || CARD_MOTION_GAME_ID[mon.main]);
@@ -72442,6 +72473,28 @@ const cardRegRowText = (row) => {
   if (row.c === 'any') return `いつでも → ${a ? a.line || a.name : '?'}`;
   return `${c ? c.line || c.name : '?'} → ${a ? a.line || a.name : '?'}`; // 一文(2026-10-31 案A)。条件は「〜とき」で終わる
 };
+// 次の賢さの段まで、何が足りないか(2026-11-04 社長「みんな賢さがマスターになってるけどそれ以上上がるようになってないの?」)。
+//   段の決まりは 82 の cardTacticSmartLevel(基本2枚で MASTER・GRAND MASTER は基本2枚+効く戦術カード6枚・HELL は9枚・LEGEND は基本3枚+10枚)。
+//   基本カードの2枚目はカードランク10・3枚目は30でセットできるようになる(96 の CARD_LEVEL_FRAMES)ので、届いていないときはそれも書く
+const cardRegSmartNextText = (frames, lv) => {
+  const f = cardTacticNormalizeFrames(frames);
+  const base = f.base.filter(Boolean).length;
+  const rows = cardTacticCountedRows(f);
+  const now = cardTacticSmartLevel(f);
+  if (now === 'legend') return 'いちばん上の LEGEND です。';
+  const next = CARD_TACTIC_SMART[CARD_TACTIC_SMART.indexOf(now) + 1];
+  const label = CARD_SHARE_SMART_LABEL[next];
+  if (next === 'master') return `次の ${label} まで: 基本カードをあと${2 - base}枚、または、ちゃんと効く戦術カードをあと${Math.max(1, 4 - rows)}枚。`;
+  const needRows = { grandmaster: 6, hell: 9, legend: 10 }[next];
+  const needBase = next === 'legend' ? 3 : 2;
+  const needs = [];
+  if (base < needBase) needs.push(`基本カードをあと${needBase - base}枚`);
+  if (rows < needRows) needs.push(`ちゃんと効く戦術カードをあと${needRows - rows}枚`);
+  const opened = cardLevelFrames(lv).base || 1;
+  const locked = CARD_LEVEL_FRAMES.filter((x) => x.base && x.base > opened && x.base <= needBase).map((x) => `${x.base}枚目はカードランク${x.at}`);
+  const rank = base < needBase && locked.length ? `(基本カードの${locked.join('、')}でセットできるようになります)` : '';
+  return `次の ${label} まで: ${needs.join('と')}。${rank}`;
+};
 // おすすめの戦い方を、持っているカード・開いている枚数で入れる。
 //   3体に同じカードを入れると賢さに1枚としか数えない(82 の cardTacticUncounted)ので、候補を上から順に3体へ配る(左・真ん中・右・左…)。
 //   候補が足りなければ、同じ物を重ねずに空けておく
@@ -72792,6 +72845,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
   const battle = cardTacticsFramesForBattle({ ...tactics, frames: draft }, lv);
   const smartLv = cardTacticSmartLevel(battle);
   const smartText = cardShareSmartText({ f: cardTacticPackFrames(battle) });
+  const smartNext = cardRegSmartNextText(battle, lv);
   const uncounted = cardTacticUncounted(battle);
   const acesNow = aces === 'auto' ? cardRegAutoAces(db, deck) : aces;
   const setRows = (k, rows) => setDraft((f) => (k === 'breeder' ? { ...f, breeder: rows } : { ...f, mons: f.mons.map((r, i) => (i === k ? rows : r)) }));
@@ -72913,7 +72967,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
                 );
               })}
             </div>
-            <p className="mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('入れると: 賢さの上限が上がります(1枚 HARD まで・2枚 EXPERT・3枚 MASTER)。サブは、型を3分の1だけ足します。')}</p>
+            <p className="mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('入れると: 賢さが上がります(基本2枚で MASTER。基本2枚と、ちゃんと効く戦術カード6枚で GRAND MASTER・9枚で HELL。LEGEND は基本3枚と10枚)。サブは、型を3分の1だけ足します。')}</p>
           </section>
           <section data-card-reg-sec="breeder" className="rounded-2xl border-2 border-violet-400 bg-slate-900/90 p-2.5">
             <CardRegSecHead n="②" color="#a78bfa" title="ブリーダーの手" count={`${draft.breeder.length}枚 / 入れられる ${open.breeder}枚`}
@@ -72959,6 +73013,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
             <div className="flex items-center gap-2 text-[13px] font-black text-white">賢さ <span className="text-amber-200">{smartText}</span></div>
             <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-700"><i className="block h-full bg-gradient-to-r from-emerald-400 to-amber-300" style={{ width: `${((CARD_TACTIC_SMART.indexOf(smartLv) + 1) / CARD_TACTIC_SMART.length) * 100}%` }}/></div>
             <small className="mt-1 block text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>賢さは、ほかのブリーダーがこのデッキと戦うときの相手の強さです。ちゃんと効く戦術カードが多いほど上がります。</small>
+            {smartNext && <p data-card-reg-smart-next className="mt-1 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(smartNext)}</p>}
           </div>
           <div data-card-reg-aces className={`${SCREEN_PANEL_CLASS} py-2`}>
             <div className="flex items-center gap-2 text-[13px] font-black text-white">切り札 <span className="text-[12px] text-amber-200">{aces === 'auto' ? 'おまかせ' : '自分でえらぶ'}</span>
