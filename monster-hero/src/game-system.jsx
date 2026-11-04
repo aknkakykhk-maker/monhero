@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1b3ac4b6bd7f455a
+// generated-sha256: 78ccc48973c21a71
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -60283,7 +60283,7 @@ const CARD_MOTION_BY_NO = Object.freeze({});
 // キュービの専用技(901〜910)の動き。本編のキュービの技の動き(24 の SKM_KYUBI)をもとに、技カードの絵に寄せた(本編の動きは変えない)
 //   2026-11-04 社長「キュービはモンバトで技モーション細かく作ったからいけるとはおもってる」→ 本編につなぐ
 //   → 同日 社長「キュービの技アクションで技カードの見た目をも参考にして」→ カードの絵の色・形・飛ぶものに寄せた(見比べ: docs/progress/card-kyubi-motion)
-//   オリヒメ(C-951)が出すときは、同じ形を星空の色で(本編のオリヒメと同じ考え)。守る・よける・特殊(911〜913)は、ほかの血統と同じ共通の動き
+//   オリヒメ(C-951。キラ C-951S・別絵キラ C-951V も種族 hybrid:C-951 で見る)が出すときは、同じ形を星空の色で(本編のオリヒメと同じ考え)。守る・よける・特殊(911〜913)は、ほかの血統と同じ共通の動き
 //   [技の名前, 大技の飾り(オーラと残像)を付けるか, 色の組 → 動き]
 const CARD_KYUBI_PALETTE = Object.freeze({
   Kyubi:   { blue:'blue', bh:205, fire:'fire',   fh:22,  star:'gold' },
@@ -60343,7 +60343,7 @@ const cardMotionBaseOf = (db, cardNo, mon) => {
   const c = cardOf(db, cardNo);
   if (!c || !cardIsAttackKind(c.kind) || c.user === 'breeder') return null;
   if (CARD_MOTION_BY_NO[c.no]) return CARD_MOTION_BY_NO[c.no];
-  if (CARD_KYUBI_LOOK[c.no]) return `card${mon && mon.no === 'C-951' ? 'Orihime' : 'Kyubi'}${c.no}`;
+  if (CARD_KYUBI_LOOK[c.no]) return `card${mon && String(mon.species) === 'hybrid:C-951' ? 'Orihime' : 'Kyubi'}${c.no}`;
   if (c.kind === 'spe') { const sp = CARD_SPECIAL_MOTION_RULES.find(([re]) => re.test(c.name)); return sp ? sp[1] : 'cardSpeRing'; }
   // 1. モンヒロに同じ名前の技がある(スエゾーのかみつき・モッチーのもっちゃん など)
   const id = mon && (CARD_MOTION_GAME_ID[mon.species] || CARD_MOTION_GAME_ID[mon.main]);

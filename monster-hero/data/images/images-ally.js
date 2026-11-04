@@ -306,7 +306,7 @@ const HYBRID_MONSTER_IMGS = Object.freeze({
   'C-069': MIA_IMG, 'C-069S': MIA_IMG, 'C-069V': MIA_IMG,
   'C-070': SPOOKY_IMG, 'C-070S': SPOOKY_IMG, 'C-070V': SPOOKY_IMG,
   // キュービ種の混血オリヒメ(番号 C-951・カードの絵は C-K02。メイン キュービ・サブ ？？？。2026-11-04 新血統キュービ)。本編の立ち絵をそのまま使う
-  'C-951': ORIHIME_IMG,
+  'C-951': ORIHIME_IMG, 'C-951S': ORIHIME_IMG, 'C-951V': ORIHIME_IMG, // キラ・別絵キラ(2026-11-05)も同じ立ち絵
 });
 
 const MOCCHI_ICON = MOCCHI_IMG;
