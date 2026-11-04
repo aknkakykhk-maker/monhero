@@ -302,6 +302,8 @@ const HYBRID_MONSTER_IMGS = Object.freeze({
   'C-208': OBORO_IMG, 'C-208S': OBORO_IMG, 'C-208V': OBORO_IMG,
   // ピンクグジラ(2026-10-30)。キラ・別絵キラも同じ立ち絵
   'C-068': HYBRID_C068_IMG, 'C-068S': HYBRID_C068_IMG, 'C-068V': HYBRID_C068_IMG,
+  // キュービ種の混血オリヒメ(番号 C-951・カードの絵は C-K02。メイン キュービ・サブ ？？？。2026-11-04 新血統キュービ)。本編の立ち絵をそのまま使う
+  'C-951': ORIHIME_IMG,
 });
 
 const MOCCHI_ICON = MOCCHI_IMG;
