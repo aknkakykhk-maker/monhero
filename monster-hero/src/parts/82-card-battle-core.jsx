@@ -1365,6 +1365,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'emerge') { const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null; const to = cardMonsterOf(db, opt.emerge || e.to); score += 2 + (m0 && to ? (to.life - m0.life) * 0.3 : 0); }
       if (e.t === 'fuse' && opt.fuse) { const to = cardMonsterOf(db, opt.fuse.no); score += to.life - (me.mons[opt.fuse.a].life + me.mons[opt.fuse.b].life) * 0.8 - 1; }
       // 区切り5
+      if (e.t === 'gutsFromDiscardNow') score += Math.min(e.n, me.discard.length) * (me.guts.length < 4 ? 0.6 : 0.3); // 霊魂操作: 捨て札からガッツを作る(ガッツが少ないほど得)
       if (e.t === 'safe') { const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null; score += m0 && m0.life <= Math.ceil(m0.max / 2) ? 1.4 : 0.4; }
       if (e.t === 'form') score += 0.2;
       // 区切り4: 山札・手札・捨て札・ガッツ
@@ -1459,6 +1460,13 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       // ダメージが0になる技は、「当たれば〜」の効果も出ないので数えない
       if (gl && t.p !== p && d > 0) score += (1 - ev) * (gl.n === 'all' ? st.players[t.p].guts.length : Math.min(gl.n, st.players[t.p].guts.length)) * 0.8 * habit.disrupt;
       if (cardHasEff(main, 'stunOnHit') && t.p !== p && d > 0) score += (1 - ev) * 1.2;
+      // キュービの当てたときの効き目(当たる見込みぶん)
+      if (t.p !== p && d > 0) {
+        if (cardHasEff(main, 'toGutsOnHit')) score += (1 - ev) * (main.guts || 0) * 0.35 * habit.saveGuts; // この札がガッツに戻る
+        if (cardHasEff(main, 'safeOnHit') && mon) score += (1 - ev) * (mon.life * 2 <= mon.max ? 1.4 : 0.6); // 次の自分のターンまでダメージ0
+        const gfd = cardEff(main, 'gutsFromDiscard'); if (gfd) score += (1 - ev) * Math.min(gfd.n, me.discard.length) * 0.35 * habit.saveGuts; // 捨て札からガッツ
+        if (cardHasEff(main, 'nextOwnCost') && mon) score += (1 - ev) * (me.hand.some((n2, j) => !opt.hand.includes(j) && (cardOf(db, n2) || {}).kind === 'int' && cardUsableBy(cardOf(db, n2), mon)) ? 0.8 : 0.3); // 次のかしこさ技が軽くなる
+      }
     });
     if (targets.length > 1) score *= 1 + 0.15 * (habit.area - 1);
     if (cost >= 5) score *= 1 + 0.12 * (habit.big - 1);
@@ -1598,6 +1606,7 @@ const cardAiChooseGuard = (db, st, policy, rand, gopt = null) => {
     const ko = target.life <= dmg && target.life > after ? 5 : 0;
     const lostAll = cardHasEff(c, 'selfGutsAll') ? me.guts.length - cost : 0; // 緊急回避: 残りのガッツも全部なくなる
     let v = extra + saved * (0.6 + 0.4 * habit.keepGuard) + ko - (cost + lostAll) * 0.35 * habit.saveGuts + back * 0.6 + (cardAiAceHit(policy, me.hand, o.hand) ? 1.5 : 0);
+    if (cardHasEff(c, 'toGutsAfterUse')) v += 0.35 * habit.saveGuts; // 九重神眼: 使ったらガッツに戻る(1つ軽い)
     // ガッツをためる子でも、ライフの半分以上を減らす攻撃は守る(2026-10-29 社長 案B: ききが払うガッツ2の守りを見送っていた)
     if (!dies && habit.saveGuts >= 1.3 && Math.min(dmg, target.life) * 2 >= target.life && saved > 0) v += (cost + lostAll) * 0.35 * habit.saveGuts + 1;
     if (!dies && finishCost !== null && habit.finish >= 1.3 && me.guts.length - cost - lostAll < finishCost && me.guts.length >= finishCost) v -= 2;
@@ -2024,6 +2033,7 @@ const cardAiCardValue = (card, habit) => {
     let v = eff('evade') ? 2.2 : eff('reduceAll') ? 2.4 : eff('reflect') ? 2.3 : eff('cover') ? 1.4 : eff('endure') ? 1.1 : eff('redirect') ? 1.0 : eff('shield') ? 1.0
       : eff('evadeAll') ? 1.2 : eff('noGutsLoss') ? 0.8 : eff('takeMult') ? 0.5 : (eff('liftAllies') || eff('waterAll')) ? 0.6 : 1.6;
     const re = cardEff(card, 'reduce'); if (re) v = 1 + re.n * 0.4;
+    if (eff('toGutsAfterUse')) v += 0.35; // 九重神眼: 使ったらガッツに戻る(払うガッツが1つ軽いのと同じ)
     if (eff('selfGutsAll')) v -= 1.4; // 緊急回避: 守れても、ためたガッツを全部なくす
     return (v - card.guts * 0.35) * habit.keepGuard;
   }
@@ -2050,6 +2060,7 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'rage') v += 0.6;
       if (e.t === 'choose') v += e.then === 'toHand' ? 0.8 : 0.3;
       if (e.t === 'safe') v += 0.8;
+      if (e.t === 'gutsFromDiscardNow') v += 0.4 * e.n; // 霊魂操作: 捨て札からガッツを作る
       if (e.t === 'revive') v += 0.3;
       if (e.t === 'possess') v += 0.2;
       if (e.t === 'cocoon') v -= 1;
@@ -2077,6 +2088,10 @@ const cardAiCardValue = (card, habit) => {
   if (eff('bonusDiscard') || eff('bonusLost')) dmg += 3;
   if (eff('tossBonus')) dmg += 1.5; // カード投げ: ふつうは手札を1〜2枚捨てて使う
   if (eff('returnOnHit')) dmg += 0.8;
+  if (eff('toGutsOnHit')) dmg += 0.6; // ひのこ・火炎車: 当たればガッツに戻る
+  if (eff('safeOnHit')) dmg += 0.8;    // 陽炎: 当てたら次の自分のターンまでダメージ0
+  const gfd = cardEff(card, 'gutsFromDiscard'); if (gfd) dmg += 0.4 * gfd.n; // なめろう: 捨て札からガッツ
+  if (eff('nextOwnCost')) dmg += 0.6;  // 天河天翔: 次のかしこさ技が軽くなる
   if (eff('halfOnEvade') || eff('noEvade')) dmg *= 1.3;
   if (eff('area')) dmg *= 1.6 * habit.area;
   const gl = cardEff(card, 'gutsLossOnHit'); if (gl) dmg += (gl.n === 'all' ? 2 : gl.n) * 0.7 * habit.disrupt * (1 + (habit.mill || 0));
