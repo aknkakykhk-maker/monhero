@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a3cb5fc79eef65ee
+// generated-sha256: ecc7ee428a570cb4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -44708,7 +44708,17 @@ const INFERNO_SHIELD_COLORS = Object.freeze([
 ]);
 const INFERNO_SHIELD_MARKS = Object.freeze(['①', '②', '③', '④', '⑤', '⑥', '⑦']);
 const INFERNO_BODY_HP_GRADIENT = 'linear-gradient(180deg,#f3e8ff 0%,#c084fc 34%,#7c3aed 70%,#3b0764 100%)';
-const infernoShieldColorAt = (k) => INFERNO_SHIELD_COLORS[Math.max(0, Math.min(INFERNO_SHIELD_COLORS.length - 1, k))];
+// EREBUS(冥界の闇・2026-11-04)は層を淡い紫 → 黒に近い紫に。本体のライフは赤(シールドが紫なので、ライフまで紫だと見分けにくい)
+const EREBUS_SHIELD_COLORS = Object.freeze([
+  Object.freeze(['#f5f3ff', '#c4b5fd', '#ede9fe']),
+  Object.freeze(['#ede9fe', '#a78bfa', '#ddd6fe']),
+  Object.freeze(['#ddd6fe', '#7c3aed', '#c4b5fd']),
+  Object.freeze(['#c4b5fd', '#5b21b6', '#a78bfa']),
+  Object.freeze(['#a78bfa', '#2e1065', '#8b5cf6']),
+]);
+const EREBUS_BODY_HP_GRADIENT = 'linear-gradient(180deg,#fecaca 0%,#f87171 34%,#dc2626 70%,#7f1d1d 100%)';
+const shieldBodyHpGradient = (rule) => (rule === 'EREBUS' ? EREBUS_BODY_HP_GRADIENT : INFERNO_BODY_HP_GRADIENT);
+const infernoShieldColorAt = (k, rule) => { const pal = rule === 'EREBUS' ? EREBUS_SHIELD_COLORS : INFERNO_SHIELD_COLORS; return pal[Math.max(0, Math.min(pal.length - 1, k))]; };
 const INFERNO_SHIELD_CSS = `
 [data-inferno-shield-gauge]{--mh-shield-w:min(150px,38vw)}
 @keyframes mhShieldFlash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
@@ -44722,7 +44732,7 @@ const INFERNO_SHIELD_CSS = `
 [data-inferno-shield-fx] *{pointer-events:none}
 `;
 // 層のゲージ(敵の段のいちばん上の真ん中)。上の行ほど後の層。いちばん下の残った層が、いま削っている層
-function InfernoShieldGauge({ view }) {
+function InfernoShieldGauge({ view, rule }) {
   if (!view || !(view.total > 0)) return null;
   const rows = [];
   for (let row = 0; row < view.total; row += 1) {
@@ -44730,7 +44740,7 @@ function InfernoShieldGauge({ view }) {
     const layer = view.layers[k] || { max: 0, now: 0 };
     const alive = k >= view.broken;
     const active = k === view.broken;
-    const [c1, c2, edge] = infernoShieldColorAt(k);
+    const [c1, c2, edge] = infernoShieldColorAt(k, rule);
     const pct = layer.max > 0 ? Math.max(0, Math.min(1, layer.now / layer.max)) : 0;
     const h = 11 + Math.min(4, k);
     rows.push(
@@ -44746,7 +44756,7 @@ function InfernoShieldGauge({ view }) {
       </div>
     );
   }
-  const curColor = view.left > 0 ? infernoShieldColorAt(view.broken)[1] : '#a8a29e';
+  const curColor = view.left > 0 ? infernoShieldColorAt(view.broken, rule)[1] : '#a8a29e';
   return (<>
     <style>{INFERNO_SHIELD_CSS}</style>
     <div data-inferno-shield-gauge={view.total} data-inferno-shield-left={view.left} aria-label={`シールド 残り${view.left}枚(全${view.total}枚)`}
@@ -44762,17 +44772,17 @@ function InfernoShieldGauge({ view }) {
 }
 // 狭い画面(背の低い縦・横向き)のシールド: 敵のライフの棒のすぐ下に細い1本(残りの枚数・各層の小さな印・今の層の「残り / 最大」)。
 //   舞台の上に重ねると、敵の頭の上の吹き出し(「3連撃!」など)とぶつかるので、ライフの帯の中に並べる。右には敵の移動の予告が出るので左に寄せる(2026-10-31 社長「狭いときも見えるように」)
-function InfernoShieldCompact({ view }) {
+function InfernoShieldCompact({ view, rule }) {
   if (!view || !(view.total > 0)) return null;
-  const curColor = view.left > 0 ? infernoShieldColorAt(view.broken)[1] : '#a8a29e';
+  const curColor = view.left > 0 ? infernoShieldColorAt(view.broken, rule)[1] : '#a8a29e';
   const cur = view.layers[view.broken] || null;
-  const [cc1, cc2, cEdge] = view.left > 0 ? infernoShieldColorAt(view.broken) : ['#a8a29e', '#57534e', 'rgba(168,162,158,.5)'];
+  const [cc1, cc2, cEdge] = view.left > 0 ? infernoShieldColorAt(view.broken, rule) : ['#a8a29e', '#57534e', 'rgba(168,162,158,.5)'];
   const curPct = cur && cur.max > 0 ? Math.max(0, Math.min(1, cur.now / cur.max)) : 0;
   return (
     <div data-inferno-shield-compact={view.total} data-inferno-shield-left={view.left} aria-label={`シールド 残り${view.left}枚(全${view.total}枚)`}
       className="pointer-events-none mt-[3px] hidden w-max max-w-full items-center gap-1 rounded-full border border-white/15 bg-black/70 py-[1px] pl-1.5 pr-1 not-italic normal-case tracking-normal [@media(max-height:640px)]:flex [@media(orientation:landscape)_and_(max-height:520px)]:flex">
       <span className="whitespace-nowrap text-[10px] font-black leading-none text-white" style={{ textShadow: `0 0 5px ${curColor},0 1px 2px #000` }}>🛡{view.left}<small className="text-[8px] text-amber-300">/{view.total}</small></span>
-      <span className="flex items-center gap-[2px]">{view.layers.map((l, k) => { const c = infernoShieldColorAt(k); const alive = k >= view.broken; return <i key={k} data-inferno-shield-pip={k + 1} className="block h-[8px] w-[5px] rounded-[1px]" style={{ transform: 'skewX(-20deg)', background: alive ? c[1] : 'rgba(120,113,108,.6)', boxShadow: k === view.broken ? `0 0 5px ${c[1]}` : 'none' }}/>; })}</span>
+      <span className="flex items-center gap-[2px]">{view.layers.map((l, k) => { const c = infernoShieldColorAt(k, rule); const alive = k >= view.broken; return <i key={k} data-inferno-shield-pip={k + 1} className="block h-[8px] w-[5px] rounded-[1px]" style={{ transform: 'skewX(-20deg)', background: alive ? c[1] : 'rgba(120,113,108,.6)', boxShadow: k === view.broken ? `0 0 5px ${c[1]}` : 'none' }}/>; })}</span>
       {cur && view.left > 0 && <span className="relative block h-[11px] w-[min(118px,30vw)] overflow-hidden rounded-[3px]" style={{ background: 'rgba(15,10,20,.85)', border: `1px solid ${cEdge}` }}>
         <span className="absolute inset-y-0 left-0 block transition-[width] duration-500" style={{ width: `${curPct * 100}%`, background: `linear-gradient(90deg,${cc1},${cc2})` }}/>
         <span className="absolute inset-0 flex items-center justify-end whitespace-nowrap pr-1 font-mono text-[8px] font-black italic leading-none tabular-nums text-white" style={{ textShadow: '0 1px 2px #000,0 0 3px #000' }}><span className="mr-auto pl-[3px] not-italic">{INFERNO_SHIELD_MARKS[view.broken] || view.broken + 1}</span>{Math.floor(cur.now).toLocaleString()} / {Math.floor(cur.max).toLocaleString()}</span>
@@ -44785,12 +44795,13 @@ function InfernoShieldCompact({ view }) {
 //   見出しは難易度ごと(INFERNO=燃える橙 / COCYTUS=氷の水色・2026-11-01 社長「これで」)。growthPct は次の1枚が大きくなる割合(難易度の決まりから)
 const SHIELD_BADGE_THEME = Object.freeze({
   INFERNO: Object.freeze({ title: '🔥 INFERNO', titleColor: '#fde68a', titleGlow: '#f97316', bg: 'linear-gradient(180deg,#1c0a0a,#0c0a09)', sub: '#fecaca' }),
+  EREBUS: Object.freeze({ title: '🌑 EREBUS', titleColor: '#fbcfe8', titleGlow: '#db2777', bg: 'linear-gradient(180deg,#2e1065,#09090b)', sub: '#f9a8d4', ring: '#c4b5fd' }),
   COCYTUS: Object.freeze({ title: '❄ COCYTUS', titleColor: '#cffafe', titleGlow: '#22d3ee', bg: 'linear-gradient(180deg,#082f49,#020617)', sub: '#a5f3fc', ring: '#a5f3fc' }),
 });
 function InfernoShieldBadge({ view, rule = 'INFERNO', growthPct = 30 }) {
   if (!view || !(view.total > 0) || !view.boss) return null;
   const theme = SHIELD_BADGE_THEME[rule] || SHIELD_BADGE_THEME.INFERNO;
-  const col = view.left > 0 ? infernoShieldColorAt(view.broken) : ['#e7e5e4', '#78716c', '#a8a29e'];
+  const col = view.left > 0 ? infernoShieldColorAt(view.broken, rule) : ['#e7e5e4', '#78716c', '#a8a29e'];
   return (
     <div data-inferno-shield-badge={view.left} aria-hidden="true"
       className="pointer-events-none absolute left-2 top-[96px] z-[43] w-[84px] rounded-[14px] px-1 pb-1 pt-1.5 text-center [@media(max-height:640px)]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
@@ -45575,10 +45586,10 @@ function BattleScreen({
             <div data-enemy-hpbar className="relative h-[14px] overflow-hidden rounded-full border-2 border-white/25 bg-slate-950" style={{boxShadow:'inset 0 2px 6px rgba(0,0,0,.85)'}}>
               {/* ★幅(width)ではなく横の縮み(scaleX)で減らす。幅を変えると1秒のあいだ毎コマ組み直しが起き、スマホでライフの減り方がかくつく
                   (2026-09-24 ユーザー指摘「敵のライフの減り方とかかくつき」) */}
-              <div className="h-full w-full origin-left transition-transform duration-1000" data-enemy-hp-tone={infernoShellView?.total>0?'inferno-body':undefined} style={{transform:`scaleX(${Math.min(1,Math.max(0,enemy.hp)/(enemy.maxHp||1))})`,backgroundImage:infernoShellView?.total>0?INFERNO_BODY_HP_GRADIENT:'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'}}></div>
+              <div className="h-full w-full origin-left transition-transform duration-1000" data-enemy-hp-tone={infernoShellView?.total>0?'inferno-body':undefined} style={{transform:`scaleX(${Math.min(1,Math.max(0,enemy.hp)/(enemy.maxHp||1))})`,backgroundImage:infernoShellView?.total>0?shieldBodyHpGradient(infernoShellRule):'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'}}></div>
               <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1/2" style={{background:'linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))'}}></div>
             </div>
-            {infernoShellView?.total>0&&<InfernoShieldCompact view={infernoShellView}/>}
+            {infernoShellView?.total>0&&<InfernoShieldCompact view={infernoShellView} rule={infernoShellRule}/>}
             {/* 敵にかかっているデバフの詳細(2026-10-06 ユーザー指示「全部ウンディーネの絶氷の位置にまとめて、簡易表示して押したら詳細が見える」)。
                 名前の横の簡易表示を押したときだけ開く。デバフが無くなったら、開いたままでも何も出さない */}
             {enemyDebuffOpen&&Array.isArray(enemyDebuffs)&&enemyDebuffs.length>0&&(
@@ -45671,7 +45682,7 @@ function BattleScreen({
               lift={battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)}/>;
           })()}
           {/* INFERNOのボスの層のシールド: ゲージ(上の真ん中)と大きな札(左)。AIコピーの小窓が出ている間は札を出さない(同じ左に重なるので) */}
-          {infernoShellView?.total>0&&<InfernoShieldGauge view={infernoShellView}/>}
+          {infernoShellView?.total>0&&<InfernoShieldGauge view={infernoShellView} rule={infernoShellRule}/>}
           {infernoShellView?.total>0&&!copyFloat&&<InfernoShieldBadge view={infernoShellView} rule={infernoShellRule} growthPct={Math.round((Number(extremeWaveStageRules(infernoShellRule,wave)?.layerGrowth)||0)*100)}/>}
           {infernoShellFx&&<InfernoShieldBreakFx key={infernoShellFx.id} fx={infernoShellFx} lite={!!(ecoBattleView||liteBattleView||fxLoad==='LIGHT'||fxLoad==='MINIMAL')} onDone={(id)=>setInfernoShellFx(cur=>cur&&cur.id===id?null:cur)}/>}
           {battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)&&<button data-soul-battle-effects-button type="button" onClick={()=>setShowSoulBattleEffects(true)} aria-label="魂格効果" className="absolute right-2 top-[56px] z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7 [@media(max-height:640px)]:rounded-full [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:top-auto [@media(max-height:640px)]:bottom-1 [@media(max-height:640px)]:right-auto [@media(max-height:640px)]:left-2" style={{boxShadow:'0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'}}><Sparkles size={17} className="text-sky-300"/><span className="text-[10px] font-black leading-none text-white [@media(max-height:640px)]:sr-only">魂格効果</span></button>}
@@ -47242,34 +47253,40 @@ const COCYTUS_REVIVE_CSS = `
 @keyframes mhIceAura{0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}40%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}}
 @keyframes mhIceBand{0%{opacity:0;transform:translateX(-30%)}15%{opacity:1;transform:translateX(0)}100%{opacity:1;transform:translateX(0)}}
 `;
-function CocytusReviveFx({ stage, lite, name }) {
+// EREBUS のムーの蘇り(2026-11-04)は、同じ3段の形を冥界の闇の色で出す(凍る → 闇に呑まれる・砕ける → 蘇る)
+const REVIVE_FX_LOOK = Object.freeze({
+  COCYTUS: Object.freeze({ icon: '❄', frost: '165,243,252', block: 'linear-gradient(135deg,rgba(236,254,255,.55),rgba(103,232,249,.25) 45%,rgba(14,116,144,.35))', blockEdge: 'rgba(207,250,254,.9)', blockGlow: '0 0 30px rgba(103,232,249,.9),inset 0 0 30px rgba(255,255,255,.6)', sfx: '……ピキ…ピキキ…', sfxColor: '#ecfeff', sfxStroke: '#0e7490', sfxGlow: '#22d3ee', flash: (t) => `radial-gradient(circle at 50% 30%,rgba(255,255,255,.97),rgba(165,243,252,${.6 + t * .1}) ${25 + t * 5}%,rgba(8,47,73,${.3 + t * .15}) 80%)`, rings: ['rgba(103,232,249,.95)', 'rgba(255,255,255,.9)', 'rgba(250,204,21,.85)'], shard: 'linear-gradient(135deg,#ffffff,#a5f3fc 50%,#0891b2)', shardGlow: '#67e8f9', word: ['FROZEN', 'BREAK!!'], bigWord: ['ABSOLUTE', 'ZERO!!'], wordStroke: '#0e7490', wordGlow: '0 0 18px #22d3ee,0 0 40px #0891b2', wordColor: '#fff', band: 'linear-gradient(90deg,rgba(8,47,73,.97),rgba(14,116,144,.97) 50%,rgba(8,47,73,.97))', bandEdge: '#a5f3fc', bandGlow: 'rgba(34,211,238,.85)', bandTitle: '#ecfeff', bandShadow: '#164e63' }),
+  EREBUS: Object.freeze({ icon: '🌑', frost: '46,16,101', block: 'radial-gradient(circle,rgba(2,0,12,.92),rgba(46,16,101,.75) 60%,rgba(219,39,119,.35))', blockEdge: 'rgba(249,168,212,.9)', blockGlow: '0 0 30px rgba(219,39,119,.8),inset 0 0 30px rgba(124,58,237,.7)', sfx: '……ズズ…ズズズ…', sfxColor: '#fbcfe8', sfxStroke: '#2e1065', sfxGlow: '#db2777', flash: (t) => `radial-gradient(circle at 50% 30%,rgba(2,0,12,.98),rgba(76,29,149,${.6 + t * .1}) ${25 + t * 5}%,rgba(80,7,36,${.35 + t * .15}) 80%)`, rings: ['rgba(249,168,212,.95)', 'rgba(167,139,250,.9)', 'rgba(250,204,21,.85)'], shard: 'linear-gradient(135deg,#1e1b4b,#05020c 60%,#500724)', shardGlow: '#db2777', word: ['SHADOW', 'BREAK!!'], bigWord: ['SHADOW', 'BREAK!!'], wordStroke: '#f9a8d4', wordGlow: '0 0 18px #db2777,0 0 40px #7c3aed', wordColor: '#0b0614', band: 'linear-gradient(90deg,rgba(2,0,12,.97),rgba(112,26,117,.97) 50%,rgba(2,0,12,.97))', bandEdge: '#f9a8d4', bandGlow: 'rgba(219,39,119,.85)', bandTitle: '#fce7f3', bandShadow: '#2e1065' }),
+});
+function CocytusReviveFx({ stage, lite, name, rule }) {
+  const L = REVIVE_FX_LOOK[rule] || REVIVE_FX_LOOK.COCYTUS;
   const tier = COCYTUS_REVIVE_TIER[stage] || 1;
   const big = tier === 3;
   const who = String(name || '');
-  const title = tier === 3 ? `❄ ${who} 真・覚醒!` : `❄ ${who} 復活!`;
+  const title = tier === 3 ? `${L.icon} ${who} 真・覚醒!` : `${L.icon} ${who} 復活!`;
   const shards = lite ? [] : Array.from({ length: 14 + tier * 10 }, (_, k) => {
     const n = 14 + tier * 10; const ang = k / n * Math.PI * 2 + (k % 2) * 0.3; const d = 70 + (k * 37 % (120 + tier * 40));
     return { k, dx: `${Math.round(Math.cos(ang) * d)}px`, dy: `${Math.round(Math.sin(ang) * d)}px`, rot: `${(k * 53) % 360}deg`, w: 14 + (k * 13 % 30), h: 10 + (k * 7 % 16) };
   });
-  const ringCols = ['rgba(103,232,249,.95)', 'rgba(255,255,255,.9)', 'rgba(250,204,21,.85)'];
+  const ringCols = L.rings;
   return (
-    <div data-cocytus-revive-fx={stage} data-cocytus-revive-tier={tier} className="pointer-events-none fixed inset-0 overflow-hidden" style={{ zIndex: 91001 }}>
+    <div data-cocytus-revive-fx={stage} data-cocytus-revive-tier={tier} data-revive-fx-look={rule === 'EREBUS' ? 'EREBUS' : 'COCYTUS'} className="pointer-events-none fixed inset-0 overflow-hidden" style={{ zIndex: 91001 }}>
       <style>{COCYTUS_REVIVE_CSS}</style>
       {!lite && <>
-        <div className="absolute inset-0" style={{ boxShadow: `inset 0 0 ${60 + tier * 30}px ${20 + tier * 14}px rgba(165,243,252,${.45 + tier * .12})`, animation: 'mhIceFrost 1s ease-out both' }}/>
-        <div className="absolute left-1/2 top-[30%]" style={{ width: 'min(58vw,240px)', height: 'min(58vw,240px)', borderRadius: big ? '18%' : '28%', background: 'linear-gradient(135deg,rgba(236,254,255,.55),rgba(103,232,249,.25) 45%,rgba(14,116,144,.35))', border: '3px solid rgba(207,250,254,.9)', boxShadow: '0 0 30px rgba(103,232,249,.9),inset 0 0 30px rgba(255,255,255,.6)', clipPath: 'polygon(8% 12%,40% 0,72% 8%,100% 30%,94% 70%,70% 100%,28% 96%,0 66%)', animation: 'mhIceBlock 1s ease-out both,mhIceFlash .4s .95s reverse both' }}/>
-        <div className="absolute left-1/2 top-[48%] whitespace-nowrap font-black italic" style={{ transform: 'translateX(-50%)', fontSize: big ? 26 : 22, color: '#ecfeff', WebkitTextStroke: '1px #0e7490', textShadow: '0 0 12px #22d3ee', animation: 'mhIceFlash 1s .1s ease-out both' }}>……ピキ…ピキキ…</div>
-        <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 50% 30%,rgba(255,255,255,.97),rgba(165,243,252,${.6 + tier * .1}) ${25 + tier * 5}%,rgba(8,47,73,${.3 + tier * .15}) 80%)`, animation: 'mhIceFlash .9s 1s ease-out both' }}/>
+        <div className="absolute inset-0" style={{ boxShadow: `inset 0 0 ${60 + tier * 30}px ${20 + tier * 14}px rgba(${L.frost},${.45 + tier * .12})`, animation: 'mhIceFrost 1s ease-out both' }}/>
+        <div className="absolute left-1/2 top-[30%]" style={{ width: 'min(58vw,240px)', height: 'min(58vw,240px)', borderRadius: big ? '18%' : '28%', background: L.block, border: `3px solid ${L.blockEdge}`, boxShadow: L.blockGlow, clipPath: 'polygon(8% 12%,40% 0,72% 8%,100% 30%,94% 70%,70% 100%,28% 96%,0 66%)', animation: 'mhIceBlock 1s ease-out both,mhIceFlash .4s .95s reverse both' }}/>
+        <div className="absolute left-1/2 top-[48%] whitespace-nowrap font-black italic" style={{ transform: 'translateX(-50%)', fontSize: big ? 26 : 22, color: L.sfxColor, WebkitTextStroke: `1px ${L.sfxStroke}`, textShadow: `0 0 12px ${L.sfxGlow}`, animation: 'mhIceFlash 1s .1s ease-out both' }}>{L.sfx}</div>
+        <div className="absolute inset-0" style={{ background: L.flash(tier), animation: 'mhIceFlash .9s 1s ease-out both' }}/>
         {Array.from({ length: tier }, (_, n) => <div key={n} className="absolute left-1/2 top-[30%] rounded-full" style={{ width: `${200 + n * 90}px`, height: `${200 + n * 90}px`, border: `${6 - n}px solid ${ringCols[n]}`, boxShadow: `0 0 30px 10px ${ringCols[n]}`, animation: `mhIceRing 1s ${1 + n * .12}s ease-out both` }}/>)}
         <div className="absolute left-1/2 top-[30%]" style={{ width: 0, height: 0 }}>
-          {shards.map(s => <i key={s.k} className="absolute block" style={{ '--dx': s.dx, '--dy': s.dy, '--rot': s.rot, width: `${s.w}px`, height: `${s.h}px`, background: 'linear-gradient(135deg,#ffffff,#a5f3fc 50%,#0891b2)', clipPath: 'polygon(0 30%,70% 0,100% 60%,30% 100%)', boxShadow: '0 0 8px #67e8f9', animation: 'mhIceShard 1s 1s cubic-bezier(.2,.7,.3,1) both' }}/>)}
+          {shards.map(s => <i key={s.k} className="absolute block" style={{ '--dx': s.dx, '--dy': s.dy, '--rot': s.rot, width: `${s.w}px`, height: `${s.h}px`, background: L.shard, clipPath: 'polygon(0 30%,70% 0,100% 60%,30% 100%)', boxShadow: `0 0 8px ${L.shardGlow}`, animation: 'mhIceShard 1s 1s cubic-bezier(.2,.7,.3,1) both' }}/>)}
         </div>
-        <div className="absolute left-1/2 top-[24%] whitespace-nowrap text-center font-black italic leading-none text-white" style={{ fontSize: big ? 'min(46px,12vw)' : 'min(40px,10.5vw)', WebkitTextStroke: '2px #0e7490', textShadow: '0 0 18px #22d3ee,0 0 40px #0891b2', animation: 'mhIceWord 1.3s 1s ease-out both' }}>{big ? <>ABSOLUTE<br/>ZERO!!</> : <>FROZEN<br/>BREAK!!</>}</div>
+        <div className="absolute left-1/2 top-[24%] whitespace-nowrap text-center font-black italic leading-none" style={{ color: L.wordColor, fontSize: big ? 'min(46px,12vw)' : 'min(40px,10.5vw)', WebkitTextStroke: `2px ${L.wordStroke}`, textShadow: L.wordGlow, animation: 'mhIceWord 1.3s 1s ease-out both' }}>{(big ? L.bigWord : L.word)[0]}<br/>{(big ? L.bigWord : L.word)[1]}</div>
         {Array.from({ length: tier }, (_, n) => <div key={`a${n}`} className="absolute left-1/2 top-[36%] rounded-[50%]" style={{ width: `${180 + n * 60}px`, height: `${50 + n * 16}px`, border: `3px solid ${ringCols[n]}`, boxShadow: `0 0 22px ${ringCols[n]}`, animation: `mhIceAura .7s ${1.9 + n * .1}s ease-out both` }}/>)}
       </>}
       <div data-cocytus-revive-band={tier} className="absolute inset-x-0 top-[42%] px-3.5 py-2.5"
-        style={{ background: 'linear-gradient(90deg,rgba(8,47,73,.97),rgba(14,116,144,.97) 50%,rgba(8,47,73,.97))', borderTop: `3px solid ${big ? '#facc15' : '#a5f3fc'}`, borderBottom: `3px solid ${big ? '#facc15' : '#a5f3fc'}`, boxShadow: '0 0 26px rgba(34,211,238,.85)', animation: `mhIceBand .5s ${lite ? 0 : 1.9}s ease-out both` }}>
-        <div className="font-black italic" style={{ fontSize: big ? 22 : 20, color: big ? '#fef08a' : '#ecfeff', textShadow: '0 2px 0 #164e63' }}>{title}</div>
+        style={{ background: L.band, borderTop: `3px solid ${big ? '#facc15' : L.bandEdge}`, borderBottom: `3px solid ${big ? '#facc15' : L.bandEdge}`, boxShadow: `0 0 26px ${L.bandGlow}`, animation: `mhIceBand .5s ${lite ? 0 : 1.9}s ease-out both` }}>
+        <div className="font-black italic" style={{ fontSize: big ? 22 : 20, color: big ? '#fef08a' : L.bandTitle, textShadow: `0 2px 0 ${L.bandShadow}` }}>{title}</div>
       </div>
     </div>
   );
@@ -47286,7 +47303,7 @@ function EnemyRevivalReveal({
     const root = typeof document !== 'undefined' ? document.querySelector('[data-fx-load]') : null;
     const lite = !!root && (root.getAttribute('data-fx-load') === 'LIGHT' || root.getAttribute('data-fx-load') === 'MINIMAL' || (root.getAttribute('data-eco-view') || 'off') !== 'off');
     const enemyName = typeof document !== 'undefined' ? (document.querySelector('[data-enemy-bar] .truncate')?.textContent || '') : '';
-    return <CocytusReviveFx stage={stage} lite={lite} name={enemyName}/>;
+    return <CocytusReviveFx stage={stage} lite={lite} name={enemyName} rule={enemyRevivalReveal.rule || specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty)}/>;
   }
   return (
 <div data-extreme-revival-reveal className="fixed inset-0 flex items-center justify-center p-5 text-center" style={{zIndex:91000,background:'radial-gradient(circle,rgba(51,65,85,.82),rgba(2,6,23,.98))'}} role="dialog" aria-modal="true" aria-label="死者の再起">
@@ -51055,12 +51072,13 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhbt-d-NIGHTMARE{--d-name:#c7d2fe;--d-bg:radial-gradient(90% 55% at 50% 0%,rgba(129,140,248,.45),transparent 62%),linear-gradient(160deg,#1e1b4b,#0b0a24 60%,#020210);--d-mark:rgba(165,180,252,.22);--d-shine:2.4s;--d-ring:#818cf8;--d-ringw:4px;--d-eyebrow:#c7d2fe;--d-go:#c7d2fe}
 .mhbt-d-CHAOS{--d-name:#fbcfe8;--d-bg:radial-gradient(70% 50% at 15% 10%,rgba(236,72,153,.55),transparent 65%),radial-gradient(70% 50% at 90% 95%,rgba(34,211,238,.5),transparent 65%),linear-gradient(160deg,#1a0420,#05010a);--d-mark:rgba(255,255,255,.18);--d-shine:2.1s;--d-ring:#f472b6;--d-ringw:4px;--d-eyebrow:#a5f3fc;--d-go:#fbcfe8}
 .mhbt-d-ULTIMATE{--d-name:#f1f5f9;--d-bg:radial-gradient(90% 55% at 50% 0%,rgba(255,255,255,.35),transparent 60%),linear-gradient(160deg,#334155,#0f172a 55%,#000);--d-mark:rgba(255,255,255,.22);--d-shine:1.9s;--d-ring:#f8fafc;--d-ringw:4px;--d-eyebrow:#e2e8f0;--d-sheen:rgba(255,255,255,.55);--d-go:#e2e8f0}
-.mhbt-d-INFINITY,.mhbt-d-GOD,.mhbt-d-RAGNAROK,.mhbt-d-HELHEIM,.mhbt-d-ETERNAL,.mhbt-d-INFERNO,.mhbt-d-COCYTUS{--d-name:#fef08a;--d-name:#99f6e4;--d-deep:rgba(250,204,21,.25);--d-bg:radial-gradient(2px 2px at 20% 30%,#fff,transparent),radial-gradient(1.5px 1.5px at 70% 20%,#fff,transparent),radial-gradient(1.5px 1.5px at 40% 75%,#fff,transparent),radial-gradient(90% 60% at 50% 0%,rgba(250,204,21,.4),transparent 60%),linear-gradient(160deg,#0c1445,#020617 60%,#000);--d-mark:rgba(253,224,71,.24);--d-shine:1.7s;--d-ring:#facc15;--d-ringw:5px;--d-eyebrow:#fde68a;--d-sheen:rgba(253,224,71,.5);--d-go:#fde68a}
+.mhbt-d-INFINITY,.mhbt-d-GOD,.mhbt-d-RAGNAROK,.mhbt-d-HELHEIM,.mhbt-d-ETERNAL,.mhbt-d-INFERNO,.mhbt-d-EREBUS,.mhbt-d-COCYTUS{--d-name:#fef08a;--d-name:#99f6e4;--d-deep:rgba(250,204,21,.25);--d-bg:radial-gradient(2px 2px at 20% 30%,#fff,transparent),radial-gradient(1.5px 1.5px at 70% 20%,#fff,transparent),radial-gradient(1.5px 1.5px at 40% 75%,#fff,transparent),radial-gradient(90% 60% at 50% 0%,rgba(250,204,21,.4),transparent 60%),linear-gradient(160deg,#0c1445,#020617 60%,#000);--d-mark:rgba(253,224,71,.24);--d-shine:1.7s;--d-ring:#facc15;--d-ringw:5px;--d-eyebrow:#fde68a;--d-sheen:rgba(253,224,71,.5);--d-go:#fde68a}
 .mhbt-d-GOD{--d-name:#fffbeb;--d-bg:radial-gradient(90% 60% at 50% 0%,rgba(255,255,255,.55),transparent 55%),radial-gradient(80% 50% at 50% 100%,rgba(250,204,21,.45),transparent 65%),linear-gradient(160deg,#78350f,#1c1003 55%,#000);--d-ring:#fff7d6;--d-ringw:6px;--d-shine:1.5s;--d-sheen:rgba(255,255,255,.7);--d-mark:rgba(255,247,214,.28)}
 .mhbt-d-RAGNAROK{--d-name:#fed7aa;--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(239,68,68,.75),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(250,204,21,.45),transparent 65%),linear-gradient(170deg,#3b0505,#120000 55%,#000);--d-ring:#f59e0b;--d-ringw:6px;--d-shine:1.3s;--d-sheen:rgba(254,215,170,.65);--d-mark:rgba(252,165,165,.28);--d-eyebrow:#fed7aa;--d-go:#fed7aa}
 .mhbt-d-HELHEIM{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(45,212,191,.55),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(167,139,250,.45),transparent 65%),linear-gradient(170deg,#042f2e,#020617 55%,#000);--d-ring:#5eead4;--d-ringw:6px;--d-shine:1.2s;--d-sheen:rgba(204,251,241,.6);--d-mark:rgba(153,246,228,.26);--d-eyebrow:#99f6e4;--d-go:#ccfbf1}
 .mhbt-d-ETERNAL{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(236,72,153,.55),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(249,168,212,.45),transparent 65%),linear-gradient(170deg,#3b0a2a,#12030d 55%,#000);--d-ring:#f9a8d4;--d-ringw:6px;--d-shine:1.1s;--d-sheen:rgba(252,231,243,.6);--d-mark:rgba(249,168,212,.26);--d-eyebrow:#f9a8d4;--d-go:#fce7f3}
 .mhbt-d-INFERNO{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(249,115,22,.6),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(253,186,116,.45),transparent 65%),linear-gradient(170deg,#431407,#120502 55%,#000);--d-ring:#fdba74;--d-ringw:6px;--d-shine:1.0s;--d-sheen:rgba(255,237,213,.6);--d-mark:rgba(253,186,116,.28);--d-eyebrow:#fdba74;--d-go:#ffedd5}
+.mhbt-d-EREBUS{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(219,39,119,.55),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(244,114,182,.45),transparent 65%),linear-gradient(170deg,#500724,#14020a 55%,#000);--d-ring:#f9a8d4;--d-ringw:6px;--d-shine:0.95s;--d-sheen:rgba(252,231,243,.6);--d-mark:rgba(249,168,212,.3);--d-eyebrow:#f9a8d4;--d-go:#fce7f3;--d-name:#fbcfe8}
 .mhbt-d-COCYTUS{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(103,232,249,.5),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(224,242,254,.45),transparent 65%),linear-gradient(170deg,#082f49,#020617 55%,#000);--d-ring:#a5f3fc;--d-ringw:6px;--d-shine:0.9s;--d-sheen:rgba(240,249,255,.65);--d-mark:rgba(165,243,252,.3);--d-eyebrow:#a5f3fc;--d-go:#e0f2fe}
 @keyframes mhbtRainbow{from{background-position:0% 0}to{background-position:300% 0}}
 @media (prefers-reduced-motion:reduce){.mhbt-tile::after,.mhbt-d-Legend::before{animation:none!important}}
@@ -101791,12 +101809,14 @@ const createAnimationStyle = () => {
     @keyframes mhUwTabOpen{0%{filter:brightness(.4) grayscale(1);transform:scale(.96)}55%{filter:brightness(.6) grayscale(.6);transform:scale(.96) translateX(-1px)}62%{transform:scale(.96) translateX(2px)}70%{filter:brightness(2.2);transform:scale(1.06)}100%{filter:none;transform:scale(1)}}
     @keyframes mhUwTabGlow{0%,100%{box-shadow:0 0 6px rgba(165,243,252,.35)}50%{box-shadow:0 0 18px rgba(165,243,252,.9),0 0 10px rgba(249,115,22,.6)}}
     @keyframes mhUwNew{0%{opacity:0;transform:scale(2)}100%{opacity:1;transform:scale(1)}}
-    /* カードの枠: INFERNO は燃える橙、COCYTUS は氷の水色。右上に「🛡×3〜5」(data-shield-layers の文字をそのまま出す) */
+    /* カードの枠: INFERNO は燃える橙、EREBUS は冥界の闇の赤紫(2026-11-04 社長「案1」)、COCYTUS は氷の水色。右上に「🛡×3〜5」(data-shield-layers の文字をそのまま出す) */
     [data-underworld-card]{position:relative}
     [data-underworld-card="INFERNO"]{box-shadow:0 0 0 2px #fb923c,0 0 22px rgba(249,115,22,.65) !important}
+    [data-underworld-card="EREBUS"]{box-shadow:0 0 0 2px #f9a8d4,0 0 22px rgba(219,39,119,.7) !important}
     [data-underworld-card="COCYTUS"]{box-shadow:0 0 0 2px #a5f3fc,0 0 22px rgba(34,211,238,.6) !important}
     [data-underworld-card][data-shield-layers]::after{content:"🛡×" attr(data-shield-layers);position:absolute;top:30px;right:10px;left:auto;bottom:auto;width:auto;height:auto;white-space:nowrap;z-index:30;font-style:normal;padding:2px 8px;border-radius:999px;font:900 11px/1.3 sans-serif;color:#fff;pointer-events:none}
     [data-underworld-card="INFERNO"][data-shield-layers]::after{background:linear-gradient(90deg,#7f1d1d,#ea580c) !important;box-shadow:0 0 10px rgba(249,115,22,.8) !important;opacity:1 !important;filter:none !important}
+    [data-underworld-card="EREBUS"][data-shield-layers]::after{background:linear-gradient(90deg,#500724,#db2777) !important;box-shadow:0 0 10px rgba(219,39,119,.8) !important;opacity:1 !important;filter:none !important}
     [data-underworld-card="COCYTUS"][data-shield-layers]::after{background:linear-gradient(90deg,#164e63,#0891b2) !important;box-shadow:0 0 10px rgba(34,211,238,.8) !important;opacity:1 !important;filter:none !important}
     /* 横向きはカードが2列になり、右の説明の欄の下に隠れるので札は出さない(説明の文にシールドの枚数がある) */
     @media (orientation:landscape) and (max-height:520px){[data-underworld-card][data-shield-layers]::after{display:none}}
