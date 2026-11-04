@@ -36,7 +36,7 @@
 const CHANGELOG = [
   {
     // 2026-11-04 社長の決定「INFERNO と COCYTUS の中間の難易度」・社長「この文で公開」(7行目も残す)
-    date: "2026-11-04 13:34", type:'feature', title:'冥界チャレンジに、INFERNOとCOCYTUSのあいだの難易度 EREBUS を追加しました', status:'new', group:'battle',
+    date: "2026-11-04 15:37", type:'feature', title:'冥界チャレンジに、INFERNOとCOCYTUSのあいだの難易度 EREBUS を追加しました', status:'new', group:'battle',
     assistantNotice:{id:'update_notice_erebus_v1',type:'mode'},
     items:[
       '冥界チャレンジの INFERNO と COCYTUS のあいだに、新しい難易度「EREBUS（エレボス）」が加わりました。INFERNOを1回以上クリアすると解放されます。',
