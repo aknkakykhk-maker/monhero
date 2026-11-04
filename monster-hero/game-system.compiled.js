@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fd1e0a8b65c5b8f7
+// source-sha256: 00ab65f1ee0f17a2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -94131,7 +94131,9 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
       const h = cardOf(db, n2);
       return !!h && cardIsAttackKind(h.kind) && h.kind !== 'spe' && me.mons.some(m => !m.ko && cardUsableBy(h, m));
     })());
-    return (c.damage || 1) * 0.5 - Math.max(0, c.guts - (me.guts.length + 2)) * 0.8 - (noHost ? 2 : 0);
+    const value = (c.damage || 1) * 0.5 - Math.max(0, cardFieldCostOf(st, c.guts || 0) - (me.guts.length + 2)) * 0.8 - (noHost ? 2 : 0);
+    if (cardAiFieldBlocked(db, st, p, no)) return CARD_AI_BLOCKED_KEEP + (me.hand.some(n2 => n2 !== no && (cardOf(db, n2) || {}).kind === 'fld') ? value * CARD_AI_BLOCKED_HOPE : 0);
+    return value;
   };
   const aceKeep = no => policy && Array.isArray(policy.aces) && policy.aces.includes(no) ? 10 : 0;
   const ks = me.hand.map((no, i) => ({
@@ -94173,6 +94175,25 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
     hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, policy.playerRole ? 99 : cardAiGutsCap(me))
   };
 };
+const cardAiFieldBlocked = (db, st, p, no) => {
+  const c = cardOf(db, no);
+  if (!st.field || !c || !cardIsAttackKind(c.kind)) return false;
+  const me = st.players[p];
+  const at = me.hand.indexOf(no);
+  const idxs = at >= 0 ? [at] : [];
+  if (c.user === 'breeder') return cardFieldBanned(db, st, p, -1, c, idxs);
+  const users = me.mons.map((m, mi) => ({
+    m,
+    mi
+  })).filter(({
+    m
+  }) => !m.ko && cardUsableBy(c, m));
+  return users.length > 0 && users.every(({
+    mi
+  }) => cardFieldBanned(db, st, p, mi, c, idxs));
+};
+const CARD_AI_BLOCKED_KEEP = -1.5;
+const CARD_AI_BLOCKED_HOPE = 0.3;
 const CARD_AI_GUARD_KEEP_ADD = 1.5;
 const CARD_AI_STUCK_KEEP = 2;
 const CARD_TACTIC_KEEP_GUARD_MAX = 3;
