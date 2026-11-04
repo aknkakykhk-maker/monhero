@@ -32,8 +32,8 @@ const waveEnemy=G('extremeWaveEnemyMultiplier'),damage=G('extremeDamageTurnMulti
 
 const ids=list=>G(list).map(x=>x.id).join();
 check('冥界の印はINFERNO・COCYTUSだけ',G('isUnderworldDifficultyId')('INFERNO')&&G('isUnderworldDifficultyId')('COCYTUS')&&!G('isUnderworldDifficultyId')('ETERNAL')&&!G('isUnderworldDifficultyId')('EXTREME')&&!G('isUnderworldDifficultyId')('Normal'));
-check('極限タブはETERNALまでの9つ・冥界タブは2つ',ids('PUBLIC_EXTREME_TAB_DIFFICULTIES')==='EXTREME,NIGHTMARE,CHAOS,ULTIMATE,INFINITY,GOD,RAGNAROK,HELHEIM,ETERNAL'&&ids('PUBLIC_UNDERWORLD_DIFFICULTIES')==='INFERNO,COCYTUS');
-check('極限の一覧の並びは変えない(保存・ランキング・種族チャレンジが使う)',ids('ALL_EXTREME_DIFFICULTIES').endsWith('ETERNAL,INFERNO,COCYTUS')&&G('SPECIES_CHALLENGE_DIFFICULTY_IDS').slice(-3).join()==='ETERNAL,INFERNO,COCYTUS');
+check('極限タブはETERNALまでの9つ・冥界タブは3つ',ids('PUBLIC_EXTREME_TAB_DIFFICULTIES')==='EXTREME,NIGHTMARE,CHAOS,ULTIMATE,INFINITY,GOD,RAGNAROK,HELHEIM,ETERNAL'&&ids('PUBLIC_UNDERWORLD_DIFFICULTIES')==='INFERNO,MALEBOLGE,COCYTUS'); // 2026-11-04 あいだに MALEBOLGE
+check('極限の一覧の並びは変えない(保存・ランキング・種族チャレンジが使う)',ids('ALL_EXTREME_DIFFICULTIES').endsWith('ETERNAL,INFERNO,MALEBOLGE,COCYTUS')&&G('SPECIES_CHALLENGE_DIFFICULTY_IDS').slice(-4).join()==='ETERNAL,INFERNO,MALEBOLGE,COCYTUS');
 check('保存キーとランキングの枠は難易度の名前のまま',G('extremeBestScoreKey')('INFERNO')==='mh_extreme_hs_INFERNO'&&G('extremeClearCountKey')('INFERNO')==='mh_extreme_clears_INFERNO'
   &&G('rankingDifficultyForMode')('extreme','INFERNO')==='ExtremeINFERNO'&&G('rankingDifficultyForMode')('extreme','COCYTUS')==='ExtremeCOCYTUS');
 check('冥界のタブはETERNALクリアで開く',!G('isUnderworldUnlocked')(0)&&G('isUnderworldUnlocked')(1));

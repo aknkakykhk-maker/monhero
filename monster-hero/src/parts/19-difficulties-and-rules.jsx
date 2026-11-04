@@ -62,13 +62,13 @@ const EXTREME_DIFFICULTIES = Object.freeze([
   { id:'INFINITY', label:'INFINITY', japanese:'インフィニティ', available:true, power:50, score:20, xp:45, gold:30, psyche:80, unlockRequirement:'ULTIMATE', description:'これまでの極限ルールを統合し、ターン経過による圧力がさらに強化された10WAVE最終難易度。', cardDescription:'極限ルールを統合。与ダメ低下とDISTANCE BREAKがさらに苛烈になる最上位10WAVE。', specialRules:Object.freeze({ assistCardEffect:0.5, positiveModifier:0.5, negativeModifier:2.0, distanceEnhancement:0.5, gutsCost:1.5, enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, minimumAllyJoinBonus:0.10, damageTurnRate:0.01, minimumDamageDealt:0.30, awakeningPenaltyRate:0.0075, awakeningZeroTurns:20, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:25, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
 ]);
 // 種族チャレンジは既存の通常・極限難易度定義を複製せず、IDの順序だけを参照する。
-// 極限チャレンジと同じく、いちばん奥(GOD・RAGNAROK・HELHEIM・ETERNAL・INFERNO・COCYTUS)まで遊べる(2026-10-03 ユーザー指示・ETERNAL は 2026-10-29・INFERNO は 2026-10-31・COCYTUS は 2026-11-01)。
+// 極限チャレンジと同じく、いちばん奥(GOD・RAGNAROK・HELHEIM・ETERNAL・INFERNO・COCYTUS)まで遊べる(2026-10-03 ユーザー指示・ETERNAL は 2026-10-29・INFERNO は 2026-10-31・COCYTUS は 2026-11-01・INFERNO と COCYTUS のあいだの MALEBOLGE は 2026-11-04)。
 // ★GOD以降の定義(ALL_EXTREME_DIFFICULTIES)はこの下で作られるので、ここではIDだけを並べる。
 //   極限の難易度を足したら、ここへも足すこと。ずれていないかは tools/mode/helheim-rules-check.js が見る
 const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([
   ...Object.keys(DIFFICULTY_SETTINGS),
   ...EXTREME_DIFFICULTIES.map(setting=>setting.id),
-  'GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO','COCYTUS',
+  'GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO','MALEBOLGE','COCYTUS',
 ]);
 // タクティクスバトルも、難易度の定義を複製せずIDの順序だけを参照する(種族チャレンジと同じ)。
 // 通常9段階＋極限5段階の14段階。GOD / RAGNAROK は極限チャレンジ専用なので入れない
@@ -320,9 +320,11 @@ const SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT = 5;
 const TACTICS_SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT = TACTICS_DIFFICULTY_INITIAL_UNLOCK_COUNT;
 const speciesChallengeInitialUnlockCountOf = (mode) => (typeof isTacticsMode === 'function' && isTacticsMode(mode)
   ? TACTICS_SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT : SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT);
-const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds=[], initialUnlockCount=SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT) => {
+// keptOpenIds … 段を間に足す前に開いていた段(2026-11-04 MALEBOLGE を足したときの COCYTUS。cocytusKeptOpenIdsFor)。前の段のクリアが無くても開いたまま
+const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds=[], initialUnlockCount=SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT, keptOpenIds=[]) => {
   const index=SPECIES_CHALLENGE_DIFFICULTY_IDS.indexOf(difficultyId);
   if(index<0)return false;
+  if(Array.isArray(keptOpenIds)&&keptOpenIds.includes(difficultyId))return true;
   const initial=Number.isFinite(initialUnlockCount)?initialUnlockCount:SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT;
   if(index<initial)return true;
   const cleared=new Set(Array.isArray(clearedDifficultyIds)?clearedDifficultyIds:[]);
@@ -331,7 +333,7 @@ const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds
 const SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS = Object.freeze({
   Beginner:1, Easy:2, Normal:3, Hard:4, Expert:5, Master:6, GrandMaster:8,
   Hell:10, Legend:12, EXTREME:15, NIGHTMARE:20, CHAOS:25, ULTIMATE:30, INFINITY:40,
-  GOD:60, RAGNAROK:80, HELHEIM:100, ETERNAL:120, INFERNO:140, COCYTUS:160,
+  GOD:60, RAGNAROK:80, HELHEIM:100, ETERNAL:120, INFERNO:140, MALEBOLGE:150, COCYTUS:160,
 });
 const speciesChallengeFirstClearReward = (difficultyId) =>
   Object.prototype.hasOwnProperty.call(SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS,difficultyId)
@@ -443,12 +445,17 @@ const ETERNAL_SETTING = Object.freeze({ id:'ETERNAL', label:'ETERNAL', japanese:
 // INFERNOはETERNALの次の極限難易度(2026-10-31 社長の決定)。冥府・ふつうのWAVEのシールド・貫き・敵ライフ10倍・デュラハンの上乗せはETERNALのまま。
 // ボスは起き上がらない(revival なし)。かわりにボスのWAVEは何枚ものシールド(層)をまとって出てくる。層の決まりは infernoStageRules
 const INFERNO_SETTING = Object.freeze({ id:'INFERNO', label:'INFERNO', japanese:'インフェルノ', tab:'underworld', available:true, debugAvailable:true, power:400, score:20, xp:140, gold:120, psyche:220, waveCount:10, unlockRequirement:'ETERNAL', rankingId:'ExtremeINFERNO', recordId:'INFERNO', description:'ボスは起き上がらないかわりに、何枚ものシールドをまとって現れる。1枚割るごとにボスは強くなり、最後は必殺技が連撃になる、極限チャレンジの最奥の難易度。', cardDescription:'ボスは3〜5枚のシールドをまとい、割るたびに攻撃が上がる。デュラハンとムーは必殺技が連撃に。冥府・シールド・貫き・敵ライフ10倍はエターナルのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
+// MALEBOLGE(仮の名前)は INFERNO と COCYTUS のあいだの段(2026-11-04 社長の決定「最新とその下の中間ぐらい」)。
+//   固さは INFERNO の約6倍(掛け算の中間)。強度450・敵ライフ15倍。層のシールドの枚数は COCYTUS と同じ(どの敵も W1・2 4枚 / W3〜10 5枚)で、
+//   1枚目は最大ライフの1.8倍(デュラハン2.6倍・ムー3.0倍)。割るたびの攻撃はふつう+20%・ボス+30%。蘇りはムーだけ1回(全回復・最大ライフ1.5倍)。
+//   ★名前は社長の返事待ちの仮。決まったら id・label・japanese・rankingId・recordId・保存キーごと差し替える(公開前なのでデータは無い)
+const MALEBOLGE_SETTING = Object.freeze({ id:'MALEBOLGE', label:'MALEBOLGE', japanese:'マレボルジェ', tab:'underworld', available:true, debugAvailable:true, power:450, score:20, xp:150, gold:130, psyche:235, waveCount:10, unlockRequirement:'INFERNO', rankingId:'ExtremeMALEBOLGE', recordId:'MALEBOLGE', description:'どの敵も何枚ものシールドをまとって現れる。1枚割るごとに敵は強くなり、ムーは倒しても大きくなって1回蘇る、インフェルノとコキュートスのあいだの難易度。', cardDescription:'どの敵も4〜5枚のシールドをまとい、割るたびに攻撃が上がる。ムーは1回、全回復して大きくなって蘇る。冥府・貫きはインフェルノのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 10:1 }), hpRate:1, maxHpRatePerRevival:1.5, atkStepsWithLayers:true, reveal:Object.freeze({ 10:Object.freeze([Object.freeze({ stage:'moo1', name:'奈落の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' })]) }) }), enemyAdjust:Object.freeze({ lifeRate:15, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
 // COCYTUSはINFERNOの次の極限難易度(2026-11-01 社長の決定)。冥府・貫き・デュラハンの上乗せはINFERNOのまま。
 // 敵のライフの上乗せは 10倍→50倍(2026-11-01 社長「ライフをさらに5倍ぐらいに」。1枚目は最大ライフ×3.0/3.8/4.4 のままなのでシールドも同じだけ厚くなる)。
 // デュラハンは1回・ムーは2回、本体を倒すと全回復+最大ライフ1.5倍(掛け算)で蘇る(シールドは張り直さない)。蘇るたびに攻撃も+20%(層1枚ぶんと同じ)。
 // ふつうの敵も層のシールドをまとい(WAVEのはじめの50%は層に置き換え)、層は厚く・枚数は多い。層の決まりは cocytusStageRules
-const COCYTUS_SETTING = Object.freeze({ id:'COCYTUS', label:'COCYTUS', japanese:'コキュートス', tab:'underworld', available:true, debugAvailable:true, power:500, score:20, xp:160, gold:140, psyche:250, waveCount:10, unlockRequirement:'INFERNO', rankingId:'ExtremeCOCYTUS', recordId:'COCYTUS', description:'どの敵も何枚もの厚いシールドをまとって現れる。1枚割るごとに敵は強くなり、デュラハンとムーは倒しても大きくなって蘇る、極限チャレンジの最奥の難易度。', cardDescription:'どの敵も4〜5枚の厚いシールドをまとい、割るたびに攻撃が上がる。デュラハンは1回・ムーは2回、全回復して大きくなって蘇る。冥府・貫き・敵ライフ10倍はインフェルノのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 9:1, 10:2 }), hpRate:1, maxHpRatePerRevival:1.5, atkStepsWithLayers:true, reveal:Object.freeze({ 9:Object.freeze([Object.freeze({ stage:'durahan', name:'凍土の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' })]), 10:Object.freeze([Object.freeze({ stage:'moo1', name:'凍土の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' }),Object.freeze({ stage:'moo2', name:'凍土の再起', desc:'ライフ全回復・最大ライフ2.25倍で復活' })]) }) }), enemyAdjust:Object.freeze({ lifeRate:50, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
-const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES,GOD_SETTING,RAGNAROK_SETTING,HELHEIM_SETTING,ETERNAL_SETTING,INFERNO_SETTING,COCYTUS_SETTING]);
+const COCYTUS_SETTING = Object.freeze({ id:'COCYTUS', label:'COCYTUS', japanese:'コキュートス', tab:'underworld', available:true, debugAvailable:true, power:500, score:20, xp:160, gold:140, psyche:250, waveCount:10, unlockRequirement:'MALEBOLGE', rankingId:'ExtremeCOCYTUS', recordId:'COCYTUS', description:'どの敵も何枚もの厚いシールドをまとって現れる。1枚割るごとに敵は強くなり、デュラハンとムーは倒しても大きくなって蘇る、極限チャレンジの最奥の難易度。', cardDescription:'どの敵も4〜5枚の厚いシールドをまとい、割るたびに攻撃が上がる。デュラハンは1回・ムーは2回、全回復して大きくなって蘇る。冥府・貫き・敵ライフ10倍はインフェルノのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 9:1, 10:2 }), hpRate:1, maxHpRatePerRevival:1.5, atkStepsWithLayers:true, reveal:Object.freeze({ 9:Object.freeze([Object.freeze({ stage:'durahan', name:'凍土の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' })]), 10:Object.freeze([Object.freeze({ stage:'moo1', name:'凍土の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' }),Object.freeze({ stage:'moo2', name:'凍土の再起', desc:'ライフ全回復・最大ライフ2.25倍で復活' })]) }) }), enemyAdjust:Object.freeze({ lifeRate:50, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
+const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES,GOD_SETTING,RAGNAROK_SETTING,HELHEIM_SETTING,ETERNAL_SETTING,INFERNO_SETTING,MALEBOLGE_SETTING,COCYTUS_SETTING]);
 // 極限チャレンジの難易度カラー。カード構造は共通のまま、上位ほど発光を少しずつ強める。
 // 常時アニメーションは使わず、iPhone縦画面でも視認性と軽さを優先する。
 const EXTREME_DIFFICULTY_THEMES = Object.freeze({
@@ -469,6 +476,7 @@ const EXTREME_DIFFICULTY_THEMES = Object.freeze({
   // 冥府(緑)の先は、終わらない時を思わせる明るい桃紫。ほかの極限(紫・赤・橙・青・金・氷・緑)とかぶらない
   ETERNAL:Object.freeze({accent:'#f9a8d4',rgb:'236,72,153',background:'linear-gradient(180deg,#3b0a2a,#12030d)',action:'linear-gradient(135deg,#db2777,#f9a8d4)',actionText:'#3b0a2a',glow:0.70,titleGlow:0.94,actionGlow:0.70,shadowBlur:56}),
   INFERNO:Object.freeze({accent:'#fb923c',rgb:'249,115,22',background:'linear-gradient(180deg,#431407,#120502)',action:'linear-gradient(135deg,#ea580c,#fdba74)',actionText:'#431407',glow:0.74,titleGlow:0.96,actionGlow:0.74,shadowBlur:60}),
+  MALEBOLGE:Object.freeze({accent:'#c4b5fd',rgb:'167,139,250',background:'linear-gradient(180deg,#2e1065,#0b0418)',action:'linear-gradient(135deg,#7c3aed,#ddd6fe)',actionText:'#2e1065',glow:0.76,titleGlow:0.97,actionGlow:0.76,shadowBlur:62}),
   COCYTUS:Object.freeze({accent:'#a5f3fc',rgb:'103,232,249',background:'linear-gradient(180deg,#082f49,#020617)',action:'linear-gradient(135deg,#0891b2,#e0f2fe)',actionText:'#082f49',glow:0.78,titleGlow:0.98,actionGlow:0.78,shadowBlur:64}),
 });
 const extremeDifficultyTheme = (difficultyId) => EXTREME_DIFFICULTY_THEMES[difficultyId] || EXTREME_DIFFICULTY_THEMES.EXTREME;
@@ -573,6 +581,17 @@ const cocytusStageRules = (waveNumber) => {
   return Object.freeze({ ...base, shieldLayers:COCYTUS_SHIELD_LAYERS[w]||0, bossWave:INFERNO_BOSS_WAVES.includes(w), layerGrowth:0.3, layerAtkGain:0.2,
     layerFirstRate:COCYTUS_FIRST_LAYER_RATE[w]||3.0, layerBodyBossOnly:true, rushAtBroken:COCYTUS_RUSH_AT_BROKEN[w]||null });
 };
+// MALEBOLGE の段階ルール(2026-11-04 社長の決定)。層の枚数は COCYTUS と同じ。1枚目は最大ライフの1.8倍(W9 2.6倍・W10 3.0倍)。
+//   割るたびの攻撃は、ふつうの敵 +20%・ボス +30%(INFERNO の+60% と COCYTUS の+20% のあいだ。1 WAVE に敵は1体なので WAVE で分ける)
+const MALEBOLGE_SHIELD_LAYERS = COCYTUS_SHIELD_LAYERS;
+const MALEBOLGE_FIRST_LAYER_RATE = Object.freeze({ 9:2.6, 10:3.0 });
+const malebolgeStageRules = (waveNumber) => {
+  const base=eternalStageRules(waveNumber);
+  const w=Math.floor(Number(waveNumber)||0);
+  const boss=INFERNO_BOSS_WAVES.includes(w);
+  return Object.freeze({ ...base, shieldLayers:MALEBOLGE_SHIELD_LAYERS[w]||0, bossWave:boss, layerGrowth:0.3, layerAtkGain:boss?0.3:0.2,
+    layerFirstRate:MALEBOLGE_FIRST_LAYER_RATE[w]||1.8, layerBodyBossOnly:true, rushAtBroken:COCYTUS_RUSH_AT_BROKEN[w]||null });
+};
 // 「WAVEで段階が動く難易度」の一覧。ここに1行足せば、実効倍率・与ダメ・BREAK・表示まで
 // すべて同じ経路を通るので、難易度名の分岐を各所へ書き足さなくてよい。
 const EXTREME_WAVE_STAGES = Object.freeze({
@@ -581,6 +600,7 @@ const EXTREME_WAVE_STAGES = Object.freeze({
   HELHEIM:Object.freeze({ label:'冥府', rules:helheimUnderworldRules }),
   ETERNAL:Object.freeze({ label:'冥府', rules:eternalStageRules }),
   INFERNO:Object.freeze({ label:'冥府', rules:infernoStageRules }),
+  MALEBOLGE:Object.freeze({ label:'冥府', rules:malebolgeStageRules }),
   COCYTUS:Object.freeze({ label:'冥府', rules:cocytusStageRules }),
 });
 const extremeWaveStage = (difficultyId) => EXTREME_WAVE_STAGES[difficultyId] || null;
@@ -891,7 +911,7 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     ['Lv5','与ダメ低下 -1.75pt/T・最低15%'],
   ]);
   // ETERNALは冥府(HELHEIM)をそのまま引き継ぐので、同じ説明にシールドと貫きを足す
-  if(difficultyId===HELHEIM_SETTING.id||difficultyId===ETERNAL_SETTING.id||difficultyId===INFERNO_SETTING.id||difficultyId===COCYTUS_SETTING.id){
+  if(difficultyId===HELHEIM_SETTING.id||difficultyId===ETERNAL_SETTING.id||difficultyId===INFERNO_SETTING.id||difficultyId===MALEBOLGE_SETTING.id||difficultyId===COCYTUS_SETTING.id){
     const adjust=rules.enemyAdjust||{};
     const durahan=adjust.byEnemy?.Durahan;
     push('冥府',[
@@ -916,6 +936,14 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
       ['割れるたび','ボスの攻撃力 +60%(最後の1枚も)'],
       ['連撃','デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)'],
     ]);
+    if(difficultyId===MALEBOLGE_SETTING.id) push('層のシールド',[
+      ['蘇り','ムーだけ1回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る。シールドは張り直さない'],
+      ['層の数','W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'],
+      ['WAVEのはじめのシールド','エターナルの50%のシールドは、層のシールドに置き換わる'],
+      ['シールドの量','1枚目はその敵の最大ライフの1.8倍(デュラハン2.6倍・ムー3倍)。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフは元のまま)'],
+      ['割れるたび','ふつうの敵の攻撃力 +20%・ボスの攻撃力 +30%(最後の1枚も。ムーは蘇るときにも+30%)'],
+      ['連撃','デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)'],
+    ]);
     if(difficultyId===COCYTUS_SETTING.id) push('層のシールド',[
       ['蘇り','デュラハンは1回・ムーは2回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る(ムーの2回目は2.25倍)。シールドは張り直さない'],
       ['層の数','W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'],
@@ -924,7 +952,7 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
       ['割れるたび','敵の攻撃力 +20%(最後の1枚も。蘇るたびにも+20%)'],
       ['連撃','デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)'],
     ]);
-    if(difficultyId===ETERNAL_SETTING.id||difficultyId===INFERNO_SETTING.id||difficultyId===COCYTUS_SETTING.id) push('シールドと貫き',[
+    if(difficultyId===ETERNAL_SETTING.id||difficultyId===INFERNO_SETTING.id||difficultyId===MALEBOLGE_SETTING.id||difficultyId===COCYTUS_SETTING.id) push('シールドと貫き',[
       ['シールド','WAVEの始めに、敵が最大ライフ50%ぶんのシールドをまとう。シールドを割るまで敵のライフは減らない'],
       ['シールドと距離強化','シールドに当てたダメージは、距離強化(間合いのボーナス)に数えない'],
       ['貫き','敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）'],
@@ -1217,7 +1245,29 @@ const isRagnarokUnlocked = (godClearCount) => (Number(godClearCount) || 0) > 0;
 const isHelheimUnlocked = (ragnarokClearCount) => (Number(ragnarokClearCount) || 0) > 0;
 const isEternalUnlocked = (helheimClearCount) => (Number(helheimClearCount) || 0) > 0;
 const isInfernoUnlocked = (eternalClearCount) => (Number(eternalClearCount) || 0) > 0;
-const isCocytusUnlocked = (infernoClearCount) => (Number(infernoClearCount) || 0) > 0;
+// MALEBOLGE(INFERNO と COCYTUS のあいだ・2026-11-04)は INFERNO を1回以上クリアすると開く
+const isMalebolgeUnlocked = (infernoClearCount) => (Number(infernoClearCount) || 0) > 0;
+// COCYTUS は MALEBOLGE を1回以上クリアすると開く。★MALEBOLGE を足す前に COCYTUS が開いていた人は閉じない(2026-11-04 社長の決め)。
+//   開いていたかは、公開のあと最初の読み込みで1回だけ作る印 mh_cocytus_open_kept_v1(cocytusOpenKept)で見る。COCYTUS の記録がある人も開いたまま
+const isCocytusUnlocked = (malebolgeClearCount, kept = null, cocytusRecord = 0) => (Number(malebolgeClearCount) || 0) > 0
+  || normalizeCocytusOpenKept(kept).extreme === true || (Number(cocytusRecord) || 0) > 0;
+// 印の中身: { version:1, extreme: 極限で INFERNO をクリアしていたか, species: 種族チャレンジで INFERNO をクリアしていた種族の id }。
+//   読めない・壊れているときは「どれも開いていなかった」(閉じる側)ではなく、作り直さずに既定の空として読む(作るのは読み込みの1回だけ)
+const COCYTUS_OPEN_KEPT_KEY = 'mh_cocytus_open_kept_v1';
+const normalizeCocytusOpenKept = (value) => {
+  const v = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const species = Array.isArray(v.species) ? [...new Set(v.species.filter(id => typeof id === 'string' && id))] : [];
+  return { version: 1, extreme: v.extreme === true, species };
+};
+// 公開のあと最初の読み込みで、いまの記録から印を作る(INFERNO のクリアがあれば、そこで COCYTUS が開いていた)
+const buildCocytusOpenKept = (extremeClearCounts, speciesProgress) => {
+  const extreme = (Number(extremeClearCounts?.[INFERNO_SETTING.id]) || 0) > 0;
+  const species = Object.entries(normalizeSpeciesChallengeProgress(speciesProgress).species)
+    .filter(([, entry]) => entry?.cleared?.[INFERNO_SETTING.id] === true).map(([id]) => id);
+  return normalizeCocytusOpenKept({ extreme, species });
+};
+// 種族チャレンジで、その種族の COCYTUS を印で開いたままにするか(isSpeciesChallengeDifficultyUnlocked の keptOpenIds に渡す)
+const cocytusKeptOpenIdsFor = (kept, speciesId) => normalizeCocytusOpenKept(kept).species.includes(speciesId) ? [COCYTUS_SETTING.id] : [];
 // 冥界チャレンジのタブは ETERNAL を1回以上クリアすると開く(今の INFERNO の解放と同じ)
 const isUnderworldUnlocked = (eternalClearCount) => (Number(eternalClearCount) || 0) > 0;
 // 難易度のシールドの枚数の幅(見た目のカードの「🛡×3〜5」に使う)。層を持たない難易度は ''
