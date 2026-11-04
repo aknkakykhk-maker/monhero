@@ -1253,9 +1253,7 @@ const cardAiFlexMode = (db, st, p) => {
   return 'attack';
 };
 const cardAiHabitNow = (db, st, p, policy) => {
-  const habit0 = policy.habit;
-  // 山札の減り比べで負けそうなときは、守りの札を残すより攻めて、山札が切れる前に倒しにいく(山札切れ狙いもやめる)
-  const habit = habit0 && !policy.playerRole && cardAiDeckRaceLosing(st, p) ? { ...habit0, attack: (habit0.attack || 1) * CARD_AI_DECK_RACE_ATTACK, finish: (habit0.finish || 1) * CARD_AI_DECK_RACE_ATTACK, keepGuard: (habit0.keepGuard || 1) * CARD_AI_DECK_RACE_GUARD, mill: 0 } : habit0;
+  const habit = policy.habit;
   if (!habit || !habit.flex) return habit;
   const mode = cardAiFlexMode(db, st, p);
   if (mode === 'guard') return { ...habit, keepGuard: CARD_AI_FLEX_HIGH, saveGuts: CARD_AI_FLEX_HIGH };
@@ -1357,7 +1355,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'gutsZeroBoth') score += (oppP.guts.length - me.guts.length) * 0.6;
       if (e.t === 'deckToGuts') score += me.deck.length <= 3 ? 1 : -3;
       // 山札の減り比べで負けそうなときは、自分の山札を減らす手(引く・山札からガッツへ)を控える
-      if ((e.t === 'draw' || e.t === 'rush' || e.t === 'deckToGuts') && !policy.playerRole && cardAiDeckRaceLosing(st, p)) score -= 1.5 * (e.n || 1);
+      if ((e.t === 'draw' || e.t === 'rush' || e.t === 'deckToGuts') && policy.gambitOnHabit && cardAiMillPlan(db, st, p, policy) && cardAiDeckRaceLosing(st, p)) score -= 1.5 * (e.n || 1);
       if (e.t === 'oppHandToDeckBottom') score += 0.5 * habit.disrupt;
       if (e.t === 'gutsToDeckShuffle') score += me.deck.length < 6 ? me.guts.length * 0.5 : -1;
       if (e.t === 'selfHurt') { const t0 = opt.target ? me.mons[opt.target.m] : null; score += t0 && t0.life >= 3 ? 0.3 : -5; }
@@ -1589,7 +1587,7 @@ const cardAiChooseGuard = (db, st, policy, rand, gopt = null) => {
     if (!best || v > best.v) best = { v, o };
   });
   // 山札の減り比べで負けそうなときは、倒れない攻撃に守りの札を使わない(札を使うと次の番に多く引いて、山札が先に切れる。2026-11-04 社長)
-  if (best && !dies && !policy.playerRole && cardAiDeckRaceLosing(st, q)) return { type: 'pass' };
+  if (best && !dies && policy.gambitOnHabit && cardAiMillPlan(db, st, q, policy) && cardAiDeckRaceLosing(st, q)) return { type: 'pass' };
   if (!best || (!(gopt && gopt.force) && best.v < 0.8 + rand() * 0.3)) return { type: 'pass' };
   return best.o;
 };
@@ -1654,14 +1652,14 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
   // 山札の減り比べで負けそうなときは、手札の札を出すのに足りる分(いちばん重い札の払うガッツ)を超えてガッツをためない。
   //   ためすぎると、そのぶん次の番に多く引いて、山札が先に切れる(2026-11-04 社長「山札切れで先に負けそうなら融通を」)
   let race = 99;
-  if (!policy.playerRole && cardAiDeckRaceLosing(st, p)) race = 1; // 山札で負けているあいだは、ガッツにするのは1枚まで
+  if (policy.gambitOnHabit && cardAiMillPlan(db, st, p, policy) && cardAiDeckRaceLosing(st, p)) race = 1; // 山札で負けているあいだは、ガッツにするのは1枚まで
   return { type: 'guts', hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, Math.min(race, policy.playerRole ? 99 : cardAiGutsCap(me))) };
 };
 // 山札の減り比べ(2026-11-04 社長「山札切れで先に負けそうなら融通を」): 自分の山札が相手より多くない(=先に山札が切れそう)か
 const CARD_AI_DECK_RACE_FROM = 45;   // 自分の山札がこの枚数以下で
-const CARD_AI_DECK_RACE_MARGIN = -1; // 相手より少ない(このままだと先に山札が切れて負けが決まる)とき、戦術カードの指示より、負けない動きを先にする
-const CARD_AI_DECK_RACE_ATTACK = 1.4;  // そのときの攻め・とどめの重み
-const CARD_AI_DECK_RACE_GUARD = 0.5;   // そのときの守りを残す重み
+const CARD_AI_DECK_RACE_MARGIN = 2;  // 相手より2枚多いところまで(このままだと先に山札が切れて負けそう)なら、戦術カードの指示より、山札を長持ちさせる動きを先にする
+// 山札切れで勝つ組み方(持久型の基本カード・持久型のくせ)の登録デッキか。山札を長持ちさせる動きは、この組み方のときだけ(攻めの組み方はガッツを控えると殴り合いで負ける)
+const cardAiMillPlan = (db, st, p, policy) => !!(policy && policy.habit && policy.habit.mill);
 const cardAiDeckRaceLosing = (st, p) => {
   const me = st.players[p], op = st.players[cardOther(p)];
   return me.deck.length <= CARD_AI_DECK_RACE_FROM && me.deck.length <= op.deck.length + CARD_AI_DECK_RACE_MARGIN;
