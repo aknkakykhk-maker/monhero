@@ -29,6 +29,8 @@ const SPECIES = [
   ['durahan', 'durahan', 'デュラハン'],
   // ゴースト(2026-10-27 社長「ゴーストのカードが盛れてたから実装よろしく」。第4弾にヘンガーと並べる・台帳 #204)
   ['ghost', 'ghost', 'ゴースト'],
+  // キュービ(2026-11-04 社長「バトルカードに新血統実装」。新しい血統。設計書 tools/art-sources/card-battle/kyubi/kyubi.md)
+  ['kyubi', 'kyubi', 'キュービ'],
 ];
 const SPECIES_BY_NAME = Object.fromEntries(SPECIES.map(([, id, name]) => [name, id]));
 // 弾(台帳 #3413)。番号の離れた技(357〜)は第4弾。全モンスター・ブリーダーは番号で分ける(推定)
@@ -40,6 +42,8 @@ const WAVE_OF_SPECIES = {
   // デュラハン(2026-10-24 #3421 で届いた)。legendcup の抜粋で第3弾と分かっていた(設計書 4-2)
   durahan: 3,
   metalner: 4, joker: 4, arrowhead: 4, centaur: 4, colorpandora: 4,
+  // キュービ: どの弾に入れるかは社長に聞いている(2026-11-04)。決まるまで 5(どのパックにも出ない)
+  kyubi: 5,
 };
 const waveOfNo = (no) => (no <= 128 ? 1 : no <= 260 ? 2 : no <= 280 ? 3 : 4);
 const KIND = { 'ちから': 'pow', 'かしこさ': 'int', '特殊': 'spe', '回避': 'dge', '防御': 'blk', '全体': 'fld' };
@@ -315,14 +319,14 @@ const build = () => {
   for (const [dir, id, name] of SPECIES) {
     const j = readJson(dir);
     for (const m of j.monster) {
-      monsters[m.no] = { no: m.no, species: id, name, type: TYPE[m.type], life: m.life, variant: m.variant || null, wave: (m.no === 'C-031R' || m.no === 'C-031RS') ? 4 : WAVE_OF_SPECIES[id], img: m.img.replace(/\.jpg$/, '') };
+      monsters[m.no] = { no: m.no, species: id, name, type: TYPE[m.type], life: m.life, variant: m.variant || null, wave: (m.no === 'C-031R' || m.no === 'C-031RS') ? 4 : WAVE_OF_SPECIES[id], img: m.img.replace(/\.jpg$/, '') , ...(m.display_no ? { dispNo: m.display_no } : {}) };
     }
     for (const s of j.skills) {
       const no = Number(s.no);
       const eff = effectsOf(no, s.text);
       if (!eff.ready) notReady.push(`${s.no} ${s.name}: ${eff.missing}`);
       add({ no: s.no, name: s.name, kind: KIND[s.kind], damage: Number.isFinite(s.damage) ? s.damage : null, guts: s.guts,
-        text: s.text || '', user: id, wave: no >= 357 ? 4 : WAVE_OF_SPECIES[id], ready: eff.ready, effects: eff.effects, img: s.no, ...(NOTE_BY_NO[no] ? { note: NOTE_BY_NO[no] } : {}) });
+        text: s.text || '', user: id, wave: no >= 357 && no < 900 ? 4 : WAVE_OF_SPECIES[id], ready: eff.ready, effects: eff.effects, img: s.no, ...(NOTE_BY_NO[no] ? { note: NOTE_BY_NO[no] } : {}) , ...(s.display_no ? { dispNo: s.display_no } : {}) });
     }
   }
   // 全体カード(breeder-field)は番号に F が付く(技カードの番号と重ならないように)。弾は F のあとの数で決める(115〜120 は第1弾・255〜263 は第3弾)
@@ -347,7 +351,7 @@ const build = () => {
       // メインの種族の技が届いていない子は準備中(設計書 4-2。デュラハンは 2026-10-24 に届いた)
       ready: !!SPECIES_BY_NAME[m.main],
       // 立ち絵が無い子は、パックにもコンピューターのデッキにも入れず、図鑑にだけ並べる(社長 2026-10-25。cards.json の dex_only)
-      ...(m.dex_only ? { dexOnly: true } : {}) };
+      ...(m.dex_only ? { dexOnly: true } : {}), ...(m.display_no ? { dispNo: m.display_no } : {}) }; // 画面の番号(キュービは「◆001」「C-◆01」。中の番号は数字のまま)
   }
   // スターター(元の表どおり。頭突き → 頭つき はカードの文字に合わせる)
   const dl = JSON.parse(fs.readFileSync(path.join(SRC, 'starter-decklists', 'decklists.json'), 'utf8'));

@@ -1,0 +1,23 @@
+{
+  "id": "kyubi",
+  "name": "キュービ",
+  "status": "最終版",
+  "updated": "2026-10-30",
+  "monster": { "no": "C-K01", "type": "air", "life": 7 },
+  "noBase": 901,
+  "cards": [
+    { "id": "K01", "name": "提灯落とし", "kind": "pow", "damage": 2, "guts": 1, "text": "", "effects": [] },
+    { "id": "K02", "name": "陽炎", "kind": "pow", "damage": 4, "guts": 4, "star": true, "text": "この技でダメージを与えた場合、このモンスターは次の自分のターンまでダメージを受けない。", "effects": [{ "t": "safeOnHit" }] },
+    { "id": "K03", "name": "狐火", "kind": "int", "damage": 2, "guts": 2, "text": "この技は回避されない。", "effects": [{ "t": "noEvade" }] },
+    { "id": "K04", "name": "ひのこ", "kind": "int", "damage": 3, "guts": 2, "text": "この技でダメージを与えた場合、このカードは捨て札にならずにガッツになる。", "effects": [{ "t": "toGutsOnHit" }] },
+    { "id": "K05", "name": "超狐火", "kind": "int", "damage": 3, "guts": 3, "text": "この技は回避されない。", "effects": [{ "t": "noEvade" }] },
+    { "id": "K06", "name": "なめろう", "kind": "int", "damage": 2, "guts": 3, "text": "この技でダメージを与えた場合、相手ブリーダーはガッツを1減らす。その後、自分の捨て札からランダムに1枚をガッツにする。", "effects": [{ "t": "gutsLossOnHit", "n": 1 }, { "t": "gutsFromDiscard", "n": 1 }] },
+    { "id": "K07", "name": "火炎車", "kind": "int", "damage": 5, "guts": 4, "text": "この技でダメージを与えた場合、このカードは捨て札にならずにガッツになる。", "effects": [{ "t": "toGutsOnHit" }] },
+    { "id": "K08", "name": "天河天翔", "kind": "int", "damage": 5, "guts": 5, "text": "この技でダメージを与えた場合、このモンスターが次に使うかしこさ技の消費ガッツを−2する。", "effects": [{ "t": "nextOwnCost", "n": 2, "kinds": ["int"] }] },
+    { "id": "K09", "name": "神狐蒼火", "kind": "int", "damage": 5, "guts": 4, "text": "この技は回避されない。", "effects": [{ "t": "noEvade" }] },
+    { "id": "K10", "name": "炸裂気泡陣", "kind": "int", "damage": 4, "guts": 7, "text": "この技は全ての相手モンスターにダメージを与える。", "effects": [{ "t": "area", "who": "enemies" }] },
+    { "id": "K11", "name": "九重神眼", "kind": "blk", "damage": null, "guts": 2, "text": "ちから技か、かしこさ技で与えられるダメージを−3する。このカードは捨て札にならずにガッツになる。", "effects": [{ "t": "reduce", "kinds": ["pow", "int"], "n": 3 }, { "t": "toGutsAfterUse" }] },
+    { "id": "K12", "name": "霊魂操作", "kind": "spe", "damage": null, "guts": 0, "text": "自分の捨て札から、ランダムに2枚をガッツにする。", "effects": [{ "t": "gutsFromDiscardNow", "n": 2 }] },
+    { "id": "K13", "name": "神域移動", "kind": "dge", "damage": null, "guts": 1, "text": "ちから技か、かしこさ技を回避する。", "effects": [{ "t": "evade", "kinds": ["pow", "int"] }] }
+  ]
+}

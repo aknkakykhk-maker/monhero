@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d116019fc85d06cb
+// source-sha256: 3aef68286e875e1a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -92279,7 +92279,7 @@ const cardResolveTarget = (db, st) => {
       const k = cardDiscardToGuts(st, pd.attacker, gd.n);
       if (k) cardLog(st, `${st.players[pd.attacker].name}は捨て札から${k}枚をガッツにした`);
     }
-    if (cardHasEff(main, 'safeOnHit') && t.p !== pd.attacker && atkMon && !atkMon.ko && atkMon.safeUntil < st.turn + 1) {
+    if (cardHasEff(main, 'safeOnHit') && t.p !== pd.attacker && atkMon && !atkMon.ko && !(atkMon.safeUntil >= st.turn + 1)) {
       atkMon.safeUntil = st.turn + 1;
       cardLog(st, `${atkMon.name}は次の自分のターンまでダメージを受けない`);
     }
@@ -101304,7 +101304,7 @@ const CardDetailModal = ({
       className: "rounded-md bg-slate-700 px-2 py-0.5"
     }, cardUserLabel(db, c)), React.createElement("span", {
       className: "rounded-md bg-slate-800 px-2 py-0.5 text-slate-400"
-    }, "No.", c.no)), dexLine, c.text && React.createElement("p", {
+    }, "No.", c.dispNo || c.no)), dexLine, c.text && React.createElement("p", {
       className: "mt-2 text-[14px] font-bold leading-relaxed"
     }, c.text), !c.text && cardPlainEffectText(c) && React.createElement("p", {
       "data-card-detail-plain": true,
@@ -101329,7 +101329,7 @@ const CardDetailModal = ({
       className: "rounded-md bg-sky-900 px-2 py-0.5"
     }, CARD_TYPE_LABEL[m.type]), React.createElement("span", {
       className: "rounded-md bg-slate-800 px-2 py-0.5 text-slate-400"
-    }, "No.", m.no)), dexLine, m.dexOnly && React.createElement("p", {
+    }, "No.", m.dispNo || m.no)), dexLine, m.dexOnly && React.createElement("p", {
       "data-card-dex-only": true,
       className: "mt-2 text-[12px] font-bold text-amber-300",
       style: JA_LABEL_STYLE
@@ -109350,7 +109350,7 @@ const CardDex = ({
           className: `mt-0.5 font-bold leading-tight ${have ? 'text-slate-100' : 'text-slate-500'}`
         }), React.createElement("span", {
           className: "text-[9px] font-bold text-slate-500"
-        }, "No.", no), mode === 'sub' && m && String(m.wave) === 'hybrid' && m.main && React.createElement("span", {
+        }, "No.", c && c.dispNo || m && m.dispNo || no), mode === 'sub' && m && String(m.wave) === 'hybrid' && m.main && React.createElement("span", {
           "data-card-dex-main": m.main,
           className: "text-[9px] font-bold text-indigo-200"
         }, "主 ", spName[m.main] || m.main));

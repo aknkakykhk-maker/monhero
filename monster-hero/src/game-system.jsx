@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f97c6d2d72512895
+// generated-sha256: 4c6a1db9fbd95a69
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -55634,7 +55634,7 @@ const cardResolveTarget = (db, st) => {
     const gd = cardEff(main, 'gutsFromDiscard');
     if (gd && t.p !== pd.attacker && !pd.gutsFromDiscardDone) { pd.gutsFromDiscardDone = true; const k = cardDiscardToGuts(st, pd.attacker, gd.n); if (k) cardLog(st, `${st.players[pd.attacker].name}は捨て札から${k}枚をガッツにした`); }
     // 陽炎(キュービ): 当てた子は、次の自分のターンまでダメージを受けない(ぬいぐるみと同じ印)
-    if (cardHasEff(main, 'safeOnHit') && t.p !== pd.attacker && atkMon && !atkMon.ko && atkMon.safeUntil < st.turn + 1) { atkMon.safeUntil = st.turn + 1; cardLog(st, `${atkMon.name}は次の自分のターンまでダメージを受けない`); }
+    if (cardHasEff(main, 'safeOnHit') && t.p !== pd.attacker && atkMon && !atkMon.ko && !(atkMon.safeUntil >= st.turn + 1)) { atkMon.safeUntil = st.turn + 1; cardLog(st, `${atkMon.name}は次の自分のターンまでダメージを受けない`); }
     // 天河天翔(キュービ): 当てた子が次に使う指定の種類の技の払うガッツ −n(重ねがけしない・期限なし・KO で消える)
     const nc = cardEff(main, 'nextOwnCost');
     if (nc && t.p !== pd.attacker && atkMon && !atkMon.ko && !(atkMon.costDown && atkMon.costDown.n >= nc.n)) { atkMon.costDown = { kinds: nc.kinds || ['int'], n: nc.n }; cardLog(st, `${atkMon.name}が次に使う${(nc.kinds || ['int']).includes('pow') ? 'ちから' : 'かしこさ'}技のガッツが${nc.n}少なくなる`); }
@@ -60955,7 +60955,7 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
             <span className="rounded-md bg-amber-900 px-2 py-0.5">ガッツ{c.guts}</span>
             {c.damage !== null && c.damage !== undefined && <span className="rounded-md bg-rose-900 px-2 py-0.5">ダメージ{c.damage}</span>}
             <span className="rounded-md bg-slate-700 px-2 py-0.5">{cardUserLabel(db, c)}</span>
-            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{c.no}</span>
+            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{c.dispNo || c.no}</span>
           </div>
           {dexLine}
           {c.text && <p className="mt-2 text-[14px] font-bold leading-relaxed">{c.text}</p>}
@@ -60970,7 +60970,7 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
           <div className="mt-1 flex flex-wrap gap-1.5 text-[12px] font-bold">
             <span className="rounded-md bg-emerald-900 px-2 py-0.5">ライフ{m.life}</span>
             <span className="rounded-md bg-sky-900 px-2 py-0.5">{CARD_TYPE_LABEL[m.type]}</span>
-            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{m.no}</span>
+            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{m.dispNo || m.no}</span>
           </div>
           {dexLine}
           {m.dexOnly && <p data-card-dex-only className="mt-2 text-[12px] font-bold text-amber-300" style={JA_LABEL_STYLE}>{jaWrap('まだ手に入らないカードです(パックには入っていません)')}</p>}
@@ -65183,7 +65183,7 @@ const CardDex = ({ db, collection, onBack }) => {
                   {c && !c.ready && <span className="absolute left-0.5 top-0.5 rounded-md bg-slate-600 px-1 text-[9px] font-black text-white">準備中</span>}
                   {rare && <span data-card-dex-rare className="absolute left-0.5 top-0.5 rounded-md bg-amber-400 px-1 text-[9px] font-black text-slate-950">{rare}</span>}
                   <CardNameFit name={name} className={`mt-0.5 font-bold leading-tight ${have ? 'text-slate-100' : 'text-slate-500'}`}/>
-                  <span className="text-[9px] font-bold text-slate-500">No.{no}</span>
+                  <span className="text-[9px] font-bold text-slate-500">No.{(c && c.dispNo) || (m && m.dispNo) || no}</span>
                   {mode === 'sub' && m && String(m.wave) === 'hybrid' && m.main && <span data-card-dex-main={m.main} className="text-[9px] font-bold text-indigo-200">主 {spName[m.main] || m.main}</span>}
                 </button>
               );

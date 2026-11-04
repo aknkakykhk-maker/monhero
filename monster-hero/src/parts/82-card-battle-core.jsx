@@ -842,7 +842,7 @@ const cardResolveTarget = (db, st) => {
     const gd = cardEff(main, 'gutsFromDiscard');
     if (gd && t.p !== pd.attacker && !pd.gutsFromDiscardDone) { pd.gutsFromDiscardDone = true; const k = cardDiscardToGuts(st, pd.attacker, gd.n); if (k) cardLog(st, `${st.players[pd.attacker].name}は捨て札から${k}枚をガッツにした`); }
     // 陽炎(キュービ): 当てた子は、次の自分のターンまでダメージを受けない(ぬいぐるみと同じ印)
-    if (cardHasEff(main, 'safeOnHit') && t.p !== pd.attacker && atkMon && !atkMon.ko && atkMon.safeUntil < st.turn + 1) { atkMon.safeUntil = st.turn + 1; cardLog(st, `${atkMon.name}は次の自分のターンまでダメージを受けない`); }
+    if (cardHasEff(main, 'safeOnHit') && t.p !== pd.attacker && atkMon && !atkMon.ko && !(atkMon.safeUntil >= st.turn + 1)) { atkMon.safeUntil = st.turn + 1; cardLog(st, `${atkMon.name}は次の自分のターンまでダメージを受けない`); }
     // 天河天翔(キュービ): 当てた子が次に使う指定の種類の技の払うガッツ −n(重ねがけしない・期限なし・KO で消える)
     const nc = cardEff(main, 'nextOwnCost');
     if (nc && t.p !== pd.attacker && atkMon && !atkMon.ko && !(atkMon.costDown && atkMon.costDown.n >= nc.n)) { atkMon.costDown = { kinds: nc.kinds || ['int'], n: nc.n }; cardLog(st, `${atkMon.name}が次に使う${(nc.kinds || ['int']).includes('pow') ? 'ちから' : 'かしこさ'}技のガッツが${nc.n}少なくなる`); }

@@ -727,7 +727,7 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
             <span className="rounded-md bg-amber-900 px-2 py-0.5">ガッツ{c.guts}</span>
             {c.damage !== null && c.damage !== undefined && <span className="rounded-md bg-rose-900 px-2 py-0.5">ダメージ{c.damage}</span>}
             <span className="rounded-md bg-slate-700 px-2 py-0.5">{cardUserLabel(db, c)}</span>
-            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{c.no}</span>
+            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{c.dispNo || c.no}</span>
           </div>
           {dexLine}
           {c.text && <p className="mt-2 text-[14px] font-bold leading-relaxed">{c.text}</p>}
@@ -742,7 +742,7 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
           <div className="mt-1 flex flex-wrap gap-1.5 text-[12px] font-bold">
             <span className="rounded-md bg-emerald-900 px-2 py-0.5">ライフ{m.life}</span>
             <span className="rounded-md bg-sky-900 px-2 py-0.5">{CARD_TYPE_LABEL[m.type]}</span>
-            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{m.no}</span>
+            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{m.dispNo || m.no}</span>
           </div>
           {dexLine}
           {m.dexOnly && <p data-card-dex-only className="mt-2 text-[12px] font-bold text-amber-300" style={JA_LABEL_STYLE}>{jaWrap('まだ手に入らないカードです(パックには入っていません)')}</p>}
