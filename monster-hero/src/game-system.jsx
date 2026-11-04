@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 660634a3c3a42062
+// generated-sha256: 8f996025c2543c67
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -56606,7 +56606,12 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
     if (cardIsGuardKind(c.kind)) return 2 * habit.keepGuard - c.guts * 0.2 + CARD_AI_GUARD_KEEP_ADD;
     // 付ける札は、手札に付ける先(場の子が使える攻めの技)が無ければ先にガッツへ
     const noHost = cardHasEff(c, 'attach') && !me.hand.some((n2) => n2 !== no && (() => { const h = cardOf(db, n2); return !!h && cardIsAttackKind(h.kind) && h.kind !== 'spe' && me.mons.some((m) => !m.ko && cardUsableBy(h, m)); })());
-    return (c.damage || 1) * 0.5 - Math.max(0, c.guts - (me.guts.length + 2)) * 0.8 - (noHost ? 2 : 0);
+    const value = (c.damage || 1) * 0.5 - Math.max(0, cardFieldCostOf(st, c.guts || 0) - (me.guts.length + 2)) * 0.8 - (noHost ? 2 : 0);
+    // 場の全体カードで使えない技(必殺技の封印・応酬・がんじがらめ)は、場が替わるまで使えない。使える札より先にガッツへ
+    //   (2026-11-04 社長「必殺技の封印を使われてるのに、威力が高い技を温存して、ほかをガッツにする」)。
+    //   場は、どちらかが別の全体カードを置くまで残る。自分の手札に全体カードがあれば外せる見込みがあるので、少しだけ残す
+    if (cardAiFieldBlocked(db, st, p, no)) return CARD_AI_BLOCKED_KEEP + (me.hand.some((n2) => n2 !== no && (cardOf(db, n2) || {}).kind === 'fld') ? value * CARD_AI_BLOCKED_HOPE : 0);
+    return value;
   };
   // 切り札(policy.aces・みんなのデッキ)はガッツにしない(手札に残す)。aces が無ければ今と同じ
   const aceKeep = (no) => (policy && Array.isArray(policy.aces) && policy.aces.includes(no) ? 10 : 0);
@@ -56645,6 +56650,19 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
   //   次の自分の番に引く枚数(手札が5枚なら1枚・それ未満なら5枚まで)が山札より多くなるほど、手札をガッツにしない
   return { type: 'guts', hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, policy.playerRole ? 99 : cardAiGutsCap(me)) };
 };
+// 場の全体カードで、この札がいま使えないか(使える子全員で。ブリーダーのカードはブリーダーとして)。攻めの技・特殊技だけを見る
+const cardAiFieldBlocked = (db, st, p, no) => {
+  const c = cardOf(db, no);
+  if (!st.field || !c || !cardIsAttackKind(c.kind)) return false;
+  const me = st.players[p];
+  const at = me.hand.indexOf(no);
+  const idxs = at >= 0 ? [at] : [];
+  if (c.user === 'breeder') return cardFieldBanned(db, st, p, -1, c, idxs);
+  const users = me.mons.map((m, mi) => ({ m, mi })).filter(({ m }) => !m.ko && cardUsableBy(c, m));
+  return users.length > 0 && users.every(({ mi }) => cardFieldBanned(db, st, p, mi, c, idxs));
+};
+const CARD_AI_BLOCKED_KEEP = -1.5;    // 場で使えない技の「残したさ」(使える札よりガッツにしやすく。使えない札(-10)よりは残す)
+const CARD_AI_BLOCKED_HOPE = 0.3;     // 自分の手札に全体カードがあって、場を替えられる見込みがあるとき、元の値打ちのうち残す割合
 const CARD_AI_GUARD_KEEP_ADD = 1.5;   // ガッツにする札を選ぶとき、使える守りの札に足す「残したさ」(2026-11-02 社長「防御系ガンガン捨てる」)
 const CARD_AI_STUCK_KEEP = 2;           // 手が詰まった番に残す守りの札
 const CARD_TACTIC_KEEP_GUARD_MAX = 3;   // 戦術カード「守りのカードを3枚まで残す」の枚数
@@ -60243,20 +60261,32 @@ const CARD_SPECIAL_MOTION_RULES = Object.freeze([
 ]);
 // カード番号ごとの上書き(社長が見て「この技はこう動いてほしい」と言ったら、その1枚だけここに足す)
 const CARD_MOTION_BY_NO = Object.freeze({});
-// キュービの専用技(901〜913)は、モンヒロの本編のキュービの技の動きをそのまま当てる(2026-11-04 社長「キュービはモンバトで技モーション細かく作ったからいけるとはおもってる」)
-//   [キュービが出すとき, オリヒメ(C-951)が出すとき]。オリヒメは本編のオリヒメの同じ技(星空の色)。守る・よける・特殊(911〜913)は、ほかの血統と同じ共通の動き
-const CARD_MOTION_KYUBI = Object.freeze({
-  '901': ['Kyubi-n5', 'Orihime-n5'], // 提灯落とし
-  '902': ['Kyubi-u5', 'Orihime-u3'], // 陽炎
-  '903': ['Kyubi-n2', 'Orihime-n2'], // 狐火
-  '904': ['Kyubi-n1', 'Orihime-n1'], // ひのこ
-  '905': ['Kyubi-u2', 'Orihime-u2'], // 超狐火(オリヒメは 超狐火・星)
-  '906': ['Kyubi-u1', 'Orihime-u1'], // なめろう(オリヒメは 織姫のくちづけの動き)
-  '907': ['Kyubi-n6', 'Orihime-n6'], // 火炎車
-  '908': ['Kyubi-u7', 'Orihime-u8'], // 天河天翔
-  '909': ['Kyubi-u3', 'Orihime-u4'], // 神狐蒼火(オリヒメは 神狐星火)
-  '910': ['Kyubi-u8', 'Orihime-u6'], // 炸裂気泡陣
+// キュービの専用技(901〜910)の動き。本編のキュービの技の動き(24 の SKM_KYUBI)をもとに、技カードの絵に寄せた(本編の動きは変えない)
+//   2026-11-04 社長「キュービはモンバトで技モーション細かく作ったからいけるとはおもってる」→ 本編につなぐ
+//   → 同日 社長「キュービの技アクションで技カードの見た目をも参考にして」→ カードの絵の色・形・飛ぶものに寄せた(見比べ: docs/progress/card-kyubi-motion)
+//   オリヒメ(C-951)が出すときは、同じ形を星空の色で(本編のオリヒメと同じ考え)。守る・よける・特殊(911〜913)は、ほかの血統と同じ共通の動き
+//   [技の名前, 大技の飾り(オーラと残像)を付けるか, 色の組 → 動き]
+const CARD_KYUBI_PALETTE = Object.freeze({
+  Kyubi:   { blue:'blue', bh:205, fire:'fire',   fh:22,  star:'gold' },
+  Orihime: { blue:'sky',  bh:195, fire:'cosmic', fh:265, star:'cosmic' },
 });
+const CARD_KYUBI_LOOK = Object.freeze({
+  '901': ['提灯落とし', false, (p) => skm('jump', { c:p.fire, fx:skmFx('fall', 'orb', 1, { s:2.4, h:p.fh }), over:'boom', burst:'spark', form:'fire' })],   // 大きな提灯が降ってくる
+  '902': ['陽炎', true, (p) => skm('warp', { c:p.blue, over:'claw', burst:'spark', hit2:true, form:'slash' })],                                         // 青い分身(残像)が爪で裂く
+  '903': ['狐火', false, (p) => skm('cast', { c:p.blue, fx:skmFx('shot', 'fire', 3, { s:1.6, h:p.bh, step:70 }), burst:'spark', form:'fire' })],          // 青い火の玉が3つまっすぐ飛ぶ
+  '904': ['ひのこ', false, (p) => skm('cast', { c:p.fire, fx:skmFx('shot', 'fire', 7, { step:28, h:p.fh }), over:'boom', burst:'spark', form:'fire' })],   // 提灯の口から火を吹く
+  '905': ['超狐火', true, (p) => skm('cast', { c:p.blue, fx:skmFx('orbit', 'fire', 9, { s:1.4, h:p.bh }), over:'pillar', burst:'star', form:'fire' })],   // まわりに青い炎がたくさん浮かんで飛ぶ
+  '906': ['なめろう', false, (p) => skm('lick', { c:'gold', line:'tongue', over:'boom', burst:'spark' })],                                                 // 黄色い提灯から大きな舌
+  '907': ['火炎車', true, (p) => skm('roll', { c:p.fire, fx:skmFx('orbit', 'fire', 10, { s:1.3, h:p.fh }), over:'tornado', burst:'spark', form:'fire' })], // 炎の渦
+  '908': ['天河天翔', true, (p) => skm('float', { c:p.star, fx:skmFx('fall', 'meteor', 14, { w:150 }), over:'aurora', burst:'star', form:'light' })],      // 夜空から星の川(流れ星)が降る
+  '909': ['神狐蒼火', true, (p) => skm('gather', { c:p.blue, fx:skmFx('fall', 'fire', 12, { s:1.7, h:p.bh }), over:'pillar', burst:'spark', form:'fire' })], // 上から青い大きな炎が落ちて火柱
+  '910': ['炸裂気泡陣', true, (p) => skm('cast', { c:p.fire, fx:skmFx('orbit', 'orb', 10, { s:1.9, h:p.fh }), over:'boom', burst:'spark', form:'fire' })], // 燃える泡が次々にはじける
+});
+// 動きを SkillFxMotion の入れ物へ入れておく(名前は 'cardKyubi902' / 'cardOrihime902')
+Object.entries(CARD_KYUBI_PALETTE).forEach(([who, pal]) => Object.entries(CARD_KYUBI_LOOK).forEach(([no, [, big, make]]) => {
+  const norm = skmNormalize(make(pal), big);
+  SKILL_FX_SPEC_CACHE[`card${who}${no}`] = big ? { ...norm, uex:true } : { ...norm, impact:true };
+}));
 const CARD_MOTION_GAME_ID = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant', ghost: 'Ghost' });
 
 // ---- 技の重さの段(2026-10-31 社長「各カードアクションをもっと一新して」 → 案A) ----
@@ -60294,7 +60324,7 @@ const cardMotionBaseOf = (db, cardNo, mon) => {
   const c = cardOf(db, cardNo);
   if (!c || !cardIsAttackKind(c.kind) || c.user === 'breeder') return null;
   if (CARD_MOTION_BY_NO[c.no]) return CARD_MOTION_BY_NO[c.no];
-  if (CARD_MOTION_KYUBI[c.no]) return CARD_MOTION_KYUBI[c.no][mon && mon.no === 'C-951' ? 1 : 0];
+  if (CARD_KYUBI_LOOK[c.no]) return `card${mon && mon.no === 'C-951' ? 'Orihime' : 'Kyubi'}${c.no}`;
   if (c.kind === 'spe') { const sp = CARD_SPECIAL_MOTION_RULES.find(([re]) => re.test(c.name)); return sp ? sp[1] : 'cardSpeRing'; }
   // 1. モンヒロに同じ名前の技がある(スエゾーのかみつき・モッチーのもっちゃん など)
   const id = mon && (CARD_MOTION_GAME_ID[mon.species] || CARD_MOTION_GAME_ID[mon.main]);
