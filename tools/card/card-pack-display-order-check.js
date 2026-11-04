@@ -33,7 +33,9 @@ for (const pack of E.CARD_PACKS) {
     assert(sorted.every((r) => rows.find((x) => x.no === r.no) === r), '確率を含む行は元と同じ');
     assert.deepEqual(Array.from(E.cardPackDisplayRows(db, pack, [...rows].reverse()), (r) => r.no), Array.from(ids), '入力順に依存しない');
     const users = [...pack.species, 'any', 'breeder'];
-    const groups = sorted.map((r) => { const m = db.monsters[r.no]; return users.indexOf(m ? m.main || m.species : db.cards[r.no].user); });
+    // 弾に指名された混血(第8弾のミーア・スプーキー。メインの種族がその弾に無い)は、いちばん後ろ(users の数)にまとめて並ぶ
+    const groupOf = (key) => { const i = users.indexOf(key); return i < 0 ? users.length : i; };
+    const groups = sorted.map((r) => { const m = db.monsters[r.no]; return groupOf(m ? m.main || m.species : db.cards[r.no].user); });
     assert(groups.every((v, i) => i === 0 || groups[i - 1] <= v), '血統はパックの順');
     if (kind === 'mon') {
       const mons = sorted.map((r) => db.monsters[r.no]);

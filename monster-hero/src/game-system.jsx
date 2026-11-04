@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 569b1031b6de014b
+// generated-sha256: 1b3ac4b6bd7f455a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -59914,7 +59914,7 @@ const CARD_RULE_PAGES = Object.freeze([
 //
 // 1パックの中身(どの弾も同じ): 8枚・300ビートP(5パックまとめて 1,350)。技などの枠7・モンスターの枠1(最後にめくる)
 // 技などの枠: その弾の「準備中でない」カード(その弾の種族の技・配った全モンスター/ブリーダーのカード)から同じ確率で1枚
-// モンスターの枠: まずレア度(第1〜3・5・7弾 通常85%/キラ12%/別絵キラ3%・第4・6・8弾 通常85%/キラ15%)、そのレア度のモンスターから同じ確率で1枚
+// モンスターの枠: まずレア度(第1〜3・5・7・8弾 通常85%/キラ12%/別絵キラ3%・第4・6弾 通常85%/キラ15%。第8弾の別絵キラはミーア・スプーキー(2026-11-04))、そのレア度のモンスターから同じ確率で1枚
 //   (「まだ持っていない種族を2倍」は社長の決めでなくした。混血はキラの無い通常のモンスターとして通常に入る)
 // 天井: その弾のパックでキラも別絵キラも出ないまま7パック開けたら、8パック目のモンスターの枠はキラ以上(弾ごとに数える)
 // だぶり(自動でビートPへ): 技カードは4枚目から1枚 5 / モンスターは2枚目から 50(キラ 100・別絵キラ 200)/ 混血も 50
@@ -59930,10 +59930,12 @@ const CARD_PACKS = Object.freeze([
   { id: 'p5', no: 5, species: ['plant', 'dragon', 'jell'], color: '#22c55e' },
   { id: 'p6', no: 6, species: ['mew', 'worm', 'durahan'], color: '#a855f7' },
   { id: 'p7', no: 7, species: ['zilla', 'metalner', 'joker', 'kyubi'], color: '#14b8a6' }, // キュービ(とオリヒメ)は 2026-11-04 に足した(社長)
-  { id: 'p8', no: 8, species: ['arrowhead', 'centaur', 'colorpandora'], color: '#ec4899' },
+  // ミーア(C-069・ピクシー×？？？)・スプーキー(C-070・ゴースト×？？？)は、メインの種族の弾(第2弾・第4弾)ではなく第8弾に入れる(2026-11-04 社長。
+  //   第8弾の袋の絵に描かれているため)。hybrids は「この混血はこの弾」の指名(元の番号。キラ・別絵キラも同じ弾)
+  { id: 'p8', no: 8, species: ['arrowhead', 'centaur', 'colorpandora'], hybrids: ['C-069', 'C-070'], color: '#ec4899' },
 ].map((p) => Object.freeze({
-  ...p, name: `第${p.no}弾パック`, price: 300, bundle: Object.freeze({ n: 5, price: 1350 }), tech: 7, mon: 1,
-  rarity: Object.freeze((p.no <= 3 || p.no === 5 || p.no === 7) ? { normal: 85, kira: 12, alt: 3 } : { normal: 85, kira: 15, alt: 0 }), pity: true,
+  ...p, hybrids: Object.freeze(p.hybrids || []), name: `第${p.no}弾パック`, price: 300, bundle: Object.freeze({ n: 5, price: 1350 }), tech: 7, mon: 1,
+  rarity: Object.freeze((p.no <= 3 || p.no === 5 || p.no === 7 || p.no === 8) ? { normal: 85, kira: 12, alt: 3 } : { normal: 85, kira: 15, alt: 0 }), pity: true,
 })));
 // 全モンスター(any)・ブリーダー(breeder)のカードの配り先(37枚。どの弾も50種前後になるよう、番号の若い順に半分ずつ配った)
 // 全体カード15枚(F。2026-10-25 カード部デッキくんの表)は、種類の少ない弾から埋めて、どの弾も55種にそろえた
@@ -59958,9 +59960,11 @@ const cardPackOf = (id) => CARD_PACKS.find((p) => p.id === id) || null;
 const cardMonRarity = (m) => (!m || !m.variant ? 'normal' : /別絵キラ/.test(m.variant) ? 'alt' : /キラ/.test(m.variant) ? 'kira' : 'normal');
 // そのカード(モンスター・技)がどの弾のパックから出るか(パックの id。出ないものは null)
 const cardPackIdOfSpecies = (species) => (CARD_PACKS.find((p) => p.species.includes(species)) || {}).id || null;
+// 混血は、弾の指名(CARD_PACKS の hybrids)があればその弾、無ければメインの種族の弾。species は「hybrid:元の番号」(キラ・別絵キラも同じ)
+const cardPackIdOfHybrid = (m) => { const base = String(m.species).replace(/^hybrid:/, ''); return (CARD_PACKS.find((p) => p.hybrids.includes(base)) || {}).id || cardPackIdOfSpecies(m.main); };
 const cardPackIdOf = (db, no) => {
   const m = db.monsters[no];
-  if (m) return cardPackIdOfSpecies(String(m.wave) === 'hybrid' ? m.main : m.species);
+  if (m) return String(m.wave) === 'hybrid' ? cardPackIdOfHybrid(m) : cardPackIdOfSpecies(m.species);
   const c = db.cards[no];
   if (!c) return null;
   if (c.user === 'any' || c.user === 'breeder') return (Object.entries(CARD_PACK_SHARED).find(([, list]) => list.includes(no)) || [])[0] || null;
