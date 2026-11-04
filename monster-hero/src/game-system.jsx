@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 52cc8966cc88d785
+// generated-sha256: 61812bbd37134afd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57085,9 +57085,11 @@ const cardAiPickIndex = (weights, rand) => {
   return weights.length - 1;
 };
 // 好きなモンスターの候補(主血統がその種族のもの。通常・キラ・別絵キラ・混血/派生)
+// 好きな子をもう1つの血統からも選ぶ助手(2026-11-04 社長: ソラシドはキュービ推しなので、キュービ・オリヒメも好きな子に入れる)
+const CARD_AI_FAVORITE_EXTRA = Object.freeze({ sorashido: ['kyubi'] });
 const cardAiFavoriteCandidates = (db, who) => {
-  const fav = CARD_AI_FAVORITE[who] || CARD_AI_FAVORITE.mua;
-  return Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && (String(m.wave) === 'hybrid' ? m.main === fav : m.species === fav)).map((m) => m.no).sort();
+  const favs = [CARD_AI_FAVORITE[who] || CARD_AI_FAVORITE.mua, ...(CARD_AI_FAVORITE_EXTRA[who] || [])];
+  return Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && favs.some((fav) => (String(m.wave) === 'hybrid' ? m.main === fav : m.species === fav))).map((m) => m.no).sort();
 };
 // モンスターの弾(混血・派生は主の種族の弾)。好きな子の技は、この弾まで使える
 //   card を渡すと、そのカードを見る弾: 混血の防御・回避はサブの種族の弾(サブが？？？の子はメインのまま)

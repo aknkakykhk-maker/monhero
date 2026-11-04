@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4ed5484c7b3b7944
+// source-sha256: a959028b041609a1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -94778,9 +94778,12 @@ const cardAiPickIndex = (weights, rand) => {
   }
   return weights.length - 1;
 };
+const CARD_AI_FAVORITE_EXTRA = Object.freeze({
+  sorashido: ['kyubi']
+});
 const cardAiFavoriteCandidates = (db, who) => {
-  const fav = CARD_AI_FAVORITE[who] || CARD_AI_FAVORITE.mua;
-  return Object.values(db.monsters).filter(m => m.ready !== false && !m.dexOnly && (String(m.wave) === 'hybrid' ? m.main === fav : m.species === fav)).map(m => m.no).sort();
+  const favs = [CARD_AI_FAVORITE[who] || CARD_AI_FAVORITE.mua, ...(CARD_AI_FAVORITE_EXTRA[who] || [])];
+  return Object.values(db.monsters).filter(m => m.ready !== false && !m.dexOnly && favs.some(fav => String(m.wave) === 'hybrid' ? m.main === fav : m.species === fav)).map(m => m.no).sort();
 };
 const cardAiMonWave = (db, m, card) => {
   if (String(m.wave) !== 'hybrid') return Number(m.wave) || 1;
