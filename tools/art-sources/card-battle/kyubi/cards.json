@@ -8,6 +8,16 @@
       "life": 7,
       "img": "C-K01.jpg",
       "display_no": "C-◆01"
+    },
+    {
+      "no": "C-901S",
+      "name": "キュービ",
+      "type": "空中",
+      "life": 7,
+      "img": "C-K01S.jpg",
+      "variant": "キラ",
+      "display_no": "C-◆01S",
+      "name_source": "キュービのキラ(2026-11-05 社長の追加分 kyubi-2026-11-05-fix/kira/C-K01S)。ライフ・特徴・技は通常版と同じ"
     }
   ],
   "skills": [
