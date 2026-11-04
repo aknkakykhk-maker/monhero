@@ -861,5 +861,15 @@ const Audio_ = (() => {
       masterOut.gain.linearRampToValueAtTime(on || videoHold ? 0 : 1, at + (on ? 2.5 : 0.25));
     } catch (e) { masterOut.gain.value = on || videoHold ? 0 : 1; }
   };
-  return { setVideoHold, setStoryEndFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  // お話の始まり(題字の幕開け)では、音を 0 から 2秒かけて上げる(2026-11-04)。終わりの札(setStoryEndFade)と対
+  const setStoryOpenFade = () => {
+    if (!masterOut || !audioCtx || videoHold) return;
+    try {
+      const at = audioCtx.currentTime;
+      masterOut.gain.cancelScheduledValues(at);
+      masterOut.gain.setValueAtTime(0, at);
+      masterOut.gain.linearRampToValueAtTime(1, at + 2);
+    } catch (e) { masterOut.gain.value = 1; }
+  };
+  return { setVideoHold, setStoryEndFade, setStoryOpenFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();
