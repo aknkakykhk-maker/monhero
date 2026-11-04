@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e42ce0b8b8ca9e14
+// generated-sha256: 31f36911107ef42c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -62084,6 +62084,19 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   }, [st.winner]);
 
   const me = st.players[CARD_ME];
+  // 手札に出す消費ガッツ(2026-11-04 社長 案A「天河天翔の −2 が働いていないように見える」)。
+  //   場の全体カード(師匠のまなざし +1・ホリィの声援 −1)と、使う子の割引(天河天翔)を入れた数。使える子が何体かいるときは、いちばん軽くなる子の数。
+  //   印刷された数と違うときは色を変える(軽い … 緑 / 重い … 赤)。計算は払うときと同じ 82 の cardActionCost / cardGuardCost
+  const handCostOf = (c, i) => {
+    if (!c || !Number.isFinite(c.guts)) return null;
+    try {
+      if (cardIsGuardKind(c.kind)) return cardGuardCost(st, c);
+      if (!cardIsAttackKind(c.kind) || cardHasEff(c, 'attach')) return cardFieldCostOf(st, c.guts);
+      const users = me.mons.map((m, mi) => (cardUsableBy(c, m) ? mi : -1)).filter((mi) => mi >= 0);
+      if (!users.length || c.user === 'breeder') return cardActionCost(db, st, CARD_ME, me.hand, [i]);
+      return Math.min(...users.map((mi) => cardActionCost(db, st, CARD_ME, me.hand, [i], mi)));
+    } catch (_) { return null; }
+  };
   const opp = st.players[CARD_CPU];
   const decider = cardDeciderOf(st);
   const myTurn = !replay && !watch && st.winner === null && decider === CARD_ME;
@@ -62880,6 +62893,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         {handOrder.map((i) => {
           const no = me.hand[i];
           const c = cardOf(db, no);
+          const cost = handCostOf(c, i);
+          const costTxt = c ? `ガッツ${cost === null ? c.guts : cost}` : 'ガッツ-';
+          const costCls = cost === null || !c || cost === c.guts ? 'text-amber-200' : cost < c.guts ? 'text-emerald-300' : 'text-rose-300';
           const on = handUsable(i);
           const up = (sel && sel.hand === i) || picks.includes(i) || pickSet.includes(i);
           // 組み合わせ: 押した札は「選んだ」、自分で足した札は「足した」、いっしょに出せる札は緑に光って「候補」(押すまで上がらない)
@@ -62898,13 +62914,13 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
               {!(replay && boardFit >= 3) && <div className={`mt-0.5 w-full rounded-md bg-black/60 ${handTiny ? 'py-px' : 'py-0.5'} text-center leading-tight`}>
                 <CardNameFit name={c ? c.name : no} size={handLarge ? (compact ? 12 : 13) : compact ? 10 : 11} className="font-bold leading-tight" twoLine tall={handLongName}/>
                 {handTiny ? <>
-                  <CardNameFit name={`ガッツ${c ? c.guts : '-'}`} size={10} className="font-extrabold leading-[1.1] text-amber-200"/>
+                  <CardNameFit name={costTxt} size={10} className={`font-extrabold leading-[1.1] ${costCls}`}/>
                   <CardNameFit name={cardCaption(c)} size={10} className="font-extrabold leading-[1.1] text-amber-200"/>
                 </> : compact ? <>
-                  <span className={`block ${handLarge ? 'text-[12px]' : 'text-[10px]'} font-extrabold leading-tight text-amber-200`}>ガッツ{c ? c.guts : '-'}</span>
+                  <span data-card-hand-cost={i} className={`block ${handLarge ? 'text-[12px]' : 'text-[10px]'} font-extrabold leading-tight ${costCls}`}>{costTxt}</span>
                   <span className={`block whitespace-nowrap ${handLarge ? 'text-[12px]' : 'text-[10px]'} font-extrabold leading-tight text-amber-200`}>{cardCaption(c)}</span>
                 </> : <>
-                  <span className={`block ${handLarge ? 'text-[13px]' : 'text-[11px]'} font-extrabold text-amber-200`}>ガッツ{c ? c.guts : '-'}</span>
+                  <span data-card-hand-cost={i} className={`block ${handLarge ? 'text-[13px]' : 'text-[11px]'} font-extrabold ${costCls}`}>{costTxt}</span>
                   <span className={`block ${handLarge ? 'text-[13px]' : 'text-[11px]'} font-extrabold text-amber-200`}>{cardCaption(c)}</span>
                 </>}
               </div>}
