@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8b6f91b82c145bef
+// generated-sha256: f9d2d11f87fb6865
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -55015,6 +55015,9 @@ const loadAssistantChatMemoFor = async (assistantId) => {
 //         ★守りで持ちょうが変わったら、当てる直前に「当たるか」を見直す(当たらなければ0)
 //         ---- 区切り6: 同時に2枚・ダメージの数え方 ----
 //         pair(dmg) 同じ名前を2枚同時に出したらdmg / requires(names) その札を全部一緒に出すときだけ(払うのはこの札のガッツだけ)/
+//         toGutsOnHit ダメージを与えたらガッツへ(ひのこ) / safeOnHit 当てた子は次の自分の番までダメージ0(陽炎) / gutsFromDiscard(n) 当てたら捨て札からランダムに n 枚をガッツへ(なめろう) /
+//         nextOwnCost(n,kinds) 当てた子が次に使うその種類の技のガッツ −n(天河天翔・重ねない・KO で消える。mons[].costDown) /
+//         守り: toGutsAfterUse 使ったら捨て札でなくガッツへ(九重神眼) / 特殊: gutsFromDiscardNow(n) 捨て札からランダムに n 枚をガッツへ(霊魂操作)
 //         returnOnHit ダメージを与えたら手札へ戻る / split ダメージを相手に割り振る(act.split … 相手の3体ぶんの点)/
 //         bonusDiscard(user) 捨て札のその種族の攻撃の技の枚数を足す / bonusLost 減ったライフのぶんを足す / mimic(attach) どの種族のちから技でもこの子が出せる
 //         tossBonus 使うときに手札を好きな枚数捨て、その枚数をダメージに足す(act.toss … 捨てる手札の番号。0枚でもよい。カード投げ)
@@ -55166,6 +55169,15 @@ const cardBeginTurn = (st) => {
   }
 };
 
+// 捨て札からランダムに n 枚をガッツへ(足りなければある分だけ)。選ぶのは持ち主の種(players[p].rng)。マルチの2台で同じ札になる
+const cardDiscardToGuts = (st, p, n) => {
+  const me = st.players[p];
+  let k = 0;
+  let s = Number.isFinite(me.rng) ? me.rng : (st.seed || 1);
+  for (; k < n && me.discard.length; k++) { const r = cardRngNext(s); s = r.s; const i = Math.floor(r.v * me.discard.length); me.guts.push(me.discard.splice(i, 1)[0]); }
+  me.rng = s;
+  return k;
+};
 const cardPayGuts = (st, p, n) => {
   const me = st.players[p];
   for (let i = 0; i < n; i++) me.discard.push(me.guts.pop());
@@ -55206,11 +55218,14 @@ const cardTakeFromHand = (st, p, idxs) => {
 };
 
 // 攻撃の総ガッツ(付ける札も含む)。技のぶん(組の札も)に、付けた札の「ガッツ-n・半分・0」と友情の証を効かせてから、付けた札のぶんを足す
-const cardActionCost = (db, st, p, hand, idxs) => {
+const cardActionCost = (db, st, p, hand, idxs, mi = null) => {
   const cards = idxs.map((i) => cardOf(db, hand[i])).filter(Boolean);
   const att = cards.filter((c) => cardHasEff(c, 'attach'));
   const core = cards.filter((c) => !cardHasEff(c, 'attach'));
   let main = core.reduce((s, c) => s + (c.guts || 0), 0);
+  // 天河天翔(キュービ): 技を使う子が持つ割引。その子が次に使う指定の種類の技だけ −n(0より下にしない)
+  const cd = Number.isInteger(mi) && mi >= 0 && st && st.players[p] && st.players[p].mons[mi] ? st.players[p].mons[mi].costDown : null;
+  if (cd && core[0] && Array.isArray(cd.kinds) && cd.kinds.includes(core[0].kind)) main = Math.max(0, main - cd.n);
   if (core[0] && cardHasEff(core[0], 'requires')) main = core[0].guts || 0; // コンビネーション: 一緒に出す2枚のガッツは無視
   const fs = st && st.freeSpe;
   if (core[0] && core[0].kind === 'spe' && core[0].user !== 'breeder' && fs && fs.p === p && fs.turn === st.turn) main = 0;
@@ -55493,7 +55508,7 @@ const cardAttackOptions = (db, st) => {
         return out2;
       };
       withAttach.forEach((idxs) => {
-        const cost = cardActionCost(db, st, p, me.hand, idxs);
+        const cost = cardActionCost(db, st, p, me.hand, idxs, mi);
         if (cost > guts) return;
         if (cardHasEff(card, 'tossBonus')) {
           tossSets(idxs).forEach((toss) => { if (cardFieldBanned(db, st, p, mi, card, idxs, toss.length)) return; opp.mons.forEach((t, j) => { if (cardCanTarget(card, t, st.turn) && cardTauntOk(st, p, [{ p: cardOther(p), m: j }], false)) out.push({ type: 'attack', mon: mi, hand: idxs, target: { p: cardOther(p), m: j }, toss }); }); });
@@ -55677,7 +55692,7 @@ const cardStartAttack = (db, st, act) => {
   const isBreeder = act.type === 'breeder';
   const mainNo = me.hand[act.hand[0]];
   const main = cardOf(db, mainNo);
-  const cost = cardActionCost(db, st, p, me.hand, act.hand);
+  const cost = cardActionCost(db, st, p, me.hand, act.hand, isBreeder ? null : act.mon);
   // カード投げ: 捨てる手札(技の札と重ならない番号だけ)。技の札を取ったあとの番号に直して取る
   const tossIdx = cardHasEff(main, 'tossBonus') && Array.isArray(act.toss) ? [...new Set(act.toss)].filter((i) => Number.isInteger(i) && i >= 0 && i < me.hand.length && !act.hand.includes(i)) : [];
   const used = cardTakeFromHand(st, p, act.hand);
@@ -55689,6 +55704,7 @@ const cardStartAttack = (db, st, act) => {
   const mon = mi >= 0 ? me.mons[mi] : null;
   if (isBreeder || used.some((n) => { const c = cardOf(db, n); return c && c.user === 'breeder'; })) me.breederUsed = true; // 影縛りなどブリーダーの札を付けたときも1枚に数える
   if (!isBreeder) { mon.attacks += 1; mon.lastCard = mainNo; }
+  if (mon && mon.costDown && Array.isArray(mon.costDown.kinds) && mon.costDown.kinds.includes(main.kind)) mon.costDown = null; // 天河天翔の割引は、その種類の技を1回使ったら終わり
   cardLog(st, cardUseText(db, st, p, mi, used), { kind: 'use', p, cards: used });
   cardEvent(st, { t: 'use', p, mon: mi, cards: used, target: act.target || null });
   if (tossed.length) { me.discard.push(...tossed); cardLog(st, `${me.name}は手札を${tossed.length}枚捨てた`); }
@@ -55790,6 +55806,14 @@ const cardResolveTarget = (db, st) => {
     const gl = cardEff(main, 'gutsLossOnHit');
     if (gl && t.p !== pd.attacker && !pd.noGutsLoss) { const k = cardLoseGuts(st, t.p, gl.n); if (k) cardLog(st, `${st.players[t.p].name}はガッツを${k}失った`); }
     if (cardHasEff(main, 'stunOnHit')) { target.stunTurn = st.turn + 1; cardLog(st, `${target.name}は次のターン攻撃できない`); }
+    // なめろう(キュービ): 相手のガッツを減らしたあと、自分の捨て札からランダムに n 枚をガッツへ(相手が減少を無効にしても行う・1回の攻撃で1度だけ)
+    const gd = cardEff(main, 'gutsFromDiscard');
+    if (gd && t.p !== pd.attacker && !pd.gutsFromDiscardDone) { pd.gutsFromDiscardDone = true; const k = cardDiscardToGuts(st, pd.attacker, gd.n); if (k) cardLog(st, `${st.players[pd.attacker].name}は捨て札から${k}枚をガッツにした`); }
+    // 陽炎(キュービ): 当てた子は、次の自分のターンまでダメージを受けない(ぬいぐるみと同じ印)
+    if (cardHasEff(main, 'safeOnHit') && t.p !== pd.attacker && atkMon && !atkMon.ko && !(atkMon.safeUntil >= st.turn + 1)) { atkMon.safeUntil = st.turn + 1; cardLog(st, `${atkMon.name}は次の自分のターンまでダメージを受けない`); }
+    // 天河天翔(キュービ): 当てた子が次に使う指定の種類の技の払うガッツ −n(重ねがけしない・期限なし・KO で消える)
+    const nc = cardEff(main, 'nextOwnCost');
+    if (nc && t.p !== pd.attacker && atkMon && !atkMon.ko && !(atkMon.costDown && atkMon.costDown.n >= nc.n)) { atkMon.costDown = { kinds: nc.kinds || ['int'], n: nc.n }; cardLog(st, `${atkMon.name}が次に使う${(nc.kinds || ['int']).includes('pow') ? 'ちから' : 'かしこさ'}技のガッツが${nc.n}少なくなる`); }
     // ドレイン: 「与えたダメージ分」は、実際に減ったライフ(残りライフ1の子を倒したら1。2026-10-27 社長が案Aに決めた)
     if (cardHasEff(main, 'drain') && atkMon && !atkMon.ko) { const h = Math.min(lifeBefore - target.life, atkMon.max - atkMon.life); atkMon.life += h; if (h) cardLog(st, `${atkMon.name}はライフを${h}回復`); }
   }
@@ -55812,7 +55836,7 @@ const cardResolveTarget = (db, st) => {
 
 const cardKo = (st, p, m) => {
   const mon = st.players[p].mons[m];
-  mon.ko = true; mon.life = 0;
+  mon.ko = true; mon.life = 0; mon.costDown = null; // 天河天翔の割引も消える
   cardLog(st, `${mon.name}はKOされた`, { kind: 'ko' });
   cardEvent(st, { t: 'ko', p, m });
 };
@@ -55837,7 +55861,13 @@ const cardFinishAttack = (db, st) => {
     if (atkMon.life <= 0) cardKo(st, pd.attacker, pd.mon);
   }
   // ポン拳: ダメージを与えたら、この札は捨て札にならず手札へ戻る
-  if (cardHasEff(main, 'returnOnHit') && pd.results.some((r) => r.dmg > 0 && r.p !== pd.attacker)) {
+  if (cardHasEff(main, 'toGutsOnHit') && pd.results.some((r) => r.dmg > 0 && r.p !== pd.attacker)) {
+    // ひのこ・火炎車(キュービ): ダメージを与えたら、この札は捨て札にならずガッツへ
+    const k = pd.used.indexOf(pd.main);
+    me.discard.push(...pd.used.filter((_, i) => i !== k));
+    me.guts.push(pd.main);
+    cardLog(st, `「${main.name}」はガッツになった`);
+  } else if (cardHasEff(main, 'returnOnHit') && pd.results.some((r) => r.dmg > 0 && r.p !== pd.attacker)) {
     const k = pd.used.indexOf(pd.main);
     me.discard.push(...pd.used.filter((_, i) => i !== k));
     me.hand.push(pd.main);
@@ -55860,7 +55890,8 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
   const me = st.players[p];
   const opp = st.players[cardOther(p)];
   (card.effects || []).forEach((e) => {
-    if (e.t === 'draw') { const k = cardDrawN(st, p, e.n); cardLog(st, `${me.name}は${k}枚引いた`); } // 山札が足りなければ引けた枚数を書く(2026-10-27 総点検D)
+    if (e.t === 'draw') { const k = cardDrawN(st, p, e.n); cardLog(st, `${me.name}は${k}枚引いた`); }
+    if (e.t === 'gutsFromDiscardNow') { const k = cardDiscardToGuts(st, p, e.n); cardLog(st, `${me.name}は捨て札から${k}枚をガッツにした`); } // 霊魂操作(キュービ) // 山札が足りなければ引けた枚数を書く(2026-10-27 総点検D)
     if (e.t === 'peekHand') { cardEvent(st, { t: 'peek', p, hand: opp.hand.slice() }); cardLog(st, `${me.name}は相手の手札を見た`); }
     if (e.t === 'discardOpp') { st.pendingDiscard = { p: cardOther(p), n: Math.min(e.n, opp.hand.length) }; if (!st.pendingDiscard.n) st.pendingDiscard = null; }
     if (e.t === 'heal' && target) { const m = me.mons[target.m]; const h = Math.min(e.n, m.max - m.life); m.life += h; cardEvent(st, { t: 'heal', p, m: target.m, n: h }); cardLog(st, `${m.name}のライフが${h}回復`); }
@@ -55943,7 +55974,7 @@ const cardApplyGuard = (db, st, act) => {
   const c = cardOf(db, no);
   cardTakeFromHand(st, q, [act.hand]);
   cardPayGuts(st, q, cardGuardCost(st, c));
-  me.discard.push(no);
+  if (cardHasEff(c, 'toGutsAfterUse')) { me.guts.push(no); cardLog(st, `「${c.name}」はガッツになった`); } else me.discard.push(no); // 九重神眼(キュービ): 使ったら捨て札でなくガッツへ(同じ相手ターンのうちにまた使える)
   const user = me.mons[act.mon];
   user.guardTurn = st.turn; // 挟み撃ちが見る
   cardLog(st, `${user.name}の「${c.name}」`, { kind: 'guard', p: q, cards: [no] });
@@ -56279,7 +56310,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
   const { level } = policy;
   const habit = cardAiHabitNow(db, st, p, policy);
   const main = cardOf(db, me.hand[opt.hand[0]]);
-  const cost = cardActionCost(db, st, p, me.hand, opt.hand);
+  const cost = cardActionCost(db, st, p, me.hand, opt.hand, opt.type === 'attack' ? opt.mon : null);
   let score = 0;
   let hurts = true; // 相手にダメージが入る見込み(攻めの技だけ下で見直す)
   if (main.kind === 'fld') return cardAiScoreField(db, st, p, main, cost, habit) + (policy.fields && policy.fields.includes(main.name) && !(st.field && st.field.p === p) ? CARD_AI_FIELD_LIKE : 0);
@@ -56302,6 +56333,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'emerge') { const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null; const to = cardMonsterOf(db, opt.emerge || e.to); score += 2 + (m0 && to ? (to.life - m0.life) * 0.3 : 0); }
       if (e.t === 'fuse' && opt.fuse) { const to = cardMonsterOf(db, opt.fuse.no); score += to.life - (me.mons[opt.fuse.a].life + me.mons[opt.fuse.b].life) * 0.8 - 1; }
       // 区切り5
+      if (e.t === 'gutsFromDiscardNow') score += Math.min(e.n, me.discard.length) * (me.guts.length < 4 ? 0.6 : 0.3); // 霊魂操作: 捨て札からガッツを作る(ガッツが少ないほど得)
       if (e.t === 'safe') { const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null; score += m0 && m0.life <= Math.ceil(m0.max / 2) ? 1.4 : 0.4; }
       if (e.t === 'form') score += 0.2;
       // 区切り4: 山札・手札・捨て札・ガッツ
@@ -56396,6 +56428,13 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       // ダメージが0になる技は、「当たれば〜」の効果も出ないので数えない
       if (gl && t.p !== p && d > 0) score += (1 - ev) * (gl.n === 'all' ? st.players[t.p].guts.length : Math.min(gl.n, st.players[t.p].guts.length)) * 0.8 * habit.disrupt;
       if (cardHasEff(main, 'stunOnHit') && t.p !== p && d > 0) score += (1 - ev) * 1.2;
+      // キュービの当てたときの効き目(当たる見込みぶん)
+      if (t.p !== p && d > 0) {
+        if (cardHasEff(main, 'toGutsOnHit')) score += (1 - ev) * (main.guts || 0) * 0.35 * habit.saveGuts; // この札がガッツに戻る
+        if (cardHasEff(main, 'safeOnHit') && mon) score += (1 - ev) * (mon.life * 2 <= mon.max ? 1.4 : 0.6); // 次の自分のターンまでダメージ0
+        const gfd = cardEff(main, 'gutsFromDiscard'); if (gfd) score += (1 - ev) * Math.min(gfd.n, me.discard.length) * 0.35 * habit.saveGuts; // 捨て札からガッツ
+        if (cardHasEff(main, 'nextOwnCost') && mon) score += (1 - ev) * (me.hand.some((n2, j) => !opt.hand.includes(j) && (cardOf(db, n2) || {}).kind === 'int' && cardUsableBy(cardOf(db, n2), mon)) ? 0.8 : 0.3); // 次のかしこさ技が軽くなる
+      }
     });
     if (targets.length > 1) score *= 1 + 0.15 * (habit.area - 1);
     if (cost >= 5) score *= 1 + 0.12 * (habit.big - 1);
@@ -56535,6 +56574,7 @@ const cardAiChooseGuard = (db, st, policy, rand, gopt = null) => {
     const ko = target.life <= dmg && target.life > after ? 5 : 0;
     const lostAll = cardHasEff(c, 'selfGutsAll') ? me.guts.length - cost : 0; // 緊急回避: 残りのガッツも全部なくなる
     let v = extra + saved * (0.6 + 0.4 * habit.keepGuard) + ko - (cost + lostAll) * 0.35 * habit.saveGuts + back * 0.6 + (cardAiAceHit(policy, me.hand, o.hand) ? 1.5 : 0);
+    if (cardHasEff(c, 'toGutsAfterUse')) v += 0.35 * habit.saveGuts; // 九重神眼: 使ったらガッツに戻る(1つ軽い)
     // ガッツをためる子でも、ライフの半分以上を減らす攻撃は守る(2026-10-29 社長 案B: ききが払うガッツ2の守りを見送っていた)
     if (!dies && habit.saveGuts >= 1.3 && Math.min(dmg, target.life) * 2 >= target.life && saved > 0) v += (cost + lostAll) * 0.35 * habit.saveGuts + 1;
     if (!dies && finishCost !== null && habit.finish >= 1.3 && me.guts.length - cost - lostAll < finishCost && me.guts.length >= finishCost) v -= 2;
@@ -56685,12 +56725,12 @@ const cardAttachUseless = (db, st, o) => {
   const main = cardOf(db, me.hand[o.hand[0]]);
   if (!main) return false;
   const targets = (cardHasEff(main, 'area') ? cardAreaTargets(st, p, o.mon, main) : o.target ? [o.target] : []).filter((t) => t.p !== p);
-  const cost = cardActionCost(db, st, p, me.hand, o.hand);
+  const cost = cardActionCost(db, st, p, me.hand, o.hand, o.type === 'attack' ? o.mon : null);
   return o.hand.slice(1).some((i) => {
     const c = cardOf(db, me.hand[i]);
     if (!c) return false;
     const effs = (c.effects || []).map((e) => e.t);
-    if (effs.length && effs.every((t) => CARD_COST_ONLY_EFFS.includes(t))) return cardActionCost(db, st, p, me.hand, o.hand.filter((x) => x !== i)) <= cost;
+    if (effs.length && effs.every((t) => CARD_COST_ONLY_EFFS.includes(t))) return cardActionCost(db, st, p, me.hand, o.hand.filter((x) => x !== i), o.type === 'attack' ? o.mon : null) <= cost;
     if (cardHasEff(c, 'attachNoEvadeHybrid') && targets.length && !targets.some((t) => !cardIsPureMon(st.players[t.p].mons[t.m]))) return true;
     return false;
   });
@@ -56961,6 +57001,7 @@ const cardAiCardValue = (card, habit) => {
     let v = eff('evade') ? 2.2 : eff('reduceAll') ? 2.4 : eff('reflect') ? 2.3 : eff('cover') ? 1.4 : eff('endure') ? 1.1 : eff('redirect') ? 1.0 : eff('shield') ? 1.0
       : eff('evadeAll') ? 1.2 : eff('noGutsLoss') ? 0.8 : eff('takeMult') ? 0.5 : (eff('liftAllies') || eff('waterAll')) ? 0.6 : 1.6;
     const re = cardEff(card, 'reduce'); if (re) v = 1 + re.n * 0.4;
+    if (eff('toGutsAfterUse')) v += 0.35; // 九重神眼: 使ったらガッツに戻る(払うガッツが1つ軽いのと同じ)
     if (eff('selfGutsAll')) v -= 1.4; // 緊急回避: 守れても、ためたガッツを全部なくす
     return (v - card.guts * 0.35) * habit.keepGuard;
   }
@@ -56987,6 +57028,7 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'rage') v += 0.6;
       if (e.t === 'choose') v += e.then === 'toHand' ? 0.8 : 0.3;
       if (e.t === 'safe') v += 0.8;
+      if (e.t === 'gutsFromDiscardNow') v += 0.4 * e.n; // 霊魂操作: 捨て札からガッツを作る
       if (e.t === 'revive') v += 0.3;
       if (e.t === 'possess') v += 0.2;
       if (e.t === 'cocoon') v -= 1;
@@ -57014,6 +57056,10 @@ const cardAiCardValue = (card, habit) => {
   if (eff('bonusDiscard') || eff('bonusLost')) dmg += 3;
   if (eff('tossBonus')) dmg += 1.5; // カード投げ: ふつうは手札を1〜2枚捨てて使う
   if (eff('returnOnHit')) dmg += 0.8;
+  if (eff('toGutsOnHit')) dmg += 0.6; // ひのこ・火炎車: 当たればガッツに戻る
+  if (eff('safeOnHit')) dmg += 0.8;    // 陽炎: 当てたら次の自分のターンまでダメージ0
+  const gfd = cardEff(card, 'gutsFromDiscard'); if (gfd) dmg += 0.4 * gfd.n; // なめろう: 捨て札からガッツ
+  if (eff('nextOwnCost')) dmg += 0.6;  // 天河天翔: 次のかしこさ技が軽くなる
   if (eff('halfOnEvade') || eff('noEvade')) dmg *= 1.3;
   if (eff('area')) dmg *= 1.6 * habit.area;
   const gl = cardEff(card, 'gutsLossOnHit'); if (gl) dmg += (gl.n === 'all' ? 2 : gl.n) * 0.7 * habit.disrupt * (1 + (habit.mill || 0));
@@ -57039,9 +57085,11 @@ const cardAiPickIndex = (weights, rand) => {
   return weights.length - 1;
 };
 // 好きなモンスターの候補(主血統がその種族のもの。通常・キラ・別絵キラ・混血/派生)
+// 好きな子をもう1つの血統からも選ぶ助手(2026-11-04 社長: ソラシドはキュービ推しなので、キュービ・オリヒメも好きな子に入れる)
+const CARD_AI_FAVORITE_EXTRA = Object.freeze({ sorashido: ['kyubi'] });
 const cardAiFavoriteCandidates = (db, who) => {
-  const fav = CARD_AI_FAVORITE[who] || CARD_AI_FAVORITE.mua;
-  return Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && (String(m.wave) === 'hybrid' ? m.main === fav : m.species === fav)).map((m) => m.no).sort();
+  const favs = [CARD_AI_FAVORITE[who] || CARD_AI_FAVORITE.mua, ...(CARD_AI_FAVORITE_EXTRA[who] || [])];
+  return Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && favs.some((fav) => (String(m.wave) === 'hybrid' ? m.main === fav : m.species === fav))).map((m) => m.no).sort();
 };
 // モンスターの弾(混血・派生は主の種族の弾)。好きな子の技は、この弾まで使える
 //   card を渡すと、そのカードを見る弾: 混血の防御・回避はサブの種族の弾(サブが？？？の子はメインのまま)
@@ -58411,7 +58459,7 @@ const cardTacticAttackFits = (db, st, act, o) => {
   switch (act.g) {
     case 'atk': return o.type === 'attack' || (o.type === 'breeder' && (main.damage || 0) > 0);
     case 'kind': return o.type === 'attack' && main.kind === { ちから: 'pow', かしこさ: 'int', 特殊: 'spe' }[v];
-    case 'cost': { if (o.type !== 'attack') return false; const g = cardActionCost(db, st, st.active, me.hand, o.hand); return v.startsWith('軽い') ? g <= 1 : v.startsWith('中') ? g >= 2 && g <= 3 : g >= cardTacticBigCost; }
+    case 'cost': { if (o.type !== 'attack') return false; const g = cardActionCost(db, st, st.active, me.hand, o.hand, o.mon); return v.startsWith('軽い') ? g <= 1 : v.startsWith('中') ? g >= 2 && g <= 3 : g >= cardTacticBigCost; }
     case 'reach': return o.type === 'attack' && (v === '全体攻撃' ? cardHasEff(main, 'area') : !cardHasEff(main, 'area'));
     case 'eff': return cards.some((c) => (CARD_TACTIC_EFF[v] || []).some((t) => cardHasEff(c, t)));
     case 'attach': return o.hand.length > 1 && cards.slice(1).some((c) => cardHasEff(c, 'attach'));
@@ -58522,7 +58570,7 @@ const cardTacticBaseAttack = (db, st, policy, knobs, ctx) => {
     if (o.type === 'attack' && ctx.skip.has(o.mon)) return false;
     if (ctx.noBreeder && (o.type === 'breeder' || o.hand.some((i) => (cardOf(db, me.hand[i]) || {}).user === 'breeder'))) return false;
     const e = effs(o);
-    if (knobs.light && o.type === 'attack' && cardActionCost(db, st, p, me.hand, o.hand) > 1) return false;
+    if (knobs.light && o.type === 'attack' && cardActionCost(db, st, p, me.hand, o.hand, o.mon) > 1) return false;
     if (knobs.safe && e.some((t) => /^selfDamage|^attachSelfIfHit$|^selfHurt$/.test(t)) && !cardAiWinsBy(db, st, o, p)) return false; // 当たれば勝ちの一撃は、堅実型でも打つ(2026-11-02 社長)
     if (knobs.noDraw && e.some((t) => ['draw', 'rush', 'deckToGuts', 'refresh', 'oppDraw'].includes(t))) return false;
     if (knobs.keepHand && me.hand.length - o.hand.length < knobs.keepHand) return false;
@@ -59847,7 +59895,7 @@ const CARD_PACKS = Object.freeze([
   { id: 'p4', no: 4, species: ['phoenix', 'monol', 'henger', 'ghost'], color: '#f97316' }, // ゴーストは 2026-10-27 に足した(第4弾だけ4種族・台帳 #204)
   { id: 'p5', no: 5, species: ['plant', 'dragon', 'jell'], color: '#22c55e' },
   { id: 'p6', no: 6, species: ['mew', 'worm', 'durahan'], color: '#a855f7' },
-  { id: 'p7', no: 7, species: ['zilla', 'metalner', 'joker'], color: '#14b8a6' },
+  { id: 'p7', no: 7, species: ['zilla', 'metalner', 'joker', 'kyubi'], color: '#14b8a6' }, // キュービ(とオリヒメ)は 2026-11-04 に足した(社長)
   { id: 'p8', no: 8, species: ['arrowhead', 'centaur', 'colorpandora'], color: '#ec4899' },
 ].map((p) => Object.freeze({
   ...p, name: `第${p.no}弾パック`, price: 300, bundle: Object.freeze({ n: 5, price: 1350 }), tech: 7, mon: 1,
@@ -61116,7 +61164,7 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
             <span className="rounded-md bg-amber-900 px-2 py-0.5">ガッツ{c.guts}</span>
             {c.damage !== null && c.damage !== undefined && <span className="rounded-md bg-rose-900 px-2 py-0.5">ダメージ{c.damage}</span>}
             <span className="rounded-md bg-slate-700 px-2 py-0.5">{cardUserLabel(db, c)}</span>
-            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{c.no}</span>
+            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{c.dispNo || c.no}</span>
           </div>
           {dexLine}
           {c.text && <p className="mt-2 text-[14px] font-bold leading-relaxed">{c.text}</p>}
@@ -61131,7 +61179,7 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
           <div className="mt-1 flex flex-wrap gap-1.5 text-[12px] font-bold">
             <span className="rounded-md bg-emerald-900 px-2 py-0.5">ライフ{m.life}</span>
             <span className="rounded-md bg-sky-900 px-2 py-0.5">{CARD_TYPE_LABEL[m.type]}</span>
-            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{m.no}</span>
+            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{m.dispNo || m.no}</span>
           </div>
           {dexLine}
           {m.dexOnly && <p data-card-dex-only className="mt-2 text-[12px] font-bold text-amber-300" style={JA_LABEL_STYLE}>{jaWrap('まだ手に入らないカードです(パックには入っていません)')}</p>}
@@ -65344,7 +65392,7 @@ const CardDex = ({ db, collection, onBack }) => {
                   {c && !c.ready && <span className="absolute left-0.5 top-0.5 rounded-md bg-slate-600 px-1 text-[9px] font-black text-white">準備中</span>}
                   {rare && <span data-card-dex-rare className="absolute left-0.5 top-0.5 rounded-md bg-amber-400 px-1 text-[9px] font-black text-slate-950">{rare}</span>}
                   <CardNameFit name={name} className={`mt-0.5 font-bold leading-tight ${have ? 'text-slate-100' : 'text-slate-500'}`}/>
-                  <span className="text-[9px] font-bold text-slate-500">No.{no}</span>
+                  <span className="text-[9px] font-bold text-slate-500">No.{(c && c.dispNo) || (m && m.dispNo) || no}</span>
                   {mode === 'sub' && m && String(m.wave) === 'hybrid' && m.main && <span data-card-dex-main={m.main} className="text-[9px] font-bold text-indigo-200">主 {spName[m.main] || m.main}</span>}
                 </button>
               );
