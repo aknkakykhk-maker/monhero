@@ -1245,8 +1245,7 @@ const cardAiFlexMode = (db, st, p) => {
 const cardAiHabitNow = (db, st, p, policy) => {
   const habit0 = policy.habit;
   // 山札の減り比べで負けそうなときは、守りの札を残すより攻めて、山札が切れる前に倒しにいく(山札切れ狙いもやめる)
-  const slow = habit0 && habit0.keepGuard >= CARD_AI_DECK_RACE_SLOW_KEEP;
-  const habit = habit0 && !policy.playerRole && cardAiDeckRaceLosing(st, p) ? slow ? { ...habit0, attack: 1.5, finish: 1.4, keepGuard: 0.5, saveGuts: 0.6, big: 1.0, mill: 0 } : { ...habit0, attack: (habit0.attack || 1) * CARD_AI_DECK_RACE_ATTACK, finish: (habit0.finish || 1) * CARD_AI_DECK_RACE_ATTACK, keepGuard: (habit0.keepGuard || 1) * CARD_AI_DECK_RACE_GUARD, mill: 0 } : habit0;
+  const habit = habit0 && !policy.playerRole && cardAiDeckRaceLosing(st, p) ? { ...habit0, attack: (habit0.attack || 1) * CARD_AI_DECK_RACE_ATTACK, finish: (habit0.finish || 1) * CARD_AI_DECK_RACE_ATTACK, keepGuard: (habit0.keepGuard || 1) * CARD_AI_DECK_RACE_GUARD, mill: 0 } : habit0;
   if (!habit || !habit.flex) return habit;
   const mode = cardAiFlexMode(db, st, p);
   if (mode === 'guard') return { ...habit, keepGuard: CARD_AI_FLEX_HIGH, saveGuts: CARD_AI_FLEX_HIGH };
@@ -1645,19 +1644,14 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
   // 山札の減り比べで負けそうなときは、手札の札を出すのに足りる分(いちばん重い札の払うガッツ)を超えてガッツをためない。
   //   ためすぎると、そのぶん次の番に多く引いて、山札が先に切れる(2026-11-04 社長「山札切れで先に負けそうなら融通を」)
   let race = 99;
-  if (!policy.playerRole && (policy.habit || {}).keepGuard >= CARD_AI_DECK_RACE_SLOW_KEEP && cardAiDeckRaceLosing(st, p)) {
-    const live = me.mons.filter((m) => !m.ko);
-    const costs = me.hand.map((n) => cardOf(db, n)).filter((c) => c && (c.user === 'breeder' || live.some((m) => cardUsableBy(c, m)))).map((c) => cardFieldCostOf(st, c.guts || 0));
-    race = Math.max(0, (costs.length ? Math.max(...costs) : 0) - me.guts.length);
-  }
+  if (!policy.playerRole && cardAiDeckRaceLosing(st, p)) race = 1; // 山札で負けているあいだは、ガッツにするのは1枚まで
   return { type: 'guts', hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, Math.min(race, policy.playerRole ? 99 : cardAiGutsCap(me))) };
 };
 // 山札の減り比べ(2026-11-04 社長「山札切れで先に負けそうなら融通を」): 自分の山札が相手より多くない(=先に山札が切れそう)か
-const CARD_AI_DECK_RACE_FROM = 30;   // 山札がこの枚数以下になったら、減り比べを見る
-const CARD_AI_DECK_RACE_MARGIN = 2;
+const CARD_AI_DECK_RACE_FROM = 45;   // 自分の山札がこの枚数以下で
+const CARD_AI_DECK_RACE_MARGIN = -1; // 相手より少ない(このままだと先に山札が切れて負けが決まる)とき、戦術カードの指示より、負けない動きを先にする
 const CARD_AI_DECK_RACE_ATTACK = 1.4;  // そのときの攻め・とどめの重み
 const CARD_AI_DECK_RACE_GUARD = 0.5;   // そのときの守りを残す重み
-const CARD_AI_DECK_RACE_SLOW_KEEP = 1.3; // 守りを残すくせがこれ以上の子(守り型のドラなど)は、減り比べのあいだガッツをためすぎない  // 自分の山札が相手より、これ以上多くないときは「負けそう」
 const cardAiDeckRaceLosing = (st, p) => {
   const me = st.players[p], op = st.players[cardOther(p)];
   return me.deck.length <= CARD_AI_DECK_RACE_FROM && me.deck.length <= op.deck.length + CARD_AI_DECK_RACE_MARGIN;

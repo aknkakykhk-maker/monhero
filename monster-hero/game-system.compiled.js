@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b2f1f47fe3b0a948
+// source-sha256: 709e8ebb54d81dd0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93133,16 +93133,7 @@ const cardAiFlexMode = (db, st, p) => {
 };
 const cardAiHabitNow = (db, st, p, policy) => {
   const habit0 = policy.habit;
-  const slow = habit0 && habit0.keepGuard >= CARD_AI_DECK_RACE_SLOW_KEEP;
-  const habit = habit0 && !policy.playerRole && cardAiDeckRaceLosing(st, p) ? slow ? {
-    ...habit0,
-    attack: 1.5,
-    finish: 1.4,
-    keepGuard: 0.5,
-    saveGuts: 0.6,
-    big: 1.0,
-    mill: 0
-  } : {
+  const habit = habit0 && !policy.playerRole && cardAiDeckRaceLosing(st, p) ? {
     ...habit0,
     attack: (habit0.attack || 1) * CARD_AI_DECK_RACE_ATTACK,
     finish: (habit0.finish || 1) * CARD_AI_DECK_RACE_ATTACK,
@@ -93634,21 +93625,16 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
   }
   const gm = cardFieldEff(st, 'fieldGutsMax');
   let race = 99;
-  if (!policy.playerRole && (policy.habit || {}).keepGuard >= CARD_AI_DECK_RACE_SLOW_KEEP && cardAiDeckRaceLosing(st, p)) {
-    const live = me.mons.filter(m => !m.ko);
-    const costs = me.hand.map(n => cardOf(db, n)).filter(c => c && (c.user === 'breeder' || live.some(m => cardUsableBy(c, m)))).map(c => cardFieldCostOf(st, c.guts || 0));
-    race = Math.max(0, (costs.length ? Math.max(...costs) : 0) - me.guts.length);
-  }
+  if (!policy.playerRole && cardAiDeckRaceLosing(st, p)) race = 1;
   return {
     type: 'guts',
     hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, Math.min(race, policy.playerRole ? 99 : cardAiGutsCap(me)))
   };
 };
-const CARD_AI_DECK_RACE_FROM = 30;
-const CARD_AI_DECK_RACE_MARGIN = 2;
+const CARD_AI_DECK_RACE_FROM = 45;
+const CARD_AI_DECK_RACE_MARGIN = -1;
 const CARD_AI_DECK_RACE_ATTACK = 1.4;
 const CARD_AI_DECK_RACE_GUARD = 0.5;
-const CARD_AI_DECK_RACE_SLOW_KEEP = 1.3;
 const cardAiDeckRaceLosing = (st, p) => {
   const me = st.players[p],
     op = st.players[cardOther(p)];
