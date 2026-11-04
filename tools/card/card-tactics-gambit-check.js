@@ -266,11 +266,14 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
   const L = (base, n) => { ci = 0; return E.cardTacticSmartLevel(F(base, n)); };
   // 2026-10-30 社長「戦術カードなしでエキスパートクラスで、そこから上がっていってマスター超え」(段の名前は本編のチャレンジモード)
   check('J 何も無ければ EXPERT(でたらめにしない)・効く戦術カード4枚で MASTER', L([], 0) === 'expert' && L([], 3) === 'expert' && L([], 4) === 'master');
-  check('J 基本1枚: 0〜3枚 EXPERT・4枚から MASTER(基本3枚でないと MASTER を超えない)', L(['tBalance'], 3) === 'expert' && L(['tBalance'], 4) === 'master' && L(['tBalance'], 15) === 'master');
-  check('J 基本2枚: MASTER', L(['tBalance', 'tBig'], 0) === 'master' && L(['tBalance', 'tBig'], 15) === 'master');
+  check('J 基本1枚: 0〜3枚 EXPERT・4枚から MASTER(基本2枚でないと MASTER を超えない)', L(['tBalance'], 3) === 'expert' && L(['tBalance'], 4) === 'master' && L(['tBalance'], 15) === 'master');
+  // 2026-11-04 社長 案B: GRAND MASTER・HELL は基本2枚から(前は基本3枚。3枚目はカードランク30まで開かないので、みんな MASTER で止まっていた)
+  const B2 = ['tBalance', 'tBig'];
+  check('J 基本2枚: 0〜5枚 MASTER・6〜8 GRAND MASTER・9〜 HELL(LEGEND にはならない)', L(B2, 0) === 'master' && L(B2, 5) === 'master' && L(B2, 6) === 'grandmaster' && L(B2, 8) === 'grandmaster' && L(B2, 9) === 'hell' && L(B2, 15) === 'hell',
+    [0, 5, 6, 8, 9, 15].map((n) => L(B2, n)).join(' '));
   const B = ['tBalance', 'tBig', 'tArea'];
-  check('J 基本3枚: 0〜3枚 MASTER・4〜6 GRAND MASTER・7〜9 HELL・10〜 LEGEND', L(B, 3) === 'master' && L(B, 4) === 'grandmaster' && L(B, 6) === 'grandmaster' && L(B, 7) === 'hell' && L(B, 9) === 'hell' && L(B, 10) === 'legend' && L(B, 15) === 'legend',
-    [3, 4, 6, 7, 9, 10, 15].map((n) => L(B, n)).join(' '));
+  check('J 基本3枚: 0〜5枚 MASTER・6〜8 GRAND MASTER・9 HELL・10〜 LEGEND', L(B, 5) === 'master' && L(B, 6) === 'grandmaster' && L(B, 8) === 'grandmaster' && L(B, 9) === 'hell' && L(B, 10) === 'legend' && L(B, 15) === 'legend',
+    [5, 6, 8, 9, 10, 15].map((n) => L(B, n)).join(' '));
   // いちばん長い名前のカードで、全部の枠を埋めたとき
   const longest = (cat) => E.CARD_TACTIC_CARDS.filter((c) => c.cat === cat).sort((a, b) => Buffer.byteLength(b.id) - Buffer.byteLength(a.id))[0].id;
   const row = (cat) => ({ c: 'species', a: longest(cat), sp: 'colorpandora', on: false });
@@ -297,7 +300,7 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
   check('L 守るときの条件を攻める手と組んだセットは数えない', lv([mis, [], []]) === 'master');
   check('L ブリーダーの枠の「この子の◯◯」は数えない', E.cardTacticUncounted({ base: B3, breeder: [{ c: 'selfLife.50', a: 'save' }], mons: [[], [], []] }).breeder[0] === '場面が合わない');
   const good = [{ c: 'incomingKo', a: 'guard' }, { c: 'myGuts.5', a: 'cost.大技(4以上)' }, { c: 'foeAlive.3', a: 'reach.全体攻撃' }, { c: 'foeHandGe.4', a: 'disrupt.手札を捨てさせる' }];
-  check('L 意味のあるセット4つは GRAND MASTER 相当', lv([good, [], []]) === 'grandmaster');
+  check('L 意味のあるセット4つは4枚と数える', E.cardTacticUncounted({ base: B3, breeder: [], mons: [good, [], []] }).mons[0].filter((x) => x === null).length === 4);
   const u = E.cardTacticUncounted({ base: B3, breeder: [], mons: [[{ c: 'ko', a: 'atk' }], [{ c: 'ko', a: 'atk' }], [{ c: 'turnGe.15', a: 'atk' }]] });
   check('L 数えない理由が付く(同じもの・ほとんど当たらない)', u.mons[0][0] === null && u.mons[1][0] === '同じものが入っている' && u.mons[2][0] === 'ほとんど当たらない', JSON.stringify(u));
   check('L 数えないセットだけなら EXPERT', E.cardTacticSmartLevel({ base: [], breeder: [], mons: [[{ c: 'turnGe.15', a: 'atk' }], [], []] }) === 'expert');

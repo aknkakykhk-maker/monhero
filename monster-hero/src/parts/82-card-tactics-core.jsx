@@ -382,7 +382,8 @@ const cardTacticFilled = (frames) => {
 
 // ---- 賢さ(2026-10-30 社長「戦術カードなしでエキスパートクラスで、そこから上がっていってマスター超え」・段の名前は本編のチャレンジモード)----
 //   EXPERT … 何もセットしない〜基本1枚 / MASTER … 基本2枚以上、またはちゃんと効く戦術カード4枚以上 /
-//   GRAND MASTER … 基本3枚+効く4枚以上 / HELL … 基本3枚+効く7枚以上 / LEGEND … 基本3枚+効く10枚以上
+//   GRAND MASTER … 基本2枚+効く6枚以上 / HELL … 基本2枚+効く9枚以上 / LEGEND … 基本3枚+効く10枚以上
+//   (2026-11-04 社長 案B。前は GRAND MASTER・HELL も基本3枚で、3枚目はカードランク30まで開かないので、みんな MASTER で止まっていた)
 //   (前は EASY〜MASTER と、何も入れていないときの「でたらめ」だった)。MASTER を超える段は先読みで強くする(82-card-share-core の CARD_SHARE_SEARCH)
 const CARD_TACTIC_SMART = Object.freeze(['expert', 'master', 'grandmaster', 'hell', 'legend']);
 // ---- 賢さに数えないセット(2026-10-29 社長 案A「ちゃんと効くカードだけ数える」) ----
@@ -423,8 +424,8 @@ const cardTacticSmartLevel = (frames) => {
   const base = f.base.filter(Boolean).length;
   const rows = cardTacticCountedRows(f);
   if (base >= 3 && rows >= 10) return 'legend';
-  if (base >= 3 && rows >= 7) return 'hell';
-  if (base >= 3 && rows >= 4) return 'grandmaster';
+  if (base >= 2 && rows >= 9) return 'hell';
+  if (base >= 2 && rows >= 6) return 'grandmaster';
   if (base >= 2 || rows >= 4) return 'master';
   return 'expert';
 };

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 50e6f49f91aa0b5e
+// source-sha256: dc14642bebe4ec54
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -97139,8 +97139,8 @@ const cardTacticSmartLevel = frames => {
   const base = f.base.filter(Boolean).length;
   const rows = cardTacticCountedRows(f);
   if (base >= 3 && rows >= 10) return 'legend';
-  if (base >= 3 && rows >= 7) return 'hell';
-  if (base >= 3 && rows >= 4) return 'grandmaster';
+  if (base >= 2 && rows >= 9) return 'hell';
+  if (base >= 2 && rows >= 6) return 'grandmaster';
   if (base >= 2 || rows >= 4) return 'master';
   return 'expert';
 };
@@ -123143,16 +123143,17 @@ const cardRegSmartNextText = (frames, lv) => {
   const label = CARD_SHARE_SMART_LABEL[next];
   if (next === 'master') return `次の ${label} まで: 基本カードをあと${2 - base}枚、または、ちゃんと効く戦術カードをあと${Math.max(1, 4 - rows)}枚。`;
   const needRows = {
-    grandmaster: 4,
-    hell: 7,
+    grandmaster: 6,
+    hell: 9,
     legend: 10
   }[next];
+  const needBase = next === 'legend' ? 3 : 2;
   const needs = [];
-  if (base < 3) needs.push(`基本カードをあと${3 - base}枚`);
+  if (base < needBase) needs.push(`基本カードをあと${needBase - base}枚`);
   if (rows < needRows) needs.push(`ちゃんと効く戦術カードをあと${needRows - rows}枚`);
   const opened = cardLevelFrames(lv).base || 1;
-  const locked = CARD_LEVEL_FRAMES.filter(x => x.base && x.base > opened && x.base <= 3).map(x => `${x.base}枚目はカードランク${x.at}`);
-  const rank = base < 3 && locked.length ? `(基本カードの${locked.join('、')}でセットできるようになります)` : '';
+  const locked = CARD_LEVEL_FRAMES.filter(x => x.base && x.base > opened && x.base <= needBase).map(x => `${x.base}枚目はカードランク${x.at}`);
+  const rank = base < needBase && locked.length ? `(基本カードの${locked.join('、')}でセットできるようになります)` : '';
   return `次の ${label} まで: ${needs.join('と')}。${rank}`;
 };
 const cardRegApplyStyle = (style, tactics, open) => {
@@ -124147,7 +124148,7 @@ const CardDeckRegister = ({
   })), React.createElement("p", {
     className: "mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100",
     style: JA_WRAP_STYLE
-  }, jaWrap('入れると: 賢さが上がります(基本2枚で MASTER。GRAND MASTER から上は、基本3枚と、ちゃんと効く戦術カード4枚・7枚・10枚)。サブは、型を3分の1だけ足します。'))), React.createElement("section", {
+  }, jaWrap('入れると: 賢さが上がります(基本2枚で MASTER。基本2枚と、ちゃんと効く戦術カード6枚で GRAND MASTER・9枚で HELL。LEGEND は基本3枚と10枚)。サブは、型を3分の1だけ足します。'))), React.createElement("section", {
     "data-card-reg-sec": "breeder",
     className: "rounded-2xl border-2 border-violet-400 bg-slate-900/90 p-2.5"
   }, React.createElement(CardRegSecHead, {

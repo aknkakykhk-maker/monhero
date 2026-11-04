@@ -35,12 +35,12 @@ const tac = (base, rows) => ({ habit: 'kyuko', f: E.cardTacticPackFrames(frames(
 
 // ---- A ----
 {
-  const want = [[0, 0, 'expert'], [1, 3, 'expert'], [2, 0, 'master'], [0, 4, 'master'], [3, 4, 'grandmaster'], [3, 7, 'hell'], [3, 10, 'legend']];
+  const want = [[0, 0, 'expert'], [1, 3, 'expert'], [2, 0, 'master'], [0, 4, 'master'], [3, 4, 'master'], [2, 5, 'master'], [2, 6, 'grandmaster'], [2, 9, 'hell'], [2, 10, 'hell'], [3, 10, 'legend']]; // 2026-11-04 社長 案B
   want.forEach(([b, r, lv]) => check(`A 基本${b}枚・効く戦術カード${r}枚は ${lv}`, E.cardShareSmartLevel(tac(b, r)) === lv, E.cardShareSmartLevel(tac(b, r))));
   check('A 前の形の登録(戦術カードの枠が無い)は EXPERT', E.cardShareSmartLevel({ habit: 'dra' }) === 'expert' && E.cardShareFightLevel({ habit: 'dra' }) === 'expert');
-  check('A 打ち方の土台: EXPERT の段だけ EXPERT・ほかは MASTER', E.cardShareFightLevel(tac(0, 0)) === 'expert' && ['master', 'grandmaster', 'hell', 'legend'].every((lv, i) => E.cardShareFightLevel(tac(...[[2, 0], [3, 4], [3, 7], [3, 10]][i])) === 'master'));
+  check('A 打ち方の土台: EXPERT の段だけ EXPERT・ほかは MASTER', E.cardShareFightLevel(tac(0, 0)) === 'expert' && ['master', 'grandmaster', 'hell', 'legend'].every((lv, i) => E.cardShareFightLevel(tac(...[[2, 0], [2, 6], [2, 9], [3, 10]][i])) === 'master'));
   const pol = (b, r) => E.cardSharePolicy(tac(b, r), 'normal');
-  check('A 先読みは GRAND MASTER・HELL・LEGEND だけに付く', !pol(0, 0).search && !pol(2, 0).search && J(pol(3, 4).search) === J(E.CARD_SHARE_SEARCH.grandmaster) && J(pol(3, 7).search) === J(E.CARD_SHARE_SEARCH.hell) && J(pol(3, 10).search) === J(E.CARD_SHARE_SEARCH.legend));
+  check('A 先読みは GRAND MASTER・HELL・LEGEND だけに付く', !pol(0, 0).search && !pol(2, 0).search && J(pol(2, 6).search) === J(E.CARD_SHARE_SEARCH.grandmaster) && J(pol(2, 9).search) === J(E.CARD_SHARE_SEARCH.hell) && J(pol(3, 10).search) === J(E.CARD_SHARE_SEARCH.legend));
   check('A 段が上がるほど先読みが深い(試す手の数×回数×手番)', ['grandmaster', 'hell', 'legend'].map((k) => E.CARD_SHARE_SEARCH[k]).every((c, i, a) => !i || c.k * c.r * c.h >= a[i - 1].k * a[i - 1].r * a[i - 1].h));
   check('A でたらめには打たない(何もセットしなくても)', !pol(0, 0).gambitRandom);
   check('A 呼んだ側の強さに左右されない(前の形の登録も)', J(E.cardSharePolicy({ habit: 'dra' }, 'easy').level) === J(E.cardSharePolicy({ habit: 'dra' }, 'master').level));
