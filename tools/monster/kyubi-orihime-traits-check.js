@@ -132,10 +132,10 @@ check('オリヒメの固有技は×2.3・消費46、名前は社長が選んだ
   const fx = read('monster-hero/src/parts/24-battle-fx.jsx');
   const kb = fx.slice(fx.indexOf('const SKM_KYUBI'), fx.indexOf('const SKM_ORIHIME'));
   const ob = fx.slice(fx.indexOf('const SKM_ORIHIME'), fx.indexOf('const SKILL_MOTION_SETS = '));
-  const names = (b) => [...b.slice(b.indexOf('unique:[')).matchAll(/skm\([^\n]*\/\/ ([^\n]+)$/gm)].map((m) => m[1].trim());
+  const names = (b) => [...b.slice(b.indexOf('unique:[')).matchAll(/skm\([^\n]*\/\/ ([^\n(]+)/gm)].map((m) => m[1].trim()); // かっこ以降(色などの補足)は読まない
   check('キュービの動き(SKM_KYUBI.unique)は名前と同じ順', JSON.stringify(names(kb)) === JSON.stringify(KYUBI_UNIQUE), names(kb).join('・'));
   // 名前を変えた3つは「(キュービの◯◯の動き)」と書いてあるので、その◯◯で突き合わせる
-  const borrowed = [...ob.matchAll(/SKM_KYUBI\.unique\[(\d)\][^\n]*\/\/ ([^\n(]+)(?:\(キュービの([^\n]+)の動き\))?$/gm)].map((m) => [Number(m[1]), (m[3] || m[2]).trim()]);
+  const borrowed = [...ob.matchAll(/SKM_KYUBI\.unique\[(\d)\][^\n]*\/\/ ([^\n(]+)(?:\(キュービの([^\n・)]+)の動き)?[^\n]*$/gm)].map((m) => [Number(m[1]), (m[3] || m[2]).trim()]);
   check('オリヒメの動きは、キュービの同じ名前の技の動きを借りる',
     borrowed.length === 7 && borrowed.every(([i, n]) => KYUBI_UNIQUE[i] === n), JSON.stringify(borrowed));
 }
