@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 900dc1ff01fb7b18
+// generated-sha256: 8b6f91b82c145bef
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -60194,6 +60194,20 @@ const CARD_SPECIAL_MOTION_RULES = Object.freeze([
 ]);
 // カード番号ごとの上書き(社長が見て「この技はこう動いてほしい」と言ったら、その1枚だけここに足す)
 const CARD_MOTION_BY_NO = Object.freeze({});
+// キュービの専用技(901〜913)は、モンヒロの本編のキュービの技の動きをそのまま当てる(2026-11-04 社長「キュービはモンバトで技モーション細かく作ったからいけるとはおもってる」)
+//   [キュービが出すとき, オリヒメ(C-951)が出すとき]。オリヒメは本編のオリヒメの同じ技(星空の色)。守る・よける・特殊(911〜913)は、ほかの血統と同じ共通の動き
+const CARD_MOTION_KYUBI = Object.freeze({
+  '901': ['Kyubi-n5', 'Orihime-n5'], // 提灯落とし
+  '902': ['Kyubi-u5', 'Orihime-u3'], // 陽炎
+  '903': ['Kyubi-n2', 'Orihime-n2'], // 狐火
+  '904': ['Kyubi-n1', 'Orihime-n1'], // ひのこ
+  '905': ['Kyubi-u2', 'Orihime-u2'], // 超狐火(オリヒメは 超狐火・星)
+  '906': ['Kyubi-u1', 'Orihime-u1'], // なめろう(オリヒメは 織姫のくちづけの動き)
+  '907': ['Kyubi-n6', 'Orihime-n6'], // 火炎車
+  '908': ['Kyubi-u7', 'Orihime-u8'], // 天河天翔
+  '909': ['Kyubi-u3', 'Orihime-u4'], // 神狐蒼火(オリヒメは 神狐星火)
+  '910': ['Kyubi-u8', 'Orihime-u6'], // 炸裂気泡陣
+});
 const CARD_MOTION_GAME_ID = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant', ghost: 'Ghost' });
 
 // ---- 技の重さの段(2026-10-31 社長「各カードアクションをもっと一新して」 → 案A) ----
@@ -60231,6 +60245,7 @@ const cardMotionBaseOf = (db, cardNo, mon) => {
   const c = cardOf(db, cardNo);
   if (!c || !cardIsAttackKind(c.kind) || c.user === 'breeder') return null;
   if (CARD_MOTION_BY_NO[c.no]) return CARD_MOTION_BY_NO[c.no];
+  if (CARD_MOTION_KYUBI[c.no]) return CARD_MOTION_KYUBI[c.no][mon && mon.no === 'C-951' ? 1 : 0];
   if (c.kind === 'spe') { const sp = CARD_SPECIAL_MOTION_RULES.find(([re]) => re.test(c.name)); return sp ? sp[1] : 'cardSpeRing'; }
   // 1. モンヒロに同じ名前の技がある(スエゾーのかみつき・モッチーのもっちゃん など)
   const id = mon && (CARD_MOTION_GAME_ID[mon.species] || CARD_MOTION_GAME_ID[mon.main]);
