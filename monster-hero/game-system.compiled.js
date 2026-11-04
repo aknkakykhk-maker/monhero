@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5a0900606d5923a9
+// source-sha256: c93fa3141439fa5a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -103369,6 +103369,18 @@ const CardBattleBoard = ({
     };
   }, [st.winner]);
   const me = st.players[CARD_ME];
+  const handCostOf = (c, i) => {
+    if (!c || !Number.isFinite(c.guts)) return null;
+    try {
+      if (cardIsGuardKind(c.kind)) return cardGuardCost(st, c);
+      if (!cardIsAttackKind(c.kind) || cardHasEff(c, 'attach')) return cardFieldCostOf(st, c.guts);
+      const users = me.mons.map((m, mi) => cardUsableBy(c, m) ? mi : -1).filter(mi => mi >= 0);
+      if (!users.length || c.user === 'breeder') return cardActionCost(db, st, CARD_ME, me.hand, [i]);
+      return Math.min(...users.map(mi => cardActionCost(db, st, CARD_ME, me.hand, [i], mi)));
+    } catch (_) {
+      return null;
+    }
+  };
   const opp = st.players[CARD_CPU];
   const decider = cardDeciderOf(st);
   const myTurn = !replay && !watch && st.winner === null && decider === CARD_ME;
@@ -104670,6 +104682,9 @@ const CardBattleBoard = ({
   }, handOrder.map(i => {
     const no = me.hand[i];
     const c = cardOf(db, no);
+    const cost = handCostOf(c, i);
+    const costTxt = c ? `ガッツ${cost === null ? c.guts : cost}` : 'ガッツ-';
+    const costCls = cost === null || !c || cost === c.guts ? 'text-amber-200' : cost < c.guts ? 'text-emerald-300' : 'text-rose-300';
     const on = handUsable(i);
     const up = sel && sel.hand === i || picks.includes(i) || pickSet.includes(i);
     const cand = mode === 'attack' && pickCands.includes(i);
@@ -104713,20 +104728,22 @@ const CardBattleBoard = ({
       twoLine: true,
       tall: handLongName
     }), handTiny ? React.createElement(React.Fragment, null, React.createElement(CardNameFit, {
-      name: `ガッツ${c ? c.guts : '-'}`,
+      name: costTxt,
       size: 10,
-      className: "font-extrabold leading-[1.1] text-amber-200"
+      className: `font-extrabold leading-[1.1] ${costCls}`
     }), React.createElement(CardNameFit, {
       name: cardCaption(c),
       size: 10,
       className: "font-extrabold leading-[1.1] text-amber-200"
     })) : compact ? React.createElement(React.Fragment, null, React.createElement("span", {
-      className: `block ${handLarge ? 'text-[12px]' : 'text-[10px]'} font-extrabold leading-tight text-amber-200`
-    }, "ガッツ", c ? c.guts : '-'), React.createElement("span", {
+      "data-card-hand-cost": i,
+      className: `block ${handLarge ? 'text-[12px]' : 'text-[10px]'} font-extrabold leading-tight ${costCls}`
+    }, costTxt), React.createElement("span", {
       className: `block whitespace-nowrap ${handLarge ? 'text-[12px]' : 'text-[10px]'} font-extrabold leading-tight text-amber-200`
     }, cardCaption(c))) : React.createElement(React.Fragment, null, React.createElement("span", {
-      className: `block ${handLarge ? 'text-[13px]' : 'text-[11px]'} font-extrabold text-amber-200`
-    }, "ガッツ", c ? c.guts : '-'), React.createElement("span", {
+      "data-card-hand-cost": i,
+      className: `block ${handLarge ? 'text-[13px]' : 'text-[11px]'} font-extrabold ${costCls}`
+    }, costTxt), React.createElement("span", {
       className: `block ${handLarge ? 'text-[13px]' : 'text-[11px]'} font-extrabold text-amber-200`
     }, cardCaption(c)))));
   }))), React.createElement("div", {
