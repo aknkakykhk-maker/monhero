@@ -98,19 +98,24 @@ const CARD_CUP_STORY = 'card_cup_2026_10_31';
         await page.locator(`[data-debug-story-item="${st.id}"]`).dispatchEvent('click');
         const dlg = page.locator('[role="dialog"][aria-label^="イベント回想"]');
         await dlg.waitFor({ timeout: 10000 });
-        const texts = [];
+        const texts = [], stepSeen = new Set();
         for (let i = 0; i < 200; i++) {
           if (await dlg.count() === 0) break;
           texts.push(await dlg.innerText());
+          const st2 = await page.evaluate(() => document.querySelector('[data-event-story]')?.getAttribute('data-story-step'));
+          if (st2 != null) stepSeen.add(Number(st2));
           const many = SHOT_LINES.length > 0;
           if (SHOT_DIR && (many ? SHOT_LINES.includes(i) : i === st.shot)) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.waitForTimeout(400); await page.screenshot({ path: path.join(SHOT_DIR, `${st.id}-${label}${many ? `-${String(i + 1).padStart(2, '0')}` : ''}.png`) }); }
           await dlg.locator('button[aria-label="次へ"]').dispatchEvent('click').catch(() => {});
           await page.waitForTimeout(40);
         }
-        // 行の数は画面の「◯ / ◯」で数える
+        // 台本の行の数は、画面が持つ台本の行(data-story-step)で数える。長い台詞はページに分かれる(2026-11-03 お話の3つのゾーン)ので、
+        //   画面の「◯ / ◯」はページ数(行の数以上)。ページは最後まで1つずつ送れたかだけを見る
         const steps = texts.map((t) => (/(\d+)\s*\/\s*(\d+)/.exec(t) || []).slice(1).map(Number)).filter((x) => x.length === 2);
-        const total = steps.length ? steps[0][1] : 0, seen = new Set(steps.map((x) => x[0]));
-        check(`① ${label}: 最後まで送れて、${cs.lines}行`, total === cs.lines && seen.size === cs.lines && seen.has(cs.lines), `全部で ${total}行・見た行 ${seen.size}`);
+        const pages = steps.length ? steps[0][1] : 0, pagesSeen = new Set(steps.map((x) => x[0]));
+        const lineCount = stepSeen.size ? Math.max(...stepSeen) + 1 : 0;
+        check(`① ${label}: 最後まで送れて、${cs.lines}行`, lineCount === cs.lines && stepSeen.size === cs.lines && pages >= cs.lines && pagesSeen.size === pages,
+          `台本 ${lineCount}行・見た行 ${stepSeen.size}・ページ ${pages}(見たページ ${pagesSeen.size})`);
         const all = texts.join('\n');
         for (const k of ['atsu', 'kyuko']) {
           const name = k === 'atsu' ? 'あつ' : 'きゅうこ';
