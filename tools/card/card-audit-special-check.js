@@ -132,6 +132,7 @@ const PREP = {
   oppHandToDeckBottom: (st) => { st.players[1].hand = ['108', '026']; },
   lastWish: (st) => { st.players[0].mons[0].life = 3; st.players[0].discard = ['100', '100', '100', '100', '100']; },
   selfHurt: () => {},
+  gutsFromDiscardNow: (st) => { st.players[0].discard = ['100', '100', '100', '100', '100']; },
 };
 const reviveMon = Object.values(db.monsters).find((m) => m.species === 'phoenix' && !m.main);
 // 合体: メインとサブが合う純血の2体
@@ -197,6 +198,8 @@ const EXPECT = {
   millOpp: (e, a, b) => (a.players[Q].deck.length - b.players[Q].deck.length === e.n && b.players[Q].discard.length - a.players[Q].discard.length === e.n) || `相手の山札が${e.n}枚捨て札にならない`,
   discardBothHands: (e, a, b) => (b.players[P].hand.length === 0 && b.players[Q].hand.length === 0) || 'お互いの手札が0にならない',
   freeSpeThisTurn: (e, a, b) => (b.freeSpe && b.freeSpe.p === P) || '特殊技0ガッツの印が付かない',
+  // キュービの霊魂操作(912。2026-11-04): 捨て札からランダムに n 枚がガッツになる(捨て札が少なければその枚数)
+  gutsFromDiscardNow: (e, a, b) => (b.players[P].guts.length - a.players[P].guts.length === Math.min(e.n, a.players[P].discard.length)) || `捨て札から${e.n}枚がガッツにならない`,
   forbidThisTurn: (e, a, b) => e.kinds.every((k) => (b.forbid[Q] || []).includes(k)) || '相手の守りの禁止が付かない',
 };
 
@@ -207,7 +210,7 @@ nonAttach.forEach((c) => {
   if (!r.st) return;
   check(`B ${c.no}「${c.name}」: 特殊技は守れない(攻撃中にならない)`, !r.st.pending);
   check(`B ${c.no}「${c.name}」: 出した札は捨て札へ`, r.st.players[P].discard.includes(c.no) || r.st.players[P].mons.some((m) => m.ko), '捨て札に無い');
-  check(`B ${c.no}「${c.name}」: 払うガッツが文の数`, r.st0.players[P].guts.length - r.st.players[P].guts.length === c.guts || effTs(c).some((t) => ['rush', 'gutsZeroBoth', 'deckToGuts', 'gutsToDeckShuffle', 'lastWish'].includes(t)),
+  check(`B ${c.no}「${c.name}」: 払うガッツが文の数`, r.st0.players[P].guts.length - r.st.players[P].guts.length === c.guts || effTs(c).some((t) => ['rush', 'gutsZeroBoth', 'deckToGuts', 'gutsToDeckShuffle', 'lastWish', 'gutsFromDiscardNow'].includes(t)),
     `${r.st0.players[P].guts.length - r.st.players[P].guts.length}`);
   (c.effects || []).forEach((e) => {
     if (CONDITION.includes(e.t)) return;
