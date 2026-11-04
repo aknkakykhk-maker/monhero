@@ -1852,7 +1852,7 @@ const CardChatPanel = ({ mode = 'pvp', onClose }) => {
     </button>
   );
   return (
-    <div data-card-chat-panel={mode} className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/40" onClick={onClose}>
+    <div data-card-chat-panel={mode} className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/40" style={cardSafePad('0px')} onClick={onClose}>
       <div className="mx-auto w-full max-w-[520px] rounded-t-2xl border-t-2 border-sky-400 bg-slate-950 px-3 pt-2 text-white" style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }} onClick={(e) => e.stopPropagation()}>
         <div className="mb-1 flex items-center">
           <b className="flex-1 text-[13px] text-sky-100">💬 コメント{mode === 'watch' ? '(観戦)' : ''}</b>
