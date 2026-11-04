@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c93fa3141439fa5a
+// source-sha256: 49feacf865d19005
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -9243,9 +9243,21 @@ const Audio_ = (() => {
       masterOut.gain.value = on || videoHold ? 0 : 1;
     }
   };
+  const setStoryOpenFade = () => {
+    if (!masterOut || !audioCtx || videoHold) return;
+    try {
+      const at = audioCtx.currentTime;
+      masterOut.gain.cancelScheduledValues(at);
+      masterOut.gain.setValueAtTime(0, at);
+      masterOut.gain.linearRampToValueAtTime(1, at + 2);
+    } catch (e) {
+      masterOut.gain.value = 1;
+    }
+  };
   return {
     setVideoHold,
     setStoryEndFade,
+    setStoryOpenFade,
     playSeFile,
     preloadSE,
     playBGM,
@@ -18812,6 +18824,7 @@ const STORY_MONSTER_ART = Object.freeze({
 });
 const STORY_BOTTOM_KEEP_ROW = true;
 const STORY_ENDING_STYLE = 'pull';
+const STORY_OPENING_STYLE = 'none';
 const storyEpisodeTitleParts = title => {
   const t = String(title || '').trim();
   const m = t.match(/^(.*?)\s*(第[\d.]+[話部][^～\s]*|終章)\s*(～.*～)?\s*$/);
@@ -130746,6 +130759,10 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (!eventReplayEnding && typeof Audio_ !== 'undefined' && Audio_.setStoryEndFade) Audio_.setStoryEndFade(false);
   }, [eventReplayEnding]);
+  const eventReplayOpeningKey = eventReplay && !eventReplay.opened && eventReplay.step === 0 ? eventReplay.id : null;
+  useEffect(() => {
+    if (eventReplayOpeningKey && typeof STORY_OPENING_STYLE !== 'undefined' && STORY_OPENING_STYLE !== 'none' && typeof Audio_ !== 'undefined' && Audio_.setStoryOpenFade) Audio_.setStoryOpenFade();
+  }, [eventReplayOpeningKey]);
   const [showDebugStoryList, setShowDebugStoryList] = useState(false);
   setAssistantCostumeStoryNow(eventReplay ? ((eventReplay.debug ? eventReplayAllList() : eventReplayList()).find(ev => ev.id === eventReplay.id) || {}).costumes || null : null);
   const [breederPoints, setBreederPoints] = useState(0);
@@ -161081,6 +161098,13 @@ function MonsterHeroGame() {
       const storyKeepRow = typeof STORY_BOTTOM_KEEP_ROW === 'undefined' ? true : !!STORY_BOTTOM_KEEP_ROW;
       let last = step === script.length - 1;
       const storyEnding = !!event && typeof STORY_ENDING_STYLE !== 'undefined' && STORY_ENDING_STYLE !== 'none';
+      const storyOpeningStyle = typeof STORY_OPENING_STYLE !== 'undefined' ? STORY_OPENING_STYLE : 'none';
+      const storyOpening = !!event && storyOpeningStyle !== 'none' && !eventReplay.opened && step === 0 && !eventReplay.ending;
+      const finishOpening = () => setEventReplay(r => r && !r.opened ? {
+        ...r,
+        opened: true,
+        shownAt: Date.now()
+      } : r);
       const isGuestWho = id => {
         const w = assistantById(id);
         return !!w && w.role === 'ゲスト';
@@ -161259,6 +161283,7 @@ function MonsterHeroGame() {
         "data-story-step": step,
         "data-story-zones": storyZones ? storyKeepRow ? 'facerow' : 'face' : undefined,
         "data-story-ending-pull": eventReplay.ending && STORY_ENDING_STYLE === 'pull' ? '' : undefined,
+        "data-story-opening": storyOpening ? storyOpeningStyle : undefined,
         className: "fixed inset-0 flex items-end justify-center",
         style: {
           position: 'fixed',
@@ -161569,7 +161594,94 @@ function MonsterHeroGame() {
           next();
         },
         className: "min-h-[50px] rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]"
-      }, last && !(storyEnding && !eventReplay.ending) ? '閉じる' : '次へ'))), eventReplay.ending && (() => {
+      }, last && !(storyEnding && !eventReplay.ending) ? '閉じる' : '次へ'))), storyOpening && (() => {
+        const parts = storyEpisodeTitleParts(event?.title);
+        const allEv = (typeof EVENT_REPLAYS !== 'undefined' ? EVENT_REPLAYS : []).filter(ev => ev && ev.id && ev.title);
+        const series = parts.serial ? allEv.filter(ev => ev.group === event.group && storyEpisodeTitleParts(ev.title).serial && storyEpisodeTitleParts(ev.title).series === parts.series).sort((a, b) => String(a.date || '').localeCompare(String(b.date || ''))) : [];
+        const idx = series.findIndex(ev => ev.id === event.id);
+        const prevEv = storyOpeningStyle === 'recap' && idx > 0 ? series[idx - 1] : null;
+        const prevParts = prevEv ? storyEpisodeTitleParts(prevEv.title) : null;
+        const liveEv = storyOpeningStyle === 'recap' && eventReplay.live && /^pandora_wings_/.test(event.id) && typeof rhythmLimitedEventAt === 'function' ? rhythmLimitedEventAt(Date.now()) : null;
+        const endMs = liveEv ? Date.parse(liveEv.displayEndAt || liveEv.endAt) : NaN;
+        const leftMs = Number.isFinite(endMs) ? endMs - Date.now() : 0;
+        const leftText = leftMs > 0 ? leftMs >= 86400000 ? `あと${Math.floor(leftMs / 86400000)}日${Math.floor(leftMs % 86400000 / 3600000)}時間` : `あと${Math.floor(leftMs / 3600000)}時間${Math.floor(leftMs % 3600000 / 60000)}分` : '';
+        const dur = storyOpeningStyle === 'recap' ? 3.4 : 2.6;
+        const iris = storyOpeningStyle === 'iris';
+        return React.createElement("div", {
+          "data-story-opening-card": storyOpeningStyle,
+          onClick: e => {
+            e.stopPropagation();
+            finishOpening();
+          },
+          onAnimationEnd: e => {
+            if (e.target === e.currentTarget) finishOpening();
+          },
+          style: {
+            position: 'absolute',
+            inset: 0,
+            zIndex: 21,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'auto',
+            overflow: 'hidden',
+            background: iris ? 'transparent' : 'rgba(2,6,23,.97)',
+            animation: `storyOpenOut ${iris ? '.3s' : '.7s'} ease-in ${iris ? dur + 1.2 : dur}s both`
+          }
+        }, iris && React.createElement("span", {
+          "aria-hidden": "true",
+          "data-story-iris-hole": true,
+          style: {
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            width: 0,
+            height: 0,
+            borderRadius: '50%',
+            transform: 'translate(-50%,-50%)',
+            boxShadow: '0 0 0 300vmax rgba(2,6,23,.97)',
+            animation: `storyIrisHole 1.3s ease-in ${dur}s both`
+          }
+        }), React.createElement("div", {
+          className: "relative w-full max-w-sm px-6 text-center",
+          style: iris ? {
+            animation: `storyOpenOut .4s ease-in ${dur - .2}s both`
+          } : undefined
+        }, parts.series && React.createElement("p", {
+          className: "text-[12px] font-black tracking-[.3em] text-fuchsia-200/80",
+          style: {
+            animation: 'storyEndCard 1s ease-out .2s both'
+          }
+        }, parts.series), React.createElement("p", {
+          className: "mt-2 text-[30px] font-black leading-tight text-white",
+          style: {
+            animation: 'storyOpenTitle 1.3s ease-out .4s both',
+            textShadow: '0 0 18px rgba(192,132,252,.8)'
+          }
+        }, parts.ep), parts.sub && React.createElement("p", {
+          className: "mt-1 text-[16px] font-black text-fuchsia-100",
+          style: {
+            animation: 'storyEndCard 1s ease-out .9s both'
+          }
+        }, parts.sub), prevParts && React.createElement("p", {
+          "data-story-opening-prev": true,
+          className: "mt-6 text-[11px] font-bold text-slate-400",
+          style: {
+            animation: 'storyEndCard 1s ease-out 1.5s both'
+          }
+        }, "前回のお話 ", prevParts.ep, " ", prevParts.sub), leftText && React.createElement("p", {
+          "data-story-opening-left": true,
+          className: "mt-2 text-[12px] font-black text-amber-200",
+          style: {
+            animation: 'storyEndCard 1s ease-out 1.8s both'
+          }
+        }, "イベント終了まで ", leftText), React.createElement("p", {
+          className: "mt-8 text-[10px] font-bold text-slate-500",
+          style: {
+            animation: 'storyEndCard 1s ease-out 1.2s both'
+          }
+        }, "タップで始まります")));
+      })(), eventReplay.ending && (() => {
         const parts = storyEpisodeTitleParts(event?.title);
         const pull = STORY_ENDING_STYLE === 'pull';
         const rich = STORY_ENDING_STYLE !== 'card';
@@ -167428,6 +167540,13 @@ const createAnimationStyle = () => {
     @keyframes storyEndCard { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: none; } }
     @keyframes storyEndFin { 0% { opacity: 0; transform: scale(1.35); filter: blur(8px); letter-spacing: .9em; } 100% { opacity: 1; transform: none; filter: none; } }
     [data-event-story] > :not([data-story-ending]) { transition: transform 1.6s ease-out, filter 1.6s ease-out; }
+    /* お話の始まり(2026-11-04)。題字のあいだ、場面は遠く暗いところに置き、幕が上がると近づきながら明るくなる(終わりの札の 'pull' の逆)。
+       'iris' は、題字の幕を鍵穴から丸く開ける */
+    @keyframes storyOpenTitle { 0% { opacity: 0; transform: scale(.9); filter: blur(6px); letter-spacing: .4em; } 100% { opacity: 1; transform: none; filter: none; } }
+    @keyframes storyOpenOut { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+    @keyframes storyIrisHole { 0% { width: 0; height: 0; } 100% { width: 260vmax; height: 260vmax; } }
+    [data-event-story][data-story-opening]:not([data-story-opening="iris"]) > :not([data-story-opening-card]):not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
+    @media (prefers-reduced-motion: reduce) { [data-story-opening-card], [data-story-opening-card] * { animation-duration: .01s !important; animation-delay: 0s !important; } }
     [data-event-story][data-story-ending-pull] > :not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
     @media (prefers-reduced-motion: reduce) { [data-story-ending] *, [data-story-ending] { animation-duration: .01s !important; animation-delay: 0s !important; } }
     @keyframes storyShrink { 0% { opacity: 0; transform: scale(1.7); filter: brightness(1.9); } 50% { opacity: 1; } 100% { transform: scale(1); filter: brightness(1); } }
