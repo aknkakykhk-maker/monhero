@@ -39,8 +39,8 @@ check('IDと動的キー',I.recordId==='INFERNO'&&I.rankingId==='ExtremeINFERNO'
   &&G('extremeBestScoreKey')('INFERNO')==='mh_extreme_hs_INFERNO'&&G('extremeClearCountKey')('INFERNO')==='mh_extreme_clears_INFERNO'
   &&G('rankingDifficultyForMode')('extreme','INFERNO')==='ExtremeINFERNO');
 check('ETERNALクリアで解放',!G('isInfernoUnlocked')(0)&&G('isInfernoUnlocked')(1)&&!G('isInfernoUnlocked')(undefined));
-// 2026-11-04: INFERNO と COCYTUS のあいだに MALEBOLGE が入った
-check('難易度一覧でMALEBOLGEの1つ前',(()=>{const ids=G('ALL_EXTREME_DIFFICULTIES').map(x=>x.id);return ids.indexOf('INFERNO')===ids.indexOf('MALEBOLGE')-1;})());
+// 2026-11-04: INFERNO と COCYTUS のあいだに EREBUS が入った
+check('難易度一覧でEREBUSの1つ前',(()=>{const ids=G('ALL_EXTREME_DIFFICULTIES').map(x=>x.id);return ids.indexOf('INFERNO')===ids.indexOf('EREBUS')-1;})());
 check('種族チャレンジの初回クリア報酬は140・ETERNALのあとに開く',G('speciesChallengeFirstClearReward')('INFERNO')===140
   &&(()=>{const f=G('isSpeciesChallengeDifficultyUnlocked');return !f('INFERNO',['HELHEIM'])&&f('INFERNO',['ETERNAL']);})());
 check('クイックにINFERNOを入れない',G('QUICK_EXTREME_SETTINGS').INFERNO===undefined);
@@ -69,5 +69,5 @@ check('本体: ボスのWAVEは層を作る・ヒットの見積もりは層の�
   &&source.includes('markShellAbsorbedHits(attackHits,enemyShellPool(enemy))')&&source.includes('markShellAbsorbedHits(ca.hits, enemyShellPool(enemy))'));
 check('本体: 本編の必殺技の連撃はタクティクスの連撃と同じ受け方',source.includes('resolveTacticsGuardedHit(incomingBeforeTurnReduction,rushHits,guardValue,guardCards>=TACTICS_RUSH_GUARD_CARDS?rushHits:1)'));
 check('本体: 通常UIへ公開しETERNALクリアで解放',source.includes("setting.id==='INFERNO'?infernoUnlocked:")&&source.includes("'ETERNALクリアで解放'"));
-check('勇者の証はINFERNOで5個',/speciesChallenge:Object\.freeze\(\{ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5(, MALEBOLGE:5)?(, COCYTUS:6)? \}\)/.test(source));
+check('勇者の証はINFERNOで5個',/speciesChallenge:Object\.freeze\(\{ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5(, EREBUS:5)?(, COCYTUS:6)? \}\)/.test(source));
 process.exit(failed?1:0);

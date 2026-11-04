@@ -19,7 +19,7 @@ vm.runInContext(`${source.slice(start,end)}\nglobalThis.api={SPECIES_CHALLENGE_D
 const { api } = context;
 const assert = (condition,message) => { if(!condition)throw new Error(message); };
 
-assert(api.SPECIES_CHALLENGE_DIFFICULTY_IDS.length===21,'難易度は既存定義の21件を使う(2026-11-04 MALEBOLGE を足した)');
+assert(api.SPECIES_CHALLENGE_DIFFICULTY_IDS.length===21,'難易度は既存定義の21件を使う(2026-11-04 EREBUS を足した)');
 const summary=api.speciesChallengeProfileSummary({ species:{
   mocchi:{
     cleared:{Beginner:true,Hard:true},

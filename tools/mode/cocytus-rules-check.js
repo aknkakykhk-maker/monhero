@@ -34,12 +34,12 @@ const C=G('COCYTUS_SETTING'),rules=G('cocytusStageRules'),plan=G('extremeShieldL
 const rush=G('extremeLayerRushHits'),view=G('enemyShellView');
 
 check('基本設定',C.id==='COCYTUS'&&C.japanese==='コキュートス'&&C.available&&C.debugAvailable&&C.power===500
-  &&C.score===20&&C.xp===160&&C.gold===140&&C.psyche===250&&C.unlockRequirement==='MALEBOLGE');
+  &&C.score===20&&C.xp===160&&C.gold===140&&C.psyche===250&&C.unlockRequirement==='EREBUS');
 check('IDと動的キー',C.recordId==='COCYTUS'&&C.rankingId==='ExtremeCOCYTUS'
   &&G('extremeBestScoreKey')('COCYTUS')==='mh_extreme_hs_COCYTUS'&&G('extremeClearCountKey')('COCYTUS')==='mh_extreme_clears_COCYTUS'
   &&G('rankingDifficultyForMode')('extreme','COCYTUS')==='ExtremeCOCYTUS');
-// 2026-11-04: INFERNO と COCYTUS のあいだに MALEBOLGE を足した。COCYTUS は MALEBOLGE クリアで開く。前から開いていた人(印)・COCYTUS の記録がある人は開いたまま
-check('MALEBOLGEクリアで解放・前から開いていた人は開いたまま',(()=>{const f=G('isCocytusUnlocked');
+// 2026-11-04: INFERNO と COCYTUS のあいだに EREBUS を足した。COCYTUS は EREBUS クリアで開く。前から開いていた人(印)・COCYTUS の記録がある人は開いたまま
+check('EREBUSクリアで解放・前から開いていた人は開いたまま',(()=>{const f=G('isCocytusUnlocked');
   return !f(0)&&f(1)&&!f(undefined)&&f(0,{extreme:true})&&!f(0,{extreme:false})&&!f(0,'壊れた値')&&f(0,null,3);})());
 check('印は公開のあとの読み込みで1回だけ作る形(INFERNO のクリアから作る・キーがあれば読むだけ)',(()=>{const b=G('buildCocytusOpenKept');
   const k1=b({INFERNO:2},{version:1,species:{}}),k0=b({INFERNO:0},null);
@@ -47,8 +47,8 @@ check('印は公開のあとの読み込みで1回だけ作る形(INFERNO のク
     &&/const keptRaw = await storeGet\(COCYTUS_OPEN_KEPT_KEY, null, false\);/.test(source)
     &&/if \(keptRaw && typeof keptRaw === 'object' && !Array\.isArray\(keptRaw\)\) setCocytusOpenKept\(normalizeCocytusOpenKept\(keptRaw\)\);/.test(source);})());
 check('難易度一覧の最後',G('ALL_EXTREME_DIFFICULTIES').map(x=>x.id).slice(-1)[0]==='COCYTUS');
-check('種族チャレンジの初回クリア報酬は160・MALEBOLGEのあとに開く(INFERNOクリアで開いていた種族は開いたまま)',G('speciesChallengeFirstClearReward')('COCYTUS')===160
-  &&(()=>{const f=G('isSpeciesChallengeDifficultyUnlocked');return !f('COCYTUS',['INFERNO'])&&f('COCYTUS',['MALEBOLGE'])&&f('COCYTUS',['INFERNO'],undefined,['COCYTUS']);})());
+check('種族チャレンジの初回クリア報酬は160・EREBUSのあとに開く(INFERNOクリアで開いていた種族は開いたまま)',G('speciesChallengeFirstClearReward')('COCYTUS')===160
+  &&(()=>{const f=G('isSpeciesChallengeDifficultyUnlocked');return !f('COCYTUS',['INFERNO'])&&f('COCYTUS',['EREBUS'])&&f('COCYTUS',['INFERNO'],undefined,['COCYTUS']);})());
 check('クイックにCOCYTUSを入れない',G('QUICK_EXTREME_SETTINGS').COCYTUS===undefined);
 check('デュラハンは1回・ムーは2回蘇る、ほかのWAVEは蘇らない',G('extremeRevivalCount')('COCYTUS',9)===1&&G('extremeRevivalCount')('COCYTUS',10)===2&&[3,5,7].every(w=>G('extremeRevivalCount')('COCYTUS',w)===0));
 check('ETERNALのルール(冥府・貫き)を引き継ぎ、敵のライフは50倍(2026-11-01 社長「さらに5倍」)',[1,3,9,10].every(w=>{const a=rules(w),b=G('eternalStageRules')(w);return a.level===b.level&&a.enemyMultiplier===b.enemyMultiplier&&a.pierceRate===b.pierceRate&&a.minimumDamageDealt===b.minimumDamageDealt;})
@@ -66,7 +66,7 @@ check('1枚割るごとに攻撃+20%(足し算)',(()=>{const a=afterHit(foe(),30
 check('連撃はINFERNOと同じ(デュラハン4枚目で2・ムー4枚目で2・5枚目で3)、ほかは1',rush('COCYTUS',9,3)===1&&rush('COCYTUS',9,4)===2&&rush('COCYTUS',9,5)===2&&rush('COCYTUS',10,3)===1&&rush('COCYTUS',10,4)===2&&rush('COCYTUS',10,5)===3&&rush('COCYTUS',3,5)===1&&rush('COCYTUS',8,5)===1);
 check('見た目が読む状態にボスの印',view({...foe(),shellBoss:true}).boss===true&&view(foe()).boss===false&&view(foe()).total===4&&view(null).boss===false);
 check('本体: 層の敵にボスの印を付ける・解放の連鎖',source.includes('newEnemy.shellBoss=layerPlan.boss;')&&source.includes("setting.id==='COCYTUS'?cocytusUnlocked:false")&&source.includes("'INFERNOクリアで解放'"));
-check('勇者の証はCOCYTUSで6個',/speciesChallenge:Object\.freeze\(\{ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5, MALEBOLGE:5, COCYTUS:6 \}\)/.test(source));
+check('勇者の証はCOCYTUSで6個',/speciesChallenge:Object\.freeze\(\{ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5, EREBUS:5, COCYTUS:6 \}\)/.test(source));
 
 const boss=(over)=>({hp:0,maxHp:1000,atk:200,layerAtkBase:100,layerAtkGain:0.2,shellBroken:5,shellLayerTotal:5,...over});
 check('蘇り: 全回復・最大ライフ1.5倍、攻撃は層1枚ぶん(+20%)を足す・文と段を渡す',(()=>{const r=revive(boss(),'COCYTUS',9,0);

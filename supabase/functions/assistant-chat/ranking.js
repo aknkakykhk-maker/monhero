@@ -17,7 +17,7 @@ export const RANKING_TABLES = Object.freeze(['rankings', 'bond_levels', 'breeder
 export const RANKING_FUNCTIONS = Object.freeze(['rhythm_week_score_totals', 'rhythm_event_totals', 'rhythm_event_totals_bonus']);
 export const RANKING_TOP = 5;
 // 1回の話題で読むランキングの数の上限(重さと費用を増やしすぎない)
-export const RANKING_PLAN_MAX = 21; // チャレンジの全部(通常9+極限12)。2026-11-04 MALEBOLGE を足して 20→21
+export const RANKING_PLAN_MAX = 21; // チャレンジの全部(通常9+極限12)。2026-11-04 EREBUS を足して 20→21
 // すぐ前のプレイヤーの発言をいくつまで見て、ランキングの話の続きとみなすか(ゲームの ASSISTANT_CHAT_RANKING_PREV と同じ)
 export const RANKING_PREV_TURNS = 2;
 // 一度に並べて読むランキングの数(データベースへの問い合わせを一度に出しすぎない)

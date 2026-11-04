@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// MALEBOLGE(仮の名前・INFERNO と COCYTUS のあいだの段・2026-11-04 社長の決定)の正式設定・層のシールド・攻撃の上がり方・蘇り・
-// ごほうび・解放の順(INFERNO → MALEBOLGE → COCYTUS)を、本体helperを切り出して検査する。cocytus-rules-check.js と同じ作り。
+// EREBUS(エレボス・INFERNO と COCYTUS のあいだの段・2026-11-04 社長の決定)の正式設定・層のシールド・攻撃の上がり方・蘇り・
+// ごほうび・解放の順(INFERNO → EREBUS → COCYTUS)を、本体helperを切り出して検査する。cocytus-rules-check.js と同じ作り。
 //   決めごと: 固さは INFERNO の約6倍。強度450・敵ライフ15倍。層の枚数は COCYTUS と同じ(W1・2 4枚 / W3〜10 5枚)。
 //   1枚目は最大ライフの1.8倍(W9 2.6倍・W10 3.0倍)。割るたびの攻撃はふつう+20%・ボス+30%。蘇りはムーだけ1回(×1.5)。
 //   ごほうび 経験値×150・ダイヤ×130・虹235・勇者の証5・種族チャレンジ初回150
@@ -34,7 +34,7 @@ const adjust=G('extremeEnemyStatAdjust'),allyRate=G('extremeAllyMaxHpRate'),appl
 const waveEnemy=G('extremeWaveEnemyMultiplier'),damage=G('extremeDamageTurnMultiplier');
 
 
-const M=G('MALEBOLGE_SETTING'),rules=G('malebolgeStageRules'),plan=G('extremeShieldLayerPlan'),afterHit=G('enemyAfterHit');
+const M=G('EREBUS_SETTING'),rules=G('erebusStageRules'),plan=G('extremeShieldLayerPlan'),afterHit=G('enemyAfterHit');
 const rush=G('extremeLayerRushHits');
 check('基本設定(強度450・スコア×20・経験値×150・ダイヤ×130・虹235・INFERNOクリアで解放・冥界タブ)',M.available&&M.debugAvailable&&M.power===450
   &&M.score===20&&M.xp===150&&M.gold===130&&M.psyche===235&&M.unlockRequirement==='INFERNO'&&M.tab==='underworld');
@@ -44,8 +44,8 @@ check('IDと動的キー(新しいキーで足す)',M.recordId===M.id&&M.ranking
 check('極限の一覧と種族チャレンジの並びは INFERNO と COCYTUS のあいだ(21段)',(()=>{const ids=G('ALL_EXTREME_DIFFICULTIES').map(x=>x.id);const sp=G('SPECIES_CHALLENGE_DIFFICULTY_IDS');
   return ids.indexOf(M.id)===ids.indexOf('INFERNO')+1&&ids.indexOf('COCYTUS')===ids.indexOf(M.id)+1&&sp.indexOf(M.id)===sp.indexOf('INFERNO')+1&&sp[sp.length-1]==='COCYTUS';})()
   // 通常9+極限5+GOD〜COCYTUS 7 = 21段(この検査では通常の表を空にしているので、本体の並びの文で見る)
-  &&/'GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO','MALEBOLGE','COCYTUS',/.test(source));
-check('INFERNOクリアで解放',!G('isMalebolgeUnlocked')(0)&&G('isMalebolgeUnlocked')(1)&&!G('isMalebolgeUnlocked')(undefined));
+  &&/'GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO','EREBUS','COCYTUS',/.test(source));
+check('INFERNOクリアで解放',!G('isErebusUnlocked')(0)&&G('isErebusUnlocked')(1)&&!G('isErebusUnlocked')(undefined));
 check('種族チャレンジ: 初回クリア報酬150・INFERNOのあとに開く',G('speciesChallengeFirstClearReward')(M.id)===150
   &&(()=>{const f=G('isSpeciesChallengeDifficultyUnlocked');return !f(M.id,['ETERNAL'])&&f(M.id,['INFERNO']);})());
 check('クイックに入れない',G('QUICK_EXTREME_SETTINGS')[M.id]===undefined);
@@ -63,11 +63,11 @@ check('蘇りはムーだけ1回(デュラハン・ほかのボスは蘇らな�
 const boss=(over)=>({hp:0,maxHp:1000,atk:200,layerAtkBase:100,layerAtkGain:0.3,shellBroken:5,shellLayerTotal:5,...over});
 check('ムーの蘇り: 全回復・最大ライフ1.5倍、攻撃は層1枚ぶん(+30%)を足す・1回きり',(()=>{const a=revive(boss(),M.id,10,0);
   return a&&a.maxHp===1500&&a.hp===1500&&a.atk===280&&a.revivalNumber===1&&a.remaining===0&&a.reveal&&a.reveal.stage==='moo1'&&revive(boss(),M.id,10,1)===null;})());
-check('勇者の証は5個(極限・種族チャレンジ)',/extreme:Object\.freeze\(\{ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5, MALEBOLGE:5, COCYTUS:6 \}\)/.test(source)
-  &&/speciesChallenge:Object\.freeze\(\{ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5, MALEBOLGE:5, COCYTUS:6 \}\)/.test(source));
+check('勇者の証は5個(極限・種族チャレンジ)',/extreme:Object\.freeze\(\{ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5, EREBUS:5, COCYTUS:6 \}\)/.test(source)
+  &&/speciesChallenge:Object\.freeze\(\{ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5, EREBUS:5, COCYTUS:6 \}\)/.test(source));
 check('ルール詳細: 先頭は層のシールドの欄',(()=>{const g=G('extremeRuleDetailGroups')(M.id);return g.length>0&&g[0].title==='層のシールド';})());
-check('本体: 解放の連鎖(INFERNO → MALEBOLGE → COCYTUS)',source.includes("setting.id==='MALEBOLGE'?malebolgeUnlocked:setting.id==='COCYTUS'?cocytusUnlocked:false")
-  &&source.includes("setting.id==='MALEBOLGE'&&!malebolgeUnlocked?'INFERNOクリアで解放'")&&source.includes('isMalebolgeUnlocked(infernoClearCount)'));
+check('本体: 解放の連鎖(INFERNO → EREBUS → COCYTUS)',source.includes("setting.id==='EREBUS'?erebusUnlocked:setting.id==='COCYTUS'?cocytusUnlocked:false")
+  &&source.includes("setting.id==='EREBUS'&&!erebusUnlocked?'INFERNOクリアで解放'")&&source.includes('isErebusUnlocked(infernoClearCount)'));
 check('助手のランキングの上限は21(本体とサーバ)',/const ASSISTANT_CHAT_RANKING_MAX = 21;/.test(source)
   &&/export const RANKING_PLAN_MAX = 21;/.test(fs.readFileSync(path.join(root,'supabase/functions/assistant-chat/ranking.js'),'utf8')));
 

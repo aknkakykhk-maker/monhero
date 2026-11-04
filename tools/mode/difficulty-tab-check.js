@@ -263,7 +263,7 @@ const serve = () => new Promise((resolve) => {
     check('同じ並びに極限の段階も続く',
       ['EXTREME', 'GOD', 'RAGNAROK', 'HELHEIM'].every(label => rankTabs.includes(label)),
       rankTabs.slice(-4).join(','));
-    // 2026-11-01: 通常9＋極限9＋冥界3(INFERNO・MALEBOLGE・COCYTUS は🛡つきで同じ並びに続く)
+    // 2026-11-01: 通常9＋極限9＋冥界3(INFERNO・EREBUS・COCYTUS は🛡つきで同じ並びに続く)
     check('タブは21段階', rankTabs.length === 21, `${rankTabs.length}枚`);
     // 極限のタブを押しても画面が落ちない(押した先で引くキーが ExtremeGOD などになる)
     await page.evaluate(() => {

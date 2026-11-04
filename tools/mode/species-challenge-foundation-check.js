@@ -19,16 +19,16 @@ const assert = (condition, message) => { if (!condition) throw new Error(message
 
 const expectedIds = [
   'Beginner','Easy','Normal','Hard','Expert','Master','GrandMaster','Hell','Legend',
-  'EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY','GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO','MALEBOLGE','COCYTUS',
+  'EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY','GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO','EREBUS','COCYTUS',
 ];
 const expectedRewards = {
   Beginner:1, Easy:2, Normal:3, Hard:4, Expert:5, Master:6, GrandMaster:8,
   Hell:10, Legend:12, EXTREME:15, NIGHTMARE:20, CHAOS:25, ULTIMATE:30, INFINITY:40,
-  GOD:60, RAGNAROK:80, HELHEIM:100, ETERNAL:120, INFERNO:140, MALEBOLGE:150, COCYTUS:160,
+  GOD:60, RAGNAROK:80, HELHEIM:100, ETERNAL:120, INFERNO:140, EREBUS:150, COCYTUS:160,
 };
 const unlocked = foundation.isSpeciesChallengeDifficultyUnlocked;
 
-assert(foundation.SPECIES_CHALLENGE_DIFFICULTY_IDS.length === 21, '難易度は21個である(2026-11-04 INFERNO と COCYTUS のあいだに MALEBOLGE)');
+assert(foundation.SPECIES_CHALLENGE_DIFFICULTY_IDS.length === 21, '難易度は21個である(2026-11-04 INFERNO と COCYTUS のあいだに EREBUS)');
 assert(JSON.stringify([...foundation.SPECIES_CHALLENGE_DIFFICULTY_IDS]) === JSON.stringify(expectedIds), '難易度順が仕様どおりである');
 for (const id of expectedIds.slice(0, 5)) assert(unlocked(id, []), `${id}は初期解放される`);
 for (let index = 5; index < expectedIds.length; index++) {

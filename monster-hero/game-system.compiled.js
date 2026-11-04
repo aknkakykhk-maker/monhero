@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 75bd6daeaad28b38
+// source-sha256: a86fdfe4eb4111a3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -743,7 +743,7 @@ const BATTLE_SYSTEM_CLASSIC = 'systemClassic';
 const BATTLE_SYSTEM_TACTICS = 'systemTactics';
 const BATTLE_SYSTEM_QUICK = 'systemQuick';
 const BATTLE_SELECT_ASSIST_KEY = 'mh_battle_select_assist_v1';
-const BATTLE_DIFFICULTY_DARK_LOOKS = new Set(['Expert', 'Master', 'GrandMaster', 'Hell', 'EXTREME', 'NIGHTMARE', 'CHAOS', 'ULTIMATE', 'INFINITY', 'GOD', 'RAGNAROK', 'HELHEIM', 'ETERNAL', 'INFERNO', 'MALEBOLGE', 'COCYTUS']);
+const BATTLE_DIFFICULTY_DARK_LOOKS = new Set(['Expert', 'Master', 'GrandMaster', 'Hell', 'EXTREME', 'NIGHTMARE', 'CHAOS', 'ULTIMATE', 'INFINITY', 'GOD', 'RAGNAROK', 'HELHEIM', 'ETERNAL', 'INFERNO', 'EREBUS', 'COCYTUS']);
 const BATTLE_SYSTEMS = Object.freeze([Object.freeze({
   id: BATTLE_SYSTEM_CLASSIC,
   label: 'クラシックバトル',
@@ -2204,7 +2204,7 @@ const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
     HELHEIM: 3,
     ETERNAL: 4,
     INFERNO: 5,
-    MALEBOLGE: 5,
+    EREBUS: 5,
     COCYTUS: 6
   }),
   speciesChallenge: Object.freeze({
@@ -2213,7 +2213,7 @@ const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
     HELHEIM: 3,
     ETERNAL: 4,
     INFERNO: 5,
-    MALEBOLGE: 5,
+    EREBUS: 5,
     COCYTUS: 6
   }),
   pro: Object.freeze({
@@ -15585,7 +15585,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
     })
   })
 }]);
-const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...EXTREME_DIFFICULTIES.map(setting => setting.id), 'GOD', 'RAGNAROK', 'HELHEIM', 'ETERNAL', 'INFERNO', 'MALEBOLGE', 'COCYTUS']);
+const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...EXTREME_DIFFICULTIES.map(setting => setting.id), 'GOD', 'RAGNAROK', 'HELHEIM', 'ETERNAL', 'INFERNO', 'EREBUS', 'COCYTUS']);
 const TACTICS_DIFFICULTY_IDS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...EXTREME_DIFFICULTIES.map(setting => setting.id)]);
 const TACTICS_EXTREME_UNLOCK_DIFFICULTIES = Object.freeze(['Master', 'GrandMaster', 'Hell', 'Legend']);
 const TACTICS_EXTREME_UNLOCK_TEXT = 'タクティクス Master以上クリアで解放';
@@ -15897,7 +15897,7 @@ const SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS = Object.freeze({
   HELHEIM: 100,
   ETERNAL: 120,
   INFERNO: 140,
-  MALEBOLGE: 150,
+  EREBUS: 150,
   COCYTUS: 160
 });
 const speciesChallengeFirstClearReward = difficultyId => Object.prototype.hasOwnProperty.call(SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS, difficultyId) ? SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS[difficultyId] : 0;
@@ -16287,10 +16287,10 @@ const INFERNO_SETTING = Object.freeze({
     })
   })
 });
-const MALEBOLGE_SETTING = Object.freeze({
-  id: 'MALEBOLGE',
-  label: 'MALEBOLGE',
-  japanese: 'マレボルジェ',
+const EREBUS_SETTING = Object.freeze({
+  id: 'EREBUS',
+  label: 'EREBUS',
+  japanese: 'エレボス',
   tab: 'underworld',
   available: true,
   debugAvailable: true,
@@ -16301,8 +16301,8 @@ const MALEBOLGE_SETTING = Object.freeze({
   psyche: 235,
   waveCount: 10,
   unlockRequirement: 'INFERNO',
-  rankingId: 'ExtremeMALEBOLGE',
-  recordId: 'MALEBOLGE',
+  rankingId: 'ExtremeEREBUS',
+  recordId: 'EREBUS',
   description: 'どの敵も何枚ものシールドをまとって現れる。1枚割るごとに敵は強くなり、ムーは倒しても大きくなって1回蘇る、インフェルノとコキュートスのあいだの難易度。',
   cardDescription: 'どの敵も4〜5枚のシールドをまとい、割るたびに攻撃が上がる。ムーは1回、全回復して大きくなって蘇る。冥府・貫きはインフェルノのまま。',
   specialRules: Object.freeze({
@@ -16335,7 +16335,7 @@ const MALEBOLGE_SETTING = Object.freeze({
       reveal: Object.freeze({
         10: Object.freeze([Object.freeze({
           stage: 'moo1',
-          name: '奈落の再起',
+          name: '常闇の再起',
           desc: 'ライフ全回復・最大ライフ1.5倍で復活'
         })])
       })
@@ -16364,7 +16364,7 @@ const COCYTUS_SETTING = Object.freeze({
   gold: 140,
   psyche: 250,
   waveCount: 10,
-  unlockRequirement: 'MALEBOLGE',
+  unlockRequirement: 'EREBUS',
   rankingId: 'ExtremeCOCYTUS',
   recordId: 'COCYTUS',
   description: 'どの敵も何枚もの厚いシールドをまとって現れる。1枚割るごとに敵は強くなり、デュラハンとムーは倒しても大きくなって蘇る、極限チャレンジの最奥の難易度。',
@@ -16425,7 +16425,7 @@ const COCYTUS_SETTING = Object.freeze({
     })
   })
 });
-const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES, GOD_SETTING, RAGNAROK_SETTING, HELHEIM_SETTING, ETERNAL_SETTING, INFERNO_SETTING, MALEBOLGE_SETTING, COCYTUS_SETTING]);
+const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES, GOD_SETTING, RAGNAROK_SETTING, HELHEIM_SETTING, ETERNAL_SETTING, INFERNO_SETTING, EREBUS_SETTING, COCYTUS_SETTING]);
 const EXTREME_DIFFICULTY_THEMES = Object.freeze({
   EXTREME: Object.freeze({
     accent: '#f0abfc',
@@ -16537,12 +16537,12 @@ const EXTREME_DIFFICULTY_THEMES = Object.freeze({
     actionGlow: 0.74,
     shadowBlur: 60
   }),
-  MALEBOLGE: Object.freeze({
-    accent: '#c4b5fd',
-    rgb: '167,139,250',
-    background: 'linear-gradient(180deg,#2e1065,#0b0418)',
-    action: 'linear-gradient(135deg,#7c3aed,#ddd6fe)',
-    actionText: '#2e1065',
+  EREBUS: Object.freeze({
+    accent: '#f9a8d4',
+    rgb: '236,72,153',
+    background: 'linear-gradient(180deg,#4a044e,#0b0418)',
+    action: 'linear-gradient(135deg,#be185d,#fbcfe8)',
+    actionText: '#4a044e',
     glow: 0.76,
     titleGlow: 0.97,
     actionGlow: 0.76,
@@ -16683,22 +16683,22 @@ const cocytusStageRules = waveNumber => {
     rushAtBroken: COCYTUS_RUSH_AT_BROKEN[w] || null
   });
 };
-const MALEBOLGE_SHIELD_LAYERS = COCYTUS_SHIELD_LAYERS;
-const MALEBOLGE_FIRST_LAYER_RATE = Object.freeze({
+const EREBUS_SHIELD_LAYERS = COCYTUS_SHIELD_LAYERS;
+const EREBUS_FIRST_LAYER_RATE = Object.freeze({
   9: 2.6,
   10: 3.0
 });
-const malebolgeStageRules = waveNumber => {
+const erebusStageRules = waveNumber => {
   const base = eternalStageRules(waveNumber);
   const w = Math.floor(Number(waveNumber) || 0);
   const boss = INFERNO_BOSS_WAVES.includes(w);
   return Object.freeze({
     ...base,
-    shieldLayers: MALEBOLGE_SHIELD_LAYERS[w] || 0,
+    shieldLayers: EREBUS_SHIELD_LAYERS[w] || 0,
     bossWave: boss,
     layerGrowth: 0.3,
     layerAtkGain: boss ? 0.3 : 0.2,
-    layerFirstRate: MALEBOLGE_FIRST_LAYER_RATE[w] || 1.8,
+    layerFirstRate: EREBUS_FIRST_LAYER_RATE[w] || 1.8,
     layerBodyBossOnly: true,
     rushAtBroken: COCYTUS_RUSH_AT_BROKEN[w] || null
   });
@@ -16724,9 +16724,9 @@ const EXTREME_WAVE_STAGES = Object.freeze({
     label: '冥府',
     rules: infernoStageRules
   }),
-  MALEBOLGE: Object.freeze({
+  EREBUS: Object.freeze({
     label: '冥府',
-    rules: malebolgeStageRules
+    rules: erebusStageRules
   }),
   COCYTUS: Object.freeze({
     label: '冥府',
@@ -17095,16 +17095,16 @@ const extremeRuleDetailGroups = (difficultyId, quick = false) => {
   };
   if (difficultyId === GOD_SETTING.id) push('神威', [['進行', '2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'], ['敵ライフ/攻撃力', '神威Lvごと +15% / +30% / +45% / +60% / +75%'], ['Lv5', '与ダメ低下 -1.5pt/T・最低20%、次のBREAKから安全距離なし']]);
   if (difficultyId === RAGNAROK_SETTING.id) push('黄昏', [['進行', '2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'], ['敵ライフ/攻撃力', '黄昏Lvごと +20% / +40% / +60% / +80% / +100%'], ['Lv2', '距離強化 35%→25%'], ['Lv3', '消費ガッツ 175%→200%'], ['Lv4', '＋補正 35%→25%・−補正 250%→300%'], ['Lv5', '与ダメ低下 -1.75pt/T・最低15%']]);
-  if (difficultyId === HELHEIM_SETTING.id || difficultyId === ETERNAL_SETTING.id || difficultyId === INFERNO_SETTING.id || difficultyId === MALEBOLGE_SETTING.id || difficultyId === COCYTUS_SETTING.id) {
+  if (difficultyId === HELHEIM_SETTING.id || difficultyId === ETERNAL_SETTING.id || difficultyId === INFERNO_SETTING.id || difficultyId === EREBUS_SETTING.id || difficultyId === COCYTUS_SETTING.id) {
     const adjust = rules.enemyAdjust || {};
     const durahan = adjust.byEnemy?.Durahan;
     push('冥府', [['進行', '2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'], ['敵ライフ/攻撃力', '冥府Lvごと +30% / +60% / +90% / +120% / +150%'], ['味方の最大ライフ', '冥府Lvごと -5%（Lv5で-25%）'], ['Lv3', '消費ガッツ 200%→225%'], ['Lv4', '＋補正 30%→20%・−補正 300%→350%'], ['Lv5', '与ダメ低下 -2.0pt/T・最低10%']]);
     push('敵の強さ', [adjust.lifeRate > 1 && ['敵ライフ', `すべての敵が${adjust.lifeRate}倍`], durahan && ['デュラハン', `ライフ・攻撃力が さらに${durahan.lifeRate}倍`]]);
     push('距離強化', [['WAVEごとに薄れる', 'WAVE1で10%、1WAVEごとに1%ずつ下がり、WAVE10で1%']]);
     if (difficultyId === INFERNO_SETTING.id) push('ボスの層のシールド', [['起き上がり', 'ボスは起き上がらない'], ['層の数', 'W3・W5・W7のボス 3枚 / W9 デュラハン 4枚 / W10 ムー 5枚'], ['シールドの量', '1枚目はエターナルのそのボスのライフと同じ。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率'], ['割れるたび', 'ボスの攻撃力 +60%(最後の1枚も)'], ['連撃', 'デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)']]);
-    if (difficultyId === MALEBOLGE_SETTING.id) push('層のシールド', [['蘇り', 'ムーだけ1回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る。シールドは張り直さない'], ['層の数', 'W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'], ['WAVEのはじめのシールド', 'エターナルの50%のシールドは、層のシールドに置き換わる'], ['シールドの量', '1枚目はその敵の最大ライフの1.8倍(デュラハン2.6倍・ムー3倍)。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフは元のまま)'], ['割れるたび', 'ふつうの敵の攻撃力 +20%・ボスの攻撃力 +30%(最後の1枚も。ムーは蘇るときにも+30%)'], ['連撃', 'デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)']]);
+    if (difficultyId === EREBUS_SETTING.id) push('層のシールド', [['蘇り', 'ムーだけ1回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る。シールドは張り直さない'], ['層の数', 'W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'], ['WAVEのはじめのシールド', 'エターナルの50%のシールドは、層のシールドに置き換わる'], ['シールドの量', '1枚目はその敵の最大ライフの1.8倍(デュラハン2.6倍・ムー3倍)。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフは元のまま)'], ['割れるたび', 'ふつうの敵の攻撃力 +20%・ボスの攻撃力 +30%(最後の1枚も。ムーは蘇るときにも+30%)'], ['連撃', 'デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)']]);
     if (difficultyId === COCYTUS_SETTING.id) push('層のシールド', [['蘇り', 'デュラハンは1回・ムーは2回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る(ムーの2回目は2.25倍)。シールドは張り直さない'], ['層の数', 'W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'], ['WAVEのはじめのシールド', 'エターナルの50%のシールドは、層のシールドに置き換わる'], ['シールドの量', '1枚目はその敵の最大ライフの3倍(デュラハン3.8倍・ムー4.4倍)。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフはそのまま)'], ['割れるたび', '敵の攻撃力 +20%(最後の1枚も。蘇るたびにも+20%)'], ['連撃', 'デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)']]);
-    if (difficultyId === ETERNAL_SETTING.id || difficultyId === INFERNO_SETTING.id || difficultyId === MALEBOLGE_SETTING.id || difficultyId === COCYTUS_SETTING.id) push('シールドと貫き', [['シールド', 'WAVEの始めに、敵が最大ライフ50%ぶんのシールドをまとう。シールドを割るまで敵のライフは減らない'], ['シールドと距離強化', 'シールドに当てたダメージは、距離強化(間合いのボーナス)に数えない'], ['貫き', '敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）']]);
+    if (difficultyId === ETERNAL_SETTING.id || difficultyId === INFERNO_SETTING.id || difficultyId === EREBUS_SETTING.id || difficultyId === COCYTUS_SETTING.id) push('シールドと貫き', [['シールド', 'WAVEの始めに、敵が最大ライフ50%ぶんのシールドをまとう。シールドを割るまで敵のライフは減らない'], ['シールドと距離強化', 'シールドに当てたダメージは、距離強化(間合いのボーナス)に数えない'], ['貫き', '敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）']]);
   }
   push('カード', [rules.assistCardEffect != null && ['アシストカード効果', specialRulePercent(rules.assistCardEffect)]]);
   push('補正', [rules.waveEnhancement != null && ['WAVE後強化', specialRulePercent(rules.waveEnhancement)], rules.positiveModifier != null && ['＋補正', specialRulePercent(rules.positiveModifier)], rules.negativeModifier != null && ['－補正', specialRulePercent(rules.negativeModifier)], rules.distanceEnhancement != null && ['距離強化', specialRulePercent(rules.distanceEnhancement)]]);
@@ -17335,8 +17335,8 @@ const isRagnarokUnlocked = godClearCount => (Number(godClearCount) || 0) > 0;
 const isHelheimUnlocked = ragnarokClearCount => (Number(ragnarokClearCount) || 0) > 0;
 const isEternalUnlocked = helheimClearCount => (Number(helheimClearCount) || 0) > 0;
 const isInfernoUnlocked = eternalClearCount => (Number(eternalClearCount) || 0) > 0;
-const isMalebolgeUnlocked = infernoClearCount => (Number(infernoClearCount) || 0) > 0;
-const isCocytusUnlocked = (malebolgeClearCount, kept = null, cocytusRecord = 0) => (Number(malebolgeClearCount) || 0) > 0 || normalizeCocytusOpenKept(kept).extreme === true || (Number(cocytusRecord) || 0) > 0;
+const isErebusUnlocked = infernoClearCount => (Number(infernoClearCount) || 0) > 0;
+const isCocytusUnlocked = (erebusClearCount, kept = null, cocytusRecord = 0) => (Number(erebusClearCount) || 0) > 0 || normalizeCocytusOpenKept(kept).extreme === true || (Number(cocytusRecord) || 0) > 0;
 const COCYTUS_OPEN_KEPT_KEY = 'mh_cocytus_open_kept_v1';
 const normalizeCocytusOpenKept = value => {
   const v = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -130980,10 +130980,10 @@ function MonsterHeroGame() {
   const eternalClearCount = extremeClearCounts[ETERNAL_SETTING.id] || 0;
   const infernoUnlocked = useMemo(() => isInfernoUnlocked(eternalClearCount), [eternalClearCount]);
   const infernoClearCount = extremeClearCounts[INFERNO_SETTING.id] || 0;
-  const malebolgeUnlocked = useMemo(() => isMalebolgeUnlocked(infernoClearCount), [infernoClearCount]);
-  const malebolgeClearCount = extremeClearCounts[MALEBOLGE_SETTING.id] || 0;
+  const erebusUnlocked = useMemo(() => isErebusUnlocked(infernoClearCount), [infernoClearCount]);
+  const erebusClearCount = extremeClearCounts[EREBUS_SETTING.id] || 0;
   const cocytusRecord = (extremeClearCounts[COCYTUS_SETTING.id] || 0) + (extremeBestScores[COCYTUS_SETTING.id] || 0);
-  const cocytusUnlocked = useMemo(() => isCocytusUnlocked(malebolgeClearCount, cocytusOpenKept, cocytusRecord), [malebolgeClearCount, cocytusOpenKept, cocytusRecord]);
+  const cocytusUnlocked = useMemo(() => isCocytusUnlocked(erebusClearCount, cocytusOpenKept, cocytusRecord), [erebusClearCount, cocytusOpenKept, cocytusRecord]);
   const underworldUnlocked = useMemo(() => isUnderworldUnlocked(eternalClearCount), [eternalClearCount]);
   const [underworldIntroDone, setUnderworldIntroDone] = useState(false);
   useEffect(() => {
@@ -152442,7 +152442,7 @@ function MonsterHeroGame() {
         }
       }, difficulties.map(setting => {
         const active = setting.id === extremeDifficulty;
-        const unlocked = debugBattle || (setting.id === 'EXTREME' ? extremeUnlocked : setting.id === 'NIGHTMARE' ? nightmareUnlocked : setting.id === 'CHAOS' ? chaosUnlocked : setting.id === 'ULTIMATE' ? ultimateUnlocked : setting.id === 'INFINITY' ? infinityUnlocked : setting.id === 'GOD' ? godUnlocked : setting.id === 'RAGNAROK' ? ragnarokUnlocked : setting.id === 'HELHEIM' ? helheimUnlocked : setting.id === 'ETERNAL' ? eternalUnlocked : setting.id === 'INFERNO' ? infernoUnlocked : setting.id === 'MALEBOLGE' ? malebolgeUnlocked : setting.id === 'COCYTUS' ? cocytusUnlocked : false);
+        const unlocked = debugBattle || (setting.id === 'EXTREME' ? extremeUnlocked : setting.id === 'NIGHTMARE' ? nightmareUnlocked : setting.id === 'CHAOS' ? chaosUnlocked : setting.id === 'ULTIMATE' ? ultimateUnlocked : setting.id === 'INFINITY' ? infinityUnlocked : setting.id === 'GOD' ? godUnlocked : setting.id === 'RAGNAROK' ? ragnarokUnlocked : setting.id === 'HELHEIM' ? helheimUnlocked : setting.id === 'ETERNAL' ? eternalUnlocked : setting.id === 'INFERNO' ? infernoUnlocked : setting.id === 'EREBUS' ? erebusUnlocked : setting.id === 'COCYTUS' ? cocytusUnlocked : false);
         const previewable = (setting.available || debugBattle && setting.debugAvailable) && unlocked;
         const theme = extremeDifficultyTheme(setting.id);
         const heroProofReward = heroProofClearReward({
@@ -152473,7 +152473,7 @@ function MonsterHeroGame() {
           className: "block text-right text-base italic leading-tight text-white"
         }, setting.available && unlocked ? `${(extremeBestScores[setting.id] || 0).toLocaleString()} pt` : '？？？'), React.createElement("span", {
           className: "block text-right text-[9px] text-amber-300"
-        }, setting.available && unlocked ? `クリア ${extremeClearCounts[setting.id] || 0}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : setting.id === 'CHAOS' ? 'NIGHTMAREクリアで解放' : setting.id === 'ULTIMATE' && !ultimateUnlocked ? 'CHAOSクリアで解放' : setting.id === 'INFINITY' && !infinityUnlocked ? 'ULTIMATEクリアで解放' : setting.id === 'GOD' && !godUnlocked ? 'INFINITYクリアで解放' : setting.id === 'RAGNAROK' && !ragnarokUnlocked ? 'GODクリアで解放' : setting.id === 'HELHEIM' && !helheimUnlocked ? 'RAGNAROKクリアで解放' : setting.id === 'ETERNAL' && !eternalUnlocked ? 'HELHEIMクリアで解放' : setting.id === 'INFERNO' && !infernoUnlocked ? 'ETERNALクリアで解放' : setting.id === 'MALEBOLGE' && !malebolgeUnlocked ? 'INFERNOクリアで解放' : setting.id === 'COCYTUS' && !cocytusUnlocked ? `${MALEBOLGE_SETTING.label}クリアで解放` : '選択できません')), previewable ? React.createElement(React.Fragment, null, React.createElement("div", {
+        }, setting.available && unlocked ? `クリア ${extremeClearCounts[setting.id] || 0}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : setting.id === 'CHAOS' ? 'NIGHTMAREクリアで解放' : setting.id === 'ULTIMATE' && !ultimateUnlocked ? 'CHAOSクリアで解放' : setting.id === 'INFINITY' && !infinityUnlocked ? 'ULTIMATEクリアで解放' : setting.id === 'GOD' && !godUnlocked ? 'INFINITYクリアで解放' : setting.id === 'RAGNAROK' && !ragnarokUnlocked ? 'GODクリアで解放' : setting.id === 'HELHEIM' && !helheimUnlocked ? 'RAGNAROKクリアで解放' : setting.id === 'ETERNAL' && !eternalUnlocked ? 'HELHEIMクリアで解放' : setting.id === 'INFERNO' && !infernoUnlocked ? 'ETERNALクリアで解放' : setting.id === 'EREBUS' && !erebusUnlocked ? 'INFERNOクリアで解放' : setting.id === 'COCYTUS' && !cocytusUnlocked ? `${EREBUS_SETTING.label}クリアで解放` : '選択できません')), previewable ? React.createElement(React.Fragment, null, React.createElement("div", {
           className: "grid grid-cols-3 gap-1 mt-1"
         }, [['敵強度', `×${setting.power}`], ['スコア', setting.score ? `×${setting.score}` : '対象外'], ['ダイヤ', setting.gold ? `×${setting.gold}` : '対象外']].map(([label, value]) => React.createElement("div", {
           key: label,

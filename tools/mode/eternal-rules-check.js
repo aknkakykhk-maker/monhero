@@ -64,5 +64,5 @@ check('本体: シールドが受けたぶんは距離強化に入れない',sou
   &&source.includes('(enemy?.hp??0)-(totalDmg-shellAbsorbedTotal)'));
 check('本体: 被ダメに貫きを通す',source.includes('applyEnemyPierce(Math.max(30,(atkVal-defVal*0.5)*(1-defenseRate)),atkVal,enemyPierceRate)'));
 check('本体: 通常UIへ公開しHELHEIMクリアで解放',source.includes("setting.id==='ETERNAL'?eternalUnlocked:")&&source.includes("'HELHEIMクリアで解放'"));
-check('勇者の証はETERNALで4個',/speciesChallenge:Object\.freeze\(\{ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4(, INFERNO:5)?(, MALEBOLGE:5)?(, COCYTUS:6)? \}\)/.test(source));
+check('勇者の証はETERNALで4個',/speciesChallenge:Object\.freeze\(\{ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4(, INFERNO:5)?(, EREBUS:5)?(, COCYTUS:6)? \}\)/.test(source));
 process.exit(failed?1:0);
