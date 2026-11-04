@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 208c4ab8cf808387
+// source-sha256: f95f91807f8ad802
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -74999,10 +74999,21 @@ const INFERNO_SHIELD_CSS = `
 @keyframes mhShieldBand{0%{opacity:0;transform:translateX(-30%)}12%{opacity:1;transform:translateX(0)}86%{opacity:1;transform:translateX(0)}100%{opacity:0;transform:translateX(12%)}}
 @keyframes mhShieldShake{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,3px) rotate(-.6deg)}40%{transform:translate(5px,-3px) rotate(.5deg)}60%{transform:translate(-4px,2px)}80%{transform:translate(3px,-2px)}}
 [data-inferno-shield-fx] *{pointer-events:none}
+@keyframes mhShieldDarkCreep{0%{opacity:0;transform:translateX(var(--from))}45%{opacity:1;transform:translateX(0)}80%{opacity:1}100%{opacity:0}}
+@keyframes mhShieldHole{0%{opacity:0;transform:translate(-50%,-50%) scale(0)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}30%{transform:translate(-50%,-50%) scale(1)}75%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(0)}}
+@keyframes mhShieldSuck{0%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--rot)) skewX(-28deg)}15%{opacity:1}100%{opacity:0;transform:translate(0,0) rotate(0deg) skewX(-28deg) scale(.2)}}
+@keyframes mhShieldRingIn{0%{opacity:0;transform:translate(-50%,-50%) scale(1.7)}25%{opacity:.85}100%{opacity:0;transform:translate(-50%,-50%) scale(.2)}}
+@keyframes mhShieldPop{0%{opacity:0;transform:skewX(-28deg) scaleX(.2)}60%{opacity:1;transform:skewX(-28deg) scaleX(1.08)}100%{opacity:1;transform:skewX(-28deg) scaleX(1)}}
+[data-inferno-shield-gauge][data-shield-entry] [data-inferno-shield-layer]{animation:mhShieldPop .26s ease-out both}
+@keyframes mhShieldEntryBar{0%{opacity:0;clip-path:inset(0 100% 0 0)}100%{opacity:1;clip-path:inset(0 0 0 0)}}
+@keyframes mhShieldEntryGather{0%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.3)}20%{opacity:1}100%{opacity:0;transform:translate(0,0) scale(.3)}}
+@keyframes mhShieldEntryShell{0%{opacity:0;transform:translate(-50%,-50%) scale(1.3)}30%{opacity:1;transform:translate(-50%,-50%) scale(1)}70%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
+@keyframes mhShieldEntryRing{0%{opacity:.95;transform:translate(-50%,-50%) scale(.6)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.45)}}
 `;
 function InfernoShieldGauge({
   view,
-  rule
+  rule,
+  entry = false
 }) {
   if (!view || !(view.total > 0)) return null;
   const rows = [];
@@ -75080,6 +75091,7 @@ function InfernoShieldGauge({
   const curColor = view.left > 0 ? infernoShieldColorAt(view.broken, rule)[1] : '#a8a29e';
   return React.createElement(React.Fragment, null, React.createElement("style", null, INFERNO_SHIELD_CSS), React.createElement("div", {
     "data-inferno-shield-gauge": view.total,
+    "data-shield-entry": entry ? '1' : undefined,
     "data-inferno-shield-left": view.left,
     "aria-label": `シールド 残り${view.left}枚(全${view.total}枚)`,
     className: "pointer-events-none absolute left-1/2 top-1 z-[44] flex items-start gap-1.5 [@media(max-height:640px)]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden",
@@ -75235,11 +75247,161 @@ function InfernoShieldBadge({
     className: "mt-[1px] text-[8px] font-extrabold text-amber-200"
   }, "次の1枚 +", growthPct, "%"));
 }
+const SHIELD_ENTRY_LOOK = Object.freeze({
+  INFERNO: Object.freeze({
+    glow: '#f97316',
+    light: '#fde68a',
+    dim: 'rgba(127,29,29,.75)'
+  }),
+  EREBUS: Object.freeze({
+    glow: '#db2777',
+    light: '#f9a8d4',
+    dim: 'rgba(20,2,16,.82)'
+  }),
+  COCYTUS: Object.freeze({
+    glow: '#22d3ee',
+    light: '#ecfeff',
+    dim: 'rgba(8,47,73,.75)'
+  })
+});
+const SHIELD_ENTRY_LAYER_MS = 260;
+const SHIELD_ENTRY_LAYER_START_MS = 1400;
+function ShieldEntryFx({
+  entry,
+  onShown,
+  onDone
+}) {
+  const look = SHIELD_ENTRY_LOOK[entry.rule] || SHIELD_ENTRY_LOOK.INFERNO;
+  const [mode, setMode] = React.useState(null);
+  const [center, setCenter] = React.useState(null);
+  const timersRef = React.useRef([]);
+  const clearTimers = () => {
+    timersRef.current.forEach(t => clearTimeout(t));
+    timersRef.current = [];
+  };
+  const later = (ms, f) => {
+    timersRef.current.push(setTimeout(f, ms));
+  };
+  React.useEffect(() => {
+    let waited = 0;
+    const tryStart = () => {
+      const blocking = typeof document !== 'undefined' && document.querySelector('[role="dialog"][aria-modal="true"]');
+      if (blocking && waited < 30000) {
+        waited += 250;
+        later(250, tryStart);
+        return;
+      }
+      const ring = typeof document !== 'undefined' ? document.querySelector('[data-enemy-ring]') : null;
+      const r = ring && ring.getBoundingClientRect();
+      setCenter(r && r.width > 0 ? {
+        x: r.left + r.width / 2,
+        y: r.top + r.height / 2,
+        w: Math.max(120, r.width)
+      } : {
+        x: (typeof window !== 'undefined' ? window.innerWidth : 390) / 2,
+        y: (typeof window !== 'undefined' ? window.innerHeight : 800) * 0.3,
+        w: 180
+      });
+      const m = waited >= 30000 ? 'short' : entry.mode;
+      setMode(m);
+      if (m === 'short') {
+        onShown(entry.total);
+        later(650, () => onDone(entry.id));
+        return;
+      }
+      for (let n = 1; n <= entry.total; n += 1) later(SHIELD_ENTRY_LAYER_START_MS + (n - 1) * SHIELD_ENTRY_LAYER_MS, () => onShown(n));
+      later(SHIELD_ENTRY_LAYER_START_MS + entry.total * SHIELD_ENTRY_LAYER_MS + 350, () => onDone(entry.id));
+    };
+    tryStart();
+    return clearTimers;
+  }, [entry.id]);
+  const skip = () => {
+    clearTimers();
+    onShown(entry.total);
+    setMode('short');
+    later(650, () => onDone(entry.id));
+  };
+  if (!mode || !center) return null;
+  const gather = mode === 'long' ? Array.from({
+    length: 14
+  }, (_, k) => {
+    const a = k / 14 * Math.PI * 2;
+    const d = center.w * 1.1;
+    return {
+      k,
+      dx: `${Math.round(Math.cos(a) * d)}px`,
+      dy: `${Math.round(Math.sin(a) * d * 0.8)}px`
+    };
+  }) : [];
+  return ReactDOM.createPortal(React.createElement("div", {
+    "data-shield-entry-fx": mode,
+    "data-shield-entry-rule": entry.rule,
+    className: "fixed inset-0 z-[9300] overflow-hidden",
+    style: {
+      pointerEvents: mode === 'long' ? 'auto' : 'none'
+    },
+    onPointerDown: mode === 'long' ? e => {
+      e.stopPropagation();
+      skip();
+    } : undefined,
+    "aria-hidden": "true"
+  }, React.createElement("style", null, INFERNO_SHIELD_CSS), mode === 'long' && React.createElement(React.Fragment, null, React.createElement("style", null, '[data-enemy-bar]{animation:mhShieldEntryBar .45s ease-out both}'), React.createElement("div", {
+    className: "pointer-events-none absolute inset-0",
+    style: {
+      boxShadow: `inset 0 0 90px 30px ${look.dim}`,
+      animation: 'mhShieldVignette 1.4s .45s ease-out both'
+    }
+  }), React.createElement("div", {
+    className: "pointer-events-none absolute",
+    style: {
+      left: center.x,
+      top: center.y,
+      width: 0,
+      height: 0
+    }
+  }, gather.map(g => React.createElement("i", {
+    key: g.k,
+    className: "absolute block h-[10px] w-[10px] rounded-full",
+    style: {
+      '--dx': g.dx,
+      '--dy': g.dy,
+      background: look.light,
+      boxShadow: `0 0 12px 4px ${look.glow}`,
+      animation: 'mhShieldEntryGather .5s .5s ease-in both'
+    }
+  }))), React.createElement("div", {
+    className: "pointer-events-none absolute",
+    style: {
+      left: center.x,
+      top: center.y,
+      width: center.w * 1.2,
+      height: center.w * 1.15,
+      borderRadius: '46%',
+      border: `3px solid ${look.light}`,
+      background: `radial-gradient(ellipse,transparent 55%,${look.glow}55)`,
+      boxShadow: `0 0 26px ${look.glow},inset 0 0 22px ${look.glow}`,
+      animation: 'mhShieldEntryShell 1.2s .9s ease-out both'
+    }
+  })), mode === 'short' && React.createElement("div", {
+    className: "pointer-events-none absolute rounded-full",
+    style: {
+      left: center.x,
+      top: center.y,
+      width: center.w * 1.3,
+      height: center.w * 1.3,
+      border: `3px solid ${look.light}`,
+      boxShadow: `0 0 24px ${look.glow}`,
+      animation: 'mhShieldEntryRing .5s ease-out both'
+    }
+  })), document.body);
+}
 function InfernoShieldBreakFx({
   fx,
   lite,
-  onDone
+  onDone,
+  rule
 }) {
+  const dark = rule === 'EREBUS';
   const dur = lite ? 1700 : fx.kind === 'final' ? 3600 : fx.kind === 'rush' ? 3300 : 2900;
   React.useEffect(() => {
     const t = setTimeout(() => onDone && onDone(fx.id), dur);
@@ -75299,12 +75461,114 @@ function InfernoShieldBreakFx({
     sub: `${fx.left === 0 ? 'シールドが全部割れた。' : ''}攻撃力 +${fx.atkPct}%`,
     big: null
   };
+  const darkBand = !dark ? null : fx.kind === 'rush' ? {
+    bg: 'linear-gradient(90deg,rgba(2,0,12,.97),rgba(91,33,182,.97) 50%,rgba(2,0,12,.97))',
+    line: '#c4b5fd',
+    glow: 'rgba(124,58,237,.9)'
+  } : final ? {
+    bg: 'linear-gradient(90deg,rgba(2,0,12,.98),rgba(112,26,117,.97) 50%,rgba(2,0,12,.98))',
+    line: '#facc15',
+    glow: 'rgba(219,39,119,.85)',
+    title: `🌑 ${fx.name} 最終形態!`
+  } : {
+    bg: 'linear-gradient(90deg,rgba(2,0,12,.97),rgba(76,29,149,.97) 50%,rgba(2,0,12,.97))',
+    line: '#c4b5fd',
+    glow: 'rgba(124,58,237,.9)',
+    title: `🌑 ${fx.name}が闇をまとった!`
+  };
+  const bandLook = darkBand ? {
+    ...band,
+    ...darkBand
+  } : band;
+  const creep = dark && !lite ? Array.from({
+    length: 8
+  }, (_, k) => ({
+    k,
+    left: k % 2 === 1,
+    top: 8 + k * 11,
+    len: 34 + k * 37 % 22,
+    h: 16 + k % 3 * 8
+  })) : [];
   return ReactDOM.createPortal(React.createElement("div", {
     "data-inferno-shield-fx": fx.kind,
+    "data-inferno-shield-look": dark ? 'EREBUS' : undefined,
     "data-inferno-shield-broken": fx.broken,
     className: "fixed inset-0 z-[9400] overflow-hidden pointer-events-none",
     "aria-live": "polite"
-  }, React.createElement("style", null, INFERNO_SHIELD_CSS), !lite && React.createElement(React.Fragment, null, React.createElement("div", {
+  }, React.createElement("style", null, INFERNO_SHIELD_CSS), !lite && dark && React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      boxShadow: 'inset 0 0 120px 60px rgba(2,0,12,.92)',
+      background: 'radial-gradient(ellipse at 50% 30%,transparent 30%,rgba(30,10,60,.55) 80%)',
+      animation: 'mhShieldVignette 1.6s ease-out both'
+    }
+  }), creep.map(c => React.createElement("i", {
+    key: c.k,
+    className: "absolute block rounded-full",
+    style: {
+      top: `${c.top}%`,
+      [c.left ? 'left' : 'right']: 0,
+      width: `${c.len}vw`,
+      height: `${c.h}px`,
+      '--from': c.left ? '-100%' : '100%',
+      background: `linear-gradient(${c.left ? 90 : 270}deg,rgba(2,0,12,.95),rgba(76,29,149,.7) 70%,rgba(167,139,250,0))`,
+      filter: 'blur(3px)',
+      animation: 'mhShieldDarkCreep 1.4s ease-out both'
+    }
+  })), React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      background: 'radial-gradient(circle at 50% 30%,rgba(2,0,12,.98) 0,rgba(2,0,12,.9) 12%,rgba(76,29,149,.55) 38%,rgba(2,0,12,.6) 85%)',
+      animation: `mhShieldFlash ${final ? 1.3 : 1}s .8s ease-out both`
+    }
+  }), React.createElement("div", {
+    className: "absolute left-1/2 top-[30%] rounded-full",
+    style: {
+      width: final ? 150 : 110,
+      height: final ? 150 : 110,
+      background: '#000',
+      boxShadow: `0 0 0 4px ${final ? '#facc15' : '#a78bfa'},0 0 40px 16px rgba(124,58,237,.95),inset 0 0 30px rgba(167,139,250,.6)`,
+      animation: 'mhShieldHole 1.5s .7s ease-out both'
+    }
+  }), [0, 1, 2, ...(final ? [3] : [])].map(n => React.createElement("div", {
+    key: n,
+    className: "absolute left-1/2 top-[30%] rounded-full",
+    style: {
+      width: `${180 + n * 70}px`,
+      height: `${180 + n * 70}px`,
+      border: `2px dashed rgba(196,181,253,${.75 - n * .14})`,
+      animation: `mhShieldRingIn 1s ${.8 + n * .1}s ease-in both`
+    }
+  })), React.createElement("div", {
+    className: "absolute left-1/2 top-[30%]",
+    style: {
+      width: 0,
+      height: 0
+    }
+  }, shards.map(s => React.createElement("i", {
+    key: s.k,
+    className: "absolute block",
+    style: {
+      '--dx': s.dx,
+      '--dy': s.dy,
+      '--rot': s.rot,
+      width: `${s.w}px`,
+      height: `${s.h}px`,
+      background: '#05020c',
+      border: '1px solid #c4b5fd',
+      boxShadow: '0 0 6px #7c3aed',
+      animation: 'mhShieldSuck 1s .85s cubic-bezier(.5,0,.8,.4) both'
+    }
+  }))), React.createElement("div", {
+    className: "absolute left-1/2 top-[22%] whitespace-nowrap text-center font-black italic leading-none",
+    style: {
+      color: '#0b0614',
+      fontSize: final ? 'min(46px,11.5vw)' : 'min(42px,11vw)',
+      WebkitTextStroke: '2px #c4b5fd',
+      textShadow: '0 0 18px #a855f7,0 0 40px #7c3aed',
+      animation: `mhShieldWord 1.5s .9s ease-out both`
+    }
+  }, final ? React.createElement(React.Fragment, null, "ALL SHADOW", React.createElement("br", null), "BREAK!!") : React.createElement(React.Fragment, null, "SHADOW", React.createElement("br", null), "BREAK!!"))), !lite && !dark && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "absolute inset-0",
     style: {
       boxShadow: 'inset 0 0 90px 34px rgba(127,29,29,.8)',
@@ -75373,10 +75637,10 @@ function InfernoShieldBreakFx({
     "data-inferno-shield-band": fx.kind,
     className: "absolute inset-x-0 top-[38%] px-3.5 py-2.5",
     style: {
-      background: band.bg,
-      borderTop: `3px solid ${band.line}`,
-      borderBottom: `3px solid ${band.line}`,
-      boxShadow: `0 0 26px ${band.glow}`,
+      background: bandLook.bg,
+      borderTop: `3px solid ${bandLook.line}`,
+      borderBottom: `3px solid ${bandLook.line}`,
+      boxShadow: `0 0 26px ${bandLook.glow}`,
       animation: `mhShieldBand ${bandLen}s ${bandDelay}s ease-out both`
     }
   }, React.createElement("div", {
@@ -75392,10 +75656,10 @@ function InfernoShieldBreakFx({
   }, React.createElement("div", {
     className: "text-[20px] font-black italic leading-tight",
     style: {
-      color: final ? '#fef08a' : fx.kind === 'rush' ? '#fdf4ff' : '#fecaca',
-      textShadow: '0 2px 0 #7c2d12'
+      color: final ? '#fef08a' : fx.kind === 'rush' || dark ? '#fdf4ff' : '#fecaca',
+      textShadow: `0 2px 0 ${dark ? '#1e1b4b' : '#7c2d12'}`
     }
-  }, band.title), React.createElement("div", {
+  }, bandLook.title), React.createElement("div", {
     className: "mt-1 text-[13px] font-extrabold leading-snug text-white"
   }, band.sub))))), document.body);
 }
@@ -75915,6 +76179,34 @@ function BattleScreen({
   })();
   const infernoFloatShift = infernoShellView?.total > 0 ? infernoShellView.total * 15 + 8 : 0;
   const infernoFloatTop = infernoFloatShift ? `calc(11% + ${infernoFloatShift}px)` : '11%';
+  const shellEntryLiteView = !!(ecoBattleView || liteBattleView || fxLoad === 'LIGHT' || fxLoad === 'MINIMAL');
+  const [shellEntry, setShellEntry] = useState(null);
+  const [shellEntryShown, setShellEntryShown] = useState(0);
+  const shellEntryKeyRef = useRef(null);
+  useEffect(() => {
+    const view = infernoShellView;
+    if (!(view?.total > 0)) return;
+    const key = `${wave}:${enemy?.id || ''}`;
+    if (shellEntryKeyRef.current === key) return;
+    shellEntryKeyRef.current = key;
+    if (shellEntryLiteView || view.broken > 0 || !SHIELD_ENTRY_LOOK[infernoShellRule]) return;
+    const mode = isQuickMode(runMode) || autoBattle ? 'short' : wave === 1 || view.boss ? 'long' : 'short';
+    setShellEntryShown(0);
+    setShellEntry({
+      id: key,
+      mode,
+      total: view.total,
+      rule: infernoShellRule
+    });
+  }, [infernoShellView?.total, wave, enemy?.id]);
+  const shellEntryActive = !!shellEntry && shellEntry.id === `${wave}:${enemy?.id || ''}` && shellEntryShown < (infernoShellView?.total || 0);
+  const shellGaugeView = shellEntryActive && infernoShellView ? {
+    ...infernoShellView,
+    total: shellEntryShown,
+    layers: infernoShellView.layers.slice(0, shellEntryShown),
+    left: Math.max(0, shellEntryShown - infernoShellView.broken),
+    boss: false
+  } : infernoShellView;
   const infernoShellSeqRef = useRef({
     key: null,
     seq: 0
@@ -76583,8 +76875,8 @@ function BattleScreen({
     style: {
       background: 'linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))'
     }
-  })), infernoShellView?.total > 0 && React.createElement(InfernoShieldCompact, {
-    view: infernoShellView,
+  })), shellGaugeView?.total > 0 && React.createElement(InfernoShieldCompact, {
+    view: shellGaugeView,
     rule: infernoShellRule
   }), enemyDebuffOpen && Array.isArray(enemyDebuffs) && enemyDebuffs.length > 0 && React.createElement("div", {
     "data-enemy-debuff-detail": true,
@@ -76752,16 +77044,23 @@ function BattleScreen({
       hatePct: hc && Number.isInteger(hc.copy) ? hc.copy : null,
       lift: battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0)
     });
-  })(), infernoShellView?.total > 0 && React.createElement(InfernoShieldGauge, {
-    view: infernoShellView,
-    rule: infernoShellRule
-  }), infernoShellView?.total > 0 && !copyFloat && React.createElement(InfernoShieldBadge, {
+  })(), shellGaugeView?.total > 0 && React.createElement(InfernoShieldGauge, {
+    view: shellGaugeView,
+    rule: infernoShellRule,
+    entry: shellEntryActive
+  }), shellEntry && React.createElement(ShieldEntryFx, {
+    key: shellEntry.id,
+    entry: shellEntry,
+    onShown: n => setShellEntryShown(v => Math.max(v, n)),
+    onDone: id => setShellEntry(cur => cur && cur.id === id ? null : cur)
+  }), infernoShellView?.total > 0 && !shellEntryActive && !copyFloat && React.createElement(InfernoShieldBadge, {
     view: infernoShellView,
     rule: infernoShellRule,
     growthPct: Math.round((Number(extremeWaveStageRules(infernoShellRule, wave)?.layerGrowth) || 0) * 100)
   }), infernoShellFx && React.createElement(InfernoShieldBreakFx, {
     key: infernoShellFx.id,
     fx: infernoShellFx,
+    rule: infernoShellRule,
     lite: !!(ecoBattleView || liteBattleView || fxLoad === 'LIGHT' || fxLoad === 'MINIMAL'),
     onDone: id => setInfernoShellFx(cur => cur && cur.id === id ? null : cur)
   }), battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && React.createElement("button", {
