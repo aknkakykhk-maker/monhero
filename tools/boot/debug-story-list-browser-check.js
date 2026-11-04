@@ -110,7 +110,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
     await page.locator('footer button[aria-label=""]').dispatchEvent('click');
     await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
-    const keysBefore = await page.evaluate(() => JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([k]) => /story|seen|replay/i.test(k)))));
+    // 並び順はそろえて比べる(ブラウザの保存の並び順は、ほかのキーを書いただけで入れ替わることがある。2026-11-04 値は同じなのに並びだけで落ちた)
+    const keysBefore = await page.evaluate(() => JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([k]) => /story|seen|replay/i.test(k)).sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0)))));
     const btn = page.locator('[data-debug-story-list]');
     await btn.evaluate((el) => { let p = el.parentElement; while (p) { if (p.tagName === 'DETAILS') p.open = true; p = p.parentElement; } });
     await btn.dispatchEvent('click');
@@ -131,7 +132,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     }
     await page.locator('[data-debug-story-overlay]').waitFor({ timeout: 10000 });
     check('終わると、この一覧へ戻る', true);
-    const keysAfter = await page.evaluate(() => JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([k]) => /story|seen|replay/i.test(k)))));
+    const keysAfter = await page.evaluate(() => JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([k]) => /story|seen|replay/i.test(k)).sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0)))));
     check('見たことにはしない(保存は何も変わらない)', keysBefore === keysAfter, keysBefore.slice(0, 120) + ' / ' + keysAfter.slice(0, 120));
     await page.locator('[data-debug-story-close]').dispatchEvent('click');
     check('閉じられる', await page.locator('[data-debug-story-overlay]').count() === 0);

@@ -185,7 +185,7 @@ const check = (name, ok, detail = '') => {
     await difficultyTabs.nth(1).click();
     await page.waitForTimeout(400);
     const extremeCount = await difficultyCards.count();
-    check('18難易度が並ぶ', normalCount + extremeCount === 18, `通常 ${normalCount} + 極限 ${extremeCount}`);
+    check('21難易度が並ぶ', normalCount + extremeCount === 21, `通常 ${normalCount} + 極限 ${extremeCount}`);
     await difficultyTabs.nth(0).click();
     await page.waitForTimeout(400);
     check('種族ランキングへの導線がある', await page.locator('[data-species-difficulty-record-link]').count() >= 1);
@@ -209,7 +209,7 @@ const check = (name, ok, detail = '') => {
     const selectedTab = await page.locator('[data-species-rank-tabs] button.bg-cyan-600').textContent();
     check('難易度カードから開くとその種族が選ばれている', /種$/.test(String(selectedTab).trim()), String(selectedTab));
     const rankDiffTabs = page.locator('[data-species-difficulty-tabs] button');
-    check('難易度も他モードと同じくタブで並ぶ', await rankDiffTabs.count() === 18, `${await rankDiffTabs.count()}タブ`);
+    check('難易度も他モードと同じくタブで並ぶ', await rankDiffTabs.count() === 21, `${await rankDiffTabs.count()}タブ`);
     // 公開後は、種族を選ぶとその種族×難易度の全国ランキングへ切り替わる。
     // このサンドボックスは通信できないので、読み込み中・取得できないときの案内が出ればよい
     // (行が出ないまま真っ白・無反応にならないことを見る)
