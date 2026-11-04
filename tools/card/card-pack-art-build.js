@@ -11,7 +11,7 @@
 //   その帯(届いた絵の座標で x 60〜965・y 1145〜1472)だけを位置合わせして引き伸ばし、ふちを14pxぼかして重ねた絵を渡している
 //   (一覧の座標 = 0.4805×X + 9.7 / 0.4805×Y + 4.7(第1弾)、0.4806×X + 1545.65 / 0.4806×Y + 804.7(第8弾))
 //
-//   node tools/card/card-pack-art-build.js <届いた絵のフォルダ(pack-01.png 〜 pack-08.png)>
+//   node tools/card/card-pack-art-build.js <届いた絵のフォルダ(pack-01.png 〜 pack-08.png。無い弾は今の絵のまま)>
 //   そのあと node tools/build.js(キャッシュキー)→ node tools/image-asset-check.js
 const fs = require('fs');
 const path = require('path');
@@ -60,6 +60,7 @@ const cutOutside = async (file) => {
   fs.mkdirSync(OUT, { recursive: true });
   for (let i = 1; i <= 8; i++) {
     const file = path.join(src, `pack-0${i}.png`);
+    if (!fs.existsSync(file)) { console.log(`第${i}弾: ${path.basename(file)} が無いので、今の絵のまま`); continue; } // 届いた弾だけ作り直す(2026-11-04 第7弾だけ社長が描き直した)
     const meta = await sharp(file).metadata();
     if (meta.width !== 1024 || meta.height !== 1536) throw new Error(`${file}: 大きさが ${meta.width}×${meta.height}(1024×1536 のはず)`);
     const cut = await (await cutOutside(file)).png().toBuffer();

@@ -254,7 +254,7 @@ const CARD_PACK_ART_IMGS = Object.freeze({
   p4: Object.freeze({ full: "images/card-battle/packs/p4.webp?v=a73fd2a05058", thumb: "images/card-battle/packs/p4-thumb.webp?v=6e685ffdb370" }),
   p5: Object.freeze({ full: "images/card-battle/packs/p5.webp?v=2548b7e299b5", thumb: "images/card-battle/packs/p5-thumb.webp?v=ab2f8539674c" }),
   p6: Object.freeze({ full: "images/card-battle/packs/p6.webp?v=a39cb36712e9", thumb: "images/card-battle/packs/p6-thumb.webp?v=3a7b7941c6b1" }),
-  p7: Object.freeze({ full: "images/card-battle/packs/p7.webp?v=77335b97c807", thumb: "images/card-battle/packs/p7-thumb.webp?v=68eb3b9cba2c" }),
+  p7: Object.freeze({ full: "images/card-battle/packs/p7.webp?v=70e172f70b48", thumb: "images/card-battle/packs/p7-thumb.webp?v=7240baa2f783" }),
   p8: Object.freeze({ full: "images/card-battle/packs/p8.webp?v=b2300408401e", thumb: "images/card-battle/packs/p8-thumb.webp?v=90032536da24" }),
 });
 const HYBRID_MONSTER_IMGS = Object.freeze({

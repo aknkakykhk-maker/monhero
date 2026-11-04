@@ -35,9 +35,9 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
-    // キュービのカード(社長「この文で」2026-11-04・5行の案)。日時は公開するときの実時刻に入れ直す
-    date: "2026-11-04 18:30", type:'update', group:'cardBattle', title:'キュービのカードが入りました', status:'new', releaseFlag:'cardBattle',
-    image:'images/card-battle/l/C-K01.jpg?v=0ced7620721c',
+    // キュービのカード(社長「この文で」2026-11-04・5行の案)。絵は社長が描き直した第7弾の袋
+    date: "2026-11-04 18:59", type:'update', group:'cardBattle', title:'キュービのカードが入りました', status:'new', releaseFlag:'cardBattle',
+    image:'images/card-battle/packs/p7.webp?v=70e172f70b48',
     items:[
       '第7弾パックに、キュービのカードと、キュービの技カード13枚が入りました。キュービの混血のオリヒメも、第7弾パックから出ます。',
       '第7弾パックは、グジラ・メタルナー・ジョーカー・キュービの4種族になります。',
