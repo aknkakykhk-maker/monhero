@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 66c00d9e6cd5f9a4
+// source-sha256: b2f1f47fe3b0a948
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93132,7 +93132,23 @@ const cardAiFlexMode = (db, st, p) => {
   return 'attack';
 };
 const cardAiHabitNow = (db, st, p, policy) => {
-  const habit = policy.habit;
+  const habit0 = policy.habit;
+  const slow = habit0 && habit0.keepGuard >= CARD_AI_DECK_RACE_SLOW_KEEP;
+  const habit = habit0 && !policy.playerRole && cardAiDeckRaceLosing(st, p) ? slow ? {
+    ...habit0,
+    attack: 1.5,
+    finish: 1.4,
+    keepGuard: 0.5,
+    saveGuts: 0.6,
+    big: 1.0,
+    mill: 0
+  } : {
+    ...habit0,
+    attack: (habit0.attack || 1) * CARD_AI_DECK_RACE_ATTACK,
+    finish: (habit0.finish || 1) * CARD_AI_DECK_RACE_ATTACK,
+    keepGuard: (habit0.keepGuard || 1) * CARD_AI_DECK_RACE_GUARD,
+    mill: 0
+  } : habit0;
   if (!habit || !habit.flex) return habit;
   const mode = cardAiFlexMode(db, st, p);
   if (mode === 'guard') return {
@@ -93255,6 +93271,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       }
       if (e.t === 'gutsZeroBoth') score += (oppP.guts.length - me.guts.length) * 0.6;
       if (e.t === 'deckToGuts') score += me.deck.length <= 3 ? 1 : -3;
+      if ((e.t === 'draw' || e.t === 'rush' || e.t === 'deckToGuts') && !policy.playerRole && cardAiDeckRaceLosing(st, p)) score -= 1.5 * (e.n || 1);
       if (e.t === 'oppHandToDeckBottom') score += 0.5 * habit.disrupt;
       if (e.t === 'gutsToDeckShuffle') score += me.deck.length < 6 ? me.guts.length * 0.5 : -1;
       if (e.t === 'selfHurt') {
@@ -93555,6 +93572,9 @@ const cardAiChooseGuard = (db, st, policy, rand, gopt = null) => {
       o
     };
   });
+  if (best && !dies && !policy.playerRole && cardAiDeckRaceLosing(st, q)) return {
+    type: 'pass'
+  };
   if (!best || !(gopt && gopt.force) && best.v < 0.8 + rand() * 0.3) return {
     type: 'pass'
   };
@@ -93613,10 +93633,26 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
     pick.push(...tossG, ...tossO.slice(0, Math.max(tossG.length ? 0 : 1, tossO.length - 1)));
   }
   const gm = cardFieldEff(st, 'fieldGutsMax');
+  let race = 99;
+  if (!policy.playerRole && (policy.habit || {}).keepGuard >= CARD_AI_DECK_RACE_SLOW_KEEP && cardAiDeckRaceLosing(st, p)) {
+    const live = me.mons.filter(m => !m.ko);
+    const costs = me.hand.map(n => cardOf(db, n)).filter(c => c && (c.user === 'breeder' || live.some(m => cardUsableBy(c, m)))).map(c => cardFieldCostOf(st, c.guts || 0));
+    race = Math.max(0, (costs.length ? Math.max(...costs) : 0) - me.guts.length);
+  }
   return {
     type: 'guts',
-    hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, policy.playerRole ? 99 : cardAiGutsCap(me))
+    hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, Math.min(race, policy.playerRole ? 99 : cardAiGutsCap(me)))
   };
+};
+const CARD_AI_DECK_RACE_FROM = 30;
+const CARD_AI_DECK_RACE_MARGIN = 2;
+const CARD_AI_DECK_RACE_ATTACK = 1.4;
+const CARD_AI_DECK_RACE_GUARD = 0.5;
+const CARD_AI_DECK_RACE_SLOW_KEEP = 1.3;
+const cardAiDeckRaceLosing = (st, p) => {
+  const me = st.players[p],
+    op = st.players[cardOther(p)];
+  return me.deck.length <= CARD_AI_DECK_RACE_FROM && me.deck.length <= op.deck.length + CARD_AI_DECK_RACE_MARGIN;
 };
 const CARD_AI_GUARD_KEEP_ADD = 1.5;
 const CARD_AI_STUCK_KEEP = 2;
