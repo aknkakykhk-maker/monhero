@@ -42,8 +42,8 @@ const WAVE_OF_SPECIES = {
   // デュラハン(2026-10-24 #3421 で届いた)。legendcup の抜粋で第3弾と分かっていた(設計書 4-2)
   durahan: 3,
   metalner: 4, joker: 4, arrowhead: 4, centaur: 4, colorpandora: 4,
-  // キュービ: どの弾に入れるかは社長に聞いている(2026-11-04)。決まるまで 5(どのパックにも出ない)
-  kyubi: 5,
+  // キュービ: 第7弾パック(ジョーカー・メタルナーと同じ。2026-11-04 社長)。パックの中身は 89-card-pack.jsx の CARD_PACKS の種族の一覧で決まる
+  kyubi: 4,
 };
 const waveOfNo = (no) => (no <= 128 ? 1 : no <= 260 ? 2 : no <= 280 ? 3 : 4);
 const KIND = { 'ちから': 'pow', 'かしこさ': 'int', '特殊': 'spe', '回避': 'dge', '防御': 'blk', '全体': 'fld' };

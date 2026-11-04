@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 61812bbd37134afd
+// generated-sha256: e5a0a885ba54e8bd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -59895,7 +59895,7 @@ const CARD_PACKS = Object.freeze([
   { id: 'p4', no: 4, species: ['phoenix', 'monol', 'henger', 'ghost'], color: '#f97316' }, // ゴーストは 2026-10-27 に足した(第4弾だけ4種族・台帳 #204)
   { id: 'p5', no: 5, species: ['plant', 'dragon', 'jell'], color: '#22c55e' },
   { id: 'p6', no: 6, species: ['mew', 'worm', 'durahan'], color: '#a855f7' },
-  { id: 'p7', no: 7, species: ['zilla', 'metalner', 'joker'], color: '#14b8a6' },
+  { id: 'p7', no: 7, species: ['zilla', 'metalner', 'joker', 'kyubi'], color: '#14b8a6' }, // キュービ(とオリヒメ)は 2026-11-04 に足した(社長)
   { id: 'p8', no: 8, species: ['arrowhead', 'centaur', 'colorpandora'], color: '#ec4899' },
 ].map((p) => Object.freeze({
   ...p, name: `第${p.no}弾パック`, price: 300, bundle: Object.freeze({ n: 5, price: 1350 }), tech: 7, mon: 1,
