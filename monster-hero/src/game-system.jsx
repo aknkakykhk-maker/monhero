@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f9d2d11f87fb6865
+// generated-sha256: 84f1fde7c43e38b9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -56606,7 +56606,12 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
     if (cardIsGuardKind(c.kind)) return 2 * habit.keepGuard - c.guts * 0.2 + CARD_AI_GUARD_KEEP_ADD;
     // 付ける札は、手札に付ける先(場の子が使える攻めの技)が無ければ先にガッツへ
     const noHost = cardHasEff(c, 'attach') && !me.hand.some((n2) => n2 !== no && (() => { const h = cardOf(db, n2); return !!h && cardIsAttackKind(h.kind) && h.kind !== 'spe' && me.mons.some((m) => !m.ko && cardUsableBy(h, m)); })());
-    return (c.damage || 1) * 0.5 - Math.max(0, c.guts - (me.guts.length + 2)) * 0.8 - (noHost ? 2 : 0);
+    const value = (c.damage || 1) * 0.5 - Math.max(0, cardFieldCostOf(st, c.guts || 0) - (me.guts.length + 2)) * 0.8 - (noHost ? 2 : 0);
+    // 場の全体カードで使えない技(必殺技の封印・応酬・がんじがらめ)は、場が替わるまで使えない。使える札より先にガッツへ
+    //   (2026-11-04 社長「必殺技の封印を使われてるのに、威力が高い技を温存して、ほかをガッツにする」)。
+    //   場は、どちらかが別の全体カードを置くまで残る。自分の手札に全体カードがあれば外せる見込みがあるので、少しだけ残す
+    if (cardAiFieldBlocked(db, st, p, no)) return CARD_AI_BLOCKED_KEEP + (me.hand.some((n2) => n2 !== no && (cardOf(db, n2) || {}).kind === 'fld') ? value * CARD_AI_BLOCKED_HOPE : 0);
+    return value;
   };
   // 切り札(policy.aces・みんなのデッキ)はガッツにしない(手札に残す)。aces が無ければ今と同じ
   const aceKeep = (no) => (policy && Array.isArray(policy.aces) && policy.aces.includes(no) ? 10 : 0);
@@ -56645,6 +56650,19 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
   //   次の自分の番に引く枚数(手札が5枚なら1枚・それ未満なら5枚まで)が山札より多くなるほど、手札をガッツにしない
   return { type: 'guts', hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, policy.playerRole ? 99 : cardAiGutsCap(me)) };
 };
+// 場の全体カードで、この札がいま使えないか(使える子全員で。ブリーダーのカードはブリーダーとして)。攻めの技・特殊技だけを見る
+const cardAiFieldBlocked = (db, st, p, no) => {
+  const c = cardOf(db, no);
+  if (!st.field || !c || !cardIsAttackKind(c.kind)) return false;
+  const me = st.players[p];
+  const at = me.hand.indexOf(no);
+  const idxs = at >= 0 ? [at] : [];
+  if (c.user === 'breeder') return cardFieldBanned(db, st, p, -1, c, idxs);
+  const users = me.mons.map((m, mi) => ({ m, mi })).filter(({ m }) => !m.ko && cardUsableBy(c, m));
+  return users.length > 0 && users.every(({ mi }) => cardFieldBanned(db, st, p, mi, c, idxs));
+};
+const CARD_AI_BLOCKED_KEEP = -1.5;    // 場で使えない技の「残したさ」(使える札よりガッツにしやすく。使えない札(-10)よりは残す)
+const CARD_AI_BLOCKED_HOPE = 0.3;     // 自分の手札に全体カードがあって、場を替えられる見込みがあるとき、元の値打ちのうち残す割合
 const CARD_AI_GUARD_KEEP_ADD = 1.5;   // ガッツにする札を選ぶとき、使える守りの札に足す「残したさ」(2026-11-02 社長「防御系ガンガン捨てる」)
 const CARD_AI_STUCK_KEEP = 2;           // 手が詰まった番に残す守りの札
 const CARD_TACTIC_KEEP_GUARD_MAX = 3;   // 戦術カード「守りのカードを3枚まで残す」の枚数
