@@ -76,6 +76,25 @@
     "virtualSigmaScale": 1.85,
     "virtualMissScale": 1.7
    }
+  },
+  "34": {
+   "createdAt": "2026-11-02 05:54",
+   "basedOn": {
+    "charts": 236,
+    "plays": 1256
+   },
+   "reasons": [
+    "低音の遅れ: 8曲・9329件から、プレイヤーが聞いているのは解析の遅れの 0.42倍 → 0.3 を 0.35 へ",
+    "1本の線: 9017小節で、つまみ食いの多い小節はばらつきが -0.7ms 小さい → 動かさない",
+    "仮想プレイヤー: 71譜面で、実際のばらつきは見込みの 1.09倍・ミスは 1.00倍 → ばらつきの倍率 1.85→1.95・ミスの倍率 1.7→1.7"
+   ],
+   "values": {
+    "lowLagFactor": 0.35,
+    "lineBoost": 0,
+    "lineDemote": 0,
+    "virtualSigmaScale": 1.95,
+    "virtualMissScale": 1.7
+   }
   }
  },
  "note": "遊んだ記録から学ぶ調整値(rhythm-chart-play-tuning.js)。リビジョンごとに残す。rhythm-play-log.js --learn --write が書き足す。前のリビジョンは消さない"

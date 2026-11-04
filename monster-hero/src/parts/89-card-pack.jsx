@@ -19,7 +19,7 @@ const CARD_PACKS = Object.freeze([
   { id: 'p4', no: 4, species: ['phoenix', 'monol', 'henger', 'ghost'], color: '#f97316' }, // ゴーストは 2026-10-27 に足した(第4弾だけ4種族・台帳 #204)
   { id: 'p5', no: 5, species: ['plant', 'dragon', 'jell'], color: '#22c55e' },
   { id: 'p6', no: 6, species: ['mew', 'worm', 'durahan'], color: '#a855f7' },
-  { id: 'p7', no: 7, species: ['zilla', 'metalner', 'joker'], color: '#14b8a6' },
+  { id: 'p7', no: 7, species: ['zilla', 'metalner', 'joker', 'kyubi'], color: '#14b8a6' }, // キュービ(とオリヒメ)は 2026-11-04 に足した(社長)
   { id: 'p8', no: 8, species: ['arrowhead', 'centaur', 'colorpandora'], color: '#ec4899' },
 ].map((p) => Object.freeze({
   ...p, name: `第${p.no}弾パック`, price: 300, bundle: Object.freeze({ n: 5, price: 1350 }), tech: 7, mon: 1,

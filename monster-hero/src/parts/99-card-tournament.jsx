@@ -530,7 +530,7 @@ const cardTourFetchHistory = async (ownerId) => {
   return Array.isArray(rows) ? cardTourNormalizeHistory(rows) : null;
 };
 const CardTourHistoryList = ({ list, known, onOpen, onClose }) => (
-  <div data-card-tour-history className="fixed inset-0 z-[80] flex justify-center bg-slate-950">
+  <div data-card-tour-history className="fixed inset-0 z-[80] flex justify-center bg-slate-950" style={cardSafePad('0px')}>
     <div className={`${SCREEN_SHELL_CLASS} w-full max-w-[600px]`}>
       <ScreenHead title="公式杯の記録" accent="text-amber-200" onBack={onClose} note="終わった大会の結果と、試合の見返しを見られます。新しい順"/>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>

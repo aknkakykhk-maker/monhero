@@ -68,7 +68,8 @@ check('一覧の各行に日付を出す', (source.match(/data-event-replay-date
   const { groups, ids, fb } = c3.__g;
   check('各イベントが、既知のまとまり(group)を持つ(足すときの書き忘れよけ)',
     list.every(ev => ids.includes(ev.group)), list.filter(ev => !ids.includes(ev.group)).map(ev => ev.id).join(', '));
-  check('まとまりの並びは、いま開いているイベント(ハロウィン・ナイト)が先頭', groups[0] && groups[0].id === 'halloween', groups.map(g => g.id).join(' > '));
+  // 2026-11-02 いま開いているイベントは「鍵の向こう側へ」(前はハロウィン・ナイト)
+  check('まとまりの並びは、いま開いているイベント(鍵の向こう側へ)が先頭', groups[0] && groups[0].id === 'pandora_wings', groups.map(g => g.id).join(' > '));
   check('すべてのイベントが、どれか1つのまとまりにちょうど1回ずつ入る(一覧から消えない・重ならない)',
     groups.flatMap(g => g.events.map(ev => ev.id)).sort().join() === list.map(ev => ev.id).sort().join());
   const msOf = (ev) => Date.parse(ev.date.replace(' ', 'T') + ':00+09:00');
@@ -232,8 +233,13 @@ if (from >= 0 && to > from) {
     first.includes(`data-face="${kikiScript[0].who}"`) && first.includes(`data-expression="${kikiScript[0].e}"`));
   // 顔を並べるのは、その台本に出てくる助手だけ。全員を並べると、
   // まだ登場していない助手までその場面に映ってしまう
+  // 2026-11-03 社長「小さい顔の列には、その場面にいる人だけ」「あとから現れる人は、現れたときまで出さない」:
+  //   列に並ぶのは、そのページまでに一度でも話した助手。ほかの助手は、はじめて話した行から並ぶ
   const kikiCast = [...new Set(kikiScript.map(l => l.who))];
-  check('話していないほうの助手も並ぶ', kikiCast.every(id => first.includes(`data-face="${id}"`)));
+  const lastRender = render(kikiScript.length - 1);
+  check('話した助手は、はじめて話した行から並ぶ(最後のページでは全員がそろう)', kikiCast.every(id => lastRender.includes(`data-face="${id}"`)));
+  const laterWho = kikiCast.find((id) => id !== kikiScript[0].who);
+  check('まだ話していない助手は、1ページ目の列に出ない', !laterWho || !first.includes(`data-story-cast-member="${laterWho}"`));
   check('その会話に出てこない助手は並ばない',
     ASSISTANTS.filter(w => !kikiCast.includes(w.id)).every(w => !first.includes(`data-face="${w.id}"`)));
   check('タップで次へ進める', /aria-label="次へ"/.test(first) && /次へ/.test(text(first)));

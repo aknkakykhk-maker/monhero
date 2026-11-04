@@ -2,12 +2,47 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9273016b444facbc
+// generated-sha256: 3fe2f938c1dbcc58
 // ============================================================
 // ---- part: 10-core.jsx ----
 
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const { useState, useEffect, useCallback, useMemo, useRef, useContext } = React;
+// ==== 見えないページのずれを戻す(全画面) ====
+// 【2026-11-02 社長「押した所と反応する所がたまにずれる。横向きにしたり、更新情報の窓を開いたりしたあとになる気がする」→ 決定「A+B 両方入れる」】
+// iPhone(とくにホーム画面のアプリ)では、回転・キーボードの出し入れ・動画の全画面との行き来のあとに、
+// ページ(window・html/body)が見えない分だけスクロールしたまま残ることがある。すると見た目と、押した位置の数え方が食い違う。
+// このゲームはページそのものをスクロールさせない作り(#root が overflow:hidden・画面の中の箱だけがスクロールする)なので、
+// 画面の大きさが変わった・visualViewport が動いた・入力欄から離れた・全画面が終わった ときに、0でなければ0へ戻す。
+// 文字を入力している間(キーボードが出ている間)は戻さない(入力欄が隠れないように)。フォーカスが外れたあとで戻す。
+(()=>{
+  if(typeof window==='undefined'||typeof document==='undefined')return;
+  const editing=()=>{const el=document.activeElement;if(!el)return false;const tag=String(el.tagName||'').toUpperCase();return tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||el.isContentEditable===true;};
+  const reset=()=>{
+    if(editing())return;
+    try{
+      if(window.scrollX||window.scrollY)window.scrollTo(0,0);
+      for(const el of [document.scrollingElement,document.documentElement,document.body]){
+        if(el&&(el.scrollTop||el.scrollLeft)){el.scrollTop=0;el.scrollLeft=0;}
+      }
+    }catch(_){}
+  };
+  // iOS は大きさや位置を少し遅れて直すことがあるので、すぐ・少しあと・もう少しあとの3回見る
+  let timers=[];
+  const soon=()=>{timers.forEach(clearTimeout);timers=[0,150,500].map(ms=>setTimeout(reset,ms));};
+  const passive={passive:true};
+  window.addEventListener('resize',soon,passive);
+  window.addEventListener('orientationchange',soon,passive);
+  if(window.visualViewport&&typeof window.visualViewport.addEventListener==='function'){
+    window.visualViewport.addEventListener('resize',soon,passive);
+    window.visualViewport.addEventListener('scroll',soon,passive);
+  }
+  // 入力欄から離れた(キーボードが閉じる)あと。次の入力欄へ移っただけのときは戻さない
+  document.addEventListener('focusout',()=>setTimeout(()=>{if(!editing())soon();},60),true);
+  // 動画の全画面が終わったとき(iPhone の動画は webkitendfullscreen。泡立たないので document の捕まえる段で受ける)
+  ['fullscreenchange','webkitfullscreenchange'].forEach(type=>document.addEventListener(type,soon));
+  document.addEventListener('webkitendfullscreen',soon,true);
+})();
 // ==== アイコン: lucide-react UMDが不安定なため、インラインSVGで自己完結 ====
 const _LI = {};
 // lucide公式のSVGパス(strokeベース)。無いものは汎用ドットにフォールバック
@@ -353,6 +388,7 @@ const eventReplayAllList = () => eventReplaySorted(() => true);
 //   イベントを足すときは、data/assistants.js の項目へ group を1つ書く(tools/boot/event-replay-check.js が見張る)。
 // ★この並びを使うのは一覧の画面だけ。再生・着替え・デバッグ一覧は今までの eventReplayList / eventReplayAllList(id で引くだけ)。
 const EVENT_REPLAY_GROUPS = Object.freeze([
+  { id:'pandora_wings', emoji:'🗝️', label:'鍵の向こう側へ', note:'パンドラとふたつの翼のお話', color:'#c084fc' },
   { id:'halloween', emoji:'🎃', label:'ハロウィン・ナイト', note:'レイドバトルとジャックのお話', color:'#fb923c' },
   { id:'update', emoji:'✨', label:'新しい遊びのお話', note:'新しい遊びができたときの案内', color:'#e879f9' },
   { id:'beat_point', emoji:'🎵', label:'ビートP', note:'ビートPと交換所のお話', color:'#34d399' },
@@ -653,9 +689,18 @@ const rhythmPlayRunLoops = (durationMs, scale = RHYTHM_PLAY_RUN_LOOP_SCALE) => {
 const rhythmPlayRunLoopScale = (songId, event, campaign) => {
   const campaignScale = campaign ? Number(campaign.loopScale) : NaN;
   if (Number.isFinite(campaignScale) && campaignScale > 0) return campaignScale;
-  const ids = (event && Array.isArray(event.songIds)) ? event.songIds : null;
+  // ショート版も対象曲として数える(songVersions・2026-11-01)
+  const ids = (event && Array.isArray(event.songIds))
+    ? (typeof rhythmEventPlaySongIds === 'function' ? rhythmEventPlaySongIds(event) : event.songIds) : null;
   const id = songId === null || songId === undefined ? '' : String(songId);
   return (id && ids && ids.includes(id)) ? RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE : RHYTHM_PLAY_RUN_LOOP_SCALE;
+};
+// 周回の倍率を上げているキャンペーン(loopScale・loopBoost を持つもの)。無ければ null。
+//   画面の案内(報酬の窓・曲えらびの帯・曲リザルト)が、実際に効く倍率(rhythmPlayRunLoopScale)とずれないように使う(2026-11-02)。
+//   公開フラグ(RELEASE_FLAGS.rhythmEventPoints)は呼ぶ側で見る(計算の rhythmPlayRunLoopCampaignNow と同じ)
+const rhythmLoopCampaignAt = (nowMs) => {
+  const c = typeof rhythmEventPointCampaignAt === 'function' ? rhythmEventPointCampaignAt(nowMs) : null;
+  return c && Number(c.loopScale) > 0 && Number(c.loopBoost) > 0 ? c : null;
 };
 // その難易度を「クイックで」通したことがあるか。
 // ★上の難易度を通していれば、その下も通したものとして扱う。下は上より必ずやさしいので、
@@ -834,7 +879,7 @@ const BATTLE_SYSTEM_QUICK = 'systemQuick';
 const BATTLE_SELECT_ASSIST_KEY = 'mh_battle_select_assist_v1';
 // 難易度えらびの札で、地が暗いので白い文字にする難易度(2026-10-09 ユーザー指示「難易度にあった色合いで、強弱を」)。
 // 色そのものは 77-screen-rhythm-multi.jsx の .mhbt-d-<難易度> にまとめてある
-const BATTLE_DIFFICULTY_DARK_LOOKS = new Set(['Expert','Master','GrandMaster','Hell','EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY','GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO','COCYTUS']);
+const BATTLE_DIFFICULTY_DARK_LOOKS = new Set(['Expert','Master','GrandMaster','Hell','EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY','GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO','EREBUS','COCYTUS']);
 const BATTLE_SYSTEMS = Object.freeze([
   Object.freeze({
     id: BATTLE_SYSTEM_CLASSIC, label: 'クラシックバトル', short: 'クラシック', emoji: '⚔️', color: '#818cf8',
@@ -2174,8 +2219,8 @@ const buildSoulTraitRespec = (masu, ownedItems) => {
   return { ok:true, refundedPoints, refundedCrystals, nextMasu:{ ...rest, soulTraitLevels:{} }, ownedItems:nextItems };
 };
 const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
-  extreme:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5, COCYTUS:6 }),
-  speciesChallenge:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5, COCYTUS:6 }),
+  extreme:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5, EREBUS:5, COCYTUS:6 }),
+  speciesChallenge:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4, INFERNO:5, EREBUS:5, COCYTUS:6 }),
   pro:Object.freeze({ Master:1, GrandMaster:2, Hell:3, Legend:4 }),
 });
 const heroProofClearReward = ({
@@ -4356,6 +4401,8 @@ const BGM_TRACKS = [
   { id:'melo_tsuki_ga_michiru_mae_ni', name:'月が満ちる前に', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni.mp3', gain:1, loop:true },
   { id:'melo_rebellion', name:'Rebellion ～Beyond the Lock～', creator:'オリジナル', src:'audio/bgm-rebellion.mp3', gain:1, loop:true },
   { id:'melo_rebellion_short', name:'Rebellion ～Beyond the Lock～ short ver.', creator:'オリジナル', src:'audio/bgm-rebellion-short.mp3', gain:1, loop:true },
+  { id:'melo_altar_world_tree', name:'Altar of the World Tree, Beneath the White Night', creator:'仙夜玖子', src:'audio/bgm-altar-world-tree.mp3', gain:1, loop:true },
+  { id:'melo_altar_world_tree_short', name:'Altar of the World Tree, Beneath the White Night short ver.', creator:'仙夜玖子', src:'audio/bgm-altar-world-tree-short.mp3', gain:1, loop:true },
   { id:'melo_tsuki_ga_michiru_mae_ni_short', name:'月が満ちる前に short ver.', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
@@ -4660,12 +4707,15 @@ const RHYTHM_ROAD_DEPTH_LABELS = Object.freeze([['NORMAL','いまの'],['DEEP','
 //   名前は重さの順に読めるようにそろえてある(既定が「標準」なのは前の指示のまま)。
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL','最大'],['LOW','多め'],['LIGHT','標準'],['MINIMAL','最小']]);
 // 押したときの光(2026-10-15・社長「演出量を最小にしても、フリックとかのタップ時の光は出る設定がほしい」)。
-// AUTO   … 演出量に合わせる(これまでどおり。演出量「最小」・軽量モードでは出さない)
-// ALWAYS … 演出量「最小」・軽量モードでも、判定ラインで弾ける光だけは出す(ほかの演出は止めたまま)
+// AUTO   … 演出量に合わせる。演出量「最小」では光だけ出す(2026-11-02)。軽量モードでは出さない
+// ALWAYS … 軽量モードでも、判定ラインで弾ける光だけは出す(ほかの演出は止めたまま)
 const RHYTHM_TAP_LIGHT_MODES = Object.freeze(['AUTO','ALWAYS']);
 const RHYTHM_TAP_LIGHT_LABELS = Object.freeze([['AUTO','おまかせ'],['ALWAYS','いつも出す']]);
 // 「最小」・軽量モードのせいで止まっている光を、この設定で出すときだけ真(ふだんの段では、もともと光が出ているので偽)
-const rhythmTapLightOnly = settings => !!settings&&settings.tapLight==='ALWAYS'&&(settings.lightweightMode===true||settings.effectAmount==='MINIMAL');
+// 2026-11-02 社長「演出量を最小にしてフリックやノーツを押したときの光だけ出すようにしたい」→ 演出量「最小」は、押したときの光をいつも出す
+//   (「押したときの光」がおまかせでも)。軽量モードは今までどおり「いつも出す」を選んだときだけ。設定 fx の「弾ける光」を「なし」にすれば止められる
+const rhythmTapLightOnly = settings => !!settings&&((settings.effectAmount==='MINIMAL'&&settings.lightweightMode!==true)
+  ||(settings.tapLight==='ALWAYS'&&(settings.lightweightMode===true||settings.effectAmount==='MINIMAL')));
 // 演奏中に1秒あたり何回描くか(2026-09-24・ユーザーと相談して決めた)。
 // POWER_SAVE … 120Hz以上の画面では1回おきに描き、毎秒60回ほどに抑える。発熱と電池を抑える。
 //   90Hzの画面は抑えない(60へ落とすと 11ms/22ms が交互に並び、かえってガタついて見える)。
@@ -4721,6 +4771,9 @@ const RHYTHM_LOOK_PRESETS = Object.freeze([
 // 演出の自動調整(設定「重いときは演出を自動で控えめに」・2026-09-27)で下げる順番。重いものから。
 // 段 n では 1〜n 番目を当てる(当てるものが無い段は飛ばす)。演奏中の見た目だけを変え、保存してある設定は変えない
 const RHYTHM_AUTO_EFFECT_STEPS = Object.freeze([
+  // 演出を1つずつ選ぶ設定(fx・2026-11-01)で「出す」「多い」「強」「大」などにした項目を、まず「おまかせ」へ戻す(「出さない」「なし」はそのまま)
+  s=>{const up=['ON','MANY','STRONG','L','DARK'],fx=s.fx||{};const keys=Object.keys(fx).filter(key=>up.includes(fx[key]));
+    return keys.length?{fx:{...fx,...Object.fromEntries(keys.map(key=>[key,'AUTO']))}}:null;},
   s=>s.noteBloom?{noteBloom:false}:null,
   s=>s.stageEffect==='LIVE'?{stageEffect:'VIVID'}:null,
   s=>s.roadFx||s.noteMotionFx||s.climaxFx?{roadFx:false,noteMotionFx:false,climaxFx:false}:null,
@@ -4872,6 +4925,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   monsterNoteEffect:'LIGHT',
   judgmentLineHeight:20,
   noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'LIGHT', lightweightMode:false,
+  // 演出を1つずつ選ぶ設定(2026-11-01)。おまかせ以外を選んだ項目だけ入る
+  fx:Object.freeze({}),
   // みんなで対戦のライブでは、演出を「軽さ優先」にそろえる(2026-10-03・ユーザー指示「マルチは演出量をデフォで下げたほうがいい」)。
   // ふだんの見た目の設定は書き換えない。対戦のあいだだけ上から重ねる
   multiLightLook:true,
@@ -4927,6 +4982,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   judgmentAtTap:false,
   // 演奏中は左上の曲名とジャケットを薄くする(2026-09-27)。始まって4秒で薄くなり、ポーズ中は元に戻る。目線を道に集めるため。既定は ON
   hudSongFade:true,
+  // ホールド・スライドを押せている指は、その指の道の光を出さず、帯を指の所からなぞるように光らせる(2026-11-02 社長・既定 ON)
+  holdTrace:true,
   // 重いときは演出を自動で控えめにする(2026-09-27)。演奏中にカクつき続けたら、重い演出から一段ずつ下げる(保存値は変えない)。既定は ON
   autoEffectDown:true,
   // 押したときの光(2026-10-15)。新しい項目なので、保存値に無い人は「おまかせ」(これまでの見え方)で補う
@@ -4956,6 +5013,131 @@ const rhythmFiniteStep = (value,min,max,step,fallback) => {
   // 0.1刻みのような小数stepでも 6.300000000000001 のような値を残さない。
   return Math.round((Math.round((number-min)/step)*step+min)*1000)/1000;
 };
+// ===== 演出を1つずつ選ぶ(2026-11-01 社長「演出量とか背景を別に細かく設定したい」) =====
+// 演出量・軽量モード・ライブ背景がまとめて出し入れしているものを、1つずつ選べるようにする。
+// 保存は設定に fx を1つ足すだけ(既存のキーは名前も値も変えない・CLAUDE.md ⑦)。どの項目も既定は「おまかせ」(AUTO)で、
+// おまかせ = いまの演出量・軽量モード・ライブ背景・各スイッチどおり(見た目は1つも変わらない)。
+// おまかせ以外を選んだ項目は、演出量「最小」・軽量モードのときも選んだとおりにする(社長の決定)。
+// weight は端末への重さの目安(オプションの札): l=軽 m=中 h=重
+const RHYTHM_FX_ON_OFF = Object.freeze([['AUTO','おまかせ'],['ON','出す'],['OFF','出さない']]);
+const RHYTHM_FX_GROUPS = Object.freeze([['stage','背景'],['road','道'],['note','ノーツ'],['judge','判定'],['combo','コンボ']]);
+const RHYTHM_FX_ITEMS = Object.freeze([
+  {key:'stageBlur',group:'stage',label:'ジャケットのぼかし',weight:'m',options:[['AUTO','おまかせ'],['STRONG','強'],['WEAK','弱'],['NONE','なし']]},
+  {key:'stageBright',group:'stage',label:'背景の明るさ',weight:'l',options:[['AUTO','おまかせ'],['100','100%'],['70','70%'],['40','40%']]},
+  {key:'searchlight',group:'stage',label:'サーチライト',weight:'m',options:RHYTHM_FX_ON_OFF},
+  {key:'sparks',group:'stage',label:'光の粒',weight:'m',options:[['AUTO','おまかせ'],['MANY','多い'],['FEW','少ない'],['NONE','なし']]},
+  {key:'laser',group:'stage',label:'レーザー',weight:'h',options:RHYTHM_FX_ON_OFF},
+  {key:'penlight',group:'stage',label:'観客のペンライト',weight:'h',options:[['AUTO','おまかせ'],['MANY','多い'],['FEW','少ない'],['NONE','なし']]},
+  {key:'timingLight',group:'stage',label:'タイミングの光',weight:'l',options:RHYTHM_FX_ON_OFF},
+  {key:'beatLine',group:'road',label:'拍の線',weight:'l',options:RHYTHM_FX_ON_OFF},
+  {key:'roadEdge',group:'road',label:'道のふちの光',weight:'l',options:RHYTHM_FX_ON_OFF},
+  {key:'roadFog',group:'road',label:'奥のもや・脈打ち',weight:'m',options:RHYTHM_FX_ON_OFF},
+  {key:'laneLine',group:'road',label:'レーンの区切り線の濃さ',weight:'l',options:[['AUTO','おまかせ'],['DARK','濃い'],['NORMAL','標準'],['LIGHT','薄い']]},
+  {key:'noteGlow',group:'note',label:'ノーツの光の強さ',weight:'l',options:[['AUTO','おまかせ'],['STRONG','強'],['NORMAL','標準'],['WEAK','弱']]},
+  {key:'flickMotion',group:'note',label:'フリックの矢印の動き',weight:'l',options:RHYTHM_FX_ON_OFF},
+  {key:'slideWave',group:'note',label:'スライドの光の波',weight:'l',options:RHYTHM_FX_ON_OFF},
+  {key:'judgeSize',group:'judge',label:'判定文字の大きさ',weight:'l',options:[['AUTO','おまかせ'],['L','大'],['M','標準'],['S','小']]},
+  {key:'judgeFlow',group:'judge',label:'判定文字の金・虹の流れ',weight:'m',options:RHYTHM_FX_ON_OFF},
+  {key:'judgeLinePulse',group:'judge',label:'判定ラインの脈打ち',weight:'l',options:RHYTHM_FX_ON_OFF},
+  {key:'burst',group:'judge',label:'判定ラインで弾ける光',weight:'m',options:[['AUTO','おまかせ'],['L','大'],['M','標準'],['S','小'],['NONE','なし']]},
+  {key:'flash',group:'judge',label:'画面のフラッシュ',weight:'l',options:RHYTHM_FX_ON_OFF},
+  {key:'comboBounce',group:'combo',label:'コンボ数の跳ね',weight:'l',options:RHYTHM_FX_ON_OFF},
+  {key:'combo100',group:'combo',label:'100コンボのお祝い',weight:'l',options:RHYTHM_FX_ON_OFF},
+  {key:'fullComboBig',group:'combo',label:'フルコンボの大きな表示',weight:'l',options:RHYTHM_FX_ON_OFF},
+]);
+const RHYTHM_FX_KEYS = Object.freeze(RHYTHM_FX_ITEMS.map(item=>item.key));
+const RHYTHM_FX_GROUP_ICONS = Object.freeze({stage:'🌌',road:'🛣',note:'🎵',judge:'✨',combo:'🔥'});
+// オプションの「▸ 詳しく」の文。どの項目も「おまかせ」は上の「まとめて決める」(演出量・軽量モード)と、組の頭のスイッチどおり
+const RHYTHM_FX_HELP = Object.freeze({
+  stageBlur:'ライブ背景に敷く曲のジャケットを、どれだけぼかすかです。既定は「おまかせ」（これまでどおり「強」）。\n「なし」はジャケットをくっきり出します。判定・スコアは変わりません。',
+  stageBright:'ライブ背景の明るさです。既定は「おまかせ」（これまでどおり100%）。ノーツが背景に紛れて見づらいときは下げてください。',
+  searchlight:'左右から揺れるサーチライトを出すかです。既定は「おまかせ」（ライブ背景が「派手」「ライブ」で、演出量が「最小」でないときに出ます）。\n「出す」を選ぶと、ライブ背景・演出量・軽量モードに関係なく出ます。',
+  sparks:'背景に舞う光の粒の量です。既定は「おまかせ」（サーチライトと同じときに出ます）。「少ない」は手前の粒だけにします。',
+  laser:'「ライブ」の背景で、小節ごとに向きと色を変えて走るレーザーです。既定は「おまかせ」。\n絵を描くのが得意な専用の部分（GPU）が無い端末では出せません。いちばん重い演出の1つです。',
+  penlight:'「ライブ」の背景で、道の両側に並ぶ観客のペンライトの量です。既定は「おまかせ」。「少ない」は本数を半分ほどにします。\nGPU が無い端末では出せません。重い演出の1つです。',
+  timingLight:'ノーツが判定ラインへ来るタイミングで、背景が光る演出です。既定は「おまかせ」（ライブ背景が「シンプル」以外のときに出ます）。',
+  beatLine:'曲の拍ごとに、細い線が道の奥から流れてくる演出です。小節の頭では明るい線になります。既定は「おまかせ」（「道の演出」どおり）。',
+  roadEdge:'道の左右のふちが、拍に合わせて光る演出です。既定は「おまかせ」（「道の演出」どおり）。',
+  roadFog:'道の奥のもやと、その先の光が小節ごとに脈打つ演出です。既定は「おまかせ」（「道の演出」どおり）。',
+  laneLine:'レーンとレーンのあいだの線の濃さです。既定は「おまかせ」（これまでどおり「標準」）。「濃い」は線を太く、「薄い」は線を薄くします。',
+  noteGlow:'ノーツのまわりの光の強さです。既定は「おまかせ」（演出量「最小」と軽量モードでは「弱」、それ以外は「標準」）。',
+  flickMotion:'フリックの矢印に付ける動きです。上へ払うフリックは矢印が3段に重なって光が流れ、横へ払うフリックは払う向きへ残像が流れます。既定は「おまかせ」（「ノーツの動き」どおり）。',
+  slideWave:'SLIDE の帯の上を、判定ラインへ向かって光の波が流れる演出です。既定は「おまかせ」（「ノーツの動き」どおり）。',
+  judgeSize:'判定の文字（MARVELOUS・GREAT など）の大きさです。既定は「おまかせ」（これまでどおり「標準」）。文字の後ろの光も一緒に大きさが変わります。',
+  judgeFlow:'判定の文字の金色の帯・虹が流れる動きと、文字が出た瞬間に弾む動き、文字のまわりの強い光です。既定は「おまかせ」（演出量が「最大」のときに出ます）。\n毎フレーム文字を塗り直すので、カクつく端末ではここを「出さない」にすると効きます。色と大きさはどれでも残ります。',
+  judgeLinePulse:'判定ラインが拍に合わせて脈打つ動きです。既定は「おまかせ」（演出量が「最大」「多め」のときに出ます）。',
+  burst:'ノーツを取った瞬間に判定ラインで弾ける光の大きさです。既定は「おまかせ」（演出量「最小」では出ます。軽量モードでは出ません。「押したときの光」を「いつも出す」にすると軽量モードでも出ます）。\n「大」「標準」「小」を選ぶと、演出量・軽量モードに関係なく、その大きさで出ます。',
+  flash:'モンスターノーツを取ったときに画面全体が光る演出です。既定は「おまかせ」。まぶしいときは「出さない」にしてください。',
+  comboBounce:'コンボ数が増えるたびに数字が跳ねる動きと、枠の脈打ちです。既定は「おまかせ」（演出量が「最大」「多め」のときに出ます）。',
+  combo100:'コンボが100のくぎりに届いたときのお祝いの表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
+  fullComboBig:'曲の終わりにフルコンボ・ALL MARVELOUS を取ったときの大きな表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
+});
+const normalizeRhythmFx = raw => {
+  const source=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
+  // おまかせ(AUTO)以外を選んだ項目だけ持つ(無い項目はおまかせ)。一覧に無い値・壊れた値は落とす
+  return Object.fromEntries(RHYTHM_FX_ITEMS.filter(item=>source[item.key]!=='AUTO'&&item.options.some(([id])=>id===source[item.key])).map(item=>[item.key,source[item.key]]));
+};
+// その項目の選んだ値(おまかせなら 'AUTO')
+const rhythmFxPick = (settings,key) => {const v=settings&&settings.fx&&settings.fx[key];return typeof v==='string'&&v?v:'AUTO';};
+// CSS の段(演奏画面のプレイエリアの data-fx-<項目> と data-fx-<項目>-lw)。いまの data-rhythm-effect・data-rhythm-lightweight と同じ値の組を、項目ごとに持つ。
+// おまかせは「演出量の値・軽量モードかどうか」そのまま(= これまでと同じ止まり方)。出す・強・大 は「最大・軽量でない」、出さない・なし は「最小・軽量」
+const rhythmFxLevel = (settings,key) => {
+  const v=rhythmFxPick(settings,key);
+  if(v==='AUTO')return RHYTHM_EFFECT_LEVELS.includes(settings&&settings.effectAmount)?settings.effectAmount:DEFAULT_RHYTHM_SETTINGS.effectAmount;
+  return v==='OFF'||v==='NONE'?'MINIMAL':'NORMAL';
+};
+const rhythmFxLight = (settings,key) => {const v=rhythmFxPick(settings,key);return v==='AUTO'?!!(settings&&settings.lightweightMode):v==='OFF'||v==='NONE';};
+// 演奏画面の要素に付ける属性(CSS の付け替えた規則が見る)
+const RHYTHM_FX_CSS_KEYS = Object.freeze(['searchlight','sparks','comboBounce','judgeFlow','burst','flash','judgeLinePulse']);
+const rhythmFxAttrs = settings => Object.fromEntries(RHYTHM_FX_CSS_KEYS.flatMap(key=>{const name='data-fx-'+key.replace(/[A-Z]/g,c=>'-'+c.toLowerCase());
+  return [[name,rhythmFxLevel(settings,key)],[name+'-lw',rhythmFxLight(settings,key)?'true':'false']];}));
+// 出す・出さないの項目を真偽で。auto はおまかせのときの答え(呼ぶ側が、いまの決まりどおりの値を渡す)
+const rhythmFxOn = (settings,key,auto) => {const v=rhythmFxPick(settings,key);return v==='AUTO'?!!auto:!(v==='OFF'||v==='NONE');};
+// ノーツの描き手(RHYTHM_CANVAS_RENDERER.begin)へ渡す値。live は演奏中に変わる設定(にじむ光・ノーツの動き)を読む先。
+// おまかせの項目は描き手が演出量・軽量モードから決めるので、渡す値もこれまでと同じになる
+// 押せているホールド・スライドが、判定ラインのところで覆っているサブレーン(ビットの集まり・前後1つずつ余裕を持たせる)。
+// ホールドは譜面の subLane と幅、スライドは今の帯の位置(lane 単位)から数える。道の光を消すのに使う(設定 holdTrace・2026-11-02)
+const rhythmHoldTraceMask = (note,visualLane) => {
+  if(!note)return 0;
+  const w=Math.max(1,Number(note.subLaneWidth)||2);
+  const lane=Number(visualLane);
+  const start=rhythmNoteIsSlide(note)&&Number.isFinite(lane)?Math.round(lane*2+1-w/2):(Number.isFinite(Number(note.subLane))?Number(note.subLane):Number(note.lane)*2);
+  if(!Number.isFinite(start))return 0;
+  let mask=0;
+  for(let i=Math.max(0,start-1);i<=Math.min(RHYTHM_SUB_LANE_COUNT-1,start+w);i++)mask|=1<<i;
+  return mask;
+};
+const rhythmFxRenderOptions = (settings,live=settings) => {
+  const base=!!settings&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
+  const motionAuto=!!live&&live.noteMotionFx===true&&base;
+  const glow=rhythmFxPick(settings,'noteGlow'),burst=rhythmFxPick(settings,'burst');
+  // 弾ける光がおまかせで「押したときの光だけ出す」とき(演出量「最小」・「いつも出す」)は、標準と同じ形の光(炎・十字・柱)を描かせる。
+  // 2026-11-02 まで描き手には「最小・軽量」の段をそのまま渡していて、描き手が地上の光を捨てていた(社長「最小でもフリックの炎を出して」で判明)
+  const tapOnly=burst==='AUTO'&&rhythmTapLightOnly(settings);
+  return {motionFlick:rhythmFxOn(settings,'flickMotion',motionAuto),motionSlide:rhythmFxOn(settings,'slideWave',motionAuto),
+    glowLevel:glow==='AUTO'?undefined:glow,hitLevel:tapOnly?'NORMAL':rhythmFxLevel(settings,'burst'),hitLight:tapOnly?false:rhythmFxLight(settings,'burst'),
+    hitScale:burst==='L'?1.35:burst==='S'?.7:1,
+    // ホールド・スライドを押せている間、帯を指の所からなぞるように光らせる(設定 holdTrace・既定 ON・演出量や軽量モードに関係なく)
+    holdTrace:!!settings&&settings.holdTrace!==false};
+};
+// 判定文字の大きさ(設定 fx「判定文字の大きさ」)。判定文字の枠ごと、下のふちを軸に広げ・縮める(文字の後ろの光・ずれメーターも一緒に)。
+// 枠は translate で中央へ寄せているので、別の指定の scale を使う(transform を上書きしない)。おまかせ・標準は何も付けない
+const rhythmJudgeScaleStyle = settings => {const v=rhythmFxPick(settings,'judgeSize');return v==='L'?{scale:'1.3',transformOrigin:'50% 100%'}:v==='S'?{scale:'.75',transformOrigin:'50% 100%'}:{};};
+// 背景の段(rhythmStageLevel の答え)を、出すを選んだ背景の項目が出る段まで上げる(下げはしない。下げるのは項目ごとの「出さない」)
+const RHYTHM_STAGE_ORDER = Object.freeze(['SIMPLE','CALM','VIVID','LIVE']);
+const rhythmFxStageLevel = (settings,base) => {
+  const want=key=>{const v=rhythmFxPick(settings,key);return v!=='AUTO'&&v!=='OFF'&&v!=='NONE';};
+  const need=want('laser')||want('penlight')?'LIVE':want('searchlight')||want('sparks')?'VIVID'
+    :want('timingLight')||want('stageBlur')||['70','40','100'].includes(rhythmFxPick(settings,'stageBright'))?'CALM':'SIMPLE';
+  return RHYTHM_STAGE_ORDER.indexOf(need)>RHYTHM_STAGE_ORDER.indexOf(base)?need:base;
+};
+// 背景の明るさ(設定 fx「背景の明るさ」)。背景の層ごと薄くして暗い地を透かす。おまかせ・100% は何も付けない
+const rhythmFxStageStyle = settings => {const v=rhythmFxPick(settings,'stageBright');return v==='70'?{opacity:.7}:v==='40'?{opacity:.4}:undefined;};
+// ジャケットのぼかし(設定 fx「ジャケットのぼかし」)。ジャケットを縮めてから引き伸ばしてぼかすので、縮める大きさで強さが変わる(強=これまでの 24)
+const rhythmFxArtSize = settings => {const v=rhythmFxPick(settings,'stageBlur');return v==='WEAK'?64:v==='NONE'?256:24;};
+// どれか1つでも「おまかせ」以外を選んでいるか(オプションの組の見出し・重いときの自動の控えめに使う)
+const rhythmFxChangedCount = (settings,keys=RHYTHM_FX_KEYS) => keys.filter(key=>rhythmFxPick(settings,key)!=='AUTO').length;
+
 const normalizeRhythmSettings = value => {
   const source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
   const bool=(key)=>typeof source[key]==='boolean'?source[key]:DEFAULT_RHYTHM_SETTINGS[key];
@@ -5013,6 +5195,7 @@ const normalizeRhythmSettings = value => {
     climaxFx:typeof source.climaxFx==='boolean'?source.climaxFx:DEFAULT_RHYTHM_SETTINGS.climaxFx,
     judgmentAtTap:typeof source.judgmentAtTap==='boolean'?source.judgmentAtTap:DEFAULT_RHYTHM_SETTINGS.judgmentAtTap,
     hudSongFade:typeof source.hudSongFade==='boolean'?source.hudSongFade:DEFAULT_RHYTHM_SETTINGS.hudSongFade,
+    holdTrace:typeof source.holdTrace==='boolean'?source.holdTrace:DEFAULT_RHYTHM_SETTINGS.holdTrace,
     autoEffectDown:typeof source.autoEffectDown==='boolean'?source.autoEffectDown:DEFAULT_RHYTHM_SETTINGS.autoEffectDown,
     tapLight:RHYTHM_TAP_LIGHT_MODES.includes(source.tapLight)?source.tapLight:DEFAULT_RHYTHM_SETTINGS.tapLight,
     stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
@@ -5020,6 +5203,8 @@ const normalizeRhythmSettings = value => {
     timingDisplay:RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay)?source.timingDisplay:DEFAULT_RHYTHM_SETTINGS.timingDisplay,
     comboStatusDisplay:bool('comboStatusDisplay'), paceDisplay:bool('paceDisplay'),
     assistMode:bool('assistMode'), mirrorChart:bool('mirrorChart'), luckyRush:bool('luckyRush'),
+    // 演出を1つずつ(2026-11-01)。無い・壊れた値は全部「おまかせ」
+    fx:normalizeRhythmFx(source.fx),
   };
 };
 const emptyRhythmBestRecord = () => ({bestScore:0,maxCombo:0,played:false,clear:false,fullCombo:false,allExcellent:false,allMarvelous:false,judgments:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]))});
@@ -5256,7 +5441,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ cardBattleIntroEvent:'atsu_cup_theme', cardCupStoryEvent:'melo_toriko', kyukoJoinStoryEvent:'original_event_01', atsuJoinStoryEvent:'melo_against_my_own_shadow', tacticsTypesEvent:'original_event_01', rhythmHellStoryEvent:'melo_sheriruth', assistantChatStoryEvent:'close_to_your_heart_alt', title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', masuCallEvent:'six_eternel',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ cardBattleIntroEvent:'atsu_cup_theme', cardCupStoryEvent:'melo_toriko', pandoraWingsStoryEvent:'melo_rebellion', kyukoJoinStoryEvent:'original_event_01', atsuJoinStoryEvent:'melo_against_my_own_shadow', tacticsTypesEvent:'original_event_01', rhythmHellStoryEvent:'melo_sheriruth', assistantChatStoryEvent:'close_to_your_heart_alt', title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', masuCallEvent:'six_eternel',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -5305,7 +5490,7 @@ const eventScriptBgmAt = (script, step) => {
   return found;
 };
 const EVENT_BGM_FADE_MS = 800; // 会話イベントの途中で曲を替えるとき、今の曲を下げる長さ
-const EVENT_BGM_SCENES = Object.freeze({ card_battle_intro_2026:'cardBattleIntroEvent', card_cup_2026_10_31:'cardCupStoryEvent', kyuko_join_2026_10_22:'kyukoJoinStoryEvent', atsu_join_2026_10_22:'atsuJoinStoryEvent', tactics_types:'tacticsTypesEvent', kiki_intro:'kikiIntro', rhythm_hell_story:'rhythmHellStoryEvent', assistant_chat_story:'assistantChatStoryEvent', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', rhythm_masu_call_2026_10_07:'masuCallEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
+const EVENT_BGM_SCENES = Object.freeze({ card_battle_intro_2026:'cardBattleIntroEvent', card_cup_2026_10_31:'cardCupStoryEvent', pandora_wings_2026_ep1:'pandoraWingsStoryEvent',pandora_wings_2026_ep2:'pandoraWingsStoryEvent',pandora_wings_2026_ep3:'pandoraWingsStoryEvent',pandora_wings_2026_ep4:'pandoraWingsStoryEvent',pandora_wings_2026_ep5:'pandoraWingsStoryEvent',pandora_wings_2026_ep6:'pandoraWingsStoryEvent',pandora_wings_2026_ep7:'pandoraWingsStoryEvent',pandora_wings_2026_ep8:'pandoraWingsStoryEvent', kyuko_join_2026_10_22:'kyukoJoinStoryEvent', atsu_join_2026_10_22:'atsuJoinStoryEvent', tactics_types:'tacticsTypesEvent', kiki_intro:'kikiIntro', rhythm_hell_story:'rhythmHellStoryEvent', assistant_chat_story:'assistantChatStoryEvent', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', rhythm_masu_call_2026_10_07:'masuCallEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
 // 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、
@@ -5457,6 +5642,9 @@ const Audio_ = (() => {
   let Tone = null, ready = false, loading = null, started = false;
   let reverb = null, seBus = null;
   let audioCtx = null, bgmGain = null, masterOut = null, analyser = null, analyserData = null;
+  // 動画(お知らせの予告動画など)を再生しているあいだ、ゲームの音を出口(masterOut)で絞る(2026-11-02 社長「BGMを止めて公開」)。
+  // 曲は止めずに音量だけ0にするので、再生を終える・一時停止する・枠を閉じると、いま鳴っている曲がそのまま戻る
+  let videoHold = false;
   // AudioContextが「動いているつもりで止まっていないか」を見るための控え。
   // Androidでは state が running のままでも音が出なくなることがあり、state だけでは気づけない
   let ctxTimeMark = null, ctxRebuildCount = 0, toneLoadFailed = false;
@@ -5572,7 +5760,9 @@ const Audio_ = (() => {
   const AUDIO_CACHE_KEYS = {
 // <audio-cache-keys>
     "audio/bgm-4u-hitasura.mp3": "f4fb42472438",
-    "audio/bgm-against-my-own-shadow.mp3": "ddce743e94fa",
+    "audio/bgm-against-my-own-shadow.mp3": "a58782a4c46f",
+    "audio/bgm-altar-world-tree-short.mp3": "45860ac8bd1d",
+    "audio/bgm-altar-world-tree.mp3": "2dda9c70f027",
     "audio/bgm-anima.mp3": "c81adf3d2fff",
     "audio/bgm-atsu-cup-theme.mp3": "e93502c4df76",
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
@@ -5588,10 +5778,10 @@ const Audio_ = (() => {
     "audio/bgm-crazy-party-night.mp3": "45e7252c400e",
     "audio/bgm-crossing-field.mp3": "1e2e7cc1d3d5",
     "audio/bgm-dullahan-clockwork-alt.mp3": "9e934451770b",
-    "audio/bgm-dullahan-clockwork.mp3": "e87bd8466b2c",
+    "audio/bgm-dullahan-clockwork.mp3": "f94c4b3c8cb8",
     "audio/bgm-dullahan-steel-ghost-alt.mp3": "1e9c04ccc1db",
     "audio/bgm-dullahan-steel-ghost.mp3": "dbb0da050ab4",
-    "audio/bgm-dullahan.mp3": "434fcea866a3",
+    "audio/bgm-dullahan.mp3": "d5d987e2ccd3",
     "audio/bgm-eiki-boss-beat.mp3": "1c3e0cb8b29f",
     "audio/bgm-eiki-boss-remix.mp3": "83093750c9ec",
     "audio/bgm-emerald-rush.mp3": "7782e3520275",
@@ -5601,15 +5791,15 @@ const Audio_ = (() => {
     "audio/bgm-freedom-dive.mp3": "34616b2fccd3",
     "audio/bgm-fusion.mp3": "6f0d4675789f",
     "audio/bgm-game-over.mp3": "d9fb75a7c827",
-    "audio/bgm-grievous-lady.mp3": "dac4aa4d3b72",
+    "audio/bgm-grievous-lady.mp3": "28bfeda8d534",
     "audio/bgm-haruka.mp3": "7a7164dbf152",
     "audio/bgm-home-ichika.mp3": "29295336d1af",
-    "audio/bgm-journey.mp3": "bd51dcc8ef21",
-    "audio/bgm-kaze-ga-soyogu-basho.mp3": "9cc789151e7e",
-    "audio/bgm-kiki-issen-short.mp3": "1dc188dbb7a7",
+    "audio/bgm-journey.mp3": "816f0cdab93e",
+    "audio/bgm-kaze-ga-soyogu-basho.mp3": "e986277401a6",
+    "audio/bgm-kiki-issen-short.mp3": "add607be5bec",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
-    "audio/bgm-light-player-short.mp3": "785e78c69005",
-    "audio/bgm-light-player.mp3": "6656f3a71344",
+    "audio/bgm-light-player-short.mp3": "5d59fb7eb1fb",
+    "audio/bgm-light-player.mp3": "c07830c2e774",
     "audio/bgm-makutsu-no-senritsu.mp3": "8db199451f0b",
     "audio/bgm-market.mp3": "a85ba65f90e7",
     "audio/bgm-menu.mp3": "a6aef603fd6a",
@@ -5626,29 +5816,29 @@ const Audio_ = (() => {
     "audio/bgm-pro-battle-01.mp3": "59a3a0fbfef1",
     "audio/bgm-pro-battle-02.mp3": "f572c81a9ef6",
     "audio/bgm-profile.mp3": "523789845ff1",
-    "audio/bgm-rebellion-short.mp3": "04678c77a7e1",
-    "audio/bgm-rebellion.mp3": "cc5dab0bab8b",
+    "audio/bgm-rebellion-short.mp3": "92a340e95441",
+    "audio/bgm-rebellion.mp3": "4c8807e74e0e",
     "audio/bgm-result.mp3": "c4dc9d2fb8a5",
     "audio/bgm-rising-hope.mp3": "5b56b8f9d099",
-    "audio/bgm-rose-short.mp3": "57888379506b",
-    "audio/bgm-rose.mp3": "acc0ceccc810",
+    "audio/bgm-rose-short.mp3": "fd5f8290037c",
+    "audio/bgm-rose.mp3": "1a030e41df75",
     "audio/bgm-sad-song-short.mp3": "2ff39f50eddd",
     "audio/bgm-sad-song.mp3": "47d16979bb90",
     "audio/bgm-senjou-no-shippuu.mp3": "dfcd5d833fec",
     "audio/bgm-sheriruth-proto.mp3": "a6f3c4e66746",
-    "audio/bgm-sheriruth.mp3": "ab30c8b641fb",
+    "audio/bgm-sheriruth.mp3": "5044be9b5c0d",
     "audio/bgm-six-eternel-beat.mp3": "151f94091a34",
     "audio/bgm-six-eternel-remix-beat.mp3": "b1a024d5b16f",
     "audio/bgm-six-eternel-remix.mp3": "5f56c89739f8",
     "audio/bgm-six-eternel.mp3": "e26412179f3a",
-    "audio/bgm-stay-with-me-short.mp3": "54a59963e979",
+    "audio/bgm-stay-with-me-short.mp3": "d836a069998d",
     "audio/bgm-the-city-beneath-the-comets.mp3": "900fda0dc05e",
     "audio/bgm-title-theme.mp3": "8af0684e79e7",
     "audio/bgm-title.mp3": "b7bdc68bb0c0",
     "audio/bgm-toriko.mp3": "3870d26f6322",
-    "audio/bgm-toward-the-stars-short.mp3": "25c386c48439",
-    "audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3": "f2e9585907f2",
-    "audio/bgm-tsuki-ga-michiru-mae-ni.mp3": "2ee86e1947fd",
+    "audio/bgm-toward-the-stars-short.mp3": "f3160c5d2a44",
+    "audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3": "fe27c9332589",
+    "audio/bgm-tsuki-ga-michiru-mae-ni.mp3": "74eb2d433abd",
     "audio/bgm-wrath-of-the-thorn-king.mp3": "d1ea326a4ee2",
     "audio/jingle-victory.mp3": "689c9715a824",
     "audio/se-awakened-moo-apocalypse.mp3": "3ed18e30e8e7",
@@ -5671,7 +5861,7 @@ const Audio_ = (() => {
   // 実際に流れている波形の大きさを設定画面から見られるようにする
   const buildAudioGraph = (ctx) => {
     masterOut = ctx.createGain();
-    masterOut.gain.value = 1;
+    masterOut.gain.value = videoHold ? 0 : 1;
     analyser = ctx.createAnalyser();
     analyser.fftSize = 2048;
     analyser.smoothingTimeConstant = 0;
@@ -6290,7 +6480,28 @@ const Audio_ = (() => {
   };
   const se = Object.fromEntries(Object.entries(fgSe).map(([name, play]) => [name, (...args) => (backgroundSeQuiet ? Promise.resolve() : play(...args))]));
 
-  return { playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  const setVideoHold = (on) => {
+    videoHold = !!on;
+    if (!masterOut || !audioCtx) return;
+    try {
+      const at = audioCtx.currentTime;
+      masterOut.gain.cancelScheduledValues(at);
+      masterOut.gain.setValueAtTime(masterOut.gain.value, at);
+      masterOut.gain.linearRampToValueAtTime(videoHold ? 0 : 1, at + 0.25);
+    } catch (e) { masterOut.gain.value = videoHold ? 0 : 1; }
+  };
+  // お話の締め(終わりの札)のあいだ、BGM も効果音もゆっくり小さくする(2026-11-03 社長「最後のページが終わるとあっけない」)。
+  //   on で 2.5秒かけて 0 へ、off で 0.25秒で元へ。予告動画の setVideoHold と同じ出口(masterOut)を使う
+  const setStoryEndFade = (on) => {
+    if (!masterOut || !audioCtx) return;
+    try {
+      const at = audioCtx.currentTime;
+      masterOut.gain.cancelScheduledValues(at);
+      masterOut.gain.setValueAtTime(masterOut.gain.value, at);
+      masterOut.gain.linearRampToValueAtTime(on || videoHold ? 0 : 1, at + (on ? 2.5 : 0.25));
+    } catch (e) { masterOut.gain.value = on || videoHold ? 0 : 1; }
+  };
+  return { setVideoHold, setStoryEndFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();
 
 // ---- part: 15-dye-and-art.jsx ----
@@ -9231,6 +9442,9 @@ const changelogEventLive = (entry, nowMs = Date.now()) => {
   if (!notice || !notice.notifyUntil) return false;
   const from = Date.parse(notice.notifyFrom || entry.visibleFrom || '');
   const until = Date.parse(notice.notifyUntil);
+  // pinUntil を書いた項目(開催前の予告など)は、その時刻からは上に固定しない。開始のお知らせと札が2つ並ばないように(2026-11-03 社長「パンドライベントの予告が2つある」)
+  const pinUntil = Date.parse(entry.pinUntil || '');
+  if (Number.isFinite(pinUntil) && nowMs >= pinUntil) return false;
   return Number.isFinite(until) && nowMs < until && (!Number.isFinite(from) || nowMs >= from);
 };
 
@@ -10214,13 +10428,29 @@ const normalizeBeatRank = (raw) => {
   return { v: 1, xp: playerRankSafeXp(r.xp), day: typeof r.day === 'string' ? r.day.slice(0, 10) : '', dayFirst: r.dayFirst === true, got, k };
 };
 
+// 曲の長さで経験値を変える(2026-11-02 社長「時間の長さで変動するように」・案A 比例・「2分を今までと同じに」)。
+//   難易度の基本の値 × 曲の長さ÷2:00。上限・下限なし。端数は四捨五入・最低1。
+//   長さが分からないとき(0・壊れた値)は今までどおり(×1)。これまでにたまった経験値はさかのぼらない(保存の形も変えない)
+const BEAT_RANK_BASE_MS = 120000;
+const beatRankLengthRate = (durationMs) => {
+  const ms = Number(durationMs);
+  return Number.isFinite(ms) && ms > 0 ? ms / BEAT_RANK_BASE_MS : 1;
+};
+// 内わけに出す長さ(「4:34」)
+const beatRankLengthText = (durationMs) => {
+  const sec = Math.round(Number(durationMs) / 1000);
+  return Number.isFinite(sec) && sec > 0 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` : '';
+};
 // 1曲ぶんの経験値と内わけ(その日はじめての +30 は入れない)。経験値の入らない難易度なら { xp:0 }
-const beatRankPlayXp = ({ difficultyId, cleared = true, fullCombo = false, allMarvelous = false, multi = false }) => {
-  const base = BEAT_RANK_XP[difficultyId];
-  if (!base) return { xp: 0, parts: [] };
+const beatRankPlayXp = ({ difficultyId, cleared = true, fullCombo = false, allMarvelous = false, multi = false, durationMs = 0 }) => {
+  const base0 = BEAT_RANK_XP[difficultyId];
+  if (!base0) return { xp: 0, parts: [] };
+  const rate = beatRankLengthRate(durationMs);
+  const base = base0 * rate;
   const parts = [];
-  let xp = cleared ? base : Math.max(1, Math.round(base * BEAT_RANK_BONUS.failRate));
-  parts.push({ label: cleared ? difficultyId : `${difficultyId}(ライフが尽きた)`, xp });
+  let xp = cleared ? Math.max(1, Math.round(base)) : Math.max(1, Math.round(base * BEAT_RANK_BONUS.failRate));
+  const len = beatRankLengthText(durationMs);
+  parts.push({ label: `${difficultyId}${len ? `・${len}` : ''}${cleared ? '' : '(ライフが尽きた)'}`, xp });
   if (cleared && allMarvelous) { xp += BEAT_RANK_BONUS.allMarvelous; parts.push({ label: '全部 MARVELOUS', xp: BEAT_RANK_BONUS.allMarvelous }); }
   else if (cleared && fullCombo) { xp += BEAT_RANK_BONUS.fullCombo; parts.push({ label: 'フルコンボ', xp: BEAT_RANK_BONUS.fullCombo }); }
   if (multi) { const scaled = Math.round(xp * BEAT_RANK_BONUS.multiScale); parts.push({ label: 'みんなで対戦 ×1.5', xp: scaled - xp }); xp = scaled; }
@@ -10229,10 +10459,10 @@ const beatRankPlayXp = ({ difficultyId, cleared = true, fullCombo = false, allMa
 
 // 経験値を足した次の値と、新しくもらうごほうび。today は日本時間の 'YYYY-MM-DD'(呼ぶ側が渡す)
 // 返り値: { next, add, parts, from, to, tickets, beatPoints, bonusTickets, bonusPoints }(bonus* は5ランクごとのおまけの分。tickets・beatPoints に含む)
-const beatRankAfter = (prev, { difficultyId, cleared = true, fullCombo, allMarvelous, multi, today }) => {
+const beatRankAfter = (prev, { difficultyId, cleared = true, fullCombo, allMarvelous, multi, today, durationMs = 0 }) => {
   const cur = normalizeBeatRank(prev);
   const from = playerRankInfo(cur.xp).rank;
-  const play = beatRankPlayXp({ difficultyId, cleared, fullCombo, allMarvelous, multi });
+  const play = beatRankPlayXp({ difficultyId, cleared, fullCombo, allMarvelous, multi, durationMs });
   if (!play.xp) return { next: cur, add: 0, parts: [], from, to: from, tickets: 0, beatPoints: 0 };
   const day = typeof today === 'string' ? today.slice(0, 10) : '';
   const first = cleared !== false && !!day && !(cur.day === day && cur.dayFirst);
@@ -10645,13 +10875,13 @@ const EXTREME_DIFFICULTIES = Object.freeze([
   { id:'INFINITY', label:'INFINITY', japanese:'インフィニティ', available:true, power:50, score:20, xp:45, gold:30, psyche:80, unlockRequirement:'ULTIMATE', description:'これまでの極限ルールを統合し、ターン経過による圧力がさらに強化された10WAVE最終難易度。', cardDescription:'極限ルールを統合。与ダメ低下とDISTANCE BREAKがさらに苛烈になる最上位10WAVE。', specialRules:Object.freeze({ assistCardEffect:0.5, positiveModifier:0.5, negativeModifier:2.0, distanceEnhancement:0.5, gutsCost:1.5, enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, minimumAllyJoinBonus:0.10, damageTurnRate:0.01, minimumDamageDealt:0.30, awakeningPenaltyRate:0.0075, awakeningZeroTurns:20, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:25, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
 ]);
 // 種族チャレンジは既存の通常・極限難易度定義を複製せず、IDの順序だけを参照する。
-// 極限チャレンジと同じく、いちばん奥(GOD・RAGNAROK・HELHEIM・ETERNAL・INFERNO・COCYTUS)まで遊べる(2026-10-03 ユーザー指示・ETERNAL は 2026-10-29・INFERNO は 2026-10-31・COCYTUS は 2026-11-01)。
+// 極限チャレンジと同じく、いちばん奥(GOD・RAGNAROK・HELHEIM・ETERNAL・INFERNO・COCYTUS)まで遊べる(2026-10-03 ユーザー指示・ETERNAL は 2026-10-29・INFERNO は 2026-10-31・COCYTUS は 2026-11-01・INFERNO と COCYTUS のあいだの EREBUS は 2026-11-04)。
 // ★GOD以降の定義(ALL_EXTREME_DIFFICULTIES)はこの下で作られるので、ここではIDだけを並べる。
 //   極限の難易度を足したら、ここへも足すこと。ずれていないかは tools/mode/helheim-rules-check.js が見る
 const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([
   ...Object.keys(DIFFICULTY_SETTINGS),
   ...EXTREME_DIFFICULTIES.map(setting=>setting.id),
-  'GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO','COCYTUS',
+  'GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO','EREBUS','COCYTUS',
 ]);
 // タクティクスバトルも、難易度の定義を複製せずIDの順序だけを参照する(種族チャレンジと同じ)。
 // 通常9段階＋極限5段階の14段階。GOD / RAGNAROK は極限チャレンジ専用なので入れない
@@ -10903,9 +11133,11 @@ const SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT = 5;
 const TACTICS_SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT = TACTICS_DIFFICULTY_INITIAL_UNLOCK_COUNT;
 const speciesChallengeInitialUnlockCountOf = (mode) => (typeof isTacticsMode === 'function' && isTacticsMode(mode)
   ? TACTICS_SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT : SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT);
-const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds=[], initialUnlockCount=SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT) => {
+// keptOpenIds … 段を間に足す前に開いていた段(2026-11-04 EREBUS を足したときの COCYTUS。cocytusKeptOpenIdsFor)。前の段のクリアが無くても開いたまま
+const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds=[], initialUnlockCount=SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT, keptOpenIds=[]) => {
   const index=SPECIES_CHALLENGE_DIFFICULTY_IDS.indexOf(difficultyId);
   if(index<0)return false;
+  if(Array.isArray(keptOpenIds)&&keptOpenIds.includes(difficultyId))return true;
   const initial=Number.isFinite(initialUnlockCount)?initialUnlockCount:SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT;
   if(index<initial)return true;
   const cleared=new Set(Array.isArray(clearedDifficultyIds)?clearedDifficultyIds:[]);
@@ -10914,7 +11146,7 @@ const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds
 const SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS = Object.freeze({
   Beginner:1, Easy:2, Normal:3, Hard:4, Expert:5, Master:6, GrandMaster:8,
   Hell:10, Legend:12, EXTREME:15, NIGHTMARE:20, CHAOS:25, ULTIMATE:30, INFINITY:40,
-  GOD:60, RAGNAROK:80, HELHEIM:100, ETERNAL:120, INFERNO:140, COCYTUS:160,
+  GOD:60, RAGNAROK:80, HELHEIM:100, ETERNAL:120, INFERNO:140, EREBUS:150, COCYTUS:160,
 });
 const speciesChallengeFirstClearReward = (difficultyId) =>
   Object.prototype.hasOwnProperty.call(SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS,difficultyId)
@@ -11026,12 +11258,16 @@ const ETERNAL_SETTING = Object.freeze({ id:'ETERNAL', label:'ETERNAL', japanese:
 // INFERNOはETERNALの次の極限難易度(2026-10-31 社長の決定)。冥府・ふつうのWAVEのシールド・貫き・敵ライフ10倍・デュラハンの上乗せはETERNALのまま。
 // ボスは起き上がらない(revival なし)。かわりにボスのWAVEは何枚ものシールド(層)をまとって出てくる。層の決まりは infernoStageRules
 const INFERNO_SETTING = Object.freeze({ id:'INFERNO', label:'INFERNO', japanese:'インフェルノ', tab:'underworld', available:true, debugAvailable:true, power:400, score:20, xp:140, gold:120, psyche:220, waveCount:10, unlockRequirement:'ETERNAL', rankingId:'ExtremeINFERNO', recordId:'INFERNO', description:'ボスは起き上がらないかわりに、何枚ものシールドをまとって現れる。1枚割るごとにボスは強くなり、最後は必殺技が連撃になる、極限チャレンジの最奥の難易度。', cardDescription:'ボスは3〜5枚のシールドをまとい、割るたびに攻撃が上がる。デュラハンとムーは必殺技が連撃に。冥府・シールド・貫き・敵ライフ10倍はエターナルのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
+// EREBUS(エレボス・冥界の闇。2026-11-04 社長が名前を決定)は INFERNO と COCYTUS のあいだの段(2026-11-04 社長の決定「最新とその下の中間ぐらい」)。
+//   固さは INFERNO の約6倍(掛け算の中間)。強度450・敵ライフ15倍。層のシールドの枚数は COCYTUS と同じ(どの敵も W1・2 4枚 / W3〜10 5枚)で、
+//   1枚目は最大ライフの1.8倍(デュラハン2.6倍・ムー3.0倍)。割るたびの攻撃はふつう+20%・ボス+30%。蘇りはムーだけ1回(全回復・最大ライフ1.5倍)。
+const EREBUS_SETTING = Object.freeze({ id:'EREBUS', label:'EREBUS', japanese:'エレボス', tab:'underworld', available:true, debugAvailable:true, power:450, score:20, xp:150, gold:130, psyche:235, waveCount:10, unlockRequirement:'INFERNO', rankingId:'ExtremeEREBUS', recordId:'EREBUS', description:'どの敵も何枚ものシールドをまとって現れる。1枚割るごとに敵は強くなり、ムーは倒しても大きくなって1回蘇る、インフェルノとコキュートスのあいだの難易度。', cardDescription:'どの敵も4〜5枚のシールドをまとい、割るたびに攻撃が上がる。ムーは1回、全回復して大きくなって蘇る。冥府・貫きはインフェルノのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 10:1 }), hpRate:1, maxHpRatePerRevival:1.5, atkStepsWithLayers:true, reveal:Object.freeze({ 10:Object.freeze([Object.freeze({ stage:'moo1', name:'常闇の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' })]) }) }), enemyAdjust:Object.freeze({ lifeRate:15, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
 // COCYTUSはINFERNOの次の極限難易度(2026-11-01 社長の決定)。冥府・貫き・デュラハンの上乗せはINFERNOのまま。
 // 敵のライフの上乗せは 10倍→50倍(2026-11-01 社長「ライフをさらに5倍ぐらいに」。1枚目は最大ライフ×3.0/3.8/4.4 のままなのでシールドも同じだけ厚くなる)。
 // デュラハンは1回・ムーは2回、本体を倒すと全回復+最大ライフ1.5倍(掛け算)で蘇る(シールドは張り直さない)。蘇るたびに攻撃も+20%(層1枚ぶんと同じ)。
 // ふつうの敵も層のシールドをまとい(WAVEのはじめの50%は層に置き換え)、層は厚く・枚数は多い。層の決まりは cocytusStageRules
-const COCYTUS_SETTING = Object.freeze({ id:'COCYTUS', label:'COCYTUS', japanese:'コキュートス', tab:'underworld', available:true, debugAvailable:true, power:500, score:20, xp:160, gold:140, psyche:250, waveCount:10, unlockRequirement:'INFERNO', rankingId:'ExtremeCOCYTUS', recordId:'COCYTUS', description:'どの敵も何枚もの厚いシールドをまとって現れる。1枚割るごとに敵は強くなり、デュラハンとムーは倒しても大きくなって蘇る、極限チャレンジの最奥の難易度。', cardDescription:'どの敵も4〜5枚の厚いシールドをまとい、割るたびに攻撃が上がる。デュラハンは1回・ムーは2回、全回復して大きくなって蘇る。冥府・貫き・敵ライフ10倍はインフェルノのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 9:1, 10:2 }), hpRate:1, maxHpRatePerRevival:1.5, atkStepsWithLayers:true, reveal:Object.freeze({ 9:Object.freeze([Object.freeze({ stage:'durahan', name:'凍土の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' })]), 10:Object.freeze([Object.freeze({ stage:'moo1', name:'凍土の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' }),Object.freeze({ stage:'moo2', name:'凍土の再起', desc:'ライフ全回復・最大ライフ2.25倍で復活' })]) }) }), enemyAdjust:Object.freeze({ lifeRate:50, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
-const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES,GOD_SETTING,RAGNAROK_SETTING,HELHEIM_SETTING,ETERNAL_SETTING,INFERNO_SETTING,COCYTUS_SETTING]);
+const COCYTUS_SETTING = Object.freeze({ id:'COCYTUS', label:'COCYTUS', japanese:'コキュートス', tab:'underworld', available:true, debugAvailable:true, power:500, score:20, xp:160, gold:140, psyche:250, waveCount:10, unlockRequirement:'EREBUS', rankingId:'ExtremeCOCYTUS', recordId:'COCYTUS', description:'どの敵も何枚もの厚いシールドをまとって現れる。1枚割るごとに敵は強くなり、デュラハンとムーは倒しても大きくなって蘇る、極限チャレンジの最奥の難易度。', cardDescription:'どの敵も4〜5枚の厚いシールドをまとい、割るたびに攻撃が上がる。デュラハンは1回・ムーは2回、全回復して大きくなって蘇る。冥府・貫き・敵ライフ10倍はインフェルノのまま。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 9:1, 10:2 }), hpRate:1, maxHpRatePerRevival:1.5, atkStepsWithLayers:true, reveal:Object.freeze({ 9:Object.freeze([Object.freeze({ stage:'durahan', name:'凍土の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' })]), 10:Object.freeze([Object.freeze({ stage:'moo1', name:'凍土の再起', desc:'ライフ全回復・最大ライフ1.5倍で復活' }),Object.freeze({ stage:'moo2', name:'凍土の再起', desc:'ライフ全回復・最大ライフ2.25倍で復活' })]) }) }), enemyAdjust:Object.freeze({ lifeRate:50, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
+const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES,GOD_SETTING,RAGNAROK_SETTING,HELHEIM_SETTING,ETERNAL_SETTING,INFERNO_SETTING,EREBUS_SETTING,COCYTUS_SETTING]);
 // 極限チャレンジの難易度カラー。カード構造は共通のまま、上位ほど発光を少しずつ強める。
 // 常時アニメーションは使わず、iPhone縦画面でも視認性と軽さを優先する。
 const EXTREME_DIFFICULTY_THEMES = Object.freeze({
@@ -11052,6 +11288,7 @@ const EXTREME_DIFFICULTY_THEMES = Object.freeze({
   // 冥府(緑)の先は、終わらない時を思わせる明るい桃紫。ほかの極限(紫・赤・橙・青・金・氷・緑)とかぶらない
   ETERNAL:Object.freeze({accent:'#f9a8d4',rgb:'236,72,153',background:'linear-gradient(180deg,#3b0a2a,#12030d)',action:'linear-gradient(135deg,#db2777,#f9a8d4)',actionText:'#3b0a2a',glow:0.70,titleGlow:0.94,actionGlow:0.70,shadowBlur:56}),
   INFERNO:Object.freeze({accent:'#fb923c',rgb:'249,115,22',background:'linear-gradient(180deg,#431407,#120502)',action:'linear-gradient(135deg,#ea580c,#fdba74)',actionText:'#431407',glow:0.74,titleGlow:0.96,actionGlow:0.74,shadowBlur:60}),
+  EREBUS:Object.freeze({accent:'#f9a8d4',rgb:'236,72,153',background:'linear-gradient(180deg,#4a044e,#0b0418)',action:'linear-gradient(135deg,#be185d,#fbcfe8)',actionText:'#4a044e',glow:0.76,titleGlow:0.97,actionGlow:0.76,shadowBlur:62}),
   COCYTUS:Object.freeze({accent:'#a5f3fc',rgb:'103,232,249',background:'linear-gradient(180deg,#082f49,#020617)',action:'linear-gradient(135deg,#0891b2,#e0f2fe)',actionText:'#082f49',glow:0.78,titleGlow:0.98,actionGlow:0.78,shadowBlur:64}),
 });
 const extremeDifficultyTheme = (difficultyId) => EXTREME_DIFFICULTY_THEMES[difficultyId] || EXTREME_DIFFICULTY_THEMES.EXTREME;
@@ -11156,6 +11393,17 @@ const cocytusStageRules = (waveNumber) => {
   return Object.freeze({ ...base, shieldLayers:COCYTUS_SHIELD_LAYERS[w]||0, bossWave:INFERNO_BOSS_WAVES.includes(w), layerGrowth:0.3, layerAtkGain:0.2,
     layerFirstRate:COCYTUS_FIRST_LAYER_RATE[w]||3.0, layerBodyBossOnly:true, rushAtBroken:COCYTUS_RUSH_AT_BROKEN[w]||null });
 };
+// EREBUS の段階ルール(2026-11-04 社長の決定)。層の枚数は COCYTUS と同じ。1枚目は最大ライフの1.8倍(W9 2.6倍・W10 3.0倍)。
+//   割るたびの攻撃は、ふつうの敵 +20%・ボス +30%(INFERNO の+60% と COCYTUS の+20% のあいだ。1 WAVE に敵は1体なので WAVE で分ける)
+const EREBUS_SHIELD_LAYERS = COCYTUS_SHIELD_LAYERS;
+const EREBUS_FIRST_LAYER_RATE = Object.freeze({ 9:2.6, 10:3.0 });
+const erebusStageRules = (waveNumber) => {
+  const base=eternalStageRules(waveNumber);
+  const w=Math.floor(Number(waveNumber)||0);
+  const boss=INFERNO_BOSS_WAVES.includes(w);
+  return Object.freeze({ ...base, shieldLayers:EREBUS_SHIELD_LAYERS[w]||0, bossWave:boss, layerGrowth:0.3, layerAtkGain:boss?0.3:0.2,
+    layerFirstRate:EREBUS_FIRST_LAYER_RATE[w]||1.8, layerBodyBossOnly:true, rushAtBroken:COCYTUS_RUSH_AT_BROKEN[w]||null });
+};
 // 「WAVEで段階が動く難易度」の一覧。ここに1行足せば、実効倍率・与ダメ・BREAK・表示まで
 // すべて同じ経路を通るので、難易度名の分岐を各所へ書き足さなくてよい。
 const EXTREME_WAVE_STAGES = Object.freeze({
@@ -11164,6 +11412,7 @@ const EXTREME_WAVE_STAGES = Object.freeze({
   HELHEIM:Object.freeze({ label:'冥府', rules:helheimUnderworldRules }),
   ETERNAL:Object.freeze({ label:'冥府', rules:eternalStageRules }),
   INFERNO:Object.freeze({ label:'冥府', rules:infernoStageRules }),
+  EREBUS:Object.freeze({ label:'冥府', rules:erebusStageRules }),
   COCYTUS:Object.freeze({ label:'冥府', rules:cocytusStageRules }),
 });
 const extremeWaveStage = (difficultyId) => EXTREME_WAVE_STAGES[difficultyId] || null;
@@ -11474,7 +11723,7 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     ['Lv5','与ダメ低下 -1.75pt/T・最低15%'],
   ]);
   // ETERNALは冥府(HELHEIM)をそのまま引き継ぐので、同じ説明にシールドと貫きを足す
-  if(difficultyId===HELHEIM_SETTING.id||difficultyId===ETERNAL_SETTING.id||difficultyId===INFERNO_SETTING.id||difficultyId===COCYTUS_SETTING.id){
+  if(difficultyId===HELHEIM_SETTING.id||difficultyId===ETERNAL_SETTING.id||difficultyId===INFERNO_SETTING.id||difficultyId===EREBUS_SETTING.id||difficultyId===COCYTUS_SETTING.id){
     const adjust=rules.enemyAdjust||{};
     const durahan=adjust.byEnemy?.Durahan;
     push('冥府',[
@@ -11499,6 +11748,14 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
       ['割れるたび','ボスの攻撃力 +60%(最後の1枚も)'],
       ['連撃','デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)'],
     ]);
+    if(difficultyId===EREBUS_SETTING.id) push('層のシールド',[
+      ['蘇り','ムーだけ1回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る。シールドは張り直さない'],
+      ['層の数','W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'],
+      ['WAVEのはじめのシールド','エターナルの50%のシールドは、層のシールドに置き換わる'],
+      ['シールドの量','1枚目はその敵の最大ライフの1.8倍(デュラハン2.6倍・ムー3倍)。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフは元のまま)'],
+      ['割れるたび','ふつうの敵の攻撃力 +20%・ボスの攻撃力 +30%(最後の1枚も。ムーは蘇るときにも+30%)'],
+      ['連撃','デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)'],
+    ]);
     if(difficultyId===COCYTUS_SETTING.id) push('層のシールド',[
       ['蘇り','デュラハンは1回・ムーは2回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る(ムーの2回目は2.25倍)。シールドは張り直さない'],
       ['層の数','W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'],
@@ -11507,7 +11764,7 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
       ['割れるたび','敵の攻撃力 +20%(最後の1枚も。蘇るたびにも+20%)'],
       ['連撃','デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)'],
     ]);
-    if(difficultyId===ETERNAL_SETTING.id||difficultyId===INFERNO_SETTING.id||difficultyId===COCYTUS_SETTING.id) push('シールドと貫き',[
+    if(difficultyId===ETERNAL_SETTING.id||difficultyId===INFERNO_SETTING.id||difficultyId===EREBUS_SETTING.id||difficultyId===COCYTUS_SETTING.id) push('シールドと貫き',[
       ['シールド','WAVEの始めに、敵が最大ライフ50%ぶんのシールドをまとう。シールドを割るまで敵のライフは減らない'],
       ['シールドと距離強化','シールドに当てたダメージは、距離強化(間合いのボーナス)に数えない'],
       ['貫き','敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）'],
@@ -11800,7 +12057,29 @@ const isRagnarokUnlocked = (godClearCount) => (Number(godClearCount) || 0) > 0;
 const isHelheimUnlocked = (ragnarokClearCount) => (Number(ragnarokClearCount) || 0) > 0;
 const isEternalUnlocked = (helheimClearCount) => (Number(helheimClearCount) || 0) > 0;
 const isInfernoUnlocked = (eternalClearCount) => (Number(eternalClearCount) || 0) > 0;
-const isCocytusUnlocked = (infernoClearCount) => (Number(infernoClearCount) || 0) > 0;
+// EREBUS(INFERNO と COCYTUS のあいだ・2026-11-04)は INFERNO を1回以上クリアすると開く
+const isErebusUnlocked = (infernoClearCount) => (Number(infernoClearCount) || 0) > 0;
+// COCYTUS は EREBUS を1回以上クリアすると開く。★EREBUS を足す前に COCYTUS が開いていた人は閉じない(2026-11-04 社長の決め)。
+//   開いていたかは、公開のあと最初の読み込みで1回だけ作る印 mh_cocytus_open_kept_v1(cocytusOpenKept)で見る。COCYTUS の記録がある人も開いたまま
+const isCocytusUnlocked = (erebusClearCount, kept = null, cocytusRecord = 0) => (Number(erebusClearCount) || 0) > 0
+  || normalizeCocytusOpenKept(kept).extreme === true || (Number(cocytusRecord) || 0) > 0;
+// 印の中身: { version:1, extreme: 極限で INFERNO をクリアしていたか, species: 種族チャレンジで INFERNO をクリアしていた種族の id }。
+//   読めない・壊れているときは「どれも開いていなかった」(閉じる側)ではなく、作り直さずに既定の空として読む(作るのは読み込みの1回だけ)
+const COCYTUS_OPEN_KEPT_KEY = 'mh_cocytus_open_kept_v1';
+const normalizeCocytusOpenKept = (value) => {
+  const v = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const species = Array.isArray(v.species) ? [...new Set(v.species.filter(id => typeof id === 'string' && id))] : [];
+  return { version: 1, extreme: v.extreme === true, species };
+};
+// 公開のあと最初の読み込みで、いまの記録から印を作る(INFERNO のクリアがあれば、そこで COCYTUS が開いていた)
+const buildCocytusOpenKept = (extremeClearCounts, speciesProgress) => {
+  const extreme = (Number(extremeClearCounts?.[INFERNO_SETTING.id]) || 0) > 0;
+  const species = Object.entries(normalizeSpeciesChallengeProgress(speciesProgress).species)
+    .filter(([, entry]) => entry?.cleared?.[INFERNO_SETTING.id] === true).map(([id]) => id);
+  return normalizeCocytusOpenKept({ extreme, species });
+};
+// 種族チャレンジで、その種族の COCYTUS を印で開いたままにするか(isSpeciesChallengeDifficultyUnlocked の keptOpenIds に渡す)
+const cocytusKeptOpenIdsFor = (kept, speciesId) => normalizeCocytusOpenKept(kept).species.includes(speciesId) ? [COCYTUS_SETTING.id] : [];
 // 冥界チャレンジのタブは ETERNAL を1回以上クリアすると開く(今の INFERNO の解放と同じ)
 const isUnderworldUnlocked = (eternalClearCount) => (Number(eternalClearCount) || 0) > 0;
 // 難易度のシールドの枚数の幅(見た目のカードの「🛡×3〜5」に使う)。層を持たない難易度は ''
@@ -12899,7 +13178,60 @@ const storyCastOf = (script) => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(
 const STORY_MONSTER_ART = Object.freeze({
   Kyubi: typeof KYUBI_IMG !== 'undefined' ? KYUBI_IMG : null,
   Orihime: typeof ORIHIME_IMG !== 'undefined' ? ORIHIME_IMG : null,
+  // イベント「鍵の向こう側へ」(2026-11-02)のパンドラ。Pandora は pose:'idle' で待機アニメ(翼・尾が動く)。
+  //   PandoraShadow … 正体が分かる前の影 / PandoraAngel・PandoraDevil … 天使側・悪魔側に分かれた全身(pose:'splitL'/'splitR'・'mergeL'/'mergeR')
+  Pandora: typeof PANDORA_IMG !== 'undefined' ? PANDORA_IMG : null,
+  PandoraShadow: typeof PANDORA_SHADOW_IMG !== 'undefined' ? PANDORA_SHADOW_IMG : null,
+  PandoraAngel: typeof PANDORA_ANGEL_IMG !== 'undefined' ? PANDORA_ANGEL_IMG : null,
+  PandoraDevil: typeof PANDORA_DEVIL_IMG !== 'undefined' ? PANDORA_DEVIL_IMG : null,
 });
+// お話の台詞を、決まった行数に収まるページへ分ける(2026-11-02 社長「セリフが長ければページ数増やせばいいだけ」)。
+//   上部ゾーン(ゲストの吹き出し)・下部ゾーン(台詞の欄)の高さを固定にしたので、収まらない台詞は「次へ」で送る次のページにする。
+//   分けるのは文の切れ目(「。」「！」「？」のあと)。1文で収まらないときだけ「、」のあと。言葉の途中では切らない。台本の字は変えない(表示のときだけ)
+//   cpl … 1行に入る字数の見込み(全角1・半角0.55で数える) / maxLines … 行数
+// 3つのゾーンのお話の下部ゾーンで、話していない助手の顔の列も小さく1行で残すか(2026-11-03 社長「下部を喋る人を下部横において」の案。
+//   false = 顔の列は出さず、話している助手の顔だけを台詞の欄の左に置く / true = その上に小さい顔の列を1行残す)
+// 2026-11-03 社長が案B(小さい顔の列を残す)を選んだ。列に並べるのは「その場面にいる人」だけ(60-app.jsx の storyCastNow)
+const STORY_BOTTOM_KEEP_ROW = true;
+// お話の締め(2026-11-03 社長「ストーリーイベントの最後のページが終わるとあっけないから工夫がほしい」)。続きもののお話(id が …_ep1 〜)だけ。
+//   'card' = 終わりの札 / 'next' = 札 + 次のお話の予告 + 次にやることのボタン / 'pull' = 最後の場面を引いて暗転してから 'next' / 'none' = 出さない
+const STORY_ENDING_STYLE = 'pull';
+// 題(「鍵の向こう側へ 第3話 ～大嫌いで、大好き～」)を、シリーズ名・何話・副題に分ける
+//   続きもの(「第◯話」「第◯部」「終章」がある題)は { series, ep, sub, serial:true }。単発のお話(「MFバトルカード ～物置の古い箱～」)は ep に題の前半、sub に「～…～」
+//   final … 「終章」(ハロウィンのエンディングA/B・パンドラ第8話)。次のお話は出さず「おしまい」にする
+const storyEpisodeTitleParts = (title) => {
+  const t = String(title || '').trim();
+  const m = t.match(/^(.*?)\s*(第[\d.]+[話部][^～\s]*|終章)\s*(～.*～)?\s*$/);
+  if (m) return { series: m[1] || '', ep: m[2] || '', sub: m[3] || '', serial: true, final: /終章/.test(m[2] || '') };
+  const s = t.match(/^(.*?)\s*(～.*～)\s*$/);
+  return s ? { series: '', ep: s[1] || t, sub: s[2] || '', serial: false, final: false } : { series: '', ep: t, sub: '', serial: false, final: false };
+};
+// 'YYYY-MM-DD HH:MM'(日本時間)を時刻へ。読めなければ NaN
+const storyJstMs = (text) => Date.parse(`${String(text || '').trim().replace(' ', 'T')}:00+09:00`);
+const storyTextUnits = (s) => [...String(s)].reduce((a, ch) => a + (/[\x20-\x7e｡-ﾟ]/.test(ch) ? 0.55 : 1), 0);
+// ちょうど行の終わりで割り切れる字数は、言葉の切れ目で折ると1行増えやすい(第1話「遊んだ回数も…報われるわけだ」42字が14字×3行で4行になった)。1.5字ぶん余分に見込む
+const storyTextLines = (s, cpl) => String(s).split('\n').reduce((a, seg) => a + Math.max(1, Math.ceil((storyTextUnits(seg) + 1.5) / Math.max(1, cpl))), 0);
+const storySplitPages = (text, cpl, maxLines) => {
+  const s = String(text ?? '');
+  if (!s || storyTextLines(s, cpl) <= maxLines) return [s];
+  const tidy = (t) => t.replace(/^[\s\n]+|[\s\n]+$/g, '');
+  const pack = (pieces) => {
+    const out = [];
+    let cur = '';
+    for (const piece of pieces) {
+      const cand = cur + piece;
+      if (tidy(cur) && storyTextLines(tidy(cand), cpl) > maxLines) { out.push(cur); cur = piece; } else cur = cand;
+    }
+    if (tidy(cur)) out.push(cur);
+    return out;
+  };
+  const sentences = (s.match(/[^。！？!?\n]*(?:[。！？!?]+[」』）)♪♡〜～ｗw…]*|\n|$)/g) || [s]).filter(Boolean);
+  const pages = pack(sentences).flatMap((page) => (storyTextLines(tidy(page), cpl) > maxLines
+    // 半角の「,」では分けない(曲名「Altar of the World Tree, Beneath …」の途中で切れた)
+    ? pack((page.match(/[^、，\n]*(?:[、，]+|\n|$)/g) || [page]).filter(Boolean)) : [page]));
+  const out = pages.map(tidy).filter((t) => t.length);
+  return out.length ? out : [s];
+};
 // お話の層の位置を測って、いちばん外側の箱([data-event-story])の CSS 変数へ書く ref。
 // 上のステージの下端(--story-stage-bottom)と下の窓の高さ(--story-sheet-h)で、真ん中のモンスターの置き場を決める。
 // ★動きの途中(登場・揺れ)のずれを拾わないよう、transform の効かない offsetTop / offsetHeight で測る。大きさが変わったら測り直す
@@ -15667,18 +15999,18 @@ const SKM_KYUBI = Object.freeze({
   normal:[
     skm('slash', { c:'fire', over:'claw', burst:'dust' }),                                                   // ひっかき
     skm('cast', { c:'fire', fx:skmFx('shot', 'spark', 4), burst:'spark' }),                                 // ひのこ
-    skm('cast', { c:'blue', fx:skmFx('orbit', 'fire', 5), burst:'star', form:'fire' }),                     // 狐火
+    skm('cast', { c:'blue', fx:skmFx('orbit', 'fire', 5), burst:'star', form:'fire', tint:true }),          // 狐火(青い炎。着弾の炎も青)
     skm('kick', { c:'red', over:'fist', burst:'dust' }),                                                     // 下駄蹴り
     skm('toss', { c:'fire', fx:skmFx('lob', 'orb', 1, { s:1.4 }), over:'boom', burst:'spark' }),            // 提灯投げ
     skm('jump', { c:'gold', fx:skmFx('fall', 'orb', 1, { s:1.6 }), over:'boom', burst:'star' }),            // 提灯落とし
-    skm('roll', { c:'fire', fx:skmFx('orbit', 'flame', 8), over:'boom', burst:'spark', form:'fire' }),      // 火炎車
+    skm('roll', { c:['#fed7aa', '#dc2626'], fx:skmFx('orbit', 'flame', 8), over:'boom', burst:'spark', form:'fire' }), // 火炎車(赤い炎の渦)
     skm('dash', { c:'holy', line:'ray', over:'xslash', burst:'star', form:'light' }),                       // 神光石火
     skm('gather', { c:'psy', fx:skmFx('orbit', 'orb', 9), over:'eye', burst:'star' })],                     // 九重神眼
   unique:[
     skm('hop', { c:'pink', fx:skmFx('shot', 'heart', 4), burst:'heart' }),                                   // ゆうわく
     skm('lick', { c:'pink', line:'tongue', burst:'heart' }),                                                 // なめろう
-    skm('cast', { c:'blue', fx:skmFx('orbit', 'fire', 9), over:'pillar', burst:'star', form:'fire' }),      // 超狐火
-    skm('gather', { c:'blue', fx:skmFx('fall', 'flame', 10), over:'pillar', burst:'spark', form:'fire' }),  // 神狐蒼火
+    skm('cast', { c:'blue', fx:skmFx('orbit', 'fire', 9), over:'pillar', burst:'star', form:'fire', tint:true }), // 超狐火
+    skm('gather', { c:'blue', fx:skmFx('fall', 'flame', 10, { s:1.6 }), over:'pillar', burst:'spark', form:'fire', tint:true }), // 神狐蒼火(青い大きな炎)
     skm('spin', { c:'wind', over:'tornado', burst:'leaf' }),                                                 // 八嵐天衝
     skm('warp', { c:'fire', over:'shadow', burst:'dust' }),                                                  // 陽炎
     skm('gather', { c:'blood', fx:skmFx('orbit', 'flame', 9), over:'eclipse', burst:'spark', form:'fire' }),  // 煉獄九尾陣
@@ -15694,7 +16026,7 @@ const SKM_ORIHIME = Object.freeze({
     { ...SKM_KYUBI.unique[1], c:'sakura' },                                                                   // 織姫のくちづけ(キュービのなめろうの動き)
     skm('cast', { c:'cosmic', fx:skmFx('orbit', 'star', 9), over:'pillar', burst:'star', form:'light' }),   // 超狐火・星
     { ...SKM_KYUBI.unique[5], c:'cosmic' },                                                                   // 陽炎
-    { ...SKM_KYUBI.unique[3], c:'sky' },                                                                      // 神狐星火(キュービの神狐蒼火の動き)
+    { ...SKM_KYUBI.unique[3], c:'cosmic' },                                                                   // 神狐星火(キュービの神狐蒼火の動き・星空の色の炎)
     { ...SKM_KYUBI.unique[4], c:'sky' },                                                                      // 八鈴天衝(キュービの八嵐天衝の動き)
     { ...SKM_KYUBI.unique[8], c:'pink' },                                                                     // 炸裂気泡陣
     { ...SKM_KYUBI.unique[6], c:'psy' },                                                                      // 煉獄九尾陣
@@ -15778,7 +16110,7 @@ const skmNormalize = (sp0, isUnique = false) => {
   if (isUnique) ms += 100;
   ms = Math.min(SKM_MAX_MS, Math.round(ms));
   const bits = sp.bits || [{x:-28,y:-20},{x:26,y:-24},{x:-30,y:16},{x:30,y:14},{x:0,y:-34}];
-  return { body:sp.body, line:sp.line, fx:sp.fx, over:sp.over, burst:sp.burst, twin:sp.twin === true, bits, c1, c2, form:sp.form || skmFormOf(sp.c), hit:Math.round(hit),
+  return { body:sp.body, line:sp.line, fx:sp.fx, over:sp.over, burst:sp.burst, twin:sp.twin === true, bits, c1, c2, form:sp.form || skmFormOf(sp.c), tint:sp.tint === true, hit:Math.round(hit),
     ...(sp.hit2 ? { hit2:Math.round(hit + 180) } : {}), ms };
 };
 // 型の名前(ユグドラシル種は 'ygHeadbutt' など、ほかの子は '<モンスターid>-n<段階>' / '-u<段階>')から、見た目の組み合わせを返す
@@ -15853,7 +16185,7 @@ const SkillFxMotion = ({kind, image, lunge=false}) => {
         <i className="thm-atk__core"/>
         <i className="thm-atk__ring"/>
       </span>}
-      {(uex||impactOnly)&&<UniqueFxImpact form={spec.form || 'burst'} offset={(spec.hit || 0) - 240}/>}
+      {(uex||impactOnly)&&<UniqueFxImpact form={spec.form || 'burst'} tint={spec.tint ? [spec.c1, spec.c2] : null} offset={(spec.hit || 0) - 240}/>}
     </span>
   );
 };
@@ -15887,11 +16219,12 @@ const UNIQUE_IMPACT_PALETTE = Object.freeze({
   fire:['#fef3c7', '#f97316'], ice:['#e0f2fe', '#38bdf8'], bolt:['#fef9c3', '#facc15'], water:['#e0f2fe', '#3b82f6'], void:['#ede9fe', '#6d28d9'],
   thorn:['#bbf7d0', '#16a34a'], rubble:['#e7d7c1', '#a8865f'], bloom:['#fce7f3', '#ec4899'], rend:['#fee2e2', '#dc2626'], psy:['#fae8ff', '#c026d3'],
 });
-const UniqueFxImpact = ({ form = 'light', offset = 0 }) => {
+// tint … 技の色で塗る(青い狐火・星空の炎など、型の決まった色では技と合わないとき。技の skm に tint:true)
+const UniqueFxImpact = ({ form = 'light', offset = 0, tint = null }) => {
   const parts = UNIQUE_IMPACT_FORMS[form];
-  const pal = UNIQUE_IMPACT_PALETTE[form];
+  const pal = tint || UNIQUE_IMPACT_PALETTE[form];
   return (
-    <span className="thm-atk__hit uex-impact" aria-hidden="true" data-impact-form={form}
+    <span className="thm-atk__hit uex-impact" aria-hidden="true" data-impact-form={form} data-impact-tint={tint ? '1' : undefined}
       style={{ '--spm-c1':pal ? pal[0] : 'var(--c1, #fff)', '--spm-c2':pal ? pal[1] : 'var(--c2, #c026d3)' }}>
       {form === 'light' && <><i className="uex-pillar"/><i className="uex-crack"/></>}
       <i className="uex-flash"/>
@@ -19383,7 +19716,8 @@ const sbFetchRhythmEventSongBestsRaw = async ({ songId, fromMs, toMs, bonusRates
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
-  const body = { song_ids: [songId], from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() };
+  // 原曲とショート版を1曲として数えるイベントでは、ショート版の id も渡す(rhythmEventQuerySongIds・2026-11-01)
+  const body = { song_ids: rhythmEventQuerySongIds([songId], fromMs, toMs), from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() };
   const askRaw = (select) => sbFetchRhythmEventRows({
     url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${select}`, rhythmRankingPeriodVersion(fromMs, toMs, legacyView))
       + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
@@ -19429,7 +19763,7 @@ const sbFetchRhythmEventTotalsRaw = async ({ songIds, fromMs, toMs, bonusRates =
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
-  const body = { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() };
+  const body = { song_ids: rhythmEventQuerySongIds(songIds, fromMs, toMs), from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() };
   // 曲の部門と同じく、加点込みの関数を先に試して、無ければ加点なしへ戻す
   if (bonusRates) {
     const askBonusRaw = (select) => sbFetchRhythmEventRows({
@@ -19573,7 +19907,7 @@ const sbFetchRhythmEventTotals = async (options = {}) => {
   if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmEventTotalsRaw(options);
   const rows = await sbFetchRhythmEventTotalsRaw({ ...options, limit: limit + RHYTHM_TIE_PAD });
   return rhythmTieFix({ rows, limit, scoreKey: 'total_score', timeKey: 'last_scored_at', fn: 'rhythm_event_precise',
-    body: { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() }, requestId, version: rhythmRankingPeriodVersion(fromMs, toMs, options.legacyView === true) });
+    body: { song_ids: rhythmEventQuerySongIds(songIds, fromMs, toMs), from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() }, requestId, version: rhythmRankingPeriodVersion(fromMs, toMs, options.legacyView === true) });
 };
 const sbFetchRhythmEventSongBests = async (options = {}) => {
   const { limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' } = options;
@@ -20919,7 +21253,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
   // ★横向きは高さが足りないので、帯と余白を詰め、説明(▸ くわしく)は出さない。
   //   説明は縦向きで読めるので、消したわけではない。
   const field=(title,control,description=null,{full=false}={})=><div data-rhythm-option-field className={`${full&&!wide?'col-span-2':''} rounded-xl border border-cyan-400/20 bg-slate-950/55 ${wide?'p-1.5':'p-2.5'}`}>
-    <p className={`rounded-lg bg-cyan-700/70 px-2 text-center ${label} ${wide?'mb-1 py-0.5 text-[11px]':'mb-2 py-1'}`}>{title}</p>
+    <p className={`rounded-lg bg-cyan-700/70 px-2 text-center ${label} ${wide?'mb-1 py-0.5 text-[11px]':'mb-2 py-1'}`} style={JA_WRAP_STYLE}>{typeof title==='string'?jaWrap(title):title}</p>
     {control}
     {description&&!wide&&<details data-rhythm-option-help className="mt-2">
       <summary className="min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ 詳しく</summary>
@@ -20928,6 +21262,20 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
   </div>;
   // 横向きは幅が広いので3列。縦向きは2列のまま(1列にすると1つずつしか見えない)
   const grid=`grid gap-2.5 ${wide?'grid-cols-3 gap-2':'grid-cols-2'}`;
+  // 演出の組(背景・道・ノーツ・判定・コンボ)。縦は開いている組(null は全部閉じる)、横は右に出す組。設定ではないので保存しない
+  const [fxGroup,setFxGroup]=useState(null);
+  const fxGroupNow=fxGroup||'stage';
+  const fxGroupShown=id=>!wide||fxGroupNow===id;
+  const fxGroupCount=id=>RHYTHM_FX_ITEMS.filter(item=>item.group===id).length;
+  const fxGroupSummary=id=>{const n=rhythmFxChangedCount(draft,RHYTHM_FX_ITEMS.filter(item=>item.group===id).map(item=>item.key));return n?`${n}つ変更`:'おまかせ';};
+  // 横は2列。段の多い項目(4つ以上)は1列ぶち抜きにする(2026-11-01 社長「横で段の多い項目は1列」)
+  const fxGrid=`grid gap-2.5 ${wide?'grid-cols-2 gap-2':'grid-cols-2'}`;
+  const FX_WEIGHT={l:['軽','bg-emerald-500/25 text-emerald-200'],m:['中','bg-amber-500/25 text-amber-200'],h:['重','bg-rose-500/25 text-rose-200']};
+  const fxPicked=key=>(draft.fx&&draft.fx[key])||'AUTO';
+  const fxSegments=item=><div className={`grid ${item.options.length>=5?'grid-cols-5':item.options.length===4?'grid-cols-4':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{item.options.map(([id,text])=><button type="button" key={id} data-rhythm-option-choice={`fx-${item.key}:${id}`} aria-pressed={fxPicked(item.key)===id}
+    onClick={()=>{setDraft(current=>normalizeRhythmSettings({...current,fx:{...(current.fx||{}),[item.key]:id}}));setMessage('');}}
+    className={`break-keep border-r border-white/10 ${item.options.length>=5?'px-0 tracking-tight':'px-1'} text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${fxPicked(item.key)===id?(id==='AUTO'?'bg-slate-600 text-white':'bg-cyan-600 text-white'):'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
+  const fxField=item=><div key={item.key} data-rhythm-fx-item={item.key} className={`${item.options.length>=4?'col-span-2':''}`}>{field(<span className="inline-flex items-center gap-1.5"><span data-rhythm-fx-weight={item.weight} className={`rounded px-1 text-[10px] font-black ${FX_WEIGHT[item.weight][1]}`}>{FX_WEIGHT[item.weight][0]}</span>{item.label}</span>,fxSegments(item),RHYTHM_FX_HELP[item.key])}</div>;
   const previewBgm=async()=>{previewRef.current?.stop();previewRef.current=null;const audio=await Audio_.startRhythmTrack('atsu_cup_theme',draft.bgmVolume);previewRef.current=audio;if(!audio)setMessage('BGMを再生できませんでした');};
   const resetDraft=()=>{setDraft(normalizeRhythmSettings(DEFAULT_RHYTHM_SETTINGS));setHellDraft({hit:'far',text:'below',lane:RHYTHM_SKY_LANE_LOOK_DEFAULT});setMessage('画面上の値を戻しました（未保存）');};
   const saveDraft=async()=>{saveHell();const saved=await onSave(draft);setDraft(saved);setMessage('保存しました');};
@@ -21097,6 +21445,9 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 {field('演奏中は曲名を薄くする',toggle('hudSongFade'),
               '演奏が始まって4秒たつと、左上の曲名とジャケットを薄くします。目線を道に集めやすくするためです。既定は「ON」です。\nポーズ中は元の濃さに戻ります。スコア・ランク・ライフの表示は薄くなりません。')}
 {field('レーン発光',segments('laneGlow',RHYTHM_LANE_GLOW_LABELS),null,{full:true})}
+{/* ホールド・スライドをなぞる光(2026-11-02 社長「押せてるときは道の押した光が出なくてホールドとかを綺麗になぞってるように」)。既定は ON */}
+{field('ホールド・スライドをなぞる光',toggle('holdTrace'),
+              'ホールド・スライドを押せているあいだ、押している指の道の光を出さず、代わりに帯そのものを指の所から奥へなぞるように光らせ、指の所に光の玉を出します。上へ立ちのぼる光と左右の光の柱はそのまま出ます。既定は「ON」です。\n指が帯から外れると、帯の光も止まります。タップ・フリック・何もない所を押したときの道の光は、これまでどおりです。演出量「最小」や軽量モードでも出ます。判定・スコアは変わりません。\n「OFF」にすると、これまでの見た目(押している所の道が光る)に戻ります。')}
 {hellReleased&&field('空中の道の見え方',hellSegments('lane',[['em','はっきり'],['el','控えめ'],['none','なし']]),
   'HELL で、空中のノーツが流れてくる空中の道をどれくらいはっきり出すかです。既定は「はっきり」です。「なし」にすると、空中の判定線だけになります。判定・スコアは変わりません。',{full:true})}
 {/* 空中のノーツの見た目(2026-10-17 社長「空中を本物の3D(段階A)が1番見やすかった。これと今のを設定で選べるようにする」)。既定は「いつもの」 */}
@@ -21182,8 +21533,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
         </section>
 </div>}
         {tab==='system'&&<div data-rhythm-options-panel="system" className={wide?'space-y-2':'space-y-4'}>
-<section data-rhythm-options-group="よく触る設定" className={favCard}>
-{!wide&&<h3 className={favHead}>★ よく触る設定</h3>}
+<section data-rhythm-options-group="まとめて決める" className={favCard}>
+{!wide&&<h3 className={favHead}>★ まとめて決める</h3>}
 <div className={wide?`mt-1 ${grid}`:`mt-3 ${grid}`}>
 {/* 見た目のおまかせ(2026-09-27)。見た目の設定が増えたので、1回押せばまとめて切り替わるようにする。細かい調整はこの下でできる */}
 {field('見た目のおまかせ',<div data-rhythm-look-presets>
@@ -21200,37 +21551,49 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
                 (ユーザーからの質問「軽量モードはどういう効果があるの？」) */}
 {field('軽量モード',toggle('lightweightMode'),
               '演出量「最小」と同じところまで演出を止めたうえで、さらに細かい動きも切ります。止まるのは、判定ラインで弾ける光と画面のフラッシュ、判定文字が弾む動きと金・虹が流れる動き、コンボ数が跳ねる動きと枠の脈動、100コンボごとのお祝いとフルコンボの大きな表示、モンスターノーツの光と能力名の弾み、判定ラインが拍に合わせて脈打つ動き、両サイドのマスモンの跳ね、明るさがじわっと変わる動きです。判定・判定窓・スコア・ライフ・譜面・音は一切変わりません。端末が熱くなるときや、演出量「標準」でもカクつくときに使ってください。',{full:true})}
-</div>
-</section>
-<section data-rhythm-options-group="演出" className={card}>
-{!wide&&<h3 className={head}>◆ 演出</h3>}
-<div className={wide?`mt-1 ${grid}`:`mt-3 ${grid}`}>
 {/* 「少なめ」が何を止めるのかを、ここで言い切る(2026-09-13・Android勢から
                 「重い」との声)。判定文字の金の帯・虹の流れは毎フレーム字を塗り直すので、
                 動きがカクつく端末ではここがいちばん効く */}
 {field('演出量',segments('effectAmount',RHYTHM_EFFECT_LABELS),
-              '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります（取ったときの光だけは、下の「押したときの光」を「いつも出す」にすると出せます）。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。',{full:true})}
-{/* 押したときの光(2026-10-15・社長「演出量を最小にしても、フリックとかのタップ時の光は出る設定がほしい」)。既定は「おまかせ」(これまでの見た目) */}
-{field('押したときの光',segments('tapLight',RHYTHM_TAP_LIGHT_LABELS),
-              'ノーツを取った瞬間に判定ラインで弾ける光（TAP・フリックの炎・ホールドやスライドを押し切ったときの光）を、演出量とは別に決めます。既定は「おまかせ」です。判定・スコアは変わりません。\n「おまかせ」＝演出量に合わせます。演出量「最小」と軽量モードでは出ません（これまでどおり）。\n「いつも出す」＝演出量「最小」や軽量モードでも、この光だけは出します。判定文字やコンボ数の弾み、画面のフラッシュ、両サイドのマスモンの跳ねなど、ほかの演出は止まったままです。モンスターノーツの光も、ふつうのノーツと同じ大きさになります。',{full:true})}
+              '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝ノーツ・フリックを取ったときに判定ラインで弾ける光だけを出し、ほかの演出（判定文字やコンボ数の弾み、画面のフラッシュ、100コンボごとの演出、フルコンボの大きな表示、モンスターノーツの大きな光）は出しません。モンスターノーツの光も、ふつうのノーツと同じ大きさになります。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。',{full:true})}
+{/* 重いときは演出を自動で控えめにする(2026-09-27)。既定は ON */}
+{field('重いときは演出を自動で控えめに',toggle('autoEffectDown'),
+              '演奏中にカクつきが続いたら、重い演出から順に自動で控えめにします。既定は「ON」です。保存してある設定は変わらず、アプリを開き直すと元に戻ります。判定・スコアは変わりません。\n下げる順番は、にじむ光 → ライブ背景「ライブ」を「派手」に → 道の演出・ノーツの動き → 判定の演出・コンボの節目 → ライブ背景を「控えめ」→「シンプル」です。\n画質を「自動」にしているときは、先に画質を下げ、それでもカクつくときに演出を下げます。')}
+</div>
+</section>
+{/* 演出を組ごとに(2026-11-01 社長「演出量とか背景を別に細かく設定したい」)。組の頭にこれまでのスイッチ(土台)、その下に1つずつ選ぶ項目(fx)。
+    縦は組の見出しを押して開く。横は左に組の一覧・右にその組の中身。1つずつ選ぶ項目は「おまかせ」が既定で、おまかせは上の「まとめて決める」と土台どおり */}
+<div data-rhythm-fx-groups className={wide?'flex gap-2':'space-y-3'}>
+{wide&&<div data-rhythm-fx-group-list className="flex w-[140px] shrink-0 flex-col gap-1.5">{RHYTHM_FX_GROUPS.map(([id,name])=><button type="button" key={id} data-rhythm-fx-group-tab={id} aria-pressed={fxGroupNow===id} onClick={()=>setFxGroup(id)} className={`flex min-h-[44px] items-center gap-1 rounded-xl border px-2 text-left text-[12px] font-black ${fxGroupNow===id?'border-fuchsia-300 bg-slate-800 text-white':'border-white/10 bg-slate-900 text-slate-300'}`}><span>{RHYTHM_FX_GROUP_ICONS[id]} {name}</span><small className="ml-auto text-[10px] font-bold text-slate-400">{fxGroupSummary(id)}</small></button>)}</div>}
+<div className={wide?'min-w-0 flex-1 space-y-2':'space-y-3'}>
+{fxGroupShown('stage')&&<section data-rhythm-options-group="背景" data-rhythm-fx-group="stage" className={card}>
+{!wide&&<button type="button" data-rhythm-fx-group-head="stage" aria-expanded={fxGroup==='stage'} onClick={()=>setFxGroup(cur=>cur==='stage'?null:'stage')} className={`flex w-full items-center gap-2 text-left ${head}`}><span aria-hidden="true" className="text-cyan-300/80">{fxGroup==='stage'?'▼':'▶'}</span>🌌 背景<span data-rhythm-fx-group-badge className="rounded-full bg-fuchsia-500/25 px-2 py-0.5 text-[10px] font-black text-fuchsia-100">{fxGroupSummary('stage')}</span><small className="ml-auto text-[10px] font-bold text-slate-400">{fxGroupCount('stage')}項目</small></button>}
+{(wide||fxGroup==='stage')&&<div className={wide?`mt-1 ${fxGrid}`:`mt-3 ${fxGrid}`}>
 {/* 1秒に描く回数(2026-09-24)。既定は「端末に合わせる」(これまでの動き)。
                 120Hz以上の画面でだけ効く。60Hz・90Hzの画面ではどちらを選んでも同じ */}
 {/* 背景の演出(2026-09-24・ユーザー指示「設定ありきで派手な感じにしたい」)。既定はシンプル(操作感を変えないため) */}
 {field('ライブ背景',segments('stageEffect',RHYTHM_STAGE_EFFECT_LABELS),
               '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、道の両側には観客のペンライトが奥までずらりと並び、拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。いちばん重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。',{full:true})}
+{RHYTHM_FX_ITEMS.filter(item=>item.group==='stage').map(fxField)}
+</div>}
+</section>}
+{fxGroupShown('road')&&<section data-rhythm-options-group="道" data-rhythm-fx-group="road" className={card}>
+{!wide&&<button type="button" data-rhythm-fx-group-head="road" aria-expanded={fxGroup==='road'} onClick={()=>setFxGroup(cur=>cur==='road'?null:'road')} className={`flex w-full items-center gap-2 text-left ${head}`}><span aria-hidden="true" className="text-cyan-300/80">{fxGroup==='road'?'▼':'▶'}</span>🛣 道<span data-rhythm-fx-group-badge className="rounded-full bg-fuchsia-500/25 px-2 py-0.5 text-[10px] font-black text-fuchsia-100">{fxGroupSummary('road')}</span><small className="ml-auto text-[10px] font-bold text-slate-400">{fxGroupCount('road')}項目</small></button>}
+{(wide||fxGroup==='road')&&<div className={wide?`mt-1 ${fxGrid}`:`mt-3 ${fxGrid}`}>
 {/* 道の演出(2026-09-26・ユーザー指示「重くなると思うから設定で切り替えられる前提で作って」)。既定は OFF */}
 {field('道の演出',toggle('roadFx'),
               '演奏中の道(レーン)を、曲に合わせて動かします。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n曲の拍ごとに細い線が奥から流れてきて、小節の頭では明るい線になります。道の左右のふちが拍に合わせて光り、道の奥はもやに溶けて、その先の光が小節ごとに脈打ちます。\n少し重くなるので、端末が熱くなるときは OFF のままにしてください。演出量が「最小」のときと軽量モードでは出ません。\n変えた設定は、次に遊ぶ曲から使われます。')}
-{/* 判定の演出・ノーツの動き・コンボの節目の演出(2026-09-27・ユーザー指示「全部やって」)。どれも既定は OFF */}
-{field('判定の演出',toggle('judgmentFx'),
-              'GREAT 以上の判定のとき、判定の文字の後ろで光がはじけ、文字が大きく弾みます。既定は「OFF」です。判定・スコアは変わりません。\n光の色は判定の色（GREAT は赤、EXCELLENT は桃紫、MARVELOUS は金）で、ぴったりの MARVELOUS では虹色の光が走ります。\n判定のたびに動くので少し重くなります。演出量が「最小」のときと軽量モードでは出ません。')}
-{field('ノーツの動き',toggle('noteMotionFx'),
-              'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。')}
-{field('コンボの節目',toggle('comboMilestoneFx'),
-              'コンボが100のくぎりに届くたび（100・200・300…）、コンボ数のまわりに金の光の輪が広がります。既定は「OFF」です。判定・スコアは変わりません。\n「100 COMBO」の大きな数字は、この設定に関係なくこれまでどおり出ます。コンボ数を出さない設定のときは、光の輪も出ません。演出量が「最小」のときと軽量モードでは出ません。')}
 {/* 盛り上がりの光(2026-09-29・ユーザー指示「最初は OFF・オプションで出せる」)。既定は OFF */}
 {field('盛り上がりの光',toggle('climaxFx'),
               'サビなど曲がいちばん盛り上がるところに入ると、道の両側に光の筋が奥から流れてきます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n盛り上がるところは曲ごとに決まっていて、そこを抜けると光はゆっくり消えます。曲の中でもとくに盛り上がるところほど光が濃くなります。\n演出量が「最小」のときと軽量モードでは出ません。')}
+{RHYTHM_FX_ITEMS.filter(item=>item.group==='road').map(fxField)}
+</div>}
+</section>}
+{fxGroupShown('note')&&<section data-rhythm-options-group="ノーツ" data-rhythm-fx-group="note" className={card}>
+{!wide&&<button type="button" data-rhythm-fx-group-head="note" aria-expanded={fxGroup==='note'} onClick={()=>setFxGroup(cur=>cur==='note'?null:'note')} className={`flex w-full items-center gap-2 text-left ${head}`}><span aria-hidden="true" className="text-cyan-300/80">{fxGroup==='note'?'▼':'▶'}</span>🎵 ノーツ<span data-rhythm-fx-group-badge className="rounded-full bg-fuchsia-500/25 px-2 py-0.5 text-[10px] font-black text-fuchsia-100">{fxGroupSummary('note')}</span><small className="ml-auto text-[10px] font-bold text-slate-400">{fxGroupCount('note')}項目</small></button>}
+{(wide||fxGroup==='note')&&<div className={wide?`mt-1 ${fxGrid}`:`mt-3 ${fxGrid}`}>
+{field('ノーツの動き',toggle('noteMotionFx'),
+              'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。')}
 {/* にじむ光(2026-09-26・ユーザー指示「見た目の向上＋軽量化」の3。既定は OFF)。WebGL で描いているときだけ効く */}
 {field('にじむ光',toggle('noteBloom'),
               'ノーツの光や、ノーツを取ったときの光のまわりを、ふわっとにじませます。既定は「OFF」です。判定・スコアは変わりません。\n描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効きます。「Canvas」のときは何も変わりません。\n光を小さな絵にぼかしてから重ねるので、GPU の仕事が少し増えます。端末が熱くなるときは OFF にしてください。演出量「最小」と軽量モードでは出しません。')}
@@ -21238,13 +21601,33 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
                 「設定でモンスターノーツを踏んだときの軽量化バージョンもほしい」) */}
 {field('モンスターノーツの演出',segments('monsterNoteEffect',RHYTHM_MONSTER_EFFECT_LABELS),
               'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。',{full:true})}
-{/* 重いときは演出を自動で控えめにする(2026-09-27)。既定は ON */}
-{field('重いときは演出を自動で控えめに',toggle('autoEffectDown'),
-              '演奏中にカクつきが続いたら、重い演出から順に自動で控えめにします。既定は「ON」です。保存してある設定は変わらず、アプリを開き直すと元に戻ります。判定・スコアは変わりません。\n下げる順番は、にじむ光 → ライブ背景「ライブ」を「派手」に → 道の演出・ノーツの動き → 判定の演出・コンボの節目 → ライブ背景を「控えめ」→「シンプル」です。\n画質を「自動」にしているときは、先に画質を下げ、それでもカクつくときに演出を下げます。')}
+{RHYTHM_FX_ITEMS.filter(item=>item.group==='note').map(fxField)}
+</div>}
+</section>}
+{fxGroupShown('judge')&&<section data-rhythm-options-group="判定" data-rhythm-fx-group="judge" className={card}>
+{!wide&&<button type="button" data-rhythm-fx-group-head="judge" aria-expanded={fxGroup==='judge'} onClick={()=>setFxGroup(cur=>cur==='judge'?null:'judge')} className={`flex w-full items-center gap-2 text-left ${head}`}><span aria-hidden="true" className="text-cyan-300/80">{fxGroup==='judge'?'▼':'▶'}</span>✨ 判定<span data-rhythm-fx-group-badge className="rounded-full bg-fuchsia-500/25 px-2 py-0.5 text-[10px] font-black text-fuchsia-100">{fxGroupSummary('judge')}</span><small className="ml-auto text-[10px] font-bold text-slate-400">{fxGroupCount('judge')}項目</small></button>}
+{(wide||fxGroup==='judge')&&<div className={wide?`mt-1 ${fxGrid}`:`mt-3 ${fxGrid}`}>
+{/* 判定の演出・ノーツの動き・コンボの節目の演出(2026-09-27・ユーザー指示「全部やって」)。どれも既定は OFF */}
+{field('判定の演出',toggle('judgmentFx'),
+              'GREAT 以上の判定のとき、判定の文字の後ろで光がはじけ、文字が大きく弾みます。既定は「OFF」です。判定・スコアは変わりません。\n光の色は判定の色（GREAT は赤、EXCELLENT は桃紫、MARVELOUS は金）で、ぴったりの MARVELOUS では虹色の光が走ります。\n判定のたびに動くので少し重くなります。演出量が「最小」のときと軽量モードでは出ません。')}
+{/* 押したときの光(2026-10-15・社長「演出量を最小にしても、フリックとかのタップ時の光は出る設定がほしい」)。既定は「おまかせ」(これまでの見た目) */}
+{field('押したときの光',segments('tapLight',RHYTHM_TAP_LIGHT_LABELS),
+              'ノーツを取った瞬間に判定ラインで弾ける光（TAP・フリックの炎・ホールドやスライドを押し切ったときの光）を、演出量とは別に決めます。既定は「おまかせ」です。判定・スコアは変わりません。\n「おまかせ」＝演出量に合わせます。演出量「最小」では、この光だけを出します。軽量モードでは出ません。\n「いつも出す」＝軽量モードでも、この光だけは出します。判定文字やコンボ数の弾み、画面のフラッシュ、両サイドのマスモンの跳ねなど、ほかの演出は止まったままです。モンスターノーツの光も、ふつうのノーツと同じ大きさになります。',{full:true})}
 {hellReleased&&field('空中を叩いた柱の光',hellSegments('hit',[['far','奥まで'],['on','短い'],['off','出さない']]),
   'HELL で空中のノーツを叩いたとき、空中の判定線から立ち上がる光の柱です。既定は「奥まで」で、空中の道に沿って奥の端まで伸びます。「短い」は地上と同じ長さ、「出さない」で光の柱を出しません。判定・スコアは変わりません。',{full:true})}
+{RHYTHM_FX_ITEMS.filter(item=>item.group==='judge').map(fxField)}
+</div>}
+</section>}
+{fxGroupShown('combo')&&<section data-rhythm-options-group="コンボ" data-rhythm-fx-group="combo" className={card}>
+{!wide&&<button type="button" data-rhythm-fx-group-head="combo" aria-expanded={fxGroup==='combo'} onClick={()=>setFxGroup(cur=>cur==='combo'?null:'combo')} className={`flex w-full items-center gap-2 text-left ${head}`}><span aria-hidden="true" className="text-cyan-300/80">{fxGroup==='combo'?'▼':'▶'}</span>🔥 コンボ<span data-rhythm-fx-group-badge className="rounded-full bg-fuchsia-500/25 px-2 py-0.5 text-[10px] font-black text-fuchsia-100">{fxGroupSummary('combo')}</span><small className="ml-auto text-[10px] font-bold text-slate-400">{fxGroupCount('combo')}項目</small></button>}
+{(wide||fxGroup==='combo')&&<div className={wide?`mt-1 ${fxGrid}`:`mt-3 ${fxGrid}`}>
+{field('コンボの節目',toggle('comboMilestoneFx'),
+              'コンボが100のくぎりに届くたび（100・200・300…）、コンボ数のまわりに金の光の輪が広がります。既定は「OFF」です。判定・スコアは変わりません。\n「100 COMBO」の大きな数字は、この設定に関係なくこれまでどおり出ます。コンボ数を出さない設定のときは、光の輪も出ません。演出量が「最小」のときと軽量モードでは出ません。')}
+{RHYTHM_FX_ITEMS.filter(item=>item.group==='combo').map(fxField)}
+</div>}
+</section>}
 </div>
-</section>
+</div>
 <section data-rhythm-options-group="端末" className={card}>
 {!wide&&<h3 className={head}>◆ 端末</h3>}
 <div className={wide?`mt-1 ${grid}`:`mt-3 ${grid}`}>
@@ -21574,6 +21957,12 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   // ジャケットを大きく見ているか(2026-09-08・ユーザー指示「モンビー中のジャケットをタップすると拡大画像が見れるように」)。
   // 画面(gameState)は増やさない。曲えらびの上に重ねるだけなので、閉じれば元の場所に戻る。
   const [artZoom,setArtZoom]=React.useState(false);
+  // 拡大画面のページ(0=ジャケット、1〜=歌詞カード)と、歌詞カードを原寸で見ている絵(2026-11-02 社長)
+  const [artPage,setArtPage]=React.useState(0);
+  const [lyricFull,setLyricFull]=React.useState(null);
+  const artPagesRef=React.useRef(null);
+  React.useEffect(()=>{if(!artZoom){setArtPage(0);setLyricFull(null);}},[artZoom]);
+  const goArtPage=(i)=>{const el=artPagesRef.current;if(!el)return;el.scrollTo({left:i*el.clientWidth,behavior:'smooth'});};
   const playable=(songs||[]).filter(song=>(difficulties||[]).some(difficulty=>rhythmChartPlayable(song,difficulty.id)));
   const setSongId=id=>{if(typeof onSongId==='function')onSongId(id);};
   const setDifficultyId=id=>{if(typeof onDifficultyId==='function')onDifficultyId(id);};
@@ -21614,7 +22003,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   const eventSongIds=(()=>{
     const released=(typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS&&RELEASE_FLAGS.rhythmWeeklyRanking===true);
     const event=(released&&typeof rhythmLimitedEventAt==='function')?rhythmLimitedEventAt(Date.now()):null;
-    return new Set((event&&Array.isArray(event.songIds))?event.songIds:[]);
+    // ショート版も「イベントの曲」に並べる(songVersions・2026-11-01)
+    return new Set(rhythmEventPlaySongIds(event));
   })();
   // ジャンル(2026-09-26。押すと下から選ぶところが出る。並べるものは RHYTHM_GENRES)。
   // ★イベントは、開催していないあいだも選ぶところに出したまま押せなくする(ユーザー指示「イベントタブもなくさないで」)。
@@ -21798,14 +22188,14 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         <button type="button" data-rhythm-genre-open aria-haspopup="dialog" onClick={()=>setGenreOpen(true)}
           className={`flex min-h-[40px] w-[42%] min-w-0 items-center justify-between gap-1 rounded-xl border px-3 text-[11px] font-black landscape:min-h-[52px] landscape:w-full landscape:px-2 ${genre&&genre.id!=='all'?'border-cyan-200/80 bg-cyan-500/20 text-cyan-50':'border-white/15 bg-slate-900/80 text-slate-200'}`}>
           <span data-rhythm-genre-current={genre?genre.id:'all'} className="min-w-0 truncate landscape:flex landscape:flex-col landscape:items-start landscape:leading-tight">
-            <small className="text-[11px] font-black max-[359px]:hidden landscape:text-[9px] landscape:text-slate-400">ジャンル<span className="landscape:hidden">：</span></small><b className="max-w-full truncate font-black landscape:text-[13px]">{genre&&genre.favorite?'♥ ':''}{genre?genre.label:'ALL'}</b>
+            <small className="text-[11px] font-black max-[359px]:hidden landscape:text-[10px] landscape:text-slate-400">ジャンル<span className="landscape:hidden">：</span></small><b className="max-w-full truncate font-black landscape:text-[13px]">{genre&&genre.favorite?'♥ ':''}{genre?genre.label:'ALL'}</b>
           </span>
           <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
         </button>
         <button type="button" data-rhythm-song-sort onClick={()=>setSortOpen(true)}
           className="flex min-h-[40px] min-w-0 flex-1 items-center justify-between gap-1 rounded-xl border border-white/15 bg-slate-900/80 px-3 text-[11px] font-black text-slate-200 landscape:min-h-[52px] landscape:flex-none landscape:px-2">
           <span className="min-w-0 truncate landscape:flex landscape:flex-col landscape:items-start landscape:leading-tight">
-            {/* 幅320ほどの画面では「並べ替え：」を外して値だけ出す(2026-10-20 改善部 M9。いまの並べ方が切れて読めなかった) */}<small className="text-[11px] font-black max-[359px]:hidden landscape:text-[9px] landscape:text-slate-400">並べ替え<span className="landscape:hidden">：</span></small><b className="max-w-full truncate font-black landscape:text-[12px]">{sortLabel}{state.desc?'（逆）':''}</b>
+            {/* 幅320ほどの画面では「並べ替え：」を外して値だけ出す(2026-10-20 改善部 M9。いまの並べ方が切れて読めなかった) */}<small className="text-[11px] font-black max-[359px]:hidden landscape:text-[10px] landscape:text-slate-400">並べ替え<span className="landscape:hidden">：</span></small><b className="max-w-full truncate font-black landscape:text-[12px]">{sortLabel}{state.desc?'（逆）':''}</b>
           </span>
           <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
         </button>
@@ -21816,7 +22206,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
           className={`relative flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${noticeOpen?'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100':'border-white/15 bg-slate-900/80 text-slate-300'}`}>
           <span aria-hidden="true">💬</span><span aria-hidden="true">{noticeOpen?'▲':'▼'}</span>
           {/* 畳んでいるあいだに、ひとこと以外の案内(一度きりの案内・週間イベントなど)も隠れているときの印 */}
-          {!noticeOpen&&noticeHidden>0&&<b data-rhythm-song-notice-badge className="absolute -right-1 -top-1 min-w-[16px] rounded-full bg-fuchsia-400 px-1 text-[9px] leading-4 text-slate-950">{noticeHidden}</b>}
+          {!noticeOpen&&noticeHidden>0&&<b data-rhythm-song-notice-badge className="absolute -right-1 -top-1 min-w-[16px] rounded-full bg-fuchsia-400 px-1 text-[10px] leading-4 text-slate-950">{noticeHidden}</b>}
         </button>}
         {/* 呼ぶ側が足す小さな札(横持ちのビートPキャンペーンなど)。縦持ちで出すかどうかは呼ぶ側が決める */}
         {toolbarExtra}
@@ -21878,7 +22268,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                     const played=!!(record&&record.played);
                     const rank=played?rhythmRankForScore(record.bestScore):'';
                     return <small {...(main?{'data-rhythm-song-row-rank':played?rank:''}:{})}
-                      className="ml-1 flex min-w-0 items-baseline gap-1 text-[9px] font-bold text-slate-400">
+                      className="ml-1 flex min-w-0 items-baseline gap-1 text-[10px] font-bold text-slate-400">
                       {/* 行が狭いとき(横持ちで絵を回したiPhoneなど)は、難易度の名前から先に外してスコアを切らさない
                           (2026-09-26・ユーザー報告「スコアの文字が切れてる」)。さらに狭ければ達成の印も外す。
                           スコアは「…」で切らない。7桁(100万点〜)が入るよう、行が300px以下なら◆の列を、380px以下なら「イベント対象」の字を外して「🏆」だけにする(2026-10-29) */}
@@ -21894,10 +22284,10 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                   })()}
                   {/* 版がいくつあるか(押したあと難易度の上で切り替えられる) */}
                   {row.versions>1&&<small {...(main?{'data-rhythm-song-row-version-count':row.versions}:{})}
-                    className="ml-1 shrink-0 rounded-md border border-sky-300/40 bg-sky-500/10 px-1 py-0.5 text-[9px] font-black leading-none text-sky-200">{row.versions}つの版</small>}
+                    className="ml-1 shrink-0 rounded-md border border-sky-300/40 bg-sky-500/10 px-1 py-0.5 text-[10px] font-black leading-none text-sky-200">{row.versions}つの版</small>}
                   {favoriteIds.has(entry.songId)&&<small {...(main?{'data-rhythm-song-row-favorite':''}:{})} aria-label="お気に入り" className="ml-auto shrink-0 text-[12px] leading-none text-rose-300">♥</small>}
                   {eventSong&&<small {...(main?{'data-rhythm-song-event':entry.songId}:{})}
-                    className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-black text-amber-200">🏆<span className="[@container(max-width:380px)]:hidden"> イベント対象</span></small>}
+                    className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200">🏆<span className="[@container(max-width:380px)]:hidden"> イベント対象</span></small>}
                 </span>
               </span>
             </button>
@@ -21953,13 +22343,13 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                 端末の字(iPhone の太字の数字)は検査の端末より幅が広く、決め打ちの22pxでは「954,0…」と切れていた。
                 この列を器(container)にして、100cqw ÷ (文字数×0.72) を上限22pxで使う。cqw が使えない端末では22pxのまま */}
             <div className="min-w-0 [container-type:inline-size]">
-              <small className="block text-[9px] font-black tracking-[.15em] text-slate-400">HIGH SCORE{/* 旧の数え方(刻みを数える前)の記録を出しているときの印(2026-10-17) */}{best&&difficulty&&rhythmBestShowsLegacy(song.songId,difficulty.id)&&<span data-rhythm-demo-legacy-best className="ml-1 rounded bg-slate-500/30 px-1 tracking-normal text-slate-200">旧</span>}{best&&best.played&&!best.clear&&<span data-rhythm-demo-uncleared className="ml-1 tracking-normal text-rose-300">未クリア</span>}</small>
+              <small className="block text-[10px] font-black tracking-[.15em] text-slate-400">HIGH SCORE{/* 旧の数え方(刻みを数える前)の記録を出しているときの印(2026-10-17) */}{best&&difficulty&&rhythmBestShowsLegacy(song.songId,difficulty.id)&&<span data-rhythm-demo-legacy-best className="ml-1 rounded bg-slate-500/30 px-1 tracking-normal text-slate-200">旧</span>}{best&&best.played&&!best.clear&&<span data-rhythm-demo-uncleared className="ml-1 tracking-normal text-rose-300">未クリア</span>}</small>
               {/* 「まだ遊んでいません」は、細い札(横の小さい画面)では「…」にせず「まだ／遊んでいません」の2行にし、長いほうの7字が入る大きさにする(2026-10-26) */}
               <b data-rhythm-demo-best className={`block font-black tabular-nums text-amber-100 ${best&&best.played?'truncate text-[22px] leading-tight':'break-keep text-[12px] leading-tight'}`}
                 style={{fontSize:best&&best.played?`min(22px, calc(100cqw / ${(best.bestScore.toLocaleString().length*.72).toFixed(2)}))`:'min(12px, calc(100cqw / 7.4))'}}>
                 {best&&best.played?best.bestScore.toLocaleString():<>まだ<wbr/>遊んでいません</>}
               </b>
-              <span data-rhythm-demo-combo className="block whitespace-nowrap text-[9px] font-black text-slate-400"><span className="[@container(max-width:120px)]:hidden">MAX </span>COMBO <b className={`text-[12px] tabular-nums ${best&&best.played?'text-white':'text-slate-500'}`}>{best&&best.played?best.maxCombo:'—'}</b></span>
+              <span data-rhythm-demo-combo className="block whitespace-nowrap text-[10px] font-black text-slate-400"><span className="[@container(max-width:120px)]:hidden">MAX </span>COMBO <b className={`text-[12px] tabular-nums ${best&&best.played?'text-white':'text-slate-500'}`}>{best&&best.played?best.maxCombo:'—'}</b></span>
             </div>
             <span data-rhythm-demo-rank className="flex flex-col items-center text-[8px] font-black tracking-[.15em] text-slate-400">RANK<b className={`text-[28px] italic leading-none tracking-normal landscape:text-[24px] ${best&&best.played?RHYTHM_RANK_COLORS[rhythmRankForScore(best.bestScore)]||'text-white':'text-slate-500'}`}>{best&&best.played?rhythmRankForScore(best.bestScore):'—'}</b></span>
           </div>
@@ -22035,12 +22425,49 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         絵の高さは「幕の74%」と「幕から下の曲名・紹介・ボタンのぶんを引いた高さ」の小さいほう。入りきらないときは幕の中でスクロールできる */}
     {artZoom&&song&&(()=>{const reserve=150+(song.credit&&song.credit.text?44:0)+(song.credit&&changelogSafeLink(song.credit.link)?52:0);return <div data-rhythm-song-art-modal role="dialog" aria-modal="true" aria-label={`${rhythmSongFullName(song)}のジャケット`}
       className="fixed inset-0 z-[9000] flex flex-col items-center justify-center overflow-y-auto p-4 landscape:flex-row landscape:gap-6"
-      style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',overflowY:'auto','--mh-art-max-h':`min(74%, calc(100% - ${reserve}px))`}}
+      style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',overflowY:'auto','--mh-art-max-h':`min(74%, calc(100% - ${reserve}px))`,
+        // 歌詞カードのページの絵の高さは、この幕の高さ(cqh)で決める(ページの枠の中では % が効かないため)。ページの印と案内のぶん(約70px)を引く
+        containerType:'size','--mh-art-page-h':`min(66cqh, calc(100cqh - ${reserve+70}px))`}}
       onClick={()=>setArtZoom(false)}>
       {/* 横長の幕では、絵を左に大きく、曲名・紹介・ボタンを右へ並べる(縦に積むと絵が小さくなるため) */}
-      <img src={typeof rhythmSongArtSrc!=='undefined'?rhythmSongArtSrc(song):song.artwork} alt={`${rhythmSongFullName(song)}のジャケット`}
-        onClick={e=>e.stopPropagation()}
-        className="max-h-[var(--mh-art-max-h)] min-h-[120px] w-auto max-w-[92%] shrink-0 rounded-2xl border border-white/25 object-contain landscape:max-h-[88%] landscape:max-w-[55%]"/>
+      {(()=>{
+        const artSrc=typeof rhythmSongArtSrc!=='undefined'?rhythmSongArtSrc(song):song.artwork;
+        const lyrics=typeof rhythmSongLyricCards==='function'?rhythmSongLyricCards(song):[];
+        // 歌詞カードの無い曲は今までどおり、ジャケット1枚だけ
+        if(!lyrics.length)return <img src={artSrc} alt={`${rhythmSongFullName(song)}のジャケット`}
+          onClick={e=>e.stopPropagation()}
+          className="max-h-[var(--mh-art-max-h)] min-h-[120px] w-auto max-w-[92%] shrink-0 rounded-2xl border border-white/25 object-contain landscape:max-h-[88%] landscape:max-w-[55%]"/>;
+        // 歌詞カードのある曲: ジャケット → 歌詞カード を横に並べ、指で横に送るか ◀ ▶・●○ で移る。
+        //   歌詞カードは字が細かいので、押すと原寸で開き、上下左右に動かして読める
+        const pages=[{src:artSrc,alt:`${rhythmSongFullName(song)}のジャケット`},...lyrics.map((src,i)=>({src,alt:`${rhythmSongFullName(song)}の歌詞カード${lyrics.length>1?` ${i+1}`:''}`,lyric:true}))];
+        const cur=Math.min(artPage,pages.length-1);
+        return <div data-rhythm-song-art-pages onClick={e=>e.stopPropagation()} className="flex w-full max-w-[92%] shrink-0 flex-col items-center landscape:max-w-[55%]">
+          <div ref={artPagesRef} data-rhythm-song-art-pager
+            onScroll={e=>{const el=e.currentTarget;const i=Math.round(el.scrollLeft/Math.max(1,el.clientWidth));if(i!==artPage)setArtPage(i);}}
+            className="flex w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
+            style={{scrollbarWidth:'none',WebkitOverflowScrolling:'touch'}}>
+            {pages.map((page,i)=><div key={page.src} data-rhythm-song-art-page={page.lyric?'lyric':'art'}
+              className="flex w-full shrink-0 snap-center items-center justify-center">
+              {page.lyric
+                ?<button type="button" data-rhythm-song-lyric-open onClick={()=>setLyricFull(page.src)} aria-label={`${page.alt}を大きく見る`} className="relative">
+                  <img src={page.src} alt={page.alt} className="max-h-[var(--mh-art-page-h)] min-h-[120px] w-auto max-w-full rounded-2xl border border-white/25 object-contain"/>
+                  <span className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-1 text-[11px] font-black text-white">🔍 大きく見る</span>
+                </button>
+                :<img src={page.src} alt={page.alt} className="max-h-[var(--mh-art-page-h)] min-h-[120px] w-auto max-w-full rounded-2xl border border-white/25 object-contain"/>}
+            </div>)}
+          </div>
+          {/* ページの印と ◀ ▶。いま何枚目か・全部で何枚かが分かるように */}
+          <div data-rhythm-song-art-dots className="mt-2 flex items-center gap-2">
+            <button type="button" data-rhythm-song-art-prev disabled={cur<=0} onClick={()=>goArtPage(cur-1)} aria-label="前のページ"
+              className="min-h-[44px] min-w-[44px] rounded-xl bg-white/10 text-sm font-black text-white disabled:opacity-30">◀</button>
+            {pages.map((page,i)=><button key={page.src} type="button" onClick={()=>goArtPage(i)} aria-label={`${i+1}ページ目(${page.lyric?'歌詞カード':'ジャケット'})`} aria-current={i===cur?'true':undefined}
+              className={`min-h-[44px] px-1 text-base leading-none ${i===cur?'text-white':'text-white/40'}`}>{i===cur?'●':'○'}</button>)}
+            <button type="button" data-rhythm-song-art-next disabled={cur>=pages.length-1} onClick={()=>goArtPage(cur+1)} aria-label="次のページ"
+              className="min-h-[44px] min-w-[44px] rounded-xl bg-white/10 text-sm font-black text-white disabled:opacity-30">▶</button>
+          </div>
+          <p style={JA_WRAP_STYLE} className="text-[10px] font-bold text-slate-400">{jaWrap(cur===0?'横に送ると歌詞カード':'歌詞カードを押すと大きく見られます')}</p>
+        </div>;
+      })()}
       <div className="flex w-full max-w-[92%] flex-col items-center landscape:w-auto landscape:max-w-[38%]">
       <b className="mt-3 max-w-full text-center text-sm font-black leading-tight text-white landscape:mt-0">{rhythmSongFullName(song)}</b>
       {/* よその作品の曲のときだけ、ひとこと紹介と相手のページへのリンクを出す
@@ -22062,6 +22489,15 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         style={{minHeight:'52px'}}>閉じる</button>
       </div>
     </div>;})()}
+    {/* 歌詞カードを原寸で見る幕。上下左右に動かして読む。閉じると拡大画面(歌詞カードのページ)に戻る */}
+    {artZoom&&lyricFull&&<div data-rhythm-song-lyric-full role="dialog" aria-modal="true" aria-label="歌詞カード"
+      className="fixed inset-0 z-[9001] overflow-auto bg-black"
+      style={{position:'fixed',inset:0,zIndex:9001,backgroundColor:'#000',overflow:'auto',WebkitOverflowScrolling:'touch'}}>
+      <img src={lyricFull} alt="歌詞カード" className="block h-auto max-w-none" style={{width:'max(100%, 900px)'}}/>
+      <button type="button" data-rhythm-song-lyric-full-close onClick={()=>setLyricFull(null)}
+        className="fixed right-3 top-3 min-h-[48px] rounded-xl bg-slate-800/90 px-4 text-sm font-black text-white"
+        style={{position:'fixed',top:'max(12px, env(safe-area-inset-top))',right:12,minHeight:'48px'}}>✕ もどる</button>
+    </div>}
     {/* ジャンルのシート。並び替えと同じ形で下から出す。選んだらすぐ閉じる */}
     {genreOpen&&<div data-rhythm-genre-sheet className="fixed inset-0 z-[9000] flex items-end justify-center"
       style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.72)',zIndex:9000}}
@@ -22129,6 +22565,18 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
 // 動画は data/rhythm-mode.js の RHYTHM_HELL_GUIDE_VIDEOS から名前で引く(説明の video と、ヘルプの {t:'video'})。
 // 無音・自動再生・繰り返し(iPhone でも自動で流れるよう muted playsInline)。sound のある動画だけ「音ありで見る」を出し、押すと音つきで最初から。
 // 読み込み前は暗い枠、読めなかったら枠ごと出さない(文だけの今の形に戻る)
+// ===== お知らせの予告動画(2026-11-02 イベント「鍵の向こう側へ」・社長「BGMを止めて公開」) =====
+// 押すまで読み込まない(preload none)。再生しているあいだだけゲームの音を絞り(Audio_.setVideoHold)、
+// 終わる・一時停止する・枠を閉じる(この部品が消える)と元に戻す。読めなかったら外枠(figure)ごと消す
+const ChangelogVideo=({src,poster})=>{
+  const ref=useRef(null);
+  const hold=(on)=>{try{if(typeof Audio_!=='undefined'&&Audio_&&typeof Audio_.setVideoHold==='function')Audio_.setVideoHold(on);}catch(e){}};
+  useEffect(()=>()=>{try{if(ref.current)ref.current.pause();}catch(e){}hold(false);},[]);
+  return <video ref={ref} src={src} poster={poster} controls playsInline preload="none"
+    onPlay={()=>hold(true)} onPause={()=>hold(false)} onEnded={()=>hold(false)}
+    onError={e=>{hold(false);const f=e.currentTarget.closest('figure');if(f)f.style.display='none';}}
+    style={{display:'block',width:'100%',maxWidth:'320px',margin:'0 auto',borderRadius:'12px',background:'#000'}}/>;
+};
 const rhythmHellGuideVideo=(id)=>{try{const v=typeof RHYTHM_HELL_GUIDE_VIDEOS!=='undefined'&&RHYTHM_HELL_GUIDE_VIDEOS?RHYTHM_HELL_GUIDE_VIDEOS[id]:null;return v&&typeof v.src==='string'&&Number(v.w)>0&&Number(v.h)>0?v:null;}catch(e){return null;}};
 const RhythmHellVideo=({id})=>{
   const info=rhythmHellGuideVideo(id);
@@ -22425,7 +22873,7 @@ precision mediump float;
 varying vec2 vP;
 uniform vec2 uSize,uRes;uniform sampler2D uArt,uStatic;uniform float uArtA,uFx,uMode;
 uniform vec4 uBeamL,uBeamR,uBeamC;uniform vec2 uBeamBox;
-uniform float uLive,uPulse,uBeats;uniform vec3 uPenA,uPenB;uniform vec4 uLas[4],uLasC[4];
+uniform float uLive,uPulse,uBeats,uPenKeep;uniform vec3 uPenA,uPenB;uniform vec4 uLas[4],uLasC[4];
 vec4 over(vec4 c,vec4 s){return s+c*(1.-s.a);}
 vec4 tint(vec3 rgb,float a){return vec4(rgb*a,a);}
 float hash(float n){return fract(sin(n*127.1)*43758.5453);}
@@ -22437,7 +22885,7 @@ vec4 pens(){
   float y=vP.y/uSize.y;if(y<.16)return vec4(0.);
   float fi=18.*pow((y-.16)/.84,1./1.5);vec4 s=vec4(0.);
   for(int k=0;k<2;k++){float row=floor(fi)+float(k),ry=.16+.84*pow(row/18.,1.5),sc=mix(.35,1.,ry),cell=26.*sc,r=7.*sc,by=ry*uSize.y,i=floor(vP.x/cell);
-    for(int j=-1;j<=1;j++){float n=i+float(j)+row*37.,h=hash(n);if(hash(n*3.1)>.8)continue;
+    for(int j=-1;j<=1;j++){float n=i+float(j)+row*37.,h=hash(n);if(hash(n*3.1)>uPenKeep)continue;
       float sw=sin(uBeats*3.14159+h*6.2832),cs=cos(sw*.35),sn=sin(sw*.35);
       vec2 q=vP-vec2((i+float(j)+.5)*cell+(h-.5)*cell*.5+sw*r*.8,by-r*1.5+(hash(n*7.7)-.5)*r*1.6);q=vec2(cs*q.x+sn*q.y,-sn*q.x+cs*q.y);q.y*=.38;float d=dot(q,q)/(r*r);if(d>9.)continue;
       float a=(exp(-d/.06)*.95+exp(-d/.7)*.3)*mix(.45,1.,sc)*(.55+.45*hash(n*9.1))*(.5+.5*uPulse);s+=vec4((hash(n*5.3)<.5?uPenA:uPenB)*a,a);}}
@@ -22506,7 +22954,7 @@ const rhythmCreateStageGL=canvas=>{
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(4));
   gl.disable(gl.BLEND);gl.disable(gl.DEPTH_TEST);gl.clearColor(0,0,0,0);
-  const u={};['uSize','uRes','uArt','uStatic','uArtA','uFx','uMode','uBeamL','uBeamR','uBeamC','uBeamBox','uLive','uPulse','uBeats','uPenA','uPenB','uLas','uLasC'].forEach(name=>{u[name]=gl.getUniformLocation(prog,name);});
+  const u={};['uSize','uRes','uArt','uStatic','uArtA','uFx','uMode','uBeamL','uBeamR','uBeamC','uBeamBox','uLive','uPulse','uBeats','uPenA','uPenB','uLas','uLasC','uPenKeep'].forEach(name=>{u[name]=gl.getUniformLocation(prog,name);});
   gl.uniform1i(u.uArt,0);gl.uniform1i(u.uStatic,1);
   const su={};['uSize','uDot','uLayer'].forEach(name=>{su[name]=gl.getUniformLocation(sparkProg,name);});
   // 動かない部分(ジャケット・暗幕)を焼いておく絵。大きさ・ジャケットの濃さ・ジャケットが変わったときだけ焼き直す
@@ -22523,7 +22971,8 @@ const rhythmCreateStageGL=canvas=>{
     // w,h … CSS px / scale … 画素密度 / timeMs … 動きの時刻 / artA … ジャケットの濃さ / fx … サーチライトと粒を出すか / tier … 色の段
     // live … 「ライブ」のときだけ {beats:曲の頭から数えた拍(小数), bar:1小節の拍数, pulse:拍の頭の光(0..1)}。無ければ「派手」と同じ
     draw(options){if(gl.isContextLost())return;if(gpuTimer)gpuTimer.begin();try{this.drawFrame(options);}finally{if(gpuTimer)gpuTimer.end();}},
-    drawFrame({w,h,scale,timeMs,artA,fx,tier,live=null}){
+    // beam/sparks/laser/pens … 演出を1つずつ選ぶ設定(fx・2026-11-01)。サーチライト・光の粒(MANY/FEW/NONE)・レーザー・ペンライト(MANY/FEW/NONE)。渡さないときは全部出す(これまでと同じ)
+    drawFrame({w,h,scale,timeMs,artA,fx,tier,live=null,beam=true,sparks='MANY',laser=true,pens='MANY'}){
       const pw=Math.max(1,Math.round(w*scale)),ph=Math.max(1,Math.round(h*scale));
       if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph;}
       gl.viewport(0,0,pw,ph);
@@ -22548,7 +22997,7 @@ const rhythmCreateStageGL=canvas=>{
         put(u.uBeamL,-22+28*swing(0),-.1*w+bw/2);
         put(u.uBeamR,22-28*swing(3500),w+.1*w-bw/2);
         const rgba=RHYTHM_STAGE_GL_BEAM_RGBA[tier]||RHYTHM_STAGE_GL_BEAM_RGBA[0];
-        gl.uniform4f(u.uBeamC,rgba[0]/255,rgba[1]/255,rgba[2]/255,(rgba[3]||0)*.75);
+        gl.uniform4f(u.uBeamC,rgba[0]/255,rgba[1]/255,rgba[2]/255,beam?(rgba[3]||0)*.75:0);
         gl.uniform2f(u.uBeamBox,bw,bh);
       }
       const liveOn=!!(fx&&live);
@@ -22565,7 +23014,7 @@ const rhythmCreateStageGL=canvas=>{
           const deg=laser.base+laser.swing*Math.sin(sweep+i*1.3),a=deg*Math.PI/180;
           lasers[i*4]=laser.x*w;lasers[i*4+1]=laser.y*h;lasers[i*4+2]=Math.cos(a);lasers[i*4+3]=Math.sin(a);
           const color=RHYTHM_STAGE_LIVE_LASER_COLORS[(barIndex+i)%RHYTHM_STAGE_LIVE_LASER_COLORS.length];
-          laserColors[i*4]=color[0]/255;laserColors[i*4+1]=color[1]/255;laserColors[i*4+2]=color[2]/255;laserColors[i*4+3]=on?(.3+.7*pulse)*.8:0;
+          laserColors[i*4]=color[0]/255;laserColors[i*4+1]=color[1]/255;laserColors[i*4+2]=color[2]/255;laserColors[i*4+3]=on&&laser?(.3+.7*pulse)*.8:0;
         });
         gl.uniform4fv(u.uLas,lasers);gl.uniform4fv(u.uLasC,laserColors);
       }
@@ -22575,7 +23024,7 @@ const rhythmCreateStageGL=canvas=>{
       // 3. 光の粒(奥の層 → 手前の層)。層の上半分と下半分に同じ並びがあるので、画面にかかる方だけ描く
       gl.useProgram(sparkProg);gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
       gl.uniform2f(su.uSize,w,h);
-      for(const layer of [0,1]){
+      for(const layer of sparks==='NONE'?[]:sparks==='FEW'?[1]:[0,1]){
         const spec=RHYTHM_STAGE_SPARKS[layer],end=spec.end,off=((timeMs/spec.duration)%1)*h;
         gl.uniform4f(su.uLayer,spec.core,spec.mid,end,spec.opacity);
         for(const [x,y,index] of RHYTHM_STAGE_GL_DOTS){if(index!==layer)continue;
@@ -22589,7 +23038,8 @@ const rhythmCreateStageGL=canvas=>{
         const top=Math.max(0,Math.min(ph,Math.floor(.16*ph-.5)));
         gl.enable(gl.SCISSOR_TEST);
         if(top>0){gl.uniform1f(u.uMode,3);gl.scissor(0,ph-top,pw,top);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);}
-        gl.uniform1f(u.uMode,2);gl.scissor(0,0,pw,ph-top);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+        // ペンライト「なし」は拍の頭の色みだけ(上の帯と同じ処理)、「少ない」は並びを間引く(uPenKeep)
+        gl.uniform1f(u.uPenKeep,pens==='FEW'?.35:.8);gl.uniform1f(u.uMode,pens==='NONE'?3:2);gl.scissor(0,0,pw,ph-top);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
         gl.disable(gl.SCISSOR_TEST);
       }
       gl.disable(gl.BLEND);
@@ -23623,7 +24073,10 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // ★重さに気をつける。ぼかしは CSS の filter を使わず、ジャケットを 24×24 の canvas へ一度だけ縮めて描き、
   //   それを引き伸ばして「ぼけた絵」にする(引き伸ばしの補間でぼける。毎フレームの作り直しが起きない)。
   //   動かすのは transform と opacity だけ(合成だけで済むもの)。
-  const stageLevel=rhythmStageLevel(settings);
+  const stageBaseLevel=rhythmStageLevel(settings);
+  // 演出を1つずつ選ぶ設定(fx・2026-11-01)で「出す」などを選んだ背景の項目があれば、その項目が出る段まで背景を上げる
+  // (ジャケット・タイミングの光・明るさ → 控えめ / サーチライト・光の粒 → 派手 / レーザー・ペンライト → ライブ)。おまかせだけならこれまでの段のまま
+  const stageLevel=rhythmFxStageLevel(settings,stageBaseLevel);
   const stageArtRef=useRef(null),stagePulseRef=useRef(null);
   // ライブ背景を WebGL で1枚に描くか(rhythmCreateStageGL の説明を参照)。ノーツと同じく演奏の始めに1回だけ決める。
   // 途中で端末に WebGL を取り上げられたら(webglcontextlost)、CSS 版へ戻す
@@ -23634,8 +24087,12 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const stageGlRef=useRef(null);
   // 道の演出(オプション「道の演出」・2026-09-26)。拍の線・道のふちの光は毎フレームの処理(tick)が canvas へ描き、
   // 奥のもやと光は動かない層で置く(光だけ小節の頭で脈打つ)。拍は曲ごとの表(RHYTHM_SONG_BEATS)から。判定・スコアには触らない
-  const roadFxOn=settings.roadFx===true&&settings.effectAmount!=='MINIMAL'&&!settings.lightweightMode;
+  const roadFxBase=settings.roadFx===true&&settings.effectAmount!=='MINIMAL'&&!settings.lightweightMode;
+  // 道の演出を3つに分けて選べる(設定 fx の拍の線・道のふちの光・奥のもや・脈打ち。おまかせは「道の演出」どおり・2026-11-01)
+  const roadBeatLineOn=rhythmFxOn(settings,'beatLine',roadFxBase),roadEdgeOn=rhythmFxOn(settings,'roadEdge',roadFxBase),roadFogOn=rhythmFxOn(settings,'roadFog',roadFxBase);
+  const roadFxOn=roadBeatLineOn||roadEdgeOn||roadFogOn;
   const roadFxRef=useRef(null);roadFxRef.current=roadFxOn&&!tutorial?rhythmSongBeatGrid(song.songId):null;
+  const roadPartsRef=useRef(null);roadPartsRef.current={line:roadBeatLineOn,edge:roadEdgeOn,fog:roadFogOn};
   const roadLinesRef=useRef(null);if(!roadLinesRef.current)roadLinesRef.current=new Float32Array(6*64);
   const roadGlowRef=useRef(null);
   // 盛り上がりの光(オプション「盛り上がりの光」・2026-09-29)。曲ごとの表(RHYTHM_SONG_CLIMAX)の区間に入ったら、
@@ -23645,6 +24102,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 光の筋が流れる速さは、曲の2拍で1周(拍の表が無い曲は 900ms)
   const climaxCycleMs=(()=>{const grid=climaxFxOn?rhythmSongBeatGrid(song.songId):null;return grid?Math.round(Math.min(1400,Math.max(500,grid.beatMs*2))):900;})();
   const stageArtSrc=stageLevel!=='SIMPLE'&&typeof rhythmSongArtSrc==='function'?rhythmSongArtSrc(song):'';
+  const stageArtSize=rhythmFxArtSize(settings);
   // 曲名のとなりに出す小さなジャケット(ライブ背景の設定とは関係なく、絵がある曲なら出す)
   const hudArtSrc=typeof rhythmSongArtSrc==='function'?rhythmSongArtSrc(song):'';
   useEffect(()=>{
@@ -23654,7 +24112,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     img.onload=()=>{if(!alive)return;try{const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);canvas.dataset.ready='1';}catch(_){}};
     img.src=stageArtSrc;
     return()=>{alive=false;img.onload=null;};
-  },[stageArtSrc,stageGl]);
+  },[stageArtSrc,stageGl,stageArtSize]);
   const sideMonsterElements=useMemo(()=>{
     if(settings.sideMonsterOpacity==='OFF')return null;
     const opacity=rhythmSideMonsterOpacityValue(settings.sideMonsterOpacity);
@@ -23794,14 +24252,15 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const [comboMilestone,setComboMilestone]=useState(0);
   const comboMilestoneTier=Math.floor((Number(view.combo)||0)/RHYTHM_COMBO_MILESTONE_STEP);
   useEffect(()=>{
-    if(settings.lightweightMode||settings.effectAmount==='MINIMAL'||comboMilestoneTier<=0){
+    // 100コンボのお祝い(設定 fx.combo100・おまかせは演出量「最小」と軽量モードで出さない。2026-11-01)
+    if(!rhythmFxOn(settings,'combo100',!settings.lightweightMode&&settings.effectAmount!=='MINIMAL')||comboMilestoneTier<=0){
       setComboMilestone(0);
       return;
     }
     setComboMilestone(comboMilestoneTier*RHYTHM_COMBO_MILESTONE_STEP);
     const timer=setTimeout(()=>setComboMilestone(0),1100);
     return ()=>clearTimeout(timer);
-  },[comboMilestoneTier,settings.lightweightMode,settings.effectAmount]);
+  },[comboMilestoneTier,settings.lightweightMode,settings.effectAmount,settings.fx]);
   // 100→1段階目のように、コンボが伸びるほど演出を派手にする。ただしどこまでも大きくはせず
   // 500コンボ(5段階目)で頭打ちにする(数字自体はそのまま表示する)。
   const comboMilestoneStage=Math.min(5,comboMilestoneTier);
@@ -23821,7 +24280,13 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const stageTierNow=Math.min(3,Math.floor(comboTier/2));
   const stageHostRef=useRef(null);
   const [stageImages,setStageImages]=useState(null);
-  const stageFxOn=(stageLevel==='VIVID'||stageLevel==='LIVE')&&settings.effectAmount!=='MINIMAL';
+  const stageFxBase=(stageBaseLevel==='VIVID'||stageBaseLevel==='LIVE')&&settings.effectAmount!=='MINIMAL';
+  const stageBeamOn=rhythmFxOn(settings,'searchlight',stageFxBase);
+  const stageSparksPick=rhythmFxPick(settings,'sparks'),stageSparks=stageSparksPick==='AUTO'?(stageFxBase?'MANY':'NONE'):stageSparksPick;
+  const stageLaserOn=rhythmFxOn(settings,'laser',stageFxBase&&stageBaseLevel==='LIVE');
+  const stagePensPick=rhythmFxPick(settings,'penlight'),stagePens=stagePensPick==='AUTO'?(stageFxBase&&stageBaseLevel==='LIVE'?'MANY':'NONE'):stagePensPick;
+  const stageFxOn=stageBeamOn||stageSparks!=='NONE';
+  const stageTimingOn=rhythmFxOn(settings,'timingLight',stageBaseLevel!=='SIMPLE');
   useEffect(()=>{
     const host=stageHostRef.current;
     if(!host||!stageFxOn||stageGl||typeof window==='undefined'||typeof document==='undefined')return undefined;
@@ -23863,7 +24328,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // art … 背景の絵の濃さ(「おだやか」は薄め)。これも毎回の描画で読むので、演出の段階が変わっても背景を作り直さない(2026-09-27)。
   //   以前は段階(stageLevel)が変わるたびに WebGL を作り直していた。「重いときは演出を自動で控えめに」が働いた瞬間、
   //   ただでさえ重い端末でシェーダーの組み立てをやり直すことになっていた
-  const stageGlLiveRef=useRef(null);stageGlLiveRef.current={tier:stageTierNow,fx:stageFxOn,live:stageLevel==='LIVE',art:stageLevel==='CALM'?.34:.5,grid:stageLevel==='LIVE'&&!tutorial?rhythmSongBeatGrid(song.songId):null};
+  const stageGlLiveRef=useRef(null);stageGlLiveRef.current={tier:stageTierNow,fx:stageFxOn||stageLaserOn||stagePens!=='NONE',beam:stageBeamOn,sparks:stageSparks,laser:stageLaserOn,pens:stagePens,live:stageLevel==='LIVE'&&(stageLaserOn||stagePens!=='NONE'),art:stageLevel==='CALM'?.34:.5,grid:stageLevel==='LIVE'&&!tutorial?rhythmSongBeatGrid(song.songId):null};
   const stageClockRef=useRef(null);if(!stageClockRef.current)stageClockRef.current={t:null,at:0};
   useEffect(()=>{
     const canvas=stageGlRef.current,host=stageHostRef.current;
@@ -23877,7 +24342,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     // 画素密度は CSS 版の焼いた画像と同じ(1.5倍まで。画質「標準」は1.25倍、「省電力」は1倍)
     const cap=renderQualityStill==='STANDARD'?1.25:rhythmRenderQualityCap(renderQualityStill,1.5);
     const scale=Math.min(cap,Math.max(1,Number(window.devicePixelRatio)||1));
-    if(stageArtSrc){const img=new Image();img.onload=()=>{if(!alive)return;const c=document.createElement('canvas');c.width=24;c.height=24;const g=c.getContext('2d');if(!g)return;try{g.drawImage(img,0,0,24,24);}catch(_){return;}if(renderer.setArt(c)){artAt=performance.now();dirty=true;}};img.src=stageArtSrc;}
+    if(stageArtSrc){const img=new Image();img.onload=()=>{if(!alive)return;const c=document.createElement('canvas');c.width=stageArtSize;c.height=stageArtSize;const g=c.getContext('2d');if(!g)return;try{g.drawImage(img,0,0,stageArtSize,stageArtSize);}catch(_){return;}if(renderer.setArt(c)){artAt=performance.now();dirty=true;}};img.src=stageArtSrc;}
     const onLost=event=>{if(event&&typeof event.preventDefault==='function')event.preventDefault();setStageGlLost(true);};
     canvas.addEventListener('webglcontextlost',onLost);
     // 大きさは変わったときだけ測る(毎フレーム測ると配置の計算をその場でさせてしまう)
@@ -23904,11 +24369,11 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
           liveArg={beats,bar:grid.bar,pulse:beats>=0?Math.exp(-since/(onBar?240:160))*(onBar?1:.6):0};}
         else liveArg={beats:(now-start)/500,bar:4,pulse:0};
       }
-      renderer.draw({w,h,scale,timeMs:now-start,artA,fx,tier,live:liveArg});
+      renderer.draw({w,h,scale,timeMs:now-start,artA,fx,tier,live:liveArg,beam:live.beam!==false,sparks:live.sparks||'MANY',laser:live.laser!==false,pens:live.pens||'MANY'});
     };
     frame=requestAnimationFrame(loop);
     return()=>{alive=false;cancelAnimationFrame(frame);if(observer)observer.disconnect();canvas.removeEventListener('webglcontextlost',onLost);renderer.release();};
-  },[stageGl,stageArtSrc,renderQualityStill]);
+  },[stageGl,stageArtSrc,renderQualityStill,stageArtSize]);
   /* フルコンボ・オールマーベラスが続いているか(プロセカ・CHUNITHM のコンボ色)。「COMBO」の字の色で見せる。
      AM=ここまで全部MARVELOUS / FC=ここまでBAD・MISSなし / 空=切れた。設定で出さないこともできる */
   /* アシストモードでは称号が付かないので出さない(出すと「取れる」と思わせてしまう) *//* フルコンボ・オールマーベラスの印(comboStatus)は、コンボ数の部品(RhythmHudCombo)が hud から決める */
@@ -24263,9 +24728,10 @@ if(judgment!=='MISS'){
     const flickHit=rhythmNoteVisualType(note)==='FLICK'?(rhythmFlickDir(note)||'up'):(note.endFlick?'up':'');
     // ホールド・スライドを押し切ったときは、光を大きめにして手ごたえを出す(2026-09-27・参考動画)
     // 空中のノーツ(試作)は、空中の判定ラインの上で空中専用の弾け方にする
-    const hitEffect=rhythmSpawnHitEffect(area,{centerRatio:span.center,widthRatio:span.width,judgment,monster:bigMonsterEffect,precise:preciseHit,defer:true,flick:flickHit,finish:rhythmNoteHasBody(note),sky:rhythmNoteSkyHeight(note)>0});
+    // 設定 fx の「判定ラインで弾ける光」「画面のフラッシュ」で「なし」「出さない」を選んだときは出さない(おまかせはこれまでどおり・2026-11-01)
+    const hitEffect=rhythmFxOn(settings,'burst',true)?rhythmSpawnHitEffect(area,{centerRatio:span.center,widthRatio:span.width,judgment,monster:bigMonsterEffect,precise:preciseHit,defer:true,flick:flickHit,finish:rhythmNoteHasBody(note),sky:rhythmNoteSkyHeight(note)>0}):null;
     if(hitEffect)restarts.push(hitEffect);
-    if(monsterHit&&monsterEffect==='NORMAL'&&!monAbOff('spark')&&screenFlashRef.current)restarts.push({el:screenFlashRef.current,attr:'rhythmFlash'});
+    if(monsterHit&&monsterEffect==='NORMAL'&&!monAbOff('spark')&&screenFlashRef.current&&rhythmFxOn(settings,'flash',true))restarts.push({el:screenFlashRef.current,attr:'rhythmFlash'});
     // そのマスモンが両サイドで大きく跳ねる(どのマスモンの番だったかが分かるように)
     // ★いちばん軽い段(NONE)では、このかたまりを丸ごと飛ばす
     //   (2026-09-13・ユーザー指摘「マスモンの表示より踏んだときの挙動だと思うんだけど」)。
@@ -24296,7 +24762,11 @@ if(judgment!=='MISS'){
     if(comboText)restarts.push({el:comboText,attr:'rhythmComboPop'});
     // ここで1回だけレイアウトを読む。集めた印をまとめて付け直す
     rhythmRestartAnimations(restarts);
-  }else if(rhythmTapLightOnly(settings)){
+  }else{
+    // 演出量「最小」・軽量モードのとき。設定 fx で「出す」(弾ける光は大・標準・小も)を選んだ項目だけは動かす(2026-11-01 社長「自分で選んだ項目は選んだとおり」)。
+    // 弾ける光のおまかせは、これまでどおり「押したときの光」の「いつも出す」で決まる
+    const extra=[];
+    if(rhythmFxOn(settings,'burst',rhythmTapLightOnly(settings))){
     // 設定「押したときの光」が「いつも出す」で、演出量「最小」・軽量モードのとき(2026-10-15・社長「演出量を最小にしても、フリックとかのタップ時の光は出る設定がほしい」)。
     // 判定ラインで弾ける光(rhythmSpawnHitEffect)だけを出す。判定文字・コンボ数の弾み・画面のフラッシュ・マスモンの跳ねは「最小」のまま止めておく。
     // モンスターノーツもふつうの大きさの光にする(900ms の大きな光は出さない)。判定・スコアには触らない
@@ -24304,7 +24774,11 @@ if(judgment!=='MISS'){
     const span=rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,lineY,nowMs):rhythmNoteVisualSpan(note,note.lane,lineY,nowMs);
     const flickHit=rhythmNoteVisualType(note)==='FLICK'?(rhythmFlickDir(note)||'up'):(note.endFlick?'up':'');
     const hitEffect=rhythmSpawnHitEffect(area,{centerRatio:span.center,widthRatio:span.width,judgment,monster:false,precise:preciseHit,defer:true,flick:flickHit,finish:rhythmNoteHasBody(note),sky:rhythmNoteSkyHeight(note)>0});
-    if(hitEffect)rhythmRestartAnimations([hitEffect]);
+    if(hitEffect)extra.push(hitEffect);}
+    if(monsterHit&&screenFlashRef.current&&rhythmFxPick(settings,'flash')==='ON')extra.push({el:screenFlashRef.current,attr:'rhythmFlash'});
+    if(rhythmFxPick(settings,'judgeFlow')==='ON'){const text=rhythmNoteIsSky(note)?skyJudgmentTextRef.current:judgmentTextRef.current;if(text)extra.push({el:text,attr:'rhythmJudgmentPop'});}
+    if(rhythmFxPick(settings,'comboBounce')==='ON'&&comboRef.current)extra.push({el:comboRef.current,attr:'rhythmComboPop'});
+    if(extra.length)rhythmRestartAnimations(extra);
   }
 }
 // ★振動は「タップ時の振動」の管轄。モンスターノーツだけ強めにする(指でも違いが分かるように)。
@@ -24464,7 +24938,7 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     // 大きく見せる(2026-09-04、ユーザーからの要望)。演出量MINIMAL・軽量モードでは
     // 従来どおりそのままリザルトへ進む(演出だけの分岐で、判定・保存には関わらない)。
     const celebrateTitle=achievements.allMarvelous?'ALL MARVELOUS!!':achievements.allExcellent?'ALL EXCELLENT!!':achievements.fullCombo?'FULL COMBO!':null;
-    const showCelebrate=!!celebrateTitle&&!failed&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
+    const showCelebrate=!!celebrateTitle&&!failed&&rhythmFxOn(settings,'fullComboBig',!settings.lightweightMode&&settings.effectAmount!=='MINIMAL');
     // ハイスコアを更新したときの演出(2026-10-06・ユーザー指示「ハイスコア更新したときはもっとちゃんと演出がほしい」)の材料。
     // previousBestScore … 更新前のBEST(初めての記録は0)。recordFx … 結果画面の上に重ねる演出を出すときだけ入れる。
     //   初めての記録(前のBESTが0)・失敗・練習・タイミング合わせ・演出量MINIMAL・軽量モードでは出さない(札と数字だけ)。
@@ -24484,7 +24958,7 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     }
     if(luckOn)setView(v=>v.result?{...v,result:{...v.result,luck:{points:run.luckPoints||0,draws:run.luckDraws||0,rush:run.luckRushCount||0,bonus:run.luckBonus||0}}}:v);
     onComplete(result,merged);
-  },[chart.totalNotes,chart.durationMs,difficulty.maxScore,difficulty.id,onComplete,settings.effectAmount,settings.lightweightMode,settings.judgmentTimingOffsetMs,stopFrame,tutorial,calibrating,debugPlay,song.songId,song.playDurationMs,assistOn,mirrorOn,luckOn,multi,multiRewardScale]);
+  },[chart.totalNotes,chart.durationMs,difficulty.maxScore,difficulty.id,onComplete,settings.effectAmount,settings.lightweightMode,settings.fx,settings.judgmentTimingOffsetMs,stopFrame,tutorial,calibrating,debugPlay,song.songId,song.playDurationMs,assistOn,mirrorOn,luckOn,multi,multiRewardScale]);
   // celebrate画面: 出た瞬間に合成SEを1回鳴らし、既定の時間で自動的にresultへ進む。
   // 依存はview.statusだけにしてある。もしview.comboなど毎ノーツ変わる値を依存に入れると、
   // (かつてコンボ演出で実際に踏んだ通り)途中でeffectが再実行されるたびcleanupが走り、
@@ -24535,7 +25009,7 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
    90Hzは抑えない(60へ落とすと間隔が 11ms/22ms と交互になり、かえってガタついて見える)。
    ★飛ばすのは描くことだけ。判定は指の入力のたびに曲の時刻で決めているので変わらない。
      取り逃しのMISSや長押しの終わりも、次に描くフレーム(8ms後)でいつもどおり数える */
-const powerSave=settings.frameRateMode!=='DEVICE';const stagePulseOn=rhythmStageLevel(settings)!=='SIMPLE';let prevFrameMs=0,avgFrameMs=1000/60,lastDrawnMs=0;
+const powerSave=settings.frameRateMode!=='DEVICE';const stagePulseOn=rhythmFxStageLevel(settings,rhythmStageLevel(settings))!=='SIMPLE'&&rhythmFxOn(settings,'timingLight',rhythmStageLevel(settings)!=='SIMPLE');let prevFrameMs=0,avgFrameMs=1000/60,lastDrawnMs=0;
 const tick=(frameNowMs)=>{RHYTHM_PERF.frame(frameNowMs);RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();if(RHYTHM_TOUCH_BRIDGE.hasPending()&&touchSweepRef.current)touchSweepRef.current();const run=runRef.current;if(!run||run.finished||run.paused)return;
 /* ★ここでプレイエリアの箱を先に測っておく形は、2026-09-25に入れて26日にやめた。毎フレームの最初の時点で
    配置の計算がたまっていることが多く、測るたびにその場で計算させていた(8秒で560ms。タップのときだけ測る
@@ -24565,7 +25039,7 @@ if(settingsLiveRef.current.autoEffectDown!==false&&stepEffectCapRef.current){con
     //   この枠でタッチが RHYTHM_TOUCH_FIX_LATE_BURST 回以上 50ms 以上遅れて届いていたら、同じ道で演出を一段下げる
     const lateNow=RHYTHM_TOUCH_BRIDGE.lateCount(),lateBurst=rhythmTouchFixOn('lateInputEffectDown')&&lateNow-(ae.late||0)>=RHYTHM_TOUCH_FIX_LATE_BURST;ae.late=lateNow;
     if(ae.settle>0)ae.settle--;else if(!qualityFirst&&((ae.frames>=RHYTHM_AUTO_QUALITY_MIN_FRAMES&&ae.slow/ae.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO)||lateBurst)&&stepEffectCapRef.current()){ae.settle=1;RHYTHM_PERF.autoStep(lateBurst?'演出(タッチの遅れ)':'演出',RHYTHM_AUTO_EFFECT_STEP_LABELS[rhythmAutoEffectMemory.level-1]||'',ae.slow,ae.frames);}ae.start=frameNowMs;ae.frames=0;ae.slow=0;}}
-if(powerSave){const gap=prevFrameMs?frameNowMs-prevFrameMs:0;prevFrameMs=frameNowMs;if(gap>0&&gap<50)avgFrameMs=avgFrameMs*.9+gap*.1;if(avgFrameMs<10&&lastDrawnMs&&frameNowMs-lastDrawnMs<12.5){frameRef.current=requestAnimationFrame(tick);return;}lastDrawnMs=frameNowMs;}const perfTickStart=typeof performance!=='undefined'&&performance.now?performance.now():0;const songTimeMs=run.audio.songTimeMs();RHYTHM_PERF.songTime(songTimeMs);RHYTHM_TIMING_DIAG.frame(songTimeMs);/* 取りこぼしの回収の長さ。直し方 inputAgeCap を入れた端末では、遅れて届く入力を待つぶん長い(入れていなければ、これまでと同じ値の定数) */const RHYTHM_MISS_RECLAIM_MS=rhythmMissReclaimMs();const travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0;updateJudgmentBand(travel,travelMs);
+if(powerSave){const gap=prevFrameMs?frameNowMs-prevFrameMs:0;prevFrameMs=frameNowMs;if(gap>0&&gap<50)avgFrameMs=avgFrameMs*.9+gap*.1;if(avgFrameMs<10&&lastDrawnMs&&frameNowMs-lastDrawnMs<12.5){frameRef.current=requestAnimationFrame(tick);return;}lastDrawnMs=frameNowMs;}const perfTickStart=typeof performance!=='undefined'&&performance.now?performance.now():0;const songTimeMs=run.audio.songTimeMs();RHYTHM_PERF.songTime(songTimeMs);RHYTHM_TIMING_DIAG.frame(songTimeMs);/* 取りこぼしの回収の長さ。直し方 inputAgeCap を入れた端末では、遅れて届く入力を待つぶん長い(入れていなければ、これまでと同じ値の定数) */const RHYTHM_MISS_RECLAIM_MS=rhythmMissReclaimMs();const travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0,traceGround=0,traceSky=0;updateJudgmentBand(travel,travelMs);
 /* ライブ背景の光。ノーツが判定ラインへ来る時刻(=曲のリズム)ごとに背景を光らせる。
    取れたかどうかでは変えない(下手でも曲に合わせて光る)。同時押しとモンスターノーツは強く光る。
    間隔が110ms未満の連打では光らせ直さない(光りっぱなしで何も分からなくなるため)。
@@ -24574,7 +25048,7 @@ if(stagePulseOn){const pulseEl=stagePulseRef.current,notes=run.notes;let index=r
 // このフレームでノーツを正しい場所へ置けるか。置けないなら判定も進めない(下のvisitNoteを参照)
 const placeable=!!travel&&travel.ready!==false;
 // canvas で描くフレームの準備(全面を消し、大きさが変わっていれば作り直す)。DOM 版では何もしない
-const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.rect,{nowMs:frameNowMs,effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDprRef.current,sizeScale:settings.noteSize/100,bloom:settingsLiveRef.current.noteBloom===true,motion:settingsLiveRef.current.noteMotionFx===true});
+const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.rect,{nowMs:frameNowMs,effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDprRef.current,sizeScale:settings.noteSize/100,bloom:settingsLiveRef.current.noteBloom===true,motion:settingsLiveRef.current.noteMotionFx===true,...rhythmFxRenderOptions(settings,settingsLiveRef.current)});
 // 叩いたときの光(WebGL のときだけ canvas で描く)。光の層はノーツの下なので、ノーツより先に描く
 // ライブ背景「ライブ」の拍は、背景の描き直し(別の描き直しの輪)がこの時刻から数える
 {const stageClock=stageClockRef.current;stageClock.t=visualTime;stageClock.at=frameNowMs;}
@@ -24589,7 +25063,7 @@ if(roadGrid&&placeable){const {beatMs,zeroMs,bar}=roadGrid,phase=(visualTime-rhy
       lines[o]=y;lines[o+1]=rhythmProjectBoundary(0,yr)*areaW;lines[o+2]=rhythmProjectBoundary(RHYTHM_LANE_COUNT,yr)*areaW;lines[o+3]=((k%bar)+bar)%bar===0?1:0;lines[o+4]=rhythmProjectionScale(yr);
       // 奥で生まれるときはふわっと出し、判定ラインを過ぎたら消していく
       lines[o+5]=Math.min(1,Math.max(0,progress/.25))*(progress>1?Math.max(0,1-(progress-1)/.3):1);count++;}
-    RHYTHM_CANVAS_RENDERER.drawRoadFx(lines,count,beatIndex>=0?Math.exp(-since/(onBar?260:170))*(onBar?1:.55):0);}
+    const parts=roadPartsRef.current||{};RHYTHM_CANVAS_RENDERER.drawRoadFx(lines,parts.line===false?0:count,parts.edge!==false&&beatIndex>=0?Math.exp(-since/(onBar?260:170))*(onBar?1:.55):0);}
   // 奥の光は小節の頭で脈打つ(Web Animations の opacity だけ。合成だけで済む)
   const glowEl=roadGlowRef.current;if(glowEl&&onBar&&beatIndex>=0&&run._roadBarAt!==beatIndex&&typeof glowEl.animate==='function'){run._roadBarAt=beatIndex;try{glowEl.animate([{opacity:1},{opacity:.5}],{duration:Math.min(900,beatMs*2),easing:'cubic-bezier(.2,.7,.3,1)'});}catch(_){}}
 }
@@ -24625,7 +25099,10 @@ const paintCanvasNote=note=>{
   const geo=rhythmNoteCanvasGeometry(note,yPx,visualLane,travel.rect,travel.noteHeight,hasBody?releaseYpx:null,{chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs,visualTime,travelMs,spawnY:travel.spawnY,travelPx:travel.travelPx,gpu:gpuBandNow},hasBody?bodyPx:0);
   const monster=!!monsterForNote(note);
   const depthScale=Math.round((0.56+geo.scale*.44)*100)/100,brightness=Math.round((0.72+geo.scale*.28)*100)/100;
-  RHYTHM_CANVAS_RENDERER.drawNote(note,geo,{failed:failedTrail,monster,wide:rhythmNoteIsWide(note),pressed:note.type==='HOLD'&&note.activePointerId!==null,slideOff:note.type==='HOLD'&&note.activePointerId!==null&&RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index),heldMs:songTimeMs-note.timeMs,alpha:failedTrail?.34:1,pop:clearFlash?Math.min(1,(songTimeMs-note._rhythmClearAt)/RHYTHM_CLEAR_FLASH_MS):null,depthScale,brightness});
+  const notePressed=note.type==='HOLD'&&note.activePointerId!==null,noteSlideOff=notePressed&&RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index);
+  // 押せている帯(外れていない)のサブレーン。そこを押している指の道の光は出さない(設定 holdTrace・2026-11-02)
+  if(notePressed&&!noteSlideOff&&!failedTrail&&hasBody){const m=rhythmHoldTraceMask(note,visualLane);if(rhythmNoteIsSky(note)||(typeof rhythmSlideHasSky==='function'&&rhythmSlideHasSky(note)))traceSky|=m;else traceGround|=m;}
+  RHYTHM_CANVAS_RENDERER.drawNote(note,geo,{failed:failedTrail,monster,wide:rhythmNoteIsWide(note),pressed:notePressed,slideOff:noteSlideOff,heldMs:songTimeMs-note.timeMs,alpha:failedTrail?.34:1,pop:clearFlash?Math.min(1,(songTimeMs-note._rhythmClearAt)/RHYTHM_CLEAR_FLASH_MS):null,depthScale,brightness});
   // マスモンの顔(焼いた絵)。以前の DOM 版と同じく、落下中は「奥行き×1.28倍」、
   // 取った瞬間は枠の大きさから2.1倍へ広がりながら消える(0.26秒・影なし)
   const monsterSlot=monster?rhythmNoteMonsterSlot(note):0,faceBitmap=monsterSlot?faceBitmapsRef.current[monsterSlot-1]:null;
@@ -24724,7 +25201,9 @@ for(let i=scanFrom;i<notes.length;i++){
   if(run.notesReady&&run.notesAscending&&(scrollTable?rhythmScrollMinAfter(note.timeMs)>scanHorizonScroll:note.timeMs>scanHorizonMs))break;
   perfScanned++;
   visitNote(note);
-  if(!note.done&&note.activePointerId!==null&&note.type==='HOLD'&&rhythmNoteHasBody(note))heldNotes.push(note);
+  // 指が帯から外れている間は、押さえている間の音を止める(2026-11-02 社長「外れても すーって音がなってて判定に入ってるように感じる」)。
+  // 外れの判断は判定と同じ所(RHYTHM_GESTURE_RUNTIME の trackingBadSincePerf)を読む。戻ればまた一覧に入って鳴る
+  if(!note.done&&note.activePointerId!==null&&note.type==='HOLD'&&rhythmNoteHasBody(note)&&!RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index))heldNotes.push(note);
 }
 RHYTHM_NOTE_SE_RUNTIME.holdSync(heldNotes);
 // 刻みの数え方: 押さえている帯の刻みを判定・コンボ・スコアへ入れる(comboTicksRef。押し終わりは判定の処理が残りを清算する)
@@ -24750,6 +25229,16 @@ for(let i=0;i<heldNotes.length;i++){const note=heldNotes[i],ticks=Number(note._r
 run.notesReady=true;
 if(canvasNotes)RHYTHM_CANVAS_RENDERER.end();
 RHYTHM_PERF.notes(perfScanned,perfDrawn,scanFrom,run.notesAscending);
+// 押せている帯が変わったときだけ、道の光を付け直す(毎フレームは作り直さない)
+if(settings.holdTrace===false){traceGround=0;traceSky=0;}
+if(traceGround!==holdTraceRef.current.g||traceSky!==holdTraceRef.current.s){
+  const groundChanged=traceGround!==holdTraceRef.current.g;holdTraceRef.current={g:traceGround,s:traceSky};
+  // 地上: 押せている帯のサブレーンの道の光に印を付けて消す(指の位置の光・接触幅の光のどちらも CSS でまとめて止める)
+  if(groundChanged){const area=playAreaRef.current;let nodes=glowNodesRef.current;if(area&&(!nodes||!nodes.length||!nodes[0].isConnected))nodes=glowNodesRef.current=Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));
+    (nodes||[]).forEach((el,index)=>{const off=!!(traceGround>>index&1);if(off===(el.dataset.rhythmTraceOff==='true'))return;if(off)el.dataset.rhythmTraceOff='true';else delete el.dataset.rhythmTraceOff;});}
+  // 空中: canvas に描く押した光から、押せている帯のサブレーンを外す
+  setPressedLanes(pressedLanesNow());
+}
 // 無敵・我慢の残り時間と根性ストックは、毎フレームsetStateせずDOMへ直接書く。
 // スコアやコンボと同じ頻度でReactを走らせると、そのぶんノーツの描画が遅れるため。
 const badge=abilityBadgeRef.current;
@@ -24883,7 +25372,7 @@ if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTick
         const travel=measureTravel(),run=runRef.current;
         if(canvasNotes&&travel&&travel.ready!==false&&run&&Array.isArray(run.notes)){
           const R=RHYTHM_CANVAS_RENDERER,live=settingsLiveRef.current||{};
-          const opts={nowMs:rhythmSongIntroNow(),effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDprRef.current,sizeScale:settings.noteSize/100,bloom:live.noteBloom===true,motion:live.noteMotionFx===true};
+          const opts={nowMs:rhythmSongIntroNow(),effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDprRef.current,sizeScale:settings.noteSize/100,bloom:live.noteBloom===true,motion:live.noteMotionFx===true,...rhythmFxRenderOptions(settings,live)};
           if(R.begin(travel.rect,opts)){
             const travelMs=rhythmTravelMsForSpeed(settings.noteSpeed),seen=new Set();
             const yPx=travel.spawnY+rhythmProjectTravelProgress(.6)*travel.travelPx;
@@ -24941,7 +25430,7 @@ rhythmEnsureHitEffects(playAreaRef.current);
    カウントダウン(READY→3→2→1 の3.2秒)のあいだに済ませるので、プレイヤーには見えない。
    ★描くときと同じ設定を渡す。キャッシュのキーは種類と画素密度だけなので、
      違う設定で焼くとそのまま曲の終わりまで使われてしまう(2026-09-12) */
-if(canvasNotes)RHYTHM_CANVAS_RENDERER.warmSprites({effect:settings.effectAmount,lightweight:settings.lightweightMode,tapLight:rhythmTapLightOnly(settings),maxDpr:noteCanvasMaxDpr});
+if(canvasNotes)RHYTHM_CANVAS_RENDERER.warmSprites({effect:settings.effectAmount,lightweight:settings.lightweightMode,tapLight:rhythmTapLightOnly(settings)||!['AUTO','NONE'].includes(rhythmFxPick(settings,'burst')),maxDpr:noteCanvasMaxDpr});
 /* モンスターノーツの顔の絵も GPU へ渡しておく(焼き上がりが描き込み先より先だったときの分。渡してあれば何もしない) */
 if(canvasNotes)faceBitmapsRef.current.forEach(face=>{if(face){RHYTHM_CANVAS_RENDERER.preloadImage(face.plain);RHYTHM_CANVAS_RENDERER.preloadImage(face.glow);}});
 /* 長いスライドの帯も GPU へ置いておく(2026-10-18 社長の決定)。画面に入った1コマで形を作って送ると、iPhone で止まっていた(Sheriruth HELL の106秒あたり)。GPU の帯を使っていなければ何もしない */
@@ -25135,7 +25624,9 @@ const inputEnds=inputs=>{const run=runRef.current;if(!run||run.finished||run.pau
   // 空中の段(試作): 空中の高さで押している指のサブレーン。地上の光の代わりに、空中の判定ラインの上で赤く光らせる(canvas で描く)。
   // 空中の段が無い譜面では、どの指も地上なので空のまま(既存の全曲は何も変わらない)
   const pressedSkyLanesNow=()=>[...(liveTouchSkySubLanesRef.current||[]),...(runRef.current?.activePointerSkyFeedback?.values()||[])];
-  const setPressedLanes=coordinates=>{const area=playAreaRef.current;if(!area)return;const active=new Set(Array.from(coordinates||[]).map(value=>Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(Number(value))))).filter(Number.isFinite)),glowOpacity=settings.laneGlow==='NONE'?'0':settings.laneGlow==='LOW'?'.35':'1';let nodes=glowNodesRef.current;if(!nodes||!nodes.length||!nodes[0].isConnected)nodes=glowNodesRef.current=Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));nodes.forEach((el,index)=>{const pressed=active.has(index);const want=pressed?'true':'false';if(el.dataset.pressed===want&&(!pressed||el.style.opacity===glowOpacity))return;el.dataset.pressed=want;el.style.opacity=pressed?glowOpacity:'0';});if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&typeof RHYTHM_CANVAS_RENDERER.setSkyPressed==='function'){RHYTHM_CANVAS_RENDERER.setSkyPressed(pressedSkyLanesNow(),Number(glowOpacity));paintIdleSkyPress();}};
+  // 押せている帯のサブレーン(ビットの集まり。g=地上・s=空中)。tick が変わったときだけ書き換える(設定 holdTrace)
+  const holdTraceRef=useRef({g:0,s:0});
+  const setPressedLanes=coordinates=>{const area=playAreaRef.current;if(!area)return;const active=new Set(Array.from(coordinates||[]).map(value=>Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(Number(value))))).filter(Number.isFinite)),glowOpacity=settings.laneGlow==='NONE'?'0':settings.laneGlow==='LOW'?'.35':'1';let nodes=glowNodesRef.current;if(!nodes||!nodes.length||!nodes[0].isConnected)nodes=glowNodesRef.current=Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));nodes.forEach((el,index)=>{const pressed=active.has(index);const want=pressed?'true':'false';if(el.dataset.pressed===want&&(!pressed||el.style.opacity===glowOpacity))return;el.dataset.pressed=want;el.style.opacity=pressed?glowOpacity:'0';});if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&typeof RHYTHM_CANVAS_RENDERER.setSkyPressed==='function'){{const skyMask=settings.holdTrace!==false?holdTraceRef.current.s:0;RHYTHM_CANVAS_RENDERER.setSkyPressed(skyMask?pressedSkyLanesNow().filter(v=>!(skyMask>>Math.floor(Number(v))&1)):pressedSkyLanesNow(),Number(glowOpacity));}paintIdleSkyPress();}};
   // 曲が始まる前の待機中(幕・READY→3→2→1)は、毎フレームの描画(tick)がまだ動いていない。地上のレーンの光は画面の要素なので光るが、
   // 空中のレーンの光は canvas に描くので、そのままだと光らなかった(2026-10-13 社長「待機中、地上は光るのに空中は光らない」)。
   // 指の出入りのたびに、空中の押した光だけをここで1回描く(叩いた光・ノーツはまだ無い)。止めている間(ポーズ)はノーツの絵を残すので描かない
@@ -25143,7 +25634,7 @@ const inputEnds=inputs=>{const run=runRef.current;if(!run||run.finished||run.pau
     if(!canvasNotes||frameRef.current!==null)return;
     const run=runRef.current;if(run&&(run.paused||run.finished))return;
     const travel=measureTravel();if(!travel||!travel.ready)return;
-    if(!RHYTHM_CANVAS_RENDERER.begin(travel.rect,{nowMs:typeof performance!=='undefined'?performance.now():0,effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDprRef.current,sizeScale:settings.noteSize/100}))return;
+    if(!RHYTHM_CANVAS_RENDERER.begin(travel.rect,{nowMs:typeof performance!=='undefined'?performance.now():0,effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDprRef.current,sizeScale:settings.noteSize/100,...rhythmFxRenderOptions(settings)}))return;
     RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);RHYTHM_CANVAS_RENDERER.end();
   };
   // 演奏中は、演奏エリアの外に触れた指でもブラウザの既定の動き(ピンチ・ダブルタップ拡大)を止める
@@ -25337,7 +25828,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   {gains&&<div data-rhythm-result-hero-gains className="relative w-full shrink-0 space-y-1.5 text-left">
     {runOk&&<div data-rhythm-result-hero-gains-run className="rounded-xl border border-fuchsia-400/40 bg-fuchsia-950/60 px-2 py-1.5">
       <div className="flex items-baseline justify-between gap-1"><span className="text-[9px] font-black text-fuchsia-200">クイック∞周回</span><b className="text-[15px] font-black leading-none text-white">+{quickRunAward.loops}周</b></div>
-      {quickRunAward.eventBoosted&&<div className="mt-0.5 text-[9px] font-black text-amber-200">{quickRunAward.scale>RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE?'🎃 キャンペーン中 ×':'🏆 イベント対象曲 ×'}{quickRunAward.scale}</div>}
+      {quickRunAward.eventBoosted&&<div className="mt-0.5 text-[9px] font-black text-amber-200">{quickRunAward.scale>RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE?`${(rhythmLoopCampaignAt(Date.now())?.banner?.emoji)||'🎟️'} キャンペーン中 ×`:'🏆 イベント対象曲 ×'}{quickRunAward.scale}</div>}
       {quickRunAward.multiScale>1&&<div className="mt-0.5 text-[9px] font-black text-cyan-200">👥 対戦ボーナス ×{quickRunAward.multiScale}</div>}
       <div className="mt-0.5 text-[9px] font-black text-slate-300">{quickRunAward.fromLoop}周目 → {quickRunAward.toLoop}周目</div>
       <div className="mt-0.5 flex flex-wrap gap-x-2 text-[9px] font-bold text-slate-300">
@@ -25478,7 +25969,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   </div>
   {/* イベントの対象曲だけ、ふだんの2倍ではなく3倍で入る(2026-09-11・ユーザー指示)。
       入った周回数だけでは「この曲だから多かった」と気づけないので、その場で言う */}
-  {quickRunAward.eventBoosted&&<div data-rhythm-result-quick-run-event className="mt-1.5 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 py-1 text-[10px] font-black text-amber-200">{quickRunAward.scale>RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE?'🎃 キャンペーン中 ×':'🏆 イベント対象曲 ×'}{quickRunAward.scale}（ふだんの曲は ×{RHYTHM_PLAY_RUN_LOOP_SCALE}）</div>}
+  {quickRunAward.eventBoosted&&<div data-rhythm-result-quick-run-event className="mt-1.5 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 py-1 text-[10px] font-black text-amber-200">{quickRunAward.scale>RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE?`${(rhythmLoopCampaignAt(Date.now())?.banner?.emoji)||'🎟️'} キャンペーン中 ×`:'🏆 イベント対象曲 ×'}{quickRunAward.scale}（ふだんの曲は ×{RHYTHM_PLAY_RUN_LOOP_SCALE}）</div>}
   {quickRunAward.multiScale>1&&<div data-rhythm-result-quick-run-multi className="mt-1.5 rounded-xl border border-cyan-300/50 bg-cyan-950/40 px-2 py-1 text-[10px] font-black text-cyan-200">👥 みんなで対戦のボーナス(人数・連続) ×{quickRunAward.multiScale}</div>}
   <div className="mt-1 text-[11px] font-black text-slate-200">{quickRunAward.fromLoop}周目 <span className="text-slate-500">→</span> {quickRunAward.toLoop}周目</div>
   <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] font-bold text-slate-300">
@@ -25524,7 +26015,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   /* ★ここへ属性を足すときは className の「後ろ」へ置く。
      rhythm-screen-layout-check.js が <main data-rhythm-tap-test className="…overflow-hidden という
      文字列の並びをそのまま見ているので、あいだに挟むと「1画面になっていない」と落ちる。 */
-  return <main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[var(--mh-sa-left)] landscape:pr-[var(--mh-sa-right)] [container-type:inline-size]" data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} style={{touchAction:'none'}}>{/* ===== 曲が始まる前の幕(2026-10-10・社長の依頼。2026-10-11 並びと長さを見直し) =====
+  return <main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[var(--mh-sa-left)] landscape:pr-[var(--mh-sa-right)] [container-type:inline-size]" data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} {...rhythmFxAttrs(settings)} style={{touchAction:'none'}}>{/* ===== 曲が始まる前の幕(2026-10-10・社長の依頼。2026-10-11 並びと長さを見直し) =====
     ジャケット・曲名・作曲者(または紹介文)・難易度とレベル。HUDもレーンも覆う(z-45)。
     2026-10-11 社長「ジャケット自体をもう少し上にして、その下に曲名のほうが見栄えがいい」。縦持ちも横持ちも、上にジャケット・下に文字を積む。
     ジャケットの大きさは画面の高さから決める(横持ち・360×640 でも文字まで収まる)。
@@ -25585,7 +26076,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 
 {/* 0になったその瞬間だけ、大きく1度だけ出す(1.4秒で消える) */}
 {lifeDownSlam&&<div data-rhythm-life-down-slam aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[32%] z-40 text-center"><b className="block text-5xl font-black leading-none">LIFE 0</b><small className="mt-1 block text-xs font-black tracking-[0.34em]">DOWN</small></div>}
-<div ref={playAreaRef} data-rhythm-play-area data-rhythm-mon-layers={monLayersOn?'1':undefined} data-rhythm-judgment-snap={judgmentSnap?'1':undefined} data-rhythm-judgment-fx={settings.judgmentFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'?'1':undefined} data-rhythm-counting={countdownStep!==null?'1':undefined} data-rhythm-strip={RHYTHM_STRIP.value||undefined} data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} data-rhythm-tap-light={rhythmTapLightOnly(settings)?'1':undefined} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{/* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
+<div ref={playAreaRef} data-rhythm-play-area data-rhythm-mon-layers={monLayersOn?'1':undefined} data-rhythm-judgment-snap={judgmentSnap?'1':undefined} data-rhythm-judgment-fx={settings.judgmentFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'?'1':undefined} data-rhythm-counting={countdownStep!==null?'1':undefined} data-rhythm-strip={RHYTHM_STRIP.value||undefined} data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} data-rhythm-tap-light={rhythmTapLightOnly(settings)&&rhythmFxPick(settings,'burst')==='AUTO'?'1':undefined} {...rhythmFxAttrs(settings)} data-fx-lane-line={['DARK','LIGHT'].includes(rhythmFxPick(settings,'laneLine'))?rhythmFxPick(settings,'laneLine'):undefined} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{/* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
     置いているので、Tailwindの relative が効く前だと基準が別の要素へ移り、
     判定ラインが画面の変なところへ出る(2026-09-05)。中身の置き場所に関わるものは
     外部CSSに任せない */position:'relative',overflow:'hidden',touchAction:'none',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none','--rhythm-note-size-scale':settings.noteSize/100,
@@ -25594,18 +26085,18 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
        ★ノーツが流れ着く先は measureTravel が**ラインを実測**して決めるので、
          ここを動かすだけで譜面も判定もそのままついてくる */
     '--mh-judgment-line-bottom':`${rhythmFiniteStep(settings.judgmentLineHeight,RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`,filter:settings.effectAmount==='MINIMAL'?'saturate(.78)':settings.effectAmount==='LOW'?'saturate(.92)':'none'}}>{laneElements}{/* ライブ背景。いちばん奥(z-index:-1)。見た目は index.html の [data-rhythm-stage] が持つ */}
-{stageLevel!=='SIMPLE'&&<div ref={stageHostRef} data-rhythm-stage={stageLevel} data-stage-tier={String(stageTierNow)} data-stage-gl={stageGl?'1':undefined} aria-hidden="true">
+{stageLevel!=='SIMPLE'&&<div ref={stageHostRef} data-rhythm-stage={stageLevel} data-stage-tier={String(stageTierNow)} data-stage-gl={stageGl?'1':undefined} aria-hidden="true" style={rhythmFxStageStyle(settings)}>
   {/* WebGL 版は、ジャケット・暗幕・サーチライト・光の粒をこの canvas 1枚に描く(暗幕の ::after は CSS 側で消す)。
       描き込み先を作り直すときは canvas も作り直す(一度片付けた canvas からは描き込み先を取り出せない) */}
   {stageGl&&<canvas key={`stage-gl-${renderQualityStill}`} ref={stageGlRef} data-rhythm-stage-gl/>}
-  {!stageGl&&stageArtSrc&&<canvas ref={stageArtRef} data-rhythm-stage-art width="24" height="24"/>}
+  {!stageGl&&stageArtSrc&&<canvas key={`stage-art-${stageArtSize}`} ref={stageArtRef} data-rhythm-stage-art width={stageArtSize} height={stageArtSize}/>}
   {/* サーチライトと光の粒は、1度だけ焼いた画像を CSS のアニメーション(合成だけで動く)で動かす(2026-09-26)。
       以前はサーチライトを clip-path で切り抜いた層、光の粒を画面の2倍の高さの CSS の模様で作っていた */}
-  {!stageGl&&stageFxOn&&stageImages&&<><img data-rhythm-stage-beam="left" src={stageImages.beams[stageTierNow]||stageImages.beams[0]} alt="" draggable={false}/><img data-rhythm-stage-beam="right" src={stageImages.beams[stageTierNow]||stageImages.beams[0]} alt="" draggable={false}/>
-    <img data-rhythm-stage-sparks="far" src={stageImages.sparks[0]} alt="" draggable={false}/><img data-rhythm-stage-sparks="near" src={stageImages.sparks[1]} alt="" draggable={false}/></>}
+  {!stageGl&&stageFxOn&&stageImages&&<>{stageBeamOn&&<><img data-rhythm-stage-beam="left" src={stageImages.beams[stageTierNow]||stageImages.beams[0]} alt="" draggable={false}/><img data-rhythm-stage-beam="right" src={stageImages.beams[stageTierNow]||stageImages.beams[0]} alt="" draggable={false}/></>}
+    {stageSparks==='MANY'&&<img data-rhythm-stage-sparks="far" src={stageImages.sparks[0]} alt="" draggable={false}/>}{stageSparks!=='NONE'&&<img data-rhythm-stage-sparks="near" src={stageImages.sparks[1]} alt="" draggable={false}/>}</>}
 </div>}{/* ノーツのタイミングの光だけは、レーンの上(z-index:1)・判定の帯とノーツ(2〜6)の下へ置く。
     背景の側に置くとレーンの暗い面に隠れて、下のふちがうっすら光るだけになっていた */}
-{roadFxOn&&<><i data-rhythm-road-haze aria-hidden="true"/><i ref={roadGlowRef} data-rhythm-road-glow aria-hidden="true"/></>}{climaxFxOn&&<i ref={climaxRef} data-rhythm-climax data-on="0" style={{'--climax-cycle':`${climaxCycleMs}ms`}} aria-hidden="true"><b data-side="l"/><b data-side="r"/></i>}{stageLevel!=='SIMPLE'&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}{cutInElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
+{roadFogOn&&<><i data-rhythm-road-haze aria-hidden="true"/><i ref={roadGlowRef} data-rhythm-road-glow aria-hidden="true"/></>}{climaxFxOn&&<i ref={climaxRef} data-rhythm-climax data-on="0" style={{'--climax-cycle':`${climaxCycleMs}ms`}} aria-hidden="true"><b data-side="l"/><b data-side="r"/></i>}{stageLevel!=='SIMPLE'&&stageTimingOn&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}{cutInElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
     「コンボももう少し目立つように段階的に / あと右より過ぎるから邪魔にならないように真ん中に寄せて」。
     右上のHUDから**プレイエリアの真ん中**へ移した。
     ★HUDの左右の列は、レーンの台形の外側の空きに置いてある。その空きは上へ行くほど広く、
@@ -25645,7 +26136,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 {countdownStep!==null&&<div data-rhythm-countdown aria-live="assertive" style={{position:'absolute',inset:0,zIndex:20,...(prepareOn?{contain:'strict'}:{}),display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'8px',pointerEvents:'none',background:'rgba(2,6,23,.35)'}}><b data-rhythm-countdown-step style={{fontSize:countdownStep==='READY'?'44px':'88px',fontWeight:900,lineHeight:1,color:'#fff',letterSpacing:countdownStep==='READY'?'.12em':'0',textShadow:'0 0 18px rgba(103,232,249,.85),0 2px 10px rgba(2,6,23,.95)'}}>{countdownStep}</b><small style={{fontSize:'12px',fontWeight:900,color:'#a5f3fc',textShadow:'0 1px 6px rgba(2,6,23,.95)'}}>{resumeCountdown?'まもなく 再開します':'まもなく はじまります'}</small></div>}
 {/* 判定の文字(地上)。空中のある譜面でも、ふつうの難易度と同じ位置・大きさ・濃さ。
     2026-10-11 社長「地上は今まで通り、空中は地上と同じ仕組みを空中版の位置にする」で、空中のある譜面だけ判定線の下へ小さく薄く出していた形(10-10・改善部 R3)をやめた。
-    空中のノーツの判定は、下の data-rhythm-sky-judgment-display が空中の判定線の上に出す */}<div data-rhythm-judgment-display data-rhythm-judge-text-pos={!skyChart&&judgeTextPos!=='now'?judgeTextPos:undefined} className="pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center" style={{bottom:!skyChart&&(judgeTextPos==='raise'||judgeTextPos==='both')?'calc(var(--mh-judgment-line-bottom,12%) + 26%)':'calc(var(--mh-judgment-line-bottom,12%) + 38px)',...(!skyChart&&(judgeTextPos==='fade'||judgeTextPos==='both')?{opacity:.55}:null)}}>{/* 判定文字の見た目(色のグラデーション・光・大きさ)は index.html が data-judgment ごとに持つ。
+    空中のノーツの判定は、下の data-rhythm-sky-judgment-display が空中の判定線の上に出す */}<div data-rhythm-judgment-display data-rhythm-judge-text-pos={!skyChart&&judgeTextPos!=='now'?judgeTextPos:undefined} className="pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center" style={{...rhythmJudgeScaleStyle(settings),bottom:!skyChart&&(judgeTextPos==='raise'||judgeTextPos==='both')?'calc(var(--mh-judgment-line-bottom,12%) + 26%)':'calc(var(--mh-judgment-line-bottom,12%) + 38px)',...(!skyChart&&(judgeTextPos==='fade'||judgeTextPos==='both')?{opacity:.55}:null)}}>{/* 判定文字の見た目(色のグラデーション・光・大きさ)は index.html が data-judgment ごとに持つ。
       どれも文字を透かしてグラデーションを敷くので、色を1つだけ選ぶインラインstyleでは書けない。
       判定ラインで弾ける光の単色は data/rhythm-mode.js の RHYTHM_JUDGMENT_COLORS が正本で、
       文字のグラデーションにも必ずその色を含める(rhythm-hit-effect-check.js が突き合わせる)。
@@ -25653,7 +26144,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
       text-[26px] と text-white は、判定がまだ無いとき(LOADING…など)の見た目 */}{settings.judgmentFx===true&&<i ref={judgmentBurstRef} data-rhythm-judgment-burst aria-hidden="true"/>}<RhythmHudJudgment hud={hudRef.current} settings={settings} status={view.status} haloKeys={haloKeys} timingDisplay={timingDisplay} judgmentTextRef={judgmentTextRef}/>{/* ずれメーター。判定文字のすぐ上へ置く(文字の位置は動かさない)。判定ラインのすぐ上は叩く指で隠れるため。
     帯の色は判定窓(MARVELOUS 金・EXCELLENT 紫・GREAT 赤・GOOD 緑・BAD 青)で、真ん中がぴったり */}
 {timingDisplay==='METER'&&<div data-rhythm-timing-meter aria-hidden="true" className="absolute bottom-full left-1/2 mb-1.5 h-[10px] w-[160px] -translate-x-1/2" style={{'--meter-mar':`${(55/185*50).toFixed(2)}%`,'--meter-exc':`${(100/185*50).toFixed(2)}%`,'--meter-gre':`${(150/185*50).toFixed(2)}%`,'--meter-goo':`${(170/185*50).toFixed(2)}%`}}><i data-rhythm-timing-meter-band/><i data-rhythm-timing-meter-center/>{Array.from({length:12},(_,i)=><i key={i} ref={el=>{meterTicksRef.current[i]=el;}} data-rhythm-timing-meter-tick style={{opacity:0}}/>)}</div>}</div>{/* 判定の文字(空中)。空中のノーツの判定だけを、地上と同じ出し方で空中の判定線の38px上に出す(RHYTHM_HELL_SKY_TEXT が below(既定)のときは、空中の線のすぐ下・来るノーツに重ならない)(地上と同時に叩いたら、それぞれの位置に1つずつ)。
-    空中の判定線は地上の判定線から、道の高さの RHYTHM_SKY_LIFT.ratio ぶん上(横 39%・縦は設定の 16/25/39%) */}{skyChart&&<div data-rhythm-sky-judgment-display className="pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center" style={{bottom:`calc(var(--mh-judgment-line-bottom,12%) + ${(RHYTHM_SKY_LIFT.ratio*100).toFixed(2)}% ${RHYTHM_HELL_SKY_TEXT.id==='below'?'- 64px':'+ 38px'})`}}>{settings.judgmentFx===true&&<i ref={skyJudgmentBurstRef} data-rhythm-judgment-burst aria-hidden="true"/>}<RhythmHudJudgment sky hud={hudRef.current} settings={settings} status="sky" haloKeys={haloKeys} timingDisplay={timingDisplay} judgmentTextRef={skyJudgmentTextRef}/></div>}{/* 能力が出たら、どのマスモンの何が出たかを短時間だけ見せる(§3.5) */}
+    空中の判定線は地上の判定線から、道の高さの RHYTHM_SKY_LIFT.ratio ぶん上(横 39%・縦は設定の 16/25/39%) */}{skyChart&&<div data-rhythm-sky-judgment-display className="pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center" style={{...rhythmJudgeScaleStyle(settings),bottom:`calc(var(--mh-judgment-line-bottom,12%) + ${(RHYTHM_SKY_LIFT.ratio*100).toFixed(2)}% ${RHYTHM_HELL_SKY_TEXT.id==='below'?'- 64px':'+ 38px'})`}}>{settings.judgmentFx===true&&<i ref={skyJudgmentBurstRef} data-rhythm-judgment-burst aria-hidden="true"/>}<RhythmHudJudgment sky hud={hudRef.current} settings={settings} status="sky" haloKeys={haloKeys} timingDisplay={timingDisplay} judgmentTextRef={skyJudgmentTextRef}/></div>}{/* 能力が出たら、どのマスモンの何が出たかを短時間だけ見せる(§3.5) */}
 {/* ラッキーラッシュ中は、プレイエリアのふちが金色に光る(ノーツより後ろ・入力に触らない) */}
 {luckyRush&&<div data-rhythm-lucky-rush aria-hidden="true"/>}
 {/* 演出を自動で控えめにしたお知らせ(設定「重いときは演出を自動で控えめに」)。2.5秒だけ出す */}
@@ -34069,6 +34560,8 @@ const jaWrapPoints = (text) => {
     for (const { segment } of _jaSegmenter.segment(s)) {
       // 道具は「これは|いけません」を「これ|はい|けませ」と、返事の「はい」に読むことがある。指す言葉のあとの「は〜」は「は」で分け直す
       if (/^は[ぁ-ゖ]/.test(segment) && /^(?:これ|それ|あれ|どれ|ここ|そこ|あそこ|わたし|あたし|ワシ|吾輩|余)$/.test(segs[segs.length - 1] || '')) segs.push('は', segment.slice(1));
+      // 道具が1語にする長いあいさつ(8字)は、あとに「。……」が付くと1行に入らず途中で折れる(「……どうい／たしまし」2026-11-02)。言葉の切れ目で分けておく
+      else if (segment === 'どういたしまして') segs.push('どう', 'いたしまして');
       else segs.push(segment);
     }
     // ① 文節ごとにまとめる。かたまりは区切りの並び(parts)と、区切りごとの「固い(hard)・柔らかい(soft)」を持つ。
@@ -37838,10 +38331,12 @@ function RhythmSongSelectScreen({
       //  非開催中の「いつでも貯まります」の帯は 2026-09-26 に外した)。
       const beatPointReleased=!debugAll&&RELEASE_FLAGS.rhythmEventPoints===true;
       const beatPointEvent=beatPointReleased?rhythmLimitedEventAt(Date.now()):null;
-      const beatPointTargetSong=!!beatPointEvent&&Array.isArray(beatPointEvent.songIds)&&beatPointEvent.songIds.includes(rhythmSelectedSongId);
+      const beatPointTargetSong=!!beatPointEvent&&rhythmEventHasSong(beatPointEvent,rhythmSelectedSongId);
       // ビートPアップキャンペーン(2026-09-28)。ランキングイベントと重なったときはイベントの帯を出す
       // (計算もイベントのほうを使う。rhythmEventPointAwardAt)。開いているあいだは描き直すたびに数え直す
       const beatPointCampaign=beatPointReleased&&!beatPointEvent?rhythmEventPointCampaignAt(Date.now()):null;
+      // イベントと周回キャンペーンが重なったときは、イベントの帯に「周回 ◯倍」を足す(キャンペーンの帯は出ないため。2026-11-02)
+      const eventLoopCampaign=beatPointEvent?rhythmLoopCampaignAt(Date.now()):null;
       // 横持ちの左の細い列(幅104px)へ入れる札。中身は縦持ちの帯と同じ
       const beatPointSideCard=beatPointCampaign
         ?<div data-rhythm-beat-band-landscape data-rhythm-beat-point-campaign-side className="rounded-xl border border-amber-300/40 bg-amber-500/10 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-amber-100">
@@ -37852,14 +38347,18 @@ function RhythmSongSelectScreen({
         </div>
         :beatPointEvent
           ?<div data-rhythm-beat-band-landscape data-rhythm-beat-point-active-side className="rounded-xl border border-violet-400/30 bg-violet-950/25 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-violet-100">
-            <span className="block">🎟️ ビートP獲得期間中</span>
-            <span style={JA_WRAP_STYLE} className="mt-0.5 block text-violet-200/80">{beatPointTargetSong?jaWrap('選択中のイベント対象曲は1.5倍'):'公開曲なら獲得できます'}</span>
+            <span style={JA_WRAP_STYLE} className="block">{jaWrap('🎟️ ビートP獲得期間中')}</span>
+            {eventLoopCampaign&&<span className="block text-amber-200">周回 {eventLoopCampaign.loopBoost}倍</span>}
+            <span style={JA_WRAP_STYLE} className="mt-0.5 block text-violet-200/80">{beatPointTargetSong?jaWrap('選択中のイベント対象曲は1.5倍'):jaWrap('公開曲なら獲得できます')}</span>
           </div>
           :null;
       // 所持ビートP(2026-09-28・ユーザー指示「曲選択画面で邪魔にならないところにビートPの表示を作って」)。
       // 題名の下に小さく1行だけ出す。ヘッダーの高さはボタン(44px)で決まっているので、この1行を足しても高さは変わらず、曲の一覧も減らない。
       // 画面を開くたびに保存値から読み直す(演奏から戻るとこの部品は作り直されるので、そのたびに最新になる)。読めないあいだは出さない
       const [beatPointBalance,setBeatPointBalance]=React.useState(null);
+      // 曲えらびの上のイベント案内は、最初はたたんだ帯で出す(2026-11-02 社長「C たたんだ形で出す」。
+      //   開いた形だと縦画面 390×844 で曲の一覧が下の欄の裏に隠れた)。押すと開く。保存はしない(開くたびにたたんだ形から)
+      const [eventNoticeOpen,setEventNoticeOpen]=React.useState(false);
       React.useEffect(()=>{
         if(!beatPointReleased)return undefined;
         let alive=true;
@@ -38078,9 +38577,20 @@ function RhythmSongSelectScreen({
         {/* 週間ランキングの「今週の対象曲」案内(docs/spec/RHYTHM_RANKING.md §10.2)。
             その週の初回に1度だけ出す。閉じるか、その週にもう一度見たら出ない。
             ★ヘルプと更新履歴は探しに行った人しか読まないので、画面のなかでも伝える(CLAUDE.md ⑤) */}
-        {selectNoticesOpen&&rhythmEventNotice&&<div data-rhythm-event-notice className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1">
+        {selectNoticesOpen&&rhythmEventNotice&&!eventNoticeOpen&&<div data-rhythm-event-notice data-rhythm-event-notice-folded className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2">
+          <div className="flex items-center gap-1">
+            <button style={JA_WRAP_STYLE} type="button" data-rhythm-event-notice-toggle aria-expanded="false" onClick={()=>setEventNoticeOpen(true)}
+              className="min-h-[44px] min-w-0 flex-1 text-left text-[11px] font-black leading-tight text-amber-200 active:scale-[.99]">
+              🏆 {rhythmEventNotice.kind==='limited'?<>{jaWrap(rhythmEventNotice.name)} 開催中！</>:jaWrap('今週の対象曲')}<span className="ml-1 text-[10px] text-fuchsia-200">▼ ひらく</span>
+            </button>
+            <button type="button" data-rhythm-event-notice-close onClick={dismissRhythmEventNotice} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
+          </div>
+        </div>}
+        {selectNoticesOpen&&rhythmEventNotice&&eventNoticeOpen&&<div data-rhythm-event-notice data-rhythm-event-notice-open-body className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1">
           <div className="flex items-start gap-1">
             <div className="min-w-0 flex-1">
+              <button type="button" data-rhythm-event-notice-toggle aria-expanded="true" onClick={()=>setEventNoticeOpen(false)}
+                className="min-h-[44px] w-full rounded-lg text-left text-[10px] font-black text-fuchsia-200 active:scale-[.99]">▲ たたむ</button>
               <AssistantBubble scene="rhythmWeeklyEvent" condition={rhythmEventNotice.kind==='limited'?'limited':null} compact/>
               {/* 期間限定のときはイベントの名前を出す。「今週の対象曲」のままだと、
                   週間ランキングが動いていると誤解される */}
@@ -38107,7 +38617,7 @@ function RhythmSongSelectScreen({
             <span className="flex min-w-0"><span className="min-w-0 truncate">{beatPointCampaign.name}</span><span className="shrink-0">{Number(beatPointCampaign.loopBoost)>0?`・周回 ${beatPointCampaign.loopBoost}倍`:'中'}</span></span>
             <span className="ml-auto shrink-0 text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.displayEndAt||beatPointCampaign.endAt))}</span>
           </div>}
-          {beatPointEvent&&<div style={JA_WRAP_STYLE} data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?jaWrap('・選択中のイベント対象曲は1.5倍'):jaWrap('・公開曲なら獲得できます')}</div>}
+          {beatPointEvent&&<div style={JA_WRAP_STYLE} data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?jaWrap('・選択中のイベント対象曲は1.5倍'):jaWrap('・公開曲なら獲得できます')}{eventLoopCampaign&&<span className="text-amber-200">{jaWrap(`・周回 ${eventLoopCampaign.loopBoost}倍`)}</span>}</div>}
         </div>}
         {/* 開催していないときの「ビートPはいつでも貯まります」の帯は外した(2026-09-26・ユーザー指示
             「ビートPがいつでももらえるはここに書く必要はない / この分でもスペース無駄にしてる」)。
@@ -38728,7 +39238,8 @@ function RhythmRankingScreen({
               {/* 期間はサーバーが決める。残り時間の見た目だけ端末の時計で数える */}
               <div data-rhythm-event-window className="mb-3 flex items-center gap-2 rounded-2xl border border-fuchsia-300/40 bg-slate-900/70 p-2">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[11px] font-black text-fuchsia-100">{eventDefinition.name}</p>
+                  {/* 長いイベント名(「鍵の向こう側へ ～パンドラとふたつの翼～」)が幅320で「…」に切れていた。切らずに折り返す(2026-11-02) */}
+                  <p style={JA_WRAP_STYLE} className="text-[11px] font-black leading-tight text-fuchsia-100">{jaWrap(eventDefinition.name)}</p>
                   {/* 週間は「毎週月曜5:00に切り替わります」、期間限定は開始と終了そのものを出す */}
                   <p data-rhythm-event-period className="text-[9px] text-slate-400">{rhythmEventPeriodText(eventDefinition,eventRange)}</p>
                 </div>
@@ -38943,7 +39454,10 @@ function RhythmRankingScreen({
                   報酬の表と同じ場所に置く。対象曲を遊ぶ理由が順位だけではなくなるため */}
               {!eventWeekly&&<p style={JA_WRAP_STYLE} data-rhythm-event-loop-bonus
                 className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2 text-[10px] leading-tight text-slate-200">
-                <b className="text-amber-200">∞周回 ×{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}</b>　{jaWrap('クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×')}{RHYTHM_PLAY_RUN_LOOP_SCALE}）の{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}倍になります
+                {/* 周回キャンペーン中は、そちらの倍率が曲を問わず効く(rhythmPlayRunLoopScale)。窓の案内も実際と同じにする(2026-11-02 社長「×3 と出ている」) */}
+                {rhythmLoopCampaignAt(Date.now())&&RELEASE_FLAGS.rhythmEventPoints===true
+                  ?<><b className="text-amber-200">∞周回 ×{rhythmLoopCampaignAt(Date.now()).loopScale}</b>　{jaWrap(`キャンペーン中は、クイックの∞周回を裏で回しながらモンヒロビートを演奏すると、どの曲でも入る周回数がいつもの${rhythmLoopCampaignAt(Date.now()).loopBoost}倍になります`)}</>
+                  :<><b className="text-amber-200">∞周回 ×{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}</b>　{jaWrap('クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×')}{RHYTHM_PLAY_RUN_LOOP_SCALE}）の{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}倍になります</>}
               </p>}
               {/* 回数ボーナス(2026-09-11・ユーザー指示)。遊んだ回数が順位に効くことは、
                   ランキングを見ているだけでは分からないので、報酬の表と同じ場所で伝える。
@@ -44195,7 +44709,17 @@ const INFERNO_SHIELD_COLORS = Object.freeze([
 ]);
 const INFERNO_SHIELD_MARKS = Object.freeze(['①', '②', '③', '④', '⑤', '⑥', '⑦']);
 const INFERNO_BODY_HP_GRADIENT = 'linear-gradient(180deg,#f3e8ff 0%,#c084fc 34%,#7c3aed 70%,#3b0764 100%)';
-const infernoShieldColorAt = (k) => INFERNO_SHIELD_COLORS[Math.max(0, Math.min(INFERNO_SHIELD_COLORS.length - 1, k))];
+// EREBUS(冥界の闇・2026-11-04)は層を淡い紫 → 黒に近い紫に。本体のライフは赤(シールドが紫なので、ライフまで紫だと見分けにくい)
+const EREBUS_SHIELD_COLORS = Object.freeze([
+  Object.freeze(['#f5f3ff', '#c4b5fd', '#ede9fe']),
+  Object.freeze(['#ede9fe', '#a78bfa', '#ddd6fe']),
+  Object.freeze(['#ddd6fe', '#7c3aed', '#c4b5fd']),
+  Object.freeze(['#c4b5fd', '#5b21b6', '#a78bfa']),
+  Object.freeze(['#a78bfa', '#2e1065', '#8b5cf6']),
+]);
+const EREBUS_BODY_HP_GRADIENT = 'linear-gradient(180deg,#fecaca 0%,#f87171 34%,#dc2626 70%,#7f1d1d 100%)';
+const shieldBodyHpGradient = (rule) => (rule === 'EREBUS' ? EREBUS_BODY_HP_GRADIENT : INFERNO_BODY_HP_GRADIENT);
+const infernoShieldColorAt = (k, rule) => { const pal = rule === 'EREBUS' ? EREBUS_SHIELD_COLORS : INFERNO_SHIELD_COLORS; return pal[Math.max(0, Math.min(pal.length - 1, k))]; };
 const INFERNO_SHIELD_CSS = `
 [data-inferno-shield-gauge]{--mh-shield-w:min(150px,38vw)}
 @keyframes mhShieldFlash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
@@ -44207,9 +44731,19 @@ const INFERNO_SHIELD_CSS = `
 @keyframes mhShieldBand{0%{opacity:0;transform:translateX(-30%)}12%{opacity:1;transform:translateX(0)}86%{opacity:1;transform:translateX(0)}100%{opacity:0;transform:translateX(12%)}}
 @keyframes mhShieldShake{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,3px) rotate(-.6deg)}40%{transform:translate(5px,-3px) rotate(.5deg)}60%{transform:translate(-4px,2px)}80%{transform:translate(3px,-2px)}}
 [data-inferno-shield-fx] *{pointer-events:none}
+@keyframes mhShieldDarkCreep{0%{opacity:0;transform:translateX(var(--from))}45%{opacity:1;transform:translateX(0)}80%{opacity:1}100%{opacity:0}}
+@keyframes mhShieldHole{0%{opacity:0;transform:translate(-50%,-50%) scale(0)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}30%{transform:translate(-50%,-50%) scale(1)}75%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(0)}}
+@keyframes mhShieldSuck{0%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--rot)) skewX(-28deg)}15%{opacity:1}100%{opacity:0;transform:translate(0,0) rotate(0deg) skewX(-28deg) scale(.2)}}
+@keyframes mhShieldRingIn{0%{opacity:0;transform:translate(-50%,-50%) scale(1.7)}25%{opacity:.85}100%{opacity:0;transform:translate(-50%,-50%) scale(.2)}}
+@keyframes mhShieldPop{0%{opacity:0;transform:skewX(-28deg) scaleX(.2)}60%{opacity:1;transform:skewX(-28deg) scaleX(1.08)}100%{opacity:1;transform:skewX(-28deg) scaleX(1)}}
+[data-inferno-shield-gauge][data-shield-entry] [data-inferno-shield-layer]{animation:mhShieldPop .26s ease-out both}
+@keyframes mhShieldEntryBar{0%{opacity:0;clip-path:inset(0 100% 0 0)}100%{opacity:1;clip-path:inset(0 0 0 0)}}
+@keyframes mhShieldEntryGather{0%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.3)}20%{opacity:1}100%{opacity:0;transform:translate(0,0) scale(.3)}}
+@keyframes mhShieldEntryShell{0%{opacity:0;transform:translate(-50%,-50%) scale(1.3)}30%{opacity:1;transform:translate(-50%,-50%) scale(1)}70%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
+@keyframes mhShieldEntryRing{0%{opacity:.95;transform:translate(-50%,-50%) scale(.6)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.45)}}
 `;
 // 層のゲージ(敵の段のいちばん上の真ん中)。上の行ほど後の層。いちばん下の残った層が、いま削っている層
-function InfernoShieldGauge({ view }) {
+function InfernoShieldGauge({ view, rule, entry = false }) {
   if (!view || !(view.total > 0)) return null;
   const rows = [];
   for (let row = 0; row < view.total; row += 1) {
@@ -44217,7 +44751,7 @@ function InfernoShieldGauge({ view }) {
     const layer = view.layers[k] || { max: 0, now: 0 };
     const alive = k >= view.broken;
     const active = k === view.broken;
-    const [c1, c2, edge] = infernoShieldColorAt(k);
+    const [c1, c2, edge] = infernoShieldColorAt(k, rule);
     const pct = layer.max > 0 ? Math.max(0, Math.min(1, layer.now / layer.max)) : 0;
     const h = 11 + Math.min(4, k);
     rows.push(
@@ -44233,10 +44767,10 @@ function InfernoShieldGauge({ view }) {
       </div>
     );
   }
-  const curColor = view.left > 0 ? infernoShieldColorAt(view.broken)[1] : '#a8a29e';
+  const curColor = view.left > 0 ? infernoShieldColorAt(view.broken, rule)[1] : '#a8a29e';
   return (<>
     <style>{INFERNO_SHIELD_CSS}</style>
-    <div data-inferno-shield-gauge={view.total} data-inferno-shield-left={view.left} aria-label={`シールド 残り${view.left}枚(全${view.total}枚)`}
+    <div data-inferno-shield-gauge={view.total} data-shield-entry={entry ? '1' : undefined} data-inferno-shield-left={view.left} aria-label={`シールド 残り${view.left}枚(全${view.total}枚)`}
       className="pointer-events-none absolute left-1/2 top-1 z-[44] flex items-start gap-1.5 [@media(max-height:640px)]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden" style={{ transform: 'translateX(-50%)' }}>
       <div className="mt-[1px] flex flex-col items-end gap-[1px] leading-none">
         {view.boss && <span data-inferno-shield-boss className="whitespace-nowrap text-[10px] font-black italic text-yellow-300" style={{ textShadow: '0 0 6px #f59e0b,0 1px 2px #000' }}>👑 BOSS</span>}
@@ -44249,17 +44783,17 @@ function InfernoShieldGauge({ view }) {
 }
 // 狭い画面(背の低い縦・横向き)のシールド: 敵のライフの棒のすぐ下に細い1本(残りの枚数・各層の小さな印・今の層の「残り / 最大」)。
 //   舞台の上に重ねると、敵の頭の上の吹き出し(「3連撃!」など)とぶつかるので、ライフの帯の中に並べる。右には敵の移動の予告が出るので左に寄せる(2026-10-31 社長「狭いときも見えるように」)
-function InfernoShieldCompact({ view }) {
+function InfernoShieldCompact({ view, rule }) {
   if (!view || !(view.total > 0)) return null;
-  const curColor = view.left > 0 ? infernoShieldColorAt(view.broken)[1] : '#a8a29e';
+  const curColor = view.left > 0 ? infernoShieldColorAt(view.broken, rule)[1] : '#a8a29e';
   const cur = view.layers[view.broken] || null;
-  const [cc1, cc2, cEdge] = view.left > 0 ? infernoShieldColorAt(view.broken) : ['#a8a29e', '#57534e', 'rgba(168,162,158,.5)'];
+  const [cc1, cc2, cEdge] = view.left > 0 ? infernoShieldColorAt(view.broken, rule) : ['#a8a29e', '#57534e', 'rgba(168,162,158,.5)'];
   const curPct = cur && cur.max > 0 ? Math.max(0, Math.min(1, cur.now / cur.max)) : 0;
   return (
     <div data-inferno-shield-compact={view.total} data-inferno-shield-left={view.left} aria-label={`シールド 残り${view.left}枚(全${view.total}枚)`}
       className="pointer-events-none mt-[3px] hidden w-max max-w-full items-center gap-1 rounded-full border border-white/15 bg-black/70 py-[1px] pl-1.5 pr-1 not-italic normal-case tracking-normal [@media(max-height:640px)]:flex [@media(orientation:landscape)_and_(max-height:520px)]:flex">
       <span className="whitespace-nowrap text-[10px] font-black leading-none text-white" style={{ textShadow: `0 0 5px ${curColor},0 1px 2px #000` }}>🛡{view.left}<small className="text-[8px] text-amber-300">/{view.total}</small></span>
-      <span className="flex items-center gap-[2px]">{view.layers.map((l, k) => { const c = infernoShieldColorAt(k); const alive = k >= view.broken; return <i key={k} data-inferno-shield-pip={k + 1} className="block h-[8px] w-[5px] rounded-[1px]" style={{ transform: 'skewX(-20deg)', background: alive ? c[1] : 'rgba(120,113,108,.6)', boxShadow: k === view.broken ? `0 0 5px ${c[1]}` : 'none' }}/>; })}</span>
+      <span className="flex items-center gap-[2px]">{view.layers.map((l, k) => { const c = infernoShieldColorAt(k, rule); const alive = k >= view.broken; return <i key={k} data-inferno-shield-pip={k + 1} className="block h-[8px] w-[5px] rounded-[1px]" style={{ transform: 'skewX(-20deg)', background: alive ? c[1] : 'rgba(120,113,108,.6)', boxShadow: k === view.broken ? `0 0 5px ${c[1]}` : 'none' }}/>; })}</span>
       {cur && view.left > 0 && <span className="relative block h-[11px] w-[min(118px,30vw)] overflow-hidden rounded-[3px]" style={{ background: 'rgba(15,10,20,.85)', border: `1px solid ${cEdge}` }}>
         <span className="absolute inset-y-0 left-0 block transition-[width] duration-500" style={{ width: `${curPct * 100}%`, background: `linear-gradient(90deg,${cc1},${cc2})` }}/>
         <span className="absolute inset-0 flex items-center justify-end whitespace-nowrap pr-1 font-mono text-[8px] font-black italic leading-none tabular-nums text-white" style={{ textShadow: '0 1px 2px #000,0 0 3px #000' }}><span className="mr-auto pl-[3px] not-italic">{INFERNO_SHIELD_MARKS[view.broken] || view.broken + 1}</span>{Math.floor(cur.now).toLocaleString()} / {Math.floor(cur.max).toLocaleString()}</span>
@@ -44272,12 +44806,13 @@ function InfernoShieldCompact({ view }) {
 //   見出しは難易度ごと(INFERNO=燃える橙 / COCYTUS=氷の水色・2026-11-01 社長「これで」)。growthPct は次の1枚が大きくなる割合(難易度の決まりから)
 const SHIELD_BADGE_THEME = Object.freeze({
   INFERNO: Object.freeze({ title: '🔥 INFERNO', titleColor: '#fde68a', titleGlow: '#f97316', bg: 'linear-gradient(180deg,#1c0a0a,#0c0a09)', sub: '#fecaca' }),
+  EREBUS: Object.freeze({ title: '🌑 EREBUS', titleColor: '#fbcfe8', titleGlow: '#db2777', bg: 'linear-gradient(180deg,#2e1065,#09090b)', sub: '#f9a8d4', ring: '#c4b5fd' }),
   COCYTUS: Object.freeze({ title: '❄ COCYTUS', titleColor: '#cffafe', titleGlow: '#22d3ee', bg: 'linear-gradient(180deg,#082f49,#020617)', sub: '#a5f3fc', ring: '#a5f3fc' }),
 });
 function InfernoShieldBadge({ view, rule = 'INFERNO', growthPct = 30 }) {
   if (!view || !(view.total > 0) || !view.boss) return null;
   const theme = SHIELD_BADGE_THEME[rule] || SHIELD_BADGE_THEME.INFERNO;
-  const col = view.left > 0 ? infernoShieldColorAt(view.broken) : ['#e7e5e4', '#78716c', '#a8a29e'];
+  const col = view.left > 0 ? infernoShieldColorAt(view.broken, rule) : ['#e7e5e4', '#78716c', '#a8a29e'];
   return (
     <div data-inferno-shield-badge={view.left} aria-hidden="true"
       className="pointer-events-none absolute left-2 top-[96px] z-[43] w-[84px] rounded-[14px] px-1 pb-1 pt-1.5 text-center [@media(max-height:640px)]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
@@ -44291,9 +44826,66 @@ function InfernoShieldBadge({ view, rule = 'INFERNO', growthPct = 30 }) {
     </div>
   );
 }
+// 登場の演出(2026-11-04 社長「モンスターが現れてライフが表示されてシールドを纏って順にシールドゲージが増えてく」)。冥界の段(INFERNO・EREBUS・COCYTUS)の層のシールドを持つ敵が出たとき。
+//   long: ライフの棒が伸びる → 段の色の光が集まって敵を包む殻になる → 層が1枚ずつ積み上がる(約3秒)。最初のWAVEとボスのWAVEだけ。画面をタップしたら短い形へ飛ぶ
+//   short: ほかのWAVE・クイック・オート。層が一度に出て、光の輪が1回広がるだけ(約0.6秒)
+//   軽め・最軽量・省エネ表示では出さない(呼ぶ側が出さない)。積み上がった枚数は onShown で呼ぶ側へ返し、ゲージはその枚数だけ描く
+const SHIELD_ENTRY_LOOK = Object.freeze({
+  INFERNO: Object.freeze({ glow: '#f97316', light: '#fde68a', dim: 'rgba(127,29,29,.75)' }),
+  EREBUS: Object.freeze({ glow: '#db2777', light: '#f9a8d4', dim: 'rgba(20,2,16,.82)' }),
+  COCYTUS: Object.freeze({ glow: '#22d3ee', light: '#ecfeff', dim: 'rgba(8,47,73,.75)' }),
+});
+const SHIELD_ENTRY_LAYER_MS = 260;
+const SHIELD_ENTRY_LAYER_START_MS = 1400;
+function ShieldEntryFx({ entry, onShown, onDone }) {
+  const look = SHIELD_ENTRY_LOOK[entry.rule] || SHIELD_ENTRY_LOOK.INFERNO;
+  const [mode, setMode] = React.useState(null); // 説明の窓(極限ルール発動など)が開いている間は始めない
+  const [center, setCenter] = React.useState(null);
+  const timersRef = React.useRef([]);
+  const clearTimers = () => { timersRef.current.forEach(t => clearTimeout(t)); timersRef.current = []; };
+  const later = (ms, f) => { timersRef.current.push(setTimeout(f, ms)); };
+  React.useEffect(() => {
+    let waited = 0;
+    const tryStart = () => {
+      const blocking = typeof document !== 'undefined' && document.querySelector('[role="dialog"][aria-modal="true"]');
+      if (blocking && waited < 30000) { waited += 250; later(250, tryStart); return; }
+      const ring = typeof document !== 'undefined' ? document.querySelector('[data-enemy-ring]') : null;
+      const r = ring && ring.getBoundingClientRect();
+      setCenter(r && r.width > 0 ? { x: r.left + r.width / 2, y: r.top + r.height / 2, w: Math.max(120, r.width) } : { x: (typeof window !== 'undefined' ? window.innerWidth : 390) / 2, y: (typeof window !== 'undefined' ? window.innerHeight : 800) * 0.3, w: 180 });
+      const m = waited >= 30000 ? 'short' : entry.mode;
+      setMode(m);
+      if (m === 'short') { onShown(entry.total); later(650, () => onDone(entry.id)); return; }
+      for (let n = 1; n <= entry.total; n += 1) later(SHIELD_ENTRY_LAYER_START_MS + (n - 1) * SHIELD_ENTRY_LAYER_MS, () => onShown(n));
+      later(SHIELD_ENTRY_LAYER_START_MS + entry.total * SHIELD_ENTRY_LAYER_MS + 350, () => onDone(entry.id));
+    };
+    tryStart();
+    return clearTimers;
+  }, [entry.id]);
+  const skip = () => { clearTimers(); onShown(entry.total); setMode('short'); later(650, () => onDone(entry.id)); };
+  if (!mode || !center) return null;
+  const gather = mode === 'long' ? Array.from({ length: 14 }, (_, k) => { const a = k / 14 * Math.PI * 2; const d = center.w * 1.1; return { k, dx: `${Math.round(Math.cos(a) * d)}px`, dy: `${Math.round(Math.sin(a) * d * 0.8)}px` }; }) : [];
+  return ReactDOM.createPortal(
+    <div data-shield-entry-fx={mode} data-shield-entry-rule={entry.rule} className="fixed inset-0 z-[9300] overflow-hidden" style={{ pointerEvents: mode === 'long' ? 'auto' : 'none' }}
+      onPointerDown={mode === 'long' ? (e) => { e.stopPropagation(); skip(); } : undefined} aria-hidden="true">
+      <style>{INFERNO_SHIELD_CSS}</style>
+      {mode === 'long' && <>
+        <style>{'[data-enemy-bar]{animation:mhShieldEntryBar .45s ease-out both}'}</style>
+        <div className="pointer-events-none absolute inset-0" style={{ boxShadow: `inset 0 0 90px 30px ${look.dim}`, animation: 'mhShieldVignette 1.4s .45s ease-out both' }}/>
+        <div className="pointer-events-none absolute" style={{ left: center.x, top: center.y, width: 0, height: 0 }}>
+          {gather.map(g => <i key={g.k} className="absolute block h-[10px] w-[10px] rounded-full" style={{ '--dx': g.dx, '--dy': g.dy, background: look.light, boxShadow: `0 0 12px 4px ${look.glow}`, animation: 'mhShieldEntryGather .5s .5s ease-in both' }}/>)}
+        </div>
+        <div className="pointer-events-none absolute" style={{ left: center.x, top: center.y, width: center.w * 1.2, height: center.w * 1.15, borderRadius: '46%', border: `3px solid ${look.light}`, background: `radial-gradient(ellipse,transparent 55%,${look.glow}55)`, boxShadow: `0 0 26px ${look.glow},inset 0 0 22px ${look.glow}`, animation: 'mhShieldEntryShell 1.2s .9s ease-out both' }}/>
+      </>}
+      {mode === 'short' && <div className="pointer-events-none absolute rounded-full" style={{ left: center.x, top: center.y, width: center.w * 1.3, height: center.w * 1.3, border: `3px solid ${look.light}`, boxShadow: `0 0 24px ${look.glow}`, animation: 'mhShieldEntryRing .5s ease-out both' }}/>}
+    </div>,
+    document.body
+  );
+}
 // 割れた瞬間の演出。kind: mid(1〜3枚目・攻撃が上がる)/ rush(必殺技が連撃に)/ final(5枚目・最終形態)
 //   軽め・最軽量・省エネ表示では、溜めと破片を出さず帯だけ
-function InfernoShieldBreakFx({ fx, lite, onDone }) {
+function InfernoShieldBreakFx({ fx, lite, onDone, rule }) {
+  // EREBUS は「闇に呑まれる」(2026-11-04 社長「案1」): 白く光らず、縁から黒い靄 → 黒い穴に吸い込まれて砕ける → 黒紫の帯
+  const dark = rule === 'EREBUS';
   const dur = lite ? 1700 : fx.kind === 'final' ? 3600 : fx.kind === 'rush' ? 3300 : 2900;
   React.useEffect(() => { const t = setTimeout(() => onDone && onDone(fx.id), dur); return () => clearTimeout(t); }, [fx.id]);
   const final = fx.kind === 'final';
@@ -44312,10 +44904,31 @@ function InfernoShieldBreakFx({ fx, lite, onDone }) {
           title: `🔥 ${fx.name} 最終形態!`, sub: `シールドが全部割れた。必殺技が${fx.hits}連撃に・攻撃力 +${fx.atkPct}%`, big: null }
       : { cls: 'mh-shield-band-mid', bg: 'linear-gradient(90deg,rgba(69,10,10,.96),rgba(185,28,28,.96) 50%,rgba(69,10,10,.96))', line: '#fb923c', glow: 'rgba(239,68,68,.8)',
           title: `🔥 ${fx.name}が怒った!`, sub: `${fx.left === 0 ? 'シールドが全部割れた。' : ''}攻撃力 +${fx.atkPct}%`, big: null };
+  const darkBand = !dark ? null : fx.kind === 'rush'
+    ? { bg: 'linear-gradient(90deg,rgba(2,0,12,.97),rgba(91,33,182,.97) 50%,rgba(2,0,12,.97))', line: '#c4b5fd', glow: 'rgba(124,58,237,.9)' }
+    : final
+      ? { bg: 'linear-gradient(90deg,rgba(2,0,12,.98),rgba(112,26,117,.97) 50%,rgba(2,0,12,.98))', line: '#facc15', glow: 'rgba(219,39,119,.85)', title: `🌑 ${fx.name} 最終形態!` }
+      : { bg: 'linear-gradient(90deg,rgba(2,0,12,.97),rgba(76,29,149,.97) 50%,rgba(2,0,12,.97))', line: '#c4b5fd', glow: 'rgba(124,58,237,.9)', title: `🌑 ${fx.name}が闇をまとった!` };
+  const bandLook = darkBand ? { ...band, ...darkBand } : band;
+  const creep = dark && !lite ? Array.from({ length: 8 }, (_, k) => ({ k, left: k % 2 === 1, top: 8 + k * 11, len: 34 + (k * 37 % 22), h: 16 + (k % 3) * 8 })) : [];
   return ReactDOM.createPortal(
-    <div data-inferno-shield-fx={fx.kind} data-inferno-shield-broken={fx.broken} className="fixed inset-0 z-[9400] overflow-hidden pointer-events-none" aria-live="polite">
+    <div data-inferno-shield-fx={fx.kind} data-inferno-shield-look={dark ? 'EREBUS' : undefined} data-inferno-shield-broken={fx.broken} className="fixed inset-0 z-[9400] overflow-hidden pointer-events-none" aria-live="polite">
       <style>{INFERNO_SHIELD_CSS}</style>
-      {!lite && <>
+      {!lite && dark && <>
+        <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 120px 60px rgba(2,0,12,.92)', background: 'radial-gradient(ellipse at 50% 30%,transparent 30%,rgba(30,10,60,.55) 80%)', animation: 'mhShieldVignette 1.6s ease-out both' }}/>
+        {creep.map(c => <i key={c.k} className="absolute block rounded-full" style={{ top: `${c.top}%`, [c.left ? 'left' : 'right']: 0, width: `${c.len}vw`, height: `${c.h}px`, '--from': c.left ? '-100%' : '100%', background: `linear-gradient(${c.left ? 90 : 270}deg,rgba(2,0,12,.95),rgba(76,29,149,.7) 70%,rgba(167,139,250,0))`, filter: 'blur(3px)', animation: 'mhShieldDarkCreep 1.4s ease-out both' }}/>)}
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 50% 30%,rgba(2,0,12,.98) 0,rgba(2,0,12,.9) 12%,rgba(76,29,149,.55) 38%,rgba(2,0,12,.6) 85%)', animation: `mhShieldFlash ${final ? 1.3 : 1}s .8s ease-out both` }}/>
+        <div className="absolute left-1/2 top-[30%] rounded-full" style={{ width: final ? 150 : 110, height: final ? 150 : 110, background: '#000', boxShadow: `0 0 0 4px ${final ? '#facc15' : '#a78bfa'},0 0 40px 16px rgba(124,58,237,.95),inset 0 0 30px rgba(167,139,250,.6)`, animation: 'mhShieldHole 1.5s .7s ease-out both' }}/>
+        {[0, 1, 2, ...(final ? [3] : [])].map(n => <div key={n} className="absolute left-1/2 top-[30%] rounded-full" style={{ width: `${180 + n * 70}px`, height: `${180 + n * 70}px`, border: `2px dashed rgba(196,181,253,${.75 - n * .14})`, animation: `mhShieldRingIn 1s ${.8 + n * .1}s ease-in both` }}/>)}
+        <div className="absolute left-1/2 top-[30%]" style={{ width: 0, height: 0 }}>
+          {shards.map(s => <i key={s.k} className="absolute block" style={{ '--dx': s.dx, '--dy': s.dy, '--rot': s.rot, width: `${s.w}px`, height: `${s.h}px`, background: '#05020c', border: '1px solid #c4b5fd', boxShadow: '0 0 6px #7c3aed', animation: 'mhShieldSuck 1s .85s cubic-bezier(.5,0,.8,.4) both' }}/>)}
+        </div>
+        <div className="absolute left-1/2 top-[22%] whitespace-nowrap text-center font-black italic leading-none"
+          style={{ color: '#0b0614', fontSize: final ? 'min(46px,11.5vw)' : 'min(42px,11vw)', WebkitTextStroke: '2px #c4b5fd', textShadow: '0 0 18px #a855f7,0 0 40px #7c3aed', animation: `mhShieldWord 1.5s .9s ease-out both` }}>
+          {final ? <>ALL SHADOW<br/>BREAK!!</> : <>SHADOW<br/>BREAK!!</>}
+        </div>
+      </>}
+      {!lite && !dark && <>
         <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 90px 34px rgba(127,29,29,.8)', animation: 'mhShieldVignette 1.3s ease-out both' }}/>
         <div className="absolute left-1/2 top-[22%]" style={{ width: 0, height: 0 }}>
           {gather.map(g => <i key={g.k} className="absolute block h-[8px] w-[8px] rounded-full bg-white" style={{ '--dx': g.dx, '--dy': g.dy, boxShadow: '0 0 10px 4px #fbbf24', animation: 'mhShieldGather .6s .2s ease-in both' }}/>)}
@@ -44331,11 +44944,11 @@ function InfernoShieldBreakFx({ fx, lite, onDone }) {
         </div>
       </>}
       <div data-inferno-shield-band={fx.kind} className="absolute inset-x-0 top-[38%] px-3.5 py-2.5"
-        style={{ background: band.bg, borderTop: `3px solid ${band.line}`, borderBottom: `3px solid ${band.line}`, boxShadow: `0 0 26px ${band.glow}`, animation: `mhShieldBand ${bandLen}s ${bandDelay}s ease-out both` }}>
+        style={{ background: bandLook.bg, borderTop: `3px solid ${bandLook.line}`, borderBottom: `3px solid ${bandLook.line}`, boxShadow: `0 0 26px ${bandLook.glow}`, animation: `mhShieldBand ${bandLen}s ${bandDelay}s ease-out both` }}>
         <div className="flex items-center gap-2.5">
           {band.big && <div className="shrink-0 text-[42px] font-black italic leading-none text-white" style={{ WebkitTextStroke: '2px #701a75', textShadow: '0 0 16px #e879f9' }}>{band.big}</div>}
           <div className="min-w-0">
-            <div className="text-[20px] font-black italic leading-tight" style={{ color: final ? '#fef08a' : fx.kind === 'rush' ? '#fdf4ff' : '#fecaca', textShadow: '0 2px 0 #7c2d12' }}>{band.title}</div>
+            <div className="text-[20px] font-black italic leading-tight" style={{ color: final ? '#fef08a' : fx.kind === 'rush' || dark ? '#fdf4ff' : '#fecaca', textShadow: `0 2px 0 ${dark ? '#1e1b4b' : '#7c2d12'}` }}>{bandLook.title}</div>
             <div className="mt-1 text-[13px] font-extrabold leading-snug text-white">{band.sub}</div>
           </div>
         </div>
@@ -44619,6 +45232,26 @@ function BattleScreen({
   //   (2026-10-31 社長「ゲージの下の層にかからないように」)。背の低い画面はゲージがライフの帯の中の細い1本なので16pxだけ、横向きは画面が低く上の飾り(✨☠️)が細い1本にかかるので56px下げる
   const infernoFloatShift = infernoShellView?.total>0 ? infernoShellView.total*15+8 : 0;
   const infernoFloatTop = infernoFloatShift ? `calc(11% + ${infernoFloatShift}px)` : '11%';
+  // 登場の演出(ShieldEntryFx)。敵が替わったら1回。途中から(再開など・もう割れている)・軽め/最軽量/省エネ表示では出さない
+  const shellEntryLiteView = !!(ecoBattleView||liteBattleView||fxLoad==='LIGHT'||fxLoad==='MINIMAL');
+  const [shellEntry, setShellEntry] = useState(null);
+  const [shellEntryShown, setShellEntryShown] = useState(0);
+  const shellEntryKeyRef = useRef(null);
+  useEffect(()=>{
+    const view=infernoShellView;
+    if(!(view?.total>0)) return;
+    const key=`${wave}:${enemy?.id||''}`;
+    if(shellEntryKeyRef.current===key) return;
+    shellEntryKeyRef.current=key;
+    if(shellEntryLiteView||view.broken>0||!SHIELD_ENTRY_LOOK[infernoShellRule]) return;
+    const mode=(isQuickMode(runMode)||autoBattle)?'short':((wave===1||view.boss)?'long':'short');
+    setShellEntryShown(0);
+    setShellEntry({ id:key, mode, total:view.total, rule:infernoShellRule });
+  },[infernoShellView?.total,wave,enemy?.id]);
+  const shellEntryActive = !!shellEntry && shellEntry.id===`${wave}:${enemy?.id||''}` && shellEntryShown<(infernoShellView?.total||0);
+  const shellGaugeView = shellEntryActive && infernoShellView
+    ? { ...infernoShellView, total:shellEntryShown, layers:infernoShellView.layers.slice(0,shellEntryShown), left:Math.max(0,shellEntryShown-infernoShellView.broken), boss:false }
+    : infernoShellView;
   const infernoShellSeqRef = useRef({ key:null, seq:0 });
   useEffect(()=>{
     const view=infernoShellView;
@@ -45076,10 +45709,10 @@ function BattleScreen({
             <div data-enemy-hpbar className="relative h-[14px] overflow-hidden rounded-full border-2 border-white/25 bg-slate-950" style={{boxShadow:'inset 0 2px 6px rgba(0,0,0,.85)'}}>
               {/* ★幅(width)ではなく横の縮み(scaleX)で減らす。幅を変えると1秒のあいだ毎コマ組み直しが起き、スマホでライフの減り方がかくつく
                   (2026-09-24 ユーザー指摘「敵のライフの減り方とかかくつき」) */}
-              <div className="h-full w-full origin-left transition-transform duration-1000" data-enemy-hp-tone={infernoShellView?.total>0?'inferno-body':undefined} style={{transform:`scaleX(${Math.min(1,Math.max(0,enemy.hp)/(enemy.maxHp||1))})`,backgroundImage:infernoShellView?.total>0?INFERNO_BODY_HP_GRADIENT:'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'}}></div>
+              <div className="h-full w-full origin-left transition-transform duration-1000" data-enemy-hp-tone={infernoShellView?.total>0?'inferno-body':undefined} style={{transform:`scaleX(${Math.min(1,Math.max(0,enemy.hp)/(enemy.maxHp||1))})`,backgroundImage:infernoShellView?.total>0?shieldBodyHpGradient(infernoShellRule):'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'}}></div>
               <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1/2" style={{background:'linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))'}}></div>
             </div>
-            {infernoShellView?.total>0&&<InfernoShieldCompact view={infernoShellView}/>}
+            {shellGaugeView?.total>0&&<InfernoShieldCompact view={shellGaugeView} rule={infernoShellRule}/>}
             {/* 敵にかかっているデバフの詳細(2026-10-06 ユーザー指示「全部ウンディーネの絶氷の位置にまとめて、簡易表示して押したら詳細が見える」)。
                 名前の横の簡易表示を押したときだけ開く。デバフが無くなったら、開いたままでも何も出さない */}
             {enemyDebuffOpen&&Array.isArray(enemyDebuffs)&&enemyDebuffs.length>0&&(
@@ -45172,9 +45805,10 @@ function BattleScreen({
               lift={battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)}/>;
           })()}
           {/* INFERNOのボスの層のシールド: ゲージ(上の真ん中)と大きな札(左)。AIコピーの小窓が出ている間は札を出さない(同じ左に重なるので) */}
-          {infernoShellView?.total>0&&<InfernoShieldGauge view={infernoShellView}/>}
-          {infernoShellView?.total>0&&!copyFloat&&<InfernoShieldBadge view={infernoShellView} rule={infernoShellRule} growthPct={Math.round((Number(extremeWaveStageRules(infernoShellRule,wave)?.layerGrowth)||0)*100)}/>}
-          {infernoShellFx&&<InfernoShieldBreakFx key={infernoShellFx.id} fx={infernoShellFx} lite={!!(ecoBattleView||liteBattleView||fxLoad==='LIGHT'||fxLoad==='MINIMAL')} onDone={(id)=>setInfernoShellFx(cur=>cur&&cur.id===id?null:cur)}/>}
+          {shellGaugeView?.total>0&&<InfernoShieldGauge view={shellGaugeView} rule={infernoShellRule} entry={shellEntryActive}/>}
+          {shellEntry&&<ShieldEntryFx key={shellEntry.id} entry={shellEntry} onShown={(n)=>setShellEntryShown(v=>Math.max(v,n))} onDone={(id)=>setShellEntry(cur=>cur&&cur.id===id?null:cur)}/>}
+          {infernoShellView?.total>0&&!shellEntryActive&&!copyFloat&&<InfernoShieldBadge view={infernoShellView} rule={infernoShellRule} growthPct={Math.round((Number(extremeWaveStageRules(infernoShellRule,wave)?.layerGrowth)||0)*100)}/>}
+          {infernoShellFx&&<InfernoShieldBreakFx key={infernoShellFx.id} fx={infernoShellFx} rule={infernoShellRule} lite={!!(ecoBattleView||liteBattleView||fxLoad==='LIGHT'||fxLoad==='MINIMAL')} onDone={(id)=>setInfernoShellFx(cur=>cur&&cur.id===id?null:cur)}/>}
           {battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)&&<button data-soul-battle-effects-button type="button" onClick={()=>setShowSoulBattleEffects(true)} aria-label="魂格効果" className="absolute right-2 top-[56px] z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7 [@media(max-height:640px)]:rounded-full [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:top-auto [@media(max-height:640px)]:bottom-1 [@media(max-height:640px)]:right-auto [@media(max-height:640px)]:left-2" style={{boxShadow:'0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'}}><Sparkles size={17} className="text-sky-300"/><span className="text-[10px] font-black leading-none text-white [@media(max-height:640px)]:sr-only">魂格効果</span></button>}
           {/* 敵が次に何をしてくるかの札(2026-09-19・ユーザー指摘「敵の行動予測が見えない」)。
               ★置き場所は**敵の絵の右下**(2026-09-22 ユーザー指示「敵の行動予測は右下に出るほうが
@@ -46743,34 +47377,40 @@ const COCYTUS_REVIVE_CSS = `
 @keyframes mhIceAura{0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}40%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}}
 @keyframes mhIceBand{0%{opacity:0;transform:translateX(-30%)}15%{opacity:1;transform:translateX(0)}100%{opacity:1;transform:translateX(0)}}
 `;
-function CocytusReviveFx({ stage, lite, name }) {
+// EREBUS のムーの蘇り(2026-11-04)は、同じ3段の形を冥界の闇の色で出す(凍る → 闇に呑まれる・砕ける → 蘇る)
+const REVIVE_FX_LOOK = Object.freeze({
+  COCYTUS: Object.freeze({ icon: '❄', frost: '165,243,252', block: 'linear-gradient(135deg,rgba(236,254,255,.55),rgba(103,232,249,.25) 45%,rgba(14,116,144,.35))', blockEdge: 'rgba(207,250,254,.9)', blockGlow: '0 0 30px rgba(103,232,249,.9),inset 0 0 30px rgba(255,255,255,.6)', sfx: '……ピキ…ピキキ…', sfxColor: '#ecfeff', sfxStroke: '#0e7490', sfxGlow: '#22d3ee', flash: (t) => `radial-gradient(circle at 50% 30%,rgba(255,255,255,.97),rgba(165,243,252,${.6 + t * .1}) ${25 + t * 5}%,rgba(8,47,73,${.3 + t * .15}) 80%)`, rings: ['rgba(103,232,249,.95)', 'rgba(255,255,255,.9)', 'rgba(250,204,21,.85)'], shard: 'linear-gradient(135deg,#ffffff,#a5f3fc 50%,#0891b2)', shardGlow: '#67e8f9', word: ['FROZEN', 'BREAK!!'], bigWord: ['ABSOLUTE', 'ZERO!!'], wordStroke: '#0e7490', wordGlow: '0 0 18px #22d3ee,0 0 40px #0891b2', wordColor: '#fff', band: 'linear-gradient(90deg,rgba(8,47,73,.97),rgba(14,116,144,.97) 50%,rgba(8,47,73,.97))', bandEdge: '#a5f3fc', bandGlow: 'rgba(34,211,238,.85)', bandTitle: '#ecfeff', bandShadow: '#164e63' }),
+  EREBUS: Object.freeze({ icon: '🌑', frost: '46,16,101', block: 'radial-gradient(circle,rgba(2,0,12,.92),rgba(46,16,101,.75) 60%,rgba(219,39,119,.35))', blockEdge: 'rgba(249,168,212,.9)', blockGlow: '0 0 30px rgba(219,39,119,.8),inset 0 0 30px rgba(124,58,237,.7)', sfx: '……ズズ…ズズズ…', sfxColor: '#fbcfe8', sfxStroke: '#2e1065', sfxGlow: '#db2777', flash: (t) => `radial-gradient(circle at 50% 30%,rgba(2,0,12,.98),rgba(76,29,149,${.6 + t * .1}) ${25 + t * 5}%,rgba(80,7,36,${.35 + t * .15}) 80%)`, rings: ['rgba(249,168,212,.95)', 'rgba(167,139,250,.9)', 'rgba(250,204,21,.85)'], shard: 'linear-gradient(135deg,#1e1b4b,#05020c 60%,#500724)', shardGlow: '#db2777', word: ['SHADOW', 'BREAK!!'], bigWord: ['SHADOW', 'BREAK!!'], wordStroke: '#f9a8d4', wordGlow: '0 0 18px #db2777,0 0 40px #7c3aed', wordColor: '#0b0614', band: 'linear-gradient(90deg,rgba(2,0,12,.97),rgba(112,26,117,.97) 50%,rgba(2,0,12,.97))', bandEdge: '#f9a8d4', bandGlow: 'rgba(219,39,119,.85)', bandTitle: '#fce7f3', bandShadow: '#2e1065' }),
+});
+function CocytusReviveFx({ stage, lite, name, rule }) {
+  const L = REVIVE_FX_LOOK[rule] || REVIVE_FX_LOOK.COCYTUS;
   const tier = COCYTUS_REVIVE_TIER[stage] || 1;
   const big = tier === 3;
   const who = String(name || '');
-  const title = tier === 3 ? `❄ ${who} 真・覚醒!` : `❄ ${who} 復活!`;
+  const title = tier === 3 ? `${L.icon} ${who} 真・覚醒!` : `${L.icon} ${who} 復活!`;
   const shards = lite ? [] : Array.from({ length: 14 + tier * 10 }, (_, k) => {
     const n = 14 + tier * 10; const ang = k / n * Math.PI * 2 + (k % 2) * 0.3; const d = 70 + (k * 37 % (120 + tier * 40));
     return { k, dx: `${Math.round(Math.cos(ang) * d)}px`, dy: `${Math.round(Math.sin(ang) * d)}px`, rot: `${(k * 53) % 360}deg`, w: 14 + (k * 13 % 30), h: 10 + (k * 7 % 16) };
   });
-  const ringCols = ['rgba(103,232,249,.95)', 'rgba(255,255,255,.9)', 'rgba(250,204,21,.85)'];
+  const ringCols = L.rings;
   return (
-    <div data-cocytus-revive-fx={stage} data-cocytus-revive-tier={tier} className="pointer-events-none fixed inset-0 overflow-hidden" style={{ zIndex: 91001 }}>
+    <div data-cocytus-revive-fx={stage} data-cocytus-revive-tier={tier} data-revive-fx-look={rule === 'EREBUS' ? 'EREBUS' : 'COCYTUS'} className="pointer-events-none fixed inset-0 overflow-hidden" style={{ zIndex: 91001 }}>
       <style>{COCYTUS_REVIVE_CSS}</style>
       {!lite && <>
-        <div className="absolute inset-0" style={{ boxShadow: `inset 0 0 ${60 + tier * 30}px ${20 + tier * 14}px rgba(165,243,252,${.45 + tier * .12})`, animation: 'mhIceFrost 1s ease-out both' }}/>
-        <div className="absolute left-1/2 top-[30%]" style={{ width: 'min(58vw,240px)', height: 'min(58vw,240px)', borderRadius: big ? '18%' : '28%', background: 'linear-gradient(135deg,rgba(236,254,255,.55),rgba(103,232,249,.25) 45%,rgba(14,116,144,.35))', border: '3px solid rgba(207,250,254,.9)', boxShadow: '0 0 30px rgba(103,232,249,.9),inset 0 0 30px rgba(255,255,255,.6)', clipPath: 'polygon(8% 12%,40% 0,72% 8%,100% 30%,94% 70%,70% 100%,28% 96%,0 66%)', animation: 'mhIceBlock 1s ease-out both,mhIceFlash .4s .95s reverse both' }}/>
-        <div className="absolute left-1/2 top-[48%] whitespace-nowrap font-black italic" style={{ transform: 'translateX(-50%)', fontSize: big ? 26 : 22, color: '#ecfeff', WebkitTextStroke: '1px #0e7490', textShadow: '0 0 12px #22d3ee', animation: 'mhIceFlash 1s .1s ease-out both' }}>……ピキ…ピキキ…</div>
-        <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 50% 30%,rgba(255,255,255,.97),rgba(165,243,252,${.6 + tier * .1}) ${25 + tier * 5}%,rgba(8,47,73,${.3 + tier * .15}) 80%)`, animation: 'mhIceFlash .9s 1s ease-out both' }}/>
+        <div className="absolute inset-0" style={{ boxShadow: `inset 0 0 ${60 + tier * 30}px ${20 + tier * 14}px rgba(${L.frost},${.45 + tier * .12})`, animation: 'mhIceFrost 1s ease-out both' }}/>
+        <div className="absolute left-1/2 top-[30%]" style={{ width: 'min(58vw,240px)', height: 'min(58vw,240px)', borderRadius: big ? '18%' : '28%', background: L.block, border: `3px solid ${L.blockEdge}`, boxShadow: L.blockGlow, clipPath: 'polygon(8% 12%,40% 0,72% 8%,100% 30%,94% 70%,70% 100%,28% 96%,0 66%)', animation: 'mhIceBlock 1s ease-out both,mhIceFlash .4s .95s reverse both' }}/>
+        <div className="absolute left-1/2 top-[48%] whitespace-nowrap font-black italic" style={{ transform: 'translateX(-50%)', fontSize: big ? 26 : 22, color: L.sfxColor, WebkitTextStroke: `1px ${L.sfxStroke}`, textShadow: `0 0 12px ${L.sfxGlow}`, animation: 'mhIceFlash 1s .1s ease-out both' }}>{L.sfx}</div>
+        <div className="absolute inset-0" style={{ background: L.flash(tier), animation: 'mhIceFlash .9s 1s ease-out both' }}/>
         {Array.from({ length: tier }, (_, n) => <div key={n} className="absolute left-1/2 top-[30%] rounded-full" style={{ width: `${200 + n * 90}px`, height: `${200 + n * 90}px`, border: `${6 - n}px solid ${ringCols[n]}`, boxShadow: `0 0 30px 10px ${ringCols[n]}`, animation: `mhIceRing 1s ${1 + n * .12}s ease-out both` }}/>)}
         <div className="absolute left-1/2 top-[30%]" style={{ width: 0, height: 0 }}>
-          {shards.map(s => <i key={s.k} className="absolute block" style={{ '--dx': s.dx, '--dy': s.dy, '--rot': s.rot, width: `${s.w}px`, height: `${s.h}px`, background: 'linear-gradient(135deg,#ffffff,#a5f3fc 50%,#0891b2)', clipPath: 'polygon(0 30%,70% 0,100% 60%,30% 100%)', boxShadow: '0 0 8px #67e8f9', animation: 'mhIceShard 1s 1s cubic-bezier(.2,.7,.3,1) both' }}/>)}
+          {shards.map(s => <i key={s.k} className="absolute block" style={{ '--dx': s.dx, '--dy': s.dy, '--rot': s.rot, width: `${s.w}px`, height: `${s.h}px`, background: L.shard, clipPath: 'polygon(0 30%,70% 0,100% 60%,30% 100%)', boxShadow: `0 0 8px ${L.shardGlow}`, animation: 'mhIceShard 1s 1s cubic-bezier(.2,.7,.3,1) both' }}/>)}
         </div>
-        <div className="absolute left-1/2 top-[24%] whitespace-nowrap text-center font-black italic leading-none text-white" style={{ fontSize: big ? 'min(46px,12vw)' : 'min(40px,10.5vw)', WebkitTextStroke: '2px #0e7490', textShadow: '0 0 18px #22d3ee,0 0 40px #0891b2', animation: 'mhIceWord 1.3s 1s ease-out both' }}>{big ? <>ABSOLUTE<br/>ZERO!!</> : <>FROZEN<br/>BREAK!!</>}</div>
+        <div className="absolute left-1/2 top-[24%] whitespace-nowrap text-center font-black italic leading-none" style={{ color: L.wordColor, fontSize: big ? 'min(46px,12vw)' : 'min(40px,10.5vw)', WebkitTextStroke: `2px ${L.wordStroke}`, textShadow: L.wordGlow, animation: 'mhIceWord 1.3s 1s ease-out both' }}>{(big ? L.bigWord : L.word)[0]}<br/>{(big ? L.bigWord : L.word)[1]}</div>
         {Array.from({ length: tier }, (_, n) => <div key={`a${n}`} className="absolute left-1/2 top-[36%] rounded-[50%]" style={{ width: `${180 + n * 60}px`, height: `${50 + n * 16}px`, border: `3px solid ${ringCols[n]}`, boxShadow: `0 0 22px ${ringCols[n]}`, animation: `mhIceAura .7s ${1.9 + n * .1}s ease-out both` }}/>)}
       </>}
       <div data-cocytus-revive-band={tier} className="absolute inset-x-0 top-[42%] px-3.5 py-2.5"
-        style={{ background: 'linear-gradient(90deg,rgba(8,47,73,.97),rgba(14,116,144,.97) 50%,rgba(8,47,73,.97))', borderTop: `3px solid ${big ? '#facc15' : '#a5f3fc'}`, borderBottom: `3px solid ${big ? '#facc15' : '#a5f3fc'}`, boxShadow: '0 0 26px rgba(34,211,238,.85)', animation: `mhIceBand .5s ${lite ? 0 : 1.9}s ease-out both` }}>
-        <div className="font-black italic" style={{ fontSize: big ? 22 : 20, color: big ? '#fef08a' : '#ecfeff', textShadow: '0 2px 0 #164e63' }}>{title}</div>
+        style={{ background: L.band, borderTop: `3px solid ${big ? '#facc15' : L.bandEdge}`, borderBottom: `3px solid ${big ? '#facc15' : L.bandEdge}`, boxShadow: `0 0 26px ${L.bandGlow}`, animation: `mhIceBand .5s ${lite ? 0 : 1.9}s ease-out both` }}>
+        <div className="font-black italic" style={{ fontSize: big ? 22 : 20, color: big ? '#fef08a' : L.bandTitle, textShadow: `0 2px 0 ${L.bandShadow}` }}>{title}</div>
       </div>
     </div>
   );
@@ -46787,7 +47427,7 @@ function EnemyRevivalReveal({
     const root = typeof document !== 'undefined' ? document.querySelector('[data-fx-load]') : null;
     const lite = !!root && (root.getAttribute('data-fx-load') === 'LIGHT' || root.getAttribute('data-fx-load') === 'MINIMAL' || (root.getAttribute('data-eco-view') || 'off') !== 'off');
     const enemyName = typeof document !== 'undefined' ? (document.querySelector('[data-enemy-bar] .truncate')?.textContent || '') : '';
-    return <CocytusReviveFx stage={stage} lite={lite} name={enemyName}/>;
+    return <CocytusReviveFx stage={stage} lite={lite} name={enemyName} rule={enemyRevivalReveal.rule || specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty)}/>;
   }
   return (
 <div data-extreme-revival-reveal className="fixed inset-0 flex items-center justify-center p-5 text-center" style={{zIndex:91000,background:'radial-gradient(circle,rgba(51,65,85,.82),rgba(2,6,23,.98))'}} role="dialog" aria-modal="true" aria-label="死者の再起">
@@ -50556,12 +51196,13 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhbt-d-NIGHTMARE{--d-name:#c7d2fe;--d-bg:radial-gradient(90% 55% at 50% 0%,rgba(129,140,248,.45),transparent 62%),linear-gradient(160deg,#1e1b4b,#0b0a24 60%,#020210);--d-mark:rgba(165,180,252,.22);--d-shine:2.4s;--d-ring:#818cf8;--d-ringw:4px;--d-eyebrow:#c7d2fe;--d-go:#c7d2fe}
 .mhbt-d-CHAOS{--d-name:#fbcfe8;--d-bg:radial-gradient(70% 50% at 15% 10%,rgba(236,72,153,.55),transparent 65%),radial-gradient(70% 50% at 90% 95%,rgba(34,211,238,.5),transparent 65%),linear-gradient(160deg,#1a0420,#05010a);--d-mark:rgba(255,255,255,.18);--d-shine:2.1s;--d-ring:#f472b6;--d-ringw:4px;--d-eyebrow:#a5f3fc;--d-go:#fbcfe8}
 .mhbt-d-ULTIMATE{--d-name:#f1f5f9;--d-bg:radial-gradient(90% 55% at 50% 0%,rgba(255,255,255,.35),transparent 60%),linear-gradient(160deg,#334155,#0f172a 55%,#000);--d-mark:rgba(255,255,255,.22);--d-shine:1.9s;--d-ring:#f8fafc;--d-ringw:4px;--d-eyebrow:#e2e8f0;--d-sheen:rgba(255,255,255,.55);--d-go:#e2e8f0}
-.mhbt-d-INFINITY,.mhbt-d-GOD,.mhbt-d-RAGNAROK,.mhbt-d-HELHEIM,.mhbt-d-ETERNAL,.mhbt-d-INFERNO,.mhbt-d-COCYTUS{--d-name:#fef08a;--d-name:#99f6e4;--d-deep:rgba(250,204,21,.25);--d-bg:radial-gradient(2px 2px at 20% 30%,#fff,transparent),radial-gradient(1.5px 1.5px at 70% 20%,#fff,transparent),radial-gradient(1.5px 1.5px at 40% 75%,#fff,transparent),radial-gradient(90% 60% at 50% 0%,rgba(250,204,21,.4),transparent 60%),linear-gradient(160deg,#0c1445,#020617 60%,#000);--d-mark:rgba(253,224,71,.24);--d-shine:1.7s;--d-ring:#facc15;--d-ringw:5px;--d-eyebrow:#fde68a;--d-sheen:rgba(253,224,71,.5);--d-go:#fde68a}
+.mhbt-d-INFINITY,.mhbt-d-GOD,.mhbt-d-RAGNAROK,.mhbt-d-HELHEIM,.mhbt-d-ETERNAL,.mhbt-d-INFERNO,.mhbt-d-EREBUS,.mhbt-d-COCYTUS{--d-name:#fef08a;--d-name:#99f6e4;--d-deep:rgba(250,204,21,.25);--d-bg:radial-gradient(2px 2px at 20% 30%,#fff,transparent),radial-gradient(1.5px 1.5px at 70% 20%,#fff,transparent),radial-gradient(1.5px 1.5px at 40% 75%,#fff,transparent),radial-gradient(90% 60% at 50% 0%,rgba(250,204,21,.4),transparent 60%),linear-gradient(160deg,#0c1445,#020617 60%,#000);--d-mark:rgba(253,224,71,.24);--d-shine:1.7s;--d-ring:#facc15;--d-ringw:5px;--d-eyebrow:#fde68a;--d-sheen:rgba(253,224,71,.5);--d-go:#fde68a}
 .mhbt-d-GOD{--d-name:#fffbeb;--d-bg:radial-gradient(90% 60% at 50% 0%,rgba(255,255,255,.55),transparent 55%),radial-gradient(80% 50% at 50% 100%,rgba(250,204,21,.45),transparent 65%),linear-gradient(160deg,#78350f,#1c1003 55%,#000);--d-ring:#fff7d6;--d-ringw:6px;--d-shine:1.5s;--d-sheen:rgba(255,255,255,.7);--d-mark:rgba(255,247,214,.28)}
 .mhbt-d-RAGNAROK{--d-name:#fed7aa;--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(239,68,68,.75),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(250,204,21,.45),transparent 65%),linear-gradient(170deg,#3b0505,#120000 55%,#000);--d-ring:#f59e0b;--d-ringw:6px;--d-shine:1.3s;--d-sheen:rgba(254,215,170,.65);--d-mark:rgba(252,165,165,.28);--d-eyebrow:#fed7aa;--d-go:#fed7aa}
 .mhbt-d-HELHEIM{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(45,212,191,.55),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(167,139,250,.45),transparent 65%),linear-gradient(170deg,#042f2e,#020617 55%,#000);--d-ring:#5eead4;--d-ringw:6px;--d-shine:1.2s;--d-sheen:rgba(204,251,241,.6);--d-mark:rgba(153,246,228,.26);--d-eyebrow:#99f6e4;--d-go:#ccfbf1}
 .mhbt-d-ETERNAL{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(236,72,153,.55),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(249,168,212,.45),transparent 65%),linear-gradient(170deg,#3b0a2a,#12030d 55%,#000);--d-ring:#f9a8d4;--d-ringw:6px;--d-shine:1.1s;--d-sheen:rgba(252,231,243,.6);--d-mark:rgba(249,168,212,.26);--d-eyebrow:#f9a8d4;--d-go:#fce7f3}
 .mhbt-d-INFERNO{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(249,115,22,.6),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(253,186,116,.45),transparent 65%),linear-gradient(170deg,#431407,#120502 55%,#000);--d-ring:#fdba74;--d-ringw:6px;--d-shine:1.0s;--d-sheen:rgba(255,237,213,.6);--d-mark:rgba(253,186,116,.28);--d-eyebrow:#fdba74;--d-go:#ffedd5}
+.mhbt-d-EREBUS{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(219,39,119,.55),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(244,114,182,.45),transparent 65%),linear-gradient(170deg,#500724,#14020a 55%,#000);--d-ring:#f9a8d4;--d-ringw:6px;--d-shine:0.95s;--d-sheen:rgba(252,231,243,.6);--d-mark:rgba(249,168,212,.3);--d-eyebrow:#f9a8d4;--d-go:#fce7f3;--d-name:#fbcfe8}
 .mhbt-d-COCYTUS{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(103,232,249,.5),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(224,242,254,.45),transparent 65%),linear-gradient(170deg,#082f49,#020617 55%,#000);--d-ring:#a5f3fc;--d-ringw:6px;--d-shine:0.9s;--d-sheen:rgba(240,249,255,.65);--d-mark:rgba(165,243,252,.3);--d-eyebrow:#a5f3fc;--d-go:#e0f2fe}
 @keyframes mhbtRainbow{from{background-position:0% 0}to{background-position:300% 0}}
 @media (prefers-reduced-motion:reduce){.mhbt-tile::after,.mhbt-d-Legend::before{animation:none!important}}
@@ -53875,8 +54516,8 @@ const assistantChatMonsterIds = (text, prevUserText) => {
 //   ・その発言にランキングの言葉やモードが無ければ、すぐ前のプレイヤーの発言(2つまで)から話題・モード・難易度を引き継ぐ
 //     (中継役も、すぐ前の発言にランキングの言葉があれば読む。ranking.js の rankingTopicOf)
 const ASSISTANT_CHAT_RANKING_TOPIC = /ランキング|ランク(?:イン|上位)|順位|何位|なんい|[0-9０-９一二三四五]+位|トップ|上位|首位|一番(?:上|強い|高い)|いちばん(?:上|強い|高い)/;
-// 1回に読むランキングの数。チャレンジの全部(通常9+極限11)が入る数。中継役の RANKING_PLAN_MAX と同じ
-const ASSISTANT_CHAT_RANKING_MAX = 20;
+// 1回に読むランキングの数。チャレンジの全部(通常9+極限12・2026-11-04 EREBUS を足した)が入る数。中継役の RANKING_PLAN_MAX と同じ
+const ASSISTANT_CHAT_RANKING_MAX = 21;
 // 引き継ぐ前の発言の数
 const ASSISTANT_CHAT_RANKING_PREV = 2;
 // 「その種類の難易度を全部」の言葉。英字の EXTREME は難易度そのものの名前なので、ここには入れない(カタカナ・漢字だけ)
@@ -54389,6 +55030,9 @@ const loadAssistantChatMemoFor = async (assistantId) => {
 //         ★守りで持ちょうが変わったら、当てる直前に「当たるか」を見直す(当たらなければ0)
 //         ---- 区切り6: 同時に2枚・ダメージの数え方 ----
 //         pair(dmg) 同じ名前を2枚同時に出したらdmg / requires(names) その札を全部一緒に出すときだけ(払うのはこの札のガッツだけ)/
+//         toGutsOnHit ダメージを与えたらガッツへ(ひのこ) / safeOnHit 当てた子は次の自分の番までダメージ0(陽炎) / gutsFromDiscard(n) 当てたら捨て札からランダムに n 枚をガッツへ(なめろう) /
+//         nextOwnCost(n,kinds) 当てた子が次に使うその種類の技のガッツ −n(天河天翔・重ねない・KO で消える。mons[].costDown) /
+//         守り: toGutsAfterUse 使ったら捨て札でなくガッツへ(九重神眼) / 特殊: gutsFromDiscardNow(n) 捨て札からランダムに n 枚をガッツへ(霊魂操作)
 //         returnOnHit ダメージを与えたら手札へ戻る / split ダメージを相手に割り振る(act.split … 相手の3体ぶんの点)/
 //         bonusDiscard(user) 捨て札のその種族の攻撃の技の枚数を足す / bonusLost 減ったライフのぶんを足す / mimic(attach) どの種族のちから技でもこの子が出せる
 //         tossBonus 使うときに手札を好きな枚数捨て、その枚数をダメージに足す(act.toss … 捨てる手札の番号。0枚でもよい。カード投げ)
@@ -54540,6 +55184,15 @@ const cardBeginTurn = (st) => {
   }
 };
 
+// 捨て札からランダムに n 枚をガッツへ(足りなければある分だけ)。選ぶのは持ち主の種(players[p].rng)。マルチの2台で同じ札になる
+const cardDiscardToGuts = (st, p, n) => {
+  const me = st.players[p];
+  let k = 0;
+  let s = Number.isFinite(me.rng) ? me.rng : (st.seed || 1);
+  for (; k < n && me.discard.length; k++) { const r = cardRngNext(s); s = r.s; const i = Math.floor(r.v * me.discard.length); me.guts.push(me.discard.splice(i, 1)[0]); }
+  me.rng = s;
+  return k;
+};
 const cardPayGuts = (st, p, n) => {
   const me = st.players[p];
   for (let i = 0; i < n; i++) me.discard.push(me.guts.pop());
@@ -54580,11 +55233,14 @@ const cardTakeFromHand = (st, p, idxs) => {
 };
 
 // 攻撃の総ガッツ(付ける札も含む)。技のぶん(組の札も)に、付けた札の「ガッツ-n・半分・0」と友情の証を効かせてから、付けた札のぶんを足す
-const cardActionCost = (db, st, p, hand, idxs) => {
+const cardActionCost = (db, st, p, hand, idxs, mi = null) => {
   const cards = idxs.map((i) => cardOf(db, hand[i])).filter(Boolean);
   const att = cards.filter((c) => cardHasEff(c, 'attach'));
   const core = cards.filter((c) => !cardHasEff(c, 'attach'));
   let main = core.reduce((s, c) => s + (c.guts || 0), 0);
+  // 天河天翔(キュービ): 技を使う子が持つ割引。その子が次に使う指定の種類の技だけ −n(0より下にしない)
+  const cd = Number.isInteger(mi) && mi >= 0 && st && st.players[p] && st.players[p].mons[mi] ? st.players[p].mons[mi].costDown : null;
+  if (cd && core[0] && Array.isArray(cd.kinds) && cd.kinds.includes(core[0].kind)) main = Math.max(0, main - cd.n);
   if (core[0] && cardHasEff(core[0], 'requires')) main = core[0].guts || 0; // コンビネーション: 一緒に出す2枚のガッツは無視
   const fs = st && st.freeSpe;
   if (core[0] && core[0].kind === 'spe' && core[0].user !== 'breeder' && fs && fs.p === p && fs.turn === st.turn) main = 0;
@@ -54867,7 +55523,7 @@ const cardAttackOptions = (db, st) => {
         return out2;
       };
       withAttach.forEach((idxs) => {
-        const cost = cardActionCost(db, st, p, me.hand, idxs);
+        const cost = cardActionCost(db, st, p, me.hand, idxs, mi);
         if (cost > guts) return;
         if (cardHasEff(card, 'tossBonus')) {
           tossSets(idxs).forEach((toss) => { if (cardFieldBanned(db, st, p, mi, card, idxs, toss.length)) return; opp.mons.forEach((t, j) => { if (cardCanTarget(card, t, st.turn) && cardTauntOk(st, p, [{ p: cardOther(p), m: j }], false)) out.push({ type: 'attack', mon: mi, hand: idxs, target: { p: cardOther(p), m: j }, toss }); }); });
@@ -55051,7 +55707,7 @@ const cardStartAttack = (db, st, act) => {
   const isBreeder = act.type === 'breeder';
   const mainNo = me.hand[act.hand[0]];
   const main = cardOf(db, mainNo);
-  const cost = cardActionCost(db, st, p, me.hand, act.hand);
+  const cost = cardActionCost(db, st, p, me.hand, act.hand, isBreeder ? null : act.mon);
   // カード投げ: 捨てる手札(技の札と重ならない番号だけ)。技の札を取ったあとの番号に直して取る
   const tossIdx = cardHasEff(main, 'tossBonus') && Array.isArray(act.toss) ? [...new Set(act.toss)].filter((i) => Number.isInteger(i) && i >= 0 && i < me.hand.length && !act.hand.includes(i)) : [];
   const used = cardTakeFromHand(st, p, act.hand);
@@ -55063,6 +55719,7 @@ const cardStartAttack = (db, st, act) => {
   const mon = mi >= 0 ? me.mons[mi] : null;
   if (isBreeder || used.some((n) => { const c = cardOf(db, n); return c && c.user === 'breeder'; })) me.breederUsed = true; // 影縛りなどブリーダーの札を付けたときも1枚に数える
   if (!isBreeder) { mon.attacks += 1; mon.lastCard = mainNo; }
+  if (mon && mon.costDown && Array.isArray(mon.costDown.kinds) && mon.costDown.kinds.includes(main.kind)) mon.costDown = null; // 天河天翔の割引は、その種類の技を1回使ったら終わり
   cardLog(st, cardUseText(db, st, p, mi, used), { kind: 'use', p, cards: used });
   cardEvent(st, { t: 'use', p, mon: mi, cards: used, target: act.target || null });
   if (tossed.length) { me.discard.push(...tossed); cardLog(st, `${me.name}は手札を${tossed.length}枚捨てた`); }
@@ -55164,6 +55821,14 @@ const cardResolveTarget = (db, st) => {
     const gl = cardEff(main, 'gutsLossOnHit');
     if (gl && t.p !== pd.attacker && !pd.noGutsLoss) { const k = cardLoseGuts(st, t.p, gl.n); if (k) cardLog(st, `${st.players[t.p].name}はガッツを${k}失った`); }
     if (cardHasEff(main, 'stunOnHit')) { target.stunTurn = st.turn + 1; cardLog(st, `${target.name}は次のターン攻撃できない`); }
+    // なめろう(キュービ): 相手のガッツを減らしたあと、自分の捨て札からランダムに n 枚をガッツへ(相手が減少を無効にしても行う・1回の攻撃で1度だけ)
+    const gd = cardEff(main, 'gutsFromDiscard');
+    if (gd && t.p !== pd.attacker && !pd.gutsFromDiscardDone) { pd.gutsFromDiscardDone = true; const k = cardDiscardToGuts(st, pd.attacker, gd.n); if (k) cardLog(st, `${st.players[pd.attacker].name}は捨て札から${k}枚をガッツにした`); }
+    // 陽炎(キュービ): 当てた子は、次の自分のターンまでダメージを受けない(ぬいぐるみと同じ印)
+    if (cardHasEff(main, 'safeOnHit') && t.p !== pd.attacker && atkMon && !atkMon.ko && !(atkMon.safeUntil >= st.turn + 1)) { atkMon.safeUntil = st.turn + 1; cardLog(st, `${atkMon.name}は次の自分のターンまでダメージを受けない`); }
+    // 天河天翔(キュービ): 当てた子が次に使う指定の種類の技の払うガッツ −n(重ねがけしない・期限なし・KO で消える)
+    const nc = cardEff(main, 'nextOwnCost');
+    if (nc && t.p !== pd.attacker && atkMon && !atkMon.ko && !(atkMon.costDown && atkMon.costDown.n >= nc.n)) { atkMon.costDown = { kinds: nc.kinds || ['int'], n: nc.n }; cardLog(st, `${atkMon.name}が次に使う${(nc.kinds || ['int']).includes('pow') ? 'ちから' : 'かしこさ'}技のガッツが${nc.n}少なくなる`); }
     // ドレイン: 「与えたダメージ分」は、実際に減ったライフ(残りライフ1の子を倒したら1。2026-10-27 社長が案Aに決めた)
     if (cardHasEff(main, 'drain') && atkMon && !atkMon.ko) { const h = Math.min(lifeBefore - target.life, atkMon.max - atkMon.life); atkMon.life += h; if (h) cardLog(st, `${atkMon.name}はライフを${h}回復`); }
   }
@@ -55186,7 +55851,7 @@ const cardResolveTarget = (db, st) => {
 
 const cardKo = (st, p, m) => {
   const mon = st.players[p].mons[m];
-  mon.ko = true; mon.life = 0;
+  mon.ko = true; mon.life = 0; mon.costDown = null; // 天河天翔の割引も消える
   cardLog(st, `${mon.name}はKOされた`, { kind: 'ko' });
   cardEvent(st, { t: 'ko', p, m });
 };
@@ -55211,7 +55876,13 @@ const cardFinishAttack = (db, st) => {
     if (atkMon.life <= 0) cardKo(st, pd.attacker, pd.mon);
   }
   // ポン拳: ダメージを与えたら、この札は捨て札にならず手札へ戻る
-  if (cardHasEff(main, 'returnOnHit') && pd.results.some((r) => r.dmg > 0 && r.p !== pd.attacker)) {
+  if (cardHasEff(main, 'toGutsOnHit') && pd.results.some((r) => r.dmg > 0 && r.p !== pd.attacker)) {
+    // ひのこ・火炎車(キュービ): ダメージを与えたら、この札は捨て札にならずガッツへ
+    const k = pd.used.indexOf(pd.main);
+    me.discard.push(...pd.used.filter((_, i) => i !== k));
+    me.guts.push(pd.main);
+    cardLog(st, `「${main.name}」はガッツになった`);
+  } else if (cardHasEff(main, 'returnOnHit') && pd.results.some((r) => r.dmg > 0 && r.p !== pd.attacker)) {
     const k = pd.used.indexOf(pd.main);
     me.discard.push(...pd.used.filter((_, i) => i !== k));
     me.hand.push(pd.main);
@@ -55234,7 +55905,8 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
   const me = st.players[p];
   const opp = st.players[cardOther(p)];
   (card.effects || []).forEach((e) => {
-    if (e.t === 'draw') { const k = cardDrawN(st, p, e.n); cardLog(st, `${me.name}は${k}枚引いた`); } // 山札が足りなければ引けた枚数を書く(2026-10-27 総点検D)
+    if (e.t === 'draw') { const k = cardDrawN(st, p, e.n); cardLog(st, `${me.name}は${k}枚引いた`); }
+    if (e.t === 'gutsFromDiscardNow') { const k = cardDiscardToGuts(st, p, e.n); cardLog(st, `${me.name}は捨て札から${k}枚をガッツにした`); } // 霊魂操作(キュービ) // 山札が足りなければ引けた枚数を書く(2026-10-27 総点検D)
     if (e.t === 'peekHand') { cardEvent(st, { t: 'peek', p, hand: opp.hand.slice() }); cardLog(st, `${me.name}は相手の手札を見た`); }
     if (e.t === 'discardOpp') { st.pendingDiscard = { p: cardOther(p), n: Math.min(e.n, opp.hand.length) }; if (!st.pendingDiscard.n) st.pendingDiscard = null; }
     if (e.t === 'heal' && target) { const m = me.mons[target.m]; const h = Math.min(e.n, m.max - m.life); m.life += h; cardEvent(st, { t: 'heal', p, m: target.m, n: h }); cardLog(st, `${m.name}のライフが${h}回復`); }
@@ -55317,7 +55989,7 @@ const cardApplyGuard = (db, st, act) => {
   const c = cardOf(db, no);
   cardTakeFromHand(st, q, [act.hand]);
   cardPayGuts(st, q, cardGuardCost(st, c));
-  me.discard.push(no);
+  if (cardHasEff(c, 'toGutsAfterUse')) { me.guts.push(no); cardLog(st, `「${c.name}」はガッツになった`); } else me.discard.push(no); // 九重神眼(キュービ): 使ったら捨て札でなくガッツへ(同じ相手ターンのうちにまた使える)
   const user = me.mons[act.mon];
   user.guardTurn = st.turn; // 挟み撃ちが見る
   cardLog(st, `${user.name}の「${c.name}」`, { kind: 'guard', p: q, cards: [no] });
@@ -55536,10 +56208,11 @@ const CARD_AI_HABIT_BLEND = Object.freeze({ expert: { mua: 0.6 }, master: { mua:
 // ★きゅうこは足さない(プレイヤー役の考え方にも使うので。きゅうこはデッキ側の CARD_AI_DECK_TUNE だけで合わせる)
 const CARD_AI_PLAY_TUNE = Object.freeze({
   // EASY・NORMAL で同じ血統(モッチーの仲間)でも組むようになって強くなった(2026-10-26)ぶん、みゅあの雑さを戻した(前は easy -0.035・normal -0.105)
-  mua: { easy: 0.1, normal: -0.04, hard: -0.11, expert: 0.03, master: 0.12 },
+  mua: { easy: 0.1, normal: -0.04, hard: -0.11, expert: 0.03, master: 0 },   // MASTER はいつも本気(雑な手0%。2026-11-03 社長 A)
   momosuke: { easy: 0.12, normal: 0.06, hard: 0, expert: 0.04, master: 0 },   // 全体カードを入れた(2026-10-30)ぶん EXPERT 0.1 → 0.04・MASTER 0.05 → 0。   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.165 → 0.14。混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 0.05
   kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: -0.08, master: 0 },   // 全体カードを入れた(2026-10-30)ぶん EXPERT 0 → -0.08・MASTER 0.1 → 0   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.345 → 0.3。意味不明(277)・混血の直し(2026-10-27)のあと 0.1
   dra: { easy: -0.075, normal: -0.075, hard: 0.03, expert: -0.06, master: 0 },
+  sorashido: { master: 0 },   // MASTER はいつも本気(2026-11-03 社長 A。前は 0.06)   // 手が詰まったときの入れ替え(2026-11-02 案A)で MASTER 54→71% に上がったので雑さを足した(450試合で 50%)
   atsu: { easy: 0.05, normal: 0, hard: 0.02, expert: 0.06, master: 0 },   // 臨機応変(2026-10-29)で強くなった(NORMAL 55→69%・EASY 73%・EXPERT 69%)ので、各強さで雑さを足した(40戦で測った)   // EXPERT は同じ血統(弱い)でも組むようになった(2026-10-26)ので 0.03 → 0
 });
 // 同じ血統で組んだ試合だけの、カードの出し方の雑さの足し引き(2026-10-26。HARD から上でも同じ血統で組むようにしたぶん)。
@@ -55652,8 +56325,9 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
   const { level } = policy;
   const habit = cardAiHabitNow(db, st, p, policy);
   const main = cardOf(db, me.hand[opt.hand[0]]);
-  const cost = cardActionCost(db, st, p, me.hand, opt.hand);
+  const cost = cardActionCost(db, st, p, me.hand, opt.hand, opt.type === 'attack' ? opt.mon : null);
   let score = 0;
+  let hurts = true; // 相手にダメージが入る見込み(攻めの技だけ下で見直す)
   if (main.kind === 'fld') return cardAiScoreField(db, st, p, main, cost, habit) + (policy.fields && policy.fields.includes(main.name) && !(st.field && st.field.p === p) ? CARD_AI_FIELD_LIKE : 0);
   if (main.kind === 'spe') {
     (main.effects || []).forEach((e) => {
@@ -55674,6 +56348,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'emerge') { const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null; const to = cardMonsterOf(db, opt.emerge || e.to); score += 2 + (m0 && to ? (to.life - m0.life) * 0.3 : 0); }
       if (e.t === 'fuse' && opt.fuse) { const to = cardMonsterOf(db, opt.fuse.no); score += to.life - (me.mons[opt.fuse.a].life + me.mons[opt.fuse.b].life) * 0.8 - 1; }
       // 区切り5
+      if (e.t === 'gutsFromDiscardNow') score += Math.min(e.n, me.discard.length) * (me.guts.length < 4 ? 0.6 : 0.3); // 霊魂操作: 捨て札からガッツを作る(ガッツが少ないほど得)
       if (e.t === 'safe') { const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null; score += m0 && m0.life <= Math.ceil(m0.max / 2) ? 1.4 : 0.4; }
       if (e.t === 'form') score += 0.2;
       // 区切り4: 山札・手札・捨て札・ガッツ
@@ -55741,16 +56416,20 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
     if (mon && mon.charge && mon.charge.kinds.includes(main.kind)) dmg *= mon.charge.n;
     const targets = opt.split ? opt.split.map((x, j) => (x > 0 ? { p: cardOther(p), m: j } : null)).filter(Boolean) : cardHasEff(main, 'area') ? cardAreaTargets(st, p, opt.mon, main) : [opt.target];
     let drained = 0; // ドレインで回復すると見込んだ合計(全員に当たる技でも、減っている分までしか回復しない)
+    hurts = false; // 相手にダメージが1以上入る見込みがあるか(全体カードで0になる技は、狙う相手の良さも数えない)
     let kills = 0; // 倒せる相手の数(相手の最後の子まで倒せるなら、自分へのダメージは気にしない)
     const per = dmg / Math.max(1, main.damage || 1); // ショットガン: 割り振った点に、付けた札・倍の割合を掛ける
     targets.forEach((t) => {
       const tm = st.players[t.p].mons[t.m];
       let d = opt.split ? Math.round(opt.split[t.m] * per) : dmg;
       const mv = cardEff(main, 'multVs'); if (mv && cardMonType(tm, st.turn) === mv.type) d *= mv.n;
+      // 全体カードのダメージの足し引き(興奮のるつぼ -2 など)も入れる。ルールと同じく最後に足す(2026-11-02 社長)
+      if (d > 0) d = Math.max(0, d + cardFieldDmgAdd(st, main));
       if (cardHasEff(main, 'nonLethal')) d = Math.min(d, tm.life - 1);
       // とどめにならない技(加勢)をライフ1の子に撃っても0ダメージ。撃たない(2026-10-27 見回り)
       if (t.p !== p && d <= 0 && cardHasEff(main, 'nonLethal')) { score -= 2; return; }
       if (t.p !== p && d >= tm.life) kills += 1;
+      if (t.p !== p && d > 0) hurts = true;
       // 影縛り: 名指しで当たりやすくなる見込み(半分)
       const ev = cardAiEvadeChance(db, st, p, main, t, level, mods.flags, mon) * (opt.hand.some((i) => cardHasEff(cardOf(db, me.hand[i]), 'attachBind')) ? 0.5 : 1);
       const half = cardHasEff(main, 'halfOnEvade') ? Math.ceil(d / 2) : 0;
@@ -55761,13 +56440,23 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (cardHasEff(main, 'drain') && mon && t.p !== p) { const heal = Math.min(Math.min(exp, tm.life), Math.max(0, mon.max - mon.life - drained)); drained += heal; score += heal * 0.5; }
       if (t.p !== p && d >= tm.life) score += (1 - ev) * 4 * habit.finish;
       const gl = cardEff(main, 'gutsLossOnHit');
-      if (gl && t.p !== p) score += (1 - ev) * (gl.n === 'all' ? st.players[t.p].guts.length : Math.min(gl.n, st.players[t.p].guts.length)) * 0.8 * habit.disrupt;
-      if (cardHasEff(main, 'stunOnHit') && t.p !== p) score += (1 - ev) * 1.2;
+      // ダメージが0になる技は、「当たれば〜」の効果も出ないので数えない
+      if (gl && t.p !== p && d > 0) score += (1 - ev) * (gl.n === 'all' ? st.players[t.p].guts.length : Math.min(gl.n, st.players[t.p].guts.length)) * 0.8 * habit.disrupt;
+      if (cardHasEff(main, 'stunOnHit') && t.p !== p && d > 0) score += (1 - ev) * 1.2;
+      // キュービの当てたときの効き目(当たる見込みぶん)
+      if (t.p !== p && d > 0) {
+        if (cardHasEff(main, 'toGutsOnHit')) score += (1 - ev) * (main.guts || 0) * 0.35 * habit.saveGuts; // この札がガッツに戻る
+        if (cardHasEff(main, 'safeOnHit') && mon) score += (1 - ev) * (mon.life * 2 <= mon.max ? 1.4 : 0.6); // 次の自分のターンまでダメージ0
+        const gfd = cardEff(main, 'gutsFromDiscard'); if (gfd) score += (1 - ev) * Math.min(gfd.n, me.discard.length) * 0.35 * habit.saveGuts; // 捨て札からガッツ
+        if (cardHasEff(main, 'nextOwnCost') && mon) score += (1 - ev) * (me.hand.some((n2, j) => !opt.hand.includes(j) && (cardOf(db, n2) || {}).kind === 'int' && cardUsableBy(cardOf(db, n2), mon)) ? 0.8 : 0.3); // 次のかしこさ技が軽くなる
+      }
     });
     if (targets.length > 1) score *= 1 + 0.15 * (habit.area - 1);
     if (cost >= 5) score *= 1 + 0.12 * (habit.big - 1);
     // 相手の残りを全部倒せる手は、自分も倒れても勝ち(同時に全滅=攻撃した側の勝ち)。自分へのダメージを引かない(2026-10-27 見回り: 相打ちで勝てるのに攻撃をやめていた)
     const winsNow = kills > 0 && kills >= st.players[cardOther(p)].mons.filter((m) => !m.ko).length;
+    // 相手の最後の子まで倒せる手(当たれば勝ち)は、回避されそうでも、自分が傷つく技でも打つ(2026-11-02 社長「勝ちになる攻撃は打つ」)
+    if (winsNow) score += CARD_AI_WIN_STRIKE_ADD;
     const sh = cardEff(main, 'selfDamageIfHit'); if (sh && mon && !winsNow) score -= sh.n * (mon.life <= sh.n ? 3 : 0.6);
     const si = mods.flags.selfIfHit; if (si && mon && !winsNow) score -= si * (mon.life <= si ? 3 : 0.6); // 捨て身
     const sa = cardEff(main, 'selfDamage'); if (sa && mon && !winsNow) score -= sa.n * (mon.life <= sa.n ? 3 : 0.6);
@@ -55778,7 +56467,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
   if (level.depth >= 1 && cheapGuard < 9 && left < cheapGuard) score -= 1.2 * habit.keepGuard;
   score -= cost * 0.12 * habit.saveGuts * (level.depth >= 2 ? 1.2 : 1);
   // 先読み2以上: 相手のいちばん強い子(残りライフあたりの火力)を先に落とす
-  if (level.depth >= 2 && opt.target && opt.target.p !== p) {
+  if (level.depth >= 2 && opt.target && opt.target.p !== p && hurts) {
     const tm = st.players[opt.target.p].mons[opt.target.m];
     score += (tm.max - tm.life) * 0.15 + (tm.life <= 3 ? 0.8 : 0);
   }
@@ -55894,10 +56583,13 @@ const cardAiChooseGuard = (db, st, policy, rand, gopt = null) => {
   let best = null;
   opts.forEach((o) => {
     const { after, extra, back, cost, c } = cardAiGuardEstimate(db, st, o, dmg);
+    // 守っても倒れるのが変わらず、はね返し・まとめて回避などの得も無い守りは出さない(戦術カードの「守る」で必ず守るときも。2026-11-02 社長)
+    if (target.life <= after && back <= 0 && extra - (cardHasEff(c, 'takeMult') ? 1.2 : 0) <= 0) return;
     const saved = Math.min(dmg, target.life) - Math.min(after, target.life);
     const ko = target.life <= dmg && target.life > after ? 5 : 0;
     const lostAll = cardHasEff(c, 'selfGutsAll') ? me.guts.length - cost : 0; // 緊急回避: 残りのガッツも全部なくなる
     let v = extra + saved * (0.6 + 0.4 * habit.keepGuard) + ko - (cost + lostAll) * 0.35 * habit.saveGuts + back * 0.6 + (cardAiAceHit(policy, me.hand, o.hand) ? 1.5 : 0);
+    if (cardHasEff(c, 'toGutsAfterUse')) v += 0.35 * habit.saveGuts; // 九重神眼: 使ったらガッツに戻る(1つ軽い)
     // ガッツをためる子でも、ライフの半分以上を減らす攻撃は守る(2026-10-29 社長 案B: ききが払うガッツ2の守りを見送っていた)
     if (!dies && habit.saveGuts >= 1.3 && Math.min(dmg, target.life) * 2 >= target.life && saved > 0) v += (cost + lostAll) * 0.35 * habit.saveGuts + 1;
     if (!dies && finishCost !== null && habit.finish >= 1.3 && me.guts.length - cost - lostAll < finishCost && me.guts.length >= finishCost) v -= 2;
@@ -55910,7 +56602,10 @@ const cardAiChooseGuard = (db, st, policy, rand, gopt = null) => {
 };
 
 // 手札をガッツへ: 使えない札(持ち主が KO)・使えそうにない重い札から。くせ「ガッツをためる」でためる量が増える
-// gopt … 戦術カードから: count(この枚数だけ置く)・keepGuards(回避・防御の札はガッツにしない)。無ければ今のまま
+// gopt … 戦術カードから: count(この枚数だけ置く)・keepGuards(回避・防御の札を CARD_TACTIC_KEEP_GUARD_MAX 枚まで残す)。無ければ今のまま
+// 手が詰まったとき(2026-11-02 社長「案A + 案B」・点検): その番に技もブリーダーのカードも1枚も使わず手札が5枚なら、ガッツが足りていても入れ替える。
+//   守りの札は CARD_AI_STUCK_KEEP 枚(「守りを残す」の札なら CARD_TACTIC_KEEP_GUARD_MAX 枚)まで・切り札は残し、ほかの札をガッツへ(最低1枚)。
+//   前は、ガッツがたまると手札を置かず、守りの札・付ける先の無い札で手札が埋まると、山札切れまで何もしない番が続いた(オートで挑むの不具合)
 const cardAiChooseGuts = (db, st, policy, gopt = null) => {
   const p = st.active;
   const me = st.players[p];
@@ -55922,12 +56617,20 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
     if (!c) return -9;
     const usable = c.user === 'breeder' || me.mons.some((m) => !m.ko && cardUsableBy(c, m)); // 倒れた子しか使えない札は使えない
     if (!usable) return -10;
-    if (cardIsGuardKind(c.kind)) return 2 * habit.keepGuard - c.guts * 0.2;
-    return (c.damage || 1) * 0.5 - Math.max(0, c.guts - (me.guts.length + 2)) * 0.8;
+    // 使える守りは、攻めの札よりなるべく残す(2026-11-02 社長「防御系ガンガン捨てるくせに、もう死んでるモンスターのカードは残したりする」)
+    if (cardIsGuardKind(c.kind)) return 2 * habit.keepGuard - c.guts * 0.2 + CARD_AI_GUARD_KEEP_ADD;
+    // 付ける札は、手札に付ける先(場の子が使える攻めの技)が無ければ先にガッツへ
+    const noHost = cardHasEff(c, 'attach') && !me.hand.some((n2) => n2 !== no && (() => { const h = cardOf(db, n2); return !!h && cardIsAttackKind(h.kind) && h.kind !== 'spe' && me.mons.some((m) => !m.ko && cardUsableBy(h, m)); })());
+    const value = (c.damage || 1) * 0.5 - Math.max(0, cardFieldCostOf(st, c.guts || 0) - (me.guts.length + 2)) * 0.8 - (noHost ? 2 : 0);
+    // 場の全体カードで使えない技(必殺技の封印・応酬・がんじがらめ)は、場が替わるまで使えない。使える札より先にガッツへ
+    //   (2026-11-04 社長「必殺技の封印を使われてるのに、威力が高い技を温存して、ほかをガッツにする」)。
+    //   場は、どちらかが別の全体カードを置くまで残る。自分の手札に全体カードがあれば外せる見込みがあるので、少しだけ残す
+    if (cardAiFieldBlocked(db, st, p, no)) return CARD_AI_BLOCKED_KEEP + (me.hand.some((n2) => n2 !== no && (cardOf(db, n2) || {}).kind === 'fld') ? value * CARD_AI_BLOCKED_HOPE : 0);
+    return value;
   };
   // 切り札(policy.aces・みんなのデッキ)はガッツにしない(手札に残す)。aces が無ければ今と同じ
   const aceKeep = (no) => (policy && Array.isArray(policy.aces) && policy.aces.includes(no) ? 10 : 0);
-  const ks = me.hand.map((no, i) => ({ i, k: keep(no) + aceKeep(no), g: cardIsGuardKind((cardOf(db, no) || {}).kind) }));
+  const ks = me.hand.map((no, i) => ({ i, k: keep(no) + (keep(no) > -9 ? aceKeep(no) : 0), g: cardIsGuardKind((cardOf(db, no) || {}).kind) }));
   // 守りの札を1枚は手元に残す(2026-10-29 社長「ガード軽視が目立つ」: 守りの札を全部ガッツにして、次の相手の番に守れない)
   //   いちばん残したい守りの札を、攻めの札より後(ガッツにしない側)へ回す
   //   守りを残すくせが低い子(みゅあ)も1枚は残す。残さないと NORMAL 62→50%・MASTER 48→35% に落ちた(2026-10-29 小さく測った)。
@@ -55941,12 +56644,43 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
   if (gopt && Number.isInteger(gopt.count)) {
     pick.splice(0, pick.length, ...order.map((o) => o.i).slice(0, gopt.count));
   }
-  if (gopt && gopt.keepGuards) { for (let k = pick.length - 1; k >= 0; k--) if (cardIsGuardKind((cardOf(db, me.hand[pick[k]]) || {}).kind)) pick.splice(k, 1); }
+  if (gopt && gopt.keepGuards) {
+    // 守りの札は、いちばん残したい物から CARD_TACTIC_KEEP_GUARD_MAX 枚までガッツにしない(4枚目からはふだんどおり)
+    const keepSet = new Set(order.filter((o) => o.g && o.k > -9).sort((a, b) => b.k - a.k).slice(0, CARD_TACTIC_KEEP_GUARD_MAX).map((o) => o.i));
+    for (let k = pick.length - 1; k >= 0; k--) if (keepSet.has(pick[k])) pick.splice(k, 1);
+  }
+  const live = me.mons.filter((m) => !m.ko);
+  const idle = !me.breederUsed && me.mons.every((m) => !m.attacks);   // この番に技もブリーダーのカードも使っていない
+  if (live.length && me.hand.length >= CARD_BATTLE_HAND_MAX && idle && pick.length === 0) {
+    const keepN = gopt && gopt.keepGuards ? CARD_TACTIC_KEEP_GUARD_MAX : CARD_AI_STUCK_KEEP;
+    const keepG = new Set(order.filter((o) => o.g && o.k > -9).sort((a, b) => b.k - a.k).slice(0, keepN).map((o) => o.i));
+    const isAce = (i) => policy && Array.isArray(policy.aces) && policy.aces.includes(me.hand[i]);
+    // 決めた枚数より多い守りの札は、全部ガッツへ。守り以外は、いちばん残したい1枚だけ手元に残す(order は残したくない順)
+    const tossG = order.filter((o) => o.g && !keepG.has(o.i) && !isAce(o.i)).map((o) => o.i);
+    const tossO = order.filter((o) => !o.g && !isAce(o.i)).map((o) => o.i);
+    pick.push(...tossG, ...tossO.slice(0, Math.max(tossG.length ? 0 : 1, tossO.length - 1)));
+  }
   const gm = cardFieldEff(st, 'fieldGutsMax'); // 長期戦の予感
   // 山札切れを自分から呼ばない(2026-10-27 あつさん「山札を気にせず負ける」):
   //   次の自分の番に引く枚数(手札が5枚なら1枚・それ未満なら5枚まで)が山札より多くなるほど、手札をガッツにしない
   return { type: 'guts', hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, policy.playerRole ? 99 : cardAiGutsCap(me)) };
 };
+// 場の全体カードで、この札がいま使えないか(使える子全員で。ブリーダーのカードはブリーダーとして)。攻めの技・特殊技だけを見る
+const cardAiFieldBlocked = (db, st, p, no) => {
+  const c = cardOf(db, no);
+  if (!st.field || !c || !cardIsAttackKind(c.kind)) return false;
+  const me = st.players[p];
+  const at = me.hand.indexOf(no);
+  const idxs = at >= 0 ? [at] : [];
+  if (c.user === 'breeder') return cardFieldBanned(db, st, p, -1, c, idxs);
+  const users = me.mons.map((m, mi) => ({ m, mi })).filter(({ m }) => !m.ko && cardUsableBy(c, m));
+  return users.length > 0 && users.every(({ mi }) => cardFieldBanned(db, st, p, mi, c, idxs));
+};
+const CARD_AI_BLOCKED_KEEP = -1.5;    // 場で使えない技の「残したさ」(使える札よりガッツにしやすく。使えない札(-10)よりは残す)
+const CARD_AI_BLOCKED_HOPE = 0.3;     // 自分の手札に全体カードがあって、場を替えられる見込みがあるとき、元の値打ちのうち残す割合
+const CARD_AI_GUARD_KEEP_ADD = 1.5;   // ガッツにする札を選ぶとき、使える守りの札に足す「残したさ」(2026-11-02 社長「防御系ガンガン捨てる」)
+const CARD_AI_STUCK_KEEP = 2;           // 手が詰まった番に残す守りの札
+const CARD_TACTIC_KEEP_GUARD_MAX = 3;   // 戦術カード「守りのカードを3枚まで残す」の枚数
 // ガッツにしてよい枚数の上限(次の番に引く枚数が山札を超えないように)。山札が5枚以上あれば上限なし
 const cardAiGutsCap = (me) => (me.deck.length >= CARD_BATTLE_HAND_MAX ? 99 : Math.max(0, me.hand.length - (CARD_BATTLE_HAND_MAX - me.deck.length)));
 
@@ -55955,6 +56689,13 @@ const cardAiGutsCap = (me) => (me.deck.length >= CARD_BATTLE_HAND_MAX ? 99 : Mat
 // 危ない部品を持つ手だけ、ためしに打って(相手は守らない・選ぶ段は先頭)、次のどれかになる手は選ばない(どの強さでも。雑な手のときも)
 //   ・その手で自分のモンスターが全員倒れて負ける(相手も同時に全滅して勝てるなら選んでよい。攻撃した側の勝ち・ルール⑧)
 //   ・その手で山札が減り、次の自分の番に引く枚数より山札が少なくなる(もともと足りないときは、その手のせいではないので数えない)
+// 当たれば勝ちになる攻撃に足す点(2026-11-02 社長)
+const CARD_AI_WIN_STRIKE_ADD = 3;
+// その手で、相手が守らなければ勝つか(相手の最後の子まで倒せる)。p … 手を出す人
+const cardAiWinsBy = (db, st, opt, p = st.active) => {
+  if (!opt || opt.type !== 'attack') return false;
+  try { const s = cardAiSettle(db, cardApplyAction(db, st, opt)); return !!s && s.winner === p; } catch (_) { return false; }
+};
 const CARD_AI_RISKY_EFFS = ['selfDamage', 'selfDamageIfHit', 'selfDamageIfEvaded', 'attachSelfIfHit', 'lastWish', 'selfHurt', 'fuse',
   'draw', 'deckToGuts', 'rush', 'refresh', 'choose', 'fieldMill', 'fieldDrawOnPlay', 'fieldBurn'];
 const cardAiDrawNeed = (pl) => (pl.hand.length >= CARD_BATTLE_HAND_MAX ? 1 : CARD_BATTLE_HAND_MAX - pl.hand.length);
@@ -56017,12 +56758,12 @@ const cardAttachUseless = (db, st, o) => {
   const main = cardOf(db, me.hand[o.hand[0]]);
   if (!main) return false;
   const targets = (cardHasEff(main, 'area') ? cardAreaTargets(st, p, o.mon, main) : o.target ? [o.target] : []).filter((t) => t.p !== p);
-  const cost = cardActionCost(db, st, p, me.hand, o.hand);
+  const cost = cardActionCost(db, st, p, me.hand, o.hand, o.type === 'attack' ? o.mon : null);
   return o.hand.slice(1).some((i) => {
     const c = cardOf(db, me.hand[i]);
     if (!c) return false;
     const effs = (c.effects || []).map((e) => e.t);
-    if (effs.length && effs.every((t) => CARD_COST_ONLY_EFFS.includes(t))) return cardActionCost(db, st, p, me.hand, o.hand.filter((x) => x !== i)) <= cost;
+    if (effs.length && effs.every((t) => CARD_COST_ONLY_EFFS.includes(t))) return cardActionCost(db, st, p, me.hand, o.hand.filter((x) => x !== i), o.type === 'attack' ? o.mon : null) <= cost;
     if (cardHasEff(c, 'attachNoEvadeHybrid') && targets.length && !targets.some((t) => !cardIsPureMon(st.players[t.p].mons[t.m]))) return true;
     return false;
   });
@@ -56040,17 +56781,24 @@ const cardAiAttackScored = (db, st, opts, policy) => opts.map((o) => ({ o, s: ca
 // policy.search … { k, r, h, eval } / 助手と対戦(cardAiPolicy)には付かない。付けるのは 82-card-share-core の cardSharePolicy だけ
 // 1回の判断で試しに進める手の数に上限を持たせる(スマホで重くしない)。上限に届いたら、そこまでの結果で選ぶ
 const CARD_AI_SEARCH_STEP_MAX = 1500;
+// 先読みの見積もりに足す MASTER の点の重み(2026-11-02 社長 ウ「先読みの見積もりを MASTER の点の付け方にそろえる」)
+const CARD_AI_SEARCH_PRIOR = 2;
+const CARD_AI_SEARCH_MILL_W = 0.5;
+// 先読みの候補で、当たった戦術カードの行の手に足す点(行は「強く勧める」。2026-11-03 社長 D)
+const CARD_AI_SEARCH_HINT_ADD = 1;
 const cardAiSearchLife = (st, p) => { let a = 0, b = 0; st.players[p].mons.forEach((m) => { if (!m.ko) a += Math.max(0, m.life); b += m.max; }); return b ? a / b : 0; };
 // 場の良さ(大きいほど me に良い)。'alive' … 残っているモンスターの数とライフを重く見る(LEGEND)
-const cardAiSearchEval = (st, me, kind) => {
+const cardAiSearchEval = (st, me, kind, mill = 0) => {
   if (st.winner === me) return 100;
   if (st.winner !== null) return -100;
   const op = cardOther(me), P = st.players[me], O = st.players[op];
+  // 持久型(山札切れで勝つくせ)は、山札の残りの差も見る(MASTER の点が山札を削る手を高く見るのとそろえる。2026-11-02 社長 ウ)
+  const deck = mill ? CARD_AI_SEARCH_MILL_W * mill * (P.deck.length - O.deck.length) : 0;
   if (kind === 'alive') {
     const alive = (x) => x.mons.filter((m) => !m.ko).length;
-    return 12 * (alive(P) - alive(O)) + 8 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.4 * (P.hand.length - O.hand.length) + 0.4 * (P.guts.length - O.guts.length);
+    return deck + 12 * (alive(P) - alive(O)) + 8 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.4 * (P.hand.length - O.hand.length) + 0.4 * (P.guts.length - O.guts.length);
   }
-  return 10 * (cardKoCount(st, me) - cardKoCount(st, op)) + 4 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.3 * (P.hand.length - O.hand.length);
+  return deck + 10 * (cardKoCount(st, me) - cardKoCount(st, op)) + 4 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.3 * (P.hand.length - O.hand.length);
 };
 const cardAiSearchShuffle = (list, rand) => { for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; } };
 const cardAiSearchRollout = (db, st0, act, me, pols, rand, cfg, budget) => {
@@ -56067,26 +56815,44 @@ const cardAiSearchRollout = (db, st0, act, me, pols, rand, cfg, budget) => {
     if (!n) { a = st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : st.phase === 'guts' ? { type: 'guts', hand: [] } : null; n = a && cardApplyAction(db, st, a); if (!n) break; }
     st = n; st.log = [];
   }
-  return cardAiSearchEval(st, me, cfg.eval);
+  return cardAiSearchEval(st, me, cfg.eval, cfg.mill || 0);
 };
 let _cardAiSearchFoe = null; // 先読みの中で相手が打つ考え方(くせの無い MASTER)
 const cardAiSearchPick = (db, st, scored, policy, rand) => {
   const cfg = policy.search;
   const me = st.active;
-  const cands = scored.slice(0, cfg.k).filter((x) => x.s > 0.3).map((x) => cardAiFillBind(db, st, x.o, policy));
+  const me0 = st.players[st.active];
+  const skip = new Set(policy.searchSkip || []);
+  const ok = (o) => !(o.type === 'attack' && skip.has(o.mon)) && !(policy.searchNoBreeder && (o.type === 'breeder' || o.hand.some((i) => (cardOf(db, me0.hand[i]) || {}).user === 'breeder')));
+  scored = scored.filter((x) => ok(x.o));
+  // 勝ちの一撃は先読みせずに打つ(2026-11-03 社長 C)
+  const winNow = scored.find((x) => cardAiWinsBy(db, st, x.o));
+  if (winNow) return cardAiFillBind(db, st, winNow.o, policy);
+  const top = scored.slice(0, cfg.k).filter((x) => x.s > 0.3);
+  // 当たった戦術カードの行の手(強く勧める手)も候補に入れ、MASTER の点に少し足して比べる
+  const hint = policy.searchHint || null;
+  const same = (a, o) => a && o && a.type === o.type && a.mon === o.mon && JSON.stringify(a.hand) === JSON.stringify(o.hand) && JSON.stringify(a.target || null) === JSON.stringify(o.target || null);
+  const hintAt = hint && hint.type !== 'endAttacks' ? scored.find((x) => same(hint, x.o)) : null;
+  if (hintAt && !top.includes(hintAt)) top.push(hintAt);
+  const cands = top.map((x) => cardAiFillBind(db, st, x.o, policy));
   cands.push({ type: 'endAttacks' });
+  const prior = top.map((x) => x.s + (x === hintAt ? CARD_AI_SEARCH_HINT_ADD : 0)).concat([0.3 + (hint && hint.type === 'endAttacks' ? CARD_AI_SEARCH_HINT_ADD : 0)]);
   if (!_cardAiSearchFoe) _cardAiSearchFoe = cardAiPolicy('kyuko', 'master', { noTactics: true });
   const self = { ...policy, search: null, gambit: null };
   const pols = [null, null]; pols[me] = self; pols[cardOther(me)] = _cardAiSearchFoe;
   const budget = { left: CARD_AI_SEARCH_STEP_MAX };
+  const ecfg = { ...cfg, mill: (policy.habit && policy.habit.mill) || 0 };
   let best = cands[0], bestV = -Infinity;
   for (let i = 0; i < cands.length && budget.left > 0; i++) {
     let v = 0, n = 0;
-    for (let r = 0; r < cfg.r && budget.left > 0; r++) { v += cardAiSearchRollout(db, st, cands[i], me, pols, rand, cfg, budget); n += 1; }
+    for (let r = 0; r < cfg.r && budget.left > 0; r++) { v += cardAiSearchRollout(db, st, cands[i], me, pols, rand, ecfg, budget); n += 1; }
     if (!n) break;
-    v = v / n + (i === 0 ? 0.5 : 0); // 並んだときは、もとの点がいちばん高い手
+    // 先の場の良さに、MASTER の点(その手の点)も足して比べる。先読みで大きく良くなる手のときだけ、MASTER の手を変える(2026-11-02 社長 ウ)
+    v = v / n + CARD_AI_SEARCH_PRIOR * prior[i] + (i === 0 ? 0.5 : 0); // 並んだときは、もとの点がいちばん高い手
     if (v > bestV) { bestV = v; best = cands[i]; }
   }
+  // 選んだ手が行の手なら、その戦術カードを光らせる(記録にも残る)
+  if (hintAt && best === cands[top.indexOf(hintAt)] && typeof cardTacticLastWhy !== 'undefined') cardTacticLastWhy = policy.searchHintWhy || null;
   return best;
 };
 const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
@@ -56116,6 +56882,12 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
     return { type: 'setupGuts', hand: order.slice(0, CARD_BATTLE_SETUP_GUTS_MAX) };
   }
   const sloppy = rand() < (policy.level.sloppy || 0);
+  // 勝ちの一撃(相手の最後の子まで倒せる攻撃)は、どの段でも、戦術カードの行より先に打つ(2026-11-03 社長 C)。
+  //   相手の残りが2体以下のときだけ試す(重くしない)
+  if (st.phase === 'main' && !st.pending && st.players[cardOther(st.active)].mons.filter((m) => !m.ko).length <= 2) {
+    const win = cardAiAttackChoices(db, st, policy).find((o) => cardAiWinsBy(db, st, o));
+    if (win) return cardAiFillBind(db, st, win, policy);
+  }
   // 戦術カード(みんなのデッキ・82-card-tactics-core)。並びが無い・雑な手のときは今のまま
   if (!sloppy && policy.gambit && typeof cardTacticDecide === 'function') {
     const tac = cardTacticDecide(db, st, policy);
@@ -56125,13 +56897,23 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   if (st.pending) return sloppy ? { type: 'pass' } : cardAiChooseGuard(db, st, policy, rand);
   if (st.phase === 'guts') {
     if (!sloppy) return cardAiChooseGuts(db, st, policy);
-    const hand = st.players[st.active].hand;
+    const me = st.players[st.active], hand = me.hand;
     const gm = cardFieldEff(st, 'fieldGutsMax');
-    return { type: 'guts', hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, Math.min(gm ? gm.n : 99, policy.playerRole ? 99 : cardAiGutsCap(st.players[st.active]))) };
+    // 雑な手でも、もう出せない札(倒れた子の札)は先にガッツへ。使える守りはでたらめに捨てない(2026-11-02 社長)
+    const dead = (i) => { const c = cardOf(db, hand[i]); return !c || (c.user !== 'breeder' && !me.mons.some((m) => !m.ko && cardUsableBy(c, m))); };
+    const isGuard = (i) => cardIsGuardKind((cardOf(db, hand[i]) || {}).kind);
+    const idx = hand.map((_, i) => i);
+    const pickS = [...idx.filter(dead), ...idx.filter((i) => !dead(i) && !isGuard(i) && rand() < 0.4)];
+    return { type: 'guts', hand: pickS.slice(0, Math.min(gm ? gm.n : 99, policy.playerRole ? 99 : cardAiGutsCap(me))) };
   }
   const opts = cardAiAttackChoices(db, st, policy);
   if (!opts.length) return { type: 'endAttacks' };
-  if (sloppy) return rand() < 0.25 ? { type: 'endAttacks' } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
+  if (sloppy) {
+    // 雑な手の番でも、当たれば勝ちの一撃があれば打つ(2026-11-02 社長「勝ちになる攻撃は打つ」)
+    const win = opts.find((o) => cardAiWinsBy(db, st, o));
+    if (win) return cardAiFillBind(db, st, win, policy);
+    return rand() < 0.25 ? { type: 'endAttacks' } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
+  }
   const scored = cardAiAttackScored(db, st, opts, policy);
   if (policy.search) return cardAiSearchPick(db, st, scored, policy, rand);
   if (scored[0].s <= 0.3) return { type: 'endAttacks' };
@@ -56157,7 +56939,7 @@ const CARD_AI_DECKS = Object.freeze({
   dra:      { kit: 'powerful', field: ['興奮のるつぼ', '必殺技の封印'] },  // 守り。受けるダメージを減らす場
   kyuko:    { field: ['必殺技の応酬'] },  // 小技を封じる。2種入れると MASTER で7点下がったので1種(2026-10-30)
   atsu:     { prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード'], field: ['必殺技の応酬', '灼熱の地'] },  // 全体攻撃を集める。全体カードは大技で押す場と焼ける場
-  sorashido: { prefer: ['大混乱', '時間稼ぎ', '大鎌', 'ハテナマーク', 'ニャーにゃー'] },  // 山札とガッツを削る札(その3体で使えるものだけ入る)
+  sorashido: { prefer: ['大混乱', '時間稼ぎ', '大声', 'ハテナマーク', 'ニャーにゃー'] },  // 山札とガッツを削る札(その3体で使えるものだけ入る)。大鎌(ジョーカーの技・ソラシドの3体では使えず入らなかった)を、ハムの「大声」に入れかえ(2026-11-02 社長 案A)
 });
 // 助手の好きなモンスター(1体。2026-10-25 社長「1体だけ好きなモンスターを決めて、あとは好みのバランスでデッキ組む」)。
 // 名前ではなく主血統(種族)で決める(「モッチーだけどジェントル使うとかはあり」)。その種族の通常・キラ・別絵キラと、
@@ -56203,6 +56985,9 @@ const CARD_AI_BUILD = Object.freeze({
   //   2体目はいちばん強い子のまま。上位4組からえらぶ形や3体目を上位3体からにすると、点は近くても勝率が9〜17点下がる助手が出た(card-ai-balance で測った)
   master: { maxWave: 99, noise: 0.05, temp: 0.2, stray: 0, best: true, lastTop: 2 },  // いちばん強い組み合わせで本気・相手のデッキを見て選び直す
 });
+// 助手ごとに、MASTER の2体目も上位◯体から毎試合えらぶ(いちばんの子は2倍えらばれやすい)。書いていない助手は2体目がいちばん強い子のまま。
+//   2026-11-01 社長「きゅうこ MASTER の3体が毎回ほぼ同じ」(点検 L)→ きゅうこだけ2体目を上位2体から(勝率は tools で測ってそろえの中)
+const CARD_AI_SECOND_TOP = Object.freeze({ kyuko: { master: 2 } });
 // 助手ごとの強さのそろえ(カードの選び方の雑さに足す値。+ で弱く・- で強く。0 より下にはならない)。
 // tools/card/card-ai-balance.js で、プレイヤー役(スターター)への勝率が強さごとにそろうように決めた(2026-10-25)
 const CARD_AI_DECK_TUNE = Object.freeze({
@@ -56212,12 +56997,12 @@ const CARD_AI_DECK_TUNE = Object.freeze({
   kyuko: { easy: -1.5, normal: -1.5, hard: -1.5, expert: 0, master: -0.05 },   // MASTER は派生25枚(ママニャーなど)で好きな子の幅が広がり強くなったので 0.1 → 1(2026-10-25)
   dra: { easy: -1.5, normal: -1.5, expert: 0.5, master: 0.5 },   // EXPERT はカウンターの直し(半分返して残りを受ける・2026-10-27)で 38% を下回ったので揺らぎを足した(57%)。MASTER は混血のメイン・サブの直し(2026-10-27)のあと、card-rules-check の強さの範囲に入るように 0.5
   atsu: { easy: -1.5, normal: -3, hard: -2.1 },
-  sorashido: { easy: -1.5, normal: -1.5, hard: -1.5, master: -0.05 },   // 2026-10-27 ルールくん(プレイヤー役への勝率 EASY 42.7・NORMAL 48.7・HARD 50.2・EXPERT 47.6・MASTER 47.8%)
+  sorashido: { easy: -1.5, normal: -1.5, hard: -1.5, master: 0.5 },   // MASTER は雑な手を0にした(2026-11-03 社長 A)ぶん、強さはデッキの揺らぎで合わせる(-0.05 → 0.5・プレイヤー役への勝率 74→52%)。2026-10-27 ルールくん(プレイヤー役への勝率 EASY 42.7・NORMAL 48.7・HARD 50.2・EXPERT 47.6・MASTER 47.8%)
 });
 // 組み直すデッキで、順番の枠に入れてよい「入れたい度」の下限(cardAiCardValue の値)。助手ごとの違いは、
 //   EXPERT・MASTER でプレイヤー役との勝率がそろうように tools/card/card-ai-balance.js で決めた
 const CARD_AI_LANE_MIN_DEFAULT = 0.8;
-const CARD_AI_LANE_MIN = Object.freeze({ momosuke: 1.5, dra: 0.8, kyuko: 2.0, atsu: 1.5, sorashido: 1.5 });   // きゅうこは混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 1.5。ドラは不自然な手の直し(2026-10-27)で MASTER が 38% を割ったので 0.3 → 0.8(1 より上だと好きな子の技が入らないことがある)
+const CARD_AI_LANE_MIN = Object.freeze({ momosuke: 2.0, dra: 0.8, kyuko: 2.0, atsu: 1.5, sorashido: 1.5 });   // きゅうこは混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 1.5。ドラは不自然な手の直し(2026-10-27)で MASTER が 38% を割ったので 0.3 → 0.8(1 より上だと好きな子の技が入らないことがある)   // ももすけは手が詰まったときの入れ替え(2026-11-02 案A)で MASTER 39.8→36.7% に下がったので 1.5 → 2.0(450試合で 40.4%)
 const CARD_DECK_COPY_MAX = 3; // 同じカード(同じ番号)の技・全体・ブリーダーカードは3枚まで。名前が同じでも番号がちがう(使うモンスターがちがう)カードは別に数える(2026-10-31 社長「ゴーレムのキックとヘンガーのキック」)
 const CARD_AI_ATTACH_MAX = 6;
 const CARD_AI_FIELD_LIKE = 1; // 得意な全体カードを出すときに足す点(cardAiScoreAttack)
@@ -56249,6 +57034,7 @@ const cardAiCardValue = (card, habit) => {
     let v = eff('evade') ? 2.2 : eff('reduceAll') ? 2.4 : eff('reflect') ? 2.3 : eff('cover') ? 1.4 : eff('endure') ? 1.1 : eff('redirect') ? 1.0 : eff('shield') ? 1.0
       : eff('evadeAll') ? 1.2 : eff('noGutsLoss') ? 0.8 : eff('takeMult') ? 0.5 : (eff('liftAllies') || eff('waterAll')) ? 0.6 : 1.6;
     const re = cardEff(card, 'reduce'); if (re) v = 1 + re.n * 0.4;
+    if (eff('toGutsAfterUse')) v += 0.35; // 九重神眼: 使ったらガッツに戻る(払うガッツが1つ軽いのと同じ)
     if (eff('selfGutsAll')) v -= 1.4; // 緊急回避: 守れても、ためたガッツを全部なくす
     return (v - card.guts * 0.35) * habit.keepGuard;
   }
@@ -56275,6 +57061,7 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'rage') v += 0.6;
       if (e.t === 'choose') v += e.then === 'toHand' ? 0.8 : 0.3;
       if (e.t === 'safe') v += 0.8;
+      if (e.t === 'gutsFromDiscardNow') v += 0.4 * e.n; // 霊魂操作: 捨て札からガッツを作る
       if (e.t === 'revive') v += 0.3;
       if (e.t === 'possess') v += 0.2;
       if (e.t === 'cocoon') v -= 1;
@@ -56302,6 +57089,10 @@ const cardAiCardValue = (card, habit) => {
   if (eff('bonusDiscard') || eff('bonusLost')) dmg += 3;
   if (eff('tossBonus')) dmg += 1.5; // カード投げ: ふつうは手札を1〜2枚捨てて使う
   if (eff('returnOnHit')) dmg += 0.8;
+  if (eff('toGutsOnHit')) dmg += 0.6; // ひのこ・火炎車: 当たればガッツに戻る
+  if (eff('safeOnHit')) dmg += 0.8;    // 陽炎: 当てたら次の自分のターンまでダメージ0
+  const gfd = cardEff(card, 'gutsFromDiscard'); if (gfd) dmg += 0.4 * gfd.n; // なめろう: 捨て札からガッツ
+  if (eff('nextOwnCost')) dmg += 0.6;  // 天河天翔: 次のかしこさ技が軽くなる
   if (eff('halfOnEvade') || eff('noEvade')) dmg *= 1.3;
   if (eff('area')) dmg *= 1.6 * habit.area;
   const gl = cardEff(card, 'gutsLossOnHit'); if (gl) dmg += (gl.n === 'all' ? 2 : gl.n) * 0.7 * habit.disrupt * (1 + (habit.mill || 0));
@@ -56327,9 +57118,11 @@ const cardAiPickIndex = (weights, rand) => {
   return weights.length - 1;
 };
 // 好きなモンスターの候補(主血統がその種族のもの。通常・キラ・別絵キラ・混血/派生)
+// 好きな子をもう1つの血統からも選ぶ助手(2026-11-04 社長: ソラシドはキュービ推しなので、キュービ・オリヒメも好きな子に入れる)
+const CARD_AI_FAVORITE_EXTRA = Object.freeze({ sorashido: ['kyubi'] });
 const cardAiFavoriteCandidates = (db, who) => {
-  const fav = CARD_AI_FAVORITE[who] || CARD_AI_FAVORITE.mua;
-  return Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && (String(m.wave) === 'hybrid' ? m.main === fav : m.species === fav)).map((m) => m.no).sort();
+  const favs = [CARD_AI_FAVORITE[who] || CARD_AI_FAVORITE.mua, ...(CARD_AI_FAVORITE_EXTRA[who] || [])];
+  return Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && favs.some((fav) => (String(m.wave) === 'hybrid' ? m.main === fav : m.species === fav))).map((m) => m.no).sort();
 };
 // モンスターの弾(混血・派生は主の種族の弾)。好きな子の技は、この弾まで使える
 //   card を渡すと、そのカードを見る弾: 混血の防御・回避はサブの種族の弾(サブが？？？の子はメインのまま)
@@ -56414,6 +57207,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
     if (!left.length) break;
     let pick;
     if (cfg.stray > 0 && rand() < cfg.stray) pick = left[Math.floor(rand() * left.length) % left.length];   // 気まぐれ
+    else if (cfg.best && k === 0 && (((CARD_AI_SECOND_TOP[who] || {})[levelId]) || 0) > 1) { const top = left.slice().sort((x, y) => y.v - x.v || (x.m.no < y.m.no ? -1 : 1)).slice(0, CARD_AI_SECOND_TOP[who][levelId]); pick = top[cardAiPickIndex(top.map((_, i) => (i === 0 ? 2 : 1)), rand)]; }
     else if (cfg.best && k === 1 && cfg.lastTop > 1) { const top = left.slice().sort((x, y) => y.v - x.v || (x.m.no < y.m.no ? -1 : 1)).slice(0, cfg.lastTop); pick = top[cardAiPickIndex(top.map((_, i) => (i === 0 ? 2 : 1)), rand)]; }
     else if (cfg.best) pick = left.reduce((x, y) => (y.v > x.v ? y : x));
     else { const top = Math.max(...left.map((x) => x.v)); pick = left[cardAiPickIndex(left.map((x) => Math.exp((x.v - top) / cfg.temp)), rand)]; }
@@ -57165,7 +57959,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   { id: 'noGuard', cat: 'monster', sec: '守り', phase: 'guard', name: '守らない', tiers: [['', 'R']], desc: '守り札を使わず受ける(札を残す)' },
   { id: 'save', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: 'ガッツをためる', tiers: [['', 'N']], start: [''], desc: '手札を多めにガッツへ回す' },
   { id: 'gutsN', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: 'ガッツを◯枚だけ置く', tiers: [[0, 'N'], [1, 'N'], [2, 'N'], [3, 'N']], desc: 'ガッツの番に置く数を決める' },
-  { id: 'keepGuard', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: '守り札を残して置く', tiers: [['', 'R']], desc: '回避・防御はガッツにしない' },
+  { id: 'keepGuard', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: '守り札を3枚まで残す', tiers: [['', 'R']], desc: '回避・防御は3枚までガッツにしない' },   // 2026-11-02 社長「案B 上限つきに」(前は守りの札を全部残して、手札が固まった)
   { id: 'gutsOrder', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: '◯から置く', tiers: [['重い札', 'N'], ['使えない札', 'N']], desc: 'ガッツにする札の順を決める' },
   { id: 'stop', cat: 'breeder', sec: '流れ', phase: 'attack', name: '攻撃を止める', tiers: [['', 'N']], start: [''], desc: 'この番の攻撃をここで終える' },
   { id: 'charge', cat: 'monster', sec: '流れ', phase: 'attack', name: '溜め技を使う', tiers: [['', 'R']], desc: '次の技を何倍にする札を先に使う' },
@@ -57176,26 +57970,27 @@ const CARD_TACTIC_GROUPS = Object.freeze([
 // 名前と効果の文(2026-10-30 社長「そもそも戦術カードの効果がわからない。カード名と効果を明確化して」→ 246枚の一覧に「この形で」)。
 //   効果は、このファイルの判定(cardTacticCond・cardTacticAttackFits・cardTacticRowAct・cardTacticHabitOf/KnobsOf)の動きどおりに書く。
 //   判定を変えたら、ここの文も必ず合わせる。カードの id(保存に書く)は変えない。種類ごとに (段) => [名前, 効果]
+const cardTacticUpTo = (v, u = '') => (Number(v) === 0 ? `0${u}` : `${v}${u}以下`); // 0 のときは「0以下」と書かずに「0」(2026-11-02 社長「変な文面多い」)
 const CARD_TACTIC_TEXT = Object.freeze({
 // ---- 条件(〜なら) ----
 any:()=>['いつでも','いつでも当てはまる。組み合わせたカードを、使えるときはいつも使う'],
-ko:()=>['倒せる相手がいる','手札の攻撃の技(特殊技は除く)で、いまのガッツで出せて、ダメージが残りライフ以上になる相手のモンスターがいるとき。その相手を狙う'],
+ko:()=>['倒せる相手がいる','手札の攻撃の技(特殊技は除く)を、いまのガッツで出せば倒せる相手のモンスターがいるとき。その相手を狙う'],
 lowest:()=>['ライフがいちばん少ない相手','相手の場で、残りライフ(数)がいちばん少ない相手を狙う'],
 highest:()=>['ライフがいちばん多い相手','相手の場で、残りライフ(数)がいちばん多い相手を狙う'],
 strongest:()=>['攻撃がいちばん強い相手','相手のモンスターのうち、使える技の最大ダメージがいちばん大きい相手を狙う(手札は見ない)'],
 attacker:()=>['前のターンに攻撃してきた相手','直前の相手のターンに攻撃してきた相手のモンスターを狙う'],
 leader:()=>['相手のリーダー','相手が1体目(左)に置いたモンスターが残っていれば、それを狙う'],
 type:(v)=>[`${v}の相手`,`いま${v}にいる相手のモンスターを狙う`],
-blood:(v)=>[`${v}の相手`,`${v}のモンスターの相手を狙う`],
-species:()=>['決めた種族の相手','組むときに選んだ種族の相手のモンスター(混血はもとの種族でも当たる)を狙う'],
+blood:(v)=>[`${v}の相手`,`${v}の相手のモンスターを狙う`],
+species:()=>['決めた種族の相手','組むときに選んだ種族の、相手のモンスターを狙う(混血は、もとの種族でも当てはまる)'],
 foeLife:(v)=>[`相手のライフ${v}%以下`,`残りライフが最大の${v}%以下になっている相手のモンスターがいるとき。その相手を狙う`],
 myLife:(v)=>[`味方のライフ${v}%以下`,`残りライフが最大の${v}%以下の自分のモンスターがいるとき。守るカードと組むと、そのモンスターが狙われたときだけ守る`],
 myGuts:(v)=>[`自分のガッツ${v}以上`,`自分のガッツが${v}以上のとき`],
-foeGutsLe:(v)=>[`相手のガッツ${v}以下`,`相手のガッツが${v}以下のとき`],
-foeGutsGe:(v)=>[`相手のガッツ${v}以上`,`相手のガッツが${v}以上のとき(大技に備える)`],
+foeGutsLe:(v)=>[`相手のガッツ${cardTacticUpTo(v)}`,`相手のガッツが${cardTacticUpTo(v)}のとき`],
+foeGutsGe:(v)=>[`相手のガッツ${v}以上`,`相手のガッツが${v}以上のとき(大技が来るのに備える)`],
 myHand:(v)=>[`自分の手札${v}枚以上`,`自分の手札が${v}枚以上のとき`],
 foeHandGe:(v)=>[`相手の手札${v}枚以上`,`相手の手札が${v}枚以上のとき`],
-foeHandLe:(v)=>[`相手の手札${v}枚以下`,`相手の手札が${v}枚以下のとき`],
+foeHandLe:(v)=>[`相手の手札${cardTacticUpTo(v,'枚')}`,`相手の手札が${cardTacticUpTo(v,'枚')}のとき`],
 myDeck:(v)=>[`自分の山札${v}枚以下`,`自分の山札の残りが${v}枚以下のとき`],
 foeDeck:(v)=>[`相手の山札${v}枚以下`,`相手の山札の残りが${v}枚以下のとき`],
 guardN:(v)=>[`手札に守りのカード${v}枚以上`,`手札に回避・防御のカードが合わせて${v}枚以上あるとき`],
@@ -57203,83 +57998,83 @@ guardKind:(v)=>[`手札に${v}のカードがある`,`手札に${v}のカード�
 bigInHand:()=>['手札に大技がある','手札に、払うガッツが4以上の攻撃のカードがあるとき'],
 areaInHand:()=>['手札に全体攻撃がある','手札に、相手の全員に当たる攻撃のカードがあるとき'],
 breederInHand:()=>['手札にブリーダーのカードがある','手札にブリーダーのカードが1枚以上あるとき'],
-turnLe:(v)=>[`自分の${v}ターン目まで`,`自分のターンが${v}回目までのとき(自分のはじめのターンが1回目)`],
+turnLe:(v)=>(Number(v)===1?['自分の1ターン目','自分の1回目のターンのとき']:[`自分の${v}ターン目まで`,`自分のターンが1回目から${v}回目までのとき`]),
 turnGe:(v)=>[`自分の${v}ターン目から`,`自分のターンが${v}回目以降のとき`],
 myAlive:(v)=>[`味方が残り${v}体`,`倒れていない自分のモンスターがちょうど${v}体のとき`],
 foeAlive:(v)=>[`相手が残り${v}体`,`倒れていない相手のモンスターがちょうど${v}体のとき`],
 koDiff:(v)=>[v==='勝っ'?'倒した数で勝っている':'倒した数で負けている',v==='勝っ'?'倒した相手の数が、倒された味方の数より多いとき':'倒された味方の数が、倒した相手の数より多いとき'],
-foeStun:()=>['攻撃できない相手','封じられていて、相手の次のターンに攻撃できない相手のモンスターを狙う'],
-myStun:()=>['攻撃できない味方がいる','封じられて攻撃できない自分のモンスターがいるとき'],
-foeCharge:()=>['溜めている相手','溜め技を使って、次の技のダメージが何倍にもなる相手のモンスターを狙う'],
+foeStun:()=>['攻撃できない相手','「攻撃できない」になっていて、次のターンに攻撃してこない相手のモンスターを狙う'],
+myStun:()=>['攻撃できない味方がいる','「攻撃できない」になっている自分のモンスターがいるとき'],
+foeCharge:()=>['溜めている相手','溜め技を使っていて、次の技のダメージが何倍にもなる相手のモンスターを狙う'],
 foeAir:()=>['空中に上がった相手','もとは地上・水中なのに、いま空中になっている相手のモンスターを狙う'],
 field:(v)=>[`場に${v}全体カードがある`,`場に、${v==='自分の'?'自分':'相手'}が出した全体カードが残っているとき`],
-foeBig:()=>['相手が大技を撃てそう','相手のガッツが4以上で手札があり、相手のモンスターが使える大技(払うガッツ4以上)をいまのガッツ+1で払えるとき'],
-myHandLe:(v)=>[`自分の手札${v}枚以下`,`自分の手札が${v}枚以下のとき`],
+foeBig:()=>['相手が大技を撃てそう','相手のガッツが4以上で手札があり、相手のモンスターの大技(払うガッツ4以上)を、次のターンにガッツが1増えれば出せるとき'],
+myHandLe:(v)=>[`自分の手札${cardTacticUpTo(v,'枚')}`,`自分の手札が${cardTacticUpTo(v,'枚')}のとき`],
 breederN:()=>['手札にブリーダーのカード2枚以上','手札にブリーダーのカードが2枚以上あるとき'],
 breederUnused:()=>['このターンまだブリーダーのカードを出していない','このターンに、まだブリーダーのカードを出していないとき'],
-myGutsLe:(v)=>[`自分のガッツ${v}以下`,`自分のガッツが${v}以下のとき`],
+myGutsLe:(v)=>[`自分のガッツ${cardTacticUpTo(v)}`,`自分のガッツが${cardTacticUpTo(v)}のとき`],
 myDiscard:(v)=>[`自分の捨て札${v}枚以上`,`自分の捨て札が${v}枚以上のとき`],
 myKo:()=>['倒れた味方がいる','自分のモンスターが1体でも倒れているとき'],
-noField:()=>['場に全体カードが無い','どちらの全体カードも場に無いとき'],
-selfLife:(v)=>[`このモンスターのライフ${v}%以下`,`このカードを入れたモンスターの残りライフが最大の${v}%以下のとき(モンスターの枠に入れたときだけ当たる)`],
-selfFresh:()=>['このモンスターがこのターンまだ攻撃していない','このカードを入れたモンスターが、このターンにまだ攻撃していないとき(モンスターの枠だけ)'],
-selfType:(v)=>[`このモンスターがいま${v}`,`このカードを入れたモンスターが、いま${v}にいるとき(モンスターの枠だけ)`],
-selfStun:()=>['このモンスターが攻撃できない','このカードを入れたモンスターが封じられて攻撃できないとき(モンスターの枠だけ)'],
-selfAdv:()=>['このモンスターが得意な相手','このカードを入れたモンスターが出せる手札の技に、相手の特徴(地上・空中・水中)でダメージが倍になるものがあるとき。その相手を狙う(モンスターの枠だけ)'],
-incoming:(v)=>[`受けるダメージ${v}以上`,`攻撃を受けたとき、受けるダメージの見込みが${v}以上なら(守るときだけ見る)`],
-incomingKo:()=>['受けると倒れる','攻撃を受けたとき、守らないと倒れるなら(守るときだけ見る)'],
-incomingArea:()=>['全体攻撃を受けた','受けた攻撃が、全員に当たる攻撃なら(守るときだけ見る)'],
+noField:()=>['場に全体カードが無い','自分の全体カードも相手の全体カードも、場に無いとき'],
+selfLife:(v)=>[`このモンスターのライフ${v}%以下`,`このカードを入れたモンスターの残りライフが最大の${v}%以下のとき(モンスターの枠に入れたときだけ当てはまる)`],
+selfFresh:()=>['このモンスターがこのターンまだ攻撃していない','このカードを入れたモンスターが、このターンにまだ攻撃していないとき(モンスターの枠に入れたときだけ)'],
+selfType:(v)=>[`このモンスターがいま${v}`,`このカードを入れたモンスターが、いま${v}にいるとき(モンスターの枠に入れたときだけ)`],
+selfStun:()=>['このモンスターが攻撃できない','このカードを入れたモンスターが「攻撃できない」になっているとき(モンスターの枠に入れたときだけ)'],
+selfAdv:()=>['このモンスターが得意な相手','このカードを入れたモンスターが出せる手札の技に、相手の特徴(地上・空中・水中)でダメージが倍になるものがあるとき。その相手を狙う(モンスターの枠に入れたときだけ)'],
+incoming:(v)=>[`受けるダメージ${v}以上`,`攻撃を受けたとき、受けるダメージの見込みが${v}以上なら(守るかどうかを決めるときだけ見る)`],
+incomingKo:()=>['受けると倒れる','攻撃を受けたとき、守らないと倒れるなら(守るかどうかを決めるときだけ見る)'],
+incomingArea:()=>['全体攻撃を受けた','受けた攻撃が、全員に当たる攻撃なら(守るかどうかを決めるときだけ見る)'],
 // ---- 基本カード(どの手にも当てはまらないときの打ち方) ----
-tBalance:()=>['バランス型','攻め・守り・ガッツ・大技・崩し・全体を同じくらいに見て、損得のいちばん良い使い方をする。とどめだけ少し優先'],
-tAttack:()=>['攻め型','攻撃を多めに出し(1.5倍重く)、ガッツはためず守りのカードも残さない。守るのは、受けると倒れるときだけ'],
-tGuard:()=>['守り型','守りのカードを残す(1.5倍重く)・攻撃は控えめ(0.7倍)。攻撃を受けたら、守れるときはいつも守る'],
-tSave:()=>['溜め型','ガッツを多めにためて(1.6倍)、大技を優先する(1.8倍)'],
-tDisrupt:()=>['崩し型','相手の手札・山札・ガッツを減らすカードを優先する(1.8倍)'],
-tBig:()=>['大技型','ダメージの大きい技を優先する(1.6倍)'],
-tArea:()=>['全体型','全員に当たる攻撃・全体カードを優先する(1.6倍)。相手が1体だけのときは全体攻撃を出さない'],
-tFinish:()=>['仕留め型','あと少しで倒せる相手への攻撃を優先する(1.6倍)'],
-tRush:()=>['速攻型','攻撃を多めに(1.6倍)・大技は控えめ(0.7倍)。払うガッツが2以上の技は出さない。守るときもガッツ1以下の守りのカードだけ使う'],
-tSteady:()=>['堅実型','守りのカードとガッツを残し(1.3倍)、攻撃は控えめ(0.8倍)。自分も傷つく技は出さない'],
-tJam:()=>['かく乱守り型','崩すカード(1.3倍)と、守りのカードを残すこと(1.3倍)を両方重くする'],
-tCalm:()=>['慎重型','いっしょに入れた基本カードの重みを半分に弱めて、極端な打ち方をしない'],
+tBalance:()=>['バランス型','攻め・守り・ガッツ・大技・崩し・全体を同じくらいに見て、いちばん得になるカードを出す。とどめだけ少し優先する'],
+tAttack:()=>['攻め型','攻撃をふだんの1.5倍選びやすくする。ガッツはためず、守りのカードも手札に残さない。守るのは、受けると倒れるときだけ'],
+tGuard:()=>['守り型','守りのカードを手札に残しやすく(ふだんの1.5倍)、攻撃は控えめ(0.7倍)にする。攻撃を受けたら、守れるときはいつも守る(守っても倒れるのが変わらないときは除く)'],
+tSave:()=>['溜め型','ガッツを多めにため(ふだんの1.6倍)、大技を選びやすくする(1.8倍)'],
+tDisrupt:()=>['崩し型','相手の手札・山札・ガッツを減らすカードを選びやすくする(ふだんの1.8倍)'],
+tBig:()=>['大技型','ダメージの大きい技を選びやすくする(ふだんの1.6倍)'],
+tArea:()=>['全体型','全員に当たる攻撃・全体カードを選びやすくする(ふだんの1.6倍)。相手が1体だけのときは全体攻撃を出さない'],
+tFinish:()=>['仕留め型','あと少しで倒せる相手への攻撃を選びやすくする(ふだんの1.6倍)'],
+tRush:()=>['速攻型','攻撃を選びやすく(ふだんの1.6倍)、大技は控えめ(0.7倍)にする。払うガッツが2以上の技は出さない。守るときも、払うガッツが1以下の守りのカードだけ使う'],
+tSteady:()=>['堅実型','守りのカードとガッツを残しやすく(ふだんの1.3倍)、攻撃は控えめ(0.8倍)にする。自分も傷つく技は出さない'],
+tJam:()=>['かく乱守り型','相手を崩すカードを選びやすく(ふだんの1.3倍)、守りのカードも手札に残しやすく(1.3倍)する'],
+tCalm:()=>['慎重型','いっしょに入れたほかの基本カードの効き目を半分にして、極端な戦い方をしない'],
 tFlex:()=>['臨機応変型','ターンごとに場を見て、とどめ・全体攻撃・守り・攻めのどれか1つを強くする'],
-tMill:()=>['持久型','相手の山札を削る・相手に引かせる・ガッツを山札へ戻すカードを重くして、相手の山札切れで勝ちを狙う'],
-tReckless:()=>['捨て身型','守りのカードを残さず(0.5倍)、とどめを優先(1.3倍)。受けると倒れるとき以外は守らない'],
-tHand:()=>['手札温存型','使ったあとに手札が2枚以上残るときだけカードを使う。ガッツを置くときも手札を2枚残して置く'],
+tMill:()=>['持久型','相手の山札を削る・相手に引かせる・ガッツを山札へ戻すカードを選びやすくして、相手の山札切れで勝ちを狙う'],
+tReckless:()=>['捨て身型','守りのカードを手札に残さず(ふだんの0.5倍)、とどめを選びやすくする(1.3倍)。受けると倒れるとき以外は守らない'],
+tHand:()=>['手札を残す型','出したあとに手札が2枚以上残るときだけカードを出す。ターンの終わりに手札をガッツにするときも、2枚は手札に残す'],
 tDeck:()=>['山札節約型','カードを引く・山札からガッツへ・手札を引き直す・相手に引かせるカードは出さない'],
 tFocus:()=>['一点集中型','ライフの割合がいちばん低い相手への攻撃を優先して、倒れるまで同じ相手を狙う'],
-tSpread:()=>['分散型','全体攻撃を重くし(1.4倍)、ライフがいちばん多い相手への攻撃を優先する'],
-tComeback:()=>['逆転型','倒された数で負けている、または味方のライフの合計が半分以下なら捨て身(守り0.5倍・とどめ・大技・全体1.3倍)。それ以外は堅く(守り・ガッツ1.2倍)'],
+tSpread:()=>['分散型','全体攻撃を選びやすくし(ふだんの1.4倍)、ライフがいちばん多い相手への攻撃を優先する'],
+tComeback:()=>['逆転型','倒された数で負けている、または味方のライフの合計が半分以下なら、捨て身で戦う(守り0.5倍・とどめ・大技・全体1.3倍)。それ以外は堅く戦う(守り・ガッツ1.2倍)'],
 // ---- モンスターカード(この子の手) ----
-atk:()=>['いちばん得な攻撃','このモンスターが出せる攻撃のうち、点数(ダメージ・とどめ・ガッツの損得)がいちばん高い攻撃をする'],
-kind:(v)=>[`${v}の技で攻撃`,`このモンスターの${v}の技のうち、点数がいちばん高い攻撃をする`],
-cost:(v)=>{const n=v.startsWith('軽い')?'0〜1':v.startsWith('中')?'2〜3':'4以上';const nm=v.startsWith('軽い')?'軽い技':v.startsWith('中')?'中くらいの技':'大技';return [`${nm}で攻撃`,`このモンスターの技のうち、払うガッツが${n}の技で、点数がいちばん高い攻撃をする`];},
-reach:(v)=>[v==='全体攻撃'?'全体攻撃で攻撃':'1体だけに攻撃',v==='全体攻撃'?'このモンスターの、相手の全員に当たる技のうち、点数がいちばん高い攻撃をする':'このモンスターの、1体だけに当てる技のうち、点数がいちばん高い攻撃をする'],
-eff:(v)=>{const d={回避されない:'相手が回避できない技',攻撃できなくする:'当たると相手を攻撃できなくする技',ガッツを減らす:'当たると相手のガッツを減らす技',吸い取る:'相手のライフを吸い取って回復する技','2回攻撃':'もう1回攻撃できるようになる技',防御で減らない:'防御されてもダメージが減らない技',回避されても半分:'回避されても半分のダメージが入る技',種族に強い:'特定の特徴の相手に倍のダメージの技',ダメージを割り振る:'ダメージを相手の何体かに割り振る技','2枚同時':'2枚組でいっしょに出す技',手札に戻る:'当たると手札に戻ってくる技',カード投げ:'カードを投げてダメージを足す技'}[v];return [`「${v}」の技で攻撃`,`このモンスターの、${d}のうち、点数がいちばん高い攻撃をする`];},
-attach:()=>['付けるカードといっしょに攻撃','技に付けるカードをいっしょに出す攻撃のうち、点数がいちばん高いものを出す'],
-attachKind:(v)=>[`付けるカード(${v})といっしょに攻撃`,`「${v}」付けるカードをいっしょに出す攻撃のうち、点数がいちばん高いものを出す`],
+atk:()=>['いちばん得な攻撃','このモンスターが出せる攻撃のうち、ダメージ・とどめ・払うガッツを見て、いちばん得な攻撃をする'],
+kind:(v)=>[`${v}の技で攻撃`,`このモンスターの${v}の技のうち、いちばん得な技で攻撃する`],
+cost:(v)=>{const n=v.startsWith('軽い')?'0〜1':v.startsWith('中')?'2〜3':'4以上';const nm=v.startsWith('軽い')?'軽い技':v.startsWith('中')?'中くらいの技':'大技';return [`${nm}で攻撃`,`このモンスターの技のうち、払うガッツが${n}の技のうち、いちばん得なもので攻撃する`];},
+reach:(v)=>[v==='全体攻撃'?'全体攻撃で攻撃':'1体だけに攻撃',v==='全体攻撃'?'このモンスターの、相手の全員に当たる技のうち、いちばん得な技で攻撃する':'このモンスターの、1体だけに当てる技のうち、いちばん得な技で攻撃する'],
+eff:(v)=>{const d={回避されない:'相手が回避できない技',攻撃できなくする:'当たると相手を攻撃できなくする技',ガッツを減らす:'当たると相手のガッツを減らす技',吸い取る:'相手のライフを吸い取って回復する技','2回攻撃':'もう1回攻撃できるようになる技',防御で減らない:'防御されてもダメージが減らない技',回避されても半分:'回避されても半分のダメージが入る技',種族に強い:'特定の特徴の相手に倍のダメージの技',ダメージを割り振る:'ダメージを相手の何体かに割り振る技','2枚同時':'2枚組でいっしょに出す技',手札に戻る:'当たると手札に戻ってくる技',カード投げ:'カードを投げてダメージを足す技'}[v];return [`「${v}」の技で攻撃`,`このモンスターの、${d}のうち、いちばん得な技で攻撃する`];},
+attach:()=>['付けるカードといっしょに攻撃','技に付けるカードをいっしょに出す攻撃のうち、いちばん得なものを出す'],
+attachKind:(v)=>[`付けるカード(${v})といっしょに攻撃`,`「${v}」の付けるカードをいっしょに出す攻撃のうち、いちばん得なものを出す`],
 spe:(v)=>{const d={味方を回復:'味方のライフを回復する',引く:'カードを引く',空中になる:'空中に上がる',安全になる:'次の攻撃を受けなくなる',まゆと羽化:'まゆになる・羽化する',のりうつる:'相手にのりうつる'}[v];return [`特殊技で${d}`,`このモンスターの特殊技のうち、${d}技を出す`];},
-stance:(v)=>({この子から攻める:['このモンスターが攻める','当てはまったら、このモンスターの攻撃で点数がいちばん高い攻撃をする'],この子は攻撃しない:['このモンスターは攻撃しない','当てはまったら、このターンはこのモンスターに攻撃させない(このあとの戦術カード・基本カードの打ち方でも攻撃させない)'],ライフの多い子が先に:['いちばん元気なら攻める','このモンスターが味方でいちばんライフが多いときだけ、このモンスターの攻撃で点数がいちばん高い攻撃をする'],ライフの少ない子は温存:['いちばん弱っていたら休む','味方が2体以上いて、このモンスターのライフがいちばん少ないとき、このターンは攻撃させない'],攻撃は1回だけ:['攻撃は1回だけ','このターンにまだ攻撃していなければ攻撃する。1回攻撃したら、このターンはもう攻撃させない'],何回でも攻める:['何回でも攻める','点数が少し低い攻撃でも出して、このモンスターの攻撃を続ける']})[v],
+stance:(v)=>({この子から攻める:['このモンスターから攻める','当てはまったら、このモンスターで、いちばん得な攻撃をする'],この子は攻撃しない:['このモンスターは攻撃しない','当てはまったら、このターンはこのモンスターに攻撃させない(このあとの戦術カード・基本カードでも攻撃させない)'],ライフの多い子が先に:['いちばん元気なら攻める','このモンスターが味方の中でいちばんライフが多いときだけ、このモンスターで、いちばん得な攻撃をする'],ライフの少ない子は温存:['いちばん弱っていたら休む','味方が2体以上いて、このモンスターのライフがいちばん少ないときは、このターンは攻撃させない(休ませる)'],攻撃は1回だけ:['攻撃は1回だけ','このターンにまだ攻撃していなければ攻撃する。1回攻撃したら、このターンはもう攻撃させない'],何回でも攻める:['何回でも攻める','少し損な攻撃でも出して、このモンスターで攻撃を続ける']})[v],
 disrupt:(v)=>({手札を捨てさせる:['相手の手札を捨てさせる','相手の手札を捨てさせる・山札の下へ戻すカードを使う'],山札を削る:['相手の山札を削る','相手の山札を削るカードを使う'],ガッツを減らす:['相手のガッツを減らす','相手のガッツを減らす・0にするカードを使う'],番を飛ばす:['相手のターンを飛ばす','相手の次のターンを飛ばすカードを使う']})[v],
-guard:()=>['守る','このモンスターが攻撃を受けたら、手札の守りのカードでいちばん良い守り方をする'],
-guardFirst:(v)=>[`${v}で守る`,`このモンスターが攻撃を受けたら、${v==='回避'||v==='防御'?v+'のカード':'「'+v+'」のカード'}だけで守る(無ければ次のカードを見る)`],
+guard:()=>['守る','このモンスターが攻撃を受けたら、手札の守りのカードでいちばん良い守り方をする。守っても倒れるのが変わらないときは、守らずに受ける'],
+guardFirst:(v)=>[`${v}で守る`,`このモンスターが攻撃を受けたら、${v==='回避'||v==='防御'?v+'のカード':'「'+v+'」のカード'}だけで守る(そのカードが無ければ、次の戦術カードへ進む)。守っても倒れるのが変わらないときは、守らずに受ける`],
 guardOver:(v)=>[`ダメージ${v}以上だけ守る`,`このモンスターが攻撃を受けたとき、受けるダメージの見込みが${v}より小さければ守らずに受ける。${v}以上なら守る`],
-guardDie:()=>['倒れるときだけ守る','このモンスターが攻撃を受けたとき、受けても倒れなければ守らずに受ける。倒れるときだけ守る'],
-cover:()=>['かばうカードで守る','このモンスターが攻撃を受けたら、かばう・身代わりのカードで守る'],
-noGuard:()=>['守らない','このモンスターが攻撃を受けても、守りのカードを使わずに受ける(カードを残す)'],
-charge:()=>['溜め技を使う','次の技のダメージを何倍にするカード(溜め・怒り・次のターンの技を倍)を使う'],
+guardDie:()=>['倒れるときだけ守る','このモンスターが攻撃を受けたとき、受けても倒れなければ守らずに受ける。倒れるときだけ守る。守っても倒れるのが変わらないときは、守らずに受ける'],
+cover:()=>['かばうカードで守る','このモンスターが攻撃を受けたら、かばう・身代わりのカードで守る。守っても倒れるのが変わらないときは、守らずに受ける'],
+noGuard:()=>['守らない','このモンスターが攻撃を受けても、守りのカードを使わずに受ける(守りのカードは手札に残す)'],
+charge:()=>['溜め技を使う','次の技のダメージを何倍にもするカード(溜め・怒り・次のターンの技を倍)を使う'],
 chargeKind:(v)=>((w)=>[`溜め(${w})を使う`,`「${w}」の溜めのカードを使う`])(v==='次の番の技を倍'?'次のターンの技を倍':v), // 段の値(保存に書く)は「次の番の技を倍」のまま。見せる言葉だけ「ターン」(2026-10-30 社長)
 // ---- ブリーダーカード ----
-bEff:(v)=>{const d={回復する:'味方を回復する',倒れた子を戻す:'倒れたモンスターを場に戻す',攻撃できないを消す:'味方の「攻撃できない」を消す',相手を攻撃できなくする:'相手のモンスターを攻撃できなくする',相手のガッツを減らす:'相手のガッツを減らす',両方のガッツを0にする:'両方のガッツを0にする',山札からガッツへ:'山札からガッツを増やす',カードを引く:'カードを引く',捨て札から拾う:'捨て札からカードを拾う',手札を引き直す:'手札を引き直す',もう1回攻撃させる:'味方にもう1回攻撃させる',合体する:'モンスターを合体させる',付ける札をただにする:'付けるカードの払うガッツを0にする',守りを名指しで封じる:'相手の守りを名指しで封じる',捨て札を山札に戻す:'ガッツを山札に戻して切り直す',小さく攻撃する:'ダメージのあるブリーダーのカードで攻撃する'}[v];return [`ブリーダー: ${d}`,`手札のブリーダーのカードのうち、${d}カードを出す`];},
+bEff:(v)=>{const d={回復する:'味方を回復する',倒れた子を戻す:'倒れたモンスターを場に戻す',攻撃できないを消す:'味方の「攻撃できない」を消す',相手を攻撃できなくする:'相手のモンスターを攻撃できなくする',相手のガッツを減らす:'相手のガッツを減らす',両方のガッツを0にする:'両方のガッツを0にする',山札からガッツへ:'山札からガッツを増やす',カードを引く:'カードを引く',捨て札から拾う:'捨て札からカードを拾う',手札を引き直す:'手札を引き直す',もう1回攻撃させる:'味方にもう1回攻撃させる',合体する:'モンスターを合体させる',付ける札をただにする:'付けるカードの払うガッツを0にする',守りを名指しで封じる:'相手の守りを名指しで封じる',捨て札を山札に戻す:'ガッツを山札に戻して切り直す',小さく攻撃する:'相手にダメージを与える'}[v];return [`ブリーダー: ${d}`,`手札のブリーダーのカードのうち、${d}カードを出す`];},
 fieldCard:()=>['全体カードを出す','手札の全体カード(場に残るカード)を出す'],
 fieldKind:(v)=>[`全体カード: ${v}`,`手札の全体カードのうち、「${v}」の全体カードを場に出す`],
-save:()=>['ガッツを多めにためる','ガッツを置くときに、ふだんより多くの手札をガッツに置く'],
-gutsN:(v)=>[`ガッツを${v}枚置く`,`ガッツを置くときに、手札から${v}枚だけガッツに置く`],
-keepGuard:()=>['守りのカードは置かない','ガッツを置くときに、回避・防御のカードはガッツに置かない'],
-gutsOrder:(v)=>[v==='重い札'?'重いカードからガッツに置く':'使えないカードからガッツに置く',v==='重い札'?'ガッツに置く枚数はふだんどおり。払うガッツの大きいカードから先に置く':'ガッツに置く枚数はふだんどおり。場のモンスターが使えないカードから先に置く'],
-stop:()=>['このターンの攻撃をやめる','当てはまったら、このターンの攻撃をここで終える'],
-ace:()=>['切りカードを出す','登録で選んだ切りカードが手札にあれば、それを先に使う'],
-holdBreeder:()=>['ブリーダーのカードを温存','当てはまったら、このターンはブリーダーのカード(全体カードも)を出さない。ほかのカードはそのまま使う'],
+save:()=>['ガッツを多めにためる','ターンの終わりに、ふだんより多くの手札をガッツにする'],
+gutsN:(v)=>(Number(v)===0?['手札をガッツにしない','ターンの終わりに、手札をガッツにしない。ただし、手札が5枚いっぱいで、そのターンに攻撃もブリーダーのカードも出せなかったときは、守りのカード2枚と切り札、ほかに1枚だけ手札に残して、残りをガッツにする(手札が動かなくなるのを防ぐ)']:[`手札を${v}枚ガッツにする`,`ターンの終わりに、手札を${v}枚だけガッツにする`]),
+keepGuard:()=>['守りのカードを3枚まで残す','ターンの終わりに手札をガッツにするとき、回避・防御のカードは3枚まで手札に残す(4枚目からはふだんどおりガッツにする)。手札が5枚いっぱいで、そのターンに攻撃もブリーダーのカードも出せなかったときは、守りのカード3枚と切り札、ほかに1枚だけ手札に残して、残りをガッツにする'],
+gutsOrder:(v)=>[v==='重い札'?'重いカードから先にガッツにする':'使えないカードから先にガッツにする',v==='重い札'?'ガッツにする枚数はふだんどおり。払うガッツの多いカードから先にガッツにする':'ガッツにする枚数はふだんどおり。場のモンスターが使えないカードから先にガッツにする'],
+stop:()=>['このターンの攻撃をやめる','当てはまったら、このターンはここで攻撃を終える'],
+ace:()=>['切り札を出す','登録で選んだ切り札が手札にあれば、先に出す'],
+holdBreeder:()=>['ブリーダーのカードを出さない','当てはまったら、このターンはブリーダーのカード(全体カードも)を出さない。ほかのカードはふだんどおり出す'],
 });
 // ひとことの文(2026-10-31 社長「戦術カードの効果がいまいちわかりづらい」→ 案A「〜とき」「〜する」の一文。表 line-table.md を社長が「このとおり」)。
 //   条件は「〜とき」、行動・基本は「〜する」で終わる。画面のカードの表・行・記録はこの一文で出し、今の名前と効果(CARD_TACTIC_TEXT)は「くわしく」に残す。
@@ -57288,23 +58083,23 @@ const cardTacticPct = (v) => (v === 50 ? '半分' : `${v / 10}割`);
 const CARD_TACTIC_LINE = Object.freeze({
   // ---- 条件 ----
   any: () => 'いつでも(ほかの条件なしで、いつも)',
-  ko: () => 'いまの手札とガッツで倒しきれる相手がいるとき(その相手をねらう)',
-  lowest: () => 'ライフがいちばん少ない相手をねらうとき',
-  highest: () => 'ライフがいちばん多い相手をねらうとき',
-  strongest: () => 'いちばん強い技をもつ相手をねらうとき',
-  attacker: () => '前のターンに攻撃してきた相手をねらうとき',
-  leader: () => '相手のリーダー(1体目)が残っているとき(その相手をねらう)',
-  type: (v) => `${v}にいる相手がいるとき(その相手をねらう)`,
-  blood: (v) => `${v}の相手がいるとき(その相手をねらう)`,
-  species: () => '決めた種族の相手がいるとき(その相手をねらう)',
-  foeLife: (v) => `ライフが${cardTacticPct(v)}以下の相手がいるとき(その相手をねらう)`,
-  myLife: (v) => `ライフが${cardTacticPct(v)}以下の味方がいるとき(守るカードなら、その味方を守る)`,
+  ko: () => 'いまの手札とガッツで倒せる相手がいるとき(その相手を狙う)',
+  lowest: () => 'ライフがいちばん少ない相手を狙うとき',
+  highest: () => 'ライフがいちばん多い相手を狙うとき',
+  strongest: () => 'いちばん強い技をもつ相手を狙うとき',
+  attacker: () => '前のターンに攻撃してきた相手を狙うとき',
+  leader: () => '相手のリーダー(1体目)が残っているとき(その相手を狙う)',
+  type: (v) => `${v}にいる相手がいるとき(その相手を狙う)`,
+  blood: (v) => `${v}の相手がいるとき(その相手を狙う)`,
+  species: () => '決めた種族の相手がいるとき(その相手を狙う)',
+  foeLife: (v) => `ライフが${cardTacticPct(v)}以下の相手がいるとき(その相手を狙う)`,
+  myLife: (v) => `ライフが${cardTacticPct(v)}以下の味方がいるとき(守るカードと組むと、その味方を守る)`,
   myGuts: (v) => `自分のガッツが${v}以上たまっているとき`,
-  foeGutsLe: (v) => `相手のガッツが${v}以下しかないとき`,
+  foeGutsLe: (v) => (Number(v) === 0 ? '相手のガッツが0のとき' : `相手のガッツが${v}以下しかないとき`),
   foeGutsGe: (v) => `相手のガッツが${v}以上たまっているとき`,
   myHand: (v) => `自分の手札が${v}枚以上あるとき`,
   foeHandGe: (v) => `相手の手札が${v}枚以上あるとき`,
-  foeHandLe: (v) => `相手の手札が${v}枚以下しかないとき`,
+  foeHandLe: (v) => (Number(v) === 0 ? '相手の手札が0枚のとき' : `相手の手札が${v}枚以下しかないとき`),
   myDeck: (v) => `自分の山札が残り${v}枚以下のとき`,
   foeDeck: (v) => `相手の山札が残り${v}枚以下のとき`,
   guardN: (v) => `手札に守りのカードが${v}枚以上あるとき`,
@@ -57312,21 +58107,21 @@ const CARD_TACTIC_LINE = Object.freeze({
   bigInHand: () => '手札に大技(ガッツ4以上)があるとき',
   areaInHand: () => '手札に全体攻撃があるとき',
   breederInHand: () => '手札にブリーダーのカードがあるとき',
-  turnLe: (v) => `自分の${v}ターン目までのとき(はじめのうち)`,
+  turnLe: (v) => (Number(v) === 1 ? '自分の1ターン目のとき(はじめのうち)' : `自分の${v}ターン目までのとき(はじめのうち)`),
   turnGe: (v) => `自分の${v}ターン目からのとき(終わりのほう)`,
   myAlive: (v) => `味方が残り${v}体のとき`,
   foeAlive: (v) => `相手が残り${v}体のとき`,
   koDiff: (v) => (v === '勝っ' ? '倒した数で勝っているとき' : '倒した数で負けているとき'),
-  foeStun: () => '攻撃できない相手がいるとき(その相手をねらう)',
+  foeStun: () => '攻撃できない相手がいるとき(その相手を狙う)',
   myStun: () => '攻撃できない味方がいるとき',
-  foeCharge: () => '溜めている相手がいるとき(その相手をねらう)',
-  foeAir: () => '空中に上がった相手がいるとき(その相手をねらう)',
+  foeCharge: () => '溜めている相手がいるとき(その相手を狙う)',
+  foeAir: () => '空中に上がった相手がいるとき(その相手を狙う)',
   field: (v) => `場に${v}全体カードがあるとき`,
   foeBig: () => '相手の大技が来そうなとき',
-  myHandLe: (v) => `自分の手札が${v}枚以下しかないとき`,
+  myHandLe: (v) => (Number(v) === 0 ? '自分の手札が0枚のとき' : `自分の手札が${v}枚以下しかないとき`),
   breederN: () => '手札にブリーダーのカードが2枚以上あるとき',
   breederUnused: () => 'このターン、まだブリーダーのカードを出していないとき',
-  myGutsLe: (v) => `自分のガッツが${v}以下しかないとき`,
+  myGutsLe: (v) => (Number(v) === 0 ? '自分のガッツが0のとき' : `自分のガッツが${v}以下しかないとき`),
   myDiscard: (v) => `自分の捨て札が${v}枚以上たまったとき`,
   myKo: () => '倒れた味方がいるとき',
   noField: () => '場に全体カードが1枚も無いとき',
@@ -57334,61 +58129,61 @@ const CARD_TACTIC_LINE = Object.freeze({
   selfFresh: () => 'このモンスターが、このターンまだ攻撃していないとき',
   selfType: (v) => `このモンスターがいま${v}にいるとき`,
   selfStun: () => 'このモンスターが攻撃できないとき',
-  selfAdv: () => 'このモンスターの得意な相手がいるとき(ダメージが倍になる相手をねらう)',
+  selfAdv: () => 'このモンスターの得意な相手がいるとき(ダメージが倍になる相手を狙う)',
   incoming: (v) => `${v}ダメージ以上の攻撃を受けたとき`,
   incomingKo: () => '受けると倒れる攻撃が来たとき',
   incomingArea: () => '全体攻撃を受けたとき',
   // ---- 基本 ----
-  tBalance: () => '攻めも守りも、いちばん得になるように打つ',
+  tBalance: () => '攻めも守りも、いちばん得になるようにカードを出す',
   tAttack: () => 'どんどん攻撃する。守るのは倒れそうなときだけ',
-  tGuard: () => '守りのカードをとっておき、攻撃を受けたらできるだけ守る',
-  tSave: () => 'ガッツを多めにためて、大技をねらう',
+  tGuard: () => '守りのカードを手札に残し、攻撃を受けたらできるだけ守る',
+  tSave: () => 'ガッツを多めにためて、大技を狙う',
   tDisrupt: () => '相手の手札・山札・ガッツを減らすカードを先に使う',
   tBig: () => 'ダメージの大きい技を先に使う',
   tArea: () => '全体攻撃・全体カードを先に使う',
   tFinish: () => 'あと少しで倒せる相手から攻撃する',
   tRush: () => '軽い技でどんどん攻撃する(大技は使わない)',
   tSteady: () => '守りのカードとガッツを残して、むりせず攻撃する',
-  tJam: () => '相手を崩しながら、守りのカードもとっておく',
-  tCalm: () => 'いっしょに入れた型を弱めて、かたよらずに打つ',
+  tJam: () => '相手を崩しながら、守りのカードも手札に残す',
+  tCalm: () => 'いっしょに入れた基本カードの効き目を弱めて、かたよらずに戦う',
   tFlex: () => 'ターンごとに場を見て、攻め・守り・とどめを切りかえる',
-  tMill: () => '相手の山札を減らして、山札切れで勝ちをねらう',
+  tMill: () => '相手の山札を減らして、山札切れで勝ちを狙う',
   tReckless: () => '守らずに、とどめをねらって攻撃する',
-  tHand: () => '手札を2枚以上残しながら打つ',
-  tDeck: () => '山札を減らすカードは使わずに打つ',
+  tHand: () => '手札がいつも2枚以上残るようにカードを出す',
+  tDeck: () => '山札を減らすカードは使わずに戦う',
   tFocus: () => '同じ相手を、倒れるまでねらい続ける',
   tSpread: () => 'ライフの多い相手や全員に、ばらしてダメージを与える',
-  tComeback: () => '負けているときは捨て身で、勝っているときは堅く打つ',
+  tComeback: () => '負けているときは捨て身で、勝っているときは堅く戦う',
   // ---- モンスター ----
   atk: () => 'いちばん良い技で攻撃する',
   kind: (v) => `${v}の技で攻撃する`,
   cost: (v) => (/^軽い/.test(v) ? '軽い技(ガッツ0〜1)で攻撃する' : /^中/.test(v) ? '中くらいの技(ガッツ2〜3)で攻撃する' : '大技(ガッツ4以上)で攻撃する'),
-  reach: (v) => (v === '全体攻撃' ? '全体攻撃で攻撃する' : '1体だけをねらう技で攻撃する'),
+  reach: (v) => (v === '全体攻撃' ? '全体攻撃で攻撃する' : '1体だけを狙う技で攻撃する'),
   eff: (v) => `「${v}」の技で攻撃する`,
   attach: () => '付けるカードといっしょに攻撃する',
   attachKind: (v) => `「${v}」の付けるカードといっしょに攻撃する`,
   spe: (v) => ({ 味方を回復: '特殊技で味方を回復する', 引く: '特殊技でカードを引く', 空中になる: '特殊技で空中に上がる', 安全になる: '特殊技で次の攻撃を受けなくする', まゆと羽化: '特殊技でまゆになる・羽化する', のりうつる: '特殊技でのりうつる' }[v] || `特殊技(${v})を使う`),
-  stance: (v) => ({ この子から攻める: 'このモンスターから先に攻撃する', この子は攻撃しない: 'このモンスターは攻撃しない', ライフの多い子が先に: 'ライフの多い味方から先に攻撃する', ライフの少ない子は温存: 'ライフの少ない味方は攻撃させずに温存する', 攻撃は1回だけ: 'このターンの攻撃は1回だけにする', 何回でも攻める: '出せるだけ何回でも攻撃する' }[v] || v),
+  stance: (v) => ({ この子から攻める: 'このモンスターから先に攻撃する', この子は攻撃しない: 'このモンスターは攻撃しない', ライフの多い子が先に: 'このモンスターのライフが味方でいちばん多いとき、攻撃する', ライフの少ない子は温存: 'このモンスターのライフが味方でいちばん少ないとき、攻撃させずに休ませる', 攻撃は1回だけ: 'このターンの攻撃は1回だけにする', 何回でも攻める: '出せるだけ何回でも攻撃する' }[v] || v),
   disrupt: (v) => ({ 手札を捨てさせる: '相手の手札を捨てさせる', 山札を削る: '相手の山札を減らす', ガッツを減らす: '相手のガッツを減らす', 番を飛ばす: '相手のターンを飛ばす' }[v] || v),
   guard: () => '攻撃を受けたら、いちばん良い守り方で守る',
   guardFirst: (v) => `攻撃を受けたら、${v}のカードで守る`,
   guardOver: (v) => `${v}ダメージ以上の攻撃だけ守る(小さい攻撃は受ける)`,
-  guardDie: () => '倒れそうなときだけ守る',
+  guardDie: () => '受けると倒れるときだけ守る',
   cover: () => 'かばう・身代わりのカードで守る',
-  noGuard: () => '守らずに受ける(守りのカードをとっておく)',
+  noGuard: () => '守らずに受ける(守りのカードは手札に残す)',
   charge: () => '溜め技で、次の技を強くする',
   chargeKind: (v) => `溜め(${v === '次の番の技を倍' ? '次のターンの技を倍' : v})で、次の技を強くする`,
   // ---- ブリーダー ----
-  bEff: (v) => `ブリーダーのカードで「${v}」をする`,
+  bEff: (v) => `ブリーダーのカードで${CARD_TACTIC_TEXT.bEff(v)[0].replace(/^ブリーダー: /, '')}`,
   fieldCard: () => '全体カードを場に出す',
   fieldKind: (v) => `全体カード「${v}」を場に出す`,
-  save: () => 'ガッツを多めにためる',
-  gutsN: (v) => `ガッツを${v}枚だけ置く`,
-  keepGuard: () => '守りのカードはガッツに置かずにとっておく',
-  gutsOrder: (v) => (v === '重い札' ? '重いカードからガッツに置く' : '使えないカードからガッツに置く'),
+  save: () => 'ターンの終わりに、手札を多めにガッツにする',
+  gutsN: (v) => (Number(v) === 0 ? '手札をガッツにしない(何もできず手札がいっぱいのときだけ入れかえる)' : `手札を${v}枚だけガッツにする`),
+  keepGuard: () => '守りのカードは3枚まで、ガッツにしないで手札に残す',
+  gutsOrder: (v) => (v === '重い札' ? '重いカードから先にガッツにする' : '使えないカードから先にガッツにする'),
   stop: () => 'このターンの攻撃をやめる',
-  ace: () => '切りカードを先に出す',
-  holdBreeder: () => 'ブリーダーのカードを出さずにとっておく',
+  ace: () => '切り札を先に出す',
+  holdBreeder: () => 'このターンはブリーダーのカードを出さない',
 });
 const cardTacticTextOf = (g, v) => {
   const t = CARD_TACTIC_TEXT[g.id] ? CARD_TACTIC_TEXT[g.id](v) : null;
@@ -57431,7 +58226,8 @@ const cardTacticFilled = (frames) => {
 
 // ---- 賢さ(2026-10-30 社長「戦術カードなしでエキスパートクラスで、そこから上がっていってマスター超え」・段の名前は本編のチャレンジモード)----
 //   EXPERT … 何もセットしない〜基本1枚 / MASTER … 基本2枚以上、またはちゃんと効く戦術カード4枚以上 /
-//   GRAND MASTER … 基本3枚+効く4枚以上 / HELL … 基本3枚+効く7枚以上 / LEGEND … 基本3枚+効く10枚以上
+//   GRAND MASTER … 基本2枚+効く6枚以上 / HELL … 基本2枚+効く9枚以上 / LEGEND … 基本3枚+効く10枚以上
+//   (2026-11-04 社長 案B。前は GRAND MASTER・HELL も基本3枚で、3枚目はカードランク30まで開かないので、みんな MASTER で止まっていた)
 //   (前は EASY〜MASTER と、何も入れていないときの「でたらめ」だった)。MASTER を超える段は先読みで強くする(82-card-share-core の CARD_SHARE_SEARCH)
 const CARD_TACTIC_SMART = Object.freeze(['expert', 'master', 'grandmaster', 'hell', 'legend']);
 // ---- 賢さに数えないセット(2026-10-29 社長 案A「ちゃんと効くカードだけ数える」) ----
@@ -57472,8 +58268,8 @@ const cardTacticSmartLevel = (frames) => {
   const base = f.base.filter(Boolean).length;
   const rows = cardTacticCountedRows(f);
   if (base >= 3 && rows >= 10) return 'legend';
-  if (base >= 3 && rows >= 7) return 'hell';
-  if (base >= 3 && rows >= 4) return 'grandmaster';
+  if (base >= 2 && rows >= 9) return 'hell';
+  if (base >= 2 && rows >= 6) return 'grandmaster';
   if (base >= 2 || rows >= 4) return 'master';
   return 'expert';
 };
@@ -57502,6 +58298,11 @@ const cardTacticRandomAct = (db, st, policy, rand = Math.random) => {
 //   慎重型 … ほかの型の効きを半分に(サブなら6分の1減らす)/ 臨機応変型・持久型 … メインならいつも、サブなら3回に1回の番
 const CARD_TACTIC_DIMS = Object.freeze(['attack', 'keepGuard', 'saveGuts', 'big', 'disrupt', 'area', 'finish']);
 const CARD_TACTIC_SUB_W = 1 / 3;
+// 登録デッキ(cardSharePolicy の gambitOnHabit): 基本カードは、くせ(メインの基本カードの型。強さごとの調整ずみ)の上に足す(2026-11-02 社長 ア)
+// 登録したくせと同じ型の基本カード(例: くせ みゅあ に攻め型)は、くせにもう入っているので二重に足さない(足すと「守るのは倒れるときだけ」が重なり、みゅあの MASTER が 50→36%)
+const cardTacticSameAsHabit = (c, habitId) => !!habitId && !!c && ((CARD_TACTIC_GROUPS.find((x) => x.id === c.g) || {}).habit === habitId);
+// 行に当たっても、MASTER の点で、いちばん良い手よりこれ以上低い手は出さない(行は「強く勧める」。2026-11-02 社長 イ)
+const CARD_TACTIC_ROW_LOSS_MAX = 2;
 const cardTacticPresetOf = (card) => {
   const g = CARD_TACTIC_GROUPS.find((x) => x.id === card.g) || {};
   if (g.habit) return { ...(CARD_AI_HABITS[g.habit] || {}) };
@@ -57510,14 +58311,14 @@ const cardTacticPresetOf = (card) => {
 };
 // mainHabit … 助手の EXPERT・MASTER(cardAiPolicy の gambitKeepMain): メインの型は今のくせ(強さごとの調整ずみ)をそのまま使い、サブだけを足す
 //   when … 助手の EXPERT・MASTER: サブごとの「効く場面」(CARD_AI_TACTIC_WHEN の名前)。その場面では、サブを3分の1でなく丸ごと効かせる
-const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null, when = null) => {
+const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null, when = null, onHabit = false, habitId = null) => {
   const subW = (i) => (st && Array.isArray(when) && typeof when[i] === 'string' && typeof cardAiTacticWhenHit === 'function' && cardAiTacticWhenHit(when[i], st, p) ? 1 : CARD_TACTIC_SUB_W);
   const list = (Array.isArray(base) ? base : []).map((id, i) => ({ c: cardTacticOf(id), w: i === 0 ? 1 : subW(i), main: i === 0 })).filter((x) => x.c && x.c.cat === 'base');
   if (!list.length) return null;
   const h = Object.fromEntries(CARD_TACTIC_DIMS.map((d) => [d, mainHabit && Number.isFinite(mainHabit[d]) ? mainHabit[d] : 1]));
   if (mainHabit && mainHabit.flex) h.flex = true;
   if (mainHabit && mainHabit.mill) h.mill = mainHabit.mill;
-  list.forEach(({ c, w, main }) => { if (mainHabit && main) return; const pre = cardTacticPresetOf(c); CARD_TACTIC_DIMS.forEach((d) => { if (Number.isFinite(pre[d])) h[d] *= 1 + (pre[d] - 1) * w; }); });
+  list.forEach(({ c, w, main }) => { if (mainHabit && main && !onHabit) return; if (onHabit && cardTacticSameAsHabit(c, habitId)) return; const pre = cardTacticPresetOf(c); CARD_TACTIC_DIMS.forEach((d) => { if (Number.isFinite(pre[d])) h[d] *= 1 + (pre[d] - 1) * w; }); });
   const calm = list.filter((x) => x.c.g === 'tCalm').reduce((a, x) => a * (1 - 0.5 * x.w), 1);
   CARD_TACTIC_DIMS.forEach((d) => { h[d] = Math.min(2, Math.max(0.3, 1 + (h[d] - 1) * calm)); });
   const turn = st ? cardTacticOwnTurn(st, p) : 0;
@@ -57539,12 +58340,12 @@ const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null, when = null
 // 基本カードの細かいくせ(knob)。メインはいつも、サブは3回に1回の番(臨機応変型・持久型と同じ)
 //   skipMain … 助手の EXPERT・MASTER: メインの型は今の打ち方のままなので、メインの細かいくせは足さない
 //   (足すと、みゅあ(攻め型: 倒れるときだけ守る)が MASTER 50→28%・ドラ(守り型: いつも守る)が EXPERT 53→39% に落ちた。2026-10-29 60戦で測った)
-const cardTacticKnobsOf = (base, st = null, p = 0, skipMain = false) => {
+const cardTacticKnobsOf = (base, st = null, p = 0, skipMain = false, habitId = null) => {
   const turn = st ? cardTacticOwnTurn(st, p) : 0;
   const out = {};
   (Array.isArray(base) ? base : []).forEach((id, i) => {
     const c = cardTacticOf(id);
-    if (!c || c.cat !== 'base' || (i > 0 && turn % 3 !== 0) || (i === 0 && skipMain)) return;
+    if (!c || c.cat !== 'base' || (i > 0 && turn % 3 !== 0) || (i === 0 && skipMain) || cardTacticSameAsHabit(c, habitId)) return;
     const g = CARD_TACTIC_GROUPS.find((x) => x.id === c.g) || {};
     Object.assign(out, g.knob || {});
   });
@@ -57692,7 +58493,7 @@ const cardTacticAttackFits = (db, st, act, o) => {
   switch (act.g) {
     case 'atk': return o.type === 'attack' || (o.type === 'breeder' && (main.damage || 0) > 0);
     case 'kind': return o.type === 'attack' && main.kind === { ちから: 'pow', かしこさ: 'int', 特殊: 'spe' }[v];
-    case 'cost': { if (o.type !== 'attack') return false; const g = cardActionCost(db, st, st.active, me.hand, o.hand); return v.startsWith('軽い') ? g <= 1 : v.startsWith('中') ? g >= 2 && g <= 3 : g >= cardTacticBigCost; }
+    case 'cost': { if (o.type !== 'attack') return false; const g = cardActionCost(db, st, st.active, me.hand, o.hand, o.mon); return v.startsWith('軽い') ? g <= 1 : v.startsWith('中') ? g >= 2 && g <= 3 : g >= cardTacticBigCost; }
     case 'reach': return o.type === 'attack' && (v === '全体攻撃' ? cardHasEff(main, 'area') : !cardHasEff(main, 'area'));
     case 'eff': return cards.some((c) => (CARD_TACTIC_EFF[v] || []).some((t) => cardHasEff(c, t)));
     case 'attach': return o.hand.length > 1 && cards.slice(1).some((c) => cardHasEff(c, 'attach'));
@@ -57730,7 +58531,11 @@ const cardTacticRowAct = (db, st, policy, phase, row, aim, ctx) => {
   const usable = (o) => !(o.type === 'attack' && ctx.skip.has(o.mon)) && !(ctx.noBreeder && (o.type === 'breeder' || o.hand.some((i) => (cardOf(db, me.hand[i]) || {}).user === 'breeder')));
   const pickBest = (fits, floor = 0) => {
     const best = ctx.scored().find((x) => x.s > floor && usable(x.o) && fits(x.o) && cardTacticAimsAt(st, x.o, aim.foes));
-    return best ? { act: cardAiFillBind(db, st, best.o, policy) } : null;
+    if (!best) return null;
+    // MASTER の点で、出せるいちばん良い手より大きく損な手なら、この行は出さずに次の行・基本カードの型へ(2026-11-02 社長 イ)
+    const top = ctx.scored().find((x) => usable(x.o));
+    if (policy.gambitOnHabit && top && best.s < top.s - CARD_TACTIC_ROW_LOSS_MAX) return null;
+    return { act: cardAiFillBind(db, st, best.o, policy) };
   };
   if (act.g === 'ace') {
     const aces = Array.isArray(policy.aces) ? policy.aces : [];
@@ -57799,8 +58604,8 @@ const cardTacticBaseAttack = (db, st, policy, knobs, ctx) => {
     if (o.type === 'attack' && ctx.skip.has(o.mon)) return false;
     if (ctx.noBreeder && (o.type === 'breeder' || o.hand.some((i) => (cardOf(db, me.hand[i]) || {}).user === 'breeder'))) return false;
     const e = effs(o);
-    if (knobs.light && o.type === 'attack' && cardActionCost(db, st, p, me.hand, o.hand) > 1) return false;
-    if (knobs.safe && e.some((t) => /^selfDamage|^attachSelfIfHit$|^selfHurt$/.test(t))) return false;
+    if (knobs.light && o.type === 'attack' && cardActionCost(db, st, p, me.hand, o.hand, o.mon) > 1) return false;
+    if (knobs.safe && e.some((t) => /^selfDamage|^attachSelfIfHit$|^selfHurt$/.test(t)) && !cardAiWinsBy(db, st, o, p)) return false; // 当たれば勝ちの一撃は、堅実型でも打つ(2026-11-02 社長)
     if (knobs.noDraw && e.some((t) => ['draw', 'rush', 'deckToGuts', 'refresh', 'oppDraw'].includes(t))) return false;
     if (knobs.keepHand && me.hand.length - o.hand.length < knobs.keepHand) return false;
     if (knobs.areaMin2 && foes.length < 2 && e.includes('area')) return false;
@@ -57828,8 +58633,9 @@ const cardTacticDecide = (db, st, policy) => {
   if (!phase) return null;
   if (policy.gambitRandom && cardTacticSmartLevel(frames) === 'random') return { act: cardTacticRandomAct(db, st, policy) };
   const p = phase === 'guard' ? st.pending.defender : st.active;
-  const habit = cardTacticHabitOf(frames.base, st, p, policy.gambitKeepMain ? policy.habit : null, policy.gambitWhen || null);
-  const knobs = cardTacticKnobsOf(frames.base, st, p, !!policy.gambitKeepMain);
+  const sameId = policy.gambitOnHabit ? policy.gambitHabitId || null : null;
+  const habit = cardTacticHabitOf(frames.base, st, p, policy.gambitKeepMain || policy.gambitOnHabit ? policy.habit : null, policy.gambitWhen || null, !!policy.gambitOnHabit, sameId);
+  const knobs = cardTacticKnobsOf(frames.base, st, p, !!policy.gambitKeepMain, sameId);
   const pol = habit ? { ...policy, habit } : policy;
   let scored = null;
   const ctx = { mi: null, skip: new Set(), noBreeder: false, scored: () => { if (!scored) scored = cardAiAttackScored(db, st, cardAiAttackChoices(db, st, pol), pol); return scored; } };
@@ -57837,7 +58643,11 @@ const cardTacticDecide = (db, st, policy) => {
   if (phase === 'attack') { [0, 1, 2].forEach((mi) => order.push({ rows: frames.mons[mi], mi })); order.push({ rows: frames.breeder, mi: null }); }
   if (phase === 'guard') { const t = st.pending.targets[st.pending.ti]; if (t && t.p === p) order.push({ rows: frames.mons[t.m] || [], mi: t.m }); }
   if (phase === 'guts') order.push({ rows: frames.breeder, mi: null });
+  // GRAND MASTER 以上(先読みつき)は、攻めるときに先読みを先に。当たった行の手は「強く勧める手」として先読みの候補に足して比べる(2026-11-03 社長 D)
+  const searchFirst = phase === 'attack' && !!policy.search;
+  let hint = null, hintWhy = null;
   for (const fr of order) {
+    if (hint) break;
     if (phase === 'attack' && fr.mi !== null && st.players[p].mons[fr.mi] && st.players[p].mons[fr.mi].ko) continue;
     for (const row of fr.rows) {
       if (!row.on) continue;
@@ -57845,8 +58655,13 @@ const cardTacticDecide = (db, st, policy) => {
       if (!aim) continue;
       ctx.mi = fr.mi;
       const got = cardTacticRowAct(db, st, pol, phase, row, aim, ctx);
+      if (got && searchFirst) { hint = got.act; hintWhy = { c: row.c, a: row.a, mi: fr.mi, phase }; break; }
       if (got) { cardTacticLastWhy = { c: row.c, a: row.a, mi: fr.mi, phase }; return got; }
     }
+  }
+  if (searchFirst) {
+    if (!hint && (ctx.skip.size || ctx.noBreeder || ['light', 'safe', 'noDraw', 'keepHand', 'focus', 'spread', 'areaMin2'].some((k) => knobs[k]))) { const b = cardTacticBaseAttack(db, st, pol, knobs, ctx); hint = b && b.act; }
+    return { policy: { ...pol, searchHint: hint || null, searchHintWhy: hintWhy, searchSkip: [...ctx.skip], searchNoBreeder: ctx.noBreeder } };
   }
   // どの行にも当たらない: 基本カードの型で打つ(細かいくせ・立ち回りで外した子・温存したブリーダーのカードも守る)
   if (phase === 'attack' && (ctx.skip.size || ctx.noBreeder || ['light', 'safe', 'noDraw', 'keepHand', 'focus', 'spread', 'areaMin2'].some((k) => knobs[k]))) return cardTacticBaseAttack(db, st, pol, knobs, ctx);
@@ -57961,8 +58776,9 @@ const CARD_SHARE_SMART_LABEL = Object.freeze({ expert: 'EXPERT', master: 'MASTER
 // MASTER を超える段の先読み(82 の cardAiSearchPick)。k … 試す手の数 / r … 1つの手を試す回数 / h … 何手番先まで進めるか / eval … 場の見方
 //   2026-10-30 に MASTER の助手と測った: GRAND MASTER 66% / HELL 71% / LEGEND は下の値(docs/progress/card-tournament/share-ai/README.md)
 const CARD_SHARE_SEARCH = Object.freeze({
+  // 深さは GRAND MASTER < HELL < LEGEND の順(2026-11-03 社長 D。MASTER の助手への勝率 55・58・65% の見込み)
   grandmaster: Object.freeze({ k: 3, r: 1, h: 1, eval: 'ko' }),
-  hell: Object.freeze({ k: 4, r: 2, h: 4, eval: 'ko' }),
+  hell: Object.freeze({ k: 3, r: 1, h: 2, eval: 'ko' }),
   legend: Object.freeze({ k: 4, r: 2, h: 4, eval: 'alive' }),
 });
 // 土台のくせ(メインの基本カードが助手の型ならその助手。前の形の登録や画面の名前に使う)
@@ -57981,7 +58797,7 @@ const cardSharePolicy = (tactics, levelId, opts = {}) => {
   if (t.f) {
     const frames = cardTacticUnpackFrames(t.f);
     const base = cardAiPolicy(t.habit, cardShareFightLevel(t), { ...opts, noTactics: true });
-    return { ...base, gambit: frames, aces: t.aces.slice(), ...(search ? { search } : {}) };
+    return { ...base, gambit: frames, gambitOnHabit: true, gambitHabitId: t.habit, aces: t.aces.slice(), ...(search ? { search } : {}) };
   }
   const base = cardAiPolicy(t.habit, cardShareFightLevel(t), { ...opts, noTactics: true });
   const habit = { ...base.habit };
@@ -59113,7 +59929,7 @@ const CARD_PACKS = Object.freeze([
   { id: 'p4', no: 4, species: ['phoenix', 'monol', 'henger', 'ghost'], color: '#f97316' }, // ゴーストは 2026-10-27 に足した(第4弾だけ4種族・台帳 #204)
   { id: 'p5', no: 5, species: ['plant', 'dragon', 'jell'], color: '#22c55e' },
   { id: 'p6', no: 6, species: ['mew', 'worm', 'durahan'], color: '#a855f7' },
-  { id: 'p7', no: 7, species: ['zilla', 'metalner', 'joker'], color: '#14b8a6' },
+  { id: 'p7', no: 7, species: ['zilla', 'metalner', 'joker', 'kyubi'], color: '#14b8a6' }, // キュービ(とオリヒメ)は 2026-11-04 に足した(社長)
   { id: 'p8', no: 8, species: ['arrowhead', 'centaur', 'colorpandora'], color: '#ec4899' },
 ].map((p) => Object.freeze({
   ...p, name: `第${p.no}弾パック`, price: 300, bundle: Object.freeze({ n: 5, price: 1350 }), tech: 7, mon: 1,
@@ -59460,6 +60276,32 @@ const CARD_SPECIAL_MOTION_RULES = Object.freeze([
 ]);
 // カード番号ごとの上書き(社長が見て「この技はこう動いてほしい」と言ったら、その1枚だけここに足す)
 const CARD_MOTION_BY_NO = Object.freeze({});
+// キュービの専用技(901〜910)の動き。本編のキュービの技の動き(24 の SKM_KYUBI)をもとに、技カードの絵に寄せた(本編の動きは変えない)
+//   2026-11-04 社長「キュービはモンバトで技モーション細かく作ったからいけるとはおもってる」→ 本編につなぐ
+//   → 同日 社長「キュービの技アクションで技カードの見た目をも参考にして」→ カードの絵の色・形・飛ぶものに寄せた(見比べ: docs/progress/card-kyubi-motion)
+//   オリヒメ(C-951)が出すときは、同じ形を星空の色で(本編のオリヒメと同じ考え)。守る・よける・特殊(911〜913)は、ほかの血統と同じ共通の動き
+//   [技の名前, 大技の飾り(オーラと残像)を付けるか, 色の組 → 動き]
+const CARD_KYUBI_PALETTE = Object.freeze({
+  Kyubi:   { blue:'blue', bh:205, fire:'fire',   fh:22,  star:'gold' },
+  Orihime: { blue:'sky',  bh:195, fire:'cosmic', fh:265, star:'cosmic' },
+});
+const CARD_KYUBI_LOOK = Object.freeze({
+  '901': ['提灯落とし', false, (p) => skm('jump', { c:p.fire, fx:skmFx('fall', 'orb', 1, { s:2.4, h:p.fh }), over:'boom', burst:'spark', form:'fire' })],   // 大きな提灯が降ってくる
+  '902': ['陽炎', true, (p) => skm('warp', { c:p.blue, over:'claw', burst:'spark', hit2:true, form:'slash' })],                                         // 青い分身(残像)が爪で裂く
+  '903': ['狐火', false, (p) => skm('cast', { c:p.blue, fx:skmFx('shot', 'fire', 3, { s:1.6, h:p.bh, step:70 }), burst:'spark', form:'fire' })],          // 青い火の玉が3つまっすぐ飛ぶ
+  '904': ['ひのこ', false, (p) => skm('cast', { c:p.fire, fx:skmFx('shot', 'fire', 7, { step:28, h:p.fh }), over:'boom', burst:'spark', form:'fire' })],   // 提灯の口から火を吹く
+  '905': ['超狐火', true, (p) => skm('cast', { c:p.blue, fx:skmFx('orbit', 'fire', 9, { s:1.4, h:p.bh }), over:'pillar', burst:'star', form:'fire' })],   // まわりに青い炎がたくさん浮かんで飛ぶ
+  '906': ['なめろう', false, (p) => skm('lick', { c:'gold', line:'tongue', over:'boom', burst:'spark' })],                                                 // 黄色い提灯から大きな舌
+  '907': ['火炎車', true, (p) => skm('roll', { c:p.fire, fx:skmFx('orbit', 'fire', 10, { s:1.3, h:p.fh }), over:'tornado', burst:'spark', form:'fire' })], // 炎の渦
+  '908': ['天河天翔', true, (p) => skm('float', { c:p.star, fx:skmFx('fall', 'meteor', 14, { w:150 }), over:'aurora', burst:'star', form:'light' })],      // 夜空から星の川(流れ星)が降る
+  '909': ['神狐蒼火', true, (p) => skm('gather', { c:p.blue, fx:skmFx('fall', 'fire', 12, { s:1.7, h:p.bh }), over:'pillar', burst:'spark', form:'fire' })], // 上から青い大きな炎が落ちて火柱
+  '910': ['炸裂気泡陣', true, (p) => skm('cast', { c:p.fire, fx:skmFx('orbit', 'orb', 10, { s:1.9, h:p.fh }), over:'boom', burst:'spark', form:'fire' })], // 燃える泡が次々にはじける
+});
+// 動きを SkillFxMotion の入れ物へ入れておく(名前は 'cardKyubi902' / 'cardOrihime902')
+Object.entries(CARD_KYUBI_PALETTE).forEach(([who, pal]) => Object.entries(CARD_KYUBI_LOOK).forEach(([no, [, big, make]]) => {
+  const norm = skmNormalize(make(pal), big);
+  SKILL_FX_SPEC_CACHE[`card${who}${no}`] = big ? { ...norm, uex:true } : { ...norm, impact:true };
+}));
 const CARD_MOTION_GAME_ID = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant', ghost: 'Ghost' });
 
 // ---- 技の重さの段(2026-10-31 社長「各カードアクションをもっと一新して」 → 案A) ----
@@ -59497,6 +60339,7 @@ const cardMotionBaseOf = (db, cardNo, mon) => {
   const c = cardOf(db, cardNo);
   if (!c || !cardIsAttackKind(c.kind) || c.user === 'breeder') return null;
   if (CARD_MOTION_BY_NO[c.no]) return CARD_MOTION_BY_NO[c.no];
+  if (CARD_KYUBI_LOOK[c.no]) return `card${mon && mon.no === 'C-951' ? 'Orihime' : 'Kyubi'}${c.no}`;
   if (c.kind === 'spe') { const sp = CARD_SPECIAL_MOTION_RULES.find(([re]) => re.test(c.name)); return sp ? sp[1] : 'cardSpeRing'; }
   // 1. モンヒロに同じ名前の技がある(スエゾーのかみつき・モッチーのもっちゃん など)
   const id = mon && (CARD_MOTION_GAME_ID[mon.species] || CARD_MOTION_GAME_ID[mon.main]);
@@ -59752,7 +60595,16 @@ const cardNameSplit = (text) => {
 //   切れ目の無い1語(フォーメーション など)は、字を小さく(5pxまで)・字の間を詰めて1行に収める(CSS の mh-nf-squeeze)。
 //   倍率は 94(字の幅が広い等幅フォントでも入るように。104 だと IPAゴシックで 58・76px の箱から2〜4px はみ出した。2026-10-25)
 //   狭いときは短い名前も2行ぶんの高さを取り、手札の絵の高さをそろえる(CSS の mh-nf-*。70-bootstrap.jsx)
-const CardNameFit = ({ name, size = 10, min = 7, className = '', style = null, twoLine = false }) => {
+// 画面いっぱいに重ねる窓(fixed inset-0)の上下の余白。iPhone の時計・電池の帯(上)とホームバー(下)に中身がかからないよう、
+//   元の余白とセーフエリアの大きいほうを取る(2026-11-04 テスターさん: 戦術カードをえらぶ窓の「←戻る」が時計の帯に重なって押せなかった。
+//   fixed の窓は body のセーフエリアの余白の外まで広がるので、窓ごとに取る)。base … 元の上下の余白(クラスの p-3 なら '.75rem')
+const cardSafePad = (base = '0px') => ({ paddingTop: `max(${base}, env(safe-area-inset-top))`, paddingBottom: `max(${base}, env(safe-area-inset-bottom))` });
+// 2行に折る幅は名前の長さで決める(2026-11-01 見た目の点検 C「長い名前は2行まで折る・縮めるのは2行でも入らないときだけ」)。
+//   1行のまま 11px で入る幅(字数 × 11px ÷ 0.96)より箱が狭いときに2行へ。7字 80px・8字 92px・9字 103px・10字以上 115px(CSS の mh-nf-n*)。
+//   それまでは 56px 以下だけ折っていて、57〜115px の箱(390幅の手札・デッキを組む画面)では字が 7〜8px まで縮んでいた
+// tall … 2行になりうる幅(115px 以下)では、短い名前も2行ぶんの高さを取る(手札・カードの並びの高さをそろえる)。
+//   手札は、長い名前が1枚でもあるときだけ(無いときは今までと同じ高さ)
+const CardNameFit = ({ name, size = 10, min = 7, className = '', style = null, twoLine = false, tall = false }) => {
   const text = String(name == null ? '' : name);
   const m = /^(.+?)([(（].+)$/.exec(text);
   const lines = m ? [m[1], m[2]] : [text];
@@ -59762,7 +60614,7 @@ const CardNameFit = ({ name, size = 10, min = 7, className = '', style = null, t
   const fit = (t) => `clamp(${squeeze ? 5 : min}px, ${((squeeze ? 94 : 96) / Math.max(1, [...t].length)).toFixed(1)}cqw, ${size}px)`;
   const row = (t, i) => <span key={i} className={`block overflow-hidden whitespace-nowrap text-center ${squeeze ? 'mh-nf-squeeze' : ''}`} style={{ fontSize: fit(t), textOverflow: 'clip' }}>{t}</span>;
   return (
-    <span className={`block w-full ${className}`} style={{ containerType: 'inline-size', ...(style || {}) }}>
+    <span className={`block w-full ${two ? `mh-nf-n${Math.min(10, [...text].length)}` : ''} ${twoLine && tall ? 'mh-nf-tall' : ''} ${className}`} style={{ containerType: 'inline-size', '--nf-2l': `${Math.round(size * 2.1)}px`, ...(style || {}) }}>
       <span className={twoLine ? `mh-nf-a block ${two ? 'mh-nf-hide' : ''}` : 'block'}>{lines.map(row)}</span>
       {two && <span data-card-name-two className="mh-nf-b">{two.map(row)}</span>}
     </span>
@@ -59790,7 +60642,8 @@ const cardBgmOf = (v) => {
 const cardBgmRandomOne = () => { const all = cardBgmAllTracks(); return all.length ? all[Math.floor(Math.random() * all.length)] : null; };
 // モンスターの絵(5-3)。モンヒロにいる種族はいまのゲームの絵、いない16種族は社長から届いた立ち絵(#3437 でクラフトくんが取り込んだ)。
 // 混血の15体は、立ち絵が届いた子から立ち絵にする(HYBRID_MONSTER_IMGS)。まだの子はカードの絵で代える(社長)
-const CARD_SPECIES_ART = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant', ghost: 'Ghost' });
+// キュービ(2026-11-04 新血統)はモンヒロにいる子なので、本編の立ち絵(ALL_PLAYER_MONSTERS.Kyubi)
+const CARD_SPECIES_ART = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant', ghost: 'Ghost', kyubi: 'Kyubi' });
 const cardNewSpeciesArt = () => ({
   dino: typeof MF_DINO_IMG !== 'undefined' ? MF_DINO_IMG : null,
   gali: typeof MF_GALI_IMG !== 'undefined' ? MF_GALI_IMG : null,
@@ -59991,7 +60844,7 @@ const CardStatusList = ({ list }) => (!list || !list.length ? null : (
   </div>
 ));
 const CardStatusSheet = ({ name, list, onClose }) => (
-  <div data-card-status-sheet onClick={onClose} className="fixed inset-0 flex items-center justify-center bg-black/60 px-4" style={{ zIndex: MODAL_Z.dialog }}>
+  <div data-card-status-sheet onClick={onClose} className="fixed inset-0 flex items-center justify-center bg-black/60 px-4" style={{ ...cardSafePad('.5rem'), zIndex: MODAL_Z.dialog }}>
     <div className="w-full max-w-sm rounded-2xl border-2 border-amber-300/80 bg-slate-950/95 p-3 text-slate-100">
       <div className="mb-2 text-[15px] font-black" style={JA_WRAP_STYLE}>{name}にかかっている効果</div>
       <CardStatusList list={list}/>
@@ -60174,7 +61027,7 @@ const CARD_TEASER_NOTICE_ID = 'update_notice_card_battle_soon_v1';
 const CardBattleTeaser = ({ onClose }) => {
   const entry = (typeof CHANGELOG !== 'undefined' && Array.isArray(CHANGELOG) ? CHANGELOG : []).find((e) => e && e.assistantNotice && e.assistantNotice.id === CARD_TEASER_NOTICE_ID) || null;
   return (
-    <div data-card-teaser role="dialog" aria-modal="true" aria-label="MFバトルカード 近日公開" onClick={onClose} className="fixed inset-0 flex items-center justify-center overflow-y-auto p-4" style={{ zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.88)' }}>
+    <div data-card-teaser role="dialog" aria-modal="true" aria-label="MFバトルカード 近日公開" onClick={onClose} className="fixed inset-0 flex items-center justify-center overflow-y-auto p-4" style={{ ...cardSafePad('1rem'), zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.88)' }}>
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-[420px] rounded-3xl border-2 border-amber-300/80 bg-slate-950 p-3 text-white shadow-2xl landscape:max-w-[760px]">
         <div className="landscape:flex landscape:items-start landscape:gap-3">
           {entry && entry.image && <img src={entry.image} alt="MFバトルカード 近日公開" className="w-full rounded-2xl landscape:w-[46%] landscape:shrink-0"/>}
@@ -60338,7 +61191,7 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
   return (
     // 詳しい画面は、ほかの窓(捨て札・記録・チャットなど。どれも MODAL_Z.dialog)より手前に出す。同じ高さだと、
     //   画面の部品の並び順しだいで捨て札の窓の後ろに回っていた(2026-10-31 社長「すてふだからだと詳細カード画面が裏に回ってる」)。確かめの窓(confirm)よりは下
-    <div data-card-detail onClick={onClose} className="fixed inset-0 flex flex-col items-center justify-center gap-3 overflow-y-auto px-4 py-6" style={{ zIndex: MODAL_Z.dialog + 100, backgroundColor: 'rgba(2,6,23,0.94)' }} role="dialog" aria-label="カードの詳しい画面">
+    <div data-card-detail onClick={onClose} className="fixed inset-0 flex flex-col items-center justify-center gap-3 overflow-y-auto px-4 py-6" style={{ ...cardSafePad('1.5rem'), zIndex: MODAL_Z.dialog + 100, backgroundColor: 'rgba(2,6,23,0.94)' }} role="dialog" aria-label="カードの詳しい画面">
       {nav ? (
         <div data-card-detail-navrow className="flex w-full max-w-sm flex-col items-center gap-1">
           <div className="flex w-full items-center justify-center gap-2">
@@ -60357,7 +61210,7 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
             <span className="rounded-md bg-amber-900 px-2 py-0.5">ガッツ{c.guts}</span>
             {c.damage !== null && c.damage !== undefined && <span className="rounded-md bg-rose-900 px-2 py-0.5">ダメージ{c.damage}</span>}
             <span className="rounded-md bg-slate-700 px-2 py-0.5">{cardUserLabel(db, c)}</span>
-            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{c.no}</span>
+            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{c.dispNo || c.no}</span>
           </div>
           {dexLine}
           {c.text && <p className="mt-2 text-[14px] font-bold leading-relaxed">{c.text}</p>}
@@ -60372,7 +61225,7 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
           <div className="mt-1 flex flex-wrap gap-1.5 text-[12px] font-bold">
             <span className="rounded-md bg-emerald-900 px-2 py-0.5">ライフ{m.life}</span>
             <span className="rounded-md bg-sky-900 px-2 py-0.5">{CARD_TYPE_LABEL[m.type]}</span>
-            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{m.no}</span>
+            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{m.dispNo || m.no}</span>
           </div>
           {dexLine}
           {m.dexOnly && <p data-card-dex-only className="mt-2 text-[12px] font-bold text-amber-300" style={JA_LABEL_STYLE}>{jaWrap('まだ手に入らないカードです(パックには入っていません)')}</p>}
@@ -60433,7 +61286,7 @@ const CardTurnLogSheet = ({ st, meName, foeName, onClose, tac = [] }) => {
   tac.forEach((x) => { const t = turns.find((y) => y.turn === x.turn); if (t) t.tac.push(x.text); });
   const list = turns.filter((t) => t.lines.length || t.head).reverse();
   return (
-    <div data-card-log-sheet className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={onClose}>
+    <div data-card-log-sheet className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3 sm:items-center" style={cardSafePad('.75rem')} onClick={onClose}>
       <div className="flex max-h-[80%] w-full max-w-md flex-col rounded-2xl border border-white/15 bg-slate-950 p-3" onClick={(e) => e.stopPropagation()}>
         <div className="mb-2 text-[15px] font-black text-amber-200">ターンの記録</div>
         <div className="min-h-0 flex-1 space-y-2 overflow-y-auto mh-scroll">
@@ -60480,7 +61333,7 @@ const CardDiscardName = ({ name }) => {
       style={one ? { fontSize: `min(10px, calc(100cqw / ${len + 0.5}))`, whiteSpace: 'nowrap' } : { fontSize: 10, ...JA_WRAP_STYLE }}>{one ? name : jaWrap(name)}</span>
   );
 };
-const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact = false, tiny = false, wide = false, motion = null, calm = false, guardTag = '', onStatus = null, statusLock = false, onPressMon = null }) => {
+const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact = false, tiny = false, wide = false, grow = false, motion = null, calm = false, guardTag = '', onStatus = null, statusLock = false, onPressMon = null }) => {
   const mon = st.players[p].mons[m];
   const art = cardMonArtOk(mon);
   const ty = cardMonType(mon, st.turn);
@@ -60513,12 +61366,18 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   //   高さは画面の高さから決める(40〜64px。844×390 で 64px・667×375 で 56px ほど。上下の帯とまんなかの 64px を引いた残りを2段で分ける)
   const wideArtH = 'clamp(40px, calc((var(--mh-vh, 100svh) - 262px) / 2), 64px)';
   // 自分の場は、まんなか(1行の実況)で空いた分だけ立ち姿を大きくする(2026-10-29 社長・⑤ 案A。立ち絵の攻撃の動きが映えるように)
+  // 背の低い画面(tiny・compact)は、まんなかの空きを 90px 残して、余りの半分ずつを上下の場の絵へ回す(2026-11-01 見た目の点検 B。
+  //   320×640 で絵が 44px なのに、まんなかが 150px 空いていた)。まんなかの高さは「画面の高さ − 決まった量」(tiny 486px・compact 550px)。
+  //   練習試合・見返しは、まんなかの外に説明や帯が出るので広げない(grow を渡さない)
+  const growH = grow && !wide && (tiny || compact)
+    ? (tiny ? 'clamp(44px, calc((var(--mh-vh, 100svh) - 576px) / 2 + 44px), 76px)' : `clamp(56px, calc((var(--mh-vh, 100svh) - 640px) / 2 + 56px), ${opp ? 84 : 96}px)`)
+    : null;
   const artSize = wide ? 'max-w-[88px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : opp ? 'max-h-[78px] max-w-[96px]' : 'max-h-[106px] max-w-[126px]';
   // 同じ血統の子が同じ大きさに見えるよう、絵の余白を詰めて広げる(cardFieldArtTransform。相手の左右の向きもここで返す)
   const artFit = art ? cardFieldArtTransform(art, opp) : null;
   const kira = art && !mon.ko ? cardKiraOf(db, mon.no) : null;
   const imgEl = art
-    ? cardKiraWrap(kira, <img src={art} alt="" onError={cardArtOnError(art, CARD_IMG(cardMonsterOf(db, mon.no).img))} style={{ ...(wide ? { maxHeight: wideArtH } : null), ...(artFit ? { transform: artFit } : null) }} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp && !artFit ? '-scale-x-100' : ''}`}/>,
+    ? cardKiraWrap(kira, <img src={art} alt="" onError={cardArtOnError(art, CARD_IMG(cardMonsterOf(db, mon.no).img))} style={{ ...(wide ? { maxHeight: wideArtH } : null), ...(growH ? { maxHeight: growH, maxWidth: `calc(${growH} * 1.36)` } : null), ...(artFit ? { transform: artFit } : null) }} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp && !artFit ? '-scale-x-100' : ''}`}/>,
       { src: art, transform: artFit || (opp ? 'scaleX(-1)' : null), calm })
     : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`}/>;
   // 攻撃の動きだけは、その手で倒れた子(はね返されて倒れたなど)でも最後まで見せる。動きが終わると倒れた形になる
@@ -60528,18 +61387,26 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   //   動いている・倒れた・オプションの「揺らさない」では付けない。端末の「動きを減らす」は CSS(.mon-idle)で止まる
   const idleBody = art && !mv && !mon.ko && !calm ? cardIdleBodyOf(mon, ty) : null;
   // calm … オプションの「画面の揺れ: 揺らさない」。受けたときは揺らさずに光るだけ
+  // 当たった子は白く一瞬光る。立ち絵の子は、絵の形どおりに(絵を型に切り抜く。2026-11-01 点検 G「絵の四角全体が白く覆われる」)。
+  //   形の層は絵と同じ大きさ・同じ向き(広げる・左右)で絵に重ねる。カードの絵で出ている子は今までどおり四角く光る
+  const hitSil = mv && mv.type === 'hit' && art ? (() => {
+    const mk = `url("${art}")`;
+    const tf = artFit || (opp ? 'scaleX(-1)' : null);
+    return <span key={`${mv.key}-f`} data-card-hit-flash="sil" className="mh-card-hit-flash mh-card-hit-flash-sil" aria-hidden="true"
+      style={{ WebkitMaskImage: mk, maskImage: mk, WebkitMaskSize: '100% 100%', maskSize: '100% 100%', WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat', ...(tf ? { transform: tf } : null) }}/>;
+  })() : null;
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? (calm ? 'mh-card-hit-calm' : 'mh-card-hit') : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = (
     <div data-card-art={`${p}-${m}`} className={`relative flex ${wide ? '' : tiny ? 'h-[44px]' : compact ? 'h-[56px]' : opp ? 'h-[78px]' : 'h-[106px]'} w-full items-end justify-center`}
-      style={{ isolation: 'isolate', ...(wide ? { height: wideArtH } : null), ...(mv && mv.type === 'attack' ? { '--atk-dx': `${mv.dx}px`, '--atk-dy': `${mv.dy}px`, zIndex: 40 } : null) }}>
+      style={{ isolation: 'isolate', ...(wide ? { height: wideArtH } : null), ...(growH ? { height: growH } : null), ...(mv && mv.type === 'attack' ? { '--atk-dx': `${mv.dx}px`, '--atk-dy': `${mv.dy}px`, zIndex: 40 } : null) }}>
       {mv && mv.type === 'attack' && mv.kind
         ? <SkillFxMotion key={mv.key} kind={mv.kind} image={imgEl}/>
-        : <div key={mv ? mv.key : 'still'} data-card-pose={mon.ko ? 'ko' : mv ? mv.type : 'still'} className={`flex items-end justify-center ${poseClass}`}>{idleBody ? <span data-card-idle={idleBody} className={`mon-idle mon-idle--${idleBody}`} style={cardIdleStyleOf(idleBody, p, m, mon.no)}>{imgEl}</span> : imgEl}</div>}
+        : <div key={mv ? mv.key : 'still'} data-card-pose={mon.ko ? 'ko' : mv ? mv.type : 'still'} className={`flex items-end justify-center ${poseClass}`}>{idleBody ? <span data-card-idle={idleBody} className={`mon-idle mon-idle--${idleBody}`} style={cardIdleStyleOf(idleBody, p, m, mon.no)}>{imgEl}</span> : hitSil ? <span className="relative inline-flex items-end justify-center">{imgEl}{hitSil}</span> : imgEl}</div>}
       {/* よけた: 元の場所に残像が残って消える / ジャンプでよけた: 上で止まって「空中」の印 */}
       {mv && mv.type === 'dodge' && <div key={`${mv.key}-a`} className="mh-card-afterimage" aria-hidden="true">{imgEl}</div>}
       {mv && mv.type === 'jump' && <span key={`${mv.key}-j`} data-card-air-mark className="mh-card-air-mark">空中</span>}
       {/* 当たった子は白く一瞬光る(2026-10-26 改良の案 B・カゲあつくん 7) */}
-      {mv && mv.type === 'hit' && <span key={`${mv.key}-f`} data-card-hit-flash className="mh-card-hit-flash" aria-hidden="true"/>}
+      {mv && mv.type === 'hit' && !art && <span key={`${mv.key}-f`} data-card-hit-flash className="mh-card-hit-flash" aria-hidden="true"/>}
       {mv && mv.type === 'guard' && <span key={`${mv.key}-s`} className="mh-card-shield" aria-hidden="true"/>}
       {mv && mv.type === 'guard' && mv.label && <span key={`${mv.key}-n`} data-card-guard-num className="mh-card-guard-num">{mv.label}</span>}
       {/* 守りの番のあいだ、守った子の上に使った守りを出しておく(すぐ消えて使ったか分からなかった。2026-10-27 社長・案A) */}
@@ -60622,11 +61489,40 @@ const CardFitLabel = ({ children, max = 14, min = 9 }) => {
   }, [children, max, min]);
   return <span ref={ref} data-card-fit-label className="block w-full overflow-hidden whitespace-nowrap px-1 leading-tight" style={{ fontSize: `${size}px` }}>{children}</span>;
 };
+// オートの「結果だけ見る」(2026-11-02 社長): 2人とも戦術カードの打ち方で最後まで一瞬で打ち(95 の cardShareAutoFinish)、そのまま結果へ。
+//   打ち方は盤面のオートと同じ(自分 … 選んだデッキの戦術カード / 相手 … 登録デッキの戦い方)。打った手は見返し用の記録に残す
+const CardAutoQuick = ({ db, game, onActLog = null, onFinish }) => {
+  const done = useRef(false);
+  useEffect(() => {
+    if (done.current) return undefined;
+    done.current = true;
+    const t = setTimeout(() => {
+      const pols = [cardSharePolicy(game.auto.tactics, game.auto.level, { sameBlood: !!game.auto.sameBlood }), cardSharePolicy(game.share.tactics, game.level, { sameBlood: !!game.cpuSameBlood })];
+      const r = cardShareAutoFinish(db, game.st, pols);
+      if (onActLog) r.acts.forEach(([by, act]) => onActLog(by, act));
+      void onFinish({ outcome: r.st.winner === CARD_ME ? 'win' : 'lose', st: r.st });
+    }, 50);
+    return () => { clearTimeout(t); };
+  }, []);
+  return (
+    <div data-mh-screen data-card-auto-quick className={`${SCREEN_SHELL_CLASS} items-center justify-center`}>
+      <p className="text-[16px] font-black text-amber-100">⏩ 結果を出しています…</p>
+    </div>
+  );
+};
 const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = null, meProfile = null, meIcon = null, onActLog = null }) => {
   // 演出の設定(オプション)。はやい … 相手が考える時間と、決着から結果までを短くする
   const settings = normalizeCardSettings(game.settings);
   // 対戦中の設定(オプション・社長 2026-10-25)。既定はどれも足す前の動きと同じ。練習試合は game.settings を持たないので既定のまま
-  const pace = CARD_THINK_PACE[settings.think] || 1;
+  // オートで挑む(案B・2026-11-02): game.auto … { tactics(自分のデッキの戦術カード), level, sameBlood }。自分の側も相手役と同じ仕組み(cardSharePolicy)で動く。
+  //   ×1/×2/×4 は、相手が考える時間・カードを大きく見せる時間を縮める。「🖐 自分で」で手に切り替えられる(戻すこともできる)。ごほうびの扱いはオートのまま(84 の結果)
+  const autoGame = game.auto && game.auto.tactics && !game.replay && !game.pvp && !game.watch ? game.auto : null;
+  const [autoOn, setAutoOn] = useState(!!autoGame);
+  const [autoSpeed, setAutoSpeed] = useState(1);
+  // 「⏩ 結果へ」(2026-11-02 社長「オート対戦は結果だけを見るも追加して」): 確かめの窓と、飛ばしたあとに残っていた手を当てないための印
+  const [skipAsk, setSkipAsk] = useState(false);
+  const skippedRef = useRef(false);
+  const pace = (CARD_THINK_PACE[settings.think] || 1) / (autoGame ? autoSpeed : 1);
   const pressMs = CARD_PRESS_MS[settings.press] || 450;
   // 確かめの窓は、人が遊んでいるときだけ。練習試合・動きの見本・マルチの検査の自動操作(window.__mhCardPvpAuto)では出さない(ブレイブくんとの決め)
   const confirmOn = (key) => settings[key] === 'ON' && !game.tutorial && !game.demo && !(typeof window !== 'undefined' && window.__mhCardPvpAuto);
@@ -60651,6 +61547,29 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const share = game.share || null;
   const who = pvp ? { id: 'pvp', name: pvp.name, accent: '#38bdf8' } : share ? { id: 'share', name: share.name, accent: '#34d399' } : (ASSISTANTS.find((a) => a.id === game.who) || ASSISTANTS[0]);
   const policy = useMemo(() => (share && typeof cardSharePolicy === 'function' ? cardSharePolicy(share.tactics, game.level, { sameBlood: !!game.cpuSameBlood }) : cardAiPolicy(game.who, game.level, { sameBlood: !!game.cpuSameBlood })), [game.who, game.level, game.cpuSameBlood]);
+  // オートの操作(×1/×2/×4・自分で/オート)。横の画面の見出しの列に出す。label … 「オートで戦っています」の文も出すか
+  const autoControls = (label) => (<>
+    {label && <span className="min-w-0 flex-1 truncate text-[12px] font-black text-sky-100">{autoOn ? '🤖 オートで戦っています' : '🖐 自分で操作しています'}</span>}
+    {[1, 2, 4].map((x) => (
+      <button key={x} type="button" data-card-auto-speed={x} aria-pressed={autoSpeed === x} onClick={() => { Audio_.fgSe.tap(); setAutoSpeed(x); }}
+        className={`min-h-[30px] rounded-lg px-2 text-[12px] font-black ${autoSpeed === x ? 'bg-sky-300 text-slate-950' : 'bg-slate-800 text-slate-200'}`}>{`×${x}`}</button>
+    ))}
+    <button type="button" data-card-auto-toggle onClick={() => { Audio_.fgSe.tap(); setAutoOn((v) => !v); }}
+      className="min-h-[30px] shrink-0 rounded-lg border border-white/30 px-2 text-[12px] font-black text-white">{autoOn ? '🖐 自分で' : '🤖 オート'}</button>
+    <button type="button" data-card-auto-skip onClick={() => { Audio_.fgSe.tap(); setSkipAsk(true); }}
+      className="min-h-[30px] shrink-0 rounded-lg bg-amber-400 px-2 text-[12px] font-black text-slate-950">⏩ 結果へ</button>
+  </>);
+  // 縦の画面のオートの操作は、見出しの列(記録・番の帯・投了)に小さく入れる(2026-11-02 社長の実機: 別の帯にすると、その高さのぶん
+  //   下の「攻撃おわり → ガッツへ」や手札の名前が画面の下で切れた)。速さは押すたびに ×1→×2→×4。オート中は番の帯の頭に 🤖
+  const autoCompact = (<>
+    <button type="button" data-card-auto-speed={autoSpeed} data-card-auto-speed-cycle aria-label={`速さ ×${autoSpeed}(押すと変わる)`} onClick={() => { Audio_.fgSe.tap(); setAutoSpeed((v) => (v === 1 ? 2 : v === 2 ? 4 : 1)); }}
+      className="min-h-[30px] shrink-0 rounded-lg bg-sky-300 px-1.5 text-[12px] font-black tabular-nums text-slate-950">{`×${autoSpeed}`}</button>
+    <button type="button" data-card-auto-toggle onClick={() => { Audio_.fgSe.tap(); setAutoOn((v) => !v); }}
+      className="min-h-[30px] shrink-0 whitespace-nowrap rounded-lg border border-white/30 px-1.5 text-[11px] font-black text-white">{autoOn ? '🖐自分で' : '🤖オート'}</button>
+    <button type="button" data-card-auto-skip aria-label="結果へ(ここから最後まで一瞬で戦う)" onClick={() => { Audio_.fgSe.tap(); setSkipAsk(true); }}
+      className="min-h-[30px] min-w-[30px] shrink-0 rounded-lg bg-amber-400 px-1 text-[13px] font-black text-slate-950">⏩</button>
+  </>);
+  const autoPolicy = useMemo(() => (autoGame && typeof cardSharePolicy === 'function' ? cardSharePolicy(autoGame.tactics, autoGame.level, { sameBlood: !!autoGame.sameBlood }) : null), [autoGame]);
   const [st, setSt] = useState(game.st);
   useEffect(() => { if (onProgress) onProgress(st); }, [st]);
   const [sel, setSel] = useState(null);      // 攻撃: { hand, mon, add } / 守り: { hand }。add … 自分で足した札(勝手には足さない)
@@ -60761,7 +61680,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   // 助手のおしゃべり(AI・83-card-battle-talk-ai.jsx): この試合で山場を聞いた回数と、それぞれの側がリードされたことがあるか(逆転の判定)
   const talk = useRef({ n: 0, behind: [false, false] });
   const press = useCardLongPress((no) => setDetail(no), pressMs);
-  const paused = !!detail || !!discard || quit;
+  const paused = !!detail || !!discard || quit || skipAsk;
 
   // ai … 山場なら { scene(AIに伝える場面), next(操作のあとの状態) }。決まった台詞を出したまま、間に合ったときだけAIのひとことに差しかえる
   const say = (scene, ai = null) => {
@@ -60873,6 +61792,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     motionTimers.current.push(setTimeout(() => setGutsFly((cur) => cur.filter((g) => !out.some((o) => o.key === g.key))), life));
   };
   const step = (act, forced = null, shown = false) => {
+    if (skippedRef.current) return false; // 「⏩ 結果へ」で最後まで打ったあと(大きく見せていた手などを、古い場に当てない)
     if (!forced && tutorial && cardDeciderOf(st) === CARD_ME && !tutAllow(act)) { tutWrongSay(); return false; }
     // 助手と対戦の自分の手: 先にカードを大きく出して、消えたら当てる(当てられる手かは先に確かめる。練習試合・見本は出さない)
     if (!forced && !shown && !pvp && !tutorial && !game.demo && bigMs > 0 && cardDeciderOf(st) === CARD_ME) {
@@ -60991,6 +61911,30 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (scene && next.winner === null) say(scene, { scene: flip || scene, next });
     return true;
   };
+
+  // 「⏩ 結果へ」: いまの場から、2人とも戦術カードの打ち方で最後まで一瞬で打つ(95 の cardShareAutoFinish)。打った手は見返し用の記録にも残す
+  const skipToEnd = () => {
+    const cur = stRef.current || st;
+    if (!autoPolicy || typeof cardShareAutoFinish !== 'function' || cur.winner !== null || skippedRef.current) return;
+    const r = cardShareAutoFinish(db, cur, [autoPolicy, policy]);
+    if (onActLog) r.acts.forEach(([by, act]) => onActLog(by, act));
+    skippedRef.current = true;
+    setSel(null); setPicks([]); setBigCard(null);
+    stRef.current = r.st;
+    setSt(r.st);
+  };
+  // オートの番(自分の側)。相手役と同じく、選んだデッキの戦術カードで決める。詳しい画面・捨て札・投了の確かめを見ているあいだは待つ
+  useEffect(() => {
+    if (!autoGame || !autoOn || !autoPolicy || st.winner !== null || paused) return undefined;
+    if (cardDeciderOf(st) !== CARD_ME) return undefined;
+    const wait = Math.round((st.pending ? 700 : st.phase === 'guts' ? 500 : 750) * pace);
+    const t = setTimeout(() => {
+      setSel(null); setPicks([]);
+      const act = cardAiChooseAction(db, st, autoPolicy);
+      if (!act || !step(act)) step(st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : { type: 'guts', hand: [] });
+    }, wait);
+    return () => { clearTimeout(t); };
+  }, [st, autoOn, paused, autoSpeed]);
 
   // コンピューターの番(守りの番・始める前・捨てる番も)。詳しい画面や捨て札を見ているあいだは待つ
   useEffect(() => {
@@ -61269,6 +62213,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const handLarge = settings.handText === 'LARGE' && !tiny;
   // 手札の小さい段は縦の画面だけ(横画面は右の列の幅に余裕がある。2026-10-27 ソランドくん「手札のカードも小さい」)
   const handTiny = tiny && !wide; // 手札の字を大きく(狭い画面では、ふつうのまま)
+  // 手札に7字以上の名前が1枚でもあれば、名前の欄を2行ぶんの高さでそろえる(CardNameFit の tall)
+  const handLongName = me.hand.some((no) => { const c = cardOf(db, no); return [...String(c ? c.name : no)].length >= 7; });
   const tapHand = (i) => {
     Audio_.fgSe.tap();
     if (tutorial && myTurn && (!cardTutorialHandOk(tutStage.id, st, i) || tutStage.next || tutQ.length > 1)) { tutWrongSay(); return; }
@@ -61704,6 +62650,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       )}
       {/* 上の帯(2026-10-29 社長・案B): 左「記録」「💬」/ まんなかに番の札ひとつ(ターン・だれの番・マルチの持ち時間・電波)/ 右に観戦の数と、右端に「投了」。
           1段・高さ固定で、どの番でも盤が動かない。電波が途切れたときも段を増やさず、番の札が橙になる。難易度は助手の名前の下にあるので帯には出さない */}
+      {/* オートの帯: 縦は見出しの下に1列、横は見出しの列の中(盤面の高さを削らない) */}
       <div data-card-head className={`relative flex ${compact ? 'h-[36px]' : 'h-[44px]'} shrink-0 items-center gap-1.5 bg-black/35 px-2`}>
         {!tutorial && <button type="button" data-card-log-open onClick={() => setLogSheet(true)} className="shrink-0 rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200" aria-label="ターンの記録を見る">記録</button>}
         {/* 💬 コメント(定型と自由文・ログ。2026-10-30 社長「マルチと観戦で自由文のコメントも」。91 の CardChatButton) */}
@@ -61725,6 +62672,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
               className={`mx-auto min-w-0 max-w-[440px] flex-1 truncate whitespace-nowrap rounded-full px-2 py-1 text-center ${sig ? 'text-[11px]' : tiny ? 'text-[12px]' : 'text-[13px]'} font-black leading-tight tabular-nums ${tone}`}>
               {sig ? (pvpClock.offline ? '電波が途切れています。つなぎ直しています…' : `相手の電波が途切れています(あと${pvpClock.foeQuietSec}秒)`) : <>
                 {!(headSt.phase === 'setup' && replay) && !(pvpLive && (tiny || headSt.active !== cardDeciderOf(headSt))) && <span className="mr-1 text-[11px] font-bold opacity-75">ターン{Math.max(1, headSt.turn)}</span>}
+                {autoGame && autoOn && !wide && <span aria-label="オートで戦っています" className="mr-0.5">🤖</span>}
                 {turnTxt}
                 {/* 守りを考えている間(番の人と考える人が違う)は、だれの守りの時間かを添える */}
                 {pvpLive && ` · ${headSt.active !== cardDeciderOf(headSt) ? (pvpClock.mine ? '守り 残り' : '相手の守り') : pvpClock.mine ? '残り' : ''}${pvpClock.left}秒`}
@@ -61737,6 +62685,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         {/* 観戦している人の数(94-card-spectate.jsx)。いないときは出さない */}
         {pvpLive && pvpClock.eyes > 0 && <span data-card-pvp-eyes={pvpClock.eyes} aria-label={`${pvpClock.eyes}人が観戦しています`} className="shrink-0 whitespace-nowrap rounded-full bg-violet-500/25 px-1.5 py-0.5 text-[11px] font-black text-violet-100 tabular-nums">{tiny ? `👀${pvpClock.eyes}` : `👀観戦${pvpClock.eyes}`}</span>}
         {/* 投了は右端へ離し、赤い縁(押しまちがえやすい所から離す)。観戦では出さない(下の「観戦をやめる」と2つ並んでいた。2026-10-27 部長) */}
+        {autoGame && <span data-card-auto-bar={autoOn ? 'auto' : 'hand'} className="flex shrink-0 items-center gap-1">{wide ? autoControls(false) : autoCompact}</span>}
         {!watch && <button type="button" data-card-quit data-card-replay-exit={replay ? '' : undefined} onClick={() => (replay ? onFinish({ outcome: 'replayExit', st }) : setQuit(true))} className={`shrink-0 rounded-lg border px-2 py-1 text-[12px] font-black ${replay || tutorial ? 'border-white/20 text-slate-200' : 'border-rose-400/80 text-rose-200'}`}>{replay ? 'とじる' : tutorial ? '飛ばす' : '投了'}</button>}
         {/* マルチの持ち時間の線(帯のいちばん下。減っていく) */}
         {pvpLive && <span aria-hidden="true" data-card-pvp-bar className={`pointer-events-none absolute bottom-0 left-0 h-[3px] transition-[width] duration-1000 ease-linear ${(pvpClock.offline || pvpClock.foeQuietSec > 0) ? 'bg-amber-500' : pvpClock.mine ? 'bg-amber-300' : 'bg-slate-400/60'}`} style={{ width: `${Math.max(0, Math.min(100, (pvpClock.left * 1000 / Math.max(1, cardPvpLimitMs(st))) * 100))}%` }}/>}
@@ -61759,7 +62708,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* 相手の番のあいだは、相手の場のふちを赤く光らせる(大きさは変えない。2026-10-26 ソラシドさん) */}
       {/* 場の床: 相手の場は冷たい色・自分の場はあったかい色(境目が分かるように。2026-10-26 社長 OK の改良の案 A・カゲあつくん 10) */}
       <div data-card-side-active={turnLive && !turnMe ? 'foe' : undefined} data-card-floor="foe" className={`flex shrink-0 items-start justify-around rounded-2xl px-1 transition-shadow ${turnLive && !turnMe ? 'shadow-[inset_0_0_0_2px_rgba(251,113,133,.75),0_0_16px_rgba(251,113,133,.35)]' : ''}`} style={{ background: 'linear-gradient(180deg, rgba(30,64,175,0) 0%, rgba(30,64,175,.28) 100%)' }}>
-        {opp.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_CPU} m={m} mark={markOf(CARD_CPU, m)} guardTag={guardTagOf(CARD_CPU, m)} statusLock={(mode === 'attack' || mode === 'guard') && !!sel} onStatus={(sp, sm) => { Audio_.fgSe.tap(); setStatusSheet({ p: sp, m: sm }); }} onPressMon={(sp, sm) => { monPressed.current = { p: sp, m: sm }; }} fx={endFx ? [] : fx.filter((f) => f.p === CARD_CPU && f.m === m)} onTap={() => tapMon(CARD_CPU, m)} press={press} compact={compact} tiny={tiny} wide={wide} calm={settings.shake === 'OFF'} motion={motions[`1-${m}`] || null}/>)}
+        {opp.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_CPU} m={m} mark={markOf(CARD_CPU, m)} guardTag={guardTagOf(CARD_CPU, m)} statusLock={(mode === 'attack' || mode === 'guard') && !!sel} onStatus={(sp, sm) => { Audio_.fgSe.tap(); setStatusSheet({ p: sp, m: sm }); }} onPressMon={(sp, sm) => { monPressed.current = { p: sp, m: sm }; }} fx={endFx ? [] : fx.filter((f) => f.p === CARD_CPU && f.m === m)} onTap={() => tapMon(CARD_CPU, m)} press={press} compact={compact} tiny={tiny} wide={wide} grow={!tutorial && !replay} calm={settings.shake === 'OFF'} motion={motions[`1-${m}`] || null}/>)}
       </div>
       {/* まんなか: 技の動き(アクション)と、起きたことの記録(ログ)の場所。相手の場と自分の場をここで上下に分ける(社長 2026-10-24)
           ★次の区切りの技ごとの動きも、この data-card-stage の中で見せる */}
@@ -61870,7 +62819,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           手札のすぐ上だと、自分のモンスターの名前とライフ・自分の帯にかぶった(2026-10-26 カゲあつくんの通しの点検) */}
       {!wide && tutorBox}
       <div data-card-side-active={turnLive && turnMe ? 'me' : undefined} data-card-floor="me" className={`flex shrink-0 items-end justify-around rounded-2xl px-1 transition-shadow ${turnLive && turnMe ? 'shadow-[inset_0_0_0_2px_rgba(252,211,77,.8),0_0_16px_rgba(252,211,77,.35)]' : ''}`} style={{ background: 'linear-gradient(0deg, rgba(180,83,9,0) 0%, rgba(180,83,9,.28) 100%)' }}>
-        {me.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_ME} m={m} mark={markOf(CARD_ME, m)} guardTag={guardTagOf(CARD_ME, m)} statusLock={(mode === 'attack' || mode === 'guard') && !!sel} onStatus={(sp, sm) => { Audio_.fgSe.tap(); setStatusSheet({ p: sp, m: sm }); }} onPressMon={(sp, sm) => { monPressed.current = { p: sp, m: sm }; }} fx={endFx ? [] : fx.filter((f) => f.p === CARD_ME && f.m === m)} onTap={() => tapMon(CARD_ME, m)} press={press} compact={compact} tiny={tiny} wide={wide} calm={settings.shake === 'OFF'} motion={motions[`0-${m}`] || null}/>)}
+        {me.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_ME} m={m} mark={markOf(CARD_ME, m)} guardTag={guardTagOf(CARD_ME, m)} statusLock={(mode === 'attack' || mode === 'guard') && !!sel} onStatus={(sp, sm) => { Audio_.fgSe.tap(); setStatusSheet({ p: sp, m: sm }); }} onPressMon={(sp, sm) => { monPressed.current = { p: sp, m: sm }; }} fx={endFx ? [] : fx.filter((f) => f.p === CARD_ME && f.m === m)} onTap={() => tapMon(CARD_ME, m)} press={press} compact={compact} tiny={tiny} wide={wide} grow={!tutorial && !replay} calm={settings.shake === 'OFF'} motion={motions[`0-${m}`] || null}/>)}
       </div>
       {/* 自分の帯: 自分のアイコン(プロフィールのアイコン+フレーム。ランキングと同じ部品)と名前を、山札・ガッツ・捨て札の左に
           (2026-10-26 社長「バトル中とかに自分のアイコンとかも出るようにしたいね」)。行の高さは変えない(アイコンは行の高さに縮める)。名前は「…」で切らず字を縮める */}
@@ -61929,7 +62878,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
               {why && <span data-card-why className={`pointer-events-none absolute left-1/2 top-[22%] z-[2] w-max max-w-[110%] -translate-x-1/2 rounded-md border border-rose-300/80 bg-rose-950/95 px-1 py-px text-center ${handTiny ? 'text-[9px]' : 'text-[10px]'} font-black leading-tight text-rose-100 shadow-[0_2px_4px_#000]`} style={JA_WRAP_STYLE}>{jaWrap(why)}</span>}
               {/* 小さい段(tiny)は名前が2行になることがあるので、字の行間と上下の余白を詰めて、下のボタンを画面に残す(320×568 の守りの番) */}
               {!(replay && boardFit >= 3) && <div className={`mt-0.5 w-full rounded-md bg-black/60 ${handTiny ? 'py-px' : 'py-0.5'} text-center leading-tight`}>
-                <CardNameFit name={c ? c.name : no} size={handLarge ? (compact ? 12 : 13) : compact ? 10 : 11} className="font-bold leading-tight" twoLine/>
+                <CardNameFit name={c ? c.name : no} size={handLarge ? (compact ? 12 : 13) : compact ? 10 : 11} className="font-bold leading-tight" twoLine tall={handLongName}/>
                 {handTiny ? <>
                   <CardNameFit name={`ガッツ${c ? c.guts : '-'}`} size={10} className="font-extrabold leading-[1.1] text-amber-200"/>
                   <CardNameFit name={cardCaption(c)} size={10} className="font-extrabold leading-[1.1] text-amber-200"/>
@@ -62071,7 +63020,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       )}
       {discard && <CardDiscardModal db={db} st={st} initial={discard.tab} onDetail={(no) => setDetail(no)} onClose={() => setDiscard(null)}/>}
       {bindAsk && (
-        <div data-card-bind-pick className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" onClick={bindCancel}>
+        <div data-card-bind-pick className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" style={cardSafePad('.75rem')} onClick={bindCancel}>
           <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100" onClick={(e) => e.stopPropagation()}>
             <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap('影縛り: 使えなくする守りのカードを選ぶ')}</div>
             <div className="mt-1 text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('同じ名前のカードは全部、この技に使えなくなります。赤いのは、狙った相手が使える守りです')}</div>
@@ -62099,7 +63048,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         const pick = cardAttackOptions(db, st).find((x) => x.mon === base.mon && JSON.stringify(x.hand) === JSON.stringify(base.hand) && JSON.stringify(x.target) === JSON.stringify(base.target) && JSON.stringify(x.toss) === want);
         const toggle = (i) => setTossAsk((cur) => (cur ? { ...cur, picks: cur.picks.includes(i) ? cur.picks.filter((x) => x !== i) : [...cur.picks, i] } : cur));
         return (
-          <div data-card-toss-pick className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" onClick={() => setTossAsk(null)}>
+          <div data-card-toss-pick className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" style={cardSafePad('.75rem')} onClick={() => setTossAsk(null)}>
             <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100" onClick={(e) => e.stopPropagation()}>
               <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap(`「${main ? main.name : ''}」で捨てる手札を選ぶ`)}</div>
               <p className="mt-1 text-[12px] font-bold leading-snug text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('捨てた枚数だけ、ダメージが増えます(0枚でも使えます)')}</p>
@@ -62123,7 +63072,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         );
       })()}
       {splitAsk && (
-        <div data-card-split-pick className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" onClick={() => setSplitAsk(null)}>
+        <div data-card-split-pick className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" style={cardSafePad('.75rem')} onClick={() => setSplitAsk(null)}>
           <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100" onClick={(e) => e.stopPropagation()}>
             <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap(splitAsk.some((o) => o.fuse) ? '合体する2体を選ぶ(左がメイン・右がサブ)' : splitAsk.some((o) => o.emerge) ? '羽化して取りかえる先を選ぶ' : 'ダメージの割り振りを選ぶ')}</div>
             <div className="mt-2 grid max-h-[55vh] gap-1.5 overflow-y-auto">
@@ -62141,7 +63090,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {mode === 'pray' && prayUse && !bigCard && (() => {
         const fc = cardOf(db, st.pendingPray.no);
         return (
-          <div data-card-pray className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3">
+          <div data-card-pray className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" style={cardSafePad('.75rem')}>
             <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100">
               <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap(`相手が全体カード「${fc ? fc.name : ''}」を出しました`)}</div>
               {fc && <button type="button" onClick={() => setDetail(fc.no)} className="mt-1 block w-full rounded-xl bg-slate-800 px-2 py-1.5 text-left text-[12px] font-bold leading-snug text-slate-200" style={JA_WRAP_STYLE}>{fc.text}</button>}
@@ -62155,10 +63104,11 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         );
       })()}
       {choice && (
-        <div data-card-choose className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3">
+        <div data-card-choose className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" style={cardSafePad('.75rem')}>
           <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100">
             <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap(`${choice.from ? `${choice.from}: ` : ''}${choice.title}`)}</div>
-            <div className="mt-2 grid max-h-[55vh] gap-1.5 overflow-y-auto">
+            {/* 背の低い縦の画面では2列にして窓の背を低くし、自分の場を見ながら選べるようにする(2026-11-01 点検 F。390×600 で場をほぼ覆っていた) */}
+            <div className="mt-2 grid max-h-[55vh] gap-1.5 overflow-y-auto [@media(orientation:portrait)_and_(max-height:700px)]:grid-cols-2">
               {choice.items.map(({ i, no, c }) => (
                 <button key={`${i}-${no}`} type="button" data-card-choose-item={i} onClick={() => step({ type: 'choose', pick: i })}
                   className="flex min-h-[48px] items-center gap-2 rounded-xl bg-slate-700 px-2 py-1.5 text-left active:scale-[.98]">
@@ -62174,7 +63124,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         </div>
       )}
       {guardAsk && (
-        <div data-card-guard-ask className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 px-4" onClick={() => setGuardAsk(null)}>
+        <div data-card-guard-ask className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 px-4" style={cardSafePad('.5rem')} onClick={() => setGuardAsk(null)}>
           <div className="w-full max-w-[320px] rounded-2xl border-2 border-sky-300 bg-slate-900 p-3 text-center shadow-[0_8px_24px_#000]" onClick={(e) => e.stopPropagation()}>
             <div className="text-[14px] font-black text-white" style={JA_WRAP_STYLE}>{`「${guardAsk.name}」を使うと`}</div>
             {guardAsk.after !== null && guardAsk.before !== null ? (
@@ -62190,6 +63140,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       )}
       {confirm && <ConfirmSheet title={confirm.label} message={confirm.kind === 'use' ? 'オプションで確かめないようにもできます' : ''} confirmLabel={confirm.kind === 'use' ? '使う' : '終わる'} onCancel={() => setConfirm(null)} onConfirm={confirmYes}/>}
       {quit && !tutorial && <ConfirmSheet title="投了しますか？" message={pvp ? '投了すると負けになります' : '投了すると負けになります(ビートPとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)'} confirmLabel="投了する" danger onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; if (pvp) CARD_PVP.surrender(); onFinish({ outcome: 'surrender', st }); }}/>}
+      {skipAsk && <ConfirmSheet title="結果へ進みますか？" message="ここから最後まで、2人とも戦術カードで一瞬で戦って、結果を出します(この対戦はあとから見返せます)" confirmLabel="結果へ" onCancel={() => setSkipAsk(false)} onConfirm={() => { setSkipAsk(false); skipToEnd(); }}/>}
       {quit && tutorial && <ConfirmSheet title="チュートリアルを飛ばしますか？" message={'ルールの画面からいつでもできます'} confirmLabel="飛ばす" onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; onFinish({ outcome: 'tutorialSkip', st }); }}/>}
     </div>
   );
@@ -62416,7 +63367,7 @@ const CardQuickRunDetail = ({ quickRun, autoReady, autoDifficulty, todayLoops = 
   );
   const wave = quickRun && quickRun.info && quickRun.info.wave;
   return (
-    <div data-card-quick-detail className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/80 p-4 landscape:py-2" role="dialog" aria-modal="true" aria-label="クイック周回" onClick={onClose}>
+    <div data-card-quick-detail className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/80 p-4 landscape:py-2" style={cardSafePad('.5rem')} role="dialog" aria-modal="true" aria-label="クイック周回" onClick={onClose}>
       <div className="w-full max-w-sm overflow-y-auto rounded-3xl border-2 border-fuchsia-400/60 bg-slate-900 p-4 text-white shadow-2xl landscape:p-3" style={{ maxHeight: 'calc(100% - 8px)' }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2">
           <span aria-hidden="true" className="text-xl">⚔</span>
@@ -62503,6 +63454,17 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   useEffect(() => { const go = () => { if (CARD_PVP_BACK.take()) setView('pvp'); }; go(); return CARD_PVP_BACK.on(go); }, []);
   // 対戦の前のデッキ選び(87-card-deck-pick.jsx)。next … 'cpu'(助手と対戦。pick は相手と難易度) / 'pvp'(マルチの入口へ)
   const [deckPick, setDeckPick] = useState(null);
+  // オートで挑む(案B・2026-11-02): ほかのブリーダーと戦う前のデッキ選びの切り替えと、今日のごほうびの残り回数(96 の cardAutoRewardLoad)
+  const [shareAuto, setShareAuto] = useState(false);
+  const [shareQuick, setShareQuick] = useState(false); // オートの「結果だけ見る」(2026-11-02)
+  const [autoLeft, setAutoLeft] = useState(null);
+  useEffect(() => {
+    if (view !== 'deckPick' || !(deckPick && deckPick.pick && deckPick.pick.share) || typeof cardAutoRewardLoad !== 'function') return undefined;
+    let alive = true;
+    setAutoLeft(null);
+    void cardAutoRewardLoad().then((r) => { if (alive) setAutoLeft(r.left); }).catch(() => {});
+    return () => { alive = false; };
+  }, [view, deckPick]);
   // マルチは、入口で相手を決めたあとにデッキ選びを挟む(2026-10-30 社長「相手を選んだあとにして」。91 の CARD_PVP_NEXT)。
   //   試合のあとに部屋を出て入口へ戻るとき(over → idle)は挟まない(次に相手を決めたときに選ぶ)。「もう1戦」は同じ部屋・同じデッキのまま
   const [kitPick, setKitPick] = useState(null);
@@ -62831,6 +63793,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   };
 
   // 過去の対戦を見る(93-card-replay.jsx)。id … 試合の番号。back … とじたあとに戻る画面(view)
+  // 端末に保存していない試合(オートの結果。93 の記録の形)を見る
+  const openReplayRec = (rec, back = 'top') => {
+    const g = rec && db ? cardReplayGameOf(db, rec) : null;
+    if (!g) { setNotice('この対戦は見られません'); return; }
+    setGame({ ...g, settings: save ? save.settings : undefined, replay: { ...g.replay, back } });
+    onNavigate('CARD_BATTLE');
+  };
   const openReplay = async (id, back = 'top') => {
     const rec = await cardReplayGet(id);
     const g = rec && db ? cardReplayGameOf(db, rec) : null;
@@ -62893,11 +63862,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   if (!save) return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="MFバトルカード" onBack={onExit}/><ScreenEmpty emoji="⏳" lines={['読み込み中…']}/></div>;
 
   if (screen === 'CARD_BATTLE' && game) {
-    // 対戦開始の画面(83-card-battle-vs.jsx)。出し終わるかタップしたら、対戦の画面へ(場はもう作ってあり、見せるだけ)
-    if (game.intro) return <CardVsIntro key={`vs-${game.key}`} db={db} intro={game.intro} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} onDone={() => setGame((g) => (g && g.key === game.key ? { ...g, intro: null } : g))}/>;
-    // 大会の見返しは、下の人もその試合のブリーダー(見ている人のアイコンと名前は出さない)
-    const tourMe = game.replay && game.replay.tour ? { name: game.replay.tour.me.name, icon: game.replay.tour.me.icon || null } : null;
-    return <CardBattleBoard key={game.key} db={db} game={game} onProgress={cpuOpenProgress} onActLog={cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogAct : null} meProfile={tourMe || (rank && rank.profile)} meIcon={tourMe ? null : rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} quickRun={quickRun ? { loops: quickRun.loops, stopped: quickRun.stopped } : null} onFinish={async ({ outcome, st, comeback = false }) => {
+    // 対戦が終わったとき(盤面の onFinish)。オートの「結果だけ見る」(CardAutoQuick)も同じ処理を通す(2026-11-02)
+    const boardFinish = async ({ outcome, st, comeback = false }) => {
       // 過去の対戦を見る(93): 何も保存しない。開いた画面へ戻すだけ(1手ごとの場を持ったままにしない)
       if (game.replay) {
         const back = game.replay.back || 'top';
@@ -62955,6 +63921,37 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       //   記録(助手ごとの勝ち数)・ランキング・強さの解放・着替えの解放・助手のひとことは通らない(助手と戦ったのではないため)
       //   もらえる物(ビートP・クイック周回・カードランクの経験値)は、相手の賢さにかかわらず助手と対戦 MASTER と同じ
       //   (2026-10-30 社長「ブリーダーのデッキとの対戦は難易度低いとやる意味なくなるから、経験値等はマスターと同等にして」)。相手の打ち方の強さは賢さ(game.level)のまま
+      // オートで挑んだ試合(案B・2026-11-02 社長・案3): 1日はじめの3回だけ手の半分(ビートP・クイック周回・経験値)。4回目からは無し。
+      //   その日はじめての勝ちの +50 は付けない。途中で手に切り替えた試合もオートの扱い。
+      //   ランキング・カードランクの送信・その日の数(daily)・相手の戦績(「戦った」の知らせ・見返し)には入れない。サーバへは何も送らない
+      if (game.share && game.auto && typeof cardAutoRewardLoad === 'function') {
+        const facts = cardResultFacts(st, CARD_ME);
+        const fresh = await freshCardSave();
+        const ar = await cardAutoRewardLoad();
+        const paid = ar.left > 0;
+        const half = cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts);
+        const point = paid ? Math.floor(half.base / 2) : 0;
+        const loops = paid ? Math.floor(cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts) / 2) : 0;
+        const levelGain = paid && typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: CARD_SHARE_REWARD_LEVEL, outcome, debug, auto: true }) : { entries: [] };
+        const rankPoint = (levelGain.gain && levelGain.gain.points) || 0;
+        // ごほうびが出た試合だけ、その日の回数に数える(自分の番が少なく0になった試合では回数を使わない)
+        const counted = paid && (point > 0 || loops > 0 || (levelGain.gain && levelGain.gain.add > 0));
+        const ok = await persist({ point: save.point + point + rankPoint }, fresh.raw, [...(levelGain.entries || []), ...(counted ? [cardAutoRewardEntry(ar)] : [])]);
+        let quick = null;
+        if (ok && loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(loops); } catch (_) { quick = null; } }
+        // 見返し(この対戦を見る): 打った手の並びから、端末の中だけで作る(サーバへは送らない・過去の対戦の一覧にも足さない)
+        const autoLog = cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogRef.current : null;
+        if (autoLog) cpuLogRef.current = null;
+        const replayRec = autoLog && typeof cardReplayFromCpu === 'function' ? cardReplayFromCpu(db, { id: `a${autoLog.id}`, at: Date.now(), myDeck: autoLog.decks[0], cpuDeck: autoLog.decks[1],
+          seed: autoLog.seed, first: autoLog.first, history: autoLog.acts, foe: { name: game.share.name }, outcome, reason: '' }) : null;
+        const reward = { ...half, base: point, got: point, bonus: 0, total: point, full: paid ? Math.floor(half.full / 2) : 0, daily: fresh.daily }; // ごほうびなしの日は「満額 → 0」と減った理由を出さない
+        setResult({ outcome, reward, opened: null, saved: ok, who: null, level: game.level, loops, quick, facts, talk: null, replay: null, share: game.share, rankGain: ok ? levelGain.gain : null,
+          replayRec: replayRec || null, auto: { tactics: game.auto.tactics, quick: !!game.auto.quick, paid, left: Math.max(0, ar.left - (ok && counted ? 1 : 0)) } });
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView('result');
+        return;
+      }
       if (game.share) {
         const facts = cardResultFacts(st, CARD_ME);
         const fresh = await freshCardSave();
@@ -63064,7 +64061,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       onBgm && onBgm(cardBgmOf(save.bgm.top));
       onNavigate('CARD_TOP');
       setView('result');
-    }}/>;
+    };
+    // 対戦開始の画面(83-card-battle-vs.jsx)。出し終わるかタップしたら、対戦の画面へ(場はもう作ってあり、見せるだけ)
+    if (game.intro) return <CardVsIntro key={`vs-${game.key}`} db={db} intro={game.intro} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} onDone={() => setGame((g) => (g && g.key === game.key ? { ...g, intro: null } : g))}/>;
+    // オートの「結果だけ見る」: 対戦の画面を出さずに、一瞬で最後まで打って結果へ(対戦開始の画面も出さない)
+    if (game.auto && game.auto.quick && game.share && !game.replay) return <CardAutoQuick key={`quick-${game.key}`} db={db} game={game} onActLog={cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogAct : null} onFinish={boardFinish}/>;
+    // 大会の見返しは、下の人もその試合のブリーダー(見ている人のアイコンと名前は出さない)
+    const tourMe = game.replay && game.replay.tour ? { name: game.replay.tour.me.name, icon: game.replay.tour.me.icon || null } : null;
+    return <CardBattleBoard key={game.key} db={db} game={game} onProgress={cpuOpenProgress} onActLog={cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogAct : null} meProfile={tourMe || (rank && rank.profile)} meIcon={tourMe ? null : rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} quickRun={quickRun ? { loops: quickRun.loops, stopped: quickRun.stopped } : null} onFinish={boardFinish}/>;
   }
 
   const allAssistants = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS : [];
@@ -63097,6 +64101,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const rented = opts && opts.rented ? opts.rented : null;
     // 個人杯のリアルタイム杯(④): 自分も相手も、始まる時刻に取った登録デッキの写し。種と先攻は杯の試合のもの(見返しで同じ試合になる)
     const cup = opts && opts.cup ? opts.cup : null;
+    // オートで挑む(案B): ほかのブリーダーの登録デッキと戦うときだけ。自分の側の打ち方は、選んだデッキの戦術カード(相手役と同じ cardSharePolicy)
+    const autoIn = opts && opts.auto && opts.auto.tactics && pick.share ? opts.auto : null;
     const issues = deck ? (rented || cup ? cardDeckProblems(db, deck) : [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)]) : ['デッキがありません'];
     if (!deck || issues.length) { setNotice(issues.join('・')); return; }
     const activeDeck = deck; // 下は選んだデッキで組む(デッキ選びで書き換えた active は、この描画ではまだ古いので受け取った物を使う)
@@ -63119,7 +64125,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } } : { mode: 'assistant',
       foe: { who: pick.who, name: assistant ? assistant.name : 'あいて', line: (CARD_VS_LINES[pick.who] || {})[pick.level] || null, deckName: cardAssistantDeckName(db, cpuDeck, pick.who, pick.level), monsters: vsMons(st, CARD_CPU) },
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } };
-    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(share ? { share } : {}), ...(cup ? { cup } : {}),
+    const auto = autoIn ? { tactics: autoIn.tactics, level: typeof cardShareFightLevel === 'function' ? cardShareFightLevel(autoIn.tactics) : 'master', sameBlood: !!cardShareSameBlood(db, activeDeck), quick: !!autoIn.quick } : null;
+    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro: auto && auto.quick ? null : intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(share ? { share } : {}), ...(cup ? { cup } : {}), ...(auto ? { auto } : {}),
       ...(rented ? { rented: { ownerId: rented.ownerId, version: rented.version, name: rented.owner } } : {}) });
     const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
     cpuLogRef.current = scene ? null : { id: gameKey, seed, first, decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], foeName: intro.foe.name, deckName: intro.foe.deckName || null, acts: [] };
@@ -63195,48 +64202,49 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           </div>
         )}
         {/* 札は上下の真ん中に置く。札が多くて収まらないときは上から並べて巻き取れる(justify-center だと上の札が画面の外へ出て押せなくなる。2026-10-30 大会の札を足したとき) */}
-        <div className={`${SCREEN_LIST_CLASS} relative z-[1] flex flex-col space-y-3 pb-4`}>
+        {/* 横の画面は札を2列にして、5つとも1画面に入れる(縦1列だと3つ目から切れていた。2026-11-01 見た目の点検 E)。上下の空きの部品は横では使わない。上へそろえる(まんなかにそろえると、568×320 ではみ出した札の上が切れて巻き取れなかった) */}
+        <div className={`${SCREEN_LIST_CLASS} relative z-[1] flex flex-col space-y-3 pb-4 landscape:grid landscape:grid-cols-2 landscape:auto-rows-max landscape:content-start landscape:gap-2 landscape:space-y-0 landscape:pb-1`}>
           {/* 札の高さは5つともそろえる(2026-10-31 社長「高さがばらばら」)。フリー対戦の顔の並びが入る高さ(112px)に合わせ、顔は小さめ(h-8) */}
-          <div aria-hidden="true" className="flex-1"/>
-          <button type="button" data-card-mode-assistant className="mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-orange-200 via-orange-400 to-rose-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); setView('foe'); }}>
+          <div aria-hidden="true" className="flex-1 landscape:hidden"/>
+          <button type="button" data-card-mode-assistant className="mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 landscape:min-h-[84px] landscape:gap-1 bg-gradient-to-br from-orange-200 via-orange-400 to-rose-500 px-4 py-3 text-left text-slate-950 landscape:px-3 landscape:py-2 active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); setView('foe'); }}>
             {/* 札の透かしの英字は、トップ・モンヒロビートと同じ置き方(端で切れて見えるのも同じ作り) */}
             <span aria-hidden="true" className="mhms-mark">ASSISTANT</span>
-            <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">⚔️</span><span><b className="block text-[22px] font-black italic leading-tight">{shareForm ? 'フリー対戦' : '助手と対戦'}</b><small className="block text-[11px] font-black text-slate-900/80">{shareForm ? '助手や、ほかのブリーダーのデッキと戦う' : '助手のみんなと戦う・強さは5段'}</small></span></span>
+            <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none landscape:text-2xl">⚔️</span><span><b className="block text-[22px] font-black italic leading-tight landscape:text-[17px]">{shareForm ? 'フリー対戦' : '助手と対戦'}</b><small className="block text-[11px] font-black text-slate-900/80">{shareForm ? '助手や、ほかのブリーダーのデッキと戦う' : '助手のみんなと戦う・強さは5段'}</small></span></span>
             {/* 顔は、もう会っている助手だけ(まだ会っていない助手が見えるとネタバレ。デバッグでも同じ) */}
-            <span aria-hidden="true" className="relative flex -space-x-2">{assistantsUnlockedFrom(seenStoryIds).filter((x) => CARD_AI_HABITS[x.id]).map((x) => <img key={x.id} src={assistantFaceImage(x, 'normal')} alt="" className="h-8 w-8 rounded-full border-2 border-white/80 bg-slate-900 object-cover object-top shadow"/>)}</span>
+            <span aria-hidden="true" className="relative flex -space-x-2">{assistantsUnlockedFrom(seenStoryIds).filter((x) => CARD_AI_HABITS[x.id]).map((x) => <img key={x.id} src={assistantFaceImage(x, 'normal')} alt="" className="h-8 w-8 rounded-full border-2 landscape:h-6 landscape:w-6 border-white/80 bg-slate-900 object-cover object-top shadow"/>)}</span>
           </button>
           {/* マルチ対戦(91-card-battle-multi.jsx)。MFバトルカードの公開の印と同じ日に開く(cardPvpOpen・社長 案A)。それまではデバッグ設定から入ったときだけ押せる */}
-          <button type="button" data-card-mode-multi disabled={!(debug || cardPvpOpen())} onClick={() => { Audio_.fgSe.tap(); setView('pvp'); }} className="mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50" style={{ animationDelay: '60ms' }}>
+          <button type="button" data-card-mode-multi disabled={!(debug || cardPvpOpen())} onClick={() => { Audio_.fgSe.tap(); setView('pvp'); }} className="mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 landscape:min-h-[84px] landscape:gap-1 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 landscape:px-3 landscape:py-2 active:scale-[.98] disabled:opacity-50" style={{ animationDelay: '60ms' }}>
             <span aria-hidden="true" className="mhms-mark">MULTI</span>
-            <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🎮</span><span><b className="block text-[22px] font-black italic leading-tight">マルチ対戦</b><small className="block text-[11px] font-black text-slate-900/80">ブリーダーどうしで戦う</small></span></span>
+            <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none landscape:text-2xl">🎮</span><span><b className="block text-[22px] font-black italic leading-tight landscape:text-[17px]">マルチ対戦</b><small className="block text-[11px] font-black text-slate-900/80">ブリーダーどうしで戦う</small></span></span>
             {!cardPvpOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">{debug ? 'つくっている途中(デバッグ)' : '準備中'}</span>}
           </button>
           {/* デッキ登録(95 の登録+96・97 の戦術カード。2026-10-29 社長)。公開の印(cardShareOpen)までは、デバッグ設定から入ったときだけ出す */}
           {typeof CardTacticsScreen === 'function' && shareForm && (
-            <button type="button" data-card-mode-tactics onClick={() => { Audio_.fgSe.tap(); setTacticsBack('mode'); setView('tactics'); }} className="mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-amber-200 via-amber-400 to-orange-600 px-4 py-3 text-left text-slate-950 active:scale-[.98]">
+            <button type="button" data-card-mode-tactics onClick={() => { Audio_.fgSe.tap(); setTacticsBack('mode'); setView('tactics'); }} className="mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 landscape:min-h-[84px] landscape:gap-1 bg-gradient-to-br from-amber-200 via-amber-400 to-orange-600 px-4 py-3 text-left text-slate-950 landscape:px-3 landscape:py-2 active:scale-[.98]">
               <span aria-hidden="true" className="mhms-mark">DECKS</span>
-              <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🗂️</span><span><b className="block text-[22px] font-black italic leading-tight">デッキ登録</b><small className="block text-[11px] font-black text-slate-900/80">デッキを登録する・戦術カードを組む・引く</small></span></span>
+              <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none landscape:text-2xl">🗂️</span><span><b className="block text-[22px] font-black italic leading-tight landscape:text-[17px]">デッキ登録</b><small className="block text-[11px] font-black text-slate-900/80">デッキを登録する・戦術カードを組む・引く</small></span></span>
               {!cardShareOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">つくっている途中(デバッグ)</span>}
             </button>
           )}
           {/* MFバトルカード大会(99)。プレイヤーの入口は HOME の札とプロフィールの「公式杯の記録」(2026-10-31 社長「対戦えらびの大会の札は消す」)。
               ここはデバッグ設定から入ったときだけ(見返しの見本を開く道) */}
           {typeof CardTournament === 'function' && shareForm && debug && (
-            <button type="button" data-card-mode-tour onClick={() => { Audio_.fgSe.tap(); setView('tour'); }} className="mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-yellow-100 via-yellow-300 to-amber-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]">
+            <button type="button" data-card-mode-tour onClick={() => { Audio_.fgSe.tap(); setView('tour'); }} className="mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 landscape:min-h-[84px] landscape:gap-1 bg-gradient-to-br from-yellow-100 via-yellow-300 to-amber-500 px-4 py-3 text-left text-slate-950 landscape:px-3 landscape:py-2 active:scale-[.98]">
               <span aria-hidden="true" className="mhms-mark">CUP</span>
-              <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🏆</span><span><b className="block text-[22px] font-black italic leading-tight">大会</b><small className="block text-[11px] font-black text-slate-900/80">登録したデッキで出る・毎日自動で対戦</small></span></span>
+              <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none landscape:text-2xl">🏆</span><span><b className="block text-[22px] font-black italic leading-tight landscape:text-[17px]">大会</b><small className="block text-[11px] font-black text-slate-900/80">登録したデッキで出る・毎日自動で対戦</small></span></span>
               <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">デバッグ</span>
             </button>
           )}
           {/* 個人杯(99-card-cup)。公開の印(cardCupOpen)までは、デバッグ設定から入ったときだけ出す */}
           {typeof CardCup === 'function' && shareForm && (debug || cardCupOpen()) && (
-            <button type="button" data-card-mode-cup onClick={() => { Audio_.fgSe.tap(); setView('cup'); }} className="mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-lime-100 via-emerald-300 to-teal-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]">
+            <button type="button" data-card-mode-cup onClick={() => { Audio_.fgSe.tap(); setView('cup'); }} className="mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 landscape:min-h-[84px] landscape:gap-1 bg-gradient-to-br from-lime-100 via-emerald-300 to-teal-500 px-4 py-3 text-left text-slate-950 landscape:px-3 landscape:py-2 active:scale-[.98]">
               <span aria-hidden="true" className="mhms-mark">MY CUP</span>
-              <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🎌</span><span><b className="block text-[22px] font-black italic leading-tight">個人杯</b><small className="block text-[11px] font-black text-slate-900/80">自分で大会を開く・仲間の大会に出る</small></span></span>
+              <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none landscape:text-2xl">🎌</span><span><b className="block text-[22px] font-black italic leading-tight landscape:text-[17px]">個人杯</b><small className="block text-[11px] font-black text-slate-900/80">自分で大会を開く・仲間の大会に出る</small></span></span>
               {!cardCupOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">つくっている途中(デバッグ)</span>}
             </button>
           )}
-          <div aria-hidden="true" className="flex-1"/>
+          <div aria-hidden="true" className="flex-1 landscape:hidden"/>
         </div>
       </div>
     );
@@ -63336,6 +64344,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       note={toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います'}
       onBack={() => { const back = deckPick.back; setDeckPick(null); if (toPvp && CARD_PVP_NEXT.take()) { setView('pvp'); return; } setView(toPvp ? 'mode' : back || 'foe'); }}
       allowRented={!toPvp && !sharePick} rentTab={shareForm && !toPvp && !sharePick}
+      auto={sharePick && typeof cardTacticsAutoOf === 'function' ? { on: shareAuto, onChange: setShareAuto, left: autoLeft, quick: shareQuick, onQuick: typeof cardShareAutoFinish === 'function' ? setShareQuick : null } : null}
       onPick={async (c) => {
         // 借りたデッキ(みんなのデッキ・95): 自分のデッキの active は書き換えない
         if (c.kind === 'rent') { const next = deckPick; setDeckPick(null); if (next.next !== 'pvp') startBattle(next.pick, c.deck, { rented: c }); return; }
@@ -63345,10 +64354,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           const ok = await persist({ decks: { ...save.decks, active: deck.id } });
           if (!ok) { setNotice('保存できませんでした'); return; }
         }
+        // オート: 選んだデッキの戦術カード(96 の cardTacticsAutoOf)で、自分の側も動かす
+        const autoT = sharePick && shareAuto && typeof cardTacticsAutoOf === 'function' ? await cardTacticsAutoOf(db, deck).catch(() => null) : null;
+        if (sharePick && shareAuto && !autoT) { setNotice('戦術カードを読めませんでした'); return; }
         const next = deckPick;
         setDeckPick(null);
         if (next.next === 'pvp') { setView('pvp'); return; }
-        startBattle(next.pick, deck);
+        startBattle(next.pick, deck, autoT ? { auto: { tactics: autoT, quick: shareQuick && typeof cardShareAutoFinish === 'function' } } : {});
       }}/>;
   }
 
@@ -63455,7 +64467,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               {/* 横画面: 前は絵を外していた(2026-10-25 カゲあつくん「EASY〜が下で切れている」)が、この欄は右の欄と同じ高さに伸びるので、
                   上が空白になっていた(2026-10-26 巡回)。強さのボタンはこの欄より上にあるので、欄の高さに収まる大きさで出す。
                   高さは縦の画面では今までどおり 17vh(縦長では 17vh が 28vmin より大きい)。横の画面だけ 28vmin まで大きくなる */}
-              <CardAssistantArt src={assistantFullImage(a, 'wink')} alt={a.name} className="w-[42%]" style={{ height: 'min(150px, max(17vh, 28vmin))' }}/>
+              <CardAssistantArt src={assistantFullImage(a, 'wink')} alt={a.name} className="w-[42%]" style={{ height: 'var(--mh-foe-art-h, min(150px, max(17vh, 28vmin)))' }}/>
               <div className="min-w-0 flex-1 pb-2">
                 <div className="text-[11px] font-bold text-slate-400">{a.tagline}</div>
                 <div className="mt-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{line ? cardJaWrap(line.text) : ''}</div>
@@ -63576,6 +64588,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                   </>}
               </div>
             )}
+            {result.auto && <div data-card-result-auto={result.auto.paid ? 'paid' : 'free'} className="mt-1 text-[12px] font-black text-sky-200" style={JA_LABEL_STYLE}>
+              {jaWrap(result.auto.paid ? `🤖 オートで挑みました(ごほうびは自分で戦うときの半分)。今日のごほうびはあと${result.auto.left}回` : '🤖 オートで挑みました。今日のごほうびは終わっています(ごほうびなしで遊べます)')}</div>}
             <div className="mt-1 text-[12px] font-bold text-slate-300">いまのビートP: {save.point}</div>
             {result.opened && <div className="mt-1 text-[13px] font-black text-emerald-300">{CARD_LEVEL_LABEL[result.opened]}が選べるようになりました！</div>}
             {!result.saved && <div className="mt-1 text-[12px] font-bold text-rose-300" style={JA_LABEL_STYLE}>{jaWrap('保存できませんでした(ビートPは増えていません)')}</div>}
@@ -63583,8 +64597,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           </div>
         </div>
         <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2`}>
+          {!result.replay && result.replayRec && <button type="button" data-card-result-replay="auto" className={`${btn} mh-button-secondary col-span-2 border border-sky-300/40 bg-slate-800`} onClick={() => { Audio_.fgSe.tap(); openReplayRec(result.replayRec, 'result'); }}>この対戦を見る</button>}
           {result.replay && <button type="button" data-card-result-replay className={`${btn} mh-button-secondary col-span-2 border border-sky-300/40 bg-slate-800`} onClick={() => { Audio_.fgSe.tap(); void openReplay(result.replay, 'result'); }}>この対戦を見る</button>}
-          <button type="button" className={`${btn} mh-button-primary`} onClick={() => { if (result.share) { startBattle({ who: result.share.tactics.habit, level: result.level, share: result.share }); return; } const again = { who: result.who, level: result.level }; setFoe(again); setDeckPick({ next: 'cpu', pick: again }); setView('deckPick'); }}>もう一度</button>
+          <button type="button" className={`${btn} mh-button-primary`} onClick={() => { if (result.share) { startBattle({ who: result.share.tactics.habit, level: result.level, share: result.share }, activeDeck, result.auto ? { auto: { tactics: result.auto.tactics, quick: !!result.auto.quick } } : {}); return; } const again = { who: result.who, level: result.level }; setFoe(again); setDeckPick({ next: 'cpu', pick: again }); setView('deckPick'); }}>もう一度</button>
           <button type="button" className={`${btn} mh-button-secondary border border-white/20 bg-slate-800`} onClick={() => setView(result.share ? 'share' : 'foe')}>相手をえらぶ</button>
         </div>
       </div>
@@ -63690,7 +64705,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                   <button key={o.id} type="button" data-card-setting-option={o.id} aria-pressed={cur} onClick={() => { Audio_.fgSe.tap(); cardPackFxSet(o.id === 'ON'); setPackFx(o.id === 'ON'); }}
                     className={`flex min-h-[48px] flex-col items-center justify-center rounded-xl px-0.5 py-1 text-[11px] font-black leading-tight active:scale-95 ${cur ? 'border border-amber-300 bg-amber-500/30 text-amber-50' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
                     <span className="block whitespace-pre-line text-center">{o.label}</span>
-                    <small className="mt-0.5 block text-center text-[9px] font-bold leading-tight opacity-80">{o.note}</small>
+                    <small className="mt-0.5 block text-center text-[11px] font-bold leading-tight opacity-80">{o.note}</small>
                   </button>
                 );
               })}
@@ -63781,7 +64796,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                           onClick={() => { Audio_.fgSe.tap(); void persist({ settings: normalizeCardSettings({ ...save.settings, [item.key]: item.bool ? o.id === 'ON' : o.id }) }); }}
                           className={`flex min-h-[48px] flex-col items-center justify-center rounded-xl px-0.5 py-1 text-[11px] font-black leading-tight active:scale-95 ${cur === o.id ? 'border border-amber-300 bg-amber-500/30 text-amber-50' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
                           <span className="block whitespace-pre-line text-center">{o.label}</span>
-                          <small className="mt-0.5 block text-center text-[9px] font-bold leading-tight opacity-80">{o.note}</small>
+                          <small className="mt-0.5 block text-center text-[11px] font-bold leading-tight opacity-80">{o.note}</small>
                         </button>
                       ))}
                     </div>
@@ -63993,7 +65008,8 @@ const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemov
       </button>
       {/* 名前の行の右はしに「i」(カードの絵の上に置くと、右上の地上・空中の札に重なった) */}
       <div className="mt-0.5 flex items-center gap-0.5">
-        <CardNameFit name={name} className="min-w-0 flex-1 font-bold leading-tight text-slate-100"/>
+        {/* 長い名前は2行まで折る(2026-11-01 見た目の点検 C。狭い列で 7px まで縮んでいた)。高さは2行ぶんでそろえる */}
+        <CardNameFit name={name} className="min-w-0 flex-1 font-bold leading-tight text-slate-100" twoLine tall/>
         {onDetail && <button type="button" data-card-deck-info={no} onClick={(e) => { e.stopPropagation(); Audio_.fgSe.tap(); onDetail(); }} aria-label={`${name}の詳細`} className="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-full border border-white/50 bg-slate-950/80 font-serif text-[11px] font-black italic leading-none text-white active:scale-90">i</button>}
       </div>
       <div className="mt-0.5 flex items-center justify-between gap-0.5">
@@ -64186,7 +65202,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
       </div>
       {!land && footer}
       {ask && (
-        <div data-card-deck-ask-sheet className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-2 sm:items-center" onClick={() => { if (!ask.busy) setAsk(null); }}>
+        <div data-card-deck-ask-sheet className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-2 sm:items-center" style={cardSafePad('.5rem')} onClick={() => { if (!ask.busy) setAsk(null); }}>
           <div className="w-full max-w-[420px] rounded-2xl border border-white/15 bg-slate-900 p-3" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start gap-2">
               {advisor.face && <img src={advisor.face} alt="" className="h-12 w-12 shrink-0 rounded-full border-2 object-cover" style={{ borderColor: advisor.accent }}/>}
@@ -64422,7 +65438,7 @@ const CardDex = ({ db, collection, onBack }) => {
                   {c && !c.ready && <span className="absolute left-0.5 top-0.5 rounded-md bg-slate-600 px-1 text-[9px] font-black text-white">準備中</span>}
                   {rare && <span data-card-dex-rare className="absolute left-0.5 top-0.5 rounded-md bg-amber-400 px-1 text-[9px] font-black text-slate-950">{rare}</span>}
                   <CardNameFit name={name} className={`mt-0.5 font-bold leading-tight ${have ? 'text-slate-100' : 'text-slate-500'}`}/>
-                  <span className="text-[9px] font-bold text-slate-500">No.{no}</span>
+                  <span className="text-[9px] font-bold text-slate-500">No.{(c && c.dispNo) || (m && m.dispNo) || no}</span>
                   {mode === 'sub' && m && String(m.wave) === 'hybrid' && m.main && <span data-card-dex-main={m.main} className="text-[9px] font-bold text-indigo-200">主 {spName[m.main] || m.main}</span>}
                 </button>
               );
@@ -64752,7 +65768,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
         const c = cards[spot.i]; const card = cardOf(db, c.no); const m = card ? null : cardMonsterOf(db, c.no);
         const alt = spot.rarity === 'alt';
         return (
-          <button type="button" data-card-pack-spot={spot.rarity} aria-label="並びへ戻す" onClick={spotOff} className="fixed inset-0 z-[72] flex flex-col items-center justify-center overflow-hidden bg-slate-950/70">
+          <button type="button" data-card-pack-spot={spot.rarity} aria-label="並びへ戻す" onClick={spotOff} className="fixed inset-0 z-[72] flex flex-col items-center justify-center overflow-hidden bg-slate-950/70" style={cardSafePad('0px')}>
             <div aria-hidden="true" className={`mh-pack-spot-rays ${alt ? 'mh-pack-spot-rays-alt' : ''}`}/>
             {fx && alt && !spot.leaving && <div aria-hidden="true" data-card-pack-pillar className="mh-pack-rpillar"/>}
             {fx && !spot.leaving && <div aria-hidden="true" className={`mh-pack-spot-burst ${alt ? 'alt' : ''}`}/>}
@@ -64812,7 +65828,7 @@ const cardPackDisplayRows = (db, pack, rows) => {
 // 詳しい画面は一覧の外に置く(中に置くと、詳しい画面を閉じるタップが一覧の背景まで届いて、一覧も閉じた)
 const CardShopSheet = ({ title, onClose, children, detail, setDetail, db, tag }) => (
   <>
-  <div data-card-shop-sheet={tag} role="dialog" aria-modal="true" aria-label={title} onClick={onClose} className="fixed inset-0 flex items-center justify-center p-3" style={{ zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.88)' }}>
+  <div data-card-shop-sheet={tag} role="dialog" aria-modal="true" aria-label={title} onClick={onClose} className="fixed inset-0 flex items-center justify-center p-3" style={{ ...cardSafePad('.75rem'), zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.88)' }}>
     <div onClick={(e) => e.stopPropagation()} className="flex max-h-full w-full max-w-[460px] flex-col rounded-3xl border-2 border-amber-300/70 bg-slate-950 text-white shadow-2xl landscape:max-w-[720px]">
       <div className="shrink-0 rounded-t-[22px] bg-amber-300/15 px-3 py-2 text-center text-[15px] font-black text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(title)}</div>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">{children}</div>
@@ -65015,7 +66031,7 @@ const CardCatalogSheet = ({ db, catalogs, collection, busy, onUse, onClose }) =>
   const pickName = pick ? nameOf(pick) : '';
   return (
     <>
-      <div data-card-catalog role="dialog" aria-modal="true" aria-label="バトルカードカタログ" onClick={onClose} className="fixed inset-0 flex items-center justify-center p-3" style={{ zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.88)' }}>
+      <div data-card-catalog role="dialog" aria-modal="true" aria-label="バトルカードカタログ" onClick={onClose} className="fixed inset-0 flex items-center justify-center p-3" style={{ ...cardSafePad('.75rem'), zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.88)' }}>
         <div onClick={(e) => e.stopPropagation()} className="flex max-h-full w-full max-w-[460px] flex-col rounded-3xl border-2 border-sky-300/70 bg-slate-950 text-white shadow-2xl landscape:max-w-[720px]">
           <div className="shrink-0 rounded-t-[22px] bg-sky-300/15 px-3 py-2 text-center text-[15px] font-black text-sky-100">📖 バトルカードカタログ</div>
           <div className="shrink-0 px-3 pt-2">
@@ -65149,7 +66165,8 @@ const cardDeckPickChoices = (db, decks, collection, opts = {}) => {
 // allowRented … 借りたデッキも並べる(助手と対戦のとき。マルチでは並べない)
 // rentTab … 「自分のデッキ/借りたデッキ」のタブにし、借りたデッキのタブで借りる・返すをする(2026-10-29 社長の作り直し「借りるのは対戦前のデッキを選ぶ画面のタブで」)。
 //   公開の印(cardShareOpen)までは、デバッグの人だけ(84 が決める)。借りられるのは1組・マルチでは使えない、は今のまま
-const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', note = '', onPick, onBack, allowRented = false, rentTab = false }) => {
+// auto … ほかのブリーダーと戦うときだけ { on, onChange, left, quick, onQuick }(quick … 結果だけ見る。2026-11-02)(オートで挑む・案B 2026-11-02)。left … 今日のごほうびの残り回数(読めていなければ null)
+const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', note = '', onPick, onBack, allowRented = false, rentTab = false, auto = null }) => {
   const [rented, setRented] = useState(null);
   const [tab, setTab] = useState('own'); // own / rent
   const [cands, setCands] = useState(null); // 借りるデッキの候補(おすすめ・よく戦われている)
@@ -65205,6 +66222,29 @@ const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', 
               <button key={id} type="button" role="tab" aria-selected={tab === id} data-card-deck-pick-tab={id} onClick={() => { Audio_.fgSe.tap(); setTab(id); }}
                 className={`flex-1 rounded-xl py-2 text-[13px] font-black ${tab === id ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`}>{label}</button>
             ))}
+          </div>
+        )}
+        {auto && tab === 'own' && (
+          <div data-card-deck-pick-auto={auto.on ? 'auto' : 'hand'} className="space-y-1.5">
+            <div className="flex gap-1.5" role="radiogroup" aria-label="戦い方">
+              {[[false, '🖐 自分で操作'], [true, '🤖 オート(戦術カード)']].map(([v, label]) => (
+                <button key={String(v)} type="button" role="radio" aria-checked={auto.on === v} data-card-deck-pick-mode={v ? 'auto' : 'hand'}
+                  onClick={() => { Audio_.fgSe.tap(); auto.onChange(v); }}
+                  className={`min-h-[44px] flex-1 rounded-xl px-1 text-[13px] font-black ${auto.on === v ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`}>{label}</button>
+              ))}
+            </div>
+            {auto.on && typeof auto.onQuick === 'function' && (
+              <button type="button" role="switch" aria-checked={!!auto.quick} data-card-deck-pick-quick={auto.quick ? 'on' : 'off'} onClick={() => { Audio_.fgSe.tap(); auto.onQuick(!auto.quick); }}
+                className={`flex min-h-[40px] w-full items-center gap-2 rounded-xl border px-2.5 text-left text-[12px] font-black ${auto.quick ? 'border-amber-300 bg-amber-950/40 text-amber-100' : 'border-slate-600 bg-slate-900 text-slate-200'}`}>
+                <span aria-hidden="true" className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${auto.quick ? 'border-amber-300 bg-amber-400 text-slate-950' : 'border-slate-400'}`}>{auto.quick ? '✓' : ''}</span>
+                <span className="min-w-0 flex-1" style={JA_WRAP_STYLE}>{jaWrap('⏩ 結果だけ見る(対戦の画面を出さずに、一瞬で最後まで戦う)')}</span>
+              </button>
+            )}
+            {auto.on && <p data-card-deck-pick-auto-note className="rounded-xl bg-slate-900/80 px-2.5 py-2 text-[11px] font-bold leading-snug text-slate-200" style={JA_WRAP_STYLE}>
+              {jaWrap('選んだデッキの戦術カードで、あなたの側も自動で戦います。試合の途中で「自分で」に切り替えられます')}
+              <span data-card-deck-pick-auto-left={auto.left === null ? '' : auto.left} className={`mt-1 block ${auto.left ? 'text-emerald-200' : 'text-amber-200'}`}>
+                {auto.left === null ? '' : auto.left > 0 ? `今日のごほうびはあと${auto.left}回(自分で戦うときの半分)` : '今日のごほうびは終わりました。ごほうびなしで遊べます'}</span>
+            </p>}
           </div>
         )}
         {note && tab === 'own' && <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{note}</p>}
@@ -68013,7 +69053,7 @@ const CardChatPanel = ({ mode = 'pvp', onClose }) => {
     </button>
   );
   return (
-    <div data-card-chat-panel={mode} className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/40" onClick={onClose}>
+    <div data-card-chat-panel={mode} className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/40" style={cardSafePad('0px')} onClick={onClose}>
       <div className="mx-auto w-full max-w-[520px] rounded-t-2xl border-t-2 border-sky-400 bg-slate-950 px-3 pt-2 text-white" style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }} onClick={(e) => e.stopPropagation()}>
         <div className="mb-1 flex items-center">
           <b className="flex-1 text-[13px] text-sky-100">💬 コメント{mode === 'watch' ? '(観戦)' : ''}</b>
@@ -68584,7 +69624,8 @@ const cardReplayMake = (db, { kind, match, at, decks, seeds, first, history, foe
   const built = cardReplayBuild(db, one);
   if (built.stop !== null) return null;
   one.prints = built.states.slice(1).map(cardReplayPrint).join('');
-  one.turn = built.states[built.states.length - 1].turn;
+  // 「ターン◯まで」は最後の手を打ったターン(見返しの最後の帯と同じ)。山札切れのように、手番が移ったところで決まる試合は最後の盤面のターンが1つ先へ進んでいる(2026-11-01 点検)
+  one.turn = built.states[Math.max(0, built.states.length - 2)].turn;
   return one;
 };
 // マルチの試合から(91 の tryVerify で、なぞり直しが通ったときだけ)
@@ -69685,6 +70726,33 @@ const cardShareReplayGet = async (ownerId, slot) => {
   const row = await cardShareReplayRpc('card_deck_replay_get', { p_owner: ownerId, p_key: key, p_slot: slot });
   return row && typeof row === 'object' && !Array.isArray(row) ? row : null;
 };
+// オートの「結果だけ見る」(2026-11-02 社長「オート対戦は結果だけを見るも追加して」)。いまの場から、2人とも戦術カードの打ち方で最後まで一瞬で打つ。
+//   pols … [自分(0)の打ち方, 相手(1)の打ち方]。打ち方・出せない手の替え方・手数の上限と決め方は大会の自動対戦(82 の cardTourPlay)と同じ。
+//   山札が尽きれば山札切れで決着するので、ふつうは上限に届かない(助手 MASTER 同士 2,000試合で最長 84ターン・171手)。
+//   上限まで決まらなければ「倒した数 → 残りのライフ → 後攻」で決める(必ず終わる)。返り値 { st(決着した場), acts:[[打った人, 手]], limit }
+const cardShareAutoFinish = (db, st0, pols, { max = typeof CARD_TOUR_MAX_STEPS === 'number' ? CARD_TOUR_MAX_STEPS : 4000, rand = Math.random } = {}) => {
+  let st = cardClone(st0);
+  const acts = [];
+  for (let steps = 0; steps < max && st.winner === null; steps++) {
+    const who = st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? cardOther(st.first) : cardDecider(st);
+    let act = cardAiChooseAction(db, st, pols[who], rand);
+    let next = act && cardApplyAction(db, st, act);
+    if (!next) {
+      act = st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : st.phase === 'guts' ? { type: 'guts', hand: [] } : null;
+      next = act && cardApplyAction(db, st, act);
+      if (!next) break;
+    }
+    acts.push([who, act]);
+    st = next;
+  }
+  if (st.winner !== null) return { st, acts, limit: false };
+  const kos = [cardKoCount(st, 0), cardKoCount(st, 1)];
+  const life = (p) => st.players[p].mons.reduce((a, m) => a + Math.max(0, m.ko ? 0 : m.life), 0);
+  const winner = kos[0] !== kos[1] ? (kos[0] > kos[1] ? 0 : 1) : life(0) !== life(1) ? (life(0) > life(1) ? 0 : 1) : cardOther(st.first);
+  const end = cardClone(st);
+  cardGameOver(end, winner, '手数の上限');
+  return { st: end, acts, limit: true };
+};
 const cardShareSameBlood = (db, deck) => {
   const ms = (deck && Array.isArray(deck.monsters) ? deck.monsters : []).map((no) => cardMonsterOf(db, no)).filter(Boolean);
   return ms.length > 0 && ms.filter((m) => cardAiBloodOf(m) === cardAiBloodOf(ms[0])).length >= 2;
@@ -69744,8 +70812,11 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
   const [foeFilter, setFoeFilter] = useState('all'); // 一覧の絞り込み(すべて/おすすめ/フレンド/人気。2026-10-30 社長・案C)
   // 戦術カード(96・97): 登録するときに載せる枠(レベルで開いている枠・持っているカードだけ)
   const [tacticsSave, setTacticsSave] = useState(null);
-  useEffect(() => { if (typeof cardTacticsLoad === 'function') void cardTacticsLoad().then(setTacticsSave).catch(() => {}); }, []);
-  const framesNow = tacticsSave && typeof cardTacticsFramesForBattle === 'function' ? cardTacticsFramesForBattle(tacticsSave.tactics, tacticsSave.info.level) : null;
+  const [tacticsDeckBox, setTacticsDeckBox] = useState(null); // デッキごとの戦術カード(96 の cardTacticsDeckLoad。2026-11-02)
+  useEffect(() => {
+    if (typeof cardTacticsLoad === 'function') void cardTacticsLoad().then(setTacticsSave).catch(() => {});
+    if (typeof cardTacticsDeckLoad === 'function') void cardTacticsDeckLoad().then((r) => setTacticsDeckBox(r.box)).catch(() => {});
+  }, []);
   const [rented, setRented] = useState(null);         // 借りているデッキ(cardRentedDeckGet)
   useEffect(() => { void cardRentedDeckGet().then(setRented); }, []);
   const rent = async (e) => {
@@ -69773,6 +70844,9 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
   const deckOf = (id) => list.find((d) => d.id === id) || null;
   const issuesOf = (d) => (d ? [...cardDeckProblems(db, d), ...cardDeckOwnProblems(db, d, collection)] : ['デッキがありません']);
   const picked = deckOf(pick);
+  // 登録に載せる戦術カードは、選んだデッキで最後に使った物(覚えていなければ共通の戦術カード)
+  const framesNow = tacticsSave && typeof cardTacticsFramesForBattle === 'function'
+    ? cardTacticsFramesForBattle({ ...tacticsSave.tactics, frames: typeof cardTacticsFramesOfDeck === 'function' ? cardTacticsFramesOfDeck(tacticsDeckBox, tacticsSave.tactics, picked && picked.id) : tacticsSave.tactics.frames }, tacticsSave.info.level) : null;
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -70025,9 +71099,10 @@ const CardShareDeckDetail = ({ entry, onClose, fight = null, rent = null }) => {
   const [record, setRecord] = useState(undefined);
   useEffect(() => { let alive = true; void cardShareRecordOf(entry.ownerId).then((r) => { if (alive) setRecord(r); }).catch(() => { if (alive) setRecord(null); }); return () => { alive = false; }; }, [entry.ownerId]);
   const losses = Math.max(0, (entry.battles || 0) - (entry.deckWins || 0));
-  const dayText = (ms) => { const d = new Date(ms); return Number.isFinite(d.getTime()) ? `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : ''; };
+  // 日時は日本時間で出す(戦われた試合・見返しの一覧の cardReplayWhen と同じ。2026-11-01 点検で、ここだけ端末の時計だった)
+  const dayText = (ms) => { if (!Number.isFinite(ms) || ms <= 0) return ''; const d = new Date(ms + 9 * 3600 * 1000); return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`; };
   return (
-    <div data-card-share-deck-detail className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={onClose}>
+    <div data-card-share-deck-detail className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60 p-3 sm:items-center" style={cardSafePad('.75rem')} onClick={onClose}>
       <div className="max-h-[86vh] w-full max-w-[440px] overflow-y-auto rounded-2xl border-2 border-amber-600/60 bg-slate-950 p-3" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2">
           {/* アイコンは絵文字のことも画像のことも(images/breeder-icons/…)ある。cardIconNode を通す(文字のまま出さない) */}
@@ -70323,13 +71398,14 @@ const cardLevelXpOf = ({ kind, level, outcome }) => {
 // 経験値を足した次の値と、新しくもらうごほうび(ビートP・カードパック券)。
 //   ごほうびは、この試合で上がったランク(from より上・to まで)の分だけ。前に上がったランクの分はさかのぼって配らない
 //   parts は結果に出す内わけ、gains はランクアップの演出に出す「もらった物」
-const cardLevelAfter = (prev, { kind, level, outcome, today }) => {
+//   auto … オートで挑んだ試合(2026-11-02 社長・案3): 手で戦うときの半分。その日はじめての勝ちは付けず、その日の勝ちの印も動かさない
+const cardLevelAfter = (prev, { kind, level, outcome, today, auto = false }) => {
   const cur = cardNormalizeLevel(prev);
   const lv0 = cardLevelInfo(cur.xp).level;
-  const base = cardLevelXpOf({ kind, level, outcome });
+  const base = auto ? Math.floor(cardLevelXpOf({ kind, level, outcome }) / 2) : cardLevelXpOf({ kind, level, outcome });
   if (!base) return { next: cur, tickets: 0, points: 0, add: 0, from: lv0, to: lv0, xp: cur.xp, parts: [], gains: [] };
   const sameDay = cur.day === today;
-  const first = outcome === 'win' && !(sameDay && cur.dayWin);
+  const first = !auto && outcome === 'win' && !(sameDay && cur.dayWin);
   const add = base + (first ? CARD_LEVEL_XP.firstWin : 0);
   const parts = [{ label: outcome === 'win' ? '勝ち' : '負け', xp: base }, ...(first ? [{ label: 'その日はじめての勝ち', xp: CARD_LEVEL_XP.firstWin }] : [])];
   const xp = cardLevelSafeXp(cur.xp + add);
@@ -70343,7 +71419,8 @@ const cardLevelAfter = (prev, { kind, level, outcome, today }) => {
   }
   const gains = [...(points ? [{ icon: '💰', text: `ビートP ${points.toLocaleString()}` }] : []), ...(tickets ? [{ icon: '🎟️', text: `カードパック券 ×${tickets}` }] : []),
     ...CARD_LEVEL_FRAMES.filter((f) => f.at > lv0 && f.at <= to).map((f) => ({ icon: '🧠', text: cardLevelFrameText(f) }))];
-  return { next: { ...cur, xp, day: today, dayWin: (sameDay && cur.dayWin) || outcome === 'win', got }, tickets, points, add, from: lv0, to, xp, parts, gains };
+  const dayNext = auto ? { day: cur.day, dayWin: cur.dayWin } : { day: today, dayWin: (sameDay && cur.dayWin) || outcome === 'win' };
+  return { next: { ...cur, xp, ...dayNext, got }, tickets, points, add, from: lv0, to, xp, parts, gains };
 };
 
 // ---- 持ち物と枠 ----
@@ -70416,12 +71493,98 @@ const cardTacticsLoad = async () => {
   const level = cardNormalizeLevel(rawL);
   return { tactics: cardNormalizeTactics(rawT), level, info: cardLevelInfo(level.xp), rawT, rawL };
 };
+// ---- デッキごとの戦術カード(2026-11-02 テスターさんの要望・社長「デッキごとに戦術カードを記憶させたい」) ----
+//   新しいキー mh_card_tactics_by_deck_v1 = { v:1, decks: { デッキのid: { frames, aces, at } } }(新しい40組まで)
+//   ・mh_card_tactics_v1 の frames は今までどおり「最後に使った戦術カード」。消さない・意味を変えない(書くときは両方に書く)
+//   ・まだ覚えていないデッキは mh_card_tactics_v1 の frames から始める(今の組み合わせが消えないように)
+//   ・はじめてこのキーを書くとき(キーがまだ無い=一度だけ)、ほかのデッキにも「書く前の共通の戦術カード」を入れておく。
+//     入れないと、1つ目のデッキを組み直したとたん、ほかのデッキが組み直した物で始まってしまう。キーがあれば二度と走らない
+//   ・オート(あとで作る)はデッキの id から cardTacticsFramesOfDeck で引く
+const CARD_TACTICS_DECK_KEY = 'mh_card_tactics_by_deck_v1';
+const CARD_TACTICS_DECK_MAX = 40;
+const cardTacticsDeckIdOk = (id) => typeof id === 'string' && id.length > 0 && id.length <= 64;
+const cardTacticsDeckNormalize = (raw) => {
+  const decks = {};
+  const src = raw && typeof raw === 'object' && raw.decks && typeof raw.decks === 'object' && !Array.isArray(raw.decks) ? raw.decks : {};
+  Object.keys(src).filter(cardTacticsDeckIdOk).forEach((id) => {
+    const e = src[id];
+    if (!e || typeof e !== 'object' || !e.frames || typeof e.frames !== 'object') return;
+    decks[id] = { frames: cardTacticNormalizeFrames(e.frames),
+      aces: Array.isArray(e.aces) ? e.aces.filter((x) => typeof x === 'string' && x.length <= 16).slice(0, CARD_SHARE_ACES_MAX) : null,
+      at: Number.isFinite(e.at) && e.at > 0 ? e.at : 0 };
+  });
+  return { v: 1, decks };
+};
+const cardTacticsDeckLoad = async () => {
+  let raw = null;
+  try { raw = await storeGet(CARD_TACTICS_DECK_KEY, null); } catch (_) { /* 読めなければ覚えていない扱い */ }
+  return { raw, box: cardTacticsDeckNormalize(raw) };
+};
+// そのデッキの戦術カード(覚えていなければ共通の frames)
+const cardTacticsFramesOfDeck = (box, tactics, deckId) => {
+  const e = box && cardTacticsDeckIdOk(deckId) ? box.decks[deckId] : null;
+  return cardTacticNormalizeFrames(e ? e.frames : tactics && tactics.frames);
+};
+// そのデッキの切り札(覚えていなければ null)
+const cardTacticsAcesOfDeck = (box, deckId) => {
+  const e = box && cardTacticsDeckIdOk(deckId) ? box.decks[deckId] : null;
+  return e && Array.isArray(e.aces) ? e.aces.slice() : null;
+};
+// 書く項目(saveStoredValuesOrRollback へ渡す)。loaded … cardTacticsDeckLoad の値(書く直前に読み直したもの)
+//   aces … 切り札(undefined なら前のまま)/ seed … { ids: いまあるデッキのid, frames: 書く前の共通の frames }(はじめて書くときだけ使う)
+const cardTacticsDeckEntry = (loaded, deckId, frames, { aces, seed = null } = {}) => {
+  if (!cardTacticsDeckIdOk(deckId)) return null;
+  const box = cardTacticsDeckNormalize(loaded && loaded.raw);
+  const decks = { ...box.decks };
+  const now = Date.now();
+  if (!(loaded && loaded.raw) && seed && Array.isArray(seed.ids)) {
+    seed.ids.filter((id) => cardTacticsDeckIdOk(id) && id !== deckId && !decks[id]).forEach((id, i) => {
+      decks[id] = { frames: cardTacticNormalizeFrames(seed.frames), aces: null, at: now - 1000 - i };
+    });
+  }
+  const before = decks[deckId];
+  decks[deckId] = { frames: cardTacticNormalizeFrames(frames), aces: aces === undefined ? (before ? before.aces : null) : (Array.isArray(aces) ? aces.slice(0, CARD_SHARE_ACES_MAX) : null), at: now };
+  const keep = Object.keys(decks).sort((a, b) => decks[b].at - decks[a].at).slice(0, CARD_TACTICS_DECK_MAX);
+  return { key: CARD_TACTICS_DECK_KEY, before: loaded ? loaded.raw : null, next: { v: 1, decks: Object.fromEntries(keep.map((id) => [id, decks[id]])) } };
+};
+// 選んだデッキの戦術カードを、登録デッキと同じ形(95 の cardShareNormalizeTactics)にする。オートで挑むときの自分の側の打ち方
+//   戦術カード … そのデッキで最後に使った物(覚えていなければ共通)。持っていない・レベルで開いていない物は外す(登録と同じ)
+//   切り札 … そのデッキで覚えている物。無ければおまかせ(98 の cardRegAutoAces)
+const cardTacticsAutoOf = async (db, deck) => {
+  if (!deck) return null;
+  const [d, byDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]);
+  const frames = cardTacticsFramesOfDeck(byDeck.box, d.tactics, deck.id);
+  const f = cardTacticPackFrames(cardTacticsFramesForBattle({ ...d.tactics, frames }, d.info.level));
+  const kept = cardTacticsAcesOfDeck(byDeck.box, deck.id);
+  const aces = kept && kept.length ? kept : typeof cardRegAutoAces === 'function' ? cardRegAutoAces(db, deck) : [];
+  return cardShareNormalizeTactics({ name: deck.name, habit: cardShareMainHabit(cardTacticUnpackFrames(f), 'kyuko'), aces, f }, deck);
+};
+
+// ---- オートで挑む(案B・2026-11-02 社長「部のおすすめ」・ごほうびは案3) ----
+//   ほかのブリーダーの登録デッキに、自分の側も戦術カードで自動で挑む。ごほうびは1日はじめの3回だけ手の半分、4回目からは無し(何回でも挑める)
+//   新しいキー mh_card_auto_reward_v1 = { v:1, day:'YYYY-MM-DD'(日本の日付), n: その日にごほうびをもらった回数 }。壊れていたら0回の扱い
+const CARD_AUTO_REWARD_KEY = 'mh_card_auto_reward_v1';
+const CARD_AUTO_REWARD_DAY_MAX = 3;
+const cardAutoRewardNormalize = (raw, today) => {
+  const day = raw && typeof raw === 'object' && typeof raw.day === 'string' ? raw.day : '';
+  const n = raw && Number.isInteger(raw.n) && raw.n >= 0 && raw.n < 10000 ? raw.n : 0;
+  return { day: today, n: day === today ? n : 0 };
+};
+const cardAutoRewardLoad = async () => {
+  let raw = null;
+  try { raw = await storeGet(CARD_AUTO_REWARD_KEY, null); } catch (_) { /* 読めなければ0回の扱い */ }
+  const today = typeof cardTodayJst === 'function' ? cardTodayJst() : '';
+  const c = cardAutoRewardNormalize(raw, today);
+  return { raw, today, n: c.n, left: Math.max(0, CARD_AUTO_REWARD_DAY_MAX - c.n) };
+};
+// ごほうびをもらった1回を数える項目(結果の取引に足す)
+const cardAutoRewardEntry = (loaded) => ({ key: CARD_AUTO_REWARD_KEY, before: loaded.raw, next: { v: 1, day: loaded.today, n: loaded.n + 1 } });
 // 1試合ぶんの経験値の保存の項目(84 の結果の取引に足す)。経験値を入れない人(公開前・デバッグでない)は空
-const cardLevelEntries = async ({ kind, level, outcome, debug = false }) => {
+const cardLevelEntries = async ({ kind, level, outcome, debug = false, auto = false }) => {
   if (!cardTacticsOpen() && !debug) return { entries: [], gain: null };
   let rawL = null, rawT = null;
   try { [rawL, rawT] = await Promise.all([storeGet(CARD_LEVEL_KEY, null), storeGet(CARD_TACTICS_KEY, null)]); } catch (_) { return { entries: [], gain: null }; }
-  const gain = cardLevelAfter(rawL, { kind, level, outcome, today: typeof cardTodayJst === 'function' ? cardTodayJst() : '' });
+  const gain = cardLevelAfter(rawL, { kind, level, outcome, auto, today: typeof cardTodayJst === 'function' ? cardTodayJst() : '' });
   if (!gain.add) return { entries: [], gain };
   const entries = [{ key: CARD_LEVEL_KEY, before: rawL, next: gain.next }];
   if (gain.tickets) { const t = cardNormalizeTactics(rawT); entries.push({ key: CARD_TACTICS_KEY, before: rawT, next: { ...t, tickets: t.tickets + gain.tickets } }); }
@@ -70482,7 +71645,7 @@ const CardTacticDetail = ({ card, onClose }) => {
   if (!card) return null;
   const st = CARD_TACTIC_CAT_STYLE[card.cat] || CARD_TACTIC_CAT_STYLE.cond;
   return (
-    <div data-card-tactic-detail={card.id} role="dialog" aria-modal="true" aria-label={card.name} onClick={onClose} className="fixed inset-0 z-[96] flex items-center justify-center bg-black/70 p-4">
+    <div data-card-tactic-detail={card.id} role="dialog" aria-modal="true" aria-label={card.name} onClick={onClose} className="fixed inset-0 z-[96] flex items-center justify-center bg-black/70 p-4" style={cardSafePad('1rem')}>
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-[340px] rounded-2xl border-2 border-white/70 p-4 text-white" style={{ background: st.bg }}>
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="rounded px-1.5 text-[13px] font-black" style={{ background: CARD_TACTIC_RARE_COLOR[card.r] }}>{card.r}</span>
@@ -70593,7 +71756,7 @@ const CardTacticPicker = ({ db, tactics, cat, title, onPick, onClose, allowNone 
   const pick = (id, spc) => { if (id) void cardTacticUseAdd(id); onPick(id, spc); };
   if (sp) {
     return (
-      <div data-card-tactic-species className="fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3">
+      <div data-card-tactic-species className="fixed inset-0 z-[80] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
         <ScreenHead title="種族をえらぶ" accent="text-amber-200" onBack={() => setSp(null)}/>
         <div className="grid min-h-0 flex-1 grid-cols-3 content-start gap-1.5 overflow-y-auto">
           {cardTacticSpeciesList(db).map((x) => (
@@ -70621,7 +71784,7 @@ const CardTacticPicker = ({ db, tactics, cat, title, onPick, onClose, allowNone 
     );
   };
   return (
-    <div data-card-tactic-picker={cat} className="fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3">
+    <div data-card-tactic-picker={cat} className="fixed inset-0 z-[80] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
       <ScreenHead title={title} accent="text-amber-200" onBack={onClose}/>
       <input data-card-tactic-search value={q} onChange={(e) => setQ(e.target.value.slice(0, 20))} placeholder="🔍 ことばでさがす(例: ライフ・大技・守る)" autoComplete="off"
         className="mb-1.5 min-h-[40px] w-full shrink-0 rounded-xl border-2 border-sky-400/60 bg-black/50 px-3 text-[14px] text-white"/>
@@ -70827,7 +71990,7 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
       {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-whiteout"/>}
       {flash > 0 && spot && <div key={flash} aria-hidden="true" className="mh-pack-flash"/>}
       {spotCard && (
-        <button type="button" data-card-tactic-spot aria-label="並びへ戻す" onClick={spotOff} className="fixed inset-0 z-[90] flex flex-col items-center justify-center bg-slate-950/70">
+        <button type="button" data-card-tactic-spot aria-label="並びへ戻す" onClick={spotOff} className="fixed inset-0 z-[90] flex flex-col items-center justify-center bg-slate-950/70" style={cardSafePad('0px')}>
           <div aria-hidden="true" className="mh-pack-spot-rays"/>
           <div className={`relative ${spot.leaving ? 'mh-pack-spot-out' : 'mh-pack-spot-in'}`} style={{ width: spotW }}>
             <div className="mh-pack-kira-front relative aspect-[5/7] w-full"><CardTacticFront card={spotCard} big/></div>
@@ -70859,7 +72022,8 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
   const [opening, setOpening] = useState(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
-  const reload = async () => { const d = await cardTacticsLoad(); setData(d); return d; };
+  const [deckBox, setDeckBox] = useState(null); // デッキごとの戦術カード(96 の cardTacticsDeckLoad().box。2026-11-02)
+  const reload = async () => { const [d, byDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]); setDeckBox(byDeck.box); setData(d); return d; };
   useEffect(() => { void reload(); }, []);
   if (!data) return <div data-mh-screen data-card-tactics className={SCREEN_SHELL_CLASS}><ScreenHead title={screenTitle} accent="text-amber-200" onBack={onBack}/></div>;
   if (opening) return <CardTacticPackOpen packs={opening} onDone={() => setOpening(null)}/>;
@@ -70870,14 +72034,17 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
   const deck = ((decks && decks.decks) || []).find((d) => d.id === (decks && decks.active)) || ((decks && decks.decks) || [])[0] || null;
   const monOf = (i) => (deck ? cardMonsterOf(db, deck.monsters[i]) : null);
   // 枠を書いて保存(この画面だけが書く。ほかの項目は読み直した値のまま)
+  //   いま使うデッキの分は、デッキごとの戦術カード(mh_card_tactics_by_deck_v1)にも書く(2026-11-02)
   const saveFrames = async (frames) => {
-    const fresh = await cardTacticsLoad();
+    const [fresh, freshDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]);
     const next = { ...fresh.tactics, frames: cardTacticNormalizeFrames(frames) };
-    const ok = await saveStoredValuesOrRollback([{ key: CARD_TACTICS_KEY, before: fresh.rawT, next }], storeGet, storeSet);
+    const deckEntry = deck ? cardTacticsDeckEntry(freshDeck, deck.id, frames, { seed: { ids: ((decks && decks.decks) || []).map((x) => x.id), frames: fresh.tactics.frames } }) : null;
+    const ok = await saveStoredValuesOrRollback([{ key: CARD_TACTICS_KEY, before: fresh.rawT, next }, ...(deckEntry ? [deckEntry] : [])], storeGet, storeSet);
     if (!ok) { setNotice('保存できませんでした'); return; }
+    if (deckEntry) setDeckBox(cardTacticsDeckNormalize(deckEntry.next));
     setData({ ...fresh, tactics: next, rawT: next });
   };
-  const f = t.frames;
+  const f = cardTacticsFramesOfDeck(deckBox, t, deck && deck.id);
   // 賢さに数えないセットの理由(82-card-tactics-core の cardTacticUncounted。ルールくん 2026-10-29「ちゃんと効く戦術カードだけ数える」)
   const uncounted = cardTacticUncounted(f);
   const whyOf = (k, i) => { const list = k === 'breeder' ? uncounted.breeder : uncounted.mons[k]; return (list && list[i]) || ''; };
@@ -71026,7 +72193,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
         )}
       </div>
       {pick && pick.cat === 'all-missing' && (
-        <div data-card-tactic-picker="missing" className="fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3">
+        <div data-card-tactic-picker="missing" className="fixed inset-0 z-[80] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
           <ScreenHead title={pick.title} accent="text-amber-200" onBack={() => setPick(null)}/>
           <div className="grid min-h-0 flex-1 grid-cols-3 content-start gap-1.5 overflow-y-auto pb-3">
             {CARD_TACTIC_CARDS.filter((c) => !cardTacticsOwns(t, c.id)).map((c) => <CardTacticFace key={c.id} card={c} small onClick={() => { Audio_.fgSe.tap(); pick.onPick(c.id); }}/>)}
@@ -71101,7 +72268,7 @@ const CardTacticsBand = ({ point = 0, busy = false, onBuy, onExchange }) => {
       </div>
       {confirm && <ConfirmSheet title="戦術カードパックを1パック開けますか？" message={`カードパック券を1枚使います(いま ${tickets}枚)`} confirmLabel="券で開ける" onCancel={() => setConfirm(false)} onConfirm={() => { void useTicket(); }}/>}
       {picking && t && (
-        <div data-card-tactic-picker="missing" className="fixed inset-0 z-[85] flex flex-col bg-slate-950/95 p-3" style={{ paddingTop: 'max(.75rem, env(safe-area-inset-top))', paddingBottom: 'max(.75rem, env(safe-area-inset-bottom))' }}>
+        <div data-card-tactic-picker="missing" className="fixed inset-0 z-[85] flex flex-col bg-slate-950 p-3" style={{ paddingTop: 'max(.75rem, env(safe-area-inset-top))', paddingBottom: 'max(.75rem, env(safe-area-inset-bottom))' }}>
           <ScreenHead title="かけら10個で1枚えらぶ" accent="text-amber-200" onBack={() => setPicking(false)}/>
           <div className="grid min-h-0 flex-1 grid-cols-3 content-start gap-1.5 overflow-y-auto pb-3">
             {CARD_TACTIC_CARDS.filter((c) => !cardTacticsOwns(t, c.id)).map((c) => <CardTacticFace key={c.id} card={c} small onClick={() => { Audio_.fgSe.tap(); void exchange(c.id); }}/>)}
@@ -71320,6 +72487,28 @@ const cardRegRowText = (row) => {
   if (row.c === 'any') return `いつでも → ${a ? a.line || a.name : '?'}`;
   return `${c ? c.line || c.name : '?'} → ${a ? a.line || a.name : '?'}`; // 一文(2026-10-31 案A)。条件は「〜とき」で終わる
 };
+// 次の賢さの段まで、何が足りないか(2026-11-04 社長「みんな賢さがマスターになってるけどそれ以上上がるようになってないの?」)。
+//   段の決まりは 82 の cardTacticSmartLevel(基本2枚で MASTER・GRAND MASTER は基本2枚+効く戦術カード6枚・HELL は9枚・LEGEND は基本3枚+10枚)。
+//   基本カードの2枚目はカードランク10・3枚目は30でセットできるようになる(96 の CARD_LEVEL_FRAMES)ので、届いていないときはそれも書く
+const cardRegSmartNextText = (frames, lv) => {
+  const f = cardTacticNormalizeFrames(frames);
+  const base = f.base.filter(Boolean).length;
+  const rows = cardTacticCountedRows(f);
+  const now = cardTacticSmartLevel(f);
+  if (now === 'legend') return 'いちばん上の LEGEND です。';
+  const next = CARD_TACTIC_SMART[CARD_TACTIC_SMART.indexOf(now) + 1];
+  const label = CARD_SHARE_SMART_LABEL[next];
+  if (next === 'master') return `次の ${label} まで: 基本カードをあと${2 - base}枚、または、ちゃんと効く戦術カードをあと${Math.max(1, 4 - rows)}枚。`;
+  const needRows = { grandmaster: 6, hell: 9, legend: 10 }[next];
+  const needBase = next === 'legend' ? 3 : 2;
+  const needs = [];
+  if (base < needBase) needs.push(`基本カードをあと${needBase - base}枚`);
+  if (rows < needRows) needs.push(`ちゃんと効く戦術カードをあと${needRows - rows}枚`);
+  const opened = cardLevelFrames(lv).base || 1;
+  const locked = CARD_LEVEL_FRAMES.filter((x) => x.base && x.base > opened && x.base <= needBase).map((x) => `${x.base}枚目はカードランク${x.at}`);
+  const rank = base < needBase && locked.length ? `(基本カードの${locked.join('、')}でセットできるようになります)` : '';
+  return `次の ${label} まで: ${needs.join('と')}。${rank}`;
+};
 // おすすめの戦い方を、持っているカード・開いている枚数で入れる。
 //   3体に同じカードを入れると賢さに1枚としか数えない(82 の cardTacticUncounted)ので、候補を上から順に3体へ配る(左・真ん中・右・左…)。
 //   候補が足りなければ、同じ物を重ねずに空けておく
@@ -71356,7 +72545,7 @@ const CardRegComboSheet = ({ tactics, where, title, onPick, onCustom, onClose })
   const list = CARD_REG_COMBOS.filter((x) => x.where === where);
   const secs = [...new Set(list.map((x) => x.sec))];
   return (
-    <div data-card-reg-combos={where} className="fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3">
+    <div data-card-reg-combos={where} className="fixed inset-0 z-[80] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
       <ScreenHead title={title} accent="text-amber-200" onBack={onClose}/>
       <div className="min-h-0 flex-1 overflow-y-auto pb-2">
         {secs.map((s) => (
@@ -71444,7 +72633,7 @@ const CardRegRows = ({ rows, why = [], onRows, baseName = '', rest = '' }) => (
 const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, baseName = '', onRows, onSwitch, onClose, onAdd, onCopy, onAuto }) => {
   const m = deck && cardMonsterOf(db, deck.monsters[k]);
   return (
-    <div data-card-reg-mon-sheet={k} className="fixed inset-0 z-[78] flex flex-col justify-end bg-black/55" onClick={onClose}>
+    <div data-card-reg-mon-sheet={k} className="fixed inset-0 z-[78] flex flex-col justify-end bg-black/55" style={cardSafePad('0px')} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} className="max-h-[82%] overflow-y-auto rounded-t-3xl border-t-[3px] border-sky-400 bg-slate-950 p-3" style={{ paddingBottom: 'max(.75rem, env(safe-area-inset-bottom))' }}>
         <div className="flex items-center gap-2.5">
           {m && <img src={CARD_IMG(m.img)} alt="" className="aspect-[5/7] w-[52px] rounded-[8px] border-2 border-sky-400 object-cover"/>}
@@ -71525,7 +72714,7 @@ const CardRegTrialSheet = ({ db, deck, battle, aces, monName, onClose }) => {
   const max = Math.max(1, ...top.map((x) => used[x.k]));
   const wins = res.filter((r) => r.win).length;
   return (
-    <div data-card-reg-trial={done ? 'done' : 'run'} className="fixed inset-0 z-[82] flex flex-col bg-slate-950/95 p-3">
+    <div data-card-reg-trial={done ? 'done' : 'run'} className="fixed inset-0 z-[82] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
       <ScreenHead title="ためしに戦わせる" accent="text-violet-200" onBack={onClose} note={`いまの戦い方で、助手(MASTER)と${CARD_REG_TRIAL_GAMES}戦`}/>
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
         <div className={`${SCREEN_PANEL_CLASS} py-2 text-center`}>
@@ -71582,7 +72771,7 @@ const CardRegTemplateSheet = ({ db, deck, tactics, open, lv, aces, monName, onPi
     setTimeout(() => { const best = cardRegAutoPick(db, deck, tactics, open, lv, aces); onPick(best.frames, `おまかせ: 「${best.s.name}」がいちばん勝ちました(${CARD_REG_AUTO_GAMES}戦 ${best.wins}勝)`); }, 60);
   };
   return (
-    <div data-card-reg-templates className="fixed inset-0 z-[82] flex flex-col bg-slate-950/95 p-3">
+    <div data-card-reg-templates className="fixed inset-0 z-[82] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
       <ScreenHead title="おすすめの組み方" accent="text-amber-200" onBack={onClose} note="えらぶと、3体とブリーダーの戦い方がまとめて入ります(いまの戦い方は置きかわります)"/>
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
         <button type="button" data-card-reg-auto disabled={auto === 'run'} onClick={() => { Audio_.fgSe.tap(); runAuto(); }}
@@ -71622,6 +72811,9 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
   const [draft, setDraft] = useState(null);     // 戦い方(枠の形)
   const [styleId, setStyleId] = useState(null);
   const [aces, setAces] = useState('auto');     // 'auto' か カード番号の配列
+  const [deckBox, setDeckBox] = useState(null); // デッキごとの戦術カード(96 の cardTacticsDeckLoad().box。2026-11-02)
+  const [rowAces, setRowAces] = useState(null); // 登録中のデッキの切り札({ id, aces }。デッキごとの覚えが無いときに使う)
+  const deckDrafts = useRef({}); // この画面で組みかけた戦い方(デッキを切り替えて戻っても、組みかけを残す)
   const [sheet, setSheet] = useState(null);     // { where, k }
   const [custom, setCustom] = useState(null);   // { k, c? } 自分で組み合わせる
   const [trial, setTrial] = useState(false); // ためしに戦わせる(CardRegTrialSheet)
@@ -71635,7 +72827,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
   useEffect(() => {
     let alive = true;
     void (async () => {
-      const d = await cardTacticsLoad();
+      const [d, byDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]);
       const [name, icon] = await Promise.all([storeGet('mh_breeder_name', 'ブリーダー', false), storeGet('mh_breeder_icon', '🙂', false)]).catch(() => ['ブリーダー', '🙂']);
       const id = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
       const row = typeof id === 'string' ? await cardShareFetchMine(id).catch(() => null) : null;
@@ -71643,10 +72835,18 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
       setData(d); setSelfId(typeof id === 'string' ? id : null); setMine(row || null);
       setProfile({ name: typeof name === 'string' && name ? name : 'ブリーダー', icon: typeof icon === 'string' && icon ? icon : '🙂' });
       const same = row ? list.find((x) => JSON.stringify(x.monsters) === JSON.stringify(row.deck.monsters) && JSON.stringify(x.cards) === JSON.stringify(row.deck.cards)) : null;
-      setDeckId((same || list.find((x) => issuesOf(x).length === 0) || list[0] || {}).id || null);
-      setDraft(cardTacticNormalizeFrames(d.tactics.frames));
+      const firstId = (same || list.find((x) => issuesOf(x).length === 0) || list[0] || {}).id || null;
+      setDeckId(firstId);
+      setDeckBox(byDeck.box);
+      // そのデッキで最後に使った戦術カード(覚えていなければ共通の戦術カード)
+      setDraft(cardTacticsFramesOfDeck(byDeck.box, d.tactics, firstId));
       const t = row ? cardShareNormalizeTactics(row.tactics) : null;
-      if (t && t.aces.length) setAces(t.aces);
+      const ra = t && t.aces.length && same ? { id: same.id, aces: t.aces } : null;
+      setRowAces(ra);
+      const keptAces = cardTacticsAcesOfDeck(byDeck.box, firstId);
+      if (keptAces && keptAces.length) setAces(keptAces);
+      else if (ra && ra.id === firstId) setAces(ra.aces);
+      else if (t && t.aces.length && !same) setAces(t.aces);
     })();
     return () => { alive = false; };
   }, []);
@@ -71659,19 +72859,37 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
   const battle = cardTacticsFramesForBattle({ ...tactics, frames: draft }, lv);
   const smartLv = cardTacticSmartLevel(battle);
   const smartText = cardShareSmartText({ f: cardTacticPackFrames(battle) });
+  const smartNext = cardRegSmartNextText(battle, lv);
   const uncounted = cardTacticUncounted(battle);
   const acesNow = aces === 'auto' ? cardRegAutoAces(db, deck) : aces;
   const setRows = (k, rows) => setDraft((f) => (k === 'breeder' ? { ...f, breeder: rows } : { ...f, mons: f.mons.map((r, i) => (i === k ? rows : r)) }));
   const rowsOf = (k) => (k === 'breeder' ? draft.breeder : draft.mons[k]);
   const maxOf = (k) => (k === 'breeder' ? open.breeder : open.mon);
+  // デッキを切り替えると、そのデッキの戦術カード(この画面で組みかけ → 覚えている物 → 共通)に入れ替える
+  const pickDeck = (id) => {
+    if (id === deckId) return;
+    if (deckId) deckDrafts.current[deckId] = { draft, aces, styleId };
+    const kept = deckDrafts.current[id];
+    if (kept) { setDraft(kept.draft); setAces(kept.aces); setStyleId(kept.styleId); }
+    else {
+      setDraft(cardTacticsFramesOfDeck(deckBox, tactics, id));
+      const ka = cardTacticsAcesOfDeck(deckBox, id);
+      setAces(ka && ka.length ? ka : rowAces && rowAces.id === id ? rowAces.aces : 'auto');
+      setStyleId(null);
+    }
+    setDeckId(id);
+  };
   const register = async () => {
     if (!deck || issuesOf(deck).length || !selfId || busy) return;
     setBusy(true); setMsg('');
     try {
       // 戦い方は持ち物(mh_card_tactics_v1)にも残す(次に開いたとき・プロフィール)。読み直した値に、セットだけを書く
-      const fresh = await cardTacticsLoad();
+      //   デッキごとの戦術カード(mh_card_tactics_by_deck_v1)にも、このデッキの分を書く(2026-11-02)
+      const [fresh, freshDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]);
       const nextT = { ...fresh.tactics, frames: cardTacticNormalizeFrames(draft) };
-      await saveStoredValuesOrRollback([{ key: CARD_TACTICS_KEY, before: fresh.rawT, next: nextT }], storeGet, storeSet);
+      const deckEntry = cardTacticsDeckEntry(freshDeck, deck.id, draft, { aces: aces === 'auto' ? null : aces, seed: { ids: list.map((x) => x.id), frames: fresh.tactics.frames } });
+      const savedT = await saveStoredValuesOrRollback([{ key: CARD_TACTICS_KEY, before: fresh.rawT, next: nextT }, ...(deckEntry ? [deckEntry] : [])], storeGet, storeSet);
+      if (savedT && deckEntry) { setDeckBox(cardTacticsDeckNormalize(deckEntry.next)); delete deckDrafts.current[deck.id]; }
       const f = cardTacticPackFrames(cardTacticsFramesForBattle(nextT, lv));
       const r = await cardShareRegister({ ownerId: selfId, name: profile.name, icon: profile.icon, frame, deck,
         tactics: { name: deck.name, habit: cardShareMainHabit(cardTacticUnpackFrames(f), 'kyuko'), aces: acesNow, f } });
@@ -71713,7 +72931,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
           {list.map((d) => {
             const why = issuesOf(d);
             return (
-              <button key={d.id} type="button" data-card-reg-deck={d.id} disabled={why.length > 0} onClick={() => { Audio_.fgSe.tap(); setDeckId(d.id); }}
+              <button key={d.id} type="button" data-card-reg-deck={d.id} disabled={why.length > 0} onClick={() => { Audio_.fgSe.tap(); pickDeck(d.id); }}
                 className={`flex w-full items-center gap-3 rounded-2xl border-2 p-2 text-left ${deckId === d.id ? 'border-amber-300 bg-amber-950/30' : 'border-slate-700 bg-slate-900'} ${why.length ? 'opacity-50' : ''}`}>
                 <CardRegThumbs db={db} deck={d}/>
                 <span className="min-w-0 flex-1"><b className="block truncate text-[14px] font-black text-white">{d.name}</b>
@@ -71763,7 +72981,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
                 );
               })}
             </div>
-            <p className="mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('入れると: 賢さの上限が上がります(1枚 HARD まで・2枚 EXPERT・3枚 MASTER)。サブは、型を3分の1だけ足します。')}</p>
+            <p className="mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('入れると: 賢さが上がります(基本2枚で MASTER。基本2枚と、ちゃんと効く戦術カード6枚で GRAND MASTER・9枚で HELL。LEGEND は基本3枚と10枚)。サブは、型を3分の1だけ足します。')}</p>
           </section>
           <section data-card-reg-sec="breeder" className="rounded-2xl border-2 border-violet-400 bg-slate-900/90 p-2.5">
             <CardRegSecHead n="②" color="#a78bfa" title="ブリーダーの手" count={`${draft.breeder.length}枚 / 入れられる ${open.breeder}枚`}
@@ -71809,6 +73027,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
             <div className="flex items-center gap-2 text-[13px] font-black text-white">賢さ <span className="text-amber-200">{smartText}</span></div>
             <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-700"><i className="block h-full bg-gradient-to-r from-emerald-400 to-amber-300" style={{ width: `${((CARD_TACTIC_SMART.indexOf(smartLv) + 1) / CARD_TACTIC_SMART.length) * 100}%` }}/></div>
             <small className="mt-1 block text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>賢さは、ほかのブリーダーがこのデッキと戦うときの相手の強さです。ちゃんと効く戦術カードが多いほど上がります。</small>
+            {smartNext && <p data-card-reg-smart-next className="mt-1 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(smartNext)}</p>}
           </div>
           <div data-card-reg-aces className={`${SCREEN_PANEL_CLASS} py-2`}>
             <div className="flex items-center gap-2 text-[13px] font-black text-white">切り札 <span className="text-[12px] text-amber-200">{aces === 'auto' ? 'おまかせ' : '自分でえらぶ'}</span>
@@ -72391,7 +73610,7 @@ const cardTourFetchHistory = async (ownerId) => {
   return Array.isArray(rows) ? cardTourNormalizeHistory(rows) : null;
 };
 const CardTourHistoryList = ({ list, known, onOpen, onClose }) => (
-  <div data-card-tour-history className="fixed inset-0 z-[80] flex justify-center bg-slate-950">
+  <div data-card-tour-history className="fixed inset-0 z-[80] flex justify-center bg-slate-950" style={cardSafePad('0px')}>
     <div className={`${SCREEN_SHELL_CLASS} w-full max-w-[600px]`}>
       <ScreenHead title="公式杯の記録" accent="text-amber-200" onBack={onClose} note="終わった大会の結果と、試合の見返しを見られます。新しい順"/>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
@@ -73367,7 +74586,17 @@ const CardCupPrizePanel = ({ c, v, now, selfId, prize, reload, getAdapters }) =>
       <b className="block text-[13px] font-black text-amber-200">ごほうび</b>
       {!prize.pool.length && !prize.fee && <p className="text-[12px] font-bold text-slate-400">この個人杯にはごほうびはありません(ランキングにも入りません)</p>}
       {prize.pool.map((p) => <div key={p.item} data-card-cup-pool={p.item} className="flex items-center justify-between text-[13px] font-black text-white"><span>{cardCupItemText(p.item, 0).replace(/ 0$/, '')}</span><span className="text-amber-200">{p.total.toLocaleString()}</span></div>)}
-      {prize.givers.length > 0 && <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`出した人: ${prize.givers.map((g) => `${g.name} ${cardCupItemText(g.item, g.amount)}`).join('・')}`)}</p>}
+      {/* 出した人は1人1行(2026-11-01 点検。1行につなげると名前と品の切れ目が分かりにくかった) */}
+      {prize.givers.length > 0 && <div data-card-cup-givers className="text-[11px] font-bold text-slate-400">
+        <p>出した人</p>
+        <ul className="mt-0.5 space-y-0.5">{prize.givers.map((g, i) => (
+          <li key={i} data-card-cup-giver className="flex items-center gap-1.5">
+            <span aria-hidden="true" className="w-4 shrink-0 text-center">{g.icon || '🙂'}</span>
+            <span className="min-w-0 flex-1 truncate text-slate-300">{g.name}</span>
+            {g.host && <span className="shrink-0 rounded bg-amber-400/20 px-1 text-[10px] text-amber-200">主催</span>}
+            <span className="shrink-0 whitespace-nowrap text-slate-200">{cardCupItemText(g.item, g.amount)}</span>
+          </li>))}</ul>
+      </div>}
       {prize.fee && <p data-card-cup-fee className="text-[12px] font-black text-sky-100">{`参加費 ${cardCupItemText(prize.fee.item, prize.fee.amount)}(主催・主催仲間は払いません)`}</p>}
       {(prize.pool.length > 0 || prize.fee) && (
         <div data-card-cup-split className="space-y-0.5 text-[12px] font-bold text-slate-200">
@@ -73992,6 +75221,8 @@ function MonsterHeroGame() {
   // 極限チャレンジ(EXTREME)の記録。チャレンジの mh_hs_* / mh_clears_* とは別のキーへ持つ
   const [extremeBestScores, setExtremeBestScores] = useState({});
   const [extremeClearCounts, setExtremeClearCounts] = useState({});
+  // EREBUS を足す前に COCYTUS が開いていたかの印(mh_cocytus_open_kept_v1・2026-11-04)。読み込みで1回だけ作る
+  const [cocytusOpenKept, setCocytusOpenKept] = useState(null);
   const [extremeDifficultyClearCounts, setExtremeDifficultyClearCounts] = useState({});
   const [onboarded, setOnboarded] = useState(true); // false=初回起動(プロフィール設定へ誘導)
   // 遊んだ時間を数える。画面が見えているあいだだけ進み、離れるときと60秒ごとに保存する。
@@ -75717,7 +76948,9 @@ function MonsterHeroGame() {
       const raw = await storeGet(BEAT_RANK_KEY, null, false);
       const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
       const gain = beatRankAfter(raw, { difficultyId: play && play.difficulty && play.difficulty.id, cleared: result?.cleared !== false,
-        fullCombo: result?.fullCombo === true, allMarvelous: result?.allMarvelous === true, multi: play && play.from === 'multi', today });
+        fullCombo: result?.fullCombo === true, allMarvelous: result?.allMarvelous === true, multi: play && play.from === 'multi', today,
+        // 曲の長さ(経験値は 長さ÷2:00 倍。2026-11-02)。読めないときは0で、今までどおりの値になる
+        durationMs: play && play.song ? rhythmPlaySongDurationMs(play.song, play.difficulty) : 0 });
       if (!gain.add) return;
       const next = { ...gain.next, k: gain.next.k || beatRankNewKey() };
       await storeSet(BEAT_RANK_KEY, next, false);
@@ -76305,6 +77538,9 @@ function MonsterHeroGame() {
   // イベント回想の2ページ目に開いているまとまりの id(null なら1ページ目=パネルの一覧)
   const [eventReplayGroupId, setEventReplayGroupId] = useState(null);
   const [eventReplay, setEventReplay] = useState(null);
+  // お話の締め(終わりの札)が出ていないときは、音を元に戻す(札のあいだだけ小さくする。閉じ方を問わず戻す)
+  const eventReplayEnding = !!(eventReplay && eventReplay.ending);
+  useEffect(() => { if (!eventReplayEnding && typeof Audio_ !== 'undefined' && Audio_.setStoryEndFade) Audio_.setStoryEndFade(false); }, [eventReplayEnding]);
   const [showDebugStoryList, setShowDebugStoryList] = useState(false);   // デバッグ設定の「全ストーリーを確認」の一覧(公開前も含めて全部。見たことにはしない)
   // イベントの会話が指定した服(ハロウィン・ナイトの衣装)を、会話のあいだだけ助手に着せる。閉じたら元へ戻る
   setAssistantCostumeStoryNow(eventReplay ? (((eventReplay.debug ? eventReplayAllList() : eventReplayList()).find(ev => ev.id === eventReplay.id) || {}).costumes || null) : null);
@@ -77030,8 +78266,11 @@ function MonsterHeroGame() {
   const eternalClearCount = extremeClearCounts[ETERNAL_SETTING.id] || 0;
   const infernoUnlocked = useMemo(() => isInfernoUnlocked(eternalClearCount), [eternalClearCount]);
   const infernoClearCount = extremeClearCounts[INFERNO_SETTING.id] || 0;
-  const cocytusUnlocked = useMemo(() => isCocytusUnlocked(infernoClearCount), [infernoClearCount]);
-  // 冥界チャレンジのタブ(INFERNO・COCYTUS)は ETERNAL クリアで開く
+  const erebusUnlocked = useMemo(() => isErebusUnlocked(infernoClearCount), [infernoClearCount]);
+  const erebusClearCount = extremeClearCounts[EREBUS_SETTING.id] || 0;
+  const cocytusRecord = (extremeClearCounts[COCYTUS_SETTING.id] || 0) + (extremeBestScores[COCYTUS_SETTING.id] || 0);
+  const cocytusUnlocked = useMemo(() => isCocytusUnlocked(erebusClearCount, cocytusOpenKept, cocytusRecord), [erebusClearCount, cocytusOpenKept, cocytusRecord]);
+  // 冥界チャレンジのタブ(INFERNO・EREBUS・COCYTUS)は ETERNAL クリアで開く
   const underworldUnlocked = useMemo(() => isUnderworldUnlocked(eternalClearCount), [eternalClearCount]);
   // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
   // 冥界チャレンジのタブを開いた最初の1回は「冥界の一言」(underworldTab)。カードを INFERNO から動かすか、タブを離れたら難易度ごとのセリフへ
@@ -77254,7 +78493,8 @@ function MonsterHeroGame() {
     const id=rhythmSettings.multiLook||'LIGHT';
     if(id==='OWN')return rhythmSettings;
     const preset=RHYTHM_LOOK_PRESETS.find(item=>item.id===id)||RHYTHM_LOOK_PRESETS.find(item=>item.id==='LIGHT');
-    return {...rhythmSettings,...(preset?preset.values:{})};
+    // 演出を1つずつ選ぶ設定(fx)は、対戦のあいだは全部「おまかせ」にして、重ねた見た目に従わせる(2026-11-01)
+    return {...rhythmSettings,...(preset?preset.values:{}),fx:{}};
   },[rhythmSettings]);
   // 曲えらびで選んだ曲を、事前ダウンロード(入のときだけ)が前もって落とす
   useEffect(()=>{if(String(gameState).startsWith('RHYTHM'))ASSET_CACHE.noteSong(rhythmSelectedSongId);},[rhythmSelectedSongId,gameState]);
@@ -78762,18 +80002,25 @@ function MonsterHeroGame() {
   // 時刻で出すのは第1部だけ(data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES)。第2部以降はジャックのストーリー(RAID_JACK_STORY_IDS)で、
   // レイドの進み具合で出る。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, CARD_CUP_STORY_ID];
+  // 「鍵の向こう側へ」の全8話(data/rhythm-event.js の PANDORA_WINGS_STORIES)。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
+  const PANDORA_WINGS_STORY_IDS = PANDORA_WINGS_STORIES.map(story => story.id);
+  // 「鍵の向こう側へ」のイベントidと、終章(閉幕のお話)のid
+  const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
+  const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, CARD_CUP_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
+    // 「鍵の向こう側へ」の第1話(第2〜7話は時刻で・第8話は閉幕のお話)
+    [PANDORA_WINGS_EVENT_ID]: 'pandora_wings_2026_ep1',
   };
   // イベントid → 閉幕の会話id。用意していないイベントでは閉幕の会話は流れない
   // (別の回の「閉幕とお礼」を代わりに流してしまわないよう、必ずここから引く)
   const RHYTHM_EVENT_THANKS_STORY_BY_EVENT = { [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_THANKS_STORY_ID,
-    [SYMPHONY_EVENT_ID]: SYMPHONY_THANKS_STORY_ID };
+    [SYMPHONY_EVENT_ID]: SYMPHONY_THANKS_STORY_ID, [PANDORA_WINGS_EVENT_ID]: PANDORA_WINGS_THANKS_STORY_ID };
   // いま開催中／いま終わったばかりのイベントに対応する会話id(無ければ null)
   const rhythmEventStoryIdFor = (event) => (event && RHYTHM_EVENT_STORY_BY_EVENT[event.id]) || null;
   const rhythmEventThanksStoryIdFor = (event) => (event && RHYTHM_EVENT_THANKS_STORY_BY_EVENT[event.id]) || null;
@@ -79145,12 +80392,16 @@ function MonsterHeroGame() {
       // ハロウィン・ナイトのお話。時刻が来ていて、まだ見ていない部のうち、いちばん古いもの
       const halloweenStoryId = RELEASE_FLAGS.rhythmEventPoints === true
         ? (halloweenNightStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null) : null;
+      // 「鍵の向こう側へ」の第2〜7話。時刻が来ていて、まだ見ていない話のうち、いちばん古いもの(第1話は開幕・第8話は閉幕のお話として流れる)
+      const pandoraWingsStoryId = RELEASE_FLAGS.rhythmWeeklyRanking === true
+        ? (pandoraWingsStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null) : null;
       if (!liveEvent) {
         if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
         else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
         else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);
         else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);
         else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
+        else if (pandoraWingsStoryId) setRhythmEventStoryPending(prev => prev || pandoraWingsStoryId);
         else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
         else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
         else if (masuCallStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);
@@ -79168,6 +80419,7 @@ function MonsterHeroGame() {
       else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);
       else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);
       else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
+      else if (pandoraWingsStoryId) setRhythmEventStoryPending(prev => prev || pandoraWingsStoryId);
       else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
       else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
       else if (masuCallStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);
@@ -80590,8 +81842,20 @@ function MonsterHeroGame() {
       }));
       setExtremeBestScores(loadedExtremeScores);
       setExtremeClearCounts(loadedExtremeClears);
+      const loadedClassicSpeciesProgress = normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY,null,false));
+      // EREBUS(INFERNO と COCYTUS のあいだ・2026-11-04)を足す前に COCYTUS が開いていた人は閉じない。
+      //   印が無いときだけ、いまの記録(INFERNO のクリア)から1回だけ作って保存する。あるときは読むだけ(二度目は作らない)
+      try {
+        const keptRaw = await storeGet(COCYTUS_OPEN_KEPT_KEY, null, false);
+        if (keptRaw && typeof keptRaw === 'object' && !Array.isArray(keptRaw)) setCocytusOpenKept(normalizeCocytusOpenKept(keptRaw));
+        else {
+          const kept = buildCocytusOpenKept(loadedExtremeClears, loadedClassicSpeciesProgress);
+          setCocytusOpenKept(kept);
+          await storeSet(COCYTUS_OPEN_KEPT_KEY, kept, false);
+        }
+      } catch (e) { setCocytusOpenKept(buildCocytusOpenKept(loadedExtremeClears, loadedClassicSpeciesProgress)); }
       setSpeciesProgressByMode({
-        [BATTLE_MODE_SPECIES_CHALLENGE]:normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY,null,false)),
+        [BATTLE_MODE_SPECIES_CHALLENGE]:loadedClassicSpeciesProgress,
         [BATTLE_MODE_TACTICS_SPECIES]:normalizeSpeciesChallengeProgress(await storeGet(TACTICS_SPECIES_CHALLENGE_PROGRESS_KEY,null,false)),
       });
       setHighScores(scores);
@@ -82030,6 +83294,9 @@ function MonsterHeroGame() {
     rhythmSixLaneSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_SIX_LANE_STORY_ID),
     beatPointUpSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_UP_STORY_ID),
     // 時刻で流すハロウィン・ナイトは第1部だけ(第2部以降はジャックのストーリー・下の raidJackStory...)
+    // 「鍵の向こう側へ」の各話(第1〜7話)と終章(閉幕のお話)
+    ...Object.fromEntries(PANDORA_WINGS_STORIES.filter(story => story.id !== PANDORA_WINGS_THANKS_STORY_ID).map(story => [`pandoraWingsEp${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
+    pandoraWingsEp8Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(PANDORA_WINGS_THANKS_STORY_ID),
     ...Object.fromEntries(HALLOWEEN_NIGHT_STORIES.map(story => [`halloweenNightPart${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
     // ジャックのストーリー(1.5部〜終章)。見たかは同じ配列(rhythmEventStorySeen)へ id を入れて持つ(新しいキーは作らない)
     ...Object.fromEntries(RAID_JACK_STORY_IDS.map(id => [raidJackStoryUnlockKey(id), Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(id)])),
@@ -91649,13 +92916,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <details key={`pinned-${c.id}`} data-changelog-pinned className="mh-changelog-pinned"
                 style={{margin:'0 0 10px',border:'2px solid #fb923c',borderRadius:16,background:'linear-gradient(135deg,#431407,#3b0764)',padding:'8px 10px'}}>
                 <summary style={{cursor:'pointer',listStyle:'none',display:'flex',alignItems:'center',gap:8,fontWeight:900,fontSize:13,color:'#ffedd5'}}>
-                  <span style={{background:'#f97316',color:'#1c1917',borderRadius:999,padding:'1px 8px',fontSize:11}}>🎃 開催中</span>
+                  {/* 札の絵文字はイベントごと(pinEmoji)。書いていない項目は 🎉(ハロウィンの 🎃 のままだった。2026-11-03) */}
+                  <span style={{background:'#f97316',color:'#1c1917',borderRadius:999,padding:'1px 8px',fontSize:11}}>{typeof c.pinEmoji==='string'&&c.pinEmoji?c.pinEmoji:'🎉'} 開催中</span>
                   {/* 固定表示の見出しは短くする。先頭の【期間限定】と末尾の「〜を開催します」は、「開催中」の札と重なるので落とす(本文の見出しはそのまま)。
                       幅の狭い画面(320)で「レイドボス戦「…」と名前が切れていたので、切らずに折り返す(2026-10-27 ダメダシくんの見回り) */}
                   <span data-changelog-pinned-title style={{flex:1,minWidth:0,lineHeight:1.3,wordBreak:'keep-all',overflowWrap:'anywhere'}}>{String(c.title||'').replace(/^【[^】]*】/,'').replace(/を開催(します)?$/,'')}</span>
                   <small style={{flexShrink:0,fontSize:10,color:'#fdba74'}}>詳細 ▼</small>
                 </summary>
                 {c.image&&<img data-changelog-pinned-image src={c.image} alt={`${c.title}のお知らせ`} onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async" style={{width:'100%',borderRadius:12,margin:'8px 0 4px'}}/>}
+                {/* 予告動画も、固定の札の中で見られるようにする(下の一覧の行と同じ) */}
+                {typeof c.video==='string'&&c.video&&<figure data-changelog-pinned-video style={{margin:'6px 0'}}>
+                  <figcaption style={{fontWeight:900,fontSize:12,color:'#ffedd5',margin:'0 0 4px'}}>▶ 予告動画</figcaption>
+                  <ChangelogVideo src={c.video} poster={typeof c.videoPoster==='string'?c.videoPoster:undefined}/>
+                </figure>}
                 {(c.items||[]).map((x,j)=><p key={j} style={{fontSize:12,color:'#fed7aa',margin:'3px 0'}}>・{x}</p>)}
               </details>)),
             ...rows.map(row=>{
@@ -91694,6 +92967,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       {c.image&&<img data-changelog-image src={c.image} alt={`${c.title}のお知らせ`}
                         onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
                         style={{width:'100%',borderRadius:'12px',margin:'6px 0'}}/>}
+                      {/* 予告動画(2026-11-02 社長「告知にストーリーの一部の予告動画もほしい」)。video:'movies/…mp4' と書いたときだけ出す。
+                          押すまで読み込まない(preload none)。videoPoster は押す前に見せる絵。読めなかったら黙って消す */}
+                      {typeof c.video==='string'&&c.video&&<figure data-changelog-video style={{margin:'6px 0'}}>
+                        <figcaption style={{fontWeight:900,margin:'0 0 4px'}}>▶ 予告動画</figcaption>
+                        <ChangelogVideo src={c.video} poster={typeof c.videoPoster==='string'?c.videoPoster:undefined}/>
+                      </figure>}
                       {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
                       {/* 本文の下に並べる見本の絵(2026-09-28・ユーザー提案「こんな感じに染色イメージを出したりしたらどう？」)。
                           gallery:[{ caption, image }] と書いたときだけ、見出しと絵を順に出す。
@@ -91737,7 +93016,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 既定値は今まで鳴っていた曲そのものなので、これまでの音は変わらない
         ['enhance','準備・強化フェーズ BGM'],['result','WAVE後リザルト BGM'],['gameOver','敗北 BGM']]},
       {id:'battle',label:'バトル'},
-      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM'],['masuCallEvent','マスモンとセッションのお話 BGM'],['halloweenNightEvent','ハロウィン・ナイトのお話 BGM'],['assistantChatStoryEvent','助手とおしゃべりのお話 BGM'],['atsuJoinStoryEvent','あつ加入のお話 BGM'],['kyukoJoinStoryEvent','きゅうこ加入のお話 BGM'],['cardBattleIntroEvent','MFバトルカードのお話 BGM'],['cardCupStoryEvent','個人杯のお話 BGM']]},
+      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM'],['masuCallEvent','マスモンとセッションのお話 BGM'],['halloweenNightEvent','ハロウィン・ナイトのお話 BGM'],['assistantChatStoryEvent','助手とおしゃべりのお話 BGM'],['atsuJoinStoryEvent','あつ加入のお話 BGM'],['kyukoJoinStoryEvent','きゅうこ加入のお話 BGM'],['cardBattleIntroEvent','MFバトルカードのお話 BGM'],['cardCupStoryEvent','個人杯のお話 BGM'],['pandoraWingsStoryEvent','鍵の向こう側へのお話 BGM']]},
       {id:'other',label:'その他',items:[['rhythmModeSelect','モンヒロビート モードえらび BGM'],['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM']]},
     ];const battleModes=BGM_BATTLE_MODE_TABS;const selected=categories.find(category=>category.id===bgmArrangementCategory)||categories[0];const selectedMode=battleModes.find(mode=>mode.id===bgmArrangementBattleMode)||battleModes[0];const items=selected.id==='battle'?selectedMode.items:selected.items;return <><div role="tablist" aria-label="BGMカテゴリ" className="grid grid-cols-4 gap-1 mb-3">{categories.map(category=><button key={category.id} type="button" role="tab" aria-selected={selected.id===category.id} onClick={()=>setBgmArrangementCategory(category.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selected.id===category.id?'bg-indigo-600 border-indigo-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{category.label}</button>)}</div>{selected.id==='battle'&&<div role="tablist" aria-label="バトルモード" className={`grid ${battleModes.length>=6?'grid-cols-3':battleModes.length>=5?'grid-cols-5':'grid-cols-4'} gap-1 mb-4`}>{battleModes.map(mode=><button key={mode.id} type="button" role="tab" aria-selected={selectedMode.id===mode.id} onClick={()=>setBgmArrangementBattleMode(mode.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selectedMode.id===mode.id?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{mode.label}</button>)}</div>}<div className="space-y-4">{selected.id==='other'&&[
       ['autoVictoryJingle','AUTO時 敵撃破ファンファーレ'],
@@ -92987,7 +94266,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="relative shrink-0">
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="mhbs-arrow absolute left-0 top-[42%] z-20 disabled:opacity-20"><ChevronLeft size={18}/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.id!==extremeDifficulty)setExtremeDifficulty(difficulties[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll max-[359px]:!px-[4%]" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:setting.id==='HELHEIM'?helheimUnlocked:setting.id==='ETERNAL'?eternalUnlocked:setting.id==='INFERNO'?infernoUnlocked:setting.id==='COCYTUS'?cocytusUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;const theme=extremeDifficultyTheme(setting.id);const heroProofReward=heroProofClearReward({extremeDifficulty:setting.id});return (
+                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:setting.id==='HELHEIM'?helheimUnlocked:setting.id==='ETERNAL'?eternalUnlocked:setting.id==='INFERNO'?infernoUnlocked:setting.id==='EREBUS'?erebusUnlocked:setting.id==='COCYTUS'?cocytusUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;const theme=extremeDifficultyTheme(setting.id);const heroProofReward=heroProofClearReward({extremeDifficulty:setting.id});return (
                       <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} data-underworld-card={underworldTab?setting.id:undefined} data-shield-layers={underworldTab?underworldShieldLayerRange(setting.id):undefined} className={`mhbt-tile mhbt-d-${setting.id} dark snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[400px] flex flex-col px-4 pt-3 pb-2.5 transition-all ${active?'on scale-100 opacity-100':'scale-[.92] opacity-45'} ${previewable?'':'dim'}`} style={{'--acc':theme.accent}}>
                         <span aria-hidden="true" className="mhbt-mark">{setting.label}</span>
                         <div className="mhbt-eyebrow">EXTREME DIFFICULTY</div>
@@ -92995,7 +94274,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <div className="mt-1 h-[42px] shrink-0 rounded-xl bg-black/40 px-2.5 py-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,.12)]">
                           <small className="block text-[8px] text-white/70 font-black">{setting.available?`${setting.label}の記録`:'難易度情報'}</small>
                           <b className="block text-right text-base italic leading-tight text-white">{setting.available&&unlocked?`${(extremeBestScores[setting.id]||0).toLocaleString()} pt`:'？？？'}</b>
-                          <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':setting.id==='ULTIMATE'&&!ultimateUnlocked?'CHAOSクリアで解放':setting.id==='INFINITY'&&!infinityUnlocked?'ULTIMATEクリアで解放':setting.id==='GOD'&&!godUnlocked?'INFINITYクリアで解放':setting.id==='RAGNAROK'&&!ragnarokUnlocked?'GODクリアで解放':setting.id==='HELHEIM'&&!helheimUnlocked?'RAGNAROKクリアで解放':setting.id==='ETERNAL'&&!eternalUnlocked?'HELHEIMクリアで解放':setting.id==='INFERNO'&&!infernoUnlocked?'ETERNALクリアで解放':setting.id==='COCYTUS'&&!cocytusUnlocked?'INFERNOクリアで解放':'選択できません'}</span>
+                          <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':setting.id==='ULTIMATE'&&!ultimateUnlocked?'CHAOSクリアで解放':setting.id==='INFINITY'&&!infinityUnlocked?'ULTIMATEクリアで解放':setting.id==='GOD'&&!godUnlocked?'INFINITYクリアで解放':setting.id==='RAGNAROK'&&!ragnarokUnlocked?'GODクリアで解放':setting.id==='HELHEIM'&&!helheimUnlocked?'RAGNAROKクリアで解放':setting.id==='ETERNAL'&&!eternalUnlocked?'HELHEIMクリアで解放':setting.id==='INFERNO'&&!infernoUnlocked?'ETERNALクリアで解放':setting.id==='EREBUS'&&!erebusUnlocked?'INFERNOクリアで解放':setting.id==='COCYTUS'&&!cocytusUnlocked?`${EREBUS_SETTING.label}クリアで解放`:'選択できません'}</span>
                         </div>
                         {previewable?<>
                           <div className="grid grid-cols-3 gap-1 mt-1">{[['敵強度',`×${setting.power}`],['スコア',setting.score?`×${setting.score}`:'対象外'],['ダイヤ',setting.gold?`×${setting.gold}`:'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
@@ -93132,7 +94411,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className={`relative shrink-0${battleTutorialSpotClass('difficulty')}`}>
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="mhbs-arrow absolute left-0 top-[42%] z-20 disabled:opacity-20"><ChevronLeft size={18}/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.[0]!==selectedDifficulty)chooseDifficulty(difficulties[best][0]);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll max-[359px]:!px-[4%]" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}} data-difficulty-carousel>
-                    {difficulties.map(([key,setting])=>{const active=key===selectedDifficulty,rec=modeRecordFor(battleMode,key);const quickUnlocked=species?isSpeciesChallengeDifficultyUnlocked(key,speciesChallengeClearedDifficultyIds(speciesChallengeProgress,speciesChallengeSelection.speciesId),speciesChallengeInitialUnlockCountOf(battleMode)):tacticsDiff?(debugBattle||isTacticsDifficultyUnlocked(key,tacticsRecordsOf(battleMode).clears)):(!quick||debugBattle||isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts));// ★タクティクスバトルの極限は、極限チャレンジ・種族チャレンジとまったく同じ作りで走らせる。
+                    {difficulties.map(([key,setting])=>{const active=key===selectedDifficulty,rec=modeRecordFor(battleMode,key);const quickUnlocked=species?isSpeciesChallengeDifficultyUnlocked(key,speciesChallengeClearedDifficultyIds(speciesChallengeProgress,speciesChallengeSelection.speciesId),speciesChallengeInitialUnlockCountOf(battleMode),battleMode===BATTLE_MODE_SPECIES_CHALLENGE?cocytusKeptOpenIdsFor(cocytusOpenKept,speciesChallengeSelection.speciesId):[]):tacticsDiff?(debugBattle||isTacticsDifficultyUnlocked(key,tacticsRecordsOf(battleMode).clears)):(!quick||debugBattle||isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts));// ★タクティクスバトルの極限は、極限チャレンジ・種族チャレンジとまったく同じ作りで走らせる。
                       //   difficulty は 'Normal' に置き換え、選んだ段階は extremeDifficulty が持つ。
                       //   記録は tacticsRecordDifficulty() がこの2つから選ぶので、混ざらない
                       const tacticsExtreme=tacticsDiff&&isExtremeDifficultyId(key);
@@ -94459,7 +95738,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <button data-species-real-run-start onClick={()=>{if(!window.confirm('実際の種族チャレンジ進行・所持品を変更します。よろしいですか？'))return;openSpeciesChallengeSelection({saveProgress:true,fromDebug:true});}} className="min-h-[46px] w-full rounded-xl bg-red-700 text-[10px] font-black text-white">実進行を保存する実戦を始める</button>
               </article>
               <article data-transcend-fruit-debug className="space-y-2 rounded-2xl border border-fuchsia-400/50 bg-fuchsia-950/20 p-3"><h3 className="text-[11px] font-black text-fuchsia-200">超越の実 → 超越ポイント確認</h3>{selectedMasu?<><label className="block text-[9px] font-black">所持マスモン<select aria-label="所持マスモン" value={selectedMasu.id} onChange={e=>{setTranscendFruitDebugMasuId(e.target.value);setTranscendFruitDebugItemId('');setTranscendFruitDebugResult(null);}} className="mt-1 block min-h-[44px] w-full rounded-xl bg-slate-900 px-3">{masuMons.map(m=><option key={m.id} value={m.id}>{m.name}／{ALL_PLAYER_MONSTERS[m.baseId]?.name||m.baseId}</option>)}</select></label><div className="grid grid-cols-2 gap-2 text-center text-[9px]"><span className="rounded-lg bg-slate-900 p-2">対応種族の実<br/><b>{transcendFruitOwnedCount(ownedItems,speciesFruitId)}</b></span><span className="rounded-lg bg-slate-900 p-2">虹の実<br/><b>{transcendFruitOwnedCount(ownedItems,RAINBOW_TRANSCEND_FRUIT_ITEM_ID)}</b></span></div><div className="grid grid-cols-2 gap-2"><button aria-pressed={selectedFruitId===speciesFruitId} onClick={()=>setTranscendFruitDebugItemId(speciesFruitId)} className={`min-h-[44px] rounded-xl text-[9px] font-black ${selectedFruitId===speciesFruitId?'bg-fuchsia-700 ring-2 ring-white':'bg-slate-800'}`}>対応種族の実を選択</button><button aria-pressed={selectedFruitId===RAINBOW_TRANSCEND_FRUIT_ITEM_ID} onClick={()=>setTranscendFruitDebugItemId(RAINBOW_TRANSCEND_FRUIT_ITEM_ID)} className={`min-h-[44px] rounded-xl text-[9px] font-black ${selectedFruitId===RAINBOW_TRANSCEND_FRUIT_ITEM_ID?'bg-fuchsia-700 ring-2 ring-white':'bg-slate-800'}`}>虹の実を選択</button></div><div>{!selectedFruitId&&<p className="text-center text-[8px] font-black text-amber-300">使う実を選んでください。</p>}</div><div className="grid grid-cols-3 gap-2"><button disabled={!selectedFruitId} onClick={()=>useFruit(1)} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">1</button><button disabled={!selectedFruitId} onClick={()=>useFruit(10)} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">10</button><button disabled={!selectedFruitId} onClick={()=>useFruit(transcendFruitOwnedCount(ownedItems,selectedFruitId))} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">MAX</button></div><div className="rounded-xl bg-black/30 p-2 text-center text-[10px]">超越P：{transcendFruitDebugResult?`${transcendFruitDebugResult.before} → ${transcendFruitDebugResult.after}${transcendFruitDebugResult.ok?'':'（失敗・変更なし）'}`:`${Math.max(0,Math.floor(Number(selectedMasu.transcendPoints)||0))} → ―`}</div><div className="grid grid-cols-2 gap-2"><button onClick={()=>grantFruit(speciesFruitId)} className="min-h-[40px] rounded-xl border border-fuchsia-500 text-[8px] font-black">対応種族の実 +10</button><button onClick={()=>grantFruit(RAINBOW_TRANSCEND_FRUIT_ITEM_ID)} className="min-h-[40px] rounded-xl border border-fuchsia-500 text-[8px] font-black">虹の実 +10</button></div></>:<p className="text-[9px] text-slate-400">所持マスモンがいません。</p>}</article>
-              {SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id=>{const unlocked=isSpeciesChallengeDifficultyUnlocked(id,clearedIds),cleared=isSpeciesChallengeCleared(speciesChallengeProgress,speciesId,id),claimed=isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress,speciesId,id);return <article key={id} data-species-difficulty={id} className={`rounded-xl border p-3 ${unlocked?'border-emerald-500/40 bg-slate-900':'border-white/10 bg-slate-950 opacity-65'}`}><div className="flex items-center justify-between gap-2"><b className="text-[11px]">{difficultyLabel(id)}</b><span className={`rounded-full px-2 py-1 text-[8px] font-black ${unlocked?'bg-emerald-900 text-emerald-200':'bg-slate-800 text-slate-400'}`}>{unlocked?'解放':'未解放'}</span></div><div className="mt-2 grid grid-cols-3 gap-1 text-center text-[8px]"><span className={cleared?'text-emerald-300':'text-slate-500'}>cleared<br/><b>{String(cleared)}</b></span><span className={claimed?'text-amber-300':'text-slate-500'}>firstRewardClaimed<br/><b>{String(claimed)}</b></span><span className="text-fuchsia-200">初回報酬<br/><b>超越の実 ×{speciesChallengeFirstClearReward(id)}</b></span></div>{/* 自己記録も種族×難易度ごとに独立していることをここで確認できる */}{(()=>{const record=speciesChallengeRecord(speciesChallengeProgress,speciesId,id);return <div data-species-record={id} className="mt-1 rounded-lg bg-black/30 px-2 py-1 text-center text-[8px] text-cyan-200">自己ベスト {record.bestScore.toLocaleString()}pt ／ 最短 {record.bestTurns!==null?`${record.bestTurns}T`:'—'} ／ クリア {record.clears}回</div>;})()}</article>;})}
+              {SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id=>{const unlocked=isSpeciesChallengeDifficultyUnlocked(id,clearedIds,undefined,cocytusKeptOpenIdsFor(cocytusOpenKept,speciesId)),cleared=isSpeciesChallengeCleared(speciesChallengeProgress,speciesId,id),claimed=isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress,speciesId,id);return <article key={id} data-species-difficulty={id} className={`rounded-xl border p-3 ${unlocked?'border-emerald-500/40 bg-slate-900':'border-white/10 bg-slate-950 opacity-65'}`}><div className="flex items-center justify-between gap-2"><b className="text-[11px]">{difficultyLabel(id)}</b><span className={`rounded-full px-2 py-1 text-[8px] font-black ${unlocked?'bg-emerald-900 text-emerald-200':'bg-slate-800 text-slate-400'}`}>{unlocked?'解放':'未解放'}</span></div><div className="mt-2 grid grid-cols-3 gap-1 text-center text-[8px]"><span className={cleared?'text-emerald-300':'text-slate-500'}>cleared<br/><b>{String(cleared)}</b></span><span className={claimed?'text-amber-300':'text-slate-500'}>firstRewardClaimed<br/><b>{String(claimed)}</b></span><span className="text-fuchsia-200">初回報酬<br/><b>超越の実 ×{speciesChallengeFirstClearReward(id)}</b></span></div>{/* 自己記録も種族×難易度ごとに独立していることをここで確認できる */}{(()=>{const record=speciesChallengeRecord(speciesChallengeProgress,speciesId,id);return <div data-species-record={id} className="mt-1 rounded-lg bg-black/30 px-2 py-1 text-center text-[8px] text-cyan-200">自己ベスト {record.bestScore.toLocaleString()}pt ／ 最短 {record.bestTurns!==null?`${record.bestTurns}T`:'—'} ／ クリア {record.clears}回</div>;})()}</article>;})}
             </section>
           </main>;
         })()}
@@ -96657,7 +97936,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const step=Math.max(0,Math.min(eventReplay.step,script.length-1));
         const line=script[step];
         const speaker=assistantById(line.who);
-        const last=step===script.length-1;
+        // 真ん中にモンスターが出るお話は、画面を「上部ゾーン(ステージ)/立ち絵ゾーン(モンスター)/下部ゾーン(窓)」の3つに固定で分ける
+        //   (2026-11-02 社長「立ち絵ゾーン固定したほうがいいよ」「上部ゾーン/立ち絵/下部ゾーンで」)。高さは台詞の長さ・顔の数で変えない(70-bootstrap.jsx の [data-story-zones])。
+        //   収まらない台詞は、文の切れ目で次のページに分けて「次へ」で送る(社長「セリフが長ければページ数増やせばいいだけ」)。
+        //   step は台本の行のまま(BGM の切り替えなども行で数える)。sub はその行の何ページ目か
+        //   2026-11-03 社長「ハロウィン以外にも全てのイベントを変えてほしい」: イベント回想に並ぶお話すべて(モンスターが出ないお話も)をこの形にする
+        const storyZones=script.length>0;
+        const storySub=storyZones?Math.max(0,Math.floor(Number(eventReplay.sub)||0)):0;
+        // 下の窓に小さい顔の列を残すか(21-assistant.jsx の STORY_BOTTOM_KEEP_ROW。読めないときは残す=いまの形)
+        const storyKeepRow=typeof STORY_BOTTOM_KEEP_ROW==='undefined'?true:!!STORY_BOTTOM_KEEP_ROW;
+        let last=step===script.length-1;
+        // お話の締め(終わりの札)を出すお話か。続きもの(…_ep1 〜)だけ。スキップしたときは出さない(skip は札を通らない)
+        //   2026-11-03 社長「全てのイベントを変えてほしい」: イベント回想に並ぶお話すべてに出す(続きものは次のお話の題名も。単発は「おわり」だけ)
+        const storyEnding=!!event&&typeof STORY_ENDING_STYLE!=='undefined'&&STORY_ENDING_STYLE!=='none';
         // ゲスト(ジャック・ぱんぷきん)は、下の助手の列には入れない。初めて話す行(か stage で呼ばれる行)から、画面の上部の「ステージ」に出る
         //  (2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」)
         const isGuestWho=(id)=>{const w=assistantById(id);return !!w&&w.role==='ゲスト';};
@@ -96680,14 +97971,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ジャックが話しているあいだ、下の箱には直前の助手の台詞を薄く残す(流れが分かる)。まだ助手が話していなければ案内を出す
         const bottomLine=speakingGuest?(assistIdx>=0?script[assistIdx]:null):line;
         const bottomSpeaker=bottomLine?assistantById(bottomLine.who):speaker;
-        const fx=line.fx||null;
+        const fx=(storyZones&&storySub>0)?null:(line.fx||null);
         // ★お話の真ん中に出すモンスター(2026-10-27 社長「推しに会える夜」)。台本の行の monsters:[{ id, pose }] は、次に monsters を書いた行まで続く(monsters:[] で消す)。
         //   pose: in(ふわっと現れる)/idle(待機アニメ)/back(後ずさって揺れる)/front(前に出て大きくなる)/approach(下のソラシドの側へ寄る)/hop(跳ねる)/hide(出さない)。
         //   上のステージ(ゲストの顔)とは別の層。縦の画面はステージと下の窓のあいだ、横の低い画面は窓の左右の空きに出す(70-bootstrap.jsx の [data-story-monsters])
         let monstersIdx=-1;
         for(let i=step;i>=0;i--){if(Array.isArray(script[i].monsters)){monstersIdx=i;break;}}
         const storyMonsters=monstersIdx>=0?script[monstersIdx].monsters.filter(m=>m&&m.pose!=='hide'&&STORY_MONSTER_ART[m.id]):[];
-        const fxColors={transform:'255,237,180',rankup:['251,146,60','251,191,36','192,132,252','248,113,113','250,204,21'][Math.max(0,stageTier-1)],shrink:'186,230,253'};
+        const fxColors={split:'233,213,255',merge:'255,250,235',unlock:'253,230,138',transform:'255,237,180',rankup:['251,146,60','251,191,36','192,132,252','248,113,113','250,204,21'][Math.max(0,stageTier-1)],shrink:'186,230,253'};
         const speakText=(l,w)=>{
           // ★呼び方は normalizeAssistantBond には入っていない(別の入れ物 assistantCallStyles)。話している助手ごとのぶんを引く
           const bond=normalizeAssistantBond(assistantBonds[w.id]);
@@ -96695,6 +97986,40 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         };
         // 台詞の「\n」は、そこで改行する(2026-10-25。チーム名を3つ並べる台詞で「すばやく攻める／チーム」と名前の途中で折れた)。行ごとに jaWrap を通す
         const bubbleLines=(text)=>(typeof text==='string'&&text.includes('\n'))?text.split('\n').map((x,i)=><React.Fragment key={i}>{i>0&&<br/>}{bubbleWrap(x)}</React.Fragment>):bubbleWrap(text);
+        // 3つのゾーンのお話: 行ごとのページ(上部の吹き出し/下部の台詞の欄、それぞれ3行に収まるように分ける)。
+        //   1行の字数は画面の幅から見込む(縦: 窓の幅、横の低い画面: 窓は 28rem まで・吹き出しの字は 12px)。見込みは少し控えめにして、はみ出さないようにする
+        const storyLand=typeof window!=='undefined'&&window.innerWidth>window.innerHeight&&window.innerHeight<=500;
+        const storyBoxW=typeof window!=='undefined'?Math.min(window.innerWidth,448):390;
+        // 下部ゾーンは台詞の欄の左に話している助手の顔(縦 92px・横の低い画面は 0.6倍)があるので、そのぶん狭い
+        const storyCplBottom=Math.max(8,Math.floor((storyBoxW-64-(storyZones?(storyLand?62:100):0))/13)-(storyZones?4:2));
+        // 吹き出しは幅が狭く、言葉の切れ目で折ると行の終わりが空きやすいので、さらに控えめに見込む(縦の 390 幅で1行12字)
+        const storyCplBubble=Math.max(6,storyLand?Math.floor((storyBoxW-118)/12)-3:Math.floor((storyBoxW-156)/14)-4);
+        const storyPageCache=[];
+        const storyPagesOf=(i)=>{
+          if(storyPageCache[i]) return storyPageCache[i];
+          const l=script[i];
+          const w=l?assistantById(l.who):null;
+          const text=l&&w?speakText(l,w):'';
+          const pages=storyZones&&typeof storySplitPages==='function'?storySplitPages(text,isGuestWho(l&&l.who)?storyCplBubble:storyCplBottom,3):[text];
+          storyPageCache[i]=pages;
+          return pages;
+        };
+        const storyCurPages=storyPagesOf(step);
+        const storyCurSub=Math.min(storySub,storyCurPages.length-1);
+        // 3つのゾーンのお話: 分けた台詞の次のページがあるあいだは、「次へ」で行は進めずにページだけ送る(next)
+        const storyMore=storyZones&&storyCurSub<storyCurPages.length-1;
+        if(storyMore) last=false;
+        // 行 i に出す字。いま見ている行はそのページ、前の行(薄く残すぶん)は最後のページ
+        const storyTextAt=(i,w)=>{
+          if(!storyZones) return speakText(script[i],w);
+          const pages=storyPagesOf(i);
+          return i===step?pages[storyCurSub]:pages[pages.length-1];
+        };
+        let storyPageNo=step+1,storyPageTotal=script.length;
+        if(storyZones){
+          storyPageTotal=0;storyPageNo=storyCurSub+1;
+          for(let i=0;i<script.length;i++){const n=storyPagesOf(i).length;storyPageTotal+=n;if(i<step)storyPageNo+=n;}
+        }
         // 回想でも最後まで見たら「見たことがある」として扱う。
         // ももすけ登場を本編より先にここで見た人は、この時点でももすけが解放され、
         // あとから本編で同じ会話が重ねて流れることもなくなる
@@ -96703,7 +98028,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const next=()=>{
           const holdMs=Number(line.holdMs);
           if(Number.isFinite(holdMs)&&holdMs>0&&Date.now()-(Number(eventReplay.shownAt)||0)<holdMs) return;
-          if(!last){ setEventReplay(r=>r&&({...r,step:r.step+1,shownAt:Date.now()})); return; }
+          if(!last){ setEventReplay(r=>r&&({...r,shownAt:Date.now(),...(storyMore?{sub:storyCurSub+1}:{step:r.step+1,sub:0})})); return; }
+          // お話の締め: 続きもののお話は、最後のページのあとに終わりの札を出す(札の「閉じる」で、もう一度ここへ来て閉じる)
+          if(storyEnding&&!eventReplay.ending){ setEventReplay(r=>r&&({...r,ending:true,endingAt:Date.now()})); if(typeof Audio_!=='undefined'&&Audio_.setStoryEndFade) Audio_.setStoryEndFade(true); return; }
           if(event&&event.id==='momosuke_intro'&&!eventReplay.debug) markMomosukeIntroSeen();
           if(event&&event.id==='tactics_intro'&&!eventReplay.debug) markTacticsIntroSeen();
           // イベントの会話も、最後まで見たら「見た」にする(次の起動で重ねて流さない)
@@ -96759,7 +98086,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setEventReplay(null);
         };
         return(
-        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
+        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-step={step} data-story-zones={storyZones?(storyKeepRow?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
           {/* ★会話の紙は「タップを受け取る側」にしておく(2026-09-17・ユーザー報告
                 「イベント中のスキップを押してもスキップ出来ない／次のセリフへ進むだけ」)。
@@ -96781,11 +98108,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:speakingGuest?'#0f172a':stageGuest.accent,background:speakingGuest?stageGuest.accent:'rgba(15,23,42,.8)',transition:'background .2s, color .2s'}}>{stageName}</span>
                 </div>
                 {bubbleLine&&(
-                  <div key={`b${bubbleIdx}`} data-story-guest-bubble data-story-pop={speakingGuest?'1':undefined} className="relative min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2" style={{borderColor:stageGuest.accent,opacity:speakingGuest?1:.4,boxShadow:speakingGuest?`0 0 0 2px ${stageGuest.accent}55, 0 0 20px ${stageGuest.accent}88`:'none',marginTop:8,animation:speakingGuest?'storyPop .3s ease-out both':undefined}}>
+                  <div key={`b${bubbleIdx}${bubbleIdx===step?`-${storyCurSub}`:''}`} data-story-guest-bubble data-story-pop={speakingGuest?'1':undefined} className="relative min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2" style={{borderColor:stageGuest.accent,opacity:speakingGuest?1:.4,boxShadow:speakingGuest?`0 0 0 2px ${stageGuest.accent}55, 0 0 20px ${stageGuest.accent}88`:'none',marginTop:8,animation:speakingGuest?'storyPop .3s ease-out both':undefined}}>
                     {/* 話している人の顔を指すしっぽ */}
                     <span aria-hidden="true" style={{position:'absolute',left:-9,top:22,width:0,height:0,borderTop:'8px solid transparent',borderBottom:'8px solid transparent',borderRight:`9px solid ${stageGuest.accent}`}}/>
                     <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:stageGuest.accent}}>{bubbleLine.name||stageGuest.name}</span>
-                    <span className="mt-1 block text-[14px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleLines(speakText(bubbleLine,stageGuest))}</span>
+                    <span className="mt-1 block text-[14px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleLines(storyZones?storyTextAt(bubbleIdx,stageGuest):speakText(bubbleLine,stageGuest))}</span>
                   </div>
                 )}
               </div>
@@ -96796,7 +98123,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {storyMonsters.map(m=>{
                 const art=<img src={STORY_MONSTER_ART[m.id]} alt="" draggable={false} className="block h-full w-full object-contain"/>;
                 return(
-                  <span key={`${m.id}:${m.pose}`} data-story-monster={m.id} data-story-pose={m.pose}>
+                  <span key={`${m.id}:${m.pose}`} data-story-monster={m.id} data-story-pose={m.pose} data-story-fierce={m.fierce?'':undefined}>
                     {m.pose==='idle'?withMonsterIdleArt(m.id,art,{fill:true,own:true}):art}
                   </span>
                 );
@@ -96805,7 +98132,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           )}
           {fx&&(
             <div key={`fx${step}`} aria-hidden="true" className="pointer-events-none" style={{position:'absolute',inset:0,zIndex:4}}>
-              <div data-story-fx-flash={fx} style={{position:'absolute',inset:0,background:`radial-gradient(circle at 50% 22%, rgba(${fxColors[fx]||'255,255,255'},.95), rgba(${fxColors[fx]||'255,255,255'},.35) 45%, rgba(0,0,0,0) 75%)`,animation:'storyFlash 1s ease-out both'}}/>
+              <div data-story-fx-flash={fx} style={{position:'absolute',inset:0,background:`radial-gradient(circle at 50% ${fx==='split'||fx==='merge'||fx==='unlock'?'46%':'22%'}, rgba(${fxColors[fx]||'255,255,255'},.95), rgba(${fxColors[fx]||'255,255,255'},.35) 45%, rgba(0,0,0,0) 75%)`,animation:'storyFlash 1s ease-out both'}}/>
+              {/* パンドラが分かれる/戻るときの鍵穴の光(2026-11-02 イベント「鍵の向こう側へ」)。分かれるときは光の筋が放射状に走る */}
+              {(fx==='split'||fx==='merge'||fx==='unlock')&&<span data-story-keyhole/>}
+              {/* 鍵が回る(第7話)。金の輪が回って、鍵穴から光があふれる */}
+              {fx==='unlock'&&<span data-story-unlock><i/></span>}
+              {fx==='split'&&<span data-story-crack>{[-160,-118,-72,-28,14,58,104,142].map((deg,i)=><i key={deg} style={{transform:`rotate(${deg}deg)`,animationDelay:`${i%3*40}ms`}}/>)}</span>}
               {line.fxText&&<div data-story-banner className="px-4 text-center text-[17px] font-black" style={{position:'absolute',top:'42%',left:'50%',width:'100%',maxWidth:'28rem',color:'#fff',textShadow:`0 0 14px rgba(${fxColors[fx]||'255,255,255'},1), 0 2px 0 rgba(0,0,0,.6)`,animation:'storyBanner 2.2s ease-out both'}}>{line.fxText}</div>}
             </div>
           )}
@@ -96818,36 +98150,109 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 (2026-10-23 社長「枠からはみ出してる。縦のスペース空いてるんだから2列にするとかしてちゃんと見た目よくして」。
                 きゅうこの加入のお話は7人で、話している子が大きくなると左右の端が枠の外へ切れていた)。
                 ★1人ぶんの枠は話している子の大きさで固定し、大きくなっても段の幅も高さも変わらない(端の子でもはみ出さない) */}
-            {(()=>{const many=cast.length>4;const big=many?60:84,small=many?48:64;return(
-            <div data-story-cast={cast.length} className={`mb-3 flex items-end justify-center ${many?'flex-wrap gap-x-1 gap-y-1.5':'gap-3'}`}>
-              {cast.map(who=>{
+            {/* 真ん中にモンスターが出ている行は、顔の列を1段・小さめにして、モンスターの置き場を空ける
+                (2026-11-02 社長「立ち絵が小さすぎる」。iPhone の縦では顔の列が2段で窓が高くなり、パンドラが背丈50px ほどに縮んでいた) */}
+            {/* 3つのゾーンのお話は、話している助手の顔を台詞の欄の左に置く(下の data-story-speaker-row)。顔の列は出さないか(STORY_BOTTOM_KEEP_ROW が false)、
+                小さく1行で残す(true)。2026-11-03 社長「上部と同じように、下部を喋る人を下部横において」 */}
+            {(()=>{if(storyZones&&!storyKeepRow)return null;const tiny=storyZones;
+              // 小さい顔の列には、その場面にいる人だけを並べる(2026-11-03 社長「いない人は出さない」「あとから現れる人は、現れたときまで出さない」)。
+              //   そのページまでに一度でも話した人。最初からいるのにしばらく話さない人は、その話の castAtStart に書けば1ページ目から並ぶ
+              const atStart=Array.isArray(event&&event.castAtStart)?event.castAtStart:[];
+              const rowCast=tiny?cast.filter(who=>atStart.includes(who.id)||script.slice(0,step+1).some(l=>l&&l.who===who.id)):cast;
+              if(tiny&&rowCast.length===0)return <div data-story-cast-tiny-empty style={{height:28,marginBottom:6}}/>;const compact=!tiny&&storyMonsters.length>0;const many=!compact&&!tiny&&cast.length>4;const big=tiny?28:compact?44:many?60:84,small=tiny?24:compact?36:many?48:64;return(
+            <div data-story-cast={cast.length} data-story-cast-compact={compact||tiny?'':undefined} data-story-cast-tiny={tiny?'':undefined} className={`${tiny?'mb-1.5 flex-nowrap gap-1':compact?'mb-2 flex-nowrap gap-1.5':'mb-3'} flex items-end justify-center ${many?'flex-wrap gap-x-1 gap-y-1.5':compact||tiny?'':'gap-3'}`}>
+              {rowCast.map(who=>{
                 const talking=!speakingGuest&&who.id===line.who;
                 return(
-                  <div key={who.id} data-story-cast-member={who.id} className={`flex min-w-0 flex-col items-center justify-end gap-1 ${talking?'':'opacity-35'}`} style={{width:many?'calc(25% - 4px)':undefined,height:many?big+16:undefined,transform:talking||many?'scale(1)':'scale(.86)',transition:'opacity .18s, transform .18s'}}>
-                    <span style={{display:'block',filter:talking?`drop-shadow(0 0 10px ${who.accent})`:'none',transition:'filter .2s'}}><AssistantFace who={who} size={talking?big:small} accent={who.accent} expression={talking?line.e:'normal'}/></span>
-                    <span className="max-w-full truncate text-[9px] font-black leading-none" style={{color:talking?who.accent:'#64748b'}}>{talking&&line.name?line.name:who.name}</span>
+                  <div key={who.id} data-story-cast-member={who.id} className={`flex min-w-0 flex-col items-center justify-end gap-1 ${talking?'':'opacity-35'}`} style={{width:many?'calc(25% - 4px)':undefined,height:tiny?big:many||compact?big+16:undefined,transform:talking||many||compact||tiny?'scale(1)':'scale(.86)',transition:'opacity .18s, transform .18s'}}>
+                    {/* 小さい顔の列(tiny)では光らせない。話している子は横の大きい顔が光るので、ここは明るさだけで分ける */}
+                    <span style={{display:'block',filter:talking&&!tiny?`drop-shadow(0 0 10px ${who.accent})`:'none',transition:'filter .2s'}}><AssistantFace who={who} size={talking?big:small} accent={who.accent} expression={talking?line.e:'normal'}/></span>
+                    {!tiny&&<span className="max-w-full truncate text-[9px] font-black leading-none" style={{color:talking?who.accent:'#64748b'}}>{talking&&line.name?line.name:who.name}</span>}
                   </div>
                 );
               })}
             </div>);})()}
-            {bottomLine?<div key={speakingGuest?'keep':`x${step}`} data-story-pop={speakingGuest?undefined:'1'} className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:bottomSpeaker.accent,opacity:speakingGuest?.4:1,boxShadow:speakingGuest?'none':`0 0 16px ${bottomSpeaker.accent}55`,transition:'opacity .18s',animation:speakingGuest?undefined:'storyPop .28s ease-out both'}}>
+            {/* 3つのゾーンのお話では、台詞の欄は3行ぶんの高さで固定(70-bootstrap.jsx の [data-story-zones] [data-story-line-box])。
+                台詞の長さで窓の高さが変わり、モンスターの大きさが行ごとに伸び縮みしていた(2026-11-02 社長「文字量によってサイズが変動してる」)。
+                収まらない台詞は、上の storyPagesOf でページに分ける */}
+            <div data-story-speaker-row={storyZones?'':undefined} className={storyZones?'flex items-start gap-2':undefined}>
+            {/* 話している助手の顔(上部ゾーンのゲストと同じ大きさ・名前の札は顔の下)。ゲストが話しているあいだは、直前の助手を暗く残す */}
+            {storyZones&&bottomLine&&<div key={`face-${bottomSpeaker.id}`} data-story-speaker={bottomSpeaker.id} className="shrink-0 text-center">
+              <span style={{display:'block',opacity:speakingGuest?.55:1,filter:speakingGuest?'brightness(.7)':`drop-shadow(0 0 10px ${bottomSpeaker.accent})`,transition:'opacity .2s, filter .2s'}}><AssistantFace who={bottomSpeaker} size={92} accent={bottomSpeaker.accent} expression={!speakingGuest&&bottomLine===line?line.e:'normal'}/></span>
+              <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:speakingGuest?bottomSpeaker.accent:'#0f172a',background:speakingGuest?'rgba(15,23,42,.8)':bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
+            </div>}
+            {bottomLine?<div key={speakingGuest?'keep':`x${step}-${storyCurSub}`} data-story-pop={speakingGuest?undefined:'1'} className={`rounded-2xl border-2 bg-slate-900 px-3 py-3${storyZones?' min-w-0 flex-1':''}`} data-story-line-box style={{borderColor:bottomSpeaker.accent,opacity:speakingGuest?.4:1,boxShadow:speakingGuest?'none':`0 0 16px ${bottomSpeaker.accent}55`,transition:'opacity .18s',animation:speakingGuest?undefined:'storyPop .28s ease-out both'}}>
               <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
               {/* ★{name} は、そのとき話している助手の呼び方へ置き換える。
                   ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた
                   (2026-09-11・ユーザー指摘「名前呼びのとこが変換されてない」)。
                   呼び方も絆Lvも助手ごとに違うので、選んでいる助手ではなく「話している助手」から引く */}
-              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={bubbleWrapStyle()}>{bubbleLines(speakText(bottomLine,bottomSpeaker))}</span>
-            </div>:<div className="rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400">▲ 上のことばを読んでね</div>}
+              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={bubbleWrapStyle()}>{bubbleLines(storyZones?storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker):speakText(bottomLine,bottomSpeaker))}</span>
+            </div>:<div data-story-line-box className={`flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400${storyZones?' min-w-0 flex-1':''}`}>▲ 上のことばを読んでね</div>}
+            </div>
             <p className="mt-2 text-center text-[11px] font-bold tabular-nums text-slate-300">
-              {step+1} / {script.length}
+              {storyPageNo} / {storyPageTotal}
               {/* 「○○は「…」と呼び合います」の案内は出さない(2026-10-22 社長「ストーリー上に出さないでほしい」)。呼び方の表(EVENT_REPLAYS の calls)は台本を書く人の控えとしてデータに残す */}
             </p>
             </div>
             <div data-story-buttons className={`relative mt-3 grid shrink-0 ${last?'grid-cols-1':'grid-cols-[1fr_2fr]'} gap-2`} style={{pointerEvents:'auto',zIndex:2}}>
               {!last&&<button type="button" onClick={(e)=>{e.stopPropagation();skip();}} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]">スキップ</button>}
-              <button type="button" onClick={(e)=>{e.stopPropagation();next();}} className="min-h-[50px] rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]">{last?'閉じる':'次へ'}</button>
+              <button type="button" onClick={(e)=>{e.stopPropagation();next();}} className="min-h-[50px] rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]">{last&&!(storyEnding&&!eventReplay.ending)?'閉じる':'次へ'}</button>
             </div>
           </div>
+          {/* お話の締め(終わりの札)。題字のように「第◯話 ～副題～ おわり」を出し、音はゆっくり小さくする。
+              'next'・'pull' は、次のお話の予告(題と公開の時刻)と、次にやることのボタン(本編で流したときだけ)も出す。最終話は「おしまい」と、全話を見た印 */}
+          {eventReplay.ending&&(()=>{
+            const parts=storyEpisodeTitleParts(event?.title);
+            const pull=STORY_ENDING_STYLE==='pull';
+            const rich=STORY_ENDING_STYLE!=='card';
+            const delay=pull?1.1:0;
+            // 次のお話: 続きもの(第◯話・第◯部)なら、同じまとまり(group)の続きものを日付順に並べた次。「終章」は最後なので出さない。単発は出さない
+            const allEv=(typeof EVENT_REPLAYS!=='undefined'?EVENT_REPLAYS:[]).filter(ev=>ev&&ev.id&&ev.title);
+            const series=parts.serial?allEv.filter(ev=>ev.group===event.group&&storyEpisodeTitleParts(ev.title).serial&&storyEpisodeTitleParts(ev.title).series===parts.series)
+              .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))):[];
+            const nextEv=parts.serial&&!parts.final?(series[series.findIndex(ev=>ev.id===event.id)+1]||null):null;
+            const nextParts=nextEv?storyEpisodeTitleParts(nextEv.title):null;
+            // 次が「終章」で、結果で分かれる(終章が2つある)ときは、副題を出さない(どちらになるかを先に見せない)
+            if(nextParts&&nextParts.final&&series.filter(ev=>storyEpisodeTitleParts(ev.title).final).length>1) nextParts.sub='';
+            const nextAt=nextEv?storyJstMs(nextEv.date):NaN;
+            const now=Date.now();
+            const jst=Number.isFinite(nextAt)?new Date(nextAt+9*3600*1000):null;
+            const when=jst?`${jst.getUTCMonth()+1}/${jst.getUTCDate()}(${'日月火水木金土'[jst.getUTCDay()]}) ${jst.getUTCHours()}:${String(jst.getUTCMinutes()).padStart(2,'0')}`:'';
+            const left=Number.isFinite(nextAt)&&nextAt>now?nextAt-now:0;
+            const leftText=left>0?(left>=3600000?`あと${Math.floor(left/3600000)}時間${Math.floor(left%3600000/60000)}分`:`あと${Math.max(1,Math.ceil(left/60000))}分`):'';
+            // 全話を見た印は、続きものの最後(終章)だけ。結果で分かれるエンディング(終章が2つ)は、どちらか片方でよい
+            const groupIds=series.filter(ev=>!storyEpisodeTitleParts(ev.title).final).map(ev=>ev.id);
+            const seenNow=normalizeRhythmEventRewardClaims(rhythmEventStorySeen);
+            const allSeen=parts.final&&groupIds.length>1&&groupIds.every(id=>id===event.id||seenNow.includes(id));
+            // 全◯話: 終章までを数える(結果で分かれる終章は1つと数える)。「第◯部」で数えるお話は「部」
+            const allCount=groupIds.length+1;
+            const allUnit=/部/.test(parts.ep)||series.some(ev=>/第[\d.]+部/.test(ev.title))?'部':'話';
+            const canClose=()=>Date.now()-(Number(eventReplay.endingAt)||0)>(delay+1.2)*1000;
+            const go=(fn)=>(e)=>{e.stopPropagation();next();fn();};
+            return(
+            <div data-story-ending={STORY_ENDING_STYLE} onClick={(e)=>{e.stopPropagation();if(canClose())next();}}
+              style={{position:'absolute',inset:0,zIndex:20,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'auto',animation:`storyEndDim .9s ease-out ${delay}s both`}}>
+              <div className="w-full max-w-sm px-6 text-center">
+                <p className="text-[12px] font-black tracking-[.3em] text-fuchsia-200/80" style={{animation:`storyEndCard 1s ease-out ${delay+.2}s both`}}>{parts.series}</p>
+                <p className="mt-2 text-[30px] font-black leading-tight text-white" style={{animation:`storyEndCard 1s ease-out ${delay+.35}s both`,textShadow:'0 0 18px rgba(192,132,252,.8)'}}>{parts.ep}</p>
+                {parts.sub&&<p className="mt-1 text-[16px] font-black text-fuchsia-100" style={{animation:`storyEndCard 1s ease-out ${delay+.5}s both`}}>{parts.sub}</p>}
+                <p data-story-ending-fin className="mt-5 text-[38px] font-black tracking-[.4em]" style={{animation:`storyEndFin 1.4s ease-out ${delay+.9}s both`,background:'linear-gradient(180deg,#fde68a,#f0abfc)',WebkitBackgroundClip:'text',backgroundClip:'text',color:'transparent'}}>{parts.final?'おしまい':'おわり'}</p>
+                {rich&&nextEv&&<div data-story-ending-next className="mx-auto mt-5 rounded-2xl border border-fuchsia-300/40 bg-slate-900/80 px-3 py-2" style={{animation:`storyEndCard 1s ease-out ${delay+1.5}s both`}}>
+                  <p className="text-[11px] font-black text-fuchsia-200">次のお話</p>
+                  <p className="text-[14px] font-black text-white">{nextParts.series&&nextParts.series!==parts.series?`${nextParts.series} `:''}{nextParts.ep} {nextParts.sub}</p>
+                  {/* 残り時間は本編(HOME で流れたとき)だけ。回想では題名だけ(2026-11-03 社長) */}
+                  {eventReplay.live&&<p className="text-[12px] font-bold text-slate-300">{left>0?<>{when} から <b className="text-amber-200">{leftText}</b></>:'もう見られます(プロフィールの「イベント回想」)'}</p>}
+                </div>}
+                {rich&&!nextEv&&allSeen&&<p data-story-ending-all className="mx-auto mt-4 inline-block rounded-full border border-amber-300/60 bg-amber-500/15 px-4 py-1 text-[13px] font-black text-amber-100" style={{animation:`storyEndCard 1s ease-out ${delay+1.5}s both`}}>🔑 全{allCount}{allUnit} ぜんぶ見た！</p>}
+                {rich&&eventReplay.live&&!eventReplay.debug&&/^pandora_wings_/.test(event.id)&&<div data-story-ending-actions className="mt-4 grid grid-cols-2 gap-2" style={{animation:`storyEndCard 1s ease-out ${delay+1.8}s both`}}>
+                  <button type="button" onClick={go(()=>setGameState('RHYTHM_DEMO_HOME'))} className="min-h-[48px] rounded-2xl bg-fuchsia-500 text-[13px] font-black text-slate-950 active:scale-[.98]">🎵 イベントの曲を遊ぶ</button>
+                  <button type="button" onClick={go(()=>{setRhythmRankingTab('event');loadRhythmEventRanking('limited',rhythmEventDivision.limited);setGameState('RHYTHM_RANKING');})} className="min-h-[48px] rounded-2xl border border-fuchsia-300/60 bg-slate-900 text-[13px] font-black text-fuchsia-100 active:scale-[.98]">🏆 ランキングを見る</button>
+                </div>}
+                <button type="button" data-story-ending-close onClick={(e)=>{e.stopPropagation();next();}} className="mt-4 min-h-[48px] w-full rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]" style={{animation:`storyEndCard 1s ease-out ${delay+(rich?2:1.4)}s both`}}>閉じる</button>
+              </div>
+            </div>);
+          })()}
         </div>);
       })()}
 
@@ -99594,7 +100999,8 @@ const createAnimationStyle = () => {
       background:radial-gradient(circle,#fff 0 20%,#fde047 45%,#f59e0b);
       clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); }
     .skfx-p--flame { width:14px; height:20px; margin:-10px 0 0 -7px; border-radius:50% 50% 50% 50% / 65% 65% 35% 35%;
-      background:radial-gradient(circle at 50% 70%,#fff 0 15%,#bef264 35%,#65a30d 70%,rgba(101,163,13,0)); box-shadow:0 0 10px #84cc16; }
+      background:radial-gradient(circle at 50% 70%,#fff 0 14%,var(--c1,#fde68a) 32%,var(--c2,#f97316) 66%,rgba(0,0,0,0)); box-shadow:0 0 10px var(--c2,#f97316); }
+    /* ↑ 炎は技の色(--c1・--c2)で塗る(2026-11-04 まで黄緑に固定されていて、火炎車・神狐蒼火などの炎が黄緑に見えていた) */
     .skfx-p--leaf { width:16px; height:9px; margin:-4px 0 0 -8px; border-radius:0 100% 0 100%;
       background:linear-gradient(135deg,#bbf7d0,#22c55e 60%,#15803d); box-shadow:0 0 6px rgba(34,197,94,.8); }
     .skfx-p--rice { width:6px; height:10px; margin:-5px 0 0 -3px; border-radius:50%; background:#fffdf5; box-shadow:0 0 4px #fde68a; }
@@ -100217,6 +101623,8 @@ const createAnimationStyle = () => {
     .fin-shape--drop { width:10px; height:16px; border-radius:50% 50% 50% 50% / 70% 70% 30% 30%; background:linear-gradient(180deg, #fff, var(--spm-c1) 50%, var(--spm-c2)); }
     .fin-shape--leaf { width:18px; height:10px; border-radius:90% 0 90% 0; background:linear-gradient(135deg, #bbf7d0, #16a34a); box-shadow:0 0 6px #22c55e; }
     .fin-shape--flame { width:16px; height:22px; border-radius:50% 50% 50% 50% / 70% 70% 30% 30%; background:radial-gradient(ellipse at 50% 80%, #fff 0 14%, #fde047 36%, #f97316 62%, rgba(220,38,38,0)); box-shadow:0 0 8px #f97316; }
+    /* 技の色で塗る固有技(青い狐火など・24 の tint)では、着弾で散る炎も技の色に */
+    [data-impact-tint] .fin-shape--flame { background:radial-gradient(ellipse at 50% 80%, #fff 0 14%, var(--spm-c1) 36%, var(--spm-c2) 62%, rgba(0,0,0,0)); box-shadow:0 0 8px var(--spm-c2); }
     .fin-shape--note { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
     .fin-shape--note::before { content:'♪'; }
     .fin-shape--heart { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
@@ -100647,12 +102055,14 @@ const createAnimationStyle = () => {
     @keyframes mhUwTabOpen{0%{filter:brightness(.4) grayscale(1);transform:scale(.96)}55%{filter:brightness(.6) grayscale(.6);transform:scale(.96) translateX(-1px)}62%{transform:scale(.96) translateX(2px)}70%{filter:brightness(2.2);transform:scale(1.06)}100%{filter:none;transform:scale(1)}}
     @keyframes mhUwTabGlow{0%,100%{box-shadow:0 0 6px rgba(165,243,252,.35)}50%{box-shadow:0 0 18px rgba(165,243,252,.9),0 0 10px rgba(249,115,22,.6)}}
     @keyframes mhUwNew{0%{opacity:0;transform:scale(2)}100%{opacity:1;transform:scale(1)}}
-    /* カードの枠: INFERNO は燃える橙、COCYTUS は氷の水色。右上に「🛡×3〜5」(data-shield-layers の文字をそのまま出す) */
+    /* カードの枠: INFERNO は燃える橙、EREBUS は冥界の闇の赤紫(2026-11-04 社長「案1」)、COCYTUS は氷の水色。右上に「🛡×3〜5」(data-shield-layers の文字をそのまま出す) */
     [data-underworld-card]{position:relative}
     [data-underworld-card="INFERNO"]{box-shadow:0 0 0 2px #fb923c,0 0 22px rgba(249,115,22,.65) !important}
+    [data-underworld-card="EREBUS"]{box-shadow:0 0 0 2px #f9a8d4,0 0 22px rgba(219,39,119,.7) !important}
     [data-underworld-card="COCYTUS"]{box-shadow:0 0 0 2px #a5f3fc,0 0 22px rgba(34,211,238,.6) !important}
     [data-underworld-card][data-shield-layers]::after{content:"🛡×" attr(data-shield-layers);position:absolute;top:30px;right:10px;left:auto;bottom:auto;width:auto;height:auto;white-space:nowrap;z-index:30;font-style:normal;padding:2px 8px;border-radius:999px;font:900 11px/1.3 sans-serif;color:#fff;pointer-events:none}
     [data-underworld-card="INFERNO"][data-shield-layers]::after{background:linear-gradient(90deg,#7f1d1d,#ea580c) !important;box-shadow:0 0 10px rgba(249,115,22,.8) !important;opacity:1 !important;filter:none !important}
+    [data-underworld-card="EREBUS"][data-shield-layers]::after{background:linear-gradient(90deg,#500724,#db2777) !important;box-shadow:0 0 10px rgba(219,39,119,.8) !important;opacity:1 !important;filter:none !important}
     [data-underworld-card="COCYTUS"][data-shield-layers]::after{background:linear-gradient(90deg,#164e63,#0891b2) !important;box-shadow:0 0 10px rgba(34,211,238,.8) !important;opacity:1 !important;filter:none !important}
     /* 横向きはカードが2列になり、右の説明の欄の下に隠れるので札は出さない(説明の文にシールドの枚数がある) */
     @media (orientation:landscape) and (max-height:520px){[data-underworld-card][data-shield-layers]::after{display:none}}
@@ -101249,6 +102659,42 @@ const createAnimationStyle = () => {
     [data-story-pose="front"] { animation: storyMonFront .5s ease-out both; }
     [data-story-pose="approach"] { animation: storyMonApproach .8s ease-out both; }
     [data-story-pose="hop"] { animation: storyMonHop 1.1s ease-out both; }
+    /* イベント「鍵の向こう側へ」(2026-11-02)のパンドラ。
+       peek … 箱のすきまから影がのぞく(ふっと出て、少し沈んだまま)。
+       splitL / splitR … 体のまんなか(鍵穴)で光がはじけたあと、悪魔側(左)と天使側(右)が左右へはじかれて離れ、それぞれの色の光をまとって揺れる。
+       mergeL / mergeR … 左右から寄って重なる(重なった所で鍵穴の光が強く光り、次の行で1つの立ち絵に戻る)。
+       fierce を付けると(第5話)離れ方と揺れが激しくなる */
+    [data-story-pose="peek"] { animation: storyMonPeek 1.2s ease-out both; filter: drop-shadow(0 0 2px rgba(233,213,255,.9)) drop-shadow(0 0 12px rgba(168,85,247,.85)); }
+    [data-story-pose="splitL"] { animation: storySplitL 1.1s cubic-bezier(.2,.9,.25,1.2) both, storySplitSway 2.6s ease-in-out 1.1s infinite; filter: drop-shadow(0 0 14px rgba(168,85,247,.95)) drop-shadow(0 0 4px rgba(88,28,135,.9)); }
+    [data-story-pose="splitR"] { animation: storySplitR 1.1s cubic-bezier(.2,.9,.25,1.2) both, storySplitSway 2.6s ease-in-out 1.4s infinite; filter: drop-shadow(0 0 14px rgba(255,255,255,.95)) drop-shadow(0 0 4px rgba(253,224,71,.8)); }
+    [data-story-pose="splitL"][data-story-fierce] { animation: storySplitL .7s cubic-bezier(.2,1.2,.3,1.4) both, storySplitShake .5s ease-in-out .7s 3, storySplitSway 2s ease-in-out 2.2s infinite; }
+    [data-story-pose="splitR"][data-story-fierce] { animation: storySplitR .7s cubic-bezier(.2,1.2,.3,1.4) both, storySplitShake .5s ease-in-out .75s 3, storySplitSway 2s ease-in-out 2.3s infinite; }
+    /* 戻るときは 悪魔側・天使側 の2つが真ん中へ寄って消え、同時に真ん中(重ねて置いた merged)のパンドラが光の中から現れる */
+    [data-story-pose="mergeL"] { animation: storyMergeL 1.3s ease-in both; filter: drop-shadow(0 0 14px rgba(168,85,247,.95)); }
+    [data-story-pose="mergeR"] { animation: storyMergeR 1.3s ease-in both; filter: drop-shadow(0 0 14px rgba(255,255,255,.95)); }
+    [data-story-pose="merged"] { position: absolute; left: 50%; bottom: 0; translate: -50% 0; animation: storyMerged 1.8s ease-out both; }
+    [data-story-monster^="Pandora"] { height: min(calc(100% / 1.14), 44vw, 250px); }
+    @keyframes storyMonPeek { 0% { opacity: 0; transform: translateY(18%) scale(.9); } 35% { opacity: .95; transform: translateY(4%); } 100% { opacity: .8; transform: translateY(6%); } }
+    @keyframes storySplitL { 0% { opacity: 0; transform: translateX(52%) scale(.9); filter: brightness(2.6); } 25% { opacity: 1; transform: translateX(46%) scale(1.04); } 100% { transform: translateX(-6%) rotate(-3deg); } }
+    @keyframes storySplitR { 0% { opacity: 0; transform: translateX(-52%) scale(.9); filter: brightness(2.6); } 25% { opacity: 1; transform: translateX(-46%) scale(1.04); } 100% { transform: translateX(6%) rotate(3deg); } }
+    @keyframes storySplitSway { 0%, 100% { translate: 0 0; } 50% { translate: 0 -4%; } }
+    @keyframes storySplitShake { 0%, 100% { translate: 0 0; } 25% { translate: -5% 1%; } 75% { translate: 5% -1%; } }
+    @keyframes storyMergeL { 0% { transform: translateX(-6%); } 70% { opacity: 1; transform: translateX(52%) scale(1.02); filter: brightness(1.6); } 100% { opacity: 0; transform: translateX(52%); filter: brightness(3); } }
+    @keyframes storyMergeR { 0% { transform: translateX(6%); } 70% { opacity: 1; transform: translateX(-52%) scale(1.02); filter: brightness(1.6); } 100% { opacity: 0; transform: translateX(-52%); filter: brightness(3); } }
+    @keyframes storyMerged { 0%, 62% { opacity: 0; transform: scale(.92); filter: brightness(3); } 80% { opacity: 1; transform: scale(1.06); filter: brightness(1.8); } 100% { opacity: 1; transform: none; filter: none; } }
+    /* 鍵穴の光(fx:'split' / 'merge')。白と紫の光が真ん中から走り、画面にひびのような光の筋が広がる */
+    [data-story-crack] { position: absolute; left: 50%; top: 46%; width: 0; height: 0; }
+    [data-story-crack] > i { position: absolute; left: 0; top: 0; width: 46vmax; height: 3px; transform-origin: 0 50%; border-radius: 3px; background: linear-gradient(90deg, rgba(255,255,255,1), rgba(216,180,254,.9) 40%, rgba(168,85,247,0)); box-shadow: 0 0 10px rgba(216,180,254,.9); animation: storyCrack .9s ease-out both; }
+    [data-story-crack] > i:nth-child(even) { background: linear-gradient(90deg, rgba(255,255,255,1), rgba(254,240,138,.9) 40%, rgba(255,255,255,0)); box-shadow: 0 0 10px rgba(255,255,255,.9); }
+    [data-story-keyhole] { position: absolute; left: 50%; top: 46%; width: 34vmin; height: 34vmin; margin: -17vmin 0 0 -17vmin; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,1) 0 12%, rgba(233,213,255,.85) 26%, rgba(147,51,234,.45) 48%, rgba(0,0,0,0) 70%); animation: storyKeyhole 1.1s ease-out both; }
+    [data-story-unlock] { position: absolute; left: 50%; top: 46%; width: 30vmin; height: 30vmin; margin: -15vmin 0 0 -15vmin; border-radius: 50%; border: 4px solid rgba(253,224,71,.95); box-shadow: 0 0 18px rgba(253,224,71,.9), inset 0 0 14px rgba(255,255,255,.8); animation: storyUnlock 1.6s ease-out both; }
+    [data-story-unlock] > i { position: absolute; left: 50%; top: -8%; width: 14%; height: 30%; margin-left: -7%; border-radius: 40% 40% 20% 20%; background: rgba(253,224,71,1); box-shadow: 0 0 10px rgba(253,224,71,1); }
+    @keyframes storyUnlock { 0% { opacity: 0; transform: scale(.4) rotate(0deg); } 20% { opacity: 1; transform: scale(1) rotate(0deg); } 65% { opacity: 1; transform: scale(1) rotate(90deg); } 100% { opacity: 0; transform: scale(2.4) rotate(90deg); } }
+    @keyframes storyCrack { 0% { opacity: 0; scale: 0 1; } 20% { opacity: 1; } 55% { opacity: 1; scale: 1 1; } 100% { opacity: 0; scale: 1 .4; } }
+    @keyframes storyKeyhole { 0% { opacity: 0; transform: scale(.2); } 25% { opacity: 1; transform: scale(1.15); } 100% { opacity: 0; transform: scale(2.2); } }
+    /* 動きを減らす設定・軽量モードでは、光の筋は出さず、光だけを短く控えめに */
+    @media (prefers-reduced-motion: reduce) { [data-story-crack] { display: none; } [data-story-keyhole] { animation-duration: .5s; opacity: .5; } }
+    [data-lightweight="true"] [data-story-crack] { display: none; }
     @keyframes storyMonIn { 0% { opacity: 0; transform: translateY(14px) scale(.85); } 100% { opacity: 1; transform: none; } }
     @keyframes storyMonBack { 0% { transform: none; } 30% { transform: translateY(-8%) scale(.86); } 45% { transform: translate(-4%, -8%) scale(.86); } 60% { transform: translate(4%, -8%) scale(.86); } 75% { transform: translate(-2%, -8%) scale(.86); } 100% { transform: translateY(-8%) scale(.86); } }
     @keyframes storyMonFront { 0% { transform: none; } 100% { transform: scale(1.14); } }
@@ -101260,7 +102706,39 @@ const createAnimationStyle = () => {
       [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 8px) !important; bottom: calc(env(safe-area-inset-bottom) + 8px); align-items: center; justify-content: space-between; gap: 0; padding: 0 14px; }
       [data-story-monster] { height: min(70%, calc(((100vw - 28rem) / 2 - 30px) / 1.14), 176px); }
     }
+    /* 3つのゾーン(上部=ステージ/立ち絵=モンスター/下部=窓)を固定する形(2026-11-02 社長「立ち絵ゾーン固定したほうがいいよ」「上部ゾーン/立ち絵/下部ゾーンで」)。
+       真ん中にモンスターが出るお話([data-story-zones]・60-app.jsx)だけ。高さは台詞の長さ・顔の数で変えない。
+       縦: 上部ゾーン = 上の端から 10px + ステージ(顔 96px・吹き出し 3行ぶん 116px)。下部ゾーン = 窓 336px(+下の安全域)。立ち絵ゾーン = そのあいだ(上の端から 150px 〜 窓の 8px 上)。
+       収まらない台詞は窓を伸ばさず、ページに分けて「次へ」で送る(60-app.jsx の storyPagesOf) */
+    @media (orientation: portrait), (min-height: 501px) {
+      [data-event-story][data-story-zones] [data-story-stage][data-story-stage] { top: calc(env(safe-area-inset-top) + 10px) !important; }
+      [data-event-story][data-story-zones] [data-story-guest-bubble] { height: 116px; overflow: hidden; }
+      /* 下部ゾーンの高さ: 話している助手の顔を台詞の欄の左に置く形(face)は 266px、小さい顔の列も残す形(facerow)は 300px(2026-11-03) */
+      [data-event-story][data-story-zones] { --story-bottom-h: 266px; }
+      [data-event-story][data-story-zones="facerow"] { --story-bottom-h: 300px; }
+      [data-event-story][data-story-zones] [data-story-sheet][data-story-sheet] { height: calc(var(--story-bottom-h) + env(safe-area-inset-bottom)); max-height: none; justify-content: flex-end; }
+      [data-event-story][data-story-zones] [data-story-line-box] { height: 120px; flex-shrink: 0; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 150px) !important; bottom: calc(var(--story-bottom-h) + env(safe-area-inset-bottom) + 8px); align-items: center; }
+      [data-event-story][data-story-zones] [data-story-monster] { height: min(calc(100% / 1.14), 50vw, 230px); }
+      [data-event-story][data-story-zones] [data-story-monsters="2"] [data-story-monster] { height: min(calc(100% / 1.14), 44vw, 210px); }
+    }
+    /* 横の低い画面: 上部ゾーン = 上の端から 6px + ステージ(顔は 0.6倍・吹き出し 3行ぶん 84px)。下部ゾーン = その下ぜんぶ(窓の高さを固定)。
+       モンスターは窓の左右の空き(上の横向きの決まりのまま) */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-event-story][data-story-zones] [data-story-guest-bubble] { height: 84px; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-sheet][data-story-sheet] { height: calc(var(--mh-vh) - 96px - env(safe-area-inset-top)) !important; max-height: none !important; justify-content: flex-end; }
+      [data-event-story][data-story-zones] [data-story-line-box] { height: 120px; flex-shrink: 0; overflow: hidden; }
+      /* 話している助手の顔も、上部ゾーンのゲストの顔と同じく 0.6倍 */
+      [data-event-story][data-story-zones] [data-story-speaker] { zoom: .6; }
+    }
     @media (prefers-reduced-motion: reduce) { [data-story-monster] { animation: none !important; } }
+    /* お話の締め(終わりの札。2026-11-03)。暗くして、題字のように「第◯話 ～副題～ おわり」を出す。'pull' は最後の場面を引いて暗くしてから */
+    @keyframes storyEndDim { 0% { background: rgba(2,6,23,0); } 100% { background: rgba(2,6,23,.9); } }
+    @keyframes storyEndCard { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: none; } }
+    @keyframes storyEndFin { 0% { opacity: 0; transform: scale(1.35); filter: blur(8px); letter-spacing: .9em; } 100% { opacity: 1; transform: none; filter: none; } }
+    [data-event-story] > :not([data-story-ending]) { transition: transform 1.6s ease-out, filter 1.6s ease-out; }
+    [data-event-story][data-story-ending-pull] > :not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
+    @media (prefers-reduced-motion: reduce) { [data-story-ending] *, [data-story-ending] { animation-duration: .01s !important; animation-delay: 0s !important; } }
     @keyframes storyShrink { 0% { opacity: 0; transform: scale(1.7); filter: brightness(1.9); } 50% { opacity: 1; } 100% { transform: scale(1); filter: brightness(1); } }
     @keyframes storyBanner { 0% { opacity: 0; transform: translate(-50%, -8px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.06); } 22% { transform: translate(-50%, 0) scale(1); } 82% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, 0) scale(1); } }
     @keyframes storyShakeA { 0%, 100% { transform: translate(0,0); } 12% { transform: translate(-6px,3px); } 24% { transform: translate(6px,-4px); } 36% { transform: translate(-5px,-3px); } 48% { transform: translate(5px,3px); } 62% { transform: translate(-3px,2px); } 78% { transform: translate(3px,-2px); } }
@@ -102358,6 +103836,8 @@ const createAnimationStyle = () => {
     @keyframes mhCardCutin { 0% { opacity: 0; transform: translateX(40%); } 100% { opacity: 1; transform: translateX(0); } }
     @media (prefers-reduced-motion: reduce) { .mh-card-cutin { animation: none; } }
     .mh-card-hit-flash { position: absolute; inset: 0; border-radius: 12px; background: rgba(255,255,255,.85); pointer-events: none; animation: mhCardHitFlash .28s ease-out both; }
+    /* 立ち絵の子は、絵の形どおりに白く光る(84 の hitSil。絵を型に切り抜く。2026-11-01 点検 G) */
+    .mh-card-hit-flash-sil { border-radius: 0; background: #fff; z-index: 3; }
     @keyframes mhCardHitFlash { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
     .mh-card-dmg-pop { animation: mhCardDmgPop 1s ease-out both; }
     /* 当たった瞬間の「防御！ 5 → 2」(1.6秒。ぽんと出て、しばらく止まって、消える。2026-10-27 社長・案A) */
@@ -102462,7 +103942,15 @@ const createAnimationStyle = () => {
     @keyframes mhCardFlip { 0% { transform: rotateY(0); } 100% { transform: rotateY(180deg); } }
     /* 手札の名前(84 の CardNameFit twoLine): 箱が 56px 以下のときだけ、長い名前を言葉の切れ目で2行に折る。切れ目の無い1語は字の間を詰めて1行(mh-nf-squeeze)。短い名前も2行ぶんの高さを取ってそろえる */
     .mh-nf-b { display: none; }
+    /* フリー対戦(84 の view 'foe')・背の低い縦の画面: 助手の顔と紹介の立ち絵を小さくして、紹介の欄を下の「対戦する」の帯に隠さない(2026-11-01 見た目の点検 D。390×600 で 26px 隠れていた) */
+    @media (orientation: portrait) and (max-height: 700px) { [data-card-top="foe"] { --mh-foe-art-h: 12vh; } [data-card-top="foe"] [data-card-foe] > img { height: 40px; width: 40px; } }
     @container (max-width: 56px) { .mh-nf-a, .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: 20px; line-height: 1; } .mh-nf-a.mh-nf-hide { display: none; } .mh-nf-squeeze { letter-spacing: -0.07em; } }
+    /* 2行に折る幅を名前の長さで決める(84 の CardNameFit。1行のまま 11px で入らない幅から2行へ。2026-11-01 見た目の点検 C)。tall は短い名前も2行ぶんの高さ。56px 以下は上の決まりのまま */
+    @container (min-width: 57px) and (max-width: 115px) { .mh-nf-tall > .mh-nf-a { display: flex; flex-direction: column; justify-content: center; min-height: var(--nf-2l, 20px); line-height: 1.05; } }
+    @container (min-width: 57px) and (max-width: 80px) { .mh-nf-n7 > .mh-nf-a.mh-nf-hide { display: none; } .mh-nf-n7 > .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: var(--nf-2l, 20px); line-height: 1.05; } }
+    @container (min-width: 57px) and (max-width: 92px) { .mh-nf-n8 > .mh-nf-a.mh-nf-hide { display: none; } .mh-nf-n8 > .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: var(--nf-2l, 20px); line-height: 1.05; } }
+    @container (min-width: 57px) and (max-width: 103px) { .mh-nf-n9 > .mh-nf-a.mh-nf-hide { display: none; } .mh-nf-n9 > .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: var(--nf-2l, 20px); line-height: 1.05; } }
+    @container (min-width: 57px) and (max-width: 115px) { .mh-nf-n10 > .mh-nf-a.mh-nf-hide { display: none; } .mh-nf-n10 > .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: var(--nf-2l, 20px); line-height: 1.05; } }
     .mh-card-jump { animation: mhCardJump .9s ease-out both; }
     .mh-card-afterimage { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; pointer-events: none; filter: grayscale(.4) brightness(1.4) drop-shadow(0 0 6px rgba(125,211,252,.9)); animation: mhCardAfter .62s ease-out both; }
     .mh-card-air-mark { position: absolute; top: -2px; left: 50%; margin-left: -18px; width: 36px; border-radius: 6px; background: rgba(8,145,178,.92); color: #ecfeff; font-size: 11px; font-weight: 900; text-align: center; pointer-events: none; animation: mhCardPop .9s ease-out both; }
@@ -102560,7 +104048,8 @@ const createAnimationStyle = () => {
     @keyframes mhPackCFlash { 0%, 20% { opacity: 1; } 100% { opacity: 0; } }
     .mh-pack-label-big { font-size: 40px; padding: 2px 24px; font-style: italic; letter-spacing: 2px; overflow: hidden; -webkit-text-stroke: 1.5px rgba(0,0,0,.3);
       box-shadow: 0 0 18px rgba(255,200,0,.9); animation: mhPackLabelIn .45s cubic-bezier(.2,1.6,.4,1) both; }
-    .mh-pack-label-big.alt { font-size: 46px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.6); box-shadow: 0 0 30px 8px rgba(255,255,255,.95), 0 0 70px 20px rgba(255,80,200,.6);
+    /* レアキラ!! の字は濃い紫で縁取る(白い字が虹色の帯の上で読みにくかった。2026-11-01 見た目の点検 H)。縁は影を8方向に重ねて作る(text-stroke は字の内側を削るため) */
+    .mh-pack-label-big.alt { font-size: 46px; color: #fff; -webkit-text-stroke: 0; text-shadow: -2px -2px 0 #3b0764, 2px -2px 0 #3b0764, -2px 2px 0 #3b0764, 2px 2px 0 #3b0764, 0px -2px 0 #3b0764, 0px 2px 0 #3b0764, -2px 0px 0 #3b0764, 2px 0px 0 #3b0764, 0 4px 6px rgba(0,0,0,.6); box-shadow: 0 0 30px 8px rgba(255,255,255,.95), 0 0 70px 20px rgba(255,80,200,.6);
       animation: mhPackLabelIn .45s cubic-bezier(.2,1.6,.4,1) both, mhPackRainbowMove 1s linear infinite; }
     .mh-pack-label-big::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.9) 50%, transparent 60%); background-size: 250% 100%; animation: mhPackLabelSheen 1.1s ease-in-out infinite; }
     @keyframes mhPackLabelIn { 0% { opacity: 0; transform: scale(2.6) rotate(-14deg); } 100% { opacity: 1; transform: scale(1) rotate(-6deg); } }

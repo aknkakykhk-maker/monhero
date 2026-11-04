@@ -79,7 +79,8 @@ check('①② には出さない', posesIn(0).length === 0 && posesIn(1).length 
 check('③ オリヒメは現れて後ずさる・キュービは現れて前に出る', /Orihime:in/.test(flat(2)) && /Orihime:back/.test(flat(2)) && /Kyubi:in/.test(flat(2)) && /Kyubi:front/.test(flat(2)), flat(2));
 check('④ 2体とも待機 → オリヒメは寄る・キュービは後ずさって待機へ', /Orihime:idle,Kyubi:idle/.test(posesIn(3)[0] || '') && /Orihime:approach/.test(flat(3)) && /Kyubi:back/.test(flat(3)) && /Kyubi:idle$/.test(posesIn(3).slice(-1)[0] || ''), flat(3));
 check('⑤ 2体とも跳ねる → 待機(打ち上げも待機)', /Orihime:hop,Kyubi:hop/.test(flat(4)) && /Orihime:idle,Kyubi:idle$/.test(posesIn(4).slice(-1)[0] || ''), flat(4));
-const otherMon = EVENT_REPLAYS.filter((ev) => ev.id !== 'sorashido_join_2026_10_27' && (ev.script || []).some((l) => l && l.monsters));
+// パンドライベント「鍵の向こう側へ」(2026-11-02)のお話も、真ん中にパンドラを出すので monsters を使う(こちらは本来の使い方)
+const otherMon = EVENT_REPLAYS.filter((ev) => ev.id !== 'sorashido_join_2026_10_27' && !/^pandora_wings_/.test(ev.id) && (ev.script || []).some((l) => l && l.monsters));
 check('ほかのお話(ジャック・きゅうこなど)には monsters を付けていない', otherMon.length === 0, otherMon.map((ev) => ev.id).join(','));
 const art = read('monster-hero/src/parts/21-assistant.jsx');
 check('絵は全身の絵(KYUBI_IMG・ORIHIME_IMG)、待機アニメは withMonsterIdleArt', /Kyubi: typeof KYUBI_IMG/.test(art) && /Orihime: typeof ORIHIME_IMG/.test(art)

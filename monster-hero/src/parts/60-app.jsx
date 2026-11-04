@@ -453,6 +453,8 @@ function MonsterHeroGame() {
   // 極限チャレンジ(EXTREME)の記録。チャレンジの mh_hs_* / mh_clears_* とは別のキーへ持つ
   const [extremeBestScores, setExtremeBestScores] = useState({});
   const [extremeClearCounts, setExtremeClearCounts] = useState({});
+  // EREBUS を足す前に COCYTUS が開いていたかの印(mh_cocytus_open_kept_v1・2026-11-04)。読み込みで1回だけ作る
+  const [cocytusOpenKept, setCocytusOpenKept] = useState(null);
   const [extremeDifficultyClearCounts, setExtremeDifficultyClearCounts] = useState({});
   const [onboarded, setOnboarded] = useState(true); // false=初回起動(プロフィール設定へ誘導)
   // 遊んだ時間を数える。画面が見えているあいだだけ進み、離れるときと60秒ごとに保存する。
@@ -2178,7 +2180,9 @@ function MonsterHeroGame() {
       const raw = await storeGet(BEAT_RANK_KEY, null, false);
       const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
       const gain = beatRankAfter(raw, { difficultyId: play && play.difficulty && play.difficulty.id, cleared: result?.cleared !== false,
-        fullCombo: result?.fullCombo === true, allMarvelous: result?.allMarvelous === true, multi: play && play.from === 'multi', today });
+        fullCombo: result?.fullCombo === true, allMarvelous: result?.allMarvelous === true, multi: play && play.from === 'multi', today,
+        // 曲の長さ(経験値は 長さ÷2:00 倍。2026-11-02)。読めないときは0で、今までどおりの値になる
+        durationMs: play && play.song ? rhythmPlaySongDurationMs(play.song, play.difficulty) : 0 });
       if (!gain.add) return;
       const next = { ...gain.next, k: gain.next.k || beatRankNewKey() };
       await storeSet(BEAT_RANK_KEY, next, false);
@@ -2766,6 +2770,9 @@ function MonsterHeroGame() {
   // イベント回想の2ページ目に開いているまとまりの id(null なら1ページ目=パネルの一覧)
   const [eventReplayGroupId, setEventReplayGroupId] = useState(null);
   const [eventReplay, setEventReplay] = useState(null);
+  // お話の締め(終わりの札)が出ていないときは、音を元に戻す(札のあいだだけ小さくする。閉じ方を問わず戻す)
+  const eventReplayEnding = !!(eventReplay && eventReplay.ending);
+  useEffect(() => { if (!eventReplayEnding && typeof Audio_ !== 'undefined' && Audio_.setStoryEndFade) Audio_.setStoryEndFade(false); }, [eventReplayEnding]);
   const [showDebugStoryList, setShowDebugStoryList] = useState(false);   // デバッグ設定の「全ストーリーを確認」の一覧(公開前も含めて全部。見たことにはしない)
   // イベントの会話が指定した服(ハロウィン・ナイトの衣装)を、会話のあいだだけ助手に着せる。閉じたら元へ戻る
   setAssistantCostumeStoryNow(eventReplay ? (((eventReplay.debug ? eventReplayAllList() : eventReplayList()).find(ev => ev.id === eventReplay.id) || {}).costumes || null) : null);
@@ -3491,8 +3498,11 @@ function MonsterHeroGame() {
   const eternalClearCount = extremeClearCounts[ETERNAL_SETTING.id] || 0;
   const infernoUnlocked = useMemo(() => isInfernoUnlocked(eternalClearCount), [eternalClearCount]);
   const infernoClearCount = extremeClearCounts[INFERNO_SETTING.id] || 0;
-  const cocytusUnlocked = useMemo(() => isCocytusUnlocked(infernoClearCount), [infernoClearCount]);
-  // 冥界チャレンジのタブ(INFERNO・COCYTUS)は ETERNAL クリアで開く
+  const erebusUnlocked = useMemo(() => isErebusUnlocked(infernoClearCount), [infernoClearCount]);
+  const erebusClearCount = extremeClearCounts[EREBUS_SETTING.id] || 0;
+  const cocytusRecord = (extremeClearCounts[COCYTUS_SETTING.id] || 0) + (extremeBestScores[COCYTUS_SETTING.id] || 0);
+  const cocytusUnlocked = useMemo(() => isCocytusUnlocked(erebusClearCount, cocytusOpenKept, cocytusRecord), [erebusClearCount, cocytusOpenKept, cocytusRecord]);
+  // 冥界チャレンジのタブ(INFERNO・EREBUS・COCYTUS)は ETERNAL クリアで開く
   const underworldUnlocked = useMemo(() => isUnderworldUnlocked(eternalClearCount), [eternalClearCount]);
   // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
   // 冥界チャレンジのタブを開いた最初の1回は「冥界の一言」(underworldTab)。カードを INFERNO から動かすか、タブを離れたら難易度ごとのセリフへ
@@ -3715,7 +3725,8 @@ function MonsterHeroGame() {
     const id=rhythmSettings.multiLook||'LIGHT';
     if(id==='OWN')return rhythmSettings;
     const preset=RHYTHM_LOOK_PRESETS.find(item=>item.id===id)||RHYTHM_LOOK_PRESETS.find(item=>item.id==='LIGHT');
-    return {...rhythmSettings,...(preset?preset.values:{})};
+    // 演出を1つずつ選ぶ設定(fx)は、対戦のあいだは全部「おまかせ」にして、重ねた見た目に従わせる(2026-11-01)
+    return {...rhythmSettings,...(preset?preset.values:{}),fx:{}};
   },[rhythmSettings]);
   // 曲えらびで選んだ曲を、事前ダウンロード(入のときだけ)が前もって落とす
   useEffect(()=>{if(String(gameState).startsWith('RHYTHM'))ASSET_CACHE.noteSong(rhythmSelectedSongId);},[rhythmSelectedSongId,gameState]);
@@ -5223,18 +5234,25 @@ function MonsterHeroGame() {
   // 時刻で出すのは第1部だけ(data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES)。第2部以降はジャックのストーリー(RAID_JACK_STORY_IDS)で、
   // レイドの進み具合で出る。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, CARD_CUP_STORY_ID];
+  // 「鍵の向こう側へ」の全8話(data/rhythm-event.js の PANDORA_WINGS_STORIES)。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
+  const PANDORA_WINGS_STORY_IDS = PANDORA_WINGS_STORIES.map(story => story.id);
+  // 「鍵の向こう側へ」のイベントidと、終章(閉幕のお話)のid
+  const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
+  const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, CARD_CUP_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
+    // 「鍵の向こう側へ」の第1話(第2〜7話は時刻で・第8話は閉幕のお話)
+    [PANDORA_WINGS_EVENT_ID]: 'pandora_wings_2026_ep1',
   };
   // イベントid → 閉幕の会話id。用意していないイベントでは閉幕の会話は流れない
   // (別の回の「閉幕とお礼」を代わりに流してしまわないよう、必ずここから引く)
   const RHYTHM_EVENT_THANKS_STORY_BY_EVENT = { [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_THANKS_STORY_ID,
-    [SYMPHONY_EVENT_ID]: SYMPHONY_THANKS_STORY_ID };
+    [SYMPHONY_EVENT_ID]: SYMPHONY_THANKS_STORY_ID, [PANDORA_WINGS_EVENT_ID]: PANDORA_WINGS_THANKS_STORY_ID };
   // いま開催中／いま終わったばかりのイベントに対応する会話id(無ければ null)
   const rhythmEventStoryIdFor = (event) => (event && RHYTHM_EVENT_STORY_BY_EVENT[event.id]) || null;
   const rhythmEventThanksStoryIdFor = (event) => (event && RHYTHM_EVENT_THANKS_STORY_BY_EVENT[event.id]) || null;
@@ -5606,12 +5624,16 @@ function MonsterHeroGame() {
       // ハロウィン・ナイトのお話。時刻が来ていて、まだ見ていない部のうち、いちばん古いもの
       const halloweenStoryId = RELEASE_FLAGS.rhythmEventPoints === true
         ? (halloweenNightStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null) : null;
+      // 「鍵の向こう側へ」の第2〜7話。時刻が来ていて、まだ見ていない話のうち、いちばん古いもの(第1話は開幕・第8話は閉幕のお話として流れる)
+      const pandoraWingsStoryId = RELEASE_FLAGS.rhythmWeeklyRanking === true
+        ? (pandoraWingsStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null) : null;
       if (!liveEvent) {
         if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
         else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
         else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);
         else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);
         else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
+        else if (pandoraWingsStoryId) setRhythmEventStoryPending(prev => prev || pandoraWingsStoryId);
         else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
         else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
         else if (masuCallStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);
@@ -5629,6 +5651,7 @@ function MonsterHeroGame() {
       else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);
       else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);
       else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
+      else if (pandoraWingsStoryId) setRhythmEventStoryPending(prev => prev || pandoraWingsStoryId);
       else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
       else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
       else if (masuCallStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);
@@ -7051,8 +7074,20 @@ function MonsterHeroGame() {
       }));
       setExtremeBestScores(loadedExtremeScores);
       setExtremeClearCounts(loadedExtremeClears);
+      const loadedClassicSpeciesProgress = normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY,null,false));
+      // EREBUS(INFERNO と COCYTUS のあいだ・2026-11-04)を足す前に COCYTUS が開いていた人は閉じない。
+      //   印が無いときだけ、いまの記録(INFERNO のクリア)から1回だけ作って保存する。あるときは読むだけ(二度目は作らない)
+      try {
+        const keptRaw = await storeGet(COCYTUS_OPEN_KEPT_KEY, null, false);
+        if (keptRaw && typeof keptRaw === 'object' && !Array.isArray(keptRaw)) setCocytusOpenKept(normalizeCocytusOpenKept(keptRaw));
+        else {
+          const kept = buildCocytusOpenKept(loadedExtremeClears, loadedClassicSpeciesProgress);
+          setCocytusOpenKept(kept);
+          await storeSet(COCYTUS_OPEN_KEPT_KEY, kept, false);
+        }
+      } catch (e) { setCocytusOpenKept(buildCocytusOpenKept(loadedExtremeClears, loadedClassicSpeciesProgress)); }
       setSpeciesProgressByMode({
-        [BATTLE_MODE_SPECIES_CHALLENGE]:normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY,null,false)),
+        [BATTLE_MODE_SPECIES_CHALLENGE]:loadedClassicSpeciesProgress,
         [BATTLE_MODE_TACTICS_SPECIES]:normalizeSpeciesChallengeProgress(await storeGet(TACTICS_SPECIES_CHALLENGE_PROGRESS_KEY,null,false)),
       });
       setHighScores(scores);
@@ -8491,6 +8526,9 @@ function MonsterHeroGame() {
     rhythmSixLaneSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_SIX_LANE_STORY_ID),
     beatPointUpSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_UP_STORY_ID),
     // 時刻で流すハロウィン・ナイトは第1部だけ(第2部以降はジャックのストーリー・下の raidJackStory...)
+    // 「鍵の向こう側へ」の各話(第1〜7話)と終章(閉幕のお話)
+    ...Object.fromEntries(PANDORA_WINGS_STORIES.filter(story => story.id !== PANDORA_WINGS_THANKS_STORY_ID).map(story => [`pandoraWingsEp${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
+    pandoraWingsEp8Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(PANDORA_WINGS_THANKS_STORY_ID),
     ...Object.fromEntries(HALLOWEEN_NIGHT_STORIES.map(story => [`halloweenNightPart${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
     // ジャックのストーリー(1.5部〜終章)。見たかは同じ配列(rhythmEventStorySeen)へ id を入れて持つ(新しいキーは作らない)
     ...Object.fromEntries(RAID_JACK_STORY_IDS.map(id => [raidJackStoryUnlockKey(id), Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(id)])),
@@ -18110,13 +18148,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <details key={`pinned-${c.id}`} data-changelog-pinned className="mh-changelog-pinned"
                 style={{margin:'0 0 10px',border:'2px solid #fb923c',borderRadius:16,background:'linear-gradient(135deg,#431407,#3b0764)',padding:'8px 10px'}}>
                 <summary style={{cursor:'pointer',listStyle:'none',display:'flex',alignItems:'center',gap:8,fontWeight:900,fontSize:13,color:'#ffedd5'}}>
-                  <span style={{background:'#f97316',color:'#1c1917',borderRadius:999,padding:'1px 8px',fontSize:11}}>🎃 開催中</span>
+                  {/* 札の絵文字はイベントごと(pinEmoji)。書いていない項目は 🎉(ハロウィンの 🎃 のままだった。2026-11-03) */}
+                  <span style={{background:'#f97316',color:'#1c1917',borderRadius:999,padding:'1px 8px',fontSize:11}}>{typeof c.pinEmoji==='string'&&c.pinEmoji?c.pinEmoji:'🎉'} 開催中</span>
                   {/* 固定表示の見出しは短くする。先頭の【期間限定】と末尾の「〜を開催します」は、「開催中」の札と重なるので落とす(本文の見出しはそのまま)。
                       幅の狭い画面(320)で「レイドボス戦「…」と名前が切れていたので、切らずに折り返す(2026-10-27 ダメダシくんの見回り) */}
                   <span data-changelog-pinned-title style={{flex:1,minWidth:0,lineHeight:1.3,wordBreak:'keep-all',overflowWrap:'anywhere'}}>{String(c.title||'').replace(/^【[^】]*】/,'').replace(/を開催(します)?$/,'')}</span>
                   <small style={{flexShrink:0,fontSize:10,color:'#fdba74'}}>詳細 ▼</small>
                 </summary>
                 {c.image&&<img data-changelog-pinned-image src={c.image} alt={`${c.title}のお知らせ`} onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async" style={{width:'100%',borderRadius:12,margin:'8px 0 4px'}}/>}
+                {/* 予告動画も、固定の札の中で見られるようにする(下の一覧の行と同じ) */}
+                {typeof c.video==='string'&&c.video&&<figure data-changelog-pinned-video style={{margin:'6px 0'}}>
+                  <figcaption style={{fontWeight:900,fontSize:12,color:'#ffedd5',margin:'0 0 4px'}}>▶ 予告動画</figcaption>
+                  <ChangelogVideo src={c.video} poster={typeof c.videoPoster==='string'?c.videoPoster:undefined}/>
+                </figure>}
                 {(c.items||[]).map((x,j)=><p key={j} style={{fontSize:12,color:'#fed7aa',margin:'3px 0'}}>・{x}</p>)}
               </details>)),
             ...rows.map(row=>{
@@ -18155,6 +18199,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       {c.image&&<img data-changelog-image src={c.image} alt={`${c.title}のお知らせ`}
                         onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
                         style={{width:'100%',borderRadius:'12px',margin:'6px 0'}}/>}
+                      {/* 予告動画(2026-11-02 社長「告知にストーリーの一部の予告動画もほしい」)。video:'movies/…mp4' と書いたときだけ出す。
+                          押すまで読み込まない(preload none)。videoPoster は押す前に見せる絵。読めなかったら黙って消す */}
+                      {typeof c.video==='string'&&c.video&&<figure data-changelog-video style={{margin:'6px 0'}}>
+                        <figcaption style={{fontWeight:900,margin:'0 0 4px'}}>▶ 予告動画</figcaption>
+                        <ChangelogVideo src={c.video} poster={typeof c.videoPoster==='string'?c.videoPoster:undefined}/>
+                      </figure>}
                       {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
                       {/* 本文の下に並べる見本の絵(2026-09-28・ユーザー提案「こんな感じに染色イメージを出したりしたらどう？」)。
                           gallery:[{ caption, image }] と書いたときだけ、見出しと絵を順に出す。
@@ -18198,7 +18248,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 既定値は今まで鳴っていた曲そのものなので、これまでの音は変わらない
         ['enhance','準備・強化フェーズ BGM'],['result','WAVE後リザルト BGM'],['gameOver','敗北 BGM']]},
       {id:'battle',label:'バトル'},
-      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM'],['masuCallEvent','マスモンとセッションのお話 BGM'],['halloweenNightEvent','ハロウィン・ナイトのお話 BGM'],['assistantChatStoryEvent','助手とおしゃべりのお話 BGM'],['atsuJoinStoryEvent','あつ加入のお話 BGM'],['kyukoJoinStoryEvent','きゅうこ加入のお話 BGM'],['cardBattleIntroEvent','MFバトルカードのお話 BGM'],['cardCupStoryEvent','個人杯のお話 BGM']]},
+      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM'],['masuCallEvent','マスモンとセッションのお話 BGM'],['halloweenNightEvent','ハロウィン・ナイトのお話 BGM'],['assistantChatStoryEvent','助手とおしゃべりのお話 BGM'],['atsuJoinStoryEvent','あつ加入のお話 BGM'],['kyukoJoinStoryEvent','きゅうこ加入のお話 BGM'],['cardBattleIntroEvent','MFバトルカードのお話 BGM'],['cardCupStoryEvent','個人杯のお話 BGM'],['pandoraWingsStoryEvent','鍵の向こう側へのお話 BGM']]},
       {id:'other',label:'その他',items:[['rhythmModeSelect','モンヒロビート モードえらび BGM'],['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM']]},
     ];const battleModes=BGM_BATTLE_MODE_TABS;const selected=categories.find(category=>category.id===bgmArrangementCategory)||categories[0];const selectedMode=battleModes.find(mode=>mode.id===bgmArrangementBattleMode)||battleModes[0];const items=selected.id==='battle'?selectedMode.items:selected.items;return <><div role="tablist" aria-label="BGMカテゴリ" className="grid grid-cols-4 gap-1 mb-3">{categories.map(category=><button key={category.id} type="button" role="tab" aria-selected={selected.id===category.id} onClick={()=>setBgmArrangementCategory(category.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selected.id===category.id?'bg-indigo-600 border-indigo-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{category.label}</button>)}</div>{selected.id==='battle'&&<div role="tablist" aria-label="バトルモード" className={`grid ${battleModes.length>=6?'grid-cols-3':battleModes.length>=5?'grid-cols-5':'grid-cols-4'} gap-1 mb-4`}>{battleModes.map(mode=><button key={mode.id} type="button" role="tab" aria-selected={selectedMode.id===mode.id} onClick={()=>setBgmArrangementBattleMode(mode.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selectedMode.id===mode.id?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{mode.label}</button>)}</div>}<div className="space-y-4">{selected.id==='other'&&[
       ['autoVictoryJingle','AUTO時 敵撃破ファンファーレ'],
@@ -19448,7 +19498,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="relative shrink-0">
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="mhbs-arrow absolute left-0 top-[42%] z-20 disabled:opacity-20"><ChevronLeft size={18}/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.id!==extremeDifficulty)setExtremeDifficulty(difficulties[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll max-[359px]:!px-[4%]" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:setting.id==='HELHEIM'?helheimUnlocked:setting.id==='ETERNAL'?eternalUnlocked:setting.id==='INFERNO'?infernoUnlocked:setting.id==='COCYTUS'?cocytusUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;const theme=extremeDifficultyTheme(setting.id);const heroProofReward=heroProofClearReward({extremeDifficulty:setting.id});return (
+                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:setting.id==='HELHEIM'?helheimUnlocked:setting.id==='ETERNAL'?eternalUnlocked:setting.id==='INFERNO'?infernoUnlocked:setting.id==='EREBUS'?erebusUnlocked:setting.id==='COCYTUS'?cocytusUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;const theme=extremeDifficultyTheme(setting.id);const heroProofReward=heroProofClearReward({extremeDifficulty:setting.id});return (
                       <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} data-underworld-card={underworldTab?setting.id:undefined} data-shield-layers={underworldTab?underworldShieldLayerRange(setting.id):undefined} className={`mhbt-tile mhbt-d-${setting.id} dark snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[400px] flex flex-col px-4 pt-3 pb-2.5 transition-all ${active?'on scale-100 opacity-100':'scale-[.92] opacity-45'} ${previewable?'':'dim'}`} style={{'--acc':theme.accent}}>
                         <span aria-hidden="true" className="mhbt-mark">{setting.label}</span>
                         <div className="mhbt-eyebrow">EXTREME DIFFICULTY</div>
@@ -19456,7 +19506,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <div className="mt-1 h-[42px] shrink-0 rounded-xl bg-black/40 px-2.5 py-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,.12)]">
                           <small className="block text-[8px] text-white/70 font-black">{setting.available?`${setting.label}の記録`:'難易度情報'}</small>
                           <b className="block text-right text-base italic leading-tight text-white">{setting.available&&unlocked?`${(extremeBestScores[setting.id]||0).toLocaleString()} pt`:'？？？'}</b>
-                          <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':setting.id==='ULTIMATE'&&!ultimateUnlocked?'CHAOSクリアで解放':setting.id==='INFINITY'&&!infinityUnlocked?'ULTIMATEクリアで解放':setting.id==='GOD'&&!godUnlocked?'INFINITYクリアで解放':setting.id==='RAGNAROK'&&!ragnarokUnlocked?'GODクリアで解放':setting.id==='HELHEIM'&&!helheimUnlocked?'RAGNAROKクリアで解放':setting.id==='ETERNAL'&&!eternalUnlocked?'HELHEIMクリアで解放':setting.id==='INFERNO'&&!infernoUnlocked?'ETERNALクリアで解放':setting.id==='COCYTUS'&&!cocytusUnlocked?'INFERNOクリアで解放':'選択できません'}</span>
+                          <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':setting.id==='ULTIMATE'&&!ultimateUnlocked?'CHAOSクリアで解放':setting.id==='INFINITY'&&!infinityUnlocked?'ULTIMATEクリアで解放':setting.id==='GOD'&&!godUnlocked?'INFINITYクリアで解放':setting.id==='RAGNAROK'&&!ragnarokUnlocked?'GODクリアで解放':setting.id==='HELHEIM'&&!helheimUnlocked?'RAGNAROKクリアで解放':setting.id==='ETERNAL'&&!eternalUnlocked?'HELHEIMクリアで解放':setting.id==='INFERNO'&&!infernoUnlocked?'ETERNALクリアで解放':setting.id==='EREBUS'&&!erebusUnlocked?'INFERNOクリアで解放':setting.id==='COCYTUS'&&!cocytusUnlocked?`${EREBUS_SETTING.label}クリアで解放`:'選択できません'}</span>
                         </div>
                         {previewable?<>
                           <div className="grid grid-cols-3 gap-1 mt-1">{[['敵強度',`×${setting.power}`],['スコア',setting.score?`×${setting.score}`:'対象外'],['ダイヤ',setting.gold?`×${setting.gold}`:'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
@@ -19593,7 +19643,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className={`relative shrink-0${battleTutorialSpotClass('difficulty')}`}>
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="mhbs-arrow absolute left-0 top-[42%] z-20 disabled:opacity-20"><ChevronLeft size={18}/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.[0]!==selectedDifficulty)chooseDifficulty(difficulties[best][0]);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll max-[359px]:!px-[4%]" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}} data-difficulty-carousel>
-                    {difficulties.map(([key,setting])=>{const active=key===selectedDifficulty,rec=modeRecordFor(battleMode,key);const quickUnlocked=species?isSpeciesChallengeDifficultyUnlocked(key,speciesChallengeClearedDifficultyIds(speciesChallengeProgress,speciesChallengeSelection.speciesId),speciesChallengeInitialUnlockCountOf(battleMode)):tacticsDiff?(debugBattle||isTacticsDifficultyUnlocked(key,tacticsRecordsOf(battleMode).clears)):(!quick||debugBattle||isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts));// ★タクティクスバトルの極限は、極限チャレンジ・種族チャレンジとまったく同じ作りで走らせる。
+                    {difficulties.map(([key,setting])=>{const active=key===selectedDifficulty,rec=modeRecordFor(battleMode,key);const quickUnlocked=species?isSpeciesChallengeDifficultyUnlocked(key,speciesChallengeClearedDifficultyIds(speciesChallengeProgress,speciesChallengeSelection.speciesId),speciesChallengeInitialUnlockCountOf(battleMode),battleMode===BATTLE_MODE_SPECIES_CHALLENGE?cocytusKeptOpenIdsFor(cocytusOpenKept,speciesChallengeSelection.speciesId):[]):tacticsDiff?(debugBattle||isTacticsDifficultyUnlocked(key,tacticsRecordsOf(battleMode).clears)):(!quick||debugBattle||isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts));// ★タクティクスバトルの極限は、極限チャレンジ・種族チャレンジとまったく同じ作りで走らせる。
                       //   difficulty は 'Normal' に置き換え、選んだ段階は extremeDifficulty が持つ。
                       //   記録は tacticsRecordDifficulty() がこの2つから選ぶので、混ざらない
                       const tacticsExtreme=tacticsDiff&&isExtremeDifficultyId(key);
@@ -20920,7 +20970,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <button data-species-real-run-start onClick={()=>{if(!window.confirm('実際の種族チャレンジ進行・所持品を変更します。よろしいですか？'))return;openSpeciesChallengeSelection({saveProgress:true,fromDebug:true});}} className="min-h-[46px] w-full rounded-xl bg-red-700 text-[10px] font-black text-white">実進行を保存する実戦を始める</button>
               </article>
               <article data-transcend-fruit-debug className="space-y-2 rounded-2xl border border-fuchsia-400/50 bg-fuchsia-950/20 p-3"><h3 className="text-[11px] font-black text-fuchsia-200">超越の実 → 超越ポイント確認</h3>{selectedMasu?<><label className="block text-[9px] font-black">所持マスモン<select aria-label="所持マスモン" value={selectedMasu.id} onChange={e=>{setTranscendFruitDebugMasuId(e.target.value);setTranscendFruitDebugItemId('');setTranscendFruitDebugResult(null);}} className="mt-1 block min-h-[44px] w-full rounded-xl bg-slate-900 px-3">{masuMons.map(m=><option key={m.id} value={m.id}>{m.name}／{ALL_PLAYER_MONSTERS[m.baseId]?.name||m.baseId}</option>)}</select></label><div className="grid grid-cols-2 gap-2 text-center text-[9px]"><span className="rounded-lg bg-slate-900 p-2">対応種族の実<br/><b>{transcendFruitOwnedCount(ownedItems,speciesFruitId)}</b></span><span className="rounded-lg bg-slate-900 p-2">虹の実<br/><b>{transcendFruitOwnedCount(ownedItems,RAINBOW_TRANSCEND_FRUIT_ITEM_ID)}</b></span></div><div className="grid grid-cols-2 gap-2"><button aria-pressed={selectedFruitId===speciesFruitId} onClick={()=>setTranscendFruitDebugItemId(speciesFruitId)} className={`min-h-[44px] rounded-xl text-[9px] font-black ${selectedFruitId===speciesFruitId?'bg-fuchsia-700 ring-2 ring-white':'bg-slate-800'}`}>対応種族の実を選択</button><button aria-pressed={selectedFruitId===RAINBOW_TRANSCEND_FRUIT_ITEM_ID} onClick={()=>setTranscendFruitDebugItemId(RAINBOW_TRANSCEND_FRUIT_ITEM_ID)} className={`min-h-[44px] rounded-xl text-[9px] font-black ${selectedFruitId===RAINBOW_TRANSCEND_FRUIT_ITEM_ID?'bg-fuchsia-700 ring-2 ring-white':'bg-slate-800'}`}>虹の実を選択</button></div><div>{!selectedFruitId&&<p className="text-center text-[8px] font-black text-amber-300">使う実を選んでください。</p>}</div><div className="grid grid-cols-3 gap-2"><button disabled={!selectedFruitId} onClick={()=>useFruit(1)} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">1</button><button disabled={!selectedFruitId} onClick={()=>useFruit(10)} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">10</button><button disabled={!selectedFruitId} onClick={()=>useFruit(transcendFruitOwnedCount(ownedItems,selectedFruitId))} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">MAX</button></div><div className="rounded-xl bg-black/30 p-2 text-center text-[10px]">超越P：{transcendFruitDebugResult?`${transcendFruitDebugResult.before} → ${transcendFruitDebugResult.after}${transcendFruitDebugResult.ok?'':'（失敗・変更なし）'}`:`${Math.max(0,Math.floor(Number(selectedMasu.transcendPoints)||0))} → ―`}</div><div className="grid grid-cols-2 gap-2"><button onClick={()=>grantFruit(speciesFruitId)} className="min-h-[40px] rounded-xl border border-fuchsia-500 text-[8px] font-black">対応種族の実 +10</button><button onClick={()=>grantFruit(RAINBOW_TRANSCEND_FRUIT_ITEM_ID)} className="min-h-[40px] rounded-xl border border-fuchsia-500 text-[8px] font-black">虹の実 +10</button></div></>:<p className="text-[9px] text-slate-400">所持マスモンがいません。</p>}</article>
-              {SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id=>{const unlocked=isSpeciesChallengeDifficultyUnlocked(id,clearedIds),cleared=isSpeciesChallengeCleared(speciesChallengeProgress,speciesId,id),claimed=isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress,speciesId,id);return <article key={id} data-species-difficulty={id} className={`rounded-xl border p-3 ${unlocked?'border-emerald-500/40 bg-slate-900':'border-white/10 bg-slate-950 opacity-65'}`}><div className="flex items-center justify-between gap-2"><b className="text-[11px]">{difficultyLabel(id)}</b><span className={`rounded-full px-2 py-1 text-[8px] font-black ${unlocked?'bg-emerald-900 text-emerald-200':'bg-slate-800 text-slate-400'}`}>{unlocked?'解放':'未解放'}</span></div><div className="mt-2 grid grid-cols-3 gap-1 text-center text-[8px]"><span className={cleared?'text-emerald-300':'text-slate-500'}>cleared<br/><b>{String(cleared)}</b></span><span className={claimed?'text-amber-300':'text-slate-500'}>firstRewardClaimed<br/><b>{String(claimed)}</b></span><span className="text-fuchsia-200">初回報酬<br/><b>超越の実 ×{speciesChallengeFirstClearReward(id)}</b></span></div>{/* 自己記録も種族×難易度ごとに独立していることをここで確認できる */}{(()=>{const record=speciesChallengeRecord(speciesChallengeProgress,speciesId,id);return <div data-species-record={id} className="mt-1 rounded-lg bg-black/30 px-2 py-1 text-center text-[8px] text-cyan-200">自己ベスト {record.bestScore.toLocaleString()}pt ／ 最短 {record.bestTurns!==null?`${record.bestTurns}T`:'—'} ／ クリア {record.clears}回</div>;})()}</article>;})}
+              {SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id=>{const unlocked=isSpeciesChallengeDifficultyUnlocked(id,clearedIds,undefined,cocytusKeptOpenIdsFor(cocytusOpenKept,speciesId)),cleared=isSpeciesChallengeCleared(speciesChallengeProgress,speciesId,id),claimed=isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress,speciesId,id);return <article key={id} data-species-difficulty={id} className={`rounded-xl border p-3 ${unlocked?'border-emerald-500/40 bg-slate-900':'border-white/10 bg-slate-950 opacity-65'}`}><div className="flex items-center justify-between gap-2"><b className="text-[11px]">{difficultyLabel(id)}</b><span className={`rounded-full px-2 py-1 text-[8px] font-black ${unlocked?'bg-emerald-900 text-emerald-200':'bg-slate-800 text-slate-400'}`}>{unlocked?'解放':'未解放'}</span></div><div className="mt-2 grid grid-cols-3 gap-1 text-center text-[8px]"><span className={cleared?'text-emerald-300':'text-slate-500'}>cleared<br/><b>{String(cleared)}</b></span><span className={claimed?'text-amber-300':'text-slate-500'}>firstRewardClaimed<br/><b>{String(claimed)}</b></span><span className="text-fuchsia-200">初回報酬<br/><b>超越の実 ×{speciesChallengeFirstClearReward(id)}</b></span></div>{/* 自己記録も種族×難易度ごとに独立していることをここで確認できる */}{(()=>{const record=speciesChallengeRecord(speciesChallengeProgress,speciesId,id);return <div data-species-record={id} className="mt-1 rounded-lg bg-black/30 px-2 py-1 text-center text-[8px] text-cyan-200">自己ベスト {record.bestScore.toLocaleString()}pt ／ 最短 {record.bestTurns!==null?`${record.bestTurns}T`:'—'} ／ クリア {record.clears}回</div>;})()}</article>;})}
             </section>
           </main>;
         })()}
@@ -23118,7 +23168,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const step=Math.max(0,Math.min(eventReplay.step,script.length-1));
         const line=script[step];
         const speaker=assistantById(line.who);
-        const last=step===script.length-1;
+        // 真ん中にモンスターが出るお話は、画面を「上部ゾーン(ステージ)/立ち絵ゾーン(モンスター)/下部ゾーン(窓)」の3つに固定で分ける
+        //   (2026-11-02 社長「立ち絵ゾーン固定したほうがいいよ」「上部ゾーン/立ち絵/下部ゾーンで」)。高さは台詞の長さ・顔の数で変えない(70-bootstrap.jsx の [data-story-zones])。
+        //   収まらない台詞は、文の切れ目で次のページに分けて「次へ」で送る(社長「セリフが長ければページ数増やせばいいだけ」)。
+        //   step は台本の行のまま(BGM の切り替えなども行で数える)。sub はその行の何ページ目か
+        //   2026-11-03 社長「ハロウィン以外にも全てのイベントを変えてほしい」: イベント回想に並ぶお話すべて(モンスターが出ないお話も)をこの形にする
+        const storyZones=script.length>0;
+        const storySub=storyZones?Math.max(0,Math.floor(Number(eventReplay.sub)||0)):0;
+        // 下の窓に小さい顔の列を残すか(21-assistant.jsx の STORY_BOTTOM_KEEP_ROW。読めないときは残す=いまの形)
+        const storyKeepRow=typeof STORY_BOTTOM_KEEP_ROW==='undefined'?true:!!STORY_BOTTOM_KEEP_ROW;
+        let last=step===script.length-1;
+        // お話の締め(終わりの札)を出すお話か。続きもの(…_ep1 〜)だけ。スキップしたときは出さない(skip は札を通らない)
+        //   2026-11-03 社長「全てのイベントを変えてほしい」: イベント回想に並ぶお話すべてに出す(続きものは次のお話の題名も。単発は「おわり」だけ)
+        const storyEnding=!!event&&typeof STORY_ENDING_STYLE!=='undefined'&&STORY_ENDING_STYLE!=='none';
         // ゲスト(ジャック・ぱんぷきん)は、下の助手の列には入れない。初めて話す行(か stage で呼ばれる行)から、画面の上部の「ステージ」に出る
         //  (2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」)
         const isGuestWho=(id)=>{const w=assistantById(id);return !!w&&w.role==='ゲスト';};
@@ -23141,14 +23203,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ジャックが話しているあいだ、下の箱には直前の助手の台詞を薄く残す(流れが分かる)。まだ助手が話していなければ案内を出す
         const bottomLine=speakingGuest?(assistIdx>=0?script[assistIdx]:null):line;
         const bottomSpeaker=bottomLine?assistantById(bottomLine.who):speaker;
-        const fx=line.fx||null;
+        const fx=(storyZones&&storySub>0)?null:(line.fx||null);
         // ★お話の真ん中に出すモンスター(2026-10-27 社長「推しに会える夜」)。台本の行の monsters:[{ id, pose }] は、次に monsters を書いた行まで続く(monsters:[] で消す)。
         //   pose: in(ふわっと現れる)/idle(待機アニメ)/back(後ずさって揺れる)/front(前に出て大きくなる)/approach(下のソラシドの側へ寄る)/hop(跳ねる)/hide(出さない)。
         //   上のステージ(ゲストの顔)とは別の層。縦の画面はステージと下の窓のあいだ、横の低い画面は窓の左右の空きに出す(70-bootstrap.jsx の [data-story-monsters])
         let monstersIdx=-1;
         for(let i=step;i>=0;i--){if(Array.isArray(script[i].monsters)){monstersIdx=i;break;}}
         const storyMonsters=monstersIdx>=0?script[monstersIdx].monsters.filter(m=>m&&m.pose!=='hide'&&STORY_MONSTER_ART[m.id]):[];
-        const fxColors={transform:'255,237,180',rankup:['251,146,60','251,191,36','192,132,252','248,113,113','250,204,21'][Math.max(0,stageTier-1)],shrink:'186,230,253'};
+        const fxColors={split:'233,213,255',merge:'255,250,235',unlock:'253,230,138',transform:'255,237,180',rankup:['251,146,60','251,191,36','192,132,252','248,113,113','250,204,21'][Math.max(0,stageTier-1)],shrink:'186,230,253'};
         const speakText=(l,w)=>{
           // ★呼び方は normalizeAssistantBond には入っていない(別の入れ物 assistantCallStyles)。話している助手ごとのぶんを引く
           const bond=normalizeAssistantBond(assistantBonds[w.id]);
@@ -23156,6 +23218,40 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         };
         // 台詞の「\n」は、そこで改行する(2026-10-25。チーム名を3つ並べる台詞で「すばやく攻める／チーム」と名前の途中で折れた)。行ごとに jaWrap を通す
         const bubbleLines=(text)=>(typeof text==='string'&&text.includes('\n'))?text.split('\n').map((x,i)=><React.Fragment key={i}>{i>0&&<br/>}{bubbleWrap(x)}</React.Fragment>):bubbleWrap(text);
+        // 3つのゾーンのお話: 行ごとのページ(上部の吹き出し/下部の台詞の欄、それぞれ3行に収まるように分ける)。
+        //   1行の字数は画面の幅から見込む(縦: 窓の幅、横の低い画面: 窓は 28rem まで・吹き出しの字は 12px)。見込みは少し控えめにして、はみ出さないようにする
+        const storyLand=typeof window!=='undefined'&&window.innerWidth>window.innerHeight&&window.innerHeight<=500;
+        const storyBoxW=typeof window!=='undefined'?Math.min(window.innerWidth,448):390;
+        // 下部ゾーンは台詞の欄の左に話している助手の顔(縦 92px・横の低い画面は 0.6倍)があるので、そのぶん狭い
+        const storyCplBottom=Math.max(8,Math.floor((storyBoxW-64-(storyZones?(storyLand?62:100):0))/13)-(storyZones?4:2));
+        // 吹き出しは幅が狭く、言葉の切れ目で折ると行の終わりが空きやすいので、さらに控えめに見込む(縦の 390 幅で1行12字)
+        const storyCplBubble=Math.max(6,storyLand?Math.floor((storyBoxW-118)/12)-3:Math.floor((storyBoxW-156)/14)-4);
+        const storyPageCache=[];
+        const storyPagesOf=(i)=>{
+          if(storyPageCache[i]) return storyPageCache[i];
+          const l=script[i];
+          const w=l?assistantById(l.who):null;
+          const text=l&&w?speakText(l,w):'';
+          const pages=storyZones&&typeof storySplitPages==='function'?storySplitPages(text,isGuestWho(l&&l.who)?storyCplBubble:storyCplBottom,3):[text];
+          storyPageCache[i]=pages;
+          return pages;
+        };
+        const storyCurPages=storyPagesOf(step);
+        const storyCurSub=Math.min(storySub,storyCurPages.length-1);
+        // 3つのゾーンのお話: 分けた台詞の次のページがあるあいだは、「次へ」で行は進めずにページだけ送る(next)
+        const storyMore=storyZones&&storyCurSub<storyCurPages.length-1;
+        if(storyMore) last=false;
+        // 行 i に出す字。いま見ている行はそのページ、前の行(薄く残すぶん)は最後のページ
+        const storyTextAt=(i,w)=>{
+          if(!storyZones) return speakText(script[i],w);
+          const pages=storyPagesOf(i);
+          return i===step?pages[storyCurSub]:pages[pages.length-1];
+        };
+        let storyPageNo=step+1,storyPageTotal=script.length;
+        if(storyZones){
+          storyPageTotal=0;storyPageNo=storyCurSub+1;
+          for(let i=0;i<script.length;i++){const n=storyPagesOf(i).length;storyPageTotal+=n;if(i<step)storyPageNo+=n;}
+        }
         // 回想でも最後まで見たら「見たことがある」として扱う。
         // ももすけ登場を本編より先にここで見た人は、この時点でももすけが解放され、
         // あとから本編で同じ会話が重ねて流れることもなくなる
@@ -23164,7 +23260,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const next=()=>{
           const holdMs=Number(line.holdMs);
           if(Number.isFinite(holdMs)&&holdMs>0&&Date.now()-(Number(eventReplay.shownAt)||0)<holdMs) return;
-          if(!last){ setEventReplay(r=>r&&({...r,step:r.step+1,shownAt:Date.now()})); return; }
+          if(!last){ setEventReplay(r=>r&&({...r,shownAt:Date.now(),...(storyMore?{sub:storyCurSub+1}:{step:r.step+1,sub:0})})); return; }
+          // お話の締め: 続きもののお話は、最後のページのあとに終わりの札を出す(札の「閉じる」で、もう一度ここへ来て閉じる)
+          if(storyEnding&&!eventReplay.ending){ setEventReplay(r=>r&&({...r,ending:true,endingAt:Date.now()})); if(typeof Audio_!=='undefined'&&Audio_.setStoryEndFade) Audio_.setStoryEndFade(true); return; }
           if(event&&event.id==='momosuke_intro'&&!eventReplay.debug) markMomosukeIntroSeen();
           if(event&&event.id==='tactics_intro'&&!eventReplay.debug) markTacticsIntroSeen();
           // イベントの会話も、最後まで見たら「見た」にする(次の起動で重ねて流さない)
@@ -23220,7 +23318,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setEventReplay(null);
         };
         return(
-        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
+        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-step={step} data-story-zones={storyZones?(storyKeepRow?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
           {/* ★会話の紙は「タップを受け取る側」にしておく(2026-09-17・ユーザー報告
                 「イベント中のスキップを押してもスキップ出来ない／次のセリフへ進むだけ」)。
@@ -23242,11 +23340,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:speakingGuest?'#0f172a':stageGuest.accent,background:speakingGuest?stageGuest.accent:'rgba(15,23,42,.8)',transition:'background .2s, color .2s'}}>{stageName}</span>
                 </div>
                 {bubbleLine&&(
-                  <div key={`b${bubbleIdx}`} data-story-guest-bubble data-story-pop={speakingGuest?'1':undefined} className="relative min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2" style={{borderColor:stageGuest.accent,opacity:speakingGuest?1:.4,boxShadow:speakingGuest?`0 0 0 2px ${stageGuest.accent}55, 0 0 20px ${stageGuest.accent}88`:'none',marginTop:8,animation:speakingGuest?'storyPop .3s ease-out both':undefined}}>
+                  <div key={`b${bubbleIdx}${bubbleIdx===step?`-${storyCurSub}`:''}`} data-story-guest-bubble data-story-pop={speakingGuest?'1':undefined} className="relative min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2" style={{borderColor:stageGuest.accent,opacity:speakingGuest?1:.4,boxShadow:speakingGuest?`0 0 0 2px ${stageGuest.accent}55, 0 0 20px ${stageGuest.accent}88`:'none',marginTop:8,animation:speakingGuest?'storyPop .3s ease-out both':undefined}}>
                     {/* 話している人の顔を指すしっぽ */}
                     <span aria-hidden="true" style={{position:'absolute',left:-9,top:22,width:0,height:0,borderTop:'8px solid transparent',borderBottom:'8px solid transparent',borderRight:`9px solid ${stageGuest.accent}`}}/>
                     <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:stageGuest.accent}}>{bubbleLine.name||stageGuest.name}</span>
-                    <span className="mt-1 block text-[14px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleLines(speakText(bubbleLine,stageGuest))}</span>
+                    <span className="mt-1 block text-[14px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleLines(storyZones?storyTextAt(bubbleIdx,stageGuest):speakText(bubbleLine,stageGuest))}</span>
                   </div>
                 )}
               </div>
@@ -23257,7 +23355,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {storyMonsters.map(m=>{
                 const art=<img src={STORY_MONSTER_ART[m.id]} alt="" draggable={false} className="block h-full w-full object-contain"/>;
                 return(
-                  <span key={`${m.id}:${m.pose}`} data-story-monster={m.id} data-story-pose={m.pose}>
+                  <span key={`${m.id}:${m.pose}`} data-story-monster={m.id} data-story-pose={m.pose} data-story-fierce={m.fierce?'':undefined}>
                     {m.pose==='idle'?withMonsterIdleArt(m.id,art,{fill:true,own:true}):art}
                   </span>
                 );
@@ -23266,7 +23364,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           )}
           {fx&&(
             <div key={`fx${step}`} aria-hidden="true" className="pointer-events-none" style={{position:'absolute',inset:0,zIndex:4}}>
-              <div data-story-fx-flash={fx} style={{position:'absolute',inset:0,background:`radial-gradient(circle at 50% 22%, rgba(${fxColors[fx]||'255,255,255'},.95), rgba(${fxColors[fx]||'255,255,255'},.35) 45%, rgba(0,0,0,0) 75%)`,animation:'storyFlash 1s ease-out both'}}/>
+              <div data-story-fx-flash={fx} style={{position:'absolute',inset:0,background:`radial-gradient(circle at 50% ${fx==='split'||fx==='merge'||fx==='unlock'?'46%':'22%'}, rgba(${fxColors[fx]||'255,255,255'},.95), rgba(${fxColors[fx]||'255,255,255'},.35) 45%, rgba(0,0,0,0) 75%)`,animation:'storyFlash 1s ease-out both'}}/>
+              {/* パンドラが分かれる/戻るときの鍵穴の光(2026-11-02 イベント「鍵の向こう側へ」)。分かれるときは光の筋が放射状に走る */}
+              {(fx==='split'||fx==='merge'||fx==='unlock')&&<span data-story-keyhole/>}
+              {/* 鍵が回る(第7話)。金の輪が回って、鍵穴から光があふれる */}
+              {fx==='unlock'&&<span data-story-unlock><i/></span>}
+              {fx==='split'&&<span data-story-crack>{[-160,-118,-72,-28,14,58,104,142].map((deg,i)=><i key={deg} style={{transform:`rotate(${deg}deg)`,animationDelay:`${i%3*40}ms`}}/>)}</span>}
               {line.fxText&&<div data-story-banner className="px-4 text-center text-[17px] font-black" style={{position:'absolute',top:'42%',left:'50%',width:'100%',maxWidth:'28rem',color:'#fff',textShadow:`0 0 14px rgba(${fxColors[fx]||'255,255,255'},1), 0 2px 0 rgba(0,0,0,.6)`,animation:'storyBanner 2.2s ease-out both'}}>{line.fxText}</div>}
             </div>
           )}
@@ -23279,36 +23382,109 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 (2026-10-23 社長「枠からはみ出してる。縦のスペース空いてるんだから2列にするとかしてちゃんと見た目よくして」。
                 きゅうこの加入のお話は7人で、話している子が大きくなると左右の端が枠の外へ切れていた)。
                 ★1人ぶんの枠は話している子の大きさで固定し、大きくなっても段の幅も高さも変わらない(端の子でもはみ出さない) */}
-            {(()=>{const many=cast.length>4;const big=many?60:84,small=many?48:64;return(
-            <div data-story-cast={cast.length} className={`mb-3 flex items-end justify-center ${many?'flex-wrap gap-x-1 gap-y-1.5':'gap-3'}`}>
-              {cast.map(who=>{
+            {/* 真ん中にモンスターが出ている行は、顔の列を1段・小さめにして、モンスターの置き場を空ける
+                (2026-11-02 社長「立ち絵が小さすぎる」。iPhone の縦では顔の列が2段で窓が高くなり、パンドラが背丈50px ほどに縮んでいた) */}
+            {/* 3つのゾーンのお話は、話している助手の顔を台詞の欄の左に置く(下の data-story-speaker-row)。顔の列は出さないか(STORY_BOTTOM_KEEP_ROW が false)、
+                小さく1行で残す(true)。2026-11-03 社長「上部と同じように、下部を喋る人を下部横において」 */}
+            {(()=>{if(storyZones&&!storyKeepRow)return null;const tiny=storyZones;
+              // 小さい顔の列には、その場面にいる人だけを並べる(2026-11-03 社長「いない人は出さない」「あとから現れる人は、現れたときまで出さない」)。
+              //   そのページまでに一度でも話した人。最初からいるのにしばらく話さない人は、その話の castAtStart に書けば1ページ目から並ぶ
+              const atStart=Array.isArray(event&&event.castAtStart)?event.castAtStart:[];
+              const rowCast=tiny?cast.filter(who=>atStart.includes(who.id)||script.slice(0,step+1).some(l=>l&&l.who===who.id)):cast;
+              if(tiny&&rowCast.length===0)return <div data-story-cast-tiny-empty style={{height:28,marginBottom:6}}/>;const compact=!tiny&&storyMonsters.length>0;const many=!compact&&!tiny&&cast.length>4;const big=tiny?28:compact?44:many?60:84,small=tiny?24:compact?36:many?48:64;return(
+            <div data-story-cast={cast.length} data-story-cast-compact={compact||tiny?'':undefined} data-story-cast-tiny={tiny?'':undefined} className={`${tiny?'mb-1.5 flex-nowrap gap-1':compact?'mb-2 flex-nowrap gap-1.5':'mb-3'} flex items-end justify-center ${many?'flex-wrap gap-x-1 gap-y-1.5':compact||tiny?'':'gap-3'}`}>
+              {rowCast.map(who=>{
                 const talking=!speakingGuest&&who.id===line.who;
                 return(
-                  <div key={who.id} data-story-cast-member={who.id} className={`flex min-w-0 flex-col items-center justify-end gap-1 ${talking?'':'opacity-35'}`} style={{width:many?'calc(25% - 4px)':undefined,height:many?big+16:undefined,transform:talking||many?'scale(1)':'scale(.86)',transition:'opacity .18s, transform .18s'}}>
-                    <span style={{display:'block',filter:talking?`drop-shadow(0 0 10px ${who.accent})`:'none',transition:'filter .2s'}}><AssistantFace who={who} size={talking?big:small} accent={who.accent} expression={talking?line.e:'normal'}/></span>
-                    <span className="max-w-full truncate text-[9px] font-black leading-none" style={{color:talking?who.accent:'#64748b'}}>{talking&&line.name?line.name:who.name}</span>
+                  <div key={who.id} data-story-cast-member={who.id} className={`flex min-w-0 flex-col items-center justify-end gap-1 ${talking?'':'opacity-35'}`} style={{width:many?'calc(25% - 4px)':undefined,height:tiny?big:many||compact?big+16:undefined,transform:talking||many||compact||tiny?'scale(1)':'scale(.86)',transition:'opacity .18s, transform .18s'}}>
+                    {/* 小さい顔の列(tiny)では光らせない。話している子は横の大きい顔が光るので、ここは明るさだけで分ける */}
+                    <span style={{display:'block',filter:talking&&!tiny?`drop-shadow(0 0 10px ${who.accent})`:'none',transition:'filter .2s'}}><AssistantFace who={who} size={talking?big:small} accent={who.accent} expression={talking?line.e:'normal'}/></span>
+                    {!tiny&&<span className="max-w-full truncate text-[9px] font-black leading-none" style={{color:talking?who.accent:'#64748b'}}>{talking&&line.name?line.name:who.name}</span>}
                   </div>
                 );
               })}
             </div>);})()}
-            {bottomLine?<div key={speakingGuest?'keep':`x${step}`} data-story-pop={speakingGuest?undefined:'1'} className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:bottomSpeaker.accent,opacity:speakingGuest?.4:1,boxShadow:speakingGuest?'none':`0 0 16px ${bottomSpeaker.accent}55`,transition:'opacity .18s',animation:speakingGuest?undefined:'storyPop .28s ease-out both'}}>
+            {/* 3つのゾーンのお話では、台詞の欄は3行ぶんの高さで固定(70-bootstrap.jsx の [data-story-zones] [data-story-line-box])。
+                台詞の長さで窓の高さが変わり、モンスターの大きさが行ごとに伸び縮みしていた(2026-11-02 社長「文字量によってサイズが変動してる」)。
+                収まらない台詞は、上の storyPagesOf でページに分ける */}
+            <div data-story-speaker-row={storyZones?'':undefined} className={storyZones?'flex items-start gap-2':undefined}>
+            {/* 話している助手の顔(上部ゾーンのゲストと同じ大きさ・名前の札は顔の下)。ゲストが話しているあいだは、直前の助手を暗く残す */}
+            {storyZones&&bottomLine&&<div key={`face-${bottomSpeaker.id}`} data-story-speaker={bottomSpeaker.id} className="shrink-0 text-center">
+              <span style={{display:'block',opacity:speakingGuest?.55:1,filter:speakingGuest?'brightness(.7)':`drop-shadow(0 0 10px ${bottomSpeaker.accent})`,transition:'opacity .2s, filter .2s'}}><AssistantFace who={bottomSpeaker} size={92} accent={bottomSpeaker.accent} expression={!speakingGuest&&bottomLine===line?line.e:'normal'}/></span>
+              <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:speakingGuest?bottomSpeaker.accent:'#0f172a',background:speakingGuest?'rgba(15,23,42,.8)':bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
+            </div>}
+            {bottomLine?<div key={speakingGuest?'keep':`x${step}-${storyCurSub}`} data-story-pop={speakingGuest?undefined:'1'} className={`rounded-2xl border-2 bg-slate-900 px-3 py-3${storyZones?' min-w-0 flex-1':''}`} data-story-line-box style={{borderColor:bottomSpeaker.accent,opacity:speakingGuest?.4:1,boxShadow:speakingGuest?'none':`0 0 16px ${bottomSpeaker.accent}55`,transition:'opacity .18s',animation:speakingGuest?undefined:'storyPop .28s ease-out both'}}>
               <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
               {/* ★{name} は、そのとき話している助手の呼び方へ置き換える。
                   ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた
                   (2026-09-11・ユーザー指摘「名前呼びのとこが変換されてない」)。
                   呼び方も絆Lvも助手ごとに違うので、選んでいる助手ではなく「話している助手」から引く */}
-              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={bubbleWrapStyle()}>{bubbleLines(speakText(bottomLine,bottomSpeaker))}</span>
-            </div>:<div className="rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400">▲ 上のことばを読んでね</div>}
+              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={bubbleWrapStyle()}>{bubbleLines(storyZones?storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker):speakText(bottomLine,bottomSpeaker))}</span>
+            </div>:<div data-story-line-box className={`flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400${storyZones?' min-w-0 flex-1':''}`}>▲ 上のことばを読んでね</div>}
+            </div>
             <p className="mt-2 text-center text-[11px] font-bold tabular-nums text-slate-300">
-              {step+1} / {script.length}
+              {storyPageNo} / {storyPageTotal}
               {/* 「○○は「…」と呼び合います」の案内は出さない(2026-10-22 社長「ストーリー上に出さないでほしい」)。呼び方の表(EVENT_REPLAYS の calls)は台本を書く人の控えとしてデータに残す */}
             </p>
             </div>
             <div data-story-buttons className={`relative mt-3 grid shrink-0 ${last?'grid-cols-1':'grid-cols-[1fr_2fr]'} gap-2`} style={{pointerEvents:'auto',zIndex:2}}>
               {!last&&<button type="button" onClick={(e)=>{e.stopPropagation();skip();}} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]">スキップ</button>}
-              <button type="button" onClick={(e)=>{e.stopPropagation();next();}} className="min-h-[50px] rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]">{last?'閉じる':'次へ'}</button>
+              <button type="button" onClick={(e)=>{e.stopPropagation();next();}} className="min-h-[50px] rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]">{last&&!(storyEnding&&!eventReplay.ending)?'閉じる':'次へ'}</button>
             </div>
           </div>
+          {/* お話の締め(終わりの札)。題字のように「第◯話 ～副題～ おわり」を出し、音はゆっくり小さくする。
+              'next'・'pull' は、次のお話の予告(題と公開の時刻)と、次にやることのボタン(本編で流したときだけ)も出す。最終話は「おしまい」と、全話を見た印 */}
+          {eventReplay.ending&&(()=>{
+            const parts=storyEpisodeTitleParts(event?.title);
+            const pull=STORY_ENDING_STYLE==='pull';
+            const rich=STORY_ENDING_STYLE!=='card';
+            const delay=pull?1.1:0;
+            // 次のお話: 続きもの(第◯話・第◯部)なら、同じまとまり(group)の続きものを日付順に並べた次。「終章」は最後なので出さない。単発は出さない
+            const allEv=(typeof EVENT_REPLAYS!=='undefined'?EVENT_REPLAYS:[]).filter(ev=>ev&&ev.id&&ev.title);
+            const series=parts.serial?allEv.filter(ev=>ev.group===event.group&&storyEpisodeTitleParts(ev.title).serial&&storyEpisodeTitleParts(ev.title).series===parts.series)
+              .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))):[];
+            const nextEv=parts.serial&&!parts.final?(series[series.findIndex(ev=>ev.id===event.id)+1]||null):null;
+            const nextParts=nextEv?storyEpisodeTitleParts(nextEv.title):null;
+            // 次が「終章」で、結果で分かれる(終章が2つある)ときは、副題を出さない(どちらになるかを先に見せない)
+            if(nextParts&&nextParts.final&&series.filter(ev=>storyEpisodeTitleParts(ev.title).final).length>1) nextParts.sub='';
+            const nextAt=nextEv?storyJstMs(nextEv.date):NaN;
+            const now=Date.now();
+            const jst=Number.isFinite(nextAt)?new Date(nextAt+9*3600*1000):null;
+            const when=jst?`${jst.getUTCMonth()+1}/${jst.getUTCDate()}(${'日月火水木金土'[jst.getUTCDay()]}) ${jst.getUTCHours()}:${String(jst.getUTCMinutes()).padStart(2,'0')}`:'';
+            const left=Number.isFinite(nextAt)&&nextAt>now?nextAt-now:0;
+            const leftText=left>0?(left>=3600000?`あと${Math.floor(left/3600000)}時間${Math.floor(left%3600000/60000)}分`:`あと${Math.max(1,Math.ceil(left/60000))}分`):'';
+            // 全話を見た印は、続きものの最後(終章)だけ。結果で分かれるエンディング(終章が2つ)は、どちらか片方でよい
+            const groupIds=series.filter(ev=>!storyEpisodeTitleParts(ev.title).final).map(ev=>ev.id);
+            const seenNow=normalizeRhythmEventRewardClaims(rhythmEventStorySeen);
+            const allSeen=parts.final&&groupIds.length>1&&groupIds.every(id=>id===event.id||seenNow.includes(id));
+            // 全◯話: 終章までを数える(結果で分かれる終章は1つと数える)。「第◯部」で数えるお話は「部」
+            const allCount=groupIds.length+1;
+            const allUnit=/部/.test(parts.ep)||series.some(ev=>/第[\d.]+部/.test(ev.title))?'部':'話';
+            const canClose=()=>Date.now()-(Number(eventReplay.endingAt)||0)>(delay+1.2)*1000;
+            const go=(fn)=>(e)=>{e.stopPropagation();next();fn();};
+            return(
+            <div data-story-ending={STORY_ENDING_STYLE} onClick={(e)=>{e.stopPropagation();if(canClose())next();}}
+              style={{position:'absolute',inset:0,zIndex:20,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'auto',animation:`storyEndDim .9s ease-out ${delay}s both`}}>
+              <div className="w-full max-w-sm px-6 text-center">
+                <p className="text-[12px] font-black tracking-[.3em] text-fuchsia-200/80" style={{animation:`storyEndCard 1s ease-out ${delay+.2}s both`}}>{parts.series}</p>
+                <p className="mt-2 text-[30px] font-black leading-tight text-white" style={{animation:`storyEndCard 1s ease-out ${delay+.35}s both`,textShadow:'0 0 18px rgba(192,132,252,.8)'}}>{parts.ep}</p>
+                {parts.sub&&<p className="mt-1 text-[16px] font-black text-fuchsia-100" style={{animation:`storyEndCard 1s ease-out ${delay+.5}s both`}}>{parts.sub}</p>}
+                <p data-story-ending-fin className="mt-5 text-[38px] font-black tracking-[.4em]" style={{animation:`storyEndFin 1.4s ease-out ${delay+.9}s both`,background:'linear-gradient(180deg,#fde68a,#f0abfc)',WebkitBackgroundClip:'text',backgroundClip:'text',color:'transparent'}}>{parts.final?'おしまい':'おわり'}</p>
+                {rich&&nextEv&&<div data-story-ending-next className="mx-auto mt-5 rounded-2xl border border-fuchsia-300/40 bg-slate-900/80 px-3 py-2" style={{animation:`storyEndCard 1s ease-out ${delay+1.5}s both`}}>
+                  <p className="text-[11px] font-black text-fuchsia-200">次のお話</p>
+                  <p className="text-[14px] font-black text-white">{nextParts.series&&nextParts.series!==parts.series?`${nextParts.series} `:''}{nextParts.ep} {nextParts.sub}</p>
+                  {/* 残り時間は本編(HOME で流れたとき)だけ。回想では題名だけ(2026-11-03 社長) */}
+                  {eventReplay.live&&<p className="text-[12px] font-bold text-slate-300">{left>0?<>{when} から <b className="text-amber-200">{leftText}</b></>:'もう見られます(プロフィールの「イベント回想」)'}</p>}
+                </div>}
+                {rich&&!nextEv&&allSeen&&<p data-story-ending-all className="mx-auto mt-4 inline-block rounded-full border border-amber-300/60 bg-amber-500/15 px-4 py-1 text-[13px] font-black text-amber-100" style={{animation:`storyEndCard 1s ease-out ${delay+1.5}s both`}}>🔑 全{allCount}{allUnit} ぜんぶ見た！</p>}
+                {rich&&eventReplay.live&&!eventReplay.debug&&/^pandora_wings_/.test(event.id)&&<div data-story-ending-actions className="mt-4 grid grid-cols-2 gap-2" style={{animation:`storyEndCard 1s ease-out ${delay+1.8}s both`}}>
+                  <button type="button" onClick={go(()=>setGameState('RHYTHM_DEMO_HOME'))} className="min-h-[48px] rounded-2xl bg-fuchsia-500 text-[13px] font-black text-slate-950 active:scale-[.98]">🎵 イベントの曲を遊ぶ</button>
+                  <button type="button" onClick={go(()=>{setRhythmRankingTab('event');loadRhythmEventRanking('limited',rhythmEventDivision.limited);setGameState('RHYTHM_RANKING');})} className="min-h-[48px] rounded-2xl border border-fuchsia-300/60 bg-slate-900 text-[13px] font-black text-fuchsia-100 active:scale-[.98]">🏆 ランキングを見る</button>
+                </div>}
+                <button type="button" data-story-ending-close onClick={(e)=>{e.stopPropagation();next();}} className="mt-4 min-h-[48px] w-full rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]" style={{animation:`storyEndCard 1s ease-out ${delay+(rich?2:1.4)}s both`}}>閉じる</button>
+              </div>
+            </div>);
+          })()}
         </div>);
       })()}
 

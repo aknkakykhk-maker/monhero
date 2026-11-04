@@ -1607,7 +1607,8 @@ const createAnimationStyle = () => {
       background:radial-gradient(circle,#fff 0 20%,#fde047 45%,#f59e0b);
       clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); }
     .skfx-p--flame { width:14px; height:20px; margin:-10px 0 0 -7px; border-radius:50% 50% 50% 50% / 65% 65% 35% 35%;
-      background:radial-gradient(circle at 50% 70%,#fff 0 15%,#bef264 35%,#65a30d 70%,rgba(101,163,13,0)); box-shadow:0 0 10px #84cc16; }
+      background:radial-gradient(circle at 50% 70%,#fff 0 14%,var(--c1,#fde68a) 32%,var(--c2,#f97316) 66%,rgba(0,0,0,0)); box-shadow:0 0 10px var(--c2,#f97316); }
+    /* ↑ 炎は技の色(--c1・--c2)で塗る(2026-11-04 まで黄緑に固定されていて、火炎車・神狐蒼火などの炎が黄緑に見えていた) */
     .skfx-p--leaf { width:16px; height:9px; margin:-4px 0 0 -8px; border-radius:0 100% 0 100%;
       background:linear-gradient(135deg,#bbf7d0,#22c55e 60%,#15803d); box-shadow:0 0 6px rgba(34,197,94,.8); }
     .skfx-p--rice { width:6px; height:10px; margin:-5px 0 0 -3px; border-radius:50%; background:#fffdf5; box-shadow:0 0 4px #fde68a; }
@@ -2230,6 +2231,8 @@ const createAnimationStyle = () => {
     .fin-shape--drop { width:10px; height:16px; border-radius:50% 50% 50% 50% / 70% 70% 30% 30%; background:linear-gradient(180deg, #fff, var(--spm-c1) 50%, var(--spm-c2)); }
     .fin-shape--leaf { width:18px; height:10px; border-radius:90% 0 90% 0; background:linear-gradient(135deg, #bbf7d0, #16a34a); box-shadow:0 0 6px #22c55e; }
     .fin-shape--flame { width:16px; height:22px; border-radius:50% 50% 50% 50% / 70% 70% 30% 30%; background:radial-gradient(ellipse at 50% 80%, #fff 0 14%, #fde047 36%, #f97316 62%, rgba(220,38,38,0)); box-shadow:0 0 8px #f97316; }
+    /* 技の色で塗る固有技(青い狐火など・24 の tint)では、着弾で散る炎も技の色に */
+    [data-impact-tint] .fin-shape--flame { background:radial-gradient(ellipse at 50% 80%, #fff 0 14%, var(--spm-c1) 36%, var(--spm-c2) 62%, rgba(0,0,0,0)); box-shadow:0 0 8px var(--spm-c2); }
     .fin-shape--note { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
     .fin-shape--note::before { content:'♪'; }
     .fin-shape--heart { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
@@ -2660,12 +2663,14 @@ const createAnimationStyle = () => {
     @keyframes mhUwTabOpen{0%{filter:brightness(.4) grayscale(1);transform:scale(.96)}55%{filter:brightness(.6) grayscale(.6);transform:scale(.96) translateX(-1px)}62%{transform:scale(.96) translateX(2px)}70%{filter:brightness(2.2);transform:scale(1.06)}100%{filter:none;transform:scale(1)}}
     @keyframes mhUwTabGlow{0%,100%{box-shadow:0 0 6px rgba(165,243,252,.35)}50%{box-shadow:0 0 18px rgba(165,243,252,.9),0 0 10px rgba(249,115,22,.6)}}
     @keyframes mhUwNew{0%{opacity:0;transform:scale(2)}100%{opacity:1;transform:scale(1)}}
-    /* カードの枠: INFERNO は燃える橙、COCYTUS は氷の水色。右上に「🛡×3〜5」(data-shield-layers の文字をそのまま出す) */
+    /* カードの枠: INFERNO は燃える橙、EREBUS は冥界の闇の赤紫(2026-11-04 社長「案1」)、COCYTUS は氷の水色。右上に「🛡×3〜5」(data-shield-layers の文字をそのまま出す) */
     [data-underworld-card]{position:relative}
     [data-underworld-card="INFERNO"]{box-shadow:0 0 0 2px #fb923c,0 0 22px rgba(249,115,22,.65) !important}
+    [data-underworld-card="EREBUS"]{box-shadow:0 0 0 2px #f9a8d4,0 0 22px rgba(219,39,119,.7) !important}
     [data-underworld-card="COCYTUS"]{box-shadow:0 0 0 2px #a5f3fc,0 0 22px rgba(34,211,238,.6) !important}
     [data-underworld-card][data-shield-layers]::after{content:"🛡×" attr(data-shield-layers);position:absolute;top:30px;right:10px;left:auto;bottom:auto;width:auto;height:auto;white-space:nowrap;z-index:30;font-style:normal;padding:2px 8px;border-radius:999px;font:900 11px/1.3 sans-serif;color:#fff;pointer-events:none}
     [data-underworld-card="INFERNO"][data-shield-layers]::after{background:linear-gradient(90deg,#7f1d1d,#ea580c) !important;box-shadow:0 0 10px rgba(249,115,22,.8) !important;opacity:1 !important;filter:none !important}
+    [data-underworld-card="EREBUS"][data-shield-layers]::after{background:linear-gradient(90deg,#500724,#db2777) !important;box-shadow:0 0 10px rgba(219,39,119,.8) !important;opacity:1 !important;filter:none !important}
     [data-underworld-card="COCYTUS"][data-shield-layers]::after{background:linear-gradient(90deg,#164e63,#0891b2) !important;box-shadow:0 0 10px rgba(34,211,238,.8) !important;opacity:1 !important;filter:none !important}
     /* 横向きはカードが2列になり、右の説明の欄の下に隠れるので札は出さない(説明の文にシールドの枚数がある) */
     @media (orientation:landscape) and (max-height:520px){[data-underworld-card][data-shield-layers]::after{display:none}}
@@ -3262,6 +3267,42 @@ const createAnimationStyle = () => {
     [data-story-pose="front"] { animation: storyMonFront .5s ease-out both; }
     [data-story-pose="approach"] { animation: storyMonApproach .8s ease-out both; }
     [data-story-pose="hop"] { animation: storyMonHop 1.1s ease-out both; }
+    /* イベント「鍵の向こう側へ」(2026-11-02)のパンドラ。
+       peek … 箱のすきまから影がのぞく(ふっと出て、少し沈んだまま)。
+       splitL / splitR … 体のまんなか(鍵穴)で光がはじけたあと、悪魔側(左)と天使側(右)が左右へはじかれて離れ、それぞれの色の光をまとって揺れる。
+       mergeL / mergeR … 左右から寄って重なる(重なった所で鍵穴の光が強く光り、次の行で1つの立ち絵に戻る)。
+       fierce を付けると(第5話)離れ方と揺れが激しくなる */
+    [data-story-pose="peek"] { animation: storyMonPeek 1.2s ease-out both; filter: drop-shadow(0 0 2px rgba(233,213,255,.9)) drop-shadow(0 0 12px rgba(168,85,247,.85)); }
+    [data-story-pose="splitL"] { animation: storySplitL 1.1s cubic-bezier(.2,.9,.25,1.2) both, storySplitSway 2.6s ease-in-out 1.1s infinite; filter: drop-shadow(0 0 14px rgba(168,85,247,.95)) drop-shadow(0 0 4px rgba(88,28,135,.9)); }
+    [data-story-pose="splitR"] { animation: storySplitR 1.1s cubic-bezier(.2,.9,.25,1.2) both, storySplitSway 2.6s ease-in-out 1.4s infinite; filter: drop-shadow(0 0 14px rgba(255,255,255,.95)) drop-shadow(0 0 4px rgba(253,224,71,.8)); }
+    [data-story-pose="splitL"][data-story-fierce] { animation: storySplitL .7s cubic-bezier(.2,1.2,.3,1.4) both, storySplitShake .5s ease-in-out .7s 3, storySplitSway 2s ease-in-out 2.2s infinite; }
+    [data-story-pose="splitR"][data-story-fierce] { animation: storySplitR .7s cubic-bezier(.2,1.2,.3,1.4) both, storySplitShake .5s ease-in-out .75s 3, storySplitSway 2s ease-in-out 2.3s infinite; }
+    /* 戻るときは 悪魔側・天使側 の2つが真ん中へ寄って消え、同時に真ん中(重ねて置いた merged)のパンドラが光の中から現れる */
+    [data-story-pose="mergeL"] { animation: storyMergeL 1.3s ease-in both; filter: drop-shadow(0 0 14px rgba(168,85,247,.95)); }
+    [data-story-pose="mergeR"] { animation: storyMergeR 1.3s ease-in both; filter: drop-shadow(0 0 14px rgba(255,255,255,.95)); }
+    [data-story-pose="merged"] { position: absolute; left: 50%; bottom: 0; translate: -50% 0; animation: storyMerged 1.8s ease-out both; }
+    [data-story-monster^="Pandora"] { height: min(calc(100% / 1.14), 44vw, 250px); }
+    @keyframes storyMonPeek { 0% { opacity: 0; transform: translateY(18%) scale(.9); } 35% { opacity: .95; transform: translateY(4%); } 100% { opacity: .8; transform: translateY(6%); } }
+    @keyframes storySplitL { 0% { opacity: 0; transform: translateX(52%) scale(.9); filter: brightness(2.6); } 25% { opacity: 1; transform: translateX(46%) scale(1.04); } 100% { transform: translateX(-6%) rotate(-3deg); } }
+    @keyframes storySplitR { 0% { opacity: 0; transform: translateX(-52%) scale(.9); filter: brightness(2.6); } 25% { opacity: 1; transform: translateX(-46%) scale(1.04); } 100% { transform: translateX(6%) rotate(3deg); } }
+    @keyframes storySplitSway { 0%, 100% { translate: 0 0; } 50% { translate: 0 -4%; } }
+    @keyframes storySplitShake { 0%, 100% { translate: 0 0; } 25% { translate: -5% 1%; } 75% { translate: 5% -1%; } }
+    @keyframes storyMergeL { 0% { transform: translateX(-6%); } 70% { opacity: 1; transform: translateX(52%) scale(1.02); filter: brightness(1.6); } 100% { opacity: 0; transform: translateX(52%); filter: brightness(3); } }
+    @keyframes storyMergeR { 0% { transform: translateX(6%); } 70% { opacity: 1; transform: translateX(-52%) scale(1.02); filter: brightness(1.6); } 100% { opacity: 0; transform: translateX(-52%); filter: brightness(3); } }
+    @keyframes storyMerged { 0%, 62% { opacity: 0; transform: scale(.92); filter: brightness(3); } 80% { opacity: 1; transform: scale(1.06); filter: brightness(1.8); } 100% { opacity: 1; transform: none; filter: none; } }
+    /* 鍵穴の光(fx:'split' / 'merge')。白と紫の光が真ん中から走り、画面にひびのような光の筋が広がる */
+    [data-story-crack] { position: absolute; left: 50%; top: 46%; width: 0; height: 0; }
+    [data-story-crack] > i { position: absolute; left: 0; top: 0; width: 46vmax; height: 3px; transform-origin: 0 50%; border-radius: 3px; background: linear-gradient(90deg, rgba(255,255,255,1), rgba(216,180,254,.9) 40%, rgba(168,85,247,0)); box-shadow: 0 0 10px rgba(216,180,254,.9); animation: storyCrack .9s ease-out both; }
+    [data-story-crack] > i:nth-child(even) { background: linear-gradient(90deg, rgba(255,255,255,1), rgba(254,240,138,.9) 40%, rgba(255,255,255,0)); box-shadow: 0 0 10px rgba(255,255,255,.9); }
+    [data-story-keyhole] { position: absolute; left: 50%; top: 46%; width: 34vmin; height: 34vmin; margin: -17vmin 0 0 -17vmin; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,1) 0 12%, rgba(233,213,255,.85) 26%, rgba(147,51,234,.45) 48%, rgba(0,0,0,0) 70%); animation: storyKeyhole 1.1s ease-out both; }
+    [data-story-unlock] { position: absolute; left: 50%; top: 46%; width: 30vmin; height: 30vmin; margin: -15vmin 0 0 -15vmin; border-radius: 50%; border: 4px solid rgba(253,224,71,.95); box-shadow: 0 0 18px rgba(253,224,71,.9), inset 0 0 14px rgba(255,255,255,.8); animation: storyUnlock 1.6s ease-out both; }
+    [data-story-unlock] > i { position: absolute; left: 50%; top: -8%; width: 14%; height: 30%; margin-left: -7%; border-radius: 40% 40% 20% 20%; background: rgba(253,224,71,1); box-shadow: 0 0 10px rgba(253,224,71,1); }
+    @keyframes storyUnlock { 0% { opacity: 0; transform: scale(.4) rotate(0deg); } 20% { opacity: 1; transform: scale(1) rotate(0deg); } 65% { opacity: 1; transform: scale(1) rotate(90deg); } 100% { opacity: 0; transform: scale(2.4) rotate(90deg); } }
+    @keyframes storyCrack { 0% { opacity: 0; scale: 0 1; } 20% { opacity: 1; } 55% { opacity: 1; scale: 1 1; } 100% { opacity: 0; scale: 1 .4; } }
+    @keyframes storyKeyhole { 0% { opacity: 0; transform: scale(.2); } 25% { opacity: 1; transform: scale(1.15); } 100% { opacity: 0; transform: scale(2.2); } }
+    /* 動きを減らす設定・軽量モードでは、光の筋は出さず、光だけを短く控えめに */
+    @media (prefers-reduced-motion: reduce) { [data-story-crack] { display: none; } [data-story-keyhole] { animation-duration: .5s; opacity: .5; } }
+    [data-lightweight="true"] [data-story-crack] { display: none; }
     @keyframes storyMonIn { 0% { opacity: 0; transform: translateY(14px) scale(.85); } 100% { opacity: 1; transform: none; } }
     @keyframes storyMonBack { 0% { transform: none; } 30% { transform: translateY(-8%) scale(.86); } 45% { transform: translate(-4%, -8%) scale(.86); } 60% { transform: translate(4%, -8%) scale(.86); } 75% { transform: translate(-2%, -8%) scale(.86); } 100% { transform: translateY(-8%) scale(.86); } }
     @keyframes storyMonFront { 0% { transform: none; } 100% { transform: scale(1.14); } }
@@ -3273,7 +3314,39 @@ const createAnimationStyle = () => {
       [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 8px) !important; bottom: calc(env(safe-area-inset-bottom) + 8px); align-items: center; justify-content: space-between; gap: 0; padding: 0 14px; }
       [data-story-monster] { height: min(70%, calc(((100vw - 28rem) / 2 - 30px) / 1.14), 176px); }
     }
+    /* 3つのゾーン(上部=ステージ/立ち絵=モンスター/下部=窓)を固定する形(2026-11-02 社長「立ち絵ゾーン固定したほうがいいよ」「上部ゾーン/立ち絵/下部ゾーンで」)。
+       真ん中にモンスターが出るお話([data-story-zones]・60-app.jsx)だけ。高さは台詞の長さ・顔の数で変えない。
+       縦: 上部ゾーン = 上の端から 10px + ステージ(顔 96px・吹き出し 3行ぶん 116px)。下部ゾーン = 窓 336px(+下の安全域)。立ち絵ゾーン = そのあいだ(上の端から 150px 〜 窓の 8px 上)。
+       収まらない台詞は窓を伸ばさず、ページに分けて「次へ」で送る(60-app.jsx の storyPagesOf) */
+    @media (orientation: portrait), (min-height: 501px) {
+      [data-event-story][data-story-zones] [data-story-stage][data-story-stage] { top: calc(env(safe-area-inset-top) + 10px) !important; }
+      [data-event-story][data-story-zones] [data-story-guest-bubble] { height: 116px; overflow: hidden; }
+      /* 下部ゾーンの高さ: 話している助手の顔を台詞の欄の左に置く形(face)は 266px、小さい顔の列も残す形(facerow)は 300px(2026-11-03) */
+      [data-event-story][data-story-zones] { --story-bottom-h: 266px; }
+      [data-event-story][data-story-zones="facerow"] { --story-bottom-h: 300px; }
+      [data-event-story][data-story-zones] [data-story-sheet][data-story-sheet] { height: calc(var(--story-bottom-h) + env(safe-area-inset-bottom)); max-height: none; justify-content: flex-end; }
+      [data-event-story][data-story-zones] [data-story-line-box] { height: 120px; flex-shrink: 0; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 150px) !important; bottom: calc(var(--story-bottom-h) + env(safe-area-inset-bottom) + 8px); align-items: center; }
+      [data-event-story][data-story-zones] [data-story-monster] { height: min(calc(100% / 1.14), 50vw, 230px); }
+      [data-event-story][data-story-zones] [data-story-monsters="2"] [data-story-monster] { height: min(calc(100% / 1.14), 44vw, 210px); }
+    }
+    /* 横の低い画面: 上部ゾーン = 上の端から 6px + ステージ(顔は 0.6倍・吹き出し 3行ぶん 84px)。下部ゾーン = その下ぜんぶ(窓の高さを固定)。
+       モンスターは窓の左右の空き(上の横向きの決まりのまま) */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-event-story][data-story-zones] [data-story-guest-bubble] { height: 84px; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-sheet][data-story-sheet] { height: calc(var(--mh-vh) - 96px - env(safe-area-inset-top)) !important; max-height: none !important; justify-content: flex-end; }
+      [data-event-story][data-story-zones] [data-story-line-box] { height: 120px; flex-shrink: 0; overflow: hidden; }
+      /* 話している助手の顔も、上部ゾーンのゲストの顔と同じく 0.6倍 */
+      [data-event-story][data-story-zones] [data-story-speaker] { zoom: .6; }
+    }
     @media (prefers-reduced-motion: reduce) { [data-story-monster] { animation: none !important; } }
+    /* お話の締め(終わりの札。2026-11-03)。暗くして、題字のように「第◯話 ～副題～ おわり」を出す。'pull' は最後の場面を引いて暗くしてから */
+    @keyframes storyEndDim { 0% { background: rgba(2,6,23,0); } 100% { background: rgba(2,6,23,.9); } }
+    @keyframes storyEndCard { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: none; } }
+    @keyframes storyEndFin { 0% { opacity: 0; transform: scale(1.35); filter: blur(8px); letter-spacing: .9em; } 100% { opacity: 1; transform: none; filter: none; } }
+    [data-event-story] > :not([data-story-ending]) { transition: transform 1.6s ease-out, filter 1.6s ease-out; }
+    [data-event-story][data-story-ending-pull] > :not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
+    @media (prefers-reduced-motion: reduce) { [data-story-ending] *, [data-story-ending] { animation-duration: .01s !important; animation-delay: 0s !important; } }
     @keyframes storyShrink { 0% { opacity: 0; transform: scale(1.7); filter: brightness(1.9); } 50% { opacity: 1; } 100% { transform: scale(1); filter: brightness(1); } }
     @keyframes storyBanner { 0% { opacity: 0; transform: translate(-50%, -8px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.06); } 22% { transform: translate(-50%, 0) scale(1); } 82% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, 0) scale(1); } }
     @keyframes storyShakeA { 0%, 100% { transform: translate(0,0); } 12% { transform: translate(-6px,3px); } 24% { transform: translate(6px,-4px); } 36% { transform: translate(-5px,-3px); } 48% { transform: translate(5px,3px); } 62% { transform: translate(-3px,2px); } 78% { transform: translate(3px,-2px); } }
@@ -4371,6 +4444,8 @@ const createAnimationStyle = () => {
     @keyframes mhCardCutin { 0% { opacity: 0; transform: translateX(40%); } 100% { opacity: 1; transform: translateX(0); } }
     @media (prefers-reduced-motion: reduce) { .mh-card-cutin { animation: none; } }
     .mh-card-hit-flash { position: absolute; inset: 0; border-radius: 12px; background: rgba(255,255,255,.85); pointer-events: none; animation: mhCardHitFlash .28s ease-out both; }
+    /* 立ち絵の子は、絵の形どおりに白く光る(84 の hitSil。絵を型に切り抜く。2026-11-01 点検 G) */
+    .mh-card-hit-flash-sil { border-radius: 0; background: #fff; z-index: 3; }
     @keyframes mhCardHitFlash { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
     .mh-card-dmg-pop { animation: mhCardDmgPop 1s ease-out both; }
     /* 当たった瞬間の「防御！ 5 → 2」(1.6秒。ぽんと出て、しばらく止まって、消える。2026-10-27 社長・案A) */
@@ -4475,7 +4550,15 @@ const createAnimationStyle = () => {
     @keyframes mhCardFlip { 0% { transform: rotateY(0); } 100% { transform: rotateY(180deg); } }
     /* 手札の名前(84 の CardNameFit twoLine): 箱が 56px 以下のときだけ、長い名前を言葉の切れ目で2行に折る。切れ目の無い1語は字の間を詰めて1行(mh-nf-squeeze)。短い名前も2行ぶんの高さを取ってそろえる */
     .mh-nf-b { display: none; }
+    /* フリー対戦(84 の view 'foe')・背の低い縦の画面: 助手の顔と紹介の立ち絵を小さくして、紹介の欄を下の「対戦する」の帯に隠さない(2026-11-01 見た目の点検 D。390×600 で 26px 隠れていた) */
+    @media (orientation: portrait) and (max-height: 700px) { [data-card-top="foe"] { --mh-foe-art-h: 12vh; } [data-card-top="foe"] [data-card-foe] > img { height: 40px; width: 40px; } }
     @container (max-width: 56px) { .mh-nf-a, .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: 20px; line-height: 1; } .mh-nf-a.mh-nf-hide { display: none; } .mh-nf-squeeze { letter-spacing: -0.07em; } }
+    /* 2行に折る幅を名前の長さで決める(84 の CardNameFit。1行のまま 11px で入らない幅から2行へ。2026-11-01 見た目の点検 C)。tall は短い名前も2行ぶんの高さ。56px 以下は上の決まりのまま */
+    @container (min-width: 57px) and (max-width: 115px) { .mh-nf-tall > .mh-nf-a { display: flex; flex-direction: column; justify-content: center; min-height: var(--nf-2l, 20px); line-height: 1.05; } }
+    @container (min-width: 57px) and (max-width: 80px) { .mh-nf-n7 > .mh-nf-a.mh-nf-hide { display: none; } .mh-nf-n7 > .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: var(--nf-2l, 20px); line-height: 1.05; } }
+    @container (min-width: 57px) and (max-width: 92px) { .mh-nf-n8 > .mh-nf-a.mh-nf-hide { display: none; } .mh-nf-n8 > .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: var(--nf-2l, 20px); line-height: 1.05; } }
+    @container (min-width: 57px) and (max-width: 103px) { .mh-nf-n9 > .mh-nf-a.mh-nf-hide { display: none; } .mh-nf-n9 > .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: var(--nf-2l, 20px); line-height: 1.05; } }
+    @container (min-width: 57px) and (max-width: 115px) { .mh-nf-n10 > .mh-nf-a.mh-nf-hide { display: none; } .mh-nf-n10 > .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: var(--nf-2l, 20px); line-height: 1.05; } }
     .mh-card-jump { animation: mhCardJump .9s ease-out both; }
     .mh-card-afterimage { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; pointer-events: none; filter: grayscale(.4) brightness(1.4) drop-shadow(0 0 6px rgba(125,211,252,.9)); animation: mhCardAfter .62s ease-out both; }
     .mh-card-air-mark { position: absolute; top: -2px; left: 50%; margin-left: -18px; width: 36px; border-radius: 6px; background: rgba(8,145,178,.92); color: #ecfeff; font-size: 11px; font-weight: 900; text-align: center; pointer-events: none; animation: mhCardPop .9s ease-out both; }
@@ -4573,7 +4656,8 @@ const createAnimationStyle = () => {
     @keyframes mhPackCFlash { 0%, 20% { opacity: 1; } 100% { opacity: 0; } }
     .mh-pack-label-big { font-size: 40px; padding: 2px 24px; font-style: italic; letter-spacing: 2px; overflow: hidden; -webkit-text-stroke: 1.5px rgba(0,0,0,.3);
       box-shadow: 0 0 18px rgba(255,200,0,.9); animation: mhPackLabelIn .45s cubic-bezier(.2,1.6,.4,1) both; }
-    .mh-pack-label-big.alt { font-size: 46px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.6); box-shadow: 0 0 30px 8px rgba(255,255,255,.95), 0 0 70px 20px rgba(255,80,200,.6);
+    /* レアキラ!! の字は濃い紫で縁取る(白い字が虹色の帯の上で読みにくかった。2026-11-01 見た目の点検 H)。縁は影を8方向に重ねて作る(text-stroke は字の内側を削るため) */
+    .mh-pack-label-big.alt { font-size: 46px; color: #fff; -webkit-text-stroke: 0; text-shadow: -2px -2px 0 #3b0764, 2px -2px 0 #3b0764, -2px 2px 0 #3b0764, 2px 2px 0 #3b0764, 0px -2px 0 #3b0764, 0px 2px 0 #3b0764, -2px 0px 0 #3b0764, 2px 0px 0 #3b0764, 0 4px 6px rgba(0,0,0,.6); box-shadow: 0 0 30px 8px rgba(255,255,255,.95), 0 0 70px 20px rgba(255,80,200,.6);
       animation: mhPackLabelIn .45s cubic-bezier(.2,1.6,.4,1) both, mhPackRainbowMove 1s linear infinite; }
     .mh-pack-label-big::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.9) 50%, transparent 60%); background-size: 250% 100%; animation: mhPackLabelSheen 1.1s ease-in-out infinite; }
     @keyframes mhPackLabelIn { 0% { opacity: 0; transform: scale(2.6) rotate(-14deg); } 100% { opacity: 1; transform: scale(1) rotate(-6deg); } }

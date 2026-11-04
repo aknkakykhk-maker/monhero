@@ -34,8 +34,9 @@ const CARD_SHARE_SMART_LABEL = Object.freeze({ expert: 'EXPERT', master: 'MASTER
 // MASTER を超える段の先読み(82 の cardAiSearchPick)。k … 試す手の数 / r … 1つの手を試す回数 / h … 何手番先まで進めるか / eval … 場の見方
 //   2026-10-30 に MASTER の助手と測った: GRAND MASTER 66% / HELL 71% / LEGEND は下の値(docs/progress/card-tournament/share-ai/README.md)
 const CARD_SHARE_SEARCH = Object.freeze({
+  // 深さは GRAND MASTER < HELL < LEGEND の順(2026-11-03 社長 D。MASTER の助手への勝率 55・58・65% の見込み)
   grandmaster: Object.freeze({ k: 3, r: 1, h: 1, eval: 'ko' }),
-  hell: Object.freeze({ k: 4, r: 2, h: 4, eval: 'ko' }),
+  hell: Object.freeze({ k: 3, r: 1, h: 2, eval: 'ko' }),
   legend: Object.freeze({ k: 4, r: 2, h: 4, eval: 'alive' }),
 });
 // 土台のくせ(メインの基本カードが助手の型ならその助手。前の形の登録や画面の名前に使う)
@@ -54,7 +55,7 @@ const cardSharePolicy = (tactics, levelId, opts = {}) => {
   if (t.f) {
     const frames = cardTacticUnpackFrames(t.f);
     const base = cardAiPolicy(t.habit, cardShareFightLevel(t), { ...opts, noTactics: true });
-    return { ...base, gambit: frames, aces: t.aces.slice(), ...(search ? { search } : {}) };
+    return { ...base, gambit: frames, gambitOnHabit: true, gambitHabitId: t.habit, aces: t.aces.slice(), ...(search ? { search } : {}) };
   }
   const base = cardAiPolicy(t.habit, cardShareFightLevel(t), { ...opts, noTactics: true });
   const habit = { ...base.habit };

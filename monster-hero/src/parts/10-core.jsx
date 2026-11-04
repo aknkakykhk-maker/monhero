@@ -1,6 +1,41 @@
 
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const { useState, useEffect, useCallback, useMemo, useRef, useContext } = React;
+// ==== 見えないページのずれを戻す(全画面) ====
+// 【2026-11-02 社長「押した所と反応する所がたまにずれる。横向きにしたり、更新情報の窓を開いたりしたあとになる気がする」→ 決定「A+B 両方入れる」】
+// iPhone(とくにホーム画面のアプリ)では、回転・キーボードの出し入れ・動画の全画面との行き来のあとに、
+// ページ(window・html/body)が見えない分だけスクロールしたまま残ることがある。すると見た目と、押した位置の数え方が食い違う。
+// このゲームはページそのものをスクロールさせない作り(#root が overflow:hidden・画面の中の箱だけがスクロールする)なので、
+// 画面の大きさが変わった・visualViewport が動いた・入力欄から離れた・全画面が終わった ときに、0でなければ0へ戻す。
+// 文字を入力している間(キーボードが出ている間)は戻さない(入力欄が隠れないように)。フォーカスが外れたあとで戻す。
+(()=>{
+  if(typeof window==='undefined'||typeof document==='undefined')return;
+  const editing=()=>{const el=document.activeElement;if(!el)return false;const tag=String(el.tagName||'').toUpperCase();return tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||el.isContentEditable===true;};
+  const reset=()=>{
+    if(editing())return;
+    try{
+      if(window.scrollX||window.scrollY)window.scrollTo(0,0);
+      for(const el of [document.scrollingElement,document.documentElement,document.body]){
+        if(el&&(el.scrollTop||el.scrollLeft)){el.scrollTop=0;el.scrollLeft=0;}
+      }
+    }catch(_){}
+  };
+  // iOS は大きさや位置を少し遅れて直すことがあるので、すぐ・少しあと・もう少しあとの3回見る
+  let timers=[];
+  const soon=()=>{timers.forEach(clearTimeout);timers=[0,150,500].map(ms=>setTimeout(reset,ms));};
+  const passive={passive:true};
+  window.addEventListener('resize',soon,passive);
+  window.addEventListener('orientationchange',soon,passive);
+  if(window.visualViewport&&typeof window.visualViewport.addEventListener==='function'){
+    window.visualViewport.addEventListener('resize',soon,passive);
+    window.visualViewport.addEventListener('scroll',soon,passive);
+  }
+  // 入力欄から離れた(キーボードが閉じる)あと。次の入力欄へ移っただけのときは戻さない
+  document.addEventListener('focusout',()=>setTimeout(()=>{if(!editing())soon();},60),true);
+  // 動画の全画面が終わったとき(iPhone の動画は webkitendfullscreen。泡立たないので document の捕まえる段で受ける)
+  ['fullscreenchange','webkitfullscreenchange'].forEach(type=>document.addEventListener(type,soon));
+  document.addEventListener('webkitendfullscreen',soon,true);
+})();
 // ==== アイコン: lucide-react UMDが不安定なため、インラインSVGで自己完結 ====
 const _LI = {};
 // lucide公式のSVGパス(strokeベース)。無いものは汎用ドットにフォールバック
@@ -346,6 +381,7 @@ const eventReplayAllList = () => eventReplaySorted(() => true);
 //   イベントを足すときは、data/assistants.js の項目へ group を1つ書く(tools/boot/event-replay-check.js が見張る)。
 // ★この並びを使うのは一覧の画面だけ。再生・着替え・デバッグ一覧は今までの eventReplayList / eventReplayAllList(id で引くだけ)。
 const EVENT_REPLAY_GROUPS = Object.freeze([
+  { id:'pandora_wings', emoji:'🗝️', label:'鍵の向こう側へ', note:'パンドラとふたつの翼のお話', color:'#c084fc' },
   { id:'halloween', emoji:'🎃', label:'ハロウィン・ナイト', note:'レイドバトルとジャックのお話', color:'#fb923c' },
   { id:'update', emoji:'✨', label:'新しい遊びのお話', note:'新しい遊びができたときの案内', color:'#e879f9' },
   { id:'beat_point', emoji:'🎵', label:'ビートP', note:'ビートPと交換所のお話', color:'#34d399' },
@@ -646,9 +682,18 @@ const rhythmPlayRunLoops = (durationMs, scale = RHYTHM_PLAY_RUN_LOOP_SCALE) => {
 const rhythmPlayRunLoopScale = (songId, event, campaign) => {
   const campaignScale = campaign ? Number(campaign.loopScale) : NaN;
   if (Number.isFinite(campaignScale) && campaignScale > 0) return campaignScale;
-  const ids = (event && Array.isArray(event.songIds)) ? event.songIds : null;
+  // ショート版も対象曲として数える(songVersions・2026-11-01)
+  const ids = (event && Array.isArray(event.songIds))
+    ? (typeof rhythmEventPlaySongIds === 'function' ? rhythmEventPlaySongIds(event) : event.songIds) : null;
   const id = songId === null || songId === undefined ? '' : String(songId);
   return (id && ids && ids.includes(id)) ? RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE : RHYTHM_PLAY_RUN_LOOP_SCALE;
+};
+// 周回の倍率を上げているキャンペーン(loopScale・loopBoost を持つもの)。無ければ null。
+//   画面の案内(報酬の窓・曲えらびの帯・曲リザルト)が、実際に効く倍率(rhythmPlayRunLoopScale)とずれないように使う(2026-11-02)。
+//   公開フラグ(RELEASE_FLAGS.rhythmEventPoints)は呼ぶ側で見る(計算の rhythmPlayRunLoopCampaignNow と同じ)
+const rhythmLoopCampaignAt = (nowMs) => {
+  const c = typeof rhythmEventPointCampaignAt === 'function' ? rhythmEventPointCampaignAt(nowMs) : null;
+  return c && Number(c.loopScale) > 0 && Number(c.loopBoost) > 0 ? c : null;
 };
 // その難易度を「クイックで」通したことがあるか。
 // ★上の難易度を通していれば、その下も通したものとして扱う。下は上より必ずやさしいので、
@@ -827,7 +872,7 @@ const BATTLE_SYSTEM_QUICK = 'systemQuick';
 const BATTLE_SELECT_ASSIST_KEY = 'mh_battle_select_assist_v1';
 // 難易度えらびの札で、地が暗いので白い文字にする難易度(2026-10-09 ユーザー指示「難易度にあった色合いで、強弱を」)。
 // 色そのものは 77-screen-rhythm-multi.jsx の .mhbt-d-<難易度> にまとめてある
-const BATTLE_DIFFICULTY_DARK_LOOKS = new Set(['Expert','Master','GrandMaster','Hell','EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY','GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO','COCYTUS']);
+const BATTLE_DIFFICULTY_DARK_LOOKS = new Set(['Expert','Master','GrandMaster','Hell','EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY','GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO','EREBUS','COCYTUS']);
 const BATTLE_SYSTEMS = Object.freeze([
   Object.freeze({
     id: BATTLE_SYSTEM_CLASSIC, label: 'クラシックバトル', short: 'クラシック', emoji: '⚔️', color: '#818cf8',

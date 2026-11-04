@@ -163,6 +163,18 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
     const keep2 = E.cardAiChooseAction(db, st, polB([{ c: 'any', a: 'keepGuard' }]), zero);
     check('F 守り札を残して置く(守りの札をガッツにしない)', keep2.type === 'guts' && !keep2.hand.includes(2), J(keep2));
     check('F ガッツをためる', keep.type === 'guts', J(keep));
+    // 手が詰まったとき(2026-11-02 社長「案A + 案B」): その番に何も使わず手札が5枚なら、ガッツが足りていても入れ替える
+    const guardsAny = Object.values(db.cards).filter((c) => (c.kind === 'blk' || c.kind === 'dge') && c.user === 'any' && c.ready).map((c) => c.no);
+    const stuck = JSON.parse(JSON.stringify(st));
+    stuck.players[0].hand = guardsAny.slice(0, 5);
+    stuck.players[0].guts = Array(20).fill('100');
+    const nGuard = (act) => stuck.players[0].hand.filter((_, i) => !act.hand.includes(i)).length;
+    const z0 = E.cardAiChooseAction(db, stuck, polB([{ c: 'any', a: 'gutsN.0' }]), zero);
+    check('F2 手札をガッツにしない: 守りの札だけで手札5枚・何も使えなかった番は、守り2枚だけ残して入れ替える', z0.type === 'guts' && z0.hand.length >= 1 && nGuard(z0) === 2, J(z0));
+    const kg = E.cardAiChooseAction(db, stuck, polB([{ c: 'any', a: 'keepGuard' }]), zero);
+    check('F2 守りのカードを3枚まで残す: 守りの札だけで手札5枚・何も使えなかった番は、守り3枚だけ残す', kg.type === 'guts' && nGuard(kg) === 3, J(kg));
+    const plain = E.cardAiChooseAction(db, stuck, E.cardAiPolicy('kyuko', 'master'), zero);
+    check('F2 戦術カードの無い AI も、ガッツがたまっていても、何も使えなかった番は入れ替える', plain.type === 'guts' && plain.hand.length >= 1, J(plain));
   } else {
     check('F ガッツの番を作れる', false, st.phase);
   }
@@ -236,7 +248,7 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
   const light = E.cardAiChooseAction(db, st, P({ base: ['tRush', null, null] }), zero);
   check('I 速攻型は軽い技だけ(モッチー砲6は出さない)', light && (light.type === 'endAttacks' || st.players[0].hand[light.hand[0]] !== '105'), J(light));
   const keep = E.cardAiChooseAction(db, st, P({ base: ['tHand', null, null] }), zero);
-  check('I 手札温存型は手札を2枚残す(2枚しかないので攻撃しない)', keep && keep.type === 'endAttacks', J(keep));
+  check('I 手札を残す型は手札を2枚残す(2枚しかないので攻撃しない)', keep && keep.type === 'endAttacks', J(keep));
   st = scene();
   st.players[1].mons[2].life = 4;
   const focus = E.cardAiChooseAction(db, st, P({ base: ['tFocus', null, null] }), zero);
@@ -254,11 +266,14 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
   const L = (base, n) => { ci = 0; return E.cardTacticSmartLevel(F(base, n)); };
   // 2026-10-30 社長「戦術カードなしでエキスパートクラスで、そこから上がっていってマスター超え」(段の名前は本編のチャレンジモード)
   check('J 何も無ければ EXPERT(でたらめにしない)・効く戦術カード4枚で MASTER', L([], 0) === 'expert' && L([], 3) === 'expert' && L([], 4) === 'master');
-  check('J 基本1枚: 0〜3枚 EXPERT・4枚から MASTER(基本3枚でないと MASTER を超えない)', L(['tBalance'], 3) === 'expert' && L(['tBalance'], 4) === 'master' && L(['tBalance'], 15) === 'master');
-  check('J 基本2枚: MASTER', L(['tBalance', 'tBig'], 0) === 'master' && L(['tBalance', 'tBig'], 15) === 'master');
+  check('J 基本1枚: 0〜3枚 EXPERT・4枚から MASTER(基本2枚でないと MASTER を超えない)', L(['tBalance'], 3) === 'expert' && L(['tBalance'], 4) === 'master' && L(['tBalance'], 15) === 'master');
+  // 2026-11-04 社長 案B: GRAND MASTER・HELL は基本2枚から(前は基本3枚。3枚目はカードランク30まで開かないので、みんな MASTER で止まっていた)
+  const B2 = ['tBalance', 'tBig'];
+  check('J 基本2枚: 0〜5枚 MASTER・6〜8 GRAND MASTER・9〜 HELL(LEGEND にはならない)', L(B2, 0) === 'master' && L(B2, 5) === 'master' && L(B2, 6) === 'grandmaster' && L(B2, 8) === 'grandmaster' && L(B2, 9) === 'hell' && L(B2, 15) === 'hell',
+    [0, 5, 6, 8, 9, 15].map((n) => L(B2, n)).join(' '));
   const B = ['tBalance', 'tBig', 'tArea'];
-  check('J 基本3枚: 0〜3枚 MASTER・4〜6 GRAND MASTER・7〜9 HELL・10〜 LEGEND', L(B, 3) === 'master' && L(B, 4) === 'grandmaster' && L(B, 6) === 'grandmaster' && L(B, 7) === 'hell' && L(B, 9) === 'hell' && L(B, 10) === 'legend' && L(B, 15) === 'legend',
-    [3, 4, 6, 7, 9, 10, 15].map((n) => L(B, n)).join(' '));
+  check('J 基本3枚: 0〜5枚 MASTER・6〜8 GRAND MASTER・9 HELL・10〜 LEGEND', L(B, 5) === 'master' && L(B, 6) === 'grandmaster' && L(B, 8) === 'grandmaster' && L(B, 9) === 'hell' && L(B, 10) === 'legend' && L(B, 15) === 'legend',
+    [5, 6, 8, 9, 10, 15].map((n) => L(B, n)).join(' '));
   // いちばん長い名前のカードで、全部の枠を埋めたとき
   const longest = (cat) => E.CARD_TACTIC_CARDS.filter((c) => c.cat === cat).sort((a, b) => Buffer.byteLength(b.id) - Buffer.byteLength(a.id))[0].id;
   const row = (cat) => ({ c: 'species', a: longest(cat), sp: 'colorpandora', on: false });
@@ -285,7 +300,7 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
   check('L 守るときの条件を攻める手と組んだセットは数えない', lv([mis, [], []]) === 'master');
   check('L ブリーダーの枠の「この子の◯◯」は数えない', E.cardTacticUncounted({ base: B3, breeder: [{ c: 'selfLife.50', a: 'save' }], mons: [[], [], []] }).breeder[0] === '場面が合わない');
   const good = [{ c: 'incomingKo', a: 'guard' }, { c: 'myGuts.5', a: 'cost.大技(4以上)' }, { c: 'foeAlive.3', a: 'reach.全体攻撃' }, { c: 'foeHandGe.4', a: 'disrupt.手札を捨てさせる' }];
-  check('L 意味のあるセット4つは GRAND MASTER 相当', lv([good, [], []]) === 'grandmaster');
+  check('L 意味のあるセット4つは4枚と数える', E.cardTacticUncounted({ base: B3, breeder: [], mons: [good, [], []] }).mons[0].filter((x) => x === null).length === 4);
   const u = E.cardTacticUncounted({ base: B3, breeder: [], mons: [[{ c: 'ko', a: 'atk' }], [{ c: 'ko', a: 'atk' }], [{ c: 'turnGe.15', a: 'atk' }]] });
   check('L 数えない理由が付く(同じもの・ほとんど当たらない)', u.mons[0][0] === null && u.mons[1][0] === '同じものが入っている' && u.mons[2][0] === 'ほとんど当たらない', JSON.stringify(u));
   check('L 数えないセットだけなら EXPERT', E.cardTacticSmartLevel({ base: [], breeder: [], mons: [[{ c: 'turnGe.15', a: 'atk' }], [], []] }) === 'expert');
@@ -305,6 +320,93 @@ const targetOf = (a) => (a && a.target ? a.target.m : null);
     check(`K ${w}: メインの型は今のくせ(強さごとの調整ずみ)のまま`, ['attack', 'keepGuard', 'saveGuts', 'big', 'disrupt', 'area', 'finish'].every((d) => Math.abs(h[d] - Math.min(2, Math.max(0.3, ma.habit[d]))) < 1e-9) && !!h.flex === !!ma.habit.flex);
   });
   check('K メインの細かいくせは足さない(攻め型の「倒れるときだけ守る」が助手に付かない)', !E.cardTacticKnobsOf(['tAttack', null, null], null, 0, true).guardDieOnly && E.cardTacticKnobsOf(['tAttack', null, null], null, 0, false).guardDieOnly === true);
+}
+
+// ---- M. 登録デッキの打ち方(2026-11-02 社長 ア+イ+ウ+「倒れるのに守る」) ----
+{
+  // ア: 基本カードは、登録したくせの上に足す。くせと同じ型の基本カード(くせ みゅあ に攻め型)は二重に足さない
+  const mua = E.cardAiPolicy('mua', 'master', { noTactics: true }).habit;
+  const keep = E.cardTacticHabitOf(['tAttack', 'tFinish', 'tBig'], null, 0, mua);
+  const on = E.cardTacticHabitOf(['tAttack', 'tFinish', 'tBig'], null, 0, mua, null, true, 'mua');
+  check('M くせ みゅあ に攻め型・仕留め型・大技型を足すと、助手 MASTER と同じくせになる', ['attack', 'keepGuard', 'saveGuts', 'big', 'disrupt', 'area', 'finish'].every((d) => Math.abs(keep[d] - on[d]) < 1e-9), J({ keep, on }));
+  const onDra = E.cardTacticHabitOf(['tAttack', null, null], null, 0, E.cardAiPolicy('dra', 'master', { noTactics: true }).habit, null, true, 'dra');
+  check('M くせ ドラ に攻め型を入れると、攻めが強くなる(くせの上に足す)', onDra.attack > E.cardAiPolicy('dra', 'master', { noTactics: true }).habit.attack, J(onDra));
+  check('M くせと同じ型の細かいくせは二重に付けない(くせ みゅあ の攻め型に「倒れるときだけ守る」を付けない)', !E.cardTacticKnobsOf(['tAttack', null, null], null, 0, false, 'mua').guardDieOnly && !!E.cardTacticKnobsOf(['tAttack', null, null], null, 0, false, 'dra').guardDieOnly);
+  // 倒れるのに守る: 守っても倒れるのが変わらない守り(光の盾で3を1減らしても、ライフ1の子は倒れる)は、「守る」の行でも出さない
+  let st = scene();
+  st.players[1].hand = ['350'];
+  st.players[1].mons[0].life = 1;
+  st = E.cardApplyAction(db, st, { type: 'attack', mon: 0, hand: [st.players[0].hand.indexOf('100')], target: { p: 1, m: 0 } });
+  if (st && st.pending && E.cardGuardOptions(db, st).length) {
+    const a = E.cardAiChooseAction(db, st, pol([{ c: 'any', a: 'guard' }]), zero);
+    check('M 守っても倒れるのが変わらない守りは、「守る」の行でも出さずに受ける', a.type === 'pass', J(a));
+    st.players[1].mons[0].life = 3;
+    const b = E.cardAiChooseAction(db, st, pol([{ c: 'any', a: 'guard' }]), zero);
+    check('M 守れば倒れないなら守る(ライフ3に3を1減らす)', b.type === 'guard', J(b));
+  } else check('M 守りの場を作れる', false, '場を作れなかった');
+}
+
+// ---- N. ガッツにする順(2026-11-02 社長「防御系ガンガン捨てるくせに、もう死んでるモンスターのカードは残したりする」) ----
+{
+  const gutsScene = () => {
+    const st = scene();
+    st.phase = 'guts'; st.active = 0; st.pending = null;
+    st.players[0].mons[0].ko = true; st.players[0].mons[0].life = 0; // モッチーが倒れた: もちき(100)はもう出せない
+    st.players[0].guts = [];
+    st.players[0].hand = ['100', '350']; // もちき(出せない)・光の盾(だれでも使える守り)
+    return st;
+  };
+  const a = E.cardAiChooseAction(db, gutsScene(), E.cardAiPolicy('kyuko', 'master', { noTactics: true }), zero);
+  check('N 倒れた子の札を先にガッツにして、使える守りは残す', a.type === 'guts' && a.hand.includes(0) && !a.hand.includes(1), J(a));
+  const sloppy = { ...E.cardAiPolicy('kyuko', 'master', { noTactics: true }) };
+  sloppy.level = { ...sloppy.level, sloppy: 1 };
+  const b = E.cardAiChooseAction(db, gutsScene(), sloppy, zero);
+  check('N 雑な手の番でも、倒れた子の札はガッツにして、使える守りはでたらめに捨てない', b.type === 'guts' && b.hand.includes(0) && !b.hand.includes(1), J(b));
+}
+
+// ---- O. 勝ちになる一撃(2026-11-02 社長「勝ちになる攻撃は、自分が傷つく技でも打つ」) ----
+{
+  const winScene = (life) => {
+    const st = scene();
+    st.players[0].hand = ['101']; // もっちゃん(5・当たると自分に1)
+    st.players[1].mons.forEach((m, i) => { if (i > 0) { m.ko = true; m.life = 0; } });
+    st.players[1].mons[0].life = life;
+    st.players[1].hand = [];
+    return st;
+  };
+  const steady = { ...E.cardAiPolicy('kyuko', 'master', { noTactics: true }), gambit: { base: ['tSteady', null, null], mons: [[], [], []] } };
+  const a = E.cardAiChooseAction(db, winScene(5), steady, zero);
+  check('O 堅実型でも、当たれば勝ちの一撃(自分も傷つく技)は打つ', a.type === 'attack', J(a));
+  const b = E.cardAiChooseAction(db, winScene(20), steady, zero);
+  check('O 堅実型は、勝ちにならないときは自分も傷つく技を出さない', b.type !== 'attack', J(b));
+  const sl = { ...E.cardAiPolicy('kyuko', 'master', { noTactics: true }) };
+  sl.level = { ...sl.level, sloppy: 1 };
+  const c = E.cardAiChooseAction(db, winScene(5), sl, zero);
+  check('O 雑な手の番でも、当たれば勝ちの一撃は打つ', c.type === 'attack', J(c));
+}
+
+// ---- P. 勝ちの一撃はどの段でも行より先に・GRAND MASTER 以上は攻めを先読み先に(2026-11-03 社長 C・D) ----
+{
+  const winScene = () => {
+    const st = scene();
+    st.players[0].hand = ['100']; // もちき(3)
+    st.players[1].mons.forEach((m, i) => { if (i > 0) { m.ko = true; m.life = 0; } });
+    st.players[1].mons[0].life = 3;
+    st.players[1].hand = [];
+    return st;
+  };
+  const stopFirst = pol([{ c: 'any', a: 'stop' }]);
+  const a = E.cardAiChooseAction(db, winScene(), stopFirst, zero);
+  check('P 「攻撃をやめる」の行があっても、勝ちの一撃は先に打つ', a.type === 'attack', J(a));
+  const easy = E.cardAiChooseAction(db, winScene(), E.cardAiPolicy('kyuko', 'easy'), zero);
+  check('P EASY でも勝ちの一撃は打つ', easy.type === 'attack', J(easy));
+  // 先読みつき: 攻める段は、当たった行の手を「勧める手」にして先読みへ回す(行の手をそのまま返さない)
+  const st = scene();
+  const sp = { ...pol([{ c: 'any', a: 'atk' }]), search: { k: 3, r: 1, h: 1, eval: 'ko' } };
+  const d = E.cardTacticDecide(db, st, sp);
+  check('P 先読みつきは、攻める段で行の手を先読みの候補として渡す', !!d && !d.act && !!d.policy && !!d.policy.searchHint, J(d && { act: d.act, hint: d.policy && d.policy.searchHint }));
+  const g = E.cardAiChooseAction(db, scene(), sp, () => 0.5);
+  check('P 先読みつきで、攻める手を出せる', g.type === 'attack' || g.type === 'endAttacks', J(g));
 }
 
 console.log(`card-tactics-gambit-check: ${passed} OK / ${fails.length} NG`);

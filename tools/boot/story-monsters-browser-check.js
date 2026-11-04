@@ -74,7 +74,9 @@ const seed = ({ storyIds }) => {
     for (let i = 0; i < script.length; i++) {
       const counter = await page.evaluate(() => [...document.querySelectorAll('[data-story-sheet] p')].map((p) => p.textContent.trim()).find((t) => /^\d+ \/ \d+/.test(t)) || '');
       if (!counter) break;
-      const idx = Number(counter.split('/')[0]) - 1;
+      // 長い台詞はページに分かれる(3つのゾーンのお話・2026-11-03)ので、ページ数ではなく画面が持つ台本の行(data-story-step)で見る
+      const stepAttr = await page.evaluate(() => document.querySelector('[data-event-story]')?.getAttribute('data-story-step'));
+      const idx = stepAttr != null ? Number(stepAttr) : Number(counter.split('/')[0]) - 1;
       const expect = want(idx);
       if (expect) {
         await page.waitForTimeout(1300);

@@ -105,6 +105,8 @@ const PANDORA_IMG = "images/monsters/pandora.PNG?v=f8009b5d2b5e";
 const PANDORA_DYE_MASK = "images/monsters/pandora-dye-mask.PNG?v=3bacac1187f6";
 // パンドラの箱(タクティクスEX)の間だけ出す、悪魔・天使の姿。起動時には読まない(箱を使うときに先読みする)
 const PANDORA_DEVIL_IMG = "images/monsters/pandora-devil.PNG?v=5ce010729f00";
+// イベント「鍵の向こう側へ」のお話で、箱のすきまからのぞく影(2026-11-02。立ち絵から作った黒い影の絵)
+const PANDORA_SHADOW_IMG = "images/monsters/pandora-shadow.png?v=3883210975c5";
 const PANDORA_ANGEL_IMG = "images/monsters/pandora-angel.PNG?v=d3dedf0b3d90";
 const SUEZO_IMG = "images/monsters/suezo.png?v=979846ef01a1";
 const SUEZO_DYE_MASK = "images/monsters/suezo-dye-mask.PNG?v=ce9b0ee85836";
@@ -252,7 +254,7 @@ const CARD_PACK_ART_IMGS = Object.freeze({
   p4: Object.freeze({ full: "images/card-battle/packs/p4.webp?v=a73fd2a05058", thumb: "images/card-battle/packs/p4-thumb.webp?v=6e685ffdb370" }),
   p5: Object.freeze({ full: "images/card-battle/packs/p5.webp?v=2548b7e299b5", thumb: "images/card-battle/packs/p5-thumb.webp?v=ab2f8539674c" }),
   p6: Object.freeze({ full: "images/card-battle/packs/p6.webp?v=a39cb36712e9", thumb: "images/card-battle/packs/p6-thumb.webp?v=3a7b7941c6b1" }),
-  p7: Object.freeze({ full: "images/card-battle/packs/p7.webp?v=77335b97c807", thumb: "images/card-battle/packs/p7-thumb.webp?v=68eb3b9cba2c" }),
+  p7: Object.freeze({ full: "images/card-battle/packs/p7.webp?v=70e172f70b48", thumb: "images/card-battle/packs/p7-thumb.webp?v=7240baa2f783" }),
   p8: Object.freeze({ full: "images/card-battle/packs/p8.webp?v=b2300408401e", thumb: "images/card-battle/packs/p8-thumb.webp?v=90032536da24" }),
 });
 const HYBRID_MONSTER_IMGS = Object.freeze({
@@ -300,6 +302,8 @@ const HYBRID_MONSTER_IMGS = Object.freeze({
   'C-208': OBORO_IMG, 'C-208S': OBORO_IMG, 'C-208V': OBORO_IMG,
   // ピンクグジラ(2026-10-30)。キラ・別絵キラも同じ立ち絵
   'C-068': HYBRID_C068_IMG, 'C-068S': HYBRID_C068_IMG, 'C-068V': HYBRID_C068_IMG,
+  // キュービ種の混血オリヒメ(番号 C-951・カードの絵は C-K02。メイン キュービ・サブ ？？？。2026-11-04 新血統キュービ)。本編の立ち絵をそのまま使う
+  'C-951': ORIHIME_IMG,
 });
 
 const MOCCHI_ICON = MOCCHI_IMG;
@@ -784,6 +788,7 @@ const ART_CONTENT_BOXES = {
   "monsters/pandora-angel.PNG": [0.172, 0.005, 0.953, 0.962, 0.667],
   "monsters/pandora-devil.PNG": [0.025, 0.009, 0.854, 0.96, 0.667],
   "monsters/pandora-dye-mask.PNG": [0.035, 0.012, 0.948, 0.961, 0.667],
+  "monsters/pandora-shadow.png": [0.025, 0.005, 0.949, 0.961, 0.667],
   "monsters/pandora.PNG": [0.025, 0.006, 0.948, 0.961, 0.667],
   "monsters/phoenix.png": [0, 0, 1, 1, 0.969],
   "monsters/pixie.png": [0.27, 0.136, 0.754, 0.948, 1],
@@ -994,6 +999,7 @@ const ART_BODY_CENTERS = {
   "monsters/pandora-angel.PNG": [0.532, 0.351, 0.3, 0.046, 0.95, 0.958],
   "monsters/pandora-devil.PNG": [0.502, 0.353, 0.11, 0.061, 0.734, 0.96],
   "monsters/pandora-dye-mask.PNG": [0.549, 0.385, 0.094, 0.063, 0.95, 0.966],
+  "monsters/pandora-shadow.png": [0.506, 0.34, 0.101, 0.059, 0.937, 0.666],
   "monsters/pandora.PNG": [0.506, 0.34, 0.101, 0.059, 0.937, 0.666],
   "monsters/phoenix.png": [0.494, 0.475, 0.029, 0.111, 0.924, 0.864],
   "monsters/pixie.png": [0.497, 0.393, 0.304, 0.137, 0.683, 0.625],

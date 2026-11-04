@@ -50,7 +50,8 @@ const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemov
       </button>
       {/* 名前の行の右はしに「i」(カードの絵の上に置くと、右上の地上・空中の札に重なった) */}
       <div className="mt-0.5 flex items-center gap-0.5">
-        <CardNameFit name={name} className="min-w-0 flex-1 font-bold leading-tight text-slate-100"/>
+        {/* 長い名前は2行まで折る(2026-11-01 見た目の点検 C。狭い列で 7px まで縮んでいた)。高さは2行ぶんでそろえる */}
+        <CardNameFit name={name} className="min-w-0 flex-1 font-bold leading-tight text-slate-100" twoLine tall/>
         {onDetail && <button type="button" data-card-deck-info={no} onClick={(e) => { e.stopPropagation(); Audio_.fgSe.tap(); onDetail(); }} aria-label={`${name}の詳細`} className="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-full border border-white/50 bg-slate-950/80 font-serif text-[11px] font-black italic leading-none text-white active:scale-90">i</button>}
       </div>
       <div className="mt-0.5 flex items-center justify-between gap-0.5">
@@ -243,7 +244,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
       </div>
       {!land && footer}
       {ask && (
-        <div data-card-deck-ask-sheet className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-2 sm:items-center" onClick={() => { if (!ask.busy) setAsk(null); }}>
+        <div data-card-deck-ask-sheet className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-2 sm:items-center" style={cardSafePad('.5rem')} onClick={() => { if (!ask.busy) setAsk(null); }}>
           <div className="w-full max-w-[420px] rounded-2xl border border-white/15 bg-slate-900 p-3" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start gap-2">
               {advisor.face && <img src={advisor.face} alt="" className="h-12 w-12 shrink-0 rounded-full border-2 object-cover" style={{ borderColor: advisor.accent }}/>}
@@ -479,7 +480,7 @@ const CardDex = ({ db, collection, onBack }) => {
                   {c && !c.ready && <span className="absolute left-0.5 top-0.5 rounded-md bg-slate-600 px-1 text-[9px] font-black text-white">準備中</span>}
                   {rare && <span data-card-dex-rare className="absolute left-0.5 top-0.5 rounded-md bg-amber-400 px-1 text-[9px] font-black text-slate-950">{rare}</span>}
                   <CardNameFit name={name} className={`mt-0.5 font-bold leading-tight ${have ? 'text-slate-100' : 'text-slate-500'}`}/>
-                  <span className="text-[9px] font-bold text-slate-500">No.{no}</span>
+                  <span className="text-[9px] font-bold text-slate-500">No.{(c && c.dispNo) || (m && m.dispNo) || no}</span>
                   {mode === 'sub' && m && String(m.wave) === 'hybrid' && m.main && <span data-card-dex-main={m.main} className="text-[9px] font-bold text-indigo-200">主 {spName[m.main] || m.main}</span>}
                 </button>
               );
@@ -809,7 +810,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
         const c = cards[spot.i]; const card = cardOf(db, c.no); const m = card ? null : cardMonsterOf(db, c.no);
         const alt = spot.rarity === 'alt';
         return (
-          <button type="button" data-card-pack-spot={spot.rarity} aria-label="並びへ戻す" onClick={spotOff} className="fixed inset-0 z-[72] flex flex-col items-center justify-center overflow-hidden bg-slate-950/70">
+          <button type="button" data-card-pack-spot={spot.rarity} aria-label="並びへ戻す" onClick={spotOff} className="fixed inset-0 z-[72] flex flex-col items-center justify-center overflow-hidden bg-slate-950/70" style={cardSafePad('0px')}>
             <div aria-hidden="true" className={`mh-pack-spot-rays ${alt ? 'mh-pack-spot-rays-alt' : ''}`}/>
             {fx && alt && !spot.leaving && <div aria-hidden="true" data-card-pack-pillar className="mh-pack-rpillar"/>}
             {fx && !spot.leaving && <div aria-hidden="true" className={`mh-pack-spot-burst ${alt ? 'alt' : ''}`}/>}
@@ -869,7 +870,7 @@ const cardPackDisplayRows = (db, pack, rows) => {
 // 詳しい画面は一覧の外に置く(中に置くと、詳しい画面を閉じるタップが一覧の背景まで届いて、一覧も閉じた)
 const CardShopSheet = ({ title, onClose, children, detail, setDetail, db, tag }) => (
   <>
-  <div data-card-shop-sheet={tag} role="dialog" aria-modal="true" aria-label={title} onClick={onClose} className="fixed inset-0 flex items-center justify-center p-3" style={{ zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.88)' }}>
+  <div data-card-shop-sheet={tag} role="dialog" aria-modal="true" aria-label={title} onClick={onClose} className="fixed inset-0 flex items-center justify-center p-3" style={{ ...cardSafePad('.75rem'), zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.88)' }}>
     <div onClick={(e) => e.stopPropagation()} className="flex max-h-full w-full max-w-[460px] flex-col rounded-3xl border-2 border-amber-300/70 bg-slate-950 text-white shadow-2xl landscape:max-w-[720px]">
       <div className="shrink-0 rounded-t-[22px] bg-amber-300/15 px-3 py-2 text-center text-[15px] font-black text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(title)}</div>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">{children}</div>
@@ -1072,7 +1073,7 @@ const CardCatalogSheet = ({ db, catalogs, collection, busy, onUse, onClose }) =>
   const pickName = pick ? nameOf(pick) : '';
   return (
     <>
-      <div data-card-catalog role="dialog" aria-modal="true" aria-label="バトルカードカタログ" onClick={onClose} className="fixed inset-0 flex items-center justify-center p-3" style={{ zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.88)' }}>
+      <div data-card-catalog role="dialog" aria-modal="true" aria-label="バトルカードカタログ" onClick={onClose} className="fixed inset-0 flex items-center justify-center p-3" style={{ ...cardSafePad('.75rem'), zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.88)' }}>
         <div onClick={(e) => e.stopPropagation()} className="flex max-h-full w-full max-w-[460px] flex-col rounded-3xl border-2 border-sky-300/70 bg-slate-950 text-white shadow-2xl landscape:max-w-[720px]">
           <div className="shrink-0 rounded-t-[22px] bg-sky-300/15 px-3 py-2 text-center text-[15px] font-black text-sky-100">📖 バトルカードカタログ</div>
           <div className="shrink-0 px-3 pt-2">

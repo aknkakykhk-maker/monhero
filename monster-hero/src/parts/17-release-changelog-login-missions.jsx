@@ -308,6 +308,9 @@ const changelogEventLive = (entry, nowMs = Date.now()) => {
   if (!notice || !notice.notifyUntil) return false;
   const from = Date.parse(notice.notifyFrom || entry.visibleFrom || '');
   const until = Date.parse(notice.notifyUntil);
+  // pinUntil を書いた項目(開催前の予告など)は、その時刻からは上に固定しない。開始のお知らせと札が2つ並ばないように(2026-11-03 社長「パンドライベントの予告が2つある」)
+  const pinUntil = Date.parse(entry.pinUntil || '');
+  if (Number.isFinite(pinUntil) && nowMs >= pinUntil) return false;
   return Number.isFinite(until) && nowMs < until && (!Number.isFinite(from) || nowMs >= from);
 };
 

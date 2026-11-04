@@ -765,6 +765,18 @@
    "name_source": "社長提供 oborogesou_cards_corrected(1).zip。画像の C-208 は最新mainで未使用。ライフ10・地上・プラント×ゲル。2026-10-28",
    "variant": "別絵キラ",
    "base": "C-208"
+  },
+  {
+   "no": "C-951",
+   "name": "オリヒメ",
+   "type": "空中",
+   "life": 7,
+   "main": "キュービ",
+   "sub": "？？？",
+   "img": "C-K02.jpg",
+   "display_no": "C-◆04",
+   "name_source": "キュービの設計(tools/art-sources/card-battle/kyubi/orihime.cards.json・2026-11-03。ライフ7は社長)。絵は kyubi/C-K02.jpg",
+   "sub_note": "副血統は ??? (レアの印)。専用技は持たず、キュービの技を使う"
   }
  ],
  "skills": []

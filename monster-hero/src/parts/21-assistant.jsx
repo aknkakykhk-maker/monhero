@@ -19,7 +19,60 @@ const storyCastOf = (script) => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(
 const STORY_MONSTER_ART = Object.freeze({
   Kyubi: typeof KYUBI_IMG !== 'undefined' ? KYUBI_IMG : null,
   Orihime: typeof ORIHIME_IMG !== 'undefined' ? ORIHIME_IMG : null,
+  // イベント「鍵の向こう側へ」(2026-11-02)のパンドラ。Pandora は pose:'idle' で待機アニメ(翼・尾が動く)。
+  //   PandoraShadow … 正体が分かる前の影 / PandoraAngel・PandoraDevil … 天使側・悪魔側に分かれた全身(pose:'splitL'/'splitR'・'mergeL'/'mergeR')
+  Pandora: typeof PANDORA_IMG !== 'undefined' ? PANDORA_IMG : null,
+  PandoraShadow: typeof PANDORA_SHADOW_IMG !== 'undefined' ? PANDORA_SHADOW_IMG : null,
+  PandoraAngel: typeof PANDORA_ANGEL_IMG !== 'undefined' ? PANDORA_ANGEL_IMG : null,
+  PandoraDevil: typeof PANDORA_DEVIL_IMG !== 'undefined' ? PANDORA_DEVIL_IMG : null,
 });
+// お話の台詞を、決まった行数に収まるページへ分ける(2026-11-02 社長「セリフが長ければページ数増やせばいいだけ」)。
+//   上部ゾーン(ゲストの吹き出し)・下部ゾーン(台詞の欄)の高さを固定にしたので、収まらない台詞は「次へ」で送る次のページにする。
+//   分けるのは文の切れ目(「。」「！」「？」のあと)。1文で収まらないときだけ「、」のあと。言葉の途中では切らない。台本の字は変えない(表示のときだけ)
+//   cpl … 1行に入る字数の見込み(全角1・半角0.55で数える) / maxLines … 行数
+// 3つのゾーンのお話の下部ゾーンで、話していない助手の顔の列も小さく1行で残すか(2026-11-03 社長「下部を喋る人を下部横において」の案。
+//   false = 顔の列は出さず、話している助手の顔だけを台詞の欄の左に置く / true = その上に小さい顔の列を1行残す)
+// 2026-11-03 社長が案B(小さい顔の列を残す)を選んだ。列に並べるのは「その場面にいる人」だけ(60-app.jsx の storyCastNow)
+const STORY_BOTTOM_KEEP_ROW = true;
+// お話の締め(2026-11-03 社長「ストーリーイベントの最後のページが終わるとあっけないから工夫がほしい」)。続きもののお話(id が …_ep1 〜)だけ。
+//   'card' = 終わりの札 / 'next' = 札 + 次のお話の予告 + 次にやることのボタン / 'pull' = 最後の場面を引いて暗転してから 'next' / 'none' = 出さない
+const STORY_ENDING_STYLE = 'pull';
+// 題(「鍵の向こう側へ 第3話 ～大嫌いで、大好き～」)を、シリーズ名・何話・副題に分ける
+//   続きもの(「第◯話」「第◯部」「終章」がある題)は { series, ep, sub, serial:true }。単発のお話(「MFバトルカード ～物置の古い箱～」)は ep に題の前半、sub に「～…～」
+//   final … 「終章」(ハロウィンのエンディングA/B・パンドラ第8話)。次のお話は出さず「おしまい」にする
+const storyEpisodeTitleParts = (title) => {
+  const t = String(title || '').trim();
+  const m = t.match(/^(.*?)\s*(第[\d.]+[話部][^～\s]*|終章)\s*(～.*～)?\s*$/);
+  if (m) return { series: m[1] || '', ep: m[2] || '', sub: m[3] || '', serial: true, final: /終章/.test(m[2] || '') };
+  const s = t.match(/^(.*?)\s*(～.*～)\s*$/);
+  return s ? { series: '', ep: s[1] || t, sub: s[2] || '', serial: false, final: false } : { series: '', ep: t, sub: '', serial: false, final: false };
+};
+// 'YYYY-MM-DD HH:MM'(日本時間)を時刻へ。読めなければ NaN
+const storyJstMs = (text) => Date.parse(`${String(text || '').trim().replace(' ', 'T')}:00+09:00`);
+const storyTextUnits = (s) => [...String(s)].reduce((a, ch) => a + (/[\x20-\x7e｡-ﾟ]/.test(ch) ? 0.55 : 1), 0);
+// ちょうど行の終わりで割り切れる字数は、言葉の切れ目で折ると1行増えやすい(第1話「遊んだ回数も…報われるわけだ」42字が14字×3行で4行になった)。1.5字ぶん余分に見込む
+const storyTextLines = (s, cpl) => String(s).split('\n').reduce((a, seg) => a + Math.max(1, Math.ceil((storyTextUnits(seg) + 1.5) / Math.max(1, cpl))), 0);
+const storySplitPages = (text, cpl, maxLines) => {
+  const s = String(text ?? '');
+  if (!s || storyTextLines(s, cpl) <= maxLines) return [s];
+  const tidy = (t) => t.replace(/^[\s\n]+|[\s\n]+$/g, '');
+  const pack = (pieces) => {
+    const out = [];
+    let cur = '';
+    for (const piece of pieces) {
+      const cand = cur + piece;
+      if (tidy(cur) && storyTextLines(tidy(cand), cpl) > maxLines) { out.push(cur); cur = piece; } else cur = cand;
+    }
+    if (tidy(cur)) out.push(cur);
+    return out;
+  };
+  const sentences = (s.match(/[^。！？!?\n]*(?:[。！？!?]+[」』）)♪♡〜～ｗw…]*|\n|$)/g) || [s]).filter(Boolean);
+  const pages = pack(sentences).flatMap((page) => (storyTextLines(tidy(page), cpl) > maxLines
+    // 半角の「,」では分けない(曲名「Altar of the World Tree, Beneath …」の途中で切れた)
+    ? pack((page.match(/[^、，\n]*(?:[、，]+|\n|$)/g) || [page]).filter(Boolean)) : [page]));
+  const out = pages.map(tidy).filter((t) => t.length);
+  return out.length ? out : [s];
+};
 // お話の層の位置を測って、いちばん外側の箱([data-event-story])の CSS 変数へ書く ref。
 // 上のステージの下端(--story-stage-bottom)と下の窓の高さ(--story-sheet-h)で、真ん中のモンスターの置き場を決める。
 // ★動きの途中(登場・揺れ)のずれを拾わないよう、transform の効かない offsetTop / offsetHeight で測る。大きさが変わったら測り直す

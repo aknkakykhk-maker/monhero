@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e8c4cd12d50dbbd7
+// source-sha256: 2a0e6fb074e925d8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13,6 +13,46 @@ const {
   useRef,
   useContext
 } = React;
+(() => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  const editing = () => {
+    const el = document.activeElement;
+    if (!el) return false;
+    const tag = String(el.tagName || '').toUpperCase();
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable === true;
+  };
+  const reset = () => {
+    if (editing()) return;
+    try {
+      if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
+      for (const el of [document.scrollingElement, document.documentElement, document.body]) {
+        if (el && (el.scrollTop || el.scrollLeft)) {
+          el.scrollTop = 0;
+          el.scrollLeft = 0;
+        }
+      }
+    } catch (_) {}
+  };
+  let timers = [];
+  const soon = () => {
+    timers.forEach(clearTimeout);
+    timers = [0, 150, 500].map(ms => setTimeout(reset, ms));
+  };
+  const passive = {
+    passive: true
+  };
+  window.addEventListener('resize', soon, passive);
+  window.addEventListener('orientationchange', soon, passive);
+  if (window.visualViewport && typeof window.visualViewport.addEventListener === 'function') {
+    window.visualViewport.addEventListener('resize', soon, passive);
+    window.visualViewport.addEventListener('scroll', soon, passive);
+  }
+  document.addEventListener('focusout', () => setTimeout(() => {
+    if (!editing()) soon();
+  }, 60), true);
+  ['fullscreenchange', 'webkitfullscreenchange'].forEach(type => document.addEventListener(type, soon));
+  document.addEventListener('webkitendfullscreen', soon, true);
+})();
 const _LI = {};
 const _ICON_PATHS = {
   Heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.5 4.04 3 5.5l7 7Z"/>',
@@ -434,6 +474,12 @@ const eventReplaySorted = keep => (typeof EVENT_REPLAYS !== 'undefined' && EVENT
 const eventReplayList = () => eventReplaySorted(eventReplayReleased);
 const eventReplayAllList = () => eventReplaySorted(() => true);
 const EVENT_REPLAY_GROUPS = Object.freeze([{
+  id: 'pandora_wings',
+  emoji: '🗝️',
+  label: '鍵の向こう側へ',
+  note: 'パンドラとふたつの翼のお話',
+  color: '#c084fc'
+}, {
   id: 'halloween',
   emoji: '🎃',
   label: 'ハロウィン・ナイト',
@@ -630,9 +676,13 @@ const rhythmPlayRunLoops = (durationMs, scale = RHYTHM_PLAY_RUN_LOOP_SCALE) => {
 const rhythmPlayRunLoopScale = (songId, event, campaign) => {
   const campaignScale = campaign ? Number(campaign.loopScale) : NaN;
   if (Number.isFinite(campaignScale) && campaignScale > 0) return campaignScale;
-  const ids = event && Array.isArray(event.songIds) ? event.songIds : null;
+  const ids = event && Array.isArray(event.songIds) ? typeof rhythmEventPlaySongIds === 'function' ? rhythmEventPlaySongIds(event) : event.songIds : null;
   const id = songId === null || songId === undefined ? '' : String(songId);
   return id && ids && ids.includes(id) ? RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE : RHYTHM_PLAY_RUN_LOOP_SCALE;
+};
+const rhythmLoopCampaignAt = nowMs => {
+  const c = typeof rhythmEventPointCampaignAt === 'function' ? rhythmEventPointCampaignAt(nowMs) : null;
+  return c && Number(c.loopScale) > 0 && Number(c.loopBoost) > 0 ? c : null;
 };
 const isQuickModeClearedAtOrAbove = (difficulty, quickClears) => quickDifficultiesAtOrAbove(difficulty).some(id => (Number(quickClears?.[id]) || 0) > 0);
 const rhythmPlayRunLoopsAllowed = (difficulty, quickClears) => isQuickModeClearedAtOrAbove(difficulty, quickClears);
@@ -693,7 +743,7 @@ const BATTLE_SYSTEM_CLASSIC = 'systemClassic';
 const BATTLE_SYSTEM_TACTICS = 'systemTactics';
 const BATTLE_SYSTEM_QUICK = 'systemQuick';
 const BATTLE_SELECT_ASSIST_KEY = 'mh_battle_select_assist_v1';
-const BATTLE_DIFFICULTY_DARK_LOOKS = new Set(['Expert', 'Master', 'GrandMaster', 'Hell', 'EXTREME', 'NIGHTMARE', 'CHAOS', 'ULTIMATE', 'INFINITY', 'GOD', 'RAGNAROK', 'HELHEIM', 'ETERNAL', 'INFERNO', 'COCYTUS']);
+const BATTLE_DIFFICULTY_DARK_LOOKS = new Set(['Expert', 'Master', 'GrandMaster', 'Hell', 'EXTREME', 'NIGHTMARE', 'CHAOS', 'ULTIMATE', 'INFINITY', 'GOD', 'RAGNAROK', 'HELHEIM', 'ETERNAL', 'INFERNO', 'EREBUS', 'COCYTUS']);
 const BATTLE_SYSTEMS = Object.freeze([Object.freeze({
   id: BATTLE_SYSTEM_CLASSIC,
   label: 'クラシックバトル',
@@ -2154,6 +2204,7 @@ const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
     HELHEIM: 3,
     ETERNAL: 4,
     INFERNO: 5,
+    EREBUS: 5,
     COCYTUS: 6
   }),
   speciesChallenge: Object.freeze({
@@ -2162,6 +2213,7 @@ const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
     HELHEIM: 3,
     ETERNAL: 4,
     INFERNO: 5,
+    EREBUS: 5,
     COCYTUS: 6
   }),
   pro: Object.freeze({
@@ -5524,6 +5576,20 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_altar_world_tree',
+  name: 'Altar of the World Tree, Beneath the White Night',
+  creator: '仙夜玖子',
+  src: 'audio/bgm-altar-world-tree.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_altar_world_tree_short',
+  name: 'Altar of the World Tree, Beneath the White Night short ver.',
+  creator: '仙夜玖子',
+  src: 'audio/bgm-altar-world-tree-short.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_tsuki_ga_michiru_mae_ni_short',
   name: '月が満ちる前に short ver.',
   creator: 'Fuki Commune',
@@ -5823,7 +5889,7 @@ const RHYTHM_ROAD_DEPTH_LABELS = Object.freeze([['NORMAL', 'いまの'], ['DEEP'
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '最大'], ['LOW', '多め'], ['LIGHT', '標準'], ['MINIMAL', '最小']]);
 const RHYTHM_TAP_LIGHT_MODES = Object.freeze(['AUTO', 'ALWAYS']);
 const RHYTHM_TAP_LIGHT_LABELS = Object.freeze([['AUTO', 'おまかせ'], ['ALWAYS', 'いつも出す']]);
-const rhythmTapLightOnly = settings => !!settings && settings.tapLight === 'ALWAYS' && (settings.lightweightMode === true || settings.effectAmount === 'MINIMAL');
+const rhythmTapLightOnly = settings => !!settings && (settings.effectAmount === 'MINIMAL' && settings.lightweightMode !== true || settings.tapLight === 'ALWAYS' && (settings.lightweightMode === true || settings.effectAmount === 'MINIMAL'));
 const RHYTHM_FRAME_RATE_MODES = Object.freeze(['POWER_SAVE', 'DEVICE']);
 const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE', '省電力'], ['DEVICE', '端末に合わせる']]);
 const RHYTHM_RENDER_QUALITY_MODES = Object.freeze(['AUTO', 'HIGH', 'STANDARD', 'SAVE']);
@@ -5894,7 +5960,17 @@ const RHYTHM_LOOK_PRESETS = Object.freeze([{
     climaxFx: true
   }
 }]);
-const RHYTHM_AUTO_EFFECT_STEPS = Object.freeze([s => s.noteBloom ? {
+const RHYTHM_AUTO_EFFECT_STEPS = Object.freeze([s => {
+  const up = ['ON', 'MANY', 'STRONG', 'L', 'DARK'],
+    fx = s.fx || {};
+  const keys = Object.keys(fx).filter(key => up.includes(fx[key]));
+  return keys.length ? {
+    fx: {
+      ...fx,
+      ...Object.fromEntries(keys.map(key => [key, 'AUTO']))
+    }
+  } : null;
+}, s => s.noteBloom ? {
   noteBloom: false
 } : null, s => s.stageEffect === 'LIVE' ? {
   stageEffect: 'VIVID'
@@ -6112,6 +6188,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   vibrationEnabled: false,
   effectAmount: 'LIGHT',
   lightweightMode: false,
+  fx: Object.freeze({}),
   multiLightLook: true,
   multiLook: 'LIGHT',
   modeSelectArt: true,
@@ -6141,6 +6218,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   climaxFx: false,
   judgmentAtTap: false,
   hudSongFade: true,
+  holdTrace: true,
   autoEffectDown: true,
   tapLight: 'AUTO',
   stageEffect: 'SIMPLE',
@@ -6162,6 +6240,257 @@ const rhythmFiniteStep = (value, min, max, step, fallback) => {
   const number = rhythmFiniteInRange(value, min, max, fallback);
   return Math.round((Math.round((number - min) / step) * step + min) * 1000) / 1000;
 };
+const RHYTHM_FX_ON_OFF = Object.freeze([['AUTO', 'おまかせ'], ['ON', '出す'], ['OFF', '出さない']]);
+const RHYTHM_FX_GROUPS = Object.freeze([['stage', '背景'], ['road', '道'], ['note', 'ノーツ'], ['judge', '判定'], ['combo', 'コンボ']]);
+const RHYTHM_FX_ITEMS = Object.freeze([{
+  key: 'stageBlur',
+  group: 'stage',
+  label: 'ジャケットのぼかし',
+  weight: 'm',
+  options: [['AUTO', 'おまかせ'], ['STRONG', '強'], ['WEAK', '弱'], ['NONE', 'なし']]
+}, {
+  key: 'stageBright',
+  group: 'stage',
+  label: '背景の明るさ',
+  weight: 'l',
+  options: [['AUTO', 'おまかせ'], ['100', '100%'], ['70', '70%'], ['40', '40%']]
+}, {
+  key: 'searchlight',
+  group: 'stage',
+  label: 'サーチライト',
+  weight: 'm',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'sparks',
+  group: 'stage',
+  label: '光の粒',
+  weight: 'm',
+  options: [['AUTO', 'おまかせ'], ['MANY', '多い'], ['FEW', '少ない'], ['NONE', 'なし']]
+}, {
+  key: 'laser',
+  group: 'stage',
+  label: 'レーザー',
+  weight: 'h',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'penlight',
+  group: 'stage',
+  label: '観客のペンライト',
+  weight: 'h',
+  options: [['AUTO', 'おまかせ'], ['MANY', '多い'], ['FEW', '少ない'], ['NONE', 'なし']]
+}, {
+  key: 'timingLight',
+  group: 'stage',
+  label: 'タイミングの光',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'beatLine',
+  group: 'road',
+  label: '拍の線',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'roadEdge',
+  group: 'road',
+  label: '道のふちの光',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'roadFog',
+  group: 'road',
+  label: '奥のもや・脈打ち',
+  weight: 'm',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'laneLine',
+  group: 'road',
+  label: 'レーンの区切り線の濃さ',
+  weight: 'l',
+  options: [['AUTO', 'おまかせ'], ['DARK', '濃い'], ['NORMAL', '標準'], ['LIGHT', '薄い']]
+}, {
+  key: 'noteGlow',
+  group: 'note',
+  label: 'ノーツの光の強さ',
+  weight: 'l',
+  options: [['AUTO', 'おまかせ'], ['STRONG', '強'], ['NORMAL', '標準'], ['WEAK', '弱']]
+}, {
+  key: 'flickMotion',
+  group: 'note',
+  label: 'フリックの矢印の動き',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'slideWave',
+  group: 'note',
+  label: 'スライドの光の波',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'judgeSize',
+  group: 'judge',
+  label: '判定文字の大きさ',
+  weight: 'l',
+  options: [['AUTO', 'おまかせ'], ['L', '大'], ['M', '標準'], ['S', '小']]
+}, {
+  key: 'judgeFlow',
+  group: 'judge',
+  label: '判定文字の金・虹の流れ',
+  weight: 'm',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'judgeLinePulse',
+  group: 'judge',
+  label: '判定ラインの脈打ち',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'burst',
+  group: 'judge',
+  label: '判定ラインで弾ける光',
+  weight: 'm',
+  options: [['AUTO', 'おまかせ'], ['L', '大'], ['M', '標準'], ['S', '小'], ['NONE', 'なし']]
+}, {
+  key: 'flash',
+  group: 'judge',
+  label: '画面のフラッシュ',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'comboBounce',
+  group: 'combo',
+  label: 'コンボ数の跳ね',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'combo100',
+  group: 'combo',
+  label: '100コンボのお祝い',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'fullComboBig',
+  group: 'combo',
+  label: 'フルコンボの大きな表示',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
+}]);
+const RHYTHM_FX_KEYS = Object.freeze(RHYTHM_FX_ITEMS.map(item => item.key));
+const RHYTHM_FX_GROUP_ICONS = Object.freeze({
+  stage: '🌌',
+  road: '🛣',
+  note: '🎵',
+  judge: '✨',
+  combo: '🔥'
+});
+const RHYTHM_FX_HELP = Object.freeze({
+  stageBlur: 'ライブ背景に敷く曲のジャケットを、どれだけぼかすかです。既定は「おまかせ」（これまでどおり「強」）。\n「なし」はジャケットをくっきり出します。判定・スコアは変わりません。',
+  stageBright: 'ライブ背景の明るさです。既定は「おまかせ」（これまでどおり100%）。ノーツが背景に紛れて見づらいときは下げてください。',
+  searchlight: '左右から揺れるサーチライトを出すかです。既定は「おまかせ」（ライブ背景が「派手」「ライブ」で、演出量が「最小」でないときに出ます）。\n「出す」を選ぶと、ライブ背景・演出量・軽量モードに関係なく出ます。',
+  sparks: '背景に舞う光の粒の量です。既定は「おまかせ」（サーチライトと同じときに出ます）。「少ない」は手前の粒だけにします。',
+  laser: '「ライブ」の背景で、小節ごとに向きと色を変えて走るレーザーです。既定は「おまかせ」。\n絵を描くのが得意な専用の部分（GPU）が無い端末では出せません。いちばん重い演出の1つです。',
+  penlight: '「ライブ」の背景で、道の両側に並ぶ観客のペンライトの量です。既定は「おまかせ」。「少ない」は本数を半分ほどにします。\nGPU が無い端末では出せません。重い演出の1つです。',
+  timingLight: 'ノーツが判定ラインへ来るタイミングで、背景が光る演出です。既定は「おまかせ」（ライブ背景が「シンプル」以外のときに出ます）。',
+  beatLine: '曲の拍ごとに、細い線が道の奥から流れてくる演出です。小節の頭では明るい線になります。既定は「おまかせ」（「道の演出」どおり）。',
+  roadEdge: '道の左右のふちが、拍に合わせて光る演出です。既定は「おまかせ」（「道の演出」どおり）。',
+  roadFog: '道の奥のもやと、その先の光が小節ごとに脈打つ演出です。既定は「おまかせ」（「道の演出」どおり）。',
+  laneLine: 'レーンとレーンのあいだの線の濃さです。既定は「おまかせ」（これまでどおり「標準」）。「濃い」は線を太く、「薄い」は線を薄くします。',
+  noteGlow: 'ノーツのまわりの光の強さです。既定は「おまかせ」（演出量「最小」と軽量モードでは「弱」、それ以外は「標準」）。',
+  flickMotion: 'フリックの矢印に付ける動きです。上へ払うフリックは矢印が3段に重なって光が流れ、横へ払うフリックは払う向きへ残像が流れます。既定は「おまかせ」（「ノーツの動き」どおり）。',
+  slideWave: 'SLIDE の帯の上を、判定ラインへ向かって光の波が流れる演出です。既定は「おまかせ」（「ノーツの動き」どおり）。',
+  judgeSize: '判定の文字（MARVELOUS・GREAT など）の大きさです。既定は「おまかせ」（これまでどおり「標準」）。文字の後ろの光も一緒に大きさが変わります。',
+  judgeFlow: '判定の文字の金色の帯・虹が流れる動きと、文字が出た瞬間に弾む動き、文字のまわりの強い光です。既定は「おまかせ」（演出量が「最大」のときに出ます）。\n毎フレーム文字を塗り直すので、カクつく端末ではここを「出さない」にすると効きます。色と大きさはどれでも残ります。',
+  judgeLinePulse: '判定ラインが拍に合わせて脈打つ動きです。既定は「おまかせ」（演出量が「最大」「多め」のときに出ます）。',
+  burst: 'ノーツを取った瞬間に判定ラインで弾ける光の大きさです。既定は「おまかせ」（演出量「最小」では出ます。軽量モードでは出ません。「押したときの光」を「いつも出す」にすると軽量モードでも出ます）。\n「大」「標準」「小」を選ぶと、演出量・軽量モードに関係なく、その大きさで出ます。',
+  flash: 'モンスターノーツを取ったときに画面全体が光る演出です。既定は「おまかせ」。まぶしいときは「出さない」にしてください。',
+  comboBounce: 'コンボ数が増えるたびに数字が跳ねる動きと、枠の脈打ちです。既定は「おまかせ」（演出量が「最大」「多め」のときに出ます）。',
+  combo100: 'コンボが100のくぎりに届いたときのお祝いの表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
+  fullComboBig: '曲の終わりにフルコンボ・ALL MARVELOUS を取ったときの大きな表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。'
+});
+const normalizeRhythmFx = raw => {
+  const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  return Object.fromEntries(RHYTHM_FX_ITEMS.filter(item => source[item.key] !== 'AUTO' && item.options.some(([id]) => id === source[item.key])).map(item => [item.key, source[item.key]]));
+};
+const rhythmFxPick = (settings, key) => {
+  const v = settings && settings.fx && settings.fx[key];
+  return typeof v === 'string' && v ? v : 'AUTO';
+};
+const rhythmFxLevel = (settings, key) => {
+  const v = rhythmFxPick(settings, key);
+  if (v === 'AUTO') return RHYTHM_EFFECT_LEVELS.includes(settings && settings.effectAmount) ? settings.effectAmount : DEFAULT_RHYTHM_SETTINGS.effectAmount;
+  return v === 'OFF' || v === 'NONE' ? 'MINIMAL' : 'NORMAL';
+};
+const rhythmFxLight = (settings, key) => {
+  const v = rhythmFxPick(settings, key);
+  return v === 'AUTO' ? !!(settings && settings.lightweightMode) : v === 'OFF' || v === 'NONE';
+};
+const RHYTHM_FX_CSS_KEYS = Object.freeze(['searchlight', 'sparks', 'comboBounce', 'judgeFlow', 'burst', 'flash', 'judgeLinePulse']);
+const rhythmFxAttrs = settings => Object.fromEntries(RHYTHM_FX_CSS_KEYS.flatMap(key => {
+  const name = 'data-fx-' + key.replace(/[A-Z]/g, c => '-' + c.toLowerCase());
+  return [[name, rhythmFxLevel(settings, key)], [name + '-lw', rhythmFxLight(settings, key) ? 'true' : 'false']];
+}));
+const rhythmFxOn = (settings, key, auto) => {
+  const v = rhythmFxPick(settings, key);
+  return v === 'AUTO' ? !!auto : !(v === 'OFF' || v === 'NONE');
+};
+const rhythmHoldTraceMask = (note, visualLane) => {
+  if (!note) return 0;
+  const w = Math.max(1, Number(note.subLaneWidth) || 2);
+  const lane = Number(visualLane);
+  const start = rhythmNoteIsSlide(note) && Number.isFinite(lane) ? Math.round(lane * 2 + 1 - w / 2) : Number.isFinite(Number(note.subLane)) ? Number(note.subLane) : Number(note.lane) * 2;
+  if (!Number.isFinite(start)) return 0;
+  let mask = 0;
+  for (let i = Math.max(0, start - 1); i <= Math.min(RHYTHM_SUB_LANE_COUNT - 1, start + w); i++) mask |= 1 << i;
+  return mask;
+};
+const rhythmFxRenderOptions = (settings, live = settings) => {
+  const base = !!settings && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL';
+  const motionAuto = !!live && live.noteMotionFx === true && base;
+  const glow = rhythmFxPick(settings, 'noteGlow'),
+    burst = rhythmFxPick(settings, 'burst');
+  const tapOnly = burst === 'AUTO' && rhythmTapLightOnly(settings);
+  return {
+    motionFlick: rhythmFxOn(settings, 'flickMotion', motionAuto),
+    motionSlide: rhythmFxOn(settings, 'slideWave', motionAuto),
+    glowLevel: glow === 'AUTO' ? undefined : glow,
+    hitLevel: tapOnly ? 'NORMAL' : rhythmFxLevel(settings, 'burst'),
+    hitLight: tapOnly ? false : rhythmFxLight(settings, 'burst'),
+    hitScale: burst === 'L' ? 1.35 : burst === 'S' ? .7 : 1,
+    holdTrace: !!settings && settings.holdTrace !== false
+  };
+};
+const rhythmJudgeScaleStyle = settings => {
+  const v = rhythmFxPick(settings, 'judgeSize');
+  return v === 'L' ? {
+    scale: '1.3',
+    transformOrigin: '50% 100%'
+  } : v === 'S' ? {
+    scale: '.75',
+    transformOrigin: '50% 100%'
+  } : {};
+};
+const RHYTHM_STAGE_ORDER = Object.freeze(['SIMPLE', 'CALM', 'VIVID', 'LIVE']);
+const rhythmFxStageLevel = (settings, base) => {
+  const want = key => {
+    const v = rhythmFxPick(settings, key);
+    return v !== 'AUTO' && v !== 'OFF' && v !== 'NONE';
+  };
+  const need = want('laser') || want('penlight') ? 'LIVE' : want('searchlight') || want('sparks') ? 'VIVID' : want('timingLight') || want('stageBlur') || ['70', '40', '100'].includes(rhythmFxPick(settings, 'stageBright')) ? 'CALM' : 'SIMPLE';
+  return RHYTHM_STAGE_ORDER.indexOf(need) > RHYTHM_STAGE_ORDER.indexOf(base) ? need : base;
+};
+const rhythmFxStageStyle = settings => {
+  const v = rhythmFxPick(settings, 'stageBright');
+  return v === '70' ? {
+    opacity: .7
+  } : v === '40' ? {
+    opacity: .4
+  } : undefined;
+};
+const rhythmFxArtSize = settings => {
+  const v = rhythmFxPick(settings, 'stageBlur');
+  return v === 'WEAK' ? 64 : v === 'NONE' ? 256 : 24;
+};
+const rhythmFxChangedCount = (settings, keys = RHYTHM_FX_KEYS) => keys.filter(key => rhythmFxPick(settings, key) !== 'AUTO').length;
 const normalizeRhythmSettings = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const bool = key => typeof source[key] === 'boolean' ? source[key] : DEFAULT_RHYTHM_SETTINGS[key];
@@ -6220,6 +6549,7 @@ const normalizeRhythmSettings = value => {
     climaxFx: typeof source.climaxFx === 'boolean' ? source.climaxFx : DEFAULT_RHYTHM_SETTINGS.climaxFx,
     judgmentAtTap: typeof source.judgmentAtTap === 'boolean' ? source.judgmentAtTap : DEFAULT_RHYTHM_SETTINGS.judgmentAtTap,
     hudSongFade: typeof source.hudSongFade === 'boolean' ? source.hudSongFade : DEFAULT_RHYTHM_SETTINGS.hudSongFade,
+    holdTrace: typeof source.holdTrace === 'boolean' ? source.holdTrace : DEFAULT_RHYTHM_SETTINGS.holdTrace,
     autoEffectDown: typeof source.autoEffectDown === 'boolean' ? source.autoEffectDown : DEFAULT_RHYTHM_SETTINGS.autoEffectDown,
     tapLight: RHYTHM_TAP_LIGHT_MODES.includes(source.tapLight) ? source.tapLight : DEFAULT_RHYTHM_SETTINGS.tapLight,
     stageEffect: RHYTHM_STAGE_EFFECTS.includes(source.stageEffect) ? source.stageEffect : DEFAULT_RHYTHM_SETTINGS.stageEffect,
@@ -6229,7 +6559,8 @@ const normalizeRhythmSettings = value => {
     paceDisplay: bool('paceDisplay'),
     assistMode: bool('assistMode'),
     mirrorChart: bool('mirrorChart'),
-    luckyRush: bool('luckyRush')
+    luckyRush: bool('luckyRush'),
+    fx: normalizeRhythmFx(source.fx)
   };
 };
 const emptyRhythmBestRecord = () => ({
@@ -6533,6 +6864,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Eiki'
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   cardBattleIntroEvent: 'atsu_cup_theme',
   cardCupStoryEvent: 'melo_toriko',
+  pandoraWingsStoryEvent: 'melo_rebellion',
   kyukoJoinStoryEvent: 'original_event_01',
   atsuJoinStoryEvent: 'melo_against_my_own_shadow',
   tacticsTypesEvent: 'original_event_01',
@@ -6630,6 +6962,14 @@ const EVENT_BGM_FADE_MS = 800;
 const EVENT_BGM_SCENES = Object.freeze({
   card_battle_intro_2026: 'cardBattleIntroEvent',
   card_cup_2026_10_31: 'cardCupStoryEvent',
+  pandora_wings_2026_ep1: 'pandoraWingsStoryEvent',
+  pandora_wings_2026_ep2: 'pandoraWingsStoryEvent',
+  pandora_wings_2026_ep3: 'pandoraWingsStoryEvent',
+  pandora_wings_2026_ep4: 'pandoraWingsStoryEvent',
+  pandora_wings_2026_ep5: 'pandoraWingsStoryEvent',
+  pandora_wings_2026_ep6: 'pandoraWingsStoryEvent',
+  pandora_wings_2026_ep7: 'pandoraWingsStoryEvent',
+  pandora_wings_2026_ep8: 'pandoraWingsStoryEvent',
   kyuko_join_2026_10_22: 'kyukoJoinStoryEvent',
   atsu_join_2026_10_22: 'atsuJoinStoryEvent',
   tactics_types: 'tacticsTypesEvent',
@@ -6842,6 +7182,7 @@ const Audio_ = (() => {
     masterOut = null,
     analyser = null,
     analyserData = null;
+  let videoHold = false;
   let ctxTimeMark = null,
     ctxRebuildCount = 0,
     toneLoadFailed = false;
@@ -6980,7 +7321,9 @@ const Audio_ = (() => {
   };
   const AUDIO_CACHE_KEYS = {
     "audio/bgm-4u-hitasura.mp3": "f4fb42472438",
-    "audio/bgm-against-my-own-shadow.mp3": "ddce743e94fa",
+    "audio/bgm-against-my-own-shadow.mp3": "a58782a4c46f",
+    "audio/bgm-altar-world-tree-short.mp3": "45860ac8bd1d",
+    "audio/bgm-altar-world-tree.mp3": "2dda9c70f027",
     "audio/bgm-anima.mp3": "c81adf3d2fff",
     "audio/bgm-atsu-cup-theme.mp3": "e93502c4df76",
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
@@ -6996,10 +7339,10 @@ const Audio_ = (() => {
     "audio/bgm-crazy-party-night.mp3": "45e7252c400e",
     "audio/bgm-crossing-field.mp3": "1e2e7cc1d3d5",
     "audio/bgm-dullahan-clockwork-alt.mp3": "9e934451770b",
-    "audio/bgm-dullahan-clockwork.mp3": "e87bd8466b2c",
+    "audio/bgm-dullahan-clockwork.mp3": "f94c4b3c8cb8",
     "audio/bgm-dullahan-steel-ghost-alt.mp3": "1e9c04ccc1db",
     "audio/bgm-dullahan-steel-ghost.mp3": "dbb0da050ab4",
-    "audio/bgm-dullahan.mp3": "434fcea866a3",
+    "audio/bgm-dullahan.mp3": "d5d987e2ccd3",
     "audio/bgm-eiki-boss-beat.mp3": "1c3e0cb8b29f",
     "audio/bgm-eiki-boss-remix.mp3": "83093750c9ec",
     "audio/bgm-emerald-rush.mp3": "7782e3520275",
@@ -7009,15 +7352,15 @@ const Audio_ = (() => {
     "audio/bgm-freedom-dive.mp3": "34616b2fccd3",
     "audio/bgm-fusion.mp3": "6f0d4675789f",
     "audio/bgm-game-over.mp3": "d9fb75a7c827",
-    "audio/bgm-grievous-lady.mp3": "dac4aa4d3b72",
+    "audio/bgm-grievous-lady.mp3": "28bfeda8d534",
     "audio/bgm-haruka.mp3": "7a7164dbf152",
     "audio/bgm-home-ichika.mp3": "29295336d1af",
-    "audio/bgm-journey.mp3": "bd51dcc8ef21",
-    "audio/bgm-kaze-ga-soyogu-basho.mp3": "9cc789151e7e",
-    "audio/bgm-kiki-issen-short.mp3": "1dc188dbb7a7",
+    "audio/bgm-journey.mp3": "816f0cdab93e",
+    "audio/bgm-kaze-ga-soyogu-basho.mp3": "e986277401a6",
+    "audio/bgm-kiki-issen-short.mp3": "add607be5bec",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
-    "audio/bgm-light-player-short.mp3": "785e78c69005",
-    "audio/bgm-light-player.mp3": "6656f3a71344",
+    "audio/bgm-light-player-short.mp3": "5d59fb7eb1fb",
+    "audio/bgm-light-player.mp3": "c07830c2e774",
     "audio/bgm-makutsu-no-senritsu.mp3": "8db199451f0b",
     "audio/bgm-market.mp3": "a85ba65f90e7",
     "audio/bgm-menu.mp3": "a6aef603fd6a",
@@ -7034,29 +7377,29 @@ const Audio_ = (() => {
     "audio/bgm-pro-battle-01.mp3": "59a3a0fbfef1",
     "audio/bgm-pro-battle-02.mp3": "f572c81a9ef6",
     "audio/bgm-profile.mp3": "523789845ff1",
-    "audio/bgm-rebellion-short.mp3": "04678c77a7e1",
-    "audio/bgm-rebellion.mp3": "cc5dab0bab8b",
+    "audio/bgm-rebellion-short.mp3": "92a340e95441",
+    "audio/bgm-rebellion.mp3": "4c8807e74e0e",
     "audio/bgm-result.mp3": "c4dc9d2fb8a5",
     "audio/bgm-rising-hope.mp3": "5b56b8f9d099",
-    "audio/bgm-rose-short.mp3": "57888379506b",
-    "audio/bgm-rose.mp3": "acc0ceccc810",
+    "audio/bgm-rose-short.mp3": "fd5f8290037c",
+    "audio/bgm-rose.mp3": "1a030e41df75",
     "audio/bgm-sad-song-short.mp3": "2ff39f50eddd",
     "audio/bgm-sad-song.mp3": "47d16979bb90",
     "audio/bgm-senjou-no-shippuu.mp3": "dfcd5d833fec",
     "audio/bgm-sheriruth-proto.mp3": "a6f3c4e66746",
-    "audio/bgm-sheriruth.mp3": "ab30c8b641fb",
+    "audio/bgm-sheriruth.mp3": "5044be9b5c0d",
     "audio/bgm-six-eternel-beat.mp3": "151f94091a34",
     "audio/bgm-six-eternel-remix-beat.mp3": "b1a024d5b16f",
     "audio/bgm-six-eternel-remix.mp3": "5f56c89739f8",
     "audio/bgm-six-eternel.mp3": "e26412179f3a",
-    "audio/bgm-stay-with-me-short.mp3": "54a59963e979",
+    "audio/bgm-stay-with-me-short.mp3": "d836a069998d",
     "audio/bgm-the-city-beneath-the-comets.mp3": "900fda0dc05e",
     "audio/bgm-title-theme.mp3": "8af0684e79e7",
     "audio/bgm-title.mp3": "b7bdc68bb0c0",
     "audio/bgm-toriko.mp3": "3870d26f6322",
-    "audio/bgm-toward-the-stars-short.mp3": "25c386c48439",
-    "audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3": "f2e9585907f2",
-    "audio/bgm-tsuki-ga-michiru-mae-ni.mp3": "2ee86e1947fd",
+    "audio/bgm-toward-the-stars-short.mp3": "f3160c5d2a44",
+    "audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3": "fe27c9332589",
+    "audio/bgm-tsuki-ga-michiru-mae-ni.mp3": "74eb2d433abd",
     "audio/bgm-wrath-of-the-thorn-king.mp3": "d1ea326a4ee2",
     "audio/jingle-victory.mp3": "689c9715a824",
     "audio/se-awakened-moo-apocalypse.mp3": "3ed18e30e8e7",
@@ -7070,7 +7413,7 @@ const Audio_ = (() => {
   const _bgmGain = pct => pct <= 0 ? 0 : Math.pow(10, (-55 + Math.min(100, pct) / 100 * 55) / 20) * 0.55;
   const buildAudioGraph = ctx => {
     masterOut = ctx.createGain();
-    masterOut.gain.value = 1;
+    masterOut.gain.value = videoHold ? 0 : 1;
     analyser = ctx.createAnalyser();
     analyser.fftSize = 2048;
     analyser.smoothingTimeConstant = 0;
@@ -8877,7 +9220,32 @@ const Audio_ = (() => {
     }
   };
   const se = Object.fromEntries(Object.entries(fgSe).map(([name, play]) => [name, (...args) => backgroundSeQuiet ? Promise.resolve() : play(...args)]));
+  const setVideoHold = on => {
+    videoHold = !!on;
+    if (!masterOut || !audioCtx) return;
+    try {
+      const at = audioCtx.currentTime;
+      masterOut.gain.cancelScheduledValues(at);
+      masterOut.gain.setValueAtTime(masterOut.gain.value, at);
+      masterOut.gain.linearRampToValueAtTime(videoHold ? 0 : 1, at + 0.25);
+    } catch (e) {
+      masterOut.gain.value = videoHold ? 0 : 1;
+    }
+  };
+  const setStoryEndFade = on => {
+    if (!masterOut || !audioCtx) return;
+    try {
+      const at = audioCtx.currentTime;
+      masterOut.gain.cancelScheduledValues(at);
+      masterOut.gain.setValueAtTime(masterOut.gain.value, at);
+      masterOut.gain.linearRampToValueAtTime(on || videoHold ? 0 : 1, at + (on ? 2.5 : 0.25));
+    } catch (e) {
+      masterOut.gain.value = on || videoHold ? 0 : 1;
+    }
+  };
   return {
+    setVideoHold,
+    setStoryEndFade,
     playSeFile,
     preloadSE,
     playBGM,
@@ -12995,6 +13363,8 @@ const changelogEventLive = (entry, nowMs = Date.now()) => {
   if (!notice || !notice.notifyUntil) return false;
   const from = Date.parse(notice.notifyFrom || entry.visibleFrom || '');
   const until = Date.parse(notice.notifyUntil);
+  const pinUntil = Date.parse(entry.pinUntil || '');
+  if (Number.isFinite(pinUntil) && nowMs >= pinUntil) return false;
   return Number.isFinite(until) && nowMs < until && (!Number.isFinite(from) || nowMs >= from);
 };
 const changelogSafeLink = link => {
@@ -14542,22 +14912,35 @@ const normalizeBeatRank = raw => {
     k
   };
 };
+const BEAT_RANK_BASE_MS = 120000;
+const beatRankLengthRate = durationMs => {
+  const ms = Number(durationMs);
+  return Number.isFinite(ms) && ms > 0 ? ms / BEAT_RANK_BASE_MS : 1;
+};
+const beatRankLengthText = durationMs => {
+  const sec = Math.round(Number(durationMs) / 1000);
+  return Number.isFinite(sec) && sec > 0 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` : '';
+};
 const beatRankPlayXp = ({
   difficultyId,
   cleared = true,
   fullCombo = false,
   allMarvelous = false,
-  multi = false
+  multi = false,
+  durationMs = 0
 }) => {
-  const base = BEAT_RANK_XP[difficultyId];
-  if (!base) return {
+  const base0 = BEAT_RANK_XP[difficultyId];
+  if (!base0) return {
     xp: 0,
     parts: []
   };
+  const rate = beatRankLengthRate(durationMs);
+  const base = base0 * rate;
   const parts = [];
-  let xp = cleared ? base : Math.max(1, Math.round(base * BEAT_RANK_BONUS.failRate));
+  let xp = cleared ? Math.max(1, Math.round(base)) : Math.max(1, Math.round(base * BEAT_RANK_BONUS.failRate));
+  const len = beatRankLengthText(durationMs);
   parts.push({
-    label: cleared ? difficultyId : `${difficultyId}(ライフが尽きた)`,
+    label: `${difficultyId}${len ? `・${len}` : ''}${cleared ? '' : '(ライフが尽きた)'}`,
     xp
   });
   if (cleared && allMarvelous) {
@@ -14592,7 +14975,8 @@ const beatRankAfter = (prev, {
   fullCombo,
   allMarvelous,
   multi,
-  today
+  today,
+  durationMs = 0
 }) => {
   const cur = normalizeBeatRank(prev);
   const from = playerRankInfo(cur.xp).rank;
@@ -14601,7 +14985,8 @@ const beatRankAfter = (prev, {
     cleared,
     fullCombo,
     allMarvelous,
-    multi
+    multi,
+    durationMs
   });
   if (!play.xp) return {
     next: cur,
@@ -15200,7 +15585,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
     })
   })
 }]);
-const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...EXTREME_DIFFICULTIES.map(setting => setting.id), 'GOD', 'RAGNAROK', 'HELHEIM', 'ETERNAL', 'INFERNO', 'COCYTUS']);
+const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...EXTREME_DIFFICULTIES.map(setting => setting.id), 'GOD', 'RAGNAROK', 'HELHEIM', 'ETERNAL', 'INFERNO', 'EREBUS', 'COCYTUS']);
 const TACTICS_DIFFICULTY_IDS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...EXTREME_DIFFICULTIES.map(setting => setting.id)]);
 const TACTICS_EXTREME_UNLOCK_DIFFICULTIES = Object.freeze(['Master', 'GrandMaster', 'Hell', 'Legend']);
 const TACTICS_EXTREME_UNLOCK_TEXT = 'タクティクス Master以上クリアで解放';
@@ -15483,9 +15868,10 @@ const simulateSpeciesChallengeJoinWave = (runState, entryId = null) => {
 const SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT = 5;
 const TACTICS_SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT = TACTICS_DIFFICULTY_INITIAL_UNLOCK_COUNT;
 const speciesChallengeInitialUnlockCountOf = mode => typeof isTacticsMode === 'function' && isTacticsMode(mode) ? TACTICS_SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT : SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT;
-const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds = [], initialUnlockCount = SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT) => {
+const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds = [], initialUnlockCount = SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT, keptOpenIds = []) => {
   const index = SPECIES_CHALLENGE_DIFFICULTY_IDS.indexOf(difficultyId);
   if (index < 0) return false;
+  if (Array.isArray(keptOpenIds) && keptOpenIds.includes(difficultyId)) return true;
   const initial = Number.isFinite(initialUnlockCount) ? initialUnlockCount : SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT;
   if (index < initial) return true;
   const cleared = new Set(Array.isArray(clearedDifficultyIds) ? clearedDifficultyIds : []);
@@ -15511,6 +15897,7 @@ const SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS = Object.freeze({
   HELHEIM: 100,
   ETERNAL: 120,
   INFERNO: 140,
+  EREBUS: 150,
   COCYTUS: 160
 });
 const speciesChallengeFirstClearReward = difficultyId => Object.prototype.hasOwnProperty.call(SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS, difficultyId) ? SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS[difficultyId] : 0;
@@ -15900,6 +16287,70 @@ const INFERNO_SETTING = Object.freeze({
     })
   })
 });
+const EREBUS_SETTING = Object.freeze({
+  id: 'EREBUS',
+  label: 'EREBUS',
+  japanese: 'エレボス',
+  tab: 'underworld',
+  available: true,
+  debugAvailable: true,
+  power: 450,
+  score: 20,
+  xp: 150,
+  gold: 130,
+  psyche: 235,
+  waveCount: 10,
+  unlockRequirement: 'INFERNO',
+  rankingId: 'ExtremeEREBUS',
+  recordId: 'EREBUS',
+  description: 'どの敵も何枚ものシールドをまとって現れる。1枚割るごとに敵は強くなり、ムーは倒しても大きくなって1回蘇る、インフェルノとコキュートスのあいだの難易度。',
+  cardDescription: 'どの敵も4〜5枚のシールドをまとい、割るたびに攻撃が上がる。ムーは1回、全回復して大きくなって蘇る。冥府・貫きはインフェルノのまま。',
+  specialRules: Object.freeze({
+    assistCardEffect: 0.30,
+    positiveModifier: 0.30,
+    negativeModifier: 3.0,
+    distanceEnhancement: 0.10,
+    gutsCost: 2.0,
+    enemyTurnRate: 0.0125,
+    allyJoinPenaltyRate: 0.0125,
+    minimumAllyJoinBonus: 0.03,
+    damageTurnRate: 0.0175,
+    minimumDamageDealt: 0.15,
+    awakeningPenaltyRate: 0.01,
+    awakeningZeroTurns: 12,
+    awakeningPenaltyExcludes: Object.freeze(['distance']),
+    distanceBreak: Object.freeze({
+      interval: 12,
+      damageDealtPerLevel: 0.5,
+      safeDistanceCount: 0,
+      persistsForRun: true
+    }),
+    revival: Object.freeze({
+      waves: Object.freeze({
+        10: 1
+      }),
+      hpRate: 1,
+      maxHpRatePerRevival: 1.5,
+      atkStepsWithLayers: true,
+      reveal: Object.freeze({
+        10: Object.freeze([Object.freeze({
+          stage: 'moo1',
+          name: '常闇の再起',
+          desc: 'ライフ全回復・最大ライフ1.5倍で復活'
+        })])
+      })
+    }),
+    enemyAdjust: Object.freeze({
+      lifeRate: 15,
+      byEnemy: Object.freeze({
+        Durahan: Object.freeze({
+          lifeRate: 1.3,
+          atkRate: 1.3
+        })
+      })
+    })
+  })
+});
 const COCYTUS_SETTING = Object.freeze({
   id: 'COCYTUS',
   label: 'COCYTUS',
@@ -15913,7 +16364,7 @@ const COCYTUS_SETTING = Object.freeze({
   gold: 140,
   psyche: 250,
   waveCount: 10,
-  unlockRequirement: 'INFERNO',
+  unlockRequirement: 'EREBUS',
   rankingId: 'ExtremeCOCYTUS',
   recordId: 'COCYTUS',
   description: 'どの敵も何枚もの厚いシールドをまとって現れる。1枚割るごとに敵は強くなり、デュラハンとムーは倒しても大きくなって蘇る、極限チャレンジの最奥の難易度。',
@@ -15974,7 +16425,7 @@ const COCYTUS_SETTING = Object.freeze({
     })
   })
 });
-const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES, GOD_SETTING, RAGNAROK_SETTING, HELHEIM_SETTING, ETERNAL_SETTING, INFERNO_SETTING, COCYTUS_SETTING]);
+const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES, GOD_SETTING, RAGNAROK_SETTING, HELHEIM_SETTING, ETERNAL_SETTING, INFERNO_SETTING, EREBUS_SETTING, COCYTUS_SETTING]);
 const EXTREME_DIFFICULTY_THEMES = Object.freeze({
   EXTREME: Object.freeze({
     accent: '#f0abfc',
@@ -16085,6 +16536,17 @@ const EXTREME_DIFFICULTY_THEMES = Object.freeze({
     titleGlow: 0.96,
     actionGlow: 0.74,
     shadowBlur: 60
+  }),
+  EREBUS: Object.freeze({
+    accent: '#f9a8d4',
+    rgb: '236,72,153',
+    background: 'linear-gradient(180deg,#4a044e,#0b0418)',
+    action: 'linear-gradient(135deg,#be185d,#fbcfe8)',
+    actionText: '#4a044e',
+    glow: 0.76,
+    titleGlow: 0.97,
+    actionGlow: 0.76,
+    shadowBlur: 62
   }),
   COCYTUS: Object.freeze({
     accent: '#a5f3fc',
@@ -16221,6 +16683,26 @@ const cocytusStageRules = waveNumber => {
     rushAtBroken: COCYTUS_RUSH_AT_BROKEN[w] || null
   });
 };
+const EREBUS_SHIELD_LAYERS = COCYTUS_SHIELD_LAYERS;
+const EREBUS_FIRST_LAYER_RATE = Object.freeze({
+  9: 2.6,
+  10: 3.0
+});
+const erebusStageRules = waveNumber => {
+  const base = eternalStageRules(waveNumber);
+  const w = Math.floor(Number(waveNumber) || 0);
+  const boss = INFERNO_BOSS_WAVES.includes(w);
+  return Object.freeze({
+    ...base,
+    shieldLayers: EREBUS_SHIELD_LAYERS[w] || 0,
+    bossWave: boss,
+    layerGrowth: 0.3,
+    layerAtkGain: boss ? 0.3 : 0.2,
+    layerFirstRate: EREBUS_FIRST_LAYER_RATE[w] || 1.8,
+    layerBodyBossOnly: true,
+    rushAtBroken: COCYTUS_RUSH_AT_BROKEN[w] || null
+  });
+};
 const EXTREME_WAVE_STAGES = Object.freeze({
   GOD: Object.freeze({
     label: '神威',
@@ -16241,6 +16723,10 @@ const EXTREME_WAVE_STAGES = Object.freeze({
   INFERNO: Object.freeze({
     label: '冥府',
     rules: infernoStageRules
+  }),
+  EREBUS: Object.freeze({
+    label: '冥府',
+    rules: erebusStageRules
   }),
   COCYTUS: Object.freeze({
     label: '冥府',
@@ -16609,15 +17095,16 @@ const extremeRuleDetailGroups = (difficultyId, quick = false) => {
   };
   if (difficultyId === GOD_SETTING.id) push('神威', [['進行', '2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'], ['敵ライフ/攻撃力', '神威Lvごと +15% / +30% / +45% / +60% / +75%'], ['Lv5', '与ダメ低下 -1.5pt/T・最低20%、次のBREAKから安全距離なし']]);
   if (difficultyId === RAGNAROK_SETTING.id) push('黄昏', [['進行', '2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'], ['敵ライフ/攻撃力', '黄昏Lvごと +20% / +40% / +60% / +80% / +100%'], ['Lv2', '距離強化 35%→25%'], ['Lv3', '消費ガッツ 175%→200%'], ['Lv4', '＋補正 35%→25%・−補正 250%→300%'], ['Lv5', '与ダメ低下 -1.75pt/T・最低15%']]);
-  if (difficultyId === HELHEIM_SETTING.id || difficultyId === ETERNAL_SETTING.id || difficultyId === INFERNO_SETTING.id || difficultyId === COCYTUS_SETTING.id) {
+  if (difficultyId === HELHEIM_SETTING.id || difficultyId === ETERNAL_SETTING.id || difficultyId === INFERNO_SETTING.id || difficultyId === EREBUS_SETTING.id || difficultyId === COCYTUS_SETTING.id) {
     const adjust = rules.enemyAdjust || {};
     const durahan = adjust.byEnemy?.Durahan;
     push('冥府', [['進行', '2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'], ['敵ライフ/攻撃力', '冥府Lvごと +30% / +60% / +90% / +120% / +150%'], ['味方の最大ライフ', '冥府Lvごと -5%（Lv5で-25%）'], ['Lv3', '消費ガッツ 200%→225%'], ['Lv4', '＋補正 30%→20%・−補正 300%→350%'], ['Lv5', '与ダメ低下 -2.0pt/T・最低10%']]);
     push('敵の強さ', [adjust.lifeRate > 1 && ['敵ライフ', `すべての敵が${adjust.lifeRate}倍`], durahan && ['デュラハン', `ライフ・攻撃力が さらに${durahan.lifeRate}倍`]]);
     push('距離強化', [['WAVEごとに薄れる', 'WAVE1で10%、1WAVEごとに1%ずつ下がり、WAVE10で1%']]);
     if (difficultyId === INFERNO_SETTING.id) push('ボスの層のシールド', [['起き上がり', 'ボスは起き上がらない'], ['層の数', 'W3・W5・W7のボス 3枚 / W9 デュラハン 4枚 / W10 ムー 5枚'], ['シールドの量', '1枚目はエターナルのそのボスのライフと同じ。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率'], ['割れるたび', 'ボスの攻撃力 +60%(最後の1枚も)'], ['連撃', 'デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)']]);
+    if (difficultyId === EREBUS_SETTING.id) push('層のシールド', [['蘇り', 'ムーだけ1回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る。シールドは張り直さない'], ['層の数', 'W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'], ['WAVEのはじめのシールド', 'エターナルの50%のシールドは、層のシールドに置き換わる'], ['シールドの量', '1枚目はその敵の最大ライフの1.8倍(デュラハン2.6倍・ムー3倍)。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフは元のまま)'], ['割れるたび', 'ふつうの敵の攻撃力 +20%・ボスの攻撃力 +30%(最後の1枚も。ムーは蘇るときにも+30%)'], ['連撃', 'デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)']]);
     if (difficultyId === COCYTUS_SETTING.id) push('層のシールド', [['蘇り', 'デュラハンは1回・ムーは2回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る(ムーの2回目は2.25倍)。シールドは張り直さない'], ['層の数', 'W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'], ['WAVEのはじめのシールド', 'エターナルの50%のシールドは、層のシールドに置き換わる'], ['シールドの量', '1枚目はその敵の最大ライフの3倍(デュラハン3.8倍・ムー4.4倍)。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフはそのまま)'], ['割れるたび', '敵の攻撃力 +20%(最後の1枚も。蘇るたびにも+20%)'], ['連撃', 'デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)']]);
-    if (difficultyId === ETERNAL_SETTING.id || difficultyId === INFERNO_SETTING.id || difficultyId === COCYTUS_SETTING.id) push('シールドと貫き', [['シールド', 'WAVEの始めに、敵が最大ライフ50%ぶんのシールドをまとう。シールドを割るまで敵のライフは減らない'], ['シールドと距離強化', 'シールドに当てたダメージは、距離強化(間合いのボーナス)に数えない'], ['貫き', '敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）']]);
+    if (difficultyId === ETERNAL_SETTING.id || difficultyId === INFERNO_SETTING.id || difficultyId === EREBUS_SETTING.id || difficultyId === COCYTUS_SETTING.id) push('シールドと貫き', [['シールド', 'WAVEの始めに、敵が最大ライフ50%ぶんのシールドをまとう。シールドを割るまで敵のライフは減らない'], ['シールドと距離強化', 'シールドに当てたダメージは、距離強化(間合いのボーナス)に数えない'], ['貫き', '敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）']]);
   }
   push('カード', [rules.assistCardEffect != null && ['アシストカード効果', specialRulePercent(rules.assistCardEffect)]]);
   push('補正', [rules.waveEnhancement != null && ['WAVE後強化', specialRulePercent(rules.waveEnhancement)], rules.positiveModifier != null && ['＋補正', specialRulePercent(rules.positiveModifier)], rules.negativeModifier != null && ['－補正', specialRulePercent(rules.negativeModifier)], rules.distanceEnhancement != null && ['距離強化', specialRulePercent(rules.distanceEnhancement)]]);
@@ -16848,7 +17335,27 @@ const isRagnarokUnlocked = godClearCount => (Number(godClearCount) || 0) > 0;
 const isHelheimUnlocked = ragnarokClearCount => (Number(ragnarokClearCount) || 0) > 0;
 const isEternalUnlocked = helheimClearCount => (Number(helheimClearCount) || 0) > 0;
 const isInfernoUnlocked = eternalClearCount => (Number(eternalClearCount) || 0) > 0;
-const isCocytusUnlocked = infernoClearCount => (Number(infernoClearCount) || 0) > 0;
+const isErebusUnlocked = infernoClearCount => (Number(infernoClearCount) || 0) > 0;
+const isCocytusUnlocked = (erebusClearCount, kept = null, cocytusRecord = 0) => (Number(erebusClearCount) || 0) > 0 || normalizeCocytusOpenKept(kept).extreme === true || (Number(cocytusRecord) || 0) > 0;
+const COCYTUS_OPEN_KEPT_KEY = 'mh_cocytus_open_kept_v1';
+const normalizeCocytusOpenKept = value => {
+  const v = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const species = Array.isArray(v.species) ? [...new Set(v.species.filter(id => typeof id === 'string' && id))] : [];
+  return {
+    version: 1,
+    extreme: v.extreme === true,
+    species
+  };
+};
+const buildCocytusOpenKept = (extremeClearCounts, speciesProgress) => {
+  const extreme = (Number(extremeClearCounts?.[INFERNO_SETTING.id]) || 0) > 0;
+  const species = Object.entries(normalizeSpeciesChallengeProgress(speciesProgress).species).filter(([, entry]) => entry?.cleared?.[INFERNO_SETTING.id] === true).map(([id]) => id);
+  return normalizeCocytusOpenKept({
+    extreme,
+    species
+  });
+};
+const cocytusKeptOpenIdsFor = (kept, speciesId) => normalizeCocytusOpenKept(kept).species.includes(speciesId) ? [COCYTUS_SETTING.id] : [];
 const isUnderworldUnlocked = eternalClearCount => (Number(eternalClearCount) || 0) > 0;
 const underworldShieldLayerRange = difficultyId => {
   const counts = Array.from({
@@ -18297,8 +18804,64 @@ const assistantById = id => ASSISTANT_LIST.find(a => a.id === id) || STORY_GUEST
 const storyCastOf = script => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(who => (script || []).some(l => l.who === who.id));
 const STORY_MONSTER_ART = Object.freeze({
   Kyubi: typeof KYUBI_IMG !== 'undefined' ? KYUBI_IMG : null,
-  Orihime: typeof ORIHIME_IMG !== 'undefined' ? ORIHIME_IMG : null
+  Orihime: typeof ORIHIME_IMG !== 'undefined' ? ORIHIME_IMG : null,
+  Pandora: typeof PANDORA_IMG !== 'undefined' ? PANDORA_IMG : null,
+  PandoraShadow: typeof PANDORA_SHADOW_IMG !== 'undefined' ? PANDORA_SHADOW_IMG : null,
+  PandoraAngel: typeof PANDORA_ANGEL_IMG !== 'undefined' ? PANDORA_ANGEL_IMG : null,
+  PandoraDevil: typeof PANDORA_DEVIL_IMG !== 'undefined' ? PANDORA_DEVIL_IMG : null
 });
+const STORY_BOTTOM_KEEP_ROW = true;
+const STORY_ENDING_STYLE = 'pull';
+const storyEpisodeTitleParts = title => {
+  const t = String(title || '').trim();
+  const m = t.match(/^(.*?)\s*(第[\d.]+[話部][^～\s]*|終章)\s*(～.*～)?\s*$/);
+  if (m) return {
+    series: m[1] || '',
+    ep: m[2] || '',
+    sub: m[3] || '',
+    serial: true,
+    final: /終章/.test(m[2] || '')
+  };
+  const s = t.match(/^(.*?)\s*(～.*～)\s*$/);
+  return s ? {
+    series: '',
+    ep: s[1] || t,
+    sub: s[2] || '',
+    serial: false,
+    final: false
+  } : {
+    series: '',
+    ep: t,
+    sub: '',
+    serial: false,
+    final: false
+  };
+};
+const storyJstMs = text => Date.parse(`${String(text || '').trim().replace(' ', 'T')}:00+09:00`);
+const storyTextUnits = s => [...String(s)].reduce((a, ch) => a + (/[\x20-\x7e｡-ﾟ]/.test(ch) ? 0.55 : 1), 0);
+const storyTextLines = (s, cpl) => String(s).split('\n').reduce((a, seg) => a + Math.max(1, Math.ceil((storyTextUnits(seg) + 1.5) / Math.max(1, cpl))), 0);
+const storySplitPages = (text, cpl, maxLines) => {
+  const s = String(text ?? '');
+  if (!s || storyTextLines(s, cpl) <= maxLines) return [s];
+  const tidy = t => t.replace(/^[\s\n]+|[\s\n]+$/g, '');
+  const pack = pieces => {
+    const out = [];
+    let cur = '';
+    for (const piece of pieces) {
+      const cand = cur + piece;
+      if (tidy(cur) && storyTextLines(tidy(cand), cpl) > maxLines) {
+        out.push(cur);
+        cur = piece;
+      } else cur = cand;
+    }
+    if (tidy(cur)) out.push(cur);
+    return out;
+  };
+  const sentences = (s.match(/[^。！？!?\n]*(?:[。！？!?]+[」』）)♪♡〜～ｗw…]*|\n|$)/g) || [s]).filter(Boolean);
+  const pages = pack(sentences).flatMap(page => storyTextLines(tidy(page), cpl) > maxLines ? pack((page.match(/[^、，\n]*(?:[、，]+|\n|$)/g) || [page]).filter(Boolean)) : [page]);
+  const out = pages.map(tidy).filter(t => t.length);
+  return out.length ? out : [s];
+};
 const storyMeasureRef = (name, kind) => el => {
   if (!el) return;
   const root = el.closest('[data-event-story]');
@@ -24230,7 +24793,8 @@ const SKM_KYUBI = Object.freeze({
     c: 'blue',
     fx: skmFx('orbit', 'fire', 5),
     burst: 'star',
-    form: 'fire'
+    form: 'fire',
+    tint: true
   }), skm('kick', {
     c: 'red',
     over: 'fist',
@@ -24250,7 +24814,7 @@ const SKM_KYUBI = Object.freeze({
     over: 'boom',
     burst: 'star'
   }), skm('roll', {
-    c: 'fire',
+    c: ['#fed7aa', '#dc2626'],
     fx: skmFx('orbit', 'flame', 8),
     over: 'boom',
     burst: 'spark',
@@ -24280,13 +24844,17 @@ const SKM_KYUBI = Object.freeze({
     fx: skmFx('orbit', 'fire', 9),
     over: 'pillar',
     burst: 'star',
-    form: 'fire'
+    form: 'fire',
+    tint: true
   }), skm('gather', {
     c: 'blue',
-    fx: skmFx('fall', 'flame', 10),
+    fx: skmFx('fall', 'flame', 10, {
+      s: 1.6
+    }),
     over: 'pillar',
     burst: 'spark',
-    form: 'fire'
+    form: 'fire',
+    tint: true
   }), skm('spin', {
     c: 'wind',
     over: 'tornado',
@@ -24338,7 +24906,7 @@ const SKM_ORIHIME = Object.freeze({
     c: 'cosmic'
   }, {
     ...SKM_KYUBI.unique[3],
-    c: 'sky'
+    c: 'cosmic'
   }, {
     ...SKM_KYUBI.unique[4],
     c: 'sky'
@@ -24580,6 +25148,7 @@ const skmNormalize = (sp0, isUnique = false) => {
     c1,
     c2,
     form: sp.form || skmFormOf(sp.c),
+    tint: sp.tint === true,
     hit: Math.round(hit),
     ...(sp.hit2 ? {
       hit2: Math.round(hit + 180)
@@ -24732,6 +25301,7 @@ const SkillFxMotion = ({
     className: "thm-atk__ring"
   })), (uex || impactOnly) && React.createElement(UniqueFxImpact, {
     form: spec.form || 'burst',
+    tint: spec.tint ? [spec.c1, spec.c2] : null,
     offset: (spec.hit || 0) - 240
   }));
 };
@@ -25056,14 +25626,16 @@ const UNIQUE_IMPACT_PALETTE = Object.freeze({
 });
 const UniqueFxImpact = ({
   form = 'light',
-  offset = 0
+  offset = 0,
+  tint = null
 }) => {
   const parts = UNIQUE_IMPACT_FORMS[form];
-  const pal = UNIQUE_IMPACT_PALETTE[form];
+  const pal = tint || UNIQUE_IMPACT_PALETTE[form];
   return React.createElement("span", {
     className: "thm-atk__hit uex-impact",
     "aria-hidden": "true",
     "data-impact-form": form,
+    "data-impact-tint": tint ? '1' : undefined,
     style: {
       '--spm-c1': pal ? pal[0] : 'var(--c1, #fff)',
       '--spm-c2': pal ? pal[1] : 'var(--c2, #c026d3)'
@@ -30784,7 +31356,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({
 }) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})` : '';
   const body = {
-    song_ids: [songId],
+    song_ids: rhythmEventQuerySongIds([songId], fromMs, toMs),
     from_at: new Date(fromMs).toISOString(),
     to_at: new Date(toMs).toISOString()
   };
@@ -30845,7 +31417,7 @@ const sbFetchRhythmEventTotalsRaw = async ({
 }) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})` : '';
   const body = {
-    song_ids: songIds,
+    song_ids: rhythmEventQuerySongIds(songIds, fromMs, toMs),
     from_at: new Date(fromMs).toISOString(),
     to_at: new Date(toMs).toISOString()
   };
@@ -31093,7 +31665,7 @@ const sbFetchRhythmEventTotals = async (options = {}) => {
     timeKey: 'last_scored_at',
     fn: 'rhythm_event_precise',
     body: {
-      song_ids: songIds,
+      song_ids: rhythmEventQuerySongIds(songIds, fromMs, toMs),
       from_at: new Date(fromMs).toISOString(),
       to_at: new Date(toMs).toISOString()
     },
@@ -33415,8 +33987,9 @@ const RhythmOptions = ({
     "data-rhythm-option-field": true,
     className: `${full && !wide ? 'col-span-2' : ''} rounded-xl border border-cyan-400/20 bg-slate-950/55 ${wide ? 'p-1.5' : 'p-2.5'}`
   }, React.createElement("p", {
-    className: `rounded-lg bg-cyan-700/70 px-2 text-center ${label} ${wide ? 'mb-1 py-0.5 text-[11px]' : 'mb-2 py-1'}`
-  }, title), control, description && !wide && React.createElement("details", {
+    className: `rounded-lg bg-cyan-700/70 px-2 text-center ${label} ${wide ? 'mb-1 py-0.5 text-[11px]' : 'mb-2 py-1'}`,
+    style: JA_WRAP_STYLE
+  }, typeof title === 'string' ? jaWrap(title) : title), control, description && !wide && React.createElement("details", {
     "data-rhythm-option-help": true,
     className: "mt-2"
   }, React.createElement("summary", {
@@ -33426,6 +33999,50 @@ const RhythmOptions = ({
     style: JA_WRAP_STYLE
   }, typeof description === 'string' ? jaWrap(description) : description)));
   const grid = `grid gap-2.5 ${wide ? 'grid-cols-3 gap-2' : 'grid-cols-2'}`;
+  const [fxGroup, setFxGroup] = useState(null);
+  const fxGroupNow = fxGroup || 'stage';
+  const fxGroupShown = id => !wide || fxGroupNow === id;
+  const fxGroupCount = id => RHYTHM_FX_ITEMS.filter(item => item.group === id).length;
+  const fxGroupSummary = id => {
+    const n = rhythmFxChangedCount(draft, RHYTHM_FX_ITEMS.filter(item => item.group === id).map(item => item.key));
+    return n ? `${n}つ変更` : 'おまかせ';
+  };
+  const fxGrid = `grid gap-2.5 ${wide ? 'grid-cols-2 gap-2' : 'grid-cols-2'}`;
+  const FX_WEIGHT = {
+    l: ['軽', 'bg-emerald-500/25 text-emerald-200'],
+    m: ['中', 'bg-amber-500/25 text-amber-200'],
+    h: ['重', 'bg-rose-500/25 text-rose-200']
+  };
+  const fxPicked = key => draft.fx && draft.fx[key] || 'AUTO';
+  const fxSegments = item => React.createElement("div", {
+    className: `grid ${item.options.length >= 5 ? 'grid-cols-5' : item.options.length === 4 ? 'grid-cols-4' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
+  }, item.options.map(([id, text]) => React.createElement("button", {
+    type: "button",
+    key: id,
+    "data-rhythm-option-choice": `fx-${item.key}:${id}`,
+    "aria-pressed": fxPicked(item.key) === id,
+    onClick: () => {
+      setDraft(current => normalizeRhythmSettings({
+        ...current,
+        fx: {
+          ...(current.fx || {}),
+          [item.key]: id
+        }
+      }));
+      setMessage('');
+    },
+    className: `break-keep border-r border-white/10 ${item.options.length >= 5 ? 'px-0 tracking-tight' : 'px-1'} text-[10px] font-black last:border-r-0 ${wide ? 'min-h-[38px]' : 'min-h-[44px]'} ${fxPicked(item.key) === id ? id === 'AUTO' ? 'bg-slate-600 text-white' : 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-300'}`
+  }, text)));
+  const fxField = item => React.createElement("div", {
+    key: item.key,
+    "data-rhythm-fx-item": item.key,
+    className: `${item.options.length >= 4 ? 'col-span-2' : ''}`
+  }, field(React.createElement("span", {
+    className: "inline-flex items-center gap-1.5"
+  }, React.createElement("span", {
+    "data-rhythm-fx-weight": item.weight,
+    className: `rounded px-1 text-[10px] font-black ${FX_WEIGHT[item.weight][1]}`
+  }, FX_WEIGHT[item.weight][0]), item.label), fxSegments(item), RHYTHM_FX_HELP[item.key]));
   const previewBgm = async () => {
     previewRef.current?.stop();
     previewRef.current = null;
@@ -33779,7 +34396,7 @@ const RhythmOptions = ({
     full: true
   }), field('演奏中は曲名を薄くする', toggle('hudSongFade'), '演奏が始まって4秒たつと、左上の曲名とジャケットを薄くします。目線を道に集めやすくするためです。既定は「ON」です。\nポーズ中は元の濃さに戻ります。スコア・ランク・ライフの表示は薄くなりません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
     full: true
-  }), hellReleased && field('空中の道の見え方', hellSegments('lane', [['em', 'はっきり'], ['el', '控えめ'], ['none', 'なし']]), 'HELL で、空中のノーツが流れてくる空中の道をどれくらいはっきり出すかです。既定は「はっきり」です。「なし」にすると、空中の判定線だけになります。判定・スコアは変わりません。', {
+  }), field('ホールド・スライドをなぞる光', toggle('holdTrace'), 'ホールド・スライドを押せているあいだ、押している指の道の光を出さず、代わりに帯そのものを指の所から奥へなぞるように光らせ、指の所に光の玉を出します。上へ立ちのぼる光と左右の光の柱はそのまま出ます。既定は「ON」です。\n指が帯から外れると、帯の光も止まります。タップ・フリック・何もない所を押したときの道の光は、これまでどおりです。演出量「最小」や軽量モードでも出ます。判定・スコアは変わりません。\n「OFF」にすると、これまでの見た目(押している所の道が光る)に戻ります。'), hellReleased && field('空中の道の見え方', hellSegments('lane', [['em', 'はっきり'], ['el', '控えめ'], ['none', 'なし']]), 'HELL で、空中のノーツが流れてくる空中の道をどれくらいはっきり出すかです。既定は「はっきり」です。「なし」にすると、空中の判定線だけになります。判定・スコアは変わりません。', {
     full: true
   }), hellReleased && field('空中のノーツの見た目', hellSegments('skyNote', [['normal', 'いつもの'], ['3d', '立体']]), 'HELL の空中のノーツを、どんな形で描くかです。既定は「いつもの」です。\n「立体」＝空中のタップを光の当たる立体の箱に、空中のスライドを丸い管にして、真下の床に影を落とします。地上のノーツと道はいつもの見た目のままです。\nノーツの位置・判定・色・スコアはどちらでも変わりません。「立体」は描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効き、「Canvas」のときはいつもの見た目で描きます。', {
     full: true
@@ -33935,11 +34552,11 @@ const RhythmOptions = ({
     "data-rhythm-options-panel": "system",
     className: wide ? 'space-y-2' : 'space-y-4'
   }, React.createElement("section", {
-    "data-rhythm-options-group": "よく触る設定",
+    "data-rhythm-options-group": "まとめて決める",
     className: favCard
   }, !wide && React.createElement("h3", {
     className: favHead
-  }, "★ よく触る設定"), React.createElement("div", {
+  }, "★ まとめて決める"), React.createElement("div", {
     className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
   }, field('見た目のおまかせ', React.createElement("div", {
     "data-rhythm-look-presets": true
@@ -33979,24 +34596,134 @@ const RhythmOptions = ({
     full: true
   }), field('軽量モード', toggle('lightweightMode'), '演出量「最小」と同じところまで演出を止めたうえで、さらに細かい動きも切ります。止まるのは、判定ラインで弾ける光と画面のフラッシュ、判定文字が弾む動きと金・虹が流れる動き、コンボ数が跳ねる動きと枠の脈動、100コンボごとのお祝いとフルコンボの大きな表示、モンスターノーツの光と能力名の弾み、判定ラインが拍に合わせて脈打つ動き、両サイドのマスモンの跳ね、明るさがじわっと変わる動きです。判定・判定窓・スコア・ライフ・譜面・音は一切変わりません。端末が熱くなるときや、演出量「標準」でもカクつくときに使ってください。', {
     full: true
-  }))), React.createElement("section", {
-    "data-rhythm-options-group": "演出",
+  }), field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝ノーツ・フリックを取ったときに判定ラインで弾ける光だけを出し、ほかの演出（判定文字やコンボ数の弾み、画面のフラッシュ、100コンボごとの演出、フルコンボの大きな表示、モンスターノーツの大きな光）は出しません。モンスターノーツの光も、ふつうのノーツと同じ大きさになります。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。', {
+    full: true
+  }), field('重いときは演出を自動で控えめに', toggle('autoEffectDown'), '演奏中にカクつきが続いたら、重い演出から順に自動で控えめにします。既定は「ON」です。保存してある設定は変わらず、アプリを開き直すと元に戻ります。判定・スコアは変わりません。\n下げる順番は、にじむ光 → ライブ背景「ライブ」を「派手」に → 道の演出・ノーツの動き → 判定の演出・コンボの節目 → ライブ背景を「控えめ」→「シンプル」です。\n画質を「自動」にしているときは、先に画質を下げ、それでもカクつくときに演出を下げます。'))), React.createElement("div", {
+    "data-rhythm-fx-groups": true,
+    className: wide ? 'flex gap-2' : 'space-y-3'
+  }, wide && React.createElement("div", {
+    "data-rhythm-fx-group-list": true,
+    className: "flex w-[140px] shrink-0 flex-col gap-1.5"
+  }, RHYTHM_FX_GROUPS.map(([id, name]) => React.createElement("button", {
+    type: "button",
+    key: id,
+    "data-rhythm-fx-group-tab": id,
+    "aria-pressed": fxGroupNow === id,
+    onClick: () => setFxGroup(id),
+    className: `flex min-h-[44px] items-center gap-1 rounded-xl border px-2 text-left text-[12px] font-black ${fxGroupNow === id ? 'border-fuchsia-300 bg-slate-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
+  }, React.createElement("span", null, RHYTHM_FX_GROUP_ICONS[id], " ", name), React.createElement("small", {
+    className: "ml-auto text-[10px] font-bold text-slate-400"
+  }, fxGroupSummary(id))))), React.createElement("div", {
+    className: wide ? 'min-w-0 flex-1 space-y-2' : 'space-y-3'
+  }, fxGroupShown('stage') && React.createElement("section", {
+    "data-rhythm-options-group": "背景",
+    "data-rhythm-fx-group": "stage",
     className: card
-  }, !wide && React.createElement("h3", {
-    className: head
-  }, "◆ 演出"), React.createElement("div", {
-    className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
-  }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります（取ったときの光だけは、下の「押したときの光」を「いつも出す」にすると出せます）。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。', {
+  }, !wide && React.createElement("button", {
+    type: "button",
+    "data-rhythm-fx-group-head": "stage",
+    "aria-expanded": fxGroup === 'stage',
+    onClick: () => setFxGroup(cur => cur === 'stage' ? null : 'stage'),
+    className: `flex w-full items-center gap-2 text-left ${head}`
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-cyan-300/80"
+  }, fxGroup === 'stage' ? '▼' : '▶'), "🌌 背景", React.createElement("span", {
+    "data-rhythm-fx-group-badge": true,
+    className: "rounded-full bg-fuchsia-500/25 px-2 py-0.5 text-[10px] font-black text-fuchsia-100"
+  }, fxGroupSummary('stage')), React.createElement("small", {
+    className: "ml-auto text-[10px] font-bold text-slate-400"
+  }, fxGroupCount('stage'), "項目")), (wide || fxGroup === 'stage') && React.createElement("div", {
+    className: wide ? `mt-1 ${fxGrid}` : `mt-3 ${fxGrid}`
+  }, field('ライブ背景', segments('stageEffect', RHYTHM_STAGE_EFFECT_LABELS), '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、道の両側には観客のペンライトが奥までずらりと並び、拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。いちばん重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。', {
     full: true
-  }), field('押したときの光', segments('tapLight', RHYTHM_TAP_LIGHT_LABELS), 'ノーツを取った瞬間に判定ラインで弾ける光（TAP・フリックの炎・ホールドやスライドを押し切ったときの光）を、演出量とは別に決めます。既定は「おまかせ」です。判定・スコアは変わりません。\n「おまかせ」＝演出量に合わせます。演出量「最小」と軽量モードでは出ません（これまでどおり）。\n「いつも出す」＝演出量「最小」や軽量モードでも、この光だけは出します。判定文字やコンボ数の弾み、画面のフラッシュ、両サイドのマスモンの跳ねなど、ほかの演出は止まったままです。モンスターノーツの光も、ふつうのノーツと同じ大きさになります。', {
+  }), RHYTHM_FX_ITEMS.filter(item => item.group === 'stage').map(fxField))), fxGroupShown('road') && React.createElement("section", {
+    "data-rhythm-options-group": "道",
+    "data-rhythm-fx-group": "road",
+    className: card
+  }, !wide && React.createElement("button", {
+    type: "button",
+    "data-rhythm-fx-group-head": "road",
+    "aria-expanded": fxGroup === 'road',
+    onClick: () => setFxGroup(cur => cur === 'road' ? null : 'road'),
+    className: `flex w-full items-center gap-2 text-left ${head}`
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-cyan-300/80"
+  }, fxGroup === 'road' ? '▼' : '▶'), "🛣 道", React.createElement("span", {
+    "data-rhythm-fx-group-badge": true,
+    className: "rounded-full bg-fuchsia-500/25 px-2 py-0.5 text-[10px] font-black text-fuchsia-100"
+  }, fxGroupSummary('road')), React.createElement("small", {
+    className: "ml-auto text-[10px] font-bold text-slate-400"
+  }, fxGroupCount('road'), "項目")), (wide || fxGroup === 'road') && React.createElement("div", {
+    className: wide ? `mt-1 ${fxGrid}` : `mt-3 ${fxGrid}`
+  }, field('道の演出', toggle('roadFx'), '演奏中の道(レーン)を、曲に合わせて動かします。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n曲の拍ごとに細い線が奥から流れてきて、小節の頭では明るい線になります。道の左右のふちが拍に合わせて光り、道の奥はもやに溶けて、その先の光が小節ごとに脈打ちます。\n少し重くなるので、端末が熱くなるときは OFF のままにしてください。演出量が「最小」のときと軽量モードでは出ません。\n変えた設定は、次に遊ぶ曲から使われます。'), field('盛り上がりの光', toggle('climaxFx'), 'サビなど曲がいちばん盛り上がるところに入ると、道の両側に光の筋が奥から流れてきます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n盛り上がるところは曲ごとに決まっていて、そこを抜けると光はゆっくり消えます。曲の中でもとくに盛り上がるところほど光が濃くなります。\n演出量が「最小」のときと軽量モードでは出ません。'), RHYTHM_FX_ITEMS.filter(item => item.group === 'road').map(fxField))), fxGroupShown('note') && React.createElement("section", {
+    "data-rhythm-options-group": "ノーツ",
+    "data-rhythm-fx-group": "note",
+    className: card
+  }, !wide && React.createElement("button", {
+    type: "button",
+    "data-rhythm-fx-group-head": "note",
+    "aria-expanded": fxGroup === 'note',
+    onClick: () => setFxGroup(cur => cur === 'note' ? null : 'note'),
+    className: `flex w-full items-center gap-2 text-left ${head}`
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-cyan-300/80"
+  }, fxGroup === 'note' ? '▼' : '▶'), "🎵 ノーツ", React.createElement("span", {
+    "data-rhythm-fx-group-badge": true,
+    className: "rounded-full bg-fuchsia-500/25 px-2 py-0.5 text-[10px] font-black text-fuchsia-100"
+  }, fxGroupSummary('note')), React.createElement("small", {
+    className: "ml-auto text-[10px] font-bold text-slate-400"
+  }, fxGroupCount('note'), "項目")), (wide || fxGroup === 'note') && React.createElement("div", {
+    className: wide ? `mt-1 ${fxGrid}` : `mt-3 ${fxGrid}`
+  }, field('ノーツの動き', toggle('noteMotionFx'), 'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。'), field('にじむ光', toggle('noteBloom'), 'ノーツの光や、ノーツを取ったときの光のまわりを、ふわっとにじませます。既定は「OFF」です。判定・スコアは変わりません。\n描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効きます。「Canvas」のときは何も変わりません。\n光を小さな絵にぼかしてから重ねるので、GPU の仕事が少し増えます。端末が熱くなるときは OFF にしてください。演出量「最小」と軽量モードでは出しません。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
     full: true
-  }), field('ライブ背景', segments('stageEffect', RHYTHM_STAGE_EFFECT_LABELS), '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、道の両側には観客のペンライトが奥までずらりと並び、拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。いちばん重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。', {
+  }), RHYTHM_FX_ITEMS.filter(item => item.group === 'note').map(fxField))), fxGroupShown('judge') && React.createElement("section", {
+    "data-rhythm-options-group": "判定",
+    "data-rhythm-fx-group": "judge",
+    className: card
+  }, !wide && React.createElement("button", {
+    type: "button",
+    "data-rhythm-fx-group-head": "judge",
+    "aria-expanded": fxGroup === 'judge',
+    onClick: () => setFxGroup(cur => cur === 'judge' ? null : 'judge'),
+    className: `flex w-full items-center gap-2 text-left ${head}`
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-cyan-300/80"
+  }, fxGroup === 'judge' ? '▼' : '▶'), "✨ 判定", React.createElement("span", {
+    "data-rhythm-fx-group-badge": true,
+    className: "rounded-full bg-fuchsia-500/25 px-2 py-0.5 text-[10px] font-black text-fuchsia-100"
+  }, fxGroupSummary('judge')), React.createElement("small", {
+    className: "ml-auto text-[10px] font-bold text-slate-400"
+  }, fxGroupCount('judge'), "項目")), (wide || fxGroup === 'judge') && React.createElement("div", {
+    className: wide ? `mt-1 ${fxGrid}` : `mt-3 ${fxGrid}`
+  }, field('判定の演出', toggle('judgmentFx'), 'GREAT 以上の判定のとき、判定の文字の後ろで光がはじけ、文字が大きく弾みます。既定は「OFF」です。判定・スコアは変わりません。\n光の色は判定の色（GREAT は赤、EXCELLENT は桃紫、MARVELOUS は金）で、ぴったりの MARVELOUS では虹色の光が走ります。\n判定のたびに動くので少し重くなります。演出量が「最小」のときと軽量モードでは出ません。'), field('押したときの光', segments('tapLight', RHYTHM_TAP_LIGHT_LABELS), 'ノーツを取った瞬間に判定ラインで弾ける光（TAP・フリックの炎・ホールドやスライドを押し切ったときの光）を、演出量とは別に決めます。既定は「おまかせ」です。判定・スコアは変わりません。\n「おまかせ」＝演出量に合わせます。演出量「最小」では、この光だけを出します。軽量モードでは出ません。\n「いつも出す」＝軽量モードでも、この光だけは出します。判定文字やコンボ数の弾み、画面のフラッシュ、両サイドのマスモンの跳ねなど、ほかの演出は止まったままです。モンスターノーツの光も、ふつうのノーツと同じ大きさになります。', {
     full: true
-  }), field('道の演出', toggle('roadFx'), '演奏中の道(レーン)を、曲に合わせて動かします。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n曲の拍ごとに細い線が奥から流れてきて、小節の頭では明るい線になります。道の左右のふちが拍に合わせて光り、道の奥はもやに溶けて、その先の光が小節ごとに脈打ちます。\n少し重くなるので、端末が熱くなるときは OFF のままにしてください。演出量が「最小」のときと軽量モードでは出ません。\n変えた設定は、次に遊ぶ曲から使われます。'), field('判定の演出', toggle('judgmentFx'), 'GREAT 以上の判定のとき、判定の文字の後ろで光がはじけ、文字が大きく弾みます。既定は「OFF」です。判定・スコアは変わりません。\n光の色は判定の色（GREAT は赤、EXCELLENT は桃紫、MARVELOUS は金）で、ぴったりの MARVELOUS では虹色の光が走ります。\n判定のたびに動くので少し重くなります。演出量が「最小」のときと軽量モードでは出ません。'), field('ノーツの動き', toggle('noteMotionFx'), 'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。'), field('コンボの節目', toggle('comboMilestoneFx'), 'コンボが100のくぎりに届くたび（100・200・300…）、コンボ数のまわりに金の光の輪が広がります。既定は「OFF」です。判定・スコアは変わりません。\n「100 COMBO」の大きな数字は、この設定に関係なくこれまでどおり出ます。コンボ数を出さない設定のときは、光の輪も出ません。演出量が「最小」のときと軽量モードでは出ません。'), field('盛り上がりの光', toggle('climaxFx'), 'サビなど曲がいちばん盛り上がるところに入ると、道の両側に光の筋が奥から流れてきます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n盛り上がるところは曲ごとに決まっていて、そこを抜けると光はゆっくり消えます。曲の中でもとくに盛り上がるところほど光が濃くなります。\n演出量が「最小」のときと軽量モードでは出ません。'), field('にじむ光', toggle('noteBloom'), 'ノーツの光や、ノーツを取ったときの光のまわりを、ふわっとにじませます。既定は「OFF」です。判定・スコアは変わりません。\n描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効きます。「Canvas」のときは何も変わりません。\n光を小さな絵にぼかしてから重ねるので、GPU の仕事が少し増えます。端末が熱くなるときは OFF にしてください。演出量「最小」と軽量モードでは出しません。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
+  }), hellReleased && field('空中を叩いた柱の光', hellSegments('hit', [['far', '奥まで'], ['on', '短い'], ['off', '出さない']]), 'HELL で空中のノーツを叩いたとき、空中の判定線から立ち上がる光の柱です。既定は「奥まで」で、空中の道に沿って奥の端まで伸びます。「短い」は地上と同じ長さ、「出さない」で光の柱を出しません。判定・スコアは変わりません。', {
     full: true
-  }), field('重いときは演出を自動で控えめに', toggle('autoEffectDown'), '演奏中にカクつきが続いたら、重い演出から順に自動で控えめにします。既定は「ON」です。保存してある設定は変わらず、アプリを開き直すと元に戻ります。判定・スコアは変わりません。\n下げる順番は、にじむ光 → ライブ背景「ライブ」を「派手」に → 道の演出・ノーツの動き → 判定の演出・コンボの節目 → ライブ背景を「控えめ」→「シンプル」です。\n画質を「自動」にしているときは、先に画質を下げ、それでもカクつくときに演出を下げます。'), hellReleased && field('空中を叩いた柱の光', hellSegments('hit', [['far', '奥まで'], ['on', '短い'], ['off', '出さない']]), 'HELL で空中のノーツを叩いたとき、空中の判定線から立ち上がる光の柱です。既定は「奥まで」で、空中の道に沿って奥の端まで伸びます。「短い」は地上と同じ長さ、「出さない」で光の柱を出しません。判定・スコアは変わりません。', {
-    full: true
-  }))), React.createElement("section", {
+  }), RHYTHM_FX_ITEMS.filter(item => item.group === 'judge').map(fxField))), fxGroupShown('combo') && React.createElement("section", {
+    "data-rhythm-options-group": "コンボ",
+    "data-rhythm-fx-group": "combo",
+    className: card
+  }, !wide && React.createElement("button", {
+    type: "button",
+    "data-rhythm-fx-group-head": "combo",
+    "aria-expanded": fxGroup === 'combo',
+    onClick: () => setFxGroup(cur => cur === 'combo' ? null : 'combo'),
+    className: `flex w-full items-center gap-2 text-left ${head}`
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-cyan-300/80"
+  }, fxGroup === 'combo' ? '▼' : '▶'), "🔥 コンボ", React.createElement("span", {
+    "data-rhythm-fx-group-badge": true,
+    className: "rounded-full bg-fuchsia-500/25 px-2 py-0.5 text-[10px] font-black text-fuchsia-100"
+  }, fxGroupSummary('combo')), React.createElement("small", {
+    className: "ml-auto text-[10px] font-bold text-slate-400"
+  }, fxGroupCount('combo'), "項目")), (wide || fxGroup === 'combo') && React.createElement("div", {
+    className: wide ? `mt-1 ${fxGrid}` : `mt-3 ${fxGrid}`
+  }, field('コンボの節目', toggle('comboMilestoneFx'), 'コンボが100のくぎりに届くたび（100・200・300…）、コンボ数のまわりに金の光の輪が広がります。既定は「OFF」です。判定・スコアは変わりません。\n「100 COMBO」の大きな数字は、この設定に関係なくこれまでどおり出ます。コンボ数を出さない設定のときは、光の輪も出ません。演出量が「最小」のときと軽量モードでは出ません。'), RHYTHM_FX_ITEMS.filter(item => item.group === 'combo').map(fxField))))), React.createElement("section", {
     "data-rhythm-options-group": "端末",
     className: card
   }, !wide && React.createElement("h3", {
@@ -34407,6 +35134,23 @@ const RhythmSongSelect = ({
   const [sortOpen, setSortOpen] = React.useState(false);
   const [genreOpen, setGenreOpen] = React.useState(false);
   const [artZoom, setArtZoom] = React.useState(false);
+  const [artPage, setArtPage] = React.useState(0);
+  const [lyricFull, setLyricFull] = React.useState(null);
+  const artPagesRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!artZoom) {
+      setArtPage(0);
+      setLyricFull(null);
+    }
+  }, [artZoom]);
+  const goArtPage = i => {
+    const el = artPagesRef.current;
+    if (!el) return;
+    el.scrollTo({
+      left: i * el.clientWidth,
+      behavior: 'smooth'
+    });
+  };
   const playable = (songs || []).filter(song => (difficulties || []).some(difficulty => rhythmChartPlayable(song, difficulty.id)));
   const setSongId = id => {
     if (typeof onSongId === 'function') onSongId(id);
@@ -34435,7 +35179,7 @@ const RhythmSongSelect = ({
   const eventSongIds = (() => {
     const released = typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS && RELEASE_FLAGS.rhythmWeeklyRanking === true;
     const event = released && typeof rhythmLimitedEventAt === 'function' ? rhythmLimitedEventAt(Date.now()) : null;
-    return new Set(event && Array.isArray(event.songIds) ? event.songIds : []);
+    return new Set(rhythmEventPlaySongIds(event));
   })();
   const eventActive = eventSongIds.size > 0;
   const favoriteIds = new Set(state.favorites || []);
@@ -34615,7 +35359,7 @@ const RhythmSongSelect = ({
     "data-rhythm-genre-current": genre ? genre.id : 'all',
     className: "min-w-0 truncate landscape:flex landscape:flex-col landscape:items-start landscape:leading-tight"
   }, React.createElement("small", {
-    className: "text-[11px] font-black max-[359px]:hidden landscape:text-[9px] landscape:text-slate-400"
+    className: "text-[11px] font-black max-[359px]:hidden landscape:text-[10px] landscape:text-slate-400"
   }, "ジャンル", React.createElement("span", {
     className: "landscape:hidden"
   }, "：")), React.createElement("b", {
@@ -34631,7 +35375,7 @@ const RhythmSongSelect = ({
   }, React.createElement("span", {
     className: "min-w-0 truncate landscape:flex landscape:flex-col landscape:items-start landscape:leading-tight"
   }, React.createElement("small", {
-    className: "text-[11px] font-black max-[359px]:hidden landscape:text-[9px] landscape:text-slate-400"
+    className: "text-[11px] font-black max-[359px]:hidden landscape:text-[10px] landscape:text-slate-400"
   }, "並べ替え", React.createElement("span", {
     className: "landscape:hidden"
   }, "：")), React.createElement("b", {
@@ -34660,7 +35404,7 @@ const RhythmSongSelect = ({
     "aria-hidden": "true"
   }, noticeOpen ? '▲' : '▼'), !noticeOpen && noticeHidden > 0 && React.createElement("b", {
     "data-rhythm-song-notice-badge": true,
-    className: "absolute -right-1 -top-1 min-w-[16px] rounded-full bg-fuchsia-400 px-1 text-[9px] leading-4 text-slate-950"
+    className: "absolute -right-1 -top-1 min-w-[16px] rounded-full bg-fuchsia-400 px-1 text-[10px] leading-4 text-slate-950"
   }, noticeHidden)), toolbarExtra), React.createElement("div", {
     ref: listRef,
     onScroll: handleListScroll,
@@ -34750,7 +35494,7 @@ const RhythmSongSelect = ({
       return React.createElement("small", _extends({}, main ? {
         'data-rhythm-song-row-rank': played ? rank : ''
       } : {}, {
-        className: "ml-1 flex min-w-0 items-baseline gap-1 text-[9px] font-bold text-slate-400"
+        className: "ml-1 flex min-w-0 items-baseline gap-1 text-[10px] font-bold text-slate-400"
       }), rowId && React.createElement("span", {
         className: `shrink-0 font-black [@container(max-width:350px)]:hidden ${rhythmDifficultyTextColor(rowId)}`
       }, rowId), (() => {
@@ -34772,7 +35516,7 @@ const RhythmSongSelect = ({
     })(), row.versions > 1 && React.createElement("small", _extends({}, main ? {
       'data-rhythm-song-row-version-count': row.versions
     } : {}, {
-      className: "ml-1 shrink-0 rounded-md border border-sky-300/40 bg-sky-500/10 px-1 py-0.5 text-[9px] font-black leading-none text-sky-200"
+      className: "ml-1 shrink-0 rounded-md border border-sky-300/40 bg-sky-500/10 px-1 py-0.5 text-[10px] font-black leading-none text-sky-200"
     }), row.versions, "つの版"), favoriteIds.has(entry.songId) && React.createElement("small", _extends({}, main ? {
       'data-rhythm-song-row-favorite': ''
     } : {}, {
@@ -34781,7 +35525,7 @@ const RhythmSongSelect = ({
     }), "♥"), eventSong && React.createElement("small", _extends({}, main ? {
       'data-rhythm-song-event': entry.songId
     } : {}, {
-      className: "ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-black text-amber-200"
+      className: "ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200"
     }), "🏆", React.createElement("span", {
       className: "[@container(max-width:380px)]:hidden"
     }, " イベント対象"))))));
@@ -34863,7 +35607,7 @@ const RhythmSongSelect = ({
   }, React.createElement("div", {
     className: "min-w-0 [container-type:inline-size]"
   }, React.createElement("small", {
-    className: "block text-[9px] font-black tracking-[.15em] text-slate-400"
+    className: "block text-[10px] font-black tracking-[.15em] text-slate-400"
   }, "HIGH SCORE", best && difficulty && rhythmBestShowsLegacy(song.songId, difficulty.id) && React.createElement("span", {
     "data-rhythm-demo-legacy-best": true,
     className: "ml-1 rounded bg-slate-500/30 px-1 tracking-normal text-slate-200"
@@ -34878,7 +35622,7 @@ const RhythmSongSelect = ({
     }
   }, best && best.played ? best.bestScore.toLocaleString() : React.createElement(React.Fragment, null, "まだ", React.createElement("wbr", null), "遊んでいません")), React.createElement("span", {
     "data-rhythm-demo-combo": true,
-    className: "block whitespace-nowrap text-[9px] font-black text-slate-400"
+    className: "block whitespace-nowrap text-[10px] font-black text-slate-400"
   }, React.createElement("span", {
     className: "[@container(max-width:120px)]:hidden"
   }, "MAX "), "COMBO ", React.createElement("b", {
@@ -35005,15 +35749,95 @@ const RhythmSongSelect = ({
         alignItems: 'center',
         justifyContent: 'center',
         overflowY: 'auto',
-        '--mh-art-max-h': `min(74%, calc(100% - ${reserve}px))`
+        '--mh-art-max-h': `min(74%, calc(100% - ${reserve}px))`,
+        containerType: 'size',
+        '--mh-art-page-h': `min(66cqh, calc(100cqh - ${reserve + 70}px))`
       },
       onClick: () => setArtZoom(false)
-    }, React.createElement("img", {
-      src: typeof rhythmSongArtSrc !== 'undefined' ? rhythmSongArtSrc(song) : song.artwork,
-      alt: `${rhythmSongFullName(song)}のジャケット`,
-      onClick: e => e.stopPropagation(),
-      className: "max-h-[var(--mh-art-max-h)] min-h-[120px] w-auto max-w-[92%] shrink-0 rounded-2xl border border-white/25 object-contain landscape:max-h-[88%] landscape:max-w-[55%]"
-    }), React.createElement("div", {
+    }, (() => {
+      const artSrc = typeof rhythmSongArtSrc !== 'undefined' ? rhythmSongArtSrc(song) : song.artwork;
+      const lyrics = typeof rhythmSongLyricCards === 'function' ? rhythmSongLyricCards(song) : [];
+      if (!lyrics.length) return React.createElement("img", {
+        src: artSrc,
+        alt: `${rhythmSongFullName(song)}のジャケット`,
+        onClick: e => e.stopPropagation(),
+        className: "max-h-[var(--mh-art-max-h)] min-h-[120px] w-auto max-w-[92%] shrink-0 rounded-2xl border border-white/25 object-contain landscape:max-h-[88%] landscape:max-w-[55%]"
+      });
+      const pages = [{
+        src: artSrc,
+        alt: `${rhythmSongFullName(song)}のジャケット`
+      }, ...lyrics.map((src, i) => ({
+        src,
+        alt: `${rhythmSongFullName(song)}の歌詞カード${lyrics.length > 1 ? ` ${i + 1}` : ''}`,
+        lyric: true
+      }))];
+      const cur = Math.min(artPage, pages.length - 1);
+      return React.createElement("div", {
+        "data-rhythm-song-art-pages": true,
+        onClick: e => e.stopPropagation(),
+        className: "flex w-full max-w-[92%] shrink-0 flex-col items-center landscape:max-w-[55%]"
+      }, React.createElement("div", {
+        ref: artPagesRef,
+        "data-rhythm-song-art-pager": true,
+        onScroll: e => {
+          const el = e.currentTarget;
+          const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
+          if (i !== artPage) setArtPage(i);
+        },
+        className: "flex w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain",
+        style: {
+          scrollbarWidth: 'none',
+          WebkitOverflowScrolling: 'touch'
+        }
+      }, pages.map((page, i) => React.createElement("div", {
+        key: page.src,
+        "data-rhythm-song-art-page": page.lyric ? 'lyric' : 'art',
+        className: "flex w-full shrink-0 snap-center items-center justify-center"
+      }, page.lyric ? React.createElement("button", {
+        type: "button",
+        "data-rhythm-song-lyric-open": true,
+        onClick: () => setLyricFull(page.src),
+        "aria-label": `${page.alt}を大きく見る`,
+        className: "relative"
+      }, React.createElement("img", {
+        src: page.src,
+        alt: page.alt,
+        className: "max-h-[var(--mh-art-page-h)] min-h-[120px] w-auto max-w-full rounded-2xl border border-white/25 object-contain"
+      }), React.createElement("span", {
+        className: "absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-1 text-[11px] font-black text-white"
+      }, "🔍 大きく見る")) : React.createElement("img", {
+        src: page.src,
+        alt: page.alt,
+        className: "max-h-[var(--mh-art-page-h)] min-h-[120px] w-auto max-w-full rounded-2xl border border-white/25 object-contain"
+      })))), React.createElement("div", {
+        "data-rhythm-song-art-dots": true,
+        className: "mt-2 flex items-center gap-2"
+      }, React.createElement("button", {
+        type: "button",
+        "data-rhythm-song-art-prev": true,
+        disabled: cur <= 0,
+        onClick: () => goArtPage(cur - 1),
+        "aria-label": "前のページ",
+        className: "min-h-[44px] min-w-[44px] rounded-xl bg-white/10 text-sm font-black text-white disabled:opacity-30"
+      }, "◀"), pages.map((page, i) => React.createElement("button", {
+        key: page.src,
+        type: "button",
+        onClick: () => goArtPage(i),
+        "aria-label": `${i + 1}ページ目(${page.lyric ? '歌詞カード' : 'ジャケット'})`,
+        "aria-current": i === cur ? 'true' : undefined,
+        className: `min-h-[44px] px-1 text-base leading-none ${i === cur ? 'text-white' : 'text-white/40'}`
+      }, i === cur ? '●' : '○')), React.createElement("button", {
+        type: "button",
+        "data-rhythm-song-art-next": true,
+        disabled: cur >= pages.length - 1,
+        onClick: () => goArtPage(cur + 1),
+        "aria-label": "次のページ",
+        className: "min-h-[44px] min-w-[44px] rounded-xl bg-white/10 text-sm font-black text-white disabled:opacity-30"
+      }, "▶")), React.createElement("p", {
+        style: JA_WRAP_STYLE,
+        className: "text-[10px] font-bold text-slate-400"
+      }, jaWrap(cur === 0 ? '横に送ると歌詞カード' : '歌詞カードを押すと大きく見られます')));
+    })(), React.createElement("div", {
       className: "flex w-full max-w-[92%] flex-col items-center landscape:w-auto landscape:max-w-[38%]"
     }, React.createElement("b", {
       className: "mt-3 max-w-full text-center text-sm font-black leading-tight text-white landscape:mt-0"
@@ -35039,7 +35863,39 @@ const RhythmSongSelect = ({
         minHeight: '52px'
       }
     }, "閉じる")));
-  })(), genreOpen && React.createElement("div", {
+  })(), artZoom && lyricFull && React.createElement("div", {
+    "data-rhythm-song-lyric-full": true,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "歌詞カード",
+    className: "fixed inset-0 z-[9001] overflow-auto bg-black",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: 9001,
+      backgroundColor: '#000',
+      overflow: 'auto',
+      WebkitOverflowScrolling: 'touch'
+    }
+  }, React.createElement("img", {
+    src: lyricFull,
+    alt: "歌詞カード",
+    className: "block h-auto max-w-none",
+    style: {
+      width: 'max(100%, 900px)'
+    }
+  }), React.createElement("button", {
+    type: "button",
+    "data-rhythm-song-lyric-full-close": true,
+    onClick: () => setLyricFull(null),
+    className: "fixed right-3 top-3 min-h-[48px] rounded-xl bg-slate-800/90 px-4 text-sm font-black text-white",
+    style: {
+      position: 'fixed',
+      top: 'max(12px, env(safe-area-inset-top))',
+      right: 12,
+      minHeight: '48px'
+    }
+  }, "✕ もどる")), genreOpen && React.createElement("div", {
     "data-rhythm-genre-sheet": true,
     className: "fixed inset-0 z-[9000] flex items-end justify-center",
     style: {
@@ -35157,6 +36013,47 @@ const RhythmSongSelect = ({
     onClick: () => setSortOpen(false),
     className: "mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white"
   }, "閉じる"))));
+};
+const ChangelogVideo = ({
+  src,
+  poster
+}) => {
+  const ref = useRef(null);
+  const hold = on => {
+    try {
+      if (typeof Audio_ !== 'undefined' && Audio_ && typeof Audio_.setVideoHold === 'function') Audio_.setVideoHold(on);
+    } catch (e) {}
+  };
+  useEffect(() => () => {
+    try {
+      if (ref.current) ref.current.pause();
+    } catch (e) {}
+    hold(false);
+  }, []);
+  return React.createElement("video", {
+    ref: ref,
+    src: src,
+    poster: poster,
+    controls: true,
+    playsInline: true,
+    preload: "none",
+    onPlay: () => hold(true),
+    onPause: () => hold(false),
+    onEnded: () => hold(false),
+    onError: e => {
+      hold(false);
+      const f = e.currentTarget.closest('figure');
+      if (f) f.style.display = 'none';
+    },
+    style: {
+      display: 'block',
+      width: '100%',
+      maxWidth: '320px',
+      margin: '0 auto',
+      borderRadius: '12px',
+      background: '#000'
+    }
+  });
 };
 const rhythmHellGuideVideo = id => {
   try {
@@ -35726,7 +36623,7 @@ precision mediump float;
 varying vec2 vP;
 uniform vec2 uSize,uRes;uniform sampler2D uArt,uStatic;uniform float uArtA,uFx,uMode;
 uniform vec4 uBeamL,uBeamR,uBeamC;uniform vec2 uBeamBox;
-uniform float uLive,uPulse,uBeats;uniform vec3 uPenA,uPenB;uniform vec4 uLas[4],uLasC[4];
+uniform float uLive,uPulse,uBeats,uPenKeep;uniform vec3 uPenA,uPenB;uniform vec4 uLas[4],uLasC[4];
 vec4 over(vec4 c,vec4 s){return s+c*(1.-s.a);}
 vec4 tint(vec3 rgb,float a){return vec4(rgb*a,a);}
 float hash(float n){return fract(sin(n*127.1)*43758.5453);}
@@ -35738,7 +36635,7 @@ vec4 pens(){
   float y=vP.y/uSize.y;if(y<.16)return vec4(0.);
   float fi=18.*pow((y-.16)/.84,1./1.5);vec4 s=vec4(0.);
   for(int k=0;k<2;k++){float row=floor(fi)+float(k),ry=.16+.84*pow(row/18.,1.5),sc=mix(.35,1.,ry),cell=26.*sc,r=7.*sc,by=ry*uSize.y,i=floor(vP.x/cell);
-    for(int j=-1;j<=1;j++){float n=i+float(j)+row*37.,h=hash(n);if(hash(n*3.1)>.8)continue;
+    for(int j=-1;j<=1;j++){float n=i+float(j)+row*37.,h=hash(n);if(hash(n*3.1)>uPenKeep)continue;
       float sw=sin(uBeats*3.14159+h*6.2832),cs=cos(sw*.35),sn=sin(sw*.35);
       vec2 q=vP-vec2((i+float(j)+.5)*cell+(h-.5)*cell*.5+sw*r*.8,by-r*1.5+(hash(n*7.7)-.5)*r*1.6);q=vec2(cs*q.x+sn*q.y,-sn*q.x+cs*q.y);q.y*=.38;float d=dot(q,q)/(r*r);if(d>9.)continue;
       float a=(exp(-d/.06)*.95+exp(-d/.7)*.3)*mix(.45,1.,sc)*(.55+.45*hash(n*9.1))*(.5+.5*uPulse);s+=vec4((hash(n*5.3)<.5?uPenA:uPenB)*a,a);}}
@@ -35840,7 +36737,7 @@ const rhythmCreateStageGL = canvas => {
   gl.disable(gl.DEPTH_TEST);
   gl.clearColor(0, 0, 0, 0);
   const u = {};
-  ['uSize', 'uRes', 'uArt', 'uStatic', 'uArtA', 'uFx', 'uMode', 'uBeamL', 'uBeamR', 'uBeamC', 'uBeamBox', 'uLive', 'uPulse', 'uBeats', 'uPenA', 'uPenB', 'uLas', 'uLasC'].forEach(name => {
+  ['uSize', 'uRes', 'uArt', 'uStatic', 'uArtA', 'uFx', 'uMode', 'uBeamL', 'uBeamR', 'uBeamC', 'uBeamBox', 'uLive', 'uPulse', 'uBeats', 'uPenA', 'uPenB', 'uLas', 'uLasC', 'uPenKeep'].forEach(name => {
     u[name] = gl.getUniformLocation(prog, name);
   });
   gl.uniform1i(u.uArt, 0);
@@ -35893,7 +36790,11 @@ const rhythmCreateStageGL = canvas => {
       artA,
       fx,
       tier,
-      live = null
+      live = null,
+      beam = true,
+      sparks = 'MANY',
+      laser = true,
+      pens = 'MANY'
     }) {
       const pw = Math.max(1, Math.round(w * scale)),
         ph = Math.max(1, Math.round(h * scale));
@@ -35941,7 +36842,7 @@ const rhythmCreateStageGL = canvas => {
         put(u.uBeamL, -22 + 28 * swing(0), -.1 * w + bw / 2);
         put(u.uBeamR, 22 - 28 * swing(3500), w + .1 * w - bw / 2);
         const rgba = RHYTHM_STAGE_GL_BEAM_RGBA[tier] || RHYTHM_STAGE_GL_BEAM_RGBA[0];
-        gl.uniform4f(u.uBeamC, rgba[0] / 255, rgba[1] / 255, rgba[2] / 255, (rgba[3] || 0) * .75);
+        gl.uniform4f(u.uBeamC, rgba[0] / 255, rgba[1] / 255, rgba[2] / 255, beam ? (rgba[3] || 0) * .75 : 0);
         gl.uniform2f(u.uBeamBox, bw, bh);
       }
       const liveOn = !!(fx && live);
@@ -35970,7 +36871,7 @@ const rhythmCreateStageGL = canvas => {
           laserColors[i * 4] = color[0] / 255;
           laserColors[i * 4 + 1] = color[1] / 255;
           laserColors[i * 4 + 2] = color[2] / 255;
-          laserColors[i * 4 + 3] = on ? (.3 + .7 * pulse) * .8 : 0;
+          laserColors[i * 4 + 3] = on && laser ? (.3 + .7 * pulse) * .8 : 0;
         });
         gl.uniform4fv(u.uLas, lasers);
         gl.uniform4fv(u.uLasC, laserColors);
@@ -35981,7 +36882,7 @@ const rhythmCreateStageGL = canvas => {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.uniform2f(su.uSize, w, h);
-      for (const layer of [0, 1]) {
+      for (const layer of sparks === 'NONE' ? [] : sparks === 'FEW' ? [1] : [0, 1]) {
         const spec = RHYTHM_STAGE_SPARKS[layer],
           end = spec.end,
           off = timeMs / spec.duration % 1 * h;
@@ -36005,7 +36906,8 @@ const rhythmCreateStageGL = canvas => {
           gl.scissor(0, ph - top, pw, top);
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
-        gl.uniform1f(u.uMode, 2);
+        gl.uniform1f(u.uPenKeep, pens === 'FEW' ? .35 : .8);
+        gl.uniform1f(u.uMode, pens === 'NONE' ? 3 : 2);
         gl.scissor(0, 0, pw, ph - top);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         gl.disable(gl.SCISSOR_TEST);
@@ -38343,16 +39245,27 @@ const RhythmTapTest = ({
   }, [settings.effectAmount, settings.lightweightMode, renderQualityStill]);
   const lifeBoxRef = useRef(null),
     lifeDamageRef = useRef(null);
-  const stageLevel = rhythmStageLevel(settings);
+  const stageBaseLevel = rhythmStageLevel(settings);
+  const stageLevel = rhythmFxStageLevel(settings, stageBaseLevel);
   const stageArtRef = useRef(null),
     stagePulseRef = useRef(null);
   const stageGlWanted = useState(() => stageLevel !== 'SIMPLE' && (rhythmStageGlActive(webglWanted) || stageLevel === 'LIVE' && rhythmStageGlPreference() !== 'css' && rhythmWebglGpuUsable()))[0];
   const [stageGlLost, setStageGlLost] = useState(false);
   const stageGl = stageGlWanted && stageLevel !== 'SIMPLE' && !stageGlLost;
   const stageGlRef = useRef(null);
-  const roadFxOn = settings.roadFx === true && settings.effectAmount !== 'MINIMAL' && !settings.lightweightMode;
+  const roadFxBase = settings.roadFx === true && settings.effectAmount !== 'MINIMAL' && !settings.lightweightMode;
+  const roadBeatLineOn = rhythmFxOn(settings, 'beatLine', roadFxBase),
+    roadEdgeOn = rhythmFxOn(settings, 'roadEdge', roadFxBase),
+    roadFogOn = rhythmFxOn(settings, 'roadFog', roadFxBase);
+  const roadFxOn = roadBeatLineOn || roadEdgeOn || roadFogOn;
   const roadFxRef = useRef(null);
   roadFxRef.current = roadFxOn && !tutorial ? rhythmSongBeatGrid(song.songId) : null;
+  const roadPartsRef = useRef(null);
+  roadPartsRef.current = {
+    line: roadBeatLineOn,
+    edge: roadEdgeOn,
+    fog: roadFogOn
+  };
   const roadLinesRef = useRef(null);
   if (!roadLinesRef.current) roadLinesRef.current = new Float32Array(6 * 64);
   const roadGlowRef = useRef(null);
@@ -38363,6 +39276,7 @@ const RhythmTapTest = ({
     return grid ? Math.round(Math.min(1400, Math.max(500, grid.beatMs * 2))) : 900;
   })();
   const stageArtSrc = stageLevel !== 'SIMPLE' && typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
+  const stageArtSize = rhythmFxArtSize(settings);
   const hudArtSrc = typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
   useEffect(() => {
     const canvas = stageArtRef.current;
@@ -38383,7 +39297,7 @@ const RhythmTapTest = ({
       alive = false;
       img.onload = null;
     };
-  }, [stageArtSrc, stageGl]);
+  }, [stageArtSrc, stageGl, stageArtSize]);
   const sideMonsterElements = useMemo(() => {
     if (settings.sideMonsterOpacity === 'OFF') return null;
     const opacity = rhythmSideMonsterOpacityValue(settings.sideMonsterOpacity);
@@ -38597,14 +39511,14 @@ const RhythmTapTest = ({
   const [comboMilestone, setComboMilestone] = useState(0);
   const comboMilestoneTier = Math.floor((Number(view.combo) || 0) / RHYTHM_COMBO_MILESTONE_STEP);
   useEffect(() => {
-    if (settings.lightweightMode || settings.effectAmount === 'MINIMAL' || comboMilestoneTier <= 0) {
+    if (!rhythmFxOn(settings, 'combo100', !settings.lightweightMode && settings.effectAmount !== 'MINIMAL') || comboMilestoneTier <= 0) {
       setComboMilestone(0);
       return;
     }
     setComboMilestone(comboMilestoneTier * RHYTHM_COMBO_MILESTONE_STEP);
     const timer = setTimeout(() => setComboMilestone(0), 1100);
     return () => clearTimeout(timer);
-  }, [comboMilestoneTier, settings.lightweightMode, settings.effectAmount]);
+  }, [comboMilestoneTier, settings.lightweightMode, settings.effectAmount, settings.fx]);
   const comboMilestoneStage = Math.min(5, comboMilestoneTier);
   const lifeRatio = rhythmLifeRatio(view.life);
   const lifeState = rhythmLifeState(view.life);
@@ -38612,7 +39526,15 @@ const RhythmTapTest = ({
   const stageTierNow = Math.min(3, Math.floor(comboTier / 2));
   const stageHostRef = useRef(null);
   const [stageImages, setStageImages] = useState(null);
-  const stageFxOn = (stageLevel === 'VIVID' || stageLevel === 'LIVE') && settings.effectAmount !== 'MINIMAL';
+  const stageFxBase = (stageBaseLevel === 'VIVID' || stageBaseLevel === 'LIVE') && settings.effectAmount !== 'MINIMAL';
+  const stageBeamOn = rhythmFxOn(settings, 'searchlight', stageFxBase);
+  const stageSparksPick = rhythmFxPick(settings, 'sparks'),
+    stageSparks = stageSparksPick === 'AUTO' ? stageFxBase ? 'MANY' : 'NONE' : stageSparksPick;
+  const stageLaserOn = rhythmFxOn(settings, 'laser', stageFxBase && stageBaseLevel === 'LIVE');
+  const stagePensPick = rhythmFxPick(settings, 'penlight'),
+    stagePens = stagePensPick === 'AUTO' ? stageFxBase && stageBaseLevel === 'LIVE' ? 'MANY' : 'NONE' : stagePensPick;
+  const stageFxOn = stageBeamOn || stageSparks !== 'NONE';
+  const stageTimingOn = rhythmFxOn(settings, 'timingLight', stageBaseLevel !== 'SIMPLE');
   useEffect(() => {
     const host = stageHostRef.current;
     if (!host || !stageFxOn || stageGl || typeof window === 'undefined' || typeof document === 'undefined') return undefined;
@@ -38692,8 +39614,12 @@ const RhythmTapTest = ({
   const stageGlLiveRef = useRef(null);
   stageGlLiveRef.current = {
     tier: stageTierNow,
-    fx: stageFxOn,
-    live: stageLevel === 'LIVE',
+    fx: stageFxOn || stageLaserOn || stagePens !== 'NONE',
+    beam: stageBeamOn,
+    sparks: stageSparks,
+    laser: stageLaserOn,
+    pens: stagePens,
+    live: stageLevel === 'LIVE' && (stageLaserOn || stagePens !== 'NONE'),
     art: stageLevel === 'CALM' ? .34 : .5,
     grid: stageLevel === 'LIVE' && !tutorial ? rhythmSongBeatGrid(song.songId) : null
   };
@@ -38731,12 +39657,12 @@ const RhythmTapTest = ({
       img.onload = () => {
         if (!alive) return;
         const c = document.createElement('canvas');
-        c.width = 24;
-        c.height = 24;
+        c.width = stageArtSize;
+        c.height = stageArtSize;
         const g = c.getContext('2d');
         if (!g) return;
         try {
-          g.drawImage(img, 0, 0, 24, 24);
+          g.drawImage(img, 0, 0, stageArtSize, stageArtSize);
         } catch (_) {
           return;
         }
@@ -38810,7 +39736,11 @@ const RhythmTapTest = ({
         artA,
         fx,
         tier,
-        live: liveArg
+        live: liveArg,
+        beam: live.beam !== false,
+        sparks: live.sparks || 'MANY',
+        laser: live.laser !== false,
+        pens: live.pens || 'MANY'
       });
     };
     frame = requestAnimationFrame(loop);
@@ -38821,7 +39751,7 @@ const RhythmTapTest = ({
       canvas.removeEventListener('webglcontextlost', onLost);
       renderer.release();
     };
-  }, [stageGl, stageArtSrc, renderQualityStill]);
+  }, [stageGl, stageArtSrc, renderQualityStill, stageArtSize]);
   const comboPosition = RHYTHM_COMBO_POSITIONS.includes(settings.comboPosition) ? settings.comboPosition : 'CENTER';
   const [isLandscape, setIsLandscape] = useState(() => orientationIsLandscape());
   const hudSongLong = !isLandscape && rhythmSongFullName(song).length > 30;
@@ -39240,7 +40170,7 @@ const RhythmTapTest = ({
         const monsterEffect = RHYTHM_MONSTER_EFFECT_LEVELS.includes(settings.monsterNoteEffect) ? settings.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect;
         const bigMonsterEffect = monsterHit && !rhythmMonsterEffectAtMost(monsterEffect, 'OFF') && !monAbOff('spark');
         const flickHit = rhythmNoteVisualType(note) === 'FLICK' ? rhythmFlickDir(note) || 'up' : note.endFlick ? 'up' : '';
-        const hitEffect = rhythmSpawnHitEffect(area, {
+        const hitEffect = rhythmFxOn(settings, 'burst', true) ? rhythmSpawnHitEffect(area, {
           centerRatio: span.center,
           widthRatio: span.width,
           judgment,
@@ -39250,9 +40180,9 @@ const RhythmTapTest = ({
           flick: flickHit,
           finish: rhythmNoteHasBody(note),
           sky: rhythmNoteSkyHeight(note) > 0
-        });
+        }) : null;
         if (hitEffect) restarts.push(hitEffect);
-        if (monsterHit && monsterEffect === 'NORMAL' && !monAbOff('spark') && screenFlashRef.current) restarts.push({
+        if (monsterHit && monsterEffect === 'NORMAL' && !monAbOff('spark') && screenFlashRef.current && rhythmFxOn(settings, 'flash', true)) restarts.push({
           el: screenFlashRef.current,
           attr: 'rhythmFlash'
         });
@@ -39291,24 +40221,43 @@ const RhythmTapTest = ({
           attr: 'rhythmComboPop'
         });
         rhythmRestartAnimations(restarts);
-      } else if (rhythmTapLightOnly(settings)) {
-        const area = playAreaRef.current,
-          lineY = RHYTHM_JUDGMENT_LINE_Y.ratio,
-          nowMs = run.audio?.songTimeMs?.() ?? note.timeMs;
-        const span = rhythmNoteIsSlide(note) ? rhythmProjectSlideSpan(rhythmReleaseLane(note), note, lineY, nowMs) : rhythmNoteVisualSpan(note, note.lane, lineY, nowMs);
-        const flickHit = rhythmNoteVisualType(note) === 'FLICK' ? rhythmFlickDir(note) || 'up' : note.endFlick ? 'up' : '';
-        const hitEffect = rhythmSpawnHitEffect(area, {
-          centerRatio: span.center,
-          widthRatio: span.width,
-          judgment,
-          monster: false,
-          precise: preciseHit,
-          defer: true,
-          flick: flickHit,
-          finish: rhythmNoteHasBody(note),
-          sky: rhythmNoteSkyHeight(note) > 0
+      } else {
+        const extra = [];
+        if (rhythmFxOn(settings, 'burst', rhythmTapLightOnly(settings))) {
+          const area = playAreaRef.current,
+            lineY = RHYTHM_JUDGMENT_LINE_Y.ratio,
+            nowMs = run.audio?.songTimeMs?.() ?? note.timeMs;
+          const span = rhythmNoteIsSlide(note) ? rhythmProjectSlideSpan(rhythmReleaseLane(note), note, lineY, nowMs) : rhythmNoteVisualSpan(note, note.lane, lineY, nowMs);
+          const flickHit = rhythmNoteVisualType(note) === 'FLICK' ? rhythmFlickDir(note) || 'up' : note.endFlick ? 'up' : '';
+          const hitEffect = rhythmSpawnHitEffect(area, {
+            centerRatio: span.center,
+            widthRatio: span.width,
+            judgment,
+            monster: false,
+            precise: preciseHit,
+            defer: true,
+            flick: flickHit,
+            finish: rhythmNoteHasBody(note),
+            sky: rhythmNoteSkyHeight(note) > 0
+          });
+          if (hitEffect) extra.push(hitEffect);
+        }
+        if (monsterHit && screenFlashRef.current && rhythmFxPick(settings, 'flash') === 'ON') extra.push({
+          el: screenFlashRef.current,
+          attr: 'rhythmFlash'
         });
-        if (hitEffect) rhythmRestartAnimations([hitEffect]);
+        if (rhythmFxPick(settings, 'judgeFlow') === 'ON') {
+          const text = rhythmNoteIsSky(note) ? skyJudgmentTextRef.current : judgmentTextRef.current;
+          if (text) extra.push({
+            el: text,
+            attr: 'rhythmJudgmentPop'
+          });
+        }
+        if (rhythmFxPick(settings, 'comboBounce') === 'ON' && comboRef.current) extra.push({
+          el: comboRef.current,
+          attr: 'rhythmComboPop'
+        });
+        if (extra.length) rhythmRestartAnimations(extra);
       }
     }
     if (settings.vibrationEnabled && judgment !== 'MISS') RHYTHM_HAPTICS.tap(monsterHit ? 26 : 12);
@@ -39674,7 +40623,7 @@ const RhythmTapTest = ({
     const liveLogEndMs = Number.isFinite(Number(song.playDurationMs)) ? Number(song.playDurationMs) : chart.durationMs;
     const liveLog = rhythmLiveLogSections(run.liveLog, liveLogEndMs);
     const celebrateTitle = achievements.allMarvelous ? 'ALL MARVELOUS!!' : achievements.allExcellent ? 'ALL EXCELLENT!!' : achievements.fullCombo ? 'FULL COMBO!' : null;
-    const showCelebrate = !!celebrateTitle && !failed && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL';
+    const showCelebrate = !!celebrateTitle && !failed && rhythmFxOn(settings, 'fullComboBig', !settings.lightweightMode && settings.effectAmount !== 'MINIMAL');
     const previousBestScore = Math.max(0, Math.floor(Number(run.startBestScore) || 0));
     const recordFx = isNewRecord && previousBestScore > 0 && !failed && !tutorial && !calibrating && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL' ? {
       id: `${Date.now()}-${score}`,
@@ -39730,7 +40679,7 @@ const RhythmTapTest = ({
       }
     } : v);
     onComplete(result, merged);
-  }, [chart.totalNotes, chart.durationMs, difficulty.maxScore, difficulty.id, onComplete, settings.effectAmount, settings.lightweightMode, settings.judgmentTimingOffsetMs, stopFrame, tutorial, calibrating, debugPlay, song.songId, song.playDurationMs, assistOn, mirrorOn, luckOn, multi, multiRewardScale]);
+  }, [chart.totalNotes, chart.durationMs, difficulty.maxScore, difficulty.id, onComplete, settings.effectAmount, settings.lightweightMode, settings.fx, settings.judgmentTimingOffsetMs, stopFrame, tutorial, calibrating, debugPlay, song.songId, song.playDurationMs, assistOn, mirrorOn, luckOn, multi, multiRewardScale]);
   const celebrateTimerRef = useRef(null);
   const [touchReportSent, setTouchReportSent] = useState(null);
   const recordFxId = view.status === 'result' && view.result && view.result.recordFx ? view.result.recordFx.id : null;
@@ -39792,7 +40741,7 @@ const RhythmTapTest = ({
   const scheduleTick = useCallback(() => {
     stopFrame();
     const powerSave = settings.frameRateMode !== 'DEVICE';
-    const stagePulseOn = rhythmStageLevel(settings) !== 'SIMPLE';
+    const stagePulseOn = rhythmFxStageLevel(settings, rhythmStageLevel(settings)) !== 'SIMPLE' && rhythmFxOn(settings, 'timingLight', rhythmStageLevel(settings) !== 'SIMPLE');
     let prevFrameMs = 0,
       avgFrameMs = 1000 / 60,
       lastDrawnMs = 0;
@@ -39878,7 +40827,9 @@ const RhythmTapTest = ({
         visualTime = songTimeMs - settings.judgmentTimingOffsetMs,
         travelMs = rhythmTravelMsForSpeed(settings.noteSpeed);
       let perfScanned = 0,
-        perfDrawn = 0;
+        perfDrawn = 0,
+        traceGround = 0,
+        traceSky = 0;
       updateJudgmentBand(travel, travelMs);
       if (stagePulseOn) {
         const pulseEl = stagePulseRef.current,
@@ -39915,7 +40866,8 @@ const RhythmTapTest = ({
         maxDpr: noteCanvasMaxDprRef.current,
         sizeScale: settings.noteSize / 100,
         bloom: settingsLiveRef.current.noteBloom === true,
-        motion: settingsLiveRef.current.noteMotionFx === true
+        motion: settingsLiveRef.current.noteMotionFx === true,
+        ...rhythmFxRenderOptions(settings, settingsLiveRef.current)
       });
       {
         const stageClock = stageClockRef.current;
@@ -39962,7 +40914,8 @@ const RhythmTapTest = ({
             lines[o + 5] = Math.min(1, Math.max(0, progress / .25)) * (progress > 1 ? Math.max(0, 1 - (progress - 1) / .3) : 1);
             count++;
           }
-          RHYTHM_CANVAS_RENDERER.drawRoadFx(lines, count, beatIndex >= 0 ? Math.exp(-since / (onBar ? 260 : 170)) * (onBar ? 1 : .55) : 0);
+          const parts = roadPartsRef.current || {};
+          RHYTHM_CANVAS_RENDERER.drawRoadFx(lines, parts.line === false ? 0 : count, parts.edge !== false && beatIndex >= 0 ? Math.exp(-since / (onBar ? 260 : 170)) * (onBar ? 1 : .55) : 0);
         }
         const glowEl = roadGlowRef.current;
         if (glowEl && onBar && beatIndex >= 0 && run._roadBarAt !== beatIndex && typeof glowEl.animate === 'function') {
@@ -40025,12 +40978,18 @@ const RhythmTapTest = ({
         const monster = !!monsterForNote(note);
         const depthScale = Math.round((0.56 + geo.scale * .44) * 100) / 100,
           brightness = Math.round((0.72 + geo.scale * .28) * 100) / 100;
+        const notePressed = note.type === 'HOLD' && note.activePointerId !== null,
+          noteSlideOff = notePressed && RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index);
+        if (notePressed && !noteSlideOff && !failedTrail && hasBody) {
+          const m = rhythmHoldTraceMask(note, visualLane);
+          if (rhythmNoteIsSky(note) || typeof rhythmSlideHasSky === 'function' && rhythmSlideHasSky(note)) traceSky |= m;else traceGround |= m;
+        }
         RHYTHM_CANVAS_RENDERER.drawNote(note, geo, {
           failed: failedTrail,
           monster,
           wide: rhythmNoteIsWide(note),
-          pressed: note.type === 'HOLD' && note.activePointerId !== null,
-          slideOff: note.type === 'HOLD' && note.activePointerId !== null && RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index),
+          pressed: notePressed,
+          slideOff: noteSlideOff,
           heldMs: songTimeMs - note.timeMs,
           alpha: failedTrail ? .34 : 1,
           pop: clearFlash ? Math.min(1, (songTimeMs - note._rhythmClearAt) / RHYTHM_CLEAR_FLASH_MS) : null,
@@ -40219,7 +41178,7 @@ const RhythmTapTest = ({
         if (run.notesReady && run.notesAscending && (scrollTable ? rhythmScrollMinAfter(note.timeMs) > scanHorizonScroll : note.timeMs > scanHorizonMs)) break;
         perfScanned++;
         visitNote(note);
-        if (!note.done && note.activePointerId !== null && note.type === 'HOLD' && rhythmNoteHasBody(note)) heldNotes.push(note);
+        if (!note.done && note.activePointerId !== null && note.type === 'HOLD' && rhythmNoteHasBody(note) && !RHYTHM_GESTURE_RUNTIME.slideOffForIndex(note.index)) heldNotes.push(note);
       }
       RHYTHM_NOTE_SE_RUNTIME.holdSync(heldNotes);
       if (run.tickRules) for (let i = 0; i < heldNotes.length; i++) comboTicksRef.current(heldNotes[i]);
@@ -40277,6 +41236,28 @@ const RhythmTapTest = ({
       run.notesReady = true;
       if (canvasNotes) RHYTHM_CANVAS_RENDERER.end();
       RHYTHM_PERF.notes(perfScanned, perfDrawn, scanFrom, run.notesAscending);
+      if (settings.holdTrace === false) {
+        traceGround = 0;
+        traceSky = 0;
+      }
+      if (traceGround !== holdTraceRef.current.g || traceSky !== holdTraceRef.current.s) {
+        const groundChanged = traceGround !== holdTraceRef.current.g;
+        holdTraceRef.current = {
+          g: traceGround,
+          s: traceSky
+        };
+        if (groundChanged) {
+          const area = playAreaRef.current;
+          let nodes = glowNodesRef.current;
+          if (area && (!nodes || !nodes.length || !nodes[0].isConnected)) nodes = glowNodesRef.current = Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));
+          (nodes || []).forEach((el, index) => {
+            const off = !!(traceGround >> index & 1);
+            if (off === (el.dataset.rhythmTraceOff === 'true')) return;
+            if (off) el.dataset.rhythmTraceOff = 'true';else delete el.dataset.rhythmTraceOff;
+          });
+        }
+        setPressedLanes(pressedLanesNow());
+      }
       const badge = abilityBadgeRef.current;
       const hasAbilityBadge = badge && (rhythmMonsterAbilityRemainingMs(run.abilities, 'MUTEKI', songTimeMs) > 0 || rhythmMonsterAbilityRemainingMs(run.abilities, 'GAMAN', songTimeMs) > 0 || rhythmMonsterAbilityRemainingMs(run.abilities, 'HISSHI', songTimeMs) > 0 || rhythmMonsterAbilityRemainingMs(run.abilities, 'ITAZURA', songTimeMs) > 0 || Number(run.abilities?.konjoStock) > 0);
       if (badge && !hasAbilityBadge) {
@@ -40507,7 +41488,8 @@ const RhythmTapTest = ({
             maxDpr: noteCanvasMaxDprRef.current,
             sizeScale: settings.noteSize / 100,
             bloom: live.noteBloom === true,
-            motion: live.noteMotionFx === true
+            motion: live.noteMotionFx === true,
+            ...rhythmFxRenderOptions(settings, live)
           };
           if (R.begin(travel.rect, opts)) {
             const travelMs = rhythmTravelMsForSpeed(settings.noteSpeed),
@@ -40723,7 +41705,7 @@ const RhythmTapTest = ({
     if (canvasNotes) RHYTHM_CANVAS_RENDERER.warmSprites({
       effect: settings.effectAmount,
       lightweight: settings.lightweightMode,
-      tapLight: rhythmTapLightOnly(settings),
+      tapLight: rhythmTapLightOnly(settings) || !['AUTO', 'NONE'].includes(rhythmFxPick(settings, 'burst')),
       maxDpr: noteCanvasMaxDpr
     });
     if (canvasNotes) faceBitmapsRef.current.forEach(face => {
@@ -41198,6 +42180,10 @@ const RhythmTapTest = ({
   const inputPoint = (clientX, clientY) => RHYTHM_VIEW_ROTATION.point(clientX, clientY);
   const pressedLanesNow = () => [...(liveTouchSubLanesRef.current || []), ...(runRef.current?.activePointerFeedback?.values() || [])];
   const pressedSkyLanesNow = () => [...(liveTouchSkySubLanesRef.current || []), ...(runRef.current?.activePointerSkyFeedback?.values() || [])];
+  const holdTraceRef = useRef({
+    g: 0,
+    s: 0
+  });
   const setPressedLanes = coordinates => {
     const area = playAreaRef.current;
     if (!area) return;
@@ -41213,7 +42199,10 @@ const RhythmTapTest = ({
       el.style.opacity = pressed ? glowOpacity : '0';
     });
     if (typeof RHYTHM_CANVAS_RENDERER !== 'undefined' && typeof RHYTHM_CANVAS_RENDERER.setSkyPressed === 'function') {
-      RHYTHM_CANVAS_RENDERER.setSkyPressed(pressedSkyLanesNow(), Number(glowOpacity));
+      {
+        const skyMask = settings.holdTrace !== false ? holdTraceRef.current.s : 0;
+        RHYTHM_CANVAS_RENDERER.setSkyPressed(skyMask ? pressedSkyLanesNow().filter(v => !(skyMask >> Math.floor(Number(v)) & 1)) : pressedSkyLanesNow(), Number(glowOpacity));
+      }
       paintIdleSkyPress();
     }
   };
@@ -41228,7 +42217,8 @@ const RhythmTapTest = ({
       effect: settings.effectAmount,
       lightweight: settings.lightweightMode,
       maxDpr: noteCanvasMaxDprRef.current,
-      sizeScale: settings.noteSize / 100
+      sizeScale: settings.noteSize / 100,
+      ...rhythmFxRenderOptions(settings)
     })) return;
     RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);
     RHYTHM_CANVAS_RENDERER.end();
@@ -41778,7 +42768,7 @@ const RhythmTapTest = ({
         className: "text-[15px] font-black leading-none text-white"
       }, "+", quickRunAward.loops, "周")), quickRunAward.eventBoosted && React.createElement("div", {
         className: "mt-0.5 text-[9px] font-black text-amber-200"
-      }, quickRunAward.scale > RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE ? '🎃 キャンペーン中 ×' : '🏆 イベント対象曲 ×', quickRunAward.scale), quickRunAward.multiScale > 1 && React.createElement("div", {
+      }, quickRunAward.scale > RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE ? `${rhythmLoopCampaignAt(Date.now())?.banner?.emoji || '🎟️'} キャンペーン中 ×` : '🏆 イベント対象曲 ×', quickRunAward.scale), quickRunAward.multiScale > 1 && React.createElement("div", {
         className: "mt-0.5 text-[9px] font-black text-cyan-200"
       }, "👥 対戦ボーナス ×", quickRunAward.multiScale), React.createElement("div", {
         className: "mt-0.5 text-[9px] font-black text-slate-300"
@@ -42131,7 +43121,7 @@ const RhythmTapTest = ({
     }, "+", quickRunAward.loops, "周")), quickRunAward.eventBoosted && React.createElement("div", {
       "data-rhythm-result-quick-run-event": true,
       className: "mt-1.5 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 py-1 text-[10px] font-black text-amber-200"
-    }, quickRunAward.scale > RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE ? '🎃 キャンペーン中 ×' : '🏆 イベント対象曲 ×', quickRunAward.scale, "（ふだんの曲は ×", RHYTHM_PLAY_RUN_LOOP_SCALE, "）"), quickRunAward.multiScale > 1 && React.createElement("div", {
+    }, quickRunAward.scale > RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE ? `${rhythmLoopCampaignAt(Date.now())?.banner?.emoji || '🎟️'} キャンペーン中 ×` : '🏆 イベント対象曲 ×', quickRunAward.scale, "（ふだんの曲は ×", RHYTHM_PLAY_RUN_LOOP_SCALE, "）"), quickRunAward.multiScale > 1 && React.createElement("div", {
       "data-rhythm-result-quick-run-multi": true,
       className: "mt-1.5 rounded-xl border border-cyan-300/50 bg-cyan-950/40 px-2 py-1 text-[10px] font-black text-cyan-200"
     }, "👥 みんなで対戦のボーナス(人数・連続) ×", quickRunAward.multiScale), React.createElement("div", {
@@ -42284,15 +43274,16 @@ const RhythmTapTest = ({
       onClick: abort
     }, multi && 'みんなの結果を見る', !multi && raidPlay && 'レイドの結果を見る', !multi && !raidPlay && React.createElement(React.Fragment, null, debugPlay ? '音ゲーデバッグへ戻る' : '曲えらびへ戻る'))))))));
   }
-  return React.createElement("main", {
+  return React.createElement("main", _extends({
     "data-rhythm-tap-test": true,
     className: "relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[var(--mh-sa-left)] landscape:pr-[var(--mh-sa-right)] [container-type:inline-size]",
     "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
-    "data-rhythm-effect": settings.effectAmount,
+    "data-rhythm-effect": settings.effectAmount
+  }, rhythmFxAttrs(settings), {
     style: {
       touchAction: 'none'
     }
-  }, songIntro && (() => {
+  }), songIntro && (() => {
     const introTitle = rhythmSongFullName(song),
       introTitleFont = (() => {
         const avail = Math.min((typeof window !== 'undefined' ? window.innerWidth : 844) * .72, 560) - 16,
@@ -42621,7 +43612,7 @@ const RhythmTapTest = ({
     className: "block text-5xl font-black leading-none"
   }, "LIFE 0"), React.createElement("small", {
     className: "mt-1 block text-xs font-black tracking-[0.34em]"
-  }, "DOWN")), React.createElement("div", {
+  }, "DOWN")), React.createElement("div", _extends({
     ref: playAreaRef,
     "data-rhythm-play-area": true,
     "data-rhythm-mon-layers": monLayersOn ? '1' : undefined,
@@ -42631,7 +43622,9 @@ const RhythmTapTest = ({
     "data-rhythm-strip": RHYTHM_STRIP.value || undefined,
     "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
     "data-rhythm-effect": settings.effectAmount,
-    "data-rhythm-tap-light": rhythmTapLightOnly(settings) ? '1' : undefined,
+    "data-rhythm-tap-light": rhythmTapLightOnly(settings) && rhythmFxPick(settings, 'burst') === 'AUTO' ? '1' : undefined
+  }, rhythmFxAttrs(settings), {
+    "data-fx-lane-line": ['DARK', 'LIGHT'].includes(rhythmFxPick(settings, 'laneLine')) ? rhythmFxPick(settings, 'laneLine') : undefined,
     onPointerDown: pointerDown,
     onPointerMove: pointerMove,
     onPointerUp: pointerEnd,
@@ -42648,22 +43641,24 @@ const RhythmTapTest = ({
       '--mh-judgment-line-bottom': `${rhythmFiniteStep(settings.judgmentLineHeight, RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`,
       filter: settings.effectAmount === 'MINIMAL' ? 'saturate(.78)' : settings.effectAmount === 'LOW' ? 'saturate(.92)' : 'none'
     }
-  }, laneElements, stageLevel !== 'SIMPLE' && React.createElement("div", {
+  }), laneElements, stageLevel !== 'SIMPLE' && React.createElement("div", {
     ref: stageHostRef,
     "data-rhythm-stage": stageLevel,
     "data-stage-tier": String(stageTierNow),
     "data-stage-gl": stageGl ? '1' : undefined,
-    "aria-hidden": "true"
+    "aria-hidden": "true",
+    style: rhythmFxStageStyle(settings)
   }, stageGl && React.createElement("canvas", {
     key: `stage-gl-${renderQualityStill}`,
     ref: stageGlRef,
     "data-rhythm-stage-gl": true
   }), !stageGl && stageArtSrc && React.createElement("canvas", {
+    key: `stage-art-${stageArtSize}`,
     ref: stageArtRef,
     "data-rhythm-stage-art": true,
-    width: "24",
-    height: "24"
-  }), !stageGl && stageFxOn && stageImages && React.createElement(React.Fragment, null, React.createElement("img", {
+    width: stageArtSize,
+    height: stageArtSize
+  }), !stageGl && stageFxOn && stageImages && React.createElement(React.Fragment, null, stageBeamOn && React.createElement(React.Fragment, null, React.createElement("img", {
     "data-rhythm-stage-beam": "left",
     src: stageImages.beams[stageTierNow] || stageImages.beams[0],
     alt: "",
@@ -42673,17 +43668,17 @@ const RhythmTapTest = ({
     src: stageImages.beams[stageTierNow] || stageImages.beams[0],
     alt: "",
     draggable: false
-  }), React.createElement("img", {
+  })), stageSparks === 'MANY' && React.createElement("img", {
     "data-rhythm-stage-sparks": "far",
     src: stageImages.sparks[0],
     alt: "",
     draggable: false
-  }), React.createElement("img", {
+  }), stageSparks !== 'NONE' && React.createElement("img", {
     "data-rhythm-stage-sparks": "near",
     src: stageImages.sparks[1],
     alt: "",
     draggable: false
-  }))), roadFxOn && React.createElement(React.Fragment, null, React.createElement("i", {
+  }))), roadFogOn && React.createElement(React.Fragment, null, React.createElement("i", {
     "data-rhythm-road-haze": true,
     "aria-hidden": "true"
   }), React.createElement("i", {
@@ -42702,7 +43697,7 @@ const RhythmTapTest = ({
     "data-side": "l"
   }), React.createElement("b", {
     "data-side": "r"
-  })), stageLevel !== 'SIMPLE' && React.createElement("i", {
+  })), stageLevel !== 'SIMPLE' && stageTimingOn && React.createElement("i", {
     ref: stagePulseRef,
     "data-rhythm-stage-pulse": true,
     "data-stage-tier": String(Math.min(3, Math.floor(comboTier / 2))),
@@ -42831,6 +43826,7 @@ const RhythmTapTest = ({
     "data-rhythm-judge-text-pos": !skyChart && judgeTextPos !== 'now' ? judgeTextPos : undefined,
     className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
     style: {
+      ...rhythmJudgeScaleStyle(settings),
       bottom: !skyChart && (judgeTextPos === 'raise' || judgeTextPos === 'both') ? 'calc(var(--mh-judgment-line-bottom,12%) + 26%)' : 'calc(var(--mh-judgment-line-bottom,12%) + 38px)',
       ...(!skyChart && (judgeTextPos === 'fade' || judgeTextPos === 'both') ? {
         opacity: .55
@@ -42876,6 +43872,7 @@ const RhythmTapTest = ({
     "data-rhythm-sky-judgment-display": true,
     className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
     style: {
+      ...rhythmJudgeScaleStyle(settings),
       bottom: `calc(var(--mh-judgment-line-bottom,12%) + ${(RHYTHM_SKY_LIFT.ratio * 100).toFixed(2)}% ${RHYTHM_HELL_SKY_TEXT.id === 'below' ? '- 64px' : '+ 38px'})`
     }
   }, settings.judgmentFx === true && React.createElement("i", {
@@ -54356,7 +55353,7 @@ const jaWrapPoints = text => {
     for (const {
       segment
     } of _jaSegmenter.segment(s)) {
-      if (/^は[ぁ-ゖ]/.test(segment) && /^(?:これ|それ|あれ|どれ|ここ|そこ|あそこ|わたし|あたし|ワシ|吾輩|余)$/.test(segs[segs.length - 1] || '')) segs.push('は', segment.slice(1));else segs.push(segment);
+      if (/^は[ぁ-ゖ]/.test(segment) && /^(?:これ|それ|あれ|どれ|ここ|そこ|あそこ|わたし|あたし|ワシ|吾輩|余)$/.test(segs[segs.length - 1] || '')) segs.push('は', segment.slice(1));else if (segment === 'どういたしまして') segs.push('どう', 'いたしまして');else segs.push(segment);
     }
     const groups = [];
     let pos = 0;
@@ -60873,8 +61870,9 @@ function RhythmSongSelectScreen({
   const eventSongTitles = rhythmEventNotice ? rhythmEventNotice.songIds.map(songId => rhythmSongFullName(rhythmEventSong(songId, RHYTHM_SONGS)) || songId) : [];
   const beatPointReleased = !debugAll && RELEASE_FLAGS.rhythmEventPoints === true;
   const beatPointEvent = beatPointReleased ? rhythmLimitedEventAt(Date.now()) : null;
-  const beatPointTargetSong = !!beatPointEvent && Array.isArray(beatPointEvent.songIds) && beatPointEvent.songIds.includes(rhythmSelectedSongId);
+  const beatPointTargetSong = !!beatPointEvent && rhythmEventHasSong(beatPointEvent, rhythmSelectedSongId);
   const beatPointCampaign = beatPointReleased && !beatPointEvent ? rhythmEventPointCampaignAt(Date.now()) : null;
+  const eventLoopCampaign = beatPointEvent ? rhythmLoopCampaignAt(Date.now()) : null;
   const beatPointSideCard = beatPointCampaign ? React.createElement("div", {
     "data-rhythm-beat-band-landscape": true,
     "data-rhythm-beat-point-campaign-side": true,
@@ -60892,12 +61890,16 @@ function RhythmSongSelectScreen({
     "data-rhythm-beat-point-active-side": true,
     className: "rounded-xl border border-violet-400/30 bg-violet-950/25 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-violet-100"
   }, React.createElement("span", {
+    style: JA_WRAP_STYLE,
     className: "block"
-  }, "🎟️ ビートP獲得期間中"), React.createElement("span", {
+  }, jaWrap('🎟️ ビートP獲得期間中')), eventLoopCampaign && React.createElement("span", {
+    className: "block text-amber-200"
+  }, "周回 ", eventLoopCampaign.loopBoost, "倍"), React.createElement("span", {
     style: JA_WRAP_STYLE,
     className: "mt-0.5 block text-violet-200/80"
-  }, beatPointTargetSong ? jaWrap('選択中のイベント対象曲は1.5倍') : '公開曲なら獲得できます')) : null;
+  }, beatPointTargetSong ? jaWrap('選択中のイベント対象曲は1.5倍') : jaWrap('公開曲なら獲得できます'))) : null;
   const [beatPointBalance, setBeatPointBalance] = React.useState(null);
+  const [eventNoticeOpen, setEventNoticeOpen] = React.useState(false);
   React.useEffect(() => {
     if (!beatPointReleased) return undefined;
     let alive = true;
@@ -61164,14 +62166,42 @@ function RhythmSongSelectScreen({
     "data-quick-run-stop": true,
     onClick: () => setQuickRunStopConfirm(true),
     className: "mt-1.5 min-h-[44px] w-full rounded-xl border border-white/15 text-[10px] font-black text-slate-400 active:scale-[.98]"
-  }, "⏹ ここで周回をやめる")))), selectNoticesOpen && rhythmEventNotice && React.createElement("div", {
+  }, "⏹ ここで周回をやめる")))), selectNoticesOpen && rhythmEventNotice && !eventNoticeOpen && React.createElement("div", {
     "data-rhythm-event-notice": true,
+    "data-rhythm-event-notice-folded": true,
+    className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2"
+  }, React.createElement("div", {
+    className: "flex items-center gap-1"
+  }, React.createElement("button", {
+    style: JA_WRAP_STYLE,
+    type: "button",
+    "data-rhythm-event-notice-toggle": true,
+    "aria-expanded": "false",
+    onClick: () => setEventNoticeOpen(true),
+    className: "min-h-[44px] min-w-0 flex-1 text-left text-[11px] font-black leading-tight text-amber-200 active:scale-[.99]"
+  }, "🏆 ", rhythmEventNotice.kind === 'limited' ? React.createElement(React.Fragment, null, jaWrap(rhythmEventNotice.name), " 開催中！") : jaWrap('今週の対象曲'), React.createElement("span", {
+    className: "ml-1 text-[10px] text-fuchsia-200"
+  }, "▼ ひらく")), React.createElement("button", {
+    type: "button",
+    "data-rhythm-event-notice-close": true,
+    onClick: dismissRhythmEventNotice,
+    "aria-label": "この案内を閉じる",
+    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
+  }, "×"))), selectNoticesOpen && rhythmEventNotice && eventNoticeOpen && React.createElement("div", {
+    "data-rhythm-event-notice": true,
+    "data-rhythm-event-notice-open-body": true,
     className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1"
   }, React.createElement("div", {
     className: "flex items-start gap-1"
   }, React.createElement("div", {
     className: "min-w-0 flex-1"
-  }, React.createElement(AssistantBubble, {
+  }, React.createElement("button", {
+    type: "button",
+    "data-rhythm-event-notice-toggle": true,
+    "aria-expanded": "true",
+    onClick: () => setEventNoticeOpen(false),
+    className: "min-h-[44px] w-full rounded-lg text-left text-[10px] font-black text-fuchsia-200 active:scale-[.99]"
+  }, "▲ たたむ"), React.createElement(AssistantBubble, {
     scene: "rhythmWeeklyEvent",
     condition: rhythmEventNotice.kind === 'limited' ? 'limited' : null,
     compact: true
@@ -61215,7 +62245,9 @@ function RhythmSongSelectScreen({
     "data-rhythm-beat-point-active": true,
     "data-target-song": beatPointTargetSong ? 'true' : 'false',
     className: "shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100"
-  }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? jaWrap('・選択中のイベント対象曲は1.5倍') : jaWrap('・公開曲なら獲得できます'))), selectNoticesOpen && rhythmSixLaneIntroVisible && React.createElement("div", {
+  }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? jaWrap('・選択中のイベント対象曲は1.5倍') : jaWrap('・公開曲なら獲得できます'), eventLoopCampaign && React.createElement("span", {
+    className: "text-amber-200"
+  }, jaWrap(`・周回 ${eventLoopCampaign.loopBoost}倍`)))), selectNoticesOpen && rhythmSixLaneIntroVisible && React.createElement("div", {
     "data-rhythm-six-lane-intro": true,
     className: "shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1"
   }, React.createElement("div", {
@@ -62015,8 +63047,9 @@ function RhythmRankingScreen({
   }, React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement("p", {
-    className: "truncate text-[11px] font-black text-fuchsia-100"
-  }, eventDefinition.name), React.createElement("p", {
+    style: JA_WRAP_STYLE,
+    className: "text-[11px] font-black leading-tight text-fuchsia-100"
+  }, jaWrap(eventDefinition.name)), React.createElement("p", {
     "data-rhythm-event-period": true,
     className: "text-[9px] text-slate-400"
   }, rhythmEventPeriodText(eventDefinition, eventRange))), React.createElement("p", {
@@ -62303,9 +63336,11 @@ function RhythmRankingScreen({
     style: JA_WRAP_STYLE,
     "data-rhythm-event-loop-bonus": true,
     className: "rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2 text-[10px] leading-tight text-slate-200"
-  }, React.createElement("b", {
+  }, rhythmLoopCampaignAt(Date.now()) && RELEASE_FLAGS.rhythmEventPoints === true ? React.createElement(React.Fragment, null, React.createElement("b", {
     className: "text-amber-200"
-  }, "∞周回 ×", RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE), "\u3000", jaWrap('クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×'), RHYTHM_PLAY_RUN_LOOP_SCALE, "）の", RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE, "倍になります"), rhythmEventPlayBonusRates(eventDefinition) && React.createElement("div", {
+  }, "∞周回 ×", rhythmLoopCampaignAt(Date.now()).loopScale), "\u3000", jaWrap(`キャンペーン中は、クイックの∞周回を裏で回しながらモンヒロビートを演奏すると、どの曲でも入る周回数がいつもの${rhythmLoopCampaignAt(Date.now()).loopBoost}倍になります`)) : React.createElement(React.Fragment, null, React.createElement("b", {
+    className: "text-amber-200"
+  }, "∞周回 ×", RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE), "\u3000", jaWrap('クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×'), RHYTHM_PLAY_RUN_LOOP_SCALE, "）の", RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE, "倍になります")), rhythmEventPlayBonusRates(eventDefinition) && React.createElement("div", {
     style: JA_WRAP_STYLE,
     "data-rhythm-event-play-bonus": true,
     className: "rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200"
@@ -73955,7 +74990,13 @@ function AiCopyGutsMeter({
 const INFERNO_SHIELD_COLORS = Object.freeze([Object.freeze(['#fefce8', '#fde68a', '#fef3c7']), Object.freeze(['#fef3c7', '#fbbf24', '#fde68a']), Object.freeze(['#fed7aa', '#f97316', '#fdba74']), Object.freeze(['#fecaca', '#dc2626', '#fca5a5']), Object.freeze(['#fca5a5', '#7f1d1d', '#f87171'])]);
 const INFERNO_SHIELD_MARKS = Object.freeze(['①', '②', '③', '④', '⑤', '⑥', '⑦']);
 const INFERNO_BODY_HP_GRADIENT = 'linear-gradient(180deg,#f3e8ff 0%,#c084fc 34%,#7c3aed 70%,#3b0764 100%)';
-const infernoShieldColorAt = k => INFERNO_SHIELD_COLORS[Math.max(0, Math.min(INFERNO_SHIELD_COLORS.length - 1, k))];
+const EREBUS_SHIELD_COLORS = Object.freeze([Object.freeze(['#f5f3ff', '#c4b5fd', '#ede9fe']), Object.freeze(['#ede9fe', '#a78bfa', '#ddd6fe']), Object.freeze(['#ddd6fe', '#7c3aed', '#c4b5fd']), Object.freeze(['#c4b5fd', '#5b21b6', '#a78bfa']), Object.freeze(['#a78bfa', '#2e1065', '#8b5cf6'])]);
+const EREBUS_BODY_HP_GRADIENT = 'linear-gradient(180deg,#fecaca 0%,#f87171 34%,#dc2626 70%,#7f1d1d 100%)';
+const shieldBodyHpGradient = rule => rule === 'EREBUS' ? EREBUS_BODY_HP_GRADIENT : INFERNO_BODY_HP_GRADIENT;
+const infernoShieldColorAt = (k, rule) => {
+  const pal = rule === 'EREBUS' ? EREBUS_SHIELD_COLORS : INFERNO_SHIELD_COLORS;
+  return pal[Math.max(0, Math.min(pal.length - 1, k))];
+};
 const INFERNO_SHIELD_CSS = `
 [data-inferno-shield-gauge]{--mh-shield-w:min(150px,38vw)}
 @keyframes mhShieldFlash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
@@ -73967,9 +75008,21 @@ const INFERNO_SHIELD_CSS = `
 @keyframes mhShieldBand{0%{opacity:0;transform:translateX(-30%)}12%{opacity:1;transform:translateX(0)}86%{opacity:1;transform:translateX(0)}100%{opacity:0;transform:translateX(12%)}}
 @keyframes mhShieldShake{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,3px) rotate(-.6deg)}40%{transform:translate(5px,-3px) rotate(.5deg)}60%{transform:translate(-4px,2px)}80%{transform:translate(3px,-2px)}}
 [data-inferno-shield-fx] *{pointer-events:none}
+@keyframes mhShieldDarkCreep{0%{opacity:0;transform:translateX(var(--from))}45%{opacity:1;transform:translateX(0)}80%{opacity:1}100%{opacity:0}}
+@keyframes mhShieldHole{0%{opacity:0;transform:translate(-50%,-50%) scale(0)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}30%{transform:translate(-50%,-50%) scale(1)}75%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(0)}}
+@keyframes mhShieldSuck{0%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--rot)) skewX(-28deg)}15%{opacity:1}100%{opacity:0;transform:translate(0,0) rotate(0deg) skewX(-28deg) scale(.2)}}
+@keyframes mhShieldRingIn{0%{opacity:0;transform:translate(-50%,-50%) scale(1.7)}25%{opacity:.85}100%{opacity:0;transform:translate(-50%,-50%) scale(.2)}}
+@keyframes mhShieldPop{0%{opacity:0;transform:skewX(-28deg) scaleX(.2)}60%{opacity:1;transform:skewX(-28deg) scaleX(1.08)}100%{opacity:1;transform:skewX(-28deg) scaleX(1)}}
+[data-inferno-shield-gauge][data-shield-entry] [data-inferno-shield-layer]{animation:mhShieldPop .26s ease-out both}
+@keyframes mhShieldEntryBar{0%{opacity:0;clip-path:inset(0 100% 0 0)}100%{opacity:1;clip-path:inset(0 0 0 0)}}
+@keyframes mhShieldEntryGather{0%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.3)}20%{opacity:1}100%{opacity:0;transform:translate(0,0) scale(.3)}}
+@keyframes mhShieldEntryShell{0%{opacity:0;transform:translate(-50%,-50%) scale(1.3)}30%{opacity:1;transform:translate(-50%,-50%) scale(1)}70%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
+@keyframes mhShieldEntryRing{0%{opacity:.95;transform:translate(-50%,-50%) scale(.6)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.45)}}
 `;
 function InfernoShieldGauge({
-  view
+  view,
+  rule,
+  entry = false
 }) {
   if (!view || !(view.total > 0)) return null;
   const rows = [];
@@ -73981,7 +75034,7 @@ function InfernoShieldGauge({
     };
     const alive = k >= view.broken;
     const active = k === view.broken;
-    const [c1, c2, edge] = infernoShieldColorAt(k);
+    const [c1, c2, edge] = infernoShieldColorAt(k, rule);
     const pct = layer.max > 0 ? Math.max(0, Math.min(1, layer.now / layer.max)) : 0;
     const h = 11 + Math.min(4, k);
     rows.push(React.createElement("div", {
@@ -74044,9 +75097,10 @@ function InfernoShieldGauge({
       }
     }, Math.floor(layer.now).toLocaleString(), " / ", Math.floor(layer.max).toLocaleString())));
   }
-  const curColor = view.left > 0 ? infernoShieldColorAt(view.broken)[1] : '#a8a29e';
+  const curColor = view.left > 0 ? infernoShieldColorAt(view.broken, rule)[1] : '#a8a29e';
   return React.createElement(React.Fragment, null, React.createElement("style", null, INFERNO_SHIELD_CSS), React.createElement("div", {
     "data-inferno-shield-gauge": view.total,
+    "data-shield-entry": entry ? '1' : undefined,
     "data-inferno-shield-left": view.left,
     "aria-label": `シールド 残り${view.left}枚(全${view.total}枚)`,
     className: "pointer-events-none absolute left-1/2 top-1 z-[44] flex items-start gap-1.5 [@media(max-height:640px)]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden",
@@ -74078,12 +75132,13 @@ function InfernoShieldGauge({
   }, rows)));
 }
 function InfernoShieldCompact({
-  view
+  view,
+  rule
 }) {
   if (!view || !(view.total > 0)) return null;
-  const curColor = view.left > 0 ? infernoShieldColorAt(view.broken)[1] : '#a8a29e';
+  const curColor = view.left > 0 ? infernoShieldColorAt(view.broken, rule)[1] : '#a8a29e';
   const cur = view.layers[view.broken] || null;
-  const [cc1, cc2, cEdge] = view.left > 0 ? infernoShieldColorAt(view.broken) : ['#a8a29e', '#57534e', 'rgba(168,162,158,.5)'];
+  const [cc1, cc2, cEdge] = view.left > 0 ? infernoShieldColorAt(view.broken, rule) : ['#a8a29e', '#57534e', 'rgba(168,162,158,.5)'];
   const curPct = cur && cur.max > 0 ? Math.max(0, Math.min(1, cur.now / cur.max)) : 0;
   return React.createElement("div", {
     "data-inferno-shield-compact": view.total,
@@ -74100,7 +75155,7 @@ function InfernoShieldCompact({
   }, "/", view.total)), React.createElement("span", {
     className: "flex items-center gap-[2px]"
   }, view.layers.map((l, k) => {
-    const c = infernoShieldColorAt(k);
+    const c = infernoShieldColorAt(k, rule);
     const alive = k >= view.broken;
     return React.createElement("i", {
       key: k,
@@ -74141,6 +75196,14 @@ const SHIELD_BADGE_THEME = Object.freeze({
     bg: 'linear-gradient(180deg,#1c0a0a,#0c0a09)',
     sub: '#fecaca'
   }),
+  EREBUS: Object.freeze({
+    title: '🌑 EREBUS',
+    titleColor: '#fbcfe8',
+    titleGlow: '#db2777',
+    bg: 'linear-gradient(180deg,#2e1065,#09090b)',
+    sub: '#f9a8d4',
+    ring: '#c4b5fd'
+  }),
   COCYTUS: Object.freeze({
     title: '❄ COCYTUS',
     titleColor: '#cffafe',
@@ -74157,7 +75220,7 @@ function InfernoShieldBadge({
 }) {
   if (!view || !(view.total > 0) || !view.boss) return null;
   const theme = SHIELD_BADGE_THEME[rule] || SHIELD_BADGE_THEME.INFERNO;
-  const col = view.left > 0 ? infernoShieldColorAt(view.broken) : ['#e7e5e4', '#78716c', '#a8a29e'];
+  const col = view.left > 0 ? infernoShieldColorAt(view.broken, rule) : ['#e7e5e4', '#78716c', '#a8a29e'];
   return React.createElement("div", {
     "data-inferno-shield-badge": view.left,
     "aria-hidden": "true",
@@ -74193,11 +75256,161 @@ function InfernoShieldBadge({
     className: "mt-[1px] text-[8px] font-extrabold text-amber-200"
   }, "次の1枚 +", growthPct, "%"));
 }
+const SHIELD_ENTRY_LOOK = Object.freeze({
+  INFERNO: Object.freeze({
+    glow: '#f97316',
+    light: '#fde68a',
+    dim: 'rgba(127,29,29,.75)'
+  }),
+  EREBUS: Object.freeze({
+    glow: '#db2777',
+    light: '#f9a8d4',
+    dim: 'rgba(20,2,16,.82)'
+  }),
+  COCYTUS: Object.freeze({
+    glow: '#22d3ee',
+    light: '#ecfeff',
+    dim: 'rgba(8,47,73,.75)'
+  })
+});
+const SHIELD_ENTRY_LAYER_MS = 260;
+const SHIELD_ENTRY_LAYER_START_MS = 1400;
+function ShieldEntryFx({
+  entry,
+  onShown,
+  onDone
+}) {
+  const look = SHIELD_ENTRY_LOOK[entry.rule] || SHIELD_ENTRY_LOOK.INFERNO;
+  const [mode, setMode] = React.useState(null);
+  const [center, setCenter] = React.useState(null);
+  const timersRef = React.useRef([]);
+  const clearTimers = () => {
+    timersRef.current.forEach(t => clearTimeout(t));
+    timersRef.current = [];
+  };
+  const later = (ms, f) => {
+    timersRef.current.push(setTimeout(f, ms));
+  };
+  React.useEffect(() => {
+    let waited = 0;
+    const tryStart = () => {
+      const blocking = typeof document !== 'undefined' && document.querySelector('[role="dialog"][aria-modal="true"]');
+      if (blocking && waited < 30000) {
+        waited += 250;
+        later(250, tryStart);
+        return;
+      }
+      const ring = typeof document !== 'undefined' ? document.querySelector('[data-enemy-ring]') : null;
+      const r = ring && ring.getBoundingClientRect();
+      setCenter(r && r.width > 0 ? {
+        x: r.left + r.width / 2,
+        y: r.top + r.height / 2,
+        w: Math.max(120, r.width)
+      } : {
+        x: (typeof window !== 'undefined' ? window.innerWidth : 390) / 2,
+        y: (typeof window !== 'undefined' ? window.innerHeight : 800) * 0.3,
+        w: 180
+      });
+      const m = waited >= 30000 ? 'short' : entry.mode;
+      setMode(m);
+      if (m === 'short') {
+        onShown(entry.total);
+        later(650, () => onDone(entry.id));
+        return;
+      }
+      for (let n = 1; n <= entry.total; n += 1) later(SHIELD_ENTRY_LAYER_START_MS + (n - 1) * SHIELD_ENTRY_LAYER_MS, () => onShown(n));
+      later(SHIELD_ENTRY_LAYER_START_MS + entry.total * SHIELD_ENTRY_LAYER_MS + 350, () => onDone(entry.id));
+    };
+    tryStart();
+    return clearTimers;
+  }, [entry.id]);
+  const skip = () => {
+    clearTimers();
+    onShown(entry.total);
+    setMode('short');
+    later(650, () => onDone(entry.id));
+  };
+  if (!mode || !center) return null;
+  const gather = mode === 'long' ? Array.from({
+    length: 14
+  }, (_, k) => {
+    const a = k / 14 * Math.PI * 2;
+    const d = center.w * 1.1;
+    return {
+      k,
+      dx: `${Math.round(Math.cos(a) * d)}px`,
+      dy: `${Math.round(Math.sin(a) * d * 0.8)}px`
+    };
+  }) : [];
+  return ReactDOM.createPortal(React.createElement("div", {
+    "data-shield-entry-fx": mode,
+    "data-shield-entry-rule": entry.rule,
+    className: "fixed inset-0 z-[9300] overflow-hidden",
+    style: {
+      pointerEvents: mode === 'long' ? 'auto' : 'none'
+    },
+    onPointerDown: mode === 'long' ? e => {
+      e.stopPropagation();
+      skip();
+    } : undefined,
+    "aria-hidden": "true"
+  }, React.createElement("style", null, INFERNO_SHIELD_CSS), mode === 'long' && React.createElement(React.Fragment, null, React.createElement("style", null, '[data-enemy-bar]{animation:mhShieldEntryBar .45s ease-out both}'), React.createElement("div", {
+    className: "pointer-events-none absolute inset-0",
+    style: {
+      boxShadow: `inset 0 0 90px 30px ${look.dim}`,
+      animation: 'mhShieldVignette 1.4s .45s ease-out both'
+    }
+  }), React.createElement("div", {
+    className: "pointer-events-none absolute",
+    style: {
+      left: center.x,
+      top: center.y,
+      width: 0,
+      height: 0
+    }
+  }, gather.map(g => React.createElement("i", {
+    key: g.k,
+    className: "absolute block h-[10px] w-[10px] rounded-full",
+    style: {
+      '--dx': g.dx,
+      '--dy': g.dy,
+      background: look.light,
+      boxShadow: `0 0 12px 4px ${look.glow}`,
+      animation: 'mhShieldEntryGather .5s .5s ease-in both'
+    }
+  }))), React.createElement("div", {
+    className: "pointer-events-none absolute",
+    style: {
+      left: center.x,
+      top: center.y,
+      width: center.w * 1.2,
+      height: center.w * 1.15,
+      borderRadius: '46%',
+      border: `3px solid ${look.light}`,
+      background: `radial-gradient(ellipse,transparent 55%,${look.glow}55)`,
+      boxShadow: `0 0 26px ${look.glow},inset 0 0 22px ${look.glow}`,
+      animation: 'mhShieldEntryShell 1.2s .9s ease-out both'
+    }
+  })), mode === 'short' && React.createElement("div", {
+    className: "pointer-events-none absolute rounded-full",
+    style: {
+      left: center.x,
+      top: center.y,
+      width: center.w * 1.3,
+      height: center.w * 1.3,
+      border: `3px solid ${look.light}`,
+      boxShadow: `0 0 24px ${look.glow}`,
+      animation: 'mhShieldEntryRing .5s ease-out both'
+    }
+  })), document.body);
+}
 function InfernoShieldBreakFx({
   fx,
   lite,
-  onDone
+  onDone,
+  rule
 }) {
+  const dark = rule === 'EREBUS';
   const dur = lite ? 1700 : fx.kind === 'final' ? 3600 : fx.kind === 'rush' ? 3300 : 2900;
   React.useEffect(() => {
     const t = setTimeout(() => onDone && onDone(fx.id), dur);
@@ -74257,12 +75470,114 @@ function InfernoShieldBreakFx({
     sub: `${fx.left === 0 ? 'シールドが全部割れた。' : ''}攻撃力 +${fx.atkPct}%`,
     big: null
   };
+  const darkBand = !dark ? null : fx.kind === 'rush' ? {
+    bg: 'linear-gradient(90deg,rgba(2,0,12,.97),rgba(91,33,182,.97) 50%,rgba(2,0,12,.97))',
+    line: '#c4b5fd',
+    glow: 'rgba(124,58,237,.9)'
+  } : final ? {
+    bg: 'linear-gradient(90deg,rgba(2,0,12,.98),rgba(112,26,117,.97) 50%,rgba(2,0,12,.98))',
+    line: '#facc15',
+    glow: 'rgba(219,39,119,.85)',
+    title: `🌑 ${fx.name} 最終形態!`
+  } : {
+    bg: 'linear-gradient(90deg,rgba(2,0,12,.97),rgba(76,29,149,.97) 50%,rgba(2,0,12,.97))',
+    line: '#c4b5fd',
+    glow: 'rgba(124,58,237,.9)',
+    title: `🌑 ${fx.name}が闇をまとった!`
+  };
+  const bandLook = darkBand ? {
+    ...band,
+    ...darkBand
+  } : band;
+  const creep = dark && !lite ? Array.from({
+    length: 8
+  }, (_, k) => ({
+    k,
+    left: k % 2 === 1,
+    top: 8 + k * 11,
+    len: 34 + k * 37 % 22,
+    h: 16 + k % 3 * 8
+  })) : [];
   return ReactDOM.createPortal(React.createElement("div", {
     "data-inferno-shield-fx": fx.kind,
+    "data-inferno-shield-look": dark ? 'EREBUS' : undefined,
     "data-inferno-shield-broken": fx.broken,
     className: "fixed inset-0 z-[9400] overflow-hidden pointer-events-none",
     "aria-live": "polite"
-  }, React.createElement("style", null, INFERNO_SHIELD_CSS), !lite && React.createElement(React.Fragment, null, React.createElement("div", {
+  }, React.createElement("style", null, INFERNO_SHIELD_CSS), !lite && dark && React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      boxShadow: 'inset 0 0 120px 60px rgba(2,0,12,.92)',
+      background: 'radial-gradient(ellipse at 50% 30%,transparent 30%,rgba(30,10,60,.55) 80%)',
+      animation: 'mhShieldVignette 1.6s ease-out both'
+    }
+  }), creep.map(c => React.createElement("i", {
+    key: c.k,
+    className: "absolute block rounded-full",
+    style: {
+      top: `${c.top}%`,
+      [c.left ? 'left' : 'right']: 0,
+      width: `${c.len}vw`,
+      height: `${c.h}px`,
+      '--from': c.left ? '-100%' : '100%',
+      background: `linear-gradient(${c.left ? 90 : 270}deg,rgba(2,0,12,.95),rgba(76,29,149,.7) 70%,rgba(167,139,250,0))`,
+      filter: 'blur(3px)',
+      animation: 'mhShieldDarkCreep 1.4s ease-out both'
+    }
+  })), React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      background: 'radial-gradient(circle at 50% 30%,rgba(2,0,12,.98) 0,rgba(2,0,12,.9) 12%,rgba(76,29,149,.55) 38%,rgba(2,0,12,.6) 85%)',
+      animation: `mhShieldFlash ${final ? 1.3 : 1}s .8s ease-out both`
+    }
+  }), React.createElement("div", {
+    className: "absolute left-1/2 top-[30%] rounded-full",
+    style: {
+      width: final ? 150 : 110,
+      height: final ? 150 : 110,
+      background: '#000',
+      boxShadow: `0 0 0 4px ${final ? '#facc15' : '#a78bfa'},0 0 40px 16px rgba(124,58,237,.95),inset 0 0 30px rgba(167,139,250,.6)`,
+      animation: 'mhShieldHole 1.5s .7s ease-out both'
+    }
+  }), [0, 1, 2, ...(final ? [3] : [])].map(n => React.createElement("div", {
+    key: n,
+    className: "absolute left-1/2 top-[30%] rounded-full",
+    style: {
+      width: `${180 + n * 70}px`,
+      height: `${180 + n * 70}px`,
+      border: `2px dashed rgba(196,181,253,${.75 - n * .14})`,
+      animation: `mhShieldRingIn 1s ${.8 + n * .1}s ease-in both`
+    }
+  })), React.createElement("div", {
+    className: "absolute left-1/2 top-[30%]",
+    style: {
+      width: 0,
+      height: 0
+    }
+  }, shards.map(s => React.createElement("i", {
+    key: s.k,
+    className: "absolute block",
+    style: {
+      '--dx': s.dx,
+      '--dy': s.dy,
+      '--rot': s.rot,
+      width: `${s.w}px`,
+      height: `${s.h}px`,
+      background: '#05020c',
+      border: '1px solid #c4b5fd',
+      boxShadow: '0 0 6px #7c3aed',
+      animation: 'mhShieldSuck 1s .85s cubic-bezier(.5,0,.8,.4) both'
+    }
+  }))), React.createElement("div", {
+    className: "absolute left-1/2 top-[22%] whitespace-nowrap text-center font-black italic leading-none",
+    style: {
+      color: '#0b0614',
+      fontSize: final ? 'min(46px,11.5vw)' : 'min(42px,11vw)',
+      WebkitTextStroke: '2px #c4b5fd',
+      textShadow: '0 0 18px #a855f7,0 0 40px #7c3aed',
+      animation: `mhShieldWord 1.5s .9s ease-out both`
+    }
+  }, final ? React.createElement(React.Fragment, null, "ALL SHADOW", React.createElement("br", null), "BREAK!!") : React.createElement(React.Fragment, null, "SHADOW", React.createElement("br", null), "BREAK!!"))), !lite && !dark && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "absolute inset-0",
     style: {
       boxShadow: 'inset 0 0 90px 34px rgba(127,29,29,.8)',
@@ -74331,10 +75646,10 @@ function InfernoShieldBreakFx({
     "data-inferno-shield-band": fx.kind,
     className: "absolute inset-x-0 top-[38%] px-3.5 py-2.5",
     style: {
-      background: band.bg,
-      borderTop: `3px solid ${band.line}`,
-      borderBottom: `3px solid ${band.line}`,
-      boxShadow: `0 0 26px ${band.glow}`,
+      background: bandLook.bg,
+      borderTop: `3px solid ${bandLook.line}`,
+      borderBottom: `3px solid ${bandLook.line}`,
+      boxShadow: `0 0 26px ${bandLook.glow}`,
       animation: `mhShieldBand ${bandLen}s ${bandDelay}s ease-out both`
     }
   }, React.createElement("div", {
@@ -74350,10 +75665,10 @@ function InfernoShieldBreakFx({
   }, React.createElement("div", {
     className: "text-[20px] font-black italic leading-tight",
     style: {
-      color: final ? '#fef08a' : fx.kind === 'rush' ? '#fdf4ff' : '#fecaca',
-      textShadow: '0 2px 0 #7c2d12'
+      color: final ? '#fef08a' : fx.kind === 'rush' || dark ? '#fdf4ff' : '#fecaca',
+      textShadow: `0 2px 0 ${dark ? '#1e1b4b' : '#7c2d12'}`
     }
-  }, band.title), React.createElement("div", {
+  }, bandLook.title), React.createElement("div", {
     className: "mt-1 text-[13px] font-extrabold leading-snug text-white"
   }, band.sub))))), document.body);
 }
@@ -74881,6 +76196,34 @@ function BattleScreen({
   })();
   const infernoFloatShift = infernoShellView?.total > 0 ? infernoShellView.total * 15 + 8 : 0;
   const infernoFloatTop = infernoFloatShift ? `calc(11% + ${infernoFloatShift}px)` : '11%';
+  const shellEntryLiteView = !!(ecoBattleView || liteBattleView || fxLoad === 'LIGHT' || fxLoad === 'MINIMAL');
+  const [shellEntry, setShellEntry] = useState(null);
+  const [shellEntryShown, setShellEntryShown] = useState(0);
+  const shellEntryKeyRef = useRef(null);
+  useEffect(() => {
+    const view = infernoShellView;
+    if (!(view?.total > 0)) return;
+    const key = `${wave}:${enemy?.id || ''}`;
+    if (shellEntryKeyRef.current === key) return;
+    shellEntryKeyRef.current = key;
+    if (shellEntryLiteView || view.broken > 0 || !SHIELD_ENTRY_LOOK[infernoShellRule]) return;
+    const mode = isQuickMode(runMode) || autoBattle ? 'short' : wave === 1 || view.boss ? 'long' : 'short';
+    setShellEntryShown(0);
+    setShellEntry({
+      id: key,
+      mode,
+      total: view.total,
+      rule: infernoShellRule
+    });
+  }, [infernoShellView?.total, wave, enemy?.id]);
+  const shellEntryActive = !!shellEntry && shellEntry.id === `${wave}:${enemy?.id || ''}` && shellEntryShown < (infernoShellView?.total || 0);
+  const shellGaugeView = shellEntryActive && infernoShellView ? {
+    ...infernoShellView,
+    total: shellEntryShown,
+    layers: infernoShellView.layers.slice(0, shellEntryShown),
+    left: Math.max(0, shellEntryShown - infernoShellView.broken),
+    boss: false
+  } : infernoShellView;
   const infernoShellSeqRef = useRef({
     key: null,
     seq: 0
@@ -75547,7 +76890,7 @@ function BattleScreen({
     "data-enemy-hp-tone": infernoShellView?.total > 0 ? 'inferno-body' : undefined,
     style: {
       transform: `scaleX(${Math.min(1, Math.max(0, enemy.hp) / (enemy.maxHp || 1))})`,
-      backgroundImage: infernoShellView?.total > 0 ? INFERNO_BODY_HP_GRADIENT : 'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'
+      backgroundImage: infernoShellView?.total > 0 ? shieldBodyHpGradient(infernoShellRule) : 'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'
     }
   }), React.createElement("div", {
     "aria-hidden": "true",
@@ -75555,8 +76898,9 @@ function BattleScreen({
     style: {
       background: 'linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))'
     }
-  })), infernoShellView?.total > 0 && React.createElement(InfernoShieldCompact, {
-    view: infernoShellView
+  })), shellGaugeView?.total > 0 && React.createElement(InfernoShieldCompact, {
+    view: shellGaugeView,
+    rule: infernoShellRule
   }), enemyDebuffOpen && Array.isArray(enemyDebuffs) && enemyDebuffs.length > 0 && React.createElement("div", {
     "data-enemy-debuff-detail": true,
     className: "mt-1 flex flex-col gap-0.5 rounded-lg border border-white/15 bg-black/60 px-2 py-1 not-italic normal-case tracking-normal"
@@ -75723,15 +77067,23 @@ function BattleScreen({
       hatePct: hc && Number.isInteger(hc.copy) ? hc.copy : null,
       lift: battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0)
     });
-  })(), infernoShellView?.total > 0 && React.createElement(InfernoShieldGauge, {
-    view: infernoShellView
-  }), infernoShellView?.total > 0 && !copyFloat && React.createElement(InfernoShieldBadge, {
+  })(), shellGaugeView?.total > 0 && React.createElement(InfernoShieldGauge, {
+    view: shellGaugeView,
+    rule: infernoShellRule,
+    entry: shellEntryActive
+  }), shellEntry && React.createElement(ShieldEntryFx, {
+    key: shellEntry.id,
+    entry: shellEntry,
+    onShown: n => setShellEntryShown(v => Math.max(v, n)),
+    onDone: id => setShellEntry(cur => cur && cur.id === id ? null : cur)
+  }), infernoShellView?.total > 0 && !shellEntryActive && !copyFloat && React.createElement(InfernoShieldBadge, {
     view: infernoShellView,
     rule: infernoShellRule,
     growthPct: Math.round((Number(extremeWaveStageRules(infernoShellRule, wave)?.layerGrowth) || 0) * 100)
   }), infernoShellFx && React.createElement(InfernoShieldBreakFx, {
     key: infernoShellFx.id,
     fx: infernoShellFx,
+    rule: infernoShellRule,
     lite: !!(ecoBattleView || liteBattleView || fxLoad === 'LIGHT' || fxLoad === 'MINIMAL'),
     onDone: id => setInfernoShellFx(cur => cur && cur.id === id ? null : cur)
   }), battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && React.createElement("button", {
@@ -78365,15 +79717,69 @@ const COCYTUS_REVIVE_CSS = `
 @keyframes mhIceAura{0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}40%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}}
 @keyframes mhIceBand{0%{opacity:0;transform:translateX(-30%)}15%{opacity:1;transform:translateX(0)}100%{opacity:1;transform:translateX(0)}}
 `;
+const REVIVE_FX_LOOK = Object.freeze({
+  COCYTUS: Object.freeze({
+    icon: '❄',
+    frost: '165,243,252',
+    block: 'linear-gradient(135deg,rgba(236,254,255,.55),rgba(103,232,249,.25) 45%,rgba(14,116,144,.35))',
+    blockEdge: 'rgba(207,250,254,.9)',
+    blockGlow: '0 0 30px rgba(103,232,249,.9),inset 0 0 30px rgba(255,255,255,.6)',
+    sfx: '……ピキ…ピキキ…',
+    sfxColor: '#ecfeff',
+    sfxStroke: '#0e7490',
+    sfxGlow: '#22d3ee',
+    flash: t => `radial-gradient(circle at 50% 30%,rgba(255,255,255,.97),rgba(165,243,252,${.6 + t * .1}) ${25 + t * 5}%,rgba(8,47,73,${.3 + t * .15}) 80%)`,
+    rings: ['rgba(103,232,249,.95)', 'rgba(255,255,255,.9)', 'rgba(250,204,21,.85)'],
+    shard: 'linear-gradient(135deg,#ffffff,#a5f3fc 50%,#0891b2)',
+    shardGlow: '#67e8f9',
+    word: ['FROZEN', 'BREAK!!'],
+    bigWord: ['ABSOLUTE', 'ZERO!!'],
+    wordStroke: '#0e7490',
+    wordGlow: '0 0 18px #22d3ee,0 0 40px #0891b2',
+    wordColor: '#fff',
+    band: 'linear-gradient(90deg,rgba(8,47,73,.97),rgba(14,116,144,.97) 50%,rgba(8,47,73,.97))',
+    bandEdge: '#a5f3fc',
+    bandGlow: 'rgba(34,211,238,.85)',
+    bandTitle: '#ecfeff',
+    bandShadow: '#164e63'
+  }),
+  EREBUS: Object.freeze({
+    icon: '🌑',
+    frost: '46,16,101',
+    block: 'radial-gradient(circle,rgba(2,0,12,.92),rgba(46,16,101,.75) 60%,rgba(219,39,119,.35))',
+    blockEdge: 'rgba(249,168,212,.9)',
+    blockGlow: '0 0 30px rgba(219,39,119,.8),inset 0 0 30px rgba(124,58,237,.7)',
+    sfx: '……ズズ…ズズズ…',
+    sfxColor: '#fbcfe8',
+    sfxStroke: '#2e1065',
+    sfxGlow: '#db2777',
+    flash: t => `radial-gradient(circle at 50% 30%,rgba(2,0,12,.98),rgba(76,29,149,${.6 + t * .1}) ${25 + t * 5}%,rgba(80,7,36,${.35 + t * .15}) 80%)`,
+    rings: ['rgba(249,168,212,.95)', 'rgba(167,139,250,.9)', 'rgba(250,204,21,.85)'],
+    shard: 'linear-gradient(135deg,#1e1b4b,#05020c 60%,#500724)',
+    shardGlow: '#db2777',
+    word: ['SHADOW', 'BREAK!!'],
+    bigWord: ['SHADOW', 'BREAK!!'],
+    wordStroke: '#f9a8d4',
+    wordGlow: '0 0 18px #db2777,0 0 40px #7c3aed',
+    wordColor: '#0b0614',
+    band: 'linear-gradient(90deg,rgba(2,0,12,.97),rgba(112,26,117,.97) 50%,rgba(2,0,12,.97))',
+    bandEdge: '#f9a8d4',
+    bandGlow: 'rgba(219,39,119,.85)',
+    bandTitle: '#fce7f3',
+    bandShadow: '#2e1065'
+  })
+});
 function CocytusReviveFx({
   stage,
   lite,
-  name
+  name,
+  rule
 }) {
+  const L = REVIVE_FX_LOOK[rule] || REVIVE_FX_LOOK.COCYTUS;
   const tier = COCYTUS_REVIVE_TIER[stage] || 1;
   const big = tier === 3;
   const who = String(name || '');
-  const title = tier === 3 ? `❄ ${who} 真・覚醒!` : `❄ ${who} 復活!`;
+  const title = tier === 3 ? `${L.icon} ${who} 真・覚醒!` : `${L.icon} ${who} 復活!`;
   const shards = lite ? [] : Array.from({
     length: 14 + tier * 10
   }, (_, k) => {
@@ -78389,10 +79795,11 @@ function CocytusReviveFx({
       h: 10 + k * 7 % 16
     };
   });
-  const ringCols = ['rgba(103,232,249,.95)', 'rgba(255,255,255,.9)', 'rgba(250,204,21,.85)'];
+  const ringCols = L.rings;
   return React.createElement("div", {
     "data-cocytus-revive-fx": stage,
     "data-cocytus-revive-tier": tier,
+    "data-revive-fx-look": rule === 'EREBUS' ? 'EREBUS' : 'COCYTUS',
     className: "pointer-events-none fixed inset-0 overflow-hidden",
     style: {
       zIndex: 91001
@@ -78400,7 +79807,7 @@ function CocytusReviveFx({
   }, React.createElement("style", null, COCYTUS_REVIVE_CSS), !lite && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "absolute inset-0",
     style: {
-      boxShadow: `inset 0 0 ${60 + tier * 30}px ${20 + tier * 14}px rgba(165,243,252,${.45 + tier * .12})`,
+      boxShadow: `inset 0 0 ${60 + tier * 30}px ${20 + tier * 14}px rgba(${L.frost},${.45 + tier * .12})`,
       animation: 'mhIceFrost 1s ease-out both'
     }
   }), React.createElement("div", {
@@ -78409,9 +79816,9 @@ function CocytusReviveFx({
       width: 'min(58vw,240px)',
       height: 'min(58vw,240px)',
       borderRadius: big ? '18%' : '28%',
-      background: 'linear-gradient(135deg,rgba(236,254,255,.55),rgba(103,232,249,.25) 45%,rgba(14,116,144,.35))',
-      border: '3px solid rgba(207,250,254,.9)',
-      boxShadow: '0 0 30px rgba(103,232,249,.9),inset 0 0 30px rgba(255,255,255,.6)',
+      background: L.block,
+      border: `3px solid ${L.blockEdge}`,
+      boxShadow: L.blockGlow,
       clipPath: 'polygon(8% 12%,40% 0,72% 8%,100% 30%,94% 70%,70% 100%,28% 96%,0 66%)',
       animation: 'mhIceBlock 1s ease-out both,mhIceFlash .4s .95s reverse both'
     }
@@ -78420,15 +79827,15 @@ function CocytusReviveFx({
     style: {
       transform: 'translateX(-50%)',
       fontSize: big ? 26 : 22,
-      color: '#ecfeff',
-      WebkitTextStroke: '1px #0e7490',
-      textShadow: '0 0 12px #22d3ee',
+      color: L.sfxColor,
+      WebkitTextStroke: `1px ${L.sfxStroke}`,
+      textShadow: `0 0 12px ${L.sfxGlow}`,
       animation: 'mhIceFlash 1s .1s ease-out both'
     }
-  }, "……ピキ…ピキキ…"), React.createElement("div", {
+  }, L.sfx), React.createElement("div", {
     className: "absolute inset-0",
     style: {
-      background: `radial-gradient(circle at 50% 30%,rgba(255,255,255,.97),rgba(165,243,252,${.6 + tier * .1}) ${25 + tier * 5}%,rgba(8,47,73,${.3 + tier * .15}) 80%)`,
+      background: L.flash(tier),
       animation: 'mhIceFlash .9s 1s ease-out both'
     }
   }), Array.from({
@@ -78458,20 +79865,21 @@ function CocytusReviveFx({
       '--rot': s.rot,
       width: `${s.w}px`,
       height: `${s.h}px`,
-      background: 'linear-gradient(135deg,#ffffff,#a5f3fc 50%,#0891b2)',
+      background: L.shard,
       clipPath: 'polygon(0 30%,70% 0,100% 60%,30% 100%)',
-      boxShadow: '0 0 8px #67e8f9',
+      boxShadow: `0 0 8px ${L.shardGlow}`,
       animation: 'mhIceShard 1s 1s cubic-bezier(.2,.7,.3,1) both'
     }
   }))), React.createElement("div", {
-    className: "absolute left-1/2 top-[24%] whitespace-nowrap text-center font-black italic leading-none text-white",
+    className: "absolute left-1/2 top-[24%] whitespace-nowrap text-center font-black italic leading-none",
     style: {
+      color: L.wordColor,
       fontSize: big ? 'min(46px,12vw)' : 'min(40px,10.5vw)',
-      WebkitTextStroke: '2px #0e7490',
-      textShadow: '0 0 18px #22d3ee,0 0 40px #0891b2',
+      WebkitTextStroke: `2px ${L.wordStroke}`,
+      textShadow: L.wordGlow,
       animation: 'mhIceWord 1.3s 1s ease-out both'
     }
-  }, big ? React.createElement(React.Fragment, null, "ABSOLUTE", React.createElement("br", null), "ZERO!!") : React.createElement(React.Fragment, null, "FROZEN", React.createElement("br", null), "BREAK!!")), Array.from({
+  }, (big ? L.bigWord : L.word)[0], React.createElement("br", null), (big ? L.bigWord : L.word)[1]), Array.from({
     length: tier
   }, (_, n) => React.createElement("div", {
     key: `a${n}`,
@@ -78487,18 +79895,18 @@ function CocytusReviveFx({
     "data-cocytus-revive-band": tier,
     className: "absolute inset-x-0 top-[42%] px-3.5 py-2.5",
     style: {
-      background: 'linear-gradient(90deg,rgba(8,47,73,.97),rgba(14,116,144,.97) 50%,rgba(8,47,73,.97))',
-      borderTop: `3px solid ${big ? '#facc15' : '#a5f3fc'}`,
-      borderBottom: `3px solid ${big ? '#facc15' : '#a5f3fc'}`,
-      boxShadow: '0 0 26px rgba(34,211,238,.85)',
+      background: L.band,
+      borderTop: `3px solid ${big ? '#facc15' : L.bandEdge}`,
+      borderBottom: `3px solid ${big ? '#facc15' : L.bandEdge}`,
+      boxShadow: `0 0 26px ${L.bandGlow}`,
       animation: `mhIceBand .5s ${lite ? 0 : 1.9}s ease-out both`
     }
   }, React.createElement("div", {
     className: "font-black italic",
     style: {
       fontSize: big ? 22 : 20,
-      color: big ? '#fef08a' : '#ecfeff',
-      textShadow: '0 2px 0 #164e63'
+      color: big ? '#fef08a' : L.bandTitle,
+      textShadow: `0 2px 0 ${L.bandShadow}`
     }
   }, title)));
 }
@@ -78524,7 +79932,8 @@ function EnemyRevivalReveal({
     return React.createElement(CocytusReviveFx, {
       stage: stage,
       lite: lite,
-      name: enemyName
+      name: enemyName,
+      rule: enemyRevivalReveal.rule || specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty)
     });
   }
   return React.createElement("div", {
@@ -83995,12 +85404,13 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhbt-d-NIGHTMARE{--d-name:#c7d2fe;--d-bg:radial-gradient(90% 55% at 50% 0%,rgba(129,140,248,.45),transparent 62%),linear-gradient(160deg,#1e1b4b,#0b0a24 60%,#020210);--d-mark:rgba(165,180,252,.22);--d-shine:2.4s;--d-ring:#818cf8;--d-ringw:4px;--d-eyebrow:#c7d2fe;--d-go:#c7d2fe}
 .mhbt-d-CHAOS{--d-name:#fbcfe8;--d-bg:radial-gradient(70% 50% at 15% 10%,rgba(236,72,153,.55),transparent 65%),radial-gradient(70% 50% at 90% 95%,rgba(34,211,238,.5),transparent 65%),linear-gradient(160deg,#1a0420,#05010a);--d-mark:rgba(255,255,255,.18);--d-shine:2.1s;--d-ring:#f472b6;--d-ringw:4px;--d-eyebrow:#a5f3fc;--d-go:#fbcfe8}
 .mhbt-d-ULTIMATE{--d-name:#f1f5f9;--d-bg:radial-gradient(90% 55% at 50% 0%,rgba(255,255,255,.35),transparent 60%),linear-gradient(160deg,#334155,#0f172a 55%,#000);--d-mark:rgba(255,255,255,.22);--d-shine:1.9s;--d-ring:#f8fafc;--d-ringw:4px;--d-eyebrow:#e2e8f0;--d-sheen:rgba(255,255,255,.55);--d-go:#e2e8f0}
-.mhbt-d-INFINITY,.mhbt-d-GOD,.mhbt-d-RAGNAROK,.mhbt-d-HELHEIM,.mhbt-d-ETERNAL,.mhbt-d-INFERNO,.mhbt-d-COCYTUS{--d-name:#fef08a;--d-name:#99f6e4;--d-deep:rgba(250,204,21,.25);--d-bg:radial-gradient(2px 2px at 20% 30%,#fff,transparent),radial-gradient(1.5px 1.5px at 70% 20%,#fff,transparent),radial-gradient(1.5px 1.5px at 40% 75%,#fff,transparent),radial-gradient(90% 60% at 50% 0%,rgba(250,204,21,.4),transparent 60%),linear-gradient(160deg,#0c1445,#020617 60%,#000);--d-mark:rgba(253,224,71,.24);--d-shine:1.7s;--d-ring:#facc15;--d-ringw:5px;--d-eyebrow:#fde68a;--d-sheen:rgba(253,224,71,.5);--d-go:#fde68a}
+.mhbt-d-INFINITY,.mhbt-d-GOD,.mhbt-d-RAGNAROK,.mhbt-d-HELHEIM,.mhbt-d-ETERNAL,.mhbt-d-INFERNO,.mhbt-d-EREBUS,.mhbt-d-COCYTUS{--d-name:#fef08a;--d-name:#99f6e4;--d-deep:rgba(250,204,21,.25);--d-bg:radial-gradient(2px 2px at 20% 30%,#fff,transparent),radial-gradient(1.5px 1.5px at 70% 20%,#fff,transparent),radial-gradient(1.5px 1.5px at 40% 75%,#fff,transparent),radial-gradient(90% 60% at 50% 0%,rgba(250,204,21,.4),transparent 60%),linear-gradient(160deg,#0c1445,#020617 60%,#000);--d-mark:rgba(253,224,71,.24);--d-shine:1.7s;--d-ring:#facc15;--d-ringw:5px;--d-eyebrow:#fde68a;--d-sheen:rgba(253,224,71,.5);--d-go:#fde68a}
 .mhbt-d-GOD{--d-name:#fffbeb;--d-bg:radial-gradient(90% 60% at 50% 0%,rgba(255,255,255,.55),transparent 55%),radial-gradient(80% 50% at 50% 100%,rgba(250,204,21,.45),transparent 65%),linear-gradient(160deg,#78350f,#1c1003 55%,#000);--d-ring:#fff7d6;--d-ringw:6px;--d-shine:1.5s;--d-sheen:rgba(255,255,255,.7);--d-mark:rgba(255,247,214,.28)}
 .mhbt-d-RAGNAROK{--d-name:#fed7aa;--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(239,68,68,.75),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(250,204,21,.45),transparent 65%),linear-gradient(170deg,#3b0505,#120000 55%,#000);--d-ring:#f59e0b;--d-ringw:6px;--d-shine:1.3s;--d-sheen:rgba(254,215,170,.65);--d-mark:rgba(252,165,165,.28);--d-eyebrow:#fed7aa;--d-go:#fed7aa}
 .mhbt-d-HELHEIM{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(45,212,191,.55),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(167,139,250,.45),transparent 65%),linear-gradient(170deg,#042f2e,#020617 55%,#000);--d-ring:#5eead4;--d-ringw:6px;--d-shine:1.2s;--d-sheen:rgba(204,251,241,.6);--d-mark:rgba(153,246,228,.26);--d-eyebrow:#99f6e4;--d-go:#ccfbf1}
 .mhbt-d-ETERNAL{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(236,72,153,.55),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(249,168,212,.45),transparent 65%),linear-gradient(170deg,#3b0a2a,#12030d 55%,#000);--d-ring:#f9a8d4;--d-ringw:6px;--d-shine:1.1s;--d-sheen:rgba(252,231,243,.6);--d-mark:rgba(249,168,212,.26);--d-eyebrow:#f9a8d4;--d-go:#fce7f3}
 .mhbt-d-INFERNO{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(249,115,22,.6),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(253,186,116,.45),transparent 65%),linear-gradient(170deg,#431407,#120502 55%,#000);--d-ring:#fdba74;--d-ringw:6px;--d-shine:1.0s;--d-sheen:rgba(255,237,213,.6);--d-mark:rgba(253,186,116,.28);--d-eyebrow:#fdba74;--d-go:#ffedd5}
+.mhbt-d-EREBUS{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(219,39,119,.55),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(244,114,182,.45),transparent 65%),linear-gradient(170deg,#500724,#14020a 55%,#000);--d-ring:#f9a8d4;--d-ringw:6px;--d-shine:0.95s;--d-sheen:rgba(252,231,243,.6);--d-mark:rgba(249,168,212,.3);--d-eyebrow:#f9a8d4;--d-go:#fce7f3;--d-name:#fbcfe8}
 .mhbt-d-COCYTUS{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(103,232,249,.5),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(224,242,254,.45),transparent 65%),linear-gradient(170deg,#082f49,#020617 55%,#000);--d-ring:#a5f3fc;--d-ringw:6px;--d-shine:0.9s;--d-sheen:rgba(240,249,255,.65);--d-mark:rgba(165,243,252,.3);--d-eyebrow:#a5f3fc;--d-go:#e0f2fe}
 @keyframes mhbtRainbow{from{background-position:0% 0}to{background-position:300% 0}}
 @media (prefers-reduced-motion:reduce){.mhbt-tile::after,.mhbt-d-Legend::before{animation:none!important}}
@@ -89549,7 +90959,7 @@ const assistantChatMonsterIds = (text, prevUserText) => {
   return out.slice(0, ASSISTANT_CHAT_MONSTER_MAX);
 };
 const ASSISTANT_CHAT_RANKING_TOPIC = /ランキング|ランク(?:イン|上位)|順位|何位|なんい|[0-9０-９一二三四五]+位|トップ|上位|首位|一番(?:上|強い|高い)|いちばん(?:上|強い|高い)/;
-const ASSISTANT_CHAT_RANKING_MAX = 20;
+const ASSISTANT_CHAT_RANKING_MAX = 21;
 const ASSISTANT_CHAT_RANKING_PREV = 2;
 const ASSISTANT_CHAT_RANKING_EXTREME_WORD = /エクストリーム|極限/;
 const ASSISTANT_CHAT_RANKING_UNDERWORLD_WORD = /冥界/;
@@ -90407,6 +91817,19 @@ const cardBeginTurn = st => {
     me.hand.push(me.deck.pop());
   }
 };
+const cardDiscardToGuts = (st, p, n) => {
+  const me = st.players[p];
+  let k = 0;
+  let s = Number.isFinite(me.rng) ? me.rng : st.seed || 1;
+  for (; k < n && me.discard.length; k++) {
+    const r = cardRngNext(s);
+    s = r.s;
+    const i = Math.floor(r.v * me.discard.length);
+    me.guts.push(me.discard.splice(i, 1)[0]);
+  }
+  me.rng = s;
+  return k;
+};
 const cardPayGuts = (st, p, n) => {
   const me = st.players[p];
   for (let i = 0; i < n; i++) me.discard.push(me.guts.pop());
@@ -90458,11 +91881,13 @@ const cardTakeFromHand = (st, p, idxs) => {
   sorted.forEach(i => me.hand.splice(i, 1));
   return taken;
 };
-const cardActionCost = (db, st, p, hand, idxs) => {
+const cardActionCost = (db, st, p, hand, idxs, mi = null) => {
   const cards = idxs.map(i => cardOf(db, hand[i])).filter(Boolean);
   const att = cards.filter(c => cardHasEff(c, 'attach'));
   const core = cards.filter(c => !cardHasEff(c, 'attach'));
   let main = core.reduce((s, c) => s + (c.guts || 0), 0);
+  const cd = Number.isInteger(mi) && mi >= 0 && st && st.players[p] && st.players[p].mons[mi] ? st.players[p].mons[mi].costDown : null;
+  if (cd && core[0] && Array.isArray(cd.kinds) && cd.kinds.includes(core[0].kind)) main = Math.max(0, main - cd.n);
   if (core[0] && cardHasEff(core[0], 'requires')) main = core[0].guts || 0;
   const fs = st && st.freeSpe;
   if (core[0] && core[0].kind === 'spe' && core[0].user !== 'breeder' && fs && fs.p === p && fs.turn === st.turn) main = 0;
@@ -90857,7 +92282,7 @@ const cardAttackOptions = (db, st) => {
         return out2;
       };
       withAttach.forEach(idxs => {
-        const cost = cardActionCost(db, st, p, me.hand, idxs);
+        const cost = cardActionCost(db, st, p, me.hand, idxs, mi);
         if (cost > guts) return;
         if (cardHasEff(card, 'tossBonus')) {
           tossSets(idxs).forEach(toss => {
@@ -91171,7 +92596,7 @@ const cardStartAttack = (db, st, act) => {
   const isBreeder = act.type === 'breeder';
   const mainNo = me.hand[act.hand[0]];
   const main = cardOf(db, mainNo);
-  const cost = cardActionCost(db, st, p, me.hand, act.hand);
+  const cost = cardActionCost(db, st, p, me.hand, act.hand, isBreeder ? null : act.mon);
   const tossIdx = cardHasEff(main, 'tossBonus') && Array.isArray(act.toss) ? [...new Set(act.toss)].filter(i => Number.isInteger(i) && i >= 0 && i < me.hand.length && !act.hand.includes(i)) : [];
   const used = cardTakeFromHand(st, p, act.hand);
   const tossed = cardTakeFromHand(st, p, tossIdx.map(i => i - act.hand.filter(h => h < i).length));
@@ -91188,6 +92613,7 @@ const cardStartAttack = (db, st, act) => {
     mon.attacks += 1;
     mon.lastCard = mainNo;
   }
+  if (mon && mon.costDown && Array.isArray(mon.costDown.kinds) && mon.costDown.kinds.includes(main.kind)) mon.costDown = null;
   cardLog(st, cardUseText(db, st, p, mi, used), {
     kind: 'use',
     p,
@@ -91369,6 +92795,24 @@ const cardResolveTarget = (db, st) => {
       target.stunTurn = st.turn + 1;
       cardLog(st, `${target.name}は次のターン攻撃できない`);
     }
+    const gd = cardEff(main, 'gutsFromDiscard');
+    if (gd && t.p !== pd.attacker && !pd.gutsFromDiscardDone) {
+      pd.gutsFromDiscardDone = true;
+      const k = cardDiscardToGuts(st, pd.attacker, gd.n);
+      if (k) cardLog(st, `${st.players[pd.attacker].name}は捨て札から${k}枚をガッツにした`);
+    }
+    if (cardHasEff(main, 'safeOnHit') && t.p !== pd.attacker && atkMon && !atkMon.ko && !(atkMon.safeUntil >= st.turn + 1)) {
+      atkMon.safeUntil = st.turn + 1;
+      cardLog(st, `${atkMon.name}は次の自分のターンまでダメージを受けない`);
+    }
+    const nc = cardEff(main, 'nextOwnCost');
+    if (nc && t.p !== pd.attacker && atkMon && !atkMon.ko && !(atkMon.costDown && atkMon.costDown.n >= nc.n)) {
+      atkMon.costDown = {
+        kinds: nc.kinds || ['int'],
+        n: nc.n
+      };
+      cardLog(st, `${atkMon.name}が次に使う${(nc.kinds || ['int']).includes('pow') ? 'ちから' : 'かしこさ'}技のガッツが${nc.n}少なくなる`);
+    }
     if (cardHasEff(main, 'drain') && atkMon && !atkMon.ko) {
       const h = Math.min(lifeBefore - target.life, atkMon.max - atkMon.life);
       atkMon.life += h;
@@ -91411,6 +92855,7 @@ const cardKo = (st, p, m) => {
   const mon = st.players[p].mons[m];
   mon.ko = true;
   mon.life = 0;
+  mon.costDown = null;
   cardLog(st, `${mon.name}はKOされた`, {
     kind: 'ko'
   });
@@ -91447,7 +92892,12 @@ const cardFinishAttack = (db, st) => {
     cardLog(st, `${atkMon.name}も${self}ダメージを受けた`);
     if (atkMon.life <= 0) cardKo(st, pd.attacker, pd.mon);
   }
-  if (cardHasEff(main, 'returnOnHit') && pd.results.some(r => r.dmg > 0 && r.p !== pd.attacker)) {
+  if (cardHasEff(main, 'toGutsOnHit') && pd.results.some(r => r.dmg > 0 && r.p !== pd.attacker)) {
+    const k = pd.used.indexOf(pd.main);
+    me.discard.push(...pd.used.filter((_, i) => i !== k));
+    me.guts.push(pd.main);
+    cardLog(st, `「${main.name}」はガッツになった`);
+  } else if (cardHasEff(main, 'returnOnHit') && pd.results.some(r => r.dmg > 0 && r.p !== pd.attacker)) {
     const k = pd.used.indexOf(pd.main);
     me.discard.push(...pd.used.filter((_, i) => i !== k));
     me.hand.push(pd.main);
@@ -91467,6 +92917,10 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
     if (e.t === 'draw') {
       const k = cardDrawN(st, p, e.n);
       cardLog(st, `${me.name}は${k}枚引いた`);
+    }
+    if (e.t === 'gutsFromDiscardNow') {
+      const k = cardDiscardToGuts(st, p, e.n);
+      cardLog(st, `${me.name}は捨て札から${k}枚をガッツにした`);
     }
     if (e.t === 'peekHand') {
       cardEvent(st, {
@@ -91747,7 +93201,10 @@ const cardApplyGuard = (db, st, act) => {
   const c = cardOf(db, no);
   cardTakeFromHand(st, q, [act.hand]);
   cardPayGuts(st, q, cardGuardCost(st, c));
-  me.discard.push(no);
+  if (cardHasEff(c, 'toGutsAfterUse')) {
+    me.guts.push(no);
+    cardLog(st, `「${c.name}」はガッツになった`);
+  } else me.discard.push(no);
   const user = me.mons[act.mon];
   user.guardTurn = st.turn;
   cardLog(st, `${user.name}の「${c.name}」`, {
@@ -92156,7 +93613,7 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
     normal: -0.04,
     hard: -0.11,
     expert: 0.03,
-    master: 0.12
+    master: 0
   },
   momosuke: {
     easy: 0.12,
@@ -92177,6 +93634,9 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
     normal: -0.075,
     hard: 0.03,
     expert: -0.06,
+    master: 0
+  },
+  sorashido: {
     master: 0
   },
   atsu: {
@@ -92315,8 +93775,9 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
   } = policy;
   const habit = cardAiHabitNow(db, st, p, policy);
   const main = cardOf(db, me.hand[opt.hand[0]]);
-  const cost = cardActionCost(db, st, p, me.hand, opt.hand);
+  const cost = cardActionCost(db, st, p, me.hand, opt.hand, opt.type === 'attack' ? opt.mon : null);
   let score = 0;
+  let hurts = true;
   if (main.kind === 'fld') return cardAiScoreField(db, st, p, main, cost, habit) + (policy.fields && policy.fields.includes(main.name) && !(st.field && st.field.p === p) ? CARD_AI_FIELD_LIKE : 0);
   if (main.kind === 'spe') {
     (main.effects || []).forEach(e => {
@@ -92348,6 +93809,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
         const to = cardMonsterOf(db, opt.fuse.no);
         score += to.life - (me.mons[opt.fuse.a].life + me.mons[opt.fuse.b].life) * 0.8 - 1;
       }
+      if (e.t === 'gutsFromDiscardNow') score += Math.min(e.n, me.discard.length) * (me.guts.length < 4 ? 0.6 : 0.3);
       if (e.t === 'safe') {
         const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null;
         score += m0 && m0.life <= Math.ceil(m0.max / 2) ? 1.4 : 0.4;
@@ -92421,6 +93883,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       m: j
     } : null).filter(Boolean) : cardHasEff(main, 'area') ? cardAreaTargets(st, p, opt.mon, main) : [opt.target];
     let drained = 0;
+    hurts = false;
     let kills = 0;
     const per = dmg / Math.max(1, main.damage || 1);
     targets.forEach(t => {
@@ -92428,12 +93891,14 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       let d = opt.split ? Math.round(opt.split[t.m] * per) : dmg;
       const mv = cardEff(main, 'multVs');
       if (mv && cardMonType(tm, st.turn) === mv.type) d *= mv.n;
+      if (d > 0) d = Math.max(0, d + cardFieldDmgAdd(st, main));
       if (cardHasEff(main, 'nonLethal')) d = Math.min(d, tm.life - 1);
       if (t.p !== p && d <= 0 && cardHasEff(main, 'nonLethal')) {
         score -= 2;
         return;
       }
       if (t.p !== p && d >= tm.life) kills += 1;
+      if (t.p !== p && d > 0) hurts = true;
       const ev = cardAiEvadeChance(db, st, p, main, t, level, mods.flags, mon) * (opt.hand.some(i => cardHasEff(cardOf(db, me.hand[i]), 'attachBind')) ? 0.5 : 1);
       const half = cardHasEff(main, 'halfOnEvade') ? Math.ceil(d / 2) : 0;
       const exp = d * (1 - ev) + half * ev;
@@ -92446,12 +93911,20 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       }
       if (t.p !== p && d >= tm.life) score += (1 - ev) * 4 * habit.finish;
       const gl = cardEff(main, 'gutsLossOnHit');
-      if (gl && t.p !== p) score += (1 - ev) * (gl.n === 'all' ? st.players[t.p].guts.length : Math.min(gl.n, st.players[t.p].guts.length)) * 0.8 * habit.disrupt;
-      if (cardHasEff(main, 'stunOnHit') && t.p !== p) score += (1 - ev) * 1.2;
+      if (gl && t.p !== p && d > 0) score += (1 - ev) * (gl.n === 'all' ? st.players[t.p].guts.length : Math.min(gl.n, st.players[t.p].guts.length)) * 0.8 * habit.disrupt;
+      if (cardHasEff(main, 'stunOnHit') && t.p !== p && d > 0) score += (1 - ev) * 1.2;
+      if (t.p !== p && d > 0) {
+        if (cardHasEff(main, 'toGutsOnHit')) score += (1 - ev) * (main.guts || 0) * 0.35 * habit.saveGuts;
+        if (cardHasEff(main, 'safeOnHit') && mon) score += (1 - ev) * (mon.life * 2 <= mon.max ? 1.4 : 0.6);
+        const gfd = cardEff(main, 'gutsFromDiscard');
+        if (gfd) score += (1 - ev) * Math.min(gfd.n, me.discard.length) * 0.35 * habit.saveGuts;
+        if (cardHasEff(main, 'nextOwnCost') && mon) score += (1 - ev) * (me.hand.some((n2, j) => !opt.hand.includes(j) && (cardOf(db, n2) || {}).kind === 'int' && cardUsableBy(cardOf(db, n2), mon)) ? 0.8 : 0.3);
+      }
     });
     if (targets.length > 1) score *= 1 + 0.15 * (habit.area - 1);
     if (cost >= 5) score *= 1 + 0.12 * (habit.big - 1);
     const winsNow = kills > 0 && kills >= st.players[cardOther(p)].mons.filter(m => !m.ko).length;
+    if (winsNow) score += CARD_AI_WIN_STRIKE_ADD;
     const sh = cardEff(main, 'selfDamageIfHit');
     if (sh && mon && !winsNow) score -= sh.n * (mon.life <= sh.n ? 3 : 0.6);
     const si = mods.flags.selfIfHit;
@@ -92463,7 +93936,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
   const cheapGuard = Math.min(9, ...me.hand.filter((_, i) => !opt.hand.includes(i)).map(n => cardOf(db, n)).filter(c => c && cardIsGuardKind(c.kind)).map(c => c.guts));
   if (level.depth >= 1 && cheapGuard < 9 && left < cheapGuard) score -= 1.2 * habit.keepGuard;
   score -= cost * 0.12 * habit.saveGuts * (level.depth >= 2 ? 1.2 : 1);
-  if (level.depth >= 2 && opt.target && opt.target.p !== p) {
+  if (level.depth >= 2 && opt.target && opt.target.p !== p && hurts) {
     const tm = st.players[opt.target.p].mons[opt.target.m];
     score += (tm.max - tm.life) * 0.15 + (tm.life <= 3 ? 0.8 : 0);
   }
@@ -92646,10 +94119,12 @@ const cardAiChooseGuard = (db, st, policy, rand, gopt = null) => {
       cost,
       c
     } = cardAiGuardEstimate(db, st, o, dmg);
+    if (target.life <= after && back <= 0 && extra - (cardHasEff(c, 'takeMult') ? 1.2 : 0) <= 0) return;
     const saved = Math.min(dmg, target.life) - Math.min(after, target.life);
     const ko = target.life <= dmg && target.life > after ? 5 : 0;
     const lostAll = cardHasEff(c, 'selfGutsAll') ? me.guts.length - cost : 0;
     let v = extra + saved * (0.6 + 0.4 * habit.keepGuard) + ko - (cost + lostAll) * 0.35 * habit.saveGuts + back * 0.6 + (cardAiAceHit(policy, me.hand, o.hand) ? 1.5 : 0);
+    if (cardHasEff(c, 'toGutsAfterUse')) v += 0.35 * habit.saveGuts;
     if (!dies && habit.saveGuts >= 1.3 && Math.min(dmg, target.life) * 2 >= target.life && saved > 0) v += (cost + lostAll) * 0.35 * habit.saveGuts + 1;
     if (!dies && finishCost !== null && habit.finish >= 1.3 && me.guts.length - cost - lostAll < finishCost && me.guts.length >= finishCost) v -= 2;
     if (!dies && guardsInHand <= 1 && habit.keepGuard >= 0.55 && habit.keepGuard < 1.3 && Math.min(dmg, target.life) * 2 < target.life) v -= 0.8;
@@ -92674,13 +94149,19 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
     if (!c) return -9;
     const usable = c.user === 'breeder' || me.mons.some(m => !m.ko && cardUsableBy(c, m));
     if (!usable) return -10;
-    if (cardIsGuardKind(c.kind)) return 2 * habit.keepGuard - c.guts * 0.2;
-    return (c.damage || 1) * 0.5 - Math.max(0, c.guts - (me.guts.length + 2)) * 0.8;
+    if (cardIsGuardKind(c.kind)) return 2 * habit.keepGuard - c.guts * 0.2 + CARD_AI_GUARD_KEEP_ADD;
+    const noHost = cardHasEff(c, 'attach') && !me.hand.some(n2 => n2 !== no && (() => {
+      const h = cardOf(db, n2);
+      return !!h && cardIsAttackKind(h.kind) && h.kind !== 'spe' && me.mons.some(m => !m.ko && cardUsableBy(h, m));
+    })());
+    const value = (c.damage || 1) * 0.5 - Math.max(0, cardFieldCostOf(st, c.guts || 0) - (me.guts.length + 2)) * 0.8 - (noHost ? 2 : 0);
+    if (cardAiFieldBlocked(db, st, p, no)) return CARD_AI_BLOCKED_KEEP + (me.hand.some(n2 => n2 !== no && (cardOf(db, n2) || {}).kind === 'fld') ? value * CARD_AI_BLOCKED_HOPE : 0);
+    return value;
   };
   const aceKeep = no => policy && Array.isArray(policy.aces) && policy.aces.includes(no) ? 10 : 0;
   const ks = me.hand.map((no, i) => ({
     i,
-    k: keep(no) + aceKeep(no),
+    k: keep(no) + (keep(no) > -9 ? aceKeep(no) : 0),
     g: cardIsGuardKind((cardOf(db, no) || {}).kind)
   }));
   const guardKeep = ks.filter(x => x.g && x.k > -9).sort((a, b) => b.k - a.k)[0];
@@ -92698,7 +94179,18 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
     pick.splice(0, pick.length, ...order.map(o => o.i).slice(0, gopt.count));
   }
   if (gopt && gopt.keepGuards) {
-    for (let k = pick.length - 1; k >= 0; k--) if (cardIsGuardKind((cardOf(db, me.hand[pick[k]]) || {}).kind)) pick.splice(k, 1);
+    const keepSet = new Set(order.filter(o => o.g && o.k > -9).sort((a, b) => b.k - a.k).slice(0, CARD_TACTIC_KEEP_GUARD_MAX).map(o => o.i));
+    for (let k = pick.length - 1; k >= 0; k--) if (keepSet.has(pick[k])) pick.splice(k, 1);
+  }
+  const live = me.mons.filter(m => !m.ko);
+  const idle = !me.breederUsed && me.mons.every(m => !m.attacks);
+  if (live.length && me.hand.length >= CARD_BATTLE_HAND_MAX && idle && pick.length === 0) {
+    const keepN = gopt && gopt.keepGuards ? CARD_TACTIC_KEEP_GUARD_MAX : CARD_AI_STUCK_KEEP;
+    const keepG = new Set(order.filter(o => o.g && o.k > -9).sort((a, b) => b.k - a.k).slice(0, keepN).map(o => o.i));
+    const isAce = i => policy && Array.isArray(policy.aces) && policy.aces.includes(me.hand[i]);
+    const tossG = order.filter(o => o.g && !keepG.has(o.i) && !isAce(o.i)).map(o => o.i);
+    const tossO = order.filter(o => !o.g && !isAce(o.i)).map(o => o.i);
+    pick.push(...tossG, ...tossO.slice(0, Math.max(tossG.length ? 0 : 1, tossO.length - 1)));
   }
   const gm = cardFieldEff(st, 'fieldGutsMax');
   return {
@@ -92706,7 +94198,39 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
     hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, policy.playerRole ? 99 : cardAiGutsCap(me))
   };
 };
+const cardAiFieldBlocked = (db, st, p, no) => {
+  const c = cardOf(db, no);
+  if (!st.field || !c || !cardIsAttackKind(c.kind)) return false;
+  const me = st.players[p];
+  const at = me.hand.indexOf(no);
+  const idxs = at >= 0 ? [at] : [];
+  if (c.user === 'breeder') return cardFieldBanned(db, st, p, -1, c, idxs);
+  const users = me.mons.map((m, mi) => ({
+    m,
+    mi
+  })).filter(({
+    m
+  }) => !m.ko && cardUsableBy(c, m));
+  return users.length > 0 && users.every(({
+    mi
+  }) => cardFieldBanned(db, st, p, mi, c, idxs));
+};
+const CARD_AI_BLOCKED_KEEP = -1.5;
+const CARD_AI_BLOCKED_HOPE = 0.3;
+const CARD_AI_GUARD_KEEP_ADD = 1.5;
+const CARD_AI_STUCK_KEEP = 2;
+const CARD_TACTIC_KEEP_GUARD_MAX = 3;
 const cardAiGutsCap = me => me.deck.length >= CARD_BATTLE_HAND_MAX ? 99 : Math.max(0, me.hand.length - (CARD_BATTLE_HAND_MAX - me.deck.length));
+const CARD_AI_WIN_STRIKE_ADD = 3;
+const cardAiWinsBy = (db, st, opt, p = st.active) => {
+  if (!opt || opt.type !== 'attack') return false;
+  try {
+    const s = cardAiSettle(db, cardApplyAction(db, st, opt));
+    return !!s && s.winner === p;
+  } catch (_) {
+    return false;
+  }
+};
 const CARD_AI_RISKY_EFFS = ['selfDamage', 'selfDamageIfHit', 'selfDamageIfEvaded', 'attachSelfIfHit', 'lastWish', 'selfHurt', 'fuse', 'draw', 'deckToGuts', 'rush', 'refresh', 'choose', 'fieldMill', 'fieldDrawOnPlay', 'fieldBurn'];
 const cardAiDrawNeed = pl => pl.hand.length >= CARD_BATTLE_HAND_MAX ? 1 : CARD_BATTLE_HAND_MAX - pl.hand.length;
 const cardAiSettle = (db, st) => {
@@ -92781,12 +94305,12 @@ const cardAttachUseless = (db, st, o) => {
   const main = cardOf(db, me.hand[o.hand[0]]);
   if (!main) return false;
   const targets = (cardHasEff(main, 'area') ? cardAreaTargets(st, p, o.mon, main) : o.target ? [o.target] : []).filter(t => t.p !== p);
-  const cost = cardActionCost(db, st, p, me.hand, o.hand);
+  const cost = cardActionCost(db, st, p, me.hand, o.hand, o.type === 'attack' ? o.mon : null);
   return o.hand.slice(1).some(i => {
     const c = cardOf(db, me.hand[i]);
     if (!c) return false;
     const effs = (c.effects || []).map(e => e.t);
-    if (effs.length && effs.every(t => CARD_COST_ONLY_EFFS.includes(t))) return cardActionCost(db, st, p, me.hand, o.hand.filter(x => x !== i)) <= cost;
+    if (effs.length && effs.every(t => CARD_COST_ONLY_EFFS.includes(t))) return cardActionCost(db, st, p, me.hand, o.hand.filter(x => x !== i), o.type === 'attack' ? o.mon : null) <= cost;
     if (cardHasEff(c, 'attachNoEvadeHybrid') && targets.length && !targets.some(t => !cardIsPureMon(st.players[t.p].mons[t.m]))) return true;
     return false;
   });
@@ -92801,6 +94325,9 @@ const cardAiAttackScored = (db, st, opts, policy) => opts.map(o => ({
   s: cardAiScoreAttack(db, st, o, policy) + (cardAiAceHit(policy, st.players[st.active].hand, o.hand) ? 2 : 0)
 })).sort((a, b) => b.s - a.s);
 const CARD_AI_SEARCH_STEP_MAX = 1500;
+const CARD_AI_SEARCH_PRIOR = 2;
+const CARD_AI_SEARCH_MILL_W = 0.5;
+const CARD_AI_SEARCH_HINT_ADD = 1;
 const cardAiSearchLife = (st, p) => {
   let a = 0,
     b = 0;
@@ -92810,17 +94337,18 @@ const cardAiSearchLife = (st, p) => {
   });
   return b ? a / b : 0;
 };
-const cardAiSearchEval = (st, me, kind) => {
+const cardAiSearchEval = (st, me, kind, mill = 0) => {
   if (st.winner === me) return 100;
   if (st.winner !== null) return -100;
   const op = cardOther(me),
     P = st.players[me],
     O = st.players[op];
+  const deck = mill ? CARD_AI_SEARCH_MILL_W * mill * (P.deck.length - O.deck.length) : 0;
   if (kind === 'alive') {
     const alive = x => x.mons.filter(m => !m.ko).length;
-    return 12 * (alive(P) - alive(O)) + 8 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.4 * (P.hand.length - O.hand.length) + 0.4 * (P.guts.length - O.guts.length);
+    return deck + 12 * (alive(P) - alive(O)) + 8 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.4 * (P.hand.length - O.hand.length) + 0.4 * (P.guts.length - O.guts.length);
   }
-  return 10 * (cardKoCount(st, me) - cardKoCount(st, op)) + 4 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.3 * (P.hand.length - O.hand.length);
+  return deck + 10 * (cardKoCount(st, me) - cardKoCount(st, op)) + 4 * (cardAiSearchLife(st, me) - cardAiSearchLife(st, op)) + 0.3 * (P.hand.length - O.hand.length);
 };
 const cardAiSearchShuffle = (list, rand) => {
   for (let i = list.length - 1; i > 0; i--) {
@@ -92858,16 +94386,28 @@ const cardAiSearchRollout = (db, st0, act, me, pols, rand, cfg, budget) => {
     st = n;
     st.log = [];
   }
-  return cardAiSearchEval(st, me, cfg.eval);
+  return cardAiSearchEval(st, me, cfg.eval, cfg.mill || 0);
 };
 let _cardAiSearchFoe = null;
 const cardAiSearchPick = (db, st, scored, policy, rand) => {
   const cfg = policy.search;
   const me = st.active;
-  const cands = scored.slice(0, cfg.k).filter(x => x.s > 0.3).map(x => cardAiFillBind(db, st, x.o, policy));
+  const me0 = st.players[st.active];
+  const skip = new Set(policy.searchSkip || []);
+  const ok = o => !(o.type === 'attack' && skip.has(o.mon)) && !(policy.searchNoBreeder && (o.type === 'breeder' || o.hand.some(i => (cardOf(db, me0.hand[i]) || {}).user === 'breeder')));
+  scored = scored.filter(x => ok(x.o));
+  const winNow = scored.find(x => cardAiWinsBy(db, st, x.o));
+  if (winNow) return cardAiFillBind(db, st, winNow.o, policy);
+  const top = scored.slice(0, cfg.k).filter(x => x.s > 0.3);
+  const hint = policy.searchHint || null;
+  const same = (a, o) => a && o && a.type === o.type && a.mon === o.mon && JSON.stringify(a.hand) === JSON.stringify(o.hand) && JSON.stringify(a.target || null) === JSON.stringify(o.target || null);
+  const hintAt = hint && hint.type !== 'endAttacks' ? scored.find(x => same(hint, x.o)) : null;
+  if (hintAt && !top.includes(hintAt)) top.push(hintAt);
+  const cands = top.map(x => cardAiFillBind(db, st, x.o, policy));
   cands.push({
     type: 'endAttacks'
   });
+  const prior = top.map(x => x.s + (x === hintAt ? CARD_AI_SEARCH_HINT_ADD : 0)).concat([0.3 + (hint && hint.type === 'endAttacks' ? CARD_AI_SEARCH_HINT_ADD : 0)]);
   if (!_cardAiSearchFoe) _cardAiSearchFoe = cardAiPolicy('kyuko', 'master', {
     noTactics: true
   });
@@ -92882,22 +94422,27 @@ const cardAiSearchPick = (db, st, scored, policy, rand) => {
   const budget = {
     left: CARD_AI_SEARCH_STEP_MAX
   };
+  const ecfg = {
+    ...cfg,
+    mill: policy.habit && policy.habit.mill || 0
+  };
   let best = cands[0],
     bestV = -Infinity;
   for (let i = 0; i < cands.length && budget.left > 0; i++) {
     let v = 0,
       n = 0;
     for (let r = 0; r < cfg.r && budget.left > 0; r++) {
-      v += cardAiSearchRollout(db, st, cands[i], me, pols, rand, cfg, budget);
+      v += cardAiSearchRollout(db, st, cands[i], me, pols, rand, ecfg, budget);
       n += 1;
     }
     if (!n) break;
-    v = v / n + (i === 0 ? 0.5 : 0);
+    v = v / n + CARD_AI_SEARCH_PRIOR * prior[i] + (i === 0 ? 0.5 : 0);
     if (v > bestV) {
       bestV = v;
       best = cands[i];
     }
   }
+  if (hintAt && best === cands[top.indexOf(hintAt)] && typeof cardTacticLastWhy !== 'undefined') cardTacticLastWhy = policy.searchHintWhy || null;
   return best;
 };
 const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
@@ -92951,6 +94496,10 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
     };
   }
   const sloppy = rand() < (policy.level.sloppy || 0);
+  if (st.phase === 'main' && !st.pending && st.players[cardOther(st.active)].mons.filter(m => !m.ko).length <= 2) {
+    const win = cardAiAttackChoices(db, st, policy).find(o => cardAiWinsBy(db, st, o));
+    if (win) return cardAiFillBind(db, st, win, policy);
+  }
   if (!sloppy && policy.gambit && typeof cardTacticDecide === 'function') {
     const tac = cardTacticDecide(db, st, policy);
     if (tac && tac.act) return tac.act;
@@ -92961,20 +94510,32 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   } : cardAiChooseGuard(db, st, policy, rand);
   if (st.phase === 'guts') {
     if (!sloppy) return cardAiChooseGuts(db, st, policy);
-    const hand = st.players[st.active].hand;
+    const me = st.players[st.active],
+      hand = me.hand;
     const gm = cardFieldEff(st, 'fieldGutsMax');
+    const dead = i => {
+      const c = cardOf(db, hand[i]);
+      return !c || c.user !== 'breeder' && !me.mons.some(m => !m.ko && cardUsableBy(c, m));
+    };
+    const isGuard = i => cardIsGuardKind((cardOf(db, hand[i]) || {}).kind);
+    const idx = hand.map((_, i) => i);
+    const pickS = [...idx.filter(dead), ...idx.filter(i => !dead(i) && !isGuard(i) && rand() < 0.4)];
     return {
       type: 'guts',
-      hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, Math.min(gm ? gm.n : 99, policy.playerRole ? 99 : cardAiGutsCap(st.players[st.active])))
+      hand: pickS.slice(0, Math.min(gm ? gm.n : 99, policy.playerRole ? 99 : cardAiGutsCap(me)))
     };
   }
   const opts = cardAiAttackChoices(db, st, policy);
   if (!opts.length) return {
     type: 'endAttacks'
   };
-  if (sloppy) return rand() < 0.25 ? {
-    type: 'endAttacks'
-  } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
+  if (sloppy) {
+    const win = opts.find(o => cardAiWinsBy(db, st, o));
+    if (win) return cardAiFillBind(db, st, win, policy);
+    return rand() < 0.25 ? {
+      type: 'endAttacks'
+    } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
+  }
   const scored = cardAiAttackScored(db, st, opts, policy);
   if (policy.search) return cardAiSearchPick(db, st, scored, policy, rand);
   if (scored[0].s <= 0.3) return {
@@ -93011,7 +94572,7 @@ const CARD_AI_DECKS = Object.freeze({
     field: ['必殺技の応酬', '灼熱の地']
   },
   sorashido: {
-    prefer: ['大混乱', '時間稼ぎ', '大鎌', 'ハテナマーク', 'ニャーにゃー']
+    prefer: ['大混乱', '時間稼ぎ', '大声', 'ハテナマーク', 'ニャーにゃー']
   }
 });
 const CARD_AI_FAVORITE = Object.freeze({
@@ -93091,6 +94652,11 @@ const CARD_AI_BUILD = Object.freeze({
     lastTop: 2
   }
 });
+const CARD_AI_SECOND_TOP = Object.freeze({
+  kyuko: {
+    master: 2
+  }
+});
 const CARD_AI_DECK_TUNE = Object.freeze({
   mua: {
     easy: -0.7,
@@ -93123,12 +94689,12 @@ const CARD_AI_DECK_TUNE = Object.freeze({
     easy: -1.5,
     normal: -1.5,
     hard: -1.5,
-    master: -0.05
+    master: 0.5
   }
 });
 const CARD_AI_LANE_MIN_DEFAULT = 0.8;
 const CARD_AI_LANE_MIN = Object.freeze({
-  momosuke: 1.5,
+  momosuke: 2.0,
   dra: 0.8,
   kyuko: 2.0,
   atsu: 1.5,
@@ -93162,6 +94728,7 @@ const cardAiCardValue = (card, habit) => {
     let v = eff('evade') ? 2.2 : eff('reduceAll') ? 2.4 : eff('reflect') ? 2.3 : eff('cover') ? 1.4 : eff('endure') ? 1.1 : eff('redirect') ? 1.0 : eff('shield') ? 1.0 : eff('evadeAll') ? 1.2 : eff('noGutsLoss') ? 0.8 : eff('takeMult') ? 0.5 : eff('liftAllies') || eff('waterAll') ? 0.6 : 1.6;
     const re = cardEff(card, 'reduce');
     if (re) v = 1 + re.n * 0.4;
+    if (eff('toGutsAfterUse')) v += 0.35;
     if (eff('selfGutsAll')) v -= 1.4;
     return (v - card.guts * 0.35) * habit.keepGuard;
   }
@@ -93188,6 +94755,7 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'rage') v += 0.6;
       if (e.t === 'choose') v += e.then === 'toHand' ? 0.8 : 0.3;
       if (e.t === 'safe') v += 0.8;
+      if (e.t === 'gutsFromDiscardNow') v += 0.4 * e.n;
       if (e.t === 'revive') v += 0.3;
       if (e.t === 'possess') v += 0.2;
       if (e.t === 'cocoon') v -= 1;
@@ -93215,6 +94783,11 @@ const cardAiCardValue = (card, habit) => {
   if (eff('bonusDiscard') || eff('bonusLost')) dmg += 3;
   if (eff('tossBonus')) dmg += 1.5;
   if (eff('returnOnHit')) dmg += 0.8;
+  if (eff('toGutsOnHit')) dmg += 0.6;
+  if (eff('safeOnHit')) dmg += 0.8;
+  const gfd = cardEff(card, 'gutsFromDiscard');
+  if (gfd) dmg += 0.4 * gfd.n;
+  if (eff('nextOwnCost')) dmg += 0.6;
   if (eff('halfOnEvade') || eff('noEvade')) dmg *= 1.3;
   if (eff('area')) dmg *= 1.6 * habit.area;
   const gl = cardEff(card, 'gutsLossOnHit');
@@ -93249,9 +94822,12 @@ const cardAiPickIndex = (weights, rand) => {
   }
   return weights.length - 1;
 };
+const CARD_AI_FAVORITE_EXTRA = Object.freeze({
+  sorashido: ['kyubi']
+});
 const cardAiFavoriteCandidates = (db, who) => {
-  const fav = CARD_AI_FAVORITE[who] || CARD_AI_FAVORITE.mua;
-  return Object.values(db.monsters).filter(m => m.ready !== false && !m.dexOnly && (String(m.wave) === 'hybrid' ? m.main === fav : m.species === fav)).map(m => m.no).sort();
+  const favs = [CARD_AI_FAVORITE[who] || CARD_AI_FAVORITE.mua, ...(CARD_AI_FAVORITE_EXTRA[who] || [])];
+  return Object.values(db.monsters).filter(m => m.ready !== false && !m.dexOnly && favs.some(fav => String(m.wave) === 'hybrid' ? m.main === fav : m.species === fav)).map(m => m.no).sort();
 };
 const cardAiMonWave = (db, m, card) => {
   if (String(m.wave) !== 'hybrid') return Number(m.wave) || 1;
@@ -93333,7 +94909,10 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
     } : x);
     if (!left.length) break;
     let pick;
-    if (cfg.stray > 0 && rand() < cfg.stray) pick = left[Math.floor(rand() * left.length) % left.length];else if (cfg.best && k === 1 && cfg.lastTop > 1) {
+    if (cfg.stray > 0 && rand() < cfg.stray) pick = left[Math.floor(rand() * left.length) % left.length];else if (cfg.best && k === 0 && ((CARD_AI_SECOND_TOP[who] || {})[levelId] || 0) > 1) {
+      const top = left.slice().sort((x, y) => y.v - x.v || (x.m.no < y.m.no ? -1 : 1)).slice(0, CARD_AI_SECOND_TOP[who][levelId]);
+      pick = top[cardAiPickIndex(top.map((_, i) => i === 0 ? 2 : 1), rand)];
+    } else if (cfg.best && k === 1 && cfg.lastTop > 1) {
       const top = left.slice().sort((x, y) => y.v - x.v || (x.m.no < y.m.no ? -1 : 1)).slice(0, cfg.lastTop);
       pick = top[cardAiPickIndex(top.map((_, i) => i === 0 ? 2 : 1), rand)];
     } else if (cfg.best) pick = left.reduce((x, y) => y.v > x.v ? y : x);else {
@@ -95167,9 +96746,9 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   cat: 'breeder',
   sec: 'ガッツ',
   phase: 'guts',
-  name: '守り札を残して置く',
+  name: '守り札を3枚まで残す',
   tiers: [['', 'R']],
-  desc: '回避・防御はガッツにしない'
+  desc: '回避・防御は3枚までガッツにしない'
 }, {
   id: 'gutsOrder',
   cat: 'breeder',
@@ -95220,25 +96799,26 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   tiers: [['', 'N']],
   desc: 'この番はブリーダーのカードを出さない(当たればそれ以外で打つ)'
 }]);
+const cardTacticUpTo = (v, u = '') => Number(v) === 0 ? `0${u}` : `${v}${u}以下`;
 const CARD_TACTIC_TEXT = Object.freeze({
   any: () => ['いつでも', 'いつでも当てはまる。組み合わせたカードを、使えるときはいつも使う'],
-  ko: () => ['倒せる相手がいる', '手札の攻撃の技(特殊技は除く)で、いまのガッツで出せて、ダメージが残りライフ以上になる相手のモンスターがいるとき。その相手を狙う'],
+  ko: () => ['倒せる相手がいる', '手札の攻撃の技(特殊技は除く)を、いまのガッツで出せば倒せる相手のモンスターがいるとき。その相手を狙う'],
   lowest: () => ['ライフがいちばん少ない相手', '相手の場で、残りライフ(数)がいちばん少ない相手を狙う'],
   highest: () => ['ライフがいちばん多い相手', '相手の場で、残りライフ(数)がいちばん多い相手を狙う'],
   strongest: () => ['攻撃がいちばん強い相手', '相手のモンスターのうち、使える技の最大ダメージがいちばん大きい相手を狙う(手札は見ない)'],
   attacker: () => ['前のターンに攻撃してきた相手', '直前の相手のターンに攻撃してきた相手のモンスターを狙う'],
   leader: () => ['相手のリーダー', '相手が1体目(左)に置いたモンスターが残っていれば、それを狙う'],
   type: v => [`${v}の相手`, `いま${v}にいる相手のモンスターを狙う`],
-  blood: v => [`${v}の相手`, `${v}のモンスターの相手を狙う`],
-  species: () => ['決めた種族の相手', '組むときに選んだ種族の相手のモンスター(混血はもとの種族でも当たる)を狙う'],
+  blood: v => [`${v}の相手`, `${v}の相手のモンスターを狙う`],
+  species: () => ['決めた種族の相手', '組むときに選んだ種族の、相手のモンスターを狙う(混血は、もとの種族でも当てはまる)'],
   foeLife: v => [`相手のライフ${v}%以下`, `残りライフが最大の${v}%以下になっている相手のモンスターがいるとき。その相手を狙う`],
   myLife: v => [`味方のライフ${v}%以下`, `残りライフが最大の${v}%以下の自分のモンスターがいるとき。守るカードと組むと、そのモンスターが狙われたときだけ守る`],
   myGuts: v => [`自分のガッツ${v}以上`, `自分のガッツが${v}以上のとき`],
-  foeGutsLe: v => [`相手のガッツ${v}以下`, `相手のガッツが${v}以下のとき`],
-  foeGutsGe: v => [`相手のガッツ${v}以上`, `相手のガッツが${v}以上のとき(大技に備える)`],
+  foeGutsLe: v => [`相手のガッツ${cardTacticUpTo(v)}`, `相手のガッツが${cardTacticUpTo(v)}のとき`],
+  foeGutsGe: v => [`相手のガッツ${v}以上`, `相手のガッツが${v}以上のとき(大技が来るのに備える)`],
   myHand: v => [`自分の手札${v}枚以上`, `自分の手札が${v}枚以上のとき`],
   foeHandGe: v => [`相手の手札${v}枚以上`, `相手の手札が${v}枚以上のとき`],
-  foeHandLe: v => [`相手の手札${v}枚以下`, `相手の手札が${v}枚以下のとき`],
+  foeHandLe: v => [`相手の手札${cardTacticUpTo(v, '枚')}`, `相手の手札が${cardTacticUpTo(v, '枚')}のとき`],
   myDeck: v => [`自分の山札${v}枚以下`, `自分の山札の残りが${v}枚以下のとき`],
   foeDeck: v => [`相手の山札${v}枚以下`, `相手の山札の残りが${v}枚以下のとき`],
   guardN: v => [`手札に守りのカード${v}枚以上`, `手札に回避・防御のカードが合わせて${v}枚以上あるとき`],
@@ -95246,60 +96826,60 @@ const CARD_TACTIC_TEXT = Object.freeze({
   bigInHand: () => ['手札に大技がある', '手札に、払うガッツが4以上の攻撃のカードがあるとき'],
   areaInHand: () => ['手札に全体攻撃がある', '手札に、相手の全員に当たる攻撃のカードがあるとき'],
   breederInHand: () => ['手札にブリーダーのカードがある', '手札にブリーダーのカードが1枚以上あるとき'],
-  turnLe: v => [`自分の${v}ターン目まで`, `自分のターンが${v}回目までのとき(自分のはじめのターンが1回目)`],
+  turnLe: v => Number(v) === 1 ? ['自分の1ターン目', '自分の1回目のターンのとき'] : [`自分の${v}ターン目まで`, `自分のターンが1回目から${v}回目までのとき`],
   turnGe: v => [`自分の${v}ターン目から`, `自分のターンが${v}回目以降のとき`],
   myAlive: v => [`味方が残り${v}体`, `倒れていない自分のモンスターがちょうど${v}体のとき`],
   foeAlive: v => [`相手が残り${v}体`, `倒れていない相手のモンスターがちょうど${v}体のとき`],
   koDiff: v => [v === '勝っ' ? '倒した数で勝っている' : '倒した数で負けている', v === '勝っ' ? '倒した相手の数が、倒された味方の数より多いとき' : '倒された味方の数が、倒した相手の数より多いとき'],
-  foeStun: () => ['攻撃できない相手', '封じられていて、相手の次のターンに攻撃できない相手のモンスターを狙う'],
-  myStun: () => ['攻撃できない味方がいる', '封じられて攻撃できない自分のモンスターがいるとき'],
-  foeCharge: () => ['溜めている相手', '溜め技を使って、次の技のダメージが何倍にもなる相手のモンスターを狙う'],
+  foeStun: () => ['攻撃できない相手', '「攻撃できない」になっていて、次のターンに攻撃してこない相手のモンスターを狙う'],
+  myStun: () => ['攻撃できない味方がいる', '「攻撃できない」になっている自分のモンスターがいるとき'],
+  foeCharge: () => ['溜めている相手', '溜め技を使っていて、次の技のダメージが何倍にもなる相手のモンスターを狙う'],
   foeAir: () => ['空中に上がった相手', 'もとは地上・水中なのに、いま空中になっている相手のモンスターを狙う'],
   field: v => [`場に${v}全体カードがある`, `場に、${v === '自分の' ? '自分' : '相手'}が出した全体カードが残っているとき`],
-  foeBig: () => ['相手が大技を撃てそう', '相手のガッツが4以上で手札があり、相手のモンスターが使える大技(払うガッツ4以上)をいまのガッツ+1で払えるとき'],
-  myHandLe: v => [`自分の手札${v}枚以下`, `自分の手札が${v}枚以下のとき`],
+  foeBig: () => ['相手が大技を撃てそう', '相手のガッツが4以上で手札があり、相手のモンスターの大技(払うガッツ4以上)を、次のターンにガッツが1増えれば出せるとき'],
+  myHandLe: v => [`自分の手札${cardTacticUpTo(v, '枚')}`, `自分の手札が${cardTacticUpTo(v, '枚')}のとき`],
   breederN: () => ['手札にブリーダーのカード2枚以上', '手札にブリーダーのカードが2枚以上あるとき'],
   breederUnused: () => ['このターンまだブリーダーのカードを出していない', 'このターンに、まだブリーダーのカードを出していないとき'],
-  myGutsLe: v => [`自分のガッツ${v}以下`, `自分のガッツが${v}以下のとき`],
+  myGutsLe: v => [`自分のガッツ${cardTacticUpTo(v)}`, `自分のガッツが${cardTacticUpTo(v)}のとき`],
   myDiscard: v => [`自分の捨て札${v}枚以上`, `自分の捨て札が${v}枚以上のとき`],
   myKo: () => ['倒れた味方がいる', '自分のモンスターが1体でも倒れているとき'],
-  noField: () => ['場に全体カードが無い', 'どちらの全体カードも場に無いとき'],
-  selfLife: v => [`このモンスターのライフ${v}%以下`, `このカードを入れたモンスターの残りライフが最大の${v}%以下のとき(モンスターの枠に入れたときだけ当たる)`],
-  selfFresh: () => ['このモンスターがこのターンまだ攻撃していない', 'このカードを入れたモンスターが、このターンにまだ攻撃していないとき(モンスターの枠だけ)'],
-  selfType: v => [`このモンスターがいま${v}`, `このカードを入れたモンスターが、いま${v}にいるとき(モンスターの枠だけ)`],
-  selfStun: () => ['このモンスターが攻撃できない', 'このカードを入れたモンスターが封じられて攻撃できないとき(モンスターの枠だけ)'],
-  selfAdv: () => ['このモンスターが得意な相手', 'このカードを入れたモンスターが出せる手札の技に、相手の特徴(地上・空中・水中)でダメージが倍になるものがあるとき。その相手を狙う(モンスターの枠だけ)'],
-  incoming: v => [`受けるダメージ${v}以上`, `攻撃を受けたとき、受けるダメージの見込みが${v}以上なら(守るときだけ見る)`],
-  incomingKo: () => ['受けると倒れる', '攻撃を受けたとき、守らないと倒れるなら(守るときだけ見る)'],
-  incomingArea: () => ['全体攻撃を受けた', '受けた攻撃が、全員に当たる攻撃なら(守るときだけ見る)'],
-  tBalance: () => ['バランス型', '攻め・守り・ガッツ・大技・崩し・全体を同じくらいに見て、損得のいちばん良い使い方をする。とどめだけ少し優先'],
-  tAttack: () => ['攻め型', '攻撃を多めに出し(1.5倍重く)、ガッツはためず守りのカードも残さない。守るのは、受けると倒れるときだけ'],
-  tGuard: () => ['守り型', '守りのカードを残す(1.5倍重く)・攻撃は控えめ(0.7倍)。攻撃を受けたら、守れるときはいつも守る'],
-  tSave: () => ['溜め型', 'ガッツを多めにためて(1.6倍)、大技を優先する(1.8倍)'],
-  tDisrupt: () => ['崩し型', '相手の手札・山札・ガッツを減らすカードを優先する(1.8倍)'],
-  tBig: () => ['大技型', 'ダメージの大きい技を優先する(1.6倍)'],
-  tArea: () => ['全体型', '全員に当たる攻撃・全体カードを優先する(1.6倍)。相手が1体だけのときは全体攻撃を出さない'],
-  tFinish: () => ['仕留め型', 'あと少しで倒せる相手への攻撃を優先する(1.6倍)'],
-  tRush: () => ['速攻型', '攻撃を多めに(1.6倍)・大技は控えめ(0.7倍)。払うガッツが2以上の技は出さない。守るときもガッツ1以下の守りのカードだけ使う'],
-  tSteady: () => ['堅実型', '守りのカードとガッツを残し(1.3倍)、攻撃は控えめ(0.8倍)。自分も傷つく技は出さない'],
-  tJam: () => ['かく乱守り型', '崩すカード(1.3倍)と、守りのカードを残すこと(1.3倍)を両方重くする'],
-  tCalm: () => ['慎重型', 'いっしょに入れた基本カードの重みを半分に弱めて、極端な打ち方をしない'],
+  noField: () => ['場に全体カードが無い', '自分の全体カードも相手の全体カードも、場に無いとき'],
+  selfLife: v => [`このモンスターのライフ${v}%以下`, `このカードを入れたモンスターの残りライフが最大の${v}%以下のとき(モンスターの枠に入れたときだけ当てはまる)`],
+  selfFresh: () => ['このモンスターがこのターンまだ攻撃していない', 'このカードを入れたモンスターが、このターンにまだ攻撃していないとき(モンスターの枠に入れたときだけ)'],
+  selfType: v => [`このモンスターがいま${v}`, `このカードを入れたモンスターが、いま${v}にいるとき(モンスターの枠に入れたときだけ)`],
+  selfStun: () => ['このモンスターが攻撃できない', 'このカードを入れたモンスターが「攻撃できない」になっているとき(モンスターの枠に入れたときだけ)'],
+  selfAdv: () => ['このモンスターが得意な相手', 'このカードを入れたモンスターが出せる手札の技に、相手の特徴(地上・空中・水中)でダメージが倍になるものがあるとき。その相手を狙う(モンスターの枠に入れたときだけ)'],
+  incoming: v => [`受けるダメージ${v}以上`, `攻撃を受けたとき、受けるダメージの見込みが${v}以上なら(守るかどうかを決めるときだけ見る)`],
+  incomingKo: () => ['受けると倒れる', '攻撃を受けたとき、守らないと倒れるなら(守るかどうかを決めるときだけ見る)'],
+  incomingArea: () => ['全体攻撃を受けた', '受けた攻撃が、全員に当たる攻撃なら(守るかどうかを決めるときだけ見る)'],
+  tBalance: () => ['バランス型', '攻め・守り・ガッツ・大技・崩し・全体を同じくらいに見て、いちばん得になるカードを出す。とどめだけ少し優先する'],
+  tAttack: () => ['攻め型', '攻撃をふだんの1.5倍選びやすくする。ガッツはためず、守りのカードも手札に残さない。守るのは、受けると倒れるときだけ'],
+  tGuard: () => ['守り型', '守りのカードを手札に残しやすく(ふだんの1.5倍)、攻撃は控えめ(0.7倍)にする。攻撃を受けたら、守れるときはいつも守る(守っても倒れるのが変わらないときは除く)'],
+  tSave: () => ['溜め型', 'ガッツを多めにため(ふだんの1.6倍)、大技を選びやすくする(1.8倍)'],
+  tDisrupt: () => ['崩し型', '相手の手札・山札・ガッツを減らすカードを選びやすくする(ふだんの1.8倍)'],
+  tBig: () => ['大技型', 'ダメージの大きい技を選びやすくする(ふだんの1.6倍)'],
+  tArea: () => ['全体型', '全員に当たる攻撃・全体カードを選びやすくする(ふだんの1.6倍)。相手が1体だけのときは全体攻撃を出さない'],
+  tFinish: () => ['仕留め型', 'あと少しで倒せる相手への攻撃を選びやすくする(ふだんの1.6倍)'],
+  tRush: () => ['速攻型', '攻撃を選びやすく(ふだんの1.6倍)、大技は控えめ(0.7倍)にする。払うガッツが2以上の技は出さない。守るときも、払うガッツが1以下の守りのカードだけ使う'],
+  tSteady: () => ['堅実型', '守りのカードとガッツを残しやすく(ふだんの1.3倍)、攻撃は控えめ(0.8倍)にする。自分も傷つく技は出さない'],
+  tJam: () => ['かく乱守り型', '相手を崩すカードを選びやすく(ふだんの1.3倍)、守りのカードも手札に残しやすく(1.3倍)する'],
+  tCalm: () => ['慎重型', 'いっしょに入れたほかの基本カードの効き目を半分にして、極端な戦い方をしない'],
   tFlex: () => ['臨機応変型', 'ターンごとに場を見て、とどめ・全体攻撃・守り・攻めのどれか1つを強くする'],
-  tMill: () => ['持久型', '相手の山札を削る・相手に引かせる・ガッツを山札へ戻すカードを重くして、相手の山札切れで勝ちを狙う'],
-  tReckless: () => ['捨て身型', '守りのカードを残さず(0.5倍)、とどめを優先(1.3倍)。受けると倒れるとき以外は守らない'],
-  tHand: () => ['手札温存型', '使ったあとに手札が2枚以上残るときだけカードを使う。ガッツを置くときも手札を2枚残して置く'],
+  tMill: () => ['持久型', '相手の山札を削る・相手に引かせる・ガッツを山札へ戻すカードを選びやすくして、相手の山札切れで勝ちを狙う'],
+  tReckless: () => ['捨て身型', '守りのカードを手札に残さず(ふだんの0.5倍)、とどめを選びやすくする(1.3倍)。受けると倒れるとき以外は守らない'],
+  tHand: () => ['手札を残す型', '出したあとに手札が2枚以上残るときだけカードを出す。ターンの終わりに手札をガッツにするときも、2枚は手札に残す'],
   tDeck: () => ['山札節約型', 'カードを引く・山札からガッツへ・手札を引き直す・相手に引かせるカードは出さない'],
   tFocus: () => ['一点集中型', 'ライフの割合がいちばん低い相手への攻撃を優先して、倒れるまで同じ相手を狙う'],
-  tSpread: () => ['分散型', '全体攻撃を重くし(1.4倍)、ライフがいちばん多い相手への攻撃を優先する'],
-  tComeback: () => ['逆転型', '倒された数で負けている、または味方のライフの合計が半分以下なら捨て身(守り0.5倍・とどめ・大技・全体1.3倍)。それ以外は堅く(守り・ガッツ1.2倍)'],
-  atk: () => ['いちばん得な攻撃', 'このモンスターが出せる攻撃のうち、点数(ダメージ・とどめ・ガッツの損得)がいちばん高い攻撃をする'],
-  kind: v => [`${v}の技で攻撃`, `このモンスターの${v}の技のうち、点数がいちばん高い攻撃をする`],
+  tSpread: () => ['分散型', '全体攻撃を選びやすくし(ふだんの1.4倍)、ライフがいちばん多い相手への攻撃を優先する'],
+  tComeback: () => ['逆転型', '倒された数で負けている、または味方のライフの合計が半分以下なら、捨て身で戦う(守り0.5倍・とどめ・大技・全体1.3倍)。それ以外は堅く戦う(守り・ガッツ1.2倍)'],
+  atk: () => ['いちばん得な攻撃', 'このモンスターが出せる攻撃のうち、ダメージ・とどめ・払うガッツを見て、いちばん得な攻撃をする'],
+  kind: v => [`${v}の技で攻撃`, `このモンスターの${v}の技のうち、いちばん得な技で攻撃する`],
   cost: v => {
     const n = v.startsWith('軽い') ? '0〜1' : v.startsWith('中') ? '2〜3' : '4以上';
     const nm = v.startsWith('軽い') ? '軽い技' : v.startsWith('中') ? '中くらいの技' : '大技';
-    return [`${nm}で攻撃`, `このモンスターの技のうち、払うガッツが${n}の技で、点数がいちばん高い攻撃をする`];
+    return [`${nm}で攻撃`, `このモンスターの技のうち、払うガッツが${n}の技のうち、いちばん得なもので攻撃する`];
   },
-  reach: v => [v === '全体攻撃' ? '全体攻撃で攻撃' : '1体だけに攻撃', v === '全体攻撃' ? 'このモンスターの、相手の全員に当たる技のうち、点数がいちばん高い攻撃をする' : 'このモンスターの、1体だけに当てる技のうち、点数がいちばん高い攻撃をする'],
+  reach: v => [v === '全体攻撃' ? '全体攻撃で攻撃' : '1体だけに攻撃', v === '全体攻撃' ? 'このモンスターの、相手の全員に当たる技のうち、いちばん得な技で攻撃する' : 'このモンスターの、1体だけに当てる技のうち、いちばん得な技で攻撃する'],
   eff: v => {
     const d = {
       回避されない: '相手が回避できない技',
@@ -95315,10 +96895,10 @@ const CARD_TACTIC_TEXT = Object.freeze({
       手札に戻る: '当たると手札に戻ってくる技',
       カード投げ: 'カードを投げてダメージを足す技'
     }[v];
-    return [`「${v}」の技で攻撃`, `このモンスターの、${d}のうち、点数がいちばん高い攻撃をする`];
+    return [`「${v}」の技で攻撃`, `このモンスターの、${d}のうち、いちばん得な技で攻撃する`];
   },
-  attach: () => ['付けるカードといっしょに攻撃', '技に付けるカードをいっしょに出す攻撃のうち、点数がいちばん高いものを出す'],
-  attachKind: v => [`付けるカード(${v})といっしょに攻撃`, `「${v}」付けるカードをいっしょに出す攻撃のうち、点数がいちばん高いものを出す`],
+  attach: () => ['付けるカードといっしょに攻撃', '技に付けるカードをいっしょに出す攻撃のうち、いちばん得なものを出す'],
+  attachKind: v => [`付けるカード(${v})といっしょに攻撃`, `「${v}」の付けるカードをいっしょに出す攻撃のうち、いちばん得なものを出す`],
   spe: v => {
     const d = {
       味方を回復: '味方のライフを回復する',
@@ -95331,12 +96911,12 @@ const CARD_TACTIC_TEXT = Object.freeze({
     return [`特殊技で${d}`, `このモンスターの特殊技のうち、${d}技を出す`];
   },
   stance: v => ({
-    この子から攻める: ['このモンスターが攻める', '当てはまったら、このモンスターの攻撃で点数がいちばん高い攻撃をする'],
-    この子は攻撃しない: ['このモンスターは攻撃しない', '当てはまったら、このターンはこのモンスターに攻撃させない(このあとの戦術カード・基本カードの打ち方でも攻撃させない)'],
-    ライフの多い子が先に: ['いちばん元気なら攻める', 'このモンスターが味方でいちばんライフが多いときだけ、このモンスターの攻撃で点数がいちばん高い攻撃をする'],
-    ライフの少ない子は温存: ['いちばん弱っていたら休む', '味方が2体以上いて、このモンスターのライフがいちばん少ないとき、このターンは攻撃させない'],
+    この子から攻める: ['このモンスターから攻める', '当てはまったら、このモンスターで、いちばん得な攻撃をする'],
+    この子は攻撃しない: ['このモンスターは攻撃しない', '当てはまったら、このターンはこのモンスターに攻撃させない(このあとの戦術カード・基本カードでも攻撃させない)'],
+    ライフの多い子が先に: ['いちばん元気なら攻める', 'このモンスターが味方の中でいちばんライフが多いときだけ、このモンスターで、いちばん得な攻撃をする'],
+    ライフの少ない子は温存: ['いちばん弱っていたら休む', '味方が2体以上いて、このモンスターのライフがいちばん少ないときは、このターンは攻撃させない(休ませる)'],
     攻撃は1回だけ: ['攻撃は1回だけ', 'このターンにまだ攻撃していなければ攻撃する。1回攻撃したら、このターンはもう攻撃させない'],
-    何回でも攻める: ['何回でも攻める', '点数が少し低い攻撃でも出して、このモンスターの攻撃を続ける']
+    何回でも攻める: ['何回でも攻める', '少し損な攻撃でも出して、このモンスターで攻撃を続ける']
   })[v],
   disrupt: v => ({
     手札を捨てさせる: ['相手の手札を捨てさせる', '相手の手札を捨てさせる・山札の下へ戻すカードを使う'],
@@ -95344,13 +96924,13 @@ const CARD_TACTIC_TEXT = Object.freeze({
     ガッツを減らす: ['相手のガッツを減らす', '相手のガッツを減らす・0にするカードを使う'],
     番を飛ばす: ['相手のターンを飛ばす', '相手の次のターンを飛ばすカードを使う']
   })[v],
-  guard: () => ['守る', 'このモンスターが攻撃を受けたら、手札の守りのカードでいちばん良い守り方をする'],
-  guardFirst: v => [`${v}で守る`, `このモンスターが攻撃を受けたら、${v === '回避' || v === '防御' ? v + 'のカード' : '「' + v + '」のカード'}だけで守る(無ければ次のカードを見る)`],
+  guard: () => ['守る', 'このモンスターが攻撃を受けたら、手札の守りのカードでいちばん良い守り方をする。守っても倒れるのが変わらないときは、守らずに受ける'],
+  guardFirst: v => [`${v}で守る`, `このモンスターが攻撃を受けたら、${v === '回避' || v === '防御' ? v + 'のカード' : '「' + v + '」のカード'}だけで守る(そのカードが無ければ、次の戦術カードへ進む)。守っても倒れるのが変わらないときは、守らずに受ける`],
   guardOver: v => [`ダメージ${v}以上だけ守る`, `このモンスターが攻撃を受けたとき、受けるダメージの見込みが${v}より小さければ守らずに受ける。${v}以上なら守る`],
-  guardDie: () => ['倒れるときだけ守る', 'このモンスターが攻撃を受けたとき、受けても倒れなければ守らずに受ける。倒れるときだけ守る'],
-  cover: () => ['かばうカードで守る', 'このモンスターが攻撃を受けたら、かばう・身代わりのカードで守る'],
-  noGuard: () => ['守らない', 'このモンスターが攻撃を受けても、守りのカードを使わずに受ける(カードを残す)'],
-  charge: () => ['溜め技を使う', '次の技のダメージを何倍にするカード(溜め・怒り・次のターンの技を倍)を使う'],
+  guardDie: () => ['倒れるときだけ守る', 'このモンスターが攻撃を受けたとき、受けても倒れなければ守らずに受ける。倒れるときだけ守る。守っても倒れるのが変わらないときは、守らずに受ける'],
+  cover: () => ['かばうカードで守る', 'このモンスターが攻撃を受けたら、かばう・身代わりのカードで守る。守っても倒れるのが変わらないときは、守らずに受ける'],
+  noGuard: () => ['守らない', 'このモンスターが攻撃を受けても、守りのカードを使わずに受ける(守りのカードは手札に残す)'],
+  charge: () => ['溜め技を使う', '次の技のダメージを何倍にもするカード(溜め・怒り・次のターンの技を倍)を使う'],
   chargeKind: v => (w => [`溜め(${w})を使う`, `「${w}」の溜めのカードを使う`])(v === '次の番の技を倍' ? '次のターンの技を倍' : v),
   bEff: v => {
     const d = {
@@ -95369,40 +96949,40 @@ const CARD_TACTIC_TEXT = Object.freeze({
       付ける札をただにする: '付けるカードの払うガッツを0にする',
       守りを名指しで封じる: '相手の守りを名指しで封じる',
       捨て札を山札に戻す: 'ガッツを山札に戻して切り直す',
-      小さく攻撃する: 'ダメージのあるブリーダーのカードで攻撃する'
+      小さく攻撃する: '相手にダメージを与える'
     }[v];
     return [`ブリーダー: ${d}`, `手札のブリーダーのカードのうち、${d}カードを出す`];
   },
   fieldCard: () => ['全体カードを出す', '手札の全体カード(場に残るカード)を出す'],
   fieldKind: v => [`全体カード: ${v}`, `手札の全体カードのうち、「${v}」の全体カードを場に出す`],
-  save: () => ['ガッツを多めにためる', 'ガッツを置くときに、ふだんより多くの手札をガッツに置く'],
-  gutsN: v => [`ガッツを${v}枚置く`, `ガッツを置くときに、手札から${v}枚だけガッツに置く`],
-  keepGuard: () => ['守りのカードは置かない', 'ガッツを置くときに、回避・防御のカードはガッツに置かない'],
-  gutsOrder: v => [v === '重い札' ? '重いカードからガッツに置く' : '使えないカードからガッツに置く', v === '重い札' ? 'ガッツに置く枚数はふだんどおり。払うガッツの大きいカードから先に置く' : 'ガッツに置く枚数はふだんどおり。場のモンスターが使えないカードから先に置く'],
-  stop: () => ['このターンの攻撃をやめる', '当てはまったら、このターンの攻撃をここで終える'],
-  ace: () => ['切りカードを出す', '登録で選んだ切りカードが手札にあれば、それを先に使う'],
-  holdBreeder: () => ['ブリーダーのカードを温存', '当てはまったら、このターンはブリーダーのカード(全体カードも)を出さない。ほかのカードはそのまま使う']
+  save: () => ['ガッツを多めにためる', 'ターンの終わりに、ふだんより多くの手札をガッツにする'],
+  gutsN: v => Number(v) === 0 ? ['手札をガッツにしない', 'ターンの終わりに、手札をガッツにしない。ただし、手札が5枚いっぱいで、そのターンに攻撃もブリーダーのカードも出せなかったときは、守りのカード2枚と切り札、ほかに1枚だけ手札に残して、残りをガッツにする(手札が動かなくなるのを防ぐ)'] : [`手札を${v}枚ガッツにする`, `ターンの終わりに、手札を${v}枚だけガッツにする`],
+  keepGuard: () => ['守りのカードを3枚まで残す', 'ターンの終わりに手札をガッツにするとき、回避・防御のカードは3枚まで手札に残す(4枚目からはふだんどおりガッツにする)。手札が5枚いっぱいで、そのターンに攻撃もブリーダーのカードも出せなかったときは、守りのカード3枚と切り札、ほかに1枚だけ手札に残して、残りをガッツにする'],
+  gutsOrder: v => [v === '重い札' ? '重いカードから先にガッツにする' : '使えないカードから先にガッツにする', v === '重い札' ? 'ガッツにする枚数はふだんどおり。払うガッツの多いカードから先にガッツにする' : 'ガッツにする枚数はふだんどおり。場のモンスターが使えないカードから先にガッツにする'],
+  stop: () => ['このターンの攻撃をやめる', '当てはまったら、このターンはここで攻撃を終える'],
+  ace: () => ['切り札を出す', '登録で選んだ切り札が手札にあれば、先に出す'],
+  holdBreeder: () => ['ブリーダーのカードを出さない', '当てはまったら、このターンはブリーダーのカード(全体カードも)を出さない。ほかのカードはふだんどおり出す']
 });
 const cardTacticPct = v => v === 50 ? '半分' : `${v / 10}割`;
 const CARD_TACTIC_LINE = Object.freeze({
   any: () => 'いつでも(ほかの条件なしで、いつも)',
-  ko: () => 'いまの手札とガッツで倒しきれる相手がいるとき(その相手をねらう)',
-  lowest: () => 'ライフがいちばん少ない相手をねらうとき',
-  highest: () => 'ライフがいちばん多い相手をねらうとき',
-  strongest: () => 'いちばん強い技をもつ相手をねらうとき',
-  attacker: () => '前のターンに攻撃してきた相手をねらうとき',
-  leader: () => '相手のリーダー(1体目)が残っているとき(その相手をねらう)',
-  type: v => `${v}にいる相手がいるとき(その相手をねらう)`,
-  blood: v => `${v}の相手がいるとき(その相手をねらう)`,
-  species: () => '決めた種族の相手がいるとき(その相手をねらう)',
-  foeLife: v => `ライフが${cardTacticPct(v)}以下の相手がいるとき(その相手をねらう)`,
-  myLife: v => `ライフが${cardTacticPct(v)}以下の味方がいるとき(守るカードなら、その味方を守る)`,
+  ko: () => 'いまの手札とガッツで倒せる相手がいるとき(その相手を狙う)',
+  lowest: () => 'ライフがいちばん少ない相手を狙うとき',
+  highest: () => 'ライフがいちばん多い相手を狙うとき',
+  strongest: () => 'いちばん強い技をもつ相手を狙うとき',
+  attacker: () => '前のターンに攻撃してきた相手を狙うとき',
+  leader: () => '相手のリーダー(1体目)が残っているとき(その相手を狙う)',
+  type: v => `${v}にいる相手がいるとき(その相手を狙う)`,
+  blood: v => `${v}の相手がいるとき(その相手を狙う)`,
+  species: () => '決めた種族の相手がいるとき(その相手を狙う)',
+  foeLife: v => `ライフが${cardTacticPct(v)}以下の相手がいるとき(その相手を狙う)`,
+  myLife: v => `ライフが${cardTacticPct(v)}以下の味方がいるとき(守るカードと組むと、その味方を守る)`,
   myGuts: v => `自分のガッツが${v}以上たまっているとき`,
-  foeGutsLe: v => `相手のガッツが${v}以下しかないとき`,
+  foeGutsLe: v => Number(v) === 0 ? '相手のガッツが0のとき' : `相手のガッツが${v}以下しかないとき`,
   foeGutsGe: v => `相手のガッツが${v}以上たまっているとき`,
   myHand: v => `自分の手札が${v}枚以上あるとき`,
   foeHandGe: v => `相手の手札が${v}枚以上あるとき`,
-  foeHandLe: v => `相手の手札が${v}枚以下しかないとき`,
+  foeHandLe: v => Number(v) === 0 ? '相手の手札が0枚のとき' : `相手の手札が${v}枚以下しかないとき`,
   myDeck: v => `自分の山札が残り${v}枚以下のとき`,
   foeDeck: v => `相手の山札が残り${v}枚以下のとき`,
   guardN: v => `手札に守りのカードが${v}枚以上あるとき`,
@@ -95410,21 +96990,21 @@ const CARD_TACTIC_LINE = Object.freeze({
   bigInHand: () => '手札に大技(ガッツ4以上)があるとき',
   areaInHand: () => '手札に全体攻撃があるとき',
   breederInHand: () => '手札にブリーダーのカードがあるとき',
-  turnLe: v => `自分の${v}ターン目までのとき(はじめのうち)`,
+  turnLe: v => Number(v) === 1 ? '自分の1ターン目のとき(はじめのうち)' : `自分の${v}ターン目までのとき(はじめのうち)`,
   turnGe: v => `自分の${v}ターン目からのとき(終わりのほう)`,
   myAlive: v => `味方が残り${v}体のとき`,
   foeAlive: v => `相手が残り${v}体のとき`,
   koDiff: v => v === '勝っ' ? '倒した数で勝っているとき' : '倒した数で負けているとき',
-  foeStun: () => '攻撃できない相手がいるとき(その相手をねらう)',
+  foeStun: () => '攻撃できない相手がいるとき(その相手を狙う)',
   myStun: () => '攻撃できない味方がいるとき',
-  foeCharge: () => '溜めている相手がいるとき(その相手をねらう)',
-  foeAir: () => '空中に上がった相手がいるとき(その相手をねらう)',
+  foeCharge: () => '溜めている相手がいるとき(その相手を狙う)',
+  foeAir: () => '空中に上がった相手がいるとき(その相手を狙う)',
   field: v => `場に${v}全体カードがあるとき`,
   foeBig: () => '相手の大技が来そうなとき',
-  myHandLe: v => `自分の手札が${v}枚以下しかないとき`,
+  myHandLe: v => Number(v) === 0 ? '自分の手札が0枚のとき' : `自分の手札が${v}枚以下しかないとき`,
   breederN: () => '手札にブリーダーのカードが2枚以上あるとき',
   breederUnused: () => 'このターン、まだブリーダーのカードを出していないとき',
-  myGutsLe: v => `自分のガッツが${v}以下しかないとき`,
+  myGutsLe: v => Number(v) === 0 ? '自分のガッツが0のとき' : `自分のガッツが${v}以下しかないとき`,
   myDiscard: v => `自分の捨て札が${v}枚以上たまったとき`,
   myKo: () => '倒れた味方がいるとき',
   noField: () => '場に全体カードが1枚も無いとき',
@@ -95432,34 +97012,34 @@ const CARD_TACTIC_LINE = Object.freeze({
   selfFresh: () => 'このモンスターが、このターンまだ攻撃していないとき',
   selfType: v => `このモンスターがいま${v}にいるとき`,
   selfStun: () => 'このモンスターが攻撃できないとき',
-  selfAdv: () => 'このモンスターの得意な相手がいるとき(ダメージが倍になる相手をねらう)',
+  selfAdv: () => 'このモンスターの得意な相手がいるとき(ダメージが倍になる相手を狙う)',
   incoming: v => `${v}ダメージ以上の攻撃を受けたとき`,
   incomingKo: () => '受けると倒れる攻撃が来たとき',
   incomingArea: () => '全体攻撃を受けたとき',
-  tBalance: () => '攻めも守りも、いちばん得になるように打つ',
+  tBalance: () => '攻めも守りも、いちばん得になるようにカードを出す',
   tAttack: () => 'どんどん攻撃する。守るのは倒れそうなときだけ',
-  tGuard: () => '守りのカードをとっておき、攻撃を受けたらできるだけ守る',
-  tSave: () => 'ガッツを多めにためて、大技をねらう',
+  tGuard: () => '守りのカードを手札に残し、攻撃を受けたらできるだけ守る',
+  tSave: () => 'ガッツを多めにためて、大技を狙う',
   tDisrupt: () => '相手の手札・山札・ガッツを減らすカードを先に使う',
   tBig: () => 'ダメージの大きい技を先に使う',
   tArea: () => '全体攻撃・全体カードを先に使う',
   tFinish: () => 'あと少しで倒せる相手から攻撃する',
   tRush: () => '軽い技でどんどん攻撃する(大技は使わない)',
   tSteady: () => '守りのカードとガッツを残して、むりせず攻撃する',
-  tJam: () => '相手を崩しながら、守りのカードもとっておく',
-  tCalm: () => 'いっしょに入れた型を弱めて、かたよらずに打つ',
+  tJam: () => '相手を崩しながら、守りのカードも手札に残す',
+  tCalm: () => 'いっしょに入れた基本カードの効き目を弱めて、かたよらずに戦う',
   tFlex: () => 'ターンごとに場を見て、攻め・守り・とどめを切りかえる',
-  tMill: () => '相手の山札を減らして、山札切れで勝ちをねらう',
+  tMill: () => '相手の山札を減らして、山札切れで勝ちを狙う',
   tReckless: () => '守らずに、とどめをねらって攻撃する',
-  tHand: () => '手札を2枚以上残しながら打つ',
-  tDeck: () => '山札を減らすカードは使わずに打つ',
+  tHand: () => '手札がいつも2枚以上残るようにカードを出す',
+  tDeck: () => '山札を減らすカードは使わずに戦う',
   tFocus: () => '同じ相手を、倒れるまでねらい続ける',
   tSpread: () => 'ライフの多い相手や全員に、ばらしてダメージを与える',
-  tComeback: () => '負けているときは捨て身で、勝っているときは堅く打つ',
+  tComeback: () => '負けているときは捨て身で、勝っているときは堅く戦う',
   atk: () => 'いちばん良い技で攻撃する',
   kind: v => `${v}の技で攻撃する`,
   cost: v => /^軽い/.test(v) ? '軽い技(ガッツ0〜1)で攻撃する' : /^中/.test(v) ? '中くらいの技(ガッツ2〜3)で攻撃する' : '大技(ガッツ4以上)で攻撃する',
-  reach: v => v === '全体攻撃' ? '全体攻撃で攻撃する' : '1体だけをねらう技で攻撃する',
+  reach: v => v === '全体攻撃' ? '全体攻撃で攻撃する' : '1体だけを狙う技で攻撃する',
   eff: v => `「${v}」の技で攻撃する`,
   attach: () => '付けるカードといっしょに攻撃する',
   attachKind: v => `「${v}」の付けるカードといっしょに攻撃する`,
@@ -95474,8 +97054,8 @@ const CARD_TACTIC_LINE = Object.freeze({
   stance: v => ({
     この子から攻める: 'このモンスターから先に攻撃する',
     この子は攻撃しない: 'このモンスターは攻撃しない',
-    ライフの多い子が先に: 'ライフの多い味方から先に攻撃する',
-    ライフの少ない子は温存: 'ライフの少ない味方は攻撃させずに温存する',
+    ライフの多い子が先に: 'このモンスターのライフが味方でいちばん多いとき、攻撃する',
+    ライフの少ない子は温存: 'このモンスターのライフが味方でいちばん少ないとき、攻撃させずに休ませる',
     攻撃は1回だけ: 'このターンの攻撃は1回だけにする',
     何回でも攻める: '出せるだけ何回でも攻撃する'
   })[v] || v,
@@ -95488,21 +97068,21 @@ const CARD_TACTIC_LINE = Object.freeze({
   guard: () => '攻撃を受けたら、いちばん良い守り方で守る',
   guardFirst: v => `攻撃を受けたら、${v}のカードで守る`,
   guardOver: v => `${v}ダメージ以上の攻撃だけ守る(小さい攻撃は受ける)`,
-  guardDie: () => '倒れそうなときだけ守る',
+  guardDie: () => '受けると倒れるときだけ守る',
   cover: () => 'かばう・身代わりのカードで守る',
-  noGuard: () => '守らずに受ける(守りのカードをとっておく)',
+  noGuard: () => '守らずに受ける(守りのカードは手札に残す)',
   charge: () => '溜め技で、次の技を強くする',
   chargeKind: v => `溜め(${v === '次の番の技を倍' ? '次のターンの技を倍' : v})で、次の技を強くする`,
-  bEff: v => `ブリーダーのカードで「${v}」をする`,
+  bEff: v => `ブリーダーのカードで${CARD_TACTIC_TEXT.bEff(v)[0].replace(/^ブリーダー: /, '')}`,
   fieldCard: () => '全体カードを場に出す',
   fieldKind: v => `全体カード「${v}」を場に出す`,
-  save: () => 'ガッツを多めにためる',
-  gutsN: v => `ガッツを${v}枚だけ置く`,
-  keepGuard: () => '守りのカードはガッツに置かずにとっておく',
-  gutsOrder: v => v === '重い札' ? '重いカードからガッツに置く' : '使えないカードからガッツに置く',
+  save: () => 'ターンの終わりに、手札を多めにガッツにする',
+  gutsN: v => Number(v) === 0 ? '手札をガッツにしない(何もできず手札がいっぱいのときだけ入れかえる)' : `手札を${v}枚だけガッツにする`,
+  keepGuard: () => '守りのカードは3枚まで、ガッツにしないで手札に残す',
+  gutsOrder: v => v === '重い札' ? '重いカードから先にガッツにする' : '使えないカードから先にガッツにする',
   stop: () => 'このターンの攻撃をやめる',
-  ace: () => '切りカードを先に出す',
-  holdBreeder: () => 'ブリーダーのカードを出さずにとっておく'
+  ace: () => '切り札を先に出す',
+  holdBreeder: () => 'このターンはブリーダーのカードを出さない'
 });
 const cardTacticTextOf = (g, v) => {
   const t = CARD_TACTIC_TEXT[g.id] ? CARD_TACTIC_TEXT[g.id](v) : null;
@@ -95603,8 +97183,8 @@ const cardTacticSmartLevel = frames => {
   const base = f.base.filter(Boolean).length;
   const rows = cardTacticCountedRows(f);
   if (base >= 3 && rows >= 10) return 'legend';
-  if (base >= 3 && rows >= 7) return 'hell';
-  if (base >= 3 && rows >= 4) return 'grandmaster';
+  if (base >= 2 && rows >= 9) return 'hell';
+  if (base >= 2 && rows >= 6) return 'grandmaster';
   if (base >= 2 || rows >= 4) return 'master';
   return 'expert';
 };
@@ -95655,6 +97235,8 @@ const cardTacticRandomAct = (db, st, policy, rand = Math.random) => {
 };
 const CARD_TACTIC_DIMS = Object.freeze(['attack', 'keepGuard', 'saveGuts', 'big', 'disrupt', 'area', 'finish']);
 const CARD_TACTIC_SUB_W = 1 / 3;
+const cardTacticSameAsHabit = (c, habitId) => !!habitId && !!c && (CARD_TACTIC_GROUPS.find(x => x.id === c.g) || {}).habit === habitId;
+const CARD_TACTIC_ROW_LOSS_MAX = 2;
 const cardTacticPresetOf = card => {
   const g = CARD_TACTIC_GROUPS.find(x => x.id === card.g) || {};
   if (g.habit) return {
@@ -95665,7 +97247,7 @@ const cardTacticPresetOf = card => {
   };
   return {};
 };
-const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null, when = null) => {
+const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null, when = null, onHabit = false, habitId = null) => {
   const subW = i => st && Array.isArray(when) && typeof when[i] === 'string' && typeof cardAiTacticWhenHit === 'function' && cardAiTacticWhenHit(when[i], st, p) ? 1 : CARD_TACTIC_SUB_W;
   const list = (Array.isArray(base) ? base : []).map((id, i) => ({
     c: cardTacticOf(id),
@@ -95681,7 +97263,8 @@ const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null, when = null
     w,
     main
   }) => {
-    if (mainHabit && main) return;
+    if (mainHabit && main && !onHabit) return;
+    if (onHabit && cardTacticSameAsHabit(c, habitId)) return;
     const pre = cardTacticPresetOf(c);
     CARD_TACTIC_DIMS.forEach(d => {
       if (Number.isFinite(pre[d])) h[d] *= 1 + (pre[d] - 1) * w;
@@ -95716,12 +97299,12 @@ const cardTacticHabitOf = (base, st = null, p = 0, mainHabit = null, when = null
   }
   return h;
 };
-const cardTacticKnobsOf = (base, st = null, p = 0, skipMain = false) => {
+const cardTacticKnobsOf = (base, st = null, p = 0, skipMain = false, habitId = null) => {
   const turn = st ? cardTacticOwnTurn(st, p) : 0;
   const out = {};
   (Array.isArray(base) ? base : []).forEach((id, i) => {
     const c = cardTacticOf(id);
-    if (!c || c.cat !== 'base' || i > 0 && turn % 3 !== 0 || i === 0 && skipMain) return;
+    if (!c || c.cat !== 'base' || i > 0 && turn % 3 !== 0 || i === 0 && skipMain || cardTacticSameAsHabit(c, habitId)) return;
     const g = CARD_TACTIC_GROUPS.find(x => x.id === c.g) || {};
     Object.assign(out, g.knob || {});
   });
@@ -96004,7 +97587,7 @@ const cardTacticAttackFits = (db, st, act, o) => {
     case 'cost':
       {
         if (o.type !== 'attack') return false;
-        const g = cardActionCost(db, st, st.active, me.hand, o.hand);
+        const g = cardActionCost(db, st, st.active, me.hand, o.hand, o.mon);
         return v.startsWith('軽い') ? g <= 1 : v.startsWith('中') ? g >= 2 && g <= 3 : g >= cardTacticBigCost;
       }
     case 'reach':
@@ -96052,9 +97635,12 @@ const cardTacticRowAct = (db, st, policy, phase, row, aim, ctx) => {
   const usable = o => !(o.type === 'attack' && ctx.skip.has(o.mon)) && !(ctx.noBreeder && (o.type === 'breeder' || o.hand.some(i => (cardOf(db, me.hand[i]) || {}).user === 'breeder')));
   const pickBest = (fits, floor = 0) => {
     const best = ctx.scored().find(x => x.s > floor && usable(x.o) && fits(x.o) && cardTacticAimsAt(st, x.o, aim.foes));
-    return best ? {
+    if (!best) return null;
+    const top = ctx.scored().find(x => usable(x.o));
+    if (policy.gambitOnHabit && top && best.s < top.s - CARD_TACTIC_ROW_LOSS_MAX) return null;
+    return {
       act: cardAiFillBind(db, st, best.o, policy)
-    } : null;
+    };
   };
   if (act.g === 'ace') {
     const aces = Array.isArray(policy.aces) ? policy.aces : [];
@@ -96183,8 +97769,8 @@ const cardTacticBaseAttack = (db, st, policy, knobs, ctx) => {
     if (o.type === 'attack' && ctx.skip.has(o.mon)) return false;
     if (ctx.noBreeder && (o.type === 'breeder' || o.hand.some(i => (cardOf(db, me.hand[i]) || {}).user === 'breeder'))) return false;
     const e = effs(o);
-    if (knobs.light && o.type === 'attack' && cardActionCost(db, st, p, me.hand, o.hand) > 1) return false;
-    if (knobs.safe && e.some(t => /^selfDamage|^attachSelfIfHit$|^selfHurt$/.test(t))) return false;
+    if (knobs.light && o.type === 'attack' && cardActionCost(db, st, p, me.hand, o.hand, o.mon) > 1) return false;
+    if (knobs.safe && e.some(t => /^selfDamage|^attachSelfIfHit$|^selfHurt$/.test(t)) && !cardAiWinsBy(db, st, o, p)) return false;
     if (knobs.noDraw && e.some(t => ['draw', 'rush', 'deckToGuts', 'refresh', 'oppDraw'].includes(t))) return false;
     if (knobs.keepHand && me.hand.length - o.hand.length < knobs.keepHand) return false;
     if (knobs.areaMin2 && foes.length < 2 && e.includes('area')) return false;
@@ -96221,8 +97807,9 @@ const cardTacticDecide = (db, st, policy) => {
     act: cardTacticRandomAct(db, st, policy)
   };
   const p = phase === 'guard' ? st.pending.defender : st.active;
-  const habit = cardTacticHabitOf(frames.base, st, p, policy.gambitKeepMain ? policy.habit : null, policy.gambitWhen || null);
-  const knobs = cardTacticKnobsOf(frames.base, st, p, !!policy.gambitKeepMain);
+  const sameId = policy.gambitOnHabit ? policy.gambitHabitId || null : null;
+  const habit = cardTacticHabitOf(frames.base, st, p, policy.gambitKeepMain || policy.gambitOnHabit ? policy.habit : null, policy.gambitWhen || null, !!policy.gambitOnHabit, sameId);
+  const knobs = cardTacticKnobsOf(frames.base, st, p, !!policy.gambitKeepMain, sameId);
   const pol = habit ? {
     ...policy,
     habit
@@ -96259,7 +97846,11 @@ const cardTacticDecide = (db, st, policy) => {
     rows: frames.breeder,
     mi: null
   });
+  const searchFirst = phase === 'attack' && !!policy.search;
+  let hint = null,
+    hintWhy = null;
   for (const fr of order) {
+    if (hint) break;
     if (phase === 'attack' && fr.mi !== null && st.players[p].mons[fr.mi] && st.players[p].mons[fr.mi].ko) continue;
     for (const row of fr.rows) {
       if (!row.on) continue;
@@ -96270,6 +97861,16 @@ const cardTacticDecide = (db, st, policy) => {
       if (!aim) continue;
       ctx.mi = fr.mi;
       const got = cardTacticRowAct(db, st, pol, phase, row, aim, ctx);
+      if (got && searchFirst) {
+        hint = got.act;
+        hintWhy = {
+          c: row.c,
+          a: row.a,
+          mi: fr.mi,
+          phase
+        };
+        break;
+      }
       if (got) {
         cardTacticLastWhy = {
           c: row.c,
@@ -96280,6 +97881,21 @@ const cardTacticDecide = (db, st, policy) => {
         return got;
       }
     }
+  }
+  if (searchFirst) {
+    if (!hint && (ctx.skip.size || ctx.noBreeder || ['light', 'safe', 'noDraw', 'keepHand', 'focus', 'spread', 'areaMin2'].some(k => knobs[k]))) {
+      const b = cardTacticBaseAttack(db, st, pol, knobs, ctx);
+      hint = b && b.act;
+    }
+    return {
+      policy: {
+        ...pol,
+        searchHint: hint || null,
+        searchHintWhy: hintWhy,
+        searchSkip: [...ctx.skip],
+        searchNoBreeder: ctx.noBreeder
+      }
+    };
   }
   if (phase === 'attack' && (ctx.skip.size || ctx.noBreeder || ['light', 'safe', 'noDraw', 'keepHand', 'focus', 'spread', 'areaMin2'].some(k => knobs[k]))) return cardTacticBaseAttack(db, st, pol, knobs, ctx);
   if (phase === 'guard') {
@@ -96510,9 +98126,9 @@ const CARD_SHARE_SEARCH = Object.freeze({
     eval: 'ko'
   }),
   hell: Object.freeze({
-    k: 4,
-    r: 2,
-    h: 4,
+    k: 3,
+    r: 1,
+    h: 2,
     eval: 'ko'
   }),
   legend: Object.freeze({
@@ -96540,6 +98156,8 @@ const cardSharePolicy = (tactics, levelId, opts = {}) => {
     return {
       ...base,
       gambit: frames,
+      gambitOnHabit: true,
+      gambitHabitId: t.habit,
       aces: t.aces.slice(),
       ...(search ? {
         search
@@ -98181,7 +99799,7 @@ const CARD_PACKS = Object.freeze([{
 }, {
   id: 'p7',
   no: 7,
-  species: ['zilla', 'metalner', 'joker'],
+  species: ['zilla', 'metalner', 'joker', 'kyubi'],
   color: '#14b8a6'
 }, {
   id: 'p8',
@@ -98790,6 +100408,126 @@ Object.entries(CARD_MOTION_SPECS).forEach(([kind, sp]) => {
 const CARD_MOTION_RULES = Object.freeze([[/コンビネーション|ラッシュ|連|乱れ|3段|三段|マシンガン|ダブル|ワンツー|ポカポカ|わらわら/, 'cardCombo'], [/ブレス/, 'cardBreath'], [/デス|死神|ドクロ|悪夢|冥|ソウル|シャドー|闇/, 'cardDark'], [/プレス|ふみつけ|ボディ|たおれこみ|ヒップ|ドロップ|メテオ/, 'cardPress'], [/ドリル|ニードル|針|ターン/, 'cardDrill'], [/ハンマー|げんこつ|たたき|ごっちん|ボンバ/, 'cardHammer'], [/剣|ソード|ブレード|スラッシュ|斬/, 'cardSword'], [/しっぽ/, 'cardTail'], [/キッス|ぺろ|なめ|ベロ|舌/, 'cardKiss'], [/歌|うた|ソング|音/, 'cardSong'], [/雷|電撃|ライトニング|サンダー|稲妻|放電/, 'cardThunder'], [/炎|火|ファイア|フレイム|熱|バーニング/, 'cardFire'], [/冷|氷|ブリザード|吹雪|凍/, 'cardIce'], [/水|泡|ツバ|しぶき|ウォーター/, 'cardWater'], [/ビーム|レーザー|キャノン|砲|光線/, 'cardBeam'], [/光|聖|ビッグバン/, 'cardLight'], [/魔空|ドレイン|弾|玉|波動|念/, 'cardOrb'], [/毒|ガス|おなら|胞子/, 'cardGas'], [/葉|花|さくら|種|つる/, 'cardLeaf'], [/岩|石|地震|ロック/, 'cardRock'], [/投げ/, 'cardThrow'], [/回転|ぐるぐる|竜巻|スピン|旋風|まわし/, 'cardSpin'], [/剣|斬|まっぷたつ|Vの字|居合|カッター/, 'cardBlade'], [/かみ|噛|かじ/, 'cardBite'], [/ひっかき|爪|ツノ|クロー|突き|つき|くしざし|ヤリ|槍/, 'cardClaw'], [/キック|けり|蹴|ひざ/, 'cardKick'], [/体当たり|タックル|頭つき|突進|ダッシュ|ころがる|転がる/, 'cardDash'], [/パンチ|チョップ|はたき|ソバット|ビンタ|でこぴん|こぶし|殴/, 'cardJab']]);
 const CARD_SPECIAL_MOTION_RULES = Object.freeze([[/歌|うた|ソング|音|笛|おどり|踊/, 'cardSpeSong'], [/偵察|にらむ|睨|見|挑発|のぞ|ガン/, 'cardSpeEye']]);
 const CARD_MOTION_BY_NO = Object.freeze({});
+const CARD_KYUBI_PALETTE = Object.freeze({
+  Kyubi: {
+    blue: 'blue',
+    bh: 205,
+    fire: 'fire',
+    fh: 22,
+    star: 'gold'
+  },
+  Orihime: {
+    blue: 'sky',
+    bh: 195,
+    fire: 'cosmic',
+    fh: 265,
+    star: 'cosmic'
+  }
+});
+const CARD_KYUBI_LOOK = Object.freeze({
+  '901': ['提灯落とし', false, p => skm('jump', {
+    c: p.fire,
+    fx: skmFx('fall', 'orb', 1, {
+      s: 2.4,
+      h: p.fh
+    }),
+    over: 'boom',
+    burst: 'spark',
+    form: 'fire'
+  })],
+  '902': ['陽炎', true, p => skm('warp', {
+    c: p.blue,
+    over: 'claw',
+    burst: 'spark',
+    hit2: true,
+    form: 'slash'
+  })],
+  '903': ['狐火', false, p => skm('cast', {
+    c: p.blue,
+    fx: skmFx('shot', 'fire', 3, {
+      s: 1.6,
+      h: p.bh,
+      step: 70
+    }),
+    burst: 'spark',
+    form: 'fire'
+  })],
+  '904': ['ひのこ', false, p => skm('cast', {
+    c: p.fire,
+    fx: skmFx('shot', 'fire', 7, {
+      step: 28,
+      h: p.fh
+    }),
+    over: 'boom',
+    burst: 'spark',
+    form: 'fire'
+  })],
+  '905': ['超狐火', true, p => skm('cast', {
+    c: p.blue,
+    fx: skmFx('orbit', 'fire', 9, {
+      s: 1.4,
+      h: p.bh
+    }),
+    over: 'pillar',
+    burst: 'star',
+    form: 'fire'
+  })],
+  '906': ['なめろう', false, p => skm('lick', {
+    c: 'gold',
+    line: 'tongue',
+    over: 'boom',
+    burst: 'spark'
+  })],
+  '907': ['火炎車', true, p => skm('roll', {
+    c: p.fire,
+    fx: skmFx('orbit', 'fire', 10, {
+      s: 1.3,
+      h: p.fh
+    }),
+    over: 'tornado',
+    burst: 'spark',
+    form: 'fire'
+  })],
+  '908': ['天河天翔', true, p => skm('float', {
+    c: p.star,
+    fx: skmFx('fall', 'meteor', 14, {
+      w: 150
+    }),
+    over: 'aurora',
+    burst: 'star',
+    form: 'light'
+  })],
+  '909': ['神狐蒼火', true, p => skm('gather', {
+    c: p.blue,
+    fx: skmFx('fall', 'fire', 12, {
+      s: 1.7,
+      h: p.bh
+    }),
+    over: 'pillar',
+    burst: 'spark',
+    form: 'fire'
+  })],
+  '910': ['炸裂気泡陣', true, p => skm('cast', {
+    c: p.fire,
+    fx: skmFx('orbit', 'orb', 10, {
+      s: 1.9,
+      h: p.fh
+    }),
+    over: 'boom',
+    burst: 'spark',
+    form: 'fire'
+  })]
+});
+Object.entries(CARD_KYUBI_PALETTE).forEach(([who, pal]) => Object.entries(CARD_KYUBI_LOOK).forEach(([no, [, big, make]]) => {
+  const norm = skmNormalize(make(pal), big);
+  SKILL_FX_SPEC_CACHE[`card${who}${no}`] = big ? {
+    ...norm,
+    uex: true
+  } : {
+    ...norm,
+    impact: true
+  };
+}));
 const CARD_MOTION_GAME_ID = Object.freeze({
   tiger: 'Tiger',
   golem: 'Golem',
@@ -98861,6 +100599,7 @@ const cardMotionBaseOf = (db, cardNo, mon) => {
   const c = cardOf(db, cardNo);
   if (!c || !cardIsAttackKind(c.kind) || c.user === 'breeder') return null;
   if (CARD_MOTION_BY_NO[c.no]) return CARD_MOTION_BY_NO[c.no];
+  if (CARD_KYUBI_LOOK[c.no]) return `card${mon && mon.no === 'C-951' ? 'Orihime' : 'Kyubi'}${c.no}`;
   if (c.kind === 'spe') {
     const sp = CARD_SPECIAL_MOTION_RULES.find(([re]) => re.test(c.name));
     return sp ? sp[1] : 'cardSpeRing';
@@ -99265,13 +101004,18 @@ const cardNameSplit = text => {
   if (scriptTurn.length) return cut(near(scriptTurn));
   return null;
 };
+const cardSafePad = (base = '0px') => ({
+  paddingTop: `max(${base}, env(safe-area-inset-top))`,
+  paddingBottom: `max(${base}, env(safe-area-inset-bottom))`
+});
 const CardNameFit = ({
   name,
   size = 10,
   min = 7,
   className = '',
   style = null,
-  twoLine = false
+  twoLine = false,
+  tall = false
 }) => {
   const text = String(name == null ? '' : name);
   const m = /^(.+?)([(（].+)$/.exec(text);
@@ -99289,9 +101033,10 @@ const CardNameFit = ({
     }
   }, t);
   return React.createElement("span", {
-    className: `block w-full ${className}`,
+    className: `block w-full ${two ? `mh-nf-n${Math.min(10, [...text].length)}` : ''} ${twoLine && tall ? 'mh-nf-tall' : ''} ${className}`,
     style: {
       containerType: 'inline-size',
+      '--nf-2l': `${Math.round(size * 2.1)}px`,
       ...(style || {})
     }
   }, React.createElement("span", {
@@ -99327,7 +101072,8 @@ const CARD_SPECIES_ART = Object.freeze({
   mocchi: 'Mocchi',
   monol: 'Monol',
   plant: 'Plant',
-  ghost: 'Ghost'
+  ghost: 'Ghost',
+  kyubi: 'Kyubi'
 });
 const cardNewSpeciesArt = () => ({
   dino: typeof MF_DINO_IMG !== 'undefined' ? MF_DINO_IMG : null,
@@ -99689,6 +101435,7 @@ const CardStatusSheet = ({
   onClick: onClose,
   className: "fixed inset-0 flex items-center justify-center bg-black/60 px-4",
   style: {
+    ...cardSafePad('.5rem'),
     zIndex: MODAL_Z.dialog
   }
 }, React.createElement("div", {
@@ -99915,6 +101662,7 @@ const CardBattleTeaser = ({
     onClick: onClose,
     className: "fixed inset-0 flex items-center justify-center overflow-y-auto p-4",
     style: {
+      ...cardSafePad('1rem'),
       zIndex: MODAL_Z.dialog,
       backgroundColor: 'rgba(2,6,23,0.88)'
     }
@@ -100196,6 +101944,7 @@ const CardDetailModal = ({
       onClick: onClose,
       className: "fixed inset-0 flex flex-col items-center justify-center gap-3 overflow-y-auto px-4 py-6",
       style: {
+        ...cardSafePad('1.5rem'),
         zIndex: MODAL_Z.dialog + 100,
         backgroundColor: 'rgba(2,6,23,0.94)'
       },
@@ -100239,7 +101988,7 @@ const CardDetailModal = ({
       className: "rounded-md bg-slate-700 px-2 py-0.5"
     }, cardUserLabel(db, c)), React.createElement("span", {
       className: "rounded-md bg-slate-800 px-2 py-0.5 text-slate-400"
-    }, "No.", c.no)), dexLine, c.text && React.createElement("p", {
+    }, "No.", c.dispNo || c.no)), dexLine, c.text && React.createElement("p", {
       className: "mt-2 text-[14px] font-bold leading-relaxed"
     }, c.text), !c.text && cardPlainEffectText(c) && React.createElement("p", {
       "data-card-detail-plain": true,
@@ -100264,7 +102013,7 @@ const CardDetailModal = ({
       className: "rounded-md bg-sky-900 px-2 py-0.5"
     }, CARD_TYPE_LABEL[m.type]), React.createElement("span", {
       className: "rounded-md bg-slate-800 px-2 py-0.5 text-slate-400"
-    }, "No.", m.no)), dexLine, m.dexOnly && React.createElement("p", {
+    }, "No.", m.dispNo || m.no)), dexLine, m.dexOnly && React.createElement("p", {
       "data-card-dex-only": true,
       className: "mt-2 text-[12px] font-bold text-amber-300",
       style: JA_LABEL_STYLE
@@ -100365,6 +102114,7 @@ const CardTurnLogSheet = ({
   return React.createElement("div", {
     "data-card-log-sheet": true,
     className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3 sm:items-center",
+    style: cardSafePad('.75rem'),
     onClick: onClose
   }, React.createElement("div", {
     className: "flex max-h-[80%] w-full max-w-md flex-col rounded-2xl border border-white/15 bg-slate-950 p-3",
@@ -100457,6 +102207,7 @@ const CardMonSlot = ({
   compact = false,
   tiny = false,
   wide = false,
+  grow = false,
   motion = null,
   calm = false,
   guardTag = '',
@@ -100514,6 +102265,7 @@ const CardMonSlot = ({
     className: `inline-block whitespace-nowrap rounded bg-rose-900 font-bold ${tiny ? 'px-0.5 text-[9px] leading-tight' : 'ml-0.5 px-1 text-[10px]'}`
   }, "攻撃できない")));
   const wideArtH = 'clamp(40px, calc((var(--mh-vh, 100svh) - 262px) / 2), 64px)';
+  const growH = grow && !wide && (tiny || compact) ? tiny ? 'clamp(44px, calc((var(--mh-vh, 100svh) - 576px) / 2 + 44px), 76px)' : `clamp(56px, calc((var(--mh-vh, 100svh) - 640px) / 2 + 56px), ${opp ? 84 : 96}px)` : null;
   const artSize = wide ? 'max-w-[88px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : opp ? 'max-h-[78px] max-w-[96px]' : 'max-h-[106px] max-w-[126px]';
   const artFit = art ? cardFieldArtTransform(art, opp) : null;
   const kira = art && !mon.ko ? cardKiraOf(db, mon.no) : null;
@@ -100524,6 +102276,10 @@ const CardMonSlot = ({
     style: {
       ...(wide ? {
         maxHeight: wideArtH
+      } : null),
+      ...(growH ? {
+        maxHeight: growH,
+        maxWidth: `calc(${growH} * 1.36)`
       } : null),
       ...(artFit ? {
         transform: artFit
@@ -100541,6 +102297,27 @@ const CardMonSlot = ({
   });
   const mv = motion && (!mon.ko || motion.type === 'attack') ? motion : null;
   const idleBody = art && !mv && !mon.ko && !calm ? cardIdleBodyOf(mon, ty) : null;
+  const hitSil = mv && mv.type === 'hit' && art ? (() => {
+    const mk = `url("${art}")`;
+    const tf = artFit || (opp ? 'scaleX(-1)' : null);
+    return React.createElement("span", {
+      key: `${mv.key}-f`,
+      "data-card-hit-flash": "sil",
+      className: "mh-card-hit-flash mh-card-hit-flash-sil",
+      "aria-hidden": "true",
+      style: {
+        WebkitMaskImage: mk,
+        maskImage: mk,
+        WebkitMaskSize: '100% 100%',
+        maskSize: '100% 100%',
+        WebkitMaskRepeat: 'no-repeat',
+        maskRepeat: 'no-repeat',
+        ...(tf ? {
+          transform: tf
+        } : null)
+      }
+    });
+  })() : null;
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? calm ? 'mh-card-hit-calm' : 'mh-card-hit' : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = React.createElement("div", {
     "data-card-art": `${p}-${m}`,
@@ -100549,6 +102326,9 @@ const CardMonSlot = ({
       isolation: 'isolate',
       ...(wide ? {
         height: wideArtH
+      } : null),
+      ...(growH ? {
+        height: growH
       } : null),
       ...(mv && mv.type === 'attack' ? {
         '--atk-dx': `${mv.dx}px`,
@@ -100568,7 +102348,9 @@ const CardMonSlot = ({
     "data-card-idle": idleBody,
     className: `mon-idle mon-idle--${idleBody}`,
     style: cardIdleStyleOf(idleBody, p, m, mon.no)
-  }, imgEl) : imgEl), mv && mv.type === 'dodge' && React.createElement("div", {
+  }, imgEl) : hitSil ? React.createElement("span", {
+    className: "relative inline-flex items-end justify-center"
+  }, imgEl, hitSil) : imgEl), mv && mv.type === 'dodge' && React.createElement("div", {
     key: `${mv.key}-a`,
     className: "mh-card-afterimage",
     "aria-hidden": "true"
@@ -100576,7 +102358,7 @@ const CardMonSlot = ({
     key: `${mv.key}-j`,
     "data-card-air-mark": true,
     className: "mh-card-air-mark"
-  }, "空中"), mv && mv.type === 'hit' && React.createElement("span", {
+  }, "空中"), mv && mv.type === 'hit' && !art && React.createElement("span", {
     key: `${mv.key}-f`,
     "data-card-hit-flash": true,
     className: "mh-card-hit-flash",
@@ -100725,6 +102507,41 @@ const CardFitLabel = ({
     }
   }, children);
 };
+const CardAutoQuick = ({
+  db,
+  game,
+  onActLog = null,
+  onFinish
+}) => {
+  const done = useRef(false);
+  useEffect(() => {
+    if (done.current) return undefined;
+    done.current = true;
+    const t = setTimeout(() => {
+      const pols = [cardSharePolicy(game.auto.tactics, game.auto.level, {
+        sameBlood: !!game.auto.sameBlood
+      }), cardSharePolicy(game.share.tactics, game.level, {
+        sameBlood: !!game.cpuSameBlood
+      })];
+      const r = cardShareAutoFinish(db, game.st, pols);
+      if (onActLog) r.acts.forEach(([by, act]) => onActLog(by, act));
+      void onFinish({
+        outcome: r.st.winner === CARD_ME ? 'win' : 'lose',
+        st: r.st
+      });
+    }, 50);
+    return () => {
+      clearTimeout(t);
+    };
+  }, []);
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-card-auto-quick": true,
+    className: `${SCREEN_SHELL_CLASS} items-center justify-center`
+  }, React.createElement("p", {
+    className: "text-[16px] font-black text-amber-100"
+  }, "⏩ 結果を出しています…"));
+};
 const CardBattleBoard = ({
   db,
   game,
@@ -100736,7 +102553,12 @@ const CardBattleBoard = ({
   onActLog = null
 }) => {
   const settings = normalizeCardSettings(game.settings);
-  const pace = CARD_THINK_PACE[settings.think] || 1;
+  const autoGame = game.auto && game.auto.tactics && !game.replay && !game.pvp && !game.watch ? game.auto : null;
+  const [autoOn, setAutoOn] = useState(!!autoGame);
+  const [autoSpeed, setAutoSpeed] = useState(1);
+  const [skipAsk, setSkipAsk] = useState(false);
+  const skippedRef = useRef(false);
+  const pace = (CARD_THINK_PACE[settings.think] || 1) / (autoGame ? autoSpeed : 1);
   const pressMs = CARD_PRESS_MS[settings.press] || 450;
   const confirmOn = key => settings[key] === 'ON' && !game.tutorial && !game.demo && !(typeof window !== 'undefined' && window.__mhCardPvpAuto);
   const replay = game.replay || null;
@@ -100764,6 +102586,66 @@ const CardBattleBoard = ({
   }) : cardAiPolicy(game.who, game.level, {
     sameBlood: !!game.cpuSameBlood
   }), [game.who, game.level, game.cpuSameBlood]);
+  const autoControls = label => React.createElement(React.Fragment, null, label && React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-[12px] font-black text-sky-100"
+  }, autoOn ? '🤖 オートで戦っています' : '🖐 自分で操作しています'), [1, 2, 4].map(x => React.createElement("button", {
+    key: x,
+    type: "button",
+    "data-card-auto-speed": x,
+    "aria-pressed": autoSpeed === x,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setAutoSpeed(x);
+    },
+    className: `min-h-[30px] rounded-lg px-2 text-[12px] font-black ${autoSpeed === x ? 'bg-sky-300 text-slate-950' : 'bg-slate-800 text-slate-200'}`
+  }, `×${x}`)), React.createElement("button", {
+    type: "button",
+    "data-card-auto-toggle": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setAutoOn(v => !v);
+    },
+    className: "min-h-[30px] shrink-0 rounded-lg border border-white/30 px-2 text-[12px] font-black text-white"
+  }, autoOn ? '🖐 自分で' : '🤖 オート'), React.createElement("button", {
+    type: "button",
+    "data-card-auto-skip": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setSkipAsk(true);
+    },
+    className: "min-h-[30px] shrink-0 rounded-lg bg-amber-400 px-2 text-[12px] font-black text-slate-950"
+  }, "⏩ 結果へ"));
+  const autoCompact = React.createElement(React.Fragment, null, React.createElement("button", {
+    type: "button",
+    "data-card-auto-speed": autoSpeed,
+    "data-card-auto-speed-cycle": true,
+    "aria-label": `速さ ×${autoSpeed}(押すと変わる)`,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setAutoSpeed(v => v === 1 ? 2 : v === 2 ? 4 : 1);
+    },
+    className: "min-h-[30px] shrink-0 rounded-lg bg-sky-300 px-1.5 text-[12px] font-black tabular-nums text-slate-950"
+  }, `×${autoSpeed}`), React.createElement("button", {
+    type: "button",
+    "data-card-auto-toggle": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setAutoOn(v => !v);
+    },
+    className: "min-h-[30px] shrink-0 whitespace-nowrap rounded-lg border border-white/30 px-1.5 text-[11px] font-black text-white"
+  }, autoOn ? '🖐自分で' : '🤖オート'), React.createElement("button", {
+    type: "button",
+    "data-card-auto-skip": true,
+    "aria-label": "結果へ(ここから最後まで一瞬で戦う)",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setSkipAsk(true);
+    },
+    className: "min-h-[30px] min-w-[30px] shrink-0 rounded-lg bg-amber-400 px-1 text-[13px] font-black text-slate-950"
+  }, "⏩"));
+  const autoPolicy = useMemo(() => autoGame && typeof cardSharePolicy === 'function' ? cardSharePolicy(autoGame.tactics, autoGame.level, {
+    sameBlood: !!autoGame.sameBlood
+  }) : null, [autoGame]);
   const [st, setSt] = useState(game.st);
   useEffect(() => {
     if (onProgress) onProgress(st);
@@ -100897,7 +102779,7 @@ const CardBattleBoard = ({
     behind: [false, false]
   });
   const press = useCardLongPress(no => setDetail(no), pressMs);
-  const paused = !!detail || !!discard || quit;
+  const paused = !!detail || !!discard || quit || skipAsk;
   const say = (scene, ai = null) => {
     if (!scene || pvp || share || settings.bubble === 'OFF') return;
     const turn = st.turn;
@@ -101075,6 +102957,7 @@ const CardBattleBoard = ({
     motionTimers.current.push(setTimeout(() => setGutsFly(cur => cur.filter(g => !out.some(o => o.key === g.key))), life));
   };
   const step = (act, forced = null, shown = false) => {
+    if (skippedRef.current) return false;
     if (!forced && tutorial && cardDeciderOf(st) === CARD_ME && !tutAllow(act)) {
       tutWrongSay();
       return false;
@@ -101253,6 +103136,39 @@ const CardBattleBoard = ({
     });
     return true;
   };
+  const skipToEnd = () => {
+    const cur = stRef.current || st;
+    if (!autoPolicy || typeof cardShareAutoFinish !== 'function' || cur.winner !== null || skippedRef.current) return;
+    const r = cardShareAutoFinish(db, cur, [autoPolicy, policy]);
+    if (onActLog) r.acts.forEach(([by, act]) => onActLog(by, act));
+    skippedRef.current = true;
+    setSel(null);
+    setPicks([]);
+    setBigCard(null);
+    stRef.current = r.st;
+    setSt(r.st);
+  };
+  useEffect(() => {
+    if (!autoGame || !autoOn || !autoPolicy || st.winner !== null || paused) return undefined;
+    if (cardDeciderOf(st) !== CARD_ME) return undefined;
+    const wait = Math.round((st.pending ? 700 : st.phase === 'guts' ? 500 : 750) * pace);
+    const t = setTimeout(() => {
+      setSel(null);
+      setPicks([]);
+      const act = cardAiChooseAction(db, st, autoPolicy);
+      if (!act || !step(act)) step(st.pending ? {
+        type: 'pass'
+      } : st.phase === 'main' ? {
+        type: 'endAttacks'
+      } : {
+        type: 'guts',
+        hand: []
+      });
+    }, wait);
+    return () => {
+      clearTimeout(t);
+    };
+  }, [st, autoOn, paused, autoSpeed]);
   useEffect(() => {
     if (st.winner !== null || paused || game.demo || pvp || replay) return undefined;
     if (tutorial && !cardTutorialCpu(db, tutStage.id, st)) return undefined;
@@ -101641,6 +103557,10 @@ const CardBattleBoard = ({
   })();
   const handLarge = settings.handText === 'LARGE' && !tiny;
   const handTiny = tiny && !wide;
+  const handLongName = me.hand.some(no => {
+    const c = cardOf(db, no);
+    return [...String(c ? c.name : no)].length >= 7;
+  });
   const tapHand = i => {
     Audio_.fgSe.tap();
     if (tutorial && myTurn && (!cardTutorialHandOk(tutStage.id, st, i) || tutStage.next || tutQ.length > 1)) {
@@ -102361,7 +104281,10 @@ const CardBattleBoard = ({
       className: `mx-auto min-w-0 max-w-[440px] flex-1 truncate whitespace-nowrap rounded-full px-2 py-1 text-center ${sig ? 'text-[11px]' : tiny ? 'text-[12px]' : 'text-[13px]'} font-black leading-tight tabular-nums ${tone}`
     }, sig ? pvpClock.offline ? '電波が途切れています。つなぎ直しています…' : `相手の電波が途切れています(あと${pvpClock.foeQuietSec}秒)` : React.createElement(React.Fragment, null, !(headSt.phase === 'setup' && replay) && !(pvpLive && (tiny || headSt.active !== cardDeciderOf(headSt))) && React.createElement("span", {
       className: "mr-1 text-[11px] font-bold opacity-75"
-    }, "ターン", Math.max(1, headSt.turn)), turnTxt, pvpLive && ` · ${headSt.active !== cardDeciderOf(headSt) ? pvpClock.mine ? '守り 残り' : '相手の守り' : pvpClock.mine ? '残り' : ''}${pvpClock.left}秒`, pvpLive && pvpClock.mine && pvpClock.timeouts > 0 && ` ⚠${pvpClock.timeouts}/${CARD_PVP_TIMEOUT_LOSE}`));
+    }, "ターン", Math.max(1, headSt.turn)), autoGame && autoOn && !wide && React.createElement("span", {
+      "aria-label": "オートで戦っています",
+      className: "mr-0.5"
+    }, "🤖"), turnTxt, pvpLive && ` · ${headSt.active !== cardDeciderOf(headSt) ? pvpClock.mine ? '守り 残り' : '相手の守り' : pvpClock.mine ? '残り' : ''}${pvpClock.left}秒`, pvpLive && pvpClock.mine && pvpClock.timeouts > 0 && ` ⚠${pvpClock.timeouts}/${CARD_PVP_TIMEOUT_LOSE}`));
   })(), quickRun && React.createElement("span", {
     "data-card-battle-quick-run": quickRun.stopped ? 'stopped' : 'live',
     "aria-label": quickRun.stopped ? '裏のクイック周回は止まっています' : `裏のクイック周回 ${quickRun.loops}周目`,
@@ -102370,7 +104293,10 @@ const CardBattleBoard = ({
     "data-card-pvp-eyes": pvpClock.eyes,
     "aria-label": `${pvpClock.eyes}人が観戦しています`,
     className: "shrink-0 whitespace-nowrap rounded-full bg-violet-500/25 px-1.5 py-0.5 text-[11px] font-black text-violet-100 tabular-nums"
-  }, tiny ? `👀${pvpClock.eyes}` : `👀観戦${pvpClock.eyes}`), !watch && React.createElement("button", {
+  }, tiny ? `👀${pvpClock.eyes}` : `👀観戦${pvpClock.eyes}`), autoGame && React.createElement("span", {
+    "data-card-auto-bar": autoOn ? 'auto' : 'hand',
+    className: "flex shrink-0 items-center gap-1"
+  }, wide ? autoControls(false) : autoCompact), !watch && React.createElement("button", {
     type: "button",
     "data-card-quit": true,
     "data-card-replay-exit": replay ? '' : undefined,
@@ -102449,6 +104375,7 @@ const CardBattleBoard = ({
     compact: compact,
     tiny: tiny,
     wide: wide,
+    grow: !tutorial && !replay,
     calm: settings.shake === 'OFF',
     motion: motions[`1-${m}`] || null
   }))), React.createElement("div", {
@@ -102665,6 +104592,7 @@ const CardBattleBoard = ({
     compact: compact,
     tiny: tiny,
     wide: wide,
+    grow: !tutorial && !replay,
     calm: settings.shake === 'OFF',
     motion: motions[`0-${m}`] || null
   }))), React.createElement("div", {
@@ -102775,7 +104703,8 @@ const CardBattleBoard = ({
       name: c ? c.name : no,
       size: handLarge ? compact ? 12 : 13 : compact ? 10 : 11,
       className: "font-bold leading-tight",
-      twoLine: true
+      twoLine: true,
+      tall: handLongName
     }), handTiny ? React.createElement(React.Fragment, null, React.createElement(CardNameFit, {
       name: `ガッツ${c ? c.guts : '-'}`,
       size: 10,
@@ -103051,6 +104980,7 @@ const CardBattleBoard = ({
   }), bindAsk && React.createElement("div", {
     "data-card-bind-pick": true,
     className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3",
+    style: cardSafePad('.75rem'),
     onClick: bindCancel
   }, React.createElement("div", {
     className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100",
@@ -103105,6 +105035,7 @@ const CardBattleBoard = ({
     return React.createElement("div", {
       "data-card-toss-pick": true,
       className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3",
+      style: cardSafePad('.75rem'),
       onClick: () => setTossAsk(null)
     }, React.createElement("div", {
       className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100",
@@ -103146,6 +105077,7 @@ const CardBattleBoard = ({
   })(), splitAsk && React.createElement("div", {
     "data-card-split-pick": true,
     className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3",
+    style: cardSafePad('.75rem'),
     onClick: () => setSplitAsk(null)
   }, React.createElement("div", {
     className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100",
@@ -103175,7 +105107,8 @@ const CardBattleBoard = ({
     const fc = cardOf(db, st.pendingPray.no);
     return React.createElement("div", {
       "data-card-pray": true,
-      className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3"
+      className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3",
+      style: cardSafePad('.75rem')
     }, React.createElement("div", {
       className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100"
     }, React.createElement("div", {
@@ -103206,14 +105139,15 @@ const CardBattleBoard = ({
     }, "使わない"))));
   })(), choice && React.createElement("div", {
     "data-card-choose": true,
-    className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3"
+    className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3",
+    style: cardSafePad('.75rem')
   }, React.createElement("div", {
     className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100"
   }, React.createElement("div", {
     className: "text-[15px] font-black",
     style: JA_LABEL_STYLE
   }, jaWrap(`${choice.from ? `${choice.from}: ` : ''}${choice.title}`)), React.createElement("div", {
-    className: "mt-2 grid max-h-[55vh] gap-1.5 overflow-y-auto"
+    className: "mt-2 grid max-h-[55vh] gap-1.5 overflow-y-auto [@media(orientation:portrait)_and_(max-height:700px)]:grid-cols-2"
   }, choice.items.map(({
     i,
     no,
@@ -103238,6 +105172,7 @@ const CardBattleBoard = ({
   }, `ガッツ${c.guts}${c.damage !== null && c.damage !== undefined ? `・ダメージ${c.damage}` : ''}`))))))), guardAsk && React.createElement("div", {
     "data-card-guard-ask": true,
     className: "fixed inset-0 z-[80] flex items-center justify-center bg-black/45 px-4",
+    style: cardSafePad('.5rem'),
     onClick: () => setGuardAsk(null)
   }, React.createElement("div", {
     className: "w-full max-w-[320px] rounded-2xl border-2 border-sky-300 bg-slate-900 p-3 text-center shadow-[0_8px_24px_#000]",
@@ -103290,6 +105225,15 @@ const CardBattleBoard = ({
         outcome: 'surrender',
         st
       });
+    }
+  }), skipAsk && React.createElement(ConfirmSheet, {
+    title: "結果へ進みますか？",
+    message: "ここから最後まで、2人とも戦術カードで一瞬で戦って、結果を出します(この対戦はあとから見返せます)",
+    confirmLabel: "結果へ",
+    onCancel: () => setSkipAsk(false),
+    onConfirm: () => {
+      setSkipAsk(false);
+      skipToEnd();
     }
   }), quit && tutorial && React.createElement(ConfirmSheet, {
     title: "チュートリアルを飛ばしますか？",
@@ -103649,6 +105593,7 @@ const CardQuickRunDetail = ({
   return React.createElement("div", {
     "data-card-quick-detail": true,
     className: "fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/80 p-4 landscape:py-2",
+    style: cardSafePad('.5rem'),
     role: "dialog",
     "aria-modal": "true",
     "aria-label": "クイック周回",
@@ -103788,6 +105733,20 @@ const CardBattleScreen = ({
     return CARD_PVP_BACK.on(go);
   }, []);
   const [deckPick, setDeckPick] = useState(null);
+  const [shareAuto, setShareAuto] = useState(false);
+  const [shareQuick, setShareQuick] = useState(false);
+  const [autoLeft, setAutoLeft] = useState(null);
+  useEffect(() => {
+    if (view !== 'deckPick' || !(deckPick && deckPick.pick && deckPick.pick.share) || typeof cardAutoRewardLoad !== 'function') return undefined;
+    let alive = true;
+    setAutoLeft(null);
+    void cardAutoRewardLoad().then(r => {
+      if (alive) setAutoLeft(r.left);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [view, deckPick]);
   const [kitPick, setKitPick] = useState(null);
   const [kitView, setKitView] = useState(null);
   const [starterOpen, setStarterOpen] = useState(null);
@@ -104290,6 +106249,22 @@ const CardBattleScreen = ({
       setDeckRewardBusy(false);
     }
   };
+  const openReplayRec = (rec, back = 'top') => {
+    const g = rec && db ? cardReplayGameOf(db, rec) : null;
+    if (!g) {
+      setNotice('この対戦は見られません');
+      return;
+    }
+    setGame({
+      ...g,
+      settings: save ? save.settings : undefined,
+      replay: {
+        ...g.replay,
+        back
+      }
+    });
+    onNavigate('CARD_BATTLE');
+  };
   const openReplay = async (id, back = 'top') => {
     const rec = await cardReplayGet(id);
     const g = rec && db ? cardReplayGameOf(db, rec) : null;
@@ -104452,6 +106427,419 @@ const CardBattleScreen = ({
     lines: ['読み込み中…']
   }));
   if (screen === 'CARD_BATTLE' && game) {
+    const boardFinish = async ({
+      outcome,
+      st,
+      comeback = false
+    }) => {
+      if (game.replay) {
+        const back = game.replay.back || 'top';
+        setGame(null);
+        onNavigate('CARD_TOP');
+        setView(back);
+        return;
+      }
+      if (game.pvp) {
+        CARD_PVP.finish(outcome, st);
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView('pvp');
+        return;
+      }
+      if (game.cup) {
+        const cup = game.cup;
+        const log = cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogRef.current : null;
+        if (log) cpuLogRef.current = null;
+        const acts = log ? log.acts.map(x => [x.by, x.act]) : null;
+        const kosMe = [cardKoCount(st, CARD_ME), cardKoCount(st, CARD_CPU)];
+        const winnerSide = outcome === 'win' ? cup.side : 1 - cup.side;
+        const key = typeof cardShareOwnerKey === 'function' ? await cardShareOwnerKey(false) : null;
+        const r = key && typeof cardTourRpc === 'function' ? await cardTourRpc('card_cup_live_report', {
+          p_match: cup.matchId,
+          p_owner: cup.selfId,
+          p_key: key,
+          p_winner: winnerSide,
+          p_how: 'absent',
+          p_verified: false,
+          p_kos: cup.side === 0 ? kosMe : [kosMe[1], kosMe[0]],
+          p_acts: acts && acts.length ? cup.side === 0 ? acts : {
+            order: 'ba',
+            acts
+          } : null,
+          p_rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null
+        }) : null;
+        setGame(null);
+        setNotice(r === 'ok' || r === 'done' ? outcome === 'win' ? '勝ちました。結果を杯に送りました' : '負けました。結果を杯に送りました' : '結果を送れませんでした。杯の画面を開き直してください');
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView('cup');
+        return;
+      }
+      if (game.demo) {
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView('top');
+        return;
+      }
+      if (game.tutorial) {
+        const fin = cardTutorialFinish(save.tutorial, outcome === 'tutorialDone' ? 'done' : 'skip', Date.now());
+        const ok = await persist({
+          tutorial: fin.tutorial,
+          point: save.point + fin.reward
+        });
+        setResult({
+          tutorial: true,
+          done: outcome === 'tutorialDone',
+          reward: ok ? fin.reward : 0,
+          saved: ok
+        });
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView('result');
+        return;
+      }
+      if (game.share && game.auto && typeof cardAutoRewardLoad === 'function') {
+        const facts = cardResultFacts(st, CARD_ME);
+        const fresh = await freshCardSave();
+        const ar = await cardAutoRewardLoad();
+        const paid = ar.left > 0;
+        const half = cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts);
+        const point = paid ? Math.floor(half.base / 2) : 0;
+        const loops = paid ? Math.floor(cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts) / 2) : 0;
+        const levelGain = paid && typeof cardLevelEntries === 'function' ? await cardLevelEntries({
+          kind: 'cpu',
+          level: CARD_SHARE_REWARD_LEVEL,
+          outcome,
+          debug,
+          auto: true
+        }) : {
+          entries: []
+        };
+        const rankPoint = levelGain.gain && levelGain.gain.points || 0;
+        const counted = paid && (point > 0 || loops > 0 || levelGain.gain && levelGain.gain.add > 0);
+        const ok = await persist({
+          point: save.point + point + rankPoint
+        }, fresh.raw, [...(levelGain.entries || []), ...(counted ? [cardAutoRewardEntry(ar)] : [])]);
+        let quick = null;
+        if (ok && loops > 0 && onQuickLoops) {
+          try {
+            quick = await onQuickLoops(loops);
+          } catch (_) {
+            quick = null;
+          }
+        }
+        const autoLog = cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogRef.current : null;
+        if (autoLog) cpuLogRef.current = null;
+        const replayRec = autoLog && typeof cardReplayFromCpu === 'function' ? cardReplayFromCpu(db, {
+          id: `a${autoLog.id}`,
+          at: Date.now(),
+          myDeck: autoLog.decks[0],
+          cpuDeck: autoLog.decks[1],
+          seed: autoLog.seed,
+          first: autoLog.first,
+          history: autoLog.acts,
+          foe: {
+            name: game.share.name
+          },
+          outcome,
+          reason: ''
+        }) : null;
+        const reward = {
+          ...half,
+          base: point,
+          got: point,
+          bonus: 0,
+          total: point,
+          full: paid ? Math.floor(half.full / 2) : 0,
+          daily: fresh.daily
+        };
+        setResult({
+          outcome,
+          reward,
+          opened: null,
+          saved: ok,
+          who: null,
+          level: game.level,
+          loops,
+          quick,
+          facts,
+          talk: null,
+          replay: null,
+          share: game.share,
+          rankGain: ok ? levelGain.gain : null,
+          replayRec: replayRec || null,
+          auto: {
+            tactics: game.auto.tactics,
+            quick: !!game.auto.quick,
+            paid,
+            left: Math.max(0, ar.left - (ok && counted ? 1 : 0))
+          }
+        });
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView('result');
+        return;
+      }
+      if (game.share) {
+        const facts = cardResultFacts(st, CARD_ME);
+        const fresh = await freshCardSave();
+        const reward = cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts);
+        const loops = cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts);
+        const levelGain = typeof cardLevelEntries === 'function' ? await cardLevelEntries({
+          kind: 'cpu',
+          level: CARD_SHARE_REWARD_LEVEL,
+          outcome,
+          debug
+        }) : {
+          entries: []
+        };
+        const rankPoint = levelGain.gain && levelGain.gain.points || 0;
+        const ok = await persist({
+          point: save.point + reward.total + rankPoint,
+          daily: reward.daily
+        }, fresh.raw, levelGain.entries);
+        if (ok && levelGain.gain && levelGain.gain.to > levelGain.gain.from && !debug) void cardRankPut(rank && rank.profile);
+        let quick = null;
+        if (ok && loops > 0 && onQuickLoops) {
+          try {
+            quick = await onQuickLoops(loops);
+          } catch (_) {
+            quick = null;
+          }
+        }
+        if (ok && quick) await persist({
+          daily: {
+            ...reward.daily,
+            quickLoops: (reward.daily.quickLoops || 0) + loops
+          }
+        }, {
+          daily: reward.daily
+        });
+        const shareLog = cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogRef.current : null;
+        if (shareLog) cpuLogRef.current = null;
+        const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+        if (typeof selfId === 'string' && typeof cardShareReportUse === 'function') {
+          const match = `share-${game.key}-${Date.now().toString(36)}`;
+          const deckWon = outcome !== 'win';
+          const replayRec = shareLog && typeof cardReplayFromCpu === 'function' ? cardReplayFromCpu(db, {
+            id: `s${shareLog.id}`,
+            at: Date.now(),
+            myDeck: shareLog.decks[0],
+            cpuDeck: shareLog.decks[1],
+            seed: shareLog.seed,
+            first: shareLog.first,
+            history: shareLog.acts,
+            foe: {
+              name: game.share.name
+            },
+            outcome,
+            reason: ''
+          }) : null;
+          void (async () => {
+            const used = await cardShareReportUse({
+              match,
+              ownerId: game.share.ownerId,
+              userId: selfId,
+              kind: 'battle',
+              deckWon,
+              version: game.share.version
+            });
+            if (used !== 'ok' || !replayRec || typeof cardShareReplayPut !== 'function') return;
+            const me = rank && rank.profile ? rank.profile : {};
+            await cardShareReplayPut({
+              match,
+              ownerId: game.share.ownerId,
+              userId: selfId,
+              name: me.name || '',
+              icon: me.icon || null,
+              frame: me.frame || null,
+              rec: replayRec,
+              deckWon
+            });
+          })().catch(() => {});
+        }
+        setResult({
+          outcome,
+          reward,
+          opened: null,
+          saved: ok,
+          who: null,
+          level: game.level,
+          loops,
+          quick,
+          facts,
+          talk: null,
+          replay: null,
+          share: game.share,
+          rankGain: ok ? levelGain.gain : null
+        });
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView('result');
+        return;
+      }
+      const openExtra = [];
+      if (openIdRef.current === game.key) {
+        let raw = null;
+        try {
+          raw = await storeGet(CARD_CPU_OPEN_KEY, null);
+        } catch (_) {
+          raw = null;
+        }
+        const open = cardNormalizeCpuOpen(raw);
+        if (!open || open.id !== game.key) {
+          openIdRef.current = null;
+          openRef.current = null;
+          setNotice('この対戦は、ほかの画面で投了として数えました');
+          onBgm && onBgm(cardBgmOf(save.bgm.top));
+          onNavigate('CARD_TOP');
+          setView('top');
+          return;
+        }
+        openExtra.push({
+          key: CARD_CPU_OPEN_KEY,
+          next: null,
+          before: raw
+        });
+      }
+      const facts = cardResultFacts(st, CARD_ME);
+      const fresh = await freshCardSave();
+      const reward = cardCpuReward(fresh.daily, game.level, outcome, facts);
+      const loops = cardCpuLoops(game.level, outcome, facts);
+      const rankable = !!(rank && rank.send) && !debug;
+      const nextRecord = cardRecordAfter(fresh.record, {
+        who: game.who,
+        level: game.level,
+        outcome,
+        at: Date.now(),
+        rankable
+      });
+      const nextUnlocked = outcome === 'win' ? cardUnlockAfterWin(fresh.unlocked, game.level) : fresh.unlocked;
+      const opened = CARD_LEVEL_ORDER.find(lv => nextUnlocked[lv] && !fresh.unlocked[lv]) || null;
+      const log = cpuLogRef.current;
+      const replayRec = log && log.id === game.key ? cardReplayFromCpu(db, {
+        id: `c${log.id}`,
+        at: Date.now(),
+        myDeck: log.decks[0],
+        cpuDeck: log.decks[1],
+        seed: log.seed,
+        first: log.first,
+        history: log.acts,
+        foe: {
+          name: log.foeName,
+          who: game.who,
+          deckName: log.deckName
+        },
+        outcome,
+        reason: '',
+        level: game.level
+      }) : null;
+      if (log && log.id === game.key) cpuLogRef.current = null;
+      const usedDeck = save.decks.decks.find(d => d.id === save.decks.active) || null;
+      const usedMons = log && log.decks[0] ? log.decks[0].monsters : (st && st.players && st.players[CARD_ME] && st.players[CARD_ME].mons || []).map(m => m.no);
+      const detailEntry = game.demo ? null : await cardRecordDetailEntry(fresh.record, d => cardRecordDetailAfter(d, {
+        who: game.who,
+        level: game.level,
+        outcome,
+        turns: facts.ownTurns,
+        deck: usedDeck ? {
+          id: usedDeck.id,
+          name: usedDeck.name
+        } : null,
+        mons: usedMons,
+        moves: cardRecordMovesOf(db, replayRec),
+        today: cardTodayJst()
+      }));
+      const levelGain = !game.demo && typeof cardLevelEntries === 'function' ? await cardLevelEntries({
+        kind: 'cpu',
+        level: game.level,
+        outcome,
+        debug
+      }) : {
+        entries: []
+      };
+      const rankPoint = levelGain.gain && levelGain.gain.points || 0;
+      const ok = await persist({
+        point: save.point + reward.total + rankPoint,
+        daily: reward.daily,
+        record: nextRecord,
+        unlocked: nextUnlocked
+      }, fresh.raw, [...openExtra, ...(detailEntry ? [detailEntry] : []), ...levelGain.entries]);
+      if (ok && openExtra.length) {
+        openIdRef.current = null;
+        openRef.current = null;
+      }
+      if (ok && game.rented && typeof cardShareReportUse === 'function') {
+        const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+        if (typeof selfId === 'string') void cardShareReportUse({
+          match: `rent-${game.key}-${Date.now().toString(36)}`,
+          ownerId: game.rented.ownerId,
+          userId: selfId,
+          kind: 'rent',
+          version: game.rented.version
+        });
+      }
+      if (ok && rankable) void cardRankSync(db, {
+        record: nextRecord,
+        collection: save.collection,
+        profile: rank.profile
+      });
+      if (ok && !debug && levelGain.gain && levelGain.gain.to > levelGain.gain.from) void cardRankPut(rank && rank.profile);
+      if (ok && outcome === 'win' && !debug) {
+        try {
+          const unlockEntry = assistantCostumeUnlockEntry(await storeGet(ASSISTANT_COSTUME_UNLOCKED_KEY, null), {
+            who: game.who,
+            level: game.level,
+            outcome
+          });
+          if (unlockEntry && (await storeSet(unlockEntry.key, unlockEntry.next))) addAssistantCostumeUnlockedNow(unlockEntry.next);
+        } catch (_) {}
+      }
+      let quick = null;
+      if (loops > 0 && onQuickLoops) {
+        try {
+          quick = await onQuickLoops(loops);
+        } catch (_) {
+          quick = null;
+        }
+      }
+      if (ok && quick) await persist({
+        daily: {
+          ...reward.daily,
+          quickLoops: (reward.daily.quickLoops || 0) + loops
+        }
+      }, {
+        daily: reward.daily
+      }, [await cardRecordDetailEntry(nextRecord, d => ({
+        ...d,
+        quick: d.quick + loops
+      }))]);
+      const talkFacts = !game.demo && !game.pvp ? cardTalkAfterFacts(db, st, {
+        cpu: CARD_CPU,
+        outcome,
+        level: game.level,
+        comeback
+      }) : null;
+      let replayId = null;
+      if (replayRec && (await cardReplaySave(replayRec))) replayId = replayRec.id;
+      setResult({
+        outcome,
+        reward,
+        opened,
+        saved: ok,
+        who: game.who,
+        level: game.level,
+        loops,
+        quick,
+        facts,
+        talk: talkFacts,
+        replay: replayId,
+        rankGain: ok ? levelGain.gain : null
+      });
+      onBgm && onBgm(cardBgmOf(save.bgm.top));
+      onNavigate('CARD_TOP');
+      setView('result');
+    };
     if (game.intro) return React.createElement(CardVsIntro, {
       key: `vs-${game.key}`,
       db: db,
@@ -104461,6 +106849,13 @@ const CardBattleScreen = ({
         ...g,
         intro: null
       } : g)
+    });
+    if (game.auto && game.auto.quick && game.share && !game.replay) return React.createElement(CardAutoQuick, {
+      key: `quick-${game.key}`,
+      db: db,
+      game: game,
+      onActLog: cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogAct : null,
+      onFinish: boardFinish
     });
     const tourMe = game.replay && game.replay.tour ? {
       name: game.replay.tour.me.name,
@@ -104478,337 +106873,7 @@ const CardBattleScreen = ({
         loops: quickRun.loops,
         stopped: quickRun.stopped
       } : null,
-      onFinish: async ({
-        outcome,
-        st,
-        comeback = false
-      }) => {
-        if (game.replay) {
-          const back = game.replay.back || 'top';
-          setGame(null);
-          onNavigate('CARD_TOP');
-          setView(back);
-          return;
-        }
-        if (game.pvp) {
-          CARD_PVP.finish(outcome, st);
-          onBgm && onBgm(cardBgmOf(save.bgm.top));
-          onNavigate('CARD_TOP');
-          setView('pvp');
-          return;
-        }
-        if (game.cup) {
-          const cup = game.cup;
-          const log = cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogRef.current : null;
-          if (log) cpuLogRef.current = null;
-          const acts = log ? log.acts.map(x => [x.by, x.act]) : null;
-          const kosMe = [cardKoCount(st, CARD_ME), cardKoCount(st, CARD_CPU)];
-          const winnerSide = outcome === 'win' ? cup.side : 1 - cup.side;
-          const key = typeof cardShareOwnerKey === 'function' ? await cardShareOwnerKey(false) : null;
-          const r = key && typeof cardTourRpc === 'function' ? await cardTourRpc('card_cup_live_report', {
-            p_match: cup.matchId,
-            p_owner: cup.selfId,
-            p_key: key,
-            p_winner: winnerSide,
-            p_how: 'absent',
-            p_verified: false,
-            p_kos: cup.side === 0 ? kosMe : [kosMe[1], kosMe[0]],
-            p_acts: acts && acts.length ? cup.side === 0 ? acts : {
-              order: 'ba',
-              acts
-            } : null,
-            p_rules: typeof CARD_REPLAY_RULES !== 'undefined' ? CARD_REPLAY_RULES : null
-          }) : null;
-          setGame(null);
-          setNotice(r === 'ok' || r === 'done' ? outcome === 'win' ? '勝ちました。結果を杯に送りました' : '負けました。結果を杯に送りました' : '結果を送れませんでした。杯の画面を開き直してください');
-          onBgm && onBgm(cardBgmOf(save.bgm.top));
-          onNavigate('CARD_TOP');
-          setView('cup');
-          return;
-        }
-        if (game.demo) {
-          onBgm && onBgm(cardBgmOf(save.bgm.top));
-          onNavigate('CARD_TOP');
-          setView('top');
-          return;
-        }
-        if (game.tutorial) {
-          const fin = cardTutorialFinish(save.tutorial, outcome === 'tutorialDone' ? 'done' : 'skip', Date.now());
-          const ok = await persist({
-            tutorial: fin.tutorial,
-            point: save.point + fin.reward
-          });
-          setResult({
-            tutorial: true,
-            done: outcome === 'tutorialDone',
-            reward: ok ? fin.reward : 0,
-            saved: ok
-          });
-          onBgm && onBgm(cardBgmOf(save.bgm.top));
-          onNavigate('CARD_TOP');
-          setView('result');
-          return;
-        }
-        if (game.share) {
-          const facts = cardResultFacts(st, CARD_ME);
-          const fresh = await freshCardSave();
-          const reward = cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts);
-          const loops = cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts);
-          const levelGain = typeof cardLevelEntries === 'function' ? await cardLevelEntries({
-            kind: 'cpu',
-            level: CARD_SHARE_REWARD_LEVEL,
-            outcome,
-            debug
-          }) : {
-            entries: []
-          };
-          const rankPoint = levelGain.gain && levelGain.gain.points || 0;
-          const ok = await persist({
-            point: save.point + reward.total + rankPoint,
-            daily: reward.daily
-          }, fresh.raw, levelGain.entries);
-          if (ok && levelGain.gain && levelGain.gain.to > levelGain.gain.from && !debug) void cardRankPut(rank && rank.profile);
-          let quick = null;
-          if (ok && loops > 0 && onQuickLoops) {
-            try {
-              quick = await onQuickLoops(loops);
-            } catch (_) {
-              quick = null;
-            }
-          }
-          if (ok && quick) await persist({
-            daily: {
-              ...reward.daily,
-              quickLoops: (reward.daily.quickLoops || 0) + loops
-            }
-          }, {
-            daily: reward.daily
-          });
-          const shareLog = cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogRef.current : null;
-          if (shareLog) cpuLogRef.current = null;
-          const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
-          if (typeof selfId === 'string' && typeof cardShareReportUse === 'function') {
-            const match = `share-${game.key}-${Date.now().toString(36)}`;
-            const deckWon = outcome !== 'win';
-            const replayRec = shareLog && typeof cardReplayFromCpu === 'function' ? cardReplayFromCpu(db, {
-              id: `s${shareLog.id}`,
-              at: Date.now(),
-              myDeck: shareLog.decks[0],
-              cpuDeck: shareLog.decks[1],
-              seed: shareLog.seed,
-              first: shareLog.first,
-              history: shareLog.acts,
-              foe: {
-                name: game.share.name
-              },
-              outcome,
-              reason: ''
-            }) : null;
-            void (async () => {
-              const used = await cardShareReportUse({
-                match,
-                ownerId: game.share.ownerId,
-                userId: selfId,
-                kind: 'battle',
-                deckWon,
-                version: game.share.version
-              });
-              if (used !== 'ok' || !replayRec || typeof cardShareReplayPut !== 'function') return;
-              const me = rank && rank.profile ? rank.profile : {};
-              await cardShareReplayPut({
-                match,
-                ownerId: game.share.ownerId,
-                userId: selfId,
-                name: me.name || '',
-                icon: me.icon || null,
-                frame: me.frame || null,
-                rec: replayRec,
-                deckWon
-              });
-            })().catch(() => {});
-          }
-          setResult({
-            outcome,
-            reward,
-            opened: null,
-            saved: ok,
-            who: null,
-            level: game.level,
-            loops,
-            quick,
-            facts,
-            talk: null,
-            replay: null,
-            share: game.share,
-            rankGain: ok ? levelGain.gain : null
-          });
-          onBgm && onBgm(cardBgmOf(save.bgm.top));
-          onNavigate('CARD_TOP');
-          setView('result');
-          return;
-        }
-        const openExtra = [];
-        if (openIdRef.current === game.key) {
-          let raw = null;
-          try {
-            raw = await storeGet(CARD_CPU_OPEN_KEY, null);
-          } catch (_) {
-            raw = null;
-          }
-          const open = cardNormalizeCpuOpen(raw);
-          if (!open || open.id !== game.key) {
-            openIdRef.current = null;
-            openRef.current = null;
-            setNotice('この対戦は、ほかの画面で投了として数えました');
-            onBgm && onBgm(cardBgmOf(save.bgm.top));
-            onNavigate('CARD_TOP');
-            setView('top');
-            return;
-          }
-          openExtra.push({
-            key: CARD_CPU_OPEN_KEY,
-            next: null,
-            before: raw
-          });
-        }
-        const facts = cardResultFacts(st, CARD_ME);
-        const fresh = await freshCardSave();
-        const reward = cardCpuReward(fresh.daily, game.level, outcome, facts);
-        const loops = cardCpuLoops(game.level, outcome, facts);
-        const rankable = !!(rank && rank.send) && !debug;
-        const nextRecord = cardRecordAfter(fresh.record, {
-          who: game.who,
-          level: game.level,
-          outcome,
-          at: Date.now(),
-          rankable
-        });
-        const nextUnlocked = outcome === 'win' ? cardUnlockAfterWin(fresh.unlocked, game.level) : fresh.unlocked;
-        const opened = CARD_LEVEL_ORDER.find(lv => nextUnlocked[lv] && !fresh.unlocked[lv]) || null;
-        const log = cpuLogRef.current;
-        const replayRec = log && log.id === game.key ? cardReplayFromCpu(db, {
-          id: `c${log.id}`,
-          at: Date.now(),
-          myDeck: log.decks[0],
-          cpuDeck: log.decks[1],
-          seed: log.seed,
-          first: log.first,
-          history: log.acts,
-          foe: {
-            name: log.foeName,
-            who: game.who,
-            deckName: log.deckName
-          },
-          outcome,
-          reason: '',
-          level: game.level
-        }) : null;
-        if (log && log.id === game.key) cpuLogRef.current = null;
-        const usedDeck = save.decks.decks.find(d => d.id === save.decks.active) || null;
-        const usedMons = log && log.decks[0] ? log.decks[0].monsters : (st && st.players && st.players[CARD_ME] && st.players[CARD_ME].mons || []).map(m => m.no);
-        const detailEntry = game.demo ? null : await cardRecordDetailEntry(fresh.record, d => cardRecordDetailAfter(d, {
-          who: game.who,
-          level: game.level,
-          outcome,
-          turns: facts.ownTurns,
-          deck: usedDeck ? {
-            id: usedDeck.id,
-            name: usedDeck.name
-          } : null,
-          mons: usedMons,
-          moves: cardRecordMovesOf(db, replayRec),
-          today: cardTodayJst()
-        }));
-        const levelGain = !game.demo && typeof cardLevelEntries === 'function' ? await cardLevelEntries({
-          kind: 'cpu',
-          level: game.level,
-          outcome,
-          debug
-        }) : {
-          entries: []
-        };
-        const rankPoint = levelGain.gain && levelGain.gain.points || 0;
-        const ok = await persist({
-          point: save.point + reward.total + rankPoint,
-          daily: reward.daily,
-          record: nextRecord,
-          unlocked: nextUnlocked
-        }, fresh.raw, [...openExtra, ...(detailEntry ? [detailEntry] : []), ...levelGain.entries]);
-        if (ok && openExtra.length) {
-          openIdRef.current = null;
-          openRef.current = null;
-        }
-        if (ok && game.rented && typeof cardShareReportUse === 'function') {
-          const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
-          if (typeof selfId === 'string') void cardShareReportUse({
-            match: `rent-${game.key}-${Date.now().toString(36)}`,
-            ownerId: game.rented.ownerId,
-            userId: selfId,
-            kind: 'rent',
-            version: game.rented.version
-          });
-        }
-        if (ok && rankable) void cardRankSync(db, {
-          record: nextRecord,
-          collection: save.collection,
-          profile: rank.profile
-        });
-        if (ok && !debug && levelGain.gain && levelGain.gain.to > levelGain.gain.from) void cardRankPut(rank && rank.profile);
-        if (ok && outcome === 'win' && !debug) {
-          try {
-            const unlockEntry = assistantCostumeUnlockEntry(await storeGet(ASSISTANT_COSTUME_UNLOCKED_KEY, null), {
-              who: game.who,
-              level: game.level,
-              outcome
-            });
-            if (unlockEntry && (await storeSet(unlockEntry.key, unlockEntry.next))) addAssistantCostumeUnlockedNow(unlockEntry.next);
-          } catch (_) {}
-        }
-        let quick = null;
-        if (loops > 0 && onQuickLoops) {
-          try {
-            quick = await onQuickLoops(loops);
-          } catch (_) {
-            quick = null;
-          }
-        }
-        if (ok && quick) await persist({
-          daily: {
-            ...reward.daily,
-            quickLoops: (reward.daily.quickLoops || 0) + loops
-          }
-        }, {
-          daily: reward.daily
-        }, [await cardRecordDetailEntry(nextRecord, d => ({
-          ...d,
-          quick: d.quick + loops
-        }))]);
-        const talkFacts = !game.demo && !game.pvp ? cardTalkAfterFacts(db, st, {
-          cpu: CARD_CPU,
-          outcome,
-          level: game.level,
-          comeback
-        }) : null;
-        let replayId = null;
-        if (replayRec && (await cardReplaySave(replayRec))) replayId = replayRec.id;
-        setResult({
-          outcome,
-          reward,
-          opened,
-          saved: ok,
-          who: game.who,
-          level: game.level,
-          loops,
-          quick,
-          facts,
-          talk: talkFacts,
-          replay: replayId,
-          rankGain: ok ? levelGain.gain : null
-        });
-        onBgm && onBgm(cardBgmOf(save.bgm.top));
-        onNavigate('CARD_TOP');
-        setView('result');
-      }
+      onFinish: boardFinish
     });
   }
   const allAssistants = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS : [];
@@ -104863,6 +106928,7 @@ const CardBattleScreen = ({
   const startBattle = (pick = foe, deck = activeDeck, opts = {}) => {
     const rented = opts && opts.rented ? opts.rented : null;
     const cup = opts && opts.cup ? opts.cup : null;
+    const autoIn = opts && opts.auto && opts.auto.tactics && pick.share ? opts.auto : null;
     const issues = deck ? rented || cup ? cardDeckProblems(db, deck) : [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)] : ['デッキがありません'];
     if (!deck || issues.length) {
       setNotice(issues.join('・'));
@@ -104927,19 +106993,28 @@ const CardBattleScreen = ({
         monsters: vsMons(st, CARD_ME)
       }
     };
+    const auto = autoIn ? {
+      tactics: autoIn.tactics,
+      level: typeof cardShareFightLevel === 'function' ? cardShareFightLevel(autoIn.tactics) : 'master',
+      sameBlood: !!cardShareSameBlood(db, activeDeck),
+      quick: !!autoIn.quick
+    } : null;
     setGame({
       key: gameKey,
       st,
       who: pick.who,
       level: pick.level,
       settings: save.settings,
-      intro,
+      intro: auto && auto.quick ? null : intro,
       cpuSameBlood: !!cpuDeck.sameBlood,
       ...(share ? {
         share
       } : {}),
       ...(cup ? {
         cup
+      } : {}),
+      ...(auto ? {
+        auto
       } : {}),
       ...(rented ? {
         rented: {
@@ -105097,14 +107172,14 @@ const CardBattleScreen = ({
       onClick: closeShareGuide,
       className: "mt-1.5 rounded-lg bg-amber-400 px-3 py-1 text-[12px] font-black text-slate-950"
     }, "わかった"))), React.createElement("div", {
-      className: `${SCREEN_LIST_CLASS} relative z-[1] flex flex-col space-y-3 pb-4`
+      className: `${SCREEN_LIST_CLASS} relative z-[1] flex flex-col space-y-3 pb-4 landscape:grid landscape:grid-cols-2 landscape:auto-rows-max landscape:content-start landscape:gap-2 landscape:space-y-0 landscape:pb-1`
     }, React.createElement("div", {
       "aria-hidden": "true",
-      className: "flex-1"
+      className: "flex-1 landscape:hidden"
     }), React.createElement("button", {
       type: "button",
       "data-card-mode-assistant": true,
-      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-orange-200 via-orange-400 to-rose-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]",
+      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 landscape:min-h-[84px] landscape:gap-1 bg-gradient-to-br from-orange-200 via-orange-400 to-rose-500 px-4 py-3 text-left text-slate-950 landscape:px-3 landscape:py-2 active:scale-[.98]",
       onClick: () => {
         Audio_.fgSe.tap();
         setView('foe');
@@ -105116,9 +107191,9 @@ const CardBattleScreen = ({
       className: "relative flex items-center gap-2"
     }, React.createElement("span", {
       "aria-hidden": "true",
-      className: "text-3xl leading-none"
+      className: "text-3xl leading-none landscape:text-2xl"
     }, "⚔️"), React.createElement("span", null, React.createElement("b", {
-      className: "block text-[22px] font-black italic leading-tight"
+      className: "block text-[22px] font-black italic leading-tight landscape:text-[17px]"
     }, shareForm ? 'フリー対戦' : '助手と対戦'), React.createElement("small", {
       className: "block text-[11px] font-black text-slate-900/80"
     }, shareForm ? '助手や、ほかのブリーダーのデッキと戦う' : '助手のみんなと戦う・強さは5段'))), React.createElement("span", {
@@ -105128,7 +107203,7 @@ const CardBattleScreen = ({
       key: x.id,
       src: assistantFaceImage(x, 'normal'),
       alt: "",
-      className: "h-8 w-8 rounded-full border-2 border-white/80 bg-slate-900 object-cover object-top shadow"
+      className: "h-8 w-8 rounded-full border-2 landscape:h-6 landscape:w-6 border-white/80 bg-slate-900 object-cover object-top shadow"
     })))), React.createElement("button", {
       type: "button",
       "data-card-mode-multi": true,
@@ -105137,7 +107212,7 @@ const CardBattleScreen = ({
         Audio_.fgSe.tap();
         setView('pvp');
       },
-      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50",
+      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 landscape:min-h-[84px] landscape:gap-1 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 landscape:px-3 landscape:py-2 active:scale-[.98] disabled:opacity-50",
       style: {
         animationDelay: '60ms'
       }
@@ -105148,9 +107223,9 @@ const CardBattleScreen = ({
       className: "relative flex items-center gap-2"
     }, React.createElement("span", {
       "aria-hidden": "true",
-      className: "text-3xl leading-none"
+      className: "text-3xl leading-none landscape:text-2xl"
     }, "🎮"), React.createElement("span", null, React.createElement("b", {
-      className: "block text-[22px] font-black italic leading-tight"
+      className: "block text-[22px] font-black italic leading-tight landscape:text-[17px]"
     }, "マルチ対戦"), React.createElement("small", {
       className: "block text-[11px] font-black text-slate-900/80"
     }, "ブリーダーどうしで戦う"))), !cardPvpOpen() && React.createElement("span", {
@@ -105163,7 +107238,7 @@ const CardBattleScreen = ({
         setTacticsBack('mode');
         setView('tactics');
       },
-      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-amber-200 via-amber-400 to-orange-600 px-4 py-3 text-left text-slate-950 active:scale-[.98]"
+      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 landscape:min-h-[84px] landscape:gap-1 bg-gradient-to-br from-amber-200 via-amber-400 to-orange-600 px-4 py-3 text-left text-slate-950 landscape:px-3 landscape:py-2 active:scale-[.98]"
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "mhms-mark"
@@ -105171,9 +107246,9 @@ const CardBattleScreen = ({
       className: "relative flex items-center gap-2"
     }, React.createElement("span", {
       "aria-hidden": "true",
-      className: "text-3xl leading-none"
+      className: "text-3xl leading-none landscape:text-2xl"
     }, "🗂️"), React.createElement("span", null, React.createElement("b", {
-      className: "block text-[22px] font-black italic leading-tight"
+      className: "block text-[22px] font-black italic leading-tight landscape:text-[17px]"
     }, "デッキ登録"), React.createElement("small", {
       className: "block text-[11px] font-black text-slate-900/80"
     }, "デッキを登録する・戦術カードを組む・引く"))), !cardShareOpen() && React.createElement("span", {
@@ -105185,7 +107260,7 @@ const CardBattleScreen = ({
         Audio_.fgSe.tap();
         setView('tour');
       },
-      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-yellow-100 via-yellow-300 to-amber-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]"
+      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 landscape:min-h-[84px] landscape:gap-1 bg-gradient-to-br from-yellow-100 via-yellow-300 to-amber-500 px-4 py-3 text-left text-slate-950 landscape:px-3 landscape:py-2 active:scale-[.98]"
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "mhms-mark"
@@ -105193,9 +107268,9 @@ const CardBattleScreen = ({
       className: "relative flex items-center gap-2"
     }, React.createElement("span", {
       "aria-hidden": "true",
-      className: "text-3xl leading-none"
+      className: "text-3xl leading-none landscape:text-2xl"
     }, "🏆"), React.createElement("span", null, React.createElement("b", {
-      className: "block text-[22px] font-black italic leading-tight"
+      className: "block text-[22px] font-black italic leading-tight landscape:text-[17px]"
     }, "大会"), React.createElement("small", {
       className: "block text-[11px] font-black text-slate-900/80"
     }, "登録したデッキで出る・毎日自動で対戦"))), React.createElement("span", {
@@ -105207,7 +107282,7 @@ const CardBattleScreen = ({
         Audio_.fgSe.tap();
         setView('cup');
       },
-      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-lime-100 via-emerald-300 to-teal-500 px-4 py-3 text-left text-slate-950 active:scale-[.98]"
+      className: "mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 landscape:min-h-[84px] landscape:gap-1 bg-gradient-to-br from-lime-100 via-emerald-300 to-teal-500 px-4 py-3 text-left text-slate-950 landscape:px-3 landscape:py-2 active:scale-[.98]"
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "mhms-mark"
@@ -105215,16 +107290,16 @@ const CardBattleScreen = ({
       className: "relative flex items-center gap-2"
     }, React.createElement("span", {
       "aria-hidden": "true",
-      className: "text-3xl leading-none"
+      className: "text-3xl leading-none landscape:text-2xl"
     }, "🎌"), React.createElement("span", null, React.createElement("b", {
-      className: "block text-[22px] font-black italic leading-tight"
+      className: "block text-[22px] font-black italic leading-tight landscape:text-[17px]"
     }, "個人杯"), React.createElement("small", {
       className: "block text-[11px] font-black text-slate-900/80"
     }, "自分で大会を開く・仲間の大会に出る"))), !cardCupOpen() && React.createElement("span", {
       className: "relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white"
     }, "つくっている途中(デバッグ)")), React.createElement("div", {
       "aria-hidden": "true",
-      className: "flex-1"
+      className: "flex-1 landscape:hidden"
     })));
   }
   const tacticsBackTo = () => {
@@ -105472,6 +107547,13 @@ const CardBattleScreen = ({
       },
       allowRented: !toPvp && !sharePick,
       rentTab: shareForm && !toPvp && !sharePick,
+      auto: sharePick && typeof cardTacticsAutoOf === 'function' ? {
+        on: shareAuto,
+        onChange: setShareAuto,
+        left: autoLeft,
+        quick: shareQuick,
+        onQuick: typeof cardShareAutoFinish === 'function' ? setShareQuick : null
+      } : null,
       onPick: async c => {
         if (c.kind === 'rent') {
           const next = deckPick;
@@ -105495,13 +107577,23 @@ const CardBattleScreen = ({
             return;
           }
         }
+        const autoT = sharePick && shareAuto && typeof cardTacticsAutoOf === 'function' ? await cardTacticsAutoOf(db, deck).catch(() => null) : null;
+        if (sharePick && shareAuto && !autoT) {
+          setNotice('戦術カードを読めませんでした');
+          return;
+        }
         const next = deckPick;
         setDeckPick(null);
         if (next.next === 'pvp') {
           setView('pvp');
           return;
         }
-        startBattle(next.pick, deck);
+        startBattle(next.pick, deck, autoT ? {
+          auto: {
+            tactics: autoT,
+            quick: shareQuick && typeof cardShareAutoFinish === 'function'
+          }
+        } : {});
       }
     });
   }
@@ -105752,7 +107844,7 @@ const CardBattleScreen = ({
       alt: a.name,
       className: "w-[42%]",
       style: {
-        height: 'min(150px, max(17vh, 28vmin))'
+        height: 'var(--mh-foe-art-h, min(150px, max(17vh, 28vmin)))'
       }
     }), React.createElement("div", {
       className: "min-w-0 flex-1 pb-2"
@@ -106036,7 +108128,11 @@ const CardBattleScreen = ({
     }, "裏のクイック周回(", result.quick.quickDifficulty && String(quickDifficultySetting(result.quick.quickDifficulty)?.label || '').toUpperCase() || 'AUTO設定', ")が", result.loops, "周ぶん進みました"), result.quick.live && Number(result.quick.toLoop) > Number(result.quick.fromLoop) && React.createElement("div", {
       "data-card-quick-loops-range": true,
       className: "mt-0.5 text-[11px] font-bold text-sky-100"
-    }, result.quick.fromLoop, "周目 → ", result.quick.toLoop, "周目"))), React.createElement("div", {
+    }, result.quick.fromLoop, "周目 → ", result.quick.toLoop, "周目"))), result.auto && React.createElement("div", {
+      "data-card-result-auto": result.auto.paid ? 'paid' : 'free',
+      className: "mt-1 text-[12px] font-black text-sky-200",
+      style: JA_LABEL_STYLE
+    }, jaWrap(result.auto.paid ? `🤖 オートで挑みました(ごほうびは自分で戦うときの半分)。今日のごほうびはあと${result.auto.left}回` : '🤖 オートで挑みました。今日のごほうびは終わっています(ごほうびなしで遊べます)')), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
     }, "いまのビートP: ", save.point), result.opened && React.createElement("div", {
       className: "mt-1 text-[13px] font-black text-emerald-300"
@@ -106047,7 +108143,15 @@ const CardBattleScreen = ({
       className: "mt-1 text-[11px] font-bold text-slate-400"
     }, "(デバッグの見本です。何も保存していません)"))), React.createElement("div", {
       className: `${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2`
-    }, result.replay && React.createElement("button", {
+    }, !result.replay && result.replayRec && React.createElement("button", {
+      type: "button",
+      "data-card-result-replay": "auto",
+      className: `${btn} mh-button-secondary col-span-2 border border-sky-300/40 bg-slate-800`,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        openReplayRec(result.replayRec, 'result');
+      }
+    }, "この対戦を見る"), result.replay && React.createElement("button", {
       type: "button",
       "data-card-result-replay": true,
       className: `${btn} mh-button-secondary col-span-2 border border-sky-300/40 bg-slate-800`,
@@ -106064,7 +108168,12 @@ const CardBattleScreen = ({
             who: result.share.tactics.habit,
             level: result.level,
             share: result.share
-          });
+          }, activeDeck, result.auto ? {
+            auto: {
+              tactics: result.auto.tactics,
+              quick: !!result.auto.quick
+            }
+          } : {});
           return;
         }
         const again = {
@@ -106319,7 +108428,7 @@ const CardBattleScreen = ({
       }, React.createElement("span", {
         className: "block whitespace-pre-line text-center"
       }, o.label), React.createElement("small", {
-        className: "mt-0.5 block text-center text-[9px] font-bold leading-tight opacity-80"
+        className: "mt-0.5 block text-center text-[11px] font-bold leading-tight opacity-80"
       }, o.note));
     })));
     const quickAutoPanel = React.createElement("div", {
@@ -106490,7 +108599,7 @@ const CardBattleScreen = ({
       }, React.createElement("span", {
         className: "block whitespace-pre-line text-center"
       }, o.label), React.createElement("small", {
-        className: "mt-0.5 block text-center text-[9px] font-bold leading-tight opacity-80"
+        className: "mt-0.5 block text-center text-[11px] font-bold leading-tight opacity-80"
       }, o.note)))));
     }), g.title === '演出' && packFxPanel, g.title === '自動' && quickAutoPanel, g.title === '助手' && startLevelPanel)))));
   }
@@ -107029,7 +109138,9 @@ const CardDeckPickTile = ({
     className: "mt-0.5 flex items-center gap-0.5"
   }, React.createElement(CardNameFit, {
     name: name,
-    className: "min-w-0 flex-1 font-bold leading-tight text-slate-100"
+    className: "min-w-0 flex-1 font-bold leading-tight text-slate-100",
+    twoLine: true,
+    tall: true
   }), onDetail && React.createElement("button", {
     type: "button",
     "data-card-deck-info": no,
@@ -107442,6 +109553,7 @@ const CardDeckEditor = ({
   }))), !land && footer, ask && React.createElement("div", {
     "data-card-deck-ask-sheet": true,
     className: "fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-2 sm:items-center",
+    style: cardSafePad('.5rem'),
     onClick: () => {
       if (!ask.busy) setAsk(null);
     }
@@ -107922,7 +110034,7 @@ const CardDex = ({
           className: `mt-0.5 font-bold leading-tight ${have ? 'text-slate-100' : 'text-slate-500'}`
         }), React.createElement("span", {
           className: "text-[9px] font-bold text-slate-500"
-        }, "No.", no), mode === 'sub' && m && String(m.wave) === 'hybrid' && m.main && React.createElement("span", {
+        }, "No.", c && c.dispNo || m && m.dispNo || no), mode === 'sub' && m && String(m.wave) === 'hybrid' && m.main && React.createElement("span", {
           "data-card-dex-main": m.main,
           className: "text-[9px] font-bold text-indigo-200"
         }, "主 ", spName[m.main] || m.main));
@@ -108600,7 +110712,8 @@ const CardPackOpen = ({
       "data-card-pack-spot": spot.rarity,
       "aria-label": "並びへ戻す",
       onClick: spotOff,
-      className: "fixed inset-0 z-[72] flex flex-col items-center justify-center overflow-hidden bg-slate-950/70"
+      className: "fixed inset-0 z-[72] flex flex-col items-center justify-center overflow-hidden bg-slate-950/70",
+      style: cardSafePad('0px')
     }, React.createElement("div", {
       "aria-hidden": "true",
       className: `mh-pack-spot-rays ${alt ? 'mh-pack-spot-rays-alt' : ''}`
@@ -108733,6 +110846,7 @@ const CardShopSheet = ({
   onClick: onClose,
   className: "fixed inset-0 flex items-center justify-center p-3",
   style: {
+    ...cardSafePad('.75rem'),
     zIndex: MODAL_Z.dialog,
     backgroundColor: 'rgba(2,6,23,0.88)'
   }
@@ -109159,6 +111273,7 @@ const CardCatalogSheet = ({
     onClick: onClose,
     className: "fixed inset-0 flex items-center justify-center p-3",
     style: {
+      ...cardSafePad('.75rem'),
       zIndex: MODAL_Z.dialog,
       backgroundColor: 'rgba(2,6,23,0.88)'
     }
@@ -109475,7 +111590,8 @@ const CardDeckPick = ({
   onPick,
   onBack,
   allowRented = false,
-  rentTab = false
+  rentTab = false,
+  auto = null
 }) => {
   const [rented, setRented] = useState(null);
   const [tab, setTab] = useState('own');
@@ -109575,7 +111691,48 @@ const CardDeckPick = ({
       setTab(id);
     },
     className: `flex-1 rounded-xl py-2 text-[13px] font-black ${tab === id ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`
-  }, label))), note && tab === 'own' && React.createElement("p", {
+  }, label))), auto && tab === 'own' && React.createElement("div", {
+    "data-card-deck-pick-auto": auto.on ? 'auto' : 'hand',
+    className: "space-y-1.5"
+  }, React.createElement("div", {
+    className: "flex gap-1.5",
+    role: "radiogroup",
+    "aria-label": "戦い方"
+  }, [[false, '🖐 自分で操作'], [true, '🤖 オート(戦術カード)']].map(([v, label]) => React.createElement("button", {
+    key: String(v),
+    type: "button",
+    role: "radio",
+    "aria-checked": auto.on === v,
+    "data-card-deck-pick-mode": v ? 'auto' : 'hand',
+    onClick: () => {
+      Audio_.fgSe.tap();
+      auto.onChange(v);
+    },
+    className: `min-h-[44px] flex-1 rounded-xl px-1 text-[13px] font-black ${auto.on === v ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`
+  }, label))), auto.on && typeof auto.onQuick === 'function' && React.createElement("button", {
+    type: "button",
+    role: "switch",
+    "aria-checked": !!auto.quick,
+    "data-card-deck-pick-quick": auto.quick ? 'on' : 'off',
+    onClick: () => {
+      Audio_.fgSe.tap();
+      auto.onQuick(!auto.quick);
+    },
+    className: `flex min-h-[40px] w-full items-center gap-2 rounded-xl border px-2.5 text-left text-[12px] font-black ${auto.quick ? 'border-amber-300 bg-amber-950/40 text-amber-100' : 'border-slate-600 bg-slate-900 text-slate-200'}`
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: `flex h-5 w-5 shrink-0 items-center justify-center rounded border ${auto.quick ? 'border-amber-300 bg-amber-400 text-slate-950' : 'border-slate-400'}`
+  }, auto.quick ? '✓' : ''), React.createElement("span", {
+    className: "min-w-0 flex-1",
+    style: JA_WRAP_STYLE
+  }, jaWrap('⏩ 結果だけ見る(対戦の画面を出さずに、一瞬で最後まで戦う)'))), auto.on && React.createElement("p", {
+    "data-card-deck-pick-auto-note": true,
+    className: "rounded-xl bg-slate-900/80 px-2.5 py-2 text-[11px] font-bold leading-snug text-slate-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap('選んだデッキの戦術カードで、あなたの側も自動で戦います。試合の途中で「自分で」に切り替えられます'), React.createElement("span", {
+    "data-card-deck-pick-auto-left": auto.left === null ? '' : auto.left,
+    className: `mt-1 block ${auto.left ? 'text-emerald-200' : 'text-amber-200'}`
+  }, auto.left === null ? '' : auto.left > 0 ? `今日のごほうびはあと${auto.left}回(自分で戦うときの半分)` : '今日のごほうびは終わりました。ごほうびなしで遊べます'))), note && tab === 'own' && React.createElement("p", {
     className: "text-[11px] font-bold text-slate-400",
     style: JA_WRAP_STYLE
   }, note), choices.map(c => {
@@ -114587,6 +116744,7 @@ const CardChatPanel = ({
   return React.createElement("div", {
     "data-card-chat-panel": mode,
     className: "fixed inset-0 z-[60] flex flex-col justify-end bg-black/40",
+    style: cardSafePad('0px'),
     onClick: onClose
   }, React.createElement("div", {
     className: "mx-auto w-full max-w-[520px] rounded-t-2xl border-t-2 border-sky-400 bg-slate-950 px-3 pt-2 text-white",
@@ -115439,7 +117597,7 @@ const cardReplayMake = (db, {
   const built = cardReplayBuild(db, one);
   if (built.stop !== null) return null;
   one.prints = built.states.slice(1).map(cardReplayPrint).join('');
-  one.turn = built.states[built.states.length - 1].turn;
+  one.turn = built.states[Math.max(0, built.states.length - 2)].turn;
   return one;
 };
 const cardReplayFromPvp = (db, {
@@ -117525,6 +119683,47 @@ const cardShareReplayGet = async (ownerId, slot) => {
   });
   return row && typeof row === 'object' && !Array.isArray(row) ? row : null;
 };
+const cardShareAutoFinish = (db, st0, pols, {
+  max = typeof CARD_TOUR_MAX_STEPS === 'number' ? CARD_TOUR_MAX_STEPS : 4000,
+  rand = Math.random
+} = {}) => {
+  let st = cardClone(st0);
+  const acts = [];
+  for (let steps = 0; steps < max && st.winner === null; steps++) {
+    const who = st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? cardOther(st.first) : cardDecider(st);
+    let act = cardAiChooseAction(db, st, pols[who], rand);
+    let next = act && cardApplyAction(db, st, act);
+    if (!next) {
+      act = st.pending ? {
+        type: 'pass'
+      } : st.phase === 'main' ? {
+        type: 'endAttacks'
+      } : st.phase === 'guts' ? {
+        type: 'guts',
+        hand: []
+      } : null;
+      next = act && cardApplyAction(db, st, act);
+      if (!next) break;
+    }
+    acts.push([who, act]);
+    st = next;
+  }
+  if (st.winner !== null) return {
+    st,
+    acts,
+    limit: false
+  };
+  const kos = [cardKoCount(st, 0), cardKoCount(st, 1)];
+  const life = p => st.players[p].mons.reduce((a, m) => a + Math.max(0, m.ko ? 0 : m.life), 0);
+  const winner = kos[0] !== kos[1] ? kos[0] > kos[1] ? 0 : 1 : life(0) !== life(1) ? life(0) > life(1) ? 0 : 1 : cardOther(st.first);
+  const end = cardClone(st);
+  cardGameOver(end, winner, '手数の上限');
+  return {
+    st: end,
+    acts,
+    limit: true
+  };
+};
 const cardShareSameBlood = (db, deck) => {
   const ms = (deck && Array.isArray(deck.monsters) ? deck.monsters : []).map(no => cardMonsterOf(db, no)).filter(Boolean);
   return ms.length > 0 && ms.filter(m => cardAiBloodOf(m) === cardAiBloodOf(ms[0])).length >= 2;
@@ -117618,10 +119817,11 @@ const CardDeckShare = ({
   const [foeDetail, setFoeDetail] = useState(null);
   const [foeFilter, setFoeFilter] = useState('all');
   const [tacticsSave, setTacticsSave] = useState(null);
+  const [tacticsDeckBox, setTacticsDeckBox] = useState(null);
   useEffect(() => {
     if (typeof cardTacticsLoad === 'function') void cardTacticsLoad().then(setTacticsSave).catch(() => {});
+    if (typeof cardTacticsDeckLoad === 'function') void cardTacticsDeckLoad().then(r => setTacticsDeckBox(r.box)).catch(() => {});
   }, []);
-  const framesNow = tacticsSave && typeof cardTacticsFramesForBattle === 'function' ? cardTacticsFramesForBattle(tacticsSave.tactics, tacticsSave.info.level) : null;
   const [rented, setRented] = useState(null);
   useEffect(() => {
     void cardRentedDeckGet().then(setRented);
@@ -117660,6 +119860,10 @@ const CardDeckShare = ({
   const deckOf = id => list.find(d => d.id === id) || null;
   const issuesOf = d => d ? [...cardDeckProblems(db, d), ...cardDeckOwnProblems(db, d, collection)] : ['デッキがありません'];
   const picked = deckOf(pick);
+  const framesNow = tacticsSave && typeof cardTacticsFramesForBattle === 'function' ? cardTacticsFramesForBattle({
+    ...tacticsSave.tactics,
+    frames: typeof cardTacticsFramesOfDeck === 'function' ? cardTacticsFramesOfDeck(tacticsDeckBox, tacticsSave.tactics, picked && picked.id) : tacticsSave.tactics.frames
+  }, tacticsSave.info.level) : null;
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -118176,12 +120380,14 @@ const CardShareDeckDetail = ({
   }, [entry.ownerId]);
   const losses = Math.max(0, (entry.battles || 0) - (entry.deckWins || 0));
   const dayText = ms => {
-    const d = new Date(ms);
-    return Number.isFinite(d.getTime()) ? `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : '';
+    if (!Number.isFinite(ms) || ms <= 0) return '';
+    const d = new Date(ms + 9 * 3600 * 1000);
+    return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
   };
   return React.createElement("div", {
     "data-card-share-deck-detail": true,
     className: "fixed inset-0 z-[90] flex items-end justify-center bg-black/60 p-3 sm:items-center",
+    style: cardSafePad('.75rem'),
     onClick: onClose
   }, React.createElement("div", {
     className: "max-h-[86vh] w-full max-w-[440px] overflow-y-auto rounded-2xl border-2 border-amber-600/60 bg-slate-950 p-3",
@@ -118709,11 +120915,16 @@ const cardLevelAfter = (prev, {
   kind,
   level,
   outcome,
-  today
+  today,
+  auto = false
 }) => {
   const cur = cardNormalizeLevel(prev);
   const lv0 = cardLevelInfo(cur.xp).level;
-  const base = cardLevelXpOf({
+  const base = auto ? Math.floor(cardLevelXpOf({
+    kind,
+    level,
+    outcome
+  }) / 2) : cardLevelXpOf({
     kind,
     level,
     outcome
@@ -118730,7 +120941,7 @@ const cardLevelAfter = (prev, {
     gains: []
   };
   const sameDay = cur.day === today;
-  const first = outcome === 'win' && !(sameDay && cur.dayWin);
+  const first = !auto && outcome === 'win' && !(sameDay && cur.dayWin);
   const add = base + (first ? CARD_LEVEL_XP.firstWin : 0);
   const parts = [{
     label: outcome === 'win' ? '勝ち' : '負け',
@@ -118761,12 +120972,18 @@ const cardLevelAfter = (prev, {
     icon: '🧠',
     text: cardLevelFrameText(f)
   }))];
+  const dayNext = auto ? {
+    day: cur.day,
+    dayWin: cur.dayWin
+  } : {
+    day: today,
+    dayWin: sameDay && cur.dayWin || outcome === 'win'
+  };
   return {
     next: {
       ...cur,
       xp,
-      day: today,
-      dayWin: sameDay && cur.dayWin || outcome === 'win',
+      ...dayNext,
       got
     },
     tickets,
@@ -118916,11 +121133,135 @@ const cardTacticsLoad = async () => {
     rawL
   };
 };
+const CARD_TACTICS_DECK_KEY = 'mh_card_tactics_by_deck_v1';
+const CARD_TACTICS_DECK_MAX = 40;
+const cardTacticsDeckIdOk = id => typeof id === 'string' && id.length > 0 && id.length <= 64;
+const cardTacticsDeckNormalize = raw => {
+  const decks = {};
+  const src = raw && typeof raw === 'object' && raw.decks && typeof raw.decks === 'object' && !Array.isArray(raw.decks) ? raw.decks : {};
+  Object.keys(src).filter(cardTacticsDeckIdOk).forEach(id => {
+    const e = src[id];
+    if (!e || typeof e !== 'object' || !e.frames || typeof e.frames !== 'object') return;
+    decks[id] = {
+      frames: cardTacticNormalizeFrames(e.frames),
+      aces: Array.isArray(e.aces) ? e.aces.filter(x => typeof x === 'string' && x.length <= 16).slice(0, CARD_SHARE_ACES_MAX) : null,
+      at: Number.isFinite(e.at) && e.at > 0 ? e.at : 0
+    };
+  });
+  return {
+    v: 1,
+    decks
+  };
+};
+const cardTacticsDeckLoad = async () => {
+  let raw = null;
+  try {
+    raw = await storeGet(CARD_TACTICS_DECK_KEY, null);
+  } catch (_) {}
+  return {
+    raw,
+    box: cardTacticsDeckNormalize(raw)
+  };
+};
+const cardTacticsFramesOfDeck = (box, tactics, deckId) => {
+  const e = box && cardTacticsDeckIdOk(deckId) ? box.decks[deckId] : null;
+  return cardTacticNormalizeFrames(e ? e.frames : tactics && tactics.frames);
+};
+const cardTacticsAcesOfDeck = (box, deckId) => {
+  const e = box && cardTacticsDeckIdOk(deckId) ? box.decks[deckId] : null;
+  return e && Array.isArray(e.aces) ? e.aces.slice() : null;
+};
+const cardTacticsDeckEntry = (loaded, deckId, frames, {
+  aces,
+  seed = null
+} = {}) => {
+  if (!cardTacticsDeckIdOk(deckId)) return null;
+  const box = cardTacticsDeckNormalize(loaded && loaded.raw);
+  const decks = {
+    ...box.decks
+  };
+  const now = Date.now();
+  if (!(loaded && loaded.raw) && seed && Array.isArray(seed.ids)) {
+    seed.ids.filter(id => cardTacticsDeckIdOk(id) && id !== deckId && !decks[id]).forEach((id, i) => {
+      decks[id] = {
+        frames: cardTacticNormalizeFrames(seed.frames),
+        aces: null,
+        at: now - 1000 - i
+      };
+    });
+  }
+  const before = decks[deckId];
+  decks[deckId] = {
+    frames: cardTacticNormalizeFrames(frames),
+    aces: aces === undefined ? before ? before.aces : null : Array.isArray(aces) ? aces.slice(0, CARD_SHARE_ACES_MAX) : null,
+    at: now
+  };
+  const keep = Object.keys(decks).sort((a, b) => decks[b].at - decks[a].at).slice(0, CARD_TACTICS_DECK_MAX);
+  return {
+    key: CARD_TACTICS_DECK_KEY,
+    before: loaded ? loaded.raw : null,
+    next: {
+      v: 1,
+      decks: Object.fromEntries(keep.map(id => [id, decks[id]]))
+    }
+  };
+};
+const cardTacticsAutoOf = async (db, deck) => {
+  if (!deck) return null;
+  const [d, byDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]);
+  const frames = cardTacticsFramesOfDeck(byDeck.box, d.tactics, deck.id);
+  const f = cardTacticPackFrames(cardTacticsFramesForBattle({
+    ...d.tactics,
+    frames
+  }, d.info.level));
+  const kept = cardTacticsAcesOfDeck(byDeck.box, deck.id);
+  const aces = kept && kept.length ? kept : typeof cardRegAutoAces === 'function' ? cardRegAutoAces(db, deck) : [];
+  return cardShareNormalizeTactics({
+    name: deck.name,
+    habit: cardShareMainHabit(cardTacticUnpackFrames(f), 'kyuko'),
+    aces,
+    f
+  }, deck);
+};
+const CARD_AUTO_REWARD_KEY = 'mh_card_auto_reward_v1';
+const CARD_AUTO_REWARD_DAY_MAX = 3;
+const cardAutoRewardNormalize = (raw, today) => {
+  const day = raw && typeof raw === 'object' && typeof raw.day === 'string' ? raw.day : '';
+  const n = raw && Number.isInteger(raw.n) && raw.n >= 0 && raw.n < 10000 ? raw.n : 0;
+  return {
+    day: today,
+    n: day === today ? n : 0
+  };
+};
+const cardAutoRewardLoad = async () => {
+  let raw = null;
+  try {
+    raw = await storeGet(CARD_AUTO_REWARD_KEY, null);
+  } catch (_) {}
+  const today = typeof cardTodayJst === 'function' ? cardTodayJst() : '';
+  const c = cardAutoRewardNormalize(raw, today);
+  return {
+    raw,
+    today,
+    n: c.n,
+    left: Math.max(0, CARD_AUTO_REWARD_DAY_MAX - c.n)
+  };
+};
+const cardAutoRewardEntry = loaded => ({
+  key: CARD_AUTO_REWARD_KEY,
+  before: loaded.raw,
+  next: {
+    v: 1,
+    day: loaded.today,
+    n: loaded.n + 1
+  }
+});
 const cardLevelEntries = async ({
   kind,
   level,
   outcome,
-  debug = false
+  debug = false,
+  auto = false
 }) => {
   if (!cardTacticsOpen() && !debug) return {
     entries: [],
@@ -118940,6 +121281,7 @@ const cardLevelEntries = async ({
     kind,
     level,
     outcome,
+    auto,
     today: typeof cardTodayJst === 'function' ? cardTodayJst() : ''
   });
   if (!gain.add) return {
@@ -119058,7 +121400,8 @@ const CardTacticDetail = ({
     "aria-modal": "true",
     "aria-label": card.name,
     onClick: onClose,
-    className: "fixed inset-0 z-[96] flex items-center justify-center bg-black/70 p-4"
+    className: "fixed inset-0 z-[96] flex items-center justify-center bg-black/70 p-4",
+    style: cardSafePad('1rem')
   }, React.createElement("div", {
     onClick: e => e.stopPropagation(),
     className: "w-full max-w-[340px] rounded-2xl border-2 border-white/70 p-4 text-white",
@@ -119273,7 +121616,8 @@ const CardTacticPicker = ({
   if (sp) {
     return React.createElement("div", {
       "data-card-tactic-species": true,
-      className: "fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3"
+      className: "fixed inset-0 z-[80] flex flex-col bg-slate-950 p-3",
+      style: cardSafePad('.75rem')
     }, React.createElement(ScreenHead, {
       title: "種族をえらぶ",
       accent: "text-amber-200",
@@ -119318,7 +121662,8 @@ const CardTacticPicker = ({
   };
   return React.createElement("div", {
     "data-card-tactic-picker": cat,
-    className: "fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3"
+    className: "fixed inset-0 z-[80] flex flex-col bg-slate-950 p-3",
+    style: cardSafePad('.75rem')
   }, React.createElement(ScreenHead, {
     title: title,
     accent: "text-amber-200",
@@ -119795,7 +122140,8 @@ const CardTacticPackOpen = ({
     "data-card-tactic-spot": true,
     "aria-label": "並びへ戻す",
     onClick: spotOff,
-    className: "fixed inset-0 z-[90] flex flex-col items-center justify-center bg-slate-950/70"
+    className: "fixed inset-0 z-[90] flex flex-col items-center justify-center bg-slate-950/70",
+    style: cardSafePad('0px')
   }, React.createElement("div", {
     "aria-hidden": "true",
     className: "mh-pack-spot-rays"
@@ -119853,8 +122199,10 @@ const CardTacticsScreen = ({
   const [opening, setOpening] = useState(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [deckBox, setDeckBox] = useState(null);
   const reload = async () => {
-    const d = await cardTacticsLoad();
+    const [d, byDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]);
+    setDeckBox(byDeck.box);
     setData(d);
     return d;
   };
@@ -119881,27 +122229,34 @@ const CardTacticsScreen = ({
   const deck = (decks && decks.decks || []).find(d => d.id === (decks && decks.active)) || (decks && decks.decks || [])[0] || null;
   const monOf = i => deck ? cardMonsterOf(db, deck.monsters[i]) : null;
   const saveFrames = async frames => {
-    const fresh = await cardTacticsLoad();
+    const [fresh, freshDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]);
     const next = {
       ...fresh.tactics,
       frames: cardTacticNormalizeFrames(frames)
     };
+    const deckEntry = deck ? cardTacticsDeckEntry(freshDeck, deck.id, frames, {
+      seed: {
+        ids: (decks && decks.decks || []).map(x => x.id),
+        frames: fresh.tactics.frames
+      }
+    }) : null;
     const ok = await saveStoredValuesOrRollback([{
       key: CARD_TACTICS_KEY,
       before: fresh.rawT,
       next
-    }], storeGet, storeSet);
+    }, ...(deckEntry ? [deckEntry] : [])], storeGet, storeSet);
     if (!ok) {
       setNotice('保存できませんでした');
       return;
     }
+    if (deckEntry) setDeckBox(cardTacticsDeckNormalize(deckEntry.next));
     setData({
       ...fresh,
       tactics: next,
       rawT: next
     });
   };
-  const f = t.frames;
+  const f = cardTacticsFramesOfDeck(deckBox, t, deck && deck.id);
   const uncounted = cardTacticUncounted(f);
   const whyOf = (k, i) => {
     const list = k === 'breeder' ? uncounted.breeder : uncounted.mons[k];
@@ -120274,7 +122629,8 @@ const CardTacticsScreen = ({
     }
   }))))))), pick && pick.cat === 'all-missing' && React.createElement("div", {
     "data-card-tactic-picker": "missing",
-    className: "fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3"
+    className: "fixed inset-0 z-[80] flex flex-col bg-slate-950 p-3",
+    style: cardSafePad('.75rem')
   }, React.createElement(ScreenHead, {
     title: pick.title,
     accent: "text-amber-200",
@@ -120425,7 +122781,7 @@ const CardTacticsBand = ({
     }
   }), picking && t && React.createElement("div", {
     "data-card-tactic-picker": "missing",
-    className: "fixed inset-0 z-[85] flex flex-col bg-slate-950/95 p-3",
+    className: "fixed inset-0 z-[85] flex flex-col bg-slate-950 p-3",
     style: {
       paddingTop: 'max(.75rem, env(safe-area-inset-top))',
       paddingBottom: 'max(.75rem, env(safe-area-inset-bottom))'
@@ -120929,6 +123285,29 @@ const cardRegRowText = row => {
   if (row.c === 'any') return `いつでも → ${a ? a.line || a.name : '?'}`;
   return `${c ? c.line || c.name : '?'} → ${a ? a.line || a.name : '?'}`;
 };
+const cardRegSmartNextText = (frames, lv) => {
+  const f = cardTacticNormalizeFrames(frames);
+  const base = f.base.filter(Boolean).length;
+  const rows = cardTacticCountedRows(f);
+  const now = cardTacticSmartLevel(f);
+  if (now === 'legend') return 'いちばん上の LEGEND です。';
+  const next = CARD_TACTIC_SMART[CARD_TACTIC_SMART.indexOf(now) + 1];
+  const label = CARD_SHARE_SMART_LABEL[next];
+  if (next === 'master') return `次の ${label} まで: 基本カードをあと${2 - base}枚、または、ちゃんと効く戦術カードをあと${Math.max(1, 4 - rows)}枚。`;
+  const needRows = {
+    grandmaster: 6,
+    hell: 9,
+    legend: 10
+  }[next];
+  const needBase = next === 'legend' ? 3 : 2;
+  const needs = [];
+  if (base < needBase) needs.push(`基本カードをあと${needBase - base}枚`);
+  if (rows < needRows) needs.push(`ちゃんと効く戦術カードをあと${needRows - rows}枚`);
+  const opened = cardLevelFrames(lv).base || 1;
+  const locked = CARD_LEVEL_FRAMES.filter(x => x.base && x.base > opened && x.base <= needBase).map(x => `${x.base}枚目はカードランク${x.at}`);
+  const rank = base < needBase && locked.length ? `(基本カードの${locked.join('、')}でセットできるようになります)` : '';
+  return `次の ${label} まで: ${needs.join('と')}。${rank}`;
+};
 const cardRegApplyStyle = (style, tactics, open) => {
   const owns = id => cardTacticsOwns(tactics, id);
   const cands = list => list.filter(([c, a]) => owns(c) && owns(a)).map(([c, a]) => ({
@@ -121003,7 +123382,8 @@ const CardRegComboSheet = ({
   const secs = [...new Set(list.map(x => x.sec))];
   return React.createElement("div", {
     "data-card-reg-combos": where,
-    className: "fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3"
+    className: "fixed inset-0 z-[80] flex flex-col bg-slate-950 p-3",
+    style: cardSafePad('.75rem')
   }, React.createElement(ScreenHead, {
     title: title,
     accent: "text-amber-200",
@@ -121190,6 +123570,7 @@ const CardRegMonSheet = ({
   return React.createElement("div", {
     "data-card-reg-mon-sheet": k,
     className: "fixed inset-0 z-[78] flex flex-col justify-end bg-black/55",
+    style: cardSafePad('0px'),
     onClick: onClose
   }, React.createElement("div", {
     onClick: e => e.stopPropagation(),
@@ -121383,7 +123764,8 @@ const CardRegTrialSheet = ({
   const wins = res.filter(r => r.win).length;
   return React.createElement("div", {
     "data-card-reg-trial": done ? 'done' : 'run',
-    className: "fixed inset-0 z-[82] flex flex-col bg-slate-950/95 p-3"
+    className: "fixed inset-0 z-[82] flex flex-col bg-slate-950 p-3",
+    style: cardSafePad('.75rem')
   }, React.createElement(ScreenHead, {
     title: "ためしに戦わせる",
     accent: "text-violet-200",
@@ -121486,7 +123868,8 @@ const CardRegTemplateSheet = ({
   };
   return React.createElement("div", {
     "data-card-reg-templates": true,
-    className: "fixed inset-0 z-[82] flex flex-col bg-slate-950/95 p-3"
+    className: "fixed inset-0 z-[82] flex flex-col bg-slate-950 p-3",
+    style: cardSafePad('.75rem')
   }, React.createElement(ScreenHead, {
     title: "おすすめの組み方",
     accent: "text-amber-200",
@@ -121558,6 +123941,9 @@ const CardDeckRegister = ({
   const [draft, setDraft] = useState(null);
   const [styleId, setStyleId] = useState(null);
   const [aces, setAces] = useState('auto');
+  const [deckBox, setDeckBox] = useState(null);
+  const [rowAces, setRowAces] = useState(null);
+  const deckDrafts = useRef({});
   const [sheet, setSheet] = useState(null);
   const [custom, setCustom] = useState(null);
   const [trial, setTrial] = useState(false);
@@ -121571,7 +123957,7 @@ const CardDeckRegister = ({
   useEffect(() => {
     let alive = true;
     void (async () => {
-      const d = await cardTacticsLoad();
+      const [d, byDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]);
       const [name, icon] = await Promise.all([storeGet('mh_breeder_name', 'ブリーダー', false), storeGet('mh_breeder_icon', '🙂', false)]).catch(() => ['ブリーダー', '🙂']);
       const id = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
       const row = typeof id === 'string' ? await cardShareFetchMine(id).catch(() => null) : null;
@@ -121584,10 +123970,18 @@ const CardDeckRegister = ({
         icon: typeof icon === 'string' && icon ? icon : '🙂'
       });
       const same = row ? list.find(x => JSON.stringify(x.monsters) === JSON.stringify(row.deck.monsters) && JSON.stringify(x.cards) === JSON.stringify(row.deck.cards)) : null;
-      setDeckId((same || list.find(x => issuesOf(x).length === 0) || list[0] || {}).id || null);
-      setDraft(cardTacticNormalizeFrames(d.tactics.frames));
+      const firstId = (same || list.find(x => issuesOf(x).length === 0) || list[0] || {}).id || null;
+      setDeckId(firstId);
+      setDeckBox(byDeck.box);
+      setDraft(cardTacticsFramesOfDeck(byDeck.box, d.tactics, firstId));
       const t = row ? cardShareNormalizeTactics(row.tactics) : null;
-      if (t && t.aces.length) setAces(t.aces);
+      const ra = t && t.aces.length && same ? {
+        id: same.id,
+        aces: t.aces
+      } : null;
+      setRowAces(ra);
+      const keptAces = cardTacticsAcesOfDeck(byDeck.box, firstId);
+      if (keptAces && keptAces.length) setAces(keptAces);else if (ra && ra.id === firstId) setAces(ra.aces);else if (t && t.aces.length && !same) setAces(t.aces);
     })();
     return () => {
       alive = false;
@@ -121617,6 +124011,7 @@ const CardDeckRegister = ({
   const smartText = cardShareSmartText({
     f: cardTacticPackFrames(battle)
   });
+  const smartNext = cardRegSmartNextText(battle, lv);
   const uncounted = cardTacticUncounted(battle);
   const acesNow = aces === 'auto' ? cardRegAutoAces(db, deck) : aces;
   const setRows = (k, rows) => setDraft(f => k === 'breeder' ? {
@@ -121628,21 +124023,52 @@ const CardDeckRegister = ({
   });
   const rowsOf = k => k === 'breeder' ? draft.breeder : draft.mons[k];
   const maxOf = k => k === 'breeder' ? open.breeder : open.mon;
+  const pickDeck = id => {
+    if (id === deckId) return;
+    if (deckId) deckDrafts.current[deckId] = {
+      draft,
+      aces,
+      styleId
+    };
+    const kept = deckDrafts.current[id];
+    if (kept) {
+      setDraft(kept.draft);
+      setAces(kept.aces);
+      setStyleId(kept.styleId);
+    } else {
+      setDraft(cardTacticsFramesOfDeck(deckBox, tactics, id));
+      const ka = cardTacticsAcesOfDeck(deckBox, id);
+      setAces(ka && ka.length ? ka : rowAces && rowAces.id === id ? rowAces.aces : 'auto');
+      setStyleId(null);
+    }
+    setDeckId(id);
+  };
   const register = async () => {
     if (!deck || issuesOf(deck).length || !selfId || busy) return;
     setBusy(true);
     setMsg('');
     try {
-      const fresh = await cardTacticsLoad();
+      const [fresh, freshDeck] = await Promise.all([cardTacticsLoad(), cardTacticsDeckLoad()]);
       const nextT = {
         ...fresh.tactics,
         frames: cardTacticNormalizeFrames(draft)
       };
-      await saveStoredValuesOrRollback([{
+      const deckEntry = cardTacticsDeckEntry(freshDeck, deck.id, draft, {
+        aces: aces === 'auto' ? null : aces,
+        seed: {
+          ids: list.map(x => x.id),
+          frames: fresh.tactics.frames
+        }
+      });
+      const savedT = await saveStoredValuesOrRollback([{
         key: CARD_TACTICS_KEY,
         before: fresh.rawT,
         next: nextT
-      }], storeGet, storeSet);
+      }, ...(deckEntry ? [deckEntry] : [])], storeGet, storeSet);
+      if (savedT && deckEntry) {
+        setDeckBox(cardTacticsDeckNormalize(deckEntry.next));
+        delete deckDrafts.current[deck.id];
+      }
       const f = cardTacticPackFrames(cardTacticsFramesForBattle(nextT, lv));
       const r = await cardShareRegister({
         ownerId: selfId,
@@ -121768,7 +124194,7 @@ const CardDeckRegister = ({
       disabled: why.length > 0,
       onClick: () => {
         Audio_.fgSe.tap();
-        setDeckId(d.id);
+        pickDeck(d.id);
       },
       className: `flex w-full items-center gap-3 rounded-2xl border-2 p-2 text-left ${deckId === d.id ? 'border-amber-300 bg-amber-950/30' : 'border-slate-700 bg-slate-900'} ${why.length ? 'opacity-50' : ''}`
     }, React.createElement(CardRegThumbs, {
@@ -121874,7 +124300,7 @@ const CardDeckRegister = ({
   })), React.createElement("p", {
     className: "mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100",
     style: JA_WRAP_STYLE
-  }, jaWrap('入れると: 賢さの上限が上がります(1枚 HARD まで・2枚 EXPERT・3枚 MASTER)。サブは、型を3分の1だけ足します。'))), React.createElement("section", {
+  }, jaWrap('入れると: 賢さが上がります(基本2枚で MASTER。基本2枚と、ちゃんと効く戦術カード6枚で GRAND MASTER・9枚で HELL。LEGEND は基本3枚と10枚)。サブは、型を3分の1だけ足します。'))), React.createElement("section", {
     "data-card-reg-sec": "breeder",
     className: "rounded-2xl border-2 border-violet-400 bg-slate-900/90 p-2.5"
   }, React.createElement(CardRegSecHead, {
@@ -121999,7 +124425,11 @@ const CardDeckRegister = ({
   })), React.createElement("small", {
     className: "mt-1 block text-[11px] font-bold text-slate-400",
     style: JA_WRAP_STYLE
-  }, "賢さは、ほかのブリーダーがこのデッキと戦うときの相手の強さです。ちゃんと効く戦術カードが多いほど上がります。")), React.createElement("div", {
+  }, "賢さは、ほかのブリーダーがこのデッキと戦うときの相手の強さです。ちゃんと効く戦術カードが多いほど上がります。"), smartNext && React.createElement("p", {
+    "data-card-reg-smart-next": true,
+    className: "mt-1 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(smartNext))), React.createElement("div", {
     "data-card-reg-aces": true,
     className: `${SCREEN_PANEL_CLASS} py-2`
   }, React.createElement("div", {
@@ -123079,7 +125509,8 @@ const CardTourHistoryList = ({
   onClose
 }) => React.createElement("div", {
   "data-card-tour-history": true,
-  className: "fixed inset-0 z-[80] flex justify-center bg-slate-950"
+  className: "fixed inset-0 z-[80] flex justify-center bg-slate-950",
+  style: cardSafePad('0px')
 }, React.createElement("div", {
   className: `${SCREEN_SHELL_CLASS} w-full max-w-[600px]`
 }, React.createElement(ScreenHead, {
@@ -124991,10 +127422,25 @@ const CardCupPrizePanel = ({
     className: "flex items-center justify-between text-[13px] font-black text-white"
   }, React.createElement("span", null, cardCupItemText(p.item, 0).replace(/ 0$/, '')), React.createElement("span", {
     className: "text-amber-200"
-  }, p.total.toLocaleString()))), prize.givers.length > 0 && React.createElement("p", {
-    className: "text-[11px] font-bold text-slate-400",
-    style: JA_WRAP_STYLE
-  }, jaWrap(`出した人: ${prize.givers.map(g => `${g.name} ${cardCupItemText(g.item, g.amount)}`).join('・')}`)), prize.fee && React.createElement("p", {
+  }, p.total.toLocaleString()))), prize.givers.length > 0 && React.createElement("div", {
+    "data-card-cup-givers": true,
+    className: "text-[11px] font-bold text-slate-400"
+  }, React.createElement("p", null, "出した人"), React.createElement("ul", {
+    className: "mt-0.5 space-y-0.5"
+  }, prize.givers.map((g, i) => React.createElement("li", {
+    key: i,
+    "data-card-cup-giver": true,
+    className: "flex items-center gap-1.5"
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "w-4 shrink-0 text-center"
+  }, g.icon || '🙂'), React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-slate-300"
+  }, g.name), g.host && React.createElement("span", {
+    className: "shrink-0 rounded bg-amber-400/20 px-1 text-[10px] text-amber-200"
+  }, "主催"), React.createElement("span", {
+    className: "shrink-0 whitespace-nowrap text-slate-200"
+  }, cardCupItemText(g.item, g.amount)))))), prize.fee && React.createElement("p", {
     "data-card-cup-fee": true,
     className: "text-[12px] font-black text-sky-100"
   }, `参加費 ${cardCupItemText(prize.fee.item, prize.fee.amount)}(主催・主催仲間は払いません)`), (prize.pool.length > 0 || prize.fee) && React.createElement("div", {
@@ -125893,6 +128339,7 @@ function MonsterHeroGame() {
   const [highestWaves, setHighestWaves] = useState({});
   const [extremeBestScores, setExtremeBestScores] = useState({});
   const [extremeClearCounts, setExtremeClearCounts] = useState({});
+  const [cocytusOpenKept, setCocytusOpenKept] = useState(null);
   const [extremeDifficultyClearCounts, setExtremeDifficultyClearCounts] = useState({});
   const [onboarded, setOnboarded] = useState(true);
   useEffect(() => {
@@ -127720,7 +130167,8 @@ function MonsterHeroGame() {
         fullCombo: result?.fullCombo === true,
         allMarvelous: result?.allMarvelous === true,
         multi: play && play.from === 'multi',
-        today
+        today,
+        durationMs: play && play.song ? rhythmPlaySongDurationMs(play.song, play.difficulty) : 0
       });
       if (!gain.add) return;
       const next = {
@@ -128270,6 +130718,10 @@ function MonsterHeroGame() {
   const [showEventReplayList, setShowEventReplayList] = useState(false);
   const [eventReplayGroupId, setEventReplayGroupId] = useState(null);
   const [eventReplay, setEventReplay] = useState(null);
+  const eventReplayEnding = !!(eventReplay && eventReplay.ending);
+  useEffect(() => {
+    if (!eventReplayEnding && typeof Audio_ !== 'undefined' && Audio_.setStoryEndFade) Audio_.setStoryEndFade(false);
+  }, [eventReplayEnding]);
   const [showDebugStoryList, setShowDebugStoryList] = useState(false);
   setAssistantCostumeStoryNow(eventReplay ? ((eventReplay.debug ? eventReplayAllList() : eventReplayList()).find(ev => ev.id === eventReplay.id) || {}).costumes || null : null);
   const [breederPoints, setBreederPoints] = useState(0);
@@ -129163,7 +131615,10 @@ function MonsterHeroGame() {
   const eternalClearCount = extremeClearCounts[ETERNAL_SETTING.id] || 0;
   const infernoUnlocked = useMemo(() => isInfernoUnlocked(eternalClearCount), [eternalClearCount]);
   const infernoClearCount = extremeClearCounts[INFERNO_SETTING.id] || 0;
-  const cocytusUnlocked = useMemo(() => isCocytusUnlocked(infernoClearCount), [infernoClearCount]);
+  const erebusUnlocked = useMemo(() => isErebusUnlocked(infernoClearCount), [infernoClearCount]);
+  const erebusClearCount = extremeClearCounts[EREBUS_SETTING.id] || 0;
+  const cocytusRecord = (extremeClearCounts[COCYTUS_SETTING.id] || 0) + (extremeBestScores[COCYTUS_SETTING.id] || 0);
+  const cocytusUnlocked = useMemo(() => isCocytusUnlocked(erebusClearCount, cocytusOpenKept, cocytusRecord), [erebusClearCount, cocytusOpenKept, cocytusRecord]);
   const underworldUnlocked = useMemo(() => isUnderworldUnlocked(eternalClearCount), [eternalClearCount]);
   const [underworldIntroDone, setUnderworldIntroDone] = useState(false);
   useEffect(() => {
@@ -129386,7 +131841,8 @@ function MonsterHeroGame() {
     const preset = RHYTHM_LOOK_PRESETS.find(item => item.id === id) || RHYTHM_LOOK_PRESETS.find(item => item.id === 'LIGHT');
     return {
       ...rhythmSettings,
-      ...(preset ? preset.values : {})
+      ...(preset ? preset.values : {}),
+      fx: {}
     };
   }, [rhythmSettings]);
   useEffect(() => {
@@ -130846,14 +133302,19 @@ function MonsterHeroGame() {
   const RAID_JACK_HOWTO_AFTER_STORY_ID = 'halloween_night_2026_part1';
   const RAID_JACK_RHYTHM_STORY_ID = 'raid_jack_rhythm_story_2026_10_06';
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, CARD_CUP_STORY_ID];
+  const PANDORA_WINGS_STORY_IDS = PANDORA_WINGS_STORIES.map(story => story.id);
+  const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
+  const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, CARD_CUP_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
-    [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID
+    [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
+    [PANDORA_WINGS_EVENT_ID]: 'pandora_wings_2026_ep1'
   };
   const RHYTHM_EVENT_THANKS_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_THANKS_STORY_ID,
-    [SYMPHONY_EVENT_ID]: SYMPHONY_THANKS_STORY_ID
+    [SYMPHONY_EVENT_ID]: SYMPHONY_THANKS_STORY_ID,
+    [PANDORA_WINGS_EVENT_ID]: PANDORA_WINGS_THANKS_STORY_ID
   };
   const rhythmEventStoryIdFor = event => event && RHYTHM_EVENT_STORY_BY_EVENT[event.id] || null;
   const rhythmEventThanksStoryIdFor = event => event && RHYTHM_EVENT_THANKS_STORY_BY_EVENT[event.id] || null;
@@ -131207,14 +133668,15 @@ function MonsterHeroGame() {
         }
       }
       const halloweenStoryId = RELEASE_FLAGS.rhythmEventPoints === true ? halloweenNightStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null : null;
+      const pandoraWingsStoryId = RELEASE_FLAGS.rhythmWeeklyRanking === true ? pandoraWingsStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null : null;
       if (!liveEvent) {
-        if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (masuCallStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
+        if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);else if (pandoraWingsStoryId) setRhythmEventStoryPending(prev => prev || pandoraWingsStoryId);else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (masuCallStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
         return;
       }
       const liveStoryId = rhythmEventStoryIdFor(liveEvent);
       if (liveStoryId && notPlayedYet(liveStoryId)) {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
-      } else if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (masuCallStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
+      } else if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);else if (pandoraWingsStoryId) setRhythmEventStoryPending(prev => prev || pandoraWingsStoryId);else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (masuCallStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
       if (rhythmEventLiveCatchUpRef.current) return;
       rhythmEventLiveCatchUpRef.current = true;
       try {
@@ -132586,8 +135048,19 @@ function MonsterHeroGame() {
       }));
       setExtremeBestScores(loadedExtremeScores);
       setExtremeClearCounts(loadedExtremeClears);
+      const loadedClassicSpeciesProgress = normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY, null, false));
+      try {
+        const keptRaw = await storeGet(COCYTUS_OPEN_KEPT_KEY, null, false);
+        if (keptRaw && typeof keptRaw === 'object' && !Array.isArray(keptRaw)) setCocytusOpenKept(normalizeCocytusOpenKept(keptRaw));else {
+          const kept = buildCocytusOpenKept(loadedExtremeClears, loadedClassicSpeciesProgress);
+          setCocytusOpenKept(kept);
+          await storeSet(COCYTUS_OPEN_KEPT_KEY, kept, false);
+        }
+      } catch (e) {
+        setCocytusOpenKept(buildCocytusOpenKept(loadedExtremeClears, loadedClassicSpeciesProgress));
+      }
       setSpeciesProgressByMode({
-        [BATTLE_MODE_SPECIES_CHALLENGE]: normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY, null, false)),
+        [BATTLE_MODE_SPECIES_CHALLENGE]: loadedClassicSpeciesProgress,
         [BATTLE_MODE_TACTICS_SPECIES]: normalizeSpeciesChallengeProgress(await storeGet(TACTICS_SPECIES_CHALLENGE_PROGRESS_KEY, null, false))
       });
       setHighScores(scores);
@@ -134139,6 +136612,8 @@ function MonsterHeroGame() {
     beatPointAlwaysSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_ALWAYS_STORY_ID),
     rhythmSixLaneSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_SIX_LANE_STORY_ID),
     beatPointUpSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_UP_STORY_ID),
+    ...Object.fromEntries(PANDORA_WINGS_STORIES.filter(story => story.id !== PANDORA_WINGS_THANKS_STORY_ID).map(story => [`pandoraWingsEp${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
+    pandoraWingsEp8Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(PANDORA_WINGS_THANKS_STORY_ID),
     ...Object.fromEntries(HALLOWEEN_NIGHT_STORIES.map(story => [`halloweenNightPart${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
     ...Object.fromEntries(RAID_JACK_STORY_IDS.map(id => [raidJackStoryUnlockKey(id), Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(id)])),
     rhythmMultiFriendsSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MULTI_FRIENDS_STORY_ID),
@@ -147183,7 +149658,7 @@ function MonsterHeroGame() {
         padding: '1px 8px',
         fontSize: 11
       }
-    }, "🎃 開催中"), React.createElement("span", {
+    }, typeof c.pinEmoji === 'string' && c.pinEmoji ? c.pinEmoji : '🎉', " 開催中"), React.createElement("span", {
       "data-changelog-pinned-title": true,
       style: {
         flex: 1,
@@ -147212,7 +149687,22 @@ function MonsterHeroGame() {
         borderRadius: 12,
         margin: '8px 0 4px'
       }
-    }), (c.items || []).map((x, j) => React.createElement("p", {
+    }), typeof c.video === 'string' && c.video && React.createElement("figure", {
+      "data-changelog-pinned-video": true,
+      style: {
+        margin: '6px 0'
+      }
+    }, React.createElement("figcaption", {
+      style: {
+        fontWeight: 900,
+        fontSize: 12,
+        color: '#ffedd5',
+        margin: '0 0 4px'
+      }
+    }, "▶ 予告動画"), React.createElement(ChangelogVideo, {
+      src: c.video,
+      poster: typeof c.videoPoster === 'string' ? c.videoPoster : undefined
+    })), (c.items || []).map((x, j) => React.createElement("p", {
       key: j,
       style: {
         fontSize: 12,
@@ -147296,7 +149786,20 @@ function MonsterHeroGame() {
           borderRadius: '12px',
           margin: '6px 0'
         }
-      }), (c.items || []).map((x, j) => React.createElement("p", {
+      }), typeof c.video === 'string' && c.video && React.createElement("figure", {
+        "data-changelog-video": true,
+        style: {
+          margin: '6px 0'
+        }
+      }, React.createElement("figcaption", {
+        style: {
+          fontWeight: 900,
+          margin: '0 0 4px'
+        }
+      }, "▶ 予告動画"), React.createElement(ChangelogVideo, {
+        src: c.video,
+        poster: typeof c.videoPoster === 'string' ? c.videoPoster : undefined
+      })), (c.items || []).map((x, j) => React.createElement("p", {
         key: j
       }, "・", x)), (Array.isArray(c.gallery) ? c.gallery : []).filter(g => g && typeof g.image === 'string' && g.image).map((g, j) => React.createElement("figure", {
         key: `g${j}`,
@@ -147485,7 +149988,7 @@ function MonsterHeroGame() {
     }, {
       id: 'event',
       label: 'イベント',
-      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM'], ['masuCallEvent', 'マスモンとセッションのお話 BGM'], ['halloweenNightEvent', 'ハロウィン・ナイトのお話 BGM'], ['assistantChatStoryEvent', '助手とおしゃべりのお話 BGM'], ['atsuJoinStoryEvent', 'あつ加入のお話 BGM'], ['kyukoJoinStoryEvent', 'きゅうこ加入のお話 BGM'], ['cardBattleIntroEvent', 'MFバトルカードのお話 BGM'], ['cardCupStoryEvent', '個人杯のお話 BGM']]
+      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM'], ['masuCallEvent', 'マスモンとセッションのお話 BGM'], ['halloweenNightEvent', 'ハロウィン・ナイトのお話 BGM'], ['assistantChatStoryEvent', '助手とおしゃべりのお話 BGM'], ['atsuJoinStoryEvent', 'あつ加入のお話 BGM'], ['kyukoJoinStoryEvent', 'きゅうこ加入のお話 BGM'], ['cardBattleIntroEvent', 'MFバトルカードのお話 BGM'], ['cardCupStoryEvent', '個人杯のお話 BGM'], ['pandoraWingsStoryEvent', '鍵の向こう側へのお話 BGM']]
     }, {
       id: 'other',
       label: 'その他',
@@ -150574,7 +153077,7 @@ function MonsterHeroGame() {
         }
       }, difficulties.map(setting => {
         const active = setting.id === extremeDifficulty;
-        const unlocked = debugBattle || (setting.id === 'EXTREME' ? extremeUnlocked : setting.id === 'NIGHTMARE' ? nightmareUnlocked : setting.id === 'CHAOS' ? chaosUnlocked : setting.id === 'ULTIMATE' ? ultimateUnlocked : setting.id === 'INFINITY' ? infinityUnlocked : setting.id === 'GOD' ? godUnlocked : setting.id === 'RAGNAROK' ? ragnarokUnlocked : setting.id === 'HELHEIM' ? helheimUnlocked : setting.id === 'ETERNAL' ? eternalUnlocked : setting.id === 'INFERNO' ? infernoUnlocked : setting.id === 'COCYTUS' ? cocytusUnlocked : false);
+        const unlocked = debugBattle || (setting.id === 'EXTREME' ? extremeUnlocked : setting.id === 'NIGHTMARE' ? nightmareUnlocked : setting.id === 'CHAOS' ? chaosUnlocked : setting.id === 'ULTIMATE' ? ultimateUnlocked : setting.id === 'INFINITY' ? infinityUnlocked : setting.id === 'GOD' ? godUnlocked : setting.id === 'RAGNAROK' ? ragnarokUnlocked : setting.id === 'HELHEIM' ? helheimUnlocked : setting.id === 'ETERNAL' ? eternalUnlocked : setting.id === 'INFERNO' ? infernoUnlocked : setting.id === 'EREBUS' ? erebusUnlocked : setting.id === 'COCYTUS' ? cocytusUnlocked : false);
         const previewable = (setting.available || debugBattle && setting.debugAvailable) && unlocked;
         const theme = extremeDifficultyTheme(setting.id);
         const heroProofReward = heroProofClearReward({
@@ -150605,7 +153108,7 @@ function MonsterHeroGame() {
           className: "block text-right text-base italic leading-tight text-white"
         }, setting.available && unlocked ? `${(extremeBestScores[setting.id] || 0).toLocaleString()} pt` : '？？？'), React.createElement("span", {
           className: "block text-right text-[9px] text-amber-300"
-        }, setting.available && unlocked ? `クリア ${extremeClearCounts[setting.id] || 0}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : setting.id === 'CHAOS' ? 'NIGHTMAREクリアで解放' : setting.id === 'ULTIMATE' && !ultimateUnlocked ? 'CHAOSクリアで解放' : setting.id === 'INFINITY' && !infinityUnlocked ? 'ULTIMATEクリアで解放' : setting.id === 'GOD' && !godUnlocked ? 'INFINITYクリアで解放' : setting.id === 'RAGNAROK' && !ragnarokUnlocked ? 'GODクリアで解放' : setting.id === 'HELHEIM' && !helheimUnlocked ? 'RAGNAROKクリアで解放' : setting.id === 'ETERNAL' && !eternalUnlocked ? 'HELHEIMクリアで解放' : setting.id === 'INFERNO' && !infernoUnlocked ? 'ETERNALクリアで解放' : setting.id === 'COCYTUS' && !cocytusUnlocked ? 'INFERNOクリアで解放' : '選択できません')), previewable ? React.createElement(React.Fragment, null, React.createElement("div", {
+        }, setting.available && unlocked ? `クリア ${extremeClearCounts[setting.id] || 0}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : setting.id === 'CHAOS' ? 'NIGHTMAREクリアで解放' : setting.id === 'ULTIMATE' && !ultimateUnlocked ? 'CHAOSクリアで解放' : setting.id === 'INFINITY' && !infinityUnlocked ? 'ULTIMATEクリアで解放' : setting.id === 'GOD' && !godUnlocked ? 'INFINITYクリアで解放' : setting.id === 'RAGNAROK' && !ragnarokUnlocked ? 'GODクリアで解放' : setting.id === 'HELHEIM' && !helheimUnlocked ? 'RAGNAROKクリアで解放' : setting.id === 'ETERNAL' && !eternalUnlocked ? 'HELHEIMクリアで解放' : setting.id === 'INFERNO' && !infernoUnlocked ? 'ETERNALクリアで解放' : setting.id === 'EREBUS' && !erebusUnlocked ? 'INFERNOクリアで解放' : setting.id === 'COCYTUS' && !cocytusUnlocked ? `${EREBUS_SETTING.label}クリアで解放` : '選択できません')), previewable ? React.createElement(React.Fragment, null, React.createElement("div", {
           className: "grid grid-cols-3 gap-1 mt-1"
         }, [['敵強度', `×${setting.power}`], ['スコア', setting.score ? `×${setting.score}` : '対象外'], ['ダイヤ', setting.gold ? `×${setting.gold}` : '対象外']].map(([label, value]) => React.createElement("div", {
           key: label,
@@ -150859,7 +153362,7 @@ function MonsterHeroGame() {
       }, difficulties.map(([key, setting]) => {
         const active = key === selectedDifficulty,
           rec = modeRecordFor(battleMode, key);
-        const quickUnlocked = species ? isSpeciesChallengeDifficultyUnlocked(key, speciesChallengeClearedDifficultyIds(speciesChallengeProgress, speciesChallengeSelection.speciesId), speciesChallengeInitialUnlockCountOf(battleMode)) : tacticsDiff ? debugBattle || isTacticsDifficultyUnlocked(key, tacticsRecordsOf(battleMode).clears) : !quick || debugBattle || isQuickDifficultyUnlocked(key, clearCounts, proClearCounts, extremeDifficultyClearCounts);
+        const quickUnlocked = species ? isSpeciesChallengeDifficultyUnlocked(key, speciesChallengeClearedDifficultyIds(speciesChallengeProgress, speciesChallengeSelection.speciesId), speciesChallengeInitialUnlockCountOf(battleMode), battleMode === BATTLE_MODE_SPECIES_CHALLENGE ? cocytusKeptOpenIdsFor(cocytusOpenKept, speciesChallengeSelection.speciesId) : []) : tacticsDiff ? debugBattle || isTacticsDifficultyUnlocked(key, tacticsRecordsOf(battleMode).clears) : !quick || debugBattle || isQuickDifficultyUnlocked(key, clearCounts, proClearCounts, extremeDifficultyClearCounts);
         const tacticsExtreme = tacticsDiff && isExtremeDifficultyId(key);
         const lockText = species ? '🔒 前の難易度クリアで解放' : tacticsDiff ? isExtremeDifficultyId(TACTICS_DIFFICULTY_IDS[TACTICS_DIFFICULTY_IDS.indexOf(key) - 1]) ? '🔒 前の難易度クリアで解放' : `🔒 ${TACTICS_EXTREME_UNLOCK_TEXT}` : '🔒 同じ難易度クリアで解放';
         const heroProofReward = heroProofClearReward({
@@ -154528,7 +157031,7 @@ function MonsterHeroGame() {
       }, "虹の実 +10"))) : React.createElement("p", {
         className: "text-[9px] text-slate-400"
       }, "所持マスモンがいません。")), SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => {
-        const unlocked = isSpeciesChallengeDifficultyUnlocked(id, clearedIds),
+        const unlocked = isSpeciesChallengeDifficultyUnlocked(id, clearedIds, undefined, cocytusKeptOpenIdsFor(cocytusOpenKept, speciesId)),
           cleared = isSpeciesChallengeCleared(speciesChallengeProgress, speciesId, id),
           claimed = isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress, speciesId, id);
         return React.createElement("article", {
@@ -158549,7 +161052,11 @@ function MonsterHeroGame() {
       const step = Math.max(0, Math.min(eventReplay.step, script.length - 1));
       const line = script[step];
       const speaker = assistantById(line.who);
-      const last = step === script.length - 1;
+      const storyZones = script.length > 0;
+      const storySub = storyZones ? Math.max(0, Math.floor(Number(eventReplay.sub) || 0)) : 0;
+      const storyKeepRow = typeof STORY_BOTTOM_KEEP_ROW === 'undefined' ? true : !!STORY_BOTTOM_KEEP_ROW;
+      let last = step === script.length - 1;
+      const storyEnding = !!event && typeof STORY_ENDING_STYLE !== 'undefined' && STORY_ENDING_STYLE !== 'none';
       const isGuestWho = id => {
         const w = assistantById(id);
         return !!w && w.role === 'ゲスト';
@@ -158590,7 +161097,7 @@ function MonsterHeroGame() {
       }
       const bottomLine = speakingGuest ? assistIdx >= 0 ? script[assistIdx] : null : line;
       const bottomSpeaker = bottomLine ? assistantById(bottomLine.who) : speaker;
-      const fx = line.fx || null;
+      const fx = storyZones && storySub > 0 ? null : line.fx || null;
       let monstersIdx = -1;
       for (let i = step; i >= 0; i--) {
         if (Array.isArray(script[i].monsters)) {
@@ -158600,6 +161107,9 @@ function MonsterHeroGame() {
       }
       const storyMonsters = monstersIdx >= 0 ? script[monstersIdx].monsters.filter(m => m && m.pose !== 'hide' && STORY_MONSTER_ART[m.id]) : [];
       const fxColors = {
+        split: '233,213,255',
+        merge: '255,250,235',
+        unlock: '253,230,138',
         transform: '255,237,180',
         rankup: ['251,146,60', '251,191,36', '192,132,252', '248,113,113', '250,204,21'][Math.max(0, stageTier - 1)],
         shrink: '186,230,253'
@@ -158611,15 +161121,63 @@ function MonsterHeroGame() {
       const bubbleLines = text => typeof text === 'string' && text.includes('\n') ? text.split('\n').map((x, i) => React.createElement(React.Fragment, {
         key: i
       }, i > 0 && React.createElement("br", null), bubbleWrap(x))) : bubbleWrap(text);
+      const storyLand = typeof window !== 'undefined' && window.innerWidth > window.innerHeight && window.innerHeight <= 500;
+      const storyBoxW = typeof window !== 'undefined' ? Math.min(window.innerWidth, 448) : 390;
+      const storyCplBottom = Math.max(8, Math.floor((storyBoxW - 64 - (storyZones ? storyLand ? 62 : 100 : 0)) / 13) - (storyZones ? 4 : 2));
+      const storyCplBubble = Math.max(6, storyLand ? Math.floor((storyBoxW - 118) / 12) - 3 : Math.floor((storyBoxW - 156) / 14) - 4);
+      const storyPageCache = [];
+      const storyPagesOf = i => {
+        if (storyPageCache[i]) return storyPageCache[i];
+        const l = script[i];
+        const w = l ? assistantById(l.who) : null;
+        const text = l && w ? speakText(l, w) : '';
+        const pages = storyZones && typeof storySplitPages === 'function' ? storySplitPages(text, isGuestWho(l && l.who) ? storyCplBubble : storyCplBottom, 3) : [text];
+        storyPageCache[i] = pages;
+        return pages;
+      };
+      const storyCurPages = storyPagesOf(step);
+      const storyCurSub = Math.min(storySub, storyCurPages.length - 1);
+      const storyMore = storyZones && storyCurSub < storyCurPages.length - 1;
+      if (storyMore) last = false;
+      const storyTextAt = (i, w) => {
+        if (!storyZones) return speakText(script[i], w);
+        const pages = storyPagesOf(i);
+        return i === step ? pages[storyCurSub] : pages[pages.length - 1];
+      };
+      let storyPageNo = step + 1,
+        storyPageTotal = script.length;
+      if (storyZones) {
+        storyPageTotal = 0;
+        storyPageNo = storyCurSub + 1;
+        for (let i = 0; i < script.length; i++) {
+          const n = storyPagesOf(i).length;
+          storyPageTotal += n;
+          if (i < step) storyPageNo += n;
+        }
+      }
       const next = () => {
         const holdMs = Number(line.holdMs);
         if (Number.isFinite(holdMs) && holdMs > 0 && Date.now() - (Number(eventReplay.shownAt) || 0) < holdMs) return;
         if (!last) {
           setEventReplay(r => r && {
             ...r,
-            step: r.step + 1,
-            shownAt: Date.now()
+            shownAt: Date.now(),
+            ...(storyMore ? {
+              sub: storyCurSub + 1
+            } : {
+              step: r.step + 1,
+              sub: 0
+            })
           });
+          return;
+        }
+        if (storyEnding && !eventReplay.ending) {
+          setEventReplay(r => r && {
+            ...r,
+            ending: true,
+            endingAt: Date.now()
+          });
+          if (typeof Audio_ !== 'undefined' && Audio_.setStoryEndFade) Audio_.setStoryEndFade(true);
           return;
         }
         if (event && event.id === 'momosuke_intro' && !eventReplay.debug) markMomosukeIntroSeen();
@@ -158674,6 +161232,9 @@ function MonsterHeroGame() {
       return React.createElement("div", {
         "data-event-story": eventReplay.id,
         "data-story-has-stage": stageGuest ? '1' : undefined,
+        "data-story-step": step,
+        "data-story-zones": storyZones ? storyKeepRow ? 'facerow' : 'face' : undefined,
+        "data-story-ending-pull": eventReplay.ending && STORY_ENDING_STYLE === 'pull' ? '' : undefined,
         className: "fixed inset-0 flex items-end justify-center",
         style: {
           position: 'fixed',
@@ -158748,7 +161309,7 @@ function MonsterHeroGame() {
           transition: 'background .2s, color .2s'
         }
       }, stageName)), bubbleLine && React.createElement("div", {
-        key: `b${bubbleIdx}`,
+        key: `b${bubbleIdx}${bubbleIdx === step ? `-${storyCurSub}` : ''}`,
         "data-story-guest-bubble": true,
         "data-story-pop": speakingGuest ? '1' : undefined,
         className: "relative min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2",
@@ -158780,7 +161341,7 @@ function MonsterHeroGame() {
       }, bubbleLine.name || stageGuest.name), React.createElement("span", {
         className: "mt-1 block text-[14px] font-bold leading-relaxed text-white",
         style: bubbleWrapStyle()
-      }, bubbleLines(speakText(bubbleLine, stageGuest)))))), storyMonsters.length > 0 && React.createElement("div", {
+      }, bubbleLines(storyZones ? storyTextAt(bubbleIdx, stageGuest) : speakText(bubbleLine, stageGuest)))))), storyMonsters.length > 0 && React.createElement("div", {
         "data-story-monsters": storyMonsters.length,
         "aria-hidden": "true",
         className: "pointer-events-none",
@@ -158797,7 +161358,8 @@ function MonsterHeroGame() {
         return React.createElement("span", {
           key: `${m.id}:${m.pose}`,
           "data-story-monster": m.id,
-          "data-story-pose": m.pose
+          "data-story-pose": m.pose,
+          "data-story-fierce": m.fierce ? '' : undefined
         }, m.pose === 'idle' ? withMonsterIdleArt(m.id, art, {
           fill: true,
           own: true
@@ -158816,10 +161378,22 @@ function MonsterHeroGame() {
         style: {
           position: 'absolute',
           inset: 0,
-          background: `radial-gradient(circle at 50% 22%, rgba(${fxColors[fx] || '255,255,255'},.95), rgba(${fxColors[fx] || '255,255,255'},.35) 45%, rgba(0,0,0,0) 75%)`,
+          background: `radial-gradient(circle at 50% ${fx === 'split' || fx === 'merge' || fx === 'unlock' ? '46%' : '22%'}, rgba(${fxColors[fx] || '255,255,255'},.95), rgba(${fxColors[fx] || '255,255,255'},.35) 45%, rgba(0,0,0,0) 75%)`,
           animation: 'storyFlash 1s ease-out both'
         }
-      }), line.fxText && React.createElement("div", {
+      }), (fx === 'split' || fx === 'merge' || fx === 'unlock') && React.createElement("span", {
+        "data-story-keyhole": true
+      }), fx === 'unlock' && React.createElement("span", {
+        "data-story-unlock": true
+      }, React.createElement("i", null)), fx === 'split' && React.createElement("span", {
+        "data-story-crack": true
+      }, [-160, -118, -72, -28, 14, 58, 104, 142].map((deg, i) => React.createElement("i", {
+        key: deg,
+        style: {
+          transform: `rotate(${deg}deg)`,
+          animationDelay: `${i % 3 * 40}ms`
+        }
+      }))), line.fxText && React.createElement("div", {
         "data-story-banner": true,
         className: "px-4 text-center text-[17px] font-black",
         style: {
@@ -158849,13 +161423,27 @@ function MonsterHeroGame() {
       }, React.createElement("p", {
         className: "mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300"
       }, eventReplay.live ? '' : '回想・', event?.title || ''), (() => {
-        const many = cast.length > 4;
-        const big = many ? 60 : 84,
-          small = many ? 48 : 64;
+        if (storyZones && !storyKeepRow) return null;
+        const tiny = storyZones;
+        const atStart = Array.isArray(event && event.castAtStart) ? event.castAtStart : [];
+        const rowCast = tiny ? cast.filter(who => atStart.includes(who.id) || script.slice(0, step + 1).some(l => l && l.who === who.id)) : cast;
+        if (tiny && rowCast.length === 0) return React.createElement("div", {
+          "data-story-cast-tiny-empty": true,
+          style: {
+            height: 28,
+            marginBottom: 6
+          }
+        });
+        const compact = !tiny && storyMonsters.length > 0;
+        const many = !compact && !tiny && cast.length > 4;
+        const big = tiny ? 28 : compact ? 44 : many ? 60 : 84,
+          small = tiny ? 24 : compact ? 36 : many ? 48 : 64;
         return React.createElement("div", {
           "data-story-cast": cast.length,
-          className: `mb-3 flex items-end justify-center ${many ? 'flex-wrap gap-x-1 gap-y-1.5' : 'gap-3'}`
-        }, cast.map(who => {
+          "data-story-cast-compact": compact || tiny ? '' : undefined,
+          "data-story-cast-tiny": tiny ? '' : undefined,
+          className: `${tiny ? 'mb-1.5 flex-nowrap gap-1' : compact ? 'mb-2 flex-nowrap gap-1.5' : 'mb-3'} flex items-end justify-center ${many ? 'flex-wrap gap-x-1 gap-y-1.5' : compact || tiny ? '' : 'gap-3'}`
+        }, rowCast.map(who => {
           const talking = !speakingGuest && who.id === line.who;
           return React.createElement("div", {
             key: who.id,
@@ -158863,14 +161451,14 @@ function MonsterHeroGame() {
             className: `flex min-w-0 flex-col items-center justify-end gap-1 ${talking ? '' : 'opacity-35'}`,
             style: {
               width: many ? 'calc(25% - 4px)' : undefined,
-              height: many ? big + 16 : undefined,
-              transform: talking || many ? 'scale(1)' : 'scale(.86)',
+              height: tiny ? big : many || compact ? big + 16 : undefined,
+              transform: talking || many || compact || tiny ? 'scale(1)' : 'scale(.86)',
               transition: 'opacity .18s, transform .18s'
             }
           }, React.createElement("span", {
             style: {
               display: 'block',
-              filter: talking ? `drop-shadow(0 0 10px ${who.accent})` : 'none',
+              filter: talking && !tiny ? `drop-shadow(0 0 10px ${who.accent})` : 'none',
               transition: 'filter .2s'
             }
           }, React.createElement(AssistantFace, {
@@ -158878,17 +161466,43 @@ function MonsterHeroGame() {
             size: talking ? big : small,
             accent: who.accent,
             expression: talking ? line.e : 'normal'
-          })), React.createElement("span", {
+          })), !tiny && React.createElement("span", {
             className: "max-w-full truncate text-[9px] font-black leading-none",
             style: {
               color: talking ? who.accent : '#64748b'
             }
           }, talking && line.name ? line.name : who.name));
         }));
-      })(), bottomLine ? React.createElement("div", {
-        key: speakingGuest ? 'keep' : `x${step}`,
+      })(), React.createElement("div", {
+        "data-story-speaker-row": storyZones ? '' : undefined,
+        className: storyZones ? 'flex items-start gap-2' : undefined
+      }, storyZones && bottomLine && React.createElement("div", {
+        key: `face-${bottomSpeaker.id}`,
+        "data-story-speaker": bottomSpeaker.id,
+        className: "shrink-0 text-center"
+      }, React.createElement("span", {
+        style: {
+          display: 'block',
+          opacity: speakingGuest ? .55 : 1,
+          filter: speakingGuest ? 'brightness(.7)' : `drop-shadow(0 0 10px ${bottomSpeaker.accent})`,
+          transition: 'opacity .2s, filter .2s'
+        }
+      }, React.createElement(AssistantFace, {
+        who: bottomSpeaker,
+        size: 92,
+        accent: bottomSpeaker.accent,
+        expression: !speakingGuest && bottomLine === line ? line.e : 'normal'
+      })), React.createElement("span", {
+        className: "mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black",
+        style: {
+          color: speakingGuest ? bottomSpeaker.accent : '#0f172a',
+          background: speakingGuest ? 'rgba(15,23,42,.8)' : bottomSpeaker.accent
+        }
+      }, bottomLine.name || bottomSpeaker.name)), bottomLine ? React.createElement("div", {
+        key: speakingGuest ? 'keep' : `x${step}-${storyCurSub}`,
         "data-story-pop": speakingGuest ? undefined : '1',
-        className: "rounded-2xl border-2 bg-slate-900 px-3 py-3",
+        className: `rounded-2xl border-2 bg-slate-900 px-3 py-3${storyZones ? ' min-w-0 flex-1' : ''}`,
+        "data-story-line-box": true,
         style: {
           borderColor: bottomSpeaker.accent,
           opacity: speakingGuest ? .4 : 1,
@@ -158905,11 +161519,12 @@ function MonsterHeroGame() {
       }, bottomLine.name || bottomSpeaker.name), React.createElement("span", {
         className: "block text-[13px] font-bold leading-relaxed text-white mt-1",
         style: bubbleWrapStyle()
-      }, bubbleLines(speakText(bottomLine, bottomSpeaker)))) : React.createElement("div", {
-        className: "rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400"
-      }, "▲ 上のことばを読んでね"), React.createElement("p", {
+      }, bubbleLines(storyZones ? storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker) : speakText(bottomLine, bottomSpeaker)))) : React.createElement("div", {
+        "data-story-line-box": true,
+        className: `flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400${storyZones ? ' min-w-0 flex-1' : ''}`
+      }, "▲ 上のことばを読んでね")), React.createElement("p", {
         className: "mt-2 text-center text-[11px] font-bold tabular-nums text-slate-300"
-      }, step + 1, " / ", script.length)), React.createElement("div", {
+      }, storyPageNo, " / ", storyPageTotal)), React.createElement("div", {
         "data-story-buttons": true,
         className: `relative mt-3 grid shrink-0 ${last ? 'grid-cols-1' : 'grid-cols-[1fr_2fr]'} gap-2`,
         style: {
@@ -158930,7 +161545,128 @@ function MonsterHeroGame() {
           next();
         },
         className: "min-h-[50px] rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]"
-      }, last ? '閉じる' : '次へ'))));
+      }, last && !(storyEnding && !eventReplay.ending) ? '閉じる' : '次へ'))), eventReplay.ending && (() => {
+        const parts = storyEpisodeTitleParts(event?.title);
+        const pull = STORY_ENDING_STYLE === 'pull';
+        const rich = STORY_ENDING_STYLE !== 'card';
+        const delay = pull ? 1.1 : 0;
+        const allEv = (typeof EVENT_REPLAYS !== 'undefined' ? EVENT_REPLAYS : []).filter(ev => ev && ev.id && ev.title);
+        const series = parts.serial ? allEv.filter(ev => ev.group === event.group && storyEpisodeTitleParts(ev.title).serial && storyEpisodeTitleParts(ev.title).series === parts.series).sort((a, b) => String(a.date || '').localeCompare(String(b.date || ''))) : [];
+        const nextEv = parts.serial && !parts.final ? series[series.findIndex(ev => ev.id === event.id) + 1] || null : null;
+        const nextParts = nextEv ? storyEpisodeTitleParts(nextEv.title) : null;
+        if (nextParts && nextParts.final && series.filter(ev => storyEpisodeTitleParts(ev.title).final).length > 1) nextParts.sub = '';
+        const nextAt = nextEv ? storyJstMs(nextEv.date) : NaN;
+        const now = Date.now();
+        const jst = Number.isFinite(nextAt) ? new Date(nextAt + 9 * 3600 * 1000) : null;
+        const when = jst ? `${jst.getUTCMonth() + 1}/${jst.getUTCDate()}(${'日月火水木金土'[jst.getUTCDay()]}) ${jst.getUTCHours()}:${String(jst.getUTCMinutes()).padStart(2, '0')}` : '';
+        const left = Number.isFinite(nextAt) && nextAt > now ? nextAt - now : 0;
+        const leftText = left > 0 ? left >= 3600000 ? `あと${Math.floor(left / 3600000)}時間${Math.floor(left % 3600000 / 60000)}分` : `あと${Math.max(1, Math.ceil(left / 60000))}分` : '';
+        const groupIds = series.filter(ev => !storyEpisodeTitleParts(ev.title).final).map(ev => ev.id);
+        const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeen);
+        const allSeen = parts.final && groupIds.length > 1 && groupIds.every(id => id === event.id || seenNow.includes(id));
+        const allCount = groupIds.length + 1;
+        const allUnit = /部/.test(parts.ep) || series.some(ev => /第[\d.]+部/.test(ev.title)) ? '部' : '話';
+        const canClose = () => Date.now() - (Number(eventReplay.endingAt) || 0) > (delay + 1.2) * 1000;
+        const go = fn => e => {
+          e.stopPropagation();
+          next();
+          fn();
+        };
+        return React.createElement("div", {
+          "data-story-ending": STORY_ENDING_STYLE,
+          onClick: e => {
+            e.stopPropagation();
+            if (canClose()) next();
+          },
+          style: {
+            position: 'absolute',
+            inset: 0,
+            zIndex: 20,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'auto',
+            animation: `storyEndDim .9s ease-out ${delay}s both`
+          }
+        }, React.createElement("div", {
+          className: "w-full max-w-sm px-6 text-center"
+        }, React.createElement("p", {
+          className: "text-[12px] font-black tracking-[.3em] text-fuchsia-200/80",
+          style: {
+            animation: `storyEndCard 1s ease-out ${delay + .2}s both`
+          }
+        }, parts.series), React.createElement("p", {
+          className: "mt-2 text-[30px] font-black leading-tight text-white",
+          style: {
+            animation: `storyEndCard 1s ease-out ${delay + .35}s both`,
+            textShadow: '0 0 18px rgba(192,132,252,.8)'
+          }
+        }, parts.ep), parts.sub && React.createElement("p", {
+          className: "mt-1 text-[16px] font-black text-fuchsia-100",
+          style: {
+            animation: `storyEndCard 1s ease-out ${delay + .5}s both`
+          }
+        }, parts.sub), React.createElement("p", {
+          "data-story-ending-fin": true,
+          className: "mt-5 text-[38px] font-black tracking-[.4em]",
+          style: {
+            animation: `storyEndFin 1.4s ease-out ${delay + .9}s both`,
+            background: 'linear-gradient(180deg,#fde68a,#f0abfc)',
+            WebkitBackgroundClip: 'text',
+            backgroundClip: 'text',
+            color: 'transparent'
+          }
+        }, parts.final ? 'おしまい' : 'おわり'), rich && nextEv && React.createElement("div", {
+          "data-story-ending-next": true,
+          className: "mx-auto mt-5 rounded-2xl border border-fuchsia-300/40 bg-slate-900/80 px-3 py-2",
+          style: {
+            animation: `storyEndCard 1s ease-out ${delay + 1.5}s both`
+          }
+        }, React.createElement("p", {
+          className: "text-[11px] font-black text-fuchsia-200"
+        }, "次のお話"), React.createElement("p", {
+          className: "text-[14px] font-black text-white"
+        }, nextParts.series && nextParts.series !== parts.series ? `${nextParts.series} ` : '', nextParts.ep, " ", nextParts.sub), eventReplay.live && React.createElement("p", {
+          className: "text-[12px] font-bold text-slate-300"
+        }, left > 0 ? React.createElement(React.Fragment, null, when, " から ", React.createElement("b", {
+          className: "text-amber-200"
+        }, leftText)) : 'もう見られます(プロフィールの「イベント回想」)')), rich && !nextEv && allSeen && React.createElement("p", {
+          "data-story-ending-all": true,
+          className: "mx-auto mt-4 inline-block rounded-full border border-amber-300/60 bg-amber-500/15 px-4 py-1 text-[13px] font-black text-amber-100",
+          style: {
+            animation: `storyEndCard 1s ease-out ${delay + 1.5}s both`
+          }
+        }, "🔑 全", allCount, allUnit, " ぜんぶ見た！"), rich && eventReplay.live && !eventReplay.debug && /^pandora_wings_/.test(event.id) && React.createElement("div", {
+          "data-story-ending-actions": true,
+          className: "mt-4 grid grid-cols-2 gap-2",
+          style: {
+            animation: `storyEndCard 1s ease-out ${delay + 1.8}s both`
+          }
+        }, React.createElement("button", {
+          type: "button",
+          onClick: go(() => setGameState('RHYTHM_DEMO_HOME')),
+          className: "min-h-[48px] rounded-2xl bg-fuchsia-500 text-[13px] font-black text-slate-950 active:scale-[.98]"
+        }, "🎵 イベントの曲を遊ぶ"), React.createElement("button", {
+          type: "button",
+          onClick: go(() => {
+            setRhythmRankingTab('event');
+            loadRhythmEventRanking('limited', rhythmEventDivision.limited);
+            setGameState('RHYTHM_RANKING');
+          }),
+          className: "min-h-[48px] rounded-2xl border border-fuchsia-300/60 bg-slate-900 text-[13px] font-black text-fuchsia-100 active:scale-[.98]"
+        }, "🏆 ランキングを見る")), React.createElement("button", {
+          type: "button",
+          "data-story-ending-close": true,
+          onClick: e => {
+            e.stopPropagation();
+            next();
+          },
+          className: "mt-4 min-h-[48px] w-full rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]",
+          style: {
+            animation: `storyEndCard 1s ease-out ${delay + (rich ? 2 : 1.4)}s both`
+          }
+        }, "閉じる")));
+      })());
     })(), dailyMasuAdvice && (() => {
       const who = activeAssistant;
       const lines = assistantSceneLinesFor(dailyMasuAdvice.shortcut === false ? 'dailyMasuAdviceBasic' : 'dailyMasuAdvice');
@@ -162930,7 +165666,8 @@ const createAnimationStyle = () => {
       background:radial-gradient(circle,#fff 0 20%,#fde047 45%,#f59e0b);
       clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); }
     .skfx-p--flame { width:14px; height:20px; margin:-10px 0 0 -7px; border-radius:50% 50% 50% 50% / 65% 65% 35% 35%;
-      background:radial-gradient(circle at 50% 70%,#fff 0 15%,#bef264 35%,#65a30d 70%,rgba(101,163,13,0)); box-shadow:0 0 10px #84cc16; }
+      background:radial-gradient(circle at 50% 70%,#fff 0 14%,var(--c1,#fde68a) 32%,var(--c2,#f97316) 66%,rgba(0,0,0,0)); box-shadow:0 0 10px var(--c2,#f97316); }
+    /* ↑ 炎は技の色(--c1・--c2)で塗る(2026-11-04 まで黄緑に固定されていて、火炎車・神狐蒼火などの炎が黄緑に見えていた) */
     .skfx-p--leaf { width:16px; height:9px; margin:-4px 0 0 -8px; border-radius:0 100% 0 100%;
       background:linear-gradient(135deg,#bbf7d0,#22c55e 60%,#15803d); box-shadow:0 0 6px rgba(34,197,94,.8); }
     .skfx-p--rice { width:6px; height:10px; margin:-5px 0 0 -3px; border-radius:50%; background:#fffdf5; box-shadow:0 0 4px #fde68a; }
@@ -163553,6 +166290,8 @@ const createAnimationStyle = () => {
     .fin-shape--drop { width:10px; height:16px; border-radius:50% 50% 50% 50% / 70% 70% 30% 30%; background:linear-gradient(180deg, #fff, var(--spm-c1) 50%, var(--spm-c2)); }
     .fin-shape--leaf { width:18px; height:10px; border-radius:90% 0 90% 0; background:linear-gradient(135deg, #bbf7d0, #16a34a); box-shadow:0 0 6px #22c55e; }
     .fin-shape--flame { width:16px; height:22px; border-radius:50% 50% 50% 50% / 70% 70% 30% 30%; background:radial-gradient(ellipse at 50% 80%, #fff 0 14%, #fde047 36%, #f97316 62%, rgba(220,38,38,0)); box-shadow:0 0 8px #f97316; }
+    /* 技の色で塗る固有技(青い狐火など・24 の tint)では、着弾で散る炎も技の色に */
+    [data-impact-tint] .fin-shape--flame { background:radial-gradient(ellipse at 50% 80%, #fff 0 14%, var(--spm-c1) 36%, var(--spm-c2) 62%, rgba(0,0,0,0)); box-shadow:0 0 8px var(--spm-c2); }
     .fin-shape--note { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
     .fin-shape--note::before { content:'♪'; }
     .fin-shape--heart { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
@@ -163983,12 +166722,14 @@ const createAnimationStyle = () => {
     @keyframes mhUwTabOpen{0%{filter:brightness(.4) grayscale(1);transform:scale(.96)}55%{filter:brightness(.6) grayscale(.6);transform:scale(.96) translateX(-1px)}62%{transform:scale(.96) translateX(2px)}70%{filter:brightness(2.2);transform:scale(1.06)}100%{filter:none;transform:scale(1)}}
     @keyframes mhUwTabGlow{0%,100%{box-shadow:0 0 6px rgba(165,243,252,.35)}50%{box-shadow:0 0 18px rgba(165,243,252,.9),0 0 10px rgba(249,115,22,.6)}}
     @keyframes mhUwNew{0%{opacity:0;transform:scale(2)}100%{opacity:1;transform:scale(1)}}
-    /* カードの枠: INFERNO は燃える橙、COCYTUS は氷の水色。右上に「🛡×3〜5」(data-shield-layers の文字をそのまま出す) */
+    /* カードの枠: INFERNO は燃える橙、EREBUS は冥界の闇の赤紫(2026-11-04 社長「案1」)、COCYTUS は氷の水色。右上に「🛡×3〜5」(data-shield-layers の文字をそのまま出す) */
     [data-underworld-card]{position:relative}
     [data-underworld-card="INFERNO"]{box-shadow:0 0 0 2px #fb923c,0 0 22px rgba(249,115,22,.65) !important}
+    [data-underworld-card="EREBUS"]{box-shadow:0 0 0 2px #f9a8d4,0 0 22px rgba(219,39,119,.7) !important}
     [data-underworld-card="COCYTUS"]{box-shadow:0 0 0 2px #a5f3fc,0 0 22px rgba(34,211,238,.6) !important}
     [data-underworld-card][data-shield-layers]::after{content:"🛡×" attr(data-shield-layers);position:absolute;top:30px;right:10px;left:auto;bottom:auto;width:auto;height:auto;white-space:nowrap;z-index:30;font-style:normal;padding:2px 8px;border-radius:999px;font:900 11px/1.3 sans-serif;color:#fff;pointer-events:none}
     [data-underworld-card="INFERNO"][data-shield-layers]::after{background:linear-gradient(90deg,#7f1d1d,#ea580c) !important;box-shadow:0 0 10px rgba(249,115,22,.8) !important;opacity:1 !important;filter:none !important}
+    [data-underworld-card="EREBUS"][data-shield-layers]::after{background:linear-gradient(90deg,#500724,#db2777) !important;box-shadow:0 0 10px rgba(219,39,119,.8) !important;opacity:1 !important;filter:none !important}
     [data-underworld-card="COCYTUS"][data-shield-layers]::after{background:linear-gradient(90deg,#164e63,#0891b2) !important;box-shadow:0 0 10px rgba(34,211,238,.8) !important;opacity:1 !important;filter:none !important}
     /* 横向きはカードが2列になり、右の説明の欄の下に隠れるので札は出さない(説明の文にシールドの枚数がある) */
     @media (orientation:landscape) and (max-height:520px){[data-underworld-card][data-shield-layers]::after{display:none}}
@@ -164585,6 +167326,42 @@ const createAnimationStyle = () => {
     [data-story-pose="front"] { animation: storyMonFront .5s ease-out both; }
     [data-story-pose="approach"] { animation: storyMonApproach .8s ease-out both; }
     [data-story-pose="hop"] { animation: storyMonHop 1.1s ease-out both; }
+    /* イベント「鍵の向こう側へ」(2026-11-02)のパンドラ。
+       peek … 箱のすきまから影がのぞく(ふっと出て、少し沈んだまま)。
+       splitL / splitR … 体のまんなか(鍵穴)で光がはじけたあと、悪魔側(左)と天使側(右)が左右へはじかれて離れ、それぞれの色の光をまとって揺れる。
+       mergeL / mergeR … 左右から寄って重なる(重なった所で鍵穴の光が強く光り、次の行で1つの立ち絵に戻る)。
+       fierce を付けると(第5話)離れ方と揺れが激しくなる */
+    [data-story-pose="peek"] { animation: storyMonPeek 1.2s ease-out both; filter: drop-shadow(0 0 2px rgba(233,213,255,.9)) drop-shadow(0 0 12px rgba(168,85,247,.85)); }
+    [data-story-pose="splitL"] { animation: storySplitL 1.1s cubic-bezier(.2,.9,.25,1.2) both, storySplitSway 2.6s ease-in-out 1.1s infinite; filter: drop-shadow(0 0 14px rgba(168,85,247,.95)) drop-shadow(0 0 4px rgba(88,28,135,.9)); }
+    [data-story-pose="splitR"] { animation: storySplitR 1.1s cubic-bezier(.2,.9,.25,1.2) both, storySplitSway 2.6s ease-in-out 1.4s infinite; filter: drop-shadow(0 0 14px rgba(255,255,255,.95)) drop-shadow(0 0 4px rgba(253,224,71,.8)); }
+    [data-story-pose="splitL"][data-story-fierce] { animation: storySplitL .7s cubic-bezier(.2,1.2,.3,1.4) both, storySplitShake .5s ease-in-out .7s 3, storySplitSway 2s ease-in-out 2.2s infinite; }
+    [data-story-pose="splitR"][data-story-fierce] { animation: storySplitR .7s cubic-bezier(.2,1.2,.3,1.4) both, storySplitShake .5s ease-in-out .75s 3, storySplitSway 2s ease-in-out 2.3s infinite; }
+    /* 戻るときは 悪魔側・天使側 の2つが真ん中へ寄って消え、同時に真ん中(重ねて置いた merged)のパンドラが光の中から現れる */
+    [data-story-pose="mergeL"] { animation: storyMergeL 1.3s ease-in both; filter: drop-shadow(0 0 14px rgba(168,85,247,.95)); }
+    [data-story-pose="mergeR"] { animation: storyMergeR 1.3s ease-in both; filter: drop-shadow(0 0 14px rgba(255,255,255,.95)); }
+    [data-story-pose="merged"] { position: absolute; left: 50%; bottom: 0; translate: -50% 0; animation: storyMerged 1.8s ease-out both; }
+    [data-story-monster^="Pandora"] { height: min(calc(100% / 1.14), 44vw, 250px); }
+    @keyframes storyMonPeek { 0% { opacity: 0; transform: translateY(18%) scale(.9); } 35% { opacity: .95; transform: translateY(4%); } 100% { opacity: .8; transform: translateY(6%); } }
+    @keyframes storySplitL { 0% { opacity: 0; transform: translateX(52%) scale(.9); filter: brightness(2.6); } 25% { opacity: 1; transform: translateX(46%) scale(1.04); } 100% { transform: translateX(-6%) rotate(-3deg); } }
+    @keyframes storySplitR { 0% { opacity: 0; transform: translateX(-52%) scale(.9); filter: brightness(2.6); } 25% { opacity: 1; transform: translateX(-46%) scale(1.04); } 100% { transform: translateX(6%) rotate(3deg); } }
+    @keyframes storySplitSway { 0%, 100% { translate: 0 0; } 50% { translate: 0 -4%; } }
+    @keyframes storySplitShake { 0%, 100% { translate: 0 0; } 25% { translate: -5% 1%; } 75% { translate: 5% -1%; } }
+    @keyframes storyMergeL { 0% { transform: translateX(-6%); } 70% { opacity: 1; transform: translateX(52%) scale(1.02); filter: brightness(1.6); } 100% { opacity: 0; transform: translateX(52%); filter: brightness(3); } }
+    @keyframes storyMergeR { 0% { transform: translateX(6%); } 70% { opacity: 1; transform: translateX(-52%) scale(1.02); filter: brightness(1.6); } 100% { opacity: 0; transform: translateX(-52%); filter: brightness(3); } }
+    @keyframes storyMerged { 0%, 62% { opacity: 0; transform: scale(.92); filter: brightness(3); } 80% { opacity: 1; transform: scale(1.06); filter: brightness(1.8); } 100% { opacity: 1; transform: none; filter: none; } }
+    /* 鍵穴の光(fx:'split' / 'merge')。白と紫の光が真ん中から走り、画面にひびのような光の筋が広がる */
+    [data-story-crack] { position: absolute; left: 50%; top: 46%; width: 0; height: 0; }
+    [data-story-crack] > i { position: absolute; left: 0; top: 0; width: 46vmax; height: 3px; transform-origin: 0 50%; border-radius: 3px; background: linear-gradient(90deg, rgba(255,255,255,1), rgba(216,180,254,.9) 40%, rgba(168,85,247,0)); box-shadow: 0 0 10px rgba(216,180,254,.9); animation: storyCrack .9s ease-out both; }
+    [data-story-crack] > i:nth-child(even) { background: linear-gradient(90deg, rgba(255,255,255,1), rgba(254,240,138,.9) 40%, rgba(255,255,255,0)); box-shadow: 0 0 10px rgba(255,255,255,.9); }
+    [data-story-keyhole] { position: absolute; left: 50%; top: 46%; width: 34vmin; height: 34vmin; margin: -17vmin 0 0 -17vmin; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,1) 0 12%, rgba(233,213,255,.85) 26%, rgba(147,51,234,.45) 48%, rgba(0,0,0,0) 70%); animation: storyKeyhole 1.1s ease-out both; }
+    [data-story-unlock] { position: absolute; left: 50%; top: 46%; width: 30vmin; height: 30vmin; margin: -15vmin 0 0 -15vmin; border-radius: 50%; border: 4px solid rgba(253,224,71,.95); box-shadow: 0 0 18px rgba(253,224,71,.9), inset 0 0 14px rgba(255,255,255,.8); animation: storyUnlock 1.6s ease-out both; }
+    [data-story-unlock] > i { position: absolute; left: 50%; top: -8%; width: 14%; height: 30%; margin-left: -7%; border-radius: 40% 40% 20% 20%; background: rgba(253,224,71,1); box-shadow: 0 0 10px rgba(253,224,71,1); }
+    @keyframes storyUnlock { 0% { opacity: 0; transform: scale(.4) rotate(0deg); } 20% { opacity: 1; transform: scale(1) rotate(0deg); } 65% { opacity: 1; transform: scale(1) rotate(90deg); } 100% { opacity: 0; transform: scale(2.4) rotate(90deg); } }
+    @keyframes storyCrack { 0% { opacity: 0; scale: 0 1; } 20% { opacity: 1; } 55% { opacity: 1; scale: 1 1; } 100% { opacity: 0; scale: 1 .4; } }
+    @keyframes storyKeyhole { 0% { opacity: 0; transform: scale(.2); } 25% { opacity: 1; transform: scale(1.15); } 100% { opacity: 0; transform: scale(2.2); } }
+    /* 動きを減らす設定・軽量モードでは、光の筋は出さず、光だけを短く控えめに */
+    @media (prefers-reduced-motion: reduce) { [data-story-crack] { display: none; } [data-story-keyhole] { animation-duration: .5s; opacity: .5; } }
+    [data-lightweight="true"] [data-story-crack] { display: none; }
     @keyframes storyMonIn { 0% { opacity: 0; transform: translateY(14px) scale(.85); } 100% { opacity: 1; transform: none; } }
     @keyframes storyMonBack { 0% { transform: none; } 30% { transform: translateY(-8%) scale(.86); } 45% { transform: translate(-4%, -8%) scale(.86); } 60% { transform: translate(4%, -8%) scale(.86); } 75% { transform: translate(-2%, -8%) scale(.86); } 100% { transform: translateY(-8%) scale(.86); } }
     @keyframes storyMonFront { 0% { transform: none; } 100% { transform: scale(1.14); } }
@@ -164596,7 +167373,39 @@ const createAnimationStyle = () => {
       [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 8px) !important; bottom: calc(env(safe-area-inset-bottom) + 8px); align-items: center; justify-content: space-between; gap: 0; padding: 0 14px; }
       [data-story-monster] { height: min(70%, calc(((100vw - 28rem) / 2 - 30px) / 1.14), 176px); }
     }
+    /* 3つのゾーン(上部=ステージ/立ち絵=モンスター/下部=窓)を固定する形(2026-11-02 社長「立ち絵ゾーン固定したほうがいいよ」「上部ゾーン/立ち絵/下部ゾーンで」)。
+       真ん中にモンスターが出るお話([data-story-zones]・60-app.jsx)だけ。高さは台詞の長さ・顔の数で変えない。
+       縦: 上部ゾーン = 上の端から 10px + ステージ(顔 96px・吹き出し 3行ぶん 116px)。下部ゾーン = 窓 336px(+下の安全域)。立ち絵ゾーン = そのあいだ(上の端から 150px 〜 窓の 8px 上)。
+       収まらない台詞は窓を伸ばさず、ページに分けて「次へ」で送る(60-app.jsx の storyPagesOf) */
+    @media (orientation: portrait), (min-height: 501px) {
+      [data-event-story][data-story-zones] [data-story-stage][data-story-stage] { top: calc(env(safe-area-inset-top) + 10px) !important; }
+      [data-event-story][data-story-zones] [data-story-guest-bubble] { height: 116px; overflow: hidden; }
+      /* 下部ゾーンの高さ: 話している助手の顔を台詞の欄の左に置く形(face)は 266px、小さい顔の列も残す形(facerow)は 300px(2026-11-03) */
+      [data-event-story][data-story-zones] { --story-bottom-h: 266px; }
+      [data-event-story][data-story-zones="facerow"] { --story-bottom-h: 300px; }
+      [data-event-story][data-story-zones] [data-story-sheet][data-story-sheet] { height: calc(var(--story-bottom-h) + env(safe-area-inset-bottom)); max-height: none; justify-content: flex-end; }
+      [data-event-story][data-story-zones] [data-story-line-box] { height: 120px; flex-shrink: 0; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 150px) !important; bottom: calc(var(--story-bottom-h) + env(safe-area-inset-bottom) + 8px); align-items: center; }
+      [data-event-story][data-story-zones] [data-story-monster] { height: min(calc(100% / 1.14), 50vw, 230px); }
+      [data-event-story][data-story-zones] [data-story-monsters="2"] [data-story-monster] { height: min(calc(100% / 1.14), 44vw, 210px); }
+    }
+    /* 横の低い画面: 上部ゾーン = 上の端から 6px + ステージ(顔は 0.6倍・吹き出し 3行ぶん 84px)。下部ゾーン = その下ぜんぶ(窓の高さを固定)。
+       モンスターは窓の左右の空き(上の横向きの決まりのまま) */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-event-story][data-story-zones] [data-story-guest-bubble] { height: 84px; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-sheet][data-story-sheet] { height: calc(var(--mh-vh) - 96px - env(safe-area-inset-top)) !important; max-height: none !important; justify-content: flex-end; }
+      [data-event-story][data-story-zones] [data-story-line-box] { height: 120px; flex-shrink: 0; overflow: hidden; }
+      /* 話している助手の顔も、上部ゾーンのゲストの顔と同じく 0.6倍 */
+      [data-event-story][data-story-zones] [data-story-speaker] { zoom: .6; }
+    }
     @media (prefers-reduced-motion: reduce) { [data-story-monster] { animation: none !important; } }
+    /* お話の締め(終わりの札。2026-11-03)。暗くして、題字のように「第◯話 ～副題～ おわり」を出す。'pull' は最後の場面を引いて暗くしてから */
+    @keyframes storyEndDim { 0% { background: rgba(2,6,23,0); } 100% { background: rgba(2,6,23,.9); } }
+    @keyframes storyEndCard { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: none; } }
+    @keyframes storyEndFin { 0% { opacity: 0; transform: scale(1.35); filter: blur(8px); letter-spacing: .9em; } 100% { opacity: 1; transform: none; filter: none; } }
+    [data-event-story] > :not([data-story-ending]) { transition: transform 1.6s ease-out, filter 1.6s ease-out; }
+    [data-event-story][data-story-ending-pull] > :not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
+    @media (prefers-reduced-motion: reduce) { [data-story-ending] *, [data-story-ending] { animation-duration: .01s !important; animation-delay: 0s !important; } }
     @keyframes storyShrink { 0% { opacity: 0; transform: scale(1.7); filter: brightness(1.9); } 50% { opacity: 1; } 100% { transform: scale(1); filter: brightness(1); } }
     @keyframes storyBanner { 0% { opacity: 0; transform: translate(-50%, -8px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.06); } 22% { transform: translate(-50%, 0) scale(1); } 82% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, 0) scale(1); } }
     @keyframes storyShakeA { 0%, 100% { transform: translate(0,0); } 12% { transform: translate(-6px,3px); } 24% { transform: translate(6px,-4px); } 36% { transform: translate(-5px,-3px); } 48% { transform: translate(5px,3px); } 62% { transform: translate(-3px,2px); } 78% { transform: translate(3px,-2px); } }
@@ -165694,6 +168503,8 @@ const createAnimationStyle = () => {
     @keyframes mhCardCutin { 0% { opacity: 0; transform: translateX(40%); } 100% { opacity: 1; transform: translateX(0); } }
     @media (prefers-reduced-motion: reduce) { .mh-card-cutin { animation: none; } }
     .mh-card-hit-flash { position: absolute; inset: 0; border-radius: 12px; background: rgba(255,255,255,.85); pointer-events: none; animation: mhCardHitFlash .28s ease-out both; }
+    /* 立ち絵の子は、絵の形どおりに白く光る(84 の hitSil。絵を型に切り抜く。2026-11-01 点検 G) */
+    .mh-card-hit-flash-sil { border-radius: 0; background: #fff; z-index: 3; }
     @keyframes mhCardHitFlash { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
     .mh-card-dmg-pop { animation: mhCardDmgPop 1s ease-out both; }
     /* 当たった瞬間の「防御！ 5 → 2」(1.6秒。ぽんと出て、しばらく止まって、消える。2026-10-27 社長・案A) */
@@ -165798,7 +168609,15 @@ const createAnimationStyle = () => {
     @keyframes mhCardFlip { 0% { transform: rotateY(0); } 100% { transform: rotateY(180deg); } }
     /* 手札の名前(84 の CardNameFit twoLine): 箱が 56px 以下のときだけ、長い名前を言葉の切れ目で2行に折る。切れ目の無い1語は字の間を詰めて1行(mh-nf-squeeze)。短い名前も2行ぶんの高さを取ってそろえる */
     .mh-nf-b { display: none; }
+    /* フリー対戦(84 の view 'foe')・背の低い縦の画面: 助手の顔と紹介の立ち絵を小さくして、紹介の欄を下の「対戦する」の帯に隠さない(2026-11-01 見た目の点検 D。390×600 で 26px 隠れていた) */
+    @media (orientation: portrait) and (max-height: 700px) { [data-card-top="foe"] { --mh-foe-art-h: 12vh; } [data-card-top="foe"] [data-card-foe] > img { height: 40px; width: 40px; } }
     @container (max-width: 56px) { .mh-nf-a, .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: 20px; line-height: 1; } .mh-nf-a.mh-nf-hide { display: none; } .mh-nf-squeeze { letter-spacing: -0.07em; } }
+    /* 2行に折る幅を名前の長さで決める(84 の CardNameFit。1行のまま 11px で入らない幅から2行へ。2026-11-01 見た目の点検 C)。tall は短い名前も2行ぶんの高さ。56px 以下は上の決まりのまま */
+    @container (min-width: 57px) and (max-width: 115px) { .mh-nf-tall > .mh-nf-a { display: flex; flex-direction: column; justify-content: center; min-height: var(--nf-2l, 20px); line-height: 1.05; } }
+    @container (min-width: 57px) and (max-width: 80px) { .mh-nf-n7 > .mh-nf-a.mh-nf-hide { display: none; } .mh-nf-n7 > .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: var(--nf-2l, 20px); line-height: 1.05; } }
+    @container (min-width: 57px) and (max-width: 92px) { .mh-nf-n8 > .mh-nf-a.mh-nf-hide { display: none; } .mh-nf-n8 > .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: var(--nf-2l, 20px); line-height: 1.05; } }
+    @container (min-width: 57px) and (max-width: 103px) { .mh-nf-n9 > .mh-nf-a.mh-nf-hide { display: none; } .mh-nf-n9 > .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: var(--nf-2l, 20px); line-height: 1.05; } }
+    @container (min-width: 57px) and (max-width: 115px) { .mh-nf-n10 > .mh-nf-a.mh-nf-hide { display: none; } .mh-nf-n10 > .mh-nf-b { display: flex; flex-direction: column; justify-content: center; min-height: var(--nf-2l, 20px); line-height: 1.05; } }
     .mh-card-jump { animation: mhCardJump .9s ease-out both; }
     .mh-card-afterimage { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; pointer-events: none; filter: grayscale(.4) brightness(1.4) drop-shadow(0 0 6px rgba(125,211,252,.9)); animation: mhCardAfter .62s ease-out both; }
     .mh-card-air-mark { position: absolute; top: -2px; left: 50%; margin-left: -18px; width: 36px; border-radius: 6px; background: rgba(8,145,178,.92); color: #ecfeff; font-size: 11px; font-weight: 900; text-align: center; pointer-events: none; animation: mhCardPop .9s ease-out both; }
@@ -165896,7 +168715,8 @@ const createAnimationStyle = () => {
     @keyframes mhPackCFlash { 0%, 20% { opacity: 1; } 100% { opacity: 0; } }
     .mh-pack-label-big { font-size: 40px; padding: 2px 24px; font-style: italic; letter-spacing: 2px; overflow: hidden; -webkit-text-stroke: 1.5px rgba(0,0,0,.3);
       box-shadow: 0 0 18px rgba(255,200,0,.9); animation: mhPackLabelIn .45s cubic-bezier(.2,1.6,.4,1) both; }
-    .mh-pack-label-big.alt { font-size: 46px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.6); box-shadow: 0 0 30px 8px rgba(255,255,255,.95), 0 0 70px 20px rgba(255,80,200,.6);
+    /* レアキラ!! の字は濃い紫で縁取る(白い字が虹色の帯の上で読みにくかった。2026-11-01 見た目の点検 H)。縁は影を8方向に重ねて作る(text-stroke は字の内側を削るため) */
+    .mh-pack-label-big.alt { font-size: 46px; color: #fff; -webkit-text-stroke: 0; text-shadow: -2px -2px 0 #3b0764, 2px -2px 0 #3b0764, -2px 2px 0 #3b0764, 2px 2px 0 #3b0764, 0px -2px 0 #3b0764, 0px 2px 0 #3b0764, -2px 0px 0 #3b0764, 2px 0px 0 #3b0764, 0 4px 6px rgba(0,0,0,.6); box-shadow: 0 0 30px 8px rgba(255,255,255,.95), 0 0 70px 20px rgba(255,80,200,.6);
       animation: mhPackLabelIn .45s cubic-bezier(.2,1.6,.4,1) both, mhPackRainbowMove 1s linear infinite; }
     .mh-pack-label-big::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.9) 50%, transparent 60%); background-size: 250% 100%; animation: mhPackLabelSheen 1.1s ease-in-out infinite; }
     @keyframes mhPackLabelIn { 0% { opacity: 0; transform: scale(2.6) rotate(-14deg); } 100% { opacity: 1; transform: scale(1) rotate(-6deg); } }

@@ -139,7 +139,7 @@ ok('モンスターノーツの演出の強さを選べる',
   &&game.includes('monsterNoteEffect:RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect)?source.monsterNoteEffect:DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect')
   &&game.includes("segments('monsterNoteEffect',RHYTHM_MONSTER_EFFECT_LABELS)")
   // 「軽め」「最小」で画面全体の光を出さない(monAbOff はデバッグの犯人さがし・2026-10-27。既定では何も止めない)
-  &&game.includes("if(monsterHit&&monsterEffect==='NORMAL'&&!monAbOff('spark')&&screenFlashRef.current)")
+  &&game.includes("if(monsterHit&&monsterEffect==='NORMAL'&&!monAbOff('spark')&&screenFlashRef.current&&rhythmFxOn(settings,'flash',true))")
   // いちばん軽い段では、踏んだ瞬間のマスモンへの反応も丸ごと飛ばす(2026-09-13)。
   // ★段は必ず順位(rhythmMonsterEffectAtMost)でくらべる。名前を並べてくらべていたため、
   //   あとから足した「最小」が大きな光の条件を素通りしていた(同日・ユーザー報告
@@ -204,17 +204,18 @@ ok('コンボ数の大きさを設定から変えられる',
 // 「多め」(LOW)で判定文字とコンボの流れを止める。「標準」(LIGHT)も同じ指定へ相乗りするので、
 // セレクタは「,」で続くこともある(2026-09-13に段を4つへ増やしたため)
 ok('演出量「多め」で、判定文字とコンボの流れを止められる',
-  /\[data-rhythm-effect="LOW"\] \[data-rhythm-judgment-text\][,{][\s\S]{0,200}animation:none;/.test(html)
-  &&/\[data-rhythm-effect="LOW"\] \[data-rhythm-combo\]\[data-combo-tier="7"\][,{][\s\S]{0,200}animation:none;/.test(html)
+  /\[data-fx-judge-flow="LOW"\] \[data-rhythm-judgment-text\][,{][\s\S]{0,200}animation:none;/.test(html)
+  // 2026-11-01 演出を1つずつ選べるようにし、判定文字の流れは data-fx-judge-flow、コンボの流れは data-fx-combo-bounce で止める(おまかせは演出量と同じ値が入る)
+  &&/\[data-fx-combo-bounce="LOW"\] \[data-rhythm-combo\]\[data-combo-tier="7"\][,{][\s\S]{0,200}animation:none;/.test(html)
   // 「標準」でも同じところが止まっている(軽い段が重い段より派手にならない)
-  &&/\[data-rhythm-effect="LIGHT"\] \[data-rhythm-judgment-text\][,{][\s\S]{0,200}animation:none;/.test(html)
+  &&/\[data-fx-judge-flow="LIGHT"\] \[data-rhythm-judgment-text\][,{][\s\S]{0,200}animation:none;/.test(html)
   // 止めるのは流れとぼかしの枚数だけ。色・グラデ・字の大きさは標準と同じに保つ
-  &&!/\[data-rhythm-effect="LOW"\] \[data-rhythm-judgment-text\][^{]*\{[^}]*background-image/.test(html)
-  &&!/\[data-rhythm-effect="LOW"\] \[data-rhythm-judgment-text\][^{]*\{[^}]*font-size/.test(html)
+  &&!/\[data-fx-judge-flow="LOW"\] \[data-rhythm-judgment-text\][^{]*\{[^}]*background-image/.test(html)
+  &&!/\[data-fx-judge-flow="LOW"\] \[data-rhythm-judgment-text\][^{]*\{[^}]*font-size/.test(html)
   // 重い判定(GREAT以上)はぼかしの枚数も落とす
   &&['GREAT','EXCELLENT','MARVELOUS'].every(j=>
-      html.includes(`[data-rhythm-play-area][data-rhythm-effect="LOW"] [data-rhythm-judgment-text][data-judgment="${j}"]`)
-      &&html.includes(`[data-rhythm-play-area][data-rhythm-effect="LIGHT"] [data-rhythm-judgment-text][data-judgment="${j}"]`))
+      html.includes(`[data-rhythm-play-area][data-fx-judge-flow="LOW"] [data-rhythm-judgment-text][data-judgment="${j}"]`)
+      &&html.includes(`[data-rhythm-play-area][data-fx-judge-flow="LIGHT"] [data-rhythm-judgment-text][data-judgment="${j}"]`))
   // 選ぶ場所と、何が止まるのかの説明がオプションにある
   &&game.includes("segments('effectAmount',RHYTHM_EFFECT_LABELS)")
   // 重い順に4段(2026-09-13・ユーザー指示「段を増やして更に標準をもっと軽くする」)。
@@ -250,12 +251,12 @@ ok('軽量モードの効果が画面に書いてある',
 //   止めるときは 100% にして、色が全部字の上に並ぶようにする。
 ok('流れを止めるときは、止まった位置に色が全部見える',
   // 判定文字(演出量ひかえめ・最小・軽量モード)
-  /\[data-rhythm-effect="LOW"\] \[data-rhythm-judgment-text\],[\s\S]{0,140}\[data-rhythm-effect="MINIMAL"\] \[data-rhythm-judgment-text\],\s*\[data-rhythm-play-area\]\[data-rhythm-lightweight="true"\] \[data-rhythm-judgment-text\]\{\s*background-size:100% 100%;/.test(html)
+  /\[data-fx-judge-flow="LOW"\] \[data-rhythm-judgment-text\],[\s\S]{0,140}\[data-fx-judge-flow="MINIMAL"\] \[data-rhythm-judgment-text\],\s*\[data-rhythm-play-area\]\[data-fx-judge-flow-lw="true"\] \[data-rhythm-judgment-text\]\{\s*background-size:100% 100%;/.test(html)
   // 500コンボ以上の虹も同じ
-  &&/\[data-rhythm-effect="LOW"\] \[data-rhythm-combo\]\[data-combo-tier="7"\],[\s\S]{0,400}background-size:100% 100%;/.test(html)
+  &&/\[data-fx-combo-bounce="LOW"\] \[data-rhythm-combo\]\[data-combo-tier="7"\],[\s\S]{0,400}background-size:100% 100%;/.test(html)
   // 「標準」も同じ並びに入っている(段を足したときの入れ忘れを拾う)
-  &&/\[data-rhythm-effect="LIGHT"\] \[data-rhythm-combo\]\[data-combo-tier="7"\],[\s\S]{0,400}background-size:100% 100%;/.test(html)
-  &&/\[data-rhythm-effect="LIGHT"\] \[data-rhythm-judgment-text\],[\s\S]{0,200}background-size:100% 100%;/.test(html)
+  &&/\[data-fx-combo-bounce="LIGHT"\] \[data-rhythm-combo\]\[data-combo-tier="7"\],[\s\S]{0,400}background-size:100% 100%;/.test(html)
+  &&/\[data-fx-judge-flow="LIGHT"\] \[data-rhythm-judgment-text\],[\s\S]{0,200}background-size:100% 100%;/.test(html)
   // 動きを減らす設定の端末でも同じ(判定ごとのルールと同じ重さで書かないと上書きできない)
   &&/@media \(prefers-reduced-motion:reduce\)\{\s*\[data-rhythm-judgment-text\]\[data-judgment\]:not\(\[data-judgment=""\]\)\{[\s\S]{0,120}background-size:100% 100%;/.test(html)
   // 流しているとき(標準)は、これまでどおり広く取って動かす
@@ -294,10 +295,10 @@ ok('節目の刻みを定数で持っている',game.includes('const RHYTHM_COMB
 // 依存は「段(tier)が変わったときだけ」動くcomboMilestoneTierだけにする。
 ok('依存はview.comboではなく、段が変わったときだけ動くcomboMilestoneTierだけ（毎ノーツ再実行されるバグの再発防止）',
   game.includes('const comboMilestoneTier=Math.floor((Number(view.combo)||0)/RHYTHM_COMBO_MILESTONE_STEP);')
-  &&game.includes('},[comboMilestoneTier,settings.lightweightMode,settings.effectAmount]);')
+  &&game.includes('},[comboMilestoneTier,settings.lightweightMode,settings.effectAmount,settings.fx]);')
   &&!/setComboMilestone\([\s\S]{0,400}\},\[view\.combo,/.test(game));
 ok('段が上がったときだけでなく、演出を止める条件でも表示を0へ戻す（出しっぱなしで固まらない）',
-  game.includes("if(settings.lightweightMode||settings.effectAmount==='MINIMAL'||comboMilestoneTier<=0){")
+  game.includes("if(!rhythmFxOn(settings,'combo100',!settings.lightweightMode&&settings.effectAmount!=='MINIMAL')||comboMilestoneTier<=0){")
   &&game.includes('setComboMilestone(0);\n      return;'));
 ok('出しっぱなしにせず、時間で消す',game.includes('setTimeout(()=>setComboMilestone(0),1100)')
   &&game.includes('return ()=>clearTimeout(timer);'));

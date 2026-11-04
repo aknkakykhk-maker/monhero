@@ -87,19 +87,24 @@ const STORIES = [
         await page.locator(`[data-debug-story-item="${st.id}"]`).dispatchEvent('click');
         const dlg = page.locator('[role="dialog"][aria-label^="イベント回想"]');
         await dlg.waitFor({ timeout: 10000 });
-        const texts = [];
+        const texts = [], stepSeen = new Set();
         for (let i = 0; i < 200; i++) {
           if (await dlg.count() === 0) break;
           texts.push(await dlg.innerText());
+          const st2 = await page.evaluate(() => document.querySelector('[data-event-story]')?.getAttribute('data-story-step'));
+          if (st2 != null) stepSeen.add(Number(st2));
           if (i === st.shot && SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.waitForTimeout(400); await page.screenshot({ path: path.join(SHOT_DIR, `${st.id}-${atsu}.png`) }); }
           await dlg.locator('button[aria-label="次へ"]').dispatchEvent('click').catch(() => {});
           await page.waitForTimeout(40);
         }
         const want = st.lines[atsu];
-        // 行の数は画面の「◯ / ◯」で数える(曲が流れて止まる行では「次へ」が空振りするので、押した回数では数えない)
+        // 行の数は、画面が持つ台本の行(data-story-step)で数える(曲が流れて止まる行では「次へ」が空振りするので、押した回数では数えない)。
+        //   長い台詞はページに分かれる(2026-11-03 お話の3つのゾーン)ので、画面の「◯ / ◯」はページ数(行の数以上)。ページは1つずつ最後まで送れたかだけを見る
         const steps = texts.map((t) => (/(\d+)\s*\/\s*(\d+)/.exec(t) || []).slice(1).map(Number)).filter((x) => x.length === 2);
-        const total = steps.length ? steps[0][1] : 0, seen = new Set(steps.map((x) => x[0]));
-        check(`① ${label} ${st.title}: 最後まで送れて、${want}行`, total === want && seen.size === want && seen.has(want), `全部で ${total}行・見た行 ${seen.size}`);
+        const pages = steps.length ? steps[0][1] : 0, pagesSeen = new Set(steps.map((x) => x[0]));
+        const lineCount = stepSeen.size ? Math.max(...stepSeen) + 1 : 0;
+        check(`① ${label} ${st.title}: 最後まで送れて、${want}行`, lineCount === want && stepSeen.size === want && pages >= want && pagesSeen.size === pages,
+          `台本 ${lineCount}行・見た行 ${stepSeen.size}・ページ ${pages}(見たページ ${pagesSeen.size})`);
         const all = texts.join('\n');
         if (atsu === 'without') {
           check(`② ${label} ${st.title}: あつが一度も出ない・差し替えの行が出る`, !/あつ/.test(all) && all.includes(st.withoutText), (all.match(/.{0,12}あつ.{0,12}/) || [''])[0]);

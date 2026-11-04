@@ -65,6 +65,8 @@ const seed = ({ storyIds }) => {
     let worst = { over: -1e9 }, at38 = null, total = 0, miss = null;
     for (let i = 0; i < 80; i++) {
       const m = await page.evaluate(() => {
+        // 最後のページのあとに出る終わりの札(2026-11-03)は、窓の上に重ねて出す。札には自分の「閉じる」がある。ここで見るのは窓のボタンなので、札が出たら終わり
+        if (document.querySelector('[data-story-ending]')) return null;
         const sheet = document.querySelector('[data-story-sheet]');
         if (!sheet) return null;
         const btns = [...sheet.querySelectorAll('button')]; const r = btns.map(b => b.getBoundingClientRect());
