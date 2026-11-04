@@ -39,7 +39,7 @@ const pct = (x) => `${(x * 100).toFixed(2)}%`;
 // ==== A. パックの決まり ====
 const WANT_SPECIES = {
   p1: ['dino', 'hare', 'mocchi'], p2: ['golem', 'pixie', 'naga'], p3: ['suezo', 'gali', 'tiger'], p4: ['phoenix', 'monol', 'henger', 'ghost'],
-  p5: ['plant', 'dragon', 'jell'], p6: ['mew', 'worm', 'durahan'], p7: ['zilla', 'metalner', 'joker'], p8: ['arrowhead', 'centaur', 'colorpandora'],
+  p5: ['plant', 'dragon', 'jell'], p6: ['mew', 'worm', 'durahan'], p7: ['zilla', 'metalner', 'joker', 'kyubi'], p8: ['arrowhead', 'centaur', 'colorpandora'],
 };
 check('A 弾は8つ(第1〜8弾)', E.CARD_PACKS.length === 8 && E.CARD_PACKS.every((p, i) => p.no === i + 1));
 E.CARD_PACKS.forEach((p) => {
