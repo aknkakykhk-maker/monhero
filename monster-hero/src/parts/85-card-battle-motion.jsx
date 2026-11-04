@@ -89,20 +89,32 @@ const CARD_SPECIAL_MOTION_RULES = Object.freeze([
 ]);
 // カード番号ごとの上書き(社長が見て「この技はこう動いてほしい」と言ったら、その1枚だけここに足す)
 const CARD_MOTION_BY_NO = Object.freeze({});
-// キュービの専用技(901〜913)は、モンヒロの本編のキュービの技の動きをそのまま当てる(2026-11-04 社長「キュービはモンバトで技モーション細かく作ったからいけるとはおもってる」)
-//   [キュービが出すとき, オリヒメ(C-951)が出すとき]。オリヒメは本編のオリヒメの同じ技(星空の色)。守る・よける・特殊(911〜913)は、ほかの血統と同じ共通の動き
-const CARD_MOTION_KYUBI = Object.freeze({
-  '901': ['Kyubi-n5', 'Orihime-n5'], // 提灯落とし
-  '902': ['Kyubi-u5', 'Orihime-u3'], // 陽炎
-  '903': ['Kyubi-n2', 'Orihime-n2'], // 狐火
-  '904': ['Kyubi-n1', 'Orihime-n1'], // ひのこ
-  '905': ['Kyubi-u2', 'Orihime-u2'], // 超狐火(オリヒメは 超狐火・星)
-  '906': ['Kyubi-u1', 'Orihime-u1'], // なめろう(オリヒメは 織姫のくちづけの動き)
-  '907': ['Kyubi-n6', 'Orihime-n6'], // 火炎車
-  '908': ['Kyubi-u7', 'Orihime-u8'], // 天河天翔
-  '909': ['Kyubi-u3', 'Orihime-u4'], // 神狐蒼火(オリヒメは 神狐星火)
-  '910': ['Kyubi-u8', 'Orihime-u6'], // 炸裂気泡陣
+// キュービの専用技(901〜910)の動き。本編のキュービの技の動き(24 の SKM_KYUBI)をもとに、技カードの絵に寄せた(本編の動きは変えない)
+//   2026-11-04 社長「キュービはモンバトで技モーション細かく作ったからいけるとはおもってる」→ 本編につなぐ
+//   → 同日 社長「キュービの技アクションで技カードの見た目をも参考にして」→ カードの絵の色・形・飛ぶものに寄せた(見比べ: docs/progress/card-kyubi-motion)
+//   オリヒメ(C-951)が出すときは、同じ形を星空の色で(本編のオリヒメと同じ考え)。守る・よける・特殊(911〜913)は、ほかの血統と同じ共通の動き
+//   [技の名前, 大技の飾り(オーラと残像)を付けるか, 色の組 → 動き]
+const CARD_KYUBI_PALETTE = Object.freeze({
+  Kyubi:   { blue:'blue', bh:205, fire:'fire',   fh:22,  star:'gold' },
+  Orihime: { blue:'sky',  bh:195, fire:'cosmic', fh:265, star:'cosmic' },
 });
+const CARD_KYUBI_LOOK = Object.freeze({
+  '901': ['提灯落とし', false, (p) => skm('jump', { c:p.fire, fx:skmFx('fall', 'orb', 1, { s:2.4, h:p.fh }), over:'boom', burst:'spark', form:'fire' })],   // 大きな提灯が降ってくる
+  '902': ['陽炎', true, (p) => skm('warp', { c:p.blue, over:'claw', burst:'spark', hit2:true, form:'slash' })],                                         // 青い分身(残像)が爪で裂く
+  '903': ['狐火', false, (p) => skm('cast', { c:p.blue, fx:skmFx('shot', 'fire', 3, { s:1.6, h:p.bh, step:70 }), burst:'spark', form:'fire' })],          // 青い火の玉が3つまっすぐ飛ぶ
+  '904': ['ひのこ', false, (p) => skm('cast', { c:p.fire, fx:skmFx('shot', 'fire', 7, { step:28, h:p.fh }), over:'boom', burst:'spark', form:'fire' })],   // 提灯の口から火を吹く
+  '905': ['超狐火', true, (p) => skm('cast', { c:p.blue, fx:skmFx('orbit', 'fire', 9, { s:1.4, h:p.bh }), over:'pillar', burst:'star', form:'fire' })],   // まわりに青い炎がたくさん浮かんで飛ぶ
+  '906': ['なめろう', false, (p) => skm('lick', { c:'gold', line:'tongue', over:'boom', burst:'spark' })],                                                 // 黄色い提灯から大きな舌
+  '907': ['火炎車', true, (p) => skm('roll', { c:p.fire, fx:skmFx('orbit', 'fire', 10, { s:1.3, h:p.fh }), over:'tornado', burst:'spark', form:'fire' })], // 炎の渦
+  '908': ['天河天翔', true, (p) => skm('float', { c:p.star, fx:skmFx('fall', 'meteor', 14, { w:150 }), over:'aurora', burst:'star', form:'light' })],      // 夜空から星の川(流れ星)が降る
+  '909': ['神狐蒼火', true, (p) => skm('gather', { c:p.blue, fx:skmFx('fall', 'fire', 12, { s:1.7, h:p.bh }), over:'pillar', burst:'spark', form:'fire' })], // 上から青い大きな炎が落ちて火柱
+  '910': ['炸裂気泡陣', true, (p) => skm('cast', { c:p.fire, fx:skmFx('orbit', 'orb', 10, { s:1.9, h:p.fh }), over:'boom', burst:'spark', form:'fire' })], // 燃える泡が次々にはじける
+});
+// 動きを SkillFxMotion の入れ物へ入れておく(名前は 'cardKyubi902' / 'cardOrihime902')
+Object.entries(CARD_KYUBI_PALETTE).forEach(([who, pal]) => Object.entries(CARD_KYUBI_LOOK).forEach(([no, [, big, make]]) => {
+  const norm = skmNormalize(make(pal), big);
+  SKILL_FX_SPEC_CACHE[`card${who}${no}`] = big ? { ...norm, uex:true } : { ...norm, impact:true };
+}));
 const CARD_MOTION_GAME_ID = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant', ghost: 'Ghost' });
 
 // ---- 技の重さの段(2026-10-31 社長「各カードアクションをもっと一新して」 → 案A) ----
@@ -140,7 +152,7 @@ const cardMotionBaseOf = (db, cardNo, mon) => {
   const c = cardOf(db, cardNo);
   if (!c || !cardIsAttackKind(c.kind) || c.user === 'breeder') return null;
   if (CARD_MOTION_BY_NO[c.no]) return CARD_MOTION_BY_NO[c.no];
-  if (CARD_MOTION_KYUBI[c.no]) return CARD_MOTION_KYUBI[c.no][mon && mon.no === 'C-951' ? 1 : 0];
+  if (CARD_KYUBI_LOOK[c.no]) return `card${mon && mon.no === 'C-951' ? 'Orihime' : 'Kyubi'}${c.no}`;
   if (c.kind === 'spe') { const sp = CARD_SPECIAL_MOTION_RULES.find(([re]) => re.test(c.name)); return sp ? sp[1] : 'cardSpeRing'; }
   // 1. モンヒロに同じ名前の技がある(スエゾーのかみつき・モッチーのもっちゃん など)
   const id = mon && (CARD_MOTION_GAME_ID[mon.species] || CARD_MOTION_GAME_ID[mon.main]);

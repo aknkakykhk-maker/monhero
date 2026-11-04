@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b353b83b8e599c9e
+// source-sha256: fd1e0a8b65c5b8f7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -100364,18 +100364,126 @@ Object.entries(CARD_MOTION_SPECS).forEach(([kind, sp]) => {
 const CARD_MOTION_RULES = Object.freeze([[/コンビネーション|ラッシュ|連|乱れ|3段|三段|マシンガン|ダブル|ワンツー|ポカポカ|わらわら/, 'cardCombo'], [/ブレス/, 'cardBreath'], [/デス|死神|ドクロ|悪夢|冥|ソウル|シャドー|闇/, 'cardDark'], [/プレス|ふみつけ|ボディ|たおれこみ|ヒップ|ドロップ|メテオ/, 'cardPress'], [/ドリル|ニードル|針|ターン/, 'cardDrill'], [/ハンマー|げんこつ|たたき|ごっちん|ボンバ/, 'cardHammer'], [/剣|ソード|ブレード|スラッシュ|斬/, 'cardSword'], [/しっぽ/, 'cardTail'], [/キッス|ぺろ|なめ|ベロ|舌/, 'cardKiss'], [/歌|うた|ソング|音/, 'cardSong'], [/雷|電撃|ライトニング|サンダー|稲妻|放電/, 'cardThunder'], [/炎|火|ファイア|フレイム|熱|バーニング/, 'cardFire'], [/冷|氷|ブリザード|吹雪|凍/, 'cardIce'], [/水|泡|ツバ|しぶき|ウォーター/, 'cardWater'], [/ビーム|レーザー|キャノン|砲|光線/, 'cardBeam'], [/光|聖|ビッグバン/, 'cardLight'], [/魔空|ドレイン|弾|玉|波動|念/, 'cardOrb'], [/毒|ガス|おなら|胞子/, 'cardGas'], [/葉|花|さくら|種|つる/, 'cardLeaf'], [/岩|石|地震|ロック/, 'cardRock'], [/投げ/, 'cardThrow'], [/回転|ぐるぐる|竜巻|スピン|旋風|まわし/, 'cardSpin'], [/剣|斬|まっぷたつ|Vの字|居合|カッター/, 'cardBlade'], [/かみ|噛|かじ/, 'cardBite'], [/ひっかき|爪|ツノ|クロー|突き|つき|くしざし|ヤリ|槍/, 'cardClaw'], [/キック|けり|蹴|ひざ/, 'cardKick'], [/体当たり|タックル|頭つき|突進|ダッシュ|ころがる|転がる/, 'cardDash'], [/パンチ|チョップ|はたき|ソバット|ビンタ|でこぴん|こぶし|殴/, 'cardJab']]);
 const CARD_SPECIAL_MOTION_RULES = Object.freeze([[/歌|うた|ソング|音|笛|おどり|踊/, 'cardSpeSong'], [/偵察|にらむ|睨|見|挑発|のぞ|ガン/, 'cardSpeEye']]);
 const CARD_MOTION_BY_NO = Object.freeze({});
-const CARD_MOTION_KYUBI = Object.freeze({
-  '901': ['Kyubi-n5', 'Orihime-n5'],
-  '902': ['Kyubi-u5', 'Orihime-u3'],
-  '903': ['Kyubi-n2', 'Orihime-n2'],
-  '904': ['Kyubi-n1', 'Orihime-n1'],
-  '905': ['Kyubi-u2', 'Orihime-u2'],
-  '906': ['Kyubi-u1', 'Orihime-u1'],
-  '907': ['Kyubi-n6', 'Orihime-n6'],
-  '908': ['Kyubi-u7', 'Orihime-u8'],
-  '909': ['Kyubi-u3', 'Orihime-u4'],
-  '910': ['Kyubi-u8', 'Orihime-u6']
+const CARD_KYUBI_PALETTE = Object.freeze({
+  Kyubi: {
+    blue: 'blue',
+    bh: 205,
+    fire: 'fire',
+    fh: 22,
+    star: 'gold'
+  },
+  Orihime: {
+    blue: 'sky',
+    bh: 195,
+    fire: 'cosmic',
+    fh: 265,
+    star: 'cosmic'
+  }
 });
+const CARD_KYUBI_LOOK = Object.freeze({
+  '901': ['提灯落とし', false, p => skm('jump', {
+    c: p.fire,
+    fx: skmFx('fall', 'orb', 1, {
+      s: 2.4,
+      h: p.fh
+    }),
+    over: 'boom',
+    burst: 'spark',
+    form: 'fire'
+  })],
+  '902': ['陽炎', true, p => skm('warp', {
+    c: p.blue,
+    over: 'claw',
+    burst: 'spark',
+    hit2: true,
+    form: 'slash'
+  })],
+  '903': ['狐火', false, p => skm('cast', {
+    c: p.blue,
+    fx: skmFx('shot', 'fire', 3, {
+      s: 1.6,
+      h: p.bh,
+      step: 70
+    }),
+    burst: 'spark',
+    form: 'fire'
+  })],
+  '904': ['ひのこ', false, p => skm('cast', {
+    c: p.fire,
+    fx: skmFx('shot', 'fire', 7, {
+      step: 28,
+      h: p.fh
+    }),
+    over: 'boom',
+    burst: 'spark',
+    form: 'fire'
+  })],
+  '905': ['超狐火', true, p => skm('cast', {
+    c: p.blue,
+    fx: skmFx('orbit', 'fire', 9, {
+      s: 1.4,
+      h: p.bh
+    }),
+    over: 'pillar',
+    burst: 'star',
+    form: 'fire'
+  })],
+  '906': ['なめろう', false, p => skm('lick', {
+    c: 'gold',
+    line: 'tongue',
+    over: 'boom',
+    burst: 'spark'
+  })],
+  '907': ['火炎車', true, p => skm('roll', {
+    c: p.fire,
+    fx: skmFx('orbit', 'fire', 10, {
+      s: 1.3,
+      h: p.fh
+    }),
+    over: 'tornado',
+    burst: 'spark',
+    form: 'fire'
+  })],
+  '908': ['天河天翔', true, p => skm('float', {
+    c: p.star,
+    fx: skmFx('fall', 'meteor', 14, {
+      w: 150
+    }),
+    over: 'aurora',
+    burst: 'star',
+    form: 'light'
+  })],
+  '909': ['神狐蒼火', true, p => skm('gather', {
+    c: p.blue,
+    fx: skmFx('fall', 'fire', 12, {
+      s: 1.7,
+      h: p.bh
+    }),
+    over: 'pillar',
+    burst: 'spark',
+    form: 'fire'
+  })],
+  '910': ['炸裂気泡陣', true, p => skm('cast', {
+    c: p.fire,
+    fx: skmFx('orbit', 'orb', 10, {
+      s: 1.9,
+      h: p.fh
+    }),
+    over: 'boom',
+    burst: 'spark',
+    form: 'fire'
+  })]
+});
+Object.entries(CARD_KYUBI_PALETTE).forEach(([who, pal]) => Object.entries(CARD_KYUBI_LOOK).forEach(([no, [, big, make]]) => {
+  const norm = skmNormalize(make(pal), big);
+  SKILL_FX_SPEC_CACHE[`card${who}${no}`] = big ? {
+    ...norm,
+    uex: true
+  } : {
+    ...norm,
+    impact: true
+  };
+}));
 const CARD_MOTION_GAME_ID = Object.freeze({
   tiger: 'Tiger',
   golem: 'Golem',
@@ -100447,7 +100555,7 @@ const cardMotionBaseOf = (db, cardNo, mon) => {
   const c = cardOf(db, cardNo);
   if (!c || !cardIsAttackKind(c.kind) || c.user === 'breeder') return null;
   if (CARD_MOTION_BY_NO[c.no]) return CARD_MOTION_BY_NO[c.no];
-  if (CARD_MOTION_KYUBI[c.no]) return CARD_MOTION_KYUBI[c.no][mon && mon.no === 'C-951' ? 1 : 0];
+  if (CARD_KYUBI_LOOK[c.no]) return `card${mon && mon.no === 'C-951' ? 'Orihime' : 'Kyubi'}${c.no}`;
   if (c.kind === 'spe') {
     const sp = CARD_SPECIAL_MOTION_RULES.find(([re]) => re.test(c.name));
     return sp ? sp[1] : 'cardSpeRing';
