@@ -714,18 +714,18 @@ const SKM_KYUBI = Object.freeze({
   normal:[
     skm('slash', { c:'fire', over:'claw', burst:'dust' }),                                                   // ひっかき
     skm('cast', { c:'fire', fx:skmFx('shot', 'spark', 4), burst:'spark' }),                                 // ひのこ
-    skm('cast', { c:'blue', fx:skmFx('orbit', 'fire', 5), burst:'star', form:'fire' }),                     // 狐火
+    skm('cast', { c:'blue', fx:skmFx('orbit', 'fire', 5), burst:'star', form:'fire', tint:true }),          // 狐火(青い炎。着弾の炎も青)
     skm('kick', { c:'red', over:'fist', burst:'dust' }),                                                     // 下駄蹴り
     skm('toss', { c:'fire', fx:skmFx('lob', 'orb', 1, { s:1.4 }), over:'boom', burst:'spark' }),            // 提灯投げ
     skm('jump', { c:'gold', fx:skmFx('fall', 'orb', 1, { s:1.6 }), over:'boom', burst:'star' }),            // 提灯落とし
-    skm('roll', { c:'fire', fx:skmFx('orbit', 'flame', 8), over:'boom', burst:'spark', form:'fire' }),      // 火炎車
+    skm('roll', { c:['#fed7aa', '#dc2626'], fx:skmFx('orbit', 'flame', 8), over:'boom', burst:'spark', form:'fire' }), // 火炎車(赤い炎の渦)
     skm('dash', { c:'holy', line:'ray', over:'xslash', burst:'star', form:'light' }),                       // 神光石火
     skm('gather', { c:'psy', fx:skmFx('orbit', 'orb', 9), over:'eye', burst:'star' })],                     // 九重神眼
   unique:[
     skm('hop', { c:'pink', fx:skmFx('shot', 'heart', 4), burst:'heart' }),                                   // ゆうわく
     skm('lick', { c:'pink', line:'tongue', burst:'heart' }),                                                 // なめろう
-    skm('cast', { c:'blue', fx:skmFx('orbit', 'fire', 9), over:'pillar', burst:'star', form:'fire' }),      // 超狐火
-    skm('gather', { c:'blue', fx:skmFx('fall', 'flame', 10), over:'pillar', burst:'spark', form:'fire' }),  // 神狐蒼火
+    skm('cast', { c:'blue', fx:skmFx('orbit', 'fire', 9), over:'pillar', burst:'star', form:'fire', tint:true }), // 超狐火
+    skm('gather', { c:'blue', fx:skmFx('fall', 'flame', 10, { s:1.6 }), over:'pillar', burst:'spark', form:'fire', tint:true }), // 神狐蒼火(青い大きな炎)
     skm('spin', { c:'wind', over:'tornado', burst:'leaf' }),                                                 // 八嵐天衝
     skm('warp', { c:'fire', over:'shadow', burst:'dust' }),                                                  // 陽炎
     skm('gather', { c:'blood', fx:skmFx('orbit', 'flame', 9), over:'eclipse', burst:'spark', form:'fire' }),  // 煉獄九尾陣
@@ -741,10 +741,10 @@ const SKM_ORIHIME = Object.freeze({
     { ...SKM_KYUBI.unique[1], c:'sakura' },                                                                   // 織姫のくちづけ(キュービのなめろうの動き)
     skm('cast', { c:'cosmic', fx:skmFx('orbit', 'star', 9), over:'pillar', burst:'star', form:'light' }),   // 超狐火・星
     { ...SKM_KYUBI.unique[5], c:'cosmic' },                                                                   // 陽炎
-    { ...SKM_KYUBI.unique[3], c:'sky' },                                                                      // 神狐星火(キュービの神狐蒼火の動き)
+    { ...SKM_KYUBI.unique[3], c:'cosmic' },                                                                   // 神狐星火(キュービの神狐蒼火の動き・星空の色の炎)
     { ...SKM_KYUBI.unique[4], c:'sky' },                                                                      // 八鈴天衝(キュービの八嵐天衝の動き)
     { ...SKM_KYUBI.unique[8], c:'pink' },                                                                     // 炸裂気泡陣
-    { ...SKM_KYUBI.unique[6], c:'psy' },                                                                      // 煉獄九尾陣
+    { ...SKM_KYUBI.unique[6], c:'psy', tint:true },                                                           // 煉獄九尾陣(着弾の炎の柱も紫)
     { ...SKM_KYUBI.unique[7], c:'sky' }],                                                                     // 天河天翔
 });
 const SKILL_MOTION_SETS = Object.freeze({ ...SKILL_MOTION_SETS_MAIN, Yaobikuni:skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red'), Ghost:SKM_GHOST, Spooky:SKM_SPOOKY, Melody:SKM_MELODY, Kuromy:SKM_KUROMY,
@@ -825,7 +825,7 @@ const skmNormalize = (sp0, isUnique = false) => {
   if (isUnique) ms += 100;
   ms = Math.min(SKM_MAX_MS, Math.round(ms));
   const bits = sp.bits || [{x:-28,y:-20},{x:26,y:-24},{x:-30,y:16},{x:30,y:14},{x:0,y:-34}];
-  return { body:sp.body, line:sp.line, fx:sp.fx, over:sp.over, burst:sp.burst, twin:sp.twin === true, bits, c1, c2, form:sp.form || skmFormOf(sp.c), hit:Math.round(hit),
+  return { body:sp.body, line:sp.line, fx:sp.fx, over:sp.over, burst:sp.burst, twin:sp.twin === true, bits, c1, c2, form:sp.form || skmFormOf(sp.c), tint:sp.tint === true, hit:Math.round(hit),
     ...(sp.hit2 ? { hit2:Math.round(hit + 180) } : {}), ms };
 };
 // 型の名前(ユグドラシル種は 'ygHeadbutt' など、ほかの子は '<モンスターid>-n<段階>' / '-u<段階>')から、見た目の組み合わせを返す
@@ -900,7 +900,7 @@ const SkillFxMotion = ({kind, image, lunge=false}) => {
         <i className="thm-atk__core"/>
         <i className="thm-atk__ring"/>
       </span>}
-      {(uex||impactOnly)&&<UniqueFxImpact form={spec.form || 'burst'} offset={(spec.hit || 0) - 240}/>}
+      {(uex||impactOnly)&&<UniqueFxImpact form={spec.form || 'burst'} tint={spec.tint ? [spec.c1, spec.c2] : null} offset={(spec.hit || 0) - 240}/>}
     </span>
   );
 };
@@ -934,11 +934,12 @@ const UNIQUE_IMPACT_PALETTE = Object.freeze({
   fire:['#fef3c7', '#f97316'], ice:['#e0f2fe', '#38bdf8'], bolt:['#fef9c3', '#facc15'], water:['#e0f2fe', '#3b82f6'], void:['#ede9fe', '#6d28d9'],
   thorn:['#bbf7d0', '#16a34a'], rubble:['#e7d7c1', '#a8865f'], bloom:['#fce7f3', '#ec4899'], rend:['#fee2e2', '#dc2626'], psy:['#fae8ff', '#c026d3'],
 });
-const UniqueFxImpact = ({ form = 'light', offset = 0 }) => {
+// tint … 技の色で塗る(青い狐火・星空の炎など、型の決まった色では技と合わないとき。技の skm に tint:true)
+const UniqueFxImpact = ({ form = 'light', offset = 0, tint = null }) => {
   const parts = UNIQUE_IMPACT_FORMS[form];
-  const pal = UNIQUE_IMPACT_PALETTE[form];
+  const pal = tint || UNIQUE_IMPACT_PALETTE[form];
   return (
-    <span className="thm-atk__hit uex-impact" aria-hidden="true" data-impact-form={form}
+    <span className="thm-atk__hit uex-impact" aria-hidden="true" data-impact-form={form} data-impact-tint={tint ? '1' : undefined}
       style={{ '--spm-c1':pal ? pal[0] : 'var(--c1, #fff)', '--spm-c2':pal ? pal[1] : 'var(--c2, #c026d3)' }}>
       {form === 'light' && <><i className="uex-pillar"/><i className="uex-crack"/></>}
       <i className="uex-flash"/>

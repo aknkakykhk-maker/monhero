@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0aad92f9accc9fa8
+// source-sha256: bb9f8ac3dd265322
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -24793,7 +24793,8 @@ const SKM_KYUBI = Object.freeze({
     c: 'blue',
     fx: skmFx('orbit', 'fire', 5),
     burst: 'star',
-    form: 'fire'
+    form: 'fire',
+    tint: true
   }), skm('kick', {
     c: 'red',
     over: 'fist',
@@ -24813,7 +24814,7 @@ const SKM_KYUBI = Object.freeze({
     over: 'boom',
     burst: 'star'
   }), skm('roll', {
-    c: 'fire',
+    c: ['#fed7aa', '#dc2626'],
     fx: skmFx('orbit', 'flame', 8),
     over: 'boom',
     burst: 'spark',
@@ -24843,13 +24844,17 @@ const SKM_KYUBI = Object.freeze({
     fx: skmFx('orbit', 'fire', 9),
     over: 'pillar',
     burst: 'star',
-    form: 'fire'
+    form: 'fire',
+    tint: true
   }), skm('gather', {
     c: 'blue',
-    fx: skmFx('fall', 'flame', 10),
+    fx: skmFx('fall', 'flame', 10, {
+      s: 1.6
+    }),
     over: 'pillar',
     burst: 'spark',
-    form: 'fire'
+    form: 'fire',
+    tint: true
   }), skm('spin', {
     c: 'wind',
     over: 'tornado',
@@ -24901,7 +24906,7 @@ const SKM_ORIHIME = Object.freeze({
     c: 'cosmic'
   }, {
     ...SKM_KYUBI.unique[3],
-    c: 'sky'
+    c: 'cosmic'
   }, {
     ...SKM_KYUBI.unique[4],
     c: 'sky'
@@ -24910,7 +24915,8 @@ const SKM_ORIHIME = Object.freeze({
     c: 'pink'
   }, {
     ...SKM_KYUBI.unique[6],
-    c: 'psy'
+    c: 'psy',
+    tint: true
   }, {
     ...SKM_KYUBI.unique[7],
     c: 'sky'
@@ -25143,6 +25149,7 @@ const skmNormalize = (sp0, isUnique = false) => {
     c1,
     c2,
     form: sp.form || skmFormOf(sp.c),
+    tint: sp.tint === true,
     hit: Math.round(hit),
     ...(sp.hit2 ? {
       hit2: Math.round(hit + 180)
@@ -25295,6 +25302,7 @@ const SkillFxMotion = ({
     className: "thm-atk__ring"
   })), (uex || impactOnly) && React.createElement(UniqueFxImpact, {
     form: spec.form || 'burst',
+    tint: spec.tint ? [spec.c1, spec.c2] : null,
     offset: (spec.hit || 0) - 240
   }));
 };
@@ -25619,14 +25627,16 @@ const UNIQUE_IMPACT_PALETTE = Object.freeze({
 });
 const UniqueFxImpact = ({
   form = 'light',
-  offset = 0
+  offset = 0,
+  tint = null
 }) => {
   const parts = UNIQUE_IMPACT_FORMS[form];
-  const pal = UNIQUE_IMPACT_PALETTE[form];
+  const pal = tint || UNIQUE_IMPACT_PALETTE[form];
   return React.createElement("span", {
     className: "thm-atk__hit uex-impact",
     "aria-hidden": "true",
     "data-impact-form": form,
+    "data-impact-tint": tint ? '1' : undefined,
     style: {
       '--spm-c1': pal ? pal[0] : 'var(--c1, #fff)',
       '--spm-c2': pal ? pal[1] : 'var(--c2, #c026d3)'
@@ -75902,11 +75912,19 @@ function BattleScreen({
     }), 'カード上限', `+1（残り${Math.ceil(getPermaBuff('kikiCardBonusTurns'))}T）`, 'text-violet-300 border-violet-300/50', {
       short: '+1'
     });
-    if (getPermaBuff('kyukoCutTurns') > 0 && getPermaBuff('kyukoCutRate') > 0) chip('kyukoCut', React.createElement(Shield, {
-      size: 9
-    }), '被ダメ', `-${Math.round(getPermaBuff('kyukoCutRate') * 100)}%（残り${Math.ceil(getPermaBuff('kyukoCutTurns'))}T）`, 'text-pink-300 border-pink-300/50', {
-      short: `-${Math.round(getPermaBuff('kyukoCutRate') * 100)}%`
-    });
+    if (getPermaBuff('kyukoCutTurns') > 0 && getPermaBuff('kyukoCutRate') > 0) {
+      const ks = getPermaBuff('kyukoCutSlot');
+      const kName = Array.isArray(tacticsUnits) && Number.isInteger(ks) && ks >= 0 ? slots[ks]?.name || '' : '';
+      const kPct = Math.round(getPermaBuff('kyukoCutRate') * 100);
+      chip('kyukoCut', React.createElement(Shield, {
+        size: 9
+      }), kName ? `${kName}の被ダメ` : '被ダメ', `-${kPct}%（残り${Math.ceil(getPermaBuff('kyukoCutTurns'))}T）`, 'text-pink-300 border-pink-300/50', {
+        short: kName ? `${[...kName].slice(0, 4).join('')} -${kPct}%` : `-${kPct}%`,
+        ...(kName ? {
+          owner: ks
+        } : {})
+      });
+    }
     if (getPermaBuff('kenshiComboPower') > 0 || getPermaBuff('kenshiExtraCombo') > 0) {
       const kenshiExtra = getPermaBuff('kenshiExtraCombo');
       chip('kenshi', React.createElement(Sword, {
@@ -76377,11 +76395,17 @@ function BattleScreen({
   const emDurStyle = enemySkillNow && Number.isFinite(enemyAttackFx?.ms) && enemyAttackFx.ms > 0 ? {
     '--em-dur': `${enemyAttackFx.ms}ms`
   } : {};
-  const rawAimedSlots = Array.isArray(tacticsUnits) && enemyIntent ? tacticsIntentTargets(enemyIntent, tacticsUnits, enemyDist) : [];
+  const kyukoPlacedSlot = Array.isArray(tacticsUnits) && Array.isArray(selectedCards) ? selectedCards.map(idx => ({
+    card: hand?.[idx],
+    slot: cardAssignments?.[idx]
+  })).find(e => e.card && e.card.subType === 'cover_kyuko' && Number.isInteger(e.slot))?.slot ?? null : null;
+  const baseAimedSlots = Array.isArray(tacticsUnits) && enemyIntent ? tacticsIntentTargets(enemyIntent, tacticsUnits, enemyDist) : [];
+  const rawAimedSlots = Number.isInteger(kyukoPlacedSlot) && enemyIntent ? redirectTacticsSingleTarget(baseAimedSlots, enemyIntent, kyukoPlacedSlot, tacticsUnits) : baseAimedSlots;
+  const kyukoAimMoved = rawAimedSlots !== baseAimedSlots && rawAimedSlots.length === 1 && rawAimedSlots[0] !== baseAimedSlots[0];
   const coverActive = Number.isInteger(tacticsCoverSlot) && rawAimedSlots.length > 0;
   const coverHitCount = coverActive ? rawAimedSlots.length : 1;
   const aimedSlots = coverActive ? [tacticsCoverSlot] : rawAimedSlots;
-  const aimedName = (coverActive ? `${tacticsTargetName(tacticsUnits, tacticsCoverSlot)}（かばう）` : null) || enemyIntent?.targetName || (aimedSlots.length ? aimedSlots.map(idx => tacticsTargetName(tacticsUnits, idx)).join('・') : enemyIntent?.variant === 'sweep' ? 'だれもいない' : '');
+  const aimedName = (coverActive ? `${tacticsTargetName(tacticsUnits, tacticsCoverSlot)}（かばう）` : null) || (kyukoAimMoved ? `${tacticsTargetName(tacticsUnits, rawAimedSlots[0])}（譜面）` : null) || enemyIntent?.targetName || (aimedSlots.length ? aimedSlots.map(idx => tacticsTargetName(tacticsUnits, idx)).join('・') : enemyIntent?.variant === 'sweep' ? 'だれもいない' : '');
   const plannedGuardBySlot = () => {
     const bySlot = {};
     const counter = makeCardHalveCounter();
@@ -77078,7 +77102,7 @@ function BattleScreen({
   }), React.createElement("span", {
     className: "text-[10px] font-black leading-none text-white [@media(max-height:640px)]:sr-only"
   }, "魂格効果")), enemy && enemyIntent && !isBusy && (() => {
-    const aimedSlot = coverActive ? tacticsCoverSlot : Number.isInteger(enemyIntent.targetSlot) ? enemyIntent.targetSlot : null;
+    const aimedSlot = coverActive ? tacticsCoverSlot : kyukoAimMoved ? rawAimedSlots[0] : Number.isInteger(enemyIntent.targetSlot) ? enemyIntent.targetSlot : null;
     const rawDmg = getIncomingDamageBeforeTurnReduction(enemyIntent, aimedSlot);
     const plannedHit = plannedHitWithCover(aimedSlot);
     const plannedDmg = plannedHit.taken;
@@ -94131,7 +94155,9 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
       const h = cardOf(db, n2);
       return !!h && cardIsAttackKind(h.kind) && h.kind !== 'spe' && me.mons.some(m => !m.ko && cardUsableBy(h, m));
     })());
-    return (c.damage || 1) * 0.5 - Math.max(0, c.guts - (me.guts.length + 2)) * 0.8 - (noHost ? 2 : 0);
+    const value = (c.damage || 1) * 0.5 - Math.max(0, cardFieldCostOf(st, c.guts || 0) - (me.guts.length + 2)) * 0.8 - (noHost ? 2 : 0);
+    if (cardAiFieldBlocked(db, st, p, no)) return CARD_AI_BLOCKED_KEEP + (me.hand.some(n2 => n2 !== no && (cardOf(db, n2) || {}).kind === 'fld') ? value * CARD_AI_BLOCKED_HOPE : 0);
+    return value;
   };
   const aceKeep = no => policy && Array.isArray(policy.aces) && policy.aces.includes(no) ? 10 : 0;
   const ks = me.hand.map((no, i) => ({
@@ -94173,6 +94199,25 @@ const cardAiChooseGuts = (db, st, policy, gopt = null) => {
     hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, policy.playerRole ? 99 : cardAiGutsCap(me))
   };
 };
+const cardAiFieldBlocked = (db, st, p, no) => {
+  const c = cardOf(db, no);
+  if (!st.field || !c || !cardIsAttackKind(c.kind)) return false;
+  const me = st.players[p];
+  const at = me.hand.indexOf(no);
+  const idxs = at >= 0 ? [at] : [];
+  if (c.user === 'breeder') return cardFieldBanned(db, st, p, -1, c, idxs);
+  const users = me.mons.map((m, mi) => ({
+    m,
+    mi
+  })).filter(({
+    m
+  }) => !m.ko && cardUsableBy(c, m));
+  return users.length > 0 && users.every(({
+    mi
+  }) => cardFieldBanned(db, st, p, mi, c, idxs));
+};
+const CARD_AI_BLOCKED_KEEP = -1.5;
+const CARD_AI_BLOCKED_HOPE = 0.3;
 const CARD_AI_GUARD_KEEP_ADD = 1.5;
 const CARD_AI_STUCK_KEEP = 2;
 const CARD_TACTIC_KEEP_GUARD_MAX = 3;
@@ -97139,8 +97184,8 @@ const cardTacticSmartLevel = frames => {
   const base = f.base.filter(Boolean).length;
   const rows = cardTacticCountedRows(f);
   if (base >= 3 && rows >= 10) return 'legend';
-  if (base >= 3 && rows >= 7) return 'hell';
-  if (base >= 3 && rows >= 4) return 'grandmaster';
+  if (base >= 2 && rows >= 9) return 'hell';
+  if (base >= 2 && rows >= 6) return 'grandmaster';
   if (base >= 2 || rows >= 4) return 'master';
   return 'expert';
 };
@@ -100370,18 +100415,126 @@ Object.entries(CARD_MOTION_SPECS).forEach(([kind, sp]) => {
 const CARD_MOTION_RULES = Object.freeze([[/コンビネーション|ラッシュ|連|乱れ|3段|三段|マシンガン|ダブル|ワンツー|ポカポカ|わらわら/, 'cardCombo'], [/ブレス/, 'cardBreath'], [/デス|死神|ドクロ|悪夢|冥|ソウル|シャドー|闇/, 'cardDark'], [/プレス|ふみつけ|ボディ|たおれこみ|ヒップ|ドロップ|メテオ/, 'cardPress'], [/ドリル|ニードル|針|ターン/, 'cardDrill'], [/ハンマー|げんこつ|たたき|ごっちん|ボンバ/, 'cardHammer'], [/剣|ソード|ブレード|スラッシュ|斬/, 'cardSword'], [/しっぽ/, 'cardTail'], [/キッス|ぺろ|なめ|ベロ|舌/, 'cardKiss'], [/歌|うた|ソング|音/, 'cardSong'], [/雷|電撃|ライトニング|サンダー|稲妻|放電/, 'cardThunder'], [/炎|火|ファイア|フレイム|熱|バーニング/, 'cardFire'], [/冷|氷|ブリザード|吹雪|凍/, 'cardIce'], [/水|泡|ツバ|しぶき|ウォーター/, 'cardWater'], [/ビーム|レーザー|キャノン|砲|光線/, 'cardBeam'], [/光|聖|ビッグバン/, 'cardLight'], [/魔空|ドレイン|弾|玉|波動|念/, 'cardOrb'], [/毒|ガス|おなら|胞子/, 'cardGas'], [/葉|花|さくら|種|つる/, 'cardLeaf'], [/岩|石|地震|ロック/, 'cardRock'], [/投げ/, 'cardThrow'], [/回転|ぐるぐる|竜巻|スピン|旋風|まわし/, 'cardSpin'], [/剣|斬|まっぷたつ|Vの字|居合|カッター/, 'cardBlade'], [/かみ|噛|かじ/, 'cardBite'], [/ひっかき|爪|ツノ|クロー|突き|つき|くしざし|ヤリ|槍/, 'cardClaw'], [/キック|けり|蹴|ひざ/, 'cardKick'], [/体当たり|タックル|頭つき|突進|ダッシュ|ころがる|転がる/, 'cardDash'], [/パンチ|チョップ|はたき|ソバット|ビンタ|でこぴん|こぶし|殴/, 'cardJab']]);
 const CARD_SPECIAL_MOTION_RULES = Object.freeze([[/歌|うた|ソング|音|笛|おどり|踊/, 'cardSpeSong'], [/偵察|にらむ|睨|見|挑発|のぞ|ガン/, 'cardSpeEye']]);
 const CARD_MOTION_BY_NO = Object.freeze({});
-const CARD_MOTION_KYUBI = Object.freeze({
-  '901': ['Kyubi-n5', 'Orihime-n5'],
-  '902': ['Kyubi-u5', 'Orihime-u3'],
-  '903': ['Kyubi-n2', 'Orihime-n2'],
-  '904': ['Kyubi-n1', 'Orihime-n1'],
-  '905': ['Kyubi-u2', 'Orihime-u2'],
-  '906': ['Kyubi-u1', 'Orihime-u1'],
-  '907': ['Kyubi-n6', 'Orihime-n6'],
-  '908': ['Kyubi-u7', 'Orihime-u8'],
-  '909': ['Kyubi-u3', 'Orihime-u4'],
-  '910': ['Kyubi-u8', 'Orihime-u6']
+const CARD_KYUBI_PALETTE = Object.freeze({
+  Kyubi: {
+    blue: 'blue',
+    bh: 205,
+    fire: 'fire',
+    fh: 22,
+    star: 'gold'
+  },
+  Orihime: {
+    blue: 'sky',
+    bh: 195,
+    fire: 'cosmic',
+    fh: 265,
+    star: 'cosmic'
+  }
 });
+const CARD_KYUBI_LOOK = Object.freeze({
+  '901': ['提灯落とし', false, p => skm('jump', {
+    c: p.fire,
+    fx: skmFx('fall', 'orb', 1, {
+      s: 2.4,
+      h: p.fh
+    }),
+    over: 'boom',
+    burst: 'spark',
+    form: 'fire'
+  })],
+  '902': ['陽炎', true, p => skm('warp', {
+    c: p.blue,
+    over: 'claw',
+    burst: 'spark',
+    hit2: true,
+    form: 'slash'
+  })],
+  '903': ['狐火', false, p => skm('cast', {
+    c: p.blue,
+    fx: skmFx('shot', 'fire', 3, {
+      s: 1.6,
+      h: p.bh,
+      step: 70
+    }),
+    burst: 'spark',
+    form: 'fire'
+  })],
+  '904': ['ひのこ', false, p => skm('cast', {
+    c: p.fire,
+    fx: skmFx('shot', 'fire', 7, {
+      step: 28,
+      h: p.fh
+    }),
+    over: 'boom',
+    burst: 'spark',
+    form: 'fire'
+  })],
+  '905': ['超狐火', true, p => skm('cast', {
+    c: p.blue,
+    fx: skmFx('orbit', 'fire', 9, {
+      s: 1.4,
+      h: p.bh
+    }),
+    over: 'pillar',
+    burst: 'star',
+    form: 'fire'
+  })],
+  '906': ['なめろう', false, p => skm('lick', {
+    c: 'gold',
+    line: 'tongue',
+    over: 'boom',
+    burst: 'spark'
+  })],
+  '907': ['火炎車', true, p => skm('roll', {
+    c: p.fire,
+    fx: skmFx('orbit', 'fire', 10, {
+      s: 1.3,
+      h: p.fh
+    }),
+    over: 'tornado',
+    burst: 'spark',
+    form: 'fire'
+  })],
+  '908': ['天河天翔', true, p => skm('float', {
+    c: p.star,
+    fx: skmFx('fall', 'meteor', 14, {
+      w: 150
+    }),
+    over: 'aurora',
+    burst: 'star',
+    form: 'light'
+  })],
+  '909': ['神狐蒼火', true, p => skm('gather', {
+    c: p.blue,
+    fx: skmFx('fall', 'fire', 12, {
+      s: 1.7,
+      h: p.bh
+    }),
+    over: 'pillar',
+    burst: 'spark',
+    form: 'fire'
+  })],
+  '910': ['炸裂気泡陣', true, p => skm('cast', {
+    c: p.fire,
+    fx: skmFx('orbit', 'orb', 10, {
+      s: 1.9,
+      h: p.fh
+    }),
+    over: 'boom',
+    burst: 'spark',
+    form: 'fire'
+  })]
+});
+Object.entries(CARD_KYUBI_PALETTE).forEach(([who, pal]) => Object.entries(CARD_KYUBI_LOOK).forEach(([no, [, big, make]]) => {
+  const norm = skmNormalize(make(pal), big);
+  SKILL_FX_SPEC_CACHE[`card${who}${no}`] = big ? {
+    ...norm,
+    uex: true
+  } : {
+    ...norm,
+    impact: true
+  };
+}));
 const CARD_MOTION_GAME_ID = Object.freeze({
   tiger: 'Tiger',
   golem: 'Golem',
@@ -100453,7 +100606,7 @@ const cardMotionBaseOf = (db, cardNo, mon) => {
   const c = cardOf(db, cardNo);
   if (!c || !cardIsAttackKind(c.kind) || c.user === 'breeder') return null;
   if (CARD_MOTION_BY_NO[c.no]) return CARD_MOTION_BY_NO[c.no];
-  if (CARD_MOTION_KYUBI[c.no]) return CARD_MOTION_KYUBI[c.no][mon && mon.no === 'C-951' ? 1 : 0];
+  if (CARD_KYUBI_LOOK[c.no]) return `card${mon && mon.no === 'C-951' ? 'Orihime' : 'Kyubi'}${c.no}`;
   if (c.kind === 'spe') {
     const sp = CARD_SPECIAL_MOTION_RULES.find(([re]) => re.test(c.name));
     return sp ? sp[1] : 'cardSpeRing';
@@ -123139,6 +123292,29 @@ const cardRegRowText = row => {
   if (row.c === 'any') return `いつでも → ${a ? a.line || a.name : '?'}`;
   return `${c ? c.line || c.name : '?'} → ${a ? a.line || a.name : '?'}`;
 };
+const cardRegSmartNextText = (frames, lv) => {
+  const f = cardTacticNormalizeFrames(frames);
+  const base = f.base.filter(Boolean).length;
+  const rows = cardTacticCountedRows(f);
+  const now = cardTacticSmartLevel(f);
+  if (now === 'legend') return 'いちばん上の LEGEND です。';
+  const next = CARD_TACTIC_SMART[CARD_TACTIC_SMART.indexOf(now) + 1];
+  const label = CARD_SHARE_SMART_LABEL[next];
+  if (next === 'master') return `次の ${label} まで: 基本カードをあと${2 - base}枚、または、ちゃんと効く戦術カードをあと${Math.max(1, 4 - rows)}枚。`;
+  const needRows = {
+    grandmaster: 6,
+    hell: 9,
+    legend: 10
+  }[next];
+  const needBase = next === 'legend' ? 3 : 2;
+  const needs = [];
+  if (base < needBase) needs.push(`基本カードをあと${needBase - base}枚`);
+  if (rows < needRows) needs.push(`ちゃんと効く戦術カードをあと${needRows - rows}枚`);
+  const opened = cardLevelFrames(lv).base || 1;
+  const locked = CARD_LEVEL_FRAMES.filter(x => x.base && x.base > opened && x.base <= needBase).map(x => `${x.base}枚目はカードランク${x.at}`);
+  const rank = base < needBase && locked.length ? `(基本カードの${locked.join('、')}でセットできるようになります)` : '';
+  return `次の ${label} まで: ${needs.join('と')}。${rank}`;
+};
 const cardRegApplyStyle = (style, tactics, open) => {
   const owns = id => cardTacticsOwns(tactics, id);
   const cands = list => list.filter(([c, a]) => owns(c) && owns(a)).map(([c, a]) => ({
@@ -123842,6 +124018,7 @@ const CardDeckRegister = ({
   const smartText = cardShareSmartText({
     f: cardTacticPackFrames(battle)
   });
+  const smartNext = cardRegSmartNextText(battle, lv);
   const uncounted = cardTacticUncounted(battle);
   const acesNow = aces === 'auto' ? cardRegAutoAces(db, deck) : aces;
   const setRows = (k, rows) => setDraft(f => k === 'breeder' ? {
@@ -124130,7 +124307,7 @@ const CardDeckRegister = ({
   })), React.createElement("p", {
     className: "mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100",
     style: JA_WRAP_STYLE
-  }, jaWrap('入れると: 賢さの上限が上がります(1枚 HARD まで・2枚 EXPERT・3枚 MASTER)。サブは、型を3分の1だけ足します。'))), React.createElement("section", {
+  }, jaWrap('入れると: 賢さが上がります(基本2枚で MASTER。基本2枚と、ちゃんと効く戦術カード6枚で GRAND MASTER・9枚で HELL。LEGEND は基本3枚と10枚)。サブは、型を3分の1だけ足します。'))), React.createElement("section", {
     "data-card-reg-sec": "breeder",
     className: "rounded-2xl border-2 border-violet-400 bg-slate-900/90 p-2.5"
   }, React.createElement(CardRegSecHead, {
@@ -124255,7 +124432,11 @@ const CardDeckRegister = ({
   })), React.createElement("small", {
     className: "mt-1 block text-[11px] font-bold text-slate-400",
     style: JA_WRAP_STYLE
-  }, "賢さは、ほかのブリーダーがこのデッキと戦うときの相手の強さです。ちゃんと効く戦術カードが多いほど上がります。")), React.createElement("div", {
+  }, "賢さは、ほかのブリーダーがこのデッキと戦うときの相手の強さです。ちゃんと効く戦術カードが多いほど上がります。"), smartNext && React.createElement("p", {
+    "data-card-reg-smart-next": true,
+    className: "mt-1 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(smartNext))), React.createElement("div", {
     "data-card-reg-aces": true,
     className: `${SCREEN_PANEL_CLASS} py-2`
   }, React.createElement("div", {
@@ -165492,7 +165673,8 @@ const createAnimationStyle = () => {
       background:radial-gradient(circle,#fff 0 20%,#fde047 45%,#f59e0b);
       clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); }
     .skfx-p--flame { width:14px; height:20px; margin:-10px 0 0 -7px; border-radius:50% 50% 50% 50% / 65% 65% 35% 35%;
-      background:radial-gradient(circle at 50% 70%,#fff 0 15%,#bef264 35%,#65a30d 70%,rgba(101,163,13,0)); box-shadow:0 0 10px #84cc16; }
+      background:radial-gradient(circle at 50% 70%,#fff 0 14%,var(--c1,#fde68a) 32%,var(--c2,#f97316) 66%,rgba(0,0,0,0)); box-shadow:0 0 10px var(--c2,#f97316); }
+    /* ↑ 炎は技の色(--c1・--c2)で塗る(2026-11-04 まで黄緑に固定されていて、火炎車・神狐蒼火などの炎が黄緑に見えていた) */
     .skfx-p--leaf { width:16px; height:9px; margin:-4px 0 0 -8px; border-radius:0 100% 0 100%;
       background:linear-gradient(135deg,#bbf7d0,#22c55e 60%,#15803d); box-shadow:0 0 6px rgba(34,197,94,.8); }
     .skfx-p--rice { width:6px; height:10px; margin:-5px 0 0 -3px; border-radius:50%; background:#fffdf5; box-shadow:0 0 4px #fde68a; }
@@ -166115,6 +166297,8 @@ const createAnimationStyle = () => {
     .fin-shape--drop { width:10px; height:16px; border-radius:50% 50% 50% 50% / 70% 70% 30% 30%; background:linear-gradient(180deg, #fff, var(--spm-c1) 50%, var(--spm-c2)); }
     .fin-shape--leaf { width:18px; height:10px; border-radius:90% 0 90% 0; background:linear-gradient(135deg, #bbf7d0, #16a34a); box-shadow:0 0 6px #22c55e; }
     .fin-shape--flame { width:16px; height:22px; border-radius:50% 50% 50% 50% / 70% 70% 30% 30%; background:radial-gradient(ellipse at 50% 80%, #fff 0 14%, #fde047 36%, #f97316 62%, rgba(220,38,38,0)); box-shadow:0 0 8px #f97316; }
+    /* 技の色で塗る固有技(青い狐火など・24 の tint)では、着弾で散る炎も技の色に */
+    [data-impact-tint] .fin-shape--flame { background:radial-gradient(ellipse at 50% 80%, #fff 0 14%, var(--spm-c1) 36%, var(--spm-c2) 62%, rgba(0,0,0,0)); box-shadow:0 0 8px var(--spm-c2); }
     .fin-shape--note { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
     .fin-shape--note::before { content:'♪'; }
     .fin-shape--heart { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
