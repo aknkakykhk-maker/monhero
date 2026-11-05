@@ -224,16 +224,22 @@ const seed = () => {
     const edge = await page.evaluate(() => {
       const rect = { left: 0, top: 0, width: 1000, height: 1000 };
       const left = rhythmProjectBoundary(0, 1), right = rhythmProjectBoundary(RHYTHM_LANE_COUNT, 1), lw = (right - left) / RHYTHM_LANE_COUNT;
-      const x = (left - lw / 2 * 1.5) * 1000;   // サブレーン1.5本ぶん外
+      // 既定の余白(2026-11-02 に「全部+0.25レーン」で 1 → 1.5 サブレーン)と wideEdge の余白(2 サブレーン)の真ん中を押す。
+      // 既定の余白の内側(既定より0.25本内)は、効かないときも受け付ける
+      const baseMargin = RHYTHM_INPUT_EDGE_MARGIN_SUB_LANES, wideMargin = RHYTHM_TOUCH_FIX_WIDE_EDGE_SUB_LANES;
+      const x = (left - lw / 2 * ((baseMargin + wideMargin) / 2)) * 1000;
+      const inside = rhythmLaneCoordinateAtPoint((left - lw / 2 * (baseMargin - .25)) * 1000, 1000, rect);
       const off = rhythmLaneCoordinateAtPoint(x, 1000, rect);
       RHYTHM_TOUCH_FIXES.wideEdge = true; RHYTHM_TOUCH_FIXES.allPlatforms = true;
       const on = rhythmLaneCoordinateAtPoint(x, 1000, rect);
-      const far = rhythmLaneCoordinateAtPoint((left - lw / 2 * 2.5) * 1000, 1000, rect);
+      const far = rhythmLaneCoordinateAtPoint((left - lw / 2 * (wideMargin + .5)) * 1000, 1000, rect);
       RHYTHM_TOUCH_FIXES.allPlatforms = false;
-      return { off, on, far, back: rhythmLaneCoordinateAtPoint(x, 1000, rect) };
+      return { baseMargin, wideMargin, inside, off, on, far, back: rhythmLaneCoordinateAtPoint(x, 1000, rect) };
     });
-    check('⑨ 効かないとき(パソコン)は、サブレーン1.5本ぶん外の指を受け付けない(いまのまま)', edge.off === null && edge.back === null, JSON.stringify(edge));
-    check('⑨ 入れると、サブレーン2本ぶんまで受け付ける(それより外は受け付けない)', typeof edge.on === 'number' && edge.far === null, JSON.stringify(edge));
+    check('⑨ wideEdge の余白は、既定の余白(+0.25レーン後)より広い', edge.wideMargin > edge.baseMargin, JSON.stringify(edge));
+    check('⑨ 効かないとき(パソコン)も、既定の余白の内側の指は受け付ける', typeof edge.inside === 'number', JSON.stringify(edge));
+    check('⑨ 効かないとき(パソコン)は、既定の余白より外の指を受け付けない(いまのまま)', edge.off === null && edge.back === null, JSON.stringify(edge));
+    check('⑨ 入れると、wideEdge の余白(サブレーン2本ぶん)まで受け付ける(それより外は受け付けない)', typeof edge.on === 'number' && edge.far === null, JSON.stringify(edge));
 
     // ⑩ リザルトの「押したのに反応しないことがあった」: 端末の記録に印を付け、報告の行を作る
     const rep = await page.evaluate(async () => {
