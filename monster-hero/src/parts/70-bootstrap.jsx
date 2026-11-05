@@ -3347,7 +3347,8 @@ const createAnimationStyle = () => {
     [data-event-story] > :not([data-story-ending]) { transition: transform 1.6s ease-out, filter 1.6s ease-out; }
     /* お話の始まり(2026-11-04)。題字のあいだ、場面は遠く暗いところに置き、幕が上がると近づきながら明るくなる(終わりの札の 'pull' の逆)。
        'iris' は、題字の幕を鍵穴から丸く開ける */
-    @keyframes storyOpenTitle { 0% { opacity: 0; transform: scale(.9); filter: blur(6px); letter-spacing: .4em; } 100% { opacity: 1; transform: none; filter: none; } }
+    /* 題字は字の間隔を動かさない(広げると長い題字がいったん2行に折れてから1行に戻り、位置がずれて見えた。2026-11-05 社長「最初の表題が位置ずれする」) */
+    @keyframes storyOpenTitle { 0% { opacity: 0; transform: scale(.94); filter: blur(6px); } 100% { opacity: 1; transform: none; filter: none; } }
     @keyframes storyOpenOut { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
     @keyframes storyIrisHole { 0% { width: 0; height: 0; } 100% { width: 260vmax; height: 260vmax; } }
     /* お話の場面の背景(2026-11-05 えるびんの登場のお話)。砂漠: 夕方の空・沈む日・遠くの白い宮殿の影・砂丘 */
