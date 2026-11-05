@@ -35,6 +35,17 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-11-05 社長「この文で公開」(ルールくんの案)。えるびんのアシストカード「えるびんの見守り」
+    date: "2026-11-05 21:55", type:'market', group:'assistant', title:'アシストカード「えるびん」が交換所に並びます', status:'new', releaseFlag:'assistantErubin',
+    items:[
+      'えるびんの加入のお話を見ると、交換所にアシストカード「えるびん」(150,000)が並びます。',
+      '「えるびんの見守り」は、味方全員の攻撃がバトル中ずっと上がり、使ったターンは受けるダメージも下がるカードです。',
+      'タクティクスバトルでは、使った子の EX の使える回数が少しずつ戻ります(3回使うと1回ぶん)。',
+      'タクティクスバトル以外では、次のターンに固有技が必ず会心になります。',
+    ],
+    assistantNotice:{ id:'update_notice_erubin_assist_card_v1', type:'market' },
+  },
+  {
     // 2026-11-05 社長「この文で」(リバースの案)。公開の印 assistantErubin が立つまで、一覧にも告知にも出ない
     date: "2026-11-05 18:20", type:'content', group:'assistant', title:'8人目の助手「えるびん」が加わりました', status:'new', releaseFlag:'assistantErubin',
     items:[
