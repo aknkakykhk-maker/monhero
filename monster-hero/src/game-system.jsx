@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ad8045ad9324a897
+// generated-sha256: 14bcf12a1426b8e8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4405,6 +4405,7 @@ const BGM_TRACKS = [
   { id:'melo_rebellion_short', name:'Rebellion ～Beyond the Lock～ short ver.', creator:'オリジナル', src:'audio/bgm-rebellion-short.mp3', gain:1, loop:true },
   { id:'melo_altar_world_tree', name:'Altar of the World Tree, Beneath the White Night', creator:'仙夜玖子', src:'audio/bgm-altar-world-tree.mp3', gain:1, loop:true },
   { id:'melo_altar_world_tree_short', name:'Altar of the World Tree, Beneath the White Night short ver.', creator:'仙夜玖子', src:'audio/bgm-altar-world-tree-short.mp3', gain:1, loop:true },
+  { id:'melo_evans', name:'Evans', creator:'DJ YOSHITAKA', src:'audio/bgm-evans.mp3', gain:1, loop:true },
   { id:'melo_tsuki_ga_michiru_mae_ni_short', name:'月が満ちる前に short ver.', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
@@ -5790,6 +5791,7 @@ const Audio_ = (() => {
     "audio/bgm-eiki-boss-remix.mp3": "83093750c9ec",
     "audio/bgm-emerald-rush.mp3": "7782e3520275",
     "audio/bgm-enhance.mp3": "eb0690d02d8a",
+    "audio/bgm-evans.mp3": "37c5c9e21113",
     "audio/bgm-event-01.mp3": "c57069b5ad2f",
     "audio/bgm-event-02.mp3": "d572118c203e",
     "audio/bgm-freedom-dive.mp3": "34616b2fccd3",
@@ -12462,7 +12464,9 @@ const marketCostumeSoonLabel = (item, nowMs = Date.now()) => {
 // comingSoonLabel: 買えない予告の札。ふつうは「近日追加」。ビートP交換所の円盤石だけ、
 // ダイヤショップより先に出す予定なので「先行公開予定」と書く(札の形は同じ)。
 // dataAttrs: 検査や画面の文字拾いが商品を見分けるための data-* をそのままカードへ付ける。
-const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabel='近日追加', detail=null, middle=null, onDetail, onZoom, onBuy, canBuy=false, disabled=false, dataAttrs=null, previewIcon=null }) => {
+// ribbon … 札の上のふちに横1行で出す帯(2026-11-06 レジェンドブリーダー優待パス「優待パス還元」)。
+// noteSlot … 品名の下に3行ぶん(帯・いつもの交換・優待の交換)の段(高さ固定)を取る。同じ一覧の札にはそろえて渡す(段の無い札だけ低くならないように)。note はその中身
+const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabel='近日追加', detail=null, middle=null, onDetail, onZoom, onBuy, canBuy=false, disabled=false, dataAttrs=null, previewIcon=null, ribbon=null, noteSlot=false, note=null }) => {
   const usesGold=item.type==='disc'||item.type==='assist'||item.type==='item';
   const usesPsyche=item.currency==='psyche';
   const usesHeroProof=item.currency==='heroProof';
@@ -12470,7 +12474,8 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
   const usesBeatPoint=item.currency==='beatPoint';
   const usesCardPoint=item.currency==='cardPoint'; // MFバトルカードのビートP
   const priceLabel=usesCardPoint?`${item.cost}ビートP`:usesBeatPoint?`${item.cost}ビートP`:usesHeroProofShard?`勇者の証片${item.cost}個`:usesHeroProof?`勇者の証${item.cost}個`:usesPsyche?`${item.cost}プシュケー`:usesGold?`${item.cost}ダイヤ`:`${item.cost}pt`;
-  return <div {...(dataAttrs||{})} className={`rounded-2xl border p-2 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/60':comingSoon?'bg-slate-900/60 border-white/10':'bg-slate-900 border-white/10'}`}>
+  return <div {...(dataAttrs||{})} className={`relative rounded-2xl border p-2 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/60':comingSoon?'bg-slate-900/60 border-white/10':'bg-slate-900 border-white/10'}`}>
+    {ribbon&&<span data-market-ribbon className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-amber-400 px-1.5 py-[1px] text-[9px] font-black leading-tight text-slate-900 shadow">{ribbon}</span>}
     <MarketProductIcon item={item} onZoom={onZoom} disabled={disabled} previewIcon={previewIcon}/>
     {/* 商品名(2026-09-18・ユーザー指摘「商品名の行ズレがださい」)。
         ★縦は**上寄せ**にする。中央寄せだと、1行で収まる品(魂格再編の書・染色もどき)だけが
@@ -12482,6 +12487,7 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
           text-wrap:balance も試したが、行の長さをならす方を優先して「トレーニン/グチケット」に
           なるため使わない。印が無く1行に入りきらない名前だけ overflow-wrap:anywhere で折る。 */}
     <div className={`w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name||'')?'text-[10px] max-[359px]:text-[9px] max-[359px]:tracking-[-0.05em]':/（/.test(item.name||'')?'text-[10px]':'text-[11px]'} font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',textWrap:'wrap',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
+    {noteSlot&&<div data-market-note className="w-full flex flex-col items-center justify-center text-center leading-tight" style={{height:'44px'}}>{note}</div>}
     {/* 詳細は「近日追加」の品でも出す(2026-09-28。近日公開予定の新モンスターの中身を先に見られるように) */}
     <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
     {/* 予告の品は買うボタンの代わりに札が出るので、値段は札の上に出す(どの売り場でも同じ) */}
@@ -37105,6 +37111,8 @@ function BreederMarketScreen({
   // レジェンドブリーダー優待パス(2026-11-05)を持っている人は、対象の3つの値段と受け取る数を優待パス還元に差し替えて並べる(交換するときも本体が決め直す)
   const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer=>(eventTab==='material')===BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId))
     .map(offer=>rhythmEventPointShopOfferWithPass(offer, legendPassActive===true));
+  // 優待パス還元の札がある一覧では、ほかの札にも同じ高さの段を取って、札の高さをそろえる
+  const legendPassSlot = eventItemOffers.some(offer=>offer.legendPass===true);
   // scroll … タブが6つ以上のときは1行に並べ、はみ出す分は横へ送る(2段にすると品物が見える高さが減る。2026-10-26 ビートP交換所の7つ)
   //   見た目と押し方は ScreenTabs(41-screen-ui.jsx)と同じ
   //   ★ここに mh-scroll を付けない: 横画面の組み替えは「根の直下の .mh-scroll」を右の一覧(全高)にするので、タブが右いっぱいに伸びて品物へ重なる(2026-10-27)
@@ -37369,18 +37377,19 @@ function BreederMarketScreen({
             const item=beatPointItemOf(offer);
             const grantText=`${offer.grantAmount.toLocaleString()}${offer.unit}`;
             // ダイヤの品は受け取る数が名前(ダイヤ ×300)に入っていて、持ち数は所持ダイヤと同じなので中段は空ける
-            const ownedPart=offer.kind==='diamond'
+            const middle=offer.kind==='diamond'
               ? null
               : ownedMiddle(ownedItemCount(ownedItems, offer.itemId), item.base?{...item.base,cost:offer.cost,currency:'beatPoint'}:null, {grantText});
-            // 優待パス還元の札(2026-11-05): 金色の帯と、いつもの交換(取り消し線)を出す。「値下げ」とは書かない
-            const passPart=offer.legendPass?<div data-legend-pass-offer className="mt-1 text-center leading-tight">
-              <span className="inline-block rounded-full bg-amber-400/90 px-2 py-0.5 text-[10px] font-black text-slate-900">🎫 優待パス還元</span>
-              <div className="mt-0.5 text-[10px] font-bold text-slate-400 line-through tabular-nums">{offer.baseCost.toLocaleString()}P → {offer.baseGrantAmount.toLocaleString()}{offer.unit}</div>
-              <div className="text-[11px] font-black text-amber-200 tabular-nums">{offer.cost.toLocaleString()}P → {offer.grantAmount.toLocaleString()}{offer.unit}</div>
-            </div>:null;
-            const middle=passPart?<>{passPart}{ownedPart}</>:ownedPart;
+            // 優待パス還元の札(2026-11-06 社長「画面ひどい」で作り直し): 帯は札の上のふちに横1行、品名の下に「いつもの交換(取り消し線)」と
+            // 「優待パスの交換」を2行。どちらも折り返さない。段の高さは同じ一覧の札すべてでそろえる(legendPassSlot)。「値下げ」とは書かない
+            const passNote=offer.legendPass?<>
+              <span data-legend-pass-ribbon className="whitespace-nowrap rounded-full bg-amber-400 px-1.5 text-[9px] font-black leading-[14px] text-slate-900">優待パス還元</span>
+              <span data-legend-pass-offer className="whitespace-nowrap text-[9px] font-bold text-slate-400 line-through tabular-nums">{offer.baseCost.toLocaleString()}P→{offer.baseGrantAmount.toLocaleString()}{offer.unit}</span>
+              <span className="whitespace-nowrap text-[10px] max-[359px]:text-[9px] font-black text-amber-200 tabular-nums">{offer.cost.toLocaleString()}P→{offer.grantAmount.toLocaleString()}{offer.unit}</span>
+            </>:null;
             return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-offer':offer.id}}
               item={item} owned={false} comingSoon={false}
+              noteSlot={legendPassSlot} note={passNote}
               canBuy={safeEventPoints>=offer.cost&&!busy}
               disabled={purchaseProcessing}
               onZoom={()=>onZoomIcon(item)}
