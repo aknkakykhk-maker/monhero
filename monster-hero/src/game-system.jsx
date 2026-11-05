@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 80559b9b9e6adbed
+// generated-sha256: 3b4b2dc100f35e47
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -98124,6 +98124,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 場面の背景(台本の行の scene:'desert'。次に scene を書いた行まで続き、scene:'none' で消す。2026-11-05 えるびんの登場のお話)
         let storyScene=null;
         for(let i=step;i>=0;i--){const l=script[i];if(l&&typeof l.scene==='string'){storyScene=l.scene==='none'?null:l.scene;break;}}
+        // 絵は data/breeder.js の STORY_SCENE_IMAGES(名前 → 絵)。表に無い名前は出さない
+        const storySceneImg=storyScene&&typeof STORY_SCENE_IMAGES!=='undefined'?(STORY_SCENE_IMAGES[storyScene]||null):null;
+        // このお話で使う背景は、開いたときに先に読んでおく(場面が替わった瞬間に絵が遅れて出ないように)
+        if(typeof STORY_SCENE_IMAGES!=='undefined'&&typeof window!=='undefined'){
+          const pre=window.__mhStoryScenePreloaded||(window.__mhStoryScenePreloaded=new Set());
+          script.forEach(l=>{const src=l&&STORY_SCENE_IMAGES[l.scene];if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});
+        }
         const finishOpening=()=>setEventReplay(r=>r&&!r.opened?{...r,opened:true,shownAt:Date.now()}:r);
         // ゲスト(ジャック・ぱんぷきん)は、下の助手の列には入れない。初めて話す行(か stage で呼ばれる行)から、画面の上部の「ステージ」に出る
         //  (2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」)
@@ -98292,10 +98299,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         };
         return(
         <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-step={step} data-story-zones={storyZones?(storyKeepRow?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} data-story-opening={storyOpening?storyOpeningStyle:undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${storyTitleNow||''}`}>
-          {/* 場面の背景(砂漠)。fx:'fall' の行では、穴へ落ちていくように背景が上へ流れて暗くなる(70-bootstrap.jsx の [data-story-scene]) */}
-          {storyScene==='desert'&&<div data-story-scene="desert" data-story-scene-fx={fx==='fall'?'fall':undefined} aria-hidden="true">
-            <span data-scene-sun/><span data-scene-palace/><span data-scene-dune="back"/><span data-scene-dune="front"/>
-          </div>}
+          {/* 場面の背景(台本の行の scene)。場面が替わると key が替わり、ふわっと切り替わる。fx:'fall' の行では、
+              穴へ落ちていくように背景が上へ流れて暗くなる(70-bootstrap.jsx の [data-story-scene]) */}
+          {storySceneImg&&<div key={storyScene} data-story-scene={storyScene} data-story-scene-fx={fx==='fall'?'fall':undefined} aria-hidden="true"
+            style={{'--story-bg':`url("${storySceneImg}")`}}/>}
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
           {/* ★会話の紙は「タップを受け取る側」にしておく(2026-09-17・ユーザー報告
                 「イベント中のスキップを押してもスキップ出来ない／次のセリフへ進むだけ」)。
@@ -102987,16 +102994,14 @@ const createAnimationStyle = () => {
     @keyframes storyOpenTitle { 0% { opacity: 0; transform: scale(.94); filter: blur(6px); } 100% { opacity: 1; transform: none; filter: none; } }
     @keyframes storyOpenOut { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
     @keyframes storyIrisHole { 0% { width: 0; height: 0; } 100% { width: 260vmax; height: 260vmax; } }
-    /* お話の場面の背景(2026-11-05 えるびんの登場のお話)。砂漠: 夕方の空・沈む日・遠くの白い宮殿の影・砂丘 */
-    [data-story-scene] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-    [data-story-scene="desert"] { background: linear-gradient(180deg, #3b2a4d 0%, #9a5a4a 26%, #e7a25c 46%, #f4c784 58%, #d9a15e 70%, #b07a43 100%); animation: storySceneIn .9s ease-out both; }
-    [data-story-scene="desert"] [data-scene-sun] { position: absolute; left: 50%; top: 38%; width: 34vmin; height: 34vmin; transform: translate(-50%, -50%); border-radius: 50%;
-      background: radial-gradient(circle, #fff3c4 0%, #fcd77f 45%, rgba(252,215,127,0) 70%); }
-    [data-story-scene="desert"] [data-scene-palace] { position: absolute; left: 50%; top: 46%; width: min(78vw, 360px); height: 18vmin; transform: translate(-50%, -100%); background: #4a2f2a; opacity: .85;
-      clip-path: polygon(0% 100%, 0% 62%, 6% 62%, 6% 20%, 7% 8%, 8% 20%, 8% 62%, 20% 62%, 22% 48%, 30% 40%, 38% 48%, 40% 62%, 44% 62%, 44% 40%, 46% 26%, 50% 14%, 54% 26%, 56% 40%, 56% 62%, 60% 62%, 62% 48%, 70% 40%, 78% 48%, 80% 62%, 92% 62%, 92% 20%, 93% 8%, 94% 20%, 94% 62%, 100% 62%, 100% 100%); }
-    [data-story-scene="desert"] [data-scene-dune] { position: absolute; left: -20%; width: 140%; border-radius: 50% 50% 0 0 / 100% 100% 0 0; }
-    [data-story-scene="desert"] [data-scene-dune="back"] { top: 44%; height: 40%; background: linear-gradient(180deg, #e2a965, #c88a4c); }
-    [data-story-scene="desert"] [data-scene-dune="front"] { top: 54%; left: -40%; width: 120%; height: 60%; background: linear-gradient(180deg, #d69a57, #a8723f); }
+    /* お話の場面の背景(2026-11-05 えるびんの登場のお話から)。絵は data/breeder.js の STORY_SCENE_IMAGES。
+       正方形の絵を敷く(縦は左右・横の低い画面は上下が切れる。大事なものは絵の真ん中にある)。
+       下のほうは会話の紙と立ち絵が乗るので、少しだけ暗くして字を読みやすくする */
+    [data-story-scene] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; background-color: #0b0a14; animation: storySceneIn .7s ease-out both; }
+    [data-story-scene]::before { content: ''; position: absolute; inset: 0; background-image: var(--story-bg); background-size: cover; background-position: center 42%; background-repeat: no-repeat; }
+    [data-story-scene]::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.10) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 55%, rgba(0,0,0,.38) 100%); }
+    /* 縦の画面: 下の3割は会話の紙が乗るので、絵は紙より上の範囲に敷く(家・宮殿などの真ん中のものが紙に隠れないように)。下の端はぼかして暗い地につなぐ */
+    @media (orientation: portrait) { [data-story-scene]::before { bottom: 30%; -webkit-mask-image: linear-gradient(180deg, #000 80%, transparent 100%); mask-image: linear-gradient(180deg, #000 80%, transparent 100%); } }
     @keyframes storySceneIn { 0% { opacity: 0; } 100% { opacity: 1; } }
     /* fx:'fall' … 穴へ落ちていく。背景が上へ流れながら暗くなる(行の holdMs のあいだに終わる長さ) */
     [data-story-scene][data-story-scene-fx="fall"] { animation: storySceneFall 2.4s cubic-bezier(.55,0,.8,.4) both; }

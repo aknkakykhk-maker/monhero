@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2b41cda77806d3cb
+// source-sha256: c293e9be2b8b903d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161280,6 +161280,20 @@ function MonsterHeroGame() {
           break;
         }
       }
+      const storySceneImg = storyScene && typeof STORY_SCENE_IMAGES !== 'undefined' ? STORY_SCENE_IMAGES[storyScene] || null : null;
+      if (typeof STORY_SCENE_IMAGES !== 'undefined' && typeof window !== 'undefined') {
+        const pre = window.__mhStoryScenePreloaded || (window.__mhStoryScenePreloaded = new Set());
+        script.forEach(l => {
+          const src = l && STORY_SCENE_IMAGES[l.scene];
+          if (src && !pre.has(src)) {
+            pre.add(src);
+            try {
+              const im = new Image();
+              im.src = src;
+            } catch (e) {}
+          }
+        });
+      }
       const finishOpening = () => setEventReplay(r => r && !r.opened ? {
         ...r,
         opened: true,
@@ -161528,19 +161542,15 @@ function MonsterHeroGame() {
         role: "dialog",
         "aria-modal": "true",
         "aria-label": `イベント回想: ${storyTitleNow || ''}`
-      }, storyScene === 'desert' && React.createElement("div", {
-        "data-story-scene": "desert",
+      }, storySceneImg && React.createElement("div", {
+        key: storyScene,
+        "data-story-scene": storyScene,
         "data-story-scene-fx": fx === 'fall' ? 'fall' : undefined,
-        "aria-hidden": "true"
-      }, React.createElement("span", {
-        "data-scene-sun": true
-      }), React.createElement("span", {
-        "data-scene-palace": true
-      }), React.createElement("span", {
-        "data-scene-dune": "back"
-      }), React.createElement("span", {
-        "data-scene-dune": "front"
-      })), React.createElement("button", {
+        "aria-hidden": "true",
+        style: {
+          '--story-bg': `url("${storySceneImg}")`
+        }
+      }), React.createElement("button", {
         type: "button",
         onClick: next,
         "aria-label": "次へ",
@@ -167793,16 +167803,14 @@ const createAnimationStyle = () => {
     @keyframes storyOpenTitle { 0% { opacity: 0; transform: scale(.94); filter: blur(6px); } 100% { opacity: 1; transform: none; filter: none; } }
     @keyframes storyOpenOut { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
     @keyframes storyIrisHole { 0% { width: 0; height: 0; } 100% { width: 260vmax; height: 260vmax; } }
-    /* お話の場面の背景(2026-11-05 えるびんの登場のお話)。砂漠: 夕方の空・沈む日・遠くの白い宮殿の影・砂丘 */
-    [data-story-scene] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-    [data-story-scene="desert"] { background: linear-gradient(180deg, #3b2a4d 0%, #9a5a4a 26%, #e7a25c 46%, #f4c784 58%, #d9a15e 70%, #b07a43 100%); animation: storySceneIn .9s ease-out both; }
-    [data-story-scene="desert"] [data-scene-sun] { position: absolute; left: 50%; top: 38%; width: 34vmin; height: 34vmin; transform: translate(-50%, -50%); border-radius: 50%;
-      background: radial-gradient(circle, #fff3c4 0%, #fcd77f 45%, rgba(252,215,127,0) 70%); }
-    [data-story-scene="desert"] [data-scene-palace] { position: absolute; left: 50%; top: 46%; width: min(78vw, 360px); height: 18vmin; transform: translate(-50%, -100%); background: #4a2f2a; opacity: .85;
-      clip-path: polygon(0% 100%, 0% 62%, 6% 62%, 6% 20%, 7% 8%, 8% 20%, 8% 62%, 20% 62%, 22% 48%, 30% 40%, 38% 48%, 40% 62%, 44% 62%, 44% 40%, 46% 26%, 50% 14%, 54% 26%, 56% 40%, 56% 62%, 60% 62%, 62% 48%, 70% 40%, 78% 48%, 80% 62%, 92% 62%, 92% 20%, 93% 8%, 94% 20%, 94% 62%, 100% 62%, 100% 100%); }
-    [data-story-scene="desert"] [data-scene-dune] { position: absolute; left: -20%; width: 140%; border-radius: 50% 50% 0 0 / 100% 100% 0 0; }
-    [data-story-scene="desert"] [data-scene-dune="back"] { top: 44%; height: 40%; background: linear-gradient(180deg, #e2a965, #c88a4c); }
-    [data-story-scene="desert"] [data-scene-dune="front"] { top: 54%; left: -40%; width: 120%; height: 60%; background: linear-gradient(180deg, #d69a57, #a8723f); }
+    /* お話の場面の背景(2026-11-05 えるびんの登場のお話から)。絵は data/breeder.js の STORY_SCENE_IMAGES。
+       正方形の絵を敷く(縦は左右・横の低い画面は上下が切れる。大事なものは絵の真ん中にある)。
+       下のほうは会話の紙と立ち絵が乗るので、少しだけ暗くして字を読みやすくする */
+    [data-story-scene] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; background-color: #0b0a14; animation: storySceneIn .7s ease-out both; }
+    [data-story-scene]::before { content: ''; position: absolute; inset: 0; background-image: var(--story-bg); background-size: cover; background-position: center 42%; background-repeat: no-repeat; }
+    [data-story-scene]::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.10) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 55%, rgba(0,0,0,.38) 100%); }
+    /* 縦の画面: 下の3割は会話の紙が乗るので、絵は紙より上の範囲に敷く(家・宮殿などの真ん中のものが紙に隠れないように)。下の端はぼかして暗い地につなぐ */
+    @media (orientation: portrait) { [data-story-scene]::before { bottom: 30%; -webkit-mask-image: linear-gradient(180deg, #000 80%, transparent 100%); mask-image: linear-gradient(180deg, #000 80%, transparent 100%); } }
     @keyframes storySceneIn { 0% { opacity: 0; } 100% { opacity: 1; } }
     /* fx:'fall' … 穴へ落ちていく。背景が上へ流れながら暗くなる(行の holdMs のあいだに終わる長さ) */
     [data-story-scene][data-story-scene-fx="fall"] { animation: storySceneFall 2.4s cubic-bezier(.55,0,.8,.4) both; }

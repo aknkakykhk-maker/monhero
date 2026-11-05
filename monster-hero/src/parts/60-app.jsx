@@ -23219,6 +23219,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 場面の背景(台本の行の scene:'desert'。次に scene を書いた行まで続き、scene:'none' で消す。2026-11-05 えるびんの登場のお話)
         let storyScene=null;
         for(let i=step;i>=0;i--){const l=script[i];if(l&&typeof l.scene==='string'){storyScene=l.scene==='none'?null:l.scene;break;}}
+        // 絵は data/breeder.js の STORY_SCENE_IMAGES(名前 → 絵)。表に無い名前は出さない
+        const storySceneImg=storyScene&&typeof STORY_SCENE_IMAGES!=='undefined'?(STORY_SCENE_IMAGES[storyScene]||null):null;
+        // このお話で使う背景は、開いたときに先に読んでおく(場面が替わった瞬間に絵が遅れて出ないように)
+        if(typeof STORY_SCENE_IMAGES!=='undefined'&&typeof window!=='undefined'){
+          const pre=window.__mhStoryScenePreloaded||(window.__mhStoryScenePreloaded=new Set());
+          script.forEach(l=>{const src=l&&STORY_SCENE_IMAGES[l.scene];if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});
+        }
         const finishOpening=()=>setEventReplay(r=>r&&!r.opened?{...r,opened:true,shownAt:Date.now()}:r);
         // ゲスト(ジャック・ぱんぷきん)は、下の助手の列には入れない。初めて話す行(か stage で呼ばれる行)から、画面の上部の「ステージ」に出る
         //  (2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」)
@@ -23387,10 +23394,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         };
         return(
         <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-step={step} data-story-zones={storyZones?(storyKeepRow?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} data-story-opening={storyOpening?storyOpeningStyle:undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${storyTitleNow||''}`}>
-          {/* 場面の背景(砂漠)。fx:'fall' の行では、穴へ落ちていくように背景が上へ流れて暗くなる(70-bootstrap.jsx の [data-story-scene]) */}
-          {storyScene==='desert'&&<div data-story-scene="desert" data-story-scene-fx={fx==='fall'?'fall':undefined} aria-hidden="true">
-            <span data-scene-sun/><span data-scene-palace/><span data-scene-dune="back"/><span data-scene-dune="front"/>
-          </div>}
+          {/* 場面の背景(台本の行の scene)。場面が替わると key が替わり、ふわっと切り替わる。fx:'fall' の行では、
+              穴へ落ちていくように背景が上へ流れて暗くなる(70-bootstrap.jsx の [data-story-scene]) */}
+          {storySceneImg&&<div key={storyScene} data-story-scene={storyScene} data-story-scene-fx={fx==='fall'?'fall':undefined} aria-hidden="true"
+            style={{'--story-bg':`url("${storySceneImg}")`}}/>}
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
           {/* ★会話の紙は「タップを受け取る側」にしておく(2026-09-17・ユーザー報告
                 「イベント中のスキップを押してもスキップ出来ない／次のセリフへ進むだけ」)。
