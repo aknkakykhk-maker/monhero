@@ -328,6 +328,15 @@ const ASSISTANT_CHAT_EXAMPLES = Object.freeze({
     { q: '九九の7の段わかんない', a: 'まかせて笑 7、14、21、28、35、42、49、56、63。前の答えに7足すだけだから、計算はこれで完ぺきだぜ・・・！' },
     { q: '負けちゃった…', a: 'くっそー、俺まで悔しい笑 でも負けたら組み直せばいいだけだぜ・・・！ どこで崩れたか、一緒に検証しよ' },
   ],
+  // えるびん(2026-11-05)。穏やかな大人・気づかい。一人称「俺」・語尾「〜ね/〜かな/〜だしね」・「笑」と「w」の両方(1文に両方は付けない)
+  erubin: [
+    { q: '今日ちょっと疲れたなー', a: 'おつかれさま。今日はもう、ゆっくりしよっか。無理しないのがいちばんだしね☺️' },
+    { q: 'おすすめの遊び方ある？', a: 'うーん、俺もこっちに来てから覚えたんだけど、まずはモンヒロバトルで1体しっかり育てるのがいいと思うよ。迷ったら一緒に考えよ' },
+    { q: 'HELLクリアできた！', a: 'え、すごいね！ さすが。あの譜面いけたなら、もう何でもいけるんじゃないかな笑' },
+    { q: '好きな食べ物は？', a: 'なんでもおいしく食べられるほうかな。みんなで食べると、もっとおいしいよね笑' },
+    { q: '九九の7の段わかんない', a: 'おけ。7、14、21、28、35、42、49、56、63だよ。前の答えに7を足していけば大丈夫。ゆっくりでいいからね' },
+    { q: '負けちゃった…', a: 'あそこまで行けたの、ちゃんと見てたよ。悔しいよね。どこで崩れたか、よかったら一緒に見てみよっか' },
+  ],
 });
 const DEFAULT_ASSISTANT_ID = 'mua';
 const assistantIdOrDefault = (id) => (ASSISTANTS.some(a => a.id === id) ? id : DEFAULT_ASSISTANT_ID);
@@ -9069,6 +9078,12 @@ const ASSISTANT_ONBOARDING_SETS = {
     icon:  { e:'normal',   t:'アイコン、いい感じじゃん！ あとは名前だけだよ笑' },
     ready: { e:'wink',     t:'そろったぜ・・・！ 「けってい」押したら、村を案内するね笑' },
   },
+  erubin: {
+    intro: { e:'happy',    t:'はじめまして。俺はえるびん、このゲームの助手だよ。まずは名前、教えてもらえるかな？' },
+    name:  { e:'happy',    t:'いい名前だね。次はアイコンを選ぼっか' },
+    icon:  { e:'normal',   t:'アイコンもいい感じ。あとは名前だけかな' },
+    ready: { e:'wink',     t:'これでそろったね。「けってい」を押したら、村を案内するよ☺️' },
+  },
 };
 const assistantOnboardingOf = (assistantId) => ASSISTANT_ONBOARDING_SETS[assistantId] || ASSISTANT_ONBOARDING;
 // 決まっているものから、いま話す内容を選ぶ
@@ -11397,6 +11412,11 @@ const ASSISTANT_INTRO_SETS = {
     { e:'excited', t:'これから一緒にモンスター育てて、最強のチーム作ろうぜ・・・！', title:'よろしく！' },
     { e:'wink', t:'まずはキミのこと教えて！ 名前とアイコン、決めよ笑', title:'まずは自己紹介から' },
   ],
+  erubin: [
+    { e:'happy', t:'はじめまして。俺はえるびん、このゲームの助手だよ', title:'はじめまして' },
+    { e:'normal', t:'これから一緒にモンスターを育てて、強いチームを作っていこうね', title:'よろしくね' },
+    { e:'wink', t:'まずはあなたのこと、教えてもらえるかな？ 名前とアイコンを決めよっか', title:'まずは自己紹介から' },
+  ],
 };
 const ASSISTANT_TUTORIAL_SETS = {
   kiki: [
@@ -11477,6 +11497,19 @@ const ASSISTANT_TUTORIAL_SETS = {
     { e:'surprise', t:'ミッションとギフトはこのへん！ 受け取り忘れはもったいないから気をつけて笑', title:'ミッションとギフト', help:'items/missions', spot:'reward' },
     { e:'normal', t:'ヘルプは右上の「設定」の中。迷ったらここを開けば、だいたい書いてあるよ', title:'ヘルプは設定の中', help:'tips/assistant', spot:'settings' },
     { e:'happy', t:'俺はここにいるよ。困ったらいつでもタップして！ 一緒に攻略しようぜ・・・！', title:'それじゃ、いってらっしゃい', spot:'assistant' },
+  ],
+  erubin: [
+    { e:'happy', t:'{name}、あらためてよろしくね。さっそく村を案内するよ', title:'あらためて、よろしく' },
+    { e:'normal', t:'目標はWAVE10のラスボス「ムー」を倒すこと。カードで戦っていくよ', title:'このゲームの目的', help:'basics/goal' },
+    { e:'normal', t:'ここがHOME。建物をタップすると、いろんなことができるよ', title:'HOMEのこと', help:'home/roster' },
+    { e:'wink', t:'神殿では合体・転生・寄付ができるよ。育成の土台になる所だから、覚えておくと安心かな', title:'神殿', help:'masu/fusion', spot:'temple' },
+    { e:'happy', t:'バトルで活躍した子は「マスモン」として登録できるよ。育てるほど強くなるんだよね', title:'勇者モンを育てる', help:'masu/masumon', spot:'management' },
+    { e:'normal', t:'バトルは勇者モンを選んで、カードで戦うよ。距離がとても大事なんだって', title:'バトル', help:'battle/distance', spot:'battle' },
+    { e:'normal', t:'ランキングは「バトル」の中。モード切替のすぐ下のボタンから見られるよ', title:'ランキングはバトルの中', help:'basics/ranking', spot:'battle' },
+    { e:'happy', t:'マーケットではモンスターやカードが買えるよ。ダイヤは計画的にね笑', title:'マーケット', help:'home/market', spot:'market' },
+    { e:'surprise', t:'ミッションとギフトはこのへんだよ。受け取り忘れはもったいないから、気をつけてね', title:'ミッションとギフト', help:'items/missions', spot:'reward' },
+    { e:'normal', t:'ヘルプは右上の「設定」の中。迷ったらここを開けば、だいたい書いてあるよ', title:'ヘルプは設定の中', help:'tips/assistant', spot:'settings' },
+    { e:'happy', t:'俺はここにいるからね。困ったらいつでもタップして。一緒に考えよう☺️', title:'それじゃ、いってらっしゃい', spot:'assistant' },
   ],
 };
 // ---------- モンビー(モンヒロビート)のチュートリアル ----------
@@ -11607,6 +11640,22 @@ const ASSISTANT_RHYTHM_TUTORIAL_SETS = {
     { e:'excited', t:'スコアは全国ランキングに載るよ。難易度をまたいだ合算だから、上の難易度で挑むほど有利！ 計算すると、ちゃんと差が出るんだよね笑', title:'全国ランキング', help:'rhythm/rhythm-ranking' },
     { e:'wink', t:'説明はいつでも、モードえらびの「📖 遊びかた」から見られるよ。それじゃ、いこうぜ・・・！', title:'それじゃ、はじめよう' },
   ],
+  erubin: [
+    { e:'happy', t:'{name}、ここが「モンヒロビート」だよ。曲に合わせてノーツを取る音ゲーなんだって', title:'モンヒロビートへようこそ', help:'rhythm/rhythm-mode' },
+    { e:'normal', t:'いまは体験版で、公開してる曲をEASY〜MASTERで遊べるよ。譜面は調整中だから、これから変わることもあるかな', title:'いまは体験版', help:'rhythm/rhythm-demo-song' },
+    { e:'normal', t:'まずは曲えらび。ここに並んでるのが、いま遊べる曲だよ', title:'曲をえらぶ', help:'rhythm/rhythm-demo-song', spot:'songList' },
+    { e:'happy', t:'曲の左の数字は「楽曲Lv.」。大きいほど難しい譜面ってこと。数字で見えると安心だよね', title:'楽曲Lv.', spot:'songLevel' },
+    { e:'normal', t:'曲名の下のひし形は、その難易度をどこまで達成したかの印。クリア→フルコンボ→オールエクセレント→オールマーベラスの順に、色が派手になっていくよ', title:'ひし形は達成の印', spot:'achievement' },
+    { e:'normal', t:'曲をえらんだら、下(横画面だと右)で難易度をえらんでね', title:'難易度をえらぶ', spot:'difficulty' },
+    { e:'surprise', t:'EXPERTとMASTERは最初は鍵つき。その曲のHARDをクリアすると、2つとも挑めるようになるよ', title:'EXPERT以上は解放式', help:'rhythm/rhythm-unlock', spot:'difficulty' },
+    { e:'normal', t:'ノーツは4種類。TAPは押す、HOLDは押さえ続ける、FLICKは払う、SLIDEはなぞる。覚えやすいよね', title:'ノーツは4種類', help:'rhythm/rhythm-note-types' },
+    { e:'happy', t:'タイミングが合うほど良い判定になるよ。MARVELOUS→EXCELLENT→GREAT→GOOD→BADの順ね', title:'判定は5段階', help:'rhythm/rhythm-judgment' },
+    { e:'excited', t:'続けて取るとコンボがのびて、全部つなぐと「フルコンボ」。そこからさらに上の称号もあるんだって。わくわくするね', title:'コンボをつなごう', help:'rhythm/rhythm-notes-and-effects' },
+    { e:'normal', t:'モードえらびの「マスモン設定」でえらんだ子は、曲の途中で「モンスターノーツ」になって流れてくるよ。取ると血統ごとの力が働くんだ', title:'マスモンも一緒に', help:'rhythm/rhythm-monster-note-display' },
+    { e:'happy', t:'ノーツの速さや音量、判定のタイミング補正はオプションで変えられるよ。合わないなと思ったら、ここで調整してね', title:'オプション', help:'rhythm/rhythm-options', spot:'options' },
+    { e:'normal', t:'スコアは全国ランキングに載るよ。難易度をまたいだ合算だから、上の難易度で挑むほど有利なんだって', title:'全国ランキング', help:'rhythm/rhythm-ranking' },
+    { e:'wink', t:'説明はいつでも、モードえらびの「📖 遊びかた」から見られるよ。それじゃ、はじめよっか', title:'それじゃ、はじめよう' },
+  ],
 };
 const assistantRhythmTutorialPages = (assistantId) =>
   ASSISTANT_RHYTHM_TUTORIAL_SETS[assistantId] || ASSISTANT_RHYTHM_TUTORIAL;
@@ -11661,6 +11710,12 @@ const ASSISTANT_BATTLE_TUTORIAL_GUIDE_SETS = {
     { e:'normal', t:'Monster Heroのバトルはちょっと特殊だから、最初にやっとくと分かりやすいと思う。攻略の基本はここからだよ笑', title:'バトルを動かして覚えよ' },
     { e:'wink', t:'今から一緒にやってみる？ 俺、横でまとめとくから笑', title:'どうする？', offer:'battleGuide' },
     { e:'happy', t:'おけ！ あとからでも「設定 → ヘルプ」からいつでも見られるから、分からなくなったら見てみて。なんくるないさ〜笑', title:'いつでも待ってるよ', declined:true },
+  ],
+  erubin: [
+    { e:'happy', t:'バトルチュートリアルが新しく入ったんだって', title:'新しいれんしゅうができたよ' },
+    { e:'normal', t:'Monster Heroのバトルはちょっと特殊だから、最初にやっておくと分かりやすいと思うよ', title:'バトルを動かして覚えよ' },
+    { e:'wink', t:'今から一緒にやってみる？ 俺も横で見てるからね', title:'どうする？', offer:'battleGuide' },
+    { e:'happy', t:'おけ。あとからでも「設定 → ヘルプ」からいつでも見られるから、分からなくなったら見てみてね☺️', title:'いつでも待ってるよ', declined:true },
   ],
 };
 const assistantBattleGuidePages = (assistantId) =>
