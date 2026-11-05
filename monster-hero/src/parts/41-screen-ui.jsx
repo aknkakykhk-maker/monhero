@@ -222,6 +222,144 @@ const JA_PARTICLE_END = /(?:は|が|を|に|で|と|も|へ|や|から|まで|�
 // 道具(Intl.Segmenter)が読み違えて途中で切る、よく使う言葉(この中では折らない。2026-10-26 社長「ストーリーやバトルカードとかでも変なとこで切れる」
 //   「や/さしく」「ひと/とおり」「はね/返す」「しと/け」。検査 tools/boot/ja-wrap-word-check.js)
 const JA_WORDS_KEEP = ['ひととおり', 'やさし', 'はね返', 'しとけ', 'しとく', 'ちょっと', 'いっしょ', 'やっぱ', 'おねがい', 'ありがと', 'ひとつ', 'ふたつ', 'みんな', 'ぜったい', 'いっぱい', 'もっと', 'ずっと', 'きっと', 'たくさん'];
+// jaWrapPoints の③(最後に通す)。迷ったら折らない(2026-11-06 社長「改行で言葉が割れる。言っても言っても直らない、仕組みにして」)。
+//   道具(Intl.Segmenter)は「すっかりはまって」を「すっかり|は|まっ|て」と読み、助詞「は」のあとで折ってよいことになっていた
+//   (「すっかりは／まってる」)。語の一覧(JA_WORDS_KEEP)に足すもぐら叩きをやめ、決まりで防ぐ。
+//   ・ひらがなの続き(ひらがな・小さい字・長音)の中では、その続きが1行(JA_WRAP_LINE)に入るあいだは折らない
+//   ・折ってよいのは「、。！？」などのあと・漢字/カタカナとの境目・空白(①②で決めた所のうち、続きの外にあるもの)
+//   ・1行に入らない長さの続きだけ、中のよい所(「て・で」のあと、「から・けど」などのあと、「お・ご」の手前、1字の助詞の手前)で分ける。1字の助詞のあとはなるべく選ばない
+//   ・続きを丸ごと残したかたまりが1行を超えるときは、続きの手前(漢字・カタカナとの境目)で分ける。続きの中は分けない
+//   検査: tools/boot/ja-wrap-lines-check.js(助手・お話・カードバトルの台詞を全部描いて、続きの途中で折れた行を数える)
+// 続きはひらがなで始まる(カタカナのあとの長音「ブリーダー」の「ー」は続きに入れない)
+const JA_KANA_RUN = /[ぁ-ゖゝゞ][ぁ-ゖゝゞー]*/g;
+const jaKeepKanaRuns = (s, chunks, segs, { visible, letters, inKeepWord }) => {
+  const breaks = new Set();
+  let at = 0;
+  for (let k = 0; k < chunks.length - 1; k++) { at += chunks[k].length; breaks.add(at); }
+  const runs = [];
+  for (const m of s.matchAll(JA_KANA_RUN)) runs.push([m.index, m.index + m[0].length]);
+  const runOf = (p) => runs.find(([a, b]) => p > a && p < b);
+  // 続きの中の折り目をいったん全部外す
+  //   ただし、英字・数字・カタカナのすぐあとの1字の助詞のあと(「SLIDEは|なぞる」「キュートスの|あいだ」)は、助詞だと言い切れるので残す
+  //   (漢字のあとは「昨日は|まって」のように言葉の頭のこともあるので残さない)
+  //   閉じかっこのあと(「「HELL」に|まとめて」)も同じ
+  const sureParticle = (p) => /^[はがをにもへとでの]$/.test(s[p - 1]) && /[A-Za-z0-9０-９ァ-ヶー」』）)]/.test(s[p - 2] || '');
+  for (const p of [...breaks]) if (runOf(p) && !sureParticle(p)) breaks.delete(p);
+  // 道具の区切り(終わる所 → その区切り、始まる所 → その区切り)
+  const segEndAt = new Map(), segStartAt = new Map();
+  at = 0;
+  for (const seg of segs) { segStartAt.set(at, seg); at += seg.length; segEndAt.set(at, seg); }
+  // 「て・で」のあと(「控えめにして|くれる」「叩かなくて|いい」)。
+  //   「てる・てた」(はまって|る)・「ても・では」・「です・でき」の途中は除く
+  //   「て|もらう」は分けてよいが、「ても|いい」「ても、」の「ても」は1つの助詞なので分けない
+  const afterTeDe = (p) => (/て$/.test(s.slice(0, p)) && /^[^るたはぁぃぅぇぉっゃゅょー]/.test(s[p]) && !/^も(?:[いうよ、。！？!?…]|$)/.test(s.slice(p, p + 2)))
+    || (/で$/.test(s.slice(0, p)) && /^[^すしきもはるぁぃぅぇぉっゃゅょー]/.test(s[p]));
+  // 続きの中で分けてよい所(道具の区切りで、小さい字・長音の手前でなく、「っ」のすぐあとでもない。道具の1語の中では分けない: ja-wrap-word-check.js)
+  const okInside = (p) => segEndAt.has(p) && !/^[ぁぃぅぇぉっゃゅょゎゕゖー]/.test(s[p]) && !/っ$/.test(s[p - 1]) && !inKeepWord(p);
+  // よい所の点数。「て・で」のあと > 「から・けど」などのあと > ふつうの区切り > 1字の助詞の手前(すっかり|はまって) > 1字の助詞のあと(すっかりは|まって) > 1字の区切りの前後
+  const isHira = (c) => /[ぁ-ゖゝゞ]/.test(c || '');
+  const score = (p, a, b) => {
+    const prev = segEndAt.get(p) || '', next = segStartAt.get(p) || '';
+    let sc;
+    // 続きの手前(漢字・カタカナ|ひらがな)。助詞で始まる続きの手前(「今日|もみんな」)は、助詞が行の頭に来るので低く
+    if (!isHira(s[p - 1]) && isHira(s[p])) sc = /^[はがをにもへとでのや][ぁ-ゖ]/.test(s.slice(p)) ? 30 : 180;
+    // 続きのあと(ひらがな|漢字・カタカナ)。「お・ご」のすぐあと(お|話)は言葉の途中
+    else if (isHira(s[p - 1]) && !isHira(s[p])) sc = /(?:^|[^ぁ-ゖ])[おご]$/.test(s.slice(0, p)) ? -100 : 180;
+    else if (afterTeDe(p)) sc = 300;
+    // 「お・ご」の手前(ちゃんと|お話し・よろしく|お願い)
+    else if (/^[おご]/.test(s[p]) && /[ぁ-ゖ一-龯]/.test(s[p + 1] || '') && segStartAt.has(p)) sc = 280;
+    // 漢字のすぐあとの送り仮名1字のあと(お話し|する・押し|切る)は言葉の途中
+    //   (1字の助詞「今日も|みんな」「理由は|それだけ」は送り仮名ではないので除く)
+    //   ほかの送り仮名1字のあと(お願い|して・高い|ところ)は、次が活用の続き(い・く・け・か・さ…)でなければ文節の切れ目
+    else if (/[一-龯々]/.test(s[p - 2] || '') && /^[ぁ-ゖ]$/.test(s[p - 1]) && !/[はがをにもへとでのや]/.test(s[p - 1])) sc = /[きしちひみりっ]/.test(s[p - 1]) || /^[いくけかさきっ]/.test(s[p]) ? -100 : 100;
+    //   (「そろって|る」「知って|た」の「てる・てた」は1語なので除く)
+    else if (/(?:から|まで|けど|ので|のに|ても|でも|には|では|とは|って|たら|だら|れば|ながら|けれど)$/.test(prev) && !(/[てで]$/.test(prev) && /^[るた]/.test(s[p]))) sc = 260;
+    // 1字の助詞の手前(すっかり|はまって)。助詞でも言葉の頭でも、言葉は割れない
+    else if (/^[はがをにもとへやの]$/.test(next)) sc = 120;
+    // 1字の助詞のあと。漢字のあと(今日も|みんな)は助詞だと分かるのでよいが、ひらがなのあと(すっかりは|まって)は言葉の頭のことがある
+    //   (漢字のあとでも「は」は「昨日は|まって」のように言葉の頭のことがあるので低いまま)
+    else if (/^[はがをにでとものへや]$/.test(prev)) sc = /[一-龯々ァ-ヶA-Za-z0-9]/.test(s[p - 2] || '') && prev !== 'は' ? 150 : 40;
+    // ひらがなどうしのほかの区切り(道具は「わか|らん」「そろって|る」と言葉の中でも区切る)
+    //   言い切りの形(た・い・る・う・だ など)のあとに「ん・の・よ・ね・わ・か・さ・ぞ・で・じ」が来る所(さびしかった|んでつね)は文の切れ目なので高く
+    else if (/[たいるうだくすつむぶぐぬ]$/.test(s.slice(0, p)) && /^[んのよねわかさぞでじ]/.test(s[p])) sc = 110;
+    else sc = (prev.length === 1 || next.length === 1) ? 20 : 60;
+    return sc - Math.abs(visible(s.slice(a, p)) - visible(s.slice(p, b)));
+  };
+  // [a,b) の中の候補 cand から、どちらの側にも字を3字(だめなら2字)残す、いちばんよい所を選ぶ
+  //   (2字しか残らない側があるときは点を引く。「「これ|やりたい」を「「これや|りたい」より先に選ぶため、はねずに点で比べる)
+  const pick = (a, b, cand) => {
+    let best = -1, bestScore = -Infinity;
+    for (const p of cand) {
+      const l = letters(s.slice(a, p)), r = letters(s.slice(p, b));
+      if (p <= a || p >= b || l < 2 || r < 2) continue;
+      // 文の終わりに1〜2字だけ残る分け方(「敵強度|×35。」)はしない(①-2 でつないだ語尾を割らない)
+      if (letters(s.slice(p)) <= 2) continue;
+      const sc = score(p, a, b) - (l < 3 ? 30 : 0) - (r < 3 ? 30 : 0);
+      if (sc > bestScore) { bestScore = sc; best = p; }
+    }
+    return best;
+  };
+  // 1行に入らない続きは、中で分ける
+  for (const [a, b] of runs) {
+    if (visible(s.slice(a, b)) <= JA_WRAP_LINE) continue;
+    const cut = (x, y) => {
+      if (visible(s.slice(x, y)) <= JA_WRAP_LINE) return;
+      const cand = []; for (let p = x + 1; p < y; p++) if (okInside(p)) cand.push(p);
+      const p = pick(x, y, cand);
+      if (p < 0) return;
+      breaks.add(p); cut(x, p); cut(p, y);
+    };
+    cut(a, b);
+  }
+  // 続きを残したかたまりが1行を超えるなら、続きの手前・あと(漢字・カタカナとの境目)で分ける
+  const sorted = () => [0, ...[...breaks].sort((x, y) => x - y), s.length];
+  for (let guard = 0; guard < 50; guard++) {
+    const bs = sorted();
+    let added = false;
+    for (let i = 0; i + 1 < bs.length && !added; i++) {
+      const x = bs[i], y = bs[i + 1];
+      if (Math.max(...s.slice(x, y).split(/\s+/).map(visible)) <= JA_WRAP_LINE) continue;
+      // 続きの手前・あとと、続きの中のよい所を、点で比べて選ぶ
+      const cand = [];
+      for (const [a, b] of runs) for (const p of [a, b]) {
+        if (p <= x || p >= y || inKeepWord(p) || !segEndAt.has(p)) continue;
+        // 送り仮名(「来|て」「強|く」)の手前・小さい字の手前・閉じる記号の手前では分けない
+        if (p === a && /^[ぁ-ゖ](?:[^ぁ-ゖ]|$)/.test(s.slice(a, a + 2)) && b - a <= 2) continue;
+        if (/^[ぁぃぅぇぉっゃゅょゎー、。！？!?」』）)…‥〜～]/.test(s[p] || '')) continue;
+        if (p === a && /^[てでくいしきっ]/.test(s[p]) && /[一-龯]$/.test(s[p - 1] || '')) continue;
+        // くっついた言葉(「振り|直す」「受け取り|忘れ」「押し|切る」)の、送り仮名と次の漢字のあいだでは分けない
+        if (p === b && b - a <= 2 && /[一-龯々]/.test(s[a - 1] || '') && /^[一-龯]/.test(s[p] || '')) continue;
+        // 開きかっこのあと・空白の前後では分けない(印は禁則より強い)
+        if (/[「『（(【〔〈《\s]/.test(s[p - 1] || '') || /\s/.test(s[p] || '')) continue;
+        cand.push(p);
+      }
+      for (let q = x + 1; q < y; q++) if (runOf(q) && okInside(q)) cand.push(q);
+      const p = pick(x, y, cand);
+      if (p >= 0) { breaks.add(p); added = true; }
+    }
+    if (!added) break;
+  }
+  const bs = sorted();
+  const out = [];
+  for (let i = 0; i + 1 < bs.length; i++) out.push(s.slice(bs[i], bs[i + 1]));
+  // 字が1〜2字だけで句読点で終わらないかたまり(「結局」「膝が」「別の」)は、狭い吹き出しでそれだけの行になりやすいので、
+  //   あとのかたまりと合わせて1行に入るならつなぐ(句読点・かっこ・記号をまたぐと、ブラウザがそこで折るのでつながない)
+  for (let k = 0; k + 1 < out.length; k++) {
+    const c = out[k], n = out[k + 1];
+    if (letters(c) > 2 || !/[ぁ-ゖァ-ヶ一-龯]$/.test(c) || !/^[ぁ-ゖァ-ヶ一-龯]/.test(n) || /\s/.test(c)) continue;
+    if (Math.max(...(c + n).split(/\s+/).map(visible)) > JA_WRAP_LINE || !/^[^\s]*[ぁ-ゖァ-ヶ一-龯]$/.test(c + n.split(/[\s、。，．！？!?「」『』（）()…‥〜～・♪♡✨]/)[0])) continue;
+    out.splice(k, 2, c + n); k -= 1;
+  }
+  //   あとと合わせられなかったものは、手前と合わせて1行に入るなら手前とつなぐ(「もったいない|のは」)
+  for (let k = 1; k < out.length; k++) {
+    const c = out[k], v = out[k - 1];
+    if (letters(c) > 2 || !/^[ぁ-ゖァ-ヶ一-龯]/.test(c) || !/[ぁ-ゖァ-ヶ一-龯]$/.test(v) || /\s/.test(c)) continue;
+    const head = c.split(/[\s、。，．！？!?「」『』（）()…‥〜～・♪♡✨]/)[0];
+    if (head !== c.replace(/[、。，．！？!?…‥〜～]+$/, '') || visible(v.split(/\s+/).pop() + c) > JA_WRAP_LINE) continue;
+    out.splice(k - 1, 2, v + c); k -= 1;
+  }
+  return out.join('​');
+};
 const jaWrapPoints = (text) => {
   const s = String(text ?? '');
   if (!s) return s;
@@ -368,7 +506,7 @@ const jaWrapPoints = (text) => {
       // 境目を含む部分(空白で区切った中)が7字を超えるときだけ分ける
       if (m && visible(m[1].split(/\s/).pop() + m[2].split(/\s/)[0]) > 7 && letters(m[1]) >= 2 && letters(m[2]) >= 2) chunks.splice(k, 1, m[1], m[2]);
     }
-    return chunks.join('​');
+    return jaKeepKanaRuns(s, chunks, segs, { visible, letters, inKeepWord });
   } catch { return s; }
 };
 // 丸ごと包むのは、吹き出しのいちばん狭い1行(本文104〜112pxで約10字)に入るものだけ(長いと字が吹き出しの外へ出る)。字の無い顔文字だけは14字まで

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8b7ff5d48422c6ca
+// source-sha256: e5e9969e68b97344
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -55495,6 +55495,120 @@ let _jaSegmenter;
 const JA_WRAP_LINE = 10;
 const JA_PARTICLE_END = /(?:は|が|を|に|で|と|も|へ|や|から|まで|より|けど|ので|のに|ても|でも|には|では|とは|ね|よ|ぞ|の)$|[、。！？!?」』…‥〜～・)）》〉】〕%％\s]$/;
 const JA_WORDS_KEEP = ['ひととおり', 'やさし', 'はね返', 'しとけ', 'しとく', 'ちょっと', 'いっしょ', 'やっぱ', 'おねがい', 'ありがと', 'ひとつ', 'ふたつ', 'みんな', 'ぜったい', 'いっぱい', 'もっと', 'ずっと', 'きっと', 'たくさん'];
+const JA_KANA_RUN = /[ぁ-ゖゝゞ][ぁ-ゖゝゞー]*/g;
+const jaKeepKanaRuns = (s, chunks, segs, {
+  visible,
+  letters,
+  inKeepWord
+}) => {
+  const breaks = new Set();
+  let at = 0;
+  for (let k = 0; k < chunks.length - 1; k++) {
+    at += chunks[k].length;
+    breaks.add(at);
+  }
+  const runs = [];
+  for (const m of s.matchAll(JA_KANA_RUN)) runs.push([m.index, m.index + m[0].length]);
+  const runOf = p => runs.find(([a, b]) => p > a && p < b);
+  const sureParticle = p => /^[はがをにもへとでの]$/.test(s[p - 1]) && /[A-Za-z0-9０-９ァ-ヶー」』）)]/.test(s[p - 2] || '');
+  for (const p of [...breaks]) if (runOf(p) && !sureParticle(p)) breaks.delete(p);
+  const segEndAt = new Map(),
+    segStartAt = new Map();
+  at = 0;
+  for (const seg of segs) {
+    segStartAt.set(at, seg);
+    at += seg.length;
+    segEndAt.set(at, seg);
+  }
+  const afterTeDe = p => /て$/.test(s.slice(0, p)) && /^[^るたはぁぃぅぇぉっゃゅょー]/.test(s[p]) && !/^も(?:[いうよ、。！？!?…]|$)/.test(s.slice(p, p + 2)) || /で$/.test(s.slice(0, p)) && /^[^すしきもはるぁぃぅぇぉっゃゅょー]/.test(s[p]);
+  const okInside = p => segEndAt.has(p) && !/^[ぁぃぅぇぉっゃゅょゎゕゖー]/.test(s[p]) && !/っ$/.test(s[p - 1]) && !inKeepWord(p);
+  const isHira = c => /[ぁ-ゖゝゞ]/.test(c || '');
+  const score = (p, a, b) => {
+    const prev = segEndAt.get(p) || '',
+      next = segStartAt.get(p) || '';
+    let sc;
+    if (!isHira(s[p - 1]) && isHira(s[p])) sc = /^[はがをにもへとでのや][ぁ-ゖ]/.test(s.slice(p)) ? 30 : 180;else if (isHira(s[p - 1]) && !isHira(s[p])) sc = /(?:^|[^ぁ-ゖ])[おご]$/.test(s.slice(0, p)) ? -100 : 180;else if (afterTeDe(p)) sc = 300;else if (/^[おご]/.test(s[p]) && /[ぁ-ゖ一-龯]/.test(s[p + 1] || '') && segStartAt.has(p)) sc = 280;else if (/[一-龯々]/.test(s[p - 2] || '') && /^[ぁ-ゖ]$/.test(s[p - 1]) && !/[はがをにもへとでのや]/.test(s[p - 1])) sc = /[きしちひみりっ]/.test(s[p - 1]) || /^[いくけかさきっ]/.test(s[p]) ? -100 : 100;else if (/(?:から|まで|けど|ので|のに|ても|でも|には|では|とは|って|たら|だら|れば|ながら|けれど)$/.test(prev) && !(/[てで]$/.test(prev) && /^[るた]/.test(s[p]))) sc = 260;else if (/^[はがをにもとへやの]$/.test(next)) sc = 120;else if (/^[はがをにでとものへや]$/.test(prev)) sc = /[一-龯々ァ-ヶA-Za-z0-9]/.test(s[p - 2] || '') && prev !== 'は' ? 150 : 40;else if (/[たいるうだくすつむぶぐぬ]$/.test(s.slice(0, p)) && /^[んのよねわかさぞでじ]/.test(s[p])) sc = 110;else sc = prev.length === 1 || next.length === 1 ? 20 : 60;
+    return sc - Math.abs(visible(s.slice(a, p)) - visible(s.slice(p, b)));
+  };
+  const pick = (a, b, cand) => {
+    let best = -1,
+      bestScore = -Infinity;
+    for (const p of cand) {
+      const l = letters(s.slice(a, p)),
+        r = letters(s.slice(p, b));
+      if (p <= a || p >= b || l < 2 || r < 2) continue;
+      if (letters(s.slice(p)) <= 2) continue;
+      const sc = score(p, a, b) - (l < 3 ? 30 : 0) - (r < 3 ? 30 : 0);
+      if (sc > bestScore) {
+        bestScore = sc;
+        best = p;
+      }
+    }
+    return best;
+  };
+  for (const [a, b] of runs) {
+    if (visible(s.slice(a, b)) <= JA_WRAP_LINE) continue;
+    const cut = (x, y) => {
+      if (visible(s.slice(x, y)) <= JA_WRAP_LINE) return;
+      const cand = [];
+      for (let p = x + 1; p < y; p++) if (okInside(p)) cand.push(p);
+      const p = pick(x, y, cand);
+      if (p < 0) return;
+      breaks.add(p);
+      cut(x, p);
+      cut(p, y);
+    };
+    cut(a, b);
+  }
+  const sorted = () => [0, ...[...breaks].sort((x, y) => x - y), s.length];
+  for (let guard = 0; guard < 50; guard++) {
+    const bs = sorted();
+    let added = false;
+    for (let i = 0; i + 1 < bs.length && !added; i++) {
+      const x = bs[i],
+        y = bs[i + 1];
+      if (Math.max(...s.slice(x, y).split(/\s+/).map(visible)) <= JA_WRAP_LINE) continue;
+      const cand = [];
+      for (const [a, b] of runs) for (const p of [a, b]) {
+        if (p <= x || p >= y || inKeepWord(p) || !segEndAt.has(p)) continue;
+        if (p === a && /^[ぁ-ゖ](?:[^ぁ-ゖ]|$)/.test(s.slice(a, a + 2)) && b - a <= 2) continue;
+        if (/^[ぁぃぅぇぉっゃゅょゎー、。！？!?」』）)…‥〜～]/.test(s[p] || '')) continue;
+        if (p === a && /^[てでくいしきっ]/.test(s[p]) && /[一-龯]$/.test(s[p - 1] || '')) continue;
+        if (p === b && b - a <= 2 && /[一-龯々]/.test(s[a - 1] || '') && /^[一-龯]/.test(s[p] || '')) continue;
+        if (/[「『（(【〔〈《\s]/.test(s[p - 1] || '') || /\s/.test(s[p] || '')) continue;
+        cand.push(p);
+      }
+      for (let q = x + 1; q < y; q++) if (runOf(q) && okInside(q)) cand.push(q);
+      const p = pick(x, y, cand);
+      if (p >= 0) {
+        breaks.add(p);
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
+  const bs = sorted();
+  const out = [];
+  for (let i = 0; i + 1 < bs.length; i++) out.push(s.slice(bs[i], bs[i + 1]));
+  for (let k = 0; k + 1 < out.length; k++) {
+    const c = out[k],
+      n = out[k + 1];
+    if (letters(c) > 2 || !/[ぁ-ゖァ-ヶ一-龯]$/.test(c) || !/^[ぁ-ゖァ-ヶ一-龯]/.test(n) || /\s/.test(c)) continue;
+    if (Math.max(...(c + n).split(/\s+/).map(visible)) > JA_WRAP_LINE || !/^[^\s]*[ぁ-ゖァ-ヶ一-龯]$/.test(c + n.split(/[\s、。，．！？!?「」『』（）()…‥〜～・♪♡✨]/)[0])) continue;
+    out.splice(k, 2, c + n);
+    k -= 1;
+  }
+  for (let k = 1; k < out.length; k++) {
+    const c = out[k],
+      v = out[k - 1];
+    if (letters(c) > 2 || !/^[ぁ-ゖァ-ヶ一-龯]/.test(c) || !/[ぁ-ゖァ-ヶ一-龯]$/.test(v) || /\s/.test(c)) continue;
+    const head = c.split(/[\s、。，．！？!?「」『』（）()…‥〜～・♪♡✨]/)[0];
+    if (head !== c.replace(/[、。，．！？!?…‥〜～]+$/, '') || visible(v.split(/\s+/).pop() + c) > JA_WRAP_LINE) continue;
+    out.splice(k - 1, 2, v + c);
+    k -= 1;
+  }
+  return out.join('​');
+};
 const jaWrapPoints = text => {
   const s = String(text ?? '');
   if (!s) return s;
@@ -55618,7 +55732,11 @@ const jaWrapPoints = text => {
       const m = chunks[k].match(/^(.*[ァ-ヶー])([ぁ-ゖ].*)$/s);
       if (m && visible(m[1].split(/\s/).pop() + m[2].split(/\s/)[0]) > 7 && letters(m[1]) >= 2 && letters(m[2]) >= 2) chunks.splice(k, 1, m[1], m[2]);
     }
-    return chunks.join('​');
+    return jaKeepKanaRuns(s, chunks, segs, {
+      visible,
+      letters,
+      inKeepWord
+    });
   } catch {
     return s;
   }
@@ -101715,7 +101833,7 @@ const CardStatusList = ({
 }, x.short, x.left ? ` ${x.left}` : ''), React.createElement("span", {
   className: "min-w-0 text-[12px] font-bold leading-snug text-slate-200",
   style: JA_WRAP_STYLE
-}, x.text))));
+}, cardJaWrap(x.text)))));
 const CardStatusSheet = ({
   name,
   list,
@@ -102279,8 +102397,9 @@ const CardDetailModal = ({
     }, cardUserLabel(db, c)), React.createElement("span", {
       className: "rounded-md bg-slate-800 px-2 py-0.5 text-slate-400"
     }, "No.", c.dispNo || c.no)), dexLine, c.text && React.createElement("p", {
-      className: "mt-2 text-[14px] font-bold leading-relaxed"
-    }, c.text), !c.text && cardPlainEffectText(c) && React.createElement("p", {
+      className: "mt-2 text-[14px] font-bold leading-relaxed",
+      style: JA_WRAP_STYLE
+    }, cardJaWrap(c.text)), !c.text && cardPlainEffectText(c) && React.createElement("p", {
       "data-card-detail-plain": true,
       className: "mt-2 text-[14px] font-bold leading-relaxed",
       style: JA_LABEL_STYLE
@@ -105426,7 +105545,7 @@ const CardBattleBoard = ({
       onClick: () => setDetail(fc.no),
       className: "mt-1 block w-full rounded-xl bg-slate-800 px-2 py-1.5 text-left text-[12px] font-bold leading-snug text-slate-200",
       style: JA_WRAP_STYLE
-    }, fc.text), React.createElement("p", {
+    }, cardJaWrap(fc.text)), React.createElement("p", {
       className: "mt-2 text-[12px] font-bold leading-snug text-amber-200",
       style: JA_WRAP_STYLE
     }, jaWrap('「おいのり」を使うと、この全体カードは効かずに捨て札へ行きます')), React.createElement("div", {
@@ -124225,7 +124344,7 @@ const CardRegTemplateSheet = ({
     }, cardIconNode(s.icon, 16), " ", s.name), React.createElement("small", {
       className: "block text-[11px] font-bold text-slate-300",
       style: JA_WRAP_STYLE
-    }, s.desc), React.createElement("div", {
+    }, cardJaWrap(s.desc)), React.createElement("div", {
       className: "mt-1.5 space-y-0.5"
     }, rows.map((x, i) => React.createElement("div", {
       key: i,
@@ -124559,7 +124678,7 @@ const CardDeckRegister = ({
   }, "おすすめ")), React.createElement("small", {
     className: "block text-[11px] font-bold leading-snug text-slate-300",
     style: JA_WRAP_STYLE
-  }, s.desc)))), React.createElement("button", {
+  }, cardJaWrap(s.desc))))), React.createElement("button", {
     type: "button",
     "data-card-reg-style": "custom",
     onClick: () => {
@@ -124620,7 +124739,7 @@ const CardDeckRegister = ({
     }, c.name), React.createElement("small", {
       className: "mt-auto line-clamp-3 text-[10px] font-bold leading-snug text-orange-50",
       style: JA_WRAP_STYLE
-    }, c.desc)) : React.createElement("b", {
+    }, cardJaWrap(c.desc))) : React.createElement("b", {
       className: "mt-1 text-[13px] font-black text-amber-100"
     }, "＋ えらぶ"));
   })), React.createElement("p", {
