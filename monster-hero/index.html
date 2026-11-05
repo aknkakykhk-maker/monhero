@@ -41,7 +41,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
 <<<<<<< HEAD
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":71739,"data/images/images-enemy.js":2926,"data/ally-monsters.js":60701,"data/lineages.js":26476,"data/breeder.js":124679,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":4294117,"data/rhythm-lane-svg.js":12463,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5743,"data/rhythm-event.js":85134,"data/changelog.js":1567706,"data/help.js":703250,"data/rhythm-step3-release.js":8517,"data/assistants.js":1094561,"data/card-battle-cards.js":120016,"tailwind.css":279774,"game-system.compiled.js":7817079,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":71739,"data/images/images-enemy.js":2926,"data/ally-monsters.js":60701,"data/lineages.js":26476,"data/breeder.js":124679,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":4294117,"data/rhythm-lane-svg.js":12463,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5743,"data/rhythm-event.js":85134,"data/changelog.js":1569011,"data/help.js":705041,"data/rhythm-step3-release.js":8517,"data/assistants.js":1094561,"data/card-battle-cards.js":120016,"tailwind.css":279774,"game-system.compiled.js":7817079,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
 =======
   var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":71739,"data/images/images-enemy.js":2926,"data/ally-monsters.js":60701,"data/lineages.js":26476,"data/breeder.js":124715,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":4294117,"data/rhythm-lane-svg.js":12463,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5743,"data/rhythm-event.js":85134,"data/changelog.js":1567274,"data/help.js":703000,"data/rhythm-step3-release.js":8517,"data/assistants.js":1094191,"data/card-battle-cards.js":120016,"tailwind.css":279774,"game-system.compiled.js":7815155,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
 >>>>>>> origin/claude/card-erubin
@@ -107,7 +107,7 @@ var GAME_BUILD = '15e193067a99';
 window.__mhGameBuild = GAME_BUILD;
 // 画面に出す版の日時(BUILD_DATE)。本体の中に書くと、ビルドのたびに本体の中身(と GAME_BUILD)が変わり、
 // 事前ダウンロードにためた本体が使えなくなるので、ここから渡す。tools/stamp-version.js が version.json と同じ値を打つ
-window.__mhBuildDate = '2026-11-05 18:17';
+window.__mhBuildDate = '2026-11-05 18:21';
 =======
 var GAME_BUILD = '22e526d513fb';
 window.__mhGameBuild = GAME_BUILD;
@@ -148,7 +148,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
      landscape: の差し替え(自前で画面を回したときにも効かせる)もそちらの設定へ移してある。
      ?v= は中身のハッシュ。tools/stamp-version.js が data/*.js と同じ仕組みで打つ。 -->
 <<<<<<< HEAD
-<link rel="stylesheet" href="tailwind.css?v=5f86a861443d" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
+<link rel="stylesheet" href="tailwind.css?v=fd692ff28a2b" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
 =======
 <link rel="stylesheet" href="tailwind.css?v=17e9004de6a4" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
 >>>>>>> origin/claude/card-erubin
@@ -2302,8 +2302,8 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
 <script src="data/rhythm-geometry-calibration.js?v=02534cca12f6" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=381554180360" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
 <script src="data/rhythm-event.js?v=a0d6468612ff" onload="__mhBoot.done('data/rhythm-event.js','週間ランキングを読み込み中')" onerror="__mhBoot.fail('data/rhythm-event.js')"></script>
-<script src="data/changelog.js?v=16008e7bf5fa" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
-<script src="data/help.js?v=2e9aabbf33e7" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
+<script src="data/changelog.js?v=3ae2a868ebcc" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/help.js?v=e7e9c0c23050" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=ae1d7f73f23a" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->
