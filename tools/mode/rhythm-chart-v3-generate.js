@@ -3904,6 +3904,20 @@ function slidePathFor(reserved,startLane,width,P,onset){
     if(endGrid-lastPoint.grid<Math.max(1,Math.floor(step/2))&&points.length>1)points[points.length-1]=endValue;
     else points.push(endValue);
   }
+  smoothSlideWidthSteps(points);
+  return points;
+}
+// 【Rev.35・隣り合う中継点で太さを2段以上飛ばさない】(2026-11-05)
+// 刻みが粗いと、形(swell など)の t が1点で大きく進み、太さが 2→4 のように一気に飛ぶ
+// (アルター原曲 EXPERT 108.82秒の 2-4-4-4-3-3-2)。帯が急に太る/細るのは読みにくいので、
+// 前後どちらから見ても隣との差が1段以内になるよう、**飛んだ側の点を細い側へ寄せる**
+// (2-4 → 2-3-4。細い側の点と、飛んでいない点はそのまま)。
+// 細い側へ寄せるのは、形が決めた下限(floorWidth)・上限(ceilWidth)の外へ出さないため。
+function smoothSlideWidthSteps(points){
+  for(let i=1;i<points.length;i++)
+    points[i].subLaneWidth=Math.min(points[i].subLaneWidth,points[i-1].subLaneWidth+1);
+  for(let i=points.length-2;i>=0;i--)
+    points[i].subLaneWidth=Math.min(points[i].subLaneWidth,points[i+1].subLaneWidth+1);
   return points;
 }
 
