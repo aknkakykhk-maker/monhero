@@ -7,7 +7,7 @@
 // 見ているもの
 //   ① カード投げ(169): 狙う相手をタップすると「捨てる手札を選ぶ」窓が出る。2枚選ぶと「2枚捨てて使う(ダメージ+2)」になり、使うと2枚捨てて相手に2ダメージ
 //   ② のりうつる(174): KOされた味方を選べて、使うとゴーストがKO・味方が戻る
-//   ③ 第4弾のパックの絵・売り場の種族の名前にゴーストが入る(4種族)
+//   ③ 第4弾のパックの袋の絵が出る(社長の1枚の絵・#4405)・売り場の種族の名前にゴーストが入る(4種族)
 //   ④ 320×568 でも窓のボタンが画面の中
 //   ⑤ 実行時エラーが無い
 const http = require('http');
@@ -116,6 +116,16 @@ const skipSummary = async (page) => { await page.waitForTimeout(600); if (await 
   const server = await serve();
   const browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const errors = [];
+  // 記録(左上の「記録」で開く一覧)に、その文が残っているか。まんなかの一言は最後のダメージの行だけを出すようになったので、
+  //   「手札を2枚捨てた」「のりうつった」は記録で見る(2026-11-05。前はまんなかの一言・画面のどこかの文で見ていた)
+  const inLog = async (page, re) => {
+    const found = await page.waitForFunction((src) => new RegExp(src).test(document.querySelector('[data-card-battle]').innerText), re.source, { timeout: 8000 }).then(() => true).catch(() => false);
+    if (found) return true;
+    await page.locator('[data-card-log-open]').first().click().catch(() => {});
+    const ok = await page.locator('[data-card-log-sheet]').waitFor({ timeout: 5000 }).then(async () => re.test(await page.locator('[data-card-log-sheet]').innerText())).catch(() => false);
+    await page.locator('[data-card-log-sheet]').click({ position: { x: 4, y: 4 } }).catch(() => {});
+    return ok;
+  };
   try {
     for (const vp of [{ width: 390, height: 844 }, { width: 320, height: 568 }]) {
       // ① カード投げ
@@ -137,7 +147,7 @@ const skipSummary = async (page) => { await page.waitForTimeout(600); if (await 
         check(`④ ${vp.width}幅: 窓のボタンが画面の中`, r.bottom <= r.h, JSON.stringify(r));
         await shot(page, `ghost-toss-${vp.width}`);
         await page.locator('[data-card-toss-go]').click();
-        const done = await page.waitForFunction(() => /手札を2枚捨てた/.test(document.querySelector('[data-card-battle]').innerText) || [...document.querySelectorAll('[data-card-log] *, [data-card-log]')].some((e) => /手札を2枚捨てた/.test(e.textContent)), null, { timeout: 15000 }).then(() => true).catch(() => false);
+        const done = await inLog(page, /手札を2枚捨てた/);
         check(`① ${vp.width}幅: 使うと手札を2枚捨てる`, done);
         const hand = await page.locator('[data-card-hand-card]').count();
         check(`① ${vp.width}幅: 手札が2枚(5枚から技と捨てた2枚が減る)`, hand === 2, `${hand}枚`);
@@ -154,7 +164,8 @@ const skipSummary = async (page) => { await page.waitForTimeout(600); if (await 
       // 確かめの窓が出る設定なら「はい」
       const yes = p2.getByRole('button', { name: /^(はい|使う)$/ });
       if (await yes.count() && await yes.first().isVisible().catch(() => false)) await yes.first().click();
-      const ok2 = await p2.waitForFunction(() => /のりうつった/.test(document.body.innerText), null, { timeout: 15000 }).then(() => true).catch(() => false);
+      await p2.waitForTimeout(1500);
+      const ok2 = await inLog(p2, /のりうつった/);
       check('② のりうつる: KOされた味方をタップして使える(記録に「のりうつった」)', ok2);
       await shot(p2, 'ghost-possess-390');
       await p2.close();
@@ -166,8 +177,11 @@ const skipSummary = async (page) => { await page.waitForTimeout(600); if (await 
       if (await demo.count()) {
         await demo.first().click();
         await page.locator('[data-card-pack-art="p4"]').first().waitFor({ timeout: 10000 });
-        const imgs = await page.locator('[data-card-pack-art="p4"] img').count();
-        check('③ 第4弾のパックの絵に立ち絵が並ぶ', imgs >= 3, `${imgs}体`);
+        // 袋は社長の描いた1枚の絵(2026-10-31 #4405 で、立ち絵を並べる形から差し替え。ゴーストも絵の中にいる)。その絵が読めているか
+        await page.locator('[data-card-pack-art="p4"]').first().scrollIntoViewIfNeeded();
+        await page.waitForFunction(() => [...document.querySelectorAll('[data-card-pack-art="p4"] img')].some((e) => e.complete && e.naturalWidth > 0), null, { timeout: 10000 }).catch(() => {});
+        const art = await page.locator('[data-card-pack-art="p4"] img').evaluateAll((els) => els.map((e) => ({ src: e.getAttribute('src') || '', ok: e.complete && e.naturalWidth > 0 })));
+        check('③ 第4弾のパックの袋の絵が出る', art.some((a) => /packs\/p4[.-]/.test(a.src) && a.ok), JSON.stringify(art.map((a) => `${a.src.split('/').pop()}:${a.ok}`)));
         await page.locator('[data-card-pack-art="p4"]').first().scrollIntoViewIfNeeded();
         await shot(page, 'ghost-pack-art');
       } else check('③ パックの絵の見本が開けない', false);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d85338da6ffbc0ea
+// generated-sha256: 0c9a2d405bda0fbf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -45044,6 +45044,12 @@ function InfernoShieldBreakFx({ fx, lite, onDone, rule }) {
 const tacticsPopupShortText = (text) => {
   const t = String(text == null ? '' : text);
   if ([...t].length <= 9) return t;
+  // 溜まる物の数(「🍪 クッキー 6/10」「🎵 黒音符 3/10」)は、数が肝心なので切らない(2026-11-05 空白で切って「🍪」だけになっていた)
+  if (/^\S+ \S+ \d+\/\d+$/.test(t) && [...t].length <= 16) return t;
+  // 残りの回数を知らせる吹き出し(「👻 完全回避！ のこり1回」「…これで最後」)も、数が肝心なので切らない
+  if (/(のこり\d+回|これで最後)$/.test(t) && [...t].length <= 16) return t;
+  // EX の吹き出し(「EX 悪夢全開！メロディ・キー！」)は、技名の中にも「！」があるので、技名の終わり(最後の「！」)まで出す
+  if (/^EX /.test(t)) { const m = t.match(/^(.*[!！])/); return m ? m[1] : t; }
   const bang = t.match(/^(.+?[!！])/);
   if (bang) return bang[1];
   const k = t.search(/[\s　・、]/);
@@ -62853,7 +62859,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           <button type="button" data-card-env={st.field.no} data-card-env-side={st.field.p === CARD_ME ? 'me' : 'foe'} onClick={() => setDetail(st.field.no)}
             className="relative z-[1] flex max-w-full items-center gap-1.5 rounded-xl border-2 border-emerald-300/80 bg-emerald-950/80 px-2 py-0.5 text-left active:scale-[.98]">
             <span className="shrink-0 whitespace-nowrap rounded-md bg-emerald-400 px-1 py-0.5 text-[10px] font-black text-emerald-950">全体</span>
-            <span className="min-w-0 text-[12px] font-black leading-tight text-emerald-50" style={JA_WRAP_STYLE}>{cardOf(db, st.field.no).name}<small className="ml-1 text-[10px] font-bold text-emerald-200">({st.field.p === CARD_ME ? '自分' : '相手'}が出した)</small></span>
+            <span className="min-w-0 text-[12px] font-black leading-tight text-emerald-50" style={JA_WRAP_STYLE}>{cardOf(db, st.field.no).name}<small className="ml-1 text-[10px] font-bold text-emerald-200">({(watch || tourReplay) ? (st.field.p === CARD_ME ? meName : who.name) : st.field.p === CARD_ME ? '自分' : '相手'}が出した)</small></span>
           </button>
         )}
         {/* 案C: 相手の番のまとめの1行。押すと開く(開いた窓は下の data-card-turn-summary) */}
@@ -90953,11 +90959,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // バトルの記録もWAVEの区切りを入れる。ランの1WAVE目では前のランのぶんを消す
     if (w === 1) { setBattleLog([]); battleLogSeqRef.current = 0; }
     pushBattleLog(isRaidJackMode(runMode)?`── ${battleModeInfo(runMode).short}：${newEnemy.name} ──`:`── WAVE ${w}：${newEnemy.name} ──`, 'turn');
-    setTurnCount(1); setSelectedCards([]); setDiscardCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); resetKusabi(); resetDreamPain(); clearKyubiKageroWait(); setWaveBuffs({});
+    setTurnCount(1); setSelectedCards([]); setDiscardCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); resetKusabi(); resetDreamPain(); clearKyubiKageroWait(); setWaveBuffs({}); resetFateWheel(); resetEnemyConfuse(); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     // きゅうこの譜面の被ダメ減・引き受けは WAVE をまたいで持ち越さない(2026-11-01 社長の決め。使ったターンに敵を倒すと、
     //   敵の番の前で処理が終わって残りターンが減らず、次の WAVE へそのまま残っていた)
     kyukoRedirectRef.current=null; writePermaBuffs(p=>p.kyukoCutTurns>0?({...p,kyukoCutTurns:0}):p);
-    resetFateWheel(); resetEnemyConfuse(); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
   }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, tacticsRecords, runMode]);
   // 勇者特性「トリックスタート」(ゴースト・スプーキー)の抽選。WAVEの1ターン目と、そこから3ターンごと。
@@ -98122,6 +98127,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 入りきらない長いかたまり(flow)は、前のかたまりの後ろへそのまま流して、言葉の切れ目で折る
           return chunks.map((c,i)=><React.Fragment key={i}>{i>0?(c.sp?' ':<wbr/>):null}{c.flow?body(c.t):<span data-story-chunk style={{display:'inline-block',maxWidth:'100%'}}>{body(c.t)}</span>}</React.Fragment>);
         };
+        // 画面の真ん中に出る文字(場面の説明・幕開けの題字・終わりの札)も、台詞と同じく言葉と文の切れ目で折る(2026-11-05 社長「真ん中の文字の改行が中途半端なとこがあった」)。
+        //   w … 文字の欄の幅(px)・fs … 字の大きさ(px)。かたまりで折れないときは jaWrap の切れ目で、行の長さをそろえて折る
+        const storyCenterCap=(w,fs)=>Math.max(4,Math.floor(w/fs-0.2));
+        const storyCenter=(text,w,fs)=>{const t=String(text??'');const cap=storyCenterCap(w,fs);const ch=typeof storyChunkLines==='function'?storyChunkLines(t,cap,3):null;return <span style={ch?{...bubbleWrapStyle(),textWrap:'wrap'}:bubbleWrapStyle()}>{storyLineNodes(t,cap)}</span>;};
         // かたまりで並べるときは、行の長さをそろえる折り方(balance)をやめる(そろえようとして、文の途中で早めに折れていた)
         const storyLineStyle=(text,cap)=>{
           const st=bubbleWrapStyle();
@@ -98263,15 +98272,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               })}
             </div>
           )}
-          {fx&&(
+          {/* 場面の説明(fxText)は、光る演出(fx)の無い行でも出す(2026-11-05。fx の無い行の説明が、どのお話でも出ていなかった) */}
+          {(fx||(line.fxText&&!(storyZones&&storySub>0)))&&(
             <div key={`fx${step}`} aria-hidden="true" className="pointer-events-none" style={{position:'absolute',inset:0,zIndex:4}}>
-              <div data-story-fx-flash={fx} style={{position:'absolute',inset:0,background:`radial-gradient(circle at 50% ${fx==='split'||fx==='merge'||fx==='unlock'?'46%':'22%'}, rgba(${fxColors[fx]||'255,255,255'},.95), rgba(${fxColors[fx]||'255,255,255'},.35) 45%, rgba(0,0,0,0) 75%)`,animation:'storyFlash 1s ease-out both'}}/>
+              {fx&&<div data-story-fx-flash={fx} style={{position:'absolute',inset:0,background:`radial-gradient(circle at 50% ${fx==='split'||fx==='merge'||fx==='unlock'?'46%':'22%'}, rgba(${fxColors[fx]||'255,255,255'},.95), rgba(${fxColors[fx]||'255,255,255'},.35) 45%, rgba(0,0,0,0) 75%)`,animation:'storyFlash 1s ease-out both'}}/>}
               {/* パンドラが分かれる/戻るときの鍵穴の光(2026-11-02 イベント「鍵の向こう側へ」)。分かれるときは光の筋が放射状に走る */}
               {(fx==='split'||fx==='merge'||fx==='unlock')&&<span data-story-keyhole/>}
               {/* 鍵が回る(第7話)。金の輪が回って、鍵穴から光があふれる */}
               {fx==='unlock'&&<span data-story-unlock><i/></span>}
               {fx==='split'&&<span data-story-crack>{[-160,-118,-72,-28,14,58,104,142].map((deg,i)=><i key={deg} style={{transform:`rotate(${deg}deg)`,animationDelay:`${i%3*40}ms`}}/>)}</span>}
-              {line.fxText&&<div data-story-banner className="px-4 text-center text-[17px] font-black" style={{position:'absolute',top:'42%',left:'50%',width:'100%',maxWidth:'28rem',color:'#fff',textShadow:`0 0 14px rgba(${fxColors[fx]||'255,255,255'},1), 0 2px 0 rgba(0,0,0,.6)`,animation:'storyBanner 2.2s ease-out both'}}>{line.fxText}</div>}
+              {/* 場面の説明は、幕開けの札が開いてから出し直す(札の裏で動きが終わって、最初の行の説明が見えなかった) */}
+              {line.fxText&&!storyOpening&&<div key={`banner${step}-${eventReplay.opened?1:0}`} data-story-banner className="px-4 text-center text-[17px] font-black" style={{position:'absolute',top:'42%',left:'50%',width:'100%',maxWidth:'28rem',color:'#fff',textShadow:`0 0 14px rgba(${fxColors[fx]||'255,255,255'},1), 0 2px 0 rgba(0,0,0,.6)`,animation:'storyBanner 2.2s ease-out both'}}>{storyCenter(line.fxText,storyBoxW-32,17)}</div>}
             </div>
           )}
           {/* ★ボタンの列はいつも窓の中に出す(2026-10-27 844×390 の横向きで、台詞が5行になると「次へ」「スキップ」が画面の外へ出て押せなかった)。
@@ -98360,9 +98371,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {iris&&<span aria-hidden="true" data-story-iris-hole style={{position:'absolute',left:'50%',top:'50%',width:0,height:0,borderRadius:'50%',transform:'translate(-50%,-50%)',boxShadow:'0 0 0 300vmax rgba(2,6,23,.97)',animation:`storyIrisHole 1.3s ease-in ${dur}s both`}}/>}
               <div className="relative w-full max-w-sm px-6 text-center" style={iris?{animation:`storyOpenOut .4s ease-in ${dur-.2}s both`}:undefined}>
                 {parts.series&&<p className="text-[12px] font-black tracking-[.3em] text-fuchsia-200/80" style={{animation:'storyEndCard 1s ease-out .2s both'}}>{parts.series}</p>}
-                <p className="mt-2 text-[30px] font-black leading-tight text-white" style={{animation:'storyOpenTitle 1.3s ease-out .4s both',textShadow:'0 0 18px rgba(192,132,252,.8)'}}>{parts.ep}</p>
-                {parts.sub&&<p className="mt-1 text-[16px] font-black text-fuchsia-100" style={{animation:'storyEndCard 1s ease-out .9s both'}}>{parts.sub}</p>}
-                {prevParts&&<p data-story-opening-prev className="mt-6 text-[11px] font-bold text-slate-400" style={{animation:'storyEndCard 1s ease-out 1.5s both'}}>前回のお話 {prevParts.ep} {prevParts.sub}</p>}
+                <p className="mt-2 text-[30px] font-black leading-tight text-white" style={{animation:'storyOpenTitle 1.3s ease-out .4s both',textShadow:'0 0 18px rgba(192,132,252,.8)'}}>{storyCenter(parts.ep,Math.min(storyBoxW,384)-48,30)}</p>
+                {parts.sub&&<p className="mt-1 text-[16px] font-black text-fuchsia-100" style={{animation:'storyEndCard 1s ease-out .9s both'}}>{storyCenter(parts.sub,Math.min(storyBoxW,384)-48,16)}</p>}
+                {prevParts&&<p data-story-opening-prev className="mt-6 text-[11px] font-bold text-slate-400" style={{animation:'storyEndCard 1s ease-out 1.5s both'}}>{storyCenter(`前回のお話 ${prevParts.ep} ${prevParts.sub}`,Math.min(storyBoxW,384)-48,11)}</p>}
                 {leftText&&<p data-story-opening-left className="mt-2 text-[12px] font-black text-amber-200" style={{animation:'storyEndCard 1s ease-out 1.8s both'}}>イベント終了まで {leftText}</p>}
                 <p className="mt-8 text-[10px] font-bold text-slate-500" style={{animation:'storyEndCard 1s ease-out 1.2s both'}}>タップで始まります</p>
               </div>
@@ -98401,12 +98412,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               style={{position:'absolute',inset:0,zIndex:20,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'auto',animation:`storyEndDim .9s ease-out ${delay}s both`}}>
               <div className="w-full max-w-sm px-6 text-center">
                 <p className="text-[12px] font-black tracking-[.3em] text-fuchsia-200/80" style={{animation:`storyEndCard 1s ease-out ${delay+.2}s both`}}>{parts.series}</p>
-                <p className="mt-2 text-[30px] font-black leading-tight text-white" style={{animation:`storyEndCard 1s ease-out ${delay+.35}s both`,textShadow:'0 0 18px rgba(192,132,252,.8)'}}>{parts.ep}</p>
-                {parts.sub&&<p className="mt-1 text-[16px] font-black text-fuchsia-100" style={{animation:`storyEndCard 1s ease-out ${delay+.5}s both`}}>{parts.sub}</p>}
+                <p className="mt-2 text-[30px] font-black leading-tight text-white" style={{animation:`storyEndCard 1s ease-out ${delay+.35}s both`,textShadow:'0 0 18px rgba(192,132,252,.8)'}}>{storyCenter(parts.ep,Math.min(storyBoxW,384)-48,30)}</p>
+                {parts.sub&&<p className="mt-1 text-[16px] font-black text-fuchsia-100" style={{animation:`storyEndCard 1s ease-out ${delay+.5}s both`}}>{storyCenter(parts.sub,Math.min(storyBoxW,384)-48,16)}</p>}
                 <p data-story-ending-fin className="mt-5 text-[38px] font-black tracking-[.4em]" style={{animation:`storyEndFin 1.4s ease-out ${delay+.9}s both`,background:'linear-gradient(180deg,#fde68a,#f0abfc)',WebkitBackgroundClip:'text',backgroundClip:'text',color:'transparent'}}>{parts.final?'おしまい':'おわり'}</p>
                 {rich&&nextEv&&<div data-story-ending-next className="mx-auto mt-5 rounded-2xl border border-fuchsia-300/40 bg-slate-900/80 px-3 py-2" style={{animation:`storyEndCard 1s ease-out ${delay+1.5}s both`}}>
                   <p className="text-[11px] font-black text-fuchsia-200">次のお話</p>
-                  <p className="text-[14px] font-black text-white">{nextParts.series&&nextParts.series!==parts.series?`${nextParts.series} `:''}{nextParts.ep} {nextParts.sub}</p>
+                  <p className="text-[14px] font-black text-white">{storyCenter(`${nextParts.series&&nextParts.series!==parts.series?`${nextParts.series} `:''}${nextParts.ep} ${nextParts.sub}`,Math.min(storyBoxW,384)-80,14)}</p>
                   {/* 残り時間は本編(HOME で流れたとき)だけ。回想では題名だけ(2026-11-03 社長) */}
                   {eventReplay.live&&<p className="text-[12px] font-bold text-slate-300">{left>0?<>{when} から <b className="text-amber-200">{leftText}</b></>:'もう見られます(プロフィールの「イベント回想」)'}</p>}
                 </div>}
@@ -102905,7 +102916,8 @@ const createAnimationStyle = () => {
     [data-event-story] > :not([data-story-ending]) { transition: transform 1.6s ease-out, filter 1.6s ease-out; }
     /* お話の始まり(2026-11-04)。題字のあいだ、場面は遠く暗いところに置き、幕が上がると近づきながら明るくなる(終わりの札の 'pull' の逆)。
        'iris' は、題字の幕を鍵穴から丸く開ける */
-    @keyframes storyOpenTitle { 0% { opacity: 0; transform: scale(.9); filter: blur(6px); letter-spacing: .4em; } 100% { opacity: 1; transform: none; filter: none; } }
+    /* 題字は字の間隔を動かさない(広げると長い題字がいったん2行に折れてから1行に戻り、位置がずれて見えた。2026-11-05 社長「最初の表題が位置ずれする」) */
+    @keyframes storyOpenTitle { 0% { opacity: 0; transform: scale(.94); filter: blur(6px); } 100% { opacity: 1; transform: none; filter: none; } }
     @keyframes storyOpenOut { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
     @keyframes storyIrisHole { 0% { width: 0; height: 0; } 100% { width: 260vmax; height: 260vmax; } }
     [data-event-story][data-story-opening]:not([data-story-opening="iris"]) > :not([data-story-opening-card]):not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }

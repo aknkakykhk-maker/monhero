@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d995096860a58e52
+// source-sha256: cda089b42a954814
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -75780,6 +75780,12 @@ function InfernoShieldBreakFx({
 const tacticsPopupShortText = text => {
   const t = String(text == null ? '' : text);
   if ([...t].length <= 9) return t;
+  if (/^\S+ \S+ \d+\/\d+$/.test(t) && [...t].length <= 16) return t;
+  if (/(のこり\d+回|これで最後)$/.test(t) && [...t].length <= 16) return t;
+  if (/^EX /.test(t)) {
+    const m = t.match(/^(.*[!！])/);
+    return m ? m[1] : t;
+  }
   const bang = t.match(/^(.+?[!！])/);
   if (bang) return bang[1];
   const k = t.search(/[\s　・、]/);
@@ -104584,7 +104590,7 @@ const CardBattleBoard = ({
     style: JA_WRAP_STYLE
   }, cardOf(db, st.field.no).name, React.createElement("small", {
     className: "ml-1 text-[10px] font-bold text-emerald-200"
-  }, "(", st.field.p === CARD_ME ? '自分' : '相手', "が出した)"))), turnSummary && !sumOpen && !bigCard && React.createElement("button", {
+  }, "(", watch || tourReplay ? st.field.p === CARD_ME ? meName : who.name : st.field.p === CARD_ME ? '自分' : '相手', "が出した)"))), turnSummary && !sumOpen && !bigCard && React.createElement("button", {
     type: "button",
     key: turnSummary.key,
     "data-card-turn-summary-chip": true,
@@ -146634,13 +146640,13 @@ function MonsterHeroGame() {
     resetDreamPain();
     clearKyubiKageroWait();
     setWaveBuffs({});
+    resetFateWheel();
+    resetEnemyConfuse();
     kyukoRedirectRef.current = null;
     writePermaBuffs(p => p.kyukoCutTurns > 0 ? {
       ...p,
       kyukoCutTurns: 0
     } : p);
-    resetFateWheel();
-    resetEnemyConfuse();
     return dist;
   }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, tacticsRecords, runMode]);
   useEffect(() => {
@@ -161295,6 +161301,18 @@ function MonsterHeroGame() {
           }
         }, body(c.t))));
       };
+      const storyCenterCap = (w, fs) => Math.max(4, Math.floor(w / fs - 0.2));
+      const storyCenter = (text, w, fs) => {
+        const t = String(text ?? '');
+        const cap = storyCenterCap(w, fs);
+        const ch = typeof storyChunkLines === 'function' ? storyChunkLines(t, cap, 3) : null;
+        return React.createElement("span", {
+          style: ch ? {
+            ...bubbleWrapStyle(),
+            textWrap: 'wrap'
+          } : bubbleWrapStyle()
+        }, storyLineNodes(t, cap));
+      };
       const storyLineStyle = (text, cap) => {
         const st = bubbleWrapStyle();
         return storyZones && typeof storyChunkLines === 'function' && storyChunkLines(text, cap, storyChunkMax(cap)) ? {
@@ -161542,7 +161560,7 @@ function MonsterHeroGame() {
           fill: true,
           own: true
         }) : art);
-      })), fx && React.createElement("div", {
+      })), (fx || line.fxText && !(storyZones && storySub > 0)) && React.createElement("div", {
         key: `fx${step}`,
         "aria-hidden": "true",
         className: "pointer-events-none",
@@ -161551,7 +161569,7 @@ function MonsterHeroGame() {
           inset: 0,
           zIndex: 4
         }
-      }, React.createElement("div", {
+      }, fx && React.createElement("div", {
         "data-story-fx-flash": fx,
         style: {
           position: 'absolute',
@@ -161571,7 +161589,8 @@ function MonsterHeroGame() {
           transform: `rotate(${deg}deg)`,
           animationDelay: `${i % 3 * 40}ms`
         }
-      }))), line.fxText && React.createElement("div", {
+      }))), line.fxText && !storyOpening && React.createElement("div", {
+        key: `banner${step}-${eventReplay.opened ? 1 : 0}`,
         "data-story-banner": true,
         className: "px-4 text-center text-[17px] font-black",
         style: {
@@ -161584,7 +161603,7 @@ function MonsterHeroGame() {
           textShadow: `0 0 14px rgba(${fxColors[fx] || '255,255,255'},1), 0 2px 0 rgba(0,0,0,.6)`,
           animation: 'storyBanner 2.2s ease-out both'
         }
-      }, line.fxText)), React.createElement("div", {
+      }, storyCenter(line.fxText, storyBoxW - 32, 17))), React.createElement("div", {
         ref: storyMeasureRef('--story-sheet-h', 'height'),
         onClick: next,
         "data-story-sheet": true,
@@ -161787,18 +161806,18 @@ function MonsterHeroGame() {
             animation: 'storyOpenTitle 1.3s ease-out .4s both',
             textShadow: '0 0 18px rgba(192,132,252,.8)'
           }
-        }, parts.ep), parts.sub && React.createElement("p", {
+        }, storyCenter(parts.ep, Math.min(storyBoxW, 384) - 48, 30)), parts.sub && React.createElement("p", {
           className: "mt-1 text-[16px] font-black text-fuchsia-100",
           style: {
             animation: 'storyEndCard 1s ease-out .9s both'
           }
-        }, parts.sub), prevParts && React.createElement("p", {
+        }, storyCenter(parts.sub, Math.min(storyBoxW, 384) - 48, 16)), prevParts && React.createElement("p", {
           "data-story-opening-prev": true,
           className: "mt-6 text-[11px] font-bold text-slate-400",
           style: {
             animation: 'storyEndCard 1s ease-out 1.5s both'
           }
-        }, "前回のお話 ", prevParts.ep, " ", prevParts.sub), leftText && React.createElement("p", {
+        }, storyCenter(`前回のお話 ${prevParts.ep} ${prevParts.sub}`, Math.min(storyBoxW, 384) - 48, 11)), leftText && React.createElement("p", {
           "data-story-opening-left": true,
           className: "mt-2 text-[12px] font-black text-amber-200",
           style: {
@@ -161866,12 +161885,12 @@ function MonsterHeroGame() {
             animation: `storyEndCard 1s ease-out ${delay + .35}s both`,
             textShadow: '0 0 18px rgba(192,132,252,.8)'
           }
-        }, parts.ep), parts.sub && React.createElement("p", {
+        }, storyCenter(parts.ep, Math.min(storyBoxW, 384) - 48, 30)), parts.sub && React.createElement("p", {
           className: "mt-1 text-[16px] font-black text-fuchsia-100",
           style: {
             animation: `storyEndCard 1s ease-out ${delay + .5}s both`
           }
-        }, parts.sub), React.createElement("p", {
+        }, storyCenter(parts.sub, Math.min(storyBoxW, 384) - 48, 16)), React.createElement("p", {
           "data-story-ending-fin": true,
           className: "mt-5 text-[38px] font-black tracking-[.4em]",
           style: {
@@ -161891,7 +161910,7 @@ function MonsterHeroGame() {
           className: "text-[11px] font-black text-fuchsia-200"
         }, "次のお話"), React.createElement("p", {
           className: "text-[14px] font-black text-white"
-        }, nextParts.series && nextParts.series !== parts.series ? `${nextParts.series} ` : '', nextParts.ep, " ", nextParts.sub), eventReplay.live && React.createElement("p", {
+        }, storyCenter(`${nextParts.series && nextParts.series !== parts.series ? `${nextParts.series} ` : ''}${nextParts.ep} ${nextParts.sub}`, Math.min(storyBoxW, 384) - 80, 14)), eventReplay.live && React.createElement("p", {
           className: "text-[12px] font-bold text-slate-300"
         }, left > 0 ? React.createElement(React.Fragment, null, when, " から ", React.createElement("b", {
           className: "text-amber-200"
@@ -167671,7 +167690,8 @@ const createAnimationStyle = () => {
     [data-event-story] > :not([data-story-ending]) { transition: transform 1.6s ease-out, filter 1.6s ease-out; }
     /* お話の始まり(2026-11-04)。題字のあいだ、場面は遠く暗いところに置き、幕が上がると近づきながら明るくなる(終わりの札の 'pull' の逆)。
        'iris' は、題字の幕を鍵穴から丸く開ける */
-    @keyframes storyOpenTitle { 0% { opacity: 0; transform: scale(.9); filter: blur(6px); letter-spacing: .4em; } 100% { opacity: 1; transform: none; filter: none; } }
+    /* 題字は字の間隔を動かさない(広げると長い題字がいったん2行に折れてから1行に戻り、位置がずれて見えた。2026-11-05 社長「最初の表題が位置ずれする」) */
+    @keyframes storyOpenTitle { 0% { opacity: 0; transform: scale(.94); filter: blur(6px); } 100% { opacity: 1; transform: none; filter: none; } }
     @keyframes storyOpenOut { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
     @keyframes storyIrisHole { 0% { width: 0; height: 0; } 100% { width: 260vmax; height: 260vmax; } }
     [data-event-story][data-story-opening]:not([data-story-opening="iris"]) > :not([data-story-opening-card]):not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
