@@ -20,6 +20,23 @@ const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=a17ca7fa2869";
 const KYUKO_FACE_ICON = "images/assistant/face/kyuko_happy.PNG?v=6ad5eda132bf";
 // ソラシド(2026-10-27)。顔アイコンをそのまま使う(きゅうこと同じ形。字のアイコンのままだと、マーケットで「?」の箱になった)
 const SORASHIDO_FACE_ICON = "images/assistant/face/sorashido_happy.PNG?v=27d67b71522c";
+// お話の背景絵(2026-11-05 えるびんの登場のお話から。社長「背景絵がない」)。台本の行の scene:'<名前>' で切り替える(次に scene を書いた行まで続き、scene:'none' で消す)。
+//   1080×1080 の正方形で、大事なものは真ん中に寄せてある(縦の画面は左右、横の低い画面は上下が切れても見える)。ほかのお話でも使ってよい
+const STORY_BG_DESERT_PALACE = "images/story-bg/desert_palace.jpg?v=890ff3607962";     // 石油王の世界: 砂漠の夕方と白い宮殿・ラクダ
+const STORY_BG_DESERT_OILFIELD = "images/story-bg/desert_oilfield.jpg?v=59471d02fcb6"; // 石油王の世界: 夕方の油田
+const STORY_BG_DESERT_HALL = "images/story-bg/desert_hall.jpg?v=8d88e8cb5328";         // 石油王の世界: 宮殿の中(アーチの回廊と赤い絨毯)
+const STORY_BG_MONHERO_PLAZA = "images/story-bg/monhero_plaza.jpg?v=0a622af77e32";     // モンヒロの世界: いつもの場所(昼の広場と家)
+const STORY_BG_MONHERO_TOWN = "images/story-bg/monhero_town.jpg?v=802681764caa";       // モンヒロの世界: 街(服の店とカフェの通り)
+const STORY_BG_MONHERO_NIGHT = "images/story-bg/monhero_night.jpg?v=9583f2f8d63d";     // モンヒロの世界: 夜(いつもの場所の月夜)
+const STORY_SCENE_IMAGES = Object.freeze({
+  desert: STORY_BG_DESERT_PALACE, // 最初に作った名前(2026-11-05)。desert_palace と同じ
+  desert_palace: STORY_BG_DESERT_PALACE,
+  desert_oilfield: STORY_BG_DESERT_OILFIELD,
+  desert_hall: STORY_BG_DESERT_HALL,
+  monhero_plaza: STORY_BG_MONHERO_PLAZA,
+  monhero_town: STORY_BG_MONHERO_TOWN,
+  monhero_night: STORY_BG_MONHERO_NIGHT,
+});
 // スネグーラチカの高解像度の立ち絵。顔アイコン(make-face-icons.js)の元絵で、覚醒のほうはマーケットのアイコン商品で使う。
 // 本体の絵(images-ally.js の SNEGUROCHKA_IMG)とは別ファイルなので、ここで持つ
 const SNEGUROCHKA_MARKET_ICON = "images/monsters/SNEGUROCHKA.PNG?v=54c9540841fe";

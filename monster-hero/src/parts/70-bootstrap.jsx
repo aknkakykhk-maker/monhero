@@ -3351,16 +3351,14 @@ const createAnimationStyle = () => {
     @keyframes storyOpenTitle { 0% { opacity: 0; transform: scale(.94); filter: blur(6px); } 100% { opacity: 1; transform: none; filter: none; } }
     @keyframes storyOpenOut { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
     @keyframes storyIrisHole { 0% { width: 0; height: 0; } 100% { width: 260vmax; height: 260vmax; } }
-    /* お話の場面の背景(2026-11-05 えるびんの登場のお話)。砂漠: 夕方の空・沈む日・遠くの白い宮殿の影・砂丘 */
-    [data-story-bg] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-    [data-story-bg="desert"] { background: linear-gradient(180deg, #3b2a4d 0%, #9a5a4a 26%, #e7a25c 46%, #f4c784 58%, #d9a15e 70%, #b07a43 100%); animation: storySceneIn .9s ease-out both; }
-    [data-story-bg="desert"] [data-scene-sun] { position: absolute; left: 50%; top: 38%; width: 34vmin; height: 34vmin; transform: translate(-50%, -50%); border-radius: 50%;
-      background: radial-gradient(circle, #fff3c4 0%, #fcd77f 45%, rgba(252,215,127,0) 70%); }
-    [data-story-bg="desert"] [data-scene-palace] { position: absolute; left: 50%; top: 46%; width: min(78vw, 360px); height: 18vmin; transform: translate(-50%, -100%); background: #4a2f2a; opacity: .85;
-      clip-path: polygon(0% 100%, 0% 62%, 6% 62%, 6% 20%, 7% 8%, 8% 20%, 8% 62%, 20% 62%, 22% 48%, 30% 40%, 38% 48%, 40% 62%, 44% 62%, 44% 40%, 46% 26%, 50% 14%, 54% 26%, 56% 40%, 56% 62%, 60% 62%, 62% 48%, 70% 40%, 78% 48%, 80% 62%, 92% 62%, 92% 20%, 93% 8%, 94% 20%, 94% 62%, 100% 62%, 100% 100%); }
-    [data-story-bg="desert"] [data-scene-dune] { position: absolute; left: -20%; width: 140%; border-radius: 50% 50% 0 0 / 100% 100% 0 0; }
-    [data-story-bg="desert"] [data-scene-dune="back"] { top: 44%; height: 40%; background: linear-gradient(180deg, #e2a965, #c88a4c); }
-    [data-story-bg="desert"] [data-scene-dune="front"] { top: 54%; left: -40%; width: 120%; height: 60%; background: linear-gradient(180deg, #d69a57, #a8723f); }
+    /* お話の場面の背景(2026-11-05 えるびんの登場のお話から)。絵は data/breeder.js の STORY_SCENE_IMAGES。
+       正方形の絵を敷く(縦は左右・横の低い画面は上下が切れる。大事なものは絵の真ん中にある)。
+       下のほうは会話の紙と立ち絵が乗るので、少しだけ暗くして字を読みやすくする */
+    [data-story-bg] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; background-color: #0b0a14; animation: storySceneIn .7s ease-out both; }
+    [data-story-bg]::before { content: ''; position: absolute; inset: 0; background-image: var(--story-bg); background-size: cover; background-position: center 42%; background-repeat: no-repeat; }
+    [data-story-bg]::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.10) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 55%, rgba(0,0,0,.38) 100%); }
+    /* 縦の画面: 下の3割は会話の紙が乗るので、絵は紙より上の範囲に敷く(家・宮殿などの真ん中のものが紙に隠れないように)。下の端はぼかして暗い地につなぐ */
+    @media (orientation: portrait) { [data-story-bg]::before { bottom: 30%; -webkit-mask-image: linear-gradient(180deg, #000 80%, transparent 100%); mask-image: linear-gradient(180deg, #000 80%, transparent 100%); } }
     @keyframes storySceneIn { 0% { opacity: 0; } 100% { opacity: 1; } }
     /* fx:'fall' … 穴へ落ちていく。背景が上へ流れながら暗くなる(行の holdMs のあいだに終わる長さ) */
     [data-story-bg][data-story-bg-fx="fall"] { animation: storySceneFall 2.4s cubic-bezier(.55,0,.8,.4) both; }
