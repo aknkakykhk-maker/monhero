@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 925bacbbba9496d3
+// source-sha256: 4d00b97a20b1de07
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -18850,13 +18850,22 @@ const storyVariantWho = id => {
 const assistantById = id => ASSISTANT_LIST.find(a => a.id === id) || storyVariantWho(id) || STORY_GUEST_LIST.find(a => a.id === id) || ASSISTANT_LIST.find(a => a.id === (typeof DEFAULT_ASSISTANT_ID !== 'undefined' ? DEFAULT_ASSISTANT_ID : '')) || ASSISTANT_LIST[0] || ASSISTANT_FALLBACK;
 const storyBaseWho = id => typeof id === 'string' ? id.split('@')[0] : id;
 const storyCastOf = script => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(who => (script || []).some(l => l && storyBaseWho(l.who) === who.id));
+const storyAssistantArtOf = (id, outfit) => {
+  const who = (typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST : []).find(a => a && a.id === id);
+  if (!who || !who.imageDir || !who.imagePrefix) return null;
+  const dirs = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS || {};
+  const dir = outfit ? dirs[outfit] : who.imageDir;
+  return dir ? `${dir}/${who.imagePrefix}_normal.PNG` : null;
+};
 const STORY_MONSTER_ART = Object.freeze({
   Kyubi: typeof KYUBI_IMG !== 'undefined' ? KYUBI_IMG : null,
   Orihime: typeof ORIHIME_IMG !== 'undefined' ? ORIHIME_IMG : null,
   Pandora: typeof PANDORA_IMG !== 'undefined' ? PANDORA_IMG : null,
   PandoraShadow: typeof PANDORA_SHADOW_IMG !== 'undefined' ? PANDORA_SHADOW_IMG : null,
   PandoraAngel: typeof PANDORA_ANGEL_IMG !== 'undefined' ? PANDORA_ANGEL_IMG : null,
-  PandoraDevil: typeof PANDORA_DEVIL_IMG !== 'undefined' ? PANDORA_DEVIL_IMG : null
+  PandoraDevil: typeof PANDORA_DEVIL_IMG !== 'undefined' ? PANDORA_DEVIL_IMG : null,
+  Erubin: storyAssistantArtOf('erubin'),
+  ErubinSekiyuou: storyAssistantArtOf('erubin', 'sekiyuou')
 });
 const STORY_BOTTOM_KEEP_ROW = true;
 const STORY_ENDING_STYLE = 'pull';

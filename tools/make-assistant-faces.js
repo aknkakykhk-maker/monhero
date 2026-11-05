@@ -88,6 +88,9 @@ const PER_ASSISTANT_BASE = {
     normal: [0.509, 0.419], happy: [0.475, 0.414], troubled: [0.56, 0.44], excited: [0.563, 0.436],
     angry: [0.563, 0.405], surprise: [0.542, 0.406], wink: [0.568, 0.443], crying: [0.575, 0.345],
   } },
+  // えるびん(2026-11-05)は きゅうこ・ソラシドと同じ 384x512 の胸から上の絵(髪が大きく広がる)。既定(0.46・0.09)だと寄りすぎで、
+  //   枠が頭で埋まらなかった(占有50〜55%)。きゅうこと同じ「頭ぜんぶ」の切り方(0.594・0.026)にそろえた(占有63〜82%。ソラシドの「頭と首」0.68 と見比べて選んだ)
+  erubin: { headRatio: 0.594, headTopSkip: 0.026 },
 };
 
 // 着替えの絵(2026-10-04 ハロウィン衣装)は構図が元の服と違う(みゅあは縦長の全身、ききとももすけは正方形のバストアップ)ので、別の切り出し方を使う
@@ -100,6 +103,9 @@ const COSTUME_TUNE = {
 //   card-master … みゅあの MASTER の服(2026-10-27)。全身が画面いっぱいで羽も広いので、ハロウィンの値だと引きすぎて胸元まで入る
 const COSTUME_DIR_TUNE = {
   'card-master': { myua: { headRatio: 0.42, headTopSkip: 0.05 } },
+  // えるびんの衣装『石油王』(2026-11-05)。通常の絵と同じ 384x512 の胸から上の絵。通常の 0.594 だと頭の布(クーフィーヤ)の上が切れるので、
+  //   布のぶんだけ引いた 0.66(顔の大きさは通常の顔とほぼ同じ。0.594・0.66・0.72 を並べて選んだ)
+  sekiyuou: { erubin: { headRatio: 0.66, headTopSkip: 0.0 } },
 };
 const PER_ASSISTANT = costumeArg ? { ...COSTUME_TUNE, ...(COSTUME_DIR_TUNE[path.basename(costumeArg)] || {}) } : PER_ASSISTANT_BASE;
 
