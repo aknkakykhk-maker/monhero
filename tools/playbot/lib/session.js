@@ -211,6 +211,8 @@ async function openSession({ playwright, pageUrl, port, out, rand, persona, repo
   s.dismissOverlays = async (max = 40) => {
     let first = '', firstShot = '', pressed = 0, noSkipNext = 0;
     for (let i = 0; i < max; i++) {
+      // お話の幕開け(題字→鍵穴)はボタンが無く、画面を押すと飛ばせる(2026-11-05)。出ていたら押して進む
+      if (await page.evaluate(() => { const c = document.querySelector('[data-story-opening-card]'); if (c) c.click(); return !!c; }).catch(() => false)) { pressed += 1; await page.waitForTimeout(150); continue; }
       const list = await s.listButtons();
       const b = list.find((x) => x.overlay && /^スキップ$/.test(x.label))
         || list.find((x) => x.overlay && /^(確認|閉じる|OK|受け取る|次へ|わかった！?|はい|とじる|×|今は見ない|あとで読む|あとで)$/.test(x.label));

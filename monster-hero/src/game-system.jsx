@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ade45ccdf2cf36a5
+// generated-sha256: 63dee22572d7e427
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -98115,10 +98115,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const storyLineNodes=(text,cap)=>{
           const chunks=typeof storyChunkLines==='function'?storyChunkLines(text,cap,storyChunkMax(cap)):null;
           // 顔文字「(˘ω˘)」・数と単位「5ターン目」は途中で折らない(数と単位の前では折れる)
-          const body=(t)=>typeof storyEmoticonParts==='function'?storyEmoticonParts(t).map((p,k)=>p.emo?<React.Fragment key={k}>{k>0&&!/^[(（]/.test(p.t)?'\u200B':null}<span style={{whiteSpace:'nowrap'}}>{p.t}</span></React.Fragment>:<React.Fragment key={k}>{bubbleWrap(p.t)}</React.Fragment>):bubbleWrap(t);
+          const body=(t)=>typeof storyEmoticonParts==='function'?storyEmoticonParts(t).map((p,k)=>p.emo?<React.Fragment key={k}>{k>0&&!/^[(（]/.test(p.t)?<wbr/>:null}<span style={{whiteSpace:'nowrap'}}>{p.t}</span></React.Fragment>:<React.Fragment key={k}>{bubbleWrap(p.t)}</React.Fragment>):bubbleWrap(t);
           if(!chunks) return typeof text==='string'&&!text.includes('\n')?body(text):bubbleLines(text);
           // 入りきらない長いかたまり(flow)は、前のかたまりの後ろへそのまま流して、言葉の切れ目で折る
-          return chunks.map((c,i)=><React.Fragment key={i}>{i>0?(c.sp?' ':'\u200B'):null}{c.flow?body(c.t):<span data-story-chunk style={{display:'inline-block',maxWidth:'100%'}}>{body(c.t)}</span>}</React.Fragment>);
+          return chunks.map((c,i)=><React.Fragment key={i}>{i>0?(c.sp?' ':<wbr/>):null}{c.flow?body(c.t):<span data-story-chunk style={{display:'inline-block',maxWidth:'100%'}}>{body(c.t)}</span>}</React.Fragment>);
         };
         // かたまりで並べるときは、行の長さをそろえる折り方(balance)をやめる(そろえようとして、文の途中で早めに折れていた)
         const storyLineStyle=(text,cap)=>{

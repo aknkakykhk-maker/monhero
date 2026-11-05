@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 586d4468f272cd21
+// source-sha256: 8e5d9a3d6e4c9af4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161271,7 +161271,7 @@ function MonsterHeroGame() {
         const chunks = typeof storyChunkLines === 'function' ? storyChunkLines(text, cap, storyChunkMax(cap)) : null;
         const body = t => typeof storyEmoticonParts === 'function' ? storyEmoticonParts(t).map((p, k) => p.emo ? React.createElement(React.Fragment, {
           key: k
-        }, k > 0 && !/^[(（]/.test(p.t) ? '\u200B' : null, React.createElement("span", {
+        }, k > 0 && !/^[(（]/.test(p.t) ? React.createElement("wbr", null) : null, React.createElement("span", {
           style: {
             whiteSpace: 'nowrap'
           }
@@ -161281,7 +161281,7 @@ function MonsterHeroGame() {
         if (!chunks) return typeof text === 'string' && !text.includes('\n') ? body(text) : bubbleLines(text);
         return chunks.map((c, i) => React.createElement(React.Fragment, {
           key: i
-        }, i > 0 ? c.sp ? ' ' : '\u200B' : null, c.flow ? body(c.t) : React.createElement("span", {
+        }, i > 0 ? c.sp ? ' ' : React.createElement("wbr", null) : null, c.flow ? body(c.t) : React.createElement("span", {
           "data-story-chunk": true,
           style: {
             display: 'inline-block',
