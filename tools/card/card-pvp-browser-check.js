@@ -639,7 +639,8 @@ const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); aw
     // 相手から何も届かなくなってから120秒で決まる(2026-10-27 社長が60秒→120秒)ので、150秒まで待つ
     for (let i = 0; i < 300 && !(await B.locator('[data-card-pvp-result]').count()); i++) await B.waitForTimeout(500);
     await B.waitForTimeout(1500);
-    const leftText = (await B.locator('[data-mh-screen]').first().innerText().catch(() => '')).slice(0, 300);
+    // 全文で探す(ランクアップの案内が長いと、先頭300文字に「相手が抜けた」が入らないことがあった。2026-11-05 ルールくん)
+    const leftText = await B.locator('[data-mh-screen]').first().innerText().catch(() => '');
     await shot(B, 'pvp-14-foe-left');
     check('⑭ 相手が画面を閉じて抜けたら、「相手が抜けた」と出る(時間切れと出さない)', /相手が抜けた/.test(leftText) && !/相手の時間切れ/.test(leftText), leftText.replace(/\n/g, ' ').slice(0, 120));
     check('⑭ そのとき「もう1戦」は出ない(待ち続けない)・「部屋を出る」が押せる', (await B.locator('[data-card-pvp-again]').count()) === 0 && (await B.locator('[data-card-pvp-leave]').count()) === 1);
