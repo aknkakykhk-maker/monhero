@@ -35,6 +35,18 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-11-05 社長「この文で公開」。DJ YOSHITAKA。難易度は社長の案B・HELL Lv.51。止まる・戻る・すべる演出あり
+    date: "2026-11-06 05:46", type:'update', group:'rhythm', title:'新曲「Evans」を追加しました', status:'new',
+    image:'images/song-art/evans.jpg?v=33c4ea278fce',
+    items:[
+      'モンヒロビートに「Evans」（1分45秒）を追加しました。曲えらびからすぐ遊べます。HELL もあります。',
+      'レベルは EASY Lv.10 ／ NORMAL Lv.11 ／ HARD Lv.18 ／ EXPERT Lv.27 ／ MASTER Lv.44 ／ HELL Lv.51 です。',
+      'ノーツ数は 218 ／ 252 ／ 340 ／ 409 ／ 563 ／ 462 です。',
+      'この曲では、曲に合わせてノーツが止まったり、奥へ戻ったり、だんだんゆっくりになったりします。叩くタイミングは音楽どおりなので、音を聞いて叩いてください。',
+    ],
+    assistantNotice:{ id:'update_notice_evans_v1', type:'content' },
+  },
+  {
     // 2026-11-05 社長「この文で公開」(ルールくんの案)。えるびんのアシストカード「えるびんの見守り」
     date: "2026-11-05 21:55", type:'market', group:'assistant', title:'アシストカード「えるびん」が交換所に並びます', status:'new', releaseFlag:'assistantErubin',
     items:[
