@@ -847,6 +847,20 @@ const EX_POLICIES = { none: () => {}, bot: policyBot, best: policyBest };
 // SIM_ERUBIN_BOOST=2 … 引き上げ版2(ずっと続く部分を足す。強いアシカはどれもバトル中ずっと続く強化を持つため)
 const ERUBIN_BOOST = process.env.SIM_ERUBIN_BOOST === '1' || process.env.SIM_ERUBIN_BOOST === '2';
 const ERUBIN_BOOST2 = process.env.SIM_ERUBIN_BOOST === '2';
+// 社長の決め(2026-11-05): 案A の③(やり返しの上乗せ)をやめ、EX の使える回数の回復に。SIM_ERUBIN_EX=all|self(全員/使った子)・SIM_ERUBIN_EX_TIER=1 なら段で 1/3・1/2・1 回ぶん(ほかは 1/3 のまま)
+const ERUBIN_EX = process.env.SIM_ERUBIN_EX || '';
+const ERUBIN_EX_FRAC = process.env.SIM_ERUBIN_EX_TIER === '1' ? [1 / 3, 1 / 2, 1] : [1 / 3, 1 / 3, 1 / 3];
+function erubinExCharge(st, slot, frac) {
+  const key = ERUBIN_EX === 'self' ? `s${slot}` : 'all';
+  st.erubinExAcc = st.erubinExAcc || {};
+  st.erubinExAcc[key] = (st.erubinExAcc[key] || 0) + frac + 1e-9;
+  while (st.erubinExAcc[key] >= 1) {
+    st.erubinExAcc[key] -= 1;
+    const uses = { ...((st.ex && st.ex.uses) || {}) };
+    Object.keys(uses).forEach((k) => { if ((ERUBIN_EX === 'self' ? Number(k) === slot : true) && uses[k] && uses[k].count > 0) { uses[k] = { ...uses[k], count: uses[k].count - 1 }; st.erubinExBack = (st.erubinExBack || 0) + 1; } });
+    st.ex = { ...st.ex, uses };
+  }
+}
 const ERUBIN_PERMA = { A: [0.06, 0.09, 0.12], B: [0.10, 0.15, 0.20], C: [0.04, 0.05, 0.06] };
 const ERUBIN_PROTO = ERUBIN_BOOST2 ? {
   A: [{ rate: 1.0, cut: 0.15 }, { rate: 1.5, cut: 0.20 }, { rate: 2.0, cut: 0.30 }],
@@ -911,6 +925,7 @@ function playTeaching(st, card, slot, effMul, usedCount, guardBySlot, startDist,
     const t = ERUBIN_PROTO.A[Math.min(level, 2)];
     st.turnB = { ...st.turnB, erubinWatch: (st.turnB.erubinWatch || 0) + t.rate * effMul, takenDamageMult: (st.turnB.takenDamageMult || 1) * (1 - t.cut * effMul) };
     if (ERUBIN_BOOST2) add('atkPct', ERUBIN_PERMA.A[Math.min(level, 2)] * effMul);
+    if (ERUBIN_EX) { st.turnB = { ...st.turnB, erubinWatch: 0 }; erubinExCharge(st, slot, ERUBIN_EX_FRAC[Math.min(level, 2)] * effMul); } // ③を EX の回復に差し替え
   } else if (card.subType === 'treat_erubin') { // 試作 B
     const t = ERUBIN_PROTO.B[Math.min(level, 2)];
     if (ERUBIN_BOOST2) add('erubinGutsCut', ERUBIN_PERMA.B[Math.min(level, 2)] * effMul);
@@ -1648,7 +1663,7 @@ function simulateRun({ heroId, allies = [], hate = true, difficulty = 'Hard', se
     }
     const turns = Math.min(st.turn, 20);
     st.turnsTotal += turns; st.waveTurns.push(turns);
-    const summary = { turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, uniques: st.uniqueLog, emergencyUses: st.emergencyUses, distBonus: st.distBonus.map((x) => Math.round(x * 1000) / 1000), exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st), enemyHpTotal: st.enemyHpTotal, regenTotal: st.regenTotal || 0, overkill: st.overkill || 0 };
+    const summary = { turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, erubinExBack: st.erubinExBack || 0, training: st.trainingLog, uniques: st.uniqueLog, emergencyUses: st.emergencyUses, distBonus: st.distBonus.map((x) => Math.round(x * 1000) / 1000), exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st), enemyHpTotal: st.enemyHpTotal, regenTotal: st.regenTotal || 0, overkill: st.overkill || 0 };
     if (out !== 'clear') return { result: out === 'wipe' ? 'wipe' : 'timeout', wave: w, ...summary };
     // WAVE を抜けた(60-app.jsx resolveEnemyDefeat 11131〜): 追いつき補正と自動回復の率
     const remaining = Math.max(0, 21 - st.turn);
@@ -1685,7 +1700,7 @@ function simulateRun({ heroId, allies = [], hate = true, difficulty = 'Hard', se
       else if ([1, 3, 5, 7, 9].includes(w)) learnTeaching(st, chooseTeaching(st, teachingPool(st, 'odd')));
     }
   }
-  return { result: 'clear', wave: maxWave, turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, uniques: st.uniqueLog, emergencyUses: st.emergencyUses, distBonus: st.distBonus.map((x) => Math.round(x * 1000) / 1000), exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st), enemyHpTotal: st.enemyHpTotal, regenTotal: st.regenTotal || 0, overkill: st.overkill || 0 };
+  return { result: 'clear', wave: maxWave, turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, erubinExBack: st.erubinExBack || 0, training: st.trainingLog, uniques: st.uniqueLog, emergencyUses: st.emergencyUses, distBonus: st.distBonus.map((x) => Math.round(x * 1000) / 1000), exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st), enemyHpTotal: st.enemyHpTotal, regenTotal: st.regenTotal || 0, overkill: st.overkill || 0 };
 }
 
 function pickAllies(heroId, rng, n = 3) {
