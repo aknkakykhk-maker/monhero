@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: dfa4e015243f5b1f
+// generated-sha256: a2842a7ff827f3e6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9576,6 +9576,14 @@ const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
 const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
 // ソラシドの加入のお話(2026-10-27)。id は data/assistants.js の EVENT_REPLAYS と同じ
 const SORASHIDO_JOIN_STORY_ID = 'sorashido_join_2026_10_27';
+// レジェンドブリーダーへの招待状(2026-11-05 社長)。ブリーダーレベル1000(LEGEND_BREEDER_PASS_LEVEL)に届いた人の HOME で一度だけ流す。
+// 見た印は新しいキー(既存のキーには触らない・CLAUDE.md ⑦)。最後まで見ても飛ばしても立つ。立っている人だけ、ビートP交換所の3つの交換が優待パス還元になる
+const LEGEND_BREEDER_PASS_STORY_ID = 'legend_breeder_pass_2026_11';
+const LEGEND_BREEDER_PASS_SEEN_KEY = 'mh_beat_shop_vip_letter_seen_v1';
+// ヘルプの本文のうち、その端末で条件を満たした人だけに見せるもの(本文のかたまりの playerFlag・2026-11-05)。
+// releaseFlag は全員いっしょの公開の印で、読み込みのときに一度だけ絞り込む。こちらは描くたびに見る(本体が印を読んだら書きかえる)
+const HELP_PLAYER_FLAGS = { legendBreederPass: false };
+const helpPlayerFlagOn = (name) => !!name && HELP_PLAYER_FLAGS[name] === true;
 // 個人杯のお話(2026-10-31)。id は data/assistants.js の EVENT_REPLAYS・CARD_CUP_STORY_ID_FOR_SPLIT と同じ
 const CARD_CUP_STORY_ID = 'card_cup_2026_10_31';
 // ソラシドの加入のお話を見終えたら、沖縄のおみやげとして 10,000ビートPをギフトで1回だけ届ける(2026-10-27 社長)。
@@ -13372,6 +13380,8 @@ const AssistantFace = ({ who, size = 88, accent, expression = null }) => {
 const helpWrap = (x) => (typeof x === 'string' && typeof jaWrap === 'function'
   ? <span style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined}>{jaWrap(x)}</span> : x);
 const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
+  // その端末で条件を満たした人だけの本文(playerFlag)は、満たしていなければ見出しごと出さない
+  if(b&&b.playerFlag&&!(typeof helpPlayerFlagOn==='function'&&helpPlayerFlagOn(b.playerFlag))) return null;
   // 動画(2026-10-13・HELL のプレイ映像)。video は data/rhythm-mode.js の RHYTHM_HELL_GUIDE_VIDEOS の名前。読めないときは見出しだけ残る
   if(b.t==='video') return <div key={i} data-help-video className="rounded-2xl p-3 border" style={{borderColor:`${accent}55`,backgroundColor:'rgba(0,0,0,0.5)'}}>{b.title&&<div className="text-[11px] font-black text-white mb-2">{b.title}</div>}{typeof RhythmHellVideo==='function'&&<RhythmHellVideo id={b.video}/>}{b.text&&<div className="text-[12px] text-slate-300 leading-relaxed mt-2">{helpWrap(b.text)}</div>}</div>;
   if(b.t==='note') return <div key={i} className="rounded-2xl p-4 border" style={{borderColor:`${accent}55`,backgroundColor:'rgba(0,0,0,0.5)'}}>{b.title&&<div className="text-[11px] font-black text-white mb-1">{b.title}</div>}<div className="text-[12px] text-slate-300 leading-relaxed">{helpWrap(b.text)}</div></div>;
@@ -36795,7 +36805,7 @@ const cardShopScrollMemo = { pending:false, tab:null, top:0, row:null };
 function BreederMarketScreen({
   gold, breederPoints, ownedItems, marketTab, marketExchangeError, purchaseProcessing,
   isItemOwned, previewIcon=null, onBack, onSelectTab, onZoomIcon, onBuy, onOpenDetail, onOpenItemDetail, onExchangeSoulRankRespec,
-  onExchangeHeroProof, eventPoints=0, onExchangeEventPoints, onOpenUpcomingDetail, frameConditionOf=null,
+  onExchangeHeroProof, eventPoints=0, onExchangeEventPoints, legendPassActive=false, legendPassLetterAvailable=false, onReadLegendPassLetter=null, onOpenUpcomingDetail, frameConditionOf=null,
   // MFバトルカードの「MFバトルカード」の売り場(区切り2)。いまはMFバトルカードのトップの「マーケットへ」から入ったときだけ渡す(デバッグ専用のあいだ)。
   // { point, starter, shop, busy, onBuyPack(packId,count), onBuyStarter(kit), onExchange(offer) }。initialSection … 最初に開く売り場
   cardShop=null, initialSection=null,
@@ -36910,7 +36920,9 @@ function BreederMarketScreen({
   const eventTab = activeSectionTab('event');
   // ビートP交換所のアイテムと強化素材の分け方。育成に使う素材(プシュケー・証片・虹の超越の実・勇者の証)を「強化素材」へ
   const BEAT_POINT_MATERIAL_ITEM_IDS = ['rainbow_psyche','hero_proof_shard','transcend_fruit_rainbow','hero_proof'];
-  const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer=>(eventTab==='material')===BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId));
+  // レジェンドブリーダー優待パス(2026-11-05)を持っている人は、対象の3つの値段と受け取る数を優待パス還元に差し替えて並べる(交換するときも本体が決め直す)
+  const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer=>(eventTab==='material')===BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId))
+    .map(offer=>rhythmEventPointShopOfferWithPass(offer, legendPassActive===true));
   // scroll … タブが6つ以上のときは1行に並べ、はみ出す分は横へ送る(2段にすると品物が見える高さが減る。2026-10-26 ビートP交換所の7つ)
   //   見た目と押し方は ScreenTabs(41-screen-ui.jsx)と同じ
   //   ★ここに mh-scroll を付けない: 横画面の組み替えは「根の直下の .mh-scroll」を右の一覧(全高)にするので、タブが右いっぱいに伸びて品物へ重なる(2026-10-27)
@@ -37164,14 +37176,27 @@ function BreederMarketScreen({
             品物の一覧の先頭に置く(上の固まった所に置くと、320×568 で品物が1段の半分しか見えなかった。2026-10-26 ダメダシくん) */}
         {(()=>{const campaign=typeof rhythmEventPointCampaignAt==='function'&&!rhythmLimitedEventAt(Date.now())?rhythmEventPointCampaignAt(Date.now()):null;
           return campaign?<MarketNotice tone="info" data-event-point-campaign>{jaWrap(`🎟️ ${campaign.name}中：公開曲のビートPが${campaign.boost}倍${Number(campaign.loopBoost)>0?`・演奏のクイック周回も${campaign.loopBoost}倍`:''}（${rhythmEventJstText(Date.parse(campaign.displayEndAt||campaign.endAt))}まで）`)}</MarketNotice>:null;})()}
+        {/* レジェンドブリーダー優待パスの手紙(2026-11-05)。Lv1000に届いていて、まだお話を見ていない人だけ。押すとお話が流れ、見たら優待パス還元になる */}
+        {legendPassLetterAvailable&&typeof onReadLegendPassLetter==='function'&&(eventTab==='item'||eventTab==='material')&&
+          <button type="button" data-legend-pass-letter onClick={onReadLegendPassLetter}
+            className="mh-button mb-2 w-full rounded-xl border border-amber-300/70 bg-amber-400/15 px-3 py-2.5 text-[13px] font-black text-amber-100 active:scale-95">
+            🎫 優待パスの手紙を読む
+          </button>}
         <div data-event-point-shop data-event-point-tab={eventTab} className={MARKET_GRID_CLASS}>
           {(eventTab==='item'||eventTab==='material')&&eventItemOffers.map(offer=>{
             const item=beatPointItemOf(offer);
             const grantText=`${offer.grantAmount.toLocaleString()}${offer.unit}`;
             // ダイヤの品は受け取る数が名前(ダイヤ ×300)に入っていて、持ち数は所持ダイヤと同じなので中段は空ける
-            const middle=offer.kind==='diamond'
+            const ownedPart=offer.kind==='diamond'
               ? null
               : ownedMiddle(ownedItemCount(ownedItems, offer.itemId), item.base?{...item.base,cost:offer.cost,currency:'beatPoint'}:null, {grantText});
+            // 優待パス還元の札(2026-11-05): 金色の帯と、いつもの交換(取り消し線)を出す。「値下げ」とは書かない
+            const passPart=offer.legendPass?<div data-legend-pass-offer className="mt-1 text-center leading-tight">
+              <span className="inline-block rounded-full bg-amber-400/90 px-2 py-0.5 text-[10px] font-black text-slate-900">🎫 優待パス還元</span>
+              <div className="mt-0.5 text-[10px] font-bold text-slate-400 line-through tabular-nums">{offer.baseCost.toLocaleString()}P → {offer.baseGrantAmount.toLocaleString()}{offer.unit}</div>
+              <div className="text-[11px] font-black text-amber-200 tabular-nums">{offer.cost.toLocaleString()}P → {offer.grantAmount.toLocaleString()}{offer.unit}</div>
+            </div>:null;
+            const middle=passPart?<>{passPart}{ownedPart}</>:ownedPart;
             return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-offer':offer.id}}
               item={item} owned={false} comingSoon={false}
               canBuy={safeEventPoints>=offer.cost&&!busy}
@@ -77158,6 +77183,9 @@ function MonsterHeroGame() {
   // 難易度 HELL のお話を見たか(RHYTHM_HELL_STORY_SEEN_KEY)と、そのあとの説明(RhythmHellGuide)の今のページ。
   // rhythmHellGuide … null なら出さない。{page, debugList, fromList}(閉じたあとに戻る一覧)
   const [rhythmHellStorySeenFlag, setRhythmHellStorySeenFlag] = useState(false);
+  // レジェンドブリーダーへの招待状を見たか(LEGEND_BREEDER_PASS_SEEN_KEY・2026-11-05)。立っていれば優待パス還元
+  const [legendPassSeenFlag, setLegendPassSeenFlag] = useState(false);
+  const [legendPassSeenLoaded, setLegendPassSeenLoaded] = useState(false);
   // 助手とおしゃべりのお話を見たか(ASSISTANT_CHAT_STORY_SEEN_KEY)。読み終えるまで流さない
   const [assistantChatStorySeenFlag, setAssistantChatStorySeenFlag] = useState(false);
   const [assistantChatStorySeenLoaded, setAssistantChatStorySeenLoaded] = useState(false);
@@ -80319,6 +80347,15 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(RHYTHM_HELL_STORY_ID)) return;
     setRhythmEventStoryPending(RHYTHM_HELL_STORY_ID);
   }, [rhythmHellStorySeenLoaded, rhythmHellStorySeenFlag, rhythmBestRecords, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // レジェンドブリーダーへの招待状を、ブリーダーレベル1000に届いたあとの HOME で1回だけ流す(2026-11-05 社長)。置き方は下のおしゃべりのお話と同じ。
+  // レベルは見るたびに経験値から数え直す(breederLevel)。見たか(飛ばしたか)は新しいキーの印
+  useEffect(() => {
+    if (!legendPassSeenLoaded || legendPassSeenFlag) return;
+    if (!(Number(breederLevel?.level) >= LEGEND_BREEDER_PASS_LEVEL)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(LEGEND_BREEDER_PASS_STORY_ID)) return;
+    setRhythmEventStoryPending(LEGEND_BREEDER_PASS_STORY_ID);
+  }, [legendPassSeenLoaded, legendPassSeenFlag, breederLevel?.level, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // 助手とおしゃべりのお話を、公開のあとの最初の HOME で1回だけ流す(2026-10-14・社長の決定)。置き方は上の HELL のお話と同じ
   useEffect(() => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantChat) return;
@@ -82049,6 +82086,8 @@ function MonsterHeroGame() {
       if (RAID_JACK_ENDING_REPLAY_READY) {
         try { const v = await storeGet(RAID_JACK_ENDING_REPLAY_KEY, null, false); setRaidJackEndingReplayDone(v === true || (!!v && typeof v === 'object')); setRaidJackEndingReplayLoaded(true); } catch {}
       }
+      // レジェンドブリーダーへの招待状を見たか(優待パス還元の印・2026-11-05)。true のときだけ見た扱い
+      try { setLegendPassSeenFlag((await storeGet(LEGEND_BREEDER_PASS_SEEN_KEY, false, false)) === true); setLegendPassSeenLoaded(true); } catch {}
       // 助手とおしゃべりのお話を見たか。おしゃべりの公開(assistantChat)のあとだけ読む
       if (EVENT_REPLAY_RELEASE_FLAGS.assistantChat) {
         try { setAssistantChatStorySeenFlag((await storeGet(ASSISTANT_CHAT_STORY_SEEN_KEY, false, false)) === true); setAssistantChatStorySeenLoaded(true); } catch {}
@@ -83379,6 +83418,13 @@ function MonsterHeroGame() {
     setRaidJackEndingReplayDone(true);
     try { storeSet(RAID_JACK_ENDING_REPLAY_KEY, { at: new Date().toISOString() }, false); } catch {}
   }, []);
+  // レジェンドブリーダーへの招待状を「見た」にする(=優待パスを受け取る)。本編で流したときだけ通す(回想・デバッグからは立てない)
+  // ヘルプの「レジェンドブリーダー優待パス」は、受け取った人だけに見せる(HELP_PLAYER_FLAGS)
+  useEffect(() => { HELP_PLAYER_FLAGS.legendBreederPass = legendPassSeenFlag === true; }, [legendPassSeenFlag]);
+  const markLegendPassSeen = useCallback(() => {
+    setLegendPassSeenFlag(true);
+    try { storeSet(LEGEND_BREEDER_PASS_SEEN_KEY, true, false); } catch {}
+  }, []);
   // 助手とおしゃべりのお話を「見た」にする。回想の画面からは保存へ直接書かず、この関数を通す
   const markAssistantChatStorySeen = useCallback(() => {
     setAssistantChatStorySeenFlag(true);
@@ -83401,6 +83447,7 @@ function MonsterHeroGame() {
     tacticsIntroSeen: tacticsIntroSeenFlag,
     rhythmHellStorySeen: rhythmHellStorySeenFlag,
     assistantChatStorySeen: assistantChatStorySeenFlag,
+    legendBreederPassSeen: legendPassSeenFlag,
     tacticsTypesSeen: tacticsTypesStorySeenFlag,
     cardBattleIntroSeen: cardBattleIntroSeenFlag,
     monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID),
@@ -83706,6 +83753,13 @@ function MonsterHeroGame() {
   // ビートP交換所。残高・ダイヤ・所持アイテムを1取引で保存し、どれか1つでも失敗したら全部戻す。
   const exchangeRhythmEventPoints = async (offer, quantity=1) => {
     if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
+    // 優待パス還元の3つは、画面から来た値段を使わず、いつもの品物と保存されている印から決め直す(2026-11-05・画面の値が古くても通さない)
+    if (offer && LEGEND_BREEDER_PASS_OFFERS[offer.id]) {
+      const base = RHYTHM_EVENT_POINT_SHOP_OFFERS.find(o => o.id === offer.id) || offer;
+      let hasPass = false;
+      try { hasPass = (await storeGet(LEGEND_BREEDER_PASS_SEEN_KEY, false, false)) === true; } catch {}
+      offer = rhythmEventPointShopOfferWithPass(base, hasPass);
+    }
     // 予告中(まだ仲間にできない)の子の円盤石は交換しない。画面でも「近日追加」で押せないが、ここでも止める
     if (offer?.available === false) return { ok:false, reason:'soon' };
     marketPurchaseProcessingRef.current = true;
@@ -96109,6 +96163,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onExchangeHeroProof={exchangeHeroProofByShard}
             eventPoints={rhythmEventPoints}
             onExchangeEventPoints={exchangeRhythmEventPoints}
+            legendPassActive={legendPassSeenFlag}
+            legendPassLetterAvailable={legendPassSeenLoaded&&!legendPassSeenFlag&&Number(breederLevel?.level)>=LEGEND_BREEDER_PASS_LEVEL}
+            onReadLegendPassLetter={()=>{ if(!eventReplay) setEventReplay({ id: LEGEND_BREEDER_PASS_STORY_ID, step: 0, live: true }); }}
             onOpenUpcomingDetail={setUpcomingMonsterDetail}
             cardShop={cardMarketEntry&&cardShopState?{ ...cardShopState, busy:false, onBuyPack:buyCardPacks, onBuyStarter:buyCardStarter, onExchange:exchangeCardPoints, onExchangeCatalog:exchangeCardCatalog, onUseCatalog:spendCardCatalog, onBuyTactics:buyTacticsPacks, onExchangeTactics:exchangeTacticsShard }:null}
             initialSection={cardMarketEntry?'card':null}
@@ -98196,6 +98253,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 難易度 HELL のお話は、見終えたら続けて説明(RhythmHellGuide)を出す。一覧へ戻るのは説明を閉じたあと
           // 助手とおしゃべりのお話は、本編で流したときだけ「見た」にする(回想・デバッグでは立てない)
           if(event&&event.id===ASSISTANT_CHAT_STORY_ID&&eventReplay.live&&!eventReplay.debug) markAssistantChatStorySeen();
+          if(event&&event.id===LEGEND_BREEDER_PASS_STORY_ID&&eventReplay.live&&!eventReplay.debug) markLegendPassSeen();
           if(event&&event.id===TACTICS_TYPES_STORY_ID&&eventReplay.live&&!eventReplay.debug) markTacticsTypesStorySeen();
           // ハロウィン・ナイトの終章は、本編で見終えたら「流し直した」も立てる(はじめて見た人にも、もう流さない)
           if(event&&(event.id===RAID_JACK_ENDING_CLEARED_ID||event.id===RAID_JACK_ENDING_NOTCLEARED_ID)&&eventReplay.live&&!eventReplay.debug) markRaidJackEndingReplayed();
@@ -98223,6 +98281,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(eventReplay.live&&!eventReplay.debug&&event&&RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id==='tactics_intro') markTacticsIntroSeen();
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id===ASSISTANT_CHAT_STORY_ID) markAssistantChatStorySeen();
+          if(eventReplay.live&&!eventReplay.debug&&event&&event.id===LEGEND_BREEDER_PASS_STORY_ID) markLegendPassSeen();
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id===TACTICS_TYPES_STORY_ID) markTacticsTypesStorySeen();
           if(eventReplay.live&&!eventReplay.debug&&event&&(event.id===RAID_JACK_ENDING_CLEARED_ID||event.id===RAID_JACK_ENDING_NOTCLEARED_ID)) markRaidJackEndingReplayed();
           // MFバトルカードのはじまりは、飛ばしたら HOME のまま(入口から入れる)

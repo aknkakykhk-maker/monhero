@@ -33,7 +33,7 @@ const cardShopScrollMemo = { pending:false, tab:null, top:0, row:null };
 function BreederMarketScreen({
   gold, breederPoints, ownedItems, marketTab, marketExchangeError, purchaseProcessing,
   isItemOwned, previewIcon=null, onBack, onSelectTab, onZoomIcon, onBuy, onOpenDetail, onOpenItemDetail, onExchangeSoulRankRespec,
-  onExchangeHeroProof, eventPoints=0, onExchangeEventPoints, onOpenUpcomingDetail, frameConditionOf=null,
+  onExchangeHeroProof, eventPoints=0, onExchangeEventPoints, legendPassActive=false, legendPassLetterAvailable=false, onReadLegendPassLetter=null, onOpenUpcomingDetail, frameConditionOf=null,
   // MFバトルカードの「MFバトルカード」の売り場(区切り2)。いまはMFバトルカードのトップの「マーケットへ」から入ったときだけ渡す(デバッグ専用のあいだ)。
   // { point, starter, shop, busy, onBuyPack(packId,count), onBuyStarter(kit), onExchange(offer) }。initialSection … 最初に開く売り場
   cardShop=null, initialSection=null,
@@ -148,7 +148,9 @@ function BreederMarketScreen({
   const eventTab = activeSectionTab('event');
   // ビートP交換所のアイテムと強化素材の分け方。育成に使う素材(プシュケー・証片・虹の超越の実・勇者の証)を「強化素材」へ
   const BEAT_POINT_MATERIAL_ITEM_IDS = ['rainbow_psyche','hero_proof_shard','transcend_fruit_rainbow','hero_proof'];
-  const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer=>(eventTab==='material')===BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId));
+  // レジェンドブリーダー優待パス(2026-11-05)を持っている人は、対象の3つの値段と受け取る数を優待パス還元に差し替えて並べる(交換するときも本体が決め直す)
+  const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer=>(eventTab==='material')===BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId))
+    .map(offer=>rhythmEventPointShopOfferWithPass(offer, legendPassActive===true));
   // scroll … タブが6つ以上のときは1行に並べ、はみ出す分は横へ送る(2段にすると品物が見える高さが減る。2026-10-26 ビートP交換所の7つ)
   //   見た目と押し方は ScreenTabs(41-screen-ui.jsx)と同じ
   //   ★ここに mh-scroll を付けない: 横画面の組み替えは「根の直下の .mh-scroll」を右の一覧(全高)にするので、タブが右いっぱいに伸びて品物へ重なる(2026-10-27)
@@ -402,14 +404,27 @@ function BreederMarketScreen({
             品物の一覧の先頭に置く(上の固まった所に置くと、320×568 で品物が1段の半分しか見えなかった。2026-10-26 ダメダシくん) */}
         {(()=>{const campaign=typeof rhythmEventPointCampaignAt==='function'&&!rhythmLimitedEventAt(Date.now())?rhythmEventPointCampaignAt(Date.now()):null;
           return campaign?<MarketNotice tone="info" data-event-point-campaign>{jaWrap(`🎟️ ${campaign.name}中：公開曲のビートPが${campaign.boost}倍${Number(campaign.loopBoost)>0?`・演奏のクイック周回も${campaign.loopBoost}倍`:''}（${rhythmEventJstText(Date.parse(campaign.displayEndAt||campaign.endAt))}まで）`)}</MarketNotice>:null;})()}
+        {/* レジェンドブリーダー優待パスの手紙(2026-11-05)。Lv1000に届いていて、まだお話を見ていない人だけ。押すとお話が流れ、見たら優待パス還元になる */}
+        {legendPassLetterAvailable&&typeof onReadLegendPassLetter==='function'&&(eventTab==='item'||eventTab==='material')&&
+          <button type="button" data-legend-pass-letter onClick={onReadLegendPassLetter}
+            className="mh-button mb-2 w-full rounded-xl border border-amber-300/70 bg-amber-400/15 px-3 py-2.5 text-[13px] font-black text-amber-100 active:scale-95">
+            🎫 優待パスの手紙を読む
+          </button>}
         <div data-event-point-shop data-event-point-tab={eventTab} className={MARKET_GRID_CLASS}>
           {(eventTab==='item'||eventTab==='material')&&eventItemOffers.map(offer=>{
             const item=beatPointItemOf(offer);
             const grantText=`${offer.grantAmount.toLocaleString()}${offer.unit}`;
             // ダイヤの品は受け取る数が名前(ダイヤ ×300)に入っていて、持ち数は所持ダイヤと同じなので中段は空ける
-            const middle=offer.kind==='diamond'
+            const ownedPart=offer.kind==='diamond'
               ? null
               : ownedMiddle(ownedItemCount(ownedItems, offer.itemId), item.base?{...item.base,cost:offer.cost,currency:'beatPoint'}:null, {grantText});
+            // 優待パス還元の札(2026-11-05): 金色の帯と、いつもの交換(取り消し線)を出す。「値下げ」とは書かない
+            const passPart=offer.legendPass?<div data-legend-pass-offer className="mt-1 text-center leading-tight">
+              <span className="inline-block rounded-full bg-amber-400/90 px-2 py-0.5 text-[10px] font-black text-slate-900">🎫 優待パス還元</span>
+              <div className="mt-0.5 text-[10px] font-bold text-slate-400 line-through tabular-nums">{offer.baseCost.toLocaleString()}P → {offer.baseGrantAmount.toLocaleString()}{offer.unit}</div>
+              <div className="text-[11px] font-black text-amber-200 tabular-nums">{offer.cost.toLocaleString()}P → {offer.grantAmount.toLocaleString()}{offer.unit}</div>
+            </div>:null;
+            const middle=passPart?<>{passPart}{ownedPart}</>:ownedPart;
             return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-offer':offer.id}}
               item={item} owned={false} comingSoon={false}
               canBuy={safeEventPoints>=offer.cost&&!busy}

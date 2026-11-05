@@ -10367,6 +10367,24 @@ const RHYTHM_HELL_STORY_CALLS = { mua: 'ドラケン／もも', kiki: 'ドラさ
 //   公開の印は assistantChat。見たかどうかは新しいキー mh_story_assistant_chat_seen_v1(60-app.jsx の EVENT_REPLAY_UNLOCK_FLAGS の assistantChatStorySeen)
 // ★お話の中では、機械やしくみの言葉を使わない(ゲームの世界の中のこととして書く)。
 //   「モンビー」は ももすけ のセリフで使う。ききは「モンヒロビート」。ドラの一人称は基本「おで」、たまに「ワイ」
+// レジェンドブリーダーへの招待状(2026-11-05 社長「手紙はストーリーイベント的に」「レジェンドブリーダー優待パス」)。
+// ブリーダーレベル1000に届いた人の HOME で一度だけ流す(見た印は新しいキー mh_beat_shop_vip_letter_seen_v1)。
+// 見たあと(飛ばしても)、ビートP交換所の3つの交換の還元が良くなる(data/rhythm-event.js の LEGEND_BREEDER_PASS_OFFERS)。
+// ★お話の中では具体的な数字を言わない(社長)。数字は交換所の札とヘルプだけ。「値下げ」「安く」とも言わない
+const LEGEND_BREEDER_PASS_STORY = [
+  { bg:'monhero_plaza', who:'mua', e:'excited', fxText:'いつもの広場に、金色の封筒を持ったみゅあが駆けてくる', t:'{name}〜！ 大変大変！ {name}あてに、なんかすごい手紙が届いてるよ！' },
+  { who:'kiki',     e:'surprise', t:'金色の封でつ……。ふつうのお手紙じゃなさそうでつね。' },
+  { who:'dra',      e:'normal',   t:'差出人は……ビートP交換所？ あそこが手紙なんて出すんだな' },
+  { who:'mua',      e:'wink',     t:'開けていい？ 開けちゃうね！' },
+  { who:'kiki',     e:'normal',   t:'『ブリーダーレベル1000に届いた{name}さまへ。たくさん育てて、たくさん演奏してくれて、ありがとうございます』……でつ。' },
+  { who:'kiki',     e:'happy',    fxText:'🎫 レジェンドブリーダー優待パスが届きました', t:'『感謝のしるしに、レジェンドブリーダー優待パスをお贈りします』' },
+  { who:'dra',      e:'happy',    t:'このパスがあれば、交換所でビートPを替えるときの還元が、ぐっと良くなるんだとよ' },
+  { who:'mua',      e:'excited',  t:'ためてきたビートPが、もっと大きな価値になるってこと！？ まぢすごいぢゃん{name}！' },
+  { who:'kiki',     e:'happy',    t:'ダイヤとトレーニングチケットの札に「優待パス還元」と出まつ。いつでも使えまつよ。' },
+  { who:'dra',      e:'wink',     t:'{name}がずっと続けてきたぶんの、ごほうびだな。遠慮なく使えばいい' },
+  { who:'mua',      e:'happy',    t:'レジェンドの{name}、これからもいっしょにがんばろ！' },
+];
+const LEGEND_BREEDER_PASS_STORY_CALLS = { mua: 'きき／ドラ', kiki: 'みゅあちん／ドラさん', dra: 'みゅあ／靴下さん' };
 const ASSISTANT_CHAT_STORY = [
   { who:'mua',      e:'excited',  t:'{name}、聞いて聞いて！ あたしたち、ずっと思ってたことがあるの！' },
   { who:'kiki',     e:'normal',   t:'いつもは、決まったひとことしか言えなかったでつ。' },
@@ -11236,6 +11254,8 @@ const EVENT_REPLAYS = [
   { id: 'rhythm_hell_story', date: '2026-10-11 18:30', title: '空まで届くビート ～難易度 HELL～', script: RHYTHM_HELL_STORY, calls: RHYTHM_HELL_STORY_CALLS, unlockedKey: 'rhythmHellStorySeen', releaseFlag: 'rhythmHell', group: 'update' },
   // 助手とおしゃべりのお話(2026-10-14)。公開の印 assistantChat と一緒に出る。公開後の最初の HOME で1回流れ、そのあとは回想から見返せる。
   // 見たかどうかは新しいキー mh_story_assistant_chat_seen_v1(60-app.jsx の EVENT_REPLAY_UNLOCK_FLAGS の assistantChatStorySeen)
+  // レジェンドブリーダーへの招待状(2026-11-05)。見た人だけ回想に出る(legendBreederPassSeen = 印 mh_beat_shop_vip_letter_seen_v1)
+  { id: 'legend_breeder_pass_2026_11', date: '2026-11-05 20:04', title: 'レジェンドブリーダーへの招待状', script: LEGEND_BREEDER_PASS_STORY, calls: LEGEND_BREEDER_PASS_STORY_CALLS, unlockedKey: 'legendBreederPassSeen', group: 'update' },
   { id: 'assistant_chat_story', date: '2026-10-14 11:59', title: '話せるようになった日 ～ことのはの鈴～', script: ASSISTANT_CHAT_STORY, calls: ASSISTANT_CHAT_STORY_CALLS, unlockedKey: 'assistantChatStorySeen', releaseFlag: 'assistantChat', group: 'update' },
   // あつの加入のお話(2026-10-22)。みゅあ・きき・ももすけの仲良し度がそろったあとの HOME で1回流れ、見終わるとあつを選べる。
   // 公開の印 assistantAtsu が立つまでは流れず、回想にも出さない(releaseFlag)。見たかは mh_rhythm_event_story_v1 の id(新しいキーは作らない)

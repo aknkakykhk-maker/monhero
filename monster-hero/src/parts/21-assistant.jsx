@@ -203,6 +203,8 @@ const AssistantFace = ({ who, size = 88, accent, expression = null }) => {
 const helpWrap = (x) => (typeof x === 'string' && typeof jaWrap === 'function'
   ? <span style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined}>{jaWrap(x)}</span> : x);
 const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
+  // その端末で条件を満たした人だけの本文(playerFlag)は、満たしていなければ見出しごと出さない
+  if(b&&b.playerFlag&&!(typeof helpPlayerFlagOn==='function'&&helpPlayerFlagOn(b.playerFlag))) return null;
   // 動画(2026-10-13・HELL のプレイ映像)。video は data/rhythm-mode.js の RHYTHM_HELL_GUIDE_VIDEOS の名前。読めないときは見出しだけ残る
   if(b.t==='video') return <div key={i} data-help-video className="rounded-2xl p-3 border" style={{borderColor:`${accent}55`,backgroundColor:'rgba(0,0,0,0.5)'}}>{b.title&&<div className="text-[11px] font-black text-white mb-2">{b.title}</div>}{typeof RhythmHellVideo==='function'&&<RhythmHellVideo id={b.video}/>}{b.text&&<div className="text-[12px] text-slate-300 leading-relaxed mt-2">{helpWrap(b.text)}</div>}</div>;
   if(b.t==='note') return <div key={i} className="rounded-2xl p-4 border" style={{borderColor:`${accent}55`,backgroundColor:'rgba(0,0,0,0.5)'}}>{b.title&&<div className="text-[11px] font-black text-white mb-1">{b.title}</div>}<div className="text-[12px] text-slate-300 leading-relaxed">{helpWrap(b.text)}</div></div>;

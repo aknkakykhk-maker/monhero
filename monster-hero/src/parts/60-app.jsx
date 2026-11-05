@@ -2279,6 +2279,9 @@ function MonsterHeroGame() {
   // 難易度 HELL のお話を見たか(RHYTHM_HELL_STORY_SEEN_KEY)と、そのあとの説明(RhythmHellGuide)の今のページ。
   // rhythmHellGuide … null なら出さない。{page, debugList, fromList}(閉じたあとに戻る一覧)
   const [rhythmHellStorySeenFlag, setRhythmHellStorySeenFlag] = useState(false);
+  // レジェンドブリーダーへの招待状を見たか(LEGEND_BREEDER_PASS_SEEN_KEY・2026-11-05)。立っていれば優待パス還元
+  const [legendPassSeenFlag, setLegendPassSeenFlag] = useState(false);
+  const [legendPassSeenLoaded, setLegendPassSeenLoaded] = useState(false);
   // 助手とおしゃべりのお話を見たか(ASSISTANT_CHAT_STORY_SEEN_KEY)。読み終えるまで流さない
   const [assistantChatStorySeenFlag, setAssistantChatStorySeenFlag] = useState(false);
   const [assistantChatStorySeenLoaded, setAssistantChatStorySeenLoaded] = useState(false);
@@ -5440,6 +5443,15 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(RHYTHM_HELL_STORY_ID)) return;
     setRhythmEventStoryPending(RHYTHM_HELL_STORY_ID);
   }, [rhythmHellStorySeenLoaded, rhythmHellStorySeenFlag, rhythmBestRecords, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // レジェンドブリーダーへの招待状を、ブリーダーレベル1000に届いたあとの HOME で1回だけ流す(2026-11-05 社長)。置き方は下のおしゃべりのお話と同じ。
+  // レベルは見るたびに経験値から数え直す(breederLevel)。見たか(飛ばしたか)は新しいキーの印
+  useEffect(() => {
+    if (!legendPassSeenLoaded || legendPassSeenFlag) return;
+    if (!(Number(breederLevel?.level) >= LEGEND_BREEDER_PASS_LEVEL)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(LEGEND_BREEDER_PASS_STORY_ID)) return;
+    setRhythmEventStoryPending(LEGEND_BREEDER_PASS_STORY_ID);
+  }, [legendPassSeenLoaded, legendPassSeenFlag, breederLevel?.level, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // 助手とおしゃべりのお話を、公開のあとの最初の HOME で1回だけ流す(2026-10-14・社長の決定)。置き方は上の HELL のお話と同じ
   useEffect(() => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantChat) return;
@@ -7170,6 +7182,8 @@ function MonsterHeroGame() {
       if (RAID_JACK_ENDING_REPLAY_READY) {
         try { const v = await storeGet(RAID_JACK_ENDING_REPLAY_KEY, null, false); setRaidJackEndingReplayDone(v === true || (!!v && typeof v === 'object')); setRaidJackEndingReplayLoaded(true); } catch {}
       }
+      // レジェンドブリーダーへの招待状を見たか(優待パス還元の印・2026-11-05)。true のときだけ見た扱い
+      try { setLegendPassSeenFlag((await storeGet(LEGEND_BREEDER_PASS_SEEN_KEY, false, false)) === true); setLegendPassSeenLoaded(true); } catch {}
       // 助手とおしゃべりのお話を見たか。おしゃべりの公開(assistantChat)のあとだけ読む
       if (EVENT_REPLAY_RELEASE_FLAGS.assistantChat) {
         try { setAssistantChatStorySeenFlag((await storeGet(ASSISTANT_CHAT_STORY_SEEN_KEY, false, false)) === true); setAssistantChatStorySeenLoaded(true); } catch {}
@@ -8500,6 +8514,13 @@ function MonsterHeroGame() {
     setRaidJackEndingReplayDone(true);
     try { storeSet(RAID_JACK_ENDING_REPLAY_KEY, { at: new Date().toISOString() }, false); } catch {}
   }, []);
+  // レジェンドブリーダーへの招待状を「見た」にする(=優待パスを受け取る)。本編で流したときだけ通す(回想・デバッグからは立てない)
+  // ヘルプの「レジェンドブリーダー優待パス」は、受け取った人だけに見せる(HELP_PLAYER_FLAGS)
+  useEffect(() => { HELP_PLAYER_FLAGS.legendBreederPass = legendPassSeenFlag === true; }, [legendPassSeenFlag]);
+  const markLegendPassSeen = useCallback(() => {
+    setLegendPassSeenFlag(true);
+    try { storeSet(LEGEND_BREEDER_PASS_SEEN_KEY, true, false); } catch {}
+  }, []);
   // 助手とおしゃべりのお話を「見た」にする。回想の画面からは保存へ直接書かず、この関数を通す
   const markAssistantChatStorySeen = useCallback(() => {
     setAssistantChatStorySeenFlag(true);
@@ -8522,6 +8543,7 @@ function MonsterHeroGame() {
     tacticsIntroSeen: tacticsIntroSeenFlag,
     rhythmHellStorySeen: rhythmHellStorySeenFlag,
     assistantChatStorySeen: assistantChatStorySeenFlag,
+    legendBreederPassSeen: legendPassSeenFlag,
     tacticsTypesSeen: tacticsTypesStorySeenFlag,
     cardBattleIntroSeen: cardBattleIntroSeenFlag,
     monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID),
@@ -8827,6 +8849,13 @@ function MonsterHeroGame() {
   // ビートP交換所。残高・ダイヤ・所持アイテムを1取引で保存し、どれか1つでも失敗したら全部戻す。
   const exchangeRhythmEventPoints = async (offer, quantity=1) => {
     if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
+    // 優待パス還元の3つは、画面から来た値段を使わず、いつもの品物と保存されている印から決め直す(2026-11-05・画面の値が古くても通さない)
+    if (offer && LEGEND_BREEDER_PASS_OFFERS[offer.id]) {
+      const base = RHYTHM_EVENT_POINT_SHOP_OFFERS.find(o => o.id === offer.id) || offer;
+      let hasPass = false;
+      try { hasPass = (await storeGet(LEGEND_BREEDER_PASS_SEEN_KEY, false, false)) === true; } catch {}
+      offer = rhythmEventPointShopOfferWithPass(base, hasPass);
+    }
     // 予告中(まだ仲間にできない)の子の円盤石は交換しない。画面でも「近日追加」で押せないが、ここでも止める
     if (offer?.available === false) return { ok:false, reason:'soon' };
     marketPurchaseProcessingRef.current = true;
@@ -21230,6 +21259,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onExchangeHeroProof={exchangeHeroProofByShard}
             eventPoints={rhythmEventPoints}
             onExchangeEventPoints={exchangeRhythmEventPoints}
+            legendPassActive={legendPassSeenFlag}
+            legendPassLetterAvailable={legendPassSeenLoaded&&!legendPassSeenFlag&&Number(breederLevel?.level)>=LEGEND_BREEDER_PASS_LEVEL}
+            onReadLegendPassLetter={()=>{ if(!eventReplay) setEventReplay({ id: LEGEND_BREEDER_PASS_STORY_ID, step: 0, live: true }); }}
             onOpenUpcomingDetail={setUpcomingMonsterDetail}
             cardShop={cardMarketEntry&&cardShopState?{ ...cardShopState, busy:false, onBuyPack:buyCardPacks, onBuyStarter:buyCardStarter, onExchange:exchangeCardPoints, onExchangeCatalog:exchangeCardCatalog, onUseCatalog:spendCardCatalog, onBuyTactics:buyTacticsPacks, onExchangeTactics:exchangeTacticsShard }:null}
             initialSection={cardMarketEntry?'card':null}
@@ -23317,6 +23349,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 難易度 HELL のお話は、見終えたら続けて説明(RhythmHellGuide)を出す。一覧へ戻るのは説明を閉じたあと
           // 助手とおしゃべりのお話は、本編で流したときだけ「見た」にする(回想・デバッグでは立てない)
           if(event&&event.id===ASSISTANT_CHAT_STORY_ID&&eventReplay.live&&!eventReplay.debug) markAssistantChatStorySeen();
+          if(event&&event.id===LEGEND_BREEDER_PASS_STORY_ID&&eventReplay.live&&!eventReplay.debug) markLegendPassSeen();
           if(event&&event.id===TACTICS_TYPES_STORY_ID&&eventReplay.live&&!eventReplay.debug) markTacticsTypesStorySeen();
           // ハロウィン・ナイトの終章は、本編で見終えたら「流し直した」も立てる(はじめて見た人にも、もう流さない)
           if(event&&(event.id===RAID_JACK_ENDING_CLEARED_ID||event.id===RAID_JACK_ENDING_NOTCLEARED_ID)&&eventReplay.live&&!eventReplay.debug) markRaidJackEndingReplayed();
@@ -23344,6 +23377,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(eventReplay.live&&!eventReplay.debug&&event&&RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id==='tactics_intro') markTacticsIntroSeen();
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id===ASSISTANT_CHAT_STORY_ID) markAssistantChatStorySeen();
+          if(eventReplay.live&&!eventReplay.debug&&event&&event.id===LEGEND_BREEDER_PASS_STORY_ID) markLegendPassSeen();
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id===TACTICS_TYPES_STORY_ID) markTacticsTypesStorySeen();
           if(eventReplay.live&&!eventReplay.debug&&event&&(event.id===RAID_JACK_ENDING_CLEARED_ID||event.id===RAID_JACK_ENDING_NOTCLEARED_ID)) markRaidJackEndingReplayed();
           // MFバトルカードのはじまりは、飛ばしたら HOME のまま(入口から入れる)
