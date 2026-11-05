@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "12b666f35bb1",
-  "packs": {"beat":{"bytes":133178894,"count":99},"battle":{"bytes":125258781,"count":797},"card":{"bytes":36015185,"count":1010},"all":{"bytes":294452860,"count":1906},"core":{"bytes":16453926,"count":22}},
+  "id": "870612b24eb6",
+  "packs": {"beat":{"bytes":133178894,"count":99},"battle":{"bytes":125266069,"count":797},"card":{"bytes":36015185,"count":1010},"all":{"bytes":294460148,"count":1906},"core":{"bytes":16453926,"count":22}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -130,7 +130,7 @@
     "images/assistant/erubin_crying.PNG": {"v":"60848fdb5a11","size":105927,"pack":"battle"},
     "images/assistant/erubin_excited.PNG": {"v":"524ad9080d5b","size":107464,"pack":"battle"},
     "images/assistant/erubin_happy.PNG": {"v":"85c058802fab","size":97647,"pack":"battle"},
-    "images/assistant/erubin_normal.PNG": {"v":"d0ce5e1ad771","size":93962,"pack":"battle"},
+    "images/assistant/erubin_normal.PNG": {"v":"75d8ac4d159c","size":97645,"pack":"battle"},
     "images/assistant/erubin_surprise.PNG": {"v":"56edadd92a0c","size":94688,"pack":"battle"},
     "images/assistant/erubin_troubled.PNG": {"v":"51b211e64e4b","size":94777,"pack":"battle"},
     "images/assistant/erubin_wink.PNG": {"v":"0b1ff0f844df","size":99278,"pack":"battle"},
@@ -282,7 +282,7 @@
     "images/assistant/sekiyuou/erubin_crying.PNG": {"v":"1e20b4c0a92d","size":117845,"pack":"battle"},
     "images/assistant/sekiyuou/erubin_excited.PNG": {"v":"2277ec6f7e46","size":117752,"pack":"battle"},
     "images/assistant/sekiyuou/erubin_happy.PNG": {"v":"71779dd2227a","size":116097,"pack":"battle"},
-    "images/assistant/sekiyuou/erubin_normal.PNG": {"v":"08c65a45f38f","size":114277,"pack":"battle"},
+    "images/assistant/sekiyuou/erubin_normal.PNG": {"v":"4ecba0da7c53","size":117882,"pack":"battle"},
     "images/assistant/sekiyuou/erubin_surprise.PNG": {"v":"d6316fcc4b44","size":112681,"pack":"battle"},
     "images/assistant/sekiyuou/erubin_troubled.PNG": {"v":"cfec5006c6c5","size":113265,"pack":"battle"},
     "images/assistant/sekiyuou/erubin_wink.PNG": {"v":"9b690e8df468","size":116548,"pack":"battle"},

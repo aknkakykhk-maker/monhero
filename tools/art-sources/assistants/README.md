@@ -95,4 +95,6 @@
   石油王を `monster-hero/images/assistant/sekiyuou/` へ
 - 切り方: `python3 tools/assistant/cut-assistant-sheet.py <シート> <出力> erubin normal,happy,surprise,troubled,crying,excited,angry,wink [--pockets]`
   (通常衣装だけ `--pockets`。石油王の白い頭布は背景とほぼ同じ色なので、囲まれた所まで抜くと頭布が消える)
+- お話の大きい立ち絵に使う `erubin_normal.PNG`(通常・石油王)は、切り抜きを `tools/assistant/rematte-assistant-art.py` で仕上げ直した(2026-11-05 社長「透過の雑さが目立つ」。石油王は `--cloth`)。
+  配信用はディザ付き256色(imagequant)。ほかの表情の絵は切ったままのもの
 - 表情の当て方・お話の骨組み: [`docs/progress/tempo-2026-11-05/erubin-prep.md`](../../../docs/progress/tempo-2026-11-05/erubin-prep.md)
