@@ -1345,6 +1345,21 @@
     "subdivisionsPerBeat": 4,
     "source": "command"
    }
+  },
+  "evans": {
+   "flowPlacement": true,
+   "masterDensity": 1.1,
+   "audio": "monster-hero/audio/bgm-evans.mp3",
+   "chartRevision": 35,
+   "audioSha256": "37c5c9e21113e18f732c166f82098820cf6edc3fb3416aad8c26e2c5b3ec80f5",
+   "durationMs": 107598,
+   "analyzedTiming": {
+    "bpm": 184.975,
+    "beatZeroMs": 2135,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
   }
  }
 }

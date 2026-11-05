@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "d8193ad5e94d",
-  "packs": {"beat":{"bytes":133178894,"count":99},"battle":{"bytes":125268269,"count":797},"card":{"bytes":36015185,"count":1010},"all":{"bytes":294462348,"count":1906},"core":{"bytes":16478502,"count":22}},
+  "id": "5c6be8352c85",
+  "packs": {"beat":{"bytes":134937313,"count":101},"battle":{"bytes":125268269,"count":797},"card":{"bytes":36015185,"count":1010},"all":{"bytes":296220767,"count":1908},"core":{"bytes":16525235,"count":22}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -30,6 +30,7 @@
     "audio/bgm-eiki-boss-remix.mp3": {"v":"83093750c9ec","size":2617100,"pack":"beat"},
     "audio/bgm-emerald-rush.mp3": {"v":"7782e3520275","size":1752624,"pack":"beat"},
     "audio/bgm-enhance.mp3": {"v":"eb0690d02d8a","size":432649,"pack":"battle"},
+    "audio/bgm-evans.mp3": {"v":"37c5c9e21113","size":1721573,"pack":"beat"},
     "audio/bgm-event-01.mp3": {"v":"c57069b5ad2f","size":2012895,"pack":"battle"},
     "audio/bgm-event-02.mp3": {"v":"d572118c203e","size":2350895,"pack":"battle"},
     "audio/bgm-freedom-dive.mp3": {"v":"34616b2fccd3","size":1744848,"pack":"beat"},
@@ -1828,6 +1829,7 @@
     "images/song-art/dullahan-clockwork.jpg": {"v":"2227eb23f4d0","size":72430,"pack":"beat"},
     "images/song-art/dullahan.jpg": {"v":"59f1f7e412a3","size":68473,"pack":"beat"},
     "images/song-art/emerald-rush.jpg": {"v":"d9bc5685600b","size":76420,"pack":"beat"},
+    "images/song-art/evans.jpg": {"v":"33c4ea278fce","size":36846,"pack":"beat"},
     "images/song-art/freedom-dive.jpg": {"v":"8541349e07f8","size":68100,"pack":"beat"},
     "images/song-art/grievous-lady.jpg": {"v":"0933a2c340b4","size":74743,"pack":"beat"},
     "images/song-art/haruka.jpg": {"v":"d3979cac1117","size":74624,"pack":"beat"},
@@ -1911,7 +1913,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"6130ecdc7a17","size":279885,"pack":"core"},
+    "tailwind.css": {"v":"a9ecc2e7be95","size":279885,"pack":"core"},
     "data/images/images-ally.js": {"v":"83d788473475","size":72834,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"f908809f4b48","size":60701,"pack":"core"},
@@ -1919,7 +1921,7 @@
     "data/breeder.js": {"v":"1c2a7c22009b","size":129032,"pack":"core"},
     "data/enemy-monsters.js": {"v":"6811f59c3732","size":7879,"pack":"core"},
     "data/skills.js": {"v":"06be9af9b367","size":4375,"pack":"core"},
-    "data/rhythm-mode.js": {"v":"eef83d0fc9ab","size":4294117,"pack":"core"},
+    "data/rhythm-mode.js": {"v":"727a3065b8b8","size":4340684,"pack":"core"},
     "data/rhythm-lane-svg.js": {"v":"f232b9d7b2ba","size":12463,"pack":"core"},
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
@@ -1930,6 +1932,6 @@
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
     "data/assistants.js": {"v":"6b88bb98f224","size":1097481,"pack":"core"},
     "data/card-battle-cards.js": {"v":"3888c3d627a6","size":120016,"pack":"core"},
-    "game-system.compiled.js": {"v":"525d39f4c344","size":7825292,"pack":"core"}
+    "game-system.compiled.js": {"v":"294ca8951660","size":7825458,"pack":"core"}
   }
 }
