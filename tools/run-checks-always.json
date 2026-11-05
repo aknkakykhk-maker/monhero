@@ -66,6 +66,7 @@
   "boot/bgm-screen-coverage-check.js",
   "boot/data-cache-key-check.js",
   "boot/event-replay-check.js",
+  "boot/story-chunk-wrap-check.js",
   "boot/event-replay-release-flag-check.js",
   "boot/gift-claim-transaction-check.js",
   "boot/gift-login-check.js",

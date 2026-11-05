@@ -23235,6 +23235,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const storyCplBottom=Math.max(8,Math.floor((storyBoxW-64-(storyZones?(storyLand?62:100):0))/13)-(storyZones?4:2));
         // 吹き出しは幅が狭く、言葉の切れ目で折ると行の終わりが空きやすいので、さらに控えめに見込む(縦の 390 幅で1行12字)
         const storyCplBubble=Math.max(6,storyLand?Math.floor((storyBoxW-118)/12)-3:Math.floor((storyBoxW-156)/14)-4);
+        // 折り方を決める1行の字数は、ページ分けの控えめな見込みではなく、実際の欄の幅から出す(欄の内側の幅÷字の大きさ。端の1字ぶんは余らせる)
+        const storyCapBottom=Math.floor((storyBoxW-64-(storyLand?62:100))/13-0.2);
+        const storyCapBubble=Math.floor((storyLand?(storyBoxW-118)/12:(storyBoxW-156)/14)-0.2);
+        // 台詞を文の切れ目のかたまりごとに並べる(storyChunkLines)。かたまりで折ると行が増えるときは、今までどおり
+        //   横の低い画面の吹き出しは高さ 84px で2行しか入らないので、かたまりで並べるのは2行まで(70-bootstrap.jsx)
+        const storyChunkMax=(cap)=>storyLand&&cap===storyCapBubble?2:3;
+        const storyLineNodes=(text,cap)=>{
+          const chunks=typeof storyChunkLines==='function'?storyChunkLines(text,cap,storyChunkMax(cap)):null;
+          // 顔文字「(˘ω˘)」・数と単位「5ターン目」は途中で折らない(数と単位の前では折れる)
+          const body=(t)=>typeof storyEmoticonParts==='function'?storyEmoticonParts(t).map((p,k)=>p.emo?<React.Fragment key={k}>{k>0&&!/^[(（]/.test(p.t)?'\u200B':null}<span style={{whiteSpace:'nowrap'}}>{p.t}</span></React.Fragment>:<React.Fragment key={k}>{bubbleWrap(p.t)}</React.Fragment>):bubbleWrap(t);
+          if(!chunks) return typeof text==='string'&&!text.includes('\n')?body(text):bubbleLines(text);
+          // 入りきらない長いかたまり(flow)は、前のかたまりの後ろへそのまま流して、言葉の切れ目で折る
+          return chunks.map((c,i)=><React.Fragment key={i}>{i>0?(c.sp?' ':'\u200B'):null}{c.flow?body(c.t):<span data-story-chunk style={{display:'inline-block',maxWidth:'100%'}}>{body(c.t)}</span>}</React.Fragment>);
+        };
+        // かたまりで並べるときは、行の長さをそろえる折り方(balance)をやめる(そろえようとして、文の途中で早めに折れていた)
+        const storyLineStyle=(text,cap)=>{
+          const st=bubbleWrapStyle();
+          return storyZones&&typeof storyChunkLines==='function'&&storyChunkLines(text,cap,storyChunkMax(cap))?{...st,textWrap:'wrap'}:st;
+        };
         const storyPageCache=[];
         const storyPagesOf=(i)=>{
           if(storyPageCache[i]) return storyPageCache[i];
@@ -23353,7 +23372,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     {/* 話している人の顔を指すしっぽ */}
                     <span aria-hidden="true" style={{position:'absolute',left:-9,top:22,width:0,height:0,borderTop:'8px solid transparent',borderBottom:'8px solid transparent',borderRight:`9px solid ${stageGuest.accent}`}}/>
                     <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:stageGuest.accent}}>{bubbleLine.name||stageGuest.name}</span>
-                    <span className="mt-1 block text-[14px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleLines(storyZones?storyTextAt(bubbleIdx,stageGuest):speakText(bubbleLine,stageGuest))}</span>
+                    <span className="mt-1 block text-[14px] font-bold leading-relaxed text-white" style={storyLineStyle(storyZones?storyTextAt(bubbleIdx,stageGuest):'',storyCapBubble)}>{storyZones?storyLineNodes(storyTextAt(bubbleIdx,stageGuest),storyCapBubble):bubbleLines(speakText(bubbleLine,stageGuest))}</span>
                   </div>
                 )}
               </div>
@@ -23428,7 +23447,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた
                   (2026-09-11・ユーザー指摘「名前呼びのとこが変換されてない」)。
                   呼び方も絆Lvも助手ごとに違うので、選んでいる助手ではなく「話している助手」から引く */}
-              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={bubbleWrapStyle()}>{bubbleLines(storyZones?storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker):speakText(bottomLine,bottomSpeaker))}</span>
+              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={storyLineStyle(storyZones?storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker):'',storyCapBottom)}>{storyZones?storyLineNodes(storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker),storyCapBottom):bubbleLines(speakText(bottomLine,bottomSpeaker))}</span>
             </div>:<div data-story-line-box className={`flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400${storyZones?' min-w-0 flex-1':''}`}>▲ 上のことばを読んでね</div>}
             </div>
             <p className="mt-2 text-center text-[11px] font-bold tabular-nums text-slate-300">

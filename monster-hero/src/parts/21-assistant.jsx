@@ -40,7 +40,7 @@ const STORY_ENDING_STYLE = 'pull';
 // お話の始まり(2026-11-04 社長「イベントストーリーのはじまりもおわりみたいにこだわって」)。終わりの札と対になる幕開け。
 //   'title' = 暗い画面に題字が浮かび、場面が近づきながら明るくなって最初のページへ / 'recap' = 'title' + 前のお話の題名・イベントの残り時間 /
 //   'iris' = 'title' のあと、鍵穴から広がるように丸く場面が開く / 'none' = 出さない。どれもタップで飛ばせる
-const STORY_OPENING_STYLE = 'none';
+const STORY_OPENING_STYLE = 'iris';
 // 題(「鍵の向こう側へ 第3話 ～大嫌いで、大好き～」)を、シリーズ名・何話・副題に分ける
 //   続きもの(「第◯話」「第◯部」「終章」がある題)は { series, ep, sub, serial:true }。単発のお話(「MFバトルカード ～物置の古い箱～」)は ep に題の前半、sub に「～…～」
 //   final … 「終章」(ハロウィンのエンディングA/B・パンドラ第8話)。次のお話は出さず「おしまい」にする
@@ -76,6 +76,75 @@ const storySplitPages = (text, cpl, maxLines) => {
     ? pack((page.match(/[^、，\n]*(?:[、，]+|\n|$)/g) || [page]).filter(Boolean)) : [page]));
   const out = pages.map(tidy).filter((t) => t.length);
   return out.length ? out : [s];
+};
+// お話の台詞を、文の切れ目ごとのかたまりに分ける(2026-11-04 社長「セリフの改行の位置がちょこちょこ悪い」)。
+//   収まる幅があるのに文の途中(「見られたくなかった／んじゃないかな」「ももは／ドラちゃんの」)で折れていたので、
+//   かたまり(。！？の後・空白・「」のまとまり。長すぎるかたまりは、さらに「、」の後)を1つずつ inline-block にして、そこで折れるようにする。
+//   cap は1行に入る字数(実際の欄の幅から)。かたまりで折ると maxLines を超えそうなら null(今までどおりの折り方)
+const STORY_EMOTICON_HEAD_RE = /^[(（][^ぁ-んァ-ヶ一-龠a-zA-Z0-9()（）]{1,10}[)）][0-9９ｂb]?/;
+// 台詞を、途中で折らない所(顔文字「(˘ω˘)」・数と単位「5ターン目」「1枚」)とそれ以外に分ける(emo の所は折らずに描く)
+const STORY_NOBREAK_SPLIT_RE = /([(（][^ぁ-んァ-ヶ一-龠a-zA-Z0-9()（）]{1,10}[)）][0-9９ｂb]?|[0-9０-９][0-9０-９,.]*(?:ターン目?|段階|回目?|体|枚|位|曲|話|日|時|周|人|個|倍|秒|分|つ))/;
+const storyEmoticonParts = (text) => String(text ?? '').split(STORY_NOBREAK_SPLIT_RE).filter((x) => x !== '').map((x, i, all) => ({ t: x, emo: STORY_NOBREAK_SPLIT_RE.test(x) && x.match(STORY_NOBREAK_SPLIT_RE)[0] === x }));
+const storyChunkLines = (text, cap, maxLines) => {
+  const s = String(text ?? '');
+  if (!s || s.includes('\n') || !(cap > 0) || storyTextUnits(s) <= cap) return null;
+  const split = (src, soft) => {
+    const chars = [...src], out = [];
+    let cur = '', sp = false, depth = 0;
+    const push = () => { if (cur) out.push({ t: cur, sp }); cur = ''; sp = false; };
+    for (let i = 0; i < chars.length; i++) {
+      const ch = chars[i], nx = chars[i + 1] ?? '';
+      // 空白で分けるのは、文が終わった後(「！ 」「？ 」「…… 」)だけ。「SKY TAP」のような語のあいだでは分けない
+      if ((ch === ' ' || ch === '\u3000') && depth === 0 && (!cur || /[。！？!?…」』）)♪♡〜～ｗw\p{Extended_Pictographic}]$/u.test(cur))) { push(); sp = true; continue; }
+      // 顔文字「(˘ω˘)」「(´ー`*)」は、中の字で分けない(描くときも途中で折らない。storyEmoticonParts)
+      const emo = depth === 0 && /[(（]/.test(ch) ? chars.slice(i).join('').match(STORY_EMOTICON_HEAD_RE) : null;
+      if (emo) { cur += emo[0]; i += [...emo[0]].length - 1; continue; }
+      if ((ch === '「' || ch === '『') && depth === 0 && !soft && cur) push();
+      cur += ch;
+      if (ch === '「' || ch === '『') depth++;
+      else if ((ch === '」' || ch === '』') && depth > 0) depth--;
+      if (!nx || depth > 0) continue;
+      if (/[。！？!?]/.test(ch) && !/[。！？!?」』）)♪♡〜～ｗw]/.test(nx)) push();
+      else if (/[」』]/.test(ch) && /[「『]/.test(nx)) push();
+      else if (soft && /[、，]/.test(ch) && !/[、，」』）)]/.test(nx)) push();
+    }
+    push();
+    return out;
+  };
+  const chunks = split(s, false).flatMap((c) => {
+    if (storyTextUnits(c.t) <= cap) return [c];
+    const sub = split(c.t, true);
+    if (sub.length) sub[0] = { ...sub[0], sp: c.sp };
+    return sub;
+  });
+  // 字の無いかたまり(「✨」「……」)・2字以下のかたまり(「だ。」)は、前のかたまりにくっつける(それだけが行に残らないように)
+  for (let i = chunks.length - 1; i > 0; i--) {
+    const c = chunks[i];
+    if (!/[ぁ-んァ-ヶ一-龠々a-zA-Z0-9０-９]/.test(c.t) || storyTextUnits(c.t) <= 2) {
+      chunks[i - 1] = { ...chunks[i - 1], t: chunks[i - 1].t + (c.sp ? ' ' : '') + c.t };
+      chunks.splice(i, 1);
+    }
+  }
+  if (chunks.length < 2) return null;
+  // 半角の字は幅の見込みがずれやすいので、1字ぶん余らせて見る。入りきらない長いかたまりは折らずに流す(flow)
+  // 絵文字(🔥✨)は字1つより幅が広いので、1つにつき 0.6字ぶん足して見る
+  const unitsOf = (t) => storyTextUnits(t) + (/[\x21-\x7e]/.test(t) ? 1 : 0) + 0.6 * ((String(t).match(/\p{Extended_Pictographic}/gu) || []).length);
+  let lines = 0, rem = 0;
+  for (const c of chunks) {
+    const own = unitsOf(c.t), u = own + (c.sp && rem > 0 ? 0.5 : 0);
+    if (own > cap) {
+      // 新しい行から始めても行数が増えないなら、新しい行から(文の頭を行の頭にそろえる)。増えるなら前の文の後ろへ流す
+      //   流すときは言葉の切れ目でしか折れないので、行の終わりが空きやすい(1行につき2字・前の行の残りは3字ぶん少なく見る)
+      const fresh = lines + Math.ceil(own / (cap - 1));
+      const left = lines > 0 ? u - Math.max(0, rem - 3) : u;
+      const flowLines = lines + Math.ceil(left / (cap - 2));
+      if (fresh <= flowLines) { lines = fresh; rem = 0; }
+      else { c.flow = true; rem = Math.max(0, (flowLines - lines) * (cap - 2) - left - 2); lines = flowLines; }
+    }
+    else if (lines > 0 && u <= rem) rem -= u;
+    else { lines += 1; rem = cap - own; }
+  }
+  return lines <= maxLines ? chunks : null;
 };
 // お話の層の位置を測って、いちばん外側の箱([data-event-story])の CSS 変数へ書く ref。
 // 上のステージの下端(--story-stage-bottom)と下の窓の高さ(--story-sheet-h)で、真ん中のモンスターの置き場を決める。
