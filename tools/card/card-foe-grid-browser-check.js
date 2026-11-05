@@ -16,6 +16,7 @@ const fs = require('fs');
 const { quietBootSeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 
 const root = path.resolve(__dirname, '..', '..');
+const BASE = 7; // ソラシドを除いた、相手えらびに並ぶ助手の数(みゅあ・きき・ももすけ・ドラ・あつ・きゅうこ・えるびん)
 const PORT = Number(process.env.CARD_PORT) || 8951;
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg' };
 const serve = () => new Promise((resolve) => {
@@ -107,12 +108,14 @@ const FAKE = "\n;if (!ASSISTANTS.some((a) => a.id === 'sorashido')) ASSISTANTS.p
       await page.locator('[data-card-foe-grid]').waitFor({ timeout: 10000 });
       const ids = await page.locator('[data-card-foe]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-foe')));
       orderOf[on] = ids;
-      check(`${label}: 相手は${on ? 7 : 6}人`, ids.length === (on ? 7 : 6), ids.join(','));
+      // 2026-11-05 えるびん(8人目)を公開。ソラシドの印が偽でも7人・真で8人になる(BASE はソラシドを除いた人数)
+      check(`${label}: 相手は${on ? BASE + 1 : BASE}人`, ids.length === (on ? BASE + 1 : BASE), ids.join(','));
       check(`${label}: ソラシドの札${on ? 'は7番目' : 'が無い'}`, on ? ids[6] === 'sorashido' : !ids.includes('sorashido'), ids.join(','));
       for (const [w, h] of SIZES) {
         await page.setViewportSize({ width: w, height: h }); await sleep(400);
         const wide = w > h;
-        const want = on ? (wide ? 7 : 4) : (wide ? 6 : 3);
+        const many = (on ? BASE + 1 : BASE) >= 7; // 7人以上は縦4列・横7列(84 の data-card-foe-grid と同じ決め)
+        const want = many ? (wide ? 7 : 4) : (wide ? 6 : 3);
         const m = await page.evaluate(() => {
           const grid = document.querySelector('[data-card-foe-grid]');
           const cols = getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length;
@@ -139,7 +142,7 @@ const FAKE = "\n;if (!ASSISTANTS.some((a) => a.id === 'sorashido')) ASSISTANTS.p
       }
       await ctx.close();
     }
-    check('② 印が真でも、はじめの6人の並びは印が偽のときと同じ', JSON.stringify((orderOf.true || []).slice(0, 6)) === JSON.stringify(orderOf.false || []), `${(orderOf.false || []).join(',')} / ${(orderOf.true || []).join(',')}`);
+    check('② 印が真でも、ソラシドを除いた並びは印が偽のときと同じ', JSON.stringify((orderOf.true || []).filter((id) => id !== 'sorashido')) === JSON.stringify(orderOf.false || []), `${(orderOf.false || []).join(',')} / ${(orderOf.true || []).join(',')}`);
     check('④ 実行時エラーが無い', !errors.length, errors.slice(0, 3).join(' / '));
   } catch (e) {
     if (lastPage && process.env.CARD_SHOT) await lastPage.screenshot({ path: process.env.CARD_SHOT }).catch(() => {});

@@ -343,6 +343,8 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get assistantKyuko() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true; },
   // ソラシドのお話(2026-10-27〜台本を書いている途中)。ソラシドの公開と一緒に出る
   get assistantSorashido() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantSorashido === true; },
+  // えるびんの加入のお話(2026-11-05)。えるびんの公開と一緒に出る
+  get assistantErubin() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantErubin === true; },
   // MFバトルカードのはじまり(card_battle_intro_2026・2026-10-24)。MFバトルカードの公開と一緒に出る
   get cardBattle() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardBattle === true; },
   // 個人杯のお話(2026-10-31)。公開の印は 99-card-cup.jsx の cardCupOpen(あとの部品なので見るたびに引く)

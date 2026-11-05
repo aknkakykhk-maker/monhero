@@ -26,12 +26,12 @@
 
 ## バトル部レフェリー: お話の背景絵と、場面ごとに切り替える部品
 
-- いまの形: 台本の行の `scene:'desert'`(次に `scene` を書いた行まで続く・`scene:'none'` で消す)と `fx:'fall'`(穴へ落ちる)。描くのは `src/parts/60-app.jsx` の `storyScene`(`data-story-scene`)、見た目は `src/parts/70-bootstrap.jsx` の `[data-story-scene="desert"]`(いまは図形だけの仮)
-- 作るもの: 背景絵を数枚と、`scene:'<名前>'` で切り替える部品(名前 → 絵の表を1か所に。例 `STORY_SCENES`)。**画像のパスはデータに直書きせず定数で指す**(`image/data-image-source-check.js`)
+- いまの形: 台本の行の `bg:'desert'`(次に `bg` を書いた行まで続く・`bg:'none'` で消す。`scene` は助手の吹き出しの場面の名前なので使わない)と `fx:'fall'`(穴へ落ちる)。描くのは `src/parts/60-app.jsx` の `storyScene`(`data-story-bg`)、見た目は `src/parts/70-bootstrap.jsx` の `[data-story-bg="desert"]`(いまは図形だけの仮)
+- 作るもの: 背景絵を数枚と、`bg:'<名前>'` で切り替える部品(名前 → 絵の表を1か所に。例 `STORY_SCENES`)。**画像のパスはデータに直書きせず定数で指す**(`image/data-image-source-check.js`)
   - 石油王の世界: 砂漠の夕方と宮殿(お話の①)・油田(案)・宮殿の中(案)
   - モンヒロの世界: いつもの場所・街・夜(いまのお話の雰囲気に合うもの)
 - 形式: 縦(390×844 前後)を基本に、横の低い画面(844×390)でも切れて見えない構図。WebP か軽い PNG。画像を足したら `node tools/build.js` → `node tools/image-asset-check.js`(CLAUDE.md ⑥-2・[`monster-hero/images/CLAUDE.md`](../../../monster-hero/images/CLAUDE.md))
-- 置き場所の案: `monster-hero/images/story-bg/<名前>.webp`。えるびんのお話(`ASSISTANT_ERUBIN_JOIN_STORY`)の①は `scene:'desert'`、②の着いた所から `scene:'none'`(またはいつもの場所の背景)。**ほかのお話でも使える形**にしておく
+- 置き場所の案: `monster-hero/images/story-bg/<名前>.webp`。えるびんのお話(`ASSISTANT_ERUBIN_JOIN_STORY`)の①は `bg:'desert'`、②の着いた所から `bg:'none'`(またはいつもの場所の背景)。**ほかのお話でも使える形**にしておく
 - 返してほしいもの: 背景の一覧の止め絵(どの場面用か)・ブランチ名
 
 ## カード部ツナグ: マーケットの表情アイコン・顔アイコンの基準合わせ・お話の大きい立ち絵

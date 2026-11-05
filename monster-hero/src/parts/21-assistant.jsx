@@ -9,12 +9,39 @@ const ASSISTANT_FALLBACK = { id:'', name:'助手', image:null, emoji:'💬', acc
 // 再生のときだけ話し手として出る登場人物(ジャックなど)。助手ではないので ASSISTANT_LIST には入れない
 const STORY_GUEST_LIST = (typeof STORY_GUEST_SPEAKERS !== 'undefined' && Array.isArray(STORY_GUEST_SPEAKERS)) ? STORY_GUEST_SPEAKERS : [];
 // 助手を先に探し、いなければ登場人物、それもなければ今までどおり既定の助手へ
+// お話の行の衣装・シークレット(data/assistants.js の eventScriptForPlayer が付ける「助手id@衣装@secret」)。
+//   衣装は絵のフォルダだけを替え、secret は名前を「？？？」にして絵を影にする(AssistantFace が secret を見て黒く塗る)。毎回同じものを返す
+const STORY_VARIANT_CACHE = new Map();
+const storyVariantWho = (id) => {
+  if (typeof id !== 'string' || !id.includes('@')) return null;
+  if (STORY_VARIANT_CACHE.has(id)) return STORY_VARIANT_CACHE.get(id);
+  const [baseId, ...flags] = id.split('@');
+  const base = ASSISTANT_LIST.find(a => a.id === baseId);
+  if (!base) return null;
+  const dirs = (typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS) || {};
+  const outfit = flags.find(f => dirs[f]);
+  const secret = flags.includes('secret');
+  const who = { ...base, id, baseId, ...(outfit ? { imageDir: dirs[outfit], tempImageDir: undefined } : {}), ...(secret ? { name: '？？？', secret: true, accent: '#8a7a5c', emoji: '❔' } : {}) };
+  STORY_VARIANT_CACHE.set(id, who);
+  return who;
+};
 const assistantById = (id) => ASSISTANT_LIST.find(a => a.id === id)
+  || storyVariantWho(id)
   || STORY_GUEST_LIST.find(a => a.id === id)
   || ASSISTANT_LIST.find(a => a.id === (typeof DEFAULT_ASSISTANT_ID !== 'undefined' ? DEFAULT_ASSISTANT_ID : ''))
   || ASSISTANT_LIST[0] || ASSISTANT_FALLBACK;
 // 台本に出てくる話し手(顔を並べる人)。助手に加えて、台本に出てくる登場人物も並べる
-const storyCastOf = (script) => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(who => (script || []).some(l => l.who === who.id));
+// 衣装・シークレットの行(「助手id@…」)は、元の助手として数える
+const storyBaseWho = (id) => (typeof id === 'string' ? id.split('@')[0] : id);
+const storyCastOf = (script) => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(who => (script || []).some(l => l && storyBaseWho(l.who) === who.id));
+// 助手の「ふつう」の表情の絵(outfit を渡すと、その衣装のフォルダの絵)。登録が無ければ null
+const storyAssistantArtOf = (id, outfit) => {
+  const who = ASSISTANT_LIST.find(a => a && a.id === id);
+  if (!who || !who.imageDir || !who.imagePrefix) return null;
+  const dirs = (typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS) || {};
+  const dir = outfit ? dirs[outfit] : who.imageDir;
+  return dir ? `${dir}/${who.imagePrefix}_normal.PNG` : null;
+};
 // お話の真ん中に出すモンスターの全身の絵(台本の monsters の id → 絵。2026-10-27「推しに会える夜」)。足すときはここへ1行
 const STORY_MONSTER_ART = Object.freeze({
   Kyubi: typeof KYUBI_IMG !== 'undefined' ? KYUBI_IMG : null,
@@ -25,6 +52,10 @@ const STORY_MONSTER_ART = Object.freeze({
   PandoraShadow: typeof PANDORA_SHADOW_IMG !== 'undefined' ? PANDORA_SHADOW_IMG : null,
   PandoraAngel: typeof PANDORA_ANGEL_IMG !== 'undefined' ? PANDORA_ANGEL_IMG : null,
   PandoraDevil: typeof PANDORA_DEVIL_IMG !== 'undefined' ? PANDORA_DEVIL_IMG : null,
+  // えるびんの登場のお話(2026-11-05)の、胸から上の大きい立ち絵(384x512)。ErubinSekiyuou … 衣装『石油王』(初めて会う場面) / Erubin … 着替えたあとの通常の服
+  //   絵の場所は助手の登録(imageDir・imagePrefix)と衣装のフォルダ(STORY_OUTFIT_DIRS)から作る(パスを画面の側に書かない)
+  Erubin: storyAssistantArtOf('erubin'),
+  ErubinSekiyuou: storyAssistantArtOf('erubin', 'sekiyuou'),
 });
 // お話の台詞を、決まった行数に収まるページへ分ける(2026-11-02 社長「セリフが長ければページ数増やせばいいだけ」)。
 //   上部ゾーン(ゲストの吹き出し)・下部ゾーン(台詞の欄)の高さを固定にしたので、収まらない台詞は「次へ」で送る次のページにする。
@@ -188,10 +219,14 @@ const AssistantFace = ({ who, size = 88, accent, expression = null }) => {
   // 場面が変わって表情が切り替わったら読み直す
   useEffect(() => { setSrc(assistantFaceSrc(who, expression)); }, [who.id, expression]);
   return (
-    <div className="shrink-0 rounded-2xl overflow-hidden border-2 flex items-center justify-center bg-black/50"
-         style={{ width:`${size}px`, height:`${size}px`, borderColor:accent, boxShadow:`0 0 12px ${accent}55` }}>
+    <div className="relative shrink-0 rounded-2xl overflow-hidden border-2 flex items-center justify-center bg-black/50"
+         // シークレットの話し手は、枠の中を夕方の砂漠の空の色にして、影(頭布と髪の形)が浮かぶようにする(暗い枠に暗い影だと、空っぽの箱に見えた。2026-11-05 社長「？はなしのほうがいい」)
+         style={{ width:`${size}px`, height:`${size}px`, borderColor:accent, boxShadow:`0 0 12px ${accent}55`, ...(who.secret ? { background:'linear-gradient(180deg, #9a5a4a 0%, #e7a25c 55%, #f4c784 100%)' } : {}) }}>
       {src
         ? <img src={src} alt={who.name} className={`w-full h-full ${who.imageFit === 'contain' ? 'object-contain p-0.5' : 'object-cover'}`}
+               data-story-secret={who.secret ? '1' : undefined}
+               // シークレットの話し手(storyVariantWho)は、誰か分からないように影で描く(こげ茶の塗りつぶし)
+               style={who.secret ? { filter:'brightness(0) invert(.12) sepia(1) saturate(1.2)' } : undefined}
                onError={()=>setSrc(src === fallback ? null : fallback)}/>
         : <span style={{ fontSize:`${Math.round(size * 0.5)}px`, lineHeight:1 }}>{who.emoji}</span>}
     </div>
