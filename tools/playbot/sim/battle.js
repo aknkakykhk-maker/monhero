@@ -524,6 +524,9 @@ function decideTurn(st) {
       if (kiki && !buffed && richestG >= 0.3 && enemyRate > 0.3) { take(kiki, 'support'); continue; }
       if (poltz && !buffed && richestG >= 0.3 && enemyRate > 0.4) { take(poltz, 'support'); continue; }
       if (meloso && !healed && hpMax && hpNow / hpMax < 0.55) { take(meloso, 'support'); continue; }
+      // えるびんの見守り: 大きいのが来るとき(狙われた子の受けるダメージの合計が、立っている子のライフの25%以上)だけ(2026-11-05)
+      const erubin = buffed ? null : supFor('erubin');
+      if (erubin && enemyRate > 0.25 && hpNow > 0 && aimed.reduce((a, sl) => a + aimDamage(sl), 0) >= hpNow * 0.25) { take(erubin, 'support'); continue; }
     }
     if (!lethal && playBest) {
       // 上手な使い方: ずっと続く強化は WAVE の早いうちに(遅いほど効く回数が減る)、回復は細ったとき、薬は火力の柱に飲ませる
@@ -538,6 +541,9 @@ function decideTurn(st) {
         const o = buffed ? null : ['kiki', 'oryo', 'poltz'].map(supFor).find((x) => x && !x.halved);
         if (o) { take(o, 'support'); continue; }
       }
+      // えるびんの見守り: 大きいのが来るとき(狙われた子の受けるダメージの合計が、立っている子のライフの25%以上)だけ(2026-11-05)
+      const erubin = buffed ? null : supFor('erubin');
+      if (erubin && enemyRate > 0.25 && hpNow > 0 && aimed.reduce((a, sl) => a + aimDamage(sl), 0) >= hpNow * 0.25) { take(erubin, 'support'); continue; }
       // みゃるの薬: いちばんダメージを出している子に、次のターン撃てるガッツが残るときだけ飲ませる
       const myaru = supOpts.filter((o) => o.card.id === 'myaru' && o.slot === mainDist && !o.halved)[0];
       if (myaru && enemyRate > 0.35) {
@@ -852,6 +858,16 @@ function playTeaching(st, card, slot, effMul, usedCount, guardBySlot, startDist,
   } else if (card.subType === 'buff_poltz') { // 12480〜12485: 待機回数を張り直す
     const tier = Math.min(level, G.POLTZ_TIERS.length - 1);
     p.poltzTier = tier; p.poltzEffMul = effMul; p.poltzCharges = G.POLTZ_TIERS[tier].charges;
+  } else if (card.subType === 'watch_erubin') { // えるびんの見守り(2026-11-05 社長の決定・60-app.jsx processTurn。ERUBIN_TIERS)
+    const t = G.ERUBIN_TIERS[Math.min(level, G.ERUBIN_TIERS.length - 1)];
+    add('atkPct', t.atk * effMul); // ① 味方全員・ずっと(次のターンから)
+    st.turnB = { ...st.turnB, takenDamageMult: (st.turnB.takenDamageMult || 1) * Math.max(0.1, 1 - t.cut * effMul) }; // ② このターンだけ・味方全員
+    // ③ タクティクス: 使った子の EX の使える回数を 1/3回ぶん戻す(3回で1回。残りは子ごとに貯める・1回ぶんまで)
+    p.erubinExAcc = { ...(p.erubinExAcc || {}) };
+    let charge = (p.erubinExAcc[slot] || 0) + t.exCharge * effMul;
+    const own = st.ex && st.ex.uses ? st.ex.uses[slot] : null;
+    if (charge >= 1 - 1e-9 && own && own.count > 0) { charge -= 1; st.ex = { ...st.ex, uses: { ...st.ex.uses, [slot]: { ...own, count: own.count - 1 } } }; }
+    p.erubinExAcc[slot] = Math.min(1, Math.max(0, charge));
   } else if (card.subType === 'buff_kiki') { // 12486
     const lv = Math.min(level, 2);
     const combo = (0.03 + lv * 0.02) * effMul;

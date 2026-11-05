@@ -1636,6 +1636,8 @@ function BattleScreen({
             if(getNextTurnBuff('melosoFullRecoveryMult',0)>0) chip('meloso',<Heart size={9}/>,'次ターン全回復','','text-rose-300 border-rose-400/50',{pulse:true});
             if(getTurnBuff('atkMult',1.0)>1) chip('boost',<Sparkles size={9}/>,'Boost',`x${getTurnBuff('atkMult',1.0).toFixed(1)}`,'text-red-500 border-red-500/50',{pulse:true});
             if(getTurnBuff('guaranteedCrit',false)) chip('critFix',<Target size={9}/>,'会心予約','','text-orange-400 border-orange-500/50',{pulse:true});
+            // えるびんの見守りのクラシックの③(一閃の構え・2026-11-05): このターンの固有技は必ず会心
+            if(getTurnBuff('erubinIsshen',null)!=null) chip('erubinIsshen',<Target size={9}/>,'一閃の構え',getTurnBuff('erubinIsshen',0)>0?`固有技 会心+${Math.round(getTurnBuff('erubinIsshen',0)*100)}%`:'固有技 会心','text-amber-200 border-amber-300/60',{pulse:true,short:'一閃'});
             if(getTurnBuff('zeroGuts',false)||getNextTurnBuff('zeroGuts',false)) chip('zeroGuts',<Star size={9}/>,'0消費中','','text-blue-400 border-blue-500/50',{pulse:true});
             if(getNextTurnBuff('reflect',false)) chip('reflectNext',<RefreshCcw size={9}/>,'次反射','','text-purple-400 border-purple-500/50',{pulse:true});
             if(getTurnBuff('reflect',false)) chip('reflectNow',<RefreshCcw size={9}/>,'反射待機','','text-purple-300 border-purple-400',{pulse:true});
