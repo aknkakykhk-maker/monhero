@@ -84,3 +84,15 @@
   (倍率 1.128)。はみ出た左右は真ん中から切る(4〜21px)。表情を入れ替えても頭が動かない
 - 表情の当て方: 上の段 左から normal(目を閉じてほほえむ)・happy(大笑い)・troubled(汗をかいて照れ笑い)・excited(頭をかいて歯を見せて笑う)/
   下の段 左から angry(腕を組んでむくれる)・surprise(驚き慌てる)・wink(指をさしてにっこり)・crying(大泣き)
+
+## えるびん(2026-11-05・公開前)
+
+8人目の助手。`erubin-expressions-sheet.png`(通常衣装)・`erubin-costume-sekiyuou-sheet.png`(衣装『石油王』)が受け取った原本
+(どちらも 1536x1024・4列×2段・1マス 384x512・背景はクリーム色で塗られている)。
+
+- 切り分けた絵は `erubin/`(通常)・`erubin/sekiyuou/`(石油王)。**384x512・背景透過**。顔アイコンは各 `face/`(256px)
+- 公開が決まるまで配信フォルダへは写さない(このフォルダの決まりどおり)。写すときは通常を `monster-hero/images/assistant/`、
+  石油王を `monster-hero/images/assistant/sekiyuou/` へ
+- 切り方: `python3 tools/assistant/cut-assistant-sheet.py <シート> <出力> erubin normal,happy,surprise,troubled,crying,excited,angry,wink [--pockets]`
+  (通常衣装だけ `--pockets`。石油王の白い頭布は背景とほぼ同じ色なので、囲まれた所まで抜くと頭布が消える)
+- 表情の当て方・お話の骨組み: [`docs/progress/tempo-2026-11-05/erubin-prep.md`](../../../docs/progress/tempo-2026-11-05/erubin-prep.md)
