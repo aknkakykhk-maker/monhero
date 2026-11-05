@@ -1348,7 +1348,7 @@
   },
   "evans": {
    "flowPlacement": true,
-   "masterDensity": 1.1,
+   "masterDensity": 1.2,
    "audio": "monster-hero/audio/bgm-evans.mp3",
    "chartRevision": 35,
    "audioSha256": "37c5c9e21113e18f732c166f82098820cf6edc3fb3416aad8c26e2c5b3ec80f5",
