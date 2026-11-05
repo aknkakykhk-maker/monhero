@@ -10785,7 +10785,7 @@ const ASSISTANT_SORASHIDO_JOIN_STORY_CALLS = { mua: 'どれみふぁソラシド
 // 社長のざっくり(11/05): 最初はシークレット。誰か分からない男が、石油王の世界でなぜかピンチになり、穴に落ちて、気が付いたらモンヒロの世界にいる
 //   → 石油王の格好のまま →「石油王だ！」と大さわぎ → みゅあに服を選んでもらい通常衣装に → 仲間になる。
 //   BGM: 最初の行(ピンチの場面)から「Wrath of the Thorn King『茨の王の怒り』」。モンヒロの世界に着いた所(bgm:'default')から、いつものお話の曲へ戻す(社長)
-// scene:'desert' … その行から砂漠の背景(scene:'none' で消す)。fx:'fall' … 穴に落ちていく演出(背景が上へ流れて暗くなる)
+// bg:'desert' … その行から砂漠の背景(bg:'none' で消す。scene は助手の吹き出しの場面の名前なので使わない)。fx:'fall' … 穴に落ちていく演出(背景が上へ流れて暗くなる)
 // 人柄(社長): ほかの助手より少し年上の、穏やかな大人。見守る・まとめる役。テーマは砂色と🏜。
 //   石油王ネタは「いじられ役」だけ(本人はいたって普通なのに、みんなに石油王あつかいされる)
 //   ★バトルカードの話は入れない(社長「世界観が違うから、こっちに来て覚えていく感じで」)。この世界のことをまだ何も知らない人として書く
@@ -10796,7 +10796,7 @@ const ASSISTANT_SORASHIDO_JOIN_STORY_CALLS = { mua: 'どれみふぁソラシド
 // atsu:'with'/'without' はほかのお話と同じ(あつを解放しているか)
 const ASSISTANT_ERUBIN_JOIN_STORY = [
   // ---- ① シークレット: 石油王の世界で、なぜかピンチ → 穴に落ちる ----
-  { who:'erubin',   e:'normal',   secret:true, outfit:'sekiyuou', scene:'desert', bgm:'melo_wrath_of_the_thorn_king', fxText:'どこまでも続く砂漠と、白い宮殿', holdMs:2500, t:'……今日も、静かな一日になりそうだね' },
+  { who:'erubin',   e:'normal',   secret:true, outfit:'sekiyuou', bg:'desert', bgm:'melo_wrath_of_the_thorn_king', fxText:'どこまでも続く砂漠と、白い宮殿', holdMs:2500, t:'……今日も、静かな一日になりそうだね' },
   { who:'erubin',   e:'wink',     secret:true, outfit:'sekiyuou', t:'……あれ。なんだろう、あの砂けむり' },
   { who:'erubin',   e:'surprise', secret:true, outfit:'sekiyuou', fx:'transform', fxText:'ラクダの群れが、まっすぐこちらへ走ってくる', t:'え、ちょっと待って、こっちに来てない！？' },
   { who:'erubin',   e:'troubled', secret:true, outfit:'sekiyuou', t:'俺、何かしたかな……。この服の金の刺しゅうが、光って見えるのかな' },
@@ -10804,7 +10804,7 @@ const ASSISTANT_ERUBIN_JOIN_STORY = [
   { who:'erubin',   e:'troubled', secret:true, outfit:'sekiyuou', fxText:'砂の下に、ぽっかりと黒い穴が開いている', t:'……これ、落ちるやつだよね……？' },
   { who:'erubin',   e:'surprise', secret:true, outfit:'sekiyuou', fx:'fall', bgmFadeOut:true, fxText:'まっさかさまに、暗い穴の底へ——', holdMs:2600, t:'うわああああ……！' },
   // ---- ② 気が付いたら、モンヒロの世界 ----
-  { who:'mua',      e:'normal',   scene:'none', bgm:'default', t:'ねえねえ、今日はこれから何して遊ぶ〜？' },
+  { who:'mua',      e:'normal',   bg:'none', bgm:'default', t:'ねえねえ、今日はこれから何して遊ぶ〜？' },
   { who:'kiki',     e:'normal',   t:'そうでつね……あれま。上から、何か落ちてきまつ！' },
   { who:'dra',      e:'surprise', fx:'transform', fxText:'ドサッ！', t:'うおっ！ ……人だ。人が降ってきたぞ' },
   { who:'erubin',   e:'troubled', outfit:'sekiyuou', t:'いたた……。……あれ。ここ、どこだろう' },

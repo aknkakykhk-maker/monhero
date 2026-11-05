@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b99868570334de14
+// generated-sha256: 0a8b155fe7b17abb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -98126,9 +98126,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // シークレットのお話(titleSecret・2026-11-05 えるびん)は、HOME で初めて流れるあいだ題名を伏せる(幕開けの題字・上の見出し)。
         //   終わりの札で本当の題名を見せる。回想は見たあとにしか開けないので、いつも本当の題名
         const storyTitleNow=event?.titleSecret&&eventReplay.live?event.titleSecret:event?.title;
-        // 場面の背景(台本の行の scene:'desert'。次に scene を書いた行まで続き、scene:'none' で消す。2026-11-05 えるびんの登場のお話)
+        // 場面の背景(台本の行の bg:'desert'。次に bg を書いた行まで続き、bg:'none' で消す。2026-11-05 えるびんの登場のお話)
         let storyScene=null;
-        for(let i=step;i>=0;i--){const l=script[i];if(l&&typeof l.scene==='string'){storyScene=l.scene==='none'?null:l.scene;break;}}
+        for(let i=step;i>=0;i--){const l=script[i];if(l&&typeof l.bg==='string'){storyScene=l.bg==='none'?null:l.bg;break;}}
         const finishOpening=()=>setEventReplay(r=>r&&!r.opened?{...r,opened:true,shownAt:Date.now()}:r);
         // ゲスト(ジャック・ぱんぷきん)は、下の助手の列には入れない。初めて話す行(か stage で呼ばれる行)から、画面の上部の「ステージ」に出る
         //  (2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」)
@@ -98298,7 +98298,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         return(
         <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-step={step} data-story-zones={storyZones?(storyKeepRow?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} data-story-opening={storyOpening?storyOpeningStyle:undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${storyTitleNow||''}`}>
           {/* 場面の背景(砂漠)。fx:'fall' の行では、穴へ落ちていくように背景が上へ流れて暗くなる(70-bootstrap.jsx の [data-story-scene]) */}
-          {storyScene==='desert'&&<div data-story-scene="desert" data-story-scene-fx={fx==='fall'?'fall':undefined} aria-hidden="true">
+          {storyScene==='desert'&&<div data-story-bg="desert" data-story-bg-fx={fx==='fall'?'fall':undefined} aria-hidden="true">
             <span data-scene-sun/><span data-scene-palace/><span data-scene-dune="back"/><span data-scene-dune="front"/>
           </div>}
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
@@ -102993,20 +102993,20 @@ const createAnimationStyle = () => {
     @keyframes storyOpenOut { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
     @keyframes storyIrisHole { 0% { width: 0; height: 0; } 100% { width: 260vmax; height: 260vmax; } }
     /* お話の場面の背景(2026-11-05 えるびんの登場のお話)。砂漠: 夕方の空・沈む日・遠くの白い宮殿の影・砂丘 */
-    [data-story-scene] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-    [data-story-scene="desert"] { background: linear-gradient(180deg, #3b2a4d 0%, #9a5a4a 26%, #e7a25c 46%, #f4c784 58%, #d9a15e 70%, #b07a43 100%); animation: storySceneIn .9s ease-out both; }
-    [data-story-scene="desert"] [data-scene-sun] { position: absolute; left: 50%; top: 38%; width: 34vmin; height: 34vmin; transform: translate(-50%, -50%); border-radius: 50%;
+    [data-story-bg] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+    [data-story-bg="desert"] { background: linear-gradient(180deg, #3b2a4d 0%, #9a5a4a 26%, #e7a25c 46%, #f4c784 58%, #d9a15e 70%, #b07a43 100%); animation: storySceneIn .9s ease-out both; }
+    [data-story-bg="desert"] [data-scene-sun] { position: absolute; left: 50%; top: 38%; width: 34vmin; height: 34vmin; transform: translate(-50%, -50%); border-radius: 50%;
       background: radial-gradient(circle, #fff3c4 0%, #fcd77f 45%, rgba(252,215,127,0) 70%); }
-    [data-story-scene="desert"] [data-scene-palace] { position: absolute; left: 50%; top: 46%; width: min(78vw, 360px); height: 18vmin; transform: translate(-50%, -100%); background: #4a2f2a; opacity: .85;
+    [data-story-bg="desert"] [data-scene-palace] { position: absolute; left: 50%; top: 46%; width: min(78vw, 360px); height: 18vmin; transform: translate(-50%, -100%); background: #4a2f2a; opacity: .85;
       clip-path: polygon(0% 100%, 0% 62%, 6% 62%, 6% 20%, 7% 8%, 8% 20%, 8% 62%, 20% 62%, 22% 48%, 30% 40%, 38% 48%, 40% 62%, 44% 62%, 44% 40%, 46% 26%, 50% 14%, 54% 26%, 56% 40%, 56% 62%, 60% 62%, 62% 48%, 70% 40%, 78% 48%, 80% 62%, 92% 62%, 92% 20%, 93% 8%, 94% 20%, 94% 62%, 100% 62%, 100% 100%); }
-    [data-story-scene="desert"] [data-scene-dune] { position: absolute; left: -20%; width: 140%; border-radius: 50% 50% 0 0 / 100% 100% 0 0; }
-    [data-story-scene="desert"] [data-scene-dune="back"] { top: 44%; height: 40%; background: linear-gradient(180deg, #e2a965, #c88a4c); }
-    [data-story-scene="desert"] [data-scene-dune="front"] { top: 54%; left: -40%; width: 120%; height: 60%; background: linear-gradient(180deg, #d69a57, #a8723f); }
+    [data-story-bg="desert"] [data-scene-dune] { position: absolute; left: -20%; width: 140%; border-radius: 50% 50% 0 0 / 100% 100% 0 0; }
+    [data-story-bg="desert"] [data-scene-dune="back"] { top: 44%; height: 40%; background: linear-gradient(180deg, #e2a965, #c88a4c); }
+    [data-story-bg="desert"] [data-scene-dune="front"] { top: 54%; left: -40%; width: 120%; height: 60%; background: linear-gradient(180deg, #d69a57, #a8723f); }
     @keyframes storySceneIn { 0% { opacity: 0; } 100% { opacity: 1; } }
     /* fx:'fall' … 穴へ落ちていく。背景が上へ流れながら暗くなる(行の holdMs のあいだに終わる長さ) */
-    [data-story-scene][data-story-scene-fx="fall"] { animation: storySceneFall 2.4s cubic-bezier(.55,0,.8,.4) both; }
+    [data-story-bg][data-story-bg-fx="fall"] { animation: storySceneFall 2.4s cubic-bezier(.55,0,.8,.4) both; }
     @keyframes storySceneFall { 0% { transform: none; filter: none; } 100% { transform: translateY(-85%) scale(1.25); filter: brightness(0); } }
-    @media (prefers-reduced-motion: reduce) { [data-story-scene], [data-story-scene][data-story-scene-fx="fall"] { animation-duration: .01s !important; } }
+    @media (prefers-reduced-motion: reduce) { [data-story-bg], [data-story-bg][data-story-bg-fx="fall"] { animation-duration: .01s !important; } }
     [data-event-story][data-story-opening]:not([data-story-opening="iris"]) > :not([data-story-opening-card]):not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
     @media (prefers-reduced-motion: reduce) { [data-story-opening-card], [data-story-opening-card] * { animation-duration: .01s !important; animation-delay: 0s !important; } }
     [data-event-story][data-story-ending-pull] > :not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
