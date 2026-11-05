@@ -10690,6 +10690,94 @@ const ASSISTANT_SORASHIDO_JOIN_STORY = [
 ];
 const ASSISTANT_SORASHIDO_JOIN_STORY_CALLS = { mua: 'どれみふぁソラシド～♪', kiki: 'ソラシドさん', momosuke: 'ソラちゃん', dra: 'ソラシド', atsu: 'ばこっちゃん', kyuko: 'ばこちゃん', sorashido: 'みゅあさん／ききさん／ももさん／ドラさん／あつさん／きゅうこちゃん' };
 
+// ---------- えるびんの加入のお話(2026-11-05・台本の全文。社長に動画で見てもらう段階。公開しない) ----------
+// 社長のざっくり: 石油王だったえるびんが光に包まれてモンヒロの世界へ → 石油王の格好のまま → みゅあに「その格好じゃ目立つ」と
+//   服をコーディネートしてもらい通常衣装に → 助手に加わる。BGM は光に包まれる所から「Wrath of the Thorn King『茨の王の怒り』」
+// 人柄(社長): ほかの助手より少し年上の、穏やかな大人。見守る・まとめる役。得意は MFバトルカード。テーマは砂色と🏜。
+//   石油王ネタは「いじられ役」だけ(本人はいたって普通なのに、みんなに石油王あつかいされる)。お金持ちっぽい発想や、衣装でふるまいが変わるのは入れない
+// 口調(社長の資料から): 一人称はふだん「俺」・少し丁寧なとき「私」。やわらかいタメ口に丁寧語がときどきまざる。語尾「〜ね」「〜よね」「〜かな」「〜だしね」。
+//   笑いは「笑」と「w」の両方(1文に両方は付けない)。「おけ！」「いいね」「さすが」。プレイヤーは「◯◯さん」
+// ★呼び方は ASSISTANT_PEER_CALLS_ERUBIN_PENDING のとおり。★具体的な年齢・職業・暮らしは書かない
+// outfit:'sekiyuou' … その行のえるびんを衣装『石油王』の絵で出す(④の着替えまで)。atsu:'with'/'without' はほかのお話と同じ
+const ASSISTANT_ERUBIN_JOIN_STORY = [
+  // ---- ① いつもの午後。カードで遊んでいると、空が光る ----
+  { who:'mua',      e:'excited',  t:'よーし、もう1戦！ ひめちん、次こそ勝つから覚悟して〜' },
+  { who:'kiki',     e:'happy',    t:'何回でもどうぞでつ。今日の私のデッキは、ちょっと固いでつよ ( ˘ω˘)9' },
+  { who:'momosuke', e:'normal',   t:'みゅあねぇ、さっきから5連敗だよw' },
+  { who:'dra',      e:'surprise', t:'……ん？ おい、空を見てみろ。なんか光ってないか' },
+  { who:'mua',      e:'surprise', t:'え、なになに！？ まぶしっ……！' },
+  { who:'erubin',   e:'surprise', outfit:'sekiyuou', fx:'transform', bgm:'melo_wrath_of_the_thorn_king', holdMs:2500, fxText:'空から光が降りてきて、ひとりの男の人が立っていた', t:'……' },
+  // ---- ② 光の中から ----
+  { who:'erubin',   e:'surprise', outfit:'sekiyuou', t:'……あれ。ここ、どこだろう' },
+  { who:'erubin',   e:'troubled', outfit:'sekiyuou', t:'さっきまで、ぜんぜん違う所にいた気がするんだけどね' },
+  { who:'kiki',     e:'surprise', t:'あれま……光の中から人が出てきまちた……！' },
+  { who:'momosuke', e:'surprise', t:'え、待って、その格好……' },
+  { who:'mua',      e:'excited',  t:'石油王だーーー！！！' },
+  { who:'erubin',   e:'surprise', outfit:'sekiyuou', t:'え、俺？' },
+  { who:'dra',      e:'surprise', t:'白い布に、金の刺しゅう……どう見ても石油王だな' },
+  { who:'erubin',   e:'troubled', outfit:'sekiyuou', t:'いやいや、普通だよ笑 たしかに、格好はそれっぽいけどね' },
+  // ---- ③ 石油王？(いじられ役のはじまり) ----
+  { who:'erubin',   e:'normal',   outfit:'sekiyuou', t:'あ、ごめんね、名乗ってなかった。私、えるびんっていいます' },
+  { who:'erubin',   e:'happy',    outfit:'sekiyuou', t:'……って、急に丁寧になっちゃった笑 俺のことは、えるびんでいいよ' },
+  { who:'mua',      e:'happy',    t:'えるびん……じゃあ、るびちん！ あたしはみゅあ、よろしくね♪' },
+  { who:'kiki',     e:'normal',   t:'助手のききでつ。えるびんさん、どこか痛い所はないでつか？' },
+  { who:'erubin',   e:'happy',    outfit:'sekiyuou', t:'ありがとう、ききさん。どこも痛くないよ。気づかってくれて嬉しい☺️' },
+  { who:'atsu',     e:'excited',  atsu:'with',    t:'ねぇエルちゃん、油田って何個持ってるの？ 笑' },
+  { who:'dra',      e:'excited',  atsu:'without', t:'ふむ。ビンビン、油田はいくつ持ってるんだ？' },
+  { who:'erubin',   e:'happy',    outfit:'sekiyuou', t:'持ってないよ笑 ……それ、絶対これからも聞かれるやつだよね' },
+  { who:'dra',      e:'happy',    atsu:'with',    t:'ビンビン、ラクダは？ ラクダは何頭いるんだ？' },
+  { who:'erubin',   e:'troubled', outfit:'sekiyuou', atsu:'with', t:'ドラちゃんまでw 一頭もいないって' },
+  { who:'kyuko',    e:'happy',    t:'ほい、えるニキ、はじめまして〜。あとでおごってくれるんでしょぉ？ 笑' },
+  { who:'erubin',   e:'troubled', outfit:'sekiyuou', t:'きゅうこちゃん、まだ会って1分だよね？ 笑' },
+  { who:'sorashido', e:'excited', t:'うぉぉぉ、本物の石油王はじめて見た！ えるさん、写真いい！？' },
+  { who:'erubin',   e:'happy',    outfit:'sekiyuou', t:'だから本物じゃないって笑 ……まぁ、写真くらいならいいよ、ソラくん' },
+  // ---- ④ コーディネート ----
+  { who:'mua',      e:'normal',   t:'でもさ、るびちん。その格好、ここだとまぢ目立つって！' },
+  { who:'erubin',   e:'troubled', outfit:'sekiyuou', t:'やっぱりそうだよね……。みんなの服と、だいぶ違うし' },
+  { who:'mua',      e:'excited',  t:'よし決めた、あたしがコーデしてあげる♪ 服えらびは任せて！' },
+  { who:'erubin',   e:'happy',    outfit:'sekiyuou', t:'おけw じゃあお願いしようかな。みゅあちゃん、センスよさそうだしね' },
+  { who:'momosuke', e:'excited',  t:'ももも手伝う〜！ えるちゃんは、黒っぽいのが似合いそう♡' },
+  { who:'kiki',     e:'happy',    t:'中は落ち着いた色のシャツで、上にはおるのがいいと思いまつ' },
+  { who:'mua',      e:'wink',     t:'ひめちん、それいい！ じゃあ……これとこれ！ はい、着てきて〜' },
+  { who:'erubin',   e:'normal',   fxText:'みんなが選んだ服に着替えて、えるびんが戻ってきた', holdMs:2000, t:'……どうかな。変じゃない？' },
+  { who:'momosuke', e:'excited',  t:'え、めっちゃいい！ 大人って感じ♡' },
+  { who:'mua',      e:'happy',    t:'でしょ〜！ あたしのコーデ、まぢ天才ぢゃん！' },
+  { who:'erubin',   e:'happy',    t:'うん、すごく着やすいね。ありがとう、みゅあちゃん、ももちゃん、ききさん' },
+  { who:'dra',      e:'normal',   t:'ふむ。これで、どこから見ても普通の人だな' },
+  { who:'erubin',   e:'happy',    t:'最初から普通なんだけどね笑' },
+  // ---- ⑤ カードの腕前 ----
+  { who:'erubin',   e:'wink',     t:'ところで、さっきみんなで遊んでたのは、カード？' },
+  { who:'mua',      e:'troubled', t:'そう、MFバトルカード！ ……なんだけど、あたし、ひめちんに5連敗中なの〜' },
+  { who:'erubin',   e:'normal',   t:'ちょっと、デッキ見せてもらってもいいかな？' },
+  { who:'erubin',   e:'wink',     t:'……なるほどね。攻めのカードばっかりで、守りが1枚もないのかな' },
+  { who:'erubin',   e:'normal',   t:'ききさんのデッキは、守りが厚いよね。こういう相手には、まず受けてから返すのがいいと思う' },
+  { who:'kiki',     e:'surprise', t:'あれま……ひと目で、私のデッキの組み方まで分かったんでつか？' },
+  { who:'erubin',   e:'happy',    t:'さっき、ちょっとだけ見えてたからね。50%に頼る技って、大体外すしね笑' },
+  { who:'sorashido', e:'surprise', t:'なに！？ 確率のこと、ちゃんと分かってる人だ……！' },
+  { who:'mua',      e:'excited',  t:'るびちん、守りのカード入れたよ！ ひめちん、もう1戦！' },
+  { who:'mua',      e:'happy',    fxText:'みゅあが、ききに勝った', holdMs:1800, t:'勝ったーーー！！ るびちん、すごっ！' },
+  { who:'kiki',     e:'happy',    t:'……参りまちた。えるびんさん、カードの組み方、とってもくわしいんでつね' },
+  { who:'erubin',   e:'happy',    t:'勝ったのは、みゅあちゃんだよ。俺は、ちょっとだけ口を出しただけだしね' },
+  { who:'kyuko',    e:'surprise', t:'えるニキ、ほんとに強い人だぁ……今度、俺とも組み方の話しよぉ' },
+  { who:'erubin',   e:'happy',    t:'いいね。きゅうこちゃんの組み方も、聞いてみたいな' },
+  // ---- ⑥ 助手に加わる ----
+  { who:'kiki',     e:'normal',   t:'えるびんさん、もとの所への帰り方は、分かりそうでつか？' },
+  { who:'erubin',   e:'troubled', t:'うーん……正直、まだ分からないかな' },
+  { who:'mua',      e:'excited',  t:'じゃあさ、分かるまでここにいなよ！ るびちんも助手になっちゃえば？' },
+  { who:'atsu',     e:'happy',    atsu:'with',    t:'いいじゃん。エルちゃんがいたら、カードの相談し放題だし笑' },
+  { who:'momosuke', e:'happy',    atsu:'without', t:'いいじゃん！ えるちゃんがいたら、カードの相談し放題だし♡' },
+  { who:'erubin',   e:'normal',   t:'……俺でいいのかな。みんなより、ちょっと年上だよ？' },
+  { who:'dra',      e:'happy',    t:'ふむ。年上がひとりいると、おでは助かるぞ。えへへ' },
+  { who:'erubin',   e:'happy',    t:'ふふ、ありがとう。じゃあ、みんなのこと、そばで見守らせてもらおうかな' },
+  { who:'erubin',   e:'happy',    t:'{name}、はじめまして。えるびんです。これから、よろしくね☺️' },
+  { who:'erubin',   e:'normal',   t:'カードの組み方で迷ったら、いつでも聞いてね。一緒に考えよう' },
+  { who:'mua',      e:'wink',     t:'あ、そうそう！ さっきの石油王の服も、着替えからいつでも着られるからね♪' },
+  { who:'erubin',   e:'troubled', t:'……それ、着たらまた石油王って呼ばれるよね？ 笑' },
+  { who:'mua',      e:'happy',    t:'もちろん！ 石油王るびちんｗ' },
+  { who:'erubin',   e:'happy',    t:'おけw もう、それでいいよ笑' },
+];
+const ASSISTANT_ERUBIN_JOIN_STORY_CALLS = { mua: 'るびちん', kiki: 'えるびんさん', momosuke: 'えるちゃん', dra: 'ビンビン', atsu: 'エルちゃん', kyuko: 'えるニキ', sorashido: 'えるさん', erubin: 'みゅあちゃん／ききさん／ももちゃん／ドラちゃん／あっくん／きゅうこちゃん／ソラくん' };
+
 // ---------- 個人杯のお話(2026-10-31・社長が全文を読んで OK) ----------
 // MFバトルカードの「個人杯」の公開のお話。公開の印(99-card-cup.jsx の cardCupOpen)が立ったあと、
 // MFバトルカードのはじまりを見た人に HOME で1回だけ流れ、そのあとは回想から見返せる(きゅうこ・ソラシドの加入のお話と同じ流れ)。
