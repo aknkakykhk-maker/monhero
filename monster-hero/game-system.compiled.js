@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d05de9c974d48ef2
+// source-sha256: 846e741064d4d8d6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -18851,7 +18851,7 @@ const assistantById = id => ASSISTANT_LIST.find(a => a.id === id) || storyVarian
 const storyBaseWho = id => typeof id === 'string' ? id.split('@')[0] : id;
 const storyCastOf = script => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(who => (script || []).some(l => l && storyBaseWho(l.who) === who.id));
 const storyAssistantArtOf = (id, outfit) => {
-  const who = (typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST : []).find(a => a && a.id === id);
+  const who = ASSISTANT_LIST.find(a => a && a.id === id);
   if (!who || !who.imageDir || !who.imagePrefix) return null;
   const dirs = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS || {};
   const dir = outfit ? dirs[outfit] : who.imageDir;
@@ -167786,6 +167786,11 @@ const createAnimationStyle = () => {
       [data-event-story][data-story-zones] [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 150px) !important; bottom: calc(var(--story-bottom-h) + env(safe-area-inset-bottom) + 8px); align-items: center; }
       [data-event-story][data-story-zones] [data-story-monster] { height: min(calc(100% / 1.14), 50vw, 230px); }
       [data-event-story][data-story-zones] [data-story-monsters="2"] [data-story-monster] { height: min(calc(100% / 1.14), 44vw, 210px); }
+      /* えるびんの登場のお話(2026-11-05 社長「C」): 胸から上の立ち絵(384x512)を、顔が大きく見えるよう上から正方形に切って、台詞の窓の上にのせる。
+         絵の下の切れ目は窓のふちに付けて隠す(浮いて見えないように)。縦の画面だけ。横の画面は窓の左右の空きに小さく出す今の形のまま */
+      [data-event-story][data-story-zones] [data-story-monsters]:has([data-story-monster^="Erubin"]) { bottom: calc(var(--story-bottom-h) + env(safe-area-inset-bottom)); align-items: flex-end; }
+      [data-event-story][data-story-zones] [data-story-monster^="Erubin"][data-story-monster^="Erubin"] { height: min(100%, 92vw, 400px); aspect-ratio: 1 / 1; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-monster^="Erubin"] img { object-fit: cover; object-position: 50% 0; }
     }
     /* 横の低い画面: 上部ゾーン = 上の端から 6px + ステージ(顔は 0.6倍・吹き出し 3行ぶん 84px)。下部ゾーン = その下ぜんぶ(窓の高さを固定)。
        モンスターは窓の左右の空き(上の横向きの決まりのまま) */

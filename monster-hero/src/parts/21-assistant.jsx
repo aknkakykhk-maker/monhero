@@ -36,7 +36,7 @@ const storyBaseWho = (id) => (typeof id === 'string' ? id.split('@')[0] : id);
 const storyCastOf = (script) => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(who => (script || []).some(l => l && storyBaseWho(l.who) === who.id));
 // 助手の「ふつう」の表情の絵(outfit を渡すと、その衣装のフォルダの絵)。登録が無ければ null
 const storyAssistantArtOf = (id, outfit) => {
-  const who = (typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST : []).find(a => a && a.id === id);
+  const who = ASSISTANT_LIST.find(a => a && a.id === id);
   if (!who || !who.imageDir || !who.imagePrefix) return null;
   const dirs = (typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS) || {};
   const dir = outfit ? dirs[outfit] : who.imageDir;
