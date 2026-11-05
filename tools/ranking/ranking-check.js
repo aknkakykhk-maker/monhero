@@ -101,7 +101,18 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
     };
   });
 
-  await page.goto(URL, { waitUntil: 'load', timeout: 60000 });
+  // ★この検査はゲームの配信(:8899)を自分では立てない。run-checks.js が立てた共有の配信を使う。
+  //   単独で node で回すと ERR_CONNECTION_REFUSED の Error だけが出て、中身のNGに見える(2026-11-05 窓口の全検査で踏んだ)。
+  //   配信が無いときは、理由と回し方を出して止める(検査の中身は変えない)
+  try {
+    await page.goto(URL, { waitUntil: 'load', timeout: 60000 });
+  } catch (e) {
+    if (/ERR_CONNECTION_REFUSED/.test(String(e))) {
+      console.log(`NG: ゲームの配信(${URL})につながらない。この検査は配信を自分で立てないので、node tools/run-checks.js --script ranking/ranking-check.js で回すか、先に python3 tools/serve.py を立てる`);
+      process.exit(1);
+    }
+    throw e;
+  }
   await page.waitForFunction(() => document.getElementById('root') && document.getElementById('root').children.length > 0, { timeout: 60000 });
   await page.waitForFunction(() => !!document.body && document.body.innerText.includes('TAP TO START'), { timeout: 30000 }).catch(() => {});
   const startBtn = page.getByRole('button', { name: 'TAP TO START' });
