@@ -36,7 +36,7 @@
 const CHANGELOG = [
   {
     // 2026-11-05 社長「この文で」(リバースの案)。公開の印 assistantErubin が立つまで、一覧にも告知にも出ない
-    date: "2026-11-05 19:25", type:'content', group:'assistant', title:'8人目の助手「えるびん」が加わりました', status:'new', releaseFlag:'assistantErubin',
+    date: "2026-11-05 18:20", type:'content', group:'assistant', title:'8人目の助手「えるびん」が加わりました', status:'new', releaseFlag:'assistantErubin',
     items:[
       'HOMEで新しいお話「砂の向こうから来た人」が流れます。遠いところから迷いこんできた人が、モンヒロの世界にやってきます。',
       'えるびんは、はじめからプロフィールの「いっしょに遊ぶ助手」で選べます。仲良し度・ごほうび・おしゃべりは、ほかの助手と同じように楽しめます。',
