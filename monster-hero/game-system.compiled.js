@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e794383fd3a3b42d
+// source-sha256: 243d5f21c1f7ac57
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -44914,6 +44914,7 @@ const TACTICS_HATE = {
     atsu: 'taunt',
     kyuko: 'cover',
     sorashido: 'buff',
+    erubin: 'buff',
     mua: 'heal',
     momosuke: 'heal',
     meloso: 'heal',
@@ -76198,6 +76199,12 @@ function BattleScreen({
       size: 9
     }), '会心予約', '', 'text-orange-400 border-orange-500/50', {
       pulse: true
+    });
+    if (getTurnBuff('erubinIsshen', null) != null) chip('erubinIsshen', React.createElement(Target, {
+      size: 9
+    }), '一閃の構え', getTurnBuff('erubinIsshen', 0) > 0 ? `固有技 会心+${Math.round(getTurnBuff('erubinIsshen', 0) * 100)}%` : '固有技 会心', 'text-amber-200 border-amber-300/60', {
+      pulse: true,
+      short: '一閃'
     });
     if (getTurnBuff('zeroGuts', false) || getNextTurnBuff('zeroGuts', false)) chip('zeroGuts', React.createElement(Star, {
       size: 9
@@ -129786,6 +129793,8 @@ function MonsterHeroGame() {
     ...p,
     [key]: value
   }));
+  const erubinIsshenOn = card => !!card && card.type === 'unique' && !isTacticsMode(runMode) && turnBuffs.erubinIsshen != null;
+  const erubinIsshenCritDmg = card => erubinIsshenOn(card) ? Math.max(0, Number(turnBuffs.erubinIsshen) || 0) : 0;
   const setTacticsNextSlotBuff = (slotIdx, key, value) => writeNextTurnBuffs(p => ({
     ...p,
     bySlot: withTacticsSlotBuff(p.bySlot, slotIdx, key, value)
@@ -133913,6 +133922,9 @@ function MonsterHeroGame() {
   }, [cardBattleIntroSeenLoaded, cardBattleIntroSeenFlag, rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (typeof setSorashidoJoinSeenForShop === 'function') setSorashidoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID));
+  }, [rhythmEventStorySeen]);
+  useEffect(() => {
+    if (typeof setErubinJoinSeenForShop === 'function') setErubinJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ERUBIN_JOIN_STORY_ID));
   }, [rhythmEventStorySeen]);
   const sorashidoGiftRef = useRef(false);
   const grantSorashidoGift = () => runGiftWrite(async () => {
@@ -143420,9 +143432,9 @@ function MonsterHeroGame() {
       heroId: mainHero?.id,
       traitOwnerId: traitOwnerOf(mon),
       comboDmgBonus: getPermaBuff('comboDmgPct'),
-      critDmgBonus: getPermaBuff('critDmgPct') + soulAttack.critDamageBonus,
+      critDmgBonus: getPermaBuff('critDmgPct') + soulAttack.critDamageBonus + erubinIsshenCritDmg(card),
       kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
-      guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx, card),
+      guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx, card) || erubinIsshenOn(card),
       rollCrit: () => false,
       globalComboRate: getPermaBuff('globalComboDmgPct') + additionalGlobalCombo,
       mainCanCrit: card.subType !== 'stun_atsu',
@@ -143433,7 +143445,7 @@ function MonsterHeroGame() {
       critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
     });
     return hits.reduce((sum, hit) => sum + hit.dmg, 0) + attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
-  }, [mainHero, turnBuffs, permaBuffs, enemyIntent]);
+  }, [mainHero, turnBuffs, permaBuffs, enemyIntent, runMode]);
   const resolveEnemyDefeat = async ({
     remainingHp,
     damage,
@@ -145239,6 +145251,53 @@ function MonsterHeroGame() {
           const owned = ownedTeachings.find(ot => ot.id === card.id);
           const level = Math.min(owned ? owned.evoLevel : 0, 2);
           if (isTacticsMode(runMode)) summonTacticsAiCopy(slotIdx, level, effMul);else summonClassicAiCopy(slotIdx, level, effMul);
+        } else if (card.subType === 'watch_erubin') {
+          const owned = ownedTeachings.find(ot => ot.id === card.id);
+          const tier = Math.min(owned ? owned.evoLevel : 0, ERUBIN_TIERS.length - 1);
+          const conf = ERUBIN_TIERS[tier];
+          const atkAdd = conf.atk * effMul;
+          addPermaBuff('atkPct', atkAdd);
+          const takenMul = Math.max(0.1, 1 - conf.cut * effMul);
+          const tactics = isTacticsMode(runMode);
+          if (tactics) {
+            for (let i = 0; i < 4; i++) {
+              const cur = Number(immediateTakenMultBySlot[i]);
+              immediateTakenMultBySlot[i] = (Number.isFinite(cur) && cur > 0 ? cur : 1) * takenMul;
+            }
+          } else immediateTakenMult *= takenMul;
+          addPopup(`🏜️ ${BREEDER_EVO_NAMES.erubin[tier]} 攻撃+${Math.round(atkAdd * 100)}%・被ダメ${Math.round(conf.cut * effMul * 100)}%減`, 'hero', 'text-amber-200 font-black text-xl drop-shadow-md');
+          if (tactics) {
+            const accRaw = livePermaBuff('erubinExAcc', null);
+            const acc = {
+              ...(accRaw && typeof accRaw === 'object' && !Array.isArray(accRaw) ? accRaw : {})
+            };
+            let charge = (Number.isFinite(Number(acc[slotIdx])) ? Number(acc[slotIdx]) : 0) + conf.exCharge * effMul;
+            const exNow = normalizeTacticsExState(tacticsExStateRef.current);
+            const own = exNow.uses[slotIdx];
+            if (charge >= 1 - 1e-9 && own && Number(own.count) > 0) {
+              charge -= 1;
+              commitTacticsExState({
+                ...exNow,
+                uses: {
+                  ...exNow.uses,
+                  [slotIdx]: {
+                    ...own,
+                    count: Math.max(0, Number(own.count) - 1)
+                  }
+                }
+              });
+              addPopup('✨ EX の使える回数 +1', 'hero', 'text-yellow-200 font-black text-lg drop-shadow-md', undefined, slotIdx);
+              pushBattleLog(`🏜️ ${actorName(slotIdx)}の EX の使える回数が1回ぶん戻った`, 'ally');
+            }
+            acc[slotIdx] = Math.min(1, Math.max(0, charge));
+            writePermaBuffs(p => ({
+              ...p,
+              erubinExAcc: acc
+            }));
+          } else {
+            setNextTurnBuff('erubinIsshen', conf.critDmg);
+            pushBattleLog(`🏜️ 次のターン、固有技が必ず会心${conf.critDmg > 0 ? `(会心のダメージ+${Math.round(conf.critDmg * 100)}%)` : ''}`, 'ally');
+          }
         } else if (card.subType === 'cover_kyuko') {
           const owned = ownedTeachings.find(ot => ot.id === card.id);
           const tier = Math.min(owned ? owned.evoLevel : 0, KYUKO_TIERS.length - 1);
@@ -145407,7 +145466,7 @@ function MonsterHeroGame() {
         attackCount++;
         const soulAttack = soulTraitAttackProfile(activeMon?.masuId ? getMasuMon(activeMon.masuId) : null, card, slotIdx);
         const critRateBonus = getPermaBuff('critRatePct') + soulAttack.critRateBonus;
-        const critDmgBonus = getPermaBuff('critDmgPct') + soulAttack.critDamageBonus;
+        const critDmgBonus = getPermaBuff('critDmgPct') + soulAttack.critDamageBonus + erubinIsshenCritDmg(card);
         const hits = buildAttackHits({
           d,
           card,
@@ -145417,7 +145476,7 @@ function MonsterHeroGame() {
           comboDmgBonus: getPermaBuff('comboDmgPct'),
           critDmgBonus,
           kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
-          guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx, card),
+          guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx, card) || erubinIsshenOn(card),
           rollCrit: () => Math.random() < Math.min(1, ((card.crit || 0.1) + critRateBonus + (tacticsExMultiBuffNow(slotIdx).critAdd || 0) + blackNoteEffectAt(slotIdx, activeMon?.id).critAdd + kyubiAttackAt(slotIdx, activeMon?.id, card).critAdd) * tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
           comboFinalMultiplier: soulAttack.comboFinalMultiplier,
@@ -148956,6 +149015,11 @@ function MonsterHeroGame() {
     }
     if (t.id === 'kiki') return `次の${level + 2}ターン 使えるカード +1枚・全体連撃 ${3 + level * 2}%アップ（バトル中永続・使用ごとに加算）`;
     if (t.id === 'sorashido') return sorashidoCopyDesc(level);
+    if (t.id === 'erubin') {
+      const tier = ERUBIN_TIERS[Math.min(level, ERUBIN_TIERS.length - 1)];
+      const third = isTacticsMode(runMode) ? '使った子の EX の使える回数を 1/3回ぶん回復（3回使うと1回）' : `次のターン 固有技が必ず会心${tier.critDmg > 0 ? `・会心のダメージ ${pct(tier.critDmg)}%アップ` : ''}`;
+      return `味方全員の攻撃 ${pct(tier.atk)}%アップ（次のターンから・バトル中永続・使用ごとに加算）・このターン味方全員の受けるダメージ ${pct(tier.cut)}%ダウン・${third}`;
+    }
     if (t.id === 'kyuko') {
       const tier = KYUKO_TIERS[Math.min(level, KYUKO_TIERS.length - 1)];
       return `このターン敵の単体攻撃を引き受ける（タクティクス）・受けるダメージ ${pct(tier.cut)}%ダウン（${tier.turns}ターン・タクティクス以外はパーティ全体）`;

@@ -20,6 +20,8 @@ const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=a17ca7fa2869";
 const KYUKO_FACE_ICON = "images/assistant/face/kyuko_happy.PNG?v=6ad5eda132bf";
 // ソラシド(2026-10-27)。顔アイコンをそのまま使う(きゅうこと同じ形。字のアイコンのままだと、マーケットで「?」の箱になった)
 const SORASHIDO_FACE_ICON = "images/assistant/face/sorashido_happy.PNG?v=27d67b71522c";
+// えるびん(2026-11-05)。顔アイコンをそのまま使う(きゅうこ・ソラシドと同じ形)
+const ERUBIN_FACE_ICON = "images/assistant/face/erubin_happy.PNG?v=cff970be9e3f";
 // お話の背景絵(2026-11-05 社長「背景絵がない」「今後のイベントや今のパンドラのイベントにも使いたい」)。どのお話からも使える共通の背景。台本の行の bg:'<名前>' で切り替える(次に bg を書いた行まで続き、bg:'none' で消す。一覧は docs/progress/story-bg/README.md)。
 //   1080×1080 の正方形で、大事なものは真ん中に寄せてある(縦の画面は左右、横の低い画面は上下が切れても見える)。ほかのお話でも使ってよい
 const STORY_BG_DESERT_PALACE = "images/story-bg/desert_palace.jpg?v=890ff3607962";     // 石油王の世界: 砂漠の夕方と白い宮殿・ラクダ
@@ -97,7 +99,8 @@ const BREEDER_EVO_NAMES = {
   poltz: ["ポルツの弁当", "ポルツの挫折", "ポルツの目覚め"],
   momosuke: ["ももすけのおねだり", "ももすけのだだこね", "ももすけの独り占め"],
   kyuko: ["きゅうこの譜面", "きゅうこの編曲", "きゅうこの交響曲"],
-  sorashido: ["ソラシドの自動化", "ソラシドの全自動", "ソラシドの無人運転"]
+  sorashido: ["ソラシドの自動化", "ソラシドの全自動", "ソラシドの無人運転"],
+  erubin: ["えるびんの見守り", "えるびんの静観", "えるびんの一閃"]
 };
 
 // かどみうむ(guts_buff)の進化段階ごとの効果量。
@@ -143,6 +146,17 @@ const KYUKO_TIERS = [
 //   pick      : コピーが「いちばん点の高いカード」を選ぶ見込み。外れたら2番目以降から選ぶ
 //   maxCards  : 1ターンに使う枚数の上限。2枚は、コピーのガッツの上限が gutsFor2 以上で、今のガッツが2枚ぶん足りるときだけ
 //   hateStart : タクティクスで、出たときの🔥(元の子の🔥に対する割合)。hateGain : 🔥のたまり方の倍率
+// えるびんの見守り(watch_erubin・2026-11-05 社長の決定)。効果の適用も説明文もこの表だけを見る。
+//   atk      : 攻撃アップ(味方全員・タクティクス/クラシック1回の最後まで・重ねがけ・上限なし)。permaBuffs.atkPct へ足す(ニコラオの力と同じ入れ物)。効くのは次のターンから
+//   cut      : 使ったターンだけ、味方全員の受けるダメージを減らす割合
+//   exCharge : タクティクスだけ。使った子の EX の使える回数を、1回使うごとにこのぶん戻す(3回で EX 1回。段で変えない)
+//   critDmg  : クラシックだけ。次のターン、固有技が必ず会心になり、会心のダメージにこのぶん足す(段1は会心だけ)
+const ERUBIN_TIERS = [
+  { atk:0.06, cut:0.15, exCharge:1/3, critDmg:0 },
+  { atk:0.09, cut:0.20, exCharge:1/3, critDmg:0.10 },
+  { atk:0.12, cut:0.30, exCharge:1/3, critDmg:0.20 },
+];
+
 const SORASHIDO_TIERS = [
   { rates:{ hp:0.5, atk:0.6, def:0.5, guts:0.6 }, turns:2, pick:0.5,  maxCards:1, hateStart:0.5,  hateGain:1.0 },
   { rates:{ hp:0.7, atk:0.8, def:0.7, guts:0.8 }, turns:3, pick:0.65, maxCards:1, hateStart:0.75, hateGain:1.25 },
@@ -204,7 +218,10 @@ const TEACHING_CARDS = [
   { id:'kyuko', baseName:"きゅうこの譜面", icon:KYUKO_FACE_ICON, type:'buff', subType:'cover_kyuko', baseValue:0.3, step:0.15, desc:"このターン敵の単体攻撃を引き受け・受けるダメージダウン", evoLevel:0, guts:20 },
   // ソラシド(2026-10-27)。公開の印 assistantSorashido が立つまでは、マーケット・ヘルプに出ない(releaseFlag)。効果量は SORASHIDO_TIERS。
   //   baseValue は Lv0 のライフの割合(表示・検査用)。増え方は表が持つので step は 0
-  { id:'sorashido', baseName:"ソラシドの自動化", icon:SORASHIDO_FACE_ICON, type:'buff', subType:'copy_sorashido', baseValue:0.5, step:0, desc:"使った子のAIコピーが、次のターンから5人目の味方として戦う", evoLevel:0, guts:20, releaseFlag:'assistantSorashido' }
+  { id:'sorashido', baseName:"ソラシドの自動化", icon:SORASHIDO_FACE_ICON, type:'buff', subType:'copy_sorashido', baseValue:0.5, step:0, desc:"使った子のAIコピーが、次のターンから5人目の味方として戦う", evoLevel:0, guts:20, releaseFlag:'assistantSorashido' },
+  // えるびん(2026-11-05 社長の決定)。公開の印 assistantErubin が立つまでは、マーケット・ヘルプに出ない(releaseFlag)。効果量は ERUBIN_TIERS。
+  //   baseValue は Lv0 の攻撃アップ(表示・検査用)。増え方は表が持つので step は 0
+  { id:'erubin', baseName:"えるびんの見守り", icon:ERUBIN_FACE_ICON, type:'buff', subType:'watch_erubin', baseValue:0.06, step:0, desc:"味方全員の攻撃が永続アップ・このターン受けるダメージダウン・EX回復(クラシックは次のターン固有技が必ず会心)", evoLevel:0, guts:20, releaseFlag:'assistantErubin' }
 ];
 
 // 初期から無料で使えるアシストカード(教えカード)のid一覧(固定)。
@@ -439,6 +456,12 @@ const setSorashidoJoinSeenForShop = (seen) => { sorashidoJoinSeenForShop = seen 
 const sorashidoCardOnSale = () => {
   try { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantSorashido === true && sorashidoJoinSeenForShop; } catch { return false; }
 };
+// えるびんのカードが交換所に並ぶか(きゅうこ・ソラシドと同じ形)。加入のお話(erubin_join_2026_11)を見たかは、ゲーム側が setErubinJoinSeenForShop で知らせる
+let erubinJoinSeenForShop = false;
+const setErubinJoinSeenForShop = (seen) => { erubinJoinSeenForShop = seen === true; };
+const erubinCardOnSale = () => {
+  try { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantErubin === true && erubinJoinSeenForShop; } catch { return false; }
+};
 // 公開の印(releaseFlag)が付いたアシカは、印が立つまでヘルプの表などに出さない
 const teachingCardReleased = (card) => {
   if (!card || !card.releaseFlag) return true;
@@ -457,6 +480,9 @@ const BREEDER_MARKET_ITEMS = [
   // ソラシド(2026-10-27)。きゅうこと同じく、公開の印が立ち、加入のお話を見たら並ぶ。150000
   { id:'sorashido', name:"アシストカード「ソラシド」", type:'assist', icon:SORASHIDO_FACE_ICON, cost:150000, desc:"使った子のAIコピーが、次のターンから5人目の味方として数ターン戦う",
     get shop() { return sorashidoCardOnSale() ? undefined : false; } },
+  // えるびん(2026-11-05 社長の決定)。きゅうこ・ソラシドと同じく、公開の印が立ち、加入のお話を見たら並ぶ。150000
+  { id:'erubin', name:"アシストカード「えるびん」", type:'assist', icon:ERUBIN_FACE_ICON, cost:150000, desc:"味方全員の攻撃が永続アップ・このターン受けるダメージダウン・EX回復(クラシックは次のターン固有技が必ず会心)",
+    get shop() { return erubinCardOnSale() ? undefined : false; } },
 
   { id:'oryo',    name:"ニコラオのアイコン",     type:'icon', icon:NICOLAO_FACE_ICON, cost:1 },
   { id:'dra',     name:"ドラのアイコン",        type:'icon', icon:DRA_FACE_ICON,     cost:1 },
