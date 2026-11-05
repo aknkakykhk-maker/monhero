@@ -207,7 +207,7 @@ const AssistantFace = ({ who, size = 88, accent, expression = null }) => {
   // 場面が変わって表情が切り替わったら読み直す
   useEffect(() => { setSrc(assistantFaceSrc(who, expression)); }, [who.id, expression]);
   return (
-    <div className="shrink-0 rounded-2xl overflow-hidden border-2 flex items-center justify-center bg-black/50"
+    <div className="relative shrink-0 rounded-2xl overflow-hidden border-2 flex items-center justify-center bg-black/50"
          style={{ width:`${size}px`, height:`${size}px`, borderColor:accent, boxShadow:`0 0 12px ${accent}55` }}>
       {src
         ? <img src={src} alt={who.name} className={`w-full h-full ${who.imageFit === 'contain' ? 'object-contain p-0.5' : 'object-cover'}`}
@@ -216,6 +216,8 @@ const AssistantFace = ({ who, size = 88, accent, expression = null }) => {
                style={who.secret ? { filter:'brightness(0) invert(.16) sepia(1) saturate(1.4)' } : undefined}
                onError={()=>setSrc(src === fallback ? null : fallback)}/>
         : <span style={{ fontSize:`${Math.round(size * 0.5)}px`, lineHeight:1 }}>{who.emoji}</span>}
+      {/* シークレットの話し手は、影の上に「？」を重ねる(影だけだと、絵が欠けた箱に見えた) */}
+      {who.secret && <span aria-hidden="true" data-story-secret-mark style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:`${Math.round(size * 0.42)}px`, fontWeight:900, color:'#e9c98f', textShadow:'0 0 10px rgba(0,0,0,.8)' }}>？</span>}
     </div>
   );
 };

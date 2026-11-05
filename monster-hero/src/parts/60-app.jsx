@@ -6021,6 +6021,21 @@ function MonsterHeroGame() {
     const ev = list.find(x => x.id === eventReplay.id);
     return eventScriptBgmAt(ev && eventScriptForPlayer(ev.script, rhythmEventStorySeen), eventReplay.step);
   })();
+  // 台本の行の bgmFadeOut:true … その行のあいだに音を下げきる(終わりの札と同じ 2.5秒。次の行で戻す)。
+  //   2026-11-05 えるびんのお話: 穴に落ちていくあいだに「茨の王の怒り」を下げ、着いた行からいつもの曲へ(社長「2.5秒」)
+  const eventLineFadeOut = (() => {
+    if (!eventReplay || kikiIntroPlaying || momosukeIntroPlaying) return false;
+    const list = eventReplay.debug ? eventReplayAllList() : eventReplayList();
+    const ev = list.find(x => x.id === eventReplay.id);
+    const sc = ev ? eventScriptForPlayer(ev.script, rhythmEventStorySeen) : null;
+    const l = Array.isArray(sc) ? sc[eventReplay.step] : null;
+    return !!(l && l.bgmFadeOut);
+  })();
+  useEffect(() => {
+    if (typeof Audio_ === 'undefined' || !Audio_.setStoryEndFade) return;
+    if (eventLineFadeOut) Audio_.setStoryEndFade(true);
+    else if (!eventReplayEnding) Audio_.setStoryEndFade(false);
+  }, [eventLineFadeOut]);
   // 同じお話の中で曲が替わるときだけ、今の曲を下げてから移す(お話に入る・出るときは今までどおり)
   const eventBgmPlayedRef = useRef(null);
   // 画面から鳴らすべき曲のキーを決める
@@ -23419,15 +23434,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               })}
             </div>
           )}
-          {fx&&(
+          {/* 場面の説明(fxText)は、光る演出(fx)の無い行でも出す(2026-11-05。fx の無い行の説明が、どのお話でも出ていなかった) */}
+          {(fx||(line.fxText&&!(storyZones&&storySub>0)))&&(
             <div key={`fx${step}`} aria-hidden="true" className="pointer-events-none" style={{position:'absolute',inset:0,zIndex:4}}>
-              <div data-story-fx-flash={fx} style={{position:'absolute',inset:0,background:`radial-gradient(circle at 50% ${fx==='split'||fx==='merge'||fx==='unlock'?'46%':'22%'}, rgba(${fxColors[fx]||'255,255,255'},.95), rgba(${fxColors[fx]||'255,255,255'},.35) 45%, rgba(0,0,0,0) 75%)`,animation:'storyFlash 1s ease-out both'}}/>
+              {fx&&<div data-story-fx-flash={fx} style={{position:'absolute',inset:0,background:`radial-gradient(circle at 50% ${fx==='split'||fx==='merge'||fx==='unlock'?'46%':'22%'}, rgba(${fxColors[fx]||'255,255,255'},.95), rgba(${fxColors[fx]||'255,255,255'},.35) 45%, rgba(0,0,0,0) 75%)`,animation:'storyFlash 1s ease-out both'}}/>}
               {/* パンドラが分かれる/戻るときの鍵穴の光(2026-11-02 イベント「鍵の向こう側へ」)。分かれるときは光の筋が放射状に走る */}
               {(fx==='split'||fx==='merge'||fx==='unlock')&&<span data-story-keyhole/>}
               {/* 鍵が回る(第7話)。金の輪が回って、鍵穴から光があふれる */}
               {fx==='unlock'&&<span data-story-unlock><i/></span>}
               {fx==='split'&&<span data-story-crack>{[-160,-118,-72,-28,14,58,104,142].map((deg,i)=><i key={deg} style={{transform:`rotate(${deg}deg)`,animationDelay:`${i%3*40}ms`}}/>)}</span>}
-              {line.fxText&&<div data-story-banner className="px-4 text-center text-[17px] font-black" style={{position:'absolute',top:'42%',left:'50%',width:'100%',maxWidth:'28rem',color:'#fff',textShadow:`0 0 14px rgba(${fxColors[fx]||'255,255,255'},1), 0 2px 0 rgba(0,0,0,.6)`,animation:'storyBanner 2.2s ease-out both'}}>{storyCenter(line.fxText,storyBoxW-32,17)}</div>}
+              {/* 場面の説明は、幕開けの札が開いてから出し直す(札の裏で動きが終わって、最初の行の説明が見えなかった。2026-11-05 えるびんのお話) */}
+              {line.fxText&&!storyOpening&&<div key={`banner${step}-${eventReplay.opened?1:0}`} data-story-banner className="px-4 text-center text-[17px] font-black" style={{position:'absolute',top:'42%',left:'50%',width:'100%',maxWidth:'28rem',color:'#fff',textShadow:`0 0 14px rgba(${fxColors[fx]||'255,255,255'},1), 0 2px 0 rgba(0,0,0,.6)`,animation:'storyBanner 2.2s ease-out both'}}>{storyCenter(line.fxText,storyBoxW-32,17)}</div>}
             </div>
           )}
           {/* ★ボタンの列はいつも窓の中に出す(2026-10-27 844×390 の横向きで、台詞が5行になると「次へ」「スキップ」が画面の外へ出て押せなかった)。
@@ -23447,7 +23464,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               // 小さい顔の列には、その場面にいる人だけを並べる(2026-11-03 社長「いない人は出さない」「あとから現れる人は、現れたときまで出さない」)。
               //   そのページまでに一度でも話した人。最初からいるのにしばらく話さない人は、その話の castAtStart に書けば1ページ目から並ぶ
               const atStart=Array.isArray(event&&event.castAtStart)?event.castAtStart:[];
-              const rowCast=(tiny?cast.filter(who=>atStart.includes(who.id)||script.slice(0,step+1).some(l=>l&&storyBase(l.who)===who.id)):cast).map(castNow);
+              const rowCast=(tiny?cast.filter(who=>atStart.includes(who.id)||script.slice(0,step+1).some(l=>l&&storyBase(l.who)===who.id)):cast).map(castNow).filter(who=>!who.secret);
               if(tiny&&rowCast.length===0)return <div data-story-cast-tiny-empty style={{height:28,marginBottom:6}}/>;const compact=!tiny&&storyMonsters.length>0;const many=!compact&&!tiny&&cast.length>4;const big=tiny?28:compact?44:many?60:84,small=tiny?24:compact?36:many?48:64;return(
             <div data-story-cast={cast.length} data-story-cast-compact={compact||tiny?'':undefined} data-story-cast-tiny={tiny?'':undefined} className={`${tiny?'mb-1.5 flex-nowrap gap-1':compact?'mb-2 flex-nowrap gap-1.5':'mb-3'} flex items-end justify-center ${many?'flex-wrap gap-x-1 gap-y-1.5':compact||tiny?'':'gap-3'}`}>
               {rowCast.map(who=>{

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1fc04ed3fa2e86da
+// source-sha256: 1769b0cab4b010c5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -19038,7 +19038,7 @@ const AssistantFace = ({
     setSrc(assistantFaceSrc(who, expression));
   }, [who.id, expression]);
   return React.createElement("div", {
-    className: "shrink-0 rounded-2xl overflow-hidden border-2 flex items-center justify-center bg-black/50",
+    className: "relative shrink-0 rounded-2xl overflow-hidden border-2 flex items-center justify-center bg-black/50",
     style: {
       width: `${size}px`,
       height: `${size}px`,
@@ -19059,7 +19059,21 @@ const AssistantFace = ({
       fontSize: `${Math.round(size * 0.5)}px`,
       lineHeight: 1
     }
-  }, who.emoji));
+  }, who.emoji), who.secret && React.createElement("span", {
+    "aria-hidden": "true",
+    "data-story-secret-mark": true,
+    style: {
+      position: 'absolute',
+      inset: 0,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: `${Math.round(size * 0.42)}px`,
+      fontWeight: 900,
+      color: '#e9c98f',
+      textShadow: '0 0 10px rgba(0,0,0,.8)'
+    }
+  }, "？"));
 };
 const helpWrap = x => typeof x === 'string' && typeof jaWrap === 'function' ? React.createElement("span", {
   style: typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined
@@ -134240,6 +134254,18 @@ function MonsterHeroGame() {
     const ev = list.find(x => x.id === eventReplay.id);
     return eventScriptBgmAt(ev && eventScriptForPlayer(ev.script, rhythmEventStorySeen), eventReplay.step);
   })();
+  const eventLineFadeOut = (() => {
+    if (!eventReplay || kikiIntroPlaying || momosukeIntroPlaying) return false;
+    const list = eventReplay.debug ? eventReplayAllList() : eventReplayList();
+    const ev = list.find(x => x.id === eventReplay.id);
+    const sc = ev ? eventScriptForPlayer(ev.script, rhythmEventStorySeen) : null;
+    const l = Array.isArray(sc) ? sc[eventReplay.step] : null;
+    return !!(l && l.bgmFadeOut);
+  })();
+  useEffect(() => {
+    if (typeof Audio_ === 'undefined' || !Audio_.setStoryEndFade) return;
+    if (eventLineFadeOut) Audio_.setStoryEndFade(true);else if (!eventReplayEnding) Audio_.setStoryEndFade(false);
+  }, [eventLineFadeOut]);
   const eventBgmPlayedRef = useRef(null);
   const bgmSuspendedByRhythmRef = useRef(false);
   const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver, allowKeep = true) => {
@@ -161633,7 +161659,7 @@ function MonsterHeroGame() {
           fill: true,
           own: true
         }) : art);
-      })), fx && React.createElement("div", {
+      })), (fx || line.fxText && !(storyZones && storySub > 0)) && React.createElement("div", {
         key: `fx${step}`,
         "aria-hidden": "true",
         className: "pointer-events-none",
@@ -161642,7 +161668,7 @@ function MonsterHeroGame() {
           inset: 0,
           zIndex: 4
         }
-      }, React.createElement("div", {
+      }, fx && React.createElement("div", {
         "data-story-fx-flash": fx,
         style: {
           position: 'absolute',
@@ -161662,7 +161688,8 @@ function MonsterHeroGame() {
           transform: `rotate(${deg}deg)`,
           animationDelay: `${i % 3 * 40}ms`
         }
-      }))), line.fxText && React.createElement("div", {
+      }))), line.fxText && !storyOpening && React.createElement("div", {
+        key: `banner${step}-${eventReplay.opened ? 1 : 0}`,
         "data-story-banner": true,
         className: "px-4 text-center text-[17px] font-black",
         style: {
@@ -161695,7 +161722,7 @@ function MonsterHeroGame() {
         if (storyZones && !storyKeepRow) return null;
         const tiny = storyZones;
         const atStart = Array.isArray(event && event.castAtStart) ? event.castAtStart : [];
-        const rowCast = (tiny ? cast.filter(who => atStart.includes(who.id) || script.slice(0, step + 1).some(l => l && storyBase(l.who) === who.id)) : cast).map(castNow);
+        const rowCast = (tiny ? cast.filter(who => atStart.includes(who.id) || script.slice(0, step + 1).some(l => l && storyBase(l.who) === who.id)) : cast).map(castNow).filter(who => !who.secret);
         if (tiny && rowCast.length === 0) return React.createElement("div", {
           "data-story-cast-tiny-empty": true,
           style: {

@@ -10756,7 +10756,7 @@ const ASSISTANT_ERUBIN_JOIN_STORY = [
   { who:'erubin',   e:'troubled', secret:true, outfit:'sekiyuou', t:'俺、何かしたかな……。この服の金の刺しゅうが、光って見えるのかな' },
   { who:'erubin',   e:'surprise', secret:true, outfit:'sekiyuou', fx:'transform', fxText:'逃げこんだ先で、足もとの砂が崩れはじめた', t:'うわ、砂が……！ 足もとが……！' },
   { who:'erubin',   e:'troubled', secret:true, outfit:'sekiyuou', fxText:'砂の下に、ぽっかりと黒い穴が開いている', t:'……これ、落ちるやつだよね……？' },
-  { who:'erubin',   e:'surprise', secret:true, outfit:'sekiyuou', fx:'fall', fxText:'まっさかさまに、暗い穴の底へ——', holdMs:2600, t:'うわああああ……！' },
+  { who:'erubin',   e:'surprise', secret:true, outfit:'sekiyuou', fx:'fall', bgmFadeOut:true, fxText:'まっさかさまに、暗い穴の底へ——', holdMs:2600, t:'うわああああ……！' },
   // ---- ② 気が付いたら、モンヒロの世界 ----
   { who:'mua',      e:'normal',   scene:'none', bgm:'default', t:'ねえねえ、今日はこれから何して遊ぶ〜？' },
   { who:'kiki',     e:'normal',   t:'そうでつね……あれま。上から、何か落ちてきまつ！' },
