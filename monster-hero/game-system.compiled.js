@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 460bd0b752dd18b5
+// source-sha256: 85c525dfa05ec98c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -146640,13 +146640,13 @@ function MonsterHeroGame() {
     resetDreamPain();
     clearKyubiKageroWait();
     setWaveBuffs({});
+    resetFateWheel();
+    resetEnemyConfuse();
     kyukoRedirectRef.current = null;
     writePermaBuffs(p => p.kyukoCutTurns > 0 ? {
       ...p,
       kyukoCutTurns: 0
     } : p);
-    resetFateWheel();
-    resetEnemyConfuse();
     return dist;
   }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, tacticsRecords, runMode]);
   useEffect(() => {
@@ -161301,6 +161301,18 @@ function MonsterHeroGame() {
           }
         }, body(c.t))));
       };
+      const storyCenterCap = (w, fs) => Math.max(4, Math.floor(w / fs - 0.2));
+      const storyCenter = (text, w, fs) => {
+        const t = String(text ?? '');
+        const cap = storyCenterCap(w, fs);
+        const ch = typeof storyChunkLines === 'function' ? storyChunkLines(t, cap, 3) : null;
+        return React.createElement("span", {
+          style: ch ? {
+            ...bubbleWrapStyle(),
+            textWrap: 'wrap'
+          } : bubbleWrapStyle()
+        }, storyLineNodes(t, cap));
+      };
       const storyLineStyle = (text, cap) => {
         const st = bubbleWrapStyle();
         return storyZones && typeof storyChunkLines === 'function' && storyChunkLines(text, cap, storyChunkMax(cap)) ? {
@@ -161590,7 +161602,7 @@ function MonsterHeroGame() {
           textShadow: `0 0 14px rgba(${fxColors[fx] || '255,255,255'},1), 0 2px 0 rgba(0,0,0,.6)`,
           animation: 'storyBanner 2.2s ease-out both'
         }
-      }, line.fxText)), React.createElement("div", {
+      }, storyCenter(line.fxText, storyBoxW - 32, 17))), React.createElement("div", {
         ref: storyMeasureRef('--story-sheet-h', 'height'),
         onClick: next,
         "data-story-sheet": true,
@@ -161793,18 +161805,18 @@ function MonsterHeroGame() {
             animation: 'storyOpenTitle 1.3s ease-out .4s both',
             textShadow: '0 0 18px rgba(192,132,252,.8)'
           }
-        }, parts.ep), parts.sub && React.createElement("p", {
+        }, storyCenter(parts.ep, Math.min(storyBoxW, 384) - 48, 30)), parts.sub && React.createElement("p", {
           className: "mt-1 text-[16px] font-black text-fuchsia-100",
           style: {
             animation: 'storyEndCard 1s ease-out .9s both'
           }
-        }, parts.sub), prevParts && React.createElement("p", {
+        }, storyCenter(parts.sub, Math.min(storyBoxW, 384) - 48, 16)), prevParts && React.createElement("p", {
           "data-story-opening-prev": true,
           className: "mt-6 text-[11px] font-bold text-slate-400",
           style: {
             animation: 'storyEndCard 1s ease-out 1.5s both'
           }
-        }, "前回のお話 ", prevParts.ep, " ", prevParts.sub), leftText && React.createElement("p", {
+        }, storyCenter(`前回のお話 ${prevParts.ep} ${prevParts.sub}`, Math.min(storyBoxW, 384) - 48, 11)), leftText && React.createElement("p", {
           "data-story-opening-left": true,
           className: "mt-2 text-[12px] font-black text-amber-200",
           style: {
@@ -161872,12 +161884,12 @@ function MonsterHeroGame() {
             animation: `storyEndCard 1s ease-out ${delay + .35}s both`,
             textShadow: '0 0 18px rgba(192,132,252,.8)'
           }
-        }, parts.ep), parts.sub && React.createElement("p", {
+        }, storyCenter(parts.ep, Math.min(storyBoxW, 384) - 48, 30)), parts.sub && React.createElement("p", {
           className: "mt-1 text-[16px] font-black text-fuchsia-100",
           style: {
             animation: `storyEndCard 1s ease-out ${delay + .5}s both`
           }
-        }, parts.sub), React.createElement("p", {
+        }, storyCenter(parts.sub, Math.min(storyBoxW, 384) - 48, 16)), React.createElement("p", {
           "data-story-ending-fin": true,
           className: "mt-5 text-[38px] font-black tracking-[.4em]",
           style: {
@@ -161897,7 +161909,7 @@ function MonsterHeroGame() {
           className: "text-[11px] font-black text-fuchsia-200"
         }, "次のお話"), React.createElement("p", {
           className: "text-[14px] font-black text-white"
-        }, nextParts.series && nextParts.series !== parts.series ? `${nextParts.series} ` : '', nextParts.ep, " ", nextParts.sub), eventReplay.live && React.createElement("p", {
+        }, storyCenter(`${nextParts.series && nextParts.series !== parts.series ? `${nextParts.series} ` : ''}${nextParts.ep} ${nextParts.sub}`, Math.min(storyBoxW, 384) - 80, 14)), eventReplay.live && React.createElement("p", {
           className: "text-[12px] font-bold text-slate-300"
         }, left > 0 ? React.createElement(React.Fragment, null, when, " から ", React.createElement("b", {
           className: "text-amber-200"
