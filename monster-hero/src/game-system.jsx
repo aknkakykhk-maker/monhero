@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0c9a2d405bda0fbf
+// generated-sha256: dfa4e015243f5b1f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -98067,6 +98067,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // お話の始まり(題字の幕開け)。開いた最初だけ(1ページ目・まだ幕を開けていないとき)。タップか、題字が出終わったら最初のページへ
         const storyOpeningStyle=typeof STORY_OPENING_STYLE!=='undefined'?STORY_OPENING_STYLE:'none';
         const storyOpening=!!event&&storyOpeningStyle!=='none'&&!eventReplay.opened&&step===0&&!eventReplay.ending;
+        // 場面の背景(台本の行の bg:'名前'。次に bg を書いた行まで続き、bg:'none' で消す。2026-11-05 共通の背景)
+        let storyScene=null;
+        for(let i=step;i>=0;i--){const l=script[i];if(l&&typeof l.bg==='string'){storyScene=l.bg==='none'?null:l.bg;break;}}
+        // 絵は data/breeder.js の STORY_SCENE_IMAGES(名前 → 絵)。表に無い名前は出さない
+        const storySceneImg=storyScene&&typeof STORY_SCENE_IMAGES!=='undefined'?(STORY_SCENE_IMAGES[storyScene]||null):null;
+        // このお話で使う背景は、開いたときに先に読んでおく(場面が替わった瞬間に絵が遅れて出ないように)
+        if(typeof STORY_SCENE_IMAGES!=='undefined'&&typeof window!=='undefined'){
+          const pre=window.__mhStoryScenePreloaded||(window.__mhStoryScenePreloaded=new Set());
+          script.forEach(l=>{const src=l&&STORY_SCENE_IMAGES[l.bg];if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});
+        }
         const finishOpening=()=>setEventReplay(r=>r&&!r.opened?{...r,opened:true,shownAt:Date.now()}:r);
         // ゲスト(ジャック・ぱんぷきん)は、下の助手の列には入れない。初めて話す行(か stage で呼ばれる行)から、画面の上部の「ステージ」に出る
         //  (2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」)
@@ -98229,6 +98239,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         };
         return(
         <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-step={step} data-story-zones={storyZones?(storyKeepRow?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} data-story-opening={storyOpening?storyOpeningStyle:undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
+          {/* 場面の背景(台本の行の bg)。場面が替わると key が替わり、ふわっと切り替わる。fx:'fall' の行では、
+              穴へ落ちていくように背景が上へ流れて暗くなる(70-bootstrap.jsx の [data-story-bg]) */}
+          {storySceneImg&&<div key={storyScene} data-story-bg={storyScene} data-story-bg-fx={fx==='fall'?'fall':undefined} aria-hidden="true"
+            style={{'--story-bg':`url("${storySceneImg}")`}}/>}
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
           {/* ★会話の紙は「タップを受け取る側」にしておく(2026-09-17・ユーザー報告
                 「イベント中のスキップを押してもスキップ出来ない／次のセリフへ進むだけ」)。
@@ -102920,6 +102934,19 @@ const createAnimationStyle = () => {
     @keyframes storyOpenTitle { 0% { opacity: 0; transform: scale(.94); filter: blur(6px); } 100% { opacity: 1; transform: none; filter: none; } }
     @keyframes storyOpenOut { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
     @keyframes storyIrisHole { 0% { width: 0; height: 0; } 100% { width: 260vmax; height: 260vmax; } }
+    /* お話の場面の背景(2026-11-05 共通の背景。どのお話からも台本の bg で使う)。絵は data/breeder.js の STORY_SCENE_IMAGES。
+       正方形の絵を敷く(縦は左右・横の低い画面は上下が切れる。大事なものは絵の真ん中にある)。
+       下のほうは会話の紙と立ち絵が乗るので、少しだけ暗くして字を読みやすくする */
+    [data-story-bg] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; background-color: #0b0a14; animation: storySceneIn .7s ease-out both; }
+    [data-story-bg]::before { content: ''; position: absolute; inset: 0; background-image: var(--story-bg); background-size: cover; background-position: center 42%; background-repeat: no-repeat; }
+    [data-story-bg]::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.10) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 55%, rgba(0,0,0,.38) 100%); }
+    /* 縦の画面: 下の3割は会話の紙が乗るので、絵は紙より上の範囲に敷く(家・宮殿などの真ん中のものが紙に隠れないように)。下の端はぼかして暗い地につなぐ */
+    @media (orientation: portrait) { [data-story-bg]::before { bottom: 30%; -webkit-mask-image: linear-gradient(180deg, #000 80%, transparent 100%); mask-image: linear-gradient(180deg, #000 80%, transparent 100%); } }
+    @keyframes storySceneIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+    /* fx:'fall' … 穴へ落ちていく。背景が上へ流れながら暗くなる(行の holdMs のあいだに終わる長さ) */
+    [data-story-bg][data-story-bg-fx="fall"] { animation: storySceneFall 2.4s cubic-bezier(.55,0,.8,.4) both; }
+    @keyframes storySceneFall { 0% { transform: none; filter: none; } 100% { transform: translateY(-85%) scale(1.25); filter: brightness(0); } }
+    @media (prefers-reduced-motion: reduce) { [data-story-bg], [data-story-bg][data-story-bg-fx="fall"] { animation-duration: .01s !important; } }
     [data-event-story][data-story-opening]:not([data-story-opening="iris"]) > :not([data-story-opening-card]):not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
     @media (prefers-reduced-motion: reduce) { [data-story-opening-card], [data-story-opening-card] * { animation-duration: .01s !important; animation-delay: 0s !important; } }
     [data-event-story][data-story-ending-pull] > :not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }

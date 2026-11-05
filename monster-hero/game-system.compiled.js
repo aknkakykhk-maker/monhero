@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cda089b42a954814
+// source-sha256: ca0e43163930c7cb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161203,6 +161203,28 @@ function MonsterHeroGame() {
       const storyEnding = !!event && typeof STORY_ENDING_STYLE !== 'undefined' && STORY_ENDING_STYLE !== 'none';
       const storyOpeningStyle = typeof STORY_OPENING_STYLE !== 'undefined' ? STORY_OPENING_STYLE : 'none';
       const storyOpening = !!event && storyOpeningStyle !== 'none' && !eventReplay.opened && step === 0 && !eventReplay.ending;
+      let storyScene = null;
+      for (let i = step; i >= 0; i--) {
+        const l = script[i];
+        if (l && typeof l.bg === 'string') {
+          storyScene = l.bg === 'none' ? null : l.bg;
+          break;
+        }
+      }
+      const storySceneImg = storyScene && typeof STORY_SCENE_IMAGES !== 'undefined' ? STORY_SCENE_IMAGES[storyScene] || null : null;
+      if (typeof STORY_SCENE_IMAGES !== 'undefined' && typeof window !== 'undefined') {
+        const pre = window.__mhStoryScenePreloaded || (window.__mhStoryScenePreloaded = new Set());
+        script.forEach(l => {
+          const src = l && STORY_SCENE_IMAGES[l.bg];
+          if (src && !pre.has(src)) {
+            pre.add(src);
+            try {
+              const im = new Image();
+              im.src = src;
+            } catch (e) {}
+          }
+        });
+      }
       const finishOpening = () => setEventReplay(r => r && !r.opened ? {
         ...r,
         opened: true,
@@ -161441,7 +161463,15 @@ function MonsterHeroGame() {
         role: "dialog",
         "aria-modal": "true",
         "aria-label": `イベント回想: ${event?.title || ''}`
-      }, React.createElement("button", {
+      }, storySceneImg && React.createElement("div", {
+        key: storyScene,
+        "data-story-bg": storyScene,
+        "data-story-bg-fx": fx === 'fall' ? 'fall' : undefined,
+        "aria-hidden": "true",
+        style: {
+          '--story-bg': `url("${storySceneImg}")`
+        }
+      }), React.createElement("button", {
         type: "button",
         onClick: next,
         "aria-label": "次へ",
@@ -167694,6 +167724,19 @@ const createAnimationStyle = () => {
     @keyframes storyOpenTitle { 0% { opacity: 0; transform: scale(.94); filter: blur(6px); } 100% { opacity: 1; transform: none; filter: none; } }
     @keyframes storyOpenOut { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
     @keyframes storyIrisHole { 0% { width: 0; height: 0; } 100% { width: 260vmax; height: 260vmax; } }
+    /* お話の場面の背景(2026-11-05 共通の背景。どのお話からも台本の bg で使う)。絵は data/breeder.js の STORY_SCENE_IMAGES。
+       正方形の絵を敷く(縦は左右・横の低い画面は上下が切れる。大事なものは絵の真ん中にある)。
+       下のほうは会話の紙と立ち絵が乗るので、少しだけ暗くして字を読みやすくする */
+    [data-story-bg] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; background-color: #0b0a14; animation: storySceneIn .7s ease-out both; }
+    [data-story-bg]::before { content: ''; position: absolute; inset: 0; background-image: var(--story-bg); background-size: cover; background-position: center 42%; background-repeat: no-repeat; }
+    [data-story-bg]::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.10) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 55%, rgba(0,0,0,.38) 100%); }
+    /* 縦の画面: 下の3割は会話の紙が乗るので、絵は紙より上の範囲に敷く(家・宮殿などの真ん中のものが紙に隠れないように)。下の端はぼかして暗い地につなぐ */
+    @media (orientation: portrait) { [data-story-bg]::before { bottom: 30%; -webkit-mask-image: linear-gradient(180deg, #000 80%, transparent 100%); mask-image: linear-gradient(180deg, #000 80%, transparent 100%); } }
+    @keyframes storySceneIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+    /* fx:'fall' … 穴へ落ちていく。背景が上へ流れながら暗くなる(行の holdMs のあいだに終わる長さ) */
+    [data-story-bg][data-story-bg-fx="fall"] { animation: storySceneFall 2.4s cubic-bezier(.55,0,.8,.4) both; }
+    @keyframes storySceneFall { 0% { transform: none; filter: none; } 100% { transform: translateY(-85%) scale(1.25); filter: brightness(0); } }
+    @media (prefers-reduced-motion: reduce) { [data-story-bg], [data-story-bg][data-story-bg-fx="fall"] { animation-duration: .01s !important; } }
     [data-event-story][data-story-opening]:not([data-story-opening="iris"]) > :not([data-story-opening-card]):not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
     @media (prefers-reduced-motion: reduce) { [data-story-opening-card], [data-story-opening-card] * { animation-duration: .01s !important; animation-delay: 0s !important; } }
     [data-event-story][data-story-ending-pull] > :not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
