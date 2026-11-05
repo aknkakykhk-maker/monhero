@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 243d5f21c1f7ac57
+// source-sha256: 91b0dc4a9ab6d9cc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -149017,8 +149017,9 @@ function MonsterHeroGame() {
     if (t.id === 'sorashido') return sorashidoCopyDesc(level);
     if (t.id === 'erubin') {
       const tier = ERUBIN_TIERS[Math.min(level, ERUBIN_TIERS.length - 1)];
-      const third = isTacticsMode(runMode) ? '使った子の EX の使える回数を 1/3回ぶん回復（3回使うと1回）' : `次のターン 固有技が必ず会心${tier.critDmg > 0 ? `・会心のダメージ ${pct(tier.critDmg)}%アップ` : ''}`;
-      return `味方全員の攻撃 ${pct(tier.atk)}%アップ（次のターンから・バトル中永続・使用ごとに加算）・このターン味方全員の受けるダメージ ${pct(tier.cut)}%ダウン・${third}`;
+      const tactics = `【タクティクス】使った子の EX の使える回数を ${Math.round(tier.exCharge * 3)}/3回ぶん回復（3回使うと1回）`;
+      const classic = `【クラシック】次のターン 固有技が必ず会心${tier.critDmg > 0 ? `（会心のダメージ ${pct(tier.critDmg)}%アップ）` : ''}`;
+      return `味方全員の攻撃 ${pct(tier.atk)}%アップ（次のターンから・バトル中永続・使用ごとに加算）・このターン味方全員の受けるダメージ ${pct(tier.cut)}%ダウン・${tactics}・${classic}`;
     }
     if (t.id === 'kyuko') {
       const tier = KYUKO_TIERS[Math.min(level, KYUKO_TIERS.length - 1)];
