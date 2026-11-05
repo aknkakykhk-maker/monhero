@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9d6256658a7a3b3b
+// source-sha256: ddfa477c3d5bd94f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93735,6 +93735,15 @@ const CARD_AI_HABITS = Object.freeze({
     area: 1.0,
     finish: 1.3,
     mill: 1
+  },
+  erubin: {
+    attack: 1.0,
+    keepGuard: 1.2,
+    saveGuts: 1.1,
+    big: 1.2,
+    disrupt: 0.8,
+    area: 0.9,
+    finish: 1.2
   }
 });
 const cardFoeReleased = who => typeof assistantReleased !== 'function' || assistantReleased(who);
@@ -94737,6 +94746,27 @@ const CARD_AI_DECKS = Object.freeze({
   },
   sorashido: {
     prefer: ['大混乱', '時間稼ぎ', '大声', 'ハテナマーク', 'ニャーにゃー']
+  },
+  erubin: {
+    variants: [{
+      id: 'blade',
+      prefer: ['冥王剣', '最終奥義', 'Vの字斬り'],
+      deckHabit: {
+        big: 1.4
+      }
+    }, {
+      id: 'mind',
+      prefer: ['精神集中', '風神剣', '雷神剣'],
+      deckHabit: {
+        saveGuts: 1.4
+      }
+    }, {
+      id: 'shield',
+      prefer: ['盾で受ける', '剣で受ける', '静の構え'],
+      deckHabit: {
+        keepGuard: 1.5
+      }
+    }]
   }
 });
 const CARD_AI_FAVORITE = Object.freeze({
@@ -94746,7 +94776,8 @@ const CARD_AI_FAVORITE = Object.freeze({
   kyuko: 'mew',
   dra: 'zilla',
   atsu: 'dragon',
-  sorashido: 'hare'
+  sorashido: 'hare',
+  erubin: 'durahan'
 });
 const CARD_AI_SAME_BLOOD = Object.freeze({
   easy: 0.3,
@@ -95094,12 +95125,20 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
     monsters: db.starters[who].monsters.slice(),
     cards: db.starters[who].cards.slice()
   };
-  const recipe = CARD_AI_DECKS[who] || CARD_AI_DECKS.mua;
+  const recipeAll = CARD_AI_DECKS[who] || CARD_AI_DECKS.mua;
   const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
   const rnd = typeof rand === 'function' ? rand : cardAiSeededRand(`${who}:${levelId}`);
   const monsters = cardAiPickTrio(db, who, levelId, rnd, opts && opts.playerDeck);
+  const variant = Array.isArray(recipeAll.variants) && recipeAll.variants.length ? recipeAll.variants[Math.min(recipeAll.variants.length - 1, Math.floor(rnd() * recipeAll.variants.length))] : null;
+  const recipe = variant ? {
+    ...recipeAll,
+    ...variant
+  } : recipeAll;
   const maxWave = cfg.maxWave;
-  const habit = cardAiDeckHabit(who, levelId);
+  const habit = variant && variant.deckHabit ? {
+    ...cardAiDeckHabit(who, levelId),
+    ...variant.deckHabit
+  } : cardAiDeckHabit(who, levelId);
   const mons = monsters.map(no => cardMonsterOf(db, no));
   const pool = Object.values(db.cards).filter(c => c.ready && (c.user === 'any' || c.user === 'breeder' ? c.wave <= maxWave : mons.some(m => cardUsableBy(c, {
     ...m,
@@ -95161,7 +95200,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
     const x = byName[name];
     if (x && !used.has(name)) {
       used.add(name);
-      add(x.c, CARD_DECK_COPY_MAX);
+      add(x.c, CARD_DECK_COPY_MAX - cards.filter(n => n === x.c.no).length);
     }
   });
   (preferOn ? recipe.field || [] : []).forEach(name => {
@@ -98124,7 +98163,8 @@ const CARD_AI_TACTIC_BASE = Object.freeze({
   kyuko: ['tBalance', 'tCalm', 'tFinish'],
   dra: ['tGuard', 'tSteady', 'tMill'],
   atsu: ['tFlex', 'tArea', 'tSteady'],
-  sorashido: ['tMill', 'tDisrupt', 'tGuard']
+  sorashido: ['tMill', 'tDisrupt', 'tGuard'],
+  erubin: ['tBalance', 'tSteady', 'tFinish']
 });
 const CARD_AI_TACTIC_COUNT = Object.freeze({
   expert: 2,
@@ -98137,7 +98177,8 @@ const CARD_AI_TACTIC_WHEN = Object.freeze({
   kyuko: [null, 'behind', 'foeLow'],
   dra: [null, 'lowLife', 'foeDeckLow'],
   atsu: [null, 'foeFull', 'lowLife'],
-  sorashido: [null, 'foeHandFull', 'lowLife']
+  sorashido: [null, 'foeHandFull', 'lowLife'],
+  erubin: [null, 'lowLife', 'foeLow']
 });
 const cardAiTacticWhenHit = (name, st, p) => {
   const me = st.players[p],
@@ -98205,6 +98246,13 @@ const CARD_AI_TACTIC_ROWS = Object.freeze({
   }], [{
     c: 'incoming.5',
     a: 'guard'
+  }]],
+  erubin: [[{
+    c: 'incomingKo',
+    a: 'guard'
+  }], [{
+    c: 'ko',
+    a: 'atk'
   }]]
 });
 const cardAiTacticGambit = (who, levelId) => {
@@ -98777,6 +98825,22 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckTheirs: [['そっちの山札、もう少ないな？ 笑', 'wink'], ['山札切れも勝ち筋のひとつだぜ・・・！', 'happy']],
     win: [['うぉぉぉ！ 読み通り！ いい勝負だった笑', 'happy'], ['作戦がきれいにはまった！ もう1戦だけやろ笑', 'excited'], ['楽しかった！ 気づいたら朝になりそう笑', 'wink'], ['うぉぉぉ！ オリヒメにも見せたかった笑', 'excited']],
     lose: [['なに！？ そこでそれ！？…悔しいけど、今のはうまいぜ・・・！', 'crying'], ['完敗！ 今の対戦、攻略まとめにして研究する笑', 'troubled'], ['なんくるないさ〜。次はデッキ組み直してくる笑', 'happy']]
+  },
+  erubin: {
+    challenge: [['カード勝負、いいね！ こっちに来てから、すっかりはまってるんだよね笑', 'happy'], ['今日はどの組み方でいこうかな🤔 いくつか持ってきたんだよね', 'wink'], ['対戦しよっか。手加減はしないけど、それでもよいかな？笑', 'wink'], ['デュラハンの出番だね。よろしくお願いします☺️', 'happy']],
+    start: [['よろしくね！ 楽しくいこう笑', 'happy'], ['おけ！ まずは様子を見ながらいくね', 'normal'], ['焦らずじっくりいくよ。それが大事だよね', 'wink'], ['さぁ、始めよっか。デュラハン、頼んだよ', 'excited']],
+    big: [['ここは大きいのいくね！ 大丈夫かな？笑', 'excited'], ['ためといてよかった。いくよー！', 'excited'], ['剣さばき、ちゃんと見ててね笑', 'wink'], ['ここで決めにいくよ。おっけー！', 'happy']],
+    bigHit: [['いたた…今のはしっかり効いたね💦', 'troubled'], ['おお、さすが！ 今の一撃はうまいね', 'surprise'], ['うわ、それ持ってたのか笑 やられたなぁ', 'surprise'], ['まだ大丈夫。ここから立て直すよ', 'normal']],
+    guardMine: [['よし、受け止めた！ 守りを残しといてよかった☺️', 'happy'], ['その手は読めてたかな笑', 'wink'], ['おけ！ ここはしっかり守れたね', 'happy']],
+    guardTheirs: [['えっ、そこで守るんだ！ さすがだね', 'surprise'], ['うまくかわされたなぁ。次は別の手でいくね', 'troubled'], ['読まれてたか笑 なかなかやるね', 'normal']],
+    myKo: [['ごめんね…よく頑張ってくれたよ', 'crying'], ['うーん、ここで倒れるか…まだ仲間がいるからね', 'troubled'], ['悔しいな。でも、ここからが本番だよね', 'angry']],
+    theirKo: [['よし、1体いただくね！', 'excited'], ['いい流れだね。このままいこう笑', 'happy'], ['ごめんね、そこは見逃せなかったw', 'wink']],
+    lastMine: [['残り1体か…落ち着いていけば、まだいけるよね', 'troubled'], ['最後の1体に託すよ。頼んだよ', 'troubled']],
+    lastTheirs: [['あと1体だね。最後まで気は抜かないよ', 'excited'], ['いよいよだね。丁寧にいこう', 'wink']],
+    deckMine: [['あれ、山札がもう少ないね💦 ちょっと急がないと', 'surprise'], ['ガッツにしすぎたかな…計算ミスだw', 'troubled']],
+    deckTheirs: [['そっちの山札、だいぶ減ってるけど大丈夫かな？', 'wink'], ['山札の残りも、ちゃんと見てるからね笑', 'happy']],
+    win: [['楽しかったー！ いい勝負だったね☺️', 'happy'], ['勝てた！ 組み方がうまくはまったね笑', 'excited'], ['またやろうね。次はどの組み方でいこうかな🤔', 'wink']],
+    lose: [['負けちゃった笑 さすがだね、強かった！', 'happy'], ['くやしいなぁ。デッキ、組み直してくるね', 'troubled'], ['お見事！ 今の勝ち方、勉強になったよ', 'normal']]
   }
 });
 const CARD_LINE_PER_TURN = 2;
@@ -113977,6 +114041,11 @@ const CARD_PVP_RESULT_LINES = Object.freeze({
     win: [['うぉぉぉ！ 勝った！ 今の組み方、最高だった笑', 'happy'], ['ナイス！ 読み合い、完全に勝ってたぜ・・・！', 'excited'], ['いい勝ち方！ 攻略まとめに残したいくらい笑', 'wink']],
     lose: [['なに！？ 惜しい…次はどう組むか考えよ', 'troubled'], ['なんくるないさ〜。今の対戦、すごく参考になった笑', 'normal'], ['相手も強かった！ もう1戦いっとく？笑', 'happy']],
     left: [['あれ、相手いなくなった？ 決着つけたかったな笑', 'surprise'], ['電波かな？ 次の相手さがそ！', 'normal'], ['勝ちは勝ちだけど…ちょっと物足りないぜ・・・', 'troubled']]
+  },
+  erubin: {
+    win: [['勝ったね！ さすが、最後の一手がきれいだったよ☺️', 'happy'], ['いいね！ 見ててこっちまで楽しかったー！', 'excited'], ['おめでとう！ その組み方、俺も参考にしたいな笑', 'wink']],
+    lose: [['惜しかったね。でも、いい勝負だったよ', 'troubled'], ['大丈夫、大丈夫。次はきっと勝てるよ😊', 'normal'], ['相手も強かったね。デッキ、いっしょに見直してみよっか？', 'happy']],
+    left: [['あれ、相手がいなくなっちゃったね。何かあったのかな？', 'surprise'], ['最後までやりたかったね。次の相手をさがそっか', 'normal'], ['途中で終わっちゃったか…ちょっと物足りないね笑', 'troubled']]
   }
 });
 const cardPvpResultLine = (who, scene, seed = 0) => {

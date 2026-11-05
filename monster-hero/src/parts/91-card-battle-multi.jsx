@@ -337,6 +337,11 @@ const CARD_PVP_RESULT_LINES = Object.freeze({
     lose: [['なに！？ 惜しい…次はどう組むか考えよ', 'troubled'], ['なんくるないさ〜。今の対戦、すごく参考になった笑', 'normal'], ['相手も強かった！ もう1戦いっとく？笑', 'happy']],
     left: [['あれ、相手いなくなった？ 決着つけたかったな笑', 'surprise'], ['電波かな？ 次の相手さがそ！', 'normal'], ['勝ちは勝ちだけど…ちょっと物足りないぜ・・・', 'troubled']],
   },
+  erubin: {   // 2026-11-05 案(ルールくん)。公開の印が立つまで、自分の助手に選べないので出ない
+    win: [['勝ったね！ さすが、最後の一手がきれいだったよ☺️', 'happy'], ['いいね！ 見ててこっちまで楽しかったー！', 'excited'], ['おめでとう！ その組み方、俺も参考にしたいな笑', 'wink']],
+    lose: [['惜しかったね。でも、いい勝負だったよ', 'troubled'], ['大丈夫、大丈夫。次はきっと勝てるよ😊', 'normal'], ['相手も強かったね。デッキ、いっしょに見直してみよっか？', 'happy']],
+    left: [['あれ、相手がいなくなっちゃったね。何かあったのかな？', 'surprise'], ['最後までやりたかったね。次の相手をさがそっか', 'normal'], ['途中で終わっちゃったか…ちょっと物足りないね笑', 'troubled']],
+  },
 });
 const cardPvpResultLine = (who, scene, seed = 0) => {
   const list = ((CARD_PVP_RESULT_LINES[who] || CARD_PVP_RESULT_LINES.mua)[scene]) || [];

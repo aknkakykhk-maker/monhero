@@ -849,6 +849,7 @@ const CARD_AI_TACTIC_BASE = Object.freeze({
   dra: ['tGuard', 'tSteady', 'tMill'],
   atsu: ['tFlex', 'tArea', 'tSteady'],
   sorashido: ['tMill', 'tDisrupt', 'tGuard'],
+  erubin: ['tBalance', 'tSteady', 'tFinish'],   // 落ち着いて守りを残し、弱った子を仕留める(2026-11-05)
 });
 const CARD_AI_TACTIC_COUNT = Object.freeze({ expert: 2, master: 3 });
 // 2枚目・3枚目が丸ごと効く場面(2026-10-29 社長 案B「型が混ざったことが、遊ぶ人に分かる程度に」)。ほかの場面では3分の1
@@ -860,6 +861,7 @@ const CARD_AI_TACTIC_WHEN = Object.freeze({
   dra: [null, 'lowLife', 'foeDeckLow'],      // 押されたら堅く・相手の山札が減ったら持久戦
   atsu: [null, 'foeFull', 'lowLife'],        // 相手が3体そろっていれば全体・押されたら堅く
   sorashido: [null, 'foeHandFull', 'lowLife'], // 相手の手札が多ければ崩す・押されたら守る
+  erubin: [null, 'lowLife', 'foeLow'],          // 押されたら堅く・弱った子がいれば仕留め
 });
 const cardAiTacticWhenHit = (name, st, p) => {
   const me = st.players[p], op = st.players[cardOther(p)];
@@ -886,6 +888,7 @@ const CARD_AI_TACTIC_ROWS = Object.freeze({
   dra: [[{ c: 'incoming.3', a: 'guard' }], [{ c: 'foeDeck.5', a: 'disrupt.山札を削る' }]],
   atsu: [[{ c: 'foeAlive.3', a: 'reach.全体攻撃' }], [{ c: 'myLife.50', a: 'guard' }]],
   sorashido: [[{ c: 'foeDeck.20', a: 'disrupt.山札を削る' }], [{ c: 'incoming.5', a: 'guard' }]],
+  erubin: [[{ c: 'incomingKo', a: 'guard' }], [{ c: 'ko', a: 'atk' }]],
 });
 const cardAiTacticGambit = (who, levelId) => {
   const n = CARD_AI_TACTIC_COUNT[levelId];
