@@ -71,7 +71,7 @@ check('A ファンの描いた C-060C は出ない', !db.monsters['C-060C'] || !
 // 混血はメインの種族の弾(キラの無い通常のモンスター)
 const hybrids = mons.filter((m) => String(m.wave) === 'hybrid');
 // 剣士モッチー・パンドラ・オボロゲソウ・ピンクグジラ(C-066・C-067・C-208・C-068)は、台帳でキラ・別絵キラも作った子。それ以外の混血はキラの無い通常
-const WITH_KIRA = ['C-066', 'C-067', 'C-208', 'C-068', 'C-069', 'C-070']; // C-068 ピンクグジラ(2026-10-30)・C-069 ミーア・C-070 スプーキー(2026-11-04)
+const WITH_KIRA = ['C-066', 'C-067', 'C-208', 'C-068', 'C-069', 'C-070', 'C-951']; // C-068 ピンクグジラ(2026-10-30)・C-069 ミーア・C-070 スプーキー(2026-11-04)・C-951 オリヒメ(キラ・レアキラ #4533 2026-11-04)
 // 弾を指名した混血(CARD_PACKS の hybrids。ミーア・スプーキーは第8弾)は、メインの種族の弾ではなく指名の弾
 const wantPackOfHybrid = (m) => (E.CARD_PACKS.find((p) => (p.hybrids || []).includes(String(m.species).replace(/^hybrid:/, ''))) || E.CARD_PACKS.find((p) => p.species.includes(m.main)) || {}).id;
 hybrids.forEach((m) => check(`A 混血 ${m.no} ${m.name}: メイン(${m.main})の弾${WITH_KIRA.some((k) => m.no.startsWith(k)) ? '' : '・通常'}`, packOf(m.no) === wantPackOfHybrid(m) && (WITH_KIRA.some((k) => m.no.startsWith(k)) || E.cardMonRarity(m) === 'normal'), `${packOf(m.no)}・${E.cardMonRarity(m)}`));

@@ -108,11 +108,28 @@ const play = (n, extraTrio, must, extraB, onlyMust) => {
     else if (forced) {
       const noOf = (a) => (a.type === 'guard' ? [me.players[0].hand[a.hand]] : Array.isArray(a.hand) ? a.hand.map((i) => me.players[0].hand[i]) : []);
       // まだどの試合でも使っていない札を含む手を先に(影縛りには名指しを入れる)
-      const legal = E.cardLegalActions(db, me).filter((a) => noOf(a).some((no) => PENDING_DONE.includes(no) || (extraB && extraB.must.includes(no))));
+      // ガッツにする手は外す(目当ての札をガッツに回してしまい、使われないまま終わっていた。2026-11-05 ルールくん)
+      const legal = E.cardLegalActions(db, me).filter((a) => a.type !== 'guts' && noOf(a).some((no) => PENDING_DONE.includes(no) || (extraB && extraB.must.includes(no))));
       // 追加の試合の相手は、入れた札(全員に当たる技など)を最初に使う
       const notLead = (a) => !(extraB && extraB.avoidLead && !aTurn && a.target && a.target.m === 0);
       const pick = (extraB && extraB.avoidLead && !aTurn && E.cardLegalActions(db, me).find((a) => (a.type === 'attack') && a.target && a.target.p === 1 && a.target.m !== 0)) || (extraB && legal.find((a) => notLead(a) && noOf(a).some((no) => extraB.must.includes(no)))) || legal.find((a) => noOf(a).some((no) => PENDING_DONE.includes(no) && !USED_SO_FAR.has(no))) || legal[0];
       if (pick) act = E.cardAiFillBind(db, me, pick, pol);
+      else if (extraTrio && aTurn) {
+        // 追加の試合だけ(ふだんの52戦の流れは変えない)
+        // 目当ての札(まだ使っていない準備中だった札)が手札にあってガッツが足りないときは、ほかの技を出さずにためる・ガッツにもしない(魔神ファイナルのような重い技・全体カード。2026-11-05 ルールくん)
+        const aim = (no) => !!must && must.includes(no) && (!USED_SO_FAR.has(no) || (db.cards[no] && db.cards[no].kind === 'fld')); // 目当ての札(入れた札で、まだどの試合でも使っていない物。全体カードは場に出たかで数えるので、いつも)
+        const heavy = me.players[0].hand.some((no) => { const c = db.cards[no]; return c && aim(no) && (c.guts || 0) > me.players[0].guts.length; });
+        if (heavy && act && (act.type === 'attack' || act.type === 'breeder') && me.phase === 'main' && !me.pending && !noOf(act).some((no) => must.includes(no))) act = { type: 'endAttacks' };
+        if (act && act.type === 'guts' && Array.isArray(act.hand)) act = { ...act, hand: act.hand.filter((i) => !aim(me.players[0].hand[i])) }; // 目当ての札はガッツにしない
+        // まだ使っていないコンビネーションが手札にあるときは、その相方の札を単独で使わない(先に使うと3枚がそろわない。2026-11-05 ルールくん)
+        const hold = new Set(me.players[0].hand.flatMap((no) => { const c = db.cards[no]; const e = c && PENDING_DONE.includes(no) && !USED_SO_FAR.has(no) && (c.effects || []).find((x) => x.t === 'requires'); return e && Array.isArray(e.names) ? e.names : []; }));
+        if (hold.size && act && act.type === 'attack' && me.phase === 'main' && !me.pending && noOf(act).every((no) => db.cards[no] && hold.has(db.cards[no].name))) act = { type: 'endAttacks' };
+        // ガッツにする札にも回さない(コンビネーションそのものと相方)
+        if (hold.size && act && act.type === 'guts' && Array.isArray(act.hand)) {
+          const keep = (i) => { const no = me.players[0].hand[i]; const c = db.cards[no]; return c && (hold.has(c.name) || ((c.effects || []).some((x) => x.t === 'requires') && !USED_SO_FAR.has(no))); };
+          act = { ...act, hand: act.hand.filter((i) => !keep(i)) };
+        }
+      }
     }
     let next = act && E.cardApplyAction(db, me, act);
     if (next && (act.type === 'attack' || act.type === 'breeder')) usedNos.push(...act.hand.map((i) => me.players[0].hand[i]));
@@ -172,6 +189,9 @@ for (let n = 0; n < N; n++) runOne(n);
       trioA = [hy.no, 'C-003', 'C-001'];
       special.push(Object.values(db.cards).filter((x) => ok2(x) && x.user === hy.sub).sort((a, b) => a.guts - b.guts)[0].no);
     }
+    // 一緒に出す札が要る技(コンビネーション)は、その相方の札も3枚ずつ入れる(偶然そろうのを待たない。2026-11-05 ルールくん)
+    const req = (c.effects || []).find((e) => e.t === 'requires');
+    if (req && Array.isArray(req.names)) req.names.forEach((nm) => { const x = Object.values(db.cards).filter((y) => y.ready && y.name === nm && (y.user === c.user || y.user === 'any')).map((y) => y.no).sort()[0]; if (x) special.push(x); });
     // 付ける札は、付ける先の技(先頭の子の、文の無いちから技)も3枚入れる
     const isAttach = (c.effects || []).some((e) => e.t === 'attach') && !needArea;
     const leadSp = db.monsters[lead].species;
