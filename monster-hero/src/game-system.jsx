@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 80559b9b9e6adbed
+// generated-sha256: c1e8ffbd2a8c9a4c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -13385,16 +13385,15 @@ const AssistantFace = ({ who, size = 88, accent, expression = null }) => {
   useEffect(() => { setSrc(assistantFaceSrc(who, expression)); }, [who.id, expression]);
   return (
     <div className="relative shrink-0 rounded-2xl overflow-hidden border-2 flex items-center justify-center bg-black/50"
-         style={{ width:`${size}px`, height:`${size}px`, borderColor:accent, boxShadow:`0 0 12px ${accent}55` }}>
+         // シークレットの話し手は、枠の中を夕方の砂漠の空の色にして、影(頭布と髪の形)が浮かぶようにする(暗い枠に暗い影だと、空っぽの箱に見えた。2026-11-05 社長「？はなしのほうがいい」)
+         style={{ width:`${size}px`, height:`${size}px`, borderColor:accent, boxShadow:`0 0 12px ${accent}55`, ...(who.secret ? { background:'linear-gradient(180deg, #9a5a4a 0%, #e7a25c 55%, #f4c784 100%)' } : {}) }}>
       {src
         ? <img src={src} alt={who.name} className={`w-full h-full ${who.imageFit === 'contain' ? 'object-contain p-0.5' : 'object-cover'}`}
                data-story-secret={who.secret ? '1' : undefined}
                // シークレットの話し手(storyVariantWho)は、誰か分からないように影で描く(こげ茶の塗りつぶし)
-               style={who.secret ? { filter:'brightness(0) invert(.16) sepia(1) saturate(1.4)' } : undefined}
+               style={who.secret ? { filter:'brightness(0) invert(.12) sepia(1) saturate(1.2)' } : undefined}
                onError={()=>setSrc(src === fallback ? null : fallback)}/>
         : <span style={{ fontSize:`${Math.round(size * 0.5)}px`, lineHeight:1 }}>{who.emoji}</span>}
-      {/* シークレットの話し手は、影の上に「？」を重ねる(影だけだと、絵が欠けた箱に見えた) */}
-      {who.secret && <span aria-hidden="true" data-story-secret-mark style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:`${Math.round(size * 0.42)}px`, fontWeight:900, color:'#e9c98f', textShadow:'0 0 10px rgba(0,0,0,.8)' }}>？</span>}
     </div>
   );
 };
