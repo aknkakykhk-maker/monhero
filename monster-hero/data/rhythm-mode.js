@@ -42224,6 +42224,8 @@ const RHYTHM_SONG_CLIMAX=Object.freeze({
   tsuki_ga_michiru_mae_ni_short:[[13616,39148,0.93],[79999,101701,1]],
   rebellion:[[112398,134724,0.75],[194259,219065,1],[228987,250073,0.7]],
   rebellion_short:[[54104,75189,0.81],[112398,134724,1]],
+  altar_world_tree:[[193174,199028,1],[301486,321978,0.89],[333687,365888,0.68]],
+  altar_world_tree_short:[[98034,131699,1]],
 // </rhythm-song-climax>
 });
 const rhythmSongClimaxAt=(songId,ms)=>{const spans=RHYTHM_SONG_CLIMAX[songId];if(!Array.isArray(spans)||!Number.isFinite(ms))return 0;for(const span of spans){if(!Array.isArray(span))continue;const [a,b,s]=span.map(Number);if(ms>=a&&ms<b)return s>0?Math.min(1,s):0;}return 0;};

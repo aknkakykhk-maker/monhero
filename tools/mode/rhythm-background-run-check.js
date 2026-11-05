@@ -254,8 +254,12 @@ const seed = () => {
     const ecoLabel = () => page.evaluate(() => document.querySelector('button[aria-label^="省エネ"]')?.getAttribute('aria-label'));
     await cycleLabelTo('省エネ', '省エネ 超', 4);
     check('超省エネに切り替えられる', (await ecoLabel()) === '省エネ 超', await ecoLabel());
-    check('超省エネの画面にもモンビーへの入口が出る',
-      await page.evaluate(() => !!document.querySelector('[data-ultra-battle-view] [data-quick-to-rhythm]')));
+    // ★入口はバトル中(∞周回の WAVE の最中)だけ出る。最後の WAVE(ボス)のあと次の周へ入るまでの十数秒は
+    //   バトルの画面ではないので入口も無い(本体は正しい)。その間に当たると1回だけ見て NG になり、続けて押しに行って
+    //   例外で止まっていた(2026-11-05)。次の周のバトルに戻るまで待ってから見る(出ることを求めるのは同じ)
+    const ultraEntry = await page.waitForFunction(() => !!document.querySelector('[data-ultra-battle-view] [data-quick-to-rhythm]'), { timeout: 30000 }).then(() => true, () => false);
+    check('超省エネの画面にもモンビーへの入口が出る', ultraEntry);
+    if (!ultraEntry) throw new Error('超省エネの画面にモンビーへの入口が出ないので、ここから先は確かめられません');
     await clickSelector('[data-quick-to-rhythm]');
     // モンヒロビートは入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
     await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());

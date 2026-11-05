@@ -23443,7 +23443,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* 鍵が回る(第7話)。金の輪が回って、鍵穴から光があふれる */}
               {fx==='unlock'&&<span data-story-unlock><i/></span>}
               {fx==='split'&&<span data-story-crack>{[-160,-118,-72,-28,14,58,104,142].map((deg,i)=><i key={deg} style={{transform:`rotate(${deg}deg)`,animationDelay:`${i%3*40}ms`}}/>)}</span>}
-              {/* 場面の説明は、幕開けの札が開いてから出し直す(札の裏で動きが終わって、最初の行の説明が見えなかった。2026-11-05 えるびんのお話) */}
+              {/* 場面の説明は、幕開けの札が開いてから出し直す(札の裏で動きが終わって、最初の行の説明が見えなかった) */}
               {line.fxText&&!storyOpening&&<div key={`banner${step}-${eventReplay.opened?1:0}`} data-story-banner className="px-4 text-center text-[17px] font-black" style={{position:'absolute',top:'42%',left:'50%',width:'100%',maxWidth:'28rem',color:'#fff',textShadow:`0 0 14px rgba(${fxColors[fx]||'255,255,255'},1), 0 2px 0 rgba(0,0,0,.6)`,animation:'storyBanner 2.2s ease-out both'}}>{storyCenter(line.fxText,storyBoxW-32,17)}</div>}
             </div>
           )}

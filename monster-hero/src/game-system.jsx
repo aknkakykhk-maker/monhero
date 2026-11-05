@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c1e8ffbd2a8c9a4c
+// generated-sha256: b99868570334de14
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -45075,6 +45075,12 @@ function InfernoShieldBreakFx({ fx, lite, onDone, rule }) {
 const tacticsPopupShortText = (text) => {
   const t = String(text == null ? '' : text);
   if ([...t].length <= 9) return t;
+  // 溜まる物の数(「🍪 クッキー 6/10」「🎵 黒音符 3/10」)は、数が肝心なので切らない(2026-11-05 空白で切って「🍪」だけになっていた)
+  if (/^\S+ \S+ \d+\/\d+$/.test(t) && [...t].length <= 16) return t;
+  // 残りの回数を知らせる吹き出し(「👻 完全回避！ のこり1回」「…これで最後」)も、数が肝心なので切らない
+  if (/(のこり\d+回|これで最後)$/.test(t) && [...t].length <= 16) return t;
+  // EX の吹き出し(「EX 悪夢全開！メロディ・キー！」)は、技名の中にも「！」があるので、技名の終わり(最後の「！」)まで出す
+  if (/^EX /.test(t)) { const m = t.match(/^(.*[!！])/); return m ? m[1] : t; }
   const bang = t.match(/^(.+?[!！])/);
   if (bang) return bang[1];
   const k = t.search(/[\s　・、]/);
@@ -62884,7 +62890,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           <button type="button" data-card-env={st.field.no} data-card-env-side={st.field.p === CARD_ME ? 'me' : 'foe'} onClick={() => setDetail(st.field.no)}
             className="relative z-[1] flex max-w-full items-center gap-1.5 rounded-xl border-2 border-emerald-300/80 bg-emerald-950/80 px-2 py-0.5 text-left active:scale-[.98]">
             <span className="shrink-0 whitespace-nowrap rounded-md bg-emerald-400 px-1 py-0.5 text-[10px] font-black text-emerald-950">全体</span>
-            <span className="min-w-0 text-[12px] font-black leading-tight text-emerald-50" style={JA_WRAP_STYLE}>{cardOf(db, st.field.no).name}<small className="ml-1 text-[10px] font-bold text-emerald-200">({st.field.p === CARD_ME ? '自分' : '相手'}が出した)</small></span>
+            <span className="min-w-0 text-[12px] font-black leading-tight text-emerald-50" style={JA_WRAP_STYLE}>{cardOf(db, st.field.no).name}<small className="ml-1 text-[10px] font-bold text-emerald-200">({(watch || tourReplay) ? (st.field.p === CARD_ME ? meName : who.name) : st.field.p === CARD_ME ? '自分' : '相手'}が出した)</small></span>
           </button>
         )}
         {/* 案C: 相手の番のまとめの1行。押すと開く(開いた窓は下の data-card-turn-summary) */}
@@ -98347,7 +98353,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* 鍵が回る(第7話)。金の輪が回って、鍵穴から光があふれる */}
               {fx==='unlock'&&<span data-story-unlock><i/></span>}
               {fx==='split'&&<span data-story-crack>{[-160,-118,-72,-28,14,58,104,142].map((deg,i)=><i key={deg} style={{transform:`rotate(${deg}deg)`,animationDelay:`${i%3*40}ms`}}/>)}</span>}
-              {/* 場面の説明は、幕開けの札が開いてから出し直す(札の裏で動きが終わって、最初の行の説明が見えなかった。2026-11-05 えるびんのお話) */}
+              {/* 場面の説明は、幕開けの札が開いてから出し直す(札の裏で動きが終わって、最初の行の説明が見えなかった) */}
               {line.fxText&&!storyOpening&&<div key={`banner${step}-${eventReplay.opened?1:0}`} data-story-banner className="px-4 text-center text-[17px] font-black" style={{position:'absolute',top:'42%',left:'50%',width:'100%',maxWidth:'28rem',color:'#fff',textShadow:`0 0 14px rgba(${fxColors[fx]||'255,255,255'},1), 0 2px 0 rgba(0,0,0,.6)`,animation:'storyBanner 2.2s ease-out both'}}>{storyCenter(line.fxText,storyBoxW-32,17)}</div>}
             </div>
           )}

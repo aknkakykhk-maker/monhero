@@ -86,7 +86,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     const look = () => page.evaluate(() => {
       const root = document.getElementById('watch-host');
       // カードの大写しと、守りの番の「受けている攻撃」の説明文(「全ての相手モンスターに〜」など、カードそのものの文)は見張りから外す
-      const clone = root.cloneNode(true); clone.querySelectorAll('[data-card-big], [data-card-guard-attack-text]').forEach((x) => x.remove());
+      //   まんなかの相手の技の効果の文(data-card-live-foe-text。「相手モンスター1体を選ぶ」など、カードの文そのもの)も同じ(2026-11-05)
+      const clone = root.cloneNode(true); clone.querySelectorAll('[data-card-big], [data-card-guard-attack-text], [data-card-live-foe-text]').forEach((x) => x.remove());
       document.body.appendChild(clone); clone.style.display = 'none';
       const text = clone.textContent; clone.remove();
       return {
