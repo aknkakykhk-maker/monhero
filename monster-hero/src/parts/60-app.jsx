@@ -8820,7 +8820,7 @@ function MonsterHeroGame() {
       const nextCostumes = normalizeOwnedAssistantCostumes([...storedCostumes, ...ownedAssistantCostumesRef.current, item.id]);
       ownedAssistantCostumesRef.current = nextCostumes;
       setOwnedAssistantCostumes(nextCostumes);
-      storeSet(ASSISTANT_COSTUME_OWNED_KEY, nextCostumes, false);
+      storeSet(ASSISTANT_COSTUME_OWNED_KEY, assistantCostumesToStore(nextCostumes), false);
     } else if (item.type !== 'item') {
       // 同じキャラのまとめは、1つ買うと中身が全部入る(商品の並びでは1つにまとまっている)
       setOwnedMarketIcons(prev => { const group = breederIconGroupOf(item.id); const next = [...new Set([...prev, item.id, ...(group ? group.memberIds : [])])]; storeSet('mh_market_icons', next, false); return next; });
@@ -8939,7 +8939,7 @@ function MonsterHeroGame() {
         ...(isDisc ? [{ key:'mh_unlocked_monsters', before:storedUnlocked, next:exchange.unlockedMonsterIds }] : []),
         ...(isAssist ? [{ key:'mh_unlocked_teachings', before:storedTeachings, next:exchange.unlockedTeachingIds }] : []),
         ...(isFrame ? [{ key:PROFILE_FRAME_OWNED_KEY, before:storedFrames, next:exchange.ownedProfileFrames }] : []),
-        ...(isCostume ? [{ key:ASSISTANT_COSTUME_OWNED_KEY, before:storedCostumes, next:exchange.ownedAssistantCostumes }] : []),
+        ...(isCostume ? [{ key:ASSISTANT_COSTUME_OWNED_KEY, before:storedCostumes, next:assistantCostumesToStore(exchange.ownedAssistantCostumes) }] : []),
         ...(isIcon ? [{ key:'mh_market_icons', before:storedIcons, next:exchange.ownedMarketIcons }] : []),
       ], storeGet, storeSet);
       if (!saved) {

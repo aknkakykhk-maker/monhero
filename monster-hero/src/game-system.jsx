@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c4b3b28eaa56f7c3
+// generated-sha256: 985da303bd2487f4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -83825,7 +83825,7 @@ function MonsterHeroGame() {
       const nextCostumes = normalizeOwnedAssistantCostumes([...storedCostumes, ...ownedAssistantCostumesRef.current, item.id]);
       ownedAssistantCostumesRef.current = nextCostumes;
       setOwnedAssistantCostumes(nextCostumes);
-      storeSet(ASSISTANT_COSTUME_OWNED_KEY, nextCostumes, false);
+      storeSet(ASSISTANT_COSTUME_OWNED_KEY, assistantCostumesToStore(nextCostumes), false);
     } else if (item.type !== 'item') {
       // 同じキャラのまとめは、1つ買うと中身が全部入る(商品の並びでは1つにまとまっている)
       setOwnedMarketIcons(prev => { const group = breederIconGroupOf(item.id); const next = [...new Set([...prev, item.id, ...(group ? group.memberIds : [])])]; storeSet('mh_market_icons', next, false); return next; });
@@ -83944,7 +83944,7 @@ function MonsterHeroGame() {
         ...(isDisc ? [{ key:'mh_unlocked_monsters', before:storedUnlocked, next:exchange.unlockedMonsterIds }] : []),
         ...(isAssist ? [{ key:'mh_unlocked_teachings', before:storedTeachings, next:exchange.unlockedTeachingIds }] : []),
         ...(isFrame ? [{ key:PROFILE_FRAME_OWNED_KEY, before:storedFrames, next:exchange.ownedProfileFrames }] : []),
-        ...(isCostume ? [{ key:ASSISTANT_COSTUME_OWNED_KEY, before:storedCostumes, next:exchange.ownedAssistantCostumes }] : []),
+        ...(isCostume ? [{ key:ASSISTANT_COSTUME_OWNED_KEY, before:storedCostumes, next:assistantCostumesToStore(exchange.ownedAssistantCostumes) }] : []),
         ...(isIcon ? [{ key:'mh_market_icons', before:storedIcons, next:exchange.ownedMarketIcons }] : []),
       ], storeGet, storeSet);
       if (!saved) {
