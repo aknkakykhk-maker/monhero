@@ -36,7 +36,7 @@
 const CHANGELOG = [
   {
     // 2026-11-05 社長「この文で公開」。DJ YOSHITAKA。難易度は社長の案B・HELL Lv.51。止まる・戻る・すべる演出あり
-    date: "2026-11-06 05:46", type:'update', title:'モンヒロビート：新曲「Evans」を追加しました', status:'new',
+    date: "2026-11-06 05:46", type:'update', group:'rhythm', title:'新曲「Evans」を追加しました', status:'new',
     image:'images/song-art/evans.jpg?v=33c4ea278fce',
     items:[
       'モンヒロビートに「Evans」（1分45秒）を追加しました。曲えらびからすぐ遊べます。HELL もあります。',
