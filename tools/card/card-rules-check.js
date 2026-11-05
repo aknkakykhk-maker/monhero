@@ -201,7 +201,7 @@ const decksAndSaves = () => {
   Object.keys(db.starters).forEach((k) => { const p = E.cardDeckProblems(db, E.cardAiBuildDeck(db, k)); ok(!p.length, `スターター ${k}: ${p.join('・')}`); });
   // 好きなモンスター(1体・主血統で決める。2026-10-25 社長): どの強さでも必ず1体入る(後の弾の子も EASY から)。
   //   候補はその種族の通常・キラ・別絵キラと、主血統がその種族の混血。毎試合少し変わり、残り2体は別々の種族。EASY はたまに気まぐれ
-  const WANT_FAV = { mua: 'mocchi', momosuke: 'metalner', kiki: 'golem', kyuko: 'mew', dra: 'zilla', atsu: 'dragon', sorashido: 'hare' };
+  const WANT_FAV = { mua: 'mocchi', momosuke: 'metalner', kiki: 'golem', kyuko: 'mew', dra: 'zilla', atsu: 'dragon', sorashido: 'hare', erubin: 'durahan' };   // えるびんはデュラハン(2026-11-05 社長)
   ok(JSON.stringify(E.CARD_AI_FAVORITE) === JSON.stringify(WANT_FAV), `好きなモンスターが社長の決めと違う: ${JSON.stringify(E.CARD_AI_FAVORITE)}`);
   const hf = E.cardAiFavoriteCandidates(db, 'mua').map((no) => db.monsters[no].name);
   ok(hf.includes('ヘルファット') && hf.filter((n) => n === 'モッチー').length >= 2, `みゅあの好きなモンスターの候補に、モッチーのキラや派生(ヘルファット)が入っていない: ${hf.join('・')}`);
