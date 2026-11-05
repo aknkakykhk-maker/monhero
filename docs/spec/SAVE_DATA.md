@@ -52,6 +52,7 @@
 | `mh_assistant_chat_memo_v2` | object | 助手とおしゃべりの思い出メモ(2026-10-14〜)。`{ [助手id]: { likes, goals, events, topics, summary } }`(各100字・summary 160字まで)。次の会話で中継役へ渡す |
 | `mh_assistant_daily_lines_v1` | object | ふだんの吹き出しを1日1回まとめて作ったひとこと(2026-10-14)。`{ day, assistantId, lines: { [場面]: [{ e, t, n }] } }`。日付が変われば使わず、次に作ったら入れ替える。n はその日に出した回数 |
 | `mh_story_assistant_chat_seen_v1` | boolean | 助手とおしゃべりのお話「話せるようになった日」を本編で見たか(飛ばしても立つ)。公開の後の最初の HOME で1回だけ流すため。回想・デバッグでは立てない |
+| `mh_beat_shop_vip_letter_seen_v1` | boolean | お話「レジェンドブリーダーへの招待状」を本編で見たか(飛ばしても立つ・2026-11-05)。ブリーダーレベル1000以上の HOME で1回だけ流す。true の人だけ、ビートP交換所のダイヤ・トレーニングチケット・重トレーニングチケットが「優待パス還元」になる(値段は data/rhythm-event.js の LEGEND_BREEDER_PASS_OFFERS。保存しない)。回想・デバッグでは立てない |
 | `mh_story_tactics_types_seen_v1` | boolean | 助手4人がタイプを教えるお話「タクティクスバトル ～4人のタイプ～」を本編で見たか(飛ばしても立つ・2026-10-18)。ヘイトとタイプの公開のあと、タクティクスバトルの導入のお話を見た人の最初の HOME で1回流す。回想・デバッグから見たぶんは立てない |
 | `mh_story_card_battle_seen_v1` | boolean | お話「MFバトルカード ～物置の古い箱～」を本編で見たか(飛ばしても立つ・2026-10-24)。MFバトルカードの公開(`RELEASE_FLAGS.cardBattle`)のあとの最初の HOME で1回流す。立っていると HOME に MFバトルカードの入口が出る。true 以外(無い・壊れた値)は「まだ」。回想・デバッグから見たぶんは立てない |
 | `mh_story_one_at_a_time_v1` | boolean | はじめて遊ぶ人の印(2026-10-27)。はじめての案内を通る人にだけ起動時に true を書き、消さない。true の人は HOME に着くたびにお話を1本だけ流し、残りは HOME を離れて戻ったときに1本ずつ流す。前から遊んでいる人には書かない(無い・false なら今までどおり続けて流す) |
