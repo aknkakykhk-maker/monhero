@@ -126,6 +126,10 @@
 //        小節の取り分の配り方を曲の盛り上がりの差から決めた分だけ変える(曲全体のノーツ数の決め方は変えない)。当たらない曲・EASY〜EXPERT は Rev.30 と同じ譜面。
 //        rhythm-hell-mix.js の R3(空中スライドの見せ場)・R4(片手地上・片手空中の流れを長めに)・R5(終わりを空中スライド2本で締める)は HELL の空中の付け方
 //        (引き出しより前に作った HELL は drawers:false で今の形のまま)
+//   35 … SLIDE の太さを隣り合う中継点で2段以上飛ばさない(2026-11-05・rhythm-slide-shape-variety-check.js が見張る)。
+//        刻みが粗いと太さが 2→4 のように一気に飛んでいた(アルター原曲 EXPERT 108.82秒の 2-4-4-4-3-3-2)。
+//        飛んだ側の点を細い側へ1段ずつ寄せる(2-4 → 2-3-4)。飛んでいない SLIDE と他のノーツは Rev.34 と同じ譜面。
+//        配信中の譜面は変えていない(アルターのその SLIDE は 2026-11-02 社長「遊ぶ譜面が変わるので触らない」)
 //   30〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
 //        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる。
 //        遊んだ記録から学ぶ調整値(tools/mode/authoring/chart-play-tuning.json)も同じ番号の並びへ書き足す。
@@ -137,7 +141,7 @@ const CHART_ENGINE_NAME='MHB CHART ENGINE';
 const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
 // 作り方(コード)を改良した最新のリビジョン。改良を足したらここを上げる
-const CHART_REVISION_CODE_LATEST=31;
+const CHART_REVISION_CODE_LATEST=35;
 // 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
 const {latestPlayTuningRevision}=require('./rhythm-chart-play-tuning.js');
