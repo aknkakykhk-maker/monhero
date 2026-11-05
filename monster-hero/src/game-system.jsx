@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 598487ffd6ccb6e3
+// generated-sha256: c1e8ffbd2a8c9a4c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -13385,16 +13385,15 @@ const AssistantFace = ({ who, size = 88, accent, expression = null }) => {
   useEffect(() => { setSrc(assistantFaceSrc(who, expression)); }, [who.id, expression]);
   return (
     <div className="relative shrink-0 rounded-2xl overflow-hidden border-2 flex items-center justify-center bg-black/50"
-         style={{ width:`${size}px`, height:`${size}px`, borderColor:accent, boxShadow:`0 0 12px ${accent}55` }}>
+         // シークレットの話し手は、枠の中を夕方の砂漠の空の色にして、影(頭布と髪の形)が浮かぶようにする(暗い枠に暗い影だと、空っぽの箱に見えた。2026-11-05 社長「？はなしのほうがいい」)
+         style={{ width:`${size}px`, height:`${size}px`, borderColor:accent, boxShadow:`0 0 12px ${accent}55`, ...(who.secret ? { background:'linear-gradient(180deg, #9a5a4a 0%, #e7a25c 55%, #f4c784 100%)' } : {}) }}>
       {src
         ? <img src={src} alt={who.name} className={`w-full h-full ${who.imageFit === 'contain' ? 'object-contain p-0.5' : 'object-cover'}`}
                data-story-secret={who.secret ? '1' : undefined}
                // シークレットの話し手(storyVariantWho)は、誰か分からないように影で描く(こげ茶の塗りつぶし)
-               style={who.secret ? { filter:'brightness(0) invert(.16) sepia(1) saturate(1.4)' } : undefined}
+               style={who.secret ? { filter:'brightness(0) invert(.12) sepia(1) saturate(1.2)' } : undefined}
                onError={()=>setSrc(src === fallback ? null : fallback)}/>
         : <span style={{ fontSize:`${Math.round(size * 0.5)}px`, lineHeight:1 }}>{who.emoji}</span>}
-      {/* シークレットの話し手は、影の上に「？」を重ねる(影だけだと、絵が欠けた箱に見えた) */}
-      {who.secret && <span aria-hidden="true" data-story-secret-mark style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:`${Math.round(size * 0.42)}px`, fontWeight:900, color:'#e9c98f', textShadow:'0 0 10px rgba(0,0,0,.8)' }}>？</span>}
     </div>
   );
 };
@@ -102983,7 +102982,8 @@ const createAnimationStyle = () => {
     [data-event-story] > :not([data-story-ending]) { transition: transform 1.6s ease-out, filter 1.6s ease-out; }
     /* お話の始まり(2026-11-04)。題字のあいだ、場面は遠く暗いところに置き、幕が上がると近づきながら明るくなる(終わりの札の 'pull' の逆)。
        'iris' は、題字の幕を鍵穴から丸く開ける */
-    @keyframes storyOpenTitle { 0% { opacity: 0; transform: scale(.9); filter: blur(6px); letter-spacing: .4em; } 100% { opacity: 1; transform: none; filter: none; } }
+    /* 題字は字の間隔を動かさない(広げると長い題字がいったん2行に折れてから1行に戻り、位置がずれて見えた。2026-11-05 社長「最初の表題が位置ずれする」) */
+    @keyframes storyOpenTitle { 0% { opacity: 0; transform: scale(.94); filter: blur(6px); } 100% { opacity: 1; transform: none; filter: none; } }
     @keyframes storyOpenOut { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
     @keyframes storyIrisHole { 0% { width: 0; height: 0; } 100% { width: 260vmax; height: 260vmax; } }
     /* お話の場面の背景(2026-11-05 えるびんの登場のお話)。砂漠: 夕方の空・沈む日・遠くの白い宮殿の影・砂丘 */

@@ -10771,6 +10771,11 @@ const ASSISTANT_ERUBIN_JOIN_STORY = [
   { who:'erubin',   e:'surprise', outfit:'sekiyuou', t:'え、俺？' },
   { who:'dra',      e:'surprise', t:'白い布に、金の刺しゅう……どう見ても石油王だな' },
   { who:'erubin',   e:'troubled', outfit:'sekiyuou', t:'いやいや、普通だよ笑 たしかに、格好はそれっぽいけどね' },
+  // 「こう見えても純日本人」(2026-11-05 社長)。見た目をからかう言い方にはしない。ももとききが素直に勘ちがいする形
+  { who:'momosuke', e:'surprise', t:'え、じゃあ遠い国から来た人？ ……ももたちの言葉、ちゃんと通じてる？' },
+  { who:'erubin',   e:'happy',    outfit:'sekiyuou', t:'通じてるよ笑 こう見えても、純日本人だからね' },
+  { who:'kiki',     e:'surprise', t:'あれま、そうだったんでつか。てっきり、遠い砂漠の国の方かと……' },
+  { who:'erubin',   e:'happy',    outfit:'sekiyuou', t:'よく言われるよw この格好だと、なおさらだよね' },
   { who:'erubin',   e:'normal',   outfit:'sekiyuou', t:'あ、ごめんね、名乗ってなかった。私、えるびんっていいます' },
   { who:'erubin',   e:'happy',    outfit:'sekiyuou', t:'……って、急に丁寧になっちゃった笑 俺のことは、えるびんでいいよ' },
   { who:'mua',      e:'happy',    t:'えるびん……じゃあ、るびちん！ あたしはみゅあ、よろしくね♪' },

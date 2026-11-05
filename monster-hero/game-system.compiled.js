@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1769b0cab4b010c5
+// source-sha256: 4359252b6af0b5fd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -19043,7 +19043,10 @@ const AssistantFace = ({
       width: `${size}px`,
       height: `${size}px`,
       borderColor: accent,
-      boxShadow: `0 0 12px ${accent}55`
+      boxShadow: `0 0 12px ${accent}55`,
+      ...(who.secret ? {
+        background: 'linear-gradient(180deg, #9a5a4a 0%, #e7a25c 55%, #f4c784 100%)'
+      } : {})
     }
   }, src ? React.createElement("img", {
     src: src,
@@ -19051,7 +19054,7 @@ const AssistantFace = ({
     className: `w-full h-full ${who.imageFit === 'contain' ? 'object-contain p-0.5' : 'object-cover'}`,
     "data-story-secret": who.secret ? '1' : undefined,
     style: who.secret ? {
-      filter: 'brightness(0) invert(.16) sepia(1) saturate(1.4)'
+      filter: 'brightness(0) invert(.12) sepia(1) saturate(1.2)'
     } : undefined,
     onError: () => setSrc(src === fallback ? null : fallback)
   }) : React.createElement("span", {
@@ -19059,21 +19062,7 @@ const AssistantFace = ({
       fontSize: `${Math.round(size * 0.5)}px`,
       lineHeight: 1
     }
-  }, who.emoji), who.secret && React.createElement("span", {
-    "aria-hidden": "true",
-    "data-story-secret-mark": true,
-    style: {
-      position: 'absolute',
-      inset: 0,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: `${Math.round(size * 0.42)}px`,
-      fontWeight: 900,
-      color: '#e9c98f',
-      textShadow: '0 0 10px rgba(0,0,0,.8)'
-    }
-  }, "？"));
+  }, who.emoji));
 };
 const helpWrap = x => typeof x === 'string' && typeof jaWrap === 'function' ? React.createElement("span", {
   style: typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined
@@ -167789,7 +167778,8 @@ const createAnimationStyle = () => {
     [data-event-story] > :not([data-story-ending]) { transition: transform 1.6s ease-out, filter 1.6s ease-out; }
     /* お話の始まり(2026-11-04)。題字のあいだ、場面は遠く暗いところに置き、幕が上がると近づきながら明るくなる(終わりの札の 'pull' の逆)。
        'iris' は、題字の幕を鍵穴から丸く開ける */
-    @keyframes storyOpenTitle { 0% { opacity: 0; transform: scale(.9); filter: blur(6px); letter-spacing: .4em; } 100% { opacity: 1; transform: none; filter: none; } }
+    /* 題字は字の間隔を動かさない(広げると長い題字がいったん2行に折れてから1行に戻り、位置がずれて見えた。2026-11-05 社長「最初の表題が位置ずれする」) */
+    @keyframes storyOpenTitle { 0% { opacity: 0; transform: scale(.94); filter: blur(6px); } 100% { opacity: 1; transform: none; filter: none; } }
     @keyframes storyOpenOut { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
     @keyframes storyIrisHole { 0% { width: 0; height: 0; } 100% { width: 260vmax; height: 260vmax; } }
     /* お話の場面の背景(2026-11-05 えるびんの登場のお話)。砂漠: 夕方の空・沈む日・遠くの白い宮殿の影・砂丘 */
