@@ -11,7 +11,8 @@
 //   ① 手札の箱の幅(50・58・76px)ごとに、全部のカード名が切れていない(どの行も中身が箱に入る)
 //   ② 狭い箱(50px)では、7文字以上で2つの言葉の切れ目がある名前だけ2行。1語のカタカナ(フォーメーション など)は割らずに1行
 //      (2026-10-25 カゲあつくん「1語のカタカナは割らない」)。2行目の頭が「ー」「ッ」「ン」や小さい字で始まらない
-//   ③ 広い箱(58・76px)では、今までどおり1行
+//   ③ 58・76px の箱でも、7字以上で言葉の切れ目がある名前は2行・6字までと1語のカタカナは1行。120px の箱(2行に折る幅より広い)では全部1行
+//      (2026-11-01 社長の決め「長い名前は2行まで折る・縮めるのは2行でも入らないときだけ」・#4482。前は 56px より広い箱は全部1行で、字が 7〜8px まで縮んでいた)
 //   ④ 「カララギ/マンゴー」「最後の/きらめき」「空中回転/アタック」「ドラゴン/パンチ」のように、言葉の切れ目で折る
 //   ⑤ 狭い箱では、短い名前も長い名前も名前の高さがそろう(手札の絵の高さがずれない)
 //   ⑥ 字の幅が広い日本語フォント(等幅の IPAゴシック・文泉驛。入れ物によってはこれしか無い)でも①が通る
@@ -66,7 +67,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       r.unmount(); host.remove(); fontStyle.remove();
       return out;
     }, [width, font]);
-    for (const W of [50, 58, 76]) {
+    for (const W of [50, 58, 76, 120]) {
       const res = await measure(W);
       const clipped = res.filter((x) => x.clipped.length);
       check(`① 手札の箱 ${W}px: 全部のカード名(${res.length}種類)が切れていない`, res.length > 200 && clipped.length === 0, clipped.slice(0, 6).map((x) => `${x.name}(${x.clipped.join('/')})`).join('・'));
@@ -86,9 +87,18 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
         check('④ 言葉の切れ目で折る(最後の/きらめき・空中回転/アタック・ドラゴン/パンチ)・1語は1行', wrong.length === 0, wrong.map(([n, w, g]) => `${n}: ${g}(${w} のはず)`).join('・'));
         const hs = [...new Set(res.filter((x) => !/[(（]/.test(x.name)).map((x) => x.h))];
         check('⑤ 狭い箱では、名前の高さがそろう(手札の絵がずれない)', hs.length === 1, `高さ ${hs.join('・')}px`);
+      } else if (W < 80) {
+        // 1行のまま 11px で入る幅(字数 × 11px ÷ 0.96。7字で 80px)より狭いので、7字以上で言葉の切れ目がある名前は2行(84 の CardNameFit・70 の mh-nf-n*)
+        const ONE_WORD = ['フォーメーション', 'コンビネーション', 'バックドロップ', 'トランスフォーム'];
+        const plain = res.filter((x) => !/[(（]/.test(x.name));
+        const longOne = plain.filter((x) => [...x.name].length >= 7 && !ONE_WORD.includes(x.name) && x.rows.length !== 2);
+        const shortTwo = plain.filter((x) => ([...x.name].length < 7 || ONE_WORD.includes(x.name)) && x.rows.length !== 1);
+        check(`③ ${W}px の箱: 7字以上で言葉の切れ目がある名前は2行・6字までと1語のカタカナは1行`, longOne.length === 0 && shortTwo.length === 0, [...longOne, ...shortTwo].slice(0, 6).map((x) => `${x.name}(${x.rows.join('/')})`).join('・'));
+        const mango = res.find((x) => x.name === 'カララギマンゴー');
+        check(`③ ${W}px の箱でも「カララギ/マンゴー」`, !!mango && mango.rows.join('/') === 'カララギ/マンゴー', mango ? mango.rows.join('/') : 'なし');
       } else {
         const twoRows = res.filter((x) => !/[(（]/.test(x.name) && x.rows.length !== 1);
-        check(`③ 広い箱 ${W}px では今までどおり1行`, twoRows.length === 0, twoRows.slice(0, 6).map((x) => x.rows.join('/')).join('・'));
+        check(`③ 広い箱 ${W}px(2行に折る幅より広い)では1行`, twoRows.length === 0, twoRows.slice(0, 6).map((x) => x.rows.join('/')).join('・'));
       }
     }
     // ⑥ 字の幅が広いフォントでも切れない(入っていない環境では既定のフォントで測るだけになる)
