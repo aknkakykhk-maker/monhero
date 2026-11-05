@@ -530,12 +530,15 @@ function decideTurn(st) {
       if (!buffed) {
         const kyu = supFor('kyuko');
         if (kyu && aimed.length === 1 && (() => { const u = G.normalizeTacticsUnit(st.units[aimed[0]]); return u && !u.downed && aimDamage(aimed[0]) >= u.hp * 0.5; })()) { take(kyu, 'support'); continue; }
+        // A: 大きいのが来るとき(狙われた子の受けるダメージの合計が、立っている子のライフの25%以上)で、まだ敵が残っているときだけ
         const eA = supFor('erubinA');
-        if (eA && aimed.length && enemyRate > 0.25) { take(eA, 'support'); continue; }
+        if (eA && enemyRate > 0.25 && hpNow > 0 && aimed.reduce((a, sl) => a + aimDamage(sl), 0) >= hpNow * 0.25) { take(eA, 'support'); continue; }
+        // B: 効いていないときだけ(重ねがけしない)
         const eB = supFor('erubinB');
-        if (eB && enemyRate > 0.3 && aliveNow.length >= 2) { take(eB, 'support'); continue; }
+        if (eB && enemyRate > 0.3 && aliveNow.length >= 2 && !(st.erubinTreat && st.turn < st.erubinTreat.until)) { take(eB, 'support'); continue; }
+        // C: まだ効いていない・ずっと続く強化か回復のアシカを持っているときだけ
         const eC = supFor('erubinC');
-        if (eC && enemyRate > 0.3 && supOpts.some((o) => o.card.id !== 'erubinC' && !used.has(o.hi))) { take(eC, 'support'); continue; }
+        if (eC && !st.erubinLead && st.teachings.some((t) => ['mua', 'momosuke', 'oryo', 'kiki', 'poltz', 'cadmium'].includes(t.id))) { take(eC, 'support'); continue; }
       }
     }
     if (!lethal && playBest) {
@@ -555,12 +558,15 @@ function decideTurn(st) {
       if (!buffed) {
         const kyu = supFor('kyuko');
         if (kyu && aimed.length === 1 && (() => { const u = G.normalizeTacticsUnit(st.units[aimed[0]]); return u && !u.downed && aimDamage(aimed[0]) >= u.hp * 0.5; })()) { take(kyu, 'support'); continue; }
+        // A: 大きいのが来るとき(狙われた子の受けるダメージの合計が、立っている子のライフの25%以上)で、まだ敵が残っているときだけ
         const eA = supFor('erubinA');
-        if (eA && aimed.length && enemyRate > 0.25) { take(eA, 'support'); continue; }
+        if (eA && enemyRate > 0.25 && hpNow > 0 && aimed.reduce((a, sl) => a + aimDamage(sl), 0) >= hpNow * 0.25) { take(eA, 'support'); continue; }
+        // B: 効いていないときだけ(重ねがけしない)
         const eB = supFor('erubinB');
-        if (eB && enemyRate > 0.3 && aliveNow.length >= 2) { take(eB, 'support'); continue; }
+        if (eB && enemyRate > 0.3 && aliveNow.length >= 2 && !(st.erubinTreat && st.turn < st.erubinTreat.until)) { take(eB, 'support'); continue; }
+        // C: まだ効いていない・ずっと続く強化か回復のアシカを持っているときだけ
         const eC = supFor('erubinC');
-        if (eC && enemyRate > 0.3 && supOpts.some((o) => o.card.id !== 'erubinC' && !used.has(o.hi))) { take(eC, 'support'); continue; }
+        if (eC && !st.erubinLead && st.teachings.some((t) => ['mua', 'momosuke', 'oryo', 'kiki', 'poltz', 'cadmium'].includes(t.id))) { take(eC, 'support'); continue; }
       }
       // みゃるの薬: いちばんダメージを出している子に、次のターン撃てるガッツが残るときだけ飲ませる
       const myaru = supOpts.filter((o) => o.card.id === 'myaru' && o.slot === mainDist && !o.halved)[0];
