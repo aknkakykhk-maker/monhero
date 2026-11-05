@@ -249,6 +249,7 @@ function getCardGuts(st, card, slot) {
   cost = Math.floor(cost * (turnB.gutsCostMult || 1) * G.tacticsSlotRate(bySlot, slot, 'gutsCostMult', 1.0));
   if (cost > 0 && ((turnB.pandoraResonanceTurns || 0) > 0 || G.tacticsSlotTurns(bySlot, slot, 'pandoraResonanceTurns') > 0)) cost = Math.floor(cost * 0.5);
   cost = Math.floor(cost * Math.max(0.1, 1 - 0.03 * (perma.snegurochkaGutsDiscountStacks || 0)));
+  if (card.teach && st.erubinTreat && st.turn >= st.erubinTreat.from && st.turn <= st.erubinTreat.until) cost = Math.floor(cost * (1 - st.erubinTreat.cut)); // 試作 B
   return cost;
 }
 
@@ -301,7 +302,8 @@ function turnReduce(st, damage, slot, immBySlot = null) {
   if (!(damage > 0)) return 0;
   const imm = immBySlot && Number(immBySlot[slot]) > 0 ? Number(immBySlot[slot]) : 1;
   const tb = st.turnB || {};
-  return Math.max(1, Math.floor(damage * imm * (tb.takenDamageMult || 1) * G.tacticsSlotRate(tb.bySlot, slot, 'takenDamageMult', 1.0)
+  const kc = st.kyukoCut && st.kyukoCut.slot === slot && st.turn <= st.kyukoCut.until ? 1 - st.kyukoCut.cut : 1; // 試作: きゅうこの譜面
+  return Math.max(1, Math.floor(damage * imm * kc * (tb.takenDamageMult || 1) * G.tacticsSlotRate(tb.bySlot, slot, 'takenDamageMult', 1.0)
     * G.tacticsExPartyTakenMult(st.ex, st.units, nowOf(st)) * multiBuffNow(st, slot).taken * partyBuffNow(st).taken * cookieNow(st).takenMult));
 }
 // 60-app.jsx guardDefFor(10971)・guardValueOf(10977)・tacticsSpreadGuardValue(10986)・tacticsSlotGuardValue(10995)
@@ -524,6 +526,17 @@ function decideTurn(st) {
       if (kiki && !buffed && richestG >= 0.3 && enemyRate > 0.3) { take(kiki, 'support'); continue; }
       if (poltz && !buffed && richestG >= 0.3 && enemyRate > 0.4) { take(poltz, 'support'); continue; }
       if (meloso && !healed && hpMax && hpNow / hpMax < 0.55) { take(meloso, 'support'); continue; }
+      // 試作(claude/erubin-asika-proto): えるびん3案・きゅうこの譜面の使いどころ(ほかのアシカと同じく1ターン1枚)
+      if (!buffed) {
+        const kyu = supFor('kyuko');
+        if (kyu && aimed.length === 1 && (() => { const u = G.normalizeTacticsUnit(st.units[aimed[0]]); return u && !u.downed && aimDamage(aimed[0]) >= u.hp * 0.5; })()) { take(kyu, 'support'); continue; }
+        const eA = supFor('erubinA');
+        if (eA && aimed.length && enemyRate > 0.25) { take(eA, 'support'); continue; }
+        const eB = supFor('erubinB');
+        if (eB && enemyRate > 0.3 && aliveNow.length >= 2) { take(eB, 'support'); continue; }
+        const eC = supFor('erubinC');
+        if (eC && enemyRate > 0.3 && supOpts.some((o) => o.card.id !== 'erubinC' && !used.has(o.hi))) { take(eC, 'support'); continue; }
+      }
     }
     if (!lethal && playBest) {
       // 上手な使い方: ずっと続く強化は WAVE の早いうちに(遅いほど効く回数が減る)、回復は細ったとき、薬は火力の柱に飲ませる
@@ -537,6 +550,17 @@ function decideTurn(st) {
       if (enemyRate > 0.3 && aliveNow.length >= 2) {
         const o = buffed ? null : ['kiki', 'oryo', 'poltz'].map(supFor).find((x) => x && !x.halved);
         if (o) { take(o, 'support'); continue; }
+      }
+      // 試作(claude/erubin-asika-proto): えるびん3案・きゅうこの譜面の使いどころ(ほかのアシカと同じく1ターン1枚)
+      if (!buffed) {
+        const kyu = supFor('kyuko');
+        if (kyu && aimed.length === 1 && (() => { const u = G.normalizeTacticsUnit(st.units[aimed[0]]); return u && !u.downed && aimDamage(aimed[0]) >= u.hp * 0.5; })()) { take(kyu, 'support'); continue; }
+        const eA = supFor('erubinA');
+        if (eA && aimed.length && enemyRate > 0.25) { take(eA, 'support'); continue; }
+        const eB = supFor('erubinB');
+        if (eB && enemyRate > 0.3 && aliveNow.length >= 2) { take(eB, 'support'); continue; }
+        const eC = supFor('erubinC');
+        if (eC && enemyRate > 0.3 && supOpts.some((o) => o.card.id !== 'erubinC' && !used.has(o.hi))) { take(eC, 'support'); continue; }
       }
       // みゃるの薬: いちばんダメージを出している子に、次のターン撃てるガッツが残るときだけ飲ませる
       const myaru = supOpts.filter((o) => o.card.id === 'myaru' && o.slot === mainDist && !o.halved)[0];
@@ -807,6 +831,16 @@ const COAST_TURNS = Number(process.env.SIM_COAST_TURNS ?? 6);
 const coasting = (st) => st.waveTurns.length > 0 && st.waveTurns[st.waveTurns.length - 1] <= COAST_TURNS;
 const EX_POLICIES = { none: () => {}, bot: policyBot, best: policyBest };
 
+// ---------- 試作: えるびんのアシカ3案・きゅうこの譜面(claude/erubin-asika-proto・2026-11-05 ルールくん。測るためだけ。main へは入れない) ----------
+//   A watch_erubin: 使ったターンに受けたダメージ×rate を、次のターンの攻撃に上乗せ。使ったターンは受けるダメージ −cut
+//   B treat_erubin: 次のターンから turns ターン、アシカのガッツ −cut
+//   C lead_erubin: 次に使うアシカ1枚の効き目 ×mult
+//   きゅうこ cover_kyuko: このターン敵の単体攻撃を使った子が引き受け、turns ターン(使ったターンを含む)その子の受けるダメージ −cut(KYUKO_TIERS)
+const ERUBIN_PROTO = {
+  A: [{ rate: 0.5, cut: 0.10 }, { rate: 0.75, cut: 0.15 }, { rate: 1.0, cut: 0.20 }],
+  B: [{ cut: 0.2, turns: 2 }, { cut: 0.3, turns: 3 }, { cut: 0.4, turns: 4 }],
+  C: [1.3, 1.5, 1.7],
+};
 // ---------- アシカ(アシストカード) ----------
 // カードの定義は data/breeder.js の TEACHING_CARDS(load-game.js で読む)。効果の量は 60-app.jsx processTurn から写した
 const TEACH_BY_ID = Object.fromEntries(G.TEACHING_CARDS.map((t) => [t.id, t]));
@@ -820,6 +854,7 @@ const scaleMua = (st) => { st.units = G.scaleTacticsUnits(st.units, st.perma.mua
 // 手札のアシカを使う(60-app.jsx processTurn 12437〜12527)。effMul は同じ子の2枚目なら 0.5
 function playTeaching(st, card, slot, effMul, usedCount, guardBySlot, startDist, localOryo, localDmgMod, localGlobalCombo) {
   const out = { oryo: 0, combo: 0, invincible: false, dealt: 0 };
+  if (st.erubinLead && card.subType !== 'lead_erubin') { effMul *= st.erubinLead; st.erubinLead = 0; } // 試作 C: 次に使うアシカの効き目
   const owned = ownedTeaching(st, card.id);
   const level = owned ? owned.evoLevel || 0 : 0;
   const p = st.perma;
@@ -852,6 +887,18 @@ function playTeaching(st, card, slot, effMul, usedCount, guardBySlot, startDist,
   } else if (card.subType === 'buff_poltz') { // 12480〜12485: 待機回数を張り直す
     const tier = Math.min(level, G.POLTZ_TIERS.length - 1);
     p.poltzTier = tier; p.poltzEffMul = effMul; p.poltzCharges = G.POLTZ_TIERS[tier].charges;
+  } else if (card.subType === 'watch_erubin') { // 試作 A
+    const t = ERUBIN_PROTO.A[Math.min(level, 2)];
+    st.turnB = { ...st.turnB, erubinWatch: (st.turnB.erubinWatch || 0) + t.rate * effMul, takenDamageMult: (st.turnB.takenDamageMult || 1) * (1 - t.cut * effMul) };
+  } else if (card.subType === 'treat_erubin') { // 試作 B
+    const t = ERUBIN_PROTO.B[Math.min(level, 2)];
+    st.erubinTreat = { cut: Math.min(0.9, t.cut * effMul), from: st.turn + 1, until: st.turn + t.turns };
+  } else if (card.subType === 'lead_erubin') { // 試作 C
+    st.erubinLead = Math.max(st.erubinLead || 0, 1 + (ERUBIN_PROTO.C[Math.min(level, 2)] - 1) * effMul);
+  } else if (card.subType === 'cover_kyuko') { // 試作: きゅうこの譜面(KYUKO_TIERS)
+    const t = G.KYUKO_TIERS[Math.min(level, G.KYUKO_TIERS.length - 1)];
+    st.turnB = { ...st.turnB, kyukoCover: slot };
+    st.kyukoCut = { slot, cut: t.cut * effMul, until: st.turn + t.turns - 1 };
   } else if (card.subType === 'buff_kiki') { // 12486
     const lv = Math.min(level, 2);
     const combo = (0.03 + lv * 0.02) * effMul;
@@ -1157,6 +1204,7 @@ function playTurn(st) {
     st.dmgBySlot[slot] = (st.dmgBySlot[slot] || 0) + total;
     st.waveDist[slot] += total; // 60-app.jsx 12881 turnDistDmg(攻撃カードのダメージを撃った子の枠へ)
   }
+  if (dealt > 0 && st.turnB && st.turnB.erubinBonus > 0) { dealt += st.turnB.erubinBonus; st.turnB = { ...st.turnB, erubinBonus: 0 }; } // 試作 A
   st.overkill = (st.overkill || 0) + Math.max(0, dealt - st.enemy.hp);
   st.enemy.hp = Math.max(0, st.enemy.hp - dealt);
   if (TRACE) {
@@ -1215,7 +1263,8 @@ function playTurn(st) {
     else if (intent.type === 'ATTACK' || intent.type === 'SPECIAL') {
       const actingDist = forcedMoveTarget != null ? forcedMoveTarget : st.dist;
       const actingIntent = G.tacticsSweepIntent(intent, st.units, actingDist);
-      const aimedSlots = targetsNow(st, intent, actingDist);
+      let aimedSlots = targetsNow(st, intent, actingDist);
+      if (tb.kyukoCover != null && aimedSlots.length === 1 && G.canTacticsSlotAct(st.units, tb.kyukoCover)) aimedSlots = [tb.kyukoCover]; // 試作: きゅうこの譜面
       const defenseSlot = aimedSlots.length ? aimedSlots[Math.floor(rng() * aimedSlots.length)] : null;
       const dId = defenseSlot != null && st.units[defenseSlot] ? st.units[defenseSlot].id : null;
       const table = G.buildUnifiedSpecialDefense({ existingEvasion: TRAIT_EVADE[dId] || 0, existingReflect: TRAIT_REFLECT[dId] || 0, existingAbsorb: TRAIT_ABSORB[dId] || 0 });
@@ -1253,6 +1302,7 @@ function playTurn(st) {
           tookHit = true;
           if (hit.taken > 0) {
             let fd = imm(slot, hit.taken);
+            if (tb.erubinWatch) st.erubinStore = (st.erubinStore || 0) + fd; // 試作 A
             const ku = G.normalizeTacticsUnit(st.units[slot]);
             // 根性(生命の泉で立ち上がった子): ライフが0になる攻撃を1回だけライフ1で踏ん張る
             if (ku && !ku.downed && fd >= ku.hp && G.tacticsExKonjoLeftOf(st.ex, st.units, slot, nowOf(st)) > 0) {
@@ -1313,6 +1363,8 @@ function playTurn(st) {
   }
   if (timeStopSlot == null) {
     const active = { ...st.nextB }; delete active.melosoFullRecoveryMult;
+    if (st.turnB.erubinWatch && st.erubinStore > 0) active.erubinBonus = Math.floor(st.erubinStore * st.turnB.erubinWatch); // 試作 A
+    st.erubinStore = 0;
     const carryAll = Math.max(0, (st.turnB.pandoraResonanceTurns || 0) - 1);
     if (active.pandoraResonanceTurns == null && carryAll > 0) active.pandoraResonanceTurns = carryAll;
     const carried = G.carryTacticsSlotBuffs(active.bySlot, st.turnB.bySlot, 'pandoraResonanceTurns');

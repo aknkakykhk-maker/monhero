@@ -97,7 +97,11 @@ const BREEDER_EVO_NAMES = {
   poltz: ["ポルツの弁当", "ポルツの挫折", "ポルツの目覚め"],
   momosuke: ["ももすけのおねだり", "ももすけのだだこね", "ももすけの独り占め"],
   kyuko: ["きゅうこの譜面", "きゅうこの編曲", "きゅうこの交響曲"],
-  sorashido: ["ソラシドの自動化", "ソラシドの全自動", "ソラシドの無人運転"]
+  sorashido: ["ソラシドの自動化", "ソラシドの全自動", "ソラシドの無人運転"],
+  // ★試作(claude/erubin-asika-proto・測るためだけ。main へは入れない)
+  erubinA: ["えるびんの見守り", "えるびんの静観", "えるびんの一閃"],
+  erubinB: ["えるびんのおごり", "えるびんの大盤振る舞い", "えるびんの石油王の宴"],
+  erubinC: ["えるびんのまとめ役", "えるびんの取りまとめ", "えるびんの大黒柱"]
 };
 
 // かどみうむ(guts_buff)の進化段階ごとの効果量。
@@ -204,7 +208,11 @@ const TEACHING_CARDS = [
   { id:'kyuko', baseName:"きゅうこの譜面", icon:KYUKO_FACE_ICON, type:'buff', subType:'cover_kyuko', baseValue:0.3, step:0.15, desc:"このターン敵の単体攻撃を引き受け・受けるダメージダウン", evoLevel:0, guts:20 },
   // ソラシド(2026-10-27)。公開の印 assistantSorashido が立つまでは、マーケット・ヘルプに出ない(releaseFlag)。効果量は SORASHIDO_TIERS。
   //   baseValue は Lv0 のライフの割合(表示・検査用)。増え方は表が持つので step は 0
-  { id:'sorashido', baseName:"ソラシドの自動化", icon:SORASHIDO_FACE_ICON, type:'buff', subType:'copy_sorashido', baseValue:0.5, step:0, desc:"使った子のAIコピーが、次のターンから5人目の味方として戦う", evoLevel:0, guts:20, releaseFlag:'assistantSorashido' }
+  { id:'sorashido', baseName:"ソラシドの自動化", icon:SORASHIDO_FACE_ICON, type:'buff', subType:'copy_sorashido', baseValue:0.5, step:0, desc:"使った子のAIコピーが、次のターンから5人目の味方として戦う", evoLevel:0, guts:20, releaseFlag:'assistantSorashido' },
+  // ★試作(claude/erubin-asika-proto・測るためだけ。main へは入れない)。効果量は tools/playbot/sim/battle.js の ERUBIN_PROTO
+  { id:'erubinA', baseName:"えるびんの見守り", icon:SORASHIDO_FACE_ICON, type:'buff', subType:'watch_erubin', baseValue:0.5, step:0, desc:"使ったターンに受けたダメージを、次のターンの攻撃に上乗せ・受けるダメージダウン", evoLevel:0, guts:20 },
+  { id:'erubinB', baseName:"えるびんのおごり", icon:SORASHIDO_FACE_ICON, type:'buff', subType:'treat_erubin', baseValue:0.2, step:0, desc:"数ターン、アシストカードのガッツの消費を減らす", evoLevel:0, guts:20 },
+  { id:'erubinC', baseName:"えるびんのまとめ役", icon:SORASHIDO_FACE_ICON, type:'buff', subType:'lead_erubin', baseValue:1.3, step:0, desc:"次に使うアシストカードの効き目を強くする", evoLevel:0, guts:20 }
 ];
 
 // 初期から無料で使えるアシストカード(教えカード)のid一覧(固定)。
