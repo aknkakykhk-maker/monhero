@@ -75,3 +75,18 @@
 - シークレットの見せ方(案): 見終わるまで、題名は「砂の向こうから来た人 ～？？？～」(幕開けの題字・回想の一覧とも)。見たあとは「～えるびん登場～」。
   HOME では、公開の日に一度だけ流れる(きゅうこ・ソラシドと同じ)
 - 実装のときに足すもの: 行の印 `secret`(名前を「？？？」・絵を影に)・`outfit`(衣装)。砂漠の背景と「落ちていく・暗転」の演出は、動画ではまだ文字だけ
+
+## 5. 本物の形(作業ブランチ claude/tempo-next・main へはまだ入れていない)
+
+入れたもの: 助手の登録(公開の印 assistantErubin は偽)・呼び方の表・仲良し度の段階(ずっと「◯◯さん」)・呼び方の選択肢・
+お話の登録(titleSecret・HOME で一度だけ流す・回想)・お話の曲の枠(erubinJoinStoryEvent=イベントBGM 1)・bgm:'default'・
+行の outfit/secret(storyVariantWho)・砂漠の背景(scene:'desert')・落ちる演出(fx:'fall')・絵(256色・通常と石油王)。
+動画: erubin-story-v2-full-switch0.8s.mp4(通し)・erubin-story-v2-opening-switch2.5s.mp4(冒頭・切り替え2.5秒)
+
+### 助手を1人そろえるのに残っていること(検査が名指ししたもの。社長がお話を良しとしたら、まとめて書く)
+- 連打したときの台詞(専用の6行と戻り)・毎日のマスの助言(ふつうの助言5件以上)・モンスター案内の台詞・おしゃべりの見本(ASSISTANT_CHAT_EXAMPLES)
+- マーケットの表情アイコン8種(各1pt)・仲良し度のごほうびの表(助手の人数)
+- 顔アイコンの切り方を make-assistant-faces.js の基準(顔の真ん中・占有)にそろえる(いまは切り分けの道具で作った仮)
+- 回想の「助手のお話」の並びに、えるびんの加入のお話を足す(event-replay-check)
+- 下の検査を通す: assistant-check・assistant-face-check・assistant/kyuko-check・assistant/daily-masu-advice-check・assistant/momosuke-check・
+  boot/event-replay-check・mode/rhythm-monster-guide-check・monster/market-icon-check・boot/asset-prefetch-check・assistant-bond-reward-check

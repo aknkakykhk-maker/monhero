@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5a05dd7888163074
+// source-sha256: 1fc04ed3fa2e86da
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161264,14 +161264,15 @@ function MonsterHeroGame() {
         return !!w && w.role === 'ゲスト';
       };
       const hiddenUntil = Array.isArray(event && event.hideUntilFirstLine) ? event.hideUntilFirstLine : [];
+      const storyBase = id => typeof storyBaseWho === 'function' ? storyBaseWho(id) : typeof id === 'string' ? id.split('@')[0] : id;
       const castNow = who => {
         for (let i = step; i >= 0; i--) {
           const w = script[i] && script[i].who;
-          if (storyBaseWho(w) === who.id) return w === who.id ? who : assistantById(w);
+          if (storyBase(w) === who.id) return w === who.id ? who : assistantById(w);
         }
         return who;
       };
-      const cast = storyCastOf(script).filter(who => who.role !== 'ゲスト').filter(who => !hiddenUntil.includes(who.id) || script.slice(0, step + 1).some(l => l && storyBaseWho(l.who) === who.id));
+      const cast = storyCastOf(script).filter(who => who.role !== 'ゲスト').filter(who => !hiddenUntil.includes(who.id) || script.slice(0, step + 1).some(l => l && storyBase(l.who) === who.id));
       let stageIdx = -1;
       for (let i = step; i >= 0; i--) {
         const l = script[i];
@@ -161316,6 +161317,7 @@ function MonsterHeroGame() {
       }
       const storyMonsters = monstersIdx >= 0 ? script[monstersIdx].monsters.filter(m => m && m.pose !== 'hide' && STORY_MONSTER_ART[m.id]) : [];
       const fxColors = {
+        fall: '255,214,150',
         split: '233,213,255',
         merge: '255,250,235',
         unlock: '253,230,138',
@@ -161693,7 +161695,7 @@ function MonsterHeroGame() {
         if (storyZones && !storyKeepRow) return null;
         const tiny = storyZones;
         const atStart = Array.isArray(event && event.castAtStart) ? event.castAtStart : [];
-        const rowCast = (tiny ? cast.filter(who => atStart.includes(who.id) || script.slice(0, step + 1).some(l => l && storyBaseWho(l.who) === who.id)) : cast).map(castNow);
+        const rowCast = (tiny ? cast.filter(who => atStart.includes(who.id) || script.slice(0, step + 1).some(l => l && storyBase(l.who) === who.id)) : cast).map(castNow);
         if (tiny && rowCast.length === 0) return React.createElement("div", {
           "data-story-cast-tiny-empty": true,
           style: {
