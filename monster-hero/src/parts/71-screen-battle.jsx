@@ -1504,6 +1504,12 @@ function InfernoShieldBreakFx({ fx, lite, onDone, rule }) {
 const tacticsPopupShortText = (text) => {
   const t = String(text == null ? '' : text);
   if ([...t].length <= 9) return t;
+  // 溜まる物の数(「🍪 クッキー 6/10」「🎵 黒音符 3/10」)は、数が肝心なので切らない(2026-11-05 空白で切って「🍪」だけになっていた)
+  if (/^\S+ \S+ \d+\/\d+$/.test(t) && [...t].length <= 16) return t;
+  // 残りの回数を知らせる吹き出し(「👻 完全回避！ のこり1回」「…これで最後」)も、数が肝心なので切らない
+  if (/(のこり\d+回|これで最後)$/.test(t) && [...t].length <= 16) return t;
+  // EX の吹き出し(「EX 悪夢全開！メロディ・キー！」)は、技名の中にも「！」があるので、技名の終わり(最後の「！」)まで出す
+  if (/^EX /.test(t)) { const m = t.match(/^(.*[!！])/); return m ? m[1] : t; }
   const bang = t.match(/^(.+?[!！])/);
   if (bang) return bang[1];
   const k = t.search(/[\s　・、]/);
