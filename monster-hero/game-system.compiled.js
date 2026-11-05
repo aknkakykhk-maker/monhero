@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ddfa477c3d5bd94f
+// source-sha256: 1cca6069bab10e4e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99089,7 +99089,8 @@ const CARD_DECK_NAME_TAILS = Object.freeze({
   kyuko: ['先読みの陣', 'お見通し作戦', '読み筋デッキ', 'ガッツ勘定隊'],
   dra: ['カウンター要塞', 'はね返し城', '鉄壁ガード団', 'ねばり腰の砦'],
   atsu: ['まとめてドーン組', '一掃カーニバル', '全体ぶっぱ隊', '総なめ軍団'],
-  sorashido: ['攻略まとめ組', '最適解デッキ', '計算どおり団', 'なんくるない隊']
+  sorashido: ['攻略まとめ組', '最適解デッキ', '計算どおり団', 'なんくるない隊'],
+  erubin: ['砂の剣士団', 'じっくり見守り隊', '組み直しの陣', 'デュラハン騎士団']
 });
 const CARD_DECK_NAME_MAX = 18;
 const CARD_DECK_STYLE = Object.freeze({
@@ -99252,6 +99253,28 @@ const CARD_VS_LINES = Object.freeze({
     master: {
       e: 'angry',
       t: 'うぉぉぉ！ 俺の全力、受けてみな・・・！'
+    }
+  },
+  erubin: {
+    easy: {
+      e: 'happy',
+      t: 'のんびりいこうか。楽しむのが一番だよね☺️'
+    },
+    normal: {
+      e: 'wink',
+      t: 'おけ！ 今日の組み方、ちょっと自信あるんだよね笑'
+    },
+    hard: {
+      e: 'normal',
+      t: 'ここからはしっかりいくね。それでもよいかな？'
+    },
+    expert: {
+      e: 'excited',
+      t: '全部の弾から選んできたよ。いい勝負にしようね'
+    },
+    master: {
+      e: 'wink',
+      t: '本気の組み方で来たよ。さすがに負けたくないかな笑'
     }
   }
 });
