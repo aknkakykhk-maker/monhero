@@ -356,7 +356,7 @@ const CardStatusList = ({ list }) => (!list || !list.length ? null : (
     {list.map((x) => (
       <div key={x.key} className="flex items-start gap-2">
         <span className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-black ${CARD_STATUS_TONE[x.tone] || CARD_STATUS_TONE.down}`}>{x.short}{x.left ? ` ${x.left}` : ''}</span>
-        <span className="min-w-0 text-[12px] font-bold leading-snug text-slate-200" style={JA_WRAP_STYLE}>{x.text}</span>
+        <span className="min-w-0 text-[12px] font-bold leading-snug text-slate-200" style={JA_WRAP_STYLE}>{cardJaWrap(x.text)}</span>
       </div>
     ))}
   </div>
@@ -731,7 +731,7 @@ const CardDetailModal = ({ db, no, onClose, status = null, statusName = '', dexI
             <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{c.dispNo || c.no}</span>
           </div>
           {dexLine}
-          {c.text && <p className="mt-2 text-[14px] font-bold leading-relaxed">{c.text}</p>}
+          {c.text && <p className="mt-2 text-[14px] font-bold leading-relaxed" style={JA_WRAP_STYLE}>{cardJaWrap(c.text)}</p>}
           {!c.text && cardPlainEffectText(c) && <p data-card-detail-plain className="mt-2 text-[14px] font-bold leading-relaxed" style={JA_LABEL_STYLE}>{jaWrap(cardPlainEffectText(c))}</p>}
           {c.note && <p data-card-detail-note className="mt-1.5 text-[12px] font-bold leading-relaxed text-sky-200" style={JA_LABEL_STYLE}>{jaWrap(c.note)}</p>}
           {!c.ready && <p className="mt-2 text-[12px] font-bold text-amber-300" style={JA_LABEL_STYLE}>{jaWrap('このカードは準備中です(まだデッキに入れられません)')}</p>}
@@ -2627,7 +2627,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           <div data-card-pray className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" style={cardSafePad('.75rem')}>
             <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100">
               <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap(`相手が全体カード「${fc ? fc.name : ''}」を出しました`)}</div>
-              {fc && <button type="button" onClick={() => setDetail(fc.no)} className="mt-1 block w-full rounded-xl bg-slate-800 px-2 py-1.5 text-left text-[12px] font-bold leading-snug text-slate-200" style={JA_WRAP_STYLE}>{fc.text}</button>}
+              {fc && <button type="button" onClick={() => setDetail(fc.no)} className="mt-1 block w-full rounded-xl bg-slate-800 px-2 py-1.5 text-left text-[12px] font-bold leading-snug text-slate-200" style={JA_WRAP_STYLE}>{cardJaWrap(fc.text)}</button>}
               <p className="mt-2 text-[12px] font-bold leading-snug text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('「おいのり」を使うと、この全体カードは効かずに捨て札へ行きます')}</p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <button type="button" data-card-pray-use onClick={() => step(prayUse)} className="mh-button mh-button-primary min-h-[48px] rounded-xl text-[14px] font-black">おいのりを使う</button>

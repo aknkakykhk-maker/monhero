@@ -345,7 +345,7 @@ const CardRegTemplateSheet = ({ db, deck, tactics, open, lv, aces, monName, onPi
           return (
             <div key={s.id} data-card-reg-template={s.id} className="rounded-2xl border-2 border-white/15 bg-slate-900 p-2.5">
               <b className="block text-[15px] font-black text-white">{cardIconNode(s.icon, 16)} {s.name}</b>
-              <small className="block text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{s.desc}</small>
+              <small className="block text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{cardJaWrap(s.desc)}</small>
               <div className="mt-1.5 space-y-0.5">
                 {rows.map((x, i) => <div key={i} className="rounded-md bg-white/5 px-1.5 py-0.5 text-[11px] font-bold text-slate-100" style={JA_WRAP_STYLE}>{x}</div>)}
                 <div className="rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[11px] font-bold text-amber-100">{`📘 基本の型: ${(cardTacticOf(f.base[0]) || {}).name || ''}`}</div>
@@ -509,7 +509,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
               className={`flex w-full items-center gap-3 rounded-2xl border-2 p-3 text-left ${styleId === s.id ? 'border-amber-300 bg-amber-950/40' : 'border-slate-700 bg-slate-900'}`}>
               <span className="w-10 text-center text-[28px]">{cardIconNode(s.icon, 28)}</span>
               <span className="min-w-0 flex-1"><b className="block text-[15px] font-black text-white">{s.name}{i === 0 && <span className="ml-1.5 rounded bg-emerald-600 px-1.5 text-[10px]">おすすめ</span>}</b>
-                <small className="block text-[11px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{s.desc}</small></span>
+                <small className="block text-[11px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{cardJaWrap(s.desc)}</small></span>
             </button>
           ))}
           <button type="button" data-card-reg-style="custom" onClick={() => { Audio_.fgSe.tap(); setStyleId('custom'); setStep('custom'); }}
@@ -536,7 +536,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
                     style={!locked && c ? { background: 'linear-gradient(160deg,#b45309,#7c2d12)' } : undefined}>
                     <small className="text-[10px] font-black text-amber-200">{i === 0 ? 'メイン' : `サブ${i}`}</small>
                     {locked ? <><span className="text-[20px]">🔒</span><small className="text-[10px] font-black text-slate-300">{lockAt ? `ランク${lockAt}で` : ''}</small></>
-                      : c ? <><b className="mt-0.5 block text-[14px] font-black leading-tight text-white" style={JA_WRAP_STYLE}>{c.name}</b><small className="mt-auto line-clamp-3 text-[10px] font-bold leading-snug text-orange-50" style={JA_WRAP_STYLE}>{c.desc}</small></>
+                      : c ? <><b className="mt-0.5 block text-[14px] font-black leading-tight text-white" style={JA_WRAP_STYLE}>{c.name}</b><small className="mt-auto line-clamp-3 text-[10px] font-bold leading-snug text-orange-50" style={JA_WRAP_STYLE}>{cardJaWrap(c.desc)}</small></>
                         : <b className="mt-1 text-[13px] font-black text-amber-100">＋ えらぶ</b>}
                   </button>
                 );
