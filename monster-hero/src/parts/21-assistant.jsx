@@ -34,6 +34,14 @@ const assistantById = (id) => ASSISTANT_LIST.find(a => a.id === id)
 // 衣装・シークレットの行(「助手id@…」)は、元の助手として数える
 const storyBaseWho = (id) => (typeof id === 'string' ? id.split('@')[0] : id);
 const storyCastOf = (script) => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(who => (script || []).some(l => l && storyBaseWho(l.who) === who.id));
+// 助手の「ふつう」の表情の絵(outfit を渡すと、その衣装のフォルダの絵)。登録が無ければ null
+const storyAssistantArtOf = (id, outfit) => {
+  const who = (typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST : []).find(a => a && a.id === id);
+  if (!who || !who.imageDir || !who.imagePrefix) return null;
+  const dirs = (typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS) || {};
+  const dir = outfit ? dirs[outfit] : who.imageDir;
+  return dir ? `${dir}/${who.imagePrefix}_normal.PNG` : null;
+};
 // お話の真ん中に出すモンスターの全身の絵(台本の monsters の id → 絵。2026-10-27「推しに会える夜」)。足すときはここへ1行
 const STORY_MONSTER_ART = Object.freeze({
   Kyubi: typeof KYUBI_IMG !== 'undefined' ? KYUBI_IMG : null,
@@ -45,8 +53,9 @@ const STORY_MONSTER_ART = Object.freeze({
   PandoraAngel: typeof PANDORA_ANGEL_IMG !== 'undefined' ? PANDORA_ANGEL_IMG : null,
   PandoraDevil: typeof PANDORA_DEVIL_IMG !== 'undefined' ? PANDORA_DEVIL_IMG : null,
   // えるびんの登場のお話(2026-11-05)の、胸から上の大きい立ち絵(384x512)。ErubinSekiyuou … 衣装『石油王』(初めて会う場面) / Erubin … 着替えたあとの通常の服
-  Erubin: 'images/assistant/erubin_normal.PNG',
-  ErubinSekiyuou: `${(typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS.sekiyuou) || 'images/assistant/sekiyuou'}/erubin_normal.PNG`,
+  //   絵の場所は助手の登録(imageDir・imagePrefix)と衣装のフォルダ(STORY_OUTFIT_DIRS)から作る(パスを画面の側に書かない)
+  Erubin: storyAssistantArtOf('erubin'),
+  ErubinSekiyuou: storyAssistantArtOf('erubin', 'sekiyuou'),
 });
 // お話の台詞を、決まった行数に収まるページへ分ける(2026-11-02 社長「セリフが長ければページ数増やせばいいだけ」)。
 //   上部ゾーン(ゲストの吹き出し)・下部ゾーン(台詞の欄)の高さを固定にしたので、収まらない台詞は「次へ」で送る次のページにする。
