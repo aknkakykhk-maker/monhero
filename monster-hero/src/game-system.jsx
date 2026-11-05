@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9904202f1657572d
+// generated-sha256: fcccb4854a848c56
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -98140,7 +98140,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // シークレットのお話(titleSecret・2026-11-05 えるびん)は、HOME で初めて流れるあいだ題名を伏せる(幕開けの題字・上の見出し)。
         //   終わりの札で本当の題名を見せる。回想は見たあとにしか開けないので、いつも本当の題名
         const storyTitleNow=event?.titleSecret&&eventReplay.live?event.titleSecret:event?.title;
-        // 場面の背景(台本の行の bg:'desert'。次に bg を書いた行まで続き、bg:'none' で消す。2026-11-05 えるびんの登場のお話)
+        // 場面の背景(台本の行の bg:'名前'。次に bg を書いた行まで続き、bg:'none' で消す。2026-11-05 共通の背景)
         let storyScene=null;
         for(let i=step;i>=0;i--){const l=script[i];if(l&&typeof l.bg==='string'){storyScene=l.bg==='none'?null:l.bg;break;}}
         // 絵は data/breeder.js の STORY_SCENE_IMAGES(名前 → 絵)。表に無い名前は出さない
@@ -98319,7 +98319,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         return(
         <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-step={step} data-story-zones={storyZones?(storyKeepRow?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} data-story-opening={storyOpening?storyOpeningStyle:undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${storyTitleNow||''}`}>
           {/* 場面の背景(台本の行の bg)。場面が替わると key が替わり、ふわっと切り替わる。fx:'fall' の行では、
-              穴へ落ちていくように背景が上へ流れて暗くなる(70-bootstrap.jsx の [data-story-scene]) */}
+              穴へ落ちていくように背景が上へ流れて暗くなる(70-bootstrap.jsx の [data-story-bg]) */}
           {storySceneImg&&<div key={storyScene} data-story-bg={storyScene} data-story-bg-fx={fx==='fall'?'fall':undefined} aria-hidden="true"
             style={{'--story-bg':`url("${storySceneImg}")`}}/>}
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
@@ -103018,7 +103018,7 @@ const createAnimationStyle = () => {
     @keyframes storyOpenTitle { 0% { opacity: 0; transform: scale(.94); filter: blur(6px); } 100% { opacity: 1; transform: none; filter: none; } }
     @keyframes storyOpenOut { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
     @keyframes storyIrisHole { 0% { width: 0; height: 0; } 100% { width: 260vmax; height: 260vmax; } }
-    /* お話の場面の背景(2026-11-05 えるびんの登場のお話から)。絵は data/breeder.js の STORY_SCENE_IMAGES。
+    /* お話の場面の背景(2026-11-05 共通の背景。どのお話からも台本の bg で使う)。絵は data/breeder.js の STORY_SCENE_IMAGES。
        正方形の絵を敷く(縦は左右・横の低い画面は上下が切れる。大事なものは絵の真ん中にある)。
        下のほうは会話の紙と立ち絵が乗るので、少しだけ暗くして字を読みやすくする */
     [data-story-bg] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; background-color: #0b0a14; animation: storySceneIn .7s ease-out both; }

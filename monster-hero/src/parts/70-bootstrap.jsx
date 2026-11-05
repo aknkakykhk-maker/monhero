@@ -3356,7 +3356,7 @@ const createAnimationStyle = () => {
     @keyframes storyOpenTitle { 0% { opacity: 0; transform: scale(.94); filter: blur(6px); } 100% { opacity: 1; transform: none; filter: none; } }
     @keyframes storyOpenOut { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
     @keyframes storyIrisHole { 0% { width: 0; height: 0; } 100% { width: 260vmax; height: 260vmax; } }
-    /* お話の場面の背景(2026-11-05 えるびんの登場のお話から)。絵は data/breeder.js の STORY_SCENE_IMAGES。
+    /* お話の場面の背景(2026-11-05 共通の背景。どのお話からも台本の bg で使う)。絵は data/breeder.js の STORY_SCENE_IMAGES。
        正方形の絵を敷く(縦は左右・横の低い画面は上下が切れる。大事なものは絵の真ん中にある)。
        下のほうは会話の紙と立ち絵が乗るので、少しだけ暗くして字を読みやすくする */
     [data-story-bg] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; background-color: #0b0a14; animation: storySceneIn .7s ease-out both; }

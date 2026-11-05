@@ -11559,7 +11559,7 @@ const ASSISTANT_CARD_CUP_STORY_CALLS = { mua: 'ひめちん／もも／あつく
 // atsu:'with' はあつを解放している人だけ、atsu:'without' はその代わりに出る行。後半の森は笑・顔文字なし(シリアスな場面)
 const PANDORA_WINGS_EP1 = [
   // ---- お昼の広場(イベントの説明) ----
-  { who:'mua',      e:'excited',  t:'ねえねえみんな、聞いて！ 今日から、モンヒロビートのイベントがはじまったよ〜！' },
+  { bg:'monhero_plaza', who:'mua',      e:'excited',  t:'ねえねえみんな、聞いて！ 今日から、モンヒロビートのイベントがはじまったよ〜！' },
   { who:'momosuke', e:'excited',  t:'きた〜！ 今回はなんて名前なの？' },
   { who:'mua',      e:'happy',    t:'「鍵の向こう側へ ～パンドラとふたつの翼～」！ なんか、かっこよくない？' },
   { who:'dra',      e:'happy',    t:'鍵か……。おで、こういうの好きだぞ。開けたくなる' },
@@ -11589,7 +11589,7 @@ const PANDORA_WINGS_EP1 = [
   { who:'dra',      e:'normal',   t:'……気になるな。行ってみるか' },
   { who:'momosuke', e:'troubled', t:'え、森の奥……？ ももはドラちゃんのうしろ歩くからね！？' },
   // ---- 森の奥(ここから笑・顔文字なし) ----
-  { who:'mua',      e:'surprise', t:'……あった。あれ、箱……？' },
+  { bg:'forest_deep', who:'mua',      e:'surprise', t:'……あった。あれ、箱……？' },
   { who:'kiki',     e:'normal',   t:'古い箱でつね。鎖がぐるぐるに巻かれてまつ。まんなかに、鍵穴がひとつ……。' },
   { who:'dra',      e:'normal',   t:'歌は、この中から聞こえるぞ' },
   { who:'momosuke', e:'troubled', t:'箱の中で、だれかが歌ってるの……？' },
@@ -11610,7 +11610,7 @@ const PANDORA_WINGS_EP1_CALLS = { mua: 'きゅきゅ', kiki: 'きゅうこさん
 // stage は話さずに真ん中の絵だけ出し替える(pandora_angel / pandora_devil で、ほめられた側を出す。none で消す)
 const PANDORA_WINGS_EP2 = [
   // ---- 次の日・森の入り口 ----
-  { who:'momosuke', e:'troubled', t:'きゅうちゃん、ほんとにまた行くの？' },
+  { bg:'forest_deep', who:'momosuke', e:'troubled', t:'きゅうちゃん、ほんとにまた行くの？' },
   { who:'kyuko',    e:'normal',   t:'行くって言ったからね。約束は守らないと' },
   { who:'mua',      e:'excited',  t:'あたし、お菓子持ってきた！ 歌のお礼！' },
   { who:'dra',      e:'happy',    t:'おでは毛布を持ってきたぞ。箱の中、寒いかもしれないからな' },
@@ -11653,7 +11653,7 @@ const PANDORA_WINGS_EP2_CALLS = { mua: 'きゅきゅ', kiki: 'きゅうこさん
 // 「ふたりいるの」で悪魔側と天使側に分かれ(fx:'split')、「大嫌いで、大好き」で1つに戻る(fx:'merge')
 const PANDORA_WINGS_EP3 = [
   // ---- 夕方・森の奥。きゅうこがひとりで来る ----
-  { who:'kyuko',    e:'normal',   t:'……今日は、俺ひとり。みんなは、昨日のことちゃんと気にしてたよ' },
+  { bg:'forest_evening', who:'kyuko',    e:'normal',   t:'……今日は、俺ひとり。みんなは、昨日のことちゃんと気にしてたよ' },
   { who:'kyuko',    e:'normal',   fxText:'箱は静かなままだった', t:'返事はいいよ。ここに座って、ちょっと休んでくだけだから' },
   { who:'pandora',  e:'normal',   monsters:[{ id:'PandoraShadow', pose:'peek' }], fxText:'しばらくして、ふたが少しだけ開いた', t:'……あの子たちは、悪くない' },
   { who:'kyuko',    e:'normal',   t:'うん' },
@@ -11690,7 +11690,7 @@ const PANDORA_WINGS_EP3_CALLS = { kyuko: 'パンドラ' };
 // ソラシドは笑・絵文字あり・「ぜ」なし。最後の1行は帯の文字で第5話へつなぐ
 const PANDORA_WINGS_EP4 = [
   // ---- 広場・夕方 ----
-  { who:'kyuko',    e:'normal',   t:'……ってわけで。パンドラ、おしゃれが好きなんだって' },
+  { bg:'monhero_plaza_evening', who:'kyuko',    e:'normal',   t:'……ってわけで。パンドラ、おしゃれが好きなんだって' },
   { who:'mua',      e:'excited',  t:'え、それ早く言ってよ〜！ あたしの出番ぢゃん！' },
   { who:'momosuke', e:'excited',  t:'もももも！ ももも出番！ かわいいの、いっぱい持ってるもん♡' },
   { who:'kiki',     e:'happy',    t:'わたくしも、リボンなら少しありまつ。' },
@@ -11704,7 +11704,7 @@ const PANDORA_WINGS_EP4 = [
   { who:'atsu',     e:'happy',    atsu:'with',    t:'じゃ、金と紫で探そっか。みんなで1個ずつ選ぶ感じで笑' },
   { who:'dra',      e:'happy',    atsu:'without', t:'よし。じゃあ金と紫で探すか。みんなで1個ずつ選ぼう' },
   // ---- 森の奥・箱の前 ----
-  { who:'momosuke', e:'troubled', t:'パンドラちゃん……この前は、ごめんね。天使のほうだけって言っちゃって' },
+  { bg:'forest_night', who:'momosuke', e:'troubled', t:'パンドラちゃん……この前は、ごめんね。天使のほうだけって言っちゃって' },
   { who:'dra',      e:'troubled', t:'おでもだ。黒いほうだけほめた。……悪かった' },
   { who:'pandora',  e:'normal',   monsters:[{ id:'PandoraShadow', pose:'peek' }], fxText:'ふたが少し開いた', t:'……いいの。あなたたちは、悪くない' },
   { who:'mua',      e:'excited',  t:'あのね、今日はおみやげがあるの！ みんなで選んだ飾り！' },
@@ -11733,7 +11733,7 @@ const PANDORA_WINGS_EP4_CALLS = { mua: 'どれみふぁソラシド〜♪', kiki
 // 「ぶつかってる」で悪魔側と天使側が激しく離れる(fierce)。箱へ戻ると絵が消える
 const PANDORA_WINGS_EP5 = [
   // ---- 昼・森の奥。パンドラがみんなと話している ----
-  { who:'mua',      e:'happy',    monsters:[{ id:'Pandora', pose:'idle' }], t:'パンドラ、今日もその飾りつけてくれてる！' },
+  { bg:'forest_deep', who:'mua',      e:'happy',    monsters:[{ id:'Pandora', pose:'idle' }], t:'パンドラ、今日もその飾りつけてくれてる！' },
   { who:'pandora',  e:'normal',   t:'……うん。気に入ってるから' },
   { who:'momosuke', e:'happy',    t:'えへへ……ももが選んだやつ〜' },
   { who:'kiki',     e:'normal',   t:'パンドラさん、きのうより顔色がいいでつね。' },
@@ -11765,7 +11765,7 @@ const PANDORA_WINGS_EP5_CALLS = { mua: 'パンドラ', kiki: 'パンドラさん
 // あつを解放していない人には、ドラの「おでとあっくんで」を「おでが前に立って」に差し替える。{name} はプレイヤーの呼び名
 const PANDORA_WINGS_EP6 = [
   // ---- 朝・箱の前。鎖が増えている ----
-  { who:'momosuke', e:'troubled', t:'……鎖、きのうより増えてる' },
+  { bg:'forest_morning', who:'momosuke', e:'troubled', t:'……鎖、きのうより増えてる' },
   { who:'mua',      e:'troubled', t:'パンドラ、聞こえる？ ……ごはん、置いとくね' },
   { who:'dra',      e:'angry',    fxText:'返事はない', t:'おでが力いっぱい引っぱれば、鎖くらい……' },
   { who:'kiki',     e:'surprise', t:'ドラさん、待ってくだしゃい。……この鎖、ふつうの鎖じゃないでつ。' },
@@ -11800,7 +11800,7 @@ const PANDORA_WINGS_EP6_CALLS = { mua: 'どれみふぁソラシド〜♪', kiki
 // BGM: 演奏が始まる所で Stay With Me short に替え、鍵を回す所から Rebellion に戻す(bgm)。箱の中は天使と悪魔のパンドラが分かれたまま交互に話し、手を取る所で戻る
 const PANDORA_WINGS_EP7 = [
   // ---- 夜・箱の前。みんなが並ぶ ----
-  { who:'mua',      e:'normal',   t:'……準備、できた？' },
+  { bg:'forest_night', who:'mua',      e:'normal',   t:'……準備、できた？' },
   { who:'dra',      e:'normal',   t:'いつでもいいぞ' },
   { who:'atsu',     e:'normal',   atsu:'with',    t:'いこう。最初の1音、そろえて' },
   { who:'dra',      e:'normal',   atsu:'without', t:'最初の1音、そろえていくぞ' },
@@ -11808,7 +11808,7 @@ const PANDORA_WINGS_EP7 = [
   { who:'momosuke', e:'excited',  bgm:'melo_stay_with_me_short', holdMs:2500, fxText:'演奏が始まる。パンドラがいつも歌っていた、あの歌', t:'とどけ……とどけ……！' },
   { who:'sorashido', e:'normal',  fxText:'ソラシドが、三線を重ねる', t:'まだまだ、鳴らすよ' },
   // ---- 箱の中・暗やみ(天使と悪魔に分かれたパンドラが、向かい合っている) ----
-  { who:'pandora',  name:'天使のパンドラ', e:'normal', stage:'none', monsters:[{ id:'PandoraDevil', pose:'splitL' }, { id:'PandoraAngel', pose:'splitR' }], fxText:'箱の中。天使と悪魔のパンドラが、向かい合っている', t:'……聞こえる。わたしたちの歌' },
+  { bg:'dark_void', who:'pandora',  name:'天使のパンドラ', e:'normal', stage:'none', monsters:[{ id:'PandoraDevil', pose:'splitL' }, { id:'PandoraAngel', pose:'splitR' }], fxText:'箱の中。天使と悪魔のパンドラが、向かい合っている', t:'……聞こえる。わたしたちの歌' },
   { who:'pandora',  name:'悪魔のパンドラ', e:'normal', t:'……外で、あの子たちが歌ってる' },
   { who:'pandora',  name:'天使のパンドラ', e:'normal', t:'あなたがいなければ、わたしはもっと、まっすぐ笑えたのに' },
   { who:'pandora',  name:'悪魔のパンドラ', e:'normal', t:'あなたがいなければ、わたしはもっと、強くいられたのに' },
@@ -11825,7 +11825,7 @@ const PANDORA_WINGS_EP7 = [
   { who:'pandora',  e:'normal',   monsters:[{ id:'PandoraDevil', pose:'mergeL' }, { id:'Pandora', pose:'merged' }, { id:'PandoraAngel', pose:'mergeR' }], fx:'merge', fxText:'ふたりが、手を取り合った', t:'……開けるよ。今度は、わたしの手で' },
   { who:'pandora',  e:'normal',   monsters:[{ id:'Pandora', pose:'idle' }], fx:'unlock', bgm:'melo_rebellion', fxText:'鍵穴に光が集まり、鍵が回った', t:'……' },
   // ---- 箱の前 ----
-  { who:'mua',      e:'surprise', stage:'none', monsters:[], fxText:'鎖が、1本ずつほどけて落ちていく', t:'鎖が……！' },
+  { bg:'forest_night', who:'mua',      e:'surprise', stage:'none', monsters:[], fxText:'鎖が、1本ずつほどけて落ちていく', t:'鎖が……！' },
   { who:'momosuke', e:'excited',  t:'とけてく……！ パンドラちゃん……！' },
   { who:'kiki',     e:'surprise', t:'……内側から、開いたんでつ……！' },
   { who:'dra',      e:'happy',    t:'……やったな' },
@@ -11837,7 +11837,7 @@ const PANDORA_WINGS_EP7_CALLS = { mua: 'パンドラ', kiki: 'パンドラさん
 // (60-app.jsx の RHYTHM_EVENT_THANKS_STORY_BY_EVENT)。前半はしっとり、後半はみんなで明るく。報酬はギフトで届く
 const PANDORA_WINGS_EP8 = [
   // ---- 朝・森の奥。箱は開いたまま、鎖はもうない ----
-  { who:'pandora',  e:'normal',   monsters:[{ id:'Pandora', pose:'in' }], fxText:'朝の光の中に、パンドラが立っている', t:'……外って、こんなに、まぶしかったんだ' },
+  { bg:'forest_morning', who:'pandora',  e:'normal',   monsters:[{ id:'Pandora', pose:'in' }], fxText:'朝の光の中に、パンドラが立っている', t:'……外って、こんなに、まぶしかったんだ' },
   { who:'mua',      e:'happy',    monsters:[{ id:'Pandora', pose:'idle' }], t:'おはよ、パンドラ！' },
   { who:'momosuke', e:'crying',   t:'パンドラちゃん……！ よかった……ほんとに、よかったぁ……' },
   { who:'pandora',  e:'normal',   t:'……泣かないで。……わたしまで、泣きそうになる' },
@@ -11864,7 +11864,7 @@ const PANDORA_WINGS_EP8 = [
   { who:'pandora',  e:'normal',   monsters:[{ id:'Pandora', pose:'idle' }], t:'……{name}も。いっしょに、叩いてくれて、ありがとう' },
   { who:'pandora',  e:'normal',   monsters:[{ id:'Pandora', pose:'front' }], fx:'rankup', fxText:'ふたつの翼が、ひとつの空へ', t:'……' },
   // ---- 広場・閉幕 ----
-  { who:'mua',      e:'happy',    stage:'none', monsters:[], t:'{name}、イベント「鍵の向こう側へ」、おつかれさま！ 最後まで一緒にいてくれて、ありがと〜！' },
+  { bg:'monhero_plaza', who:'mua',      e:'happy',    stage:'none', monsters:[], t:'{name}、イベント「鍵の向こう側へ」、おつかれさま！ 最後まで一緒にいてくれて、ありがと〜！' },
   { who:'kiki',     e:'happy',    t:'ランキングの報酬と参加報酬は、ギフトに届きまつ。受け取り忘れのないように、確かめてくだしゃいね (´ー`*)' },
   { who:'momosuke', e:'happy',    t:'お話は、プロフィールの「イベント回想」からいつでも見返せるよ！ パンドラちゃんに会いたくなったら、いつでも！' },
   { who:'dra',      e:'happy',    t:'またな、{name}。次の曲でも、いっしょに叩こう' },

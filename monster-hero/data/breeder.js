@@ -20,7 +20,7 @@ const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=a17ca7fa2869";
 const KYUKO_FACE_ICON = "images/assistant/face/kyuko_happy.PNG?v=6ad5eda132bf";
 // ソラシド(2026-10-27)。顔アイコンをそのまま使う(きゅうこと同じ形。字のアイコンのままだと、マーケットで「?」の箱になった)
 const SORASHIDO_FACE_ICON = "images/assistant/face/sorashido_happy.PNG?v=27d67b71522c";
-// お話の背景絵(2026-11-05 社長「背景絵がない」「今後のイベントや今のパンドラのイベントにも使いたい」)。どのお話からも使える共通の背景。台本の行の scene:'<名前>' で切り替える(次に scene を書いた行まで続き、scene:'none' で消す)。
+// お話の背景絵(2026-11-05 社長「背景絵がない」「今後のイベントや今のパンドラのイベントにも使いたい」)。どのお話からも使える共通の背景。台本の行の bg:'<名前>' で切り替える(次に bg を書いた行まで続き、bg:'none' で消す。一覧は docs/progress/story-bg/README.md)。
 //   1080×1080 の正方形で、大事なものは真ん中に寄せてある(縦の画面は左右、横の低い画面は上下が切れても見える)。ほかのお話でも使ってよい
 const STORY_BG_DESERT_PALACE = "images/story-bg/desert_palace.jpg?v=890ff3607962";     // 石油王の世界: 砂漠の夕方と白い宮殿・ラクダ
 const STORY_BG_DESERT_OILFIELD = "images/story-bg/desert_oilfield.jpg?v=59471d02fcb6"; // 石油王の世界: 夕方の油田
@@ -35,7 +35,6 @@ const STORY_BG_FOREST_NIGHT = "images/story-bg/forest_night.jpg?v=c81c56738292";
 const STORY_BG_FOREST_MORNING = "images/story-bg/forest_morning.jpg?v=f4ff723a3e67";   // 森の奥(朝・もや)
 const STORY_BG_DARK_VOID = "images/story-bg/dark_void.jpg?v=6c4987dd8307";             // 暗やみ(心の中・箱の中など。うすい鎖の影と光の粒)
 const STORY_SCENE_IMAGES = Object.freeze({
-  desert: STORY_BG_DESERT_PALACE, // 最初に作った名前(2026-11-05)。desert_palace と同じ
   desert_palace: STORY_BG_DESERT_PALACE,
   desert_oilfield: STORY_BG_DESERT_OILFIELD,
   desert_hall: STORY_BG_DESERT_HALL,
