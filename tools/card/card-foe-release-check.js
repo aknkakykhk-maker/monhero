@@ -21,7 +21,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 
 const NEW = 'sorashido';
 const NOW6 = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko'];
-const flags = { assistantAtsu: true, assistantKyuko: true, assistantSorashido: false };
+const flags = { assistantAtsu: true, assistantKyuko: true, assistantSorashido: false, assistantErubin: false };
+// えるびん(2026-11-05)も公開前の助手。カードの相手の表に入ったので、ソラシドと同じく「印が偽なら出さない」を見る
+const NEW2 = 'erubin';
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map, Date, RELEASE_FLAGS: flags });
 vm.runInContext(`${read(path.join(GAME, 'data', 'assistants.js'))}\n;\n${read(path.join(GAME, 'data', 'card-battle-cards.js'))}\n;\n${read(P('82-card-battle-core.jsx'))}\n;\n`
   + 'this.E = { ASSISTANTS, assistantUnlockedBy, cardFoeReleased, CARD_AI_HABITS, CARD_AI_TUNE, CARD_AI_DECKS, CARD_AI_FAVORITE, CARD_CPU_PLAYLIST_DEFAULT, cardNormalizeCpuPlaylist };', ctx);
@@ -50,7 +52,8 @@ const SEEN = ['atsu_join_2026_10_22'];
 setFlag(false);
 check('① 印が偽: ソラシドは公開前', E.cardFoeReleased(NEW) === false);
 check('① 印が偽: いまの6人は公開のまま', NOW6.every((w) => E.cardFoeReleased(w) === true));
-check('① 打ち方の表は、ソラシドを除くといまの6人', JSON.stringify(Object.keys(E.CARD_AI_HABITS).filter((w) => w !== NEW).sort()) === JSON.stringify([...NOW6].sort()));
+check('① 印が偽: えるびんも公開前', E.cardFoeReleased(NEW2) === false);
+check('① 打ち方の表は、ソラシド・えるびんを除くといまの6人', JSON.stringify(Object.keys(E.CARD_AI_HABITS).filter((w) => w !== NEW && w !== NEW2).sort()) === JSON.stringify([...NOW6].sort()));
 if (foesExpr) {
   for (const debug of [false, true]) {
     const got = ids(run(foesExpr, { debug, seenStoryIds: SEEN }));
