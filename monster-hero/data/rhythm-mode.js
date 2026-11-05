@@ -39419,13 +39419,15 @@ const evansHellChart=mhChart(51,evansHellNotes,EVANS_DURATION_MS,6);
 //   5 84.23〜84.68秒で少し奥へ戻ってから流れ直す(盛り上がりのあと音が落ちつく所。行って戻るので後ろのノーツの位置はずれない)
 //   6 88.70〜89.50秒で奥へ戻り、91.40〜92.28秒で止まって、93秒の最後の盛り上がりへ流れ込む
 //   7 104.6秒から だんだん遅くなって、その難易度の最後のノーツで止まるように終わる
+//     ★最後は倍率0にしない(0.1)。曲の終わりまで倍率0のままだと、拍の線を描くループ(30-rhythm-play.jsx)が画面の外の線を数え続けて
+//       終わらなくなることがある(2026-11-05 撮影で MASTER が固まった)。0.1倍なら止まって見えて、位置は先へ進み続ける
 // ★止まる・戻る間に判定のあるノーツ(長押しの途中を含む)は、組1(ふつうの速さ・EVANS_SCROLL_GROUPS)で流す。
 //   その間に叩くノーツはいつもどおり流れて来て、その奥のノーツだけが止まる・戻る(Grievous Lady と同じ見せ方)
 const EVANS_SCROLL_WINDOWS=Object.freeze([[26170,26620],[33950,34400],[37360,37650],[56820,57110],[78450,79050],[84230,84680],[88700,89500],[91400,92280]]);
 const EVANS_SCROLL_GROUPS=Object.freeze({1:Object.freeze([Object.freeze([0,1])])});
 const evansScrollTable=lastMs=>Object.freeze([[24200,'LERP',1],[26170,0],[26620,1],[33950,0],[34400,1],[37360,0],[37650,1],[56820,0],[57110,1],
   [78450,0],[79050,1],[84230,'GLIDE',-0.12,0.5],[84455,'GLIDE',0.12,0.5],[84680,1],[88700,'GLIDE',-0.2,0.5],[89100,'GLIDE',0.2,0.5],[89500,1],
-  [91400,0],[92280,1],[104600,'LERP',1],[Math.max(104800,lastMs),0]].map(row=>Object.freeze(row)));
+  [91400,0],[92280,1],[104600,'LERP',1],[Math.max(104800,lastMs),0.1]].map(row=>Object.freeze(row)));
 const evansScrolled=chart=>{
   const notes=chart.notes;
   const lastMs=notes.reduce((m,note)=>Math.max(m,Number(note.endTimeMs)||0,Number(note.timeMs)||0),0);
