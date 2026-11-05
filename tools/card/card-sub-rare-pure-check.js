@@ -61,8 +61,16 @@ const pureAttack = (defMon, evadeNo, { withSpeed = false, field = null } = {}) =
 const canEvade = (st, evadeNo) => !!st && !!st.pending && E.cardGuardOptions(db, st).some((x) => st.players[1].hand[x.hand] === evadeNo);
 
 rares.forEach((m) => {
-  const ev = evadeOf(m.main);
-  if (!ev) { check(`${m.name}: 材料(メインの種族の回避の札)`, false); return; }
+  // メインの種族に回避の札が無い子(スプーキー: ゴーストの守りは「帽子に隠れる」だけ)は、誰でも使える緊急回避で確かめる(2026-11-05 ルールくん)
+  const ownEv = evadeOf(m.main);
+  const ev = ownEv || cards.find((c) => c.kind === 'dge' && c.user === 'any' && (c.effects || []).some((e) => e.t === 'evade' && e.kinds.includes('pow') && e.kinds.includes('int') && !e.minGuts));
+  if (!ev) { check(`${m.name}: 材料(メインの種族か誰でも使える回避の札)`, false); return; }
+  if (!ownEv) {
+    // そのかわり、メインの種族の守りの札(防御)をふだん出せることも見る(守りの札はメインの種族のまま)
+    const blk = cards.find((c) => c.kind === 'blk' && c.user === m.main);
+    const b = blk && pureAttack(m, blk.no);
+    check(`${m.name}: ふだんはメインの種族の守りの札(${blk ? blk.name : 'なし'})を出せる`, !!b && canEvade(b.st, blk.no));
+  }
   check(`${m.name}: 純血ではない・守りの札はメインの種族`, !E.cardIsPureMon({ ...m }) && !E.cardIsHybridMon({ ...m }));
   // A
   const a = pureAttack(m, ev.no, { withSpeed: true });
