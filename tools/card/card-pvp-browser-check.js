@@ -244,6 +244,9 @@ const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); aw
     check('⑥ 定型のチャットが、相手の画面の吹き出しに出る・顔は相手のアイコン', chatSeen && chatIcon >= 1, `アイコンの絵 ${chatIcon}`);
     await shot(B, 'pvp-04-chat');
     const beatP = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'));
+    // カードランクのごほうびを配ったランク(試合でランクが上がると、そのビートPも同じ保存に入る。2026-11-05 ルールくん)
+    const rankGot = (page) => page.evaluate(() => { try { const v = JSON.parse(localStorage.getItem('mh_card_level_v1') || 'null'); return v && Array.isArray(v.got) ? v.got : []; } catch (_) { return []; } });
+    const rankBefore = [await rankGot(A), await rankGot(B)];
     const pointBefore = [await beatP(A), await beatP(B)];
     await B.evaluate(() => window.__fakeWsDrop(9000));
     const offSeen = await B.locator('[data-card-pvp-signal]').filter({ hasText: '電波が途切れています' }).waitFor({ timeout: 6000 }).then(() => true).catch(() => false);
@@ -280,10 +283,14 @@ const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); aw
     check('⑥ 終わったら、2台とも報酬が出る', /ビートP|ごほうびはありません/.test(rewardA) && /ビートP|ごほうびはありません/.test(rewardB), `${rewardA} / ${rewardB}`);
     // 2台は保存先が別なので、それぞれに入る(2026-10-26 社長: 勝ち +400 は MASTER の2倍・負け +150 は MASTER と同じで勝ちの 3/4。2026-10-27 社長: マルチはさらに2倍で +800・+300)。
     // 勝ちは、その日はじめての勝ちなら +50(助手と対戦と合わせて1日1回・2倍にしない)。この検査の端末はその日まだ勝っていないので +850
-    const gain = pointAfter.map((v, i) => v - pointBefore[i]);
+    // ランクが上がったぶん(本体の playerRankBeatPointsFor で数える)は引いてから、勝ち負けのぶんを見る
+    const rankAfter = [await rankGot(A), await rankGot(B)];
+    const rankPts = await Promise.all([A, B].map((page, i) => page.evaluate((lvs) => (typeof playerRankBeatPointsFor === 'function' ? lvs.reduce((a, lv) => a + playerRankBeatPointsFor(lv), 0) : null), rankAfter[i].filter((lv) => !rankBefore[i].includes(lv)))));
+    check('⑥ ランクが上がったぶんのビートPを数えられる', rankPts.every((x) => Number.isFinite(x)), JSON.stringify(rankPts));
+    const gain = pointAfter.map((v, i) => v - pointBefore[i] - (rankPts[i] || 0));
     // 負けは自分の番の数で減る(3回で90・10回で満額300。2倍なので偶数)。その試合の番の数で決まるので、幅で見る
     const okGain = (r, g) => (r === 'win' ? g === 850 : r === 'lose' ? g >= 90 && g <= 300 && g % 2 === 0 : false);
-    check('⑥ ビートPが、2台それぞれに増えている(勝ち+800とその日はじめての+50・負けは自分の番の数で90〜300。マルチは2倍)', okGain(rA, gain[0]) && okGain(rB, gain[1]), `A ${pointBefore[0]} → ${pointAfter[0]}(${rA})・B ${pointBefore[1]} → ${pointAfter[1]}(${rB})`);
+    check('⑥ ビートPが、2台それぞれに増えている(勝ち+800とその日はじめての+50・負けは自分の番の数で90〜300。マルチは2倍)', okGain(rA, gain[0]) && okGain(rB, gain[1]), `A ${pointBefore[0]} → ${pointAfter[0]}(${rA}・ランク分 ${rankPts[0]})・B ${pointBefore[1]} → ${pointAfter[1]}(${rB}・ランク分 ${rankPts[1]})`);
     // 結果の画面の「もらったビートP」も、+50 を足した合計
     const shown = [rewardA, rewardB].map((t) => Number(((t || '').match(/もらったビートP:\s*(\d+)/) || [])[1]));
     check('⑥ 結果の画面の「もらったビートP」が、増えた数と同じ', shown[0] === gain[0] && shown[1] === gain[1], `${rewardA} / ${rewardB}`);
