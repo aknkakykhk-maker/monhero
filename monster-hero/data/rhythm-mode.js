@@ -39410,6 +39410,31 @@ const evansHellNotes=((t,h,f,s,T,F,S)=>[
 // </evans-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
 const evansHellChart=mhChart(51,evansHellNotes,EVANS_DURATION_MS,6);
+// 流れる速さの表(2026-11-05 社長「ノーツが止まったり戻る演出もいれたい」・候補1〜7をすべて)。仕組みは Sheriruth・Grievous Lady と同じ。
+//   判定の時刻は音楽どおりのまま、ノーツの見た目の位置だけを変える。[時刻ms,倍率] / [時刻,'LERP',倍率](だんだん変える) / [時刻,'GLIDE',割合,山の位置](道の長さ×割合だけ動く。マイナスは奥へ戻る)
+//   1 24.2秒〜 だんだん遅くなって 26.17〜26.62秒で止まり、26.8秒の頭へ流れ込む(低音だけになる溜め)
+//   2 33.95〜34.40秒・37.36〜37.65秒で止まる(低音が抜けたブレイクの切れ目)
+//   3 56.82〜57.11秒で止まる(いちばん強いフィルの手前。止まったぶん後ろが詰まって、59.2秒の盛り上がりへ一気に来る)
+//   4 78.45〜79.05秒で止まる(盛り上がりの途中で音が切れる所)
+//   5 84.23〜84.68秒で少し奥へ戻ってから流れ直す(盛り上がりのあと音が落ちつく所。行って戻るので後ろのノーツの位置はずれない)
+//   6 88.70〜89.50秒で奥へ戻り、91.40〜92.28秒で止まって、93秒の最後の盛り上がりへ流れ込む
+//   7 104.6秒から だんだん遅くなって、その難易度の最後のノーツで止まるように終わる
+// ★止まる・戻る間に判定のあるノーツ(長押しの途中を含む)は、組1(ふつうの速さ・EVANS_SCROLL_GROUPS)で流す。
+//   その間に叩くノーツはいつもどおり流れて来て、その奥のノーツだけが止まる・戻る(Grievous Lady と同じ見せ方)
+const EVANS_SCROLL_WINDOWS=Object.freeze([[26170,26620],[33950,34400],[37360,37650],[56820,57110],[78450,79050],[84230,84680],[88700,89500],[91400,92280]]);
+const EVANS_SCROLL_GROUPS=Object.freeze({1:Object.freeze([Object.freeze([0,1])])});
+const evansScrollTable=lastMs=>Object.freeze([[24200,'LERP',1],[26170,0],[26620,1],[33950,0],[34400,1],[37360,0],[37650,1],[56820,0],[57110,1],
+  [78450,0],[79050,1],[84230,'GLIDE',-0.12,0.5],[84455,'GLIDE',0.12,0.5],[84680,1],[88700,'GLIDE',-0.2,0.5],[89100,'GLIDE',0.2,0.5],[89500,1],
+  [91400,0],[92280,1],[104600,'LERP',1],[Math.max(104800,lastMs),0]].map(row=>Object.freeze(row)));
+const evansScrolled=chart=>{
+  const notes=chart.notes;
+  const lastMs=notes.reduce((m,note)=>Math.max(m,Number(note.endTimeMs)||0,Number(note.timeMs)||0),0);
+  const grouped=notes.map(note=>{const a=Number(note.timeMs),b=Math.max(a,Number(note.endTimeMs)||a);
+    return EVANS_SCROLL_WINDOWS.some(([s,e])=>a<=e&&b>=s)?Object.freeze({...note,scrollGroup:1}):note;});
+  return mhChart(chart.level,grouped,chart.durationMs,chart.laneCount,{scrollChanges:evansScrollTable(lastMs),scrollGroups:EVANS_SCROLL_GROUPS});
+};
+const evansScrolledCharts=Object.freeze(Object.fromEntries(Object.entries(evansCharts).map(([id,chart])=>[id,evansScrolled(chart)])));
+const evansHellScrolledChart=evansScrolled(evansHellChart);
 // HELL(デバッグ専用・2026-10-11)。参考譜面の空中(空中のタップ・高さのあるスライド)を土台に、親指2本で押せる形へ直した譜面
 // (tools/mode/rhythm-ref-thumbfix.js。同じ親指が地上と空中を行き来する間は1.5拍以上・押せない0・指の交差0)。速さの演出と組は MASTER と同じ
 // 2026-10-13 社長の決定「案3 X のまま」: 上下に交わる3か所(15.4・67.7・135.7秒)で、右手の空中スライドも左へ1レーン動かし、左手の地上スライドとすれ違う X にした
@@ -42531,7 +42556,7 @@ const RHYTHM_SONG_ENTRIES = [
     // 2026-11-05 追加。DJ YOSHITAKA。深海の魚の絵のジャケット
     artwork:'images/song-art/evans.jpg?v=33c4ea278fce',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
-      id,evansCharts[id]||emptyRhythmChart()
+      id,evansScrolledCharts[id]||emptyRhythmChart()
     ])))
   }),
   Object.freeze({
@@ -47960,7 +47985,7 @@ const monsterShortHellNotes=((t,h,f,s,T,F,S)=>[
 // </monster-short-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
 const monsterShortHellChart=mhChart(35,monsterShortHellNotes,MONSTER_SHORT_DURATION_MS,6);
-const RHYTHM_HELL_CHARTS=Object.freeze({mf_ichika_mix:mfIchikaMixHellChart,monster_hero:monsterHeroHellChart,monster_hero_another:monsterHeroAnotherHellChart,six_eternel_beat:sixEternelBeatHellChart,six_eternel_remix:sixEternelRemixHellChart,stay_with_me:stayWithMeHellChart,kiki_issen:kikiIssenHellChart,close_to_your_heart:closeToYourHeartHellChart,eiki_boss_remix:eikiBossRemixHellChart,pandora_boss_remix:pandoraBossRemixHellChart,dullahan:dullahanHellChart,dullahan_clockwork:dullahanClockworkHellChart,toriko:torikoHellChart,'4u_hitasura':song4uHitasuraHellChart,kindan_no_resistance:kindanNoResistanceHellChart,crossing_field:crossingFieldHellChart,nothing_without_you:nothingWithoutYouHellChart,mou_hitotsu_no_sekai_e:mouHitotsuNoSekaiEHellChart,senjou_no_shippuu:senjouNoShippuuHellChart,makutsu_no_senritsu:makutsuNoSenritsuHellChart,the_city_beneath_the_comets:theCityBeneathTheCometsHellChart,freedom_dive:freedomDiveHellChart,only_my_railgun:onlyMyRailgunHellChart,big_bridge_no_shitou:bigBridgeNoShitouHellChart,rising_hope:risingHopeHellChart,haruka:harukaHellChart,stay_with_me_short:stayWithMeShortHellChart,kiki_issen_short:kikiIssenShortHellChart,crazy_party_night:crazyPartyNightHellChart,crazy_party_night_full:crazyPartyNightFullHellChart,emerald_rush:emeraldRushHellChart,wrath_of_the_thorn_king:wrathOfTheThornKingHellChart,monster:monsterHellChart,monster_short:monsterShortHellChart,anima:animaHellChart,journey:journeyHellChart,sheriruth:sheriruthHellChart,grievous_lady:grievousLadyHellChart,kaze_ga_soyogu:kazeGaSoyoguHellChart,against_my_own_shadow:againstMyOwnShadowHellChart,rose:roseHellChart,rose_short:roseShortHellChart,toward_the_stars_short:towardTheStarsShortHellChart,sad_song:sadSongHellChart,sad_song_short:sadSongShortHellChart,black_shout:blackShoutHellChart,light_player:lightPlayerHellChart,light_player_short:lightPlayerShortHellChart,tsuki_ga_michiru_mae_ni:tsukiGaMichiruMaeNiHellChart,tsuki_ga_michiru_mae_ni_short:tsukiGaMichiruMaeNiShortHellChart,rebellion:rebellionHellChart,rebellion_short:rebellionShortHellChart,altar_world_tree:altarWorldTreeHellChart,altar_world_tree_short:altarWorldTreeShortHellChart,evans:evansHellChart});
+const RHYTHM_HELL_CHARTS=Object.freeze({mf_ichika_mix:mfIchikaMixHellChart,monster_hero:monsterHeroHellChart,monster_hero_another:monsterHeroAnotherHellChart,six_eternel_beat:sixEternelBeatHellChart,six_eternel_remix:sixEternelRemixHellChart,stay_with_me:stayWithMeHellChart,kiki_issen:kikiIssenHellChart,close_to_your_heart:closeToYourHeartHellChart,eiki_boss_remix:eikiBossRemixHellChart,pandora_boss_remix:pandoraBossRemixHellChart,dullahan:dullahanHellChart,dullahan_clockwork:dullahanClockworkHellChart,toriko:torikoHellChart,'4u_hitasura':song4uHitasuraHellChart,kindan_no_resistance:kindanNoResistanceHellChart,crossing_field:crossingFieldHellChart,nothing_without_you:nothingWithoutYouHellChart,mou_hitotsu_no_sekai_e:mouHitotsuNoSekaiEHellChart,senjou_no_shippuu:senjouNoShippuuHellChart,makutsu_no_senritsu:makutsuNoSenritsuHellChart,the_city_beneath_the_comets:theCityBeneathTheCometsHellChart,freedom_dive:freedomDiveHellChart,only_my_railgun:onlyMyRailgunHellChart,big_bridge_no_shitou:bigBridgeNoShitouHellChart,rising_hope:risingHopeHellChart,haruka:harukaHellChart,stay_with_me_short:stayWithMeShortHellChart,kiki_issen_short:kikiIssenShortHellChart,crazy_party_night:crazyPartyNightHellChart,crazy_party_night_full:crazyPartyNightFullHellChart,emerald_rush:emeraldRushHellChart,wrath_of_the_thorn_king:wrathOfTheThornKingHellChart,monster:monsterHellChart,monster_short:monsterShortHellChart,anima:animaHellChart,journey:journeyHellChart,sheriruth:sheriruthHellChart,grievous_lady:grievousLadyHellChart,kaze_ga_soyogu:kazeGaSoyoguHellChart,against_my_own_shadow:againstMyOwnShadowHellChart,rose:roseHellChart,rose_short:roseShortHellChart,toward_the_stars_short:towardTheStarsShortHellChart,sad_song:sadSongHellChart,sad_song_short:sadSongShortHellChart,black_shout:blackShoutHellChart,light_player:lightPlayerHellChart,light_player_short:lightPlayerShortHellChart,tsuki_ga_michiru_mae_ni:tsukiGaMichiruMaeNiHellChart,tsuki_ga_michiru_mae_ni_short:tsukiGaMichiruMaeNiShortHellChart,rebellion:rebellionHellChart,rebellion_short:rebellionShortHellChart,altar_world_tree:altarWorldTreeHellChart,altar_world_tree_short:altarWorldTreeShortHellChart,evans:evansHellScrolledChart});
 // はじめての HELL の目安(2026-10-21 改善部 N6・社長の決定)。HELL は MASTER を1回クリアで開くが、MASTER と HELL の Lv. の差が大きい曲がある
 //   (デュラハンテーマ MASTER 25 → HELL 59 など)。HELL の譜面のうち Lv. がいちばん低い公開曲を、実データから選ぶ(曲名・Lv. を手で書かない)
 const rhythmHellEntrySong=()=>{
@@ -48623,7 +48648,7 @@ const RHYTHM_PROTO_SONGS=Object.freeze([
     debugDescription:'曲の解析から HELL 用に一から作った譜面(地上と空中が混ざる形・交差は上下に分ける)。遊んでも記録しない。',
     bgmTrackId:'melo_evans',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
-      id,rhythmChartOnRoad(id==='HELL'?evansHellChart:emptyRhythmChart())
+      id,rhythmChartOnRoad(id==='HELL'?evansHellScrolledChart:emptyRhythmChart())
     ])))
   }),
   // BLACK SHOUT の HELL(2026-10-21)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
