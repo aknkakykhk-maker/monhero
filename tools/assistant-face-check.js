@@ -71,6 +71,10 @@ const SKIN_RULES = {
   // 社長「もうちょい下にしたい」で、そこから丸の大きさの10%下げた(3段の見本から「2 中くらい」)。
   // 実測: 肌中心38〜57%(照れ笑いは手と前髪が顔にかかる)/ 重心x47〜55% / y62〜69%、頭シルエットの占有55〜78%
   sorashido: { centerMin: 0.30, x: [0.40, 0.60], y: [0.55, 0.76] },
+  // えるびん(2026-11-05)。日焼けした肌(実測 R≈180〜215 G≈115〜145 B≈75〜97・r-b≈115〜120)で、上の isSkin(明るいアニメ調の肌)では1画素も拾えない。
+  //   えるびんだけ肌色の範囲を持つ(ほかの助手の測り方は変えない)。髪(R≈60)・服(黒・こげ茶)は R の下限で外れる
+  //   切り方はきゅうこと同じ「頭ぜんぶ」。実測: 肌中心47〜58% / 重心x40〜60% / y57〜66%、頭シルエットの占有63〜82%
+  erubin: { centerMin: 0.40, x: [0.36, 0.64], y: [0.52, 0.72], isSkin: (r, g, b, a) => a > 128 && r > 165 && r < 240 && g > 100 && b > 55 && r > g + 35 && g > b + 20 },
 };
 const SKIN_FALLBACK = { centerMin: 0.10, x: [0.35, 0.65], y: [0.40, 0.80] };
 // 肌色とみなす色。アニメ調の肌は赤みが強く、青が少し低い。
@@ -86,7 +90,7 @@ const check = (name, ok, detail = '') => {
   if (!ok) failed++;
 };
 
-const measure = async (file) => {
+const measure = async (file, skinOf = isSkin) => {
   const img = await loadImage(file);
   const W = img.width, H = img.height;
   const cv = createCanvas(W, H);
@@ -100,7 +104,7 @@ const measure = async (file) => {
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const i = (y * W + x) * 4;
-      const skin = isSkin(d[i], d[i + 1], d[i + 2], d[i + 3]);
+      const skin = skinOf(d[i], d[i + 1], d[i + 2], d[i + 3]);
       if (x >= x0 && x < x1 && y >= y0 && y < y1) { total++; if (skin) hit++; }
       if (skin) { sx += x; sy += y; count++; }
       // 頭のシルエット。透明でも白でもない画素を「キャラそのもの」とみなす
@@ -136,7 +140,7 @@ const run = async () => {
       const rel = assistantFaceImage(who, e);
       const file = path.join(web, rel);
       if (!fs.existsSync(file)) { check(`${who.name}: ${e} の顔アイコンがある`, false, rel); continue; }
-      const m = await measure(file);
+      const m = await measure(file, skinRule.isSkin || isSkin);
       measured++;
       sizes.add(`${m.W}x${m.H}`);
       if (m.center < skinRule.centerMin) bad.center.push(`${e}=${pct(m.center)}`);

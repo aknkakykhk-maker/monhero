@@ -338,6 +338,17 @@ const SORASHIDO_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
   get shop() { try { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantSorashido === true ? undefined : false; } catch { return false; } },
 }));
 
+// 助手えるびんの顔アイコンも同じ仕様(8表情・各1pt)。画像は吹き出しの face/erubin_*.PNG をそのまま使う(2026-11-05)。
+// 公開の印 assistantErubin が立つまでは交換所に並べない(見るたびに読む。台帳 2026-10-27「公開前の助手の名前や絵は、ふつうの画面のどこにも出さない」)
+const ERUBIN_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
+  id: `erubin_${key}`,
+  name: `えるびん（${label}）のアイコン`,
+  type: 'icon',
+  icon: `images/assistant/face/erubin_${key}.PNG`,
+  cost: 1,
+  get shop() { try { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantErubin === true ? undefined : false; } catch { return false; } },
+}));
+
 // あつの顔アイコンも、助手と同じ仕様(8表情・各1pt)で並べる(2026-10-03)。
 // 顔アイコン(256px)は images/breeder-icons/atsu_<表情>.png に直接置いている。
 // 2026-10-22 あつが助手になり、絵を助手あつの大きい絵から作った顔(images/assistant/face/atsu_*.PNG と同じ絵)へ差し替えた
@@ -607,6 +618,7 @@ const BREEDER_MARKET_ITEMS = [
   ...ATSU_MARKET_ICONS,
   ...KYUKO_MARKET_ICONS,
   ...SORASHIDO_MARKET_ICONS,
+  ...ERUBIN_MARKET_ICONS,
   ...HALLOWEEN_MARKET_ICONS
 ];
 // ==================== アイコンのまとめ売り(2026-10-03・ユーザー指示) ====================
@@ -633,9 +645,10 @@ const breederIconGroupKeyOf = (id) => {
   if (/^kyuko_/.test(key)) return 'kyuko';
   // ソラシド(2026-10-27)。表情8種を、ほかの助手と同じく「ソラシドのアイコン」1件にまとめる(社長の指摘)
   if (/^sorashido_/.test(key)) return 'sorashido';
+  if (/^erubin_/.test(key)) return 'erubin';
   return key.replace(/_disc_icon$/, '').replace(/_awakened_icon$/, '').replace(/_icon$/, '');
 };
-const BREEDER_ICON_GROUP_NAMES = Object.freeze({ mua:'みゅあ', dra:'ドラ', kiki:'きき', momosuke:'ももすけ', atsu:'あつ', kyuko:'きゅうこ', sorashido:'ソラシド',
+const BREEDER_ICON_GROUP_NAMES = Object.freeze({ mua:'みゅあ', dra:'ドラ', kiki:'きき', momosuke:'ももすけ', atsu:'あつ', kyuko:'きゅうこ', sorashido:'ソラシド', erubin:'えるびん',
   mua_halloween:'みゅあ（ハロウィン）', kiki_halloween:'きき（ハロウィン）', momosuke_halloween:'ももすけ（ハロウィン）', snegurochka_halloween:'スネグーラチカ（ハロウィン）' });
 // 中身が2つ以上あるキャラだけがまとまる(1つしかないアイコンは今までどおり1枚で売る)。並びは商品の並びのまま
 const BREEDER_ICON_GROUPS = (() => {
@@ -1145,11 +1158,25 @@ const muaCardMasterCostume = Object.freeze({
   unlockHow: 'MFバトルカードの「フリー対戦」で、みゅあの MASTER に勝つと買えます',
   lockLabel: Object.freeze(['MFバトルカードの', '「フリー対戦」で', 'みゅあの MASTER に', '勝つと買えます']),
 });
+// えるびんの石油王の服(2026-11-05 社長「えるびんはデフォルト通常・初期から石油王衣装に着替えられる」)。
+//   売り場は無い(price も saleWindows も持たない)。starter:true の服は、はじめから持っている扱いにする
+//   (normalizeOwnedAssistantCostumes が足す。保存キーは増やさず、読み込みで書き戻さない)。
+//   絵は登場のお話と同じ images/assistant/sekiyuou/。えるびんの公開の印(assistantErubin)と一緒に出る
+const ERUBIN_SEKIYUOU_COSTUME_ART = "images/assistant/sekiyuou/face/erubin_happy.PNG?v=f73323a07081";
+const erubinSekiyuouCostume = Object.freeze({
+  id: 'erubin_sekiyuou_v1', assistantId: 'erubin',
+  name: '石油王', desc: 'えるびんが砂漠から着てきた服。白い頭布と、金の刺しゅうの入った民族衣装です。',
+  get released() { try { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantErubin === true; } catch { return false; } },
+  starter: true,
+  icon: ERUBIN_SEKIYUOU_COSTUME_ART,
+  imageDir: 'images/assistant/sekiyuou',
+});
 const ASSISTANT_COSTUMES = Object.freeze([
   halloweenCostume('mua', 'myua', 'ハロウィンの魔女', 'ハロウィン・ナイトの衣装。大きな魔女帽子とカボチャのステッキのコスプレです。'),
   halloweenCostume('kiki', 'kiki', 'ハロウィンのうさ耳フード', 'ハロウィン・ナイトの衣装。オレンジと黒のうさ耳リボンとパーカーのコスプレです。'),
   halloweenCostume('momosuke', 'momosuke', 'ハロウィンの小悪魔', 'ハロウィン・ナイトの衣装。ふわふわの耳と小さな翼の小悪魔コスプレです。'),
   muaCardMasterCostume,
+  erubinSekiyuouCostume,
 ]);
 // ---- 解放が要る服(unlock を持つ服)の覚え方(2026-10-27) ----
 // 新しいキー mh_assistant_costume_unlocked_v1 … 解放された服のidの配列。足すだけで消さない(CLAUDE.md ⑦)。
@@ -1215,7 +1242,9 @@ const ASSISTANT_COSTUME_SHOPS = Object.freeze({
 // 壊れた値・古い形が入っていても必ず文字列の配列へ落とす
 const normalizeOwnedAssistantCostumes = (value) => {
   const list = Array.isArray(value) ? value : [];
-  return [...new Set(list.filter(id => typeof id === 'string' && id.trim()).map(id => id.trim()))];
+  // はじめから持っている服(starter:true・公開済み)は、保存値に無くても持っている扱いにする
+  const starters = ASSISTANT_COSTUMES.filter(costume => costume && costume.starter === true && costume.released === true).map(costume => costume.id);
+  return [...new Set([...list.filter(id => typeof id === 'string' && id.trim()).map(id => id.trim()), ...starters])];
 };
 const releasedAssistantCostumes = () => ASSISTANT_COSTUMES.filter(costume => costume && costume.released === true);
 const assistantCostumeById = (id) => releasedAssistantCostumes().find(costume => costume.id === id) || null;

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a2842a7ff827f3e6
+// generated-sha256: 9909f7c40c245608
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -350,6 +350,8 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get assistantKyuko() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true; },
   // ソラシドのお話(2026-10-27〜台本を書いている途中)。ソラシドの公開と一緒に出る
   get assistantSorashido() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantSorashido === true; },
+  // えるびんの加入のお話(2026-11-05)。えるびんの公開と一緒に出る
+  get assistantErubin() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantErubin === true; },
   // MFバトルカードのはじまり(card_battle_intro_2026・2026-10-24)。MFバトルカードの公開と一緒に出る
   get cardBattle() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardBattle === true; },
   // 個人杯のお話(2026-10-31)。公開の印は 99-card-cup.jsx の cardCupOpen(あとの部品なので見るたびに引く)
@@ -5441,7 +5443,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ cardBattleIntroEvent:'atsu_cup_theme', cardCupStoryEvent:'melo_toriko', pandoraWingsStoryEvent:'melo_rebellion', kyukoJoinStoryEvent:'original_event_01', atsuJoinStoryEvent:'melo_against_my_own_shadow', tacticsTypesEvent:'original_event_01', rhythmHellStoryEvent:'melo_sheriruth', assistantChatStoryEvent:'close_to_your_heart_alt', title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', masuCallEvent:'six_eternel',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ erubinJoinStoryEvent:'original_event_01', cardBattleIntroEvent:'atsu_cup_theme', cardCupStoryEvent:'melo_toriko', pandoraWingsStoryEvent:'melo_rebellion', kyukoJoinStoryEvent:'original_event_01', atsuJoinStoryEvent:'melo_against_my_own_shadow', tacticsTypesEvent:'original_event_01', rhythmHellStoryEvent:'melo_sheriruth', assistantChatStoryEvent:'close_to_your_heart_alt', title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', masuCallEvent:'six_eternel',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -5485,12 +5487,14 @@ const eventScriptBgmAt = (script, step) => {
   let found = null;
   for (let i = 0; i <= last; i += 1) {
     const id = script[i] && script[i].bgm;
-    if (typeof id === 'string' && BGM_TRACKS.some(t => t.id === id)) found = id;
+    // bgm:'default' … そこから会話イベントの曲(いつものお話の曲)へ戻す(2026-11-05 えるびんのお話。社長「モンヒロの世界に入ったら通常のイベントBGMに」)
+    if (id === 'default') found = null;
+    else if (typeof id === 'string' && BGM_TRACKS.some(t => t.id === id)) found = id;
   }
   return found;
 };
 const EVENT_BGM_FADE_MS = 800; // 会話イベントの途中で曲を替えるとき、今の曲を下げる長さ
-const EVENT_BGM_SCENES = Object.freeze({ card_battle_intro_2026:'cardBattleIntroEvent', card_cup_2026_10_31:'cardCupStoryEvent', pandora_wings_2026_ep1:'pandoraWingsStoryEvent',pandora_wings_2026_ep2:'pandoraWingsStoryEvent',pandora_wings_2026_ep3:'pandoraWingsStoryEvent',pandora_wings_2026_ep4:'pandoraWingsStoryEvent',pandora_wings_2026_ep5:'pandoraWingsStoryEvent',pandora_wings_2026_ep6:'pandoraWingsStoryEvent',pandora_wings_2026_ep7:'pandoraWingsStoryEvent',pandora_wings_2026_ep8:'pandoraWingsStoryEvent', kyuko_join_2026_10_22:'kyukoJoinStoryEvent', atsu_join_2026_10_22:'atsuJoinStoryEvent', tactics_types:'tacticsTypesEvent', kiki_intro:'kikiIntro', rhythm_hell_story:'rhythmHellStoryEvent', assistant_chat_story:'assistantChatStoryEvent', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', rhythm_masu_call_2026_10_07:'masuCallEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
+const EVENT_BGM_SCENES = Object.freeze({ erubin_join_2026_11:'erubinJoinStoryEvent', card_battle_intro_2026:'cardBattleIntroEvent', card_cup_2026_10_31:'cardCupStoryEvent', pandora_wings_2026_ep1:'pandoraWingsStoryEvent',pandora_wings_2026_ep2:'pandoraWingsStoryEvent',pandora_wings_2026_ep3:'pandoraWingsStoryEvent',pandora_wings_2026_ep4:'pandoraWingsStoryEvent',pandora_wings_2026_ep5:'pandoraWingsStoryEvent',pandora_wings_2026_ep6:'pandoraWingsStoryEvent',pandora_wings_2026_ep7:'pandoraWingsStoryEvent',pandora_wings_2026_ep8:'pandoraWingsStoryEvent', kyuko_join_2026_10_22:'kyukoJoinStoryEvent', atsu_join_2026_10_22:'atsuJoinStoryEvent', tactics_types:'tacticsTypesEvent', kiki_intro:'kikiIntro', rhythm_hell_story:'rhythmHellStoryEvent', assistant_chat_story:'assistantChatStoryEvent', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', rhythm_masu_call_2026_10_07:'masuCallEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
 // 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、
@@ -9246,6 +9250,8 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   //   偽のあいだは、助手の一覧・おしゃべり・選ぶ画面に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS)。
   //   MFバトルカードの相手えらび・マルチ・観戦・記録・曲の並びにも出ない(82 の cardFoeReleased)
   assistantSorashido: true,
+  // えるびん(8人目・2026-11-05)。社長が出来上がりを確かめて「オッケー」を出すまで偽のまま(お話・選ぶ画面・おしゃべりに出ない)
+  assistantErubin: true,
   // MFバトルカード(2026-10-24〜作っている途中。設計 docs/spec/CARD_BATTLE.md 7-3)。社長がお話と画面を見て「公開」と言ったら真にする。
   //   偽のあいだは、公開のお話(card_battle_intro_2026)・HOME の入口・マーケットのMFバトルカードの欄・更新履歴・ヘルプに出ない(デバッグ設定からだけ入れる)
   cardBattle: true, // 2026-10-26 社長「公開する」
@@ -9576,6 +9582,7 @@ const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
 const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
 // ソラシドの加入のお話(2026-10-27)。id は data/assistants.js の EVENT_REPLAYS と同じ
 const SORASHIDO_JOIN_STORY_ID = 'sorashido_join_2026_10_27';
+<<<<<<< HEAD
 // レジェンドブリーダーへの招待状(2026-11-05 社長)。ブリーダーレベル1000(LEGEND_BREEDER_PASS_LEVEL)に届いた人の HOME で一度だけ流す。
 // 見た印は新しいキー(既存のキーには触らない・CLAUDE.md ⑦)。最後まで見ても飛ばしても立つ。立っている人だけ、ビートP交換所の3つの交換が優待パス還元になる
 const LEGEND_BREEDER_PASS_STORY_ID = 'legend_breeder_pass_2026_11';
@@ -9584,6 +9591,10 @@ const LEGEND_BREEDER_PASS_SEEN_KEY = 'mh_beat_shop_vip_letter_seen_v1';
 // releaseFlag は全員いっしょの公開の印で、読み込みのときに一度だけ絞り込む。こちらは描くたびに見る(本体が印を読んだら書きかえる)
 const HELP_PLAYER_FLAGS = { legendBreederPass: false };
 const helpPlayerFlagOn = (name) => !!name && HELP_PLAYER_FLAGS[name] === true;
+=======
+// えるびんの加入のお話(2026-11-05・公開の印 assistantErubin)
+const ERUBIN_JOIN_STORY_ID = 'erubin_join_2026_11';
+>>>>>>> origin/main
 // 個人杯のお話(2026-10-31)。id は data/assistants.js の EVENT_REPLAYS・CARD_CUP_STORY_ID_FOR_SPLIT と同じ
 const CARD_CUP_STORY_ID = 'card_cup_2026_10_31';
 // ソラシドの加入のお話を見終えたら、沖縄のおみやげとして 10,000ビートPをギフトで1回だけ届ける(2026-10-27 社長)。
@@ -13186,12 +13197,39 @@ const ASSISTANT_FALLBACK = { id:'', name:'助手', image:null, emoji:'💬', acc
 // 再生のときだけ話し手として出る登場人物(ジャックなど)。助手ではないので ASSISTANT_LIST には入れない
 const STORY_GUEST_LIST = (typeof STORY_GUEST_SPEAKERS !== 'undefined' && Array.isArray(STORY_GUEST_SPEAKERS)) ? STORY_GUEST_SPEAKERS : [];
 // 助手を先に探し、いなければ登場人物、それもなければ今までどおり既定の助手へ
+// お話の行の衣装・シークレット(data/assistants.js の eventScriptForPlayer が付ける「助手id@衣装@secret」)。
+//   衣装は絵のフォルダだけを替え、secret は名前を「？？？」にして絵を影にする(AssistantFace が secret を見て黒く塗る)。毎回同じものを返す
+const STORY_VARIANT_CACHE = new Map();
+const storyVariantWho = (id) => {
+  if (typeof id !== 'string' || !id.includes('@')) return null;
+  if (STORY_VARIANT_CACHE.has(id)) return STORY_VARIANT_CACHE.get(id);
+  const [baseId, ...flags] = id.split('@');
+  const base = ASSISTANT_LIST.find(a => a.id === baseId);
+  if (!base) return null;
+  const dirs = (typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS) || {};
+  const outfit = flags.find(f => dirs[f]);
+  const secret = flags.includes('secret');
+  const who = { ...base, id, baseId, ...(outfit ? { imageDir: dirs[outfit], tempImageDir: undefined } : {}), ...(secret ? { name: '？？？', secret: true, accent: '#8a7a5c', emoji: '❔' } : {}) };
+  STORY_VARIANT_CACHE.set(id, who);
+  return who;
+};
 const assistantById = (id) => ASSISTANT_LIST.find(a => a.id === id)
+  || storyVariantWho(id)
   || STORY_GUEST_LIST.find(a => a.id === id)
   || ASSISTANT_LIST.find(a => a.id === (typeof DEFAULT_ASSISTANT_ID !== 'undefined' ? DEFAULT_ASSISTANT_ID : ''))
   || ASSISTANT_LIST[0] || ASSISTANT_FALLBACK;
 // 台本に出てくる話し手(顔を並べる人)。助手に加えて、台本に出てくる登場人物も並べる
-const storyCastOf = (script) => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(who => (script || []).some(l => l.who === who.id));
+// 衣装・シークレットの行(「助手id@…」)は、元の助手として数える
+const storyBaseWho = (id) => (typeof id === 'string' ? id.split('@')[0] : id);
+const storyCastOf = (script) => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(who => (script || []).some(l => l && storyBaseWho(l.who) === who.id));
+// 助手の「ふつう」の表情の絵(outfit を渡すと、その衣装のフォルダの絵)。登録が無ければ null
+const storyAssistantArtOf = (id, outfit) => {
+  const who = ASSISTANT_LIST.find(a => a && a.id === id);
+  if (!who || !who.imageDir || !who.imagePrefix) return null;
+  const dirs = (typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS) || {};
+  const dir = outfit ? dirs[outfit] : who.imageDir;
+  return dir ? `${dir}/${who.imagePrefix}_normal.PNG` : null;
+};
 // お話の真ん中に出すモンスターの全身の絵(台本の monsters の id → 絵。2026-10-27「推しに会える夜」)。足すときはここへ1行
 const STORY_MONSTER_ART = Object.freeze({
   Kyubi: typeof KYUBI_IMG !== 'undefined' ? KYUBI_IMG : null,
@@ -13202,6 +13240,10 @@ const STORY_MONSTER_ART = Object.freeze({
   PandoraShadow: typeof PANDORA_SHADOW_IMG !== 'undefined' ? PANDORA_SHADOW_IMG : null,
   PandoraAngel: typeof PANDORA_ANGEL_IMG !== 'undefined' ? PANDORA_ANGEL_IMG : null,
   PandoraDevil: typeof PANDORA_DEVIL_IMG !== 'undefined' ? PANDORA_DEVIL_IMG : null,
+  // えるびんの登場のお話(2026-11-05)の、胸から上の大きい立ち絵(384x512)。ErubinSekiyuou … 衣装『石油王』(初めて会う場面) / Erubin … 着替えたあとの通常の服
+  //   絵の場所は助手の登録(imageDir・imagePrefix)と衣装のフォルダ(STORY_OUTFIT_DIRS)から作る(パスを画面の側に書かない)
+  Erubin: storyAssistantArtOf('erubin'),
+  ErubinSekiyuou: storyAssistantArtOf('erubin', 'sekiyuou'),
 });
 // お話の台詞を、決まった行数に収まるページへ分ける(2026-11-02 社長「セリフが長ければページ数増やせばいいだけ」)。
 //   上部ゾーン(ゲストの吹き出し)・下部ゾーン(台詞の欄)の高さを固定にしたので、収まらない台詞は「次へ」で送る次のページにする。
@@ -13365,10 +13407,14 @@ const AssistantFace = ({ who, size = 88, accent, expression = null }) => {
   // 場面が変わって表情が切り替わったら読み直す
   useEffect(() => { setSrc(assistantFaceSrc(who, expression)); }, [who.id, expression]);
   return (
-    <div className="shrink-0 rounded-2xl overflow-hidden border-2 flex items-center justify-center bg-black/50"
-         style={{ width:`${size}px`, height:`${size}px`, borderColor:accent, boxShadow:`0 0 12px ${accent}55` }}>
+    <div className="relative shrink-0 rounded-2xl overflow-hidden border-2 flex items-center justify-center bg-black/50"
+         // シークレットの話し手は、枠の中を夕方の砂漠の空の色にして、影(頭布と髪の形)が浮かぶようにする(暗い枠に暗い影だと、空っぽの箱に見えた。2026-11-05 社長「？はなしのほうがいい」)
+         style={{ width:`${size}px`, height:`${size}px`, borderColor:accent, boxShadow:`0 0 12px ${accent}55`, ...(who.secret ? { background:'linear-gradient(180deg, #9a5a4a 0%, #e7a25c 55%, #f4c784 100%)' } : {}) }}>
       {src
         ? <img src={src} alt={who.name} className={`w-full h-full ${who.imageFit === 'contain' ? 'object-contain p-0.5' : 'object-cover'}`}
+               data-story-secret={who.secret ? '1' : undefined}
+               // シークレットの話し手(storyVariantWho)は、誰か分からないように影で描く(こげ茶の塗りつぶし)
+               style={who.secret ? { filter:'brightness(0) invert(.12) sepia(1) saturate(1.2)' } : undefined}
                onError={()=>setSrc(src === fallback ? null : fallback)}/>
         : <span style={{ fontSize:`${Math.round(size * 0.5)}px`, lineHeight:1 }}>{who.emoji}</span>}
     </div>
@@ -43485,6 +43531,8 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   atsu: (who) => `${who}からフレンド申請来てるよ。とりあえず見にいこ`,
   kyuko: (who) => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`,
   sorashido: (who) => `おっ、${who}からフレンド申請来てる！ 見にいこ笑`,
+  // えるびん(2026-11-05・公開前)。穏やかな大人の口調
+  erubin: (who) => `${who}からフレンド申請が来てるよ。よかったら、見にいってみよっか`,
 });
 function HomeFriendRequestNotice({ activeAssistant, count, names, onOpen, onLater }) {
   const who = activeAssistant;
@@ -56301,6 +56349,8 @@ const CARD_AI_HABITS = Object.freeze({
   atsu:     { attack: 1.0, keepGuard: 1.0, saveGuts: 1.0, big: 1.0, disrupt: 1.0, area: 1.0, finish: 1.0, flex: true },
   // ソラシド: 計算して山札切れを狙う(2026-10-29 社長「山札やガッツを削って山札勝ちを狙いやすい」)。mill … 山札を削る・引かせる・ガッツを削る札の重み
   sorashido: { attack: 1.1, keepGuard: 0.9, saveGuts: 1.0, big: 0.9, disrupt: 1.5, area: 1.0, finish: 1.3, mill: 1 },   // 相手の手を崩す(2026-10-27 ルールくんの S2。好きな子ハムで5段×450試合を測った)
+  // えるびん: 少し年上の落ち着いた大人(2026-11-05 社長)。無理をせず、守りを残して、決めどころで大技ととどめ。デッキは型をいくつか持つ(CARD_AI_DECKS の variants)
+  erubin: { attack: 1.0, keepGuard: 1.2, saveGuts: 1.1, big: 1.2, disrupt: 0.8, area: 0.9, finish: 1.2 },
 });
 // 公開の印(RELEASE_FLAGS・data/assistants.js の ASSISTANT_RELEASE_FLAGS)が立つまで、カードの相手えらび・マルチ・観戦・記録・曲の並びに出さない(2026-10-27。ソラシド)。
 //   カードだけの一覧は作らず、助手の一覧と同じ assistantReleased で見る。デバッグからも出さない
@@ -57053,12 +57103,18 @@ const CARD_AI_DECKS = Object.freeze({
   dra:      { kit: 'powerful', field: ['興奮のるつぼ', '必殺技の封印'] },  // 守り。受けるダメージを減らす場
   kyuko:    { field: ['必殺技の応酬'] },  // 小技を封じる。2種入れると MASTER で7点下がったので1種(2026-10-30)
   atsu:     { prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード'], field: ['必殺技の応酬', '灼熱の地'] },  // 全体攻撃を集める。全体カードは大技で押す場と焼ける場
-  sorashido: { prefer: ['大混乱', '時間稼ぎ', '大声', 'ハテナマーク', 'ニャーにゃー'] },  // 山札とガッツを削る札(その3体で使えるものだけ入る)。大鎌(ジョーカーの技・ソラシドの3体では使えず入らなかった)を、ハムの「大声」に入れかえ(2026-11-02 社長 案A)
+  sorashido: { prefer: ['大混乱', '時間稼ぎ', '大声', 'ハテナマーク', 'ニャーにゃー'] },
+  // えるびん: デュラハン種が好きで、組み方をいくつも持つ(2026-11-05 社長「色んなバリエーションをもつ」)。毎試合 variants から1つ選ぶ(prefer と、デッキを組むときのくせの上書き deckHabit)
+  erubin: { variants: [
+    { id: 'blade', prefer: ['冥王剣', '最終奥義', 'Vの字斬り'], deckHabit: { big: 1.4 } },   // 剣技: デュラハンの重い剣で押す
+    { id: 'mind', prefer: ['精神集中', '風神剣', '雷神剣'], deckHabit: { saveGuts: 1.4 } },  // 精神: ガッツをためて、かしこさの剣
+    { id: 'shield', prefer: ['盾で受ける', '剣で受ける', '静の構え'], deckHabit: { keepGuard: 1.5 } },  // 守り: 受けて返す
+  ] },  // 山札とガッツを削る札(その3体で使えるものだけ入る)。大鎌(ジョーカーの技・ソラシドの3体では使えず入らなかった)を、ハムの「大声」に入れかえ(2026-11-02 社長 案A)
 });
 // 助手の好きなモンスター(1体。2026-10-25 社長「1体だけ好きなモンスターを決めて、あとは好みのバランスでデッキ組む」)。
 // 名前ではなく主血統(種族)で決める(「モッチーだけどジェントル使うとかはあり」)。その種族の通常・キラ・別絵キラと、
 // その種族を主血統に持つ混血・派生がみな候補になり、カードが増えれば自動で候補に入る。どの強さでも必ず1体入れる
-const CARD_AI_FAVORITE = Object.freeze({ mua: 'mocchi', momosuke: 'metalner', kiki: 'golem', kyuko: 'mew', dra: 'zilla', atsu: 'dragon', sorashido: 'hare' });   // ソラシドはハム(2026-10-27 社長の決め)
+const CARD_AI_FAVORITE = Object.freeze({ mua: 'mocchi', momosuke: 'metalner', kiki: 'golem', kyuko: 'mew', dra: 'zilla', atsu: 'dragon', sorashido: 'hare', erubin: 'durahan' });   // ソラシドはハム(2026-10-27 社長の決め)・えるびんはデュラハン(2026-11-05 社長)
 // 強さごとの組み方(社長の決め)。maxWave … 技などのカードの弾(好きな子の技は、その子の弾まで使える) / noise … カードの選び方の雑さ /
 // temp … 残り2体の選び方のゆらぎ(大きいほど型に合わない子も入る) / stray … 気まぐれな子(型と関係なく)が1体混ざる割合 /
 // best … いちばん強い組み合わせ(相手のデッキも見る)
@@ -57335,12 +57391,15 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
 //   スターターの id(speed など)を渡したときは、スターターのデッキをそのまま返す
 const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) => {
   if (db.starters[who]) return { monsters: db.starters[who].monsters.slice(), cards: db.starters[who].cards.slice() }; // スターターの id をそのまま渡したとき
-  const recipe = CARD_AI_DECKS[who] || CARD_AI_DECKS.mua;
+  const recipeAll = CARD_AI_DECKS[who] || CARD_AI_DECKS.mua;
   const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
   const rnd = typeof rand === 'function' ? rand : cardAiSeededRand(`${who}:${levelId}`);
   const monsters = cardAiPickTrio(db, who, levelId, rnd, opts && opts.playerDeck);
+  // 型をいくつも持つ助手(えるびん)は、毎試合1つ選ぶ(3体を選んだあとに引くので、ほかの助手の組み方は変わらない)
+  const variant = Array.isArray(recipeAll.variants) && recipeAll.variants.length ? recipeAll.variants[Math.min(recipeAll.variants.length - 1, Math.floor(rnd() * recipeAll.variants.length))] : null;
+  const recipe = variant ? { ...recipeAll, ...variant } : recipeAll;
   const maxWave = cfg.maxWave;
-  const habit = cardAiDeckHabit(who, levelId);
+  const habit = variant && variant.deckHabit ? { ...cardAiDeckHabit(who, levelId), ...variant.deckHabit } : cardAiDeckHabit(who, levelId);
   const mons = monsters.map((no) => cardMonsterOf(db, no));
   // 弾の制限は技などのカードにかける。ただし、その子が使う技は、その子の弾まで使える(後の弾の好きな子も EASY から戦えるように)
   const pool = Object.values(db.cards).filter((c) => c.ready && ((c.user === 'any' || c.user === 'breeder') ? c.wave <= maxWave
@@ -57387,7 +57446,8 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   const shared = attacks.filter((x) => x.c.user === 'any' || x.c.user === 'breeder');
   const used = new Set();
   // 助手らしさの札(あつの全体攻撃など)を先に入れる
-  (preferOn ? recipe.prefer || [] : []).forEach((name) => { const x = byName[name]; if (x && !used.has(name)) { used.add(name); add(x.c, CARD_DECK_COPY_MAX); } });
+  //   守りの札を型の札にしたとき(えるびんの守りの型)は、守りの段で入ったぶんを引く(3枚を超えない。2026-11-05)
+  (preferOn ? recipe.prefer || [] : []).forEach((name) => { const x = byName[name]; if (x && !used.has(name)) { used.add(name); add(x.c, CARD_DECK_COPY_MAX - cards.filter((n) => n === x.c.no).length); } });
   (preferOn ? recipe.field || [] : []).forEach((name) => { const x = byName[name]; if (x && !used.has(name)) { used.add(name); add(x.c, CARD_AI_FIELD_COPIES); } });
   let li = 0, guard = 0;
   while (cards.length < CARD_BATTLE_DECK_SIZE && guard++ < 400) {
@@ -58807,6 +58867,7 @@ const CARD_AI_TACTIC_BASE = Object.freeze({
   dra: ['tGuard', 'tSteady', 'tMill'],
   atsu: ['tFlex', 'tArea', 'tSteady'],
   sorashido: ['tMill', 'tDisrupt', 'tGuard'],
+  erubin: ['tBalance', 'tSteady', 'tFinish'],   // 落ち着いて守りを残し、弱った子を仕留める(2026-11-05)
 });
 const CARD_AI_TACTIC_COUNT = Object.freeze({ expert: 2, master: 3 });
 // 2枚目・3枚目が丸ごと効く場面(2026-10-29 社長 案B「型が混ざったことが、遊ぶ人に分かる程度に」)。ほかの場面では3分の1
@@ -58818,6 +58879,7 @@ const CARD_AI_TACTIC_WHEN = Object.freeze({
   dra: [null, 'lowLife', 'foeDeckLow'],      // 押されたら堅く・相手の山札が減ったら持久戦
   atsu: [null, 'foeFull', 'lowLife'],        // 相手が3体そろっていれば全体・押されたら堅く
   sorashido: [null, 'foeHandFull', 'lowLife'], // 相手の手札が多ければ崩す・押されたら守る
+  erubin: [null, 'lowLife', 'foeLow'],          // 押されたら堅く・弱った子がいれば仕留め
 });
 const cardAiTacticWhenHit = (name, st, p) => {
   const me = st.players[p], op = st.players[cardOther(p)];
@@ -58844,6 +58906,7 @@ const CARD_AI_TACTIC_ROWS = Object.freeze({
   dra: [[{ c: 'incoming.3', a: 'guard' }], [{ c: 'foeDeck.5', a: 'disrupt.山札を削る' }]],
   atsu: [[{ c: 'foeAlive.3', a: 'reach.全体攻撃' }], [{ c: 'myLife.50', a: 'guard' }]],
   sorashido: [[{ c: 'foeDeck.20', a: 'disrupt.山札を削る' }], [{ c: 'incoming.5', a: 'guard' }]],
+  erubin: [[{ c: 'incomingKo', a: 'guard' }], [{ c: 'ko', a: 'atk' }]],
 });
 const cardAiTacticGambit = (who, levelId) => {
   const n = CARD_AI_TACTIC_COUNT[levelId];
@@ -59278,6 +59341,23 @@ const CARD_BATTLE_LINES = Object.freeze({
     win: [['うぉぉぉ！ 読み通り！ いい勝負だった笑', 'happy'], ['作戦がきれいにはまった！ もう1戦だけやろ笑', 'excited'], ['楽しかった！ 気づいたら朝になりそう笑', 'wink'], ['うぉぉぉ！ オリヒメにも見せたかった笑', 'excited']],
     lose: [['なに！？ そこでそれ！？…悔しいけど、今のはうまいぜ・・・！', 'crying'], ['完敗！ 今の対戦、攻略まとめにして研究する笑', 'troubled'], ['なんくるないさ〜。次はデッキ組み直してくる笑', 'happy']],
   },
+  // えるびん(2026-11-05 案・ルールくん。口調は docs/progress/tempo-2026-11-05/erubin-split.md)。こっちで覚えてはまったカード・デュラハン好き・組み方をいくつも持つ。公開の印が立つまで画面には出ない
+  erubin: {
+    challenge: [['カード勝負、いいね！ こっちに来てから、すっかりはまってるんだよね笑', 'happy'], ['今日はどの組み方でいこうかな🤔 いくつか持ってきたんだよね', 'wink'], ['対戦しよっか。手加減はしないけど、それでもよいかな？笑', 'wink'], ['デュラハンの出番だね。よろしくお願いします☺️', 'happy']],
+    start: [['よろしくね！ 楽しくいこう笑', 'happy'], ['おけ！ まずは様子を見ながらいくね', 'normal'], ['焦らずじっくりいくよ。それが大事だよね', 'wink'], ['さぁ、始めよっか。デュラハン、頼んだよ', 'excited']],
+    big: [['ここは大きいのいくね！ 大丈夫かな？笑', 'excited'], ['ためといてよかった。いくよー！', 'excited'], ['剣さばき、ちゃんと見ててね笑', 'wink'], ['ここで決めにいくよ。おっけー！', 'happy']],
+    bigHit: [['いたた…今のはしっかり効いたね💦', 'troubled'], ['おお、さすが！ 今の一撃はうまいね', 'surprise'], ['うわ、それ持ってたのか笑 やられたなぁ', 'surprise'], ['まだ大丈夫。ここから立て直すよ', 'normal']],
+    guardMine: [['よし、受け止めた！ 守りを残しといてよかった☺️', 'happy'], ['その手は読めてたかな笑', 'wink'], ['おけ！ ここはしっかり守れたね', 'happy']],
+    guardTheirs: [['えっ、そこで守るんだ！ さすがだね', 'surprise'], ['うまくかわされたなぁ。次は別の手でいくね', 'troubled'], ['読まれてたか笑 なかなかやるね', 'normal']],
+    myKo: [['ごめんね…よく頑張ってくれたよ', 'crying'], ['うーん、ここで倒れるか…まだ仲間がいるからね', 'troubled'], ['悔しいな。でも、ここからが本番だよね', 'angry']],
+    theirKo: [['よし、1体いただくね！', 'excited'], ['いい流れだね。このままいこう笑', 'happy'], ['ごめんね、そこは見逃せなかったw', 'wink']],
+    lastMine: [['残り1体か…落ち着いていけば、まだいけるよね', 'troubled'], ['最後の1体に託すよ。頼んだよ', 'troubled']],
+    lastTheirs: [['あと1体だね。最後まで気は抜かないよ', 'excited'], ['いよいよだね。丁寧にいこう', 'wink']],
+    deckMine: [['あれ、山札がもう少ないね💦 ちょっと急がないと', 'surprise'], ['ガッツにしすぎたかな…計算ミスだw', 'troubled']],
+    deckTheirs: [['そっちの山札、だいぶ減ってるけど大丈夫かな？', 'wink'], ['山札の残りも、ちゃんと見てるからね笑', 'happy']],
+    win: [['楽しかったー！ いい勝負だったね☺️', 'happy'], ['勝てた！ 組み方がうまくはまったね笑', 'excited'], ['またやろうね。次はどの組み方でいこうかな🤔', 'wink']],
+    lose: [['負けちゃった笑 さすがだね、強かった！', 'happy'], ['くやしいなぁ。デッキ、組み直してくるね', 'troubled'], ['お見事！ 今の勝ち方、勉強になったよ', 'normal']],
+  },
 });
 // 1ターンにしゃべるのは2回まで。同じ場面では、直近に出した台詞を続けて出さない
 const CARD_LINE_PER_TURN = 2;
@@ -59466,6 +59546,7 @@ const CARD_DECK_NAME_TAILS = Object.freeze({
   dra: ['カウンター要塞', 'はね返し城', '鉄壁ガード団', 'ねばり腰の砦'],
   atsu: ['まとめてドーン組', '一掃カーニバル', '全体ぶっぱ隊', '総なめ軍団'],
   sorashido: ['攻略まとめ組', '最適解デッキ', '計算どおり団', 'なんくるない隊'],   // 2026-10-27 社長の決め
+  erubin: ['砂の剣士団', 'じっくり見守り隊', '組み直しの陣', 'デュラハン騎士団'],   // 2026-11-05 社長「この文で」
 });
 // 長すぎるときは MASTER の「本気の」を省く(320幅の札で2行に収まる長さ)
 const CARD_DECK_NAME_MAX = 18;
@@ -59522,6 +59603,13 @@ const CARD_VS_LINES = Object.freeze({
     hard: { e: 'excited', t: 'ここからは本気の読み合いだぜ・・・！' },
     expert: { e: 'excited', t: '攻略班の作戦、ぜんぶ試させてもらう笑' },
     master: { e: 'angry', t: 'うぉぉぉ！ 俺の全力、受けてみな・・・！' },
+  },
+  erubin: {   // 2026-11-05 社長「この文で」(ルールくんの案)。公開の印が立つまで画面には出ない
+    easy: { e: 'happy', t: 'のんびりいこうか。楽しむのが一番だよね☺️' },
+    normal: { e: 'wink', t: 'おけ！ 今日の組み方、ちょっと自信あるんだよね笑' },
+    hard: { e: 'normal', t: 'ここからはしっかりいくね。それでもよいかな？' },
+    expert: { e: 'excited', t: '全部の弾から選んできたよ。いい勝負にしようね' },
+    master: { e: 'wink', t: '本気の組み方で来たよ。さすがに負けたくないかな笑' },
   },
 });
 // 練習試合のひとこと(みゅあ)
@@ -63330,6 +63418,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   dra_surprise: [384, 384, 25, 39, 313, 278],
   dra_troubled: [384, 384, 45, 43, 294, 272],
   dra_wink: [384, 384, 49, 43, 286, 270],
+  erubin_angry: [384, 512, 1, 9, 382, 503],
+  erubin_crying: [384, 512, 1, 14, 382, 498],
+  erubin_excited: [384, 512, 1, 13, 382, 499],
+  erubin_happy: [384, 512, 1, 18, 382, 494],
+  erubin_normal: [384, 512, 0, 13, 384, 499],
+  erubin_surprise: [384, 512, 1, 16, 382, 496],
+  erubin_troubled: [384, 512, 1, 20, 382, 492],
+  erubin_wink: [384, 512, 1, 14, 382, 498],
   kiki_angry: [1536, 1024, 481, 10, 573, 1014],
   kiki_crying: [1536, 1024, 480, 15, 572, 1009],
   kiki_excited: [1536, 1024, 495, 12, 556, 1012],
@@ -67671,6 +67767,11 @@ const CARD_PVP_RESULT_LINES = Object.freeze({
     win: [['うぉぉぉ！ 勝った！ 今の組み方、最高だった笑', 'happy'], ['ナイス！ 読み合い、完全に勝ってたぜ・・・！', 'excited'], ['いい勝ち方！ 攻略まとめに残したいくらい笑', 'wink']],
     lose: [['なに！？ 惜しい…次はどう組むか考えよ', 'troubled'], ['なんくるないさ〜。今の対戦、すごく参考になった笑', 'normal'], ['相手も強かった！ もう1戦いっとく？笑', 'happy']],
     left: [['あれ、相手いなくなった？ 決着つけたかったな笑', 'surprise'], ['電波かな？ 次の相手さがそ！', 'normal'], ['勝ちは勝ちだけど…ちょっと物足りないぜ・・・', 'troubled']],
+  },
+  erubin: {   // 2026-11-05 案(ルールくん)。公開の印が立つまで、自分の助手に選べないので出ない
+    win: [['勝ったね！ さすが、最後の一手がきれいだったよ☺️', 'happy'], ['いいね！ 見ててこっちまで楽しかったー！', 'excited'], ['おめでとう！ その組み方、俺も参考にしたいな笑', 'wink']],
+    lose: [['惜しかったね。でも、いい勝負だったよ', 'troubled'], ['大丈夫、大丈夫。次はきっと勝てるよ😊', 'normal'], ['相手も強かったね。デッキ、いっしょに見直してみよっか？', 'happy']],
+    left: [['あれ、相手がいなくなっちゃったね。何かあったのかな？', 'surprise'], ['最後までやりたかったね。次の相手をさがそっか', 'normal'], ['途中で終わっちゃったか…ちょっと物足りないね笑', 'troubled']],
   },
 });
 const cardPvpResultLine = (who, scene, seed = 0) => {
@@ -80151,7 +80252,7 @@ function MonsterHeroGame() {
   // 「鍵の向こう側へ」のイベントidと、終章(閉幕のお話)のid
   const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
   const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, CARD_CUP_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -80394,6 +80495,14 @@ function MonsterHeroGame() {
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
     if (rhythmEventStoryStartedRef.current.includes(SORASHIDO_JOIN_STORY_ID)) return;
     setRhythmEventStoryPending(SORASHIDO_JOIN_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // えるびんの加入のお話(2026-11-05)。ソラシドと同じく、公開のあとの最初の HOME でだれにでも1回だけ流す。公開の印 assistantErubin が偽なら何もしない
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantErubin) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(ERUBIN_JOIN_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(ERUBIN_JOIN_STORY_ID)) return;
+    setRhythmEventStoryPending(ERUBIN_JOIN_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // ハロウィン・ナイトの終章を、見終えた人へ一度だけ流し直す(2026-11-01 社長。35-raid-jack.jsx の RAID_JACK_ENDING_REPLAY_KEY)。
   // 流すのは前に見た方。見ていない人はふつうの流れで見る(見終えたところで印が立つので、二度は流れない)
@@ -80929,6 +81038,21 @@ function MonsterHeroGame() {
     const ev = list.find(x => x.id === eventReplay.id);
     return eventScriptBgmAt(ev && eventScriptForPlayer(ev.script, rhythmEventStorySeen), eventReplay.step);
   })();
+  // 台本の行の bgmFadeOut:true … その行のあいだに音を下げきる(終わりの札と同じ 2.5秒。次の行で戻す)。
+  //   2026-11-05 えるびんのお話: 穴に落ちていくあいだに「茨の王の怒り」を下げ、着いた行からいつもの曲へ(社長「2.5秒」)
+  const eventLineFadeOut = (() => {
+    if (!eventReplay || kikiIntroPlaying || momosukeIntroPlaying) return false;
+    const list = eventReplay.debug ? eventReplayAllList() : eventReplayList();
+    const ev = list.find(x => x.id === eventReplay.id);
+    const sc = ev ? eventScriptForPlayer(ev.script, rhythmEventStorySeen) : null;
+    const l = Array.isArray(sc) ? sc[eventReplay.step] : null;
+    return !!(l && l.bgmFadeOut);
+  })();
+  useEffect(() => {
+    if (typeof Audio_ === 'undefined' || !Audio_.setStoryEndFade) return;
+    if (eventLineFadeOut) Audio_.setStoryEndFade(true);
+    else if (!eventReplayEnding) Audio_.setStoryEndFade(false);
+  }, [eventLineFadeOut]);
   // 同じお話の中で曲が替わるときだけ、今の曲を下げてから移す(お話に入る・出るときは今までどおり)
   const eventBgmPlayedRef = useRef(null);
   // 画面から鳴らすべき曲のキーを決める
@@ -82142,6 +82266,7 @@ function MonsterHeroGame() {
         const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, KYUKO_JOIN_STORY_ID,
           // ソラシドのお話は公開してからだけ(公開前に始めた人を見た扱いにすると、公開の日に流れなくなる)
           ...(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? [SORASHIDO_JOIN_STORY_ID] : []),
+          ...(EVENT_REPLAY_RELEASE_FLAGS.assistantErubin ? [ERUBIN_JOIN_STORY_ID] : []),
           ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
         const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
         if (add.length) {
@@ -83470,6 +83595,7 @@ function MonsterHeroGame() {
     atsuJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID),
     kyukoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID),
     sorashidoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID),
+    erubinJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ERUBIN_JOIN_STORY_ID),
     cardCupStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(CARD_CUP_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
@@ -98124,6 +98250,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // お話の始まり(題字の幕開け)。開いた最初だけ(1ページ目・まだ幕を開けていないとき)。タップか、題字が出終わったら最初のページへ
         const storyOpeningStyle=typeof STORY_OPENING_STYLE!=='undefined'?STORY_OPENING_STYLE:'none';
         const storyOpening=!!event&&storyOpeningStyle!=='none'&&!eventReplay.opened&&step===0&&!eventReplay.ending;
+        // シークレットのお話(titleSecret・2026-11-05 えるびん)は、HOME で初めて流れるあいだ題名を伏せる(幕開けの題字・上の見出し)。
+        //   終わりの札で本当の題名を見せる。回想は見たあとにしか開けないので、いつも本当の題名
+        const storyTitleNow=event?.titleSecret&&eventReplay.live?event.titleSecret:event?.title;
         // 場面の背景(台本の行の bg:'名前'。次に bg を書いた行まで続き、bg:'none' で消す。2026-11-05 共通の背景)
         let storyScene=null;
         for(let i=step;i>=0;i--){const l=script[i];if(l&&typeof l.bg==='string'){storyScene=l.bg==='none'?null:l.bg;break;}}
@@ -98140,8 +98269,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const isGuestWho=(id)=>{const w=assistantById(id);return !!w&&w.role==='ゲスト';};
         // hideUntilFirstLine に書いた助手は、初めて話す行までは下の列にも出さない(登場の場面で顔を伏せる。2026-10-22 社長「あつの顔は『呼んだ？』で登場するまで伏せる」)
         const hiddenUntil=Array.isArray(event&&event.hideUntilFirstLine)?event.hideUntilFirstLine:[];
+        // 顔の列の人を、いまの行までで最後に話したときの姿(衣装・シークレット)で出す(2026-11-05 えるびん)
+        // (storyBaseWho は 21-assistant.jsx。一部だけを動かす検査では無いことがあるので、無ければ id のまま)
+        const storyBase=(id)=>typeof storyBaseWho==='function'?storyBaseWho(id):(typeof id==='string'?id.split('@')[0]:id);
+        const castNow=(who)=>{for(let i=step;i>=0;i--){const w=script[i]&&script[i].who;if(storyBase(w)===who.id)return w===who.id?who:assistantById(w);}return who;};
         const cast=storyCastOf(script).filter(who=>who.role!=='ゲスト')
-          .filter(who=>!hiddenUntil.includes(who.id)||script.slice(0,step+1).some(l=>l&&l.who===who.id));
+          .filter(who=>!hiddenUntil.includes(who.id)||script.slice(0,step+1).some(l=>l&&storyBase(l.who)===who.id));
         let stageIdx=-1;
         for(let i=step;i>=0;i--){const l=script[i];if(l.stage==='none'){stageIdx=-1;break;}if(l.stage||isGuestWho(l.who)){stageIdx=i;break;}}
         const stageLine=stageIdx>=0?script[stageIdx]:null;
@@ -98164,11 +98297,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         let monstersIdx=-1;
         for(let i=step;i>=0;i--){if(Array.isArray(script[i].monsters)){monstersIdx=i;break;}}
         const storyMonsters=monstersIdx>=0?script[monstersIdx].monsters.filter(m=>m&&m.pose!=='hide'&&STORY_MONSTER_ART[m.id]):[];
-        const fxColors={split:'233,213,255',merge:'255,250,235',unlock:'253,230,138',transform:'255,237,180',rankup:['251,146,60','251,191,36','192,132,252','248,113,113','250,204,21'][Math.max(0,stageTier-1)],shrink:'186,230,253'};
+        const fxColors={fall:'255,214,150',split:'233,213,255',merge:'255,250,235',unlock:'253,230,138',transform:'255,237,180',rankup:['251,146,60','251,191,36','192,132,252','248,113,113','250,204,21'][Math.max(0,stageTier-1)],shrink:'186,230,253'};
         const speakText=(l,w)=>{
           // ★呼び方は normalizeAssistantBond には入っていない(別の入れ物 assistantCallStyles)。話している助手ごとのぶんを引く
-          const bond=normalizeAssistantBond(assistantBonds[w.id]);
-          return assistantSpeakText(l.t,breederName,assistantBondLevelOf(bond.points),assistantCallStyles[w.id]||null,w.id);
+          // 衣装・シークレットの話し手(storyVariantWho)は、元の助手の仲良し度・呼び方を使う
+          const wid=w.baseId||w.id;
+          const bond=normalizeAssistantBond(assistantBonds[wid]);
+          return assistantSpeakText(l.t,breederName,assistantBondLevelOf(bond.points),assistantCallStyles[wid]||null,wid);
         };
         // 台詞の「\n」は、そこで改行する(2026-10-25。チーム名を3つ並べる台詞で「すばやく攻める／チーム」と名前の途中で折れた)。行ごとに jaWrap を通す
         const bubbleLines=(text)=>(typeof text==='string'&&text.includes('\n'))?text.split('\n').map((x,i)=><React.Fragment key={i}>{i>0&&<br/>}{bubbleWrap(x)}</React.Fragment>):bubbleWrap(text);
@@ -98297,7 +98432,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setEventReplay(null);
         };
         return(
-        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-step={step} data-story-zones={storyZones?(storyKeepRow?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} data-story-opening={storyOpening?storyOpeningStyle:undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
+        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-step={step} data-story-zones={storyZones?(storyKeepRow?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} data-story-opening={storyOpening?storyOpeningStyle:undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${storyTitleNow||''}`}>
           {/* 場面の背景(台本の行の bg)。場面が替わると key が替わり、ふわっと切り替わる。fx:'fall' の行では、
               穴へ落ちていくように背景が上へ流れて暗くなる(70-bootstrap.jsx の [data-story-bg]) */}
           {storySceneImg&&<div key={storyScene} data-story-bg={storyScene} data-story-bg-fx={fx==='fall'?'fall':undefined} aria-hidden="true"
@@ -98362,7 +98497,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               窓を縦に積み、題・顔・台詞の部分(data-story-body)だけを中で流す。ボタンの列は縮めない */}
           <div ref={storyMeasureRef('--story-sheet-h','height')} onClick={next} data-story-sheet data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} className="relative flex w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] flex-col overflow-hidden rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'auto',zIndex:1}}>
             <div data-story-body className="min-h-0 flex-1 overflow-y-auto mh-scroll">
-            <p className="mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300">{eventReplay.live?'':'回想・'}{event?.title||''}</p>
+            <p className="mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300">{eventReplay.live?'':'回想・'}{storyTitleNow||''}</p>
             {/* 話し手の顔の列。5人以上のお話では1段4人ずつに折り返し、顔も少し小さくする
                 (2026-10-23 社長「枠からはみ出してる。縦のスペース空いてるんだから2列にするとかしてちゃんと見た目よくして」。
                 きゅうこの加入のお話は7人で、話している子が大きくなると左右の端が枠の外へ切れていた)。
@@ -98375,7 +98510,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               // 小さい顔の列には、その場面にいる人だけを並べる(2026-11-03 社長「いない人は出さない」「あとから現れる人は、現れたときまで出さない」)。
               //   そのページまでに一度でも話した人。最初からいるのにしばらく話さない人は、その話の castAtStart に書けば1ページ目から並ぶ
               const atStart=Array.isArray(event&&event.castAtStart)?event.castAtStart:[];
-              const rowCast=tiny?cast.filter(who=>atStart.includes(who.id)||script.slice(0,step+1).some(l=>l&&l.who===who.id)):cast;
+              const rowCast=(tiny?cast.filter(who=>atStart.includes(who.id)||script.slice(0,step+1).some(l=>l&&storyBase(l.who)===who.id)):cast).map(castNow).filter(who=>!who.secret);
               if(tiny&&rowCast.length===0)return <div data-story-cast-tiny-empty style={{height:28,marginBottom:6}}/>;const compact=!tiny&&storyMonsters.length>0;const many=!compact&&!tiny&&cast.length>4;const big=tiny?28:compact?44:many?60:84,small=tiny?24:compact?36:many?48:64;return(
             <div data-story-cast={cast.length} data-story-cast-compact={compact||tiny?'':undefined} data-story-cast-tiny={tiny?'':undefined} className={`${tiny?'mb-1.5 flex-nowrap gap-1':compact?'mb-2 flex-nowrap gap-1.5':'mb-3'} flex items-end justify-center ${many?'flex-wrap gap-x-1 gap-y-1.5':compact||tiny?'':'gap-3'}`}>
               {rowCast.map(who=>{
@@ -98422,7 +98557,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           {/* お話の始まり(2026-11-04 社長「はじまりもおわりみたいにこだわって」)。暗い画面に「シリーズ名/第◯話/～副題～」が浮かび、
               場面が近づきながら明るくなって最初のページへ。'recap' は前のお話の題名とイベントの残り時間(本編のときだけ)も添える。'iris' は鍵穴から丸く開く */}
           {storyOpening&&(()=>{
-            const parts=storyEpisodeTitleParts(event?.title);
+            const parts=storyEpisodeTitleParts(storyTitleNow);
             const allEv=(typeof EVENT_REPLAYS!=='undefined'?EVENT_REPLAYS:[]).filter(ev=>ev&&ev.id&&ev.title);
             const series=parts.serial?allEv.filter(ev=>ev.group===event.group&&storyEpisodeTitleParts(ev.title).serial&&storyEpisodeTitleParts(ev.title).series===parts.series)
               .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))):[];
@@ -102971,6 +103106,11 @@ const createAnimationStyle = () => {
       [data-event-story][data-story-zones] [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 150px) !important; bottom: calc(var(--story-bottom-h) + env(safe-area-inset-bottom) + 8px); align-items: center; }
       [data-event-story][data-story-zones] [data-story-monster] { height: min(calc(100% / 1.14), 50vw, 230px); }
       [data-event-story][data-story-zones] [data-story-monsters="2"] [data-story-monster] { height: min(calc(100% / 1.14), 44vw, 210px); }
+      /* えるびんの登場のお話(2026-11-05 社長「C」): 胸から上の立ち絵(384x512)を、顔が大きく見えるよう上から正方形に切って、台詞の窓の上にのせる。
+         絵の下の切れ目は窓のふちに付けて隠す(浮いて見えないように)。縦の画面だけ。横の画面は窓の左右の空きに小さく出す今の形のまま */
+      [data-event-story][data-story-zones] [data-story-monsters]:has([data-story-monster^="Erubin"]) { bottom: calc(var(--story-bottom-h) + env(safe-area-inset-bottom)); align-items: flex-end; }
+      [data-event-story][data-story-zones] [data-story-monster^="Erubin"][data-story-monster^="Erubin"] { height: min(100%, 92vw, 400px); aspect-ratio: 1 / 1; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-monster^="Erubin"] img { object-fit: cover; object-position: 50% 0; }
     }
     /* 横の低い画面: 上部ゾーン = 上の端から 6px + ステージ(顔は 0.6倍・吹き出し 3行ぶん 84px)。下部ゾーン = その下ぜんぶ(窓の高さを固定)。
        モンスターは窓の左右の空き(上の横向きの決まりのまま) */

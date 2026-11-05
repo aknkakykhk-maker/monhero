@@ -36,7 +36,13 @@ check('① 台本が無い・空なら null', at(null, 0) === null && at([], 0) 
 
 // ② ③ ⑤
 const assistants = read('monster-hero/data/assistants.js');
-const written = [...assistants.matchAll(/\bbgm:'([^']+)'/g)].map((m) => m[1]);
+// bgm:'default' は曲ではなく「会話イベントの曲へ戻す」印(2026-11-05 えるびんのお話)。曲の数には入れず、下で別に見る
+const writtenAll = [...assistants.matchAll(/\bbgm:'([^']+)'/g)].map((m) => m[1]);
+const written = writtenAll.filter((id) => id !== 'default');
+{
+  const bgmSrc = fs.readFileSync(path.join(root, 'monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx'), 'utf8');
+  check("⑥ bgm:'default' で会話イベントの曲へ戻せる(eventScriptBgmAt が 'default' を読む)", /if \(id === 'default'\) found = null;/.test(bgmSrc));
+}
 check('② 台本に書いた bgm はすべて曲の表にある', written.length > 0 && written.every((id) => ids.has(id)), written.join(', '));
 const types = assistants.slice(assistants.indexOf('const ASSISTANT_TACTICS_TYPES = ['), assistants.indexOf('];', assistants.indexOf('const ASSISTANT_TACTICS_TYPES = [')));
 const lines = types.split('\n').filter((l) => /\{ who:/.test(l));

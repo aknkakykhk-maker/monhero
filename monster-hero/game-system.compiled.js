@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fd2a7fd363bf6ec9
+// source-sha256: 3d3ee5d5b072dc60
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -447,6 +447,9 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   },
   get assistantSorashido() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantSorashido === true;
+  },
+  get assistantErubin() {
+    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantErubin === true;
   },
   get cardBattle() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardBattle === true;
@@ -6862,6 +6865,7 @@ const rhythmAchievementPending = (ledger, rules, eligible) => {
 const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Pandora' && (enemyId === 'Moo' || currentWave === 10) ? 'pandora_boss' : null;
 const eikiBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
+  erubinJoinStoryEvent: 'original_event_01',
   cardBattleIntroEvent: 'atsu_cup_theme',
   cardCupStoryEvent: 'melo_toriko',
   pandoraWingsStoryEvent: 'melo_rebellion',
@@ -6954,12 +6958,13 @@ const eventScriptBgmAt = (script, step) => {
   let found = null;
   for (let i = 0; i <= last; i += 1) {
     const id = script[i] && script[i].bgm;
-    if (typeof id === 'string' && BGM_TRACKS.some(t => t.id === id)) found = id;
+    if (id === 'default') found = null;else if (typeof id === 'string' && BGM_TRACKS.some(t => t.id === id)) found = id;
   }
   return found;
 };
 const EVENT_BGM_FADE_MS = 800;
 const EVENT_BGM_SCENES = Object.freeze({
+  erubin_join_2026_11: 'erubinJoinStoryEvent',
   card_battle_intro_2026: 'cardBattleIntroEvent',
   card_cup_2026_10_31: 'cardCupStoryEvent',
   pandora_wings_2026_ep1: 'pandoraWingsStoryEvent',
@@ -13186,6 +13191,7 @@ const RELEASE_FLAGS = {
   assistantAtsu: true,
   assistantKyuko: true,
   assistantSorashido: true,
+  assistantErubin: true,
   cardBattle: true,
   cardAssistantTalk: true,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
@@ -13544,12 +13550,7 @@ const ASSISTANT_CHAT_STORY_ID = 'assistant_chat_story';
 const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
 const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
 const SORASHIDO_JOIN_STORY_ID = 'sorashido_join_2026_10_27';
-const LEGEND_BREEDER_PASS_STORY_ID = 'legend_breeder_pass_2026_11';
-const LEGEND_BREEDER_PASS_SEEN_KEY = 'mh_beat_shop_vip_letter_seen_v1';
-const HELP_PLAYER_FLAGS = {
-  legendBreederPass: false
-};
-const helpPlayerFlagOn = name => !!name && HELP_PLAYER_FLAGS[name] === true;
+const ERUBIN_JOIN_STORY_ID = 'erubin_join_2026_11';
 const CARD_CUP_STORY_ID = 'card_cup_2026_10_31';
 const SORASHIDO_GIFT_KEY = 'mh_sorashido_gift_v1';
 const SORASHIDO_GIFT_BEAT_POINTS = 10000;
@@ -18818,15 +18819,53 @@ const ASSISTANT_FALLBACK = {
   greeting: ''
 };
 const STORY_GUEST_LIST = typeof STORY_GUEST_SPEAKERS !== 'undefined' && Array.isArray(STORY_GUEST_SPEAKERS) ? STORY_GUEST_SPEAKERS : [];
-const assistantById = id => ASSISTANT_LIST.find(a => a.id === id) || STORY_GUEST_LIST.find(a => a.id === id) || ASSISTANT_LIST.find(a => a.id === (typeof DEFAULT_ASSISTANT_ID !== 'undefined' ? DEFAULT_ASSISTANT_ID : '')) || ASSISTANT_LIST[0] || ASSISTANT_FALLBACK;
-const storyCastOf = script => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(who => (script || []).some(l => l.who === who.id));
+const STORY_VARIANT_CACHE = new Map();
+const storyVariantWho = id => {
+  if (typeof id !== 'string' || !id.includes('@')) return null;
+  if (STORY_VARIANT_CACHE.has(id)) return STORY_VARIANT_CACHE.get(id);
+  const [baseId, ...flags] = id.split('@');
+  const base = ASSISTANT_LIST.find(a => a.id === baseId);
+  if (!base) return null;
+  const dirs = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS || {};
+  const outfit = flags.find(f => dirs[f]);
+  const secret = flags.includes('secret');
+  const who = {
+    ...base,
+    id,
+    baseId,
+    ...(outfit ? {
+      imageDir: dirs[outfit],
+      tempImageDir: undefined
+    } : {}),
+    ...(secret ? {
+      name: '？？？',
+      secret: true,
+      accent: '#8a7a5c',
+      emoji: '❔'
+    } : {})
+  };
+  STORY_VARIANT_CACHE.set(id, who);
+  return who;
+};
+const assistantById = id => ASSISTANT_LIST.find(a => a.id === id) || storyVariantWho(id) || STORY_GUEST_LIST.find(a => a.id === id) || ASSISTANT_LIST.find(a => a.id === (typeof DEFAULT_ASSISTANT_ID !== 'undefined' ? DEFAULT_ASSISTANT_ID : '')) || ASSISTANT_LIST[0] || ASSISTANT_FALLBACK;
+const storyBaseWho = id => typeof id === 'string' ? id.split('@')[0] : id;
+const storyCastOf = script => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(who => (script || []).some(l => l && storyBaseWho(l.who) === who.id));
+const storyAssistantArtOf = (id, outfit) => {
+  const who = ASSISTANT_LIST.find(a => a && a.id === id);
+  if (!who || !who.imageDir || !who.imagePrefix) return null;
+  const dirs = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS || {};
+  const dir = outfit ? dirs[outfit] : who.imageDir;
+  return dir ? `${dir}/${who.imagePrefix}_normal.PNG` : null;
+};
 const STORY_MONSTER_ART = Object.freeze({
   Kyubi: typeof KYUBI_IMG !== 'undefined' ? KYUBI_IMG : null,
   Orihime: typeof ORIHIME_IMG !== 'undefined' ? ORIHIME_IMG : null,
   Pandora: typeof PANDORA_IMG !== 'undefined' ? PANDORA_IMG : null,
   PandoraShadow: typeof PANDORA_SHADOW_IMG !== 'undefined' ? PANDORA_SHADOW_IMG : null,
   PandoraAngel: typeof PANDORA_ANGEL_IMG !== 'undefined' ? PANDORA_ANGEL_IMG : null,
-  PandoraDevil: typeof PANDORA_DEVIL_IMG !== 'undefined' ? PANDORA_DEVIL_IMG : null
+  PandoraDevil: typeof PANDORA_DEVIL_IMG !== 'undefined' ? PANDORA_DEVIL_IMG : null,
+  Erubin: storyAssistantArtOf('erubin'),
+  ErubinSekiyuou: storyAssistantArtOf('erubin', 'sekiyuou')
 });
 const STORY_BOTTOM_KEEP_ROW = true;
 const STORY_ENDING_STYLE = 'pull';
@@ -19008,17 +19047,24 @@ const AssistantFace = ({
     setSrc(assistantFaceSrc(who, expression));
   }, [who.id, expression]);
   return React.createElement("div", {
-    className: "shrink-0 rounded-2xl overflow-hidden border-2 flex items-center justify-center bg-black/50",
+    className: "relative shrink-0 rounded-2xl overflow-hidden border-2 flex items-center justify-center bg-black/50",
     style: {
       width: `${size}px`,
       height: `${size}px`,
       borderColor: accent,
-      boxShadow: `0 0 12px ${accent}55`
+      boxShadow: `0 0 12px ${accent}55`,
+      ...(who.secret ? {
+        background: 'linear-gradient(180deg, #9a5a4a 0%, #e7a25c 55%, #f4c784 100%)'
+      } : {})
     }
   }, src ? React.createElement("img", {
     src: src,
     alt: who.name,
     className: `w-full h-full ${who.imageFit === 'contain' ? 'object-contain p-0.5' : 'object-cover'}`,
+    "data-story-secret": who.secret ? '1' : undefined,
+    style: who.secret ? {
+      filter: 'brightness(0) invert(.12) sepia(1) saturate(1.2)'
+    } : undefined,
     onError: () => setSrc(src === fallback ? null : fallback)
   }) : React.createElement("span", {
     style: {
@@ -19031,7 +19077,6 @@ const helpWrap = x => typeof x === 'string' && typeof jaWrap === 'function' ? Re
   style: typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined
 }, jaWrap(x)) : x;
 const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
-  if (b && b.playerFlag && !(typeof helpPlayerFlagOn === 'function' && helpPlayerFlagOn(b.playerFlag))) return null;
   if (b.t === 'video') return React.createElement("div", {
     key: i,
     "data-help-video": true,
@@ -59078,9 +59123,6 @@ function BreederMarketScreen({
   onExchangeHeroProof,
   eventPoints = 0,
   onExchangeEventPoints,
-  legendPassActive = false,
-  legendPassLetterAvailable = false,
-  onReadLegendPassLetter = null,
   onOpenUpcomingDetail,
   frameConditionOf = null,
   cardShop = null,
@@ -59291,7 +59333,7 @@ function BreederMarketScreen({
   const exchangeTab = activeSectionTab('exchange');
   const eventTab = activeSectionTab('event');
   const BEAT_POINT_MATERIAL_ITEM_IDS = ['rainbow_psyche', 'hero_proof_shard', 'transcend_fruit_rainbow', 'hero_proof'];
-  const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer => eventTab === 'material' === BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId)).map(offer => rhythmEventPointShopOfferWithPass(offer, legendPassActive === true));
+  const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer => eventTab === 'material' === BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId));
   const renderSectionTabs = (section, scroll = false) => {
     const items = SECTION_TABS[section].tabs.map(tab => ({
       id: tab.key,
@@ -59802,36 +59844,20 @@ function BreederMarketScreen({
       tone: "info",
       "data-event-point-campaign": true
     }, jaWrap(`🎟️ ${campaign.name}中：公開曲のビートPが${campaign.boost}倍${Number(campaign.loopBoost) > 0 ? `・演奏のクイック周回も${campaign.loopBoost}倍` : ''}（${rhythmEventJstText(Date.parse(campaign.displayEndAt || campaign.endAt))}まで）`)) : null;
-  })(), legendPassLetterAvailable && typeof onReadLegendPassLetter === 'function' && (eventTab === 'item' || eventTab === 'material') && React.createElement("button", {
-    type: "button",
-    "data-legend-pass-letter": true,
-    onClick: onReadLegendPassLetter,
-    className: "mh-button mb-2 w-full rounded-xl border border-amber-300/70 bg-amber-400/15 px-3 py-2.5 text-[13px] font-black text-amber-100 active:scale-95"
-  }, "🎫 優待パスの手紙を読む"), React.createElement("div", {
+  })(), React.createElement("div", {
     "data-event-point-shop": true,
     "data-event-point-tab": eventTab,
     className: MARKET_GRID_CLASS
   }, (eventTab === 'item' || eventTab === 'material') && eventItemOffers.map(offer => {
     const item = beatPointItemOf(offer);
     const grantText = `${offer.grantAmount.toLocaleString()}${offer.unit}`;
-    const ownedPart = offer.kind === 'diamond' ? null : ownedMiddle(ownedItemCount(ownedItems, offer.itemId), item.base ? {
+    const middle = offer.kind === 'diamond' ? null : ownedMiddle(ownedItemCount(ownedItems, offer.itemId), item.base ? {
       ...item.base,
       cost: offer.cost,
       currency: 'beatPoint'
     } : null, {
       grantText
     });
-    const passPart = offer.legendPass ? React.createElement("div", {
-      "data-legend-pass-offer": true,
-      className: "mt-1 text-center leading-tight"
-    }, React.createElement("span", {
-      className: "inline-block rounded-full bg-amber-400/90 px-2 py-0.5 text-[10px] font-black text-slate-900"
-    }, "🎫 優待パス還元"), React.createElement("div", {
-      className: "mt-0.5 text-[10px] font-bold text-slate-400 line-through tabular-nums"
-    }, offer.baseCost.toLocaleString(), "P → ", offer.baseGrantAmount.toLocaleString(), offer.unit), React.createElement("div", {
-      className: "text-[11px] font-black text-amber-200 tabular-nums"
-    }, offer.cost.toLocaleString(), "P → ", offer.grantAmount.toLocaleString(), offer.unit)) : null;
-    const middle = passPart ? React.createElement(React.Fragment, null, passPart, ownedPart) : ownedPart;
     return React.createElement(MarketProductCard, {
       key: offer.id,
       dataAttrs: {
@@ -72402,7 +72428,8 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   dra: who => `${who}からフレンド申請が来てるわ。見にいくか`,
   atsu: who => `${who}からフレンド申請来てるよ。とりあえず見にいこ`,
   kyuko: who => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`,
-  sorashido: who => `おっ、${who}からフレンド申請来てる！ 見にいこ笑`
+  sorashido: who => `おっ、${who}からフレンド申請来てる！ 見にいこ笑`,
+  erubin: who => `${who}からフレンド申請が来てるよ。よかったら、見にいってみよっか`
 });
 function HomeFriendRequestNotice({
   activeAssistant,
@@ -93708,6 +93735,15 @@ const CARD_AI_HABITS = Object.freeze({
     area: 1.0,
     finish: 1.3,
     mill: 1
+  },
+  erubin: {
+    attack: 1.0,
+    keepGuard: 1.2,
+    saveGuts: 1.1,
+    big: 1.2,
+    disrupt: 0.8,
+    area: 0.9,
+    finish: 1.2
   }
 });
 const cardFoeReleased = who => typeof assistantReleased !== 'function' || assistantReleased(who);
@@ -94710,6 +94746,27 @@ const CARD_AI_DECKS = Object.freeze({
   },
   sorashido: {
     prefer: ['大混乱', '時間稼ぎ', '大声', 'ハテナマーク', 'ニャーにゃー']
+  },
+  erubin: {
+    variants: [{
+      id: 'blade',
+      prefer: ['冥王剣', '最終奥義', 'Vの字斬り'],
+      deckHabit: {
+        big: 1.4
+      }
+    }, {
+      id: 'mind',
+      prefer: ['精神集中', '風神剣', '雷神剣'],
+      deckHabit: {
+        saveGuts: 1.4
+      }
+    }, {
+      id: 'shield',
+      prefer: ['盾で受ける', '剣で受ける', '静の構え'],
+      deckHabit: {
+        keepGuard: 1.5
+      }
+    }]
   }
 });
 const CARD_AI_FAVORITE = Object.freeze({
@@ -94719,7 +94776,8 @@ const CARD_AI_FAVORITE = Object.freeze({
   kyuko: 'mew',
   dra: 'zilla',
   atsu: 'dragon',
-  sorashido: 'hare'
+  sorashido: 'hare',
+  erubin: 'durahan'
 });
 const CARD_AI_SAME_BLOOD = Object.freeze({
   easy: 0.3,
@@ -95067,12 +95125,20 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
     monsters: db.starters[who].monsters.slice(),
     cards: db.starters[who].cards.slice()
   };
-  const recipe = CARD_AI_DECKS[who] || CARD_AI_DECKS.mua;
+  const recipeAll = CARD_AI_DECKS[who] || CARD_AI_DECKS.mua;
   const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
   const rnd = typeof rand === 'function' ? rand : cardAiSeededRand(`${who}:${levelId}`);
   const monsters = cardAiPickTrio(db, who, levelId, rnd, opts && opts.playerDeck);
+  const variant = Array.isArray(recipeAll.variants) && recipeAll.variants.length ? recipeAll.variants[Math.min(recipeAll.variants.length - 1, Math.floor(rnd() * recipeAll.variants.length))] : null;
+  const recipe = variant ? {
+    ...recipeAll,
+    ...variant
+  } : recipeAll;
   const maxWave = cfg.maxWave;
-  const habit = cardAiDeckHabit(who, levelId);
+  const habit = variant && variant.deckHabit ? {
+    ...cardAiDeckHabit(who, levelId),
+    ...variant.deckHabit
+  } : cardAiDeckHabit(who, levelId);
   const mons = monsters.map(no => cardMonsterOf(db, no));
   const pool = Object.values(db.cards).filter(c => c.ready && (c.user === 'any' || c.user === 'breeder' ? c.wave <= maxWave : mons.some(m => cardUsableBy(c, {
     ...m,
@@ -95134,7 +95200,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
     const x = byName[name];
     if (x && !used.has(name)) {
       used.add(name);
-      add(x.c, CARD_DECK_COPY_MAX);
+      add(x.c, CARD_DECK_COPY_MAX - cards.filter(n => n === x.c.no).length);
     }
   });
   (preferOn ? recipe.field || [] : []).forEach(name => {
@@ -98097,7 +98163,8 @@ const CARD_AI_TACTIC_BASE = Object.freeze({
   kyuko: ['tBalance', 'tCalm', 'tFinish'],
   dra: ['tGuard', 'tSteady', 'tMill'],
   atsu: ['tFlex', 'tArea', 'tSteady'],
-  sorashido: ['tMill', 'tDisrupt', 'tGuard']
+  sorashido: ['tMill', 'tDisrupt', 'tGuard'],
+  erubin: ['tBalance', 'tSteady', 'tFinish']
 });
 const CARD_AI_TACTIC_COUNT = Object.freeze({
   expert: 2,
@@ -98110,7 +98177,8 @@ const CARD_AI_TACTIC_WHEN = Object.freeze({
   kyuko: [null, 'behind', 'foeLow'],
   dra: [null, 'lowLife', 'foeDeckLow'],
   atsu: [null, 'foeFull', 'lowLife'],
-  sorashido: [null, 'foeHandFull', 'lowLife']
+  sorashido: [null, 'foeHandFull', 'lowLife'],
+  erubin: [null, 'lowLife', 'foeLow']
 });
 const cardAiTacticWhenHit = (name, st, p) => {
   const me = st.players[p],
@@ -98178,6 +98246,13 @@ const CARD_AI_TACTIC_ROWS = Object.freeze({
   }], [{
     c: 'incoming.5',
     a: 'guard'
+  }]],
+  erubin: [[{
+    c: 'incomingKo',
+    a: 'guard'
+  }], [{
+    c: 'ko',
+    a: 'atk'
   }]]
 });
 const cardAiTacticGambit = (who, levelId) => {
@@ -98750,6 +98825,22 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckTheirs: [['そっちの山札、もう少ないな？ 笑', 'wink'], ['山札切れも勝ち筋のひとつだぜ・・・！', 'happy']],
     win: [['うぉぉぉ！ 読み通り！ いい勝負だった笑', 'happy'], ['作戦がきれいにはまった！ もう1戦だけやろ笑', 'excited'], ['楽しかった！ 気づいたら朝になりそう笑', 'wink'], ['うぉぉぉ！ オリヒメにも見せたかった笑', 'excited']],
     lose: [['なに！？ そこでそれ！？…悔しいけど、今のはうまいぜ・・・！', 'crying'], ['完敗！ 今の対戦、攻略まとめにして研究する笑', 'troubled'], ['なんくるないさ〜。次はデッキ組み直してくる笑', 'happy']]
+  },
+  erubin: {
+    challenge: [['カード勝負、いいね！ こっちに来てから、すっかりはまってるんだよね笑', 'happy'], ['今日はどの組み方でいこうかな🤔 いくつか持ってきたんだよね', 'wink'], ['対戦しよっか。手加減はしないけど、それでもよいかな？笑', 'wink'], ['デュラハンの出番だね。よろしくお願いします☺️', 'happy']],
+    start: [['よろしくね！ 楽しくいこう笑', 'happy'], ['おけ！ まずは様子を見ながらいくね', 'normal'], ['焦らずじっくりいくよ。それが大事だよね', 'wink'], ['さぁ、始めよっか。デュラハン、頼んだよ', 'excited']],
+    big: [['ここは大きいのいくね！ 大丈夫かな？笑', 'excited'], ['ためといてよかった。いくよー！', 'excited'], ['剣さばき、ちゃんと見ててね笑', 'wink'], ['ここで決めにいくよ。おっけー！', 'happy']],
+    bigHit: [['いたた…今のはしっかり効いたね💦', 'troubled'], ['おお、さすが！ 今の一撃はうまいね', 'surprise'], ['うわ、それ持ってたのか笑 やられたなぁ', 'surprise'], ['まだ大丈夫。ここから立て直すよ', 'normal']],
+    guardMine: [['よし、受け止めた！ 守りを残しといてよかった☺️', 'happy'], ['その手は読めてたかな笑', 'wink'], ['おけ！ ここはしっかり守れたね', 'happy']],
+    guardTheirs: [['えっ、そこで守るんだ！ さすがだね', 'surprise'], ['うまくかわされたなぁ。次は別の手でいくね', 'troubled'], ['読まれてたか笑 なかなかやるね', 'normal']],
+    myKo: [['ごめんね…よく頑張ってくれたよ', 'crying'], ['うーん、ここで倒れるか…まだ仲間がいるからね', 'troubled'], ['悔しいな。でも、ここからが本番だよね', 'angry']],
+    theirKo: [['よし、1体いただくね！', 'excited'], ['いい流れだね。このままいこう笑', 'happy'], ['ごめんね、そこは見逃せなかったw', 'wink']],
+    lastMine: [['残り1体か…落ち着いていけば、まだいけるよね', 'troubled'], ['最後の1体に託すよ。頼んだよ', 'troubled']],
+    lastTheirs: [['あと1体だね。最後まで気は抜かないよ', 'excited'], ['いよいよだね。丁寧にいこう', 'wink']],
+    deckMine: [['あれ、山札がもう少ないね💦 ちょっと急がないと', 'surprise'], ['ガッツにしすぎたかな…計算ミスだw', 'troubled']],
+    deckTheirs: [['そっちの山札、だいぶ減ってるけど大丈夫かな？', 'wink'], ['山札の残りも、ちゃんと見てるからね笑', 'happy']],
+    win: [['楽しかったー！ いい勝負だったね☺️', 'happy'], ['勝てた！ 組み方がうまくはまったね笑', 'excited'], ['またやろうね。次はどの組み方でいこうかな🤔', 'wink']],
+    lose: [['負けちゃった笑 さすがだね、強かった！', 'happy'], ['くやしいなぁ。デッキ、組み直してくるね', 'troubled'], ['お見事！ 今の勝ち方、勉強になったよ', 'normal']]
   }
 });
 const CARD_LINE_PER_TURN = 2;
@@ -98998,7 +99089,8 @@ const CARD_DECK_NAME_TAILS = Object.freeze({
   kyuko: ['先読みの陣', 'お見通し作戦', '読み筋デッキ', 'ガッツ勘定隊'],
   dra: ['カウンター要塞', 'はね返し城', '鉄壁ガード団', 'ねばり腰の砦'],
   atsu: ['まとめてドーン組', '一掃カーニバル', '全体ぶっぱ隊', '総なめ軍団'],
-  sorashido: ['攻略まとめ組', '最適解デッキ', '計算どおり団', 'なんくるない隊']
+  sorashido: ['攻略まとめ組', '最適解デッキ', '計算どおり団', 'なんくるない隊'],
+  erubin: ['砂の剣士団', 'じっくり見守り隊', '組み直しの陣', 'デュラハン騎士団']
 });
 const CARD_DECK_NAME_MAX = 18;
 const CARD_DECK_STYLE = Object.freeze({
@@ -99161,6 +99253,28 @@ const CARD_VS_LINES = Object.freeze({
     master: {
       e: 'angry',
       t: 'うぉぉぉ！ 俺の全力、受けてみな・・・！'
+    }
+  },
+  erubin: {
+    easy: {
+      e: 'happy',
+      t: 'のんびりいこうか。楽しむのが一番だよね☺️'
+    },
+    normal: {
+      e: 'wink',
+      t: 'おけ！ 今日の組み方、ちょっと自信あるんだよね笑'
+    },
+    hard: {
+      e: 'normal',
+      t: 'ここからはしっかりいくね。それでもよいかな？'
+    },
+    expert: {
+      e: 'excited',
+      t: '全部の弾から選んできたよ。いい勝負にしようね'
+    },
+    master: {
+      e: 'wink',
+      t: '本気の組み方で来たよ。さすがに負けたくないかな笑'
     }
   }
 });
@@ -105485,6 +105599,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   dra_surprise: [384, 384, 25, 39, 313, 278],
   dra_troubled: [384, 384, 45, 43, 294, 272],
   dra_wink: [384, 384, 49, 43, 286, 270],
+  erubin_angry: [384, 512, 1, 9, 382, 503],
+  erubin_crying: [384, 512, 1, 14, 382, 498],
+  erubin_excited: [384, 512, 1, 13, 382, 499],
+  erubin_happy: [384, 512, 1, 18, 382, 494],
+  erubin_normal: [384, 512, 0, 13, 384, 499],
+  erubin_surprise: [384, 512, 1, 16, 382, 496],
+  erubin_troubled: [384, 512, 1, 20, 382, 492],
+  erubin_wink: [384, 512, 1, 14, 382, 498],
   kiki_angry: [1536, 1024, 481, 10, 573, 1014],
   kiki_crying: [1536, 1024, 480, 15, 572, 1009],
   kiki_excited: [1536, 1024, 495, 12, 556, 1012],
@@ -113950,6 +114072,11 @@ const CARD_PVP_RESULT_LINES = Object.freeze({
     win: [['うぉぉぉ！ 勝った！ 今の組み方、最高だった笑', 'happy'], ['ナイス！ 読み合い、完全に勝ってたぜ・・・！', 'excited'], ['いい勝ち方！ 攻略まとめに残したいくらい笑', 'wink']],
     lose: [['なに！？ 惜しい…次はどう組むか考えよ', 'troubled'], ['なんくるないさ〜。今の対戦、すごく参考になった笑', 'normal'], ['相手も強かった！ もう1戦いっとく？笑', 'happy']],
     left: [['あれ、相手いなくなった？ 決着つけたかったな笑', 'surprise'], ['電波かな？ 次の相手さがそ！', 'normal'], ['勝ちは勝ちだけど…ちょっと物足りないぜ・・・', 'troubled']]
+  },
+  erubin: {
+    win: [['勝ったね！ さすが、最後の一手がきれいだったよ☺️', 'happy'], ['いいね！ 見ててこっちまで楽しかったー！', 'excited'], ['おめでとう！ その組み方、俺も参考にしたいな笑', 'wink']],
+    lose: [['惜しかったね。でも、いい勝負だったよ', 'troubled'], ['大丈夫、大丈夫。次はきっと勝てるよ😊', 'normal'], ['相手も強かったね。デッキ、いっしょに見直してみよっか？', 'happy']],
+    left: [['あれ、相手がいなくなっちゃったね。何かあったのかな？', 'surprise'], ['最後までやりたかったね。次の相手をさがそっか', 'normal'], ['途中で終わっちゃったか…ちょっと物足りないね笑', 'troubled']]
   }
 });
 const cardPvpResultLine = (who, scene, seed = 0) => {
@@ -130479,8 +130606,6 @@ function MonsterHeroGame() {
   const [momosukeIntroStep, setMomosukeIntroStep] = useState(null);
   const [tacticsIntroSeenFlag, setTacticsIntroSeenFlag] = useState(false);
   const [rhythmHellStorySeenFlag, setRhythmHellStorySeenFlag] = useState(false);
-  const [legendPassSeenFlag, setLegendPassSeenFlag] = useState(false);
-  const [legendPassSeenLoaded, setLegendPassSeenLoaded] = useState(false);
   const [assistantChatStorySeenFlag, setAssistantChatStorySeenFlag] = useState(false);
   const [assistantChatStorySeenLoaded, setAssistantChatStorySeenLoaded] = useState(false);
   const [tacticsTypesStorySeenFlag, setTacticsTypesStorySeenFlag] = useState(false);
@@ -133477,7 +133602,7 @@ function MonsterHeroGame() {
   const PANDORA_WINGS_STORY_IDS = PANDORA_WINGS_STORIES.map(story => story.id);
   const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
   const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, CARD_CUP_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
@@ -133697,13 +133822,6 @@ function MonsterHeroGame() {
     setRhythmEventStoryPending(RHYTHM_HELL_STORY_ID);
   }, [rhythmHellStorySeenLoaded, rhythmHellStorySeenFlag, rhythmBestRecords, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
-    if (!legendPassSeenLoaded || legendPassSeenFlag) return;
-    if (!(Number(breederLevel?.level) >= LEGEND_BREEDER_PASS_LEVEL)) return;
-    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
-    if (rhythmEventStoryStartedRef.current.includes(LEGEND_BREEDER_PASS_STORY_ID)) return;
-    setRhythmEventStoryPending(LEGEND_BREEDER_PASS_STORY_ID);
-  }, [legendPassSeenLoaded, legendPassSeenFlag, breederLevel?.level, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
-  useEffect(() => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantChat) return;
     if (!assistantChatStorySeenLoaded || assistantChatStorySeenFlag) return;
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
@@ -133732,6 +133850,13 @@ function MonsterHeroGame() {
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
     if (rhythmEventStoryStartedRef.current.includes(SORASHIDO_JOIN_STORY_ID)) return;
     setRhythmEventStoryPending(SORASHIDO_JOIN_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantErubin) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(ERUBIN_JOIN_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(ERUBIN_JOIN_STORY_ID)) return;
+    setRhythmEventStoryPending(ERUBIN_JOIN_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (!RAID_JACK_ENDING_REPLAY_READY || RELEASE_FLAGS.raidJack !== true) return;
@@ -134234,6 +134359,18 @@ function MonsterHeroGame() {
     const ev = list.find(x => x.id === eventReplay.id);
     return eventScriptBgmAt(ev && eventScriptForPlayer(ev.script, rhythmEventStorySeen), eventReplay.step);
   })();
+  const eventLineFadeOut = (() => {
+    if (!eventReplay || kikiIntroPlaying || momosukeIntroPlaying) return false;
+    const list = eventReplay.debug ? eventReplayAllList() : eventReplayList();
+    const ev = list.find(x => x.id === eventReplay.id);
+    const sc = ev ? eventScriptForPlayer(ev.script, rhythmEventStorySeen) : null;
+    const l = Array.isArray(sc) ? sc[eventReplay.step] : null;
+    return !!(l && l.bgmFadeOut);
+  })();
+  useEffect(() => {
+    if (typeof Audio_ === 'undefined' || !Audio_.setStoryEndFade) return;
+    if (eventLineFadeOut) Audio_.setStoryEndFade(true);else if (!eventReplayEnding) Audio_.setStoryEndFade(false);
+  }, [eventLineFadeOut]);
   const eventBgmPlayedRef = useRef(null);
   const bgmSuspendedByRhythmRef = useRef(false);
   const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver, allowKeep = true) => {
@@ -135312,10 +135449,6 @@ function MonsterHeroGame() {
           setRaidJackEndingReplayLoaded(true);
         } catch {}
       }
-      try {
-        setLegendPassSeenFlag((await storeGet(LEGEND_BREEDER_PASS_SEEN_KEY, false, false)) === true);
-        setLegendPassSeenLoaded(true);
-      } catch {}
       if (EVENT_REPLAY_RELEASE_FLAGS.assistantChat) {
         try {
           setAssistantChatStorySeenFlag((await storeGet(ASSISTANT_CHAT_STORY_SEEN_KEY, false, false)) === true);
@@ -135361,7 +135494,7 @@ function MonsterHeroGame() {
       }
       if (!wasOnboarded) {
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
-        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, KYUKO_JOIN_STORY_ID, ...(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? [SORASHIDO_JOIN_STORY_ID] : []), ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
+        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, KYUKO_JOIN_STORY_ID, ...(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? [SORASHIDO_JOIN_STORY_ID] : []), ...(EVENT_REPLAY_RELEASE_FLAGS.assistantErubin ? [ERUBIN_JOIN_STORY_ID] : []), ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
         const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
         if (add.length) {
           const next = [...seenNow, ...add];
@@ -136763,15 +136896,6 @@ function MonsterHeroGame() {
       }, false);
     } catch {}
   }, []);
-  useEffect(() => {
-    HELP_PLAYER_FLAGS.legendBreederPass = legendPassSeenFlag === true;
-  }, [legendPassSeenFlag]);
-  const markLegendPassSeen = useCallback(() => {
-    setLegendPassSeenFlag(true);
-    try {
-      storeSet(LEGEND_BREEDER_PASS_SEEN_KEY, true, false);
-    } catch {}
-  }, []);
   const markAssistantChatStorySeen = useCallback(() => {
     setAssistantChatStorySeenFlag(true);
     try {
@@ -136796,7 +136920,6 @@ function MonsterHeroGame() {
     tacticsIntroSeen: tacticsIntroSeenFlag,
     rhythmHellStorySeen: rhythmHellStorySeenFlag,
     assistantChatStorySeen: assistantChatStorySeenFlag,
-    legendBreederPassSeen: legendPassSeenFlag,
     tacticsTypesSeen: tacticsTypesStorySeenFlag,
     cardBattleIntroSeen: cardBattleIntroSeenFlag,
     monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID),
@@ -136816,6 +136939,7 @@ function MonsterHeroGame() {
     atsuJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID),
     kyukoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID),
     sorashidoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID),
+    erubinJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ERUBIN_JOIN_STORY_ID),
     cardCupStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(CARD_CUP_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
@@ -137189,14 +137313,6 @@ function MonsterHeroGame() {
       ok: false,
       reason: 'busy'
     };
-    if (offer && LEGEND_BREEDER_PASS_OFFERS[offer.id]) {
-      const base = RHYTHM_EVENT_POINT_SHOP_OFFERS.find(o => o.id === offer.id) || offer;
-      let hasPass = false;
-      try {
-        hasPass = (await storeGet(LEGEND_BREEDER_PASS_SEEN_KEY, false, false)) === true;
-      } catch {}
-      offer = rhythmEventPointShopOfferWithPass(base, hasPass);
-    }
     if (offer?.available === false) return {
       ok: false,
       reason: 'soon'
@@ -157778,15 +157894,6 @@ function MonsterHeroGame() {
       onExchangeHeroProof: exchangeHeroProofByShard,
       eventPoints: rhythmEventPoints,
       onExchangeEventPoints: exchangeRhythmEventPoints,
-      legendPassActive: legendPassSeenFlag,
-      legendPassLetterAvailable: legendPassSeenLoaded && !legendPassSeenFlag && Number(breederLevel?.level) >= LEGEND_BREEDER_PASS_LEVEL,
-      onReadLegendPassLetter: () => {
-        if (!eventReplay) setEventReplay({
-          id: LEGEND_BREEDER_PASS_STORY_ID,
-          step: 0,
-          live: true
-        });
-      },
       onOpenUpcomingDetail: setUpcomingMonsterDetail,
       cardShop: cardMarketEntry && cardShopState ? {
         ...cardShopState,
@@ -161269,6 +161376,7 @@ function MonsterHeroGame() {
       const storyEnding = !!event && typeof STORY_ENDING_STYLE !== 'undefined' && STORY_ENDING_STYLE !== 'none';
       const storyOpeningStyle = typeof STORY_OPENING_STYLE !== 'undefined' ? STORY_OPENING_STYLE : 'none';
       const storyOpening = !!event && storyOpeningStyle !== 'none' && !eventReplay.opened && step === 0 && !eventReplay.ending;
+      const storyTitleNow = event?.titleSecret && eventReplay.live ? event.titleSecret : event?.title;
       let storyScene = null;
       for (let i = step; i >= 0; i--) {
         const l = script[i];
@@ -161301,7 +161409,15 @@ function MonsterHeroGame() {
         return !!w && w.role === 'ゲスト';
       };
       const hiddenUntil = Array.isArray(event && event.hideUntilFirstLine) ? event.hideUntilFirstLine : [];
-      const cast = storyCastOf(script).filter(who => who.role !== 'ゲスト').filter(who => !hiddenUntil.includes(who.id) || script.slice(0, step + 1).some(l => l && l.who === who.id));
+      const storyBase = id => typeof storyBaseWho === 'function' ? storyBaseWho(id) : typeof id === 'string' ? id.split('@')[0] : id;
+      const castNow = who => {
+        for (let i = step; i >= 0; i--) {
+          const w = script[i] && script[i].who;
+          if (storyBase(w) === who.id) return w === who.id ? who : assistantById(w);
+        }
+        return who;
+      };
+      const cast = storyCastOf(script).filter(who => who.role !== 'ゲスト').filter(who => !hiddenUntil.includes(who.id) || script.slice(0, step + 1).some(l => l && storyBase(l.who) === who.id));
       let stageIdx = -1;
       for (let i = step; i >= 0; i--) {
         const l = script[i];
@@ -161346,6 +161462,7 @@ function MonsterHeroGame() {
       }
       const storyMonsters = monstersIdx >= 0 ? script[monstersIdx].monsters.filter(m => m && m.pose !== 'hide' && STORY_MONSTER_ART[m.id]) : [];
       const fxColors = {
+        fall: '255,214,150',
         split: '233,213,255',
         merge: '255,250,235',
         unlock: '253,230,138',
@@ -161354,8 +161471,9 @@ function MonsterHeroGame() {
         shrink: '186,230,253'
       };
       const speakText = (l, w) => {
-        const bond = normalizeAssistantBond(assistantBonds[w.id]);
-        return assistantSpeakText(l.t, breederName, assistantBondLevelOf(bond.points), assistantCallStyles[w.id] || null, w.id);
+        const wid = w.baseId || w.id;
+        const bond = normalizeAssistantBond(assistantBonds[wid]);
+        return assistantSpeakText(l.t, breederName, assistantBondLevelOf(bond.points), assistantCallStyles[wid] || null, wid);
       };
       const bubbleLines = text => typeof text === 'string' && text.includes('\n') ? text.split('\n').map((x, i) => React.createElement(React.Fragment, {
         key: i
@@ -161469,7 +161587,6 @@ function MonsterHeroGame() {
         if (event && event.id === RAID_JACK_HOWTO_AFTER_STORY_ID && eventReplay.live && !eventReplay.debug && RELEASE_FLAGS.raidJack === true && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_STORY_START_ID)) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
         if (event && event.id === RAID_JACK_STORY_START_ID && eventReplay.live && !eventReplay.debug && RELEASE_FLAGS.raidJack === true && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_HOWTO_STORY_ID)) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
         if (event && event.id === ASSISTANT_CHAT_STORY_ID && eventReplay.live && !eventReplay.debug) markAssistantChatStorySeen();
-        if (event && event.id === LEGEND_BREEDER_PASS_STORY_ID && eventReplay.live && !eventReplay.debug) markLegendPassSeen();
         if (event && event.id === TACTICS_TYPES_STORY_ID && eventReplay.live && !eventReplay.debug) markTacticsTypesStorySeen();
         if (event && (event.id === RAID_JACK_ENDING_CLEARED_ID || event.id === RAID_JACK_ENDING_NOTCLEARED_ID) && eventReplay.live && !eventReplay.debug) markRaidJackEndingReplayed();
         if (event && event.id === CARD_BATTLE_INTRO_STORY_ID && eventReplay.live && !eventReplay.debug) {
@@ -161496,7 +161613,6 @@ function MonsterHeroGame() {
         if (eventReplay.live && !eventReplay.debug && event && RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
         if (eventReplay.live && !eventReplay.debug && event && event.id === 'tactics_intro') markTacticsIntroSeen();
         if (eventReplay.live && !eventReplay.debug && event && event.id === ASSISTANT_CHAT_STORY_ID) markAssistantChatStorySeen();
-        if (eventReplay.live && !eventReplay.debug && event && event.id === LEGEND_BREEDER_PASS_STORY_ID) markLegendPassSeen();
         if (eventReplay.live && !eventReplay.debug && event && event.id === TACTICS_TYPES_STORY_ID) markTacticsTypesStorySeen();
         if (eventReplay.live && !eventReplay.debug && event && (event.id === RAID_JACK_ENDING_CLEARED_ID || event.id === RAID_JACK_ENDING_NOTCLEARED_ID)) markRaidJackEndingReplayed();
         if (eventReplay.live && !eventReplay.debug && event && event.id === CARD_BATTLE_INTRO_STORY_ID) markCardBattleIntroSeen();
@@ -161530,7 +161646,7 @@ function MonsterHeroGame() {
         },
         role: "dialog",
         "aria-modal": "true",
-        "aria-label": `イベント回想: ${event?.title || ''}`
+        "aria-label": `イベント回想: ${storyTitleNow || ''}`
       }, storySceneImg && React.createElement("div", {
         key: storyScene,
         "data-story-bg": storyScene,
@@ -161717,11 +161833,11 @@ function MonsterHeroGame() {
         className: "min-h-0 flex-1 overflow-y-auto mh-scroll"
       }, React.createElement("p", {
         className: "mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300"
-      }, eventReplay.live ? '' : '回想・', event?.title || ''), (() => {
+      }, eventReplay.live ? '' : '回想・', storyTitleNow || ''), (() => {
         if (storyZones && !storyKeepRow) return null;
         const tiny = storyZones;
         const atStart = Array.isArray(event && event.castAtStart) ? event.castAtStart : [];
-        const rowCast = tiny ? cast.filter(who => atStart.includes(who.id) || script.slice(0, step + 1).some(l => l && l.who === who.id)) : cast;
+        const rowCast = (tiny ? cast.filter(who => atStart.includes(who.id) || script.slice(0, step + 1).some(l => l && storyBase(l.who) === who.id)) : cast).map(castNow).filter(who => !who.secret);
         if (tiny && rowCast.length === 0) return React.createElement("div", {
           "data-story-cast-tiny-empty": true,
           style: {
@@ -161841,7 +161957,7 @@ function MonsterHeroGame() {
         },
         className: "min-h-[50px] rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]"
       }, last && !(storyEnding && !eventReplay.ending) ? '閉じる' : '次へ'))), storyOpening && (() => {
-        const parts = storyEpisodeTitleParts(event?.title);
+        const parts = storyEpisodeTitleParts(storyTitleNow);
         const allEv = (typeof EVENT_REPLAYS !== 'undefined' ? EVENT_REPLAYS : []).filter(ev => ev && ev.id && ev.title);
         const series = parts.serial ? allEv.filter(ev => ev.group === event.group && storyEpisodeTitleParts(ev.title).serial && storyEpisodeTitleParts(ev.title).series === parts.series).sort((a, b) => String(a.date || '').localeCompare(String(b.date || ''))) : [];
         const idx = series.findIndex(ev => ev.id === event.id);
@@ -167770,6 +167886,11 @@ const createAnimationStyle = () => {
       [data-event-story][data-story-zones] [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 150px) !important; bottom: calc(var(--story-bottom-h) + env(safe-area-inset-bottom) + 8px); align-items: center; }
       [data-event-story][data-story-zones] [data-story-monster] { height: min(calc(100% / 1.14), 50vw, 230px); }
       [data-event-story][data-story-zones] [data-story-monsters="2"] [data-story-monster] { height: min(calc(100% / 1.14), 44vw, 210px); }
+      /* えるびんの登場のお話(2026-11-05 社長「C」): 胸から上の立ち絵(384x512)を、顔が大きく見えるよう上から正方形に切って、台詞の窓の上にのせる。
+         絵の下の切れ目は窓のふちに付けて隠す(浮いて見えないように)。縦の画面だけ。横の画面は窓の左右の空きに小さく出す今の形のまま */
+      [data-event-story][data-story-zones] [data-story-monsters]:has([data-story-monster^="Erubin"]) { bottom: calc(var(--story-bottom-h) + env(safe-area-inset-bottom)); align-items: flex-end; }
+      [data-event-story][data-story-zones] [data-story-monster^="Erubin"][data-story-monster^="Erubin"] { height: min(100%, 92vw, 400px); aspect-ratio: 1 / 1; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-monster^="Erubin"] img { object-fit: cover; object-position: 50% 0; }
     }
     /* 横の低い画面: 上部ゾーン = 上の端から 6px + ステージ(顔は 0.6倍・吹き出し 3行ぶん 84px)。下部ゾーン = その下ぜんぶ(窓の高さを固定)。
        モンスターは窓の左右の空き(上の横向きの決まりのまま) */

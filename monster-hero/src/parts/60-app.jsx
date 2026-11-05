@@ -5247,7 +5247,7 @@ function MonsterHeroGame() {
   // 「鍵の向こう側へ」のイベントidと、終章(閉幕のお話)のid
   const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
   const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, CARD_CUP_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -5490,6 +5490,14 @@ function MonsterHeroGame() {
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
     if (rhythmEventStoryStartedRef.current.includes(SORASHIDO_JOIN_STORY_ID)) return;
     setRhythmEventStoryPending(SORASHIDO_JOIN_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // えるびんの加入のお話(2026-11-05)。ソラシドと同じく、公開のあとの最初の HOME でだれにでも1回だけ流す。公開の印 assistantErubin が偽なら何もしない
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantErubin) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(ERUBIN_JOIN_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(ERUBIN_JOIN_STORY_ID)) return;
+    setRhythmEventStoryPending(ERUBIN_JOIN_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // ハロウィン・ナイトの終章を、見終えた人へ一度だけ流し直す(2026-11-01 社長。35-raid-jack.jsx の RAID_JACK_ENDING_REPLAY_KEY)。
   // 流すのは前に見た方。見ていない人はふつうの流れで見る(見終えたところで印が立つので、二度は流れない)
@@ -6025,6 +6033,21 @@ function MonsterHeroGame() {
     const ev = list.find(x => x.id === eventReplay.id);
     return eventScriptBgmAt(ev && eventScriptForPlayer(ev.script, rhythmEventStorySeen), eventReplay.step);
   })();
+  // 台本の行の bgmFadeOut:true … その行のあいだに音を下げきる(終わりの札と同じ 2.5秒。次の行で戻す)。
+  //   2026-11-05 えるびんのお話: 穴に落ちていくあいだに「茨の王の怒り」を下げ、着いた行からいつもの曲へ(社長「2.5秒」)
+  const eventLineFadeOut = (() => {
+    if (!eventReplay || kikiIntroPlaying || momosukeIntroPlaying) return false;
+    const list = eventReplay.debug ? eventReplayAllList() : eventReplayList();
+    const ev = list.find(x => x.id === eventReplay.id);
+    const sc = ev ? eventScriptForPlayer(ev.script, rhythmEventStorySeen) : null;
+    const l = Array.isArray(sc) ? sc[eventReplay.step] : null;
+    return !!(l && l.bgmFadeOut);
+  })();
+  useEffect(() => {
+    if (typeof Audio_ === 'undefined' || !Audio_.setStoryEndFade) return;
+    if (eventLineFadeOut) Audio_.setStoryEndFade(true);
+    else if (!eventReplayEnding) Audio_.setStoryEndFade(false);
+  }, [eventLineFadeOut]);
   // 同じお話の中で曲が替わるときだけ、今の曲を下げてから移す(お話に入る・出るときは今までどおり)
   const eventBgmPlayedRef = useRef(null);
   // 画面から鳴らすべき曲のキーを決める
@@ -7238,6 +7261,7 @@ function MonsterHeroGame() {
         const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, KYUKO_JOIN_STORY_ID,
           // ソラシドのお話は公開してからだけ(公開前に始めた人を見た扱いにすると、公開の日に流れなくなる)
           ...(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? [SORASHIDO_JOIN_STORY_ID] : []),
+          ...(EVENT_REPLAY_RELEASE_FLAGS.assistantErubin ? [ERUBIN_JOIN_STORY_ID] : []),
           ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
         const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
         if (add.length) {
@@ -8566,6 +8590,7 @@ function MonsterHeroGame() {
     atsuJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID),
     kyukoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID),
     sorashidoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID),
+    erubinJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ERUBIN_JOIN_STORY_ID),
     cardCupStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(CARD_CUP_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
@@ -23220,6 +23245,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // お話の始まり(題字の幕開け)。開いた最初だけ(1ページ目・まだ幕を開けていないとき)。タップか、題字が出終わったら最初のページへ
         const storyOpeningStyle=typeof STORY_OPENING_STYLE!=='undefined'?STORY_OPENING_STYLE:'none';
         const storyOpening=!!event&&storyOpeningStyle!=='none'&&!eventReplay.opened&&step===0&&!eventReplay.ending;
+        // シークレットのお話(titleSecret・2026-11-05 えるびん)は、HOME で初めて流れるあいだ題名を伏せる(幕開けの題字・上の見出し)。
+        //   終わりの札で本当の題名を見せる。回想は見たあとにしか開けないので、いつも本当の題名
+        const storyTitleNow=event?.titleSecret&&eventReplay.live?event.titleSecret:event?.title;
         // 場面の背景(台本の行の bg:'名前'。次に bg を書いた行まで続き、bg:'none' で消す。2026-11-05 共通の背景)
         let storyScene=null;
         for(let i=step;i>=0;i--){const l=script[i];if(l&&typeof l.bg==='string'){storyScene=l.bg==='none'?null:l.bg;break;}}
@@ -23236,8 +23264,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const isGuestWho=(id)=>{const w=assistantById(id);return !!w&&w.role==='ゲスト';};
         // hideUntilFirstLine に書いた助手は、初めて話す行までは下の列にも出さない(登場の場面で顔を伏せる。2026-10-22 社長「あつの顔は『呼んだ？』で登場するまで伏せる」)
         const hiddenUntil=Array.isArray(event&&event.hideUntilFirstLine)?event.hideUntilFirstLine:[];
+        // 顔の列の人を、いまの行までで最後に話したときの姿(衣装・シークレット)で出す(2026-11-05 えるびん)
+        // (storyBaseWho は 21-assistant.jsx。一部だけを動かす検査では無いことがあるので、無ければ id のまま)
+        const storyBase=(id)=>typeof storyBaseWho==='function'?storyBaseWho(id):(typeof id==='string'?id.split('@')[0]:id);
+        const castNow=(who)=>{for(let i=step;i>=0;i--){const w=script[i]&&script[i].who;if(storyBase(w)===who.id)return w===who.id?who:assistantById(w);}return who;};
         const cast=storyCastOf(script).filter(who=>who.role!=='ゲスト')
-          .filter(who=>!hiddenUntil.includes(who.id)||script.slice(0,step+1).some(l=>l&&l.who===who.id));
+          .filter(who=>!hiddenUntil.includes(who.id)||script.slice(0,step+1).some(l=>l&&storyBase(l.who)===who.id));
         let stageIdx=-1;
         for(let i=step;i>=0;i--){const l=script[i];if(l.stage==='none'){stageIdx=-1;break;}if(l.stage||isGuestWho(l.who)){stageIdx=i;break;}}
         const stageLine=stageIdx>=0?script[stageIdx]:null;
@@ -23260,11 +23292,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         let monstersIdx=-1;
         for(let i=step;i>=0;i--){if(Array.isArray(script[i].monsters)){monstersIdx=i;break;}}
         const storyMonsters=monstersIdx>=0?script[monstersIdx].monsters.filter(m=>m&&m.pose!=='hide'&&STORY_MONSTER_ART[m.id]):[];
-        const fxColors={split:'233,213,255',merge:'255,250,235',unlock:'253,230,138',transform:'255,237,180',rankup:['251,146,60','251,191,36','192,132,252','248,113,113','250,204,21'][Math.max(0,stageTier-1)],shrink:'186,230,253'};
+        const fxColors={fall:'255,214,150',split:'233,213,255',merge:'255,250,235',unlock:'253,230,138',transform:'255,237,180',rankup:['251,146,60','251,191,36','192,132,252','248,113,113','250,204,21'][Math.max(0,stageTier-1)],shrink:'186,230,253'};
         const speakText=(l,w)=>{
           // ★呼び方は normalizeAssistantBond には入っていない(別の入れ物 assistantCallStyles)。話している助手ごとのぶんを引く
-          const bond=normalizeAssistantBond(assistantBonds[w.id]);
-          return assistantSpeakText(l.t,breederName,assistantBondLevelOf(bond.points),assistantCallStyles[w.id]||null,w.id);
+          // 衣装・シークレットの話し手(storyVariantWho)は、元の助手の仲良し度・呼び方を使う
+          const wid=w.baseId||w.id;
+          const bond=normalizeAssistantBond(assistantBonds[wid]);
+          return assistantSpeakText(l.t,breederName,assistantBondLevelOf(bond.points),assistantCallStyles[wid]||null,wid);
         };
         // 台詞の「\n」は、そこで改行する(2026-10-25。チーム名を3つ並べる台詞で「すばやく攻める／チーム」と名前の途中で折れた)。行ごとに jaWrap を通す
         const bubbleLines=(text)=>(typeof text==='string'&&text.includes('\n'))?text.split('\n').map((x,i)=><React.Fragment key={i}>{i>0&&<br/>}{bubbleWrap(x)}</React.Fragment>):bubbleWrap(text);
@@ -23393,7 +23427,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setEventReplay(null);
         };
         return(
-        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-step={step} data-story-zones={storyZones?(storyKeepRow?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} data-story-opening={storyOpening?storyOpeningStyle:undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
+        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-step={step} data-story-zones={storyZones?(storyKeepRow?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} data-story-opening={storyOpening?storyOpeningStyle:undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${storyTitleNow||''}`}>
           {/* 場面の背景(台本の行の bg)。場面が替わると key が替わり、ふわっと切り替わる。fx:'fall' の行では、
               穴へ落ちていくように背景が上へ流れて暗くなる(70-bootstrap.jsx の [data-story-bg]) */}
           {storySceneImg&&<div key={storyScene} data-story-bg={storyScene} data-story-bg-fx={fx==='fall'?'fall':undefined} aria-hidden="true"
@@ -23458,7 +23492,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               窓を縦に積み、題・顔・台詞の部分(data-story-body)だけを中で流す。ボタンの列は縮めない */}
           <div ref={storyMeasureRef('--story-sheet-h','height')} onClick={next} data-story-sheet data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} className="relative flex w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] flex-col overflow-hidden rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'auto',zIndex:1}}>
             <div data-story-body className="min-h-0 flex-1 overflow-y-auto mh-scroll">
-            <p className="mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300">{eventReplay.live?'':'回想・'}{event?.title||''}</p>
+            <p className="mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300">{eventReplay.live?'':'回想・'}{storyTitleNow||''}</p>
             {/* 話し手の顔の列。5人以上のお話では1段4人ずつに折り返し、顔も少し小さくする
                 (2026-10-23 社長「枠からはみ出してる。縦のスペース空いてるんだから2列にするとかしてちゃんと見た目よくして」。
                 きゅうこの加入のお話は7人で、話している子が大きくなると左右の端が枠の外へ切れていた)。
@@ -23471,7 +23505,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               // 小さい顔の列には、その場面にいる人だけを並べる(2026-11-03 社長「いない人は出さない」「あとから現れる人は、現れたときまで出さない」)。
               //   そのページまでに一度でも話した人。最初からいるのにしばらく話さない人は、その話の castAtStart に書けば1ページ目から並ぶ
               const atStart=Array.isArray(event&&event.castAtStart)?event.castAtStart:[];
-              const rowCast=tiny?cast.filter(who=>atStart.includes(who.id)||script.slice(0,step+1).some(l=>l&&l.who===who.id)):cast;
+              const rowCast=(tiny?cast.filter(who=>atStart.includes(who.id)||script.slice(0,step+1).some(l=>l&&storyBase(l.who)===who.id)):cast).map(castNow).filter(who=>!who.secret);
               if(tiny&&rowCast.length===0)return <div data-story-cast-tiny-empty style={{height:28,marginBottom:6}}/>;const compact=!tiny&&storyMonsters.length>0;const many=!compact&&!tiny&&cast.length>4;const big=tiny?28:compact?44:many?60:84,small=tiny?24:compact?36:many?48:64;return(
             <div data-story-cast={cast.length} data-story-cast-compact={compact||tiny?'':undefined} data-story-cast-tiny={tiny?'':undefined} className={`${tiny?'mb-1.5 flex-nowrap gap-1':compact?'mb-2 flex-nowrap gap-1.5':'mb-3'} flex items-end justify-center ${many?'flex-wrap gap-x-1 gap-y-1.5':compact||tiny?'':'gap-3'}`}>
               {rowCast.map(who=>{
@@ -23518,7 +23552,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           {/* お話の始まり(2026-11-04 社長「はじまりもおわりみたいにこだわって」)。暗い画面に「シリーズ名/第◯話/～副題～」が浮かび、
               場面が近づきながら明るくなって最初のページへ。'recap' は前のお話の題名とイベントの残り時間(本編のときだけ)も添える。'iris' は鍵穴から丸く開く */}
           {storyOpening&&(()=>{
-            const parts=storyEpisodeTitleParts(event?.title);
+            const parts=storyEpisodeTitleParts(storyTitleNow);
             const allEv=(typeof EVENT_REPLAYS!=='undefined'?EVENT_REPLAYS:[]).filter(ev=>ev&&ev.id&&ev.title);
             const series=parts.serial?allEv.filter(ev=>ev.group===event.group&&storyEpisodeTitleParts(ev.title).serial&&storyEpisodeTitleParts(ev.title).series===parts.series)
               .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))):[];
