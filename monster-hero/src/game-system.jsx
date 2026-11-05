@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 523477c5b6479fdf
+// generated-sha256: f38e70d7337b865b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9251,7 +9251,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   //   MFバトルカードの相手えらび・マルチ・観戦・記録・曲の並びにも出ない(82 の cardFoeReleased)
   assistantSorashido: true,
   // えるびん(8人目・2026-11-05)。社長が出来上がりを確かめて「オッケー」を出すまで偽のまま(お話・選ぶ画面・おしゃべりに出ない)
-  assistantErubin: false,
+  assistantErubin: true,
   // MFバトルカード(2026-10-24〜作っている途中。設計 docs/spec/CARD_BATTLE.md 7-3)。社長がお話と画面を見て「公開」と言ったら真にする。
   //   偽のあいだは、公開のお話(card_battle_intro_2026)・HOME の入口・マーケットのMFバトルカードの欄・更新履歴・ヘルプに出ない(デバッグ設定からだけ入れる)
   cardBattle: true, // 2026-10-26 社長「公開する」
