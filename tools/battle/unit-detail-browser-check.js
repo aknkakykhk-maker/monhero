@@ -6,6 +6,8 @@
 //
 // 土台(起動・タクティクスプロの始め方・カードの進め方)は melody-kuromy-browser-check.js をそのまま写した。
 //   ① 枠の「マーク×数」の地が薄い(下の絵が透ける)・字に縁取りがあり読める・枠からはみ出さない
+//      ★2026-10-30 からタクティクスの札は効果の札(data-ex-effect・強化=緑/弱化=赤/溜まる物=紫・2026-10-27〜29 社長「案A」)。古い札と新しい札の両方を見る
+//        新しい札の地は濃いめのまま透かさない・古い札は地が薄い(2026-11-05 社長「今の濃さのまま」)
 //   ② タクティクス: カードを置く途中でないとき枠を押すと EX の窓が開き(今までどおり)、「能力・効果」へ切り替えると
 //      ライフ・ガッツ・ちから・丈夫さ(いまの値と元の値)・この子の効果・味方全員の効果が出る。ちからは「ステータス」と同じ値
 //   ③ カードを選んでいる途中の枠のタップは、コードの検査(unit-detail-check.js)で見る
@@ -336,15 +338,23 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       // ① 札の濃さ
       const marks = await page.evaluate((i) => {
         const box = document.querySelector(`button[data-slot-index="${i}"]`);
-        return [...(box ? box.querySelectorAll('[data-stack-mark]') : [])].map((m) => {
+        // ★2026-10-30 からタクティクスの「マーク×数」は効果の札(ExEffectChips・data-ex-effect)にまとまった(melody-kuromy-browser-check と同じ見方)。
+        //   古い札(data-stack-mark)と新しい札の両方を見る。隠してある札(data-ex-effect-hidden)は数えない
+        return [...(box ? box.querySelectorAll('[data-stack-mark],[data-ex-effect]:not([data-ex-effect-hidden])') : [])].map((m) => {
           const cs = getComputedStyle(m), a = box.getBoundingClientRect(), b = m.getBoundingClientRect();
           const alpha = Number((cs.backgroundColor.match(/rgba?\(([^)]+)\)/) || [])[1]?.split(',')[3] ?? 1);
-          return { kind: m.getAttribute('data-stack-mark'), alpha, shadow: cs.textShadow, inSlot: b.left >= a.left && b.right <= a.right && b.top >= a.top && b.bottom <= a.bottom };
+          const rgb = (cs.backgroundColor.match(/rgba?\(([^)]+)\)/) || [])[1]?.split(',').slice(0, 3).map(Number) || [0, 0, 0];
+          return { kind: m.getAttribute('data-stack-mark') || m.getAttribute('data-ex-effect'), chip: !m.hasAttribute('data-stack-mark'), tone: m.getAttribute('data-ex-effect-kind'), rgb, ring: cs.boxShadow, alpha, shadow: cs.textShadow, inSlot: b.left >= a.left && b.right <= a.right && b.top >= a.top && b.bottom <= a.bottom };
         });
       }, mSlot);
       check('枠に「マーク×数」が出ている', marks.length > 0, JSON.stringify(marks.map((m) => m.kind)));
-      check('マーク×数の地は薄い(不透明度0.5以下で、下の絵が透ける)', marks.length > 0 && marks.every((m) => m.alpha <= 0.5), JSON.stringify(marks.map((m) => m.alpha)));
-      check('地を薄くしたぶん、字に縁取りがあって読める', marks.length > 0 && marks.every((m) => m.shadow && m.shadow !== 'none'));
+      // 古い「マーク×数」(data-stack-mark・2026-10-13 社長): 地は薄く(下の絵が透ける)、字に縁取り
+      // 新しい効果の札(data-ex-effect・2026-10-27〜29 社長「案A」): 強化=緑・弱化=赤・溜まる物=紫の地と、縁の輪(ring)で読ませる。
+      //   地は濃いめのまま透かさない(2026-11-05 社長「今の濃さのまま」。10/13 の「地を薄く」は古い札だけの決まり)
+      const oldMarks = marks.filter((m) => !m.chip), chips = marks.filter((m) => m.chip);
+      const toneOk = (m) => { const [r, g, b] = m.rgb; return m.tone === 'buff' ? g > r && g > b : m.tone === 'debuff' ? r > g && r > b : m.tone === 'stack' ? b > g && r > g : false; };
+      check('マーク×数の地は薄い(不透明度0.5以下で、下の絵が透ける)/効果の札は種類の色の地で濃いめ(不透明度0.8以上・透かさない)', marks.length > 0 && oldMarks.every((m) => m.alpha <= 0.5) && chips.every((m) => toneOk(m) && m.alpha >= 0.8), JSON.stringify(marks.map((m) => (m.chip ? `${m.tone}:${m.rgb}:${m.alpha}` : m.alpha))));
+      check('地を薄くしたぶん、字に縁取りがあって読める/効果の札は縁の輪がある', marks.length > 0 && oldMarks.every((m) => m.shadow && m.shadow !== 'none') && chips.every((m) => m.ring && m.ring !== 'none'));
       check('マーク×数は枠からはみ出さない', marks.every((m) => m.inSlot));
       await shot('after-marks');
       // ② タップで EX の窓 → 能力・効果
@@ -360,10 +370,13 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
         const num = (k) => (p.querySelector(`[data-unit-stat="${k}"]`)?.innerText || '').replace(/\s+/g, ' ');
         return { text: p.innerText.replace(/\s+/g, ' '), hp: num('hp'), guts: num('guts'), atk: num('atk'), def: num('def'), apt: num('apt'),
           own: p.querySelectorAll('[data-unit-effects="own"] [data-unit-effect]').length, team: p.querySelectorAll('[data-unit-effects="team"] [data-unit-effect]').length,
-          ownKinds: [...p.querySelectorAll('[data-unit-effects="own"] [data-unit-effect]')].map((e) => e.getAttribute('data-unit-effect')) };
+          ownKinds: [...p.querySelectorAll('[data-unit-effects="own"] [data-unit-effect]')].map((e) => e.getAttribute('data-unit-effect')),
+          // EXの効果の行(exfx-)は、名前と数(あとNターン・今/上限・×数)が出ているか
+          ownTexts: [...p.querySelectorAll('[data-unit-effects="own"] [data-unit-effect]')].map((e) => `${e.getAttribute('data-unit-effect')}:${e.innerText.replace(/\s+/g, ' ')}`) };
       });
       check('「能力・効果」にライフ・ガッツ・ちから・丈夫さ・間合い適性が出る', !!ally && /\d+ \/ \d+/.test(ally.hp) && /\d+ \/ \d+/.test(ally.guts) && /元の値 \d/.test(ally.atk) && /元の値 \d/.test(ally.def) && /間合い適性/.test(ally.apt), ally && `${ally.hp} | ${ally.guts} | ${ally.atk} | ${ally.def} | ${ally.apt}`);
-      check('この子の効果に、枠のマーク(EXの残りターンなど)が名前と数つきで出る', !!ally && ally.ownKinds.some((k) => /^mark-/.test(k)), ally && ally.ownKinds.join(','));
+      // ★EXの効果があるときは、同じものを出していた「マーク×数」の行(mark-)は出さず、EXの効果の行(exfx-)にまとめる(71 の UnitDetailBody・二重にしない)
+      check('この子の効果に、枠のマーク(EXの残りターンなど)が名前と数つきで出る', !!ally && ally.ownTexts.some((t) => /^mark-/.test(t) || /^exfx-[^:]+:\S.*(あと\d+ターン|\d+\s*\/\s*\d+|×\d+)/.test(t)), ally && ally.ownTexts.join(' | '));
       check('数が0のマーク(クッキー×0など)は、この子の効果に出さない', !!ally && !/×0(?!\d)/.test(ally.text), ally && ally.text.slice(0, 200));
       check('味方全員の効果(ライフ回復・ガッツ回復など)が出る', !!ally && ally.team >= 2 && /ライフ回復/.test(ally.text), ally && String(ally.team));
       check('能力・効果の窓は幅390で字がはみ出さない', (await overflowIn('[data-tactics-ex-card]')).length === 0, (await overflowIn('[data-tactics-ex-card]')).join(' / '));
