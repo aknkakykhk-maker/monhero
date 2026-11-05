@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9746c93782655d69
+// source-sha256: 95dc3f5ca2e309cb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -105599,6 +105599,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   dra_surprise: [384, 384, 25, 39, 313, 278],
   dra_troubled: [384, 384, 45, 43, 294, 272],
   dra_wink: [384, 384, 49, 43, 286, 270],
+  erubin_angry: [384, 512, 0, 8, 384, 504],
+  erubin_crying: [384, 512, 0, 13, 384, 499],
+  erubin_excited: [384, 512, 0, 13, 384, 499],
+  erubin_happy: [384, 512, 0, 18, 384, 494],
+  erubin_normal: [384, 512, 0, 13, 384, 499],
+  erubin_surprise: [384, 512, 0, 13, 384, 499],
+  erubin_troubled: [384, 512, 0, 19, 384, 493],
+  erubin_wink: [384, 512, 0, 14, 384, 498],
   kiki_angry: [1536, 1024, 481, 10, 573, 1014],
   kiki_crying: [1536, 1024, 480, 15, 572, 1009],
   kiki_excited: [1536, 1024, 495, 12, 556, 1012],
