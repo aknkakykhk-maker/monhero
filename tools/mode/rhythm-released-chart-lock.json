@@ -271,6 +271,11 @@
   "altar_world_tree_short/hard": "2e6eef62ff6c822c",
   "altar_world_tree_short/expert": "ab6c4319d6c24f88",
   "altar_world_tree_short/master": "dc9fbbc0868386bb",
+  "evans/easy": "09049634ec9af4fc",
+  "evans/normal": "2e7d5a7dce15f652",
+  "evans/hard": "1780c09268004a89",
+  "evans/expert": "c6c42c7a4b313c53",
+  "evans/master": "d36c317caeb688b3",
   "mf_ichika_mix/hell": "fb44abd7b8b62f15",
   "monster_hero/hell": "5e9db00bf41b8e59",
   "monster_hero_another/hell": "5dc329f75601a73e",
@@ -324,7 +329,8 @@
   "rebellion/hell": "b9725052c60b586d",
   "rebellion_short/hell": "afe6b5390d7d8392",
   "altar_world_tree/hell": "7a17297ddcf051e7",
-  "altar_world_tree_short/hell": "02d22507dcb0689c"
+  "altar_world_tree_short/hell": "02d22507dcb0689c",
+  "evans/hell": "c6f47f64d053a04d"
  },
  "history": [
   {
@@ -606,6 +612,32 @@
    "reason": "2026-11-02 社長の決定: アルター原曲MASTERの131.23秒の交差ノーツ1つを、押さえている帯の外側(左端)へ動かす(クロスが内側にあった所。イベント開始前の1か所だけの直し)",
    "changed": [
     "altar_world_tree/master"
+   ]
+  },
+  {
+   "at": "2026-11-06 05:49",
+   "reason": "新曲 Evans を公開",
+   "changed": [
+    "evans/easy",
+    "evans/normal",
+    "evans/hard",
+    "evans/expert",
+    "evans/master",
+    "evans/hell"
+   ]
+  },
+  {
+   "at": "2026-11-06 05:51",
+   "reason": "新曲 Evans を公開(MASTER の帯の中のタップ1個をずらした後)",
+   "changed": [
+    "evans/master"
+   ]
+  },
+  {
+   "at": "2026-11-06 05:51",
+   "reason": "新曲 Evans を公開(EXPERT のモンスターノーツ枠2を足した後)",
+   "changed": [
+    "evans/expert"
    ]
   }
  ]
