@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6eca4957ec395c23
+// generated-sha256: 6fe2d3c002515565
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -43503,6 +43503,8 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   atsu: (who) => `${who}からフレンド申請来てるよ。とりあえず見にいこ`,
   kyuko: (who) => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`,
   sorashido: (who) => `おっ、${who}からフレンド申請来てる！ 見にいこ笑`,
+  // えるびん(2026-11-05・公開前)。穏やかな大人の口調
+  erubin: (who) => `${who}からフレンド申請が来てるよ。よかったら、見にいってみよっか`,
 });
 function HomeFriendRequestNotice({ activeAssistant, count, names, onOpen, onLater }) {
   const who = activeAssistant;
