@@ -424,6 +424,24 @@ const RHYTHM_EVENT_POINT_SHOP_OFFERS = Object.freeze([
   Object.freeze({ id:'transcend_fruit_rainbow', name:'虹の超越の実', emoji:'🍇', kind:'item', itemId:'transcend_fruit_rainbow', grantAmount:1, unit:'個', cost:3000 }),
   Object.freeze({ id:'hero_proof', name:'勇者の証', emoji:'🏅', kind:'item', itemId:'hero_proof', grantAmount:1, unit:'個', cost:1500 }),
 ]);
+// ===== レジェンドブリーダー優待パス(2026-11-05 社長) =====
+// ブリーダーレベル1000に届いた人へ、HOMEのお話「レジェンドブリーダーへの招待状」で優待パスが届く。
+// お話を見た(印 mh_beat_shop_vip_letter_seen_v1 が立った)あとは、下の3つの交換の還元が良くなる(いつもの約83倍・3つとも同じ比率)。
+//   ダイヤ 5P→300 は 1P→5,000 / トレーニングチケット 5P→3枚 は 1P→50枚 / 重トレーニングチケット 15P→1枚 は 9P→50枚
+// ★品物のidは同じまま、値段(cost)と受け取る数(grantAmount)だけを差し替える(保存の形は変わらない)。
+// ★「値下げ」「安く」とは言わない(社長)。画面の札は「🎫 優待パス還元」
+const LEGEND_BREEDER_PASS_LEVEL = 1000;
+const LEGEND_BREEDER_PASS_OFFERS = Object.freeze({
+  diamond_300:        Object.freeze({ cost:1, grantAmount:5000 }),
+  training_ticket_x3: Object.freeze({ cost:1, grantAmount:50 }),
+  training_ticket_l:  Object.freeze({ cost:9, grantAmount:50 }),
+});
+// 優待パスを持っているときの品物(持っていない・対象外の品物はそのまま返す)。baseCost / baseGrantAmount にいつもの交換を残す(札の取り消し線用)
+const rhythmEventPointShopOfferWithPass = (offer, hasPass) => {
+  const pass = hasPass === true && offer && LEGEND_BREEDER_PASS_OFFERS[offer.id];
+  if (!pass) return offer;
+  return Object.freeze({ ...offer, cost:pass.cost, grantAmount:pass.grantAmount, legendPass:true, baseCost:offer.cost, baseGrantAmount:offer.grantAmount });
+};
 // 近日公開予定の商品(2026-09-28 ユーザー指示「ビートポイントの方にも追加で、どっちも1500P」)。
 // ★同じ日に「円盤石交換のビートポイントは仮に10000に変更しといて」と指示があり、10,000Pにした(仮の値)。
 // ★さらに同じ日に「新モンスターの予定販売ビートポイントはやっぱり1500に変更しといて」と指示があり、1,500Pへ戻した。

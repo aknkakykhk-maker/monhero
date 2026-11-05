@@ -436,6 +436,14 @@ const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
 const SORASHIDO_JOIN_STORY_ID = 'sorashido_join_2026_10_27';
 // えるびんの加入のお話(2026-11-05・公開の印 assistantErubin)
 const ERUBIN_JOIN_STORY_ID = 'erubin_join_2026_11';
+// レジェンドブリーダーへの招待状(2026-11-05 社長)。ブリーダーレベル1000(LEGEND_BREEDER_PASS_LEVEL)に届いた人の HOME で一度だけ流す。
+// 見た印は新しいキー(既存のキーには触らない・CLAUDE.md ⑦)。最後まで見ても飛ばしても立つ。立っている人だけ、ビートP交換所の3つの交換が優待パス還元になる
+const LEGEND_BREEDER_PASS_STORY_ID = 'legend_breeder_pass_2026_11';
+const LEGEND_BREEDER_PASS_SEEN_KEY = 'mh_beat_shop_vip_letter_seen_v1';
+// ヘルプの本文のうち、その端末で条件を満たした人だけに見せるもの(本文のかたまりの playerFlag・2026-11-05)。
+// releaseFlag は全員いっしょの公開の印で、読み込みのときに一度だけ絞り込む。こちらは描くたびに見る(本体が印を読んだら書きかえる)
+const HELP_PLAYER_FLAGS = { legendBreederPass: false };
+const helpPlayerFlagOn = (name) => !!name && HELP_PLAYER_FLAGS[name] === true;
 // 個人杯のお話(2026-10-31)。id は data/assistants.js の EVENT_REPLAYS・CARD_CUP_STORY_ID_FOR_SPLIT と同じ
 const CARD_CUP_STORY_ID = 'card_cup_2026_10_31';
 // ソラシドの加入のお話を見終えたら、沖縄のおみやげとして 10,000ビートPをギフトで1回だけ届ける(2026-10-27 社長)。

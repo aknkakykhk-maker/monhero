@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3d3ee5d5b072dc60
+// source-sha256: e794383fd3a3b42d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13551,6 +13551,12 @@ const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
 const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
 const SORASHIDO_JOIN_STORY_ID = 'sorashido_join_2026_10_27';
 const ERUBIN_JOIN_STORY_ID = 'erubin_join_2026_11';
+const LEGEND_BREEDER_PASS_STORY_ID = 'legend_breeder_pass_2026_11';
+const LEGEND_BREEDER_PASS_SEEN_KEY = 'mh_beat_shop_vip_letter_seen_v1';
+const HELP_PLAYER_FLAGS = {
+  legendBreederPass: false
+};
+const helpPlayerFlagOn = name => !!name && HELP_PLAYER_FLAGS[name] === true;
 const CARD_CUP_STORY_ID = 'card_cup_2026_10_31';
 const SORASHIDO_GIFT_KEY = 'mh_sorashido_gift_v1';
 const SORASHIDO_GIFT_BEAT_POINTS = 10000;
@@ -19077,6 +19083,7 @@ const helpWrap = x => typeof x === 'string' && typeof jaWrap === 'function' ? Re
   style: typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined
 }, jaWrap(x)) : x;
 const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
+  if (b && b.playerFlag && !(typeof helpPlayerFlagOn === 'function' && helpPlayerFlagOn(b.playerFlag))) return null;
   if (b.t === 'video') return React.createElement("div", {
     key: i,
     "data-help-video": true,
@@ -59123,6 +59130,9 @@ function BreederMarketScreen({
   onExchangeHeroProof,
   eventPoints = 0,
   onExchangeEventPoints,
+  legendPassActive = false,
+  legendPassLetterAvailable = false,
+  onReadLegendPassLetter = null,
   onOpenUpcomingDetail,
   frameConditionOf = null,
   cardShop = null,
@@ -59333,7 +59343,7 @@ function BreederMarketScreen({
   const exchangeTab = activeSectionTab('exchange');
   const eventTab = activeSectionTab('event');
   const BEAT_POINT_MATERIAL_ITEM_IDS = ['rainbow_psyche', 'hero_proof_shard', 'transcend_fruit_rainbow', 'hero_proof'];
-  const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer => eventTab === 'material' === BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId));
+  const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer => eventTab === 'material' === BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId)).map(offer => rhythmEventPointShopOfferWithPass(offer, legendPassActive === true));
   const renderSectionTabs = (section, scroll = false) => {
     const items = SECTION_TABS[section].tabs.map(tab => ({
       id: tab.key,
@@ -59844,20 +59854,36 @@ function BreederMarketScreen({
       tone: "info",
       "data-event-point-campaign": true
     }, jaWrap(`🎟️ ${campaign.name}中：公開曲のビートPが${campaign.boost}倍${Number(campaign.loopBoost) > 0 ? `・演奏のクイック周回も${campaign.loopBoost}倍` : ''}（${rhythmEventJstText(Date.parse(campaign.displayEndAt || campaign.endAt))}まで）`)) : null;
-  })(), React.createElement("div", {
+  })(), legendPassLetterAvailable && typeof onReadLegendPassLetter === 'function' && (eventTab === 'item' || eventTab === 'material') && React.createElement("button", {
+    type: "button",
+    "data-legend-pass-letter": true,
+    onClick: onReadLegendPassLetter,
+    className: "mh-button mb-2 w-full rounded-xl border border-amber-300/70 bg-amber-400/15 px-3 py-2.5 text-[13px] font-black text-amber-100 active:scale-95"
+  }, "🎫 優待パスの手紙を読む"), React.createElement("div", {
     "data-event-point-shop": true,
     "data-event-point-tab": eventTab,
     className: MARKET_GRID_CLASS
   }, (eventTab === 'item' || eventTab === 'material') && eventItemOffers.map(offer => {
     const item = beatPointItemOf(offer);
     const grantText = `${offer.grantAmount.toLocaleString()}${offer.unit}`;
-    const middle = offer.kind === 'diamond' ? null : ownedMiddle(ownedItemCount(ownedItems, offer.itemId), item.base ? {
+    const ownedPart = offer.kind === 'diamond' ? null : ownedMiddle(ownedItemCount(ownedItems, offer.itemId), item.base ? {
       ...item.base,
       cost: offer.cost,
       currency: 'beatPoint'
     } : null, {
       grantText
     });
+    const passPart = offer.legendPass ? React.createElement("div", {
+      "data-legend-pass-offer": true,
+      className: "mt-1 text-center leading-tight"
+    }, React.createElement("span", {
+      className: "inline-block rounded-full bg-amber-400/90 px-2 py-0.5 text-[10px] font-black text-slate-900"
+    }, "🎫 優待パス還元"), React.createElement("div", {
+      className: "mt-0.5 text-[10px] font-bold text-slate-400 line-through tabular-nums"
+    }, offer.baseCost.toLocaleString(), "P → ", offer.baseGrantAmount.toLocaleString(), offer.unit), React.createElement("div", {
+      className: "text-[11px] font-black text-amber-200 tabular-nums"
+    }, offer.cost.toLocaleString(), "P → ", offer.grantAmount.toLocaleString(), offer.unit)) : null;
+    const middle = passPart ? React.createElement(React.Fragment, null, passPart, ownedPart) : ownedPart;
     return React.createElement(MarketProductCard, {
       key: offer.id,
       dataAttrs: {
@@ -130606,6 +130632,8 @@ function MonsterHeroGame() {
   const [momosukeIntroStep, setMomosukeIntroStep] = useState(null);
   const [tacticsIntroSeenFlag, setTacticsIntroSeenFlag] = useState(false);
   const [rhythmHellStorySeenFlag, setRhythmHellStorySeenFlag] = useState(false);
+  const [legendPassSeenFlag, setLegendPassSeenFlag] = useState(false);
+  const [legendPassSeenLoaded, setLegendPassSeenLoaded] = useState(false);
   const [assistantChatStorySeenFlag, setAssistantChatStorySeenFlag] = useState(false);
   const [assistantChatStorySeenLoaded, setAssistantChatStorySeenLoaded] = useState(false);
   const [tacticsTypesStorySeenFlag, setTacticsTypesStorySeenFlag] = useState(false);
@@ -133822,6 +133850,13 @@ function MonsterHeroGame() {
     setRhythmEventStoryPending(RHYTHM_HELL_STORY_ID);
   }, [rhythmHellStorySeenLoaded, rhythmHellStorySeenFlag, rhythmBestRecords, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
+    if (!legendPassSeenLoaded || legendPassSeenFlag) return;
+    if (!(Number(breederLevel?.level) >= LEGEND_BREEDER_PASS_LEVEL)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(LEGEND_BREEDER_PASS_STORY_ID)) return;
+    setRhythmEventStoryPending(LEGEND_BREEDER_PASS_STORY_ID);
+  }, [legendPassSeenLoaded, legendPassSeenFlag, breederLevel?.level, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantChat) return;
     if (!assistantChatStorySeenLoaded || assistantChatStorySeenFlag) return;
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
@@ -135449,6 +135484,10 @@ function MonsterHeroGame() {
           setRaidJackEndingReplayLoaded(true);
         } catch {}
       }
+      try {
+        setLegendPassSeenFlag((await storeGet(LEGEND_BREEDER_PASS_SEEN_KEY, false, false)) === true);
+        setLegendPassSeenLoaded(true);
+      } catch {}
       if (EVENT_REPLAY_RELEASE_FLAGS.assistantChat) {
         try {
           setAssistantChatStorySeenFlag((await storeGet(ASSISTANT_CHAT_STORY_SEEN_KEY, false, false)) === true);
@@ -136896,6 +136935,15 @@ function MonsterHeroGame() {
       }, false);
     } catch {}
   }, []);
+  useEffect(() => {
+    HELP_PLAYER_FLAGS.legendBreederPass = legendPassSeenFlag === true;
+  }, [legendPassSeenFlag]);
+  const markLegendPassSeen = useCallback(() => {
+    setLegendPassSeenFlag(true);
+    try {
+      storeSet(LEGEND_BREEDER_PASS_SEEN_KEY, true, false);
+    } catch {}
+  }, []);
   const markAssistantChatStorySeen = useCallback(() => {
     setAssistantChatStorySeenFlag(true);
     try {
@@ -136920,6 +136968,7 @@ function MonsterHeroGame() {
     tacticsIntroSeen: tacticsIntroSeenFlag,
     rhythmHellStorySeen: rhythmHellStorySeenFlag,
     assistantChatStorySeen: assistantChatStorySeenFlag,
+    legendBreederPassSeen: legendPassSeenFlag,
     tacticsTypesSeen: tacticsTypesStorySeenFlag,
     cardBattleIntroSeen: cardBattleIntroSeenFlag,
     monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID),
@@ -137313,6 +137362,14 @@ function MonsterHeroGame() {
       ok: false,
       reason: 'busy'
     };
+    if (offer && LEGEND_BREEDER_PASS_OFFERS[offer.id]) {
+      const base = RHYTHM_EVENT_POINT_SHOP_OFFERS.find(o => o.id === offer.id) || offer;
+      let hasPass = false;
+      try {
+        hasPass = (await storeGet(LEGEND_BREEDER_PASS_SEEN_KEY, false, false)) === true;
+      } catch {}
+      offer = rhythmEventPointShopOfferWithPass(base, hasPass);
+    }
     if (offer?.available === false) return {
       ok: false,
       reason: 'soon'
@@ -157894,6 +157951,15 @@ function MonsterHeroGame() {
       onExchangeHeroProof: exchangeHeroProofByShard,
       eventPoints: rhythmEventPoints,
       onExchangeEventPoints: exchangeRhythmEventPoints,
+      legendPassActive: legendPassSeenFlag,
+      legendPassLetterAvailable: legendPassSeenLoaded && !legendPassSeenFlag && Number(breederLevel?.level) >= LEGEND_BREEDER_PASS_LEVEL,
+      onReadLegendPassLetter: () => {
+        if (!eventReplay) setEventReplay({
+          id: LEGEND_BREEDER_PASS_STORY_ID,
+          step: 0,
+          live: true
+        });
+      },
       onOpenUpcomingDetail: setUpcomingMonsterDetail,
       cardShop: cardMarketEntry && cardShopState ? {
         ...cardShopState,
@@ -161587,6 +161653,7 @@ function MonsterHeroGame() {
         if (event && event.id === RAID_JACK_HOWTO_AFTER_STORY_ID && eventReplay.live && !eventReplay.debug && RELEASE_FLAGS.raidJack === true && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_STORY_START_ID)) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
         if (event && event.id === RAID_JACK_STORY_START_ID && eventReplay.live && !eventReplay.debug && RELEASE_FLAGS.raidJack === true && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_HOWTO_STORY_ID)) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
         if (event && event.id === ASSISTANT_CHAT_STORY_ID && eventReplay.live && !eventReplay.debug) markAssistantChatStorySeen();
+        if (event && event.id === LEGEND_BREEDER_PASS_STORY_ID && eventReplay.live && !eventReplay.debug) markLegendPassSeen();
         if (event && event.id === TACTICS_TYPES_STORY_ID && eventReplay.live && !eventReplay.debug) markTacticsTypesStorySeen();
         if (event && (event.id === RAID_JACK_ENDING_CLEARED_ID || event.id === RAID_JACK_ENDING_NOTCLEARED_ID) && eventReplay.live && !eventReplay.debug) markRaidJackEndingReplayed();
         if (event && event.id === CARD_BATTLE_INTRO_STORY_ID && eventReplay.live && !eventReplay.debug) {
@@ -161613,6 +161680,7 @@ function MonsterHeroGame() {
         if (eventReplay.live && !eventReplay.debug && event && RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
         if (eventReplay.live && !eventReplay.debug && event && event.id === 'tactics_intro') markTacticsIntroSeen();
         if (eventReplay.live && !eventReplay.debug && event && event.id === ASSISTANT_CHAT_STORY_ID) markAssistantChatStorySeen();
+        if (eventReplay.live && !eventReplay.debug && event && event.id === LEGEND_BREEDER_PASS_STORY_ID) markLegendPassSeen();
         if (eventReplay.live && !eventReplay.debug && event && event.id === TACTICS_TYPES_STORY_ID) markTacticsTypesStorySeen();
         if (eventReplay.live && !eventReplay.debug && event && (event.id === RAID_JACK_ENDING_CLEARED_ID || event.id === RAID_JACK_ENDING_NOTCLEARED_ID)) markRaidJackEndingReplayed();
         if (eventReplay.live && !eventReplay.debug && event && event.id === CARD_BATTLE_INTRO_STORY_ID) markCardBattleIntroSeen();

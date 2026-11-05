@@ -119,7 +119,8 @@ const dataBlockText = (id) => {
 
 const buildDigest = () => {
   const flags = loadReleaseFlags();
-  const released = (x) => !x || ((!x.releaseFlag || flags[x.releaseFlag] === true) && (!x.unreleasedFlag || flags[x.unreleasedFlag] === false));
+  // playerFlag(端末の進み具合で、届いた人だけに見せる本文・2026-11-05)は、だれにでも話す助手の要約へ入れない
+  const released = (x) => !x || (!x.playerFlag && (!x.releaseFlag || flags[x.releaseFlag] === true) && (!x.unreleasedFlag || flags[x.unreleasedFlag] === false));
   const help = loadScript('help.js', ['HELP_CATEGORIES', 'helpBlockPlainText']);
   const index = [];
   const topics = [];
