@@ -249,6 +249,7 @@ function getCardGuts(st, card, slot) {
   cost = Math.floor(cost * (turnB.gutsCostMult || 1) * G.tacticsSlotRate(bySlot, slot, 'gutsCostMult', 1.0));
   if (cost > 0 && ((turnB.pandoraResonanceTurns || 0) > 0 || G.tacticsSlotTurns(bySlot, slot, 'pandoraResonanceTurns') > 0)) cost = Math.floor(cost * 0.5);
   cost = Math.floor(cost * Math.max(0.1, 1 - 0.03 * (perma.snegurochkaGutsDiscountStacks || 0)));
+  if ((perma.erubinGutsCut || 0) > 0 && (card.teach || isAttackType(card))) cost = Math.floor(cost * (1 - Math.min(0.5, perma.erubinGutsCut))); // 試作 B 引き上げ版2(ずっと)
   if ((card.teach || (st.erubinTreat && st.erubinTreat.all && isAttackType(card))) && st.erubinTreat && st.turn >= st.erubinTreat.from && st.turn <= st.erubinTreat.until) cost = Math.floor(cost * (1 - st.erubinTreat.cut)); // 試作 B
   return cost;
 }
@@ -535,7 +536,7 @@ function decideTurn(st) {
         if (eA && enemyRate > 0.25 && hpNow > 0 && aimed.reduce((a, sl) => a + aimDamage(sl), 0) >= hpNow * 0.25) { take(eA, 'support'); continue; }
         // B: 効いていないときだけ(重ねがけしない)
         const eB = supFor('erubinB');
-        if (eB && enemyRate > 0.3 && aliveNow.length >= 2 && !(st.erubinTreat && st.turn < st.erubinTreat.until)) { take(eB, 'support'); continue; }
+        if (eB && enemyRate > 0.3 && aliveNow.length >= 2 && !(st.erubinTreat && st.turn < st.erubinTreat.until) && (st.perma.erubinGutsCut || 0) < 0.5) { take(eB, 'support'); continue; }
         // C: まだ効いていない・ずっと続く強化か回復のアシカを持っているときだけ
         const eC = supFor('erubinC');
         if (eC && !st.erubinLead && st.teachings.some((t) => ['mua', 'momosuke', 'oryo', 'kiki', 'poltz', 'cadmium'].includes(t.id))) { take(eC, 'support'); continue; }
@@ -563,7 +564,7 @@ function decideTurn(st) {
         if (eA && enemyRate > 0.25 && hpNow > 0 && aimed.reduce((a, sl) => a + aimDamage(sl), 0) >= hpNow * 0.25) { take(eA, 'support'); continue; }
         // B: 効いていないときだけ(重ねがけしない)
         const eB = supFor('erubinB');
-        if (eB && enemyRate > 0.3 && aliveNow.length >= 2 && !(st.erubinTreat && st.turn < st.erubinTreat.until)) { take(eB, 'support'); continue; }
+        if (eB && enemyRate > 0.3 && aliveNow.length >= 2 && !(st.erubinTreat && st.turn < st.erubinTreat.until) && (st.perma.erubinGutsCut || 0) < 0.5) { take(eB, 'support'); continue; }
         // C: まだ効いていない・ずっと続く強化か回復のアシカを持っているときだけ
         const eC = supFor('erubinC');
         if (eC && !st.erubinLead && st.teachings.some((t) => ['mua', 'momosuke', 'oryo', 'kiki', 'poltz', 'cadmium'].includes(t.id))) { take(eC, 'support'); continue; }
@@ -843,8 +844,15 @@ const EX_POLICIES = { none: () => {}, bot: policyBot, best: policyBest };
 //   C lead_erubin: 次に使うアシカ1枚の効き目 ×mult
 //   きゅうこ cover_kyuko: このターン敵の単体攻撃を使った子が引き受け、turns ターン(使ったターンを含む)その子の受けるダメージ −cut(KYUKO_TIERS)
 // SIM_ERUBIN_BOOST=1 … 引き上げ版(社長「見た感じ滅茶弱かった」。B は技のガッツにも効く・C は次の2枚に効く)
-const ERUBIN_BOOST = process.env.SIM_ERUBIN_BOOST === '1';
-const ERUBIN_PROTO = ERUBIN_BOOST ? {
+// SIM_ERUBIN_BOOST=2 … 引き上げ版2(ずっと続く部分を足す。強いアシカはどれもバトル中ずっと続く強化を持つため)
+const ERUBIN_BOOST = process.env.SIM_ERUBIN_BOOST === '1' || process.env.SIM_ERUBIN_BOOST === '2';
+const ERUBIN_BOOST2 = process.env.SIM_ERUBIN_BOOST === '2';
+const ERUBIN_PERMA = { A: [0.06, 0.09, 0.12], B: [0.10, 0.15, 0.20], C: [0.04, 0.05, 0.06] };
+const ERUBIN_PROTO = ERUBIN_BOOST2 ? {
+  A: [{ rate: 1.0, cut: 0.15 }, { rate: 1.5, cut: 0.20 }, { rate: 2.0, cut: 0.30 }],
+  B: [{ cut: 0, turns: 0 }, { cut: 0, turns: 0 }, { cut: 0, turns: 0 }],
+  C: [1.5, 1.8, 2.0], C_CARDS: 2,
+} : ERUBIN_BOOST ? {
   A: [{ rate: 1.5, cut: 0.20 }, { rate: 2.0, cut: 0.30 }, { rate: 3.0, cut: 0.40 }],
   B: [{ cut: 0.3, turns: 3, all: true }, { cut: 0.4, turns: 4, all: true }, { cut: 0.5, turns: 5, all: true }],
   C: [1.5, 1.8, 2.0], C_CARDS: 2,
@@ -902,11 +910,14 @@ function playTeaching(st, card, slot, effMul, usedCount, guardBySlot, startDist,
   } else if (card.subType === 'watch_erubin') { // 試作 A
     const t = ERUBIN_PROTO.A[Math.min(level, 2)];
     st.turnB = { ...st.turnB, erubinWatch: (st.turnB.erubinWatch || 0) + t.rate * effMul, takenDamageMult: (st.turnB.takenDamageMult || 1) * (1 - t.cut * effMul) };
+    if (ERUBIN_BOOST2) add('atkPct', ERUBIN_PERMA.A[Math.min(level, 2)] * effMul);
   } else if (card.subType === 'treat_erubin') { // 試作 B
     const t = ERUBIN_PROTO.B[Math.min(level, 2)];
-    st.erubinTreat = { cut: Math.min(0.9, t.cut * effMul), from: st.turn + 1, until: st.turn + t.turns, all: !!t.all };
+    if (ERUBIN_BOOST2) add('erubinGutsCut', ERUBIN_PERMA.B[Math.min(level, 2)] * effMul);
+    else st.erubinTreat = { cut: Math.min(0.9, t.cut * effMul), from: st.turn + 1, until: st.turn + t.turns, all: !!t.all };
   } else if (card.subType === 'lead_erubin') { // 試作 C
     st.erubinLead = Math.max(st.erubinLead || 0, 1 + (ERUBIN_PROTO.C[Math.min(level, 2)] - 1) * effMul); st.erubinLeadLeft = ERUBIN_PROTO.C_CARDS;
+    if (ERUBIN_BOOST2) { add('atkPct', ERUBIN_PERMA.C[Math.min(level, 2)] * effMul); add('defPct', ERUBIN_PERMA.C[Math.min(level, 2)] * effMul); }
   } else if (card.subType === 'cover_kyuko') { // 試作: きゅうこの譜面(KYUKO_TIERS)
     const t = G.KYUKO_TIERS[Math.min(level, G.KYUKO_TIERS.length - 1)];
     st.turnB = { ...st.turnB, kyukoCover: slot };
