@@ -1162,7 +1162,7 @@ const muaCardMasterCostume = Object.freeze({
 //   売り場は無い(price も saleWindows も持たない)。starter:true の服は、はじめから持っている扱いにする
 //   (normalizeOwnedAssistantCostumes が足す。保存キーは増やさず、読み込みで書き戻さない)。
 //   絵は登場のお話と同じ images/assistant/sekiyuou/。えるびんの公開の印(assistantErubin)と一緒に出る
-const ERUBIN_SEKIYUOU_COSTUME_ART = "images/assistant/sekiyuou/face/erubin_happy.PNG?v=5370fd010049";
+const ERUBIN_SEKIYUOU_COSTUME_ART = "images/assistant/sekiyuou/face/erubin_happy.PNG?v=f73323a07081";
 const erubinSekiyuouCostume = Object.freeze({
   id: 'erubin_sekiyuou_v1', assistantId: 'erubin',
   name: '石油王', desc: 'えるびんが砂漠から着てきた服。白い頭布と、金の刺しゅうの入った民族衣装です。',
