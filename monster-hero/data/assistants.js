@@ -8850,6 +8850,40 @@ addAssistantLinePack({ id: 'templeScreensKyuko', assistantId: 'kyuko', label: '�
   ],
 } });
 
+// ===== えるびん: 毎日のマスの助言・モンヒロビートのモンスター案内(2026-11-05・リバース) =====
+// 口調は docs/rules/PRESIDENT_DECISIONS.md の 11/5 の「えるびん」の行どおり(一人称「俺」・やわらかいタメ口・「〜ね」「〜かな」・プレイヤーは {name}=「◯◯さん」)。
+// ゲームの数字・決まりは、ほかの助手の同じ場面の台詞と同じものだけ(クイックのBeginner・WAVE2・「あきらめる」・勇者モン・金のノーツ)
+addAssistantLinePack({
+  id: 'erubinDailyAndRhythmMonsters',
+  assistantId: 'erubin',
+  label: '日次・マスモン登録の助言／モンヒロビートのモンスター(えるびん)',
+  lines: {
+    dailyMasuAdvice: [
+      { e:'wink',     t:'{name}、マスモンを早く増やす近道があるんだけど、聞いてみるかな？' },
+      { e:'normal',   t:'クイックのBeginnerでWAVE2まで進んだら、そこで「あきらめる」を選ぶんだよね' },
+      { e:'normal',   t:'WAVE2まで進むのが条件だから、そこだけは気をつけてね' },
+      { e:'normal',   t:'登録できるのは勇者モンにした子だけ。そこも確かめておくと安心かな' },
+      { e:'happy',    t:'短い時間で仲間を増やしたい日は、これがいちばん早いよ。おけ？笑' },
+      { e:'happy',    t:'急がなくて大丈夫。{name}のやりやすい方でいいからね☺️' },
+    ],
+    dailyMasuAdviceBasic: [
+      { e:'normal',   t:'マスモンを増やしたいなら、まずはクイックのBeginnerを最後まで遊んでみてね' },
+      { e:'happy',    t:'終わったあとのリザルトから、勇者モンにした子をマスモンに登録できるよ' },
+      { e:'wink',     t:'{name}、慣れてきたら、もっと早く増やせる近道もあるから教えるね笑' },
+      { e:'normal',   t:'マスモンが増えると、組める編成の幅がぐっと広がるよね' },
+      { e:'happy',    t:'無理しなくて大丈夫だよ。遊びたいときに、ゆっくりでいいからね😊' },
+    ],
+    rhythmMonsters: [
+      { e:'normal',   t:'ここで選んだ子は、曲の途中で金のノーツになって出てくるんだよね' },
+      { e:'happy',    t:'{name}、好きな子を入れておくといいよ。俺はやっぱりアークかな笑' },
+      { e:'normal',   t:'スコアには関係ないから、好みで選んで大丈夫だよ' },
+      { e:'normal',   t:'出てくる順番は、入れた順のままだよね' },
+      { e:'normal',   t:'取れなくても能力が出ないだけで、ライフは減らないから安心してね' },
+      { e:'excited',  t:'好きな子が飛んでくると、ちょっとうれしくなるよねw' },
+    ],
+  },
+});
+
 const ASSISTANT_PACKS_APPLIED = {};
 const applyAssistantLinePacks = () => {
   for (const pack of ASSISTANT_LINE_PACKS) {
@@ -8893,40 +8927,6 @@ const ASSISTANT_SPAM_LINES = [
 const ASSISTANT_SPAM_RECOVER = { e:'happy', t:'……うそだよ♪ いつでも呼んでね！' };
 // 助手ごとの連打リアクション(2026-10-22 社長「キャラ別に言葉変えて」)。書かなければ上のみゅあのぶんを使う。
 // 形はみゅあと同じ: 最後の行に last:true、recover で笑って(照れて)元に戻る
-// ===== えるびん: 毎日のマスの助言・モンヒロビートのモンスター案内(2026-11-05・リバース) =====
-// 口調は docs/rules/PRESIDENT_DECISIONS.md の 11/5 の「えるびん」の行どおり(一人称「俺」・やわらかいタメ口・「〜ね」「〜かな」・プレイヤーは {name}=「◯◯さん」)。
-// ゲームの数字・決まりは、ほかの助手の同じ場面の台詞と同じものだけ(クイックのBeginner・WAVE2・「あきらめる」・勇者モン・金のノーツ)
-addAssistantLinePack({
-  id: 'erubinDailyAndRhythmMonsters',
-  assistantId: 'erubin',
-  label: '日次・マスモン登録の助言／モンヒロビートのモンスター(えるびん)',
-  lines: {
-    dailyMasuAdvice: [
-      { e:'wink',     t:'{name}、マスモンを早く増やす近道があるんだけど、聞いてみるかな？' },
-      { e:'normal',   t:'クイックのBeginnerでWAVE2まで進んだら、そこで「あきらめる」を選ぶんだよね' },
-      { e:'normal',   t:'WAVE2まで進むのが条件だから、そこだけは気をつけてね' },
-      { e:'normal',   t:'登録できるのは勇者モンにした子だけ。そこも確かめておくと安心かな' },
-      { e:'happy',    t:'短い時間で仲間を増やしたい日は、これがいちばん早いよ。おけ？笑' },
-      { e:'happy',    t:'急がなくて大丈夫。{name}のやりやすい方でいいからね☺️' },
-    ],
-    dailyMasuAdviceBasic: [
-      { e:'normal',   t:'マスモンを増やしたいなら、まずはクイックのBeginnerを最後まで遊んでみてね' },
-      { e:'happy',    t:'終わったあとのリザルトから、勇者モンにした子をマスモンに登録できるよ' },
-      { e:'wink',     t:'{name}、慣れてきたら、もっと早い近道も教えるね笑' },
-      { e:'normal',   t:'マスモンが増えると、組める編成の幅がぐっと広がるよね' },
-      { e:'happy',    t:'無理しなくて大丈夫だよ。遊びたいときに、ゆっくりでいいからね😊' },
-    ],
-    rhythmMonsters: [
-      { e:'normal',   t:'ここで決めた子が、曲の途中で金のノーツになって出てくるよ' },
-      { e:'happy',    t:'{name}、好きな子を入れておくといいよ。俺はやっぱりアークかな笑' },
-      { e:'normal',   t:'スコアには関係ないから、好みで選んで大丈夫だよ' },
-      { e:'normal',   t:'出てくる順番は、入れた順のままだよね' },
-      { e:'normal',   t:'取れなくても能力が出ないだけで、ライフは減らないから安心してね' },
-      { e:'excited',  t:'好きな子が飛んでくると、ちょっとうれしくなるよねw' },
-    ],
-  },
-});
-
 const ASSISTANT_SPAM_SETS = {
   kiki: {
     lines: [
