@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 85c525dfa05ec98c
+// source-sha256: 4c2ee826d26c7da0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -104590,7 +104590,7 @@ const CardBattleBoard = ({
     style: JA_WRAP_STYLE
   }, cardOf(db, st.field.no).name, React.createElement("small", {
     className: "ml-1 text-[10px] font-bold text-emerald-200"
-  }, "(", st.field.p === CARD_ME ? '自分' : '相手', "が出した)"))), turnSummary && !sumOpen && !bigCard && React.createElement("button", {
+  }, "(", watch || tourReplay ? st.field.p === CARD_ME ? meName : who.name : st.field.p === CARD_ME ? '自分' : '相手', "が出した)"))), turnSummary && !sumOpen && !bigCard && React.createElement("button", {
     type: "button",
     key: turnSummary.key,
     "data-card-turn-summary-chip": true,

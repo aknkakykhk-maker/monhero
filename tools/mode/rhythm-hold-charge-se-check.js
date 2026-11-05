@@ -104,8 +104,9 @@ check('試聴は1.2秒で止まる',SE._holdVoiceCount()===0&&live===0);
 
 // ---- 本体の配線 ----
 const flat=src=>src.replace(/\s+/g,'');
-check('演奏のループが毎フレーム、押さえている HOLD/SLIDE を渡す',
-  /heldNotes\.length=0;/.test(play)&&/if\(!note\.done&&note\.activePointerId!==null&&note\.type==='HOLD'&&rhythmNoteHasBody\(note\)\)heldNotes\.push\(note\);/.test(play)
+// 帯から外れている間(刻みが MISS の間)は渡さない(2026-11-02 社長: 外れている間は押せているときの光とホールドの音を止める)
+check('演奏のループが毎フレーム、押さえている HOLD/SLIDE を渡す(帯から外れている間は渡さない)',
+  /heldNotes\.length=0;/.test(play)&&/if\(!note\.done&&note\.activePointerId!==null&&note\.type==='HOLD'&&rhythmNoteHasBody\(note\)&&!RHYTHM_GESTURE_RUNTIME\.slideOffForIndex\(note\.index\)\)heldNotes\.push\(note\);/.test(play)
   &&play.includes('RHYTHM_NOTE_SE_RUNTIME.holdSync(heldNotes);'));
 check('曲の終わり・画面を出るとき・ポーズで止める',
   /run\.finished=true;(?:rhythmSongPlaySignal\([^)]*\);)?stopFrame\(\);RHYTHM_NOTE_SE_RUNTIME\.holdStopAll\(/.test(flat(play)) // 曲の終わり(曲の再生の合図を消してから止める形になった)

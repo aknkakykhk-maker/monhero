@@ -5,6 +5,7 @@
 // 見るもの:
 //   ・曲えらびで「見た目のおまかせ」の案内が出ているときも、「決定」が画面の中に収まる(縦持ち・横持ち)
 //     横持ち(高さ360px)では案内を左下へ浮かせており、右の列(難易度・決定)にかからない
+//   ・イベント開催中の帯も、横持ちは左下へ浮かせて「決定」を押し下げない(開催中だけ見る・2026-11-05)
 //   ・コンボの節目の輪が、ポーズボタンにかからない。
 //     「右上」と縦持ちの「おすすめ」は輪の上側を消している(中心から上へ「輪の幅の5%」より先は描かない)ので、
 //     その位置ではコンボの中心とボタンの下端の間がそれより広いことを見る。ほかの位置は輪の半径ぶん離れていること
@@ -79,11 +80,14 @@ const seed = (lookIntroSeen) => {
         const start = rect(q('[data-rhythm-demo-start]')), intro = rect(q('[data-rhythm-look-intro]'));
         const hit = (a, b) => a && b && a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
         return { intro: !!intro && intro.height > 0, inside: !!start && start.top >= 0 && start.bottom <= innerHeight + 1 && start.left >= 0 && start.right <= innerWidth + 1,
-          overlap: hit(start, intro), start: start && [Math.round(start.top), Math.round(start.bottom)], vh: innerHeight };
+          overlap: hit(start, intro), start: start && [Math.round(start.top), Math.round(start.bottom)], vh: innerHeight,
+          // イベント開催中の帯(開催中だけ出る)。横持ちは左下へ浮かせて、右の列を押し下げない(2026-11-05)
+          event: (() => { const e = q('[data-rhythm-event-notice]'); if (!e || getComputedStyle(e).display === 'none') return null; const b = rect(e); return { overlap: hit(start, b), floated: getComputedStyle(e).position === 'absolute' }; })() };
       });
       check(`${w}x${h} 見た目の案内が出ている`, r.intro);
       check(`${w}x${h} 案内が出ていても「決定」が画面の中にある`, r.inside, `決定 ${r.start} / 画面の高さ ${r.vh}`);
       check(`${w}x${h} 案内が「決定」にかからない`, !r.overlap);
+      if (r.event) check(`${w}x${h} イベントの帯が「決定」にかからない(横持ちは左下へ浮かせる)`, !r.event.overlap && (h > w || r.event.floated), JSON.stringify(r.event));
       await page.close();
     }
     // --- 演奏中: コンボの節目の輪とポーズボタン ---
