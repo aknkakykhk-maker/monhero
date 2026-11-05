@@ -49,8 +49,8 @@ ok('レベルが1000に届いてからだけ流す',/Number\(breederLevel\?\.lev
 ok('最後まで見ても、飛ばしても印を立てる(本編のときだけ)',(parts.match(/LEGEND_BREEDER_PASS_STORY_ID[^\n]*live&&!eventReplay\.debug[^\n]*markLegendPassSeen|live&&!eventReplay\.debug&&event&&event\.id===LEGEND_BREEDER_PASS_STORY_ID\) markLegendPassSeen/g)||[]).length>=2);
 ok('交換するときは、画面の値段を使わず保存の印から決め直す',/LEGEND_BREEDER_PASS_OFFERS\[offer\.id\][\s\S]{0,400}storeGet\(LEGEND_BREEDER_PASS_SEEN_KEY[\s\S]{0,200}rhythmEventPointShopOfferWithPass\(base, hasPass\)/.test(parts));
 // 画面に出る文字(> と < のあいだ)に「値下げ」「安く」が無いこと。説明のための注記(// …)は見ない
-const passCard=parts.slice(parts.indexOf('const passPart='),parts.indexOf('const middle=passPart'));
-ok('交換所の札は「優待パス還元」で、値下げとは書かない',parts.includes('🎫 優待パス還元')&&passCard.length>0&&!/値下げ|安く/.test(passCard));
+const passCard=parts.slice(parts.indexOf('const passNote='),parts.indexOf('const passNote=')+900);
+ok('交換所の札は「優待パス還元」で、値下げとは書かない',passCard.includes('優待パス還元')&&passCard.length>0&&!/値下げ|安く/.test(passCard));
 ok('見ていない人(Lv1000以上)には「優待パスの手紙を読む」',parts.includes('🎫 優待パスの手紙を読む')&&/legendPassLetterAvailable=\{legendPassSeenLoaded&&!legendPassSeenFlag&&Number\(breederLevel\?\.level\)>=LEGEND_BREEDER_PASS_LEVEL\}/.test(parts));
 ok('ヘルプの本文は、受け取った人だけに描く(playerFlag)',parts.includes('helpPlayerFlagOn(b.playerFlag)')&&parts.includes('HELP_PLAYER_FLAGS.legendBreederPass = legendPassSeenFlag === true'));
 
@@ -61,5 +61,9 @@ ok('更新履歴には書かない(社長)',!read('monster-hero/data/changelog.j
 const digest=path.join(ROOT,'monster-hero/data/assistant-chat-digest.json');
 ok('だれにでも話す助手の要約に入れない',!fs.existsSync(digest)||!fs.readFileSync(digest,'utf8').includes('レジェンドブリーダー優待パス'));
 
+// 2026-11-06 社長「画面ひどい」: 帯と2行の交換を、持ち数の段(高さ22pxの横並び)に押し込んで縦に潰れ、ボタンの下へはみ出していた
+ok('優待パスの帯と交換は、持ち数の段ではなく品名の下の専用の段(noteSlot)に出す',/noteSlot=\{legendPassSlot\} note=\{passNote\}/.test(parts)&&!/const middle=passPart/.test(parts));
+ok('同じ一覧のほかの札にも同じ高さの段を取って、札の高さをそろえる',/const legendPassSlot = eventItemOffers\.some\(offer=>offer\.legendPass===true\)/.test(parts));
+ok('帯・いつもの交換・優待の交換は折り返さない(whitespace-nowrap)',(passCard.match(/whitespace-nowrap/g)||[]).length>=3);
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);

@@ -151,6 +151,8 @@ function BreederMarketScreen({
   // レジェンドブリーダー優待パス(2026-11-05)を持っている人は、対象の3つの値段と受け取る数を優待パス還元に差し替えて並べる(交換するときも本体が決め直す)
   const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer=>(eventTab==='material')===BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId))
     .map(offer=>rhythmEventPointShopOfferWithPass(offer, legendPassActive===true));
+  // 優待パス還元の札がある一覧では、ほかの札にも同じ高さの段を取って、札の高さをそろえる
+  const legendPassSlot = eventItemOffers.some(offer=>offer.legendPass===true);
   // scroll … タブが6つ以上のときは1行に並べ、はみ出す分は横へ送る(2段にすると品物が見える高さが減る。2026-10-26 ビートP交換所の7つ)
   //   見た目と押し方は ScreenTabs(41-screen-ui.jsx)と同じ
   //   ★ここに mh-scroll を付けない: 横画面の組み替えは「根の直下の .mh-scroll」を右の一覧(全高)にするので、タブが右いっぱいに伸びて品物へ重なる(2026-10-27)
@@ -415,18 +417,19 @@ function BreederMarketScreen({
             const item=beatPointItemOf(offer);
             const grantText=`${offer.grantAmount.toLocaleString()}${offer.unit}`;
             // ダイヤの品は受け取る数が名前(ダイヤ ×300)に入っていて、持ち数は所持ダイヤと同じなので中段は空ける
-            const ownedPart=offer.kind==='diamond'
+            const middle=offer.kind==='diamond'
               ? null
               : ownedMiddle(ownedItemCount(ownedItems, offer.itemId), item.base?{...item.base,cost:offer.cost,currency:'beatPoint'}:null, {grantText});
-            // 優待パス還元の札(2026-11-05): 金色の帯と、いつもの交換(取り消し線)を出す。「値下げ」とは書かない
-            const passPart=offer.legendPass?<div data-legend-pass-offer className="mt-1 text-center leading-tight">
-              <span className="inline-block rounded-full bg-amber-400/90 px-2 py-0.5 text-[10px] font-black text-slate-900">🎫 優待パス還元</span>
-              <div className="mt-0.5 text-[10px] font-bold text-slate-400 line-through tabular-nums">{offer.baseCost.toLocaleString()}P → {offer.baseGrantAmount.toLocaleString()}{offer.unit}</div>
-              <div className="text-[11px] font-black text-amber-200 tabular-nums">{offer.cost.toLocaleString()}P → {offer.grantAmount.toLocaleString()}{offer.unit}</div>
-            </div>:null;
-            const middle=passPart?<>{passPart}{ownedPart}</>:ownedPart;
+            // 優待パス還元の札(2026-11-06 社長「画面ひどい」で作り直し): 帯は札の上のふちに横1行、品名の下に「いつもの交換(取り消し線)」と
+            // 「優待パスの交換」を2行。どちらも折り返さない。段の高さは同じ一覧の札すべてでそろえる(legendPassSlot)。「値下げ」とは書かない
+            const passNote=offer.legendPass?<>
+              <span data-legend-pass-ribbon className="whitespace-nowrap rounded-full bg-amber-400 px-1.5 text-[9px] font-black leading-[14px] text-slate-900">優待パス還元</span>
+              <span data-legend-pass-offer className="whitespace-nowrap text-[9px] font-bold text-slate-400 line-through tabular-nums">{offer.baseCost.toLocaleString()}P→{offer.baseGrantAmount.toLocaleString()}{offer.unit}</span>
+              <span className="whitespace-nowrap text-[10px] max-[359px]:text-[9px] font-black text-amber-200 tabular-nums">{offer.cost.toLocaleString()}P→{offer.grantAmount.toLocaleString()}{offer.unit}</span>
+            </>:null;
             return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-offer':offer.id}}
               item={item} owned={false} comingSoon={false}
+              noteSlot={legendPassSlot} note={passNote}
               canBuy={safeEventPoints>=offer.cost&&!busy}
               disabled={purchaseProcessing}
               onZoom={()=>onZoomIcon(item)}
