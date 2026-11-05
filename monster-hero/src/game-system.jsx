@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fe5b83e38933a42e
+// generated-sha256: b08ba8512be934ae
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -13213,7 +13213,7 @@ const storyBaseWho = (id) => (typeof id === 'string' ? id.split('@')[0] : id);
 const storyCastOf = (script) => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(who => (script || []).some(l => l && storyBaseWho(l.who) === who.id));
 // 助手の「ふつう」の表情の絵(outfit を渡すと、その衣装のフォルダの絵)。登録が無ければ null
 const storyAssistantArtOf = (id, outfit) => {
-  const who = (typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST : []).find(a => a && a.id === id);
+  const who = ASSISTANT_LIST.find(a => a && a.id === id);
   if (!who || !who.imageDir || !who.imagePrefix) return null;
   const dirs = (typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS) || {};
   const dir = outfit ? dirs[outfit] : who.imageDir;

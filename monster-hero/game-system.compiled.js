@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5bcc55a5f8fb140e
+// source-sha256: 51d3316aa67b293b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -18851,7 +18851,7 @@ const assistantById = id => ASSISTANT_LIST.find(a => a.id === id) || storyVarian
 const storyBaseWho = id => typeof id === 'string' ? id.split('@')[0] : id;
 const storyCastOf = script => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(who => (script || []).some(l => l && storyBaseWho(l.who) === who.id));
 const storyAssistantArtOf = (id, outfit) => {
-  const who = (typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST : []).find(a => a && a.id === id);
+  const who = ASSISTANT_LIST.find(a => a && a.id === id);
   if (!who || !who.imageDir || !who.imagePrefix) return null;
   const dirs = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS || {};
   const dir = outfit ? dirs[outfit] : who.imageDir;
