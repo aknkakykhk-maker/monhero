@@ -223,28 +223,50 @@ const ASSISTANTS = [
     tagline: 'すぐ計算したがる、熱くて陽気な攻略班のエンジニア',
     intro: '攻略を詰めたい人向け。気になるとすぐ計算してまとめを作り、勝ち負けには本気。負けても「なんくるないさ〜」と笑って組み直す。',
   },
+  {
+    // えるびん(2026-11-05・社長の決定)。8人目の助手。公開の印 assistantErubin が立つまでは、一覧にも・おしゃべりにも・選ぶ画面にも出ない(ASSISTANT_RELEASE_FLAGS)。
+    // ほかの助手より少し年上の、穏やかな大人。見守る・まとめる役。彫りの深い顔立ちだけど純日本人(ふつうの日本語で話す)。
+    // 石油王だったが、光の向こう(穴に落ちて)からモンヒロの世界へ来た。石油王ネタは「いじられ役」だけ(本人はいたって普通)。
+    // 好きなモンスターはアーク。MFバトルカードはこっちに来て覚えてはまっていく(デュラハン種が好き)。登場のお話にはカードの話を入れない
+    // ★元のテスターさんご本人の暮らし(年齢・仕事・住まい・予定など)は書かない・推し量らない(社長)
+    id: 'erubin',
+    name: 'えるびん',
+    role: '助手',
+    imageDir: 'images/assistant',
+    imagePrefix: 'erubin',
+    // 絵(2026-11-05 社長): 通常衣装と衣装『石油王』の8表情(tools/art-sources/assistants/erubin-*-sheet.png)を、きゅうこと同じ 384x512 に切り分けた。
+    // 表情の当て方は社長の「これで」(docs/progress/tempo-2026-11-05/erubin-expressions-normal.png)。石油王の絵は images/assistant/sekiyuou/
+    expressions: ASSISTANT_EXPRESSIONS,
+    defaultExpression: ASSISTANT_DEFAULT_EXPRESSION,
+    emoji: '🏜️',
+    // テーマ色は砂色
+    accent: '#d6b47a',
+    greeting: 'おけ！ 呼んでくれてありがとう☺️',
+    firstPerson: 'ふだんは「俺」。少し丁寧に話すときは「私」。「僕」「あたし」「おで」は使わない',
+    speech: 'おだやかで、やわらかいタメ口。ときどき丁寧語がまざる(「そういうことです笑」)。語尾は「〜ね」「〜よね」「〜かな」「〜のかな」「〜だしね」が多い。相手を気づかって確かめる(「〜大丈夫かな？」)',
+    speechQuirks: ['語尾に「笑」と「w」の両方を使う(1文に両方は付けない)', '「おけ！」「おけw」「いいね」「さすが」', 'のばし棒で喜ぶ(「楽しかったー！」)。絵文字は ☺️😊🤔💦 を軽く'],
+    speechMarkers: '俺|私|おけ|いいね|さすが|かな|だしね|よね|笑|w(?![A-Za-z])|☺️',
+    rhythmCall: 'モンヒロビート',
+    tagline: 'みんなを見守る、穏やかな大人(なぜか石油王あつかい)',
+    intro: '落ち着いて話を聞いてほしい人向け。いつも相手を気づかって、困っていたら一緒に考えてくれる。この世界のことは、来てから少しずつ覚えている。',
+  },
 ];
 // 助手どうしの呼び方(だれ → だれ)。台本の決めごと(きき加入・異世界交響祭などの冒頭のコメント)をここへ1か所にまとめた。
 // おしゃべりの人柄(tools/build-assistant-chat-digest.js)はここから作る。台本で実際に使っているかは
 // tools/assistant/assistant-chat-check.js が突き合わせる。台本を書くときもこの表に合わせる
 const ASSISTANT_PEER_CALLS = Object.freeze({
-  mua:      { kiki: 'ひめちん', momosuke: 'もも', dra: 'ドラケン', atsu: 'あつくん', kyuko: 'きゅきゅ', sorashido: 'どれみふぁソラシド～♪' },
-  kiki:     { mua: 'みゅあちん', momosuke: 'ももさん', dra: 'ドラさん', atsu: 'あっくん', kyuko: 'きゅうこさん', sorashido: 'ソラシドさん' },
-  momosuke: { mua: 'みゅあねぇ', kiki: 'ききちゃん', dra: 'ドラちゃん', atsu: 'あつ', kyuko: 'きゅうちゃん', sorashido: 'ソラちゃん' },
-  dra:      { mua: 'みゅあ', kiki: '靴下さん', momosuke: 'もも(好意が暴走すると「ももぉ〜」)', atsu: 'あっくん', kyuko: 'きゅうこちゃん', sorashido: 'ソラシド' },
+  mua:      { kiki: 'ひめちん', momosuke: 'もも', dra: 'ドラケン', atsu: 'あつくん', kyuko: 'きゅきゅ', sorashido: 'どれみふぁソラシド～♪', erubin: 'るびちん' },
+  kiki:     { mua: 'みゅあちん', momosuke: 'ももさん', dra: 'ドラさん', atsu: 'あっくん', kyuko: 'きゅうこさん', sorashido: 'ソラシドさん', erubin: 'えるびんさん' },
+  momosuke: { mua: 'みゅあねぇ', kiki: 'ききちゃん', dra: 'ドラちゃん', atsu: 'あつ', kyuko: 'きゅうちゃん', sorashido: 'ソラちゃん', erubin: 'えるちゃん' },
+  dra:      { mua: 'みゅあ', kiki: '靴下さん', momosuke: 'もも(好意が暴走すると「ももぉ〜」)', atsu: 'あっくん', kyuko: 'きゅうこちゃん', sorashido: 'ソラシド', erubin: 'ビンビン' },
   // あつ(2026-10-22 社長の決定)
-  atsu:     { mua: 'みゅあ', kiki: 'きき', momosuke: 'もも', dra: 'ドラちゃん', kyuko: 'きゅうこちゃん', sorashido: 'ばこっちゃん' },
+  atsu:     { mua: 'みゅあ', kiki: 'きき', momosuke: 'もも', dra: 'ドラちゃん', kyuko: 'きゅうこちゃん', sorashido: 'ばこっちゃん', erubin: 'エルちゃん' },
   // きゅうこ(2026-10-22 社長の決定)
-  kyuko:    { mua: 'みゅあねぇ', kiki: 'ききさん', momosuke: 'ももすけ', dra: 'ドラちゃん', atsu: 'あつニキ', sorashido: 'ばこちゃん' },
+  kyuko:    { mua: 'みゅあねぇ', kiki: 'ききさん', momosuke: 'ももすけ', dra: 'ドラちゃん', atsu: 'あつニキ', sorashido: 'ばこちゃん', erubin: 'えるニキ' },
   // ソラシド(2026-10-27 社長が全部決めた)。ほかの助手からの呼び方も各行の sorashido に足した(みゅあ「ソラちん」→2026-10-28 みゅあ本人の要望で「どれみふぁソラシド～♪」・きき「ソラシドさん」・もも「ソラちゃん」・ドラ「ソラシド」・あつ「ばこっちゃん」・きゅうこ「ばこちゃん」)
-  sorashido: { mua: 'みゅあさん', kiki: 'ききさん', momosuke: 'ももさん', dra: 'ドラさん', atsu: 'あつさん', kyuko: 'きゅうこちゃん' },
-});
-// 公開前の助手えるびん(8人目・2026-11-05 社長が決めた呼び方)。公開するまでは、どこからも読まない
-//   (上の表はおしゃべりのまとめの材料になるので、入れると公開前に名前が出る)。公開のときに、
-//   erubin の行を上の表へ足し、ほかの行には erubin の呼び方を足す。プレイヤーの呼び方は社長に確認中
-const ASSISTANT_PEER_CALLS_ERUBIN_PENDING = Object.freeze({
-  erubin: { mua: 'みゅあちゃん', kiki: 'ききさん', momosuke: 'ももちゃん', dra: 'ドラちゃん', atsu: 'あっくん', kyuko: 'きゅうこちゃん', sorashido: 'ソラくん' },
-  toErubin: { mua: 'るびちん', kiki: 'えるびんさん', momosuke: 'えるちゃん', dra: 'ビンビン', atsu: 'エルちゃん', kyuko: 'えるニキ', sorashido: 'えるさん' },
+  sorashido: { mua: 'みゅあさん', kiki: 'ききさん', momosuke: 'ももさん', dra: 'ドラさん', atsu: 'あつさん', kyuko: 'きゅうこちゃん', erubin: 'えるさん' },
+  // えるびん(2026-11-05 社長が全部決めた)。ほかの助手からの呼び方も各行の erubin に足した
+  erubin:   { mua: 'みゅあちゃん', kiki: 'ききさん', momosuke: 'ももちゃん', dra: 'ドラちゃん', atsu: 'あっくん', kyuko: 'きゅうこちゃん', sorashido: 'ソラくん' },
 });
 // おしゃべりの受け答えの見本(2026-10-14 社長「キャラごとの喋り方の特徴がちゃんと反映されてない気がする」)。
 // 台本の実際のセリフの言い回し・くせを元に書いた。答えはどれも1〜3行・ゲームの数字や仕組みは書かない。
@@ -330,7 +352,7 @@ const assistantAtsuUnlockReady = (levelOf) => typeof levelOf === 'function'
   && Object.entries(ASSISTANT_ATSU_UNLOCK_BONDS).every(([id, need]) => { const lv = Number(levelOf(id)); return Number.isFinite(lv) && lv >= need; });
 // 公開の印が立つまで、一覧にも出さない助手(印の名前は RELEASE_FLAGS・17-release-changelog-login-missions.jsx)。
 // RELEASE_FLAGS はあとの部品で作られるので、見るたびに引く(読み込み時に触ると画面が真っ白になる)
-const ASSISTANT_RELEASE_FLAGS = Object.freeze({ atsu: 'assistantAtsu', kyuko: 'assistantKyuko', sorashido: 'assistantSorashido' });
+const ASSISTANT_RELEASE_FLAGS = Object.freeze({ atsu: 'assistantAtsu', kyuko: 'assistantKyuko', sorashido: 'assistantSorashido', erubin: 'assistantErubin' });
 const assistantReleased = (assistantId) => {
   const flag = ASSISTANT_RELEASE_FLAGS[assistantId];
   if (!flag) return true;
@@ -368,10 +390,16 @@ const eventScriptForPlayer = (script, seenStoryIds) => {
   const list = Array.isArray(script) ? script : [];
   const marked = (l, id) => l && (l[id] === 'with' || l[id] === 'without');
   const ids = EVENT_SCRIPT_SPLIT_ASSISTANTS.filter(id => list.some(l => marked(l, id)));
-  if (!ids.length) return list;
   const on = Object.fromEntries(ids.map(id => [id, eventScriptSplitOn(id, seenStoryIds)]));
-  return list.filter(l => !l || ids.every(id => !marked(l, id) || ((l[id] === 'with') === on[id])));
+  const kept = ids.length ? list.filter(l => !l || ids.every(id => !marked(l, id) || ((l[id] === 'with') === on[id]))) : list;
+  // 行の outfit(衣装)・secret(名前を「？？？」・絵を影に)は、話し手を「助手id@衣装@secret」に置き換えて渡す(2026-11-05 えるびんの登場のお話)。
+  //   画面は assistantById がこの形を読んで、衣装の絵の場所・「？？？」・影を付けた話し手を返す(21-assistant.jsx の storyVariantWho)
+  if (!kept.some(l => l && (l.outfit || l.secret))) return kept;
+  return kept.map(l => (l && (l.outfit || l.secret) && typeof l.who === 'string')
+    ? { ...l, who: [l.who, typeof l.outfit === 'string' ? l.outfit : '', l.secret ? 'secret' : ''].filter(Boolean).join('@') } : l);
 };
+// 台本の行で衣装を指定するときの、衣装の名前 → 絵のフォルダ(立ち絵 <接頭辞>_<表情>.PNG と face/)
+const STORY_OUTFIT_DIRS = Object.freeze({ sekiyuou: 'images/assistant/sekiyuou' });
 // 選べる助手だけを残す。読み込みが間に合っていない・壊れた値でも、
 // 条件のない助手は必ず残る(画面から助手が消えない)
 const assistantsUnlockedFrom = (seenStoryIds) =>
@@ -900,6 +928,18 @@ const ASSISTANT_BOND_STYLES = {
       '殿堂入りの検証仲間', '響きあう仲間', '心のよりどころ', '最強の相方', '伝説の攻略班',
       '星をつなぐ相棒', '時を越える相棒', '魂の相棒', 'ふたりでひとつの攻略班', '最強の攻略班',
     ],
+  },  // えるびん(2026-11-05): 段階の名前は「砂の向こうから来た人」の流れ(旅の人 → 見守る人 → いちばんの理解者 → 砂漠の向こうまで一緒に)。
+  // 呼び方はずっと「さん」付け(社長「◯◯さん」)
+  erubin: {
+    titles: [
+      '砂の向こうから来た人', 'となりの旅人', '話しやすい人', '気づかいの人', 'お茶の相手',
+      'いつものフレンド', '相談相手', '見守る人', '頼れるお兄さん', 'オアシスの仲間',
+      '心強い大人', '帰る場所の人', '同じ空を見る人', '頼れる相棒', '背中を預ける相棒',
+      'いちばんの理解者', 'かけがえのない相棒', '砂漠の灯り', '星を数える仲', '最高の相方',
+      '殿堂入りの相棒', '響きあう仲間', '心のよりどころ', '最強の相方', '伝説の旅の友',
+      '星をつなぐ相棒', '時を越える相棒', '魂の相棒', 'ふたりでひとつの旅', '砂漠の向こうまで一緒に',
+    ],
+    call: () => '{name}さん',
   },
 };
 // その助手の30段階を作る。need はみゅあと共通、タイトル・呼び方・話し方だけ差し替える
@@ -960,6 +1000,11 @@ const ASSISTANT_CALL_STYLE_SETS = {
   ],
   // ソラシド(2026-10-31)。ほかの助手を「さん」「ちゃん」で呼ぶので、その2つと呼び捨て
   sorashido: [
+    { id:'san',   label:'さん付け',   template:'{name}さん' },
+    { id:'plain', label:'呼び捨て',   template:'{name}' },
+    { id:'chan',  label:'ちゃん付け', template:'{name}ちゃん' },
+  ],  // えるびん(2026-11-05)。プレイヤーは「◯◯さん」(社長)。ほかの助手を「ちゃん」「くん」で呼ぶので、その2つと呼び捨て
+  erubin: [
     { id:'san',   label:'さん付け',   template:'{name}さん' },
     { id:'plain', label:'呼び捨て',   template:'{name}' },
     { id:'chan',  label:'ちゃん付け', template:'{name}ちゃん' },
@@ -10693,7 +10738,8 @@ const ASSISTANT_SORASHIDO_JOIN_STORY_CALLS = { mua: 'どれみふぁソラシド
 // ---------- えるびんの加入のお話(2026-11-05・台本の全文。社長に動画で見てもらう段階。公開しない) ----------
 // 社長のざっくり(11/05): 最初はシークレット。誰か分からない男が、石油王の世界でなぜかピンチになり、穴に落ちて、気が付いたらモンヒロの世界にいる
 //   → 石油王の格好のまま →「石油王だ！」と大さわぎ → みゅあに服を選んでもらい通常衣装に → 仲間になる。
-//   BGM「Wrath of the Thorn King『茨の王の怒り』」(どこから流すかは動画で見せて決める。いまはピンチの場面から)
+//   BGM: 最初の行(ピンチの場面)から「Wrath of the Thorn King『茨の王の怒り』」。モンヒロの世界に着いた所(bgm:'default')から、いつものお話の曲へ戻す(社長)
+// scene:'desert' … その行から砂漠の背景(scene:'none' で消す)。fx:'fall' … 穴に落ちていく演出(背景が上へ流れて暗くなる)
 // 人柄(社長): ほかの助手より少し年上の、穏やかな大人。見守る・まとめる役。テーマは砂色と🏜。
 //   石油王ネタは「いじられ役」だけ(本人はいたって普通なのに、みんなに石油王あつかいされる)
 //   ★バトルカードの話は入れない(社長「世界観が違うから、こっちに来て覚えていく感じで」)。この世界のことをまだ何も知らない人として書く
@@ -10704,15 +10750,15 @@ const ASSISTANT_SORASHIDO_JOIN_STORY_CALLS = { mua: 'どれみふぁソラシド
 // atsu:'with'/'without' はほかのお話と同じ(あつを解放しているか)
 const ASSISTANT_ERUBIN_JOIN_STORY = [
   // ---- ① シークレット: 石油王の世界で、なぜかピンチ → 穴に落ちる ----
-  { who:'erubin',   e:'normal',   secret:true, outfit:'sekiyuou', bgm:'melo_wrath_of_the_thorn_king', fxText:'どこまでも続く砂漠と、白い宮殿', holdMs:2500, t:'……今日も、静かな一日になりそうだね' },
+  { who:'erubin',   e:'normal',   secret:true, outfit:'sekiyuou', scene:'desert', bgm:'melo_wrath_of_the_thorn_king', fxText:'どこまでも続く砂漠と、白い宮殿', holdMs:2500, t:'……今日も、静かな一日になりそうだね' },
   { who:'erubin',   e:'wink',     secret:true, outfit:'sekiyuou', t:'……あれ。なんだろう、あの砂けむり' },
   { who:'erubin',   e:'surprise', secret:true, outfit:'sekiyuou', fx:'transform', fxText:'ラクダの群れが、まっすぐこちらへ走ってくる', t:'え、ちょっと待って、こっちに来てない！？' },
   { who:'erubin',   e:'troubled', secret:true, outfit:'sekiyuou', t:'俺、何かしたかな……。この服の金の刺しゅうが、光って見えるのかな' },
   { who:'erubin',   e:'surprise', secret:true, outfit:'sekiyuou', fx:'transform', fxText:'逃げこんだ先で、足もとの砂が崩れはじめた', t:'うわ、砂が……！ 足もとが……！' },
   { who:'erubin',   e:'troubled', secret:true, outfit:'sekiyuou', fxText:'砂の下に、ぽっかりと黒い穴が開いている', t:'……これ、落ちるやつだよね……？' },
-  { who:'erubin',   e:'surprise', secret:true, outfit:'sekiyuou', fx:'transform', fxText:'まっさかさまに、暗い穴の底へ——', holdMs:2600, t:'うわああああ……！' },
+  { who:'erubin',   e:'surprise', secret:true, outfit:'sekiyuou', fx:'fall', fxText:'まっさかさまに、暗い穴の底へ——', holdMs:2600, t:'うわああああ……！' },
   // ---- ② 気が付いたら、モンヒロの世界 ----
-  { who:'mua',      e:'normal',   t:'ねえねえ、今日はこれから何して遊ぶ〜？' },
+  { who:'mua',      e:'normal',   scene:'none', bgm:'default', t:'ねえねえ、今日はこれから何して遊ぶ〜？' },
   { who:'kiki',     e:'normal',   t:'そうでつね……あれま。上から、何か落ちてきまつ！' },
   { who:'dra',      e:'surprise', fx:'transform', fxText:'ドサッ！', t:'うおっ！ ……人だ。人が降ってきたぞ' },
   { who:'erubin',   e:'troubled', outfit:'sekiyuou', t:'いたた……。……あれ。ここ、どこだろう' },
@@ -11246,6 +11292,8 @@ const EVENT_REPLAYS = [
   // ソラシドの加入のお話(2026-10-27)。公開の印 assistantSorashido が立つまで流れず、回想にも出ない。ソラシドは駆け込んでくる行まで顔を伏せる
   //   date は公開の日に合わせて直す(いまは台本を書いた日)
   { id: 'sorashido_join_2026_10_27', date: '2026-10-27 12:00', title: '推しに会える夜 ～ソラシド登場～', script: ASSISTANT_SORASHIDO_JOIN_STORY, calls: ASSISTANT_SORASHIDO_JOIN_STORY_CALLS, unlockedKey: 'sorashidoJoinSeen', releaseFlag: 'assistantSorashido', hideUntilFirstLine: ['sorashido'], group: 'assistant' },
+  // えるびんの加入のお話(2026-11-05)。公開の印 assistantErubin が立つまで、流れず回想にも出ない。見るまでは題名を titleSecret で出す(シークレット)
+  { id: 'erubin_join_2026_11', date: '2026-11-05 12:00', title: '砂の向こうから来た人 ～えるびん登場～', titleSecret: '砂の向こうから来た人 ～？？？～', script: ASSISTANT_ERUBIN_JOIN_STORY, calls: ASSISTANT_ERUBIN_JOIN_STORY_CALLS, unlockedKey: 'erubinJoinSeen', releaseFlag: 'assistantErubin', hideUntilFirstLine: ['erubin'], group: 'assistant' },
   // 個人杯のお話(2026-10-31)。公開の印 cardCup(99-card-cup.jsx の cardCupOpen)が立つまで流れず、回想にも出ない。
   //   あつを解放していない人には、あつのはじめての登場になる(atsuJoin)。あつは最初にしゃべる行まで顔を伏せる
   // イベント「鍵の向こう側へ」第1話(2026-11-02 12:00)。開幕のお話として流れる(60-app.jsx の RHYTHM_EVENT_STORY_BY_EVENT)。見たかは mh_rhythm_event_story_v1 の id

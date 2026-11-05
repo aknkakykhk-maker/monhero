@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 39a7242e400ab528
+// source-sha256: 5a05dd7888163074
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -447,6 +447,9 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   },
   get assistantSorashido() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantSorashido === true;
+  },
+  get assistantErubin() {
+    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantErubin === true;
   },
   get cardBattle() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardBattle === true;
@@ -6862,6 +6865,7 @@ const rhythmAchievementPending = (ledger, rules, eligible) => {
 const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Pandora' && (enemyId === 'Moo' || currentWave === 10) ? 'pandora_boss' : null;
 const eikiBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
+  erubinJoinStoryEvent: 'original_event_01',
   cardBattleIntroEvent: 'atsu_cup_theme',
   cardCupStoryEvent: 'melo_toriko',
   pandoraWingsStoryEvent: 'melo_rebellion',
@@ -6954,12 +6958,13 @@ const eventScriptBgmAt = (script, step) => {
   let found = null;
   for (let i = 0; i <= last; i += 1) {
     const id = script[i] && script[i].bgm;
-    if (typeof id === 'string' && BGM_TRACKS.some(t => t.id === id)) found = id;
+    if (id === 'default') found = null;else if (typeof id === 'string' && BGM_TRACKS.some(t => t.id === id)) found = id;
   }
   return found;
 };
 const EVENT_BGM_FADE_MS = 800;
 const EVENT_BGM_SCENES = Object.freeze({
+  erubin_join_2026_11: 'erubinJoinStoryEvent',
   card_battle_intro_2026: 'cardBattleIntroEvent',
   card_cup_2026_10_31: 'cardCupStoryEvent',
   pandora_wings_2026_ep1: 'pandoraWingsStoryEvent',
@@ -13186,6 +13191,7 @@ const RELEASE_FLAGS = {
   assistantAtsu: true,
   assistantKyuko: true,
   assistantSorashido: true,
+  assistantErubin: false,
   cardBattle: true,
   cardAssistantTalk: true,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
@@ -13544,6 +13550,7 @@ const ASSISTANT_CHAT_STORY_ID = 'assistant_chat_story';
 const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
 const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
 const SORASHIDO_JOIN_STORY_ID = 'sorashido_join_2026_10_27';
+const ERUBIN_JOIN_STORY_ID = 'erubin_join_2026_11';
 const CARD_CUP_STORY_ID = 'card_cup_2026_10_31';
 const SORASHIDO_GIFT_KEY = 'mh_sorashido_gift_v1';
 const SORASHIDO_GIFT_BEAT_POINTS = 10000;
@@ -18812,8 +18819,37 @@ const ASSISTANT_FALLBACK = {
   greeting: ''
 };
 const STORY_GUEST_LIST = typeof STORY_GUEST_SPEAKERS !== 'undefined' && Array.isArray(STORY_GUEST_SPEAKERS) ? STORY_GUEST_SPEAKERS : [];
-const assistantById = id => ASSISTANT_LIST.find(a => a.id === id) || STORY_GUEST_LIST.find(a => a.id === id) || ASSISTANT_LIST.find(a => a.id === (typeof DEFAULT_ASSISTANT_ID !== 'undefined' ? DEFAULT_ASSISTANT_ID : '')) || ASSISTANT_LIST[0] || ASSISTANT_FALLBACK;
-const storyCastOf = script => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(who => (script || []).some(l => l.who === who.id));
+const STORY_VARIANT_CACHE = new Map();
+const storyVariantWho = id => {
+  if (typeof id !== 'string' || !id.includes('@')) return null;
+  if (STORY_VARIANT_CACHE.has(id)) return STORY_VARIANT_CACHE.get(id);
+  const [baseId, ...flags] = id.split('@');
+  const base = ASSISTANT_LIST.find(a => a.id === baseId);
+  if (!base) return null;
+  const dirs = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS || {};
+  const outfit = flags.find(f => dirs[f]);
+  const secret = flags.includes('secret');
+  const who = {
+    ...base,
+    id,
+    baseId,
+    ...(outfit ? {
+      imageDir: dirs[outfit],
+      tempImageDir: undefined
+    } : {}),
+    ...(secret ? {
+      name: '？？？',
+      secret: true,
+      accent: '#8a7a5c',
+      emoji: '❔'
+    } : {})
+  };
+  STORY_VARIANT_CACHE.set(id, who);
+  return who;
+};
+const assistantById = id => ASSISTANT_LIST.find(a => a.id === id) || storyVariantWho(id) || STORY_GUEST_LIST.find(a => a.id === id) || ASSISTANT_LIST.find(a => a.id === (typeof DEFAULT_ASSISTANT_ID !== 'undefined' ? DEFAULT_ASSISTANT_ID : '')) || ASSISTANT_LIST[0] || ASSISTANT_FALLBACK;
+const storyBaseWho = id => typeof id === 'string' ? id.split('@')[0] : id;
+const storyCastOf = script => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(who => (script || []).some(l => l && storyBaseWho(l.who) === who.id));
 const STORY_MONSTER_ART = Object.freeze({
   Kyubi: typeof KYUBI_IMG !== 'undefined' ? KYUBI_IMG : null,
   Orihime: typeof ORIHIME_IMG !== 'undefined' ? ORIHIME_IMG : null,
@@ -19013,6 +19049,10 @@ const AssistantFace = ({
     src: src,
     alt: who.name,
     className: `w-full h-full ${who.imageFit === 'contain' ? 'object-contain p-0.5' : 'object-cover'}`,
+    "data-story-secret": who.secret ? '1' : undefined,
+    style: who.secret ? {
+      filter: 'brightness(0) invert(.16) sepia(1) saturate(1.4)'
+    } : undefined,
     onError: () => setSrc(src === fallback ? null : fallback)
   }) : React.createElement("span", {
     style: {
@@ -133443,7 +133483,7 @@ function MonsterHeroGame() {
   const PANDORA_WINGS_STORY_IDS = PANDORA_WINGS_STORIES.map(story => story.id);
   const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
   const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, CARD_CUP_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
@@ -133691,6 +133731,13 @@ function MonsterHeroGame() {
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
     if (rhythmEventStoryStartedRef.current.includes(SORASHIDO_JOIN_STORY_ID)) return;
     setRhythmEventStoryPending(SORASHIDO_JOIN_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantErubin) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(ERUBIN_JOIN_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(ERUBIN_JOIN_STORY_ID)) return;
+    setRhythmEventStoryPending(ERUBIN_JOIN_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (!RAID_JACK_ENDING_REPLAY_READY || RELEASE_FLAGS.raidJack !== true) return;
@@ -135316,7 +135363,7 @@ function MonsterHeroGame() {
       }
       if (!wasOnboarded) {
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
-        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, KYUKO_JOIN_STORY_ID, ...(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? [SORASHIDO_JOIN_STORY_ID] : []), ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
+        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, KYUKO_JOIN_STORY_ID, ...(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? [SORASHIDO_JOIN_STORY_ID] : []), ...(EVENT_REPLAY_RELEASE_FLAGS.assistantErubin ? [ERUBIN_JOIN_STORY_ID] : []), ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
         const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
         if (add.length) {
           const next = [...seenNow, ...add];
@@ -136761,6 +136808,7 @@ function MonsterHeroGame() {
     atsuJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID),
     kyukoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID),
     sorashidoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID),
+    erubinJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ERUBIN_JOIN_STORY_ID),
     cardCupStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(CARD_CUP_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
@@ -161197,6 +161245,15 @@ function MonsterHeroGame() {
       const storyEnding = !!event && typeof STORY_ENDING_STYLE !== 'undefined' && STORY_ENDING_STYLE !== 'none';
       const storyOpeningStyle = typeof STORY_OPENING_STYLE !== 'undefined' ? STORY_OPENING_STYLE : 'none';
       const storyOpening = !!event && storyOpeningStyle !== 'none' && !eventReplay.opened && step === 0 && !eventReplay.ending;
+      const storyTitleNow = event?.titleSecret && eventReplay.live ? event.titleSecret : event?.title;
+      let storyScene = null;
+      for (let i = step; i >= 0; i--) {
+        const l = script[i];
+        if (l && typeof l.scene === 'string') {
+          storyScene = l.scene === 'none' ? null : l.scene;
+          break;
+        }
+      }
       const finishOpening = () => setEventReplay(r => r && !r.opened ? {
         ...r,
         opened: true,
@@ -161207,7 +161264,14 @@ function MonsterHeroGame() {
         return !!w && w.role === 'ゲスト';
       };
       const hiddenUntil = Array.isArray(event && event.hideUntilFirstLine) ? event.hideUntilFirstLine : [];
-      const cast = storyCastOf(script).filter(who => who.role !== 'ゲスト').filter(who => !hiddenUntil.includes(who.id) || script.slice(0, step + 1).some(l => l && l.who === who.id));
+      const castNow = who => {
+        for (let i = step; i >= 0; i--) {
+          const w = script[i] && script[i].who;
+          if (storyBaseWho(w) === who.id) return w === who.id ? who : assistantById(w);
+        }
+        return who;
+      };
+      const cast = storyCastOf(script).filter(who => who.role !== 'ゲスト').filter(who => !hiddenUntil.includes(who.id) || script.slice(0, step + 1).some(l => l && storyBaseWho(l.who) === who.id));
       let stageIdx = -1;
       for (let i = step; i >= 0; i--) {
         const l = script[i];
@@ -161260,8 +161324,9 @@ function MonsterHeroGame() {
         shrink: '186,230,253'
       };
       const speakText = (l, w) => {
-        const bond = normalizeAssistantBond(assistantBonds[w.id]);
-        return assistantSpeakText(l.t, breederName, assistantBondLevelOf(bond.points), assistantCallStyles[w.id] || null, w.id);
+        const wid = w.baseId || w.id;
+        const bond = normalizeAssistantBond(assistantBonds[wid]);
+        return assistantSpeakText(l.t, breederName, assistantBondLevelOf(bond.points), assistantCallStyles[wid] || null, wid);
       };
       const bubbleLines = text => typeof text === 'string' && text.includes('\n') ? text.split('\n').map((x, i) => React.createElement(React.Fragment, {
         key: i
@@ -161434,8 +161499,20 @@ function MonsterHeroGame() {
         },
         role: "dialog",
         "aria-modal": "true",
-        "aria-label": `イベント回想: ${event?.title || ''}`
-      }, React.createElement("button", {
+        "aria-label": `イベント回想: ${storyTitleNow || ''}`
+      }, storyScene === 'desert' && React.createElement("div", {
+        "data-story-scene": "desert",
+        "data-story-scene-fx": fx === 'fall' ? 'fall' : undefined,
+        "aria-hidden": "true"
+      }, React.createElement("span", {
+        "data-scene-sun": true
+      }), React.createElement("span", {
+        "data-scene-palace": true
+      }), React.createElement("span", {
+        "data-scene-dune": "back"
+      }), React.createElement("span", {
+        "data-scene-dune": "front"
+      })), React.createElement("button", {
         type: "button",
         onClick: next,
         "aria-label": "次へ",
@@ -161612,11 +161689,11 @@ function MonsterHeroGame() {
         className: "min-h-0 flex-1 overflow-y-auto mh-scroll"
       }, React.createElement("p", {
         className: "mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300"
-      }, eventReplay.live ? '' : '回想・', event?.title || ''), (() => {
+      }, eventReplay.live ? '' : '回想・', storyTitleNow || ''), (() => {
         if (storyZones && !storyKeepRow) return null;
         const tiny = storyZones;
         const atStart = Array.isArray(event && event.castAtStart) ? event.castAtStart : [];
-        const rowCast = tiny ? cast.filter(who => atStart.includes(who.id) || script.slice(0, step + 1).some(l => l && l.who === who.id)) : cast;
+        const rowCast = (tiny ? cast.filter(who => atStart.includes(who.id) || script.slice(0, step + 1).some(l => l && storyBaseWho(l.who) === who.id)) : cast).map(castNow);
         if (tiny && rowCast.length === 0) return React.createElement("div", {
           "data-story-cast-tiny-empty": true,
           style: {
@@ -161736,7 +161813,7 @@ function MonsterHeroGame() {
         },
         className: "min-h-[50px] rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]"
       }, last && !(storyEnding && !eventReplay.ending) ? '閉じる' : '次へ'))), storyOpening && (() => {
-        const parts = storyEpisodeTitleParts(event?.title);
+        const parts = storyEpisodeTitleParts(storyTitleNow);
         const allEv = (typeof EVENT_REPLAYS !== 'undefined' ? EVENT_REPLAYS : []).filter(ev => ev && ev.id && ev.title);
         const series = parts.serial ? allEv.filter(ev => ev.group === event.group && storyEpisodeTitleParts(ev.title).serial && storyEpisodeTitleParts(ev.title).series === parts.series).sort((a, b) => String(a.date || '').localeCompare(String(b.date || ''))) : [];
         const idx = series.findIndex(ev => ev.id === event.id);
@@ -167686,6 +167763,21 @@ const createAnimationStyle = () => {
     @keyframes storyOpenTitle { 0% { opacity: 0; transform: scale(.9); filter: blur(6px); letter-spacing: .4em; } 100% { opacity: 1; transform: none; filter: none; } }
     @keyframes storyOpenOut { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
     @keyframes storyIrisHole { 0% { width: 0; height: 0; } 100% { width: 260vmax; height: 260vmax; } }
+    /* お話の場面の背景(2026-11-05 えるびんの登場のお話)。砂漠: 夕方の空・沈む日・遠くの白い宮殿の影・砂丘 */
+    [data-story-scene] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+    [data-story-scene="desert"] { background: linear-gradient(180deg, #3b2a4d 0%, #9a5a4a 26%, #e7a25c 46%, #f4c784 58%, #d9a15e 70%, #b07a43 100%); animation: storySceneIn .9s ease-out both; }
+    [data-story-scene="desert"] [data-scene-sun] { position: absolute; left: 50%; top: 38%; width: 34vmin; height: 34vmin; transform: translate(-50%, -50%); border-radius: 50%;
+      background: radial-gradient(circle, #fff3c4 0%, #fcd77f 45%, rgba(252,215,127,0) 70%); }
+    [data-story-scene="desert"] [data-scene-palace] { position: absolute; left: 50%; top: 46%; width: min(78vw, 360px); height: 18vmin; transform: translate(-50%, -100%); background: #4a2f2a; opacity: .85;
+      clip-path: polygon(0% 100%, 0% 62%, 6% 62%, 6% 20%, 7% 8%, 8% 20%, 8% 62%, 20% 62%, 22% 48%, 30% 40%, 38% 48%, 40% 62%, 44% 62%, 44% 40%, 46% 26%, 50% 14%, 54% 26%, 56% 40%, 56% 62%, 60% 62%, 62% 48%, 70% 40%, 78% 48%, 80% 62%, 92% 62%, 92% 20%, 93% 8%, 94% 20%, 94% 62%, 100% 62%, 100% 100%); }
+    [data-story-scene="desert"] [data-scene-dune] { position: absolute; left: -20%; width: 140%; border-radius: 50% 50% 0 0 / 100% 100% 0 0; }
+    [data-story-scene="desert"] [data-scene-dune="back"] { top: 44%; height: 40%; background: linear-gradient(180deg, #e2a965, #c88a4c); }
+    [data-story-scene="desert"] [data-scene-dune="front"] { top: 54%; left: -40%; width: 120%; height: 60%; background: linear-gradient(180deg, #d69a57, #a8723f); }
+    @keyframes storySceneIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+    /* fx:'fall' … 穴へ落ちていく。背景が上へ流れながら暗くなる(行の holdMs のあいだに終わる長さ) */
+    [data-story-scene][data-story-scene-fx="fall"] { animation: storySceneFall 2.4s cubic-bezier(.55,0,.8,.4) both; }
+    @keyframes storySceneFall { 0% { transform: none; filter: none; } 100% { transform: translateY(-85%) scale(1.25); filter: brightness(0); } }
+    @media (prefers-reduced-motion: reduce) { [data-story-scene], [data-story-scene][data-story-scene-fx="fall"] { animation-duration: .01s !important; } }
     [data-event-story][data-story-opening]:not([data-story-opening="iris"]) > :not([data-story-opening-card]):not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
     @media (prefers-reduced-motion: reduce) { [data-story-opening-card], [data-story-opening-card] * { animation-duration: .01s !important; animation-delay: 0s !important; } }
     [data-event-story][data-story-ending-pull] > :not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
