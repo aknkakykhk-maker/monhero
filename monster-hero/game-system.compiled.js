@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1abe5871ab047255
+// source-sha256: 48a5ce5585eb3f94
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161554,7 +161554,7 @@ function MonsterHeroGame() {
           fill: true,
           own: true
         }) : art);
-      })), fx && React.createElement("div", {
+      })), (fx || line.fxText && !(storyZones && storySub > 0)) && React.createElement("div", {
         key: `fx${step}`,
         "aria-hidden": "true",
         className: "pointer-events-none",
@@ -161563,7 +161563,7 @@ function MonsterHeroGame() {
           inset: 0,
           zIndex: 4
         }
-      }, React.createElement("div", {
+      }, fx && React.createElement("div", {
         "data-story-fx-flash": fx,
         style: {
           position: 'absolute',
@@ -161583,7 +161583,8 @@ function MonsterHeroGame() {
           transform: `rotate(${deg}deg)`,
           animationDelay: `${i % 3 * 40}ms`
         }
-      }))), line.fxText && React.createElement("div", {
+      }))), line.fxText && !storyOpening && React.createElement("div", {
+        key: `banner${step}-${eventReplay.opened ? 1 : 0}`,
         "data-story-banner": true,
         className: "px-4 text-center text-[17px] font-black",
         style: {
