@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 54f8292c8cc4199c
+// source-sha256: d995096860a58e52
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -18824,7 +18824,7 @@ const STORY_MONSTER_ART = Object.freeze({
 });
 const STORY_BOTTOM_KEEP_ROW = true;
 const STORY_ENDING_STYLE = 'pull';
-const STORY_OPENING_STYLE = 'none';
+const STORY_OPENING_STYLE = 'iris';
 const storyEpisodeTitleParts = title => {
   const t = String(title || '').trim();
   const m = t.match(/^(.*?)\s*(第[\d.]+[話部][^～\s]*|終章)\s*(～.*～)?\s*$/);
@@ -18874,6 +18874,97 @@ const storySplitPages = (text, cpl, maxLines) => {
   const pages = pack(sentences).flatMap(page => storyTextLines(tidy(page), cpl) > maxLines ? pack((page.match(/[^、，\n]*(?:[、，]+|\n|$)/g) || [page]).filter(Boolean)) : [page]);
   const out = pages.map(tidy).filter(t => t.length);
   return out.length ? out : [s];
+};
+const STORY_EMOTICON_HEAD_RE = /^[(（][^ぁ-んァ-ヶ一-龠a-zA-Z0-9()（）]{1,10}[)）][0-9９ｂb]?/;
+const STORY_NOBREAK_SPLIT_RE = /([(（][^ぁ-んァ-ヶ一-龠a-zA-Z0-9()（）]{1,10}[)）][0-9９ｂb]?|[0-9０-９][0-9０-９,.]*(?:ターン目?|段階|回目?|体|枚|位|曲|話|日|時|周|人|個|倍|秒|分|つ))/;
+const storyEmoticonParts = text => String(text ?? '').split(STORY_NOBREAK_SPLIT_RE).filter(x => x !== '').map((x, i, all) => ({
+  t: x,
+  emo: STORY_NOBREAK_SPLIT_RE.test(x) && x.match(STORY_NOBREAK_SPLIT_RE)[0] === x
+}));
+const storyChunkLines = (text, cap, maxLines) => {
+  const s = String(text ?? '');
+  if (!s || s.includes('\n') || !(cap > 0) || storyTextUnits(s) <= cap) return null;
+  const split = (src, soft) => {
+    const chars = [...src],
+      out = [];
+    let cur = '',
+      sp = false,
+      depth = 0;
+    const push = () => {
+      if (cur) out.push({
+        t: cur,
+        sp
+      });
+      cur = '';
+      sp = false;
+    };
+    for (let i = 0; i < chars.length; i++) {
+      const ch = chars[i],
+        nx = chars[i + 1] ?? '';
+      if ((ch === ' ' || ch === '\u3000') && depth === 0 && (!cur || /[。！？!?…」』）)♪♡〜～ｗw\p{Extended_Pictographic}]$/u.test(cur))) {
+        push();
+        sp = true;
+        continue;
+      }
+      const emo = depth === 0 && /[(（]/.test(ch) ? chars.slice(i).join('').match(STORY_EMOTICON_HEAD_RE) : null;
+      if (emo) {
+        cur += emo[0];
+        i += [...emo[0]].length - 1;
+        continue;
+      }
+      if ((ch === '「' || ch === '『') && depth === 0 && !soft && cur) push();
+      cur += ch;
+      if (ch === '「' || ch === '『') depth++;else if ((ch === '」' || ch === '』') && depth > 0) depth--;
+      if (!nx || depth > 0) continue;
+      if (/[。！？!?]/.test(ch) && !/[。！？!?」』）)♪♡〜～ｗw]/.test(nx)) push();else if (/[」』]/.test(ch) && /[「『]/.test(nx)) push();else if (soft && /[、，]/.test(ch) && !/[、，」』）)]/.test(nx)) push();
+    }
+    push();
+    return out;
+  };
+  const chunks = split(s, false).flatMap(c => {
+    if (storyTextUnits(c.t) <= cap) return [c];
+    const sub = split(c.t, true);
+    if (sub.length) sub[0] = {
+      ...sub[0],
+      sp: c.sp
+    };
+    return sub;
+  });
+  for (let i = chunks.length - 1; i > 0; i--) {
+    const c = chunks[i];
+    if (!/[ぁ-んァ-ヶ一-龠々a-zA-Z0-9０-９]/.test(c.t) || storyTextUnits(c.t) <= 2) {
+      chunks[i - 1] = {
+        ...chunks[i - 1],
+        t: chunks[i - 1].t + (c.sp ? ' ' : '') + c.t
+      };
+      chunks.splice(i, 1);
+    }
+  }
+  if (chunks.length < 2) return null;
+  const unitsOf = t => storyTextUnits(t) + (/[\x21-\x7e]/.test(t) ? 1 : 0) + 0.6 * (String(t).match(/\p{Extended_Pictographic}/gu) || []).length;
+  let lines = 0,
+    rem = 0;
+  for (const c of chunks) {
+    const own = unitsOf(c.t),
+      u = own + (c.sp && rem > 0 ? 0.5 : 0);
+    if (own > cap) {
+      const fresh = lines + Math.ceil(own / (cap - 1));
+      const left = lines > 0 ? u - Math.max(0, rem - 3) : u;
+      const flowLines = lines + Math.ceil(left / (cap - 2));
+      if (fresh <= flowLines) {
+        lines = fresh;
+        rem = 0;
+      } else {
+        c.flow = true;
+        rem = Math.max(0, (flowLines - lines) * (cap - 2) - left - 2);
+        lines = flowLines;
+      }
+    } else if (lines > 0 && u <= rem) rem -= u;else {
+      lines += 1;
+      rem = cap - own;
+    }
+  }
+  return lines <= maxLines ? chunks : null;
 };
 const storyMeasureRef = (name, kind) => el => {
   if (!el) return;
@@ -161179,6 +161270,38 @@ function MonsterHeroGame() {
       const storyBoxW = typeof window !== 'undefined' ? Math.min(window.innerWidth, 448) : 390;
       const storyCplBottom = Math.max(8, Math.floor((storyBoxW - 64 - (storyZones ? storyLand ? 62 : 100 : 0)) / 13) - (storyZones ? 4 : 2));
       const storyCplBubble = Math.max(6, storyLand ? Math.floor((storyBoxW - 118) / 12) - 3 : Math.floor((storyBoxW - 156) / 14) - 4);
+      const storyCapBottom = Math.floor((storyBoxW - 64 - (storyLand ? 62 : 100)) / 13 - 0.2);
+      const storyCapBubble = Math.floor((storyLand ? (storyBoxW - 118) / 12 : (storyBoxW - 156) / 14) - 0.2);
+      const storyChunkMax = cap => storyLand && cap === storyCapBubble ? 2 : 3;
+      const storyLineNodes = (text, cap) => {
+        const chunks = typeof storyChunkLines === 'function' ? storyChunkLines(text, cap, storyChunkMax(cap)) : null;
+        const body = t => typeof storyEmoticonParts === 'function' ? storyEmoticonParts(t).map((p, k) => p.emo ? React.createElement(React.Fragment, {
+          key: k
+        }, k > 0 && !/^[(（]/.test(p.t) ? React.createElement("wbr", null) : null, React.createElement("span", {
+          style: {
+            whiteSpace: 'nowrap'
+          }
+        }, p.t)) : React.createElement(React.Fragment, {
+          key: k
+        }, bubbleWrap(p.t))) : bubbleWrap(t);
+        if (!chunks) return typeof text === 'string' && !text.includes('\n') ? body(text) : bubbleLines(text);
+        return chunks.map((c, i) => React.createElement(React.Fragment, {
+          key: i
+        }, i > 0 ? c.sp ? ' ' : React.createElement("wbr", null) : null, c.flow ? body(c.t) : React.createElement("span", {
+          "data-story-chunk": true,
+          style: {
+            display: 'inline-block',
+            maxWidth: '100%'
+          }
+        }, body(c.t))));
+      };
+      const storyLineStyle = (text, cap) => {
+        const st = bubbleWrapStyle();
+        return storyZones && typeof storyChunkLines === 'function' && storyChunkLines(text, cap, storyChunkMax(cap)) ? {
+          ...st,
+          textWrap: 'wrap'
+        } : st;
+      };
       const storyPageCache = [];
       const storyPagesOf = i => {
         if (storyPageCache[i]) return storyPageCache[i];
@@ -161395,8 +161518,8 @@ function MonsterHeroGame() {
         }
       }, bubbleLine.name || stageGuest.name), React.createElement("span", {
         className: "mt-1 block text-[14px] font-bold leading-relaxed text-white",
-        style: bubbleWrapStyle()
-      }, bubbleLines(storyZones ? storyTextAt(bubbleIdx, stageGuest) : speakText(bubbleLine, stageGuest)))))), storyMonsters.length > 0 && React.createElement("div", {
+        style: storyLineStyle(storyZones ? storyTextAt(bubbleIdx, stageGuest) : '', storyCapBubble)
+      }, storyZones ? storyLineNodes(storyTextAt(bubbleIdx, stageGuest), storyCapBubble) : bubbleLines(speakText(bubbleLine, stageGuest)))))), storyMonsters.length > 0 && React.createElement("div", {
         "data-story-monsters": storyMonsters.length,
         "aria-hidden": "true",
         className: "pointer-events-none",
@@ -161573,8 +161696,8 @@ function MonsterHeroGame() {
         }
       }, bottomLine.name || bottomSpeaker.name), React.createElement("span", {
         className: "block text-[13px] font-bold leading-relaxed text-white mt-1",
-        style: bubbleWrapStyle()
-      }, bubbleLines(storyZones ? storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker) : speakText(bottomLine, bottomSpeaker)))) : React.createElement("div", {
+        style: storyLineStyle(storyZones ? storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker) : '', storyCapBottom)
+      }, storyZones ? storyLineNodes(storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker), storyCapBottom) : bubbleLines(speakText(bottomLine, bottomSpeaker)))) : React.createElement("div", {
         "data-story-line-box": true,
         className: `flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400${storyZones ? ' min-w-0 flex-1' : ''}`
       }, "▲ 上のことばを読んでね")), React.createElement("p", {

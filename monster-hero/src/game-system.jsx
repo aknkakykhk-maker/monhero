@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f06e3c1288a5129a
+// generated-sha256: d85338da6ffbc0ea
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -13209,7 +13209,7 @@ const STORY_ENDING_STYLE = 'pull';
 // お話の始まり(2026-11-04 社長「イベントストーリーのはじまりもおわりみたいにこだわって」)。終わりの札と対になる幕開け。
 //   'title' = 暗い画面に題字が浮かび、場面が近づきながら明るくなって最初のページへ / 'recap' = 'title' + 前のお話の題名・イベントの残り時間 /
 //   'iris' = 'title' のあと、鍵穴から広がるように丸く場面が開く / 'none' = 出さない。どれもタップで飛ばせる
-const STORY_OPENING_STYLE = 'none';
+const STORY_OPENING_STYLE = 'iris';
 // 題(「鍵の向こう側へ 第3話 ～大嫌いで、大好き～」)を、シリーズ名・何話・副題に分ける
 //   続きもの(「第◯話」「第◯部」「終章」がある題)は { series, ep, sub, serial:true }。単発のお話(「MFバトルカード ～物置の古い箱～」)は ep に題の前半、sub に「～…～」
 //   final … 「終章」(ハロウィンのエンディングA/B・パンドラ第8話)。次のお話は出さず「おしまい」にする
@@ -13245,6 +13245,75 @@ const storySplitPages = (text, cpl, maxLines) => {
     ? pack((page.match(/[^、，\n]*(?:[、，]+|\n|$)/g) || [page]).filter(Boolean)) : [page]));
   const out = pages.map(tidy).filter((t) => t.length);
   return out.length ? out : [s];
+};
+// お話の台詞を、文の切れ目ごとのかたまりに分ける(2026-11-04 社長「セリフの改行の位置がちょこちょこ悪い」)。
+//   収まる幅があるのに文の途中(「見られたくなかった／んじゃないかな」「ももは／ドラちゃんの」)で折れていたので、
+//   かたまり(。！？の後・空白・「」のまとまり。長すぎるかたまりは、さらに「、」の後)を1つずつ inline-block にして、そこで折れるようにする。
+//   cap は1行に入る字数(実際の欄の幅から)。かたまりで折ると maxLines を超えそうなら null(今までどおりの折り方)
+const STORY_EMOTICON_HEAD_RE = /^[(（][^ぁ-んァ-ヶ一-龠a-zA-Z0-9()（）]{1,10}[)）][0-9９ｂb]?/;
+// 台詞を、途中で折らない所(顔文字「(˘ω˘)」・数と単位「5ターン目」「1枚」)とそれ以外に分ける(emo の所は折らずに描く)
+const STORY_NOBREAK_SPLIT_RE = /([(（][^ぁ-んァ-ヶ一-龠a-zA-Z0-9()（）]{1,10}[)）][0-9９ｂb]?|[0-9０-９][0-9０-９,.]*(?:ターン目?|段階|回目?|体|枚|位|曲|話|日|時|周|人|個|倍|秒|分|つ))/;
+const storyEmoticonParts = (text) => String(text ?? '').split(STORY_NOBREAK_SPLIT_RE).filter((x) => x !== '').map((x, i, all) => ({ t: x, emo: STORY_NOBREAK_SPLIT_RE.test(x) && x.match(STORY_NOBREAK_SPLIT_RE)[0] === x }));
+const storyChunkLines = (text, cap, maxLines) => {
+  const s = String(text ?? '');
+  if (!s || s.includes('\n') || !(cap > 0) || storyTextUnits(s) <= cap) return null;
+  const split = (src, soft) => {
+    const chars = [...src], out = [];
+    let cur = '', sp = false, depth = 0;
+    const push = () => { if (cur) out.push({ t: cur, sp }); cur = ''; sp = false; };
+    for (let i = 0; i < chars.length; i++) {
+      const ch = chars[i], nx = chars[i + 1] ?? '';
+      // 空白で分けるのは、文が終わった後(「！ 」「？ 」「…… 」)だけ。「SKY TAP」のような語のあいだでは分けない
+      if ((ch === ' ' || ch === '\u3000') && depth === 0 && (!cur || /[。！？!?…」』）)♪♡〜～ｗw\p{Extended_Pictographic}]$/u.test(cur))) { push(); sp = true; continue; }
+      // 顔文字「(˘ω˘)」「(´ー`*)」は、中の字で分けない(描くときも途中で折らない。storyEmoticonParts)
+      const emo = depth === 0 && /[(（]/.test(ch) ? chars.slice(i).join('').match(STORY_EMOTICON_HEAD_RE) : null;
+      if (emo) { cur += emo[0]; i += [...emo[0]].length - 1; continue; }
+      if ((ch === '「' || ch === '『') && depth === 0 && !soft && cur) push();
+      cur += ch;
+      if (ch === '「' || ch === '『') depth++;
+      else if ((ch === '」' || ch === '』') && depth > 0) depth--;
+      if (!nx || depth > 0) continue;
+      if (/[。！？!?]/.test(ch) && !/[。！？!?」』）)♪♡〜～ｗw]/.test(nx)) push();
+      else if (/[」』]/.test(ch) && /[「『]/.test(nx)) push();
+      else if (soft && /[、，]/.test(ch) && !/[、，」』）)]/.test(nx)) push();
+    }
+    push();
+    return out;
+  };
+  const chunks = split(s, false).flatMap((c) => {
+    if (storyTextUnits(c.t) <= cap) return [c];
+    const sub = split(c.t, true);
+    if (sub.length) sub[0] = { ...sub[0], sp: c.sp };
+    return sub;
+  });
+  // 字の無いかたまり(「✨」「……」)・2字以下のかたまり(「だ。」)は、前のかたまりにくっつける(それだけが行に残らないように)
+  for (let i = chunks.length - 1; i > 0; i--) {
+    const c = chunks[i];
+    if (!/[ぁ-んァ-ヶ一-龠々a-zA-Z0-9０-９]/.test(c.t) || storyTextUnits(c.t) <= 2) {
+      chunks[i - 1] = { ...chunks[i - 1], t: chunks[i - 1].t + (c.sp ? ' ' : '') + c.t };
+      chunks.splice(i, 1);
+    }
+  }
+  if (chunks.length < 2) return null;
+  // 半角の字は幅の見込みがずれやすいので、1字ぶん余らせて見る。入りきらない長いかたまりは折らずに流す(flow)
+  // 絵文字(🔥✨)は字1つより幅が広いので、1つにつき 0.6字ぶん足して見る
+  const unitsOf = (t) => storyTextUnits(t) + (/[\x21-\x7e]/.test(t) ? 1 : 0) + 0.6 * ((String(t).match(/\p{Extended_Pictographic}/gu) || []).length);
+  let lines = 0, rem = 0;
+  for (const c of chunks) {
+    const own = unitsOf(c.t), u = own + (c.sp && rem > 0 ? 0.5 : 0);
+    if (own > cap) {
+      // 新しい行から始めても行数が増えないなら、新しい行から(文の頭を行の頭にそろえる)。増えるなら前の文の後ろへ流す
+      //   流すときは言葉の切れ目でしか折れないので、行の終わりが空きやすい(1行につき2字・前の行の残りは3字ぶん少なく見る)
+      const fresh = lines + Math.ceil(own / (cap - 1));
+      const left = lines > 0 ? u - Math.max(0, rem - 3) : u;
+      const flowLines = lines + Math.ceil(left / (cap - 2));
+      if (fresh <= flowLines) { lines = fresh; rem = 0; }
+      else { c.flow = true; rem = Math.max(0, (flowLines - lines) * (cap - 2) - left - 2); lines = flowLines; }
+    }
+    else if (lines > 0 && u <= rem) rem -= u;
+    else { lines += 1; rem = cap - own; }
+  }
+  return lines <= maxLines ? chunks : null;
 };
 // お話の層の位置を測って、いちばん外側の箱([data-event-story])の CSS 変数へ書く ref。
 // 上のステージの下端(--story-stage-bottom)と下の窓の高さ(--story-sheet-h)で、真ん中のモンスターの置き場を決める。
@@ -98039,6 +98108,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const storyCplBottom=Math.max(8,Math.floor((storyBoxW-64-(storyZones?(storyLand?62:100):0))/13)-(storyZones?4:2));
         // 吹き出しは幅が狭く、言葉の切れ目で折ると行の終わりが空きやすいので、さらに控えめに見込む(縦の 390 幅で1行12字)
         const storyCplBubble=Math.max(6,storyLand?Math.floor((storyBoxW-118)/12)-3:Math.floor((storyBoxW-156)/14)-4);
+        // 折り方を決める1行の字数は、ページ分けの控えめな見込みではなく、実際の欄の幅から出す(欄の内側の幅÷字の大きさ。端の1字ぶんは余らせる)
+        const storyCapBottom=Math.floor((storyBoxW-64-(storyLand?62:100))/13-0.2);
+        const storyCapBubble=Math.floor((storyLand?(storyBoxW-118)/12:(storyBoxW-156)/14)-0.2);
+        // 台詞を文の切れ目のかたまりごとに並べる(storyChunkLines)。かたまりで折ると行が増えるときは、今までどおり
+        //   横の低い画面の吹き出しは高さ 84px で2行しか入らないので、かたまりで並べるのは2行まで(70-bootstrap.jsx)
+        const storyChunkMax=(cap)=>storyLand&&cap===storyCapBubble?2:3;
+        const storyLineNodes=(text,cap)=>{
+          const chunks=typeof storyChunkLines==='function'?storyChunkLines(text,cap,storyChunkMax(cap)):null;
+          // 顔文字「(˘ω˘)」・数と単位「5ターン目」は途中で折らない(数と単位の前では折れる)
+          const body=(t)=>typeof storyEmoticonParts==='function'?storyEmoticonParts(t).map((p,k)=>p.emo?<React.Fragment key={k}>{k>0&&!/^[(（]/.test(p.t)?<wbr/>:null}<span style={{whiteSpace:'nowrap'}}>{p.t}</span></React.Fragment>:<React.Fragment key={k}>{bubbleWrap(p.t)}</React.Fragment>):bubbleWrap(t);
+          if(!chunks) return typeof text==='string'&&!text.includes('\n')?body(text):bubbleLines(text);
+          // 入りきらない長いかたまり(flow)は、前のかたまりの後ろへそのまま流して、言葉の切れ目で折る
+          return chunks.map((c,i)=><React.Fragment key={i}>{i>0?(c.sp?' ':<wbr/>):null}{c.flow?body(c.t):<span data-story-chunk style={{display:'inline-block',maxWidth:'100%'}}>{body(c.t)}</span>}</React.Fragment>);
+        };
+        // かたまりで並べるときは、行の長さをそろえる折り方(balance)をやめる(そろえようとして、文の途中で早めに折れていた)
+        const storyLineStyle=(text,cap)=>{
+          const st=bubbleWrapStyle();
+          return storyZones&&typeof storyChunkLines==='function'&&storyChunkLines(text,cap,storyChunkMax(cap))?{...st,textWrap:'wrap'}:st;
+        };
         const storyPageCache=[];
         const storyPagesOf=(i)=>{
           if(storyPageCache[i]) return storyPageCache[i];
@@ -98157,7 +98245,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     {/* 話している人の顔を指すしっぽ */}
                     <span aria-hidden="true" style={{position:'absolute',left:-9,top:22,width:0,height:0,borderTop:'8px solid transparent',borderBottom:'8px solid transparent',borderRight:`9px solid ${stageGuest.accent}`}}/>
                     <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:stageGuest.accent}}>{bubbleLine.name||stageGuest.name}</span>
-                    <span className="mt-1 block text-[14px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleLines(storyZones?storyTextAt(bubbleIdx,stageGuest):speakText(bubbleLine,stageGuest))}</span>
+                    <span className="mt-1 block text-[14px] font-bold leading-relaxed text-white" style={storyLineStyle(storyZones?storyTextAt(bubbleIdx,stageGuest):'',storyCapBubble)}>{storyZones?storyLineNodes(storyTextAt(bubbleIdx,stageGuest),storyCapBubble):bubbleLines(speakText(bubbleLine,stageGuest))}</span>
                   </div>
                 )}
               </div>
@@ -98232,7 +98320,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた
                   (2026-09-11・ユーザー指摘「名前呼びのとこが変換されてない」)。
                   呼び方も絆Lvも助手ごとに違うので、選んでいる助手ではなく「話している助手」から引く */}
-              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={bubbleWrapStyle()}>{bubbleLines(storyZones?storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker):speakText(bottomLine,bottomSpeaker))}</span>
+              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={storyLineStyle(storyZones?storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker):'',storyCapBottom)}>{storyZones?storyLineNodes(storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker),storyCapBottom):bubbleLines(speakText(bottomLine,bottomSpeaker))}</span>
             </div>:<div data-story-line-box className={`flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400${storyZones?' min-w-0 flex-1':''}`}>▲ 上のことばを読んでね</div>}
             </div>
             <p className="mt-2 text-center text-[11px] font-bold tabular-nums text-slate-300">

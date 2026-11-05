@@ -128,6 +128,7 @@
   "boot/debug-passphrase-check.js": 0.6,
   "boot/debug-story-list-browser-check.js": 8.3,
   "boot/event-replay-check.js": 0.9,
+  "boot/story-chunk-wrap-check.js": 0.3,
   "boot/event-replay-release-flag-check.js": 0,
   "boot/event-replay-tap-check.js": 4.2,
   "boot/gift-claim-transaction-check.js": 0.2,
