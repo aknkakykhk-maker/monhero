@@ -146,6 +146,7 @@ const Audio_ = (() => {
     "audio/bgm-eiki-boss-remix.mp3": "83093750c9ec",
     "audio/bgm-emerald-rush.mp3": "7782e3520275",
     "audio/bgm-enhance.mp3": "eb0690d02d8a",
+    "audio/bgm-evans.mp3": "37c5c9e21113",
     "audio/bgm-event-01.mp3": "c57069b5ad2f",
     "audio/bgm-event-02.mp3": "d572118c203e",
     "audio/bgm-freedom-dive.mp3": "34616b2fccd3",

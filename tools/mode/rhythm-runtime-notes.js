@@ -227,6 +227,7 @@ const RELEASED_MARKERS=Object.freeze({
   rebellion_short:'rebellion-short-v3',
   altar_world_tree:'altar-world-tree-v3',
   altar_world_tree_short:'altar-world-tree-short-v3',
+  evans:'evans-v3',
 });
 
 // 曲id → 音源の一覧(tools/mode/authoring/rhythm-song-registry.json)のid。
@@ -287,6 +288,7 @@ const RELEASED_TRACKS=Object.freeze({
   rebellion_short:'rebellion_short',
   altar_world_tree:'altar_world_tree',
   altar_world_tree_short:'altar_world_tree_short',
+  evans:'evans',
 });
 
 module.exports={SLIDE_EASE_CODES,FLICK_DIR_CODES,heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,
