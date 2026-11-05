@@ -6,6 +6,7 @@
   "assistant/assistant-select-render-check.js",
   "assistant/assistant-unlock-notice-render-check.js",
   "assistant/assistant-update-notice-check.js",
+  "assistant/assistant-line-owner-check.js",
   "assistant/atsu-check.js",
   "assistant/kyuko-check.js",
   "assistant/daily-masu-advice-check.js",
