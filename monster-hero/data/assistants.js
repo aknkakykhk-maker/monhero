@@ -9479,6 +9479,43 @@ addAssistantLinePack({
   },
 });
 
+
+// ===== モンヒロビートのモードえらび: ソラシド・えるびん(2026-11-05) =====
+// 社長「これみゅあのせりふじゃない？」。rhythmModeSelect は場面の定義を持たない束だけの場面で、ふたりの行が無く、
+// みゅあの行(てかてか・まぢ)を話していた。ほかの助手と同じ7本(あいさつ・ソロ・フリーマッチ・プライベート・ランキング・マスモン設定・マスモンを呼ぶ)
+addAssistantLinePack({
+  id: 'rhythmModeSelectSorashido',
+  assistantId: 'sorashido',
+  label: 'ソラシド・モンヒロビート モードえらび',
+  lines: {
+    rhythmModeSelect: [
+      { e:'excited',  t:'{name}、今日はどう攻める？ ソロで検証か、みんなで叩くか笑' },
+      { e:'normal',   t:'ソロライブなら、いつもの曲えらびに行けるよ。じっくり詰めるならこっち笑' },
+      { e:'excited',  t:'フリーマッチは、だれとでも最大5人で協力ライブ。うぉぉぉ、盛り上がるやつ！' },
+      { e:'normal',   t:'フレンドと遊ぶなら「プライベート」で部屋をつくって、合言葉を教えてあげて' },
+      { e:'wink',     t:'「ランキング」に全国とマスモンの順位が出る。上、取りにいこうぜ・・・！' },
+      { e:'normal',   t:'マスモン設定もここから。いっしょに演奏する子、えらんであげて笑' },
+      { e:'happy',    t:'マルチにマスモンを呼べるんだよ。なんくるないさ〜、ひとりでもすぐライブできる笑' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'rhythmModeSelectErubin',
+  assistantId: 'erubin',
+  label: 'えるびん・モンヒロビート モードえらび',
+  lines: {
+    rhythmModeSelect: [
+      { e:'happy',    t:'{name}、今日はどうしようか？ ひとりでも、みんなとでも楽しいよね☺️' },
+      { e:'normal',   t:'ソロライブなら、いつもの曲えらびに行けるよ。ゆっくり練習したいときはこっちだね' },
+      { e:'excited',  t:'フリーマッチは、だれとでも最大5人で協力ライブできるんだって。いいね笑' },
+      { e:'normal',   t:'フレンドと遊ぶなら「プライベート」で部屋をつくって、合言葉を教えてあげてね' },
+      { e:'wink',     t:'「ランキング」で、全国とマスモンの順位が見られるよ。俺もこっそり見てるw' },
+      { e:'normal',   t:'マスモン設定もここからだよ。いっしょに演奏する子、えらんであげてね' },
+      { e:'happy',    t:'マルチにマスモンを呼べるんだよ。にぎやかになって楽しいよね😊' },
+    ],
+  },
+});
+
 const ASSISTANT_PACKS_APPLIED = {};
 const applyAssistantLinePacks = () => {
   for (const pack of ASSISTANT_LINE_PACKS) {
@@ -12636,14 +12673,14 @@ const assistantRecentLimit = (total) => Math.max(1, Math.min(3, total - 2));
 // 仲良し度で絞った結果が空になったときは、絞る前の一覧をそのまま使う
 // (Lvを増やしたときに「話すことが無い」画面ができないようにするための安全弁)
 // いま選ばれている助手のセリフだけに絞る。
-// その助手のセリフが1つも無い場面では、みゅあのぶんへ落として黙り込まないようにする
-// (助手を増やした直後に、まだセリフを書いていない場面があっても画面が止まらない)
+// その助手のセリフが1つも無い場面では、何も返さない(ほかの助手の口調で話させない)
 const filterAssistantLines = (list, assistantId) => {
   if (!Array.isArray(list) || !list.length) return [];
   const id = assistantId || DEFAULT_ASSISTANT_ID;
-  const mine = list.filter(line => (line.who || DEFAULT_ASSISTANT_ID) === id);
-  if (mine.length > 0) return mine;
-  return list.filter(line => (line.who || DEFAULT_ASSISTANT_ID) === DEFAULT_ASSISTANT_ID);
+  // ★ほかの助手(みゅあ)の行へは落とさない(2026-11-05 社長「新助手出るたびにみゅあのセリフとごっちゃになるのどうにかして」)。
+  //   その助手の行が無い場面では何も言わない(吹き出しが出ないだけで画面は止まらない)。
+  //   抜けは tools/assistant/assistant-line-owner-check.js が全助手×全場面で見張る
+  return list.filter(line => (line.who || DEFAULT_ASSISTANT_ID) === id);
 };
 
 const assistantSceneLines = (scene, condition, bondLevel, assistantId) => {

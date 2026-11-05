@@ -221,7 +221,7 @@ const TEACHING_CARDS = [
   { id:'sorashido', baseName:"ソラシドの自動化", icon:SORASHIDO_FACE_ICON, type:'buff', subType:'copy_sorashido', baseValue:0.5, step:0, desc:"使った子のAIコピーが、次のターンから5人目の味方として戦う", evoLevel:0, guts:20, releaseFlag:'assistantSorashido' },
   // えるびん(2026-11-05 社長の決定)。公開の印 assistantErubin が立つまでは、マーケット・ヘルプに出ない(releaseFlag)。効果量は ERUBIN_TIERS。
   //   baseValue は Lv0 の攻撃アップ(表示・検査用)。増え方は表が持つので step は 0
-  { id:'erubin', baseName:"えるびんの見守り", icon:ERUBIN_FACE_ICON, type:'buff', subType:'watch_erubin', baseValue:0.06, step:0, desc:"味方全員の攻撃が永続アップ・このターン受けるダメージダウン・EX回復(クラシックは次のターン固有技が必ず会心)", evoLevel:0, guts:20, releaseFlag:'assistantErubin' }
+  { id:'erubin', baseName:"えるびんの見守り", icon:ERUBIN_FACE_ICON, type:'buff', subType:'watch_erubin', baseValue:0.06, step:0, desc:"味方全員の攻撃が永続アップ・このターン受けるダメージダウン・【タクティクス】使った子のEXの回数を回復・【クラシック】次のターン固有技が必ず会心", evoLevel:0, guts:20, releaseFlag:'assistantErubin' }
 ];
 
 // 初期から無料で使えるアシストカード(教えカード)のid一覧(固定)。
@@ -481,7 +481,7 @@ const BREEDER_MARKET_ITEMS = [
   { id:'sorashido', name:"アシストカード「ソラシド」", type:'assist', icon:SORASHIDO_FACE_ICON, cost:150000, desc:"使った子のAIコピーが、次のターンから5人目の味方として数ターン戦う",
     get shop() { return sorashidoCardOnSale() ? undefined : false; } },
   // えるびん(2026-11-05 社長の決定)。きゅうこ・ソラシドと同じく、公開の印が立ち、加入のお話を見たら並ぶ。150000
-  { id:'erubin', name:"アシストカード「えるびん」", type:'assist', icon:ERUBIN_FACE_ICON, cost:150000, desc:"味方全員の攻撃が永続アップ・このターン受けるダメージダウン・EX回復(クラシックは次のターン固有技が必ず会心)",
+  { id:'erubin', name:"アシストカード「えるびん」", type:'assist', icon:ERUBIN_FACE_ICON, cost:150000, desc:"味方全員の攻撃が永続アップ・このターン受けるダメージダウン・【タクティクス】使った子のEXの回数を回復・【クラシック】次のターン固有技が必ず会心",
     get shop() { return erubinCardOnSale() ? undefined : false; } },
 
   { id:'oryo',    name:"ニコラオのアイコン",     type:'icon', icon:NICOLAO_FACE_ICON, cost:1 },
@@ -1271,6 +1271,12 @@ const normalizeOwnedAssistantCostumes = (value) => {
   // はじめから持っている服(starter:true・公開済み)は、保存値に無くても持っている扱いにする
   const starters = ASSISTANT_COSTUMES.filter(costume => costume && costume.starter === true && costume.released === true).map(costume => costume.id);
   return [...new Set([...list.filter(id => typeof id === 'string' && id.trim()).map(id => id.trim()), ...starters])];
+};
+// 保存するときの形: はじめから持っている服(starter)は書かない(読み込みのたびに足されるので、保存に残さなくてよい。
+//   服を買ったときに、買っていない starter の服まで mh_assistant_costume_owned_v1 へ書き足さないため・2026-11-05)
+const assistantCostumesToStore = (value) => {
+  const starters = ASSISTANT_COSTUMES.filter(costume => costume && costume.starter === true).map(costume => costume.id);
+  return normalizeOwnedAssistantCostumes(value).filter(id => !starters.includes(id));
 };
 const releasedAssistantCostumes = () => ASSISTANT_COSTUMES.filter(costume => costume && costume.released === true);
 const assistantCostumeById = (id) => releasedAssistantCostumes().find(costume => costume.id === id) || null;

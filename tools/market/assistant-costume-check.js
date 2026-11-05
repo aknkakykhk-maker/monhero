@@ -160,7 +160,7 @@ check('読み込みで保存値を書き戻さない(あるのは読み込みだ
 check('買う処理が costume を扱う(保存を読み直して足す)', /item\.type === 'costume'\) \{[\s\S]{0,400}storeGet\(ASSISTANT_COSTUME_OWNED_KEY[\s\S]{0,400}storeSet\(ASSISTANT_COSTUME_OWNED_KEY/.test(app));
 check('所持の判定が costume を扱う', app.includes("if (item.type === 'costume') return normalizeOwnedAssistantCostumes(ownedAssistantCostumes)"));
 check('通貨はダイヤ(購入計算・売り場の表示とも)', /item\?\.type === 'costume'\) \? 'diamond'/.test(purchase) && read('monster-hero/src/parts/20-market-notices-help.jsx').includes("item?.type==='costume') ? 'diamond'"));
-check('ビートP交換が costume の保存を同じ取引に入れる', /isCostume \? \[\{ key:ASSISTANT_COSTUME_OWNED_KEY, before:storedCostumes, next:exchange\.ownedAssistantCostumes \}\]/.test(app));
+check('ビートP交換が costume の保存を同じ取引に入れる(はじめから持っている服は保存へ書かない)', /isCostume \? \[\{ key:ASSISTANT_COSTUME_OWNED_KEY, before:storedCostumes, next:assistantCostumesToStore\(exchange\.ownedAssistantCostumes\) \}\]/.test(app));
 check('マーケット: ダイヤショップに「着替え」タブ(服があるときだけ)', market.includes("...(costumeItems.length?[{key:'costume',label:'着替え'}]:[])"));
 check('マーケット: ビートP交換所に「着替え」タブ(服があるときだけ)', market.includes("...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[])"));
 check('マーケット: ビートP交換所が交換の確認へつながる', market.includes("eventTab==='costume'&&RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.filter(offer=>offer.available!==false).map") && market.includes("data-event-point-costume"));

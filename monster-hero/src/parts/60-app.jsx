@@ -8820,7 +8820,7 @@ function MonsterHeroGame() {
       const nextCostumes = normalizeOwnedAssistantCostumes([...storedCostumes, ...ownedAssistantCostumesRef.current, item.id]);
       ownedAssistantCostumesRef.current = nextCostumes;
       setOwnedAssistantCostumes(nextCostumes);
-      storeSet(ASSISTANT_COSTUME_OWNED_KEY, nextCostumes, false);
+      storeSet(ASSISTANT_COSTUME_OWNED_KEY, assistantCostumesToStore(nextCostumes), false);
     } else if (item.type !== 'item') {
       // 同じキャラのまとめは、1つ買うと中身が全部入る(商品の並びでは1つにまとまっている)
       setOwnedMarketIcons(prev => { const group = breederIconGroupOf(item.id); const next = [...new Set([...prev, item.id, ...(group ? group.memberIds : [])])]; storeSet('mh_market_icons', next, false); return next; });
@@ -8939,7 +8939,7 @@ function MonsterHeroGame() {
         ...(isDisc ? [{ key:'mh_unlocked_monsters', before:storedUnlocked, next:exchange.unlockedMonsterIds }] : []),
         ...(isAssist ? [{ key:'mh_unlocked_teachings', before:storedTeachings, next:exchange.unlockedTeachingIds }] : []),
         ...(isFrame ? [{ key:PROFILE_FRAME_OWNED_KEY, before:storedFrames, next:exchange.ownedProfileFrames }] : []),
-        ...(isCostume ? [{ key:ASSISTANT_COSTUME_OWNED_KEY, before:storedCostumes, next:exchange.ownedAssistantCostumes }] : []),
+        ...(isCostume ? [{ key:ASSISTANT_COSTUME_OWNED_KEY, before:storedCostumes, next:assistantCostumesToStore(exchange.ownedAssistantCostumes) }] : []),
         ...(isIcon ? [{ key:'mh_market_icons', before:storedIcons, next:exchange.ownedMarketIcons }] : []),
       ], storeGet, storeSet);
       if (!saved) {
@@ -17655,13 +17655,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(t.id==='myaru'){const v=t.baseValue+level*t.step, d=pct(myaruSelfDamageRate(t,level)); return `次ターン攻撃 ${v.toFixed(1)}倍・自傷 ${d}%`;}
     if(t.id==='kiki') return `次の${level+2}ターン 使えるカード +1枚・全体連撃 ${3+level*2}%アップ（バトル中永続・使用ごとに加算）`;
     if(t.id==='sorashido') return sorashidoCopyDesc(level);
-    // えるびんの見守り(2026-11-05)。③は遊んでいるモードで変わる(タクティクス: EX の回復 / クラシック: 一閃の構え)
+    // えるびんの見守り(2026-11-05)。③はモードで変わる(タクティクス: EX の回復 / クラシック: 一閃の構え)。
+    //   どの画面でも両方をモードの印つきで出す(マーケットはモードが無いので、片方だけだと分からない。2026-11-05 社長の指摘・きゅうこ・ソラシドも両方書く)
     if(t.id==='erubin'){
       const tier=ERUBIN_TIERS[Math.min(level,ERUBIN_TIERS.length-1)];
-      const third=isTacticsMode(runMode)
-        ? '使った子の EX の使える回数を 1/3回ぶん回復（3回使うと1回）'
-        : `次のターン 固有技が必ず会心${tier.critDmg>0?`・会心のダメージ ${pct(tier.critDmg)}%アップ`:''}`;
-      return `味方全員の攻撃 ${pct(tier.atk)}%アップ（次のターンから・バトル中永続・使用ごとに加算）・このターン味方全員の受けるダメージ ${pct(tier.cut)}%ダウン・${third}`;
+      const tactics=`【タクティクス】使った子の EX の使える回数を ${Math.round(tier.exCharge*3)}/3回ぶん回復（3回使うと1回）`;
+      const classic=`【クラシック】次のターン 固有技が必ず会心${tier.critDmg>0?`（会心のダメージ ${pct(tier.critDmg)}%アップ）`:''}`;
+      return `味方全員の攻撃 ${pct(tier.atk)}%アップ（次のターンから・バトル中永続・使用ごとに加算）・このターン味方全員の受けるダメージ ${pct(tier.cut)}%ダウン・${tactics}・${classic}`;
     }
     if(t.id==='kyuko'){
       const tier=KYUKO_TIERS[Math.min(level,KYUKO_TIERS.length-1)];

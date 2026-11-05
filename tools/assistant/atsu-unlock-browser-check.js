@@ -129,7 +129,8 @@ const pickerText = (page) => page.evaluate(() => {
       await page.waitForTimeout(2500);
       check('公開の印が偽なら、仲良し度がそろってもお話は流れない', !(await storyOn(page)));
       await openAssistantList(page);
-      const t = await pickerText(page);
+      // えるびんの紹介「なぜか石油王あつかい」の「あつ」を、助手あつと取り違えない(2026-11-05)
+      const t = String(await pickerText(page) || '').replace(/あつかい/g, '');
       check('公開の印が偽なら、助手の一覧にあつも「？？？」も出ない', !!t && !/あつ/.test(t) && !/会えるかもしれません/.test(t), t.slice(0, 120));
       await page.close();
     }
@@ -140,7 +141,8 @@ const pickerText = (page) => page.evaluate(() => {
       await page.waitForTimeout(2500);
       check('仲良し度が1人でも足りなければ、お話は流れない', !(await storyOn(page)));
       await openAssistantList(page);
-      const t = await pickerText(page);
+      // えるびんの紹介「なぜか石油王あつかい」の「あつ」を、助手あつと取り違えない(2026-11-05)
+      const t = String(await pickerText(page) || '').replace(/あつかい/g, '');
       check('解放前は、一覧に鍵つきの「？？？」で出る', /会えるかもしれません/.test(t) && !/あつ/.test(t), t.slice(0, 160));
       await shot(page, '01-select-locked');
       await page.close();
