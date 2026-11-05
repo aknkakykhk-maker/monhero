@@ -190,10 +190,13 @@ for (const cat of HELP_GUIDE) {
 
 // --- ③ 本文(全項目) ---
 let bodyNg = [];
+const playerFlagLeak = [];
 for (const cat of HELP_GUIDE) {
   for (const topic of cat.topics) {
     const body = text(render({ helpCatId: cat.id, helpTopicId: topic.id }));
     const missing = topic.blocks.some(b => {
+      // その端末で条件を満たした人だけの本文(playerFlag・2026-11-05 レジェンドブリーダー優待パス)は、満たしていない検査の端末では出ないのが正しい
+      if (b.playerFlag) { if (body.includes(b.text)) playerFlagLeak.push(`${cat.id}/${topic.id}`); return false; }
       if (b.t === 'kv') return b.rows.some(r => !body.includes(r[0]) || !body.includes(r[1]));
       if (b.t === 'list' || b.t === 'steps') return b.items.some(x => !body.includes(x));
       if (b.t === 'note') return (b.title && !body.includes(b.title)) || !body.includes(b.text);
@@ -209,6 +212,7 @@ for (const cat of HELP_GUIDE) {
 }
 const topicCount = HELP_GUIDE.reduce((s, c) => s + c.topics.length, 0);
 check('全項目の本文が最後まで描ける', bodyNg.length === 0, bodyNg.length ? bodyNg.join(', ') : `${topicCount}項目`);
+check('受け取った人だけの本文(playerFlag)は、条件を満たしていない端末に出ない', playerFlagLeak.length === 0, playerFlagLeak.join(', ') || '出ていない');
 
 // 以前「難易度が3つしか載っていない」状態だったので、実データの全件が描かれることを名指しで見る
 const diffBody = text(render({ helpCatId: 'basics', helpTopicId: 'difficulty' }));
