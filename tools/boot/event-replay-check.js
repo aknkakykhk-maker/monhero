@@ -83,8 +83,9 @@ check('一覧の各行に日付を出す', (source.match(/data-event-replay-date
   const aw = (groups.find(g => g.id === 'assistant') || { events: [] }).events.map(ev => ev.id);
   const uw = (groups.find(g => g.id === 'update') || { events: [] }).events.map(ev => ev.id);
   // 2026-10-27 ソラシドの加入のお話も「助手のお話」のいちばん後ろに並ぶ
-  check('「助手のお話」は きき → ももすけ → あつ → きゅうこ → ソラシド の加入のお話(新しい遊びのお話には入らない)',
-    aw.join() === 'kiki_intro,momosuke_intro,atsu_join_2026_10_22,kyuko_join_2026_10_22,sorashido_join_2026_10_27'
+  // 2026-11-05 えるびんの加入のお話も、そのうしろに並ぶ(公開の印が立つまでは一覧に出ない)
+  check('「助手のお話」は きき → ももすけ → あつ → きゅうこ → ソラシド → えるびん の加入のお話(新しい遊びのお話には入らない)',
+    aw.join() === 'kiki_intro,momosuke_intro,atsu_join_2026_10_22,kyuko_join_2026_10_22,sorashido_join_2026_10_27,erubin_join_2026_11'
       && !uw.includes('atsu_join_2026_10_22') && !uw.includes('kyuko_join_2026_10_22') && !uw.includes('sorashido_join_2026_10_27'), aw.join(' > '));
   // 知らない・書き忘れの group は FALLBACK へ入り、一覧から消えない
   const c4 = { EVENT_REPLAYS: [{ id: 'x', date: '2026-01-01 00:00', group: 'nazo' }, { id: 'y', date: '2026-01-02 00:00' }] };
