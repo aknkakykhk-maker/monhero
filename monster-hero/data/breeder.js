@@ -25,9 +25,9 @@ const SORASHIDO_FACE_ICON = "images/assistant/face/sorashido_happy.PNG?v=27d67b7
 const STORY_BG_DESERT_PALACE = "images/story-bg/desert_palace.jpg?v=890ff3607962";     // 石油王の世界: 砂漠の夕方と白い宮殿・ラクダ
 const STORY_BG_DESERT_OILFIELD = "images/story-bg/desert_oilfield.jpg?v=59471d02fcb6"; // 石油王の世界: 夕方の油田
 const STORY_BG_DESERT_HALL = "images/story-bg/desert_hall.jpg?v=8d88e8cb5328";         // 石油王の世界: 宮殿の中(アーチの回廊と赤い絨毯)
-const STORY_BG_MONHERO_PLAZA = "images/story-bg/monhero_plaza.jpg?v=0a622af77e32";     // モンヒロの世界: いつもの場所(昼の広場と家)
+const STORY_BG_MONHERO_PLAZA = "images/story-bg/monhero_plaza.jpg?v=2f93d331ea70";     // モンヒロの世界: いつもの場所(HOME の背景の絵の上側を切り出したもの・2026-11-05 社長「ホームの背景のイメージがいつもの場所」)
 const STORY_BG_MONHERO_TOWN = "images/story-bg/monhero_town.jpg?v=802681764caa";       // モンヒロの世界: 街(服の店とカフェの通り)
-const STORY_BG_MONHERO_NIGHT = "images/story-bg/monhero_night.jpg?v=9583f2f8d63d";     // モンヒロの世界: 夜(いつもの場所の月夜)
+const STORY_BG_MONHERO_NIGHT = "images/story-bg/monhero_night.jpg?v=deafecbf6f06";     // モンヒロの世界: 夜(上の絵を夜の色にして、月と星・戸口や泉の明かりを足したもの)
 const STORY_SCENE_IMAGES = Object.freeze({
   desert: STORY_BG_DESERT_PALACE, // 最初に作った名前(2026-11-05)。desert_palace と同じ
   desert_palace: STORY_BG_DESERT_PALACE,
