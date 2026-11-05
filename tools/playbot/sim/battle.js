@@ -249,7 +249,7 @@ function getCardGuts(st, card, slot) {
   cost = Math.floor(cost * (turnB.gutsCostMult || 1) * G.tacticsSlotRate(bySlot, slot, 'gutsCostMult', 1.0));
   if (cost > 0 && ((turnB.pandoraResonanceTurns || 0) > 0 || G.tacticsSlotTurns(bySlot, slot, 'pandoraResonanceTurns') > 0)) cost = Math.floor(cost * 0.5);
   cost = Math.floor(cost * Math.max(0.1, 1 - 0.03 * (perma.snegurochkaGutsDiscountStacks || 0)));
-  if (card.teach && st.erubinTreat && st.turn >= st.erubinTreat.from && st.turn <= st.erubinTreat.until) cost = Math.floor(cost * (1 - st.erubinTreat.cut)); // 試作 B
+  if ((card.teach || (st.erubinTreat && st.erubinTreat.all && isAttackType(card))) && st.erubinTreat && st.turn >= st.erubinTreat.from && st.turn <= st.erubinTreat.until) cost = Math.floor(cost * (1 - st.erubinTreat.cut)); // 試作 B
   return cost;
 }
 
@@ -836,10 +836,16 @@ const EX_POLICIES = { none: () => {}, bot: policyBot, best: policyBest };
 //   B treat_erubin: 次のターンから turns ターン、アシカのガッツ −cut
 //   C lead_erubin: 次に使うアシカ1枚の効き目 ×mult
 //   きゅうこ cover_kyuko: このターン敵の単体攻撃を使った子が引き受け、turns ターン(使ったターンを含む)その子の受けるダメージ −cut(KYUKO_TIERS)
-const ERUBIN_PROTO = {
+// SIM_ERUBIN_BOOST=1 … 引き上げ版(社長「見た感じ滅茶弱かった」。B は技のガッツにも効く・C は次の2枚に効く)
+const ERUBIN_BOOST = process.env.SIM_ERUBIN_BOOST === '1';
+const ERUBIN_PROTO = ERUBIN_BOOST ? {
+  A: [{ rate: 1.5, cut: 0.20 }, { rate: 2.0, cut: 0.30 }, { rate: 3.0, cut: 0.40 }],
+  B: [{ cut: 0.3, turns: 3, all: true }, { cut: 0.4, turns: 4, all: true }, { cut: 0.5, turns: 5, all: true }],
+  C: [1.5, 1.8, 2.0], C_CARDS: 2,
+} : {
   A: [{ rate: 0.5, cut: 0.10 }, { rate: 0.75, cut: 0.15 }, { rate: 1.0, cut: 0.20 }],
   B: [{ cut: 0.2, turns: 2 }, { cut: 0.3, turns: 3 }, { cut: 0.4, turns: 4 }],
-  C: [1.3, 1.5, 1.7],
+  C: [1.3, 1.5, 1.7], C_CARDS: 1,
 };
 // ---------- アシカ(アシストカード) ----------
 // カードの定義は data/breeder.js の TEACHING_CARDS(load-game.js で読む)。効果の量は 60-app.jsx processTurn から写した
@@ -854,7 +860,7 @@ const scaleMua = (st) => { st.units = G.scaleTacticsUnits(st.units, st.perma.mua
 // 手札のアシカを使う(60-app.jsx processTurn 12437〜12527)。effMul は同じ子の2枚目なら 0.5
 function playTeaching(st, card, slot, effMul, usedCount, guardBySlot, startDist, localOryo, localDmgMod, localGlobalCombo) {
   const out = { oryo: 0, combo: 0, invincible: false, dealt: 0 };
-  if (st.erubinLead && card.subType !== 'lead_erubin') { effMul *= st.erubinLead; st.erubinLead = 0; } // 試作 C: 次に使うアシカの効き目
+  if (st.erubinLead && card.subType !== 'lead_erubin') { effMul *= st.erubinLead; st.erubinLeadLeft = (st.erubinLeadLeft || 1) - 1; if (st.erubinLeadLeft <= 0) st.erubinLead = 0; } // 試作 C: 次に使うアシカの効き目
   const owned = ownedTeaching(st, card.id);
   const level = owned ? owned.evoLevel || 0 : 0;
   const p = st.perma;
@@ -892,9 +898,9 @@ function playTeaching(st, card, slot, effMul, usedCount, guardBySlot, startDist,
     st.turnB = { ...st.turnB, erubinWatch: (st.turnB.erubinWatch || 0) + t.rate * effMul, takenDamageMult: (st.turnB.takenDamageMult || 1) * (1 - t.cut * effMul) };
   } else if (card.subType === 'treat_erubin') { // 試作 B
     const t = ERUBIN_PROTO.B[Math.min(level, 2)];
-    st.erubinTreat = { cut: Math.min(0.9, t.cut * effMul), from: st.turn + 1, until: st.turn + t.turns };
+    st.erubinTreat = { cut: Math.min(0.9, t.cut * effMul), from: st.turn + 1, until: st.turn + t.turns, all: !!t.all };
   } else if (card.subType === 'lead_erubin') { // 試作 C
-    st.erubinLead = Math.max(st.erubinLead || 0, 1 + (ERUBIN_PROTO.C[Math.min(level, 2)] - 1) * effMul);
+    st.erubinLead = Math.max(st.erubinLead || 0, 1 + (ERUBIN_PROTO.C[Math.min(level, 2)] - 1) * effMul); st.erubinLeadLeft = ERUBIN_PROTO.C_CARDS;
   } else if (card.subType === 'cover_kyuko') { // 試作: きゅうこの譜面(KYUKO_TIERS)
     const t = G.KYUKO_TIERS[Math.min(level, G.KYUKO_TIERS.length - 1)];
     st.turnB = { ...st.turnB, kyukoCover: slot };
