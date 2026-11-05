@@ -547,7 +547,8 @@ check('モード選択は極限チャレンジもクイックも出さず、残�
 check('モードカードは選択難易度固定でなくモード内最高スコアを表示する',
   // タクティクスは記録の置き場も難易度の並びも違うので、その2つを差し替えてから最高スコアを出す
   has('modeBestScore=ranked?highestModeScore(isTacticsMode(m.id)?tacticsRecordsOf(m.id).hs:isProMode(m.id)?proHighScores:highScores,isTacticsMode(m.id)?TACTICS_DIFFICULTY_IDS:Object.keys(DIFFICULTY_SETTINGS)):rec.score')
-    && has('highestModeScore(extremeBestScores,PUBLIC_EXTREME_DIFFICULTIES.map(setting=>setting.id))')
+    // 2026-11-01 冥界チャレンジ(#4437・社長の決め): 極限のモードカードの記録は、極限タブの ETERNAL までの9つから取る(冥界は別のタブ)
+    && has('highestModeScore(extremeBestScores,PUBLIC_EXTREME_TAB_DIFFICULTIES.map(setting=>setting.id))')
     && has("ranked?'最高スコア'")
     && has("ranked?`${modeBestScore.toLocaleString()} pt`"));
 check('上のタブはモード選択・ブリーダーLv・絆Lv・総合力の4つ',
