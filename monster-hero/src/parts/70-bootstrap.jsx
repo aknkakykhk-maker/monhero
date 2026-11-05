@@ -3329,6 +3329,11 @@ const createAnimationStyle = () => {
       [data-event-story][data-story-zones] [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 150px) !important; bottom: calc(var(--story-bottom-h) + env(safe-area-inset-bottom) + 8px); align-items: center; }
       [data-event-story][data-story-zones] [data-story-monster] { height: min(calc(100% / 1.14), 50vw, 230px); }
       [data-event-story][data-story-zones] [data-story-monsters="2"] [data-story-monster] { height: min(calc(100% / 1.14), 44vw, 210px); }
+      /* えるびんの登場のお話(2026-11-05 社長「C」): 胸から上の立ち絵(384x512)を、顔が大きく見えるよう上から正方形に切って、台詞の窓の上にのせる。
+         絵の下の切れ目は窓のふちに付けて隠す(浮いて見えないように)。縦の画面だけ。横の画面は窓の左右の空きに小さく出す今の形のまま */
+      [data-event-story][data-story-zones] [data-story-monsters]:has([data-story-monster^="Erubin"]) { bottom: calc(var(--story-bottom-h) + env(safe-area-inset-bottom)); align-items: flex-end; }
+      [data-event-story][data-story-zones] [data-story-monster^="Erubin"][data-story-monster^="Erubin"] { height: min(100%, 92vw, 400px); aspect-ratio: 1 / 1; overflow: hidden; }
+      [data-event-story][data-story-zones] [data-story-monster^="Erubin"] img { object-fit: cover; object-position: 50% 0; }
     }
     /* 横の低い画面: 上部ゾーン = 上の端から 6px + ステージ(顔は 0.6倍・吹き出し 3行ぶん 84px)。下部ゾーン = その下ぜんぶ(窓の高さを固定)。
        モンスターは窓の左右の空き(上の横向きの決まりのまま) */
