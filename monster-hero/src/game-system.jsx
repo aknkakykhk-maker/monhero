@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ec3da579fbedf109
+// generated-sha256: 0a7e25916c68d0cf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -63390,6 +63390,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   dra_surprise: [384, 384, 25, 39, 313, 278],
   dra_troubled: [384, 384, 45, 43, 294, 272],
   dra_wink: [384, 384, 49, 43, 286, 270],
+  erubin_angry: [384, 512, 0, 8, 384, 504],
+  erubin_crying: [384, 512, 0, 13, 384, 499],
+  erubin_excited: [384, 512, 0, 13, 384, 499],
+  erubin_happy: [384, 512, 0, 18, 384, 494],
+  erubin_normal: [384, 512, 0, 13, 384, 499],
+  erubin_surprise: [384, 512, 0, 13, 384, 499],
+  erubin_troubled: [384, 512, 0, 19, 384, 493],
+  erubin_wink: [384, 512, 0, 14, 384, 498],
   kiki_angry: [1536, 1024, 481, 10, 573, 1014],
   kiki_crying: [1536, 1024, 480, 15, 572, 1009],
   kiki_excited: [1536, 1024, 495, 12, 556, 1012],
