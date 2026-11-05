@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "12b666f35bb1",
-  "packs": {"beat":{"bytes":133178894,"count":99},"battle":{"bytes":125258781,"count":797},"card":{"bytes":36015185,"count":1010},"all":{"bytes":294452860,"count":1906},"core":{"bytes":16453926,"count":22}},
+  "id": "a433f8ec3bee",
+  "packs": {"beat":{"bytes":133178894,"count":99},"battle":{"bytes":125258781,"count":797},"card":{"bytes":36015185,"count":1010},"all":{"bytes":294452860,"count":1906},"core":{"bytes":16453952,"count":22}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -1928,7 +1928,7 @@
     "data/help.js": {"v":"2e9aabbf33e7","size":703250,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":9047,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
-    "data/assistants.js": {"v":"3ce753b1414e","size":1094535,"pack":"core"},
+    "data/assistants.js": {"v":"30373be5f79d","size":1094561,"pack":"core"},
     "data/card-battle-cards.js": {"v":"3888c3d627a6","size":120016,"pack":"core"},
     "game-system.compiled.js": {"v":"92a1ff3535e3","size":7816711,"pack":"core"}
   }

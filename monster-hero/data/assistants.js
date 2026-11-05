@@ -11413,7 +11413,7 @@ const ASSISTANT_ERUBIN_JOIN_STORY = [
   { who:'kiki',     e:'surprise', t:'あれま……だいじょうぶでつか？ どこか痛い所はないでつか？' },
   { who:'erubin',   e:'happy',    outfit:'sekiyuou', t:'ありがとう。うん、どこも痛くないよ。気づかってくれて嬉しい☺️' },
   // ---- ③ 石油王だ！(いじられ役のはじまり) ----
-  { who:'momosuke', e:'surprise', t:'え、待って、その格好……' },
+  { who:'momosuke', e:'surprise', monsters:[], t:'え、待って、その格好……' },
   { who:'mua',      e:'excited',  t:'石油王だーーー！！！' },
   { who:'erubin',   e:'surprise', outfit:'sekiyuou', t:'え、俺？' },
   { who:'dra',      e:'surprise', t:'白い布に、金の刺しゅう……どう見ても石油王だな' },
@@ -11454,7 +11454,7 @@ const ASSISTANT_ERUBIN_JOIN_STORY = [
   { who:'dra',      e:'normal',   t:'ふむ。これで、どこから見ても普通の人だな' },
   { who:'erubin',   e:'happy',    t:'最初から普通なんだけどね笑' },
   // ---- ⑤ 見守る人(さりげない手伝いと、気づかい) ----
-  { who:'kiki',     e:'normal',   bg:'monhero_plaza', fxText:'着替えのあと。散らかった服を、ききがひとりで片付けはじめた', holdMs:2000, t:'……ふう。よいしょ、でつ' },
+  { who:'kiki',     e:'normal',   bg:'monhero_plaza', monsters:[], fxText:'着替えのあと。散らかった服を、ききがひとりで片付けはじめた', holdMs:2000, t:'……ふう。よいしょ、でつ' },
   { who:'erubin',   e:'normal',   t:'ききさん、そっち持つよ。たたむのは、こんな感じでいいかな？' },
   { who:'kiki',     e:'surprise', t:'あれま。来たばかりなのに、手伝ってもらうなんて……' },
   { who:'erubin',   e:'happy',    t:'いいのいいの。服を選んでもらったのは俺だしね' },
