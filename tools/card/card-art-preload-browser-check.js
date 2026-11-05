@@ -29,7 +29,12 @@ const run = async (mode) => {
   // ★本体は「長くても2.5秒」待って出す(83 の cardArtPreload の capMs)。1.5秒遅らせると、ほかの検査やビルドが同時に走って
   //   重いときに2.5秒を超え、決めたとおり先に出て①が落ちた(2026-11-01 ビート部)。待つ上限に余裕を残して0.8秒にする
   //   (読み終えるのを待たずに出す作りなら、0.8秒でも絵は描けていないので①で分かる)
+  // 立ち絵を最初に読みに行った時刻(本体の待ち上限 2.5秒を数え始める目安)。2026-11-05: 機械がとても重いと 0.8秒でも
+  //   上限を超えて、決めたとおり先に出る(ビート部テンポの run-checks で①が落ちた)。上限を過ぎて出たときだけ、
+  //   「そのあと少しで6体とも描ける」を見る(上限より前に、描けていないまま出たら、今までどおり NG)
+  let artAskAt = 0;
   await page.route(/\/images\/monsters\/[^/]+\.(png|webp)/i, async (route) => {
+    if (!artAskAt) artAskAt = Date.now();
     if (mode === 'fail') return route.abort();
     await new Promise((r) => setTimeout(r, 800)); return route.continue();
   });
@@ -53,7 +58,15 @@ const run = async (mode) => {
   await require(path.join(root, 'tools/card/lib/starter-open-pass.js'))(page);
   // 対戦開始の画面(練習試合)。読んでいるあいだは「対戦の準備中…」、読み終えてから出る
   const vs = await page.locator('[data-card-vs]').waitFor({ timeout: 30000 }).then(() => true).catch(() => false);
-  const arts = await page.evaluate(() => [...document.querySelectorAll('[data-card-vs-mon] img')].map((im) => ({ src: im.getAttribute('src') || '', ok: im.complete && im.naturalWidth > 0 })));
+  const vsAfterMs = artAskAt ? Date.now() - artAskAt : 0;
+  const readArts = () => page.evaluate(() => [...document.querySelectorAll('[data-card-vs-mon] img')].map((im) => ({ src: im.getAttribute('src') || '', ok: im.complete && im.naturalWidth > 0 })));
+  const arts = await readArts();
+  // 上限(2.5秒)を過ぎて出たときだけ: 3秒のうちに6体とも描けるか
+  let artsLater = null;
+  if (vs && !arts.every((x) => x.ok) && vsAfterMs >= 2500) {
+    await page.waitForFunction(() => { const ims = [...document.querySelectorAll('[data-card-vs-mon] img')]; return ims.length === 6 && ims.every((im) => im.complete && im.naturalWidth > 0); }, null, { timeout: 3000 }).catch(() => {});
+    artsLater = await readArts();
+  }
   // 事前ダウンロードに入れる立ち絵(84 の cardArtPrefetchPaths)が、一覧(asset-manifest.json)にあるパスか
   const pre = await page.evaluate(async () => {
     const paths = typeof cardArtPrefetchPaths === 'function' ? cardArtPrefetchPaths() : [];
@@ -61,12 +74,17 @@ const run = async (mode) => {
     return { n: paths.length, missing: paths.filter((p) => !(m && m.files[p])) };
   });
   await b.close(); server.close();
-  return { vs, arts, errs, pre };
+  return { vs, arts, artsLater, vsAfterMs, errs, pre };
 };
 (async () => {
   const slow = await run('slow');
-  check('① 立ち絵を0.8秒遅らせても、対戦開始の画面が出たときに6体ぶんの絵が全部描けている(読み終えてから出す)',
-    slow.vs && slow.arts.length === 6 && slow.arts.every((x) => x.ok) && slow.arts.some((x) => /images\/monsters\//.test(x.src)), JSON.stringify(slow.arts.map((x) => `${x.ok ? 'o' : 'x'}${x.src.split('/').pop()}`)));
+  const allOk = (list) => !!list && list.length === 6 && list.every((x) => x.ok) && list.some((x) => /images\/monsters\//.test(x.src));
+  // 上限(2.5秒)より前に出たのに描けていなければ NG。上限を過ぎて出た(機械がとても重い)ときは、3秒のうちに6体とも描ければ OK
+  const capped = !allOk(slow.arts) && slow.vsAfterMs >= 2500 && allOk(slow.artsLater);
+  check('① 立ち絵を0.8秒遅らせても、対戦開始の画面が出たときに6体ぶんの絵が全部描けている(読み終えてから出す。機械が重く待つ上限2.5秒を過ぎたときは、すぐあとに描ける)',
+    slow.vs && (allOk(slow.arts) || capped),
+    `${slow.vsAfterMs}ms ${JSON.stringify(slow.arts.map((x) => `${x.ok ? 'o' : 'x'}${x.src.split('/').pop()}`))}${slow.artsLater ? ` → 少しあと ${JSON.stringify(slow.artsLater.map((x) => (x.ok ? 'o' : 'x')).join(''))}` : ''}`);
+  if (capped) console.log(`  (機械が重く、待つ上限 2.5秒を過ぎて出た: ${slow.vsAfterMs}ms。そのあと6体とも描けた)`);
   const fail = await run('fail');
   check('② 立ち絵の通信が失敗しても、真っ白にならず、カードの絵で6体とも出る', fail.vs && fail.arts.length === 6 && fail.arts.every((x) => x.ok) && fail.arts.every((x) => /card-battle/.test(x.src)),
     JSON.stringify(fail.arts.map((x) => `${x.ok ? 'o' : 'x'}${x.src.split('/').pop()}`)));
