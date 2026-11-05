@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 686bd2206504a175
+// source-sha256: 05872418e7ffa77f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -17978,7 +17978,10 @@ const MarketProductCard = ({
   canBuy = false,
   disabled = false,
   dataAttrs = null,
-  previewIcon = null
+  previewIcon = null,
+  ribbon = null,
+  noteSlot = false,
+  note = null
 }) => {
   const usesGold = item.type === 'disc' || item.type === 'assist' || item.type === 'item';
   const usesPsyche = item.currency === 'psyche';
@@ -17988,8 +17991,11 @@ const MarketProductCard = ({
   const usesCardPoint = item.currency === 'cardPoint';
   const priceLabel = usesCardPoint ? `${item.cost}ビートP` : usesBeatPoint ? `${item.cost}ビートP` : usesHeroProofShard ? `勇者の証片${item.cost}個` : usesHeroProof ? `勇者の証${item.cost}個` : usesPsyche ? `${item.cost}プシュケー` : usesGold ? `${item.cost}ダイヤ` : `${item.cost}pt`;
   return React.createElement("div", _extends({}, dataAttrs || {}, {
-    className: `rounded-2xl border p-2 flex flex-col items-center gap-1 ${owned ? 'bg-emerald-900/30 border-emerald-500/60' : comingSoon ? 'bg-slate-900/60 border-white/10' : 'bg-slate-900 border-white/10'}`
-  }), React.createElement(MarketProductIcon, {
+    className: `relative rounded-2xl border p-2 flex flex-col items-center gap-1 ${owned ? 'bg-emerald-900/30 border-emerald-500/60' : comingSoon ? 'bg-slate-900/60 border-white/10' : 'bg-slate-900 border-white/10'}`
+  }), ribbon && React.createElement("span", {
+    "data-market-ribbon": true,
+    className: "pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-amber-400 px-1.5 py-[1px] text-[9px] font-black leading-tight text-slate-900 shadow"
+  }, ribbon), React.createElement(MarketProductIcon, {
     item: item,
     onZoom: onZoom,
     disabled: disabled,
@@ -18002,7 +18008,13 @@ const MarketProductCard = ({
       wordBreak: 'keep-all',
       overflowWrap: 'anywhere'
     }
-  }, marketNameNodes(item.name)), React.createElement("div", {
+  }, marketNameNodes(item.name)), noteSlot && React.createElement("div", {
+    "data-market-note": true,
+    className: "w-full flex flex-col items-center justify-center text-center leading-tight",
+    style: {
+      height: '44px'
+    }
+  }, note), React.createElement("div", {
     className: "w-full flex items-center justify-center gap-1",
     style: {
       height: '22px'
@@ -59353,6 +59365,7 @@ function BreederMarketScreen({
   const eventTab = activeSectionTab('event');
   const BEAT_POINT_MATERIAL_ITEM_IDS = ['rainbow_psyche', 'hero_proof_shard', 'transcend_fruit_rainbow', 'hero_proof'];
   const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer => eventTab === 'material' === BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId)).map(offer => rhythmEventPointShopOfferWithPass(offer, legendPassActive === true));
+  const legendPassSlot = eventItemOffers.some(offer => offer.legendPass === true);
   const renderSectionTabs = (section, scroll = false) => {
     const items = SECTION_TABS[section].tabs.map(tab => ({
       id: tab.key,
@@ -59875,24 +59888,22 @@ function BreederMarketScreen({
   }, (eventTab === 'item' || eventTab === 'material') && eventItemOffers.map(offer => {
     const item = beatPointItemOf(offer);
     const grantText = `${offer.grantAmount.toLocaleString()}${offer.unit}`;
-    const ownedPart = offer.kind === 'diamond' ? null : ownedMiddle(ownedItemCount(ownedItems, offer.itemId), item.base ? {
+    const middle = offer.kind === 'diamond' ? null : ownedMiddle(ownedItemCount(ownedItems, offer.itemId), item.base ? {
       ...item.base,
       cost: offer.cost,
       currency: 'beatPoint'
     } : null, {
       grantText
     });
-    const passPart = offer.legendPass ? React.createElement("div", {
+    const passNote = offer.legendPass ? React.createElement(React.Fragment, null, React.createElement("span", {
+      "data-legend-pass-ribbon": true,
+      className: "whitespace-nowrap rounded-full bg-amber-400 px-1.5 text-[9px] font-black leading-[14px] text-slate-900"
+    }, "優待パス還元"), React.createElement("span", {
       "data-legend-pass-offer": true,
-      className: "mt-1 text-center leading-tight"
-    }, React.createElement("span", {
-      className: "inline-block rounded-full bg-amber-400/90 px-2 py-0.5 text-[10px] font-black text-slate-900"
-    }, "🎫 優待パス還元"), React.createElement("div", {
-      className: "mt-0.5 text-[10px] font-bold text-slate-400 line-through tabular-nums"
-    }, offer.baseCost.toLocaleString(), "P → ", offer.baseGrantAmount.toLocaleString(), offer.unit), React.createElement("div", {
-      className: "text-[11px] font-black text-amber-200 tabular-nums"
-    }, offer.cost.toLocaleString(), "P → ", offer.grantAmount.toLocaleString(), offer.unit)) : null;
-    const middle = passPart ? React.createElement(React.Fragment, null, passPart, ownedPart) : ownedPart;
+      className: "whitespace-nowrap text-[9px] font-bold text-slate-400 line-through tabular-nums"
+    }, offer.baseCost.toLocaleString(), "P→", offer.baseGrantAmount.toLocaleString(), offer.unit), React.createElement("span", {
+      className: "whitespace-nowrap text-[10px] max-[359px]:text-[9px] font-black text-amber-200 tabular-nums"
+    }, offer.cost.toLocaleString(), "P→", offer.grantAmount.toLocaleString(), offer.unit)) : null;
     return React.createElement(MarketProductCard, {
       key: offer.id,
       dataAttrs: {
@@ -59901,6 +59912,8 @@ function BreederMarketScreen({
       item: item,
       owned: false,
       comingSoon: false,
+      noteSlot: legendPassSlot,
+      note: passNote,
       canBuy: safeEventPoints >= offer.cost && !busy,
       disabled: purchaseProcessing,
       onZoom: () => onZoomIcon(item),
