@@ -23,6 +23,7 @@ node tools/ctx.js rules 音量       その語に触れている節だけ
 | [`SCOPE.md`](SCOPE.md) | ⑩・⑩-2 | 質問に答えるとき／譜面生成ツールを触るとき |
 | [`CHART_ENGINE.md`](CHART_ENGINE.md) | ⑩-2 | 譜面の作り方(最新リビジョンだけ・手の決まり)を触るとき |
 | [`CONVERSATION.md`](CONVERSATION.md) | 会話言語 | 英語禁止のフックの経緯 |
+| [`ASSISTANT_ADD.md`](ASSISTANT_ADD.md) | ⑤・⑥ | 新しい助手を足すとき(全場面の台詞をそろえる・取り違えの検査) |
 | [`NEW_DEPT_BRIEF.md`](NEW_DEPT_BRIEF.md) | — | 新しい部署を作るとき・新しい部署になったとき(共通の申し送り) |
 | [`ORGANIZATION.md`](ORGANIZATION.md) | — | だれ(どの部署・部長)に仕事を頼むか・報告するかを確かめるとき(組織図) |
 

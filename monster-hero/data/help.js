@@ -1481,7 +1481,7 @@ const HELP_CATEGORIES = [
       },
       {
         id:'card-cup', emoji:'🎌', title:'個人杯', releaseFlag:'cardBattle', group:'対戦',
-        assistant:'仲間と大会が開けるようになりまちた。トーナメントの表が光っていくの、見てるだけでドキドキしまつ', expression:'happy',
+        assistant:'仲間と大会が開けるようになったよ。トーナメントの表が光っていくの、見てるだけでドキドキするね', expression:'happy',
         blocks:[
           {t:'p',text:'トップ画面の「対戦」→「個人杯」で、自分で大会を開いたり、ほかのブリーダーの大会に出たりできます。'},
           {t:'steps',items:[
@@ -2441,7 +2441,7 @@ const HELP_CATEGORIES = [
       },
       {
         id: 'assistant-costume', emoji: '👗', title: '助手の着替え',
-        assistant: 'ももたちのお洋服を着替えられるよ♡ 顔も立ち絵も、えらんだ服に変わるの！',
+        assistant: '助手のお洋服を着替えられるよ。顔も立ち絵も、えらんだ服に変わるの！',
         expression: 'wink',
         blocks: [
           { t:'p', text:'みゅあ・きき・ももすけが着る服を替えられます。プロフィール画面の「着替え：〜」ボタンから、持っている服を選びます。選んだ服は、助手の吹き出しの顔と立ち絵に出ます。' },

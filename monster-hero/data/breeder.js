@@ -1272,6 +1272,12 @@ const normalizeOwnedAssistantCostumes = (value) => {
   const starters = ASSISTANT_COSTUMES.filter(costume => costume && costume.starter === true && costume.released === true).map(costume => costume.id);
   return [...new Set([...list.filter(id => typeof id === 'string' && id.trim()).map(id => id.trim()), ...starters])];
 };
+// 保存するときの形: はじめから持っている服(starter)は書かない(読み込みのたびに足されるので、保存に残さなくてよい。
+//   服を買ったときに、買っていない starter の服まで mh_assistant_costume_owned_v1 へ書き足さないため・2026-11-05)
+const assistantCostumesToStore = (value) => {
+  const starters = ASSISTANT_COSTUMES.filter(costume => costume && costume.starter === true).map(costume => costume.id);
+  return normalizeOwnedAssistantCostumes(value).filter(id => !starters.includes(id));
+};
 const releasedAssistantCostumes = () => ASSISTANT_COSTUMES.filter(costume => costume && costume.released === true);
 const assistantCostumeById = (id) => releasedAssistantCostumes().find(costume => costume.id === id) || null;
 // その助手の服(並びは ASSISTANT_COSTUMES のとおり)
