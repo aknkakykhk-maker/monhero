@@ -216,6 +216,8 @@ const HERO = process.env.HERO || 'ゴーレム';
         const pv = await preview();
         // 写真はコピーが出ている最初のターン(予測の札の有る無しによらず同じ場面。前と後で比べるため)
         const out = await page.evaluate(() => !!document.querySelector('[data-tactics-ai-copy-out="1"],[data-ai-copy-float]'));
+        // 記録の窓が開いたままなら閉じてから撮る
+        for (let c = 0; c < 4 && /BATTLE LOG/.test(await text()); c += 1) { await page.getByRole('button', { name: /^閉じる$/ }).last().click({ timeout: 1500 }).catch(() => {}); await page.waitForTimeout(400); }
         if (out && SHOT && !shot) { await page.screenshot({ path: path.join(SHOT, `predict-${MODE}.png`) }); shot = true; }
         const look = pv.length ? await page.evaluate(() => {
           const e = [...document.querySelectorAll('[data-ai-copy-damage-preview]')].find((x) => x.getClientRects().length);
