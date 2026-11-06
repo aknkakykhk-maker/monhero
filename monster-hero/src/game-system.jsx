@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c97101664ec15ae3
+// generated-sha256: e3eef6d48350d66e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -915,7 +915,7 @@ const BATTLE_SYSTEMS = Object.freeze([
     ]),
     note: 'タクティクスチャレンジ／種族チャレンジ／プロ。難易度は通常と極限から選べます',
     points: Object.freeze([
-      Object.freeze(['❤️', 'ステータスの持ち方', '基本のバトルは全員ぶんを合わせた1組ですが、こちらはライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます。供モンが加わっても合算されず、自分の値のまま並びます。攻撃はそのモンスターのちから、受けるダメージはそのモンスターの丈夫さで決まり、狙われた子だけが減ります。倒れたモンスターはその場では戦えなくなり、全員が倒れたときだけ負けです。']),
+      Object.freeze(['❤️', 'ステータスの持ち方', '基本のバトルは全員ぶんを合わせた1組ですが、こちらはライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます。供モンが加わっても合算されず、自分の値のまま並びます。攻撃はそのモンスターのちから、受けるダメージはそのモンスターの丈夫さで決まり、狙われたモンスターだけが減ります。倒れたモンスターはその場では戦えなくなり、全員が倒れたときだけ負けです。']),
       Object.freeze(['🎯', '敵の狙い', '敵の予告に「誰を狙うか」まで出ます。基本のバトルはライフが1本なので狙いという考え方がありませんが、こちらは1体ずつ持つので、誰が受けるかで結果が変わります。']),
       Object.freeze(['🌀', '敵の技が増える', '間合い攻撃・連撃・貫通撃・攻撃力アップなど、基本のバトルには無い技を使い分けます。ガードが効かない技もあるので、予告を見てから受け方を決めます。']),
       Object.freeze(['✨', '勇者特性は持っているモンスターのもの', '基本のバトルは勇者モンの特性だけが効きますが、こちらは連れてきた供モンの勇者特性も、それぞれのモンスターに効きます（効き目は勇者モンと同じ）。ライガーの「俊足」ならライガーが狙われたときに避け、ゴーレムの「怪力」ならゴーレムが攻撃したときに乗ります。供モンを選ぶ意味が「ステータスの足し算」から「どの特性を連れていくか」に変わります。']),
@@ -40719,7 +40719,7 @@ function MasuSoulTraitsScreen({
             <div className="text-center text-xl mb-1">🌀</div><h3 className="text-center text-base font-black text-cyan-200">魂格特性を全リセット</h3>
             <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-300">{spent>0?<>「{masu.name}」が使用した魂格P <b className="text-amber-300">{spent}P</b> をすべて未使用へ戻します。</>:<>「{masu.name}」は、魂格特性にはまだ振っていません。</>}魂格段階・Lv・最高初到達Lvは変わりません。</p>
             {/* 結晶で増やしたぶんは結晶として持ち物へ戻る(2026-10-21 社長「結晶で使った分は結晶にもどる仕様にしたい」)。0個のときは出さない */}
-            {bonusPoints>0&&<p data-soul-trait-respec-crystal={bonusPoints} className="mt-2 rounded-xl border border-fuchsia-400/40 bg-fuchsia-950/40 px-3 py-2 text-[10px] font-black leading-relaxed text-fuchsia-100">🔮 魂格の結晶 <b className="text-fuchsia-200">{bonusPoints}個</b> が持ち物に戻ります。結晶で増やした魂格P {bonusPoints}P はこの子から無くなり、戻った結晶はほかのマスモンにも使えます。</p>}
+            {bonusPoints>0&&<p data-soul-trait-respec-crystal={bonusPoints} className="mt-2 rounded-xl border border-fuchsia-400/40 bg-fuchsia-950/40 px-3 py-2 text-[10px] font-black leading-relaxed text-fuchsia-100">🔮 魂格の結晶 <b className="text-fuchsia-200">{bonusPoints}個</b> が持ち物に戻ります。結晶で増やした魂格P {bonusPoints}P はこのモンスターから無くなり、戻った結晶はほかのマスモンにも使えます。</p>}
             <div className="mt-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"><span className="text-slate-400">魂格再編の書</span><span className="text-cyan-300">{scrollHave} → {Math.max(0,scrollHave-1)}冊</span></div>
             {bonusPoints>0&&<div className="mt-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"><span className="text-slate-400">魂格の結晶</span><span className="text-fuchsia-300">{crystalHave} → {crystalHave+bonusPoints}個</span></div>}
             {bonusPoints>0&&<div className="mt-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"><span className="text-slate-400">このモンスターの魂格P(獲得済み)</span><span className="text-amber-300">{earned} → {Math.max(0,earned-bonusPoints)}P</span></div>}
@@ -41146,7 +41146,7 @@ function MasuEnhanceScreen({
             {autoEnhanceIntroVisible&&(
               <div className="rounded-2xl border border-lime-400/60 bg-lime-950/30 p-3">
                 <div className="text-[13px] font-black text-lime-200">💡 強化を毎回手で振るのが大変なら</div>
-                <div className="mt-1 text-[11px] font-bold text-slate-200 leading-relaxed">上の「オート強化」で、この子ごとに「どこまで上げてよいか」と「その中での優先順位」を決めておけます。強化ポイントが入るたび自動で振られるので、転生したあとの周回でも放っておくだけで元の形まで戻ります。</div>
+                <div className="mt-1 text-[11px] font-bold text-slate-200 leading-relaxed">上の「オート強化」で、このモンスターごとに「どこまで上げてよいか」と「その中での優先順位」を決めておけます。強化ポイントが入るたび自動で振られるので、転生したあとの周回でも放っておくだけで元の形まで戻ります。</div>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <button type="button" onClick={()=>{onDismissAutoEnhanceIntro();onOpenAutoEnhance();}} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-lime-500 text-slate-950 text-[12px] font-black active:scale-95">設定を開く</button>
                   <button type="button" onClick={onDismissAutoEnhanceIntro} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 text-slate-300 text-[12px] font-black active:scale-95">あとで</button>
@@ -58268,7 +58268,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   { id: 'attach', cat: 'monster', sec: '攻撃', phase: 'attack', name: '付ける札を使う', tiers: [['', 'R']], desc: '技に付ける札をいっしょに出す' },
   { id: 'attachKind', cat: 'monster', sec: '攻撃', phase: 'attack', name: '付ける札: ◯', tiers: [['ダメージを上げる', 'N'], ['回避させない', 'R'], ['ガッツを軽くする', 'N']], desc: 'その効き目の付ける札を、技にいっしょに出す' },
   { id: 'spe', cat: 'monster', sec: '特殊技', phase: 'attack', name: '特殊技: ◯', tiers: [['味方を回復', 'N'], ['引く', 'N'], ['空中になる', 'N'], ['安全になる', 'R'], ['まゆと羽化', 'R'], ['のりうつる', 'SR']], desc: 'その効き目の特殊技を出す' },
-  { id: 'stance', cat: 'monster', sec: '立ち回り', phase: 'attack', name: '立ち回り: ◯', tiers: [['この子から攻める', 'N'], ['このモンスターは攻撃しない', 'N'], ['ライフの多いモンスターが先に', 'R'], ['ライフの少ないモンスターは温存', 'R'], ['攻撃は1回だけ', 'N'], ['何回でも攻める', 'SR']], desc: 'そのモンスターの前に出る・下がるを決める' },
+  { id: 'stance', cat: 'monster', sec: '立ち回り', phase: 'attack', name: '立ち回り: ◯', tiers: [['このモンスターから攻める', 'N'], ['このモンスターは攻撃しない', 'N'], ['ライフの多いモンスターが先に', 'R'], ['ライフの少ないモンスターは温存', 'R'], ['攻撃は1回だけ', 'N'], ['何回でも攻める', 'SR']], desc: 'そのモンスターの前に出る・下がるを決める' },
   { id: 'bEff', cat: 'breeder', sec: 'ブリーダーのカード', phase: 'attack', name: 'ブリーダー: ◯', tiers: [['回復する', 'N'], ['倒れたモンスターを戻す', 'R'], ['攻撃できないを消す', 'N'], ['相手を攻撃できなくする', 'R'], ['相手のガッツを減らす', 'N'], ['両方のガッツを0にする', 'SR'],
     ['山札からガッツへ', 'N'], ['カードを引く', 'N'], ['捨て札から拾う', 'N'], ['手札を引き直す', 'N'], ['もう1回攻撃させる', 'R'], ['合体する', 'SR'], ['付ける札をただにする', 'N'], ['守りを名指しで封じる', 'R'], ['捨て札を山札に戻す', 'N'], ['小さく攻撃する', 'N']], desc: 'その効き目のブリーダーのカードを出す' },
   { id: 'fieldCard', cat: 'breeder', sec: 'ブリーダー', phase: 'attack', name: '全体カードを出す', tiers: [['', 'R']], desc: '場に残る全体カードを出す' },
@@ -88183,7 +88183,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const CARD_SCOPE_TONE = { '単体':'border-sky-400/60 bg-sky-500/20 text-sky-200',
     '全体':'border-violet-400/60 bg-violet-500/20 text-violet-200',
     '敵へ':'border-slate-400/60 bg-slate-500/20 text-slate-200' };
-  const CARD_SCOPE_NOTE = { '単体':'置いた子だけに効きます', '全体':'立っている味方ぜんぶに効きます', '敵へ':'置いたモンスターのちからで殴ります' };
+  const CARD_SCOPE_NOTE = { '単体':'置いたモンスターだけに効きます', '全体':'立っている味方ぜんぶに効きます', '敵へ':'置いたモンスターのちからで殴ります' };
   const cardEffectMultiplier = (card, halved=false) => {
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     return isAssistCard(card)&&specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty,'assistCardEffect') : (halved?0.5:1);
@@ -99675,7 +99675,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
             {['buff','debuff','heal'].includes(focusedCard.type)&&(<div className="text-center italic text-amber-300 font-bold text-[9px] leading-tight">{getDynamicDesc(focusedCard,true,focusedCard.evoLevel||0)}</div>)}
             {/* ★みゃるの薬は、タクティクスでは「飲んだ子だけ」に効く。自傷もその子のライフから引く
                 (2026-09-22 ユーザー指摘。それまでは盤面の合計ライフから引き、攻撃バフも全員に乗っていた) */}
-            {isTacticsMode(runMode)&&focusedCard.subType==='buff_myaru'&&(<div className="text-center text-[9px] font-bold leading-tight text-emerald-300">置いた子だけに効きます。自傷もそのモンスターの今のライフから引きます</div>)}
+            {isTacticsMode(runMode)&&focusedCard.subType==='buff_myaru'&&(<div className="text-center text-[9px] font-bold leading-tight text-emerald-300">置いたモンスターだけに効きます。自傷もそのモンスターの今のライフから引きます</div>)}
             {focusedCard.effectDesc&&<div className="border-t border-white/10 pt-1 mt-1 text-[9px] text-amber-200 font-bold"><span className="text-indigo-400">特殊効果:</span> {focusedCard.effectDesc}</div>}
           </div>
         </div>

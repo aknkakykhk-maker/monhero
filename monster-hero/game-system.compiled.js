@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2a4e07f99e74360d
+// source-sha256: f1c90762082a59f5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -767,7 +767,7 @@ const BATTLE_SYSTEMS = Object.freeze([Object.freeze({
   tagline: '基本のルールに、誰を守るかの読み合いを足したバトル',
   highlights: Object.freeze([Object.freeze(['❤️', 'ステータスは1体ずつ別々']), Object.freeze(['🎯', '敵の予告に「誰を狙うか」まで出る']), Object.freeze(['✨', '連れてきた全員の勇者特性が効く'])]),
   note: 'タクティクスチャレンジ／種族チャレンジ／プロ。難易度は通常と極限から選べます',
-  points: Object.freeze([Object.freeze(['❤️', 'ステータスの持ち方', '基本のバトルは全員ぶんを合わせた1組ですが、こちらはライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます。供モンが加わっても合算されず、自分の値のまま並びます。攻撃はそのモンスターのちから、受けるダメージはそのモンスターの丈夫さで決まり、狙われた子だけが減ります。倒れたモンスターはその場では戦えなくなり、全員が倒れたときだけ負けです。']), Object.freeze(['🎯', '敵の狙い', '敵の予告に「誰を狙うか」まで出ます。基本のバトルはライフが1本なので狙いという考え方がありませんが、こちらは1体ずつ持つので、誰が受けるかで結果が変わります。']), Object.freeze(['🌀', '敵の技が増える', '間合い攻撃・連撃・貫通撃・攻撃力アップなど、基本のバトルには無い技を使い分けます。ガードが効かない技もあるので、予告を見てから受け方を決めます。']), Object.freeze(['✨', '勇者特性は持っているモンスターのもの', '基本のバトルは勇者モンの特性だけが効きますが、こちらは連れてきた供モンの勇者特性も、それぞれのモンスターに効きます（効き目は勇者モンと同じ）。ライガーの「俊足」ならライガーが狙われたときに避け、ゴーレムの「怪力」ならゴーレムが攻撃したときに乗ります。供モンを選ぶ意味が「ステータスの足し算」から「どの特性を連れていくか」に変わります。']), Object.freeze(['🃏', 'カードを使うモンスターを選ぶ', 'カードは「誰が使うか」を選んでから出します。ガッツもそのモンスターのぶんから払うので、1体に任せきりにはできません。']), Object.freeze(['🤝', '供モンの加入', '供モンが加わると、そのぶん敵も強くなります。強く育てたモンスターを連れていくほど手ごわくなるので、少ない人数のまま進むという選び方もできます。']), Object.freeze(['🎮', '中にあるモード', 'タクティクスチャレンジ（基本）、種族チャレンジ、プロの3つです。難易度は通常と極限から選べます。']), Object.freeze(['🏆', 'スコアと記録', 'クラシックバトルとは別の全国ランキングに載ります。クラシックバトルの記録は書き換わりません。']), Object.freeze(['💪', '育成はここでも効く', '編成・カード・間合い・強化フェーズは基本のバトルと同じで、育てた強さはそのまま効きます。そのうえに「誰が受けるか」の判断が足される、という関係です。']), Object.freeze(['🎯', 'こんな人におすすめ', '基本のバトルに慣れて、もう一段の読み合いがほしい人向けです。同じ編成でも、受け方の判断で結果が変わります。'])]),
+  points: Object.freeze([Object.freeze(['❤️', 'ステータスの持ち方', '基本のバトルは全員ぶんを合わせた1組ですが、こちらはライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます。供モンが加わっても合算されず、自分の値のまま並びます。攻撃はそのモンスターのちから、受けるダメージはそのモンスターの丈夫さで決まり、狙われたモンスターだけが減ります。倒れたモンスターはその場では戦えなくなり、全員が倒れたときだけ負けです。']), Object.freeze(['🎯', '敵の狙い', '敵の予告に「誰を狙うか」まで出ます。基本のバトルはライフが1本なので狙いという考え方がありませんが、こちらは1体ずつ持つので、誰が受けるかで結果が変わります。']), Object.freeze(['🌀', '敵の技が増える', '間合い攻撃・連撃・貫通撃・攻撃力アップなど、基本のバトルには無い技を使い分けます。ガードが効かない技もあるので、予告を見てから受け方を決めます。']), Object.freeze(['✨', '勇者特性は持っているモンスターのもの', '基本のバトルは勇者モンの特性だけが効きますが、こちらは連れてきた供モンの勇者特性も、それぞれのモンスターに効きます（効き目は勇者モンと同じ）。ライガーの「俊足」ならライガーが狙われたときに避け、ゴーレムの「怪力」ならゴーレムが攻撃したときに乗ります。供モンを選ぶ意味が「ステータスの足し算」から「どの特性を連れていくか」に変わります。']), Object.freeze(['🃏', 'カードを使うモンスターを選ぶ', 'カードは「誰が使うか」を選んでから出します。ガッツもそのモンスターのぶんから払うので、1体に任せきりにはできません。']), Object.freeze(['🤝', '供モンの加入', '供モンが加わると、そのぶん敵も強くなります。強く育てたモンスターを連れていくほど手ごわくなるので、少ない人数のまま進むという選び方もできます。']), Object.freeze(['🎮', '中にあるモード', 'タクティクスチャレンジ（基本）、種族チャレンジ、プロの3つです。難易度は通常と極限から選べます。']), Object.freeze(['🏆', 'スコアと記録', 'クラシックバトルとは別の全国ランキングに載ります。クラシックバトルの記録は書き換わりません。']), Object.freeze(['💪', '育成はここでも効く', '編成・カード・間合い・強化フェーズは基本のバトルと同じで、育てた強さはそのまま効きます。そのうえに「誰が受けるか」の判断が足される、という関係です。']), Object.freeze(['🎯', 'こんな人におすすめ', '基本のバトルに慣れて、もう一段の読み合いがほしい人向けです。同じ編成でも、受け方の判断で結果が変わります。'])]),
   modes: Object.freeze([BATTLE_MODE_TACTICS, BATTLE_MODE_TACTICS_SPECIES, BATTLE_MODE_TACTICS_PRO])
 }), Object.freeze({
   id: BATTLE_SYSTEM_QUICK,
@@ -66528,7 +66528,7 @@ function MasuSoulTraitsScreen({
     className: "mt-2 rounded-xl border border-fuchsia-400/40 bg-fuchsia-950/40 px-3 py-2 text-[10px] font-black leading-relaxed text-fuchsia-100"
   }, "🔮 魂格の結晶 ", React.createElement("b", {
     className: "text-fuchsia-200"
-  }, bonusPoints, "個"), " が持ち物に戻ります。結晶で増やした魂格P ", bonusPoints, "P はこの子から無くなり、戻った結晶はほかのマスモンにも使えます。"), React.createElement("div", {
+  }, bonusPoints, "個"), " が持ち物に戻ります。結晶で増やした魂格P ", bonusPoints, "P はこのモンスターから無くなり、戻った結晶はほかのマスモンにも使えます。"), React.createElement("div", {
     className: "mt-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"
   }, React.createElement("span", {
     className: "text-slate-400"
@@ -67542,7 +67542,7 @@ function MasuEnhanceScreen({
     className: "text-[13px] font-black text-lime-200"
   }, "💡 強化を毎回手で振るのが大変なら"), React.createElement("div", {
     className: "mt-1 text-[11px] font-bold text-slate-200 leading-relaxed"
-  }, "上の「オート強化」で、この子ごとに「どこまで上げてよいか」と「その中での優先順位」を決めておけます。強化ポイントが入るたび自動で振られるので、転生したあとの周回でも放っておくだけで元の形まで戻ります。"), React.createElement("div", {
+  }, "上の「オート強化」で、このモンスターごとに「どこまで上げてよいか」と「その中での優先順位」を決めておけます。強化ポイントが入るたび自動で振られるので、転生したあとの周回でも放っておくだけで元の形まで戻ります。"), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -97017,7 +97017,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   sec: '立ち回り',
   phase: 'attack',
   name: '立ち回り: ◯',
-  tiers: [['この子から攻める', 'N'], ['このモンスターは攻撃しない', 'N'], ['ライフの多いモンスターが先に', 'R'], ['ライフの少ないモンスターは温存', 'R'], ['攻撃は1回だけ', 'N'], ['何回でも攻める', 'SR']],
+  tiers: [['このモンスターから攻める', 'N'], ['このモンスターは攻撃しない', 'N'], ['ライフの多いモンスターが先に', 'R'], ['ライフの少ないモンスターは温存', 'R'], ['攻撃は1回だけ', 'N'], ['何回でも攻める', 'SR']],
   desc: 'そのモンスターの前に出る・下がるを決める'
 }, {
   id: 'bEff',
@@ -143362,7 +143362,7 @@ function MonsterHeroGame() {
     '敵へ': 'border-slate-400/60 bg-slate-500/20 text-slate-200'
   };
   const CARD_SCOPE_NOTE = {
-    '単体': '置いた子だけに効きます',
+    '単体': '置いたモンスターだけに効きます',
     '全体': '立っている味方ぜんぶに効きます',
     '敵へ': '置いたモンスターのちからで殴ります'
   };
@@ -163958,7 +163958,7 @@ function MonsterHeroGame() {
       className: "text-center italic text-amber-300 font-bold text-[9px] leading-tight"
     }, getDynamicDesc(focusedCard, true, focusedCard.evoLevel || 0)), isTacticsMode(runMode) && focusedCard.subType === 'buff_myaru' && React.createElement("div", {
       className: "text-center text-[9px] font-bold leading-tight text-emerald-300"
-    }, "置いた子だけに効きます。自傷もそのモンスターの今のライフから引きます"), focusedCard.effectDesc && React.createElement("div", {
+    }, "置いたモンスターだけに効きます。自傷もそのモンスターの今のライフから引きます"), focusedCard.effectDesc && React.createElement("div", {
       className: "border-t border-white/10 pt-1 mt-1 text-[9px] text-amber-200 font-bold"
     }, React.createElement("span", {
       className: "text-indigo-400"

@@ -128,7 +128,7 @@ function MasuEnhanceScreen({
             {autoEnhanceIntroVisible&&(
               <div className="rounded-2xl border border-lime-400/60 bg-lime-950/30 p-3">
                 <div className="text-[13px] font-black text-lime-200">💡 強化を毎回手で振るのが大変なら</div>
-                <div className="mt-1 text-[11px] font-bold text-slate-200 leading-relaxed">上の「オート強化」で、この子ごとに「どこまで上げてよいか」と「その中での優先順位」を決めておけます。強化ポイントが入るたび自動で振られるので、転生したあとの周回でも放っておくだけで元の形まで戻ります。</div>
+                <div className="mt-1 text-[11px] font-bold text-slate-200 leading-relaxed">上の「オート強化」で、このモンスターごとに「どこまで上げてよいか」と「その中での優先順位」を決めておけます。強化ポイントが入るたび自動で振られるので、転生したあとの周回でも放っておくだけで元の形まで戻ります。</div>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <button type="button" onClick={()=>{onDismissAutoEnhanceIntro();onOpenAutoEnhance();}} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-lime-500 text-slate-950 text-[12px] font-black active:scale-95">設定を開く</button>
                   <button type="button" onClick={onDismissAutoEnhanceIntro} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 text-slate-300 text-[12px] font-black active:scale-95">あとで</button>

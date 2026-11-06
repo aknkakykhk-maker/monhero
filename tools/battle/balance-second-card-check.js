@@ -86,7 +86,7 @@ check('固有技の数値効果も半減する',
     && buffHalved('addPermaBuff', 'critRatePct') && buffHalved('addWaveBuff', 'enemyAtkDebuffPct'));
 // 2026-09-20: 新モードは「同じ子の2枚目」なので言い方を変えている
 check('半減したことを画面に出す',
-  has("'2枚目以降 効果半減'") && has("isTacticsMode(runMode)?'同じ子の2枚目 効果半減'"));
+  has("'2枚目以降 効果半減'") && has("isTacticsMode(runMode)?'同じモンスターの2枚目 効果半減'"));
 // ★予測も実処理と同じ器を通す。別々に数えると「予測より実際が弱い」が起きる
 // ★予測を出すところは、どれも同じ器(makeCardHalveCounter)で「何枚目か」を数える。
 //   自前で数え直すと、画面のどれか1つだけ半減がずれる

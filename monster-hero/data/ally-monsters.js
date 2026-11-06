@@ -146,7 +146,7 @@ const ALL_PLAYER_MONSTERS = {
       effectDesc:"霊魂：次のターンから3ターン、カードの消費ガッツ−30%・味方全員の回避率+10%" } },
   Orihime: { id:'Orihime', name:"オリヒメ", emoji:"🎐", imgUrl:ORIHIME_IMG, iconUrl:ORIHIME_IMG,
     faceIconUrl:ORIHIME_FACE_ICON, atkMotion:'default',
-    trait:"天河の契り", traitDesc:"勇者モンにすると：合流した子から相方を1体選ぶ。同じターンに同じ種類の動きをすると逢瀬がたまり、相方との距離の差(1〜3)で与ダメ上昇・被ダメ軽減・ダメージの分け合いが開く",
+    trait:"天河の契り", traitDesc:"勇者モンにすると：合流したモンスターから相方を1体選ぶ。同じターンに同じ種類の動きをすると逢瀬がたまり、相方との距離の差(1〜3)で与ダメ上昇・被ダメ軽減・ダメージの分け合いが開く",
     baseHp:440, baseGuts:140, baseAtk:145, baseDef:85, plusStats:{hp:140,atk:30,def:15,guts:40}, distAptitude:['B','A','D','A'],
     unique:{ name:"求愛", icon:ORIHIME_IMG, monId:"Orihime", baseMult:2.3, baseGuts:46, evoLevel:0,
       names:["求愛","織姫のくちづけ","超狐火・星","陽炎","神狐星火","八鈴天衝","炸裂気泡陣","煉獄九尾陣","天河天翔"],

@@ -560,7 +560,7 @@ check('加入ボーナス(plusStats)は新モードでは使わない',
     && has('if(!tacticsJoin){ setMaxHp(nMaxHp); setHp(p=>p+(nMaxHp-bHp)); setMaxGuts(nMaxGuts); setAtk(nAtk); setDef(nDef); }'));
 check('合流ボーナスの説明も新モード向けに出す',
   has('素のステータスがそのまま入ります')
-    && has('あとから入るほど、先に育った子に追いつく補正がかかります'));
+    && has('あとから入るほど、先に育ったモンスターに追いつく補正がかかります'));
 // ★runMode はラン後も残る。ラン外(ベースモン一覧など)ではクラシックの値を出す(2026-09-25 ユーザー報告)
 check('合流ボーナスの新モード説明はラン中の画面だけ',
   has("{isTacticsMode(runMode)&&(RUN_PHASE_STATES.includes(gameState)||gameState==='BATTLE')"));
@@ -1266,7 +1266,7 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
   // ★カードの説明は、パーティの平均で1つの数字を出さない(誰の数値か分からない)
   check('カードの説明は「その子の丈夫さ」で決まると書く',
     has('if(isTacticsMode(runMode)) return(<div className="text-center font-bold">敵の攻撃を軽減')
-      && has('置く子で変わります。盤面の枠に出る GUARD の数字で確かめられます'));
+      && has('置くモンスターで変わります。盤面の枠に出る GUARD の数字で確かめられます'));
   check('枠へガードのまとめを出す(連撃ガードは合計値)',
     battleScreenSpread.includes('data-tactics-guard-total={gv}')
       && battleScreenSpread.includes("data-tactics-guard-kind={slotRushGuard?'rush':'spread'}")
@@ -1338,7 +1338,7 @@ check('枠ごとのバフは、タクティクスのときだけ読む',
 }
 check('カードの説明にも「飲んだ子だけ」と書く',
   has("isTacticsMode(runMode)&&focusedCard.subType==='buff_myaru'")
-    && has('置いた子だけに効きます。自傷もその子の今のライフから引きます'));
+    && has('置いたモンスターだけに効きます。自傷もそのモンスターの今のライフから引きます'));
 
 // --- ㉞ カードの説明に「ジャンル」と「誰に効くか」を出す(2026-09-22 ユーザー指示) ---
 // ★タクティクスは1体ずつステータスを持つので、置いた子だけに効くのか味方ぜんぶに効くのかで

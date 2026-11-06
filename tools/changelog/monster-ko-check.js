@@ -14,7 +14,7 @@ const DIALOG_FILES=new Set(['monster-hero/data/assistants.js','monster-hero/src/
 const files=['monster-hero/data/help.js','monster-hero/data/changelog.js','monster-hero/data/breeder.js','monster-hero/data/rhythm-event.js','monster-hero/data/ally-monsters.js','monster-hero/data/lineages.js',
   ...fs.readdirSync(path.join(ROOT,'monster-hero/src/parts')).filter(f=>f.endsWith('.jsx')).map(f=>`monster-hero/src/parts/${f}`)].filter(f=>!DIALOG_FILES.has(f));
 const EXCL=/様子|調子|梯子|帽子|扇子|椅子|王子|双子|女子|男子|団子|菓子|拍子|粒子|原子|電子|分子|冊子|格子|種子|子供|子ども|息子|弟子|振り?子|骨子|面子|利子|因子|子守|黒子|障子|迷子|親子|子会社|子音|子分|子孫|子連れ|子犬|子猫|子羊|遺伝子|女の子|男の子|お子|っ子|餃子|柚子|茄子|椰子|獅子|玉子|子規|玖子/;
-const KO=/(?<![子])子(?=[がをはにのもとでやへ、。！？!?…」』）)\s,，・／/〜~]|$|たち|ら)/g;
+const KO=/(?<![子])子(?=[がをはにのもとでやへ、。！？!?…」』）)\s,，・／/〜~]|$|たち|ら|だけ|まで|より|から|しか|ごと|同士|ばかり|ばっかり|だった|です|でも|じゃ|なら|なの|って|ってる|には|へは|とは|でした)/g;
 const found=[];
 for(const f of files){
   const src=fs.readFileSync(path.join(ROOT,f),'utf8');

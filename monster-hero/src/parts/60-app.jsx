@@ -13028,7 +13028,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const CARD_SCOPE_TONE = { '単体':'border-sky-400/60 bg-sky-500/20 text-sky-200',
     '全体':'border-violet-400/60 bg-violet-500/20 text-violet-200',
     '敵へ':'border-slate-400/60 bg-slate-500/20 text-slate-200' };
-  const CARD_SCOPE_NOTE = { '単体':'置いた子だけに効きます', '全体':'立っている味方ぜんぶに効きます', '敵へ':'置いたモンスターのちからで殴ります' };
+  const CARD_SCOPE_NOTE = { '単体':'置いたモンスターだけに効きます', '全体':'立っている味方ぜんぶに効きます', '敵へ':'置いたモンスターのちからで殴ります' };
   const cardEffectMultiplier = (card, halved=false) => {
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     return isAssistCard(card)&&specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty,'assistCardEffect') : (halved?0.5:1);
@@ -24520,7 +24520,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
             {['buff','debuff','heal'].includes(focusedCard.type)&&(<div className="text-center italic text-amber-300 font-bold text-[9px] leading-tight">{getDynamicDesc(focusedCard,true,focusedCard.evoLevel||0)}</div>)}
             {/* ★みゃるの薬は、タクティクスでは「飲んだ子だけ」に効く。自傷もその子のライフから引く
                 (2026-09-22 ユーザー指摘。それまでは盤面の合計ライフから引き、攻撃バフも全員に乗っていた) */}
-            {isTacticsMode(runMode)&&focusedCard.subType==='buff_myaru'&&(<div className="text-center text-[9px] font-bold leading-tight text-emerald-300">置いた子だけに効きます。自傷もそのモンスターの今のライフから引きます</div>)}
+            {isTacticsMode(runMode)&&focusedCard.subType==='buff_myaru'&&(<div className="text-center text-[9px] font-bold leading-tight text-emerald-300">置いたモンスターだけに効きます。自傷もそのモンスターの今のライフから引きます</div>)}
             {focusedCard.effectDesc&&<div className="border-t border-white/10 pt-1 mt-1 text-[9px] text-amber-200 font-bold"><span className="text-indigo-400">特殊効果:</span> {focusedCard.effectDesc}</div>}
           </div>
         </div>

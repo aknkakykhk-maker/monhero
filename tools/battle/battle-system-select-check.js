@@ -189,7 +189,7 @@ check('売りがカード下の1行と重なっていない',
     !!traitPointOf(classic) && !!traitPointOf(tactics),
     [classic, tactics].map(s => (traitPointOf(s) || ['', 'なし'])[1]).join(' / '));
   check('クラシックは勇者モンの特性だけと書いてある',
-    /勇者モン(にした子)?の特性だけ/.test(traitPointOf(classic)[2]));
+    /勇者モン(にした(子|モンスター))?の特性だけ/.test(traitPointOf(classic)[2]));
   check('タクティクスは供モンの特性も効くと書いてある',
     /供モンの勇者特性も/.test(traitPointOf(tactics)[2])
       && /どの特性を連れていくか/.test(traitPointOf(tactics)[2]));
