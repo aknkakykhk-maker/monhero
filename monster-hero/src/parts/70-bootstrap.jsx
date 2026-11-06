@@ -277,7 +277,7 @@ const createAnimationStyle = () => {
       100% { transform:translate3d(0,16px,0) scale(.88,.80); filter:drop-shadow(0 0 28px rgba(255,255,255,.94)) drop-shadow(0 12px 28px rgba(14,165,233,.82)); }
     }
     /* 左右の滑りは --atk-side(敵が右なら1・左なら-1)ぶん敵の側へ寄せる。
-       端の枠の子が外側へ滑ると画面の外へ半分出て、消えたように見えていた(2026-09-24 ユーザー指摘) */
+       端の枠のモンスターが外側へ滑ると画面の外へ半分出て、消えたように見えていた(2026-09-24 ユーザー指摘) */
     @keyframes waterBurstAttack {
       0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 5px rgba(103,232,249,.5)); }
       10% { transform:translate3d(0,8px,0) scale(.95,.88) rotate(-2deg); filter:drop-shadow(0 0 15px rgba(34,211,238,.9)); }
@@ -704,24 +704,24 @@ const createAnimationStyle = () => {
     .mon-idle--heavy { animation:monIdleHeavy 3600ms ease-in-out infinite; }
     .mon-idle--glide { animation:monIdleGlide 3200ms ease-in-out infinite; }
     .mon-idle--drift { animation:monIdleDrift 4200ms ease-in-out infinite; transform-origin:50% 50%; }
-    /* 宙に浮いている子。ゆっくり上下してわずかに伸び縮みする */
+    /* 宙に浮いているモンスター。ゆっくり上下してわずかに伸び縮みする */
     @keyframes monIdleHover {
       0%,100% { transform:translate3d(0,0,0) scale(1,1); }
       50% { transform:translate3d(0,-4%,0) scale(.99,1.015); }
     }
-    /* 地面に立っている丸い子。足元を軸に、つぶれて・伸びて・小さく弾む */
+    /* 地面に立っている丸いモンスター。足元を軸に、つぶれて・伸びて・小さく弾む */
     @keyframes monIdleBounce {
       0%,100% { transform:translate3d(0,0,0) scale(1,1); }
       20% { transform:translate3d(0,0,0) scale(1.04,.95); }
       45% { transform:translate3d(0,-3%,0) scale(.97,1.04); }
       65% { transform:translate3d(0,0,0) scale(1.02,.98); }
     }
-    /* どっしり立っている子。胸がふくらむように、縦へわずかに伸び縮みする */
+    /* どっしり立っているモンスター。胸がふくらむように、縦へわずかに伸び縮みする */
     @keyframes monIdleBreathe {
       0%,100% { transform:translate3d(0,0,0) scale(1,1); }
       50% { transform:translate3d(0,-1%,0) scale(1.015,1.04); }
     }
-    /* ↓ 待機が地味だった子の動き(2026-09-25 ユーザー指示「待機中の動きが地味なモンスターがいるからもう少し改良したい」)。
+    /* ↓ 待機が地味だったモンスターの動き(2026-09-25 ユーザー指示「待機中の動きが地味なモンスターがいるからもう少し改良したい」)。
        どれも足元(transform-origin 50% 96%)を軸にするので、地面から離れて見えない */
     /* ぷるぷるの子(モッチー・剣士モッチー)。つぶれて、ぴょんと伸びて、ぷるんと揺れて止まる */
     @keyframes monIdleJelly {
@@ -758,12 +758,12 @@ const createAnimationStyle = () => {
       0%,100% { transform:translate3d(0,0,0) rotate(-4deg); }
       50% { transform:translate3d(0,-8%,0) rotate(4deg); }
     }
-    /* 植物の子。足元を軸に、左右へゆっくり傾く */
+    /* 植物のモンスター。足元を軸に、左右へゆっくり傾く */
     @keyframes monIdleSway {
       0%,100% { transform:rotate(-2deg); }
       50% { transform:rotate(2deg); }
     }
-    /* 人魚の子。水の中にいるように、上下しながら少し傾く */
+    /* 人魚のモンスター。水の中にいるように、上下しながら少し傾く */
     @keyframes monIdleSwim {
       0%,100% { transform:translate3d(0,0,0) rotate(-1.5deg); }
       50% { transform:translate3d(0,-3%,0) rotate(1.5deg); }
@@ -1277,7 +1277,7 @@ const createAnimationStyle = () => {
       88% { transform:translate3d(calc(var(--atk-dx) * -.03),calc(var(--atk-dy) * -.03),0) scale(1.05) rotate(-2deg); }
       94%,100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
     }
-    /* 角から敵までの雷。ジグザグの形(clip-path)で切り抜き、光は親(.thm-atk__line)の影で付ける(子に付けると形で切れる) */
+    /* 角から敵までの雷。ジグザグの形(clip-path)で切り抜き、光は親(.thm-atk__line)の影で付ける(モンスターに付けると形で切れる) */
     .thm-atk--claw .thm-atk__line { top:24%; filter:drop-shadow(0 0 6px #facc15) drop-shadow(0 0 14px rgba(250,204,21,.8)); }
     .thm-atk--claw .thm-atk__line i { width:40px; left:-20px;
       clip-path:polygon(42% 100%, 12% 86%, 70% 72%, 16% 58%, 66% 44%, 20% 30%, 62% 16%, 42% 0%, 58% 0%, 78% 16%, 36% 30%, 82% 44%, 32% 58%, 86% 72%, 28% 86%, 58% 100%);
@@ -2072,7 +2072,7 @@ const createAnimationStyle = () => {
       @keyframes thmReduced { 0% { filter:none; } 45% { filter:drop-shadow(0 0 18px var(--c2)); } 100% { filter:none; } }
     }
     /* ==== 固有技の格上げ(24-battle-fx.jsx の UniqueFxExtras / UniqueFxImpact。2026-10-02 ユーザー指示「固有技はもっとかっこよくしてほしい」)====
-       固有技(thm-atk--lunge / .uex)だけに足す。使う子のオーラ・残像と、敵の上の光柱・地割れ・閃光。
+       固有技(thm-atk--lunge / .uex)だけに足す。使うモンスターのオーラ・残像と、敵の上の光柱・地割れ・閃光。
        色は --c1(明)/--c2(濃)。着弾の時刻は --hit-at。敵の位置は --atk-dx/dy(.thm-atk__hit が translate する) */
     .uex-aura { position:absolute; inset:-14%; z-index:2; border-radius:50%; pointer-events:none; opacity:0;
       background:radial-gradient(circle, color-mix(in srgb, var(--c1,#fff) 85%, transparent) 0 18%, color-mix(in srgb, var(--c2,#c026d3) 70%, transparent) 42%, transparent 70%);
@@ -2145,7 +2145,7 @@ const createAnimationStyle = () => {
     .spm--release .spm__shade { opacity:1; animation:spmShadeOut 520ms ease-in 180ms forwards; }
     @keyframes spmShadeIn { from { opacity:0; } to { opacity:1; } }
     @keyframes spmShadeOut { from { opacity:1; } to { opacity:0; } }
-    /* 使う子へ集まる光 */
+    /* 使うモンスターへ集まる光 */
     .spm__gather { left:var(--spm-fx); top:var(--spm-fy); width:0; height:0; }
     .spm__ring { position:absolute; left:-70px; top:-70px; width:140px; height:140px; border-radius:50%; opacity:0;
       border:3px solid var(--spm-c1); box-shadow:0 0 14px var(--spm-c2), inset 0 0 14px var(--spm-c2);
@@ -2448,7 +2448,7 @@ const createAnimationStyle = () => {
     .ex-desc__item::before { content:''; position:absolute; left:.2em; top:.62em; width:.5em; height:.5em; border-radius:50%; background:#d946ef; }
     .ex-desc__sub { padding-left:2.1em; font-size:.92em; color:#cbd5e1; line-height:1.4; position:relative; }
     .ex-desc__sub::before { content:'─'; position:absolute; left:1.1em; opacity:.6; }
-    /* 使った子の距離枠の光 */
+    /* 使ったモンスターの距離枠の光 */
     .ex-aura { position:absolute; inset:-2px; z-index:57; pointer-events:none; border-radius:18px; opacity:0;
       border:2px solid var(--ex-c1); box-shadow:0 0 14px var(--ex-c2), inset 0 0 22px color-mix(in srgb, var(--ex-c2) 70%, transparent);
       animation:exAura 1600ms ease-out forwards; }
@@ -2702,7 +2702,7 @@ const createAnimationStyle = () => {
       background: radial-gradient(closest-side, rgba(168,85,247,.55), rgba(168,85,247,.25) 55%, rgba(168,85,247,0) 80%); }
     /* ★すりガラス(backdrop-filter)を外す(2026-09-24 ユーザー指摘「バトル画面にかくつきを感じる」)。
        枠・見出し・ライフの札の下地はもともと 72〜98% の濃さで、ぼかしはほとんど見えていなかった。
-       それでいて枠の中は入れ子で9か所ぼかしていて、ライフの札は跳ねている味方の絵の真上にあるため、
+       それでいて枠の中は入れモンスターで9か所ぼかしていて、ライフの札は跳ねている味方の絵の真上にあるため、
        絵が動くたびに毎コマぼかし直しになっていた(iPhone でいちばん重い処理のひとつ) */
     [data-tactics-look] [data-slot-index], [data-tactics-look] [data-slot-head], [data-tactics-look] [data-tactics-party-slot] {
       -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
@@ -4450,7 +4450,7 @@ const createAnimationStyle = () => {
     .mh-card-dodge { animation: mhCardDodge .62s ease-out both; }
     .mh-card-guard { animation: mhCardGuard .7s ease-out both; }
     .mh-card-hit { animation: mhRjJackHit .6s ease-out both; }
-    /* 当たった子の白い光・ダメージの数字・倒れたときの帯(2026-10-26 改良の案 B) */
+    /* 当たったモンスターの白い光・ダメージの数字・倒れたときの帯(2026-10-26 改良の案 B) */
     /* 全体カードの背景に切りかわる(2026-10-26 改良の案 D) */
     .mh-card-field-bg { animation: mhCardFieldBg .6s ease-out both; }
     @keyframes mhCardFieldBg { 0% { opacity: 0; } 100% { opacity: 1; } }
@@ -4470,7 +4470,7 @@ const createAnimationStyle = () => {
     @keyframes mhCardCutin { 0% { opacity: 0; transform: translateX(40%); } 100% { opacity: 1; transform: translateX(0); } }
     @media (prefers-reduced-motion: reduce) { .mh-card-cutin { animation: none; } }
     .mh-card-hit-flash { position: absolute; inset: 0; border-radius: 12px; background: rgba(255,255,255,.85); pointer-events: none; animation: mhCardHitFlash .28s ease-out both; }
-    /* 立ち絵の子は、絵の形どおりに白く光る(84 の hitSil。絵を型に切り抜く。2026-11-01 点検 G) */
+    /* 立ち絵のモンスターは、絵の形どおりに白く光る(84 の hitSil。絵を型に切り抜く。2026-11-01 点検 G) */
     .mh-card-hit-flash-sil { border-radius: 0; background: #fff; z-index: 3; }
     @keyframes mhCardHitFlash { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
     .mh-card-dmg-pop { animation: mhCardDmgPop 1s ease-out both; }
