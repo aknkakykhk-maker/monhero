@@ -3,13 +3,13 @@
 //   縦 390×844・deviceScaleFactor 2(780×1688)・音なしの mp4。ffmpeg で書き出す
 //
 // 撮るもの
-//   tactic-glow.mp4  … 登録デッキ(偽・戦術カード入り)との対戦。相手が戦術カードで動くと、上に「📜 ◯◯の戦術カード(…)」の帯(84 の tacGlow)が出て、
+//   a-tactic-glow-finish.mp4 / a-tactic-glow-guard.mp4 … 登録デッキ(偽・戦術カード入り)との対戦。相手が戦術カードで動くと、上に「📜 ◯◯の戦術カード(…)」の帯(84 の tacGlow)が出て、
 //                      その指示どおりにとどめ・守りが決まる所(帯が出た時刻の前後を切り出す)
-//   tactic-smart.mp4 … デッキ登録の確かめの欄の「賢さ GRAND MASTER 相当」と「次の HELL まで」
+//   a-tactic-smart.mp4 … デッキ登録の確かめの欄の「賢さ GRAND MASTER 相当」と「次の HELL まで」
 //
 // 決まり
 //   ・公開済みの main の画面だけ。ゲーム本体は変えない(相手のデッキ・戦術カード・カードランクは、この道具の中で作る偽のデータ)
-//   ・ほかのブリーダーの本名・デッキ名は出さない(相手は「カード部のテスト」、デッキ名は仮の名前)
+//   ・ほかのブリーダーの本名・デッキ名は出さない(相手は「ブリーダーA」、デッキ名は仮の名前)
 //   ・本物の Supabase には行かない(この道具の中ですべて返す)。デバッグのボタン・合言葉の欄は、切り出したあとの動画には映らない
 const http = require('http');
 const path = require('path');
@@ -22,7 +22,7 @@ const OUT = path.resolve(process.argv[2] || path.join(root, 'docs/progress/card-
 const SHOTS = process.env.CARD_VIDEO_SHOTS || '';   // 途中の画面の写真を置くフォルダ(作り直すとき用)
 const PORT = Number(process.env.CARD_PORT) || 8993;
 const W = 390, H = 844, DSF = 2;
-const FOE = { name: 'カード部のテスト', deck: '仮のデッキ' };
+const FOE = { name: 'ブリーダーA', deck: '仮のデッキ' };
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4' };
 const serve = () => new Promise((resolve) => {
   const server = http.createServer((req, res) => {
@@ -190,8 +190,8 @@ if (require.main === module) {
       const dur = Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', webm]).toString().trim()) || 0;
       // 帯が出る5秒前から12秒(帯 2.4秒 → 技・守りが決まって数字が出るまで)
       const cut = (x, name) => { if (!x) { console.log(`${name}: 帯が出なかったので撮れない`); return; } const at = dur - (end - x.at) / 1000; mp4(webm, path.join(OUT, name), Math.max(0, at - 5), 12); console.log(`書き出し: ${name}(${x.text})`); };
-      cut(glows.find((x) => /倒せる/.test(x.text)), 'tactic-glow-finish.mp4');
-      cut(glows.find((x) => /守り方で守る/.test(x.text)), 'tactic-glow-guard.mp4');
+      cut(glows.find((x) => /倒せる/.test(x.text)), 'a-tactic-glow-finish.mp4');
+      cut(glows.find((x) => /守り方で守る/.test(x.text)), 'a-tactic-glow-guard.mp4');
       if (A.errors.length) console.log(`実行時エラー: ${A.errors.slice(0, 3).join(' / ')}`);
 
       // ---- デッキ登録の確かめの欄(賢さ GRAND MASTER 相当・次の HELL まで) ----
@@ -225,8 +225,8 @@ if (require.main === module) {
         const webm2 = path.join(tmp2, fs.readdirSync(tmp2).find((f) => f.endsWith('.webm')));
         const dur2 = Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', webm2]).toString().trim()) || 0;
         const len = (end2 - t0) / 1000;
-        mp4(webm2, path.join(OUT, 'tactic-smart.mp4'), Math.max(0, dur2 - len), len);
-        console.log(`書き出し: tactic-smart.mp4(${len.toFixed(1)}秒)`);
+        mp4(webm2, path.join(OUT, 'a-tactic-smart.mp4'), Math.max(0, dur2 - len), len);
+        console.log(`書き出し: a-tactic-smart.mp4(${len.toFixed(1)}秒)`);
         if (B.errors.length) console.log(`実行時エラー: ${B.errors.slice(0, 3).join(' / ')}`);
       } finally { fs.rmSync(tmp2, { recursive: true, force: true }); }
 
