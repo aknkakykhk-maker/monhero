@@ -21217,7 +21217,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <span className="text-[13px] font-black text-white">{who.name}</span>
                     <span className="text-[9px] font-black leading-tight text-center" style={{color:who.accent}}>{who.tagline||''}</span>
                     <span className="text-[9px] text-slate-400 leading-tight text-center">{who.intro||''}</span>
-                    <span className="mt-auto w-full min-h-[38px] rounded-xl flex items-center justify-center text-[11px] font-black text-slate-950" style={{backgroundColor:who.accent}}>このモンスターにする</span>
+                    <span className="mt-auto w-full min-h-[38px] rounded-xl flex items-center justify-center text-[11px] font-black text-slate-950" style={{backgroundColor:who.accent}}>この助手にする</span>
                   </button>
                 ))}
               </div>

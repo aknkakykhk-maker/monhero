@@ -281,7 +281,7 @@ const clickByText = (page, text) => page.evaluate((t) => {
     const done = await page.evaluate(() => {
       const all = [...document.querySelectorAll('button')];
       if (all.some((x) => /バトル/.test(x.textContent) && !/れんしゅう/.test(x.textContent))) return 'home';
-      const b = all.find((x) => x.textContent.includes('この子にする'))
+      const b = all.find((x) => x.textContent.includes('この助手にする'))
         || all.find((x) => ['確認', '閉じる', 'OK'].includes(x.textContent.trim()));
       if (b) { b.click(); return 'clicked'; }
       return 'none';

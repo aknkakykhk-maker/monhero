@@ -77,7 +77,8 @@ const NEWS_IDS = /^(tactics_intro|kiki_intro|momosuke_intro|beat_point_always_.*
     // --- 助手えらび → 名前とアイコン → 決定 ---
     await clickText('^確認$');
     await page.waitForTimeout(400);
-    const chose = await clickText('この子にする');
+    // 助手(人)を選ぶボタン。2026-11-06 #4623 で「このモンスターにする」と言い換えられていたのを「この助手にする」へ直した
+    const chose = await clickText('この助手にする');
     check('助手をえらべる', chose);
     await page.waitForTimeout(1200);
     await clickText('名前を決める');
