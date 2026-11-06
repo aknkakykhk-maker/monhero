@@ -21,7 +21,9 @@ vm.runInContext(`${src}\n;globalThis.__t={talk:RHYTHM_BUDDY_TALK,kinds:RHYTHM_BU
 const T = sb.__t;
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
-const TRAITS = ['jester', 'brave', 'clingy', 'smart', 'serious', 'proud', 'worrier', 'stubborn', 'easygoing'];
+const TRAITS = ['jester', 'brave', 'clingy', 'smart', 'serious', 'proud', 'worrier', 'stubborn', 'easygoing',
+  // 2026-11-06 の10個
+  'fiery', 'cool', 'fickle', 'mellow', 'hasty', 'competitive', 'showoff', 'shy', 'hardworker', 'romantic'];
 const MOODS = ['great', 'good', 'normal', 'bad', 'awful'];
 
 check('場面は16個', T.kinds.length === 16 && T.kinds.every((k) => T.talk[k]) && Object.keys(T.talk).length === 16);
@@ -46,7 +48,8 @@ T.kinds.forEach((k) => {
 const long = all.filter(([, l]) => l.split('{song}').join('１２３４５６７８９０').length > T.max);
 check('どのセリフも40文字に収まる(曲名は10文字で数える)', long.length === 0, long.slice(0, 3).map(([k, l]) => `${k}:${l}`).join(' / '));
 const unique = new Set(all.map(([k, l]) => `${k}|${l}`));
-check('同じ場面で同じセリフを2度書いていない', unique.size === all.length, `${all.length - unique.size}件の重複`);
+{ const seen = new Set(); const dup = []; all.forEach(([k, l]) => { const key = `${k}|${l}`; if (seen.has(key)) dup.push(key); seen.add(key); });
+  check('同じ場面で同じセリフを2度書いていない', unique.size === all.length, `${all.length - unique.size}件の重複 ${dup.slice(0, 8).join(' / ')}`); }
 check('セリフは全部で900以上(たくさん用意する)', all.length >= 900, `${all.length}`);
 console.log(`   セリフの数: ${all.length}(場面ごと: ${T.kinds.map((k) => `${k}=${all.filter(([kk]) => kk === k).length}`).join(' ')})`);
 check('「{」「}」が{song}以外に残っていない', all.every(([, l]) => !/[{}]/.test(l.split('{song}').join(''))));

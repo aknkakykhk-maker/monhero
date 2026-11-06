@@ -22,13 +22,17 @@ vm.runInContext(`${read('33-rhythm-buddy-talk.jsx')}\n${read('33-rhythm-buddy-co
 const C = sb.__c;
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
-const TRAITS = ['jester', 'brave', 'clingy', 'smart', 'serious', 'proud', 'worrier', 'stubborn', 'easygoing'];
+const TRAITS = ['jester', 'brave', 'clingy', 'smart', 'serious', 'proud', 'worrier', 'stubborn', 'easygoing',
+  // 2026-11-06 の10個
+  'fiery', 'cool', 'fickle', 'mellow', 'hasty', 'competitive', 'showoff', 'shy', 'hardworker', 'romantic'];
 const MOODS = ['great', 'good', 'normal', 'bad', 'awful'];
-const HOLES = ['who', 'me', 'lv', 'mood', 'trait', 'song', 'fav', 'score', 'days', 'plays', 'mate', 'topic'];
-const HON = { jester: 'っち', brave: '', clingy: 'ちゃん', smart: 'さん', serious: '様', proud: '', worrier: 'さん', stubborn: '', easygoing: 'さん' };
+// sprout は性格の芽(ビートLv.10〜29 のいまいちばん近い性格。2026-11-06)
+const HOLES = ['who', 'me', 'lv', 'mood', 'trait', 'song', 'fav', 'score', 'days', 'plays', 'mate', 'topic', 'sprout'];
+const HON = { jester: 'っち', brave: '', clingy: 'ちゃん', smart: 'さん', serious: '様', proud: '', worrier: 'さん', stubborn: '', easygoing: 'さん',
+  fiery: '', cool: 'さん', fickle: 'くん', mellow: 'さん', hasty: '', competitive: '', showoff: 'ちゃん', shy: 'さん', hardworker: 'さん', romantic: 'さん' };
 
 // ===== セリフ集 =====
-check('会話の場面は52個', C.kinds.length === 52 && C.kinds.every((k) => C.convo[k]), String(C.kinds.length));
+check('会話の場面は53個(2026-11-06 に性格の芽 sproutNew を足した)', C.kinds.length === 53 && C.kinds.every((k) => C.convo[k]), String(C.kinds.length));
 const missing = [];
 C.kinds.forEach((k) => {
   const set = C.convo[k];
@@ -47,22 +51,23 @@ C.kinds.forEach((k) => {
   TRAITS.forEach((t) => (set.trait[t] || []).forEach((l) => all.push([k, l])));
   MOODS.forEach((m) => (set.mood[m] || []).forEach((l) => all.push([k, l])));
 });
-check('同じ場面で同じセリフを2度書いていない', new Set(all.map(([k, l]) => `${k}|${l}`)).size === all.length, `${all.length - new Set(all.map(([k, l]) => `${k}|${l}`)).size}件の重複`);
+{ const seen = new Set(); const dup = []; all.forEach(([k, l]) => { const key = `${k}|${l}`; if (seen.has(key)) dup.push(key); seen.add(key); });
+  check('同じ場面で同じセリフを2度書いていない', dup.length === 0, `${dup.length}件の重複 ${dup.slice(0, 8).join(' / ')}`); }
 check('会話のセリフは600以上', all.length >= 600, String(all.length));
 const talkTotal = (() => { let n = 0; Object.keys(C.talk).forEach((k) => { const x = C.talk[k]; n += x.common.length; TRAITS.forEach((t) => { n += (x.trait[t] || []).length; }); MOODS.forEach((m) => { n += (x.mood[m] || []).length; }); }); return n; })();
 console.log(`   会話のセリフ: ${all.length} / 場面ごと: ${C.kinds.map((k) => `${k}=${all.filter(([kk]) => kk === k).length}`).join(' ')} / いままでのおしゃべり: ${talkTotal} / 合わせて ${all.length + talkTotal}`);
 const badHole = [];
 all.forEach(([k, l]) => { (l.match(/\{[^}]*\}/g) || []).forEach((h) => { if (!HOLES.includes(h.slice(1, -1))) badHole.push(`${k}:${l}`); }); });
-check('穴は知っているもの({who}{me}{lv}{mood}{trait}{song}{fav}{score}{days}{plays}{mate}{topic})だけ', badHole.length === 0, badHole.slice(0, 3).join(' / '));
+check('穴は知っているもの({who}{me}{lv}{mood}{trait}{song}{fav}{score}{days}{plays}{mate}{topic}{sprout})だけ', badHole.length === 0, badHole.slice(0, 3).join(' / '));
 // 現実的な長さで入れて40文字以内(名前8字・曲名12字・ほか)
-const REAL = { who: 'あいうえおかきく', me: 'あいうえおかきく', mate: 'あいうえおかきく', song: '１２３４５６７８９０１２', fav: '１２３４５６７８９０１２', lv: '100', mood: '超不機嫌', trait: 'プライドが高い', score: '100万点', days: '999', plays: '9999', topic: '得意な曲' };
+const REAL = { sprout: 'プライドが高い', who: 'あいうえおかきく', me: 'あいうえおかきく', mate: 'あいうえおかきく', song: '１２３４５６７８９０１２', fav: '１２３４５６７８９０１２', lv: '100', mood: '超不機嫌', trait: 'プライドが高い', score: '100万点', days: '999', plays: '9999', topic: '得意な曲' };
 const tooLong = all.filter(([, l]) => l.replace(/\{([a-z]+)\}/g, (a, key) => REAL[key]).length > C.max);
 check('どのセリフも、現実的な長さの名前・曲名を入れて40文字に収まる', tooLong.length === 0, tooLong.slice(0, 3).map(([k, l]) => `${k}:${l}`).join(' / '));
 const noBrace = all.filter(([, l]) => /[{}]/.test(l.replace(/\{[a-z]+\}/g, '')));
 check('「{」「}」が穴以外に残っていない', noBrace.length === 0);
 
 // ===== 選べる(どの値が無くても黙らない)=====
-const NEED = { recall: ['topic'], bondHello: ['plays'], bondJoin: ['plays'], lvUp: ['lv'], traitNew: ['trait'], banterRival: ['mate'], banterFriend: ['mate'], hMiss: ['who'], banter: ['mate'], qHow: ['who'], qFav: ['who'], songTalk: ['song'], nameAsk: ['me'], welcome: ['who'], farewell: ['who'], reactPick: ['who', 'song'], reactOmakase: ['who'], hMvp: ['who'], hHigh: ['who'], hLow: ['who'], hFull: ['who'], hQuit: ['who'], callOut: ['who'] };
+const NEED = { recall: ['topic'], bondHello: ['plays'], bondJoin: ['plays'], lvUp: ['lv'], traitNew: ['trait'], sproutNew: ['sprout'], banterRival: ['mate'], banterFriend: ['mate'], hMiss: ['who'], banter: ['mate'], qHow: ['who'], qFav: ['who'], songTalk: ['song'], nameAsk: ['me'], welcome: ['who'], farewell: ['who'], reactPick: ['who', 'song'], reactOmakase: ['who'], hMvp: ['who'], hHigh: ['who'], hLow: ['who'], hFull: ['who'], hQuit: ['who'], callOut: ['who'] };
 const vars0 = {}; // 値がまだ何も無い(性格も得意な曲も決まっていない)
 const silent = [];
 C.kinds.forEach((k) => ['', ...TRAITS].forEach((t) => MOODS.forEach((m) => {
@@ -117,7 +122,7 @@ check('2つ目が無ければ extra は空・同じ種類はextraにしない', 
 check('2つの質問があるときは、聞き返しの ask を付けない(答えを待たない)', P('モッチー、レベルいくつ?何点だった?').ask === '' && P('モッチー、調子どう?得意な曲は?').awaits === '');
 check('「さっきの話は?」は recallAsk', P('さっきの話は?').kind === 'recallAsk' && P('モッチー、さっきの曲どうだった?').kind === 'recallAsk');
 check('話題の呼び名がある(調子・得意な曲・スコアなど)', C.topic.howMe === '調子' && C.topic.favAsk === '得意な曲' && !!C.topic.scoreAsk);
-check('性格ごとの話しぶりが9つ全部にある(絵文字・聞き返す頻度・話しかけの好み3つ)', ['jester', 'brave', 'clingy', 'smart', 'serious', 'proud', 'worrier', 'stubborn', 'easygoing'].every((t) => { const x = C.style[t]; return x && Array.isArray(x.emoji) && x.ask > 0 && x.ask <= 1 && x.starter.length === 3; }));
+check('性格ごとの話しぶりが全部(19)にある(絵文字・聞き返す頻度・話しかけの好み3つ)', TRAITS.every((t) => { const x = C.style[t]; return x && Array.isArray(x.emoji) && x.ask > 0 && x.ask <= 1 && x.starter.length === 3; }));
 check('絵文字が長すぎて40文字を超えない(最長3文字ぶん)', Object.values(C.style).every((x) => x.emoji.every((e) => e.length <= 3)));
 check('甘えん坊は聞き返す頻度が高く、プライドは低い', C.style.clingy.ask > C.style.proud.ask);
 check('2体の相性: ライバル(プライド×勇敢)・仲良し(甘えん坊が入る)・ふつう', C.pairKind('proud', 'brave') === 'banterRival' && C.pairKind('brave', 'proud') === 'banterRival' && C.pairKind('clingy', 'smart') === 'banterFriend' && C.pairKind('smart', 'serious') === 'banter');

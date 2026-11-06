@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 154e3119df37ea5c
+// source-sha256: 9ada4649583ac76f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -14929,6 +14929,10 @@ const beatRankRewardItems = rank => {
     icon: '🎶',
     text: `セッション券 ${r.toLocaleString()}枚`,
     bonus: true
+  }, {
+    icon: '🌱',
+    text: '性格のたね 1個',
+    bonus: true
   }] : [])];
 };
 const beatRankRewardText = rank => `ビートP ${playerRankBeatPointsFor(rank).toLocaleString()}・セッション券 ${beatRankTicketsFor(rank).toLocaleString()}枚`;
@@ -15029,7 +15033,8 @@ const beatRankAfter = (prev, {
     from,
     to: from,
     tickets: 0,
-    beatPoints: 0
+    beatPoints: 0,
+    seeds: 0
   };
   const day = typeof today === 'string' ? today.slice(0, 10) : '';
   const first = cleared !== false && !!day && !(cur.day === day && cur.dayFirst);
@@ -15043,13 +15048,15 @@ const beatRankAfter = (prev, {
   let tickets = 0,
     beatPoints = 0,
     bonusTickets = 0,
-    bonusPoints = 0;
+    bonusPoints = 0,
+    seeds = 0;
   for (let r = Math.max(cur.got + 1, 2); r <= to; r++) {
     tickets += beatRankTicketsFor(r);
     beatPoints += playerRankBeatPointsFor(r);
     if (r % 5 === 0) {
       bonusTickets += r;
       bonusPoints += r * 200;
+      seeds += 1;
     }
   }
   return {
@@ -15067,7 +15074,8 @@ const beatRankAfter = (prev, {
     tickets,
     beatPoints,
     bonusTickets,
-    bonusPoints
+    bonusPoints,
+    seeds
   };
 };
 const STAT_POINT_GAIN = {
@@ -48807,8 +48815,72 @@ const RHYTHM_BUDDY_TRAITS = Object.freeze([Object.freeze({
   label: 'のんびり屋',
   note: '長い曲に強いが、ノーツが詰まった譜面は苦手',
   how: '長い曲をよく遊ぶ'
+}), Object.freeze({
+  id: 'fiery',
+  label: '熱血',
+  note: 'その日たくさん遊ぶほど燃えて上手くなる(その日の5曲目から)',
+  how: '1日にたくさん続けて遊ぶ',
+  v2: true
+}), Object.freeze({
+  id: 'cool',
+  label: 'クール',
+  note: 'ブレが小さく、ノーツが詰まった譜面に強い',
+  how: '高いスコア(満点の9割以上)をよく出す',
+  v2: true
+}), Object.freeze({
+  id: 'fickle',
+  label: '気まぐれ',
+  note: '日によって得意な難易度と苦手な難易度が入れかわる',
+  how: '毎回ちがう難易度を遊ぶ',
+  v2: true
+}), Object.freeze({
+  id: 'mellow',
+  label: 'おっとり',
+  note: '無理なく叩ける譜面では安定して強いが、難しすぎる譜面は少し苦手',
+  how: '自分より易しい譜面をよく遊ぶ',
+  v2: true
+}), Object.freeze({
+  id: 'hasty',
+  label: 'せっかち',
+  note: '短い曲に強いが、長い曲は少し苦手',
+  how: '短い曲(2分未満)をよく遊ぶ',
+  v2: true
+}), Object.freeze({
+  id: 'competitive',
+  label: '負けず嫌い',
+  note: '前の回(同じ曲・同じ難易度)がいまいちだと、次は燃えて上手くなる',
+  how: '同じ曲を続けてもう一度遊ぶ',
+  v2: true
+}), Object.freeze({
+  id: 'showoff',
+  label: 'お調子者',
+  note: '調子の良い日はさらに上手、悪い日はさらに下手(調子の波が大きい)',
+  how: '調子の良い日によく遊ぶ',
+  v2: true
+}), Object.freeze({
+  id: 'shy',
+  label: '人見知り',
+  note: '人の少ない部屋で強く、人が多いと少し落ちる',
+  how: 'ひとり(ほかに人のいない部屋)でよく遊ぶ',
+  v2: true
+}), Object.freeze({
+  id: 'hardworker',
+  label: '努力家',
+  note: '同じ曲を遊ぶほど、曲の得意がより深くたまる',
+  how: '同じ曲をくり返し遊ぶ',
+  v2: true
+}), Object.freeze({
+  id: 'romantic',
+  label: 'ロマンチスト',
+  note: '夜(22:00〜朝5:00)に強いが、昼は少し落ちる',
+  how: '夜によく遊ぶ',
+  v2: true
 })]);
 const RHYTHM_BUDDY_TRAIT_IDS = Object.freeze(RHYTHM_BUDDY_TRAITS.map(t => t.id));
+const RHYTHM_BUDDY_TRAIT_IDS_V1 = Object.freeze(RHYTHM_BUDDY_TRAITS.filter(t => !t.v2).map(t => t.id));
+const RHYTHM_BUDDY_SPROUT_LEVEL = 10;
+const RHYTHM_BUDDY_SHORT_SONG_MS = 120000;
+const RHYTHM_BUDDY_TRAIT_SEED_ITEM_ID = 'buddy_trait_seed';
 const RHYTHM_BUDDY_OLD_TRAITS = Object.freeze({
   steady: 'serious',
   burst: 'jester',
@@ -48940,6 +49012,21 @@ const rhythmBuddyNormalizeMon = raw => {
     streakDays: rhythmBuddyInt(o.streakDays, 9999),
     bestStreakDays: rhythmBuddyInt(o.bestStreakDays, 9999),
     traitAt: rhythmBuddyInt(o.traitAt),
+    pool: o.pool === 'v2' ? 'v2' : o.pool === 'v1' ? 'v1' : RHYTHM_BUDDY_TRAIT_IDS.includes(o.trait) || RHYTHM_BUDDY_OLD_TRAITS[o.trait] ? 'v1' : 'v2',
+    traitLock: o.traitLock === true && RHYTHM_BUDDY_TRAIT_IDS.includes(o.trait),
+    born: RHYTHM_BUDDY_TRAIT_IDS.includes(o.born) ? o.born : '',
+    dayLives: rhythmBuddyInt(o.dayLives, 9999),
+    marathonLives: rhythmBuddyInt(o.marathonLives),
+    highLives: rhythmBuddyInt(o.highLives),
+    switchLives: rhythmBuddyInt(o.switchLives),
+    easyLives: rhythmBuddyInt(o.easyLives),
+    shortLives: rhythmBuddyInt(o.shortLives),
+    retryLives: rhythmBuddyInt(o.retryLives),
+    goodMoodLives: rhythmBuddyInt(o.goodMoodLives),
+    soloLives: rhythmBuddyInt(o.soloLives),
+    nightLives: rhythmBuddyInt(o.nightLives),
+    lastSong: rhythmBuddyStr(o.lastSong, 60),
+    lastDiff: RHYTHM_BUDDY_DIFF_IDS.includes(o.lastDiff) ? o.lastDiff : '',
     lastRound: rhythmBuddyStr(o.lastRound, 40),
     lastDay: rhythmBuddyStr(o.lastDay, 10),
     firstAt: rhythmBuddyInt(o.firstAt, 9e15),
@@ -49135,14 +49222,23 @@ const RHYTHM_BUDDY_PICK_WHY = Object.freeze({
   safe: '今日は慣れた曲で安心したい',
   long: '長い曲をのんびり楽しみたい',
   fun: '気分で選んだよ',
-  new: 'はじめての曲にワクワク!'
+  new: 'はじめての曲にワクワク!',
+  short: '短い曲でサクッといきたい!',
+  revenge: 'さっきの曲でリベンジ!',
+  practice: '得意な曲をもっと練習!',
+  easy: 'ゆっくり楽しめる曲がいいな',
+  romance: 'この曲の世界にひたりたい'
 });
 const rhythmBuddyNewSongChance = (trait, moodId) => {
   const base = {
     jester: 0.25,
     brave: 0.2,
     stubborn: 0.04,
-    serious: 0.08
+    serious: 0.08,
+    fickle: 0.2,
+    fiery: 0.15,
+    hardworker: 0.06,
+    shy: 0.08
   }[trait];
   const mood = {
     great: 0.08,
@@ -49188,6 +49284,34 @@ const rhythmBuddyChooseSong = (mon, catalog, {
     songId: most(top, 'durationMs'),
     why: 'long'
   };
+  if (m.trait === 'competitive' && m.recent[0] && top.includes(m.recent[0].songId)) return {
+    songId: m.recent[0].songId,
+    why: 'revenge'
+  };
+  if (m.trait === 'hasty' && info) return {
+    songId: top.reduce((a, b) => stat(b, 'durationMs') > 0 && (stat(a, 'durationMs') <= 0 || stat(b, 'durationMs') < stat(a, 'durationMs')) ? b : a, top[0]),
+    why: 'short'
+  };
+  if (m.trait === 'hardworker') return {
+    songId: top[0],
+    why: 'practice'
+  };
+  if (m.trait === 'mellow' && info) return {
+    songId: top.reduce((a, b) => stat(b, 'level') > 0 && stat(b, 'level') < stat(a, 'level') ? b : a, top[0]),
+    why: 'easy'
+  };
+  if (m.trait === 'fiery' && info) return {
+    songId: most(top, 'level'),
+    why: 'hard'
+  };
+  if (m.trait === 'fickle') return {
+    songId: pickOne(top),
+    why: 'fun'
+  };
+  if (m.trait === 'romantic') return {
+    songId: pickOne(top.slice(0, 3)),
+    why: 'romance'
+  };
   if (moodId === 'bad' || moodId === 'awful' || m.trait === 'worrier') return {
     songId: top[0],
     why: 'safe'
@@ -49232,6 +49356,26 @@ const rhythmBuddySpeciesLean = (base, allBases) => {
   });
   return best;
 };
+const RHYTHM_BUDDY_BORN_BY_STAT = Object.freeze({
+  baseDef: ['serious', 'cool'],
+  baseAtk: ['brave', 'fiery'],
+  baseHp: ['easygoing', 'mellow'],
+  baseGuts: ['jester', 'showoff']
+});
+const rhythmBuddyBornTrait = (masuId, base, allBases) => {
+  const list = Array.isArray(allBases) ? allBases.filter(b => b && typeof b === 'object') : [];
+  const r1 = rhythmBuddyHash(`${masuId}|born`);
+  const r2 = rhythmBuddyHash(`${masuId}|born2`);
+  if (!base || !list.length || r1 < 0.25) return RHYTHM_BUDDY_TRAIT_IDS[Math.floor(r2 * RHYTHM_BUDDY_TRAIT_IDS.length) % RHYTHM_BUDDY_TRAIT_IDS.length];
+  const zs = Object.keys(RHYTHM_BUDDY_BORN_BY_STAT).map(k => {
+    const vals = list.map(b => Number(b[k]) || 0);
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    return [k, max > min ? ((Number(base[k]) || 0) - min) / (max - min) : 0];
+  }).sort((a, b) => b[1] - a[1]);
+  const pool = [...RHYTHM_BUDDY_BORN_BY_STAT[zs[0][0]], ...RHYTHM_BUDDY_BORN_BY_STAT[zs[0][0]], ...RHYTHM_BUDDY_BORN_BY_STAT[zs[1][0]]];
+  return pool[Math.floor(r2 * pool.length) % pool.length];
+};
 const rhythmBuddyTraitScores = (mon, lean) => {
   const m = rhythmBuddyNormalizeMon(mon);
   const total = Math.max(1, m.lives);
@@ -49249,21 +49393,62 @@ const rhythmBuddyTraitScores = (mon, lean) => {
     proud: share(m.crowdLives) * 1.1,
     worrier: share(m.badMoodLives) * 2,
     stubborn: Math.max(0, (topDiff - 0.6) / 0.4) * 0.9,
-    easygoing: share(m.longLives) * 1.4
+    easygoing: share(m.longLives) * 1.4,
+    fiery: share(m.marathonLives) * 1.4,
+    cool: share(m.highLives) * 1.3,
+    fickle: share(m.switchLives) * 0.7,
+    mellow: share(m.easyLives) * 1.0,
+    hasty: share(m.shortLives) * 1.0,
+    competitive: share(m.retryLives) * 1.1,
+    showoff: share(m.goodMoodLives) * 1.4,
+    shy: Math.max(0, share(m.soloLives) - 0.5) * 1.6,
+    hardworker: Math.max(0, (share(Math.max(0, ...Object.values(m.songs))) - 0.2) / 0.8) * 1.3,
+    romantic: share(m.nightLives) * 1.1
   };
-  if (RHYTHM_BUDDY_TRAIT_IDS.includes(lean)) scores[lean] += 0.25;
+  const born = m.born || lean;
+  if (RHYTHM_BUDDY_TRAIT_IDS.includes(born)) scores[born] += 0.25;
   return scores;
+};
+const rhythmBuddyTraitPool = m => m.pool === 'v1' ? RHYTHM_BUDDY_TRAIT_IDS_V1 : RHYTHM_BUDDY_TRAIT_IDS;
+const rhythmBuddyBestTrait = (scores, ids) => ids.slice().sort((a, b) => scores[b] - scores[a])[0];
+const rhythmBuddyTraitSprout = (mon, lean) => {
+  const m = rhythmBuddyNormalizeMon(mon);
+  if (m.trait) return '';
+  const level = rhythmBuddyLevelInfo(m.exp).level;
+  if (level < RHYTHM_BUDDY_SPROUT_LEVEL || level >= RHYTHM_BUDDY_TRAIT_LEVEL) return '';
+  return rhythmBuddyBestTrait(rhythmBuddyTraitScores(m, lean), rhythmBuddyTraitPool(m));
 };
 const rhythmBuddyNextTrait = (mon, lean) => {
   const m = rhythmBuddyNormalizeMon(mon);
-  if (rhythmBuddyLevelInfo(m.exp).level < RHYTHM_BUDDY_TRAIT_LEVEL) return '';
+  if (m.traitLock && m.trait) return m.trait;
+  if (rhythmBuddyLevelInfo(m.exp).level < RHYTHM_BUDDY_TRAIT_LEVEL) return m.trait || '';
   const scores = rhythmBuddyTraitScores(m, lean);
-  const best = RHYTHM_BUDDY_TRAIT_IDS.slice().sort((a, b) => scores[b] - scores[a])[0];
+  const best = rhythmBuddyBestTrait(scores, rhythmBuddyTraitPool(m));
   if (!m.trait) return best;
   if (m.lives - m.traitAt < 10) return m.trait;
   return scores[best] >= scores[m.trait] + 0.3 ? best : m.trait;
 };
 const rhythmBuddyTraitOf = id => RHYTHM_BUDDY_TRAITS.find(t => t.id === id) || null;
+const rhythmBuddyUseTraitSeed = (state, masuId, traitId) => {
+  const st = rhythmBuddyNormalize(state);
+  const key = rhythmBuddyStr(masuId, 80);
+  if (!key || !RHYTHM_BUDDY_TRAIT_IDS.includes(traitId)) return null;
+  const before = rhythmBuddyNormalizeMon(st.mons[key]);
+  if (before.trait === traitId && before.traitLock) return null;
+  return {
+    ...st,
+    mons: {
+      ...st.mons,
+      [key]: {
+        ...before,
+        trait: traitId,
+        traitAt: before.lives,
+        traitLock: true,
+        pool: 'v2'
+      }
+    }
+  };
+};
 const rhythmBuddyHash = text => {
   let h = 2166136261;
   const s = String(text);
@@ -49302,7 +49487,8 @@ const rhythmBuddyAccuracy = ({
   mood,
   chartLevel,
   density,
-  humans = 1
+  humans = 1,
+  nowMs = 0
 }) => {
   const m = rhythmBuddyNormalizeMon(mon);
   const {
@@ -49316,22 +49502,46 @@ const rhythmBuddyAccuracy = ({
   const masteryRate = m.trait === 'stubborn' ? 2 : 1;
   acc += (0.03 * mastery - d * 0.012 * (1 - mastery)) * masteryRate;
   const over = chartLv - rhythmBuddyComfortLevel(level, m.songs[songId], m.trait);
-  acc -= over > 0 ? Math.min(0.35, over * 0.015) * (m.trait === 'brave' ? 0.7 : 1) : -Math.min(0.02, -over * 0.002);
+  acc -= over > 0 ? Math.min(0.35, over * 0.015) * (m.trait === 'brave' ? 0.7 : m.trait === 'mellow' ? 1.15 : 1) : -Math.min(0.02, -over * 0.002);
+  if (m.trait === 'mellow' && over <= 0) acc += 0.025;
   const dens = Number(density);
   if (Number.isFinite(dens) && dens > 0) {
     const extra = dens - (1 + chartLv / 10);
-    if (extra > 0) acc -= extra * 0.04 * (m.trait === 'easygoing' ? 1.5 : 1);
+    if (extra > 0) acc -= extra * 0.04 * (m.trait === 'easygoing' ? 1.5 : m.trait === 'cool' ? 0.5 : 1);
   }
   if (m.trait === 'easygoing') acc += Number(durationMs) >= RHYTHM_BUDDY_LONG_SONG_MS ? 0.025 : -0.01;
   if (m.trait === 'proud') acc += Math.max(-0.01, Math.min(0.04, 0.012 * (Math.floor(Number(humans) || 1) - 1) - (Number(humans) <= 1 ? 0.01 : 0)));
+  const dur = Number(durationMs);
+  if (m.trait === 'hasty' && dur > 0) acc += dur < RHYTHM_BUDDY_SHORT_SONG_MS ? 0.025 : dur >= RHYTHM_BUDDY_LONG_SONG_MS ? -0.015 : 0;
+  if (m.trait === 'shy') {
+    const h = Math.floor(Number(humans) || 1);
+    acc += h <= 1 ? 0.025 : h >= 3 ? -0.02 : 0;
+  }
+  const t = Number(nowMs) > 0 ? Number(nowMs) : 0;
+  const today = t ? rhythmBuddyDayKey(t) : '';
+  if (m.trait === 'fiery' && today && m.lastDay === today) acc += Math.min(0.03, Math.max(0, m.dayLives - 3) * 0.008);
+  if (m.trait === 'fickle' && today) {
+    const ids = rhythmBuddyShownDiffIds();
+    const hit = ids[Math.floor(rhythmBuddyHash(`${m.firstAt}|${today}|hit`) * ids.length) % ids.length];
+    const miss = ids[Math.floor(rhythmBuddyHash(`${m.firstAt}|${today}|miss`) * ids.length) % ids.length];
+    acc += diffId === hit ? 0.035 : diffId === miss ? -0.025 : 0;
+  }
+  if (m.trait === 'competitive' && m.recent[0] && m.recent[0].songId === songId && m.recent[0].diffId === diffId) {
+    const bestScore = m.best[diffId] ? m.best[diffId].score : 0;
+    if (bestScore > 0 && m.recent[0].score < bestScore * 0.97) acc += 0.03;
+  }
+  if (m.trait === 'romantic' && t) {
+    const hour = new Date(t + 9 * 3600 * 1000).getUTCHours();
+    acc += hour >= 22 || hour < 5 ? 0.025 : hour >= 10 && hour < 17 ? -0.01 : 0;
+  }
   const moodAcc = mood ? mood.acc : 0;
-  acc += m.trait === 'serious' ? moodAcc * 0.5 : moodAcc;
+  acc += m.trait === 'serious' ? moodAcc * 0.5 : m.trait === 'showoff' ? moodAcc * 1.6 : moodAcc;
   return Math.max(0.1, Math.min(1, acc));
 };
 const rhythmBuddyGrowthRate = level => Math.pow((Math.max(1, level) - 1) / (RHYTHM_BUDDY_LEVEL_MAX - 1), 0.7);
-const rhythmBuddySongSkill = (plays, trait) => 0.1 * (1 - Math.exp(-rhythmBuddyInt(plays) * (trait === 'smart' ? 1.5 : 1) / 12));
+const rhythmBuddySongSkill = (plays, trait) => (trait === 'hardworker' ? 0.14 : 0.1) * (1 - Math.exp(-rhythmBuddyInt(plays) * (trait === 'smart' ? 1.5 : 1) / 12));
 const rhythmBuddySpread = (trait, mood, level = 1) => {
-  const base = trait === 'serious' ? 0.02 : trait === 'jester' ? 0.055 : 0.035;
+  const base = trait === 'serious' ? 0.02 : trait === 'jester' ? 0.055 : trait === 'cool' ? 0.026 : 0.035;
   return base * (1.6 - 1.1 * rhythmBuddyGrowthRate(level)) * (mood ? mood.spread : 1);
 };
 const rhythmBuddyNormal = rand => {
@@ -49349,7 +49559,8 @@ const rhythmBuddyPlay = ({
   mood,
   rand,
   chartLevel = 0,
-  humans = 1
+  humans = 1,
+  nowMs = 0
 }) => {
   const r = typeof rand === 'function' ? rand : Math.random;
   const m = rhythmBuddyNormalizeMon(mon);
@@ -49365,7 +49576,8 @@ const rhythmBuddyPlay = ({
     mood,
     chartLevel,
     density,
-    humans
+    humans,
+    nowMs
   }) + rhythmBuddyNormal(r) * rhythmBuddySpread(m.trait, mood, level);
   if (m.trait === 'jester') {
     const roll = r();
@@ -49445,7 +49657,8 @@ const rhythmBuddyApplyLive = (mon, {
     gain: 0,
     levelUp: 0,
     familiarUp: false,
-    traitNew: ''
+    traitNew: '',
+    sproutNew: ''
   };
   const gain = rhythmBuddyExpGain(diffId, teamRank, moodId, before.trait);
   const songs = {
@@ -49486,6 +49699,28 @@ const rhythmBuddyApplyLive = (mon, {
     }, ...before.recent].slice(0, RHYTHM_BUDDY_RECENT_KEEP) : before.recent
   };
   after.bestStreakDays = Math.max(before.bestStreakDays, after.streakDays);
+  {
+    const dur = Number(durationMs);
+    const prevSong = before.lastSong || (before.recent[0] ? before.recent[0].songId : '');
+    const prevDiff = before.lastDiff || (before.recent[0] ? before.recent[0].diffId : '');
+    const comfort = rhythmBuddyComfortLevel(rhythmBuddyLevelInfo(before.exp).level, before.songs[sid] || 0, before.trait);
+    const ratio = Number(maxScore) > 0 && Number.isFinite(Number(score)) ? Number(score) / Number(maxScore) : 0;
+    const t = rhythmBuddyInt(nowMs, 9e15);
+    const hour = t ? new Date(t + 9 * 3600 * 1000).getUTCHours() : 12;
+    after.dayLives = (before.lastDay === dayKey ? before.dayLives : 0) + 1;
+    after.marathonLives = before.marathonLives + (after.dayLives >= 5 ? 1 : 0);
+    after.highLives = before.highLives + (ratio >= 0.9 ? 1 : 0);
+    after.switchLives = before.switchLives + (prevDiff && RHYTHM_BUDDY_DIFF_IDS.includes(diffId) && prevDiff !== diffId ? 1 : 0);
+    after.easyLives = before.easyLives + (Number(chartLevel) > 0 && Number(chartLevel) <= comfort - 5 ? 1 : 0);
+    after.shortLives = before.shortLives + (dur > 0 && dur < RHYTHM_BUDDY_SHORT_SONG_MS ? 1 : 0);
+    after.retryLives = before.retryLives + (prevSong && sid && prevSong === sid ? 1 : 0);
+    after.lastSong = sid;
+    after.lastDiff = RHYTHM_BUDDY_DIFF_IDS.includes(diffId) ? diffId : '';
+    after.goodMoodLives = before.goodMoodLives + (moodId === 'great' || moodId === 'good' ? 1 : 0);
+    after.soloLives = before.soloLives + (Math.floor(Number(humans) || 1) <= 1 ? 1 : 0);
+    after.nightLives = before.nightLives + (t && (hour >= 22 || hour < 5) ? 1 : 0);
+    if (!before.born && RHYTHM_BUDDY_TRAIT_IDS.includes(lean)) after.born = lean;
+  }
   if (RHYTHM_BUDDY_DIFF_IDS.includes(diffId) && Number(maxScore) > 0 && Number.isFinite(Number(score))) {
     const got = Math.min(rhythmBuddyInt(score, 1e7), rhythmBuddyInt(maxScore, 1e7));
     if (got > (before.best[diffId] && before.best[diffId].score || 0)) after.best = {
@@ -49501,15 +49736,18 @@ const rhythmBuddyApplyLive = (mon, {
   if (traitNew) {
     after.trait = traitNew;
     after.traitAt = after.lives;
+    if (!before.trait) after.pool = 'v2';
   }
   const levelUp = rhythmBuddyLevelInfo(after.exp).level - rhythmBuddyLevelInfo(before.exp).level;
   const familiarUp = !!sid && rhythmBuddyFamiliarStars(songs[sid], after.trait) > rhythmBuddyFamiliarStars(before.songs[sid] || 0, before.trait);
+  const sproutNew = levelUp > 0 && rhythmBuddyLevelInfo(before.exp).level < RHYTHM_BUDDY_SPROUT_LEVEL && rhythmBuddyLevelInfo(after.exp).level >= RHYTHM_BUDDY_SPROUT_LEVEL ? rhythmBuddyTraitSprout(after, after.born || lean) : '';
   return {
     mon: after,
     gain,
     levelUp,
     familiarUp,
-    traitNew
+    traitNew,
+    sproutNew
   };
 };
 const RHYTHM_BUDDY_TALK_MAX = 40;
@@ -49526,7 +49764,17 @@ const RHYTHM_BUDDY_TALK_BASE = {
       proud: ['ふふ、私が来たからには安心よ', '当然、呼ばれると思ってた', '足を引っぱらないでね?', 'ほめてもいいのよ?'],
       worrier: ['あの…足を引っぱらないかな…', 'うまくできるかな…がんばる!', 'ドキドキするぅ…', 'ミスしたらごめんね…'],
       stubborn: ['呼ばれたからには手は抜かん!', '自分のやり方でいくぞ', '遊ぶからには勝つ!', '文句は言わせんぞ'],
-      easygoing: ['ふぁ〜…あ、来たよ〜', 'のんびりいこうね〜', 'ゆっくりやろ〜', 'おじゃましま〜す']
+      easygoing: ['ふぁ〜…あ、来たよ〜', 'のんびりいこうね〜', 'ゆっくりやろ〜', 'おじゃましま〜す'],
+      fiery: ['来たぞ!今日も全力だ!', '燃えてきた!何曲でもいくぞ!', '体の中が熱い!いけるぞ!', 'まだまだ遊び足りない!'],
+      cool: ['来たよ。準備はできてる', '…さて、始めようか', '落ち着いていこう', 'どんな譜面でも問題ない'],
+      fickle: ['来ちゃった。気分で', '今日はなんか、いける気がするかも', 'やっぱ来てよかったかも', '今日の気分は…むずかしい曲かな'],
+      mellow: ['お呼びいただいて、うれしいです', 'あらあら、にぎやかですね', 'ゆっくりで大丈夫ですよ', 'ふふ、楽しくなりそうですね'],
+      hasty: ['来た!はやく始めよ!', '待ってた!次の曲は?', 'すぐいける!すぐ!', 'サクッといこ!サクッと!'],
+      competitive: ['来たからには負けないぞ', '前のリベンジ、させてもらう!', '今日こそいちばんを取る!', 'だれにも負けないからな'],
+      showoff: ['お待たせ〜!来ちゃった〜!', 'ノッてきた〜!今日は天才かも!', '呼んでくれると思ってた〜!', '今日の調子、見ててね〜!'],
+      shy: ['あ、あの…よろしく…', '…人、多いね。がんばる', 'ちょっと緊張…でも来たよ', 'こ、こんにちは…'],
+      hardworker: ['よろしく!今日も練習あるのみ!', 'コツコツいこう!', '今日も一歩ずつ上手くなる!', '呼んでくれてありがとう!がんばる!'],
+      romantic: ['なんて素敵な部屋…来てよかった', 'この部屋、星みたいにきらきらしてる', '音楽の夢の中へ、ようこそ', 'ここに来られて、夢みたい']
     },
     mood: {
       great: ['今日は絶好調!!', '最高の気分!!', 'なんでもできそう!'],
@@ -49547,7 +49795,17 @@ const RHYTHM_BUDDY_TALK_BASE = {
       proud: ['{song}がふさわしいわ', 'この曲なら完璧よ', '{song}を選ぶのが当然ね', '得意な曲を見せてあげる'],
       worrier: ['{song}ならできるかも…', 'この曲なら安心…かな', '{song}でもいいかな…?', 'おぼえてる曲がいいな…'],
       stubborn: ['{song}以外は認めん!', 'この曲でいく!', '{song}がいい。譲れん', '曲は{song}だ'],
-      easygoing: ['{song}がいいな〜', 'この曲、ゆっくりで好き〜', '{song}にしよ〜', 'なんでもいいけど{song}〜']
+      easygoing: ['{song}がいいな〜', 'この曲、ゆっくりで好き〜', '{song}にしよ〜', 'なんでもいいけど{song}〜'],
+      fiery: ['{song}で燃えたい!', 'この曲で全力出すぞ!', '{song}だ!熱くなれる!', '何回でもやりたい曲だ!'],
+      cool: ['{song}がいいね', 'この曲、悪くない', '{song}にしよう', '{song}なら問題ない'],
+      fickle: ['{song}…いや、やっぱ別のかも', '今日は{song}の気分かも', 'なんとなく{song}がいい', '{song}かな、たぶん'],
+      mellow: ['{song}はいかがですか?', 'この曲、やさしい音で好きです', '{song}にしましょうか', '{song}なんて、どうでしょう'],
+      hasty: ['{song}!はやく!', 'この曲すぐ終わるからいい!', '{song}にしよ!決まり!', '迷うより{song}!'],
+      competitive: ['{song}でリベンジしたい!', '{song}なら負けない!', 'この曲で今度こそ勝つ!', '{song}、前の借りを返す!'],
+      showoff: ['{song}でしょでしょ!', '{song}なら天才かも?', 'この曲、ノれるやつ〜!', '{song}、いいとこ見せるね〜!'],
+      shy: ['あ、あの…{song}がいい…', '{song}…だめ、かな…', 'この曲、好き…なんだ', '…{song}、とか…'],
+      hardworker: ['{song}、もっと練習したい!', '{song}をやりこみたい!', '練習中の曲にしよう!', '{song}、できるまでやる!'],
+      romantic: ['{song}、なんて素敵な曲…', '{song}の旋律にひたりたいな', 'この曲、夢みたいにきれいなんだ', '{song}で星空を旅しよう']
     },
     mood: {
       great: ['どの曲でもいけちゃう!', '今日はこの曲で決まり!!'],
@@ -49568,7 +49826,17 @@ const RHYTHM_BUDDY_TALK_BASE = {
       proud: ['{song}なら当然うまくやるわ', '私の演奏、見てなさい', '完璧にこなしてみせるわ', '見せ場をつくってあげる'],
       worrier: ['{song}か…緊張する…', '間違えないかな…', '深呼吸、深呼吸…', 'うまくできますように…'],
       stubborn: ['やると決めたらやる!', '最後まで食らいつく!', '妥協はせん!', '{song}、絶対にやりきる!'],
-      easygoing: ['{song}か〜、いい曲〜', 'ゆっくり構えていこ〜', 'のんびりやろ〜', 'リズムに身をまかせる〜']
+      easygoing: ['{song}か〜、いい曲〜', 'ゆっくり構えていこ〜', 'のんびりやろ〜', 'リズムに身をまかせる〜'],
+      fiery: ['{song}、燃えてきた!', '全力でいくぞ!', '最後まで熱くいく!', '一音一音に全力だ!'],
+      cool: ['{song}か。いいね', '静かに入ろう', '計算どおりにいく', '…集中する'],
+      fickle: ['{song}か〜、気分は上々かも', 'なんとなくいけそう', 'やっぱ楽しいかも、この曲', '気分で叩いちゃおう'],
+      mellow: ['{song}ですね、楽しみです', 'ゆっくり、ていねいにいきましょう', 'ふふ、いい音ですね', 'みなさん、肩の力をぬいて'],
+      hasty: ['{song}!始まった!', 'よし、すぐいく!', '待ってた待ってた!', 'サクッと決める!'],
+      competitive: ['{song}、今度こそ!', '負けないぞ、見てろ!', 'ここで差をつける!', '前より上をねらう!'],
+      showoff: ['{song}、ノッてきた〜!', 'いいとこ見せちゃうよ〜!', '今日は天才の日かも?', '見ててね、見ててね〜!'],
+      shy: ['{song}…始まる…', '…うん、集中する', 'ちょっとはずかしいけど…いくね', '音だけ見てれば平気…'],
+      hardworker: ['{song}、練習の成果を出す!', '練習どおりに叩くぞ!', 'ここまでの積み重ね、見せる!', 'よし、いつもどおり!'],
+      romantic: ['{song}の世界へ…', '旋律に耳をすませて…', '音の星を集めにいこう', '夢の始まりだね']
     },
     mood: {
       great: ['テンション最高!!', '今日はいけるきがする!!', 'ワクワクがとまらない!'],
@@ -49589,7 +49857,17 @@ const RHYTHM_BUDDY_TALK_BASE = {
       proud: ['当たり前ね。私だもの', 'もっと称えていいのよ?', 'やっぱり私が一番ね', 'ふふん、見たでしょ?'],
       worrier: ['え、ほんとに?まぐれかも…', 'MVP…!?信じられない…', 'うれしいけど、次が不安…', '夢じゃないよね…?'],
       stubborn: ['当然の結果だ', '努力は裏切らん!', '次もMVPを取る!', 'これが俺のやり方だ!'],
-      easygoing: ['あ〜MVPだ〜、やった〜', 'ラッキー〜', 'なんか取れちゃった〜', 'うれし〜ねむい〜']
+      easygoing: ['あ〜MVPだ〜、やった〜', 'ラッキー〜', 'なんか取れちゃった〜', 'うれし〜ねむい〜'],
+      fiery: ['やったぞ!全力のおかげだ!', '燃えた分だけ取れた!', 'まだまだ上がいける!', 'もう一曲いくぞ!'],
+      cool: ['想定内だね', '計算どおり', '…悪くない結果だ', '落ち着いてたからね'],
+      fickle: ['MVP?気分がよかったのかも', 'なんとなく取れちゃった', '明日はわかんないけどね', 'やっぱ今日はいける日かも'],
+      mellow: ['あらあら、MVPですって', 'ふふ、うれしいですね', 'みなさんのおかげです', 'ありがたいことですね'],
+      hasty: ['MVP!よし次!', 'やった!はやく次の曲!', '取った!すぐもう一曲!', '喜ぶのはあと!次!'],
+      competitive: ['よし!やっと勝てた!', 'これがリベンジだ!', '次も負けないからな!', '悔しかった分、うれしい!'],
+      showoff: ['見た?見た?MVP〜!', 'やっぱ天才かも?', 'でしょでしょ!ノッてたもん!', 'このままずっとノッてたい〜!'],
+      shy: ['え、あ…MVP…?てれる…', '…うれしい。ありがと', 'みんなに見られてる…てれる', 'こ、こういうの、なれてない…'],
+      hardworker: ['やった!練習してよかった!', '積み重ねが実った!', 'コツコツやってきたかいがあった!', 'でも、もっと上手くなる!'],
+      romantic: ['夢みたい…MVPだなんて', '星に手が届いた気分', 'なんて素敵な結末…', 'この瞬間、ずっと忘れない']
     },
     mood: {
       great: ['最高の日!!MVP!!', '今日は無敵だ!!', 'うれしすぎる!!'],
@@ -49610,7 +49888,17 @@ const RHYTHM_BUDDY_TALK_BASE = {
       proud: ['まあ、このくらいは当然ね', '完璧に近かったでしょ?', '見事だったでしょ?', 'さすが私ね'],
       worrier: ['ふぅ…うまくいってよかった…', 'ほっとした〜…', 'ミスしなくて助かった…', 'ドキドキした〜…'],
       stubborn: ['狙いどおりだ', '手は抜かなかった!', 'まだ満足せんぞ', 'これが実力だ!'],
-      easygoing: ['いい感じだったね〜', 'ふぅ、気持ちよかった〜', 'ゆったりできたよ〜', 'うまくいったね〜']
+      easygoing: ['いい感じだったね〜', 'ふぅ、気持ちよかった〜', 'ゆったりできたよ〜', 'うまくいったね〜'],
+      fiery: ['全力が届いた!', '体がまだ熱い!', 'この調子でもう一曲だ!', '胸が熱くなった!'],
+      cool: ['問題なかったね', 'いい流れだった', '想定どおりに叩けた', '…うん、悪くない'],
+      fickle: ['今のはよかったかも', '気分がのってた', 'なんか、うまくいっちゃった', 'この気分、続くといいな'],
+      mellow: ['とてもよかったですね', 'ふふ、気持ちのいい演奏でした', 'みなさん、おじょうずでした', 'ていねいに叩けましたね'],
+      hasty: ['よし!次いこ!', 'いい感じ!はやく次!', 'すぐもう一回やりたい!', '終わるのはやかった!いいね!'],
+      competitive: ['よし、前より上だ!', 'この調子なら負けない!', 'まだまだ、もっと上へ!', '今日は勝ちにいけた!'],
+      showoff: ['見た?決まったでしょ!', 'ノリノリだったでしょ〜!', '天才かもしれない〜', '今の、録画しといて〜!'],
+      shy: ['…うまく、できた', 'ふふ…よかった', 'ちょっとだけ、うれしい', '…みんなの前でも、できた'],
+      hardworker: ['いい感じ!練習どおり!', '積み重ねてきたかいがある!', 'この感覚、もっと練習しよう!', 'よし、一歩前進!'],
+      romantic: ['心が音にとけていく…', 'なんて素敵な時間だったの', '旋律がきらきらしてた', 'まるで星の海を泳いだみたい']
     },
     mood: {
       great: ['最高の演奏!!', 'ノリノリだった!!', '気持ちよかった〜!!'],
@@ -49631,7 +49919,17 @@ const RHYTHM_BUDDY_TALK_BASE = {
       proud: ['本調子じゃなかっただけよ', 'こんなものじゃないわ', '次は本気を見せるわ', 'まあ、悪くないでしょ?'],
       worrier: ['ミスしちゃった…ごめんね…', 'みんなの足を引っぱったかな…', 'もっとうまくなりたい…', '次はちゃんとやる…!'],
       stubborn: ['納得いかん!もう一回!', 'こんなはずでは…', '次こそ決める!', '妥協はせんぞ'],
-      easygoing: ['まあ、こんなもんだよね〜', 'ふわ〜、おつかれ〜', 'のんびり上達しよ〜', 'つぎ、がんばるね〜']
+      easygoing: ['まあ、こんなもんだよね〜', 'ふわ〜、おつかれ〜', 'のんびり上達しよ〜', 'つぎ、がんばるね〜'],
+      fiery: ['まだまだ燃え足りない!', '次はもっと全力だ!', 'ここからもっと熱くなる!', 'もう一曲で上げるぞ!'],
+      cool: ['まあ、こんなものか', '想定の範囲だね', '次は修正できる', '…落ち着いていこう'],
+      fickle: ['うーん、気分がのらなかったかも', 'ふつうだった、たぶん', '次はいい気分かも', 'やっぱ別の曲がよかったかな'],
+      mellow: ['まあまあ、悪くなかったですよ', 'おつかれさまでした', 'ゆっくり上手になりましょう', '次もいっしょにがんばりましょう'],
+      hasty: ['まあいい!次!', '考えるのはあと!次の曲!', '待てない!もう一曲!', 'すぐもう一回!'],
+      competitive: ['くっ…あと少しだった!', '次は負けない!', 'もう一回、もう一回!', 'こんなんじゃ満足できない!'],
+      showoff: ['今のは準備運動〜!', 'まだノリきれてないだけ〜', '次は天才モードいくよ〜!', 'ふふん、本番はこれから〜'],
+      shy: ['…ちょっと、かたくなった', '人が多いと、手がかたく…', '…次は、もう少し', 'えへ…まあまあ、かな'],
+      hardworker: ['まだ練習が足りないな!', 'もう一回やらせて!', 'コツコツ直していこう!', '伸びしろがあるってこと!'],
+      romantic: ['もう少しで、星に届いたのに', '旋律をつかみきれなかった…', '夢の続きは、次の曲で', '欠けた月みたいな出来だね']
     },
     mood: {
       great: ['それでも楽しかった!!', 'もう一回やりたい!!'],
@@ -49652,7 +49950,17 @@ const RHYTHM_BUDDY_TALK_BASE = {
       proud: ['…今のは見なかったことにして', '次は絶対に見返すわ', 'こんなの私じゃないわ…', '調子が悪かっただけよ!'],
       worrier: ['やっぱりダメだった…ごめんなさい…', 'みんなに迷惑かけた…', 'どうしよう…', '自信なくなっちゃう…'],
       stubborn: ['認めん!もう一回だ!', 'こんなはずはない!', '次こそ…!', 'あきらめんぞ!'],
-      easygoing: ['あちゃ〜、失敗した〜', 'まあ、そんな日もあるよね〜', 'ねむくてミスった〜', '次はがんばる〜…たぶん']
+      easygoing: ['あちゃ〜、失敗した〜', 'まあ、そんな日もあるよね〜', 'ねむくてミスった〜', '次はがんばる〜…たぶん'],
+      fiery: ['くうっ、まだまだだ!', 'この悔しさで燃えてきた!', 'もう一曲だ!全力で!', '熱がたりなかった!次だ!'],
+      cool: ['…想定外だったね', '次は落ち着いていく', '今のは計算ミスだ', '問題ない。立て直す'],
+      fickle: ['あちゃ、気分じゃなかったかも', '今日はこういう日かも', 'やっぱ別の難易度がよかった', 'ま、明日は変わるかも'],
+      mellow: ['あらあら、残念でしたね', 'そういう日もありますよ', 'ゆっくり立て直しましょう', 'ふふ、次はきっと大丈夫です'],
+      hasty: ['うわっ、急ぎすぎた!', '次!次いこ!', 'はやく取り返したい!', '落ちこむひまない!次!'],
+      competitive: ['くっ…今のなし!', '悔しい!絶対リベンジする!', '負けたままじゃ終われない!', 'このままじゃ引き下がれない!'],
+      showoff: ['あれ〜?今日はノれなかった〜', 'ま、天才にも休みはあるよね〜', '次こそノッてくからね〜!', '調子の波ってやつ〜!'],
+      shy: ['…うう、みんな見てた…', '人が多くて、目が回った…', '…はずかしい', 'こ、今度は二人のときに…'],
+      hardworker: ['よし、ここから特訓だ!', 'できるまで、何回でもやる!', 'ここからまた積み上げよう!', '苦手なとこ、見つかった!'],
+      romantic: ['夢が、こわれちゃった…', '今日の旋律は、遠かったね', '星がかくれた夜みたい', '涙も音楽の一部かな']
     },
     mood: {
       great: ['でもすごく楽しかった!!', 'めげないよ!!'],
@@ -49673,7 +49981,17 @@ const RHYTHM_BUDDY_TALK_BASE = {
       proud: ['しかたないわね、譲ってあげる', '私の席は特別に空けるわ', 'また呼ぶことを許すわ', 'ふふ、ありがたく思いなさい'],
       worrier: ['ここにいていいのかな…帰るね…', 'ごめんね、席ゆずる…', '迷惑かけなくてよかった…', 'またね…ほんとにまたね…'],
       stubborn: ['しかたない、席はゆずる', '次は最後までやるぞ!', '帰るが、また来る', '席のことは了解した'],
-      easygoing: ['はいは〜い、ゆずるね〜', 'じゃあね〜', 'ねむくなってきたからちょうどいい〜', 'またね〜、のんびり〜']
+      easygoing: ['はいは〜い、ゆずるね〜', 'じゃあね〜', 'ねむくなってきたからちょうどいい〜', 'またね〜、のんびり〜'],
+      fiery: ['席はゆずる!みんな燃えろ!', 'またすぐ全力で来る!', '熱いの、たのんだぞ!', '次は一日中遊ぶぞ!'],
+      cool: ['席はゆずるよ', 'じゃあ、また', '落ち着いたらまた来る', 'あとはよろしく'],
+      fickle: ['ゆずるね。気分で', 'やっぱ帰ろっかな', '今日はここまでかも', 'またなんとなく来るね'],
+      mellow: ['どうぞ、お席をゆずりますね', 'みなさん、楽しんでくださいね', 'またお会いしましょうね', 'それでは、失礼しますね'],
+      hasty: ['ゆずる!はやく座って!', 'じゃ!またすぐ!', '次の人、急いで!', 'すぐ戻る!'],
+      competitive: ['次は負けないからな!またな!', '席はゆずる。勝負はまた今度!', 'くっ…またリベンジしに来る!', '次こそ一番になる!じゃあな!'],
+      showoff: ['じゃ、またね〜!呼んでね〜!', '名残おしいけど、お先〜!', '次も天才っぷり見せにくるね〜', 'ばいば〜い!また来るよ〜!'],
+      shy: ['あ…じゃあ、ゆずるね', '…またね', '人が多いから、そっと帰るね', '…またね、二人のときに'],
+      hardworker: ['席ゆずる!練習してくるね!', 'ありがとう!またがんばる!', '次までに上手くなっておく!', 'またね!コツコツ続ける!'],
+      romantic: ['素敵な時間を、ありがとう', '夢の続きは、またいつか', '星の数ほど、また会えるよ', 'この旋律を胸に、またね']
     },
     mood: {
       great: ['楽しかった!!ありがとう!!', 'またあそぼうね!!'],
@@ -49694,7 +50012,17 @@ const RHYTHM_BUDDY_TALK_BASE = {
       proud: ['よろしく。ついてきなさい', 'ええ、よろしく'],
       worrier: ['よ、よろしくね…!', 'こちらこそ…よろしく…'],
       stubborn: ['よろしく。手は抜かん', 'おう、よろしく'],
-      easygoing: ['よろしく〜', 'よろしくね〜、のんびりね〜']
+      easygoing: ['よろしく〜', 'よろしくね〜、のんびりね〜'],
+      fiery: ['よろしく!燃えていこう!', 'よろしくな!熱い時間にしよう!'],
+      cool: ['よろしく', '…よろしく。落ち着いていこう'],
+      fickle: ['よろしく〜、たぶん', 'よろしくね。気分いいかも'],
+      mellow: ['よろしくお願いしますね', 'ふふ、仲良くしてくださいね'],
+      hasty: ['よろしく!はやく始めよ!', 'よろしく!さっそくいこ!'],
+      competitive: ['よろしく!負けないぞ!', 'よろしくな、勝負だ!'],
+      showoff: ['よろしく〜!ノッていこ〜!', 'よろしくね〜!見ててね〜!'],
+      shy: ['あ、よ…よろしく…', '…うん、よろしくね'],
+      hardworker: ['よろしく!いっしょに練習しよう!', 'よろしく!がんばろうね!'],
+      romantic: ['よろしくね。素敵な出会いだね', '出会えたこと、星に感謝だね']
     },
     mood: {
       great: ['よろしく!!元気いっぱい!!'],
@@ -49715,7 +50043,17 @@ const RHYTHM_BUDDY_TALK_BASE = {
       proud: ['当然のことよ', 'わかればいいのよ'],
       worrier: ['そ、そんな…ありがとう…', 'お役に立ててよかった…'],
       stubborn: ['礼などいらん', 'いや、当然だ'],
-      easygoing: ['いいよいいよ〜', 'どういたしまして〜']
+      easygoing: ['いいよいいよ〜', 'どういたしまして〜'],
+      fiery: ['礼はいい!もう一曲だ!', 'へへ、燃えるな!'],
+      cool: ['別にいいよ', '問題ないよ'],
+      fickle: ['気分でやっただけかも', 'いいのいいの、なんとなく'],
+      mellow: ['いえいえ、どういたしまして', 'ふふ、喜んでもらえてうれしいです'],
+      hasty: ['いいって!次いこ!', 'どういたしまして!はやく次!'],
+      competitive: ['いいって、気にするな', 'へへ、次は負けないけどな'],
+      showoff: ['でしょでしょ〜!いいってこと〜', 'えっへん、もっと頼って〜'],
+      shy: ['あ…う、うん…', '…どういたしまして'],
+      hardworker: ['どういたしまして!練習の成果!', 'いいよ!また手伝う!'],
+      romantic: ['ふふ、素敵な言葉をありがとう', 'その一言で、心が晴れたよ']
     },
     mood: {
       great: ['こっちこそありがとう!!'],
@@ -49736,7 +50074,17 @@ const RHYTHM_BUDDY_TALK_BASE = {
       proud: ['当然ね。でも、ありがとう', 'もっとほめてもいいのよ'],
       worrier: ['ほ、ほんと?うれしい…', 'ありがとう…自信出てきた…'],
       stubborn: ['当たり前だ。…ありがとう', 'まだ満足せんが、感謝する'],
-      easygoing: ['ありがと〜', 'えへへ〜、うれし〜']
+      easygoing: ['ありがと〜', 'えへへ〜、うれし〜'],
+      fiery: ['よし!もっと燃えてきた!', 'ありがとう!まだまだいくぞ!'],
+      cool: ['…ありがとう', '悪くないでしょ'],
+      fickle: ['えへ、今日は調子いいのかも', 'ほめられた。気分上がるかも'],
+      mellow: ['あら、うれしいです', 'ふふ、ありがとうございます'],
+      hasty: ['ありがと!次もすぐやる!', 'ありがと!はやく次の曲!'],
+      competitive: ['へへ、でもまだまだ!', 'ありがと!でも次はもっと上!'],
+      showoff: ['でしょでしょ〜!', 'やっぱ天才かも〜?'],
+      shy: ['え…あ、ありがと…', '…てれる'],
+      hardworker: ['ありがとう!もっと練習する!', 'うれしい!もっとがんばれる!'],
+      romantic: ['なんて素敵な言葉…', '夢みたい、ありがとう']
     },
     mood: {
       great: ['やったー!!ありがとう!!'],
@@ -49757,7 +50105,17 @@ const RHYTHM_BUDDY_TALK_BASE = {
       proud: ['いいわよ、もう一度見せてあげる', '何度でもどうぞ'],
       worrier: ['う、うん…がんばる…', 'もう一回…ドキドキ…'],
       stubborn: ['おう!次こそ決める!', '望むところだ'],
-      easygoing: ['いいよ〜、もう一回〜', 'のんびりやろ〜']
+      easygoing: ['いいよ〜、もう一回〜', 'のんびりやろ〜'],
+      fiery: ['もう一曲か!燃えるな!', '何度でも全力だ!'],
+      cool: ['いいよ。もう一回', '問題ない。いこう'],
+      fickle: ['もう一回?いい気分だしいいかも', 'やっぱもう一回やりたいかも'],
+      mellow: ['ええ、もう一度いきましょうか', 'ふふ、何度でもお付き合いしますね'],
+      hasty: ['もう一回!すぐやろ!', '待ってました!はやく!'],
+      competitive: ['よし、リベンジだ!', 'もう一回!今度こそ!'],
+      showoff: ['いいね〜!もっとノッてく〜!', '何回でも見せちゃう〜!'],
+      shy: ['…うん、もう一回', 'い、いいよ…やる'],
+      hardworker: ['よし!もう一回練習だ!', '何回でもやろう!'],
+      romantic: ['もう一度、あの旋律を', '夢の続きを見よう']
     },
     mood: {
       great: ['やろうやろう!!うれしい!!'],
@@ -49778,7 +50136,17 @@ const RHYTHM_BUDDY_TALK_BASE = {
       proud: ['いるに決まっているでしょう', '呼ぶまでもないわ'],
       worrier: ['い、いるよ…!', 'ここにいるよ…大丈夫…?'],
       stubborn: ['いるぞ', '呼ばれんでも、ここにいる'],
-      easygoing: ['いるよ〜', 'ここだよ〜']
+      easygoing: ['いるよ〜', 'ここだよ〜'],
+      fiery: ['ここだ!いつでも全力だ!', 'おう!熱いまま待ってたぞ!'],
+      cool: ['ここにいる。問題ない', '…ここだよ'],
+      fickle: ['いるよ、たぶん', '呼んだ?なんとなく来た'],
+      mellow: ['はい、ここにいますよ', 'ふふ、お呼びですか?'],
+      hasty: ['いる!なに?はやく!', 'ここ!すぐ行く!'],
+      competitive: ['いるぞ!勝負か?', 'ここだ!いつでもいける!'],
+      showoff: ['は〜い!呼んだ〜?', 'いるよいるよ〜!'],
+      shy: ['…い、いるよ', 'あ、あの…ここ…'],
+      hardworker: ['いるよ!練習中だった!', 'ここだよ!準備はできてる!'],
+      romantic: ['ここにいるよ、星のそばに', '音の中にいたよ']
     },
     mood: {
       great: ['はーい!!元気だよ!!'],
@@ -49799,7 +50167,17 @@ const RHYTHM_BUDDY_TALK_BASE = {
       proud: ['まあ、そんな日もあるわ', '次は見返せばいいのよ'],
       worrier: ['だ、だいじょうぶだよ…!', 'ぼくもよく失敗するよ…'],
       stubborn: ['次こそ決めろ!', '立ち上がれ!'],
-      easygoing: ['まあまあ、気にしない〜', 'そんな日もあるよ〜']
+      easygoing: ['まあまあ、気にしない〜', 'そんな日もあるよ〜'],
+      fiery: ['落ちこむな!次は燃えるぞ!', 'まだまだこれからだ!'],
+      cool: ['気にしなくていい', '次は落ち着いていこう'],
+      fickle: ['そういう気分の日もあるかも', '明日はいい日かもよ'],
+      mellow: ['大丈夫ですよ、ゆっくりで', 'あらあら、気にしないでくださいね'],
+      hasty: ['気にするな!次!', 'はやく忘れて次いこ!'],
+      competitive: ['気にするな!次はリベンジだ!', '悔しい分、次は強くなれる!'],
+      showoff: ['だいじょぶだいじょぶ〜!', '次はノれるって〜!'],
+      shy: ['…うん、次がある、よ', '…そ、そばにいるね'],
+      hardworker: ['練習すればきっとできる!', 'いっしょに練習しよう!'],
+      romantic: ['雨のあとには、虹が出るよ', '失敗も、素敵な物語の一部だよ']
     },
     mood: {
       great: ['ドンマイ!!楽しもう!!'],
@@ -49820,7 +50198,17 @@ const RHYTHM_BUDDY_TALK_BASE = {
       proud: ['待ってあげるわ。早くしなさい', '少しなら待つわ'],
       worrier: ['だ、だいじょうぶ?待ってるよ…', 'ゆっくりでいいよ…'],
       stubborn: ['待つ。急ぐな', 'こちらは構わん'],
-      easygoing: ['ゆっくりでいいよ〜', 'いくらでも待てるよ〜']
+      easygoing: ['ゆっくりでいいよ〜', 'いくらでも待てるよ〜'],
+      fiery: ['待つ間も体はあったまってる!', '燃えたまま待ってるぞ!'],
+      cool: ['待つよ。問題ない', '落ち着いて準備して'],
+      fickle: ['待つのもいい気分かも', 'ゆっくりでいいかも、なんとなく'],
+      mellow: ['お待ちしていますね', 'どうぞ、あわてずに'],
+      hasty: ['う…待つ!はやくね!', '待てないけど、待つ!'],
+      competitive: ['待ってる!準備しとけよ!', 'その間に作戦を考える!'],
+      showoff: ['待ってる〜!そのぶんノっとく〜', 'いいよ〜、ゆっくりで〜'],
+      shy: ['…うん、待ってる', '…しずかに、待ってるね'],
+      hardworker: ['待ってる間、指の練習してる!', 'いいよ!準備ができたら言って!'],
+      romantic: ['星を数えて待ってるね', '待つ時間も、素敵だよ']
     },
     mood: {
       great: ['待つのも楽しい!!'],
@@ -49843,7 +50231,17 @@ const RHYTHM_BUDDY_TALK_EXTRA = {
       proud: ['主役のおでましよ', '期待していていいわよ'],
       worrier: ['みんなの邪魔にならないようにする…', 'はじめてじゃないのに緊張する…'],
       stubborn: ['やるからには最後までやる', '手を抜かんから覚悟しろ'],
-      easygoing: ['あ〜、あったかい部屋だね〜', 'ふぁ…ぼちぼちいこ〜']
+      easygoing: ['あ〜、あったかい部屋だね〜', 'ふぁ…ぼちぼちいこ〜'],
+      fiery: ['来たぞ!今日も熱くなろう!', '一日中でも遊べるぞ!'],
+      cool: ['来たよ。静かでいい部屋だ', 'いい部屋だね。始めよう'],
+      fickle: ['なんとなく来ちゃった', '今日はこの部屋の気分かも'],
+      mellow: ['おじゃましますね', 'あら、すてきなお部屋ですね'],
+      hasty: ['来た!もう始めよ!', '着いた!曲まだ?'],
+      competitive: ['今日も勝ちにいくぞ!', 'みんなライバルだな!'],
+      showoff: ['今日はノリノリでいくよ〜!', '主役、到着〜!'],
+      shy: ['…人、いっぱい…ちょっと緊張', '…すみっこに、いるね'],
+      hardworker: ['今日もコツコツ上手くなる!', '練習の成果を見せる日だ!'],
+      romantic: ['なんて素敵な顔ぶれ…', '今日はどんな音に出会えるかな']
     },
     mood: {
       great: ['気分は最高潮!!'],
@@ -49864,7 +50262,17 @@ const RHYTHM_BUDDY_TALK_EXTRA = {
       proud: ['{song}で格の違いを見せるわ', 'この曲は私にぴったり'],
       worrier: ['この曲ならなんとか…', '{song}、おぼえてるから…'],
       stubborn: ['{song}で勝負すると決めた', 'この曲を譲る気はない'],
-      easygoing: ['この曲、のんびりできる〜', '{song}がいいなぁ〜']
+      easygoing: ['この曲、のんびりできる〜', '{song}がいいなぁ〜'],
+      fiery: ['この曲で燃えよう!', '{song}で全力だ!'],
+      cool: ['この曲、手ごたえがある', '{song}なら落ち着いていける'],
+      fickle: ['この曲、今の気分かも', '{song}…やっぱこれかな'],
+      mellow: ['この曲、やさしくて好きです', '{song}はいかがでしょう'],
+      hasty: ['この曲、短くていい!', '{song}!決めた!すぐ!'],
+      competitive: ['{song}で勝負したい!', 'この曲、前に負けたやつ!'],
+      showoff: ['{song}、超ノれるよ〜!', 'この曲なら天才になれる〜!'],
+      shy: ['…{song}、いい?', 'この曲なら、少し落ち着く…'],
+      hardworker: ['{song}、毎日練習してる!', 'この曲、もっと上手くなりたい!'],
+      romantic: ['{song}の旋律、うっとりする…', 'この曲、月の光みたいなんだ']
     },
     mood: {
       great: ['なんでも決めて!!ぼくは{song}!!'],
@@ -49885,7 +50293,17 @@ const RHYTHM_BUDDY_TALK_EXTRA = {
       proud: ['私の見せ場、期待して', 'この曲、私が決めるわ'],
       worrier: ['落ち着け、落ち着け…', '指がふるえてきた…'],
       stubborn: ['一音も逃さん!', '絶対に外さんぞ'],
-      easygoing: ['のんびり、でも集中〜', 'ゆったり構えて叩くよ〜']
+      easygoing: ['のんびり、でも集中〜', 'ゆったり構えて叩くよ〜'],
+      fiery: ['全身で叩くぞ!', '指先まで燃えてる!'],
+      cool: ['落ち着いて、正確に', '…譜面は見えてる'],
+      fickle: ['気分で乗っちゃおう', 'なんか今、いい感じかも'],
+      mellow: ['ていねいに、ていねいに', 'ふふ、いい音が出てますね'],
+      hasty: ['どんどんいく!', '先に先に!'],
+      competitive: ['負けるもんか!', 'ここで巻き返す!'],
+      showoff: ['ノッてきた〜!いくよ〜!', '指がノリノリ〜!'],
+      shy: ['…よし、いく', '画面だけ見てれば、平気…'],
+      hardworker: ['練習どおり、練習どおり!', '積み重ねを信じる!'],
+      romantic: ['音の波に、のっていこう', 'この旋律に、ひたるね']
     },
     mood: {
       great: ['いけいけー!!'],
@@ -49906,7 +50324,17 @@ const RHYTHM_BUDDY_TALK_EXTRA = {
       proud: ['ふふ、当然の結果ね', '私が一番に決まってるでしょ'],
       worrier: ['みんなに迷惑かけなくてよかった…', 'うれしくて手がふるえる…'],
       stubborn: ['努力の成果だ', '一番でなければ意味がない'],
-      easygoing: ['ほんとに取れた〜?やった〜', 'なんかうれし〜']
+      easygoing: ['ほんとに取れた〜?やった〜', 'なんかうれし〜'],
+      fiery: ['全力の勝ちだ!', 'もっと燃えて、また取る!'],
+      cool: ['当然…とまでは言わないけど', '…うん、取れると思ってた'],
+      fickle: ['え、取れた?気分いいかも', 'こういう日もあるんだね'],
+      mellow: ['あらあら、ありがたいですね', 'ふふ、みなさんと取れました'],
+      hasty: ['やった!休まず次!', '取れた!さっさと次の曲!'],
+      competitive: ['よっしゃ!勝った!', 'これで前の借りは返した!'],
+      showoff: ['やっぱ天才かも!?', '今日の主役、いただき〜!'],
+      shy: ['…う、うれしい', 'みんなの前で…はずかしい…'],
+      hardworker: ['やった!毎日の練習のおかげ!', 'まだまだ上を目指す!'],
+      romantic: ['夢がかなった夜みたい', '星がほほえんでくれた']
     },
     mood: {
       great: ['世界一うれしい!!'],
@@ -49927,7 +50355,17 @@ const RHYTHM_BUDDY_TALK_EXTRA = {
       proud: ['当然の出来ね', 'このくらい朝飯前よ'],
       worrier: ['よかった…ほんとによかった…', 'ミスしなくてほっとした…'],
       stubborn: ['納得のいく演奏だ', 'まだまだ上を目指す'],
-      easygoing: ['気持ちよく叩けた〜', 'いい感じだったね〜']
+      easygoing: ['気持ちよく叩けた〜', 'いい感じだったね〜'],
+      fiery: ['熱い演奏だった!', 'この熱、まだ冷めない!'],
+      cool: ['安定してたね', '問題なく叩けた'],
+      fickle: ['今日はいい気分かも', 'なんか楽しかった'],
+      mellow: ['気持ちよく叩けましたね', 'ふふ、すてきでした'],
+      hasty: ['いい!すぐ次!', 'ばっちり!次の曲は?'],
+      competitive: ['よし!この調子だ!', '自己ベスト、もっと更新する!'],
+      showoff: ['ノッてるノッてる〜!', '調子の波、きてる〜!'],
+      shy: ['…ふふ、楽しかった', '…ちょっと、自信ついた'],
+      hardworker: ['積み重ねが音になった!', '練習してきてよかった!'],
+      romantic: ['心が旋律とひとつになった', '胸がきらきらしてる']
     },
     mood: {
       great: ['最高の気分!!!'],
@@ -49948,7 +50386,17 @@ const RHYTHM_BUDDY_TALK_EXTRA = {
       proud: ['私ならもっとできたはず', '次は本気を出すわ'],
       worrier: ['ミスが気になる…', 'みんなに迷惑かけてないかな…'],
       stubborn: ['まだ納得していない', '次は譲らんぞ'],
-      easygoing: ['まあ、これくらいでいいや〜', 'ほどほどが一番〜']
+      easygoing: ['まあ、これくらいでいいや〜', 'ほどほどが一番〜'],
+      fiery: ['まだ燃えきってない!', '次はもっと熱くいく!'],
+      cool: ['次は精度を上げる', 'ふつうだね。次で上げる'],
+      fickle: ['ふつうかも。気分次第だね', '次はちがう気分かも'],
+      mellow: ['ほどよい出来でしたね', '次はもう少しだけ、がんばりましょうか'],
+      hasty: ['まあまあ!次!', 'よし、すぐやり直し!'],
+      competitive: ['くっ…まだ足りない!', '次はもっと上をいく!'],
+      showoff: ['今のは本気の半分〜!', '次でいっきにノるから〜!'],
+      shy: ['…人が多くて、そわそわした', '…次は、もうちょっと'],
+      hardworker: ['次はここを練習しよう!', 'コツコツ伸ばしていこう!'],
+      romantic: ['もう少しで、夢に手が届いた', '旋律が、ちょっとだけ遠かった']
     },
     mood: {
       great: ['楽しければOK!!'],
@@ -49969,7 +50417,17 @@ const RHYTHM_BUDDY_TALK_EXTRA = {
       proud: ['屈辱だわ…', '次は絶対に取り返す'],
       worrier: ['やっぱりだめだった…', 'みんなごめんなさい…'],
       stubborn: ['こんな結果は認めん', '何度でもやり直す'],
-      easygoing: ['まあ、仕方ないよね〜', 'そんな日もあるよ〜']
+      easygoing: ['まあ、仕方ないよね〜', 'そんな日もあるよ〜'],
+      fiery: ['悔しい!でも燃えてきた!', '次こそ全力を出しきる!'],
+      cool: ['…まあ、立て直せる', '想定外。次で直す'],
+      fickle: ['気分じゃなかったのかも', '次はきっといい気分'],
+      mellow: ['あらあら、そういうこともありますね', '大丈夫、また次がありますよ'],
+      hasty: ['しまった!次!', '急ぎすぎたかも!もう一回!'],
+      competitive: ['うう、悔しい!', '今のはなし!やり直し!'],
+      showoff: ['あちゃ〜、ノリそこねた〜', '天才にも波はあるの〜'],
+      shy: ['…人前だと、手が止まる', '…うう、はずかしい'],
+      hardworker: ['よし、特訓メニュー追加だ!', 'できるまでがんばる!'],
+      romantic: ['星のない夜みたい…', '悲しい旋律も、きれいだね']
     },
     mood: {
       great: ['失敗しても楽しい!!'],
@@ -49990,7 +50448,17 @@ const RHYTHM_BUDDY_TALK_EXTRA = {
       proud: ['お見送りしてもいいのよ?', '次も呼ぶのよ、いいわね?'],
       worrier: ['ちゃんと帰れるかな…ばいばい…', 'みんな、気をつけてね…'],
       stubborn: ['席をゆずるのは今回だけだぞ', '約束だ、また呼べよ'],
-      easygoing: ['じゃあ、おやすみ〜…じゃない、またね〜', 'お先に〜']
+      easygoing: ['じゃあ、おやすみ〜…じゃない、またね〜', 'お先に〜'],
+      fiery: ['また燃えに来るぞ!', 'みんな、全力でいけよ!'],
+      cool: ['じゃあ、またね', '…先に行くよ'],
+      fickle: ['なんとなく帰るね', '気分が向いたら、また来る'],
+      mellow: ['お先に失礼しますね', 'みなさん、また会いましょうね'],
+      hasty: ['じゃ!お先!', 'またすぐ来る!急いで来る!'],
+      competitive: ['次は負けないぞ!またな!', 'リベンジしに、また来る!'],
+      showoff: ['お先〜!また呼んでね〜!', 'ばいば〜い!次もノッてくよ〜!'],
+      shy: ['…じゃあ、またね', 'あ、ありがと…ばいばい'],
+      hardworker: ['ありがとう!練習してくる!', 'またね!次はもっと上手くなってる!'],
+      romantic: ['今日の旋律は、宝物だよ', '素敵な夢をありがとう']
     },
     mood: {
       great: ['最高の時間をありがとう!!'],
@@ -50011,7 +50479,17 @@ const RHYTHM_BUDDY_TALK_EXTRA = {
       proud: ['よろしくしてあげる'],
       worrier: ['よ、よろしくお願いします…'],
       stubborn: ['うむ、よろしく'],
-      easygoing: ['よろしくね〜']
+      easygoing: ['よろしくね〜'],
+      fiery: ['よろしくな!燃えようぜ!'],
+      cool: ['どうも。よろしく'],
+      fickle: ['よろしくね〜、なんとなく'],
+      mellow: ['こちらこそ、よろしくお願いします'],
+      hasty: ['よろしく!はやく!'],
+      competitive: ['よろしく!勝負だ!'],
+      showoff: ['よろしく〜!ノッてこ〜!'],
+      shy: ['…よ、よろしく'],
+      hardworker: ['よろしく!今日もがんばろう!'],
+      romantic: ['出会いに乾杯だね']
     }
   },
   replyThanks: {
@@ -50025,7 +50503,17 @@ const RHYTHM_BUDDY_TALK_EXTRA = {
       proud: ['もっと感謝してもいいわよ'],
       worrier: ['ほんとに?よかった…'],
       stubborn: ['礼を言われるほどでは…'],
-      easygoing: ['いいよ〜、気にしな〜い']
+      easygoing: ['いいよ〜、気にしな〜い'],
+      fiery: ['いいってことよ!燃えていこう!'],
+      cool: ['大したことないよ'],
+      fickle: ['いいの、気分だから'],
+      mellow: ['いえいえ、お気になさらず'],
+      hasty: ['いいって!それより次!'],
+      competitive: ['へへ、礼はいいって!'],
+      showoff: ['でしょでしょ〜!えっへん!'],
+      shy: ['…ど、どういたしまして'],
+      hardworker: ['いいよ!いつでも言って!'],
+      romantic: ['その言葉、星より輝いてる']
     }
   },
   replyNice: {
@@ -50039,7 +50527,17 @@ const RHYTHM_BUDDY_TALK_EXTRA = {
       proud: ['ふふ、もっとほめなさい'],
       worrier: ['えへへ…自信がついた…'],
       stubborn: ['褒めても何も出んぞ'],
-      easygoing: ['うれし〜、ありがと〜']
+      easygoing: ['うれし〜、ありがと〜'],
+      fiery: ['よし!もっと燃えるぞ!'],
+      cool: ['…悪くない'],
+      fickle: ['今日は気分がいいからかも'],
+      mellow: ['ふふ、うれしいです'],
+      hasty: ['ありがと!次!'],
+      competitive: ['へへ、でも次はもっとうまくやる!'],
+      showoff: ['ほめられるともっとノれる〜!'],
+      shy: ['…あ、ありがと…てれる'],
+      hardworker: ['うれしい!やる気が出た!'],
+      romantic: ['なんて素敵なほめ言葉…']
     }
   },
   replyAgain: {
@@ -50053,7 +50551,17 @@ const RHYTHM_BUDDY_TALK_EXTRA = {
       proud: ['次こそ見せてあげる'],
       worrier: ['が、がんばるよ…'],
       stubborn: ['次は絶対だ!'],
-      easygoing: ['じゃあ、もう一回〜']
+      easygoing: ['じゃあ、もう一回〜'],
+      fiery: ['よし!もう一曲燃えるぞ!'],
+      cool: ['了解。もう一回'],
+      fickle: ['いいよ、気分がのってるし'],
+      mellow: ['ええ、もう一度いきましょう'],
+      hasty: ['やる!今すぐ!'],
+      competitive: ['今度こそ勝つ!'],
+      showoff: ['次はもっとノッてく〜!'],
+      shy: ['…また、やる'],
+      hardworker: ['何回でもやらせて!'],
+      romantic: ['もう一度、夢を見よう']
     }
   },
   replyCall: {
@@ -50067,7 +50575,17 @@ const RHYTHM_BUDDY_TALK_EXTRA = {
       proud: ['私を呼ぶとは分かっているわね'],
       worrier: ['い、いますよ…どうしたの…?'],
       stubborn: ['見ればわかるだろう'],
-      easygoing: ['ふぁい、いるよ〜']
+      easygoing: ['ふぁい、いるよ〜'],
+      fiery: ['ここだ!燃えてるぞ!'],
+      cool: ['いるよ。どうした'],
+      fickle: ['呼んだ?気分で来たよ'],
+      mellow: ['はいはい、どうしましたか?'],
+      hasty: ['いる!用件はやく!'],
+      competitive: ['呼んだか?いつでもいけるぞ!'],
+      showoff: ['は〜い!お呼びかな〜?'],
+      shy: ['…あ、は、はい…'],
+      hardworker: ['はい!いるよ!'],
+      romantic: ['呼ばれた気がして、来たよ']
     }
   },
   replyDrop: {
@@ -50081,7 +50599,17 @@ const RHYTHM_BUDDY_TALK_EXTRA = {
       proud: ['あなたならできるわ'],
       worrier: ['わたしもよく失敗するから…'],
       stubborn: ['くじけるな。やり直せ'],
-      easygoing: ['どんまい〜、どんまい〜']
+      easygoing: ['どんまい〜、どんまい〜'],
+      fiery: ['顔を上げろ!まだまだだ!'],
+      cool: ['気にしない。次だよ'],
+      fickle: ['そんな気分の日もあるって'],
+      mellow: ['大丈夫ですよ、気にしないで'],
+      hasty: ['どんまい!はやく次!'],
+      competitive: ['悔しいなら、次で返せ!'],
+      showoff: ['どんまい!次はノれるよ〜'],
+      shy: ['…げ、元気だして'],
+      hardworker: ['練習すれば絶対よくなる!'],
+      romantic: ['涙のあとは、星がきれいだよ']
     }
   },
   replyWait: {
@@ -50095,7 +50623,17 @@ const RHYTHM_BUDDY_TALK_EXTRA = {
       proud: ['急ぎなさい?'],
       worrier: ['待ってるよ…本当に待ってるよ…'],
       stubborn: ['待つが、長くは待たんぞ'],
-      easygoing: ['ぜんぜんいいよ〜、ぼくも休む〜']
+      easygoing: ['ぜんぜんいいよ〜、ぼくも休む〜'],
+      fiery: ['待つ間もウォーミングアップだ!'],
+      cool: ['かまわない。待つよ'],
+      fickle: ['待つの、今日は平気かも'],
+      mellow: ['どうぞごゆっくり'],
+      hasty: ['はやくね!…いや、待つ!'],
+      competitive: ['待つ!その間に作戦だ!'],
+      showoff: ['いいよ〜!待つのも得意〜'],
+      shy: ['…うん、ここにいる'],
+      hardworker: ['待ってる!その間も練習!'],
+      romantic: ['待つ夜も、素敵だね']
     }
   },
   idle: {
@@ -50109,7 +50647,17 @@ const RHYTHM_BUDDY_TALK_EXTRA = {
       proud: ['待たせるなんて失礼ね', '私を待たせるとはいい度胸ね', 'まだなの?早くしなさい', '準備なんてとっくに終わってるわ'],
       worrier: ['うまくできるかな…心配…', '緊張で手がふるえる…', 'もしミスしたらどうしよう…', '早く始まってほしいような…'],
       stubborn: ['待つのは性に合わん', '早くしてくれ!', '腹はくくった、いつでもいい', '決まりが遅いな'],
-      easygoing: ['ふぁ〜…ねむくなってきた〜', 'のんびり待つのも悪くないね〜', 'ごろごろ〜', 'おやつ食べたいな〜']
+      easygoing: ['ふぁ〜…ねむくなってきた〜', 'のんびり待つのも悪くないね〜', 'ごろごろ〜', 'おやつ食べたいな〜'],
+      fiery: ['体があったまってきた!', '早く燃えたいぞ!', 'まだまだ遊べるぞ!', '待ってる間も全力だ!'],
+      cool: ['…静かでいいね', '譜面を思い返してる', '落ち着いて待つよ', '急ぐ必要はない'],
+      fickle: ['ひまだなあ、なんとなく', '待ってたら気分変わってきた', 'やっぱ別の曲がいいかも', '今日の気分は…まだ決めてない'],
+      mellow: ['お茶でもいかがですか?', 'ゆっくり待ちましょうね', 'ふふ、のどかですね', 'みなさん、準備はいいですか?'],
+      hasty: ['まだ?まだ?', 'はやくはやく!', '待てない〜!', 'もう始めよ!ね!'],
+      competitive: ['うずうずしてきた!', '前の記録、思い出してた', '次は絶対一番になる', 'じっとしてると落ち着かない!'],
+      showoff: ['ヒマ〜、ノリたい〜', '天才は待つのも上手〜', 'ダンスの練習しとこ〜', 'まだかな〜、見せたいのに〜'],
+      shy: ['…しずか。落ち着く', '…こういう時間、好き', '…すみっこ、落ち着く', '…だれか話しかけてくれるかな'],
+      hardworker: ['手首の体操してる!', '前の曲のふりかえり中!', '空き時間もコツコツ!', '今日は何曲できるかな!'],
+      romantic: ['窓の外、星が見えるかな', '頭の中で旋律が流れてる', '月を見ながら待ってるね', '待つ時間も物語のうち']
     },
     mood: {
       great: ['待ってるあいだも楽しい!!', '早く叩きたくてたまらない!!', '今日は何でもできそう!!'],
@@ -50159,7 +50707,17 @@ const RHYTHM_BUDDY_HONORIFICS = Object.freeze({
   proud: '',
   worrier: 'さん',
   stubborn: '',
-  easygoing: 'さん'
+  easygoing: 'さん',
+  fiery: '',
+  cool: 'さん',
+  fickle: 'くん',
+  mellow: 'さん',
+  hasty: '',
+  competitive: '',
+  showoff: 'ちゃん',
+  shy: 'さん',
+  hardworker: 'さん',
+  romantic: 'さん'
 });
 const rhythmBuddyHonorific = trait => Object.prototype.hasOwnProperty.call(RHYTHM_BUDDY_HONORIFICS, trait) ? RHYTHM_BUDDY_HONORIFICS[trait] : 'さん';
 const rhythmBuddyTalkPick = ({
@@ -50397,13 +50955,63 @@ const RHYTHM_BUDDY_TRAIT_STYLE = Object.freeze({
     emoji: ['☺️', '🍃', '💤'],
     ask: 0.6,
     starter: [3, 2, 1]
+  },
+  fiery: {
+    emoji: ['🔥', '💥'],
+    ask: 0.5,
+    starter: [2, 1, 3]
+  },
+  cool: {
+    emoji: ['😎'],
+    ask: 0.3,
+    starter: [1, 3, 1]
+  },
+  fickle: {
+    emoji: ['🎲', '🌀'],
+    ask: 0.7,
+    starter: [2, 2, 2]
+  },
+  mellow: {
+    emoji: ['🍵', '🌸'],
+    ask: 0.7,
+    starter: [3, 2, 2]
+  },
+  hasty: {
+    emoji: ['⚡', '💨'],
+    ask: 0.4,
+    starter: [1, 2, 3]
+  },
+  competitive: {
+    emoji: ['🔥', '😤'],
+    ask: 0.5,
+    starter: [1, 2, 3]
+  },
+  showoff: {
+    emoji: ['🎉', '😎', '✌️'],
+    ask: 0.6,
+    starter: [2, 1, 3]
+  },
+  shy: {
+    emoji: ['😳', '💦'],
+    ask: 0.3,
+    starter: [3, 1, 1]
+  },
+  hardworker: {
+    emoji: ['💪', '📖'],
+    ask: 0.6,
+    starter: [2, 3, 1]
+  },
+  romantic: {
+    emoji: ['🌙', '✨', '🌹'],
+    ask: 0.6,
+    starter: [3, 2, 1]
   }
 });
-const RHYTHM_BUDDY_PAIR_RIVALS = Object.freeze(['brave|proud', 'proud|smart', 'brave|stubborn', 'proud|stubborn', 'jester|serious', 'smart|stubborn']);
+const RHYTHM_BUDDY_PAIR_RIVALS = Object.freeze(['brave|proud', 'proud|smart', 'brave|stubborn', 'proud|stubborn', 'jester|serious', 'smart|stubborn', 'competitive|fiery', 'brave|competitive', 'competitive|proud', 'cool|fiery', 'hasty|mellow', 'cool|showoff']);
 const rhythmBuddyPairKind = (a, b) => {
   const key = [a, b].sort().join('|');
   if (RHYTHM_BUDDY_PAIR_RIVALS.indexOf(key) >= 0) return 'banterRival';
-  if (a === 'clingy' || b === 'clingy' || a === 'easygoing' || b === 'easygoing' || key === 'jester|worrier') return 'banterFriend';
+  if (a === 'clingy' || b === 'clingy' || a === 'easygoing' || b === 'easygoing' || a === 'mellow' || b === 'mellow' || key === 'jester|worrier' || key === 'jester|showoff') return 'banterFriend';
   return 'banter';
 };
 const rhythmBuddyConvoNormalize = text => {
@@ -50524,7 +51132,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{mood}に決まってるでしょ', '私に不調なんてないわ'],
       worrier: ['{mood}…だと思う、たぶん…', '心配してくれてありがとう…'],
       stubborn: ['{mood}だが、問題ない', '調子など関係ない'],
-      easygoing: ['{mood}〜、のんびり〜', 'ぼちぼちだよ〜']
+      easygoing: ['{mood}〜、のんびり〜', 'ぼちぼちだよ〜'],
+      fiery: ['{mood}!でも燃えてるぞ!', 'いつでも熱いぞ!'],
+      cool: ['{mood}。問題ない', '…いつもどおりだよ'],
+      fickle: ['{mood}…いや、どうかな', '今日の気分は{mood}かも'],
+      mellow: ['{mood}ですよ、ふふ', 'おかげさまで、元気です'],
+      hasty: ['{mood}!はやく遊ぼ!', '元気!だから次!'],
+      competitive: ['{mood}!勝てる気がする!', '今日は負ける気がしない!'],
+      showoff: ['天才的に{mood}〜!', '調子の波、いま上のほう〜!'],
+      shy: ['…{mood}、だよ', '…うん、まあまあ'],
+      hardworker: ['{mood}!今日も練習する!', '毎日続けてるから元気!'],
+      romantic: ['{mood}…素敵な一日だから', '月がきれいで、心も軽いよ']
     },
     mood: {
       great: ['最高にいい!!{who}さんは?'],
@@ -50545,7 +51163,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{who}さんは?まあ聞いてあげる'],
       worrier: ['{who}さんは大丈夫…?'],
       stubborn: ['{who}さんはどうだ'],
-      easygoing: ['{who}さんは〜?ねむくない〜?']
+      easygoing: ['{who}さんは〜?ねむくない〜?'],
+      fiery: ['{who}さんは燃えてるか?'],
+      cool: ['{who}さんも、問題ない?'],
+      fickle: ['{who}さんは今日どんな気分?'],
+      mellow: ['{who}さんは、お元気ですか?'],
+      hasty: ['{who}さんは?はやく教えて!'],
+      competitive: ['{who}さんは?負けてないか?'],
+      showoff: ['{who}さんもノッてる〜?'],
+      shy: ['…{who}さんは…?'],
+      hardworker: ['{who}さんは?練習してる?'],
+      romantic: ['{who}さんの心は、晴れてる?']
     },
     mood: {
       great: ['{who}さんも元気?!'],
@@ -50566,7 +51194,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['当然ね。私もよ'],
       worrier: ['よかった…ほっとした…'],
       stubborn: ['うむ、その調子だ'],
-      easygoing: ['いいね〜、のんびりいこ〜']
+      easygoing: ['いいね〜、のんびりいこ〜'],
+      fiery: ['よし!いっしょに燃えるぞ!'],
+      cool: ['そう。よかった'],
+      fickle: ['いいね、こっちも気分上がったかも'],
+      mellow: ['あら、よかったですね'],
+      hasty: ['よし!じゃあすぐ始めよ!'],
+      competitive: ['よし、じゃあ勝負だ!'],
+      showoff: ['いいね〜!いっしょにノろ〜!'],
+      shy: ['…よかった'],
+      hardworker: ['よし!いっしょにがんばろう!'],
+      romantic: ['素敵、心が通じあったね']
     },
     mood: {
       great: ['最高だね!!'],
@@ -50587,7 +51225,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['しかたないわね、今日は私が引っぱるわ'],
       worrier: ['えっ、大丈夫…?心配…'],
       stubborn: ['休むのも勝負のうちだ'],
-      easygoing: ['いっしょにのんびりしよ〜']
+      easygoing: ['いっしょにのんびりしよ〜'],
+      fiery: ['今日の分も、こっちが燃える!'],
+      cool: ['無理しないで。合わせるよ'],
+      fickle: ['そういう気分の日もあるよね'],
+      mellow: ['あらあら、ゆっくり休んでくださいね'],
+      hasty: ['じゃあサクッと短い曲にしよ!'],
+      competitive: ['なら今日はかわりに勝ってくる!'],
+      showoff: ['じゃ、元気わけてあげる〜!'],
+      shy: ['…そ、そっか。むり、しないで'],
+      hardworker: ['休むのも練習のうちだよ!'],
+      romantic: ['月の光で、ゆっくり休んでね']
     },
     mood: {
       great: ['ぼくが元気を分けてあげる!!'],
@@ -50608,7 +51256,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['Lv.{lv}。まだ序の口よ'],
       worrier: ['Lv.{lv}…低くないかな…'],
       stubborn: ['Lv.{lv}。満足はしとらん'],
-      easygoing: ['Lv.{lv}〜、のんびり上げてる〜']
+      easygoing: ['Lv.{lv}〜、のんびり上げてる〜'],
+      fiery: ['Lv.{lv}!まだまだ上がるぞ!'],
+      cool: ['Lv.{lv}。悪くない'],
+      fickle: ['Lv.{lv}…だったかな、たぶん'],
+      mellow: ['Lv.{lv}になりました、ふふ'],
+      hasty: ['Lv.{lv}!もっとはやく上げたい!'],
+      competitive: ['Lv.{lv}!まだまだ上げるぞ!'],
+      showoff: ['Lv.{lv}!けっこうすごくない〜?'],
+      shy: ['…Lv.{lv}、だよ'],
+      hardworker: ['Lv.{lv}!コツコツ上げてる!'],
+      romantic: ['Lv.{lv}。星をひとつずつ集めてる']
     },
     mood: {
       great: ['Lv.{lv}!!まだ伸びる!!'],
@@ -50629,7 +51287,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{fav}は完璧よ'],
       worrier: ['{fav}ならなんとか…'],
       stubborn: ['{fav}以外は認めん'],
-      easygoing: ['{fav}がおちつく〜']
+      easygoing: ['{fav}がおちつく〜'],
+      fiery: ['{fav}なら一番燃える!'],
+      cool: ['{fav}なら問題ない'],
+      fickle: ['{fav}が好き…今日はね'],
+      mellow: ['{fav}が、落ち着きますね'],
+      hasty: ['{fav}がいい!サクッといける!'],
+      competitive: ['{fav}なら誰にも負けたくない!'],
+      showoff: ['{fav}なら天才だよ〜!'],
+      shy: ['…{fav}、好き'],
+      hardworker: ['{fav}、たくさん練習した!'],
+      romantic: ['{fav}は夢みたいに素敵なの']
     },
     mood: {
       great: ['{fav}!!なんど叩いても楽しい!!'],
@@ -50650,7 +51318,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{who}さんの自慢の曲は?'],
       worrier: ['{who}さんの得意な曲…あるかな?'],
       stubborn: ['{who}さんの曲選びの基準は?'],
-      easygoing: ['{who}さんは何がすき〜?']
+      easygoing: ['{who}さんは何がすき〜?'],
+      fiery: ['{who}さんの一番燃える曲は?'],
+      cool: ['{who}さんは、何が得意?'],
+      fickle: ['{who}さんの好きな曲、今日はどれ?'],
+      mellow: ['{who}さんのお好きな曲は?'],
+      hasty: ['{who}さんの好きな曲!はやく!'],
+      competitive: ['{who}さんの得意曲は?勝負しよう!'],
+      showoff: ['{who}さんのノれる曲は〜?'],
+      shy: ['…{who}さんは、どの曲が好き…?'],
+      hardworker: ['{who}さんの得意曲、教えて!'],
+      romantic: ['{who}さんの好きな旋律は?']
     },
     mood: {
       great: [],
@@ -50671,7 +51349,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{song}は得意よ。見てなさい'],
       worrier: ['{song}…むずかしいけど、がんばる…'],
       stubborn: ['{song}は譲れん曲だ'],
-      easygoing: ['{song}、のんびり聴きたい〜']
+      easygoing: ['{song}、のんびり聴きたい〜'],
+      fiery: ['{song}なら全力でいける!'],
+      cool: ['{song}は落ち着いて叩ける'],
+      fickle: ['{song}、今日はいい気分かも'],
+      mellow: ['{song}、すてきな曲ですね'],
+      hasty: ['{song}!すぐやろ!'],
+      competitive: ['{song}、次こそ勝ちたい!'],
+      showoff: ['{song}、ノリノリになれる〜!'],
+      shy: ['…{song}、好きなんだ'],
+      hardworker: ['{song}、できるまでやりたい!'],
+      romantic: ['{song}…なんて素敵な旋律']
     },
     mood: {
       great: ['{song}!!最高!!'],
@@ -50692,7 +51380,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{trait}よ。当然でしょ'],
       worrier: ['{trait}…直したいな…'],
       stubborn: ['{trait}で何が悪い'],
-      easygoing: ['{trait}〜']
+      easygoing: ['{trait}〜'],
+      fiery: ['{trait}だ!燃えてるぞ!'],
+      cool: ['{trait}。それだけ'],
+      fickle: ['{trait}…らしいよ、たぶん'],
+      mellow: ['{trait}ですって、ふふ'],
+      hasty: ['{trait}!はい次!'],
+      competitive: ['{trait}!だから負けたくない!'],
+      showoff: ['{trait}〜!ぴったりでしょ〜?'],
+      shy: ['…{trait}、みたい'],
+      hardworker: ['{trait}!練習大好き!'],
+      romantic: ['{trait}。夢見がちなの']
     },
     mood: {
       great: [],
@@ -50713,7 +51411,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{score}。まあまあね'],
       worrier: ['{score}…低かったかな…'],
       stubborn: ['{score}。納得はしとらん'],
-      easygoing: ['{score}くらい〜']
+      easygoing: ['{score}くらい〜'],
+      fiery: ['{score}!まだまだ上げる!'],
+      cool: ['{score}。想定内'],
+      fickle: ['{score}…だった気がする'],
+      mellow: ['{score}でしたよ、ふふ'],
+      hasty: ['{score}!次はもっとはやく上げる!'],
+      competitive: ['{score}…次はもっと上!'],
+      showoff: ['{score}!なかなかでしょ〜?'],
+      shy: ['…{score}、だった'],
+      hardworker: ['{score}!まだ伸ばせる!'],
+      romantic: ['{score}…夢の途中だよ']
     },
     mood: {
       great: [],
@@ -50734,7 +51442,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{plays}回も私を選ぶなんて当然ね'],
       worrier: ['{plays}回…ご迷惑じゃない…?'],
       stubborn: ['{plays}回。まだ足りん'],
-      easygoing: ['{plays}回〜、ゆるっとね〜']
+      easygoing: ['{plays}回〜、ゆるっとね〜'],
+      fiery: ['{plays}回!全部全力だった!'],
+      cool: ['{plays}回。まだ続ける'],
+      fickle: ['{plays}回?数えてなかったかも'],
+      mellow: ['{plays}回も、ありがたいですね'],
+      hasty: ['{plays}回!もっといける!'],
+      competitive: ['{plays}回!勝ち越したい!'],
+      showoff: ['{plays}回も呼ばれちゃった〜!'],
+      shy: ['…{plays}回、だよ。うれしい'],
+      hardworker: ['{plays}回!積み重ねてきた!'],
+      romantic: ['{plays}回の、素敵な思い出']
     },
     mood: {
       great: [],
@@ -50755,7 +51473,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{me}よ。覚えておきなさい'],
       worrier: ['{me}…だよ。おぼえにくい…?'],
       stubborn: ['{me}だ。二度は言わん'],
-      easygoing: ['{me}〜、よろしく〜']
+      easygoing: ['{me}〜、よろしく〜'],
+      fiery: ['{me}だ!熱いのが取りえ!'],
+      cool: ['{me}。よろしく'],
+      fickle: ['{me}だよ。今日の気分は上々'],
+      mellow: ['{me}です。よろしくお願いしますね'],
+      hasty: ['{me}!はい、覚えた?次!'],
+      competitive: ['{me}だ!覚えとけよ!'],
+      showoff: ['{me}だよ〜!覚えてね〜!'],
+      shy: ['…{me}、です'],
+      hardworker: ['{me}!練習大好き、よろしく!'],
+      romantic: ['{me}。星の名前みたいでしょ']
     },
     mood: {
       great: [],
@@ -50776,7 +51504,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['当たり前よ。でも、ありがと'],
       worrier: ['えっ、ほんとに…?うれしい…'],
       stubborn: ['おだてても何も出んぞ…'],
-      easygoing: ['えへへ〜、ありがと〜']
+      easygoing: ['えへへ〜、ありがと〜'],
+      fiery: ['へへっ、もっと燃えてきた!'],
+      cool: ['…悪い気はしないね'],
+      fickle: ['ほんと?今日の気分、最高かも'],
+      mellow: ['まあ、うれしいです'],
+      hasty: ['ありがと!さ、次!'],
+      competitive: ['へへ…てれるな、でも負けないぞ'],
+      showoff: ['でしょでしょ〜!わかってる〜!'],
+      shy: ['…か、顔が熱い'],
+      hardworker: ['ありがとう!練習のはげみになる!'],
+      romantic: ['心に花が咲いたよ']
     },
     mood: {
       great: ['やったー!!うれしすぎる!!'],
@@ -50797,7 +51535,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['今回は特別に許すわ'],
       worrier: ['だ、だいじょうぶ…ぼくこそごめん…'],
       stubborn: ['謝るな。次で取り返せ'],
-      easygoing: ['いいよ〜、きにしない〜']
+      easygoing: ['いいよ〜、きにしない〜'],
+      fiery: ['いいって!燃えていこう!'],
+      cool: ['大丈夫。気にしてない'],
+      fickle: ['もう忘れちゃったかも'],
+      mellow: ['ふふ、もう大丈夫ですよ'],
+      hasty: ['いいよ!それより次!'],
+      competitive: ['いいよ!次の勝負で返して!'],
+      showoff: ['いいってことよ〜!'],
+      shy: ['…う、ううん、平気'],
+      hardworker: ['いいよ!気にしないで!'],
+      romantic: ['気にしないで。月もときどき欠けるもの']
     },
     mood: {
       great: ['ぜんぜんOK!!'],
@@ -50818,7 +51566,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['ふふっ、悪くないわね'],
       worrier: ['わ、笑うところだったかな…?'],
       stubborn: ['ふっ…悪くない'],
-      easygoing: ['ふふふ〜']
+      easygoing: ['ふふふ〜'],
+      fiery: ['わっはっは!燃えるな!'],
+      cool: ['…今のは、少し笑えた'],
+      fickle: ['なんか笑えてきたかも'],
+      mellow: ['ふふふ、おかしいですね'],
+      hasty: ['あはは!で、次は?'],
+      competitive: ['へへ、勝った気分!'],
+      showoff: ['でしょ?センスあるでしょ〜?'],
+      shy: ['…えへ'],
+      hardworker: ['あはは!楽しいね!'],
+      romantic: ['ふふ、素敵な笑顔']
     },
     mood: {
       great: ['あははは!!最高!!'],
@@ -50839,7 +51597,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['休むのも仕事のうちよ'],
       worrier: ['だ、大丈夫…?休んで…'],
       stubborn: ['休むのも勝負だ'],
-      easygoing: ['いっしょに寝ようか〜']
+      easygoing: ['いっしょに寝ようか〜'],
+      fiery: ['休め!明日また燃えよう!'],
+      cool: ['休んだほうがいい'],
+      fickle: ['寝ちゃうのも、ありかも'],
+      mellow: ['あらあら、少し休みましょうか'],
+      hasty: ['じゃあ寝よ!すぐ寝よ!'],
+      competitive: ['休んで、また勝負しよう!'],
+      showoff: ['おやすみ〜!起きたらまたノろ〜!'],
+      shy: ['…うん、休んでね'],
+      hardworker: ['しっかり休むのも大事!'],
+      romantic: ['星を見ながら、休もう']
     },
     mood: {
       great: [],
@@ -50860,7 +51628,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['私はデザートがいいわ'],
       worrier: ['食べすぎないようにね…'],
       stubborn: ['腹がへっては戦はできん'],
-      easygoing: ['おやつタイムにしよ〜']
+      easygoing: ['おやつタイムにしよ〜'],
+      fiery: ['食べて力をつけるぞ!'],
+      cool: ['何か食べてきなよ'],
+      fickle: ['おやつの気分かも'],
+      mellow: ['おやつにしましょうか'],
+      hasty: ['はやく食べてこよ!'],
+      competitive: ['早食いなら負けない!'],
+      showoff: ['おやつ食べたらもっとノれる〜!'],
+      shy: ['…おやつ、いっしょに…?'],
+      hardworker: ['食べて、練習のつづき!'],
+      romantic: ['月みたいなパンケーキがいいな']
     },
     mood: {
       great: [],
@@ -50881,7 +51659,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['私がついてるのよ。大丈夫'],
       worrier: ['わ、わたしまで悲しくなる…'],
       stubborn: ['乗りこえられる。俺が保証する'],
-      easygoing: ['ゆっくりいこ〜、ここにいるよ〜']
+      easygoing: ['ゆっくりいこ〜、ここにいるよ〜'],
+      fiery: ['元気を分けるぞ!全力で!'],
+      cool: ['…話、聞くよ'],
+      fickle: ['気分は変わるものだよ'],
+      mellow: ['大丈夫ですよ、ここにいますからね'],
+      hasty: ['いっしょに一曲やろ!すぐ!'],
+      competitive: ['悔しいなら、いっしょに巻き返そう!'],
+      showoff: ['元気出して〜!ノリでなんとかなる〜!'],
+      shy: ['…そばに、いるね'],
+      hardworker: ['話してくれたら、力になる!'],
+      romantic: ['夜が明けるまで、そばにいるよ']
     },
     mood: {
       great: [],
@@ -50902,7 +51690,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['当然の結果ね'],
       worrier: ['ほんとに?うれしい…!'],
       stubborn: ['うむ、よくやった'],
-      easygoing: ['よかったね〜']
+      easygoing: ['よかったね〜'],
+      fiery: ['やったな!こっちまで燃える!'],
+      cool: ['よかったね'],
+      fickle: ['なんかうれしくなっちゃった'],
+      mellow: ['まあ、よかったですね'],
+      hasty: ['やった!じゃあ次!'],
+      competitive: ['やったな!負けてられない!'],
+      showoff: ['いいね〜!こっちまでノッてきた〜!'],
+      shy: ['…よかったね。うれしい'],
+      hardworker: ['やったね!がんばったかいがあった!'],
+      romantic: ['素敵!星もお祝いしてるよ']
     },
     mood: {
       great: ['最高だー!!'],
@@ -50923,7 +51721,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['私に任せなさい'],
       worrier: ['が、がんばる…!'],
       stubborn: ['言われなくてもやる'],
-      easygoing: ['おー、がんばる〜']
+      easygoing: ['おー、がんばる〜'],
+      fiery: ['全力でいくぞー!'],
+      cool: ['了解。いこう'],
+      fickle: ['うん、気分がのってきた'],
+      mellow: ['ええ、がんばりましょうね'],
+      hasty: ['いく!今すぐ!'],
+      competitive: ['おう!絶対勝つ!'],
+      showoff: ['まかせて〜!天才におまかせ〜!'],
+      shy: ['…うん、がんばる'],
+      hardworker: ['おう!練習の成果、見せる!'],
+      romantic: ['うん、夢をかなえにいこう']
     },
     mood: {
       great: ['燃えてきたー!!'],
@@ -50944,7 +51752,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['私も取れるけど、今日は譲るわ'],
       worrier: ['わ、わたしにはむりだ…すごい…'],
       stubborn: ['次は俺が取る'],
-      easygoing: ['わ〜すごい〜']
+      easygoing: ['わ〜すごい〜'],
+      fiery: ['すごい!こっちも燃えてきた!'],
+      cool: ['見事だね'],
+      fickle: ['すごい。今日はその人の日かも'],
+      mellow: ['まあ、おじょうずですね'],
+      hasty: ['すごい!はやく次で取りたい!'],
+      competitive: ['くっ…次は負けない!'],
+      showoff: ['やるね〜!でも次はこっちの番〜!'],
+      shy: ['…す、すごい'],
+      hardworker: ['すごい!見習って練習する!'],
+      romantic: ['なんて素敵な演奏…']
     },
     mood: {
       great: ['最高だー!!天才!!'],
@@ -50965,7 +51783,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['私でも、たまにはあるわ'],
       worrier: ['わかる…ぼくも怖い…'],
       stubborn: ['次で取り返せ!'],
-      easygoing: ['まあまあ〜、きにしない〜']
+      easygoing: ['まあまあ〜、きにしない〜'],
+      fiery: ['まだまだ!次は燃えていけ!'],
+      cool: ['気にしない。次がある'],
+      fickle: ['気分、切りかえよっか'],
+      mellow: ['あらあら、大丈夫ですよ'],
+      hasty: ['切りかえ!次!'],
+      competitive: ['ミスしても、取り返せばいい!'],
+      showoff: ['だいじょぶ!ノリでいける〜!'],
+      shy: ['…わかる。見られると、かたくなる'],
+      hardworker: ['練習すれば、こわくなくなる!'],
+      romantic: ['間違えた音も、旋律の一部だよ']
     },
     mood: {
       great: ['つぎがんばろ!!'],
@@ -50986,7 +51814,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['私は平気だけど?'],
       worrier: ['わたしも不安…'],
       stubborn: ['やればできる!あきらめるな!'],
-      easygoing: ['ゆっくり慣れよ〜']
+      easygoing: ['ゆっくり慣れよ〜'],
+      fiery: ['何度でも叩いて燃えよう!'],
+      cool: ['落ち着いて見れば平気'],
+      fickle: ['今日はむずかしい気分の日かも'],
+      mellow: ['ゆっくり慣れていきましょうね'],
+      hasty: ['サクッと何回もやろ!'],
+      competitive: ['難しいなら、なおさら負けない!'],
+      showoff: ['天才なら、なんとかなる〜!'],
+      shy: ['…うん、むずかしいね'],
+      hardworker: ['できるまで練習あるのみ!'],
+      romantic: ['難しい旋律ほど、美しいんだ']
     },
     mood: {
       great: ['がんばれば、いける!!'],
@@ -51007,7 +51845,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['ふふ、私もよ'],
       worrier: ['すごい…うらやましい…'],
       stubborn: ['ならばもう一段上へだ'],
-      easygoing: ['よゆうだね〜']
+      easygoing: ['よゆうだね〜'],
+      fiery: ['なら次は全力で上へ!'],
+      cool: ['なら上の難易度だね'],
+      fickle: ['よゆうの日もあるよね'],
+      mellow: ['あら、たのもしいですね'],
+      hasty: ['じゃあ次!もっと上!'],
+      competitive: ['なら、もっと上で勝負だ!'],
+      showoff: ['さっすが〜!こっちもノッてく〜!'],
+      shy: ['…すごいね'],
+      hardworker: ['なら一つ上の難易度で練習だ!'],
+      romantic: ['軽やかで、素敵だね']
     },
     mood: {
       great: ['ぼくも余裕!!'],
@@ -51028,7 +51876,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['また呼びなさい。待ってるわ'],
       worrier: ['き、気をつけてね…'],
       stubborn: ['また勝負だ'],
-      easygoing: ['ばいばい〜、またね〜']
+      easygoing: ['ばいばい〜、またね〜'],
+      fiery: ['またな!次も燃えるぞ!'],
+      cool: ['またね'],
+      fickle: ['またね。気が向いたら'],
+      mellow: ['お気をつけて、またね'],
+      hasty: ['またね!すぐね!'],
+      competitive: ['またな!次は負けないぞ!'],
+      showoff: ['ばいば〜い!また呼んでね〜!'],
+      shy: ['…ば、ばいばい'],
+      hardworker: ['またね!練習しておく!'],
+      romantic: ['またね。いい夢を']
     },
     mood: {
       great: ['またすぐ遊ぼうね!!'],
@@ -51049,7 +51907,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['私に勝てると思って?'],
       worrier: ['か、勝てるかな…'],
       stubborn: ['引く気はない。やるぞ'],
-      easygoing: ['のんびり勝負しよ〜']
+      easygoing: ['のんびり勝負しよ〜'],
+      fiery: ['おう!全力でやるぞ!'],
+      cool: ['いいよ。落ち着いてやる'],
+      fickle: ['勝負?今日はのった'],
+      mellow: ['ふふ、お手やわらかに'],
+      hasty: ['やる!はやく始めよ!'],
+      competitive: ['望むところだ!今度こそ勝つ!'],
+      showoff: ['いいよ〜!天才に勝てるかな〜?'],
+      shy: ['…う、うん。やってみる'],
+      hardworker: ['いいよ!勝負も練習になる!'],
+      romantic: ['素敵な勝負にしよう']
     },
     mood: {
       great: ['やるぞ!!ぜったい勝つ!!'],
@@ -51070,7 +51938,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['なにか用?'],
       worrier: ['な、なにかあった…?'],
       stubborn: ['なんだ'],
-      easygoing: ['ふぁい〜?']
+      easygoing: ['ふぁい〜?'],
+      fiery: ['おう!どうした!'],
+      cool: ['…なに?'],
+      fickle: ['ん?呼んだ?'],
+      mellow: ['はあい、どうしました?'],
+      hasty: ['なに?はやく!'],
+      competitive: ['ん?勝負か?'],
+      showoff: ['な〜に〜?'],
+      shy: ['…な、なに?'],
+      hardworker: ['はい!なに?'],
+      romantic: ['あら、呼ばれた気がしたの']
     },
     mood: {
       great: ['なんでも聞いて!!'],
@@ -51091,7 +51969,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['私にもわからないことくらいあるわ'],
       worrier: ['ご、ごめん、わからない…'],
       stubborn: ['答えは自分で見つけろ'],
-      easygoing: ['う〜ん、わかんな〜い']
+      easygoing: ['う〜ん、わかんな〜い'],
+      fiery: ['わからん!でも全力だ!'],
+      cool: ['…わからない'],
+      fickle: ['うーん、気分で答えちゃおうかな'],
+      mellow: ['あら、わかりませんね'],
+      hasty: ['わかんない!次の話!'],
+      competitive: ['くっ…わからない、悔しい!'],
+      showoff: ['それ、むずかしすぎ〜!'],
+      shy: ['…えっと…わからない'],
+      hardworker: ['わからない!あとで勉強する!'],
+      romantic: ['謎めいていて、素敵だね']
     },
     mood: {
       great: ['でも楽しいね!!'],
@@ -51112,7 +52000,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{mate}、私についてきなさい'],
       worrier: ['{mate}、足を引っぱったらごめん…'],
       stubborn: ['{mate}、負けんぞ'],
-      easygoing: ['{mate}〜、のんびりいこ〜']
+      easygoing: ['{mate}〜、のんびりいこ〜'],
+      fiery: ['{mate}、いっしょに燃えるぞ!'],
+      cool: ['{mate}、よろしく'],
+      fickle: ['{mate}、今日は気が合いそう'],
+      mellow: ['{mate}さん、仲良くしましょうね'],
+      hasty: ['{mate}、はやく始めよ!'],
+      competitive: ['{mate}、負けないからな!'],
+      showoff: ['{mate}、いっしょにノろ〜!'],
+      shy: ['…{mate}、よろしく'],
+      hardworker: ['{mate}、いっしょに練習しよう!'],
+      romantic: ['{mate}、素敵な出会いだね']
     },
     mood: {
       great: ['{mate}!!今日は最高だね!!'],
@@ -51133,7 +52031,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{who}さん、遅かったじゃない。待ってたわ'],
       worrier: ['{who}さん、き、来てくれたんだ…よかった…'],
       stubborn: ['{who}さんか。足は引っぱるなよ'],
-      easygoing: ['{who}さん、いらっしゃ〜い']
+      easygoing: ['{who}さん、いらっしゃ〜い'],
+      fiery: ['{who}さん、来たか!燃えるぞ!'],
+      cool: ['{who}さん、来たね'],
+      fickle: ['{who}さん、いい時に来たかも'],
+      mellow: ['{who}さん、いらっしゃいませ'],
+      hasty: ['{who}さん、来た!すぐやろ!'],
+      competitive: ['{who}さん、来たな!勝負だ!'],
+      showoff: ['{who}さん、いらっしゃ〜い!見ててね〜!'],
+      shy: ['…あ、{who}さん…こんにちは'],
+      hardworker: ['{who}さん、ようこそ!いっしょにがんばろう!'],
+      romantic: ['{who}さん、素敵な夜にようこそ']
     },
     mood: {
       great: ['{who}さん!!待ってたよ!!'],
@@ -51154,7 +52062,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{who}さん、また来なさいよ'],
       worrier: ['{who}さん、気をつけてね…'],
       stubborn: ['{who}さんか。また来い'],
-      easygoing: ['{who}さん、ばいば〜い']
+      easygoing: ['{who}さん、ばいば〜い'],
+      fiery: ['{who}さん、また燃えにこいよ!'],
+      cool: ['{who}さん、またね'],
+      fickle: ['{who}さん、行っちゃった。ま、いっか'],
+      mellow: ['{who}さん、お気をつけて'],
+      hasty: ['{who}さん、またすぐね!'],
+      competitive: ['{who}さん、次は勝負しような!'],
+      showoff: ['{who}さん、また来てね〜!'],
+      shy: ['…{who}さん、また…ね'],
+      hardworker: ['{who}さん、またいっしょに練習しよう!'],
+      romantic: ['{who}さん、またどこかの星で']
     },
     mood: {
       great: ['{who}さん、楽しかった!!また!!'],
@@ -51175,7 +52093,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{who}さん、{song}とはやるじゃない'],
       worrier: ['{who}さん、{song}…むずかしくない…?'],
       stubborn: ['{who}さん、{song}か。いい度胸だ'],
-      easygoing: ['{who}さん、{song}いいね〜']
+      easygoing: ['{who}さん、{song}いいね〜'],
+      fiery: ['{who}さん、{song}か!燃えるな!'],
+      cool: ['{who}さん、{song}だね。問題ない'],
+      fickle: ['{who}さん、{song}?いい気分かも'],
+      mellow: ['{who}さん、{song}、すてきですね'],
+      hasty: ['{who}さん、{song}!すぐいこ!'],
+      competitive: ['{who}さん、{song}か!負けない!'],
+      showoff: ['{who}さん、{song}とはノれるね〜!'],
+      shy: ['…{who}さん、{song}…好き'],
+      hardworker: ['{who}さん、{song}だね!練習の成果を見せる!'],
+      romantic: ['{who}さん、{song}…素敵な選曲']
     },
     mood: {
       great: ['{who}さん!{song}!最高!!'],
@@ -51196,7 +52124,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{who}さん、私が選んであげてもいいわよ'],
       worrier: ['{who}さん、むずかしい曲がきたらどうしよう…'],
       stubborn: ['{who}さん、決めきれんのか'],
-      easygoing: ['{who}さん、おまかせでいいよね〜']
+      easygoing: ['{who}さん、おまかせでいいよね〜'],
+      fiery: ['{who}さん、おまかせか!なんでも全力だ!'],
+      cool: ['{who}さん、おまかせか。いいよ'],
+      fickle: ['{who}さん、おまかせ大好きかも'],
+      mellow: ['{who}さん、おまかせ、楽しみですね'],
+      hasty: ['{who}さん、おまかせ!はやい!いいね!'],
+      competitive: ['{who}さん、おまかせ?何が来ても勝つ!'],
+      showoff: ['{who}さん、おまかせ〜!何でもノれる〜!'],
+      shy: ['…{who}さん、おまかせ…どきどき'],
+      hardworker: ['{who}さん、おまかせ!どの曲も練習だ!'],
+      romantic: ['{who}さん、運命の一曲だね']
     },
     mood: {
       great: [],
@@ -51217,7 +52155,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{who}さん、やるじゃない。次は私が上よ'],
       worrier: ['{who}さん、すごい…わたしにはむりだ…'],
       stubborn: ['{who}さん、見事だ。次は負けん'],
-      easygoing: ['{who}さん、すごいね〜MVP〜']
+      easygoing: ['{who}さん、すごいね〜MVP〜'],
+      fiery: ['{who}さん、MVPか!熱いな!'],
+      cool: ['{who}さん、MVP。さすがだね'],
+      fickle: ['{who}さん、今日はついてる日かも'],
+      mellow: ['{who}さん、まあ、MVPですって'],
+      hasty: ['{who}さん、MVP!次もすぐね!'],
+      competitive: ['{who}さん、くっ…次はこっちが取る!'],
+      showoff: ['{who}さん、やるね〜!次はこっちね〜!'],
+      shy: ['…{who}さん、すごい'],
+      hardworker: ['{who}さん、すごい!見習う!'],
+      romantic: ['{who}さん、星みたいに輝いてた']
     },
     mood: {
       great: ['{who}さん最高!!MVP!!'],
@@ -51238,7 +52186,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{who}さん、悪くないわね'],
       worrier: ['{who}さん、すごい…ミスしてなかった…'],
       stubborn: ['{who}さん、よくやった'],
-      easygoing: ['{who}さん、うまいね〜']
+      easygoing: ['{who}さん、うまいね〜'],
+      fiery: ['{who}さん、熱い演奏だった!'],
+      cool: ['{who}さん、正確だったね'],
+      fickle: ['{who}さん、今日は気分のってたね'],
+      mellow: ['{who}さん、おじょうずでした'],
+      hasty: ['{who}さん、うまい!はやかった!'],
+      competitive: ['{who}さん、やるな!負けてられない!'],
+      showoff: ['{who}さん、ノッてたね〜!'],
+      shy: ['…{who}さん、じょうず'],
+      hardworker: ['{who}さん、いい演奏!練習のたまもの?'],
+      romantic: ['{who}さん、素敵な音だった']
     },
     mood: {
       great: ['{who}さん最高!!'],
@@ -51259,7 +52217,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{who}さん、あなたならできるわ'],
       worrier: ['{who}さん、だ、だいじょうぶ…?'],
       stubborn: ['{who}さん、あきらめるな。次だ'],
-      easygoing: ['{who}さん、どんまい〜']
+      easygoing: ['{who}さん、どんまい〜'],
+      fiery: ['{who}さん、まだまだこれからだ!'],
+      cool: ['{who}さん、次は直せるよ'],
+      fickle: ['{who}さん、気分の問題かもよ'],
+      mellow: ['{who}さん、そういう日もありますよ'],
+      hasty: ['{who}さん、すぐ次!次!'],
+      competitive: ['{who}さん、次で巻き返そう!'],
+      showoff: ['{who}さん、次はノれるって〜!'],
+      shy: ['…{who}さん、げ、元気だして'],
+      hardworker: ['{who}さん、いっしょに練習しよう!'],
+      romantic: ['{who}さん、夜明けはきっと来るよ']
     },
     mood: {
       great: ['{who}さん、次はいける!!'],
@@ -51280,7 +52248,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{who}さん、やるわね。認めてあげる'],
       worrier: ['{who}さん、すごい…ほんとに人間…?'],
       stubborn: ['{who}さん、見事だ。脱帽だ'],
-      easygoing: ['{who}さん、フルコンすごいね〜']
+      easygoing: ['{who}さん、フルコンすごいね〜'],
+      fiery: ['{who}さん、フルコン!燃えるな!'],
+      cool: ['{who}さん、フルコンか。見事'],
+      fickle: ['{who}さん、フルコン?明日もいけそうかも'],
+      mellow: ['{who}さん、フルコンですって、まあ'],
+      hasty: ['{who}さん、フルコン!はやっ!'],
+      competitive: ['{who}さん、フルコンか…くっ、負けない!'],
+      showoff: ['{who}さん、フルコン!天才じゃん〜!'],
+      shy: ['…{who}さん、フルコン…すごい'],
+      hardworker: ['{who}さん、フルコン!練習の成果だね!'],
+      romantic: ['{who}さん、フルコン…夢みたい']
     },
     mood: {
       great: ['{who}さん!!最高!!フルコン!!'],
@@ -51301,7 +52279,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{who}さん、たまにはそんな日もあるわ'],
       worrier: ['{who}さん、だ、大丈夫…?なにかあった…?'],
       stubborn: ['{who}さん、次は最後までやれ'],
-      easygoing: ['{who}さん、ゆっくりでいいよ〜']
+      easygoing: ['{who}さん、ゆっくりでいいよ〜'],
+      fiery: ['{who}さん、次は最後まで燃えよう!'],
+      cool: ['{who}さん、大丈夫?'],
+      fickle: ['{who}さん、気分が変わったのかな'],
+      mellow: ['{who}さん、ご無理なさらずに'],
+      hasty: ['{who}さん、どうした?はやく戻って!'],
+      competitive: ['{who}さん、勝負はおあずけだな'],
+      showoff: ['{who}さん、また戻ってきてね〜!'],
+      shy: ['…{who}さん、また、来てね'],
+      hardworker: ['{who}さん、また今度いっしょに!'],
+      romantic: ['{who}さん、また旋律の中で会おう']
     },
     mood: {
       great: ['{who}さん、次は最後まで!!'],
@@ -51322,7 +52310,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{who}さん、私の演奏、期待してなさい'],
       worrier: ['{who}さん、ぼ、ぼく足を引っぱってない…?'],
       stubborn: ['{who}さん、手は抜くなよ'],
-      easygoing: ['{who}さ〜ん、のんびりいこ〜']
+      easygoing: ['{who}さ〜ん、のんびりいこ〜'],
+      fiery: ['{who}さん、今日も全力でいくぞ!'],
+      cool: ['{who}さん、落ち着いていこう'],
+      fickle: ['{who}さん、今日はなんかいけそう'],
+      mellow: ['{who}さん、ゆっくり楽しみましょうね'],
+      hasty: ['{who}さん、はやく次いこ!'],
+      competitive: ['{who}さん、次の曲で勝負だ!'],
+      showoff: ['{who}さん、見ててね〜!'],
+      shy: ['…{who}さん、あの…'],
+      hardworker: ['{who}さん、今日もコツコツいこう!'],
+      romantic: ['{who}さん、いい夜だね']
     },
     mood: {
       great: ['{who}さん!!今日は最高だね!!'],
@@ -51343,7 +52341,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{topic}の話でしょ。覚えてるわよ'],
       worrier: ['え、{topic}の話…だったよね?'],
       stubborn: ['{topic}の話だったな'],
-      easygoing: ['{topic}の話だっけ〜?のんびり覚えてる〜']
+      easygoing: ['{topic}の話だっけ〜?のんびり覚えてる〜'],
+      fiery: ['{topic}の話だ!熱かったな!'],
+      cool: ['{topic}の話だったね'],
+      fickle: ['{topic}の話…だったかも'],
+      mellow: ['{topic}のお話でしたね、ふふ'],
+      hasty: ['{topic}の話!覚えてる!'],
+      competitive: ['{topic}の話だろ?覚えてる!'],
+      showoff: ['{topic}の話!記憶力も天才〜!'],
+      shy: ['…{topic}の、話…だよね'],
+      hardworker: ['{topic}の話!ちゃんと覚えてる!'],
+      romantic: ['{topic}の話…素敵だったね']
     },
     mood: {
       great: ['{topic}の話!!ちゃんと覚えてるよ!!'],
@@ -51364,7 +52372,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['まだ何も話してないわ。話しかけなさい'],
       worrier: ['え、ま、まだ何も話してない…よね?'],
       stubborn: ['まだ話していないな'],
-      easygoing: ['まだ何も話してないよ〜']
+      easygoing: ['まだ何も話してないよ〜'],
+      fiery: ['まだだ!何でも熱く答えるぞ!'],
+      cool: ['まだ何も話してないよ'],
+      fickle: ['まだ話してない…よね、たぶん'],
+      mellow: ['まだお話ししていませんよ'],
+      hasty: ['まだ!はやく話そ!'],
+      competitive: ['まだ何も話してないぞ!'],
+      showoff: ['まだだよ〜!話そ話そ〜!'],
+      shy: ['…ま、まだ、何も…'],
+      hardworker: ['まだ話してないよ!今から話そう!'],
+      romantic: ['まだ物語は始まってないよ']
     },
     mood: {
       great: ['まだだよ!!今から話そう!!'],
@@ -51385,7 +52403,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{plays}回も私を選ぶなんて、見る目があるわ'],
       worrier: ['{plays}回もいっしょ…ありがとう…'],
       stubborn: ['{plays}回目か。悪くない'],
-      easygoing: ['{plays}回目〜、もう慣れっこだね〜']
+      easygoing: ['{plays}回目〜、もう慣れっこだね〜'],
+      fiery: ['{plays}回も!まだまだ燃えるぞ!'],
+      cool: ['{plays}回。長い付き合いだね'],
+      fickle: ['{plays}回?気づいたらそんなに'],
+      mellow: ['{plays}回も、ありがとうございます'],
+      hasty: ['{plays}回!あっという間!'],
+      competitive: ['{plays}回か!まだまだ上をめざす!'],
+      showoff: ['{plays}回も!ご指名ありがと〜!'],
+      shy: ['…{plays}回も…うれしい'],
+      hardworker: ['{plays}回!一回一回が積み重ね!'],
+      romantic: ['{plays}回…夢みたいな日々だね']
     },
     mood: {
       great: ['{plays}回目!!最高の仲間だね!!'],
@@ -51406,7 +52434,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{plays}回目の私に、期待しなさい'],
       worrier: ['{plays}回目なのに、まだ緊張する…'],
       stubborn: ['{plays}回目か。今日もやるぞ'],
-      easygoing: ['{plays}回目〜、今日ものんびり〜']
+      easygoing: ['{plays}回目〜、今日ものんびり〜'],
+      fiery: ['{plays}回目も全力だ!'],
+      cool: ['{plays}回目。いつもどおりいく'],
+      fickle: ['{plays}回目、今日の気分は上々'],
+      mellow: ['{plays}回目ですね、うれしいです'],
+      hasty: ['{plays}回目!はやく始めよ!'],
+      competitive: ['{plays}回目!今日こそ一番だ!'],
+      showoff: ['{plays}回目!今日もノッてくよ〜!'],
+      shy: ['…{plays}回目。少し慣れた'],
+      hardworker: ['{plays}回目!今日も練習あるのみ!'],
+      romantic: ['{plays}回目の、素敵な時間']
     },
     mood: {
       great: ['{plays}回目!!張り切っていくよ!!'],
@@ -51427,7 +52465,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['おはよう。朝から私と遊べるなんて幸運よ'],
       worrier: ['お、おはよう…早いね…'],
       stubborn: ['おはよう。朝は嫌いじゃない'],
-      easygoing: ['おはよ〜…まだちょっとねむい〜']
+      easygoing: ['おはよ〜…まだちょっとねむい〜'],
+      fiery: ['おはよう!朝から燃えてるぞ!'],
+      cool: ['おはよう。朝は静かでいい'],
+      fickle: ['おはよ。朝の気分、悪くないかも'],
+      mellow: ['おはようございます、いい朝ですね'],
+      hasty: ['おはよ!朝からサクッといこ!'],
+      competitive: ['おはよう!朝から勝ちにいく!'],
+      showoff: ['おはよ〜!朝からノリノリ〜!'],
+      shy: ['…お、おはよう'],
+      hardworker: ['おはよう!朝練しよう!'],
+      romantic: ['おはよう。朝日がきれいだね']
     },
     mood: {
       great: ['おはよう!!最高の朝だね!!'],
@@ -51448,7 +52496,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['こんにちは。昼の私も輝いてるわよ'],
       worrier: ['こ、こんにちは…昼でも緊張する…'],
       stubborn: ['こんにちは。昼でもやるときはやる'],
-      easygoing: ['こんにちは〜、お昼ごはんのあとは眠いね〜']
+      easygoing: ['こんにちは〜、お昼ごはんのあとは眠いね〜'],
+      fiery: ['こんにちは!昼も熱いぞ!'],
+      cool: ['こんにちは。調子は問題ない'],
+      fickle: ['こんにちは。お昼はなんとなく好き'],
+      mellow: ['こんにちは、ごはんは食べましたか?'],
+      hasty: ['こんにちは!昼休み短いし、はやく!'],
+      competitive: ['こんにちは!昼も負けないぞ!'],
+      showoff: ['こんにちは〜!昼もノッてるよ〜!'],
+      shy: ['…こ、こんにちは'],
+      hardworker: ['こんにちは!昼も練習がんばろう!'],
+      romantic: ['こんにちは。空がすみきってるね']
     },
     mood: {
       great: ['こんにちは!!元気いっぱいだよ!!'],
@@ -51469,7 +52527,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['こんばんは。夜の舞台は私の出番ね'],
       worrier: ['こんばんは…夜はちょっと緊張するね…'],
       stubborn: ['こんばんは。夜こそ本番だ'],
-      easygoing: ['こんばんは〜、まったり遊ぼ〜']
+      easygoing: ['こんばんは〜、まったり遊ぼ〜'],
+      fiery: ['こんばんは!夜もまだまだ燃える!'],
+      cool: ['こんばんは。落ち着く時間だね'],
+      fickle: ['こんばんは。夜は気分が変わるかも'],
+      mellow: ['こんばんは、今日もよくがんばりましたね'],
+      hasty: ['こんばんは!寝る前にサクッと!'],
+      competitive: ['こんばんは!夜も勝負だ!'],
+      showoff: ['こんばんは〜!夜は天才タイム〜!'],
+      shy: ['…こんばんは。夜は、静かでいいね'],
+      hardworker: ['こんばんは!今日の練習、仕上げよう!'],
+      romantic: ['こんばんは。星がきれいな夜だね']
     },
     mood: {
       great: ['こんばんは!!夜も最高!!'],
@@ -51490,7 +52558,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['こんな時間まで起きてるなんて、やるじゃない'],
       worrier: ['こんな時間…明日だいじょうぶ…?'],
       stubborn: ['夜ふかしか。ほどほどにな'],
-      easygoing: ['ふぁ…もう夜おそいね〜']
+      easygoing: ['ふぁ…もう夜おそいね〜'],
+      fiery: ['こんな時間でも燃えてるぞ!'],
+      cool: ['遅いね。ほどほどに'],
+      fickle: ['夜ふかしの気分かも'],
+      mellow: ['あらあら、夜ふかしさんですね'],
+      hasty: ['夜おそい!はやく一曲やって寝よ!'],
+      competitive: ['こんな時間でも負けないぞ!'],
+      showoff: ['夜ふかし〜!テンション上がる〜!'],
+      shy: ['…夜おそいと、人が少なくて落ち着く'],
+      hardworker: ['夜おそいね!練習はほどほどに!'],
+      romantic: ['月が高いね。夢の時間だ']
     },
     mood: {
       great: ['夜ふかしライブ!!テンション上がる!!'],
@@ -51511,7 +52589,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['Lv.{lv}。当然の結果ね'],
       worrier: ['Lv.{lv}…ほんとに?うれしい…'],
       stubborn: ['Lv.{lv}か。まだまだこれからだ'],
-      easygoing: ['Lv.{lv}だって〜、やったね〜']
+      easygoing: ['Lv.{lv}だって〜、やったね〜'],
+      fiery: ['Lv.{lv}!燃えた分だけ上がった!'],
+      cool: ['Lv.{lv}。計算どおり'],
+      fickle: ['Lv.{lv}?いつのまに'],
+      mellow: ['Lv.{lv}ですって、うれしいですね'],
+      hasty: ['Lv.{lv}!もう次のLv!'],
+      competitive: ['Lv.{lv}!次はもっと上だ!'],
+      showoff: ['Lv.{lv}!やっぱ天才かも〜!'],
+      shy: ['…Lv.{lv}…ちょっと、うれしい'],
+      hardworker: ['Lv.{lv}!練習が実った!'],
+      romantic: ['Lv.{lv}…星に一歩近づいた']
     },
     mood: {
       great: ['Lv.{lv}!!最高にうれしい!!'],
@@ -51532,10 +52620,51 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{trait}…ふふ、私にぴったりね'],
       worrier: ['{trait}…ぼくで、いいのかな…'],
       stubborn: ['{trait}か。受け入れよう'],
-      easygoing: ['{trait}らしいよ〜、のんびりいこ〜']
+      easygoing: ['{trait}らしいよ〜、のんびりいこ〜'],
+      fiery: ['{trait}か!燃えてきた!'],
+      cool: ['{trait}。問題ない'],
+      fickle: ['{trait}…明日は変わるかもね'],
+      mellow: ['{trait}だそうです。いいですね'],
+      hasty: ['{trait}!わかった!次!'],
+      competitive: ['{trait}だって!負けないぞ!'],
+      showoff: ['{trait}!まさにそれ〜!'],
+      shy: ['…{trait}、だって'],
+      hardworker: ['{trait}!これからもコツコツ!'],
+      romantic: ['{trait}…なんて素敵な響き']
     },
     mood: {
       great: ['{trait}!!わたしの性格、気に入った!!'],
+      good: [],
+      normal: [],
+      bad: [],
+      awful: []
+    }
+  },
+  sproutNew: {
+    common: ['最近、{sprout}っぽいって言われるんだ', 'なんだか{sprout}っぽくなってきたかも', '{sprout}っぽい?まだ分からないけどね', '性格の芽が出たみたい。{sprout}っぽいって!'],
+    trait: {
+      jester: ['{sprout}っぽい?ウケるね!'],
+      brave: ['{sprout}っぽいか!悪くない!'],
+      clingy: ['{sprout}っぽいって〜!どうかな〜?'],
+      smart: ['{sprout}の傾向が見えてきました'],
+      serious: ['{sprout}の兆しがあるそうです'],
+      proud: ['{sprout}っぽい?当然ね'],
+      worrier: ['{sprout}っぽい…のかな…'],
+      stubborn: ['{sprout}っぽい、か。ふむ'],
+      easygoing: ['{sprout}っぽいんだって〜'],
+      fiery: ['{sprout}っぽいって!燃えてきた!'],
+      cool: ['{sprout}っぽい…か。悪くない'],
+      fickle: ['{sprout}っぽい?気分次第かも'],
+      mellow: ['あらあら、{sprout}っぽいそうです'],
+      hasty: ['{sprout}っぽい!はやく決まらないかな!'],
+      competitive: ['{sprout}っぽい?負けないぞ!'],
+      showoff: ['{sprout}っぽいって!天才かも!'],
+      shy: ['…{sprout}っぽい、って…'],
+      hardworker: ['{sprout}っぽいって!もっと練習しよう!'],
+      romantic: ['{sprout}っぽい…なんて素敵な響き']
+    },
+    mood: {
+      great: ['{sprout}っぽいって!!うれしい!!'],
       good: [],
       normal: [],
       bad: [],
@@ -51553,7 +52682,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{mate}、私に勝てると思ってるの?'],
       worrier: ['{mate}、強そう…でも負けない…'],
       stubborn: ['{mate}、勝つのはこっちだ'],
-      easygoing: ['{mate}〜、ほどほどに勝負しよ〜']
+      easygoing: ['{mate}〜、ほどほどに勝負しよ〜'],
+      fiery: ['{mate}、どっちが熱いか見せよう!'],
+      cool: ['{mate}、落ち着いていくよ'],
+      fickle: ['{mate}、今日は負ける気がしないかも'],
+      mellow: ['{mate}さん、お手やわらかにね'],
+      hasty: ['{mate}、先にいくよ!'],
+      competitive: ['{mate}、今度こそ勝つ!'],
+      showoff: ['{mate}、天才の本気、見せちゃう〜!'],
+      shy: ['…{mate}、負けない、よ'],
+      hardworker: ['{mate}、勝負!いい練習になる!'],
+      romantic: ['{mate}と、素敵な勝負を']
     },
     mood: {
       great: ['{mate}!!絶対負けないからね!!'],
@@ -51574,7 +52713,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{mate}、あなたとなら悪くないわ'],
       worrier: ['{mate}がいてくれて、ほっとする…'],
       stubborn: ['{mate}か。頼りにしてるぞ'],
-      easygoing: ['{mate}〜、いっしょにのんびりしよ〜']
+      easygoing: ['{mate}〜、いっしょにのんびりしよ〜'],
+      fiery: ['{mate}といると力がわく!'],
+      cool: ['{mate}となら問題ない'],
+      fickle: ['{mate}といると気分がいい'],
+      mellow: ['{mate}さんと一緒で、うれしいです'],
+      hasty: ['{mate}、いっしょにサクッといこ!'],
+      competitive: ['{mate}、組んでも負けないぞ!'],
+      showoff: ['{mate}、二人でノリノリいこ〜!'],
+      shy: ['…{mate}といると、落ち着く'],
+      hardworker: ['{mate}、二人でコツコツいこう!'],
+      romantic: ['{mate}と奏でる、二人の旋律']
     },
     mood: {
       great: ['{mate}!!大好き!!いっしょに叩こう!!'],
@@ -51595,7 +52744,17 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       proud: ['{who}さん、私もたまにミスするわよ…たまにね'],
       worrier: ['{who}さん、ぼくもよくミスするから大丈夫…'],
       stubborn: ['{who}さん、次がある'],
-      easygoing: ['{who}さん、気にしない気にしない〜']
+      easygoing: ['{who}さん、気にしない気にしない〜'],
+      fiery: ['{who}さん、取り返そう!全力で!'],
+      cool: ['{who}さん、気にしなくていい'],
+      fickle: ['{who}さん、明日は得意な日かもよ'],
+      mellow: ['{who}さん、だいじょうぶですよ'],
+      hasty: ['{who}さん、切りかえ!はやく!'],
+      competitive: ['{who}さん、次で取り返そう!'],
+      showoff: ['{who}さん、ドンマイ〜!次ノれる〜!'],
+      shy: ['…{who}さん、き、気にしないで'],
+      hardworker: ['{who}さん、練習あるのみだよ!'],
+      romantic: ['{who}さん、ミスも素敵な音のうち']
     },
     mood: {
       great: ['{who}さん!!次は絶対いける!!'],
@@ -51619,7 +52778,17 @@ const RHYTHM_BUDDY_SELF_WORDS = Object.freeze({
   proud: Object.freeze(['わたし', 'わたくし', 'おれ']),
   worrier: Object.freeze(['ぼく', 'わたし', 'あたし', 'うち']),
   stubborn: Object.freeze(['おれ', 'わし', '拙者', '自分']),
-  easygoing: Object.freeze(['ぼく', 'うち', 'わし', 'あたし'])
+  easygoing: Object.freeze(['ぼく', 'うち', 'わし', 'あたし']),
+  fiery: Object.freeze(['おれ', 'ぼく', 'あたし']),
+  cool: Object.freeze(['ぼく', 'わたし', 'おれ']),
+  fickle: Object.freeze(['ぼく', 'あたし', 'うち', 'おれ']),
+  mellow: Object.freeze(['わたし', 'わたくし', 'ぼく']),
+  hasty: Object.freeze(['おれ', 'ぼく', 'あたし', 'うち']),
+  competitive: Object.freeze(['おれ', 'ぼく', 'あたし']),
+  showoff: Object.freeze(['オイラ', 'おれ', 'ぼく', 'あたし']),
+  shy: Object.freeze(['ぼく', 'わたし', 'うち']),
+  hardworker: Object.freeze(['ぼく', 'わたし', '自分', 'あたし']),
+  romantic: Object.freeze(['ぼく', 'わたし', 'わたくし'])
 });
 const RHYTHM_BUDDY_FEMALE_LINEAGES = Object.freeze(['pixie', 'undine']);
 const rhythmBuddyGenderOf = baseId => {
@@ -51637,7 +52806,17 @@ const RHYTHM_BUDDY_SELF_WORDS_FEMALE = Object.freeze({
   proud: Object.freeze(['わたし', 'わたくし', 'あたし']),
   worrier: Object.freeze(['わたし', 'あたし', 'うち']),
   stubborn: Object.freeze(['あたし', 'わたし', 'うち']),
-  easygoing: Object.freeze(['うち', 'あたし', 'わたし'])
+  easygoing: Object.freeze(['うち', 'あたし', 'わたし']),
+  fiery: Object.freeze(['あたし', 'わたし', 'うち']),
+  cool: Object.freeze(['わたし', 'あたし']),
+  fickle: Object.freeze(['あたし', 'うち', 'わたし']),
+  mellow: Object.freeze(['わたし', 'わたくし']),
+  hasty: Object.freeze(['あたし', 'うち', 'わたし']),
+  competitive: Object.freeze(['あたし', 'わたし', 'うち']),
+  showoff: Object.freeze(['あたし', 'うち', 'わたし']),
+  shy: Object.freeze(['わたし', 'うち']),
+  hardworker: Object.freeze(['わたし', 'あたし']),
+  romantic: Object.freeze(['わたし', 'わたくし', 'あたし'])
 });
 const RHYTHM_BUDDY_CALL_STYLES = Object.freeze({
   san: Object.freeze({
@@ -51706,7 +52885,17 @@ const RHYTHM_BUDDY_CALLS = Object.freeze({
   proud: Object.freeze(['bare', 'kun', 'chan']),
   worrier: Object.freeze(['san', 'kun', 'chan', 'master']),
   stubborn: Object.freeze(['bare', 'partner', 'dono']),
-  easygoing: Object.freeze(['san', 'kun', 'chan', 'cchi'])
+  easygoing: Object.freeze(['san', 'kun', 'chan', 'cchi']),
+  fiery: Object.freeze(['bare', 'partner', 'boss']),
+  cool: Object.freeze(['san', 'bare', 'partner']),
+  fickle: Object.freeze(['kun', 'chan', 'cchi', 'san']),
+  mellow: Object.freeze(['san', 'sama', 'chan']),
+  hasty: Object.freeze(['bare', 'kun', 'boss']),
+  competitive: Object.freeze(['bare', 'kun', 'partner']),
+  showoff: Object.freeze(['chan', 'cchi', 'boss', 'partner']),
+  shy: Object.freeze(['san', 'kun', 'master']),
+  hardworker: Object.freeze(['san', 'master', 'partner']),
+  romantic: Object.freeze(['san', 'lord', 'sama'])
 });
 const RHYTHM_BUDDY_QUIRKS = Object.freeze({
   '': Object.freeze([{
@@ -51800,6 +52989,78 @@ const RHYTHM_BUDDY_QUIRKS = Object.freeze({
     end: '〜'
   }, {
     end: '♪'
+  }]),
+  fiery: Object.freeze([{
+    pre: 'よっしゃ、'
+  }, {
+    pre: 'うおお、'
+  }, {
+    end: '!!'
+  }]),
+  cool: Object.freeze([{
+    pre: 'ふっ、'
+  }, {
+    pre: 'さて、'
+  }, {
+    end: '…'
+  }]),
+  fickle: Object.freeze([{
+    pre: 'んー、'
+  }, {
+    pre: 'あ、そうだ、'
+  }, {
+    end: '…かも'
+  }, {
+    end: '♪'
+  }]),
+  mellow: Object.freeze([{
+    pre: 'あらあら、'
+  }, {
+    pre: 'ふふ、'
+  }, {
+    pre: 'そうですね、'
+  }]),
+  hasty: Object.freeze([{
+    pre: 'はやく、'
+  }, {
+    pre: 'よし次、'
+  }, {
+    end: '!'
+  }]),
+  competitive: Object.freeze([{
+    pre: 'くっ、'
+  }, {
+    pre: '見てろ、'
+  }, {
+    end: '!!'
+  }]),
+  showoff: Object.freeze([{
+    pre: 'ねえ見た?、'
+  }, {
+    pre: 'じゃーん、'
+  }, {
+    end: '♪'
+  }]),
+  shy: Object.freeze([{
+    pre: 'あ、あの、'
+  }, {
+    pre: 'えっと…、'
+  }, {
+    end: '…'
+  }]),
+  hardworker: Object.freeze([{
+    pre: 'よし、'
+  }, {
+    pre: 'コツコツ、'
+  }, {
+    end: '!'
+  }]),
+  romantic: Object.freeze([{
+    pre: 'ああ、'
+  }, {
+    pre: 'ねえ、'
+  }, {
+    end: '…♪'
   }])
 });
 const RHYTHM_BUDDY_HABITS = Object.freeze([Object.freeze({
@@ -51968,7 +53229,17 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = {
       proud: ['{who}さん、{self}を呼ぶとはお目が高いわ', '{self}の出番ね'],
       worrier: ['{who}さん、{self}でいいのかな…がんばる!', '{self}、足を引っぱらないようにする…'],
       stubborn: ['{who}さん、{self}が来たぞ', '{self}は手を抜かんぞ'],
-      easygoing: ['{who}さん、{self}も来たよ〜', '{self}、のんびりがんばるね〜']
+      easygoing: ['{who}さん、{self}も来たよ〜', '{self}、のんびりがんばるね〜'],
+      fiery: ['{who}さん、{self}が来たぞ!燃えるぞ!', '{self}、全力で叩く!'],
+      cool: ['{who}さん、{self}も来たよ', '{self}、いつでもいける'],
+      fickle: ['{who}さん、{self}、なんとなく来たよ', '{self}の気分、今日はいいかも'],
+      mellow: ['{who}さん、{self}も来ましたよ', '{self}、ていねいにがんばりますね'],
+      hasty: ['{who}さん、{self}来た!はやく!', '{self}、すぐ始めたい!'],
+      competitive: ['{who}さん、{self}が来たからには勝つ!', '{self}、今日こそ負けない!'],
+      showoff: ['{who}さん、{self}が来たよ〜!見ててね〜!', '{self}、今日もノッてるよ〜!'],
+      shy: ['…{who}さん、{self}も…来たよ', '{self}、ちょっと緊張…'],
+      hardworker: ['{who}さん、{self}も練習してきた!', '{self}、今日もコツコツがんばる!'],
+      romantic: ['{who}さん、{self}も旋律に呼ばれたの', '{self}、素敵な時間を過ごしたいな']
     },
     mood: {}
   },
@@ -51983,7 +53254,17 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = {
       proud: ['{like}は{self}のための曲よ', '{self}といえば{like}でしょ?'],
       worrier: ['{like}なら、{self}も安心…', '{self}、{like}は好きなんだ…'],
       stubborn: ['{like}は{self}の曲だ', '{self}は{like}と決めている'],
-      easygoing: ['{like}、{self}の好きな曲〜', '{self}、{like}がいいな〜']
+      easygoing: ['{like}、{self}の好きな曲〜', '{self}、{like}がいいな〜'],
+      fiery: ['{like}は{self}が一番燃える曲だ!', '{self}の{like}、全力でいくぞ!'],
+      cool: ['{like}は{self}の好きな曲', '{self}、{like}なら問題ない'],
+      fickle: ['{like}…{self}、今日は好きかも', '{self}、なんとなく{like}が好き'],
+      mellow: ['{like}は{self}の好きな曲なんです', '{self}、{like}がお気に入りですよ'],
+      hasty: ['{like}!{self}の好きなやつ!はやく!', '{self}、{like}ならすぐやる!'],
+      competitive: ['{like}なら、{self}は負けない!', '{self}、{like}でリベンジしたい!'],
+      showoff: ['{like}は{self}の得意曲〜!', '{self}といえば{like}でしょでしょ!'],
+      shy: ['…{like}、{self}の好きな曲', '…{like}だと、{self}もほっとする'],
+      hardworker: ['{like}は{self}が一番練習した曲!', '{self}、{like}をもっとやりこみたい!'],
+      romantic: ['{like}は{self}の宝物の曲', '{self}、{like}の旋律が大好き']
     },
     mood: {}
   },
@@ -51998,7 +53279,17 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = {
       proud: ['{dislike}?べ、別に苦手じゃないわ', '{dislike}くらい、どうってことないわ'],
       worrier: ['{dislike}…{self}、自信ないよ…', '{dislike}、またミスしそう…'],
       stubborn: ['{dislike}か。今日こそ勝つぞ', '苦手な{dislike}でも引かん'],
-      easygoing: ['{dislike}か〜、ちょっと苦手〜', 'まあ、{dislike}もいっか〜']
+      easygoing: ['{dislike}か〜、ちょっと苦手〜', 'まあ、{dislike}もいっか〜'],
+      fiery: ['{dislike}か!苦手でも燃えるぞ!', '苦手な{dislike}にも全力だ!'],
+      cool: ['{dislike}か。…まあ、問題ない', '{dislike}は苦手。でも落ち着いていく'],
+      fickle: ['{dislike}…今日は苦手な気分かも', '{dislike}?明日なら好きかも'],
+      mellow: ['{dislike}は、ちょっと苦手なんです', 'あらあら、{dislike}ですか'],
+      hasty: ['{dislike}!サクッと終わらせよ!', '{dislike}は苦手!はやく次!'],
+      competitive: ['{dislike}…くっ、今度こそ!', '{dislike}にはリベンジしたい!'],
+      showoff: ['{dislike}?ま、なんとかなるっしょ〜', '{dislike}でもノれ…るかな〜?'],
+      shy: ['…{dislike}、ちょっとにがて', '{dislike}…う、うん、やる'],
+      hardworker: ['{dislike}、苦手だから練習だ!', '{self}、{dislike}を特訓中!'],
+      romantic: ['{dislike}…まだ心がとどかない曲', '{dislike}の旋律、いつか好きになりたい']
     },
     mood: {}
   },
@@ -52013,7 +53304,17 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = {
       proud: ['{hg}わ。当然ね'],
       worrier: ['{hg}…よかったぁ'],
       stubborn: ['{hg}のが効いたぞ'],
-      easygoing: ['{hg}〜。いい感じ〜']
+      easygoing: ['{hg}〜。いい感じ〜'],
+      fiery: ['{hg}!燃えたぞ!'],
+      cool: ['{hg}。計算どおり'],
+      fickle: ['{hg}、気分がよかったのかも'],
+      mellow: ['{hg}のが、よかったですね'],
+      hasty: ['{hg}!よし次!'],
+      competitive: ['{hg}!前より上だ!'],
+      showoff: ['{hg}!見た?見た?'],
+      shy: ['…{hg}。よかった'],
+      hardworker: ['{hg}!練習どおり!'],
+      romantic: ['{hg}…夢みたい']
     },
     mood: {}
   },
@@ -52028,7 +53329,17 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = {
       proud: ['{hb}だけよ。次は見てなさい'],
       worrier: ['{hb}…ごめんね'],
       stubborn: ['{hb}。次は外さん'],
-      easygoing: ['{hb}〜。まあいっか〜']
+      easygoing: ['{hb}〜。まあいっか〜'],
+      fiery: ['{hb}。まだまだ燃え足りない!'],
+      cool: ['{hb}。次は直す'],
+      fickle: ['{hb}…気分のせいかも'],
+      mellow: ['{hb}…あらあら'],
+      hasty: ['{hb}!次はすぐ直す!'],
+      competitive: ['{hb}…くっ、次は負けない!'],
+      showoff: ['{hb}〜。ま、次はノれる〜'],
+      shy: ['…{hb}。人が多くて…'],
+      hardworker: ['{hb}。そこ、練習する!'],
+      romantic: ['{hb}…旋律がこぼれちゃった']
     },
     mood: {}
   },
@@ -52043,7 +53354,17 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = {
       proud: ['{dislike}なんて…次は見てなさい'],
       worrier: ['やっぱり{dislike}はむずかしい…'],
       stubborn: ['{dislike}め、次こそは'],
-      easygoing: ['{dislike}はむずかしいね〜']
+      easygoing: ['{dislike}はむずかしいね〜'],
+      fiery: ['{dislike}め…次は全力だ!'],
+      cool: ['{dislike}は、まだ課題だね'],
+      fickle: ['{dislike}、今日も気分じゃなかった'],
+      mellow: ['{dislike}は、やっぱりむずかしいですね'],
+      hasty: ['{dislike}…はやく慣れたい!'],
+      competitive: ['くっ…{dislike}、次こそリベンジ!'],
+      showoff: ['{dislike}、ノリきれなかった〜'],
+      shy: ['…{dislike}、やっぱりにがて'],
+      hardworker: ['{dislike}、できるまでやる!'],
+      romantic: ['{dislike}は、遠い星みたい']
     },
     mood: {}
   },
@@ -52058,7 +53379,17 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = {
       proud: ['{food}は{self}の好物よ', '{food}を用意してくれてもいいのよ?'],
       worrier: ['{food}食べたら落ち着くかな…', '{food}、持ってくればよかった…'],
       stubborn: ['{food}は譲らんぞ', '{self}の好物は{food}だ'],
-      easygoing: ['{food}食べたいな〜…', '{food}食べて、お昼寝したいな〜']
+      easygoing: ['{food}食べたいな〜…', '{food}食べて、お昼寝したいな〜'],
+      fiery: ['{food}食べて燃えるぞ!', '{self}の力のもとは{food}だ!'],
+      cool: ['{food}が食べたいな', '{self}の好物は{food}'],
+      fickle: ['{food}の気分かも…やっぱちがうかも', '{self}、今日は{food}が好き'],
+      mellow: ['終わったら{food}をいただきましょうか', '{self}ね、{food}が好きなんですよ'],
+      hasty: ['{food}!はやく食べたい!', '{self}の好物は{food}!はい覚えた?'],
+      competitive: ['勝ったら{food}を食べる!', '{self}の好物は{food}!ゆずらないぞ!'],
+      showoff: ['{food}食べたら天才になれる〜!', '{food}、だれかおごって〜!'],
+      shy: ['…{food}、好き', '…{food}、いっしょに食べたい'],
+      hardworker: ['{food}食べて、練習がんばる!', '練習のあとの{food}が最高!'],
+      romantic: ['{food}、夢みたいな味', '月夜に{food}を食べたいな']
     },
     mood: {}
   },
@@ -52073,7 +53404,17 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = {
       proud: ['{hobby}なら誰にも負けないわ', '{self}の趣味?{hobby}よ'],
       worrier: ['{hobby}のことを考えると落ち着く…', '{self}、{hobby}が好きなんだ…'],
       stubborn: ['趣味は{hobby}だ。文句あるか', '{hobby}はゆずれん'],
-      easygoing: ['{hobby}っていいよね〜', '{self}ね〜、{hobby}が好き〜']
+      easygoing: ['{hobby}っていいよね〜', '{self}ね〜、{hobby}が好き〜'],
+      fiery: ['{hobby}も全力でやるぞ!', '{self}の趣味は{hobby}だ!熱いぞ!'],
+      cool: ['{hobby}は落ち着くね', '{self}の趣味は{hobby}'],
+      fickle: ['{hobby}…今はそれが好きかも', '{self}、最近は{hobby}の気分'],
+      mellow: ['{hobby}って、すてきですよね', '{self}、{hobby}が好きなんです'],
+      hasty: ['{hobby}もサクッとやる!', '{self}の趣味?{hobby}!以上!'],
+      competitive: ['{hobby}でも負けないぞ!', '{self}、{hobby}もきわめたい!'],
+      showoff: ['{hobby}もけっこう上手いんだよ〜!', '{self}の趣味は{hobby}〜!すごいでしょ〜?'],
+      shy: ['…{hobby}、ひとりでするの好き', '…{self}、{hobby}が好き'],
+      hardworker: ['{hobby}も毎日続けてる!', '{self}、{hobby}もコツコツ練習中!'],
+      romantic: ['{hobby}をしてると、夢を見てるみたい', '{self}、{hobby}がとても好きなの']
     },
     mood: {}
   },
@@ -52088,7 +53429,17 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = {
       proud: ['{self}、{ht}のよ'],
       worrier: ['{self}、{ht}んだ…'],
       stubborn: ['{self}は{ht}のだ'],
-      easygoing: ['{self}ね〜、{ht}んだ〜']
+      easygoing: ['{self}ね〜、{ht}んだ〜'],
+      fiery: ['{self}はな、{ht}んだ!'],
+      cool: ['{self}、{ht}んだよね'],
+      fickle: ['{self}って、{ht}のかも'],
+      mellow: ['{self}、{ht}んですよ'],
+      hasty: ['{self}、{ht}の!はい次!'],
+      competitive: ['{self}、{ht}んだ。でも負けない!'],
+      showoff: ['{self}ってね〜、{ht}んだよ〜'],
+      shy: ['…じつは{self}、{ht}の'],
+      hardworker: ['{self}、{ht}んだ!知ってた?'],
+      romantic: ['{self}ね、{ht}の。素敵でしょ']
     },
     mood: {}
   },
@@ -52103,7 +53454,17 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = {
       proud: ['今日は{self}の誕生日よ。祝いなさい'],
       worrier: ['今日、誕生日なんだ…覚えててくれた?'],
       stubborn: ['今日は誕生日だ。祝ってもいいぞ'],
-      easygoing: ['今日は誕生日なんだ〜うれしいな〜']
+      easygoing: ['今日は誕生日なんだ〜うれしいな〜'],
+      fiery: ['今日は誕生日だ!全力で祝うぞ!'],
+      cool: ['今日は誕生日なんだ。…悪くない日だ'],
+      fickle: ['今日誕生日なんだ。気分いいかも'],
+      mellow: ['今日はお誕生日なんです、ふふ'],
+      hasty: ['今日誕生日!はやく祝って!'],
+      competitive: ['誕生日だから、今日は絶対勝つ!'],
+      showoff: ['今日は{self}の誕生日〜!主役だよ〜!'],
+      shy: ['…きょう、誕生日、なんだ'],
+      hardworker: ['今日は{self}の誕生日!また一年がんばる!'],
+      romantic: ['今日は{self}の誕生日。夢みたいな日']
     },
     mood: {
       bad: ['今日は誕生日なんだけど…'],
@@ -84937,6 +86298,11 @@ const RHYTHM_MULTI = (() => {
       }, {
         extraDelay: growth.levelUp > 0 ? 3000 : 800,
         skipGap: true
+      });else if (growth.sproutNew) cpuSay(x, 'sproutNew', {
+        who: ownerName()
+      }, {
+        extraDelay: growth.levelUp > 0 ? 3000 : 800,
+        skipGap: true
       });
     },
     sendChat(text) {
@@ -88087,6 +89453,13 @@ const rhythmBuddyLeanOf = baseId => {
   const base = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[baseId] : null;
   return rhythmBuddySpeciesLean(base, all);
 };
+const rhythmBuddyBornOf = (masuId, baseId, mon) => {
+  const m = mon ? rhythmBuddyNormalizeMon(mon) : null;
+  if (m && m.born) return m.born;
+  const all = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? Object.values(ALL_PLAYER_MONSTERS) : [];
+  const base = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[baseId] : null;
+  return rhythmBuddyBornTrait(masuId, base, all);
+};
 const rhythmBuddyMasuName = masu => {
   const base = masu && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
   return String(masu && masu.name || base && base.name || 'マスモン').slice(0, 12);
@@ -88115,7 +89488,8 @@ const rhythmBuddyMakeBrain = songs => ({
       mood,
       rand: Math.random,
       chartLevel: chart ? Number(chart.level) || 0 : 0,
-      humans
+      humans,
+      nowMs: Date.now()
     });
   },
   talk({
@@ -88173,6 +89547,10 @@ const rhythmBuddyMakeBrain = songs => ({
       lv: String(rhythmBuddyLevelInfo(norm.exp).level),
       mood: mood && mood.label ? mood.label : '',
       trait: traitDef ? traitDef.label : '',
+      sprout: (() => {
+        const sp = norm.trait ? null : rhythmBuddyTraitOf(rhythmBuddyTraitSprout(norm, rhythmBuddyBornOf(masuId, baseId, mon)));
+        return sp ? sp.label : '';
+      })(),
       plays: norm.lives > 0 ? String(norm.lives) : '',
       days: norm.streakDays > 0 ? String(norm.streakDays) : '',
       topic: topicSongId ? nameOf(topicSongId) : RHYTHM_BUDDY_CONVO_TOPIC[topicKind] || '',
@@ -88586,13 +89964,20 @@ function RhythmBuddyDetail({
   dayKey,
   songName,
   onBack,
-  ownerName = ''
+  ownerName = '',
+  seeds = 0,
+  onUseSeed = null
 }) {
   const m = rhythmBuddyNormalizeMon(mon);
   const info = rhythmBuddyLevelInfo(m.exp);
   const mood = rhythmBuddyMood(masu.id, dayKey, m);
   const trait = rhythmBuddyTraitOf(m.trait);
-  const lean = rhythmBuddyTraitOf(rhythmBuddyLeanOf(masu.baseId));
+  const bornId = rhythmBuddyBornOf(masu.id, masu.baseId, m);
+  const lean = rhythmBuddyTraitOf(bornId);
+  const sprout = rhythmBuddyTraitOf(rhythmBuddyTraitSprout(m, bornId));
+  const [seedOpen, setSeedOpen] = React.useState(false);
+  const [seedPick, setSeedPick] = React.useState('');
+  const [seedBusy, setSeedBusy] = React.useState(false);
   const comfort = rhythmBuddyComfortLevelOf(m);
   const [allSongs, setAllSongs] = React.useState(false);
   const [traitsOpen, setTraitsOpen] = React.useState(false);
@@ -88655,13 +90040,21 @@ function RhythmBuddyDetail({
   }, "性格"), trait ? React.createElement(React.Fragment, null, React.createElement("p", {
     "data-rhythm-buddy-trait": trait.id,
     className: "text-sm font-black text-amber-200"
-  }, trait.label), React.createElement("small", {
+  }, trait.label, m.traitLock && React.createElement("span", {
+    "data-rhythm-buddy-trait-locked": true,
+    className: "ml-1 text-[10px] text-lime-200"
+  }, "🌱たねで選んだ")), React.createElement("small", {
     className: "block text-[9px] font-bold leading-snug text-slate-400"
-  }, trait.note)) : React.createElement(React.Fragment, null, React.createElement("p", {
+  }, trait.note)) : sprout ? React.createElement(React.Fragment, null, React.createElement("p", {
+    "data-rhythm-buddy-sprout": sprout.id,
+    className: "text-sm font-black text-lime-200"
+  }, "🌱 ", sprout.label, "っぽい?"), React.createElement("small", {
+    className: "block text-[9px] font-bold leading-snug text-slate-500"
+  }, "性格の芽です。ビートLv.", RHYTHM_BUDDY_TRAIT_LEVEL, "で決まるまで、遊び方で入れかわります")) : React.createElement(React.Fragment, null, React.createElement("p", {
     className: "text-sm font-black text-slate-400"
   }, "まだ見えない"), React.createElement("small", {
     className: "block text-[9px] font-bold leading-snug text-slate-500"
-  }, "ビートLv.", RHYTHM_BUDDY_TRAIT_LEVEL, "で決まります。", lean ? `${lean.label}になりやすい種類です` : '')))), React.createElement("section", {
+  }, "ビートLv.", RHYTHM_BUDDY_SPROUT_LEVEL, "で芽が出て、Lv.", RHYTHM_BUDDY_TRAIT_LEVEL, "で決まります。", lean ? `生まれつき${lean.label}になりやすいモンスターです` : '')))), React.createElement("section", {
     "data-rhythm-buddy-profile": true,
     className: "rounded-xl border border-pink-300/30 bg-slate-950/60 p-2"
   }, React.createElement("h4", {
@@ -88686,7 +90079,57 @@ function RhythmBuddyDetail({
     type: "button",
     onClick: () => setTraitsOpen(v => !v),
     className: "min-h-[36px] w-full rounded-lg bg-slate-800 text-[11px] font-black text-slate-200"
-  }, traitsOpen ? '性格の一覧を閉じる' : '性格の一覧を見る(9つ)'), traitsOpen && React.createElement("ul", {
+  }, traitsOpen ? '性格の一覧を閉じる' : `性格の一覧を見る(${RHYTHM_BUDDY_TRAITS.length}つ)`), onUseSeed && React.createElement("section", {
+    "data-rhythm-buddy-seed": true,
+    className: "rounded-xl border border-lime-300/30 bg-slate-950/60 p-2"
+  }, React.createElement("div", {
+    className: "flex items-center justify-between gap-2"
+  }, React.createElement("small", {
+    className: "text-[11px] font-black text-lime-100"
+  }, "🌱 性格のたね ", React.createElement("b", {
+    "data-rhythm-buddy-seed-count": true,
+    className: "text-amber-200"
+  }, seeds, "個")), React.createElement("button", {
+    "data-rhythm-buddy-seed-open": true,
+    type: "button",
+    disabled: seeds <= 0,
+    onClick: () => {
+      setSeedOpen(v => !v);
+      setSeedPick('');
+    },
+    className: `min-h-[34px] rounded-lg px-3 text-[11px] font-black ${seeds > 0 ? 'bg-lime-500 text-slate-950' : 'bg-slate-800 text-slate-500'}`
+  }, seedOpen ? 'やめる' : '性格を選び直す')), React.createElement("small", {
+    className: "mt-0.5 block text-[9px] font-bold leading-snug text-slate-400"
+  }, "1個使うと、性格を全部の中から選び直せます。選んだ性格は遊び方では変わりません(もう一度たねを使えば変えられます)"), seedOpen && React.createElement("div", {
+    className: "mt-1 space-y-1"
+  }, React.createElement("ul", {
+    "data-rhythm-buddy-seed-list": true,
+    className: "grid grid-cols-2 gap-1"
+  }, RHYTHM_BUDDY_TRAITS.map(t => React.createElement("li", {
+    key: t.id
+  }, React.createElement("button", {
+    type: "button",
+    "data-rhythm-buddy-seed-pick": t.id,
+    disabled: trait && trait.id === t.id && m.traitLock,
+    onClick: () => setSeedPick(t.id),
+    className: `min-h-[34px] w-full rounded-lg px-1 text-[11px] font-black ${seedPick === t.id ? 'bg-amber-300 text-slate-950' : trait && trait.id === t.id ? 'bg-slate-800 text-slate-500' : 'bg-slate-800 text-amber-100'}`
+  }, t.label)))), seedPick && React.createElement("button", {
+    "data-rhythm-buddy-seed-use": true,
+    type: "button",
+    disabled: seedBusy,
+    onClick: async () => {
+      setSeedBusy(true);
+      try {
+        if (await onUseSeed(masu.id, seedPick)) {
+          setSeedOpen(false);
+          setSeedPick('');
+        }
+      } finally {
+        setSeedBusy(false);
+      }
+    },
+    className: "min-h-[38px] w-full rounded-lg bg-lime-400 text-[12px] font-black text-slate-950"
+  }, "たねを1個使って「", (rhythmBuddyTraitOf(seedPick) || {}).label, "」にする"))), traitsOpen && React.createElement("ul", {
     "data-rhythm-buddy-traits": true,
     className: "space-y-1 rounded-xl bg-slate-950/60 p-2"
   }, RHYTHM_BUDDY_TRAITS.map(t => React.createElement("li", {
@@ -89343,7 +90786,9 @@ function MasuBeatScreen({
   tickets = 0,
   onBack,
   backLabel = 'M/B管理へ戻る',
-  breederName = ''
+  breederName = '',
+  seeds = 0,
+  onUseTraitSeed = null
 }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
@@ -89385,7 +90830,9 @@ function MasuBeatScreen({
     dayKey: dayKey,
     songName: songName,
     ownerName: breederName,
-    onBack: () => setDetailId('')
+    onBack: () => setDetailId(''),
+    seeds: seeds,
+    onUseSeed: onUseTraitSeed
   }) : React.createElement(RhythmBuddyList, {
     masuMons: masuMons,
     state: state,
@@ -89421,7 +90868,7 @@ function RhythmBuddyGrowth({
         durationMs,
         teamRank,
         dayKey,
-        lean: rhythmBuddyLeanOf(masu.baseId),
+        lean: rhythmBuddyBornOf(masu.id, masu.baseId, st.mons[masu.id]),
         nowMs: Date.now(),
         score,
         maxScore,
@@ -130637,6 +132084,25 @@ function MonsterHeroGame() {
     await storeSet('mh_owned_items', nextItems, false);
     return true;
   };
+  const useBuddyTraitSeed = async (masuId, traitId) => {
+    const have = ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TRAIT_SEED_ITEM_ID);
+    if (have <= 0) return false;
+    let done = false;
+    await RHYTHM_BUDDY_STORE.update(st => {
+      const next = rhythmBuddyUseTraitSeed(st, masuId, traitId);
+      done = !!next;
+      return next;
+    });
+    if (!done) return false;
+    const nextItems = {
+      ...ownedItemsRef.current,
+      [RHYTHM_BUDDY_TRAIT_SEED_ITEM_ID]: ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TRAIT_SEED_ITEM_ID) - 1
+    };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    await storeSet('mh_owned_items', nextItems, false);
+    return true;
+  };
   const syncBeatRankToServer = async saved => {
     try {
       const cur = normalizeBeatRank(saved);
@@ -130673,10 +132139,13 @@ function MonsterHeroGame() {
       };
       await storeSet(BEAT_RANK_KEY, next, false);
       setBeatRank(next);
-      if (gain.tickets > 0) {
+      if (gain.tickets > 0 || gain.seeds > 0) {
         const nextItems = {
           ...ownedItemsRef.current,
-          [RHYTHM_BUDDY_TICKET_ITEM_ID]: ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TICKET_ITEM_ID) + gain.tickets
+          [RHYTHM_BUDDY_TICKET_ITEM_ID]: ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TICKET_ITEM_ID) + gain.tickets,
+          ...(gain.seeds > 0 ? {
+            [RHYTHM_BUDDY_TRAIT_SEED_ITEM_ID]: ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TRAIT_SEED_ITEM_ID) + gain.seeds
+          } : {})
         };
         ownedItemsRef.current = nextItems;
         setOwnedItems(nextItems);
@@ -130689,6 +132158,9 @@ function MonsterHeroGame() {
       }] : []), ...(gain.beatPoints > 0 ? [{
         icon: '🎟️',
         text: `ビートP ${gain.beatPoints.toLocaleString()}`
+      }] : []), ...(gain.seeds > 0 ? [{
+        icon: '🌱',
+        text: `性格のたね ×${gain.seeds}`
       }] : [])];
       const basePoints = gain.beatPoints - gain.bonusPoints,
         baseTickets = gain.tickets - gain.bonusTickets;
@@ -130709,6 +132181,11 @@ function MonsterHeroGame() {
         icon: '🎶',
         text: `セッション券 ${gain.bonusTickets}枚`,
         note: '5ランクごとのおまけ(ランクと同じ枚数)',
+        bonus: true
+      }] : []), ...(gain.seeds > 0 ? [{
+        icon: '🌱',
+        text: `性格のたね ${gain.seeds}個`,
+        note: '5ランクごとのおまけ(マスモンの性格を選び直せる)',
         bonus: true
       }] : [])];
       setBeatRankAward({
@@ -158694,6 +160171,8 @@ function MonsterHeroGame() {
       songs: rhythmDemoSongs(RHYTHM_SONGS),
       tickets: ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID),
       breederName: breederName,
+      seeds: ownedItemCount(ownedItems, RHYTHM_BUDDY_TRAIT_SEED_ITEM_ID),
+      onUseTraitSeed: useBuddyTraitSeed,
       onBack: () => setGameState(masuBeatBack),
       backLabel: masuBeatBack === 'MB_MANAGEMENT' ? 'M/B管理へ戻る' : 'モードえらびへ戻る'
     }), gameState === 'MASU_MONS' && React.createElement(MasuMonsScreen, {
