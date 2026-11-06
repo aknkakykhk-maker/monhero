@@ -4,7 +4,7 @@
 //
 //   node tools/battle/sorashido-copy-predict-browser-check.js            # タクティクスプロ(コピーは空きマスか小窓)
 //   MODE=classic node tools/battle/sorashido-copy-predict-browser-check.js # クラシック(本編・コピーは敵の段の小窓)
-//   SHOT_DIR=<フォルダ> を付けると、予測が出ている画面の写真を残す
+//   SHOT_DIR=<フォルダ> を付けると、予測が出ている画面の写真を残す / DEBUG=1 で途中の様子(記録・止まった画面のボタン)を出す
 //
 // 見ること:
 //   ① コピーが出ているターンに「攻N」(data-ai-copy-damage-preview)が出る(コピーが攻撃の札を決めているとき)
@@ -18,7 +18,8 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 
-const root = path.resolve(TOOLS_DIR, '..');
+// ROOT_DIR を渡すと、その場所のゲームを開く(止め絵の「前」を、直す前の版で同じ場面から撮るため)
+const root = process.env.ROOT_DIR ? path.resolve(process.env.ROOT_DIR) : path.resolve(TOOLS_DIR, '..');
 const PORT = 8997;
 const MIME = { '.html':'text/html', '.js':'text/javascript', '.json':'application/json',
   '.css':'text/css', '.png':'image/png', '.jpg':'image/jpeg', '.webp':'image/webp',
@@ -49,7 +50,7 @@ const HERO = process.env.HERO || 'ゴーレム';
 
 (async () => {
   const app = fs.readFileSync(path.join(root, 'monster-hero/src/parts/60-app.jsx'), 'utf8');
-  if (!/\baiCopyPredictedDmg\(/.test(app)) { console.log('SKIP: 本体にコピーの予測ダメージ(aiCopyPredictedDmg)がまだ無い'); process.exit(0); }
+  if (!process.env.ROOT_DIR && !/\baiCopyPredictedDmg\(/.test(app)) { console.log('SKIP: 本体にコピーの予測ダメージ(aiCopyPredictedDmg)がまだ無い'); process.exit(0); }
   let playwright;
   try { playwright = require('playwright'); }
   catch { console.log('SKIP: playwright が入っていないので確認できません'); process.exit(0); }
@@ -62,9 +63,9 @@ const HERO = process.env.HERO || 'ゴーレム';
     const page = await browser.newPage({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block', deviceScaleFactor: SHOT ? 2 : 1 });
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.addInitScript(() => {
-      // 乱数は真ん中(0.45〜0.55)に寄せる。会心(当たる率は低い)が出ず、コピーはいちばんよい札を選ぶ(32-sorashido-copy.jsx の aiCopyPickOne は乱数が pick より小さいとき1番を選ぶ)。
+      // 乱数は 0.30〜0.45 に寄せる。会心(当たる率は低い)が出ず、コピーはいちばんよい札を選ぶ(32-sorashido-copy.jsx の aiCopyPickOne は乱数が pick より小さいとき1番を選ぶ)。
       //   大きい側に寄せると、コピーがわざと2番目以下(守り)ばかり選んで攻撃しなかった。山札の並びは毎回同じになる
-      let seed = 7; Math.random = () => { seed = (seed * 9301 + 49297) % 233280; return 0.45 + (seed / 233280) * 0.1; };
+      let seed = 7; Math.random = () => { seed = (seed * 9301 + 49297) % 233280; return 0.3 + (seed / 233280) * 0.15; };
       const set = (k, v) => localStorage.setItem(k, JSON.stringify(v));
       set('mh_breeder_name', '検査ブリーダー'); set('mh_breeder_icon', '🐣'); set('mh_onboarded', true);
       set('mh_tutorial_seen_v1', true); set('mh_battle_tutorial_seen_v1', true); set('mh_battle_tutorial_guide_shown_v1', true);
@@ -103,7 +104,7 @@ const HERO = process.env.HERO || 'ゴーレム';
       await page.evaluate(() => { const cards = [...document.querySelectorAll('[data-battle-mode="tacticsPro"]')]; const card = cards[Math.floor(cards.length / 2)] || cards[0];
         [...(card ? card.querySelectorAll('button') : [])].find((x) => x.textContent.includes('難易度を選ぶ'))?.click(); });
     } else {
-      await page.locator('[data-battle-system="systemClassic"]').dispatchEvent('click');
+      await page.locator('[data-battle-system="systemClassic"]').dispatchEvent('click', {}, { timeout: 10000 });
       await page.waitForTimeout(1400);
       await page.evaluate(() => [...document.querySelectorAll('button')].find((x) => x.textContent.includes('難易度を選ぶ') && !x.disabled && x.offsetParent)?.click());
     }
@@ -118,7 +119,7 @@ const HERO = process.env.HERO || 'ゴーレム';
     let pickedSorashido = false;
     for (let i = 0; i < 40; i += 1) {
       if (/WAVE 1\/10/.test(await text())) break;
-      const step = await page.evaluate(() => {
+      const step = await page.evaluate((HERO) => {
         const live = [...document.querySelectorAll('button')].filter((x) => !x.disabled && x.offsetParent);
         const pick = (re) => live.find((x) => re.test(x.textContent.trim()));
         const go = pick(/出撃|バトル開始|この編成で|この子で挑む|^決定$|^確定$|^勇者モンに選ぶ$/); if (go) { go.click(); return 'go'; }
@@ -126,11 +127,12 @@ const HERO = process.env.HERO || 'ゴーレム';
         const so = live.find((x) => /ソラシド/.test(x.textContent)); if (so) { so.click(); return 'sorashido'; }
         const slot = pick(/^(零|近|中|遠)距離/); if (slot) { slot.click(); return 'slot'; }
         const start = pick(/はじめる|この子で/); if (start) { start.click(); return 'start'; }
-        // クラシックの勇者モンえらび: 並びの最初のモンスター
-        const mon = live.find((x) => x.closest('[data-hero-pick],[data-masu-pick],[data-monster-pick]'));
+        // クラシックの勇者モンえらび: 「ゴーレム 総合力 …」のボタン(押すと詳しい窓が開き、「勇者モンに選ぶ」で決まる)
+        const mon = live.find((x) => x.innerText.replace(/\s+/g, ' ').trim().startsWith(`${HERO} 総合力`));
         if (mon) { mon.click(); return 'mon'; }
         return null;
-      });
+      }, HERO);
+      if (process.env.DEBUG) console.log('STEP', i, step, step ? '' : (await page.evaluate(() => [...document.querySelectorAll('button')].filter((x) => x.offsetParent && !x.disabled).map((x) => (x.innerText || x.getAttribute('aria-label') || '').replace(/\s+/g, ' ').slice(0, 18)).join(' / '))).slice(0, 700));
       if (step === 'sorashido') pickedSorashido = true;
       if (!step) break;
       await page.waitForTimeout(900);
@@ -138,6 +140,7 @@ const HERO = process.env.HERO || 'ゴーレム';
     check('アシストカードでソラシドの自動化を選べる', pickedSorashido);
     check('バトル(WAVE 1)まで進める', /WAVE 1\/10/.test(await text()), MODE);
 
+    if (process.env.DEBUG) console.log('DOM', await page.evaluate(() => ({ hand: [...document.querySelectorAll('[data-hand-card]')].map((c) => [c.getAttribute('data-card-usable'), c.getAttribute('data-card-type'), c.textContent.slice(0, 10)]).slice(0, 6), slots: [...document.querySelectorAll('[data-slot-index]')].map((e) => e.tagName + ':' + e.getAttribute('data-slot-index') + ':' + !!e.querySelector('img')).join(','), action: document.querySelector('[data-battle-action]')?.outerHTML.slice(0, 160) })));
     const heroSlot = await page.evaluate(() => { const b = [...document.querySelectorAll('button[data-slot-index]')].find((x) => x.querySelector('img')); return b ? Number(b.getAttribute('data-slot-index')) : null; });
     const turnNo = async () => { const m = (await text()).match(/TURN (\d+)\//); return m ? Number(m[1]) : null; };
     // バトルの記録から、コピーが敵へ当てたダメージの行を全部取る(「〜のコピーの 技 → 敵に N ダメージ」)
@@ -152,6 +155,13 @@ const HERO = process.env.HERO || 'ゴーレム';
     };
     const preview = () => page.evaluate(() => [...document.querySelectorAll('[data-ai-copy-damage-preview]')].filter((e) => e.offsetParent || e.getClientRects().length).map((e) => Number(e.getAttribute('data-ai-copy-damage-preview'))));
     const playTurn = async (useSorashido, beforeAction = null) => {
+      // バトルの途中で開いたお話(HOME の外でも流れるもの)は、スキップで閉じてから進める
+      for (let s = 0; s < 3; s += 1) {
+        const skip = page.getByRole('button', { name: 'スキップ', exact: true }).first();
+        if (await skip.count() === 0 || !(await skip.isVisible().catch(() => false))) break;
+        await skip.click().catch(() => {}); await page.waitForTimeout(800);
+        await page.getByRole('button', { name: /^(閉じる|OK)$/ }).first().click({ timeout: 1500 }).catch(() => {});
+      }
       const before = await turnNo();
       const idx = await page.evaluate((useSo) => {
         const cards = [...document.querySelectorAll('[data-hand-card]')];
@@ -164,10 +174,12 @@ const HERO = process.env.HERO || 'ゴーレム';
         return i;
       }, useSorashido);
       if (idx >= 0) {
-        await page.locator('[data-hand-card]').nth(idx).click({ timeout: 10000 }).catch(() => {});
+        await page.locator('[data-hand-card]').nth(idx).click({ timeout: 10000 }).catch((e) => { if (process.env.DEBUG) console.log('CLICKERR', String(e).slice(0, 200)); });
         await page.waitForTimeout(600);
         await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => !x.disabled && x.offsetParent && /\(使用中\)/.test(x.textContent)); if (b) b.click(); });
         if (heroSlot != null && await page.locator('button[data-slot-assignable="true"]').count()) await page.locator(`button[data-slot-index="${heroSlot}"]`).click().catch(() => {});
+        // クラシックは置ける枠の印が無い。行動のボタンが押せないままなら、勇者の枠を押して置く
+        if (heroSlot != null && await page.locator('[data-battle-action][disabled]').count()) await page.locator(`button[data-slot-index="${heroSlot}"]`).click({ timeout: 3000 }).catch(() => {});
         await page.waitForTimeout(400);
         await page.evaluate(() => document.querySelector('[data-tactics-ex-close]')?.click());
       }
@@ -202,7 +214,9 @@ const HERO = process.env.HERO || 'ゴーレム';
       const hitsBefore = sum(await copyHits());
       const got = await playTurn(false, async () => {
         const pv = await preview();
-        if (pv.length && SHOT && !shot) { await page.screenshot({ path: path.join(SHOT, `predict-${MODE}.png`) }); shot = true; }
+        // 写真はコピーが出ている最初のターン(予測の札の有る無しによらず同じ場面。前と後で比べるため)
+        const out = await page.evaluate(() => !!document.querySelector('[data-tactics-ai-copy-out="1"],[data-ai-copy-float]'));
+        if (out && SHOT && !shot) { await page.screenshot({ path: path.join(SHOT, `predict-${MODE}.png`) }); shot = true; }
         const look = pv.length ? await page.evaluate(() => {
           const e = [...document.querySelectorAll('[data-ai-copy-damage-preview]')].find((x) => x.getClientRects().length);
           const s = e && getComputedStyle(e);
