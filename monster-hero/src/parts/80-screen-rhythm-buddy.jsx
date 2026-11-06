@@ -122,6 +122,14 @@ const rhythmBuddyLeanOf = (baseId) => {
   const base = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[baseId] : null;
   return rhythmBuddySpeciesLean(base, all);
 };
+// 生まれつきのなりやすい性格(2026-11-06・種類のなりやすさ+運)。覚えていればそれ、まだならマスモンの id と種類から決まる値
+const rhythmBuddyBornOf = (masuId, baseId, mon) => {
+  const m = mon ? rhythmBuddyNormalizeMon(mon) : null;
+  if (m && m.born) return m.born;
+  const all = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? Object.values(ALL_PLAYER_MONSTERS) : [];
+  const base = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[baseId] : null;
+  return rhythmBuddyBornTrait(masuId, base, all);
+};
 const rhythmBuddyMasuName = (masu) => {
   const base = masu && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
   return String((masu && masu.name) || (base && base.name) || 'マスモン').slice(0, 12);
@@ -141,7 +149,7 @@ const rhythmBuddyMakeBrain = (songs) => ({
     return rhythmBuddyPlay({
       mon, songId, diffId, totalNotes, maxScore: diffDef ? diffDef.maxScore : 1000000,
       durationMs: (chart && Number(chart.durationMs)) || (song ? Number(song.playDurationMs) || 0 : 0), mood, rand: Math.random,
-      chartLevel: chart ? Number(chart.level) || 0 : 0, humans,
+      chartLevel: chart ? Number(chart.level) || 0 : 0, humans, nowMs: Date.now(),
     });
   },
   // 部屋のチャットで話す一言(2026-10-07)。性格・その日の調子で変わる。kind='result' のときは、MVP・出来で場面を決める。
@@ -181,6 +189,8 @@ const rhythmBuddyMakeBrain = (songs) => ({
       lv: String(rhythmBuddyLevelInfo(norm.exp).level),
       mood: mood && mood.label ? mood.label : '',
       trait: traitDef ? traitDef.label : '',
+      // 性格の芽(ビートLv.10〜29・2026-11-06)。決まっていれば空
+      sprout: (() => { const sp = norm.trait ? null : rhythmBuddyTraitOf(rhythmBuddyTraitSprout(norm, rhythmBuddyBornOf(masuId, baseId, mon))); return sp ? sp.label : ''; })(),
       plays: norm.lives > 0 ? String(norm.lives) : '',
       days: norm.streakDays > 0 ? String(norm.streakDays) : '',
       topic: topicSongId ? nameOf(topicSongId) : (RHYTHM_BUDDY_CONVO_TOPIC[topicKind] || ''),
@@ -392,12 +402,18 @@ const rhythmBuddyCallText = (call, name) => {
   const n = String(name || '').trim();
   return n && typeof call.suf === 'string' ? `${n}${call.suf}` : call.label;
 };
-function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = '' }) {
+function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = '', seeds = 0, onUseSeed = null }) {
   const m = rhythmBuddyNormalizeMon(mon);
   const info = rhythmBuddyLevelInfo(m.exp);
   const mood = rhythmBuddyMood(masu.id, dayKey, m);
   const trait = rhythmBuddyTraitOf(m.trait);
-  const lean = rhythmBuddyTraitOf(rhythmBuddyLeanOf(masu.baseId));
+  const bornId = rhythmBuddyBornOf(masu.id, masu.baseId, m);
+  const lean = rhythmBuddyTraitOf(bornId);
+  // Lv.10〜29 の「性格の芽」(2026-11-06)。いまいちばん近い性格(遊び方で入れかわる)
+  const sprout = rhythmBuddyTraitOf(rhythmBuddyTraitSprout(m, bornId));
+  const [seedOpen, setSeedOpen] = React.useState(false);
+  const [seedPick, setSeedPick] = React.useState('');
+  const [seedBusy, setSeedBusy] = React.useState(false);
   const comfort = rhythmBuddyComfortLevelOf(m);
   const [allSongs, setAllSongs] = React.useState(false);
   const [traitsOpen, setTraitsOpen] = React.useState(false);
@@ -447,8 +463,10 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = ''
         <section className="rounded-xl bg-slate-950/60 p-2">
           <h4 className="text-[10px] font-black text-slate-400">性格</h4>
           {trait
-            ? <><p data-rhythm-buddy-trait={trait.id} className="text-sm font-black text-amber-200">{trait.label}</p><small className="block text-[9px] font-bold leading-snug text-slate-400">{trait.note}</small></>
-            : <><p className="text-sm font-black text-slate-400">まだ見えない</p><small className="block text-[9px] font-bold leading-snug text-slate-500">ビートLv.{RHYTHM_BUDDY_TRAIT_LEVEL}で決まります。{lean ? `${lean.label}になりやすい種類です` : ''}</small></>}
+            ? <><p data-rhythm-buddy-trait={trait.id} className="text-sm font-black text-amber-200">{trait.label}{m.traitLock && <span data-rhythm-buddy-trait-locked className="ml-1 text-[10px] text-lime-200">🌱たねで選んだ</span>}</p><small className="block text-[9px] font-bold leading-snug text-slate-400">{trait.note}</small></>
+            : sprout
+              ? <><p data-rhythm-buddy-sprout={sprout.id} className="text-sm font-black text-lime-200">🌱 {sprout.label}っぽい?</p><small className="block text-[9px] font-bold leading-snug text-slate-500">性格の芽です。ビートLv.{RHYTHM_BUDDY_TRAIT_LEVEL}で決まるまで、遊び方で入れかわります</small></>
+              : <><p className="text-sm font-black text-slate-400">まだ見えない</p><small className="block text-[9px] font-bold leading-snug text-slate-500">ビートLv.{RHYTHM_BUDDY_SPROUT_LEVEL}で芽が出て、Lv.{RHYTHM_BUDDY_TRAIT_LEVEL}で決まります。{lean ? `生まれつき${lean.label}になりやすいモンスターです` : ''}</small></>}
         </section>
       </div>
       <section data-rhythm-buddy-profile className="rounded-xl border border-pink-300/30 bg-slate-950/60 p-2">
@@ -467,8 +485,36 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = ''
         </small>
       </section>
       <button data-rhythm-buddy-traits-toggle type="button" onClick={() => setTraitsOpen((v) => !v)} className="min-h-[36px] w-full rounded-lg bg-slate-800 text-[11px] font-black text-slate-200">
-        {traitsOpen ? '性格の一覧を閉じる' : '性格の一覧を見る(9つ)'}
+        {traitsOpen ? '性格の一覧を閉じる' : `性格の一覧を見る(${RHYTHM_BUDDY_TRAITS.length}つ)`}
       </button>
+      {onUseSeed && (
+        <section data-rhythm-buddy-seed className="rounded-xl border border-lime-300/30 bg-slate-950/60 p-2">
+          <div className="flex items-center justify-between gap-2">
+            <small className="text-[11px] font-black text-lime-100">🌱 性格のたね <b data-rhythm-buddy-seed-count className="text-amber-200">{seeds}個</b></small>
+            <button data-rhythm-buddy-seed-open type="button" disabled={seeds <= 0} onClick={() => { setSeedOpen((v) => !v); setSeedPick(''); }}
+              className={`min-h-[34px] rounded-lg px-3 text-[11px] font-black ${seeds > 0 ? 'bg-lime-500 text-slate-950' : 'bg-slate-800 text-slate-500'}`}>{seedOpen ? 'やめる' : '性格を選び直す'}</button>
+          </div>
+          <small className="mt-0.5 block text-[9px] font-bold leading-snug text-slate-400">1個使うと、性格を全部の中から選び直せます。選んだ性格は遊び方では変わりません(もう一度たねを使えば変えられます)</small>
+          {seedOpen && (
+            <div className="mt-1 space-y-1">
+              <ul data-rhythm-buddy-seed-list className="grid grid-cols-2 gap-1">
+                {RHYTHM_BUDDY_TRAITS.map((t) => (
+                  <li key={t.id}><button type="button" data-rhythm-buddy-seed-pick={t.id} disabled={trait && trait.id === t.id && m.traitLock} onClick={() => setSeedPick(t.id)}
+                    className={`min-h-[34px] w-full rounded-lg px-1 text-[11px] font-black ${seedPick === t.id ? 'bg-amber-300 text-slate-950' : trait && trait.id === t.id ? 'bg-slate-800 text-slate-500' : 'bg-slate-800 text-amber-100'}`}>{t.label}</button></li>
+                ))}
+              </ul>
+              {seedPick && (
+                <button data-rhythm-buddy-seed-use type="button" disabled={seedBusy} onClick={async () => {
+                  setSeedBusy(true);
+                  try { if (await onUseSeed(masu.id, seedPick)) { setSeedOpen(false); setSeedPick(''); } } finally { setSeedBusy(false); }
+                }} className="min-h-[38px] w-full rounded-lg bg-lime-400 text-[12px] font-black text-slate-950">
+                  たねを1個使って「{(rhythmBuddyTraitOf(seedPick) || {}).label}」にする
+                </button>
+              )}
+            </div>
+          )}
+        </section>
+      )}
       {traitsOpen && (
         <ul data-rhythm-buddy-traits className="space-y-1 rounded-xl bg-slate-950/60 p-2">
           {RHYTHM_BUDDY_TRAITS.map((t) => (
@@ -840,7 +886,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
 }
 
 // 画面: マスモン一覧(モンヒロビート)。M/B管理と、モンヒロビートのモードえらびから開く
-function MasuBeatScreen({ masuMons = [], songs = [], tickets = 0, onBack, backLabel = 'M/B管理へ戻る', breederName = '' }) {
+function MasuBeatScreen({ masuMons = [], songs = [], tickets = 0, onBack, backLabel = 'M/B管理へ戻る', breederName = '', seeds = 0, onUseTraitSeed = null }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
   const [detailId, setDetailId] = React.useState('');
@@ -863,7 +909,7 @@ function MasuBeatScreen({ masuMons = [], songs = [], tickets = 0, onBack, backLa
       {!detail && <div className="mb-2 shrink-0">{listControls.bar}</div>}
       <div className={`w-full ${SCREEN_LIST_CLASS}`}>
         {detail
-          ? <RhythmBuddyDetail masu={detail} mon={state.mons[detail.id]} dayKey={dayKey} songName={songName} ownerName={breederName} onBack={() => setDetailId('')} />
+          ? <RhythmBuddyDetail masu={detail} mon={state.mons[detail.id]} dayKey={dayKey} songName={songName} ownerName={breederName} onBack={() => setDetailId('')} seeds={seeds} onUseSeed={onUseTraitSeed} />
           : <RhythmBuddyList masuMons={masuMons} state={state} dayKey={dayKey} onOpen={setDetailId} settings={listControls.settings} />}
       </div>
       {listControls.sheet}
@@ -881,7 +927,7 @@ function RhythmBuddyGrowth({ masu, round, songId, diffId, durationMs, teamRank, 
     const dayKey = rhythmBuddyDayKey(Date.now());
     RHYTHM_BUDDY_STORE.update((st) => {
       const moodId = rhythmBuddyMood(masu.id, dayKey, st.mons[masu.id]).id;
-      const r = rhythmBuddyApplyLive(st.mons[masu.id], { round, songId, diffId, durationMs, teamRank, dayKey, lean: rhythmBuddyLeanOf(masu.baseId), nowMs: Date.now(), score, maxScore, chartLevel, humans, moodId });
+      const r = rhythmBuddyApplyLive(st.mons[masu.id], { round, songId, diffId, durationMs, teamRank, dayKey, lean: rhythmBuddyBornOf(masu.id, masu.baseId, st.mons[masu.id]), nowMs: Date.now(), score, maxScore, chartLevel, humans, moodId });
       if (!r.gain) return null;
       outcome = r;
       return { ...st, mons: { ...st.mons, [masu.id]: r.mon } };

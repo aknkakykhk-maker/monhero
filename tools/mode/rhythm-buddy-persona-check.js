@@ -31,7 +31,9 @@ const P = sb.__p;
 const screen0 = read('80-screen-rhythm-buddy.jsx');
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
-const TRAITS = ['jester', 'brave', 'clingy', 'smart', 'serious', 'proud', 'worrier', 'stubborn', 'easygoing'];
+const TRAITS = ['jester', 'brave', 'clingy', 'smart', 'serious', 'proud', 'worrier', 'stubborn', 'easygoing',
+  // 2026-11-06 の10個
+  'fiery', 'cool', 'fickle', 'mellow', 'hasty', 'competitive', 'showoff', 'shy', 'hardworker', 'romantic'];
 const ALL_T = ['', ...TRAITS];
 const ids = Array.from({ length: 300 }, (_, i) => `masu_${i}_${(i * 7919).toString(36)}`);
 

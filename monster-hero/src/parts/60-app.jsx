@@ -2164,6 +2164,20 @@ function MonsterHeroGame() {
     await storeSet('mh_owned_items', nextItems, false);
     return true;
   };
+  // 性格のたねを1個使って、マスモンの性格を選び直す(2026-11-06 社長の決定 C)。
+  // 先に相棒の保存(mh_rhythm_buddy_v1)を書き換え、できたときだけたねを1個減らす(減ったのに性格が変わらない、を作らない)
+  const useBuddyTraitSeed = async (masuId, traitId) => {
+    const have = ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TRAIT_SEED_ITEM_ID);
+    if (have <= 0) return false;
+    let done = false;
+    await RHYTHM_BUDDY_STORE.update((st) => { const next = rhythmBuddyUseTraitSeed(st, masuId, traitId); done = !!next; return next; });
+    if (!done) return false;
+    const nextItems = { ...ownedItemsRef.current, [RHYTHM_BUDDY_TRAIT_SEED_ITEM_ID]: ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TRAIT_SEED_ITEM_ID) - 1 };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    await storeSet('mh_owned_items', nextItems, false);
+    return true;
+  };
   // 使ったセッション券を1枚返す(人が来て、呼んだマスモンが席をゆずったとき)
   // ビートランクの行を全国ランキングへ書く(持ち主の鍵 k で)。表がまだ無い・送れないときは何もしない(遊びは止めない)
   const syncBeatRankToServer = async (saved) => {
@@ -2190,8 +2204,10 @@ function MonsterHeroGame() {
       const next = { ...gain.next, k: gain.next.k || beatRankNewKey() };
       await storeSet(BEAT_RANK_KEY, next, false);
       setBeatRank(next);
-      if (gain.tickets > 0) {
-        const nextItems = { ...ownedItemsRef.current, [RHYTHM_BUDDY_TICKET_ITEM_ID]: ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TICKET_ITEM_ID) + gain.tickets };
+      if (gain.tickets > 0 || gain.seeds > 0) {
+        // セッション券と、5ランクごとの性格のたね(2026-11-06)を同じ書き込みで足す
+        const nextItems = { ...ownedItemsRef.current, [RHYTHM_BUDDY_TICKET_ITEM_ID]: ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TICKET_ITEM_ID) + gain.tickets,
+          ...(gain.seeds > 0 ? { [RHYTHM_BUDDY_TRAIT_SEED_ITEM_ID]: ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TRAIT_SEED_ITEM_ID) + gain.seeds } : {}) };
         ownedItemsRef.current = nextItems;
         setOwnedItems(nextItems);
         await storeSet('mh_owned_items', nextItems, false);
@@ -2200,6 +2216,7 @@ function MonsterHeroGame() {
       const gains = [
         ...(gain.tickets > 0 ? [{ icon: '🎶', text: `セッション券 ×${gain.tickets}` }] : []),
         ...(gain.beatPoints > 0 ? [{ icon: '🎟️', text: `ビートP ${gain.beatPoints.toLocaleString()}` }] : []),
+        ...(gain.seeds > 0 ? [{ icon: '🌱', text: `性格のたね ×${gain.seeds}` }] : []),
       ];
       // 画面いっぱいの演出に並べる、もらった物(ふつうの分 → 5ランクごとのおまけ の順。おまけは光で分ける)
       const basePoints = gain.beatPoints - gain.bonusPoints, baseTickets = gain.tickets - gain.bonusTickets;
@@ -2208,6 +2225,7 @@ function MonsterHeroGame() {
         ...(gain.bonusPoints > 0 ? [{ icon: '🎟️', text: `ビートP ${gain.bonusPoints.toLocaleString()}`, note: '5ランクごとのおまけ(ランク ×200)', bonus: true }] : []),
         ...(baseTickets > 0 ? [{ icon: '🎶', text: `セッション券 ${baseTickets}枚`, note: 'ランクが上がるたびに1枚' }] : []),
         ...(gain.bonusTickets > 0 ? [{ icon: '🎶', text: `セッション券 ${gain.bonusTickets}枚`, note: '5ランクごとのおまけ(ランクと同じ枚数)', bonus: true }] : []),
+        ...(gain.seeds > 0 ? [{ icon: '🌱', text: `性格のたね ${gain.seeds}個`, note: '5ランクごとのおまけ(マスモンの性格を選び直せる)', bonus: true }] : []),
       ];
       setBeatRankAward({ add: gain.add, parts: gain.parts, from: gain.from, to: gain.to, xp: next.xp, gains });
       // ランクが上がったら、画面いっぱいの演出を出す(2026-10-29 社長「この演出で」)。押すと先へ・閉じる
@@ -21598,6 +21616,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* マスモン一覧(モンヒロビート)。M/B管理とモンヒロビートのモードえらびから開き、開いた画面へ戻る */}
         {gameState==='RHYTHM_MASU_BEAT'&&(
           <MasuBeatScreen masuMons={masuMons} songs={rhythmDemoSongs(RHYTHM_SONGS)} tickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} breederName={breederName}
+            seeds={ownedItemCount(ownedItems, RHYTHM_BUDDY_TRAIT_SEED_ITEM_ID)} onUseTraitSeed={useBuddyTraitSeed}
             onBack={()=>setGameState(masuBeatBack)} backLabel={masuBeatBack==='MB_MANAGEMENT'?'M/B管理へ戻る':'モードえらびへ戻る'}/>
         )}
         {gameState==='MASU_MONS'&&(

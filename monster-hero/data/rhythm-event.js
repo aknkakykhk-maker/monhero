@@ -420,6 +420,8 @@ const RHYTHM_EVENT_POINT_SHOP_OFFERS = Object.freeze([
   Object.freeze({ id:'skip_ticket_haou', name:'スキップチケット・覇', emoji:'⏩', kind:'item', itemId:'skip_ticket_haou', grantAmount:1, unit:'枚', cost:500 }),
   // セッション券(2026-10-07・docs/spec/RHYTHM_BUDDY.md)。1回呼べば何曲も一緒に遊べるので、イベント中の1〜2曲ぶん
   Object.freeze({ id:'session_ticket', name:'セッション券', emoji:'🎶', kind:'item', itemId:'session_ticket', grantAmount:1, unit:'枚', cost:150 }),
+  // 性格のたね(2026-11-06 社長・マスモンの性格 案1)。マスモンの性格を19個から選び直す。何個でも交換できる
+  Object.freeze({ id:'buddy_trait_seed', name:'性格のたね', emoji:'🌱', kind:'item', itemId:'buddy_trait_seed', grantAmount:1, unit:'個', cost:1000 }),
   Object.freeze({ id:'hero_proof_shard', name:'勇者の証片', emoji:'🎖️', kind:'item', itemId:'hero_proof_shard', grantAmount:1, unit:'個', cost:75 }),
   Object.freeze({ id:'transcend_fruit_rainbow', name:'虹の超越の実', emoji:'🍇', kind:'item', itemId:'transcend_fruit_rainbow', grantAmount:1, unit:'個', cost:3000 }),
   Object.freeze({ id:'hero_proof', name:'勇者の証', emoji:'🏅', kind:'item', itemId:'hero_proof', grantAmount:1, unit:'個', cost:1500 }),
