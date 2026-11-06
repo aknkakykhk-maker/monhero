@@ -2522,6 +2522,7 @@ const CARD_CPU_PLAYLIST_DEFAULT = Object.freeze({
   mua: Object.freeze(['melo_toriko']), kiki: Object.freeze(['eiki_boss']), momosuke: Object.freeze(['melo_crossing_field']),
   kyuko: Object.freeze(['melo_toward_the_stars_short']), dra: Object.freeze(['melo_mou_hitotsu_no_sekai_e']), atsu: Object.freeze(['melo_against_my_own_shadow']),
   sorashido: Object.freeze(['monster_hero_theme']),   // Monster Hero(2026-10-27 社長の答え)
+  erubin: Object.freeze(['melo_wrath_of_the_thorn_king']),   // 茨の王の怒り(2026-11-06 社長の答え。えるびん登場のお話の最初の曲)
 });
 const cardNormalizePlaylistList = (v, isTrack = () => true) => {
   if (Array.isArray(v) && v.includes(CARD_BGM_RANDOM)) return [CARD_BGM_RANDOM];   // ランダム(選べる曲ぜんぶ)
