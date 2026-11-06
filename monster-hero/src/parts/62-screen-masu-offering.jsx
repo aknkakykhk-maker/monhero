@@ -45,7 +45,9 @@ function MasuOfferingScreen({
     return { maxLevels:Math.max(0, lv.toLevel-lv.fromLevel), maxTimes:rt.reincarnations, maxDiamonds:donationDiamondValue(gold) };
   }, [selected, gold, ownedItems, lockedIds, autoBreak]);
 
-  const diamondAmount = Math.min(limits.maxDiamonds, Math.max(0, parseInt(String(diamondText).replace(/[^0-9]/g,''),10) || 0));
+  // 打った文字から数を読む。全角数字は半角へ、小数点から先は切り捨て、桁区切りのカンマ・マイナス・ほかの文字は無視(2026-11-07)
+  const diamondDigits = String(diamondText).replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).split(/[.．。]/)[0].replace(/[^0-9]/g,'');
+  const diamondAmount = Math.min(limits.maxDiamonds, Math.max(0, parseInt(diamondDigits,10) || 0));
   const amount = mode==='diamonds' ? diamondAmount : mode==='levels' ? Math.min(levels, Math.max(1, limits.maxLevels)) : Math.min(times, Math.max(1, limits.maxTimes));
   const plan = useMemo(()=>selected ? buildMasuOffering({ masu:selected, gold, ownedItems, lockedIds, mode, amount, autoBreakthrough:autoBreak }) : null,
     [selected, gold, ownedItems, lockedIds, mode, amount, autoBreak]);
@@ -117,7 +119,7 @@ function MasuOfferingScreen({
       <div className="mh-panel rounded-2xl border border-white/10 bg-slate-900/70 p-3 space-y-2">
         {mode==='diamonds'&&<>
           <div className="text-[11px] font-black text-slate-300">使うダイヤ（自由に入力できます）</div>
-          <input type="text" inputMode="numeric" aria-label="お布施に使うダイヤ" value={diamondText===''?'':diamondAmount.toLocaleString()} placeholder="0" onChange={e=>setDiamondText(e.target.value)} className="w-full min-h-[48px] rounded-xl border border-slate-600 bg-black/50 p-3 text-right font-mono text-lg font-black text-white outline-none focus:border-violet-300"/>
+          <input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" autoComplete="off" data-offering-diamond-input aria-label="お布施に使うダイヤ" value={diamondText===''?'':diamondAmount.toLocaleString()} placeholder="0" onChange={e=>setDiamondText(e.target.value)} className="w-full min-h-[48px] rounded-xl border border-slate-600 bg-black/50 p-3 text-right font-mono text-lg font-black text-white outline-none focus:border-violet-300"/>
           {/* 320 幅で「+100,000」が枠の端まで届いていた(2026-10-27 ダメダシの見回り)。狭い幅だけ、字を少し小さく・横の余白を詰める */}
           <div className="grid grid-cols-4 gap-1.5">{OFFERING_DIAMOND_STEPS.map(step=><button key={step} className={`${stepBtn} whitespace-nowrap px-1 max-[359px]:text-[11px] max-[359px]:tracking-tight`} onClick={()=>setDiamondText(String(Math.min(limits.maxDiamonds, diamondAmount+step)))}>+{fmt(step)}</button>)}</div>
           <div className="grid grid-cols-2 gap-1.5"><button className={stepBtn} onClick={()=>setDiamondText('')}>クリア</button><button className={stepBtn} disabled={limits.maxDiamonds<=0} onClick={()=>setDiamondText(String(limits.maxDiamonds))}>MAX（{fmt(limits.maxDiamonds)}）</button></div>

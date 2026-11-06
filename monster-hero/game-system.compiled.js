@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b4242e47639ebf40
+// source-sha256: 53a2dd980dfe3b41
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -1428,8 +1428,16 @@ const soulRankXpForBondLevel = level => {
   if (current < 900) return 345000 + (current - 800) * 500;
   return 430000 + (current - 900) * 900;
 };
+const XP_FOR_BOND_LEVEL_AT_CACHE = new Map();
 const xpForBondLevelAt = level => {
   const current = Math.max(1, Math.floor(Number(level) || 1));
+  const cached = XP_FOR_BOND_LEVEL_AT_CACHE.get(current);
+  if (cached !== undefined) return cached;
+  const value = xpForBondLevelAtUncached(current);
+  XP_FOR_BOND_LEVEL_AT_CACHE.set(current, value);
+  return value;
+};
+const xpForBondLevelAtUncached = current => {
   const normal = xpForBondLevel(current);
   if (current < MAX_MASU_LEVEL_CAP) return normal;
   if (current < SOUL_RANK_BASE_LEVEL) return Math.max(1, Math.round(normal * transcendXpMultiplier(current)));
@@ -1985,10 +1993,14 @@ const normalizeInheritedUniqueLineages = masuMons => (Array.isArray(masuMons) ? 
     uniqueSkillLevels
   };
 });
+const TOTAL_BOND_XP_CACHE = new Map();
 const totalBondXpForLevel = level => {
   const target = Math.max(1, Math.min(SOUL_RANK_LEVEL_CAP, Math.floor(Number(level) || 1)));
+  const cached = TOTAL_BOND_XP_CACHE.get(target);
+  if (cached !== undefined) return cached;
   let total = 0;
   for (let current = 1; current < target; current++) total += xpForBondLevelAt(current);
+  TOTAL_BOND_XP_CACHE.set(target, total);
   return total;
 };
 const MAX_MASU_LEVEL_CAP = 400;
@@ -4345,7 +4357,7 @@ const buildMasuReincarnation = ({
 };
 const OFFERING_TICKET_DIAMONDS = 100;
 const OFFERING_TICKET_XP = 15;
-const OFFERING_MAX_REINCARNATIONS = 50;
+const OFFERING_MAX_REINCARNATIONS = 100000;
 const OFFERING_MODES = Object.freeze(['diamonds', 'levels', 'reincarnate']);
 const offeringXpForDiamonds = diamonds => Math.floor(donationDiamondValue(diamonds) * OFFERING_TICKET_XP / OFFERING_TICKET_DIAMONDS);
 const offeringDiamondsForXp = xp => Math.ceil(donationDiamondValue(xp) * OFFERING_TICKET_DIAMONDS / OFFERING_TICKET_XP);
@@ -4534,7 +4546,7 @@ const buildMasuOffering = ({
     nextMasu: st.masu
   };
 };
-const REINCARNATE_BATCH_MAX = 50;
+const REINCARNATE_BATCH_MAX = 100000;
 const buildMasuReincarnationBatch = ({
   masu,
   skillKey,
@@ -67023,7 +67035,8 @@ function MasuOfferingScreen({
       maxDiamonds: donationDiamondValue(gold)
     };
   }, [selected, gold, ownedItems, lockedIds, autoBreak]);
-  const diamondAmount = Math.min(limits.maxDiamonds, Math.max(0, parseInt(String(diamondText).replace(/[^0-9]/g, ''), 10) || 0));
+  const diamondDigits = String(diamondText).replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).split(/[.．。]/)[0].replace(/[^0-9]/g, '');
+  const diamondAmount = Math.min(limits.maxDiamonds, Math.max(0, parseInt(diamondDigits, 10) || 0));
   const amount = mode === 'diamonds' ? diamondAmount : mode === 'levels' ? Math.min(levels, Math.max(1, limits.maxLevels)) : Math.min(times, Math.max(1, limits.maxTimes));
   const plan = useMemo(() => selected ? buildMasuOffering({
     masu: selected,
@@ -67207,6 +67220,10 @@ function MasuOfferingScreen({
   }, "使うダイヤ（自由に入力できます）"), React.createElement("input", {
     type: "text",
     inputMode: "numeric",
+    pattern: "[0-9]*",
+    enterKeyHint: "done",
+    autoComplete: "off",
+    "data-offering-diamond-input": true,
     "aria-label": "お布施に使うダイヤ",
     value: diamondText === '' ? '' : diamondAmount.toLocaleString(),
     placeholder: "0",
@@ -67853,8 +67870,17 @@ function MasuSoulTraitsScreen({
     onClick: () => setSoulTraitDraftLevels(maxUpgrade),
     className: "mh-button mh-button-secondary min-h-[48px] rounded-xl bg-violet-700 text-[11px] font-black active:scale-95 disabled:opacity-30"
   }, "MAX")), React.createElement("div", {
-    className: "my-2 text-center text-[11px] font-black text-sky-200"
-  }, "今回 +", draft, "段階"), React.createElement("button", {
+    "data-soul-trait-draft-input": true,
+    className: "my-2 flex items-center justify-center gap-1.5 text-[11px] font-black text-sky-200"
+  }, "今回 +", React.createElement(CountInput, {
+    value: draft,
+    min: 0,
+    max: maxUpgrade,
+    onChange: n => setSoulTraitDraftLevels(n),
+    unit: "段階",
+    label: "上げる段階",
+    className: "w-20"
+  }), "段階"), React.createElement("button", {
     type: "button",
     "data-soul-trait-confirm": true,
     disabled: draft <= 0 || soulTraitProcessingRef.current,
@@ -68562,11 +68588,19 @@ function MasuTranscendEnhanceScreen({
     onPress: () => setWant(exchangeWant - 1),
     className: "min-h-[44px] rounded-xl bg-slate-700 text-xl font-black disabled:opacity-30"
   }, "−"), React.createElement("div", {
-    className: "text-center leading-none"
-  }, React.createElement("span", {
-    "data-transcend-exchange-want": true,
-    className: "font-mono text-3xl font-black text-white"
-  }, exchangeWant), React.createElement("span", {
+    className: "flex items-center justify-center gap-1 leading-none"
+  }, React.createElement(CountInput, {
+    value: exchangeWant,
+    min: 1,
+    max: exchangeMax,
+    onChange: setWant,
+    unit: "P",
+    label: "変換するポイント",
+    className: "w-20",
+    dataAttrs: {
+      'data-transcend-exchange-want': exchangeWant
+    }
+  }), React.createElement("span", {
     className: "text-[10px] font-bold text-slate-400"
   }, "P")), React.createElement(PressRepeatButton, {
     "aria-label": "変換するポイントを増やす",
