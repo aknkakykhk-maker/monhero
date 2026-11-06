@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 71c0e967d6eea59d
+// source-sha256: 154e3119df37ea5c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -95656,7 +95656,8 @@ const CARD_CPU_PLAYLIST_DEFAULT = Object.freeze({
   kyuko: Object.freeze(['melo_toward_the_stars_short']),
   dra: Object.freeze(['melo_mou_hitotsu_no_sekai_e']),
   atsu: Object.freeze(['melo_against_my_own_shadow']),
-  sorashido: Object.freeze(['monster_hero_theme'])
+  sorashido: Object.freeze(['monster_hero_theme']),
+  erubin: Object.freeze(['melo_wrath_of_the_thorn_king'])
 });
 const cardNormalizePlaylistList = (v, isTrack = () => true) => {
   if (Array.isArray(v) && v.includes(CARD_BGM_RANDOM)) return [CARD_BGM_RANDOM];
