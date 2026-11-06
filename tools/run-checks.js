@@ -62,6 +62,9 @@ const REQUIRED = [
   // モンスターを「子」と呼ばない(2026-11-06 社長「モンスターのことを『子』って表現するのやめてほしい」「部員に伝えてもチャットが変わると意味がない」)。
   // 会話が変わっても残るよう、必須に入れて毎回通す。助手の台詞(特定のマスモンを指す「この子」「あの子」)は見ない
   'changelog/monster-ko-check.js',
+  // 保存データ・ランキングにそのまま書く値(保存キー・戦術カードの id・種名)の錠。文の一括の置き換えで値まで変わったら止める
+  // (2026-11-06 #4623 で戦術カードの id が画面の文と一緒に書き換わった。#4627 で戻した)
+  'boot/saved-value-lock-check.js',
   'image-asset-check.js',
 ];
 
@@ -229,6 +232,10 @@ function changedFiles(base) {
   const out = new Set();
   // porcelain は「XY<空白>パス」。先に trim すると状態の記号を消しそこねる
   for (const l of run(['status', '--porcelain', '-uall'])) out.add(l.slice(3).replace(/^.* -> /, '').replace(/^"|"$/g, ''));
+  // base を指定しないときは origin/main からの差(このブランチでコミットした分)も見る。
+  // 2026-11-06 #4623: 先にコミット・プッシュしてから --changed を回したら「変更 0 件 → 検査 0 本」で何も回らず、
+  // 終わりも成功のまま。落ちる検査5本(いつも回す検査に入っていた)が一度も回らずに main へ入った
+  if (!base && run(['rev-parse', '--verify', '--quiet', 'origin/main']).length) base = 'origin/main';
   if (base) for (const f of run(['diff', '--name-only', `${base}...HEAD`])) out.add(f.trim());
   return [...out].filter(Boolean);
 }
