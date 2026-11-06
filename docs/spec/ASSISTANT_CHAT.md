@@ -186,7 +186,7 @@ HELL・モンヒロビート・マルチの項目が材料に無かった)。
 
 ### 段階3 API 版の掛け合い(kind:'peer_talks')
 
-- ゲームは HOME に入ったとき、その日に作った掛け合いが尽きていて、その日に頼んだ回数が3回より少なければ頼む(`assistantPeerRequestGen`。HOME で流すのは1日5回までなので、ふつうは1日1〜2回で足りる)。公開の印 `RELEASE_FLAGS.assistantPeerApi`。
+- ゲームは HOME に入ったとき、その日に作った掛け合いが尽きていて、その日に頼んだ回数が100回より少なければ頼む(`assistantPeerRequestGen`。HOME で流すのは1日5回までなので、ふつうは1日1〜2回で足りる)。公開の印 `RELEASE_FLAGS.assistantPeerApi`。
 - 送るもの: 会ったペア(`{ a, b, lv, ab, ba }`。ab … a が b を呼ぶ呼び方)・遊んだ記録(数字だけ)・共有してよいメモ。会話の本文は送らない。
 - 返すもの: 掛け合い4本まで(2〜4行・1行60字まで・相手は `{c}`)。崩れたもの(ペア外の話し手・記録に無い数字・恋愛やないしょの言葉・AI の話・個人情報)は捨てる。1本も残らなければ回数を戻す。
 - 回数: 1人1日100回(2026-11-07 社長「今のおしゃべりと同じ数え方」)・全員1日3,000回。表 `assistant_peer_talk_usage` と関数 `assistant_peer_talk_take` / `assistant_peer_talk_refund`

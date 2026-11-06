@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: acd1d7a2a2694203
+// generated-sha256: cd378c356a42afba
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -55686,8 +55686,9 @@ const ASSISTANT_PEER_TALK_DAY_KEY = 'mh_assistant_peer_talk_day_v1';
 const ASSISTANT_PEER_SPECIAL_SEEN_KEY = 'mh_assistant_peer_special_seen_v1';
 const ASSISTANT_PEER_TALK_GEN_KEY = 'mh_assistant_peer_talk_gen_v1';
 const ASSISTANT_PEER_TALK_LOG_MAX = 30;
-// API 版(段階3)。1日に頼む回数(サーバの上限と同じ3回)と、作ったものを台本より先に出す割合
-const ASSISTANT_PEER_GEN_ASK_MAX = 3;
+// API 版(段階3)。1日に頼める回数(サーバの1人の上限と同じ100回・2026-11-07 社長)と、作ったものを台本より先に出す割合。
+//   頼むのは、その日に作ったものを見終えたときだけ(流すのは HOME 1日5回まで)なので、ふつうは1日1〜2回
+const ASSISTANT_PEER_GEN_ASK_MAX = 100;
 const ASSISTANT_PEER_GEN_RATE = 0.6;
 const ASSISTANT_PEER_GEN_EXPRESSIONS = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
 // 1日に流す数(社長「HOMEで1日5回程度、ほかの画面でもときどき」)と、画面に入ったときに流す割合

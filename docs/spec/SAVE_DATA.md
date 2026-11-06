@@ -56,7 +56,7 @@
 | `mh_assistant_peer_talk_log_v1` | array | 最近見た助手どうしの掛け合い(30件まで)。`[{ id, at }]`。同じ掛け合いが続かないようにする |
 | `mh_assistant_peer_talk_day_v1` | object | その日に流した掛け合いの数。`{ day, home, other }`(HOME は1日5回・ほかの画面は3回まで) |
 | `mh_assistant_peer_special_seen_v1` | array | 仲良し度 Lv5 の「2人の特別なお話」を見たペア。`[ペア]`。プロフィールの関係図から見返せる |
-| `mh_assistant_peer_talk_gen_v1` | object | API 版で作ったその日の助手どうしの掛け合い(2026-11-07)。`{ day, asked, talks: [{ id, pair, lines: [{ who, e, t }] }] }`。日付が変われば使わない。asked はその日に頼んだ回数(3回まで) |
+| `mh_assistant_peer_talk_gen_v1` | object | API 版で作ったその日の助手どうしの掛け合い(2026-11-07)。`{ day, asked, talks: [{ id, pair, lines: [{ who, e, t }] }] }`。日付が変われば使わない。asked はその日に頼んだ回数(100回まで) |
 | `mh_assistant_daily_lines_v1` | object | ふだんの吹き出しを1日1回まとめて作ったひとこと(2026-10-14)。`{ day, assistantId, lines: { [場面]: [{ e, t, n }] } }`。日付が変われば使わず、次に作ったら入れ替える。n はその日に出した回数 |
 | `mh_story_assistant_chat_seen_v1` | boolean | 助手とおしゃべりのお話「話せるようになった日」を本編で見たか(飛ばしても立つ)。公開の後の最初の HOME で1回だけ流すため。回想・デバッグでは立てない |
 | `mh_beat_shop_vip_letter_seen_v1` | boolean | お話「レジェンドブリーダーへの招待状」を本編で見たか(飛ばしても立つ・2026-11-05)。ブリーダーレベル1000以上の HOME で1回だけ流す。true の人だけ、ビートP交換所のダイヤ・トレーニングチケット・重トレーニングチケットが「優待パス還元」になる(値段は data/rhythm-event.js の LEGEND_BREEDER_PASS_OFFERS。保存しない)。回想・デバッグでは立てない |
