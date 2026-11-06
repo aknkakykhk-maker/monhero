@@ -830,7 +830,7 @@ const AllyJoinFx = ({ effect }) => {
         <div className="relative grid grid-cols-4 gap-1.5">
           {rows.map((row, ri) => <PhaseGrowthCell key={row.key} row={row} d={450 + ri * 110} countMs={countMs} single={!!effect.single}/>)}
         </div>
-        {effect.apt && <div className="mh-train-gain relative mt-1.5 text-center text-[10px] font-black text-cyan-300" style={{'--d': '1000ms'}}>{effect.single ? 'この子の間合い適性' : '間合い適性'} {effect.apt}</div>}
+        {effect.apt && <div className="mh-train-gain relative mt-1.5 text-center text-[10px] font-black text-cyan-300" style={{'--d': '1000ms'}}>{effect.single ? 'このモンスターの間合い適性' : '間合い適性'} {effect.apt}</div>}
       </div>
     </div>
   );

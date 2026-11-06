@@ -30,7 +30,7 @@ const CARD_VS_LINES = Object.freeze({
     easy: { e: 'happy', t: 'きょうはゆるっと遊ぼ♪ でも攻めるのはやめないよ！' },
     normal: { e: 'wink', t: '先に攻めたもん勝ちぢゃん！ いっくよー！' },
     hard: { e: 'excited', t: 'まぢでガンガンいくから、ついてきてね！' },
-    expert: { e: 'excited', t: '全部の弾から選んだ子たちだよ！ 本気ダッシュぢゃん！' },
+    expert: { e: 'excited', t: '全部の弾から選んだモンスターたちだよ！ 本気ダッシュぢゃん！' },
     master: { e: 'wink', t: 'いちばん強い組み合わせで来たよ。止めてみなよ？' },
   },
   momosuke: {
