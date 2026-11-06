@@ -69,6 +69,7 @@
 | `mh_masu_locked_v1` | string[] / `[]` | マスモンのお気に入り(ロック)のIDの並び(2026-10-01)。お気に入りの子は削除・合体の副・寄付ができない。壊れた値は「お気に入りなし」(`normalizeMasuLockIds`)。`mh_masu_mons` には書かない |
 | `mh_favorite_masu_v1` | string / `null` | 「好きなモンスター」にしたマスモン1体のID(フレンド機能・プロフィールで選ぶ。フレンドにだけ見える)。マスモンのロックの「お気に入り」(`mh_masu_locked_v1`)とは**別のもの** |
 | `mh_profile_message_v1` | string / `''` | フレンドのプロフィールに出る「ひとこと」(30文字まで。`friendsCleanMessage` を通した文) |
+| `mh_breeder_gender_v1` | string / `'none'` | プロフィールの性別(`'male'`/`'female'`/`'none'`=答えない)。`normalizeBreederGender` を通し、無い・壊れているときは `'none'`(これまでと同じ呼び方)。助手の段ごとの呼び方(`ASSISTANT_GENDER_CALLS`)とマスモンのくん/ちゃんに使う。端末の中だけで、ランキング・フレンドには送らない(2026-11-06 社長) |
 | `mh_friend_favorites_v1` | string[] / `[]` | フレンド一覧で「お気に入り」にしたフレンドのID(`friendsNormalizeFavorites` を通す) |
 | `mh_friend_recent_v1` | object[] / `[]` | 最近いっしょに遊んだ人(`{id,name,at}`。新しい順・同じ人は1件・最大30人。端末だけに覚え、サーバーへは送らない。`friendsNormalizeRecent` を通す) |
 | `mh_friend_notes_v1` | object / `{}` | フレンドごとのメモ(フレンドのID→メモ。メモは12文字まで・最大200人ぶん。端末だけに覚え、サーバーへは送らない。`friendsNormalizeNotes` を通す) |

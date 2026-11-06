@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 357fc8b6c08a59c3
+// generated-sha256: 0b381fb64e222766
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -31821,12 +31821,23 @@ const rhythmBuddyPersonaBirthday = (id) => {
   const d = new Date(Date.UTC(2025, 0, 1) + n * 86400000);
   return { month: d.getUTCMonth() + 1, day: d.getUTCDate() };
 };
+// 呼び方の id を、プレイヤーの性別に合わせて持ち替える。男の子なら「ちゃん」→「くん」、女の子なら「くん」→「ちゃん」。
+// 候補(list)に替える先が無い性格では替えない
+const rhythmBuddyCallForGender = (callId, list, gender) => {
+  const has = (id) => Array.isArray(list) && list.includes(id);
+  if (gender === 'male' && callId === 'chan' && has('kun')) return 'kun';
+  if (gender === 'female' && callId === 'kun' && has('chan')) return 'chan';
+  return callId;
+};
 // その子の個体差(D の好き・苦手な曲は rhythmBuddyPersonaSongs で別に読む)
 // baseId(種)を渡すと性別も決まる。渡さないとき・ほかの種は、これまでと1文字も変わらない
 const rhythmBuddyPersona = (masuId, trait = '', baseId = null) => {
   const t = Object.prototype.hasOwnProperty.call(RHYTHM_BUDDY_SELF_WORDS, trait) ? trait : '';
   const gender = rhythmBuddyGenderOf(baseId);
-  const callId = rhythmBuddyPersonaChoose(RHYTHM_BUDDY_CALLS[t], masuId, `call:${t}`, true);
+  const callId0 = rhythmBuddyPersonaChoose(RHYTHM_BUDDY_CALLS[t], masuId, `call:${t}`, true);
+  // プレイヤーの性別(プロフィール。data/assistants.js の assistantPlayerGender)に合わせて、くん/ちゃんを持ち替える(2026-11-06 社長)。
+  // その性格の候補に両方あるときだけ。答えない('none')ならこれまでと1文字も変わらない
+  const callId = rhythmBuddyCallForGender(callId0, RHYTHM_BUDDY_CALLS[t], typeof assistantPlayerGender === 'function' ? assistantPlayerGender() : 'none');
   const quirk = rhythmBuddyPersonaChoose(RHYTHM_BUDDY_QUIRKS[t], masuId, `quirk:${t}`, false);
   return {
     gender,
@@ -37908,6 +37919,8 @@ function ProfileScreen({
   favoriteMasu = null, onOpenFavoritePicker,
   // フレンドのプロフィールに出る「ひとこと」(自由入力・30文字まで)と、書き換える画面を開く操作
   profileMessage = '', onOpenMessageEditor,
+  // 性別(男の子/女の子/答えない)。助手・マスモンの呼び方のもとにする。ほかの人には見せない(2026-11-06 社長)
+  breederGender = 'none', onSelectBreederGender = null,
   // 選べる助手だけ(イベントで加入する助手は、その会話を見るまで並べない)。
   // 渡されなければ今までどおり全員を並べる
   unlockedAssistants,
@@ -37978,6 +37991,19 @@ function ProfileScreen({
               </div>
             </div>
           </div>
+          {onSelectBreederGender&&!onboardingPreview&&(
+            <div className="mt-2 rounded-xl border border-white/10 bg-black/25 px-2.5 py-1.5" data-profile-gender>
+              <div className="flex items-center gap-2">
+                <small className="shrink-0 text-[10px] font-black leading-tight text-sky-300">性別<span className="block text-[9px] font-bold text-slate-400">非公開</span></small>
+                <div className="grid flex-1 grid-cols-3 gap-1.5" role="radiogroup" aria-label="性別">
+                  {[['male','男の子'],['female','女の子'],['none','答えない']].map(([id,label])=>(
+                    <button key={id} type="button" role="radio" aria-checked={breederGender===id} data-gender={id} onClick={()=>onSelectBreederGender(id)}
+                      className={`min-h-[36px] rounded-lg border text-[11px] font-black active:scale-95 ${breederGender===id?'border-sky-300 bg-sky-500/30 text-white':'border-white/10 bg-slate-800/80 text-slate-300'}`}>{label}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
           {/* ② 着せかえのタイル(アイコン・フレーム・図鑑・着替え)。ひとことと好きなモンスターは、下の「見せる札」へ移した(2026-10-29 案B)。
               増えても、ここへ同じ形で足していく */}
           {(()=>{
@@ -78130,6 +78156,18 @@ function MonsterHeroGame() {
   const [showFavoritePicker, setShowFavoritePicker] = useState(false);
   // ひとこと(フレンドのプロフィールに出る自己紹介。30文字まで)。新しい保存キー。選んだ文は friendsCleanMessage を通してから覚える
   const PROFILE_MESSAGE_KEY = 'mh_profile_message_v1';
+  // 性別(2026-11-06 社長)。助手・マスモンの呼び方のもとにするだけで、ランキング・フレンドには出さない。新しい保存キー。
+  // 'male'/'female'/'none'(答えない・既定)。無い・壊れているときは 'none' = これまでと同じ呼び方
+  const BREEDER_GENDER_KEY = 'mh_breeder_gender_v1';
+  const [breederGender, setBreederGender] = useState('none');
+  const saveBreederGender = (v) => {
+    const next = typeof normalizeBreederGender === 'function' ? normalizeBreederGender(v) : 'none';
+    if (typeof assistantSetPlayerGender === 'function') assistantSetPlayerGender(next);
+    setBreederGender(next);
+    Promise.resolve(storeSet(BREEDER_GENDER_KEY, next, false)).catch(error => {
+      console.error('[profile] gender save failed:', error && error.message ? error.message : error);
+    });
+  };
   const [profileMessage, setProfileMessage] = useState('');
   const [showMessageEditor, setShowMessageEditor] = useState(false);
   const [tempMessage, setTempMessage] = useState('');
@@ -82143,6 +82181,7 @@ function MonsterHeroGame() {
       setProfileFrameId(normalizeProfileFrameId(await storeGet(PROFILE_FRAME_KEY, PROFILE_FRAME_NONE_ID, false)));
       // 好きなモンスター(フレンド用)。既存のセーブデータには無いキーなので、既定は必ず「未設定」
       { const savedMessage = await storeGet(PROFILE_MESSAGE_KEY, '', false); setProfileMessage(friendsCleanMessage(savedMessage)); }
+      { const savedGender = await storeGet(BREEDER_GENDER_KEY, 'none', false); const g = typeof normalizeBreederGender === 'function' ? normalizeBreederGender(savedGender) : 'none'; if (typeof assistantSetPlayerGender === 'function') assistantSetPlayerGender(g); setBreederGender(g); }
       { const savedFavorite = await storeGet(FAVORITE_MASU_KEY, null, false); setFavoriteMasuId(typeof savedFavorite === 'string' && savedFavorite ? savedFavorite : null); }
       // 呼び方の上書きは助手ごとに別のキーへ。みゅあのぶんは今までのキーをそのまま読む
       const loadedCallStyles = {};
@@ -96763,6 +96802,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             favoriteMasu={(favoriteMasuId!=null&&masuMons.find(m=>String(m.id)===String(favoriteMasuId)))||null}
             onOpenFavoritePicker={()=>setShowFavoritePicker(true)}
             profileMessage={profileMessage}
+            breederGender={breederGender}
+            onSelectBreederGender={saveBreederGender}
             onOpenMessageEditor={()=>{setTempMessage(profileMessage);setShowMessageEditor(true);}}
           />
         )}
