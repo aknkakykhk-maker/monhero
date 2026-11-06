@@ -7086,7 +7086,12 @@ function MonsterHeroGame() {
       // (localStorage直)で読む。ここでは作らない(まだ無い端末は対象外のまま素通りする)
       let currentPlayerId = '';
       try { currentPlayerId = window.localStorage.getItem('mh_player_id') || ''; } catch {}
-      const playerCompensationGrant = grantPlayerCompensationGifts(compensationGrant.gifts, currentPlayerId);
+      const playerCompensationGrant0 = grantPlayerCompensationGifts(compensationGrant.gifts, currentPlayerId);
+      // モンヒロビート本オープン記念ギフト(すでに遊んでいる人全員へ1回だけ・2026-11-07)。本オープンの印が偽のあいだは何もしない。
+      // ギフトを足してから印を立てる(足す前に閉じられても、次の起動で配り直せる。同じidがあれば足さない)
+      const grandOpenAllDone = await storeGet(GRAND_OPEN_ALL_GIFT_KEY, false, false);
+      const grandOpenGrant = grantGrandOpenAllGift(playerCompensationGrant0.gifts, { done: grandOpenAllDone, onboarded: compensationEverPlayed });
+      const playerCompensationGrant = grandOpenGrant.granted ? { granted: true, gifts: grandOpenGrant.gifts } : playerCompensationGrant0;
       // 受け取り済みのギフトは消えずに積もるので、起動のたびに古いぶんを落としておく
       // (pruneGiftHistory。ログインボーナスと補償は数え直しに使うので残す)
       const prunedGifts = pruneGiftHistory(playerCompensationGrant.gifts);
@@ -7096,6 +7101,7 @@ function MonsterHeroGame() {
       if (loginGrant.granted || compensationGrant.granted || playerCompensationGrant.granted || prunedGifts.length !== playerCompensationGrant.gifts.length) {
         await storeSet('mh_gifts', prunedGifts, false);
       }
+      if (grandOpenGrant.granted) await storeSet(GRAND_OPEN_ALL_GIFT_KEY, true, false);
       if (loginGrant.granted) setLoginBonusPopup({ day:loginGrant.day, rewards:loginGrant.gift.rewards });
       // ログインボーナスでptとして配ってしまったぶんを、経験値へ付け替える(一度きり)。
       // 経験値が増えてレベルが上がったぶんのポイントもここで配る
@@ -7832,6 +7838,8 @@ function MonsterHeroGame() {
           const grant = grantNewPlayerCampaignGift(giftsNow, Date.now(), waivedCompensationRewards(giftsNow, waivedNow));
           if (grant.granted) { await storeSet('mh_gifts', grant.gifts, false); setGifts(grant.gifts); }
           await storeSet(NEW_PLAYER_CAMPAIGN_KEY, true, false);
+          // 本オープン記念の新規プレゼントを配った人には、全員向けの本オープン記念ギフトは配らない(大盛りを重ねない)
+          if (RHYTHM_GRAND_OPEN_RELEASE) await storeSet(GRAND_OPEN_ALL_GIFT_KEY, true, false);
         }
       } catch {}
     }

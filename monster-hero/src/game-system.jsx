@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 23bf7e210843c868
+// generated-sha256: e454a82022cd5ac4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9237,6 +9237,13 @@ const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = true;
 // ビートPはSTEP4で正式公開。獲得はこのフラグに加えて期間限定イベント開催中だけに限定し、
 // 常設の交換所・ヘルプ・更新履歴・助手告知を同じタイミングで公開する。
 const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
+// モンヒロビート本オープン(2026-11-07 社長「本オープンに記念は差し替えたい」「とりあえずまずは全て準備できてから」)。
+// 真にすると、同時に次が切り替わる(偽のあいだは今までどおりプレオープン記念のまま):
+//   ・新しく始める人へのプレゼント → 「モンヒロビート本オープン記念」(大盛り)。NEW_PLAYER_CAMPAIGN_GIFT_GRAND
+//   ・すでに遊んでいる人全員へ1回だけ「本オープン記念ギフト」(ダイヤ1,000万ほか)。GRAND_OPEN_ALL_GIFT
+//   ・ヘルプの新規キャンペーンの話題・更新履歴(releaseFlag:'rhythmGrandOpen')
+// 社長が「本オープン」と言うまで偽のまま
+const RHYTHM_GRAND_OPEN_RELEASE = false;
 // ★tacticsBattle は「β公開のあいだも開く枠」。ヘルプは、β版で遊べる人にも要る
 //   (tactics は本公開だけ。両方を1つのフラグにすると、本公開前の告知まで出てしまう)
 // ★rhythmHell … 難易度 HELL(空中のノーツ SKY TAP・SKY SLIDE)。社長の OK まで偽(HISTORY 10/11 02:05「HELL はデバッグで色々見てから」)。
@@ -9282,7 +9289,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   //   数字は 32-tactics-units.jsx の TACTICS_HATE / MONSTER_TYPES。お話「タクティクスバトル ～4人のタイプ～」(tactics_types)もこの印で出る
   tacticsHate: true,
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
-  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
+  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmGrandOpen:RHYTHM_GRAND_OPEN_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
@@ -10014,26 +10021,78 @@ const NEW_PLAYER_CAMPAIGN_GIFT = Object.freeze({
     { type:'rainbowPsyche', amount:100 },
   ],
 });
+// 本オープン記念(2026-11-07 社長「大盛り」)。RHYTHM_GRAND_OPEN_RELEASE が真のあいだ、上の代わりに配る。
+// 配らなかったお詫び(ダイヤ1,000・スキップ序2/破2/急7・染色もどき5)を足した合計が
+// ダイヤ150,000・虹のプシュケー150・スキップ序3/破3/急10・セッション券10・性格のたね3・染色もどき5 になるようにしてある。
+// 配った印(NEW_PLAYER_CAMPAIGN_KEY)は同じものを使う(プレオープン記念をもらった人には届かない)
+const NEW_PLAYER_CAMPAIGN_GIFT_GRAND = Object.freeze({
+  id: 'monhiro_beat_grand_open_new_player_v1',
+  title: 'モンヒロビート 本オープン記念',
+  description: '新規プレイヤーキャンペーンのプレゼントです。モンヒロビートの本オープンを記念して、はじめた方へお贈りします。',
+  rewards: [
+    { type:'diamond', amount:149000 },
+    { type:'rainbowPsyche', amount:150 },
+    { type:'skipTicketJo', amount:1 },
+    { type:'skipTicketHa', amount:1 },
+    { type:'skipTicketKyu', amount:3 },
+    { type:'gameItem', itemId:'session_ticket', amount:10 },
+    { type:'gameItem', itemId:'buddy_trait_seed', amount:3 },
+  ],
+});
+const newPlayerCampaignGiftDef = () => (RHYTHM_GRAND_OPEN_RELEASE ? NEW_PLAYER_CAMPAIGN_GIFT_GRAND : NEW_PLAYER_CAMPAIGN_GIFT);
 // ギフト一覧へ1件足す。すでに同じidがあれば何もしない(何度呼んでも増えない)
 // extraRewards … 配らなかったお詫びの合計(waivedCompensationRewards)。同じ種類は数を足し、新しい種類は並べる
 const grantNewPlayerCampaignGift = (gifts, now=Date.now(), extraRewards=[]) => {
   const list = Array.isArray(gifts) ? gifts : [];
   if (!NEW_PLAYER_CAMPAIGN_ENABLED) return { granted:false, gifts:list };
-  if (list.some(item => item?.id === NEW_PLAYER_CAMPAIGN_GIFT.id)) return { granted:false, gifts:list };
-  const rewards = NEW_PLAYER_CAMPAIGN_GIFT.rewards.map(r=>({...r}));
+  const def = newPlayerCampaignGiftDef();
+  // プレオープン記念と本オープン記念のどちらかが届いていれば、もう足さない
+  if (list.some(item => item?.id === NEW_PLAYER_CAMPAIGN_GIFT.id || item?.id === NEW_PLAYER_CAMPAIGN_GIFT_GRAND.id)) return { granted:false, gifts:list };
+  const rewards = def.rewards.map(r=>({...r}));
   (Array.isArray(extraRewards) ? extraRewards : []).forEach(extra => {
     const amount = Math.floor(Number(extra?.amount) || 0);
     if (!extra?.type || amount <= 0) return;
-    const same = rewards.find(r => r.type === extra.type);
+    // アイテムをidで持つ報酬(gameItem)には足さない(お詫びに gameItem は無いが、混ざらないように)
+    const same = extra.type === 'gameItem' ? null : rewards.find(r => r.type === extra.type && !r.itemId);
     if (same) same.amount += amount; else rewards.push({ type:extra.type, amount });
   });
   const gift = {
-    ...NEW_PLAYER_CAMPAIGN_GIFT,
+    ...def,
     source: 'campaign',
     rewards,
     createdAt: new Date(now).toISOString(),
     claimedAt: null,
   };
+  return { granted:true, gifts:[gift, ...list] };
+};
+
+// ===== 本オープン記念ギフト(すでに遊んでいる人全員へ1回だけ・2026-11-07 社長「推奨でダイヤは1000万」) =====
+// RHYTHM_GRAND_OPEN_RELEASE が真になってから、起動したときに1回だけギフトボックスへ足す。
+// 【二重に配らない】新しいキー GRAND_OPEN_ALL_GIFT_KEY と、ギフト側の同じidの両方を見る(idは固定)。
+// 【新しく始めた人には配らない】本オープン記念の新規プレゼントを配ったときに、同じキーを立てる(新規の大盛りと重ねない)。
+// 【受取期限なし】受け取りそこねると取り返しがつかないので expiresAt を書かない
+const GRAND_OPEN_ALL_GIFT_KEY = 'mh_rhythm_grand_open_gift_v1';
+const GRAND_OPEN_ALL_GIFT = Object.freeze({
+  id: 'monhiro_beat_grand_open_all_v1',
+  title: 'モンヒロビート 本オープン記念',
+  description: 'モンヒロビートの本オープンを記念して、遊んでくださっている皆さんへお贈りします。いつもありがとうございます。',
+  rewards: [
+    { type:'diamond', amount:10000000 },
+    { type:'rainbowPsyche', amount:150 },
+    { type:'skipTicketJo', amount:3 },
+    { type:'skipTicketHa', amount:3 },
+    { type:'skipTicketKyu', amount:10 },
+    { type:'dyeMock', amount:5 },
+    { type:'gameItem', itemId:'session_ticket', amount:10 },
+    { type:'gameItem', itemId:'buddy_trait_seed', amount:3 },
+  ],
+});
+// 配るか(戻り値 { granted, gifts })。done は GRAND_OPEN_ALL_GIFT_KEY の値。onboarded は はじめての設定を終えているか
+const grantGrandOpenAllGift = (gifts, { done = false, onboarded = false } = {}, now = Date.now()) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  if (!RHYTHM_GRAND_OPEN_RELEASE || done === true || onboarded !== true) return { granted:false, gifts:list };
+  if (list.some(item => item?.id === GRAND_OPEN_ALL_GIFT.id || item?.id === NEW_PLAYER_CAMPAIGN_GIFT_GRAND.id)) return { granted:false, gifts:list };
+  const gift = { ...GRAND_OPEN_ALL_GIFT, source:'campaign', rewards:GRAND_OPEN_ALL_GIFT.rewards.map(r=>({...r})), createdAt:new Date(now).toISOString(), claimedAt:null };
   return { granted:true, gifts:[gift, ...list] };
 };
 
@@ -82613,7 +82672,12 @@ function MonsterHeroGame() {
       // (localStorage直)で読む。ここでは作らない(まだ無い端末は対象外のまま素通りする)
       let currentPlayerId = '';
       try { currentPlayerId = window.localStorage.getItem('mh_player_id') || ''; } catch {}
-      const playerCompensationGrant = grantPlayerCompensationGifts(compensationGrant.gifts, currentPlayerId);
+      const playerCompensationGrant0 = grantPlayerCompensationGifts(compensationGrant.gifts, currentPlayerId);
+      // モンヒロビート本オープン記念ギフト(すでに遊んでいる人全員へ1回だけ・2026-11-07)。本オープンの印が偽のあいだは何もしない。
+      // ギフトを足してから印を立てる(足す前に閉じられても、次の起動で配り直せる。同じidがあれば足さない)
+      const grandOpenAllDone = await storeGet(GRAND_OPEN_ALL_GIFT_KEY, false, false);
+      const grandOpenGrant = grantGrandOpenAllGift(playerCompensationGrant0.gifts, { done: grandOpenAllDone, onboarded: compensationEverPlayed });
+      const playerCompensationGrant = grandOpenGrant.granted ? { granted: true, gifts: grandOpenGrant.gifts } : playerCompensationGrant0;
       // 受け取り済みのギフトは消えずに積もるので、起動のたびに古いぶんを落としておく
       // (pruneGiftHistory。ログインボーナスと補償は数え直しに使うので残す)
       const prunedGifts = pruneGiftHistory(playerCompensationGrant.gifts);
@@ -82623,6 +82687,7 @@ function MonsterHeroGame() {
       if (loginGrant.granted || compensationGrant.granted || playerCompensationGrant.granted || prunedGifts.length !== playerCompensationGrant.gifts.length) {
         await storeSet('mh_gifts', prunedGifts, false);
       }
+      if (grandOpenGrant.granted) await storeSet(GRAND_OPEN_ALL_GIFT_KEY, true, false);
       if (loginGrant.granted) setLoginBonusPopup({ day:loginGrant.day, rewards:loginGrant.gift.rewards });
       // ログインボーナスでptとして配ってしまったぶんを、経験値へ付け替える(一度きり)。
       // 経験値が増えてレベルが上がったぶんのポイントもここで配る
@@ -83359,6 +83424,8 @@ function MonsterHeroGame() {
           const grant = grantNewPlayerCampaignGift(giftsNow, Date.now(), waivedCompensationRewards(giftsNow, waivedNow));
           if (grant.granted) { await storeSet('mh_gifts', grant.gifts, false); setGifts(grant.gifts); }
           await storeSet(NEW_PLAYER_CAMPAIGN_KEY, true, false);
+          // 本オープン記念の新規プレゼントを配った人には、全員向けの本オープン記念ギフトは配らない(大盛りを重ねない)
+          if (RHYTHM_GRAND_OPEN_RELEASE) await storeSet(GRAND_OPEN_ALL_GIFT_KEY, true, false);
         }
       } catch {}
     }

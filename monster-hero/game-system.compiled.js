@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9b1c96a4f091722d
+// source-sha256: 8bb369e69a9d427e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13194,6 +13194,7 @@ const RAID_JACK_RHYTHM_PUBLIC_RELEASE = true;
 const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;
 const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = true;
 const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
+const RHYTHM_GRAND_OPEN_RELEASE = false;
 const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   tactics: TACTICS_MODE_PUBLIC_RELEASE,
@@ -13213,6 +13214,7 @@ const RELEASE_FLAGS = {
   tacticsHate: true,
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE,
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE,
+  rhythmGrandOpen: RHYTHM_GRAND_OPEN_RELEASE,
   rhythmMulti: RHYTHM_MULTI_PUBLIC_RELEASE,
   friends: FRIENDS_PUBLIC_RELEASE,
   raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE,
@@ -13987,32 +13989,123 @@ const NEW_PLAYER_CAMPAIGN_GIFT = Object.freeze({
     amount: 100
   }]
 });
+const NEW_PLAYER_CAMPAIGN_GIFT_GRAND = Object.freeze({
+  id: 'monhiro_beat_grand_open_new_player_v1',
+  title: 'モンヒロビート 本オープン記念',
+  description: '新規プレイヤーキャンペーンのプレゼントです。モンヒロビートの本オープンを記念して、はじめた方へお贈りします。',
+  rewards: [{
+    type: 'diamond',
+    amount: 149000
+  }, {
+    type: 'rainbowPsyche',
+    amount: 150
+  }, {
+    type: 'skipTicketJo',
+    amount: 1
+  }, {
+    type: 'skipTicketHa',
+    amount: 1
+  }, {
+    type: 'skipTicketKyu',
+    amount: 3
+  }, {
+    type: 'gameItem',
+    itemId: 'session_ticket',
+    amount: 10
+  }, {
+    type: 'gameItem',
+    itemId: 'buddy_trait_seed',
+    amount: 3
+  }]
+});
+const newPlayerCampaignGiftDef = () => RHYTHM_GRAND_OPEN_RELEASE ? NEW_PLAYER_CAMPAIGN_GIFT_GRAND : NEW_PLAYER_CAMPAIGN_GIFT;
 const grantNewPlayerCampaignGift = (gifts, now = Date.now(), extraRewards = []) => {
   const list = Array.isArray(gifts) ? gifts : [];
   if (!NEW_PLAYER_CAMPAIGN_ENABLED) return {
     granted: false,
     gifts: list
   };
-  if (list.some(item => item?.id === NEW_PLAYER_CAMPAIGN_GIFT.id)) return {
+  const def = newPlayerCampaignGiftDef();
+  if (list.some(item => item?.id === NEW_PLAYER_CAMPAIGN_GIFT.id || item?.id === NEW_PLAYER_CAMPAIGN_GIFT_GRAND.id)) return {
     granted: false,
     gifts: list
   };
-  const rewards = NEW_PLAYER_CAMPAIGN_GIFT.rewards.map(r => ({
+  const rewards = def.rewards.map(r => ({
     ...r
   }));
   (Array.isArray(extraRewards) ? extraRewards : []).forEach(extra => {
     const amount = Math.floor(Number(extra?.amount) || 0);
     if (!extra?.type || amount <= 0) return;
-    const same = rewards.find(r => r.type === extra.type);
+    const same = extra.type === 'gameItem' ? null : rewards.find(r => r.type === extra.type && !r.itemId);
     if (same) same.amount += amount;else rewards.push({
       type: extra.type,
       amount
     });
   });
   const gift = {
-    ...NEW_PLAYER_CAMPAIGN_GIFT,
+    ...def,
     source: 'campaign',
     rewards,
+    createdAt: new Date(now).toISOString(),
+    claimedAt: null
+  };
+  return {
+    granted: true,
+    gifts: [gift, ...list]
+  };
+};
+const GRAND_OPEN_ALL_GIFT_KEY = 'mh_rhythm_grand_open_gift_v1';
+const GRAND_OPEN_ALL_GIFT = Object.freeze({
+  id: 'monhiro_beat_grand_open_all_v1',
+  title: 'モンヒロビート 本オープン記念',
+  description: 'モンヒロビートの本オープンを記念して、遊んでくださっている皆さんへお贈りします。いつもありがとうございます。',
+  rewards: [{
+    type: 'diamond',
+    amount: 10000000
+  }, {
+    type: 'rainbowPsyche',
+    amount: 150
+  }, {
+    type: 'skipTicketJo',
+    amount: 3
+  }, {
+    type: 'skipTicketHa',
+    amount: 3
+  }, {
+    type: 'skipTicketKyu',
+    amount: 10
+  }, {
+    type: 'dyeMock',
+    amount: 5
+  }, {
+    type: 'gameItem',
+    itemId: 'session_ticket',
+    amount: 10
+  }, {
+    type: 'gameItem',
+    itemId: 'buddy_trait_seed',
+    amount: 3
+  }]
+});
+const grantGrandOpenAllGift = (gifts, {
+  done = false,
+  onboarded = false
+} = {}, now = Date.now()) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  if (!RHYTHM_GRAND_OPEN_RELEASE || done === true || onboarded !== true) return {
+    granted: false,
+    gifts: list
+  };
+  if (list.some(item => item?.id === GRAND_OPEN_ALL_GIFT.id || item?.id === NEW_PLAYER_CAMPAIGN_GIFT_GRAND.id)) return {
+    granted: false,
+    gifts: list
+  };
+  const gift = {
+    ...GRAND_OPEN_ALL_GIFT,
+    source: 'campaign',
+    rewards: GRAND_OPEN_ALL_GIFT.rewards.map(r => ({
+      ...r
+    })),
     createdAt: new Date(now).toISOString(),
     claimedAt: null
   };
@@ -137122,7 +137215,16 @@ function MonsterHeroGame() {
       try {
         currentPlayerId = window.localStorage.getItem('mh_player_id') || '';
       } catch {}
-      const playerCompensationGrant = grantPlayerCompensationGifts(compensationGrant.gifts, currentPlayerId);
+      const playerCompensationGrant0 = grantPlayerCompensationGifts(compensationGrant.gifts, currentPlayerId);
+      const grandOpenAllDone = await storeGet(GRAND_OPEN_ALL_GIFT_KEY, false, false);
+      const grandOpenGrant = grantGrandOpenAllGift(playerCompensationGrant0.gifts, {
+        done: grandOpenAllDone,
+        onboarded: compensationEverPlayed
+      });
+      const playerCompensationGrant = grandOpenGrant.granted ? {
+        granted: true,
+        gifts: grandOpenGrant.gifts
+      } : playerCompensationGrant0;
       const prunedGifts = pruneGiftHistory(playerCompensationGrant.gifts);
       setGifts(prunedGifts);
       await storeSet('mh_login_bonus', loginGrant.loginBonus, false);
@@ -137130,6 +137232,7 @@ function MonsterHeroGame() {
       if (loginGrant.granted || compensationGrant.granted || playerCompensationGrant.granted || prunedGifts.length !== playerCompensationGrant.gifts.length) {
         await storeSet('mh_gifts', prunedGifts, false);
       }
+      if (grandOpenGrant.granted) await storeSet(GRAND_OPEN_ALL_GIFT_KEY, true, false);
       if (loginGrant.granted) setLoginBonusPopup({
         day: loginGrant.day,
         rewards: loginGrant.gift.rewards
@@ -137886,6 +137989,7 @@ function MonsterHeroGame() {
             setGifts(grant.gifts);
           }
           await storeSet(NEW_PLAYER_CAMPAIGN_KEY, true, false);
+          if (RHYTHM_GRAND_OPEN_RELEASE) await storeSet(GRAND_OPEN_ALL_GIFT_KEY, true, false);
         }
       } catch {}
     }
