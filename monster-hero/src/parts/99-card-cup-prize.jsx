@@ -33,6 +33,15 @@ const CARD_CUP_ITEMS = Object.freeze([
   { item: 'card:catalog', label: 'バトルカードカタログ', emoji: '📘', card: 'catalogs' },
 ]);
 const cardCupItemOf = (item) => CARD_CUP_ITEMS.find((x) => x.item === item) || null;
+// 打った文字から数を読む(2026-11-07 社長「数値が絡む項目は基本直接入力」・バトル部 #4654 と同じ読み方)。
+//   全角数字は半角へ、小数点から先は切り捨て、桁区切りのカンマ・マイナス・ほかの文字は無視。空欄・数字なしは 0
+const cardCupReadCount = (text) => {
+  const digits = String(text == null ? '' : text).replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).split(/[.．。]/)[0].replace(/[^0-9]/g, '');
+  const n = parseInt(digits, 10);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+};
+// 配る割合(「60,30,10」)を読む。区切りは半角・全角のカンマ・読点・中黒・空白。0 と読めない所は落とす。8つまで
+const cardCupReadSplit = (text) => String(text == null ? '' : text).split(/[,，、・\s　]+/).map(cardCupReadCount).filter((x) => x > 0).slice(0, 8);
 const cardCupItemText = (item, amount) => { const it = cardCupItemOf(item); return `${it ? `${it.emoji} ${it.label}` : item} ${Number(amount || 0).toLocaleString()}`; };
 // 出せない物(画面の一覧に理由つきで出す)
 const CARD_CUP_ITEMS_NG = Object.freeze([
@@ -329,7 +338,7 @@ const CardCupPrizePanel = ({ c, v, now, selfId, prize, reload, getAdapters }) =>
           <div className="flex flex-wrap gap-1">{giveOptions.map((x) => <button key={x.item} type="button" data-card-cup-give-item={x.item} onClick={() => setPick({ item: x.item, amount: haveOf(x.item) })} className={chip(pick && pick.item === x.item)}>{cardCupItemOf(x.item).emoji} {x.label}</button>)}</div>
           {pick && (
             <div className="flex items-center gap-1.5">
-              <input data-card-cup-give-amount inputMode="numeric" value={pick.amount} onChange={(e) => setPick({ ...pick, amount: Math.max(0, Math.floor(Number(String(e.target.value).replace(/[^0-9]/g, '')) || 0)) })} className="w-24 rounded-lg border border-slate-600 bg-slate-900 px-2 py-1.5 text-[14px] font-black text-white"/>
+              <input data-card-cup-give-amount inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" autoComplete="off" value={pick.amount} onChange={(e) => setPick({ ...pick, amount: cardCupReadCount(e.target.value) })} className="w-24 rounded-lg border border-slate-600 bg-slate-900 px-2 py-1.5 text-[14px] font-black text-white"/>
               <small className="min-w-0 flex-1 text-[11px] font-bold text-slate-400">{`持っている ${haveOf(pick.item).toLocaleString()}`}</small>
               <button type="button" data-card-cup-give-go disabled={busy || !(pick.amount > 0)} onClick={() => run(async () => { const a = await getAdapters(); if (!a.owner || !a.key) return 'locked'; return cardCupGive(a, c.id, pick.item, pick.amount, haveOf(pick.item)); })} className="shrink-0 rounded-lg bg-amber-400 px-3 py-1.5 text-[13px] font-black text-slate-950 disabled:opacity-50">預ける</button>
             </div>
@@ -341,9 +350,9 @@ const CardCupPrizePanel = ({ c, v, now, selfId, prize, reload, getAdapters }) =>
             <button type="button" data-card-cup-fee-item="" onClick={() => { setFeeItem(''); setFeeAmount(0); }} className={chip(!feeItem)}>なし</button>
             {feeOptions.map((x) => <button key={x.item} type="button" data-card-cup-fee-item={x.item} onClick={() => { setFeeItem(x.item); setFeeAmount(Math.max(1, feeAmount)); }} className={chip(feeItem === x.item)}>{cardCupItemOf(x.item).emoji} {x.label}</button>)}
           </div>
-          {feeItem && <div className="flex items-center gap-1.5"><input data-card-cup-fee-amount inputMode="numeric" value={feeAmount} onChange={(e) => setFeeAmount(Math.max(0, Math.floor(Number(String(e.target.value).replace(/[^0-9]/g, '')) || 0)))} className="w-24 rounded-lg border border-slate-600 bg-slate-900 px-2 py-1.5 text-[14px] font-black text-white"/><small className="text-[11px] font-bold text-slate-400">参加する人が払う量</small></div>}
+          {feeItem && <div className="flex items-center gap-1.5"><input data-card-cup-fee-amount inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" autoComplete="off" value={feeAmount} onChange={(e) => setFeeAmount(cardCupReadCount(e.target.value))} className="w-24 rounded-lg border border-slate-600 bg-slate-900 px-2 py-1.5 text-[14px] font-black text-white"/><small className="text-[11px] font-bold text-slate-400">参加する人が払う量</small></div>}
           <div className="flex flex-wrap gap-1">{CARD_CUP_SPLITS.map((s) => <button key={s.id} type="button" data-card-cup-split-pick={s.id} onClick={() => setSplit(s.split)} className={chip(split && split.join() === s.split.join())}>{s.label}</button>)}</div>
-          <input data-card-cup-split-custom value={(split || []).join(',')} onChange={(e) => setSplit(String(e.target.value).split(/[,、・\s]+/).map((x) => Math.floor(Number(x))).filter((x) => x > 0).slice(0, 8))} placeholder="自分で決める(例 60,30,10)" className="w-full rounded-lg border border-slate-600 bg-slate-900 px-2 py-1.5 text-[13px] font-bold text-white"/>
+          <input data-card-cup-split-custom value={(split || []).join(',')} onChange={(e) => setSplit(cardCupReadSplit(e.target.value))} placeholder="自分で決める(例 60,30,10)" className="w-full rounded-lg border border-slate-600 bg-slate-900 px-2 py-1.5 text-[13px] font-bold text-white"/>
           <small className="block text-[11px] font-bold text-slate-400">{`1位から順に・合計100%(いま ${(split || []).reduce((a, b) => a + b, 0)}%)`}</small>
           <button type="button" data-card-cup-fee-go disabled={busy || !split || split.reduce((a, b) => a + b, 0) !== 100} onClick={() => run(async () => { const a = await getAdapters(); return cardCupPrizeRpc('card_cup_prize_set', { p_cup: c.id, p_owner: a.owner, p_key: a.key, p_fee_item: feeItem || null, p_fee_amount: feeItem ? feeAmount : 0, p_split: split }); })} className="w-full rounded-lg bg-amber-400 py-1.5 text-[13px] font-black text-slate-950 disabled:opacity-50">この内容で決める</button>
         </div>

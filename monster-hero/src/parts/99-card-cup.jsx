@@ -452,7 +452,7 @@ const CardCup = ({ onBack, onOpenRegister = null, initialCup = null, onCupChange
     {tab === 'code' && (
       <div data-card-cup-find className="space-y-2 rounded-2xl border-2 border-amber-600/60 bg-indigo-950/60 p-3">
         <b className="block text-[13px] font-black text-amber-200">合言葉(6けたの数字)</b>
-        <input data-card-cup-code-input inputMode="numeric" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))} className="w-full rounded-xl border-2 border-slate-600 bg-slate-950 px-3 py-2 text-center text-[24px] font-black tracking-[0.3em] text-white"/>
+        <input data-card-cup-code-input inputMode="numeric" pattern="[0-9]*" autoComplete="off" maxLength={6} value={code} onChange={(e) => setCode(String(e.target.value).replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)).replace(/[^0-9]/g, '').slice(0, 6))} className="w-full rounded-xl border-2 border-slate-600 bg-slate-950 px-3 py-2 text-center text-[24px] font-black tracking-[0.3em] text-white"/>
         <button type="button" data-card-cup-find-go onClick={() => { Audio_.fgSe.tap(); void find(); }} className="w-full rounded-2xl bg-gradient-to-b from-amber-300 to-orange-500 py-2.5 text-[15px] font-black text-slate-950">探す</button>
       </div>
     )}
