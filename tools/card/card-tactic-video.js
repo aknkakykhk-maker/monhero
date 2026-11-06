@@ -3,13 +3,13 @@
 //   縦 390×844・deviceScaleFactor 2(780×1688)・音なしの mp4。ffmpeg で書き出す
 //
 // 撮るもの
-//   tactic-glow.mp4  … 登録デッキ(偽・戦術カード入り)との対戦。相手が戦術カードで動くと、上に「📜 ◯◯の戦術カード(…)」の帯(84 の tacGlow)が出て、
+//   a-tactic-glow-finish.mp4 / a-tactic-glow-guard.mp4 … 登録デッキ(偽・戦術カード入り)との対戦。相手が戦術カードで動くと、上に「📜 ◯◯の戦術カード(…)」の帯(84 の tacGlow)が出て、
 //                      その指示どおりにとどめ・守りが決まる所(帯が出た時刻の前後を切り出す)
-//   tactic-smart.mp4 … デッキ登録の確かめの欄の「賢さ GRAND MASTER 相当」と「次の HELL まで」
+//   a-tactic-smart.mp4 … デッキ登録の確かめの欄の「賢さ GRAND MASTER 相当」と「次の HELL まで」
 //
 // 決まり
 //   ・公開済みの main の画面だけ。ゲーム本体は変えない(相手のデッキ・戦術カード・カードランクは、この道具の中で作る偽のデータ)
-//   ・ほかのブリーダーの本名・デッキ名は出さない(相手は「カード部のテスト」、デッキ名は仮の名前)
+//   ・ほかのブリーダーの本名・デッキ名は出さない(相手は「ブリーダーA」、デッキ名は仮の名前)
 //   ・本物の Supabase には行かない(この道具の中ですべて返す)。デバッグのボタン・合言葉の欄は、切り出したあとの動画には映らない
 const http = require('http');
 const path = require('path');
@@ -22,7 +22,7 @@ const OUT = path.resolve(process.argv[2] || path.join(root, 'docs/progress/card-
 const SHOTS = process.env.CARD_VIDEO_SHOTS || '';   // 途中の画面の写真を置くフォルダ(作り直すとき用)
 const PORT = Number(process.env.CARD_PORT) || 8993;
 const W = 390, H = 844, DSF = 2;
-const FOE = { name: 'カード部のテスト', deck: '仮のデッキ' };
+const FOE = { name: 'ブリーダーA', deck: '仮のデッキ' };
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4' };
 const serve = () => new Promise((resolve) => {
   const server = http.createServer((req, res) => {
@@ -33,12 +33,47 @@ const serve = () => new Promise((resolve) => {
   });
   server.listen(PORT, () => resolve(server));
 });
-const mp4 = (webm, out, from, len) => execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-ss', from.toFixed(2), '-t', len.toFixed(2), '-i', webm,
-  '-vf', `scale=${W * DSF}:${H * DSF}:flags=lanczos,fps=30,format=yuv420p`, '-c:v', 'libx264', '-crf', '20', '-preset', 'medium', '-an', out]);
+// 録画: Playwright の recordVideo は 1倍(390×844)でしか絵を撮らない(780×1688 の枠の左上にしか入らなかった。2026-11-06 テンポ)。
+//   そこで、ブラウザに画面のこまを deviceScaleFactor 2 の細かさ(780×1688)で送らせ(CDP の Page.startScreencast)、直近 KEEP_MS ぶんだけ手元に持つ。
+//   こまは画面が変わったときだけ届くので、mp4 にするときは次のこままでの長さを付けて並べる
+const KEEP_MS = 40000;
+const recorder = async (context, page) => {
+  const client = await context.newCDPSession(page);
+  const frames = [];
+  client.on('Page.screencastFrame', ({ data, metadata, sessionId }) => {
+    frames.push({ t: metadata.timestamp * 1000, buf: Buffer.from(data, 'base64') });
+    const old = Date.now() - KEEP_MS;
+    while (frames.length > 2 && frames[1].t < old) frames.shift();
+    client.send('Page.screencastFrameAck', { sessionId }).catch(() => {});
+  });
+  await client.send('Page.startScreencast', { format: 'jpeg', quality: 95, maxWidth: W * DSF, maxHeight: H * DSF, everyNthFrame: 1 });
+  return { frames, stop: () => client.send('Page.stopScreencast').catch(() => {}) };
+};
+// from〜to(ミリ秒の時刻)のこまを mp4 に(30fps・780×1688・音なし)
+const mp4 = (rec, out, from, to) => {
+  const dir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'card-tactic-frames-'));
+  try {
+    const all = rec.frames;
+    const startIdx = Math.max(0, all.findIndex((f) => f.t > from) - 1);
+    const use = all.slice(startIdx).filter((f) => f.t <= to);
+    if (!use.length) throw new Error(`${path.basename(out)}: こまが無い`);
+    const lines = [];
+    use.forEach((f, i) => {
+      const name = path.join(dir, `${String(i).padStart(5, '0')}.jpg`);
+      fs.writeFileSync(name, f.buf);
+      const a = Math.max(f.t, from), b = i + 1 < use.length ? use[i + 1].t : to;
+      lines.push(`file '${name}'`, `duration ${Math.max(0.001, (b - a) / 1000).toFixed(3)}`);
+    });
+    lines.push(`file '${path.join(dir, `${String(use.length - 1).padStart(5, '0')}.jpg`)}'`);
+    fs.writeFileSync(path.join(dir, 'list.txt'), lines.join('\n'));
+    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', path.join(dir, 'list.txt'),
+      '-vf', `scale=${W * DSF}:${H * DSF}:flags=lanczos,fps=30,format=yuv420p`, '-c:v', 'libx264', '-crf', '18', '-preset', 'medium', '-an', out]);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+};
 
 // ゲームを開いて HOME まで(はじめての窓は閉じる)。偽の登録デッキと、本物の Supabase へ行かない返事を仕込む
-const boot = async (browser, tmp) => {
-  const context = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DSF, recordVideo: { dir: tmp, size: { width: W * DSF, height: H * DSF } } });
+const boot = async (browser) => {
+  const context = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DSF });
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e.message || e)));
@@ -67,7 +102,8 @@ const boot = async (browser, tmp) => {
   const home = page.locator('[data-home-card-battle]');
   for (let i = 0; i < 120 && !(await home.isVisible().catch(() => false)); i++) { if (await top.isVisible().catch(() => false)) await top.click().catch(() => {}); await dismiss(); await sleep(500); }
   for (let i = 0; i < 4; i++) { await sleep(500); await dismiss(); }
-  return { context, page, state, errors, sleep, dismiss };
+  const rec = await recorder(context, page);
+  return { context, page, state, errors, sleep, dismiss, rec };
 };
 const shot = async (page, name) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: true }); await page.screenshot({ path: path.join(SHOTS, `${name}.png`) }); } };
 
@@ -147,9 +183,8 @@ if (require.main === module) {
     fs.mkdirSync(OUT, { recursive: true });
     const server = await serve();
     const browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-    const tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'card-tactic-video-'));
     try {
-      const A = await boot(browser, tmp);
+      const A = await boot(browser);
       const { page, sleep, dismiss } = A;
       await page.locator('[data-home-card-battle]').click();
       await page.locator('[data-card-top]').first().waitFor({ timeout: 20000 });
@@ -169,35 +204,30 @@ if (require.main === module) {
       await page.locator('[data-card-deck-pick-mode="auto"]').click();
       await sleep(400);
       await page.locator('[data-card-deck-pick-go]').click();
-      // 帯(data-card-tactic-glow)が出るたびに、時刻と文を控える。とどめ(倒せる相手)と守り(受けるダメージ)の両方が出るか、試合が終わるまで
+      // 帯(data-card-tactic-glow)が出るたびに、時刻と文を控える。とどめ(倒せる相手)と守り(守り方で守る)の最初の帯を、
+      //   それぞれ帯の5秒前から12秒(帯 2.4秒 → 技・守りが決まって数字が出るまで)書き出す。帯が出てから7秒たったら書き出す(手元のこまは直近 KEEP_MS だけ)
+      const want = [{ re: /倒せる/, name: 'a-tactic-glow-finish.mp4' }, { re: /守り方で守る/, name: 'a-tactic-glow-guard.mp4' }];
       const glows = [];
       const until = Date.now() + 240000;
       let seen = '';
-      while (Date.now() < until) {
+      while (Date.now() < until && want.some((w) => !w.done)) {
         const g = await page.locator('[data-card-tactic-glow]').first().textContent({ timeout: 300 }).catch(() => null);
         if (g && g !== seen) { glows.push({ at: Date.now(), text: g }); seen = g; }
         if (!g) seen = '';
-        const kinds = { finish: glows.some((x) => /倒せる/.test(x.text)), guard: glows.some((x) => /守り方で守る/.test(x.text)) };
-        if (kinds.finish && kinds.guard && Date.now() - glows[glows.length - 1].at > 6000) break;
-        if (await page.locator('[data-card-result]').count().catch(() => 0)) break;
+        for (const w of want) {
+          const x = !w.done && glows.find((y) => w.re.test(y.text));
+          if (x && Date.now() - x.at > 7500) { mp4(A.rec, path.join(OUT, w.name), x.at - 5000, x.at + 7000); w.done = true; console.log(`書き出し: ${w.name}(${x.text})`); }
+        }
         await sleep(150);
       }
-      await sleep(1000);
-      const end = Date.now();
-      console.log(glows.map((x) => `${((x.at - end) / 1000).toFixed(1)}秒 ${x.text}`).join('\n') || '帯が出なかった');
+      want.filter((w) => !w.done).forEach((w) => console.log(`${w.name}: 帯が出なかったので撮れない`));
+      await A.rec.stop();
       await A.context.close();
-      const webm = path.join(tmp, fs.readdirSync(tmp).find((f) => f.endsWith('.webm')));
-      const dur = Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', webm]).toString().trim()) || 0;
-      // 帯が出る5秒前から12秒(帯 2.4秒 → 技・守りが決まって数字が出るまで)
-      const cut = (x, name) => { if (!x) { console.log(`${name}: 帯が出なかったので撮れない`); return; } const at = dur - (end - x.at) / 1000; mp4(webm, path.join(OUT, name), Math.max(0, at - 5), 12); console.log(`書き出し: ${name}(${x.text})`); };
-      cut(glows.find((x) => /倒せる/.test(x.text)), 'tactic-glow-finish.mp4');
-      cut(glows.find((x) => /守り方で守る/.test(x.text)), 'tactic-glow-guard.mp4');
       if (A.errors.length) console.log(`実行時エラー: ${A.errors.slice(0, 3).join(' / ')}`);
 
       // ---- デッキ登録の確かめの欄(賢さ GRAND MASTER 相当・次の HELL まで) ----
-      const tmp2 = fs.mkdtempSync(path.join(require('os').tmpdir(), 'card-tactic-video-'));
       try {
-        const B = await boot(browser, tmp2);
+        const B = await boot(browser);
         const smart = await B.page.evaluate(seedSmart);
         console.log(`賢さの仕込み: ${smart}`);
         await B.page.evaluate(mountRegister);
@@ -221,15 +251,13 @@ if (require.main === module) {
         console.log(text.replace(/\s+/g, ' '));
         await B.sleep(6500);
         const end2 = Date.now();
+        await B.rec.stop();
         await B.context.close();
-        const webm2 = path.join(tmp2, fs.readdirSync(tmp2).find((f) => f.endsWith('.webm')));
-        const dur2 = Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', webm2]).toString().trim()) || 0;
-        const len = (end2 - t0) / 1000;
-        mp4(webm2, path.join(OUT, 'tactic-smart.mp4'), Math.max(0, dur2 - len), len);
-        console.log(`書き出し: tactic-smart.mp4(${len.toFixed(1)}秒)`);
+        mp4(B.rec, path.join(OUT, 'a-tactic-smart.mp4'), t0, end2);
+        console.log(`書き出し: a-tactic-smart.mp4(${((end2 - t0) / 1000).toFixed(1)}秒)`);
         if (B.errors.length) console.log(`実行時エラー: ${B.errors.slice(0, 3).join(' / ')}`);
-      } finally { fs.rmSync(tmp2, { recursive: true, force: true }); }
+      } finally { /* こまは手元のメモリだけ */ }
 
-    } finally { await browser.close(); server.close(); fs.rmSync(tmp, { recursive: true, force: true }); }
+    } finally { await browser.close(); server.close(); }
   })().catch((e) => { console.error(e.message || e); process.exit(1); });
 }
