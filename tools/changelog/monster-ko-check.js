@@ -14,13 +14,17 @@ const DIALOG_FILES=new Set(['monster-hero/data/assistants.js','monster-hero/src/
 const files=['monster-hero/data/help.js','monster-hero/data/changelog.js','monster-hero/data/breeder.js','monster-hero/data/rhythm-event.js','monster-hero/data/ally-monsters.js','monster-hero/data/lineages.js',
   ...fs.readdirSync(path.join(ROOT,'monster-hero/src/parts')).filter(f=>f.endsWith('.jsx')).map(f=>`monster-hero/src/parts/${f}`)].filter(f=>!DIALOG_FILES.has(f));
 const EXCL=/様子|調子|梯子|帽子|扇子|椅子|王子|双子|女子|男子|団子|菓子|拍子|粒子|原子|電子|分子|冊子|格子|種子|子供|子ども|息子|弟子|振り?子|骨子|面子|利子|因子|子守|黒子|障子|迷子|親子|子会社|子音|子分|子孫|子連れ|子犬|子猫|子羊|遺伝子|女の子|男の子|お子|っ子|餃子|柚子|茄子|椰子|獅子|玉子|子規|玖子/;
-const KO=/(?<![子])子(?=[がをはにのもとでやへ、。！？!?…」』）)\s,，・／/〜~]|$|たち|ら)/g;
+const KO=/(?<![子])子(?=[がをはにのもとでやへ、。！？!?…」』）)\s,，・／/〜~]|$|たち|ら|だけ|まで|より|から|しか|ごと|同士|ばかり|ばっかり|だった|です|でも|じゃ|なら|なの|って|ってる|には|へは|とは|でした)/g;
+// 保存の値として使っている文(画面にはそのまま出さない)は見ない。書き換えると、プレイヤーが組んだ戦術(保存データ)が働かなくなる(CLAUDE.md ⑦)。
+//   MFバトルカードの戦術の「立ち回り」「ブリーダー」の選択肢の値と、その値で分ける判定・手本。画面には CARD_TACTIC_* の表の表示用の文(「モンスター」)が出る
+const SAVED_VALUE_LINE=/\{ id: '(stance|bEff)',|if \(v === '|'(stance|bEff)\.[^']*'/;
 const found=[];
 for(const f of files){
   const src=fs.readFileSync(path.join(ROOT,f),'utf8');
   const ast=parser.parse(src,{sourceType:'script',plugins:['jsx'],errorRecovery:true});
+  const lines=src.split('\n');
   const visit=n=>{if(!n||typeof n!=='object')return;if(Array.isArray(n)){n.forEach(visit);return;}
-    if(n.type==='StringLiteral'||n.type==='TemplateElement'||n.type==='JSXText'){
+    if((n.type==='StringLiteral'||n.type==='TemplateElement'||n.type==='JSXText')&&!SAVED_VALUE_LINE.test(lines[n.loc.start.line-1]||'')){
       const t=n.type==='TemplateElement'?n.value.cooked||'':n.value;let m;KO.lastIndex=0;
       while((m=KO.exec(t))){if(EXCL.test(t.slice(Math.max(0,m.index-4),m.index+3)))continue;found.push(`${f.replace('monster-hero/','')}:${n.loc.start.line} 「${t.slice(Math.max(0,m.index-8),m.index+3)}」`);}}
     for(const k in n){if(k==='loc'||/Comments$/.test(k))continue;const v=n[k];if(v&&typeof v==='object')visit(v);}};

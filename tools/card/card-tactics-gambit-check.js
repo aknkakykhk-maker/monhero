@@ -21,13 +21,21 @@ const GAME = path.resolve(__dirname, '..', '..', 'monster-hero');
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
 const src = (f) => fs.readFileSync(path.join(GAME, f), 'utf8');
 vm.runInContext(`${src('data/card-battle-cards.js')}\n;\n${src('src/parts/82-card-battle-core.jsx')}\n;\n${src('src/parts/82-card-tactics-core.jsx')}\n;\n`
-  + 'this.E = { cardTacticSmartLevel, cardTacticUncounted, cardTacticPackFrames, cardTacticUnpackFrames, cardTacticKnobsOf, CARD_BATTLE_DATA, CARD_AI_HABITS, CARD_TACTIC_CARDS, CARD_TACTIC_START, CARD_TACTIC_GROUPS, cardTacticNormalizeFrames, cardTacticHabitOf, cardTacticFilled, cardTacticDecide, cardTacticCond, cardTacticOf, cardCreateGame, cardApplyAction, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardOther, cardGuardOptions, CARD_AI_TACTIC_BASE };', ctx);
+  + 'this.E = { cardTacticOf, CARD_TACTIC_ID_ALIAS, cardTacticSmartLevel, cardTacticUncounted, cardTacticPackFrames, cardTacticUnpackFrames, cardTacticKnobsOf, CARD_BATTLE_DATA, CARD_AI_HABITS, CARD_TACTIC_CARDS, CARD_TACTIC_START, CARD_TACTIC_GROUPS, cardTacticNormalizeFrames, cardTacticHabitOf, cardTacticFilled, cardTacticDecide, cardTacticCond, cardTacticOf, cardCreateGame, cardApplyAction, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardOther, cardGuardOptions, CARD_AI_TACTIC_BASE };', ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 const VERBOSE = process.argv.includes('--verbose');
 let passed = 0;
 const fails = [];
 const check = (name, ok, detail = '') => { if (ok) { passed++; if (VERBOSE) console.log(`OK: ${name}`); } else fails.push(`${name}${detail ? ` — ${detail}` : ''}`); };
+// 2026-11-06 の #4623 のあいだだけ配っていた id(「子」を「モンスター」にした値)で保存された戦術も、元のカードとして読む
+{
+  const aliases = Object.entries(E.CARD_TACTIC_ID_ALIAS);
+  check('#4623 の間の id がどれも元のカードを指す', aliases.length === 4 && aliases.every(([from, to]) => E.cardTacticOf(from) && E.cardTacticOf(from).id === to && !E.CARD_TACTIC_CARDS.some((c) => c.id === from)));
+  const raw = { base: [null, null, null], breeder: [{ c: 'any', a: 'bEff.倒れたモンスターを戻す' }], mons: [[{ c: 'any', a: 'stance.このモンスターは攻撃しない' }], [], []] };
+  const f = E.cardTacticNormalizeFrames(JSON.parse(JSON.stringify(raw)));
+  check('#4623 の間の id で組んだ戦術が消えずに元の id で読める', (f.breeder[0] && f.breeder[0].a === 'bEff.倒れた子を戻す' && f.mons[0][0] && f.mons[0][0].a === 'stance.この子は攻撃しない'), JSON.stringify(f));
+}
 const J = (x) => JSON.stringify(x);
 
 // ---- A ----

@@ -144,7 +144,7 @@ let bestCount = 0;
 for (let i = 0; i < 1000; i++) { const v = (i + 0.5) / 1000; if (pick({ rng: seq([v, v]), level: 1 })[0] === 'best') bestCount++; }
 check('Lv2 は いちばん点の高いカードを 65% の見込みで選ぶ', bestCount === 650, `${bestCount}/1000`);
 check('5人目の枠は 4・引く枚数の既定は 3(呼ぶ側はプレイヤーの手札の枚数を渡す)', s.SORASHIDO_COPY_SLOT === 4 && s.SORASHIDO_COPY_HAND_DRAW === 3);
-check('説明文に Lv ごとの続くターンと強さが出る', /2ターン/.test(s.sorashidoCopyDesc(0)) && /4ターン/.test(s.sorashidoCopyDesc(2)) && /ちから90%/.test(s.sorashidoCopyDesc(2)) && /2枚まで/.test(s.sorashidoCopyDesc(2)) && !/2枚まで/.test(s.sorashidoCopyDesc(1)) && /自分の山札\(距離撃とほかの子の固有技を抜いたもの\)から引く/.test(s.sorashidoCopyDesc(0)));
+check('説明文に Lv ごとの続くターンと強さが出る', /2ターン/.test(s.sorashidoCopyDesc(0)) && /4ターン/.test(s.sorashidoCopyDesc(2)) && /ちから90%/.test(s.sorashidoCopyDesc(2)) && /2枚まで/.test(s.sorashidoCopyDesc(2)) && !/2枚まで/.test(s.sorashidoCopyDesc(1)) && /自分の山札\(距離撃とほかのモンスターの固有技を抜いたもの\)から引く/.test(s.sorashidoCopyDesc(0)));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
