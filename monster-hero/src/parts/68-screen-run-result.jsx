@@ -50,7 +50,7 @@ function UpgradeSkillScreen({
           {tacticsMode
             ? <span data-tactics-guts-recovery className="block font-mono font-black leading-tight">
                 {gutsSlots.length===0
-                  ? <b className="text-slate-500" style={{fontSize:'12px'}}>立っている子がいません</b>
+                  ? <b className="text-slate-500" style={{fontSize:'12px'}}>立っているモンスターがいません</b>
                   : gutsSlots.map(index=>{
                       const unit=tacticsUnits[index];
                       const full=unit.guts>=unit.maxGuts;
@@ -183,7 +183,7 @@ function RewardPickScreen({
     const pickable=!tacticsMode||pendingSlot!==undefined;
     const currentUnit=currentSlot!=null?tacticsUnits[currentSlot]:null;
     const currentName=currentSlot!=null
-      ? (slots?.[currentSlot]?.masuName||slots?.[currentSlot]?.name||`${currentSlot+1}番目の子`) : '';
+      ? (slots?.[currentSlot]?.masuName||slots?.[currentSlot]?.name||`${currentSlot+1}番目のモンスター`) : '';
     const activePicks=tacticsMode?(currentSlot!=null?picksOf(currentSlot):[]):trainingPicks;
     const baseStats=currentUnit
       ? {atk:currentUnit.atk,def:currentUnit.def,hp:currentUnit.baseMaxHp,guts:currentUnit.baseMaxGuts}
@@ -205,7 +205,7 @@ function RewardPickScreen({
     };
     const trainingOptions=trainingOptionsFor(runMode);
     const optionById=(id)=>trainingOptions.find(option=>option.id===id);
-    const unitName=(slotIdx)=>slots?.[slotIdx]?.masuName||slots?.[slotIdx]?.name||`${slotIdx+1}番目の子`;
+    const unitName=(slotIdx)=>slots?.[slotIdx]?.masuName||slots?.[slotIdx]?.name||`${slotIdx+1}番目のモンスター`;
     // 「だれを強化するのか」を顔で見せるための絵(立っている子ごと)
     const trainingFace=(slotIdx)=>{
       const mon=slots?.[slotIdx];
@@ -249,7 +249,7 @@ function RewardPickScreen({
                     <span className="mh-ph-medal relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-black/40">{trainingFace(currentSlot)}</span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <span className="rounded-full bg-amber-400 px-2 py-px text-[9px] font-black text-slate-900">いま強化する子</span>
+                        <span className="rounded-full bg-amber-400 px-2 py-px text-[9px] font-black text-slate-900">いま強化するモンスター</span>
                         <span className="text-[9px] font-black text-slate-400">{RANGE_LABELS[currentSlot]}距離</span>
                       </div>
                       {/* 320 で「モッチーのトレー…」と切れていた。2行まで出し、言葉の切れ目で折る(2026-10-27 ジン・WAVE の合間の見回り) */}
@@ -402,7 +402,7 @@ function RewardPickScreen({
               onClick={()=>{setTrainingPicks([]); handleTraining({revive:slotIdx});}}
               data-ph-kind="revive"
               className="mh-ph-frame w-full min-h-[44px] rounded-2xl border-2 px-3 text-left font-black text-emerald-200 active:scale-95 disabled:opacity-40">
-              <span className="block text-[12px] leading-tight">{slots?.[slotIdx]?.masuName||slots?.[slotIdx]?.name||`${slotIdx+1}番目の子`}を起こす<span className="text-[9px] font-black text-emerald-400/90">　このWAVEの強化はなし</span></span>
+              <span className="block text-[12px] leading-tight">{slots?.[slotIdx]?.masuName||slots?.[slotIdx]?.name||`${slotIdx+1}番目のモンスター`}を起こす<span className="text-[9px] font-black text-emerald-400/90">　このWAVEの強化はなし</span></span>
             </button>
           ))}
         </div>

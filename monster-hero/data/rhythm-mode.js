@@ -49066,7 +49066,7 @@ const installRhythmGestureVisuals=()=>{
   const style=document.createElement('style');
   style.textContent=`
     /* ★ノーツの見た目は必ず [data-rhythm-note-head](粒)を名指しで指す。span:last-child で書くと、
-       マスモンの絵が入るノーツでは最後の子が絵(data-rhythm-monster-face)になるため、
+       マスモンの絵が入るノーツでは最後のモンスターが絵(data-rhythm-monster-face)になるため、
        色も矢印も幅広の縁取りも「絵」のほうへ付いてしまう。実際に
        「モンスターノーツとフリックノーツによく分からない縦線がある」という不具合になった(2026-09-07)。 */
     /* FLICKは緑。ヘルプ・終点フリックの終端バー・練習の説明がいずれも「緑」で揃えてあるのに、

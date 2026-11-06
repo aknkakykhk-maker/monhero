@@ -128,6 +128,9 @@ const CHANGELOG_TYPES = ['update', 'issue'];
 // ★idTitle は、題を書き直した項目の元の題(2026-10-27 社長「題の頭に遊びの名前を付けない」で頭を外した239件)。
 //   id は元の題から作り続ける。題から作り直すと、読んだ人の既読(mh_changelog_seen_ids_*)が外れて全部 NEW に戻る。
 const changelogEntryId = entry => {
+  // ★fixedId は、出したあとで本文を直した項目の元の既読の印(2026-11-06 社長「モンスターのことを『子』って表現するのやめて」で直した110件)。
+  //   本文から作り直すと、読んだ人の既読が外れて NEW に戻るため、元の印をそのまま使う
+  if (typeof entry.fixedId === 'string' && entry.fixedId) return entry.fixedId;
   const source = entry.id || [entry.type, entry.idTitle || entry.title, ...(entry.items || [])].join('\u001f');
   let hash = 2166136261;
   for (let i=0;i<source.length;i++) { hash ^= source.charCodeAt(i); hash = Math.imul(hash, 16777619); }

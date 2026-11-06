@@ -814,7 +814,7 @@ const RhythmMonsterSlotsPanel=({rhythmMonsterSlots,rhythmMonsterSlotIdsInUse,rhy
                       <b className="block truncate text-[12px] font-black">{masu.name}<small className="ml-1 text-[10px] font-bold text-slate-400">{base.name}</small></b>
                       <span className={`mt-0.5 inline-block max-w-full truncate rounded-md border px-1.5 py-0.5 text-[10px] font-black ${rhythmAbilityTone(ability?ability.id:'')}`}>{ability?`${rhythmAbilityEmoji(ability.id)}${ability.name}`:'能力なし'}</span>
                     </div>
-                    {(label||current)&&<small className="shrink-0 text-right text-[10px] font-bold text-rose-300">{current?'この枠の子':label}</small>}
+                    {(label||current)&&<small className="shrink-0 text-right text-[10px] font-bold text-rose-300">{current?'この枠のモンスター':label}</small>}
                   </button></li>;})}
                 {candidates.length===0&&<li className="rounded-xl border border-white/10 p-4 text-center text-[11px] font-bold text-slate-500">設定できるマスモンがいません</li>}
                 </ul>
