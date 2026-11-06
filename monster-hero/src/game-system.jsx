@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1982ae0235f7920a
+// generated-sha256: 23bf7e210843c868
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -1444,13 +1444,20 @@ const soulRankXpForBondLevel = (level) => {
   if (current < 900) return 345000 + (current - 800) * 500;
   return 430000 + (current - 900) * 900;
 };
+// レベルごとの経験値は決まった式なので、一度出した答えを関数自身に覚えておく(2026-11-07 お布施の転生の上限を外したときの速さ対策。答えは同じ)。
+// ★覚えておく表は関数の中に置く(検査が関数を1つずつ切り出して試すので、外に置くと見えなくなる)
 const xpForBondLevelAt = (level) => {
   const current = Math.max(1, Math.floor(Number(level) || 1));
+  const cache = xpForBondLevelAt.cache || (xpForBondLevelAt.cache = new Map());
+  const cached = cache.get(current);
+  if (cached !== undefined) return cached;
   const normal = xpForBondLevel(current);
-  if (current < MAX_MASU_LEVEL_CAP) return normal;
   // Lv400〜499は既存の超越XP式を1も変えない。Lv500→501から魂格の正式式へ切り替える。
-  if (current < SOUL_RANK_BASE_LEVEL) return Math.max(1, Math.round(normal * transcendXpMultiplier(current)));
-  return soulRankXpForBondLevel(current);
+  const value = current < MAX_MASU_LEVEL_CAP ? normal
+    : current < SOUL_RANK_BASE_LEVEL ? Math.max(1, Math.round(normal * transcendXpMultiplier(current)))
+    : soulRankXpForBondLevel(current);
+  cache.set(current, value);
+  return value;
 };
 const bondLevelInfo = (totalXp) => {
   // 壊れた保存値(NaN・Infinity・負数)で回り続けないよう、先に有限の0以上へ落とす
@@ -2028,10 +2035,16 @@ const normalizeInheritedUniqueLineages = (masuMons) => (Array.isArray(masuMons) 
   });
   return { ...masu, inheritedUniques:kept, uniqueSkillLevels };
 });
+// レベルごとの累計は決まった式なので、一度出した答えを関数自身に覚えておく(2026-11-07: お布施の転生の上限を外したら、
+// 何百回もの転生の見積もりで毎回 Lv.1 から足し直して画面が固まった。答えは前と1も変わらない)。表は関数の中(上と同じ理由)
 const totalBondXpForLevel = (level) => {
   const target = Math.max(1, Math.min(SOUL_RANK_LEVEL_CAP, Math.floor(Number(level) || 1)));
+  const cache = totalBondXpForLevel.cache || (totalBondXpForLevel.cache = new Map());
+  const cached = cache.get(target);
+  if (cached !== undefined) return cached;
   let total = 0;
   for (let current = 1; current < target; current++) total += xpForBondLevelAt(current);
+  cache.set(target, total);
   return total;
 };
 // 【限界突破と転生】
@@ -4001,7 +4014,9 @@ const buildMasuReincarnation = ({ masu, skillKey, gold, lockedIds = [] }) => {
 // 画面の見積もりと実際の実行は必ずこの関数1本で計算する(別々に数えると表示と実際がずれる)。
 const OFFERING_TICKET_DIAMONDS = 100;
 const OFFERING_TICKET_XP = 15;
-const OFFERING_MAX_REINCARNATIONS = 50;
+// ★画面の上限ではない(2026-11-07 社長「上限はなしで」)。ふつうは持っているダイヤ・レベルで先に止まる。
+//   計算が止まらなくなるのを防ぐ見張りとして、ありえない大きさの数だけを置く(以前は 50 回で止めていた)
+const OFFERING_MAX_REINCARNATIONS = 100000;
 const OFFERING_MODES = Object.freeze(['diamonds', 'levels', 'reincarnate']);
 const offeringXpForDiamonds = (diamonds) => Math.floor(donationDiamondValue(diamonds) * OFFERING_TICKET_XP / OFFERING_TICKET_DIAMONDS);
 const offeringDiamondsForXp = (xp) => Math.ceil(donationDiamondValue(xp) * OFFERING_TICKET_DIAMONDS / OFFERING_TICKET_XP);
@@ -4096,7 +4111,9 @@ const buildMasuOffering = ({ masu, gold, ownedItems, lockedIds = [], mode = 'dia
 // 転生をまとめて行う。1回ぶんの計算は buildMasuReincarnation をそのまま count 回くり返すだけ
 // (費用・ポイント・ロックの判定を別に書かない)。途中で止まったら、そこまでの回数で確定する。
 // 固有技は選んだものを毎回上げる。最大に届いたあとは自動で「ポイントとして残す」になる。
-const REINCARNATE_BATCH_MAX = 50;
+// ★画面の上限ではない(2026-11-07 社長「上限はなしで」)。転生は毎回 Lv.100 が要るので、ふつうはレベルとダイヤで先に止まる。
+//   計算が止まらなくなるのを防ぐ見張りとして、ありえない大きさの数だけを置く(以前は 50 回で止めていた)
+const REINCARNATE_BATCH_MAX = 100000;
 const buildMasuReincarnationBatch = ({ masu, skillKey, gold, lockedIds = [], count = 1 }) => {
   const wanted = Math.min(REINCARNATE_BATCH_MAX, Math.max(1, Math.floor(Number(count) || 1)));
   let cur = masu, goldLeft = donationDiamondValue(gold), spent = 0, done = 0, first = null, last = null, reason = '';
@@ -40645,7 +40662,9 @@ function MasuOfferingScreen({
     return { maxLevels:Math.max(0, lv.toLevel-lv.fromLevel), maxTimes:rt.reincarnations, maxDiamonds:donationDiamondValue(gold) };
   }, [selected, gold, ownedItems, lockedIds, autoBreak]);
 
-  const diamondAmount = Math.min(limits.maxDiamonds, Math.max(0, parseInt(String(diamondText).replace(/[^0-9]/g,''),10) || 0));
+  // 打った文字から数を読む。全角数字は半角へ、小数点から先は切り捨て、桁区切りのカンマ・マイナス・ほかの文字は無視(2026-11-07)
+  const diamondDigits = String(diamondText).replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).split(/[.．。]/)[0].replace(/[^0-9]/g,'');
+  const diamondAmount = Math.min(limits.maxDiamonds, Math.max(0, parseInt(diamondDigits,10) || 0));
   const amount = mode==='diamonds' ? diamondAmount : mode==='levels' ? Math.min(levels, Math.max(1, limits.maxLevels)) : Math.min(times, Math.max(1, limits.maxTimes));
   const plan = useMemo(()=>selected ? buildMasuOffering({ masu:selected, gold, ownedItems, lockedIds, mode, amount, autoBreakthrough:autoBreak }) : null,
     [selected, gold, ownedItems, lockedIds, mode, amount, autoBreak]);
@@ -40717,7 +40736,7 @@ function MasuOfferingScreen({
       <div className="mh-panel rounded-2xl border border-white/10 bg-slate-900/70 p-3 space-y-2">
         {mode==='diamonds'&&<>
           <div className="text-[11px] font-black text-slate-300">使うダイヤ（自由に入力できます）</div>
-          <input type="text" inputMode="numeric" aria-label="お布施に使うダイヤ" value={diamondText===''?'':diamondAmount.toLocaleString()} placeholder="0" onChange={e=>setDiamondText(e.target.value)} className="w-full min-h-[48px] rounded-xl border border-slate-600 bg-black/50 p-3 text-right font-mono text-lg font-black text-white outline-none focus:border-violet-300"/>
+          <input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" autoComplete="off" data-offering-diamond-input aria-label="お布施に使うダイヤ" value={diamondText===''?'':diamondAmount.toLocaleString()} placeholder="0" onChange={e=>setDiamondText(e.target.value)} className="w-full min-h-[48px] rounded-xl border border-slate-600 bg-black/50 p-3 text-right font-mono text-lg font-black text-white outline-none focus:border-violet-300"/>
           {/* 320 幅で「+100,000」が枠の端まで届いていた(2026-10-27 ダメダシの見回り)。狭い幅だけ、字を少し小さく・横の余白を詰める */}
           <div className="grid grid-cols-4 gap-1.5">{OFFERING_DIAMOND_STEPS.map(step=><button key={step} className={`${stepBtn} whitespace-nowrap px-1 max-[359px]:text-[11px] max-[359px]:tracking-tight`} onClick={()=>setDiamondText(String(Math.min(limits.maxDiamonds, diamondAmount+step)))}>+{fmt(step)}</button>)}</div>
           <div className="grid grid-cols-2 gap-1.5"><button className={stepBtn} onClick={()=>setDiamondText('')}>クリア</button><button className={stepBtn} disabled={limits.maxDiamonds<=0} onClick={()=>setDiamondText(String(limits.maxDiamonds))}>MAX（{fmt(limits.maxDiamonds)}）</button></div>
@@ -40962,7 +40981,8 @@ function MasuSoulTraitsScreen({
                 <button type="button" data-soul-trait-plus-five disabled={draft>=maxUpgrade} onClick={()=>addDraft(5)} className="mh-button mh-button-secondary min-h-[48px] rounded-xl bg-sky-700 text-[11px] font-black active:scale-95 disabled:opacity-30">+5</button>
                 <button type="button" data-soul-trait-max disabled={maxUpgrade<=0} onClick={()=>setSoulTraitDraftLevels(maxUpgrade)} className="mh-button mh-button-secondary min-h-[48px] rounded-xl bg-violet-700 text-[11px] font-black active:scale-95 disabled:opacity-30">MAX</button>
               </div>
-              <div className="my-2 text-center text-[11px] font-black text-sky-200">今回 +{draft}段階</div>
+              {/* 段階は直接打ち込める(2026-11-07 社長「数値が絡む項目は基本直接入力できるように」)。強化できる段階を超えたらそこへ合わせる */}
+              <div data-soul-trait-draft-input className="my-2 flex items-center justify-center gap-1.5 text-[11px] font-black text-sky-200">今回 +<CountInput value={draft} min={0} max={maxUpgrade} onChange={n=>setSoulTraitDraftLevels(n)} unit="段階" label="上げる段階" className="w-20"/>段階</div>
               <button type="button" data-soul-trait-confirm disabled={draft<=0||soulTraitProcessingRef.current} onClick={()=>commitSoulTraitUpgrade(masu.id,selected.id,draft)} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl bg-sky-500 text-slate-950 text-[12px] font-black active:scale-[.98] disabled:opacity-30">強化を決定</button>
             </>}
           </div>
@@ -41238,7 +41258,7 @@ function MasuTranscendEnhanceScreen({
                   : <>
                     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-xl bg-black/30 p-2.5">
                       <PressRepeatButton aria-label="変換するポイントを減らす" disabled={exchangeWant<=1} onPress={()=>setWant(exchangeWant-1)} className="min-h-[44px] rounded-xl bg-slate-700 text-xl font-black disabled:opacity-30">−</PressRepeatButton>
-                      <div className="text-center leading-none"><span data-transcend-exchange-want className="font-mono text-3xl font-black text-white">{exchangeWant}</span><span className="text-[10px] font-bold text-slate-400">P</span></div>
+                      <div className="flex items-center justify-center gap-1 leading-none">{/* 変換するポイントは直接打ち込める(2026-11-07 社長)。変換できる数を超えたらそこへ合わせる */}<CountInput value={exchangeWant} min={1} max={exchangeMax} onChange={setWant} unit="P" label="変換するポイント" className="w-20" dataAttrs={{'data-transcend-exchange-want':exchangeWant}}/><span className="text-[10px] font-bold text-slate-400">P</span></div>
                       <PressRepeatButton aria-label="変換するポイントを増やす" disabled={exchangeWant>=exchangeMax} onPress={()=>setWant(exchangeWant+1)} className="min-h-[44px] rounded-xl bg-fuchsia-700 text-xl font-black disabled:bg-slate-700 disabled:opacity-30">＋</PressRepeatButton>
                     </div>
                     <div className="grid grid-cols-3 gap-1.5">

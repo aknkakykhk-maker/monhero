@@ -135,7 +135,8 @@ function MasuSoulTraitsScreen({
                 <button type="button" data-soul-trait-plus-five disabled={draft>=maxUpgrade} onClick={()=>addDraft(5)} className="mh-button mh-button-secondary min-h-[48px] rounded-xl bg-sky-700 text-[11px] font-black active:scale-95 disabled:opacity-30">+5</button>
                 <button type="button" data-soul-trait-max disabled={maxUpgrade<=0} onClick={()=>setSoulTraitDraftLevels(maxUpgrade)} className="mh-button mh-button-secondary min-h-[48px] rounded-xl bg-violet-700 text-[11px] font-black active:scale-95 disabled:opacity-30">MAX</button>
               </div>
-              <div className="my-2 text-center text-[11px] font-black text-sky-200">今回 +{draft}段階</div>
+              {/* 段階は直接打ち込める(2026-11-07 社長「数値が絡む項目は基本直接入力できるように」)。強化できる段階を超えたらそこへ合わせる */}
+              <div data-soul-trait-draft-input className="my-2 flex items-center justify-center gap-1.5 text-[11px] font-black text-sky-200">今回 +<CountInput value={draft} min={0} max={maxUpgrade} onChange={n=>setSoulTraitDraftLevels(n)} unit="段階" label="上げる段階" className="w-20"/>段階</div>
               <button type="button" data-soul-trait-confirm disabled={draft<=0||soulTraitProcessingRef.current} onClick={()=>commitSoulTraitUpgrade(masu.id,selected.id,draft)} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl bg-sky-500 text-slate-950 text-[12px] font-black active:scale-[.98] disabled:opacity-30">強化を決定</button>
             </>}
           </div>
