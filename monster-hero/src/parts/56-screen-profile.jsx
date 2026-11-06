@@ -209,9 +209,9 @@ function ProfileScreen({
             </div>
           </div>
           {onSelectBreederGender&&!onboardingPreview&&(
-            <div className="mt-3 rounded-xl border border-white/10 bg-black/25 px-2.5 py-2" data-profile-gender>
+            <div className="mt-2 rounded-xl border border-white/10 bg-black/25 px-2.5 py-1.5" data-profile-gender>
               <div className="flex items-center gap-2">
-                <small className="shrink-0 text-[10px] font-black text-sky-300">性別</small>
+                <small className="shrink-0 text-[10px] font-black leading-tight text-sky-300">性別<span className="block text-[9px] font-bold text-slate-400">非公開</span></small>
                 <div className="grid flex-1 grid-cols-3 gap-1.5" role="radiogroup" aria-label="性別">
                   {[['male','男の子'],['female','女の子'],['none','答えない']].map(([id,label])=>(
                     <button key={id} type="button" role="radio" aria-checked={breederGender===id} data-gender={id} onClick={()=>onSelectBreederGender(id)}
@@ -219,7 +219,6 @@ function ProfileScreen({
                   ))}
                 </div>
               </div>
-              <p className="mt-1 text-[10px] leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手やマスモンの呼び方が変わります。ほかの人には見えません')}</p>
             </div>
           )}
           {/* ② 着せかえのタイル(アイコン・フレーム・図鑑・着替え)。ひとことと好きなモンスターは、下の「見せる札」へ移した(2026-10-29 案B)。
