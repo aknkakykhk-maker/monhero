@@ -1,0 +1,235 @@
+// MFバトルカード 紹介動画 第3弾 (a) 戦術カードの場面を、実際のブラウザで撮る(2026-11-06 ソランド部長の割り振り・ビート部テンポ)。
+//   node tools/card/card-tactic-video.js [出力フォルダ]   既定: docs/progress/card-intro-video-3/
+//   縦 390×844・deviceScaleFactor 2(780×1688)・音なしの mp4。ffmpeg で書き出す
+//
+// 撮るもの
+//   tactic-glow.mp4  … 登録デッキ(偽・戦術カード入り)との対戦。相手が戦術カードで動くと、上に「📜 ◯◯の戦術カード(…)」の帯(84 の tacGlow)が出て、
+//                      その指示どおりにとどめ・守りが決まる所(帯が出た時刻の前後を切り出す)
+//   tactic-smart.mp4 … デッキ登録の確かめの欄の「賢さ GRAND MASTER 相当」と「次の HELL まで」
+//
+// 決まり
+//   ・公開済みの main の画面だけ。ゲーム本体は変えない(相手のデッキ・戦術カード・カードランクは、この道具の中で作る偽のデータ)
+//   ・ほかのブリーダーの本名・デッキ名は出さない(相手は「カード部のテスト」、デッキ名は仮の名前)
+//   ・本物の Supabase には行かない(この道具の中ですべて返す)。デバッグのボタン・合言葉の欄は、切り出したあとの動画には映らない
+const http = require('http');
+const path = require('path');
+const fs = require('fs');
+const { execFileSync } = require('child_process');
+const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
+
+const root = path.resolve(__dirname, '..', '..');
+const OUT = path.resolve(process.argv[2] || path.join(root, 'docs/progress/card-intro-video-3'));
+const SHOTS = process.env.CARD_VIDEO_SHOTS || '';   // 途中の画面の写真を置くフォルダ(作り直すとき用)
+const PORT = Number(process.env.CARD_PORT) || 8993;
+const W = 390, H = 844, DSF = 2;
+const FOE = { name: 'カード部のテスト', deck: '仮のデッキ' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4' };
+const serve = () => new Promise((resolve) => {
+  const server = http.createServer((req, res) => {
+    const file = path.join(root, decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, ''));
+    if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end('not found'); return; }
+    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || MIME[path.extname(file).toLowerCase()] || 'application/octet-stream' });
+    fs.createReadStream(file).pipe(res);
+  });
+  server.listen(PORT, () => resolve(server));
+});
+const mp4 = (webm, out, from, len) => execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-ss', from.toFixed(2), '-t', len.toFixed(2), '-i', webm,
+  '-vf', `scale=${W * DSF}:${H * DSF}:flags=lanczos,fps=30,format=yuv420p`, '-c:v', 'libx264', '-crf', '20', '-preset', 'medium', '-an', out]);
+
+// ゲームを開いて HOME まで(はじめての窓は閉じる)。偽の登録デッキと、本物の Supabase へ行かない返事を仕込む
+const boot = async (browser, tmp) => {
+  const context = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DSF, recordVideo: { dir: tmp, size: { width: W * DSF, height: H * DSF } } });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e.message || e)));
+  const state = { entry: null };
+  await page.route(/supabase\.co/, (route) => {
+    const url = route.request().url();
+    const json = (v) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) });
+    if (/\/rest\/v1\/card_deck_entries\?/.test(url) && !/owner_id=eq\./.test(url)) return json(state.entry ? [state.entry] : []);
+    if (/\/rpc\/card_deck_register/.test(url)) return json('ok');
+    const fn = (url.match(/rpc\/([a-z_]+)/) || [])[1] || '';
+    return json(fn ? null : []);
+  });
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('__cardSeeded')) return;
+    sessionStorage.setItem('__cardSeeded', '1');
+    localStorage.setItem('mh_debug_unlocked_v1', '1'); // HOME に MFバトルカードの札を出すため(デバッグのボタンは撮らない)
+    for (const [k, v] of Object.entries({ mh_breeder_name: 'ブリーダー', mh_breeder_icon: '🐣', mh_onboarded: true, mh_tutorial_seen_v1: true, mh_battle_tutorial_seen_v1: true,
+      mh_battle_tutorial_guide_shown_v1: true, mh_inherited_unique_level_compensation_v1: true, mh_inherited_unique_level_compensation_pending_v1: false })) localStorage.setItem(k, JSON.stringify(v));
+  });
+  await page.addInitScript(eventStorySeed());
+  await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
+  const sleep = (ms) => page.waitForTimeout(ms);
+  const dismiss = async () => { for (const x of await page.getByRole('button', { name: /^(受け取る|閉じる|はじめる|OK|スキップ|次へ|とじる|あとで|あとで読む|わかった)$/ }).all()) { if (await x.isVisible().catch(() => false)) { await x.dispatchEvent('click').catch(() => {}); await sleep(300); } } };
+  await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 90000 });
+  const top = page.getByRole('button', { name: 'トップ画面へ進む' });
+  const home = page.locator('[data-home-card-battle]');
+  for (let i = 0; i < 120 && !(await home.isVisible().catch(() => false)); i++) { if (await top.isVisible().catch(() => false)) await top.click().catch(() => {}); await dismiss(); await sleep(500); }
+  for (let i = 0; i < 4; i++) { await sleep(500); await dismiss(); }
+  return { context, page, state, errors, sleep, dismiss };
+};
+const shot = async (page, name) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: true }); await page.screenshot({ path: path.join(SHOTS, `${name}.png`) }); } };
+
+
+// スターター(一撃必殺パワフルチーム)を受け取り、練習試合を飛ばしてトップへ
+const starter = async (page) => {
+  if (!(await page.locator('[data-card-top="starter"]').count())) return;
+  await page.locator('[data-card-kit="powerful"]').click();
+  await page.getByRole('button', { name: /にする$/ }).click();
+  await require(path.join(__dirname, 'lib/starter-open-pass.js'))(page);
+  await page.locator('[data-card-quit]').waitFor({ timeout: 20000 });
+  await page.locator('[data-card-quit]').click();
+  await page.getByRole('button', { name: /^飛ばす$/ }).last().click();
+  await page.locator('[data-card-top="result"]').waitFor({ timeout: 15000 });
+  await page.getByRole('button', { name: /トップへ/ }).first().click();
+  await page.locator('[data-card-top="top"]').waitFor({ timeout: 15000 });
+};
+// 偽の登録デッキ(ドラの MASTER のデッキ・戦術カード入り)。ゲームの中の関数で作る(ブラウザの中で動く)
+//   基本カード: 仕留め型・守り型 / 3体それぞれ「倒せる相手 → 攻める」「受けるダメージ3以上 → 守る」
+const fakeEntry = (foe) => {
+  const db = CARD_BATTLE_DATA;
+  const d = cardAiBuildDeck(db, 'dra', 'master', cardAiSeededRand('tactic-video'));
+  const id = (g, v) => (CARD_TACTIC_CARDS.find((c) => c.g === g && (v === undefined || c.v === v)) || {}).id;
+  const guardAct = (CARD_TACTIC_CARDS.find((c) => c.cat === 'monster' && c.phase === 'guard') || {}).id;
+  const rows = [{ c: id('ko'), a: id('atk'), on: true }, { c: id('incoming', 3), a: guardAct, on: true }];
+  const frames = cardTacticNormalizeFrames({ base: [id('tFinish'), id('tGuard'), null], breeder: [], mons: [rows, rows, rows] });
+  const f = cardTacticPackFrames(frames);
+  return { owner_id: 'tacticvideo01', user_name: foe.name, icon: '🛡️', profile_frame: null, deck: { monsters: d.monsters, cards: d.cards },
+    tactics: { name: foe.deck, habit: 'dra', aces: [], f }, version: 1, active: true, battles: 3, deck_wins: 2, rents: 0, updated_at: new Date().toISOString() };
+};
+
+// デッキ登録の画面のための偽のデータ(ブラウザの中で動く): カードランク12(基本カードの2枚目が開く)・戦術カードを全部持つ・
+//   基本2枚(仕留め型・守り型)と、ちゃんと効く戦術カード6枚 → 賢さ GRAND MASTER(HELL まであと3枚)
+const seedSmart = () => {
+  let xp = 0;
+  for (let r = 1; r < 12; r++) xp += playerRankNeed(r);
+  localStorage.setItem('mh_card_level_v1', JSON.stringify({ v: 1, xp, day: '', dayWin: false, got: Array.from({ length: 11 }, (_, i) => i + 2) }));
+  const id = (g, v) => (CARD_TACTIC_CARDS.find((c) => c.g === g && (v === undefined || c.v === v)) || {}).id;
+  const conds = CARD_TACTIC_CARDS.filter((c) => c.cat === 'cond' && c.g !== 'species' && !CARD_TACTIC_GUARD_ONLY_CONDS.includes(c.g));
+  const acts = CARD_TACTIC_CARDS.filter((c) => c.cat === 'monster' && c.phase === 'attack');
+  const frames = { base: [id('tFinish'), id('tGuard'), null], breeder: [], mons: [[], [], []] };
+  let k = 0;
+  for (const c of conds) {
+    for (const a of acts) {
+      if (cardTacticCountedRows(cardTacticNormalizeFrames(frames)) >= 6) break;
+      const mi = k % 3;
+      const next = { ...frames, mons: frames.mons.map((r, i) => (i === mi ? [...r, { c: c.id, a: a.id, on: true }] : r)) };
+      if (next.mons[mi].length > 2) continue;
+      if (cardTacticCountedRows(cardTacticNormalizeFrames(next)) > cardTacticCountedRows(cardTacticNormalizeFrames(frames))) { frames.mons = next.mons; k++; break; }
+    }
+  }
+  const own = {};
+  CARD_TACTIC_CARDS.forEach((c) => { own[c.id] = 1; });
+  localStorage.setItem('mh_card_tactics_v1', JSON.stringify({ ...cardNormalizeTactics(null), own, frames }));
+  localStorage.removeItem('mh_card_tactics_by_deck_v1');
+  return `${cardTacticSmartLevel(cardTacticNormalizeFrames(frames))}(基本2・効く ${cardTacticCountedRows(cardTacticNormalizeFrames(frames))}枚)`;
+};
+// デッキ登録の画面だけを、ゲームの上に重ねて描く(デッキは偽の1組「わたしのデッキ」)
+const mountRegister = () => {
+  const db = CARD_BATTLE_DATA;
+  const A = { ...cardAiBuildDeck(db, 'kiki', 'master', cardAiSeededRand('tactic-video-mine')), id: 'dMine', name: 'わたしのデッキ' };
+  const col = {};
+  [...A.monsters, ...A.cards].forEach((no) => { col[no] = 9; });
+  document.getElementById('__reg')?.remove();
+  const div = document.createElement('div');
+  div.id = '__reg';
+  div.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;background:#0f172a;color:#fff';
+  document.body.appendChild(div);
+  window.__regRoot = ReactDOM.createRoot(div);
+  window.__regRoot.render(React.createElement(CardDeckRegister, { db, decks: { v: 1, active: 'dMine', decks: [A] }, collection: col, onBack: () => {} }));
+};
+
+module.exports = { boot, shot, mp4, serve, FOE, W, H, DSF, OUT, root };
+if (require.main === module) {
+  (async () => {
+    const playwright = require('playwright');
+    fs.mkdirSync(OUT, { recursive: true });
+    const server = await serve();
+    const browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+    const tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'card-tactic-video-'));
+    try {
+      const A = await boot(browser, tmp);
+      const { page, sleep, dismiss } = A;
+      await page.locator('[data-home-card-battle]').click();
+      await page.locator('[data-card-top]').first().waitFor({ timeout: 20000 });
+      await sleep(800); await dismiss();
+      await starter(page);
+      A.state.entry = await page.evaluate(fakeEntry, FOE);
+      await page.locator('[data-card-cpu]').click();
+      await page.locator('[data-card-mode-assistant]').click();
+      await sleep(1200); await dismiss();
+      await page.locator('[data-card-foe-tab="breeder"]').click();
+      await sleep(1500); await dismiss();
+      await shot(page, '03-breeder');
+      await page.locator('[data-card-share-fight="tacticvideo01"]').click();
+      await page.locator('[data-card-deck-pick]').first().waitFor({ timeout: 15000 });
+      await sleep(800); await dismiss();
+      await shot(page, '04-deck-pick');
+      await page.locator('[data-card-deck-pick-mode="auto"]').click();
+      await sleep(400);
+      await page.locator('[data-card-deck-pick-go]').click();
+      // 帯(data-card-tactic-glow)が出るたびに、時刻と文を控える。とどめ(倒せる相手)と守り(受けるダメージ)の両方が出るか、試合が終わるまで
+      const glows = [];
+      const until = Date.now() + 240000;
+      let seen = '';
+      while (Date.now() < until) {
+        const g = await page.locator('[data-card-tactic-glow]').first().textContent({ timeout: 300 }).catch(() => null);
+        if (g && g !== seen) { glows.push({ at: Date.now(), text: g }); seen = g; }
+        if (!g) seen = '';
+        const kinds = { finish: glows.some((x) => /倒せる/.test(x.text)), guard: glows.some((x) => /守り方で守る/.test(x.text)) };
+        if (kinds.finish && kinds.guard && Date.now() - glows[glows.length - 1].at > 6000) break;
+        if (await page.locator('[data-card-result]').count().catch(() => 0)) break;
+        await sleep(150);
+      }
+      await sleep(1000);
+      const end = Date.now();
+      console.log(glows.map((x) => `${((x.at - end) / 1000).toFixed(1)}秒 ${x.text}`).join('\n') || '帯が出なかった');
+      await A.context.close();
+      const webm = path.join(tmp, fs.readdirSync(tmp).find((f) => f.endsWith('.webm')));
+      const dur = Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', webm]).toString().trim()) || 0;
+      // 帯が出る5秒前から12秒(帯 2.4秒 → 技・守りが決まって数字が出るまで)
+      const cut = (x, name) => { if (!x) { console.log(`${name}: 帯が出なかったので撮れない`); return; } const at = dur - (end - x.at) / 1000; mp4(webm, path.join(OUT, name), Math.max(0, at - 5), 12); console.log(`書き出し: ${name}(${x.text})`); };
+      cut(glows.find((x) => /倒せる/.test(x.text)), 'tactic-glow-finish.mp4');
+      cut(glows.find((x) => /守り方で守る/.test(x.text)), 'tactic-glow-guard.mp4');
+      if (A.errors.length) console.log(`実行時エラー: ${A.errors.slice(0, 3).join(' / ')}`);
+
+      // ---- デッキ登録の確かめの欄(賢さ GRAND MASTER 相当・次の HELL まで) ----
+      const tmp2 = fs.mkdtempSync(path.join(require('os').tmpdir(), 'card-tactic-video-'));
+      try {
+        const B = await boot(browser, tmp2);
+        const smart = await B.page.evaluate(seedSmart);
+        console.log(`賢さの仕込み: ${smart}`);
+        await B.page.evaluate(mountRegister);
+        const R = (sel) => B.page.locator(`#__reg ${sel}`);
+        await R('[data-card-reg-deck]').first().waitFor({ timeout: 20000 });
+        const t0 = Date.now();
+        await B.sleep(900);
+        await R('[data-card-reg-deck]').first().click();
+        await B.sleep(700);
+        await R('[data-card-reg-next]').click();
+        await B.sleep(700);
+        await R('[data-card-reg-style="custom"]').click();
+        await B.sleep(500);
+        await R('[data-card-reg-next]').click();
+        await R('[data-card-reg-smart]').waitFor({ timeout: 10000 });
+        await B.sleep(600);
+        await R('[data-card-reg-smart]').scrollIntoViewIfNeeded();
+        await R('[data-card-reg-smart]').evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'smooth' }));
+        await shot(B.page, '05-smart');
+        const text = await R('[data-card-reg-smart]').innerText();
+        console.log(text.replace(/\s+/g, ' '));
+        await B.sleep(6500);
+        const end2 = Date.now();
+        await B.context.close();
+        const webm2 = path.join(tmp2, fs.readdirSync(tmp2).find((f) => f.endsWith('.webm')));
+        const dur2 = Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', webm2]).toString().trim()) || 0;
+        const len = (end2 - t0) / 1000;
+        mp4(webm2, path.join(OUT, 'tactic-smart.mp4'), Math.max(0, dur2 - len), len);
+        console.log(`書き出し: tactic-smart.mp4(${len.toFixed(1)}秒)`);
+        if (B.errors.length) console.log(`実行時エラー: ${B.errors.slice(0, 3).join(' / ')}`);
+      } finally { fs.rmSync(tmp2, { recursive: true, force: true }); }
+
+    } finally { await browser.close(); server.close(); fs.rmSync(tmp, { recursive: true, force: true }); }
+  })().catch((e) => { console.error(e.message || e); process.exit(1); });
+}
