@@ -3237,7 +3237,15 @@ const CARD_TACTIC_CARDS = Object.freeze(CARD_TACTIC_GROUPS.flatMap((g) => g.tier
 }))));
 const CARD_TACTIC_BY_ID = Object.freeze(Object.fromEntries(CARD_TACTIC_CARDS.map((c) => [c.id, c])));
 const CARD_TACTIC_START = Object.freeze(CARD_TACTIC_CARDS.filter((c) => c.start).map((c) => c.id));
-const cardTacticOf = (id) => (typeof id === 'string' && Object.prototype.hasOwnProperty.call(CARD_TACTIC_BY_ID, id) ? CARD_TACTIC_BY_ID[id] : null);
+// 2026-11-06 10:36〜(#4623)のあいだだけ配っていた別の id。その間に引いた・組んだカードも、元の id のカードとして読む(保存は書き換えない)
+const CARD_TACTIC_ID_ALIAS = Object.freeze({
+  'stance.このモンスターは攻撃しない': 'stance.この子は攻撃しない',
+  'stance.ライフの多いモンスターが先に': 'stance.ライフの多い子が先に',
+  'stance.ライフの少ないモンスターは温存': 'stance.ライフの少ない子は温存',
+  'bEff.倒れたモンスターを戻す': 'bEff.倒れた子を戻す',
+});
+const cardTacticCanonId = (id) => (typeof id === 'string' && Object.prototype.hasOwnProperty.call(CARD_TACTIC_ID_ALIAS, id) ? CARD_TACTIC_ID_ALIAS[id] : id);
+const cardTacticOf = (id0) => { const id = cardTacticCanonId(id0); return typeof id === 'string' && Object.prototype.hasOwnProperty.call(CARD_TACTIC_BY_ID, id) ? CARD_TACTIC_BY_ID[id] : null; };
 
 // 枠の形(2026-10-29 社長: 基本カードはメイン1+サブ2・ブリーダーの枠・モンスター1体ごとの枠)
 //   { base:[メイン, サブ1, サブ2](カードidか null), breeder:[行], mons:[[行],[行],[行]] }(mons は場の左・真ん中・右の子)

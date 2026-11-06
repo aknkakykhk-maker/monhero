@@ -93,7 +93,7 @@ const cardTacticsInt = (n, max = 1e9) => (Number.isFinite(Number(n)) ? Math.min(
 const cardNormalizeTactics = (raw) => {
   const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const own = {};
-  if (r.own && typeof r.own === 'object' && !Array.isArray(r.own)) Object.entries(r.own).forEach(([id, n]) => { const k = cardTacticsInt(n, 999); if (id && id.length <= 64 && k > 0) own[id] = k; });
+  if (r.own && typeof r.own === 'object' && !Array.isArray(r.own)) Object.entries(r.own).forEach(([id, n]) => { const k = cardTacticsInt(n, 999); if (id && id.length <= 64 && k > 0) { const c = cardTacticCanonId(id); own[c] = Math.min(999, (own[c] || 0) + k); } });
   return { v: 1, own, frames: cardTacticNormalizeFrames(r.frames), shards: cardTacticsInt(r.shards), tickets: cardTacticsInt(r.tickets), pulls: cardTacticsInt(r.pulls), dry: cardTacticsInt(r.dry, 99) };
 };
 const cardTacticsOwns = (t, id) => CARD_TACTIC_START.includes(id) || ((t && t.own && t.own[id]) || 0) > 0;

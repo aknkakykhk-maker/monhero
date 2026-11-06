@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 501e6cf0ccfddbf3
+// generated-sha256: a18d904d953b0c03
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -58521,7 +58521,15 @@ const CARD_TACTIC_CARDS = Object.freeze(CARD_TACTIC_GROUPS.flatMap((g) => g.tier
 }))));
 const CARD_TACTIC_BY_ID = Object.freeze(Object.fromEntries(CARD_TACTIC_CARDS.map((c) => [c.id, c])));
 const CARD_TACTIC_START = Object.freeze(CARD_TACTIC_CARDS.filter((c) => c.start).map((c) => c.id));
-const cardTacticOf = (id) => (typeof id === 'string' && Object.prototype.hasOwnProperty.call(CARD_TACTIC_BY_ID, id) ? CARD_TACTIC_BY_ID[id] : null);
+// 2026-11-06 10:36〜(#4623)のあいだだけ配っていた別の id。その間に引いた・組んだカードも、元の id のカードとして読む(保存は書き換えない)
+const CARD_TACTIC_ID_ALIAS = Object.freeze({
+  'stance.このモンスターは攻撃しない': 'stance.この子は攻撃しない',
+  'stance.ライフの多いモンスターが先に': 'stance.ライフの多い子が先に',
+  'stance.ライフの少ないモンスターは温存': 'stance.ライフの少ない子は温存',
+  'bEff.倒れたモンスターを戻す': 'bEff.倒れた子を戻す',
+});
+const cardTacticCanonId = (id) => (typeof id === 'string' && Object.prototype.hasOwnProperty.call(CARD_TACTIC_ID_ALIAS, id) ? CARD_TACTIC_ID_ALIAS[id] : id);
+const cardTacticOf = (id0) => { const id = cardTacticCanonId(id0); return typeof id === 'string' && Object.prototype.hasOwnProperty.call(CARD_TACTIC_BY_ID, id) ? CARD_TACTIC_BY_ID[id] : null; };
 
 // 枠の形(2026-10-29 社長: 基本カードはメイン1+サブ2・ブリーダーの枠・モンスター1体ごとの枠)
 //   { base:[メイン, サブ1, サブ2](カードidか null), breeder:[行], mons:[[行],[行],[行]] }(mons は場の左・真ん中・右の子)
@@ -71817,7 +71825,7 @@ const cardTacticsInt = (n, max = 1e9) => (Number.isFinite(Number(n)) ? Math.min(
 const cardNormalizeTactics = (raw) => {
   const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const own = {};
-  if (r.own && typeof r.own === 'object' && !Array.isArray(r.own)) Object.entries(r.own).forEach(([id, n]) => { const k = cardTacticsInt(n, 999); if (id && id.length <= 64 && k > 0) own[id] = k; });
+  if (r.own && typeof r.own === 'object' && !Array.isArray(r.own)) Object.entries(r.own).forEach(([id, n]) => { const k = cardTacticsInt(n, 999); if (id && id.length <= 64 && k > 0) { const c = cardTacticCanonId(id); own[c] = Math.min(999, (own[c] || 0) + k); } });
   return { v: 1, own, frames: cardTacticNormalizeFrames(r.frames), shards: cardTacticsInt(r.shards), tickets: cardTacticsInt(r.tickets), pulls: cardTacticsInt(r.pulls), dry: cardTacticsInt(r.dry, 99) };
 };
 const cardTacticsOwns = (t, id) => CARD_TACTIC_START.includes(id) || ((t && t.own && t.own[id]) || 0) > 0;

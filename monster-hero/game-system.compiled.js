@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d501dcfb7a585176
+// source-sha256: ced021d3c127566f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -97485,7 +97485,17 @@ const CARD_TACTIC_CARDS = Object.freeze(CARD_TACTIC_GROUPS.flatMap(g => g.tiers.
 }))));
 const CARD_TACTIC_BY_ID = Object.freeze(Object.fromEntries(CARD_TACTIC_CARDS.map(c => [c.id, c])));
 const CARD_TACTIC_START = Object.freeze(CARD_TACTIC_CARDS.filter(c => c.start).map(c => c.id));
-const cardTacticOf = id => typeof id === 'string' && Object.prototype.hasOwnProperty.call(CARD_TACTIC_BY_ID, id) ? CARD_TACTIC_BY_ID[id] : null;
+const CARD_TACTIC_ID_ALIAS = Object.freeze({
+  'stance.このモンスターは攻撃しない': 'stance.この子は攻撃しない',
+  'stance.ライフの多いモンスターが先に': 'stance.ライフの多い子が先に',
+  'stance.ライフの少ないモンスターは温存': 'stance.ライフの少ない子は温存',
+  'bEff.倒れたモンスターを戻す': 'bEff.倒れた子を戻す'
+});
+const cardTacticCanonId = id => typeof id === 'string' && Object.prototype.hasOwnProperty.call(CARD_TACTIC_ID_ALIAS, id) ? CARD_TACTIC_ID_ALIAS[id] : id;
+const cardTacticOf = id0 => {
+  const id = cardTacticCanonId(id0);
+  return typeof id === 'string' && Object.prototype.hasOwnProperty.call(CARD_TACTIC_BY_ID, id) ? CARD_TACTIC_BY_ID[id] : null;
+};
 const CARD_TACTIC_FRAME_MAX = Object.freeze({
   base: 3,
   breeder: 3,
@@ -121469,7 +121479,10 @@ const cardNormalizeTactics = raw => {
   const own = {};
   if (r.own && typeof r.own === 'object' && !Array.isArray(r.own)) Object.entries(r.own).forEach(([id, n]) => {
     const k = cardTacticsInt(n, 999);
-    if (id && id.length <= 64 && k > 0) own[id] = k;
+    if (id && id.length <= 64 && k > 0) {
+      const c = cardTacticCanonId(id);
+      own[c] = Math.min(999, (own[c] || 0) + k);
+    }
   });
   return {
     v: 1,
