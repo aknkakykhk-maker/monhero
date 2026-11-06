@@ -117,21 +117,29 @@ const pure = (() => {
   // 性格は Lv.10 まで見えない
   let mon = null; let traitAtLevel = 0;
   for (let i = 0; i < 400 && !traitAtLevel; i += 1) {
-    const r = b.apply(mon, { round: `r${i}`, songId: 'songA', diffId: i % 2 ? 'MASTER' : 'EXPERT', durationMs: 60000, teamRank: 'B', dayKey: d1, lean: '', nowMs: 1 });
+    // 2026-11-06: 新しい性格(努力家=同じ曲・せっかち=短い曲)に寄らないよう、曲を回し、2分10秒の曲にする
+    // 日もばらす(同じ日にたくさん遊ぶと熱血になる)。1日4曲を1日おき
+    const dk = new Date(Date.UTC(2026, 9, 1) + Math.floor(i / 4) * 2 * 86400000).toISOString().slice(0, 10);
+    const r = b.apply(mon, { round: `r${i}`, songId: `s${i % 6}`, diffId: i % 2 ? 'MASTER' : 'EXPERT', durationMs: 130000, teamRank: 'B', dayKey: dk, lean: '', nowMs: 1 });
     mon = r.mon;
     if (mon.trait) traitAtLevel = b.level(mon.exp).level;
   }
   check('性格は Lv.30 で決まる', traitAtLevel === 30, `Lv.${traitAtLevel}`);
   check('EXPERT・MASTER をよく遊ぶとひょうきん(種類の傾向より育て方が勝つ)', mon && mon.trait === 'jester', mon && mon.trait);
 
-  // 9つの性格: 育て方ごとに決まる
+  // 性格: 育て方ごとに決まる(2026-11-06 に19個。ふつうの遊び方は、どの性格にも寄らない形にした:
+  //   6曲を回す・1日4曲を1日おき・2人の部屋・2分10秒の曲・昼・譜面Lv.は渡さない・HARD と EXPERT を2曲ずつ)
   const grow = (opts) => {
     let m2 = null;
     for (let i = 0; i < 60; i += 1) {
-      const day = new Date(Date.UTC(2026, 9, 1) + (opts.daily ? i : 0) * 86400000).toISOString().slice(0, 10);
-      const diffId = typeof opts.diff === 'function' ? opts.diff(i) : opts.diff;
-      m2 = b.apply(m2, { round: `g${i}`, songId: opts.songs ? `s${i}` : 'songA', diffId, durationMs: opts.long ? 200000 : 100000, teamRank: 'B', dayKey: day, lean: '', nowMs: i,
-        chartLevel: opts.hard ? 99 : 1, humans: opts.crowd ? 4 : 1, moodId: opts.bad ? 'bad' : 'normal' }).mon;
+      const dayN = opts.daily ? i : opts.marathon ? Math.floor(i / 10) * 2 : Math.floor(i / 4) * 2;
+      const day = new Date(Date.UTC(2026, 9, 1) + dayN * 86400000).toISOString().slice(0, 10);
+      const diffId = typeof opts.diff === 'function' ? opts.diff(i) : opts.diff || ['HARD', 'HARD', 'EXPERT', 'EXPERT'][i % 4];
+      const songId = opts.songs ? `s${i}` : opts.same ? 'songA' : opts.retry ? `s${Math.floor(i / 2) % 6}` : `s${i % 6}`;
+      const nowMs = Date.UTC(2026, 9, 1 + dayN, opts.night ? 14 : 3) + i * 60000; // 14:00 UTC = 23:00 JST / 3:00 UTC = 12:00 JST
+      m2 = b.apply(m2, { round: `g${i}`, songId, diffId, durationMs: opts.long ? 200000 : opts.short ? 90000 : 130000, teamRank: 'B', dayKey: day, lean: '', nowMs,
+        chartLevel: opts.hard ? 99 : opts.easy ? 1 : 0, humans: opts.crowd ? 4 : opts.solo ? 1 : 2, moodId: opts.bad ? 'bad' : opts.good ? 'good' : 'normal',
+        ...(opts.high ? { score: 950000, maxScore: 1000000 } : {}) }).mon;
     }
     return m2.trait;
   };
@@ -142,6 +150,13 @@ const pure = (() => {
     stubborn: grow({ diff: 'NORMAL' }), serious: grow({ diff: (i) => ['EASY', 'NORMAL', 'HARD'][i % 3] }),
   };
   check('9つの性格は、それぞれの育て方で決まる', Object.entries(cases).every(([want, got]) => want === got), JSON.stringify(cases));
+  // 2026-11-06 の10個
+  const cases2 = {
+    fiery: grow({ marathon: true }), cool: grow({ high: true }), fickle: grow({ diff: (i) => (i % 2 ? 'HARD' : 'EXPERT') }), mellow: grow({ easy: true }),
+    hasty: grow({ short: true }), competitive: grow({ retry: true }), showoff: grow({ good: true }), shy: grow({ solo: true }),
+    hardworker: grow({ same: true }), romantic: grow({ night: true }),
+  };
+  check('新しい10個の性格も、それぞれの育て方で決まる', Object.entries(cases2).every(([want, got]) => want === got), JSON.stringify(cases2));
   check('はじめの4つで決まっていた性格は、読み込むときに置き換える', ['steady', 'burst', 'stamina', 'artisan'].map((t) => b.normMon({ trait: t }).trait).join(',') === 'serious,jester,easygoing,smart');
   // 効き目
   const seqT = (seed) => { let x = seed; return () => { x = (x * 1103515245 + 12345) % 2147483648; return x / 2147483648; }; };

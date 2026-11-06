@@ -19,6 +19,17 @@ const RHYTHM_BUDDY_SELF_WORDS = Object.freeze({
   worrier: Object.freeze(['ぼく', 'わたし', 'あたし', 'うち']),
   stubborn: Object.freeze(['おれ', 'わし', '拙者', '自分']),
   easygoing: Object.freeze(['ぼく', 'うち', 'わし', 'あたし']),
+  // 2026-11-06 の10個
+  fiery: Object.freeze(['おれ', 'ぼく', 'あたし']),
+  cool: Object.freeze(['ぼく', 'わたし', 'おれ']),
+  fickle: Object.freeze(['ぼく', 'あたし', 'うち', 'おれ']),
+  mellow: Object.freeze(['わたし', 'わたくし', 'ぼく']),
+  hasty: Object.freeze(['おれ', 'ぼく', 'あたし', 'うち']),
+  competitive: Object.freeze(['おれ', 'ぼく', 'あたし']),
+  showoff: Object.freeze(['オイラ', 'おれ', 'ぼく', 'あたし']),
+  shy: Object.freeze(['ぼく', 'わたし', 'うち']),
+  hardworker: Object.freeze(['ぼく', 'わたし', '自分', 'あたし']),
+  romantic: Object.freeze(['ぼく', 'わたし', 'わたくし']),
 });
 // 性別(2026-10-16 社長「ウンディーネとピクシー種は明確に女個体だから、そういう設定を足して」)。
 // 種(主血統)で決まる。ピクシー種(ピクシー・ミア・パンドラ)とウンディーネ種(ウンディーネ・ヤオビクニ・スネグーラチカ)は女の子。
@@ -41,6 +52,17 @@ const RHYTHM_BUDDY_SELF_WORDS_FEMALE = Object.freeze({
   worrier: Object.freeze(['わたし', 'あたし', 'うち']),
   stubborn: Object.freeze(['あたし', 'わたし', 'うち']),
   easygoing: Object.freeze(['うち', 'あたし', 'わたし']),
+  // 2026-11-06 の10個
+  fiery: Object.freeze(['あたし', 'わたし', 'うち']),
+  cool: Object.freeze(['わたし', 'あたし']),
+  fickle: Object.freeze(['あたし', 'うち', 'わたし']),
+  mellow: Object.freeze(['わたし', 'わたくし']),
+  hasty: Object.freeze(['あたし', 'うち', 'わたし']),
+  competitive: Object.freeze(['あたし', 'わたし', 'うち']),
+  showoff: Object.freeze(['あたし', 'うち', 'わたし']),
+  shy: Object.freeze(['わたし', 'うち']),
+  hardworker: Object.freeze(['わたし', 'あたし']),
+  romantic: Object.freeze(['わたし', 'わたくし', 'あたし']),
 });
 // B 人の呼び方。suf は名前のあとに付ける形('' は呼び捨て)、call は名前の代わりに呼ぶ形。
 // 先頭は、性格ごとの呼び方(33-rhythm-buddy-talk.jsx の RHYTHM_BUDDY_HONORIFICS)と同じにしておく
@@ -68,6 +90,17 @@ const RHYTHM_BUDDY_CALLS = Object.freeze({
   worrier: Object.freeze(['san', 'kun', 'chan', 'master']),
   stubborn: Object.freeze(['bare', 'partner', 'dono']),
   easygoing: Object.freeze(['san', 'kun', 'chan', 'cchi']),
+  // 2026-11-06 の10個
+  fiery: Object.freeze(['bare', 'partner', 'boss']),
+  cool: Object.freeze(['san', 'bare', 'partner']),
+  fickle: Object.freeze(['kun', 'chan', 'cchi', 'san']),
+  mellow: Object.freeze(['san', 'sama', 'chan']),
+  hasty: Object.freeze(['bare', 'kun', 'boss']),
+  competitive: Object.freeze(['bare', 'kun', 'partner']),
+  showoff: Object.freeze(['chan', 'cchi', 'boss', 'partner']),
+  shy: Object.freeze(['san', 'kun', 'master']),
+  hardworker: Object.freeze(['san', 'master', 'partner']),
+  romantic: Object.freeze(['san', 'lord', 'sama']),
 });
 // C 口ぐせ。pre は文の頭に付ける一言、end は文の終わりを替える一言(終わりの「!」「。」などを外してから付ける)
 const RHYTHM_BUDDY_QUIRKS = Object.freeze({
@@ -81,6 +114,17 @@ const RHYTHM_BUDDY_QUIRKS = Object.freeze({
   worrier: Object.freeze([{ pre: 'えっと、' }, { pre: 'あのね、' }, { pre: 'うう、' }, { end: '…' }]),
   stubborn: Object.freeze([{ pre: 'ふん、' }, { pre: 'よし、' }, { pre: 'さて、' }]),
   easygoing: Object.freeze([{ pre: 'ふぁ〜、' }, { pre: 'よいしょ、' }, { pre: 'えっとね、' }, { end: '〜' }, { end: '♪' }]),
+  // 2026-11-06 の10個
+  fiery: Object.freeze([{ pre: 'よっしゃ、' }, { pre: 'うおお、' }, { end: '!!' }]),
+  cool: Object.freeze([{ pre: 'ふっ、' }, { pre: 'さて、' }, { end: '…' }]),
+  fickle: Object.freeze([{ pre: 'んー、' }, { pre: 'あ、そうだ、' }, { end: '…かも' }, { end: '♪' }]),
+  mellow: Object.freeze([{ pre: 'あらあら、' }, { pre: 'ふふ、' }, { pre: 'そうですね、' }]),
+  hasty: Object.freeze([{ pre: 'はやく、' }, { pre: 'よし次、' }, { end: '!' }]),
+  competitive: Object.freeze([{ pre: 'くっ、' }, { pre: '見てろ、' }, { end: '!!' }]),
+  showoff: Object.freeze([{ pre: 'ねえ見た?、' }, { pre: 'じゃーん、' }, { end: '♪' }]),
+  shy: Object.freeze([{ pre: 'あ、あの、' }, { pre: 'えっと…、' }, { end: '…' }]),
+  hardworker: Object.freeze([{ pre: 'よし、' }, { pre: 'コツコツ、' }, { end: '!' }]),
+  romantic: Object.freeze([{ pre: 'ああ、' }, { pre: 'ねえ、' }, { end: '…♪' }]),
 });
 // E 叩き方のくせ(見た目とセリフだけ)。good=よかったとき / bad=よくなかったとき(どちらも「〜た」で終わる) / talk=自分のくせを話す(言い切りの形)
 const RHYTHM_BUDDY_HABITS = Object.freeze([
@@ -205,7 +249,7 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = ({
       clingy: ['{who}さん、{self}を呼んでくれたの?うれしい!', '{self}、ずっと待ってたよ〜'], smart: ['{who}さん、{self}も準備できています', '{self}の出番ですね'],
       serious: ['{who}さん、{self}も全力で取り組みます!', '{self}、精一杯がんばります!'], proud: ['{who}さん、{self}を呼ぶとはお目が高いわ', '{self}の出番ね'],
       worrier: ['{who}さん、{self}でいいのかな…がんばる!', '{self}、足を引っぱらないようにする…'], stubborn: ['{who}さん、{self}が来たぞ', '{self}は手を抜かんぞ'],
-      easygoing: ['{who}さん、{self}も来たよ〜', '{self}、のんびりがんばるね〜'],
+      easygoing: ['{who}さん、{self}も来たよ〜', '{self}、のんびりがんばるね〜'], fiery: ['{who}さん、{self}が来たぞ!燃えるぞ!', '{self}、全力で叩く!'], cool: ['{who}さん、{self}も来たよ', '{self}、いつでもいける'], fickle: ['{who}さん、{self}、なんとなく来たよ', '{self}の気分、今日はいいかも'], mellow: ['{who}さん、{self}も来ましたよ', '{self}、ていねいにがんばりますね'], hasty: ['{who}さん、{self}来た!はやく!', '{self}、すぐ始めたい!'], competitive: ['{who}さん、{self}が来たからには勝つ!', '{self}、今日こそ負けない!'], showoff: ['{who}さん、{self}が来たよ〜!見ててね〜!', '{self}、今日もノッてるよ〜!'], shy: ['…{who}さん、{self}も…来たよ', '{self}、ちょっと緊張…'], hardworker: ['{who}さん、{self}も練習してきた!', '{self}、今日もコツコツがんばる!'], romantic: ['{who}さん、{self}も旋律に呼ばれたの', '{self}、素敵な時間を過ごしたいな'],
     },
     mood: {},
   },
@@ -216,7 +260,7 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = ({
       clingy: ['{like}、{self}の大好きな曲〜!', '{self}ね、{like}がいちばん好き!'], smart: ['{like}は{self}のいちばん好きな曲です', '{self}の記録では{like}が最多です'],
       serious: ['{self}、{like}がいちばん好きなんです', '{like}は何度も一緒に遊んだ曲です'], proud: ['{like}は{self}のための曲よ', '{self}といえば{like}でしょ?'],
       worrier: ['{like}なら、{self}も安心…', '{self}、{like}は好きなんだ…'], stubborn: ['{like}は{self}の曲だ', '{self}は{like}と決めている'],
-      easygoing: ['{like}、{self}の好きな曲〜', '{self}、{like}がいいな〜'],
+      easygoing: ['{like}、{self}の好きな曲〜', '{self}、{like}がいいな〜'], fiery: ['{like}は{self}が一番燃える曲だ!', '{self}の{like}、全力でいくぞ!'], cool: ['{like}は{self}の好きな曲', '{self}、{like}なら問題ない'], fickle: ['{like}…{self}、今日は好きかも', '{self}、なんとなく{like}が好き'], mellow: ['{like}は{self}の好きな曲なんです', '{self}、{like}がお気に入りですよ'], hasty: ['{like}!{self}の好きなやつ!はやく!', '{self}、{like}ならすぐやる!'], competitive: ['{like}なら、{self}は負けない!', '{self}、{like}でリベンジしたい!'], showoff: ['{like}は{self}の得意曲〜!', '{self}といえば{like}でしょでしょ!'], shy: ['…{like}、{self}の好きな曲', '…{like}だと、{self}もほっとする'], hardworker: ['{like}は{self}が一番練習した曲!', '{self}、{like}をもっとやりこみたい!'], romantic: ['{like}は{self}の宝物の曲', '{self}、{like}の旋律が大好き'],
     },
     mood: {},
   },
@@ -227,7 +271,7 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = ({
       clingy: ['{dislike}、苦手なの…そばにいてね', '{self}、{dislike}はこわいよ〜'], smart: ['{dislike}は{self}の苦手な曲です', '{dislike}は成績が伸びていません'],
       serious: ['{dislike}は苦手ですが、がんばります', '{self}、{dislike}は練習中です'], proud: ['{dislike}?べ、別に苦手じゃないわ', '{dislike}くらい、どうってことないわ'],
       worrier: ['{dislike}…{self}、自信ないよ…', '{dislike}、またミスしそう…'], stubborn: ['{dislike}か。今日こそ勝つぞ', '苦手な{dislike}でも引かん'],
-      easygoing: ['{dislike}か〜、ちょっと苦手〜', 'まあ、{dislike}もいっか〜'],
+      easygoing: ['{dislike}か〜、ちょっと苦手〜', 'まあ、{dislike}もいっか〜'], fiery: ['{dislike}か!苦手でも燃えるぞ!', '苦手な{dislike}にも全力だ!'], cool: ['{dislike}か。…まあ、問題ない', '{dislike}は苦手。でも落ち着いていく'], fickle: ['{dislike}…今日は苦手な気分かも', '{dislike}?明日なら好きかも'], mellow: ['{dislike}は、ちょっと苦手なんです', 'あらあら、{dislike}ですか'], hasty: ['{dislike}!サクッと終わらせよ!', '{dislike}は苦手!はやく次!'], competitive: ['{dislike}…くっ、今度こそ!', '{dislike}にはリベンジしたい!'], showoff: ['{dislike}?ま、なんとかなるっしょ〜', '{dislike}でもノれ…るかな〜?'], shy: ['…{dislike}、ちょっとにがて', '{dislike}…う、うん、やる'], hardworker: ['{dislike}、苦手だから練習だ!', '{self}、{dislike}を特訓中!'], romantic: ['{dislike}…まだ心がとどかない曲', '{dislike}の旋律、いつか好きになりたい'],
     },
     mood: {},
   },
@@ -235,7 +279,7 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = ({
     common: ['{hg}!'],
     trait: {
       jester: ['{hg}!さすがでしょ?'], brave: ['{hg}!この調子だ!'], clingy: ['{hg}よ〜!ほめて!'], smart: ['{hg}のが勝因ですね'],
-      serious: ['{hg}のがよかったです!'], proud: ['{hg}わ。当然ね'], worrier: ['{hg}…よかったぁ'], stubborn: ['{hg}のが効いたぞ'], easygoing: ['{hg}〜。いい感じ〜'],
+      serious: ['{hg}のがよかったです!'], proud: ['{hg}わ。当然ね'], worrier: ['{hg}…よかったぁ'], stubborn: ['{hg}のが効いたぞ'], easygoing: ['{hg}〜。いい感じ〜'], fiery: ['{hg}!燃えたぞ!'], cool: ['{hg}。計算どおり'], fickle: ['{hg}、気分がよかったのかも'], mellow: ['{hg}のが、よかったですね'], hasty: ['{hg}!よし次!'], competitive: ['{hg}!前より上だ!'], showoff: ['{hg}!見た?見た?'], shy: ['…{hg}。よかった'], hardworker: ['{hg}!練習どおり!'], romantic: ['{hg}…夢みたい'],
     },
     mood: {},
   },
@@ -243,7 +287,7 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = ({
     common: ['{hb}…次こそ!'],
     trait: {
       jester: ['{hb}!まあ次、次!'], brave: ['{hb}。次は取り返す!'], clingy: ['{hb}…なぐさめて〜'], smart: ['{hb}のが原因ですね'],
-      serious: ['{hb}…次は気をつけます'], proud: ['{hb}だけよ。次は見てなさい'], worrier: ['{hb}…ごめんね'], stubborn: ['{hb}。次は外さん'], easygoing: ['{hb}〜。まあいっか〜'],
+      serious: ['{hb}…次は気をつけます'], proud: ['{hb}だけよ。次は見てなさい'], worrier: ['{hb}…ごめんね'], stubborn: ['{hb}。次は外さん'], easygoing: ['{hb}〜。まあいっか〜'], fiery: ['{hb}。まだまだ燃え足りない!'], cool: ['{hb}。次は直す'], fickle: ['{hb}…気分のせいかも'], mellow: ['{hb}…あらあら'], hasty: ['{hb}!次はすぐ直す!'], competitive: ['{hb}…くっ、次は負けない!'], showoff: ['{hb}〜。ま、次はノれる〜'], shy: ['…{hb}。人が多くて…'], hardworker: ['{hb}。そこ、練習する!'], romantic: ['{hb}…旋律がこぼれちゃった'],
     },
     mood: {},
   },
@@ -251,7 +295,7 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = ({
     common: ['やっぱり{dislike}は苦手…', '{dislike}、いつか好きになりたいな'],
     trait: {
       jester: ['{dislike}にまた負けた〜!'], brave: ['{dislike}め…次は勝つ!'], clingy: ['{dislike}、また苦手だった…'], smart: ['{dislike}は課題が残りますね'],
-      serious: ['{dislike}はまだ苦手です…次こそ'], proud: ['{dislike}なんて…次は見てなさい'], worrier: ['やっぱり{dislike}はむずかしい…'], stubborn: ['{dislike}め、次こそは'], easygoing: ['{dislike}はむずかしいね〜'],
+      serious: ['{dislike}はまだ苦手です…次こそ'], proud: ['{dislike}なんて…次は見てなさい'], worrier: ['やっぱり{dislike}はむずかしい…'], stubborn: ['{dislike}め、次こそは'], easygoing: ['{dislike}はむずかしいね〜'], fiery: ['{dislike}め…次は全力だ!'], cool: ['{dislike}は、まだ課題だね'], fickle: ['{dislike}、今日も気分じゃなかった'], mellow: ['{dislike}は、やっぱりむずかしいですね'], hasty: ['{dislike}…はやく慣れたい!'], competitive: ['くっ…{dislike}、次こそリベンジ!'], showoff: ['{dislike}、ノリきれなかった〜'], shy: ['…{dislike}、やっぱりにがて'], hardworker: ['{dislike}、できるまでやる!'], romantic: ['{dislike}は、遠い星みたい'],
     },
     mood: {},
   },
@@ -262,7 +306,7 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = ({
       clingy: ['{food}、一緒に食べよ〜?', '{self}ね、{food}が大好きなの〜'], smart: ['{food}は集中力に効くんです', '{self}の好物は{food}です'],
       serious: ['終わったら{food}が食べたいです', '{food}を励みにがんばります!'], proud: ['{food}は{self}の好物よ', '{food}を用意してくれてもいいのよ?'],
       worrier: ['{food}食べたら落ち着くかな…', '{food}、持ってくればよかった…'], stubborn: ['{food}は譲らんぞ', '{self}の好物は{food}だ'],
-      easygoing: ['{food}食べたいな〜…', '{food}食べて、お昼寝したいな〜'],
+      easygoing: ['{food}食べたいな〜…', '{food}食べて、お昼寝したいな〜'], fiery: ['{food}食べて燃えるぞ!', '{self}の力のもとは{food}だ!'], cool: ['{food}が食べたいな', '{self}の好物は{food}'], fickle: ['{food}の気分かも…やっぱちがうかも', '{self}、今日は{food}が好き'], mellow: ['終わったら{food}をいただきましょうか', '{self}ね、{food}が好きなんですよ'], hasty: ['{food}!はやく食べたい!', '{self}の好物は{food}!はい覚えた?'], competitive: ['勝ったら{food}を食べる!', '{self}の好物は{food}!ゆずらないぞ!'], showoff: ['{food}食べたら天才になれる〜!', '{food}、だれかおごって〜!'], shy: ['…{food}、好き', '…{food}、いっしょに食べたい'], hardworker: ['{food}食べて、練習がんばる!', '練習のあとの{food}が最高!'], romantic: ['{food}、夢みたいな味', '月夜に{food}を食べたいな'],
     },
     mood: {},
   },
@@ -273,7 +317,7 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = ({
       clingy: ['{self}ね、{hobby}が大好きなの〜', '今度、{hobby}の話を聞いて〜'], smart: ['{self}の趣味は{hobby}です', '{hobby}は頭の休憩になります'],
       serious: ['{self}、{hobby}が好きなんです', '休みの日は{hobby}が楽しみです'], proud: ['{hobby}なら誰にも負けないわ', '{self}の趣味?{hobby}よ'],
       worrier: ['{hobby}のことを考えると落ち着く…', '{self}、{hobby}が好きなんだ…'], stubborn: ['趣味は{hobby}だ。文句あるか', '{hobby}はゆずれん'],
-      easygoing: ['{hobby}っていいよね〜', '{self}ね〜、{hobby}が好き〜'],
+      easygoing: ['{hobby}っていいよね〜', '{self}ね〜、{hobby}が好き〜'], fiery: ['{hobby}も全力でやるぞ!', '{self}の趣味は{hobby}だ!熱いぞ!'], cool: ['{hobby}は落ち着くね', '{self}の趣味は{hobby}'], fickle: ['{hobby}…今はそれが好きかも', '{self}、最近は{hobby}の気分'], mellow: ['{hobby}って、すてきですよね', '{self}、{hobby}が好きなんです'], hasty: ['{hobby}もサクッとやる!', '{self}の趣味?{hobby}!以上!'], competitive: ['{hobby}でも負けないぞ!', '{self}、{hobby}もきわめたい!'], showoff: ['{hobby}もけっこう上手いんだよ〜!', '{self}の趣味は{hobby}〜!すごいでしょ〜?'], shy: ['…{hobby}、ひとりでするの好き', '…{self}、{hobby}が好き'], hardworker: ['{hobby}も毎日続けてる!', '{self}、{hobby}もコツコツ練習中!'], romantic: ['{hobby}をしてると、夢を見てるみたい', '{self}、{hobby}がとても好きなの'],
     },
     mood: {},
   },
@@ -281,7 +325,7 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = ({
     common: ['{self}、{ht}んだ'],
     trait: {
       jester: ['{self}ってさ、{ht}んだよね〜'], brave: ['{self}は{ht}んだ!'], clingy: ['{self}ね、{ht}の〜'], smart: ['{self}は{ht}傾向があります'],
-      serious: ['{self}、{ht}んです'], proud: ['{self}、{ht}のよ'], worrier: ['{self}、{ht}んだ…'], stubborn: ['{self}は{ht}のだ'], easygoing: ['{self}ね〜、{ht}んだ〜'],
+      serious: ['{self}、{ht}んです'], proud: ['{self}、{ht}のよ'], worrier: ['{self}、{ht}んだ…'], stubborn: ['{self}は{ht}のだ'], easygoing: ['{self}ね〜、{ht}んだ〜'], fiery: ['{self}はな、{ht}んだ!'], cool: ['{self}、{ht}んだよね'], fickle: ['{self}って、{ht}のかも'], mellow: ['{self}、{ht}んですよ'], hasty: ['{self}、{ht}の!はい次!'], competitive: ['{self}、{ht}んだ。でも負けない!'], showoff: ['{self}ってね〜、{ht}んだよ〜'], shy: ['…じつは{self}、{ht}の'], hardworker: ['{self}、{ht}んだ!知ってた?'], romantic: ['{self}ね、{ht}の。素敵でしょ'],
     },
     mood: {},
   },
@@ -290,7 +334,7 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = ({
     trait: {
       jester: ['今日は{self}の誕生日!お祝いして〜!'], brave: ['今日は誕生日だ!最高の日にするぞ!'], clingy: ['今日ね、{self}の誕生日なの〜!'],
       smart: ['本日は{self}の誕生日です'], serious: ['今日は{self}の誕生日なんです!'], proud: ['今日は{self}の誕生日よ。祝いなさい'],
-      worrier: ['今日、誕生日なんだ…覚えててくれた?'], stubborn: ['今日は誕生日だ。祝ってもいいぞ'], easygoing: ['今日は誕生日なんだ〜うれしいな〜'],
+      worrier: ['今日、誕生日なんだ…覚えててくれた?'], stubborn: ['今日は誕生日だ。祝ってもいいぞ'], easygoing: ['今日は誕生日なんだ〜うれしいな〜'], fiery: ['今日は誕生日だ!全力で祝うぞ!'], cool: ['今日は誕生日なんだ。…悪くない日だ'], fickle: ['今日誕生日なんだ。気分いいかも'], mellow: ['今日はお誕生日なんです、ふふ'], hasty: ['今日誕生日!はやく祝って!'], competitive: ['誕生日だから、今日は絶対勝つ!'], showoff: ['今日は{self}の誕生日〜!主役だよ〜!'], shy: ['…きょう、誕生日、なんだ'], hardworker: ['今日は{self}の誕生日!また一年がんばる!'], romantic: ['今日は{self}の誕生日。夢みたいな日'],
     },
     mood: { bad: ['今日は誕生日なんだけど…'], awful: ['…誕生日なのに'] },
   },

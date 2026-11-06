@@ -28,6 +28,7 @@ const BEAT_RANK_BONUS = Object.freeze({ failRate: 0.1, fullCombo: 4, allMarvelou
 //   ランクが1つ上がるたび: ビートP「そのランク×100」+セッション券1枚
 //   5ランクごと(5・10・15…): さらにビートP「そのランク×200」+セッション券「そのランクと同じ枚数」
 //   例: ランク5に上がると ビートP 500+1,000・セッション券 1枚+5枚
+//   2026-11-06 社長(マスモンの性格・案1): 5ランクごとのおまけに、性格のたね1個も足す(これから上がった分だけ。さかのぼらない)
 // 毎ランクのビートPの式はカードランクも同じ(playerRankBeatPointsFor)。券の種類はそれぞれ
 const playerRankBeatPointsFor = (rank) => {
   const r = Math.max(0, Math.floor(Number(rank) || 0));
@@ -46,7 +47,7 @@ const beatRankRewardItems = (rank) => {
   return [
     { icon: '🎟️', text: `ビートP ${(r * 100).toLocaleString()}` },
     { icon: '🎶', text: 'セッション券 1枚' },
-    ...(bonus ? [{ icon: '🎟️', text: `ビートP ${(r * 200).toLocaleString()}`, bonus: true }, { icon: '🎶', text: `セッション券 ${r.toLocaleString()}枚`, bonus: true }] : []),
+    ...(bonus ? [{ icon: '🎟️', text: `ビートP ${(r * 200).toLocaleString()}`, bonus: true }, { icon: '🎶', text: `セッション券 ${r.toLocaleString()}枚`, bonus: true }, { icon: '🌱', text: '性格のたね 1個', bonus: true }] : []),
   ];
 };
 const beatRankRewardText = (rank) => `ビートP ${playerRankBeatPointsFor(rank).toLocaleString()}・セッション券 ${beatRankTicketsFor(rank).toLocaleString()}枚`;
@@ -91,22 +92,22 @@ const beatRankPlayXp = ({ difficultyId, cleared = true, fullCombo = false, allMa
 };
 
 // 経験値を足した次の値と、新しくもらうごほうび。today は日本時間の 'YYYY-MM-DD'(呼ぶ側が渡す)
-// 返り値: { next, add, parts, from, to, tickets, beatPoints, bonusTickets, bonusPoints }(bonus* は5ランクごとのおまけの分。tickets・beatPoints に含む)
+// 返り値: { next, add, parts, from, to, tickets, beatPoints, bonusTickets, bonusPoints, seeds }(bonus* は5ランクごとのおまけの分。tickets・beatPoints に含む。seeds は性格のたね)
 const beatRankAfter = (prev, { difficultyId, cleared = true, fullCombo, allMarvelous, multi, today, durationMs = 0 }) => {
   const cur = normalizeBeatRank(prev);
   const from = playerRankInfo(cur.xp).rank;
   const play = beatRankPlayXp({ difficultyId, cleared, fullCombo, allMarvelous, multi, durationMs });
-  if (!play.xp) return { next: cur, add: 0, parts: [], from, to: from, tickets: 0, beatPoints: 0 };
+  if (!play.xp) return { next: cur, add: 0, parts: [], from, to: from, tickets: 0, beatPoints: 0, seeds: 0 };
   const day = typeof today === 'string' ? today.slice(0, 10) : '';
   const first = cleared !== false && !!day && !(cur.day === day && cur.dayFirst);
   const parts = first ? [...play.parts, { label: 'その日はじめての1曲', xp: BEAT_RANK_BONUS.dayFirst }] : play.parts;
   const add = play.xp + (first ? BEAT_RANK_BONUS.dayFirst : 0);
   const xp = playerRankSafeXp(cur.xp + add);
   const to = playerRankInfo(xp).rank;
-  let tickets = 0, beatPoints = 0, bonusTickets = 0, bonusPoints = 0;
+  let tickets = 0, beatPoints = 0, bonusTickets = 0, bonusPoints = 0, seeds = 0;
   for (let r = Math.max(cur.got + 1, 2); r <= to; r++) {
     tickets += beatRankTicketsFor(r); beatPoints += playerRankBeatPointsFor(r);
-    if (r % 5 === 0) { bonusTickets += r; bonusPoints += r * 200; }
+    if (r % 5 === 0) { bonusTickets += r; bonusPoints += r * 200; seeds += 1; }
   }
-  return { next: { ...cur, xp, day: day || cur.day, dayFirst: first || (cur.day === day && cur.dayFirst), got: Math.max(cur.got, to) }, add, parts, from, to, tickets, beatPoints, bonusTickets, bonusPoints };
+  return { next: { ...cur, xp, day: day || cur.day, dayFirst: first || (cur.day === day && cur.dayFirst), got: Math.max(cur.got, to) }, add, parts, from, to, tickets, beatPoints, bonusTickets, bonusPoints, seeds };
 };
