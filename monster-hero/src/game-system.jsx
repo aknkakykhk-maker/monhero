@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e3eef6d48350d66e
+// generated-sha256: 501e6cf0ccfddbf3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -58268,8 +58268,8 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   { id: 'attach', cat: 'monster', sec: '攻撃', phase: 'attack', name: '付ける札を使う', tiers: [['', 'R']], desc: '技に付ける札をいっしょに出す' },
   { id: 'attachKind', cat: 'monster', sec: '攻撃', phase: 'attack', name: '付ける札: ◯', tiers: [['ダメージを上げる', 'N'], ['回避させない', 'R'], ['ガッツを軽くする', 'N']], desc: 'その効き目の付ける札を、技にいっしょに出す' },
   { id: 'spe', cat: 'monster', sec: '特殊技', phase: 'attack', name: '特殊技: ◯', tiers: [['味方を回復', 'N'], ['引く', 'N'], ['空中になる', 'N'], ['安全になる', 'R'], ['まゆと羽化', 'R'], ['のりうつる', 'SR']], desc: 'その効き目の特殊技を出す' },
-  { id: 'stance', cat: 'monster', sec: '立ち回り', phase: 'attack', name: '立ち回り: ◯', tiers: [['このモンスターから攻める', 'N'], ['このモンスターは攻撃しない', 'N'], ['ライフの多いモンスターが先に', 'R'], ['ライフの少ないモンスターは温存', 'R'], ['攻撃は1回だけ', 'N'], ['何回でも攻める', 'SR']], desc: 'そのモンスターの前に出る・下がるを決める' },
-  { id: 'bEff', cat: 'breeder', sec: 'ブリーダーのカード', phase: 'attack', name: 'ブリーダー: ◯', tiers: [['回復する', 'N'], ['倒れたモンスターを戻す', 'R'], ['攻撃できないを消す', 'N'], ['相手を攻撃できなくする', 'R'], ['相手のガッツを減らす', 'N'], ['両方のガッツを0にする', 'SR'],
+  { id: 'stance', cat: 'monster', sec: '立ち回り', phase: 'attack', name: '立ち回り: ◯', tiers: [['この子から攻める', 'N'], ['この子は攻撃しない', 'N'], ['ライフの多い子が先に', 'R'], ['ライフの少ない子は温存', 'R'], ['攻撃は1回だけ', 'N'], ['何回でも攻める', 'SR']], desc: 'その子の前に出る・下がるを決める' },
+  { id: 'bEff', cat: 'breeder', sec: 'ブリーダーのカード', phase: 'attack', name: 'ブリーダー: ◯', tiers: [['回復する', 'N'], ['倒れた子を戻す', 'R'], ['攻撃できないを消す', 'N'], ['相手を攻撃できなくする', 'R'], ['相手のガッツを減らす', 'N'], ['両方のガッツを0にする', 'SR'],
     ['山札からガッツへ', 'N'], ['カードを引く', 'N'], ['捨て札から拾う', 'N'], ['手札を引き直す', 'N'], ['もう1回攻撃させる', 'R'], ['合体する', 'SR'], ['付ける札をただにする', 'N'], ['守りを名指しで封じる', 'R'], ['捨て札を山札に戻す', 'N'], ['小さく攻撃する', 'N']], desc: 'その効き目のブリーダーのカードを出す' },
   { id: 'fieldCard', cat: 'breeder', sec: 'ブリーダー', phase: 'attack', name: '全体カードを出す', tiers: [['', 'R']], desc: '場に残る全体カードを出す' },
   { id: 'fieldKind', cat: 'breeder', sec: '全体カード', phase: 'attack', name: '全体カード: ◯', tiers: [['ダメージを足す', 'N'], ['払うガッツを変える', 'N'], ['大きいダメージを封じる', 'R'], ['山札を削る', 'N'], ['純血のプライド', 'N'], ['技の種類を封じる', 'SR'],
@@ -58876,10 +58876,10 @@ const cardTacticRowAct = (db, st, policy, phase, row, aim, ctx) => {
       if (!m) return null;
       const alive = me.mons.filter((x) => !x.ko);
       const v = act.v;
-      if (v === 'このモンスターは攻撃しない') { ctx.skip.add(mi); return null; }
-      if (v === 'ライフの少ないモンスターは温存') { if (alive.length > 1 && m.life === Math.min(...alive.map((x) => x.life))) ctx.skip.add(mi); return null; }
+      if (v === 'この子は攻撃しない') { ctx.skip.add(mi); return null; }
+      if (v === 'ライフの少ない子は温存') { if (alive.length > 1 && m.life === Math.min(...alive.map((x) => x.life))) ctx.skip.add(mi); return null; }
       if (v === '攻撃は1回だけ') { if (m.attacks > 0) { ctx.skip.add(mi); return null; } return pickBest(mine); }
-      if (v === 'ライフの多いモンスターが先に') return m.life === Math.max(...alive.map((x) => x.life)) ? pickBest(mine) : null;
+      if (v === 'ライフの多い子が先に') return m.life === Math.max(...alive.map((x) => x.life)) ? pickBest(mine) : null;
       if (v === '何回でも攻める') return pickBest(mine, -1); // 点数が少し低い手でも出す
       return pickBest(mine); // この子から攻める
     }
@@ -60007,7 +60007,7 @@ const CARD_TUTORIAL_LINES = Object.freeze({
   M2: 'じゃあ次はあたしの番ね！ いっくよー！',
   M3: 'これでどーだ！',
   D9: 'みゅあが攻めてきたぞ。相手のターンでも、回避か防御のカードで守れるんだ',
-  D10: '光ってる「ステップ」をタップか、狙われたピクシーまで運んでみな。守りのカードは、狙われたモンスターのぶん(か、誰でも使えるもの)だけ使えるからな',
+  D10: '光ってる「ステップ」をタップか、狙われたピクシーまで運んでみな。守りのカードは、狙われたモンスターのぶん(か、誰でも使えるもの)だけ使えるぞ',
   // D10b … ステップを選んだあと、「これで守る」で決める前(2026-10-26 巡回 → 社長が文をOK。84 が D10 のかわりに出す)
   D10b: 'よし、それでいい。最後に光ってる「これで守る」を押して決めな',
   M4: 'えー！ よけられた！？ うまっ！ｗ',
@@ -72224,7 +72224,7 @@ const CardTacticRow = ({ db, row, i, n, onChange, onMove, onRemove, onPickC, onP
 // おまかせで埋める行(持っているカードだけ。上から順に、空いている行へ)
 const CARD_TACTIC_AUTO = Object.freeze({
   monster: [['ko', 'atk'], ['myLife.30', 'guardDie'], ['myGuts.5', 'cost.大技(4以上)'], ['foeLife.50', 'atk'], ['any', 'guard']],
-  breeder: [['any', 'save'], ['foeAlive.3', 'fieldCard'], ['myKo', 'bEff.倒れたモンスターを戻す']],
+  breeder: [['any', 'save'], ['foeAlive.3', 'fieldCard'], ['myKo', 'bEff.倒れた子を戻す']],
 });
 const cardTacticAutoFill = (t, rows, cat, max) => {
   const out = rows.slice();

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f1c90762082a59f5
+// source-sha256: d501dcfb7a585176
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -97017,15 +97017,15 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   sec: '立ち回り',
   phase: 'attack',
   name: '立ち回り: ◯',
-  tiers: [['このモンスターから攻める', 'N'], ['このモンスターは攻撃しない', 'N'], ['ライフの多いモンスターが先に', 'R'], ['ライフの少ないモンスターは温存', 'R'], ['攻撃は1回だけ', 'N'], ['何回でも攻める', 'SR']],
-  desc: 'そのモンスターの前に出る・下がるを決める'
+  tiers: [['この子から攻める', 'N'], ['この子は攻撃しない', 'N'], ['ライフの多い子が先に', 'R'], ['ライフの少ない子は温存', 'R'], ['攻撃は1回だけ', 'N'], ['何回でも攻める', 'SR']],
+  desc: 'その子の前に出る・下がるを決める'
 }, {
   id: 'bEff',
   cat: 'breeder',
   sec: 'ブリーダーのカード',
   phase: 'attack',
   name: 'ブリーダー: ◯',
-  tiers: [['回復する', 'N'], ['倒れたモンスターを戻す', 'R'], ['攻撃できないを消す', 'N'], ['相手を攻撃できなくする', 'R'], ['相手のガッツを減らす', 'N'], ['両方のガッツを0にする', 'SR'], ['山札からガッツへ', 'N'], ['カードを引く', 'N'], ['捨て札から拾う', 'N'], ['手札を引き直す', 'N'], ['もう1回攻撃させる', 'R'], ['合体する', 'SR'], ['付ける札をただにする', 'N'], ['守りを名指しで封じる', 'R'], ['捨て札を山札に戻す', 'N'], ['小さく攻撃する', 'N']],
+  tiers: [['回復する', 'N'], ['倒れた子を戻す', 'R'], ['攻撃できないを消す', 'N'], ['相手を攻撃できなくする', 'R'], ['相手のガッツを減らす', 'N'], ['両方のガッツを0にする', 'SR'], ['山札からガッツへ', 'N'], ['カードを引く', 'N'], ['捨て札から拾う', 'N'], ['手札を引き直す', 'N'], ['もう1回攻撃させる', 'R'], ['合体する', 'SR'], ['付ける札をただにする', 'N'], ['守りを名指しで封じる', 'R'], ['捨て札を山札に戻す', 'N'], ['小さく攻撃する', 'N']],
   desc: 'その効き目のブリーダーのカードを出す'
 }, {
   id: 'fieldCard',
@@ -98040,11 +98040,11 @@ const cardTacticRowAct = (db, st, policy, phase, row, aim, ctx) => {
       if (!m) return null;
       const alive = me.mons.filter(x => !x.ko);
       const v = act.v;
-      if (v === 'このモンスターは攻撃しない') {
+      if (v === 'この子は攻撃しない') {
         ctx.skip.add(mi);
         return null;
       }
-      if (v === 'ライフの少ないモンスターは温存') {
+      if (v === 'ライフの少ない子は温存') {
         if (alive.length > 1 && m.life === Math.min(...alive.map(x => x.life))) ctx.skip.add(mi);
         return null;
       }
@@ -98055,7 +98055,7 @@ const cardTacticRowAct = (db, st, policy, phase, row, aim, ctx) => {
         }
         return pickBest(mine);
       }
-      if (v === 'ライフの多いモンスターが先に') return m.life === Math.max(...alive.map(x => x.life)) ? pickBest(mine) : null;
+      if (v === 'ライフの多い子が先に') return m.life === Math.max(...alive.map(x => x.life)) ? pickBest(mine) : null;
       if (v === '何回でも攻める') return pickBest(mine, -1);
       return pickBest(mine);
     }
@@ -99890,7 +99890,7 @@ const CARD_TUTORIAL_LINES = Object.freeze({
   M2: 'じゃあ次はあたしの番ね！ いっくよー！',
   M3: 'これでどーだ！',
   D9: 'みゅあが攻めてきたぞ。相手のターンでも、回避か防御のカードで守れるんだ',
-  D10: '光ってる「ステップ」をタップか、狙われたピクシーまで運んでみな。守りのカードは、狙われたモンスターのぶん(か、誰でも使えるもの)だけ使えるからな',
+  D10: '光ってる「ステップ」をタップか、狙われたピクシーまで運んでみな。守りのカードは、狙われたモンスターのぶん(か、誰でも使えるもの)だけ使えるぞ',
   D10b: 'よし、それでいい。最後に光ってる「これで守る」を押して決めな',
   M4: 'えー！ よけられた！？ うまっ！ｗ',
   D11: 'ほらな、守りは大事なんだよ。おでの膝くらい大事だ。えへへ',
@@ -122269,7 +122269,7 @@ const CardTacticRow = ({
 }, `賢さに数えない(${why})`));
 const CARD_TACTIC_AUTO = Object.freeze({
   monster: [['ko', 'atk'], ['myLife.30', 'guardDie'], ['myGuts.5', 'cost.大技(4以上)'], ['foeLife.50', 'atk'], ['any', 'guard']],
-  breeder: [['any', 'save'], ['foeAlive.3', 'fieldCard'], ['myKo', 'bEff.倒れたモンスターを戻す']]
+  breeder: [['any', 'save'], ['foeAlive.3', 'fieldCard'], ['myKo', 'bEff.倒れた子を戻す']]
 });
 const cardTacticAutoFill = (t, rows, cat, max) => {
   const out = rows.slice();
