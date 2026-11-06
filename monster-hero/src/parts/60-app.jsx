@@ -1851,6 +1851,48 @@ function MonsterHeroGame() {
     const costC = (c) => getCardGuts(c, copy.srcSlot);
     return { dmgOf, isGuardC, usableC, scoreC, costC };
   };
+  // ★AIコピーの予測ダメージ(2026-11-06 社長「ソラシドのコピーにも予測ダメージとか出して」)。味方の枠の「攻N」と同じ札で出す。
+  //   数え方は、実際にコピーが撃つときとそろえる(検査 tools/battle/sorashido-copy-predict-check.js が式を見張る)。
+  //   ・タクティクス/レイド: 下の「AIコピーの1手」(runTacticsAiCopyAction)と同じ。決めてある札(picks)を順に、コピーのガッツで払える札だけ、
+  //     ガードは数えず、攻撃は tacticsAiCopyTools の dmgOf(元のモンスターの今の攻撃 × コピーの攻撃の割合)
+  //   ・本編(5つの遊び): 味方のカードの流れ(aiCopyEntries)と同じ。ガード以外を払える順に、味方が選んだカードのあとに続けて、
+  //     その場の補正(previewLocalBoosts)を積み、ダメージはコピーのちから(dmgScale)で縮める。2枚目の半減はしない(コピーの札は数えない)
+  //   描くたびに呼ぶので、状態は変えない(札を決める planTacticsAiCopy は呼ばない。決まっていなければ 0)
+  const aiCopyPredictedDmg = (copy) => {
+    if (!copy || !EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isAiCopyOut(copy, turnCount)) return 0;
+    const picks = Array.isArray(copy.picks) ? copy.picks : [];
+    if (!picks.length) return 0;
+    if (isTacticsMode(runMode)) {
+      if (!isTacticsAiCopyStanding(copy) || copy.plannedTurn !== turnCount) return 0;
+      const tools = tacticsAiCopyTools(copy, enemyDist);
+      if (!tools) return 0;
+      let gutsC = Math.max(0, Number(copy.guts) || 0), total = 0;
+      picks.forEach((card) => {
+        const cost = Math.max(0, Number(tools.costC(card)) || 0);
+        if (cost > gutsC) return;
+        gutsC -= cost;
+        if (tools.isGuardC(card)) return;
+        const d = tools.dmgOf(card); if (d > 0) total += d;
+      });
+      return total;
+    }
+    const srcMon = slots[copy.srcSlot];
+    if (!srcMon) return 0;
+    const dmgScale = atk > 0 ? Math.max(1e-6, Math.max(0, Number(copy.atk) || 0) / atk) : 1e-6;
+    let left = Math.max(0, Number(copy.guts) || 0), total = 0;
+    let run = { ...previewLocalBoosts(null).final };
+    picks.forEach((card) => {
+      const cost = Math.max(0, Number(card?.guts ?? card?.cost) || 0);
+      if (!card || cost > left) return;
+      left -= cost;
+      if (card.type === 'guard' || card.type === 'weak_guard') return;
+      const b = boostsForCardDamage(run, card, false);
+      if (isAttackCard(card)) total += getAttackPredictedDmg(card, srcMon, getDmg(card, copy.srcSlot, srcMon, b.oryo, b.dmgMod, false, enemyDist, dmgScale), b.combo, copy.srcSlot, false);
+      const boost = localBoostFromCard(card);
+      if (boost) run = { oryo: run.oryo + (boost.oryo || 0), dmgMod: run.dmgMod + (boost.dmgMod || 0), combo: run.combo + (boost.combo || 0) };
+    });
+    return total;
+  };
   // そのターンに使う札を決めて持たせる(手札・次に使う札)。コピー自身の山札から引く
   const planTacticsAiCopy = (turn) => {
     const copy = aiCopyRef.current;
@@ -22941,7 +22983,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin} hamCounterFx={hamCounterFx} skipHamCounterFx={skipHamCounterFx}
             tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} kyubiOrihimeStackMarks={kyubiOrihimeStackMarks} tacticsShields={isTacticsMode(runMode)&&tacticsExEnabled?[0,1,2,3].map(i=>tacticsExShieldAt(tacticsExState,i,tacticsExNow)):null} sweetStackView={sweetStackView} bowStackView={bowStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
-            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsHate={tacticsHate} tacticsHateOn={tacticsHateOnFor(runMode)} aiCopy={EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido?aiCopy:null} aiCopyHitting={!!(attackAnim&&aiCopyHitRef.current&&!isTacticsMode(runMode))} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
+            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsHate={tacticsHate} tacticsHateOn={tacticsHateOnFor(runMode)} aiCopy={EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido?aiCopy:null} aiCopyPreviewDmg={EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido?aiCopyPredictedDmg(aiCopy):0} aiCopyHitting={!!(attackAnim&&aiCopyHitRef.current&&!isTacticsMode(runMode))} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}
             isAssistCard={isAssistCard} isAttackCard={isAttackCard} isBusy={isBusy} isHeroSlotMon={isHeroSlotMon}

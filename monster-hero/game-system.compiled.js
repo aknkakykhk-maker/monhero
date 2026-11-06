@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f3db389bbff41bff
+// source-sha256: e98cec420afdba2a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -76606,6 +76606,23 @@ function AiCopyLifeBar({
     }
   })));
 }
+function DamagePreviewChip({
+  dmg,
+  pending = false,
+  halved = false,
+  tight = false,
+  soulPct = 0,
+  as = 'span',
+  ...marks
+}) {
+  const Tag = as;
+  return React.createElement(Tag, _extends({}, marks, {
+    className: `rounded ${tight ? 'px-0.5' : 'px-1'} py-0.5 text-[8px] font-black leading-none shadow ring-1 ${pending ? 'bg-yellow-500 text-black ring-yellow-200' : 'bg-red-600 text-white ring-white/50'}`
+  }), pending && halved ? '½' : '', "攻", dmg, pending && soulPct > 0 && React.createElement("span", {
+    "data-soul-damage-preview": true,
+    className: "ml-0.5 rounded bg-sky-950/80 px-0.5 text-[7px] text-sky-100"
+  }, "魂格+", soulPct, "%"));
+}
 function AiCopyFloat({
   copy,
   src,
@@ -76616,7 +76633,8 @@ function AiCopyFloat({
   standing,
   onOpen,
   hatePct = null,
-  lift = false
+  lift = false,
+  predDmg = 0
 }) {
   if (!copy) return null;
   const name = tacticsAiCopyName(copy);
@@ -76687,7 +76705,12 @@ function AiCopyFloat({
   }), Number.isInteger(hatePct) && React.createElement("span", {
     "data-ai-copy-float-hate": hatePct,
     className: "whitespace-nowrap text-[9px] font-black tabular-nums text-rose-200"
-  }, "狙われ ", hatePct, "%")), React.createElement("span", {
+  }, "狙われ ", hatePct, "%"), standing && predDmg > 0 && React.createElement("span", {
+    className: "flex"
+  }, React.createElement(DamagePreviewChip, {
+    dmg: predDmg,
+    "data-ai-copy-damage-preview": predDmg
+  }))), React.createElement("span", {
     className: short ? 'min-w-0 flex-1 max-[399px]:basis-full' : 'flex w-full min-w-0 justify-center'
   }, next));
 }
@@ -77564,6 +77587,7 @@ function BattleScreen({
   tacticsHate,
   tacticsHateOn,
   aiCopy,
+  aiCopyPreviewDmg = 0,
   tacticsExEffectsAt,
   tacticsExEnemyEffects,
   aiCopyHitting = false,
@@ -78806,6 +78830,7 @@ function BattleScreen({
       standing: standing || phase === 'vanish',
       onOpen: aiCopy ? () => setCopyHandOpen(true) : null,
       hatePct: hc && Number.isInteger(hc.copy) ? hc.copy : null,
+      predDmg: standing && aiCopy ? aiCopyPreviewDmg : 0,
       lift: battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0)
     });
   })(), shellGaugeView?.total > 0 && React.createElement(InfernoShieldGauge, {
@@ -79975,6 +80000,8 @@ function BattleScreen({
     const tCopyOut = copyStanding || tCopyPhase === 'vanish';
     const copySrc = tCopy && tCopy.pos === i ? slots[tCopy.srcSlot] : null;
     const tCopyOnMon = !!s || !!(tCopy && tCopy.stacked);
+    const copyDmgNow = tacticsNewLayout && !tacticsCopyOutside && tCopy && tCopy.pos === i && copyStanding && aiCopy ? aiCopyPreviewDmg : 0;
+    const copySlotDmg = !tCopyOnMon ? copyDmgNow : 0;
     const tCopyHatePct = (() => {
       if (!(tCopy && tCopy.pos === i && copyStanding && tacticsHateOn && Array.isArray(tacticsHate))) return null;
       const ch = tacticsTargetChancesWithCopy(tacticsUnits, tacticsHate, TACTICS_TARGET_LOW_HP_BIAS, aiCopy);
@@ -80047,7 +80074,12 @@ function BattleScreen({
       className: "block max-w-full min-w-0 truncate text-emerald-200"
     }, tCopy.nextCard ? tCopy.nextCard.name || tCopy.nextCard.baseName || '考え中' : '考え中', React.createElement("span", {
       className: "tabular-nums text-sky-200/90"
-    }, " あと", tCopy.turnsLeft)))) : null;
+    }, " あと", tCopy.turnsLeft)), tCopyOnMon && copyDmgNow > 0 && React.createElement("span", {
+      className: "mt-px flex"
+    }, React.createElement(DamagePreviewChip, {
+      dmg: copyDmgNow,
+      "data-ai-copy-damage-preview": copyDmgNow
+    })))) : null;
     const hateFlame = Number.isInteger(hatePct) ? React.createElement("span", {
       "data-tactics-hate": i,
       "data-tactics-hate-pct": hatePct,
@@ -80224,16 +80256,21 @@ function BattleScreen({
           animation: 'tacticsHitRing 520ms ease-out 110ms forwards'
         }
       })));
-    })(), tacticsNewLayout && (previewDmg > 0 || previewGuard > 0 || slotAimHit || hateFlame) && React.createElement("div", {
+    })(), tacticsNewLayout && (previewDmg > 0 || previewGuard > 0 || copySlotDmg > 0 || slotAimHit || hateFlame) && React.createElement("div", {
       "data-tactics-slot-top-row": true,
       className: "absolute left-1 right-1.5 top-[20px] z-[63] flex h-[13px] items-center gap-1 pointer-events-none"
-    }, hateFlame, (previewDmg > 0 || previewGuard > 0) && React.createElement("div", {
+    }, hateFlame, (previewDmg > 0 || previewGuard > 0 || copySlotDmg > 0) && React.createElement("div", {
       "data-tactics-image-previews": true,
       className: "flex shrink-0 items-center gap-0.5"
-    }, previewDmg > 0 && React.createElement("span", {
-      "data-tactics-damage-preview": previewDmg,
-      className: `rounded px-1 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview ? 'bg-yellow-500 text-black ring-yellow-200' : 'bg-red-600 text-white ring-white/50'}`
-    }, isPendingPreview && isPendingHalved ? '½' : '', "攻", previewDmg), previewGuard > 0 && React.createElement("span", {
+    }, previewDmg > 0 && React.createElement(DamagePreviewChip, {
+      dmg: previewDmg,
+      pending: isPendingPreview,
+      halved: isPendingHalved,
+      "data-tactics-damage-preview": previewDmg
+    }), copySlotDmg > 0 && React.createElement(DamagePreviewChip, {
+      dmg: copySlotDmg,
+      "data-ai-copy-damage-preview": copySlotDmg
+    }), previewGuard > 0 && React.createElement("span", {
       "data-tactics-guard-preview": previewGuard,
       className: "rounded bg-emerald-600 px-1 py-0.5 text-[8px] font-black leading-none text-white shadow ring-1 ring-emerald-200"
     }, isPendingGuardHalved ? '½' : '', "守", previewGuard)), React.createElement("div", {
@@ -80502,13 +80539,15 @@ function BattleScreen({
     }, previewGuard > 0 && React.createElement("div", {
       "data-tactics-guard-preview": previewGuard,
       className: "rounded bg-emerald-500 px-0.5 py-0.5 text-[8px] font-black leading-none text-black shadow ring-1 ring-emerald-100"
-    }, isPendingGuardHalved ? '½' : '', "守", previewGuard), previewDmg > 0 && React.createElement("div", {
-      "data-tactics-damage-preview": previewDmg,
-      className: `rounded px-0.5 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview ? 'bg-yellow-500 text-black ring-yellow-200' : 'bg-red-600 text-white ring-white/50'}`
-    }, isPendingPreview && isPendingHalved ? '½' : '', "攻", previewDmg, isPendingPreview && previewSoulPct > 0 && React.createElement("span", {
-      "data-soul-damage-preview": true,
-      className: "ml-0.5 rounded bg-sky-950/80 px-0.5 text-[7px] text-sky-100"
-    }, "魂格+", previewSoulPct, "%")), slotAimHit && React.createElement("div", {
+    }, isPendingGuardHalved ? '½' : '', "守", previewGuard), previewDmg > 0 && React.createElement(DamagePreviewChip, {
+      as: "div",
+      tight: true,
+      dmg: previewDmg,
+      pending: isPendingPreview,
+      halved: isPendingHalved,
+      soulPct: previewSoulPct,
+      "data-tactics-damage-preview": previewDmg
+    }), slotAimHit && React.createElement("div", {
       "data-tactics-aimed-damage": slotAimHit.taken,
       "data-tactics-aimed-parts": slotAimHit.parts.length > 1 ? slotAimHit.parts.join('・') : undefined,
       className: "ml-auto flex flex-col items-center gap-0.5 rounded border border-red-300 bg-red-950 px-0.5 py-0.5 text-[8px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse"
@@ -131780,6 +131819,50 @@ function MonsterHeroGame() {
       costC
     };
   };
+  const aiCopyPredictedDmg = copy => {
+    if (!copy || !EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isAiCopyOut(copy, turnCount)) return 0;
+    const picks = Array.isArray(copy.picks) ? copy.picks : [];
+    if (!picks.length) return 0;
+    if (isTacticsMode(runMode)) {
+      if (!isTacticsAiCopyStanding(copy) || copy.plannedTurn !== turnCount) return 0;
+      const tools = tacticsAiCopyTools(copy, enemyDist);
+      if (!tools) return 0;
+      let gutsC = Math.max(0, Number(copy.guts) || 0),
+        total = 0;
+      picks.forEach(card => {
+        const cost = Math.max(0, Number(tools.costC(card)) || 0);
+        if (cost > gutsC) return;
+        gutsC -= cost;
+        if (tools.isGuardC(card)) return;
+        const d = tools.dmgOf(card);
+        if (d > 0) total += d;
+      });
+      return total;
+    }
+    const srcMon = slots[copy.srcSlot];
+    if (!srcMon) return 0;
+    const dmgScale = atk > 0 ? Math.max(1e-6, Math.max(0, Number(copy.atk) || 0) / atk) : 1e-6;
+    let left = Math.max(0, Number(copy.guts) || 0),
+      total = 0;
+    let run = {
+      ...previewLocalBoosts(null).final
+    };
+    picks.forEach(card => {
+      const cost = Math.max(0, Number(card?.guts ?? card?.cost) || 0);
+      if (!card || cost > left) return;
+      left -= cost;
+      if (card.type === 'guard' || card.type === 'weak_guard') return;
+      const b = boostsForCardDamage(run, card, false);
+      if (isAttackCard(card)) total += getAttackPredictedDmg(card, srcMon, getDmg(card, copy.srcSlot, srcMon, b.oryo, b.dmgMod, false, enemyDist, dmgScale), b.combo, copy.srcSlot, false);
+      const boost = localBoostFromCard(card);
+      if (boost) run = {
+        oryo: run.oryo + (boost.oryo || 0),
+        dmgMod: run.dmgMod + (boost.dmgMod || 0),
+        combo: run.combo + (boost.combo || 0)
+      };
+    });
+    return total;
+  };
   const planTacticsAiCopy = turn => {
     const copy = aiCopyRef.current;
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isTacticsMode(runMode) || !isTacticsAiCopyStanding(copy) || !isAiCopyOut(copy, turn)) return null;
@@ -162648,6 +162731,7 @@ function MonsterHeroGame() {
       tacticsHate: tacticsHate,
       tacticsHateOn: tacticsHateOnFor(runMode),
       aiCopy: EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? aiCopy : null,
+      aiCopyPreviewDmg: EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? aiCopyPredictedDmg(aiCopy) : 0,
       aiCopyHitting: !!(attackAnim && aiCopyHitRef.current && !isTacticsMode(runMode)),
       tacticsCoverSlot: tacticsExEnabled ? tacticsExCoverSlot(tacticsExState, tacticsUnits, tacticsExNow) : null,
       guts: guts,
