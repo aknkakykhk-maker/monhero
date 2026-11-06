@@ -1,12 +1,12 @@
 // 助手どうしのつながり(2026-11-07 社長「ガッツリ作りこんで」)を確かめる。ブラウザは使わない。
 //   node tools/assistant/assistant-peer-check.js
 // 設計: docs/progress/assistant-peer-plan.md
-//   ① 台本: 会った助手の全ペアに、どこでもの掛け合い2本以上・Lv2 の掛け合い・Lv5 の特別なお話がある。
+//   ① 台本: 会った助手の全ペアに、Lv1 の掛け合い2本以上・Lv2 と Lv4 の掛け合い・Lv5 の特別なお話がある。
 //      話し手はそのペアの2人だけ・表情は決まった8つ・{c} はかならず呼び方に置きかわる
 //   ② 口調: みゅあは「じゃん」「まじ」ではなく「ぢゃん」「まぢ」/ あつは文の最後に「笑」か記号か顔文字 /
 //      一人称の取り違え(ももすけの「私」「あたし」、ドラ以外の「おで」など)が無い
 //   ③ 守り: モンスターを「子」と呼ばない・恋愛のことばが無い・呼び方に敬称が重ならない
-//   ④ Lv4 の呼び方: 表が入っていれば、全員ぶんがそろっている。空のあいだは今の呼び方のまま
+//   ④ 呼び方は仲良し度が上がっても変えない(2026-11-07 社長「呼び方は変えないでいい」)
 //   ⑤ 仲良し度: 行動ごと・ペアごとの1日の上限で止まる・日付が変わると数え直す・Lv の境目
 //   ⑥ 掛け合いの選び方: 会っていない助手は出ない・Lv の足りない台本は出ない・1日の数の上限・
 //      Lv5 の特別なお話を HOME で先に流す・ほかの画面はその画面の台本を先に出す
@@ -40,7 +40,6 @@ const G = (expr) => vm.runInContext(expr, ctx);
 
 const TALKS = G('ASSISTANT_PEER_TALKS');
 const CALLS = G('ASSISTANT_PEER_CALLS');
-const CLOSE = G('ASSISTANT_PEER_CALLS_CLOSE');
 const IDS = Object.keys(CALLS);
 const EXPR = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
 const SCENES = ['any', 'home', 'market', 'rhythm', 'masu', 'card'];
@@ -54,9 +53,9 @@ const pairKey = (a, b) => [a, b].sort().join('-');
   for (const p of pairs) {
     const list = TALKS.filter(t => pairKey(t.pair[0], t.pair[1]) === p);
     const anyLv1 = list.filter(t => !t.special && t.lv === 1).length;
-    if (anyLv1 < 2 || !list.some(t => !t.special && t.lv === 2) || !list.some(t => t.special && t.lv === 5)) missing.push(p);
+    if (anyLv1 < 2 || !list.some(t => !t.special && t.lv === 2) || !list.some(t => !t.special && t.lv === 4) || !list.some(t => t.special && t.lv === 5)) missing.push(p);
   }
-  check(`① 全${pairs.length}ペアに、Lv1 の掛け合い2本以上・Lv2 の掛け合い・Lv5 の特別なお話がある`, missing.length === 0, missing.join(','));
+  check(`① 全${pairs.length}ペアに、Lv1 の掛け合い2本以上・Lv2 と Lv4 の掛け合い・Lv5 の特別なお話がある`, missing.length === 0, missing.join(','));
   const ids = TALKS.map(t => t.id);
   check('① 台本の id が重ならない', new Set(ids).size === ids.length);
   const bad = [];
@@ -66,17 +65,15 @@ const pairKey = (a, b) => [a, b].sort().join('-');
     for (const l of t.lines) {
       if (!t.pair.includes(l.who)) bad.push(`${t.id}:${l.who}はペアでない`);
       if (!EXPR.includes(l.e)) bad.push(`${t.id}:表情${l.e}`);
-      for (const lv of [1, 4]) {
-        const txt = G(`assistantPeerLineText`)(l, t, lv);
-        if (/\{|\}/.test(txt) || !txt) bad.push(`${t.id}:置きかえ残り`);
-      }
+      const txt = G('assistantPeerLineText')(l, t);
+      if (/\{|\}/.test(txt) || !txt) bad.push(`${t.id}:置きかえ残り`);
     }
     if (!new Set(t.lines.map(l => l.who)).size === 2) bad.push(`${t.id}:1人しか話さない`);
   }
   check('① 話し手はペアの2人だけ・表情は8つのうち・{c} は呼び方に置きかわる・場面は決まったもの', bad.length === 0, bad.slice(0, 8).join(' / '));
-  const example = G('assistantPeerLineText')(TALKS.find(t => t.id === 'kiki-mua-1').lines[0], TALKS.find(t => t.id === 'kiki-mua-1'), 1);
+  const example = G('assistantPeerLineText')(TALKS.find(t => t.id === 'kiki-mua-1').lines[0], TALKS.find(t => t.id === 'kiki-mua-1'));
   check('① みゅあ→ききは「ひめちん」で呼ぶ(ASSISTANT_PEER_CALLS)', /^ひめちん、/.test(example), example);
-  const draMomo = G('assistantPeerCall')('dra', 'momosuke', 1);
+  const draMomo = G('assistantPeerCall')('dra', 'momosuke');
   check('① 呼び方の ( ) の注記は外す(ドラ→もも「もも」)', draMomo === 'もも', draMomo);
 }
 
@@ -110,17 +107,12 @@ const pairKey = (a, b) => [a, b].sort().join('-');
   check('③ {c} のあとに敬称を付けない(呼び方に入っている)', hon.length === 0, hon.join(','));
 }
 
-// ④ Lv4 の呼び方
+// ④ 呼び方は変えない
 {
-  const keys = Object.keys(CLOSE);
-  if (keys.length === 0) {
-    check('④ Lv4 の呼び方の表は社長が決めるまで空。空のあいだ Lv4 でも今の呼び方', G('assistantPeerCall')('mua', 'kiki', 4) === 'ひめちん');
-  } else {
-    const miss = [];
-    for (const a of IDS) for (const b of IDS) if (a !== b && !(CLOSE[a] && typeof CLOSE[a][b] === 'string' && CLOSE[a][b])) miss.push(`${a}→${b}`);
-    check('④ Lv4 の呼び方は全員ぶんがそろっている', miss.length === 0, miss.join(','));
-    check('④ Lv3 までは今の呼び方・Lv4 から表の呼び方', G('assistantPeerCall')('mua', 'kiki', 3) === 'ひめちん' && G('assistantPeerCall')('mua', 'kiki', 4) === CLOSE.mua.kiki);
-  }
+  check('④ 呼び方を仲良し度で変える表(ASSISTANT_PEER_CALLS_CLOSE)を持たない', G('typeof ASSISTANT_PEER_CALLS_CLOSE') === 'undefined');
+  const t = TALKS.find(x => x.id === 'kiki-mua-4');
+  const kiki = t && t.lines.find(l => l.who === 'kiki' && /\{c\}/.test(l.t));
+  check('④ Lv4 の掛け合いでも今の呼び方(きき→みゅあ「みゅあちん」)', !!kiki && G('assistantPeerLineText')(kiki, t).startsWith('みゅあちん'));
 }
 
 // ⑤ 仲良し度

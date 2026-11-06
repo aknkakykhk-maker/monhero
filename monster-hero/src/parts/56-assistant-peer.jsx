@@ -217,10 +217,10 @@ const assistantPeerMarkShown = (talk, { scene, special, now = Date.now() }) => {
     if (specialSeen !== st.special) storeSet(ASSISTANT_PEER_SPECIAL_SEEN_KEY, specialSeen, false);
   } catch {}
 };
-// 台本の {c} を、話している助手が相手を呼ぶ呼び方へ置きかえる(Lv4 からはくだけた呼び方。表が決まるまでは今の呼び方)
-const assistantPeerLineText = (line, talk, level) => {
+// 台本の {c} を、話している助手が相手を呼ぶ呼び方へ置きかえる(呼び方は仲良し度では変えない・2026-11-07 社長)
+const assistantPeerLineText = (line, talk) => {
   const partner = talk.pair.find(id => id !== line.who) || talk.pair[0];
-  const call = typeof assistantPeerCall === 'function' ? assistantPeerCall(line.who, partner, level) : partner;
+  const call = typeof assistantPeerCall === 'function' ? assistantPeerCall(line.who, partner) : partner;
   return String(line.t || '').replace(/\{c\}/g, call);
 };
 
@@ -276,7 +276,7 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
         {a.name}と{b.name}の仲良し度が Lv{levelUp.level}{stage ? `「${stage.name}」` : ''}になりました
       </div>);
   }
-  const { talk, step, level } = cur;
+  const { talk, step } = cur;
   const line = talk.lines[step];
   // 左は最初に話す助手、右はその相手
   const left = assistantById(talk.lines[0].who);
@@ -300,7 +300,7 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
         {face(left)}
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-black leading-none" style={{ color: speaker.accent || '#f472b6' }}>{speaker.name}</p>
-          <p data-assistant-peer-line className="mt-1 text-[12px] font-bold leading-snug text-white">{helpWrap(assistantPeerLineText(line, talk, level))}</p>
+          <p data-assistant-peer-line className="mt-1 text-[12px] font-bold leading-snug text-white">{helpWrap(assistantPeerLineText(line, talk))}</p>
         </div>
         {face(right)}
       </div>
@@ -397,7 +397,7 @@ const assistantPeerRequestGen = async ({ metIds, stats }) => {
   const pairs = [];
   for (let i = 0; i < met.length; i++) for (let j = i + 1; j < met.length; j++) {
     const a = met[i], b = met[j], lv = assistantPeerLevel(st, a, b);
-    pairs.push({ a, b, lv, ab: assistantPeerCall(a, b, lv), ba: assistantPeerCall(b, a, lv) });
+    pairs.push({ a, b, lv, ab: assistantPeerCall(a, b), ba: assistantPeerCall(b, a) });
   }
   assistantPeerGenBusy = true;
   const asked = { ...gen, asked: gen.asked + 1 };

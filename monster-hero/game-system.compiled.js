@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4a51b88c27378538
+// source-sha256: 1f6bcf307a3bfe78
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93843,9 +93843,9 @@ const assistantPeerMarkShown = (talk, {
     if (specialSeen !== st.special) storeSet(ASSISTANT_PEER_SPECIAL_SEEN_KEY, specialSeen, false);
   } catch {}
 };
-const assistantPeerLineText = (line, talk, level) => {
+const assistantPeerLineText = (line, talk) => {
   const partner = talk.pair.find(id => id !== line.who) || talk.pair[0];
-  const call = typeof assistantPeerCall === 'function' ? assistantPeerCall(line.who, partner, level) : partner;
+  const call = typeof assistantPeerCall === 'function' ? assistantPeerCall(line.who, partner) : partner;
   return String(line.t || '').replace(/\{c\}/g, call);
 };
 function AssistantPeerTalk({
@@ -93942,8 +93942,7 @@ function AssistantPeerTalk({
   }
   const {
     talk,
-    step,
-    level
+    step
   } = cur;
   const line = talk.lines[step];
   const left = assistantById(talk.lines[0].who);
@@ -93999,7 +93998,7 @@ function AssistantPeerTalk({
   }, speaker.name), React.createElement("p", {
     "data-assistant-peer-line": true,
     className: "mt-1 text-[12px] font-bold leading-snug text-white"
-  }, helpWrap(assistantPeerLineText(line, talk, level)))), face(right)), React.createElement("div", {
+  }, helpWrap(assistantPeerLineText(line, talk)))), face(right)), React.createElement("div", {
     className: "mt-1 flex items-center justify-between"
   }, React.createElement("span", {
     className: "text-[9px] font-bold text-slate-500"
@@ -94163,8 +94162,8 @@ const assistantPeerRequestGen = async ({
       a,
       b,
       lv,
-      ab: assistantPeerCall(a, b, lv),
-      ba: assistantPeerCall(b, a, lv)
+      ab: assistantPeerCall(a, b),
+      ba: assistantPeerCall(b, a)
     });
   }
   assistantPeerGenBusy = true;

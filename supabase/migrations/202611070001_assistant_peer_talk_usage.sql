@@ -1,6 +1,6 @@
 -- 助手どうしの掛け合い・API 版(kind:'peer_talks'・2026-11-07 社長「ガッツリ作りこんで」「APIは余裕ある」)の回数を数える表と関数。
 -- ★足すだけ。既存の表(assistant_chat_usage など)と関数には触らない。
--- おしゃべり(1人100往復・全員2,000往復)とは別に数える: 1人1日3回・全員1日3,000回(上限の数は Edge Function が渡す)。
+-- おしゃべり(1人100往復・全員2,000往復)とは別に数える: 1人1日100回・全員1日3,000回(上限の数は Edge Function が渡す。Secrets で下げられる)。
 -- ゲームからは読めも書けもしない(RLS を入れてポリシーを作らない)。Edge Function(service_role)だけが関数で使う。
 -- 1日の区切りはゲームの日替わりと同じ朝5:00(JST)。
 create table if not exists public.assistant_peer_talk_usage (

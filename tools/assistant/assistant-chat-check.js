@@ -283,7 +283,7 @@ const unit = async (core) => {
     const memo = { mua: { likes: 'モッチー', secret: 'テストのこと', topics: 'ないしょの話' } };
     const r = await core.handleRequest({ body: { kind: 'peer_talks', breederId: 'b1', pairs, peerMemos: memo, stats: { ブリーダーLv: 12 } }, digest: DIGEST, client, take: async () => { throw new Error('おしゃべりの表を使った'); }, refund: async () => {}, takePeer, refundPeer });
     const p = client.calls[0] || {};
-    check('㉖ peer_talks はおしゃべりと別の数え方(takePeer)で、1人3回・全員3,000回', calls[0] && calls[0][0] === 'take' && calls[0][2] === 3 && calls[0][3] === 3000 && core.PEER_USER_LIMIT === 3 && core.PEER_TOTAL_LIMIT === 3000);
+    check('㉖ peer_talks はおしゃべりと別の数え方(takePeer)で、1人100回・全員3,000回(2026-11-07 社長)', calls[0] && calls[0][0] === 'take' && calls[0][2] === 100 && calls[0][3] === 3000 && core.PEER_USER_LIMIT === 100 && core.PEER_TOTAL_LIMIT === 3000);
     check('㉖ モデルは同じ・thinking を切る・構造化出力', p.model === 'claude-haiku-5-5' && p.thinking && p.thinking.type === 'disabled' && p.output_config.format.type === 'json_schema');
     check('㉖ system は 決まり/ヘルプ(区切り)/助手たち全員(区切り)で、人ごとの値を入れない', (p.system || []).length === 3 && p.system.map(b => !!b.cache_control).join(',') === 'false,true,true'
       && /みゅあ/.test(p.system[2].text) && /えるびん/.test(p.system[2].text) && !/"b1"|ブリーダーLv/.test(JSON.stringify(p.system)));
