@@ -78,7 +78,9 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
 
   // 初回ログインボーナス・はじめての案内などの重なりを閉じてからHOMEを操作する。
   // 残したままだとタップが重なりに吸われ、下のボタンを押せない
-  for (let i = 0; i < 10; i++) {
+  // HOME のお話は続けて流れることがある(MFバトルカードのはじまり → 個人杯のお話 など)。1本閉じたすき間で抜けると、
+  // 次のお話が後から出てボタンにかぶさる(2026-11-06 個人杯のお話の窓で「強化」が押せずに落ちた)。窓の無い状態が3回続くまで閉じ続ける
+  for (let i = 0, quiet = 0; i < 40 && quiet < 3; i++) {
     const closed = await page.evaluate(() => {
       const b = [...document.querySelectorAll('button')].find((x) => /受け取|閉じる|スキップ/.test(x.textContent));
       if (b) b.click();
@@ -86,7 +88,7 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
     });
     await page.waitForTimeout(800);
     const blocked = await page.evaluate(() => !!document.querySelector('[role="dialog"]'));
-    if (!closed && !blocked) break;
+    quiet = (!closed && !blocked) ? quiet + 1 : 0;
   }
 
   // M/B管理 → マスモン一覧 → 対象を開く → 育成・カスタムの「強化」
