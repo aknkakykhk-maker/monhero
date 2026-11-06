@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a1ced3e57db6d711
+// source-sha256: e98cec420afdba2a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -128542,9 +128542,11 @@ const CardCup = ({
   }, "合言葉(6けたの数字)"), React.createElement("input", {
     "data-card-cup-code-input": true,
     inputMode: "numeric",
+    pattern: "[0-9]*",
+    autoComplete: "off",
     maxLength: 6,
     value: code,
-    onChange: e => setCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6)),
+    onChange: e => setCode(String(e.target.value).replace(/[０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)).replace(/[^0-9]/g, '').slice(0, 6)),
     className: "w-full rounded-xl border-2 border-slate-600 bg-slate-950 px-3 py-2 text-center text-[24px] font-black tracking-[0.3em] text-white"
   }), React.createElement("button", {
     type: "button",
@@ -128895,6 +128897,12 @@ const CARD_CUP_ITEMS = Object.freeze([{
   card: 'catalogs'
 }]);
 const cardCupItemOf = item => CARD_CUP_ITEMS.find(x => x.item === item) || null;
+const cardCupReadCount = text => {
+  const digits = String(text == null ? '' : text).replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).split(/[.．。]/)[0].replace(/[^0-9]/g, '');
+  const n = parseInt(digits, 10);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+};
+const cardCupReadSplit = text => String(text == null ? '' : text).split(/[,，、・\s　]+/).map(cardCupReadCount).filter(x => x > 0).slice(0, 8);
 const cardCupItemText = (item, amount) => {
   const it = cardCupItemOf(item);
   return `${it ? `${it.emoji} ${it.label}` : item} ${Number(amount || 0).toLocaleString()}`;
@@ -129539,10 +129547,13 @@ const CardCupPrizePanel = ({
   }, React.createElement("input", {
     "data-card-cup-give-amount": true,
     inputMode: "numeric",
+    pattern: "[0-9]*",
+    enterKeyHint: "done",
+    autoComplete: "off",
     value: pick.amount,
     onChange: e => setPick({
       ...pick,
-      amount: Math.max(0, Math.floor(Number(String(e.target.value).replace(/[^0-9]/g, '')) || 0))
+      amount: cardCupReadCount(e.target.value)
     }),
     className: "w-24 rounded-lg border border-slate-600 bg-slate-900 px-2 py-1.5 text-[14px] font-black text-white"
   }), React.createElement("small", {
@@ -129586,8 +129597,11 @@ const CardCupPrizePanel = ({
   }, React.createElement("input", {
     "data-card-cup-fee-amount": true,
     inputMode: "numeric",
+    pattern: "[0-9]*",
+    enterKeyHint: "done",
+    autoComplete: "off",
     value: feeAmount,
-    onChange: e => setFeeAmount(Math.max(0, Math.floor(Number(String(e.target.value).replace(/[^0-9]/g, '')) || 0))),
+    onChange: e => setFeeAmount(cardCupReadCount(e.target.value)),
     className: "w-24 rounded-lg border border-slate-600 bg-slate-900 px-2 py-1.5 text-[14px] font-black text-white"
   }), React.createElement("small", {
     className: "text-[11px] font-bold text-slate-400"
@@ -129602,7 +129616,7 @@ const CardCupPrizePanel = ({
   }, s.label))), React.createElement("input", {
     "data-card-cup-split-custom": true,
     value: (split || []).join(','),
-    onChange: e => setSplit(String(e.target.value).split(/[,、・\s]+/).map(x => Math.floor(Number(x))).filter(x => x > 0).slice(0, 8)),
+    onChange: e => setSplit(cardCupReadSplit(e.target.value)),
     placeholder: "自分で決める(例 60,30,10)",
     className: "w-full rounded-lg border border-slate-600 bg-slate-900 px-2 py-1.5 text-[13px] font-bold text-white"
   }), React.createElement("small", {
