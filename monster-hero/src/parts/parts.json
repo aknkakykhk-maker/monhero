@@ -326,6 +326,10 @@
       "role": "助手とおしゃべりの窓(AssistantChatWindow)。中継役へ送るだけで、会話は端末の新しいキーにだけ置く。公開の印 assistantChat の後ろ"
     },
     {
+      "file": "56-assistant-peer.jsx",
+      "role": "助手どうしの仲良し度(ペアごと)と台本版の掛け合い(AssistantPeerTalk)・プロフィールの関係図(AssistantPeerMap)。公開の印 assistantPeer の後ろ。保存は mh_assistant_peer_* の新しいキーだけ"
+    },
+    {
       "file": "82-card-battle-core.jsx",
       "role": "MFバトルカードのルールの本体とコンピューターの考え方(ゲームの始まり・できる操作・操作を進める・守り・勝ち負け・くせと難易度)。カードの表は data/card-battle-cards.js",
       "pure": true

@@ -141,6 +141,8 @@ function ProfileScreen({
   // 選べる助手だけ(イベントで加入する助手は、その会話を見るまで並べない)。
   // 渡されなければ今までどおり全員を並べる
   unlockedAssistants,
+  // 助手どうしの特別なお話を見返す(関係図のボタン)
+  onReplayPeerTalk = null,
 }) {
   // モンヒロビートの実績。曲の記録はモンヒロビートを開くまで読み込まれないので、ここで保存から直接読む
   const [rhythmAchRows, setRhythmAchRows] = React.useState([]);
@@ -408,6 +410,10 @@ function ProfileScreen({
                     })}
                   </div>
                   <div className="mt-1 text-[10px] text-slate-400">仲良し度は助手ごとに別々に貯まります。切り替えても消えません。</div>
+                  {/* 助手どうしの関係図(2026-11-07)。公開の印 assistantPeer の後ろ。特別なお話の見返しは 60-app が流す */}
+                  {typeof AssistantPeerMap==='function'&&assistantPeerEnabled()&&(
+                    <div className="mt-3"><AssistantPeerMap metIds={assistantChoices.map(w=>w.id)} onReplay={onReplayPeerTalk}/></div>
+                  )}
                 </div>
               )}
             </div>

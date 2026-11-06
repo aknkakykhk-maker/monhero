@@ -98,6 +98,12 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 6人目の助手きゅうこ(2026-10-22 社長の決定)。新モンスターのイルミネ・ドリーミィも出る加入のお話を社長が全文読んで OK を出したら、3つ同時に真にする。
   //   偽のあいだは、助手の一覧・加入のお話・回想・マーケットのカード「きゅうこ」に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS・data/breeder.js の kyukoCardOnSale)
   assistantKyuko: true,
+  // 助手どうしのつながり(2026-11-07 社長「ガッツリ作りこんで」)。ペアの仲良し度・台本版の掛け合い・プロフィールの関係図(56-assistant-peer.jsx)。
+  //   偽にすると、仲良し度は上がらず、掛け合いも関係図も出ない(おしゃべりで渡すほかの助手のメモ=段階1 はこの印に関係なく送る)
+  assistantPeer: true,
+  // 助手どうしの掛け合いの API 版(kind:'peer_talks')。中継役(assistant-chat)を窓口が配り、表 assistant_peer_talk_usage を作ってから真にする。
+  //   偽のあいだは頼まず、台本版(ASSISTANT_PEER_TALKS)だけで流れる
+  assistantPeerApi: false,
   // 7人目の助手ソラシド(2026-10-27 社長の決定)。絵・お話・お知らせがそろって、社長が「公開」と言ったら真にする。
   //   偽のあいだは、助手の一覧・おしゃべり・選ぶ画面に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS)。
   //   MFバトルカードの相手えらび・マルチ・観戦・記録・曲の並びにも出ない(82 の cardFoeReleased)

@@ -2782,6 +2782,8 @@ function MonsterHeroGame() {
   const assistantCallStyle = assistantCallStyles[selectedAssistantId] || null;
   // 助手とおしゃべりの窓(2026-10-14)。開いているあいだだけ真。公開の印 assistantChat が立つまではデバッグ設定からだけ開ける
   const [assistantChatOpen, setAssistantChatOpen] = useState(false);
+  // 関係図から見返す助手どうしの特別なお話(台本)。null なら見返していない
+  const [peerReplay, setPeerReplay] = useState(null);
   // ふだんの吹き出しを1日1回まとめて作る(2026-10-14)。この起動で頼んだ「日付|助手」を覚え、二重に頼まない
   const assistantDailyLinesAskedRef = useRef('');
   const [assistantDailyLinesDebugMsg, setAssistantDailyLinesDebugMsg] = useState('');
@@ -8407,6 +8409,13 @@ function MonsterHeroGame() {
     assistantDailyLinesAskedRef.current = key;
     void requestAssistantDailyLines(false);
   }, [bootPhase, gameState, activeAssistant && activeAssistant.id]);
+  // 助手どうしの掛け合いの API 版(2026-11-07)。HOME に入るたびに確かめ、その日の分が尽きていて回数が残っていれば頼む(56-assistant-peer.jsx)
+  useEffect(() => {
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || typeof assistantPeerRequestGen !== 'function' || !assistantPeerApiEnabled()) return;
+    const metIds = assistantsUnlockedFrom(rhythmEventStorySeen).filter(who => who.id !== 'momosuke' || momosukeIntroSeenFlag).map(who => who.id);
+    const stats = buildAssistantDailyStats({ breederLevel: breederLevel && breederLevel.level, bondLevel: assistantBondLevelNow, masuMons, rhythmBestRecords, highScores });
+    void assistantPeerRequestGen({ metIds, stats });
+  }, [bootPhase, gameState]);
   // モンヒロビートのモードえらびで、助手が立ち絵でひとこと(2026-10-03)。開くたびに1本えらぶ
   const rhythmModeSelectOpen = gameState === 'RHYTHM_MODE_SELECT';
   const rhythmModeAssistant = useMemo(() => {
@@ -8636,6 +8645,8 @@ function MonsterHeroGame() {
   // 助手を切り替える。仲良し度も呼び方も助手ごとに分けてあるので、切り替えても何も失われない
   const chooseAssistant = useCallback((id) => {
     const next = normalizeAssistantId(id);
+    // 助手どうしの仲良し度: その日に2人を交互に選んだ(56-assistant-peer.jsx・1日の上限あり)
+    if (typeof assistantPeerGainSwitch === 'function') assistantPeerGainSwitch(selectedAssistantIdRef.current, next);
     selectedAssistantIdRef.current = next;
     setSelectedAssistantId(next);
     setAssistantChosen(true);
@@ -18754,6 +18765,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onExchange={()=>addAssistantBondFor(id,'chat')} onClose={()=>setAssistantChatOpen(false)}/>;
         })()}
 
+        {/* 助手どうしの掛け合い(2026-11-07)。HOME・マーケット・モンヒロビート・マスモン一覧・MFバトルカードの入口で、ときどき2人が話す。
+            お話・おしゃべり・小窓が出ているあいだは出さない。会った助手だけ(プロフィールの仲良し度と同じ判定)。特別なお話の見返しもここで流す */}
+        {typeof AssistantPeerTalk==='function'&&RELEASE_FLAGS.assistantPeer===true&&(()=>{
+          const metIds=assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag).map(who=>who.id);
+          const busy=!!eventReplay||assistantChatOpen||showAssistantPicker||kikiIntroStep!=null||momosukeIntroStep!=null||!assistantChosen;
+          const scene=busy?null:(ASSISTANT_PEER_SCENES[gameState]||null);
+          return <AssistantPeerTalk scene={peerReplay?null:scene} metIds={metIds} selectedId={selectedAssistantId}
+            replay={peerReplay} onReplayEnd={()=>setPeerReplay(null)}/>;
+        })()}
+
         {/* モンヒロビート(音ゲー)の準備中の案内。公開フラグが立つまでHOMEのモンヒロビートはここへ来る。
             見た目は体験版ホームに合わせ、修行のCSSは借りない(別の機能の見た目に引きずられないため) */}
         {gameState==='RHYTHM_INFO'&&(
@@ -21314,6 +21335,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             /* 仲良し度の並びは、会った助手だけ(2026-10-27 社長「仲良し度だけ会ってから出す」)。助手えらびの小窓と同じ判定:
                ももすけは最初の会話を見たか(momosukeIntroSeenFlag)、あつなどは加入のお話を見たか(assistantsUnlockedFrom) */
             unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag)}
+            onReplayPeerTalk={(talk)=>setPeerReplay(talk)}
             onOpenRhythmHistory={openRhythmHistory}
             friendsEnabled={RELEASE_FLAGS.friends===true}
             onOpenFriends={()=>openFriends(null)}
@@ -23450,6 +23472,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(!last){ setEventReplay(r=>r&&({...r,shownAt:Date.now(),...(storyMore?{sub:storyCurSub+1}:{step:r.step+1,sub:0})})); return; }
           // お話の締め: 続きもののお話は、最後のページのあとに終わりの札を出す(札の「閉じる」で、もう一度ここへ来て閉じる)
           if(storyEnding&&!eventReplay.ending){ setEventReplay(r=>r&&({...r,ending:true,endingAt:Date.now()})); if(typeof Audio_!=='undefined'&&Audio_.setStoryEndFade) Audio_.setStoryEndFade(true); return; }
+          // 助手どうしの仲良し度: 同じお話に2人が出た(回想でも数える。ペアごとに1日の上限あり・56-assistant-peer.jsx)
+          if(!eventReplay.debug&&typeof assistantPeerGainStory==='function') assistantPeerGainStory(storyCastOf(script).map(w=>w&&w.id));
           if(event&&event.id==='momosuke_intro'&&!eventReplay.debug) markMomosukeIntroSeen();
           if(event&&event.id==='tactics_intro'&&!eventReplay.debug) markTacticsIntroSeen();
           // イベントの会話も、最後まで見たら「見た」にする(次の起動で重ねて流さない)

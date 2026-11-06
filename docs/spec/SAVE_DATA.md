@@ -49,7 +49,14 @@
 | `mh_breeder_id_v1` | string or null | 端末ごとに1回だけ作るブリーダーID。全国ランキングで同名の別人を見分けるために送る(名前を変えても変わらない。`docs/spec/RHYTHM_RANKING.md` §4) |
 | `mh_assistant_chat_log_v1` | object | 助手とおしゃべりの会話。`{ [助手id]: [{ role:'user'\|'assistant', text, e? }] }`、助手ごとに最後の60件。端末にだけ置き、サーバーには残さない(`docs/spec/ASSISTANT_CHAT.md`) |
 | `mh_assistant_chat_memo_v1` | object | 助手とおしゃべりの思い出メモ(前の形)。`{ [助手id]: 120字までの文 }`。2026-10-14 からは**読むだけ**で書かない。新しいキーに無い助手のぶんは「前に話した話題」として引き継ぐ |
-| `mh_assistant_chat_memo_v2` | object | 助手とおしゃべりの思い出メモ(2026-10-14〜)。`{ [助手id]: { likes, goals, events, topics, summary } }`(各100字・summary 160字まで)。次の会話で中継役へ渡す |
+| `mh_assistant_chat_memo_v2` | object | 助手とおしゃべりの思い出メモ(2026-10-14〜)。`{ [助手id]: { likes, goals, events, topics, summary, secret } }`(各100字・summary 160字まで)。次の会話で中継役へ渡す。secret(ないしょの話)は 2026-11-07 に足した欄で、ほかの助手には渡さない。無い人は空として読む |
+| `mh_assistant_chat_last_v1` | object | 助手ごとに最後におしゃべりの返事が来た日(2026-11-07)。`{ [助手id]: 'YYYY-MM-DD' }`。30日以内に話した助手の思い出メモだけを、ほかの助手とのおしゃべりで共有する |
+| `mh_assistant_peer_bond_v1` | object | 助手どうしの仲良し度(2026-11-07)。`{ "kiki-mua"(助手idの名前順): 点数 }`。Lv は data/assistants.js の ASSISTANT_PEER_BOND_LEVELS |
+| `mh_assistant_peer_bond_day_v1` | object | 助手どうしの仲良し度の、その日に上がった量(1日の上限を数える)。`{ day, got: { [ペア]: { story, switch, talk } } }`。日付が変われば数え直す |
+| `mh_assistant_peer_talk_log_v1` | array | 最近見た助手どうしの掛け合い(30件まで)。`[{ id, at }]`。同じ掛け合いが続かないようにする |
+| `mh_assistant_peer_talk_day_v1` | object | その日に流した掛け合いの数。`{ day, home, other }`(HOME は1日5回・ほかの画面は3回まで) |
+| `mh_assistant_peer_special_seen_v1` | array | 仲良し度 Lv5 の「2人の特別なお話」を見たペア。`[ペア]`。プロフィールの関係図から見返せる |
+| `mh_assistant_peer_talk_gen_v1` | object | API 版で作ったその日の助手どうしの掛け合い(2026-11-07)。`{ day, asked, talks: [{ id, pair, lines: [{ who, e, t }] }] }`。日付が変われば使わない。asked はその日に頼んだ回数(3回まで) |
 | `mh_assistant_daily_lines_v1` | object | ふだんの吹き出しを1日1回まとめて作ったひとこと(2026-10-14)。`{ day, assistantId, lines: { [場面]: [{ e, t, n }] } }`。日付が変われば使わず、次に作ったら入れ替える。n はその日に出した回数 |
 | `mh_story_assistant_chat_seen_v1` | boolean | 助手とおしゃべりのお話「話せるようになった日」を本編で見たか(飛ばしても立つ)。公開の後の最初の HOME で1回だけ流すため。回想・デバッグでは立てない |
 | `mh_beat_shop_vip_letter_seen_v1` | boolean | お話「レジェンドブリーダーへの招待状」を本編で見たか(飛ばしても立つ・2026-11-05)。ブリーダーレベル1000以上の HOME で1回だけ流す。true の人だけ、ビートP交換所のダイヤ・トレーニングチケット・重トレーニングチケットが「優待パス還元」になる(値段は data/rhythm-event.js の LEGEND_BREEDER_PASS_OFFERS。保存しない)。回想・デバッグでは立てない |

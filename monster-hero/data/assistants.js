@@ -12898,3 +12898,680 @@ const MUA_CARD_SHOP_LINES = Object.freeze([
   { e:'normal',  t:'だぶったカードは、ビートPに変わるから安心してね！' },
   { e:'normal',  t:'ビートPが足りないときは、対戦で稼いでからまた来よ！' },
 ]);
+
+// ===== 助手どうしのつながり(2026-11-07 社長「ガッツリ作りこんで」・設計 docs/progress/assistant-peer-plan.md) =====
+// 段階2 ペアの仲良し度。点数は端末の mh_assistant_peer_bond_v1 { "kiki-mua"(id の名前順): 点数 }(56-assistant-peer.jsx)。
+// Lv2: 掛け合いが増える / Lv3: プロフィールの関係図に線が出る / Lv4: 呼び方がくだける(ASSISTANT_PEER_CALLS_CLOSE) / Lv5: 2人の特別なお話
+const ASSISTANT_PEER_BOND_LEVELS = Object.freeze([
+  { level:1, min:0,   name:'顔見知り' },
+  { level:2, min:30,  name:'話し仲間' },
+  { level:3, min:90,  name:'なかよし' },
+  { level:4, min:180, name:'大のなかよし' },
+  { level:5, min:320, name:'名コンビ' },
+]);
+// 上がり方。amount … 1回ぶん / dailyMax … その行動で1日にペアごとに上がる上限。ペアごとの1日の合計は ASSISTANT_PEER_BOND_DAILY_MAX まで
+const ASSISTANT_PEER_BOND_ACTIONS = Object.freeze({
+  story:  { amount:6, dailyMax:6, label:'同じお話に2人が出た' },
+  switch: { amount:3, dailyMax:3, label:'その日に2人を交互に選んだ' },
+  talk:   { amount:2, dailyMax:6, label:'2人の掛け合いを見た' },
+});
+const ASSISTANT_PEER_BOND_DAILY_MAX = 12;
+const assistantPeerBondLevel = (points) => {
+  const p = Math.max(0, Math.floor(Number(points) || 0));
+  let lv = 1;
+  for (const s of ASSISTANT_PEER_BOND_LEVELS) if (p >= s.min) lv = s.level;
+  return lv;
+};
+// Lv4 からの呼び方。★社長が表を決めるまで空(空のあいだは今の呼び方のまま)。案は docs/progress/assistant-peer/lv4-calls-draft.json
+const ASSISTANT_PEER_CALLS_CLOSE = Object.freeze({});
+// from が to をどう呼ぶか。( ) の注記は外す
+const assistantPeerCall = (from, to, level = 1) => {
+  const close = level >= 4 && ASSISTANT_PEER_CALLS_CLOSE[from] && ASSISTANT_PEER_CALLS_CLOSE[from][to];
+  const base = (ASSISTANT_PEER_CALLS[from] && ASSISTANT_PEER_CALLS[from][to]) || '';
+  return String(close || base).replace(/\(.*?\)/g, '').trim();
+};
+// 段階3 台本版の掛け合い。lines の t の {c} は「話している助手が相手をどう呼ぶか」(assistantPeerCall)に置きかえる。
+//   scene … any(どこでも)/ home / market / rhythm / masu / card。lv … そのペアの仲良し度がこのLv以上で出る。
+//   special … Lv5 の「2人の特別なお話」(1回だけ HOME で流れ、関係図から見返せる)
+const ASSISTANT_PEER_TALKS = Object.freeze([
+  { id:'kiki-mua-1', pair:['kiki', 'mua'], lv:1, scene:'any', lines:[
+    { who:'mua', e:'happy', t:'{c}、今日のおやつ何にする？ あたしはいちごのやつ一択ぢゃん♪' },
+    { who:'kiki', e:'happy', t:'私はチョコがいいでつ♪ 半分こしましょうか' },
+    { who:'mua', e:'excited', t:'さすが{c}、わかってる〜！' },
+  ] },
+  { id:'kiki-mua-2', pair:['kiki', 'mua'], lv:1, scene:'market', lines:[
+    { who:'kiki', e:'normal', t:'{c}、マーケットに新しいものが並んでますよ' },
+    { who:'mua', e:'excited', t:'えっ見る見る！ あたし全部ほしくなっちゃうかも！' },
+    { who:'kiki', e:'wink', t:'ほどほどに、ですよ？ …私もちょっと見たいですけど♪' },
+  ] },
+  { id:'kiki-mua-3', pair:['kiki', 'mua'], lv:2, scene:'any', lines:[
+    { who:'mua', e:'troubled', t:'{c}ってさ、おとなしいのにバトルだと急にガンガンいくよね' },
+    { who:'kiki', e:'happy', t:'倒される前に倒せば、守らなくていいので♪' },
+    { who:'mua', e:'surprise', t:'まぢで言ってる…？ {c}こわ〜w' },
+  ] },
+  { id:'kiki-mua-sp', pair:['kiki', 'mua'], lv:5, scene:'home', special:true, lines:[
+    { who:'mua', e:'happy', t:'ねぇ{c}、最初に会ったころ覚えてる？' },
+    { who:'kiki', e:'normal', t:'はい。{c}が元気すぎて、ちょっと圧倒されました' },
+    { who:'mua', e:'wink', t:'えー、今は？' },
+    { who:'kiki', e:'happy', t:'今は、その元気に助けられてまつ。ほんとですよ♪' },
+    { who:'mua', e:'excited', t:'…もー！ そういうのずるいぢゃん！ これからもずっと一緒に遊ぼうね！' },
+    { who:'kiki', e:'happy', t:'はい♪ もちろんです' },
+  ] },
+  { id:'momosuke-mua-1', pair:['momosuke', 'mua'], lv:1, scene:'any', lines:[
+    { who:'momosuke', e:'excited', t:'{c}！ 見て見て、メタルナーがピカピカなの！！' },
+    { who:'mua', e:'happy', t:'ほんとだ！ {c}が毎日みがいてるもんね♪' },
+    { who:'momosuke', e:'wink', t:'でしょでしょ〜♡ ももの自慢なんだからw' },
+  ] },
+  { id:'momosuke-mua-2', pair:['momosuke', 'mua'], lv:1, scene:'rhythm', lines:[
+    { who:'mua', e:'excited', t:'{c}、モンヒロビートで勝負しよ！' },
+    { who:'momosuke', e:'wink', t:'いいよ〜？ でも{c}、この前ミスってたよね？w' },
+    { who:'mua', e:'angry', t:'あれは指がすべっただけだし！ 今日は本気出すかんね！' },
+  ] },
+  { id:'momosuke-mua-3', pair:['momosuke', 'mua'], lv:2, scene:'any', lines:[
+    { who:'momosuke', e:'troubled', t:'{c}〜、ももの髪、今日ちょっとはねてない？' },
+    { who:'mua', e:'happy', t:'え〜全然かわいいよ？ むしろそれがいいぢゃん♪' },
+    { who:'momosuke', e:'excited', t:'ほんと！？ {c}に言われたら自信出た！！' },
+  ] },
+  { id:'momosuke-mua-sp', pair:['momosuke', 'mua'], lv:5, scene:'home', special:true, lines:[
+    { who:'momosuke', e:'normal', t:'ねぇ{c}、ももね、ここに来たばっかのとき、ちょっと緊張してたんだ' },
+    { who:'mua', e:'surprise', t:'えっ、{c}が？ 全然見えなかった！' },
+    { who:'momosuke', e:'wink', t:'隠すの上手でしょw でも{c}が最初に話しかけてくれたから、すぐ平気になったの' },
+    { who:'mua', e:'crying', t:'やば、ちょっと泣きそうなんだけど…' },
+    { who:'momosuke', e:'excited', t:'泣かないで！？ ももの自慢の{c}なんだから、笑ってて！！' },
+    { who:'mua', e:'happy', t:'うん！ これからもよろしくね、{c}！' },
+  ] },
+  { id:'dra-mua-1', pair:['dra', 'mua'], lv:1, scene:'any', lines:[
+    { who:'dra', e:'happy', t:'{c}、今日の育成どうだった？ おでは寝坊したくさ' },
+    { who:'mua', e:'troubled', t:'{c}、それ毎日言ってない？w' },
+    { who:'dra', e:'wink', t:'えへへ、ばれたか' },
+  ] },
+  { id:'dra-mua-2', pair:['dra', 'mua'], lv:1, scene:'masu', lines:[
+    { who:'dra', e:'normal', t:'このマスモン、能力の伸び方がいいな。育て方がうまいんだよ' },
+    { who:'mua', e:'happy', t:'でしょ！ あたしも手伝ったもん♪' },
+    { who:'dra', e:'happy', t:'{c}はほめるとすぐ得意になるからな、くさ' },
+  ] },
+  { id:'dra-mua-3', pair:['dra', 'mua'], lv:2, scene:'any', lines:[
+    { who:'dra', e:'wink', t:'{c}、おでのグジラ、最近たくましくなったと思わん？ どこがとは言わんけど' },
+    { who:'mua', e:'troubled', t:'{c}、それ以上言ったら怒るかんね' },
+    { who:'dra', e:'happy', t:'えへへ、ごめんごめん' },
+  ] },
+  { id:'dra-mua-sp', pair:['dra', 'mua'], lv:5, scene:'home', special:true, lines:[
+    { who:'mua', e:'normal', t:'ねぇ{c}、いつもふざけてるけどさ、説明はめっちゃわかりやすいよね' },
+    { who:'dra', e:'surprise', t:'お、おう？ 急にどうしたんだよ' },
+    { who:'mua', e:'happy', t:'あたし、{c}に教わったから強くなれたんだよ。ありがとね' },
+    { who:'dra', e:'crying', t:'……やめろよ、おで、こういうの弱いんだからな' },
+    { who:'mua', e:'wink', t:'あ、照れてる〜w' },
+    { who:'dra', e:'happy', t:'えへへ。これからもいっぱい教えてやるからな、{c}' },
+  ] },
+  { id:'atsu-mua-1', pair:['atsu', 'mua'], lv:1, scene:'any', lines:[
+    { who:'atsu', e:'happy', t:'{c}、今日HELLいこ。とりあえず一曲だけ笑' },
+    { who:'mua', e:'surprise', t:'{c}の『一曲だけ』って絶対一曲で終わんないぢゃん！' },
+    { who:'atsu', e:'wink', t:'ばれた？笑' },
+  ] },
+  { id:'atsu-mua-2', pair:['atsu', 'mua'], lv:1, scene:'rhythm', lines:[
+    { who:'mua', e:'excited', t:'{c}、さっきのフルコン見てたよ！ まぢすごい！' },
+    { who:'atsu', e:'normal', t:'てか{c}もいけるでしょ。次の難易度、上げてみ？笑' },
+    { who:'mua', e:'troubled', t:'えぇ〜…でも{c}が言うならやってみる！' },
+  ] },
+  { id:'atsu-mua-3', pair:['atsu', 'mua'], lv:2, scene:'any', lines:[
+    { who:'atsu', e:'wink', t:'{c}、さっき転びそうになってたよね笑' },
+    { who:'mua', e:'angry', t:'見てたの！？ 忘れて！' },
+    { who:'atsu', e:'happy', t:'無理〜。しばらくネタにする笑' },
+  ] },
+  { id:'atsu-mua-sp', pair:['atsu', 'mua'], lv:5, scene:'home', special:true, lines:[
+    { who:'atsu', e:'normal', t:'{c}ってさ、まわりが落ちこんでるとき、いつも先に笑うよね笑' },
+    { who:'mua', e:'surprise', t:'え、そう？' },
+    { who:'atsu', e:'happy', t:'そう。あれ、けっこう助かってんだよ。みんなも、俺も！' },
+    { who:'mua', e:'crying', t:'…{c}にそんなこと言われると思わなかった' },
+    { who:'atsu', e:'wink', t:'たまにはね笑 これからも頼むわ、{c}( *\'ω\'*)ノ' },
+    { who:'mua', e:'excited', t:'まかせて！ ずっと元気でいるから！' },
+  ] },
+  { id:'kyuko-mua-1', pair:['kyuko', 'mua'], lv:1, scene:'any', lines:[
+    { who:'kyuko', e:'normal', t:'{c}、それ持ちすぎじゃない？ 半分持つよぉ' },
+    { who:'mua', e:'happy', t:'ありがと{c}！ やさし〜♪' },
+    { who:'kyuko', e:'wink', t:'おけ〜。どういたしまして笑' },
+  ] },
+  { id:'kyuko-mua-2', pair:['kyuko', 'mua'], lv:1, scene:'market', lines:[
+    { who:'mua', e:'troubled', t:'{c}、ダイヤ足りないかも…' },
+    { who:'kyuko', e:'normal', t:'急がないなら、ビートP交換所で替えるほうがお得だと思う。俺もそうしてる笑' },
+    { who:'mua', e:'excited', t:'さすが無課金ランカー！ まぢ天才ぢゃん！' },
+  ] },
+  { id:'kyuko-mua-3', pair:['kyuko', 'mua'], lv:2, scene:'any', lines:[
+    { who:'mua', e:'wink', t:'{c}って見た目かわいいのに、中身は落ち着いてるよね' },
+    { who:'kyuko', e:'happy', t:'よく言われるぅ笑 {c}は見た目も中身も元気だよね' },
+    { who:'mua', e:'excited', t:'それほめてる！？ ほめてるよね！？' },
+  ] },
+  { id:'kyuko-mua-sp', pair:['kyuko', 'mua'], lv:5, scene:'home', special:true, lines:[
+    { who:'kyuko', e:'normal', t:'{c}、俺ね、ここ来てよかったなって思ってる' },
+    { who:'mua', e:'surprise', t:'えっ、どしたの急に' },
+    { who:'kyuko', e:'happy', t:'{c}がいつも話しかけてくれるからさ。一人で黙々とやるより、ずっと楽しいんだぁ🥺' },
+    { who:'mua', e:'crying', t:'{c}〜！ あたしもだよ！' },
+    { who:'kyuko', e:'wink', t:'ほい！ じゃあこれからも一緒に上目指そ笑' },
+    { who:'mua', e:'excited', t:'うん！ いこいこ！' },
+  ] },
+  { id:'mua-sorashido-1', pair:['mua', 'sorashido'], lv:1, scene:'any', lines:[
+    { who:'sorashido', e:'excited', t:'{c}、聞いてくれ！ 今日の勝率、計算したら7割超えてたぜ・・・！' },
+    { who:'mua', e:'happy', t:'{c}！ すご〜い！ …で、7割ってどのくらい？' },
+    { who:'sorashido', e:'happy', t:'10回やって7回勝つってことさ笑' },
+  ] },
+  { id:'mua-sorashido-2', pair:['mua', 'sorashido'], lv:1, scene:'rhythm', lines:[
+    { who:'mua', e:'excited', t:'{c}！ 今日の曲、何がいいと思う？' },
+    { who:'sorashido', e:'normal', t:'判定の平均から出すと、{c}はBPM150くらいが一番伸びると思うよ笑' },
+    { who:'mua', e:'surprise', t:'そこまで計算してんの！？ まぢエンジニアぢゃん！' },
+  ] },
+  { id:'mua-sorashido-3', pair:['mua', 'sorashido'], lv:2, scene:'any', lines:[
+    { who:'sorashido', e:'crying', t:'うぉぉぉ！ 負けたぁ！ くやしい！' },
+    { who:'mua', e:'happy', t:'{c}！ 声でっか〜w でも次は勝てるって！' },
+    { who:'sorashido', e:'happy', t:'なんくるないさ〜、だな笑 ありがとう{c}' },
+  ] },
+  { id:'mua-sorashido-sp', pair:['mua', 'sorashido'], lv:5, scene:'home', special:true, lines:[
+    { who:'sorashido', e:'normal', t:'{c}、俺さ、最初はみんなの戦い方を表にまとめるだけで満足してたんだ' },
+    { who:'mua', e:'normal', t:'うんうん' },
+    { who:'sorashido', e:'happy', t:'でも{c}が『一緒にやろ！』って言ってくれてから、遊ぶのがでーじ楽しくなったんだよ笑' },
+    { who:'mua', e:'excited', t:'{c}！ それ、あたしもうれしい！' },
+    { who:'sorashido', e:'wink', t:'これからも一緒に勝ちにいこうぜ・・・！' },
+    { who:'mua', e:'happy', t:'おー！ もちろん！' },
+  ] },
+  { id:'erubin-mua-1', pair:['erubin', 'mua'], lv:1, scene:'any', lines:[
+    { who:'erubin', e:'normal', t:'{c}、今日は少し眠そうだね。大丈夫かな？' },
+    { who:'mua', e:'troubled', t:'{c}、ばれた？ 夜ふかししちゃった〜' },
+    { who:'erubin', e:'happy', t:'無理しないでね。休むのも大事だしね' },
+  ] },
+  { id:'erubin-mua-2', pair:['erubin', 'mua'], lv:1, scene:'card', lines:[
+    { who:'mua', e:'excited', t:'{c}、MFバトルカード教えて！' },
+    { who:'erubin', e:'happy', t:'いいよ。まずはデッキの組み方からかな。{c}なら、すぐ覚えられると思うよ' },
+    { who:'mua', e:'wink', t:'やった！ 先生よろしく〜♪' },
+  ] },
+  { id:'erubin-mua-3', pair:['erubin', 'mua'], lv:2, scene:'any', lines:[
+    { who:'mua', e:'wink', t:'{c}って、ほんとに石油王なの？' },
+    { who:'erubin', e:'troubled', t:'どうしてみんな、そう思うのかな…笑' },
+    { who:'mua', e:'happy', t:'なんか、余裕がある感じするもん！' },
+  ] },
+  { id:'erubin-mua-sp', pair:['erubin', 'mua'], lv:5, scene:'home', special:true, lines:[
+    { who:'erubin', e:'normal', t:'{c}、こっちに来たばかりのころ、俺は何も分からなかったよね' },
+    { who:'mua', e:'happy', t:'うん。でも{c}、すぐなじんでたよ？' },
+    { who:'erubin', e:'happy', t:'それは{c}が毎日明るく話しかけてくれたからだよ。本当に助かったんだ' },
+    { who:'mua', e:'crying', t:'え〜、そんなの当たり前ぢゃん…うれしすぎる' },
+    { who:'erubin', e:'wink', t:'これからも、みんなのこと見守らせてね' },
+    { who:'mua', e:'excited', t:'うん！ {c}も、ずっと一緒だよ！' },
+  ] },
+  { id:'kiki-momosuke-1', pair:['kiki', 'momosuke'], lv:1, scene:'any', lines:[
+    { who:'momosuke', e:'excited', t:'{c}！ 今日のお洋服かわいいね！！' },
+    { who:'kiki', e:'happy', t:'ありがとうございます♪ {c}もとってもすてきですよ' },
+    { who:'momosuke', e:'wink', t:'えへ、知ってる〜w' },
+  ] },
+  { id:'kiki-momosuke-2', pair:['kiki', 'momosuke'], lv:1, scene:'masu', lines:[
+    { who:'kiki', e:'normal', t:'{c}、そのマスモン、ちからをもっと上げましょう' },
+    { who:'momosuke', e:'surprise', t:'{c}、また攻撃に振るの！？ 守りは！？' },
+    { who:'kiki', e:'wink', t:'倒される前に倒せば大丈夫でつ♪' },
+  ] },
+  { id:'kiki-momosuke-3', pair:['kiki', 'momosuke'], lv:2, scene:'any', lines:[
+    { who:'momosuke', e:'wink', t:'{c}ってさ、怒ったら一番こわいタイプでしょw' },
+    { who:'kiki', e:'happy', t:'ふふ、試してみますか？' },
+    { who:'momosuke', e:'crying', t:'ごめんなさい！！ 冗談です！！' },
+  ] },
+  { id:'kiki-momosuke-sp', pair:['kiki', 'momosuke'], lv:5, scene:'home', special:true, lines:[
+    { who:'kiki', e:'normal', t:'{c}、少しいいですか' },
+    { who:'momosuke', e:'surprise', t:'なになに？ {c}があらたまってる！' },
+    { who:'kiki', e:'happy', t:'私、口数が少ないので、{c}がいつもにぎやかにしてくれて、うれしいんです' },
+    { who:'momosuke', e:'crying', t:'ちょ、{c}…それはずるいって！！' },
+    { who:'kiki', e:'wink', t:'これからも、たくさん話しかけてくださいね♪' },
+    { who:'momosuke', e:'excited', t:'もちろん！！ ずっとしゃべりかけるからね！！' },
+  ] },
+  { id:'dra-kiki-1', pair:['dra', 'kiki'], lv:1, scene:'any', lines:[
+    { who:'dra', e:'happy', t:'{c}、今日のコーデもきまってるな' },
+    { who:'kiki', e:'wink', t:'ありがとうございます、{c}。今日の靴下はしましまでつ♪' },
+    { who:'dra', e:'happy', t:'おしゃれだな、くさ' },
+  ] },
+  { id:'dra-kiki-2', pair:['dra', 'kiki'], lv:1, scene:'masu', lines:[
+    { who:'dra', e:'normal', t:'{c}、守りも少しは上げたほうがいいんじゃないか？' },
+    { who:'kiki', e:'happy', t:'{c}、倒される前に倒せば守りはいらないんですよ♪' },
+    { who:'dra', e:'surprise', t:'物静かに言うことじゃないんだよなぁ、くさ' },
+  ] },
+  { id:'dra-kiki-3', pair:['dra', 'kiki'], lv:2, scene:'any', lines:[
+    { who:'dra', e:'wink', t:'{c}、おでの説明、ちゃんと聞いてた？' },
+    { who:'kiki', e:'troubled', t:'途中でおやじギャグが入ったので、そこから覚えてないでつ' },
+    { who:'dra', e:'crying', t:'えへへ…ギャグのせいだったか' },
+  ] },
+  { id:'dra-kiki-sp', pair:['dra', 'kiki'], lv:5, scene:'home', special:true, lines:[
+    { who:'kiki', e:'normal', t:'{c}、前から言おうと思ってたんです' },
+    { who:'dra', e:'surprise', t:'お、おう？ なんだよ改まって' },
+    { who:'kiki', e:'happy', t:'{c}の説明、とっても分かりやすいです。冗談が多いのは…まあ、半分くらい好きです♪' },
+    { who:'dra', e:'happy', t:'半分かよ！ でも、うれしいわ' },
+    { who:'kiki', e:'wink', t:'これからも頼りにしてますね' },
+    { who:'dra', e:'excited', t:'まかせとけ、{c}！ えへへ' },
+  ] },
+  { id:'atsu-kiki-1', pair:['atsu', 'kiki'], lv:1, scene:'any', lines:[
+    { who:'atsu', e:'happy', t:'{c}、今日もパワー型でいく？笑' },
+    { who:'kiki', e:'happy', t:'もちろんでつ、{c}。全部ちからに振りました♪' },
+    { who:'atsu', e:'wink', t:'やっぱそうなるよね笑' },
+  ] },
+  { id:'atsu-kiki-2', pair:['atsu', 'kiki'], lv:1, scene:'rhythm', lines:[
+    { who:'kiki', e:'troubled', t:'{c}、HELLって本当に私にもできるんでしょうか' },
+    { who:'atsu', e:'normal', t:'できるでしょ。{c}、押しの強さはピカイチだし笑' },
+    { who:'kiki', e:'happy', t:'では、ちからいっぱい押してきまつ' },
+  ] },
+  { id:'atsu-kiki-3', pair:['atsu', 'kiki'], lv:2, scene:'any', lines:[
+    { who:'atsu', e:'wink', t:'{c}、さっきの勝ち方、えげつなかったね笑' },
+    { who:'kiki', e:'happy', t:'ほめ言葉として受け取っておきますね♪' },
+    { who:'atsu', e:'happy', t:'ほめてるほめてる。こわいけど笑' },
+  ] },
+  { id:'atsu-kiki-sp', pair:['atsu', 'kiki'], lv:5, scene:'home', special:true, lines:[
+    { who:'atsu', e:'normal', t:'{c}ってさ、静かなのに、いざってときは絶対引かないよね笑' },
+    { who:'kiki', e:'surprise', t:'そう見えますか？' },
+    { who:'atsu', e:'happy', t:'見える。あの強さ、俺けっこう尊敬してるんだよ！' },
+    { who:'kiki', e:'happy', t:'{c}にそう言ってもらえると、うれしいです♪' },
+    { who:'atsu', e:'wink', t:'これからも頼りにしてるわ、{c}笑' },
+    { who:'kiki', e:'wink', t:'はい。いつでもちから全開でいきまつ' },
+  ] },
+  { id:'kiki-kyuko-1', pair:['kiki', 'kyuko'], lv:1, scene:'any', lines:[
+    { who:'kyuko', e:'normal', t:'{c}、今日のおすすめの育て方ある？' },
+    { who:'kiki', e:'happy', t:'ちからを上げましょう、{c}♪' },
+    { who:'kyuko', e:'happy', t:'だよねぇ笑 聞く前から分かってた' },
+  ] },
+  { id:'kiki-kyuko-2', pair:['kiki', 'kyuko'], lv:1, scene:'market', lines:[
+    { who:'kiki', e:'normal', t:'{c}は、いつもどうやって節約してるんですか？' },
+    { who:'kyuko', e:'wink', t:'使う日を決めてるだけだよぉ。イベントのときにまとめて使うの笑' },
+    { who:'kiki', e:'surprise', t:'なるほど…さすがでつ' },
+  ] },
+  { id:'kiki-kyuko-3', pair:['kiki', 'kyuko'], lv:2, scene:'any', lines:[
+    { who:'kyuko', e:'troubled', t:'{c}、ぐぬぬぬ…また負けた' },
+    { who:'kiki', e:'happy', t:'{c}、もう一回やりましょう。次は私がちから全開で手伝いますよ♪' },
+    { who:'kyuko', e:'happy', t:'ありがとん笑 心強いよぉ' },
+  ] },
+  { id:'kiki-kyuko-sp', pair:['kiki', 'kyuko'], lv:5, scene:'home', special:true, lines:[
+    { who:'kiki', e:'normal', t:'{c}、いつも落ち着いてて、すごいなって思ってるんです' },
+    { who:'kyuko', e:'surprise', t:'えっ、{c}がそれ言う？ 俺からしたら{c}のほうが落ち着いてるよぉ' },
+    { who:'kiki', e:'happy', t:'私は話すのがゆっくりなだけでつ' },
+    { who:'kyuko', e:'happy', t:'笑 でも、{c}といると安心するのはほんと' },
+    { who:'kiki', e:'wink', t:'では、これからもゆっくり一緒にいきましょう♪' },
+    { who:'kyuko', e:'wink', t:'ほい！ よろしくね笑' },
+  ] },
+  { id:'kiki-sorashido-1', pair:['kiki', 'sorashido'], lv:1, scene:'any', lines:[
+    { who:'sorashido', e:'excited', t:'{c}！ 攻撃に全部振ったときのダメージ、計算してみたぜ・・・！' },
+    { who:'kiki', e:'happy', t:'どうでした、{c}？' },
+    { who:'sorashido', e:'surprise', t:'でーじ強かった…！ 理にかなってたんだな笑' },
+  ] },
+  { id:'kiki-sorashido-2', pair:['kiki', 'sorashido'], lv:1, scene:'masu', lines:[
+    { who:'kiki', e:'normal', t:'{c}、このマスモンの伸び方、表にできますか？' },
+    { who:'sorashido', e:'happy', t:'まかせて！ 5分で作るぜ笑' },
+    { who:'kiki', e:'wink', t:'助かりまつ♪' },
+  ] },
+  { id:'kiki-sorashido-3', pair:['kiki', 'sorashido'], lv:2, scene:'any', lines:[
+    { who:'sorashido', e:'crying', t:'{c}、俺の計算、また外れた…' },
+    { who:'kiki', e:'happy', t:'{c}、外れても、ちからで押し切ればいいんですよ♪' },
+    { who:'sorashido', e:'surprise', t:'計算の意味…！ でも元気出た笑' },
+  ] },
+  { id:'kiki-sorashido-sp', pair:['kiki', 'sorashido'], lv:5, scene:'home', special:true, lines:[
+    { who:'sorashido', e:'normal', t:'{c}、俺が作った表、いつもちゃんと読んでくれてありがとうな' },
+    { who:'kiki', e:'happy', t:'{c}の表、とっても分かりやすいので' },
+    { who:'sorashido', e:'happy', t:'そう言ってもらえると、作ったかいがあるんだよ笑' },
+    { who:'kiki', e:'wink', t:'これからも、新しい表を楽しみにしてますね♪' },
+    { who:'sorashido', e:'excited', t:'うぉぉぉ！ やる気出たぜ・・・！ ちばりよー、俺！' },
+  ] },
+  { id:'erubin-kiki-1', pair:['erubin', 'kiki'], lv:1, scene:'any', lines:[
+    { who:'erubin', e:'normal', t:'{c}、お茶をいれたんだけど、飲むかな？' },
+    { who:'kiki', e:'happy', t:'ありがとうございます、{c}。いただきまつ♪' },
+    { who:'erubin', e:'happy', t:'熱いから気をつけてね' },
+  ] },
+  { id:'erubin-kiki-2', pair:['erubin', 'kiki'], lv:1, scene:'card', lines:[
+    { who:'kiki', e:'troubled', t:'{c}、カードの組み方、私も覚えたいです' },
+    { who:'erubin', e:'happy', t:'いいよ。{c}なら、攻撃のカードを多めにしたいよね' },
+    { who:'kiki', e:'surprise', t:'どうして分かったんですか？' },
+  ] },
+  { id:'erubin-kiki-3', pair:['erubin', 'kiki'], lv:2, scene:'any', lines:[
+    { who:'kiki', e:'wink', t:'{c}、今日はどちらの服なんですか？' },
+    { who:'erubin', e:'troubled', t:'どっちでもいいんだけど…みんなが石油王の服をすすめてくるんだよね笑' },
+    { who:'kiki', e:'happy', t:'似合ってるからですよ♪' },
+  ] },
+  { id:'erubin-kiki-sp', pair:['erubin', 'kiki'], lv:5, scene:'home', special:true, lines:[
+    { who:'erubin', e:'normal', t:'{c}、いつも静かに見ててくれるよね' },
+    { who:'kiki', e:'surprise', t:'気づいてましたか？' },
+    { who:'erubin', e:'happy', t:'うん。俺もみんなを見守るのが好きだから、なんだか仲間ができたみたいでうれしいんだよね' },
+    { who:'kiki', e:'happy', t:'では、二人で見守り係ですね♪' },
+    { who:'erubin', e:'wink', t:'そういうことです笑 これからもよろしくね、{c}' },
+    { who:'kiki', e:'happy', t:'はい、こちらこそでつ' },
+  ] },
+  { id:'dra-momosuke-1', pair:['dra', 'momosuke'], lv:1, scene:'any', lines:[
+    { who:'dra', e:'happy', t:'{c}、今日も元気だな。見てるだけで元気が出るわ' },
+    { who:'momosuke', e:'wink', t:'でしょ〜w {c}、わかってるぅ〜' },
+    { who:'dra', e:'happy', t:'えへへ、正解' },
+  ] },
+  { id:'dra-momosuke-2', pair:['dra', 'momosuke'], lv:1, scene:'rhythm', lines:[
+    { who:'momosuke', e:'excited', t:'{c}、ホールドで勝負しよ！！' },
+    { who:'dra', e:'happy', t:'お、言ったな{c}。おでは粘り強いからな、くさ' },
+    { who:'momosuke', e:'wink', t:'出た〜w 負けないもんね！！' },
+  ] },
+  { id:'dra-momosuke-3', pair:['dra', 'momosuke'], lv:2, scene:'any', lines:[
+    { who:'dra', e:'crying', t:'{c}、メタルナーの話ばっかりで、おでのグジラの話も聞いてくれよ〜' },
+    { who:'momosuke', e:'happy', t:'{c}、しょうがないなぁw 3分だけね！' },
+    { who:'dra', e:'excited', t:'ももぉ〜！ ありがとな！' },
+  ] },
+  { id:'dra-momosuke-sp', pair:['dra', 'momosuke'], lv:5, scene:'home', special:true, lines:[
+    { who:'momosuke', e:'normal', t:'{c}ってさ、ふざけてばっかなのに、ももが落ちこんだとき絶対気づくよね' },
+    { who:'dra', e:'surprise', t:'お、おう。バレてた？' },
+    { who:'momosuke', e:'happy', t:'バレバレだよw でもね、あれ、すっごくうれしかったんだ' },
+    { who:'dra', e:'crying', t:'{c}…おで、泣いていいか？' },
+    { who:'momosuke', e:'wink', t:'だめ〜w 笑ってて！！ {c}はそのほうがいいから！' },
+    { who:'dra', e:'happy', t:'えへへ。これからもよろしくな、{c}' },
+  ] },
+  { id:'atsu-momosuke-1', pair:['atsu', 'momosuke'], lv:1, scene:'any', lines:[
+    { who:'momosuke', e:'wink', t:'{c}、今日もHELLやってるの？ 好きすぎでしょw' },
+    { who:'atsu', e:'happy', t:'好きだよ。{c}もやる？笑' },
+    { who:'momosuke', e:'surprise', t:'え、ももが！？ …ちょっとだけなら！！' },
+  ] },
+  { id:'atsu-momosuke-2', pair:['atsu', 'momosuke'], lv:1, scene:'rhythm', lines:[
+    { who:'atsu', e:'wink', t:'{c}、さっきのスコア見たよ。まあまあじゃん笑' },
+    { who:'momosuke', e:'angry', t:'まあまあって何！？ {c}、ちゃんとほめて！！' },
+    { who:'atsu', e:'happy', t:'うそうそ。かなりよかった笑' },
+  ] },
+  { id:'atsu-momosuke-3', pair:['atsu', 'momosuke'], lv:2, scene:'any', lines:[
+    { who:'momosuke', e:'excited', t:'{c}！ メタルナーとドラゴン、どっちが強いか勝負しよ！！' },
+    { who:'atsu', e:'wink', t:'いいね。手加減しないよ？笑' },
+    { who:'momosuke', e:'wink', t:'こっちのセリフだしw' },
+  ] },
+  { id:'atsu-momosuke-sp', pair:['atsu', 'momosuke'], lv:5, scene:'home', special:true, lines:[
+    { who:'atsu', e:'normal', t:'{c}ってさ、からかってるようで、ちゃんと相手を乗せてるよね笑' },
+    { who:'momosuke', e:'surprise', t:'え、{c}にバレてる！？' },
+    { who:'atsu', e:'happy', t:'わかるよ。俺も似たようなことしてるから笑' },
+    { who:'momosuke', e:'happy', t:'ふふ、似た者どうしだね！！' },
+    { who:'atsu', e:'wink', t:'そういうこと。これからも一緒にまわりを盛り上げよ、{c}！' },
+    { who:'momosuke', e:'excited', t:'うん！！ まかせて！！' },
+  ] },
+  { id:'kyuko-momosuke-1', pair:['kyuko', 'momosuke'], lv:1, scene:'any', lines:[
+    { who:'momosuke', e:'excited', t:'{c}！ ドリーミィ見せて！！ かわいすぎるの！！' },
+    { who:'kyuko', e:'happy', t:'いいよぉ笑 {c}ほんと好きだよね' },
+    { who:'momosuke', e:'happy', t:'大好き！！' },
+  ] },
+  { id:'kyuko-momosuke-2', pair:['kyuko', 'momosuke'], lv:1, scene:'masu', lines:[
+    { who:'kyuko', e:'normal', t:'{c}、そのマスモン、すばやさをもう少し上げると化けると思う' },
+    { who:'momosuke', e:'surprise', t:'ほんと！？ {c}が言うなら上げる！！' },
+    { who:'kyuko', e:'wink', t:'おけ！ 結果教えてね笑' },
+  ] },
+  { id:'kyuko-momosuke-3', pair:['kyuko', 'momosuke'], lv:2, scene:'any', lines:[
+    { who:'momosuke', e:'wink', t:'{c}って、見た目もものライバルなんだけどw' },
+    { who:'kyuko', e:'troubled', t:'えぇ、俺そういうつもりないよぉ笑' },
+    { who:'momosuke', e:'happy', t:'わかってるって！！ でも、かわいいのはもものほうだからね♡' },
+  ] },
+  { id:'kyuko-momosuke-sp', pair:['kyuko', 'momosuke'], lv:5, scene:'home', special:true, lines:[
+    { who:'kyuko', e:'normal', t:'{c}、初めて会ったとき、テンション爆上がりだったよね笑' },
+    { who:'momosuke', e:'happy', t:'だってドリーミィがかわいすぎたんだもん！！' },
+    { who:'kyuko', e:'happy', t:'あれ見て、俺もここでやっていけそうって思ったんだぁ' },
+    { who:'momosuke', e:'surprise', t:'え、そうなの！？' },
+    { who:'kyuko', e:'wink', t:'そうだよぉ。ありがとね、{c}🫂' },
+    { who:'momosuke', e:'excited', t:'こちらこそ！！ これからもいっぱい遊ぼ、{c}！！' },
+  ] },
+  { id:'momosuke-sorashido-1', pair:['momosuke', 'sorashido'], lv:1, scene:'any', lines:[
+    { who:'sorashido', e:'happy', t:'{c}、メタルナーの強さを表にしたぜ笑' },
+    { who:'momosuke', e:'excited', t:'見せて見せて！！ {c}、すご！！' },
+    { who:'sorashido', e:'wink', t:'グラフもつけといたぜ・・・！' },
+  ] },
+  { id:'momosuke-sorashido-2', pair:['momosuke', 'sorashido'], lv:1, scene:'rhythm', lines:[
+    { who:'momosuke', e:'wink', t:'{c}、さっきの曲、ミスいくつだった？w' },
+    { who:'sorashido', e:'crying', t:'…数えたら12だった' },
+    { who:'momosuke', e:'happy', t:'数えたんだ！？ えらいw 次は半分にしよ！！' },
+  ] },
+  { id:'momosuke-sorashido-3', pair:['momosuke', 'sorashido'], lv:2, scene:'any', lines:[
+    { who:'sorashido', e:'excited', t:'うぉぉぉ！ {c}、見てくれ、新記録だ！' },
+    { who:'momosuke', e:'surprise', t:'え！！ ほんとだ！！ {c}やるじゃん！！' },
+    { who:'sorashido', e:'happy', t:'でーじうれしい笑' },
+  ] },
+  { id:'momosuke-sorashido-sp', pair:['momosuke', 'sorashido'], lv:5, scene:'home', special:true, lines:[
+    { who:'momosuke', e:'normal', t:'{c}ってさ、負けたときすっごい悔しがるよね' },
+    { who:'sorashido', e:'troubled', t:'お、おう。かっこ悪いよな笑' },
+    { who:'momosuke', e:'happy', t:'ううん。本気なのが分かるから、もも、ああいうの好きだよ' },
+    { who:'sorashido', e:'surprise', t:'{c}…' },
+    { who:'momosuke', e:'wink', t:'だから、次も全力で悔しがってね！！w' },
+    { who:'sorashido', e:'happy', t:'なんくるないさ〜！ 次は勝って喜ぶぜ・・・！' },
+  ] },
+  { id:'atsu-dra-1', pair:['atsu', 'dra'], lv:1, scene:'any', lines:[
+    { who:'dra', e:'happy', t:'{c}、今日もカードの対戦するか？' },
+    { who:'atsu', e:'wink', t:'いいね。{c}、手加減なしでね笑' },
+    { who:'dra', e:'wink', t:'おでもガチでいくからな、くさ' },
+  ] },
+  { id:'atsu-dra-2', pair:['atsu', 'dra'], lv:1, scene:'card', lines:[
+    { who:'atsu', e:'normal', t:'{c}、モンスター甲子園の話、またしてよ笑' },
+    { who:'dra', e:'happy', t:'おう。あのときの決勝はな…長くなるぞ？' },
+    { who:'atsu', e:'happy', t:'いいよ。全部聞く！' },
+  ] },
+  { id:'atsu-dra-3', pair:['atsu', 'dra'], lv:2, scene:'any', lines:[
+    { who:'dra', e:'wink', t:'{c}、おでのデッキ、最近ちょっと重くなっただろ。何がとは言わんけど' },
+    { who:'atsu', e:'happy', t:'カードの枚数でしょ笑 {c}、それ毎回言うよね笑' },
+    { who:'dra', e:'happy', t:'えへへ' },
+  ] },
+  { id:'atsu-dra-sp', pair:['atsu', 'dra'], lv:5, scene:'home', special:true, lines:[
+    { who:'atsu', e:'normal', t:'{c}、俺さ、カードで本気を出せる相手、{c}くらいなんだよね笑' },
+    { who:'dra', e:'surprise', t:'おいおい、急にどうしたんだよ' },
+    { who:'atsu', e:'happy', t:'本気でやれる相手がいるの、けっこうありがたいって話！' },
+    { who:'dra', e:'happy', t:'…おでもだよ、{c}。おまえとやるのが一番楽しいんだわ' },
+    { who:'atsu', e:'wink', t:'じゃ、これからもずっとライバルで笑' },
+    { who:'dra', e:'excited', t:'おう！ 負けないからな、くさ' },
+  ] },
+  { id:'dra-kyuko-1', pair:['dra', 'kyuko'], lv:1, scene:'any', lines:[
+    { who:'kyuko', e:'normal', t:'{c}、またお昼寝してたでしょ笑' },
+    { who:'dra', e:'wink', t:'{c}、なんで分かったんだよ' },
+    { who:'kyuko', e:'happy', t:'顔に跡ついてるよぉ🤣' },
+  ] },
+  { id:'dra-kyuko-2', pair:['dra', 'kyuko'], lv:1, scene:'masu', lines:[
+    { who:'dra', e:'normal', t:'{c}、そのニャーの育て方、すごいな。無課金でここまでいくのか' },
+    { who:'kyuko', e:'happy', t:'頭を使えばいけるよぉ。ありがとん笑' },
+    { who:'dra', e:'happy', t:'おでも見習わないとな、くさ' },
+  ] },
+  { id:'dra-kyuko-3', pair:['dra', 'kyuko'], lv:2, scene:'any', lines:[
+    { who:'dra', e:'wink', t:'{c}、見た目はかわいいのに中身は男前だよな' },
+    { who:'kyuko', e:'happy', t:'よく言われるぅ笑 {c}は中身おじさんだよね' },
+    { who:'dra', e:'crying', t:'ひどい！ 合ってるけど！' },
+  ] },
+  { id:'dra-kyuko-sp', pair:['dra', 'kyuko'], lv:5, scene:'home', special:true, lines:[
+    { who:'kyuko', e:'normal', t:'{c}、前に負けたとき、そっとアドバイスくれたの覚えてる？' },
+    { who:'dra', e:'surprise', t:'ん？ そんなことあったか？' },
+    { who:'kyuko', e:'happy', t:'あった笑 あれで勝てるようになったんだぁ。ちゃんとお礼言えてなかったから' },
+    { who:'dra', e:'happy', t:'…えへへ。おでは、ちょっと言っただけだよ' },
+    { who:'kyuko', e:'wink', t:'それでもありがとん！ これからも教えてね、{c}' },
+    { who:'dra', e:'happy', t:'おう、いつでも聞きにこいよ、{c}' },
+  ] },
+  { id:'dra-sorashido-1', pair:['dra', 'sorashido'], lv:1, scene:'any', lines:[
+    { who:'sorashido', e:'excited', t:'{c}、昨日の対戦、全部の手を表にまとめたぜ・・・！' },
+    { who:'dra', e:'surprise', t:'{c}、まじかよ。おで寝てたわ' },
+    { who:'sorashido', e:'happy', t:'読んでくれよ笑' },
+  ] },
+  { id:'dra-sorashido-2', pair:['dra', 'sorashido'], lv:1, scene:'card', lines:[
+    { who:'dra', e:'normal', t:'{c}、カードの勝率、どうなってる？' },
+    { who:'sorashido', e:'happy', t:'計算したら、先に攻めたほうが勝ちやすいって出たぜ笑' },
+    { who:'dra', e:'wink', t:'おでの読みどおりだな、くさ' },
+  ] },
+  { id:'dra-sorashido-3', pair:['dra', 'sorashido'], lv:2, scene:'any', lines:[
+    { who:'dra', e:'wink', t:'{c}、声がでかいんだよ。何がとは言わんけど' },
+    { who:'sorashido', e:'surprise', t:'声って言ってるじゃん！ 笑' },
+    { who:'dra', e:'happy', t:'えへへ' },
+  ] },
+  { id:'dra-sorashido-sp', pair:['dra', 'sorashido'], lv:5, scene:'home', special:true, lines:[
+    { who:'sorashido', e:'normal', t:'{c}、俺の表、いつも最後まで読んでくれるの、{c}だけなんだよな笑' },
+    { who:'dra', e:'happy', t:'長いけど、ちゃんと役に立つからな' },
+    { who:'sorashido', e:'happy', t:'そう言ってくれるの、でーじうれしいんだよ' },
+    { who:'dra', e:'wink', t:'{c}は熱いからな。おでは、そういうやつが好きなんだわ' },
+    { who:'sorashido', e:'excited', t:'うぉぉぉ！ これからも一緒に攻略していこうぜ・・・！' },
+  ] },
+  { id:'dra-erubin-1', pair:['dra', 'erubin'], lv:1, scene:'any', lines:[
+    { who:'dra', e:'happy', t:'{c}、今日もきまってるな' },
+    { who:'erubin', e:'troubled', t:'{c}、その呼び方、だんだん慣れてきたよ笑' },
+    { who:'dra', e:'wink', t:'えへへ、いい名前だろ' },
+  ] },
+  { id:'dra-erubin-2', pair:['dra', 'erubin'], lv:1, scene:'card', lines:[
+    { who:'erubin', e:'happy', t:'{c}、デュラハンのカード、引けたんだ' },
+    { who:'dra', e:'surprise', t:'お、{c}の好きなやつか。見せてみ' },
+    { who:'erubin', e:'wink', t:'ちょっとだけね。大事にしてるんだよね' },
+  ] },
+  { id:'dra-erubin-3', pair:['dra', 'erubin'], lv:2, scene:'any', lines:[
+    { who:'dra', e:'wink', t:'{c}、石油王ってほんとか？ おでにもちょっと分けてくれよ' },
+    { who:'erubin', e:'happy', t:'{c}、何もないよ…笑' },
+    { who:'dra', e:'crying', t:'なんだよ〜' },
+  ] },
+  { id:'dra-erubin-sp', pair:['dra', 'erubin'], lv:5, scene:'home', special:true, lines:[
+    { who:'erubin', e:'normal', t:'{c}、こっちに来たばかりのとき、カードを教えてくれたよね' },
+    { who:'dra', e:'happy', t:'おう。{c}、飲みこみ早かったからな' },
+    { who:'erubin', e:'happy', t:'あれがきっかけで、カードが好きになったんだよ。感謝してるよ' },
+    { who:'dra', e:'crying', t:'…やめろよ、おで泣くだろ' },
+    { who:'erubin', e:'wink', t:'泣いてもいいよ笑 これからもよろしくね、{c}' },
+    { who:'dra', e:'happy', t:'えへへ。おう、まかせとけ' },
+  ] },
+  { id:'atsu-kyuko-1', pair:['atsu', 'kyuko'], lv:1, scene:'any', lines:[
+    { who:'kyuko', e:'happy', t:'{c}、今日もランキングの上のほうにいたね笑' },
+    { who:'atsu', e:'wink', t:'{c}もでしょ。無課金でそれはやばいって笑' },
+    { who:'kyuko', e:'wink', t:'ありがとん笑' },
+  ] },
+  { id:'atsu-kyuko-2', pair:['atsu', 'kyuko'], lv:1, scene:'rhythm', lines:[
+    { who:'atsu', e:'normal', t:'{c}、HELL一緒にいこ！' },
+    { who:'kyuko', e:'troubled', t:'え〜、ちょっとこわいよぉ' },
+    { who:'atsu', e:'happy', t:'大丈夫。{c}ならいけるって笑' },
+  ] },
+  { id:'atsu-kyuko-3', pair:['atsu', 'kyuko'], lv:2, scene:'any', lines:[
+    { who:'atsu', e:'wink', t:'{c}、さっきの判断、えぐかったね笑' },
+    { who:'kyuko', e:'happy', t:'{c}に言われるとうれしい🤣' },
+    { who:'atsu', e:'happy', t:'次も期待してるわ！' },
+  ] },
+  { id:'atsu-kyuko-sp', pair:['atsu', 'kyuko'], lv:5, scene:'home', special:true, lines:[
+    { who:'atsu', e:'normal', t:'{c}、俺、{c}の育て方、けっこう参考にしてるんだよ笑' },
+    { who:'kyuko', e:'surprise', t:'えっ、{c}が？ うそでしょ笑' },
+    { who:'atsu', e:'happy', t:'ほんと。頭使って強くなるの、かっこいいと思う！' },
+    { who:'kyuko', e:'happy', t:'…ありがとん。そう言われると、もっとがんばれちゃうなぁ' },
+    { who:'atsu', e:'wink', t:'じゃ、これからも二人で上の順位いこ笑' },
+    { who:'kyuko', e:'wink', t:'ほい！ おけ〜！' },
+  ] },
+  { id:'atsu-sorashido-1', pair:['atsu', 'sorashido'], lv:1, scene:'any', lines:[
+    { who:'sorashido', e:'excited', t:'{c}！ HELLのノーツ数、全部数えたぜ・・・！' },
+    { who:'atsu', e:'happy', t:'{c}、それ数える？笑' },
+    { who:'sorashido', e:'happy', t:'数えたら安心するんだよ笑' },
+  ] },
+  { id:'atsu-sorashido-2', pair:['atsu', 'sorashido'], lv:1, scene:'rhythm', lines:[
+    { who:'atsu', e:'wink', t:'{c}、俺のスコア、計算で抜けそう？笑' },
+    { who:'sorashido', e:'surprise', t:'…計算上はあと3回ってとこだな！' },
+    { who:'atsu', e:'happy', t:'ほんとに計算してる！' },
+  ] },
+  { id:'atsu-sorashido-3', pair:['atsu', 'sorashido'], lv:2, scene:'any', lines:[
+    { who:'sorashido', e:'crying', t:'{c}に負けた〜！ くやしい！' },
+    { who:'atsu', e:'wink', t:'{c}、いつでも相手するよ笑' },
+    { who:'sorashido', e:'happy', t:'次は勝つぜ・・・！' },
+  ] },
+  { id:'atsu-sorashido-sp', pair:['atsu', 'sorashido'], lv:5, scene:'home', special:true, lines:[
+    { who:'sorashido', e:'normal', t:'{c}、俺、{c}の打ち方、全部表にまとめたことあるんだ' },
+    { who:'atsu', e:'surprise', t:'え、そうなの！？' },
+    { who:'sorashido', e:'happy', t:'そしたら分かったんだよ。{c}って、ただ強いんじゃなくて、毎日ちゃんと練習してるんだって' },
+    { who:'atsu', e:'happy', t:'…よく見てんね笑 ありがと！' },
+    { who:'sorashido', e:'wink', t:'だから俺もがんばれるんだぜ・・・！' },
+    { who:'atsu', e:'wink', t:'じゃ、これからも一緒に上いこ、{c}( *\'ω\'*)ノ' },
+  ] },
+  { id:'atsu-erubin-1', pair:['atsu', 'erubin'], lv:1, scene:'any', lines:[
+    { who:'erubin', e:'normal', t:'{c}、今日も元気だね' },
+    { who:'atsu', e:'happy', t:'{c}もでしょ。てか、いつも落ち着いてるよね笑' },
+    { who:'erubin', e:'happy', t:'そうかな？ ありがとう' },
+  ] },
+  { id:'atsu-erubin-2', pair:['atsu', 'erubin'], lv:1, scene:'card', lines:[
+    { who:'atsu', e:'wink', t:'{c}、カード勝負しよ。手加減しないよ？笑' },
+    { who:'erubin', e:'happy', t:'いいよ。{c}、強いから楽しみだね' },
+    { who:'atsu', e:'happy', t:'そうこなくちゃ！' },
+  ] },
+  { id:'atsu-erubin-3', pair:['atsu', 'erubin'], lv:2, scene:'any', lines:[
+    { who:'atsu', e:'wink', t:'{c}、また石油王っぽい服着てる笑' },
+    { who:'erubin', e:'troubled', t:'{c}まで…これ、ふつうの服なんだけどね笑' },
+    { who:'atsu', e:'happy', t:'似合ってるからいいじゃん！' },
+  ] },
+  { id:'atsu-erubin-sp', pair:['atsu', 'erubin'], lv:5, scene:'home', special:true, lines:[
+    { who:'erubin', e:'normal', t:'{c}、みんなのこと、よく見てるよね' },
+    { who:'atsu', e:'surprise', t:'{c}もでしょ。俺よりずっと笑' },
+    { who:'erubin', e:'happy', t:'ふふ。だから、{c}がみんなを引っぱってるのも、ちゃんと分かってるよ' },
+    { who:'atsu', e:'troubled', t:'…やめてよ、照れるじゃん笑' },
+    { who:'erubin', e:'wink', t:'これからも、陰ながら応援してるね' },
+    { who:'atsu', e:'happy', t:'ありがと、{c}。頼りにしてる！' },
+  ] },
+  { id:'kyuko-sorashido-1', pair:['kyuko', 'sorashido'], lv:1, scene:'any', lines:[
+    { who:'sorashido', e:'excited', t:'{c}、育成の計算、手伝ってくれないか！' },
+    { who:'kyuko', e:'happy', t:'いいよぉ。{c}の表、見せて笑' },
+    { who:'sorashido', e:'happy', t:'助かるぜ・・・！' },
+  ] },
+  { id:'kyuko-sorashido-2', pair:['kyuko', 'sorashido'], lv:1, scene:'rhythm', lines:[
+    { who:'kyuko', e:'normal', t:'{c}、この曲好きなんだぁ' },
+    { who:'sorashido', e:'happy', t:'{c}、音楽好きだもんな。BPMは…175だな笑' },
+    { who:'kyuko', e:'wink', t:'すぐ数字にする〜🤣' },
+  ] },
+  { id:'kyuko-sorashido-3', pair:['kyuko', 'sorashido'], lv:2, scene:'any', lines:[
+    { who:'sorashido', e:'crying', t:'{c}〜、計算どおりにいかないんだ…' },
+    { who:'kyuko', e:'normal', t:'{c}、運のところは計算できないからね。だから試すのが大事だと思う' },
+    { who:'sorashido', e:'happy', t:'なるほど…でーじ深い！' },
+  ] },
+  { id:'kyuko-sorashido-sp', pair:['kyuko', 'sorashido'], lv:5, scene:'home', special:true, lines:[
+    { who:'kyuko', e:'normal', t:'{c}、二人で作った攻略メモ、もうけっこうたまったね' },
+    { who:'sorashido', e:'happy', t:'{c}のおかげだぜ・・・！ 俺だけだと表ばっかりになるからな笑' },
+    { who:'kyuko', e:'happy', t:'俺だけだと、だいたいで済ませちゃうしねぇ笑' },
+    { who:'sorashido', e:'wink', t:'いい組み合わせなんだな、俺たち！' },
+    { who:'kyuko', e:'wink', t:'ほい！ これからもよろしくね、{c}' },
+  ] },
+  { id:'erubin-kyuko-1', pair:['erubin', 'kyuko'], lv:1, scene:'any', lines:[
+    { who:'erubin', e:'normal', t:'{c}、今日は眠そうだね。大丈夫かな？' },
+    { who:'kyuko', e:'troubled', t:'{c}、夜中まで育成してたぁ😭' },
+    { who:'erubin', e:'happy', t:'{c}らしいね。少し休もうか' },
+  ] },
+  { id:'erubin-kyuko-2', pair:['erubin', 'kyuko'], lv:1, scene:'card', lines:[
+    { who:'kyuko', e:'normal', t:'{c}、カードのデッキ、見てもいい？' },
+    { who:'erubin', e:'happy', t:'いいよ。{c}なら、何か気づくかもね' },
+    { who:'kyuko', e:'wink', t:'…この1枚、入れ替えたら強くなると思う笑' },
+  ] },
+  { id:'erubin-kyuko-3', pair:['erubin', 'kyuko'], lv:2, scene:'any', lines:[
+    { who:'kyuko', e:'happy', t:'{c}って、頼れるお兄さんって感じだよね' },
+    { who:'erubin', e:'happy', t:'そうかな？ {c}も、しっかりしてるよね' },
+    { who:'kyuko', e:'wink', t:'いいかげんなときもあるけどね笑' },
+  ] },
+  { id:'erubin-kyuko-sp', pair:['erubin', 'kyuko'], lv:5, scene:'home', special:true, lines:[
+    { who:'erubin', e:'normal', t:'{c}、いつもみんなのこと、さりげなく助けてるよね' },
+    { who:'kyuko', e:'surprise', t:'えっ、ばれてた？ 笑' },
+    { who:'erubin', e:'happy', t:'うん。俺はそういうところ、すてきだなと思ってるよ' },
+    { who:'kyuko', e:'happy', t:'…{c}に言われると照れるなぁ🥺 ありがとん' },
+    { who:'erubin', e:'wink', t:'これからも、二人でみんなを支えていこうね' },
+    { who:'kyuko', e:'wink', t:'ほい！ まかせて！' },
+  ] },
+  { id:'erubin-sorashido-1', pair:['erubin', 'sorashido'], lv:1, scene:'any', lines:[
+    { who:'sorashido', e:'excited', t:'{c}、MFバトルカードの勝率、表にしたぜ・・・！' },
+    { who:'erubin', e:'happy', t:'すごいね、{c}。見せてくれるかな？' },
+    { who:'sorashido', e:'happy', t:'もちろん笑' },
+  ] },
+  { id:'erubin-sorashido-2', pair:['erubin', 'sorashido'], lv:1, scene:'card', lines:[
+    { who:'erubin', e:'normal', t:'{c}、デュラハンのカードって、どのくらい使われてるのかな' },
+    { who:'sorashido', e:'happy', t:'ちょうど数えたとこだぜ笑 {c}、けっこう人気だったよ！' },
+    { who:'erubin', e:'surprise', t:'そうなんだ。うれしいね' },
+  ] },
+  { id:'erubin-sorashido-3', pair:['erubin', 'sorashido'], lv:2, scene:'any', lines:[
+    { who:'sorashido', e:'crying', t:'{c}、負けた…くやしい！' },
+    { who:'erubin', e:'happy', t:'{c}は本気だから悔しいんだよね。それって大事なことだと思うよ' },
+    { who:'sorashido', e:'happy', t:'…なんくるないさ〜。ありがとう笑' },
+  ] },
+  { id:'erubin-sorashido-sp', pair:['erubin', 'sorashido'], lv:5, scene:'home', special:true, lines:[
+    { who:'sorashido', e:'normal', t:'{c}、こっちに来たばかりのころ、俺の表、読んでくれたよな' },
+    { who:'erubin', e:'happy', t:'うん。{c}の表のおかげで、この世界のことがよく分かったんだよね' },
+    { who:'sorashido', e:'surprise', t:'まじか…役に立ってたんだな' },
+    { who:'erubin', e:'wink', t:'とってもね。ありがとう、{c}' },
+    { who:'sorashido', e:'excited', t:'うぉぉぉ！ これからも表、作りまくるぜ・・・！' },
+  ] },
+  { id:'erubin-momosuke-1', pair:['erubin', 'momosuke'], lv:1, scene:'any', lines:[
+    { who:'erubin', e:'normal', t:'{c}、今日の髪型、すてきだね' },
+    { who:'momosuke', e:'excited', t:'でしょ！！ {c}、わかってる〜♡' },
+    { who:'erubin', e:'happy', t:'ふふ、いつも元気をもらってるよ' },
+  ] },
+  { id:'erubin-momosuke-2', pair:['erubin', 'momosuke'], lv:1, scene:'card', lines:[
+    { who:'momosuke', e:'wink', t:'{c}、デュラハンばっかり使ってるでしょw' },
+    { who:'erubin', e:'troubled', t:'ばれちゃったかな…笑 好きなんだよね' },
+    { who:'momosuke', e:'happy', t:'いいと思う！！ ももはメタルナーで勝負するから！！' },
+  ] },
+  { id:'erubin-momosuke-3', pair:['erubin', 'momosuke'], lv:2, scene:'any', lines:[
+    { who:'momosuke', e:'troubled', t:'{c}〜、ももの話、ちゃんと聞いてる？' },
+    { who:'erubin', e:'happy', t:'聞いてるよ。{c}の話は楽しいからね' },
+    { who:'momosuke', e:'excited', t:'ほんと！？ じゃあもっと話す！！' },
+  ] },
+  { id:'erubin-momosuke-sp', pair:['erubin', 'momosuke'], lv:5, scene:'home', special:true, lines:[
+    { who:'momosuke', e:'normal', t:'{c}、こっちに来たばっかのとき、ももがいっぱい話しかけたの、うるさくなかった？' },
+    { who:'erubin', e:'happy', t:'ぜんぜん。{c}のおかげで、すぐさみしくなくなったんだよね' },
+    { who:'momosuke', e:'surprise', t:'え…ほんと！？' },
+    { who:'erubin', e:'wink', t:'うん。本当に感謝してるよ、{c}' },
+    { who:'momosuke', e:'excited', t:'えへへ…！！ これからも、ももがいっぱい話しかけてあげるね！！' },
+    { who:'erubin', e:'happy', t:'うん、楽しみにしてるね' },
+  ] },
+]);
