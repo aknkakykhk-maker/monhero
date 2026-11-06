@@ -46,7 +46,7 @@ const TACTICS_EX_EFFECT_VIEW = Object.freeze({
   nightmareKey: { icon: '🗝️', to: 'self', note: () => '与ダメ・会心率アップ(使った黒音符の数で決まる)' },
   kusabiDouble: { icon: '🔻', to: 'self', note: (d) => `楔が1回で2つ・上限12・ヘイト−${d.hateDown || 0}` },
   millefeuille: { icon: '🥞', to: 'all', pct: (d) => tacticsExPct(d.millefeuille && d.millefeuille.statBase),
-    note: (d) => `シールドのある子は全ステータス+${tacticsExPct(d.millefeuille && d.millefeuille.statBase)}%(楔1つごとに+${tacticsExPct(d.millefeuille && d.millefeuille.statPer)}%)` },
+    note: (d) => `シールドのあるモンスターは全ステータス+${tacticsExPct(d.millefeuille && d.millefeuille.statBase)}%(楔1つごとに+${tacticsExPct(d.millefeuille && d.millefeuille.statPer)}%)` },
 });
 const tacticsExTurnsLeftOf = (rm) => (!rm ? null : rm.kind === 'turns' ? Math.max(1, tacticsSafeInt(rm.turns, 1)) : rm.kind === 'wave' ? 'wave' : rm.kind === 'turn' ? 1 : null);
 // 枠ごとの一覧(味方)。defOf(monId, slot) は使う EX の定義(60 の raidExDefOf と同じもの)、nameOf(slot) は子の名前

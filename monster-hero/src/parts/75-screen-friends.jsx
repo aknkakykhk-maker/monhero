@@ -469,8 +469,8 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                   <dl data-friend-collection className="mt-2 grid grid-cols-2 gap-2">
                     {cell('マスモン', `${c.masu}体`, 'text-pink-200')}
                     {cell('図鑑', c.dexTotal > 0 ? `${c.dex} / ${c.dexTotal}` : `${c.dex}`, 'text-sky-200')}
-                    {cell('超越した子', `${c.transcended}体`, 'text-amber-200')}
-                    {cell('転生した子', `${c.reincarnated}体`, 'text-emerald-200')}
+                    {cell('超越したモンスター', `${c.transcended}体`, 'text-amber-200')}
+                    {cell('転生したモンスター', `${c.reincarnated}体`, 'text-emerald-200')}
                     {cell('アイコン', `${c.icons}個`, 'text-indigo-200')}
                     {cell('フレーム', `${c.frames}個`, 'text-indigo-200')}
                   </dl>);
