@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 53a2dd980dfe3b41
+// source-sha256: 329bfb31893c244f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -1428,20 +1428,15 @@ const soulRankXpForBondLevel = level => {
   if (current < 900) return 345000 + (current - 800) * 500;
   return 430000 + (current - 900) * 900;
 };
-const XP_FOR_BOND_LEVEL_AT_CACHE = new Map();
 const xpForBondLevelAt = level => {
   const current = Math.max(1, Math.floor(Number(level) || 1));
-  const cached = XP_FOR_BOND_LEVEL_AT_CACHE.get(current);
+  const cache = xpForBondLevelAt.cache || (xpForBondLevelAt.cache = new Map());
+  const cached = cache.get(current);
   if (cached !== undefined) return cached;
-  const value = xpForBondLevelAtUncached(current);
-  XP_FOR_BOND_LEVEL_AT_CACHE.set(current, value);
-  return value;
-};
-const xpForBondLevelAtUncached = current => {
   const normal = xpForBondLevel(current);
-  if (current < MAX_MASU_LEVEL_CAP) return normal;
-  if (current < SOUL_RANK_BASE_LEVEL) return Math.max(1, Math.round(normal * transcendXpMultiplier(current)));
-  return soulRankXpForBondLevel(current);
+  const value = current < MAX_MASU_LEVEL_CAP ? normal : current < SOUL_RANK_BASE_LEVEL ? Math.max(1, Math.round(normal * transcendXpMultiplier(current))) : soulRankXpForBondLevel(current);
+  cache.set(current, value);
+  return value;
 };
 const bondLevelInfo = totalXp => {
   const safeTotal = Math.max(0, Math.floor(Number(totalXp) || 0));
@@ -1993,14 +1988,14 @@ const normalizeInheritedUniqueLineages = masuMons => (Array.isArray(masuMons) ? 
     uniqueSkillLevels
   };
 });
-const TOTAL_BOND_XP_CACHE = new Map();
 const totalBondXpForLevel = level => {
   const target = Math.max(1, Math.min(SOUL_RANK_LEVEL_CAP, Math.floor(Number(level) || 1)));
-  const cached = TOTAL_BOND_XP_CACHE.get(target);
+  const cache = totalBondXpForLevel.cache || (totalBondXpForLevel.cache = new Map());
+  const cached = cache.get(target);
   if (cached !== undefined) return cached;
   let total = 0;
   for (let current = 1; current < target; current++) total += xpForBondLevelAt(current);
-  TOTAL_BOND_XP_CACHE.set(target, total);
+  cache.set(target, total);
   return total;
 };
 const MAX_MASU_LEVEL_CAP = 400;

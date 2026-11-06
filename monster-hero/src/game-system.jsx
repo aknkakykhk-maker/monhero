@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 44d9dd2c1499c19e
+// generated-sha256: cf7ed9b192287d34
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -1444,22 +1444,20 @@ const soulRankXpForBondLevel = (level) => {
   if (current < 900) return 345000 + (current - 800) * 500;
   return 430000 + (current - 900) * 900;
 };
-// レベルごとの経験値は決まった式なので、一度出した答えを覚えておく(2026-11-07 お布施の転生の上限を外したときの速さ対策。答えは同じ)
-const XP_FOR_BOND_LEVEL_AT_CACHE = new Map();
+// レベルごとの経験値は決まった式なので、一度出した答えを関数自身に覚えておく(2026-11-07 お布施の転生の上限を外したときの速さ対策。答えは同じ)。
+// ★覚えておく表は関数の中に置く(検査が関数を1つずつ切り出して試すので、外に置くと見えなくなる)
 const xpForBondLevelAt = (level) => {
   const current = Math.max(1, Math.floor(Number(level) || 1));
-  const cached = XP_FOR_BOND_LEVEL_AT_CACHE.get(current);
+  const cache = xpForBondLevelAt.cache || (xpForBondLevelAt.cache = new Map());
+  const cached = cache.get(current);
   if (cached !== undefined) return cached;
-  const value = xpForBondLevelAtUncached(current);
-  XP_FOR_BOND_LEVEL_AT_CACHE.set(current, value);
-  return value;
-};
-const xpForBondLevelAtUncached = (current) => {
   const normal = xpForBondLevel(current);
-  if (current < MAX_MASU_LEVEL_CAP) return normal;
   // Lv400〜499は既存の超越XP式を1も変えない。Lv500→501から魂格の正式式へ切り替える。
-  if (current < SOUL_RANK_BASE_LEVEL) return Math.max(1, Math.round(normal * transcendXpMultiplier(current)));
-  return soulRankXpForBondLevel(current);
+  const value = current < MAX_MASU_LEVEL_CAP ? normal
+    : current < SOUL_RANK_BASE_LEVEL ? Math.max(1, Math.round(normal * transcendXpMultiplier(current)))
+    : soulRankXpForBondLevel(current);
+  cache.set(current, value);
+  return value;
 };
 const bondLevelInfo = (totalXp) => {
   // 壊れた保存値(NaN・Infinity・負数)で回り続けないよう、先に有限の0以上へ落とす
@@ -2037,16 +2035,16 @@ const normalizeInheritedUniqueLineages = (masuMons) => (Array.isArray(masuMons) 
   });
   return { ...masu, inheritedUniques:kept, uniqueSkillLevels };
 });
-// レベルごとの累計は決まった式なので、一度出した答えを覚えておく(2026-11-07: お布施の転生の上限を外したら、
-// 何百回もの転生の見積もりで毎回 Lv.1 から足し直して画面が固まった。答えは前と1も変わらない)
-const TOTAL_BOND_XP_CACHE = new Map();
+// レベルごとの累計は決まった式なので、一度出した答えを関数自身に覚えておく(2026-11-07: お布施の転生の上限を外したら、
+// 何百回もの転生の見積もりで毎回 Lv.1 から足し直して画面が固まった。答えは前と1も変わらない)。表は関数の中(上と同じ理由)
 const totalBondXpForLevel = (level) => {
   const target = Math.max(1, Math.min(SOUL_RANK_LEVEL_CAP, Math.floor(Number(level) || 1)));
-  const cached = TOTAL_BOND_XP_CACHE.get(target);
+  const cache = totalBondXpForLevel.cache || (totalBondXpForLevel.cache = new Map());
+  const cached = cache.get(target);
   if (cached !== undefined) return cached;
   let total = 0;
   for (let current = 1; current < target; current++) total += xpForBondLevelAt(current);
-  TOTAL_BOND_XP_CACHE.set(target, total);
+  cache.set(target, total);
   return total;
 };
 // 【限界突破と転生】
