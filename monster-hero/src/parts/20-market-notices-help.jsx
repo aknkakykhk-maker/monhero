@@ -683,7 +683,7 @@ const helpDataRows = (id) => {
         const rowOf = (d, role) => {
           const duration = d.duration === 'turns' ? `${d.turns}ターン` : ({ turn:'そのターン', wave:'そのWAVE', style:'選び直すまで' }[d.duration] || '');
           return [`${monName}「${d.name}」${role}`,
-            `${d.unlimited ? '無制限' : `1ラン${d.maxUses}回`} ／ ${d.withCards ? 'カードと併用可' : 'その子はカード不可'} ／ ${duration}`];
+            `${d.unlimited ? '無制限' : `1ラン${d.maxUses}回`} ／ ${d.withCards ? 'カードと併用可' : 'そのモンスターはカード不可'} ／ ${duration}`];
         };
         const support = def.supportKey && TACTICS_EX_SKILLS[def.supportKey] ? tacticsExDefOf(def.supportKey) : null;
         return support ? [rowOf(def, '(勇者のとき)'), rowOf(support, '(共モンのとき)')] : [rowOf(def, '')];

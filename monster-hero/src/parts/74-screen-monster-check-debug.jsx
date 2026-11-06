@@ -278,7 +278,7 @@ function OrihimeTraitLab() {
     setLog(kogare.rollsLeft <= 0 ? 'このターンはもう振れない' : r.confused ? '攻撃が当たった: 敵が「意味不明」になった' : '攻撃が当たった: 意味不明にはならなかった');
   };
   const share = () => { const [a, b] = bond.share ? shareOrihimeDamage(100) : [100, 0];
-    setLog(bond.share ? `100のダメージを分け合う: 受けた子${a}・相方${b}(被ダメ−${monsterCheckPct(bond.takenCut)}の前)` : '分け合いは間合いの差3のときだけ'); };
+    setLog(bond.share ? `100のダメージを分け合う: 受けたモンスター${a}・相方${b}(被ダメ−${monsterCheckPct(bond.takenCut)}の前)` : '分け合いは間合いの差3のときだけ'); };
   return (
     <div data-monster-check-trait-lab="Orihime" className="space-y-2 rounded-xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-2">
       <div className="text-center text-[10px] font-black text-fuchsia-200">勇者特性・EXを動かして見る(バトルには出ない)</div>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 14bcf12a1426b8e8
+// generated-sha256: c97101664ec15ae3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -438,7 +438,7 @@ const SPECIES_CHALLENGE_MODE = Object.freeze({
     ['🔥','上位の難易度','EXTREME以上では、極限チャレンジと同じ特殊ルールがそのまま適用されます。敵の強さや報酬の倍率も極限チャレンジと同じ設定です。'],
     ['💎','もらえるもの','経験値・ダイヤは難易度の設定どおりです。加えて、種族と難易度の組み合わせごとに初回クリア報酬があります。'],
     ['🏅','記録','自己ベストスコア・最短クリアターン・クリア回数は、種族と難易度の組み合わせごとに別々に残ります。同じ難易度でも種族が違えば別の記録です。チャレンジモードの自己ベストや最高到達WAVEは書き換わりません。'],
-    ['⭐','マスモン登録','勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。チャレンジモードと同じです。'],
+    ['⭐','マスモン登録','勇者モンにしたモンスターは、プレイが終わったあとマスモンとして登録できます。チャレンジモードと同じです。'],
     ['⏩','スキップチケット','使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'],
     ['🔁','AUTO','AUTOでの自動戦闘は使えます。ただしクリア後にそのまま次の周へ入る「AUTO∞」は使えません。挑むたびに種族・難易度・編成を選び直すモードのためです。'],
     ['🎯','こんな人におすすめ','特定の種族を集中して育てている人、いつもの編成とは違う制限つきの戦いを試したい人、種族ごとにやり込みたい人向けです。'],
@@ -468,13 +468,13 @@ const TACTICS_MODE = Object.freeze({
   ],
   points:[
     ['⚔️','編成','ベースモンもマスモンも自由に連れていけます。勇者モン1体と供モンで挑みます。'],
-    ['❤️','ステータスの持ち方','ライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます(クラシックバトルはパーティ全員ぶんの合計)。倒れた子はその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'],
+    ['❤️','ステータスの持ち方','ライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます(クラシックバトルはパーティ全員ぶんの合計)。倒れたモンスターはその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'],
     ['📈','WAVEのあいだの強化','クラシックバトルのチャレンジモードと同じで、WAVEをクリアするたびに強化フェーズがあります。敵がどんな技を使ってくるかを見てから、どこを伸ばすかを決められます。'],
     ['👹','難しさ','難易度は通常9段階と極限5段階です。敵は通常攻撃と必殺技だけでなく、間合い攻撃・連撃・貫通撃・攻撃力アップなど、それぞれ違う技を使ってきます。どの技が来るかは1ターン前に予告されるので、ガードで受けるか、間合いを変えるか、動きを止めるかをその場で選びます。'],
     ['💎','もらえる経験値とダイヤ','ブリーダー経験値・絆経験値・ダイヤは、どれも難易度の設定どおりの倍率です。モードによる上乗せはありません。'],
     ['🏆','スコアと記録','スコアはこのモード専用の全国ランキングに反映されます。自己ベストスコア・最高到達WAVE・クリア回数も専用の場所に残り、ほかのモードの記録は書き換わりません。'],
-    ['🤝','供モンの加入','決まったWAVEで供モンが加わります。ただしタクティクスバトルでは、供モンが加わるとそのぶん敵も強くなります。強く育てた子を連れていくほど敵も手ごわくなるので、少ない人数のまま進むという選び方もできます。'],
-    ['⭐','マスモン登録','勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。'],
+    ['🤝','供モンの加入','決まったWAVEで供モンが加わります。ただしタクティクスバトルでは、供モンが加わるとそのぶん敵も強くなります。強く育てたモンスターを連れていくほど敵も手ごわくなるので、少ない人数のまま進むという選び方もできます。'],
+    ['⭐','マスモン登録','勇者モンにしたモンスターは、プレイが終わったあとマスモンとして登録できます。'],
     ['⏩','スキップチケット','使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'],
     ['🎯','こんな人におすすめ','育成の数字だけでなく、その場の判断で勝ちたい人、いつもの押し切りが通じない戦いを試したい人向けです。'],
   ],
@@ -494,12 +494,12 @@ const TACTICS_SPECIES_MODE = Object.freeze({
   points:[
     ['🧬','どんなモード','挑む前に種族をひとつ選び、その種族だけでWAVE1〜10を戦い抜くモードです。クラシックバトルの種族チャレンジと同じしばりで、戦い方だけがタクティクスバトルになります。'],
     ['⚔️','編成','勇者モン1体と供モン最大3体で挑みます。選べるのは、その種族の解放済みベースモンと所持マスモンだけです。同じモンスターは1体までですが、同じ種族の別のモンスターなら一緒に連れていけます。'],
-    ['❤️','ステータスの持ち方','ライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます(クラシックバトルはパーティ全員ぶんの合計)。倒れた子はその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'],
+    ['❤️','ステータスの持ち方','ライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます(クラシックバトルはパーティ全員ぶんの合計)。倒れたモンスターはその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'],
     ['🤝','供モンの加入','事前に選んだ供モンは、WAVE2・4・6をクリアしたときに1体ずつ加わります。加わるとそのぶん敵も強くなります。'],
     ['👹','難しさ','難易度は14段階です。最初の5段階は最初から挑めます。その先は、同じ種族で1つ前の難易度をクリアすると順に解放されます。'],
     ['💎','もらえるもの','経験値・ダイヤは難易度の設定どおりです。加えて、種族と難易度の組み合わせごとに初回クリア報酬があります。'],
     ['🏅','記録','自己ベストスコア・最短クリアターン・クリア回数は、種族と難易度の組み合わせごとに別々に残ります。クラシックバトルの種族チャレンジの記録は書き換わりません。'],
-    ['⭐','マスモン登録','勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。'],
+    ['⭐','マスモン登録','勇者モンにしたモンスターは、プレイが終わったあとマスモンとして登録できます。'],
     ['⏩','スキップチケット','使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'],
     ['🎯','こんな人におすすめ','特定の種族を育てている人で、押し切りではなく読み合いで勝ちたい人向けです。'],
   ],
@@ -516,7 +516,7 @@ const TACTICS_PRO_MODE = Object.freeze({
   ],
   points:[
     ['⚔️','編成','育てたマスモンは1体も連れていけません。全員が素のベースモンです。積み上げたステータス・強化ポイント・固有技レベル・限界突破は、このモードでは一切使えません。'],
-    ['❤️','ステータスの持ち方','ライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます(クラシックバトルはパーティ全員ぶんの合計)。倒れた子はその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'],
+    ['❤️','ステータスの持ち方','ライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます(クラシックバトルはパーティ全員ぶんの合計)。倒れたモンスターはその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'],
     ['📈','WAVEのあいだの強化','WAVEをクリアするたびに強化フェーズがあります。素の状態から始まるぶん、誰をどこまで伸ばすかの判断がそのまま結果に出ます。'],
     ['👹','難しさ','難易度は通常9段階と極限5段階です。敵は間合い攻撃・連撃・貫通撃・攻撃力アップなどを使い分け、どの技が来るかは1ターン前に予告されます。育てた個体に頼れないぶん、読み合いの比重がいちばん大きいモードです。'],
     ['💎','もらえる経験値とダイヤ','絆経験値が3倍、ブリーダー経験値が1.5倍になります（難易度の倍率にさらにかかります）。ダイヤとスコアの倍率は難易度の設定どおりです。'],
@@ -803,8 +803,8 @@ const BATTLE_MODES = [
       ['👹', '難しさ', '9段階の難易度から選べます。強化を自分で選べるぶん、うまく組み立てれば高い難易度でも十分に戦えます。育てたマスモンをそのまま活かせる、いちばん素直な難しさです。'],
       ['💎', 'もらえる経験値とダイヤ', 'ブリーダー経験値・絆経験値・ダイヤは、どれも難易度の設定どおりの倍率です。モードによる上乗せはありません。'],
       ['🏆', 'スコアと記録', 'スコアは難易度ごとの全国ランキングに反映されます。自己ベストスコア・最高到達WAVE・クリア回数も難易度ごとに残ります。'],
-      ['🤝', '供モンの加入', '決まったWAVEで供モンが加わります。加わる子は所持しているモンスターから選べます。'],
-      ['⭐', 'マスモン登録', '勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。'],
+      ['🤝', '供モンの加入', '決まったWAVEで供モンが加わります。加わるモンスターは所持しているモンスターから選べます。'],
+      ['⭐', 'マスモン登録', '勇者モンにしたモンスターは、プレイが終わったあとマスモンとして登録できます。'],
       ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'],
       ['🎯', 'こんな人におすすめ', 'じっくり考えて攻略したい人、ランキング上位や自己ベスト更新を狙いたい人向けです。'],
     ],
@@ -818,15 +818,15 @@ const BATTLE_MODES = [
       ['🚫', 'スコアランキングは無し'],
     ],
     points: [
-      ['⚔️', '編成', 'ベースモンもマスモンも自由に連れていけます。育てたい子を勇者モンにすると、その子の絆経験値がいちばん多く貯まります。'],
+      ['⚔️', '編成', 'ベースモンもマスモンも自由に連れていけます。育てたいモンスターを勇者モンにすると、そのモンスターの絆経験値がいちばん多く貯まります。'],
       ['📈', 'WAVEのあいだの強化', '強化を選ぶ画面は出ません。かわりにWAVEをクリアするたび、味方全員の全ステータス（ライフ・ちから・丈夫さ・ガッツ）がそのときの値から10%上がり、ライフとガッツが満タンまで回復します。'],
       ['👹', '難しさ', '9段階の難易度から選べます。強化を選べないぶん苦手をふさぎにくく、チャレンジモードとは違う難しさがあります。育成が目的なので、無理のない難易度で回すのが向いています。'],
       ['💎', 'もらえる経験値とダイヤ', 'ブリーダー経験値・絆経験値・ダイヤが、難易度の倍率にさらに1.5倍かかります。同じ時間でいちばん多く育つのがこのモードです。'],
       ['🏆', 'スコアと記録', 'スコアは競いません。ランキングには載らず、チャレンジモードの自己ベストも書き換わりません。記録はクイック専用の場所に、最高到達WAVEとクリア回数として残ります。'],
       ['🤝', '供モンの加入', '決まったWAVEで供モンが加わります。加わったあと、味方の誰か1体の固有技がランダムで1レベル上がります（上限Lv.8）。技を選ぶ画面は出ません。'],
-      ['⭐', 'マスモン登録', '勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。'],
+      ['⭐', 'マスモン登録', '勇者モンにしたモンスターは、プレイが終わったあとマスモンとして登録できます。'],
       ['⏩', 'スキップチケット', 'このモードでだけ使えます。チケットのある難易度は、戦わずに一気にクリアぶんの報酬を受け取れます。'],
-      ['🎯', 'こんな人におすすめ', '新しい子を早く育てたい人、絆レベルや強化ポイントをまとめて稼ぎたい人向けです。'],
+      ['🎯', 'こんな人におすすめ', '新しいモンスターを早く育てたい人、絆レベルや強化ポイントをまとめて稼ぎたい人向けです。'],
     ],
   },
   {
@@ -893,10 +893,10 @@ const BATTLE_SYSTEMS = Object.freeze([
     ]),
     note: 'チャレンジ／種族チャレンジ／プロ。難易度は通常と極限から選べます',
     points: Object.freeze([
-      Object.freeze(['🛡️', 'ステータスの持ち方', 'ライフ・ちから・丈夫さ・ガッツは、パーティ全員ぶんを合わせた1組です。供モンが加わるとその子のぶんが足されて、パーティがまとめて強くなります。ライフも1本なので、誰が狙われても同じライフが減り、0になったら負けです。']),
+      Object.freeze(['🛡️', 'ステータスの持ち方', 'ライフ・ちから・丈夫さ・ガッツは、パーティ全員ぶんを合わせた1組です。供モンが加わるとそのモンスターのぶんが足されて、パーティがまとめて強くなります。ライフも1本なので、誰が狙われても同じライフが減り、0になったら負けです。']),
       Object.freeze(['🃏', 'カードと間合い', '手札のカードをガッツで払って使います。攻撃・ガード・回復・間合いの移動などがあり、モンスターには間合いごとの得意・不得意（間合い適性）があります。']),
       Object.freeze(['🔮', '敵の予告', '敵が次のターンに何をするかは、そのターンのうちに予告されます。「解析」を押すと、それぞれの行動が選ばれる確率と威力まで確かめられます。受けるか、攻めるか、間合いを変えるかをここで決めます。']),
-      Object.freeze(['✨', '勇者特性', '勇者モンにした子の特性だけが、パーティ全体へ効きます。供モンが同じ特性を持っていても効かないので、誰を勇者モンにするかが編成の要になります。']),
+      Object.freeze(['✨', '勇者特性', '勇者モンにしたモンスターの特性だけが、パーティ全体へ効きます。供モンが同じ特性を持っていても効かないので、誰を勇者モンにするかが編成の要になります。']),
       Object.freeze(['📈', 'WAVEのあいだの強化', 'WAVEをクリアするたびに強化フェーズがあります。ちから・丈夫さ・ライフ・ガッツのどれを伸ばすかを自分で選び、ブリーダーの教えもここで選びます。編成のかみ合わせを考えながら組み立てられます。']),
       Object.freeze(['👹', '難しさ', '通常の9段階に加えて、その上に極限の段があります。難易度えらびの「極限」タブから挑め、段ごとに特殊ルールが付きます。']),
       Object.freeze(['🎮', '中にあるモード', 'チャレンジモード（基本）、種族チャレンジ（ひとつの種族だけで挑む）、プロモード（ベースモンだけで挑む）の3つです。']),
@@ -915,12 +915,12 @@ const BATTLE_SYSTEMS = Object.freeze([
     ]),
     note: 'タクティクスチャレンジ／種族チャレンジ／プロ。難易度は通常と極限から選べます',
     points: Object.freeze([
-      Object.freeze(['❤️', 'ステータスの持ち方', '基本のバトルは全員ぶんを合わせた1組ですが、こちらはライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます。供モンが加わっても合算されず、自分の値のまま並びます。攻撃はその子のちから、受けるダメージはその子の丈夫さで決まり、狙われた子だけが減ります。倒れた子はその場では戦えなくなり、全員が倒れたときだけ負けです。']),
+      Object.freeze(['❤️', 'ステータスの持ち方', '基本のバトルは全員ぶんを合わせた1組ですが、こちらはライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます。供モンが加わっても合算されず、自分の値のまま並びます。攻撃はそのモンスターのちから、受けるダメージはそのモンスターの丈夫さで決まり、狙われた子だけが減ります。倒れたモンスターはその場では戦えなくなり、全員が倒れたときだけ負けです。']),
       Object.freeze(['🎯', '敵の狙い', '敵の予告に「誰を狙うか」まで出ます。基本のバトルはライフが1本なので狙いという考え方がありませんが、こちらは1体ずつ持つので、誰が受けるかで結果が変わります。']),
       Object.freeze(['🌀', '敵の技が増える', '間合い攻撃・連撃・貫通撃・攻撃力アップなど、基本のバトルには無い技を使い分けます。ガードが効かない技もあるので、予告を見てから受け方を決めます。']),
-      Object.freeze(['✨', '勇者特性は持っている子のもの', '基本のバトルは勇者モンの特性だけが効きますが、こちらは連れてきた供モンの勇者特性も、それぞれの子に効きます（効き目は勇者モンと同じ）。ライガーの「俊足」ならライガーが狙われたときに避け、ゴーレムの「怪力」ならゴーレムが攻撃したときに乗ります。供モンを選ぶ意味が「ステータスの足し算」から「どの特性を連れていくか」に変わります。']),
-      Object.freeze(['🃏', 'カードを使う子を選ぶ', 'カードは「誰が使うか」を選んでから出します。ガッツもその子のぶんから払うので、1体に任せきりにはできません。']),
-      Object.freeze(['🤝', '供モンの加入', '供モンが加わると、そのぶん敵も強くなります。強く育てた子を連れていくほど手ごわくなるので、少ない人数のまま進むという選び方もできます。']),
+      Object.freeze(['✨', '勇者特性は持っているモンスターのもの', '基本のバトルは勇者モンの特性だけが効きますが、こちらは連れてきた供モンの勇者特性も、それぞれのモンスターに効きます（効き目は勇者モンと同じ）。ライガーの「俊足」ならライガーが狙われたときに避け、ゴーレムの「怪力」ならゴーレムが攻撃したときに乗ります。供モンを選ぶ意味が「ステータスの足し算」から「どの特性を連れていくか」に変わります。']),
+      Object.freeze(['🃏', 'カードを使うモンスターを選ぶ', 'カードは「誰が使うか」を選んでから出します。ガッツもそのモンスターのぶんから払うので、1体に任せきりにはできません。']),
+      Object.freeze(['🤝', '供モンの加入', '供モンが加わると、そのぶん敵も強くなります。強く育てたモンスターを連れていくほど手ごわくなるので、少ない人数のまま進むという選び方もできます。']),
       Object.freeze(['🎮', '中にあるモード', 'タクティクスチャレンジ（基本）、種族チャレンジ、プロの3つです。難易度は通常と極限から選べます。']),
       Object.freeze(['🏆', 'スコアと記録', 'クラシックバトルとは別の全国ランキングに載ります。クラシックバトルの記録は書き換わりません。']),
       Object.freeze(['💪', '育成はここでも効く', '編成・カード・間合い・強化フェーズは基本のバトルと同じで、育てた強さはそのまま効きます。そのうえに「誰が受けるか」の判断が足される、という関係です。']),
@@ -944,7 +944,7 @@ const BATTLE_SYSTEMS = Object.freeze([
       Object.freeze(['⏩', 'スキップチケット', 'このモードでだけ使えます。チケットのある難易度は、戦わずに一気にクリアぶんの報酬を受け取れます。']),
       Object.freeze(['🎁', '報酬の方針を選べる', '難易度えらびで「育成／プシュケー優先／ダイヤ優先」を選べます。いま欲しいものに合わせて、もらえるものの内訳を変えられます。']),
       Object.freeze(['🏆', 'スコアと記録', 'スコアは競いません。ランキングには載らず、ほかのモードの自己ベストも書き換わりません。記録はクイック専用の場所に、最高到達WAVEとクリア回数として残ります。']),
-      Object.freeze(['🎯', 'こんな人におすすめ', '新しい子を早く育てたい人、絆レベルや強化ポイントをまとめて稼ぎたい人向けです。']),
+      Object.freeze(['🎯', 'こんな人におすすめ', '新しいモンスターを早く育てたい人、絆レベルや強化ポイントをまとめて稼ぎたい人向けです。']),
     ]),
     modes: Object.freeze([BATTLE_MODE_QUICK]),
     direct: true,
@@ -9278,6 +9278,9 @@ const CHANGELOG_TYPES = ['update', 'issue'];
 // ★idTitle は、題を書き直した項目の元の題(2026-10-27 社長「題の頭に遊びの名前を付けない」で頭を外した239件)。
 //   id は元の題から作り続ける。題から作り直すと、読んだ人の既読(mh_changelog_seen_ids_*)が外れて全部 NEW に戻る。
 const changelogEntryId = entry => {
+  // ★fixedId は、出したあとで本文を直した項目の元の既読の印(2026-11-06 社長「モンスターのことを『子』って表現するのやめて」で直した110件)。
+  //   本文から作り直すと、読んだ人の既読が外れて NEW に戻るため、元の印をそのまま使う
+  if (typeof entry.fixedId === 'string' && entry.fixedId) return entry.fixedId;
   const source = entry.id || [entry.type, entry.idTitle || entry.title, ...(entry.items || [])].join('\u001f');
   let hash = 2166136261;
   for (let i=0;i<source.length;i++) { hash ^= source.charCodeAt(i); hash = Math.imul(hash, 16777619); }
@@ -12829,7 +12832,7 @@ const helpDataRows = (id) => {
         const rowOf = (d, role) => {
           const duration = d.duration === 'turns' ? `${d.turns}ターン` : ({ turn:'そのターン', wave:'そのWAVE', style:'選び直すまで' }[d.duration] || '');
           return [`${monName}「${d.name}」${role}`,
-            `${d.unlimited ? '無制限' : `1ラン${d.maxUses}回`} ／ ${d.withCards ? 'カードと併用可' : 'その子はカード不可'} ／ ${duration}`];
+            `${d.unlimited ? '無制限' : `1ラン${d.maxUses}回`} ／ ${d.withCards ? 'カードと併用可' : 'そのモンスターはカード不可'} ／ ${duration}`];
         };
         const support = def.supportKey && TACTICS_EX_SKILLS[def.supportKey] ? tacticsExDefOf(def.supportKey) : null;
         return support ? [rowOf(def, '(勇者のとき)'), rowOf(support, '(共モンのとき)')] : [rowOf(def, '')];
@@ -23601,7 +23604,7 @@ const RhythmMonsterSlotsPanel=({rhythmMonsterSlots,rhythmMonsterSlotIdsInUse,rhy
                       <b className="block truncate text-[12px] font-black">{masu.name}<small className="ml-1 text-[10px] font-bold text-slate-400">{base.name}</small></b>
                       <span className={`mt-0.5 inline-block max-w-full truncate rounded-md border px-1.5 py-0.5 text-[10px] font-black ${rhythmAbilityTone(ability?ability.id:'')}`}>{ability?`${rhythmAbilityEmoji(ability.id)}${ability.name}`:'能力なし'}</span>
                     </div>
-                    {(label||current)&&<small className="shrink-0 text-right text-[10px] font-bold text-rose-300">{current?'この枠の子':label}</small>}
+                    {(label||current)&&<small className="shrink-0 text-right text-[10px] font-bold text-rose-300">{current?'この枠のモンスター':label}</small>}
                   </button></li>;})}
                 {candidates.length===0&&<li className="rounded-xl border border-white/10 p-4 text-center text-[11px] font-bold text-slate-500">設定できるマスモンがいません</li>}
                 </ul>
@@ -27033,7 +27036,7 @@ const chooseTacticsTarget = (units, random = Math.random, bias = TACTICS_TARGET_
 const TACTICS_ALL_TARGET_LABEL = '全員';
 const tacticsTargetName = (units, slotIndex) => {
   const unit = Array.isArray(units) ? units[slotIndex] : null;
-  return (unit && String(unit.name || '').trim()) || `${slotIndex + 1}番目の子`;
+  return (unit && String(unit.name || '').trim()) || `${slotIndex + 1}番目のモンスター`;
 };
 
 // 敵の予告へ「誰を狙うか」を足す。
@@ -27269,7 +27272,7 @@ const tacticsHateHelpRows = (id) => {
       const hate = [h, 0, 0, 0];
       const w = [0, 1, 2, 3].map(i => tacticsHateWeightMult(hate, i));
       const sum = w.reduce((x, y) => x + y, 0) || 1;
-      rows.push([`1体が🔥${h}・ほか0`, `その子 ${Math.round(w[0] / sum * 100)}% ／ ほか ${Math.round(w[1] / sum * 100)}%ずつ`]);
+      rows.push([`1体が🔥${h}・ほか0`, `そのモンスター ${Math.round(w[0] / sum * 100)}% ／ ほか ${Math.round(w[1] / sum * 100)}%ずつ`]);
     });
     return rows;
   }
@@ -27864,7 +27867,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'eiki_dist_match',
     name: '緋桜瞬歩',
     useNote: '5ターン 距離補正×1.7・同じ距離は完全回避',
-    desc: '5ターンのあいだ、エイキの攻撃が強くなり、敵の攻撃をよける。\n・攻撃の距離補正が、どの距離でも×1.7に固定される（ふだんは、敵と同じ距離で×1.5、離れるほど下がって×0.9）\n・敵と同じ距離の枠にいるとき、エイキが狙われた攻撃を完全に回避する\n・使ったターン、エイキはカードを使えない（ほかの子は使える）',
+    desc: '5ターンのあいだ、エイキの攻撃が強くなり、敵の攻撃をよける。\n・攻撃の距離補正が、どの距離でも×1.7に固定される（ふだんは、敵と同じ距離で×1.5、離れるほど下がって×0.9）\n・敵と同じ距離の枠にいるとき、エイキが狙われた攻撃を完全に回避する\n・使ったターン、エイキはカードを使えない（ほかのモンスターは使える）',
     maxUses: 3, unlimited: false, withCards: false, duration: 'turns', turns: 5,
     effect: 'distMatch',
   }),
@@ -27946,7 +27949,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'undine_spring_of_life',
     name: '生命の泉',
     useNote: '選んだ味方が満タン・ガッツ30%回復＋アクアフィールド(水牢/氷結)',
-    desc: '味方1体（自分でもよい）を選んで、立て直す。使うと「アクアフィールド」も広がる。\n・ダウン中の子：すぐ立ち上がり、ライフが満タンになる。3ターンのあいだ「根性」がつく（ライフが0になる攻撃を、1回だけライフ1で踏ん張る）\n・立っている子：ライフが満タンになり、3ターンのあいだライフ上限が+30%・与えるダメージ+20%\n・どちらも、選んだ子のガッツが上限の30%回復する\n・アクアフィールド（3ターン）：広がった瞬間、味方全員のデバフが消える\n　ウンディーネ・ヤオビクニ・スネグーラチカが、フィールドで最初に使った技で道が決まる\n　通常技を最初に使う→「水牢」：通常技を使うたびに1たまり、1つごとに敵が与えるダメージ−10%\n　固有技を最初に使う→「氷結」：固有技を使うたびに1たまり、1つごとに敵が受けるダメージ+10%\n　決まった道は変わらず、水牢と氷結は同時にたまらない\n　3つたまると「アクアフィナーレ」：3つ使い切り、敵は1ターン動けず、2ターンのあいだ敵が受けるダメージが+50%',
+    desc: '味方1体（自分でもよい）を選んで、立て直す。使うと「アクアフィールド」も広がる。\n・ダウン中の子：すぐ立ち上がり、ライフが満タンになる。3ターンのあいだ「根性」がつく（ライフが0になる攻撃を、1回だけライフ1で踏ん張る）\n・立っている子：ライフが満タンになり、3ターンのあいだライフ上限が+30%・与えるダメージ+20%\n・どちらも、選んだモンスターのガッツが上限の30%回復する\n・アクアフィールド（3ターン）：広がった瞬間、味方全員のデバフが消える\n　ウンディーネ・ヤオビクニ・スネグーラチカが、フィールドで最初に使った技で道が決まる\n　通常技を最初に使う→「水牢」：通常技を使うたびに1たまり、1つごとに敵が与えるダメージ−10%\n　固有技を最初に使う→「氷結」：固有技を使うたびに1たまり、1つごとに敵が受けるダメージ+10%\n　決まった道は変わらず、水牢と氷結は同時にたまらない\n　3つたまると「アクアフィナーレ」：3つ使い切り、敵は1ターン動けず、2ターンのあいだ敵が受けるダメージが+50%',
     // ★2026-10-03 ユーザー指示で 3回 → 5回
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     target: 'ally', lifeSpring: Object.freeze({ maxUpRate: 0.3, gutsRate: 0.3, konjo: 1, dmgUp: 0.2 }),
@@ -28004,7 +28007,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'plant_green_blessing',
     name: '緑のめぐみ',
     useNote: '5ターン 味方全員 力・丈夫さ+10%・自動回復+10%',
-    desc: '5ターンのあいだ、味方全員が緑の力に包まれる。\n・味方全員のちから・丈夫さが+10%\n・ターン終わりの自動回復が、ライフ・ガッツとも上限の10%ぶん多くなる\n・使った子が倒れても効果は続く',
+    desc: '5ターンのあいだ、味方全員が緑の力に包まれる。\n・味方全員のちから・丈夫さが+10%\n・ターン終わりの自動回復が、ライフ・ガッツとも上限の10%ぶん多くなる\n・使ったモンスターが倒れても効果は続く',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     partyBoost: Object.freeze({ statRate: 0.1, hpRegen: 0.1, gutsRegen: 0.1 }),
     effect: 'partyBoost',
@@ -28017,7 +28020,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'oboro_misty_return',
     name: 'おぼろ返し',
     useNote: '3ターン 受けたダメージの50%がライフに戻る',
-    desc: '3ターンのあいだ、受けたダメージを回復に変える。\n・味方が敵の攻撃で受けたダメージの50%を、受けた子のライフへすぐ回復する\n・ガッツも、受けたダメージの5%ぶん回復する\n・倒れた子には回復しない\n・使った子が倒れても効果は続く',
+    desc: '3ターンのあいだ、受けたダメージを回復に変える。\n・味方が敵の攻撃で受けたダメージの50%を、受けたモンスターのライフへすぐ回復する\n・ガッツも、受けたダメージの5%ぶん回復する\n・倒れたモンスターには回復しない\n・使ったモンスターが倒れても効果は続く',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     damageBack: Object.freeze({ hpRate: 0.5, gutsRate: 0.05 }),
     effect: 'damageBack',
@@ -28029,7 +28032,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'suezo_psycho_lock_on',
     name: 'サイコロックオン',
     useNote: '5ターン 敵の距離を固定・敵が与えるダメージ−30%・敵が受けるダメージ+30%',
-    desc: '5ターンのあいだ、念力で敵を縛りつける。\n・敵の距離を固定する（敵が「移動」を選んだときは、何もしない）\n・敵が与えるダメージが30%下がる\n・敵が受けるダメージが30%上がる（味方の攻撃が通りやすくなる）\n・使った子が倒れても効果は続く',
+    desc: '5ターンのあいだ、念力で敵を縛りつける。\n・敵の距離を固定する（敵が「移動」を選んだときは、何もしない）\n・敵が与えるダメージが30%下がる\n・敵が受けるダメージが30%上がる（味方の攻撃が通りやすくなる）\n・使ったモンスターが倒れても効果は続く',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     psychoLock: Object.freeze({ enemyDmgDown: 0.3, enemyTakenUp: 0.3 }),
     effect: 'psychoLock',
@@ -28202,8 +28205,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Dreamy: Object.freeze({
     id: 'dreamy_millefeuille_shield',
     name: 'ミルフィーシールド',
-    useNote: '全員に最大ライフぶんのシールド・3ターン シールドのある子は全ステータス+5%(楔1つごとに+5%)',
-    desc: '夢の雲を何層にも重ねて、味方を包む。\n・使った瞬間に、立っている味方全員（ドリーミィも）へ、それぞれ自分の最大ライフと同じ量のシールドを張る。敵の攻撃はシールドが先に受け、0になってからライフが減る\n・シールドが残っている子は、ちから・丈夫さ・ライフ上限・ガッツ上限が+5%。さらに、使った瞬間の敵の楔の数（いちばん多いもの）1つごとに+5%（楔0で+5%・3つで+20%・6つで+35%）\n・シールドが0になった子は、アップもなくなる（ライフ・ガッツが元の上限より多ければ上限まで戻る。ほかの子はそのまま）\n・3ターンたつと、残ったシールドもアップも消える\n・効いているあいだにもう一度使うと、シールドは残りに足され、残りターンは3に戻る。アップは、そのときの楔の数で決め直した値になる（重ならない）',
+    useNote: '全員に最大ライフぶんのシールド・3ターン シールドのあるモンスターは全ステータス+5%(楔1つごとに+5%)',
+    desc: '夢の雲を何層にも重ねて、味方を包む。\n・使った瞬間に、立っている味方全員（ドリーミィも）へ、それぞれ自分の最大ライフと同じ量のシールドを張る。敵の攻撃はシールドが先に受け、0になってからライフが減る\n・シールドが残っているモンスターは、ちから・丈夫さ・ライフ上限・ガッツ上限が+5%。さらに、使った瞬間の敵の楔の数（いちばん多いもの）1つごとに+5%（楔0で+5%・3つで+20%・6つで+35%）\n・シールドが0になったモンスターは、アップもなくなる（ライフ・ガッツが元の上限より多ければ上限まで戻る。ほかのモンスターはそのまま）\n・3ターンたつと、残ったシールドもアップも消える\n・効いているあいだにもう一度使うと、シールドは残りに足され、残りターンは3に戻る。アップは、そのときの楔の数で決め直した値になる（重ならない）',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     millefeuille: Object.freeze({ statBase: 0.05, statPer: 0.05 }),
     effect: 'millefeuille',
@@ -28450,7 +28453,7 @@ const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, 
   if (!remaining.unlimited && remaining.left <= 0) return { ok: false, reason: 'このランで使える回数が残っていない' };
   if (sameTacticsExTurn(safe.lastUse[slot], now)) return { ok: false, reason: 'このターンはもう使った' };
   if (!def.withCards && Math.max(0, tacticsSafeInt(selectedCount, 0)) > 0) {
-    return { ok: false, reason: 'この子にカードを置いていると使えないEX。先にこの子のカードを外す' };
+    return { ok: false, reason: 'このモンスターにカードを置いていると使えないEX。先にこのモンスターのカードを外す' };
   }
   if (def.lifeCostRate > 0 && hp != null && maxHp != null && Number.isFinite(Number(hp)) && Number.isFinite(Number(maxHp)) && Number(hp) <= tacticsExLifeCost(def, maxHp)) {
     return { ok: false, reason: `ライフが足りない（最大ライフの${Math.round(def.lifeCostRate * 100)}%を払うので、それより多く残っているときだけ使える）` };
@@ -29471,7 +29474,7 @@ const aiCopyPickCards = (hand, { score, costOf, guts, maxGuts, rng, level }) => 
 // ---- 説明文(ブリーダーの教え・マーケット・カードの詳しい画面) ----
 const sorashidoCopyDesc = (level) => {
   const t = aiCopyRules(level), p = (v) => Math.round(v * 100);
-  return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%・コピーは自分の山札(距離撃とほかの子の固有技を抜いたもの)から引く${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
+  return `使ったモンスターのAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%・コピーは自分の山札(距離撃とほかのモンスターの固有技を抜いたもの)から引く${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
 };
 
 // ---- part: 33-ai-copy.jsx ----
@@ -29673,7 +29676,7 @@ const TACTICS_EX_EFFECT_VIEW = Object.freeze({
   nightmareKey: { icon: '🗝️', to: 'self', note: () => '与ダメ・会心率アップ(使った黒音符の数で決まる)' },
   kusabiDouble: { icon: '🔻', to: 'self', note: (d) => `楔が1回で2つ・上限12・ヘイト−${d.hateDown || 0}` },
   millefeuille: { icon: '🥞', to: 'all', pct: (d) => tacticsExPct(d.millefeuille && d.millefeuille.statBase),
-    note: (d) => `シールドのある子は全ステータス+${tacticsExPct(d.millefeuille && d.millefeuille.statBase)}%(楔1つごとに+${tacticsExPct(d.millefeuille && d.millefeuille.statPer)}%)` },
+    note: (d) => `シールドのあるモンスターは全ステータス+${tacticsExPct(d.millefeuille && d.millefeuille.statBase)}%(楔1つごとに+${tacticsExPct(d.millefeuille && d.millefeuille.statPer)}%)` },
 });
 const tacticsExTurnsLeftOf = (rm) => (!rm ? null : rm.kind === 'turns' ? Math.max(1, tacticsSafeInt(rm.turns, 1)) : rm.kind === 'wave' ? 'wave' : rm.kind === 'turn' ? 1 : null);
 // 枠ごとの一覧(味方)。defOf(monId, slot) は使う EX の定義(60 の raidExDefOf と同じもの)、nameOf(slot) は子の名前
@@ -35277,7 +35280,7 @@ const AllyJoinFx = ({ effect }) => {
         <div className="relative grid grid-cols-4 gap-1.5">
           {rows.map((row, ri) => <PhaseGrowthCell key={row.key} row={row} d={450 + ri * 110} countMs={countMs} single={!!effect.single}/>)}
         </div>
-        {effect.apt && <div className="mh-train-gain relative mt-1.5 text-center text-[10px] font-black text-cyan-300" style={{'--d': '1000ms'}}>{effect.single ? 'この子の間合い適性' : '間合い適性'} {effect.apt}</div>}
+        {effect.apt && <div className="mh-train-gain relative mt-1.5 text-center text-[10px] font-black text-cyan-300" style={{'--d': '1000ms'}}>{effect.single ? 'このモンスターの間合い適性' : '間合い適性'} {effect.apt}</div>}
       </div>
     </div>
   );
@@ -39805,7 +39808,7 @@ function MasuMonsScreen({
 }) {
   return (
       <div data-mh-screen className={SCREEN_SHELL_CLASS}>
-        <ScreenHead title="マスモン一覧(バトル)" accent="text-pink-400" note="マスモン＝自分で育てた子。絆・状態を見る" onBack={onBack} backLabel="M/B管理へ戻る"/>
+        <ScreenHead title="マスモン一覧(バトル)" accent="text-pink-400" note="マスモン＝自分で育てたモンスター。絆・状態を見る" onBack={onBack} backLabel="M/B管理へ戻る"/>
         <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="masuList" compact/></div>
         <ScreenLead>勇者モンをラン終了時に登録すると、ここに並びます。編成画面で選ぶと次の周回で使えます(同じ種は1体まで)。</ScreenLead>
         {renderMonsterSortFilterBar({ singleType: true })}
@@ -40008,7 +40011,7 @@ function MasuReincarnateScreen({
             if(r?.ok){ setBulkIds([]); setBulkConfirmOpen(false); }
           } finally { setBulkPending(false); }
         };
-        return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="転生" accent="text-violet-300" onBack={onBackToTemple} backLabel="神殿へ戻る"/><div className="shrink-0 w-full max-w-md mx-auto mb-2">{/* 札の欄を広く取れるよう、吹き出しは右上の「たたむ」で顔と小さな札だけにできる(覚えるのは既存の mh_bubble_collapsed_v1 の中の印。2026-10-27 社長「助手のコメントのオンオフ」) */}<AssistantBubble scene="reincarnate" compact collapseKey="temple:reincarnate"/></div>{renderScreenNote('reincarnate',`絆Lv.${REINCARNATE_MIN_LEVEL}以上のマスモンは、強化を振り直せます。`,[`レベルが${REINCARNATE_LEVEL_DROP}下がる代わりに、振った強化をすべて振り直せます。`,'限界突破の回数や★はそのまま残ります。','「すべて選択」は編成中とお気に入りの子を選びません。','左上の□で選ぶと、何体かをまとめて転生できます。1体あたりの回数と「最大」も選べます。'])}{renderMonsterSortFilterBar({singleType:true})}<div className={SCREEN_LIST_CLASS}>{entries.length===0?<ScreenEmpty emoji="🔄" lines={masuMons.length===0?['まだマスモンがいません。','勇者モンでランを終えると登録できます。']:['表示できるマスモンがいません。','並べ替え・絞り込みの設定を見直してください。']}/>:<div className="grid grid-cols-3 gap-2 pb-3">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const locked=isMasuLocked(rebirthLockedMasuIds,masu.id);const can=lvl.level>=REINCARNATE_MIN_LEVEL&&!locked;const on=can&&picked.some(id=>String(id)===String(masu.id));return <div key={masu.id} className="relative" data-reincarnate-card={masu.id}><button disabled={!can} data-reincarnate-locked={locked?'1':undefined} onClick={()=>{setReincarnateSelectedId(masu.id);setReincarnateSkillKey(null);setReincarnateTimes(1);setReincarnateError('');}} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} w-full ${on?'border-violet-200 ring-2 ring-violet-300':'border-violet-500/40'} bg-slate-900 disabled:opacity-60`}>{renderMonsterCardBody({masu,base,status:locked?<span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-amber-500/25 border border-amber-300/50 text-amber-100">🔁 転生ロック</span>:lvl.level<REINCARNATE_MIN_LEVEL?<span className="block text-center text-[10px] font-bold leading-tight text-slate-300">あとLv.{REINCARNATE_MIN_LEVEL-lvl.level}で転生</span>:<ReincarnateBadge count={masu.reincarnateCount} className="is-inline"/>})}</button>{can&&<button type="button" role="checkbox" aria-checked={on} aria-label={`${masu.name}をまとめて転生に選ぶ`} data-reincarnate-pick={masu.id} disabled={busy} onClick={()=>togglePick(masu.id)} className="absolute left-0 top-0 z-10 flex h-11 w-11 items-start justify-start p-1.5"><span aria-hidden="true" className={`flex h-6 w-6 items-center justify-center rounded-md border-2 text-[13px] font-black ${on?'border-violet-100 bg-violet-500 text-white':'border-white/70 bg-slate-950/80 text-transparent'}`}>✓</span></button>}</div>})}</div>}</div>
+        return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="転生" accent="text-violet-300" onBack={onBackToTemple} backLabel="神殿へ戻る"/><div className="shrink-0 w-full max-w-md mx-auto mb-2">{/* 札の欄を広く取れるよう、吹き出しは右上の「たたむ」で顔と小さな札だけにできる(覚えるのは既存の mh_bubble_collapsed_v1 の中の印。2026-10-27 社長「助手のコメントのオンオフ」) */}<AssistantBubble scene="reincarnate" compact collapseKey="temple:reincarnate"/></div>{renderScreenNote('reincarnate',`絆Lv.${REINCARNATE_MIN_LEVEL}以上のマスモンは、強化を振り直せます。`,[`レベルが${REINCARNATE_LEVEL_DROP}下がる代わりに、振った強化をすべて振り直せます。`,'限界突破の回数や★はそのまま残ります。','「すべて選択」は編成中とお気に入りのモンスターを選びません。','左上の□で選ぶと、何体かをまとめて転生できます。1体あたりの回数と「最大」も選べます。'])}{renderMonsterSortFilterBar({singleType:true})}<div className={SCREEN_LIST_CLASS}>{entries.length===0?<ScreenEmpty emoji="🔄" lines={masuMons.length===0?['まだマスモンがいません。','勇者モンでランを終えると登録できます。']:['表示できるマスモンがいません。','並べ替え・絞り込みの設定を見直してください。']}/>:<div className="grid grid-cols-3 gap-2 pb-3">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const locked=isMasuLocked(rebirthLockedMasuIds,masu.id);const can=lvl.level>=REINCARNATE_MIN_LEVEL&&!locked;const on=can&&picked.some(id=>String(id)===String(masu.id));return <div key={masu.id} className="relative" data-reincarnate-card={masu.id}><button disabled={!can} data-reincarnate-locked={locked?'1':undefined} onClick={()=>{setReincarnateSelectedId(masu.id);setReincarnateSkillKey(null);setReincarnateTimes(1);setReincarnateError('');}} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} w-full ${on?'border-violet-200 ring-2 ring-violet-300':'border-violet-500/40'} bg-slate-900 disabled:opacity-60`}>{renderMonsterCardBody({masu,base,status:locked?<span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-amber-500/25 border border-amber-300/50 text-amber-100">🔁 転生ロック</span>:lvl.level<REINCARNATE_MIN_LEVEL?<span className="block text-center text-[10px] font-bold leading-tight text-slate-300">あとLv.{REINCARNATE_MIN_LEVEL-lvl.level}で転生</span>:<ReincarnateBadge count={masu.reincarnateCount} className="is-inline"/>})}</button>{can&&<button type="button" role="checkbox" aria-checked={on} aria-label={`${masu.name}をまとめて転生に選ぶ`} data-reincarnate-pick={masu.id} disabled={busy} onClick={()=>togglePick(masu.id)} className="absolute left-0 top-0 z-10 flex h-11 w-11 items-start justify-start p-1.5"><span aria-hidden="true" className={`flex h-6 w-6 items-center justify-center rounded-md border-2 text-[13px] font-black ${on?'border-violet-100 bg-violet-500 text-white':'border-white/70 bg-slate-950/80 text-transparent'}`}>✓</span></button>}</div>})}</div>}</div>
           {eligible.length>0&&<div className={SCREEN_FOOTER_CLASS} data-reincarnate-bulk-bar>
             <div data-reincarnate-bulk-times className="mb-2 flex items-center gap-1.5"><span className="shrink-0 text-[11px] font-black text-slate-300">1体あたりの回数</span><button type="button" disabled={busy||bulkTimes!=='max'&&timesNum<=1} onClick={()=>setTimes(timesNum-1)} className="mh-button mh-button-secondary min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30">−</button>{/* 回数は直接打ち込める(2026-10-20)。打つと「最大」から数の指定に変わる */}<CountInput value={timesNum} max={timesMax} onChange={(n)=>setBulkTimes(n)} unit="回" label="1体あたりの回数" disabled={busy||!picked.length} className="w-14 shrink-0"/><button type="button" disabled={busy||bulkTimes!=='max'&&timesNum>=timesMax} onClick={()=>setTimes(timesNum+1)} className="mh-button mh-button-secondary min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30">＋</button><button type="button" disabled={busy} onClick={()=>setBulkTimes('max')} className={`mh-button mh-button-secondary min-h-[44px] flex-1 rounded-xl text-xs font-black active:scale-95 disabled:opacity-30 ${bulkTimes==='max'?'bg-violet-600 text-white':'bg-slate-800'}`}>最大{picked.length?`（${timesMax}回）`:''}</button></div>
             {/* 札の欄を広く取れるよう、「すべて選択・選択を外す・まとめて転生」を1段にまとめる(前は3段+注意書きで、375×667 では札が1段しか見えなかった。
@@ -40719,7 +40722,7 @@ function MasuSoulTraitsScreen({
             {bonusPoints>0&&<p data-soul-trait-respec-crystal={bonusPoints} className="mt-2 rounded-xl border border-fuchsia-400/40 bg-fuchsia-950/40 px-3 py-2 text-[10px] font-black leading-relaxed text-fuchsia-100">🔮 魂格の結晶 <b className="text-fuchsia-200">{bonusPoints}個</b> が持ち物に戻ります。結晶で増やした魂格P {bonusPoints}P はこの子から無くなり、戻った結晶はほかのマスモンにも使えます。</p>}
             <div className="mt-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"><span className="text-slate-400">魂格再編の書</span><span className="text-cyan-300">{scrollHave} → {Math.max(0,scrollHave-1)}冊</span></div>
             {bonusPoints>0&&<div className="mt-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"><span className="text-slate-400">魂格の結晶</span><span className="text-fuchsia-300">{crystalHave} → {crystalHave+bonusPoints}個</span></div>}
-            {bonusPoints>0&&<div className="mt-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"><span className="text-slate-400">この子の魂格P(獲得済み)</span><span className="text-amber-300">{earned} → {Math.max(0,earned-bonusPoints)}P</span></div>}
+            {bonusPoints>0&&<div className="mt-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"><span className="text-slate-400">このモンスターの魂格P(獲得済み)</span><span className="text-amber-300">{earned} → {Math.max(0,earned-bonusPoints)}P</span></div>}
             <div className="mt-4 grid grid-cols-2 gap-2"><button type="button" disabled={soulTraitProcessingRef.current} onClick={()=>setSoulTraitRespecOpen(false)} className="mh-button mh-button-secondary min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black active:scale-95 disabled:opacity-30">やめる</button><button type="button" data-soul-trait-respec-confirm disabled={soulTraitProcessingRef.current} onClick={()=>commitSoulTraitRespec(masu.id)} className="mh-button mh-button-primary min-h-[48px] rounded-xl bg-cyan-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30">1冊使って再編</button></div>
           </div>
         </div>}
@@ -41382,7 +41385,7 @@ function MasuFusionScreen({
               </div>
               {selectedSubs.length>0&&<div className="mt-2 max-h-16 overflow-y-auto mh-scroll space-y-1">{selectedSubs.map(sub=><div key={sub.id} className="flex justify-between gap-2 text-[11px] text-slate-200"><span className="truncate">{sub.name}・絆Lv.{masuBondLevelInfo(sub).level}</span><span className="shrink-0 text-cyan-300">+{cappedBondXp(sub).toLocaleString()} XP</span></div>)}</div>}
               {selectedSubs.length>1&&<div className="mt-2 rounded-xl border border-violet-500/60 bg-violet-950/40 px-3 py-2 text-[11px] leading-relaxed font-bold text-violet-200">複数副を選択順にまとめて合体します。固有技継承は確認画面で副ごとに選べ、Lv上限を超える場合は「限界突破して合体」も選べます。</div>}
-              <button onClick={continueWithFusionSubs} disabled={selectedSubs.length===0} className="mh-button mh-button-primary mt-2 w-full min-h-[52px] rounded-xl bg-violet-600 text-white text-[13px] font-black disabled:bg-slate-800 disabled:text-slate-400 active:scale-95">{selectedSubs.length>0?`副${selectedSubs.length}体で確認へ`:'合体に使う子を選んでください'}</button>
+              <button onClick={continueWithFusionSubs} disabled={selectedSubs.length===0} className="mh-button mh-button-primary mt-2 w-full min-h-[52px] rounded-xl bg-violet-600 text-white text-[13px] font-black disabled:bg-slate-800 disabled:text-slate-400 active:scale-95">{selectedSubs.length>0?`副${selectedSubs.length}体で確認へ`:'合体に使うモンスターを選んでください'}</button>
             </div>
             {fusionSortBar}
             <div className={SCREEN_LIST_CLASS}>
@@ -41891,7 +41894,7 @@ function ProMonsterGridPicker({ list, selectedId=null, selectedIds=null, isDisab
       {/* 選んだ札の光る縁が左右の端で欠けないよう、内側に少し余白(320 で左右の列の縁が切れていた。2026-10-27 ジン) */}
       <div data-pro-pick-scroll className="flex-1 min-h-0 overflow-y-auto mh-scroll px-1">
       {pinnedIds.length>0&&(<>
-        <div className={`px-1 mb-1 text-[9px] font-black ${ac.head}`}>★お気に入り・前回使った子</div>
+        <div className={`px-1 mb-1 text-[9px] font-black ${ac.head}`}>★お気に入り・前回使ったモンスター</div>
         <div className="grid grid-cols-4 gap-1.5 mb-3">{pinnedIds.map(id=>tile(byId.get(id),'pin-'))}</div>
       </>)}
       <div className={`px-1 mb-1 text-[9px] font-black text-slate-400${header?' [@media(max-height:760px)]:hidden':''}`}>{activeTab==='all'?'すべて':`${(lineageTabs.find(t=>t.id===activeTab)||{}).name}血統`}（{shownList.length}体）</div>
@@ -41973,7 +41976,7 @@ function ProPartyPicker({ list, need, initialIds=[], isDisabled, onDone, onDetai
       <button key={i} type="button" data-pro-party-slot={i} data-pro-party-active={on?'true':undefined} data-pro-party-hero={isHero?'true':undefined}
         disabled={step==='hero'&&!m}
         onClick={()=>{if(step==='hero'){if(m)setHeroId(m.id);return;}if(m)removeAt(i);else setActive(i);}}
-        aria-label={step==='hero'?(m?`${m.name}を勇者モンにする`:'空き'):(m?`${m.name}を枠から外す`:`${i+1}番目の枠に入れる子を選ぶ`)}
+        aria-label={step==='hero'?(m?`${m.name}を勇者モンにする`:'空き'):(m?`${m.name}を枠から外す`:`${i+1}番目の枠に入れるモンスターを選ぶ`)}
         className={`relative flex min-w-0 flex-col items-center rounded-xl border-2 px-0.5 pb-1 pt-0.5 text-center active:scale-95 ${on?'border-indigo-300 bg-indigo-900/40 shadow-[0_0_10px_rgba(165,180,252,.55)]':isHero?'border-amber-300 bg-amber-900/50 shadow-[0_0_10px_rgba(252,211,77,.55)]':m?'border-pink-300/50 bg-slate-900/80':'border-dashed border-white/20 bg-slate-900/40'}`}>
         <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 [@media(max-height:760px)]:h-8 [@media(max-height:760px)]:w-8 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7">
           {m?(m.imgUrl?<DyedMonsterImage baseId={m.id} src={m.imgUrl} alt="" masuColors={m.colors} className="h-full w-full object-contain"/>:<span className="text-xl">{m.emoji}</span>):<span className={`text-[15px] font-black ${on?'text-indigo-100':'text-slate-600'}`}>+</span>}
@@ -41987,12 +41990,12 @@ function ProPartyPicker({ list, need, initialIds=[], isDisabled, onDone, onDetai
       </button>
     );
   };
-  const guide=step==='hero'?(hero?`${hero.name}が勇者モンです。ほかの子を押すと替えられます`:'勇者モンにする子を、上の枠から1体えらんでください')
-    :full?'そろいました。枠を押すとその子を外せます。勇者モンは次でえらびます'
-    :`枠を押して、下の子を「枠に入れる」(どの順でもOK・あと${need-filled}体)`;
+  const guide=step==='hero'?(hero?`${hero.name}が勇者モンです。ほかのモンスターを押すと替えられます`:'勇者モンにするモンスターを、上の枠から1体えらんでください')
+    :full?'そろいました。枠を押すとそのモンスターを外せます。勇者モンは次でえらびます'
+    :`枠を押して、下のモンスターを「枠に入れる」(どの順でもOK・あと${need-filled}体)`;
   const top=(
     <section data-pro-party className="mb-2 shrink-0 rounded-2xl border border-indigo-300/30 bg-black/30 p-2 [@media(max-height:640px)]:mb-1 [@media(max-height:640px)]:py-1.5">
-      <div className="mb-1 flex items-baseline justify-between gap-1 text-[11px] font-black text-indigo-200 [@media(orientation:landscape)_and_(max-height:520px)]:mb-0 [@media(orientation:landscape)_and_(max-height:520px)]:text-[10px]"><span>{step==='hero'?'② 勇者モンをえらぶ':'① 編成する子をえらぶ'}</span><span className="text-[9px] text-slate-400">{filled} / {need}</span></div>
+      <div className="mb-1 flex items-baseline justify-between gap-1 text-[11px] font-black text-indigo-200 [@media(orientation:landscape)_and_(max-height:520px)]:mb-0 [@media(orientation:landscape)_and_(max-height:520px)]:text-[10px]"><span>{step==='hero'?'② 勇者モンをえらぶ':'① 編成するモンスターをえらぶ'}</span><span className="text-[9px] text-slate-400">{filled} / {need}</span></div>
       <div className={`grid gap-1 ${need>4?'grid-cols-6':'grid-cols-4'} pt-1`}>{ids.map(slot)}</div>
       <div data-pro-party-guide title={guide} className="mt-1 rounded-lg bg-indigo-950/40 px-2 py-1 text-[10px] font-bold text-indigo-100 [@media(max-height:640px)]:hidden">{guide}</div>
     </section>
@@ -42003,7 +42006,7 @@ function ProPartyPicker({ list, need, initialIds=[], isDisabled, onDone, onDetai
       <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
         <div className="rounded-2xl border border-amber-300/30 bg-black/30 p-3 text-[10px] leading-relaxed text-slate-200">
           <div className="mb-1 text-[11px] font-black text-amber-200">👑 勇者モンとは</div>
-          <div>戦いの主役になる1体です。最初のWAVEから盤面に立ち、置いた距離から戦いが始まります。ほかの子は供モンの候補になり、これまでどおりWAVEごとに1体ずつ合流します。</div>
+          <div>戦いの主役になる1体です。最初のWAVEから盤面に立ち、置いた距離から戦いが始まります。ほかのモンスターは供モンの候補になり、これまでどおりWAVEごとに1体ずつ合流します。</div>
         </div>
       </div>
       <div className="shrink-0 flex gap-2 pt-2">
@@ -42050,7 +42053,7 @@ function PickHeroAllyScreen({
       {/* 戻るボタンは ScreenHead と同じ枠つきの形にそろえる(2026-10-05。この画面だけ枠の無い矢印だった) */}
       <div className="mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><div className="min-w-0"><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンをえらぶ':'供モンをえらぶ'}</h2>
         {/* 呼び名の説明を1行(2026-10-09 G7。呼び名は変えず、何のことかを足す) */}
-        <p data-pick-term-note className={`mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode==='hero'&&isProMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}${pickMode==='hero'||pickMode==='ally'?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}>{helpWrap(pickMode==='hero'?'勇者モン＝バトルの主役。この子の勇者特性が効く':'供モン＝勇者モンと一緒に戦う仲間')}</p></div><div className="w-10"></div></div>
+        <p data-pick-term-note className={`mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode==='hero'&&isProMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}${pickMode==='hero'||pickMode==='ally'?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}>{helpWrap(pickMode==='hero'?'勇者モン＝バトルの主役。このモンスターの勇者特性が効く':'供モン＝勇者モンと一緒に戦う仲間')}</p></div><div className="w-10"></div></div>
       {/* 供モン合流はバトルの途中に挟まる場面なので、どのWAVEを抜けたごほうびなのかを見出しの下に出す */}
       {pickMode==='ally'&&<div className="-mt-1 mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 flex shrink-0 flex-col items-center gap-1.5">
         <span className="mh-ph-plate">{waveResult?.wave>0?`WAVE ${waveResult.wave} CLEAR ・ `:''}新しい仲間が合流</span>
@@ -42173,7 +42176,7 @@ function PickHeroAllyScreen({
           if(pickMode==='hero'&&isProMode(runMode)) return (
             <ProMonsterGridPicker list={list} selectedId={proHeroPreset?.heroBaseId||null} accent="indigo"
               instant={!!battleTutorial} isDisabled={m=>!scenarioPicksHero(m.id)} spotClassFor={m=>battleTutorialSpotClass('monCards')}
-              confirmLabel="この子で挑む" confirmAria={m=>`${m.name}を勇者モンに選ぶ`}
+              confirmLabel="このモンスターで挑む" confirmAria={m=>`${m.name}を勇者モンに選ぶ`}
               onSelect={m=>{setProHeroPreset(null);setCurrentPickingMon(m);advanceRunStage('PICK_SLOT');}}
               onDetail={m=>setCurrentPickingMon(m)}/>
           );
@@ -42420,7 +42423,7 @@ function PickSlotScreen({
       {/* この子の間合い適性を4つまとめて。枠の中にも出すが、置いてある枠には出ないので、
           ここで4距離ぶんを見比べられるようにする */}
       <div data-slot-aptitude className="mh-phase-tall mh-ph-panel shrink-0 w-full max-w-xs mt-1 px-2 py-1.5">
-        <div className="mh-ph-panel-label text-[9px] font-black text-left mb-1">この子の間合い適性</div>
+        <div className="mh-ph-panel-label text-[9px] font-black text-left mb-1">このモンスターの間合い適性</div>
         <div className="grid grid-cols-4 gap-1">
           {RANGE_LABELS.map((label,i)=>{const grade=getDistAptitude(mon,i); return (
             <span key={label} className="mh-ph-cell rounded-lg px-1 py-1">
@@ -42452,7 +42455,7 @@ function PickSlotScreen({
           <button type="button" data-orihime-partner-pick aria-pressed={!!partnerPick}
             onClick={()=>onPartnerPick&&onPartnerPick(!partnerPick)}
             className={`min-h-[44px] w-full rounded-lg border-2 px-2 text-[12px] font-black active:scale-95 ${partnerPick?'border-sky-300 bg-sky-700 text-white':'border-white/20 bg-black/40 text-slate-200'}`}>
-            🎐 {partnerPick?'相方にする(このまま置く)':'この子を相方にする'}
+            🎐 {partnerPick?'相方にする(このまま置く)':'このモンスターを相方にする'}
           </button>
           <div className="mt-1 text-[9px] font-bold leading-snug text-slate-300">{partnerOffer.heroName}の「天河の契り」の相方になります。相方は1体だけで、置いた距離とのへだたりで効き目が変わります。</div>
         </div>
@@ -42460,7 +42463,7 @@ function PickSlotScreen({
       {/* 間合い適性はどこに置いても4距離すべてに入る。ここの%は「このモンスターを加えた後の各距離の補正値」 */}
       {/* タクティクスは合算しない(その距離に立っている子の適性だけが、その子の攻撃に効く)。従来のモードは編成全員ぶんの合算 */}
       <div className="mh-phase-mid shrink-0 text-[10px] text-slate-400 font-bold mt-2 leading-relaxed px-2">{perSlotApt
-        ?<>間合い適性は、置いた距離にいる子のぶんだけが、その子の攻撃に効きます(足し算にはなりません)。<br/>どの距離に誰を置くかで、その子の適性が決まります。</>
+        ?<>間合い適性は、置いた距離にいるモンスターのぶんだけが、そのモンスターの攻撃に効きます(足し算にはなりません)。<br/>どの距離に誰を置くかで、そのモンスターの適性が決まります。</>
         :<>間合い適性はどこに置いても4距離すべてに加算されます。<br/>配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。</>}</div>
       {/* 練習中は押せる枠だけを光らせる。枠全体を囲むと「どれを押すのか」が分からなかった */}
       {/* 背の低い端末では、ここが縮んでスクロールする。戻るボタンを画面の外へ押し出さないため。
@@ -42652,7 +42655,7 @@ function UpgradeSkillScreen({
           {tacticsMode
             ? <span data-tactics-guts-recovery className="block font-mono font-black leading-tight">
                 {gutsSlots.length===0
-                  ? <b className="text-slate-500" style={{fontSize:'12px'}}>立っている子がいません</b>
+                  ? <b className="text-slate-500" style={{fontSize:'12px'}}>立っているモンスターがいません</b>
                   : gutsSlots.map(index=>{
                       const unit=tacticsUnits[index];
                       const full=unit.guts>=unit.maxGuts;
@@ -42785,7 +42788,7 @@ function RewardPickScreen({
     const pickable=!tacticsMode||pendingSlot!==undefined;
     const currentUnit=currentSlot!=null?tacticsUnits[currentSlot]:null;
     const currentName=currentSlot!=null
-      ? (slots?.[currentSlot]?.masuName||slots?.[currentSlot]?.name||`${currentSlot+1}番目の子`) : '';
+      ? (slots?.[currentSlot]?.masuName||slots?.[currentSlot]?.name||`${currentSlot+1}番目のモンスター`) : '';
     const activePicks=tacticsMode?(currentSlot!=null?picksOf(currentSlot):[]):trainingPicks;
     const baseStats=currentUnit
       ? {atk:currentUnit.atk,def:currentUnit.def,hp:currentUnit.baseMaxHp,guts:currentUnit.baseMaxGuts}
@@ -42807,7 +42810,7 @@ function RewardPickScreen({
     };
     const trainingOptions=trainingOptionsFor(runMode);
     const optionById=(id)=>trainingOptions.find(option=>option.id===id);
-    const unitName=(slotIdx)=>slots?.[slotIdx]?.masuName||slots?.[slotIdx]?.name||`${slotIdx+1}番目の子`;
+    const unitName=(slotIdx)=>slots?.[slotIdx]?.masuName||slots?.[slotIdx]?.name||`${slotIdx+1}番目のモンスター`;
     // 「だれを強化するのか」を顔で見せるための絵(立っている子ごと)
     const trainingFace=(slotIdx)=>{
       const mon=slots?.[slotIdx];
@@ -42851,7 +42854,7 @@ function RewardPickScreen({
                     <span className="mh-ph-medal relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-black/40">{trainingFace(currentSlot)}</span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <span className="rounded-full bg-amber-400 px-2 py-px text-[9px] font-black text-slate-900">いま強化する子</span>
+                        <span className="rounded-full bg-amber-400 px-2 py-px text-[9px] font-black text-slate-900">いま強化するモンスター</span>
                         <span className="text-[9px] font-black text-slate-400">{RANGE_LABELS[currentSlot]}距離</span>
                       </div>
                       {/* 320 で「モッチーのトレー…」と切れていた。2行まで出し、言葉の切れ目で折る(2026-10-27 ジン・WAVE の合間の見回り) */}
@@ -43004,7 +43007,7 @@ function RewardPickScreen({
               onClick={()=>{setTrainingPicks([]); handleTraining({revive:slotIdx});}}
               data-ph-kind="revive"
               className="mh-ph-frame w-full min-h-[44px] rounded-2xl border-2 px-3 text-left font-black text-emerald-200 active:scale-95 disabled:opacity-40">
-              <span className="block text-[12px] leading-tight">{slots?.[slotIdx]?.masuName||slots?.[slotIdx]?.name||`${slotIdx+1}番目の子`}を起こす<span className="text-[9px] font-black text-emerald-400/90">　このWAVEの強化はなし</span></span>
+              <span className="block text-[12px] leading-tight">{slots?.[slotIdx]?.masuName||slots?.[slotIdx]?.name||`${slotIdx+1}番目のモンスター`}を起こす<span className="text-[9px] font-black text-emerald-400/90">　このWAVEの強化はなし</span></span>
             </button>
           ))}
         </div>
@@ -44751,7 +44754,7 @@ const BattleUnitDetailBody = ({ side, status, chips = [], marks = null, debuffs 
       </div>
       <div data-unit-stat="apt" className="mt-1 text-[10px] font-black text-cyan-300">この枠の間合い適性 {apt >= 0 ? '+' : ''}{apt}%</div>
       {status.tactics
-        ? <>{list('own', 'この子にかかっている効果', [...(hasEx ? exRows : markRows), ...lineRows, ...own.map(chipRow)])}{list('team', '味方全員にかかっている効果', team.map(chipRow))}</>
+        ? <>{list('own', 'このモンスターにかかっている効果', [...(hasEx ? exRows : markRows), ...lineRows, ...own.map(chipRow)])}{list('team', '味方全員にかかっている効果', team.map(chipRow))}</>
         : list('team', 'かかっている効果(パーティ全体)', hasEx ? [...exRows, ...lineRows] : [...markRows, ...lineRows, ...own.map(chipRow), ...team.map(chipRow)])}
     </div>
   );
@@ -47590,7 +47593,7 @@ function BattleScreen({
                 <dt className="font-bold text-slate-400">使える回数</dt>
                 <dd data-tactics-ex-uses className="font-black text-white">{exPanel.remaining.unlimited?'無制限':`のこり ${exPanel.remaining.left} / ${exPanel.remaining.max}（${exPanel.def.usesPerWave?'このWAVE':'このラン'}）`}</dd>
                 <dt className="font-bold text-slate-400">カード</dt>
-                <dd data-tactics-ex-with-cards={exPanel.def.withCards?'yes':'no'} className="font-black text-white">{exPanel.def.withCards?'同じターンにこの子も通常カードを使える':'使ったターン、この子はカードを使えない（ほかの子は使える）'}</dd>
+                <dd data-tactics-ex-with-cards={exPanel.def.withCards?'yes':'no'} className="font-black text-white">{exPanel.def.withCards?'同じターンにこのモンスターも通常カードを使える':'使ったターン、このモンスターはカードを使えない（ほかのモンスターは使える）'}</dd>
                 {tacticsHateOn&&(()=>{const lv=tacticsHateExLevel(exPanel.def.effect,slots[exPanel.slot]?.id||null); return lv>0?<><dt className="font-bold text-slate-400">狙われやすさ</dt><dd data-tactics-ex-hate={lv} className="font-black text-orange-200">使うと{'🔥'.repeat(lv)} {TACTICS_HATE_LEVEL_LABELS[lv]}</dd></>:null;})()}
                 {exPanel.durationText&&<><dt className="font-bold text-slate-400">効果時間</dt><dd className="font-black text-white">{exPanel.durationText}</dd></>}
                 {exPanel.def.conditionText&&<><dt className="font-bold text-slate-400">条件</dt><dd className="font-black text-white">{exPanel.def.conditionText}</dd></>}
@@ -48027,7 +48030,7 @@ function MasuAutoEnhanceScreen({
               <div className="mt-2 text-[11px] font-bold leading-relaxed text-slate-300">
                 {settings.enabled
                   ? '強化ポイントが入るたびに、下の順番で上限まで自動で振ります。バトル・スキップ・合体・限界突破・転生のあと、AUTO∞の周回中も同じように働きます。'
-                  : 'OFFのあいだ、この子の強化ポイントは自動では振られません。'}
+                  : 'OFFのあいだ、このモンスターの強化ポイントは自動では振られません。'}
               </div>
               {settings.enabled&&awaitsReset&&(
                 <div className="mt-2 rounded-xl border border-cyan-400/60 bg-cyan-950/30 px-2.5 py-2 text-[11px] font-black text-cyan-200 leading-relaxed">
@@ -48058,7 +48061,7 @@ function MasuAutoEnhanceScreen({
               <button type="button" onClick={captureCurrent} className="min-h-[44px] rounded-xl bg-slate-800 border border-lime-400/40 text-lime-200 text-[11px] font-black active:scale-95 px-2 leading-tight">いまの値を<br/>目標として取り込む</button>
               <button type="button" onClick={clearAll} className="min-h-[44px] rounded-xl bg-slate-800 border border-white/10 text-slate-300 text-[11px] font-black active:scale-95 px-2 leading-tight">すべて<br/>「振らない」に戻す</button>
             </div>
-            <div className="text-[10px] text-slate-400 font-bold leading-relaxed px-1">「いまの値を目標として取り込む」は、この子のいまの数値をそのまま目標に写します。転生する前に押しておくと、転生後の周回で同じ数値まで自動で戻ります。</div>
+            <div className="text-[10px] text-slate-400 font-bold leading-relaxed px-1">「いまの値を目標として取り込む」は、このモンスターのいまの数値をそのまま目標に写します。転生する前に押しておくと、転生後の周回で同じ数値まで自動で戻ります。</div>
 
             {/* いま持っているポイントの行き先 */}
             <div className="rounded-2xl border border-lime-500/40 bg-black/30 p-3">
@@ -48624,7 +48627,7 @@ function OrihimeTraitLab() {
     setLog(kogare.rollsLeft <= 0 ? 'このターンはもう振れない' : r.confused ? '攻撃が当たった: 敵が「意味不明」になった' : '攻撃が当たった: 意味不明にはならなかった');
   };
   const share = () => { const [a, b] = bond.share ? shareOrihimeDamage(100) : [100, 0];
-    setLog(bond.share ? `100のダメージを分け合う: 受けた子${a}・相方${b}(被ダメ−${monsterCheckPct(bond.takenCut)}の前)` : '分け合いは間合いの差3のときだけ'); };
+    setLog(bond.share ? `100のダメージを分け合う: 受けたモンスター${a}・相方${b}(被ダメ−${monsterCheckPct(bond.takenCut)}の前)` : '分け合いは間合いの差3のときだけ'); };
   return (
     <div data-monster-check-trait-lab="Orihime" className="space-y-2 rounded-xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-2">
       <div className="text-center text-[10px] font-black text-fuchsia-200">勇者特性・EXを動かして見る(バトルには出ない)</div>
@@ -49545,8 +49548,8 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                   <dl data-friend-collection className="mt-2 grid grid-cols-2 gap-2">
                     {cell('マスモン', `${c.masu}体`, 'text-pink-200')}
                     {cell('図鑑', c.dexTotal > 0 ? `${c.dex} / ${c.dexTotal}` : `${c.dex}`, 'text-sky-200')}
-                    {cell('超越した子', `${c.transcended}体`, 'text-amber-200')}
-                    {cell('転生した子', `${c.reincarnated}体`, 'text-emerald-200')}
+                    {cell('超越したモンスター', `${c.transcended}体`, 'text-amber-200')}
+                    {cell('転生したモンスター', `${c.reincarnated}体`, 'text-emerald-200')}
                     {cell('アイコン', `${c.icons}個`, 'text-indigo-200')}
                     {cell('フレーム', `${c.frames}個`, 'text-indigo-200')}
                   </dl>);
@@ -53427,7 +53430,7 @@ function RhythmBuddyListSheet({ tab, settings, onChange, onTab, onClose }) {
             <section>
               <h4 className="mb-1.5 text-[11px] font-black text-slate-300">一緒に遊んだか</h4>
               <div className="grid grid-cols-3 gap-2">
-                {[{ id: 'all', label: 'すべて' }, { id: 'yes', label: '遊んだ子' }, { id: 'no', label: 'まだの子' }].map((opt) => (
+                {[{ id: 'all', label: 'すべて' }, { id: 'yes', label: '遊んだモンスター' }, { id: 'no', label: 'まだのモンスター' }].map((opt) => (
                   <button key={opt.id} type="button" onClick={() => onChange({ played: opt.id })} className={chip(settings.played === opt.id)}>{opt.label}</button>
                 ))}
               </div>
@@ -53627,7 +53630,7 @@ function MasuBeatScreen({ masuMons = [], songs = [], tickets = 0, onBack, backLa
       {/* 横画面は、根の直下の子を「左の列(見出し・説明・並べ替え)」と「右の列(スクロールする一覧)」へ振り分ける
           (index.html の [data-mh-screen]:has(> .mh-scroll))。一覧だけを右の列へ入れ、広く使う。
           以前は説明も並べ替えも一覧と同じ入れ物に入れて max-w-md にしたため、左の列が空いて右が狭く、文字や札が切れた */}
-      <ScreenHead title="マスモン一覧(モンヒロビート)" accent="text-lime-300" note="マスモン＝自分で育てた子。マルチに呼ぶと一緒に演奏する" wrapTitle onBack={detail ? () => setDetailId('') : onBack} backLabel={detail ? '一覧へ戻る' : backLabel} />
+      <ScreenHead title="マスモン一覧(モンヒロビート)" accent="text-lime-300" note="マスモン＝自分で育てたモンスター。マルチに呼ぶと一緒に演奏する" wrapTitle onBack={detail ? () => setDetailId('') : onBack} backLabel={detail ? '一覧へ戻る' : backLabel} />
       <section className="mb-2 shrink-0 rounded-2xl border border-lime-300/30 bg-slate-900/80 p-2.5">
         <RhythmBuddyAllowance freeLeft={freeLeft} tickets={tickets} className="text-slate-200" />
         <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>
@@ -54630,7 +54633,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
       <div key={r} className="relative min-w-0">
         <button type="button" data-raid-slot={r} data-raid-slot-active={active ? 'true' : undefined} onClick={() => { if (step === 'hero') { if (mon) { if (r !== heroRange) setPartnerRange(null); setHeroRange(r); } return; } if (step === 'teach') { setStep('hero'); return; } pickSlot(r); }}
           data-raid-slot-hero={isHero ? 'true' : undefined} disabled={step === 'hero' && !mon}
-          aria-label={step === 'party' ? (mon ? `${RANGE_LABELS[r]}距離の${mon.name}を外す` : `${RANGE_LABELS[r]}距離に置く子を選ぶ`) : (mon ? `${mon.name}を勇者モンにする` : `${RANGE_LABELS[r]}距離は空き`)}
+          aria-label={step === 'party' ? (mon ? `${RANGE_LABELS[r]}距離の${mon.name}を外す` : `${RANGE_LABELS[r]}距離に置くモンスターを選ぶ`) : (mon ? `${mon.name}を勇者モンにする` : `${RANGE_LABELS[r]}距離は空き`)}
           className={`flex w-full min-w-0 flex-col items-center rounded-xl border-2 p-1 ${mon ? 'pb-2.5' : ''} text-center active:scale-95 ${active ? 'border-orange-300 bg-orange-900/40 shadow-[0_0_10px_rgba(253,186,116,.55)]' : mon ? (isHero ? 'border-amber-300 bg-amber-900/50 shadow-[0_0_10px_rgba(252,211,77,.55)]' : heroPick ? 'border-amber-200/50 bg-sky-950/40' : 'border-sky-300/60 bg-sky-950/40') : 'border-dashed border-white/20 bg-slate-900/40'}`}>
           <span className="flex items-center gap-0.5">{rangeChip(r)}<span className="text-[9px] font-black text-slate-200">距離</span></span>
           {mon ? faceOf(mon, 'mt-0.5 h-10 w-10 [@media(max-height:640px)]:h-8 [@media(max-height:640px)]:w-8') : <span className={`mt-0.5 flex h-10 w-10 [@media(max-height:640px)]:h-8 [@media(max-height:640px)]:w-8 items-center justify-center rounded-full border border-dashed text-[16px] font-black ${active ? 'border-orange-200 text-orange-100' : 'border-white/25 text-slate-500'}`}>+</span>}
@@ -54643,10 +54646,10 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
       </div>
     );
   };
-  const guide = step === 'hero' ? (hero ? `${hero.name}が勇者モンです。ほかの子を押すと替えられます` : '勇者モンにする子を、上の枠から1体えらんでください')
-    : placedCount === 0 ? '好きな距離の枠を押してから、下の一覧で置く子をえらんでください(どの順でもOK)'
+  const guide = step === 'hero' ? (hero ? `${hero.name}が勇者モンです。ほかのモンスターを押すと替えられます` : '勇者モンにするモンスターを、上の枠から1体えらんでください')
+    : placedCount === 0 ? '好きな距離の枠を押してから、下の一覧で置くモンスターをえらんでください(どの順でもOK)'
     : Number.isInteger(pickRange) && placedCount < 4 ? `次は${RANGE_LABELS[pickRange]}距離(ほかの枠を押すとそこに置けます)。全部で${1 + RAID_JACK_ALLY_MAX}体まで`
-    : '置けました。枠を押すとその子を外せます。勇者モンは次でえらびます';
+    : '置けました。枠を押すとそのモンスターを外せます。勇者モンは次でえらびます';
   // ②の説明と、挑戦回数の説明。横向きの背の低い画面では、下の「詳しく」にたたんで出す(2026-10-28・844×390 で
   //   オリヒメの相方の行が増えたぶん、下の欄の高さがほぼ0になって読めなかった。ジン部長)
   const heroAboutText = '戦いの主役になる1体です。ちから・丈夫さは勇者モンをもとに、供モンのぶんが足されます。勇者モンを置いた距離から戦いが始まり、少しだけ狙われやすくなります(🔥)。';
@@ -54655,7 +54658,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
     // 一覧の流れる枠の外に置いて、画面の上に固定する(2026-10-19 社長「編成のとこは固定にしたほうが見やすいんじゃない？」)。
     // 背の低い端末(高さ640以下)は、説明の行を畳み・案内を1行にして、下の一覧が2行以上見える高さを残す
     <section className="mb-2 shrink-0 rounded-2xl border border-orange-300/30 bg-black/30 p-2 [@media(max-height:640px)]:mb-1 [@media(max-height:640px)]:py-1.5" data-raid-party>
-      <div className={`mb-1 flex flex-wrap items-baseline gap-x-1 text-[11px] font-black text-orange-200 ${step === 'hero' ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`}>いまの編成と距離<span className="text-[9px] font-normal text-slate-300 [@media(max-height:640px)]:hidden">%はその距離での適性(その距離に立つ子のぶんだけ効きます)</span></div>
+      <div className={`mb-1 flex flex-wrap items-baseline gap-x-1 text-[11px] font-black text-orange-200 ${step === 'hero' ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`}>いまの編成と距離<span className="text-[9px] font-normal text-slate-300 [@media(max-height:640px)]:hidden">%はその距離での適性(その距離に立つモンスターのぶんだけ効きます)</span></div>
       <div className="grid grid-cols-4 gap-1.5 pb-1.5 pt-1">{ranges.map((r) => slot(r))}</div>
       {/* 背の低い端末は2行まで(1行だと 320 で「…置く子をえ…」と切れた。2026-10-27 カゲあつくん) */}
       {step !== 'teach' && <div data-raid-guide title={guide} className={`mt-1.5 rounded-lg bg-orange-950/40 px-2 py-1 text-[10px] font-bold text-orange-100 [@media(max-height:640px)]:mt-1 [@media(max-height:640px)]:line-clamp-2 [@media(max-height:640px)]:py-0.5 [@media(max-height:640px)]:leading-snug ${step === 'hero' ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`} style={JA_LABEL_STYLE}>{jaWrap(guide)}</div>}
@@ -54705,8 +54708,8 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
         {step === 'hero' && heroIsOrihime && (
         <section className="rounded-2xl border border-sky-300/40 bg-sky-950/30 p-3 text-[10px] leading-relaxed text-slate-200 [@media(max-height:640px)]:hidden" data-raid-orihime-partner>
           <div className="mb-1 text-[11px] font-black text-sky-200">🎐 相方をえらぶ(天河の契り)</div>
-          <div className="mb-1.5" style={JA_WRAP_STYLE}>{jaWrap(`上の「🎐相方」で、${hero.masuName || hero.name}の相方を1体えらびます。相方との距離の差(1〜3)で効き目が変わります。えらばなければ、いちばん近い子が相方になります。`)}</div>
-          {!Number.isInteger(partnerIdx) && <div className="text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('ほかの距離にも子を置くと、相方をえらべます。')}</div>}
+          <div className="mb-1.5" style={JA_WRAP_STYLE}>{jaWrap(`上の「🎐相方」で、${hero.masuName || hero.name}の相方を1体えらびます。相方との距離の差(1〜3)で効き目が変わります。えらばなければ、いちばん近いモンスターが相方になります。`)}</div>
+          {!Number.isInteger(partnerIdx) && <div className="text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('ほかの距離にもモンスターを置くと、相方をえらべます。')}</div>}
           {Number.isInteger(partnerIdx) && <div className="mt-1 text-[9px] text-sky-100">{partnerChosen ? '相方' : '相方(自動)'}: {slotMons[partnerIdx].masuName || slotMons[partnerIdx].name}・距離の差 {Math.abs(partnerIdx - heroIdx)}</div>}
         </section>
         )}
@@ -54741,7 +54744,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
         {step === 'party' ? (
           <button type="button" data-raid-prep-next disabled={placedCount === 0} onClick={() => setStep('hero')}
             className="w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
-            {placedCount > 0 ? '次へ(勇者モンをえらぶ)' : '距離に子を置いてください'}
+            {placedCount > 0 ? '次へ(勇者モンをえらぶ)' : '距離にモンスターを置いてください'}
           </button>
         ) : (
           <div className="flex gap-2">
@@ -58186,16 +58189,16 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   // ---------- 条件 ----------
   { id: 'any', cat: 'cond', sec: '標的', name: 'いつでも', tiers: [['', 'N']], start: [''], desc: 'いつも当たる' },
   { id: 'ko', cat: 'cond', sec: '標的', name: '倒せる相手', tiers: [['', 'N']], start: [''], desc: '出せる技で倒せる相手を標的にする' },
-  { id: 'lowest', cat: 'cond', sec: '標的', name: 'いちばんライフの低い相手', tiers: [['', 'N']], desc: '残りライフがいちばん少ない子' },
-  { id: 'highest', cat: 'cond', sec: '標的', name: 'いちばんライフの高い相手', tiers: [['', 'N']], desc: '残りライフがいちばん多い子' },
-  { id: 'strongest', cat: 'cond', sec: '標的', name: 'いちばん攻撃の強い相手', tiers: [['', 'R']], desc: 'その子が使える技の最大ダメージで見積もる(手札は見ない)' },
-  { id: 'attacker', cat: 'cond', sec: '標的', name: '前の番に攻撃してきた相手', tiers: [['', 'R']], desc: '直前の相手の番に攻撃してきた子' },
-  { id: 'leader', cat: 'cond', sec: '標的', name: '相手のリーダー', tiers: [['', 'R']], desc: '相手が1体目に置いた子' },
-  { id: 'type', cat: 'cond', sec: '標的', name: '◯の相手', tiers: [['地上', 'N'], ['空中', 'N'], ['水中', 'N']], desc: 'その特徴の子' },
-  { id: 'blood', cat: 'cond', sec: '標的', name: '◯の相手', tiers: [['純血', 'N'], ['混血', 'N']], desc: 'その血の子' },
+  { id: 'lowest', cat: 'cond', sec: '標的', name: 'いちばんライフの低い相手', tiers: [['', 'N']], desc: '残りライフがいちばん少ないモンスター' },
+  { id: 'highest', cat: 'cond', sec: '標的', name: 'いちばんライフの高い相手', tiers: [['', 'N']], desc: '残りライフがいちばん多いモンスター' },
+  { id: 'strongest', cat: 'cond', sec: '標的', name: 'いちばん攻撃の強い相手', tiers: [['', 'R']], desc: 'そのモンスターが使える技の最大ダメージで見積もる(手札は見ない)' },
+  { id: 'attacker', cat: 'cond', sec: '標的', name: '前の番に攻撃してきた相手', tiers: [['', 'R']], desc: '直前の相手の番に攻撃してきたモンスター' },
+  { id: 'leader', cat: 'cond', sec: '標的', name: '相手のリーダー', tiers: [['', 'R']], desc: '相手が1体目に置いたモンスター' },
+  { id: 'type', cat: 'cond', sec: '標的', name: '◯の相手', tiers: [['地上', 'N'], ['空中', 'N'], ['水中', 'N']], desc: 'その特徴のモンスター' },
+  { id: 'blood', cat: 'cond', sec: '標的', name: '◯の相手', tiers: [['純血', 'N'], ['混血', 'N']], desc: 'その血のモンスター' },
   { id: 'species', cat: 'cond', sec: '標的', name: '種族を決めた相手', tiers: [['', 'R']], desc: '組むときに種族を1つ選ぶ(1枚で全種族)' },
-  { id: 'foeLife', cat: 'cond', sec: 'ライフ', name: '相手のライフ◯%以下', tiers: CARD_TACTIC_LIFE.map((v) => [v, cardTacticFine([80, 60, 40, 20])(v)]), start: [50], desc: 'その割合以下の相手の子を標的にする' },
-  { id: 'myLife', cat: 'cond', sec: 'ライフ', name: '自分のライフ◯%以下', tiers: CARD_TACTIC_LIFE.map((v) => [v, cardTacticFine([80, 60, 40, 20])(v)]), desc: 'その割合以下の自分の子がいる(守る相手にする)' },
+  { id: 'foeLife', cat: 'cond', sec: 'ライフ', name: '相手のライフ◯%以下', tiers: CARD_TACTIC_LIFE.map((v) => [v, cardTacticFine([80, 60, 40, 20])(v)]), start: [50], desc: 'その割合以下の相手のモンスターを標的にする' },
+  { id: 'myLife', cat: 'cond', sec: 'ライフ', name: '自分のライフ◯%以下', tiers: CARD_TACTIC_LIFE.map((v) => [v, cardTacticFine([80, 60, 40, 20])(v)]), desc: 'その割合以下の自分のモンスターがいる(守る相手にする)' },
   { id: 'myGuts', cat: 'cond', sec: 'ガッツ', name: '自分のガッツ◯以上', tiers: [1, 2, 3, 4, 5, 6, 7].map((v) => [v, cardTacticFine([2, 4, 6])(v)]), start: [3], desc: '自分のガッツがその数以上' },
   { id: 'foeGutsLe', cat: 'cond', sec: 'ガッツ', name: '相手のガッツ◯以下', tiers: [0, 1, 2, 3, 4].map((v) => [v, cardTacticFine([1, 3])(v)]), desc: '相手のガッツがその数以下' },
   { id: 'foeGutsGe', cat: 'cond', sec: 'ガッツ', name: '相手のガッツ◯以上', tiers: [3, 4, 5, 6, 7].map((v) => [v, cardTacticFine([4, 6])(v)]), desc: '相手のガッツがその数以上(大技に備える)' },
@@ -58214,9 +58217,9 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   { id: 'myAlive', cat: 'cond', sec: '場', name: '自分の場が◯体', tiers: [[1, 'R'], [2, 'N'], [3, 'N']], desc: '自分の場に残っている数' },
   { id: 'foeAlive', cat: 'cond', sec: '場', name: '相手の場が◯体', tiers: [[1, 'R'], [2, 'N'], [3, 'N']], desc: '相手の場に残っている数' },
   { id: 'koDiff', cat: 'cond', sec: '場', name: '倒した数で◯ている', tiers: [['勝っ', 'N'], ['負け', 'N']], desc: '倒した数と倒された数をくらべる' },
-  { id: 'foeStun', cat: 'cond', sec: '状態', name: '攻撃できない相手', tiers: [['', 'R']], desc: '封じられて次の番に攻撃できない相手の子' },
-  { id: 'myStun', cat: 'cond', sec: '状態', name: '攻撃できない味方', tiers: [['', 'N']], desc: '封じられている自分の子がいる' },
-  { id: 'foeCharge', cat: 'cond', sec: '状態', name: '溜めている相手', tiers: [['', 'R']], desc: '次の技が何倍にもなる相手の子' },
+  { id: 'foeStun', cat: 'cond', sec: '状態', name: '攻撃できない相手', tiers: [['', 'R']], desc: '封じられて次の番に攻撃できない相手のモンスター' },
+  { id: 'myStun', cat: 'cond', sec: '状態', name: '攻撃できない味方', tiers: [['', 'N']], desc: '封じられている自分のモンスターがいる' },
+  { id: 'foeCharge', cat: 'cond', sec: '状態', name: '溜めている相手', tiers: [['', 'R']], desc: '次の技が何倍にもなる相手のモンスター' },
   { id: 'foeAir', cat: 'cond', sec: '状態', name: '空中に上がった相手', tiers: [['', 'N']], desc: 'いま空中になっている子(もとは地上・水中)' },
   { id: 'field', cat: 'cond', sec: '状態', name: '場に◯全体カードがある', tiers: [['自分の', 'N'], ['相手の', 'N']], desc: 'だれが出した全体カードが場にあるか' },
   { id: 'foeBig', cat: 'cond', sec: '状態', name: '相手が大技を構えている', tiers: [['', 'SR']], desc: '相手のガッツと使える技から、大技を撃てそうと見積もる' },
@@ -58225,13 +58228,13 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   { id: 'breederUnused', cat: 'cond', sec: 'ブリーダー向き', name: 'この番まだブリーダーのカードを使っていない', tiers: [['', 'N']], desc: 'この番に、まだブリーダーのカードを出していない' },
   { id: 'myGutsLe', cat: 'cond', sec: 'ブリーダー向き', name: '自分のガッツ◯以下', tiers: [0, 1, 2, 3].map((v) => [v, 'N']), desc: '自分のガッツがその数以下' },
   { id: 'myDiscard', cat: 'cond', sec: 'ブリーダー向き', name: '捨て札◯枚以上', tiers: [[10, 'N'], [20, 'R']], desc: '自分の捨て札がその数以上' },
-  { id: 'myKo', cat: 'cond', sec: 'ブリーダー向き', name: '倒れた味方がいる', tiers: [['', 'N']], desc: '自分の子が1体でも倒れている' },
+  { id: 'myKo', cat: 'cond', sec: 'ブリーダー向き', name: '倒れた味方がいる', tiers: [['', 'N']], desc: '自分のモンスターが1体でも倒れている' },
   { id: 'noField', cat: 'cond', sec: 'ブリーダー向き', name: '場に全体カードが無い', tiers: [['', 'N']], desc: 'どちらの全体カードも場に無い' },
-  { id: 'selfLife', cat: 'cond', sec: 'このモンスター', name: 'この子のライフ◯%以下', tiers: CARD_TACTIC_LIFE.map((v) => [v, cardTacticFine([80, 60, 40, 20])(v)]), desc: 'その枠の子のライフがその割合以下(モンスターの枠だけ)' },
-  { id: 'selfFresh', cat: 'cond', sec: 'このモンスター', name: 'この子がまだ攻撃していない', tiers: [['', 'N']], desc: 'この番に、その枠の子がまだ攻撃していない' },
-  { id: 'selfType', cat: 'cond', sec: 'このモンスター', name: 'この子が◯', tiers: [['地上', 'N'], ['空中', 'N'], ['水中', 'N']], desc: 'その枠の子のいまの特徴' },
-  { id: 'selfStun', cat: 'cond', sec: 'このモンスター', name: 'この子が攻撃できない', tiers: [['', 'N']], desc: 'その枠の子が封じられている' },
-  { id: 'selfAdv', cat: 'cond', sec: 'このモンスター', name: 'この子が有利な相手がいる', tiers: [['', 'R']], desc: 'その枠の子の手札の技が倍になる相手がいる(その相手を標的にする)' },
+  { id: 'selfLife', cat: 'cond', sec: 'このモンスター', name: 'このモンスターのライフ◯%以下', tiers: CARD_TACTIC_LIFE.map((v) => [v, cardTacticFine([80, 60, 40, 20])(v)]), desc: 'その枠のモンスターのライフがその割合以下(モンスターの枠だけ)' },
+  { id: 'selfFresh', cat: 'cond', sec: 'このモンスター', name: 'このモンスターがまだ攻撃していない', tiers: [['', 'N']], desc: 'この番に、その枠のモンスターがまだ攻撃していない' },
+  { id: 'selfType', cat: 'cond', sec: 'このモンスター', name: 'このモンスターが◯', tiers: [['地上', 'N'], ['空中', 'N'], ['水中', 'N']], desc: 'その枠のモンスターのいまの特徴' },
+  { id: 'selfStun', cat: 'cond', sec: 'このモンスター', name: 'このモンスターが攻撃できない', tiers: [['', 'N']], desc: 'その枠のモンスターが封じられている' },
+  { id: 'selfAdv', cat: 'cond', sec: 'このモンスター', name: 'このモンスターが有利な相手がいる', tiers: [['', 'R']], desc: 'その枠のモンスターの手札の技が倍になる相手がいる(その相手を標的にする)' },
   { id: 'incoming', cat: 'cond', sec: '守るとき', name: '受けるダメージ◯以上', tiers: [[3, 'N'], [5, 'N'], [7, 'N'], [10, 'R']], desc: '受ける攻撃の見込みがその数以上(守るときだけ)' },
   { id: 'incomingKo', cat: 'cond', sec: '守るとき', name: '受けると倒れる', tiers: [['', 'N']], desc: '守らないと倒れる攻撃(守るときだけ)' },
   { id: 'incomingArea', cat: 'cond', sec: '守るとき', name: '全体攻撃を受けた', tiers: [['', 'R']], desc: '全員に当たる攻撃を受けている(守るときだけ)' },
@@ -58243,7 +58246,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   { id: 'tDisrupt', cat: 'base', sec: '基本', name: '崩し型', tiers: [['', 'N']], habit: 'momosuke', desc: '相手の手を崩す(ももすけの型)' },
   { id: 'tBig', cat: 'base', sec: '基本', name: '大技型', tiers: [['', 'R']], mul: { big: 1.6 }, desc: 'ダメージの大きい技を選ぶ' },
   { id: 'tArea', cat: 'base', sec: '基本', name: '全体型', tiers: [['', 'R']], mul: { area: 1.6 }, knob: { areaMin2: true }, desc: '全体攻撃・全体カードを選ぶ' },
-  { id: 'tFinish', cat: 'base', sec: '基本', name: '仕留め型', tiers: [['', 'R']], mul: { finish: 1.6 }, desc: 'あと少しで倒せる子を先に狙う' },
+  { id: 'tFinish', cat: 'base', sec: '基本', name: '仕留め型', tiers: [['', 'R']], mul: { finish: 1.6 }, desc: 'あと少しで倒せるモンスターを先に狙う' },
   { id: 'tRush', cat: 'base', sec: '基本', name: '速攻型', tiers: [['', 'R']], mul: { attack: 1.6, big: 0.7 }, knob: { light: true }, desc: '軽い技で手数を出す' },
   { id: 'tSteady', cat: 'base', sec: '基本', name: '堅実型', tiers: [['', 'R']], mul: { keepGuard: 1.3, saveGuts: 1.3, attack: 0.8 }, knob: { safe: true }, desc: '守りとガッツを残して、無理をしない' },
   { id: 'tJam', cat: 'base', sec: '基本', name: 'かく乱守り型', tiers: [['', 'R']], mul: { disrupt: 1.3, keepGuard: 1.3 }, desc: '崩しながら守る' },
@@ -58265,8 +58268,8 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   { id: 'attach', cat: 'monster', sec: '攻撃', phase: 'attack', name: '付ける札を使う', tiers: [['', 'R']], desc: '技に付ける札をいっしょに出す' },
   { id: 'attachKind', cat: 'monster', sec: '攻撃', phase: 'attack', name: '付ける札: ◯', tiers: [['ダメージを上げる', 'N'], ['回避させない', 'R'], ['ガッツを軽くする', 'N']], desc: 'その効き目の付ける札を、技にいっしょに出す' },
   { id: 'spe', cat: 'monster', sec: '特殊技', phase: 'attack', name: '特殊技: ◯', tiers: [['味方を回復', 'N'], ['引く', 'N'], ['空中になる', 'N'], ['安全になる', 'R'], ['まゆと羽化', 'R'], ['のりうつる', 'SR']], desc: 'その効き目の特殊技を出す' },
-  { id: 'stance', cat: 'monster', sec: '立ち回り', phase: 'attack', name: '立ち回り: ◯', tiers: [['この子から攻める', 'N'], ['この子は攻撃しない', 'N'], ['ライフの多い子が先に', 'R'], ['ライフの少ない子は温存', 'R'], ['攻撃は1回だけ', 'N'], ['何回でも攻める', 'SR']], desc: 'その子の前に出る・下がるを決める' },
-  { id: 'bEff', cat: 'breeder', sec: 'ブリーダーのカード', phase: 'attack', name: 'ブリーダー: ◯', tiers: [['回復する', 'N'], ['倒れた子を戻す', 'R'], ['攻撃できないを消す', 'N'], ['相手を攻撃できなくする', 'R'], ['相手のガッツを減らす', 'N'], ['両方のガッツを0にする', 'SR'],
+  { id: 'stance', cat: 'monster', sec: '立ち回り', phase: 'attack', name: '立ち回り: ◯', tiers: [['この子から攻める', 'N'], ['このモンスターは攻撃しない', 'N'], ['ライフの多いモンスターが先に', 'R'], ['ライフの少ないモンスターは温存', 'R'], ['攻撃は1回だけ', 'N'], ['何回でも攻める', 'SR']], desc: 'そのモンスターの前に出る・下がるを決める' },
+  { id: 'bEff', cat: 'breeder', sec: 'ブリーダーのカード', phase: 'attack', name: 'ブリーダー: ◯', tiers: [['回復する', 'N'], ['倒れたモンスターを戻す', 'R'], ['攻撃できないを消す', 'N'], ['相手を攻撃できなくする', 'R'], ['相手のガッツを減らす', 'N'], ['両方のガッツを0にする', 'SR'],
     ['山札からガッツへ', 'N'], ['カードを引く', 'N'], ['捨て札から拾う', 'N'], ['手札を引き直す', 'N'], ['もう1回攻撃させる', 'R'], ['合体する', 'SR'], ['付ける札をただにする', 'N'], ['守りを名指しで封じる', 'R'], ['捨て札を山札に戻す', 'N'], ['小さく攻撃する', 'N']], desc: 'その効き目のブリーダーのカードを出す' },
   { id: 'fieldCard', cat: 'breeder', sec: 'ブリーダー', phase: 'attack', name: '全体カードを出す', tiers: [['', 'R']], desc: '場に残る全体カードを出す' },
   { id: 'fieldKind', cat: 'breeder', sec: '全体カード', phase: 'attack', name: '全体カード: ◯', tiers: [['ダメージを足す', 'N'], ['払うガッツを変える', 'N'], ['大きいダメージを封じる', 'R'], ['山札を削る', 'N'], ['純血のプライド', 'N'], ['技の種類を封じる', 'SR'],
@@ -58873,10 +58876,10 @@ const cardTacticRowAct = (db, st, policy, phase, row, aim, ctx) => {
       if (!m) return null;
       const alive = me.mons.filter((x) => !x.ko);
       const v = act.v;
-      if (v === 'この子は攻撃しない') { ctx.skip.add(mi); return null; }
-      if (v === 'ライフの少ない子は温存') { if (alive.length > 1 && m.life === Math.min(...alive.map((x) => x.life))) ctx.skip.add(mi); return null; }
+      if (v === 'このモンスターは攻撃しない') { ctx.skip.add(mi); return null; }
+      if (v === 'ライフの少ないモンスターは温存') { if (alive.length > 1 && m.life === Math.min(...alive.map((x) => x.life))) ctx.skip.add(mi); return null; }
       if (v === '攻撃は1回だけ') { if (m.attacks > 0) { ctx.skip.add(mi); return null; } return pickBest(mine); }
-      if (v === 'ライフの多い子が先に') return m.life === Math.max(...alive.map((x) => x.life)) ? pickBest(mine) : null;
+      if (v === 'ライフの多いモンスターが先に') return m.life === Math.max(...alive.map((x) => x.life)) ? pickBest(mine) : null;
       if (v === '何回でも攻める') return pickBest(mine, -1); // 点数が少し低い手でも出す
       return pickBest(mine); // この子から攻める
     }
@@ -59380,9 +59383,9 @@ const CARD_BATTLE_LINES = Object.freeze({
     start: ['いっくよー！ 先に攻めたもん勝ちぢゃんｗ', 'よろしくね！ あたし、ガンガンいっちゃうよ♪', 'ﾜｸﾜｸ…！ 最初の一手、決めちゃお！', 'まぢ燃えてきた！ 楽しくいこ！'],
     big: ['これでどーだ！ 大技いっちゃうよ♪', 'ためたガッツ、ぜんぶ乗せぢゃんｗ', 'まとめていっけぇー！', 'ここで決めるよ！ 覚悟しててね♪'],
     bigHit: ['いったぁ…！ 今のはまぢ効いた…', 'えっ、そんなに削れるの！？ やばすぎｗ', 'うわー！ でもまだまだいけるよ！', 'ぐぬ…！ 次はあたしの番だかんね！'],
-    guardMine: ['よけたー！ あたしの子、すばしっこいでしょ♪', 'セーフ！ 読んでたもんね〜ｗ', '守りもバッチリぢゃん！'],
+    guardMine: ['よけたー！ あたしのモンスター、すばしっこいでしょ♪', 'セーフ！ 読んでたもんね〜ｗ', '守りもバッチリぢゃん！'],
     guardTheirs: ['えー！ よけられた！？ うまっ！', 'むぅ、守られちゃった…次は当てるよ！', 'そうくるかー！ やるぢゃんｗ'],
-    myKo: ['あぁっ、倒れちゃった…！ ありがと、休んでて！', 'うそー！ まだ残りの子がいるもん！', 'くやしい…！ でも、ここから巻き返すよ！'],
+    myKo: ['あぁっ、倒れちゃった…！ ありがと、休んでて！', 'うそー！ まだ残りのモンスターがいるもん！', 'くやしい…！ でも、ここから巻き返すよ！'],
     theirKo: ['やったー！ 1体倒したよ♪', 'よっしゃ！ この調子でいこ！', '決まったー！ ﾄﾞﾔｧ'],
     lastMine: ['あと1体…！ でもあたし、あきらめないよ！', 'ピンチすぎる…！ ここからが本番ぢゃんｗ'],
     lastTheirs: ['あと1体だね！ 一気にいっちゃうよ♪', 'ラストスパート！ 最後まで全力でいこ！'],
@@ -59411,10 +59414,10 @@ const CARD_BATTLE_LINES = Object.freeze({
     challenge: ['カードでももに勝てると思ってる？w', 'いいよ、相手してあげる♡ 泣いても知らないよ？', '手札、ぜーんぶ見えちゃうかもよ？w', 'ももと勝負！？ 楽しませてよね♡'],
     start: ['さ、どこからいじってあげよっかな〜w', '先に言っとくけど、ももはずるいよ？♡', 'よろしくー！ すぐ終わっちゃったらごめんねw', 'ガッツ、ためすぎないほうがいいよ？ 理由はあとでね♡'],
     big: ['はい、どーん！！ これは痛いでしょw', 'とっておき出しちゃう♡', 'まとめてやっちゃうよー！！', 'ここで本気出すの、ずるくない？ ももは出すけどw'],
-    bigHit: ['まって、痛すぎるんだけど！！', 'えっ、今のなに！？ すご…', 'ちょ、ももの子になにしてくれてんの！！', 'むかつく〜！ でも今のはうまかったw'],
+    bigHit: ['まって、痛すぎるんだけど！！', 'えっ、今のなに！？ すご…', 'ちょ、もものモンスターになにしてくれてんの！！', 'むかつく〜！ でも今のはうまかったw'],
     guardMine: ['残念でした〜♡ 当たらないよw', 'それ、読めてたよ？ww', 'はいセーフ！！ ももの勝ち〜'],
     guardTheirs: ['は！？ よけるのずるい！！', 'まって、それ持ってたの！？', 'むぅ…やるじゃん。ちょっとだけね'],
-    myKo: ['えー！！ ももの子がー！！', 'やられた…覚えときなよ？w', 'ありがとね。あとはももがなんとかする！'],
+    myKo: ['えー！！ もものモンスターがー！！', 'やられた…覚えときなよ？w', 'ありがとね。あとはももがなんとかする！'],
     theirKo: ['1体いただき〜♡', 'はい、いっちょあがり！！w', 'よわよわじゃん？ なーんてね、次いくよ！'],
     lastMine: ['残り1体…でもここから逆転するのがももだから！！', 'まって、ピンチじゃん…！ 本気出す'],
     lastTheirs: ['あと1体だね〜♡ どうする？w', 'もう逃げられないよ？ ふふっ'],
@@ -59706,7 +59709,7 @@ const CARD_VS_LINES = Object.freeze({
     easy: { e: 'happy', t: 'きょうはゆるっと遊ぼ♪ でも攻めるのはやめないよ！' },
     normal: { e: 'wink', t: '先に攻めたもん勝ちぢゃん！ いっくよー！' },
     hard: { e: 'excited', t: 'まぢでガンガンいくから、ついてきてね！' },
-    expert: { e: 'excited', t: '全部の弾から選んだ子たちだよ！ 本気ダッシュぢゃん！' },
+    expert: { e: 'excited', t: '全部の弾から選んだモンスターたちだよ！ 本気ダッシュぢゃん！' },
     master: { e: 'wink', t: 'いちばん強い組み合わせで来たよ。止めてみなよ？' },
   },
   momosuke: {
@@ -60004,7 +60007,7 @@ const CARD_TUTORIAL_LINES = Object.freeze({
   M2: 'じゃあ次はあたしの番ね！ いっくよー！',
   M3: 'これでどーだ！',
   D9: 'みゅあが攻めてきたぞ。相手のターンでも、回避か防御のカードで守れるんだ',
-  D10: '光ってる「ステップ」をタップか、狙われたピクシーまで運んでみな。守りのカードは、狙われた子のぶん(か、誰でも使えるもの)だけ使えるからな',
+  D10: '光ってる「ステップ」をタップか、狙われたピクシーまで運んでみな。守りのカードは、狙われたモンスターのぶん(か、誰でも使えるもの)だけ使えるからな',
   // D10b … ステップを選んだあと、「これで守る」で決める前(2026-10-26 巡回 → 社長が文をOK。84 が D10 のかわりに出す)
   D10b: 'よし、それでいい。最後に光ってる「これで守る」を押して決めな',
   M4: 'えー！ よけられた！？ うまっ！ｗ',
@@ -63206,7 +63209,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {wide && tutorBox}
       {wide && replayFoeHand}
       {/* 練習試合で、いまタップ(か運ぶ)カードの上に出す案内 */}
-      {tutorial && tutFocus.hand.length > 0 && <div data-card-tutor-arrow className="mx-auto mb-1 shrink-0 animate-bounce rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900" style={JA_LABEL_STYLE}>👇 {jaWrap(mode === 'guts' ? 'タップでガッツに(ガッツへ運んでもOK)' : mode === 'guard' ? 'タップで守る(狙われた子へ運んでもOK)' : 'タップ → 相手をタップ(相手へ運んでもOK)')}</div>}
+      {tutorial && tutFocus.hand.length > 0 && <div data-card-tutor-arrow className="mx-auto mb-1 shrink-0 animate-bounce rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900" style={JA_LABEL_STYLE}>👇 {jaWrap(mode === 'guts' ? 'タップでガッツに(ガッツへ運んでもOK)' : mode === 'guard' ? 'タップで守る(狙われたモンスターへ運んでもOK)' : 'タップ → 相手をタップ(相手へ運んでもOK)')}</div>}
       {/* 守れるカードが無いときは、下の理由の1行だけにする(「使える回避・防御はありません」と2回言っていた。2026-10-27 カゲあつくん) */}
       {guide && !tutorial && !(mode === 'guard' && !guardOpts.length && !hint) && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap(hint || guide)}</div>}
       {/* 練習試合で回避を選んだあと(あとは「これで守る」で決めるだけ)。前は「手札に回避・防御のカードがありません」と出て、次に押す所が分かりにくかった(2026-10-26 巡回 → 社長が文をOK) */}
@@ -65727,7 +65730,7 @@ const CARD_DEX_PACK_TONE = Object.freeze({ 1: 'bg-amber-600', 2: 'bg-emerald-600
 const CARD_DEX_UNIT = Object.freeze({ pack: 'このパック', species: 'この血統', sub: 'このサブ血統', kind: 'この種類' });
 // サブ血統別の見出し: 純血(主も副もこの血統)・混血(副血統がこの血統。主血統はちがう)
 //   副血統が ？？？ の子は、めずらしい種(レア)という意味(2026-10-30 社長)
-const cardDexSubHead = (k, label, tab) => (k === 'pure' ? `純血(主も副も${label})` : tab === 'unknown' ? '副血統が ？？？ の子は、めずらしい種(レア)です' : `混血(副血統が${label})`);
+const cardDexSubHead = (k, label, tab) => (k === 'pure' ? `純血(主も副も${label})` : tab === 'unknown' ? '副血統が ？？？ のモンスターは、めずらしい種(レア)です' : `混血(副血統が${label})`);
 const CardDex = ({ db, collection, onBack }) => {
   const [mode, setMode] = useState('pack');
   const [tabs, setTabs] = useState({ pack: '1', species: CARD_PACKS[0].species[0], sub: CARD_PACKS[0].species[0], kind: 'mon' });
@@ -72221,7 +72224,7 @@ const CardTacticRow = ({ db, row, i, n, onChange, onMove, onRemove, onPickC, onP
 // おまかせで埋める行(持っているカードだけ。上から順に、空いている行へ)
 const CARD_TACTIC_AUTO = Object.freeze({
   monster: [['ko', 'atk'], ['myLife.30', 'guardDie'], ['myGuts.5', 'cost.大技(4以上)'], ['foeLife.50', 'atk'], ['any', 'guard']],
-  breeder: [['any', 'save'], ['foeAlive.3', 'fieldCard'], ['myKo', 'bEff.倒れた子を戻す']],
+  breeder: [['any', 'save'], ['foeAlive.3', 'fieldCard'], ['myKo', 'bEff.倒れたモンスターを戻す']],
 });
 const cardTacticAutoFill = (t, rows, cat, max) => {
   const out = rows.slice();
@@ -85392,7 +85395,7 @@ function MonsterHeroGame() {
       return { ok:true, count:result.count, stopReason:result.stopReason };
     } catch {
       reincarnateProcessingRef.current=false;
-      setReincarnateError('転生データを保存できませんでした。どの子も転生していません。もう一度お試しください。');
+      setReincarnateError('転生データを保存できませんでした。どのモンスターも転生していません。もう一度お試しください。');
       return { ok:false };
     }
   };
@@ -88007,17 +88010,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // 「あといくら足りないか」がいちばん小さい子を、理由の文に出す
       if(!best||left-need>best.left-best.need) best={name:mon.masuName||mon.name,left,need};
     });
-    if(!owner) return { ok:false, kind:'none', short:'使えない', why:'この技を使える子が編成にいない' };
+    if(!owner) return { ok:false, kind:'none', short:'使えない', why:'この技を使えるモンスターが編成にいない' };
     if(alive===0) return { ok:false, kind:'down', short:'ダウン', why:card.type==='unique'
       ? `この技を使う ${owner.masuName||owner.name} が倒れている`
-      : 'カードを使える子が全員倒れている' };
+      : 'カードを使えるモンスターが全員倒れている' };
     // 使える子が全員「併用できないEXを使った子」だけだったとき
     if(!best&&exLocked>0) return { ok:false, kind:'ex', short:'EX使用', why:card.type==='unique'
       ? `この技を使う ${owner.masuName||owner.name} は、このターンEXスキルを使ったのでカードを使えない`
-      : 'このターンEXスキルを使った子はカードを使えない。ほかに使える子がいない' };
+      : 'このターンEXスキルを使ったモンスターはカードを使えない。ほかに使えるモンスターがいない' };
     if(best) return { ok:false, kind:'guts', short:'ガッツ不足',
-      why:`どの子もガッツが足りない（いちばん近いのは ${best.name} で ⚡${best.left}、必要なのは ⚡${best.need}）` };
-    return { ok:false, kind:'uses', short:'枚数上限', why:'このターン、攻撃カードを出せる子がもう残っていない' };
+      why:`どのモンスターもガッツが足りない（いちばん近いのは ${best.name} で ⚡${best.left}、必要なのは ⚡${best.need}）` };
+    return { ok:false, kind:'uses', short:'枚数上限', why:'このターン、攻撃カードを出せるモンスターがもう残っていない' };
   };
   // カード選択(タップ/ドラッグ共通)。
   // showDetail=false はスワイプ(ドラッグ)で置いたとき。カード効果のパネルが出たままだと
@@ -88180,7 +88183,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const CARD_SCOPE_TONE = { '単体':'border-sky-400/60 bg-sky-500/20 text-sky-200',
     '全体':'border-violet-400/60 bg-violet-500/20 text-violet-200',
     '敵へ':'border-slate-400/60 bg-slate-500/20 text-slate-200' };
-  const CARD_SCOPE_NOTE = { '単体':'置いた子だけに効きます', '全体':'立っている味方ぜんぶに効きます', '敵へ':'置いた子のちからで殴ります' };
+  const CARD_SCOPE_NOTE = { '単体':'置いた子だけに効きます', '全体':'立っている味方ぜんぶに効きます', '敵へ':'置いたモンスターのちからで殴ります' };
   const cardEffectMultiplier = (card, halved=false) => {
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     return isAssistCard(card)&&specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty,'assistCardEffect') : (halved?0.5:1);
@@ -89846,7 +89849,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // EXTREMEでは消費量・枚数でなく、教えカードから発生する効果量だけを半減する。
       const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
       const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect'):(halved?0.5:1);
-      if(halved) addPopup(isTacticsMode(runMode)?'同じ子の2枚目 効果半減':'2枚目以降 効果半減','hero','text-slate-300 text-sm font-black');
+      if(halved) addPopup(isTacticsMode(runMode)?'同じモンスターの2枚目 効果半減':'2枚目以降 効果半減','hero','text-slate-300 text-sm font-black');
       const slotIdx=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
       lastType=card.type;
       // ★パンドラの箱の「強化ダイスキライライ」(2026-10-06): 箱のあいだにパンドラが固有技を使うと、威力アップ・悪魔の追加連撃(getDmg・連撃側で掛かる)に加えて、
@@ -92811,7 +92814,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     //   どの画面でも両方をモードの印つきで出す(マーケットはモードが無いので、片方だけだと分からない。2026-11-05 社長の指摘・きゅうこ・ソラシドも両方書く)
     if(t.id==='erubin'){
       const tier=ERUBIN_TIERS[Math.min(level,ERUBIN_TIERS.length-1)];
-      const tactics=`【タクティクス】使った子の EX の使える回数を ${Math.round(tier.exCharge*3)}/3回ぶん回復（3回使うと1回）`;
+      const tactics=`【タクティクス】使ったモンスターの EX の使える回数を ${Math.round(tier.exCharge*3)}/3回ぶん回復（3回使うと1回）`;
       const classic=`【クラシック】次のターン 固有技が必ず会心${tier.critDmg>0?`（会心のダメージ ${pct(tier.critDmg)}%アップ）`:''}`;
       return `味方全員の攻撃 ${pct(tier.atk)}%アップ（次のターンから・バトル中永続・使用ごとに加算）・このターン味方全員の受けるダメージ ${pct(tier.cut)}%ダウン・${tactics}・${classic}`;
     }
@@ -92959,7 +92962,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         : <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-1">{rows.map(([label,value,color])=><div key={label} className="flex justify-between text-[10px] font-mono"><span>{label}:</span><span className={`${color} font-bold`}>{value}</span></div>)}</div>}</div>
       {/* 間合い適性は「距離ごとの与ダメージ補正(%)」。グレードは目安で、実際に効くのは%のほう。
           aptCurrentPctを渡すと、いまの距離補正値からこのモンスターを加えた後の値まで出す。 */}
-      <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30 min-w-0"><div className="flex items-center justify-between gap-2 mb-0.5 flex-wrap"><div className="text-[10px] text-cyan-400 uppercase font-bold">{/* 勇者モンの詳細・配置(今の補正を渡すとき)は遊ぶ人の言葉で(2026-10-27 社長OK「この子の得意な距離」) */}{aptCurrentPct?'この子の得意な距離':'間合い適性（距離補正）'}{growth&&<span className="ml-1 text-slate-500 normal-case">タップで詳細</span>}</div>{aptPointsLabel}</div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(mon,idx); const pct=aptDeltaPct?(aptDeltaPct[idx]||0):aptGradeToPct(grade); const cur=aptCurrentPct?(aptCurrentPct[idx]||0):null; const gain=growth?growth.apt[idx]:null; const openKey=`${monGrowthKey}:${idx}`; const aptOpen=!!gain&&growthAptOpen===openKey;
+      <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30 min-w-0"><div className="flex items-center justify-between gap-2 mb-0.5 flex-wrap"><div className="text-[10px] text-cyan-400 uppercase font-bold">{/* 勇者モンの詳細・配置(今の補正を渡すとき)は遊ぶ人の言葉で(2026-10-27 社長OK「この子の得意な距離」) */}{aptCurrentPct?'このモンスターの得意な距離':'間合い適性（距離補正）'}{growth&&<span className="ml-1 text-slate-500 normal-case">タップで詳細</span>}</div>{aptPointsLabel}</div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(mon,idx); const pct=aptDeltaPct?(aptDeltaPct[idx]||0):aptGradeToPct(grade); const cur=aptCurrentPct?(aptCurrentPct[idx]||0):null; const gain=growth?growth.apt[idx]:null; const openKey=`${monGrowthKey}:${idx}`; const aptOpen=!!gain&&growthAptOpen===openKey;
         const cell=(<><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span data-dist-apt-grade className={`flex h-[22px] w-full items-center justify-center rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>{cur!=null&&<span className="text-[8px] font-bold leading-none text-slate-400">合流すると</span>}<span className={`text-[10px] font-mono font-black leading-none ${pct>0?'text-cyan-300':pct<0?'text-red-300':'text-slate-500'}`}>{cur!=null&&pct===0?'+':''}{formatAptPct(pct)}</span>{gain&&(gain.baseUp>0||gain.enhance>0)&&<span className="flex w-full flex-wrap items-center justify-center gap-0.5 mt-0.5">{growthGainBadge('base',gain.baseUp)}{growthGainBadge('enhance',gain.enhance)}</span>}</>);
         return(<div key={idx} className="flex flex-col items-center gap-0.5 min-w-0">{gain
           ? <button type="button" data-growth-apt-cell={idx} aria-expanded={aptOpen} aria-label={`${label}距離の間合い適性の内訳を${aptOpen?'閉じる':'開く'}`} onClick={()=>setGrowthAptOpen(aptOpen?null:openKey)} className={`w-full min-w-0 flex flex-col items-center gap-0.5 rounded-xl border px-1 py-1 active:scale-95 ${aptOpen?'border-fuchsia-400/70 bg-fuchsia-950/40':'border-white/10 bg-black/20'}`}>{cell}</button>
@@ -93000,7 +93003,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           見ないと、タクティクスを遊んだあとにHOMEのベースモン一覧などで開いたとき、
           クラシックの合流ボーナスの値の代わりにタクティクスの説明が出る(2026-09-25 ユーザー報告) */}
         {isTacticsMode(runMode)&&(RUN_PHASE_STATES.includes(gameState)||gameState==='BATTLE')
-          ?(<div className="text-[10px] text-white font-bold mt-1">素のステータスがそのまま入ります<span className="block text-[9px] font-bold text-cyan-300">あとから入るほど、先に育った子に追いつく補正がかかります</span></div>)
+          ?(<div className="text-[10px] text-white font-bold mt-1">素のステータスがそのまま入ります<span className="block text-[9px] font-bold text-cyan-300">あとから入るほど、先に育ったモンスターに追いつく補正がかかります</span></div>)
           :(<div className="text-[10px] text-white font-bold mt-1">{joinBonus||'なし'}</div>)}{aptBonus&&<div className="text-[10px] text-cyan-300 font-bold mt-0.5">間合い適性 {aptBonus}</div>}</div>
       </div>
       {extraAfterApt}
@@ -93949,7 +93952,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className={`w-full max-w-md mx-auto space-y-2 ${SCREEN_LIST_CLASS}`}>
               {managementTab==='monster'?<>
                 {managementLink(<List size={18}/>,'ベースモン一覧','ベースモン＝解放した種族そのもの。勇者モンにして遊ぶとマスモンになる',()=>setGameState('OWNED_MONSTERS'))}
-                {managementLink(<Star size={18}/>,'マスモン一覧(バトル)','マスモン＝自分で育てた子。絆・状態を見る',()=>setGameState('MASU_MONS'))}
+                {managementLink(<Star size={18}/>,'マスモン一覧(バトル)','マスモン＝自分で育てたモンスター。絆・状態を見る',()=>setGameState('MASU_MONS'))}
                 {/* モンヒロビートのマルチに呼んだマスモンの育ち具合(ビートLv)。バトルの育ちとは別(docs/spec/RHYTHM_BUDDY.md) */}
                 {RELEASE_FLAGS.rhythmMulti===true&&managementLink(<Activity size={18}/>,'マスモン一覧(モンヒロビート)','マルチに呼んだマスモンのビートLv・調子・得意な曲を見る',()=>openMasuBeat('MB_MANAGEMENT'),{'data-mb-masu-beat':true})}
                 {managementLink(<BookOpen size={18}/>,'モンスター図鑑','出会ったモンスターと血統をふり返る',()=>{setDexLineageFilter('all');setGameState('MONSTER_DEX');})}
@@ -96369,7 +96372,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <span className="text-[13px] font-black text-white">{who.name}</span>
                     <span className="text-[9px] font-black leading-tight text-center" style={{color:who.accent}}>{who.tagline||''}</span>
                     <span className="text-[9px] text-slate-400 leading-tight text-center">{who.intro||''}</span>
-                    <span className="mt-auto w-full min-h-[38px] rounded-xl flex items-center justify-center text-[11px] font-black text-slate-950" style={{backgroundColor:who.accent}}>この子にする</span>
+                    <span className="mt-auto w-full min-h-[38px] rounded-xl flex items-center justify-center text-[11px] font-black text-slate-950" style={{backgroundColor:who.accent}}>このモンスターにする</span>
                   </button>
                 ))}
               </div>
@@ -97638,7 +97641,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const curBase=cur?ALL_PLAYER_MONSTERS[cur.baseId]:null;
           const curFace=curBase?friendsFaceIconOf(cur.baseId):null;
           return (
-            <PickerSheet title="好きなモンスター" note="フレンドがあなたのプロフィールを開いたとき、この子が見えます。" onClose={closeFav} accent="border-pink-500"
+            <PickerSheet title="好きなモンスター" note="フレンドがあなたのプロフィールを開いたとき、このモンスターが見えます。" onClose={closeFav} accent="border-pink-500"
               preview={<>
                 {curFace?<ProfileAvatar src={curFace.src} id={curFace.id} className="h-14 w-14 shrink-0"/>:<span className="flex h-14 w-14 shrink-0 items-center justify-center text-3xl" aria-hidden="true">💗</span>}
                 <span className="min-w-0"><b className="block truncate text-[12px] font-black text-white">{curBase?curBase.name:'まだ選んでいません'}</b><small className="block text-[10px] font-bold text-pink-300">{curBase?`絆Lv.${masuBondLevelInfo(cur).level}`:'下から選んでください'}</small></span>
@@ -99665,14 +99668,14 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
               // ★タクティクスは受け止める量が**置いた子の丈夫さ**で決まる。パーティの平均で
               //   1つの数字を出すと「誰の数値なのか分からない」(2026-09-22 ユーザー指摘)。
               //   数字は枠ごとの GUARD: に任せ、ここでは決まり方だけを書く
-              if(isTacticsMode(runMode)) return(<div className="text-center font-bold">敵の攻撃を軽減{halved&&<span className="text-amber-300 font-black">（2枚目以降のため半減）</span>}<span className="text-slate-400 font-normal">（{focusedCard.flat||0} ＋ その子の丈夫さ×{focusedCard.mult||0}{halved?' の半分':''}）</span><span className="block text-emerald-300 font-normal">置く子で変わります。盤面の枠に出る GUARD の数字で確かめられます</span></div>);
+              if(isTacticsMode(runMode)) return(<div className="text-center font-bold">敵の攻撃を軽減{halved&&<span className="text-amber-300 font-black">（2枚目以降のため半減）</span>}<span className="text-slate-400 font-normal">（{focusedCard.flat||0} ＋ そのモンスターの丈夫さ×{focusedCard.mult||0}{halved?' の半分':''}）</span><span className="block text-emerald-300 font-normal">置くモンスターで変わります。盤面の枠に出る GUARD の数字で確かめられます</span></div>);
               return(<div className="text-center font-bold">敵の攻撃を最大 {Math.floor(halved?raw*0.5:raw)} 軽減{halved&&<span className="text-amber-300 font-black">（2枚目以降のため半減）</span>}<span className="text-slate-400 font-normal">（{focusedCard.flat||0} ＋ 丈夫さ×{focusedCard.mult||0}{halved?' の半分':''}）</span></div>);
             })()}
             {focusedCard.type==='range_atk'&&focusedCard.rangeIdx!=null&&(<div className="border-t border-white/10 pt-1 mt-1 text-[9px] text-cyan-200 font-bold"><span className="text-cyan-400">距離効果:</span> {RANGE_LABELS[focusedCard.rangeIdx]}距離で威力アップ。攻撃後、{RANGE_LABELS[focusedCard.rangeIdx]}距離へ移動する</div>)}
             {['buff','debuff','heal'].includes(focusedCard.type)&&(<div className="text-center italic text-amber-300 font-bold text-[9px] leading-tight">{getDynamicDesc(focusedCard,true,focusedCard.evoLevel||0)}</div>)}
             {/* ★みゃるの薬は、タクティクスでは「飲んだ子だけ」に効く。自傷もその子のライフから引く
                 (2026-09-22 ユーザー指摘。それまでは盤面の合計ライフから引き、攻撃バフも全員に乗っていた) */}
-            {isTacticsMode(runMode)&&focusedCard.subType==='buff_myaru'&&(<div className="text-center text-[9px] font-bold leading-tight text-emerald-300">置いた子だけに効きます。自傷もその子の今のライフから引きます</div>)}
+            {isTacticsMode(runMode)&&focusedCard.subType==='buff_myaru'&&(<div className="text-center text-[9px] font-bold leading-tight text-emerald-300">置いた子だけに効きます。自傷もそのモンスターの今のライフから引きます</div>)}
             {focusedCard.effectDesc&&<div className="border-t border-white/10 pt-1 mt-1 text-[9px] text-amber-200 font-bold"><span className="text-indigo-400">特殊効果:</span> {focusedCard.effectDesc}</div>}
           </div>
         </div>
@@ -100247,7 +100250,7 @@ const createAnimationStyle = () => {
       100% { transform:translate3d(0,16px,0) scale(.88,.80); filter:drop-shadow(0 0 28px rgba(255,255,255,.94)) drop-shadow(0 12px 28px rgba(14,165,233,.82)); }
     }
     /* 左右の滑りは --atk-side(敵が右なら1・左なら-1)ぶん敵の側へ寄せる。
-       端の枠の子が外側へ滑ると画面の外へ半分出て、消えたように見えていた(2026-09-24 ユーザー指摘) */
+       端の枠のモンスターが外側へ滑ると画面の外へ半分出て、消えたように見えていた(2026-09-24 ユーザー指摘) */
     @keyframes waterBurstAttack {
       0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 5px rgba(103,232,249,.5)); }
       10% { transform:translate3d(0,8px,0) scale(.95,.88) rotate(-2deg); filter:drop-shadow(0 0 15px rgba(34,211,238,.9)); }
@@ -100674,24 +100677,24 @@ const createAnimationStyle = () => {
     .mon-idle--heavy { animation:monIdleHeavy 3600ms ease-in-out infinite; }
     .mon-idle--glide { animation:monIdleGlide 3200ms ease-in-out infinite; }
     .mon-idle--drift { animation:monIdleDrift 4200ms ease-in-out infinite; transform-origin:50% 50%; }
-    /* 宙に浮いている子。ゆっくり上下してわずかに伸び縮みする */
+    /* 宙に浮いているモンスター。ゆっくり上下してわずかに伸び縮みする */
     @keyframes monIdleHover {
       0%,100% { transform:translate3d(0,0,0) scale(1,1); }
       50% { transform:translate3d(0,-4%,0) scale(.99,1.015); }
     }
-    /* 地面に立っている丸い子。足元を軸に、つぶれて・伸びて・小さく弾む */
+    /* 地面に立っている丸いモンスター。足元を軸に、つぶれて・伸びて・小さく弾む */
     @keyframes monIdleBounce {
       0%,100% { transform:translate3d(0,0,0) scale(1,1); }
       20% { transform:translate3d(0,0,0) scale(1.04,.95); }
       45% { transform:translate3d(0,-3%,0) scale(.97,1.04); }
       65% { transform:translate3d(0,0,0) scale(1.02,.98); }
     }
-    /* どっしり立っている子。胸がふくらむように、縦へわずかに伸び縮みする */
+    /* どっしり立っているモンスター。胸がふくらむように、縦へわずかに伸び縮みする */
     @keyframes monIdleBreathe {
       0%,100% { transform:translate3d(0,0,0) scale(1,1); }
       50% { transform:translate3d(0,-1%,0) scale(1.015,1.04); }
     }
-    /* ↓ 待機が地味だった子の動き(2026-09-25 ユーザー指示「待機中の動きが地味なモンスターがいるからもう少し改良したい」)。
+    /* ↓ 待機が地味だったモンスターの動き(2026-09-25 ユーザー指示「待機中の動きが地味なモンスターがいるからもう少し改良したい」)。
        どれも足元(transform-origin 50% 96%)を軸にするので、地面から離れて見えない */
     /* ぷるぷるの子(モッチー・剣士モッチー)。つぶれて、ぴょんと伸びて、ぷるんと揺れて止まる */
     @keyframes monIdleJelly {
@@ -100728,12 +100731,12 @@ const createAnimationStyle = () => {
       0%,100% { transform:translate3d(0,0,0) rotate(-4deg); }
       50% { transform:translate3d(0,-8%,0) rotate(4deg); }
     }
-    /* 植物の子。足元を軸に、左右へゆっくり傾く */
+    /* 植物のモンスター。足元を軸に、左右へゆっくり傾く */
     @keyframes monIdleSway {
       0%,100% { transform:rotate(-2deg); }
       50% { transform:rotate(2deg); }
     }
-    /* 人魚の子。水の中にいるように、上下しながら少し傾く */
+    /* 人魚のモンスター。水の中にいるように、上下しながら少し傾く */
     @keyframes monIdleSwim {
       0%,100% { transform:translate3d(0,0,0) rotate(-1.5deg); }
       50% { transform:translate3d(0,-3%,0) rotate(1.5deg); }
@@ -101247,7 +101250,7 @@ const createAnimationStyle = () => {
       88% { transform:translate3d(calc(var(--atk-dx) * -.03),calc(var(--atk-dy) * -.03),0) scale(1.05) rotate(-2deg); }
       94%,100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
     }
-    /* 角から敵までの雷。ジグザグの形(clip-path)で切り抜き、光は親(.thm-atk__line)の影で付ける(子に付けると形で切れる) */
+    /* 角から敵までの雷。ジグザグの形(clip-path)で切り抜き、光は親(.thm-atk__line)の影で付ける(モンスターに付けると形で切れる) */
     .thm-atk--claw .thm-atk__line { top:24%; filter:drop-shadow(0 0 6px #facc15) drop-shadow(0 0 14px rgba(250,204,21,.8)); }
     .thm-atk--claw .thm-atk__line i { width:40px; left:-20px;
       clip-path:polygon(42% 100%, 12% 86%, 70% 72%, 16% 58%, 66% 44%, 20% 30%, 62% 16%, 42% 0%, 58% 0%, 78% 16%, 36% 30%, 82% 44%, 32% 58%, 86% 72%, 28% 86%, 58% 100%);
@@ -102042,7 +102045,7 @@ const createAnimationStyle = () => {
       @keyframes thmReduced { 0% { filter:none; } 45% { filter:drop-shadow(0 0 18px var(--c2)); } 100% { filter:none; } }
     }
     /* ==== 固有技の格上げ(24-battle-fx.jsx の UniqueFxExtras / UniqueFxImpact。2026-10-02 ユーザー指示「固有技はもっとかっこよくしてほしい」)====
-       固有技(thm-atk--lunge / .uex)だけに足す。使う子のオーラ・残像と、敵の上の光柱・地割れ・閃光。
+       固有技(thm-atk--lunge / .uex)だけに足す。使うモンスターのオーラ・残像と、敵の上の光柱・地割れ・閃光。
        色は --c1(明)/--c2(濃)。着弾の時刻は --hit-at。敵の位置は --atk-dx/dy(.thm-atk__hit が translate する) */
     .uex-aura { position:absolute; inset:-14%; z-index:2; border-radius:50%; pointer-events:none; opacity:0;
       background:radial-gradient(circle, color-mix(in srgb, var(--c1,#fff) 85%, transparent) 0 18%, color-mix(in srgb, var(--c2,#c026d3) 70%, transparent) 42%, transparent 70%);
@@ -102115,7 +102118,7 @@ const createAnimationStyle = () => {
     .spm--release .spm__shade { opacity:1; animation:spmShadeOut 520ms ease-in 180ms forwards; }
     @keyframes spmShadeIn { from { opacity:0; } to { opacity:1; } }
     @keyframes spmShadeOut { from { opacity:1; } to { opacity:0; } }
-    /* 使う子へ集まる光 */
+    /* 使うモンスターへ集まる光 */
     .spm__gather { left:var(--spm-fx); top:var(--spm-fy); width:0; height:0; }
     .spm__ring { position:absolute; left:-70px; top:-70px; width:140px; height:140px; border-radius:50%; opacity:0;
       border:3px solid var(--spm-c1); box-shadow:0 0 14px var(--spm-c2), inset 0 0 14px var(--spm-c2);
@@ -102418,7 +102421,7 @@ const createAnimationStyle = () => {
     .ex-desc__item::before { content:''; position:absolute; left:.2em; top:.62em; width:.5em; height:.5em; border-radius:50%; background:#d946ef; }
     .ex-desc__sub { padding-left:2.1em; font-size:.92em; color:#cbd5e1; line-height:1.4; position:relative; }
     .ex-desc__sub::before { content:'─'; position:absolute; left:1.1em; opacity:.6; }
-    /* 使った子の距離枠の光 */
+    /* 使ったモンスターの距離枠の光 */
     .ex-aura { position:absolute; inset:-2px; z-index:57; pointer-events:none; border-radius:18px; opacity:0;
       border:2px solid var(--ex-c1); box-shadow:0 0 14px var(--ex-c2), inset 0 0 22px color-mix(in srgb, var(--ex-c2) 70%, transparent);
       animation:exAura 1600ms ease-out forwards; }
@@ -102672,7 +102675,7 @@ const createAnimationStyle = () => {
       background: radial-gradient(closest-side, rgba(168,85,247,.55), rgba(168,85,247,.25) 55%, rgba(168,85,247,0) 80%); }
     /* ★すりガラス(backdrop-filter)を外す(2026-09-24 ユーザー指摘「バトル画面にかくつきを感じる」)。
        枠・見出し・ライフの札の下地はもともと 72〜98% の濃さで、ぼかしはほとんど見えていなかった。
-       それでいて枠の中は入れ子で9か所ぼかしていて、ライフの札は跳ねている味方の絵の真上にあるため、
+       それでいて枠の中は入れモンスターで9か所ぼかしていて、ライフの札は跳ねている味方の絵の真上にあるため、
        絵が動くたびに毎コマぼかし直しになっていた(iPhone でいちばん重い処理のひとつ) */
     [data-tactics-look] [data-slot-index], [data-tactics-look] [data-slot-head], [data-tactics-look] [data-tactics-party-slot] {
       -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
@@ -104420,7 +104423,7 @@ const createAnimationStyle = () => {
     .mh-card-dodge { animation: mhCardDodge .62s ease-out both; }
     .mh-card-guard { animation: mhCardGuard .7s ease-out both; }
     .mh-card-hit { animation: mhRjJackHit .6s ease-out both; }
-    /* 当たった子の白い光・ダメージの数字・倒れたときの帯(2026-10-26 改良の案 B) */
+    /* 当たったモンスターの白い光・ダメージの数字・倒れたときの帯(2026-10-26 改良の案 B) */
     /* 全体カードの背景に切りかわる(2026-10-26 改良の案 D) */
     .mh-card-field-bg { animation: mhCardFieldBg .6s ease-out both; }
     @keyframes mhCardFieldBg { 0% { opacity: 0; } 100% { opacity: 1; } }
@@ -104440,7 +104443,7 @@ const createAnimationStyle = () => {
     @keyframes mhCardCutin { 0% { opacity: 0; transform: translateX(40%); } 100% { opacity: 1; transform: translateX(0); } }
     @media (prefers-reduced-motion: reduce) { .mh-card-cutin { animation: none; } }
     .mh-card-hit-flash { position: absolute; inset: 0; border-radius: 12px; background: rgba(255,255,255,.85); pointer-events: none; animation: mhCardHitFlash .28s ease-out both; }
-    /* 立ち絵の子は、絵の形どおりに白く光る(84 の hitSil。絵を型に切り抜く。2026-11-01 点検 G) */
+    /* 立ち絵のモンスターは、絵の形どおりに白く光る(84 の hitSil。絵を型に切り抜く。2026-11-01 点検 G) */
     .mh-card-hit-flash-sil { border-radius: 0; background: #fff; z-index: 3; }
     @keyframes mhCardHitFlash { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
     .mh-card-dmg-pop { animation: mhCardDmgPop 1s ease-out both; }

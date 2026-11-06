@@ -225,7 +225,7 @@ const CardTacticRow = ({ db, row, i, n, onChange, onMove, onRemove, onPickC, onP
 // おまかせで埋める行(持っているカードだけ。上から順に、空いている行へ)
 const CARD_TACTIC_AUTO = Object.freeze({
   monster: [['ko', 'atk'], ['myLife.30', 'guardDie'], ['myGuts.5', 'cost.大技(4以上)'], ['foeLife.50', 'atk'], ['any', 'guard']],
-  breeder: [['any', 'save'], ['foeAlive.3', 'fieldCard'], ['myKo', 'bEff.倒れた子を戻す']],
+  breeder: [['any', 'save'], ['foeAlive.3', 'fieldCard'], ['myKo', 'bEff.倒れたモンスターを戻す']],
 });
 const cardTacticAutoFill = (t, rows, cat, max) => {
   const out = rows.slice();

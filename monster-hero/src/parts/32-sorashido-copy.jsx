@@ -132,5 +132,5 @@ const aiCopyPickCards = (hand, { score, costOf, guts, maxGuts, rng, level }) => 
 // ---- 説明文(ブリーダーの教え・マーケット・カードの詳しい画面) ----
 const sorashidoCopyDesc = (level) => {
   const t = aiCopyRules(level), p = (v) => Math.round(v * 100);
-  return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%・コピーは自分の山札(距離撃とほかの子の固有技を抜いたもの)から引く${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
+  return `使ったモンスターのAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%・コピーは自分の山札(距離撃とほかのモンスターの固有技を抜いたもの)から引く${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
 };

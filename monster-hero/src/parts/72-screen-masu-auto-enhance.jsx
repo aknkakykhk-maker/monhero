@@ -206,7 +206,7 @@ function MasuAutoEnhanceScreen({
               <div className="mt-2 text-[11px] font-bold leading-relaxed text-slate-300">
                 {settings.enabled
                   ? '強化ポイントが入るたびに、下の順番で上限まで自動で振ります。バトル・スキップ・合体・限界突破・転生のあと、AUTO∞の周回中も同じように働きます。'
-                  : 'OFFのあいだ、この子の強化ポイントは自動では振られません。'}
+                  : 'OFFのあいだ、このモンスターの強化ポイントは自動では振られません。'}
               </div>
               {settings.enabled&&awaitsReset&&(
                 <div className="mt-2 rounded-xl border border-cyan-400/60 bg-cyan-950/30 px-2.5 py-2 text-[11px] font-black text-cyan-200 leading-relaxed">
@@ -237,7 +237,7 @@ function MasuAutoEnhanceScreen({
               <button type="button" onClick={captureCurrent} className="min-h-[44px] rounded-xl bg-slate-800 border border-lime-400/40 text-lime-200 text-[11px] font-black active:scale-95 px-2 leading-tight">いまの値を<br/>目標として取り込む</button>
               <button type="button" onClick={clearAll} className="min-h-[44px] rounded-xl bg-slate-800 border border-white/10 text-slate-300 text-[11px] font-black active:scale-95 px-2 leading-tight">すべて<br/>「振らない」に戻す</button>
             </div>
-            <div className="text-[10px] text-slate-400 font-bold leading-relaxed px-1">「いまの値を目標として取り込む」は、この子のいまの数値をそのまま目標に写します。転生する前に押しておくと、転生後の周回で同じ数値まで自動で戻ります。</div>
+            <div className="text-[10px] text-slate-400 font-bold leading-relaxed px-1">「いまの値を目標として取り込む」は、このモンスターのいまの数値をそのまま目標に写します。転生する前に押しておくと、転生後の周回で同じ数値まで自動で戻ります。</div>
 
             {/* いま持っているポイントの行き先 */}
             <div className="rounded-2xl border border-lime-500/40 bg-black/30 p-3">
