@@ -8,7 +8,7 @@
 // 形(全員共通): 縦 390×844 を deviceScaleFactor 2(= 780×1688)で、場面ごとに mp4(音なし)。各 8〜14 秒
 //   ・本物の表(Supabase)には行かない。答えはこの道具の中の偽の表で返す。名前はそれらしい普通の名前(ほかのブリーダーの本名・デッキ名は出さない)
 //   ・デバッグのボタン・合言葉の欄は映さない(デバッグの印を立てない。準備の場面は録ったあとで切り落とす)
-//   ・1つのモードを1本で録り、場面の始まりと終わりの時刻を覚えておいて ffmpeg で切り出す
+//   ・ブラウザから2倍の細かさのこまを受け取り(CDP の screencast)、場面の始まりと終わりの時刻で ffmpeg に並べて mp4 にする
 // 撮るもの
 //   (b) 個人杯(ゲームの上に個人杯の画面 CardCup を重ねて描く。card-cup-screen-browser-check.js と同じ形)
 //       b1-open    個人杯をひらく: 「開く」→ 名前・形式・人数を選んで「開く」を押すまで(開いたあとは合言葉が出るので映さない)
@@ -43,57 +43,57 @@ const iso = (ms) => new Date(ms).toISOString();
 const KEY = 'c'.repeat(48);
 const myDeck = [{ owner_id: 'me', user_name: ME, deck: { monsters: MONS, cards: Array(50).fill('001') }, tactics: { habit: 'kiki', name: 'まっすぐ攻めデッキ' }, version: 1, active: true, battles: 0, deck_wins: 0, rents: 0, updated_at: iso(now) }];
 
-// 録画の時刻と、こちらの時計のずれを測る。録画の頭で画面を一瞬だけ真っ赤紫(#ff00ff)にしておき、その色が動画の何秒目に出たかを探す
-//   (録画は新しいページを作ったあと少し遅れて始まるので、そのままの時刻で切ると1秒ほど後ろの絵が混ざった)
-const syncOffset = (webm, flashAt) => {
-  const dir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'card-video-sync-'));
+// 録画: Playwright の recordVideo は 1倍(390×844)でしか絵を撮らず、780×1688 の枠の左上にしか入らない(2026-11-06 テンポの指摘・card-tactic-video.js と同じ直し)。
+//   そこで、ブラウザに画面のこまを deviceScaleFactor 2 の細かさ(780×1688)で送らせ(CDP の Page.startScreencast)、直近 KEEP_MS ぶんだけ手元に持つ。
+//   こまは画面が変わったときだけ届くので、mp4 にするときは次のこままでの長さを付けて並べる。場面が終わるたびにすぐ mp4 にする
+const KEEP_MS = 60000;
+const recorder = async (context, page) => {
+  const client = await context.newCDPSession(page);
+  const frames = [];
+  client.on('Page.screencastFrame', ({ data, metadata, sessionId }) => {
+    frames.push({ t: metadata.timestamp * 1000, buf: Buffer.from(data, 'base64') });
+    const old = Date.now() - KEEP_MS;
+    while (frames.length > 2 && frames[1].t < old) frames.shift();
+    client.send('Page.screencastFrameAck', { sessionId }).catch(() => {});
+  });
+  await client.send('Page.startScreencast', { format: 'jpeg', quality: 95, maxWidth: VW * DPR, maxHeight: VH * DPR, everyNthFrame: 1 });
+  return { frames, stop: () => client.send('Page.stopScreencast').catch(() => {}) };
+};
+// from〜to(Date.now() の時刻・ミリ秒)のこまを mp4 に(30fps・780×1688・音なし)
+const mp4 = (rec, name, from, to) => {
+  fs.mkdirSync(OUT, { recursive: true });
+  const out = path.join(OUT, `${name}.mp4`);
+  const dir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'card-cup-frames-'));
   try {
-    execFileSync('ffmpeg', ['-loglevel', 'error', '-i', webm, '-vf', `fps=20,crop=20:20:${VW * DPR / 2 - 10}:${VH * DPR / 2 - 10},scale=1:1`, '-f', 'rawvideo', '-pix_fmt', 'rgb24', path.join(dir, 'px.raw')]);
-    const px = fs.readFileSync(path.join(dir, 'px.raw'));
-    for (let i = 0; i + 2 < px.length; i += 3) {
-      // 録画では色が薄まって (160,96,159) くらいに写る。1こま 50ms。幕を出したのは flashAt の 150ms 前
-      if (px[i] > 130 && px[i + 2] > 130 && px[i] - px[i + 1] > 40 && px[i + 2] - px[i + 1] > 40) return (i / 3) * 50 - (flashAt - 150);
-    }
-    console.log('  (時刻合わせの印が録画に見つからなかった。ずれは0のまま切る)');
-    return 0;
+    const all = rec.frames;
+    const startIdx = Math.max(0, all.findIndex((f) => f.t > from) - 1);
+    const use = all.slice(startIdx).filter((f) => f.t <= to);
+    if (!use.length) throw new Error(`${name}: こまが無い`);
+    const lines = [];
+    use.forEach((f, i) => {
+      const file = path.join(dir, `${String(i).padStart(5, '0')}.jpg`);
+      fs.writeFileSync(file, f.buf);
+      const a = Math.max(f.t, from), b = i + 1 < use.length ? use[i + 1].t : to;
+      lines.push(`file '${file}'`, `duration ${Math.max(0.001, (b - a) / 1000).toFixed(3)}`);
+    });
+    lines.push(`file '${path.join(dir, `${String(use.length - 1).padStart(5, '0')}.jpg`)}'`);
+    fs.writeFileSync(path.join(dir, 'list.txt'), lines.join('\n'));
+    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', path.join(dir, 'list.txt'),
+      '-vf', `scale=${VW * DPR}:${VH * DPR}:flags=lanczos,fps=30,format=yuv420p`, '-c:v', 'libx264', '-crf', '18', '-preset', 'medium', '-an', '-movflags', '+faststart', out]);
+    console.log(`  ${path.relative(ROOT, out)}(${((to - from) / 1000).toFixed(1)}秒)`);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 };
-// 撮って、場面ごとに切り出す。marks は [名前, 始まり(ms), 終わり(ms)](こちらの時計。offset で録画の時刻へ直す)
-const cut = (webm, marks, offset = 0) => {
-  fs.mkdirSync(OUT, { recursive: true });
-  marks.forEach(([name, a, b]) => {
-    const out = path.join(OUT, `${name}.mp4`);
-    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-ss', (Math.max(0, a + offset) / 1000).toFixed(2), '-i', webm, '-t', ((b - a) / 1000).toFixed(2),
-      '-vf', `scale=${VW * DPR}:${VH * DPR}:flags=lanczos,fps=30`, '-an', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '20', '-movflags', '+faststart', out]);
-    console.log(`  ${path.relative(ROOT, out)}(${((b - a) / 1000).toFixed(1)}秒)`);
-  });
-};
+// 1つのモードを1つのページで撮る。fn(page, mark, start, save): start() で録り始め、save(名前, 始まり, 終わり) で場面を mp4 に
 const record = async (browser, name, fn) => {
-  const dir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'card-video-'));
-  const context = await browser.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: DPR, recordVideo: { dir, size: { width: VW * DPR, height: VH * DPR } } });
+  const context = await browser.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: DPR });
   const page = await context.newPage();
-  const t0 = Date.now();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e && e.message || e)));
-  const mark = () => Date.now() - t0;
-  let marks = [];
-  // 時刻合わせの印(ゲームが動き出したあとに、真っ赤紫の幕を0.8秒かぶせる。静かなページでは録画のこまが描かれないので、起動のあとで出す)
-  let flashAt = null;
-  const flash = async () => {
-    await page.evaluate(() => { const d = document.createElement('div'); d.id = '__sync'; d.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#ff00ff'; document.body.appendChild(d); });
-    await page.waitForTimeout(150);
-    flashAt = mark();
-    await page.waitForTimeout(650);
-    await page.evaluate(() => document.getElementById('__sync')?.remove());
-    await page.waitForTimeout(300);
-  };
-  try { marks = await fn(page, mark, flash); } finally { await context.close(); }
-  const webm = await page.video().path();
+  let rec = null;
+  const start = async () => { if (!rec) rec = await recorder(context, page); await page.waitForTimeout(300); };
+  const save = (clip, a, b) => mp4(rec, clip, a, b);
+  try { await fn(page, () => Date.now(), start, save); } finally { if (rec) await rec.stop(); await context.close(); }
   if (errors.length) console.log(`  (${name} の実行時エラー: ${errors.slice(0, 2).join(' / ')})`);
-  const offset = flashAt == null ? 0 : syncOffset(webm, flashAt);
-  console.log(`  録画の時刻のずれ ${offset}ms`);
-  cut(webm, marks, offset);
-  fs.rmSync(dir, { recursive: true, force: true });
 };
 const seed = (page, extra = {}) => page.addInitScript((x) => {
   if (sessionStorage.getItem('__vidSeeded')) return; sessionStorage.setItem('__vidSeeded', '1');
@@ -128,7 +128,7 @@ const koMatches = [
   ...KO.rounds[1].map((p, k) => ({ id: 110 + k, round: 1, slot: k, a: p[0], b: p[1], winner: 0, kos: [3, 2], decided: 'ko', live: null })),
   { id: 120, round: 2, slot: 0, a: 0, b: 1, winner: 0, kos: [3, 2], decided: 'ko', live: null },
 ];
-const shootCup = (browser) => record(browser, '(b) 個人杯', async (page, mark, flash) => {
+const shootCup = (browser) => record(browser, '(b) 個人杯', async (page, mark, start, save) => {
   let joined = false;
   await page.route(/supabase\.co/, async (route) => {
     const url = route.request().url();
@@ -156,7 +156,7 @@ const shootCup = (browser) => record(browser, '(b) 個人杯', async (page, mark
   await seed(page);
   await boot(page);
   await page.waitForFunction(() => typeof CardCup === 'function' && typeof ReactDOM !== 'undefined', null, { timeout: 90000 });
-  await flash();
+  await start();
   const mount = () => page.evaluate(() => {
     document.getElementById('__cup')?.remove();
     const div = document.createElement('div');
@@ -167,7 +167,6 @@ const shootCup = (browser) => record(browser, '(b) 個人杯', async (page, mark
     window.__root.render(React.createElement(CardCup, { onBack: () => {}, onOpenRegister: () => {}, onOpenReplay: async () => true }));
   });
   const T = (sel) => page.locator(`#__cup ${sel}`);
-  const marks = [];
   // b1 個人杯をひらく
   await mount();
   await T('[data-card-cup-tab="create"]').waitFor({ timeout: 20000 });
@@ -187,7 +186,7 @@ const shootCup = (browser) => record(browser, '(b) 個人杯', async (page, mark
   // 開いたあとの画面には合言葉が出るので、「開く」を押したところで場面を切る(合言葉は映さない)
   await T('[data-card-cup-create-go]').hover().catch(() => {});
   await page.waitForTimeout(400);
-  marks.push(['b1-open', a, mark()]);
+  save('b1-open', a, mark());
   await T('[data-card-cup-create-go]').click();
   // b2 参加
   await mount();
@@ -201,7 +200,7 @@ const shootCup = (browser) => record(browser, '(b) 個人杯', async (page, mark
   await T('[data-card-cup-join-go]').scrollIntoViewIfNeeded().catch(() => {});
   await page.waitForTimeout(3500);
   // 参加したあとの画面には合言葉が出るので、参加の画面(このデッキで参加)までで場面を切る(合言葉は映さない)
-  marks.push(['b2-join', a, mark()]);
+  save('b2-join', a, mark());
   // b3 結果のトーナメント
   await mount();
   await T('[data-card-cup-tab="mine"]').waitFor({ timeout: 20000 });
@@ -214,8 +213,7 @@ const shootCup = (browser) => record(browser, '(b) 個人杯', async (page, mark
   await T('[data-card-cup-bracket]').waitFor({ timeout: 15000 });
   await page.waitForFunction(() => document.querySelector('#__cup [data-card-cup-bracket]')?.getAttribute('data-card-cup-lit') === '3', null, { timeout: 15000 });
   await page.waitForTimeout(4500);
-  marks.push(['b3-result', a, mark()]);
-  return marks;
+  save('b3-result', a, mark());
 });
 
 // ======== (c) 公式杯 ========
@@ -232,7 +230,7 @@ const LIVE = { who: 'kiki', play: '最後の1体まで目が離せない、手�
 const pairs = [[0, 1, 0], [2, 3, 0], [0, 2, 0], [1, 3, 0], [0, 3, 0], [1, 2, 0]];
 const TOUR_MATCHES = pairs.map(([a, b, w], i) => ({ id: 301 + i, stage: 'group', grp: 0, day: Math.floor(i / 2), a, b, play_on: addDay(first, Math.floor(i / 2)), visible_at: at4(addDay(first, Math.floor(i / 2) + 1)),
   winner: w, kos: [3, 1 + (i % 2)], decided: 'ko', live: LIVE }));
-const shootTour = (browser) => record(browser, '(c) 公式杯', async (page, mark, flash) => {
+const shootTour = (browser) => record(browser, '(c) 公式杯', async (page, mark, start, save) => {
   let matchRow = null;
   await page.route(/supabase\.co/, async (route) => {
     const url = route.request().url();
@@ -248,7 +246,6 @@ const shootTour = (browser) => record(browser, '(c) 公式杯', async (page, mar
   });
   await seed(page);
   await boot(page);
-  await flash();
   // MFバトルカードをはじめて開くと出るスターター選びと練習試合を、先に済ませる(録画からは切り落とす)
   await page.locator('[data-home-card-battle]').first().dispatchEvent('click');
   await page.locator('[data-card-top="starter"]').waitFor({ timeout: 30000 });
@@ -272,8 +269,8 @@ const shootTour = (browser) => record(browser, '(c) 公式杯', async (page, mar
   await boot(page);
   await page.locator('[data-home-card-tour]').waitFor({ timeout: 30000 });
   await dismiss(page);
+  await start();
   await page.waitForTimeout(800);
-  const marks = [];
   // c1 総当たりの順位の表
   let a = mark();
   await page.waitForTimeout(1500);
@@ -281,7 +278,7 @@ const shootTour = (browser) => record(browser, '(c) 公式杯', async (page, mar
   await page.locator('[data-card-tour-head]').waitFor({ timeout: 20000 });
   await page.locator('[data-card-tour-reveal-replay]').waitFor({ timeout: 20000 });
   await page.waitForTimeout(3600);
-  marks.push(['c1-table', a, mark()]);
+  save('c1-table', a, mark());
   // c2 「見返す」で試合のリプレイ
   await page.locator('[data-card-tour-tab="today"]').click();
   await page.locator('[data-card-tour-replay]').first().waitFor({ timeout: 15000 });
@@ -295,8 +292,7 @@ const shootTour = (browser) => record(browser, '(c) 公式杯', async (page, mar
   const auto = page.locator('[data-card-replay-auto]');
   if (await auto.count()) await auto.first().click();
   await page.waitForTimeout(9500);
-  marks.push(['c2-replay', a, mark()]);
-  return marks;
+  save('c2-replay', a, mark());
 });
 
 (async () => {
