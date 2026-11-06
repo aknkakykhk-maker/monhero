@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 71c0e967d6eea59d
+// source-sha256: 7141fcf326ec93f0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -51894,10 +51894,17 @@ const rhythmBuddyPersonaBirthday = id => {
     day: d.getUTCDate()
   };
 };
+const rhythmBuddyCallForGender = (callId, list, gender) => {
+  const has = id => Array.isArray(list) && list.includes(id);
+  if (gender === 'male' && callId === 'chan' && has('kun')) return 'kun';
+  if (gender === 'female' && callId === 'kun' && has('chan')) return 'chan';
+  return callId;
+};
 const rhythmBuddyPersona = (masuId, trait = '', baseId = null) => {
   const t = Object.prototype.hasOwnProperty.call(RHYTHM_BUDDY_SELF_WORDS, trait) ? trait : '';
   const gender = rhythmBuddyGenderOf(baseId);
-  const callId = rhythmBuddyPersonaChoose(RHYTHM_BUDDY_CALLS[t], masuId, `call:${t}`, true);
+  const callId0 = rhythmBuddyPersonaChoose(RHYTHM_BUDDY_CALLS[t], masuId, `call:${t}`, true);
+  const callId = rhythmBuddyCallForGender(callId0, RHYTHM_BUDDY_CALLS[t], typeof assistantPlayerGender === 'function' ? assistantPlayerGender() : 'none');
   const quirk = rhythmBuddyPersonaChoose(RHYTHM_BUDDY_QUIRKS[t], masuId, `quirk:${t}`, false);
   return {
     gender,
@@ -60515,6 +60522,8 @@ function ProfileScreen({
   onOpenFavoritePicker,
   profileMessage = '',
   onOpenMessageEditor,
+  breederGender = 'none',
+  onSelectBreederGender = null,
   unlockedAssistants
 }) {
   const [rhythmAchRows, setRhythmAchRows] = React.useState([]);
@@ -60634,7 +60643,29 @@ function ProfileScreen({
     }
   })), React.createElement("div", {
     className: "mt-0.5 text-[10px] text-slate-400 font-mono"
-  }, breederLevel.xpIntoLevel.toLocaleString(), " / ", breederLevel.xpForNext.toLocaleString(), " XP")))), (() => {
+  }, breederLevel.xpIntoLevel.toLocaleString(), " / ", breederLevel.xpForNext.toLocaleString(), " XP")))), onSelectBreederGender && !onboardingPreview && React.createElement("div", {
+    className: "mt-3 rounded-xl border border-white/10 bg-black/25 px-2.5 py-2",
+    "data-profile-gender": true
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement("small", {
+    className: "shrink-0 text-[10px] font-black text-sky-300"
+  }, "性別"), React.createElement("div", {
+    className: "grid flex-1 grid-cols-3 gap-1.5",
+    role: "radiogroup",
+    "aria-label": "性別"
+  }, [['male', '男の子'], ['female', '女の子'], ['none', '答えない']].map(([id, label]) => React.createElement("button", {
+    key: id,
+    type: "button",
+    role: "radio",
+    "aria-checked": breederGender === id,
+    "data-gender": id,
+    onClick: () => onSelectBreederGender(id),
+    className: `min-h-[36px] rounded-lg border text-[11px] font-black active:scale-95 ${breederGender === id ? 'border-sky-300 bg-sky-500/30 text-white' : 'border-white/10 bg-slate-800/80 text-slate-300'}`
+  }, label)))), React.createElement("p", {
+    className: "mt-1 text-[10px] leading-snug text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('助手やマスモンの呼び方が変わります。ほかの人には見えません'))), (() => {
     const frameName = (profileFrameById(normalizeProfileFrameId(profileFrameId)) || {}).name || 'フレームなし';
     const tile = 'flex min-h-[56px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-2 text-left active:scale-95 max-[359px]:gap-1.5 max-[359px]:px-2';
     return React.createElement("div", {
@@ -131084,6 +131115,16 @@ function MonsterHeroGame() {
   const [favoriteMasuId, setFavoriteMasuId] = useState(null);
   const [showFavoritePicker, setShowFavoritePicker] = useState(false);
   const PROFILE_MESSAGE_KEY = 'mh_profile_message_v1';
+  const BREEDER_GENDER_KEY = 'mh_breeder_gender_v1';
+  const [breederGender, setBreederGender] = useState('none');
+  const saveBreederGender = v => {
+    const next = typeof normalizeBreederGender === 'function' ? normalizeBreederGender(v) : 'none';
+    if (typeof assistantSetPlayerGender === 'function') assistantSetPlayerGender(next);
+    setBreederGender(next);
+    Promise.resolve(storeSet(BREEDER_GENDER_KEY, next, false)).catch(error => {
+      console.error('[profile] gender save failed:', error && error.message ? error.message : error);
+    });
+  };
   const [profileMessage, setProfileMessage] = useState('');
   const [showMessageEditor, setShowMessageEditor] = useState(false);
   const [tempMessage, setTempMessage] = useState('');
@@ -135182,6 +135223,12 @@ function MonsterHeroGame() {
       {
         const savedMessage = await storeGet(PROFILE_MESSAGE_KEY, '', false);
         setProfileMessage(friendsCleanMessage(savedMessage));
+      }
+      {
+        const savedGender = await storeGet(BREEDER_GENDER_KEY, 'none', false);
+        const g = typeof normalizeBreederGender === 'function' ? normalizeBreederGender(savedGender) : 'none';
+        if (typeof assistantSetPlayerGender === 'function') assistantSetPlayerGender(g);
+        setBreederGender(g);
       }
       {
         const savedFavorite = await storeGet(FAVORITE_MASU_KEY, null, false);
@@ -158127,6 +158174,8 @@ function MonsterHeroGame() {
       favoriteMasu: favoriteMasuId != null && masuMons.find(m => String(m.id) === String(favoriteMasuId)) || null,
       onOpenFavoritePicker: () => setShowFavoritePicker(true),
       profileMessage: profileMessage,
+      breederGender: breederGender,
+      onSelectBreederGender: saveBreederGender,
       onOpenMessageEditor: () => {
         setTempMessage(profileMessage);
         setShowMessageEditor(true);

@@ -1019,6 +1019,31 @@ const ASSISTANT_CALL_STYLE_SETS = {
     { id:'chan',  label:'ちゃん付け', template:'{name}ちゃん' },
   ],
 };
+// ---------- プレイヤーの性別と、段ごとの呼び方(2026-11-06 社長) ----------
+// プロフィールの「性別」(男の子/女の子/答えない)。保存は mh_breeder_gender_v1('male'/'female'/'none')。
+// 端末の中だけで使い、ランキング・フレンドには出さない(社長)。無い・壊れているときは 'none' = これまでと同じ呼び方。
+// 変わるのは仲良し度の段が決める呼び方だけ。Lv6から本人が決めた呼び方(mh_assistant_call_style_*)はそのまま優先する。
+const BREEDER_GENDERS = Object.freeze(['none', 'male', 'female']);
+const normalizeBreederGender = (v) => (v === 'male' || v === 'female' ? v : 'none');
+let assistantPlayerGenderNow = 'none';
+const assistantSetPlayerGender = (v) => { assistantPlayerGenderNow = normalizeBreederGender(v); return assistantPlayerGenderNow; };
+const assistantPlayerGender = () => assistantPlayerGenderNow;
+// 助手ごとに「段の呼び方 → 男の子 / 女の子のときの呼び方」。載っていない段・助手(ももすけ・えるびん)は変えない(社長「この表で」)
+const ASSISTANT_GENDER_CALLS = Object.freeze({
+  mua:       { '{name}': { male: '{name}くん', female: '{name}ちゃん' } },
+  kiki:      { '{name}ちー': { male: '{name}くん', female: '{name}ちゃん' } },
+  dra:       { '{name}': { male: '{name}くん', female: '{name}ちゃん' } },
+  atsu:      { '{name}': { male: '{name}くん', female: '{name}ちゃん' } },
+  kyuko:     { '{name}': { male: '{name}ニキ', female: '{name}ネキ' } },
+  sorashido: { '{name}': { male: '{name}くん', female: '{name}ちゃん' }, '{name}ちん': { male: '{name}くん', female: '{name}ちゃん' } },
+});
+const assistantGenderCallOf = (template, assistantId, gender = assistantPlayerGenderNow) => {
+  const g = normalizeBreederGender(gender);
+  if (g === 'none') return template;
+  const key = Object.prototype.hasOwnProperty.call(ASSISTANT_BOND_LEVEL_SETS, assistantId) ? assistantId : 'mua';
+  const row = ASSISTANT_GENDER_CALLS[key] && ASSISTANT_GENDER_CALLS[key][template];
+  return row && row[g] ? row[g] : template;
+};
 const assistantCallStylesOf = (assistantId) => ASSISTANT_CALL_STYLE_SETS[assistantId] || ASSISTANT_CALL_STYLES;
 const ASSISTANT_CALL_STYLE_UNLOCK_LEVEL = 6;
 const ASSISTANT_CALL_STYLE_MAX_LEN = 16;
@@ -1172,6 +1197,7 @@ const assistantCallSuffixes = () => {
     ...Object.values(ASSISTANT_BOND_LEVEL_SETS).flatMap(levels => (levels || []).map(l => l && l.call)),
     ...ASSISTANT_CALL_STYLES.map(c => c.template),
     ...Object.values(ASSISTANT_CALL_STYLE_SETS).flatMap(list => (list || []).map(c => c.template)),
+    ...Object.values(ASSISTANT_GENDER_CALLS).flatMap(rows => Object.values(rows).flatMap(r => [r.male, r.female])),
   ];
   return [...new Set(templates.filter(t => typeof t === 'string' && t.startsWith('{name}')).map(t => t.slice('{name}'.length)).filter(Boolean))]
     .sort((a, b) => b.length - a.length);
@@ -1193,7 +1219,7 @@ const assistantCallName = (name, level, customCall, assistantId) => {
   const custom = (lv >= ASSISTANT_CALL_STYLE_UNLOCK_LEVEL && typeof customCall === 'string') ? customCall.trim() : '';
   if (custom) return custom.includes('{name}') ? assistantFillCallTemplate(custom, raw) : custom;
   const stage = assistantBondStageByLevel(lv, assistantId);
-  return assistantFillCallTemplate(stage.call || '{name}', raw);
+  return assistantFillCallTemplate(assistantGenderCallOf(stage.call || '{name}', assistantId), raw);
 };
 // セリフの中の {name} を、そのときの呼び方へ置き換える
 const assistantSpeak = (text, name, level, customCall, assistantId) =>

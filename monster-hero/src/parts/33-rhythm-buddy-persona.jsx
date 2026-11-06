@@ -122,12 +122,23 @@ const rhythmBuddyPersonaBirthday = (id) => {
   const d = new Date(Date.UTC(2025, 0, 1) + n * 86400000);
   return { month: d.getUTCMonth() + 1, day: d.getUTCDate() };
 };
+// 呼び方の id を、プレイヤーの性別に合わせて持ち替える。男の子なら「ちゃん」→「くん」、女の子なら「くん」→「ちゃん」。
+// 候補(list)に替える先が無い性格では替えない
+const rhythmBuddyCallForGender = (callId, list, gender) => {
+  const has = (id) => Array.isArray(list) && list.includes(id);
+  if (gender === 'male' && callId === 'chan' && has('kun')) return 'kun';
+  if (gender === 'female' && callId === 'kun' && has('chan')) return 'chan';
+  return callId;
+};
 // その子の個体差(D の好き・苦手な曲は rhythmBuddyPersonaSongs で別に読む)
 // baseId(種)を渡すと性別も決まる。渡さないとき・ほかの種は、これまでと1文字も変わらない
 const rhythmBuddyPersona = (masuId, trait = '', baseId = null) => {
   const t = Object.prototype.hasOwnProperty.call(RHYTHM_BUDDY_SELF_WORDS, trait) ? trait : '';
   const gender = rhythmBuddyGenderOf(baseId);
-  const callId = rhythmBuddyPersonaChoose(RHYTHM_BUDDY_CALLS[t], masuId, `call:${t}`, true);
+  const callId0 = rhythmBuddyPersonaChoose(RHYTHM_BUDDY_CALLS[t], masuId, `call:${t}`, true);
+  // プレイヤーの性別(プロフィール。data/assistants.js の assistantPlayerGender)に合わせて、くん/ちゃんを持ち替える(2026-11-06 社長)。
+  // その性格の候補に両方あるときだけ。答えない('none')ならこれまでと1文字も変わらない
+  const callId = rhythmBuddyCallForGender(callId0, RHYTHM_BUDDY_CALLS[t], typeof assistantPlayerGender === 'function' ? assistantPlayerGender() : 'none');
   const quirk = rhythmBuddyPersonaChoose(RHYTHM_BUDDY_QUIRKS[t], masuId, `quirk:${t}`, false);
   return {
     gender,

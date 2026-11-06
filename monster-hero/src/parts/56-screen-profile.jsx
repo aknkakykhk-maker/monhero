@@ -136,6 +136,8 @@ function ProfileScreen({
   favoriteMasu = null, onOpenFavoritePicker,
   // フレンドのプロフィールに出る「ひとこと」(自由入力・30文字まで)と、書き換える画面を開く操作
   profileMessage = '', onOpenMessageEditor,
+  // 性別(男の子/女の子/答えない)。助手・マスモンの呼び方のもとにする。ほかの人には見せない(2026-11-06 社長)
+  breederGender = 'none', onSelectBreederGender = null,
   // 選べる助手だけ(イベントで加入する助手は、その会話を見るまで並べない)。
   // 渡されなければ今までどおり全員を並べる
   unlockedAssistants,
@@ -206,6 +208,20 @@ function ProfileScreen({
               </div>
             </div>
           </div>
+          {onSelectBreederGender&&!onboardingPreview&&(
+            <div className="mt-3 rounded-xl border border-white/10 bg-black/25 px-2.5 py-2" data-profile-gender>
+              <div className="flex items-center gap-2">
+                <small className="shrink-0 text-[10px] font-black text-sky-300">性別</small>
+                <div className="grid flex-1 grid-cols-3 gap-1.5" role="radiogroup" aria-label="性別">
+                  {[['male','男の子'],['female','女の子'],['none','答えない']].map(([id,label])=>(
+                    <button key={id} type="button" role="radio" aria-checked={breederGender===id} data-gender={id} onClick={()=>onSelectBreederGender(id)}
+                      className={`min-h-[36px] rounded-lg border text-[11px] font-black active:scale-95 ${breederGender===id?'border-sky-300 bg-sky-500/30 text-white':'border-white/10 bg-slate-800/80 text-slate-300'}`}>{label}</button>
+                  ))}
+                </div>
+              </div>
+              <p className="mt-1 text-[10px] leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手やマスモンの呼び方が変わります。ほかの人には見えません')}</p>
+            </div>
+          )}
           {/* ② 着せかえのタイル(アイコン・フレーム・図鑑・着替え)。ひとことと好きなモンスターは、下の「見せる札」へ移した(2026-10-29 案B)。
               増えても、ここへ同じ形で足していく */}
           {(()=>{

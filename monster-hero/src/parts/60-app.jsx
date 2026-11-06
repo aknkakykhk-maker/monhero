@@ -2657,6 +2657,18 @@ function MonsterHeroGame() {
   const [showFavoritePicker, setShowFavoritePicker] = useState(false);
   // ひとこと(フレンドのプロフィールに出る自己紹介。30文字まで)。新しい保存キー。選んだ文は friendsCleanMessage を通してから覚える
   const PROFILE_MESSAGE_KEY = 'mh_profile_message_v1';
+  // 性別(2026-11-06 社長)。助手・マスモンの呼び方のもとにするだけで、ランキング・フレンドには出さない。新しい保存キー。
+  // 'male'/'female'/'none'(答えない・既定)。無い・壊れているときは 'none' = これまでと同じ呼び方
+  const BREEDER_GENDER_KEY = 'mh_breeder_gender_v1';
+  const [breederGender, setBreederGender] = useState('none');
+  const saveBreederGender = (v) => {
+    const next = typeof normalizeBreederGender === 'function' ? normalizeBreederGender(v) : 'none';
+    if (typeof assistantSetPlayerGender === 'function') assistantSetPlayerGender(next);
+    setBreederGender(next);
+    Promise.resolve(storeSet(BREEDER_GENDER_KEY, next, false)).catch(error => {
+      console.error('[profile] gender save failed:', error && error.message ? error.message : error);
+    });
+  };
   const [profileMessage, setProfileMessage] = useState('');
   const [showMessageEditor, setShowMessageEditor] = useState(false);
   const [tempMessage, setTempMessage] = useState('');
@@ -6670,6 +6682,7 @@ function MonsterHeroGame() {
       setProfileFrameId(normalizeProfileFrameId(await storeGet(PROFILE_FRAME_KEY, PROFILE_FRAME_NONE_ID, false)));
       // 好きなモンスター(フレンド用)。既存のセーブデータには無いキーなので、既定は必ず「未設定」
       { const savedMessage = await storeGet(PROFILE_MESSAGE_KEY, '', false); setProfileMessage(friendsCleanMessage(savedMessage)); }
+      { const savedGender = await storeGet(BREEDER_GENDER_KEY, 'none', false); const g = typeof normalizeBreederGender === 'function' ? normalizeBreederGender(savedGender) : 'none'; if (typeof assistantSetPlayerGender === 'function') assistantSetPlayerGender(g); setBreederGender(g); }
       { const savedFavorite = await storeGet(FAVORITE_MASU_KEY, null, false); setFavoriteMasuId(typeof savedFavorite === 'string' && savedFavorite ? savedFavorite : null); }
       // 呼び方の上書きは助手ごとに別のキーへ。みゅあのぶんは今までのキーをそのまま読む
       const loadedCallStyles = {};
@@ -21290,6 +21303,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             favoriteMasu={(favoriteMasuId!=null&&masuMons.find(m=>String(m.id)===String(favoriteMasuId)))||null}
             onOpenFavoritePicker={()=>setShowFavoritePicker(true)}
             profileMessage={profileMessage}
+            breederGender={breederGender}
+            onSelectBreederGender={saveBreederGender}
             onOpenMessageEditor={()=>{setTempMessage(profileMessage);setShowMessageEditor(true);}}
           />
         )}
