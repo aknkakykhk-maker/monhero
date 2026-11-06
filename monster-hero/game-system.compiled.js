@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ced021d3c127566f
+// source-sha256: 71c0e967d6eea59d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -55627,6 +55627,19 @@ const jaKeepKanaRuns = (s, chunks, segs, {
     if (head !== c.replace(/[、。，．！？!?…‥〜～]+$/, '') || visible(v.split(/\s+/).pop() + c) > JA_WRAP_LINE) continue;
     out.splice(k - 1, 2, v + c);
     k -= 1;
+  }
+  for (let k = 0; k + 1 < out.length; k++) {
+    const c = out[k],
+      n = out[k + 1];
+    if (letters(c) > 2 || !/[ぁ-ゖァ-ヶ一-龯]$/.test(c) || !/^[ぁ-ゖァ-ヶ一-龯]/.test(n) || /\s/.test(c + n)) continue;
+    const x = out.slice(0, k).join('').length,
+      y = x + c.length + n.length;
+    const cand = [];
+    const strong = q => score(q, q, q) >= 150;
+    const edge = q => isHira(s[q - 1]) !== isHira(s[q]) && segEndAt.has(q) && /[ぁ-ゖ一-龯ァ-ヶ]/.test(s[q - 1]) && /^[一-龯ァ-ヶ]|^[ぁ-ゖ]/.test(s[q]) && !/^[ぁぃぅぇぉっゃゅょゎー]/.test(s[q]) && !inKeepWord(q) && !(/[一-龯々][きしちひみりっ]$/.test(s.slice(0, q)) && /^[一-龯]/.test(s[q]));
+    for (let q = x + c.length + 1; q < y; q++) if ((runOf(q) && okInside(q) || edge(q)) && strong(q) && letters(s.slice(x, q)) >= 3 && letters(s.slice(q, y)) >= 3 && visible(s.slice(x, q)) <= JA_WRAP_LINE && visible(s.slice(q, y)) <= JA_WRAP_LINE) cand.push(q);
+    const q = pick(x, y, cand);
+    if (q >= 0) out.splice(k, 2, s.slice(x, q), s.slice(q, y));
   }
   return out.join('​');
 };
@@ -158031,7 +158044,7 @@ function MonsterHeroGame() {
       style: {
         backgroundColor: who.accent
       }
-    }, "このモンスターにする")))), React.createElement("p", {
+    }, "この助手にする")))), React.createElement("p", {
       className: "w-full max-w-md mx-auto text-[9px] text-slate-500 text-center leading-tight pb-2"
     }, "3人とも最初から選べます。仲良し度は助手ごとに別々に貯まるので、あとで変えても消えません。"))), gameState === 'PROFILE' && React.createElement(ProfileScreen, {
       onCardShareGo: intent => {

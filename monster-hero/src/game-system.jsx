@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a18d904d953b0c03
+// generated-sha256: 7d1030773b996683
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -34807,6 +34807,22 @@ const jaKeepKanaRuns = (s, chunks, segs, { visible, letters, inKeepWord }) => {
     const head = c.split(/[\s、。，．！？!?「」『』（）()…‥〜～・♪♡✨]/)[0];
     if (head !== c.replace(/[、。，．！？!?…‥〜～]+$/, '') || visible(v.split(/\s+/).pop() + c) > JA_WRAP_LINE) continue;
     out.splice(k - 1, 2, v + c); k -= 1;
+  }
+  //   どちらとも合わせられなかったものは、あとのかたまりの中のよい所まで折り目をずらす(「まだ|会ってないやつね。」→「まだ会って|ないやつね。」)。
+  //   ずらした先の両側に字が3字以上残り、あとの側が1行に入るときだけ
+  for (let k = 0; k + 1 < out.length; k++) {
+    const c = out[k], n = out[k + 1];
+    if (letters(c) > 2 || !/[ぁ-ゖァ-ヶ一-龯]$/.test(c) || !/^[ぁ-ゖァ-ヶ一-龯]/.test(n) || /\s/.test(c + n)) continue;
+    const x = out.slice(0, k).join('').length, y = x + c.length + n.length;
+    const cand = [];
+    // 点の高い所(「て・で」のあと・「から」などのあと・漢字やカタカナとの境目。150点以上)だけ。道具が言葉の中に入れた区切り(これや|りたい)へはずらさない
+    const strong = (q) => score(q, q, q) >= 150;
+    const edge = (q) => isHira(s[q - 1]) !== isHira(s[q]) && segEndAt.has(q) && /[ぁ-ゖ一-龯ァ-ヶ]/.test(s[q - 1]) && /^[一-龯ァ-ヶ]|^[ぁ-ゖ]/.test(s[q]) && !/^[ぁぃぅぇぉっゃゅょゎー]/.test(s[q]) && !inKeepWord(q)
+      // くっついた言葉(受け取り|忘れ・吹き出し|押す)の、送り仮名と次の漢字のあいだへはずらさない
+      && !(/[一-龯々][きしちひみりっ]$/.test(s.slice(0, q)) && /^[一-龯]/.test(s[q]));
+    for (let q = x + c.length + 1; q < y; q++) if (((runOf(q) && okInside(q)) || edge(q)) && strong(q) && letters(s.slice(x, q)) >= 3 && letters(s.slice(q, y)) >= 3 && visible(s.slice(x, q)) <= JA_WRAP_LINE && visible(s.slice(q, y)) <= JA_WRAP_LINE) cand.push(q);
+    const q = pick(x, y, cand);
+    if (q >= 0) out.splice(k, 2, s.slice(x, q), s.slice(q, y));
   }
   return out.join('​');
 };
@@ -96380,7 +96396,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <span className="text-[13px] font-black text-white">{who.name}</span>
                     <span className="text-[9px] font-black leading-tight text-center" style={{color:who.accent}}>{who.tagline||''}</span>
                     <span className="text-[9px] text-slate-400 leading-tight text-center">{who.intro||''}</span>
-                    <span className="mt-auto w-full min-h-[38px] rounded-xl flex items-center justify-center text-[11px] font-black text-slate-950" style={{backgroundColor:who.accent}}>このモンスターにする</span>
+                    <span className="mt-auto w-full min-h-[38px] rounded-xl flex items-center justify-center text-[11px] font-black text-slate-950" style={{backgroundColor:who.accent}}>この助手にする</span>
                   </button>
                 ))}
               </div>

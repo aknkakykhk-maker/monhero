@@ -35,7 +35,7 @@ const SEEN_KEYS = [constOf('ASSISTANT_CHAT_STORY_SEEN_KEY'), constOf('TACTICS_TY
 check('昔のお知らせのお話の id と印のキーを読めた', Object.values(PAST).every(Boolean) && SEEN_KEYS.every(Boolean), JSON.stringify(PAST));
 
 // はじめての案内を進めるボタン(遊び役 tools/playbot/scenarios/new-player.js と同じ考え方)
-const FORWARD = /^(TAP TO START|トップ画面へ進む|次へ|つぎへ|はじめる|始める|決定！?|この名前で(始める|決定)?|これにする|この子にする|OK|受け取る|スキップ)$/;
+const FORWARD = /^(TAP TO START|トップ画面へ進む|次へ|つぎへ|はじめる|始める|決定！?|この名前で(始める|決定)?|これにする|この助手にする|OK|受け取る|スキップ)$/;
 const SETUP = [/^名前を決める$/, /^アイコンを選ぶ$/];
 
 (async () => {
