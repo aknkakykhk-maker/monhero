@@ -21,7 +21,7 @@ const root = path.resolve(__dirname, '..', '..');
 const OUT = path.resolve(process.argv[2] || path.join(root, 'docs/progress/card-intro-video-3'));
 const SHOTS = process.env.CARD_VIDEO_SHOTS || '';   // 途中の画面の写真を置くフォルダ(作り直すとき用)
 const PORT = Number(process.env.CARD_PORT) || 8993;
-const W = 390, H = 844, DSF = 2;
+const W = 390, H = 844, DSF = Number(process.env.CARD_VIDEO_DSF) || 2; // 細かさ(CARD_VIDEO_DSF=3 で 1170×2532)
 const FOE = { name: 'ブリーダーA', deck: '仮のデッキ' };
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4' };
 const serve = () => new Promise((resolve) => {
@@ -72,7 +72,7 @@ const mp4 = (rec, out, from, to) => {
 };
 
 // ゲームを開いて HOME まで(はじめての窓は閉じる)。偽の登録デッキと、本物の Supabase へ行かない返事を仕込む
-const boot = async (browser) => {
+const boot = async (browser, opts = {}) => {
   const context = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DSF });
   const page = await context.newPage();
   const errors = [];
@@ -86,13 +86,13 @@ const boot = async (browser) => {
     const fn = (url.match(/rpc\/([a-z_]+)/) || [])[1] || '';
     return json(fn ? null : []);
   });
-  await page.addInitScript(() => {
+  await page.addInitScript((name) => {
     if (sessionStorage.getItem('__cardSeeded')) return;
     sessionStorage.setItem('__cardSeeded', '1');
     localStorage.setItem('mh_debug_unlocked_v1', '1'); // HOME に MFバトルカードの札を出すため(デバッグのボタンは撮らない)
-    for (const [k, v] of Object.entries({ mh_breeder_name: 'ブリーダー', mh_breeder_icon: '🐣', mh_onboarded: true, mh_tutorial_seen_v1: true, mh_battle_tutorial_seen_v1: true,
+    for (const [k, v] of Object.entries({ mh_breeder_name: name, mh_breeder_icon: '🐣', mh_onboarded: true, mh_tutorial_seen_v1: true, mh_battle_tutorial_seen_v1: true,
       mh_battle_tutorial_guide_shown_v1: true, mh_inherited_unique_level_compensation_v1: true, mh_inherited_unique_level_compensation_pending_v1: false })) localStorage.setItem(k, JSON.stringify(v));
-  });
+  }, opts.name || 'ブリーダー');
   await page.addInitScript(eventStorySeed());
   await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
   const sleep = (ms) => page.waitForTimeout(ms);
@@ -161,10 +161,10 @@ const seedSmart = () => {
   localStorage.removeItem('mh_card_tactics_by_deck_v1');
   return `${cardTacticSmartLevel(cardTacticNormalizeFrames(frames))}(基本2・効く ${cardTacticCountedRows(cardTacticNormalizeFrames(frames))}枚)`;
 };
-// デッキ登録の画面だけを、ゲームの上に重ねて描く(デッキは偽の1組「わたしのデッキ」)
-const mountRegister = () => {
+// デッキ登録の画面だけを、ゲームの上に重ねて描く(デッキは偽の1組「わたしのデッキ」。habit … どの助手の MASTER のデッキの形か。既定はきき)
+const mountRegister = (habit) => {
   const db = CARD_BATTLE_DATA;
-  const A = { ...cardAiBuildDeck(db, 'kiki', 'master', cardAiSeededRand('tactic-video-mine')), id: 'dMine', name: 'わたしのデッキ' };
+  const A = { ...cardAiBuildDeck(db, habit || 'kiki', 'master', cardAiSeededRand('tactic-video-mine')), id: 'dMine', name: 'わたしのデッキ' };
   const col = {};
   [...A.monsters, ...A.cards].forEach((no) => { col[no] = 9; });
   document.getElementById('__reg')?.remove();
@@ -176,7 +176,7 @@ const mountRegister = () => {
   window.__regRoot.render(React.createElement(CardDeckRegister, { db, decks: { v: 1, active: 'dMine', decks: [A] }, collection: col, onBack: () => {} }));
 };
 
-module.exports = { boot, shot, mp4, serve, FOE, W, H, DSF, OUT, root };
+module.exports = { boot, shot, mp4, serve, starter, fakeEntry, seedSmart, mountRegister, FOE, W, H, DSF, OUT, root };
 if (require.main === module) {
   (async () => {
     const playwright = require('playwright');
