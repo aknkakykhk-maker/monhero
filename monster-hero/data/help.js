@@ -2750,7 +2750,7 @@ const HELP_CATEGORIES = [
       },
       {
         id: 'assistant-life', emoji: '🏡', title: '助手たちの今', releaseFlag:'assistantLife',
-        assistant: 'みんな、それぞれ好きにすごしてるんだよ♪ さみしそうな助手がいたら、声かけてあげてね！',
+        assistant: 'みんな、それぞれ思い思いにすごしてるんだよ♪ さみしそうな助手がいたら、声かけてあげてね！',
         expression: 'happy',
         blocks: [
           { t:'p', text:'助手はそれぞれ、6つの時間(朝5時・昼10時・午後14時・夕方18時・夜21時・深夜0時から)ごとに、気分としたいことで、だれと・どこで・何をするかを決めます。同じ時間のあいだは、様子は変わりません。' },

@@ -216,10 +216,16 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
 
     // ⑨ 友情Lv が上がった演出: みんなの友情Lv を Lv3 の手前(118)にして見守る → 上がると画面いっぱいの祝い(トーストは出さない)
     {
-      const V = await open({ w: 390, h: 844, bondAll: 118 });
-      for (let i = 0; i < 40 && !(await V.page.locator('[data-assistant-life-band]').count()); i++) { await finishTalk(V.page); await V.page.waitForTimeout(500); }
-      await reopen(V.page);
-      const wb = V.page.locator('[data-assistant-life-watch]:not([disabled])').first();
+      // 様子は端末ごとの種で決まるので、組ができていなければ開き直す(新しい端末として)
+      let V = null, wb = null;
+      for (let tries = 0; tries < 4; tries++) {
+        V = await open({ w: 390, h: 844, bondAll: 118 });
+        for (let i = 0; i < 40 && !(await V.page.locator('[data-assistant-life-band]').count()); i++) { await finishTalk(V.page); await V.page.waitForTimeout(500); }
+        await reopen(V.page);
+        wb = V.page.locator('[data-assistant-life-watch]:not([disabled])').first();
+        if (await wb.count()) break;
+        await V.page.close();
+      }
       if (await wb.count()) {
         await wb.click(); await V.page.waitForTimeout(500);
         await finishTalk(V.page);
