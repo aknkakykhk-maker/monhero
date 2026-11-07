@@ -226,3 +226,17 @@
 2. 段階2(PR): 演奏中の顔とふきだし・結果のカード・Lv で開くもの
 3. 段階3(PR): 台詞(コトバ・ナカヨシと分担)と口調の検査・デュオ・合体の演出(仲良し度は main の 9d21861 から読む)
 5. ヘルプ・更新履歴・一度きりの案内 → カゲあつくんの見直し → 社長
+
+## 進捗(作る段)
+
+- [x] 社長の止め絵の確認(縦 `real-*.jpg`・横 `real-land-*.jpg`)→「この形で作る」(11/7)
+- [x] 段階1: 計算と保存・呼ぶシートの助手のタブ・部屋の中の動き(公開の印 `RELEASE_FLAGS.rhythmAssistantSession` は偽)
+  - 計算 `33-rhythm-assistant-session.jsx`(純粋)・保存と画面 `80-screen-rhythm-assistant-session.jsx`・部屋 `77-screen-rhythm-multi.jsx`(知らせに `as`)
+  - 部屋の中では助手を masuId `as:<助手id>` で持つ。頭(cpuBrain)は `rhythmAssistSessionWrapBrain` で包んで、助手のときだけ助手の計算へ回す
+  - 控えは `mh_rhythm_buddy_v1` の calls に `kind:'assistant'`・`assistantId`(無い控えはマスモン)
+  - 台詞は最小限(来たとき・好きな曲・MVP・高い・低い)。段階3でコトバ・ツムギ・ナカヨシ(4)と増やす
+  - 検査 `tools/mode/rhythm-assistant-session-check.js`
+  - 印を立てて試すとき: ゲームを開いて HOME で `RELEASE_FLAGS.rhythmAssistantSession = true` にしてからモンヒロビートへ入る
+- [ ] 段階2: 演奏中の顔とひとこと(左上・縦は時間の行の下/横は曲名の行の下)・結果のカード(「助手」の印)・Lv で開くもの
+- [ ] 段階3: 台詞・デュオ・サビの合体・仲良し度 +3
+- [ ] 止め絵(縦横)・台詞の抜粋・更新履歴とヘルプの文 → 窓口
