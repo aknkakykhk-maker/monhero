@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cb7c8256a1559e75
+// source-sha256: b4bd30cf643f1d0f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -90123,7 +90123,7 @@ function RhythmMultiMemberCards({
     }, React.createElement(RhythmMultiAvatar, {
       m: m,
       resolveIconUrl: resolveIconUrl,
-      sizeClass: tall ? 'h-12 w-12 landscape:h-16 landscape:w-16' : 'h-7 w-7',
+      sizeClass: tall ? 'h-12 w-12 landscape:h-16 landscape:w-16 [@media(max-height:440px)]:h-11 [@media(max-height:440px)]:w-11 [[data-mh-view-rotation=true]_&]:h-11 [[data-mh-view-rotation=true]_&]:w-11' : 'h-7 w-7',
       small: !tall
     }), m.id === hostId && React.createElement("span", {
       "aria-hidden": "true",
@@ -91293,9 +91293,11 @@ function RhythmMultiScreen({
     className: "block whitespace-nowrap text-base font-black italic tracking-wider text-cyan-200"
   }, "MULTI LIVE"), React.createElement("small", {
     className: "mt-0.5 block break-keep text-[10px] font-black leading-tight text-fuchsia-200"
-  }, "▶ ", step, view ? React.createElement(React.Fragment, null, " ・ ", React.createElement("span", {
+  }, React.createElement("span", {
     className: "whitespace-nowrap"
-  }, view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode], " ", view.code)) : ''), view && room && room.round && React.createElement("small", {
+  }, "▶ ", step), view ? React.createElement(React.Fragment, null, " ", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "・", view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode], " ", view.code)) : ''), view && room && room.round && React.createElement("small", {
     "data-rhythm-multi-streak-next": true,
     className: "mt-0.5 inline-block whitespace-nowrap rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-1.5 text-[9px] font-black leading-4 text-white"
   }, "🔥 ", rhythmMultiStreakNextText(view.streak))), quickRunInfo && React.createElement(RhythmQuickRunPill, {
@@ -92183,7 +92185,7 @@ function RhythmMultiScreen({
       className: "min-h-[48px] rounded-xl bg-fuchsia-700 px-2 text-sm font-black disabled:opacity-40"
     }, "メンバー確定")), friendsOn && view && React.createElement("section", {
       "data-rhythm-multi-friend-invite": true,
-      className: card
+      className: `${card} landscape:hidden`
     }, React.createElement("button", {
       "data-rhythm-multi-friend-invite-toggle": true,
       type: "button",
@@ -92192,7 +92194,12 @@ function RhythmMultiScreen({
     }, invitePanel ? 'フレンドの招待を閉じる' : 'フレンドを招待する'), invitePanel && inviteListBody), buddyBumped && React.createElement("p", {
       "data-rhythm-buddy-bumped": true,
       className: "text-[11px] font-black leading-snug text-amber-200"
-    }, "人が入ってきたので、呼んだマスモンは席をゆずって帰りました(使った回数・券は戻りました)"), buddyCallButton(), view && !publicRoom && !view.full && onStepAway && React.createElement("button", {
+    }, "人が入ってきたので、呼んだマスモンは席をゆずって帰りました(使った回数・券は戻りました)"), React.createElement("div", {
+      className: "landscape:hidden"
+    }, buddyCallButton()), React.createElement("div", {
+      "data-rhythm-multi-exit-row": true,
+      className: "space-y-2 landscape:grid landscape:grid-flow-col landscape:auto-cols-fr landscape:gap-2 landscape:space-y-0"
+    }, view && !publicRoom && !view.full && onStepAway && React.createElement("button", {
       "data-rhythm-multi-step-away": true,
       type: "button",
       className: `${btn} w-full bg-cyan-800`,
@@ -92203,7 +92210,7 @@ function RhythmMultiScreen({
       type: "button",
       className: `${btn} w-full bg-slate-700`,
       onClick: leaveRoomAfterTap
-    }, view ? 'ルームを出る' : 'やめる'), message && React.createElement("p", {
+    }, view ? 'ルームを出る' : 'やめる')), message && React.createElement("p", {
       className: "text-[12px] font-black text-rose-300"
     }, message)))), chatSheet, inviteSheetLayer, rankingLayer, buddyInfoLayer, buddySheetLayer);
   }
