@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9d2c74bf621e3d9b
+// generated-sha256: 977e7ec391b70812
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -66022,7 +66022,7 @@ const cardNormalizeCpuOpen = (v) => {
 };
 // 対戦の見出し・結果に出す強さの名前。登録デッキが相手なら、そのデッキの賢さの段(GRAND MASTER・HELL・LEGEND まで。2026-10-30 社長)
 const cardBattleLevelLabel = (level, share) => (share && typeof cardShareSmartLevel === 'function' ? CARD_SHARE_SMART_LABEL[cardShareSmartLevel(share.tactics)] : CARD_LEVEL_LABEL[level]) || '';
-const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, cupItems = null, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, onSettings = null }) => {
+const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, cupItems = null, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, onSettings = null, sessionTickets = null, onUseSessionTicket = null, onRefundSessionTicket = null }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
@@ -66058,13 +66058,33 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const [shareAuto, setShareAuto] = useState(false);
   const [shareQuick, setShareQuick] = useState(false); // オートの「結果だけ見る」(2026-11-02)
   const [autoLeft, setAutoLeft] = useState(null);
+  // セッション券でふやせる今日の残り(2026-11-07 社長・1日20回まで。96 の cardAutoRewardAddExtra)と、確認の窓・結果のひとこと
+  const [autoExtraLeft, setAutoExtraLeft] = useState(null);
+  const [autoTicketAsk, setAutoTicketAsk] = useState(false);
+  const [autoTicketBusy, setAutoTicketBusy] = useState(false);
+  const [autoTicketNote, setAutoTicketNote] = useState('');
   useEffect(() => {
     if (view !== 'deckPick' || !(deckPick && deckPick.pick && deckPick.pick.share) || typeof cardAutoRewardLoad !== 'function') return undefined;
     let alive = true;
-    setAutoLeft(null);
-    void cardAutoRewardLoad().then((r) => { if (alive) setAutoLeft(r.left); }).catch(() => {});
+    setAutoLeft(null); setAutoExtraLeft(null); setAutoTicketNote('');
+    void cardAutoRewardLoad().then((r) => { if (alive) { setAutoLeft(r.left); setAutoExtraLeft(Number.isInteger(r.extraLeft) ? r.extraLeft : null); } }).catch(() => {});
     return () => { alive = false; };
   }, [view, deckPick]);
+  // 確認の窓の「1枚使って1回ふやす」。券は 60 の consumeBuddyTicket を通し、書けなければ refundBuddyTicket で返す(96 の中で)
+  const useAutoTicket = async () => {
+    if (autoTicketBusy || typeof cardAutoRewardAddExtra !== 'function') return;
+    setAutoTicketBusy(true);
+    try {
+      const res = await cardAutoRewardAddExtra({ consume: onUseSessionTicket, refund: onRefundSessionTicket });
+      const l = res && res.loaded;
+      if (l) { setAutoLeft(l.left); setAutoExtraLeft(l.extraLeft); }
+      setAutoTicketNote(res && res.ok ? 'ごほうびが1回ぶん戻りました'
+        : res && res.why === 'limit' ? '今日はこれ以上ふやせません'
+          : res && res.why === 'noTicket' ? 'セッション券がありません'
+            : res && res.why === 'notEmpty' ? 'まだ今日のごほうびが残っています'
+              : '保存できなかったので、セッション券は戻しました');
+    } finally { setAutoTicketBusy(false); setAutoTicketAsk(false); }
+  };
   // マルチは、入口で相手を決めたあとにデッキ選びを挟む(2026-10-30 社長「相手を選んだあとにして」。91 の CARD_PVP_NEXT)。
   //   試合のあとに部屋を出て入口へ戻るとき(over → idle)は挟まない(次に相手を決めたときに選ぶ)。「もう1戦」は同じ部屋・同じデッキのまま
   const [kitPick, setKitPick] = useState(null);
@@ -66942,11 +66962,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const toPvp = deckPick.next === 'pvp';
     // ほかのブリーダーの登録デッキと戦うとき(2026-10-31 テスターさんの要望)。借りたデッキでは戦わない(ごほうびの扱いを変えないため)
     const sharePick = !!(deckPick.pick && deckPick.pick.share);
-    return <CardDeckPick db={db} decks={save.decks} collection={save.collection}
+    return <><CardDeckPick db={db} decks={save.decks} collection={save.collection}
       note={toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います'}
       onBack={() => { const back = deckPick.back; setDeckPick(null); if (toPvp && CARD_PVP_NEXT.take()) { setView('pvp'); return; } setView(toPvp ? 'mode' : back || 'foe'); }}
       allowRented={!toPvp && !sharePick} rentTab={shareForm && !toPvp && !sharePick}
-      auto={sharePick && typeof cardTacticsAutoOf === 'function' ? { on: shareAuto, onChange: setShareAuto, left: autoLeft, quick: shareQuick, onQuick: typeof cardShareAutoFinish === 'function' ? setShareQuick : null } : null}
+      auto={sharePick && typeof cardTacticsAutoOf === 'function' ? { on: shareAuto, onChange: setShareAuto, left: autoLeft, quick: shareQuick, extraLeft: autoExtraLeft, tickets: Number.isInteger(sessionTickets) ? sessionTickets : null, ticketNote: autoTicketNote, onExtra: typeof onUseSessionTicket === 'function' && typeof cardAutoRewardAddExtra === 'function' ? () => { setAutoTicketNote(''); setAutoTicketAsk(true); } : null, onQuick: typeof cardShareAutoFinish === 'function' ? setShareQuick : null } : null}
       onPick={async (c) => {
         // 借りたデッキ(みんなのデッキ・95): 自分のデッキの active は書き換えない
         if (c.kind === 'rent') { const next = deckPick; setDeckPick(null); if (next.next !== 'pvp') startBattle(next.pick, c.deck, { rented: c }); return; }
@@ -66963,7 +66983,28 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         setDeckPick(null);
         if (next.next === 'pvp') { setView('pvp'); return; }
         startBattle(next.pick, deck, autoT ? { auto: { tactics: autoT, quick: shareQuick && typeof cardShareAutoFinish === 'function' } } : {});
-      }}/>;
+      }}/>
+      {/* セッション券でオートのごほうびを1回ふやす確認の窓(2026-11-07 社長。見た目は案 docs/progress/card-auto-ticket のまま) */}
+      {autoTicketAsk && (
+        <ModalFrame label="セッション券を使う確認" onClose={autoTicketBusy ? undefined : () => setAutoTicketAsk(false)} zIndex={MODAL_Z.confirm}>
+          <div data-card-auto-ticket-ask>
+            <h3 className="text-center text-base font-black leading-snug text-amber-200" style={JA_LABEL_STYLE}>{jaWrap('セッション券を1枚使いますか？')}</h3>
+            <p className="mt-3 text-[12px] font-bold leading-relaxed text-slate-200" style={JA_WRAP_STYLE}>{jaWrap('オートで挑むの今日のごほうびが1回ぶん戻ります。')}</p>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-center">
+              <div className="rounded-xl bg-slate-900 p-2"><small className="block text-[10px] font-bold text-slate-400">セッション券</small>
+                <b data-card-auto-ticket-count className="text-[16px] font-black tabular-nums">{Number.isInteger(sessionTickets) ? sessionTickets : 0} → <span className="text-amber-200">{Math.max(0, (Number.isInteger(sessionTickets) ? sessionTickets : 0) - 1)}</span>枚</b></div>
+              <div className="rounded-xl bg-slate-900 p-2"><small className="block text-[10px] font-bold text-slate-400">今日のごほうび</small>
+                <b className="text-[16px] font-black tabular-nums">{Number.isInteger(autoLeft) ? autoLeft : 0} → <span className="text-emerald-200">{(Number.isInteger(autoLeft) ? autoLeft : 0) + 1}</span>回</b></div>
+            </div>
+            <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`ふやしたぶんは今日(朝4時まで)だけ使えます。今日ふやせるのはあと${Number.isInteger(autoExtraLeft) ? autoExtraLeft : 0}回です。`)}</p>
+            <div className="mt-4 grid grid-cols-1 gap-2">
+              <button type="button" data-card-auto-ticket-use disabled={autoTicketBusy} onClick={() => { void useAutoTicket(); }} className="mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98] disabled:opacity-50">1枚使って1回ふやす</button>
+              <ModalCloseButton onClick={() => setAutoTicketAsk(false)} disabled={autoTicketBusy} label="やめる"/>
+            </div>
+          </div>
+        </ModalFrame>
+      )}
+    </>;
   }
 
   if (view === 'pvp') {
@@ -68846,6 +68887,16 @@ const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', 
               {jaWrap('選んだデッキの戦術カードで、あなたの側も自動で戦います。試合の途中で「自分で」に切り替えられます')}
               <span data-card-deck-pick-auto-left={auto.left === null ? '' : auto.left} className={`mt-1 block ${auto.left ? 'text-emerald-200' : 'text-amber-200'}`}>
                 {auto.left === null ? '' : auto.left > 0 ? `今日のごほうびはあと${auto.left}回(自分で戦うときの半分)` : '今日のごほうびは終わりました。ごほうびなしで遊べます'}</span>
+              {/* セッション券1枚でごほうびを1回ふやす(2026-11-07 社長・1日20回まで)。今日のごほうびを使い切ったときだけ出す。
+                  押すと確認の窓(84)。券が0枚なら押せない。今日ふやせる回数を使い切ったら出さない */}
+              {auto.left === 0 && typeof auto.onExtra === 'function' && Number.isInteger(auto.extraLeft) && (auto.extraLeft > 0 ? (<>
+                <button type="button" data-card-auto-ticket disabled={!(auto.tickets > 0)} onClick={() => { Audio_.fgSe.tap(); auto.onExtra(); }}
+                  className="mt-2 flex min-h-[44px] w-full items-center justify-center gap-1 rounded-xl border border-emerald-300 bg-emerald-900/70 px-2 text-[12px] font-black text-emerald-100 shadow-[0_0_10px_rgba(52,211,153,.45)] active:scale-[.98] disabled:border-slate-600 disabled:bg-slate-800 disabled:text-slate-400 disabled:shadow-none" style={JA_WRAP_STYLE}>
+                  {jaWrap('🎫 セッション券1枚でごほうびを1回ふやす')}</button>
+                <span data-card-auto-ticket-left={auto.extraLeft} className="mt-1 block text-right text-[10px] text-slate-400" style={JA_WRAP_STYLE}>
+                  {jaWrap(auto.tickets > 0 ? `持っているセッション券 ${auto.tickets}枚・今日ふやせるのはあと${auto.extraLeft}回` : 'セッション券がありません(モンヒロビートのランクが上がるともらえます)')}</span>
+              </>) : <span data-card-auto-ticket-left="0" className="mt-1 block text-[10px] text-slate-400">今日はこれ以上ふやせません</span>)}
+              {auto.ticketNote && <span data-card-auto-ticket-note className="mt-1 block text-[11px] text-emerald-200" style={JA_WRAP_STYLE}>{jaWrap(auto.ticketNote)}</span>}
             </p>}
           </div>
         )}
@@ -74177,7 +74228,7 @@ const cardTacticsAutoOf = async (db, deck) => {
 
 // ---- オートで挑む(案B・2026-11-02 社長「部のおすすめ」・ごほうびは案3) ----
 //   ほかのブリーダーの登録デッキに、自分の側も戦術カードで自動で挑む。ごほうびは1日はじめの3回だけ手の半分、4回目からは無し(何回でも挑める)
-//   新しいキー mh_card_auto_reward_v1 = { v:1, day:'YYYY-MM-DD'(日本の日付), n: その日にごほうびをもらった回数 }。壊れていたら0回の扱い
+//   新しいキー mh_card_auto_reward_v1 = { v:1, day:'YYYY-MM-DD'(日本の日付), n: その日にごほうびをもらった回数, extra?: その日にセッション券でふやした回数, r?: 戻しの印 }。壊れていたら0回の扱い
 const CARD_AUTO_REWARD_KEY = 'mh_card_auto_reward_v1';
 const CARD_AUTO_REWARD_DAY_MAX = 3;
 // 2026-11-07 の一度きりの戻し(社長「オートご褒美がリセットされてない。今日の分は全員リセットして」)。
@@ -74186,22 +74237,50 @@ const CARD_AUTO_REWARD_DAY_MAX = 3;
 //   ほかの日は何もしない。キーの名前・形はそのまま(項目 r を足しただけ。前からの読み方は r を見ない)
 const CARD_AUTO_REWARD_RESET_DAY = '2026-11-07';
 const CARD_AUTO_REWARD_RESET_MARK = '20261107';
+// ★セッション券でふやした回数 extra(2026-11-07 社長「セッション券1枚でオートごほうび1回分を復活できるようにしたい」・1日20回まで)。
+//   同じ値に項目 extra を足しただけ(n の意味は変えない)。残りは max(0, 3 + extra - n)。無い・壊れている・0〜20の整数でないときは0。
+//   日が変わると n と同じく0に戻る。書くときは印 r を消さない(11/7 は印を付けて書く。付けないと n が0に戻って二重になる)
+const CARD_AUTO_REWARD_EXTRA_MAX = 20;
 const cardAutoRewardNormalize = (raw, today) => {
   const day = raw && typeof raw === 'object' && typeof raw.day === 'string' ? raw.day : '';
   // 切り替えの夜の持ち越し(cardDayCarry)はここでは使わない。上のとおり、持ち越した分が4:00 を過ぎても今日の分として残ったため
   let n = raw && Number.isInteger(raw.n) && raw.n >= 0 && raw.n < 10000 ? raw.n : 0;
   if (day === CARD_AUTO_REWARD_RESET_DAY && today === CARD_AUTO_REWARD_RESET_DAY && raw.r !== CARD_AUTO_REWARD_RESET_MARK) n = 0;
-  return { day: today, n: day === today ? n : 0 };
+  const extra = raw && Number.isInteger(raw.extra) && raw.extra >= 0 && raw.extra <= CARD_AUTO_REWARD_EXTRA_MAX ? raw.extra : 0;
+  return { day: today, n: day === today ? n : 0, extra: day === today ? extra : 0 };
 };
 const cardAutoRewardLoad = async () => {
   let raw = null;
   try { raw = await storeGet(CARD_AUTO_REWARD_KEY, null); } catch (_) { /* 読めなければ0回の扱い */ }
   const today = typeof cardTodayJst === 'function' ? cardTodayJst() : '';
   const c = cardAutoRewardNormalize(raw, today);
-  return { raw, today: c.day, n: c.n, left: Math.max(0, CARD_AUTO_REWARD_DAY_MAX - c.n) };
+  return { raw, today: c.day, n: c.n, extra: c.extra, left: Math.max(0, CARD_AUTO_REWARD_DAY_MAX + c.extra - c.n), extraLeft: Math.max(0, CARD_AUTO_REWARD_EXTRA_MAX - c.extra) };
 };
-// ごほうびをもらった1回を数える項目(結果の取引に足す)
-const cardAutoRewardEntry = (loaded) => ({ key: CARD_AUTO_REWARD_KEY, before: loaded.raw, next: { v: 1, day: loaded.today, n: loaded.n + 1, ...(loaded.today === CARD_AUTO_REWARD_RESET_DAY ? { r: CARD_AUTO_REWARD_RESET_MARK } : {}) } });
+// 書く値(n・extra・印 r)。11/7 は印を付ける。ほかの日に前から付いている印もそのまま残す
+const cardAutoRewardValue = (loaded, { n, extra }) => ({
+  v: 1, day: loaded.today, n, ...(extra > 0 ? { extra } : {}),
+  ...(loaded.today === CARD_AUTO_REWARD_RESET_DAY || (loaded.raw && typeof loaded.raw === 'object' && loaded.raw.r === CARD_AUTO_REWARD_RESET_MARK && loaded.raw.day === loaded.today) ? { r: CARD_AUTO_REWARD_RESET_MARK } : {}),
+});
+// ごほうびをもらった1回を数える項目(結果の取引に足す)。券でふやした回数(extra)はそのまま引き継ぐ
+const cardAutoRewardEntry = (loaded) => ({ key: CARD_AUTO_REWARD_KEY, before: loaded.raw, next: cardAutoRewardValue(loaded, { n: loaded.n + 1, extra: loaded.extra || 0 }) });
+// セッション券1枚でごほうびを1回ふやす。consume は券を1枚減らす関数(60 の consumeBuddyTicket。持っていなければ false)、
+//   refund は返す関数(60 の refundBuddyTicket)。上限20は、画面の値ではなく、ここで読み直した保存の値で数える。
+//   順番: 読み直す → 上限・残りを確かめる → 券を1枚減らす → extra+1 を書く。書けなければ券を返す(券だけ減ってごほうびが戻らない、を作らない)
+//   返すのは { ok, why, loaded }。why … 'limit'(今日はもう20回ふやした)・'notEmpty'(まだごほうびが残っている)・'noTicket'(券が無い)・'save'(書けなかった。券は返した)
+const cardAutoRewardAddExtra = async ({ consume, refund } = {}) => {
+  const loaded = await cardAutoRewardLoad();
+  if (loaded.extra >= CARD_AUTO_REWARD_EXTRA_MAX) return { ok: false, why: 'limit', loaded };
+  if (loaded.left > 0) return { ok: false, why: 'notEmpty', loaded };
+  if (typeof consume !== 'function' || !(await consume())) return { ok: false, why: 'noTicket', loaded };
+  // storeSet は書けなかったとき false を返す(例外は出さない。25-storage.jsx)
+  let saved = false;
+  try { saved = (await storeSet(CARD_AUTO_REWARD_KEY, cardAutoRewardValue(loaded, { n: loaded.n, extra: loaded.extra + 1 }))) !== false; } catch (_) { saved = false; }
+  if (!saved) {
+    if (typeof refund === 'function') { try { await refund(); } catch (__) { /* 返せなくても遊びは止めない */ } }
+    return { ok: false, why: 'save', loaded };
+  }
+  return { ok: true, why: '', loaded: await cardAutoRewardLoad() };
+};
 // 1試合ぶんの経験値の保存の項目(84 の結果の取引に足す)。経験値を入れない人(公開前・デバッグでない)は空
 const cardLevelEntries = async ({ kind, level, outcome, debug = false, auto = false }) => {
   if (!cardTacticsOpen() && !debug) return { entries: [], gain: null };
@@ -98556,7 +98635,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* MFバトルカードのマルチ: 招待の部屋を開いたまま、ほかの画面にいるあいだの帯(91 の CardMultiAwayBar・2026-10-30。ビートの帯と同じ形) */}
         <CardMultiAwayBar busy={CARD_PVP_NOTICE_BUSY.includes(gameState)} onReturn={()=>{CARD_PVP_BACK.request();if(!String(gameState).startsWith('CARD_'))setCardOrigin('home');setGameState('CARD_TOP');}}/>
         <CardPvpInviteNotice enabled={!!cardBattleEntryVisible&&(cardPvpOpen()||!!cardBattleDebugHome)} busy={CARD_PVP_NOTICE_BUSY.includes(gameState)} onAccept={()=>{if(!String(gameState).startsWith('CARD_'))setCardOrigin('home');setGameState('CARD_TOP');}}/>
-        {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{void exitCardBattle();}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={playCardBgm} onQuickLoops={awardCardQuickLoops}
+        {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} sessionTickets={ownedItemCount(ownedItems,RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseSessionTicket={consumeBuddyTicket} onRefundSessionTicket={refundBuddyTicket} onExit={()=>{void exitCardBattle();}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={playCardBgm} onQuickLoops={awardCardQuickLoops}
           quickRun={cardQuickRunView()}
           quickAutoReady={autoQuickRunConfigured(autoSettings)} onSettings={(settings)=>setCardQuickAutoStart(!!(settings&&settings.quickAutoStart))} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
           topAssistant={cardTopAssistant}
