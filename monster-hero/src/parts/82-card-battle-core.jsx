@@ -2684,11 +2684,15 @@ const cardNormalizeLevelCounts = (v) => {
   const r = cardIsPlainObject(v) ? v : {};
   return Object.fromEntries(CARD_LEVEL_ORDER.map((lv) => [lv, cardNormalizePoint(r[lv])]));
 };
-// 週の区切り: モンヒロビートの週間ランキングと同じ、日本時間の月曜 5:00 から(カゲあつくん)。週の鍵はその月曜の日付(YYYY-MM-DD)
-//   日本時間から5時間戻した日付で数える(月曜 4:59 は前の週・5:00 から新しい週)
-const CARD_WEEK_START_HOUR_JST = 5;
+// 週の区切り: モンヒロビートの週間ランキングと同じ、日本時間の月曜 4:00 から(カゲあつくん)。週の鍵はその月曜の日付(YYYY-MM-DD)
+//   2026-11-09 04:00 JST(CARD_WEEK_SWITCH_MS)から4:00区切り。それより前は月曜 5:00 区切り(2026-11-07 社長「ぜんぶ4時に統一」→ 週は次の週から)。
+//   切り替えの週(2026-11-02 の週)だけ1時間短い。週の鍵の形・値は前も後も変わらない
+const CARD_WEEK_START_HOUR_JST = 4;
+const CARD_WEEK_START_HOUR_JST_OLD = 5;
+const CARD_WEEK_SWITCH_MS = Date.UTC(2026, 10, 8, 19, 0, 0); // 2026-11-09 04:00 JST
+const cardWeekStartHourAt = (now) => (Number(now) >= CARD_WEEK_SWITCH_MS ? CARD_WEEK_START_HOUR_JST : CARD_WEEK_START_HOUR_JST_OLD);
 const cardWeekKeyJst = (now) => {
-  const d = new Date(Number(now) + (9 - CARD_WEEK_START_HOUR_JST) * 3600 * 1000);
+  const d = new Date(Number(now) + (9 - cardWeekStartHourAt(now)) * 3600 * 1000);
   d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
   return d.toISOString().slice(0, 10);
 };
