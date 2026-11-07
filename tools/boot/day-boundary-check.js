@@ -33,7 +33,8 @@ const want = (file, names) => {
 };
 
 const code = [
-  want('17-release-changelog-login-missions.jsx', ['loginBonusPeriodKey', 'jstDayKey4', 'jstDayCarry', 'playtimeDayKey', 'playtimeDayOf']),
+  want('17-release-changelog-login-missions.jsx', ['loginBonusPeriodKey', 'jstDayKey4', 'jstDayCarry', 'playtimeDayKey', 'playtimeDayOf', 'DAY_RESET_20261107_FLAG', 'dayReset20261107Value', 'runDayReset20261107']),
+  (part('17-release-changelog-login-missions.jsx').match(/\nconst DAY_RESET_20261107_ITEMS = [\s\S]*?\n\]\);/) || [''])[0],
   want('21-assistant.jsx', ['assistantBubbleDayKey']),
   want('33-rhythm-buddy.jsx', ['rhythmBuddyDayKey']),
   want('35-raid-jack.jsx', ['raidJackDayKey']),
@@ -45,7 +46,7 @@ const ctx = { Date: class extends Date { static now() { return ctx.__now; } } };
 ctx.__now = 0;
 vm.createContext(ctx);
 try {
-  vm.runInContext(`${code}\nthis.E = { loginBonusPeriodKey, jstDayKey4, jstDayCarry, playtimeDayKey, playtimeDayOf, assistantBubbleDayKey, rhythmBuddyDayKey, raidJackDayKey, cardDayCarry, cardNormalizeDaily, cardTodayJst, cardAutoRewardNormalize };`, ctx);
+  vm.runInContext(`${code}\nthis.E = { loginBonusPeriodKey, jstDayKey4, jstDayCarry, playtimeDayKey, playtimeDayOf, assistantBubbleDayKey, rhythmBuddyDayKey, raidJackDayKey, cardDayCarry, cardNormalizeDaily, cardTodayJst, cardAutoRewardNormalize, DAY_RESET_20261107_FLAG, runDayReset20261107 };`, ctx);
 } catch (e) { check('取り出した関数が動く', false, e.message); console.log(`\n${failed}件のNGがあります`); process.exit(1); }
 const E = ctx.E;
 const jst = (s) => Date.parse(`${s}+09:00`);
@@ -116,6 +117,32 @@ for (const [name, fn] of Object.entries(carries)) {
   check('オートのごほうび: 壊れた保存は0回', E.cardAutoRewardNormalize('x', '2026-11-07').n === 0 && E.cardAutoRewardNormalize({ day: '2026-11-07', n: -1, r: '20261107' }, '2026-11-07').n === 0);
 }
 
+// 2026-11-07 の一度きりの戻し(毎日の分・レベルのその日はじめての勝ち・ビートのランクのその日はじめての1曲・マス助言)
+const dayResetChecks = (async () => {
+  const mk = (init) => { const m = new Map(Object.entries(init)); return { m, storeGet: async (k, d) => (m.has(k) ? JSON.parse(JSON.stringify(m.get(k))) : d), storeSet: async (k, v) => { m.set(k, v); } }; };
+  const init = {
+    mh_card_daily_v1: { day: '2026-11-07', cpuPoint: 300, firstWin: true },
+    mh_card_level_v1: { v: 1, xp: 1234, day: '2026-11-07', dayWin: true, got: [2] },
+    mh_rhythm_rank_v1: { v: 1, xp: 99, day: '2026-11-06', dayFirst: true },
+    mh_daily_masu_advice_date_v1: '2026-11-07',
+  };
+  const st = mk(init);
+  const n = await E.runDayReset20261107({ storeGet: st.storeGet, storeSet: st.storeSet, now: jst('2026-11-07T13:00:00') });
+  check('一度きりの戻し: 11/7 の日付の3つを前の日へ(11/6 の物は触らない)', n === 3 && st.m.get('mh_card_daily_v1').day === '2026-11-06' && st.m.get('mh_card_level_v1').day === '2026-11-06' && st.m.get('mh_rhythm_rank_v1').day === '2026-11-06' && st.m.get('mh_daily_masu_advice_date_v1') === '2026-11-06', String(n));
+  check('一度きりの戻し: 日付のほかは変えない', st.m.get('mh_card_level_v1').xp === 1234 && st.m.get('mh_card_daily_v1').cpuPoint === 300 && st.m.get('mh_card_level_v1').got[0] === 2);
+  check('一度きりの戻し: 毎日の分は今日の空の記録として読める', E.cardNormalizeDaily(st.m.get('mh_card_daily_v1'), '2026-11-07').firstWin === false);
+  check('一度きりの戻し: フラグが立つ', st.m.get(E.DAY_RESET_20261107_FLAG) === true);
+  st.m.set('mh_card_daily_v1', { day: '2026-11-07', cpuPoint: 50, firstWin: true });
+  const n2 = await E.runDayReset20261107({ storeGet: st.storeGet, storeSet: st.storeSet, now: jst('2026-11-07T20:00:00') });
+  check('一度きりの戻し: 2回目は何もしない(二重に戻さない)', n2 === 0 && st.m.get('mh_card_daily_v1').day === '2026-11-07');
+  const st8 = mk(init);
+  const n8 = await E.runDayReset20261107({ storeGet: st8.storeGet, storeSet: st8.storeSet, now: jst('2026-11-08T05:00:00') });
+  check('一度きりの戻し: 11/8 は何もしない(フラグも立てない)', n8 === 0 && st8.m.get('mh_card_daily_v1').day === '2026-11-07' && !st8.m.has(E.DAY_RESET_20261107_FLAG));
+  const st6 = mk(init);
+  const n6 = await E.runDayReset20261107({ storeGet: st6.storeGet, storeSet: st6.storeSet, now: jst('2026-11-07T03:59:00') });
+  check('一度きりの戻し: 11/7 の3:59(まだ 11/6)は何もしない', n6 === 0 && !st6.m.has(E.DAY_RESET_20261107_FLAG));
+})();
+
 // ③ 持ち越しを通す所と、前の区切りの式が戻っていないか(本文を見る)
 const src = (f) => part(f);
 const app = src('60-app.jsx');
@@ -133,5 +160,7 @@ const oldForms = [
 ];
 for (const [f, re] of oldForms) check(`${f} に前の区切り(0時・5時)の日付キーが残っていない`, !re.test(src(f)));
 
-console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
-process.exit(failed ? 1 : 0);
+dayResetChecks.catch((e) => check('一度きりの戻しの検査が動く', false, e && e.message)).then(() => {
+  console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
+  process.exit(failed ? 1 : 0);
+});

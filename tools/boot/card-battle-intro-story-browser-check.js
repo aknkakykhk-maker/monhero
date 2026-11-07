@@ -87,7 +87,7 @@ const CARD_CUP_STORY = 'card_cup_2026_10_31';
       await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
       await page.locator('footer button[aria-label=""]').dispatchEvent('click');
       await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
-      const keysBefore = await page.evaluate(() => JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([k]) => /story|seen|replay|card/i.test(k)))));
+      const keysBefore = await page.evaluate(() => JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([k]) => /story|seen|replay|card/i.test(k)).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))));
       const listBtn = page.locator('[data-debug-story-list]');
       await listBtn.evaluate((el) => { let p = el.parentElement; while (p) { if (p.tagName === 'DETAILS') p.open = true; p = p.parentElement; } });
       await listBtn.dispatchEvent('click');
@@ -124,7 +124,7 @@ const CARD_CUP_STORY = 'card_cup_2026_10_31';
         }
         await page.locator('[data-debug-story-overlay]').waitFor({ timeout: 10000 });
       }
-      const keysAfter = await page.evaluate(() => JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([k]) => /story|seen|replay|card/i.test(k)))));
+      const keysAfter = await page.evaluate(() => JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([k]) => /story|seen|replay|card/i.test(k)).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))));
       check(`④ ${label}: 再生しても保存は変わらない・実行時エラーが無い`, keysBefore === keysAfter && errors.length === 0, errors.slice(0, 2).join(' / '));
       await ctx.close();
     }

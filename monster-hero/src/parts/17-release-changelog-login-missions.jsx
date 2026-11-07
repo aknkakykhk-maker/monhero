@@ -423,6 +423,34 @@ const jstDayCarry = (saved, today) => {
   const t = Date.parse(`${today}T00:00:00Z`);
   return Number.isFinite(t) && saved === new Date(t + 86400000).toISOString().slice(0, 10) ? saved : today;
 };
+// ---------- 2026-11-07 の一度きりの戻し(社長「今日の分は全員リセット」) ----------
+//   4時そろえの切り替えの夜に0時区切りで書いた「11/7」が、4:00 を過ぎても今日の分として残ったので、11/7 のあいだに1回だけ前の日の日付へ戻す。
+//   items … [キー, その値の中で日付を持つ所]。'' は値そのものが日付の文字列(マス助言)。日付だけを '2026-11-06' にし、ほかは触らない
+const DAY_RESET_20261107_FLAG = 'mh_day_reset_20261107_v1';
+const DAY_RESET_20261107_ITEMS = Object.freeze([
+  ['mh_card_daily_v1', 'day'],        // バトルカードの毎日の分(助手と対戦のごほうび・その日のポイント)
+  ['mh_card_level_v1', 'day'],        // バトルカードのレベルの「その日はじめての勝ち」
+  ['mh_rhythm_rank_v1', 'day'],       // モンヒロビートのランクの「その日はじめての1曲」
+  ['mh_daily_masu_advice_date_v1', ''], // 毎日のマス助言
+]);
+const dayReset20261107Value = (v, field) => {
+  if (field === '') return v === '2026-11-07' ? '2026-11-06' : null;
+  if (!v || typeof v !== 'object' || Array.isArray(v) || v[field] !== '2026-11-07') return null;
+  return { ...v, [field]: '2026-11-06' };
+};
+const runDayReset20261107 = async ({ storeGet, storeSet, now = Date.now() }) => {
+  try {
+    if (jstDayKey4(now) !== '2026-11-07') return 0;
+    if (await storeGet(DAY_RESET_20261107_FLAG, false, false)) return 0;
+    await storeSet(DAY_RESET_20261107_FLAG, true, false);   // 先に立てる(途中で止まっても二重に戻さない)
+    let n = 0;
+    for (const [key, field] of DAY_RESET_20261107_ITEMS) {
+      const next = dayReset20261107Value(await storeGet(key, null, false), field);
+      if (next !== null) { await storeSet(key, next, false); n += 1; }
+    }
+    return n;
+  } catch (_) { return 0; }
+};
 // ---------- どの助手と一緒に遊ぶか ----------
 // 助手は「みゅあ」「きき」から選ぶ。どちらも最初から解放されていて、解放条件は無い。
 //
