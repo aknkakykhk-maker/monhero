@@ -215,7 +215,7 @@ function RhythmAssistSessionPicker({ assistants = [], calledIds = [], guideAssis
                   {lv >= RHYTHM_ASSIST_SESSION_TASTE_LEVEL && <span data-rhythm-assist-taste className="w-full truncate text-center text-[9px] font-bold text-slate-300">♡ {rhythmAssistSessionLikedNames(who.id).join('・')}</span>}
                   {calledOf(who.id) && <span className="rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950">呼んでいる</span>}
                   {!calledOf(who.id) && !rhythmAssistSessionVisitFree(who.id) && rhythmAssistSessionAsleep(who.id) && <span data-rhythm-assist-asleep className="w-full rounded-xl bg-indigo-300/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950">💤 寝ている</span>}
-                  {!calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && <span data-rhythm-assist-visit aria-label="🎵 いまモンビーにいる・回数なし" className="flex w-full flex-wrap justify-center rounded-xl bg-sky-400/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"><span className="whitespace-nowrap">🎵 いま</span><span className="whitespace-nowrap">モンビーにいる</span><span className="whitespace-nowrap">・回数なし</span></span>}
+                  {!calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && <span data-rhythm-assist-visit aria-label="🎵 いまモンヒロビートにいる・回数なし" className="flex w-full flex-wrap justify-center rounded-xl bg-sky-400/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"><span className="whitespace-nowrap">🎵 いま</span><span className="whitespace-nowrap">モンヒロビート</span><span className="whitespace-nowrap">にいる・回数なし</span></span>}
                 </button>
               );
             })}
