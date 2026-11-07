@@ -54,6 +54,11 @@ const assistantPeerEnabled = () => typeof RELEASE_FLAGS !== 'undefined' && RELEA
 // API 版は、サーバ(assistant-chat の kind:'peer_talks')を窓口が配ってから真にする(RELEASE_FLAGS.assistantPeerApi)
 const assistantPeerApiEnabled = () => assistantPeerEnabled() && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantPeerApi === true;
 const assistantPeerPairKey = (a, b) => [String(a), String(b)].sort().join('-');
+// 助手たちの今(公開の印 assistantLife)が真なら、助手どうしの値は「友情Lv」と呼び、今日のペアはやめる(2026-11-07 社長)
+const assistantPeerLifeOn = () => typeof assistantLifeEnabled === 'function' && assistantLifeEnabled();
+const assistantPeerStageName = (stage) => (stage ? (assistantPeerLifeOn() && stage.lifeName ? stage.lifeName : stage.name) : '');
+const assistantPeerPhotoTitle = (photo) => (photo ? (assistantPeerLifeOn() && photo.lifeTitle ? photo.lifeTitle : photo.title) : '');
+const assistantPeerLvLabel = (lv) => (assistantPeerLifeOn() ? `友情Lv${lv}` : `仲良し度 Lv${lv}`);
 const assistantPeerTalkList = () => (typeof ASSISTANT_PEER_TALKS !== 'undefined' && Array.isArray(ASSISTANT_PEER_TALKS)) ? ASSISTANT_PEER_TALKS : [];
 // ③ ミニイベント・けんか/仲直り・3人の掛け合いを、掛け合いと同じ形(kind 付き)にして返す。一度作ったら使い回す
 let assistantPeerExtraCache = null;
@@ -293,7 +298,7 @@ const assistantPeerTodayPairOf = (metIds, day) => {
 };
 // その日はじめてなら、今日のペアを決め、続けてログインした日数を数える。2日以上続いたら今日のペアに +2
 const assistantPeerEnsureDaily = (metIds, now = Date.now()) => {
-  if (!assistantPeerEnabled()) return null;
+  if (!assistantPeerEnabled() || assistantPeerLifeOn()) return null;
   const st = ASSISTANT_PEER_STORE.state;
   const day = assistantPeerDayKey(now);
   if (st.daily.day === day && st.daily.pair) return st.daily;
@@ -463,7 +468,10 @@ const assistantPeerPickTalk = (st, { scene, metIds, selectedId, now = Date.now()
   // 重み: いまの助手が入るペアは3倍。仲良し度Lv2から掛け合いが増える(Lv が上がるほど出やすい)。
   //   今日のペア(まだ達成していない)は4倍、その日の出来事に合う掛け合いは6倍。
   //   ③ ミニイベントは Lv6 から3倍・3人の掛け合いはどれかのペアが Lv7 なら6倍・けんかは「たまに」なので半分
-  const dailyPair = st.daily && st.daily.day === day && !st.daily.done ? st.daily.pair : null;
+  const dailyPair = !assistantPeerLifeOn() && st.daily && st.daily.day === day && !st.daily.done ? st.daily.pair : null;
+  // 助手たちの今: いま一緒に過ごしている顔ぶれの掛け合いを6倍(56-assistant-life.jsx の様子)
+  const lifeGroups = (assistantPeerLifeOn() && typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.life && ASSISTANT_LIFE_STORE.state.life.groups) || [];
+  const together = (ms) => lifeGroups.some(g => ms.every(id => g.ids.includes(id)));
   const evBoost = typeof ASSISTANT_PEER_EVENT_BOOST_LV !== 'undefined' ? ASSISTANT_PEER_EVENT_BOOST_LV : 6;
   const trioBoost = typeof ASSISTANT_PEER_TRIO_BOOST_LV !== 'undefined' ? ASSISTANT_PEER_TRIO_BOOST_LV : 7;
   const weight = (t) => {
@@ -471,9 +479,9 @@ const assistantPeerPickTalk = (st, { scene, metIds, selectedId, now = Date.now()
     const lv = Math.min(...lvs);
     const base = (assistantPeerMembers(t).includes(selectedId) ? 3 : 1) * (1 + 0.5 * (lv - 1));
     // 3人は、どれかのペアが Lv7 になると6倍(ペアの Lv が上がってほかの掛け合いも増えるので、それより強く押す)
-    if (t.kind === 'trio') return base * (lvs.some(x => x >= trioBoost) ? 6 : 1);
+    if (t.kind === 'trio') return base * (lvs.some(x => x >= trioBoost) ? 6 : 1) * (together(assistantPeerMembers(t)) ? 6 : 1);
     const pk = assistantPeerPairKey(t.pair[0], t.pair[1]);
-    return base * (dailyPair && pk === dailyPair ? 4 : 1) * (t.when ? 6 : 1)
+    return base * (dailyPair && pk === dailyPair ? 4 : 1) * (t.when ? 6 : 1) * (together(t.pair) ? 6 : 1)
       * (t.kind === 'event' && lv >= evBoost ? 3 : 1) * (t.kind === 'quarrel' ? 0.5 : 1);
   };
   const sum = pool.reduce((s, t) => s + weight(t), 0);
@@ -543,6 +551,8 @@ const assistantPeerLineText = (line, talk) => {
 function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayEnd = null, today = null }) {
   const st = useAssistantPeerState();
   const [cur, setCur] = React.useState(null); // { talk, special, step, phase:'lines'|'choice'|'reply', pick, replay }
+  // 掛け合いが流れているあいだは、助手たちの今の帯(56-assistant-life.jsx)を隠す
+  React.useEffect(() => { if (ASSISTANT_PEER_STORE.state.talking !== !!cur) ASSISTANT_PEER_STORE.set({ talking: !!cur }); }, [!!cur]);
   const decidedRef = React.useRef('');
   const metKey = (metIds || []).join(',');
   React.useEffect(() => {
@@ -647,6 +657,7 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
       <div data-assistant-peer-toast={toast.kind} className="mx-auto w-fit rounded-full border border-pink-300/60 bg-slate-950/90 px-4 py-1.5 text-[11px] font-black text-pink-200 shadow-xl">
         {toast.kind === 'daily' ? `今日のペア達成！ ${a.name}と${b.name}がもっと仲良くなりました`
           : toast.kind === 'makeup' ? `${a.name}と${b.name}が仲直りしました`
+          : assistantPeerLifeOn() ? `${a.name}と${b.name}の友情Lvが ${toast.level}${stage ? `「${assistantPeerStageName(stage)}」` : ''}になりました`
           : `${a.name}と${b.name}の仲良し度が Lv${toast.level}${stage ? `「${stage.name}」` : ''}になりました`}
       </div>);
   }
@@ -717,7 +728,7 @@ function AssistantPeerPhoto({ pair, photo, open }) {
         {/* 立ち絵の上のほう(顔から胸まで)を寄りで並べる */}
         <img src={assistantFullImage(a, photo.e[0])} alt="" loading="lazy" decoding="async" className="absolute left-[-2%] top-[6%] h-[170%] w-[56%]" style={{ objectFit: 'cover', objectPosition: '50% 0%' }}/>
         <img src={assistantFullImage(b, photo.e[1])} alt="" loading="lazy" decoding="async" className="absolute right-[-2%] top-[6%] h-[170%] w-[56%]" style={{ objectFit: 'cover', objectPosition: '50% 0%' }}/>
-        <span className="absolute inset-x-0 bottom-0 bg-black/55 px-1 py-0.5 text-center text-[9px] font-black text-amber-100">{photo.title}</span>
+        <span className="absolute inset-x-0 bottom-0 bg-black/55 px-1 py-0.5 text-center text-[9px] font-black text-amber-100">{assistantPeerPhotoTitle(photo)}</span>
       </>) : (
         <span className="absolute inset-0 flex flex-col items-center justify-center text-[10px] font-bold text-slate-500"><span className="text-lg" aria-hidden="true">🔒</span>Lv{photo.lv}で貼られます</span>)}
     </div>);
@@ -743,7 +754,7 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
           <p className="min-w-0 flex-1 text-[13px] font-black text-amber-200">{a.name}と{b.name}の思い出アルバム</p>
           <button type="button" data-assistant-peer-album-close onClick={onClose} aria-label="閉じる" className="h-8 w-8 rounded-full border border-slate-600 text-[14px] font-black text-slate-300 active:scale-95">×</button>
         </div>
-        <p className="mb-2 text-[10px] text-slate-400">仲良し度 Lv{lv}・見た掛け合い {talks.length}/{all}</p>
+        <p className="mb-2 text-[10px] text-slate-400">{assistantPeerLvLabel(lv)}・見た掛け合い {talks.length}/{all}</p>
         <div className="grid grid-cols-2 gap-2">
           {photos.map(ph => <AssistantPeerPhoto key={ph.lv} pair={pair} photo={ph} open={lv >= ph.lv}/>)}
         </div>
@@ -814,8 +825,8 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
   return (
     <div data-assistant-peer-map className="rounded-2xl border border-white/10 bg-slate-950/60 p-3">
       <p className="text-[12px] font-black text-pink-200">助手どうしの関係図</p>
-      <p className="mb-2 text-[9px] leading-tight text-slate-400">助手どうしも仲良くなります。仲良し度 Lv3 になった2人は線で結ばれます。ペアを押すと思い出アルバムが開きます。</p>
-      {dailyPair && dailyPair.every(id => ids.includes(id)) && (
+      <p className="mb-2 text-[9px] leading-tight text-slate-400">助手どうしも仲良くなります。{assistantPeerLvLabel(3)} になった2人は線で結ばれます。ペアを押すと思い出アルバムが開きます。</p>
+      {!assistantPeerLifeOn() && dailyPair && dailyPair.every(id => ids.includes(id)) && (
         <button type="button" data-assistant-peer-daily onClick={() => setAlbumPair(dailyPair)}
           className="mb-2 flex w-full items-center gap-2 rounded-xl border border-amber-300/50 bg-amber-400/10 px-2 py-1.5 text-left active:scale-[.98]">
           <span className="text-[10px] font-black text-amber-200">今日のペア</span>
@@ -842,7 +853,9 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
             <button key={`${x.a}-${x.b}`} type="button" data-assistant-peer-row={assistantPeerPairKey(x.a, x.b)} onClick={() => setAlbumPair([x.a, x.b])}
               className="flex w-full items-center gap-2 rounded-lg bg-slate-900/70 px-2 py-1 text-left active:scale-[.98]">
               <span className="min-w-0 flex-1 truncate text-[10px] font-bold text-slate-200">{A.name} × {B.name}</span>
-              <span className="whitespace-nowrap text-[10px] font-black text-pink-200">Lv{x.lv}{stage ? ` ${stage.name}` : ''}</span>
+              <span className="whitespace-nowrap text-[10px] font-black text-pink-200">Lv{x.lv}{stage ? ` ${assistantPeerStageName(stage)}` : ''}</span>
+              {/* 助手たちの今: あと何点で次の段か(UX-REVIEW の3) */}
+              {assistantPeerLifeOn() && nextStage && <span data-assistant-peer-next className="whitespace-nowrap text-[9px] font-bold text-slate-400">あと{nextStage.min - x.pts}</span>}
               <span className="w-14 h-1.5 shrink-0 overflow-hidden rounded-full bg-slate-700" aria-hidden="true">
                 <span className="block h-full bg-pink-400" style={{ width: `${nextStage ? Math.min(100, Math.round(100 * (x.pts - stage.min) / (nextStage.min - stage.min))) : 100}%` }}/>
               </span>
