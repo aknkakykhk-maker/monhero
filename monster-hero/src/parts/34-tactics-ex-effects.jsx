@@ -166,6 +166,8 @@ const CLASSIC_CHIP_VIEW = Object.freeze({
   zeroGuts:     { icon: '⭐', turns: 'now' },  reflectNext:{ icon: '🔁', turns: 'next' }, reflectNow: { icon: '🔁', turns: 'now' },
   takenNext:    { icon: '🛡️', turns: 'next' }, takenNow:  { icon: '🛡️', turns: 'now' },
   costNext:     { icon: '⚡', turns: 'next', kind: 'debuff' }, costNow: { icon: '⚡', turns: 'now', kind: 'debuff' },
+  // えるびんの見守り③「一閃の構え」(そのターンの固有技は必ず会心・会心ダメージ+)。そのターンだけ
+  erubinIsshen: { icon: '🗡️', turns: 'now' },
 });
 const CLASSIC_DEBUFF_VIEW = Object.freeze({
   shell: 'wave', ice: 'wave', confuse: 'count', aquaPrison: 'count', aquaFreeze: 'count', aquaFinale: 'count', nightmare: 'count', psycho: 'count',
