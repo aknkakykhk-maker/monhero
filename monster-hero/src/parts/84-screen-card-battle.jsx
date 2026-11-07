@@ -3016,7 +3016,7 @@ const CardAutoRewardBar = ({ info, tickets, onAdd, note = '' }) => {
           <b className={`block whitespace-nowrap font-black leading-tight tabular-nums ${empty ? 'text-[17px] text-white' : 'text-[14px] text-slate-200'}`}>残り {info.left}<span className="text-[11px] text-slate-400"> / {total}回</span></b>
         </div>
         <button type="button" data-card-auto-ticket disabled={!!why} onClick={() => { Audio_.fgSe.tap(); if (typeof onAdd === 'function') onAdd(); }}
-          className={`flex min-h-[44px] shrink-0 flex-col items-center justify-center rounded-xl border px-2 text-[12px] font-black leading-tight active:scale-[.98] disabled:opacity-45 ${empty ? 'border-emerald-300 bg-emerald-900/80 text-emerald-100 shadow-[0_0_10px_rgba(52,211,153,.45)]' : 'border-white/15 bg-slate-800 text-slate-300'}`}>
+          className={`flex min-h-[44px] shrink-0 flex-col items-center justify-center rounded-xl border px-2 text-[12px] font-black leading-tight active:scale-[.98] disabled:opacity-45 ${empty ? 'border-emerald-300 bg-emerald-900/80 text-emerald-100 shadow-[0_0_10px_rgba(52,211,153,.45)]' : 'border-emerald-300/60 bg-emerald-950/70 text-emerald-100'}`}>
           <span className="whitespace-nowrap">🎫 セッション券で</span><span className="whitespace-nowrap">ふやす</span></button>
       </div>
       {why && <span data-card-auto-ticket-why className="mt-1 block text-right text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(why)}</span>}
@@ -3125,10 +3125,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const res = await cardAutoRewardAddExtra({ consume: onUseSessionTicket, refund: onRefundSessionTicket, count });
       const l = res && res.loaded;
       if (l) applyAutoLoaded(l);
-      setAutoTicketNote(res && res.ok ? `ごほうびが${res.count}回ぶん戻りました`
+      // 残りがあるうちからも足せるので、使い切ったあとに戻す前の言い方はやめて「ふえました」にした(2026-11-07 部長)
+      setAutoTicketNote(res && res.ok ? `オートのごほうびが${res.count}回ふえました`
         : res && res.why === 'limit' ? '今日はこれ以上ふやせません'
           : res && res.why === 'noTicket' ? 'セッション券が足りません'
-            : res && res.why === 'notEmpty' ? 'まだ今日のごほうびが残っています'
               : '保存できなかったので、セッション券は戻しました');
     } finally { setAutoTicketBusy(false); setAutoTicketAsk(false); }
   };

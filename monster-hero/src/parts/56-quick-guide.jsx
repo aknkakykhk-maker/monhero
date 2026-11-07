@@ -119,6 +119,18 @@ const quickGuidePick = (ctx) => {
   }
 };
 
+// モンヒロビートの「🔄 横」で絵を回しているとき(端末は縦のまま)。案内は回した器の中へ出し、位置も器の中の座標で測る
+//   (2026-11-07 レフェリーくん: body へ出していたので、回したときに案内の窓だけ縦のままだった)
+const quickGuideRotated = () => typeof RHYTHM_VIEW_ROTATION === 'object' && !!RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.active === 'function' && RHYTHM_VIEW_ROTATION.active();
+const quickGuideRectOf = (el) => (quickGuideRotated() && typeof RHYTHM_VIEW_ROTATION.rectOf === 'function' ? RHYTHM_VIEW_ROTATION.rectOf(el) : el.getBoundingClientRect());
+// 案内を描く場所の大きさ。回しているときは幅と高さが入れ替わる
+const quickGuideView = () => {
+  if (typeof window === 'undefined') return { w: 0, h: 0 };
+  return quickGuideRotated() ? { w: window.innerHeight || 0, h: window.innerWidth || 0 } : { w: window.innerWidth || 0, h: window.innerHeight || 0 };
+};
+// 案内を出す先。ふだんは body(バトルの技の札など body へ出る物より上に重ねるため)。回しているときは回した器
+const quickGuidePortalTarget = () => (typeof rotationAwarePortalTarget === 'function' ? rotationAwarePortalTarget() : (typeof document !== 'undefined' ? document.body : null));
+
 // 光らせる所。見えている最初の1つの位置(画面の座標)。無ければ null
 const quickGuideSpotRect = (selector) => {
   if (!selector || typeof document === 'undefined') return null;
@@ -126,9 +138,9 @@ const quickGuideSpotRect = (selector) => {
     // 同じ目印が並ぶ物(横に並ぶ難易度の札など)は、いちばん画面に入っている1つ
     let best = null, bestArea = -1;
     for (const el of document.querySelectorAll(selector)) {
-      const r = el.getBoundingClientRect();
+      const r = quickGuideRectOf(el), v = quickGuideView();
       if (!(r.width > 0 && r.height > 0)) continue;
-      const area = Math.max(0, Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0)) * Math.max(0, Math.min(r.right, window.innerWidth) - Math.max(r.left, 0));
+      const area = Math.max(0, Math.min(r.bottom, v.h) - Math.max(r.top, 0)) * Math.max(0, Math.min(r.right, v.w) - Math.max(r.left, 0));
       if (area > bestArea) { bestArea = area; best = { el, top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom }; }
     }
     if (best) return best;
@@ -147,7 +159,7 @@ const quickGuideScrollTo = (el, top) => {
     box = box.parentElement;
   }
   if (!box || box === document.body) return;
-  const r = el.getBoundingClientRect(), b = box.getBoundingClientRect();
+  const r = quickGuideRectOf(el), b = quickGuideRectOf(box);
   if (top) box.scrollTop += r.top - b.top - 8;
   else if (r.top < b.top) box.scrollTop += r.top - b.top - 8;
   else if (r.bottom > b.bottom) box.scrollTop += r.bottom - b.bottom + 8;
@@ -167,13 +179,13 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
   // 窓の高さを測る(光らせる所と重ならない置き方を決めるため)
   // ページが変わったら知らせる(帯を開く・閉じるなど、画面の側でする事のため)
   useEffect(() => { if (onPage && page) onPage(page); }, [guideId, step]);
-  useEffect(() => { try { const h = panelRef.current && panelRef.current.getBoundingClientRect().height; if (h > 0) setPanelH(Math.ceil(h)); } catch (_) { /* 既定のまま */ } });
+  useEffect(() => { try { const h = panelRef.current && panelRef.current.offsetHeight; if (h > 0) setPanelH(Math.ceil(h)); } catch (_) { /* 既定のまま */ } });
   // 光らせる所を測る。初めに画面の中へ寄せ、あとは 300ms ごとと画面の大きさが変わったときに測り直す(バトルは動き続けるため)
   //   ★窓の分を引いた残りに入りきらない大きな所(AUTO設定の欄・横画面の難易度)は、先頭を上へ寄せ、窓に重ならない範囲だけ光らせる
   useEffect(() => {
     if (!page || !page.spot) { setRect(null); return undefined; }
     const first = quickGuideSpotRect(page.spot);
-    const vh0 = window.innerHeight || 0;
+    const vh0 = quickGuideView().h;
     try {
       if (first && first.el) quickGuideScrollTo(first.el, first.height > vh0 - panelH - 40);
       // 文で言っている中身が画面の外なら、そこまで寄せる(大きな欄の下のほうにあるスイッチなど)
@@ -183,7 +195,7 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
     // 光らせる所が大きすぎて窓と上下に並べられないときは、文で言っている中身(must)だけを光らせる(横画面の難易度の札など)
     const measure = () => {
       let r = quickGuideSpotRect(page.spot);
-      const vh = window.innerHeight || 0;
+      const vh = quickGuideView().h;
       if (r && page.must && r.height > vh - panelH - 40) { const m = quickGuideSpotRect(page.must); if (m) r = m; }
       setRect(r ? { top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom } : null);
     };
@@ -197,19 +209,27 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
   if (!line) return null;
   const text = quickGuideNoBreak(String(line.t).split('{name}').join(callName || 'ブリーダー'));
   const last = step >= pages.length - 1;
-  const vh = typeof window !== 'undefined' ? window.innerHeight || 0 : 0;
+  const vh = quickGuideView().h;
   // 小さいボタン(🎵 など)は枠を詰める(となりのボタンにかからないように)
   const pad = rect && Math.min(rect.width, rect.height) < 56 ? 3 : 6, gap = 12;
   // 窓は光らせた所と重ならない側へ。上に入るなら上・下に入るなら下・どちらにも入らなければ、下に置いて光らせる所を切り詰める
   const roomTop = rect ? rect.top - pad - gap : 0, roomBottom = rect ? vh - rect.bottom - pad - gap : 0;
   //   どちらにも入らないときは下に置く(大きな所は先頭へ寄せてあるので、見出しが窓の上に見える)
-  const atTop = !!rect && vh > 0 && roomBottom < panelH && roomTop >= panelH;
+  //   窓を上・下に置いたときに、光らせる所がどれだけ残るか(どちらも細い線しか残らないなら、下の squeeze で片側へ置く)
+  const keepIfBottom = rect ? Math.min(rect.bottom, vh - panelH - gap - pad - 10) - rect.top : 0;
+  const keepIfTop = rect ? rect.bottom - Math.max(rect.top, panelH + gap + pad + 10) : 0;
+  //   左右にも空きが無く、上下どちらに置いても光らせる所が細い線しか残らないとき(横に長い所)は、窓を片側へ細く重ねて置く(下の squeeze)。
+  //   光らせる所の一部に重なるが、切り詰めて見えなくするよりよい(🔄横の曲えらびの帯の中・2026-11-07 レフェリーくん)
+  const vw0 = quickGuideView().w;
+  const squeeze = !!rect && vh > 0 && vw0 > vh && roomBottom < panelH && roomTop < panelH
+    && Math.max(rect.left - pad - gap, vw0 - (rect.left + rect.width) - pad - gap) < 170 && Math.max(keepIfTop, keepIfBottom) < 40;
+  const atTop = !!rect && vh > 0 && !squeeze && roomBottom < panelH && roomTop >= panelH;
   // 横画面で上下どちらにも入らないときは、左右の空きが十分なら窓を細くして横に置く(横画面の難易度の札など。切り詰めずに済む)
-  const vw = typeof window !== 'undefined' ? window.innerWidth || 0 : 0;
+  const vw = quickGuideView().w;
   const roomLeft = rect ? rect.left - pad - gap : 0, roomRight = rect ? vw - (rect.left + rect.width) - pad - gap : 0;
   const side = !!rect && vh > 0 && vw > vh && !atTop && roomBottom < panelH && Math.max(roomLeft, roomRight) >= 170
-    ? (roomRight >= roomLeft ? 'right' : 'left') : null;
-  const sideWidth = side ? Math.min(300, Math.max(roomLeft, roomRight) - 4) : 0;
+    ? (roomRight >= roomLeft ? 'right' : 'left') : squeeze ? 'left' : null;
+  const sideWidth = side ? (squeeze ? Math.min(300, Math.round(vw * 0.38)) : Math.min(300, Math.max(roomLeft, roomRight) - 4)) : 0;
   const sideTop = side ? Math.max(8, Math.min(vh - panelH - 8, rect.top + rect.height / 2 - panelH / 2)) : 0;
   let ring = rect;
   if (rect && vh > 0 && !side) {
@@ -250,5 +270,6 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
       </div>
     </div>
   );
-  return typeof document !== 'undefined' && document.body && typeof ReactDOM === 'object' && ReactDOM.createPortal ? ReactDOM.createPortal(overlay, document.body) : overlay;
+  const target = quickGuidePortalTarget();
+  return target && typeof ReactDOM === 'object' && ReactDOM.createPortal ? ReactDOM.createPortal(overlay, target) : overlay;
 };

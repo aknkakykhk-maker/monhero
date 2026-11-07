@@ -424,7 +424,7 @@ const serve = () => new Promise((resolve) => {
 const browser = async (core) => {
   let playwright;
   try { playwright = require('playwright'); } catch { console.log('SKIP: playwright が入っていないので実ブラウザの確認は飛ばします'); return; }
-  const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
+  const { eventStorySeed, loginBonusDoneSeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
   const server = await serve();
   const errors = [];
   const sent = [];
@@ -476,6 +476,8 @@ const browser = async (core) => {
     });
     // このお話「話せるようになった日」そのものを確かめるので、これだけは「見た」にしない
     await page.addInitScript(eventStorySeed({ except: ['assistant_chat_story'] }));
+    // ログインボーナスの窓が割りこむとお話を待つ ⑭ が時刻で揺れるので、受け取り済みにしておく(2026-11-07 マモリの知らせ)
+    await page.addInitScript(loginBonusDoneSeed());
     await page.route('**/rest/v1/**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
     // 中継役を偽物の Claude で動かす(本番の API は叩かない)
     await page.route('**/functions/v1/assistant-chat', async (route) => {

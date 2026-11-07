@@ -572,6 +572,15 @@ const assistantLifeMarkSeen = (talk, now = Date.now()) => {
 //   ひとりごと … kind 'life-solo'/声かけ … kind 'life-invite'(pair は [誘う人, 誘われる人])/ブリーダーへ … kind 'life-breeder'/
 //   言い合い … kind 'quarrel' と 'makeup'(今の仲直りの流れにそのまま乗る)・distance(距離をおく)
 let assistantLifeTalkCache = null;
+// 台本が「どこで言う台詞か」(2026-11-07 ミハリ L 残り④: 練習スタジオのソラシドが「広場、だれもいないな笑」)。
+//   鍵の place があればそれ。無ければ台詞に出てくる場所の名前(家は「家に帰ろ」のように出先でも言うので見ない)。どこでも言えるなら null
+const ASSISTANT_LIFE_TALK_PLACE_WORDS = Object.freeze([['練習スタジオ', 'studio'], ['おやつ屋', 'cafe'], ['カード部屋', 'cardroom'], ['育成場', 'ranch'], ['図書室', 'library'], ['マーケット', 'market'], ['ひなたの丘', 'hill'], ['中庭', 'garden'], ['広場', 'plaza']]);
+const assistantLifeTalkAt = (t, keys = (t && t.keys) || {}) => {
+  if (keys.place && ASSISTANT_LIFE_PLACES[keys.place]) return keys.place;
+  const txt = ((t && t.lines) || []).map(l => (l && l.t) || '').join('\n');
+  for (const [w, place] of ASSISTANT_LIFE_TALK_PLACE_WORDS) if (txt.includes(w)) return place;
+  return null;
+};
 const assistantLifeTalkSet = () => {
   if (assistantLifeTalkCache) return assistantLifeTalkCache;
   const raw = (typeof ASSISTANT_LIFE_TALKS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_TALKS)) ? ASSISTANT_LIFE_TALKS : [];
@@ -580,7 +589,7 @@ const assistantLifeTalkSet = () => {
   for (const t of raw) {
     if (!t || typeof t.id !== 'string' || !okLines(t.lines)) continue;
     const keys = t.keys && typeof t.keys === 'object' ? t.keys : {};
-    const base = { id: t.id, keys, lines: t.lines, lv: 1, scene: 'any', life: true };
+    const base = { id: t.id, keys, lines: t.lines, lv: 1, scene: 'any', life: true, at: assistantLifeTalkAt(t, keys) };
     if (t.kind === 'solo') out.solo.push({ ...base, kind: 'life-solo', who: t.who, pair: [t.who], line: t.line === 'feel' ? 'feel' : 'scene' });
     else if (t.kind === 'breeder') out.breeder.push({ ...base, kind: 'life-breeder', who: t.who, pair: [t.who] });
     else if (t.kind === 'invite' && t.from) out.invite.push({ ...base, kind: 'life-invite', who: t.who, from: t.from, pair: [t.from, t.who] });
@@ -733,9 +742,10 @@ const assistantLifePickSoloTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, p
   const keysOf = (t) => ({ pt: t.keys.place ? assistantLifePlaceType(id, t.keys.place) : null, mood: t.keys.mood || null, why: t.keys.why || null, doing: t.keys.doing || null });
   const want = { pt: assistantLifePlaceType(id, s.place), mood, why: s.reason === 'distance' ? null : s.reason, doing: s.doing };
   const T = assistantLifeTalkSet();
-  const br = T.breeder.filter(t => t.who === id).map(t => ({ talk: t, keys: keysOf(t) }));
+  const here = (t) => t.at == null || t.at === s.place; // 台詞の場所といまの場所を合わせる
+  const br = T.breeder.filter(t => t.who === id && here(t)).map(t => ({ talk: t, keys: keysOf(t) }));
   if (br.length && rand() < 0.3) { const t = assistantLifeChoose(br, want, ['doing', 'why', 'mood', 'pt'], seen, rand); if (t && !seen[t.id]) return assistantLifeWithCtx(t, ctx); }
-  const mine = T.solo.filter(t => t.who === id);
+  const mine = T.solo.filter(t => t.who === id && here(t));
   const ok = (c) => c.keys.pt == null || c.keys.pt === want.pt;
   const scene = assistantLifeChoose(mine.filter(t => t.line === 'scene').map(t => ({ talk: t, keys: keysOf(t) })).filter(ok), want, ['doing', 'why', 'mood'], seen, rand);
   const feel = assistantLifeChoose(mine.filter(t => t.line === 'feel').map(t => ({ talk: t, keys: keysOf(t) })).filter(ok), want, ['doing', 'why', 'mood'], seen, rand);
@@ -752,7 +762,7 @@ const assistantLifePickCallTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, r
   const ctx = { place: s.place, doing: s.doing };
   const keysOf = (t) => ({ pt: t.keys && t.keys.place ? assistantLifePlaceType(id, t.keys.place) : null, mood: (t.keys && t.keys.mood) || null, why: (t.keys && t.keys.why) || null, doing: (t.keys && t.keys.doing) || null });
   const want = { pt: assistantLifePlaceType(id, s.place), mood: ((life && life.moods) || {})[id] || null, why: s.reason && s.reason !== 'distance' ? s.reason : null, doing: s.doing };
-  const cands = assistantLifeTalkSet().breeder.filter(t => t.who === id && (t.lines || []).every(l => l.who === id)).map(t => ({ talk: t, keys: keysOf(t) }));
+  const cands = assistantLifeTalkSet().breeder.filter(t => t.who === id && (t.at == null || t.at === s.place) && (t.lines || []).every(l => l.who === id)).map(t => ({ talk: t, keys: keysOf(t) }));
   if (!cands.length) return null;
   const t = assistantLifeChoose(cands, want, ['doing', 'why', 'mood', 'pt'], seen, rand);
   return t ? assistantLifeWithCtx({ ...t, pair: Array.isArray(t.pair) && t.pair.length ? t.pair : [id] }, ctx) : null;

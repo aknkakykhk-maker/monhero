@@ -18619,7 +18619,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           className="shrink-0 w-11 min-h-[44px] flex items-center justify-center rounded-xl bg-red-800 text-red-50 font-black">×</button>
       </div>
     </div>,
-    document.body
+    rotationAwarePortalTarget()
   ) : null;
   // お話や大事な窓が出ているあいだは出さずに待ち、閉じてから出す(WaitForOverlayClose・41-screen-ui.jsx)
   const updateNotice = (updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay) ? ReactDOM.createPortal(<WaitForOverlayClose>{
@@ -18638,7 +18638,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       </div>
     )
   }</WaitForOverlayClose>,
-    document.body
+    rotationAwarePortalTarget()
   ) : null;
   const titleModal = showChangelog ? (
     <div className="mh-title-modal" {...settingsBackdropProps(closeChangelog)}>

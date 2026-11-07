@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: aef1e4a5eb60eeff
+// generated-sha256: fe72c32ea017c9ff
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -24109,7 +24109,7 @@ const RhythmMonsterSlotsPanel=({rhythmMonsterSlots,rhythmMonsterSlotIdsInUse,rhy
               {rhythmMonsterPickerOpen&&<ModalFrame label="モンスターノーツにするマスモンを選ぶ" border="border-fuchsia-400/70" onClose={()=>setRhythmMonsterPickerOpen(false)}>
                 <h3 className="text-center text-base font-black text-fuchsia-100">{target+1}番目に出すマスモン</h3>
                 <p className="mt-1 text-center text-[10px] font-bold text-slate-400">曲の約{Math.round((ratios[target]||0)*100)}%あたりで出ます{targetMasu?`（いまは ${targetMasu.name}）`:''}</p>
-                <ul data-rhythm-monster-picker className="mh-scroll mt-3 max-h-[55vh] space-y-1.5 overflow-y-auto">
+                <ul data-rhythm-monster-picker className="mh-scroll mt-3 max-h-[55vh] [[data-mh-view-rotation=true]_&]:max-h-[55vw] space-y-1.5 overflow-y-auto">
                 {candidates.map(masu=>{
                   const base=ALL_PLAYER_MONSTERS[masu.baseId],issue=rhythmMonsterSlotReplaceIssue(rhythmMonsterSlotIdsInUse,target,masu.id,masuMons);
                   const ability=rhythmSlotAbility(masu),at=slotOf(masu);
@@ -36426,6 +36426,14 @@ const ScreenSectionLabel = ({ children, note = '' }) => (
 //   ConfirmSheet     … 「本当に〜しますか」の確認。本体の askConfirm から出す
 // ★窓の重なり順(z-index)は MODAL_Z の段から選ぶ。値をその場で書かない
 const MODAL_Z = Object.freeze({ dialog:42000, confirm:43000 });
+// body へ直に出す窓の出し先。ふだんは body。モンヒロビートの「🔄 横」で絵を回しているときは、回した器の中へ出す
+//   (body のままだと、その窓だけ回らず字が横倒しになる。--mh-vh も器の中でしか効かない)。2026-11-07 レフェリーくん
+//   検査: tools/ui/rotation-height-check.js
+const rotationAwarePortalTarget = () => {
+  if (typeof document === 'undefined') return null;
+  const rotated = typeof RHYTHM_VIEW_ROTATION === 'object' && !!RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.active === 'function' && RHYTHM_VIEW_ROTATION.active();
+  return (rotated && document.querySelector('[data-mh-view-rotation="true"]')) || document.body;
+};
 const ModalFrame = ({ label, border='border-amber-400/70', onClose, children, narrow=false, zIndex=MODAL_Z.dialog }) => (
   <div onClick={onClose||undefined} className="fixed inset-0 flex items-center justify-center overflow-y-auto px-4" style={{position:'fixed',inset:0,paddingTop:'max(16px, env(safe-area-inset-top))',paddingBottom:'max(16px, env(safe-area-inset-bottom))',backgroundColor:'rgba(2,6,23,0.94)',zIndex}} role="dialog" aria-modal="true" aria-label={label}>
     <div onClick={e=>e.stopPropagation()} className={`w-full ${narrow?'max-w-[280px]':'max-w-sm'} rounded-3xl border-2 ${border} bg-slate-950 p-4 shadow-2xl`}>{children}</div>
@@ -43288,6 +43296,8 @@ function MasuSoulTraitsScreen({
 // 下書き(draft)は「確定後の目盛り数」。確定するまで保存へ触らない。確定は onCommit(plan) が
 // applyUniqueBoostPlan を通して保存する(今より下げる・効かない種類・上限超え・P不足はそこで弾く)。
 // 見た目はレフェリーくんの案の絵(docs/progress/unique-boost)に合わせる。
+// ★🔄横(端末は縦のまま絵を回す)では --mh-vh が端末の縦の長さのままなので、高さは回した枠いっぱい(!max-h-full)にし、
+//   横で背が低いときの畳み方も回したとき用([[data-mh-view-rotation=true]_&]:…)を並べて持つ(2026-11-07 レフェリーくんの指摘)
 
 function UniqueBoostSheet({ masu, skillKey, onClose, onCommit }) {
   const [tab, setTab] = useState('attack');
@@ -43322,20 +43332,20 @@ function UniqueBoostSheet({ masu, skillKey, onClose, onCommit }) {
   return (
     <div className="fixed inset-0 flex items-end sm:items-center justify-center" style={{ position:'fixed', inset:0, backgroundColor:'rgba(2,6,23,0.78)', zIndex:31600 }}
       role="dialog" aria-modal="true" aria-label={`${skillName}のオリジナル強化`} data-unique-boost-sheet>
-      <div className="w-full max-w-md bg-slate-900 border-2 border-amber-500/80 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+      <div data-unique-boost-panel className="w-full max-w-md bg-slate-900 border-2 border-amber-500/80 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden [[data-mh-view-rotation=true]_&]:!max-h-full"
         style={{ maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - 12px)', paddingBottom:'env(safe-area-inset-bottom)' }}>
-        <div data-unique-boost-head className="shrink-0 px-4 pt-3 pb-2 border-b border-white/10 [@media(orientation:landscape)_and_(max-height:520px)]:pt-2 [@media(orientation:landscape)_and_(max-height:520px)]:pb-1.5">
+        <div data-unique-boost-head className="shrink-0 px-4 pt-3 pb-2 border-b border-white/10 [@media(orientation:landscape)_and_(max-height:520px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2 [@media(orientation:landscape)_and_(max-height:520px)]:pb-1.5 [[data-mh-view-rotation=true]_&]:pb-1.5">
           <div className="flex items-center justify-between gap-2 min-w-0">
             <div className="min-w-0 flex items-baseline gap-1.5"><span className="truncate text-[15px] font-black text-white">{skillName}</span><span className="shrink-0 text-[11px] font-mono font-black text-amber-300">Lv.{level}</span></div>
             <div className="shrink-0 flex items-center gap-1 text-[11px] font-black text-amber-300"><Sparkles size={12}/>未使用 固有技P {normalized.uniqueSkillPoints.toLocaleString()}</div>
           </div>
-          <div className="mt-1.5 text-[12px] font-black text-amber-200 [@media(orientation:landscape)_and_(max-height:520px)]:hidden">✨ オリジナル強化(この技だけに効きます)</div>
+          <div className="mt-1.5 text-[12px] font-black text-amber-200 [@media(orientation:landscape)_and_(max-height:520px)]:hidden [[data-mh-view-rotation=true]_&]:hidden">✨ オリジナル強化(この技だけに効きます)</div>
           {/* 横で背が低いときは説明を畳み、行が見える場所を広くする(2026-11-07 実画面で1行しか見えなかった) */}
-          <div className="mt-0.5 text-[10px] font-bold leading-relaxed text-slate-400 [@media(orientation:landscape)_and_(max-height:520px)]:hidden">Lv.8 になった固有技に、余った固有技Pで強化を積めます。合体でこの技を引き継ぐと、強化も一緒に引き継ぎます。</div>
-          <div className="mt-2 grid grid-cols-3 gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1" role="tablist">
+          <div className="mt-0.5 text-[10px] font-bold leading-relaxed text-slate-400 [@media(orientation:landscape)_and_(max-height:520px)]:hidden [[data-mh-view-rotation=true]_&]:hidden">Lv.8 になった固有技に、余った固有技Pで強化を積めます。合体でこの技を引き継ぐと、強化も一緒に引き継ぎます。</div>
+          <div className="mt-2 grid grid-cols-3 gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1 [[data-mh-view-rotation=true]_&]:mt-1" role="tablist">
             {UNIQUE_BOOST_TABS.map(t => (
               <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} data-unique-boost-tab={t.id} onClick={() => setTab(t.id)}
-                className={`min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[34px] rounded-xl text-[12px] font-black border ${tab === t.id ? 'bg-amber-500 text-slate-950 border-amber-300' : 'bg-slate-800 text-slate-300 border-white/10'}`}>{t.label}</button>
+                className={`min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[34px] [[data-mh-view-rotation=true]_&]:min-h-[34px] rounded-xl text-[12px] font-black border ${tab === t.id ? 'bg-amber-500 text-slate-950 border-amber-300' : 'bg-slate-800 text-slate-300 border-white/10'}`}>{t.label}</button>
             ))}
           </div>
         </div>
@@ -43371,14 +43381,14 @@ function UniqueBoostSheet({ masu, skillKey, onClose, onCommit }) {
             );
           })}
         </div>
-        <div className="shrink-0 px-4 pt-2 pb-3 border-t border-white/10 [@media(orientation:landscape)_and_(max-height:520px)]:pt-1 [@media(orientation:landscape)_and_(max-height:520px)]:pb-2">
+        <div className="shrink-0 px-4 pt-2 pb-3 border-t border-white/10 [@media(orientation:landscape)_and_(max-height:520px)]:pt-1 [[data-mh-view-rotation=true]_&]:pt-1 [@media(orientation:landscape)_and_(max-height:520px)]:pb-2 [[data-mh-view-rotation=true]_&]:pb-2">
           <div className="flex items-center justify-between text-[12px] font-black"><span className="text-slate-400">残りP</span><span className="text-amber-300">{remaining.toLocaleString()}</span></div>
-          <div className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1">
-            <button type="button" onClick={onClose} className="min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] rounded-2xl bg-slate-800 text-[13px] font-black text-white">やめる</button>
+          <div className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1 [[data-mh-view-rotation=true]_&]:mt-1">
+            <button type="button" onClick={onClose} className="min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px] rounded-2xl bg-slate-800 text-[13px] font-black text-white">やめる</button>
             <button type="button" data-unique-boost-commit disabled={draftCost <= 0} onClick={() => {
               const plan = {}; UNIQUE_BOOST_DEFINITIONS.forEach(def => { if (targetOf(def.id) > (current[def.id] || 0)) plan[def.id] = targetOf(def.id); });
               if (onCommit(plan)) { setDraft({}); onClose(); }
-            }} className="min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] rounded-2xl bg-gradient-to-b from-amber-500 to-orange-700 text-[13px] font-black text-white disabled:opacity-40">強化を確定</button>
+            }} className="min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px] rounded-2xl bg-gradient-to-b from-amber-500 to-orange-700 text-[13px] font-black text-white disabled:opacity-40">強化を確定</button>
           </div>
         </div>
       </div>
@@ -46153,10 +46163,30 @@ function HomeScreen({
   React.useEffect(()=>{
     const scene=homeSceneRef.current;const box=scene&&scene.querySelector('.mh-home-assistant');
     if(!scene||!box)return undefined;
-    const measure=()=>{const b=box.offsetTop+box.offsetHeight;if(b>0)scene.style.setProperty('--mh-home-assistant-bottom',`${Math.ceil(b)}px`);};
+    // 横(背の低い横画面)では、モンヒロビートの札を M/B管理の右隣に並べる。その位置に使う M/B管理の右端も渡す(2026-11-07 横 667×375 で
+    // 吹き出しが1行伸びると、M/B管理とモンヒロビートの札が重なった。左の列は縦に積む余白がない)
+    // 左の列は上から 吹き出し → M/B管理 → 助手ライフ → モンヒロビート。上の札が下がったら、下の札もその下端(+顔の列の分)より下へ押す
+    // (2026-11-07 長い台詞で M/B管理が下がり、縦では助手ライフ、横ではモンヒロビートの札に重なった)。ふだんの位置は CSS の % のまま
+    const offTop=el=>{let y=0;for(let e=el;e&&e!==scene;e=e.offsetParent)y+=e.offsetTop;return y;};
+    const offLeft=el=>{let x=0;for(let e=el;e&&e!==scene;e=e.offsetParent)x+=e.offsetLeft;return x;};
+    const measure=()=>{const b=offTop(box)+box.offsetHeight;if(b>0)scene.style.setProperty('--mh-home-assistant-bottom',`${Math.ceil(b)}px`);
+      // 横(背の低い横画面)では、モンヒロビートの札を M/B管理の右隣に並べる(左の列は縦に積む余白がない)。その位置に使う M/B管理の右端
+      const mg=scene.querySelector('.mh-home-facility.management');
+      if(mg&&mg.offsetParent){scene.style.setProperty('--mh-home-management-right',`${Math.ceil(offLeft(mg)+mg.offsetWidth)}px`);scene.style.setProperty('--mh-home-management-bottom',`${Math.ceil(offTop(mg)+mg.offsetHeight)}px`);}
+      const lf=scene.querySelector('.mh-home-facility.life');
+      if(lf&&lf.offsetParent)scene.style.setProperty('--mh-home-life-bottom',`${Math.ceil(offTop(lf)+lf.offsetHeight)}px`);
+      // モンヒロビートが押し下げられて、その下(イベントの札・公式杯・MFバトルカード)にかかるときだけ、下の札をまとめて下げる。
+      // 下の札は下から位置を決めているので、translate で動かす(offsetTop は translate を含まないので、測り直しても積み上がらない)
+      const rh=scene.querySelector('.mh-home-facility.rhythm');let push=0;
+      if(rh&&rh.offsetParent){const rb=offTop(rh)+rh.offsetHeight+22,rr=offLeft(rh)+rh.offsetWidth;
+        for(const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle')){if(!el.offsetParent)continue;const t=offTop(el);if(t>offTop(rh)&&offLeft(el)<rr)push=Math.max(push,rb-t);}}
+      scene.style.setProperty('--mh-home-left-push',`${Math.max(0,Math.ceil(push))}px`);};
     measure();
     if(typeof ResizeObserver==='undefined'){const id=setInterval(measure,1000);return()=>clearInterval(id);}
-    const ro=new ResizeObserver(measure);ro.observe(box);ro.observe(scene);return()=>ro.disconnect();
+    const ro=new ResizeObserver(measure);ro.observe(box);ro.observe(scene);
+    // 札は後から出る(助手ライフは公開の印・読み込みのあと)。ときどき測り直す
+    const id=setInterval(measure,1000);
+    return()=>{ro.disconnect();clearInterval(id);};
   },[]);
   const homeBackgroundSrc=homeArtSrc(homeArt,homeSceneWide);
   const homeBackgroundWide=homeArtIsWide(homeArt,homeSceneWide);
@@ -54722,8 +54752,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     // モンビーに出かけている助手は回数を使わない(社長の決定 2026-11-07)。払っていないので控えも残さない(返すものが無い)
     let paid = rhythmAssistSessionVisitFree(who.id) ? 'visit' : '';
     // 寝ている助手は、来てくれるときと断られるときがある(社長 2026-11-07)。断られたら払わずに、シートに一言を出して呼ばない
+    let wokeUp = false;
     if (!paid && rhythmAssistSessionAsleep(who.id)) {
       const woke = rhythmAssistSessionTryWake(who.id);
+      wokeUp = woke.came;
       if (!woke.came) { setBuddyRefused({ id: who.id, line: woke.line, at: Date.now() }); return 'refused'; }
     }
     if (!paid) paid = (await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
@@ -54735,6 +54767,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     setBuddyBumped(false);
     const joined = RHYTHM_MULTI.summon({ masuId: key, callId: call.id, name: rhythmAssistSessionName(who.id), level: rhythmAssistSessionLevel(RHYTHM_ASSIST_SESSION_STORE.get(), who.id), baseId: '', colors: [], assistantId: who.id });
     if (!joined) endBuddy(key, call.id);
+    else if (wokeUp) rhythmAssistSessionNoteWoken(who.id);
     setBuddySheet('');
     return joined ? 'ok' : 'full';
   };
@@ -57354,9 +57387,15 @@ const rhythmAssistSessionVisitFree = (id) => {
 //     同じ時間帯に断られた助手を呼び直すと1回ごとに+2割(9割まで)。断られた回数は起動の中だけ覚える(保存しない)
 //   断られたら回数もセッション券も使わない。来てくれたら、部屋に来たときの一言を「起こされた」一言にする
 const RHYTHM_ASSIST_SESSION_WAKE = { refused: {}, woke: new Set() };
+// 寝ているかの正本は助手ライフの assistantLifeAsleep(ナカヨシ5・#4862。印が偽・失敗なら偽)
 const rhythmAssistSessionAsleep = (id) => {
-  if (!rhythmAssistSessionEnabled() || typeof assistantLifeCurrent !== 'function' || typeof assistantLifeWhereOf !== 'function') return false;
-  try { const w = assistantLifeWhereOf(assistantLifeCurrent(), id); return !!(w && w.doing === 'sleep'); } catch (_) { return false; }
+  if (!rhythmAssistSessionEnabled() || typeof assistantLifeAsleep !== 'function') return false;
+  try { return assistantLifeAsleep(id) === true; } catch (_) { return false; }
+};
+// 起こして部屋に入れたことを助手ライフへ知らせる(家の「今日あったこと」と生活のリズムの「誘って遊んだ」)。入れたときだけ呼ぶ
+const rhythmAssistSessionNoteWoken = (id) => {
+  if (typeof assistantLifeOnWoken !== 'function') return;
+  try { assistantLifeOnWoken({ assistantId: id, came: true, at: Date.now() }); } catch (_) { /* 受け手の失敗で止めない */ }
 };
 const rhythmAssistSessionWakeChance = ({ nightOwl = false, bondLevel = 1, bondMax = 1, retries = 0 } = {}) => {
   const bond = bondMax > 1 ? Math.max(0, Math.min(1, (Number(bondLevel) - 1) / (bondMax - 1))) : 0;
@@ -60434,6 +60473,18 @@ const quickGuidePick = (ctx) => {
   }
 };
 
+// モンヒロビートの「🔄 横」で絵を回しているとき(端末は縦のまま)。案内は回した器の中へ出し、位置も器の中の座標で測る
+//   (2026-11-07 レフェリーくん: body へ出していたので、回したときに案内の窓だけ縦のままだった)
+const quickGuideRotated = () => typeof RHYTHM_VIEW_ROTATION === 'object' && !!RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.active === 'function' && RHYTHM_VIEW_ROTATION.active();
+const quickGuideRectOf = (el) => (quickGuideRotated() && typeof RHYTHM_VIEW_ROTATION.rectOf === 'function' ? RHYTHM_VIEW_ROTATION.rectOf(el) : el.getBoundingClientRect());
+// 案内を描く場所の大きさ。回しているときは幅と高さが入れ替わる
+const quickGuideView = () => {
+  if (typeof window === 'undefined') return { w: 0, h: 0 };
+  return quickGuideRotated() ? { w: window.innerHeight || 0, h: window.innerWidth || 0 } : { w: window.innerWidth || 0, h: window.innerHeight || 0 };
+};
+// 案内を出す先。ふだんは body(バトルの技の札など body へ出る物より上に重ねるため)。回しているときは回した器
+const quickGuidePortalTarget = () => (typeof rotationAwarePortalTarget === 'function' ? rotationAwarePortalTarget() : (typeof document !== 'undefined' ? document.body : null));
+
 // 光らせる所。見えている最初の1つの位置(画面の座標)。無ければ null
 const quickGuideSpotRect = (selector) => {
   if (!selector || typeof document === 'undefined') return null;
@@ -60441,9 +60492,9 @@ const quickGuideSpotRect = (selector) => {
     // 同じ目印が並ぶ物(横に並ぶ難易度の札など)は、いちばん画面に入っている1つ
     let best = null, bestArea = -1;
     for (const el of document.querySelectorAll(selector)) {
-      const r = el.getBoundingClientRect();
+      const r = quickGuideRectOf(el), v = quickGuideView();
       if (!(r.width > 0 && r.height > 0)) continue;
-      const area = Math.max(0, Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0)) * Math.max(0, Math.min(r.right, window.innerWidth) - Math.max(r.left, 0));
+      const area = Math.max(0, Math.min(r.bottom, v.h) - Math.max(r.top, 0)) * Math.max(0, Math.min(r.right, v.w) - Math.max(r.left, 0));
       if (area > bestArea) { bestArea = area; best = { el, top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom }; }
     }
     if (best) return best;
@@ -60462,7 +60513,7 @@ const quickGuideScrollTo = (el, top) => {
     box = box.parentElement;
   }
   if (!box || box === document.body) return;
-  const r = el.getBoundingClientRect(), b = box.getBoundingClientRect();
+  const r = quickGuideRectOf(el), b = quickGuideRectOf(box);
   if (top) box.scrollTop += r.top - b.top - 8;
   else if (r.top < b.top) box.scrollTop += r.top - b.top - 8;
   else if (r.bottom > b.bottom) box.scrollTop += r.bottom - b.bottom + 8;
@@ -60482,13 +60533,13 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
   // 窓の高さを測る(光らせる所と重ならない置き方を決めるため)
   // ページが変わったら知らせる(帯を開く・閉じるなど、画面の側でする事のため)
   useEffect(() => { if (onPage && page) onPage(page); }, [guideId, step]);
-  useEffect(() => { try { const h = panelRef.current && panelRef.current.getBoundingClientRect().height; if (h > 0) setPanelH(Math.ceil(h)); } catch (_) { /* 既定のまま */ } });
+  useEffect(() => { try { const h = panelRef.current && panelRef.current.offsetHeight; if (h > 0) setPanelH(Math.ceil(h)); } catch (_) { /* 既定のまま */ } });
   // 光らせる所を測る。初めに画面の中へ寄せ、あとは 300ms ごとと画面の大きさが変わったときに測り直す(バトルは動き続けるため)
   //   ★窓の分を引いた残りに入りきらない大きな所(AUTO設定の欄・横画面の難易度)は、先頭を上へ寄せ、窓に重ならない範囲だけ光らせる
   useEffect(() => {
     if (!page || !page.spot) { setRect(null); return undefined; }
     const first = quickGuideSpotRect(page.spot);
-    const vh0 = window.innerHeight || 0;
+    const vh0 = quickGuideView().h;
     try {
       if (first && first.el) quickGuideScrollTo(first.el, first.height > vh0 - panelH - 40);
       // 文で言っている中身が画面の外なら、そこまで寄せる(大きな欄の下のほうにあるスイッチなど)
@@ -60498,7 +60549,7 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
     // 光らせる所が大きすぎて窓と上下に並べられないときは、文で言っている中身(must)だけを光らせる(横画面の難易度の札など)
     const measure = () => {
       let r = quickGuideSpotRect(page.spot);
-      const vh = window.innerHeight || 0;
+      const vh = quickGuideView().h;
       if (r && page.must && r.height > vh - panelH - 40) { const m = quickGuideSpotRect(page.must); if (m) r = m; }
       setRect(r ? { top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom } : null);
     };
@@ -60512,19 +60563,27 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
   if (!line) return null;
   const text = quickGuideNoBreak(String(line.t).split('{name}').join(callName || 'ブリーダー'));
   const last = step >= pages.length - 1;
-  const vh = typeof window !== 'undefined' ? window.innerHeight || 0 : 0;
+  const vh = quickGuideView().h;
   // 小さいボタン(🎵 など)は枠を詰める(となりのボタンにかからないように)
   const pad = rect && Math.min(rect.width, rect.height) < 56 ? 3 : 6, gap = 12;
   // 窓は光らせた所と重ならない側へ。上に入るなら上・下に入るなら下・どちらにも入らなければ、下に置いて光らせる所を切り詰める
   const roomTop = rect ? rect.top - pad - gap : 0, roomBottom = rect ? vh - rect.bottom - pad - gap : 0;
   //   どちらにも入らないときは下に置く(大きな所は先頭へ寄せてあるので、見出しが窓の上に見える)
-  const atTop = !!rect && vh > 0 && roomBottom < panelH && roomTop >= panelH;
+  //   窓を上・下に置いたときに、光らせる所がどれだけ残るか(どちらも細い線しか残らないなら、下の squeeze で片側へ置く)
+  const keepIfBottom = rect ? Math.min(rect.bottom, vh - panelH - gap - pad - 10) - rect.top : 0;
+  const keepIfTop = rect ? rect.bottom - Math.max(rect.top, panelH + gap + pad + 10) : 0;
+  //   左右にも空きが無く、上下どちらに置いても光らせる所が細い線しか残らないとき(横に長い所)は、窓を片側へ細く重ねて置く(下の squeeze)。
+  //   光らせる所の一部に重なるが、切り詰めて見えなくするよりよい(🔄横の曲えらびの帯の中・2026-11-07 レフェリーくん)
+  const vw0 = quickGuideView().w;
+  const squeeze = !!rect && vh > 0 && vw0 > vh && roomBottom < panelH && roomTop < panelH
+    && Math.max(rect.left - pad - gap, vw0 - (rect.left + rect.width) - pad - gap) < 170 && Math.max(keepIfTop, keepIfBottom) < 40;
+  const atTop = !!rect && vh > 0 && !squeeze && roomBottom < panelH && roomTop >= panelH;
   // 横画面で上下どちらにも入らないときは、左右の空きが十分なら窓を細くして横に置く(横画面の難易度の札など。切り詰めずに済む)
-  const vw = typeof window !== 'undefined' ? window.innerWidth || 0 : 0;
+  const vw = quickGuideView().w;
   const roomLeft = rect ? rect.left - pad - gap : 0, roomRight = rect ? vw - (rect.left + rect.width) - pad - gap : 0;
   const side = !!rect && vh > 0 && vw > vh && !atTop && roomBottom < panelH && Math.max(roomLeft, roomRight) >= 170
-    ? (roomRight >= roomLeft ? 'right' : 'left') : null;
-  const sideWidth = side ? Math.min(300, Math.max(roomLeft, roomRight) - 4) : 0;
+    ? (roomRight >= roomLeft ? 'right' : 'left') : squeeze ? 'left' : null;
+  const sideWidth = side ? (squeeze ? Math.min(300, Math.round(vw * 0.38)) : Math.min(300, Math.max(roomLeft, roomRight) - 4)) : 0;
   const sideTop = side ? Math.max(8, Math.min(vh - panelH - 8, rect.top + rect.height / 2 - panelH / 2)) : 0;
   let ring = rect;
   if (rect && vh > 0 && !side) {
@@ -60565,7 +60624,8 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
       </div>
     </div>
   );
-  return typeof document !== 'undefined' && document.body && typeof ReactDOM === 'object' && ReactDOM.createPortal ? ReactDOM.createPortal(overlay, document.body) : overlay;
+  const target = quickGuidePortalTarget();
+  return target && typeof ReactDOM === 'object' && ReactDOM.createPortal ? ReactDOM.createPortal(overlay, target) : overlay;
 };
 
 // ---- part: 56-assistant-life.jsx ----
@@ -61143,6 +61203,15 @@ const assistantLifeMarkSeen = (talk, now = Date.now()) => {
 //   ひとりごと … kind 'life-solo'/声かけ … kind 'life-invite'(pair は [誘う人, 誘われる人])/ブリーダーへ … kind 'life-breeder'/
 //   言い合い … kind 'quarrel' と 'makeup'(今の仲直りの流れにそのまま乗る)・distance(距離をおく)
 let assistantLifeTalkCache = null;
+// 台本が「どこで言う台詞か」(2026-11-07 ミハリ L 残り④: 練習スタジオのソラシドが「広場、だれもいないな笑」)。
+//   鍵の place があればそれ。無ければ台詞に出てくる場所の名前(家は「家に帰ろ」のように出先でも言うので見ない)。どこでも言えるなら null
+const ASSISTANT_LIFE_TALK_PLACE_WORDS = Object.freeze([['練習スタジオ', 'studio'], ['おやつ屋', 'cafe'], ['カード部屋', 'cardroom'], ['育成場', 'ranch'], ['図書室', 'library'], ['マーケット', 'market'], ['ひなたの丘', 'hill'], ['中庭', 'garden'], ['広場', 'plaza']]);
+const assistantLifeTalkAt = (t, keys = (t && t.keys) || {}) => {
+  if (keys.place && ASSISTANT_LIFE_PLACES[keys.place]) return keys.place;
+  const txt = ((t && t.lines) || []).map(l => (l && l.t) || '').join('\n');
+  for (const [w, place] of ASSISTANT_LIFE_TALK_PLACE_WORDS) if (txt.includes(w)) return place;
+  return null;
+};
 const assistantLifeTalkSet = () => {
   if (assistantLifeTalkCache) return assistantLifeTalkCache;
   const raw = (typeof ASSISTANT_LIFE_TALKS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_TALKS)) ? ASSISTANT_LIFE_TALKS : [];
@@ -61151,7 +61220,7 @@ const assistantLifeTalkSet = () => {
   for (const t of raw) {
     if (!t || typeof t.id !== 'string' || !okLines(t.lines)) continue;
     const keys = t.keys && typeof t.keys === 'object' ? t.keys : {};
-    const base = { id: t.id, keys, lines: t.lines, lv: 1, scene: 'any', life: true };
+    const base = { id: t.id, keys, lines: t.lines, lv: 1, scene: 'any', life: true, at: assistantLifeTalkAt(t, keys) };
     if (t.kind === 'solo') out.solo.push({ ...base, kind: 'life-solo', who: t.who, pair: [t.who], line: t.line === 'feel' ? 'feel' : 'scene' });
     else if (t.kind === 'breeder') out.breeder.push({ ...base, kind: 'life-breeder', who: t.who, pair: [t.who] });
     else if (t.kind === 'invite' && t.from) out.invite.push({ ...base, kind: 'life-invite', who: t.who, from: t.from, pair: [t.from, t.who] });
@@ -61304,9 +61373,10 @@ const assistantLifePickSoloTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, p
   const keysOf = (t) => ({ pt: t.keys.place ? assistantLifePlaceType(id, t.keys.place) : null, mood: t.keys.mood || null, why: t.keys.why || null, doing: t.keys.doing || null });
   const want = { pt: assistantLifePlaceType(id, s.place), mood, why: s.reason === 'distance' ? null : s.reason, doing: s.doing };
   const T = assistantLifeTalkSet();
-  const br = T.breeder.filter(t => t.who === id).map(t => ({ talk: t, keys: keysOf(t) }));
+  const here = (t) => t.at == null || t.at === s.place; // 台詞の場所といまの場所を合わせる
+  const br = T.breeder.filter(t => t.who === id && here(t)).map(t => ({ talk: t, keys: keysOf(t) }));
   if (br.length && rand() < 0.3) { const t = assistantLifeChoose(br, want, ['doing', 'why', 'mood', 'pt'], seen, rand); if (t && !seen[t.id]) return assistantLifeWithCtx(t, ctx); }
-  const mine = T.solo.filter(t => t.who === id);
+  const mine = T.solo.filter(t => t.who === id && here(t));
   const ok = (c) => c.keys.pt == null || c.keys.pt === want.pt;
   const scene = assistantLifeChoose(mine.filter(t => t.line === 'scene').map(t => ({ talk: t, keys: keysOf(t) })).filter(ok), want, ['doing', 'why', 'mood'], seen, rand);
   const feel = assistantLifeChoose(mine.filter(t => t.line === 'feel').map(t => ({ talk: t, keys: keysOf(t) })).filter(ok), want, ['doing', 'why', 'mood'], seen, rand);
@@ -61323,7 +61393,7 @@ const assistantLifePickCallTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, r
   const ctx = { place: s.place, doing: s.doing };
   const keysOf = (t) => ({ pt: t.keys && t.keys.place ? assistantLifePlaceType(id, t.keys.place) : null, mood: (t.keys && t.keys.mood) || null, why: (t.keys && t.keys.why) || null, doing: (t.keys && t.keys.doing) || null });
   const want = { pt: assistantLifePlaceType(id, s.place), mood: ((life && life.moods) || {})[id] || null, why: s.reason && s.reason !== 'distance' ? s.reason : null, doing: s.doing };
-  const cands = assistantLifeTalkSet().breeder.filter(t => t.who === id && (t.lines || []).every(l => l.who === id)).map(t => ({ talk: t, keys: keysOf(t) }));
+  const cands = assistantLifeTalkSet().breeder.filter(t => t.who === id && (t.at == null || t.at === s.place) && (t.lines || []).every(l => l.who === id)).map(t => ({ talk: t, keys: keysOf(t) }));
   if (!cands.length) return null;
   const t = assistantLifeChoose(cands, want, ['doing', 'why', 'mood', 'pt'], seen, rand);
   return t ? assistantLifeWithCtx({ ...t, pair: Array.isArray(t.pair) && t.pair.length ? t.pair : [id] }, ctx) : null;
@@ -61974,6 +62044,11 @@ const assistantLifeAtBeat = (id) => { const w = assistantLifeWhereOf(assistantLi
 // いま寝ているか(読むだけ。ビート部の「寝ている助手を呼ぶ」・カード部が使う。2026-11-07 マモリと決めた)
 const assistantLifeAsleep = (id) => { try { const w = assistantLifeWhereOf(assistantLifeCurrent(), id); return !!(w && w.doing === 'sleep'); } catch (_) { return false; } };
 const assistantLifeBeatIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLifeAtBeat);
+// いまカード部屋でカード研究をしている助手(カード部とのつなぎ口。読むだけ。2026-11-07 社長「カード部屋にいる助手と対戦すると、ごほうび1.5倍」)。
+//   印が偽・いまの時間の様子がまだ無いときは false/[]。図書室でのカード研究は入れない。組で来ていれば全員。
+//   カード部は assistantLifeNow を呼ばない(様子を決め直して保存するため)。ごほうびは「対戦を始めた時点でいたか」で決める(カード部の案)
+const assistantLifeAtCard = (id) => { try { const w = assistantLifeWhereOf(assistantLifeCurrent(), id); return !!(w && w.doing === 'cards' && w.place === 'cardroom'); } catch (_) { return false; } };
+const assistantLifeCardIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLifeAtCard);
 // 家にいる組は、だれかひとりの部屋に集まる(家が好きな助手 → 並びの先)
 const assistantLifeHostOf = (ids) => ids.find(id => ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav === 'home') || [...ids].sort((a, b) => ASSISTANT_LIFE_HOUSE_ORDER.indexOf(a) - ASSISTANT_LIFE_HOUSE_ORDER.indexOf(b))[0];
 
@@ -62042,6 +62117,13 @@ const assistantLifeOnWoken = (ev) => {
   assistantLifeRhythmPlay(ev.assistantId, ev.at || Date.now());
   void assistantLifeDiaryAdd(`${assistantLifeName(ev.assistantId)} 起こされてモンヒロビートへ`, [ev.assistantId], { kind: 'woken' });
 };
+// カード部屋の助手と対戦した(カード部が typeof で確かめて、対戦が終わったら呼ぶ)。ev = { assistantId, won, at }
+//   今日あったことに1件・生活のリズムの「誘って遊んだ」に数える。勝ち負けで文を変える
+const assistantLifeOnCardMatch = (ev) => {
+  if (!ev || !ev.assistantId || !ASSISTANT_LIFE_PREFS[ev.assistantId]) return;
+  assistantLifeRhythmPlay(ev.assistantId, ev.at || Date.now());
+  void assistantLifeDiaryAdd(`${assistantLifeName(ev.assistantId)}とカード部屋で対戦して${ev.won ? '勝った' : '負けた'}`, [ev.assistantId], { kind: 'card', now: ev.at || Date.now() });
+};
 const assistantLifeOnSessionLive = (ev) => {
   if (!ev || !ev.assistantId) return;
   const ids = [ev.assistantId, ...((ev.partnerIds || []).filter(x => x !== ev.assistantId))];
@@ -62087,7 +62169,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-roof{position:absolute;left:-8px;right:-8px;top:0;clip-path:polygon(50% 0,100% 100%,0 100%);background:repeating-linear-gradient(0deg,#7a2e1e 0 7px,#5e2216 7px 9px);box-shadow:inset 0 -6px 0 #3b140c}
 .mhl-chim{position:absolute;width:20px;background:#6b4a3a;border:2px solid #3b2a20}
 .mhl-attic{position:absolute;left:50%;transform:translateX(-50%);width:40px;height:40px;border-radius:50%;border:4px solid #e8c37a;background:#1e293b;display:grid;place-items:center;font-size:14px}
-.mhl-hname{position:absolute;left:50%;transform:translateX(-50%);font-size:11px;font-weight:900;padding:1px 10px;border-radius:8px;background:linear-gradient(#5b3a1e,#3b2412);border:1.5px solid #e8c37a;color:#fff3d6;white-space:nowrap}
+.mhl-hname{position:absolute;z-index:3;left:50%;transform:translateX(-50%);font-size:11px;font-weight:900;padding:1px 10px;border-radius:8px;background:linear-gradient(#5b3a1e,#3b2412);border:1.5px solid #e8c37a;color:#fff3d6;white-space:nowrap}
 .mhl-frame{position:absolute;left:0;right:0;background:#6b4423;border-radius:4px;box-shadow:0 10px 24px #0008}
 .mhl-room{position:absolute;overflow:hidden;border-radius:3px;padding:0;border:0;text-align:left;cursor:pointer}
 .mhl-room:active{filter:brightness(1.12)}
@@ -62147,6 +62229,21 @@ function AssistantLifeNames({ text }) {
   return <>{parts.map((n, i) => <React.Fragment key={i}>{i ? '・' : ''}<span data-assistant-life-name className="whitespace-nowrap">{n}</span>{i < parts.length - 1 ? <wbr/> : null}</React.Fragment>)}</>;
 }
 
+// 掲示板の1行(「07:30 朝: あつ・ソラシド 図書室でカード研究 / …」)。まとまりの途中で折らない(2026-11-07 ミハリ 残り①「カード研/究」「ド/ラ」)。
+//   空白で区切ったまとまりを nowrap にし、名前は「・」、場所としていることは「〇〇で」のあとで折れてよい
+function AssistantLifeChunks({ text }) {
+  const out = [];
+  String(text || '').split(' ').forEach((tok, i) => {
+    if (i) out.push(' ');
+    const m = tok.match(/^(.+?で)(.+)$/);
+    const subs = tok.includes('・') ? tok.split('・').map((x, k, a) => (k < a.length - 1 ? `${x}・` : x)) : (m && Object.values(ASSISTANT_LIFE_PLACES).includes(m[1].slice(0, -1)) ? [m[1], m[2]] : [tok]);
+    subs.forEach((x, k) => { if (k) out.push(<wbr key={`w${i}-${k}`}/>); out.push(<span key={`c${i}-${k}`} data-assistant-life-chunk className="whitespace-nowrap">{x}</span>); });
+  });
+  return <>{out}</>;
+}
+
+// 掲示板は2行まで: 縦は1組・横は2組までと「ほか◯組」(全部は押した先の一覧で読む)
+const assistantLifeBoardShort = (text, max = 2) => { const ps = String(text || '').split(' / '); return ps.length > max ? `${ps.slice(0, max).join(' / ')} ほか${ps.length - max}組` : String(text || ''); };
 // 部屋1つ
 function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx }) {
   const L = ASSISTANT_LIFE_ROOM_LOOK[id];
@@ -62187,7 +62284,7 @@ function AssistantLifeHouseArt({ width, land, look, rooms, metSet, onOpen, diary
       <div className="mhl-chim" style={{ left: width * .72, top: roofH * .05, height: roofH * .6 }}/>
       <div className="mhl-roof" style={{ height: roofH }}/>
       {/* 屋根裏の🔒は、何か分からないので出さない(屋根裏ができたら出す。2026-11-07 ミハリ L11) */}
-      <span className="mhl-hname" style={{ top: roofH - (land ? 22 : 14) }}>🏡 助手の家</span>
+      <span className="mhl-hname" data-assistant-life-hname style={{ top: roofH - 22 }}>🏡 助手の家</span>
       <div className="mhl-frame" style={{ top: roofH, height: bodyH }}>
         {ASSISTANT_LIFE_HOUSE_ORDER.map((id, i) => {
           const r = Math.floor(i / cols), c = i % cols;
@@ -62196,7 +62293,7 @@ function AssistantLifeHouseArt({ width, land, look, rooms, metSet, onOpen, diary
         <div className="mhl-liv" data-assistant-life-living style={{ left: wall, top: ly, width: width - 2 * wall, height: lh, filter: night ? 'brightness(.62)' : undefined }}>
           <button type="button" className="mhl-board text-left" data-assistant-life-board onClick={onBoard} style={{ width: Math.min(width * (land ? .42 : .52), 240) }} aria-label="今日あったことを全部見る">
             <b>📌 今日あったこと{items.length ? ' ›' : ''}</b>
-            {items.length ? items.slice(0, land ? 1 : 2).map((x, i) => <p key={i} data-assistant-life-board-item>{x.t} {x.text}</p>) : <p>まだ何もありません</p>}
+            {items.length ? items.slice(0, land ? 1 : 2).map((x, i) => <p key={i} data-assistant-life-board-item><AssistantLifeChunks text={`${x.t} ${assistantLifeBoardShort(x.text, land ? 2 : 1)}`}/></p>) : <p>まだ何もありません</p>}
           </button>
           <div className="mhl-door" style={{ left: width * (land ? .62 : .66), height: lh - 14 }}/>
           <span className="absolute text-[24px]" style={{ left: width * (land ? .62 : .66) + 46, bottom: 6 }} aria-hidden="true">🛋️</span>
@@ -62281,7 +62378,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
           <div className="mhl-row"><span className="k">🤝 友情Lv</span><span className="flex flex-wrap gap-x-3 text-[11px]">{friends.map(f => <span key={f.id}>{assistantLifeName(f.id)} <b className={f.lv >= 5 ? 'text-pink-300' : f.lv >= 3 ? 'text-amber-300' : ''}>Lv{f.lv}</b></span>)}</span></div>
           {sess && <div className="mhl-row" data-assistant-life-room-session-row><span className="k">🎵 セッション</span><b>セッションLv{sess.level}</b><span className="ml-auto text-[10px] text-slate-300">一緒に {sess.lives}回</span></div>}
           <div className="py-1.5"><p className="text-[10.5px] font-black text-slate-300">今日あったこと</p>
-            {items.length ? items.map((x, i) => <p key={i} className="text-[11px] font-bold text-slate-100"><b className="mr-1.5 text-amber-200">{x.t}</b>{x.text}</p>) : <p className="text-[11px] text-slate-400">まだありません</p>}
+            {items.length ? items.map((x, i) => <p key={i} className="text-[11px] font-bold text-slate-100"><b className="mr-1.5 text-amber-200">{x.t}</b><AssistantLifeChunks text={x.text}/></p>) : <p className="text-[11px] text-slate-400">まだありません</p>}
           </div>
         </div>
         <div className="mt-2 grid grid-cols-2 gap-1.5">
@@ -62484,7 +62581,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       <button type="button" className="mhl-tile mhl-watch flex-1" data-assistant-life-today-act="watch" disabled={watchLeft <= 0 || !unwatched.length} onClick={() => unwatched[0] && watch(unwatched[0])}>
         <em>あと{watchLeft}</em><i>👀</i><b>見守る</b><small>{unwatched.length ? `${unwatched.length}か所` : 'いまは無し'}</small></button>
       <button type="button" className="mhl-tile mhl-call flex-1" data-assistant-life-today-act="call" disabled={!Object.keys(life.solo || {}).length} onClick={() => { const id = lonely ? lonely[0] : Object.keys(life.solo || {})[0]; if (id) setRoomId(id); }}>
-        <em>無料</em><i>💬</i><b>声をかける</b><small>{lonely ? `${nameOf(lonely[0])}がさみしそう` : 'ひとりの助手に'}</small></button>
+        <em>無料</em><i>💬</i><b>声をかける</b><small data-assistant-life-today-sub>{lonely ? `💭 ${nameOf(lonely[0])}` : 'ひとりの助手に'}</small></button>
       <button type="button" className="mhl-tile mhl-give flex-1" data-assistant-life-today-act="give" disabled={!canGive || !giveGroup} onClick={() => { if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids); else setTab('items'); }}>
         <em>{itemsLeft}回</em><i>🧺</i><b>渡す</b><small>{itemInfos.map(x => `${x.emoji}${haveOf(x.kind)}`).join(' ')}</small></button>
       <button type="button" className="mhl-tile mhl-beat flex-1" data-assistant-life-today-act="beat" onClick={() => { if (beatIds[0]) setRoomId(beatIds[0]); }} disabled={!beatIds.length}>
@@ -62572,7 +62669,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
             <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/60" onClick={() => setBoardOpen(false)}/>
             <div className="mhl-sheet" style={land ? { left: 'auto', width: '42%', top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px' } : undefined}>
               <p className="mhl-en">TODAY</p><p className="text-[18px] font-black">📌 今日あったこと</p>
-              {(diary.items || []).length ? [...diary.items].reverse().map((x, i) => <p key={i} className="mt-1.5 text-[12px] font-bold leading-snug text-slate-100"><b className="mr-1.5 text-amber-200">{x.t}</b>{x.text}</p>) : <p className="mt-2 text-[12px] text-slate-400">まだ何もありません</p>}
+              {(diary.items || []).length ? [...diary.items].reverse().map((x, i) => <p key={i} className="mt-1.5 text-[12px] font-bold leading-snug text-slate-100"><b className="mr-1.5 text-amber-200">{x.t}</b><AssistantLifeChunks text={x.text}/></p>) : <p className="mt-2 text-[12px] text-slate-400">まだ何もありません</p>}
               <button type="button" className="mhl-btn mt-3 w-full bg-slate-700" onClick={() => setBoardOpen(false)}>閉じる</button>
             </div>
           </div>)}
@@ -62614,6 +62711,27 @@ function AssistantLifeTownMap({ life, ids, look, onPick }) {
         const dy = r.top < mr.top + 3 ? mr.top + 3 - r.top : r.bottom > mr.bottom - 3 ? mr.bottom - 3 - r.bottom : 0;
         if (dx || dy) el.style.translate = `${dx}px ${dy}px`;
       }
+      // 顔の丸が、となりの場所の札に重なるとき(中庭の顔と練習スタジオの札。2026-11-07 ミハリ 残り②): 顔のいない側(札だけ)を、
+      //   上・下・左・右のうちほかの札にも地図のふちにもかからない、いちばん近い所へ逃がす
+      const els = [...m.querySelectorAll('[data-assistant-life-map-place]')];
+      const hit = (r, q) => Math.min(r.right, q.right) - Math.max(r.left, q.left) > 1 && Math.min(r.bottom, q.bottom) - Math.max(r.top, q.top) > 1;
+      const tr = (el) => (el.style.translate || '0px 0px').split(' ').map(v => parseFloat(v) || 0).concat([0]).slice(0, 2);
+      for (const a of els) {
+        if (!a.querySelector('button')) continue;
+        for (const b of els) {
+          if (a === b || b.querySelector('button')) continue;
+          const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+          if (!hit(ra, rb)) continue;
+          const [x0, y0] = tr(b);
+          const cands = [[0, ra.top - rb.bottom - 2], [0, ra.bottom - rb.top + 2], [ra.left - rb.right - 2, 0], [ra.right - rb.left + 2, 0]].sort((p, q) => Math.abs(p[0]) + Math.abs(p[1]) - Math.abs(q[0]) - Math.abs(q[1]));
+          const free = cands.find(([dx, dy]) => {
+            const q = { left: rb.left + dx, right: rb.right + dx, top: rb.top + dy, bottom: rb.bottom + dy };
+            if (q.left < mr.left + 3 || q.right > mr.right - 3 || q.top < mr.top + 3 || q.bottom > mr.bottom - 3) return false;
+            return els.every(o => o === b || !hit(q, o.getBoundingClientRect()));
+          }) || cands[0];
+          b.style.translate = `${x0 + free[0]}px ${y0 + free[1]}px`;
+        }
+      }
     };
     fit();
     window.addEventListener('resize', fit);
@@ -62645,15 +62763,20 @@ function AssistantLifeHomeFaces({ metIds }) {
     if (!assistantLifeEnabled()) return undefined;
     const measure = () => {
       const o = {};
-      const obs = [...document.querySelectorAll(ASSISTANT_LIFE_HOME_OBSTACLES)].filter(el => el.offsetParent).map(el => ({ el, r: el.getBoundingClientRect() }));
+      // 🔄横(端末は縦のまま、器を90度回して描く)では、画面の座標ではなく器の中の座標で測る。顔の列も器の中に置かれるため
+      //   (2026-11-07 本番で、🔄横の顔が札と関係ない所に出ていた)
+      const rot = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.active();
+      const rectOf = (el) => (rot ? RHYTHM_VIEW_ROTATION.rectOf(el) : el.getBoundingClientRect());
+      const vw = rot ? window.innerHeight : window.innerWidth, vh = rot ? window.innerWidth : window.innerHeight;
+      const obs = [...document.querySelectorAll(ASSISTANT_LIFE_HOME_OBSTACLES)].filter(el => el.offsetParent).map(el => ({ el, r: rectOf(el) }));
       for (const [k, sel] of Object.entries(ASSISTANT_LIFE_FACILITY_SEL)) {
         const el = document.querySelector(sel);
         if (!el || !el.offsetParent) continue;
-        const r = el.getBoundingClientRect();
+        const r = rectOf(el);
         // 札の下にある、横に重なるものまでのすき間(顔の列は札の幅+140px まで伸びうるので、その幅で見る)
-        const right = r.left + r.width / 2 > window.innerWidth / 2;
+        const right = r.left + r.width / 2 > vw / 2;
         const x0 = right ? r.right - Math.max(r.width, 140) : r.left, x1 = right ? r.right : r.left + Math.max(r.width, 140);
-        let gap = window.innerHeight - r.bottom;
+        let gap = vh - r.bottom;
         for (const b of obs) { if (b.el === el || b.el.contains(el) || el.contains(b.el)) continue; if (b.r.top >= r.bottom - 2 && b.r.right > x0 && b.r.left < x1) gap = Math.min(gap, b.r.top - r.bottom); }
         o[k] = { x: r.left, y: r.top, w: r.width, h: r.height, gap: Math.round(gap), right };
       }
@@ -71311,7 +71434,7 @@ const CardAutoRewardBar = ({ info, tickets, onAdd, note = '' }) => {
           <b className={`block whitespace-nowrap font-black leading-tight tabular-nums ${empty ? 'text-[17px] text-white' : 'text-[14px] text-slate-200'}`}>残り {info.left}<span className="text-[11px] text-slate-400"> / {total}回</span></b>
         </div>
         <button type="button" data-card-auto-ticket disabled={!!why} onClick={() => { Audio_.fgSe.tap(); if (typeof onAdd === 'function') onAdd(); }}
-          className={`flex min-h-[44px] shrink-0 flex-col items-center justify-center rounded-xl border px-2 text-[12px] font-black leading-tight active:scale-[.98] disabled:opacity-45 ${empty ? 'border-emerald-300 bg-emerald-900/80 text-emerald-100 shadow-[0_0_10px_rgba(52,211,153,.45)]' : 'border-white/15 bg-slate-800 text-slate-300'}`}>
+          className={`flex min-h-[44px] shrink-0 flex-col items-center justify-center rounded-xl border px-2 text-[12px] font-black leading-tight active:scale-[.98] disabled:opacity-45 ${empty ? 'border-emerald-300 bg-emerald-900/80 text-emerald-100 shadow-[0_0_10px_rgba(52,211,153,.45)]' : 'border-emerald-300/60 bg-emerald-950/70 text-emerald-100'}`}>
           <span className="whitespace-nowrap">🎫 セッション券で</span><span className="whitespace-nowrap">ふやす</span></button>
       </div>
       {why && <span data-card-auto-ticket-why className="mt-1 block text-right text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(why)}</span>}
@@ -71420,10 +71543,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const res = await cardAutoRewardAddExtra({ consume: onUseSessionTicket, refund: onRefundSessionTicket, count });
       const l = res && res.loaded;
       if (l) applyAutoLoaded(l);
-      setAutoTicketNote(res && res.ok ? `ごほうびが${res.count}回ぶん戻りました`
+      // 残りがあるうちからも足せるので、使い切ったあとに戻す前の言い方はやめて「ふえました」にした(2026-11-07 部長)
+      setAutoTicketNote(res && res.ok ? `オートのごほうびが${res.count}回ふえました`
         : res && res.why === 'limit' ? '今日はこれ以上ふやせません'
           : res && res.why === 'noTicket' ? 'セッション券が足りません'
-            : res && res.why === 'notEmpty' ? 'まだ今日のごほうびが残っています'
               : '保存できなかったので、セッション券は戻しました');
     } finally { setAutoTicketBusy(false); setAutoTicketAsk(false); }
   };
@@ -79658,12 +79781,12 @@ const cardAutoRewardEntry = (loaded) => ({ key: CARD_AUTO_REWARD_KEY, before: lo
 //   上限20は、画面の値ではなく、ここで読み直した保存の値で数える(extra + count が20を超えるなら使わない)。
 //   順番: 読み直す → 上限・残りを確かめる → 券を count 枚減らす(途中で足りなくなったら、減らした分を返して止める) → extra+count を書く。
 //   書けなければ券を全部返す(券だけ減ってごほうびが戻らない、を作らない)。保存の形は #4720 のまま(extra の数がふえるだけ)
-//   返すのは { ok, why, count, loaded }。why … 'limit'(今日の20回を超える)・'notEmpty'(まだごほうびが残っている)・'noTicket'(券が足りない)・'save'(書けなかった。券は返した)
+//   ★今日のごほうびが残っているうちからふやせる(2026-11-07 社長の答え B。前は使い切ったときだけだった)。ふえた回数は今の残りに足される
+//   返すのは { ok, why, count, loaded }。why … 'limit'(今日の20回を超える)・'noTicket'(券が足りない)・'save'(書けなかった。券は返した)
 const cardAutoRewardAddExtra = async ({ consume, refund, count = 1 } = {}) => {
   const k = Number.isInteger(count) && count > 0 ? count : 1;
   const loaded = await cardAutoRewardLoad();
   if (loaded.extra + k > CARD_AUTO_REWARD_EXTRA_MAX) return { ok: false, why: 'limit', count: k, loaded };
-  if (loaded.left > 0) return { ok: false, why: 'notEmpty', count: k, loaded };
   const giveBack = async (n) => { for (let i = 0; i < n; i++) { if (typeof refund !== 'function') return; try { await refund(); } catch (__) { /* 返せなくても遊びは止めない */ } } };
   let used = 0;
   if (typeof consume === 'function') { while (used < k && (await consume())) used++; }
@@ -79675,9 +79798,9 @@ const cardAutoRewardAddExtra = async ({ consume, refund, count = 1 } = {}) => {
   return { ok: true, why: '', count: k, loaded: await cardAutoRewardLoad() };
 };
 // 券でふやせないわけ(押せないときのひとこと)。left … 今日のごほうびの残り、tickets … 持っている券、extraLeft … 今日あとふやせる回数
-const cardAutoTicketBlock = ({ left, tickets, extraLeft }) => (
-  Number.isInteger(left) && left > 0 ? 'ごほうびを使い切ると、ふやせます'
-    : !(Number.isInteger(extraLeft) && extraLeft > 0) ? `今日はこれ以上ふやせません(1日${CARD_AUTO_REWARD_EXTRA_MAX}回まで)`
+//   ごほうびが残っていても止めない(2026-11-07 社長の答え B)。left は呼ぶ側との形をそろえるために受け取るだけ
+const cardAutoTicketBlock = ({ tickets, extraLeft }) => (
+  !(Number.isInteger(extraLeft) && extraLeft > 0) ? `今日はこれ以上ふやせません(1日${CARD_AUTO_REWARD_EXTRA_MAX}回まで)`
       : !(Number.isInteger(tickets) && tickets > 0) ? 'セッション券がありません(モンヒロビートのランクが上がるともらえます)' : '');
 // 1試合ぶんの経験値の保存の項目(84 の結果の取引に足す)。経験値を入れない人(公開前・デバッグでない)は空
 const cardLevelEntries = async ({ kind, level, outcome, debug = false, auto = false, mult = 1 }) => {
@@ -101496,7 +101619,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           className="shrink-0 w-11 min-h-[44px] flex items-center justify-center rounded-xl bg-red-800 text-red-50 font-black">×</button>
       </div>
     </div>,
-    document.body
+    rotationAwarePortalTarget()
   ) : null;
   // お話や大事な窓が出ているあいだは出さずに待ち、閉じてから出す(WaitForOverlayClose・41-screen-ui.jsx)
   const updateNotice = (updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay) ? ReactDOM.createPortal(<WaitForOverlayClose>{
@@ -101515,7 +101638,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       </div>
     )
   }</WaitForOverlayClose>,
-    document.body
+    rotationAwarePortalTarget()
   ) : null;
   const titleModal = showChangelog ? (
     <div className="mh-title-modal" {...settingsBackdropProps(closeChangelog)}>
@@ -113516,7 +113639,7 @@ const createAnimationStyle = () => {
     .mh-gift-list{display:flex;flex-direction:column;gap:8px}.mh-gift-card{display:flex;flex:none;flex-direction:column;gap:4px;min-height:88px;padding:10px 12px}.mh-gift-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;min-width:0;min-height:20px}.mh-gift-heading h3{display:flex;align-items:flex-start;gap:4px;min-width:0;font-size:14px;line-height:19px;color:#fff}.mh-gift-heading h3 span{flex:none;margin-top:1px;padding:1px 6px;border-radius:6px;background:#78350f;color:#fde68a;font-size:10px;line-height:16px}.mh-gift-heading h3 b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-width:0;white-space:normal;overflow-wrap:anywhere}.mh-gift-heading>em{flex:none;padding:2px 8px;border-radius:999px;font-size:10px;line-height:16px;font-style:normal;font-weight:900}.mh-gift-main{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px}.mh-gift-rewards{display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:2px 7px;min-width:0;color:#fde68a;font-size:11px;line-height:15px;font-weight:900}.mh-gift-rewards span{overflow-wrap:anywhere}.mh-gift-main>button{flex:none;min-width:84px;height:44px;padding:0 12px;border-radius:12px;background:#0891b2;color:#fff;font-size:12px;font-weight:900;white-space:nowrap;transition:transform .12s ease-out}.mh-gift-main>button:active{transform:scale(.95)}.mh-gift-main>button:disabled{opacity:.4;transform:none}.mh-gift-deadline{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#94a3b8;font-size:10px;line-height:14px}
     @media(max-height:620px){.mh-home-mission{top:64%}.mh-home-gift{top:73%}}
     /* 横画面(#146・2026-09-05)。コラムが画面いっぱいになるので、左右の余白へ施設を振り分ける。左＝吹き出し・M/B管理・モンヒロビート、右＝更新履歴・神殿・マーケット、右下＝ミッションとギフトを横並び、下中央＝バトル。上の max-height:620px は横画面のスマホにも当たるので、この行はそれより後ろに置いて上書きする */
-    @media(orientation:landscape) and (max-height:600px){.mh-home-assistant{left:2%;width:36%;top:calc(70px + env(safe-area-inset-top))}.mh-home-facility>span{padding:6px 12px}.mh-home-facility.management{left:2.4%;top:max(calc(146px + env(safe-area-inset-top)),calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.rhythm{left:2.4%;top:64.8%}.mh-home-facility.temple{right:2.4%;top:35.76%}.mh-home-facility.market{right:2.4%;top:59.76%}.mh-home-scene .mh-home-facility.life{left:auto;right:calc(2.4% + 118px);top:59.76%}.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle,.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle.raised,.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle.below-tour{bottom:32px}.mh-home-scene:has(.mh-home-facility.life) .mh-home-event-banner{bottom:72px}.mh-home-mission{right:calc(5% + 120px);top:78%}.mh-home-gift{top:78%}.mh-home-facility.battle>span{padding:8px 16px;font-size:18px;animation:none}.mh-home-masumon-layer{left:30%;right:30%;top:30%;bottom:34%}}
+    @media(orientation:landscape) and (max-height:600px){.mh-home-assistant{left:2%;width:36%;top:calc(70px + env(safe-area-inset-top))}.mh-home-facility>span{padding:6px 12px}.mh-home-facility.management{left:2.4%;top:max(calc(146px + env(safe-area-inset-top)),calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-scene .mh-home-facility.rhythm,.mh-home-scene .mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{left:calc(var(--mh-home-management-right,124px) + 8px);top:max(calc(156px + env(safe-area-inset-top)),calc(var(--mh-home-assistant-bottom,0px) + 16px))}.mh-home-facility.temple{right:2.4%;top:35.76%}.mh-home-facility.market{right:2.4%;top:59.76%}.mh-home-scene .mh-home-facility.life{left:auto;right:calc(2.4% + 118px);top:59.76%}.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle,.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle.raised,.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle.below-tour{bottom:32px}.mh-home-scene:has(.mh-home-facility.life) .mh-home-event-banner{bottom:72px}.mh-home-mission{right:calc(5% + 120px);top:78%}.mh-home-gift{top:78%}.mh-home-facility.battle>span{padding:8px 16px;font-size:18px;animation:none}.mh-home-masumon-layer{left:30%;right:30%;top:30%;bottom:34%}}
     /* 横画面でも幅が 760px までの端末(667×375 など)では、ミッションがモンヒロバトルの札に33px重なっていた。ミッション・ギフトを細く、バトルの札を小さくして、すき間をあける(2026-10-27) */
     @media(orientation:landscape) and (max-height:600px) and (max-width:760px){.mh-home-mission{width:104px;padding:7px 5px;right:calc(3% + 104px);white-space:nowrap}.mh-home-gift{width:96px;padding:7px 5px;right:3%}.mh-home-facility.battle>span{min-width:120px;padding:8px 8px;font-size:15px}}
     .mh-boot-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom));color:#fff;text-align:center;background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%);isolation:isolate}
@@ -113552,7 +113675,7 @@ const createAnimationStyle = () => {
     @media(max-width:350px){.mh-title-actions button{width:46px;height:46px}.mh-mocchi-wrap{width:130px;height:130px}.mh-title-header{padding-left:9px;padding-right:9px}}
     @media(max-height:620px){.mh-mocchi-wrap{width:105px;height:105px;margin-bottom:5px}.mh-boot-copy h2{margin-bottom:10px}.mh-boot-copy p{margin-top:5px}}
     @media(prefers-reduced-motion:reduce){.mh-mocchi-wrap img,.mh-mocchi-wrap span,.mh-mocchi-wrap i{animation:none!important}.mh-entering>img{animation:mhReducedFade .85s ease both}.mh-gate-core,.mh-gate-particles{display:none}.mh-gate-flash{animation:mhReducedFlash .85s ease both}}@keyframes mhReducedFade{to{opacity:.4}}@keyframes mhReducedFlash{0%,55%{opacity:0}100%{opacity:1}}
-    .mh-home-facility.rhythm{left:1.9%;top:55.25%}.mh-home-facility.life{left:2.52%;top:37%}@media (orientation:portrait){.mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{top:49.5%}}@media (orientation:portrait) and (max-height:620px){.mh-home-facility.life{top:39%}.mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{top:52%}}.mh-home-facility.life>span{border-color:#f9a8d4dd;background:linear-gradient(135deg,#4a1d3bf2,#1e1b4bf2);box-shadow:0 3px 12px #0009,0 0 15px #f472b666}.mh-home-facility.rhythm>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#0e7490ee,#4c1d95ee);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66}
+    .mh-home-facility.rhythm{left:1.9%;top:55.25%}.mh-home-facility.life{left:2.52%;top:37%}.mh-home-scene .mh-home-event-banner,.mh-home-scene .mh-home-tour-banner,.mh-home-scene .mh-home-card-battle{translate:0 var(--mh-home-left-push,0px)}@media (orientation:portrait){.mh-home-facility.life{top:max(37%,calc(var(--mh-home-management-bottom,0px) + 20px))}.mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{top:max(49.5%,calc(var(--mh-home-life-bottom,0px) + 32px))}}@media (orientation:portrait) and (max-height:620px){.mh-home-facility.life{top:max(39%,calc(var(--mh-home-management-bottom,0px) + 20px))}.mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{top:max(52%,calc(var(--mh-home-life-bottom,0px) + 32px))}}.mh-home-facility.life>span{border-color:#f9a8d4dd;background:linear-gradient(135deg,#4a1d3bf2,#1e1b4bf2);box-shadow:0 3px 12px #0009,0 0 15px #f472b666}.mh-home-facility.rhythm>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#0e7490ee,#4c1d95ee);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66}
     .mh-debug-banner{flex:none;text-align:center;background:#be123c;color:white;padding:5px;font-size:9px;font-weight:1000;letter-spacing:.04em}.mh-home-facility.rhythm small{display:block;font-size:7px;color:#fde68a}.mh-rule-button{width:100%;margin-top:18px;padding:13px;border-radius:14px;background:#4338ca;font-weight:900}.mh-node-map{position:relative;flex:1;min-height:250px;overflow:hidden;border:1px solid #ffffff33;border-radius:15px;background:radial-gradient(circle,#164e63,#020617);transition:.4s}.mh-node-map>i{position:absolute;height:3px;background:#94a3b8;transform-origin:0 50%;z-index:0}.mh-node-map>button{position:absolute;z-index:2;width:52px;height:52px;margin:-26px;border:3px solid #ffffff88;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;transition:.25s}.mh-node-map>button span{font-size:17px}.mh-node-map>button small{font-size:6px;font-weight:900}.mh-node-map>button.current{border-color:#fff700;box-shadow:0 0 18px #fff700}.mh-node-map>button.destination{animation:trainingGlow .7s infinite alternate;pointer-events:auto}.mh-node-map>button:not(.destination){pointer-events:auto}.mh-node-map img,.mh-node-map>button>div{position:absolute;width:48px;height:48px;object-fit:contain;z-index:3}.mh-board-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:5px}.mh-board-buttons button{min-height:34px;border-radius:8px;background:#334155;font-size:8px;font-weight:900}@keyframes trainingGlow{to{transform:scale(1.2);border-color:#fff;box-shadow:0 0 24px #fde047}}.mh-training-debug{position:absolute;right:8px;bottom:82px;z-index:30;width:min(270px,82vw);max-height:55vh;overflow:auto;padding:10px;border:2px solid #e879f9;border-radius:14px;background:#0f172ff5;font-size:8px}.mh-training-debug button,.mh-training-debug select{margin:3px;padding:6px;border-radius:6px;background:#334155}.mh-training-debug button.active{background:#db2777}.mh-training-debug pre{max-height:110px;overflow:auto;white-space:pre-wrap;background:#000;padding:5px}.mh-training-modal{position:fixed;z-index:50000;inset:0;display:flex;align-items:center;padding:16px;background:#020617e8}.mh-training-modal>div{width:100%;max-height:85vh;overflow:auto;padding:18px;border:1px solid #a78bfa;border-radius:20px;background:#111827}.mh-training-modal h3{margin:8px 0;font-size:17px;font-weight:1000}.mh-training-modal p{margin:7px 0;color:#cbd5e1;font-size:10px}.mh-rules-list p{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #ffffff22;padding:7px}.mh-rules-list b{font-size:10px}.mh-rules-list span{font-size:8px;text-align:right}.mh-route-choice,.mh-modal-close{display:block;width:100%;margin-top:8px;padding:12px;border-radius:10px;background:#4338ca;font-size:10px;font-weight:900}.mh-modal-close{background:#475569}.mh-training-result>div>button+button{margin-top:7px;background:#334155;color:white}
     .mh-training-screen{height:100%;display:flex;flex-direction:column;overflow:hidden;padding:calc(10px + env(safe-area-inset-top)) 12px calc(10px + env(safe-area-inset-bottom));background:radial-gradient(circle at top,#312e81,#07101f 60%)}.mh-training-head{display:grid;grid-template-columns:46px 1fr 46px;align-items:center;flex:none}.mh-training-head>button{min-height:44px;display:flex;align-items:center;justify-content:center}.mh-training-head div{text-align:center}.mh-training-head small{display:block;color:#f9a8d4;font:900 8px monospace;letter-spacing:.25em}.mh-training-head h2{font-size:18px;font-weight:1000}.mh-training-selected{display:flex;align-items:center;gap:10px;margin:9px 0;padding:10px;border:1px solid #f9a8d477;border-radius:18px;background:#3b076455}.mh-training-selected>img,.mh-training-selected>div:first-child{width:56px;height:56px;object-fit:contain;flex:none}.mh-training-selected>div{display:flex;flex:1;min-width:0;flex-direction:column}.mh-training-selected b{font-size:14px}.mh-training-selected span{color:#fbcfe8;font-size:9px}.mh-training-selected button{padding:9px;border-radius:10px;background:#7e22ce;font-size:9px;font-weight:900}.mh-training-note{font-size:9px;color:#cbd5e1;padding:2px 3px 8px}.mh-training-mon-list{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;overflow-y:auto;padding:2px 1px 90px}.mh-training-mon-list>button{position:relative;min-width:0;padding:7px 4px;border:2px solid #334155;border-radius:16px;background:#0f172acc}.mh-training-mon-list>button.active{border-color:#f472b6;background:#83184377;box-shadow:0 0 13px #ec489966}.mh-training-mon-list img,.mh-training-mon-list>button>div:first-child{width:54px;height:54px;object-fit:contain;margin:auto}.mh-training-mon-list b,.mh-training-mon-list small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-training-mon-list b{font-size:10px}.mh-training-mon-list small{font-size:7px;color:#94a3b8}.mh-training-mon-list span{position:absolute;right:5px;top:4px;color:#fde68a;font-size:8px}.mh-training-empty{grid-column:1/-1;text-align:center;margin-top:50px;color:#64748b}.mh-training-footer{position:absolute;z-index:6;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));padding-top:20px;background:linear-gradient(transparent,#07101f 24%)}.mh-training-footer button{width:100%;min-height:52px;border-radius:18px;background:linear-gradient(90deg,#db2777,#7c3aed);font-weight:1000;box-shadow:0 6px 20px #0008}.mh-training-footer button:disabled{background:#334155;color:#64748b}.mh-training-difficulties{overflow:auto;padding:10px 1px 95px}.mh-training-difficulties>button{display:block;width:100%;margin-bottom:10px;padding:14px;text-align:left;border:2px solid #334155;border-radius:20px;background:#0f172acc}.mh-training-difficulties>button.active{border-color:#f472b6}.mh-training-difficulties>button.soon{opacity:.72}.mh-training-difficulties>button>div{display:flex;justify-content:space-between}.mh-training-difficulties b{font-size:18px}.mh-training-difficulties em{padding:4px 8px;border-radius:999px;background:#475569;font-size:8px;font-style:normal}.mh-training-difficulties p{margin:8px 0;color:#cbd5e1;font-size:10px}.mh-training-difficulties dl{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.mh-training-difficulties dl span{padding:5px;border-radius:7px;background:#02061788;text-align:center;font-size:8px}.mh-training-confirm{overflow:auto;padding:12px 2px 100px}.mh-training-confirm h3{margin:10px 0 2px;color:#f9a8d4;font-size:26px;font-weight:1000}.mh-training-confirm h4{margin-top:16px;color:#c4b5fd;font-size:11px;font-weight:1000}.mh-training-confirm p{color:#cbd5e1;font-size:10px}.mh-training-ticket{display:flex;flex-wrap:wrap;justify-content:space-between;margin-top:16px;padding:14px;border:1px solid #fbbf24aa;border-radius:16px;background:#78350f55}.mh-training-ticket b{color:#fde68a}.mh-training-ticket small{width:100%;margin-top:5px;color:#fef3c7;font-size:8px}
     .mh-training-board{height:100%;display:flex;flex-direction:column;padding:calc(8px + env(safe-area-inset-top)) 9px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(#0c4a6e,#082f49 44%,#052e16)}.mh-training-board>header{display:flex;align-items:center;justify-content:space-between}.mh-training-board>header div{display:flex;flex-direction:column}.mh-training-board>header b{font-size:14px}.mh-training-board>header span{font-size:8px;color:#bae6fd}.mh-training-board>header button{min-height:40px;padding:0 10px;border-radius:10px;background:#7f1d1d;font-size:9px;font-weight:900}.mh-training-hud{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:7px 0}.mh-training-hud span{padding:6px 2px;border-radius:8px;background:#020617aa;text-align:center;font-size:8px;font-weight:900}.mh-training-map{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;flex:1;min-height:0;padding:7px;overflow:auto;border:1px solid #ffffff22;border-radius:16px;background:#0005}.mh-training-map>div{position:relative;aspect-ratio:1;border:2px solid #64748b;border-radius:10px;background:#334155;display:flex;align-items:center;justify-content:center}.mh-training-map>div.passed{opacity:.52}.mh-training-map>div.current{border-color:#fde047;background:#854d0e;box-shadow:0 0 14px #fde047}.mh-training-map span{font-size:17px}.mh-training-map small{position:absolute;left:3px;top:1px;font-size:6px}.mh-training-map img,.mh-training-map>div.current>div{position:absolute;width:45px;height:45px;object-fit:contain;filter:drop-shadow(0 3px 3px #000);z-index:2}.mh-training-message{min-height:28px;padding:7px;text-align:center;font-size:10px;font-weight:900}.mh-training-tools{display:flex;min-height:54px;gap:5px}.mh-training-tools button{flex:1;display:flex;align-items:center;justify-content:center;gap:3px;padding:4px;border:1px solid #a78bfa;border-radius:10px;background:#312e81}.mh-training-tools button span{font-size:17px}.mh-training-tools button small{font-size:7px}.mh-training-tools p{margin:auto;color:#94a3b8;font-size:8px}.mh-training-board>footer{margin-top:7px}.mh-roll-button{width:100%;min-height:58px;border-radius:19px;background:linear-gradient(#fbbf24,#d97706);color:#451a03;font-size:17px;font-weight:1000}.mh-roll-button small{display:block;font-size:7px}.mh-fixed-dice{display:grid;grid-template-columns:1fr repeat(3,58px);gap:5px;align-items:center}.mh-fixed-dice button{height:54px;border-radius:14px;background:#fbbf24;color:#422006;font-size:20px;font-weight:1000}.mh-training-branch{position:fixed;z-index:40000;inset:0;display:flex;align-items:center;padding:20px;background:#020617dd}.mh-training-branch>div{width:100%;padding:18px;border:1px solid #c4b5fd;border-radius:22px;background:#111827}.mh-training-branch h3{text-align:center;font-size:18px;font-weight:1000}.mh-training-branch button{display:flex;justify-content:space-between;width:100%;margin-top:8px;padding:14px;border-radius:12px;background:#312e81}.mh-training-branch span{font-size:9px;color:#cbd5e1}.mh-training-board{position:relative;background:linear-gradient(160deg,#082f49,#0f172a 52%,#14532d)}.mh-training-board>header{gap:8px}.mh-training-board>header b small{margin-left:5px;color:#facc15;font-size:7px}.mh-debug-toggle{background:#be185d!important;letter-spacing:.08em}.mh-training-hud{grid-template-columns:repeat(3,1fr)}.mh-training-hud span{display:flex;flex-direction:column;gap:2px}.mh-training-hud b{color:white;font-size:11px}.mh-tile-viewport{position:relative;flex:1;min-height:250px;overflow:auto;scroll-behavior:smooth;border:2px solid #67e8f966;border-radius:18px;background:linear-gradient(#0c4a6e99,#052e1699),repeating-linear-gradient(45deg,#ffffff08 0 8px,transparent 8px 16px);box-shadow:inset 0 0 30px #020617}.mh-tile-board{position:relative;width:720px;height:520px;transform-origin:center;transition:transform .3s}.mh-tile-viewport.overview{overflow:hidden}.mh-tile-viewport.overview .mh-tile-board{transform:scale(.46) translate(-58%,-58%)}.mh-tile-board>i{position:absolute;height:13px;border:2px solid #dbeafe99;background:#64748b;box-shadow:0 2px 0 #0f172a;transform-origin:0 50%;z-index:0}.mh-training-tile{position:absolute;z-index:2;width:68px;height:68px;margin:-34px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:4px solid #e2e8f0;border-radius:12px;color:white;background:var(--tile-color);box-shadow:0 5px 0 #0f172a,0 8px 14px #0008;transition:left .25s,top .25s,transform .2s}.mh-training-tile>span{font-size:23px;line-height:1}.mh-training-tile>small{max-width:62px;font-size:7px;font-weight:1000;text-shadow:0 1px 2px #000}.mh-training-tile.branch:after{content:'分岐';position:absolute;right:-9px;top:-10px;padding:2px 4px;border-radius:6px;background:#f97316;font-size:6px;font-weight:1000}.mh-training-tile.start{border-color:#86efac}.mh-training-tile.goal{border-color:#fde047;box-shadow:0 0 22px #facc15,0 5px 0 #713f12}.mh-training-tile.current{z-index:8;border-color:#fff;box-shadow:0 0 0 4px #facc15,0 8px 18px #000;transform:scale(1.05)}.mh-training-tile.branch-choice{z-index:9;animation:trainingGlow .55s infinite alternate;pointer-events:auto}.mh-training-piece{position:absolute;left:50%;bottom:34px;width:62px;height:73px;transform:translateX(-50%);pointer-events:none;filter:drop-shadow(0 5px 3px #000)}.mh-training-piece img,.mh-training-piece>div{width:58px!important;height:58px!important;object-fit:contain}.mh-training-piece b{position:absolute;bottom:0;left:50%;max-width:75px;transform:translateX(-50%);padding:2px 5px;border-radius:8px;background:#020617e8;white-space:nowrap;font-size:7px}.mh-training-message{color:#fef3c7}.mh-training-tools{align-items:stretch}.mh-training-tools>strong{display:flex;align-items:center;font-size:8px}.mh-training-tools button{min-width:0}.mh-training-tools button small{line-height:1.25}.mh-training-debug{right:8px;top:calc(52px + env(safe-area-inset-top));bottom:auto;box-shadow:0 14px 30px #000}.mh-debug-close{float:right;background:#be123c!important}.mh-training-board>footer{flex:none}.mh-roll-button:disabled{filter:grayscale(.7);opacity:.65}.mh-training-tools button.waiting{border-color:#fde047;box-shadow:inset 0 0 12px #facc1544}.mh-roll-decision{display:grid;grid-template-columns:1fr 2fr;gap:7px;align-items:center;min-height:58px;padding:6px 8px;border:2px solid #fbbf24;border-radius:19px;background:#451a03}.mh-roll-decision b{text-align:center;color:#fde68a}.mh-roll-decision button{height:44px;border-radius:13px;background:#fbbf24;color:#451a03;font-weight:1000}.mh-tool-unavailable{padding:9px;border:1px solid #f8717177;border-radius:10px;background:#450a0a;color:#fecaca!important}@media(max-width:380px){.mh-training-piece{transform:translateX(-50%) scale(.85)}.mh-training-tools{min-height:48px}.mh-training-message{min-height:24px;padding:4px}.mh-tile-viewport{min-height:220px}}
