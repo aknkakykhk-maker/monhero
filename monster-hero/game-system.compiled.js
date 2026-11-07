@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 79e9a0aa8f255172
+// source-sha256: 95508b58fac9405b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13,6 +13,79 @@ const {
   useRef,
   useContext
 } = React;
+const MH_SCREEN_TRAIL_KEY = 'mh_screen_trail_v1';
+const MH_SCREEN_TRAIL = (() => {
+  const MAX = 30;
+  let list = [];
+  let saveTimer = 0;
+  try {
+    const raw = JSON.parse(typeof localStorage !== 'undefined' && localStorage.getItem(MH_SCREEN_TRAIL_KEY) || '[]');
+    if (Array.isArray(raw)) list = raw.filter(x => x && typeof x === 'object' && Number.isFinite(x.t) && typeof x.k === 'string').slice(-MAX);
+  } catch (_) {
+    list = [];
+  }
+  const save = () => {
+    if (saveTimer) return;
+    saveTimer = setTimeout(() => {
+      saveTimer = 0;
+      try {
+        localStorage.setItem(MH_SCREEN_TRAIL_KEY, JSON.stringify(list));
+      } catch (_) {}
+    }, 1500);
+  };
+  const push = (k, d = '') => {
+    try {
+      list.push({
+        t: Date.now(),
+        k: String(k).slice(0, 8),
+        d: String(d == null ? '' : d).slice(0, 80)
+      });
+      if (list.length > MAX) list = list.slice(-MAX);
+      save();
+    } catch (_) {}
+  };
+  const sinceLast = (k, prefix = '') => {
+    for (let i = list.length - 1; i >= 0; i--) {
+      if (list[i].k === k && String(list[i].d).startsWith(prefix)) return list.slice(i);
+    }
+    return [];
+  };
+  const compact = items => {
+    if (!items.length) return [];
+    const t0 = items[0].t;
+    const out = [];
+    let size = 0;
+    for (const x of items) {
+      const s = `${Math.round((x.t - t0) / 100) / 10}:${x.k}:${x.d}`.slice(0, 60);
+      if (out.length >= 10 || size + s.length > 400) break;
+      out.push(s);
+      size += s.length;
+    }
+    return out;
+  };
+  if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    try {
+      document.addEventListener('visibilitychange', () => push('vis', document.visibilityState));
+      window.addEventListener('pagehide', e => push('page', 'hide' + (e && e.persisted ? '*' : '')));
+      window.addEventListener('pageshow', e => push('page', 'show' + (e && e.persisted ? '*' : '')));
+      document.addEventListener('webglcontextlost', () => push('gl', 'lost'), true);
+      document.addEventListener('webglcontextrestored', () => push('gl', 'restored'), true);
+      let last = 0;
+      const tick = now => {
+        if (last > 0 && now - last > 1000 && document.visibilityState === 'visible') push('gap', Math.round(now - last));
+        last = now;
+        window.requestAnimationFrame(tick);
+      };
+      if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(tick);
+    } catch (_) {}
+  }
+  return {
+    push,
+    list: () => list.slice(),
+    sinceLast,
+    compact
+  };
+})();
 (() => {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
   const editing = () => {
@@ -38426,6 +38499,9 @@ const rhythmTouchDiagOf = ({
       timing: RHYTHM_TIMING_DIAG.snapshot(),
       ...(frame && typeof frame === 'object' ? {
         frame
+      } : {}),
+      ...(typeof MH_SCREEN_TRAIL !== 'undefined' ? {
+        scr: MH_SCREEN_TRAIL.compact(MH_SCREEN_TRAIL.sinceLast('play', 'start'))
       } : {})
     }
   };
@@ -42029,6 +42105,7 @@ const RhythmTapTest = ({
   const beginRun = async startBestValue => {
     if (startLockRef.current) return;
     startLockRef.current = true;
+    if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('play', 'start:' + String(song && song.songId || '').slice(0, 24));
     const generation = ++generationRef.current;
     disposeRun();
     rhythmSongPrepSignal(true, song.songId);
@@ -61213,6 +61290,18 @@ const TimeOfDayClock = ({
     "aria-hidden": "true"
   }, st.slot.icon), st.minute);
 };
+const TimeOfDayClockText = ({
+  prefix = ' '
+}) => {
+  const st = useTimeOfDay();
+  if (st.settings.clock !== 'on') return null;
+  return React.createElement("span", {
+    "data-time-of-day-clock-text": st.slot.id,
+    style: {
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, prefix, st.minute);
+};
 const TimeOfDaySettingsPanel = () => {
   const st = useTimeOfDay();
   const row = (key, title, desc) => React.createElement("div", {
@@ -62180,6 +62269,7 @@ class MhErrorBoundary extends React.Component {
     try {
       const stack = info && info.componentStack ? info.componentStack.split('\n').filter(Boolean).slice(0, 3).join(' ') : '';
       window.__mhErr && window.__mhErr('[screen-error] ' + (this.props.screen || 'root') + ': ' + (error && error.message) + ' ' + stack);
+      if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('err', (this.props.screen || 'root') + ':' + String(error && error.message || '').slice(0, 60));
     } catch (e) {}
   }
   render() {
@@ -140784,8 +140874,18 @@ function MonsterHeroGame() {
   const isCardRunScreen = state => isCardScreen(state) || state === 'BREEDER_MARKET' && cardMarketEntryRef.current === true;
   const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state);
   const runBackgroundAllowedRef = useRef(false);
+  const gameStateCaller = () => {
+    try {
+      const line = String(new Error().stack || '').split('\n').slice(2).find(l => !/setGameState|gameStateCaller/.test(l)) || '';
+      const m = /at\s+([\w$.]+)/.exec(line) || /^([\w$.]+)@/.exec(line.trim());
+      return m ? m[1] : '';
+    } catch (_) {
+      return '';
+    }
+  };
   const setGameState = next => {
     runBackgroundAllowedRef.current = isBackgroundRunScreen(next);
+    if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`);
     setGameStateRaw(next);
   };
   const [debugThrowScreenError, setDebugThrowScreenError] = useState(false);
@@ -162747,7 +162847,8 @@ function MonsterHeroGame() {
       "aria-modal": "true",
       "aria-label": label || `${mon.name}の詳細`
     }, React.createElement("div", {
-      className: `bg-slate-900 border-2 ${accentClass} rounded-3xl p-4 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto overflow-hidden`,
+      "data-monster-detail-box": true,
+      className: `bg-slate-900 border-2 ${accentClass} rounded-3xl p-4 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto [[data-mh-view-rotation=true]_&]:overflow-y-auto [[data-mh-view-rotation=true]_&]:!max-h-full`,
       style: {
         maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)'
       }
@@ -162759,7 +162860,8 @@ function MonsterHeroGame() {
       power,
       powerNote
     }), React.createElement("div", {
-      className: "flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2"
+      "data-monster-detail-body": true,
+      className: "flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2 [@media(orientation:landscape)_and_(max-height:520px)]:flex-none [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible [[data-mh-view-rotation=true]_&]:flex-none [[data-mh-view-rotation=true]_&]:overflow-visible"
     }, detailOpts.marketDiscIcon && React.createElement("section", {
       className: "rounded-xl border border-amber-500/40 bg-amber-950/30 p-2 flex items-center gap-3"
     }, React.createElement("img", {
