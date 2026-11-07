@@ -222,3 +222,13 @@ const rhythmAssistSessionListenBase = (songId, songs = (typeof RHYTHM_SONGS !== 
   const base = id.replace(/_(short|full)$/, '');
   return base !== id && Array.isArray(songs) && songs.some((s) => s && s.songId === base) ? base : id;
 };
+
+// ---- プロフィールの札(Lv.50)と称号(Lv.100「セッションマスター」) ----
+const RHYTHM_ASSIST_SESSION_BADGE_LEVEL = 50;
+const RHYTHM_ASSIST_SESSION_MASTER_LEVEL = 100;
+// [{ assistantId, level, master }](Lv.50 以上の助手だけ。Lv の高い順)
+const rhythmAssistSessionBadges = (state) => RHYTHM_ASSIST_SESSION_IDS
+  .map((id) => ({ assistantId: id, level: rhythmAssistSessionLevel(state, id) }))
+  .filter((x) => x.level >= RHYTHM_ASSIST_SESSION_BADGE_LEVEL)
+  .map((x) => ({ ...x, master: x.level >= RHYTHM_ASSIST_SESSION_MASTER_LEVEL }))
+  .sort((a, b) => b.level - a.level);

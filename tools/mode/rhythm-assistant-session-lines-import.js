@@ -17,7 +17,7 @@ const DIR = path.join(ROOT, 'docs/progress/beat-assistant-session/lines');
 const OUT = path.join(ROOT, 'monster-hero/src/parts/33-rhythm-assistant-session-lines.jsx');
 const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
 const EXPR = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
-const SOLO_SCENES = ['join', 'first', 'like', 'dislike', 'combo', 'miss', 'climax', 'last', 'mvp', 'high', 'mid', 'low', 'fc', 'levelup', 'likeup', 'overcome'];
+const SOLO_SCENES = ['join', 'first', 'like', 'dislike', 'combo', 'miss', 'climax', 'last', 'mvp', 'high', 'mid', 'low', 'fc', 'levelup', 'likeup', 'overcome', 'sp50', 'sp80', 'sp100'];
 const PAIR_SCENES = ['play', 'result', 'gattai'];
 
 const errors = [];
@@ -40,7 +40,7 @@ const solo = {};
     if (!line || line.startsWith('#') && !line.startsWith('## ')) return;
     const head = /^## ([a-z]+)$/.exec(line);
     if (head) { who = head[1]; if (!IDS.includes(who)) errors.push(`${where}: 知らない助手 ${who}`); solo[who] = solo[who] || {}; return; }
-    const m = /^([a-z]+(?::[a-z0-9_]+)?) \| (.+)$/.exec(line);
+    const m = /^([a-z][a-z0-9]*(?::[a-z0-9_]+)?) \| (.+)$/.exec(line);
     if (!m || !who) { errors.push(`${where}: 読めない行 — ${line}`); return; }
     const [, scene, rest] = m;
     if (!SOLO_SCENES.includes(scene) && !scene.startsWith('song:') && !scene.startsWith('listen:')) errors.push(`${where}: 知らない場面 ${scene}`);

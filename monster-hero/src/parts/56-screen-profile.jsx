@@ -505,6 +505,8 @@ function ProfileScreen({
             <ChevronRight size={16} className="shrink-0 text-amber-400"/>
           </button>
         )}
+        {/* 助手とのセッション(2026-11-07 ビート部マモリ): セッションLv.50 の札・Lv.100 の称号「セッションマスター」。公開の印が偽・まだだれも Lv.50 でないあいだは出さない */}
+        {onboarded&&!onboardingPreview&&typeof RhythmAssistSessionProfileBadges==='function'&&<RhythmAssistSessionProfileBadges/>}
         {/* イベント回想: 見たことのある会話イベントを、あとから何度でも見返せる。
             見るだけで、初回閲覧フラグ・助手選択・仲良し度・通常のアップデート通知には一切影響しない */}
         {onboarded&&!onboardingPreview&&(()=>{

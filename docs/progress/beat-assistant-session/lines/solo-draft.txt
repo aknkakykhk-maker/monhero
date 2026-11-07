@@ -6,6 +6,7 @@
 #   combo(50・100・300コンボ) / miss(ミスが3つ続いた) / climax(サビ) / last(最後の10秒)
 #   mvp / high(9割以上) / mid / low(7割未満) / fc(フルコン) / levelup(セッションLv.UP) / likeup(苦手が好きになった) / overcome(苦手な曲をクリア)
 #   song:<曲id>(好きな曲・苦手な曲の結果の専用)
+#   sp50 / sp80 / sp100(セッションLv.50・80・100 で開く特別な台詞。部屋に来たとき・結果でときどき)
 # 守り: 恋愛にしない・悪口なし・下げない・ネタバレなし・プレイヤーは「ブリーダー」(ききは「ブリーダーさん」)
 
 ## mua
@@ -44,6 +45,12 @@ song:toriko | mua happy トリコはあたしの杯の曲だし、テンショ�
 song:haruka | mua happy ハルカ、聞くたびにキュンとしちゃう♪
 song:crazy_party_night | mua happy パーティーの曲って、それだけで楽しいぢゃん♪
 song:grievous_lady | mua happy Grievous Lady、最後までついていけた！あたしえらいｗ
+sp50 | mua happy あたしたち、もうセッションLv.50ぢゃん！まぢ最強コンビかも♪
+sp50 | mua wink ブリーダーとならどんな曲でも楽しいの、ほんとだよ♪
+sp80 | mua excited Lv.80！ここまで来たら、もう息ぴったりぢゃん♪
+sp80 | mua happy あたしの一番のセッション相手は、ブリーダーだよｗ
+sp100 | mua excited セッションLv.100！あたしたち、セッションマスターぢゃん！
+sp100 | mua happy ここまで一緒に叩いてくれて、まぢありがと♪
 
 ## kiki
 join | kiki happy ブリーダーさん、よろしくお願いしまつ♪
@@ -81,6 +88,12 @@ song:kiki_issen | kiki happy 綺季一閃は、私の曲でつ♪ 雪の舞う�
 song:tsuki_ga_michiru_mae_ni | kiki happy 月が満ちる前に、しっとりしていて落ち着きます♪
 song:kaze_ga_soyogu | kiki happy 風がそよぐ場所、気持ちがすっと軽くなりますね
 song:black_shout | kiki happy BLACK SHOUT、こわかったけど、最後までがんばれました
+sp50 | kiki happy ブリーダーさんとのセッション、Lv.50になりました♪
+sp50 | kiki wink 指が覚えてくれている気がしまつ♪
+sp80 | kiki happy Lv.80でつ。目を閉じても合わせられそうです♪
+sp80 | kiki normal ブリーダーさんの音、ちゃんと聞こえていますよ
+sp100 | kiki excited Lv.100でつ！セッションマスターですね♪
+sp100 | kiki happy たくさん一緒に演奏してくれて、ありがとうございまつ♪
 
 ## momosuke
 join | momosuke happy ももが来たからには盛り上げるよ！！
@@ -118,6 +131,12 @@ song:crossing_field | momosuke happy crossing field は、ももが一番かわ�
 song:only_my_railgun | momosuke happy only my railgun、テンション上がりっぱなしw
 song:rose | momosuke happy ROSE はかっこいいももも見せられる曲なんだよ♡
 song:dullahan_clockwork | momosuke happy チクタクに負けなかった！！ブリーダーもえらい♡
+sp50 | momosuke excited Lv.50！！ももとブリーダー、もう名コンビだね♡
+sp50 | momosuke wink ここまで来たら、ももの専属だよw
+sp80 | momosuke excited Lv.80！！ステージの上で一番息が合うの、ブリーダーかも♡
+sp80 | momosuke happy ももについてこれるの、ブリーダーくらいだよ！！
+sp100 | momosuke excited Lv.100！！セッションマスターはもものおかげだよね♡
+sp100 | momosuke happy ずっと一緒にステージ立ってくれて、ありがと！！
 
 ## dra
 join | dra happy おでも混ぜてくれよな、えへへ
@@ -155,6 +174,12 @@ song:mou_hitotsu_no_sekai_e | dra happy もう一つの世界へは、おでの�
 song:big_bridge_no_shitou | dra happy ビッグブリッヂの死闘、橋を渡りきった気分だな
 song:senjou_no_shippuu | dra happy 戦場の疾風、風みたいに駆け抜けたな
 song:stay_with_me | dra happy Stay With Me、しんみりしたけど、悪くなかったんだな
+sp50 | dra happy セッションLv.50だな。おで、うれしいくさ
+sp50 | dra normal ここまで来たの、ちょっとした冒険だったな
+sp80 | dra happy Lv.80だな。もう目をつぶっても合わせられるからな
+sp80 | dra happy ブリーダーと叩くの、おで好きなんだな、えへへ
+sp100 | dra excited Lv.100だな！セッションマスターだからな！
+sp100 | dra happy 長い冒険だったな。ありがとうな、えへへ
 
 ## atsu
 join | atsu happy とりあえず一曲いくか笑
@@ -192,6 +217,12 @@ song:against_my_own_shadow | atsu happy AMOSは俺の曲だしな笑
 song:sad_song | atsu happy SAD SONG、しっかり聞かせたな！
 song:rebellion | atsu happy Rebellion、最後まで攻めきったな笑
 song:mf_ichika_mix | atsu happy 自分の大会の曲、やりきったぞ笑
+sp50 | atsu happy とりあえずLv.50だな笑
+sp50 | atsu wink てか、だいぶ息合ってきたな！
+sp80 | atsu happy Lv.80か。普通にいいコンビだろ笑
+sp80 | atsu normal ここまで来たら、締めも任せていいよな！
+sp100 | atsu excited Lv.100！セッションマスターだな笑
+sp100 | atsu happy ここまで付き合ってくれて、ありがとな！
 
 ## kyuko
 join | kyuko happy ほい！俺も入るね〜
@@ -229,6 +260,12 @@ song:toward_the_stars_short | kyuko happy Toward the Stars は、サビ前で一
 song:six_eternel_beat | kyuko happy SIX ÉTERNEL、展開がきれいでいいよね〜
 song:evans | kyuko happy Evans は、音の重ね方が気持ちいいんだよね〜
 song:toriko | kyuko happy トリコ、最後までノリについていけた〜！
+sp50 | kyuko happy Lv.50だね〜。合わせ方が分かってきたよ
+sp50 | kyuko wink ブリーダーの癖、だいたい読めるようになったよ〜笑
+sp80 | kyuko happy Lv.80〜。構成を読まなくても合うね〜
+sp80 | kyuko normal ここまでの記録、きれいに積み上がってるよ〜
+sp100 | kyuko excited Lv.100〜！セッションマスターだね、ありがとん笑
+sp100 | kyuko happy ここまでの全部、いい流れだったよ〜
 
 ## sorashido
 join | sorashido happy うぉぉぉ！俺も参戦するぜ・・・！
@@ -266,6 +303,12 @@ song:monster_hero | sorashido happy Monster Hero は全ノーツ計算済みだ�
 song:freedom_dive | sorashido happy FREEDOM DiVE↓、速さも計算のうちだぜ笑
 song:humanoid | sorashido happy ヒューマノイド、ノーツの多さがたまらないぜ！
 song:kaze_ga_soyogu | sorashido happy 風がそよぐ場所、ゆっくりでも合わせきったぜ笑
+sp50 | sorashido excited セッションLv.50だぜ！表に太字で書いとくぜ笑
+sp50 | sorashido happy ここまでの演奏回数、ちゃんと数えてあるぜ・・・！
+sp80 | sorashido excited Lv.80！誤差がほとんど無くなってきたぜ！
+sp80 | sorashido happy この伸び方、グラフにしたらきれいだぜ笑
+sp100 | sorashido excited うぉぉぉ！Lv.100、セッションマスターだぜ・・・！
+sp100 | sorashido happy ここまでの記録、全部宝物だぜ笑
 
 ## erubin
 join | erubin happy 俺も一緒にいいかな？よろしくね
@@ -303,3 +346,9 @@ song:wrath_of_the_thorn_king | erubin happy 茨の王の怒りは、ここに来
 song:altar_world_tree | erubin happy Altar of the World Tree、静かで落ち着くんだよね
 song:dullahan | erubin happy デュラハンのテーマ、重たいけど好きなんだよね
 song:crazy_party_night | erubin happy Crazy Party Night、最後までついていけたね
+sp50 | erubin happy セッションLv.50になったね。ありがとね
+sp50 | erubin normal 一緒に演奏する時間、落ち着くんだよね
+sp80 | erubin happy Lv.80か。ずいぶん合うようになったね
+sp80 | erubin normal 無理しないで、これからもゆっくりいこうね
+sp100 | erubin excited Lv.100だね。セッションマスター、すごいよ
+sp100 | erubin happy ここまで一緒にいてくれて、ありがとね

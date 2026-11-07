@@ -256,9 +256,10 @@
   - [x] オプション「助手のひとこと」(全部/少なめ/切る)。保存は `mh_rhythm_assistant_session_v1` の `talk`(無い人は全部)。切り替えは呼ぶシートの助手のタブの上
   - [x] Lv.45 結果のカードの枠が助手の色・Lv.90 名前入りの背景(`rhythmAssistSessionCardStyle`・`RhythmAssistSessionCardBack`)
   - [x] Lv.25 得意の応援(8人。呼んだ人のこの1曲の結果で決まる経験値+10〜20%・ビートP+3。結果の育ちの行に出す。ハートが舞う・金色のふきだし・ペンライトなどの演出はまだ)
-  - [ ] Lv.50・100 プロフィールの札と称号
-  - [ ] Lv.50・80・100 特別な台詞の束(txt に場面を足して取り込む)
-  - [ ] Lv.75 聞きどころ → 統括に量を相談中(案A: 好き・苦手の4曲だけ=32行 / 案B: 全曲 約480行)
+  - [x] Lv.50・100 プロフィールの札と称号(プロフィールに欄「助手とのセッション」・`RhythmAssistSessionProfileBadges`)
+  - [x] Lv.50・80・100 特別な台詞の束(場面 sp50・sp80・sp100。部屋に来たとき・結果でときどき)
+  - [x] Lv.75 聞きどころの仕組み(社長の決定: 案B 全部の曲)。曲の特徴 `lines/listen-facts.md`(道具 `rhythm-assistant-session-listen-facts.js`)・書き方 `lines/LISTEN-GUIDE.md`・まだの曲 `lines/listen-pending.json`・新曲スキル 9-2・見張り
+  - [ ] 聞きどころの台詞(46曲×8人): コトバ(前半23曲 → listen-kotoba.txt)・ツムギ(後半23曲 → listen-tsumugi.txt)待ち
 - [ ] 台詞の見直し: コトバ(口調・「元の行 → 直した行(理由)」で返る)・ナカヨシ(4)(呼び方・距離感)。返ったら txt を直して `rhythm-assistant-session-lines-import.js`
 - [ ] 止め絵(縦横)・台詞の抜粋・更新履歴とヘルプの文 → 窓口(モンヒロくん)。公開の印は社長の「この文で」まで偽
 - 試し方: ゲームを開き HOME で `RELEASE_FLAGS.rhythmAssistantSession = true` にしてからモンヒロビートへ。デュオを試すときは `await ASSISTANT_PEER_STORE.load()` のあとで `ASSISTANT_PEER_STORE.set({ bond: { 'kiki-mua': 99999 }, special: ['kiki-mua'] })`(読み込む前に入れると消える)。サビが早い曲は「風がそよぐ場所」(約36秒)
