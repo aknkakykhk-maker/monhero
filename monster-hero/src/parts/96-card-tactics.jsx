@@ -62,16 +62,18 @@ const cardLevelXpOf = ({ kind, level, outcome }) => {
 //   ごほうびは、この試合で上がったランク(from より上・to まで)の分だけ。前に上がったランクの分はさかのぼって配らない
 //   parts は結果に出す内わけ、gains はランクアップの演出に出す「もらった物」
 //   auto … オートで挑んだ試合(2026-11-02 社長・案3): 手で戦うときの半分。その日はじめての勝ちは付けず、その日の勝ちの印も動かさない
-const cardLevelAfter = (prev, { kind, level, outcome, today: today0, auto = false }) => {
+const cardLevelAfter = (prev, { kind, level, outcome, today: today0, auto = false, mult = 1 }) => {
   const cur = cardNormalizeLevel(prev);
   const today = cardDayCarry(cur.day, today0);   // 切り替えの夜は、0時区切りで書いた次の日のまま数える
   const lv0 = cardLevelInfo(cur.xp).level;
-  const base = auto ? Math.floor(cardLevelXpOf({ kind, level, outcome }) / 2) : cardLevelXpOf({ kind, level, outcome });
+  const base0 = auto ? Math.floor(cardLevelXpOf({ kind, level, outcome }) / 2) : cardLevelXpOf({ kind, level, outcome });
+  // カード部屋にいる助手と対戦(82 の cardLifeUpApply・手で遊んだときだけ): 勝ち負けの分だけ 1.5倍。その日はじめての勝ちの +30 は倍にしない
+  const base = !auto && Number.isFinite(mult) && mult > 1 && base0 > 0 ? Math.round(base0 * mult) : base0; // 82 の cardLifeUpApply と同じ(96 は単独でも読まれる)
   if (!base) return { next: cur, tickets: 0, points: 0, add: 0, from: lv0, to: lv0, xp: cur.xp, parts: [], gains: [] };
   const sameDay = cur.day === today;
   const first = !auto && outcome === 'win' && !(sameDay && cur.dayWin);
   const add = base + (first ? CARD_LEVEL_XP.firstWin : 0);
-  const parts = [{ label: outcome === 'win' ? '勝ち' : '負け', xp: base }, ...(first ? [{ label: 'その日はじめての勝ち', xp: CARD_LEVEL_XP.firstWin }] : [])];
+  const parts = [{ label: outcome === 'win' ? '勝ち' : '負け', xp: base0 }, ...(base > base0 ? [{ label: 'カード部屋の助手と対戦(1.5倍)', xp: base - base0 }] : []), ...(first ? [{ label: 'その日はじめての勝ち', xp: CARD_LEVEL_XP.firstWin }] : [])];
   const xp = cardLevelSafeXp(cur.xp + add);
   const to = cardLevelInfo(xp).level;
   const got = [...cur.got];
@@ -280,11 +282,11 @@ const cardAutoRewardAddExtra = async ({ consume, refund } = {}) => {
   return { ok: true, why: '', loaded: await cardAutoRewardLoad() };
 };
 // 1試合ぶんの経験値の保存の項目(84 の結果の取引に足す)。経験値を入れない人(公開前・デバッグでない)は空
-const cardLevelEntries = async ({ kind, level, outcome, debug = false, auto = false }) => {
+const cardLevelEntries = async ({ kind, level, outcome, debug = false, auto = false, mult = 1 }) => {
   if (!cardTacticsOpen() && !debug) return { entries: [], gain: null };
   let rawL = null, rawT = null;
   try { [rawL, rawT] = await Promise.all([storeGet(CARD_LEVEL_KEY, null), storeGet(CARD_TACTICS_KEY, null)]); } catch (_) { return { entries: [], gain: null }; }
-  const gain = cardLevelAfter(rawL, { kind, level, outcome, auto, today: typeof cardTodayJst === 'function' ? cardTodayJst() : '' });
+  const gain = cardLevelAfter(rawL, { kind, level, outcome, auto, mult, today: typeof cardTodayJst === 'function' ? cardTodayJst() : '' });
   if (!gain.add) return { entries: [], gain };
   const entries = [{ key: CARD_LEVEL_KEY, before: rawL, next: gain.next }];
   if (gain.tickets) { const t = cardNormalizeTactics(rawT); entries.push({ key: CARD_TACTICS_KEY, before: rawT, next: { ...t, tickets: t.tickets + gain.tickets } }); }

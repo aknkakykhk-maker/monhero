@@ -634,7 +634,40 @@ const cardFoeStyle = (who) => {
 const CARD_CUTIN_SCENES = Object.freeze(['myKo', 'theirKo', 'lastMine', 'lastTheirs', 'deckMine', 'deckTheirs']);
 const cardBubbleMs = (text) => Math.min(7000, Math.max(3000, 1800 + 150 * [...String(text || '')].length));
 // 結果の画面: 負け・投了で満額より減ったか(r は cardCpuReward の返り値。古い形・マルチの形には full が無いので出さない)
-const cardResultCut = (r) => !!r && !r.short && Number.isFinite(r.full) && Number.isFinite(r.got) && r.got < r.full;
+// 助手ライフ: いまカード部屋にいる助手(2026-11-07 社長・カード部ルールくん)。読むのは助手ライフ段階2の口だけ(assistantLifeAtCard・assistantLifeCardIds)。
+//   口がまだ無い・こわれているときは「だれもいない」(ごほうびアップなし)。この画面から assistantLifeNow は呼ばない(様子を決め直して保存してしまうため)
+//   保存のキーは増やさない。上がるかどうかは対戦を始めた時点で決め、game.lifeUp に持つ(試合中に出ていっても、その試合は上げる)
+const cardLifeCardIds = () => {
+  try {
+    const v = typeof assistantLifeCardIds === 'function' ? assistantLifeCardIds() : [];
+    return Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x) : [];
+  } catch (_) { return []; }
+};
+const cardLifeAtCard = (id) => {
+  if (typeof id !== 'string' || !id) return false;
+  try { return typeof assistantLifeAtCard === 'function' ? assistantLifeAtCard(id) === true : false; } catch (_) { return false; }
+};
+// 対戦のあと、助手ライフへ「この助手と対戦した」と知らせる(今日あったこと・生活のリズム)。口が無ければ何もしない
+const cardLifeOnMatch = (x) => { try { if (typeof assistantLifeOnCardMatch === 'function') assistantLifeOnCardMatch(x); } catch (_) { /* 知らせられなくても対戦の結果はそのまま */ } };
+// 家の部屋の「🃏 カード部屋で対戦する」から来たとき、相手えらびをその助手で開く(60-app が cardLifeSetApp で開く道を渡す)
+const CARD_LIFE_INVITE = { pending: null, app: null };
+const CARD_LIFE_INVITE_TTL_MS = 60 * 1000;
+const cardLifeSetApp = (app) => {
+  CARD_LIFE_INVITE.app = app && typeof app === 'object' ? app : null;
+  if (typeof ASSISTANT_LIFE_LINKS === 'undefined' || !ASSISTANT_LIFE_LINKS) return;
+  ASSISTANT_LIFE_LINKS.cardInvite = CARD_LIFE_INVITE.app && typeof CARD_LIFE_INVITE.app.open === 'function' && (!CARD_LIFE_INVITE.app.visible || CARD_LIFE_INVITE.app.visible())
+    ? (id) => { CARD_LIFE_INVITE.pending = { who: id, at: Date.now() }; CARD_LIFE_INVITE.app.open(); }
+    : null;
+};
+const cardLifeTakeInvite = () => {
+  const p = CARD_LIFE_INVITE.pending; CARD_LIFE_INVITE.pending = null;
+  return p && typeof p.who === 'string' && Date.now() - p.at < CARD_LIFE_INVITE_TTL_MS ? p.who : null;
+};
+// 倍にする前の数(カード部屋にいた助手と対戦で 1.5倍にしたときは base。ふだんは got と同じ)
+const cardResultPlain = (r) => (r && r.lifeUp === true && Number.isFinite(r.base) ? r.base : r ? r.got : 0);
+// カード部屋の帯を出すか: 1.5倍で本当に増えたときだけ(もらえた数が 0 の試合は出さない。2026-11-07 社長)
+const cardResultLifeUp = (r) => !!r && r.lifeUp === true && Number.isFinite(r.base) && Number.isFinite(r.got) && r.got > r.base;
+const cardResultCut = (r) => !!r && !r.short && Number.isFinite(r.full) && Number.isFinite(cardResultPlain(r)) && cardResultPlain(r) < r.full;
 //   投了は「番の数で減った分」と「倒した数×10」の小さいほう(82 の cardCpuBasePoint)なので、効いたほうの理由を出す
 const cardResultCutWhy = (outcome, r) => {
   const turns = `自分のターンが${Number(r.ownTurns) || 0}回。${CARD_LOSE_FULL_TURNS}回で満額`;
@@ -3038,6 +3071,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   //   公開の印(cardShareOpen)までは、デバッグ設定から入った人だけ新しい形。ふつうの人は今のまま
   const shareForm = debug || (typeof cardShareOpen === 'function' && cardShareOpen());
   const [foeTab, setFoeTab] = useState('assistant'); // フリー対戦のタブ: assistant / breeder
+  // 家の部屋の「🃏 カード部屋で対戦する」から来たら、その助手を選んだ相手えらびを開く(読み込みが終わってから。スターター前は開かず捨てる)
+  useEffect(() => {
+    if (!save || !CARD_LIFE_INVITE.pending) return;
+    const who = cardLifeTakeInvite();
+    if (!who || !save.starter || !CARD_AI_HABITS[who]) return;
+    setFoe((f) => ({ ...f, who })); setFoeTab('assistant'); setView('foe');
+  }, [save]);
   // 公開のときの一度きりの案内(対戦の入口で助手が「フリー対戦」と「デッキ登録」を知らせる)。新しいキー mh_card_share_guide_seen_v1。読めなければ出さない
   const CARD_SHARE_GUIDE_KEY = 'mh_card_share_guide_seen_v1';
   const [shareGuide, setShareGuide] = useState(false);
@@ -3572,8 +3612,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       // 自分の番の数・倒した数で決める(かかった時間は見ない)。案A・台帳 #3484
       const facts = cardResultFacts(st, CARD_ME);
       const fresh = await freshCardSave();
-      const reward = cardCpuReward(fresh.daily, game.level, outcome, facts);
-      const loops = cardCpuLoops(game.level, outcome, facts);
+      const lifeMult = game.lifeUp && !game.demo ? CARD_LIFE_UP_MULT : 1; // カード部屋にいた助手と対戦: ビートP・経験値・周回を 1.5倍
+      const reward = cardCpuReward(fresh.daily, game.level, outcome, facts, lifeMult);
+      const loops = cardCpuLoops(game.level, outcome, facts, lifeMult);
       // ランキングに数えるのは、公開後に、デバッグでない人がふつうの入口から戦ったぶんだけ(rank.send。60-app が決める)
       //   借りたデッキ(みんなのデッキ・95)で戦った試合も数える(2026-10-29 社長「数える」)
       const rankable = !!(rank && rank.send) && !debug;
@@ -3591,7 +3632,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const detailEntry = game.demo ? null : await cardRecordDetailEntry(fresh.record, (d) => cardRecordDetailAfter(d, { who: game.who, level: game.level, outcome, turns: facts.ownTurns,
         deck: usedDeck ? { id: usedDeck.id, name: usedDeck.name } : null, mons: usedMons, moves: cardRecordMovesOf(db, replayRec), today: cardTodayJst() }));
       // MFバトルカードのレベル(96。公開前はデバッグの人だけ)。同じ取引で書く。みんなのデッキ・借りたデッキも、選んだ強さで数える
-      const levelGain = !game.demo && typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: game.level, outcome, debug }) : { entries: [] };
+      const levelGain = !game.demo && typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: game.level, outcome, debug, mult: lifeMult }) : { entries: [] };
       // カードランクのごほうびのビートP(ランクが上がったときだけ)も、同じ取引で足す
       const rankPoint = (levelGain.gain && levelGain.gain.points) || 0;
       const ok = await persist({ point: save.point + reward.total + rankPoint, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked }, fresh.raw, [...openExtra, ...(detailEntry ? [detailEntry] : []), ...levelGain.entries]);
@@ -3622,7 +3663,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       // 過去の対戦を見る(93): この試合の手の一覧を端末に取っておく。保存できたら結果の画面に「この対戦を見る」
       let replayId = null;
       if (replayRec && await cardReplaySave(replayRec)) replayId = replayRec.id;
-      setResult({ outcome, reward, opened, saved: ok, who: game.who, level: game.level, loops, quick, facts, talk: talkFacts, replay: replayId, rankGain: ok ? levelGain.gain : null });
+      if (ok && !game.demo) cardLifeOnMatch({ assistantId: game.who, won: outcome === 'win', at: Date.now() });
+      setResult({ outcome, reward, opened, saved: ok, who: game.who, level: game.level, loops, quick, facts, talk: talkFacts, replay: replayId, rankGain: ok ? levelGain.gain : null, lifeUp: lifeMult > 1 });
       onBgm && onBgm(cardBgmOf(save.bgm.top));
       onNavigate('CARD_TOP');
       setView('result');
@@ -3691,7 +3733,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       foe: { who: pick.who, name: assistant ? assistant.name : 'あいて', line: (CARD_VS_LINES[pick.who] || {})[pick.level] || null, deckName: cardAssistantDeckName(db, cpuDeck, pick.who, pick.level), monsters: vsMons(st, CARD_CPU) },
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } };
     const auto = autoIn ? { tactics: autoIn.tactics, level: typeof cardShareFightLevel === 'function' ? cardShareFightLevel(autoIn.tactics) : 'master', sameBlood: !!cardShareSameBlood(db, activeDeck), quick: !!autoIn.quick } : null;
-    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro: auto && auto.quick ? null : intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(share ? { share } : {}), ...(cup ? { cup } : {}), ...(auto ? { auto } : {}),
+    // カード部屋にいる助手と対戦: 始めた時点でいたかで決める(手で遊ぶ助手と対戦だけ。みんなのデッキ・杯・オートは上げない)
+    const lifeUp = !share && !cup && !auto && cardLifeAtCard(pick.who);
+    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro: auto && auto.quick ? null : intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(lifeUp ? { lifeUp: true } : {}), ...(share ? { share } : {}), ...(cup ? { cup } : {}), ...(auto ? { auto } : {}),
       ...(rented ? { rented: { ownerId: rented.ownerId, version: rented.version, name: rented.owner } } : {}) });
     const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
     cpuLogRef.current = scene ? null : { id: gameKey, seed, first, decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], foeName: intro.foe.name, deckName: intro.foe.deckName || null, acts: [] };
@@ -4004,6 +4048,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   }
   if (view === 'foe') {
     const a = allAssistants.find((x) => x.id === foe.who) || foes[0];
+    // いまカード部屋にいる助手(読むだけ・口が無ければだれもいない)。並びは相手えらびの順
+    const lifeIds = cardLifeCardIds();
+    const lifeFoes = foes.filter((x) => lifeIds.includes(x.id));
     const line = a ? cardPickLine(a.id, 'challenge', null, () => 0.0) : null;
     return (
       <div data-mh-screen data-card-top="foe" className={SCREEN_SHELL_CLASS}>
@@ -4014,14 +4061,20 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               7列は横の小さい画面(568×320)で名前の字が小さくなりすぎた(5.9px)ので、すき間と札の内側を詰めて、いまの6列と同じくらいにする */}
           <div data-card-foe-grid={foes.length >= 7 ? 7 : 6} className={`grid ${foes.length >= 7 ? 'grid-cols-4 gap-1.5 landscape:grid-cols-7 landscape:gap-1' : 'grid-cols-3 gap-1.5 landscape:grid-cols-6'}`}>
             {foes.map((x) => (
-              <button key={x.id} type="button" data-card-foe={x.id} onClick={() => { Audio_.fgSe.tap(); setFoe((f) => ({ ...f, who: x.id })); }} className={`relative flex flex-col items-center rounded-xl border-2 ${foes.length >= 7 ? 'p-1 landscape:p-0.5' : 'p-1'} ${foe.who === x.id ? 'bg-white/10' : 'border-white/10 bg-slate-900/70'}`} style={foe.who === x.id ? { borderColor: x.accent } : undefined}>
+              <button key={x.id} type="button" data-card-foe={x.id} onClick={() => { Audio_.fgSe.tap(); setFoe((f) => ({ ...f, who: x.id })); }} className={`relative flex flex-col items-center rounded-xl border-2 ${foes.length >= 7 ? 'p-1 landscape:p-0.5' : 'p-1'} ${foe.who === x.id ? 'bg-white/10' : 'border-white/10 bg-slate-900/70'}`} style={{ ...(foe.who === x.id ? { borderColor: x.accent } : {}), ...(lifeIds.includes(x.id) ? { boxShadow: 'inset 0 0 0 2px #fcd34d' } : {}) }} data-card-foe-life={lifeIds.includes(x.id) ? '' : undefined}>
                 <img src={assistantFaceImage(x, 'normal')} alt={x.name} className="h-[52px] w-[52px] rounded-lg object-cover object-top landscape:h-[34px] landscape:w-[34px]"/>
                 {/* 名前は折らない。横の小さい画面(568×320)では札が細く「みゅ/あ」「もも/すけ」と折れたので、入らなければ字を小さくする(2026-10-26 ソランドくん) */}
                 <span className="block w-full" style={{ containerType: 'inline-size' }}><span data-card-foe-name className="block whitespace-nowrap text-center font-black" style={{ fontSize: `min(13px, calc(100cqw / ${[...x.name].length + 0.3}))` }}>{x.name}</span></span>
                 {save.record.beaten[x.id] && <span className="absolute right-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-black text-slate-900">勝</span>}
+                {/* カード部屋にいる助手の印は左上の角(右上は「勝」の印の場所。名前には重ねない) */}
+                {lifeIds.includes(x.id) && <span data-card-foe-life-chip className="absolute left-0.5 top-0.5 rounded-full bg-gradient-to-r from-amber-200 to-amber-400 px-1 text-[9px] font-black leading-[14px] text-slate-950 shadow landscape:text-[8px] landscape:leading-[12px]">🃏UP</span>}
               </button>
             ))}
           </div>
+          {lifeFoes.length > 0 && <div data-card-foe-life-band className="rounded-xl border-2 border-amber-300 bg-amber-950/80 px-2.5 py-1.5 text-[13px] font-black leading-snug text-amber-200" style={JA_LABEL_STYLE}>
+            <p>{jaWrap(`🃏 いまカード部屋にいる助手: ${lifeFoes.map((x) => x.name).join('・')}`)}</p>
+            <p className="text-[12px] text-white">{jaWrap('この助手と対戦すると、ビートP・カードランクの経験値・クイック周回が 1.5倍')}</p>
+          </div>}
           {/* 強さのボタンは助手の顔のすぐ下(紹介の欄が長いと、下の「対戦する」の帯に潜っていた。2026-10-25 社長の実機) */}
           {/* 見出しの部品(ScreenSectionLabel)の注記は9pxで小さすぎた(見回り #16)。ほかの画面は変えず、ここだけ11pxで書く */}
           <div className="flex items-baseline gap-2 px-0.5 pt-1">
@@ -4160,8 +4213,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           <div className={SCREEN_PANEL_CLASS}>
             {/* もらったビートPは大きく数え上げる(下の行が本当の数。数え上げは飾り) */}
             {!result.demo && r.total > 0 && <div data-card-gain-count className="mb-1 text-center text-[32px] font-black leading-none text-amber-200 [text-shadow:0_0_16px_rgba(251,191,36,.55)]">+<CardCountUp to={r.total}/><span className="ml-1 text-[14px]">ビートP</span></div>}
-            <div className="text-[13px] font-black text-amber-200">もらったビートP: {r.total}</div>
-            <div className="mt-1 text-[12px] font-bold text-slate-300">{cardBattleLevelLabel(result.level, result.share)}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {cardResultCut(r) ? `${r.full} → ${r.got}` : r.got}</div>
+            <div className="text-[13px] font-black text-amber-200">もらったビートP: {r.total}{cardResultLifeUp(r) && <span data-card-result-life-plain className="ml-1 text-[11px] font-bold text-slate-300">(ふだん {cardResultPlain(r) + (r.bonus || 0)})</span>}</div>
+            {/* カード部屋にいた助手と対戦した(助手ライフ・2026-11-07 社長)。1.5倍で増えたときだけ出す */}
+            {cardResultLifeUp(r) && <div data-card-result-life-up className="my-1.5 rounded-xl border-2 border-amber-300 bg-amber-950/80 px-2.5 py-1.5 text-[13px] font-black leading-snug text-amber-200" style={JA_LABEL_STYLE}>
+              <p>{jaWrap(`🃏 カード部屋の${a ? a.name : '助手'}と対戦しました`)}</p>
+              <p className="text-[12px] text-white">{jaWrap(`ビートP・カードランクの経験値・クイック周回 1.5倍(${cardResultPlain(r)} → ${r.got})`)}</p>
+            </div>}
+            <div className="mt-1 text-[12px] font-bold text-slate-300">{cardBattleLevelLabel(result.level, result.share)}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {cardResultCut(r) ? `${r.full} → ${cardResultPlain(r)}` : cardResultPlain(r)}</div>
             {cardResultCut(r) && <div data-card-result-cut className="text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(cardResultCutWhy(result.outcome, r))}</div>}
             {r.bonus > 0 && <div className="text-[12px] font-bold text-slate-300">今日はじめての勝ち: +{r.bonus}</div>}
             {r.short && <div className="mt-1 text-[11px] font-bold text-slate-500" style={JA_LABEL_STYLE}>{jaWrap('自分のターンを3回やる前に終わったので、ビートPとクイック周回は入りません')}</div>}

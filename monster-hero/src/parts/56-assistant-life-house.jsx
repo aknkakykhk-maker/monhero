@@ -112,7 +112,12 @@ const assistantLifeDiaryOnSlot = (life, slot, now = Date.now()) => {
 // モンヒロビートの助手とのセッション(ビート部とのつなぎ口)。向きは「ビート部が呼ぶ」:
 //   1曲終えて助手が育ったら、ビート部が assistantLifeOnSessionLive(ev) を呼ぶ(ev = { assistantId, partnerIds, songId, levelUp, level, duo, at })
 //   家の部屋から「一緒にモンビー」を押したら、ビート部が入れておいた ASSISTANT_LIFE_LINKS.beatInvite(助手id) を呼ぶ(無ければボタンを出さない)
-const ASSISTANT_LIFE_LINKS = { beatInvite: null };
+// カード部が入れておく ASSISTANT_LIFE_LINKS.cardInvite(助手id)(84 の cardLifeSetApp)。カード部屋にいる助手の部屋で「🃏 カード部屋で対戦する」を押すと呼ぶ(無ければボタンを出さない)
+const ASSISTANT_LIFE_LINKS = { beatInvite: null, cardInvite: null };
+// いまカード部屋にいる助手(段階2の読むだけの口 assistantLifeCardIds。無い・こわれているときはだれもいない)
+const assistantLifeHouseCardIds = () => {
+  try { const v = typeof assistantLifeCardIds === 'function' ? assistantLifeCardIds() : []; return Array.isArray(v) ? v.filter(x => typeof x === 'string') : []; } catch { return []; }
+};
 const assistantLifeOnSessionLive = (ev) => {
   if (!ev || !ev.assistantId) return;
   const ids = [ev.assistantId, ...((ev.partnerIds || []).filter(x => x !== ev.assistantId))];
@@ -190,7 +195,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-tile i{font-style:normal;font-size:17px;display:block;line-height:1}.mhl-tile b{display:block;font-size:12px;font-weight:900;margin-top:2px;text-shadow:0 1px 2px #0007;white-space:nowrap}
 .mhl-tile small{display:block;font-size:9px;font-weight:800;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mhl-tile em{position:absolute;right:6px;top:4px;font-style:normal;font-size:9px;font-weight:900;background:#0f172acc;border-radius:999px;padding:0 5px}
-.mhl-watch{background:linear-gradient(135deg,#fb7185,#f59e0b)}.mhl-call{background:linear-gradient(135deg,#38bdf8,#6366f1)}.mhl-give{background:linear-gradient(135deg,#34d399,#16a34a)}.mhl-beat{background:linear-gradient(135deg,#a855f7,#ec4899)}
+.mhl-watch{background:linear-gradient(135deg,#fb7185,#f59e0b)}.mhl-call{background:linear-gradient(135deg,#38bdf8,#6366f1)}.mhl-give{background:linear-gradient(135deg,#34d399,#16a34a)}.mhl-beat{background:linear-gradient(135deg,#a855f7,#ec4899)}.mhl-card{background:linear-gradient(90deg,#fde68a,#fbbf24,#f59e0b);color:#1e1b4b}.mhl-card-up{margin-left:6px;border-radius:999px;background:#1e1b4b;color:#fde68a;padding:1px 7px;font-size:11px}
 .mhl-icons{display:flex;gap:6px}.mhl-icons button{flex:1;min-height:48px;border-radius:12px;background:rgba(30,41,59,.9);border:1px solid #ffffff2a;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#e2e8f0}
 .mhl-icons button.on{background:linear-gradient(#f472b633,#f472b611);border-color:#f9a8d4;color:#fff}.mhl-icons button i{font-style:normal;font-size:17px;line-height:1.1}
 .mhl-sheet{position:absolute;left:0;right:0;bottom:0;z-index:20;max-height:86%;overflow-y:auto;border-radius:22px 22px 0 0;background:linear-gradient(#1e1b4b,#0b1020 40%);border-top:2px solid #f9a8d4;box-shadow:0 -10px 30px #000a;padding:12px 14px calc(14px + env(safe-area-inset-bottom))}
@@ -310,7 +315,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
 };
 
 // 部屋を押したとき(その助手のこと・その場でできること)
-function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose, onPeek, onInvite, onWatch, onGive, onBeat, canGive, slot, land = false }) {
+function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose, onPeek, onInvite, onWatch, onGive, onBeat, onCard, canGive, slot, land = false }) {
   const who = assistantById(id);
   if (!who) return null;
   const w = assistantLifeWhereOf(life, id);
@@ -357,6 +362,9 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
             : <button type="button" className="mhl-btn mhl-give" data-assistant-life-room-act="give" disabled={!canGive} onClick={() => onGive(w.group)}>🧺 渡す</button>}
           {typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && (
             <button type="button" className="mhl-btn mhl-beat col-span-2" data-assistant-life-room-act="beat" onClick={() => onBeat(id)}>🎵 一緒にモンビー{atBeat ? '(いまモンビーにいる)' : ''}</button>)}
+          {/* カード部屋にいる助手と対戦すると、ごほうび 1.5倍(2026-11-07 社長・カード部)。カード部屋にいるときだけ出す */}
+          {typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && assistantLifeHouseCardIds().includes(id) && (
+            <button type="button" className="mhl-btn mhl-card col-span-2" data-assistant-life-room-act="card" onClick={() => onCard(id)}>🃏 カード部屋で対戦する <span className="mhl-card-up">ごほうびアップ</span></button>)}
         </div>
       </div>
     </div>);
@@ -515,6 +523,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     playTalk(talk, { ids: give.pair, place: g ? g.place : 'home' });
   };
   const beat = (id) => { try { if (typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function') { close(); ASSISTANT_LIFE_LINKS.beatInvite(id); } } catch {} };
+  const card = (id) => { try { if (typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function') { close(); ASSISTANT_LIFE_LINKS.cardInvite(id); } } catch {} };
   // 今日やれること
   const unwatched = (life.groups || []).filter(g => !(life.watched || []).includes(assistantLifeGroupKey(g)));
   const lonely = Object.entries(life.solo || {}).find(([, s]) => s.reason === 'lonely');
@@ -608,7 +617,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
           </div>
         </>)}
         {roomId && <AssistantLifeRoomSheet id={roomId} life={life} peerSt={peerSt} bondLevelOf={bondLevelOf} diary={diary} slot={slot} canGive={canGive && itemsLeft > 0}
-          land={land} onClose={() => setRoomId(null)} onPeek={peek} onInvite={invite} onWatch={watch} onGive={(g) => openGive(g.ids)} onBeat={beat}/>}
+          land={land} onClose={() => setRoomId(null)} onPeek={peek} onInvite={invite} onWatch={watch} onGive={(g) => openGive(g.ids)} onBeat={beat} onCard={card}/>}
         {scene && <AssistantLifeScene key={scene.key} scene={scene} look={look} canGive={canGive && itemsLeft > 0} onClose={() => setScene(null)} onGive={openGive}/>}
         {intro && (
           <button type="button" className="mhl-intro" data-assistant-life-intro={intro} onClick={() => setIntro(null)} aria-label="とばす">
@@ -684,6 +693,8 @@ function AssistantLifeHomeFaces({ metIds }) {
     if (!rects[f]) continue;
     (by[f] = by[f] || []).push(id);
   }
+  // カード部屋にいる助手と対戦するとごほうびアップ(カード部の口があるときだけ)。MFバトルカードの札の横の顔の並びに小さく「UP」
+  const cardUp = typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && assistantLifeHouseCardIds().some(id => (by.card || []).includes(id));
   const peer = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null;
   const q = peer && peer.quarrel && peer.quarrel.pending;
   const after = new Set(q && q.pair ? String(q.pair).split('-') : []);
@@ -694,7 +705,8 @@ function AssistantLifeHomeFaces({ metIds }) {
       const side = r.gap < 15;
       const size = side ? 20 : Math.max(12, Math.min(20, r.gap - 3));
       const step = size - 4; // 少し重ねる
-      const rowW = size + (list.length - 1) * step + 6;
+      const upW = f === 'card' && cardUp ? Math.round(size * 1.25) + 2 : 0;
+      const rowW = size + (list.length - 1) * step + 6 + upW;
       const left = side ? (r.right ? r.x - rowW - 4 : r.x + r.w + 4) : (r.right ? Math.max(4, r.x + r.w - rowW) : r.x);
       const top = side ? r.y + r.h / 2 - size / 2 : r.y + r.h + 1;
       return (
@@ -708,6 +720,7 @@ function AssistantLifeHomeFaces({ metIds }) {
                   {/* 押しやすいように、見た目より広く押せる */}
                   <span aria-hidden="true" className="absolute -inset-1.5"/>
                 </button>); })}
+            {upW > 0 && <span data-assistant-life-home-card-up className="pointer-events-none shrink-0 rounded-full bg-amber-300 font-black text-slate-950" style={{ marginLeft: 2, fontSize: Math.max(8, Math.round(size * 0.48)), lineHeight: `${Math.max(10, size - 4)}px`, padding: '0 3px' }}>UP</span>}
           </div>
         </div>); })}
   </>);
