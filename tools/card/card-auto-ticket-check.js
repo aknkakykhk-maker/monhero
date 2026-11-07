@@ -88,6 +88,7 @@ const reset = (raw, tickets) => { box.store = raw ? { [KEY]: raw } : {}; box.tic
     + card84.slice(card84.indexOf('// オートのごほうびの残りの札と'), card84.indexOf('const CardBattleScreen = ('));
   check('③ 券が0枚・今日の上限のときはボタンを押せず、わけを出す(96 の cardAutoTicketBlock・84 の札)', /data-card-auto-ticket disabled=\{!!why\}/.test(ui) && /data-card-auto-ticket-why/.test(ui)
     && /extraLeft > 0\) \?/.test(ui) && /tickets > 0\) \?/.test(ui));
+  check('⑥ ふやしたあとの言葉は「オートのごほうびが◯回ふえました」(残りがあるうちから足せるので「戻りました」は使わない)', /オートのごほうびが\$\{res\.count\}回ふえました/.test(card84) && !/戻りました/.test(card84.slice(card84.indexOf('const useAutoTicket'), card84.indexOf('const useAutoTicket') + 1500)));
   check('⑥ ごほうびが残っているときにボタンを止める決まり・言葉が残っていない', !/notEmpty/.test(src) && !/使い切ると、ふやせます/.test(ui) && !/notEmpty/.test(card84));
   check('⑥ デッキえらび(87)は共通の札とボタン(CardAutoRewardBar)を使う', /<CardAutoRewardBar info=\{auto\.info\}/.test(pick) && !/セッション券1枚でごほうびを1回ふやす/.test(pick));
 
