@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2779a5227e7ba3d9
+// source-sha256: fa5e9b5a69d99f33
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -95036,11 +95036,45 @@ const assistantPeerLifeOn = () => typeof assistantLifeEnabled === 'function' && 
 const assistantPeerStageName = stage => stage ? assistantPeerLifeOn() && stage.lifeName ? stage.lifeName : stage.name : '';
 const assistantPeerPhotoTitle = photo => photo ? assistantPeerLifeOn() && photo.lifeTitle ? photo.lifeTitle : photo.title : '';
 const assistantPeerLvLabel = lv => assistantPeerLifeOn() ? `友情Lv${lv}` : `仲良し度 Lv${lv}`;
-const assistantPeerTalkList = () => typeof ASSISTANT_PEER_TALKS !== 'undefined' && Array.isArray(ASSISTANT_PEER_TALKS) ? ASSISTANT_PEER_TALKS : [];
+const assistantPeerRewrite = t => {
+  if (!t || !assistantPeerLifeOn()) return t;
+  const x = (typeof ASSISTANT_PEER_REWRITES !== 'undefined' ? ASSISTANT_PEER_REWRITES : {})[t.id];
+  if (!x) return t;
+  const out = {
+    ...t
+  };
+  if (x.lines) out.lines = x.lines;
+  if (x.makeup && Array.isArray(t.makeup)) out.makeup = x.makeup;
+  if (x.reply && Array.isArray(t.choice)) out.choice = t.choice.map((c, i) => x.reply[i] ? {
+    ...c,
+    reply: x.reply[i]
+  } : c);
+  if (x.distance) out.distance = x.distance;
+  if (x.doing) out.lifeDoing = x.doing;
+  if (x.lv) out.lifeLv = x.lv;
+  if (x.similar) out.similar = x.similar;
+  return out;
+};
+const assistantPeerTalkListCache = {
+  on: null,
+  list: null
+};
+const assistantPeerTalkList = () => {
+  const raw = typeof ASSISTANT_PEER_TALKS !== 'undefined' && Array.isArray(ASSISTANT_PEER_TALKS) ? ASSISTANT_PEER_TALKS : [];
+  const on = assistantPeerLifeOn();
+  if (!on) return raw;
+  if (assistantPeerTalkListCache.on !== on || !assistantPeerTalkListCache.list) {
+    assistantPeerTalkListCache.on = on;
+    assistantPeerTalkListCache.list = raw.map(assistantPeerRewrite);
+  }
+  return assistantPeerTalkListCache.list;
+};
 let assistantPeerExtraCache = null;
+let assistantPeerExtraCacheOn = null;
 const assistantPeerExtraTalks = () => {
-  if (assistantPeerExtraCache) return assistantPeerExtraCache;
-  const events = (typeof ASSISTANT_PEER_EVENTS !== 'undefined' ? ASSISTANT_PEER_EVENTS : []).map(t => ({
+  const on = assistantPeerLifeOn();
+  if (assistantPeerExtraCache && assistantPeerExtraCacheOn === on) return assistantPeerExtraCache;
+  const events = (typeof ASSISTANT_PEER_EVENTS !== 'undefined' ? ASSISTANT_PEER_EVENTS : []).map(assistantPeerRewrite).map(t => ({
     ...t,
     pair: [...t.pair].sort(),
     kind: 'event',
@@ -95048,7 +95082,8 @@ const assistantPeerExtraTalks = () => {
     scene: 'any'
   }));
   const quarrels = [];
-  for (const q of typeof ASSISTANT_PEER_QUARRELS !== 'undefined' ? ASSISTANT_PEER_QUARRELS : []) {
+  for (const q0 of typeof ASSISTANT_PEER_QUARRELS !== 'undefined' ? ASSISTANT_PEER_QUARRELS : []) {
+    const q = assistantPeerRewrite(q0);
     const pair = [...q.pair].sort();
     quarrels.push({
       id: q.id,
@@ -95057,7 +95092,8 @@ const assistantPeerExtraTalks = () => {
       lv: 2,
       scene: 'home',
       makeupId: `${q.id}m`,
-      lines: q.lines
+      lines: q.lines,
+      distance: q.distance || []
     });
     quarrels.push({
       id: `${q.id}m`,
@@ -95069,7 +95105,8 @@ const assistantPeerExtraTalks = () => {
       lines: q.makeup
     });
   }
-  const trios = (typeof ASSISTANT_PEER_TRIO_TALKS !== 'undefined' ? ASSISTANT_PEER_TRIO_TALKS : []).map(t => ({
+  if (on && typeof assistantLifeQuarrelTalks === 'function') quarrels.push(...assistantLifeQuarrelTalks());
+  const trios = (typeof ASSISTANT_PEER_TRIO_TALKS !== 'undefined' ? ASSISTANT_PEER_TRIO_TALKS : []).map(assistantPeerRewrite).map(t => ({
     ...t,
     kind: 'trio',
     lv: 1,
@@ -95080,11 +95117,13 @@ const assistantPeerExtraTalks = () => {
     quarrels,
     trios
   };
+  assistantPeerExtraCacheOn = on;
   return assistantPeerExtraCache;
 };
 const assistantPeerAllTalks = () => {
   const x = assistantPeerExtraTalks();
-  return [...assistantPeerTalkList(), ...x.events, ...x.quarrels, ...x.trios];
+  const life = assistantPeerLifeOn() && typeof assistantLifeAlbumTalks === 'function' ? assistantLifeAlbumTalks() : [];
+  return [...assistantPeerTalkList(), ...x.events, ...x.quarrels, ...x.trios, ...life];
 };
 const assistantPeerMembers = t => t && Array.isArray(t.trio) ? t.trio : t && Array.isArray(t.pair) ? t.pair : [];
 const assistantPeerPairsOf = t => {
@@ -95564,10 +95603,12 @@ const assistantPeerSaveChoice = (talkId, index) => {
 const assistantPeerReactionTalk = (kind, pair) => {
   const R = typeof ASSISTANT_PEER_REACTIONS !== 'undefined' ? ASSISTANT_PEER_REACTIONS : {};
   const [a, b] = pair;
-  const line = who => R[who] && R[who][kind] ? {
+  const RW = assistantPeerLifeOn() && typeof ASSISTANT_PEER_REACTION_REWRITES !== 'undefined' ? ASSISTANT_PEER_REACTION_REWRITES : {};
+  const pickR = who => RW[who] && RW[who][kind] || R[who] && R[who][kind] || null;
+  const line = who => pickR(who) ? {
     who,
-    e: R[who][kind].e,
-    t: R[who][kind].t
+    e: pickR(who).e,
+    t: pickR(who).t
   } : null;
   const lines = [line(a), line(b)].filter(Boolean);
   return lines.length === 2 ? {
@@ -95661,8 +95702,11 @@ const assistantPeerPickTalk = (st, {
     pending: null,
     done: []
   };
+  const lifeOn = assistantPeerLifeOn();
+  const lifeGroups = lifeOn && typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.life && ASSISTANT_LIFE_STORE.state.life.groups || [];
+  const together = ms => lifeGroups.some(g => ms.every(id => g.ids.includes(id)));
   if (scene === 'home') {
-    if (quarrel.pending && now - (quarrel.pending.at || 0) >= ASSISTANT_PEER_TALK_GAP_MS) {
+    if (quarrel.pending && now - (quarrel.pending.at || 0) >= ASSISTANT_PEER_TALK_GAP_MS && (!lifeOn || together(String(quarrel.pending.pair || '').split('-')))) {
       const mk = extra.quarrels.find(t => t.kind === 'makeup' && t.quarrelId === quarrel.pending.id);
       if (mk && ok(mk)) return {
         talk: mk,
@@ -95701,6 +95745,17 @@ const assistantPeerPickTalk = (st, {
       };
     }
   }
+  if (lifeOn && isHome && typeof assistantLifePickHomeTalk === 'function' && rand() < 0.75) {
+    const t = assistantLifePickHomeTalk(st, {
+      selectedId,
+      metIds,
+      rand
+    });
+    if (t) return {
+      talk: t,
+      special: false
+    };
+  }
   const trioLv = typeof ASSISTANT_PEER_TRIO_LV !== 'undefined' ? ASSISTANT_PEER_TRIO_LV : 2;
   const qLv = typeof ASSISTANT_PEER_QUARREL_LV !== 'undefined' ? ASSISTANT_PEER_QUARREL_LV : {
     min: 2,
@@ -95709,6 +95764,7 @@ const assistantPeerPickTalk = (st, {
   const pairLvs = t => assistantPeerPairsOf(t).map(([a, b]) => assistantPeerLevel(st, a, b));
   const fits = t => {
     if (t.special) return false;
+    if (lifeOn && (t.similar || t.kind === 'quarrel')) return false;
     if (t.kind === 'trio') return pairLvs(t).every(lv => lv >= trioLv);
     if (t.kind === 'makeup') return false;
     if (t.kind === 'quarrel') {
@@ -95725,8 +95781,6 @@ const assistantPeerPickTalk = (st, {
   const fresh = pool.filter(t => !recent.includes(t.id));
   if (fresh.length) pool = fresh;else pool = [...pool].sort((x, y) => recent.indexOf(x.id) - recent.indexOf(y.id)).slice(0, Math.max(1, Math.ceil(pool.length / 3)));
   const dailyPair = !assistantPeerLifeOn() && st.daily && st.daily.day === day && !st.daily.done ? st.daily.pair : null;
-  const lifeGroups = assistantPeerLifeOn() && typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.life && ASSISTANT_LIFE_STORE.state.life.groups || [];
-  const together = ms => lifeGroups.some(g => ms.every(id => g.ids.includes(id)));
   const evBoost = typeof ASSISTANT_PEER_EVENT_BOOST_LV !== 'undefined' ? ASSISTANT_PEER_EVENT_BOOST_LV : 6;
   const trioBoost = typeof ASSISTANT_PEER_TRIO_BOOST_LV !== 'undefined' ? ASSISTANT_PEER_TRIO_BOOST_LV : 7;
   const weight = t => {
@@ -95813,6 +95867,7 @@ const assistantPeerMarkShown = (talk, {
   }
   ASSISTANT_PEER_STORE.set(patch);
   if (typeof assistantLifeAddPlay === 'function') void assistantLifeAddPlay('peer', now);
+  if (typeof assistantLifeMarkSeen === 'function') assistantLifeMarkSeen(talk, now);
   if (talk.kind === 'quarrel' && typeof assistantLifeNote === 'function') void assistantLifeNote('quarrel', {
     pair: assistantPeerPairKey(talk.pair[0], talk.pair[1]),
     now
@@ -95840,10 +95895,11 @@ const assistantPeerMakeupDone = talk => {
   return true;
 };
 const assistantPeerLineText = (line, talk) => {
-  const members = assistantPeerMembers(talk);
+  const members = talk && talk.anyTrio && Array.isArray(talk.pair) ? talk.pair : assistantPeerMembers(talk);
   const partner = members.find(id => id !== line.who) || members[0];
   const callOf = to => typeof assistantPeerCall === 'function' ? assistantPeerCall(line.who, to) : to;
-  return String(line.t || '').replace(/\{c:([a-z]+)\}/g, (m, id) => callOf(id)).replace(/\{c\}/g, callOf(partner));
+  const text = String(line.t || '').replace(/\{c:([a-z]+)\}/g, (m, id) => callOf(id)).replace(/\{c\}/g, callOf(partner));
+  return text.includes('{') && typeof assistantLifeFillHoles === 'function' ? assistantLifeFillHoles(text, talk) : text;
 };
 function AssistantPeerTalk({
   scene,
@@ -96043,7 +96099,8 @@ function AssistantPeerTalk({
   const line = cur.phase === 'choice' ? talk.lines[talk.lines.length - 1] : list[cur.step];
   const isTrio = talk.kind === 'trio';
   const left = assistantById(talk.lines[0].who);
-  const right = isTrio ? null : assistantById(talk.pair.find(id => id !== left.id));
+  const rightId = isTrio ? null : talk.pair.find(id => id !== left.id);
+  const right = rightId ? assistantById(rightId) : null;
   const speaker = assistantById(line.who);
   const pairKey = isTrio ? null : assistantPeerPairKey(talk.pair[0], talk.pair[1]);
   const daily = pairKey && talk.kind !== 'quarrel' && st.daily && st.daily.day === assistantPeerDayKey() && st.daily.pair === pairKey ? st.daily : null;
@@ -97047,7 +97104,7 @@ const assistantLifeDecide = ({
     const pm = prev && prev.moods && prev.moods[id];
     if (pm && w[pm] != null && inertia > 0) w[pm] *= inertia;
     if (wasLonely.has(id)) w.lonely *= 4;
-    if (ids.some(o => o !== id && quarrelNow(id, o))) w.sulky *= 12;
+    if (ids.some(o => o !== id && quarrelNow(id, o) && !introduced.includes(assistantLifePairKey(id, o)))) w.sulky *= 12;
     if (recentOf('gift', r => (r.ids || []).includes(id), 4) || recentOf('play', r => (r.ids || []).includes(id), 4)) w.happy *= 3;
     if (invited.has(id)) {
       w.happy *= 4;
@@ -97082,7 +97139,7 @@ const assistantLifeDecide = ({
   }
   const lvOf = (a, b) => typeof assistantPeerBondLevel === 'function' ? assistantPeerBondLevel(bond[assistantLifePairKey(a, b)] || 0) : 1;
   const score = (a, b) => {
-    if (quarrelNow(a, b)) return -10;
+    if (quarrelNow(a, b) && !introduced.includes(assistantLifePairKey(a, b))) return -10;
     let s = 1 + lvOf(a, b) * 0.25;
     if (prevPairs.has(assistantLifePairKey(a, b))) s -= 1;
     if (doing[a] === doing[b] && ASSISTANT_LIFE_DOINGS[doing[a]].group) s += 1.5;
@@ -97154,7 +97211,7 @@ const assistantLifeDecide = ({
       continue;
     }
     const p = ASSISTANT_LIFE_PREFS[id];
-    const quarrel = ids.some(o => o !== id && quarrelNow(id, o));
+    const quarrel = ids.some(o => o !== id && quarrelNow(id, o) && !introduced.includes(assistantLifePairKey(id, o)));
     const reason = quarrel ? 'distance' : wants[id] ? 'lonely' : 'mypace';
     if (reason === 'lonely') {
       moods[id] = 'lonely';
@@ -97293,7 +97350,7 @@ const normalizeAssistantLife = v => {
     lonely: Array.isArray(o.lonely) ? o.lonely.filter(ok) : [],
     recent,
     nudges,
-    watched: Array.isArray(o.watched) ? o.watched.filter(k => typeof k === 'string').slice(-10) : []
+    watched: Array.isArray(o.watched) ? o.watched.filter(k => typeof k === 'string').slice(-30) : []
   };
 };
 const ASSISTANT_LIFE_STORE = {
@@ -97301,7 +97358,8 @@ const ASSISTANT_LIFE_STORE = {
     loaded: false,
     open: false,
     life: normalizeAssistantLife(null),
-    play: normalizeAssistantLifePlay(null)
+    play: normalizeAssistantLifePlay(null),
+    seen: {}
   },
   loading: null,
   listeners: new Set(),
@@ -97323,13 +97381,14 @@ const ASSISTANT_LIFE_STORE = {
     if (this.state.loaded) return Promise.resolve(this.state);
     if (this.loading) return this.loading;
     this.loading = (async () => {
-      const [life, play] = await Promise.all([storeGet(ASSISTANT_LIFE_STORE_KEY, null, false), storeGet(ASSISTANT_LIFE_PLAY_KEY, null, false)].map(p => Promise.resolve(p).catch(() => null)));
+      const [life, play, seen] = await Promise.all([storeGet(ASSISTANT_LIFE_STORE_KEY, null, false), storeGet(ASSISTANT_LIFE_PLAY_KEY, null, false), storeGet('mh_assistant_peer_seen14_v1', null, false)].map(p => Promise.resolve(p).catch(() => null)));
       const l = normalizeAssistantLife(life);
       if (!l.salt) l.salt = Math.random().toString(36).slice(2, 10);
       this.set({
         loaded: true,
         life: l,
-        play: normalizeAssistantLifePlay(play)
+        play: normalizeAssistantLifePlay(play),
+        seen: normalizeAssistantLifeSeen(seen)
       });
       return this.state;
     })();
@@ -97474,6 +97533,393 @@ const useAssistantLifeState = () => {
   }, []);
   return st;
 };
+const ASSISTANT_LIFE_SEEN_KEY = 'mh_assistant_peer_seen14_v1';
+const ASSISTANT_LIFE_SEEN_DAYS = 14;
+const ASSISTANT_LIFE_SEEN_MAX = 4000;
+const assistantLifeLvBand = lv => lv >= 7 ? '7-10' : lv >= 4 ? '4-6' : '1-3';
+const ASSISTANT_LIFE_BAND_RANK = Object.freeze({
+  '1-3': 0,
+  '4-6': 1,
+  '7-10': 2
+});
+const assistantLifePlaceType = (who, place) => place === 'home' ? 'home' : ASSISTANT_LIFE_PREFS[who] && ASSISTANT_LIFE_PREFS[who].fav === place ? 'fav' : 'other';
+const normalizeAssistantLifeSeen = (v, today = assistantLifeDayKey()) => {
+  const out = {};
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
+  const limit = Date.parse(`${today}T00:00:00Z`) - ASSISTANT_LIFE_SEEN_DAYS * 86400000;
+  const rows = Object.entries(v).filter(([id, d]) => typeof id === 'string' && typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && Date.parse(`${d}T00:00:00Z`) > limit);
+  rows.sort((x, y) => x[1] < y[1] ? -1 : x[1] > y[1] ? 1 : 0);
+  for (const [id, d] of rows.slice(-ASSISTANT_LIFE_SEEN_MAX)) out[id] = d;
+  return out;
+};
+const assistantLifeMarkSeen = (talk, now = Date.now()) => {
+  if (!assistantLifeEnabled() || !talk || !talk.id || talk.gen) return;
+  const day = assistantLifeDayKey(now);
+  const seen = {
+    ...(ASSISTANT_LIFE_STORE.state.seen || {})
+  };
+  for (const id of Array.isArray(talk.parts) && talk.parts.length ? talk.parts : [talk.id]) seen[id] = day;
+  const next = normalizeAssistantLifeSeen(seen, day);
+  ASSISTANT_LIFE_STORE.set({
+    seen: next
+  });
+  try {
+    storeSet(ASSISTANT_LIFE_SEEN_KEY, next, false);
+  } catch {}
+};
+let assistantLifeTalkCache = null;
+const assistantLifeTalkSet = () => {
+  if (assistantLifeTalkCache) return assistantLifeTalkCache;
+  const raw = typeof ASSISTANT_LIFE_TALKS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_TALKS) ? ASSISTANT_LIFE_TALKS : [];
+  const out = {
+    solo: [],
+    breeder: [],
+    invite: [],
+    pair: [],
+    trio: [],
+    anyTrio: [],
+    quarrel: []
+  };
+  const okLines = a => Array.isArray(a) && a.length > 0 && a.every(l => l && typeof l.who === 'string' && typeof l.t === 'string');
+  for (const t of raw) {
+    if (!t || typeof t.id !== 'string' || !okLines(t.lines)) continue;
+    const keys = t.keys && typeof t.keys === 'object' ? t.keys : {};
+    const base = {
+      id: t.id,
+      keys,
+      lines: t.lines,
+      lv: 1,
+      scene: 'any',
+      life: true
+    };
+    if (t.kind === 'solo') out.solo.push({
+      ...base,
+      kind: 'life-solo',
+      who: t.who,
+      pair: [t.who],
+      line: t.line === 'feel' ? 'feel' : 'scene'
+    });else if (t.kind === 'breeder') out.breeder.push({
+      ...base,
+      kind: 'life-breeder',
+      who: t.who,
+      pair: [t.who]
+    });else if (t.kind === 'invite' && t.from) out.invite.push({
+      ...base,
+      kind: 'life-invite',
+      who: t.who,
+      from: t.from,
+      pair: [t.from, t.who]
+    });else if (t.kind === 'pair' && Array.isArray(t.pair)) out.pair.push({
+      ...base,
+      pair: [...t.pair].sort()
+    });else if (t.kind === 'trio' && t.any && Array.isArray(t.pair)) out.anyTrio.push({
+      ...base,
+      pair: [...t.pair].sort(),
+      anyTrio: true
+    });else if (t.kind === 'trio' && Array.isArray(t.trio)) out.trio.push({
+      ...base,
+      kind: 'trio',
+      trio: [...t.trio].sort()
+    });else if (t.kind === 'quarrel' && Array.isArray(t.pair)) {
+      const pair = [...t.pair].sort();
+      out.quarrel.push({
+        ...base,
+        pair,
+        kind: 'quarrel',
+        lv: 2,
+        scene: 'home',
+        makeupId: `${t.id}m`,
+        distance: okLines(t.distance) ? t.distance : []
+      });
+      if (okLines(t.makeup)) out.quarrel.push({
+        ...base,
+        id: `${t.id}m`,
+        pair,
+        kind: 'makeup',
+        lv: 2,
+        scene: 'home',
+        quarrelId: t.id,
+        lines: t.makeup
+      });
+    }
+  }
+  assistantLifeTalkCache = out;
+  return out;
+};
+const assistantLifeQuarrelTalks = () => assistantLifeTalkSet().quarrel;
+const assistantLifeAlbumTalks = () => {
+  const x = assistantLifeTalkSet();
+  return [...x.pair, ...x.anyTrio, ...x.trio];
+};
+const assistantLifeFillHoles = (text, talk) => {
+  const c = talk && talk.ctx || {};
+  const k = talk && talk.keys || {};
+  const doing = ASSISTANT_LIFE_DOINGS[c.doing] ? c.doing : ASSISTANT_LIFE_DOINGS[k.doing] ? k.doing : ASSISTANT_LIFE_DOINGS[talk && talk.lifeDoing] ? talk.lifeDoing : 'walk';
+  const place = ASSISTANT_LIFE_PLACES[c.place] ? c.place : ASSISTANT_LIFE_PLACES[k.place] ? k.place : ASSISTANT_LIFE_DOINGS[doing].places[0];
+  return String(text).replace(/\{place\}/g, ASSISTANT_LIFE_PLACES[place]).replace(/\{doing_te\}/g, ASSISTANT_LIFE_DOINGS[doing].te).replace(/\{doing\}/g, ASSISTANT_LIFE_DOINGS[doing].label);
+};
+const assistantLifeChoose = (cands, want, relax, seen, rand = Math.random) => {
+  const fit = (keys, skip) => Object.entries(want).every(([k, v]) => skip.has(k) || v == null || keys[k] == null || keys[k] === v);
+  const weight = keys => Object.entries(want).reduce((w, [k, v]) => v != null && keys[k] === v ? w * (k === 'air' ? 4 : 2) : w, 1);
+  let firstPool = null;
+  for (let n = 0; n <= relax.length; n++) {
+    const skip = new Set(relax.slice(0, n));
+    const pool = cands.filter(c => fit(c.keys || {}, skip));
+    if (!pool.length) continue;
+    if (!firstPool) firstPool = pool;
+    const fresh = pool.filter(c => !(seen && seen[c.talk.id]));
+    if (!fresh.length) continue;
+    const sum = fresh.reduce((x, c) => x + weight(c.keys || {}), 0);
+    let r = rand() * sum;
+    for (const c of fresh) {
+      r -= weight(c.keys || {});
+      if (r <= 0) return c.talk;
+    }
+    return fresh[fresh.length - 1].talk;
+  }
+  if (!firstPool) return null;
+  return [...firstPool].sort((x, y) => String((seen || {})[x.talk.id] || '').localeCompare(String((seen || {})[y.talk.id] || '')))[0].talk;
+};
+const assistantLifeWithCtx = (talk, ctx) => talk ? {
+  ...talk,
+  ctx: {
+    ...(talk.ctx || {}),
+    ...ctx
+  }
+} : null;
+const assistantLifeAirOf = (life, a, b) => {
+  const key = assistantLifePairKey(a, b);
+  const now = life && Number.isFinite(life.abs) ? life.abs : 0;
+  const rs = (life && life.recent || []).filter(r => r && r.pair === key && Number.isFinite(r.abs) && now - r.abs >= 0 && now - r.abs <= ASSISTANT_LIFE_RECENT_SLOTS);
+  const lastQ = Math.max(-Infinity, ...rs.filter(r => r.kind === 'quarrel').map(r => r.abs));
+  const lastM = Math.max(-Infinity, ...rs.filter(r => r.kind === 'makeup').map(r => r.abs));
+  if (lastM >= lastQ && lastM > -Infinity && now - lastM <= 6) return 'makeup';
+  if (lastQ > -Infinity && lastQ > lastM) return 'after';
+  return 'normal';
+};
+const assistantLifeLevelOf = (peerSt, a, b) => typeof assistantPeerLevel === 'function' ? assistantPeerLevel(peerSt, a, b) : 1;
+const assistantLifeOldPairCands = (pair, lv) => {
+  if (typeof assistantPeerTalkList !== 'function') return [];
+  const ev = typeof assistantPeerExtraTalks === 'function' ? assistantPeerExtraTalks().events : [];
+  return [...assistantPeerTalkList(), ...ev].filter(t => t && Array.isArray(t.pair) && !t.special && !t.when && !t.gen && !t.similar && t.kind !== 'quarrel' && t.kind !== 'makeup' && assistantLifePairKey(t.pair[0], t.pair[1]) === assistantLifePairKey(pair[0], pair[1]) && lv >= (t.lv || 1)).map(t => ({
+    talk: t,
+    keys: {
+      doing: t.lifeDoing || null,
+      lv: t.lifeLv || null
+    }
+  }));
+};
+const assistantLifePickPairTalk = (pair, group, peerSt, life, seen, rand = Math.random) => {
+  const [a, b] = [...pair].sort();
+  const key = assistantLifePairKey(a, b);
+  const lv = assistantLifeLevelOf(peerSt, a, b);
+  const ctx = {
+    place: group.place,
+    doing: group.doing
+  };
+  const quarrels = typeof assistantPeerExtraTalks === 'function' ? assistantPeerExtraTalks().quarrels : assistantLifeQuarrelTalks();
+  const q = peerSt && peerSt.quarrel || {
+    pending: null,
+    done: []
+  };
+  if (q.pending && q.pending.pair === key) {
+    const mk = quarrels.find(t => t.kind === 'makeup' && t.quarrelId === q.pending.id);
+    if (mk) return assistantLifeWithCtx(mk, ctx);
+  }
+  const moods = life && life.moods || {};
+  const grumpy = [a, b].some(id => moods[id] === 'sulky' || moods[id] === 'restless');
+  if (!q.pending && lv >= 2 && rand() < (grumpy ? 0.3 : 0.05)) {
+    const qs = quarrels.filter(t => t.kind === 'quarrel' && assistantLifePairKey(t.pair[0], t.pair[1]) === key && !(seen && seen[t.id]));
+    if (qs.length) return assistantLifeWithCtx(qs[Math.floor(rand() * qs.length)], ctx);
+  }
+  const band = assistantLifeLvBand(lv);
+  const air = assistantLifeAirOf(life, a, b);
+  const okBand = x => x == null || (ASSISTANT_LIFE_BAND_RANK[x] ?? 0) <= ASSISTANT_LIFE_BAND_RANK[band];
+  const okAir = x => x == null || x === 'normal' || x === air;
+  const cands = [...assistantLifeTalkSet().pair.filter(t => assistantLifePairKey(t.pair[0], t.pair[1]) === key).map(t => ({
+    talk: t,
+    keys: {
+      doing: t.keys.doing || null,
+      lv: t.keys.lv || null,
+      air: t.keys.air || null
+    }
+  })), ...assistantLifeOldPairCands([a, b], lv)].filter(c => okBand(c.keys.lv) && okAir(c.keys.air));
+  return assistantLifeWithCtx(assistantLifeChoose(cands, {
+    air: air === 'normal' ? null : air,
+    doing: group.doing,
+    lv: band
+  }, ['doing', 'lv'], seen, rand), ctx);
+};
+const assistantLifePickGroupTalk = (group, peerSt, life = ASSISTANT_LIFE_STORE.state.life, rand = Math.random) => {
+  if (!group || !Array.isArray(group.ids) || group.ids.length < 2) return null;
+  const seen = ASSISTANT_LIFE_STORE.state.seen || {};
+  const ids = group.ids;
+  const ctx = {
+    place: group.place,
+    doing: group.doing
+  };
+  if (ids.length === 2) return assistantLifePickPairTalk(ids, group, peerSt, life, seen, rand);
+  const trioLv = typeof ASSISTANT_PEER_TRIO_LV !== 'undefined' ? ASSISTANT_PEER_TRIO_LV : 2;
+  const pairsOk = m => {
+    for (let i = 0; i < m.length; i++) for (let j = i + 1; j < m.length; j++) if (assistantLifeLevelOf(peerSt, m[i], m[j]) < trioLv) return false;
+    return true;
+  };
+  const oldTrios = typeof assistantPeerExtraTalks === 'function' ? assistantPeerExtraTalks().trios : [];
+  const fixed = [...assistantLifeTalkSet().trio, ...oldTrios.filter(t => !t.similar)].filter(t => Array.isArray(t.trio) && t.trio.every(id => ids.includes(id)) && pairsOk(t.trio)).map(t => ({
+    talk: t,
+    keys: {
+      doing: t.keys && t.keys.doing || t.lifeDoing || null
+    }
+  }));
+  const freshFixed = fixed.filter(c => !seen[c.talk.id]);
+  if (freshFixed.length) return assistantLifeWithCtx(assistantLifeChoose(freshFixed, {
+    doing: group.doing
+  }, ['doing'], seen, rand), ctx);
+  const any = assistantLifeTalkSet().anyTrio.filter(t => t.pair.every(id => ids.includes(id))).map(t => ({
+    talk: t,
+    keys: {
+      doing: t.keys.doing || null
+    }
+  }));
+  const freshAny = any.filter(c => !seen[c.talk.id]);
+  if (freshAny.length) return assistantLifeWithCtx({
+    ...assistantLifeChoose(freshAny, {
+      doing: group.doing
+    }, ['doing'], seen, rand),
+    kind: 'trio',
+    trio: [...ids]
+  }, ctx);
+  const pairs = [];
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) pairs.push([ids[i], ids[j]]);
+  const w = pairs.map(p => 1 + assistantLifeLevelOf(peerSt, p[0], p[1]));
+  let r = rand() * w.reduce((x, y) => x + y, 0);
+  let pick = pairs[pairs.length - 1];
+  for (let i = 0; i < pairs.length; i++) {
+    r -= w[i];
+    if (r <= 0) {
+      pick = pairs[i];
+      break;
+    }
+  }
+  return assistantLifePickPairTalk(pick, group, peerSt, life, seen, rand) || (fixed.length ? assistantLifeWithCtx(assistantLifeChoose(fixed, {
+    doing: group.doing
+  }, ['doing'], seen, rand), ctx) : null);
+};
+const assistantLifePickHomeTalk = (peerSt, {
+  selectedId,
+  metIds,
+  rand = Math.random
+} = {}) => {
+  if (!assistantLifeEnabled() || !ASSISTANT_LIFE_STORE.state.loaded) return null;
+  const met = new Set(metIds || []);
+  const groups = (ASSISTANT_LIFE_STORE.state.life && ASSISTANT_LIFE_STORE.state.life.groups || []).filter(g => g.ids.every(id => met.has(id)));
+  if (!groups.length) return null;
+  const w = groups.map(g => g.ids.includes(selectedId) ? 3 : 1);
+  let r = rand() * w.reduce((x, y) => x + y, 0);
+  let g = groups[groups.length - 1];
+  for (let i = 0; i < groups.length; i++) {
+    r -= w[i];
+    if (r <= 0) {
+      g = groups[i];
+      break;
+    }
+  }
+  return assistantLifePickGroupTalk(g, peerSt, ASSISTANT_LIFE_STORE.state.life, rand);
+};
+const assistantLifePickSoloTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, peerSt = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null, rand = Math.random) => {
+  const s = life && life.solo && life.solo[id];
+  if (!s) return null;
+  const seen = ASSISTANT_LIFE_STORE.state.seen || {};
+  const ctx = {
+    place: s.place,
+    doing: s.doing
+  };
+  const mood = (life.moods || {})[id] || null;
+  const q = peerSt && peerSt.quarrel || {};
+  if (s.reason === 'distance' && q.pending && String(q.pending.pair).split('-').includes(id) && typeof assistantPeerExtraTalks === 'function') {
+    const qt = assistantPeerExtraTalks().quarrels.find(t => t.id === q.pending.id && t.kind === 'quarrel');
+    if (qt && Array.isArray(qt.distance) && qt.distance.length) return assistantLifeWithCtx({
+      id: `${qt.id}-distance`,
+      kind: 'life-distance',
+      pair: qt.pair,
+      lines: qt.distance,
+      lv: 1,
+      scene: 'any'
+    }, ctx);
+  }
+  const keysOf = t => ({
+    pt: t.keys.place ? assistantLifePlaceType(id, t.keys.place) : null,
+    mood: t.keys.mood || null,
+    why: t.keys.why || null,
+    doing: t.keys.doing || null
+  });
+  const want = {
+    pt: assistantLifePlaceType(id, s.place),
+    mood,
+    why: s.reason === 'distance' ? null : s.reason,
+    doing: s.doing
+  };
+  const T = assistantLifeTalkSet();
+  const br = T.breeder.filter(t => t.who === id).map(t => ({
+    talk: t,
+    keys: keysOf(t)
+  }));
+  if (br.length && rand() < 0.3) {
+    const t = assistantLifeChoose(br, want, ['doing', 'why', 'mood', 'pt'], seen, rand);
+    if (t && !seen[t.id]) return assistantLifeWithCtx(t, ctx);
+  }
+  const mine = T.solo.filter(t => t.who === id);
+  const ok = c => c.keys.pt == null || c.keys.pt === want.pt;
+  const scene = assistantLifeChoose(mine.filter(t => t.line === 'scene').map(t => ({
+    talk: t,
+    keys: keysOf(t)
+  })).filter(ok), want, ['doing', 'why', 'mood'], seen, rand);
+  const feel = assistantLifeChoose(mine.filter(t => t.line === 'feel').map(t => ({
+    talk: t,
+    keys: keysOf(t)
+  })).filter(ok), want, ['doing', 'why', 'mood'], seen, rand);
+  const parts = [scene, feel].filter(Boolean);
+  if (!parts.length) return null;
+  return assistantLifeWithCtx({
+    id: parts.map(t => t.id).join('+'),
+    kind: 'life-solo',
+    pair: [id],
+    parts: parts.map(t => t.id),
+    lines: parts.flatMap(t => t.lines),
+    keys: parts[0].keys,
+    lv: 1,
+    scene: 'any'
+  }, ctx);
+};
+const assistantLifePickInviteTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, peerSt = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null, rand = Math.random) => {
+  const s = life && life.solo && life.solo[id];
+  if (!s) return null;
+  const seen = ASSISTANT_LIFE_STORE.state.seen || {};
+  const mood = (life.moods || {})[id];
+  const answer = mood === 'sulky' ? 'shy' : s.reason === 'mypace' ? rand() < 0.6 ? 'decline' : 'glad' : rand() < 0.8 ? 'glad' : 'shy';
+  const others = [...(life.groups || []).flatMap(g => g.ids), ...Object.keys(life.solo || {})].filter(x => x !== id);
+  const cands = assistantLifeTalkSet().invite.filter(t => t.who === id && others.includes(t.from)).map(t => ({
+    talk: t,
+    keys: {
+      answer: t.keys.answer || null,
+      from: t.from
+    }
+  }));
+  const best = [...new Set(cands.map(c => c.talk.from))].sort((x, y) => assistantLifeLevelOf(peerSt, y, id) - assistantLifeLevelOf(peerSt, x, id))[0] || null;
+  const t = assistantLifeChoose(cands, {
+    answer,
+    from: best
+  }, ['from', 'answer'], seen, rand);
+  if (!t) return null;
+  const g = (life.groups || []).find(x => x.ids.includes(t.from));
+  return assistantLifeWithCtx(t, g ? {
+    place: g.place,
+    doing: g.doing
+  } : {
+    place: s.place,
+    doing: s.doing
+  });
+};
 const assistantLifeWatchLeft = (play, day) => {
   const p = assistantLifePlayForDay(play, day);
   const tier = assistantLifeTierOf(p.points);
@@ -97506,7 +97952,7 @@ const assistantLifeWatch = async (group, now = Date.now()) => {
   const life = ASSISTANT_LIFE_STORE.state.life;
   const key = assistantLifeGroupKey(group);
   if ((life.watched || []).includes(key) || assistantLifeWatchLeft(ASSISTANT_LIFE_STORE.state.play, day) <= 0) return null;
-  const talk = assistantLifePickWatchTalk(group, ASSISTANT_PEER_STORE.state);
+  const talk = assistantLifePickGroupTalk(group, ASSISTANT_PEER_STORE.state, life) || assistantLifePickWatchTalk(group, ASSISTANT_PEER_STORE.state);
   if (!talk) return null;
   const p = assistantLifePlayForDay(ASSISTANT_LIFE_STORE.state.play, day);
   ASSISTANT_LIFE_STORE.set({
@@ -97531,9 +97977,25 @@ const assistantLifeWatch = async (group, now = Date.now()) => {
       now
     });
   } catch {}
+  if (talk.kind === 'quarrel') return talk;
+  if (talk.kind === 'makeup') {
+    if (assistantPeerMakeupDone(talk)) {
+      await assistantPeerGain(talk.pair[0], talk.pair[1], 'makeup');
+      assistantPeerAddPlayerBond(talk.pair, 'peerMakeup');
+    }
+    try {
+      assistantPeerAlbumAdd(talk);
+    } catch {}
+    return talk;
+  }
   try {
     assistantPeerAlbumAdd(talk);
   } catch {}
+  if (talk.kind === 'event') {
+    await assistantPeerGain(talk.pair[0], talk.pair[1], 'event');
+    assistantPeerAddPlayerBond(talk.pair, 'peerEvent');
+    return talk;
+  }
   for (const [a, b] of assistantPeerPairsOf(talk)) await assistantPeerGain(a, b, 'talk');
   assistantPeerAddPlayerBond(assistantPeerMembers(talk), talk.kind === 'trio' ? 'peerTrio' : 'peerTalk');
   return talk;
@@ -97686,7 +98148,33 @@ function AssistantLifeScreenBody({
     if (onReplay) onReplay(talk);
   };
   const invite = async id => {
-    if (await assistantLifeNudge('invite', id)) setNote(`${nameOf(id)}を誘いました。次の時間に、だれかのところへ行きます`);
+    const talk = assistantLifePickInviteTalk(id, life);
+    if (!(await assistantLifeNudge('invite', id))) return;
+    setNote(`${nameOf(id)}を誘いました。次の時間に、だれかのところへ行きます`);
+    if (talk) {
+      assistantLifeMarkSeen(talk);
+      assistantLifeCloseScreen();
+      if (onReplay) onReplay(talk);
+    }
+  };
+  const peek = id => {
+    const key = `solo:${id}`;
+    if ((life.watched || []).includes(key)) return;
+    const talk = assistantLifePickSoloTalk(id, life);
+    if (!talk) {
+      setNote(`${nameOf(id)}は、いまは静かに過ごしています`);
+      return;
+    }
+    ASSISTANT_LIFE_STORE.set({
+      life: {
+        ...life,
+        watched: [...(life.watched || []), key]
+      }
+    });
+    assistantLifeSaveLife();
+    assistantLifeMarkSeen(talk);
+    assistantLifeCloseScreen();
+    if (onReplay) onReplay(talk);
   };
   const introduce = async () => {
     if (pick.length === 2 && (await assistantLifeNudge('introduce', pick))) {
@@ -97803,7 +98291,13 @@ function AssistantLifeScreenBody({
     className: `ml-1 text-[10px] ${s.reason === 'lonely' ? 'text-amber-200' : 'text-slate-400'}`
   }, ASSISTANT_LIFE_REASON_LABEL[s.reason])), React.createElement("p", {
     className: "text-[11px] font-bold leading-tight text-slate-300"
-  }, ASSISTANT_LIFE_PLACES[s.place], "で", ASSISTANT_LIFE_DOINGS[s.doing].label, "・", mood(id))), s.reason !== 'distance' && React.createElement("button", {
+  }, ASSISTANT_LIFE_PLACES[s.place], "で", ASSISTANT_LIFE_DOINGS[s.doing].label, "・", mood(id))), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-peek": id,
+    disabled: (life.watched || []).includes(`solo:${id}`),
+    onClick: () => peek(id),
+    className: "min-h-[44px] shrink-0 rounded-xl border border-pink-300/40 bg-pink-400/5 px-2 text-[11px] font-black text-pink-100 active:scale-[.98] disabled:opacity-40"
+  }, (life.watched || []).includes(`solo:${id}`) ? '見た' : 'ようすを見る'), s.reason !== 'distance' && React.createElement("button", {
     type: "button",
     "data-assistant-life-invite": id,
     disabled: invitedNext.has(id),

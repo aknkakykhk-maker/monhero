@@ -59,24 +59,59 @@ const assistantPeerLifeOn = () => typeof assistantLifeEnabled === 'function' && 
 const assistantPeerStageName = (stage) => (stage ? (assistantPeerLifeOn() && stage.lifeName ? stage.lifeName : stage.name) : '');
 const assistantPeerPhotoTitle = (photo) => (photo ? (assistantPeerLifeOn() && photo.lifeTitle ? photo.lifeTitle : photo.title) : '');
 const assistantPeerLvLabel = (lv) => (assistantPeerLifeOn() ? `友情Lv${lv}` : `仲良し度 Lv${lv}`);
-const assistantPeerTalkList = () => (typeof ASSISTANT_PEER_TALKS !== 'undefined' && Array.isArray(ASSISTANT_PEER_TALKS)) ? ASSISTANT_PEER_TALKS : [];
+// 助手たちの今(段階3): 公開の印 assistantLife が真のときだけ、今の台本を書き直しの表(ASSISTANT_PEER_REWRITES・ツムギ)の文で出す。
+//   今の文は data の ASSISTANT_PEER_TALKS などに残したまま(公開中・思い出アルバムが id で覚えている)。id は変えない
+//   表の doing・lv(1-3/4-6/7-10)は様子に合う台本を引く鍵(lifeDoing・lifeLv)/similar は新しい台本とほぼ同じ(新しい選び方では出さない・アルバムには残る)
+const assistantPeerRewrite = (t) => {
+  if (!t || !assistantPeerLifeOn()) return t;
+  const x = (typeof ASSISTANT_PEER_REWRITES !== 'undefined' ? ASSISTANT_PEER_REWRITES : {})[t.id];
+  if (!x) return t;
+  const out = { ...t };
+  if (x.lines) out.lines = x.lines;
+  if (x.makeup && Array.isArray(t.makeup)) out.makeup = x.makeup;
+  if (x.reply && Array.isArray(t.choice)) out.choice = t.choice.map((c, i) => (x.reply[i] ? { ...c, reply: x.reply[i] } : c));
+  if (x.distance) out.distance = x.distance;
+  if (x.doing) out.lifeDoing = x.doing;
+  if (x.lv) out.lifeLv = x.lv;
+  if (x.similar) out.similar = x.similar;
+  return out;
+};
+// 一度作ったら使い回す(印が変わったら作り直す)
+const assistantPeerTalkListCache = { on: null, list: null };
+const assistantPeerTalkList = () => {
+  const raw = (typeof ASSISTANT_PEER_TALKS !== 'undefined' && Array.isArray(ASSISTANT_PEER_TALKS)) ? ASSISTANT_PEER_TALKS : [];
+  const on = assistantPeerLifeOn();
+  if (!on) return raw;
+  if (assistantPeerTalkListCache.on !== on || !assistantPeerTalkListCache.list) { assistantPeerTalkListCache.on = on; assistantPeerTalkListCache.list = raw.map(assistantPeerRewrite); }
+  return assistantPeerTalkListCache.list;
+};
 // ③ ミニイベント・けんか/仲直り・3人の掛け合いを、掛け合いと同じ形(kind 付き)にして返す。一度作ったら使い回す
 let assistantPeerExtraCache = null;
+let assistantPeerExtraCacheOn = null;
 const assistantPeerExtraTalks = () => {
-  if (assistantPeerExtraCache) return assistantPeerExtraCache;
-  const events = (typeof ASSISTANT_PEER_EVENTS !== 'undefined' ? ASSISTANT_PEER_EVENTS : []).map(t => ({ ...t, pair: [...t.pair].sort(), kind: 'event', lv: t.lv || (typeof ASSISTANT_PEER_EVENT_LV !== 'undefined' ? ASSISTANT_PEER_EVENT_LV : 3), scene: 'any' }));
+  const on = assistantPeerLifeOn();
+  if (assistantPeerExtraCache && assistantPeerExtraCacheOn === on) return assistantPeerExtraCache;
+  const events = (typeof ASSISTANT_PEER_EVENTS !== 'undefined' ? ASSISTANT_PEER_EVENTS : []).map(assistantPeerRewrite).map(t => ({ ...t, pair: [...t.pair].sort(), kind: 'event', lv: t.lv || (typeof ASSISTANT_PEER_EVENT_LV !== 'undefined' ? ASSISTANT_PEER_EVENT_LV : 3), scene: 'any' }));
   const quarrels = [];
-  for (const q of (typeof ASSISTANT_PEER_QUARRELS !== 'undefined' ? ASSISTANT_PEER_QUARRELS : [])) {
+  for (const q0 of (typeof ASSISTANT_PEER_QUARRELS !== 'undefined' ? ASSISTANT_PEER_QUARRELS : [])) {
+    const q = assistantPeerRewrite(q0);
     const pair = [...q.pair].sort();
-    quarrels.push({ id: q.id, pair, kind: 'quarrel', lv: 2, scene: 'home', makeupId: `${q.id}m`, lines: q.lines });
+    quarrels.push({ id: q.id, pair, kind: 'quarrel', lv: 2, scene: 'home', makeupId: `${q.id}m`, lines: q.lines, distance: q.distance || [] });
     quarrels.push({ id: `${q.id}m`, pair, kind: 'makeup', lv: 2, scene: 'home', quarrelId: q.id, lines: q.makeup });
   }
-  const trios = (typeof ASSISTANT_PEER_TRIO_TALKS !== 'undefined' ? ASSISTANT_PEER_TRIO_TALKS : []).map(t => ({ ...t, kind: 'trio', lv: 1, scene: 'any' }));
+  // 助手たちの今の言い合い(ASSISTANT_LIFE_TALKS の quarrel)も同じ形で足す(印が真のときだけ)
+  if (on && typeof assistantLifeQuarrelTalks === 'function') quarrels.push(...assistantLifeQuarrelTalks());
+  const trios = (typeof ASSISTANT_PEER_TRIO_TALKS !== 'undefined' ? ASSISTANT_PEER_TRIO_TALKS : []).map(assistantPeerRewrite).map(t => ({ ...t, kind: 'trio', lv: 1, scene: 'any' }));
   assistantPeerExtraCache = { events, quarrels, trios };
+  assistantPeerExtraCacheOn = on;
   return assistantPeerExtraCache;
 };
-// 思い出アルバムで見返せるもの全部(2人の掛け合い・ミニイベント・けんか/仲直り・3人の掛け合い)
-const assistantPeerAllTalks = () => { const x = assistantPeerExtraTalks(); return [...assistantPeerTalkList(), ...x.events, ...x.quarrels, ...x.trios]; };
+// 思い出アルバムで見返せるもの全部(2人の掛け合い・ミニイベント・けんか/仲直り・3人の掛け合い)。印が真なら助手たちの今の2人・3人の台本も
+const assistantPeerAllTalks = () => {
+  const x = assistantPeerExtraTalks();
+  const life = assistantPeerLifeOn() && typeof assistantLifeAlbumTalks === 'function' ? assistantLifeAlbumTalks() : [];
+  return [...assistantPeerTalkList(), ...x.events, ...x.quarrels, ...x.trios, ...life];
+};
 // 掛け合いに出る助手(2人か3人)
 const assistantPeerMembers = (t) => (t && Array.isArray(t.trio) ? t.trio : (t && Array.isArray(t.pair) ? t.pair : []));
 // その掛け合いに出る助手どうしのペア(3人なら3組)
@@ -358,7 +393,9 @@ const assistantPeerSaveChoice = (talkId, index) => {
 const assistantPeerReactionTalk = (kind, pair) => {
   const R = typeof ASSISTANT_PEER_REACTIONS !== 'undefined' ? ASSISTANT_PEER_REACTIONS : {};
   const [a, b] = pair;
-  const line = (who) => (R[who] && R[who][kind]) ? { who, e: R[who][kind].e, t: R[who][kind].t } : null;
+  const RW = assistantPeerLifeOn() && typeof ASSISTANT_PEER_REACTION_REWRITES !== 'undefined' ? ASSISTANT_PEER_REACTION_REWRITES : {};
+  const pickR = (who) => (RW[who] && RW[who][kind]) || (R[who] && R[who][kind]) || null;
+  const line = (who) => (pickR(who) ? { who, e: pickR(who).e, t: pickR(who).t } : null);
   const lines = [line(a), line(b)].filter(Boolean);
   return lines.length === 2 ? { id: `react-${kind}-${assistantPeerPairKey(a, b)}`, pair: [a, b], lv: 1, scene: 'any', reaction: kind, lines } : null;
 };
@@ -418,9 +455,14 @@ const assistantPeerPickTalk = (st, { scene, metIds, selectedId, now = Date.now()
   const extra = assistantPeerExtraTalks();
   const lvOf = (t) => assistantPeerLevel(st, t.pair[0], t.pair[1]);
   const quarrel = st.quarrel || { pending: null, done: [] };
+  const lifeOn = assistantPeerLifeOn();
+  // 助手たちの今: いま一緒に過ごしている顔ぶれ(56-assistant-life.jsx の様子)
+  const lifeGroups = (lifeOn && typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.life && ASSISTANT_LIFE_STORE.state.life.groups) || [];
+  const together = (ms) => lifeGroups.some(g => ms.every(id => g.ids.includes(id)));
   if (scene === 'home') {
-    // けんかを見たあと、次に HOME を開いたとき(続けて流さない間をあけて)仲直りを流す
-    if (quarrel.pending && now - (quarrel.pending.at || 0) >= ASSISTANT_PEER_TALK_GAP_MS) {
+    // けんかを見たあと、次に HOME を開いたとき(続けて流さない間をあけて)仲直りを流す。
+    //   助手たちの今では、2人がまた一緒に過ごしているとき(引き合わせた・自然に戻った)だけ
+    if (quarrel.pending && now - (quarrel.pending.at || 0) >= ASSISTANT_PEER_TALK_GAP_MS && (!lifeOn || together(String(quarrel.pending.pair || '').split('-')))) {
       const mk = extra.quarrels.find(t => t.kind === 'makeup' && t.quarrelId === quarrel.pending.id);
       if (mk && ok(mk)) return { talk: mk, special: false };
     }
@@ -444,12 +486,19 @@ const assistantPeerPickTalk = (st, { scene, metIds, selectedId, now = Date.now()
       return { talk: (mine.length ? mine : gen)[0], special: false };
     }
   }
+  // 助手たちの今: いま一緒にいる顔ぶれの、様子に合う台本(7割5分)。無ければ下の今までの選び方
+  if (lifeOn && isHome && typeof assistantLifePickHomeTalk === 'function' && rand() < 0.75) {
+    const t = assistantLifePickHomeTalk(st, { selectedId, metIds, rand });
+    if (t) return { talk: t, special: false };
+  }
   // ③ の台本の出る条件
   const trioLv = typeof ASSISTANT_PEER_TRIO_LV !== 'undefined' ? ASSISTANT_PEER_TRIO_LV : 2;
   const qLv = typeof ASSISTANT_PEER_QUARREL_LV !== 'undefined' ? ASSISTANT_PEER_QUARREL_LV : { min: 2, max: 3 };
   const pairLvs = (t) => assistantPeerPairsOf(t).map(([a, b]) => assistantPeerLevel(st, a, b));
   const fits = (t) => {
     if (t.special) return false;
+    // 助手たちの今: 新しい台本とほぼ同じもの(similar)は出さない。言い合いは様子から起きる(ここでは引かない)
+    if (lifeOn && (t.similar || t.kind === 'quarrel')) return false;
     if (t.kind === 'trio') return pairLvs(t).every(lv => lv >= trioLv);
     if (t.kind === 'makeup') return false;
     if (t.kind === 'quarrel') { const lv = lvOf(t); return isHome && lv >= qLv.min && lv <= qLv.max && !quarrel.pending && !quarrel.done.includes(t.id); }
@@ -469,9 +518,7 @@ const assistantPeerPickTalk = (st, { scene, metIds, selectedId, now = Date.now()
   //   今日のペア(まだ達成していない)は4倍、その日の出来事に合う掛け合いは6倍。
   //   ③ ミニイベントは Lv6 から3倍・3人の掛け合いはどれかのペアが Lv7 なら6倍・けんかは「たまに」なので半分
   const dailyPair = !assistantPeerLifeOn() && st.daily && st.daily.day === day && !st.daily.done ? st.daily.pair : null;
-  // 助手たちの今: いま一緒に過ごしている顔ぶれの掛け合いを6倍(56-assistant-life.jsx の様子)
-  const lifeGroups = (assistantPeerLifeOn() && typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.life && ASSISTANT_LIFE_STORE.state.life.groups) || [];
-  const together = (ms) => lifeGroups.some(g => ms.every(id => g.ids.includes(id)));
+  // 助手たちの今: いま一緒に過ごしている顔ぶれの掛け合いを6倍(together は上で作った)
   const evBoost = typeof ASSISTANT_PEER_EVENT_BOOST_LV !== 'undefined' ? ASSISTANT_PEER_EVENT_BOOST_LV : 6;
   const trioBoost = typeof ASSISTANT_PEER_TRIO_BOOST_LV !== 'undefined' ? ASSISTANT_PEER_TRIO_BOOST_LV : 7;
   const weight = (t) => {
@@ -520,8 +567,9 @@ const assistantPeerMarkShown = (talk, { scene, special, now = Date.now() }) => {
     try { storeSet(ASSISTANT_PEER_QUARREL_KEY, quarrel, false); } catch {}
   }
   ASSISTANT_PEER_STORE.set(patch);
-  // 助手たちの今: 見守った分のにぎわい・言い合いのあとは2人が距離をおく(公開の印 assistantLife の後ろ)
+  // 助手たちの今: 見守った分のにぎわい・言い合いのあとは2人が距離をおく・見た台本は14日出さない(公開の印 assistantLife の後ろ)
   if (typeof assistantLifeAddPlay === 'function') void assistantLifeAddPlay('peer', now);
+  if (typeof assistantLifeMarkSeen === 'function') assistantLifeMarkSeen(talk, now);
   if (talk.kind === 'quarrel' && typeof assistantLifeNote === 'function') void assistantLifeNote('quarrel', { pair: assistantPeerPairKey(talk.pair[0], talk.pair[1]), now });
 };
 // 仲直りを最後まで見た(または閉じた)。待っていた仲直りを消す
@@ -537,10 +585,13 @@ const assistantPeerMakeupDone = (talk) => {
 // 台本の {c} を、話している助手が相手を呼ぶ呼び方へ置きかえる(呼び方は仲良し度では変えない・2026-11-07 社長)
 //   3人の掛け合いは {c:kiki} の形(話している助手が kiki を呼ぶ呼び方)
 const assistantPeerLineText = (line, talk) => {
-  const members = assistantPeerMembers(talk);
+  // どの3人でもの台本(anyTrio)は、話す2人(pair)のあいだで呼ぶ
+  const members = talk && talk.anyTrio && Array.isArray(talk.pair) ? talk.pair : assistantPeerMembers(talk);
   const partner = members.find(id => id !== line.who) || members[0];
   const callOf = (to) => (typeof assistantPeerCall === 'function' ? assistantPeerCall(line.who, to) : to);
-  return String(line.t || '').replace(/\{c:([a-z]+)\}/g, (m, id) => callOf(id)).replace(/\{c\}/g, callOf(partner));
+  const text = String(line.t || '').replace(/\{c:([a-z]+)\}/g, (m, id) => callOf(id)).replace(/\{c\}/g, callOf(partner));
+  // 助手たちの今の台本の穴 {place}・{doing}・{doing_te}(いまの様子の場所・していること。56-assistant-life.jsx)
+  return text.includes('{') && typeof assistantLifeFillHoles === 'function' ? assistantLifeFillHoles(text, talk) : text;
 };
 
 // ---------- 掛け合いの表示 ----------
@@ -667,7 +718,9 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
   // 左は最初に話す助手、右はその相手。3人の掛け合いは左に3人の顔を並べる
   const isTrio = talk.kind === 'trio';
   const left = assistantById(talk.lines[0].who);
-  const right = isTrio ? null : assistantById(talk.pair.find(id => id !== left.id));
+  // ひとりごと(助手たちの今)は相手がいないので、右の顔は出さない
+  const rightId = isTrio ? null : talk.pair.find(id => id !== left.id);
+  const right = rightId ? assistantById(rightId) : null;
   const speaker = assistantById(line.who);
   const pairKey = isTrio ? null : assistantPeerPairKey(talk.pair[0], talk.pair[1]);
   const daily = pairKey && talk.kind !== 'quarrel' && st.daily && st.daily.day === assistantPeerDayKey() && st.daily.pair === pairKey ? st.daily : null;
