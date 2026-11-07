@@ -920,7 +920,7 @@ invite kyuko sorashido answer=shy | sorashido happy {c}の勘、数字で見て�
 invite sorashido erubin answer=glad | erubin normal {c}、また表を見せてもらえるかな | sorashido excited もちろんだ！ 字も大きくしたぜ・・・！
 invite erubin sorashido answer=glad | sorashido normal {c}、デュラハンの使われ方、新しく数えたんだ | erubin happy 見たいな。今行くね☺️
 invite sorashido erubin answer=decline | erubin happy {c}、少し休もう。昨日も寝てないでしょ | sorashido troubled あと1列だけ…ほんとに1列だけ笑
-invite erubin sorashido answer=decline | sorashido excited {c}、朝までカード研究しようぜ・・・！ | erubin troubled 朝までは、ちょっとむずかしいかな💦 夕方までならいいよ
+invite erubin sorashido answer=decline | sorashido excited {c}、朝までカード研究しようぜ・・・！ | erubin troubled 朝までは、ちょっと無理かも💦 夕方までならいいよ
 invite sorashido erubin answer=shy | erubin normal {c}、表の字が小さいって言いすぎたかな。ごめんね | sorashido troubled ……いや、ほんとに小さかったし笑 | sorashido happy 大きくしたから、見てくれ
 invite erubin sorashido answer=shy | sorashido happy {c}の「見守り」、数字にならないけど一番効いてる気がするんだ | erubin surprise 本当？ | erubin happy …うれしいな。じゃあ今日もそばにいるね
 invite kyuko erubin answer=glad | erubin normal {c}、お茶にしない？ 少し休もうか | kyuko happy ほい！ ちょうど休みたかったんだぁ
@@ -949,7 +949,7 @@ trio momosuke mua sorashido | sorashido normal {c:momosuke}、今日のミス2�
 trio momosuke mua sorashido doing=snack | mua excited いちごタルト、最後の1個！ | momosuke excited ももの！！ | sorashido normal ……あみだくじ、作っといたぜ・・・！
 trio kiki mua sorashido doing=snack | sorashido excited おやつ屋さんの新作、全部で6つだ！ | mua happy ぢゃあ2個ずつ分けよ♪ | kiki wink では、甘さの表も作っていただけますか？
 trio kiki mua sorashido doing=walk | mua happy {place}、気持ちいいね！ | kiki normal {c:sorashido}、今日は歩数を数えないでくださいね | sorashido troubled ……もう1,000歩数えちゃった笑
-trio kiki mua sorashido | kiki happy 3人そろうと、にぎやかでいいですね | mua excited {c:kiki}が笑ってると、あたしもうれしい！ | sorashido happy 今日の笑った回数、表に…いや、やめとく笑
+trio kiki mua sorashido | kiki happy 3人そろうと、にぎやかでいいですね | mua excited {c:kiki}が笑ってると、あたしもうれしい！ | sorashido happy 笑った回数も表にしたら、怒られるか笑
 trio dra kiki sorashido doing=cards | dra normal この組み方、勝率はどうだ？ | sorashido excited 6割だ！ でも{c:kiki}が使うと8割になる | kiki wink 攻撃の枚数を増やしましたので
 trio dra kiki sorashido | kiki normal {c:dra}のギャグ、今日は何回目ですか？ | sorashido happy 数えたら7回目だぜ笑 | dra troubled 2人して数えるなよ……
 trio dra kiki sorashido doing=snack | dra happy せんべい、3枚あるぞ | kiki happy ありがとうございます。お茶もいれまつね | sorashido normal 割れ方、表にしていいか？笑
@@ -996,7 +996,7 @@ trio atsu kiki kyuko | kyuko happy この3人、気づくといつも勝って�
 ## 言い合い → 距離をおく → 仲直り(前半14ペア)
 quarrel kiki mua seed=snack | kiki troubled 私のいちご、なくなっています… | mua troubled ご、ごめん！ おいしそうで、つい！ || kiki normal 少しだけ、ひとりでお茶をいただきます || mua normal {c}、新しいいちご買ってきた！ ごめんね | kiki happy …では、半分こにしましょう
 quarrel kiki mua seed=noise | kiki normal {c}、図書室では静かにお願いします | mua angry 静かにしてたもん！ ちょっと笑っただけ！ || mua troubled …広場でひとりで遊んでよっかな || kiki happy さっきは、少しきつく言いすぎました | mua happy ううん、あたしも声大きかった！ 小声で話そ
-quarrel momosuke mua seed=order | momosuke angry {c}、鏡の前ずっと使ってる！！ | mua angry だってまだ前髪決まってないもん！ || momosuke troubled ……ふーん、べつにいいもん || mua happy さっきはごめんね。いっしょに鏡使お！ | momosuke wink …しょうがないなぁ。前髪、ももがやってあげる♡
+quarrel momosuke mua seed=order | momosuke angry {c}、鏡の前ずっと使ってる！！ | mua angry だってまだ前髪決まってないもん！ || momosuke troubled ……ふーん、べつにいいもん || mua happy さっきはごめんね。いっしょに鏡使お！ | momosuke wink …しょうがないなぁ。ももが前髪やってあげる♡
 quarrel momosuke mua seed=look | mua surprise え、その服、あたしと同じ！？ | momosuke angry ももが先に買ったんだもん！！ || mua troubled ……今日は別のとこで遊ぼっかな || momosuke normal {c}、おそろいって思えば、悪くないかも | mua excited それ！ おそろいで写真とろ！
 quarrel dra mua seed=noise | mua angry {c}、ギャグしつこい！ もう5回目！ | dra troubled 5回目がいちばんおもしろいんだぞ… || dra normal ……家で、ひとりでギャグの練習するわ || mua normal {c}、さっきは言いすぎた。6回目、聞いたげる | dra happy ほんとか！ えへへ、とっておきだぞ
 quarrel dra mua seed=late | mua angry {c}、約束の時間、30分も過ぎてる！ | dra troubled 昼寝がな、長引いたんだよ… || mua troubled …もういい。ひとりで行く || dra normal みゅあ、待たせて悪かった。せんべい持ってきた | mua happy …せんべいで許す！ 次は起こしに行くから！

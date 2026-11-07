@@ -18169,6 +18169,1834 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'dra', e:'happy', t:'……気がきくな。ありがとな' },
     { who:'kyuko', e:'wink', t:'今度は俺の寝ぐせ、{c}が言っていいよ笑' },
   ] },
+  { id:'life-invite-kiki-mua-001', kind:'invite', who:'kiki', from:'mua', keys:{ answer:'glad' }, lines:[
+    { who:'mua', e:'excited', t:'{c}、{place}でおやつしよ！' },
+    { who:'kiki', e:'happy', t:'はい、ぜひ。お茶もいれていきまつね' },
+  ] },
+  { id:'life-invite-mua-kiki-001', kind:'invite', who:'mua', from:'kiki', keys:{ answer:'glad' }, lines:[
+    { who:'kiki', e:'normal', t:'{c}、少しお散歩しませんか？' },
+    { who:'mua', e:'excited', t:'するする！ {c}から誘ってくれるの、うれしい♪' },
+  ] },
+  { id:'life-invite-kiki-mua-002', kind:'invite', who:'kiki', from:'mua', keys:{ answer:'decline' }, lines:[
+    { who:'mua', e:'happy', t:'{c}、マーケット行かない？' },
+    { who:'kiki', e:'troubled', t:'ごめんなさい、今は本の続きが気になっていて…' },
+    { who:'mua', e:'wink', t:'おけ！ 読み終わったら教えてね' },
+  ] },
+  { id:'life-invite-mua-kiki-002', kind:'invite', who:'mua', from:'kiki', keys:{ answer:'decline' }, lines:[
+    { who:'kiki', e:'normal', t:'{c}、図書室でいっしょに本を読みませんか？' },
+    { who:'mua', e:'troubled', t:'ごめん、静かにできる自信ないｗ また今度！' },
+  ] },
+  { id:'life-invite-kiki-mua-003', kind:'invite', who:'kiki', from:'mua', keys:{ answer:'shy' }, lines:[
+    { who:'mua', e:'excited', t:'{c}、おそろいのリボンつけて歩こ！' },
+    { who:'kiki', e:'surprise', t:'おそろい、でつか…？' },
+    { who:'kiki', e:'happy', t:'……少しだけなら。恥ずかしいですけど' },
+  ] },
+  { id:'life-invite-mua-kiki-003', kind:'invite', who:'mua', from:'kiki', keys:{ answer:'shy' }, lines:[
+    { who:'kiki', e:'happy', t:'{c}のコーデ、今日もすてきですね。いっしょに歩きたいです' },
+    { who:'mua', e:'surprise', t:'え、急にほめるのずるい…！' },
+    { who:'mua', e:'wink', t:'…しょうがないなぁ、行こ！' },
+  ] },
+  { id:'life-invite-momosuke-mua-001', kind:'invite', who:'momosuke', from:'mua', keys:{ answer:'glad' }, lines:[
+    { who:'mua', e:'excited', t:'{c}、いっしょに練習しよ！' },
+    { who:'momosuke', e:'excited', t:'するする！！ ももが振り付け教えてあげる♡' },
+  ] },
+  { id:'life-invite-mua-momosuke-004', kind:'invite', who:'mua', from:'momosuke', keys:{ answer:'glad' }, lines:[
+    { who:'momosuke', e:'wink', t:'{c}〜、マーケットで服見よ！！' },
+    { who:'mua', e:'excited', t:'行く行く！ ちょうど見たかったの！' },
+  ] },
+  { id:'life-invite-momosuke-mua-002', kind:'invite', who:'momosuke', from:'mua', keys:{ answer:'decline' }, lines:[
+    { who:'mua', e:'happy', t:'{c}、今からおやつ行かない？' },
+    { who:'momosuke', e:'troubled', t:'ごめん、今メタルナーみがいてる途中なの！！ あとで！！' },
+  ] },
+  { id:'life-invite-mua-momosuke-005', kind:'invite', who:'mua', from:'momosuke', keys:{ answer:'decline' }, lines:[
+    { who:'momosuke', e:'excited', t:'{c}、ステージの練習つきあって！！' },
+    { who:'mua', e:'troubled', t:'ごめん、今コーデ考え中なの！ 決まったらすぐ行く！' },
+  ] },
+  { id:'life-invite-momosuke-mua-003', kind:'invite', who:'momosuke', from:'mua', keys:{ answer:'shy' }, lines:[
+    { who:'mua', e:'happy', t:'{c}の歌、聞きに行ってもいい？' },
+    { who:'momosuke', e:'surprise', t:'え、聞きに来てくれるの！？' },
+    { who:'momosuke', e:'wink', t:'…べつにいいけど。いちばん前ね♡' },
+  ] },
+  { id:'life-invite-mua-momosuke-006', kind:'invite', who:'mua', from:'momosuke', keys:{ answer:'shy' }, lines:[
+    { who:'momosuke', e:'normal', t:'{c}、きのうのこと、まだ怒ってる？ おやつ行こ' },
+    { who:'mua', e:'troubled', t:'…べつに怒ってないし' },
+    { who:'mua', e:'happy', t:'…行く。いちごのやつね' },
+  ] },
+  { id:'life-invite-dra-mua-001', kind:'invite', who:'dra', from:'mua', keys:{ answer:'glad' }, lines:[
+    { who:'mua', e:'happy', t:'{c}〜、{place}でおやつしよ！' },
+    { who:'dra', e:'surprise', t:'お、おでもいいのか？' },
+    { who:'dra', e:'happy', t:'しょうがないな、行ってやるか。……えへへ' },
+  ] },
+  { id:'life-invite-mua-dra-007', kind:'invite', who:'mua', from:'dra', keys:{ answer:'glad' }, lines:[
+    { who:'dra', e:'normal', t:'みゅあ、カードの説明聞くか？ 3つだけ覚えればいい' },
+    { who:'mua', e:'excited', t:'3つなら聞く！ 行こ行こ！' },
+  ] },
+  { id:'life-invite-dra-mua-002', kind:'invite', who:'dra', from:'mua', keys:{ answer:'decline' }, lines:[
+    { who:'mua', e:'excited', t:'{c}、いっしょに走ろ！' },
+    { who:'dra', e:'troubled', t:'走るのは膝が断ってるんだ。歩くならいいぞ' },
+  ] },
+  { id:'life-invite-mua-dra-008', kind:'invite', who:'mua', from:'dra', keys:{ answer:'decline' }, lines:[
+    { who:'dra', e:'wink', t:'みゅあ、新しいギャグできたぞ。聞きに来るか？' },
+    { who:'mua', e:'angry', t:'今日はもういい！ｗ また明日ね' },
+  ] },
+  { id:'life-invite-dra-mua-003', kind:'invite', who:'dra', from:'mua', keys:{ answer:'shy' }, lines:[
+    { who:'mua', e:'normal', t:'{c}、さみしそうだったから来ちゃった' },
+    { who:'dra', e:'surprise', t:'……べつにさみしくなんてないぞ' },
+    { who:'dra', e:'happy', t:'でも、来てくれたなら、お茶くらい出すわ' },
+  ] },
+  { id:'life-invite-mua-dra-009', kind:'invite', who:'mua', from:'dra', keys:{ answer:'shy' }, lines:[
+    { who:'dra', e:'normal', t:'みゅあ、さっきは言いすぎた。せんべい食うか？' },
+    { who:'mua', e:'troubled', t:'…べつにすねてないもん' },
+    { who:'mua', e:'happy', t:'…1枚だけね！' },
+  ] },
+  { id:'life-invite-atsu-mua-001', kind:'invite', who:'atsu', from:'mua', keys:{ answer:'glad' }, lines:[
+    { who:'mua', e:'excited', t:'{c}、いっしょにHELLやろ！' },
+    { who:'atsu', e:'happy', t:'いいね、待ってた笑' },
+  ] },
+  { id:'life-invite-mua-atsu-010', kind:'invite', who:'mua', from:'atsu', keys:{ answer:'glad' }, lines:[
+    { who:'atsu', e:'happy', t:'{c}、一曲だけいこ笑' },
+    { who:'mua', e:'wink', t:'{c}の「一曲だけ」、信じてないけど行く！ｗ' },
+  ] },
+  { id:'life-invite-atsu-mua-002', kind:'invite', who:'atsu', from:'mua', keys:{ answer:'decline' }, lines:[
+    { who:'mua', e:'happy', t:'{c}、マーケットで服見よ！' },
+    { who:'atsu', e:'troubled', t:'今ちょっと練習中…あとで顔出すわ笑' },
+  ] },
+  { id:'life-invite-mua-atsu-011', kind:'invite', who:'mua', from:'atsu', keys:{ answer:'decline' }, lines:[
+    { who:'atsu', e:'excited', t:'{c}、次のイベントの作戦会議しよ！' },
+    { who:'mua', e:'troubled', t:'ごめん、今おやつ食べてるとこ！ 食べたら行く！' },
+  ] },
+  { id:'life-invite-atsu-mua-003', kind:'invite', who:'atsu', from:'mua', keys:{ answer:'shy' }, lines:[
+    { who:'mua', e:'normal', t:'{c}、さっきのこと、まだ気にしてる？ いっしょに練習しよ' },
+    { who:'atsu', e:'surprise', t:'…気にしてないって笑' },
+    { who:'atsu', e:'happy', t:'ま、誘われたら行くしかないかー笑' },
+  ] },
+  { id:'life-invite-mua-atsu-012', kind:'invite', who:'mua', from:'atsu', keys:{ answer:'shy' }, lines:[
+    { who:'atsu', e:'wink', t:'{c}、さっきはからかいすぎた！ おやつおごるから来て笑' },
+    { who:'mua', e:'troubled', t:'…おごりで許すと思ってる？' },
+    { who:'mua', e:'happy', t:'…許す！ いちご2個ね！' },
+  ] },
+  { id:'life-invite-kyuko-mua-001', kind:'invite', who:'kyuko', from:'mua', keys:{ answer:'glad' }, lines:[
+    { who:'mua', e:'excited', t:'{c}、作戦会議しよ！' },
+    { who:'kyuko', e:'happy', t:'ほい！ メモ持ってくねぇ' },
+  ] },
+  { id:'life-invite-mua-kyuko-013', kind:'invite', who:'mua', from:'kyuko', keys:{ answer:'glad' }, lines:[
+    { who:'kyuko', e:'normal', t:'{c}、モッチーの育て方、見せてもらってもいい？' },
+    { who:'mua', e:'excited', t:'もちろん！ 見て見て！' },
+  ] },
+  { id:'life-invite-kyuko-mua-002', kind:'invite', who:'kyuko', from:'mua', keys:{ answer:'decline' }, lines:[
+    { who:'mua', e:'excited', t:'{c}、いっしょにマーケット行こ！' },
+    { who:'kyuko', e:'troubled', t:'ごめんねぇ、今いいとこなんだぁ。あとで行くよ笑' },
+    { who:'mua', e:'wink', t:'おけ！ じゃあ、おみやげ見つけとく♪' },
+  ] },
+  { id:'life-invite-mua-kyuko-014', kind:'invite', who:'mua', from:'kyuko', keys:{ answer:'decline' }, lines:[
+    { who:'kyuko', e:'happy', t:'{c}、図書室で静かに作戦考えない？' },
+    { who:'mua', e:'troubled', t:'静かに、が無理かもｗ 広場ならいける！' },
+  ] },
+  { id:'life-invite-kyuko-mua-003', kind:'invite', who:'kyuko', from:'mua', keys:{ answer:'shy' }, lines:[
+    { who:'mua', e:'happy', t:'{c}、いつも作戦ありがと！ お礼の手紙書いてきた！' },
+    { who:'kyuko', e:'surprise', t:'え、手紙？' },
+    { who:'kyuko', e:'happy', t:'…照れるなぁ🥺 あとでゆっくり読むね' },
+  ] },
+  { id:'life-invite-mua-kyuko-015', kind:'invite', who:'mua', from:'kyuko', keys:{ answer:'shy' }, lines:[
+    { who:'kyuko', e:'normal', t:'{c}、さっきは言いすぎたかも。いっしょに歩こ' },
+    { who:'mua', e:'troubled', t:'…うん。べつにいいけど' },
+    { who:'mua', e:'happy', t:'…話、いっぱいしていい？' },
+  ] },
+  { id:'life-invite-mua-sorashido-016', kind:'invite', who:'mua', from:'sorashido', keys:{ answer:'glad' }, lines:[
+    { who:'sorashido', e:'excited', t:'{c}、新しい表できたぜ・・・！ 見に来るか？' },
+    { who:'mua', e:'excited', t:'見る見る！ あたしの勝ち数ある？' },
+  ] },
+  { id:'life-invite-sorashido-mua-001', kind:'invite', who:'sorashido', from:'mua', keys:{ answer:'glad' }, lines:[
+    { who:'mua', e:'excited', t:'{c}、いっしょにイベント回ろ！' },
+    { who:'sorashido', e:'happy', t:'うぉぉぉ！ 順番もう計算してある笑' },
+  ] },
+  { id:'life-invite-mua-sorashido-017', kind:'invite', who:'mua', from:'sorashido', keys:{ answer:'decline' }, lines:[
+    { who:'sorashido', e:'normal', t:'{c}、ミスの数の反省会やるか？' },
+    { who:'mua', e:'troubled', t:'それはパス！ｗ 楽しいことなら行く！' },
+  ] },
+  { id:'life-invite-sorashido-mua-002', kind:'invite', who:'sorashido', from:'mua', keys:{ answer:'decline' }, lines:[
+    { who:'mua', e:'happy', t:'{c}、おやつ行こ！' },
+    { who:'sorashido', e:'troubled', t:'あと3列で表が終わるんだ…終わったらすぐ行く笑' },
+  ] },
+  { id:'life-invite-mua-sorashido-018', kind:'invite', who:'mua', from:'sorashido', keys:{ answer:'shy' }, lines:[
+    { who:'sorashido', e:'normal', t:'{c}、この前は表に変なこと書いて悪かった。いっしょに練習しないか' },
+    { who:'mua', e:'troubled', t:'…ミスの数は書かない？' },
+    { who:'mua', e:'happy', t:'…ならいいよ！' },
+  ] },
+  { id:'life-invite-sorashido-mua-003', kind:'invite', who:'sorashido', from:'mua', keys:{ answer:'shy' }, lines:[
+    { who:'mua', e:'happy', t:'{c}の表、いつもありがとね。お礼におやつ行こ！' },
+    { who:'sorashido', e:'surprise', t:'お礼！？ ……なんか照れるな笑' },
+    { who:'sorashido', e:'happy', t:'行く！' },
+  ] },
+  { id:'life-invite-erubin-mua-001', kind:'invite', who:'erubin', from:'mua', keys:{ answer:'glad' }, lines:[
+    { who:'mua', e:'excited', t:'{c}、今日のコーデ、あたしに選ばせて！' },
+    { who:'erubin', e:'happy', t:'おけ！ お願いするね☺️' },
+  ] },
+  { id:'life-invite-mua-erubin-019', kind:'invite', who:'mua', from:'erubin', keys:{ answer:'glad' }, lines:[
+    { who:'erubin', e:'normal', t:'{c}、中庭の花が咲いてたよ。見に行かない？' },
+    { who:'mua', e:'excited', t:'行く！ 写真撮ろ！' },
+  ] },
+  { id:'life-invite-erubin-mua-002', kind:'invite', who:'erubin', from:'mua', keys:{ answer:'decline' }, lines:[
+    { who:'mua', e:'excited', t:'{c}、石油王の服で広場行こ！ｗ' },
+    { who:'erubin', e:'troubled', t:'それは目立ちすぎるかな笑 ふつうの服でなら行くよ' },
+  ] },
+  { id:'life-invite-mua-erubin-020', kind:'invite', who:'mua', from:'erubin', keys:{ answer:'decline' }, lines:[
+    { who:'erubin', e:'normal', t:'{c}、カードの研究、いっしょにどうかな？' },
+    { who:'mua', e:'troubled', t:'ごめん、カードの数字見るとねむくなっちゃう…また今度！' },
+  ] },
+  { id:'life-invite-erubin-mua-003', kind:'invite', who:'erubin', from:'mua', keys:{ answer:'shy' }, lines:[
+    { who:'mua', e:'normal', t:'{c}、こっち来たころのこと、話聞かせて！' },
+    { who:'erubin', e:'surprise', t:'俺の話？ おもしろいかな…' },
+    { who:'erubin', e:'happy', t:'…じゃあ、少しだけね' },
+  ] },
+  { id:'life-invite-mua-erubin-021', kind:'invite', who:'mua', from:'erubin', keys:{ answer:'shy' }, lines:[
+    { who:'erubin', e:'happy', t:'{c}、さっきはごめんね。お詫びにお茶でもどうかな' },
+    { who:'mua', e:'troubled', t:'…べつに怒ってないし' },
+    { who:'mua', e:'happy', t:'…いちごのケーキも付けてくれるなら行く！' },
+  ] },
+  { id:'life-invite-momosuke-kiki-004', kind:'invite', who:'momosuke', from:'kiki', keys:{ answer:'glad' }, lines:[
+    { who:'kiki', e:'happy', t:'{c}、おやつ屋さんの新作、いっしょにどうですか？' },
+    { who:'momosuke', e:'excited', t:'行く！！ {c}から誘ってくれるの、うれしい♡' },
+  ] },
+  { id:'life-invite-kiki-momosuke-004', kind:'invite', who:'kiki', from:'momosuke', keys:{ answer:'glad' }, lines:[
+    { who:'momosuke', e:'excited', t:'{c}！ 練習見に来て！！' },
+    { who:'kiki', e:'happy', t:'はい。いちばん後ろの席で、静かに見ていますね' },
+  ] },
+  { id:'life-invite-momosuke-kiki-005', kind:'invite', who:'momosuke', from:'kiki', keys:{ answer:'decline' }, lines:[
+    { who:'kiki', e:'normal', t:'{c}、図書室で本を読みませんか？' },
+    { who:'momosuke', e:'troubled', t:'ごめん、静かにしてると眠くなっちゃうの！！ また誘って！！' },
+  ] },
+  { id:'life-invite-kiki-momosuke-005', kind:'invite', who:'kiki', from:'momosuke', keys:{ answer:'decline' }, lines:[
+    { who:'momosuke', e:'wink', t:'{c}も、ももといっしょに踊ってみない！？' },
+    { who:'kiki', e:'troubled', t:'踊るのは、少し…。見ているほうが好きです' },
+  ] },
+  { id:'life-invite-momosuke-kiki-006', kind:'invite', who:'momosuke', from:'kiki', keys:{ answer:'shy' }, lines:[
+    { who:'kiki', e:'normal', t:'{c}、さっきは少し言いすぎました。お茶にしませんか' },
+    { who:'momosuke', e:'troubled', t:'…べつに、ももは気にしてないし' },
+    { who:'momosuke', e:'happy', t:'…いちごのケーキもあるなら行く！！' },
+  ] },
+  { id:'life-invite-kiki-momosuke-006', kind:'invite', who:'kiki', from:'momosuke', keys:{ answer:'shy' }, lines:[
+    { who:'momosuke', e:'happy', t:'{c}のこと、ももが案内してあげる！！ 新しいお店見つけたの！！' },
+    { who:'kiki', e:'surprise', t:'私でいいんですか？' },
+    { who:'kiki', e:'happy', t:'…では、お願いしまつ' },
+  ] },
+  { id:'life-invite-dra-kiki-004', kind:'invite', who:'dra', from:'kiki', keys:{ answer:'glad' }, lines:[
+    { who:'kiki', e:'normal', t:'{c}、カードの説明をお願いしてもいいですか？' },
+    { who:'dra', e:'happy', t:'おう、まかせとけ。今日はギャグ少なめでいくわ' },
+  ] },
+  { id:'life-invite-kiki-dra-007', kind:'invite', who:'kiki', from:'dra', keys:{ answer:'glad' }, lines:[
+    { who:'dra', e:'normal', t:'{c}、いいお茶が入ったんだ。飲みに来るか？' },
+    { who:'kiki', e:'happy', t:'ありがとうございます。すぐ行きまつ' },
+  ] },
+  { id:'life-invite-dra-kiki-005', kind:'invite', who:'dra', from:'kiki', keys:{ answer:'decline' }, lines:[
+    { who:'kiki', e:'normal', t:'{c}、朝のお散歩、ごいっしょしませんか？' },
+    { who:'dra', e:'troubled', t:'朝は膝がまだ寝てるんだよ…昼からなら行くわ' },
+  ] },
+  { id:'life-invite-kiki-dra-008', kind:'invite', who:'kiki', from:'dra', keys:{ answer:'decline' }, lines:[
+    { who:'dra', e:'wink', t:'{c}、新しいギャグ、3つ聞いてくか？' },
+    { who:'kiki', e:'normal', t:'今日は、1つまでにしておきます' },
+  ] },
+  { id:'life-invite-dra-kiki-006', kind:'invite', who:'dra', from:'kiki', keys:{ answer:'shy' }, lines:[
+    { who:'kiki', e:'happy', t:'{c}の説明、いつも助かっています。お礼に、お茶をいれさせてください' },
+    { who:'dra', e:'surprise', t:'お、おう…急にどうしたんだよ' },
+    { who:'dra', e:'happy', t:'……えへへ。ありがたくいただくわ' },
+  ] },
+  { id:'life-invite-kiki-dra-009', kind:'invite', who:'kiki', from:'dra', keys:{ answer:'shy' }, lines:[
+    { who:'dra', e:'normal', t:'{c}、さっきはギャグがしつこかったな。すまん' },
+    { who:'kiki', e:'normal', t:'…少し、すねていました' },
+    { who:'kiki', e:'happy', t:'でも、お散歩なら行きまつ' },
+  ] },
+  { id:'life-invite-atsu-kiki-004', kind:'invite', who:'atsu', from:'kiki', keys:{ answer:'glad' }, lines:[
+    { who:'kiki', e:'normal', t:'{c}、次のボス、いっしょに行きませんか？' },
+    { who:'atsu', e:'excited', t:'いいね！ 二人で一気にいこ笑' },
+  ] },
+  { id:'life-invite-kiki-atsu-010', kind:'invite', who:'kiki', from:'atsu', keys:{ answer:'glad' }, lines:[
+    { who:'atsu', e:'happy', t:'{c}、ちから全開で練習しよ笑' },
+    { who:'kiki', e:'happy', t:'はい。今日も押し切りまつ ( ˘ω˘)9グッ!' },
+  ] },
+  { id:'life-invite-atsu-kiki-005', kind:'invite', who:'atsu', from:'kiki', keys:{ answer:'decline' }, lines:[
+    { who:'kiki', e:'happy', t:'{c}、図書室で静かに作戦を立てませんか？' },
+    { who:'atsu', e:'troubled', t:'静かにするの、苦手なんだよね笑 練習スタジオならいける！' },
+  ] },
+  { id:'life-invite-kiki-atsu-011', kind:'invite', who:'kiki', from:'atsu', keys:{ answer:'decline' }, lines:[
+    { who:'atsu', e:'excited', t:'{c}、HELLいこ！' },
+    { who:'kiki', e:'troubled', t:'今日は少し、手が疲れていて…。明日にしてもいいですか？' },
+  ] },
+  { id:'life-invite-atsu-kiki-006', kind:'invite', who:'atsu', from:'kiki', keys:{ answer:'shy' }, lines:[
+    { who:'kiki', e:'normal', t:'{c}、いつも引っぱってくれて、ありがとうございます' },
+    { who:'atsu', e:'surprise', t:'え、急にどうしたの？笑' },
+    { who:'atsu', e:'happy', t:'…照れるじゃん！ ま、おやつでも行こ笑' },
+  ] },
+  { id:'life-invite-kiki-atsu-012', kind:'invite', who:'kiki', from:'atsu', keys:{ answer:'shy' }, lines:[
+    { who:'atsu', e:'wink', t:'{c}、さっき前に出すぎた？ ごめん笑' },
+    { who:'kiki', e:'normal', t:'…少しだけ、ゆずってほしかったです' },
+    { who:'kiki', e:'happy', t:'次は、交代でいきましょう' },
+  ] },
+  { id:'life-invite-kyuko-kiki-004', kind:'invite', who:'kyuko', from:'kiki', keys:{ answer:'glad' }, lines:[
+    { who:'kiki', e:'normal', t:'{c}、図書室の窓ぎわ、空いていましたよ' },
+    { who:'kyuko', e:'happy', t:'ほい！ すぐ行くねぇ' },
+  ] },
+  { id:'life-invite-kiki-kyuko-013', kind:'invite', who:'kiki', from:'kyuko', keys:{ answer:'glad' }, lines:[
+    { who:'kyuko', e:'normal', t:'{c}、作戦考えたから、見てもらえる？' },
+    { who:'kiki', e:'happy', t:'はい、ぜひ。攻撃のところから見せてください' },
+  ] },
+  { id:'life-invite-kyuko-kiki-005', kind:'invite', who:'kyuko', from:'kiki', keys:{ answer:'decline' }, lines:[
+    { who:'kiki', e:'happy', t:'{c}、朝のお散歩に行きませんか？' },
+    { who:'kyuko', e:'troubled', t:'朝は無理ぃ…昨日も夜ふかししたぁ😭' },
+  ] },
+  { id:'life-invite-kiki-kyuko-014', kind:'invite', who:'kiki', from:'kyuko', keys:{ answer:'decline' }, lines:[
+    { who:'kyuko', e:'happy', t:'{c}、守りのデッキ組んでみない？' },
+    { who:'kiki', e:'normal', t:'…守りは、また今度にしまつ' },
+  ] },
+  { id:'life-invite-kyuko-kiki-006', kind:'invite', who:'kyuko', from:'kiki', keys:{ answer:'shy' }, lines:[
+    { who:'kiki', e:'happy', t:'{c}の作戦、いつもすごいと思っていまつ' },
+    { who:'kyuko', e:'surprise', t:'え、ほめられた？' },
+    { who:'kyuko', e:'happy', t:'…ありがとん笑 じゃあ、今日もいっしょに考えよっか' },
+  ] },
+  { id:'life-invite-kiki-kyuko-015', kind:'invite', who:'kiki', from:'kyuko', keys:{ answer:'shy' }, lines:[
+    { who:'kyuko', e:'normal', t:'{c}、さっきは「だいたい」で組んでごめんね' },
+    { who:'kiki', e:'normal', t:'…ちゃんと数えてくれるなら、いいでつよ' },
+    { who:'kiki', e:'happy', t:'では、いっしょに組みましょう' },
+  ] },
+  { id:'life-invite-kiki-sorashido-016', kind:'invite', who:'kiki', from:'sorashido', keys:{ answer:'glad' }, lines:[
+    { who:'sorashido', e:'excited', t:'{c}、新しい表を見てくれ！' },
+    { who:'kiki', e:'happy', t:'はい。今日の表も楽しみにしていました' },
+  ] },
+  { id:'life-invite-sorashido-kiki-004', kind:'invite', who:'sorashido', from:'kiki', keys:{ answer:'glad' }, lines:[
+    { who:'kiki', e:'normal', t:'{c}、いっしょにお茶にしませんか？' },
+    { who:'sorashido', e:'happy', t:'いいな！ 計算はお休みにする笑' },
+  ] },
+  { id:'life-invite-kiki-sorashido-017', kind:'invite', who:'kiki', from:'sorashido', keys:{ answer:'decline' }, lines:[
+    { who:'sorashido', e:'normal', t:'{c}、守りの数字の表、いっしょに見ないか？' },
+    { who:'kiki', e:'troubled', t:'…守りの表は、また今度にしまつ' },
+  ] },
+  { id:'life-invite-sorashido-kiki-005', kind:'invite', who:'sorashido', from:'kiki', keys:{ answer:'decline' }, lines:[
+    { who:'kiki', e:'normal', t:'{c}、朝のお散歩に行きませんか？' },
+    { who:'sorashido', e:'troubled', t:'朝方まで計算してたから、今ちょっと…昼なら行く！' },
+  ] },
+  { id:'life-invite-kiki-sorashido-018', kind:'invite', who:'kiki', from:'sorashido', keys:{ answer:'shy' }, lines:[
+    { who:'sorashido', e:'normal', t:'{c}、表に「守りが弱い」と書いて悪かった' },
+    { who:'kiki', e:'normal', t:'…気にしていません。少しだけしか' },
+    { who:'kiki', e:'happy', t:'では、お茶にしましょう' },
+  ] },
+  { id:'life-invite-sorashido-kiki-006', kind:'invite', who:'sorashido', from:'kiki', keys:{ answer:'shy' }, lines:[
+    { who:'kiki', e:'happy', t:'{c}の表、全部とってあるんです' },
+    { who:'sorashido', e:'surprise', t:'全部！？ ……でーじうれしいんだけど' },
+    { who:'sorashido', e:'happy', t:'じゃあ次のも、いちばんに見せるわ' },
+  ] },
+  { id:'life-invite-erubin-kiki-004', kind:'invite', who:'erubin', from:'kiki', keys:{ answer:'glad' }, lines:[
+    { who:'kiki', e:'normal', t:'{c}、ベンチで少し見守りませんか？' },
+    { who:'erubin', e:'happy', t:'いいね。見守り係の時間だね☺️' },
+  ] },
+  { id:'life-invite-kiki-erubin-019', kind:'invite', who:'kiki', from:'erubin', keys:{ answer:'glad' }, lines:[
+    { who:'erubin', e:'normal', t:'{c}、お茶をいれたんだ。いっしょにどうかな' },
+    { who:'kiki', e:'happy', t:'ありがとうございます。いただきまつ' },
+  ] },
+  { id:'life-invite-erubin-kiki-005', kind:'invite', who:'erubin', from:'kiki', keys:{ answer:'decline' }, lines:[
+    { who:'kiki', e:'happy', t:'{c}、朝のお散歩はいかがですか？' },
+    { who:'erubin', e:'troubled', t:'ごめんね、今カードを考えてて…あとで行くね' },
+  ] },
+  { id:'life-invite-kiki-erubin-020', kind:'invite', who:'kiki', from:'erubin', keys:{ answer:'decline' }, lines:[
+    { who:'erubin', e:'normal', t:'{c}、デュラハンのデッキで対戦してみない？' },
+    { who:'kiki', e:'normal', t:'守りのデッキは、少し苦手で…。見ているだけでもいいですか？' },
+  ] },
+  { id:'life-invite-erubin-kiki-006', kind:'invite', who:'erubin', from:'kiki', keys:{ answer:'shy' }, lines:[
+    { who:'kiki', e:'happy', t:'{c}が見守ってくれると、安心して戦えまつ' },
+    { who:'erubin', e:'surprise', t:'俺が？ そう言ってもらえるとうれしいな' },
+    { who:'erubin', e:'happy', t:'じゃあ、今日もそばにいるね' },
+  ] },
+  { id:'life-invite-kiki-erubin-021', kind:'invite', who:'kiki', from:'erubin', keys:{ answer:'shy' }, lines:[
+    { who:'erubin', e:'happy', t:'{c}、いつも静かに支えてくれてありがとう' },
+    { who:'kiki', e:'surprise', t:'…気づいていたんですか' },
+    { who:'kiki', e:'happy', t:'少し照れまつ。お散歩、行きましょうか' },
+  ] },
+  { id:'life-invite-dra-momosuke-007', kind:'invite', who:'dra', from:'momosuke', keys:{ answer:'glad' }, lines:[
+    { who:'momosuke', e:'excited', t:'{c}、前説やって！！' },
+    { who:'dra', e:'happy', t:'おう、すべる準備はできてるぞ' },
+  ] },
+  { id:'life-invite-momosuke-dra-007', kind:'invite', who:'momosuke', from:'dra', keys:{ answer:'glad' }, lines:[
+    { who:'dra', e:'normal', t:'{c}、プリン冷えてるぞ。食べに来るか？' },
+    { who:'momosuke', e:'excited', t:'行く！！ 2つ食べていい！？' },
+  ] },
+  { id:'life-invite-dra-momosuke-008', kind:'invite', who:'dra', from:'momosuke', keys:{ answer:'decline' }, lines:[
+    { who:'momosuke', e:'excited', t:'{c}、{place}まで競争しよ！！' },
+    { who:'dra', e:'troubled', t:'競争は膝が断ってるんだよ。歩くならいいぞ' },
+  ] },
+  { id:'life-invite-momosuke-dra-008', kind:'invite', who:'momosuke', from:'dra', keys:{ answer:'decline' }, lines:[
+    { who:'dra', e:'wink', t:'{c}、新しいギャグ聞くか？' },
+    { who:'momosuke', e:'troubled', t:'今は練習中なの！！ 終わったら採点してあげる！！' },
+  ] },
+  { id:'life-invite-dra-momosuke-009', kind:'invite', who:'dra', from:'momosuke', keys:{ answer:'shy' }, lines:[
+    { who:'momosuke', e:'normal', t:'{c}、さっきギャグ先に言っちゃってごめんね' },
+    { who:'dra', e:'troubled', t:'……べつに気にしてないぞ' },
+    { who:'dra', e:'happy', t:'でも、おやつは行くわ。えへへ' },
+  ] },
+  { id:'life-invite-momosuke-dra-009', kind:'invite', who:'momosuke', from:'dra', keys:{ answer:'shy' }, lines:[
+    { who:'dra', e:'normal', t:'{c}、元気ないだろ。おで、話聞くぞ' },
+    { who:'momosuke', e:'surprise', t:'…なんで分かったの' },
+    { who:'momosuke', e:'happy', t:'…うん。ちょっとだけ聞いて' },
+  ] },
+  { id:'life-invite-atsu-momosuke-007', kind:'invite', who:'atsu', from:'momosuke', keys:{ answer:'glad' }, lines:[
+    { who:'momosuke', e:'wink', t:'{c}、HELLでスコア勝負しよ！！' },
+    { who:'atsu', e:'happy', t:'上等！ 負けないよ笑' },
+  ] },
+  { id:'life-invite-momosuke-atsu-010', kind:'invite', who:'momosuke', from:'atsu', keys:{ answer:'glad' }, lines:[
+    { who:'atsu', e:'happy', t:'{c}、ライブ見に行っていい？笑' },
+    { who:'momosuke', e:'excited', t:'もちろん！！ いちばん前で見てて！！' },
+  ] },
+  { id:'life-invite-atsu-momosuke-008', kind:'invite', who:'atsu', from:'momosuke', keys:{ answer:'decline' }, lines:[
+    { who:'momosuke', e:'excited', t:'{c}、マーケットでお買い物しよ！！' },
+    { who:'atsu', e:'troubled', t:'今ちょっと育成中！ あとで行く笑' },
+  ] },
+  { id:'life-invite-momosuke-atsu-011', kind:'invite', who:'momosuke', from:'atsu', keys:{ answer:'decline' }, lines:[
+    { who:'atsu', e:'excited', t:'{c}、もう1曲いこ！' },
+    { who:'momosuke', e:'troubled', t:'もう声が出ないよ〜！！ 明日にして！！' },
+  ] },
+  { id:'life-invite-atsu-momosuke-009', kind:'invite', who:'atsu', from:'momosuke', keys:{ answer:'shy' }, lines:[
+    { who:'momosuke', e:'normal', t:'{c}、さっきは煽りすぎた。ごめんね' },
+    { who:'atsu', e:'surprise', t:'え、気にしてないって笑' },
+    { who:'atsu', e:'happy', t:'じゃあ仲直りの一曲いこ！' },
+  ] },
+  { id:'life-invite-momosuke-atsu-012', kind:'invite', who:'momosuke', from:'atsu', keys:{ answer:'shy' }, lines:[
+    { who:'atsu', e:'wink', t:'{c}の歌、聞きたいんだけど笑' },
+    { who:'momosuke', e:'surprise', t:'え、ももの！？' },
+    { who:'momosuke', e:'wink', t:'…しょうがないなぁ。ちゃんと手ふってね♡' },
+  ] },
+  { id:'life-invite-kyuko-momosuke-007', kind:'invite', who:'kyuko', from:'momosuke', keys:{ answer:'glad' }, lines:[
+    { who:'momosuke', e:'excited', t:'{c}！！ ドリーミィに会いに行っていい！？' },
+    { who:'kyuko', e:'happy', t:'ほい！ 待ってるよぉ' },
+  ] },
+  { id:'life-invite-momosuke-kyuko-013', kind:'invite', who:'momosuke', from:'kyuko', keys:{ answer:'glad' }, lines:[
+    { who:'kyuko', e:'normal', t:'{c}、新しい編成の名前、決めてくれない？' },
+    { who:'momosuke', e:'excited', t:'決める決める！！ 最強の名前つけてあげる！！' },
+  ] },
+  { id:'life-invite-kyuko-momosuke-008', kind:'invite', who:'kyuko', from:'momosuke', keys:{ answer:'decline' }, lines:[
+    { who:'momosuke', e:'wink', t:'{c}、ドリーミィといっしょにダンスしよ！！' },
+    { who:'kyuko', e:'troubled', t:'踊るのはちょっと…見てるほうにするねぇ笑' },
+  ] },
+  { id:'life-invite-momosuke-kyuko-014', kind:'invite', who:'momosuke', from:'kyuko', keys:{ answer:'decline' }, lines:[
+    { who:'kyuko', e:'happy', t:'{c}、図書室で作戦考えよ' },
+    { who:'momosuke', e:'troubled', t:'静かなとこ、もも苦手なの！！ また今度ね！！' },
+  ] },
+  { id:'life-invite-kyuko-momosuke-009', kind:'invite', who:'kyuko', from:'momosuke', keys:{ answer:'shy' }, lines:[
+    { who:'momosuke', e:'happy', t:'{c}の作戦、ももにも分かるように教えて！！' },
+    { who:'kyuko', e:'surprise', t:'え、俺の作戦に興味あるの？' },
+    { who:'kyuko', e:'happy', t:'…うれしいなぁ。ゆっくり説明するね' },
+  ] },
+  { id:'life-invite-momosuke-kyuko-015', kind:'invite', who:'momosuke', from:'kyuko', keys:{ answer:'shy' }, lines:[
+    { who:'kyuko', e:'normal', t:'{c}、さっきドリーミィをひとり占めしてたの、べつにいいよ笑' },
+    { who:'momosuke', e:'troubled', t:'…ごめん。かわいすぎて' },
+    { who:'momosuke', e:'wink', t:'…じゃあ今日は、いっしょにかわいがろ！！' },
+  ] },
+  { id:'life-invite-sorashido-momosuke-007', kind:'invite', who:'sorashido', from:'momosuke', keys:{ answer:'glad' }, lines:[
+    { who:'momosuke', e:'excited', t:'{c}、スコア勝負しよ！！' },
+    { who:'sorashido', e:'excited', t:'のった！ 記録の準備はできてるぜ・・・！' },
+  ] },
+  { id:'life-invite-momosuke-sorashido-016', kind:'invite', who:'momosuke', from:'sorashido', keys:{ answer:'glad' }, lines:[
+    { who:'sorashido', e:'normal', t:'{c}、今日のミスの数、いっしょに数えるか？' },
+    { who:'momosuke', e:'wink', t:'少なかったら、いっぱいほめてね♡' },
+  ] },
+  { id:'life-invite-sorashido-momosuke-008', kind:'invite', who:'sorashido', from:'momosuke', keys:{ answer:'decline' }, lines:[
+    { who:'momosuke', e:'happy', t:'{c}、おやつ行こ！！' },
+    { who:'sorashido', e:'troubled', t:'今、表のいいとこなんだ…あと10分！' },
+  ] },
+  { id:'life-invite-momosuke-sorashido-017', kind:'invite', who:'momosuke', from:'sorashido', keys:{ answer:'decline' }, lines:[
+    { who:'sorashido', e:'excited', t:'{c}、ミスの反省会やるぞ！' },
+    { who:'momosuke', e:'troubled', t:'反省会はいや〜！！ 楽しいことなら行く！！' },
+  ] },
+  { id:'life-invite-sorashido-momosuke-009', kind:'invite', who:'sorashido', from:'momosuke', keys:{ answer:'shy' }, lines:[
+    { who:'momosuke', e:'normal', t:'{c}、この前は大声で笑ってごめんね' },
+    { who:'sorashido', e:'troubled', t:'……べつに気にしてないぞ笑' },
+    { who:'sorashido', e:'happy', t:'で、次の勝負はいつにする？' },
+  ] },
+  { id:'life-invite-momosuke-sorashido-018', kind:'invite', who:'momosuke', from:'sorashido', keys:{ answer:'shy' }, lines:[
+    { who:'sorashido', e:'happy', t:'{c}の応援の歌、また聞きたいんだけど' },
+    { who:'momosuke', e:'surprise', t:'え、ほんと！？' },
+    { who:'momosuke', e:'wink', t:'…しょうがないなぁ。特別ね♡' },
+  ] },
+  { id:'life-invite-erubin-momosuke-007', kind:'invite', who:'erubin', from:'momosuke', keys:{ answer:'glad' }, lines:[
+    { who:'momosuke', e:'excited', t:'{c}、今日もおしゃべりしよ！！' },
+    { who:'erubin', e:'happy', t:'おけ！ たくさん聞くよ☺️' },
+  ] },
+  { id:'life-invite-momosuke-erubin-019', kind:'invite', who:'momosuke', from:'erubin', keys:{ answer:'glad' }, lines:[
+    { who:'erubin', e:'normal', t:'{c}、ライブの衣装、いっしょに見に行かない？' },
+    { who:'momosuke', e:'excited', t:'行く！！ {c}に選んでほしかったの！！' },
+  ] },
+  { id:'life-invite-erubin-momosuke-008', kind:'invite', who:'erubin', from:'momosuke', keys:{ answer:'decline' }, lines:[
+    { who:'momosuke', e:'wink', t:'{c}、石油王の服で来て！！w' },
+    { who:'erubin', e:'troubled', t:'それは恥ずかしいかな笑 ふつうの服でなら行くね' },
+  ] },
+  { id:'life-invite-momosuke-erubin-020', kind:'invite', who:'momosuke', from:'erubin', keys:{ answer:'decline' }, lines:[
+    { who:'erubin', e:'normal', t:'{c}、中庭でゆっくり散歩しない？' },
+    { who:'momosuke', e:'troubled', t:'今は練習したい気分なの！！ 夜なら行く！！' },
+  ] },
+  { id:'life-invite-erubin-momosuke-009', kind:'invite', who:'erubin', from:'momosuke', keys:{ answer:'shy' }, lines:[
+    { who:'momosuke', e:'normal', t:'{c}、この前はおしゃべりしすぎてごめんね' },
+    { who:'erubin', e:'surprise', t:'ぜんぜんだよ。楽しかったし' },
+    { who:'erubin', e:'happy', t:'今日も聞かせてくれるかな？' },
+  ] },
+  { id:'life-invite-momosuke-erubin-021', kind:'invite', who:'momosuke', from:'erubin', keys:{ answer:'shy' }, lines:[
+    { who:'erubin', e:'happy', t:'{c}の歌、聞きに行ってもいいかな' },
+    { who:'momosuke', e:'surprise', t:'え、{c}が！？' },
+    { who:'momosuke', e:'wink', t:'…いちばんいい席、空けとくね♡' },
+  ] },
+  { id:'life-invite-atsu-dra-010', kind:'invite', who:'atsu', from:'dra', keys:{ answer:'glad' }, lines:[
+    { who:'dra', e:'normal', t:'{c}、暇なら一戦どうだ' },
+    { who:'atsu', e:'excited', t:'いいね、待ってた！ 今日は勝つから笑' },
+  ] },
+  { id:'life-invite-dra-atsu-010', kind:'invite', who:'dra', from:'atsu', keys:{ answer:'glad' }, lines:[
+    { who:'atsu', e:'happy', t:'{c}、決勝の続きやろ笑' },
+    { who:'dra', e:'excited', t:'おう！ 膝の準備はできてるぞ' },
+  ] },
+  { id:'life-invite-atsu-dra-011', kind:'invite', who:'atsu', from:'dra', keys:{ answer:'decline' }, lines:[
+    { who:'dra', e:'happy', t:'{c}、ひなたで昼寝しないか？' },
+    { who:'atsu', e:'troubled', t:'寝てる場合じゃないんだよね笑 練習してくる！' },
+  ] },
+  { id:'life-invite-dra-atsu-011', kind:'invite', who:'dra', from:'atsu', keys:{ answer:'decline' }, lines:[
+    { who:'atsu', e:'excited', t:'{c}、たまには上の難易度いこうよ！' },
+    { who:'dra', e:'troubled', t:'HELLは膝が泣くんだよ…カードなら行くぞ' },
+  ] },
+  { id:'life-invite-atsu-dra-012', kind:'invite', who:'atsu', from:'dra', keys:{ answer:'shy' }, lines:[
+    { who:'dra', e:'normal', t:'{c}、さっきの勝負、ノーカンでいいぞ' },
+    { who:'atsu', e:'surprise', t:'え、いいの？笑' },
+    { who:'atsu', e:'happy', t:'じゃあもう1戦！ 今度はちゃんと数えて！' },
+  ] },
+  { id:'life-invite-dra-atsu-012', kind:'invite', who:'dra', from:'atsu', keys:{ answer:'shy' }, lines:[
+    { who:'atsu', e:'wink', t:'{c}の説明、また聞きたいんだけど笑' },
+    { who:'dra', e:'surprise', t:'お、おでの？' },
+    { who:'dra', e:'happy', t:'……えへへ。しょうがないな、教えてやるわ' },
+  ] },
+  { id:'life-invite-kyuko-dra-010', kind:'invite', who:'kyuko', from:'dra', keys:{ answer:'glad' }, lines:[
+    { who:'dra', e:'normal', t:'{c}、山札見てやろうか' },
+    { who:'kyuko', e:'happy', t:'ほい！ お願いしまーす' },
+  ] },
+  { id:'life-invite-dra-kyuko-013', kind:'invite', who:'dra', from:'kyuko', keys:{ answer:'glad' }, lines:[
+    { who:'kyuko', e:'normal', t:'{c}、ゆっくり散歩しよ。急がないやつ' },
+    { who:'dra', e:'happy', t:'それならおでも大歓迎だ' },
+  ] },
+  { id:'life-invite-kyuko-dra-011', kind:'invite', who:'kyuko', from:'dra', keys:{ answer:'decline' }, lines:[
+    { who:'dra', e:'wink', t:'{c}、今日のギャグ聞くか？' },
+    { who:'kyuko', e:'troubled', t:'今は図書室で考えごとしたいんだぁ。あとで聞くね笑' },
+  ] },
+  { id:'life-invite-dra-kyuko-014', kind:'invite', who:'dra', from:'kyuko', keys:{ answer:'decline' }, lines:[
+    { who:'kyuko', e:'happy', t:'{c}、練習スタジオで叩こ' },
+    { who:'dra', e:'troubled', t:'今はひなたで寝る時間なんだよ…夕方なら行く' },
+  ] },
+  { id:'life-invite-kyuko-dra-012', kind:'invite', who:'kyuko', from:'dra', keys:{ answer:'shy' }, lines:[
+    { who:'dra', e:'normal', t:'{c}、寝ぐせのこと言って悪かったな。……せんべい食うか？' },
+    { who:'kyuko', e:'troubled', t:'…べつにいいけどぉ' },
+    { who:'kyuko', e:'happy', t:'…1枚だけね笑' },
+  ] },
+  { id:'life-invite-dra-kyuko-015', kind:'invite', who:'dra', from:'kyuko', keys:{ answer:'shy' }, lines:[
+    { who:'kyuko', e:'normal', t:'{c}、前に教えてくれたやつのお礼、させて' },
+    { who:'dra', e:'surprise', t:'お礼？ おでは大したことしてないぞ' },
+    { who:'dra', e:'happy', t:'……ま、もらえるもんはもらっとくか。えへへ' },
+  ] },
+  { id:'life-invite-sorashido-dra-010', kind:'invite', who:'sorashido', from:'dra', keys:{ answer:'glad' }, lines:[
+    { who:'dra', e:'normal', t:'{c}、新しい表、読ませてくれるか？' },
+    { who:'sorashido', e:'excited', t:'もちろんだ！ 40ページあるぞ笑' },
+  ] },
+  { id:'life-invite-dra-sorashido-016', kind:'invite', who:'dra', from:'sorashido', keys:{ answer:'glad' }, lines:[
+    { who:'sorashido', e:'excited', t:'{c}、攻略本の説明、書いてくれないか！' },
+    { who:'dra', e:'happy', t:'おう。ギャグ入りでいいならな' },
+  ] },
+  { id:'life-invite-sorashido-dra-011', kind:'invite', who:'sorashido', from:'dra', keys:{ answer:'decline' }, lines:[
+    { who:'dra', e:'happy', t:'{c}、昼寝しないか？' },
+    { who:'sorashido', e:'troubled', t:'今は計算中で寝られないんだ笑 終わったら行く' },
+  ] },
+  { id:'life-invite-dra-sorashido-017', kind:'invite', who:'dra', from:'sorashido', keys:{ answer:'decline' }, lines:[
+    { who:'sorashido', e:'excited', t:'{c}、朝まで研究しようぜ・・・！' },
+    { who:'dra', e:'troubled', t:'朝までは膝がもたないわ。夕方までならいいぞ' },
+  ] },
+  { id:'life-invite-sorashido-dra-012', kind:'invite', who:'sorashido', from:'dra', keys:{ answer:'shy' }, lines:[
+    { who:'dra', e:'normal', t:'{c}、誤字を笑ったの、悪かったな' },
+    { who:'sorashido', e:'troubled', t:'……べつに気にしてないって笑' },
+    { who:'sorashido', e:'happy', t:'じゃあ、いっしょに誤字探しやろう' },
+  ] },
+  { id:'life-invite-dra-sorashido-018', kind:'invite', who:'dra', from:'sorashido', keys:{ answer:'shy' }, lines:[
+    { who:'sorashido', e:'happy', t:'{c}、いつも表を最後まで読んでくれて、ありがとうな' },
+    { who:'dra', e:'surprise', t:'お、おう…急にどうした' },
+    { who:'dra', e:'happy', t:'……えへへ。これからも読むから、早く次の作れよ' },
+  ] },
+  { id:'life-invite-erubin-dra-010', kind:'invite', who:'erubin', from:'dra', keys:{ answer:'glad' }, lines:[
+    { who:'dra', e:'normal', t:'ビンビン、カードやるか？' },
+    { who:'erubin', e:'happy', t:'もちろん。{c}とやるのが楽しいからね' },
+  ] },
+  { id:'life-invite-dra-erubin-019', kind:'invite', who:'dra', from:'erubin', keys:{ answer:'glad' }, lines:[
+    { who:'erubin', e:'normal', t:'{c}、デュラハンの新しい形、見てもらえるかな' },
+    { who:'dra', e:'happy', t:'おう、見せてみな' },
+  ] },
+  { id:'life-invite-erubin-dra-011', kind:'invite', who:'erubin', from:'dra', keys:{ answer:'decline' }, lines:[
+    { who:'dra', e:'wink', t:'{c}、石油王の服で対戦しないか？' },
+    { who:'erubin', e:'troubled', t:'それはずるい作戦じゃないかな笑 ふつうの服でならいいよ' },
+  ] },
+  { id:'life-invite-dra-erubin-020', kind:'invite', who:'dra', from:'erubin', keys:{ answer:'decline' }, lines:[
+    { who:'erubin', e:'happy', t:'{c}、朝の散歩、いっしょにどうかな' },
+    { who:'dra', e:'troubled', t:'朝は膝がまだ起きてないんだ…昼からならな' },
+  ] },
+  { id:'life-invite-erubin-dra-012', kind:'invite', who:'erubin', from:'dra', keys:{ answer:'shy' }, lines:[
+    { who:'dra', e:'normal', t:'{c}、石油王の話、しつこかったな。悪かった' },
+    { who:'erubin', e:'surprise', t:'気にしてないよ笑' },
+    { who:'erubin', e:'happy', t:'じゃあ、仲直りに一戦しようか' },
+  ] },
+  { id:'life-invite-dra-erubin-021', kind:'invite', who:'dra', from:'erubin', keys:{ answer:'shy' }, lines:[
+    { who:'erubin', e:'happy', t:'{c}に教わったカード、今では大好きなんだ' },
+    { who:'dra', e:'surprise', t:'……そうか。それはうれしいな' },
+    { who:'dra', e:'happy', t:'じゃあ今日も、いい勝負しようか' },
+  ] },
+  { id:'life-invite-kyuko-atsu-013', kind:'invite', who:'kyuko', from:'atsu', keys:{ answer:'glad' }, lines:[
+    { who:'atsu', e:'happy', t:'{c}、次のイベント、二人で上位とろ！' },
+    { who:'kyuko', e:'happy', t:'ほい！ 計画はもう立ててあるよぉ' },
+  ] },
+  { id:'life-invite-atsu-kyuko-013', kind:'invite', who:'atsu', from:'kyuko', keys:{ answer:'glad' }, lines:[
+    { who:'kyuko', e:'normal', t:'{c}、新しい編成、試し打ちつきあって' },
+    { who:'atsu', e:'excited', t:'いいね！ すぐ行く笑' },
+  ] },
+  { id:'life-invite-kyuko-atsu-014', kind:'invite', who:'kyuko', from:'atsu', keys:{ answer:'decline' }, lines:[
+    { who:'atsu', e:'excited', t:'{c}、HELL3周いこ！' },
+    { who:'kyuko', e:'troubled', t:'3周はむりぃ笑 1周なら行く' },
+  ] },
+  { id:'life-invite-atsu-kyuko-014', kind:'invite', who:'atsu', from:'kyuko', keys:{ answer:'decline' }, lines:[
+    { who:'kyuko', e:'happy', t:'{c}、図書室で作戦考えよ' },
+    { who:'atsu', e:'troubled', t:'静かなとこだと寝ちゃう笑 練習スタジオでならいいよ！' },
+  ] },
+  { id:'life-invite-kyuko-atsu-015', kind:'invite', who:'kyuko', from:'atsu', keys:{ answer:'shy' }, lines:[
+    { who:'atsu', e:'wink', t:'{c}の作戦待たずに突っこんでごめん笑' },
+    { who:'kyuko', e:'troubled', t:'…ほんとだよぉ' },
+    { who:'kyuko', e:'happy', t:'…次はちゃんと待ってね。じゃあ行こ' },
+  ] },
+  { id:'life-invite-atsu-kyuko-015', kind:'invite', who:'atsu', from:'kyuko', keys:{ answer:'shy' }, lines:[
+    { who:'kyuko', e:'happy', t:'{c}が誘ってくれたから、ランキングここまで来れたんだぁ' },
+    { who:'atsu', e:'surprise', t:'え、急にどうしたの？笑' },
+    { who:'atsu', e:'happy', t:'…照れるじゃん！ じゃあ次も上いこ！' },
+  ] },
+  { id:'life-invite-sorashido-atsu-013', kind:'invite', who:'sorashido', from:'atsu', keys:{ answer:'glad' }, lines:[
+    { who:'atsu', e:'happy', t:'{c}、今日も勝負する？笑' },
+    { who:'sorashido', e:'excited', t:'当たり前だ！ 準備はできてるぜ・・・！' },
+  ] },
+  { id:'life-invite-atsu-sorashido-016', kind:'invite', who:'atsu', from:'sorashido', keys:{ answer:'glad' }, lines:[
+    { who:'sorashido', e:'excited', t:'{c}、今日は協力プレイしよう！' },
+    { who:'atsu', e:'happy', t:'いいね！ 強すぎるやつね笑' },
+  ] },
+  { id:'life-invite-sorashido-atsu-014', kind:'invite', who:'sorashido', from:'atsu', keys:{ answer:'decline' }, lines:[
+    { who:'atsu', e:'excited', t:'{c}、もう1戦いこ！' },
+    { who:'sorashido', e:'troubled', t:'さっきの分析が終わってないんだ…終わったらすぐ行く笑' },
+  ] },
+  { id:'life-invite-atsu-sorashido-017', kind:'invite', who:'atsu', from:'sorashido', keys:{ answer:'decline' }, lines:[
+    { who:'sorashido', e:'normal', t:'{c}、反省会の表、いっしょに見よう' },
+    { who:'atsu', e:'troubled', t:'反省会は1回でいいって笑 次の勝負なら行く！' },
+  ] },
+  { id:'life-invite-sorashido-atsu-015', kind:'invite', who:'sorashido', from:'atsu', keys:{ answer:'shy' }, lines:[
+    { who:'atsu', e:'happy', t:'{c}、さっきの数え方、俺がまちがってた笑' },
+    { who:'sorashido', e:'troubled', t:'……いや、俺もむきになってた' },
+    { who:'sorashido', e:'happy', t:'次からは2人で数えよう' },
+  ] },
+  { id:'life-invite-atsu-sorashido-018', kind:'invite', who:'atsu', from:'sorashido', keys:{ answer:'shy' }, lines:[
+    { who:'sorashido', e:'happy', t:'{c}の打ち方、表にしてずっと見てるんだ' },
+    { who:'atsu', e:'surprise', t:'え、まじで？笑' },
+    { who:'atsu', e:'happy', t:'…照れるな！ じゃ、見本見せに行く！' },
+  ] },
+  { id:'life-invite-erubin-atsu-013', kind:'invite', who:'erubin', from:'atsu', keys:{ answer:'glad' }, lines:[
+    { who:'atsu', e:'happy', t:'{c}、ベンチで少し休まない？笑' },
+    { who:'erubin', e:'happy', t:'いいね。{c}もがんばりすぎだしね' },
+  ] },
+  { id:'life-invite-atsu-erubin-019', kind:'invite', who:'atsu', from:'erubin', keys:{ answer:'glad' }, lines:[
+    { who:'erubin', e:'normal', t:'{c}、みんなの様子、いっしょに見に行かない？' },
+    { who:'atsu', e:'happy', t:'いいね！ 前は俺、後ろは{c}で笑' },
+  ] },
+  { id:'life-invite-erubin-atsu-014', kind:'invite', who:'erubin', from:'atsu', keys:{ answer:'decline' }, lines:[
+    { who:'atsu', e:'excited', t:'{c}、いっしょに一曲どう？' },
+    { who:'erubin', e:'troubled', t:'俺には速すぎるかな💦 見てるだけでもいい？' },
+  ] },
+  { id:'life-invite-atsu-erubin-020', kind:'invite', who:'atsu', from:'erubin', keys:{ answer:'decline' }, lines:[
+    { who:'erubin', e:'normal', t:'{c}、今日は早めに休まない？' },
+    { who:'atsu', e:'troubled', t:'まだやれるって笑 あと1曲だけ！' },
+  ] },
+  { id:'life-invite-erubin-atsu-015', kind:'invite', who:'erubin', from:'atsu', keys:{ answer:'shy' }, lines:[
+    { who:'atsu', e:'normal', t:'{c}、さっきは止めてくれてありがと！' },
+    { who:'erubin', e:'surprise', t:'俺、強く言いすぎたかなって思ってたんだ' },
+    { who:'erubin', e:'happy', t:'じゃあ、いっしょにお茶にしようか' },
+  ] },
+  { id:'life-invite-atsu-erubin-021', kind:'invite', who:'atsu', from:'erubin', keys:{ answer:'shy' }, lines:[
+    { who:'erubin', e:'happy', t:'{c}が前にいてくれるから、安心して見ていられるんだよね' },
+    { who:'atsu', e:'surprise', t:'え、急にどうしたの？' },
+    { who:'atsu', e:'happy', t:'…照れるじゃん笑 じゃ、いっしょに行こ！' },
+  ] },
+  { id:'life-invite-sorashido-kyuko-016', kind:'invite', who:'sorashido', from:'kyuko', keys:{ answer:'glad' }, lines:[
+    { who:'kyuko', e:'normal', t:'{c}、このメモ、表にしてくれる？' },
+    { who:'sorashido', e:'excited', t:'まかせろ！ すぐやるぜ・・・！' },
+  ] },
+  { id:'life-invite-kyuko-sorashido-016', kind:'invite', who:'kyuko', from:'sorashido', keys:{ answer:'glad' }, lines:[
+    { who:'sorashido', e:'normal', t:'{c}、ニャーの勝負しないか？' },
+    { who:'kyuko', e:'happy', t:'ほい！ どっちが速いか見よっか' },
+  ] },
+  { id:'life-invite-sorashido-kyuko-017', kind:'invite', who:'sorashido', from:'kyuko', keys:{ answer:'decline' }, lines:[
+    { who:'kyuko', e:'happy', t:'{c}、攻略なしで散歩しよ' },
+    { who:'sorashido', e:'troubled', t:'……攻略なしは、まだ自信ない笑 また今度な' },
+  ] },
+  { id:'life-invite-kyuko-sorashido-017', kind:'invite', who:'kyuko', from:'sorashido', keys:{ answer:'decline' }, lines:[
+    { who:'sorashido', e:'excited', t:'{c}、朝まで研究しようぜ・・・！' },
+    { who:'kyuko', e:'troubled', t:'朝までは無理ぃ。俺、もう眠いよぉ' },
+  ] },
+  { id:'life-invite-sorashido-kyuko-018', kind:'invite', who:'sorashido', from:'kyuko', keys:{ answer:'shy' }, lines:[
+    { who:'kyuko', e:'normal', t:'{c}、メモを表にされたの、もう気にしてないよぉ' },
+    { who:'sorashido', e:'troubled', t:'……ほんとか？' },
+    { who:'sorashido', e:'happy', t:'じゃあ次は、ちゃんと聞いてから作る' },
+  ] },
+  { id:'life-invite-kyuko-sorashido-018', kind:'invite', who:'kyuko', from:'sorashido', keys:{ answer:'shy' }, lines:[
+    { who:'sorashido', e:'happy', t:'{c}の勘、数字で見てもすごいんだよな' },
+    { who:'kyuko', e:'surprise', t:'え、ほめられてる？' },
+    { who:'kyuko', e:'happy', t:'…ありがとん笑 じゃあ今日もいっしょに研究しよ' },
+  ] },
+  { id:'life-invite-sorashido-erubin-019', kind:'invite', who:'sorashido', from:'erubin', keys:{ answer:'glad' }, lines:[
+    { who:'erubin', e:'normal', t:'{c}、また表を見せてもらえるかな' },
+    { who:'sorashido', e:'excited', t:'もちろんだ！ 字も大きくしたぜ・・・！' },
+  ] },
+  { id:'life-invite-erubin-sorashido-016', kind:'invite', who:'erubin', from:'sorashido', keys:{ answer:'glad' }, lines:[
+    { who:'sorashido', e:'normal', t:'{c}、デュラハンの使われ方、新しく数えたんだ' },
+    { who:'erubin', e:'happy', t:'見たいな。今行くね☺️' },
+  ] },
+  { id:'life-invite-sorashido-erubin-020', kind:'invite', who:'sorashido', from:'erubin', keys:{ answer:'decline' }, lines:[
+    { who:'erubin', e:'happy', t:'{c}、少し休もう。昨日も寝てないでしょ' },
+    { who:'sorashido', e:'troubled', t:'あと1列だけ…ほんとに1列だけ笑' },
+  ] },
+  { id:'life-invite-erubin-sorashido-017', kind:'invite', who:'erubin', from:'sorashido', keys:{ answer:'decline' }, lines:[
+    { who:'sorashido', e:'excited', t:'{c}、朝までカード研究しようぜ・・・！' },
+    { who:'erubin', e:'troubled', t:'朝までは、ちょっと無理かも💦 夕方までならいいよ' },
+  ] },
+  { id:'life-invite-sorashido-erubin-021', kind:'invite', who:'sorashido', from:'erubin', keys:{ answer:'shy' }, lines:[
+    { who:'erubin', e:'normal', t:'{c}、表の字が小さいって言いすぎたかな。ごめんね' },
+    { who:'sorashido', e:'troubled', t:'……いや、ほんとに小さかったし笑' },
+    { who:'sorashido', e:'happy', t:'大きくしたから、見てくれ' },
+  ] },
+  { id:'life-invite-erubin-sorashido-018', kind:'invite', who:'erubin', from:'sorashido', keys:{ answer:'shy' }, lines:[
+    { who:'sorashido', e:'happy', t:'{c}の「見守り」、数字にならないけど一番効いてる気がするんだ' },
+    { who:'erubin', e:'surprise', t:'本当？' },
+    { who:'erubin', e:'happy', t:'…うれしいな。じゃあ今日もそばにいるね' },
+  ] },
+  { id:'life-invite-kyuko-erubin-019', kind:'invite', who:'kyuko', from:'erubin', keys:{ answer:'glad' }, lines:[
+    { who:'erubin', e:'normal', t:'{c}、お茶にしない？ 少し休もうか' },
+    { who:'kyuko', e:'happy', t:'ほい！ ちょうど休みたかったんだぁ' },
+  ] },
+  { id:'life-invite-erubin-kyuko-019', kind:'invite', who:'erubin', from:'kyuko', keys:{ answer:'glad' }, lines:[
+    { who:'kyuko', e:'normal', t:'{c}、お気に入りの場所、教えてあげる' },
+    { who:'erubin', e:'happy', t:'本当？ うれしいな。連れていってほしいな☺️' },
+  ] },
+  { id:'life-invite-kyuko-erubin-020', kind:'invite', who:'kyuko', from:'erubin', keys:{ answer:'decline' }, lines:[
+    { who:'erubin', e:'happy', t:'{c}、朝の散歩に行かない？' },
+    { who:'kyuko', e:'troubled', t:'朝は無理ぃ…昨日も夜ふかししちゃった笑' },
+  ] },
+  { id:'life-invite-erubin-kyuko-020', kind:'invite', who:'erubin', from:'kyuko', keys:{ answer:'decline' }, lines:[
+    { who:'kyuko', e:'happy', t:'{c}、夜中まで育成しよ' },
+    { who:'erubin', e:'troubled', t:'夜中までは心配だな💦 夕方までならいっしょにやるよ' },
+  ] },
+  { id:'life-invite-kyuko-erubin-021', kind:'invite', who:'kyuko', from:'erubin', keys:{ answer:'shy' }, lines:[
+    { who:'erubin', e:'normal', t:'{c}、さっきは心配しすぎたかな。ごめんね' },
+    { who:'kyuko', e:'troubled', t:'…べつにいいよぉ' },
+    { who:'kyuko', e:'happy', t:'…心配してくれるの、ちょっとうれしいし' },
+  ] },
+  { id:'life-invite-erubin-kyuko-021', kind:'invite', who:'erubin', from:'kyuko', keys:{ answer:'shy' }, lines:[
+    { who:'kyuko', e:'happy', t:'{c}、いつも見守ってくれてありがとん' },
+    { who:'erubin', e:'surprise', t:'気づいてたんだね笑' },
+    { who:'erubin', e:'happy', t:'じゃあ今日も、そばで見てるね' },
+  ] },
+  { id:'life-trio-dra-erubin-momosuke-001', kind:'trio', trio:['dra', 'erubin', 'momosuke'], keys:{ doing:'walk' }, lines:[
+    { who:'momosuke', e:'happy', t:'{c:dra}、膝だいじょぶ？ ゆっくり歩こ！！' },
+    { who:'dra', e:'happy', t:'おう、ありがとな。おでの膝は今日も元気だ。……たぶん' },
+    { who:'erubin', e:'happy', t:'疲れたら、あそこのベンチで休もうね' },
+  ] },
+  { id:'life-trio-dra-erubin-momosuke-002', kind:'trio', trio:['dra', 'erubin', 'momosuke'], keys:{ doing:'snack' }, lines:[
+    { who:'dra', e:'normal', t:'プリン3つ買ってきたぞ' },
+    { who:'momosuke', e:'excited', t:'さすが{c:dra}！！ ももは2つね！！' },
+    { who:'erubin', e:'troubled', t:'それだと{c:dra}の分がなくなっちゃうよ笑' },
+  ] },
+  { id:'life-trio-dra-erubin-momosuke-003', kind:'trio', trio:['dra', 'erubin', 'momosuke'], keys:{ doing:'cards' }, lines:[
+    { who:'erubin', e:'normal', t:'{c:dra}に教わった形、{c:momosuke}にも見せたいな' },
+    { who:'momosuke', e:'excited', t:'見たい見たい！！ ピカピカのカード入ってる？' },
+    { who:'dra', e:'wink', t:'入れといてやるか。えへへ' },
+  ] },
+  { id:'life-trio-dra-erubin-momosuke-004', kind:'trio', trio:['dra', 'erubin', 'momosuke'], keys:{  }, lines:[
+    { who:'momosuke', e:'wink', t:'今日のおしゃべり、ももが司会ね！！' },
+    { who:'erubin', e:'happy', t:'おけ！ 聞き役は俺がするね' },
+    { who:'dra', e:'happy', t:'じゃあおでは、合いの手係だな' },
+  ] },
+  { id:'life-trio-atsu-mua-sorashido-001', kind:'trio', trio:['atsu', 'mua', 'sorashido'], keys:{ doing:'practice' }, lines:[
+    { who:'atsu', e:'happy', t:'今日はHELLいこ笑' },
+    { who:'mua', e:'excited', t:'のった！ {c:sorashido}、記録お願い！' },
+    { who:'sorashido', e:'excited', t:'まかせろ、全部数えるぜ・・・！' },
+  ] },
+  { id:'life-trio-atsu-mua-sorashido-002', kind:'trio', trio:['atsu', 'mua', 'sorashido'], keys:{ doing:'snack' }, lines:[
+    { who:'mua', e:'excited', t:'3人でおやつって、めずらしいね！' },
+    { who:'sorashido', e:'normal', t:'計算したら、この3人がそろうのは週に2回くらいだ笑' },
+    { who:'atsu', e:'wink', t:'数えてたの？笑 じゃあ今日は特別だね！' },
+  ] },
+  { id:'life-trio-atsu-mua-sorashido-003', kind:'trio', trio:['atsu', 'mua', 'sorashido'], keys:{  }, lines:[
+    { who:'sorashido', e:'crying', t:'また{c:atsu}に2点差で負けた…' },
+    { who:'mua', e:'happy', t:'2点なら、ほぼ勝ちぢゃん！' },
+    { who:'atsu', e:'happy', t:'それね笑 次は3人で協力しよ！' },
+  ] },
+  { id:'life-trio-atsu-kiki-sorashido-004', kind:'trio', trio:['atsu', 'kiki', 'sorashido'], keys:{ doing:'training' }, lines:[
+    { who:'kiki', e:'normal', t:'今日も、ちからに振りまつ' },
+    { who:'sorashido', e:'troubled', t:'{c:kiki}、ほかの数字がずっと止まってるぞ…' },
+    { who:'atsu', e:'happy', t:'でも強いからいいじゃん笑' },
+  ] },
+  { id:'life-trio-atsu-kiki-sorashido-005', kind:'trio', trio:['atsu', 'kiki', 'sorashido'], keys:{ doing:'cards' }, lines:[
+    { who:'atsu', e:'excited', t:'{c:kiki}が攻めて、俺が続く！' },
+    { who:'kiki', e:'wink', t:'押し切りましょう ( ˘ω˘)9グッ!' },
+    { who:'sorashido', e:'happy', t:'勝率、計算しなくても分かるわ笑' },
+  ] },
+  { id:'life-trio-atsu-kiki-sorashido-006', kind:'trio', trio:['atsu', 'kiki', 'sorashido'], keys:{  }, lines:[
+    { who:'sorashido', e:'normal', t:'3人の勝ち数、表にしてもいいか？' },
+    { who:'kiki', e:'happy', t:'はい。いちばん上は、私たちですね' },
+    { who:'atsu', e:'wink', t:'上の段は俺らのものだね笑' },
+  ] },
+  { id:'life-trio-kiki-kyuko-mua-001', kind:'trio', trio:['kiki', 'kyuko', 'mua'], keys:{ doing:'snack' }, lines:[
+    { who:'mua', e:'excited', t:'ねぇねぇ、今日はなに食べる？' },
+    { who:'kiki', e:'happy', t:'私はお茶だけで。{c:kyuko}は？' },
+    { who:'kyuko', e:'happy', t:'甘いのと辛いの両方笑 {c:mua}と半分こする' },
+  ] },
+  { id:'life-trio-kiki-kyuko-mua-002', kind:'trio', trio:['kiki', 'kyuko', 'mua'], keys:{  }, lines:[
+    { who:'mua', e:'excited', t:'図書室、3人だとちょっと楽しいね！' },
+    { who:'kiki', e:'normal', t:'{c:mua}、声が少し大きいですよ' },
+    { who:'kyuko', e:'happy', t:'小声のつもりなんだよね笑 分かる分かる' },
+  ] },
+  { id:'life-trio-kiki-kyuko-mua-003', kind:'trio', trio:['kiki', 'kyuko', 'mua'], keys:{ doing:'training' }, lines:[
+    { who:'kyuko', e:'normal', t:'{c:mua}のモッチー、{c:kiki}のゴーレムと練習させよっか' },
+    { who:'kiki', e:'happy', t:'いいですね。押し切りの練習でつ' },
+    { who:'mua', e:'surprise', t:'え、モッチー押し切られちゃう！？ｗ' },
+  ] },
+  { id:'life-trio-momosuke-mua-sorashido-001', kind:'trio', trio:['momosuke', 'mua', 'sorashido'], keys:{ doing:'practice' }, lines:[
+    { who:'momosuke', e:'excited', t:'今のポーズ、おそろいにしよ！！' },
+    { who:'mua', e:'wink', t:'いいね！ {c:sorashido}、写真お願い！' },
+    { who:'sorashido', e:'happy', t:'角度、計算して撮るわ笑' },
+  ] },
+  { id:'life-trio-momosuke-mua-sorashido-002', kind:'trio', trio:['momosuke', 'mua', 'sorashido'], keys:{  }, lines:[
+    { who:'sorashido', e:'normal', t:'{c:momosuke}、今日のミス2つだったぞ' },
+    { who:'momosuke', e:'wink', t:'大きい声で言わないでw' },
+    { who:'mua', e:'happy', t:'でも減ったぢゃん！ えらいえらい！' },
+  ] },
+  { id:'life-trio-momosuke-mua-sorashido-003', kind:'trio', trio:['momosuke', 'mua', 'sorashido'], keys:{ doing:'snack' }, lines:[
+    { who:'mua', e:'excited', t:'いちごタルト、最後の1個！' },
+    { who:'momosuke', e:'excited', t:'ももの！！' },
+    { who:'sorashido', e:'normal', t:'……あみだくじ、作っといたぜ・・・！' },
+  ] },
+  { id:'life-trio-kiki-mua-sorashido-004', kind:'trio', trio:['kiki', 'mua', 'sorashido'], keys:{ doing:'snack' }, lines:[
+    { who:'sorashido', e:'excited', t:'おやつ屋さんの新作、全部で6つだ！' },
+    { who:'mua', e:'happy', t:'ぢゃあ2個ずつ分けよ♪' },
+    { who:'kiki', e:'wink', t:'では、甘さの表も作っていただけますか？' },
+  ] },
+  { id:'life-trio-kiki-mua-sorashido-005', kind:'trio', trio:['kiki', 'mua', 'sorashido'], keys:{ doing:'walk' }, lines:[
+    { who:'mua', e:'happy', t:'{place}、気持ちいいね！' },
+    { who:'kiki', e:'normal', t:'{c:sorashido}、今日は歩数を数えないでくださいね' },
+    { who:'sorashido', e:'troubled', t:'……もう1,000歩数えちゃった笑' },
+  ] },
+  { id:'life-trio-kiki-mua-sorashido-006', kind:'trio', trio:['kiki', 'mua', 'sorashido'], keys:{  }, lines:[
+    { who:'kiki', e:'happy', t:'3人そろうと、にぎやかでいいですね' },
+    { who:'mua', e:'excited', t:'{c:kiki}が笑ってると、あたしもうれしい！' },
+    { who:'sorashido', e:'happy', t:'笑った回数も表にしたら、怒られるか笑' },
+  ] },
+  { id:'life-trio-dra-kiki-sorashido-005', kind:'trio', trio:['dra', 'kiki', 'sorashido'], keys:{ doing:'cards' }, lines:[
+    { who:'dra', e:'normal', t:'この組み方、勝率はどうだ？' },
+    { who:'sorashido', e:'excited', t:'6割だ！ でも{c:kiki}が使うと8割になる' },
+    { who:'kiki', e:'wink', t:'攻撃の枚数を増やしましたので' },
+  ] },
+  { id:'life-trio-dra-kiki-sorashido-006', kind:'trio', trio:['dra', 'kiki', 'sorashido'], keys:{  }, lines:[
+    { who:'kiki', e:'normal', t:'{c:dra}のギャグ、今日は何回目ですか？' },
+    { who:'sorashido', e:'happy', t:'数えたら7回目だぜ笑' },
+    { who:'dra', e:'troubled', t:'2人して数えるなよ……' },
+  ] },
+  { id:'life-trio-dra-kiki-sorashido-007', kind:'trio', trio:['dra', 'kiki', 'sorashido'], keys:{ doing:'snack' }, lines:[
+    { who:'dra', e:'happy', t:'せんべい、3枚あるぞ' },
+    { who:'kiki', e:'happy', t:'ありがとうございます。お茶もいれまつね' },
+    { who:'sorashido', e:'normal', t:'割れ方、表にしていいか？笑' },
+  ] },
+  { id:'life-trio-dra-erubin-sorashido-008', kind:'trio', trio:['dra', 'erubin', 'sorashido'], keys:{ doing:'cards' }, lines:[
+    { who:'erubin', e:'normal', t:'デュラハンの新しい形、2人に見てほしいんだ' },
+    { who:'dra', e:'happy', t:'おう、説明はおでがする' },
+    { who:'sorashido', e:'excited', t:'数字はまかせろ！' },
+  ] },
+  { id:'life-trio-dra-erubin-sorashido-009', kind:'trio', trio:['dra', 'erubin', 'sorashido'], keys:{ doing:'walk' }, lines:[
+    { who:'dra', e:'troubled', t:'ちょっと休けいだ。膝が限界だ' },
+    { who:'sorashido', e:'normal', t:'計算どおり、ちょうどベンチの前だ笑' },
+    { who:'erubin', e:'happy', t:'じゃあ、3人で少し休もうね' },
+  ] },
+  { id:'life-trio-dra-erubin-sorashido-010', kind:'trio', trio:['dra', 'erubin', 'sorashido'], keys:{  }, lines:[
+    { who:'sorashido', e:'happy', t:'{c:dra}と{c:erubin}がいると、表が人に届く気がするんだよな' },
+    { who:'erubin', e:'happy', t:'俺はいつも読むだけだけどね' },
+    { who:'dra', e:'wink', t:'読む人がいないと、表もさみしいからな' },
+  ] },
+  { id:'life-trio-atsu-momosuke-sorashido-007', kind:'trio', trio:['atsu', 'momosuke', 'sorashido'], keys:{ doing:'practice' }, lines:[
+    { who:'momosuke', e:'wink', t:'{c:atsu}、今日こそフルコン？w' },
+    { who:'atsu', e:'happy', t:'うるさいって笑' },
+    { who:'sorashido', e:'excited', t:'2人のスコア、全部記録するぜ・・・！' },
+  ] },
+  { id:'life-trio-atsu-momosuke-sorashido-008', kind:'trio', trio:['atsu', 'momosuke', 'sorashido'], keys:{  }, lines:[
+    { who:'sorashido', e:'normal', t:'今日の煽り合い、{c:momosuke}が3回多かったぞ' },
+    { who:'momosuke', e:'surprise', t:'数えないで！！w' },
+    { who:'atsu', e:'happy', t:'それね笑 数えるとこじゃないって！' },
+  ] },
+  { id:'life-trio-atsu-momosuke-sorashido-009', kind:'trio', trio:['atsu', 'momosuke', 'sorashido'], keys:{ doing:'snack' }, lines:[
+    { who:'atsu', e:'happy', t:'勝負のあとのおやつ、最高笑' },
+    { who:'momosuke', e:'excited', t:'勝ったのはもも！！' },
+    { who:'sorashido', e:'troubled', t:'判定、まだ出てないんだけどな笑' },
+  ] },
+  { id:'life-trio-erubin-kyuko-momosuke-001', kind:'trio', trio:['erubin', 'kyuko', 'momosuke'], keys:{ doing:'training' }, lines:[
+    { who:'momosuke', e:'excited', t:'ドリーミィ、今日もかわいすぎる！！' },
+    { who:'kyuko', e:'happy', t:'{c:momosuke}が来ると、ドリーミィもうれしそうだねぇ' },
+    { who:'erubin', e:'happy', t:'見てるだけで、やさしい気持ちになるね☺️' },
+  ] },
+  { id:'life-trio-erubin-kyuko-momosuke-002', kind:'trio', trio:['erubin', 'kyuko', 'momosuke'], keys:{  }, lines:[
+    { who:'erubin', e:'normal', t:'2人とも、少し休もうか' },
+    { who:'kyuko', e:'happy', t:'ほい。{c:erubin}がいると、ちゃんと休めるよぉ' },
+    { who:'momosuke', e:'wink', t:'もも、休みながらしゃべる！！' },
+  ] },
+  { id:'life-trio-erubin-kyuko-momosuke-003', kind:'trio', trio:['erubin', 'kyuko', 'momosuke'], keys:{ doing:'snack' }, lines:[
+    { who:'kyuko', e:'normal', t:'ここのお茶、{c:erubin}のおすすめなんだって' },
+    { who:'erubin', e:'happy', t:'うん。ゆっくりできる味なんだよね' },
+    { who:'momosuke', e:'excited', t:'ももはケーキも！！' },
+  ] },
+  { id:'life-trio-dra-mua-sorashido-011', kind:'trio', trio:['dra', 'mua', 'sorashido'], keys:{ doing:'cards' }, lines:[
+    { who:'dra', e:'normal', t:'みゅあ、この3つだけ覚えとけ' },
+    { who:'mua', e:'happy', t:'3つならいける！' },
+    { who:'sorashido', e:'excited', t:'その3つで勝率5割は超えるぜ笑' },
+  ] },
+  { id:'life-trio-dra-mua-sorashido-012', kind:'trio', trio:['dra', 'mua', 'sorashido'], keys:{  }, lines:[
+    { who:'mua', e:'angry', t:'{c:dra}のギャグ、10点中2点！' },
+    { who:'sorashido', e:'normal', t:'今週の平均は3点だな' },
+    { who:'dra', e:'crying', t:'平均まで出すなよ……' },
+  ] },
+  { id:'life-trio-dra-mua-sorashido-013', kind:'trio', trio:['dra', 'mua', 'sorashido'], keys:{ doing:'walk' }, lines:[
+    { who:'mua', e:'excited', t:'{place}までお散歩しよ！' },
+    { who:'dra', e:'troubled', t:'おでの膝のぶん、ゆっくりな' },
+    { who:'sorashido', e:'happy', t:'膝のぶん、2割増しで計算しとく笑' },
+  ] },
+  { id:'life-trio-erubin-kiki-sorashido-004', kind:'trio', trio:['erubin', 'kiki', 'sorashido'], keys:{ doing:'walk' }, lines:[
+    { who:'erubin', e:'happy', t:'今日はどこで見守ろうか' },
+    { who:'kiki', e:'normal', t:'いつものベンチにしましょう' },
+    { who:'sorashido', e:'normal', t:'2人とも、歩数ぴったり同じだったぞ笑' },
+  ] },
+  { id:'life-trio-erubin-kiki-sorashido-005', kind:'trio', trio:['erubin', 'kiki', 'sorashido'], keys:{ doing:'snack' }, lines:[
+    { who:'kiki', e:'happy', t:'お茶、3人分いれました' },
+    { who:'erubin', e:'happy', t:'ありがとう。いい香りだね' },
+    { who:'sorashido', e:'troubled', t:'……表、こぼさないように端に置いとく' },
+  ] },
+  { id:'life-trio-erubin-kiki-sorashido-006', kind:'trio', trio:['erubin', 'kiki', 'sorashido'], keys:{  }, lines:[
+    { who:'sorashido', e:'normal', t:'「見守り」の効き目、2人分だと倍になるのか？' },
+    { who:'kiki', e:'wink', t:'計算では、どうでしょう' },
+    { who:'erubin', e:'happy', t:'数字にならないのが、いいところかもね笑' },
+  ] },
+  { id:'life-trio-kiki-momosuke-sorashido-007', kind:'trio', trio:['kiki', 'momosuke', 'sorashido'], keys:{ doing:'snack' }, lines:[
+    { who:'momosuke', e:'excited', t:'{c:kiki}、いちごのせて！！' },
+    { who:'kiki', e:'happy', t:'はい、{c:momosuke}のぶんは多めに' },
+    { who:'sorashido', e:'normal', t:'いちごの数、ちゃんと表にしとくな笑' },
+  ] },
+  { id:'life-trio-kiki-momosuke-sorashido-008', kind:'trio', trio:['kiki', 'momosuke', 'sorashido'], keys:{ doing:'practice' }, lines:[
+    { who:'sorashido', e:'excited', t:'{c:momosuke}のミス、今日は1つだ！' },
+    { who:'momosuke', e:'wink', t:'でしょ！！' },
+    { who:'kiki', e:'happy', t:'よくがんばりましたね' },
+  ] },
+  { id:'life-trio-kiki-momosuke-sorashido-009', kind:'trio', trio:['kiki', 'momosuke', 'sorashido'], keys:{  }, lines:[
+    { who:'momosuke', e:'normal', t:'ねぇ、3人で何か作らない？' },
+    { who:'kiki', e:'happy', t:'では、ゴーレムのしおりを' },
+    { who:'sorashido', e:'excited', t:'俺は3人の表を作る！' },
+  ] },
+  { id:'life-trio-erubin-momosuke-sorashido-007', kind:'trio', trio:['erubin', 'momosuke', 'sorashido'], keys:{ doing:'cards' }, lines:[
+    { who:'sorashido', e:'normal', t:'{c:erubin}のデッキ、表にしたら守り9割だ笑' },
+    { who:'momosuke', e:'wink', t:'ももがピカピカのカード足してあげる！！' },
+    { who:'erubin', e:'happy', t:'ありがとう。守りと光、いい組み合わせだね' },
+  ] },
+  { id:'life-trio-erubin-momosuke-sorashido-008', kind:'trio', trio:['erubin', 'momosuke', 'sorashido'], keys:{  }, lines:[
+    { who:'momosuke', e:'excited', t:'今日はね、話したいこと3つあるの！！' },
+    { who:'sorashido', e:'normal', t:'1つ目から順番に表にするか？' },
+    { who:'erubin', e:'happy', t:'表はあとでいいよ笑 まずは聞こう' },
+  ] },
+  { id:'life-trio-erubin-momosuke-sorashido-009', kind:'trio', trio:['erubin', 'momosuke', 'sorashido'], keys:{ doing:'walk' }, lines:[
+    { who:'erubin', e:'normal', t:'{place}、3人で来るのは初めてだね' },
+    { who:'momosuke', e:'excited', t:'記念写真とろ！！' },
+    { who:'sorashido', e:'happy', t:'タイマー10秒にしとく笑' },
+  ] },
+  { id:'life-trio-dra-erubin-kyuko-014', kind:'trio', trio:['dra', 'erubin', 'kyuko'], keys:{ doing:'cards' }, lines:[
+    { who:'kyuko', e:'normal', t:'{c:dra}が教えた形、{c:erubin}が変えて、俺がまた変えた笑' },
+    { who:'erubin', e:'happy', t:'3人の組み方になったね' },
+    { who:'dra', e:'wink', t:'名前は「三人寄れば」でどうだ' },
+  ] },
+  { id:'life-trio-dra-erubin-kyuko-015', kind:'trio', trio:['dra', 'erubin', 'kyuko'], keys:{  }, lines:[
+    { who:'dra', e:'troubled', t:'ふぁ〜……3人とも眠そうだな' },
+    { who:'kyuko', e:'troubled', t:'俺は夜ふかしぃ…' },
+    { who:'erubin', e:'happy', t:'じゃあ今日は、ゆっくりしようね' },
+  ] },
+  { id:'life-trio-dra-erubin-kyuko-016', kind:'trio', trio:['dra', 'erubin', 'kyuko'], keys:{ doing:'snack' }, lines:[
+    { who:'erubin', e:'normal', t:'お茶、いれたよ' },
+    { who:'dra', e:'happy', t:'せんべいも出すぞ' },
+    { who:'kyuko', e:'happy', t:'のんびり組のおやつだねぇ笑' },
+  ] },
+  { id:'life-trio-dra-erubin-mua-017', kind:'trio', trio:['dra', 'erubin', 'mua'], keys:{ doing:'snack' }, lines:[
+    { who:'mua', e:'excited', t:'3人でおやつ〜！' },
+    { who:'dra', e:'normal', t:'みゅあ、ほっぺにクリームついてるぞ' },
+    { who:'erubin', e:'happy', t:'写真撮っておこうか笑' },
+  ] },
+  { id:'life-trio-dra-erubin-mua-018', kind:'trio', trio:['dra', 'erubin', 'mua'], keys:{  }, lines:[
+    { who:'mua', e:'wink', t:'{c:erubin}、今日の服もあたしが選んだの！' },
+    { who:'erubin', e:'happy', t:'うん。とっても好評なんだよね' },
+    { who:'dra', e:'wink', t:'石油王の服より似合ってるな。えへへ' },
+  ] },
+  { id:'life-trio-dra-erubin-mua-019', kind:'trio', trio:['dra', 'erubin', 'mua'], keys:{ doing:'walk' }, lines:[
+    { who:'dra', e:'troubled', t:'ちょっと休けいだ' },
+    { who:'mua', e:'happy', t:'{c:dra}、またぁ？ｗ' },
+    { who:'erubin', e:'normal', t:'ゆっくりでいいよ。急ぐ理由もないしね' },
+  ] },
+  { id:'life-trio-atsu-kyuko-mua-010', kind:'trio', trio:['atsu', 'kyuko', 'mua'], keys:{ doing:'cards' }, lines:[
+    { who:'mua', e:'excited', t:'このデッキの名前、「キラキラ作戦」！' },
+    { who:'kyuko', e:'happy', t:'中身は俺が考えた笑' },
+    { who:'atsu', e:'happy', t:'じゃ、攻めるのは俺ね！' },
+  ] },
+  { id:'life-trio-atsu-kyuko-mua-011', kind:'trio', trio:['atsu', 'kyuko', 'mua'], keys:{  }, lines:[
+    { who:'atsu', e:'happy', t:'3人で上位とろ笑' },
+    { who:'kyuko', e:'normal', t:'作戦はもうある。{c:mua}は勢い担当ね' },
+    { who:'mua', e:'excited', t:'まかせて！ いっくよー！' },
+  ] },
+  { id:'life-trio-atsu-kyuko-mua-012', kind:'trio', trio:['atsu', 'kyuko', 'mua'], keys:{ doing:'practice' }, lines:[
+    { who:'kyuko', e:'normal', t:'{c:mua}、そこは手を入れかえて' },
+    { who:'mua', e:'surprise', t:'ほんとだ、楽！' },
+    { who:'atsu', e:'wink', t:'いいね、次は上の難易度いこ笑' },
+  ] },
+  { id:'life-trio-erubin-mua-sorashido-010', kind:'trio', trio:['erubin', 'mua', 'sorashido'], keys:{ doing:'walk' }, lines:[
+    { who:'mua', e:'excited', t:'{c:erubin}のコーデ、表にしたら何になる？ｗ' },
+    { who:'sorashido', e:'normal', t:'色の数なら出せるぞ。5色だ' },
+    { who:'erubin', e:'troubled', t:'数えられると、ちょっと照れるね笑' },
+  ] },
+  { id:'life-trio-erubin-mua-sorashido-011', kind:'trio', trio:['erubin', 'mua', 'sorashido'], keys:{  }, lines:[
+    { who:'sorashido', e:'happy', t:'今日の3人、勝率も笑顔も高いな笑' },
+    { who:'mua', e:'excited', t:'笑顔も数えたの！？' },
+    { who:'erubin', e:'happy', t:'それは数えなくていいかな笑' },
+  ] },
+  { id:'life-trio-erubin-mua-sorashido-012', kind:'trio', trio:['erubin', 'mua', 'sorashido'], keys:{ doing:'snack' }, lines:[
+    { who:'mua', e:'happy', t:'{c:sorashido}、計算はお休み！' },
+    { who:'sorashido', e:'troubled', t:'……頭の中で少しだけ' },
+    { who:'erubin', e:'wink', t:'少しだけ、ならいいかな笑' },
+  ] },
+  { id:'life-trio-dra-momosuke-sorashido-020', kind:'trio', trio:['dra', 'momosuke', 'sorashido'], keys:{ doing:'practice' }, lines:[
+    { who:'momosuke', e:'excited', t:'{c:dra}、前説お願い！！' },
+    { who:'dra', e:'happy', t:'おう。すべる準備はできてる' },
+    { who:'sorashido', e:'normal', t:'すべった回数、記録しとく笑' },
+  ] },
+  { id:'life-trio-dra-momosuke-sorashido-021', kind:'trio', trio:['dra', 'momosuke', 'sorashido'], keys:{  }, lines:[
+    { who:'sorashido', e:'normal', t:'{c:dra}のギャグ、{c:momosuke}の笑った回数は3回だ' },
+    { who:'momosuke', e:'wink', t:'4回だったよw' },
+    { who:'dra', e:'excited', t:'1回増えた！ えへへ' },
+  ] },
+  { id:'life-trio-dra-momosuke-sorashido-022', kind:'trio', trio:['dra', 'momosuke', 'sorashido'], keys:{ doing:'snack' }, lines:[
+    { who:'dra', e:'happy', t:'プリン、3つあるぞ' },
+    { who:'momosuke', e:'excited', t:'2つちょうだい！！' },
+    { who:'sorashido', e:'troubled', t:'計算が合わなくなるだろ笑' },
+  ] },
+  { id:'life-trio-atsu-kiki-kyuko-013', kind:'trio', trio:['atsu', 'kiki', 'kyuko'], keys:{ doing:'training' }, lines:[
+    { who:'kiki', e:'normal', t:'ゴーレム、今日もちからを上げまつ' },
+    { who:'kyuko', e:'happy', t:'じゃあ俺は、ほかの数字を見とくねぇ' },
+    { who:'atsu', e:'happy', t:'役割分担、ばっちりじゃん笑' },
+  ] },
+  { id:'life-trio-atsu-kiki-kyuko-014', kind:'trio', trio:['atsu', 'kiki', 'kyuko'], keys:{ doing:'cards' }, lines:[
+    { who:'atsu', e:'excited', t:'攻めは{c:kiki}と俺！' },
+    { who:'kyuko', e:'normal', t:'守りは俺が考える。それでいいよね' },
+    { who:'kiki', e:'wink', t:'守りは、おまかせしまつ' },
+  ] },
+  { id:'life-trio-atsu-kiki-kyuko-015', kind:'trio', trio:['atsu', 'kiki', 'kyuko'], keys:{  }, lines:[
+    { who:'kyuko', e:'happy', t:'この3人、気づくといつも勝ってるよねぇ' },
+    { who:'kiki', e:'happy', t:'迷わないので、強いんでしょうか' },
+    { who:'atsu', e:'wink', t:'それね笑 次もいこ！' },
+  ] },
+  { id:'life-quarrel-kiki-mua-001', kind:'quarrel', pair:['kiki', 'mua'], keys:{ seed:'snack' }, lines:[
+    { who:'kiki', e:'troubled', t:'私のいちご、なくなっています…' },
+    { who:'mua', e:'troubled', t:'ご、ごめん！ おいしそうで、つい！' },
+  ], distance:[
+    { who:'kiki', e:'normal', t:'少しだけ、ひとりでお茶をいただきます' },
+  ], makeup:[
+    { who:'mua', e:'normal', t:'{c}、新しいいちご買ってきた！ ごめんね' },
+    { who:'kiki', e:'happy', t:'…では、半分こにしましょう' },
+  ] },
+  { id:'life-quarrel-kiki-mua-002', kind:'quarrel', pair:['kiki', 'mua'], keys:{ seed:'noise' }, lines:[
+    { who:'kiki', e:'normal', t:'{c}、図書室では静かにお願いします' },
+    { who:'mua', e:'angry', t:'静かにしてたもん！ ちょっと笑っただけ！' },
+  ], distance:[
+    { who:'mua', e:'troubled', t:'…広場でひとりで遊んでよっかな' },
+  ], makeup:[
+    { who:'kiki', e:'happy', t:'さっきは、少しきつく言いすぎました' },
+    { who:'mua', e:'happy', t:'ううん、あたしも声大きかった！ 小声で話そ' },
+  ] },
+  { id:'life-quarrel-momosuke-mua-001', kind:'quarrel', pair:['momosuke', 'mua'], keys:{ seed:'order' }, lines:[
+    { who:'momosuke', e:'angry', t:'{c}、鏡の前ずっと使ってる！！' },
+    { who:'mua', e:'angry', t:'だってまだ前髪決まってないもん！' },
+  ], distance:[
+    { who:'momosuke', e:'troubled', t:'……ふーん、べつにいいもん' },
+  ], makeup:[
+    { who:'mua', e:'happy', t:'さっきはごめんね。いっしょに鏡使お！' },
+    { who:'momosuke', e:'wink', t:'…しょうがないなぁ。ももが前髪やってあげる♡' },
+  ] },
+  { id:'life-quarrel-momosuke-mua-002', kind:'quarrel', pair:['momosuke', 'mua'], keys:{ seed:'look' }, lines:[
+    { who:'mua', e:'surprise', t:'え、その服、あたしと同じ！？' },
+    { who:'momosuke', e:'angry', t:'ももが先に買ったんだもん！！' },
+  ], distance:[
+    { who:'mua', e:'troubled', t:'……今日は別のとこで遊ぼっかな' },
+  ], makeup:[
+    { who:'momosuke', e:'normal', t:'{c}、おそろいって思えば、悪くないかも' },
+    { who:'mua', e:'excited', t:'それ！ おそろいで写真とろ！' },
+  ] },
+  { id:'life-quarrel-dra-mua-001', kind:'quarrel', pair:['dra', 'mua'], keys:{ seed:'noise' }, lines:[
+    { who:'mua', e:'angry', t:'{c}、ギャグしつこい！ もう5回目！' },
+    { who:'dra', e:'troubled', t:'5回目がいちばんおもしろいんだぞ…' },
+  ], distance:[
+    { who:'dra', e:'normal', t:'……家で、ひとりでギャグの練習するわ' },
+  ], makeup:[
+    { who:'mua', e:'normal', t:'{c}、さっきは言いすぎた。6回目、聞いたげる' },
+    { who:'dra', e:'happy', t:'ほんとか！ えへへ、とっておきだぞ' },
+  ] },
+  { id:'life-quarrel-dra-mua-002', kind:'quarrel', pair:['dra', 'mua'], keys:{ seed:'late' }, lines:[
+    { who:'mua', e:'angry', t:'{c}、約束の時間、30分も過ぎてる！' },
+    { who:'dra', e:'troubled', t:'昼寝がな、長引いたんだよ…' },
+  ], distance:[
+    { who:'mua', e:'troubled', t:'…もういい。ひとりで行く' },
+  ], makeup:[
+    { who:'dra', e:'normal', t:'みゅあ、待たせて悪かった。せんべい持ってきた' },
+    { who:'mua', e:'happy', t:'…せんべいで許す！ 次は起こしに行くから！' },
+  ] },
+  { id:'life-quarrel-atsu-mua-001', kind:'quarrel', pair:['atsu', 'mua'], keys:{ seed:'look' }, lines:[
+    { who:'atsu', e:'wink', t:'{c}、転んだとこ、まだネタにしてる笑' },
+    { who:'mua', e:'angry', t:'もう忘れてって言ったぢゃん！' },
+  ], distance:[
+    { who:'mua', e:'troubled', t:'……今日は{c}と話さない' },
+  ], makeup:[
+    { who:'atsu', e:'normal', t:'ごめん、からかいすぎた！ もう言わないから！' },
+    { who:'mua', e:'happy', t:'…ほんと？ じゃあ、いっしょに一曲だけ！' },
+  ] },
+  { id:'life-quarrel-atsu-mua-002', kind:'quarrel', pair:['atsu', 'mua'], keys:{ seed:'order' }, lines:[
+    { who:'mua', e:'excited', t:'次、あたしの番！' },
+    { who:'atsu', e:'happy', t:'いや、今のは俺の番だったでしょ笑' },
+  ], distance:[
+    { who:'atsu', e:'troubled', t:'…まぁ〜、ちょっと頭冷やすわ…' },
+  ], makeup:[
+    { who:'mua', e:'normal', t:'{c}、さっきは順番ゆずればよかった' },
+    { who:'atsu', e:'happy', t:'いいって笑 じゃ、交代でいこ！' },
+  ] },
+  { id:'life-quarrel-kyuko-mua-001', kind:'quarrel', pair:['kyuko', 'mua'], keys:{ seed:'noise' }, lines:[
+    { who:'kyuko', e:'troubled', t:'{c}、図書室では静かにって言ったよね…' },
+    { who:'mua', e:'troubled', t:'……ごめん、つい大きい声出ちゃった' },
+  ], distance:[
+    { who:'kyuko', e:'normal', t:'今日はちょっと、ひとりで考えたいかな' },
+  ], makeup:[
+    { who:'mua', e:'normal', t:'{c}、小さい声で話す練習してきた！' },
+    { who:'kyuko', e:'happy', t:'それ、ふつうの声と同じだよぉ笑 でもありがとん' },
+  ] },
+  { id:'life-quarrel-kyuko-mua-002', kind:'quarrel', pair:['kyuko', 'mua'], keys:{ seed:'plan' }, lines:[
+    { who:'mua', e:'angry', t:'「なんかいい」で決めちゃだめなの！？' },
+    { who:'kyuko', e:'troubled', t:'だめじゃないけど、数字も見てほしいなぁ…' },
+  ], distance:[
+    { who:'mua', e:'troubled', t:'……あたし、数字苦手なんだもん' },
+  ], makeup:[
+    { who:'kyuko', e:'happy', t:'さっきはごめん。数字は俺、名前は{c}で決めよ' },
+    { who:'mua', e:'excited', t:'それならいい！ 最強の名前つける！' },
+  ] },
+  { id:'life-quarrel-mua-sorashido-001', kind:'quarrel', pair:['mua', 'sorashido'], keys:{ seed:'peek' }, lines:[
+    { who:'mua', e:'angry', t:'表に「ミスの数」って書いてある！' },
+    { who:'sorashido', e:'troubled', t:'事実を書いただけなんだけどな…' },
+  ], distance:[
+    { who:'mua', e:'troubled', t:'……もう表見ない' },
+  ], makeup:[
+    { who:'sorashido', e:'normal', t:'{c}、「がんばった回数」に書き直したぜ' },
+    { who:'mua', e:'happy', t:'…それならいい！ 何回だった？' },
+  ] },
+  { id:'life-quarrel-mua-sorashido-002', kind:'quarrel', pair:['mua', 'sorashido'], keys:{ seed:'late' }, lines:[
+    { who:'sorashido', e:'angry', t:'待ち合わせ、計算より20分遅れてるぞ！' },
+    { who:'mua', e:'troubled', t:'だって服が決まらなかったの！' },
+  ], distance:[
+    { who:'sorashido', e:'normal', t:'……先に行って表作っとく' },
+  ], makeup:[
+    { who:'mua', e:'normal', t:'{c}、待たせてごめん！ おやつ買ってきた' },
+    { who:'sorashido', e:'happy', t:'……20分ぶんのおやつだな笑 許す' },
+  ] },
+  { id:'life-quarrel-erubin-mua-001', kind:'quarrel', pair:['erubin', 'mua'], keys:{ seed:'look' }, lines:[
+    { who:'mua', e:'angry', t:'{c}、あたしが選んだ服、着てないぢゃん！' },
+    { who:'erubin', e:'troubled', t:'ごめん、今日は石油王の服の気分で…' },
+  ], distance:[
+    { who:'mua', e:'troubled', t:'……べつにいいけど' },
+  ], makeup:[
+    { who:'erubin', e:'normal', t:'{c}、着替えてきたよ。やっぱりこっちが落ち着くね' },
+    { who:'mua', e:'happy', t:'でしょ！ 似合ってるよ♪' },
+  ] },
+  { id:'life-quarrel-erubin-mua-002', kind:'quarrel', pair:['erubin', 'mua'], keys:{ seed:'noise' }, lines:[
+    { who:'erubin', e:'normal', t:'{c}、夜遅くまで騒ぐと、みんな寝られないよ' },
+    { who:'mua', e:'angry', t:'ちょっとはしゃいだだけだもん！' },
+  ], distance:[
+    { who:'mua', e:'troubled', t:'……もう寝る' },
+  ], makeup:[
+    { who:'erubin', e:'happy', t:'さっきは言いすぎたかな。明日の朝、いっしょに騒ごうか笑' },
+    { who:'mua', e:'excited', t:'朝なら騒いでいいの！？ やった！' },
+  ] },
+  { id:'life-quarrel-kiki-momosuke-003', kind:'quarrel', pair:['kiki', 'momosuke'], keys:{ seed:'peek' }, lines:[
+    { who:'kiki', e:'troubled', t:'本のしおりが、ちがうページにはさまっていました' },
+    { who:'momosuke', e:'troubled', t:'……ごめん、もも、さわっちゃった' },
+  ], distance:[
+    { who:'kiki', e:'normal', t:'…少しだけ、時間をください' },
+  ], makeup:[
+    { who:'momosuke', e:'normal', t:'{c}、新しいしおり作ってきた！！ ピカピカのやつ！！' },
+    { who:'kiki', e:'happy', t:'…きれいですね。大事に使いまつ' },
+  ] },
+  { id:'life-quarrel-kiki-momosuke-004', kind:'quarrel', pair:['kiki', 'momosuke'], keys:{ seed:'noise' }, lines:[
+    { who:'kiki', e:'normal', t:'{c}、もう少し小さい声で歌えますか？' },
+    { who:'momosuke', e:'angry', t:'ももの歌、うるさいってこと！？' },
+  ], distance:[
+    { who:'momosuke', e:'troubled', t:'……ふーん。もう歌わないもん' },
+  ], makeup:[
+    { who:'kiki', e:'happy', t:'さっきは言い方がよくなかったです。{c}の歌、好きですよ' },
+    { who:'momosuke', e:'excited', t:'ほんと！？ じゃあ小さめに歌う！！' },
+  ] },
+  { id:'life-quarrel-dra-kiki-003', kind:'quarrel', pair:['dra', 'kiki'], keys:{ seed:'noise' }, lines:[
+    { who:'kiki', e:'normal', t:'おやじギャグ、今日はもう4回目でつ' },
+    { who:'dra', e:'troubled', t:'3回までって決まりだったか……' },
+  ], distance:[
+    { who:'dra', e:'normal', t:'……今日はもう、ギャグは封印だ' },
+  ], makeup:[
+    { who:'kiki', e:'happy', t:'{c}、1回だけなら、もう聞きますよ' },
+    { who:'dra', e:'excited', t:'ほんとか！ じゃあ、とっておきのやつ！' },
+  ] },
+  { id:'life-quarrel-dra-kiki-004', kind:'quarrel', pair:['dra', 'kiki'], keys:{ seed:'plan' }, lines:[
+    { who:'dra', e:'normal', t:'{c}、たまには守りも考えろって' },
+    { who:'kiki', e:'angry', t:'守るより、倒したほうが早いでつ' },
+  ], distance:[
+    { who:'kiki', e:'normal', t:'……少し、ひとりで考えまつ' },
+  ], makeup:[
+    { who:'dra', e:'happy', t:'悪かった。{c}の攻め、おでが説明できる形にするわ' },
+    { who:'kiki', e:'happy', t:'…お願いしまつ。攻めのままで' },
+  ] },
+  { id:'life-quarrel-atsu-kiki-003', kind:'quarrel', pair:['atsu', 'kiki'], keys:{ seed:'order' }, lines:[
+    { who:'atsu', e:'excited', t:'前は俺が出るって！' },
+    { who:'kiki', e:'angry', t:'前は私です。押し切りまつ' },
+  ], distance:[
+    { who:'atsu', e:'troubled', t:'…まぁ〜、しゃあない！ ちょっと休む…' },
+  ], makeup:[
+    { who:'kiki', e:'normal', t:'{c}、交代で前に出ませんか' },
+    { who:'atsu', e:'happy', t:'いいね！ それが一番強いじゃん笑' },
+  ] },
+  { id:'life-quarrel-atsu-kiki-004', kind:'quarrel', pair:['atsu', 'kiki'], keys:{ seed:'plan' }, lines:[
+    { who:'kiki', e:'normal', t:'{c}、今回は攻めすぎでした' },
+    { who:'atsu', e:'angry', t:'いや、{c}だって全部ちからに振ってたじゃん！' },
+  ], distance:[
+    { who:'kiki', e:'troubled', t:'……そうでした' },
+  ], makeup:[
+    { who:'atsu', e:'happy', t:'ごめん、言いすぎた！ 2人とも攻めすぎだったね笑' },
+    { who:'kiki', e:'happy', t:'では次は、少しだけ守りましょう' },
+  ] },
+  { id:'life-quarrel-kiki-kyuko-005', kind:'quarrel', pair:['kiki', 'kyuko'], keys:{ seed:'plan' }, lines:[
+    { who:'kiki', e:'normal', t:'{c}、また「だいたい」で組みましたね' },
+    { who:'kyuko', e:'troubled', t:'……今回はちょっとだけだよぉ' },
+  ], distance:[
+    { who:'kiki', e:'normal', t:'少し、ひとりで考えまつ' },
+  ], makeup:[
+    { who:'kyuko', e:'normal', t:'{c}、今回はちゃんと全部数えて組んだよ' },
+    { who:'kiki', e:'happy', t:'……本当ですね。きれいな形です' },
+  ] },
+  { id:'life-quarrel-kiki-kyuko-006', kind:'quarrel', pair:['kiki', 'kyuko'], keys:{ seed:'late' }, lines:[
+    { who:'kyuko', e:'troubled', t:'{c}、朝の待ち合わせ、早すぎない？' },
+    { who:'kiki', e:'angry', t:'約束は朝の6時でしたよ' },
+  ], distance:[
+    { who:'kyuko', e:'normal', t:'……昼まで寝てから考えるね' },
+  ], makeup:[
+    { who:'kiki', e:'happy', t:'さっきは怒ってすみません。お昼の約束にしましょう' },
+    { who:'kyuko', e:'happy', t:'ありがとん笑 昼なら絶対行く' },
+  ] },
+  { id:'life-quarrel-kiki-sorashido-007', kind:'quarrel', pair:['kiki', 'sorashido'], keys:{ seed:'peek' }, lines:[
+    { who:'kiki', e:'normal', t:'…表に「守りが弱い」と書かれていました' },
+    { who:'sorashido', e:'troubled', t:'いや、事実を書いただけで……' },
+  ], distance:[
+    { who:'kiki', e:'normal', t:'事実でも、少し傷つきました' },
+  ], makeup:[
+    { who:'sorashido', e:'normal', t:'{c}、「攻撃がとても強い」に書き直したぜ' },
+    { who:'kiki', e:'happy', t:'…ありがとうございます。そちらのほうがうれしいです' },
+  ] },
+  { id:'life-quarrel-kiki-sorashido-008', kind:'quarrel', pair:['kiki', 'sorashido'], keys:{ seed:'score' }, lines:[
+    { who:'sorashido', e:'angry', t:'今の対戦、計算だと俺が勝ってたはずだ！' },
+    { who:'kiki', e:'wink', t:'計算より、押し切るほうが速かったです' },
+  ], distance:[
+    { who:'sorashido', e:'troubled', t:'……計算、やり直してくる' },
+  ], makeup:[
+    { who:'kiki', e:'happy', t:'{c}、さっきの表、いっしょに見ませんか' },
+    { who:'sorashido', e:'happy', t:'……おう。{c}が強いって分かったわ笑' },
+  ] },
+  { id:'life-quarrel-erubin-kiki-003', kind:'quarrel', pair:['erubin', 'kiki'], keys:{ seed:'order' }, lines:[
+    { who:'erubin', e:'normal', t:'ベンチ、{c}が座っていいよ' },
+    { who:'kiki', e:'normal', t:'いえ、{c}がどうぞ' },
+  ], distance:[
+    { who:'erubin', e:'troubled', t:'……そっかぁ。じゃあ俺は立ってるね' },
+  ], makeup:[
+    { who:'kiki', e:'happy', t:'では、2人で半分ずつ座りましょう' },
+    { who:'erubin', e:'happy', t:'いいね。それがいちばんだね' },
+  ] },
+  { id:'life-quarrel-erubin-kiki-004', kind:'quarrel', pair:['erubin', 'kiki'], keys:{ seed:'late' }, lines:[
+    { who:'kiki', e:'troubled', t:'お茶、冷めてしまいました' },
+    { who:'erubin', e:'troubled', t:'ごめんね、カードの研究に夢中で…' },
+  ], distance:[
+    { who:'kiki', e:'normal', t:'…少し、ひとりで飲みまつ' },
+  ], makeup:[
+    { who:'erubin', e:'normal', t:'{c}、いれなおしたよ。今度は俺がいれたんだ' },
+    { who:'kiki', e:'happy', t:'…あたたかいですね。ありがとうございます' },
+  ] },
+  { id:'life-quarrel-dra-momosuke-005', kind:'quarrel', pair:['dra', 'momosuke'], keys:{ seed:'peek' }, lines:[
+    { who:'dra', e:'troubled', t:'{c}、おでのとっておきのギャグ、先に言っただろ' },
+    { who:'momosuke', e:'troubled', t:'……ちょっと言いたくなっちゃって' },
+  ], distance:[
+    { who:'dra', e:'normal', t:'……今日は家で、新しいの考えるわ' },
+  ], makeup:[
+    { who:'momosuke', e:'normal', t:'{c}、新しいギャグ、いっしょに考えよ！！' },
+    { who:'dra', e:'happy', t:'……おう。2人で考えたら、すべっても半分だな' },
+  ] },
+  { id:'life-quarrel-dra-momosuke-006', kind:'quarrel', pair:['dra', 'momosuke'], keys:{ seed:'snack' }, lines:[
+    { who:'momosuke', e:'angry', t:'{c}、ももの分のプリン食べたでしょ！！' },
+    { who:'dra', e:'troubled', t:'……ひとつ多いと思ったんだよ' },
+  ], distance:[
+    { who:'momosuke', e:'troubled', t:'……もういいもん' },
+  ], makeup:[
+    { who:'dra', e:'normal', t:'{c}、プリン2つ買ってきた。2つともやる' },
+    { who:'momosuke', e:'excited', t:'2つも！？ …1つは{c}にあげる♡' },
+  ] },
+  { id:'life-quarrel-atsu-momosuke-005', kind:'quarrel', pair:['atsu', 'momosuke'], keys:{ seed:'score' }, lines:[
+    { who:'momosuke', e:'angry', t:'今のはももの勝ちでしょ！！' },
+    { who:'atsu', e:'happy', t:'いや、俺のほうが1点高かったって笑' },
+  ], distance:[
+    { who:'momosuke', e:'troubled', t:'……ふーん。もう勝負しないもん' },
+  ], makeup:[
+    { who:'atsu', e:'normal', t:'ごめん、むきになった！ もう1回、楽しくやろ！' },
+    { who:'momosuke', e:'wink', t:'…次はももが勝つからね♡' },
+  ] },
+  { id:'life-quarrel-atsu-momosuke-006', kind:'quarrel', pair:['atsu', 'momosuke'], keys:{ seed:'noise' }, lines:[
+    { who:'atsu', e:'troubled', t:'{c}、練習の音、ちょっと大きいかも…' },
+    { who:'momosuke', e:'angry', t:'{c}だって、HELLの音でかいじゃん！！' },
+  ], distance:[
+    { who:'atsu', e:'normal', t:'……まぁ〜、たしかに！ 少し離れるわ笑' },
+  ], makeup:[
+    { who:'momosuke', e:'normal', t:'{c}、時間決めて交代で練習しよ！！' },
+    { who:'atsu', e:'happy', t:'いいね、それでいこ笑' },
+  ] },
+  { id:'life-quarrel-kyuko-momosuke-003', kind:'quarrel', pair:['kyuko', 'momosuke'], keys:{ seed:'order' }, lines:[
+    { who:'kyuko', e:'troubled', t:'{c}、ドリーミィ、ずっとひとり占めしてない？' },
+    { who:'momosuke', e:'angry', t:'だってかわいすぎるんだもん！！' },
+  ], distance:[
+    { who:'momosuke', e:'troubled', t:'……ちょっとだけ、がまんする' },
+  ], makeup:[
+    { who:'kyuko', e:'happy', t:'{c}、いっしょにかわいがろっか笑' },
+    { who:'momosuke', e:'excited', t:'うん！！ 2人でなでよ！！' },
+  ] },
+  { id:'life-quarrel-kyuko-momosuke-004', kind:'quarrel', pair:['kyuko', 'momosuke'], keys:{ seed:'plan' }, lines:[
+    { who:'momosuke', e:'angry', t:'編成の名前、ももが決めたのに変えたでしょ！！' },
+    { who:'kyuko', e:'troubled', t:'長すぎて、画面に入らなかったんだぁ…' },
+  ], distance:[
+    { who:'momosuke', e:'troubled', t:'……ももの名前、きらいなんだ' },
+  ], makeup:[
+    { who:'kyuko', e:'normal', t:'短くしたけど、{c}の名前のまま残したよ' },
+    { who:'momosuke', e:'happy', t:'……ほんとだ！！ ならいい！！' },
+  ] },
+  { id:'life-quarrel-momosuke-sorashido-003', kind:'quarrel', pair:['momosuke', 'sorashido'], keys:{ seed:'peek' }, lines:[
+    { who:'momosuke', e:'angry', t:'{c}、ミスの数、大きい声で読まないで！！' },
+    { who:'sorashido', e:'troubled', t:'減ってたから、ほめたつもりだったんだ…' },
+  ], distance:[
+    { who:'momosuke', e:'troubled', t:'……もう練習見せない' },
+  ], makeup:[
+    { who:'sorashido', e:'normal', t:'{c}、次は2人にしか聞こえない声で言う' },
+    { who:'momosuke', e:'happy', t:'…じゃあ、こっそりほめてね♡' },
+  ] },
+  { id:'life-quarrel-momosuke-sorashido-004', kind:'quarrel', pair:['momosuke', 'sorashido'], keys:{ seed:'score' }, lines:[
+    { who:'sorashido', e:'angry', t:'今の判定、俺の勝ちだろ！' },
+    { who:'momosuke', e:'angry', t:'ももの勝ち！！ ぜったい！！' },
+  ], distance:[
+    { who:'sorashido', e:'normal', t:'……録画、見直してくる' },
+  ], makeup:[
+    { who:'sorashido', e:'happy', t:'{c}、見直したら引き分けだった笑' },
+    { who:'momosuke', e:'wink', t:'じゃあ、2人とも勝ちね！！' },
+  ] },
+  { id:'life-quarrel-erubin-momosuke-005', kind:'quarrel', pair:['erubin', 'momosuke'], keys:{ seed:'late' }, lines:[
+    { who:'momosuke', e:'angry', t:'{c}、話の途中でうとうとしてたでしょ！！' },
+    { who:'erubin', e:'troubled', t:'ごめん、昨日あまり寝てなくて…💦' },
+  ], distance:[
+    { who:'momosuke', e:'troubled', t:'……ちょっとだけ、さみしかった' },
+  ], makeup:[
+    { who:'erubin', e:'normal', t:'{c}、今日は最後まで、ちゃんと聞くよ' },
+    { who:'momosuke', e:'happy', t:'ほんと！？ じゃあ、さっきの続きからね！！' },
+  ] },
+  { id:'life-quarrel-erubin-momosuke-006', kind:'quarrel', pair:['erubin', 'momosuke'], keys:{ seed:'look' }, lines:[
+    { who:'momosuke', e:'wink', t:'{c}、石油王の服で来てってば！！w' },
+    { who:'erubin', e:'troubled', t:'それは目立ちすぎるから、いやかな…' },
+  ], distance:[
+    { who:'momosuke', e:'troubled', t:'……ちぇー' },
+  ], makeup:[
+    { who:'erubin', e:'happy', t:'じゃあ、ライブの日だけ、少しだけ着てみようかな笑' },
+    { who:'momosuke', e:'excited', t:'ほんと！？ 約束だよ！！' },
+  ] },
+  { id:'life-quarrel-atsu-dra-007', kind:'quarrel', pair:['atsu', 'dra'], keys:{ seed:'score' }, lines:[
+    { who:'dra', e:'angry', t:'今のはノーカンだ！' },
+    { who:'atsu', e:'happy', t:'いや、カウントでしょ笑' },
+  ], distance:[
+    { who:'dra', e:'troubled', t:'……家で山札組み直してくる' },
+  ], makeup:[
+    { who:'atsu', e:'normal', t:'{c}、さっきのはノーカンでいいよ笑 もう1戦やろ！' },
+    { who:'dra', e:'happy', t:'……おう。今度は文句なしで勝つからな' },
+  ] },
+  { id:'life-quarrel-atsu-dra-008', kind:'quarrel', pair:['atsu', 'dra'], keys:{ seed:'late' }, lines:[
+    { who:'atsu', e:'troubled', t:'{c}、作戦会議の時間、寝てたでしょ笑' },
+    { who:'dra', e:'troubled', t:'夜ふかしは膝にくるんだよ…' },
+  ], distance:[
+    { who:'atsu', e:'normal', t:'…まぁ〜、しゃあない！ 1人で考えとく…' },
+  ], makeup:[
+    { who:'dra', e:'normal', t:'{c}、さっきの作戦、聞かせてくれ。おでも乗るわ' },
+    { who:'atsu', e:'happy', t:'いいね！ 2人でやるほうが強いし笑' },
+  ] },
+  { id:'life-quarrel-dra-kyuko-007', kind:'quarrel', pair:['dra', 'kyuko'], keys:{ seed:'look' }, lines:[
+    { who:'dra', e:'troubled', t:'{c}、おでの寝ぐせ、みんなの前で言っただろ' },
+    { who:'kyuko', e:'troubled', t:'……ごめん、つい' },
+  ], distance:[
+    { who:'dra', e:'normal', t:'今日はちょっと、帽子かぶって過ごすわ' },
+  ], makeup:[
+    { who:'kyuko', e:'normal', t:'{c}、寝ぐせ直し持ってきたよぉ' },
+    { who:'dra', e:'happy', t:'……気がきくな。ありがとな' },
+  ] },
+  { id:'life-quarrel-dra-kyuko-008', kind:'quarrel', pair:['dra', 'kyuko'], keys:{ seed:'plan' }, lines:[
+    { who:'kyuko', e:'troubled', t:'{c}が教えてくれた形、変えたら怒る？' },
+    { who:'dra', e:'angry', t:'……おでの自信作なんだぞ' },
+  ], distance:[
+    { who:'kyuko', e:'normal', t:'……じゃあ、今日はやめとく' },
+  ], makeup:[
+    { who:'dra', e:'happy', t:'{c}、さっきは大人げなかった。変えた形、見せてくれ' },
+    { who:'kyuko', e:'happy', t:'ほい！ {c}の形がもとだから、いいとこは残してあるよぉ' },
+  ] },
+  { id:'life-quarrel-dra-sorashido-009', kind:'quarrel', pair:['dra', 'sorashido'], keys:{ seed:'peek' }, lines:[
+    { who:'sorashido', e:'angry', t:'{c}、表の誤字、笑っただろ！' },
+    { who:'dra', e:'troubled', t:'いや、「勝率」が「勝卒」になってたから……' },
+  ], distance:[
+    { who:'sorashido', e:'normal', t:'……ちょっと、ひとりで直してくる' },
+  ], makeup:[
+    { who:'dra', e:'normal', t:'{c}、笑って悪かった。誤字、いっしょに探すか' },
+    { who:'sorashido', e:'happy', t:'……頼む。{c}の目、正確だからな' },
+  ] },
+  { id:'life-quarrel-dra-sorashido-010', kind:'quarrel', pair:['dra', 'sorashido'], keys:{ seed:'late' }, lines:[
+    { who:'dra', e:'troubled', t:'{c}、また朝まで計算してただろ' },
+    { who:'sorashido', e:'angry', t:'好きでやってるんだからいいだろ！' },
+  ], distance:[
+    { who:'dra', e:'normal', t:'……そうか。心配しただけなんだけどな' },
+  ], makeup:[
+    { who:'sorashido', e:'normal', t:'{c}、さっきは悪かった。今日は早めに寝る' },
+    { who:'dra', e:'happy', t:'おう。膝枕は貸さないけどな。えへへ' },
+  ] },
+  { id:'life-quarrel-dra-erubin-011', kind:'quarrel', pair:['dra', 'erubin'], keys:{ seed:'look' }, lines:[
+    { who:'erubin', e:'troubled', t:'{c}、石油王の話、もう3回目だよ' },
+    { who:'dra', e:'wink', t:'何回言ってもおもしろいんだよ、ビンビン' },
+  ], distance:[
+    { who:'erubin', e:'troubled', t:'……今日はちょっと、ひとりで散歩してくるね' },
+  ], makeup:[
+    { who:'dra', e:'normal', t:'{c}、しつこかったな。悪かった' },
+    { who:'erubin', e:'happy', t:'いいよ。じゃあ、仲直りに一戦しようか' },
+  ] },
+  { id:'life-quarrel-dra-erubin-012', kind:'quarrel', pair:['dra', 'erubin'], keys:{ seed:'score' }, lines:[
+    { who:'dra', e:'angry', t:'今の手は、ずるいだろ！' },
+    { who:'erubin', e:'troubled', t:'ルールどおりだと思うんだけどな…' },
+  ], distance:[
+    { who:'dra', e:'troubled', t:'……ルールブック、読み直してくる' },
+  ], makeup:[
+    { who:'dra', e:'normal', t:'{c}、確かめたらルールどおりだった。すまんな' },
+    { who:'erubin', e:'happy', t:'教えてもらった形を使っただけだよ笑' },
+  ] },
+  { id:'life-quarrel-atsu-kyuko-009', kind:'quarrel', pair:['atsu', 'kyuko'], keys:{ seed:'plan' }, lines:[
+    { who:'kyuko', e:'troubled', t:'{c}、作戦待たずに突っこんだでしょ…' },
+    { who:'atsu', e:'troubled', t:'だって、いけると思ったんだって…' },
+  ], distance:[
+    { who:'kyuko', e:'normal', t:'……ちょっと、ひとりで組み直すね' },
+  ], makeup:[
+    { who:'atsu', e:'normal', t:'{c}、さっきはごめん！ 次はちゃんと待つ！' },
+    { who:'kyuko', e:'happy', t:'ほい。じゃあ次は、3つ数えてから突っこもっか笑' },
+  ] },
+  { id:'life-quarrel-atsu-kyuko-010', kind:'quarrel', pair:['atsu', 'kyuko'], keys:{ seed:'late' }, lines:[
+    { who:'atsu', e:'angry', t:'{c}、また夜ふかしして朝の練習来なかったでしょ！' },
+    { who:'kyuko', e:'troubled', t:'……起きられなかったぁ' },
+  ], distance:[
+    { who:'atsu', e:'troubled', t:'…まぁ〜、言いすぎたかも…' },
+  ], makeup:[
+    { who:'kyuko', e:'normal', t:'{c}、昼の練習ならぜったい行く' },
+    { who:'atsu', e:'happy', t:'それでいこ笑 昼なら俺も眠くないし！' },
+  ] },
+  { id:'life-quarrel-atsu-sorashido-011', kind:'quarrel', pair:['atsu', 'sorashido'], keys:{ seed:'score' }, lines:[
+    { who:'sorashido', e:'angry', t:'今のは俺の勝ちだろ！' },
+    { who:'atsu', e:'troubled', t:'いや、数え方が違うって…' },
+  ], distance:[
+    { who:'sorashido', e:'normal', t:'……もう一回、数え直してくる' },
+  ], makeup:[
+    { who:'atsu', e:'happy', t:'{c}、さっきのはどっちの勝ちでもいいよ笑' },
+    { who:'sorashido', e:'happy', t:'……数え直したら、{c}の勝ちだった。次は勝つ' },
+  ] },
+  { id:'life-quarrel-atsu-sorashido-012', kind:'quarrel', pair:['atsu', 'sorashido'], keys:{ seed:'peek' }, lines:[
+    { who:'atsu', e:'troubled', t:'{c}、俺の打ち方、勝手に表にした？笑' },
+    { who:'sorashido', e:'troubled', t:'研究のためだったんだ…' },
+  ], distance:[
+    { who:'atsu', e:'normal', t:'…ちょっと恥ずかしいかな…' },
+  ], makeup:[
+    { who:'sorashido', e:'normal', t:'{c}、表は2人だけで見ることにする' },
+    { who:'atsu', e:'happy', t:'それならいいよ！ 俺にも見せてね笑' },
+  ] },
+  { id:'life-quarrel-atsu-erubin-013', kind:'quarrel', pair:['atsu', 'erubin'], keys:{ seed:'late' }, lines:[
+    { who:'erubin', e:'troubled', t:'{c}、また無理してたよね' },
+    { who:'atsu', e:'angry', t:'大丈夫だって！ 心配しすぎ！' },
+  ], distance:[
+    { who:'erubin', e:'normal', t:'……そっかぁ。少し離れて見てるね' },
+  ], makeup:[
+    { who:'atsu', e:'normal', t:'{c}、さっきはごめん！ ほんとはちょっと疲れてた！' },
+    { who:'erubin', e:'happy', t:'うん。じゃあ、いっしょに休もうか' },
+  ] },
+  { id:'life-quarrel-atsu-erubin-014', kind:'quarrel', pair:['atsu', 'erubin'], keys:{ seed:'order' }, lines:[
+    { who:'atsu', e:'happy', t:'{c}、先に行ってて！ 俺あとから行くから笑' },
+    { who:'erubin', e:'troubled', t:'いつもそう言って、来ないよね…' },
+  ], distance:[
+    { who:'atsu', e:'troubled', t:'…ごめん、気をつける…' },
+  ], makeup:[
+    { who:'atsu', e:'normal', t:'{c}、今日はいっしょに出発しよ！' },
+    { who:'erubin', e:'happy', t:'うん。待ってたよ☺️' },
+  ] },
+  { id:'life-quarrel-kyuko-sorashido-005', kind:'quarrel', pair:['kyuko', 'sorashido'], keys:{ seed:'peek' }, lines:[
+    { who:'kyuko', e:'troubled', t:'{c}、俺のメモ、勝手に表にしたでしょ…' },
+    { who:'sorashido', e:'troubled', t:'いや、まとめたほうが見やすいと思って' },
+  ], distance:[
+    { who:'kyuko', e:'normal', t:'……ちょっとだけ、ひとりで考えたかったんだよぉ' },
+  ], makeup:[
+    { who:'sorashido', e:'normal', t:'{c}、次からは聞いてから表にする' },
+    { who:'kyuko', e:'happy', t:'ありがとん。でも、表は見やすかった笑' },
+  ] },
+  { id:'life-quarrel-kyuko-sorashido-006', kind:'quarrel', pair:['kyuko', 'sorashido'], keys:{ seed:'noise' }, lines:[
+    { who:'kyuko', e:'troubled', t:'{c}、夜中にキーボードの音、ずっと聞こえてたよぉ' },
+    { who:'sorashido', e:'angry', t:'計算が止まらなかったんだよ！' },
+  ], distance:[
+    { who:'sorashido', e:'troubled', t:'……今夜は静かにする' },
+  ], makeup:[
+    { who:'sorashido', e:'normal', t:'{c}、夜はノートに書くことにした笑' },
+    { who:'kyuko', e:'happy', t:'それなら、いっしょに夜ふかしできるねぇ笑' },
+  ] },
+  { id:'life-quarrel-erubin-kyuko-007', kind:'quarrel', pair:['erubin', 'kyuko'], keys:{ seed:'late' }, lines:[
+    { who:'erubin', e:'troubled', t:'{c}、また夜ふかししたの？ 心配だよ' },
+    { who:'kyuko', e:'troubled', t:'……心配しすぎだよぉ。大丈夫だって' },
+  ], distance:[
+    { who:'erubin', e:'normal', t:'そっかぁ。……ちょっと言いすぎたかな' },
+  ], makeup:[
+    { who:'kyuko', e:'normal', t:'{c}、さっきはごめん。昨日はちゃんと寝たよ' },
+    { who:'erubin', e:'happy', t:'よかった。それだけで安心したよ☺️' },
+  ] },
+  { id:'life-quarrel-erubin-kyuko-008', kind:'quarrel', pair:['erubin', 'kyuko'], keys:{ seed:'plan' }, lines:[
+    { who:'kyuko', e:'troubled', t:'{c}のデッキ、守りのカード多すぎない？' },
+    { who:'erubin', e:'troubled', t:'俺はじっくり勝ちたいんだよね…' },
+  ], distance:[
+    { who:'kyuko', e:'normal', t:'……そっか。口出しすぎたかも' },
+  ], makeup:[
+    { who:'kyuko', e:'happy', t:'{c}、守りのまま強くなる形、考えてきたよ' },
+    { who:'erubin', e:'happy', t:'ありがとう。それなら試してみたいな' },
+  ] },
+  { id:'life-quarrel-erubin-sorashido-009', kind:'quarrel', pair:['erubin', 'sorashido'], keys:{ seed:'look' }, lines:[
+    { who:'erubin', e:'troubled', t:'{c}、表の文字、本当に読めなくて…' },
+    { who:'sorashido', e:'troubled', t:'……そんなに小さいか？ 気にしてたんだけどな' },
+  ], distance:[
+    { who:'erubin', e:'normal', t:'ごめんね。言い方がよくなかったかな' },
+  ], makeup:[
+    { who:'sorashido', e:'happy', t:'{c}、文字を2倍にしたぜ・・・！' },
+    { who:'erubin', e:'happy', t:'読みやすい！ ありがとう、{c}' },
+  ] },
+  { id:'life-quarrel-erubin-sorashido-010', kind:'quarrel', pair:['erubin', 'sorashido'], keys:{ seed:'late' }, lines:[
+    { who:'sorashido', e:'angry', t:'{c}、待ち合わせ15分遅れたぞ！' },
+    { who:'erubin', e:'troubled', t:'ごめんね、中庭の花に見とれてて…' },
+  ], distance:[
+    { who:'sorashido', e:'normal', t:'……先に行ってる' },
+  ], makeup:[
+    { who:'erubin', e:'normal', t:'{c}、お詫びに、その花の場所を教えるね' },
+    { who:'sorashido', e:'happy', t:'……何本咲いてるか、数えに行こう笑' },
+  ] },
+  { id:'life-breeder-mua-001', kind:'breeder', who:'mua', keys:{ place:'plaza', mood:'happy' }, lines:[
+    { who:'mua', e:'excited', t:'あ、ブリーダー！ ちょうど会いたかったの♪' },
+  ] },
+  { id:'life-breeder-mua-002', kind:'breeder', who:'mua', keys:{ place:'plaza', mood:'happy' }, lines:[
+    { who:'mua', e:'wink', t:'見て見て、今日のコーデ！ どう？ｗ' },
+  ] },
+  { id:'life-breeder-mua-003', kind:'breeder', who:'mua', keys:{ place:'plaza', mood:'happy' }, lines:[
+    { who:'mua', e:'happy', t:'広場、人多くて楽しいよ！ いっしょに歩こ！' },
+  ] },
+  { id:'life-breeder-mua-004', kind:'breeder', who:'mua', keys:{ mood:'lonely', why:'lonely' }, lines:[
+    { who:'mua', e:'surprise', t:'ブリーダー！ 来てくれたの！？ まぢうれしい！' },
+  ] },
+  { id:'life-breeder-mua-005', kind:'breeder', who:'mua', keys:{ mood:'lonely', why:'lonely' }, lines:[
+    { who:'mua', e:'troubled', t:'ちょうど、だれか来ないかなって思ってたとこ…' },
+  ] },
+  { id:'life-breeder-mua-006', kind:'breeder', who:'mua', keys:{ mood:'lonely', why:'lonely' }, lines:[
+    { who:'mua', e:'happy', t:'ひとりで暇だったの！ なにして遊ぶ？' },
+  ] },
+  { id:'life-breeder-mua-007', kind:'breeder', who:'mua', keys:{ doing:'snack' }, lines:[
+    { who:'mua', e:'excited', t:'ブリーダーも食べる？ いちごのやつ、おいしいよ♪' },
+  ] },
+  { id:'life-breeder-mua-008', kind:'breeder', who:'mua', keys:{ doing:'practice' }, lines:[
+    { who:'mua', e:'happy', t:'今の見てた？ けっこういい感じぢゃない？ｗ' },
+  ] },
+  { id:'life-breeder-mua-009', kind:'breeder', who:'mua', keys:{ doing:'walk' }, lines:[
+    { who:'mua', e:'wink', t:'いっしょに歩く？ 今日いい天気だよ！' },
+  ] },
+  { id:'life-breeder-mua-010', kind:'breeder', who:'mua', keys:{ mood:'sleepy' }, lines:[
+    { who:'mua', e:'normal', t:'ふぁ〜…ブリーダー？ ちょっとうとうとしてたｗ' },
+  ] },
+  { id:'life-breeder-mua-011', kind:'breeder', who:'mua', keys:{ mood:'sulky' }, lines:[
+    { who:'mua', e:'angry', t:'……べつにすねてないし。…でも来てくれてうれしい' },
+  ] },
+  { id:'life-breeder-mua-012', kind:'breeder', who:'mua', keys:{ mood:'sleepy' }, lines:[
+    { who:'mua', e:'troubled', t:'寝ぐせ見ないで〜！ 今直すから！' },
+  ] },
+  { id:'life-breeder-kiki-001', kind:'breeder', who:'kiki', keys:{ place:'library', mood:'happy' }, lines:[
+    { who:'kiki', e:'happy', t:'ブリーダーさん、静かにどうぞ。今いいところなんでつ♪♪' },
+  ] },
+  { id:'life-breeder-kiki-002', kind:'breeder', who:'kiki', keys:{ place:'library', mood:'happy' }, lines:[
+    { who:'kiki', e:'normal', t:'この本、おすすめですよ。育成の話がたくさんあります' },
+  ] },
+  { id:'life-breeder-kiki-003', kind:'breeder', who:'kiki', keys:{ place:'library', mood:'happy' }, lines:[
+    { who:'kiki', e:'wink', t:'窓ぎわの席、空いていますよ。いっしょにどうですか' },
+  ] },
+  { id:'life-breeder-kiki-004', kind:'breeder', who:'kiki', keys:{ mood:'lonely', why:'lonely' }, lines:[
+    { who:'kiki', e:'surprise', t:'あれま、ブリーダーさん。来てくださったんですね' },
+  ] },
+  { id:'life-breeder-kiki-005', kind:'breeder', who:'kiki', keys:{ mood:'lonely', why:'lonely' }, lines:[
+    { who:'kiki', e:'happy', t:'少しだけ、だれかと話したかったんです。ちょうどよかったでつ' },
+  ] },
+  { id:'life-breeder-kiki-006', kind:'breeder', who:'kiki', keys:{ mood:'lonely', why:'lonely' }, lines:[
+    { who:'kiki', e:'normal', t:'お茶、ちょうど2つ入れていたんです。どうぞ' },
+  ] },
+  { id:'life-breeder-kiki-007', kind:'breeder', who:'kiki', keys:{ doing:'training' }, lines:[
+    { who:'kiki', e:'happy', t:'ゴーレム、今日もちからを上げました。見てくださいね' },
+  ] },
+  { id:'life-breeder-kiki-008', kind:'breeder', who:'kiki', keys:{ doing:'snack' }, lines:[
+    { who:'kiki', e:'normal', t:'ブリーダーさんの分のおやつも、とってありまつよ' },
+  ] },
+  { id:'life-breeder-kiki-009', kind:'breeder', who:'kiki', keys:{ doing:'cards' }, lines:[
+    { who:'kiki', e:'wink', t:'今日のデッキも、攻撃のカードばかりです ( ˘ω˘)9グッ!' },
+  ] },
+  { id:'life-breeder-kiki-010', kind:'breeder', who:'kiki', keys:{ mood:'sleepy' }, lines:[
+    { who:'kiki', e:'troubled', t:'あ、少しうとうとしていました…見なかったことにしてください' },
+  ] },
+  { id:'life-breeder-kiki-011', kind:'breeder', who:'kiki', keys:{ mood:'sulky' }, lines:[
+    { who:'kiki', e:'normal', t:'…今は、少しひとりにしてほしいです。…でも、来てくれてありがとう' },
+  ] },
+  { id:'life-breeder-kiki-012', kind:'breeder', who:'kiki', keys:{ mood:'eager' }, lines:[
+    { who:'kiki', e:'excited', t:'ブリーダーさん、次のバトルはいつですか。準備はできていまつ' },
+  ] },
+  { id:'life-breeder-momosuke-001', kind:'breeder', who:'momosuke', keys:{ place:'studio', mood:'happy' }, lines:[
+    { who:'momosuke', e:'excited', t:'ブリーダー！！ ももの練習、見に来てくれたの！？' },
+  ] },
+  { id:'life-breeder-momosuke-002', kind:'breeder', who:'momosuke', keys:{ place:'studio', mood:'happy' }, lines:[
+    { who:'momosuke', e:'wink', t:'今のステップ、ちゃんと見てた？ 見てたよね！？w' },
+  ] },
+  { id:'life-breeder-momosuke-003', kind:'breeder', who:'momosuke', keys:{ place:'studio', mood:'happy' }, lines:[
+    { who:'momosuke', e:'happy', t:'いちばん前の席、ブリーダーのために空けといたよ♡' },
+  ] },
+  { id:'life-breeder-momosuke-004', kind:'breeder', who:'momosuke', keys:{ mood:'lonely', why:'lonely' }, lines:[
+    { who:'momosuke', e:'surprise', t:'ブリーダー！！ もう、来るの遅いんだから！！' },
+  ] },
+  { id:'life-breeder-momosuke-005', kind:'breeder', who:'momosuke', keys:{ mood:'lonely', why:'lonely' }, lines:[
+    { who:'momosuke', e:'troubled', t:'…べつにさみしくなかったし。ちょっとだけだし' },
+  ] },
+  { id:'life-breeder-momosuke-006', kind:'breeder', who:'momosuke', keys:{ mood:'lonely', why:'lonely' }, lines:[
+    { who:'momosuke', e:'happy', t:'来てくれたから、許してあげる♡' },
+  ] },
+  { id:'life-breeder-momosuke-007', kind:'breeder', who:'momosuke', keys:{ doing:'training' }, lines:[
+    { who:'momosuke', e:'excited', t:'見て！！ メタルナー、今日もピッカピカ！！' },
+  ] },
+  { id:'life-breeder-momosuke-008', kind:'breeder', who:'momosuke', keys:{ doing:'snack' }, lines:[
+    { who:'momosuke', e:'wink', t:'いちごは最後に食べるの。ブリーダーにもひとつあげよっか？' },
+  ] },
+  { id:'life-breeder-momosuke-009', kind:'breeder', who:'momosuke', keys:{ doing:'walk' }, lines:[
+    { who:'momosuke', e:'happy', t:'いっしょに歩こ！！ ももが前ね！！' },
+  ] },
+  { id:'life-breeder-momosuke-010', kind:'breeder', who:'momosuke', keys:{ mood:'sleepy' }, lines:[
+    { who:'momosuke', e:'normal', t:'ふぁ…今、アイドルお休み中…' },
+  ] },
+  { id:'life-breeder-momosuke-011', kind:'breeder', who:'momosuke', keys:{ mood:'sulky' }, lines:[
+    { who:'momosuke', e:'angry', t:'今ももに話しかけても、なにも出ないよ！！ …ほめてくれたら別だけど' },
+  ] },
+  { id:'life-breeder-momosuke-012', kind:'breeder', who:'momosuke', keys:{ mood:'eager' }, lines:[
+    { who:'momosuke', e:'excited', t:'今日のもも、本気モードだから！！ 見ててね！！' },
+  ] },
+  { id:'life-breeder-dra-001', kind:'breeder', who:'dra', keys:{ place:'home', mood:'lonely', why:'lonely' }, lines:[
+    { who:'dra', e:'surprise', t:'お、ブリーダーか。……べつに、さみしくなんてなかったぞ。えへへ' },
+  ] },
+  { id:'life-breeder-dra-002', kind:'breeder', who:'dra', keys:{ place:'home', mood:'lonely', why:'lonely' }, lines:[
+    { who:'dra', e:'happy', t:'来てくれたのか。いいせんべいがあるんだ、食ってけ' },
+  ] },
+  { id:'life-breeder-dra-003', kind:'breeder', who:'dra', keys:{ place:'home', mood:'lonely', why:'lonely' }, lines:[
+    { who:'dra', e:'normal', t:'おでのギャグ、聞いてくれる人を待ってたんだよ' },
+  ] },
+  { id:'life-breeder-dra-004', kind:'breeder', who:'dra', keys:{ place:'home', mood:'happy' }, lines:[
+    { who:'dra', e:'happy', t:'いらっしゃい。座布団、2枚目出してやるわ' },
+  ] },
+  { id:'life-breeder-dra-005', kind:'breeder', who:'dra', keys:{ place:'home', mood:'happy' }, lines:[
+    { who:'dra', e:'wink', t:'今日の膝の調子は上々だぞ。何でも説明してやる' },
+  ] },
+  { id:'life-breeder-dra-006', kind:'breeder', who:'dra', keys:{ place:'home', mood:'sleepy' }, lines:[
+    { who:'dra', e:'normal', t:'ふぁ〜…ブリーダーか。いま昼寝の2回目に入るとこだった' },
+  ] },
+  { id:'life-breeder-dra-007', kind:'breeder', who:'dra', keys:{ doing:'cards' }, lines:[
+    { who:'dra', e:'happy', t:'カードのこと、聞きたいことあるか？ 3分で説明するぞ' },
+  ] },
+  { id:'life-breeder-dra-008', kind:'breeder', who:'dra', keys:{ doing:'walk' }, lines:[
+    { who:'dra', e:'troubled', t:'ちょうど休けいしたかったんだ。膝がな' },
+  ] },
+  { id:'life-breeder-dra-009', kind:'breeder', who:'dra', keys:{ doing:'snack' }, lines:[
+    { who:'dra', e:'normal', t:'プリン、もうひとつあるぞ。ブリーダーの分だ' },
+  ] },
+  { id:'life-breeder-dra-010', kind:'breeder', who:'dra', keys:{ mood:'sulky' }, lines:[
+    { who:'dra', e:'troubled', t:'……ふとんから出ないぞ。今日は出ないからな。…ちょっとだけなら出る' },
+  ] },
+  { id:'life-breeder-dra-011', kind:'breeder', who:'dra', keys:{ mood:'eager' }, lines:[
+    { who:'dra', e:'excited', t:'ブリーダー、いいとこに来た。新しい組み方、説明させてくれ' },
+  ] },
+  { id:'life-breeder-dra-012', kind:'breeder', who:'dra', keys:{ mood:'restless' }, lines:[
+    { who:'dra', e:'surprise', t:'なんかそわそわするんだよ。ブリーダー、何かいいことあったか？' },
+  ] },
+  { id:'life-breeder-atsu-001', kind:'breeder', who:'atsu', keys:{ place:'studio', mood:'happy' }, lines:[
+    { who:'atsu', e:'happy', t:'お、ブリーダー！ 一曲いこ笑' },
+  ] },
+  { id:'life-breeder-atsu-002', kind:'breeder', who:'atsu', keys:{ place:'studio', mood:'happy' }, lines:[
+    { who:'atsu', e:'wink', t:'いいとこ来たね！ 今フルコン出たとこ！' },
+  ] },
+  { id:'life-breeder-atsu-003', kind:'breeder', who:'atsu', keys:{ place:'studio', mood:'happy' }, lines:[
+    { who:'atsu', e:'normal', t:'見てて！ 次は上の難易度いくから笑' },
+  ] },
+  { id:'life-breeder-atsu-004', kind:'breeder', who:'atsu', keys:{ mood:'lonely', why:'lonely' }, lines:[
+    { who:'atsu', e:'happy', t:'ちょうど対戦相手さがしてたんだよね笑' },
+  ] },
+  { id:'life-breeder-atsu-005', kind:'breeder', who:'atsu', keys:{ mood:'lonely', why:'lonely' }, lines:[
+    { who:'atsu', e:'normal', t:'来てくれてありがと！ ひとりだと暇でさ笑' },
+  ] },
+  { id:'life-breeder-atsu-006', kind:'breeder', who:'atsu', keys:{ mood:'lonely', why:'lonely' }, lines:[
+    { who:'atsu', e:'wink', t:'ま、待ってたわけじゃないけどね笑' },
+  ] },
+  { id:'life-breeder-atsu-007', kind:'breeder', who:'atsu', keys:{ doing:'training' }, lines:[
+    { who:'atsu', e:'happy', t:'ドラゴン、だいぶ強くなったでしょ！' },
+  ] },
+  { id:'life-breeder-atsu-008', kind:'breeder', who:'atsu', keys:{ doing:'cards' }, lines:[
+    { who:'atsu', e:'excited', t:'カードで一戦どう？ 手加減しないよ笑' },
+  ] },
+  { id:'life-breeder-atsu-009', kind:'breeder', who:'atsu', keys:{ doing:'practice' }, lines:[
+    { who:'atsu', e:'happy', t:'とりあえずHELL1周、見てってよ笑' },
+  ] },
+  { id:'life-breeder-atsu-010', kind:'breeder', who:'atsu', keys:{ mood:'sleepy' }, lines:[
+    { who:'atsu', e:'troubled', t:'さすがに練習しすぎた笑 ちょっと休むわ！' },
+  ] },
+  { id:'life-breeder-atsu-011', kind:'breeder', who:'atsu', keys:{ mood:'sulky' }, lines:[
+    { who:'atsu', e:'normal', t:'…今日はちょっとうまくいかない日なんだよね笑' },
+  ] },
+  { id:'life-breeder-atsu-012', kind:'breeder', who:'atsu', keys:{ mood:'eager' }, lines:[
+    { who:'atsu', e:'excited', t:'いいね、来てくれたなら上いくしかないじゃん！' },
+  ] },
+  { id:'life-breeder-kyuko-001', kind:'breeder', who:'kyuko', keys:{ place:'library', mood:'happy', why:'mypace' }, lines:[
+    { who:'kyuko', e:'normal', t:'あ、ブリーダー。今いいとこ考えてたんだぁ' },
+  ] },
+  { id:'life-breeder-kyuko-002', kind:'breeder', who:'kyuko', keys:{ place:'library', mood:'happy', why:'mypace' }, lines:[
+    { who:'kyuko', e:'happy', t:'静かに見ててくれるなら、ここにいていいよぉ笑' },
+  ] },
+  { id:'life-breeder-kyuko-003', kind:'breeder', who:'kyuko', keys:{ place:'library', mood:'happy', why:'mypace' }, lines:[
+    { who:'kyuko', e:'wink', t:'新しい組み方、あとでいちばんに見せてあげる' },
+  ] },
+  { id:'life-breeder-kyuko-004', kind:'breeder', who:'kyuko', keys:{ mood:'lonely', why:'lonely' }, lines:[
+    { who:'kyuko', e:'surprise', t:'ブリーダー？ ちょうど作戦を見せたかったんだぁ' },
+  ] },
+  { id:'life-breeder-kyuko-005', kind:'breeder', who:'kyuko', keys:{ mood:'lonely', why:'lonely' }, lines:[
+    { who:'kyuko', e:'happy', t:'来てくれてありがとん笑' },
+  ] },
+  { id:'life-breeder-kyuko-006', kind:'breeder', who:'kyuko', keys:{ mood:'lonely', why:'lonely' }, lines:[
+    { who:'kyuko', e:'normal', t:'ひとりで考えるのも好きだけど、たまには話したいよね' },
+  ] },
+  { id:'life-breeder-kyuko-007', kind:'breeder', who:'kyuko', keys:{ doing:'training' }, lines:[
+    { who:'kyuko', e:'happy', t:'ニャー、今日も素早さ伸びてるよぉ' },
+  ] },
+  { id:'life-breeder-kyuko-008', kind:'breeder', who:'kyuko', keys:{ doing:'cards' }, lines:[
+    { who:'kyuko', e:'normal', t:'このデッキ、課金しなくても組めるやつなんだぁ' },
+  ] },
+  { id:'life-breeder-kyuko-009', kind:'breeder', who:'kyuko', keys:{ doing:'snack' }, lines:[
+    { who:'kyuko', e:'happy', t:'甘いのと辛いの、両方あるよ。どっちがいい？' },
+  ] },
+  { id:'life-breeder-kyuko-010', kind:'breeder', who:'kyuko', keys:{ mood:'sleepy' }, lines:[
+    { who:'kyuko', e:'troubled', t:'昨日も夜ふかししちゃったぁ…ねむい😭' },
+  ] },
+  { id:'life-breeder-kyuko-011', kind:'breeder', who:'kyuko', keys:{ mood:'sulky' }, lines:[
+    { who:'kyuko', e:'normal', t:'……ランキング落ちたぁ。ぐぬぬぬ。まあ、なんとかなるっしょ' },
+  ] },
+  { id:'life-breeder-kyuko-012', kind:'breeder', who:'kyuko', keys:{ mood:'eager' }, lines:[
+    { who:'kyuko', e:'excited', t:'ブリーダー、いいとこ来た！ 今の数字見て！' },
+  ] },
+  { id:'life-breeder-sorashido-001', kind:'breeder', who:'sorashido', keys:{ place:'cardroom', mood:'eager' }, lines:[
+    { who:'sorashido', e:'excited', t:'ブリーダー！ 新しい表、できたとこだぜ・・・！' },
+  ] },
+  { id:'life-breeder-sorashido-002', kind:'breeder', who:'sorashido', keys:{ place:'cardroom', mood:'eager' }, lines:[
+    { who:'sorashido', e:'happy', t:'ちょうどいい。この数字、いっしょに見てくれ笑' },
+  ] },
+  { id:'life-breeder-sorashido-003', kind:'breeder', who:'sorashido', keys:{ place:'cardroom', mood:'happy' }, lines:[
+    { who:'sorashido', e:'normal', t:'カード部屋、今日も落ち着くわ。ゆっくりしてってくれ' },
+  ] },
+  { id:'life-breeder-sorashido-004', kind:'breeder', who:'sorashido', keys:{ mood:'lonely', why:'lonely' }, lines:[
+    { who:'sorashido', e:'surprise', t:'なに！？ ブリーダー！ 表を見てくれる人、待ってたんだ笑' },
+  ] },
+  { id:'life-breeder-sorashido-005', kind:'breeder', who:'sorashido', keys:{ mood:'lonely', why:'lonely' }, lines:[
+    { who:'sorashido', e:'happy', t:'来てくれてありがとな。でーじうれしい' },
+  ] },
+  { id:'life-breeder-sorashido-006', kind:'breeder', who:'sorashido', keys:{ mood:'lonely', why:'lonely' }, lines:[
+    { who:'sorashido', e:'normal', t:'ひとりで計算してると、時間を忘れるんだよな笑' },
+  ] },
+  { id:'life-breeder-sorashido-007', kind:'breeder', who:'sorashido', keys:{ doing:'cards' }, lines:[
+    { who:'sorashido', e:'excited', t:'今の対戦、勝率の計算どおりだった！' },
+  ] },
+  { id:'life-breeder-sorashido-008', kind:'breeder', who:'sorashido', keys:{ doing:'practice' }, lines:[
+    { who:'sorashido', e:'happy', t:'今日のミス、きのうより3つ少ないぞ笑' },
+  ] },
+  { id:'life-breeder-sorashido-009', kind:'breeder', who:'sorashido', keys:{ doing:'snack' }, lines:[
+    { who:'sorashido', e:'normal', t:'おやつの新作、全部で6つあった。数えたぞ笑' },
+  ] },
+  { id:'life-breeder-sorashido-010', kind:'breeder', who:'sorashido', keys:{ mood:'sleepy' }, lines:[
+    { who:'sorashido', e:'troubled', t:'朝まで計算してたから、さすがに眠い…笑' },
+  ] },
+  { id:'life-breeder-sorashido-011', kind:'breeder', who:'sorashido', keys:{ mood:'sulky' }, lines:[
+    { who:'sorashido', e:'crying', t:'また2点差で負けたんだよ…くっそー笑' },
+  ] },
+  { id:'life-breeder-sorashido-012', kind:'breeder', who:'sorashido', keys:{ mood:'restless' }, lines:[
+    { who:'sorashido', e:'surprise', t:'新しいカードの情報、もう見たか！？ 気になってしかたない笑' },
+  ] },
+  { id:'life-breeder-erubin-001', kind:'breeder', who:'erubin', keys:{ place:'cardroom', mood:'happy' }, lines:[
+    { who:'erubin', e:'happy', t:'いらっしゃい。デュラハンの新しい形、見ていくかな？' },
+  ] },
+  { id:'life-breeder-erubin-002', kind:'breeder', who:'erubin', keys:{ place:'cardroom', mood:'happy' }, lines:[
+    { who:'erubin', e:'normal', t:'ゆっくりしていってね。ここ、落ち着くんだよね☺️' },
+  ] },
+  { id:'life-breeder-erubin-003', kind:'breeder', who:'erubin', keys:{ place:'cardroom', mood:'eager' }, lines:[
+    { who:'erubin', e:'excited', t:'ちょうどいいところに来たね。今の組み方、試してみたいんだ' },
+  ] },
+  { id:'life-breeder-erubin-004', kind:'breeder', who:'erubin', keys:{ mood:'lonely', why:'lonely' }, lines:[
+    { who:'erubin', e:'surprise', t:'来てくれたんだね。うれしいな☺️' },
+  ] },
+  { id:'life-breeder-erubin-005', kind:'breeder', who:'erubin', keys:{ mood:'lonely', why:'lonely' }, lines:[
+    { who:'erubin', e:'happy', t:'みんな忙しそうだったから、少しさみしかったんだ笑' },
+  ] },
+  { id:'life-breeder-erubin-006', kind:'breeder', who:'erubin', keys:{ mood:'lonely', why:'lonely' }, lines:[
+    { who:'erubin', e:'normal', t:'話し相手になってくれるかな？' },
+  ] },
+  { id:'life-breeder-erubin-007', kind:'breeder', who:'erubin', keys:{ doing:'walk' }, lines:[
+    { who:'erubin', e:'happy', t:'中庭の花、見に行かない？ きれいに咲いてたよ' },
+  ] },
+  { id:'life-breeder-erubin-008', kind:'breeder', who:'erubin', keys:{ doing:'snack' }, lines:[
+    { who:'erubin', e:'normal', t:'お茶、いれようか。少し休もう' },
+  ] },
+  { id:'life-breeder-erubin-009', kind:'breeder', who:'erubin', keys:{ doing:'training' }, lines:[
+    { who:'erubin', e:'happy', t:'アーク、守りがまた伸びたんだよ' },
+  ] },
+  { id:'life-breeder-erubin-010', kind:'breeder', who:'erubin', keys:{ mood:'sleepy' }, lines:[
+    { who:'erubin', e:'troubled', t:'つい遅くまでカードを考えちゃって…眠いかな💦' },
+  ] },
+  { id:'life-breeder-erubin-011', kind:'breeder', who:'erubin', keys:{ mood:'sulky' }, lines:[
+    { who:'erubin', e:'troubled', t:'3回つづけて負けちゃったんだ…そっかぁ笑' },
+  ] },
+  { id:'life-breeder-erubin-012', kind:'breeder', who:'erubin', keys:{ mood:'restless' }, lines:[
+    { who:'erubin', e:'surprise', t:'新しい場所の話を聞いたんだ。ちょっとわくわくするね' },
+  ] },
   { id:'life-pair-mua-sorashido-001', kind:'pair', pair:['mua', 'sorashido'], keys:{ doing:'snack', lv:'1-3' }, lines:[
     { who:'sorashido', e:'excited', t:'今日のおやつ、新作が7つもあるぜ・・・！' },
     { who:'mua', e:'surprise', t:'え、もう数えたの！？ 早すぎｗ' },
@@ -19630,12 +21458,12 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'kiki', e:'happy', t:'はい。今度は、並んで座りましょう' },
     { who:'erubin', e:'happy', t:'うん、それがいちばんだね' },
   ] },
-  { id:'life-trio-erubin-momosuke-any-001', kind:'trio', pair:['erubin', 'momosuke'], trio:null, any:true, keys:{ doing:'snack' }, lines:[
+  { id:'life-trio-erubin-momosuke-any-013', kind:'trio', pair:['erubin', 'momosuke'], trio:null, any:true, keys:{ doing:'snack' }, lines:[
     { who:'momosuke', e:'excited', t:'3人で食べると、おやつってなんでこんなにおいしいの！！' },
     { who:'erubin', e:'happy', t:'にぎやかだからかな。みんなの顔を見てると、つい食べすぎちゃうね' },
     { who:'momosuke', e:'wink', t:'じゃあ、もう1個ずつ食べよ！！ 3人分ね♡' },
   ] },
-  { id:'life-trio-erubin-momosuke-any-002', kind:'trio', pair:['erubin', 'momosuke'], trio:null, any:true, keys:{ doing:'walk' }, lines:[
+  { id:'life-trio-erubin-momosuke-any-014', kind:'trio', pair:['erubin', 'momosuke'], trio:null, any:true, keys:{ doing:'walk' }, lines:[
     { who:'erubin', e:'normal', t:'みんなで歩くと、いつもより道が短く感じるね' },
     { who:'momosuke', e:'excited', t:'わかる！！ おしゃべりしてたら、もう着いちゃった！！' },
     { who:'erubin', e:'happy', t:'帰りは遠回りしようか。もう少し話していたいしね' },
@@ -19650,112 +21478,112 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'mua', e:'troubled', t:'表はいいから、早く始めよ〜ｗ' },
     { who:'sorashido', e:'excited', t:'よし、1試合目は{c:mua}からだ！' },
   ] },
-  { id:'life-trio-dra-erubin-any-001', kind:'trio', pair:['dra', 'erubin'], trio:null, any:true, keys:{ doing:'cards' }, lines:[
+  { id:'life-trio-dra-erubin-any-023', kind:'trio', pair:['dra', 'erubin'], trio:null, any:true, keys:{ doing:'cards' }, lines:[
     { who:'dra', e:'normal', t:'3人いるなら、おでは解説係をやるか' },
     { who:'erubin', e:'happy', t:'{c:dra}の解説を聞きながら対戦すると、勉強になるんだよね' },
     { who:'dra', e:'wink', t:'膝が痛くならないうちに、早く始めるぞ' },
   ] },
-  { id:'life-trio-dra-erubin-any-002', kind:'trio', pair:['dra', 'erubin'], trio:null, any:true, keys:{ doing:'snack' }, lines:[
+  { id:'life-trio-dra-erubin-any-024', kind:'trio', pair:['dra', 'erubin'], trio:null, any:true, keys:{ doing:'snack' }, lines:[
     { who:'erubin', e:'happy', t:'みんなの分、おやつを3つに分けたよ' },
     { who:'dra', e:'surprise', t:'おっ、きっちり同じ大きさだな。{c:erubin}は細かいなぁ' },
     { who:'erubin', e:'wink', t:'分けるのは得意なんだ笑 さあ、食べようか' },
   ] },
-  { id:'life-trio-atsu-mua-any-001', kind:'trio', pair:['atsu', 'mua'], trio:null, any:true, keys:{ doing:'practice' }, lines:[
+  { id:'life-trio-atsu-mua-any-016', kind:'trio', pair:['atsu', 'mua'], trio:null, any:true, keys:{ doing:'practice' }, lines:[
     { who:'atsu', e:'excited', t:'3人いるし、順番に一曲ずつ回そ笑' },
     { who:'mua', e:'happy', t:'いいね！ あたし2番目ね♪' },
     { who:'atsu', e:'wink', t:'じゃあ俺はトリ！ 盛り上げて待ってて笑' },
   ] },
-  { id:'life-trio-atsu-mua-any-002', kind:'trio', pair:['atsu', 'mua'], trio:null, any:true, keys:{ doing:'walk' }, lines:[
+  { id:'life-trio-atsu-mua-any-017', kind:'trio', pair:['atsu', 'mua'], trio:null, any:true, keys:{ doing:'walk' }, lines:[
     { who:'mua', e:'excited', t:'3人で並んで歩くと、なんかチームっぽくない？' },
     { who:'atsu', e:'happy', t:'それな！ 次のイベントもこのメンバーでいこ笑' },
     { who:'mua', e:'wink', t:'決まりね！ 作戦はあとでみんなで考えよ♪' },
   ] },
-  { id:'life-trio-dra-mua-any-003', kind:'trio', pair:['dra', 'mua'], trio:null, any:true, keys:{ doing:'snack' }, lines:[
+  { id:'life-trio-dra-mua-any-025', kind:'trio', pair:['dra', 'mua'], trio:null, any:true, keys:{ doing:'snack' }, lines:[
     { who:'mua', e:'happy', t:'みんなでおやつって、それだけで楽しいぢゃん♪' },
     { who:'dra', e:'happy', t:'おでのせんべいも分けてやるぞ。膝にはやさしくないけどな' },
     { who:'mua', e:'troubled', t:'せんべいと膝、関係あるの？ｗ' },
   ] },
-  { id:'life-trio-dra-mua-any-004', kind:'trio', pair:['dra', 'mua'], trio:null, any:true, keys:{ doing:'training' }, lines:[
+  { id:'life-trio-dra-mua-any-026', kind:'trio', pair:['dra', 'mua'], trio:null, any:true, keys:{ doing:'training' }, lines:[
     { who:'dra', e:'normal', t:'3人で育てると、マスモンも目移りしそうだな' },
     { who:'mua', e:'happy', t:'モッチーはぜったい、あたしのとこに来るもん！' },
     { who:'dra', e:'wink', t:'それはどうかな。おでのとこはおやつがあるからな' },
   ] },
-  { id:'life-trio-atsu-sorashido-any-003', kind:'trio', pair:['atsu', 'sorashido'], trio:null, any:true, keys:{ doing:'practice' }, lines:[
+  { id:'life-trio-atsu-sorashido-any-018', kind:'trio', pair:['atsu', 'sorashido'], trio:null, any:true, keys:{ doing:'practice' }, lines:[
     { who:'sorashido', e:'excited', t:'3人の自己ベスト、並べたら全部2点差以内だったぜ・・・！' },
     { who:'atsu', e:'surprise', t:'まじ！？ じゃあ今日で差がつくね笑' },
     { who:'sorashido', e:'happy', t:'記録はちゃんと取るからな。全員本気で頼む笑' },
   ] },
-  { id:'life-trio-atsu-sorashido-any-004', kind:'trio', pair:['atsu', 'sorashido'], trio:null, any:true, keys:{ doing:'cards' }, lines:[
+  { id:'life-trio-atsu-sorashido-any-019', kind:'trio', pair:['atsu', 'sorashido'], trio:null, any:true, keys:{ doing:'cards' }, lines:[
     { who:'atsu', e:'happy', t:'3人で勝ち抜き戦しよ！ 負けた人が次の審判ね笑' },
     { who:'sorashido', e:'normal', t:'いいな。勝ち数の表は俺が作る' },
     { who:'atsu', e:'wink', t:'審判しながら表作るの、忙しすぎでしょ笑' },
   ] },
-  { id:'life-trio-momosuke-sorashido-any-001', kind:'trio', pair:['momosuke', 'sorashido'], trio:null, any:true, keys:{ doing:'practice' }, lines:[
+  { id:'life-trio-momosuke-sorashido-any-004', kind:'trio', pair:['momosuke', 'sorashido'], trio:null, any:true, keys:{ doing:'practice' }, lines:[
     { who:'momosuke', e:'excited', t:'3人で踊ったら、ステージみたいじゃない！？' },
     { who:'sorashido', e:'happy', t:'たしかに。立ち位置、計算しておこうか笑' },
     { who:'momosuke', e:'wink', t:'真ん中はもも！！ そこだけは決まってるの♡' },
   ] },
-  { id:'life-trio-momosuke-sorashido-any-002', kind:'trio', pair:['momosuke', 'sorashido'], trio:null, any:true, keys:{ doing:'snack' }, lines:[
+  { id:'life-trio-momosuke-sorashido-any-005', kind:'trio', pair:['momosuke', 'sorashido'], trio:null, any:true, keys:{ doing:'snack' }, lines:[
     { who:'sorashido', e:'normal', t:'ちんすこう、3人分持ってきたぞ' },
     { who:'momosuke', e:'excited', t:'やったー！！ {c:sorashido}のふるさとのやつ！！' },
     { who:'sorashido', e:'happy', t:'みんなで食べると、いつもよりうまく感じるな笑' },
   ] },
-  { id:'life-trio-kiki-sorashido-any-001', kind:'trio', pair:['kiki', 'sorashido'], trio:null, any:true, keys:{ doing:'training' }, lines:[
+  { id:'life-trio-kiki-sorashido-any-010', kind:'trio', pair:['kiki', 'sorashido'], trio:null, any:true, keys:{ doing:'training' }, lines:[
     { who:'kiki', e:'normal', t:'3人で育成するなら、全員ちから全振りでいきましょう' },
     { who:'sorashido', e:'surprise', t:'全員！？ 計算したら、守りがゼロになるぞ笑' },
     { who:'kiki', e:'wink', t:'先に倒せば、ゼロでも困りませんよ♪' },
   ] },
-  { id:'life-trio-kiki-sorashido-any-002', kind:'trio', pair:['kiki', 'sorashido'], trio:null, any:true, keys:{ doing:'cards' }, lines:[
+  { id:'life-trio-kiki-sorashido-any-011', kind:'trio', pair:['kiki', 'sorashido'], trio:null, any:true, keys:{ doing:'cards' }, lines:[
     { who:'sorashido', e:'excited', t:'3人分のデッキ、強さを表にして比べてみたぜ・・・！' },
     { who:'kiki', e:'happy', t:'見せてください。…あれま、私のが一番とがってまつね' },
     { who:'sorashido', e:'happy', t:'とがりすぎて、表の外にはみ出してるぞ笑' },
   ] },
-  { id:'life-trio-atsu-kiki-any-005', kind:'trio', pair:['atsu', 'kiki'], trio:null, any:true, keys:{ doing:'training' }, lines:[
+  { id:'life-trio-atsu-kiki-any-020', kind:'trio', pair:['atsu', 'kiki'], trio:null, any:true, keys:{ doing:'training' }, lines:[
     { who:'atsu', e:'happy', t:'3人で育成すると、それぞれ育て方ちがっておもしろいね笑' },
     { who:'kiki', e:'normal', t:'私は攻撃、{c:atsu}は勢い、もう1人は…何でしょうね' },
     { who:'atsu', e:'wink', t:'それ、あとで本人に聞こ笑' },
   ] },
-  { id:'life-trio-atsu-kiki-any-006', kind:'trio', pair:['atsu', 'kiki'], trio:null, any:true, keys:{ doing:'practice' }, lines:[
+  { id:'life-trio-atsu-kiki-any-021', kind:'trio', pair:['atsu', 'kiki'], trio:null, any:true, keys:{ doing:'practice' }, lines:[
     { who:'kiki', e:'happy', t:'3人で叩くと、音が厚くなって楽しいでつ♪' },
     { who:'atsu', e:'excited', t:'わかる！ {c:kiki}の音、一番強いけど笑' },
     { who:'kiki', e:'wink', t:'力いっぱい、が私の取りえでつから' },
   ] },
-  { id:'life-trio-erubin-sorashido-any-003', kind:'trio', pair:['erubin', 'sorashido'], trio:null, any:true, keys:{ doing:'cards' }, lines:[
+  { id:'life-trio-erubin-sorashido-any-015', kind:'trio', pair:['erubin', 'sorashido'], trio:null, any:true, keys:{ doing:'cards' }, lines:[
     { who:'sorashido', e:'normal', t:'3人いると、デュラハン対策の話がはかどるな' },
     { who:'erubin', e:'happy', t:'うん。みんなの意見を聞くと、新しい組み方が見えてくるね' },
     { who:'sorashido', e:'excited', t:'よし、今日の結論は表にまとめておくぜ・・・！' },
   ] },
-  { id:'life-trio-erubin-sorashido-any-004', kind:'trio', pair:['erubin', 'sorashido'], trio:null, any:true, keys:{ doing:'walk' }, lines:[
+  { id:'life-trio-erubin-sorashido-any-016', kind:'trio', pair:['erubin', 'sorashido'], trio:null, any:true, keys:{ doing:'walk' }, lines:[
     { who:'erubin', e:'normal', t:'3人で散歩すると、{c:sorashido}は歩数を数えるのかな？' },
     { who:'sorashido', e:'happy', t:'もちろんだ。3人分ちゃんと数えてるぞ笑' },
     { who:'erubin', e:'wink', t:'それは大変そうだね笑 たまには景色も見ようね' },
   ] },
-  { id:'life-trio-dra-kiki-any-005', kind:'trio', pair:['dra', 'kiki'], trio:null, any:true, keys:{ doing:'snack' }, lines:[
+  { id:'life-trio-dra-kiki-any-027', kind:'trio', pair:['dra', 'kiki'], trio:null, any:true, keys:{ doing:'snack' }, lines:[
     { who:'kiki', e:'happy', t:'みなさんの分も、お茶をいれましたよ' },
     { who:'dra', e:'happy', t:'助かるな。おやつは、おでが3人分持ってきたぞ' },
     { who:'kiki', e:'wink', t:'では、ゆっくり3人のお茶会にしましょう♪' },
   ] },
-  { id:'life-trio-dra-kiki-any-006', kind:'trio', pair:['dra', 'kiki'], trio:null, any:true, keys:{ doing:'walk' }, lines:[
+  { id:'life-trio-dra-kiki-any-028', kind:'trio', pair:['dra', 'kiki'], trio:null, any:true, keys:{ doing:'walk' }, lines:[
     { who:'dra', e:'troubled', t:'3人で歩くと、おでがいつも最後になるな' },
     { who:'kiki', e:'normal', t:'では、私たちが歩くのをゆっくりにしまつ' },
     { who:'dra', e:'happy', t:'……そういうとこ、優しいよな' },
   ] },
-  { id:'life-trio-kiki-momosuke-any-003', kind:'trio', pair:['kiki', 'momosuke'], trio:null, any:true, keys:{ doing:'snack' }, lines:[
+  { id:'life-trio-kiki-momosuke-any-012', kind:'trio', pair:['kiki', 'momosuke'], trio:null, any:true, keys:{ doing:'snack' }, lines:[
     { who:'momosuke', e:'excited', t:'ケーキ、3人分選んできた！！ どれがいい！？' },
     { who:'kiki', e:'happy', t:'では、残ったものをいただきまつね♪' },
     { who:'momosuke', e:'wink', t:'{c:kiki}、いつも最後に選ぶよね！！ 優しいんだから♡' },
   ] },
-  { id:'life-trio-kiki-momosuke-any-004', kind:'trio', pair:['kiki', 'momosuke'], trio:null, any:true, keys:{ doing:'practice' }, lines:[
+  { id:'life-trio-kiki-momosuke-any-013', kind:'trio', pair:['kiki', 'momosuke'], trio:null, any:true, keys:{ doing:'practice' }, lines:[
     { who:'kiki', e:'normal', t:'3人で練習すると、{c:momosuke}が一番楽しそうですね' },
     { who:'momosuke', e:'excited', t:'だって、見てくれる人が2人もいるんだもん！！' },
     { who:'kiki', e:'happy', t:'では、二人でしっかり見てまつね♪' },
   ] },
-  { id:'life-trio-momosuke-mua-any-003', kind:'trio', pair:['momosuke', 'mua'], trio:null, any:true, keys:{ doing:'practice' }, lines:[
+  { id:'life-trio-momosuke-mua-any-006', kind:'trio', pair:['momosuke', 'mua'], trio:null, any:true, keys:{ doing:'practice' }, lines:[
     { who:'mua', e:'excited', t:'3人そろったし、おそろいポーズ撮ろ！' },
     { who:'momosuke', e:'happy', t:'いいね！！ もう1人にもポーズ教えてあげよ！！' },
     { who:'mua', e:'wink', t:'せーので決めるよ！ はい、チーズ♪' },
   ] },
-  { id:'life-trio-momosuke-mua-any-004', kind:'trio', pair:['momosuke', 'mua'], trio:null, any:true, keys:{ doing:'walk' }, lines:[
+  { id:'life-trio-momosuke-mua-any-007', kind:'trio', pair:['momosuke', 'mua'], trio:null, any:true, keys:{ doing:'walk' }, lines:[
     { who:'momosuke', e:'excited', t:'3人で歩いてたら、みんなに見られてる気がする！！' },
     { who:'mua', e:'happy', t:'あたしたち、目立つもんねｗ' },
     { who:'momosuke', e:'wink', t:'もっと目立っちゃお！！' },
@@ -19770,12 +21598,12 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'kyuko', e:'wink', t:'好きなのは最後に取っておく派だよぉ' },
     { who:'mua', e:'surprise', t:'え、あたし最初に食べる派！ もう1人はどっちかな？ｗ' },
   ] },
-  { id:'life-trio-atsu-kyuko-any-007', kind:'trio', pair:['atsu', 'kyuko'], trio:null, any:true, keys:{ doing:'training' }, lines:[
+  { id:'life-trio-atsu-kyuko-any-022', kind:'trio', pair:['atsu', 'kyuko'], trio:null, any:true, keys:{ doing:'training' }, lines:[
     { who:'atsu', e:'excited', t:'3人のマスモン、並べてランキングつけよ笑' },
     { who:'kyuko', e:'troubled', t:'えぇ、それ絶対もめるやつだよぉ' },
     { who:'atsu', e:'wink', t:'じゃあ全員1位ってことで笑' },
   ] },
-  { id:'life-trio-atsu-kyuko-any-008', kind:'trio', pair:['atsu', 'kyuko'], trio:null, any:true, keys:{ doing:'cards' }, lines:[
+  { id:'life-trio-atsu-kyuko-any-023', kind:'trio', pair:['atsu', 'kyuko'], trio:null, any:true, keys:{ doing:'cards' }, lines:[
     { who:'kyuko', e:'normal', t:'3人だと、いろんな組み合わせで試せるねぇ' },
     { who:'atsu', e:'happy', t:'いいね！ 俺は全部攻めで出るから笑' },
     { who:'kyuko', e:'wink', t:'ほい！ じゃあ守りは、もう1人に任せよっか笑' },
