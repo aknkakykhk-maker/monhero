@@ -2163,7 +2163,9 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     if ((view && view.myCpus ? view.myCpus : []).some((c) => c.masuId === key)) return 'already'; // 同じ助手は2人呼べない
     const day = rhythmBuddyDayKey(Date.now());
     const call = { id: rhythmBuddyCallId(), masuId: key, at: Date.now(), load: RHYTHM_BUDDY_LOAD_ID, kind: 'assistant', assistantId: who.id };
-    let paid = (await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
+    // モンビーに出かけている助手は回数を使わない(社長の決定 2026-11-07)。払っていないので控えも残さない(返すものが無い)
+    let paid = rhythmAssistSessionVisitFree(who.id) ? 'visit' : '';
+    if (!paid) paid = (await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
     if (!paid && onUseBuddyTicket) {
       try { paid = (await onUseBuddyTicket()) === true ? 'ticket' : ''; } catch (_) { paid = ''; }
       if (paid) await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyAddCall(st, { ...call, paid: 'ticket', day }));

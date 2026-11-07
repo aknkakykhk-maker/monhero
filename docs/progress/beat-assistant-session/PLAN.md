@@ -272,5 +272,5 @@
   - `rhythmAssistSessionOnLive(fn)` … 1曲遊んで育ちを保存したあと1回。`{ assistantId, partnerIds, songId, round, gain, levelUp, level, likeUp, duo, at }`
   - `rhythmAssistSessionInvite(id, { onResult })` … 自分だけのプライベートの部屋を作り、入れたら呼ぶ(払い方は呼ぶシートと同じ)。払えなければ部屋へ行かず `{ ok:false, reason:'no_ticket' }`。誘いは5分で消える
   - 結果の友情Lv に段の名前「+3(Lv4 いい友だち)」
-- [ ] 🔄横の土台の直し(テンポ)が main に入ったら、曲えらびの席の吹き出し・チーム結果のチップを撮り直して残りだけ直す。「助手の表示が重ならない・切れない」の検査(縦・横・🔄横)を足す
-- [ ] 券なしセッション(社長の A/B/C 待ち)。決まったら、呼ぶ時点で `assistantLifeAtBeat(id)` を見て控えに `paid:'visit'` を付ける。部屋が続くあいだは無料
+- [x] 🔄横の土台の直し(テンポ #4808)のあと撮り直し、席の吹き出しを席のカードに収めた(#4830)。検査は rhythm-multi-layout-check の「席の吹き出し」
+- [x] 券なしセッション(社長の決定: 助手が自分でモンビーに出かけているあいだは、その助手とは何回でも回数なし)。呼ぶ時点で `assistantLifeAtBeat(id)` を見る(`rhythmAssistSessionVisitFree`)。払っていないので控えは残さない。呼ぶシートに札「🎵 いまモンビーにいる・回数なし」。検査 `tools/mode/rhythm-assistant-session-sheet-check.js`(縦・横・🔄横・小さい縦で測る)。止め絵 `visit-tate.jpg`・`visit-yoko.jpg`・`visit-kaiten.jpg`
