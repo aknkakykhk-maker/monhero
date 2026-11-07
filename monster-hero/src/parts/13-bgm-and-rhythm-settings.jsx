@@ -479,7 +479,7 @@ const rhythmLookPresetOf = settings => (RHYTHM_LOOK_PRESETS.find(preset=>Object.
 // ノーツの色の組(B5・2026-11-07)。並びは画面のボタンの順。id は data/rhythm-mode.js の RHYTHM_NOTE_PALETTES と同じ
 const RHYTHM_NOTE_PALETTE_CHOICES = Object.freeze([['STANDARD','標準'],['PASTEL','パステル'],['NEON','ネオン'],['CLEAR','見分けやすい']]);
 // ノーツの形(2026-11-07 社長「ノーツの形も何種類か作って選べるようにしたい」)。id は data/rhythm-mode.js の RHYTHM_NOTE_SHAPE_IDS と同じ
-const RHYTHM_NOTE_SHAPE_CHOICES = Object.freeze([['STANDARD','標準'],['ROUND','まる'],['CUT','カット'],['FRAME','フレーム'],['STRIPE','ストライプ']]);
+const RHYTHM_NOTE_SHAPE_CHOICES = Object.freeze([['STANDARD','標準'],['ROUND','まる'],['DIAMOND','ひし形'],['CHEVRON','Vの字'],['HOLLOW','中抜き'],['PIXEL','ドット'],['GEM','宝石'],['PAW','肉球']]);
 // 記念ステージ(B5)。本オープンの印(rhythmGrandOpen)が立つまで、選ぶところを出さず、選んであっても描かない
 const RHYTHM_STAGE_THEME_CHOICES = Object.freeze([['NONE','いつもの背景'],['GRAND_OPEN','本オープン記念']]);
 const rhythmStageThemeActive = (settings) => settings?.stageTheme === 'GRAND_OPEN'
