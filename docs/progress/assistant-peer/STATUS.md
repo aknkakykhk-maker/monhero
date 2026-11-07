@@ -205,3 +205,13 @@
 - 直し: 横はモンヒロビートを M/B管理の右隣に並べた(「開催中」の札の分だけ下げる)。縦は 上の札の下端(+顔の列の分)より下へ押す `max()`(ふだんの % は変えない)。押されてイベントの札・MFバトルカードにかかるときだけ、下の札を translate でまとめて下げる(CSS の変数 --mh-home-*-bottom・--mh-home-left-push は 69-screen-home.jsx が測る)
 - 検査 `tools/assistant/assistant-life-home-layout-check.js`(縦4・横2・🔄横2 の大きさ × ふつう/いちばん長い台詞66文字。`LIFE_BASE=本番URL` で本番を見る)。下ごしらえは `life-browser-shared.js` に出した
 - 止め絵 `shots/home-faces-portrait.jpg`・`home-faces-land-844.jpg`・`home-faces-land-667.jpg`・`home-faces-rot-back.jpg`
+
+### ナカヨシ6 の続き(次の会話へ)
+- 公開済み: #4869(HOME の顔・札の重なり)/#4871(assistant-chat-check ⑭ の揺れ止め: `loginBonusDoneSeed`。マモリ・窓口へ伝える)
+- マモリ #4868 で `assistantLifeOnWoken` が本番でつながった(起こして来てくれたら今日あったことに1件)
+- 段階1の残り(ナカヨシ5→ミハリの撮り直し #4863・どれも低。止め絵 docs/progress/qa-2026-11-07/shots/life2-*.jpg)
+  ① 横の掲示板「今日あったこと」(2行)で言葉の途中で折れる(「カード研/究」)→ 名前は AssistantLifeNames、していることの言葉も nowrap のまとまりに
+  ② 地図で中庭の2人の顔が「練習スタジオ」の札の頭に重なる → ASSISTANT_LIFE_MAP_POS の garden/studio を離すか fit に顔と札の重なりを足す。browser-check ⑫ に「顔と札の重なり」
+  ③ 縦の今日やれること「声をかける ソラシドがさみし…」が切れる → small を短く(名前+💭)か2行
+  ④ ようすを見るで、練習スタジオのソラシドが「広場、だれもいないな笑」→ assistantLifePickSoloTalk で台本の place といまの場所を合わせる。検査: 8人×場所
+- そのあと段階2(LIFE-STAGE2-PLAN.md)。作る前に止め絵(縦・横)と更新履歴の文案を窓口へ。カード部屋の読むだけの口(assistantLifeAtCard 等)が main に入ったらソランドへ知らせる
