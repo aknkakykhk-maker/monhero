@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f39f0306445d9fa0
+// generated-sha256: f4dc2623c83772c7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -23086,7 +23086,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         </div>
         </>}
       {/* 横持ちの助手のひとことは、決定ボタンより下へ置く(2026-09-26)。上に置くと決定が画面の外へ押し出されていた */}
-      {notice&&noticeOpen&&<div data-rhythm-song-notice-landscape className="mt-1.5 hidden landscape:block">{React.isValidElement(notice)?React.cloneElement(notice,{maxLines:1,faceSize:28}):notice}</div>}
+      {notice&&noticeOpen&&<div data-rhythm-song-notice-landscape className="mt-1.5 hidden landscape:block">{React.isValidElement(notice)?React.cloneElement(notice,{oneLine:true,faceSize:28}):notice}</div>}
     </aside>
 
     {/* 並び替えのシート。行を1本増やさずに済むよう、選ぶところは下から出す。
