@@ -169,7 +169,7 @@ const normalizeBattleFxSettings = (value) => {
 // 設定画面に並べる項目。文言はここだけに書く(設定画面・ヘルプの説明と食い違わせない)
 const BATTLE_FX_SETTING_ITEMS = Object.freeze([
   { key:'load', title:'画面の軽さ',
-    desc:'バトル画面の飾りと演出の量です。スマホが熱くなる・動きがかくつくときは、軽いほうを選んでください。ダメージや進行は変わりません。',
+    desc:'バトル画面の飾りと演出の量です。スマホが熱くなる・動きがかくつくときは、軽いほうを選んでください。仲良し度などが上がったときの演出も、軽いほど控えめになります。ダメージや進行は変わりません。',
     options:[
       { id:'RICH', label:'豪華', note:'すべての飾りと演出' },
       { id:'STANDARD', label:'標準', note:'飾りの動きを止める' },
