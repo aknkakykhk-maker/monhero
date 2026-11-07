@@ -439,6 +439,8 @@ function HomeScreen({
                 古いままになる・CLAUDE.md ⑥-4)。開催していなければ何も出ない。
               ★いまのイベントはモンヒロビートの曲だけを対象にするので、札もここだけ。
                 ほかの遊びを対象にするイベントを作るときは、そのボタンにも同じ em を足す */}
+          {/* 助手ライフ(2026-11-07 社長)。家と町にいる助手の顔はこの札の横に出る(56-assistant-life-house.jsx の AssistantLifeHomeFaces) */}
+          {typeof assistantLifeEnabled==='function'&&assistantLifeEnabled()&&<button className="mh-home-facility life" data-home-assistant-life onClick={()=>assistantLifeOpenScreen()} aria-label="助手ライフ"><span><span aria-hidden="true" style={{fontSize:16,lineHeight:1}}>🏡</span><b className="mh-home-facility-label">助手ライフ<small>みんなの家</small></b></span></button>}
           <button className="mh-home-facility rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}><span>🎵 モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small>準備中</small>}{homeRhythmEventOpen&&<em data-home-event-badge className="mh-home-event-badge" style={HOME_EVENT_BADGE_STYLE}>✨開催中✨</em>}</span></button>
           {/* 2026-09-20 ユーザー指示で正式名称を「モンヒロバトル」にした。
               モンヒロビートと同じく、字が長くても略さずそのまま入れる(CLAUDE.md ⑤) */}

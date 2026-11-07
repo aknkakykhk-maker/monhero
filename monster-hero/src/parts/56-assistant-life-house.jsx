@@ -1,0 +1,672 @@
+// ===== 助手ライフ「助手たちの家」(段階1・2026-11-07 社長) =====
+// 専用ページの真ん中は家の断面。8人それぞれの部屋があり、いる・いないが分かる(いる部屋は灯りと顔、出かけている部屋は灯りが消えて扉に行き先の札)。
+// 案と止め絵: docs/progress/assistant-peer/LIFE-HOUSE-PLAN.md・ux/life-house-mock-*.jpg。家の絵は描き下ろしが届くまで図形で組む(注文書 HOUSE-ART-ORDER.md)
+// HOME では、遊んでいる所の施設の横に顔だけを出す(AssistantLifeHomeFaces)。家と町にいる助手は施設「🏡 助手ライフ」の横
+// 保存は足すだけ: 今日あったこと mh_assistant_life_diary_v1 / 入場を長く見せた日 mh_assistant_life_intro_v1
+// 公開の印 assistantLife の後ろ。様子の仕組み・台本の引き方は 56-assistant-life.jsx
+
+const ASSISTANT_LIFE_HOUSE_ORDER = Object.freeze(['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']);
+// 部屋の壁の色と家具(描き下ろしの絵が届くまでの仮。注文書の表と同じ)
+const ASSISTANT_LIFE_ROOM_LOOK = Object.freeze({
+  mua:       { wall: ['#fde4f0', '#f9c4dd'], furn: '🪞🎀🍰' },
+  kiki:      { wall: ['#ece7ff', '#d6ccfb'], furn: '🫖📚🗿' },
+  momosuke:  { wall: ['#ffe9d6', '#fdd0a8'], furn: '🎹🎧' },
+  dra:       { wall: ['#e3f8e6', '#bfe9c7'], furn: '🛏️🍪' },
+  atsu:      { wall: ['#ffe2e2', '#f8bcbc'], furn: '🥁🐉' },
+  kyuko:     { wall: ['#e0f2fe', '#b9e0f8'], furn: '📚🎼' },
+  sorashido: { wall: ['#fff8d6', '#f6e59a'], furn: '🃏🧮' },
+  erubin:    { wall: ['#e8edf3', '#c9d3df'], furn: '⚔️🛡️' },
+});
+const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({ home: '🏡', plaza: '⛲', cafe: '🍰', studio: '🎵', ranch: '🥚', cardroom: '🃏', library: '📚', market: '🛍️', hill: '🌄', garden: '🌷' });
+// 出かけている先を、HOME のどの施設に出すか(していること → 施設)。家と町は「🏡 助手ライフ」
+const assistantLifeFacilityOf = (entry) => {
+  if (!entry) return 'life';
+  if (entry.doing === 'practice') return 'rhythm';
+  if (entry.doing === 'cards' && entry.place === 'cardroom') return 'card';
+  if (entry.doing === 'training') return 'management';
+  if (entry.place === 'market') return 'market';
+  return 'life';
+};
+// 時間帯の見た目(朝・昼・夕・夜)
+const assistantLifeTimeLook = (slotId) => (slotId === 'morning' ? 'morning' : slotId === 'evening' ? 'evening' : (slotId === 'night' || slotId === 'late') ? 'night' : 'noon');
+// 窓の外・場面の背景(お話の背景の絵。広場と森は時間帯の絵がある)
+const ASSISTANT_LIFE_VIEW = Object.freeze({
+  morning: ['images/story-bg/monhero_plaza.jpg', 'images/story-bg/forest_morning.jpg'],
+  noon:    ['images/story-bg/monhero_plaza.jpg', 'images/story-bg/forest_deep.jpg'],
+  evening: ['images/story-bg/monhero_plaza_evening.jpg', 'images/story-bg/forest_evening.jpg'],
+  night:   ['images/story-bg/monhero_night.jpg', 'images/story-bg/forest_night.jpg'],
+});
+const ASSISTANT_LIFE_BGM_TRACK = 'kaze_ga_soyogu'; // 助手ライフの曲(2026-11-07 社長: 今ある「風がそよぐ場所」)
+
+// いま、その助手がどこで誰と何をしているか(様子がその時間のものでなければ null)
+const assistantLifeWhereOf = (life, id) => {
+  if (!life) return null;
+  const g = (life.groups || []).find(x => x.ids.includes(id));
+  if (g) return { id, place: g.place, doing: g.doing, with: g.ids.filter(x => x !== id), group: g, reason: null };
+  const s = (life.solo || {})[id];
+  if (s) return { id, place: s.place, doing: s.doing, with: [], group: null, reason: s.reason || null };
+  return null;
+};
+const assistantLifeCurrent = () => {
+  if (!assistantLifeEnabled() || typeof ASSISTANT_LIFE_STORE === 'undefined') return null;
+  const life = ASSISTANT_LIFE_STORE.state.life;
+  return life && life.abs === assistantLifeSlotAt().abs ? life : null;
+};
+// いまモンヒロビートにいる助手(ビート部とのつなぎ口。「練習」している時間帯がモンビーにいる時間)
+const assistantLifeAtBeat = (id) => { const w = assistantLifeWhereOf(assistantLifeCurrent(), id); return !!(w && w.doing === 'practice'); };
+const assistantLifeBeatIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLifeAtBeat);
+// 家にいる組は、だれかひとりの部屋に集まる(家が好きな助手 → 並びの先)
+const assistantLifeHostOf = (ids) => ids.find(id => ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav === 'home') || [...ids].sort((a, b) => ASSISTANT_LIFE_HOUSE_ORDER.indexOf(a) - ASSISTANT_LIFE_HOUSE_ORDER.indexOf(b))[0];
+
+// ---------- 今日あったこと(家の掲示板・部屋を押したとき) ----------
+const ASSISTANT_LIFE_DIARY_KEY = 'mh_assistant_life_diary_v1';
+const ASSISTANT_LIFE_DIARY_MAX = 40;
+const normalizeAssistantLifeDiary = (v) => {
+  const raw = v && typeof v === 'object' ? v : {};
+  const items = Array.isArray(raw.items) ? raw.items.filter(x => x && typeof x.text === 'string').map(x => ({
+    t: typeof x.t === 'string' ? x.t : '', text: x.text.slice(0, 80), ids: Array.isArray(x.ids) ? x.ids.filter(i => typeof i === 'string') : [], kind: typeof x.kind === 'string' ? x.kind : 'note',
+  })) : [];
+  return { day: typeof raw.day === 'string' ? raw.day : null, items: items.slice(-ASSISTANT_LIFE_DIARY_MAX), slots: Array.isArray(raw.slots) ? raw.slots.filter(Number.isFinite).slice(-6) : [] };
+};
+const ASSISTANT_LIFE_DIARY = {
+  state: normalizeAssistantLifeDiary(null), loaded: false, loading: null, listeners: new Set(),
+  emit() { for (const fn of this.listeners) { try { fn(this.state); } catch {} } },
+  load() {
+    if (this.loaded) return Promise.resolve(this.state);
+    if (!this.loading) this.loading = (async () => { try { this.state = normalizeAssistantLifeDiary(await storeGet(ASSISTANT_LIFE_DIARY_KEY, null, false)); } catch {} this.loaded = true; this.emit(); return this.state; })();
+    return this.loading;
+  },
+};
+const assistantLifeClock = (now = Date.now()) => { const d = new Date(Number(now) + 9 * 3600000); return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`; };
+const assistantLifeDiaryAdd = async (text, ids = [], { kind = 'note', now = Date.now(), slotAbs = null } = {}) => {
+  if (!assistantLifeEnabled() || !text) return;
+  await ASSISTANT_LIFE_DIARY.load();
+  const day = assistantLifeDayKey(now);
+  const cur = ASSISTANT_LIFE_DIARY.state.day === day ? ASSISTANT_LIFE_DIARY.state : { day, items: [], slots: [] };
+  if (slotAbs != null && cur.slots.includes(slotAbs)) return;
+  const items = [...cur.items, { t: assistantLifeClock(now), text: String(text).slice(0, 80), ids, kind }].slice(-ASSISTANT_LIFE_DIARY_MAX);
+  ASSISTANT_LIFE_DIARY.state = { day, items, slots: slotAbs != null ? [...cur.slots, slotAbs].slice(-6) : cur.slots };
+  ASSISTANT_LIFE_DIARY.emit();
+  try { storeSet(ASSISTANT_LIFE_DIARY_KEY, ASSISTANT_LIFE_DIARY.state, false); } catch {}
+};
+const assistantLifeName = (id) => (typeof assistantById === 'function' && assistantById(id) ? assistantById(id).name : id);
+// 時間が変わって様子が決まったら、組の過ごし方を書く(同じ時間は1回だけ)
+const assistantLifeDiaryOnSlot = (life, slot, now = Date.now()) => {
+  const gs = (life.groups || []).slice(0, 3);
+  if (!gs.length) return;
+  const text = gs.map(g => `${g.ids.map(assistantLifeName).join('・')} ${ASSISTANT_LIFE_PLACES[g.place]}で${ASSISTANT_LIFE_DOINGS[g.doing].label}`).join(' / ');
+  void assistantLifeDiaryAdd(`${slot.label}: ${text}`, gs.flatMap(g => g.ids), { kind: 'slot', now, slotAbs: slot.abs });
+};
+// モンヒロビートの助手とのセッション(ビート部とのつなぎ口)。向きは「ビート部が呼ぶ」:
+//   1曲終えて助手が育ったら、ビート部が assistantLifeOnSessionLive(ev) を呼ぶ(ev = { assistantId, partnerIds, songId, levelUp, level, duo, at })
+//   家の部屋から「一緒にモンビー」を押したら、ビート部が入れておいた ASSISTANT_LIFE_LINKS.beatInvite(助手id) を呼ぶ(無ければボタンを出さない)
+const ASSISTANT_LIFE_LINKS = { beatInvite: null };
+const assistantLifeOnSessionLive = (ev) => {
+  if (!ev || !ev.assistantId) return;
+  const ids = [ev.assistantId, ...((ev.partnerIds || []).filter(x => x !== ev.assistantId))];
+  const who = ids.map(assistantLifeName).join('・');
+  void assistantLifeDiaryAdd(`${who} セッション${ev.duo ? '(デュオ)' : ''}${ev.levelUp && ev.level ? ` → 🎵Lv${ev.level}` : ''}`, ids, { kind: 'session' });
+};
+const useAssistantLifeDiary = () => {
+  const [st, setSt] = React.useState(ASSISTANT_LIFE_DIARY.state);
+  React.useEffect(() => { ASSISTANT_LIFE_DIARY.listeners.add(setSt); ASSISTANT_LIFE_DIARY.load().then(setSt).catch(() => {}); return () => { ASSISTANT_LIFE_DIARY.listeners.delete(setSt); }; }, []);
+  return st.day === assistantLifeDayKey() ? st : { ...st, items: [] };
+};
+// セッションLv(ビート部の値を読むだけ)
+const assistantLifeSessionInfo = (id) => {
+  try {
+    if (typeof RHYTHM_ASSIST_SESSION_STORE === 'undefined' || typeof rhythmAssistSessionLevel !== 'function') return null;
+    const st = RHYTHM_ASSIST_SESSION_STORE.get();
+    const lv = rhythmAssistSessionLevel(st, id);
+    const mon = typeof rhythmAssistSessionMon === 'function' ? rhythmAssistSessionMon(st, id) : null;
+    return { level: lv, lives: mon && Number.isFinite(mon.lives) ? mon.lives : 0 };
+  } catch { return null; }
+};
+
+// ---------- 入場の演出(毎回。その日の最初は長く・2回目からは短く。タップで飛ばせる) ----------
+const ASSISTANT_LIFE_INTRO_KEY = 'mh_assistant_life_intro_v1';
+
+// ---------- 見た目(CSS) ----------
+const ASSISTANT_LIFE_HOUSE_CSS = `
+.mhl-root{position:fixed;inset:0;display:flex;justify-content:center;background:#05030f}
+.mhl-page{position:relative;display:flex;flex-direction:column;width:100%;height:100%;overflow:hidden;color:#fff}
+.mhl-sky{position:absolute;inset:0}
+.mhl-sky.t-noon{background:linear-gradient(#7cc4f5,#cdeafe 60%,#e6f6d8)}.mhl-sky.t-morning{background:linear-gradient(#f9c6c9,#fde7c8 55%,#e8f3dc)}
+.mhl-sky.t-evening{background:linear-gradient(#5b2a6e,#e8775a 50%,#f6c98b)}.mhl-sky.t-night{background:linear-gradient(#070b24,#1b2452 60%,#22305e)}
+.mhl-wood{position:absolute;left:0;right:0;bottom:0;height:52%;background-size:cover;background-position:center bottom;opacity:.75}
+.mhl-hdr{position:relative;z-index:5;padding:8px 12px 6px;background:linear-gradient(180deg,#140b2ef2,#140b2ecc 75%,#140b2e00)}
+.mhl-en{font-size:9px;letter-spacing:.18em;font-weight:900;color:#f9a8d4}
+.mhl-ti{font-size:22px;font-weight:900;line-height:1.05;background:linear-gradient(90deg,#fff,#fbcfe8 60%,#fde68a);-webkit-background-clip:text;background-clip:text;color:transparent}
+.mhl-clock{border-radius:12px;padding:3px 8px;border:1px solid #ffffff33;background:rgba(15,23,42,.72);text-align:right}
+.mhl-chip{display:inline-flex;align-items:center;gap:3px;background:linear-gradient(90deg,#be185d,#f59e0b);padding:1px 8px;border-radius:999px;font-size:10px;font-weight:900;white-space:nowrap}
+.mhl-bar{flex:1;height:7px;border-radius:9px;background:#ffffff1f;overflow:hidden}.mhl-bar>i{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fbbf24)}
+.mhl-body{position:relative;z-index:2;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden}
+.mhl-house{position:relative;margin:0 auto}
+.mhl-roof{position:absolute;left:-8px;right:-8px;top:0;clip-path:polygon(50% 0,100% 100%,0 100%);background:repeating-linear-gradient(0deg,#7a2e1e 0 7px,#5e2216 7px 9px);box-shadow:inset 0 -6px 0 #3b140c}
+.mhl-chim{position:absolute;width:20px;background:#6b4a3a;border:2px solid #3b2a20}
+.mhl-attic{position:absolute;left:50%;transform:translateX(-50%);width:40px;height:40px;border-radius:50%;border:4px solid #e8c37a;background:#1e293b;display:grid;place-items:center;font-size:14px}
+.mhl-hname{position:absolute;left:50%;transform:translateX(-50%);font-size:11px;font-weight:900;padding:1px 10px;border-radius:8px;background:linear-gradient(#5b3a1e,#3b2412);border:1.5px solid #e8c37a;color:#fff3d6;white-space:nowrap}
+.mhl-frame{position:absolute;left:0;right:0;background:#6b4423;border-radius:4px;box-shadow:0 10px 24px #0008}
+.mhl-room{position:absolute;overflow:hidden;border-radius:3px;padding:0;border:0;text-align:left;cursor:pointer}
+.mhl-room:active{filter:brightness(1.12)}
+.mhl-room .w{position:absolute;inset:0}
+.mhl-room .fl{position:absolute;left:0;right:0;bottom:0;height:13px;background:repeating-linear-gradient(90deg,#b07a4a 0 22px,#9a6a3e 22px 24px)}
+.mhl-room .win{position:absolute;right:6px;top:6px;width:27%;height:36%;border:3px solid #f5e6c8;border-radius:3px;overflow:hidden;background:#000}
+.mhl-room .win img{width:100%;height:100%;object-fit:cover}
+.mhl-room .win:before,.mhl-room .win:after{content:"";position:absolute;top:0;bottom:0;width:22%;background:linear-gradient(90deg,#f9a8d4cc,#f472b688);z-index:1}
+.mhl-room .win:before{left:0}.mhl-room .win:after{right:0;transform:scaleX(-1)}
+.mhl-room .pl{position:absolute;left:5px;top:5px;z-index:3;font-size:10px;font-weight:900;padding:0 6px;border-radius:6px;background:#fffbeb;color:#422006;border:1px solid #d6b37a}
+.mhl-room .lv{position:absolute;left:5px;top:22px;z-index:3;font-size:9px;font-weight:900;padding:0 4px;border-radius:5px;background:#312e81;color:#fde68a;border:1px solid #fde68a88}
+.mhl-room .fu{position:absolute;left:5px;bottom:9px;z-index:2;font-size:19px;letter-spacing:1px}
+.mhl-room .pp{position:absolute;bottom:9px;right:10%;z-index:4;display:flex}
+.mhl-room .pp>span{border-radius:50%;box-shadow:0 2px 6px #0008}.mhl-room .pp>span+span{margin-left:-10px}
+.mhl-room .pp .lonely{box-shadow:0 0 0 2.5px #fbbf24,0 0 10px #fbbf24}.mhl-room .pp .after{box-shadow:0 0 0 2.5px #7dd3fc}
+.mhl-room .bb{position:absolute;right:4px;z-index:5;max-width:80%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9.5px;font-weight:900;background:#fff;color:#1e293b;border-radius:9px;padding:1px 6px;box-shadow:0 2px 5px #0007}
+.mhl-room .off{position:absolute;inset:0;z-index:3;background:rgba(6,9,24,.5)}
+.mhl-room .lamp{position:absolute;inset:0;z-index:3;background:radial-gradient(circle at 60% 40%,rgba(255,214,140,.45),transparent 70%);mix-blend-mode:screen;pointer-events:none}
+.mhl-room .tag{position:absolute;left:50%;top:50%;z-index:6;transform:translate(-50%,-38%) rotate(-3deg);max-width:92%;text-align:center;padding:3px 8px 4px;border-radius:7px;background:linear-gradient(#fef3c7,#fde68a);color:#422006;border:1.5px solid #b45309;box-shadow:0 3px 6px #0009}
+.mhl-room .tag b{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mhl-room .tag small{display:block;font-size:9px;font-weight:800;color:#7c2d12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mhl-room .lock{position:absolute;inset:0;z-index:6;display:grid;place-items:center;background:rgba(15,23,42,.78);font-size:11px;font-weight:900;color:#cbd5e1}
+.mhl-liv{position:absolute;overflow:hidden;border-radius:3px;background:linear-gradient(#f3e3c4,#e7cfa2)}
+.mhl-board{position:absolute;left:8px;top:6px;bottom:6px;border-radius:5px;background:#c08a52;border:3px solid #7c4a22;padding:3px 6px;overflow:hidden}
+.mhl-board b{display:block;font-size:9.5px;color:#fff}.mhl-board p{font-size:9px;font-weight:800;color:#1e293b;background:#fffbeb;border-radius:3px;padding:1px 4px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mhl-door{position:absolute;bottom:0;width:38px;border-radius:18px 18px 0 0;background:linear-gradient(#8b5a2b,#6b4423);border:2px solid #3b2412}
+.mhl-find{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:900;padding:6px 10px;border-radius:999px;background:linear-gradient(135deg,#7c3aed,#db2777);border:1.5px solid #fff9;box-shadow:0 4px 12px #0009}
+.mhl-tile{position:relative;display:block;min-height:58px;border-radius:12px;padding:6px 6px 4px;text-align:left;clip-path:polygon(0 0,88% 0,100% 20%,100% 100%,0 100%);overflow:hidden;box-shadow:inset 0 -4px 0 #0003;color:#fff}
+.mhl-tile:active{transform:scale(.97)}.mhl-tile:disabled{opacity:.55}
+.mhl-tile i{font-style:normal;font-size:17px;display:block;line-height:1}.mhl-tile b{display:block;font-size:12px;font-weight:900;margin-top:2px;text-shadow:0 1px 2px #0007;white-space:nowrap}
+.mhl-tile small{display:block;font-size:9px;font-weight:800;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mhl-tile em{position:absolute;right:6px;top:4px;font-style:normal;font-size:9px;font-weight:900;background:#0f172acc;border-radius:999px;padding:0 5px}
+.mhl-watch{background:linear-gradient(135deg,#fb7185,#f59e0b)}.mhl-call{background:linear-gradient(135deg,#38bdf8,#6366f1)}.mhl-give{background:linear-gradient(135deg,#34d399,#16a34a)}.mhl-beat{background:linear-gradient(135deg,#a855f7,#ec4899)}
+.mhl-icons{display:flex;gap:6px}.mhl-icons button{flex:1;min-height:48px;border-radius:12px;background:rgba(30,41,59,.9);border:1px solid #ffffff2a;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#e2e8f0}
+.mhl-icons button.on{background:linear-gradient(#f472b633,#f472b611);border-color:#f9a8d4;color:#fff}.mhl-icons button i{font-style:normal;font-size:17px;line-height:1.1}
+.mhl-sheet{position:absolute;left:0;right:0;bottom:0;z-index:20;max-height:86%;overflow-y:auto;border-radius:22px 22px 0 0;background:linear-gradient(#1e1b4b,#0b1020 40%);border-top:2px solid #f9a8d4;box-shadow:0 -10px 30px #000a;padding:12px 14px calc(14px + env(safe-area-inset-bottom))}
+.mhl-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed #ffffff1a;font-size:12px;font-weight:800}
+.mhl-row .k{width:78px;flex:none;color:#cbd5e1;font-size:10.5px}
+.mhl-btn{min-height:44px;border-radius:12px;font-size:12px;font-weight:900;color:#fff}.mhl-btn:disabled{opacity:.45}
+.mhl-scene{position:absolute;inset:0;z-index:30;overflow:hidden;background:#000}
+.mhl-scene .bg{position:absolute;inset:0;background-size:cover;background-position:center}
+.mhl-scene .st{position:absolute;bottom:0;object-fit:contain;object-position:bottom;filter:drop-shadow(0 6px 12px #0008)}
+@keyframes mhlIntroTitle{0%{opacity:0;transform:scale(.9)}30%{opacity:1;transform:scale(1)}100%{opacity:1}}
+@keyframes mhlDoorL{from{transform:translateX(0)}to{transform:translateX(-102%)}}
+@keyframes mhlDoorR{from{transform:translateX(0)}to{transform:translateX(102%)}}
+@keyframes mhlPop{0%{transform:scale(0)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+@keyframes mhlFade{from{opacity:1}to{opacity:0}}
+.mhl-intro{position:absolute;inset:0;z-index:40;pointer-events:auto}
+.mhl-intro .door{position:absolute;top:0;bottom:0;width:50.5%;background:repeating-linear-gradient(0deg,#f5e6c8 0 12px,#e8d3a8 12px 14px);box-shadow:inset 0 0 0 4px #6b4423}
+.mhl-pop .pp>span{animation:mhlPop .35s ease-out both}
+@media (prefers-reduced-motion:reduce){.mhl-intro{display:none}.mhl-pop .pp>span{animation:none}}
+`;
+
+function AssistantLifeHouseStyle() { return <style>{ASSISTANT_LIFE_HOUSE_CSS}</style>; }
+
+// 部屋1つ
+function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx }) {
+  const L = ASSISTANT_LIFE_ROOM_LOOK[id];
+  const view = ASSISTANT_LIFE_VIEW[look][idx % 2];
+  const night = look === 'night';
+  const ppl = state && state.in ? state.in : null;
+  const sess = assistantLifeSessionInfo(id);
+  return (
+    <button type="button" className="mhl-room" data-assistant-life-room={id} data-assistant-life-room-in={ppl ? ppl.join(',') : ''} data-assistant-life-room-tag={state && state.tag ? '1' : '0'}
+      style={{ left: x, top: y, width: w, height: h }} onClick={() => met && onOpen(id)} aria-label={`${assistantLifeName(id)}の部屋`}>
+      <div className="w" style={{ background: `linear-gradient(${L.wall[0]},${L.wall[1]})`, filter: night ? (ppl ? 'brightness(.92)' : 'brightness(.55)') : undefined }}/>
+      <div className="win"><img src={view} alt="" loading="lazy" style={{ objectPosition: `${(idx % 3) * 40}% 60%` }}/></div>
+      <span className="pl">{met ? assistantLifeName(id) : '？'}</span>
+      {met && sess && sess.level > 1 && <span className="lv" data-assistant-life-room-session={sess.level}>🎵Lv{sess.level}</span>}
+      <span className="fu" aria-hidden="true">{L.furn}</span><div className="fl"/>
+      {ppl && (look === 'night' || look === 'evening') && <div className="lamp"/>}
+      {!ppl && met && <div className="off" style={night ? { background: 'rgba(3,5,16,.72)' } : undefined}/>}
+      {ppl && <div className="pp">{ppl.map(pid => { const who = assistantById(pid); return who ? (
+        <span key={pid} className={state.lonely && pid === id ? 'lonely' : state.after ? 'after' : ''} data-assistant-life-room-face={pid}><AssistantFace who={who} size={Math.round(Math.min(40, h * .44))} accent={who.accent}/></span>) : null; })}</div>}
+      {ppl && state.bub && <span className="bb" style={{ bottom: Math.round(Math.min(40, h * .44)) + 14 }}>{state.bub}</span>}
+      {state && state.tag && <span className="tag" data-assistant-life-room-away={id}><b>{state.tag[0]}</b><small>{state.tag[1]}</small></span>}
+      {!met && <span className="lock">まだ会っていない</span>}
+    </button>);
+}
+
+// 家(縦: 4階×2部屋 / 横: 2段×4部屋)。部屋・居間・屋根裏の位置は注文書 HOUSE-ART-ORDER.md と同じ並び
+function AssistantLifeHouseArt({ width, land, look, rooms, metSet, onOpen, diary, pop }) {
+  const wall = 6, cols = land ? 4 : 2, rows = land ? 2 : 4;
+  const rw = (width - wall * (cols + 1)) / cols;
+  const rh = land ? Math.round(rw * 0.74) : Math.round(rw * 0.5);
+  const lh = land ? 62 : 78, roofH = land ? 44 : 64;
+  const bodyH = wall + rows * (rh + wall) + lh + wall, ly = wall + rows * (rh + wall);
+  const night = look === 'night';
+  const items = (diary.items || []).slice(-3).reverse();
+  return (
+    <div className={`mhl-house${pop ? ' mhl-pop' : ''}`} data-assistant-life-house style={{ width, height: roofH + bodyH }}>
+      <div className="mhl-chim" style={{ left: width * .72, top: roofH * .05, height: roofH * .6 }}/>
+      <div className="mhl-roof" style={{ height: roofH }}/>
+      {!land && <div className="mhl-attic" style={{ top: roofH - 52 }} aria-label="屋根裏(まだ開いていません)">🔒</div>}
+      <span className="mhl-hname" style={{ top: roofH - (land ? 22 : 14) }}>🏡 助手の家</span>
+      <div className="mhl-frame" style={{ top: roofH, height: bodyH }}>
+        {ASSISTANT_LIFE_HOUSE_ORDER.map((id, i) => {
+          const r = Math.floor(i / cols), c = i % cols;
+          return <AssistantLifeRoom key={id} id={id} idx={i + r} met={metSet.has(id)} look={look} x={wall + c * (rw + wall)} y={wall + r * (rh + wall)} w={rw} h={rh} state={rooms[id]} onOpen={onOpen}/>;
+        })}
+        <div className="mhl-liv" data-assistant-life-living style={{ left: wall, top: ly, width: width - 2 * wall, height: lh, filter: night ? 'brightness(.62)' : undefined }}>
+          <div className="mhl-board" data-assistant-life-board style={{ width: Math.min(width * (land ? .42 : .5), 240) }}>
+            <b>📌 今日あったこと</b>
+            {items.length ? items.slice(0, land ? 2 : 3).map((x, i) => <p key={i}>{x.t} {x.text}</p>) : <p>まだ何もありません</p>}
+          </div>
+          <div className="mhl-door" style={{ left: width * (land ? .62 : .66), height: lh - 14 }}/>
+          <span className="absolute text-[24px]" style={{ left: width * (land ? .62 : .66) + 46, bottom: 6 }} aria-hidden="true">🛋️</span>
+          <span className="absolute right-2 top-1 text-[9px] font-black text-amber-900">みんなの居間</span>
+          {night && <span className="absolute text-[18px]" style={{ right: 40, bottom: 6 }} aria-hidden="true">🔥</span>}
+        </div>
+      </div>
+    </div>);
+}
+
+// 部屋ごとの見え方(いる人・出かけている札)を、いまの様子から作る
+const assistantLifeRoomsOf = (life, metIds) => {
+  const rooms = {};
+  const peer = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null;
+  for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
+    if (!metIds.includes(id)) { rooms[id] = null; continue; }
+    const w = assistantLifeWhereOf(life, id);
+    if (!w) { rooms[id] = { in: [id], bub: '' }; continue; }
+    const doing = ASSISTANT_LIFE_DOINGS[w.doing] || { label: '' };
+    if (w.place === 'home') {
+      const ids = w.group ? w.group.ids : [id];
+      const host = w.group ? assistantLifeHostOf(ids) : id;
+      if (host === id) {
+        const lonely = w.reason === 'lonely';
+        rooms[id] = { in: [host, ...ids.filter(x => x !== host)], lonely, bub: w.doing === 'sleep' ? '💤' : lonely ? '💭 だれか来ないかな…' : ids.length > 1 ? `${ASSISTANT_LIFE_PLACE_ICON.home} ${ids.length}人で${doing.label}` : doing.label };
+      } else rooms[id] = { tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, doing.label] };
+      continue;
+    }
+    const withText = w.with.length ? `${w.with.map(assistantLifeName).join('・')}と` : 'ひとりで';
+    rooms[id] = { tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${ASSISTANT_LIFE_PLACES[w.place]}へ`, `${withText} ・ ${doing.label}`] };
+  }
+  // 言い合いのあとの2人(水色の縁)
+  const q = peer && peer.quarrel && peer.quarrel.pending;
+  if (q && q.pair) for (const id of String(q.pair).split('-')) if (rooms[id] && rooms[id].in) rooms[id] = { ...rooms[id], after: true };
+  return rooms;
+};
+
+// 部屋を押したとき(その助手のこと・その場でできること)
+function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose, onPeek, onInvite, onWatch, onGive, onBeat, canGive, slot, land = false }) {
+  const who = assistantById(id);
+  if (!who) return null;
+  const w = assistantLifeWhereOf(life, id);
+  const home = !w || w.place === 'home';
+  const doing = w ? (ASSISTANT_LIFE_DOINGS[w.doing] || { label: '' }).label : '';
+  const mood = ASSISTANT_LIFE_MOODS[(life && life.moods || {})[id]] || '';
+  const lv = typeof bondLevelOf === 'function' ? bondLevelOf(id) : null;
+  const friends = ASSISTANT_LIFE_HOUSE_ORDER.filter(x => x !== id).map(x => ({ id: x, lv: typeof assistantPeerLevel === 'function' ? assistantPeerLevel(peerSt, id, x) : 1 }))
+    .sort((a, b) => b.lv - a.lv).slice(0, 3);
+  const sess = assistantLifeSessionInfo(id);
+  const items = (diary.items || []).filter(x => (x.ids || []).includes(id)).slice(-3);
+  const watched = (life && life.watched) || [];
+  const groupKey = w && w.group ? assistantLifeGroupKey(w.group) : null;
+  const canWatch = groupKey ? !watched.includes(groupKey) : !watched.includes(`solo:${id}`);
+  const atBeat = w && w.doing === 'practice';
+  const slotDef = ASSISTANT_LIFE_SLOTS[slot.i];
+  const where = !w ? '🏡 部屋で過ごしている' : home ? `🏡 ${w.group ? `${w.with.map(assistantLifeName).join('・')}と ` : ''}${doing}` : `${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${ASSISTANT_LIFE_PLACES[w.place]}で${doing}${w.with.length ? ` ・ ${w.with.map(assistantLifeName).join('・')}と` : ''}`;
+  return (
+    <div className="absolute inset-0" style={{ zIndex: 25 }} data-assistant-life-room-sheet={id}>
+      <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/60" onClick={onClose}/>
+      <div className="mhl-sheet" style={land ? { left: 'auto', width: '42%', top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px', borderTop: 0, borderLeft: '2px solid #f9a8d4', paddingTop: 10 } : undefined}>
+        <img src={assistantFullImage(who, w && w.reason === 'lonely' ? 'troubled' : 'happy')} alt="" className={`pointer-events-none absolute right-0 top-0 object-contain object-right-top opacity-95 ${land ? 'h-[96px] w-[96px]' : 'h-[150px] w-[150px]'}`}/>
+        <p className="mhl-en">ROOM · {String(who.id).toUpperCase()}</p>
+        <p className="text-[21px] font-black">{who.name}の部屋</p>
+        <p className="mt-1 max-w-[62%] text-[12px] font-bold" data-assistant-life-room-where>{where}</p>
+        {!home && <p className="text-[11px] font-bold text-violet-200">⏱ {slotDef ? `${ASSISTANT_LIFE_SLOTS[(slot.i + 1) % 6].label}(${slotDef.to}時)まで` : ''}いる</p>}
+        {(w && w.reason === 'lonely') ? <p className="text-[11px] font-bold text-amber-200">💭 さみしそう(だれか来てほしい)</p> : mood ? <p className="text-[11px] font-bold text-pink-200">気分: {mood}</p> : null}
+        <div className={land ? 'mt-2' : 'mt-8'}>
+          {lv != null && <div className="mhl-row"><span className="k">💗 仲良し度</span><b>Lv{lv}</b></div>}
+          <div className="mhl-row"><span className="k">🤝 友情Lv</span><span className="flex flex-wrap gap-x-3 text-[11px]">{friends.map(f => <span key={f.id}>{assistantLifeName(f.id)} <b className={f.lv >= 5 ? 'text-pink-300' : f.lv >= 3 ? 'text-amber-300' : ''}>Lv{f.lv}</b></span>)}</span></div>
+          {sess && <div className="mhl-row" data-assistant-life-room-session-row><span className="k">🎵 セッション</span><b>セッションLv{sess.level}</b><span className="ml-auto text-[10px] text-slate-300">一緒に {sess.lives}回</span></div>}
+          <div className="py-1.5"><p className="text-[10.5px] font-black text-slate-300">今日あったこと</p>
+            {items.length ? items.map((x, i) => <p key={i} className="text-[11px] font-bold text-slate-100"><b className="mr-1.5 text-amber-200">{x.t}</b>{x.text}</p>) : <p className="text-[11px] text-slate-400">まだありません</p>}
+          </div>
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-1.5">
+          {w && w.group
+            ? <button type="button" className="mhl-btn mhl-watch" data-assistant-life-room-act="watch" disabled={!canWatch} onClick={() => onWatch(w.group)}>{canWatch ? (home ? '👀 見守る' : '👀 見守りに行く') : '見守りました'}</button>
+            : <button type="button" className="mhl-btn mhl-watch" data-assistant-life-room-act="peek" disabled={!canWatch} onClick={() => onPeek(id)}>{canWatch ? '👀 ようすを見る' : '見た'}</button>}
+          {!w || !w.group
+            ? <button type="button" className="mhl-btn mhl-call" data-assistant-life-room-act="invite" disabled={w && w.reason === 'distance'} onClick={() => onInvite(id)}>💬 声をかける</button>
+            : <button type="button" className="mhl-btn mhl-give" data-assistant-life-room-act="give" disabled={!canGive} onClick={() => onGive(w.group)}>🧺 渡す</button>}
+          {typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && (
+            <button type="button" className="mhl-btn mhl-beat col-span-2" data-assistant-life-room-act="beat" onClick={() => onBeat(id)}>🎵 一緒にモンビー{atBeat ? '(いまモンビーにいる)' : ''}</button>)}
+        </div>
+      </div>
+    </div>);
+}
+
+// 場面(見守る・ようすを見る・渡す の掛け合いを、その場所の背景と立ち絵で流す)
+const assistantLifeSceneBg = (place, look) => {
+  const v = ASSISTANT_LIFE_VIEW[look];
+  if (place === 'plaza') return { src: v[0] };
+  if (place === 'hill' || place === 'garden') return { src: v[1] };
+  if (place === 'cafe' || place === 'market') return { src: 'images/story-bg/monhero_town.jpg', tint: look };
+  // 絵の無い所は、HOME の町の絵のその建物を大きく切り抜いて使う(あとで絵を差し替えるだけで入る)
+  const pos = { studio: '20% 18%', ranch: '8% 38%', cardroom: '50% 86%', library: '82% 24%' }[place];
+  if (pos) return { src: 'data/images/home-background.jpg', pos, zoom: true, tint: look };
+  return null;
+};
+const ASSISTANT_LIFE_TINT = Object.freeze({ morning: 'linear-gradient(180deg,rgba(255,190,190,.25),transparent 60%)', noon: 'none', evening: 'linear-gradient(180deg,rgba(255,120,80,.35),rgba(110,50,90,.35))', night: 'linear-gradient(180deg,rgba(10,15,50,.6),rgba(10,15,50,.5))' });
+function AssistantLifeScene({ scene, look, onClose, onGive, canGive }) {
+  const peer = (typeof useAssistantPeerState === 'function') ? useAssistantPeerState() : null;
+  const [started, setStarted] = React.useState(false);
+  React.useEffect(() => { if (peer && peer.talking) setStarted(true); }, [peer && peer.talking]);
+  const done = started && peer && !peer.talking;
+  const ids = (scene.ids || []).slice(0, 3);
+  const bg = scene.place === 'home' || !scene.place ? null : assistantLifeSceneBg(scene.place, look);
+  const host = scene.place === 'home' ? assistantLifeHostOf(ids) : null;
+  const room = host ? ASSISTANT_LIFE_ROOM_LOOK[host] : null;
+  const hint = ids.length >= 2 && typeof assistantLifePairHint === 'function' && peer ? assistantLifePairHint(peer, ASSISTANT_LIFE_STORE.state.life, ids[0], ids[1]) : null;
+  const stage = hint && typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' ? ASSISTANT_PEER_BOND_LEVELS.find(s => s.level === hint.lv) : null;
+  const placeName = scene.place === 'home' ? `${assistantLifeName(host)}の部屋` : (ASSISTANT_LIFE_PLACES[scene.place] || '');
+  return (
+    <div className="mhl-scene" data-assistant-life-scene={scene.place || 'home'}>
+      {bg ? <div className="bg" style={{ backgroundImage: `url(${bg.src})`, backgroundPosition: bg.pos || 'center', backgroundSize: bg.zoom ? '260%' : 'cover', filter: bg.zoom ? 'blur(2px)' : undefined }}/>
+        : <div className="bg" style={{ background: room ? `linear-gradient(${room.wall[0]},${room.wall[1]})` : '#1e1b4b' }}>
+            <div className="absolute inset-x-0 bottom-0 h-[24%]" style={{ background: 'repeating-linear-gradient(90deg,#b07a4a 0 46px,#9a6a3e 46px 50px)' }}/>
+            <div className="absolute right-[8%] top-[16%] h-[20%] w-[34%] overflow-hidden rounded border-[5px] border-[#f5e6c8]"><img src={ASSISTANT_LIFE_VIEW[look][1]} alt="" className="h-full w-full object-cover"/></div>
+            {room && <span className="absolute bottom-[24%] left-3 text-[46px] opacity-90" aria-hidden="true">{room.furn}</span>}
+          </div>}
+      {bg && bg.tint && <div className="absolute inset-0" style={{ background: ASSISTANT_LIFE_TINT[bg.tint] }}/>}
+      {!bg && look === 'night' && <div className="absolute inset-0" style={{ background: 'rgba(10,15,50,.35)' }}/>}
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg,transparent 45%,rgba(10,6,30,.7) 85%)' }}/>
+      {ids.map((pid, i) => { const who = assistantById(pid); if (!who) return null; const n = ids.length; const cx = n === 1 ? 50 : n === 2 ? (i ? 66 : 34) : [22, 50, 78][i];
+        return <img key={pid} className="st" src={assistantFullImage(who, 'happy')} alt="" style={{ left: `${cx}%`, transform: 'translateX(-50%)', height: '58%', width: n === 1 ? '90%' : '70%', bottom: '22%' }}/>; })}
+      <div className="mhl-hdr absolute inset-x-0 top-0" style={{ paddingTop: 'calc(8px + env(safe-area-inset-top))' }}>
+        <div className="flex items-start gap-2">
+          <button type="button" data-assistant-life-scene-back onClick={onClose} aria-label="家へ戻る" className="h-9 w-9 text-[18px] text-slate-100">←</button>
+          <div className="min-w-0 flex-1"><p className="mhl-en">{scene.place && scene.place !== 'home' ? String(scene.place).toUpperCase() : 'ROOM'}</p><p className="mhl-ti" style={{ fontSize: 19 }}>{ASSISTANT_LIFE_PLACE_ICON[scene.place] || '🏡'} {placeName}</p></div>
+        </div>
+        {hint && <p className="mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black" style={{ background: 'linear-gradient(90deg,#db2777,#a855f7)' }}>🤝 {ids.slice(0, 2).map(assistantLifeName).join('・')} 友情Lv{hint.lv}{stage ? ` ${assistantPeerStageName(stage)}` : ''}</p>}
+      </div>
+      {done && (
+        <div className="absolute inset-x-3 flex gap-1.5" style={{ bottom: 'calc(14px + env(safe-area-inset-bottom))' }} data-assistant-life-scene-done>
+          {ids.length >= 2 && <button type="button" className="mhl-btn mhl-give flex-1" disabled={!canGive} onClick={() => onGive(ids)}>🧺 渡す</button>}
+          <button type="button" className="mhl-btn flex-1 bg-slate-700" onClick={onClose}>🏡 家へ戻る</button>
+        </div>)}
+    </div>);
+}
+
+// ---------- 専用ページ ----------
+const useAssistantLifeLand = () => {
+  const get = () => typeof window !== 'undefined' && window.innerWidth > window.innerHeight && window.innerHeight < 600;
+  const [land, setLand] = React.useState(get);
+  React.useEffect(() => { const f = () => setLand(get()); window.addEventListener('resize', f); window.addEventListener('orientationchange', f); return () => { window.removeEventListener('resize', f); window.removeEventListener('orientationchange', f); }; }, []);
+  return land;
+};
+function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = null, bondLevelOf = null }) {
+  const st = useAssistantLifeNow(metIds);
+  const diary = useAssistantLifeDiary();
+  const peerSt = (typeof useAssistantPeerState === 'function') ? useAssistantPeerState() : null;
+  const land = useAssistantLifeLand();
+  const [tab, setTab] = React.useState('house');
+  const [roomId, setRoomId] = React.useState(st.focus || null);
+  const [scene, setScene] = React.useState(null);
+  const [note, setNote] = React.useState('');
+  const [give, setGive] = React.useState(null);
+  const [intro, setIntro] = React.useState(null); // 'long' | 'short' | null
+  const [vw, setVw] = React.useState(() => (typeof window !== 'undefined' ? window.innerWidth : 390));
+  React.useEffect(() => { const f = () => setVw(window.innerWidth); window.addEventListener('resize', f); return () => window.removeEventListener('resize', f); }, []);
+  // 入場: その日の最初は長く(1.2秒)、2回目からは短く(0.4秒)
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      let last = null; try { last = await storeGet(ASSISTANT_LIFE_INTRO_KEY, null, false); } catch {}
+      const day = assistantLifeDayKey();
+      if (!alive) return;
+      const kind = last === day ? 'short' : 'long';
+      setIntro(kind);
+      if (kind === 'long') { try { storeSet(ASSISTANT_LIFE_INTRO_KEY, day, false); } catch {} }
+      setTimeout(() => { if (alive) setIntro(null); }, kind === 'long' ? 1200 : 400);
+    })();
+    return () => { alive = false; };
+  }, []);
+  React.useEffect(() => { if (st.focus) { setRoomId(st.focus); ASSISTANT_LIFE_STORE.set({ focus: null }); } }, [st.focus]);
+  if (!assistantLifeEnabled() || !st.loaded || !st.open) return null;
+  const life = st.life || {};
+  const ids = (metIds || []).filter(id => ASSISTANT_LIFE_PREFS[id]);
+  const metSet = new Set(ids);
+  const slot = assistantLifeSlotAt();
+  const look = assistantLifeTimeLook(slot.id);
+  const day = assistantLifeDayKey();
+  const play = assistantLifePlayForDay(st.play, day);
+  const tier = assistantLifeTierOf(play.points);
+  const next = ASSISTANT_LIFE_TIERS[assistantLifeTierIndex(tier) + 1] || null;
+  const watchLeft = assistantLifeWatchLeft(st.play, day);
+  const rooms = assistantLifeRoomsOf(life, ids);
+  const nameOf = assistantLifeName;
+  const close = () => { setScene(null); assistantLifeCloseScreen(); };
+  // 掛け合いを、家を閉じずに場面で流す
+  const playTalk = (talk, ctx) => {
+    if (!talk) return;
+    const sceneIds = (ctx && ctx.ids && ctx.ids.length) ? ctx.ids : (typeof assistantPeerMembers === 'function' ? assistantPeerMembers(talk) : []);
+    setRoomId(null);
+    setScene({ ids: sceneIds, place: (ctx && ctx.place) || 'home', key: talk.id });
+    if (onReplay) onReplay(talk);
+    if (sceneIds.length >= 2) void assistantLifeDiaryAdd(`${sceneIds.map(nameOf).join('・')}の様子を見守った`, sceneIds, { kind: 'watch' });
+  };
+  const watch = async (g) => { const talk = await assistantLifeWatch(g); if (!talk) { setNote('この組の掛け合いは、いまは見られません'); return; } playTalk(talk, { ids: g.ids, place: g.place }); };
+  const peek = (id) => {
+    const key = `solo:${id}`;
+    if ((life.watched || []).includes(key)) return;
+    const talk = assistantLifePickSoloTalk(id, life);
+    if (!talk) { setNote(`${nameOf(id)}は、いまは静かに過ごしています`); return; }
+    ASSISTANT_LIFE_STORE.set({ life: { ...life, watched: [...(life.watched || []), key] } });
+    assistantLifeSaveLife(); assistantLifeMarkSeen(talk);
+    const w = assistantLifeWhereOf(life, id);
+    playTalk(talk, { ids: [id], place: w ? w.place : 'home' });
+  };
+  const invite = async (id) => {
+    const talk = assistantLifePickInviteTalk(id, life);
+    if (!(await assistantLifeNudge('invite', id))) return;
+    setNote(`${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
+    if (talk) { assistantLifeMarkSeen(talk); const w = assistantLifeWhereOf(life, id); playTalk(talk, { ids: [id], place: w ? w.place : 'home' }); }
+  };
+  // 渡す(2人にあげる道具)。前の画面と同じ確かめ(AssistantLifeGiveSheet)
+  const canGive = !!(peerItems && onUseItem);
+  const itemInfos = ASSISTANT_LIFE_ITEM_KINDS.map(k => assistantLifeItemInfo(k.kind));
+  const haveOf = (kind) => (peerItems && Number(peerItems[kind])) || 0;
+  const usedOf = (kind) => !!(peerSt && typeof assistantPeerItemUsedToday === 'function' && assistantPeerItemUsedToday(peerSt, kind));
+  const openGive = (gids) => {
+    const list = Array.isArray(gids) ? gids : (gids && gids.ids) || [];
+    if (list.length < 2) return;
+    const kind = itemInfos.find(x => haveOf(x.kind) > 0 && !usedOf(x.kind))?.kind || 'gift';
+    const ps = []; for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) ps.push([list[i], list[j]]);
+    const best = ps.find(([a, b]) => assistantLifePairHint(peerSt, life, a, b).near) || ps.find(([a, b]) => assistantLifePairHint(peerSt, life, a, b).after) || ps[0];
+    setRoomId(null); setScene(null);
+    setGive({ ids: list, pair: list.length === 2 ? [...list] : best, kind });
+  };
+  const doGive = async () => {
+    if (!give || !give.pair) return;
+    const talk = await onUseItem(give.kind, give.pair);
+    const info = assistantLifeItemInfo(give.kind);
+    if (!talk) { setNote(`${info.name}は、いまは渡せません(1日1回・持っている数を見てください)`); setGive(null); return; }
+    const g = (life.groups || []).find(x => give.pair.every(id => x.ids.includes(id)));
+    setGive(null);
+    void assistantLifeDiaryAdd(`${give.pair.map(nameOf).join('と')}に${info.name}を渡した`, give.pair, { kind: 'give' });
+    playTalk(talk, { ids: give.pair, place: g ? g.place : 'home' });
+  };
+  const beat = (id) => { try { if (typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function') { close(); ASSISTANT_LIFE_LINKS.beatInvite(id); } } catch {} };
+  // 今日やれること
+  const unwatched = (life.groups || []).filter(g => !(life.watched || []).includes(assistantLifeGroupKey(g)));
+  const lonely = Object.entries(life.solo || {}).find(([, s]) => s.reason === 'lonely');
+  const beatIds = ids.filter(id => { const w = assistantLifeWhereOf(life, id); return w && w.doing === 'practice'; });
+  const itemsLeft = itemInfos.reduce((n, x) => n + (usedOf(x.kind) ? 0 : Math.min(1, haveOf(x.kind))), 0);
+  const giveGroup = (life.groups || [])[0];
+  const pad = 12;
+  const houseW = land ? Math.min(560, Math.round(vw * 0.64) - pad * 2) : Math.min(380, vw - pad * 2);
+  const tiles = (
+    <div className={land ? 'grid grid-cols-2 gap-1.5' : 'flex gap-1.5'} data-assistant-life-today>
+      <button type="button" className="mhl-tile mhl-watch flex-1" data-assistant-life-today-act="watch" disabled={watchLeft <= 0 || !unwatched.length} onClick={() => unwatched[0] && watch(unwatched[0])}>
+        <em>あと{watchLeft}</em><i>👀</i><b>見守る</b><small>{unwatched.length ? `${unwatched.length}か所` : 'いまは無し'}</small></button>
+      <button type="button" className="mhl-tile mhl-call flex-1" data-assistant-life-today-act="call" disabled={!Object.keys(life.solo || {}).length} onClick={() => { const id = lonely ? lonely[0] : Object.keys(life.solo || {})[0]; if (id) setRoomId(id); }}>
+        <em>無料</em><i>💬</i><b>声をかける</b><small>{lonely ? `${nameOf(lonely[0])}がさみしそう` : 'ひとりの助手に'}</small></button>
+      <button type="button" className="mhl-tile mhl-give flex-1" data-assistant-life-today-act="give" disabled={!canGive || !giveGroup} onClick={() => { if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids); else setTab('items'); }}>
+        <em>{itemsLeft}回</em><i>🧺</i><b>渡す</b><small>{itemInfos.map(x => `${x.emoji}${haveOf(x.kind)}`).join(' ')}</small></button>
+      <button type="button" className="mhl-tile mhl-beat flex-1" data-assistant-life-today-act="beat" onClick={() => { if (beatIds[0]) setRoomId(beatIds[0]); }} disabled={!beatIds.length}>
+        <i>🎵</i><b>モンビー</b><small>{beatIds.length ? `${beatIds.length}人が練習中` : 'いまはだれも'}</small></button>
+    </div>);
+  const icons = (
+    <div className="mhl-icons" role="tablist" data-assistant-life-icons>
+      {[['house', '🏡', '家'], ['where', '📋', '居場所'], ['friends', '🤝', '友情'], ['items', '🎒', '道具']].map(([k, ic, label]) => (
+        <button key={k} type="button" role="tab" aria-selected={tab === k} data-assistant-life-icon={k} className={tab === k ? 'on' : ''} onClick={() => { setTab(k); setRoomId(null); }}><i>{ic}</i>{label}</button>))}
+    </div>);
+  const header = (
+    <div className="mhl-hdr" style={{ paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>
+      <div className="flex items-start gap-2">
+        <button type="button" data-assistant-life-close onClick={close} aria-label="閉じる" className="h-9 w-8 shrink-0 text-[19px] text-slate-100">←</button>
+        <div className="min-w-0 flex-1"><p className="mhl-en whitespace-nowrap" style={land ? { letterSpacing: '.06em', fontSize: 8 } : undefined}>ASSISTANT LIFE · {tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : 'HOUSE'}</p><p className="mhl-ti whitespace-nowrap" style={land ? { fontSize: 18 } : undefined}>助手ライフ</p></div>
+        <div className="mhl-clock shrink-0" data-assistant-life-clock><p className="whitespace-nowrap text-[11px] font-black">{{ morning: '🌅', noon: '☀', evening: '🌇', night: '🌙' }[look]} {land ? slot.label : assistantLifeSlotRange(slot.id)}</p><p data-assistant-life-next-slot className="whitespace-nowrap text-[9.5px] font-bold text-slate-300">{assistantLifeNextSlotText().replace('(みんなが動きます)', '')}</p></div>
+      </div>
+      <div className="mt-1.5 flex items-center gap-1.5" data-assistant-life-tier={tier.id} title={ASSISTANT_LIFE_TIER_NOTES[tier.id]}>
+        <span className="mhl-chip">🎉 {tier.label} ×{tier.mult}</span>
+        <span className="mhl-bar" aria-hidden="true"><i style={{ width: `${next ? Math.min(100, Math.round(100 * (play.points - tier.min) / (next.min - tier.min))) : 100}%` }}/></span>
+        <span className="whitespace-nowrap text-[9.5px] font-bold text-slate-200">{next ? `${next.label}まで ${next.min - play.points}` : 'いちばん上'}</span>
+      </div>
+    </div>);
+  const findBtn = <button type="button" className="mhl-find" data-assistant-life-find onClick={() => setTab('where')}>📋 みんなの居場所 ›</button>;
+  const houseView = (
+    <div className="relative pt-1">
+      <div className={land ? 'mb-1 flex justify-start' : 'mb-1 flex justify-end'} style={{ paddingInline: pad }}>{findBtn}</div>
+      <AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={setRoomId} diary={diary} pop={!!intro}/>
+    </div>);
+  const tabBody = tab === 'house' ? houseView
+    : tab === 'where' ? (
+      <div className="px-3 pb-3" data-assistant-life-where>
+        <AssistantLifeTownMap life={life} ids={ids} look={look} onPick={(id) => { setTab('house'); setRoomId(id); }}/>
+        <AssistantLifeScreenBody metIds={metIds} onReplay={playTalk} peerItems={peerItems} onUseItem={onUseItem} embedded/>
+      </div>)
+    : tab === 'friends' ? (<div className="px-3 pb-3 pt-1">{typeof AssistantPeerMap === 'function' && <AssistantPeerMap metIds={metIds} onReplay={(t) => playTalk(t, null)} peerItems={peerItems} onUseItem={onUseItem}/>}</div>)
+    : (
+      <div className="px-3 pb-3 pt-1" data-assistant-life-items>
+        <p className="text-[13px] font-black text-amber-200">🎒 2人にあげる道具</p>
+        {itemInfos.map(x => (
+          <div key={x.kind} data-assistant-life-item={x.kind} className="mt-2 flex items-center gap-2 rounded-2xl border border-amber-300/30 bg-slate-900/85 p-2">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/5 text-[26px]" aria-hidden="true">{x.emoji}</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[12px] font-black text-white">{x.name} <span className="text-[10px] text-slate-400">持っている {haveOf(x.kind)}個 ・ 今日あと{usedOf(x.kind) ? 0 : 1}回</span></p>
+              <p className="text-[10.5px] leading-snug text-slate-300">{x.what.split('。')[0]}。<span className="text-orange-300">🤝 友情Lv +{x.peerAmt}</span>・2人との<span className="text-pink-200">💗 仲良し度 +{x.playerAmt}</span></p>
+            </div>
+          </div>))}
+        <p className="mt-2 text-[10.5px] leading-snug text-slate-400">手に入れる: モンヒロビートの「ビートP交換所」({itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・')})。渡す: 部屋や場面の「🧺 渡す」。声をかける・見守るは無料です</p>
+      </div>);
+  return (
+    <div className="mhl-root" style={{ zIndex: 9000 }} data-assistant-life-screen data-assistant-life-look={look} data-assistant-life-land={land ? '1' : '0'}>
+      <AssistantLifeHouseStyle/>
+      <div className="mhl-page" style={{ maxWidth: land ? 'none' : 480 }}>
+        <div className={`mhl-sky t-${look}`}/>
+        <div className="mhl-wood" style={{ backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})` }}/>
+        {land ? (
+          <div className="relative z-[2] flex h-full min-h-0" style={{ paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
+            <div className="mhl-body" style={{ flex: '0 0 64%' }}>{tabBody}</div>
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2">
+              {header}
+              {note && <p data-assistant-life-note className="rounded-xl bg-sky-400/15 px-2 py-1 text-[10.5px] font-bold text-sky-100">{note}</p>}
+              {tiles}
+              {icons}
+            </div>
+          </div>
+        ) : (<>
+          {header}
+          <div className="mhl-body">
+            {note && <p data-assistant-life-note className="mx-3 mb-1 rounded-xl bg-sky-400/15 px-2 py-1.5 text-[11px] font-bold text-sky-100">{note}</p>}
+            {tabBody}
+          </div>
+          <div className="relative z-[3] bg-gradient-to-t from-[#0b1020] via-[#0b1020ee] to-transparent px-3 pt-1.5" style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom))' }}>
+            {tab === 'house' && <><p className="mb-1 flex justify-between text-[10px] font-black text-slate-200">今日やれること<span className="font-bold text-slate-400">朝4時に戻る</span></p>{tiles}</>}
+            <div className="mt-1.5">{icons}</div>
+          </div>
+        </>)}
+        {roomId && <AssistantLifeRoomSheet id={roomId} life={life} peerSt={peerSt} bondLevelOf={bondLevelOf} diary={diary} slot={slot} canGive={canGive && itemsLeft > 0}
+          land={land} onClose={() => setRoomId(null)} onPeek={peek} onInvite={invite} onWatch={watch} onGive={(g) => openGive(g.ids)} onBeat={beat}/>}
+        {scene && <AssistantLifeScene key={scene.key} scene={scene} look={look} canGive={canGive && itemsLeft > 0} onClose={() => setScene(null)} onGive={openGive}/>}
+        {intro && (
+          <button type="button" className="mhl-intro" data-assistant-life-intro={intro} onClick={() => setIntro(null)} aria-label="とばす">
+            {intro === 'long' && <div className="absolute inset-0 grid place-items-center" style={{ animation: 'mhlFade .3s ease-in .9s both' }}>
+              <div className="text-center" style={{ animation: 'mhlIntroTitle .5s ease-out both' }}><p className="mhl-en">ASSISTANT LIFE</p><p className="mhl-ti" style={{ fontSize: 30 }}>助手ライフ</p></div></div>}
+            <div className="door" style={{ left: 0, animation: `mhlDoorL ${intro === 'long' ? '.5s' : '.35s'} ease-in ${intro === 'long' ? '.35s' : '0s'} both` }}/>
+            <div className="door" style={{ right: 0, animation: `mhlDoorR ${intro === 'long' ? '.5s' : '.35s'} ease-in ${intro === 'long' ? '.35s' : '0s'} both` }}/>
+          </button>)}
+      </div>
+      {give && <AssistantLifeGiveSheet give={give} setGive={setGive} life={life} peerSt={peerSt} itemInfos={itemInfos} haveOf={haveOf} usedOf={usedOf} nameOf={nameOf} onGive={doGive}/>}
+    </div>);
+}
+
+// 📋 みんなの居場所の地図(HOME の町の絵の上に顔の丸)
+const ASSISTANT_LIFE_MAP_POS = Object.freeze({
+  studio: [24, 22], ranch: [10, 38], library: [81, 25], garden: [68, 34], plaza: [51, 47], cafe: [16, 53], market: [86, 56], home: [8, 65], cardroom: [49, 82], hill: [85, 10],
+});
+function AssistantLifeTownMap({ life, ids, look, onPick }) {
+  const at = {};
+  for (const id of ids) { const w = assistantLifeWhereOf(life, id); const p = w ? w.place : 'home'; (at[p] = at[p] || []).push(id); }
+  const filter = { morning: 'saturate(.85) brightness(1.05) sepia(.18)', noon: 'none', evening: 'saturate(1.1) brightness(.85) sepia(.35) hue-rotate(-12deg)', night: 'brightness(.45) saturate(.7)' }[look];
+  return (
+    <div className="relative mb-2 overflow-hidden rounded-2xl border border-white/15" style={{ aspectRatio: '941 / 1000', maxHeight: 340 }} data-assistant-life-map>
+      <img src="data/images/home-background.jpg" alt="" className="absolute left-0 top-0 w-full" style={{ filter, transform: 'translateY(-14%)' }}/>
+      {Object.entries(ASSISTANT_LIFE_MAP_POS).map(([place, [x, y]]) => { const who = at[place] || []; return (
+        <div key={place} className="absolute flex -translate-x-1/2 -translate-y-full flex-col items-center" style={{ left: `${x}%`, top: `${y}%` }} data-assistant-life-map-place={place}>
+          {who.length > 0 && <span className="flex rounded-full border border-white/40 bg-slate-950/70 px-1 py-0.5">{who.map(id => { const a = assistantById(id); return a ? <button key={id} type="button" onClick={() => onPick(id)} className="-ml-1.5 first:ml-0 rounded-full"><AssistantFace who={a} size={24} accent={a.accent}/></button> : null; })}</span>}
+          <span className={`mt-0.5 whitespace-nowrap rounded-md border px-1.5 text-[9.5px] font-black ${who.length ? 'border-amber-300 bg-amber-950/90 text-amber-50' : 'border-slate-500/60 bg-slate-950/70 text-slate-300'}`}>{ASSISTANT_LIFE_PLACE_ICON[place]} {ASSISTANT_LIFE_PLACES[place]}</span>
+        </div>); })}
+    </div>);
+}
+
+// ---------- HOME: 遊んでいる所の施設の横に顔だけ ----------
+// HOME の施設の場所を測って、その横に重ねる(施設の並びは 69-screen-home.jsx・70-bootstrap.jsx の CSS が決める)
+const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({ rhythm: '.mh-home-facility.rhythm', card: '.mh-home-card-battle', management: '.mh-home-facility.management', market: '.mh-home-facility.market', life: '.mh-home-facility.life' });
+function AssistantLifeHomeFaces({ metIds }) {
+  const st = useAssistantLifeNow(metIds);
+  const [rects, setRects] = React.useState({});
+  React.useEffect(() => {
+    if (!assistantLifeEnabled()) return undefined;
+    const measure = () => {
+      const o = {};
+      for (const [k, sel] of Object.entries(ASSISTANT_LIFE_FACILITY_SEL)) { const el = document.querySelector(sel); if (el && el.offsetParent) { const r = el.getBoundingClientRect(); o[k] = { x: r.left, y: r.top, w: r.width, h: r.height }; } }
+      setRects(prev => (JSON.stringify(prev) === JSON.stringify(o) ? prev : o));
+    };
+    measure();
+    const t = setInterval(measure, 700);
+    window.addEventListener('resize', measure);
+    return () => { clearInterval(t); window.removeEventListener('resize', measure); };
+  }, []);
+  if (!assistantLifeEnabled() || !st.loaded || st.open) return null;
+  const life = st.life;
+  if (!life || life.abs !== assistantLifeSlotAt().abs) return null;
+  const ids = (metIds || []).filter(id => ASSISTANT_LIFE_PREFS[id]);
+  const by = {};
+  for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
+    if (!ids.includes(id)) continue;
+    let f = assistantLifeFacilityOf(assistantLifeWhereOf(life, id));
+    if (!rects[f]) f = 'life';
+    if (!rects[f]) continue;
+    (by[f] = by[f] || []).push(id);
+  }
+  const peer = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null;
+  const q = peer && peer.quarrel && peer.quarrel.pending;
+  const after = new Set(q && q.pair ? String(q.pair).split('-') : []);
+  const vw = window.innerWidth;
+  return (<>
+    {Object.entries(by).map(([f, list]) => {
+      const r = rects[f];
+      const size = 26, wrap = list.length > 4;
+      const cols = wrap ? 4 : list.length;
+      const boxW = wrap ? cols * (size + 3) + 8 : size + (list.length - 1) * (size - 7) + 10;
+      const right = r.x + r.w / 2 > vw / 2; // 右の列の施設は左に出す
+      const left = right ? r.x - boxW - 4 : r.x + r.w + 4;
+      const rowsN = wrap ? Math.ceil(list.length / cols) : 1;
+      const boxH = rowsN * (size + 3) + 6;
+      return (
+        <div key={f} data-assistant-life-home-faces={f} className="fixed" style={{ zIndex: 40, left, top: r.y + r.h / 2 - boxH / 2, width: boxW }}>
+          <div className={`pointer-events-auto rounded-[14px] border border-white/35 bg-slate-950/75 p-[3px] shadow-lg ${wrap ? 'grid gap-[3px]' : 'flex items-center'}`} style={wrap ? { gridTemplateColumns: `repeat(${cols}, ${size}px)` } : undefined}>
+            {list.map((id, i) => { const who = assistantById(id); if (!who) return null; const w = assistantLifeWhereOf(life, id); const lonely = w && w.reason === 'lonely';
+              return (
+                <button key={id} type="button" data-assistant-life-home-face={id} aria-label={`${who.name}のようす`} onClick={() => { ASSISTANT_LIFE_STORE.set({ open: true, focus: id }); }}
+                  className="rounded-full active:scale-90" style={{ marginLeft: !wrap && i ? -7 : 0, boxShadow: lonely ? '0 0 0 2px #fbbf24,0 0 8px #fbbf24' : after.has(id) ? '0 0 0 2px #7dd3fc' : '0 0 0 2px #fff' }}>
+                  <AssistantFace who={who} size={size} accent={who.accent}/>
+                </button>); })}
+          </div>
+        </div>); })}
+  </>);
+}

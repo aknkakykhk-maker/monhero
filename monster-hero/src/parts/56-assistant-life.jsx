@@ -396,6 +396,8 @@ const assistantLifeNow = async ({ members, now = Date.now() } = {}) => {
     nudges: { invite: cur.nudges.invite.filter(keep), introduce: cur.nudges.introduce.filter(keep) } };
   ASSISTANT_LIFE_STORE.set({ life });
   assistantLifeSaveLife();
+  // 今日あったこと(家の掲示板)へ、この時間の過ごし方を書く(56-assistant-life-house.jsx)
+  if (typeof assistantLifeDiaryOnSlot === 'function') { try { assistantLifeDiaryOnSlot(life, slot, now); } catch {} }
   return life;
 };
 // 最近のできごとを覚える(kind: gift・play・quarrel・makeup。pair か ids)
@@ -694,7 +696,7 @@ const assistantLifeItemDesc = (item) => {
   const k = ASSISTANT_LIFE_ITEM_KINDS.find(x => x.itemId === item.id);
   if (!k) return item.desc || '';
   const info = assistantLifeItemInfo(k.kind);
-  return `${k.what.split('。')[0]}。助手2人に使うと、2人の友情Lv +${info.peerAmt}・2人それぞれとあなたの仲良し度 +${info.playerAmt}・2人のひとこと。HOME の「助手たちの今」で、一緒にいる2人を選んで使う。1日1回まで(朝4時に戻る)。ビートP交換所で手に入る。`;
+  return `${k.what.split('。')[0]}。助手2人に使うと、2人の友情Lv +${info.peerAmt}・2人それぞれとあなたの仲良し度 +${info.playerAmt}・2人のひとこと。HOME の「🏡 助手ライフ」で、一緒にいる2人に渡す。1日1回まで(朝4時に戻る)。ビートP交換所で手に入る。`;
 };
 // 道具を渡すとよさそうな2人の印(もうすぐ友情Lv が上がる/言い合いのあと)
 const assistantLifePairHint = (peerSt, life, a, b) => {
@@ -842,12 +844,15 @@ function AssistantLifeBand({ metIds }) {
 }
 
 // 閉じているあいだは何も読まない・書かない(演奏中・マルチ中に様子を決め直さない)
+// 2026-11-07 段階1: 中身は「助手たちの家」(56-assistant-life-house.jsx)。今の一覧は家の「📋 居場所」の中で embedded として使う
 function AssistantLifeScreen(props) {
   const st = useAssistantLifeState();
   if (!assistantLifeEnabled() || !st.open) return null;
+  if (typeof AssistantLifeHouse === 'function') return <AssistantLifeHouse {...props}/>;
   return <AssistantLifeScreenBody {...props}/>;
 }
-function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem = null }) {
+//   embedded … 家の「📋 居場所」の中に入れる(外枠・見出し・にぎわい・タブ・道具の欄を出さない。掛け合いは家を閉じずに場面で流す)
+function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem = null, embedded = false }) {
   const st = useAssistantLifeNow(metIds);
   const [tab, setTab] = React.useState('now');
   const [pick, setPick] = React.useState([]);
@@ -866,18 +871,19 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
   const invitedNext = new Set(((life.nudges && life.nudges.invite) || []).filter(n => n.abs === slot.abs + 1).map(n => n.id));
   const introNext = ((life.nudges && life.nudges.introduce) || []).find(n => n.abs === slot.abs + 1);
   const ids = (metIds || []).filter(id => ASSISTANT_LIFE_PREFS[id]);
+  // 掛け合いを流す。家の中(embedded)なら閉じずに場面で流す(ctx … だれが・どこで)
+  const playTalk = (talk, ctx) => { if (!embedded) assistantLifeCloseScreen(); if (onReplay) onReplay(talk, ctx); };
   const watch = async (g) => {
     const talk = await assistantLifeWatch(g);
     if (!talk) { setNote('この組の掛け合いは、いまは見られません'); return; }
-    assistantLifeCloseScreen();
-    if (onReplay) onReplay(talk);
+    playTalk(talk, { ids: g.ids, place: g.place });
   };
   // 誘う: 次の時間にだれかのところへ行く。声をかけに行く台本があれば、その場で流す
   const invite = async (id) => {
     const talk = assistantLifePickInviteTalk(id, life);
     if (!(await assistantLifeNudge('invite', id))) return;
     setNote(`${nameOf(id)}を誘いました。次の時間に、だれかのところへ行きます`);
-    if (talk) { assistantLifeMarkSeen(talk); assistantLifeCloseScreen(); if (onReplay) onReplay(talk); }
+    if (talk) { assistantLifeMarkSeen(talk); playTalk(talk, { ids: [id], place: ((life.solo || {})[id] || {}).place }); }
   };
   // ようすを見る(ひとりの助手): ひとりごと・距離をおく・ブリーダーへのひとこと。同じ時間に同じ助手は1回。何も増えない
   const peek = (id) => {
@@ -888,8 +894,7 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
     ASSISTANT_LIFE_STORE.set({ life: { ...life, watched: [...(life.watched || []), key] } });
     assistantLifeSaveLife();
     assistantLifeMarkSeen(talk);
-    assistantLifeCloseScreen();
-    if (onReplay) onReplay(talk);
+    playTalk(talk, { ids: [id], place: ((life.solo || {})[id] || {}).place });
   };
   const introduce = async () => { if (pick.length === 2 && await assistantLifeNudge('introduce', pick)) { setNote(`${nameOf(pick[0])}と${nameOf(pick[1])}が、次の時間に一緒に過ごしやすくなりました`); setPick([]); } };
   const mood = (id) => ASSISTANT_LIFE_MOODS[(life.moods || {})[id]] || '';
@@ -911,20 +916,21 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
     const talk = await onUseItem(give.kind, give.pair);
     const info = assistantLifeItemInfo(give.kind);
     if (!talk) { setNote(`${info.name}は、いまは渡せません(1日1回・持っている数を見てください)`); setGive(null); return; }
+    const g = (life.groups || []).find(x => give.pair.every(id => x.ids.includes(id)));
     setGive(null);
-    assistantLifeCloseScreen();
-    if (onReplay) onReplay(talk);
+    playTalk(talk, { ids: give.pair, place: g ? g.place : null });
   };
   return (
-    <div data-assistant-life-screen className="fixed inset-0 flex justify-center bg-black/80" style={{ zIndex: 9000 }}>
-      <div className="flex h-full w-full max-w-md flex-col bg-slate-950" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
-          <p className="min-w-0 flex-1 text-[15px] font-black text-pink-200">助手たちの今</p>
+    <div {...(embedded ? { 'data-assistant-life-list': '' } : { 'data-assistant-life-screen': '' })} className={embedded ? 'relative' : 'fixed inset-0 flex justify-center bg-black/80'} style={embedded ? undefined : { zIndex: 9000 }}>
+      <div className={embedded ? 'w-full' : 'flex h-full w-full max-w-md flex-col bg-slate-950'} style={embedded ? undefined : { paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        {!embedded && <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
+          <p className="min-w-0 flex-1 text-[15px] font-black text-pink-200">助手ライフ</p>
           <span className="text-right text-[10px] font-bold leading-tight text-slate-400">いまは{assistantLifeSlotRange(slot.id)}<br/><span data-assistant-life-next-slot className="text-slate-300">{assistantLifeNextSlotText()}</span></span>
           <button type="button" data-assistant-life-close onClick={assistantLifeCloseScreen} aria-label="閉じる" className="h-9 w-9 rounded-full border border-slate-600 text-[15px] font-black text-slate-300 active:scale-95">×</button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-2">
-          {/* にぎわい(その日に遊んだ量) */}
+        </div>}
+        <div className={embedded ? 'pb-2' : 'min-h-0 flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-2'}>
+          {/* にぎわい(その日に遊んだ量)。家の中では上の帯に出す */}
+          {!embedded && <>
           <div data-assistant-life-tier={tier.id} className="rounded-2xl border border-pink-300/40 bg-pink-400/10 p-2.5">
             <div className="flex items-baseline gap-2">
               <p className="text-[12px] font-black text-pink-100">今日のにぎわい「{tier.label}」</p>
@@ -942,9 +948,10 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
               <button key={k} type="button" role="tab" aria-selected={tab === k} data-assistant-life-tab={k} onClick={() => setTab(k)}
                 className={`min-h-[40px] flex-1 rounded-xl border text-[12px] font-black active:scale-[.98] ${tab === k ? 'border-pink-300 bg-pink-400/20 text-pink-100' : 'border-white/10 text-slate-400'}`}>{label}</button>))}
           </div>
+          </>}
           {note && <p data-assistant-life-note className="mt-2 rounded-xl bg-sky-400/10 px-2 py-1.5 text-[11px] font-bold text-sky-100">{note}</p>}
           {tab === 'now' && (<>
-            {canGive && (
+            {canGive && !embedded && (
               <div data-assistant-life-items className="mt-2 rounded-2xl border border-amber-300/40 bg-amber-400/5 p-2">
                 <p className="text-[12px] font-black text-amber-200">🎁 2人にあげる道具(今日あと:{itemInfos.map(x => `${x.emoji}${usedOf(x.kind) ? 0 : 1}回`).join('・')})</p>
                 {itemInfos.map(x => (
@@ -1108,10 +1115,10 @@ function AssistantLifeItemIntro({ peerItems }) {
           {guide && <AssistantFace who={guide} size={44} accent={guide.accent} expression="wink"/>}
           <p className="text-[14px] font-black text-amber-200">はじめての {info.emoji} {info.name}！</p>
         </div>
-        <p className="mt-2 text-[12px] leading-relaxed text-white">① 「助手たちの今」で、一緒にいる2人を選んで渡せるよ<br/>② 2人の友情Lv と、あなたとの仲良し度が上がる<br/>③ 1日1回。「🤝 もうすぐ友情Lv」の印がついた2人に渡すと、Lv が上がりやすい！</p>
+        <p className="mt-2 text-[12px] leading-relaxed text-white">① 「🏡 助手ライフ」で、一緒にいる2人に渡せるよ<br/>② 2人の友情Lv と、あなたとの仲良し度が上がる<br/>③ 1日1回。「🤝 もうすぐ友情Lv」の印がついた2人に渡すと、Lv が上がりやすい！</p>
         <div className="mt-2 flex gap-2">
           <button type="button" data-assistant-life-item-intro-close onClick={() => close(false)} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">あとで</button>
-          <button type="button" data-assistant-life-item-intro-open onClick={() => close(true)} className="min-h-[44px] flex-[2] rounded-xl border border-amber-300/70 bg-amber-400/20 text-[12px] font-black text-amber-100 active:scale-[.98]">「助手たちの今」を開く</button>
+          <button type="button" data-assistant-life-item-intro-open onClick={() => close(true)} className="min-h-[44px] flex-[2] rounded-xl border border-amber-300/70 bg-amber-400/20 text-[12px] font-black text-amber-100 active:scale-[.98]">「助手ライフ」を開く</button>
         </div>
       </div>
     </div>);
