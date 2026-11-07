@@ -54,14 +54,18 @@ for (const n of names) {
 }
 
 // 書きかけの台本(docs/progress/assistant-peer/lines/*.txt の新しい形)も「新しい形」として読む。形・鍵・口調の基本はここで止める
-const KINDS = { solo: 1, invite: 2, pair: 2, trio: 3, quarrel: 2, breeder: 1 };
+const KINDS = { solo: 1, invite: 2, pair: 2, trio: 3, quarrel: 2, breeder: 1,
+  // 助手たちの家(lines/ORDER-HOUSE.md・2026-11-07 ナカヨシ5)
+  fight: 2, mend: 2, mend3: 3, jealous: 3, secret: 2, consult: 2, tease: 2, rival: 2, awkward: 2, sleep: 1, owl: 1, home: 1 };
+const TRIO_KINDS = ['trio', 'mend3', 'jealous'];
 const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
 const FACES = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
 const KEYS = {
   place: ['home', 'plaza', 'cafe', 'studio', 'ranch', 'cardroom', 'library', 'market', 'hill', 'garden'],
   mood: ['happy', 'lonely', 'restless', 'sulky', 'sleepy', 'eager'], why: ['lonely', 'mypace', 'distance'],
-  doing: ['snack', 'practice', 'training', 'cards', 'walk', 'idle', 'sleep', 'read'], lv: ['1-3', '4-6', '7-10'],
-  air: ['normal', 'after', 'makeup'], answer: ['glad', 'decline', 'shy'], line: ['scene', 'feel'],
+  doing: ['snack', 'practice', 'training', 'cards', 'walk', 'idle', 'sleep', 'read'], lv: ['1-3', '4-6', '7-10', '1-4', '5-10'],
+  air: ['normal', 'after', 'makeup'], answer: ['glad', 'decline', 'shy'], line: ['scene', 'feel', 'talk', 'woken'],
+  cause: ['tidy', 'snack', 'song', 'win', 'late', 'promise'], how: ['apology', 'gift', 'player'], game: ['beat', 'card'], slot: ['evening', 'night'],
   // けんかのたね(lines/FEELINGS.md): おやつ・順番・寝ぐせや服・作戦の好み・遅れた・うるさい/夜ふかし・メモを見た・勝負の結果
   seed: ['snack', 'order', 'look', 'plan', 'late', 'noise', 'peek', 'score'],
 };
@@ -93,11 +97,11 @@ for (const f of txtFiles) {
       if ([...t.replace(/\{[^}]+\}/g, '')].length > 60) bad(`60字をこえる「${t}」`);
       const holes = (t.match(/\{(place|doing|doing_te)\}/g) || []).length;
       if (holes > 1) bad(`穴は1本に1つまで「${t}」`);
-      if (head === 'trio' && /\{c\}/.test(t)) bad('3人の台本は {c:id} で呼ぶ');
+      if (TRIO_KINDS.includes(head) && /\{c\}/.test(t)) bad('3人の台本は {c:id} で呼ぶ');
       if (/\{c:([a-z]+)\}/.test(t) && !who.includes(t.match(/\{c:([a-z]+)\}/)[1])) bad(`{c:id} の相手がいない「${t}」`);
       if (/\{c\}(さん|ちゃん|くん)/.test(t)) bad(`{c} のあとに敬称を付けない「${t}」`);
       if (/(あの|その|どの|うちの|いい|かわいい)子|子たち|子ら(?![しい])/.test(t)) bad(`モンスターを「子」と呼ばない(助手が特定のマスモンを「この子」と言うのだけはよい)「${t}」`);
-      if (/恋人|デート|付き合っ|ないしょ|内緒|秘密/.test(t)) bad(`守りの言葉「${t}」`);
+      if (/恋人|デート|付き合っ|ないしょ|内緒|秘密|ブリーダー(?!Lv|P|経験|の教え)/.test(t)) bad(`守りの言葉「${t}」`);
       if (w === 'mua' && /じゃん|まじ(?!め)|あたし以外|[^ｗ]w(?![A-Za-z])|(?<![あ])私|俺/.test(t)) bad(`みゅあの口調「${t}」`);
       if (w === 'kiki' && /だよ|だね|してよ|あたし|俺/.test(t)) bad(`ききの口調「${t}」`);
       // ほかの助手の話し方が混ざらない(文の終わりの「でつ・まつ」と「おで」。言葉の途中の「でつい」は mua-tone-check が見る)
