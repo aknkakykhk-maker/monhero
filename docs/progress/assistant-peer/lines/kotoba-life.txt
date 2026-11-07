@@ -62,6 +62,8 @@ solo dra mood=sulky line=scene | dra troubled 石をけっとばしたら、思�
 solo dra mood=sulky line=feel | dra normal ……べつに、すねてなんかないからな
 
 ## ひとりごと みゅあ
+solo mua place=home mood=sleepy line=feel | mua troubled 起きたら髪ぼさぼさだったら、どうしよｗ
+solo mua place=plaza mood=happy line=scene | mua wink 噴水の前で写真とったら、いい感じに撮れたｗ
 solo mua place=home mood=happy line=scene | mua happy 新しいワンピース、鏡の前で回ってみたｗ
 solo mua place=home mood=happy line=scene | mua excited クッキー焼けた！ いいにおいすぎる〜
 solo mua place=home mood=happy line=scene | mua wink モッチーのぬいぐるみ、ベッドに並べなおしたよ♪
@@ -111,6 +113,8 @@ solo mua mood=sulky line=scene | mua troubled 前髪、思ったより切りす�
 solo mua mood=sulky line=feel | mua normal …帽子かぶればバレないよね。うん、大丈夫ｗ
 
 ## ひとりごと きき
+solo kiki place=library mood=happy line=scene | kiki normal 窓ぎわの席が空いていました。今日はついていまつ
+solo kiki place=library mood=happy line=feel | kiki happy 読み終わったら、だれかにおすすめしたいですね♪♪
 solo kiki place=home mood=happy line=scene | kiki happy 窓ぎわでお茶をいれました。いい香りでつ♪♪
 solo kiki place=home mood=happy line=scene | kiki normal ゴーレムの図鑑を、最初から読み返していまつ
 solo kiki place=home mood=happy line=scene | kiki happy 今日のおやつは、あたたかいスープにしました
@@ -216,6 +220,7 @@ solo momosuke mood=sulky line=scene | momosuke angry 道の小石、ぜんぶよ
 solo momosuke mood=sulky line=feel | momosuke normal …よけてたら、ちょっと楽しくなってきたw
 
 ## ひとりごと あつ
+solo atsu mood=sleepy line=scene | atsu normal 育成場のベンチで、ちょっと寝てた笑
 solo atsu place=home mood=happy line=scene | atsu happy 昨日のHELL、録画見返してる笑
 solo atsu place=home mood=happy line=scene | atsu normal 肉焼いたー笑 冒険の前はがっつり食べるのが一番！
 solo atsu place=home mood=happy line=scene | atsu wink ドラゴンの図鑑、またながめてた( *'ω'*)ノ！
@@ -392,6 +397,8 @@ solo sorashido mood=sulky line=scene | sorashido crying 2点差で負けたの�
 solo sorashido mood=sulky line=feel | sorashido normal …組み直せばいいだけだ。次は勝つ
 
 ## ひとりごと えるびん
+solo erubin place=home mood=sulky line=scene | erubin troubled 対戦の負け、部屋でひとりで反省会かな笑
+solo erubin place=home mood=sulky line=feel | erubin normal 少し時間がたてば、また楽しめるよね
 solo erubin place=cardroom mood=happy line=scene | erubin happy デュラハンの新しい組み方、思いついたよ
 solo erubin place=cardroom mood=happy line=scene | erubin normal アークのカードを、つい手に取っちゃうんだよね笑
 solo erubin place=cardroom mood=happy line=feel | erubin happy カード部屋は、いつ来ても落ち着くね☺️
