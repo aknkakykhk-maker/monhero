@@ -272,7 +272,7 @@ solo atsu mood=lonely why=lonely line=feel | atsu happy ま、だれか見つけ
 solo atsu mood=restless line=scene | atsu surprise イベントの告知、まだかな？
 solo atsu mood=restless line=feel | atsu excited そわそわするー笑
 solo atsu mood=sulky line=scene | atsu troubled 今日はちょっとうまくいかないなー笑
-solo atsu mood=sulky line=feel | atsu normal ちなみに、悔しいのは本気だかららしい笑
+solo atsu mood=sulky line=feel | atsu normal ちなみに、悔しいのは本気だからだよ笑
 
 ## ひとりごと きゅうこ
 solo kyuko place=library mood=happy why=mypace line=scene | kyuko normal 図書室、今日は俺ひとりだぁ。貸し切りっしょ笑

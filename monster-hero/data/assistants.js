@@ -11668,7 +11668,7 @@ const ASSISTANT_RHYTHM_GRAND_OPEN_TEASER = [
   { who:'sorashido', e:'excited',  t:'うぉぉぉ、本オープン！ 飾りつけの数の計算なら任せてくれだぜ・・・！' },
   { who:'erubin',    e:'happy',    t:'いいねー！ 俺も手伝うよ。何から始めよっか' },
   { who:'mua',       e:'wink',     t:'それは当日までのひみつ〜。ぜったい楽しみにしててね！' },
-  { who:'kiki',      e:'happy',    t:'くわしいことは、更新情報でお知らせしまつ。みなさん、お楽しみに〜♪♪' },
+  { who:'kiki',      e:'happy',    t:'本オープンは、11月9日の朝10時でつ。くわしいことは、更新情報でお知らせしまつ。みなさん、お楽しみに〜♪♪' },
 ];
 const ASSISTANT_RHYTHM_GRAND_OPEN_TEASER_CALLS = { kiki: 'みゅあちん' };
 const ASSISTANT_RHYTHM_GRAND_OPEN_STORY = [
@@ -13031,6 +13031,8 @@ const ASSISTANT_PEER_BOND_ACTIONS = Object.freeze({
   // ③ ミニイベント(1日5まで)・仲直り(1回の仲直りにつき1回・1日20の上限の外)(2026-11-07 社長)
   event:  { amount:5, dailyMax:5, label:'2人のミニイベントを見た' },
   makeup: { amount:5, dailyMax:5, label:'けんかのあと仲直りした', uncapped:true },
+  // 助手ライフ: けんかの間に入った助手と、けんかした2人それぞれ(2026-11-08 社長の決まり「間に入る+3」・助手部キズナ)
+  mediate: { amount:3, dailyMax:6, label:'けんかの間に入った' },
 });
 const ASSISTANT_PEER_BOND_DAILY_MAX = 20;
 // 思い出アルバムのツーショット写真(段ごとに1枚。2人の立ち絵を並べて作る)。e … 左・右の表情
@@ -16490,7 +16492,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'atsu', e:'troubled', t:'今日はちょっとうまくいかないなー笑' },
   ] },
   { id:'life-solo-atsu-053', kind:'solo', who:'atsu', keys:{ mood:'sulky' }, line:'feel', lines:[
-    { who:'atsu', e:'normal', t:'ちなみに、悔しいのは本気だかららしい笑' },
+    { who:'atsu', e:'normal', t:'ちなみに、悔しいのは本気だからだよ笑' },
   ] },
   { id:'life-solo-kyuko-001', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'happy', why:'mypace' }, line:'scene', lines:[
     { who:'kyuko', e:'normal', t:'図書室、今日は俺ひとりだぁ。貸し切りっしょ笑' },
