@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2a0bee79bf4232fe
+// source-sha256: 33426497c68eebd9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -88768,7 +88768,9 @@ const RHYTHM_MULTI = (() => {
     },
     join(code, profile, mode, opts = {}) {
       loadSelectSecPref();
-      this.leave();
+      this.leave({
+        silent: true
+      });
       const now = Date.now();
       const id = rhythmMultiMakeId();
       const roomMode = RHYTHM_MULTI_MODES.includes(mode) ? mode : 'private';
@@ -88833,7 +88835,13 @@ const RHYTHM_MULTI = (() => {
       sweepTimer = setInterval(sweep, 1000);
       emit();
     },
-    leave() {
+    leave(opts = {}) {
+      if (s && !(opts && opts.silent)) rhythmMultiLastRoom = {
+        code: s.code,
+        mode: s.mode,
+        at: Date.now(),
+        others: alive().filter(m => !m.cpu && m.id !== s.selfId).length
+      };
       if (s) s.cpus.forEach(c => {
         try {
           if (cpuBrain && cpuBrain.ended) cpuBrain.ended(c.masuId, c.callId);
@@ -89489,6 +89497,13 @@ function RhythmMultiAloneHint({
   }, "モードえらびへ戻る"));
 }
 let rhythmMultiPendingInvite = null;
+let rhythmMultiLastRoom = null;
+const RHYTHM_MULTI_REJOIN_MS = 10 * 60 * 1000;
+const rhythmMultiRejoinTarget = (now = Date.now()) => {
+  const r = rhythmMultiLastRoom;
+  if (!r || !r.code || !(now - r.at >= 0 && now - r.at < RHYTHM_MULTI_REJOIN_MS)) return null;
+  return r.mode === 'private' ? null : r;
+};
 function RhythmInviteHomeBar({
   show = false,
   onAccept = null
@@ -90790,11 +90805,12 @@ function RhythmMultiScreen({
   const [roster, setRoster] = React.useState(null);
   const [friendInvites, setFriendInvites] = React.useState([]);
   const [invitePanel, setInvitePanel] = React.useState(false);
+  const [inviteSheet, setInviteSheet] = React.useState(false);
   const [invitedIds, setInvitedIds] = React.useState({});
   const [inviteMessage, setInviteMessage] = React.useState('');
   const [presence, setPresence] = React.useState({});
   React.useEffect(() => {
-    if (!invitePanel || !roster || !roster.length || typeof friendsPresenceFor !== 'function') return undefined;
+    if (!(invitePanel || inviteSheet) || !roster || !roster.length || typeof friendsPresenceFor !== 'function') return undefined;
     let alive = true;
     const load = () => {
       void friendsPresenceFor(roster.map(f => f.otherId)).then(p => {
@@ -90807,7 +90823,7 @@ function RhythmMultiScreen({
       alive = false;
       clearInterval(t);
     };
-  }, [invitePanel, roster]);
+  }, [invitePanel, inviteSheet, roster]);
   const loadRoster = React.useCallback(async id => {
     try {
       setRoster(await sbFetchFriendRoster(id));
@@ -90979,6 +90995,43 @@ function RhythmMultiScreen({
       create: true
     });
   };
+  const rejoinLast = () => {
+    const r = rhythmMultiRejoinTarget();
+    if (!r) return;
+    setMessage('');
+    setFreeOpen(false);
+    setFreeList(false);
+    rhythmMultiLastRoom = null;
+    RHYTHM_MULTI.join(r.code, myProfile(), r.mode, {
+      create: true
+    });
+  };
+  const [freeRooms, setFreeRooms] = React.useState(null);
+  React.useEffect(() => {
+    if (!freeOpen) {
+      setFreeRooms(null);
+      return undefined;
+    }
+    return RHYTHM_MULTI.watchRooms('free', setFreeRooms);
+  }, [freeOpen]);
+  const freeRoomCount = Array.isArray(freeRooms) ? freeRooms.length : null;
+  const rejoinTarget = !view ? rhythmMultiRejoinTarget() : null;
+  const rejoinButton = rejoinTarget && React.createElement("button", {
+    type: "button",
+    "data-rhythm-multi-rejoin": rejoinTarget.code,
+    onClick: rejoinLast,
+    className: "flex min-h-[52px] w-full items-center gap-3 rounded-2xl border-2 border-amber-300/80 bg-amber-950/70 px-4 text-left active:scale-[.98]"
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-xl"
+  }, "↩"), React.createElement("span", {
+    className: "min-w-0 flex-1 leading-tight"
+  }, React.createElement("b", {
+    className: "block text-[15px] font-black text-amber-100"
+  }, "さっきの部屋に戻る"), React.createElement("small", {
+    className: "block text-[11px] font-bold text-amber-200/90",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`部屋 ${rejoinTarget.code}。演奏中なら、次の曲から一緒に遊べます`))));
   const joinFreeRoom = async code => {
     setMessage('');
     if (!(await freePenaltyOk())) return;
@@ -91253,7 +91306,6 @@ function RhythmMultiScreen({
   }, inviteMessage), React.createElement("p", {
     className: "text-[10px] font-bold leading-relaxed text-slate-400"
   }, "招待は3分のあいだ届きます。相手がマルチの入口をひらくと「参加する」が出ます。"));
-  const [inviteSheet, setInviteSheet] = React.useState(false);
   const openInviteSheet = () => {
     setInviteMessage('');
     setChatOpen(false);
@@ -91693,7 +91745,7 @@ function RhythmMultiScreen({
         setFreeList(false);
       },
       className: "min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 text-sm font-black"
-    }, "✕")), freeList ? React.createElement(RhythmMultiRoomList, {
+    }, "✕")), rejoinButton, freeList ? React.createElement(RhythmMultiRoomList, {
       onJoin: joinFreeRoom,
       onCreate: createFree,
       onBack: () => setFreeList(false),
@@ -91703,8 +91755,9 @@ function RhythmMultiScreen({
     }, React.createElement("button", {
       type: "button",
       "data-rhythm-multi-free-create": true,
+      "data-rhythm-multi-free-create-hot": freeRoomCount === 0 ? '1' : undefined,
       onClick: createFree,
-      className: "flex min-h-[60px] w-full items-center gap-3 rounded-2xl bg-gradient-to-b from-fuchsia-500 to-violet-700 px-4 text-left active:scale-[.98]"
+      className: `flex min-h-[60px] w-full items-center gap-3 rounded-2xl bg-gradient-to-b from-fuchsia-500 to-violet-700 px-4 text-left active:scale-[.98] ${freeRoomCount === 0 ? 'ring-4 ring-amber-300 shadow-[0_0_18px_rgba(252,211,77,.6)]' : ''}`
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "text-2xl"
@@ -91730,7 +91783,31 @@ function RhythmMultiScreen({
     }, "部屋に入る"), React.createElement("small", {
       className: "block text-[11px] font-bold opacity-90",
       style: JA_WRAP_STYLE
-    }, jaWrap('いま開いている部屋の一覧から選ぶ')))), React.createElement("button", {
+    }, jaWrap('いま開いている部屋の一覧から選ぶ')), React.createElement("small", {
+      "data-rhythm-multi-free-room-count": freeRoomCount == null ? '' : String(freeRoomCount),
+      className: "mt-1 flex items-center gap-1.5 text-[12px] font-black"
+    }, freeRoomCount == null ? React.createElement("span", {
+      className: "text-sky-100/80"
+    }, "部屋をさがしています…") : freeRoomCount === 0 ? React.createElement("span", {
+      className: "text-amber-200"
+    }, "いま部屋はありません → 部屋を作ろう") : React.createElement(React.Fragment, null, React.createElement("span", {
+      className: "flex"
+    }, freeRooms.slice(0, 3).map((r, n) => React.createElement("span", {
+      key: r.code,
+      className: "h-6 w-6 shrink-0 overflow-hidden rounded-full border border-white/70 bg-slate-900",
+      style: n ? {
+        marginLeft: '-6px'
+      } : undefined
+    }, React.createElement(RhythmMultiAvatar, {
+      m: {
+        icon: r.hi
+      },
+      resolveIconUrl: resolveIconUrl,
+      sizeClass: "h-6 w-6",
+      small: true
+    })))), React.createElement("span", {
+      className: "text-lime-200"
+    }, "🟢 ", freeRoomCount, "部屋 待っています"))))), React.createElement("button", {
       type: "button",
       "data-rhythm-multi-free-auto": true,
       onClick: () => {
