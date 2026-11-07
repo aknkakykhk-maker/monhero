@@ -31,6 +31,7 @@ const serve = () => new Promise((resolve) => {
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 const SHOT = process.env.SHOT_DIR || '';
+const { quietBootSeed, updateNoticeSeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 
 // 1回のバトルを流し、勇者(マスモンのザン)の固有技を1回撃って、出ていた予測「攻N」と実際の記録を返す
 const runOnce = async (browser, label, boosts) => {
@@ -54,6 +55,8 @@ const runOnce = async (browser, label, boosts) => {
     set('mh_masu_mons', [m]);
     set('mh_monster_roster', ['masu:zb1']);
   }, boosts);
+  await page.addInitScript(quietBootSeed());
+  await page.addInitScript(updateNoticeSeed());
   await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
   await page.route(/supabase\.co/, (route) => route.abort());
   // 敵のライフを大きくして、1発で倒れないようにする(記録の数字をそのまま比べるため)
@@ -110,6 +113,13 @@ const runOnce = async (browser, label, boosts) => {
   };
   let result = null;
   for (let turn = 0; turn < 20 && reached && !result; turn += 1) {
+    // バトルの途中で出たお話は「スキップ」で閉じる
+    for (let sk = 0; sk < 3; sk += 1) {
+      const skip = page.getByRole('button', { name: 'スキップ', exact: true }).first();
+      if (await skip.count() === 0 || !(await skip.isVisible().catch(() => false))) break;
+      await skip.click().catch(() => {}); await page.waitForTimeout(800);
+      await page.getByRole('button', { name: /^(閉じる|OK)$/ }).first().click({ timeout: 1500 }).catch(() => {});
+    }
     const before = await turnNo();
     if (process.env.DEBUG) { console.log(label, 'TURN', await turnNo(), JSON.stringify(await page.evaluate(() => [...document.querySelectorAll('[data-hand-card]')].map((c) => [c.getAttribute('data-card-type'), c.getAttribute('data-card-usable'), c.textContent.slice(0, 8)])))); if (turn === 0 && SHOT) await page.screenshot({ path: path.join(SHOT, `combo-${label}-turn0.png`) }); }
     const uniqueIdx = await page.evaluate(() => [...document.querySelectorAll('[data-hand-card]')].findIndex((c) => c.getAttribute('data-card-usable') === 'true' && c.getAttribute('data-card-type') === 'unique'));
