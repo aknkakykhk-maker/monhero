@@ -477,3 +477,281 @@ add atsu-sorashido-q distance1 | atsu normal ……ちょっと頭冷やして�
 add atsu-sorashido-q distance2 | sorashido troubled くっそー、配色はいいと思うんだけどな…
 add kyuko-mua-q distance1 | kyuko normal まあ、なんとかなるっしょ…ちょっと散歩してくるねぇ
 add kyuko-mua-q distance2 | mua troubled ……べつに、真ん中ぢゃなくてもいいけどさ
+
+## B 選ぶ返事つき(choice)。返事の反応は reply<返事の番号>-<行>
+edit kiki-mua-c1 1 | mua happy 今日のおやつ、いちごタルトとチョコケーキどっちにする？
+tag kiki-mua-c1 doing=snack lv=1-3
+edit momosuke-mua-c1 1 | momosuke excited 今日のライブ衣装、ピンクと白どっちがいいかな！？
+tag momosuke-mua-c1 doing=practice lv=1-3
+edit dra-mua-c1 1 | dra wink 新しいギャグ考えたんだけど、聞くか？
+edit dra-mua-c1 reply1-2 | mua troubled …やっぱ外れたぢゃんｗ
+edit dra-mua-c1 reply2-1 | dra crying そうか…おで、さみしいな
+edit dra-mua-c1 reply3-1 | mua wink ぢゃ、あたしが採点するね！
+edit dra-mua-c1 reply3-2 | dra happy おう、甘めで頼むぞ。えへへ
+tag dra-mua-c1 lv=1-3
+edit atsu-mua-c1 1 | atsu happy 今日HELL何曲いける？笑
+edit atsu-mua-c1 reply1-2 | atsu happy いいね！ まずそこからね！
+tag atsu-mua-c1 doing=practice lv=1-3
+edit kyuko-mua-c1 1 | mua troubled 育成でダイヤ使うか迷ってる〜
+edit kyuko-mua-c1 reply2-2 | mua happy ぢゃ、イベントまで楽しみにとっとく！
+tag kyuko-mua-c1 doing=training lv=1-3
+edit mua-sorashido-c1 1 | sorashido excited 勝率を上げる表を作ったぜ・・・！ 3ページだ！
+edit mua-sorashido-c1 reply1-1 | sorashido happy まじめだな！ うれしいよ笑
+tag mua-sorashido-c1 doing=cards lv=1-3
+edit erubin-mua-c1 1 | erubin normal 紅茶とココア、どっちがいいかな？
+tag erubin-mua-c1 doing=snack lv=1-3
+edit kiki-momosuke-c1 1 | momosuke excited マスモンの育て方で勝負しよ！！
+edit kiki-momosuke-c1 reply1-1 | kiki happy ありがとうございます♪ 先手必勝でつね
+tag kiki-momosuke-c1 doing=training lv=1-3
+edit dra-kiki-c1 1 | dra normal 守りも少しは上げたほうがいいって
+edit dra-kiki-c1 2 | kiki happy 先に倒せば、守りはいらないんですよ♪
+tag dra-kiki-c1 doing=training lv=1-3
+edit atsu-kiki-c1 1 | atsu happy 次の対戦、どっちが先に攻める？笑
+edit atsu-kiki-c1 2 | kiki happy もちろん私でつ
+edit atsu-kiki-c1 reply1-2 | atsu happy いいね！ あとは任せて！
+edit atsu-kiki-c1 reply2-1 | atsu wink 了解！ 道は作っとくね笑
+tag atsu-kiki-c1 doing=cards lv=1-3
+edit kiki-kyuko-c1 1 | kyuko normal 今日の作戦、攻めと守りどっちでいく？
+tag kiki-kyuko-c1 doing=cards lv=1-3
+edit kiki-sorashido-c1 1 | sorashido excited 攻撃全振りのダメージ、もう一回計算するか？
+edit kiki-sorashido-c1 reply1-1 | sorashido wink 了解、一発で出すよ笑
+tag kiki-sorashido-c1 doing=training lv=1-3
+edit erubin-kiki-c1 1 | erubin normal お茶のおかわり、いるかな？
+tag erubin-kiki-c1 doing=snack lv=1-3
+edit dra-momosuke-c1 1 | dra wink 今日のおでのギャグ、採点してくれよ
+edit dra-momosuke-c1 reply2-1 | dra troubled 半分か…まあ、半分でもうれしいくさ
+edit dra-momosuke-c1 reply3-2 | dra happy おで、それでも幸せだな
+tag dra-momosuke-c1 lv=1-3
+edit atsu-momosuke-c1 1 | atsu wink 次のライブ、俺のほうが盛り上げられるかもね笑
+tag atsu-momosuke-c1 doing=practice lv=1-3
+edit kyuko-momosuke-c1 1 | momosuke excited ドリーミィとメタルナー、どっちがかわいい！？
+tag kyuko-momosuke-c1 doing=training lv=1-3
+edit momosuke-sorashido-c1 1 | sorashido happy ミスを減らす練習メニューを作ったぞ笑
+edit momosuke-sorashido-c1 reply1-2 | sorashido happy ちょうどいいな笑
+tag momosuke-sorashido-c1 doing=practice lv=1-3
+edit erubin-momosuke-c1 1 | erubin normal 今日はどんな話をしてくれるのかな？
+edit erubin-momosuke-c1 2 | momosuke excited 話したいこと、いっぱいある！！
+tag erubin-momosuke-c1 doing=walk lv=1-3
+edit atsu-dra-c1 1 | atsu happy 今日のカードの対戦、どっちのデッキでいく？笑
+edit atsu-dra-c1 reply1-2 | atsu happy いいね！ 本気で行く！
+edit atsu-dra-c1 reply2-1 | atsu wink 了解！ 手加減なしね笑
+tag atsu-dra-c1 doing=cards lv=1-3
+edit dra-kyuko-c1 1 | kyuko normal そのグジラ、育て方を変えたら強くなると思う
+edit dra-kyuko-c1 2 | dra surprise まじか。{c}、教えてくれよ
+edit dra-kyuko-c1 reply1-2 | dra happy なるほどな、助かるぞ
+edit dra-kyuko-c1 reply2-1 | dra wink じゃ、おでが先に聞いておくな
+tag dra-kyuko-c1 doing=training lv=1-3
+edit dra-sorashido-c1 1 | sorashido excited 昨日の対戦、20ページの表にしたぜ・・・！
+edit dra-sorashido-c1 reply1-2 | dra happy おでも読むぞ、くさ
+edit dra-sorashido-c1 reply2-1 | sorashido troubled 3行か…やってみるよ笑
+edit dra-sorashido-c1 reply2-2 | dra wink それが一番ありがたいな
+edit dra-sorashido-c1 reply3-2 | sorashido happy 頼んだぞ笑
+tag dra-sorashido-c1 doing=cards lv=1-3
+edit dra-erubin-c1 1 | dra wink デュラハンのカード、ちょっと貸してくれよ
+edit dra-erubin-c1 reply1-2 | dra happy おう、約束するぞ
+tag dra-erubin-c1 doing=cards lv=1-3
+edit atsu-kyuko-c1 1 | kyuko normal 次のランキング、どっちが上に行くか勝負しよ
+edit atsu-kyuko-c1 2 | atsu wink いいよ！ 負けないけど笑
+edit atsu-kyuko-c1 reply2-2 | kyuko troubled ぐぬぬぬ…見ててよぉ
+tag atsu-kyuko-c1 lv=1-3
+edit atsu-sorashido-c1 1 | sorashido excited HELLのノーツ、全部数えてきたぜ・・・！
+edit atsu-sorashido-c1 2 | atsu happy また数えたの？笑
+edit atsu-sorashido-c1 reply1-1 | sorashido wink いい読みだ！
+tag atsu-sorashido-c1 doing=practice lv=1-3
+edit atsu-erubin-c1 1 | erubin normal 今日はちょっと休んだほうがいいかな？
+tag atsu-erubin-c1 lv=1-3
+edit kyuko-sorashido-c1 1 | sorashido happy 育成の計算、手でやるか機械でやるか…
+edit kyuko-sorashido-c1 2 | kyuko normal どっちでもいいと思うよぉ
+edit kyuko-sorashido-c1 reply1-1 | sorashido excited だよな！ 手で計算するのが楽しいんだ！
+tag kyuko-sorashido-c1 doing=training lv=1-3
+edit erubin-kyuko-c1 1 | erubin normal 夜ふかしは体に悪いよ？
+edit erubin-kyuko-c1 2 | kyuko troubled 分かってるけど、育成が楽しくてぇ😭
+tag erubin-kyuko-c1 lv=1-3
+edit erubin-sorashido-c1 1 | sorashido excited 新しい表、どこから説明しよう！
+edit erubin-sorashido-c1 reply3-2 | sorashido happy 頼んだよ笑
+tag erubin-sorashido-c1 doing=cards lv=1-3
+
+## C その日の出来事(when)。今の仕組みのまま。when の中身に合う言い回しにした
+edit kiki-mua-w-morning 1 | mua happy おはよ〜！ 朝の空気、気持ちいいね♪
+edit atsu-dra-w-morning 1 | dra troubled 朝はつらいな…膝もまだ寝てる
+edit kyuko-momosuke-w-morning 1 | momosuke excited おはよ！！ 朝ごはん食べた！？
+edit erubin-sorashido-w-morning 1 | erubin happy おはよう、{c}。今日も早いね
+edit erubin-sorashido-w-morning 2 | sorashido excited 朝のうちに、表を1枚作っといたぞ笑
+edit erubin-kyuko-w-night 1 | erubin normal もう遅いね。そろそろ寝る時間じゃないかな？
+edit erubin-kyuko-w-night 2 | kyuko troubled あと1回だけぇ😭 {c}、見逃してぇ
+edit momosuke-mua-w-night 1 | mua troubled 夜ふかしするとお肌に悪いって〜
+edit kiki-sorashido-w-night 1 | sorashido happy 夜は計算がはかどるんだよな笑
+edit atsu-dra-w-night 1 | atsu wink 夜のほうが調子いいでしょ、{c}笑
+edit atsu-dra-w-night 2 | dra happy ばれたか。おでは夜型なんだよ、くさ
+edit erubin-mua-w-winter 1 | mua troubled 寒すぎ〜！ 手がこおる〜
+edit erubin-mua-w-winter 2 | erubin happy あたたかい紅茶をいれようか、{c}
+edit dra-momosuke-w-winter 1 | momosuke excited 雪が降ったら、雪合戦しよ！！
+edit dra-momosuke-w-winter 2 | dra wink おでは雪だるま係だな。膝にやさしいからな
+edit kiki-kyuko-w-winter 1 | kiki normal 寒い日は、こたつでゆっくりしたいでつね
+edit kiki-kyuko-w-winter 2 | kyuko happy 分かるぅ。こたつで育成が最強だよぉ笑
+edit atsu-sorashido-w-winter 1 | sorashido surprise 寒い…！ 沖縄はこんなに寒くないぞ
+edit atsu-sorashido-w-winter 2 | atsu happy 上着貸そうか？笑
+edit momosuke-mua-w-christmas 1 | mua excited もうすぐクリスマスぢゃん！ {c}、プレゼント何がいい？
+edit momosuke-mua-w-christmas 2 | momosuke excited キラキラのやつ！！ {c}は？
+edit erubin-kiki-w-christmas 1 | erubin happy ツリーの飾りつけ、一緒にやろうか
+edit dra-kyuko-w-christmas 1 | dra happy クリスマスのケーキは、おでが切ってやるからな
+edit dra-kyuko-w-christmas 2 | kyuko wink 大きさ、ちゃんとそろえてねぇ笑
+edit atsu-sorashido-w-christmas 1 | atsu happy クリスマスもHELLやる？笑
+edit atsu-sorashido-w-christmas 2 | sorashido excited もちろんだぜ・・・！ サンタも驚く記録を出すぞ！
+edit kiki-mua-w-newyear 1 | mua happy あけおめ〜！ {c}、今年もよろしくね♪
+edit kiki-mua-w-newyear 2 | kiki happy あけましておめでとうございまつ。今年もよろしくお願いしまつ♪
+edit atsu-momosuke-w-newyear 1 | momosuke excited おみくじ、大吉だった！！
+edit atsu-momosuke-w-newyear 2 | atsu wink 俺も大吉笑 今年はいけるね！
+edit dra-sorashido-w-newyear 1 | dra happy お正月のおもち、何個食べた？
+edit dra-sorashido-w-newyear 2 | sorashido happy 8個だ！ ちゃんと数えてたからな笑
+edit erubin-kyuko-w-newyear 1 | kyuko happy 今年の目標、決めた？
+edit erubin-kyuko-w-newyear 2 | erubin normal みんなが楽しく遊べること、かな
+edit atsu-mua-w-battle 1 | atsu happy 今日のブリーダーのバトル見た？笑
+edit atsu-mua-w-battle 2 | mua excited 見た見た！ けっこういい動きだったよね！
+edit dra-kiki-w-battle 1 | dra normal 今日のブリーダー、バトルで攻めてたな
+edit dra-kiki-w-battle 2 | kiki happy はい。ちから全開でしたね♪
+edit momosuke-sorashido-w-battle 1 | sorashido excited 今日のバトルの記録、もう表にしたぜ・・・！
+edit momosuke-sorashido-w-battle 2 | momosuke wink はや！！w {c}、仕事早すぎ
+edit erubin-kyuko-w-battle 1 | erubin happy 今日のブリーダーのバトル、落ち着いてたね
+edit erubin-kyuko-w-battle 2 | kyuko normal 判断がよかったよねぇ。見てて楽しかった笑
+edit momosuke-mua-w-clear 1 | mua excited 今日、ブリーダーがチャレンジクリアしたって！
+edit momosuke-mua-w-clear 2 | momosuke excited ほんと！？ すごすぎ！！
+edit atsu-kiki-w-clear 1 | atsu happy 今日のクリア、ちゃんと見てたよ笑
+edit atsu-kiki-w-clear 2 | kiki happy 私もでつ。うれしいですね♪
+edit dra-erubin-w-clear 1 | erubin happy ブリーダー、チャレンジをクリアしたんだって
+edit dra-erubin-w-clear 2 | dra excited おでもうれしいぞ、えへへ
+edit kyuko-sorashido-w-clear 1 | sorashido excited クリアおめでとうの表、作るか！
+edit kyuko-sorashido-w-clear 2 | kyuko happy それ作るの！？笑 いいねぇ
+edit kyuko-mua-w-enhance 1 | kyuko normal 今日のブリーダーの強化、いい選び方だったねぇ
+edit kyuko-mua-w-enhance 2 | mua happy {c}がほめるなら、間違いないぢゃん！
+edit kiki-sorashido-w-enhance 1 | kiki happy 今日の強化、ちからに振ってましたよ♪
+edit kiki-sorashido-w-enhance 2 | sorashido happy ダメージ、計算しとくよ笑
+edit erubin-momosuke-w-enhance 1 | momosuke excited マスモンがまた強くなってた！！
+edit erubin-momosuke-w-enhance 2 | erubin happy ブリーダーは毎日がんばってるもんね
+edit atsu-dra-w-enhance 1 | dra normal 今日の強化、悪くないな
+edit atsu-dra-w-enhance 2 | atsu wink もう一段いけるよね笑
+edit dra-mua-w-streak 1 | mua excited ブリーダー、毎日来てくれてるね！
+edit dra-mua-w-streak 2 | dra happy おでもうれしいぞ。えへへ
+edit kiki-momosuke-w-streak 1 | momosuke excited ブリーダー、連続で来てるよ！！
+edit kiki-momosuke-w-streak 2 | kiki happy ほんとですね。ありがとうございまつ♪
+edit atsu-kyuko-w-streak 1 | atsu happy ブリーダー、毎日えらいね笑
+edit atsu-kyuko-w-streak 2 | kyuko wink 続けるのが一番大事だからねぇ笑
+edit erubin-sorashido-w-streak 1 | sorashido excited 連続ログインの日数、記録してるぜ・・・！
+edit erubin-sorashido-w-streak 2 | erubin happy それは大事な記録だね
+
+## D 特別なお話(Lv5 の -sp・Lv10 の -sp2)。締めの「これからも」を、そのペアらしい次の約束やひとことに言いかえた
+edit kiki-mua-sp 5 | mua excited …もー！ そういうのずるいぢゃん！ あたしも、{c}がいると安心するんだよ
+edit kiki-mua-sp 6 | kiki happy では、明日も一緒に遊びましょうね♪
+edit momosuke-mua-sp 6 | mua happy うん！ 笑ってる！ だって{c}の自慢なんでしょ？ｗ
+edit dra-mua-sp 6 | dra happy えへへ。……まあ、聞きたくなったら、いつでも来いよ、{c}
+edit atsu-mua-sp 3 | atsu happy そう！ あれ、けっこう助かってんだよ笑 みんなも、俺も！
+edit atsu-mua-sp 5 | atsu wink たまにはね笑 その笑顔、頼りにしてる( *'ω'*)ノ
+edit atsu-mua-sp 6 | mua excited まかせて！ 明日も元気でいるから！
+edit kyuko-mua-sp 5 | kyuko wink ほい！ じゃあ次も一緒に上目指そ笑
+edit mua-sorashido-sp 5 | sorashido wink 次のイベントも、一緒に勝ちにいこうぜ・・・！
+edit erubin-mua-sp 5 | erubin wink みんなのことは、俺がちゃんと見守ってるからね
+edit erubin-mua-sp 6 | mua excited うん！ ぢゃあ、{c}が疲れたら、あたしが元気を分けるね！
+edit kiki-momosuke-sp 5 | kiki wink 明日も、たくさん話しかけてくださいね♪
+edit dra-kiki-sp 4 | dra happy 半分かよ！ でも、うれしいな
+edit dra-kiki-sp 5 | kiki wink 説明のほうは、ちゃんと頼りにしてますね
+edit atsu-kiki-sp 3 | atsu happy 見える！ あの強さ、俺けっこう尊敬してるんだよ！
+edit atsu-kiki-sp 5 | atsu wink 次のボスも、頼りにしてる笑
+edit kiki-kyuko-sp 4 | kyuko happy あはは。でも、{c}といると安心するのはほんと
+edit kiki-kyuko-sp 5 | kiki wink では、このままゆっくり一緒にいきましょう♪
+edit kiki-sorashido-sp 4 | kiki wink 次の新しい表も、楽しみにしてますね♪
+edit erubin-kiki-sp 5 | erubin wink そういうこと笑 二人なら、見落としも減りそうだね
+edit erubin-kiki-sp 6 | kiki happy はい。頼りにしてまつ
+edit dra-momosuke-sp 6 | dra happy えへへ。じゃあ、ずっと笑っててやるからな、{c}
+edit atsu-momosuke-sp 5 | atsu wink そういうこと！ 次のライブも一緒に盛り上げよ、{c}！
+edit kyuko-momosuke-sp 6 | momosuke excited こちらこそ！！ 明日もドリーミィに会いに来るね、{c}！！
+edit atsu-dra-sp 1 | atsu normal 俺さ、カードで本気を出せる相手、{c}くらいなんだよね笑
+edit atsu-dra-sp 4 | dra happy …おでもだよ、{c}。おまえとやるのが一番楽しいんだ
+edit atsu-dra-sp 5 | atsu wink じゃ、ずっとライバルってことで笑
+edit dra-kyuko-sp 5 | kyuko wink それでもありがとん！ また教えてね、{c}
+edit dra-sorashido-sp 1 | sorashido normal 俺の表、いつも最後まで読んでくれるの、{c}だけなんだよな笑
+edit dra-sorashido-sp 4 | dra wink {c}は熱いからな。おでは、そういうやつが好きなんだ
+edit dra-sorashido-sp 5 | sorashido excited うぉぉぉ！ 次の攻略も、一緒にやろうぜ・・・！
+edit dra-erubin-sp 5 | erubin wink 泣いてもいいよ笑 またカード、教えてね
+edit atsu-kyuko-sp 1 | atsu normal 俺、{c}の育て方、けっこう参考にしてるんだよ笑
+edit atsu-kyuko-sp 3 | atsu happy ほんと！ 頭使って強くなるの、かっこいいと思う！
+edit atsu-kyuko-sp 5 | atsu wink じゃ、二人で上の順位いこ笑
+edit atsu-sorashido-sp 1 | sorashido normal 俺さ、{c}の打ち方、全部表にまとめたことあるんだ
+edit atsu-sorashido-sp 6 | atsu wink じゃ、一緒に上いこ、{c}( *'ω'*)ノ
+edit atsu-erubin-sp 3 | erubin happy うん。だから、{c}がみんなを引っぱってるのも、ちゃんと分かってるよ
+edit atsu-erubin-sp 5 | erubin wink 後ろのことは任せて、前を向いててね
+edit kyuko-sorashido-sp 2 | sorashido happy {c}のおかげだ！ 俺だけだと表ばっかりになるからな笑
+edit kyuko-sorashido-sp 5 | kyuko wink ほい！ 次のメモも、二人で作ろうねぇ
+edit erubin-kyuko-sp 5 | erubin wink 二人で、みんなを支えていこうね
+edit erubin-sorashido-sp 5 | sorashido excited うぉぉぉ！ 表、もっと作りまくるぜ・・・！
+edit erubin-momosuke-sp 5 | momosuke excited えへへ…！！ じゃあ明日も、ももがいっぱい話しかけてあげるね！！
+edit kiki-mua-sp2 6 | kiki happy はい♪♪ 二人で、いっぱい笑いましょう
+edit dra-mua-sp2 5 | dra happy えへへ。おでが教えて、{c}が強くなる。この感じでいこうな
+edit atsu-mua-sp2 5 | atsu wink それね笑 その笑顔に、また頼らせて！
+edit erubin-mua-sp2 6 | erubin troubled それは目立ちすぎるかな笑 でも、{c}の選ぶ服なら着てみたいね
+edit kiki-momosuke-sp2 5 | momosuke wink え、そう？w じゃあ、いっぱいしゃべりかけちゃう！！
+edit dra-kiki-sp2 4 | dra excited まじか！ {c}から頼まれる日が来るとはな……とっておきのを教えてやるぞ
+edit dra-kiki-sp2 6 | dra happy それでいいんだよ。一緒に笑ってくれたら、おでは満足だ
+edit atsu-kiki-sp2 6 | kiki wink では、おたがいに背中をあずけましょう♪♪
+edit kiki-kyuko-sp2 6 | kiki wink 二人でゆっくり、でも火力は全開でいきましょう♪♪
+edit kiki-sorashido-sp2 5 | sorashido wink だから俺が数えとく。この表、もっと長くしていこうな笑
+edit erubin-kiki-sp2 6 | kiki happy 私もです。たまには、見守り係もお茶の時間ですね
+edit dra-momosuke-sp2 6 | dra happy ももぉ〜……！ よし、ネタ帳作るぞ。二人でみんなを笑わせような
+edit atsu-momosuke-sp2 6 | atsu wink 約束！ 二人で、会場ごと盛り上げよ笑
+edit kyuko-momosuke-sp2 6 | momosuke happy やったー！！ ずっとその名前で勝とうね、{c}♡
+edit momosuke-sorashido-sp2 6 | sorashido happy よし、勝って一緒に歌おう笑 その日まで、よろしくな、{c}！
+edit atsu-dra-sp2 5 | dra happy だからさ、{c}。また、あれ以上の勝負しような
+edit dra-kyuko-sp2 6 | dra happy えへへ。いい名前つけて、ずっと使おうな、{c}
+edit dra-sorashido-sp2 6 | dra happy ……のった。二人で、いちばん分かりやすい本にしような
+edit dra-erubin-sp2 6 | erubin happy うん、俺もだよ。次も、いい勝負しようね
+edit atsu-kyuko-sp2 6 | atsu happy 上等！ 一緒に、てっぺんいこ笑
+edit atsu-sorashido-sp2 5 | sorashido wink そういうこと。また、どっちが勝つか分からない勝負しような笑
+edit atsu-erubin-sp2 6 | erubin wink そういうこと笑 安心して前に出てね、{c}
+edit kyuko-sorashido-sp2 6 | sorashido happy なんくるないさ〜。こういう日も、たまにはいいな笑
+edit erubin-kyuko-sp2 6 | erubin happy いいね。二人で、みんなの居場所を増やしていこうね
+edit erubin-sorashido-sp2 4 | erubin happy 数字にならないことも、あるよね☺️
+edit erubin-sorashido-sp2 6 | erubin wink それなら十分かな笑 また表、見せてね、{c}
+edit erubin-momosuke-sp2 6 | erubin happy おけ！ {c}がいちばん輝けるように、手伝うね
+
+## E ミニイベント(ASSISTANT_PEER_EVENTS)
+edit kiki-mua-ev1 1 | mua excited クッキー対決しよ！ ブリーダーに食べ比べてもらうの！
+edit dra-momosuke-ev1 1 | momosuke excited モンヒロビートで勝負しよ！！ 負けたらジュースおごりね！
+edit kyuko-sorashido-ev1 1 | sorashido excited うぉぉぉ！ どっちのデッキ案が強いか勝負だ！
+edit kyuko-sorashido-ev1 3 | sorashido happy 俺は計算した。先に攻めきる型が、勝率いちばん高いぜ笑
+edit kyuko-sorashido-ev1 7 | sorashido normal ブリーダー、判定たのむ！ どっちの作戦が好きだ？
+edit kyuko-sorashido-ev1 reply2-1 | sorashido excited よっしゃー！ 計算どおりだ！
+edit kyuko-sorashido-ev1 reply3-2 | sorashido excited 最強の作戦ができたな！ さっそく表にするぜ笑
+edit atsu-dra-ev1 1 | atsu happy どっちのモンスターがかっこいいか勝負しよ笑
+edit erubin-kiki-ev1 1 | erubin normal マーケットにおつかいに行ってきたよ。おやつの材料ね
+edit momosuke-mua-ev1 1 | momosuke excited 新しい振り付け考えたから、勝負しよ！！
+edit atsu-kyuko-ev1 1 | kyuko happy モンスタークイズで早押し勝負しよぉ
+edit dra-sorashido-ev1 1 | sorashido excited 海で釣り勝負だ！ 潮の時間は計算ずみだぜ笑
+edit dra-sorashido-ev1 3 | sorashido happy お、かかった！ …小さいけど、でーじかわいい魚だな笑
+edit dra-sorashido-ev1 7 | sorashido normal ブリーダー、これ、どっちの勝ちだ…？
+edit dra-sorashido-ev1 reply3-1 | sorashido happy それだ！ 楽しかったなら全部勝ちだぜ・・・！
+edit erubin-momosuke-ev1 1 | momosuke excited お部屋の飾りつけ対決しよ！！
+edit kiki-kyuko-ev1 1 | kyuko happy お絵かき対決しよぉ。お題は好きなモンスター〜
+edit mua-sorashido-ev1 1 | mua excited マスモンの写真対決しよ！ いちばんいい1枚を撮った方が勝ち♪
+edit mua-sorashido-ev1 4 | sorashido happy 俺は夕方の浜で、シルエットを撮った。でーじきれいだぜ笑
+edit mua-sorashido-ev1 6 | sorashido wink {c}のモッチー写真も、反則級にかわいいな
+edit mua-sorashido-ev1 reply1-2 | sorashido happy 負けた！ あのほっぺは計算できないぜ笑
+edit atsu-erubin-ev1 1 | erubin happy 新しいデッキを組んだんだ。見てくれるかな
+
+## H 差し入れ・友情のしるし・遊んだあとの反応(ASSISTANT_PEER_REACTIONS)
+edit reaction-dra-gift | happy 差し入れか、ありがたいな。{c}、分けような
+edit reaction-atsu-gift | happy 差し入れありがと笑 {c}と食べる！
+edit reaction-atsu-token | wink 友情のしるしね！ {c}とおそろいだ笑
+edit reaction-sorashido-gift | excited 差し入れ！？ ありがとう！ {c}と分けるぜ笑
+edit reaction-sorashido-token | happy 友情のしるし…でーじうれしいぜ・・・！ {c}、ありがとな
+
+## 取り残しの直し(当てたあとに拾った分)
+edit dra-mua-sp 5 | mua wink あ、照れてる〜ｗ
+edit atsu-momosuke-sp 3 | atsu happy わかるよ！ 俺も似たようなことしてるから笑
+edit atsu-erubin-sp 2 | atsu surprise {c}もでしょ！ 俺よりずっと笑
+edit atsu-erubin-sp 6 | atsu happy ありがと、{c}！ 頼りにしてる！
+edit atsu-kyuko-c1 reply1-2 | atsu happy お、言ったね！ 燃えてきた笑
+edit atsu-erubin-c1 reply1-1 | atsu troubled …分かった！ 少しだけね！
+edit mua-sorashido-sp2 3 | mua happy ぢゃあ今日は逆！ あたしにも表の作り方、教えて！
+edit erubin-mua-sp2 3 | mua happy ぢゃあ今日は、二人でおそろいコーデしよ！ 砂の色入れるね♪
+edit atsu-dra-ev1 5 | atsu wink てか、決めてもらおうぜ！ ブリーダーに！
+edit mua-sorashido-ev1 reply3-1 | mua happy ぢゃあアルバム作ろ！ 2人の写真集♪
+edit reaction-atsu-play | happy {c}と見てたよ！ いい感じだったね！
