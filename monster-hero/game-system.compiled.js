@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3c6b93155c88bddc
+// source-sha256: 75886cf51c891301
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -61217,6 +61217,11 @@ html[data-mh-tod="night"] .mh-title-gate img.mh-title-visual{filter:brightness(.
 html[data-mh-tod="morning"] :is([data-mh-theme-category="menu"],[data-mh-theme-category="market"],[data-mh-theme-category="temple"]) .mh-screen-shell,html[data-mh-tod="morning"] .mhms-stage{box-shadow:inset 0 0 0 100vmax rgba(190,215,255,.05)}
 html[data-mh-tod="evening"] :is([data-mh-theme-category="menu"],[data-mh-theme-category="market"],[data-mh-theme-category="temple"]) .mh-screen-shell,html[data-mh-tod="evening"] .mhms-stage{box-shadow:inset 0 0 0 100vmax rgba(255,120,48,.07)}
 html[data-mh-tod="night"] :is([data-mh-theme-category="menu"],[data-mh-theme-category="market"],[data-mh-theme-category="temple"]) .mh-screen-shell,html[data-mh-tod="night"] .mhms-stage{box-shadow:inset 0 0 0 100vmax rgba(6,10,40,.24)}
+.mh-tod-tint{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 2.4s ease;border-radius:inherit}
+html[data-mh-tod="morning"] .mh-tod-tint{opacity:var(--tod-k,1);background:linear-gradient(180deg,rgba(186,214,255,.30) 0%,rgba(214,236,255,.16) 50%,rgba(255,236,214,.10) 100%)}
+html[data-mh-tod="evening"] .mh-tod-tint{opacity:var(--tod-k,1);background:linear-gradient(180deg,rgba(255,128,48,.34) 0%,rgba(255,110,64,.24) 45%,rgba(120,40,30,.34) 100%)}
+html[data-mh-tod="night"] .mh-tod-tint{opacity:var(--tod-k,1);background:linear-gradient(180deg,rgba(5,8,34,.84) 0%,rgba(10,16,52,.70) 50%,rgba(6,10,34,.76) 100%)}
+@media (prefers-reduced-motion:reduce){.mh-tod-tint{transition:none!important}}
 @media (prefers-reduced-motion:reduce){.mh-home-background::after,.mh-home-background::before,.mh-title-gate img,.mh-screen-shell,.mhms-stage{transition:none!important}}
 .mh-tod-clock{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border:1px solid #eed99566;border-radius:999px;background:#0f1d2ad9;color:#f9eac2;font-size:11px;font-weight:900;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;box-shadow:0 2px 6px #0007;pointer-events:none}
 .mh-tod-clock i{font-style:normal;font-size:12px}
@@ -61302,6 +61307,24 @@ const TimeOfDayClockText = ({
     }
   }, prefix, st.minute);
 };
+const TimeOfDayTint = ({
+  strength = 1,
+  className = ''
+}) => {
+  useEffect(() => {
+    ensureTimeOfDayCss();
+  }, []);
+  const k = Math.max(0, Math.min(1, Number(strength)));
+  return React.createElement("span", {
+    "aria-hidden": "true",
+    "data-time-of-day-tint": true,
+    className: `mh-tod-tint ${className}`,
+    style: {
+      '--tod-k': Number.isFinite(k) ? k : 1
+    }
+  });
+};
+const timeOfDayLabelAt = (now = Date.now()) => timeOfDayAt(now).label;
 const TimeOfDaySettingsPanel = () => {
   const st = useTimeOfDay();
   const row = (key, title, desc) => React.createElement("div", {
@@ -90788,7 +90811,8 @@ function RhythmMultiScreen({
       kind: 'assistant',
       assistantId: who.id
     };
-    let paid = (await RHYTHM_BUDDY_STORE.update(st => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
+    let paid = rhythmAssistSessionVisitFree(who.id) ? 'visit' : '';
+    if (!paid) paid = (await RHYTHM_BUDDY_STORE.update(st => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
     if (!paid && onUseBuddyTicket) {
       try {
         paid = (await onUseBuddyTicket()) === true ? 'ticket' : '';
@@ -94198,8 +94222,10 @@ function RhythmBuddySheet({
   const tabNow = assistOn ? tab : 'masu';
   const masuPicks = picks.filter(p => p.kind === 'masu');
   const singleMasu = masuPicks.length === 1 && picks.length === 1 ? (masuMons || []).find(x => x && x.id === masuPicks[0].id) : null;
-  const useFree = Math.min(freeLeft, picks.length);
-  const useTickets = picks.length - useFree;
+  const visitPicks = picks.filter(p => p.kind === 'assistant' && rhythmAssistSessionVisitFree(p.id)).length;
+  const paidPicks = picks.length - visitPicks;
+  const useFree = Math.min(freeLeft, paidPicks);
+  const useTickets = paidPicks - useFree;
   const shortTickets = Math.max(0, useTickets - tickets);
   const pickedAssistantIds = picks.filter(p => p.kind === 'assistant').map(p => p.id);
   const duoNow = assistOn && pickedAssistantIds.length && typeof rhythmAssistSessionDuosNow === 'function' ? rhythmAssistSessionDuosNow([...calledIds.map(c => rhythmAssistSessionIdOf(c)).filter(Boolean), ...pickedAssistantIds]).filter(d => pickedAssistantIds.includes(d.a) || pickedAssistantIds.includes(d.b)) : [];
@@ -94254,7 +94280,7 @@ function RhythmBuddySheet({
     "data-rhythm-buddy-multi-cost": true,
     className: "text-[10px] font-bold leading-snug text-slate-300",
     style: JA_WRAP_STYLE
-  }, jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います`)), shortTickets > 0 && React.createElement("p", {
+  }, jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。${paidPicks ? `無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います` : '回数は使いません'}${visitPicks ? `(モンビーにいる助手 ${visitPicks}人は回数なし)` : ''}`)), shortTickets > 0 && React.createElement("p", {
     "data-rhythm-buddy-multi-short": true,
     className: "text-[10px] font-black text-rose-300",
     style: JA_WRAP_STYLE
@@ -95096,7 +95122,17 @@ function RhythmAssistSessionPicker({
       className: "w-full truncate text-center text-[9px] font-bold text-slate-300"
     }, "♡ ", rhythmAssistSessionLikedNames(who.id).join('・')), calledOf(who.id) && React.createElement("span", {
       className: "rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950"
-    }, "呼んでいる"));
+    }, "呼んでいる"), !calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && React.createElement("span", {
+      "data-rhythm-assist-visit": true,
+      "aria-label": "🎵 いまモンビーにいる・回数なし",
+      className: "flex w-full flex-wrap justify-center rounded-xl bg-sky-400/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"
+    }, React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "🎵 いま"), React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "モンビーにいる"), React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "・回数なし")));
   }))));
 }
 const RHYTHM_ASSIST_SESSION_FX_QUEUE = {
@@ -95170,6 +95206,14 @@ const rhythmAssistSessionSetApp = app => {
   RHYTHM_ASSIST_SESSION_INVITE.app = app && typeof app === 'object' ? app : null;
   if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.beatInvite = id => rhythmAssistSessionInvite(id);
 };
+const rhythmAssistSessionVisitFree = id => {
+  if (!rhythmAssistSessionEnabled() || typeof assistantLifeAtBeat !== 'function') return false;
+  try {
+    return assistantLifeAtBeat(id) === true;
+  } catch (_) {
+    return false;
+  }
+};
 const rhythmAssistSessionCanPayNow = () => {
   const app = RHYTHM_ASSIST_SESSION_INVITE.app;
   const free = typeof RHYTHM_BUDDY_STORE !== 'undefined' ? rhythmBuddyFreeLeft(RHYTHM_BUDDY_STORE.get(), rhythmBuddyDayKey(Date.now())) : 0;
@@ -95195,7 +95239,7 @@ const rhythmAssistSessionInvite = (id, opts = {}) => {
     ok: false,
     reason: 'unknown'
   });
-  if (!rhythmAssistSessionCanPayNow()) return rhythmAssistSessionInviteDone(onResult, {
+  if (!rhythmAssistSessionVisitFree(id) && !rhythmAssistSessionCanPayNow()) return rhythmAssistSessionInviteDone(onResult, {
     ok: false,
     reason: 'no_ticket'
   });
@@ -99864,6 +99908,7 @@ const quickNudgeAfter = (nudge, today) => {
   };
 };
 const QUICK_GUIDE_RUN_BETWEEN = Object.freeze(['WAVE_RESULT', 'QUICK_GROWTH', 'PICK_ALLY', 'QUICK_JOIN']);
+const QUICK_GUIDE_SEEN_AFTER_MS = 1200;
 const quickGuideScreenKey = (gameState, quickRun, autoRepeat) => quickRun === true && autoRepeat === true && QUICK_GUIDE_RUN_BETWEEN.includes(gameState) ? 'BATTLE' : gameState;
 const quickGuidePick = ctx => {
   const c = ctx || {};
@@ -147323,6 +147368,8 @@ function MonsterHeroGame() {
     };
   };
   const [quickGuideSeen, setQuickGuideSeen] = useState(null);
+  const quickGuideSeenRef = useRef(null);
+  const quickGuideStoredRef = useRef(null);
   const [quickNudge, setQuickNudge] = useState(null);
   const [quickGuideReplay, setQuickGuideReplay] = useState(null);
   const quickGuideShowingRef = useRef(null);
@@ -155026,7 +155073,9 @@ function MonsterHeroGame() {
         [seenRaw, nudgeRaw] = await Promise.all([storeGet(QUICK_GUIDE_SEEN_KEY, null, false), storeGet(QUICK_GUIDE_NUDGE_KEY, null, false)]);
       } catch (_) {}
       if (cancelled) return;
-      setQuickGuideSeen(normalizeQuickGuideSeen(seenRaw));
+      quickGuideSeenRef.current = normalizeQuickGuideSeen(seenRaw);
+      quickGuideStoredRef.current = quickGuideSeenRef.current;
+      setQuickGuideSeen(quickGuideSeenRef.current);
       setQuickNudge(normalizeQuickNudge(nudgeRaw));
     })();
     return () => {
@@ -155068,6 +155117,20 @@ function MonsterHeroGame() {
   }, [quickGuidePicked]);
   const quickGuideActive = quickGuideReplay ? `replay:${quickGuideReplay}` : quickNudgeShowing && !quickGuideBusy ? quickNudgeShowing : quickGuidePicked && quickGuidePicked !== quickGuideLater && quickGuidePicked !== 'nudgeHome' && quickGuidePicked !== 'nudgeBattle' ? quickGuidePicked : null;
   quickGuideShowingRef.current = quickGuideActive;
+  const persistQuickGuideSeen = guideId => {
+    if (!guideId || !Array.isArray(quickGuideStoredRef.current) || quickGuideStoredRef.current.includes(guideId)) return;
+    const next = quickGuideSeenAfter(quickGuideStoredRef.current, guideId);
+    quickGuideStoredRef.current = next.seen;
+    storeSet(QUICK_GUIDE_SEEN_KEY, next, false);
+  };
+  const markQuickGuideSeen = guideId => {
+    persistQuickGuideSeen(guideId);
+    if (!guideId || !Array.isArray(quickGuideSeenRef.current) || quickGuideSeenRef.current.includes(guideId)) return;
+    quickGuideSeenRef.current = normalizeQuickGuideSeen({
+      seen: [...quickGuideSeenRef.current, guideId]
+    });
+    setQuickGuideSeen(quickGuideSeenRef.current);
+  };
   const finishQuickGuide = (guideId, done) => {
     if (quickGuideReplay) {
       setQuickGuideReplay(null);
@@ -155077,14 +155140,27 @@ function MonsterHeroGame() {
       setQuickNudgeShowing(null);
       return;
     }
-    if (!done) {
-      setQuickGuideLater(guideId);
-      return;
-    }
-    const next = quickGuideSeenAfter(quickGuideSeen, guideId);
-    setQuickGuideSeen(next.seen);
-    storeSet(QUICK_GUIDE_SEEN_KEY, next, false);
+    if (!done) setQuickGuideLater(guideId);
+    markQuickGuideSeen(guideId);
   };
+  const quickGuideShownRef = useRef(new Map());
+  useEffect(() => {
+    const id = quickGuideActive && !String(quickGuideActive).startsWith('replay:') && quickGuideActive !== 'nudgeHome' && quickGuideActive !== 'nudgeBattle' ? quickGuideActive : null;
+    if (!id) return undefined;
+    const screen = quickGuideScreen;
+    const t = setTimeout(() => {
+      quickGuideShownRef.current.set(id, screen);
+      persistQuickGuideSeen(id);
+    }, QUICK_GUIDE_SEEN_AFTER_MS);
+    return () => clearTimeout(t);
+  }, [quickGuideActive, quickGuideScreen]);
+  useEffect(() => {
+    for (const [id, screen] of [...quickGuideShownRef.current]) {
+      if (screen === quickGuideScreen) continue;
+      quickGuideShownRef.current.delete(id);
+      markQuickGuideSeen(id);
+    }
+  }, [quickGuideScreen]);
   const startOnboardingPreview = () => {
     onboardingPreviewBackupRef.current = {
       name: breederName,

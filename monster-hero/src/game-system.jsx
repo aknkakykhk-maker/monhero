@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2c2f60cc5457beb6
+// generated-sha256: 3e316e767182a181
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -37901,6 +37901,11 @@ html[data-mh-tod="night"] .mh-title-gate img.mh-title-visual{filter:brightness(.
 html[data-mh-tod="morning"] :is([data-mh-theme-category="menu"],[data-mh-theme-category="market"],[data-mh-theme-category="temple"]) .mh-screen-shell,html[data-mh-tod="morning"] .mhms-stage{box-shadow:inset 0 0 0 100vmax rgba(190,215,255,.05)}
 html[data-mh-tod="evening"] :is([data-mh-theme-category="menu"],[data-mh-theme-category="market"],[data-mh-theme-category="temple"]) .mh-screen-shell,html[data-mh-tod="evening"] .mhms-stage{box-shadow:inset 0 0 0 100vmax rgba(255,120,48,.07)}
 html[data-mh-tod="night"] :is([data-mh-theme-category="menu"],[data-mh-theme-category="market"],[data-mh-theme-category="temple"]) .mh-screen-shell,html[data-mh-tod="night"] .mhms-stage{box-shadow:inset 0 0 0 100vmax rgba(6,10,40,.24)}
+.mh-tod-tint{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 2.4s ease;border-radius:inherit}
+html[data-mh-tod="morning"] .mh-tod-tint{opacity:var(--tod-k,1);background:linear-gradient(180deg,rgba(186,214,255,.30) 0%,rgba(214,236,255,.16) 50%,rgba(255,236,214,.10) 100%)}
+html[data-mh-tod="evening"] .mh-tod-tint{opacity:var(--tod-k,1);background:linear-gradient(180deg,rgba(255,128,48,.34) 0%,rgba(255,110,64,.24) 45%,rgba(120,40,30,.34) 100%)}
+html[data-mh-tod="night"] .mh-tod-tint{opacity:var(--tod-k,1);background:linear-gradient(180deg,rgba(5,8,34,.84) 0%,rgba(10,16,52,.70) 50%,rgba(6,10,34,.76) 100%)}
+@media (prefers-reduced-motion:reduce){.mh-tod-tint{transition:none!important}}
 @media (prefers-reduced-motion:reduce){.mh-home-background::after,.mh-home-background::before,.mh-title-gate img,.mh-screen-shell,.mhms-stage{transition:none!important}}
 .mh-tod-clock{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border:1px solid #eed99566;border-radius:999px;background:#0f1d2ad9;color:#f9eac2;font-size:11px;font-weight:900;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;box-shadow:0 2px 6px #0007;pointer-events:none}
 .mh-tod-clock i{font-style:normal;font-size:12px}
@@ -37964,6 +37969,17 @@ const TimeOfDayClockText = ({ prefix = ' ' }) => {
   if (st.settings.clock !== 'on') return null;
   return <span data-time-of-day-clock-text={st.slot.id} style={{ fontVariantNumeric: 'tabular-nums' }}>{prefix}{st.minute}</span>;
 };
+
+// 背景の絵の上に、HOME と同じ時間帯の色を重ねる層(2026-11-07 ミハリの指摘 L7③ 地図が夜も昼の明るさ・L14 夜の場面が昼の絵)。
+//   置き方: 背景の絵の「すぐ後ろ」(ボタン・文字・顔より前)に <TimeOfDayTint/> を置く。親は position:relative などで位置を持つこと。
+//   strength … 濃さ(0〜1。既定1 = HOME と同じ)。設定の「時間帯で雰囲気を変える」が切なら何も重ならない(印が外れるため)
+const TimeOfDayTint = ({ strength = 1, className = '' }) => {
+  useEffect(() => { ensureTimeOfDayCss(); }, []);
+  const k = Math.max(0, Math.min(1, Number(strength)));
+  return <span aria-hidden="true" data-time-of-day-tint className={`mh-tod-tint ${className}`} style={{ '--tod-k': Number.isFinite(k) ? k : 1 }}/>;
+};
+// いまの時間帯の名前(朝・昼・夕・夜)。画面に時間帯の言葉を出すときはここから取る(L8: 同じ17:30に「夕方」と「午後」が並んだ)
+const timeOfDayLabelAt = (now = Date.now()) => timeOfDayAt(now).label;
 
 // 設定の欄(設定画面の「画面テーマ」の下)
 const TimeOfDaySettingsPanel = () => {
@@ -54269,7 +54285,9 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     if ((view && view.myCpus ? view.myCpus : []).some((c) => c.masuId === key)) return 'already'; // 同じ助手は2人呼べない
     const day = rhythmBuddyDayKey(Date.now());
     const call = { id: rhythmBuddyCallId(), masuId: key, at: Date.now(), load: RHYTHM_BUDDY_LOAD_ID, kind: 'assistant', assistantId: who.id };
-    let paid = (await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
+    // モンビーに出かけている助手は回数を使わない(社長の決定 2026-11-07)。払っていないので控えも残さない(返すものが無い)
+    let paid = rhythmAssistSessionVisitFree(who.id) ? 'visit' : '';
+    if (!paid) paid = (await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
     if (!paid && onUseBuddyTicket) {
       try { paid = (await onUseBuddyTicket()) === true ? 'ticket' : ''; } catch (_) { paid = ''; }
       if (paid) await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyAddCall(st, { ...call, paid: 'ticket', day }));
@@ -56264,8 +56282,11 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
   const masuPicks = picks.filter((p) => p.kind === 'masu');
   const singleMasu = masuPicks.length === 1 && picks.length === 1 ? (masuMons || []).find((x) => x && x.id === masuPicks[0].id) : null;
   // 使う回数: 無料の残りから先に使い、足りないぶんをセッション券で。券が足りないときは押せない(呼べる分だけ呼ぶ、はしない)
-  const useFree = Math.min(freeLeft, picks.length);
-  const useTickets = picks.length - useFree;
+  //   モンビーに出かけている助手(rhythmAssistSessionVisitFree)は回数を使わない
+  const visitPicks = picks.filter((p) => p.kind === 'assistant' && rhythmAssistSessionVisitFree(p.id)).length;
+  const paidPicks = picks.length - visitPicks;
+  const useFree = Math.min(freeLeft, paidPicks);
+  const useTickets = paidPicks - useFree;
   const shortTickets = Math.max(0, useTickets - tickets);
   // デュオになる組み合わせ(呼んでいる助手と、選んでいる助手を合わせて見る)
   const pickedAssistantIds = picks.filter((p) => p.kind === 'assistant').map((p) => p.id);
@@ -56305,7 +56326,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
                     })}
                   </div>
                   <p data-rhythm-buddy-multi-cost className="text-[10px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>
-                    {jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います`)}
+                    {jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。${paidPicks ? `無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います` : '回数は使いません'}${visitPicks ? `(モンビーにいる助手 ${visitPicks}人は回数なし)` : ''}`)}
                   </p>
                   {shortTickets > 0 && <p data-rhythm-buddy-multi-short className="text-[10px] font-black text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(`セッション券が ${shortTickets}枚 足りません。選ぶ数を減らすと呼べます`)}</p>}
                   {duoNow.length > 0 && <p data-rhythm-buddy-multi-duo className="text-[10px] font-black text-pink-200">🎤 デュオ: {duoNow.map((d) => `${rhythmAssistSessionName(d.a)}×${rhythmAssistSessionName(d.b)}`).join('・')}</p>}
@@ -56809,6 +56830,7 @@ function RhythmAssistSessionPicker({ assistants = [], calledIds = [], guideAssis
                   <span className="whitespace-nowrap text-[10px] font-black text-pink-200">セッションLv.{lv}</span>
                   {lv >= RHYTHM_ASSIST_SESSION_TASTE_LEVEL && <span data-rhythm-assist-taste className="w-full truncate text-center text-[9px] font-bold text-slate-300">♡ {rhythmAssistSessionLikedNames(who.id).join('・')}</span>}
                   {calledOf(who.id) && <span className="rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950">呼んでいる</span>}
+                  {!calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && <span data-rhythm-assist-visit aria-label="🎵 いまモンビーにいる・回数なし" className="flex w-full flex-wrap justify-center rounded-xl bg-sky-400/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"><span className="whitespace-nowrap">🎵 いま</span><span className="whitespace-nowrap">モンビーにいる</span><span className="whitespace-nowrap">・回数なし</span></span>}
                 </button>
               );
             })}
@@ -56862,6 +56884,13 @@ const rhythmAssistSessionSetApp = (app) => {
   RHYTHM_ASSIST_SESSION_INVITE.app = app && typeof app === 'object' ? app : null;
   if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.beatInvite = (id) => rhythmAssistSessionInvite(id);
 };
+// 助手が自分でモンビーに出かけているあいだ(助手ライフの「練習」の時間帯)は、その助手とは何回でも券なし(2026-11-07 社長の決定・台帳)。
+//   帰ったら今までどおり回数を使う。呼んだ時点で決め、その部屋にいるあいだは無料のまま。助手ライフが非公開なら常に偽
+//   (払っていないので控え mh_rhythm_buddy_v1 の calls には残さない。返すものも無い)
+const rhythmAssistSessionVisitFree = (id) => {
+  if (!rhythmAssistSessionEnabled() || typeof assistantLifeAtBeat !== 'function') return false;
+  try { return assistantLifeAtBeat(id) === true; } catch (_) { return false; }
+};
 const rhythmAssistSessionCanPayNow = () => {
   const app = RHYTHM_ASSIST_SESSION_INVITE.app;
   const free = typeof RHYTHM_BUDDY_STORE !== 'undefined' ? rhythmBuddyFreeLeft(RHYTHM_BUDDY_STORE.get(), rhythmBuddyDayKey(Date.now())) : 0;
@@ -56874,7 +56903,7 @@ const rhythmAssistSessionInvite = (id, opts = {}) => {
   const app = RHYTHM_ASSIST_SESSION_INVITE.app;
   if (!rhythmAssistSessionEnabled() || !app || typeof app.open !== 'function') return rhythmAssistSessionInviteDone(onResult, { ok: false, reason: 'off' });
   if (!rhythmAssistSessionWho(id)) return rhythmAssistSessionInviteDone(onResult, { ok: false, reason: 'unknown' });
-  if (!rhythmAssistSessionCanPayNow()) return rhythmAssistSessionInviteDone(onResult, { ok: false, reason: 'no_ticket' });
+  if (!rhythmAssistSessionVisitFree(id) && !rhythmAssistSessionCanPayNow()) return rhythmAssistSessionInviteDone(onResult, { ok: false, reason: 'no_ticket' });
   const inRoom = typeof RHYTHM_MULTI !== 'undefined' && !!RHYTHM_MULTI.view();
   RHYTHM_ASSIST_SESSION_INVITE.pending = { id, at: Date.now(), onResult: typeof onResult === 'function' ? onResult : null };
   RHYTHM_ASSIST_SESSION_INVITE.listeners.forEach((fn) => { try { fn(); } catch (_) { /* 画面の失敗で止めない */ } });
@@ -59880,6 +59909,8 @@ const quickNudgeAfter = (nudge, today) => { const s = normalizeQuickNudge(nudge)
 //   ここで案内を消すと作り直されて1ページ目へ戻り、「あとで」も取り消される(2026-11-07 レフェリーくんの止め絵)。
 //   出している ∞ の案内(g3a)は、このあいだも出したままにし、「あとで」もバトルの画面と同じに扱う
 const QUICK_GUIDE_RUN_BETWEEN = Object.freeze(['WAVE_RESULT', 'QUICK_GROWTH', 'PICK_ALLY', 'QUICK_JOIN']);
+// 案内がこれだけ見えていたら「見た」にする(閉じなくても、アプリを閉じても、二度と自動では出さない。2026-11-07 社長)
+const QUICK_GUIDE_SEEN_AFTER_MS = 1200;
 const quickGuideScreenKey = (gameState, quickRun, autoRepeat) => (quickRun === true && autoRepeat === true && QUICK_GUIDE_RUN_BETWEEN.includes(gameState) ? 'BATTLE' : gameState);
 // いまの画面で出す案内。ctx … { gameState, busy, seen, quickUnlocked, quickEverCleared, quickSelect, quickRun, autoRepeat, battleTutorial, raidJack, backgroundRun, nudgeOk, showing }
 //   showing … いま出している案内(WAVE のあいだも ∞ の案内を出したままにするため)
@@ -87377,6 +87408,8 @@ function MonsterHeroGame() {
   // quickGuideSeen … 見終えた案内の id(null は読み込み前。読み込むまで何も出さない)/ quickNudge … 誘導の回数と最後の日
   // quickGuideReplay … ヘルプから見返している案内のまとまり('g1' 'g2' 'g3')。保存は新しいキーだけ(CLAUDE.md ⑦)
   const [quickGuideSeen, setQuickGuideSeen] = useState(null);
+  const quickGuideSeenRef = useRef(null); // 見た印の最新(閉じると画面を離れるが同じ描画で重なっても、印を取りこぼさない)
+  const quickGuideStoredRef = useRef(null); // 保存してある見た印(出した時点で先に保存する。画面の印は閉じる・離れるまで付けない)
   const [quickNudge, setQuickNudge] = useState(null);
   const [quickGuideReplay, setQuickGuideReplay] = useState(null);
   // いま出している案内(前の描画の分)。クイックの∞の WAVE のあいだも案内を出したままにするため(56 の quickGuidePick の showing)
@@ -93670,7 +93703,9 @@ function MonsterHeroGame() {
       let seenRaw = null, nudgeRaw = null;
       try { [seenRaw, nudgeRaw] = await Promise.all([storeGet(QUICK_GUIDE_SEEN_KEY, null, false), storeGet(QUICK_GUIDE_NUDGE_KEY, null, false)]); } catch (_) { /* 読めなければ既定 */ }
       if (cancelled) return;
-      setQuickGuideSeen(normalizeQuickGuideSeen(seenRaw));
+      quickGuideSeenRef.current = normalizeQuickGuideSeen(seenRaw);
+      quickGuideStoredRef.current = quickGuideSeenRef.current;
+      setQuickGuideSeen(quickGuideSeenRef.current);
       setQuickNudge(normalizeQuickNudge(nudgeRaw));
     })();
     return () => { cancelled = true; };
@@ -93710,15 +93745,50 @@ function MonsterHeroGame() {
     : quickNudgeShowing && !quickGuideBusy ? quickNudgeShowing
     : quickGuidePicked && quickGuidePicked !== quickGuideLater && quickGuidePicked !== 'nudgeHome' && quickGuidePicked !== 'nudgeBattle' ? quickGuidePicked : null;
   quickGuideShowingRef.current = quickGuideActive;
-  // 案内を閉じる。done … 最後まで見た(見た印を付ける)。誘導とヘルプからの見返しは印を付けない
+  // 見た印を保存する(同じ案内に二度書かない)。★案内を出した時点で呼ぶ(2026-11-07 社長「モンビーとかひらくたびに助手が裏周回の説明をしてくる」)。
+  //   出したまま閉じずにアプリを閉じた・読み込み直したときも、二度と自動では出さない。見返しはヘルプからできる
+  const persistQuickGuideSeen = (guideId) => {
+    if (!guideId || !Array.isArray(quickGuideStoredRef.current) || quickGuideStoredRef.current.includes(guideId)) return;
+    const next = quickGuideSeenAfter(quickGuideStoredRef.current, guideId);
+    quickGuideStoredRef.current = next.seen;
+    storeSet(QUICK_GUIDE_SEEN_KEY, next, false);
+  };
+  // 画面の見た印を付ける(閉じた・画面を離れたとき)。保存もする
+  const markQuickGuideSeen = (guideId) => {
+    persistQuickGuideSeen(guideId);
+    if (!guideId || !Array.isArray(quickGuideSeenRef.current) || quickGuideSeenRef.current.includes(guideId)) return;
+    quickGuideSeenRef.current = normalizeQuickGuideSeen({ seen: [...quickGuideSeenRef.current, guideId] });
+    setQuickGuideSeen(quickGuideSeenRef.current);
+  };
+  // 案内を閉じる。誘導とヘルプからの見返しは印を付けない。
+  // ★「最後まで」でも「あとで」でも見た印を付ける(2026-11-07 社長「モンビーとかひらくたびに助手が裏周回の説明をしてくる」)。
+  //   前は「あとで」に印を付けず、画面を開き直すたびに最初から出していた。見返しはヘルプの「クイックのAUTO設定と裏周回」からできる
   const finishQuickGuide = (guideId, done) => {
     if (quickGuideReplay) { setQuickGuideReplay(null); return; }
     if (guideId === 'nudgeHome' || guideId === 'nudgeBattle') { setQuickNudgeShowing(null); return; }
-    if (!done) { setQuickGuideLater(guideId); return; }
-    const next = quickGuideSeenAfter(quickGuideSeen, guideId);
-    setQuickGuideSeen(next.seen);
-    storeSet(QUICK_GUIDE_SEEN_KEY, next, false);
+    if (!done) setQuickGuideLater(guideId);
+    markQuickGuideSeen(guideId);
   };
+  // 案内を出したまま画面を離れた(閉じずに戻った・別の画面へ進んだ)ときも、見た印を付ける。一度出した案内は二度と自動では出さない
+  //   画面(quickGuideScreen。∞の WAVE のあいだはバトルと同じ)が変わったときにだけ見る。一瞬出ない描画があっても、案内を途中で消さない
+  //   出した案内は { 案内id: 出した画面 } で覚え、画面が変わったら「前の画面で出した物」だけに印を付ける(新しい画面の案内には付けない)
+  const quickGuideShownRef = useRef(new Map());
+  // 出してから少し(1.2秒)見えていたら、保存だけ先にする(画面の印は付けないので、閉じるまで・WAVE をまたいでも出したまま)。
+  //   ★一瞬だけ出て、すぐほかの案内(曲えらびの初めての説明など)に替わった案内は数えない(読めていないので)
+  useEffect(() => {
+    const id = quickGuideActive && !String(quickGuideActive).startsWith('replay:') && quickGuideActive !== 'nudgeHome' && quickGuideActive !== 'nudgeBattle' ? quickGuideActive : null;
+    if (!id) return undefined;
+    const screen = quickGuideScreen;
+    const t = setTimeout(() => { quickGuideShownRef.current.set(id, screen); persistQuickGuideSeen(id); }, QUICK_GUIDE_SEEN_AFTER_MS);
+    return () => clearTimeout(t);
+  }, [quickGuideActive, quickGuideScreen]);
+  useEffect(() => {
+    for (const [id, screen] of [...quickGuideShownRef.current]) {
+      if (screen === quickGuideScreen) continue;
+      quickGuideShownRef.current.delete(id);
+      markQuickGuideSeen(id);
+    }
+  }, [quickGuideScreen]);
 
   // 初回チュートリアル。HOMEを最初に開いたときだけ自動で始める。
   // デバッグから何度でも呼べるよう、開始と終了を関数に分けている
