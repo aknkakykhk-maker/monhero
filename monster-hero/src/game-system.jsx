@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4325a02b2b576433
+// generated-sha256: fa750aec315a2d2e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -30027,6 +30027,8 @@ const CLASSIC_CHIP_VIEW = Object.freeze({
   zeroGuts:     { icon: '⭐', turns: 'now' },  reflectNext:{ icon: '🔁', turns: 'next' }, reflectNow: { icon: '🔁', turns: 'now' },
   takenNext:    { icon: '🛡️', turns: 'next' }, takenNow:  { icon: '🛡️', turns: 'now' },
   costNext:     { icon: '⚡', turns: 'next', kind: 'debuff' }, costNow: { icon: '⚡', turns: 'now', kind: 'debuff' },
+  // えるびんの見守り③「一閃の構え」(そのターンの固有技は必ず会心・会心ダメージ+)。そのターンだけ
+  erubinIsshen: { icon: '🗡️', turns: 'now' },
 });
 const CLASSIC_DEBUFF_VIEW = Object.freeze({
   shell: 'wave', ice: 'wave', confuse: 'count', aquaPrison: 'count', aquaFreeze: 'count', aquaFinale: 'count', nightmare: 'count', psycho: 'count',
