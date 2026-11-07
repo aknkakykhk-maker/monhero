@@ -156,10 +156,18 @@ if (process.argv.includes('--stats')) {
       if (g.ids.length === 2 && g.place === 'home') bad.push(`${life.abs}: 2人きりで家`);
       if (!DOINGS[g.doing].places.includes(g.place)) bad.push(`${life.abs}: ${g.doing} を ${g.place} で`);
     }
-    for (const [id, s] of Object.entries(life.solo)) if (!DOINGS[s.doing].places.includes(s.place) && !(s.reason === 'lonely' && s.place === 'home') && !((s.doing === 'idle' || s.doing === 'walk') && s.place === PREFS[id].fav)) bad.push(`${life.abs}: ${id} が ${s.doing} を ${s.place} で`);
+    for (const [id, s] of Object.entries(life.solo)) if (!DOINGS[s.doing].places.includes(s.place) && !(s.reason === 'lonely' && s.place === 'home')) bad.push(`${life.abs}: ${id} が ${s.doing} を ${s.place} で`);
     for (const id of Object.keys(life.moods)) if (!MOODS[life.moods[id]]) bad.push(`${life.abs}: 気分 ${life.moods[id]}`);
   }
-  check('② 1人は1か所だけ・組は2〜4人・2人きりで「家」「寝る」は作らない・場所としていることが合う', bad.length === 0, bad.slice(0, 5).join(' / '));
+  check('② 1人は1か所だけ・組は2〜4人・2人きりで「家」「寝る」は作らない・場所としていることが合う(カード部屋で散歩、にしない。ミハリ L9)', bad.length === 0, bad.slice(0, 5).join(' / '));
+  // 寝ている助手は「さみしそう」にしない・気分は「ねむい」(ミハリ L2・L12)
+  const sleepBad = [];
+  for (const life of runs) for (const [id, s] of Object.entries(life.solo)) if (s.doing === 'sleep' && (s.reason === 'lonely' || life.moods[id] !== 'sleepy' || (life.lonely || []).includes(id))) sleepBad.push(`${life.abs}: ${id} ${s.reason}/${life.moods[id]}`);
+  check('② 寝ている助手は「さみしそう」にならず、気分は「ねむい」', sleepBad.length === 0 && runs.some(l => Object.values(l.solo).some(s => s.doing === 'sleep')), sleepBad.slice(0, 5).join(' / '));
+  // 前の版で保存した様子も、読み込むときに整える
+  const norm = G('normalizeAssistantLife');
+  const fixed = norm({ moods: { dra: 'eager', sorashido: 'happy' }, groups: [], solo: { dra: { doing: 'sleep', place: 'home', reason: 'lonely' }, sorashido: { doing: 'walk', place: 'cardroom', reason: 'mypace' } }, lonely: ['dra'] });
+  check('② 前の版の様子(寝ているのにさみしそう・カード部屋で散歩)は、読み込むときに整える', fixed.solo.dra.reason === 'mypace' && fixed.moods.dra === 'sleepy' && !fixed.lonely.includes('dra') && DOINGS.walk.places.includes(fixed.solo.sorashido.place));
   // 言い合い
   let together = 0;
   for (let k = 0; k < 60; k++) {
