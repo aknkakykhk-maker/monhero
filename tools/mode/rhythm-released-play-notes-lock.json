@@ -1,0 +1,1662 @@
+{
+ "note": "公開中の曲の、演奏が始まるときのノーツ列の指紋(ふつう・ミラー・アシスト)。勝手に書き換えない。意図して変えたときだけ rhythm-released-play-notes-lock-check.js --update --reason で更新する",
+ "items": {
+  "mf_ichika_mix/easy": {
+   "notes": "dc07dae1c03fa417",
+   "mirror": "1162086c3c3cd6e8",
+   "assist": "dc07dae1c03fa417"
+  },
+  "mf_ichika_mix/normal": {
+   "notes": "ecf18c7059bfd123",
+   "mirror": "afa7cd0a461b52e5",
+   "assist": "c9d1516808bd14da"
+  },
+  "mf_ichika_mix/hard": {
+   "notes": "6a246ac7f681eb9c",
+   "mirror": "3ce1b0937c7e47d3",
+   "assist": "d67f2bc86fd38893"
+  },
+  "mf_ichika_mix/expert": {
+   "notes": "e31d2e7c217db79c",
+   "mirror": "9d14a93190417b8e",
+   "assist": "fc9d2abe7f5cf837"
+  },
+  "mf_ichika_mix/master": {
+   "notes": "1c8ab1004b9d51e7",
+   "mirror": "23b47b07a571ff50",
+   "assist": "3e122f6b62f87b92"
+  },
+  "mf_ichika_mix/hell": {
+   "notes": "dde4dce61b78546f",
+   "mirror": "ba94debf93192f1e",
+   "assist": "e51d696cb20ae953"
+  },
+  "monster_hero/easy": {
+   "notes": "167b6c155ec08083",
+   "mirror": "9eb88dbf6bec354e",
+   "assist": "167b6c155ec08083"
+  },
+  "monster_hero/normal": {
+   "notes": "9314d77e42038013",
+   "mirror": "09f672e2457482ca",
+   "assist": "732afcd533859fdb"
+  },
+  "monster_hero/hard": {
+   "notes": "861f3db6d8f10813",
+   "mirror": "91604f5934bc36cd",
+   "assist": "cd7c7a88f444e5bd"
+  },
+  "monster_hero/expert": {
+   "notes": "bd3448dbcef256ab",
+   "mirror": "aa08a179fe1b4956",
+   "assist": "4b85c9485f6ae3ff"
+  },
+  "monster_hero/master": {
+   "notes": "97bed7f90e451581",
+   "mirror": "637762c246231bea",
+   "assist": "b9956616c284c4ac"
+  },
+  "monster_hero/hell": {
+   "notes": "216aaa660b8a10df",
+   "mirror": "972ce2bc2ce953de",
+   "assist": "070463a4fdd61b17"
+  },
+  "monster_hero_another/easy": {
+   "notes": "e75f6de81100f99a",
+   "mirror": "6d513e11a5636673",
+   "assist": "e75f6de81100f99a"
+  },
+  "monster_hero_another/normal": {
+   "notes": "0195c29e0985f606",
+   "mirror": "b0bc2e99afbeee4e",
+   "assist": "7e837c6e1eae2082"
+  },
+  "monster_hero_another/hard": {
+   "notes": "02f62ff747fe1bb3",
+   "mirror": "1cf25c14f119703c",
+   "assist": "32a5312827654a4b"
+  },
+  "monster_hero_another/expert": {
+   "notes": "5460aab64d93a9c9",
+   "mirror": "b82966065d2f710f",
+   "assist": "9e3ee7e90a8525e7"
+  },
+  "monster_hero_another/master": {
+   "notes": "ce43cca87c6d2ffe",
+   "mirror": "a0031300f1633ecf",
+   "assist": "d66d839c7d09db38"
+  },
+  "monster_hero_another/hell": {
+   "notes": "5b0d8a5e51229184",
+   "mirror": "02fa65ad9d386306",
+   "assist": "2328a268d30d6700"
+  },
+  "six_eternel_beat/easy": {
+   "notes": "34e586932a6a328c",
+   "mirror": "2159136e855ebda7",
+   "assist": "34e586932a6a328c"
+  },
+  "six_eternel_beat/normal": {
+   "notes": "37b4c15784c1def9",
+   "mirror": "273a931e9b9e1fb3",
+   "assist": "5d7aebcaf3e3c23c"
+  },
+  "six_eternel_beat/hard": {
+   "notes": "324e42045b46b5e1",
+   "mirror": "3136b5ac706bee18",
+   "assist": "d0adba740332c7a9"
+  },
+  "six_eternel_beat/expert": {
+   "notes": "e0139d4a351270e8",
+   "mirror": "ce3d75afc3fc8a39",
+   "assist": "f536fc03919e4da9"
+  },
+  "six_eternel_beat/master": {
+   "notes": "a81a4d8a6db3332e",
+   "mirror": "25c75406600205bb",
+   "assist": "89a14598ebd88136"
+  },
+  "six_eternel_beat/hell": {
+   "notes": "a2ddfdbf1be495a2",
+   "mirror": "3dd92a94d6aaf93b",
+   "assist": "c8377bbe386d1491"
+  },
+  "six_eternel_remix/easy": {
+   "notes": "62fae7f80bc81d44",
+   "mirror": "bf085aa2e0a1a5f8",
+   "assist": "62fae7f80bc81d44"
+  },
+  "six_eternel_remix/normal": {
+   "notes": "8e40c45b2c10aa55",
+   "mirror": "f0a44cd39b46fe87",
+   "assist": "03a7b1aff981b2c8"
+  },
+  "six_eternel_remix/hard": {
+   "notes": "adf9f4589900f3ee",
+   "mirror": "aac24920a7864388",
+   "assist": "1add6a4e4b1e7ecd"
+  },
+  "six_eternel_remix/expert": {
+   "notes": "5b56bad920020a9a",
+   "mirror": "dcebf2056329a565",
+   "assist": "a34685f0314726b7"
+  },
+  "six_eternel_remix/master": {
+   "notes": "cedcf7793bc2852c",
+   "mirror": "d91a2f7caabe4bcb",
+   "assist": "d6ee15b9870b1345"
+  },
+  "six_eternel_remix/hell": {
+   "notes": "1c31071c5a767f3a",
+   "mirror": "e8143c597023c3da",
+   "assist": "10eec31359544e4a"
+  },
+  "stay_with_me/easy": {
+   "notes": "f0ae43f3be425917",
+   "mirror": "a3e0da6f0592d5ca",
+   "assist": "f0ae43f3be425917"
+  },
+  "stay_with_me/normal": {
+   "notes": "e18a9400971c919e",
+   "mirror": "e8865025c3ce6468",
+   "assist": "bf6f44e29b0f471d"
+  },
+  "stay_with_me/hard": {
+   "notes": "d9d243a22bb522f8",
+   "mirror": "e14f28a3e9cf3876",
+   "assist": "9a9348264c8a6491"
+  },
+  "stay_with_me/expert": {
+   "notes": "53ef639751a88c3b",
+   "mirror": "779ee0ac4a57849c",
+   "assist": "8e3ed5d546135cb3"
+  },
+  "stay_with_me/master": {
+   "notes": "ce39cf5f987a79e4",
+   "mirror": "a41424d673e4eb77",
+   "assist": "6970f43f692dd4f4"
+  },
+  "stay_with_me/hell": {
+   "notes": "b12b1c127db24842",
+   "mirror": "5881cdcd947ac817",
+   "assist": "b74e66f2e5328122"
+  },
+  "kiki_issen/easy": {
+   "notes": "ff342167e7c67bc4",
+   "mirror": "dce448620586b22b",
+   "assist": "ff342167e7c67bc4"
+  },
+  "kiki_issen/normal": {
+   "notes": "3eedca6383b3a929",
+   "mirror": "94f766cd5adbbadd",
+   "assist": "24a7d67820d712ec"
+  },
+  "kiki_issen/hard": {
+   "notes": "2d1e624a682c7439",
+   "mirror": "651c32cd5ecb19b4",
+   "assist": "f6b286e92b930f2d"
+  },
+  "kiki_issen/expert": {
+   "notes": "0355e18d728bbc94",
+   "mirror": "20f391d57cb17297",
+   "assist": "c47706d010a6b2d1"
+  },
+  "kiki_issen/master": {
+   "notes": "3215fcd03e96f83a",
+   "mirror": "1bb621734700d2ee",
+   "assist": "80d307372ea1cd7a"
+  },
+  "kiki_issen/hell": {
+   "notes": "44b98e32a116df66",
+   "mirror": "83753fc60e858af1",
+   "assist": "970e814a52766cda"
+  },
+  "kaze_ga_soyogu/easy": {
+   "notes": "34165e5a26475cd0",
+   "mirror": "f1b9466eb934a098",
+   "assist": "34165e5a26475cd0"
+  },
+  "kaze_ga_soyogu/normal": {
+   "notes": "6e683dd7cb9107bf",
+   "mirror": "5b6ca7febf4756bf",
+   "assist": "e337ea1e569eb815"
+  },
+  "kaze_ga_soyogu/hard": {
+   "notes": "cf5f6bc8ece9d786",
+   "mirror": "1f9375d91949a1bc",
+   "assist": "d07be5c525fc7cf4"
+  },
+  "kaze_ga_soyogu/expert": {
+   "notes": "357702d5e63afb4d",
+   "mirror": "7fe1afb55f14f2ed",
+   "assist": "646b6b66ddd90fcf"
+  },
+  "kaze_ga_soyogu/master": {
+   "notes": "7b202e3ff5499ed6",
+   "mirror": "f5c240c37a8390dd",
+   "assist": "d9e6e6642c701975"
+  },
+  "kaze_ga_soyogu/hell": {
+   "notes": "30b700694a3d171c",
+   "mirror": "62f0e34cb7002d19",
+   "assist": "8c4955263b521cfd"
+  },
+  "close_to_your_heart/easy": {
+   "notes": "e7b37b147f428aa3",
+   "mirror": "82a7cf349a7f8120",
+   "assist": "e7b37b147f428aa3"
+  },
+  "close_to_your_heart/normal": {
+   "notes": "b7e385d75d71ccba",
+   "mirror": "b1cf273b68817827",
+   "assist": "d6ec04760254e30a"
+  },
+  "close_to_your_heart/hard": {
+   "notes": "afd5cb20fb5b50bf",
+   "mirror": "957a8f02b6d9e9a9",
+   "assist": "d9dc52efa60765ee"
+  },
+  "close_to_your_heart/expert": {
+   "notes": "7a5caac172f30334",
+   "mirror": "16d4e57ca279e92b",
+   "assist": "8b09b09948e54302"
+  },
+  "close_to_your_heart/master": {
+   "notes": "2d7293d82f011600",
+   "mirror": "831c40bcf8711c9c",
+   "assist": "ecba504e09af0f76"
+  },
+  "close_to_your_heart/hell": {
+   "notes": "301d3c63c13ab3d4",
+   "mirror": "bcf60206831a8336",
+   "assist": "83111e83c3b247d8"
+  },
+  "eiki_boss_remix/easy": {
+   "notes": "359ae67b87855765",
+   "mirror": "b5efc2bfeb19d52c",
+   "assist": "359ae67b87855765"
+  },
+  "eiki_boss_remix/normal": {
+   "notes": "b7c8ddc26cad6fa4",
+   "mirror": "b7619a78170b051e",
+   "assist": "58c91c81019a8f39"
+  },
+  "eiki_boss_remix/hard": {
+   "notes": "b9bb3e58229aeca7",
+   "mirror": "64c0ce5d07c6088d",
+   "assist": "883180bf693a4c7c"
+  },
+  "eiki_boss_remix/expert": {
+   "notes": "47e16ea0ef589a7d",
+   "mirror": "d81324f6ef2e4742",
+   "assist": "06129b2361d19a41"
+  },
+  "eiki_boss_remix/master": {
+   "notes": "4f6397fa811fe6de",
+   "mirror": "05dc39fca58a5853",
+   "assist": "44173ba65f76bd48"
+  },
+  "eiki_boss_remix/hell": {
+   "notes": "da2b53b38fcb4dfe",
+   "mirror": "807ce70efef4cf07",
+   "assist": "8d8db32c87e1db34"
+  },
+  "pandora_boss_remix/easy": {
+   "notes": "640580914b34726b",
+   "mirror": "21f43ca2a9b683d0",
+   "assist": "640580914b34726b"
+  },
+  "pandora_boss_remix/normal": {
+   "notes": "9886a2d36aebf70d",
+   "mirror": "dac2755f399ec9b3",
+   "assist": "60ec3a953a473f11"
+  },
+  "pandora_boss_remix/hard": {
+   "notes": "b04e332dee81fa5a",
+   "mirror": "fedc2dbf0f244b3d",
+   "assist": "275613942e640000"
+  },
+  "pandora_boss_remix/expert": {
+   "notes": "e5a23124214a5301",
+   "mirror": "2de588058ebf8521",
+   "assist": "085fedeaf48a29b4"
+  },
+  "pandora_boss_remix/master": {
+   "notes": "d5db1afc84dc9871",
+   "mirror": "9c43956528b0c012",
+   "assist": "cce117185eee1da2"
+  },
+  "pandora_boss_remix/hell": {
+   "notes": "8b2b255c41960fd7",
+   "mirror": "9bf07f689210337a",
+   "assist": "a4c18e4bd0258947"
+  },
+  "dullahan/easy": {
+   "notes": "c69be544b1202244",
+   "mirror": "2d48d761b6002c90",
+   "assist": "c69be544b1202244"
+  },
+  "dullahan/normal": {
+   "notes": "cfe2b3a82b7bd359",
+   "mirror": "577cc15212c9e3c7",
+   "assist": "9c387225fd5d9e6f"
+  },
+  "dullahan/hard": {
+   "notes": "5ba264c80a260937",
+   "mirror": "8c06fc5ec97aa3ce",
+   "assist": "3d273bc41869f656"
+  },
+  "dullahan/expert": {
+   "notes": "93351aa073024394",
+   "mirror": "22c379507560b2ac",
+   "assist": "ed2c547178d37365"
+  },
+  "dullahan/master": {
+   "notes": "74e80467cd41ffa6",
+   "mirror": "04f96a4affa1f6bb",
+   "assist": "aada29fa17f3ad2a"
+  },
+  "dullahan/hell": {
+   "notes": "60e2e8a3a5ddff7f",
+   "mirror": "e4a54930a4aabe88",
+   "assist": "45de4cbaf5e5f74d"
+  },
+  "dullahan_clockwork/easy": {
+   "notes": "f0c9015674edef8e",
+   "mirror": "58e4fded1838b432",
+   "assist": "f0c9015674edef8e"
+  },
+  "dullahan_clockwork/normal": {
+   "notes": "32ad3c9d600b4466",
+   "mirror": "a59df1fbf580301f",
+   "assist": "d92e2f20cbc30db4"
+  },
+  "dullahan_clockwork/hard": {
+   "notes": "9ceddf4b864a8dda",
+   "mirror": "ccbe144eedf62b3c",
+   "assist": "03089fddb53c360a"
+  },
+  "dullahan_clockwork/expert": {
+   "notes": "4a157feeaeeaefa4",
+   "mirror": "735048ac99abb118",
+   "assist": "5413b8451a28dc3a"
+  },
+  "dullahan_clockwork/master": {
+   "notes": "b79701fc15c41712",
+   "mirror": "12477b5036400a80",
+   "assist": "6257c7664311c935"
+  },
+  "dullahan_clockwork/hell": {
+   "notes": "45cf413379fe6263",
+   "mirror": "ed2a08690f070aad",
+   "assist": "c90ef68f804be3ac"
+  },
+  "toriko/easy": {
+   "notes": "cce8e61b09437324",
+   "mirror": "cc367960d684dd34",
+   "assist": "cce8e61b09437324"
+  },
+  "toriko/normal": {
+   "notes": "91586a47cb8f13dc",
+   "mirror": "fd06d1fd9a012a94",
+   "assist": "c5a44bb37f7581e9"
+  },
+  "toriko/hard": {
+   "notes": "5f7ef882036295a3",
+   "mirror": "f504be2bb8a49c82",
+   "assist": "b110d14c4b2e29b0"
+  },
+  "toriko/expert": {
+   "notes": "b855d58f1651c163",
+   "mirror": "11ad649d626b8173",
+   "assist": "f47baa6ee107d6b2"
+  },
+  "toriko/master": {
+   "notes": "0edb65fa28bec2ef",
+   "mirror": "bbde842dc170b5e7",
+   "assist": "42202c12f894c6c3"
+  },
+  "toriko/hell": {
+   "notes": "e8b34a71a2d50e28",
+   "mirror": "870fb148009e0c70",
+   "assist": "d18288dd5b6865b0"
+  },
+  "4u_hitasura/easy": {
+   "notes": "676200da49f648b4",
+   "mirror": "0a0e9380e2016d82",
+   "assist": "676200da49f648b4"
+  },
+  "4u_hitasura/normal": {
+   "notes": "61cf20d920d9db39",
+   "mirror": "b0b0f7ae0d58e1e7",
+   "assist": "bbf2eddb7be78a7e"
+  },
+  "4u_hitasura/hard": {
+   "notes": "e705d92e16d41c39",
+   "mirror": "667bb90343ba7186",
+   "assist": "be9990768e737740"
+  },
+  "4u_hitasura/expert": {
+   "notes": "1ef6c725295c25f3",
+   "mirror": "f6a02966e2a20732",
+   "assist": "95671044b5c44356"
+  },
+  "4u_hitasura/master": {
+   "notes": "ac9f0ddd6bb5ff8e",
+   "mirror": "8e46ef2098373c15",
+   "assist": "da7d2ce7d4d3fa17"
+  },
+  "4u_hitasura/hell": {
+   "notes": "d781d3ffedeb0a81",
+   "mirror": "aa13bf1c735d1769",
+   "assist": "fe5461cae2b2de8b"
+  },
+  "kindan_no_resistance/easy": {
+   "notes": "173ce0aef3146ad0",
+   "mirror": "8c14073a88cbf1b2",
+   "assist": "173ce0aef3146ad0"
+  },
+  "kindan_no_resistance/normal": {
+   "notes": "5e4bd77191da12f3",
+   "mirror": "663adb1e2037325c",
+   "assist": "6fad50c5d8ad90bf"
+  },
+  "kindan_no_resistance/hard": {
+   "notes": "080a3294dacc75fe",
+   "mirror": "409e1c18181b70a9",
+   "assist": "469afcc6aecdb3f6"
+  },
+  "kindan_no_resistance/expert": {
+   "notes": "4f3bdf990d2fadb7",
+   "mirror": "fc8a3cdeb92998bb",
+   "assist": "a17bd6837b2c78b7"
+  },
+  "kindan_no_resistance/master": {
+   "notes": "eb18e5174db8d9b8",
+   "mirror": "e9be7c3abbc66853",
+   "assist": "eceef8edbe687004"
+  },
+  "kindan_no_resistance/hell": {
+   "notes": "6464fe2401ce8a47",
+   "mirror": "175257a90433a4c9",
+   "assist": "74c3286b70f926e9"
+  },
+  "crossing_field/easy": {
+   "notes": "3060206c5a27088f",
+   "mirror": "5dd6137e3ee092da",
+   "assist": "3060206c5a27088f"
+  },
+  "crossing_field/normal": {
+   "notes": "8bf0c1899f628f27",
+   "mirror": "49b2ed9dfecd888d",
+   "assist": "3bd98fc2727402e2"
+  },
+  "crossing_field/hard": {
+   "notes": "09cfb196b66e0ec7",
+   "mirror": "03d19cf84363bc98",
+   "assist": "21357fe5d74d4d79"
+  },
+  "crossing_field/expert": {
+   "notes": "5b9d26c529a5e612",
+   "mirror": "41e0625789a8d1e2",
+   "assist": "be6dcafd66f65207"
+  },
+  "crossing_field/master": {
+   "notes": "d70be39f82b4fb2d",
+   "mirror": "135e4cad043d5a29",
+   "assist": "a891c3954009585a"
+  },
+  "crossing_field/hell": {
+   "notes": "a726e7c65fc4817e",
+   "mirror": "91862b5591776670",
+   "assist": "66b2a77090657460"
+  },
+  "nothing_without_you/easy": {
+   "notes": "de2fb48de3236a3a",
+   "mirror": "a88ff63df825ce16",
+   "assist": "de2fb48de3236a3a"
+  },
+  "nothing_without_you/normal": {
+   "notes": "8f73b52f5672fb29",
+   "mirror": "5cfa69333dae6b2a",
+   "assist": "a37dc6fc1e4a7552"
+  },
+  "nothing_without_you/hard": {
+   "notes": "8df073addef941a7",
+   "mirror": "8df926380bed7443",
+   "assist": "bc205d80198b59b5"
+  },
+  "nothing_without_you/expert": {
+   "notes": "2414739ad3884ae9",
+   "mirror": "a381b459fe9a69a4",
+   "assist": "50a9998ad74b339c"
+  },
+  "nothing_without_you/master": {
+   "notes": "06b75052894732e8",
+   "mirror": "96aba22b57ec4f11",
+   "assist": "1feffd131ed7f85c"
+  },
+  "nothing_without_you/hell": {
+   "notes": "f8e08a564703c493",
+   "mirror": "d5a89a748f0f22c7",
+   "assist": "a57f8774e9fc6dc4"
+  },
+  "mou_hitotsu_no_sekai_e/easy": {
+   "notes": "62fc5bfb83ea83ac",
+   "mirror": "01db1fded97d53d4",
+   "assist": "62fc5bfb83ea83ac"
+  },
+  "mou_hitotsu_no_sekai_e/normal": {
+   "notes": "463bbef8104744a1",
+   "mirror": "fb376b4e2f3acc57",
+   "assist": "d1e5985844f67c1f"
+  },
+  "mou_hitotsu_no_sekai_e/hard": {
+   "notes": "ce65815ceef44320",
+   "mirror": "6197ae78ba8fc78a",
+   "assist": "4a4715adf117c23c"
+  },
+  "mou_hitotsu_no_sekai_e/expert": {
+   "notes": "c659f22f3e5cc0c6",
+   "mirror": "1ca7ece1972e4b6a",
+   "assist": "d212d12af63ed7c2"
+  },
+  "mou_hitotsu_no_sekai_e/master": {
+   "notes": "2b7349f9706f36fd",
+   "mirror": "75b06af313e78823",
+   "assist": "ece03c10e70911f7"
+  },
+  "mou_hitotsu_no_sekai_e/hell": {
+   "notes": "1ea257ff4413c85e",
+   "mirror": "a179fd90f4ae4646",
+   "assist": "0cfebcba86e185e1"
+  },
+  "senjou_no_shippuu/easy": {
+   "notes": "635be7ccc33e3431",
+   "mirror": "685cd6308bfe7ef4",
+   "assist": "635be7ccc33e3431"
+  },
+  "senjou_no_shippuu/normal": {
+   "notes": "279e2a31783b22e0",
+   "mirror": "2c63486479e77829",
+   "assist": "1088429ecc95fb59"
+  },
+  "senjou_no_shippuu/hard": {
+   "notes": "9b3e4bbbaccb415d",
+   "mirror": "f6a872d52c4a7aae",
+   "assist": "fd07df91a016f6d3"
+  },
+  "senjou_no_shippuu/expert": {
+   "notes": "590965c6d86d1a27",
+   "mirror": "6182fe57568efa26",
+   "assist": "3f4b2b461edb80c7"
+  },
+  "senjou_no_shippuu/master": {
+   "notes": "131c69cd5b758ddc",
+   "mirror": "c7bdcf4d76fa43e9",
+   "assist": "28b885c7be99feeb"
+  },
+  "senjou_no_shippuu/hell": {
+   "notes": "82f679918ef0744a",
+   "mirror": "f231ae81d39ba277",
+   "assist": "ea544cc9b49fd905"
+  },
+  "makutsu_no_senritsu/easy": {
+   "notes": "d7c7a3f1f115339b",
+   "mirror": "acf14fe795bec3f1",
+   "assist": "d7c7a3f1f115339b"
+  },
+  "makutsu_no_senritsu/normal": {
+   "notes": "51a236dab37da0a0",
+   "mirror": "27b0b947a12ccc02",
+   "assist": "899ed0c7c77f6554"
+  },
+  "makutsu_no_senritsu/hard": {
+   "notes": "867fe9c78922e0d0",
+   "mirror": "990e44f58ef34dbe",
+   "assist": "9755a467402e1f7e"
+  },
+  "makutsu_no_senritsu/expert": {
+   "notes": "2408fef694d437dd",
+   "mirror": "59ac30b5dd768e01",
+   "assist": "7e9e7a6299e0e36c"
+  },
+  "makutsu_no_senritsu/master": {
+   "notes": "53c30744a25d7ce6",
+   "mirror": "0e386ad707e4e0fd",
+   "assist": "51b38352b39f4bad"
+  },
+  "makutsu_no_senritsu/hell": {
+   "notes": "096cd9966debdf36",
+   "mirror": "dd51e06461fe20a3",
+   "assist": "afedf97a326491e9"
+  },
+  "the_city_beneath_the_comets/easy": {
+   "notes": "03972ce84e75e7b7",
+   "mirror": "cc2711dbb964425a",
+   "assist": "03972ce84e75e7b7"
+  },
+  "the_city_beneath_the_comets/normal": {
+   "notes": "a0359e4dc7229298",
+   "mirror": "973bc2f6746e6037",
+   "assist": "63b00a60b4bb6d80"
+  },
+  "the_city_beneath_the_comets/hard": {
+   "notes": "2fd267b04fe2ce33",
+   "mirror": "2bd580fa3dabb71f",
+   "assist": "873afa50e953800b"
+  },
+  "the_city_beneath_the_comets/expert": {
+   "notes": "4274b0b7496ac687",
+   "mirror": "dda81bbea63ea705",
+   "assist": "b28c1b9c6bb4c31f"
+  },
+  "the_city_beneath_the_comets/master": {
+   "notes": "5130423d3b172b75",
+   "mirror": "38d7d530634e34e7",
+   "assist": "b233a9c9b1e76c5d"
+  },
+  "the_city_beneath_the_comets/hell": {
+   "notes": "a1c2fc509c68297e",
+   "mirror": "80c512d6ed153a9b",
+   "assist": "9bb39c321f8f5b35"
+  },
+  "freedom_dive/easy": {
+   "notes": "936da4d6a22b520b",
+   "mirror": "3217577e0d6c1931",
+   "assist": "936da4d6a22b520b"
+  },
+  "freedom_dive/normal": {
+   "notes": "bfba9a9e0ea1e880",
+   "mirror": "93cf62b54cb8ca6a",
+   "assist": "27881b75588643ff"
+  },
+  "freedom_dive/hard": {
+   "notes": "aa50c13f0301c027",
+   "mirror": "89228e08551d1730",
+   "assist": "b6726debf28d580f"
+  },
+  "freedom_dive/expert": {
+   "notes": "44cb40ef2661bfdb",
+   "mirror": "cb087cd90472a52a",
+   "assist": "d3167c93ef81b068"
+  },
+  "freedom_dive/master": {
+   "notes": "6a954a22173f735f",
+   "mirror": "534cdc4c3521d947",
+   "assist": "0e7a94520b6659d7"
+  },
+  "freedom_dive/hell": {
+   "notes": "2b56cd3aa50a1425",
+   "mirror": "ef690991861bd1ae",
+   "assist": "e052debba1c51723"
+  },
+  "only_my_railgun/easy": {
+   "notes": "41fa389439f0c29b",
+   "mirror": "267b59e57163abb2",
+   "assist": "41fa389439f0c29b"
+  },
+  "only_my_railgun/normal": {
+   "notes": "74e7a4e20771ac3a",
+   "mirror": "e0504c22159ab39d",
+   "assist": "9fce1c94f7cdf02c"
+  },
+  "only_my_railgun/hard": {
+   "notes": "3b396eaf611b5526",
+   "mirror": "5050fdfa2d2976e7",
+   "assist": "aae955ba21797321"
+  },
+  "only_my_railgun/expert": {
+   "notes": "e8b0fe821c8fab96",
+   "mirror": "c7fe9f9aafd464e6",
+   "assist": "77ce239dda011a1d"
+  },
+  "only_my_railgun/master": {
+   "notes": "9e306562f4dc6a03",
+   "mirror": "302da293f81cfd1b",
+   "assist": "3665b9079297f5ed"
+  },
+  "only_my_railgun/hell": {
+   "notes": "c3905f1eeee300a2",
+   "mirror": "93827ac37330e481",
+   "assist": "f5145da76a86d426"
+  },
+  "big_bridge_no_shitou/easy": {
+   "notes": "753002574c8b9efc",
+   "mirror": "20224030d6bee255",
+   "assist": "753002574c8b9efc"
+  },
+  "big_bridge_no_shitou/normal": {
+   "notes": "3aab502c19d846bd",
+   "mirror": "813edd7ae765c2da",
+   "assist": "3672e0549ae719ff"
+  },
+  "big_bridge_no_shitou/hard": {
+   "notes": "31985fc36dbafafc",
+   "mirror": "e5571c959015a498",
+   "assist": "bd489cb100d7b4ce"
+  },
+  "big_bridge_no_shitou/expert": {
+   "notes": "273905f9a97cec34",
+   "mirror": "0dbfc0969831c1e8",
+   "assist": "6959438f20e87e05"
+  },
+  "big_bridge_no_shitou/master": {
+   "notes": "e0b559c0335befd3",
+   "mirror": "35f4adedbe8d9081",
+   "assist": "e7587afb735b1b8c"
+  },
+  "big_bridge_no_shitou/hell": {
+   "notes": "0dfcf25d8b42fd3f",
+   "mirror": "156fe06a88a22132",
+   "assist": "467c74dbee1228ae"
+  },
+  "rising_hope/easy": {
+   "notes": "af564ac3d28c8570",
+   "mirror": "6fe065468b5bd0ff",
+   "assist": "af564ac3d28c8570"
+  },
+  "rising_hope/normal": {
+   "notes": "ce8d584a73d65eb8",
+   "mirror": "a72b947ed460110b",
+   "assist": "a44fdff771d9cc58"
+  },
+  "rising_hope/hard": {
+   "notes": "26ed206be6f53e95",
+   "mirror": "4f5385415fb29735",
+   "assist": "227160fca85c13bf"
+  },
+  "rising_hope/expert": {
+   "notes": "ac8bc7424f079303",
+   "mirror": "a054be3e06903982",
+   "assist": "3844cb4a2deb944f"
+  },
+  "rising_hope/master": {
+   "notes": "e1eaf70981dc858e",
+   "mirror": "1ffb1358f65b52ef",
+   "assist": "a37881eccbc7a16c"
+  },
+  "rising_hope/hell": {
+   "notes": "31eec2297d5f5818",
+   "mirror": "2f750907363934fb",
+   "assist": "820e31a84944d9f7"
+  },
+  "haruka/easy": {
+   "notes": "073cd08794b05603",
+   "mirror": "35fd864304d6c1af",
+   "assist": "073cd08794b05603"
+  },
+  "haruka/normal": {
+   "notes": "88debf84adada3db",
+   "mirror": "6998999994252925",
+   "assist": "d2d31f6e89c798d5"
+  },
+  "haruka/hard": {
+   "notes": "a79cdefebc332bc9",
+   "mirror": "902236ad2797aa21",
+   "assist": "b430dec9d8d66e26"
+  },
+  "haruka/expert": {
+   "notes": "34c2042927ad4236",
+   "mirror": "6b078d4ada911073",
+   "assist": "cd19916e0d1c38eb"
+  },
+  "haruka/master": {
+   "notes": "84390d2430256bf9",
+   "mirror": "14aeedd4b3c8913b",
+   "assist": "57ad3910fbd8a193"
+  },
+  "haruka/hell": {
+   "notes": "fadcc56d207ccbbf",
+   "mirror": "a551d37d90604536",
+   "assist": "de5e84bbf598057f"
+  },
+  "stay_with_me_short/easy": {
+   "notes": "702a7a011b03d658",
+   "mirror": "0e30e96b010d2d11",
+   "assist": "702a7a011b03d658"
+  },
+  "stay_with_me_short/normal": {
+   "notes": "a14854e2ec6cc6e4",
+   "mirror": "291a981504050574",
+   "assist": "e5c51e64be1d6e83"
+  },
+  "stay_with_me_short/hard": {
+   "notes": "ee87d049f4b988f6",
+   "mirror": "7d671a70e9f331a6",
+   "assist": "378917af39107f58"
+  },
+  "stay_with_me_short/expert": {
+   "notes": "7dd0e75e84b3ae63",
+   "mirror": "60495f049b3e5ca2",
+   "assist": "067590692052828c"
+  },
+  "stay_with_me_short/master": {
+   "notes": "165197bab2a18a69",
+   "mirror": "dba07afcefc6cfd7",
+   "assist": "ab0a0bde800dd921"
+  },
+  "stay_with_me_short/hell": {
+   "notes": "15710aaf560d0143",
+   "mirror": "9ae76034a50e41e0",
+   "assist": "0dd52f7e60f9c1f2"
+  },
+  "kiki_issen_short/easy": {
+   "notes": "b1ad9c59a90c2ead",
+   "mirror": "35ab0c87eea4253e",
+   "assist": "b1ad9c59a90c2ead"
+  },
+  "kiki_issen_short/normal": {
+   "notes": "b19e324fc354c2a9",
+   "mirror": "a70a7e728435726f",
+   "assist": "7d9558f356629980"
+  },
+  "kiki_issen_short/hard": {
+   "notes": "fe507bb1f1619887",
+   "mirror": "e7f9c5c117194636",
+   "assist": "55b1c00fb2478a39"
+  },
+  "kiki_issen_short/expert": {
+   "notes": "0c1e9c66574b7c4f",
+   "mirror": "eef4349ae3b35c55",
+   "assist": "4dc5c15a2551eb63"
+  },
+  "kiki_issen_short/master": {
+   "notes": "d669fd1c77f06048",
+   "mirror": "34c3a211d5090fed",
+   "assist": "f22b1d4bf247f79d"
+  },
+  "kiki_issen_short/hell": {
+   "notes": "a0762c5058d5c79b",
+   "mirror": "46c9d01d8697c400",
+   "assist": "417df8cb4c086a5c"
+  },
+  "crazy_party_night/easy": {
+   "notes": "dc130ee8defc5343",
+   "mirror": "6730f5137637b6d3",
+   "assist": "dc130ee8defc5343"
+  },
+  "crazy_party_night/normal": {
+   "notes": "8f2faea775b42142",
+   "mirror": "528b745cd051a8b6",
+   "assist": "ae9664de67f3f1be"
+  },
+  "crazy_party_night/hard": {
+   "notes": "f64b3b4154b382be",
+   "mirror": "79486790c1da2baf",
+   "assist": "3361a9c65794c856"
+  },
+  "crazy_party_night/expert": {
+   "notes": "299c38b2cd3a0d1a",
+   "mirror": "277153ad02a8eddd",
+   "assist": "3d6c9f9a6e167236"
+  },
+  "crazy_party_night/master": {
+   "notes": "2d0c05887a137c4a",
+   "mirror": "70a41559faf4f659",
+   "assist": "f0501657403c6b0d"
+  },
+  "crazy_party_night/hell": {
+   "notes": "f317f764b40a3530",
+   "mirror": "db8e11e32e2518e1",
+   "assist": "4d30238726ded34a"
+  },
+  "crazy_party_night_full/easy": {
+   "notes": "9da2ded50b7e3136",
+   "mirror": "ec881a32709a161e",
+   "assist": "9da2ded50b7e3136"
+  },
+  "crazy_party_night_full/normal": {
+   "notes": "5f5e04b4a57aa024",
+   "mirror": "775b274d2898b6e8",
+   "assist": "ef7ebe5525ec0a14"
+  },
+  "crazy_party_night_full/hard": {
+   "notes": "8e25f2f1d623d52b",
+   "mirror": "f3fac1da686e2daa",
+   "assist": "e6dbceaca00bbeee"
+  },
+  "crazy_party_night_full/expert": {
+   "notes": "1db9d6fb4a6e26a9",
+   "mirror": "423657b8fea7b84e",
+   "assist": "6094a4254f28fad4"
+  },
+  "crazy_party_night_full/master": {
+   "notes": "9731f7abdae86c22",
+   "mirror": "097d653cf1b865aa",
+   "assist": "6ff729e0130dd435"
+  },
+  "crazy_party_night_full/hell": {
+   "notes": "f30b88ad3eca305f",
+   "mirror": "7ab90820486ffbe5",
+   "assist": "0ecaeeee6f998a79"
+  },
+  "emerald_rush/easy": {
+   "notes": "a00cdf6bf7e29d67",
+   "mirror": "29638ea12ad73f2d",
+   "assist": "a00cdf6bf7e29d67"
+  },
+  "emerald_rush/normal": {
+   "notes": "bcf62b3a11b6f222",
+   "mirror": "e1557dc1a7ac7a1c",
+   "assist": "c0e92d6f90881414"
+  },
+  "emerald_rush/hard": {
+   "notes": "5fc56be9f73041f8",
+   "mirror": "e309cc0940ac2473",
+   "assist": "baab29f4f4b59c51"
+  },
+  "emerald_rush/expert": {
+   "notes": "cdda9ec733f1a8b6",
+   "mirror": "706857c2991f8772",
+   "assist": "d82be3a69e7ebe66"
+  },
+  "emerald_rush/master": {
+   "notes": "dbadf61569786300",
+   "mirror": "f3832adbe8599110",
+   "assist": "270acd074b814131"
+  },
+  "emerald_rush/hell": {
+   "notes": "30506cbe0ecf0e12",
+   "mirror": "75581e8d723f91f9",
+   "assist": "8ef37b102a330d03"
+  },
+  "wrath_of_the_thorn_king/easy": {
+   "notes": "5b8b755f2762f597",
+   "mirror": "ffe84f5223cc6d5d",
+   "assist": "5b8b755f2762f597"
+  },
+  "wrath_of_the_thorn_king/normal": {
+   "notes": "e88f82823aef31b2",
+   "mirror": "b208c44e91927b61",
+   "assist": "cf0316dd4c135dbe"
+  },
+  "wrath_of_the_thorn_king/hard": {
+   "notes": "b9341274bf4e1635",
+   "mirror": "a6ac7963a96b9825",
+   "assist": "2a5dca55d12a8764"
+  },
+  "wrath_of_the_thorn_king/expert": {
+   "notes": "22700f03d71e88d9",
+   "mirror": "75d1c2613c1e8968",
+   "assist": "fa9953f1f17eaaf7"
+  },
+  "wrath_of_the_thorn_king/master": {
+   "notes": "914d875d0677eb12",
+   "mirror": "b9eaf17f7197ac37",
+   "assist": "270399e2a52be2d9"
+  },
+  "wrath_of_the_thorn_king/hell": {
+   "notes": "5fd1a62861d2a8ad",
+   "mirror": "0d3d6b85b13c98fe",
+   "assist": "5e0d053f0093917d"
+  },
+  "monster/easy": {
+   "notes": "8c7deefaf4685023",
+   "mirror": "0080945ace2fe887",
+   "assist": "8c7deefaf4685023"
+  },
+  "monster/normal": {
+   "notes": "f4649d72ec378e01",
+   "mirror": "72459084e021c480",
+   "assist": "26d29fa2991a0d9c"
+  },
+  "monster/hard": {
+   "notes": "58a975a9197e92f2",
+   "mirror": "977ec57dbe03cd1d",
+   "assist": "c2f9705093857bf1"
+  },
+  "monster/expert": {
+   "notes": "da8edd45e00e02a4",
+   "mirror": "76763409cd251528",
+   "assist": "698a7bb87f60bc61"
+  },
+  "monster/master": {
+   "notes": "2429cadad8ca5a97",
+   "mirror": "9586d76cb44820ca",
+   "assist": "4fa3d6e19c46d4ca"
+  },
+  "monster/hell": {
+   "notes": "1827bad984e2f6c2",
+   "mirror": "c3591418b34c33ef",
+   "assist": "d7d28f92be586c95"
+  },
+  "monster_short/easy": {
+   "notes": "0aaa3d438480064b",
+   "mirror": "ef7d37c822f9a06f",
+   "assist": "0aaa3d438480064b"
+  },
+  "monster_short/normal": {
+   "notes": "9be9223cfaa3acd4",
+   "mirror": "2fe69849116e53bd",
+   "assist": "32ee619aae633b9c"
+  },
+  "monster_short/hard": {
+   "notes": "c29d466d13188f0f",
+   "mirror": "2f481a8a19ba0153",
+   "assist": "6e6ac2dca0780b71"
+  },
+  "monster_short/expert": {
+   "notes": "b7e71dcc4a197c7c",
+   "mirror": "d0abe4ac300be03e",
+   "assist": "ced1f76c2678006a"
+  },
+  "monster_short/master": {
+   "notes": "a39cd81102009d43",
+   "mirror": "eb330bf68657c4be",
+   "assist": "101c78047d0627ca"
+  },
+  "monster_short/hell": {
+   "notes": "21e0072fccd19691",
+   "mirror": "d5af16ac93ec5df5",
+   "assist": "a3911cd236d70aaa"
+  },
+  "anima/easy": {
+   "notes": "4a674d45f7344581",
+   "mirror": "3d18e3e833a3ae6d",
+   "assist": "4a674d45f7344581"
+  },
+  "anima/normal": {
+   "notes": "2e3f6abcddd36f36",
+   "mirror": "b4b2b7f1964b61e4",
+   "assist": "85c07082f2ae2b2e"
+  },
+  "anima/hard": {
+   "notes": "15626d2933919338",
+   "mirror": "2f45ab951029f4be",
+   "assist": "f129387914bc42c9"
+  },
+  "anima/expert": {
+   "notes": "8b7269065e53b82f",
+   "mirror": "ddc830c8d5cf9acb",
+   "assist": "3f8508c4777dca92"
+  },
+  "anima/master": {
+   "notes": "38a82631549dea75",
+   "mirror": "bc06634833bf1198",
+   "assist": "625243015e1d830e"
+  },
+  "anima/hell": {
+   "notes": "ed40792b0c2d1112",
+   "mirror": "3be383ef6ecbf3c2",
+   "assist": "284eb93f40d41dae"
+  },
+  "journey/easy": {
+   "notes": "ffc8cb29a34d9804",
+   "mirror": "dd3edc3a81682efb",
+   "assist": "ffc8cb29a34d9804"
+  },
+  "journey/normal": {
+   "notes": "5a16a2657b25b548",
+   "mirror": "52b612b460c96cda",
+   "assist": "7307d2002fe06c4a"
+  },
+  "journey/hard": {
+   "notes": "0aa7cd61de980752",
+   "mirror": "5f08f2b0651f2315",
+   "assist": "79f1cb89bfe19934"
+  },
+  "journey/expert": {
+   "notes": "cc83b6ccb1f15eb9",
+   "mirror": "d3cf0dbc6b39e895",
+   "assist": "22e9c99a0deebe5c"
+  },
+  "journey/master": {
+   "notes": "312ce2e2833d758b",
+   "mirror": "111922b86f099dc6",
+   "assist": "2b70e4133ca9eed8"
+  },
+  "journey/hell": {
+   "notes": "0493a13aa30ab529",
+   "mirror": "7423639bcd5112c6",
+   "assist": "44f3391d1ef7791c"
+  },
+  "sheriruth/easy": {
+   "notes": "738c1d011d29513e",
+   "mirror": "9e51667da9fd01ba",
+   "assist": "738c1d011d29513e"
+  },
+  "sheriruth/normal": {
+   "notes": "d59fc7fa488039fd",
+   "mirror": "0d1e49ee4fb30c6d",
+   "assist": "d59fc7fa488039fd"
+  },
+  "sheriruth/hard": {
+   "notes": "58761636cd0000e4",
+   "mirror": "a43d2bbc82534057",
+   "assist": "58761636cd0000e4"
+  },
+  "sheriruth/expert": {
+   "notes": "40e39e6f0b3e30bd",
+   "mirror": "66c2e62de41be933",
+   "assist": "40e39e6f0b3e30bd"
+  },
+  "sheriruth/master": {
+   "notes": "2c70c25fcecb7158",
+   "mirror": "506e3f50a5638583",
+   "assist": "2c70c25fcecb7158"
+  },
+  "sheriruth/hell": {
+   "notes": "a0ea151766697833",
+   "mirror": "80e5536491b2f7e0",
+   "assist": "a0ea151766697833"
+  },
+  "grievous_lady/easy": {
+   "notes": "a215e5bd6860767f",
+   "mirror": "cdded8ef4be50ac4",
+   "assist": "a215e5bd6860767f"
+  },
+  "grievous_lady/normal": {
+   "notes": "dca714e8cab8b8bd",
+   "mirror": "86f237c9e8e86d58",
+   "assist": "dca714e8cab8b8bd"
+  },
+  "grievous_lady/hard": {
+   "notes": "02ca117ca8e3faf3",
+   "mirror": "337bf8974ecc59ed",
+   "assist": "02ca117ca8e3faf3"
+  },
+  "grievous_lady/expert": {
+   "notes": "48b7063bb5f7c148",
+   "mirror": "865b1a3eabda4f49",
+   "assist": "48b7063bb5f7c148"
+  },
+  "grievous_lady/master": {
+   "notes": "fbb1a3b04509bfe8",
+   "mirror": "0a61df4930bdfefd",
+   "assist": "fbb1a3b04509bfe8"
+  },
+  "grievous_lady/hell": {
+   "notes": "679224ac178465a6",
+   "mirror": "f6f1ff165a0aaeb6",
+   "assist": "679224ac178465a6"
+  },
+  "against_my_own_shadow/easy": {
+   "notes": "1977f1368a6cedea",
+   "mirror": "35be2e7f28f12317",
+   "assist": "1977f1368a6cedea"
+  },
+  "against_my_own_shadow/normal": {
+   "notes": "a5eb957ea3cac5e7",
+   "mirror": "e1a9e19c0573220c",
+   "assist": "493a9519db03461e"
+  },
+  "against_my_own_shadow/hard": {
+   "notes": "27712913784661b0",
+   "mirror": "f4f08f287b7b6096",
+   "assist": "9529b35f73d59184"
+  },
+  "against_my_own_shadow/expert": {
+   "notes": "6bcbed9ee7b8c7e5",
+   "mirror": "8cc8f29cc0b92bb0",
+   "assist": "912b663f7d79958c"
+  },
+  "against_my_own_shadow/master": {
+   "notes": "31bfdf7b090cd239",
+   "mirror": "44b507f10503fd39",
+   "assist": "610692e24f84f65e"
+  },
+  "against_my_own_shadow/hell": {
+   "notes": "66f0c1740a87fdc8",
+   "mirror": "d9b37d3ea99da709",
+   "assist": "6d44b0e282e6782f"
+  },
+  "rose/easy": {
+   "notes": "21a5b494f9877d1b",
+   "mirror": "6c9c1fbd2dcd1203",
+   "assist": "21a5b494f9877d1b"
+  },
+  "rose/normal": {
+   "notes": "26ab0b24e6a68890",
+   "mirror": "04aae85c0e313e2b",
+   "assist": "8e0ea07c3beca539"
+  },
+  "rose/hard": {
+   "notes": "341967cfa628d201",
+   "mirror": "3ddaef1ac9605a6e",
+   "assist": "da3d2ec70390208f"
+  },
+  "rose/expert": {
+   "notes": "8c7be9dd7e810462",
+   "mirror": "43b3cef7e59a6420",
+   "assist": "239e963456c15b79"
+  },
+  "rose/master": {
+   "notes": "114fbaf474f093e8",
+   "mirror": "ffc642d5c69c8655",
+   "assist": "dd059211a9e8a887"
+  },
+  "rose/hell": {
+   "notes": "495a43eb1c7ad91d",
+   "mirror": "b27233debe7abb6c",
+   "assist": "1880e4491b406179"
+  },
+  "rose_short/easy": {
+   "notes": "b4215f64277e3a8c",
+   "mirror": "2b10e7f52ca65caf",
+   "assist": "b4215f64277e3a8c"
+  },
+  "rose_short/normal": {
+   "notes": "1bd69d9cb72652f3",
+   "mirror": "a10d5c8ec785e640",
+   "assist": "62e9da79174e51a3"
+  },
+  "rose_short/hard": {
+   "notes": "edc944e8f17e1873",
+   "mirror": "95732e21ccc4ee12",
+   "assist": "44ff41fc573bfa91"
+  },
+  "rose_short/expert": {
+   "notes": "cdcecb11f454e3b4",
+   "mirror": "fd7b492106ce2dc7",
+   "assist": "4ecf37a4c88580f3"
+  },
+  "rose_short/master": {
+   "notes": "ff73135d3d4c9237",
+   "mirror": "e12400e7c6e7accd",
+   "assist": "01036e182dd7e38c"
+  },
+  "rose_short/hell": {
+   "notes": "21b880fde7d16087",
+   "mirror": "9b51894b62d78548",
+   "assist": "680bb15fdb5ed703"
+  },
+  "sad_song/easy": {
+   "notes": "8b4f656d91d982cc",
+   "mirror": "2e499f92bcfae9d4",
+   "assist": "8b4f656d91d982cc"
+  },
+  "sad_song/normal": {
+   "notes": "e7f54d3406f5ca8d",
+   "mirror": "5297efc5de84e66d",
+   "assist": "019a704916dd2f8c"
+  },
+  "sad_song/hard": {
+   "notes": "7f5a25da3038a0a9",
+   "mirror": "49d6a0b07ad49b4f",
+   "assist": "244cbf7d99f37c27"
+  },
+  "sad_song/expert": {
+   "notes": "cd2f8f7af36c6bb7",
+   "mirror": "3714b69c56ccf295",
+   "assist": "36a5dc8b9ba2c4e7"
+  },
+  "sad_song/master": {
+   "notes": "f254c45ae745a08b",
+   "mirror": "357daab39135c685",
+   "assist": "376259ee0c97d378"
+  },
+  "sad_song/hell": {
+   "notes": "668777baf7648fac",
+   "mirror": "c417009d79280a6a",
+   "assist": "b2f276b9a5b85df0"
+  },
+  "sad_song_short/easy": {
+   "notes": "e4b315a012eae5c2",
+   "mirror": "0c0a03f5fd50c753",
+   "assist": "e4b315a012eae5c2"
+  },
+  "sad_song_short/normal": {
+   "notes": "8b073d69f14a54c6",
+   "mirror": "3f80409e45efa6b9",
+   "assist": "fa7501f7ce68b5ef"
+  },
+  "sad_song_short/hard": {
+   "notes": "77127f3739354280",
+   "mirror": "a819c7a40f97b0d2",
+   "assist": "b597907c8c5e59d3"
+  },
+  "sad_song_short/expert": {
+   "notes": "e41d84374495db0e",
+   "mirror": "6aef37b2d6509225",
+   "assist": "b8b1d268d9f98e50"
+  },
+  "sad_song_short/master": {
+   "notes": "2830976c81faa46b",
+   "mirror": "de1764f82c39a63c",
+   "assist": "c55ed4d1e285ee57"
+  },
+  "sad_song_short/hell": {
+   "notes": "4f15f981f85deee5",
+   "mirror": "d04a8ade4d1defcb",
+   "assist": "aa92e887ed800afe"
+  },
+  "toward_the_stars_short/easy": {
+   "notes": "625a781de06d2196",
+   "mirror": "787194e330a6472f",
+   "assist": "625a781de06d2196"
+  },
+  "toward_the_stars_short/normal": {
+   "notes": "ba437f7e18782ebe",
+   "mirror": "2c2237d09b7ee147",
+   "assist": "06d11124954052b2"
+  },
+  "toward_the_stars_short/hard": {
+   "notes": "578eba4a8b2829cb",
+   "mirror": "0e78ba1363e3af36",
+   "assist": "fdf31b6e750f2bdd"
+  },
+  "toward_the_stars_short/expert": {
+   "notes": "516af9ab869d0eb4",
+   "mirror": "d1301924d31ad3e9",
+   "assist": "b4d99515418d2540"
+  },
+  "toward_the_stars_short/master": {
+   "notes": "4c6be6fc3a9b3d07",
+   "mirror": "1328e2b21119d490",
+   "assist": "076338da058ef717"
+  },
+  "toward_the_stars_short/hell": {
+   "notes": "e030fecc12291f92",
+   "mirror": "37e54883c10434ec",
+   "assist": "02635aa5992e2e22"
+  },
+  "black_shout/easy": {
+   "notes": "fb2ec16f628f984a",
+   "mirror": "85db6b7bc8f345b7",
+   "assist": "fb2ec16f628f984a"
+  },
+  "black_shout/normal": {
+   "notes": "b8e3384d4011af7e",
+   "mirror": "52be26598f39121a",
+   "assist": "792638a077703466"
+  },
+  "black_shout/hard": {
+   "notes": "ce6a4024b9b5bbdb",
+   "mirror": "6f711220b413e017",
+   "assist": "a87bd64ae4b1b889"
+  },
+  "black_shout/expert": {
+   "notes": "48fff1859334d8e8",
+   "mirror": "93dd80bdcb760ece",
+   "assist": "2ece82b539a81159"
+  },
+  "black_shout/master": {
+   "notes": "a297c230e74c0acd",
+   "mirror": "d4a52af99a46295a",
+   "assist": "adaf6d299d7fc3e5"
+  },
+  "black_shout/hell": {
+   "notes": "ff791efe0a0b9401",
+   "mirror": "af7faf826c13aee8",
+   "assist": "341f2d3b6565ae05"
+  },
+  "light_player/easy": {
+   "notes": "fd98dd3d9e4fce9c",
+   "mirror": "cfbbb1f2fb2b275e",
+   "assist": "fd98dd3d9e4fce9c"
+  },
+  "light_player/normal": {
+   "notes": "8ea4b737309d8b8e",
+   "mirror": "c026a54efed63262",
+   "assist": "a1f8d9f087a3e8cb"
+  },
+  "light_player/hard": {
+   "notes": "0113e266970d322c",
+   "mirror": "791ac4492054706f",
+   "assist": "f143eb120fd8f730"
+  },
+  "light_player/expert": {
+   "notes": "42735cf9aeeeae57",
+   "mirror": "70a77b4c8ccd3a55",
+   "assist": "44210c5a805ba8f3"
+  },
+  "light_player/master": {
+   "notes": "21e45fdb2bab586d",
+   "mirror": "e99249515cc0fd6b",
+   "assist": "3568e88b26ff1e94"
+  },
+  "light_player/hell": {
+   "notes": "3cb8b6ff8a79152a",
+   "mirror": "c5063e9a266f0659",
+   "assist": "8bd8c5641973b24e"
+  },
+  "light_player_short/easy": {
+   "notes": "066bd6835c53ffd4",
+   "mirror": "499d0e920342dfa5",
+   "assist": "066bd6835c53ffd4"
+  },
+  "light_player_short/normal": {
+   "notes": "3ce652ddcd81181b",
+   "mirror": "0b019162f408f2ad",
+   "assist": "1851f2aa12679c0d"
+  },
+  "light_player_short/hard": {
+   "notes": "23a91a6751a1859f",
+   "mirror": "cdd6791aa6916365",
+   "assist": "96f1764e1b345d38"
+  },
+  "light_player_short/expert": {
+   "notes": "cdf2e785c8f711d9",
+   "mirror": "063901e3713911c6",
+   "assist": "6e3f5d46eda670a8"
+  },
+  "light_player_short/master": {
+   "notes": "097ad19841b7508b",
+   "mirror": "5864fe2b1626d184",
+   "assist": "95114903709ba11a"
+  },
+  "light_player_short/hell": {
+   "notes": "63411732322aee5b",
+   "mirror": "685200c3ed36fedf",
+   "assist": "acebdc089f832bdf"
+  },
+  "tsuki_ga_michiru_mae_ni/easy": {
+   "notes": "65091d1dcda7aced",
+   "mirror": "4129e740eac53551",
+   "assist": "65091d1dcda7aced"
+  },
+  "tsuki_ga_michiru_mae_ni/normal": {
+   "notes": "19cdec31c71a3d11",
+   "mirror": "bba607631e2766a9",
+   "assist": "ad86910c5e78e2bf"
+  },
+  "tsuki_ga_michiru_mae_ni/hard": {
+   "notes": "176068c5130019d0",
+   "mirror": "41a11f3af38d7d7c",
+   "assist": "5fa400c7752bc891"
+  },
+  "tsuki_ga_michiru_mae_ni/expert": {
+   "notes": "f9968a820dc12345",
+   "mirror": "f338b9a526b54729",
+   "assist": "347761f482c12258"
+  },
+  "tsuki_ga_michiru_mae_ni/master": {
+   "notes": "8a526483bf6fe97e",
+   "mirror": "ca6e814e39edb4ea",
+   "assist": "df13a51fbbd21c90"
+  },
+  "tsuki_ga_michiru_mae_ni/hell": {
+   "notes": "3b0c99c356eba7f7",
+   "mirror": "08d411d7f9b85300",
+   "assist": "679c9e9ea7a5d642"
+  },
+  "tsuki_ga_michiru_mae_ni_short/easy": {
+   "notes": "7187eb911dd69bad",
+   "mirror": "4492a0016bf7412d",
+   "assist": "7187eb911dd69bad"
+  },
+  "tsuki_ga_michiru_mae_ni_short/normal": {
+   "notes": "1d720c6caeaadde4",
+   "mirror": "9156fe7ecfebc447",
+   "assist": "591662f283ac9b58"
+  },
+  "tsuki_ga_michiru_mae_ni_short/hard": {
+   "notes": "de48cad43b8fcb99",
+   "mirror": "7ff44978bf1e4e72",
+   "assist": "0b1b0d90657288dc"
+  },
+  "tsuki_ga_michiru_mae_ni_short/expert": {
+   "notes": "594571cbd2504921",
+   "mirror": "1abe8239361436df",
+   "assist": "cd42845bb351fc51"
+  },
+  "tsuki_ga_michiru_mae_ni_short/master": {
+   "notes": "46efa8230f9b57da",
+   "mirror": "433f3ad07da6241c",
+   "assist": "b5a965344a184004"
+  },
+  "tsuki_ga_michiru_mae_ni_short/hell": {
+   "notes": "28db4ce5e2894b4f",
+   "mirror": "8e05421700a388eb",
+   "assist": "ed970c06c42d3745"
+  },
+  "rebellion/easy": {
+   "notes": "53f1fb26bc86df4a",
+   "mirror": "50fa2716aa69504b",
+   "assist": "53f1fb26bc86df4a"
+  },
+  "rebellion/normal": {
+   "notes": "28433d77a811a8b4",
+   "mirror": "106a959349777b9e",
+   "assist": "4f8e487fd823eafb"
+  },
+  "rebellion/hard": {
+   "notes": "de52428a1f6bd17d",
+   "mirror": "0de6449ba5e1d114",
+   "assist": "b90060c164a2b14c"
+  },
+  "rebellion/expert": {
+   "notes": "35a5c3733534ce1f",
+   "mirror": "8f3d52d26005bf19",
+   "assist": "d21a777a4df3fb97"
+  },
+  "rebellion/master": {
+   "notes": "4b1aa86d8c6b7951",
+   "mirror": "5c94c6157ee8f0f8",
+   "assist": "1f54fd60744ecb6e"
+  },
+  "rebellion/hell": {
+   "notes": "f1ad7c95cc3f5d02",
+   "mirror": "da16e3c4b91dc9cd",
+   "assist": "1ff657d826f12269"
+  },
+  "rebellion_short/easy": {
+   "notes": "b4179efe80832f42",
+   "mirror": "f7d269c42a91be7e",
+   "assist": "b4179efe80832f42"
+  },
+  "rebellion_short/normal": {
+   "notes": "4c50f450355c9e93",
+   "mirror": "41b487822f20c99b",
+   "assist": "13ebac63f80224f1"
+  },
+  "rebellion_short/hard": {
+   "notes": "2056dae082c17e76",
+   "mirror": "61b7580091563318",
+   "assist": "287ff0f83e2925cd"
+  },
+  "rebellion_short/expert": {
+   "notes": "c4a7d3ed0b1f879d",
+   "mirror": "d6badd1540b53fbf",
+   "assist": "bfdd681d81ad0eb6"
+  },
+  "rebellion_short/master": {
+   "notes": "3b70d47b3398d9a9",
+   "mirror": "f75d7025055a4852",
+   "assist": "d0a323d4b3fb76a2"
+  },
+  "rebellion_short/hell": {
+   "notes": "f76bd9eea8762b22",
+   "mirror": "1101cbd5313aef00",
+   "assist": "72f8fcb73d1d7ab1"
+  },
+  "altar_world_tree/easy": {
+   "notes": "e4ef1685c33065fe",
+   "mirror": "702e13733098e256",
+   "assist": "e4ef1685c33065fe"
+  },
+  "altar_world_tree/normal": {
+   "notes": "c393fed7580c88be",
+   "mirror": "42fd415ec04996c8",
+   "assist": "4cb6b0eefac17206"
+  },
+  "altar_world_tree/hard": {
+   "notes": "90d776637cf7f167",
+   "mirror": "859b2eeee90d2951",
+   "assist": "d40368c9f99baae7"
+  },
+  "altar_world_tree/expert": {
+   "notes": "01c6453aafb5eae5",
+   "mirror": "a607c91b6d81e60a",
+   "assist": "d5c51b0f5e5d04d8"
+  },
+  "altar_world_tree/master": {
+   "notes": "ddefcd45ac5a9c94",
+   "mirror": "6383e91edbfe7987",
+   "assist": "07ebaa66d36277f7"
+  },
+  "altar_world_tree/hell": {
+   "notes": "a35d6b219fab83aa",
+   "mirror": "4c529643afc67506",
+   "assist": "57d5269db4b2faf3"
+  },
+  "altar_world_tree_short/easy": {
+   "notes": "38896ba2293f0c50",
+   "mirror": "b013606071a36b06",
+   "assist": "38896ba2293f0c50"
+  },
+  "altar_world_tree_short/normal": {
+   "notes": "88cccda35051336d",
+   "mirror": "77ddfb1e860160b2",
+   "assist": "22c06a186e37cd28"
+  },
+  "altar_world_tree_short/hard": {
+   "notes": "c8a96f22962256f4",
+   "mirror": "1dc65ce0aae0a725",
+   "assist": "2b7230c76a2f7248"
+  },
+  "altar_world_tree_short/expert": {
+   "notes": "825d7a62f11bd6f8",
+   "mirror": "7fa36fa64037753e",
+   "assist": "33bd25b62716565d"
+  },
+  "altar_world_tree_short/master": {
+   "notes": "e2d85eff932eca9a",
+   "mirror": "80c73cc7639c69f0",
+   "assist": "ad1b3ff7f6b0eaf8"
+  },
+  "altar_world_tree_short/hell": {
+   "notes": "a786098b4bacd139",
+   "mirror": "e49bfda2732273cf",
+   "assist": "c80a2a4bb436db1a"
+  },
+  "evans/easy": {
+   "notes": "113761f9612bc428",
+   "mirror": "e2cef54393e0115e",
+   "assist": "113761f9612bc428"
+  },
+  "evans/normal": {
+   "notes": "462593592c878bde",
+   "mirror": "55d627ad6a4c8a78",
+   "assist": "2fa183db6ccbe38d"
+  },
+  "evans/hard": {
+   "notes": "9c5ce44c079101b2",
+   "mirror": "3e30f37f05fee2bd",
+   "assist": "3312d2992165ee54"
+  },
+  "evans/expert": {
+   "notes": "65258458c71aaadc",
+   "mirror": "21a7223d590e3623",
+   "assist": "8af935a2a353852a"
+  },
+  "evans/master": {
+   "notes": "37c1fcd3ae49899c",
+   "mirror": "6f437649e559bc5b",
+   "assist": "a8cb29d012ed5f32"
+  },
+  "evans/hell": {
+   "notes": "083c9eed96b12c3c",
+   "mirror": "11a5478eb131e1e1",
+   "assist": "b403ab36b8f696dc"
+  }
+ },
+ "history": [
+  {
+   "at": "2026-11-07 12:11",
+   "reason": "2026-11-07 社長「既存曲ちょこちょこ勝手に変わるけどそうならないようにできないの？」→ 見張りを足す(ビート部 マモリ)。今の main の値を控えにする",
+   "changedCount": 330
+  }
+ ]
+}
