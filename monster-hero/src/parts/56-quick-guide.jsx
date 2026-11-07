@@ -129,11 +129,7 @@ const quickGuideView = () => {
   return quickGuideRotated() ? { w: window.innerHeight || 0, h: window.innerWidth || 0 } : { w: window.innerWidth || 0, h: window.innerHeight || 0 };
 };
 // 案内を出す先。ふだんは body(バトルの技の札など body へ出る物より上に重ねるため)。回しているときは回した器
-const quickGuidePortalTarget = () => {
-  if (typeof document === 'undefined') return null;
-  if (quickGuideRotated()) return document.querySelector('[data-mh-view-rotation="true"]') || document.body;
-  return document.body;
-};
+const quickGuidePortalTarget = () => (typeof rotationAwarePortalTarget === 'function' ? rotationAwarePortalTarget() : (typeof document !== 'undefined' ? document.body : null));
 
 // 光らせる所。見えている最初の1つの位置(画面の座標)。無ければ null
 const quickGuideSpotRect = (selector) => {
