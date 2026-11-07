@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 778ae22d055de2e3
+// source-sha256: edfa3fb4b375c5b5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -60371,6 +60371,111 @@ const growthFxBreederLevel = (levelFrom, levelTo, breederName = '') => {
     gains: []
   });
 };
+const growthFxPeerPct = points => {
+  const list = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' && Array.isArray(ASSISTANT_PEER_BOND_LEVELS) ? ASSISTANT_PEER_BOND_LEVELS : [];
+  const p = growthFxNum(points);
+  let cur = list[0],
+    next = null;
+  for (let i = 0; i < list.length; i++) {
+    if (p >= growthFxNum(list[i].min)) {
+      cur = list[i];
+      next = list[i + 1] || null;
+    }
+  }
+  if (!cur) return 0;
+  if (!next) return 100;
+  return growthFxPct((p - growthFxNum(cur.min)) / Math.max(1, growthFxNum(next.min) - growthFxNum(cur.min)) * 100);
+};
+const growthFxPeerLevelName = (level, lifeName = true) => {
+  const list = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' && Array.isArray(ASSISTANT_PEER_BOND_LEVELS) ? ASSISTANT_PEER_BOND_LEVELS : [];
+  const row = list.find(r => r && r.level === level);
+  return row ? lifeName && row.lifeName || row.name || '' : '';
+};
+const growthFxPeerLevel = ({
+  pair,
+  levelBefore,
+  levelAfter
+} = {}) => {
+  if (!Array.isArray(pair) || pair.length !== 2 || !(growthFxNum(levelAfter) > growthFxNum(levelBefore))) return;
+  const [a, b] = pair;
+  const stage = growthFxPeerLevelName(levelAfter);
+  growthFxPush({
+    tier: 'level',
+    kind: 'friend',
+    who: [a, b].sort().join('-'),
+    levelFrom: levelBefore,
+    levelTo: levelAfter,
+    title: '友情Lv UP!',
+    sub: `${growthFxAssistantName(a)} と ${growthFxAssistantName(b)} の友情Lvが Lv.${levelAfter} になった${stage ? `(${stage})` : ''}`,
+    face: growthFxAssistantFace(a, 'excited'),
+    gains: []
+  });
+};
+const growthFxPeerItem = ({
+  pair,
+  itemId,
+  pointsBefore,
+  pointsAfter,
+  levelBefore,
+  levelAfter,
+  reaction = null,
+  playerGain = 0
+} = {}) => {
+  if (!Array.isArray(pair) || pair.length !== 2) return;
+  const gain = growthFxNum(pointsAfter) - growthFxNum(pointsBefore);
+  if (!(gain > 0) && !(growthFxNum(playerGain) > 0)) return;
+  const items = typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : [];
+  const item = items.find(i => i && i.id === itemId) || {};
+  const [a, b] = pair;
+  const rows = [];
+  if (gain > 0) rows.push({
+    kind: 'friend',
+    label: '2人の友情Lv',
+    levelFrom: levelBefore,
+    levelTo: levelAfter,
+    pctFrom: growthFxPeerPct(pointsBefore),
+    pctTo: growthFxPeerPct(pointsAfter),
+    gain
+  });
+  if (growthFxNum(playerGain) > 0) rows.push({
+    kind: 'bond',
+    label: 'あなたとの仲良し度(2人とも)',
+    pctFrom: 0,
+    pctTo: 100,
+    gain: growthFxNum(playerGain)
+  });
+  const face = id => growthFxAssistantFace(id, reaction === 'dislike' ? 'troubled' : reaction === 'like' ? 'excited' : 'happy');
+  growthFxPush({
+    tier: 'item',
+    kind: 'friend',
+    title: `${growthFxAssistantName(a)} と ${growthFxAssistantName(b)} に ${item.name || ''}！`,
+    item: `${item.emoji || ''} ${item.name || ''} ×1`,
+    faces: [face(a), face(b)].filter(Boolean),
+    reaction,
+    rows
+  });
+};
+const growthFxSessionLevel = (list = []) => {
+  const ups = (Array.isArray(list) ? list : []).filter(u => u && growthFxNum(u.levelAfter) > growthFxNum(u.levelBefore));
+  if (!ups.length) return;
+  const top = ups[0];
+  const gains = ups.map(u => ({
+    icon: '🎤',
+    text: `${growthFxAssistantName(u.assistantId)} セッションLv.${u.levelAfter}`,
+    note: growthFxNum(u.tickets) > 0 ? `セッション券 ×${growthFxNum(u.tickets)}` : ''
+  }));
+  growthFxPush({
+    tier: 'level',
+    kind: 'session',
+    who: ups.map(u => u.assistantId).join('+'),
+    levelFrom: top.levelBefore,
+    levelTo: top.levelAfter,
+    title: 'セッションLv UP!',
+    sub: ups.length > 1 ? 'いっしょに演奏した助手のセッションLvが上がった' : `${growthFxAssistantName(top.assistantId)} とのセッションLvが Lv.${top.levelAfter} になった`,
+    face: growthFxAssistantFace(top.assistantId, 'excited'),
+    gains: ups.length > 1 || gains[0].note ? gains : []
+  });
+};
 const GROWTH_FX_CSS = `
 .mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
 .mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
@@ -60814,6 +60919,24 @@ const GrowthFxLevelUp = ({
     "aria-hidden": "true"
   }, sheet.kind === 'bond' ? React.createElement("path", {
     d: "M50 88 C20 66 6 50 6 32 C6 18 17 8 30 8 C40 8 46 14 50 21 C54 14 60 8 70 8 C83 8 94 18 94 32 C94 50 80 66 50 88Z",
+    fill: k.color,
+    stroke: "#fff",
+    strokeWidth: "3"
+  }) : sheet.kind === 'friend' ? React.createElement("g", {
+    fill: k.color,
+    stroke: "#fff",
+    strokeWidth: "3"
+  }, React.createElement("circle", {
+    cx: "36",
+    cy: "52",
+    r: "32"
+  }), React.createElement("circle", {
+    cx: "64",
+    cy: "52",
+    r: "32",
+    fillOpacity: ".85"
+  })) : sheet.kind === 'star' ? React.createElement("path", {
+    d: "M50 4 L62 36 L96 38 L69 59 L79 93 L50 73 L21 93 L31 59 L4 38 L38 36 Z",
     fill: k.color,
     stroke: "#fff",
     strokeWidth: "3"
