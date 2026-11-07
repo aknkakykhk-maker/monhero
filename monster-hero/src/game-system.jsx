@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7a8ab16a3c7a9f70
+// generated-sha256: c50e1120078b1000
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9294,9 +9294,9 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 助手どうしのつながり(2026-11-07 社長「ガッツリ作りこんで」)。ペアの仲良し度・台本版の掛け合い・プロフィールの関係図(56-assistant-peer.jsx)。
   //   偽にすると、仲良し度は上がらず、掛け合いも関係図も出ない(おしゃべりで渡すほかの助手のメモ=段階1 はこの印に関係なく送る)
   assistantPeer: true,
-  // 助手どうしの掛け合いの API 版(kind:'peer_talks')。中継役(assistant-chat)を窓口が配り、表 assistant_peer_talk_usage を作ってから真にする。
-  //   偽のあいだは頼まず、台本版(ASSISTANT_PEER_TALKS)だけで流れる
-  assistantPeerApi: false,
+  // 助手どうしの掛け合いの API 版(kind:'peer_talks')。中継役(assistant-chat)を窓口が配り、表 assistant_peer_talk_usage を作ってから
+  //   マージする(2026-11-07 社長「この文で公開」・窓口の段取り)。偽にすると頼まず、台本版(ASSISTANT_PEER_TALKS)だけで流れる
+  assistantPeerApi: true,
   // 7人目の助手ソラシド(2026-10-27 社長の決定)。絵・お話・お知らせがそろって、社長が「公開」と言ったら真にする。
   //   偽のあいだは、助手の一覧・おしゃべり・選ぶ画面に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS)。
   //   MFバトルカードの相手えらび・マルチ・観戦・記録・曲の並びにも出ない(82 の cardFoeReleased)
@@ -55618,8 +55618,8 @@ const normalizeAssistantChatMemo = (rawV2, rawV1) => {
 // 守り: 「ないしょ」の欄(secret)は渡さない・ないしょ/秘密らしい言葉を含む欄も渡さない・30日話していない助手の分は渡さない。
 // 設計: docs/progress/assistant-peer-plan.md。★保存は新しいキーだけ(CLAUDE.md ⑦)
 // 助手どうしの「今日」(2026-11-07 社長の決定: ゲーム全体の1日の区切りを朝4時 JST にそろえる)。
-//   共通の jstDayKey4(バトル部セコンドが 17-release に足す)と同じ中身の loginBonusPeriodKey を使う。jstDayKey4 が入ったらここだけ差しかえる
-const assistantPeerDayKey = (now = Date.now()) => loginBonusPeriodKey(now);
+//   共通の jstDayKey4(17-release)を使う(前の loginBonusPeriodKey と中身は同じなので、保存した日付はそのまま読める)
+const assistantPeerDayKey = (now = Date.now()) => jstDayKey4(now);
 const ASSISTANT_CHAT_LAST_KEY = 'mh_assistant_chat_last_v1'; // { [助手id]: 'YYYY-MM-DD' } 最後に返事が来た日(assistantPeerDayKey・朝4時区切り)
 const ASSISTANT_PEER_SHARE_DAYS = 30;
 const ASSISTANT_PEER_SHARE_FIELDS = ['likes', 'goals', 'events', 'topics', 'summary'];

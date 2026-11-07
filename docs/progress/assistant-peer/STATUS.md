@@ -75,3 +75,10 @@
 - 検査 `assistant-peer-check.js` ⑪。口調・守りの検査は③の台本にも広げた。返事は1人1行に書く(行ごとに見る口調の検査が取り違えるため。前からあった kiki-kyuko-c1 の NG もこれで直った)
 - 残り: コトバの台本(`claude/assistant-peer-lines` の `lines/kotoba.txt`)を `peer-talks-import.js` で取り込む → ⑪ の「(参考)」が 28・28・28 になる。
   更新履歴の「Lv5とLv10で特別なお話」は、取り込んでから本当になる
+
+## 公開の段取り(2026-11-07 社長「この文で公開」・窓口の段取り)
+
+- `assistantPeerDayKey` を `jstDayKey4` に差しかえた(前の loginBonusPeriodKey と中身は同じ。保存した日付はそのまま読める)
+- `RELEASE_FLAGS.assistantPeerApi` を真にした(この PR に入れた)。**サーバ(SQL → assistant-chat)を窓口が配ってからマージする**
+- SQL の1日の区切りを朝5時 → 朝4時にそろえた(まだ流す前。ゲームの jstDayKey4 と同じ)
+- `assistant-chat-check.js` のブラウザ検査は、HOME で飛ぶ peer_talks をおしゃべりと別に数えるよう直した

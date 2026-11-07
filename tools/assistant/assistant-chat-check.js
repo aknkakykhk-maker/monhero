@@ -429,6 +429,7 @@ const browser = async (core) => {
   const errors = [];
   const sent = [];
   const dailySent = [];
+  const peerSent = [];
   let dailyFail = false;
   const client = fakeClient((params) => {
     const isDaily = !!(params.output_config && params.output_config.format && params.output_config.format.schema.properties.lines);
@@ -479,6 +480,8 @@ const browser = async (core) => {
     // 中継役を偽物の Claude で動かす(本番の API は叩かない)
     await page.route('**/functions/v1/assistant-chat', async (route) => {
       const body = JSON.parse(route.request().postData() || '{}');
+      // 助手どうしの掛け合い(peer_talks)は HOME に入ると別に頼まれる。おしゃべりとは数えず、上限扱いで返す(ゲームは台本版で流れる)
+      if (body.kind === 'peer_talks') { peerSent.push(body); await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, kind: 'tired' }) }); return; }
       if (body.kind === 'daily_lines') dailySent.push(body); else sent.push(body);
       const r = await core.handleRequest({ body, digest: DIGEST, client, take: c.take, refund: c.refund });
       await route.fulfill({ status: r.status, contentType: 'application/json', body: JSON.stringify(r.json) });

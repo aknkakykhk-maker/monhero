@@ -290,8 +290,8 @@ const normalizeAssistantChatMemo = (rawV2, rawV1) => {
 // 守り: 「ないしょ」の欄(secret)は渡さない・ないしょ/秘密らしい言葉を含む欄も渡さない・30日話していない助手の分は渡さない。
 // 設計: docs/progress/assistant-peer-plan.md。★保存は新しいキーだけ(CLAUDE.md ⑦)
 // 助手どうしの「今日」(2026-11-07 社長の決定: ゲーム全体の1日の区切りを朝4時 JST にそろえる)。
-//   共通の jstDayKey4(バトル部セコンドが 17-release に足す)と同じ中身の loginBonusPeriodKey を使う。jstDayKey4 が入ったらここだけ差しかえる
-const assistantPeerDayKey = (now = Date.now()) => loginBonusPeriodKey(now);
+//   共通の jstDayKey4(17-release)を使う(前の loginBonusPeriodKey と中身は同じなので、保存した日付はそのまま読める)
+const assistantPeerDayKey = (now = Date.now()) => jstDayKey4(now);
 const ASSISTANT_CHAT_LAST_KEY = 'mh_assistant_chat_last_v1'; // { [助手id]: 'YYYY-MM-DD' } 最後に返事が来た日(assistantPeerDayKey・朝4時区切り)
 const ASSISTANT_PEER_SHARE_DAYS = 30;
 const ASSISTANT_PEER_SHARE_FIELDS = ['likes', 'goals', 'events', 'topics', 'summary'];

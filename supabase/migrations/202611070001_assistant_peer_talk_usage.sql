@@ -2,7 +2,7 @@
 -- ★足すだけ。既存の表(assistant_chat_usage など)と関数には触らない。
 -- おしゃべり(1人100往復・全員2,000往復)とは別に数える: 1人1日100回・全員1日3,000回(上限の数は Edge Function が渡す。Secrets で下げられる)。
 -- ゲームからは読めも書けもしない(RLS を入れてポリシーを作らない)。Edge Function(service_role)だけが関数で使う。
--- 1日の区切りはゲームの日替わりと同じ朝5:00(JST)。
+-- 1日の区切りはゲームの日替わりと同じ朝4:00(JST・jstDayKey4 と同じ。2026-11-07 社長の決定)。
 create table if not exists public.assistant_peer_talk_usage (
   day date not null,
   breeder_id text not null,
@@ -14,7 +14,7 @@ alter table public.assistant_peer_talk_usage enable row level security;
 create or replace function public.assistant_peer_talk_take(p_breeder text, p_user_limit int, p_total_limit int)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare
-  d date := ((now() at time zone 'Asia/Tokyo') - interval '5 hours')::date;
+  d date := ((now() at time zone 'Asia/Tokyo') - interval '4 hours')::date;
   total int;
   mine int;
 begin
@@ -35,7 +35,7 @@ end $$;
 
 create or replace function public.assistant_peer_talk_refund(p_breeder text)
 returns void language plpgsql security definer set search_path = public as $$
-declare d date := ((now() at time zone 'Asia/Tokyo') - interval '5 hours')::date;
+declare d date := ((now() at time zone 'Asia/Tokyo') - interval '4 hours')::date;
 begin
   update assistant_peer_talk_usage set count = greatest(count - 1, 0) where day = d and breeder_id = p_breeder;
 end $$;

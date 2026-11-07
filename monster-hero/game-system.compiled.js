@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f4add209da86e308
+// source-sha256: ad126b5ebf89c556
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13224,7 +13224,7 @@ const RELEASE_FLAGS = {
   assistantAtsu: true,
   assistantKyuko: true,
   assistantPeer: true,
-  assistantPeerApi: false,
+  assistantPeerApi: true,
   assistantSorashido: true,
   assistantErubin: true,
   cardBattle: true,
@@ -93449,7 +93449,7 @@ const normalizeAssistantChatMemo = (rawV2, rawV1) => {
   for (const [id, memo] of Object.entries(v2)) out[id] = normalizeAssistantChatMemoOne(memo);
   return out;
 };
-const assistantPeerDayKey = (now = Date.now()) => loginBonusPeriodKey(now);
+const assistantPeerDayKey = (now = Date.now()) => jstDayKey4(now);
 const ASSISTANT_CHAT_LAST_KEY = 'mh_assistant_chat_last_v1';
 const ASSISTANT_PEER_SHARE_DAYS = 30;
 const ASSISTANT_PEER_SHARE_FIELDS = ['likes', 'goals', 'events', 'topics', 'summary'];
