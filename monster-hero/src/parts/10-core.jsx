@@ -347,6 +347,10 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get assistantErubin() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantErubin === true; },
   // MFバトルカードのはじまり(card_battle_intro_2026・2026-10-24)。MFバトルカードの公開と一緒に出る
   get cardBattle() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardBattle === true; },
+  // モンヒロビート本オープンのお話(rhythm_grand_open・2026-11-07)。本オープンの印と一緒に出る
+  get rhythmGrandOpen() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmGrandOpen === true; },
+  // 本オープンの予告のお話(rhythm_grand_open_teaser)。予告の印で出て、本オープンのあとも回想に残す
+  get rhythmGrandOpenTeaser() { return typeof RELEASE_FLAGS !== 'undefined' && (RELEASE_FLAGS.rhythmGrandOpenTeaser === true || RELEASE_FLAGS.rhythmGrandOpen === true); },
   // 個人杯のお話(2026-10-31)。公開の印は 99-card-cup.jsx の cardCupOpen(あとの部品なので見るたびに引く)
   get cardCup() { return typeof cardCupOpen === 'function' && cardCupOpen() === true; },
 });

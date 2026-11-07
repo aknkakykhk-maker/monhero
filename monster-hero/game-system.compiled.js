@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 54f1ac5e81441bbd
+// source-sha256: d4e6c3616e600293
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -453,6 +453,12 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   },
   get cardBattle() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardBattle === true;
+  },
+  get rhythmGrandOpen() {
+    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmGrandOpen === true;
+  },
+  get rhythmGrandOpenTeaser() {
+    return typeof RELEASE_FLAGS !== 'undefined' && (RELEASE_FLAGS.rhythmGrandOpenTeaser === true || RELEASE_FLAGS.rhythmGrandOpen === true);
   },
   get cardCup() {
     return typeof cardCupOpen === 'function' && cardCupOpen() === true;
@@ -1430,10 +1436,13 @@ const soulRankXpForBondLevel = level => {
 };
 const xpForBondLevelAt = level => {
   const current = Math.max(1, Math.floor(Number(level) || 1));
+  const cache = xpForBondLevelAt.cache || (xpForBondLevelAt.cache = new Map());
+  const cached = cache.get(current);
+  if (cached !== undefined) return cached;
   const normal = xpForBondLevel(current);
-  if (current < MAX_MASU_LEVEL_CAP) return normal;
-  if (current < SOUL_RANK_BASE_LEVEL) return Math.max(1, Math.round(normal * transcendXpMultiplier(current)));
-  return soulRankXpForBondLevel(current);
+  const value = current < MAX_MASU_LEVEL_CAP ? normal : current < SOUL_RANK_BASE_LEVEL ? Math.max(1, Math.round(normal * transcendXpMultiplier(current))) : soulRankXpForBondLevel(current);
+  cache.set(current, value);
+  return value;
 };
 const bondLevelInfo = totalXp => {
   const safeTotal = Math.max(0, Math.floor(Number(totalXp) || 0));
@@ -1987,8 +1996,12 @@ const normalizeInheritedUniqueLineages = masuMons => (Array.isArray(masuMons) ? 
 });
 const totalBondXpForLevel = level => {
   const target = Math.max(1, Math.min(SOUL_RANK_LEVEL_CAP, Math.floor(Number(level) || 1)));
+  const cache = totalBondXpForLevel.cache || (totalBondXpForLevel.cache = new Map());
+  const cached = cache.get(target);
+  if (cached !== undefined) return cached;
   let total = 0;
   for (let current = 1; current < target; current++) total += xpForBondLevelAt(current);
+  cache.set(target, total);
   return total;
 };
 const MAX_MASU_LEVEL_CAP = 400;
@@ -4345,7 +4358,7 @@ const buildMasuReincarnation = ({
 };
 const OFFERING_TICKET_DIAMONDS = 100;
 const OFFERING_TICKET_XP = 15;
-const OFFERING_MAX_REINCARNATIONS = 50;
+const OFFERING_MAX_REINCARNATIONS = 100000;
 const OFFERING_MODES = Object.freeze(['diamonds', 'levels', 'reincarnate']);
 const offeringXpForDiamonds = diamonds => Math.floor(donationDiamondValue(diamonds) * OFFERING_TICKET_XP / OFFERING_TICKET_DIAMONDS);
 const offeringDiamondsForXp = xp => Math.ceil(donationDiamondValue(xp) * OFFERING_TICKET_DIAMONDS / OFFERING_TICKET_XP);
@@ -4534,7 +4547,7 @@ const buildMasuOffering = ({
     nextMasu: st.masu
   };
 };
-const REINCARNATE_BATCH_MAX = 50;
+const REINCARNATE_BATCH_MAX = 100000;
 const buildMasuReincarnationBatch = ({
   masu,
   skillKey,
@@ -6021,6 +6034,9 @@ const RHYTHM_MULTI_LOOK_LEVELS = Object.freeze(['LIGHT', 'STANDARD', 'VIVID', 'O
 const rhythmLookPresetOf = settings => (RHYTHM_LOOK_PRESETS.find(preset => Object.entries(preset.values).every(([key, value]) => settings && settings[key] === value)) || {
   id: ''
 }).id;
+const RHYTHM_NOTE_PALETTE_CHOICES = Object.freeze([['STANDARD', '標準'], ['PASTEL', 'パステル'], ['NEON', 'ネオン'], ['CLEAR', '見分けやすい']]);
+const RHYTHM_STAGE_THEME_CHOICES = Object.freeze([['NONE', 'いつもの背景'], ['GRAND_OPEN', '本オープン記念']]);
+const rhythmStageThemeActive = settings => settings?.stageTheme === 'GRAND_OPEN' && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmGrandOpen === true;
 const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['LIVE', 'ライブ'], ['VIVID', '派手'], ['CALM', '控えめ'], ['SIMPLE', 'シンプル']]);
 const RHYTHM_LANE_COVER_MIN = 0,
   RHYTHM_LANE_COVER_MAX = 60,
@@ -6199,6 +6215,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   effectAmount: 'LIGHT',
   lightweightMode: false,
   fx: Object.freeze({}),
+  notePalette: 'STANDARD',
+  stageTheme: 'NONE',
   multiLightLook: true,
   multiLook: 'LIGHT',
   modeSelectArt: true,
@@ -6570,7 +6588,9 @@ const normalizeRhythmSettings = value => {
     assistMode: bool('assistMode'),
     mirrorChart: bool('mirrorChart'),
     luckyRush: bool('luckyRush'),
-    fx: normalizeRhythmFx(source.fx)
+    fx: normalizeRhythmFx(source.fx),
+    notePalette: RHYTHM_NOTE_PALETTE_CHOICES.some(([id]) => id === source.notePalette) ? source.notePalette : DEFAULT_RHYTHM_SETTINGS.notePalette,
+    stageTheme: RHYTHM_STAGE_THEME_CHOICES.some(([id]) => id === source.stageTheme) ? source.stageTheme : DEFAULT_RHYTHM_SETTINGS.stageTheme
   };
 };
 const emptyRhythmBestRecord = () => ({
@@ -6873,6 +6893,7 @@ const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Pa
 const eikiBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   erubinJoinStoryEvent: 'original_event_01',
+  rhythmGrandOpenEvent: 'kaze_ga_soyogu',
   cardBattleIntroEvent: 'atsu_cup_theme',
   cardCupStoryEvent: 'melo_toriko',
   pandoraWingsStoryEvent: 'melo_rebellion',
@@ -6972,6 +6993,8 @@ const eventScriptBgmAt = (script, step) => {
 const EVENT_BGM_FADE_MS = 800;
 const EVENT_BGM_SCENES = Object.freeze({
   erubin_join_2026_11: 'erubinJoinStoryEvent',
+  rhythm_grand_open_teaser: 'rhythmGrandOpenEvent',
+  rhythm_grand_open: 'rhythmGrandOpenEvent',
   card_battle_intro_2026: 'cardBattleIntroEvent',
   card_cup_2026_10_31: 'cardCupStoryEvent',
   pandora_wings_2026_ep1: 'pandoraWingsStoryEvent',
@@ -13187,6 +13210,8 @@ const RAID_JACK_RHYTHM_PUBLIC_RELEASE = true;
 const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;
 const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = true;
 const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
+const RHYTHM_GRAND_OPEN_RELEASE = false;
+const RHYTHM_GRAND_OPEN_TEASER_RELEASE = false;
 const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   tactics: TACTICS_MODE_PUBLIC_RELEASE,
@@ -13208,6 +13233,8 @@ const RELEASE_FLAGS = {
   tacticsHate: true,
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE,
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE,
+  rhythmGrandOpen: RHYTHM_GRAND_OPEN_RELEASE,
+  rhythmGrandOpenTeaser: RHYTHM_GRAND_OPEN_TEASER_RELEASE,
   rhythmMulti: RHYTHM_MULTI_PUBLIC_RELEASE,
   friends: FRIENDS_PUBLIC_RELEASE,
   raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE,
@@ -13547,6 +13574,12 @@ const LOGIN_BONUS_DEFAULT = {
   totalLoginDays: 0
 };
 const loginBonusPeriodKey = (now = Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const jstDayKey4 = (now = Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const jstDayCarry = (saved, today) => {
+  if (typeof saved !== 'string' || typeof today !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(saved)) return today;
+  const t = Date.parse(`${today}T00:00:00Z`);
+  return Number.isFinite(t) && saved === new Date(t + 86400000).toISOString().slice(0, 10) ? saved : today;
+};
 const ASSISTANT_SELECTED_KEY = 'mh_assistant_selected_v1';
 const KIKI_INTRO_SEEN_KEY = 'mh_kiki_intro_seen_v1';
 const MOMOSUKE_INTRO_SEEN_KEY = 'mh_momosuke_intro_seen_v1';
@@ -13569,6 +13602,8 @@ const HELP_PLAYER_FLAGS = {
 };
 const helpPlayerFlagOn = name => !!name && HELP_PLAYER_FLAGS[name] === true;
 const CARD_CUP_STORY_ID = 'card_cup_2026_10_31';
+const RHYTHM_GRAND_OPEN_TEASER_STORY_ID = 'rhythm_grand_open_teaser';
+const RHYTHM_GRAND_OPEN_STORY_ID = 'rhythm_grand_open';
 const SORASHIDO_GIFT_KEY = 'mh_sorashido_gift_v1';
 const SORASHIDO_GIFT_BEAT_POINTS = 10000;
 const sorashidoJoinGift = () => ({
@@ -13982,32 +14017,124 @@ const NEW_PLAYER_CAMPAIGN_GIFT = Object.freeze({
     amount: 100
   }]
 });
+const NEW_PLAYER_CAMPAIGN_GIFT_GRAND = Object.freeze({
+  id: 'monhiro_beat_grand_open_new_player_v1',
+  title: 'モンヒロビート 本オープン記念',
+  description: '新規プレイヤーキャンペーンのプレゼントです。モンヒロビートの本オープンを記念して、はじめた方へお贈りします。',
+  rewards: [{
+    type: 'diamond',
+    amount: 149000
+  }, {
+    type: 'rainbowPsyche',
+    amount: 150
+  }, {
+    type: 'skipTicketJo',
+    amount: 1
+  }, {
+    type: 'skipTicketHa',
+    amount: 1
+  }, {
+    type: 'skipTicketKyu',
+    amount: 3
+  }, {
+    type: 'gameItem',
+    itemId: 'session_ticket',
+    amount: 10
+  }, {
+    type: 'gameItem',
+    itemId: 'buddy_trait_seed',
+    amount: 3
+  }]
+});
+const rhythmGrandOpenReleased = () => typeof RHYTHM_GRAND_OPEN_RELEASE !== 'undefined' && RHYTHM_GRAND_OPEN_RELEASE === true;
+const newPlayerCampaignGiftDef = () => rhythmGrandOpenReleased() ? NEW_PLAYER_CAMPAIGN_GIFT_GRAND : NEW_PLAYER_CAMPAIGN_GIFT;
 const grantNewPlayerCampaignGift = (gifts, now = Date.now(), extraRewards = []) => {
   const list = Array.isArray(gifts) ? gifts : [];
   if (!NEW_PLAYER_CAMPAIGN_ENABLED) return {
     granted: false,
     gifts: list
   };
-  if (list.some(item => item?.id === NEW_PLAYER_CAMPAIGN_GIFT.id)) return {
+  const def = newPlayerCampaignGiftDef();
+  if (list.some(item => item?.id === NEW_PLAYER_CAMPAIGN_GIFT.id || item?.id === NEW_PLAYER_CAMPAIGN_GIFT_GRAND.id)) return {
     granted: false,
     gifts: list
   };
-  const rewards = NEW_PLAYER_CAMPAIGN_GIFT.rewards.map(r => ({
+  const rewards = def.rewards.map(r => ({
     ...r
   }));
   (Array.isArray(extraRewards) ? extraRewards : []).forEach(extra => {
     const amount = Math.floor(Number(extra?.amount) || 0);
     if (!extra?.type || amount <= 0) return;
-    const same = rewards.find(r => r.type === extra.type);
+    const same = extra.type === 'gameItem' ? null : rewards.find(r => r.type === extra.type && !r.itemId);
     if (same) same.amount += amount;else rewards.push({
       type: extra.type,
       amount
     });
   });
   const gift = {
-    ...NEW_PLAYER_CAMPAIGN_GIFT,
+    ...def,
     source: 'campaign',
     rewards,
+    createdAt: new Date(now).toISOString(),
+    claimedAt: null
+  };
+  return {
+    granted: true,
+    gifts: [gift, ...list]
+  };
+};
+const GRAND_OPEN_ALL_GIFT_KEY = 'mh_rhythm_grand_open_gift_v1';
+const GRAND_OPEN_ALL_GIFT = Object.freeze({
+  id: 'monhiro_beat_grand_open_all_v1',
+  title: 'モンヒロビート 本オープン記念',
+  description: 'モンヒロビートの本オープンを記念して、遊んでくださっている皆さんへお贈りします。いつもありがとうございます。',
+  rewards: [{
+    type: 'diamond',
+    amount: 10000000
+  }, {
+    type: 'rainbowPsyche',
+    amount: 150
+  }, {
+    type: 'skipTicketJo',
+    amount: 3
+  }, {
+    type: 'skipTicketHa',
+    amount: 3
+  }, {
+    type: 'skipTicketKyu',
+    amount: 10
+  }, {
+    type: 'dyeMock',
+    amount: 5
+  }, {
+    type: 'gameItem',
+    itemId: 'session_ticket',
+    amount: 10
+  }, {
+    type: 'gameItem',
+    itemId: 'buddy_trait_seed',
+    amount: 3
+  }]
+});
+const grantGrandOpenAllGift = (gifts, {
+  done = false,
+  onboarded = false
+} = {}, now = Date.now()) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  if (!rhythmGrandOpenReleased() || done === true || onboarded !== true) return {
+    granted: false,
+    gifts: list
+  };
+  if (list.some(item => item?.id === GRAND_OPEN_ALL_GIFT.id || item?.id === NEW_PLAYER_CAMPAIGN_GIFT_GRAND.id)) return {
+    granted: false,
+    gifts: list
+  };
+  const gift = {
+    ...GRAND_OPEN_ALL_GIFT,
+    source: 'campaign',
+    rewards: GRAND_OPEN_ALL_GIFT.rewards.map(r => ({
+      ...r
+    })),
     createdAt: new Date(now).toISOString(),
     claimedAt: null
   };
@@ -14215,8 +14342,12 @@ const PLAYTIME_KEY = 'mh_playtime_v1';
 const PLAYTIME_TICK_MS = 15000;
 const PLAYTIME_SAVE_MS = 60000;
 const PLAYTIME_MAX_STEP_MS = 60000;
-const playtimeDayKey = (now = Date.now()) => new Date(Number(now) + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const playtimeDayKey = (now = Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
 const PLAYTIME_DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const playtimeDayOf = (savedDay, now = Date.now()) => {
+  const day = playtimeDayKey(now);
+  return savedDay === playtimeDayKey(Number(now) + 86400000) ? savedDay : day;
+};
 const playtimeDayValue = value => typeof value === 'string' && PLAYTIME_DAY_PATTERN.test(value) ? value : null;
 const playtimeSpan = value => {
   const ms = Number(value?.ms);
@@ -14240,7 +14371,7 @@ const advancePlaytime = (current, deltaMs, now = Date.now()) => {
   const base = normalizePlaytime(current);
   const delta = Number(deltaMs);
   if (!(Number.isFinite(delta) && delta > 0)) return base;
-  const day = playtimeDayKey(now);
+  const day = playtimeDayOf(base.today.day, now);
   const sameDay = base.today.day === day;
   const todayMs = (sameDay ? base.today.ms : 0) + delta;
   return {
@@ -14259,7 +14390,7 @@ const advancePlaytime = (current, deltaMs, now = Date.now()) => {
 };
 const playtimeTodayMs = (value, now = Date.now()) => {
   const base = normalizePlaytime(value);
-  return base.today.day === playtimeDayKey(now) ? base.today.ms : 0;
+  return base.today.day === playtimeDayOf(base.today.day, now) ? base.today.ms : 0;
 };
 const PLAYTIME_DEVICE_KEY = 'mhdev_playtime_device_v1';
 const PLAYTIME_DEVICE_ID_RE = /^[a-z0-9]{12,40}$/;
@@ -19226,7 +19357,7 @@ const ASSISTANT_BUBBLE_MODE_LABELS = Object.freeze([{
 }]);
 const ASSISTANT_BUBBLE_ALWAYS_SCENES = Object.freeze(['home', 'quickRhythmBackground', 'rhythmWeeklyEvent']);
 const assistantBubbleAlwaysShown = scene => !scene || ASSISTANT_BUBBLE_ALWAYS_SCENES.includes(scene) || /Intro$/.test(String(scene));
-const assistantBubbleDayKey = (now = Date.now()) => new Date(Number(now) + (9 - 5) * 3600000).toISOString().slice(0, 10);
+const assistantBubbleDayKey = (now = Date.now()) => new Date(Number(now) + (9 - 4) * 3600000).toISOString().slice(0, 10);
 const normalizeAssistantBubbleSeen = (raw, day) => raw && typeof raw === 'object' && raw.day === day && Array.isArray(raw.scenes) ? {
   day,
   scenes: raw.scenes.filter(x => typeof x === 'string').slice(0, 300)
@@ -34832,7 +34963,7 @@ const RhythmOptions = ({
     className: wide ? `mt-1 ${fxGrid}` : `mt-3 ${fxGrid}`
   }, field('ライブ背景', segments('stageEffect', RHYTHM_STAGE_EFFECT_LABELS), '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、道の両側には観客のペンライトが奥までずらりと並び、拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。いちばん重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。', {
     full: true
-  }), RHYTHM_FX_ITEMS.filter(item => item.group === 'stage').map(fxField))), fxGroupShown('road') && React.createElement("section", {
+  }), RHYTHM_FX_ITEMS.filter(item => item.group === 'stage').map(fxField), typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmGrandOpen === true && field('記念ステージ', segments('stageTheme', RHYTHM_STAGE_THEME_CHOICES), 'モンヒロビートの本オープンを記念した背景です。金色の光と紙吹雪が、いつもの背景に重なります。判定・スコアは変わりません。\n演出量「最小」と軽量モードでは、紙吹雪は止まったまま出ます。'))), fxGroupShown('road') && React.createElement("section", {
     "data-rhythm-options-group": "道",
     "data-rhythm-fx-group": "road",
     className: card
@@ -34872,7 +35003,7 @@ const RhythmOptions = ({
     className: "ml-auto text-[10px] font-bold text-slate-400"
   }, fxGroupCount('note'), "項目")), (wide || fxGroup === 'note') && React.createElement("div", {
     className: wide ? `mt-1 ${fxGrid}` : `mt-3 ${fxGrid}`
-  }, field('ノーツの動き', toggle('noteMotionFx'), 'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。'), field('にじむ光', toggle('noteBloom'), 'ノーツの光や、ノーツを取ったときの光のまわりを、ふわっとにじませます。既定は「OFF」です。判定・スコアは変わりません。\n描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効きます。「Canvas」のときは何も変わりません。\n光を小さな絵にぼかしてから重ねるので、GPU の仕事が少し増えます。端末が熱くなるときは OFF にしてください。演出量「最小」と軽量モードでは出しません。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
+  }, field('ノーツの色', segments('notePalette', RHYTHM_NOTE_PALETTE_CHOICES), 'ノーツの色の組み合わせです。既定は「標準」（これまでの色）です。判定・スコアは変わりません。\n「パステル」＝やわらかい色。「ネオン」＝くっきり光る色。「見分けやすい」＝色の見え方に左右されにくい組み合わせで、ノーツのまわりの光を出しません。\nTAP・HOLD・SLIDE・FLICK などの種類ごとに色が分かれているのは、どれを選んでも同じです。次に演奏を始めたときから変わります。'), field('ノーツの動き', toggle('noteMotionFx'), 'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。'), field('にじむ光', toggle('noteBloom'), 'ノーツの光や、ノーツを取ったときの光のまわりを、ふわっとにじませます。既定は「OFF」です。判定・スコアは変わりません。\n描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効きます。「Canvas」のときは何も変わりません。\n光を小さな絵にぼかしてから重ねるので、GPU の仕事が少し増えます。端末が熱くなるときは OFF にしてください。演出量「最小」と軽量モードでは出しません。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
     full: true
   }), RHYTHM_FX_ITEMS.filter(item => item.group === 'note').map(fxField))), fxGroupShown('judge') && React.createElement("section", {
     "data-rhythm-options-group": "判定",
@@ -35407,6 +35538,27 @@ const RhythmSongSelect = ({
     const head = rhythmSongVersionHead(entry.songId);
     return playable.filter(item => rhythmSongVersionHead(item.songId) === head).sort((a, b) => rhythmSongVersionIndex(a.songId) - rhythmSongVersionIndex(b.songId));
   };
+  const firstSongId = (() => {
+    const recs = bestRecords && typeof bestRecords === 'object' ? bestRecords : {};
+    const playedAny = Object.keys(recs).some(id => recs[id] && typeof recs[id] === 'object' && Object.keys(recs[id]).some(d => {
+      const r = rhythmBestRecord(recs, id, d);
+      return !!(r && r.played);
+    }));
+    if (playedAny) return null;
+    let pick = null;
+    for (const entry of playable) {
+      if (!entry || rhythmSongVersionHead(entry.songId) !== entry.songId || !rhythmChartPlayable(entry, 'EASY')) continue;
+      const lv = Number(entry.difficulties.EASY.level);
+      const ms = rhythmSongDurationMs(entry, difficulties);
+      if (!Number.isFinite(lv) || lv <= 0) continue;
+      if (!pick || lv < pick.lv || lv === pick.lv && ms < pick.ms) pick = {
+        id: entry.songId,
+        lv,
+        ms
+      };
+    }
+    return pick ? pick.id : null;
+  })();
   const rows = (() => {
     const out = [],
       at = new Map();
@@ -35717,7 +35869,11 @@ const RhythmSongSelect = ({
     } : {}, {
       "aria-label": "お気に入り",
       className: "ml-auto shrink-0 text-[12px] leading-none text-rose-300"
-    }), "♥"), eventSong && React.createElement("small", _extends({}, main ? {
+    }), "♥"), firstSongId && row.members.some(item => item.songId === firstSongId) && React.createElement("small", _extends({}, main ? {
+      'data-rhythm-song-first': firstSongId
+    } : {}, {
+      className: "ml-auto shrink-0 rounded-md border border-emerald-300/60 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-black text-emerald-200"
+    }), "🔰 はじめての1曲"), eventSong && React.createElement("small", _extends({}, main ? {
       'data-rhythm-song-event': entry.songId
     } : {}, {
       className: "ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200"
@@ -38925,6 +39081,15 @@ const RhythmLineAdjustPanel = ({
     className: "min-h-[40px] rounded-lg border border-white/25 bg-slate-800 px-3 text-[12px] font-black"
   }, "やめる")));
 };
+const RHYTHM_GRAND_STAGE_CONFETTI = Object.freeze(Array.from({
+  length: 48
+}, (_, k) => Object.freeze({
+  x: k * 37 % 100,
+  y: k * 53 % 90,
+  dur: 6 + k * 7 % 6,
+  delay: -(k * 13 % 11),
+  color: ['#ffd45e', '#ff9ec4', '#8fd8ff', '#ffffff', '#ffc061'][k % 5]
+})));
 const RhythmTapTest = ({
   song,
   difficulty,
@@ -38945,7 +39110,8 @@ const RhythmTapTest = ({
   onApplyCalibration = null,
   multi = false,
   multiRewardScale = 1,
-  lineAdjust = null
+  lineAdjust = null,
+  breederName = ''
 }) => {
   const tutorialProp = tutorial;
   tutorial = tutorial || !!lineAdjust;
@@ -38958,6 +39124,12 @@ const RhythmTapTest = ({
     judgmentLineHeight: lineHeightOverride
   }, [settingsIn, lineHeightOverride]);
   const settings = useMemo(() => settingsBase && settingsBase.autoEffectDown !== false ? rhythmCapEffects(settingsBase, effectCap) : settingsBase, [settingsBase, effectCap]);
+  useState(() => {
+    try {
+      if (typeof rhythmApplyNotePalette === 'function') rhythmApplyNotePalette(settingsIn?.notePalette);
+    } catch (e) {}
+    return 0;
+  });
   const settingsLiveRef = useRef(settings);
   settingsLiveRef.current = settings;
   useEffect(() => {
@@ -39291,6 +39463,7 @@ const RhythmTapTest = ({
     })));
   }), [chart.notes, monsterSignature, settings.lightweightMode, settings.effectAmount, monsterFaceHidden]);
   const [sideArtUrls, setSideArtUrls] = useState([]);
+  const partnerLineRef = useRef(null);
   useEffect(() => {
     let cancelled = false;
     const made = [];
@@ -43336,6 +43509,35 @@ const RhythmTapTest = ({
     }, "+", Number(quickRunAward.psyche).toLocaleString())), quickRunAward.shard > 0 && React.createElement("span", null, "🎖️ ", React.createElement("b", {
       className: "text-amber-200"
     }, "+", Number(quickRunAward.shard).toLocaleString())))), (() => {
+      if (tutorial || calibrating || debugPlay || multi || index < 0 || !monsters[index]) return null;
+      if (partnerLineRef.current === null) partnerLineRef.current = typeof rhythmSoloPartnerLine === 'function' ? rhythmSoloPartnerLine({
+        masu: monsters[index],
+        song,
+        diffId: difficulty?.id,
+        score: view.score,
+        fullCombo: !!result.fullCombo,
+        cleared: result.cleared !== false,
+        who: breederName
+      }) : '';
+      const line = partnerLineRef.current;
+      if (!line) return null;
+      return React.createElement("div", {
+        "data-rhythm-result-partner-line": true,
+        className: "mx-auto my-2 flex max-w-sm items-center gap-2 rounded-2xl border border-sky-300/40 bg-sky-950/40 px-3 py-2"
+      }, heroArt && React.createElement("img", {
+        src: heroArt,
+        alt: "",
+        "aria-hidden": "true",
+        className: "h-12 w-12 shrink-0 object-contain"
+      }), React.createElement("div", {
+        className: "min-w-0 flex-1"
+      }, React.createElement("small", {
+        className: "block truncate text-[10px] font-black text-sky-200"
+      }, monsters[index].name), React.createElement("p", {
+        style: JA_WRAP_STYLE,
+        className: "text-[12px] font-bold leading-snug text-white"
+      }, jaWrap(line))));
+    })(), (() => {
       if (tutorial || calibrating || debugPlay || multi || result.assist || result.cleared === false) return null;
       const before = runRef.current?.startBest;
       if (before && before.clear === true) return null;
@@ -43873,6 +44075,19 @@ const RhythmTapTest = ({
     src: stageImages.sparks[1],
     alt: "",
     draggable: false
+  }))), rhythmStageThemeActive(settings) && React.createElement("div", {
+    "data-rhythm-grand-stage": true,
+    "data-still": settings.effectAmount === 'MINIMAL' || settings.lightweightMode ? '1' : undefined,
+    "aria-hidden": "true"
+  }, React.createElement("style", null, `[data-rhythm-grand-stage]{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden;background:radial-gradient(ellipse 70% 38% at 50% 0%,rgba(255,196,64,.42),rgba(255,196,64,0) 70%),linear-gradient(180deg,rgba(255,214,102,.10),rgba(255,214,102,0) 45%)}[data-rhythm-grand-stage] i{position:absolute;top:-4%;width:1.2vmin;height:2.2vmin;border-radius:2px;opacity:.9;animation:mhGrandConfetti linear infinite}[data-rhythm-grand-stage][data-still] i{animation:none}[data-rhythm-grand-stage] b{position:absolute;left:0;right:0;top:24%;text-align:center;font:900 7vmin/1 system-ui,sans-serif;letter-spacing:.12em;color:rgba(255,220,120,.16)}@keyframes mhGrandConfetti{from{transform:translateY(0) rotate(0deg)}to{transform:translateY(110vh) rotate(540deg)}}`), React.createElement("b", null, "GRAND OPEN"), RHYTHM_GRAND_STAGE_CONFETTI.map((c, k) => React.createElement("i", {
+    key: k,
+    style: {
+      left: `${c.x}%`,
+      background: c.color,
+      animationDuration: `${c.dur}s`,
+      animationDelay: `${c.delay}s`,
+      top: settings.effectAmount === 'MINIMAL' || settings.lightweightMode ? `${c.y}%` : undefined
+    }
   }))), roadFogOn && React.createElement(React.Fragment, null, React.createElement("i", {
     "data-rhythm-road-haze": true,
     "aria-hidden": "true"
@@ -48958,7 +49173,7 @@ const rhythmBuddyInt = (v, max = 1e9) => {
 const rhythmBuddyStr = (v, max) => String(v == null ? '' : v).replace(/[\u0000-\u001f]/g, '').slice(0, max);
 const rhythmBuddyDayKey = nowMs => {
   const now = Number.isFinite(nowMs) ? nowMs : 0;
-  return new Date(now + 9 * 3600 * 1000 - 5 * 3600 * 1000).toISOString().slice(0, 10);
+  return new Date(now + 9 * 3600 * 1000 - 4 * 3600 * 1000).toISOString().slice(0, 10);
 };
 const rhythmBuddyPrevDayKey = dayKey => {
   const t = Date.parse(`${dayKey}T00:00:00Z`);
@@ -52301,6 +52516,37 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       awful: ['…{who}さん']
     }
   },
+  hMid: {
+    common: ['{who}さん、おつかれさま!', '{who}さん、いい感じだったね!', '{who}さん、もう1曲いこっか!', '{who}さん、となりで聞いてて楽しかった!'],
+    trait: {
+      jester: ['{who}さん、いいノリだったね!'],
+      brave: ['{who}さん、次はもっと上を狙おう!'],
+      clingy: ['{who}さん、となりで演奏できてうれしい〜'],
+      smart: ['{who}さん、安定していましたね'],
+      serious: ['{who}さん、おつかれさまでした'],
+      proud: ['{who}さん、まあまあね。次はもっといけるわ'],
+      worrier: ['{who}さん、最後までいけたね…よかった'],
+      stubborn: ['{who}さん、悪くない。次だ'],
+      easygoing: ['{who}さん、のんびり楽しかったね〜'],
+      fiery: ['{who}さん、まだまだ燃えられるぞ!'],
+      cool: ['{who}さん、悪くない。伸びしろはある'],
+      fickle: ['{who}さん、次はどの曲にする?'],
+      mellow: ['{who}さん、おだやかでいい演奏でした'],
+      hasty: ['{who}さん、さあ次!すぐ次!'],
+      competitive: ['{who}さん、次は自己ベスト更新だ!'],
+      showoff: ['{who}さん、見てた見てた!いい感じ!'],
+      shy: ['{who}さん…いっしょに演奏、楽しかった'],
+      hardworker: ['{who}さん、くり返せばもっと伸びます'],
+      romantic: ['{who}さん、いい音色だったね']
+    },
+    mood: {
+      great: ['{who}さん、いい感じ!!'],
+      good: ['{who}さん、ナイス!'],
+      normal: [],
+      bad: ['…{who}さん、おつかれ'],
+      awful: ['…{who}さん']
+    }
+  },
   callOut: {
     common: ['{who}さん、楽しんでる?', '{who}さん、調子はどう?', 'ねえ、{who}さん!', '{who}さん、いっしょにがんばろうね!', '{who}さん、次の曲たのしみだね!'],
     trait: {
@@ -54938,7 +55184,7 @@ const raidJackParticipated = raw => {
 };
 const raidJackDayKey = nowMs => {
   const now = Number.isFinite(nowMs) ? nowMs : 0;
-  const jst = new Date(now + 9 * 3600 * 1000 - 5 * 3600 * 1000);
+  const jst = new Date(now + 9 * 3600 * 1000 - 4 * 3600 * 1000);
   return jst.toISOString().slice(0, 10);
 };
 const raidJackDefaultState = () => ({
@@ -60162,7 +60408,7 @@ function SettingsScreen({
     className: "block text-[13px] font-black text-slate-200"
   }, "助手のひとこと"), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝5:00で戻ります)。「出さない」にしても、はじめての案内やHOMEの助手、新しい機能のお知らせは出ます。"), React.createElement("div", {
+  }, "画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、はじめての案内やHOMEの助手、新しい機能のお知らせは出ます。"), React.createElement("div", {
     className: "mt-2 grid grid-cols-3 gap-2"
   }, ASSISTANT_BUBBLE_MODE_LABELS.map(option => React.createElement("button", {
     key: option.id,
@@ -67037,7 +67283,8 @@ function MasuOfferingScreen({
       maxDiamonds: donationDiamondValue(gold)
     };
   }, [selected, gold, ownedItems, lockedIds, autoBreak]);
-  const diamondAmount = Math.min(limits.maxDiamonds, Math.max(0, parseInt(String(diamondText).replace(/[^0-9]/g, ''), 10) || 0));
+  const diamondDigits = String(diamondText).replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).split(/[.．。]/)[0].replace(/[^0-9]/g, '');
+  const diamondAmount = Math.min(limits.maxDiamonds, Math.max(0, parseInt(diamondDigits, 10) || 0));
   const amount = mode === 'diamonds' ? diamondAmount : mode === 'levels' ? Math.min(levels, Math.max(1, limits.maxLevels)) : Math.min(times, Math.max(1, limits.maxTimes));
   const plan = useMemo(() => selected ? buildMasuOffering({
     masu: selected,
@@ -67221,6 +67468,10 @@ function MasuOfferingScreen({
   }, "使うダイヤ（自由に入力できます）"), React.createElement("input", {
     type: "text",
     inputMode: "numeric",
+    pattern: "[0-9]*",
+    enterKeyHint: "done",
+    autoComplete: "off",
+    "data-offering-diamond-input": true,
     "aria-label": "お布施に使うダイヤ",
     value: diamondText === '' ? '' : diamondAmount.toLocaleString(),
     placeholder: "0",
@@ -67867,8 +68118,17 @@ function MasuSoulTraitsScreen({
     onClick: () => setSoulTraitDraftLevels(maxUpgrade),
     className: "mh-button mh-button-secondary min-h-[48px] rounded-xl bg-violet-700 text-[11px] font-black active:scale-95 disabled:opacity-30"
   }, "MAX")), React.createElement("div", {
-    className: "my-2 text-center text-[11px] font-black text-sky-200"
-  }, "今回 +", draft, "段階"), React.createElement("button", {
+    "data-soul-trait-draft-input": true,
+    className: "my-2 flex items-center justify-center gap-1.5 text-[11px] font-black text-sky-200"
+  }, "今回 +", React.createElement(CountInput, {
+    value: draft,
+    min: 0,
+    max: maxUpgrade,
+    onChange: n => setSoulTraitDraftLevels(n),
+    unit: "段階",
+    label: "上げる段階",
+    className: "w-20"
+  }), "段階"), React.createElement("button", {
     type: "button",
     "data-soul-trait-confirm": true,
     disabled: draft <= 0 || soulTraitProcessingRef.current,
@@ -68576,11 +68836,19 @@ function MasuTranscendEnhanceScreen({
     onPress: () => setWant(exchangeWant - 1),
     className: "min-h-[44px] rounded-xl bg-slate-700 text-xl font-black disabled:opacity-30"
   }, "−"), React.createElement("div", {
-    className: "text-center leading-none"
-  }, React.createElement("span", {
-    "data-transcend-exchange-want": true,
-    className: "font-mono text-3xl font-black text-white"
-  }, exchangeWant), React.createElement("span", {
+    className: "flex items-center justify-center gap-1 leading-none"
+  }, React.createElement(CountInput, {
+    value: exchangeWant,
+    min: 1,
+    max: exchangeMax,
+    onChange: setWant,
+    unit: "P",
+    label: "変換するポイント",
+    className: "w-20",
+    dataAttrs: {
+      'data-transcend-exchange-want': exchangeWant
+    }
+  }), React.createElement("span", {
     className: "text-[10px] font-bold text-slate-400"
   }, "P")), React.createElement(PressRepeatButton, {
     "aria-label": "変換するポイントを増やす",
@@ -76620,6 +76888,23 @@ function AiCopyLifeBar({
     }
   })));
 }
+function DamagePreviewChip({
+  dmg,
+  pending = false,
+  halved = false,
+  tight = false,
+  soulPct = 0,
+  as = 'span',
+  ...marks
+}) {
+  const Tag = as;
+  return React.createElement(Tag, _extends({}, marks, {
+    className: `rounded ${tight ? 'px-0.5' : 'px-1'} py-0.5 text-[8px] font-black leading-none shadow ring-1 ${pending ? 'bg-yellow-500 text-black ring-yellow-200' : 'bg-red-600 text-white ring-white/50'}`
+  }), pending && halved ? '½' : '', "攻", dmg, pending && soulPct > 0 && React.createElement("span", {
+    "data-soul-damage-preview": true,
+    className: "ml-0.5 rounded bg-sky-950/80 px-0.5 text-[7px] text-sky-100"
+  }, "魂格+", soulPct, "%"));
+}
 function AiCopyFloat({
   copy,
   src,
@@ -76630,7 +76915,8 @@ function AiCopyFloat({
   standing,
   onOpen,
   hatePct = null,
-  lift = false
+  lift = false,
+  predDmg = 0
 }) {
   if (!copy) return null;
   const name = tacticsAiCopyName(copy);
@@ -76701,7 +76987,12 @@ function AiCopyFloat({
   }), Number.isInteger(hatePct) && React.createElement("span", {
     "data-ai-copy-float-hate": hatePct,
     className: "whitespace-nowrap text-[9px] font-black tabular-nums text-rose-200"
-  }, "狙われ ", hatePct, "%")), React.createElement("span", {
+  }, "狙われ ", hatePct, "%"), standing && predDmg > 0 && React.createElement("span", {
+    className: "flex"
+  }, React.createElement(DamagePreviewChip, {
+    dmg: predDmg,
+    "data-ai-copy-damage-preview": predDmg
+  }))), React.createElement("span", {
     className: short ? 'min-w-0 flex-1 max-[399px]:basis-full' : 'flex w-full min-w-0 justify-center'
   }, next));
 }
@@ -77578,6 +77869,7 @@ function BattleScreen({
   tacticsHate,
   tacticsHateOn,
   aiCopy,
+  aiCopyPreviewDmg = 0,
   tacticsExEffectsAt,
   tacticsExEnemyEffects,
   aiCopyHitting = false,
@@ -78820,6 +79112,7 @@ function BattleScreen({
       standing: standing || phase === 'vanish',
       onOpen: aiCopy ? () => setCopyHandOpen(true) : null,
       hatePct: hc && Number.isInteger(hc.copy) ? hc.copy : null,
+      predDmg: standing && aiCopy ? aiCopyPreviewDmg : 0,
       lift: battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0)
     });
   })(), shellGaugeView?.total > 0 && React.createElement(InfernoShieldGauge, {
@@ -79989,6 +80282,8 @@ function BattleScreen({
     const tCopyOut = copyStanding || tCopyPhase === 'vanish';
     const copySrc = tCopy && tCopy.pos === i ? slots[tCopy.srcSlot] : null;
     const tCopyOnMon = !!s || !!(tCopy && tCopy.stacked);
+    const copyDmgNow = tacticsNewLayout && !tacticsCopyOutside && tCopy && tCopy.pos === i && copyStanding && aiCopy ? aiCopyPreviewDmg : 0;
+    const copySlotDmg = !tCopyOnMon ? copyDmgNow : 0;
     const tCopyHatePct = (() => {
       if (!(tCopy && tCopy.pos === i && copyStanding && tacticsHateOn && Array.isArray(tacticsHate))) return null;
       const ch = tacticsTargetChancesWithCopy(tacticsUnits, tacticsHate, TACTICS_TARGET_LOW_HP_BIAS, aiCopy);
@@ -80061,7 +80356,12 @@ function BattleScreen({
       className: "block max-w-full min-w-0 truncate text-emerald-200"
     }, tCopy.nextCard ? tCopy.nextCard.name || tCopy.nextCard.baseName || '考え中' : '考え中', React.createElement("span", {
       className: "tabular-nums text-sky-200/90"
-    }, " あと", tCopy.turnsLeft)))) : null;
+    }, " あと", tCopy.turnsLeft)), tCopyOnMon && copyDmgNow > 0 && React.createElement("span", {
+      className: "mt-px flex"
+    }, React.createElement(DamagePreviewChip, {
+      dmg: copyDmgNow,
+      "data-ai-copy-damage-preview": copyDmgNow
+    })))) : null;
     const hateFlame = Number.isInteger(hatePct) ? React.createElement("span", {
       "data-tactics-hate": i,
       "data-tactics-hate-pct": hatePct,
@@ -80238,16 +80538,21 @@ function BattleScreen({
           animation: 'tacticsHitRing 520ms ease-out 110ms forwards'
         }
       })));
-    })(), tacticsNewLayout && (previewDmg > 0 || previewGuard > 0 || slotAimHit || hateFlame) && React.createElement("div", {
+    })(), tacticsNewLayout && (previewDmg > 0 || previewGuard > 0 || copySlotDmg > 0 || slotAimHit || hateFlame) && React.createElement("div", {
       "data-tactics-slot-top-row": true,
       className: "absolute left-1 right-1.5 top-[20px] z-[63] flex h-[13px] items-center gap-1 pointer-events-none"
-    }, hateFlame, (previewDmg > 0 || previewGuard > 0) && React.createElement("div", {
+    }, hateFlame, (previewDmg > 0 || previewGuard > 0 || copySlotDmg > 0) && React.createElement("div", {
       "data-tactics-image-previews": true,
       className: "flex shrink-0 items-center gap-0.5"
-    }, previewDmg > 0 && React.createElement("span", {
-      "data-tactics-damage-preview": previewDmg,
-      className: `rounded px-1 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview ? 'bg-yellow-500 text-black ring-yellow-200' : 'bg-red-600 text-white ring-white/50'}`
-    }, isPendingPreview && isPendingHalved ? '½' : '', "攻", previewDmg), previewGuard > 0 && React.createElement("span", {
+    }, previewDmg > 0 && React.createElement(DamagePreviewChip, {
+      dmg: previewDmg,
+      pending: isPendingPreview,
+      halved: isPendingHalved,
+      "data-tactics-damage-preview": previewDmg
+    }), copySlotDmg > 0 && React.createElement(DamagePreviewChip, {
+      dmg: copySlotDmg,
+      "data-ai-copy-damage-preview": copySlotDmg
+    }), previewGuard > 0 && React.createElement("span", {
       "data-tactics-guard-preview": previewGuard,
       className: "rounded bg-emerald-600 px-1 py-0.5 text-[8px] font-black leading-none text-white shadow ring-1 ring-emerald-200"
     }, isPendingGuardHalved ? '½' : '', "守", previewGuard)), React.createElement("div", {
@@ -80516,13 +80821,15 @@ function BattleScreen({
     }, previewGuard > 0 && React.createElement("div", {
       "data-tactics-guard-preview": previewGuard,
       className: "rounded bg-emerald-500 px-0.5 py-0.5 text-[8px] font-black leading-none text-black shadow ring-1 ring-emerald-100"
-    }, isPendingGuardHalved ? '½' : '', "守", previewGuard), previewDmg > 0 && React.createElement("div", {
-      "data-tactics-damage-preview": previewDmg,
-      className: `rounded px-0.5 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview ? 'bg-yellow-500 text-black ring-yellow-200' : 'bg-red-600 text-white ring-white/50'}`
-    }, isPendingPreview && isPendingHalved ? '½' : '', "攻", previewDmg, isPendingPreview && previewSoulPct > 0 && React.createElement("span", {
-      "data-soul-damage-preview": true,
-      className: "ml-0.5 rounded bg-sky-950/80 px-0.5 text-[7px] text-sky-100"
-    }, "魂格+", previewSoulPct, "%")), slotAimHit && React.createElement("div", {
+    }, isPendingGuardHalved ? '½' : '', "守", previewGuard), previewDmg > 0 && React.createElement(DamagePreviewChip, {
+      as: "div",
+      tight: true,
+      dmg: previewDmg,
+      pending: isPendingPreview,
+      halved: isPendingHalved,
+      soulPct: previewSoulPct,
+      "data-tactics-damage-preview": previewDmg
+    }), slotAimHit && React.createElement("div", {
       "data-tactics-aimed-damage": slotAimHit.taken,
       "data-tactics-aimed-parts": slotAimHit.parts.length > 1 ? slotAimHit.parts.join('・') : undefined,
       className: "ml-auto flex flex-col items-center gap-0.5 rounded border border-red-300 bg-red-950 px-0.5 py-0.5 text-[8px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse"
@@ -82513,7 +82820,7 @@ function RhythmHistoryScreen({
     compact: true
   })), list.length === 0 ? React.createElement("p", {
     className: "rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400"
-  }, "終わった週やイベントがまだありません。", React.createElement("br", null), "週間ランキングは毎週 月曜 5:00 に切り替わります。") : React.createElement(React.Fragment, null, React.createElement("div", {
+  }, "終わった週やイベントがまだありません。", React.createElement("br", null), "週間ランキングは毎週 月曜 4:00 に切り替わります。") : React.createElement(React.Fragment, null, React.createElement("div", {
     "data-rhythm-history-tabs": true,
     className: "sticky top-0 z-10 -mx-3 bg-slate-950 px-3 pt-1"
   }, React.createElement(ScreenTabs, {
@@ -82531,7 +82838,7 @@ function RhythmHistoryScreen({
   })), shownList.length === 0 ? React.createElement("p", {
     "data-rhythm-history-empty": listTab,
     className: "rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400"
-  }, listTab === 'limited' ? '終わったイベントはまだありません。' : '終わった週はまだありません。', React.createElement("br", null), listTab === 'limited' ? 'イベントが終わると、ここに順位が残ります。' : '週間ランキングは毎週 月曜 5:00 に切り替わります。') : React.createElement("div", {
+  }, listTab === 'limited' ? '終わったイベントはまだありません。' : '終わった週はまだありません。', React.createElement("br", null), listTab === 'limited' ? 'イベントが終わると、ここに順位が残ります。' : '週間ランキングは毎週 月曜 4:00 に切り替わります。') : React.createElement("div", {
     className: "flex flex-col gap-2"
   }, shownList.map(entry => React.createElement("button", {
     key: entry.id,
@@ -89509,6 +89816,45 @@ const rhythmBuddyMasuName = masu => {
   return String(masu && masu.name || base && base.name || 'マスモン').slice(0, 12);
 };
 const rhythmBuddyTalkRecent = new Map();
+const rhythmSoloPartnerLine = ({
+  masu,
+  song,
+  diffId,
+  score = 0,
+  fullCombo = false,
+  cleared = true,
+  who = ''
+}) => {
+  if (!masu || masu.id == null || !who) return '';
+  try {
+    const brain = rhythmBuddyMakeBrain(song ? [song] : []);
+    const base = {
+      masuId: String(masu.id),
+      baseId: masu.baseId || null,
+      songId: song?.songId || '',
+      score,
+      diffId,
+      who
+    };
+    let text = cleared === false ? brain.talk({
+      ...base,
+      kind: 'hLow'
+    }) : brain.talk({
+      ...base,
+      kind: 'reactResult',
+      fc: fullCombo ? 1 : 0,
+      quit: false,
+      missRate: 0
+    });
+    if (!text && cleared !== false) text = brain.talk({
+      ...base,
+      kind: 'hMid'
+    });
+    return typeof text === 'string' ? text : '';
+  } catch (e) {
+    return '';
+  }
+};
 const rhythmBuddyMakeBrain = songs => ({
   play({
     songId,
@@ -90077,7 +90423,7 @@ function RhythmBuddyDetail({
     size: 22
   }), mood.label), React.createElement("small", {
     className: "block text-[9px] font-bold leading-snug text-slate-500"
-  }, "朝5:00に変わります。育つ早さは経験値×", rhythmBuddyMoodExpScale(mood.id, m.trait))), React.createElement("section", {
+  }, "朝4:00に変わります。育つ早さは経験値×", rhythmBuddyMoodExpScale(mood.id, m.trait))), React.createElement("section", {
     className: "rounded-xl bg-slate-950/60 p-2"
   }, React.createElement("h4", {
     className: "text-[10px] font-black text-slate-400"
@@ -98404,7 +98750,13 @@ const cardNormalizeDecks = v => {
     decks
   };
 };
-const cardNormalizeDaily = (v, today) => {
+const cardDayCarry = (saved, today) => {
+  if (typeof saved !== 'string' || typeof today !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(saved)) return today;
+  const t = Date.parse(`${today}T00:00:00Z`);
+  return Number.isFinite(t) && saved === new Date(t + 86400000).toISOString().slice(0, 10) ? saved : today;
+};
+const cardNormalizeDaily = (v, today0) => {
+  const today = cardDayCarry(cardIsPlainObject(v) ? v.day : null, today0);
   const base = {
     day: today,
     cpuPoint: 0,
@@ -98861,9 +99213,12 @@ const cardNormalizeLevelCounts = v => {
   const r = cardIsPlainObject(v) ? v : {};
   return Object.fromEntries(CARD_LEVEL_ORDER.map(lv => [lv, cardNormalizePoint(r[lv])]));
 };
-const CARD_WEEK_START_HOUR_JST = 5;
+const CARD_WEEK_START_HOUR_JST = 4;
+const CARD_WEEK_START_HOUR_JST_OLD = 5;
+const CARD_WEEK_SWITCH_MS = Date.UTC(2026, 10, 8, 19, 0, 0);
+const cardWeekStartHourAt = now => Number(now) >= CARD_WEEK_SWITCH_MS ? CARD_WEEK_START_HOUR_JST : CARD_WEEK_START_HOUR_JST_OLD;
 const cardWeekKeyJst = now => {
-  const d = new Date(Number(now) + (9 - CARD_WEEK_START_HOUR_JST) * 3600 * 1000);
+  const d = new Date(Number(now) + (9 - cardWeekStartHourAt(now)) * 3600 * 1000);
   d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7);
   return d.toISOString().slice(0, 10);
 };
@@ -104571,7 +104926,7 @@ const cardFieldArtTransform = (src, flip) => {
   const ty = (1 - (0.5 + k * (y1 - 0.5))) * 100;
   return `translate(${tx.toFixed(1)}%, ${ty.toFixed(1)}%) scale(${(flip ? -k : k).toFixed(3)}, ${k.toFixed(3)})`;
 };
-const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+const cardTodayJst = () => new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10);
 const cardCaption = c => !c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : c.kind === 'fld' ? '全体' : Number.isFinite(c.damage) ? `ダメージ${c.damage}` : '';
 const cardMonStatuses = (st, p, m) => {
   const mon = st && st.players[p] && st.players[p].mons[m];
@@ -115315,16 +115670,19 @@ const cardWeeklyRewardForPlace = place => {
   };
 };
 const cardNormalizeWeeklyClaims = v => v === null || v === undefined ? [] : Array.isArray(v) ? v.filter(x => typeof x === 'string' && x) : null;
-const cardWeekStartMs = now => Date.parse(`${cardWeekKeyJst(now)}T${String(CARD_WEEK_START_HOUR_JST).padStart(2, '0')}:00:00+09:00`);
+const cardWeekStartOfKey = key => Date.parse(`${key}T0${key >= cardWeekKeyJst(CARD_WEEK_SWITCH_MS) ? CARD_WEEK_START_HOUR_JST : CARD_WEEK_START_HOUR_JST_OLD}:00:00+09:00`);
+const cardWeekStartMs = now => cardWeekStartOfKey(cardWeekKeyJst(now));
+const cardWeekEndMs = startMs => cardWeekStartMs(startMs + CARD_WEEK_MS + 2 * 3600 * 1000);
 const cardWeeklyClaimId = weekKey => `card_weekly_${weekKey}`;
 const cardWeeksAwaitingReward = (nowMs, claims) => {
   if (!Array.isArray(claims)) return [];
   const now = Number(nowMs) || 0;
   const thisStart = cardWeekStartMs(now);
+  const prev1 = cardWeekStartMs(thisStart - 1),
+    prev2 = cardWeekStartMs(prev1 - 1);
   const out = [];
-  for (let back = 2; back >= 1; back--) {
-    const startMs = thisStart - back * CARD_WEEK_MS;
-    const endMs = startMs + CARD_WEEK_MS;
+  for (const startMs of [prev2, prev1]) {
+    const endMs = cardWeekEndMs(startMs);
     if (startMs < CARD_WEEKLY_REWARD_FROM_MS || now < endMs || now >= endMs + CARD_WEEKLY_CLAIM_MS) continue;
     const key = cardWeekKeyJst(startMs);
     const id = cardWeeklyClaimId(key);
@@ -115895,7 +116253,7 @@ const CardRankingBoard = ({
     className: chip(period === id)
   }, label)), React.createElement("small", {
     className: "ml-auto self-center text-[10px] font-bold text-slate-400"
-  }, period === 'week' ? '月曜 5:00 から' : 'フリー対戦で勝った数')), React.createElement("div", {
+  }, period === 'week' ? '月曜 4:00 から' : 'フリー対戦で勝った数')), React.createElement("div", {
     className: "grid grid-cols-5 gap-1"
   }, CARD_LEVEL_ORDER.map(lv => React.createElement("button", {
     key: lv,
@@ -116117,9 +116475,10 @@ const cardRecordDetailAfter = (d0, {
         turns: d.wins.turns + t,
         fastest: t > 0 ? d.wins.fastest ? Math.min(d.wins.fastest, t) : t : d.wins.fastest
       };
+      const dayKey = cardDayCarry(d.day.key, today);
       d.day = {
-        key: today,
-        win: (d.day.key === today ? d.day.win : 0) + 1
+        key: dayKey,
+        win: (d.day.key === dayKey ? d.day.win : 0) + 1
       };
     } else if (outcome === 'surrender') {
       f.surrender += 1;
@@ -124201,10 +124560,11 @@ const cardLevelAfter = (prev, {
   kind,
   level,
   outcome,
-  today,
+  today: today0,
   auto = false
 }) => {
   const cur = cardNormalizeLevel(prev);
+  const today = cardDayCarry(cur.day, today0);
   const lv0 = cardLevelInfo(cur.xp).level;
   const base = auto ? Math.floor(cardLevelXpOf({
     kind,
@@ -124514,8 +124874,9 @@ const cardTacticsAutoOf = async (db, deck) => {
 };
 const CARD_AUTO_REWARD_KEY = 'mh_card_auto_reward_v1';
 const CARD_AUTO_REWARD_DAY_MAX = 3;
-const cardAutoRewardNormalize = (raw, today) => {
+const cardAutoRewardNormalize = (raw, today0) => {
   const day = raw && typeof raw === 'object' && typeof raw.day === 'string' ? raw.day : '';
+  const today = cardDayCarry(day, today0);
   const n = raw && Number.isInteger(raw.n) && raw.n >= 0 && raw.n < 10000 ? raw.n : 0;
   return {
     day: today,
@@ -124531,7 +124892,7 @@ const cardAutoRewardLoad = async () => {
   const c = cardAutoRewardNormalize(raw, today);
   return {
     raw,
-    today,
+    today: c.day,
     n: c.n,
     left: Math.max(0, CARD_AUTO_REWARD_DAY_MAX - c.n)
   };
@@ -133098,6 +133459,50 @@ function MonsterHeroGame() {
       costC
     };
   };
+  const aiCopyPredictedDmg = copy => {
+    if (!copy || !EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isAiCopyOut(copy, turnCount)) return 0;
+    const picks = Array.isArray(copy.picks) ? copy.picks : [];
+    if (!picks.length) return 0;
+    if (isTacticsMode(runMode)) {
+      if (!isTacticsAiCopyStanding(copy) || copy.plannedTurn !== turnCount) return 0;
+      const tools = tacticsAiCopyTools(copy, enemyDist);
+      if (!tools) return 0;
+      let gutsC = Math.max(0, Number(copy.guts) || 0),
+        total = 0;
+      picks.forEach(card => {
+        const cost = Math.max(0, Number(tools.costC(card)) || 0);
+        if (cost > gutsC) return;
+        gutsC -= cost;
+        if (tools.isGuardC(card)) return;
+        const d = tools.dmgOf(card);
+        if (d > 0) total += d;
+      });
+      return total;
+    }
+    const srcMon = slots[copy.srcSlot];
+    if (!srcMon) return 0;
+    const dmgScale = atk > 0 ? Math.max(1e-6, Math.max(0, Number(copy.atk) || 0) / atk) : 1e-6;
+    let left = Math.max(0, Number(copy.guts) || 0),
+      total = 0;
+    let run = {
+      ...previewLocalBoosts(null).final
+    };
+    picks.forEach(card => {
+      const cost = Math.max(0, Number(card?.guts ?? card?.cost) || 0);
+      if (!card || cost > left) return;
+      left -= cost;
+      if (card.type === 'guard' || card.type === 'weak_guard') return;
+      const b = boostsForCardDamage(run, card, false);
+      if (isAttackCard(card)) total += getAttackPredictedDmg(card, srcMon, getDmg(card, copy.srcSlot, srcMon, b.oryo, b.dmgMod, false, enemyDist, dmgScale), b.combo, copy.srcSlot, false);
+      const boost = localBoostFromCard(card);
+      if (boost) run = {
+        oryo: run.oryo + (boost.oryo || 0),
+        dmgMod: run.dmgMod + (boost.dmgMod || 0),
+        combo: run.combo + (boost.combo || 0)
+      };
+    });
+    return total;
+  };
   const planTacticsAiCopy = turn => {
     const copy = aiCopyRef.current;
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isTacticsMode(runMode) || !isTacticsAiCopyStanding(copy) || !isAiCopyOut(copy, turn)) return null;
@@ -133504,7 +133909,7 @@ function MonsterHeroGame() {
   const grantBeatRankForResult = async (result, play) => {
     try {
       const raw = await storeGet(BEAT_RANK_KEY, null, false);
-      const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+      const today = jstDayCarry(normalizeBeatRank(raw).day, jstDayKey4());
       const gain = beatRankAfter(raw, {
         difficultyId: play && play.difficulty && play.difficulty.id,
         cleared: result?.cleared !== false,
@@ -136677,7 +137082,7 @@ function MonsterHeroGame() {
   const PANDORA_WINGS_STORY_IDS = PANDORA_WINGS_STORIES.map(story => story.id);
   const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
   const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
@@ -136958,6 +137363,15 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(CARD_CUP_STORY_ID)) return;
     setRhythmEventStoryPending(prev => prev || CARD_CUP_STORY_ID);
   }, [cardBattleIntroSeenLoaded, cardBattleIntroSeenFlag, rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
+    const open = RELEASE_FLAGS.rhythmGrandOpen === true;
+    const id = open ? RHYTHM_GRAND_OPEN_STORY_ID : RELEASE_FLAGS.rhythmGrandOpenTeaser === true ? RHYTHM_GRAND_OPEN_TEASER_STORY_ID : null;
+    if (!id) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(id)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(id)) return;
+    setRhythmEventStoryPending(prev => prev || id);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (typeof setSorashidoJoinSeenForShop === 'function') setSorashidoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID));
   }, [rhythmEventStorySeen]);
@@ -138349,7 +138763,16 @@ function MonsterHeroGame() {
       try {
         currentPlayerId = window.localStorage.getItem('mh_player_id') || '';
       } catch {}
-      const playerCompensationGrant = grantPlayerCompensationGifts(compensationGrant.gifts, currentPlayerId);
+      const playerCompensationGrant0 = grantPlayerCompensationGifts(compensationGrant.gifts, currentPlayerId);
+      const grandOpenAllDone = await storeGet(GRAND_OPEN_ALL_GIFT_KEY, false, false);
+      const grandOpenGrant = grantGrandOpenAllGift(playerCompensationGrant0.gifts, {
+        done: grandOpenAllDone,
+        onboarded: compensationEverPlayed
+      });
+      const playerCompensationGrant = grandOpenGrant.granted ? {
+        granted: true,
+        gifts: grandOpenGrant.gifts
+      } : playerCompensationGrant0;
       const prunedGifts = pruneGiftHistory(playerCompensationGrant.gifts);
       setGifts(prunedGifts);
       await storeSet('mh_login_bonus', loginGrant.loginBonus, false);
@@ -138357,6 +138780,7 @@ function MonsterHeroGame() {
       if (loginGrant.granted || compensationGrant.granted || playerCompensationGrant.granted || prunedGifts.length !== playerCompensationGrant.gifts.length) {
         await storeSet('mh_gifts', prunedGifts, false);
       }
+      if (grandOpenGrant.granted) await storeSet(GRAND_OPEN_ALL_GIFT_KEY, true, false);
       if (loginGrant.granted) setLoginBonusPopup({
         day: loginGrant.day,
         rewards: loginGrant.gift.rewards
@@ -139113,6 +139537,7 @@ function MonsterHeroGame() {
             setGifts(grant.gifts);
           }
           await storeSet(NEW_PLAYER_CAMPAIGN_KEY, true, false);
+          if (RHYTHM_GRAND_OPEN_RELEASE) await storeSet(GRAND_OPEN_ALL_GIFT_KEY, true, false);
         }
       } catch {}
     }
@@ -140064,6 +140489,8 @@ function MonsterHeroGame() {
     sorashidoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID),
     erubinJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ERUBIN_JOIN_STORY_ID),
     cardCupStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(CARD_CUP_STORY_ID),
+    rhythmGrandOpenTeaserSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_GRAND_OPEN_TEASER_STORY_ID),
+    rhythmGrandOpenSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_GRAND_OPEN_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -144523,8 +144950,8 @@ function MonsterHeroGame() {
         dailyMasuAdviceCheckedRef.current = false;
         return;
       }
-      const today = localCalendarDate();
       const shownDate = await storeGet(DAILY_MASU_ADVICE_KEY, '', false);
+      const today = jstDayCarry(shownDate, jstDayKey4());
       if (cancelled || masuMons.length >= 8 || shownDate === today) return;
       await storeSet(DAILY_MASU_ADVICE_KEY, today, false);
       const quickClearTotal = Object.values(quickClearCounts || {}).reduce((sum, n) => sum + (Number.isFinite(n) ? n : 0), 0);
@@ -158565,6 +158992,7 @@ function MonsterHeroGame() {
       difficulty: rhythmPlay.difficulty,
       settings: rhythmPlay.from === 'multi' ? rhythmMultiPlaySettings : rhythmSettings,
       monsterEntries: rhythmMonsterNoteEntries,
+      breederName: breederName,
       multi: rhythmPlay.from === 'multi',
       multiRewardScale: rhythmPlay.from === 'multi' ? rhythmMultiTotalScale(rhythmPlay.multiCount, rhythmPlay.multiStreak, rhythmPlay.multiCpus) : 1,
       bestRecord: rhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id),
@@ -164036,6 +164464,7 @@ function MonsterHeroGame() {
       tacticsHate: tacticsHate,
       tacticsHateOn: tacticsHateOnFor(runMode),
       aiCopy: EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? aiCopy : null,
+      aiCopyPreviewDmg: EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? aiCopyPredictedDmg(aiCopy) : 0,
       aiCopyHitting: !!(attackAnim && aiCopyHitRef.current && !isTacticsMode(runMode)),
       tacticsCoverSlot: tacticsExEnabled ? tacticsExCoverSlot(tacticsExState, tacticsUnits, tacticsExNow) : null,
       guts: guts,

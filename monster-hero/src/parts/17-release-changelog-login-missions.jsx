@@ -70,6 +70,17 @@ const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = true;
 // ビートPはSTEP4で正式公開。獲得はこのフラグに加えて期間限定イベント開催中だけに限定し、
 // 常設の交換所・ヘルプ・更新履歴・助手告知を同じタイミングで公開する。
 const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
+// モンヒロビート本オープン(2026-11-07 社長「本オープンに記念は差し替えたい」「とりあえずまずは全て準備できてから」)。
+// 真にすると、同時に次が切り替わる(偽のあいだは今までどおりプレオープン記念のまま):
+//   ・新しく始める人へのプレゼント → 「モンヒロビート本オープン記念」(大盛り)。NEW_PLAYER_CAMPAIGN_GIFT_GRAND
+//   ・すでに遊んでいる人全員へ1回だけ「本オープン記念ギフト」(ダイヤ1,000万ほか)。GRAND_OPEN_ALL_GIFT
+//   ・ヘルプの新規キャンペーンの話題・更新履歴(releaseFlag:'rhythmGrandOpen')
+// 社長が「本オープン」と言うまで偽のまま
+const RHYTHM_GRAND_OPEN_RELEASE = false;
+// 本オープンの予告(2026-11-07 社長「ホームで流してから本オープン。その前に予告の告知あり」)。
+// 真にすると、予告の更新情報・助手の告知・HOME で1回だけ流す予告のお話(rhythm_grand_open_teaser)が出る。
+// 本オープン(上)を真にしたあとは、予告のお話は HOME では流さない(回想には残る)。日にちが決まって社長が「予告を出す」と言うまで偽
+const RHYTHM_GRAND_OPEN_TEASER_RELEASE = false;
 // ★tacticsBattle は「β公開のあいだも開く枠」。ヘルプは、β版で遊べる人にも要る
 //   (tactics は本公開だけ。両方を1つのフラグにすると、本公開前の告知まで出てしまう)
 // ★rhythmHell … 難易度 HELL(空中のノーツ SKY TAP・SKY SLIDE)。社長の OK まで偽(HISTORY 10/11 02:05「HELL はデバッグで色々見てから」)。
@@ -121,7 +132,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   //   数字は 32-tactics-units.jsx の TACTICS_HATE / MONSTER_TYPES。お話「タクティクスバトル ～4人のタイプ～」(tactics_types)もこの印で出る
   tacticsHate: true,
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
-  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
+  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmGrandOpen:RHYTHM_GRAND_OPEN_RELEASE, rhythmGrandOpenTeaser:RHYTHM_GRAND_OPEN_TEASER_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
@@ -395,6 +406,19 @@ const LOGIN_BONUS_DEFAULT = { currentDay:1, lastGrantedPeriod:null, totalLoginDa
 // 日本時間へ直した後に4時間戻した暦日を期間キーにする。03:59と04:00は別の日、
 // 04:00から翌03:59までは同じ日として扱える、比較・保存しやすい YYYY-MM-DD 形式。
 const loginBonusPeriodKey = (now=Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+// ---------- ゲームの「今日」(日本時間・朝4時区切り) ----------
+// 2026-11-07 社長「てかぜんぶ4時に統一して」。1日で数える物は、これで「今日」を決める(loginBonusPeriodKey と同じ値)。
+//   jstDayKey4(now) … 'YYYY-MM-DD'。04:00 から翌03:59 までが同じ日
+//   jstDayCarry(saved, today) … 切り替えの夜の持ち越し。前は0時区切りだった物は、0:00〜4:00 に「次の日」の日付で保存されている。
+//     保存された日がちょうど today の次の日なら、その日を今日として扱う(受け取り済みのまま・書くときもその日付のまま)。
+//     4:00 になると today がその日に追いつくので、二重取りも取り逃しも起きない。それ以外は today
+//   ★どちらもキーの名前・形は変えない。区切り方の検査は tools/boot/day-boundary-check.js
+const jstDayKey4 = (now=Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const jstDayCarry = (saved, today) => {
+  if (typeof saved !== 'string' || typeof today !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(saved)) return today;
+  const t = Date.parse(`${today}T00:00:00Z`);
+  return Number.isFinite(t) && saved === new Date(t + 86400000).toISOString().slice(0, 10) ? saved : today;
+};
 // ---------- どの助手と一緒に遊ぶか ----------
 // 助手は「みゅあ」「きき」から選ぶ。どちらも最初から解放されていて、解放条件は無い。
 //
@@ -455,6 +479,10 @@ const HELP_PLAYER_FLAGS = { legendBreederPass: false };
 const helpPlayerFlagOn = (name) => !!name && HELP_PLAYER_FLAGS[name] === true;
 // 個人杯のお話(2026-10-31)。id は data/assistants.js の EVENT_REPLAYS・CARD_CUP_STORY_ID_FOR_SPLIT と同じ
 const CARD_CUP_STORY_ID = 'card_cup_2026_10_31';
+// モンヒロビート本オープンの予告のお話と、本オープンのお話(2026-11-07)。id は data/assistants.js の EVENT_REPLAYS と同じ。
+// 見たかは、ほかのイベントのお話と同じく mh_rhythm_event_story_v1 の id の並びに足す(新しいキーは作らない)
+const RHYTHM_GRAND_OPEN_TEASER_STORY_ID = 'rhythm_grand_open_teaser';
+const RHYTHM_GRAND_OPEN_STORY_ID = 'rhythm_grand_open';
 // ソラシドの加入のお話を見終えたら、沖縄のおみやげとして 10,000ビートPをギフトで1回だけ届ける(2026-10-27 社長)。
 // ★届けたかは新しいキー mh_sorashido_gift_v1 に持つ(ギフトの一覧は古いものから消えるので、それだけでは二重を防げない・CLAUDE.md ⑦)。
 // ★イベント回想で見直しても届かない(見た印は最初の1回だけ立ち、届けた印もある)
@@ -853,26 +881,80 @@ const NEW_PLAYER_CAMPAIGN_GIFT = Object.freeze({
     { type:'rainbowPsyche', amount:100 },
   ],
 });
+// 本オープン記念(2026-11-07 社長「大盛り」)。RHYTHM_GRAND_OPEN_RELEASE が真のあいだ、上の代わりに配る。
+// 配らなかったお詫び(ダイヤ1,000・スキップ序2/破2/急7・染色もどき5)を足した合計が
+// ダイヤ150,000・虹のプシュケー150・スキップ序3/破3/急10・セッション券10・性格のたね3・染色もどき5 になるようにしてある。
+// 配った印(NEW_PLAYER_CAMPAIGN_KEY)は同じものを使う(プレオープン記念をもらった人には届かない)
+const NEW_PLAYER_CAMPAIGN_GIFT_GRAND = Object.freeze({
+  id: 'monhiro_beat_grand_open_new_player_v1',
+  title: 'モンヒロビート 本オープン記念',
+  description: '新規プレイヤーキャンペーンのプレゼントです。モンヒロビートの本オープンを記念して、はじめた方へお贈りします。',
+  rewards: [
+    { type:'diamond', amount:149000 },
+    { type:'rainbowPsyche', amount:150 },
+    { type:'skipTicketJo', amount:1 },
+    { type:'skipTicketHa', amount:1 },
+    { type:'skipTicketKyu', amount:3 },
+    { type:'gameItem', itemId:'session_ticket', amount:10 },
+    { type:'gameItem', itemId:'buddy_trait_seed', amount:3 },
+  ],
+});
+// 本オープンの印を読む。検査はこのあたりだけを切り出して動かすので、印が見えなくても落ちないよう typeof で守る(見えなければ偽)
+const rhythmGrandOpenReleased = () => typeof RHYTHM_GRAND_OPEN_RELEASE !== 'undefined' && RHYTHM_GRAND_OPEN_RELEASE === true;
+const newPlayerCampaignGiftDef = () => (rhythmGrandOpenReleased() ? NEW_PLAYER_CAMPAIGN_GIFT_GRAND : NEW_PLAYER_CAMPAIGN_GIFT);
 // ギフト一覧へ1件足す。すでに同じidがあれば何もしない(何度呼んでも増えない)
 // extraRewards … 配らなかったお詫びの合計(waivedCompensationRewards)。同じ種類は数を足し、新しい種類は並べる
 const grantNewPlayerCampaignGift = (gifts, now=Date.now(), extraRewards=[]) => {
   const list = Array.isArray(gifts) ? gifts : [];
   if (!NEW_PLAYER_CAMPAIGN_ENABLED) return { granted:false, gifts:list };
-  if (list.some(item => item?.id === NEW_PLAYER_CAMPAIGN_GIFT.id)) return { granted:false, gifts:list };
-  const rewards = NEW_PLAYER_CAMPAIGN_GIFT.rewards.map(r=>({...r}));
+  const def = newPlayerCampaignGiftDef();
+  // プレオープン記念と本オープン記念のどちらかが届いていれば、もう足さない
+  if (list.some(item => item?.id === NEW_PLAYER_CAMPAIGN_GIFT.id || item?.id === NEW_PLAYER_CAMPAIGN_GIFT_GRAND.id)) return { granted:false, gifts:list };
+  const rewards = def.rewards.map(r=>({...r}));
   (Array.isArray(extraRewards) ? extraRewards : []).forEach(extra => {
     const amount = Math.floor(Number(extra?.amount) || 0);
     if (!extra?.type || amount <= 0) return;
-    const same = rewards.find(r => r.type === extra.type);
+    // アイテムをidで持つ報酬(gameItem)には足さない(お詫びに gameItem は無いが、混ざらないように)
+    const same = extra.type === 'gameItem' ? null : rewards.find(r => r.type === extra.type && !r.itemId);
     if (same) same.amount += amount; else rewards.push({ type:extra.type, amount });
   });
   const gift = {
-    ...NEW_PLAYER_CAMPAIGN_GIFT,
+    ...def,
     source: 'campaign',
     rewards,
     createdAt: new Date(now).toISOString(),
     claimedAt: null,
   };
+  return { granted:true, gifts:[gift, ...list] };
+};
+
+// ===== 本オープン記念ギフト(すでに遊んでいる人全員へ1回だけ・2026-11-07 社長「推奨でダイヤは1000万」) =====
+// RHYTHM_GRAND_OPEN_RELEASE が真になってから、起動したときに1回だけギフトボックスへ足す。
+// 【二重に配らない】新しいキー GRAND_OPEN_ALL_GIFT_KEY と、ギフト側の同じidの両方を見る(idは固定)。
+// 【新しく始めた人には配らない】本オープン記念の新規プレゼントを配ったときに、同じキーを立てる(新規の大盛りと重ねない)。
+// 【受取期限なし】受け取りそこねると取り返しがつかないので expiresAt を書かない
+const GRAND_OPEN_ALL_GIFT_KEY = 'mh_rhythm_grand_open_gift_v1';
+const GRAND_OPEN_ALL_GIFT = Object.freeze({
+  id: 'monhiro_beat_grand_open_all_v1',
+  title: 'モンヒロビート 本オープン記念',
+  description: 'モンヒロビートの本オープンを記念して、遊んでくださっている皆さんへお贈りします。いつもありがとうございます。',
+  rewards: [
+    { type:'diamond', amount:10000000 },
+    { type:'rainbowPsyche', amount:150 },
+    { type:'skipTicketJo', amount:3 },
+    { type:'skipTicketHa', amount:3 },
+    { type:'skipTicketKyu', amount:10 },
+    { type:'dyeMock', amount:5 },
+    { type:'gameItem', itemId:'session_ticket', amount:10 },
+    { type:'gameItem', itemId:'buddy_trait_seed', amount:3 },
+  ],
+});
+// 配るか(戻り値 { granted, gifts })。done は GRAND_OPEN_ALL_GIFT_KEY の値。onboarded は はじめての設定を終えているか
+const grantGrandOpenAllGift = (gifts, { done = false, onboarded = false } = {}, now = Date.now()) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  if (!rhythmGrandOpenReleased() || done === true || onboarded !== true) return { granted:false, gifts:list };
+  if (list.some(item => item?.id === GRAND_OPEN_ALL_GIFT.id || item?.id === NEW_PLAYER_CAMPAIGN_GIFT_GRAND.id)) return { granted:false, gifts:list };
+  const gift = { ...GRAND_OPEN_ALL_GIFT, source:'campaign', rewards:GRAND_OPEN_ALL_GIFT.rewards.map(r=>({...r})), createdAt:new Date(now).toISOString(), claimedAt:null };
   return { granted:true, gifts:[gift, ...list] };
 };
 
@@ -1016,8 +1098,11 @@ const PLAYTIME_KEY = 'mh_playtime_v1';
 const PLAYTIME_TICK_MS = 15000;        // 数える間隔
 const PLAYTIME_SAVE_MS = 60000;        // 保存する間隔(数えるたびに保存すると書き込みが多すぎる)
 const PLAYTIME_MAX_STEP_MS = 60000;    // 1回で足してよい上限。スリープ復帰などで飛んだぶんは数えない
-const playtimeDayKey = (now=Date.now()) => new Date(Number(now)+9*60*60*1000).toISOString().slice(0,10);
+// 日の区切りは朝4時(jstDayKey4 と同じ。2026-11-07 から。前は0時)。切り出して検査されるので式はここに持つ
+const playtimeDayKey = (now=Date.now()) => new Date(Number(now)+5*60*60*1000).toISOString().slice(0,10);
 const PLAYTIME_DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+// 切り替えの夜の持ち越し(jstDayCarry と同じ)。0時区切りのころに0:00〜4:00で書いた「次の日」が残っていれば、その日のまま数える(遊んだ日数を二重に足さない)
+const playtimeDayOf = (savedDay, now=Date.now()) => { const day = playtimeDayKey(now); return savedDay === playtimeDayKey(Number(now) + 86400000) ? savedDay : day; };
 const playtimeDayValue = (value) => typeof value === 'string' && PLAYTIME_DAY_PATTERN.test(value) ? value : null;
 const playtimeSpan = (value) => {
   const ms = Number(value?.ms);
@@ -1043,7 +1128,7 @@ const advancePlaytime = (current, deltaMs, now=Date.now()) => {
   const base = normalizePlaytime(current);
   const delta = Number(deltaMs);
   if (!(Number.isFinite(delta) && delta > 0)) return base;
-  const day = playtimeDayKey(now);
+  const day = playtimeDayOf(base.today.day, now);
   const sameDay = base.today.day === day;
   const todayMs = (sameDay ? base.today.ms : 0) + delta;
   return {
@@ -1059,7 +1144,7 @@ const advancePlaytime = (current, deltaMs, now=Date.now()) => {
 // (プロフィールを開いた時点ではまだ加算が走っていないことがあるため)
 const playtimeTodayMs = (value, now=Date.now()) => {
   const base = normalizePlaytime(value);
-  return base.today.day === playtimeDayKey(now) ? base.today.ms : 0;
+  return base.today.day === playtimeDayOf(base.today.day, now) ? base.today.ms : 0;
 };
 // --- 端末ごとのプレイ時間(2026-10-06) ---
 // ユーザー報告「プレイ時間が短くなるバグ」。プレイ時間(mh_playtime_v1)は端末の中だけで数え、

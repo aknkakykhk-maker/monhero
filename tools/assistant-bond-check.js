@@ -157,17 +157,18 @@ check('仕様どおりの行動がそろっている', WANTED_ACTIONS.every(k =>
 
 // --- 獲得量と1日上限が指定どおりか(1つずつ突き合わせる) ---
 // ここを表で持っておくと、あとから誰かが1行だけ書き換えたときに必ず落ちる
+// 2026-11-07 社長「助手の親密度は既存のものも数値上げて」→ どれも1回の量・1日の上限を2倍
 const WANT_AMOUNTS = {
-  login: [10, 10], battle: [6, 30], challenge: [4, 20], quick: [2, 12], pro: [4, 20],
-  ranking: [2, 6], temple: [2, 8], mission: [4, 16], gift: [2, 8], market: [2, 6],
-  talk: [2, 10], management: [2, 8], fusion: [4, 12], breakthrough: [4, 12],
-  reincarnate: [4, 12], regenerate: [2, 6], donate: [4, 12], enhance: [2, 12],
-  dye: [2, 6], partySet: [2, 6], extreme: [6, 18], clear: [4, 16],
-  quickClear: [2, 12], proClear: [4, 16], extremeClear: [8, 24],
+  login: [20, 20], battle: [12, 60], challenge: [8, 40], quick: [4, 24], pro: [8, 40],
+  ranking: [4, 12], temple: [4, 16], mission: [8, 32], gift: [4, 16], market: [4, 12],
+  talk: [4, 20], management: [4, 16], fusion: [8, 24], breakthrough: [8, 24],
+  reincarnate: [8, 24], regenerate: [4, 12], donate: [8, 24], enhance: [4, 24],
+  dye: [4, 12], partySet: [4, 12], extreme: [12, 36], clear: [8, 32],
+  quickClear: [4, 24], proClear: [8, 32], extremeClear: [16, 48],
   // 助手のアシストカード専用
-  assistantCardEquip: [4, 20], assistantCardUse: [6, 24],
+  assistantCardEquip: [8, 40], assistantCardUse: [12, 48],
   // 助手とおしゃべり(2026-10-14・社長の決定「1往復 +2、1日 +20 まで」。今の増え方とは別枠)
-  chat: [2, 20],
+  chat: [4, 40],
   // 助手どうし(2026-11-07・社長「助手の親密度を上げる何かがもっとほしい」。掛け合いに出た2人それぞれへ入る。公開の印 assistantPeer)
   peerTalk: [2, 10], peerChoice: [5, 15], peerDaily: [20, 20],
   peerGift: [30, 30], peerToken: [25, 25], peerPlay: [6, 24],
@@ -179,14 +180,14 @@ const wrongAmounts = Object.entries(WANT_AMOUNTS)
 check('すべての行動の獲得量と1日上限が指定どおり', wrongAmounts.length === 0, wrongAmounts.join(' 、 '));
 check('表にない行動が増えていない',
   Object.keys(actions).every(k => WANT_AMOUNTS[k]), Object.keys(actions).filter(k => !WANT_AMOUNTS[k]).join(', '));
-// 既存行動だけの理論上限(=カード分を足す前の値)。仕様の318と一致すること
+// 既存行動だけの理論上限(=カード分を足す前の値)。仕様の318の2倍(2026-11-07)の636と一致すること
 const LEGACY_KEYS = Object.keys(WANT_AMOUNTS).filter(k => !k.startsWith('assistantCard') && k !== 'chat' && !PEER_KEYS.includes(k));
 const legacySum = LEGACY_KEYS.reduce((a, k) => a + actions[k].dailyMax, 0);
-check('既存行動だけの1日理論上限は318', legacySum === 318, `${legacySum}`);
+check('既存行動だけの1日理論上限は636(318の2倍)', legacySum === 636, `${legacySum}`);
 const peerSum = PEER_KEYS.reduce((a, k) => a + actions[k].dailyMax, 0);
 check('カード分・おしゃべり分・助手どうし分を足した理論上限が全体の上限と一致する(手入力していない)',
   A.ASSISTANT_BOND_DAILY_MAX === legacySum + actions.assistantCardEquip.dailyMax + actions.assistantCardUse.dailyMax + actions.chat.dailyMax + peerSum,
-  `${A.ASSISTANT_BOND_DAILY_MAX} / 318+20+24+20+${peerSum}=${legacySum + 64 + peerSum}`);
+  `${A.ASSISTANT_BOND_DAILY_MAX} / 636+40+48+40+${peerSum}=${legacySum + 128 + peerSum}`);
 // Lvアップに必要な累積量は変えていない(増やしたのは1回の獲得量だけ)。
 // 獲得量をいじるときにここまで一緒に動かすと、既存プレイヤーのLvが勝手に変わってしまう
 // 2026-10-21 社長「助手レベルの上限もそろそろ上げて」で Lv30 まで。Lv20 までの数は変えていない(前と同じ)。

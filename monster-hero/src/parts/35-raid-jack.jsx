@@ -281,10 +281,10 @@ const raidJackParticipated = (raw) => {
   return !!(st.a.day || st.b.day || st.b.total > 0 || st.a.defeated.length || st.b.defeated.length || st.claimed.length || st.pending.length);
 };
 
-// 毎日5:00(JST)で回数が戻る。日付キー = 5時間引いたJSTの日付。
+// 毎日4:00(JST)で回数が戻る。日付キー = 4時間引いたJSTの日付(jstDayKey4 と同じ。2026-11-07 に5:00からそろえた)
 const raidJackDayKey = (nowMs) => {
   const now = Number.isFinite(nowMs) ? nowMs : 0;
-  const jst = new Date(now + 9 * 3600 * 1000 - 5 * 3600 * 1000);
+  const jst = new Date(now + 9 * 3600 * 1000 - 4 * 3600 * 1000);
   return jst.toISOString().slice(0, 10);
 };
 

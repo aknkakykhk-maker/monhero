@@ -781,7 +781,7 @@ const ASSISTANT_BOND_LEVELS = [
   { level:19, need:11650, title:'唯一の理解者',       call:'{name}ちん', tone:'いちばんの理解者として接する' },
   { level:20, need:12800, title:'永遠の相棒',         call:'{name}ちん', tone:'永遠の相棒。いちばん自然体な話し方' },
   // Lv21〜30(2026-10-21 社長「助手レベルの上限もそろそろ上げて」)。need は Lv20 までの伸び方
-  // (1段ごとに必要な量が +50 ずつ広がる)をそのまま続けた。Lv20→30 は 14,250。毎日しっかり遊んで(1日160ほど)約3か月
+  // (1段ごとに必要な量が +50 ずつ広がる)をそのまま続けた。Lv20→30 は 14,250。毎日しっかり遊んで(1日160ほど)約3か月(2026-11-07 に増え方を2倍にしたので、いまは1日320ほど・約1か月半)
   { level:21, need:14000, title:'終わらない冒険',     call:'{name}ちん', tone:'Lv20の先へ。これからの冒険の話もする' },
   { level:22, need:15250, title:'背中を預けあう仲',   call:'{name}ちん', tone:'お互いに背中を任せられる、頼もしい話し方' },
   { level:23, need:16550, title:'心のよりどころ',     call:'{name}ちん', tone:'へこんだ日も、顔を見ると元気が出る相手' },
@@ -1229,40 +1229,41 @@ const assistantSpeak = (text, name, level, customCall, assistantId) =>
 // 放置しても減らない(久しぶりに開いた人が冷たくされないため)。
 //   amount   … 1回で増える量
 //   dailyMax … その行動で1日に増やせる上限
+// 2026-11-07 社長「助手の親密度は既存のものも数値上げて」→ どの行動も、1回の量と1日の上限をどちらも2倍にした(保存の形・必要な量は変えない)
 const ASSISTANT_BOND_ACTIONS = {
-  login:     { amount:10, dailyMax:10, label:'ログイン' },
-  battle:    { amount:6, dailyMax:30, label:'バトルを遊ぶ' },
-  challenge: { amount:4, dailyMax:20, label:'チャレンジモード' },
-  quick:     { amount:2, dailyMax:12, label:'クイックモード' },
-  pro:       { amount:4, dailyMax:20, label:'プロモード' },
-  ranking:   { amount:2, dailyMax:6,  label:'ランキングを見る' },
-  temple:    { amount:2, dailyMax:8,  label:'神殿を使う' },
-  mission:   { amount:4, dailyMax:16, label:'ミッション達成' },
-  gift:      { amount:2, dailyMax:8,  label:'ギフトを受け取る' },
-  market:    { amount:2, dailyMax:6,  label:'マーケットを見る' },
-  talk:      { amount:2, dailyMax:10, label:'みゅあと話す' },
-  management:  { amount:2, dailyMax:8,  label:'M/B管理を見る' },
-  fusion:      { amount:4, dailyMax:12, label:'合体する' },
-  breakthrough:{ amount:4, dailyMax:12, label:'限界突破する' },
-  reincarnate: { amount:4, dailyMax:12, label:'転生する' },
-  regenerate:  { amount:2, dailyMax:6,  label:'再生する' },
-  donate:      { amount:4, dailyMax:12, label:'寄付する' },
-  enhance:     { amount:2, dailyMax:12, label:'マスモンを強化する' },
-  dye:         { amount:2, dailyMax:6,  label:'染色する' },
-  partySet:    { amount:2, dailyMax:6,  label:'編成を保存する' },
-  extreme:      { amount:6, dailyMax:18, label:'極限チャレンジに挑む' },
-  clear:        { amount:4, dailyMax:16, label:'チャレンジモードをクリア' },
-  quickClear:   { amount:2, dailyMax:12, label:'クイックモードをクリア' },
-  proClear:     { amount:4, dailyMax:16, label:'プロモードをクリア' },
-  extremeClear: { amount:8, dailyMax:24, label:'極限チャレンジをクリア' },
+  login:     { amount:20, dailyMax:20, label:'ログイン' },
+  battle:    { amount:12, dailyMax:60, label:'バトルを遊ぶ' },
+  challenge: { amount:8, dailyMax:40, label:'チャレンジモード' },
+  quick:     { amount:4, dailyMax:24, label:'クイックモード' },
+  pro:       { amount:8, dailyMax:40, label:'プロモード' },
+  ranking:   { amount:4, dailyMax:12,  label:'ランキングを見る' },
+  temple:    { amount:4, dailyMax:16,  label:'神殿を使う' },
+  mission:   { amount:8, dailyMax:32, label:'ミッション達成' },
+  gift:      { amount:4, dailyMax:16,  label:'ギフトを受け取る' },
+  market:    { amount:4, dailyMax:12,  label:'マーケットを見る' },
+  talk:      { amount:4, dailyMax:20, label:'みゅあと話す' },
+  management:  { amount:4, dailyMax:16,  label:'M/B管理を見る' },
+  fusion:      { amount:8, dailyMax:24, label:'合体する' },
+  breakthrough:{ amount:8, dailyMax:24, label:'限界突破する' },
+  reincarnate: { amount:8, dailyMax:24, label:'転生する' },
+  regenerate:  { amount:4, dailyMax:12,  label:'再生する' },
+  donate:      { amount:8, dailyMax:24, label:'寄付する' },
+  enhance:     { amount:4, dailyMax:24, label:'マスモンを強化する' },
+  dye:         { amount:4, dailyMax:12,  label:'染色する' },
+  partySet:    { amount:4, dailyMax:12,  label:'編成を保存する' },
+  extreme:      { amount:12, dailyMax:36, label:'極限チャレンジに挑む' },
+  clear:        { amount:8, dailyMax:32, label:'チャレンジモードをクリア' },
+  quickClear:   { amount:4, dailyMax:24, label:'クイックモードをクリア' },
+  proClear:     { amount:8, dailyMax:32, label:'プロモードをクリア' },
+  extremeClear: { amount:16, dailyMax:48, label:'極限チャレンジをクリア' },
   // 助手のアシストカード(みゅあ・きき)だけの行動。
   // ここだけは「いま選んでいる助手」ではなく、そのカード本人の仲良し度が増える。
   // 編成を保存しただけでは増えない(付け外しでは稼げず、実際にバトルを始めた時だけ数える)
-  assistantCardEquip: { amount:4, dailyMax:20, label:'助手のカードを編成して挑む' },
-  assistantCardUse:   { amount:6, dailyMax:24, label:'助手のカードをバトルで使う' },
-  // 助手とおしゃべり(2026-10-14・社長の決定「1往復 +2、1日 +20 まで」)。返事が来た1往復だけ数え、
+  assistantCardEquip: { amount:8, dailyMax:40, label:'助手のカードを編成して挑む' },
+  assistantCardUse:   { amount:12, dailyMax:48, label:'助手のカードをバトルで使う' },
+  // 助手とおしゃべり(2026-10-14・社長の決定「1往復 +2、1日 +20 まで」→ 2026-11-07 に2倍で +4・1日 +40)。返事が来た1往復だけ数え、
   // 話した相手の助手へ入る(いま選んでいる助手と同じ)。公開の印が立つまではヘルプの表にも出さない
-  chat: { amount:2, dailyMax:20, label:'助手とおしゃべりする', releaseFlag:'assistantChat' },
+  chat: { amount:4, dailyMax:40, label:'助手とおしゃべりする', releaseFlag:'assistantChat' },
   // 助手どうし(2026-11-07 社長「助手の親密度を上げる何かがもっとほしい」)。掛け合いに出てきた2人それぞれの仲良し度が増える。
   //   公開の印 assistantPeer の後ろ(56-assistant-peer.jsx が assistantPeerAddPlayerBond で入れる)
   peerTalk:   { amount:2,  dailyMax:10, label:'助手どうしの掛け合いを見る', releaseFlag:'assistantPeer' },
@@ -11048,7 +11049,7 @@ const ASSISTANT_RAID_JACK_HOWTO = [
   { who:'kiki',     e:'normal',   t:'挑むときは、段階を選んで、勇者モン・供モン(3体まで)・アシカを選んで、編成して始めまつ。' },
   { who:'dra',      e:'normal',   t:'1回の挑戦は20ターン。そのあいだにジャックへダメージを与えるんだ' },
   { who:'mua',      e:'troubled', t:'20ターンかぁ。短いようで長いね' },
-  { who:'momosuke', e:'normal',   t:'挑戦は1日3回まで無料。毎朝5:00に回復するよ。レイドバトルとグランドスラムは、別々に数えるの' },
+  { who:'momosuke', e:'normal',   t:'挑戦は1日3回まで無料。毎朝4:00に回復するよ。レイドバトルとグランドスラムは、別々に数えるの' },
   { who:'kiki',     e:'surprise', t:'足りないときは、ビートPで1回300Pずつ追加できまつ。1日に買える回数に上限はありませんよ。' },
   { who:'momosuke', e:'wink',     t:'モンビーでビートPをいっぱい貯めておけば、何回でも挑めちゃうね♡' },
   { who:'dra',      e:'troubled', t:'ただし気をつけろ。始めた時点で1回使う。途中でやめても、アプリを閉じても、回数は戻らないぞ' },
@@ -11162,7 +11163,7 @@ const ASSISTANT_CHAT_STORY = [
   { who:'momosuke', e:'happy',    t:'モンビーのことも、バトルのことも、ももに聞いていいよ♡ ……ま、ただのおしゃべりでもいいけど？' },
   { who:'dra',      e:'normal',   t:'話すたびに、ちょっとずつ仲良くなれるんだ。前に話したことも、少しは覚えといてやる' },
   { who:'mua',      e:'troubled', t:'あ、でもね！ 名前とか住所とか電話番号みたいな大事なことは、書いちゃだめだよ' },
-  { who:'kiki',     e:'normal',   t:'鈴を鳴らせるのは1日100回まででつ。朝5時に、また鳴らせるようになりまつ。' },
+  { who:'kiki',     e:'normal',   t:'鈴を鳴らせるのは1日100回まででつ。朝4時に、また鳴らせるようになりまつ。' },
   { who:'momosuke', e:'normal',   t:'みんなでいっぱい鳴らしすぎた日は、鈴が早めに疲れちゃうんだって。そしたら、また明日ね♡' },
   { who:'dra',      e:'happy',    t:'HOMEで、おでたちの吹き出しの下にある「💬 おしゃべり」を押してみろ' },
   { who:'mua',      e:'excited',  t:'いま選んでる助手が待ってるからね！ さっそく話しかけてみて〜！' },
@@ -11520,7 +11521,7 @@ const ASSISTANT_ERUBIN_JOIN_STORY = [
   { who:'erubin',   e:'happy',    outfit:'sekiyuou', t:'持ってないよ笑 ……それ、絶対これからも聞かれるやつだよね' },
   { who:'dra',      e:'happy',    atsu:'with',    t:'ビンビン、ラクダは？ ラクダは何頭いるんだ？' },
   { who:'erubin',   e:'troubled', outfit:'sekiyuou', atsu:'with', t:'ドラちゃんまでw さっき追いかけられたばっかりだって' },
-  { who:'kyuko',    e:'happy',    t:'ほい、えるニキ、はじめまして〜。あとでおごってくれるんでしょぉ？ 笑' },
+  { who:'kyuko',    e:'happy',    t:'ほい、えるニキ、はじめまして〜。もう呼び名決めちゃったけど、いいよねぇ？ 笑' },
   { who:'erubin',   e:'troubled', outfit:'sekiyuou', t:'きゅうこちゃん、まだ会って1分だよね？ 笑' },
   { who:'sorashido', e:'excited', t:'うぉぉぉ、本物の石油王はじめて見た！ えるさん、写真いい！？' },
   { who:'erubin',   e:'happy',    outfit:'sekiyuou', t:'だから本物じゃないって笑 ……まぁ、写真くらいならいいよ、ソラくん' },
@@ -11642,6 +11643,70 @@ const ASSISTANT_CARD_CUP_STORY = [
 ];
 const ASSISTANT_CARD_CUP_STORY_CALLS = { mua: 'ひめちん／もも／あつくん', kiki: 'みゅあちん／ももさん／あっくん', momosuke: 'みゅあねぇ／きゅうちゃん', dra: 'あっくん／ソラシド', kyuko: 'ももすけ／きゅうこちゃん', sorashido: 'きゅうこちゃん', atsu: 'きゅうこちゃん' };
 
+// ---------- モンヒロビート本オープン(2026-11-07 社長「本オープン用のストーリーも必要」) ----------
+// 予告のお話(短い)と、本オープンのお話(ふりかえり → お祝い → ギフト案内)。助手8人全員が出る。
+// 予告は RELEASE_FLAGS.rhythmGrandOpenTeaser、本編は RELEASE_FLAGS.rhythmGrandOpen で出る(どちらも社長が決めるまで偽)。
+// あつの行は atsu:'with'(あつを解放した人だけ)。ほかの7人は公開ずみなので印なし。
+// BGM は2本とも「風がそよぐ場所」(EVENT_BGM_SCENES の rhythmGrandOpenEvent)。本編は③のクラッカーから Rising Hope へ替える(2026-11-07 社長「切り替え案」)
+// ギフトの中身を変えたら、本編の④の行も直す(GRAND_OPEN_ALL_GIFT・17-release-changelog-login-missions.jsx)
+const ASSISTANT_RHYTHM_GRAND_OPEN_TEASER = [
+  { who:'mua',       e:'excited',  bg:'monhero_plaza', t:'みんなー！ まぢでビッグニュースあるんだけど！' },
+  { who:'kiki',      e:'surprise', t:'あれま、みゅあちん。そんなに慌てて、どうしたんでつか？' },
+  { who:'mua',       e:'happy',    t:'モンビーがね、もうすぐ本オープンするんだって！ｗ' },
+  { who:'dra',       e:'surprise', t:'本オープン……？ ふむ。おでたち、もうずっと遊んでるぞ' },
+  { who:'kiki',      e:'happy',    t:'今まではプレオープンだったんでつ。モンヒロビートが、いよいよ本番になるんでつよ♪♪' },
+  { who:'momosuke',  e:'excited',  t:'えー！！ モンビート、本番になったらもっとすごくなるってこと！？♡' },
+  { who:'atsu',      e:'excited',  atsu:'with', t:'まじで！？ てか、それお祝いするしかなくない？ 笑' },
+  { who:'kyuko',     e:'happy',    t:'ほい、お祝いいいねぇ〜。俺、当日の段取り考えとくよぉ笑' },
+  { who:'sorashido', e:'excited',  t:'うぉぉぉ、本オープン！ 飾りつけの数の計算なら任せてくれだぜ・・・！' },
+  { who:'erubin',    e:'happy',    t:'いいねー！ 俺も手伝うよ。何から始めよっか' },
+  { who:'mua',       e:'wink',     t:'それは当日までのひみつ〜。ぜったい楽しみにしててね！' },
+  { who:'kiki',      e:'happy',    t:'くわしいことは、更新情報でお知らせしまつ。みなさん、お楽しみに〜♪♪' },
+];
+const ASSISTANT_RHYTHM_GRAND_OPEN_TEASER_CALLS = { kiki: 'みゅあちん' };
+const ASSISTANT_RHYTHM_GRAND_OPEN_STORY = [
+  // ---- ① 本オープンの朝。広場の飾りつけ ----
+  { who:'mua',       e:'excited',  bg:'monhero_plaza', fxText:'広場いっぱいに、風船と旗が飾られている', t:'みんな、準備できた〜！？ 今日はまぢで特別な日ぢゃん！' },
+  { who:'kiki',      e:'happy',    t:'はいでつ！ 今日は、モンヒロビートの本オープンの日でつ♪♪' },
+  { who:'dra',       e:'happy',    t:'えへへ、おで、ちょっと早起きしたからな。飾りつけ、がんばったぞ' },
+  { who:'erubin',    e:'happy',    t:'ドラちゃん、朝からずっと風船ふくらませてたもんね笑 さすがだよー' },
+  { who:'sorashido', e:'excited',  t:'うぉぉぉ、風船ぜんぶで88個！ 俺、ちゃんと数えたぜ・・・！' },
+  { who:'kyuko',     e:'troubled', t:'ばこちゃん、数えるとこそこぉ？ 笑 ほい、はやく始めよ〜' },
+  // ---- ② ふりかえり ----
+  { who:'mua',       e:'normal',   t:'でもさ、プレオープンから、いろんなことあったよね〜' },
+  { who:'kiki',      e:'happy',    t:'はじめは、曲も難易度も今よりずっと少なかったんでつよね。なつかしいでつ (*´ω`*)' },
+  { who:'momosuke',  e:'excited',  t:'ももは、モンビートの大会がいちばんの思い出！！ みんなで順位を見て、ドキドキしたよね♡' },
+  { who:'dra',       e:'normal',   t:'ふむ。おでは、難易度HELLだな。……指がつるかと思ったからな' },
+  { who:'mua',       e:'happy',    t:'あとさー、みんなで対戦できるようになったのも、まぢアツかったｗ' },
+  { who:'kyuko',     e:'happy',    t:'ハロウィンの夜もさぁ、みんなでジャックに挑んだよねぇ笑' },
+  { who:'atsu',      e:'excited',  atsu:'with', t:'てか、マスモンと一緒にセッションできるの、まじでエモくない？ 笑' },
+  { who:'sorashido', e:'happy',    t:'俺は途中から来たけど、みんなの記録を見てるだけで楽しいよなー☺️' },
+  { who:'erubin',    e:'happy',    t:'俺なんて、来たのはついこのあいだだからね。これから、いっぱい教えてね' },
+  { who:'kiki',      e:'happy',    t:'それもこれも、遊んでくれたみなさんのおかげでつ。ほんとうに、ありがとうございまつ♪♪' },
+  // ---- ③ お祝い ----
+  { who:'mua',       e:'excited',  fx:'transform', bgm:'melo_rising_hope', fxText:'パーン！ クラッカーの音が、広場にひびいた', t:'せーのっ……モンヒロビート、本オープン、おめでとーーー！！' },
+  { who:'momosuke',  e:'excited',  t:'おめでとう！！ もも、今日からもっともっと叩くよ〜♡' },
+  { who:'dra',       e:'excited',  t:'おめでとうだ！ おで、ケーキも用意したからな' },
+  { who:'kyuko',     e:'surprise', t:'えっ、ケーキぃ！？ ドラちゃん、それ先に言ってよぉ〜笑' },
+  { who:'atsu',      e:'happy',    atsu:'with', t:'ケーキあるなら、もう勝ち確じゃん 笑' },
+  { who:'sorashido', e:'excited',  t:'切り分けなら任せてくれだぜ・・・！ 角度まで、きっちり計算するからよ笑' },
+  { who:'erubin',    e:'happy',    t:'さすがソラくん笑 じゃあ俺、みんなの飲みもの用意してくるねー' },
+  // ---- ④ ギフト案内 ----
+  { who:'kiki',      e:'normal',   t:'それから、みなさんに大事なお知らせがありまつ' },
+  { who:'kiki',      e:'happy',    t:'本オープンを記念して、ギフトボックスにプレゼントを入れておきまちた♪♪' },
+  { who:'mua',       e:'excited',  t:'しかもさ、ダイヤ1,000万個！ まぢでやばくない！？ｗ' },
+  { who:'dra',       e:'surprise', t:'いっせんまん……。おで、指が足りないぞ' },
+  { who:'sorashido', e:'excited',  t:'うぉぉぉ、1日1,000個ずつ使っても、27年以上かかるぜ・・・！' },
+  { who:'erubin',    e:'happy',    t:'計算はやいね笑 ほかにも、虹のプシュケーやスキップチケットも入ってるよ' },
+  { who:'momosuke',  e:'excited',  t:'セッション券と性格のたねもある！！ もも、マスモンの性格えらび、がんばっちゃお〜♡' },
+  { who:'kyuko',     e:'happy',    t:'ほい、受け取りの期限はないってさぁ。あわてなくて大丈夫だよぉ笑' },
+  { who:'kiki',      e:'happy',    t:'おひとりさま1回、ギフトボックスから受け取れまつ。これから始めるみなさんにも、記念のプレゼントがありまつよ♪♪' },
+  { who:'atsu',      e:'wink',     atsu:'with', t:'みんな、まじでありがと！ これからもよろしくね 笑' },
+  { who:'mua',       e:'wink',     t:'これからもモンビー、いっぱい遊んでね！ あたしたち、まぢで待ってるから！' },
+  { who:'kiki',      e:'happy',    t:'モンヒロビートを、これからもよろしくお願いしまつ♪♪' },
+];
+const ASSISTANT_RHYTHM_GRAND_OPEN_STORY_CALLS = { erubin: 'ドラちゃん／ソラくん', kyuko: 'ばこちゃん／ドラちゃん' };
+
 // ===== イベント「鍵の向こう側へ ～パンドラとふたつの翼～」(2026-11-02〜11-09)のお話 =====
 // 第1話「鎖の箱」(社長の「この文で」2026-11-02)。開始の 11/2 12:00 に開幕のお話として HOME で1回流れ、そのあとは回想から見返せる。
 // 出る時刻・話の一覧は data/rhythm-event.js の PANDORA_WINGS_STORIES。BGM は Rebellion(13-bgm の pandoraWingsStoryEvent)。
@@ -11703,7 +11768,7 @@ const PANDORA_WINGS_EP2 = [
   { who:'kyuko',    e:'normal',   t:'行くって言ったからね。約束は守らないと' },
   { who:'mua',      e:'excited',  t:'あたし、お菓子持ってきた！ 歌のお礼！' },
   { who:'dra',      e:'happy',    t:'おでは毛布を持ってきたぞ。箱の中、寒いかもしれないからな' },
-  { who:'kiki',     e:'normal',   t:'わたくしは図鑑を持ってきまちた。何かわかるかもしれないでつ。' },
+  { who:'kiki',     e:'normal',   t:'私は図鑑を持ってきまちた。何かわかるかもしれないでつ。' },
   { who:'atsu',     e:'happy',    atsu:'with',    t:'みんな準備いいね笑 じゃ、行こっか' },
   { who:'mua',      e:'happy',    atsu:'without', t:'みんな準備ばっちりだね〜。じゃ、行こっか！' },
   // ---- 箱の前 ----
@@ -11782,7 +11847,7 @@ const PANDORA_WINGS_EP4 = [
   { bg:'monhero_plaza_evening', who:'kyuko',    e:'normal',   t:'……ってわけで。パンドラ、おしゃれが好きなんだって' },
   { who:'mua',      e:'excited',  t:'え、それ早く言ってよ〜！ あたしの出番ぢゃん！' },
   { who:'momosuke', e:'excited',  t:'もももも！ ももも出番！ かわいいの、いっぱい持ってるもん♡' },
-  { who:'kiki',     e:'happy',    t:'わたくしも、リボンなら少しありまつ。' },
+  { who:'kiki',     e:'happy',    t:'私も、リボンなら少しありまつ。' },
   { who:'dra',      e:'normal',   t:'おではおしゃれはわからん。……荷物持ちならできるぞ' },
   { who:'momosuke', e:'troubled', t:'この前、ももたち、パンドラちゃんにひどいこと言っちゃったでしょ。だから、ちゃんとあやまって、それから……' },
   { who:'mua',      e:'normal',   t:'「どっちも似合う」って、ちゃんと伝えたいよね' },
@@ -11878,7 +11943,7 @@ const PANDORA_WINGS_EP6 = [
   { who:'dra',      e:'happy',    atsu:'without', t:'おでが前に立って、テンポを引っぱる。こういうのは、慣れてるやつがやるもんだ' },
   { who:'momosuke', e:'excited',  t:'ももも、いっぱい叩く！ 指が痛くなっても叩く！' },
   { who:'sorashido', e:'happy',   t:'じゃあ俺は三線で入るよ。音、重ねたほうが届くっしょ' },
-  { who:'kiki',     e:'normal',   t:'わたくしは……' },
+  { who:'kiki',     e:'normal',   t:'私は……' },
   { who:'kiki',     e:'normal',   t:'……パンドラさんに聞こえるように、いちばん前で、名前を呼びまつ。' },
   { who:'mua',      e:'excited',  t:'{name}も、手伝ってくれる？ いっしょに、叩こう！' },
   { who:'kyuko',    e:'normal',   t:'……待ってて、パンドラ。明日、迎えにくるから' },
@@ -12050,6 +12115,10 @@ const EVENT_REPLAYS = [
   { id: 'pandora_wings_2026_ep7', date: '2026-11-08 04:00', title: '鍵の向こう側へ 第7話 ～私と私で～', script: PANDORA_WINGS_EP7, calls: PANDORA_WINGS_EP7_CALLS, unlockedKey: 'pandoraWingsEp7Seen', group: 'pandora_wings' },
   // 終章(2026-11-09 4:00)。閉幕のお話として流れる(60-app.jsx の RHYTHM_EVENT_THANKS_STORY_BY_EVENT)
   { id: 'pandora_wings_2026_ep8', date: '2026-11-09 04:00', title: '鍵の向こう側へ 第8話・終章 ～鍵の向こう側へ～', script: PANDORA_WINGS_EP8, calls: PANDORA_WINGS_EP8_CALLS, unlockedKey: 'pandoraWingsEp8Seen', group: 'pandora_wings' },
+  // モンヒロビート本オープン(2026-11-07)。予告は rhythmGrandOpenTeaser、本編は rhythmGrandOpen の印が真になるまで回想にも出さない。
+  //   date は公開の日が決まったら合わせる。見たかは mh_rhythm_event_story_v1 の id
+  { id: 'rhythm_grand_open_teaser', date: '2026-11-07 12:00', title: 'もうすぐ本オープン！ ～モンヒロビート～', script: ASSISTANT_RHYTHM_GRAND_OPEN_TEASER, calls: ASSISTANT_RHYTHM_GRAND_OPEN_TEASER_CALLS, unlockedKey: 'rhythmGrandOpenTeaserSeen', releaseFlag: 'rhythmGrandOpenTeaser', group: 'update' },
+  { id: 'rhythm_grand_open', date: '2026-11-07 12:01', title: 'モンヒロビート、本オープン！ ～8人のお祝い～', script: ASSISTANT_RHYTHM_GRAND_OPEN_STORY, calls: ASSISTANT_RHYTHM_GRAND_OPEN_STORY_CALLS, unlockedKey: 'rhythmGrandOpenSeen', releaseFlag: 'rhythmGrandOpen', group: 'update' },
   { id: 'card_cup_2026_10_31', date: '2026-10-31 12:00', title: 'みゅあ杯、はじまるよ！ ～個人杯～', script: ASSISTANT_CARD_CUP_STORY, calls: ASSISTANT_CARD_CUP_STORY_CALLS, unlockedKey: 'cardCupStorySeen', releaseFlag: 'cardCup', hideUntilFirstLine: ['atsu'], group: 'update' },
   { id: 'raid_jack_howto_2026_10_04', date: '2026-10-04 08:02', title: 'カボチャの大王ジャック ～レイドの遊び方～', script: ASSISTANT_RAID_JACK_HOWTO, calls: ASSISTANT_RAID_JACK_HOWTO_CALLS, unlockedKey: 'raidJackHowtoSeen', releaseFlag: 'raidJack', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, group: 'halloween' },
 ];

@@ -108,7 +108,10 @@ check('予測は保留中のカードを枚数に数えない', pendingGuards >=
 check('スロット予測も保留中のカードを除く', has('selectedCards.forEach(idx=>{ if(idx===pendingIdx) return; pendingCounter.take(hand[idx],cardAssignments[idx]!=null?cardAssignments[idx]:null); });'));
 check('保留カードの判定にドラッグ中の手札位置も使う', has('dragState.cardIndex:null'));
 // ★枠は87pxしかないので、2026-09-23に「DMG:」から「攻」へ縮めた(重なりを無くすため)
-check('半減マークは保留カード自身の判定で出す', has("{isPendingPreview&&isPendingHalved?'½':''}攻"));
+// 2026-11-06 「攻N」の札は味方とAIコピーで同じ部品(DamagePreviewChip)になった。部品の中の式と、味方の枠2か所(新しい盤面・古い盤面)が
+//   保留カード自身の判定(isPendingPreview・isPendingHalved)を渡していることを見る
+check('半減マークは保留カード自身の判定で出す', has("{pending && halved ? '½' : ''}攻")
+  && (source.match(/<DamagePreviewChip[^>]*pending=\{isPendingPreview\} halved=\{isPendingHalved\}/g) || []).length >= 2);
 
 // ガードの見え方
 check('ガードの合計軽減を表示する', has('合計軽減')

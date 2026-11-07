@@ -122,7 +122,7 @@ const oneByOne = (list, ids, gold, lockedIds = []) => {
     short.ok && short.total === 2 && short.done.length === 1 && short.done[0].count === 2 && short.outOfGold && short.stoppedId === 'p4'
     && short.nextGold === 0 && same(short.nextMasuMons, two.mons), JSON.stringify({ total:short.total, stop:short.stoppedId }));
   check('回数を2回選んでも同じ子は1人ぶん', buildMasuReincarnationMulti({ masuMons:pool, ids:['p4', 'p4'], gold:big, times:2 }).total === 2);
-  check('回数のおかしな値(0・負・文字)は1回、50回より多い値は50回までにそろう',
+  check('回数のおかしな値(0・負・文字)は1回、大きい値は続けられる回数まで(2026-11-07 画面の上限50回を外した)',
     buildMasuReincarnationMulti({ masuMons:pool, ids:['p4'], gold:big, times:0 }).total === 1
     && buildMasuReincarnationMulti({ masuMons:pool, ids:['p4'], gold:big, times:-3 }).total === 1
     && buildMasuReincarnationMulti({ masuMons:pool, ids:['p4'], gold:big, times:'abc' }).total === 1

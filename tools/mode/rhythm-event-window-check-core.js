@@ -41,7 +41,7 @@ check('公開曲の一覧を抽出できる',!!demoIds);
 const context={console};
 vm.createContext(context);
 vm.runInContext(`${demoIds}\n${eventData}\n`
-  +'this.out={RHYTHM_WEEK_MS,RHYTHM_WEEK_ANCHOR_MS,RHYTHM_EVENTS,RHYTHM_DEMO_SONG_IDS,'
+  +'this.out={RHYTHM_WEEK_MS,RHYTHM_WEEK_ANCHOR_MS,RHYTHM_WEEK_SWITCH_MS,rhythmWeekEndMs,rhythmWeeksAwaitingReward,RHYTHM_EVENTS,RHYTHM_DEMO_SONG_IDS,'
   +'rhythmWeekStartMs,rhythmWeekWindow,rhythmWeekId,rhythmWeeklyEvent,rhythmLimitedEventAt,'
   +'rhythmEventWindow,rhythmEventRemainingText,rhythmEventDivisions,rhythmEventDivisionSongId,rhythmEventSong,'
   +'rhythmEventPeriodText,rhythmEventSongsLabel,rhythmEventBanner,rhythmEventDivisionReward,rhythmEventRewardForRank,rhythmEventHasRewards,'
@@ -65,17 +65,39 @@ const jstParts=(ms)=>{
     const now=O.RHYTHM_WEEK_ANCHOR_MS-30*24*3600*1000+i*3600*1000;
     const start=O.rhythmWeekStartMs(now);
     const p=jstParts(start);
-    if(p.weekday!==1||p.hour!==5||p.minute!==0||p.second!==0){ok=false;sample=new Date(start).toISOString();break;}
-    if(!(start<=now&&now<start+O.RHYTHM_WEEK_MS)){ok=false;sample=`窓の外: ${new Date(now).toISOString()}`;break;}
+    // 2026-11-09 04:00(RHYTHM_WEEK_SWITCH_MS)から月曜4:00、それより前の週は月曜5:00
+    const hour=start>=O.RHYTHM_WEEK_SWITCH_MS?4:5;
+    if(p.weekday!==1||p.hour!==hour||p.minute!==0||p.second!==0){ok=false;sample=new Date(start).toISOString();break;}
+    if(!(start<=now&&now<O.rhythmWeekWindow(now).endMs)){ok=false;sample=`窓の外: ${new Date(now).toISOString()}`;break;}
   }
-  check('週の始まりは必ず月曜 5:00 JST',ok,sample||'1年ぶん(8880時点)を確認');
+  check('週の始まりは必ず月曜 4:00 JST(切り替えより前は 5:00)',ok,sample||'1年ぶん(8880時点)を確認');
 }
-check('週の長さは7日',O.RHYTHM_WEEK_MS===7*24*3600*1000
-  &&O.rhythmWeekWindow(Date.now()).endMs-O.rhythmWeekWindow(Date.now()).startMs===7*24*3600*1000);
+check('週の長さは7日(切り替えの週だけ1時間短い)',O.RHYTHM_WEEK_MS===7*24*3600*1000
+  &&O.rhythmWeekWindow(Date.now()).endMs-O.rhythmWeekWindow(Date.now()).startMs===(O.rhythmWeekWindow(Date.now()).startMs<O.RHYTHM_WEEK_SWITCH_MS?7*24*3600*1000-3600*1000:7*24*3600*1000));
 {
-  // 境界そのもの。月曜5:00の1ミリ秒前は前の週、ちょうどは新しい週
+  // 切り替え(2026-11-07 社長「ぜんぶ4時に統一」→ 週は次の週から)。今週の名前は変えず、二重の週・抜けた時間を作らない
+  const sw=O.RHYTHM_WEEK_SWITCH_MS, H=3600*1000;
+  check('切り替えの日時は 2026-11-09(月)4:00 JST',new Date(sw).toISOString()==='2026-11-08T19:00:00.000Z');
+  const before=O.rhythmWeekWindow(sw-1), after=O.rhythmWeekWindow(sw);
+  check('切り替えの週は 11/2 5:00 〜 11/9 4:00(週の名前は weekly_2026_11_02 のまま)',
+    new Date(before.startMs).toISOString()==='2026-11-01T20:00:00.000Z'&&before.endMs===sw&&O.rhythmWeekId(sw-1)==='weekly_2026_11_02'&&O.rhythmWeekId(Date.UTC(2026,10,2,0))==='weekly_2026_11_02');
+  check('11/9 4:00 から次の週(weekly_2026_11_09・7日)',after.startMs===sw&&after.endMs===sw+O.RHYTHM_WEEK_MS&&O.rhythmWeekId(sw)==='weekly_2026_11_09'&&O.rhythmWeekId(sw+H/2)==='weekly_2026_11_09');
+  // 切り替えの前後12週を1分も抜かさず・重ねずにつながっている
+  let t=O.rhythmWeekStartMs(sw-6*O.RHYTHM_WEEK_MS), okChain=true, ids=new Set();
+  for(let k=0;k<12;k++){const w=O.rhythmWeekWindow(t);if(w.startMs!==t||O.rhythmWeekWindow(w.endMs-1).startMs!==t||ids.has(O.rhythmWeekId(t))){okChain=false;break;}ids.add(O.rhythmWeekId(t));t=w.endMs;}
+  check('週が抜けも重なりもなくつながる(切り替えの前後12週)',okChain&&ids.size===12,[...ids].join(' '));
+  // 週間報酬: 切り替えのあとに、切り替えの週と、その前の週を1回ずつだけ数える
+  const aw=O.rhythmWeeksAwaitingReward(sw+H,[]);
+  check('切り替えのあと、終わった週の報酬は前の2週(11/2 の週・10/26 の週)を1回ずつ',
+    aw.length===2&&aw.map(w=>w.id).join(',')==='weekly_2026_10_26,weekly_2026_11_02'&&aw[1].endMs===sw&&aw[0].endMs===before.startMs,
+    aw.map(w=>`${w.id}:${new Date(w.startMs).toISOString()}〜${new Date(w.endMs).toISOString()}`).join(' / '));
+  const aw2=O.rhythmWeeksAwaitingReward(sw+O.RHYTHM_WEEK_MS+H,[]);
+  check('その次の週も、切り替えの週を正しい期間で数える',aw2.map(w=>w.id).join(',')==='weekly_2026_11_02,weekly_2026_11_09'&&aw2[0].startMs===before.startMs&&aw2[0].endMs===sw);
+}
+{
+  // 境界そのもの(切り替えより前の週)。月曜5:00の1ミリ秒前は前の週、ちょうどは新しい週
   const start=O.RHYTHM_WEEK_ANCHOR_MS;
-  check('月曜5:00ちょうどで次の週へ入る',
+  check('月曜5:00ちょうどで次の週へ入る(切り替えより前)',
     O.rhythmWeekStartMs(start)===start&&O.rhythmWeekStartMs(start-1)===start-O.RHYTHM_WEEK_MS);
 }
 check('壊れた値でも落ちない',
@@ -365,7 +387,7 @@ check('期間の文を出し分ける',(()=>{
   //   先週のまま残っているのかが画面から分からなかった。
   //   期間が取れないときだけ、これまでどおりの文へ倒す
   if(!/^今週 \d+\/\d+\([日月火水木金土]\) \d+:\d\d 〜 \d+\/\d+\([日月火水木金土]\) \d+:\d\d$/.test(weekText))return false;
-  if(O.rhythmEventPeriodText(week,null)!=='毎週 月曜 5:00 に切り替わります')return false;
+  if(O.rhythmEventPeriodText(week,null)!=='毎週 月曜 4:00 に切り替わります')return false;
   return limited.every(e=>{
     const text=O.rhythmEventPeriodText(e,O.rhythmEventWindow(e,null));
     return /\d+\/\d+\([日月火水木金土]\) \d+:\d\d 〜 \d+\/\d+\([日月火水木金土]\) \d+:\d\d/.test(text);
@@ -586,7 +608,7 @@ check('公開したら助手のひとことも週間に触れる',(()=>{
 
 // 案内(CLAUDE.md ⑤)
 check('ヘルプに週間とイベントの説明がある',
-  help.includes("title:'「週間」タブ'")&&help.includes('毎週月曜 5:00')
+  help.includes("title:'「週間」タブ'")&&help.includes('毎週月曜 4:00')
   &&help.includes('「イベント」タブ（期間限定イベント）'));
 check('ヘルプに曲数を書き写していない',
   [...(help.split("id:'rhythm-ranking'")[1]||'').matchAll(/(\d+)\s*曲/g)]
@@ -826,13 +848,13 @@ check('適用SQLを用意している',
   check('RLSをすり抜けない作りにしている',
     apply.includes('security_invoker = on')&&apply.includes('security invoker'));
   check('週の区切りをSQL側でも検査している',
-    apply.includes('週の始まりが月曜になっていません')&&apply.includes('週の始まりが5:00になっていません'));
+    apply.includes('週の始まりが月曜になっていません')&&apply.includes('週の始まりが4:00(切り替えより前は5:00)になっていません'));
   check('土台(フェーズ2のビュー)が無ければ止める',apply.includes('先に RHYTHM_TOTAL_APPLY.sql を適用してください'));
   check('期間で絞る索引を足している',apply.includes('rankings_rhythm_created_at_idx'));
   check('書き込み権限を与えていない',!/grant\s+(insert|update|delete|all)/i.test(apply));
 }
 check('仕様書に週間の決めごとがある',
-  spec.includes('rhythm_week_window')&&spec.includes('rhythm_event_totals')&&spec.includes('月曜 5:00 JST'));
+  spec.includes('rhythm_week_window')&&spec.includes('rhythm_event_totals')&&spec.includes('月曜 4:00 JST'));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);

@@ -236,7 +236,7 @@ function MasuTranscendEnhanceScreen({
                   : <>
                     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-xl bg-black/30 p-2.5">
                       <PressRepeatButton aria-label="変換するポイントを減らす" disabled={exchangeWant<=1} onPress={()=>setWant(exchangeWant-1)} className="min-h-[44px] rounded-xl bg-slate-700 text-xl font-black disabled:opacity-30">−</PressRepeatButton>
-                      <div className="text-center leading-none"><span data-transcend-exchange-want className="font-mono text-3xl font-black text-white">{exchangeWant}</span><span className="text-[10px] font-bold text-slate-400">P</span></div>
+                      <div className="flex items-center justify-center gap-1 leading-none">{/* 変換するポイントは直接打ち込める(2026-11-07 社長)。変換できる数を超えたらそこへ合わせる */}<CountInput value={exchangeWant} min={1} max={exchangeMax} onChange={setWant} unit="P" label="変換するポイント" className="w-20" dataAttrs={{'data-transcend-exchange-want':exchangeWant}}/><span className="text-[10px] font-bold text-slate-400">P</span></div>
                       <PressRepeatButton aria-label="変換するポイントを増やす" disabled={exchangeWant>=exchangeMax} onPress={()=>setWant(exchangeWant+1)} className="min-h-[44px] rounded-xl bg-fuchsia-700 text-xl font-black disabled:bg-slate-700 disabled:opacity-30">＋</PressRepeatButton>
                     </div>
                     <div className="grid grid-cols-3 gap-1.5">

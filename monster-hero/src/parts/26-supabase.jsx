@@ -913,7 +913,7 @@ const pendingLocalRankingEntries = (list) => (Array.isArray(list) ? list : []).f
 // 送り直すときは、遊んだ時刻を行に入れて送る(2026-09-14)。
 //
 // rankings.created_at の既定値は now() なので、この列を付けずに送ると
-// **送り直した瞬間**が記録の時刻になる。週間ランキング(月曜5:00区切り)は
+// **送り直した瞬間**が記録の時刻になる。週間ランキング(月曜4:00区切り)は
 // created_at で期間を数えているため、先週以前の未送信記録を送り直すと
 // 遊んでいない今週の合計へ足されてしまう。
 // 実際に 2026-09-14 6:22 にアプリを開いただけで、4曲ぶんが今週の週間ランキングへ載った
@@ -1718,7 +1718,7 @@ const askWithProfileFrame = async (askFn, select) => {
     return askFn(select);
   }
 };
-// 今週の始まり・終わり(月曜5:00 JST区切り)。1行だけ返る
+// 今週の始まり・終わり(月曜4:00 JST区切り。2026-11-09 より前の週は5:00)。1行だけ返る
 const sbFetchRhythmWeekWindow = async ({ requestId = 'untracked' } = {}) => {
   const rows = await sbFetchRhythmEventRows({
     url: `${SUPABASE_URL}/rest/v1/rhythm_week_window?select=week_start,week_end&limit=1`,

@@ -1851,6 +1851,48 @@ function MonsterHeroGame() {
     const costC = (c) => getCardGuts(c, copy.srcSlot);
     return { dmgOf, isGuardC, usableC, scoreC, costC };
   };
+  // ★AIコピーの予測ダメージ(2026-11-06 社長「ソラシドのコピーにも予測ダメージとか出して」)。味方の枠の「攻N」と同じ札で出す。
+  //   数え方は、実際にコピーが撃つときとそろえる(検査 tools/battle/sorashido-copy-predict-check.js が式を見張る)。
+  //   ・タクティクス/レイド: 下の「AIコピーの1手」(runTacticsAiCopyAction)と同じ。決めてある札(picks)を順に、コピーのガッツで払える札だけ、
+  //     ガードは数えず、攻撃は tacticsAiCopyTools の dmgOf(元のモンスターの今の攻撃 × コピーの攻撃の割合)
+  //   ・本編(5つの遊び): 味方のカードの流れ(aiCopyEntries)と同じ。ガード以外を払える順に、味方が選んだカードのあとに続けて、
+  //     その場の補正(previewLocalBoosts)を積み、ダメージはコピーのちから(dmgScale)で縮める。2枚目の半減はしない(コピーの札は数えない)
+  //   描くたびに呼ぶので、状態は変えない(札を決める planTacticsAiCopy は呼ばない。決まっていなければ 0)
+  const aiCopyPredictedDmg = (copy) => {
+    if (!copy || !EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isAiCopyOut(copy, turnCount)) return 0;
+    const picks = Array.isArray(copy.picks) ? copy.picks : [];
+    if (!picks.length) return 0;
+    if (isTacticsMode(runMode)) {
+      if (!isTacticsAiCopyStanding(copy) || copy.plannedTurn !== turnCount) return 0;
+      const tools = tacticsAiCopyTools(copy, enemyDist);
+      if (!tools) return 0;
+      let gutsC = Math.max(0, Number(copy.guts) || 0), total = 0;
+      picks.forEach((card) => {
+        const cost = Math.max(0, Number(tools.costC(card)) || 0);
+        if (cost > gutsC) return;
+        gutsC -= cost;
+        if (tools.isGuardC(card)) return;
+        const d = tools.dmgOf(card); if (d > 0) total += d;
+      });
+      return total;
+    }
+    const srcMon = slots[copy.srcSlot];
+    if (!srcMon) return 0;
+    const dmgScale = atk > 0 ? Math.max(1e-6, Math.max(0, Number(copy.atk) || 0) / atk) : 1e-6;
+    let left = Math.max(0, Number(copy.guts) || 0), total = 0;
+    let run = { ...previewLocalBoosts(null).final };
+    picks.forEach((card) => {
+      const cost = Math.max(0, Number(card?.guts ?? card?.cost) || 0);
+      if (!card || cost > left) return;
+      left -= cost;
+      if (card.type === 'guard' || card.type === 'weak_guard') return;
+      const b = boostsForCardDamage(run, card, false);
+      if (isAttackCard(card)) total += getAttackPredictedDmg(card, srcMon, getDmg(card, copy.srcSlot, srcMon, b.oryo, b.dmgMod, false, enemyDist, dmgScale), b.combo, copy.srcSlot, false);
+      const boost = localBoostFromCard(card);
+      if (boost) run = { oryo: run.oryo + (boost.oryo || 0), dmgMod: run.dmgMod + (boost.dmgMod || 0), combo: run.combo + (boost.combo || 0) };
+    });
+    return total;
+  };
   // そのターンに使う札を決めて持たせる(手札・次に使う札)。コピー自身の山札から引く
   const planTacticsAiCopy = (turn) => {
     const copy = aiCopyRef.current;
@@ -2210,7 +2252,8 @@ function MonsterHeroGame() {
   const grantBeatRankForResult = async (result, play) => {
     try {
       const raw = await storeGet(BEAT_RANK_KEY, null, false);
-      const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+      // 日の区切りは朝4時(2026-11-07 から。前は0時)。切り替えの夜は、0時区切りで書いた次の日のまま数える(その日はじめての1曲を二重に付けない)
+      const today = jstDayCarry(normalizeBeatRank(raw).day, jstDayKey4());
       const gain = beatRankAfter(raw, { difficultyId: play && play.difficulty && play.difficulty.id, cleared: result?.cleared !== false,
         fullCombo: result?.fullCombo === true, allMarvelous: result?.allMarvelous === true, multi: play && play.from === 'multi', today,
         // 曲の長さ(経験値は 長さ÷2:00 倍。2026-11-02)。読めないときは0で、今までどおりの値になる
@@ -5297,7 +5340,7 @@ function MonsterHeroGame() {
   // 「鍵の向こう側へ」のイベントidと、終章(閉幕のお話)のid
   const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
   const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -5572,6 +5615,18 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(CARD_CUP_STORY_ID)) return;
     setRhythmEventStoryPending(prev => prev || CARD_CUP_STORY_ID);
   }, [cardBattleIntroSeenLoaded, cardBattleIntroSeenFlag, rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // モンヒロビート本オープンのお話(2026-11-07)。本オープンの印が真になったあとの最初の HOME で1回だけ流す(見たかは mh_rhythm_event_story_v1 の id)。
+  // 予告のお話は、予告の印が真で、まだ本オープンしていないあいだだけ流す(本オープンのあとは本編だけ。予告は回想から見られる)。
+  // ★ほかのお話が先に流れようとしていたら待つ(上書きしない)
+  useEffect(() => {
+    const open = RELEASE_FLAGS.rhythmGrandOpen === true;
+    const id = open ? RHYTHM_GRAND_OPEN_STORY_ID : (RELEASE_FLAGS.rhythmGrandOpenTeaser === true ? RHYTHM_GRAND_OPEN_TEASER_STORY_ID : null);
+    if (!id) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(id)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(id)) return;
+    setRhythmEventStoryPending(prev => prev || id);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // ソラシドの加入のお話を見たら、マーケットにカード「ソラシド」が並ぶ(data/breeder.js の sorashidoCardOnSale。公開の印 assistantSorashido も要る)。
   // お話を流すのは上の加入のお話の所
   useEffect(() => {
@@ -7061,7 +7116,12 @@ function MonsterHeroGame() {
       // (localStorage直)で読む。ここでは作らない(まだ無い端末は対象外のまま素通りする)
       let currentPlayerId = '';
       try { currentPlayerId = window.localStorage.getItem('mh_player_id') || ''; } catch {}
-      const playerCompensationGrant = grantPlayerCompensationGifts(compensationGrant.gifts, currentPlayerId);
+      const playerCompensationGrant0 = grantPlayerCompensationGifts(compensationGrant.gifts, currentPlayerId);
+      // モンヒロビート本オープン記念ギフト(すでに遊んでいる人全員へ1回だけ・2026-11-07)。本オープンの印が偽のあいだは何もしない。
+      // ギフトを足してから印を立てる(足す前に閉じられても、次の起動で配り直せる。同じidがあれば足さない)
+      const grandOpenAllDone = await storeGet(GRAND_OPEN_ALL_GIFT_KEY, false, false);
+      const grandOpenGrant = grantGrandOpenAllGift(playerCompensationGrant0.gifts, { done: grandOpenAllDone, onboarded: compensationEverPlayed });
+      const playerCompensationGrant = grandOpenGrant.granted ? { granted: true, gifts: grandOpenGrant.gifts } : playerCompensationGrant0;
       // 受け取り済みのギフトは消えずに積もるので、起動のたびに古いぶんを落としておく
       // (pruneGiftHistory。ログインボーナスと補償は数え直しに使うので残す)
       const prunedGifts = pruneGiftHistory(playerCompensationGrant.gifts);
@@ -7071,6 +7131,7 @@ function MonsterHeroGame() {
       if (loginGrant.granted || compensationGrant.granted || playerCompensationGrant.granted || prunedGifts.length !== playerCompensationGrant.gifts.length) {
         await storeSet('mh_gifts', prunedGifts, false);
       }
+      if (grandOpenGrant.granted) await storeSet(GRAND_OPEN_ALL_GIFT_KEY, true, false);
       if (loginGrant.granted) setLoginBonusPopup({ day:loginGrant.day, rewards:loginGrant.gift.rewards });
       // ログインボーナスでptとして配ってしまったぶんを、経験値へ付け替える(一度きり)。
       // 経験値が増えてレベルが上がったぶんのポイントもここで配る
@@ -7807,6 +7868,8 @@ function MonsterHeroGame() {
           const grant = grantNewPlayerCampaignGift(giftsNow, Date.now(), waivedCompensationRewards(giftsNow, waivedNow));
           if (grant.granted) { await storeSet('mh_gifts', grant.gifts, false); setGifts(grant.gifts); }
           await storeSet(NEW_PLAYER_CAMPAIGN_KEY, true, false);
+          // 本オープン記念の新規プレゼントを配った人には、全員向けの本オープン記念ギフトは配らない(大盛りを重ねない)
+          if (RHYTHM_GRAND_OPEN_RELEASE) await storeSet(GRAND_OPEN_ALL_GIFT_KEY, true, false);
         }
       } catch {}
     }
@@ -8656,6 +8719,8 @@ function MonsterHeroGame() {
     sorashidoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID),
     erubinJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ERUBIN_JOIN_STORY_ID),
     cardCupStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(CARD_CUP_STORY_ID),
+    rhythmGrandOpenTeaserSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_GRAND_OPEN_TEASER_STORY_ID),
+    rhythmGrandOpenSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_GRAND_OPEN_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -11642,8 +11707,9 @@ function MonsterHeroGame() {
         dailyMasuAdviceCheckedRef.current = false;
         return;
       }
-      const today = localCalendarDate();
+      // 日の区切りは朝4時(jstDayKey4。2026-11-07 から。前は端末の時計の0時)。切り替えの夜に0時区切りで書いた次の日が残っていれば、もう出した扱い
       const shownDate = await storeGet(DAILY_MASU_ADVICE_KEY, '', false);
+      const today = jstDayCarry(shownDate, jstDayKey4());
       if (cancelled || masuMons.length >= 8 || shownDate === today) return;
       await storeSet(DAILY_MASU_ADVICE_KEY, today, false);
       // 「あきらめる」の近道は、クイックを何回かクリアした人だけへ(2026-10-10・改善部の提案G9)。
@@ -20432,7 +20498,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {raidDamageFx&&((gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='raid')||gameState==='RAID_JACK_DEBUG')&&<RaidJackDamageFx key={raidDamageFx.key} fx={raidDamageFx} onDone={()=>setRaidDamageFx(null)}/>}
         {beatRankFx&&beatRankFx.ready&&gameState==='RHYTHM_PLAY'&&<PlayerRankUpFx kind="beat" from={beatRankFx.from} to={beatRankFx.to} gains={beatRankFx.gains} onClose={()=>setBeatRankFx(null)}/>}
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward}
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} breederName={breederName} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward}
           onRankBarFull={()=>setBeatRankFx(f=>f&&!f.ready?{...f,ready:true}:f)} onRankBarStart={()=>setBeatRankFx(f=>f&&!f.started?{...f,started:true}:f)} onRankBarDone={()=>setBeatRankBarPlaying(false)} onComplete={async(result,merged)=>{
           // デバッグ画面の試作曲(RHYTHM_PROTO_SONGS)は、何も残さない。周回の報酬・経験値・自己ベスト・クリア回数・
           // 実績・全国ランキングのどれにも入れない(CLAUDE.md ⑦。試作は公開しない曲なので、記録に混ぜない)
@@ -22991,7 +23057,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin} hamCounterFx={hamCounterFx} skipHamCounterFx={skipHamCounterFx}
             tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} kyubiOrihimeStackMarks={kyubiOrihimeStackMarks} tacticsShields={isTacticsMode(runMode)&&tacticsExEnabled?[0,1,2,3].map(i=>tacticsExShieldAt(tacticsExState,i,tacticsExNow)):null} sweetStackView={sweetStackView} bowStackView={bowStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
-            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsHate={tacticsHate} tacticsHateOn={tacticsHateOnFor(runMode)} aiCopy={EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido?aiCopy:null} aiCopyHitting={!!(attackAnim&&aiCopyHitRef.current&&!isTacticsMode(runMode))} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
+            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsHate={tacticsHate} tacticsHateOn={tacticsHateOnFor(runMode)} aiCopy={EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido?aiCopy:null} aiCopyPreviewDmg={EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido?aiCopyPredictedDmg(aiCopy):0} aiCopyHitting={!!(attackAnim&&aiCopyHitRef.current&&!isTacticsMode(runMode))} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}
             isAssistCard={isAssistCard} isAttackCard={isAttackCard} isBusy={isBusy} isHeroSlotMon={isHeroSlotMon}

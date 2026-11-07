@@ -2,7 +2,7 @@
 //
 // 見るもの(本物の定義をNodeで動かす)
 //   ① A/Bの5段階の名前・倍率・ライフ(35,000×倍率×10)・技の本数(3/4/5/5/5)が設計書どおり
-//   ② 期間は見るたびに数え直す(前・中・後)。回数は毎日5:00(JST)で戻る
+//   ② 期間は見るたびに数え直す(前・中・後)。回数は毎日4:00(JST)で戻る(2026-11-07 に5:00からそろえた)
 //   ③ 保存データの正規化(無い・壊れている → 既定値)と、新しい保存キーだけを使う
 //   ④ 段階式の解放(前の段階を倒すと次が開く)
 //   ⑤ 公開フラグが偽のまま(公開前に出ない)
@@ -146,8 +146,8 @@ const t = (s) => Date.parse(s);
 check('開始前は before(開始は公開日時の 2026-10-05 4:00)', o.raidJackWindowAt(t('2026-10-05T03:59:59+09:00')) === 'before' && o.raidJackWindowAt(t('2026-10-05T04:00:00+09:00')) === 'open');
 check('期間中は open', o.raidJackWindowAt(t('2026-10-20T12:00:00+09:00')) === 'open');
 check('終了後は after', o.raidJackWindowAt(t('2026-11-01T04:00:00+09:00')) === 'after');
-check('5:00前は前日扱い', o.raidJackDayKey(t('2026-10-20T04:59:00+09:00')) === '2026-10-19');
-check('5:00から翌日', o.raidJackDayKey(t('2026-10-20T05:00:00+09:00')) === '2026-10-20');
+check('4:00前は前日扱い', o.raidJackDayKey(t('2026-10-20T03:59:00+09:00')) === '2026-10-19');
+check('4:00から翌日', o.raidJackDayKey(t('2026-10-20T04:00:00+09:00')) === '2026-10-20');
 const day = '2026-10-20';
 check('無料は1日3回', o.raidJackRemaining({ day, used: 0, extra: 0 }, t('2026-10-20T12:00:00+09:00')) === 3);
 check('使った分だけ減る', o.raidJackRemaining({ day, used: 2, extra: 0 }, t('2026-10-20T12:00:00+09:00')) === 1);
@@ -208,7 +208,7 @@ check('公開フラグは true(2026-10-05 4:00 公開)で、RELEASE_FLAGS.raidJa
   const vm2 = require('vm');
   const fl = rel.slice(rel.indexOf('const RELEASE_FLAGS = {'), rel.indexOf('};', rel.indexOf('const RELEASE_FLAGS = {')) + 2);
   const base = { SPECIES_CHALLENGE_PUBLIC_RELEASE: true, TACTICS_MODE_PUBLIC_RELEASE: true, TACTICS_BETA_PRO_RELEASE: true, TACTICS_EX_SKILLS_RELEASE: true, RHYTHM_MODE_PUBLIC_RELEASE: true, RHYTHM_MULTI_PUBLIC_RELEASE: true, FRIENDS_PUBLIC_RELEASE: true,
-    QUICK_RHYTHM_LINK_PUBLIC_RELEASE: true, RAID_JACK_RHYTHM_PUBLIC_RELEASE: true, RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE: true, RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE: true, RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE: true, RHYTHM_EVENT_POINTS_PUBLIC_RELEASE: true, RAID_JACK_PUBLIC_RELEASE: true };
+    QUICK_RHYTHM_LINK_PUBLIC_RELEASE: true, RAID_JACK_RHYTHM_PUBLIC_RELEASE: true, RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE: true, RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE: true, RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE: true, RHYTHM_EVENT_POINTS_PUBLIC_RELEASE: true, RHYTHM_GRAND_OPEN_RELEASE: false, RHYTHM_GRAND_OPEN_TEASER_RELEASE: false, RAID_JACK_PUBLIC_RELEASE: true };
   const at = (ms, withEvent = true) => {
     const c = { ...base, Date: class extends Date { static now() { return ms; } }, Object, Number, Math, Array };
     vm2.createContext(c);

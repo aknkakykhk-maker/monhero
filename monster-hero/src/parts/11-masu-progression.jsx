@@ -372,13 +372,20 @@ const soulRankXpForBondLevel = (level) => {
   if (current < 900) return 345000 + (current - 800) * 500;
   return 430000 + (current - 900) * 900;
 };
+// レベルごとの経験値は決まった式なので、一度出した答えを関数自身に覚えておく(2026-11-07 お布施の転生の上限を外したときの速さ対策。答えは同じ)。
+// ★覚えておく表は関数の中に置く(検査が関数を1つずつ切り出して試すので、外に置くと見えなくなる)
 const xpForBondLevelAt = (level) => {
   const current = Math.max(1, Math.floor(Number(level) || 1));
+  const cache = xpForBondLevelAt.cache || (xpForBondLevelAt.cache = new Map());
+  const cached = cache.get(current);
+  if (cached !== undefined) return cached;
   const normal = xpForBondLevel(current);
-  if (current < MAX_MASU_LEVEL_CAP) return normal;
   // Lv400〜499は既存の超越XP式を1も変えない。Lv500→501から魂格の正式式へ切り替える。
-  if (current < SOUL_RANK_BASE_LEVEL) return Math.max(1, Math.round(normal * transcendXpMultiplier(current)));
-  return soulRankXpForBondLevel(current);
+  const value = current < MAX_MASU_LEVEL_CAP ? normal
+    : current < SOUL_RANK_BASE_LEVEL ? Math.max(1, Math.round(normal * transcendXpMultiplier(current)))
+    : soulRankXpForBondLevel(current);
+  cache.set(current, value);
+  return value;
 };
 const bondLevelInfo = (totalXp) => {
   // 壊れた保存値(NaN・Infinity・負数)で回り続けないよう、先に有限の0以上へ落とす
@@ -956,10 +963,16 @@ const normalizeInheritedUniqueLineages = (masuMons) => (Array.isArray(masuMons) 
   });
   return { ...masu, inheritedUniques:kept, uniqueSkillLevels };
 });
+// レベルごとの累計は決まった式なので、一度出した答えを関数自身に覚えておく(2026-11-07: お布施の転生の上限を外したら、
+// 何百回もの転生の見積もりで毎回 Lv.1 から足し直して画面が固まった。答えは前と1も変わらない)。表は関数の中(上と同じ理由)
 const totalBondXpForLevel = (level) => {
   const target = Math.max(1, Math.min(SOUL_RANK_LEVEL_CAP, Math.floor(Number(level) || 1)));
+  const cache = totalBondXpForLevel.cache || (totalBondXpForLevel.cache = new Map());
+  const cached = cache.get(target);
+  if (cached !== undefined) return cached;
   let total = 0;
   for (let current = 1; current < target; current++) total += xpForBondLevelAt(current);
+  cache.set(target, total);
   return total;
 };
 // 【限界突破と転生】
@@ -2929,7 +2942,9 @@ const buildMasuReincarnation = ({ masu, skillKey, gold, lockedIds = [] }) => {
 // 画面の見積もりと実際の実行は必ずこの関数1本で計算する(別々に数えると表示と実際がずれる)。
 const OFFERING_TICKET_DIAMONDS = 100;
 const OFFERING_TICKET_XP = 15;
-const OFFERING_MAX_REINCARNATIONS = 50;
+// ★画面の上限ではない(2026-11-07 社長「上限はなしで」)。ふつうは持っているダイヤ・レベルで先に止まる。
+//   計算が止まらなくなるのを防ぐ見張りとして、ありえない大きさの数だけを置く(以前は 50 回で止めていた)
+const OFFERING_MAX_REINCARNATIONS = 100000;
 const OFFERING_MODES = Object.freeze(['diamonds', 'levels', 'reincarnate']);
 const offeringXpForDiamonds = (diamonds) => Math.floor(donationDiamondValue(diamonds) * OFFERING_TICKET_XP / OFFERING_TICKET_DIAMONDS);
 const offeringDiamondsForXp = (xp) => Math.ceil(donationDiamondValue(xp) * OFFERING_TICKET_DIAMONDS / OFFERING_TICKET_XP);
@@ -3024,7 +3039,9 @@ const buildMasuOffering = ({ masu, gold, ownedItems, lockedIds = [], mode = 'dia
 // 転生をまとめて行う。1回ぶんの計算は buildMasuReincarnation をそのまま count 回くり返すだけ
 // (費用・ポイント・ロックの判定を別に書かない)。途中で止まったら、そこまでの回数で確定する。
 // 固有技は選んだものを毎回上げる。最大に届いたあとは自動で「ポイントとして残す」になる。
-const REINCARNATE_BATCH_MAX = 50;
+// ★画面の上限ではない(2026-11-07 社長「上限はなしで」)。転生は毎回 Lv.100 が要るので、ふつうはレベルとダイヤで先に止まる。
+//   計算が止まらなくなるのを防ぐ見張りとして、ありえない大きさの数だけを置く(以前は 50 回で止めていた)
+const REINCARNATE_BATCH_MAX = 100000;
 const buildMasuReincarnationBatch = ({ masu, skillKey, gold, lockedIds = [], count = 1 }) => {
   const wanted = Math.min(REINCARNATE_BATCH_MAX, Math.max(1, Math.floor(Number(count) || 1)));
   let cur = masu, goldLeft = donationDiamondValue(gold), spent = 0, done = 0, first = null, last = null, reason = '';

@@ -538,7 +538,8 @@ const browser = async (core) => {
     await page.waitForTimeout(400);
     const after = await page.evaluate(() => ({ ...localStorage }));
     const bond = (s) => { try { return JSON.parse(s.mh_assistant_bond_v1 || '{}').points; } catch { return null; } };
-    check('⑩ みゅあの仲良し度が +2(chat)', bond(after) === bond(before) + 2, `${bond(before)} → ${bond(after)}`);
+    // 1往復で増える量は data/assistants.js の ASSISTANT_BOND_ACTIONS.chat(2026-11-07 に2倍で +4)
+    check('⑩ みゅあの仲良し度が chat の量(+4)だけ増える', bond(after) === bond(before) + 4, `${bond(before)} → ${bond(after)}`);
     const memo = JSON.parse(after.mh_assistant_chat_memo_v2 || '{}');
     const log = JSON.parse(after.mh_assistant_chat_log_v1 || '{}');
     check('⑩ 思い出メモが新しいキー(mh_assistant_chat_memo_v2)に5つの欄で残り、前のキーは書き換えない', memo.mua && memo.mua.topics === 'あいさつした' && 'likes' in memo.mua
