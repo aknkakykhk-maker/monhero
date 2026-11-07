@@ -1,5 +1,6 @@
 // 助手ライフ(助手たちの家・段階1 2026-11-07)の画面と HOME の施設の顔を、実際に開いて確かめる。公開の印 assistantLife はページの中でだけ立てる(本体の印は偽のまま)。
 //   node tools/assistant/assistant-life-browser-check.js            検査
+//   LIFE_BASE=https://aknkakykhk-maker.github.io/monhero/ で本番の版を見る(公開後の確かめ)
 //   node tools/assistant/assistant-life-browser-check.js --shots    止め絵も撮る(docs/progress/assistant-peer/shots/life-*.png)
 //   ① HOME の施設の横に、会った助手の顔が全部出る(帯は出ない)/ 施設「🏡 助手ライフ」を押すと家が開く / 縦 390・横 844×390 ではみ出さない
 //   ⑩ 家: 8人の部屋・いる部屋は顔・出かけた部屋は行き先の札・部屋を押すとその助手のこと・場面・みんなの居場所(地図と一覧)・入場の演出
@@ -44,6 +45,11 @@ const boardProblems = (page) => page.evaluate(() => {
   for (const c of document.querySelectorAll('[data-assistant-life-board-item] [data-assistant-life-chunk]')) if (c.getClientRects().length > 1) ng.push(`掲示板の言葉が途中で折れる: ${c.textContent}`);
   if (!document.querySelector('[data-assistant-life-board-item] [data-assistant-life-chunk]')) ng.push('掲示板に言葉が無い(検査の前提)');
   for (const sm of document.querySelectorAll('[data-assistant-life-today] small')) if (sm.scrollWidth > sm.clientWidth + 1) ng.push(`今日やれることの字が切れる: ${sm.textContent}`);
+  // 部屋の吹き出し(「💭 だれか来ないかな…」)が部屋の幅で切れない・まとまりの途中で折れない(2026-11-08 ミハリ: 横で「だれか来ない…」)
+  for (const b of document.querySelectorAll('[data-assistant-life-room-bub]')) { if (b.scrollWidth > b.clientWidth + 1 || b.scrollHeight > b.clientHeight + 1) ng.push(`部屋の吹き出しが切れる: ${b.textContent}`); for (const c of b.querySelectorAll('[data-assistant-life-chunk]')) if (c.getClientRects().length > 1) ng.push(`吹き出しが途中で折れる: ${c.textContent}`); }
+  if (!document.querySelector('[data-assistant-life-room-bub]')) ng.push('部屋の吹き出しが無い(検査の前提)');
+  // 吹き出しは1行で収まり、名札に重ならない(字の幅が端末で1割ちがっても)
+  for (const b of document.querySelectorAll('[data-assistant-life-room-bub]')) { const room = b.closest('.mhl-room'), pl = room && room.querySelector('.pl'); const r = b.getBoundingClientRect(); if (b.getClientRects().length && [...b.querySelectorAll('[data-assistant-life-chunk]')].some((c, i, a) => i && Math.abs(c.getBoundingClientRect().top - a[0].getBoundingClientRect().top) > 2)) ng.push(`部屋の吹き出しが2行になる: ${b.textContent}`); if (r.width * 1.1 > room.clientWidth * 0.88 + 1) ng.push(`部屋の吹き出しが字の幅しだいで切れる: ${b.textContent} ${Math.round(r.width)}/${Math.round(room.clientWidth)}`); if (pl) { const q = pl.getBoundingClientRect(); if (Math.min(r.right, q.right) - Math.max(r.left, q.left) > 1 && Math.min(r.bottom, q.bottom) - Math.max(r.top, q.top) > 1) ng.push(`部屋の吹き出しが名札に重なる: ${b.textContent}`); } }
   // 屋根の札「🏡 助手の家」が家の枠に隠れない(縦で下半分が枠の下にあった)
   const hn = document.querySelector('[data-assistant-life-hname]'); if (hn) { const r = hn.getBoundingClientRect(); for (const y of [r.top + 3, r.bottom - 3]) { const e = document.elementFromPoint(r.left + r.width / 2, y); if (!e || !hn.contains(e)) ng.push('屋根の札「助手の家」が枠に隠れる'); } }
   const sub = document.querySelector('[data-assistant-life-today-sub]'); if (!sub || !/^💭 \S+/.test(sub.textContent)) ng.push(`声をかけるにさみしそうな助手の名前が無い: ${sub && sub.textContent}`);
@@ -70,7 +76,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     await page.addInitScript(oneTimeNoticeSeed());
     await page.addInitScript(seed, { storyIds: STORY_IDS, life, intro, bondAll });
     await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
-    await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${process.env.LIFE_BASE ? process.env.LIFE_BASE.replace(/\/?$/, '/') : `http://localhost:${PORT}/`}monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     await toHome(page);
     return { page, errors };
   };

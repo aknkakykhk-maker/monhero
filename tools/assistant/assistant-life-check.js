@@ -460,7 +460,9 @@ if (process.argv.includes('--stats')) {
       const D = G('ASSISTANT_LIFE_DOINGS'), W = G('ASSISTANT_LIFE_TALK_PLACE_WORDS'), at = G('assistantLifeTalkAt');
       const ng = [];
       let n = 0;
-      for (const id of ids) for (const [doing, d] of Object.entries(D)) for (const place of d.places) for (const mood of [null, 'happy', 'lonely', 'restless', 'sulky', 'sleepy', 'eager']) for (const reason of ['lonely', 'mypace']) for (let k = 0; k < 4; k++) {
+      const TODS = G('assistantLifeTalkTods'); let todNg = [];
+      for (const look of ['morning', 'noon', 'evening', 'night']) { ctx.assistantLifeTimeLook = () => look;
+      for (const id of ids) for (const [doing, d] of Object.entries(D)) for (const place of d.places) for (const mood of [null, 'happy', 'lonely', 'restless', 'sulky', 'sleepy', 'eager']) for (const reason of ['lonely', 'mypace']) for (let k = 0; k < 2; k++) {
         const life = { ...lifeBase, moods: mood ? { [id]: mood } : {}, solo: { [id]: { doing, place, reason } } };
         for (const t of [G('assistantLifePickSoloTalk')(id, life, peer(1), Math.random), G('assistantLifePickCallTalk')(id, life, Math.random)]) {
           if (!t) continue; n++;
@@ -470,9 +472,13 @@ if (process.argv.includes('--stats')) {
             const txt = o.lines.map(l => l.t).join('/');
             const hit = W.find(([w]) => txt.includes(w));
             if (hit && hit[1] !== place && at(o) !== place) ng.push(`${id}@${place}: ${txt.slice(0, 24)}`);
+            const tods = TODS(o); if (tods && !tods.includes(look)) todNg.push(`${id}@${look}: ${txt.slice(0, 24)}`);
           }
         }
       }
+      }
+      delete ctx.assistantLifeTimeLook;
+      check('⑧ ようすを見る・声をかけるの台詞は、いまの時間帯と食いちがわない(夕方に「朝の散歩で」を言わない)', todNg.length === 0 && TODS({ lines: [{ t: '朝の散歩で、きれいな花を見つけました' }] }).join() === 'morning', [...new Set(todNg)].slice(0, 3).join(' / '));
       check('⑧ ようすを見る・声をかけるの台詞は、いまの場所とちがう場所の名前を言わない(8人×場所×気分)', n > 1000 && ng.length === 0, `${n}本 ${[...new Set(ng)].slice(0, 3).join(' / ')}`);
     }
     lstore.set({ seen: {} });

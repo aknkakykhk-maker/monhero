@@ -29,10 +29,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 //   todo:担当 … モンヒロビートの中で開けるのに、回したとき用がまだ無い(担当へ回してある)
 const REVIEWED = {
   // ② vh で高さを決めている窓
-  '21-assistant.jsx|88vh|1': 'todo:助手部 仲良し度のシート(助手の吹き出しから。モンヒロビートの中でも開ける)',
   '24-sorashido-copy-view.jsx|94dvh|1': 'outside ソラシドのAIコピー(バトルの中だけ)',
-  '56-assistant-chat.jsx|85vh|1': 'todo:助手部 おしゃべり(助手の吹き出しから。モンヒロビートの中でも開ける)',
-  '56-assistant-peer.jsx|85vh|1': 'todo:助手部 助手たちの今の窓',
   '56-screen-profile.jsx|58vh|1': 'outside プロフィールの仲良し度のごほうびの一覧(gameState が PROFILE のときだけ。モンヒロビートの外)',
   '60-app.jsx|86vh|1': 'outside バトルのモードの説明(バトルのモードえらび)',
   '60-app.jsx|75vh|1': 'outside バトルの技えらび',

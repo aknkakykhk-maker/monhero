@@ -506,7 +506,7 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
       </div>
       {open&&(
         <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:70000}} role="dialog" aria-modal="true" aria-label={`${who.name}の説明`}>
-          <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 bg-slate-950 flex flex-col" style={{ borderColor:color, maxHeight:'88vh' }}>
+          <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 bg-slate-950 flex flex-col max-h-[88vh] [[data-mh-view-rotation=true]_&]:max-h-[88vw]" style={{ borderColor:color }}>
             <div className="shrink-0 flex items-center gap-3 p-4 border-b border-white/10">
               <AssistantFace who={who} size={68} accent={color} expression={face}/>
               <div className="flex-1 min-w-0">

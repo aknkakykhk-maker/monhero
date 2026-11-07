@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2d988db24f0a4f9a
+// source-sha256: 277076344b76ff9f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -20269,10 +20269,9 @@ const AssistantBubble = ({
     "aria-modal": "true",
     "aria-label": `${who.name}の説明`
   }, React.createElement("div", {
-    className: "w-full max-w-md rounded-t-3xl border-t-2 border-x-2 bg-slate-950 flex flex-col",
+    className: "w-full max-w-md rounded-t-3xl border-t-2 border-x-2 bg-slate-950 flex flex-col max-h-[88vh] [[data-mh-view-rotation=true]_&]:max-h-[88vw]",
     style: {
-      borderColor: color,
-      maxHeight: '88vh'
+      borderColor: color
     }
   }, React.createElement("div", {
     className: "shrink-0 flex items-center gap-3 p-4 border-b border-white/10"
@@ -98804,7 +98803,7 @@ function AssistantChatWindow({
     },
     onClick: onClose
   }, React.createElement("div", {
-    className: "w-full max-w-md max-h-[85vh] flex flex-col rounded-2xl border-2 bg-slate-950 text-slate-100 shadow-2xl",
+    className: "w-full max-w-md max-h-[85vh] [[data-mh-view-rotation=true]_&]:max-h-[85vw] flex flex-col rounded-2xl border-2 bg-slate-950 text-slate-100 shadow-2xl",
     style: {
       borderColor: accent
     },
@@ -100361,7 +100360,7 @@ function AssistantPeerAlbum({
     },
     onClick: onClose
   }, React.createElement("div", {
-    className: "w-full max-w-md max-h-[85vh] overflow-y-auto mh-scroll rounded-2xl border-2 border-amber-300/60 bg-slate-950 p-3",
+    className: "w-full max-w-md max-h-[85vh] [[data-mh-view-rotation=true]_&]:max-h-[85vw] overflow-y-auto mh-scroll rounded-2xl border-2 border-amber-300/60 bg-slate-950 p-3",
     onClick: ev => ev.stopPropagation()
   }, React.createElement("div", {
     className: "mb-2 flex items-center gap-2"
@@ -102304,6 +102303,20 @@ const assistantLifeTalkAt = (t, keys = t && t.keys || {}) => {
   for (const [w, place] of ASSISTANT_LIFE_TALK_PLACE_WORDS) if (txt.includes(w)) return place;
   return null;
 };
+const ASSISTANT_LIFE_TALK_TOD_RULES = Object.freeze([[/朝の/, ['morning']], [/寝る前/, ['night']], [/夕方にな/, ['morning', 'noon']], [/昼寝/, ['morning', 'noon', 'evening']]]);
+const assistantLifeTalkTods = t => {
+  const txt = (t && t.lines || []).map(l => l && l.t || '').join('\n');
+  let ok = null;
+  for (const [re, tods] of ASSISTANT_LIFE_TALK_TOD_RULES) if (re.test(txt)) ok = ok ? ok.filter(x => tods.includes(x)) : [...tods];
+  return ok;
+};
+const assistantLifeLookNow = () => {
+  try {
+    return typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : null;
+  } catch (_) {
+    return null;
+  }
+};
 const assistantLifeTalkSet = () => {
   if (assistantLifeTalkCache) return assistantLifeTalkCache;
   const raw = typeof ASSISTANT_LIFE_TALKS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_TALKS) ? ASSISTANT_LIFE_TALKS : [];
@@ -102327,7 +102340,8 @@ const assistantLifeTalkSet = () => {
       lv: 1,
       scene: 'any',
       life: true,
-      at: assistantLifeTalkAt(t, keys)
+      at: assistantLifeTalkAt(t, keys),
+      tods: assistantLifeTalkTods(t)
     };
     if (t.kind === 'solo') out.solo.push({
       ...base,
@@ -102598,7 +102612,8 @@ const assistantLifePickSoloTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, p
     doing: s.doing
   };
   const T = assistantLifeTalkSet();
-  const here = t => t.at == null || t.at === s.place;
+  const look = assistantLifeLookNow();
+  const here = t => (t.at == null || t.at === s.place) && (!t.tods || !look || t.tods.includes(look));
   const br = T.breeder.filter(t => t.who === id && here(t)).map(t => ({
     talk: t,
     keys: keysOf(t)
@@ -102656,7 +102671,8 @@ const assistantLifePickCallTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, r
     why: s.reason && s.reason !== 'distance' ? s.reason : null,
     doing: s.doing
   };
-  const cands = assistantLifeTalkSet().breeder.filter(t => t.who === id && (t.at == null || t.at === s.place) && (t.lines || []).every(l => l.who === id)).map(t => ({
+  const look = assistantLifeLookNow();
+  const cands = assistantLifeTalkSet().breeder.filter(t => t.who === id && (t.at == null || t.at === s.place) && (!t.tods || !look || t.tods.includes(look)) && (t.lines || []).every(l => l.who === id)).map(t => ({
     talk: t,
     keys: keysOf(t)
   }));
@@ -104778,7 +104794,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-room .pp{position:absolute;bottom:9px;right:10%;z-index:4;display:flex}
 .mhl-room .pp>span{border-radius:50%;box-shadow:0 2px 6px #0008}.mhl-room .pp>span+span{margin-left:-10px}
 .mhl-room .pp .lonely{box-shadow:0 0 0 2.5px #fbbf24,0 0 10px #fbbf24}.mhl-room .pp .after{box-shadow:0 0 0 2.5px #7dd3fc}
-.mhl-room .bb{position:absolute;right:4px;z-index:5;max-width:80%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9.5px;font-weight:900;background:#fff;color:#1e293b;border-radius:9px;padding:1px 6px;box-shadow:0 2px 5px #0007}
+.mhl-room .bb{position:absolute;right:4px;z-index:5;max-width:88%;overflow:hidden;white-space:normal;line-height:1.2;text-align:center;font-size:9.5px;font-weight:900;background:#fff;color:#1e293b;border-radius:9px;padding:1px 6px;box-shadow:0 2px 5px #0007}
 .mhl-room .off{position:absolute;inset:0;z-index:3;background:rgba(6,9,24,.5)}
 .mhl-room .lamp{position:absolute;inset:0;z-index:3;background:radial-gradient(circle at 60% 40%,rgba(255,214,140,.45),transparent 70%);mix-blend-mode:screen;pointer-events:none}
 .mhl-room .tag{position:absolute;left:50%;top:50%;z-index:6;transform:translate(-50%,-38%) rotate(-3deg);max-width:92%;text-align:center;padding:3px 8px 4px;border-radius:7px;background:linear-gradient(#fef3c7,#fde68a);color:#422006;border:1.5px solid #b45309;box-shadow:0 3px 6px #0009}
@@ -104936,10 +104952,17 @@ function AssistantLifeRoom({
     })) : null;
   })), ppl && state.bub && React.createElement("span", {
     className: "bb",
+    "data-assistant-life-room-bub": true,
     style: {
-      bottom: Math.round(Math.min(40, h * .44)) + 14
+      bottom: Math.round(Math.min(40, h * .44)) + 14,
+      fontSize: w < 150 ? 8.5 : undefined
     }
-  }, state.bub), state && state.tag && React.createElement("span", {
+  }, [].concat(state.lonely && !state.sleep && !state.after && w < 150 ? ['💭 さみしいな…'] : state.bub).map((x, i) => React.createElement(React.Fragment, {
+    key: i
+  }, i ? React.createElement("wbr", null) : null, React.createElement("span", {
+    className: "whitespace-nowrap",
+    "data-assistant-life-chunk": true
+  }, x)))), state && state.tag && React.createElement("span", {
     className: "tag",
     "data-assistant-life-room-away": id
   }, React.createElement("b", null, state.tag[0]), React.createElement("small", null, state.tag[1]), state.tag[2] && React.createElement("small", {
@@ -105095,7 +105118,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
           in: [host, ...ids.filter(x => x !== host)],
           lonely,
           sleep: w.doing === 'sleep',
-          bub: w.doing === 'sleep' ? '💤 おやすみ中' : lonely ? '💭 だれか来ないかな…' : ids.length > 1 ? `部屋で${ids.length}人で${doing.label}` : `部屋で${doing.label}`
+          bub: w.doing === 'sleep' ? ['💤 おやすみ中'] : lonely ? ['💭 だれか', '来ないかな…'] : ids.length > 1 ? ['部屋で', `${ids.length}人で`, doing.label] : ['部屋で', doing.label]
         };
       } else rooms[id] = {
         tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)]
@@ -105117,7 +105140,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
       rooms[id] = rooms[id].in ? {
         ...rooms[id],
         after: true,
-        bub: mark
+        bub: [`💢 ${assistantLifeName(other)}と`, '言い合いのあと']
       } : {
         ...rooms[id],
         tag: [rooms[id].tag[0], mark, rooms[id].tag[2] || null]
