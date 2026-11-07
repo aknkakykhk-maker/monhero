@@ -19,6 +19,7 @@ function MasuFusionScreen({
   renderScreenNote, resetFusionFlow, setFusionInheritSoulRank, setFusionInheritUniqueIds,
   setFusionMainId, setFusionResultData, setFusionSortDir, setFusionSortKey, setFusionStep,
   setFusionSubId, setFusionSubIds, setMasuMonDetail, lockedMasuIds=[],
+  fusionInheritSkillKeys={}, setFusionInheritSkillKeys=()=>{},
 }) {
 
       // 戻り先(TEMPLE)の指定は本体に残す。この画面は「閉じる」とだけ言う
@@ -130,6 +131,7 @@ function MasuFusionScreen({
           if (selectedSubs.length === 0) return;
           setFusionSubId(selectedSubs[0].id);
           setFusionInheritUniqueIds([]);
+          setFusionInheritSkillKeys({});
           setFusionStep('confirm');
         };
         return (
@@ -188,7 +190,7 @@ function MasuFusionScreen({
         if (!mainBase || !subBase) { resetFusionFlow(); return null; }
         const mainLvl = masuBondLevelInfo(main);
         const subLvl = masuBondLevelInfo(sub);
-        const inheritancePlan = buildFusionInheritancePlan({ main, subs:selectedSubs, selectedSubIds:fusionInheritUniqueIds });
+        const inheritancePlan = buildFusionInheritancePlan({ main, subs:selectedSubs, selectedSubIds:fusionInheritUniqueIds, choiceBySubId:fusionInheritSkillKeys });
         const soulInheritancePreview = buildFusionSoulRankInheritancePlan({
           main, subs:selectedSubs, inherit:false, gold, ownedItems,
         });
@@ -327,7 +329,7 @@ function MasuFusionScreen({
                   <div className="flex justify-between text-[11px] font-bold"><span className="text-slate-400">勇者の証</span><span className={soulProofShortage?'text-red-300 font-black':'text-sky-200 font-black'}>{ownedItemCount(ownedItems,HERO_PROOF_ITEM_ID)} / {soulHeroProofCost}{soulProofShortage?`（あと${soulProofShortage}）`:''}</span></div>
                 </>}
                 <div className="flex justify-between text-[11px] font-bold"><span className="text-slate-400">継承する固有技数</span><span className="text-amber-300 font-black">{inheritancePlan.inheritCount}個</span></div>
-                <div className="flex justify-between gap-2 text-[11px] font-bold"><span className="text-slate-400 shrink-0">継承対象</span><span className="text-amber-200 font-black text-right">{inheritancePlan.inheritedEntries.length?inheritancePlan.inheritedEntries.map(entry=>`${entry.sub.name}「${entry.subBase.unique.name}」`).join('、'):'なし'}</span></div>
+                <div className="flex justify-between gap-2 text-[11px] font-bold"><span className="text-slate-400 shrink-0">継承対象</span><span className="text-amber-200 font-black text-right">{inheritancePlan.inheritedEntries.length?inheritancePlan.inheritedEntries.map(entry=>`${entry.sub.name}「${entry.chosen?.unique?.name||entry.subBase.unique.name}」`).join('、'):'なし'}</span></div>
                 <div className="flex justify-between text-[11px] font-bold"><span className="text-slate-400">固有技継承ダイヤ合計</span><span className="text-amber-300 font-black">{inheritCost.toLocaleString()}</span></div>
                 <div className="flex justify-between text-[11px] font-bold"><span className="text-slate-400">限界突破 ×{breakthroughPlan.count}</span><span className="text-amber-300 font-black">{breakthroughDiamondCost.toLocaleString()}</span></div>
                 <div className="border-t border-white/15 pt-2 flex justify-between text-[13px] font-black"><span className="text-slate-200">合計消費</span><span className={diamondShortage?'text-red-300':'text-amber-300'}>{totalDiamondCost.toLocaleString()}</span></div>
@@ -335,14 +337,44 @@ function MasuFusionScreen({
                 {diamondShortage>0&&<div className="text-[11px] text-red-300 font-black text-right">あと{diamondShortage.toLocaleString()}ダイヤ必要</div>}
               </div>
               <div className="space-y-2 mb-2">
+                {/* 副1体ごとに、引き継ぐ技を1つ選ぶ(副の自前の技+副が前に引き継いだ技・いちばん上は「引き継がない」)。
+                    Lv とオリジナル強化も一緒に移る。主と同じ系統の技は灰色で選べない(2026-11-07 社長) */}
                 {inheritancePlan.entries.map(entry=>{
                   const selected = fusionInheritUniqueIds.includes(entry.sub.id);
-                  const disabled = !entry.eligible || (entry.duplicate&&!selected);
-                  const reason = !entry.eligible ? `絆Lv${FUSION_INHERIT_MIN_SUB_LEVEL}以上と継承可能な固有技が必要です` : entry.duplicate ? '同じ系統の固有技が主または先の副から継承されます' : '';
-                  return <button key={entry.sub.id} disabled={disabled} onClick={()=>setFusionInheritUniqueIds(prev=>prev.includes(entry.sub.id)?prev.filter(id=>id!==entry.sub.id):[...prev,entry.sub.id])} role="switch" aria-checked={selected&&!disabled} className={`w-full min-h-[44px] flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border active:scale-95 disabled:opacity-60 ${selected&&!disabled?'bg-amber-950/50 border-amber-500/60':'bg-slate-900 border-white/10'}`}>
-                    <span className="text-[12px] font-black text-left text-white">{entry.sub.name}：{entry.subBase?.unique?`固有技「${entry.subBase.unique.name}」を引き継ぐ`:'継承可能な固有技なし'}{reason&&<><br/><span className="text-[10px] leading-relaxed text-slate-400 font-bold">{reason}{selected&&entry.duplicate?'（選択中ですが費用・継承対象には含みません）':''}</span></>}</span>
-                    <div className={`w-10 h-6 rounded-full shrink-0 relative ${selected&&!disabled?'bg-amber-500':'bg-slate-700'}`}><div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${selected&&!disabled?'left-5':'left-1'}`}></div></div>
-                  </button>;
+                  const pick = (key) => {
+                    if (key == null) { setFusionInheritUniqueIds(prev=>prev.filter(id=>id!==entry.sub.id)); return; }
+                    setFusionInheritSkillKeys(prev=>({ ...prev, [entry.sub.id]:key }));
+                    setFusionInheritUniqueIds(prev=>prev.includes(entry.sub.id)?prev:[...prev,entry.sub.id]);
+                  };
+                  const unusedPoints = normalizeMasuProgression(entry.sub).uniqueSkillPoints;
+                  const radio = (on) => <span className={`shrink-0 mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center ${on?'border-amber-400':'border-slate-500'}`}>{on&&<span className="w-2.5 h-2.5 rounded-full bg-amber-400"/>}</span>;
+                  return <div key={entry.sub.id} data-fusion-inherit-pick className="rounded-2xl border border-amber-500/50 bg-slate-950/40 p-3 space-y-1.5">
+                    <div className="text-[12px] font-black text-white">{entry.sub.name} から引き継ぐ技を選ぶ</div>
+                    <div className="text-[10px] font-bold text-slate-400">1つだけ選べます(副1体につき1つ・{FUSION_INHERIT_COST.toLocaleString()}ダイヤ)</div>
+                    {!entry.eligible && <div className="text-[10px] leading-relaxed text-slate-400 font-bold">絆Lv{FUSION_INHERIT_MIN_SUB_LEVEL}以上と継承可能な固有技が必要です</div>}
+                    {entry.eligible && <>
+                      <button type="button" role="radio" aria-checked={!selected} onClick={()=>pick(null)} className={`w-full min-h-[44px] flex items-center gap-2 px-3 py-2 rounded-xl border text-left active:scale-[0.99] ${!selected?'bg-slate-800/80 border-slate-400/60':'bg-slate-900 border-white/10'}`}>{radio(!selected)}<span className="text-[12px] font-black text-white">引き継がない</span></button>
+                      {entry.options.map(option=>{
+                        const on = selected && entry.chosenKey===option.key;
+                        const summary = uniqueBoostSummaryText(option.boosts);
+                        const name = uniqueSkillAtLevel(option.unique, option.level)?.name || option.unique?.name || '固有技';
+                        return <button key={option.key} type="button" role="radio" aria-checked={on} data-fusion-inherit-option={option.key} disabled={option.duplicate} onClick={()=>pick(option.key)}
+                          className={`w-full min-h-[44px] flex items-start gap-2 px-3 py-2 rounded-xl border text-left active:scale-[0.99] disabled:opacity-50 ${on?'bg-amber-950/50 border-amber-400/80':'bg-slate-900 border-white/10'}`}>
+                          {radio(on)}
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-baseline justify-between gap-2"><span className="min-w-0 truncate text-[12px] font-black text-white">{name}</span><span className="shrink-0 text-[10px] font-mono font-black text-amber-300">Lv.{option.level}</span></span>
+                            <span className="block text-[10px] font-bold text-indigo-300">{option.own?'自前':`引き継ぎ${option.unique?.sourceMasuName?`(${option.unique.sourceMasuName})`:''}`}</span>
+                            {option.duplicate
+                              ? <span className="block text-[10px] font-bold text-rose-300/80">同じ系統の固有技を主がすでに持っています</span>
+                              : <span className="block text-[10px] font-bold text-amber-200">オリジナル強化:{summary || (option.level>=MAX_UNIQUE_SKILL_LEVEL?'なし':`なし(Lv.${MAX_UNIQUE_SKILL_LEVEL} から積めます)`)}</span>}
+                          </span>
+                        </button>;
+                      })}
+                      {selected && entry.inherited && <div className="rounded-lg bg-amber-900/30 px-2 py-1.5 text-[11px] font-black text-amber-200">Lv とオリジナル強化も一緒に引き継ぎます</div>}
+                      {selected && !entry.inherited && <div className="rounded-lg bg-slate-800/60 px-2 py-1.5 text-[10px] font-bold text-slate-300">選んだ技は同じ系統の固有技が主または先の副から継承されるため、引き継ぎません(費用もかかりません)</div>}
+                    </>}
+                    {unusedPoints>0 && <div className="rounded-lg bg-rose-950/40 px-2 py-1.5 text-[11px] font-black text-rose-300">副の未使用固有技P {unusedPoints.toLocaleString()} は消えます</div>}
+                  </div>;
                 })}
               </div>
               <div className="mb-2 rounded-2xl border border-red-500/60 bg-red-950/40 p-3">

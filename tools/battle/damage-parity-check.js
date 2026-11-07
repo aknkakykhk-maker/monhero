@@ -19,8 +19,11 @@ const { GAME_SYSTEM, loadDyeModule } = require(path.join(TOOLS_DIR, 'harness'));
 // 魂格(masu)の攻撃プロフィールは、予測・実処理の両方が使うようになった。
 // 本体から切り出した関数へ本物を渡す(ここで作るモンスターは masuId を持たないので
 // getMasuMon は呼ばれず、魂格なし=素の値で比べることになる)
-const soulTraitAttackProfile = loadDyeModule().soulTraitAttackProfile;
-const getMasuMon = () => null;
+const { soulTraitAttackProfile, attackBoostProfile } = loadDyeModule();
+// 2026-11-07: 固有技のオリジナル強化(会心率・会心ダメージ・連撃ダメージ・連撃数)も予測と実処理の両方へ乗る。
+//   強化ありの組み合わせだけ、攻撃した子を masuId 付きにして、ここで決めた個体を返す
+let currentMasu = null;
+const getMasuMon = () => currentMasu;
 
 const source = fs.readFileSync(GAME_SYSTEM, 'utf8');
 let failed = 0;
@@ -72,19 +75,19 @@ const tacticsSlotFlag = Function(`${slotFlagSrc.text}\nreturn tacticsSlotFlag;`)
 // この検査が見るのは**既存5モードのぶん**なので、持ち主は勇者モンで固定する。
 // タクティクスで「札を出した子」になることは tools/mode/tactics-enemy-actions-check.js が見る
 const traitOwnerOfFor = (mainHero) => () => (mainHero && mainHero.id) || null;
-const makePredicted = (mainHero, getPermaBuff, getTurnBuff) => Function('mainHero', 'getPermaBuff', 'getTurnBuff', 'Math', 'buildAttackHits', 'attackAtonementDmg', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', 'traitOwnerOf', `${fateSrc}\n${laterSrc}\nconst tacticsExEffectAt = () => null; const tacticsExStyleAt = () => null; const tacticsExCombosAt = () => null; const tacticsCritFixedNow = () => false; /* 完全回避・乱心の会心確定はタクティクスだけ */ const tacticsExMultiBuffNow = () => ({ dmg:1, taken:1, critRate:1, critDmg:1, distMult:0 }); const TACTICS_EX_DUAL_HIT_REPEAT = 2; // タクティクスのEX(片手盾・二刀流・スイーツパラダイス)は既存5モードでは効かない\nreturn (${predictedArrow});`)(mainHero, getPermaBuff, getTurnBuff, Math, shared.buildAttackHits, shared.attackAtonementDmg, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag, traitOwnerOfFor(mainHero));
+const makePredicted = (mainHero, getPermaBuff, getTurnBuff) => Function('mainHero', 'getPermaBuff', 'getTurnBuff', 'Math', 'buildAttackHits', 'attackAtonementDmg', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', 'traitOwnerOf', 'attackBoostProfile', `${fateSrc}\n${laterSrc}\nconst tacticsExEffectAt = () => null; const tacticsExStyleAt = () => null; const tacticsExCombosAt = () => null; const tacticsCritFixedNow = () => false; /* 完全回避・乱心の会心確定はタクティクスだけ */ const tacticsExMultiBuffNow = () => ({ dmg:1, taken:1, critRate:1, critDmg:1, distMult:0 }); const TACTICS_EX_DUAL_HIT_REPEAT = 2; // タクティクスのEX(片手盾・二刀流・スイーツパラダイス)は既存5モードでは効かない\nreturn (${predictedArrow});`)(mainHero, getPermaBuff, getTurnBuff, Math, shared.buildAttackHits, shared.attackAtonementDmg, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag, traitOwnerOfFor(mainHero), attackBoostProfile);
 
 // --- 実処理: processTurn の攻撃ブロック(会心判定 〜 全体連撃)を取り出す ---
 // ★AIコピーの札はダメージの倍率に copyDmgScale を掛けて渡す(2026-10-27 #4140)。閉じかっこまでは見ない
 const anchor = source.indexOf("const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult");
 if (anchor < 0) throw new Error('processTurn の攻撃ブロックが見つからない');
-const act = slice("const soulAttack=soulTraitAttackProfile(activeMon?.masuId?getMasuMon(activeMon.masuId):null,card,slotIdx);", 'if (rangeMoveTarget!=null)', anchor);
+const act = slice("const soulAttack=attackBoostProfile(activeMon?.masuId?getMasuMon(activeMon.masuId):null,card,slotIdx);", 'if (rangeMoveTarget!=null)', anchor);
 // 2026-10-21(#3309)からハムのカウンターの演出(await で演出を待つ1行)がこの区間に入った。ダメージには関わらず、
 // 同期の Function では await を書けないので、取り出した写しからだけ外す(本体は変えない)
 const HAM_COUNTER_FX_LINE = /\{ const crossFx=fireTacticsExCross\(slotIdx\); if\(crossFx\) await playHamCounterFx\(crossFx,slotIdx,activeMon\); \}/;
 check('ハムのカウンターの演出の1行を写しから外せる(書き方が変わったらここを直す)', !act.text.includes('await ') || HAM_COUNTER_FX_LINE.test(act.text));
 act.text = act.text.replace(HAM_COUNTER_FX_LINE, '');
-const makeActual = (rng) => Function('d', 'card', 'activeMon', 'mainHero', 'getPermaBuff', 'getTurnBuff', 'localGlobalComboAdd', 'slotIdx', 'Math', 'buildAttackHits', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', 'traitOwnerOf', `
+const makeActual = (rng) => Function('d', 'card', 'activeMon', 'mainHero', 'getPermaBuff', 'getTurnBuff', 'localGlobalComboAdd', 'slotIdx', 'Math', 'buildAttackHits', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', 'traitOwnerOf', 'attackBoostProfile', `
   let totalDmg = 0, hasCrit = false; const attackHits = [];
   const halved = false; // 「同じ子の2枚目」ではない(パンドラの箱の悪魔側が見る値)
   ${fateSrc}
@@ -117,7 +120,7 @@ for (const heroId of heroes) for (const attackerId of [heroId, 'Suezo']) for (co
       const mainHero = { id: heroId }; const mon = { id: attackerId };
       const predicted = makePredicted(mainHero, getPermaBuff, getTurnBuff)(card, mon, d, localGlobal, 1);
       const M = mathWith(() => 1); // 乱数会心は起きない(guaranteedCrit だけが会心)
-      const actual = makeActual()(d, card, mon, mainHero, getPermaBuff, getTurnBuff, localGlobal, 1, M, shared.buildAttackHits, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag, traitOwnerOfFor(mainHero));
+      const actual = makeActual()(d, card, mon, mainHero, getPermaBuff, getTurnBuff, localGlobal, 1, M, shared.buildAttackHits, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag, traitOwnerOfFor(mainHero), attackBoostProfile);
       // 贖罪の追撃は予測にだけ入っている(実処理では固有技の効果ブロック側)
       const atonement = card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis')
         ? Math.floor((() => { const split = heroId === 'Pandora' && attackerId === 'Pandora' && ['atk', 'range_atk'].includes(card.type); const mb = split ? Math.floor(d * 0.5) : d; return turn.guaranteedCrit ? Math.floor(mb * 1.6) : mb; })() * 0.2)
@@ -127,11 +130,47 @@ for (const heroId of heroes) for (const attackerId of [heroId, 'Suezo']) for (co
     }
 check(`乱数を固定すると予測と実処理の合計が一致する(${cases} 通り)`, mismatches.length === 0, mismatches.slice(0, 5).join(' / '));
 
+// --- 固有技のオリジナル強化(2026-11-07): 会心率・会心ダメージ・連撃ダメージ・連撃数を積んだ個体でも、予測と実処理が一致する ---
+//   威力・〇〇特攻は getDmg(予測と実処理が同じ関数を呼ぶ)の中で掛かるので、ここでは d に入った後の部分を比べる。
+//   贖罪の追撃(アーク・イブリース)は実処理では別ブロックなので、この組み合わせからは外す(同じ倍率を渡していることは下で文字で見る)
+{
+  const boosted = { critDamage: 300, critRate: 200, comboDamage: 500, comboCount: 2 };
+  let bcases = 0; const bmis = []; let grew = false;
+  for (const heroId of heroes) for (const ownerId of ['Zan', 'Eiki', 'KenshiMocchi', 'Ghost', 'Golem']) for (const d of [100, 333])
+    for (const critMode of ['none', 'guaranteed']) for (const withBoost of [false, true]) {
+      const card = { type: 'unique', monId: ownerId };
+      const perma = { comboDmgPct: 0.03, globalComboDmgPct: 0.05, critDmgPct: 0.1, critRatePct: 0, kenshiExtraCombo: 1, fateStacks: null };
+      const turn = { guaranteedCrit: critMode === 'guaranteed' };
+      const getPermaBuff = (k, def = 0) => (k in perma ? perma[k] : def);
+      const getTurnBuff = (k, def) => (k in turn ? turn[k] : def);
+      const mainHero = { id: heroId }; const mon = { id: 'Suezo', masuId: 'm1' };
+      currentMasu = withBoost ? { id: 'm1', baseId: 'Suezo', uniqueSkillLevels: { own: 8 }, uniqueSkillBoosts: { own: boosted } } : null;
+      const predicted = makePredicted(mainHero, getPermaBuff, getTurnBuff)(card, mon, d, 0, 1);
+      const actual = makeActual()(d, card, mon, mainHero, getPermaBuff, getTurnBuff, 0, 1, mathWith(() => 1), shared.buildAttackHits, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag, traitOwnerOfFor(mainHero), attackBoostProfile);
+      bcases++;
+      if (predicted !== actual.totalDmg) bmis.push(`${heroId}/${ownerId} d=${d} ${critMode} 強化${withBoost ? 'あり' : 'なし'}: 予測${predicted} ≠ 実${actual.totalDmg}`);
+      if (withBoost && ownerId === 'Zan' && d === 333 && critMode === 'none') {
+        currentMasu = null;
+        const plain = makePredicted(mainHero, getPermaBuff, getTurnBuff)(card, mon, d, 0, 1);
+        grew = grew || predicted > plain;
+      }
+    }
+  currentMasu = null;
+  check(`オリジナル強化ありでも、乱数を固定すると予測と実処理の合計が一致する(${bcases} 通り)`, bmis.length === 0, bmis.slice(0, 5).join(' / '));
+  check('オリジナル強化(連撃数・連撃ダメージ)を積むと予測の合計が増える', grew);
+  check('贖罪の追撃も、予測と実処理が同じ連撃の最終倍率(オリジナル強化の連撃ダメージ込み)を渡す',
+    predictedArrow.includes('attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier)')
+    && source.includes('const comboAmt=attackAtonementDmg(card, finalD, soulAttack.comboFinalMultiplier);'));
+  check('威力・〇〇特攻は getDmg の中で掛かる(予測も実処理も getDmg を通る)',
+    source.includes('const soulAttack=attackBoostProfile(mon?.masuId?getMasuMon(mon.masuId):null,card,slotIdx,uniqueBoostCtxFor(mon,slotIdx,attackStartDist));')
+    && /\*distBonusMult\*soulAttack\.damageMultiplier;/.test(source));
+}
+
 // ヒット列の順序(メイン → 連撃 → 全体連撃)と本数の代表例
 {
   const perma = { comboDmgPct: 0, globalComboDmgPct: 0.1, critDmgPct: 0, critRatePct: 0 };
   const getPermaBuff = (k, def = 0) => (k in perma ? perma[k] : def); const getTurnBuff = (k, def) => def;
-  const hits = makeActual()(100, { type: 'unique', monId: 'Eiki' }, { id: 'Eiki' }, { id: 'Eiki' }, getPermaBuff, getTurnBuff, 0, 1, mathWith(() => 1), shared.buildAttackHits, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag, traitOwnerOfFor({ id: 'Eiki' })).attackHits;
+  const hits = makeActual()(100, { type: 'unique', monId: 'Eiki' }, { id: 'Eiki' }, { id: 'Eiki' }, getPermaBuff, getTurnBuff, 0, 1, mathWith(() => 1), shared.buildAttackHits, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag, traitOwnerOfFor({ id: 'Eiki' }), attackBoostProfile).attackHits;
   const names = hits.map(h => h.skillName || 'main').join(',');
   check('エイキ勇者の固有技: メイン → 桜花連舞×2 → +30% → 緋桜連華×2 → 全体連撃 の順と本数', hits.length === 7 && hits[0].dmg === 100, names);
 }

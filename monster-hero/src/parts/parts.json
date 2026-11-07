@@ -276,6 +276,10 @@
       "role": "画面: 魂格特性(MASU_SOUL_TRAITS)"
     },
     {
+      "file": "63-unique-boost-sheet.jsx",
+      "role": "シート: 固有技のオリジナル強化(マスモン詳細の固有技強化の枠から開く)"
+    },
+    {
       "file": "64-screen-masu-transcend-enhance.jsx",
       "role": "画面: 超越強化(MASU_TRANSCEND_ENHANCE)"
     },

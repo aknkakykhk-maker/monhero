@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e2eae2e4444a3e9e
+// source-sha256: 81e6a9ccbfc192ba
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -1927,6 +1927,374 @@ const moveUniqueOrderKey = (order, key, delta) => {
   list.splice(to, 0, list.splice(from, 1)[0]);
   return list;
 };
+const UNIQUE_BOOST_STEP_COST = 100;
+const UNIQUE_BOOST_COMBO_IDS = Object.freeze(['Zan', 'Eiki', 'KenshiMocchi', 'Ark', 'Iblis', 'Ghost', 'Spooky', 'Illumine']);
+const UNIQUE_BOOST_EFFECT_IDS = Object.freeze(['Mocchi', 'Mitarashi', 'Golem', 'Tiger', 'Monol', 'Zan', 'Eiki', 'KenshiMocchi', 'Illumine', 'Dreamy', 'Yggdrasil', 'MelWhip', 'Melody', 'Kuromy']);
+const UNIQUE_BOOST_HEAL_IDS = Object.freeze(['Suezo', 'Oboro', 'Plant', 'Yggdrasil', 'MelWhip', 'Melody', 'Kuromy']);
+const UNIQUE_BOOST_DURATION_IDS = Object.freeze(['Pandora', 'Dreamy', 'Kyubi', 'Orihime', 'Spooky', 'Snegurochka', 'Undine', 'Yaobikuni']);
+const UNIQUE_BOOST_CHANCE_IDS = Object.freeze(['Ghost', 'Spooky']);
+const UNIQUE_BOOST_TABS = Object.freeze([Object.freeze({
+  id: 'attack',
+  label: '攻撃'
+}), Object.freeze({
+  id: 'slayer',
+  label: '特攻'
+}), Object.freeze({
+  id: 'support',
+  label: '補助'
+})]);
+const UNIQUE_BOOST_DEFINITIONS = Object.freeze([Object.freeze({
+  id: 'power',
+  tab: 'attack',
+  name: '威力',
+  unit: '%',
+  perStep: 0.1,
+  stepCost: 100,
+  maxValue: null,
+  desc: 'この技のダメージが上がります。'
+}), Object.freeze({
+  id: 'critDamage',
+  tab: 'attack',
+  name: '会心ダメージ',
+  unit: '%',
+  perStep: 0.13,
+  stepCost: 100,
+  maxValue: null,
+  desc: 'この技が会心になったときのダメージが上がります。'
+}), Object.freeze({
+  id: 'critRate',
+  tab: 'attack',
+  name: '会心率',
+  unit: 'pt',
+  perStep: 0.1,
+  stepCost: 100,
+  maxValue: 50,
+  desc: 'この技の会心率が上がります。'
+}), Object.freeze({
+  id: 'comboDamage',
+  tab: 'attack',
+  name: '連撃ダメージ',
+  unit: '%',
+  perStep: 0.1,
+  stepCost: 100,
+  maxValue: null,
+  only: UNIQUE_BOOST_COMBO_IDS,
+  desc: 'この技で出る連撃1本1本のダメージが上がります。'
+}), Object.freeze({
+  id: 'comboCount',
+  tab: 'attack',
+  name: '連撃数',
+  unit: '本',
+  perStep: 1,
+  stepCost: 10000,
+  maxValue: 3,
+  only: UNIQUE_BOOST_COMBO_IDS,
+  desc: 'この技で攻撃するたびに、元のダメージの10%の連撃が1本増えます。'
+}), Object.freeze({
+  id: 'mooSlayer',
+  tab: 'slayer',
+  name: 'ムー特攻',
+  unit: '%',
+  perStep: 0.2,
+  stepCost: 100,
+  maxValue: null,
+  desc: '相手がムー・覚醒ムーのとき、この技のダメージが上がります。'
+}), Object.freeze({
+  id: 'eventBossSlayer',
+  tab: 'slayer',
+  name: 'イベボス特攻',
+  unit: '%',
+  perStep: 0.2,
+  stepCost: 100,
+  maxValue: null,
+  desc: '相手が期間イベントのボス(ジャックなど)のとき、この技のダメージが上がります。'
+}), Object.freeze({
+  id: 'chargeBreak',
+  tab: 'slayer',
+  name: '溜めくずし',
+  unit: '%',
+  perStep: 0.2,
+  stepCost: 100,
+  maxValue: null,
+  desc: '相手が必殺技を溜めているとき、この技のダメージが上がります。'
+}), Object.freeze({
+  id: 'immobileSlayer',
+  tab: 'slayer',
+  name: '動けない敵へ',
+  unit: '%',
+  perStep: 0.2,
+  stepCost: 100,
+  maxValue: null,
+  desc: '相手がスタン・絶氷の楔で動けないとき、この技のダメージが上がります。'
+}), Object.freeze({
+  id: 'finisher',
+  tab: 'slayer',
+  name: 'とどめ',
+  unit: '%',
+  perStep: 0.2,
+  stepCost: 100,
+  maxValue: null,
+  desc: '相手のライフが3割以下のとき、この技のダメージが上がります。'
+}), Object.freeze({
+  id: 'rangeMatch',
+  tab: 'slayer',
+  name: '間合いの極意',
+  unit: '%',
+  perStep: 0.15,
+  stepCost: 100,
+  maxValue: null,
+  desc: '相手と同じ距離から撃ったとき、この技のダメージが上がります。'
+}), Object.freeze({
+  id: 'heroPride',
+  tab: 'slayer',
+  name: '勇者の誇り',
+  unit: '%',
+  perStep: 0.15,
+  stepCost: 100,
+  maxValue: null,
+  desc: 'この技を使ったのが勇者モンのとき、この技のダメージが上がります。'
+}), Object.freeze({
+  id: 'extremeChallenge',
+  tab: 'slayer',
+  name: '極限への挑戦',
+  unit: '%',
+  perStep: 0.15,
+  stepCost: 100,
+  maxValue: null,
+  desc: '極限チャレンジで戦うとき、この技のダメージが上がります。'
+}), Object.freeze({
+  id: 'gutsSave',
+  tab: 'support',
+  name: '省気',
+  unit: '%',
+  sign: -1,
+  perStep: 0.04,
+  stepCost: 100,
+  maxValue: 50,
+  desc: 'この技の消費ガッツが減ります。'
+}), Object.freeze({
+  id: 'effectPower',
+  tab: 'support',
+  name: '効果の強さ',
+  unit: '%',
+  perStep: 0.1,
+  stepCost: 100,
+  maxValue: 100,
+  only: UNIQUE_BOOST_EFFECT_IDS,
+  desc: 'この技の効果の数字(被ダメ軽減・ちから・連撃ダメージなど)が、元の数字に対して強くなります。'
+}), Object.freeze({
+  id: 'healAmount',
+  tab: 'support',
+  name: '回復の量',
+  unit: '%',
+  perStep: 0.1,
+  stepCost: 100,
+  maxValue: 100,
+  only: UNIQUE_BOOST_HEAL_IDS,
+  desc: 'この技で回復するライフ・ガッツの量が、元の量に対して増えます。'
+}), Object.freeze({
+  id: 'effectDuration',
+  tab: 'support',
+  name: '効果の長さ',
+  unit: 'ターン',
+  perStep: 1,
+  stepCost: 5000,
+  maxValue: 1,
+  only: UNIQUE_BOOST_DURATION_IDS,
+  desc: 'この技の効果が続くターンが長くなります。'
+}), Object.freeze({
+  id: 'effectChance',
+  tab: 'support',
+  name: '効果の確率',
+  unit: 'pt',
+  perStep: 0.05,
+  stepCost: 100,
+  maxValue: 25,
+  only: UNIQUE_BOOST_CHANCE_IDS,
+  desc: 'この技の当たり(コインの表・運命の輪のダメージ3倍)が出やすくなります。'
+}), Object.freeze({
+  id: 'evade',
+  tab: 'support',
+  name: '見切り',
+  unit: 'pt',
+  perStep: 0.05,
+  stepCost: 100,
+  maxValue: 20,
+  desc: 'この技を使ったターン、敵の攻撃をよける率が上がります。'
+})]);
+const UNIQUE_BOOST_BY_ID = Object.freeze(Object.fromEntries(UNIQUE_BOOST_DEFINITIONS.map(def => [def.id, def])));
+const uniqueBoostMaxSteps = def => def && def.maxValue != null && Number.isFinite(Number(def.maxValue)) ? Math.floor(Number(def.maxValue) / def.perStep + 1e-9) : Infinity;
+const uniqueBoostAppliesTo = (def, monId) => !!def && (!Array.isArray(def.only) || def.only.includes(String(monId || '')));
+const normalizeUniqueBoostSteps = raw => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  UNIQUE_BOOST_DEFINITIONS.forEach(def => {
+    const n = Math.floor(Number(raw[def.id]));
+    if (!Number.isFinite(n) || n <= 0) return;
+    out[def.id] = Math.min(n, uniqueBoostMaxSteps(def));
+  });
+  return out;
+};
+const normalizeUniqueSkillBoosts = masuOrBoosts => {
+  const raw = masuOrBoosts && typeof masuOrBoosts === 'object' && !Array.isArray(masuOrBoosts) && Object.prototype.hasOwnProperty.call(masuOrBoosts, 'uniqueSkillBoosts') ? masuOrBoosts.uniqueSkillBoosts : masuOrBoosts;
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  Object.entries(raw).forEach(([key, steps]) => {
+    if (typeof key !== 'string' || !key) return;
+    const normalized = normalizeUniqueBoostSteps(steps);
+    if (Object.keys(normalized).length) out[key] = normalized;
+  });
+  return out;
+};
+const uniqueBoostStepsOf = (masu, key) => normalizeUniqueSkillBoosts(masu)[String(key || '')] || {};
+const uniqueBoostSpentOfSteps = steps => Object.entries(normalizeUniqueBoostSteps(steps)).reduce((sum, [id, n]) => sum + n * (UNIQUE_BOOST_BY_ID[id]?.stepCost || UNIQUE_BOOST_STEP_COST), 0);
+const uniqueSkillBoostSpentPoints = masu => {
+  const all = normalizeUniqueSkillBoosts(masu);
+  const owned = new Set([OWN_UNIQUE_KEY, ...(Array.isArray(masu?.inheritedUniques) ? masu.inheritedUniques : []).map(unique => inheritedUniqueLevelKey(unique)).filter(Boolean)]);
+  return Object.entries(all).reduce((sum, [key, steps]) => sum + (owned.has(key) ? uniqueBoostSpentOfSteps(steps) : 0), 0);
+};
+const uniqueBoostValue = (def, steps) => Math.max(0, Math.floor(Number(steps) || 0)) * (def?.perStep || 0);
+const formatUniqueBoostValue = (def, steps) => {
+  if (!def) return '';
+  const value = uniqueBoostValue(def, steps);
+  const sign = def.sign === -1 ? '−' : '+';
+  if (def.unit === '本' || def.unit === 'ターン') return `${sign}${Math.round(value)}${def.unit}`;
+  const digits = Math.round(def.perStep * 100) % 10 === 0 ? 1 : 2;
+  return `${sign}${value.toFixed(digits)}${def.unit}`;
+};
+const uniqueBoostSummaryText = (steps, max = 2) => {
+  const normalized = normalizeUniqueBoostSteps(steps);
+  const parts = UNIQUE_BOOST_DEFINITIONS.filter(def => normalized[def.id] > 0).map(def => `${def.name}${formatUniqueBoostValue(def, normalized[def.id])}`);
+  if (!parts.length) return '';
+  return parts.length > max ? `${parts.slice(0, max).join('・')} ほか` : parts.join('・');
+};
+const uniqueBoostMonIdOfKey = (masu, key) => {
+  if (key === OWN_UNIQUE_KEY) {
+    const base = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[masu?.baseId] : null;
+    return base?.unique?.monId || masu?.baseId || null;
+  }
+  const found = (Array.isArray(masu?.inheritedUniques) ? masu.inheritedUniques : []).find(unique => inheritedUniqueLevelKey(unique) === key);
+  return found?.monId || null;
+};
+const uniqueBoostSkillLevelOf = (masu, key) => {
+  if (key === OWN_UNIQUE_KEY) return Math.max(0, Math.min(MAX_UNIQUE_SKILL_LEVEL, Math.floor(Number(masu?.uniqueSkillLevels?.own) || 0)));
+  const list = Array.isArray(masu?.inheritedUniques) ? masu.inheritedUniques : [];
+  const index = list.findIndex(unique => inheritedUniqueLevelKey(unique) === key);
+  return index < 0 ? 0 : resolveInheritedUniqueLevel(masu, list[index], index);
+};
+const applyUniqueBoostPlan = (masu, key, plan) => {
+  if (!masu || typeof key !== 'string' || !plan || typeof plan !== 'object') return null;
+  const normalized = normalizeMasuProgression(masu);
+  const monId = uniqueBoostMonIdOfKey(normalized, key);
+  if (!monId || uniqueBoostSkillLevelOf(normalized, key) < MAX_UNIQUE_SKILL_LEVEL) return null;
+  const all = normalizeUniqueSkillBoosts(normalized);
+  const current = all[key] || {};
+  const next = {
+    ...current
+  };
+  let cost = 0;
+  for (const [id, rawTarget] of Object.entries(plan)) {
+    const def = UNIQUE_BOOST_BY_ID[id];
+    const target = Math.floor(Number(rawTarget));
+    if (!def || !Number.isFinite(target)) return null;
+    const have = current[id] || 0;
+    if (target === have) continue;
+    if (target < have || target > uniqueBoostMaxSteps(def) || !uniqueBoostAppliesTo(def, monId)) return null;
+    cost += (target - have) * def.stepCost;
+    next[id] = target;
+  }
+  if (cost <= 0 || cost > normalized.uniqueSkillPoints) return null;
+  return {
+    cost,
+    nextMasu: {
+      ...normalized,
+      uniqueSkillBoosts: {
+        ...all,
+        [key]: next
+      },
+      uniqueSkillPoints: normalized.uniqueSkillPoints - cost
+    }
+  };
+};
+const withInheritedUniqueBoosts = (masu, newKey, steps) => {
+  const normalized = normalizeUniqueBoostSteps(steps);
+  if (!masu || !newKey || !Object.keys(normalized).length) return masu;
+  return {
+    ...masu,
+    uniqueSkillBoosts: {
+      ...normalizeUniqueSkillBoosts(masu),
+      [newKey]: normalized
+    }
+  };
+};
+const uniqueBoostKeyOfCard = card => {
+  if (!card || card.type !== 'unique') return null;
+  const id = typeof card.inheritedUniqueId === 'string' ? card.inheritedUniqueId.trim() : '';
+  return id ? `${INHERITED_UNIQUE_LEVEL_KEY_PREFIX}${id}` : OWN_UNIQUE_KEY;
+};
+const UNIQUE_BOOST_EMPTY_PROFILE = Object.freeze({
+  damagePct: 0,
+  comboFinalPct: 0,
+  comboExtra: 0,
+  critRatePoints: 0,
+  critDamagePct: 0,
+  gutsSavePct: 0,
+  effectPct: 0,
+  healPct: 0,
+  durationTurns: 0,
+  chancePoints: 0,
+  evadePoints: 0
+});
+const uniqueBoostIsEventBoss = enemyId => typeof EVENT_BOSS_IDS !== 'undefined' && EVENT_BOSS_IDS.includes(String(enemyId || ''));
+const uniqueBoostProfile = (masu, card, ctx = {}) => {
+  const key = uniqueBoostKeyOfCard(card);
+  if (!masu || !key) return UNIQUE_BOOST_EMPTY_PROFILE;
+  const steps = uniqueBoostStepsOf(masu, key);
+  if (!Object.keys(steps).length) return UNIQUE_BOOST_EMPTY_PROFILE;
+  const monId = card.monId || uniqueBoostMonIdOfKey(masu, key);
+  const v = id => uniqueBoostAppliesTo(UNIQUE_BOOST_BY_ID[id], monId) ? uniqueBoostValue(UNIQUE_BOOST_BY_ID[id], steps[id]) : 0;
+  const c = ctx && typeof ctx === 'object' ? ctx : {};
+  const eventBoss = !!c.eventBattle || uniqueBoostIsEventBoss(c.enemyId);
+  const moo = !eventBoss && ['Moo', 'AwakenedMoo'].includes(String(c.enemyId || ''));
+  const ratio = Number(c.enemyHpRatio);
+  let damagePct = v('power');
+  if (moo) damagePct += v('mooSlayer');
+  if (eventBoss) damagePct += v('eventBossSlayer');
+  if (c.enemyCharging) damagePct += v('chargeBreak');
+  if (c.enemyImmobile) damagePct += v('immobileSlayer');
+  if (Number.isFinite(ratio) && ratio > 0 && ratio <= 0.3) damagePct += v('finisher');
+  if (c.sameDistance) damagePct += v('rangeMatch');
+  if (c.isHero) damagePct += v('heroPride');
+  if (c.extreme) damagePct += v('extremeChallenge');
+  return {
+    damagePct,
+    comboFinalPct: v('comboDamage'),
+    comboExtra: Math.round(v('comboCount')),
+    critRatePoints: v('critRate'),
+    critDamagePct: v('critDamage'),
+    gutsSavePct: Math.min(50, v('gutsSave')),
+    effectPct: v('effectPower'),
+    healPct: v('healAmount'),
+    durationTurns: Math.round(v('effectDuration')),
+    chancePoints: v('effectChance'),
+    evadePoints: v('evade')
+  };
+};
+const attackBoostProfile = (masu, card, slotIdx = null, ctx = {}) => {
+  const soul = soulTraitAttackProfile(masu, card, slotIdx);
+  const ub = uniqueBoostProfile(masu, card, ctx);
+  return {
+    ...soul,
+    soulDamagePct: soul.damagePct,
+    damagePct: soul.damagePct + ub.damagePct,
+    damageMultiplier: soul.damageMultiplier * (1 + ub.damagePct / 100),
+    comboFinalMultiplier: soul.comboFinalMultiplier * (1 + ub.comboFinalPct / 100),
+    critRateBonus: soul.critRateBonus + ub.critRatePoints / 100,
+    critDamageBonus: soul.critDamageBonus + ub.critDamagePct / 100,
+    gutsCostMultiplier: soul.gutsCostMultiplier * Math.max(0, 1 - ub.gutsSavePct / 100),
+    uniqueBoost: ub
+  };
+};
 const migrateInheritedUniqueLevelIds = (masuMons, makeId = createInheritedUniqueId) => {
   let changed = false;
   const usedIds = new Set();
@@ -2688,14 +3056,22 @@ const buildUniqueSkillPointReset = masu => {
     const stableShadowExists = legacyMatch && inheritedUniqueLevelKey(normalized.inheritedUniques?.[Number(legacyMatch[1])]) && Object.prototype.hasOwnProperty.call(normalized.uniqueSkillLevels, inheritedUniqueLevelKey(normalized.inheritedUniques[Number(legacyMatch[1])]));
     return sum + (stableShadowExists ? 0 : Math.max(0, Math.floor(Number(level) || 0)));
   }, 0);
-  if (refundedPoints <= 0) return null;
+  const boosts = normalizeUniqueSkillBoosts(normalized);
+  const refundedBoostPoints = Object.values(boosts).reduce((sum, steps) => sum + uniqueBoostSpentOfSteps(steps), 0);
+  const levelPoints = refundedPoints;
+  const total = levelPoints + refundedBoostPoints;
+  if (total <= 0) return null;
+  const nextMasu = {
+    ...normalized,
+    uniqueSkillLevels: Object.fromEntries(Object.keys(normalized.uniqueSkillLevels).map(key => [key, 0])),
+    uniqueSkillPoints: normalized.uniqueSkillPoints + total
+  };
+  if (Object.prototype.hasOwnProperty.call(normalized, 'uniqueSkillBoosts')) nextMasu.uniqueSkillBoosts = {};
   return {
-    refundedPoints,
-    nextMasu: {
-      ...normalized,
-      uniqueSkillLevels: Object.fromEntries(Object.keys(normalized.uniqueSkillLevels).map(key => [key, 0])),
-      uniqueSkillPoints: normalized.uniqueSkillPoints + refundedPoints
-    }
+    refundedPoints: total,
+    refundedLevelPoints: levelPoints,
+    refundedBoostPoints,
+    nextMasu
   };
 };
 const resetMasuForRebirth = (masu, {
@@ -2754,6 +3130,10 @@ const resetMasuForRebirth = (masu, {
   }));
   if (Array.isArray(masu?.uniqueOrder)) reset.uniqueOrder = masu.uniqueOrder.filter(key => typeof key === 'string');
   if (typeof masu?.initialUniqueKey === 'string' && masu.initialUniqueKey) reset.initialUniqueKey = masu.initialUniqueKey;
+  {
+    const boosts = normalizeUniqueSkillBoosts(masu);
+    if (Object.keys(boosts).length) reset.uniqueSkillBoosts = boosts;
+  }
   if (masu?.individualStats && typeof masu.individualStats === 'object') reset.individualStats = {
     ...masu.individualStats
   };
@@ -2931,7 +3311,8 @@ const mergeMasuIntoMon = masu => {
     initialUniqueKey: normalizeInitialUniqueKey(masu),
     soulRankStage: normalizeSoulRankStage(masu?.soulRankStage),
     soulPointMaxReachedLevel: normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel),
-    soulTraitLevels: normalizeSoulTraitLevels(masu?.soulTraitLevels)
+    soulTraitLevels: normalizeSoulTraitLevels(masu?.soulTraitLevels),
+    uniqueSkillBoosts: normalizeUniqueSkillBoosts(masu)
   };
 };
 const masuGrowthBreakdown = (masu, mergedMon) => {
@@ -3135,6 +3516,8 @@ const monsterPowerParts = mon => {
     aptitude: 0,
     unique: 0,
     soul: 0,
+    boost: 0,
+    boostSpent: 0,
     total: 0
   };
   const num = v => Number.isFinite(Number(v)) ? Number(v) : 0;
@@ -3143,12 +3526,16 @@ const monsterPowerParts = mon => {
   const uniques = monsterPowerUniques(mon);
   const uniquePower = uniques.length * MONSTER_POWER_UNIQUE_OWNED + uniques.reduce((sum, u) => sum + Math.max(0, Math.floor(num(u.evoLevel))), 0) * MONSTER_POWER_UNIQUE_PER_LEVEL;
   const soulPower = soulTraitSpentPoints(mon) * 10;
+  const boostSpent = uniqueSkillBoostSpentPoints(mon);
+  const boostPower = boostSpent * 10;
   return {
     stat,
     aptitude: apt,
     unique: uniquePower,
     soul: soulPower,
-    total: stat + apt + uniquePower + soulPower
+    boost: boostPower,
+    boostSpent,
+    total: stat + apt + uniquePower + soulPower + boostPower
   };
 };
 const monsterPowerOf = mon => Math.round(monsterPowerParts(mon).total);
@@ -4130,18 +4517,45 @@ const buildFusionDiamondSummary = ({
 const buildFusionInheritancePlan = ({
   main,
   subs,
-  selectedSubIds
+  selectedSubIds,
+  choiceBySubId = null
 }) => {
   const selected = new Set(Array.isArray(selectedSubIds) ? selectedSubIds : []);
+  const choices = choiceBySubId && typeof choiceBySubId === 'object' ? choiceBySubId : {};
   const mainBase = main ? ALL_PLAYER_MONSTERS[main.baseId] : null;
   const ownedLineageIds = new Set([uniqueLineageId(mainBase?.unique, mainBase?.id), ...(Array.isArray(main?.inheritedUniques) ? main.inheritedUniques : []).map(unique => uniqueLineageId(unique))].filter(Boolean));
   const entries = (Array.isArray(subs) ? subs : []).map(sub => {
     const subBase = sub ? ALL_PLAYER_MONSTERS[sub.baseId] : null;
-    const lineageId = uniqueLineageId(subBase?.unique, subBase?.id);
-    const eligible = !!sub && masuBondLevelInfo(sub).level >= FUSION_INHERIT_MIN_SUB_LEVEL && !!subBase?.unique;
+    const options = !sub ? [] : [...(subBase?.unique ? [{
+      key: OWN_UNIQUE_KEY,
+      unique: subBase.unique,
+      monId: subBase.id,
+      lineageId: uniqueLineageId(subBase.unique, subBase.id),
+      own: true,
+      level: Math.max(0, Math.min(MAX_UNIQUE_SKILL_LEVEL, Math.floor(Number(sub.uniqueSkillLevels?.own) || Number(subBase.unique.evoLevel) || 0)))
+    }] : []), ...(Array.isArray(sub.inheritedUniques) ? sub.inheritedUniques : []).map((unique, index) => {
+      const key = inheritedUniqueLevelKey(unique);
+      if (!key || !isValidInheritedUnique(unique)) return null;
+      return {
+        key,
+        unique,
+        monId: unique.monId || null,
+        lineageId: uniqueLineageId(unique),
+        own: false,
+        level: resolveInheritedUniqueLevel(sub, unique, index)
+      };
+    }).filter(Boolean)].map(option => ({
+      ...option,
+      boosts: uniqueBoostStepsOf(sub, option.key),
+      duplicate: !!option.lineageId && ownedLineageIds.has(option.lineageId)
+    }));
+    const chosenKey = typeof choices[sub?.id] === 'string' && options.some(o => o.key === choices[sub?.id]) ? choices[sub?.id] : OWN_UNIQUE_KEY;
+    const chosen = options.find(o => o.key === chosenKey) || null;
+    const lineageId = chosen ? chosen.lineageId : uniqueLineageId(subBase?.unique, subBase?.id);
+    const eligible = !!sub && masuBondLevelInfo(sub).level >= FUSION_INHERIT_MIN_SUB_LEVEL && options.length > 0;
     const requested = !!sub && selected.has(sub.id);
     const duplicate = !!lineageId && ownedLineageIds.has(lineageId);
-    const inherited = requested && eligible && !!lineageId && !duplicate;
+    const inherited = requested && eligible && !!chosen && !!lineageId && !duplicate;
     if (inherited) ownedLineageIds.add(lineageId);
     return {
       sub,
@@ -4150,7 +4564,10 @@ const buildFusionInheritancePlan = ({
       eligible,
       requested,
       duplicate,
-      inherited
+      inherited,
+      options,
+      chosenKey,
+      chosen
     };
   });
   const inheritedEntries = entries.filter(entry => entry.inherited);
@@ -12520,6 +12937,9 @@ const rankingMasuDetail = masu => {
     ...(soulTraitSpentPoints(masu) > 0 ? {
       soulSpentPoints: soulTraitSpentPoints(masu)
     } : {}),
+    ...(uniqueSkillBoostSpentPoints(masu) > 0 ? {
+      uniqueBoostSpent: uniqueSkillBoostSpentPoints(masu)
+    } : {}),
     statPoints: {
       hp: num(sp.hp),
       atk: num(sp.atk),
@@ -12583,6 +13003,7 @@ const rankingDetailToMasu = (baseId, detail, colors) => {
     soulRankStage: normalizeSoulRankStage(detail.soulRankStage),
     soulTraitLevels: normalizeSoulTraitLevels(detail.soulTraitLevels),
     soulSpentPointsSnapshot: Number.isFinite(Number(detail.soulSpentPoints)) ? num(detail.soulSpentPoints) : 0,
+    uniqueBoostSpentSnapshot: num(detail.uniqueBoostSpent),
     statPoints: {
       hp: num(sp.hp),
       atk: num(sp.atk),
@@ -19939,6 +20360,8 @@ const difficultyStyle = (setting, selected) => selected ? {
 };
 const MOO_BOSS_IDS = ['Moo', 'AwakenedMoo', 'Jack'];
 const isMooBoss = id => MOO_BOSS_IDS.includes(String(id || ''));
+const EVENT_BOSS_IDS = Object.freeze(['Jack']);
+const isEventBossId = id => EVENT_BOSS_IDS.includes(String(id || ''));
 const ENEMY_ART_LAYOUT = {
   default: {
     scanScale: 1,
@@ -21237,9 +21660,13 @@ const FATE_WHEEL_OUTCOMES = Object.freeze([Object.freeze({
   id: 'atk',
   label: 'ちから+15%'
 })]);
-const rollFateCoin = (rnd = Math.random) => rnd() < 0.5 ? 'heads' : 'tails';
+const rollFateCoin = (rnd = Math.random, bonusPoints = 0) => rnd() < 0.5 + Math.max(0, Math.min(25, Number(bonusPoints) || 0)) / 100 ? 'heads' : 'tails';
 const fateCoinDmgMult = side => side === 'heads' ? FATE_COIN_HEADS_MULT : FATE_COIN_TAILS_MULT;
-const rollFateWheel = (rnd = Math.random) => FATE_WHEEL_OUTCOMES[Math.min(FATE_WHEEL_OUTCOMES.length - 1, Math.max(0, Math.floor(rnd() * FATE_WHEEL_OUTCOMES.length)))];
+const rollFateWheel = (rnd = Math.random, bonusPoints = 0) => {
+  const bonus = Math.max(0, Math.min(25, Number(bonusPoints) || 0)) / 100;
+  if (bonus > 0 && rnd() < bonus) return FATE_WHEEL_OUTCOMES.find(o => o.id === 'dmg3');
+  return FATE_WHEEL_OUTCOMES[Math.min(FATE_WHEEL_OUTCOMES.length - 1, Math.max(0, Math.floor(rnd() * FATE_WHEEL_OUTCOMES.length)))];
+};
 const fateCount = v => Math.max(0, Math.floor(Number(v) || 0));
 const fateSlotStacksOf = (fateStacks, slotIdx) => {
   const raw = fateStacks && typeof fateStacks === 'object' && fateStacks.bySlot && typeof fateStacks.bySlot === 'object' ? fateStacks.bySlot[String(slotIdx)] : null;
@@ -21437,6 +21864,7 @@ const ATTACK_COMBO_RULES = Object.freeze({
   atonement: 0.2
 });
 const KENSHI_COMBO_POWER_MAX = 3;
+const UNIQUE_BOOST_EXTRA_COMBO_RATE = 0.1;
 const buildAttackHits = ({
   d,
   card,
@@ -21454,7 +21882,8 @@ const buildAttackHits = ({
   swordSkill = true,
   hitRepeat = 1,
   exCombos = null,
-  critDmgMult = 1
+  critDmgMult = 1,
+  boostExtraCombos = 0
 }) => {
   const hits = [];
   const critMult = 1.5 + critDmgBonus;
@@ -21500,6 +21929,10 @@ const buildAttackHits = ({
   if (swordSkill && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiUnique) combo(rate + comboDmgBonus);
   if (attackerId === 'KenshiMocchi') {
     for (let i = 0; i < kenshiExtraCombos; i++) combo(ATTACK_COMBO_RULES.kenshiExtraCombo + comboDmgBonus);
+  }
+  if (card.type === 'unique') {
+    const n = Math.max(0, Math.min(10, Math.floor(Number(boostExtraCombos) || 0)));
+    for (let i = 0; i < n; i++) combo(UNIQUE_BOOST_EXTRA_COMBO_RATE);
   }
   for (const ec of Array.isArray(exCombos) ? exCombos : [exCombos]) {
     if (ec && ec.count > 0 && ec.rate > 0) {
@@ -70722,6 +71155,212 @@ function MasuSoulTraitsScreen({
     className: "mh-button mh-button-primary min-h-[48px] rounded-xl bg-cyan-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30"
   }, "1冊使って再編")))));
 }
+function UniqueBoostSheet({
+  masu,
+  skillKey,
+  onClose,
+  onCommit
+}) {
+  const [tab, setTab] = useState('attack');
+  const [draft, setDraft] = useState({});
+  const [helpId, setHelpId] = useState(null);
+  if (!masu || !skillKey) return null;
+  const normalized = normalizeMasuProgression(masu);
+  const monId = uniqueBoostMonIdOfKey(normalized, skillKey);
+  const level = uniqueBoostSkillLevelOf(normalized, skillKey);
+  const base = ALL_PLAYER_MONSTERS[normalized.baseId];
+  const uniqueDef = skillKey === OWN_UNIQUE_KEY ? base?.unique : (normalized.inheritedUniques || []).find(u => inheritedUniqueLevelKey(u) === skillKey);
+  const skillName = uniqueSkillAtLevel(uniqueDef, level)?.name || uniqueDef?.name || '固有技';
+  const current = uniqueBoostStepsOf(normalized, skillKey);
+  const targetOf = id => Math.max(current[id] || 0, Math.floor(Number(draft[id]) || 0));
+  const draftCost = UNIQUE_BOOST_DEFINITIONS.reduce((sum, def) => sum + (targetOf(def.id) - (current[def.id] || 0)) * def.stepCost, 0);
+  const remaining = normalized.uniqueSkillPoints - draftCost;
+  const setTarget = (def, target) => setDraft(prev => {
+    const have = current[def.id] || 0;
+    const now = Math.max(have, Math.floor(Number(prev[def.id]) || 0));
+    const otherCost = draftCost - (now - have) * def.stepCost;
+    const byPoints = have + Math.floor(Math.max(0, normalized.uniqueSkillPoints - otherCost) / def.stepCost);
+    const next = Math.max(have, Math.min(target, uniqueBoostMaxSteps(def), byPoints));
+    const out = {
+      ...prev
+    };
+    if (next > have) out[def.id] = next;else delete out[def.id];
+    return out;
+  });
+  const helpDef = helpId ? UNIQUE_BOOST_BY_ID[helpId] : null;
+  const capText = def => def.maxValue != null && Number.isFinite(Number(def.maxValue)) ? `・最大${def.sign === -1 ? '−' : '+'}${def.maxValue}${def.unit}` : '';
+  const stepText = def => `${def.stepCost.toLocaleString()}Pで${formatUniqueBoostValue(def, 1)}${capText(def)}`;
+  const rows = UNIQUE_BOOST_DEFINITIONS.filter(def => def.tab === tab);
+  return React.createElement("div", {
+    className: "fixed inset-0 flex items-end sm:items-center justify-center",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(2,6,23,0.78)',
+      zIndex: 31600
+    },
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": `${skillName}のオリジナル強化`,
+    "data-unique-boost-sheet": true
+  }, React.createElement("div", {
+    className: "w-full max-w-md bg-slate-900 border-2 border-amber-500/80 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden",
+    style: {
+      maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - 12px)',
+      paddingBottom: 'env(safe-area-inset-bottom)'
+    }
+  }, React.createElement("div", {
+    "data-unique-boost-head": true,
+    className: "shrink-0 px-4 pt-3 pb-2 border-b border-white/10 [@media(orientation:landscape)_and_(max-height:520px)]:pt-2 [@media(orientation:landscape)_and_(max-height:520px)]:pb-1.5"
+  }, React.createElement("div", {
+    className: "flex items-center justify-between gap-2 min-w-0"
+  }, React.createElement("div", {
+    className: "min-w-0 flex items-baseline gap-1.5"
+  }, React.createElement("span", {
+    className: "truncate text-[15px] font-black text-white"
+  }, skillName), React.createElement("span", {
+    className: "shrink-0 text-[11px] font-mono font-black text-amber-300"
+  }, "Lv.", level)), React.createElement("div", {
+    className: "shrink-0 flex items-center gap-1 text-[11px] font-black text-amber-300"
+  }, React.createElement(Sparkles, {
+    size: 12
+  }), "未使用 固有技P ", normalized.uniqueSkillPoints.toLocaleString())), React.createElement("div", {
+    className: "mt-1.5 text-[12px] font-black text-amber-200 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
+  }, "✨ オリジナル強化(この技だけに効きます)"), React.createElement("div", {
+    className: "mt-0.5 text-[10px] font-bold leading-relaxed text-slate-400 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
+  }, "Lv.8 になった固有技に、余った固有技Pで強化を積めます。合体でこの技を引き継ぐと、強化も一緒に引き継ぎます。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-3 gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1",
+    role: "tablist"
+  }, UNIQUE_BOOST_TABS.map(t => React.createElement("button", {
+    key: t.id,
+    type: "button",
+    role: "tab",
+    "aria-selected": tab === t.id,
+    "data-unique-boost-tab": t.id,
+    onClick: () => setTab(t.id),
+    className: `min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[34px] rounded-xl text-[12px] font-black border ${tab === t.id ? 'bg-amber-500 text-slate-950 border-amber-300' : 'bg-slate-800 text-slate-300 border-white/10'}`
+  }, t.label)))), React.createElement("div", {
+    "data-unique-boost-rows": true,
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll px-3 py-2 space-y-2"
+  }, rows.map(def => {
+    const applies = uniqueBoostAppliesTo(def, monId);
+    const have = current[def.id] || 0;
+    const target = targetOf(def.id);
+    const maxSteps = uniqueBoostMaxSteps(def);
+    const canAdd = applies && target < maxSteps && remaining >= def.stepCost;
+    return React.createElement("div", {
+      key: def.id,
+      "data-unique-boost-row": def.id,
+      "data-unique-boost-applies": applies ? '1' : '0',
+      className: `rounded-2xl border px-3 py-2 ${!applies ? 'border-white/5 bg-slate-900/60 opacity-50' : target > have ? 'border-amber-400/80 bg-amber-950/20' : 'border-white/10 bg-slate-800/50'}`
+    }, React.createElement("div", {
+      className: "flex items-start justify-between gap-2 min-w-0"
+    }, React.createElement("div", {
+      className: "min-w-0"
+    }, React.createElement("div", {
+      className: "flex items-center gap-1"
+    }, React.createElement("span", {
+      className: `text-[13px] font-black ${applies ? 'text-white' : 'text-slate-500'}`
+    }, def.name), React.createElement("button", {
+      type: "button",
+      "aria-label": `${def.name}の説明`,
+      onClick: () => setHelpId(def.id),
+      className: "shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-slate-300 active:scale-90"
+    }, React.createElement(HelpCircle, {
+      size: 14
+    }))), applies && React.createElement("div", {
+      className: "text-[9px] font-bold text-slate-500"
+    }, stepText(def))), React.createElement("div", {
+      className: "shrink-0 text-right text-[12px] font-mono font-black"
+    }, applies ? React.createElement("span", {
+      className: target > have ? 'text-amber-300' : 'text-slate-300'
+    }, formatUniqueBoostValue(def, have), " → ", formatUniqueBoostValue(def, target)) : React.createElement("span", {
+      className: "text-[10px] font-sans text-slate-500"
+    }, "この技には効果がありません"))), applies && React.createElement("div", {
+      className: "mt-1.5 flex items-center justify-end gap-1.5"
+    }, React.createElement("button", {
+      type: "button",
+      "aria-label": `${def.name}を1つ戻す`,
+      disabled: target <= have,
+      onClick: () => setTarget(def, target - 1),
+      className: "min-w-[44px] min-h-[38px] px-2 rounded-xl bg-slate-800 border border-white/10 text-[12px] font-black text-white disabled:opacity-30"
+    }, "−1"), React.createElement("button", {
+      type: "button",
+      "aria-label": `${def.name}を1つ上げる`,
+      disabled: !canAdd,
+      onClick: () => setTarget(def, target + 1),
+      className: "min-w-[44px] min-h-[38px] px-2 rounded-xl bg-slate-800 border border-white/10 text-[12px] font-black text-white disabled:opacity-30"
+    }, "+1"), maxSteps >= 10 && React.createElement("button", {
+      type: "button",
+      "aria-label": `${def.name}を10上げる`,
+      disabled: !canAdd,
+      onClick: () => setTarget(def, target + 10),
+      className: "min-w-[44px] min-h-[38px] px-2 rounded-xl bg-slate-800 border border-white/10 text-[12px] font-black text-white disabled:opacity-30"
+    }, "+10"), React.createElement("button", {
+      type: "button",
+      "aria-label": `${def.name}を上げられるだけ上げる`,
+      disabled: !canAdd,
+      onClick: () => setTarget(def, Infinity),
+      className: "min-w-[44px] min-h-[38px] px-2 rounded-xl bg-slate-800 border border-white/10 text-[12px] font-black text-white disabled:opacity-30"
+    }, "MAX")));
+  })), React.createElement("div", {
+    className: "shrink-0 px-4 pt-2 pb-3 border-t border-white/10 [@media(orientation:landscape)_and_(max-height:520px)]:pt-1 [@media(orientation:landscape)_and_(max-height:520px)]:pb-2"
+  }, React.createElement("div", {
+    className: "flex items-center justify-between text-[12px] font-black"
+  }, React.createElement("span", {
+    className: "text-slate-400"
+  }, "残りP"), React.createElement("span", {
+    className: "text-amber-300"
+  }, remaining.toLocaleString())), React.createElement("div", {
+    className: "mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    className: "min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] rounded-2xl bg-slate-800 text-[13px] font-black text-white"
+  }, "やめる"), React.createElement("button", {
+    type: "button",
+    "data-unique-boost-commit": true,
+    disabled: draftCost <= 0,
+    onClick: () => {
+      const plan = {};
+      UNIQUE_BOOST_DEFINITIONS.forEach(def => {
+        if (targetOf(def.id) > (current[def.id] || 0)) plan[def.id] = targetOf(def.id);
+      });
+      if (onCommit(plan)) {
+        setDraft({});
+        onClose();
+      }
+    },
+    className: "min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] rounded-2xl bg-gradient-to-b from-amber-500 to-orange-700 text-[13px] font-black text-white disabled:opacity-40"
+  }, "強化を確定")))), helpDef && React.createElement("div", {
+    className: "fixed inset-0 flex items-center justify-center p-6",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(2,6,23,0.6)',
+      zIndex: 31700
+    },
+    onClick: () => setHelpId(null),
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": `${helpDef.name}の説明`
+  }, React.createElement("div", {
+    className: "w-full max-w-xs rounded-2xl border border-amber-400/70 bg-slate-900 p-4",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "text-[14px] font-black text-amber-200"
+  }, helpDef.name), React.createElement("div", {
+    className: "mt-1 text-[12px] font-bold leading-relaxed text-slate-200"
+  }, helpDef.desc), React.createElement("div", {
+    className: "mt-1 text-[11px] font-bold text-slate-400"
+  }, stepText(helpDef)), !uniqueBoostAppliesTo(helpDef, monId) && React.createElement("div", {
+    className: "mt-1 text-[11px] font-bold text-slate-500"
+  }, "この技には効果がありません。"), React.createElement("button", {
+    type: "button",
+    onClick: () => setHelpId(null),
+    className: "mt-3 w-full min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black text-white"
+  }, "閉じる"))));
+}
 function MasuTranscendEnhanceScreen({
   commitTranscendExchange,
   commitTranscendFruit,
@@ -72012,7 +72651,9 @@ function MasuFusionScreen({
   setFusionSubId,
   setFusionSubIds,
   setMasuMonDetail,
-  lockedMasuIds = []
+  lockedMasuIds = [],
+  fusionInheritSkillKeys = {},
+  setFusionInheritSkillKeys = () => {}
 }) {
   const closeFusion = onClose;
   const fusedBorder = masu => (masu.fusionHistory || []).length > 0 ? 'border-amber-400 ring-1 ring-amber-400' : 'border-violet-400/40';
@@ -72153,6 +72794,7 @@ function MasuFusionScreen({
       if (selectedSubs.length === 0) return;
       setFusionSubId(selectedSubs[0].id);
       setFusionInheritUniqueIds([]);
+      setFusionInheritSkillKeys({});
       setFusionStep('confirm');
     };
     return React.createElement("div", {
@@ -72278,7 +72920,8 @@ function MasuFusionScreen({
     const inheritancePlan = buildFusionInheritancePlan({
       main,
       subs: selectedSubs,
-      selectedSubIds: fusionInheritUniqueIds
+      selectedSubIds: fusionInheritUniqueIds,
+      choiceBySubId: fusionInheritSkillKeys
     });
     const soulInheritancePreview = buildFusionSoulRankInheritancePlan({
       main,
@@ -72562,7 +73205,7 @@ function MasuFusionScreen({
       className: "text-slate-400 shrink-0"
     }, "継承対象"), React.createElement("span", {
       className: "text-amber-200 font-black text-right"
-    }, inheritancePlan.inheritedEntries.length ? inheritancePlan.inheritedEntries.map(entry => `${entry.sub.name}「${entry.subBase.unique.name}」`).join('、') : 'なし')), React.createElement("div", {
+    }, inheritancePlan.inheritedEntries.length ? inheritancePlan.inheritedEntries.map(entry => `${entry.sub.name}「${entry.chosen?.unique?.name || entry.subBase.unique.name}」`).join('、') : 'なし')), React.createElement("div", {
       className: "flex justify-between text-[11px] font-bold"
     }, React.createElement("span", {
       className: "text-slate-400"
@@ -72592,24 +73235,76 @@ function MasuFusionScreen({
       className: "space-y-2 mb-2"
     }, inheritancePlan.entries.map(entry => {
       const selected = fusionInheritUniqueIds.includes(entry.sub.id);
-      const disabled = !entry.eligible || entry.duplicate && !selected;
-      const reason = !entry.eligible ? `絆Lv${FUSION_INHERIT_MIN_SUB_LEVEL}以上と継承可能な固有技が必要です` : entry.duplicate ? '同じ系統の固有技が主または先の副から継承されます' : '';
-      return React.createElement("button", {
+      const pick = key => {
+        if (key == null) {
+          setFusionInheritUniqueIds(prev => prev.filter(id => id !== entry.sub.id));
+          return;
+        }
+        setFusionInheritSkillKeys(prev => ({
+          ...prev,
+          [entry.sub.id]: key
+        }));
+        setFusionInheritUniqueIds(prev => prev.includes(entry.sub.id) ? prev : [...prev, entry.sub.id]);
+      };
+      const unusedPoints = normalizeMasuProgression(entry.sub).uniqueSkillPoints;
+      const radio = on => React.createElement("span", {
+        className: `shrink-0 mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center ${on ? 'border-amber-400' : 'border-slate-500'}`
+      }, on && React.createElement("span", {
+        className: "w-2.5 h-2.5 rounded-full bg-amber-400"
+      }));
+      return React.createElement("div", {
         key: entry.sub.id,
-        disabled: disabled,
-        onClick: () => setFusionInheritUniqueIds(prev => prev.includes(entry.sub.id) ? prev.filter(id => id !== entry.sub.id) : [...prev, entry.sub.id]),
-        role: "switch",
-        "aria-checked": selected && !disabled,
-        className: `w-full min-h-[44px] flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border active:scale-95 disabled:opacity-60 ${selected && !disabled ? 'bg-amber-950/50 border-amber-500/60' : 'bg-slate-900 border-white/10'}`
-      }, React.createElement("span", {
-        className: "text-[12px] font-black text-left text-white"
-      }, entry.sub.name, "：", entry.subBase?.unique ? `固有技「${entry.subBase.unique.name}」を引き継ぐ` : '継承可能な固有技なし', reason && React.createElement(React.Fragment, null, React.createElement("br", null), React.createElement("span", {
-        className: "text-[10px] leading-relaxed text-slate-400 font-bold"
-      }, reason, selected && entry.duplicate ? '（選択中ですが費用・継承対象には含みません）' : ''))), React.createElement("div", {
-        className: `w-10 h-6 rounded-full shrink-0 relative ${selected && !disabled ? 'bg-amber-500' : 'bg-slate-700'}`
+        "data-fusion-inherit-pick": true,
+        className: "rounded-2xl border border-amber-500/50 bg-slate-950/40 p-3 space-y-1.5"
       }, React.createElement("div", {
-        className: `absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${selected && !disabled ? 'left-5' : 'left-1'}`
-      })));
+        className: "text-[12px] font-black text-white"
+      }, entry.sub.name, " から引き継ぐ技を選ぶ"), React.createElement("div", {
+        className: "text-[10px] font-bold text-slate-400"
+      }, "1つだけ選べます(副1体につき1つ・", FUSION_INHERIT_COST.toLocaleString(), "ダイヤ)"), !entry.eligible && React.createElement("div", {
+        className: "text-[10px] leading-relaxed text-slate-400 font-bold"
+      }, "絆Lv", FUSION_INHERIT_MIN_SUB_LEVEL, "以上と継承可能な固有技が必要です"), entry.eligible && React.createElement(React.Fragment, null, React.createElement("button", {
+        type: "button",
+        role: "radio",
+        "aria-checked": !selected,
+        onClick: () => pick(null),
+        className: `w-full min-h-[44px] flex items-center gap-2 px-3 py-2 rounded-xl border text-left active:scale-[0.99] ${!selected ? 'bg-slate-800/80 border-slate-400/60' : 'bg-slate-900 border-white/10'}`
+      }, radio(!selected), React.createElement("span", {
+        className: "text-[12px] font-black text-white"
+      }, "引き継がない")), entry.options.map(option => {
+        const on = selected && entry.chosenKey === option.key;
+        const summary = uniqueBoostSummaryText(option.boosts);
+        const name = uniqueSkillAtLevel(option.unique, option.level)?.name || option.unique?.name || '固有技';
+        return React.createElement("button", {
+          key: option.key,
+          type: "button",
+          role: "radio",
+          "aria-checked": on,
+          "data-fusion-inherit-option": option.key,
+          disabled: option.duplicate,
+          onClick: () => pick(option.key),
+          className: `w-full min-h-[44px] flex items-start gap-2 px-3 py-2 rounded-xl border text-left active:scale-[0.99] disabled:opacity-50 ${on ? 'bg-amber-950/50 border-amber-400/80' : 'bg-slate-900 border-white/10'}`
+        }, radio(on), React.createElement("span", {
+          className: "min-w-0 flex-1"
+        }, React.createElement("span", {
+          className: "flex items-baseline justify-between gap-2"
+        }, React.createElement("span", {
+          className: "min-w-0 truncate text-[12px] font-black text-white"
+        }, name), React.createElement("span", {
+          className: "shrink-0 text-[10px] font-mono font-black text-amber-300"
+        }, "Lv.", option.level)), React.createElement("span", {
+          className: "block text-[10px] font-bold text-indigo-300"
+        }, option.own ? '自前' : `引き継ぎ${option.unique?.sourceMasuName ? `(${option.unique.sourceMasuName})` : ''}`), option.duplicate ? React.createElement("span", {
+          className: "block text-[10px] font-bold text-rose-300/80"
+        }, "同じ系統の固有技を主がすでに持っています") : React.createElement("span", {
+          className: "block text-[10px] font-bold text-amber-200"
+        }, "オリジナル強化:", summary || (option.level >= MAX_UNIQUE_SKILL_LEVEL ? 'なし' : `なし(Lv.${MAX_UNIQUE_SKILL_LEVEL} から積めます)`))));
+      }), selected && entry.inherited && React.createElement("div", {
+        className: "rounded-lg bg-amber-900/30 px-2 py-1.5 text-[11px] font-black text-amber-200"
+      }, "Lv とオリジナル強化も一緒に引き継ぎます"), selected && !entry.inherited && React.createElement("div", {
+        className: "rounded-lg bg-slate-800/60 px-2 py-1.5 text-[10px] font-bold text-slate-300"
+      }, "選んだ技は同じ系統の固有技が主または先の副から継承されるため、引き継ぎません(費用もかかりません)")), unusedPoints > 0 && React.createElement("div", {
+        className: "rounded-lg bg-rose-950/40 px-2 py-1.5 text-[11px] font-black text-rose-300"
+      }, "副の未使用固有技P ", unusedPoints.toLocaleString(), " は消えます"));
     })), React.createElement("div", {
       className: "mb-2 rounded-2xl border border-red-500/60 bg-red-950/40 p-3"
     }, React.createElement("div", {
@@ -144725,6 +145420,8 @@ function MonsterHeroGame() {
   const [masuRegisteredThisRun, setMasuRegisteredThisRun] = useState(false);
   const [masuMonDetail, setMasuMonDetail] = useState(null);
   const [uniqueSettingMasuId, setUniqueSettingMasuId] = useState(null);
+  const [uniqueBoostTarget, setUniqueBoostTarget] = useState(null);
+  const [powerBreakdownMasuId, setPowerBreakdownMasuId] = useState(null);
   const [dexLineageFilter, setDexLineageFilter] = useState('all');
   const [dexMonsterId, setDexMonsterId] = useState(null);
   const [dexTab, setDexTab] = useState('basic');
@@ -144766,6 +145463,7 @@ function MonsterHeroGame() {
   const [fusionSubId, setFusionSubId] = useState(null);
   const [fusionSubIds, setFusionSubIds] = useState([]);
   const [fusionInheritUniqueIds, setFusionInheritUniqueIds] = useState([]);
+  const [fusionInheritSkillKeys, setFusionInheritSkillKeys] = useState({});
   const [fusionInheritSoulRank, setFusionInheritSoulRank] = useState(false);
   const [fusionAnimPhase, setFusionAnimPhase] = useState(0);
   const [fusionResultData, setFusionResultData] = useState(null);
@@ -152404,6 +153102,18 @@ function MonsterHeroGame() {
     Audio_.se.levelUp();
     return updatedMasu;
   };
+  const commitUniqueBoostPlan = (masuId, skillKey, plan) => {
+    const masu = getMasuMon(masuId);
+    const result = masu ? applyUniqueBoostPlan(masu, skillKey, plan) : null;
+    if (!result) return null;
+    setMasuMons(prev => {
+      const next = prev.map(m => String(m.id) === String(masuId) ? result.nextMasu : m);
+      storeSet('mh_masu_mons', next, false);
+      return next;
+    });
+    Audio_.se.levelUp();
+    return result.nextMasu;
+  };
   const commitSoulTraitUpgrade = async (masuId, traitId, levels) => {
     if (soulTraitProcessingRef.current) return null;
     const beforeMasuMons = masuMonsRef.current;
@@ -153167,7 +153877,8 @@ function MonsterHeroGame() {
     const inheritancePlan = buildFusionInheritancePlan({
       main,
       subs,
-      selectedSubIds: fusionInheritUniqueIds
+      selectedSubIds: fusionInheritUniqueIds,
+      choiceBySubId: fusionInheritSkillKeys
     });
     if (inheritancePlan.entries.some(entry => entry.requested && !entry.eligible) || fusionInheritUniqueIds.some(id => !uniqueSubIds.has(id))) {
       fusionProcessingRef.current = false;
@@ -153215,13 +153926,28 @@ function MonsterHeroGame() {
       const subBase = ALL_PLAYER_MONSTERS[sub.baseId];
       const subUniqueLineageId = uniqueLineageId(subBase?.unique, subBase?.id);
       const canInherit = !!inheritancePlan.entries[subIndex]?.inherited;
-      const inheritedLevel = Math.max(0, Number(sub.uniqueSkillLevels?.own) || Number(subBase?.unique?.evoLevel) || 0);
-      const inheritedUnique = canInherit ? {
-        ...uniqueSkillAtLevel(subBase.unique, inheritedLevel),
-        monId: subBase.id,
-        lineageId: subUniqueLineageId,
-        sourceMasuName: sub.name
-      } : null;
+      const chosenOption = canInherit ? inheritancePlan.entries[subIndex].chosen : null;
+      const inheritedLevel = chosenOption ? chosenOption.level : 0;
+      let inheritedUnique = null;
+      if (chosenOption && chosenOption.own) {
+        inheritedUnique = {
+          ...uniqueSkillAtLevel(subBase.unique, inheritedLevel),
+          monId: subBase.id,
+          lineageId: subUniqueLineageId,
+          sourceMasuName: sub.name
+        };
+      } else if (chosenOption) {
+        const {
+          inheritedUniqueId: _oldInheritedId,
+          ...rest
+        } = uniqueSkillAtLevel(chosenOption.unique, inheritedLevel);
+        inheritedUnique = {
+          ...rest,
+          monId: chosenOption.monId || rest.monId,
+          lineageId: chosenOption.lineageId,
+          sourceMasuName: chosenOption.unique.sourceMasuName || sub.name
+        };
+      }
       const transfer = transferableReincarnateBonus(sub);
       const advanced = applyBondXpGain(nextMain, gainedXp);
       nextMain = {
@@ -153240,7 +153966,11 @@ function MonsterHeroGame() {
           timestamp: Date.now()
         }]
       };
-      if (inheritedUnique) nextMain = appendInheritedUnique(nextMain, inheritedUnique, inheritedLevel);
+      if (inheritedUnique) {
+        nextMain = appendInheritedUnique(nextMain, inheritedUnique, inheritedLevel);
+        const added = nextMain.inheritedUniques[nextMain.inheritedUniques.length - 1];
+        nextMain = withInheritedUniqueBoosts(nextMain, inheritedUniqueLevelKey(added), chosenOption.boosts);
+      }
       inherited ||= !!inheritedUnique;
       inheritedReincarnatePoints += transfer.points;
       inheritedReincarnateCount += transfer.count;
@@ -153317,6 +154047,7 @@ function MonsterHeroGame() {
     setFusionSubId(null);
     setFusionSubIds([]);
     setFusionInheritUniqueIds([]);
+    setFusionInheritSkillKeys({});
     setFusionInheritSoulRank(false);
     setFusionAnimPhase(0);
     setFusionResultData(null);
@@ -153327,6 +154058,7 @@ function MonsterHeroGame() {
     setFusionSubId(null);
     setFusionSubIds([]);
     setFusionInheritUniqueIds([]);
+    setFusionInheritSkillKeys({});
     setFusionInheritSoulRank(false);
     setFusionAnimPhase(0);
     setFusionResultData(null);
@@ -154931,7 +155663,7 @@ function MonsterHeroGame() {
     if (cost > 0 && (getTurnBuff('pandoraResonanceTurns', 0) > 0 || tacticsSlotTurns(slotBuffs, slotIdx, 'pandoraResonanceTurns') > 0)) cost = Math.floor(cost * 0.5);
     cost = Math.floor(cost * Math.max(0.1, 1 - 0.03 * getPermaBuff('snegurochkaGutsDiscountStacks')));
     const soulOwner = Number.isInteger(slotIdx) && slots[slotIdx]?.masuId ? getMasuMon(slots[slotIdx].masuId) : null;
-    const soulGutsMultiplier = soulTraitAttackProfile(soulOwner, card, slotIdx).gutsCostMultiplier;
+    const soulGutsMultiplier = attackBoostProfile(soulOwner, card, slotIdx).gutsCostMultiplier;
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
     if (extremeWaveStage(specialRuleDifficulty)) return Math.floor(cost * effectiveExtremeSpecialRule(specialRuleDifficulty, 'gutsCost', wave) * soulGutsMultiplier);
     return applyExtremeIntegerRule(cost * soulGutsMultiplier, specialRuleDifficulty, 'gutsCost');
@@ -157511,9 +158243,16 @@ function MonsterHeroGame() {
     '全体': '立っている味方ぜんぶに効きます',
     '敵へ': '置いたモンスターのちからで殴ります'
   };
+  const uniqueBoostOfCardInRun = (card, slotIdx = null) => {
+    if (!card || card.type !== 'unique') return UNIQUE_BOOST_EMPTY_PROFILE;
+    const si = Number.isInteger(card.ownerSlotIdx) ? card.ownerSlotIdx : slotIdx;
+    const owner = Number.isInteger(si) ? slots[si] : null;
+    return uniqueBoostProfile(owner?.masuId ? getMasuMon(owner.masuId) : null, card);
+  };
   const cardEffectMultiplier = (card, halved = false) => {
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-    return isAssistCard(card) && specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty, 'assistCardEffect') : halved ? 0.5 : 1;
+    const base = isAssistCard(card) && specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty, 'assistCardEffect') : halved ? 0.5 : 1;
+    return base * (1 + uniqueBoostOfCardInRun(card).effectPct / 100);
   };
   const cardHalveGroup = slotIdx => isTacticsMode(runMode) ? `slot${Number.isInteger(slotIdx) ? slotIdx : 'none'}` : 'turn';
   const makeHalveCounter = () => makeCardHalveCounter(cardHalveGroup, isAssistCard);
@@ -157670,6 +158409,21 @@ function MonsterHeroGame() {
       }, pendingCard, pendingHalved)
     };
   };
+  const uniqueBoostCtxFor = (mon, slotIdx, attackStartDist = enemyDist) => {
+    const sr = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+    const maxHp = Number(enemy?.maxHp) || 0;
+    const heroOf = m => m?.masuId && mainHero?.masuId ? m.masuId === mainHero.masuId : !!m && m.id === mainHero?.id;
+    return {
+      enemyId: enemy?.id,
+      enemyHpRatio: maxHp > 0 ? Math.max(0, Number(enemy?.hp) || 0) / maxHp : null,
+      enemyCharging: ['CHARGE', 'PIERCE_CHARGE'].includes(enemyIntent?.type),
+      enemyImmobile: !!getTurnBuff('stunEnemy', false) || getWaveBuff('iceLockTurns') > 0 && !getWaveBuff('iceLockPreparing', false),
+      sameDistance: Number.isInteger(Number(slotIdx)) && Number(slotIdx) === Number(attackStartDist),
+      isHero: isTacticsMode(runMode) ? false : heroOf(mon),
+      extreme: !!sr && isExtremeDifficultyId(sr),
+      eventBattle: isRaidJackMode(runMode)
+    };
+  };
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo = 0, additionalDmgMod = 0, isSecondOrLaterAtk = false, attackStartDist = enemyDist, skillDmgMult = 1) => {
     if (!mon || !card || ['guard', 'draw', 'buff', 'heal', 'weak_guard'].includes(card.type)) return 0;
     const distDiff = Math.abs(slotIdx - attackStartDist);
@@ -157692,7 +158446,7 @@ function MonsterHeroGame() {
     if (attackHeroId === 'Pandora' && card.type === 'unique' && card.monId !== 'Pandora') traitMult *= 1.5;
     const aptForSlot = isTacticsMode(runMode) && mon ? getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty), wave) : distAptPct;
     const distBonusMult = 1.0 + (distDmgBonus[slotIdx] || 0) + (aptForSlot[slotIdx] || 0);
-    const soulAttack = soulTraitAttackProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, slotIdx);
+    const soulAttack = attackBoostProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, slotIdx, uniqueBoostCtxFor(mon, slotIdx, attackStartDist));
     const totalBuffMult = traitMult * cookieEffectNow().dmgMult * blackNoteEffectAt(slotIdx, mon?.id).dmgMult * kyubiAttackAt(slotIdx, mon?.id, card).dmgMult * orihimeDmgMultAt(slotIdx) * bowAtkMultAt(slotIdx) * tacticsExMultiBuffNow(slotIdx).dmg * (card.type === 'unique' ? tacticsExPandoraDevilNow(slotIdx, false).dmg : 1) * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
     const attackerAtk = (isTacticsMode(runMode) && tacticsUnitsRef.current[slotIdx] ? Math.max(0, normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk) * trickStartAtkMult(trickStartStacksAt(slotIdx)) * fateAtkMult(livePermaBuff('fateStacks', null), slotIdx);
     let finalDmg = Math.floor(attackerAtk * distMult * baseDmgMult * (Number(skillDmgMult) > 0 ? Number(skillDmgMult) : 1) * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + fateWheelEnemyTakenBonus(fateWheelRef.current) + tacticsExPsychoLockNow().enemyTakenBonus + additionalDmgMod + dreamPainTakenBonus(dreamPainRef.current)));
@@ -157707,10 +158461,10 @@ function MonsterHeroGame() {
       distanceBrokenDmg = applyUltimateDistanceBreak(turnPressedDmg, slotIdx, ultimateDistanceBreakLevels, specialRuleDifficulty, card.type);
     }
     return applyExtremeIntegerRule(distanceBrokenDmg, specialRuleDifficulty, 'damageDealt');
-  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, ultimateDistanceBreakLevels, totalTurnCount, turnCount, runMode, difficulty, extremeDifficulty]);
+  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, ultimateDistanceBreakLevels, totalTurnCount, turnCount, runMode, difficulty, extremeDifficulty, enemy, enemyIntent]);
   const getAttackPredictedDmg = useCallback((card, mon, baseDmg, additionalGlobalCombo = 0, slotIdx = null, halved = false) => {
     if (baseDmg <= 0) return 0;
-    const soulAttack = soulTraitAttackProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, null);
+    const soulAttack = attackBoostProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, null);
     const hits = buildAttackHits({
       d: baseDmg,
       card,
@@ -157720,6 +158474,7 @@ function MonsterHeroGame() {
       comboDmgBonus: getPermaBuff('comboDmgPct'),
       critDmgBonus: getPermaBuff('critDmgPct') + soulAttack.critDamageBonus + erubinIsshenCritDmg(card),
       kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
+      boostExtraCombos: soulAttack.uniqueBoost.comboExtra,
       guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx, card) || erubinIsshenOn(card),
       rollCrit: () => false,
       globalComboRate: getPermaBuff('globalComboDmgPct') + additionalGlobalCombo,
@@ -158045,7 +158800,8 @@ function MonsterHeroGame() {
         const defenseSlot = aimedSlots && aimedSlots.length ? aimedSlots[Math.floor(Math.random() * aimedSlots.length)] : null;
         const defenseHeroId = !isTacticsMode(runMode) ? mainHero?.id : defenseSlot != null ? tacticsUnitsRef.current[defenseSlot]?.id || null : null;
         const kusabiDefenseKey = !isTacticsMode(runMode) ? 'party' : defenseSlot != null ? String(defenseSlot) : null;
-        const kusabiEvasion = (hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0) + reikonEvasionNow();
+        const boostEvade = !isTacticsMode(runMode) ? Number(immediateEffects.boostEvade) || 0 : defenseSlot != null ? Number(immediateEffects.boostEvadeBySlot?.[defenseSlot]) || 0 : 0;
+        const kusabiEvasion = (hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0) + reikonEvasionNow() + boostEvade;
         const defenseTable = !isTacticsMode(runMode) && kusabiEvasion <= 0 ? unifiedSpecialDefense : buildUnifiedSpecialDefense({
           soulEvasion: soulBattleParty.evasion,
           soulReflect: soulBattleParty.reflect,
@@ -159316,6 +160072,8 @@ function MonsterHeroGame() {
       currentTurnGuardMult = 0;
     let immediateTakenMult = 1;
     const immediateTakenMultBySlot = {};
+    let boostEvadeThisTurn = 0;
+    const boostEvadeBySlot = {};
     const guardBySlot = {};
     const addGuardForSlot = (idx, flat, mult, weight) => {
       if (!Number.isInteger(idx)) return;
@@ -159397,9 +160155,16 @@ function MonsterHeroGame() {
       }
       const halved = entry.aiCopy ? false : halveCounter.take(card, entry.slotIdx);
       const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-      const effMul = isBreeder && specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty, 'assistCardEffect') : halved ? 0.5 : 1;
+      const effMulBase = isBreeder && specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty, 'assistCardEffect') : halved ? 0.5 : 1;
       if (halved) addPopup(isTacticsMode(runMode) ? '同じモンスターの2枚目 効果半減' : '2枚目以降 効果半減', 'hero', 'text-slate-300 text-sm font-black');
       const slotIdx = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
+      const cardBoost = entry.aiCopy ? UNIQUE_BOOST_EMPTY_PROFILE : uniqueBoostOfCardInRun(card, slotIdx);
+      const effMul = effMulBase * (1 + cardBoost.effectPct / 100);
+      const healMul = effMulBase * (1 + cardBoost.healPct / 100);
+      if (cardBoost.evadePoints > 0) {
+        boostEvadeThisTurn = Math.max(boostEvadeThisTurn, cardBoost.evadePoints);
+        boostEvadeBySlot[slotIdx] = Math.max(boostEvadeBySlot[slotIdx] || 0, cardBoost.evadePoints);
+      }
       lastType = card.type;
       if (isTacticsMode(runMode) && !isBreeder && entry.slotIdx != null) {
         pdTag();
@@ -159717,7 +160482,7 @@ function MonsterHeroGame() {
               addPopup(`ソードスキル! 連撃パワー ${nextPower}/${KENSHI_COMBO_POWER_MAX}`, 'hero', 'text-violet-300 text-lg font-bold');
             }
           } else if (card.monId === FATE_COIN_MONSTER_ID) {
-            const side = rollFateCoin();
+            const side = rollFateCoin(Math.random, cardBoost.chancePoints);
             fateDmgMult = fateCoinDmgMult(side);
             if (side === 'heads') {
               writePermaBuffs(p => ({
@@ -159743,14 +160508,14 @@ function MonsterHeroGame() {
               });
             }
           } else if (card.monId === FATE_WHEEL_MONSTER_ID) {
-            fateWheelPick = rollFateWheel();
+            fateWheelPick = rollFateWheel(Math.random, cardBoost.chancePoints);
             if (fateWheelPick.dmgMult) fateDmgMult = fateWheelPick.dmgMult;
           }
         }
         const attackStartDist = attackDistance;
         const d = getDmg(card, slotIdx, activeMon, localOryoAdd, localDmgModAdd, halved, attackStartDist, fateDmgMult * copyDmgScale);
         attackCount++;
-        const soulAttack = soulTraitAttackProfile(activeMon?.masuId ? getMasuMon(activeMon.masuId) : null, card, slotIdx);
+        const soulAttack = attackBoostProfile(activeMon?.masuId ? getMasuMon(activeMon.masuId) : null, card, slotIdx);
         const critRateBonus = getPermaBuff('critRatePct') + soulAttack.critRateBonus;
         const critDmgBonus = getPermaBuff('critDmgPct') + soulAttack.critDamageBonus + erubinIsshenCritDmg(card);
         const hits = buildAttackHits({
@@ -159762,6 +160527,7 @@ function MonsterHeroGame() {
           comboDmgBonus: getPermaBuff('comboDmgPct'),
           critDmgBonus,
           kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
+          boostExtraCombos: soulAttack.uniqueBoost.comboExtra,
           guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx, card) || erubinIsshenOn(card),
           rollCrit: () => Math.random() < Math.min(1, ((card.crit || 0.1) + critRateBonus + (tacticsExMultiBuffNow(slotIdx).critAdd || 0) + blackNoteEffectAt(slotIdx, activeMon?.id).critAdd + kyubiAttackAt(slotIdx, activeMon?.id, card).critAdd) * tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
@@ -159863,20 +160629,24 @@ function MonsterHeroGame() {
           if (card.monId === DREAM_PAIN_MONSTER_ID) {
             const dp = writeDreamPain({
               ...startDreamPain(kusabiBeforeAttack),
+              turns: DREAM_PAIN_TURNS + cardBoost.durationTurns,
               bonus: dreamPainTakenOf(kusabiBeforeAttack) * effMul
             });
             addPopup(`💤 ドリームペイン 被ダメ+${Math.round(dp.bonus * 100)}%`, 'enemy', 'text-fuchsia-300 text-lg font-bold');
           }
           if (hasReikon(card.monId)) {
-            writeReikonKey(trickStartKeyOf(slotIdx), startReikon());
-            addPopup(`👻 霊魂 次のターンから${REIKON_TURNS}ターン 消費ガッツ−${Math.round((1 - REIKON_GUTS_MULT) * 100)}%・回避+${REIKON_EVASION_UP}%`, 'hero', 'text-violet-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
+            writeReikonKey(trickStartKeyOf(slotIdx), {
+              ...startReikon(),
+              turns: REIKON_TURNS + cardBoost.durationTurns
+            });
+            addPopup(`👻 霊魂 次のターンから${REIKON_TURNS + cardBoost.durationTurns}ターン 消費ガッツ−${Math.round((1 - REIKON_GUTS_MULT) * 100)}%・回避+${REIKON_EVASION_UP}%`, 'hero', 'text-violet-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
           }
           if (card.monId === 'Ham') {
             immediateStun = true;
             setImmediateTurnBuff('stunEnemy', true);
             addPopup('スタン!', 'enemy', 'text-yellow-400 text-lg font-bold');
           } else if (card.monId === 'Suezo') {
-            const gRec = gainGutsByRate(slotIdx, 0.5 * effMul);
+            const gRec = gainGutsByRate(slotIdx, 0.5 * healMul);
             if (gRec > 0) addPopup(`⚡ ガッツ +${gRec}`, 'guts', 'text-amber-400 text-xl font-black drop-shadow-md');
           } else if (card.monId === 'Pixie' || card.monId === 'Mia') {
             if (isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx, 'zeroGuts', true);else setNextTurnBuff('zeroGuts', true);
@@ -159894,8 +160664,9 @@ function MonsterHeroGame() {
             addPopup('丈夫さUP!', 'hero', 'text-emerald-400 text-lg font-bold');
             addPopup('次ターン反射！', 'hero', 'text-purple-400 text-lg font-bold');
           } else if (card.monId === 'Oboro' || card.monId === 'Plant') {
-            const hRec = Math.floor(finalD * 0.5);
-            const gRec = Math.floor(finalD * 0.05);
+            const healBoost = 1 + cardBoost.healPct / 100;
+            const hRec = Math.floor(finalD * 0.5 * healBoost);
+            const gRec = Math.floor(finalD * 0.05 * healBoost);
             if (isTacticsMode(runMode)) hpBeforeEnemyAttack = commitTacticsUnits(healTacticsAt(tacticsUnitsRef.current, slotIdx, hRec));else {
               hpBeforeEnemyAttack = Math.min(liveEffectiveMaxHp(), hpBeforeEnemyAttack + hRec);
               setHp(hpBeforeEnemyAttack);
@@ -159928,14 +160699,14 @@ function MonsterHeroGame() {
             addPopup('次ターン被ダメ50%減!', 'hero', 'text-pink-400 text-lg font-bold');
           } else if (isLifeTreeGuardCard(card)) {
             const guardFx = lifeTreeGuardEffectOf(card.monId);
-            const gRec = gainGutsByRate(slotIdx, guardFx.guts * effMul);
+            const gRec = gainGutsByRate(slotIdx, guardFx.guts * healMul);
             const guardMult = lifeTreeGuardMult(effMul, card.monId);
             if (guardFx.hp > 0) {
               if (isTacticsMode(runMode)) {
-                const healed = tacticsRateHealAt(slotIdx, guardFx.hp * effMul, 0);
+                const healed = tacticsRateHealAt(slotIdx, guardFx.hp * healMul, 0);
                 if (healed) hpBeforeEnemyAttack = healed.total;
               } else {
-                const heal = Math.floor(liveEffectiveMaxHp() * guardFx.hp * effMul);
+                const heal = Math.floor(liveEffectiveMaxHp() * guardFx.hp * healMul);
                 if (heal > 0) {
                   hpBeforeEnemyAttack = Math.min(liveEffectiveMaxHp(), hpBeforeEnemyAttack + heal);
                   setHp(hpBeforeEnemyAttack);
@@ -159977,10 +160748,10 @@ function MonsterHeroGame() {
               const id = fateWheelPick.id;
               if (id === 'enemyAtkDown') writeFateWheel({
                 ...fateWheelRef.current,
-                atkDown: FATE_WHEEL_DEBUFF_TURNS
+                atkDown: FATE_WHEEL_DEBUFF_TURNS + cardBoost.durationTurns
               });else if (id === 'enemyTakenUp') writeFateWheel({
                 ...fateWheelRef.current,
-                takenUp: FATE_WHEEL_DEBUFF_TURNS
+                takenUp: FATE_WHEEL_DEBUFF_TURNS + cardBoost.durationTurns
               });else if (id === 'combo') writePermaBuffs(p => ({
                 ...p,
                 fateStacks: withFateSlotStack(p.fateStacks, slotIdx, 'combo')
@@ -159996,17 +160767,19 @@ function MonsterHeroGame() {
               });
             }
           } else if (card.monId === 'Pandora') {
-            if (isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx, 'pandoraResonanceTurns', 2);else setNextTurnBuff('pandoraResonanceTurns', 2);
-            addPopup('双極共振！ 次の2ターン消費半減', 'hero', 'text-fuchsia-300 text-lg font-bold');
+            const resonanceTurns = 2 + cardBoost.durationTurns;
+            if (isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx, 'pandoraResonanceTurns', resonanceTurns);else setNextTurnBuff('pandoraResonanceTurns', resonanceTurns);
+            addPopup(`双極共振！ 次の${resonanceTurns}ターン消費半減`, 'hero', 'text-fuchsia-300 text-lg font-bold');
           } else if (isIceLockMonster(card.monId)) {
             activatedIceLockThisTurn = true;
+            const iceTurns = 5 + cardBoost.durationTurns;
             setWaveBuffs(p => ({
               ...p,
-              iceLockTurns: 5,
+              iceLockTurns: 5 + cardBoost.durationTurns,
               iceLockPreparing: (p.iceLockTurns || 0) <= 0
             }));
             addPermaBuff('snegurochkaGutsDiscountStacks', 1);
-            addPopup('絶氷の楔！ 5ターン移動封印', 'enemy', 'text-cyan-200 text-lg font-bold');
+            addPopup(`絶氷の楔！ ${iceTurns}ターン移動封印`, 'enemy', 'text-cyan-200 text-lg font-bold');
             addPopup('消費ガッツ3%減！', 'hero', 'text-cyan-300 text-sm font-bold');
           }
         }
@@ -160391,7 +161164,9 @@ function MonsterHeroGame() {
       forcedMoveTarget,
       iceLockRefreshed: activatedIceLockThisTurn,
       takenMult: immediateTakenMult,
-      takenMultBySlot: immediateTakenMultBySlot
+      takenMultBySlot: immediateTakenMultBySlot,
+      boostEvade: boostEvadeThisTurn,
+      boostEvadeBySlot
     }, executedIntent, hpBeforeEnemyAttack, enemyHpAfterOurAttacks);
     kyukoRedirectRef.current = null;
     writePermaBuffs(p => p.kyukoCutTurns > 0 ? {
@@ -163649,6 +164424,8 @@ function MonsterHeroGame() {
     const remaining = Math.max(0, normalized.uniqueSkillPoints - allocated);
     const resetTicketCount = ownedItemCount(ownedItems, 'unique_skill_reset_ticket');
     const resetPointCount = Object.values(normalized.uniqueSkillLevels).reduce((sum, level) => sum + Math.max(0, Math.floor(Number(level) || 0)), 0);
+    const boostPointCount = Object.values(normalizeUniqueSkillBoosts(normalized)).reduce((sum, steps) => sum + uniqueBoostSpentOfSteps(steps), 0);
+    const hasMaxedSkill = choices.some(choice => choice.level >= MAX_UNIQUE_SKILL_LEVEL);
     const changeDraft = (skillKey, delta) => setUniqueSkillPointDrafts(prev => {
       const id = String(masu.id),
         current = {
@@ -163683,7 +164460,7 @@ function MonsterHeroGame() {
       className: `text-[10px] font-black flex items-center gap-1 ${normalized.uniqueSkillPoints > 0 ? 'text-amber-300' : 'text-slate-500'}`
     }, React.createElement(Sparkles, {
       size: 10
-    }), "未使用 固有技P：", normalized.uniqueSkillPoints)), normalized.uniqueSkillPoints > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
+    }), "未使用 固有技P：", normalized.uniqueSkillPoints)), (normalized.uniqueSkillPoints > 0 || hasMaxedSkill) && React.createElement(React.Fragment, null, normalized.uniqueSkillPoints > 0 && React.createElement("div", {
       className: "text-[8px] text-slate-400 font-bold mb-1.5 leading-tight"
     }, "＋／－で仮配分し、「強化を確定」で反映します。"), React.createElement("div", {
       className: "space-y-1.5"
@@ -163715,8 +164492,25 @@ function MonsterHeroGame() {
         disabled: remaining <= 0 || after >= MAX_UNIQUE_SKILL_LEVEL,
         onClick: () => changeDraft(choice.key, 1),
         className: "w-9 min-h-[36px] rounded-lg bg-amber-700 text-base font-black disabled:opacity-30"
-      }, "＋")));
-    })), React.createElement("div", {
+      }, "＋")), maxed && (() => {
+        const summary = uniqueBoostSummaryText(uniqueBoostStepsOf(normalized, choice.key));
+        return React.createElement("div", {
+          className: "mt-1 flex items-center justify-between gap-2 min-w-0"
+        }, React.createElement("span", {
+          "data-unique-boost-summary": true,
+          className: `min-w-0 text-[9px] font-black leading-tight ${summary ? 'text-amber-200' : 'text-slate-500'}`
+        }, summary ? `✨ ${summary}` : 'オリジナル強化:なし'), React.createElement("button", {
+          type: "button",
+          "data-unique-boost-open": true,
+          "aria-label": `${current?.name || choice.name}のオリジナル強化を開く`,
+          onClick: () => setUniqueBoostTarget({
+            masuId: masu.id,
+            skillKey: choice.key
+          }),
+          className: "shrink-0 min-h-[40px] px-2.5 rounded-xl bg-gradient-to-b from-amber-500 to-orange-700 text-white text-[10px] font-black active:scale-95"
+        }, "✨ オリジナル強化"));
+      })());
+    })), normalized.uniqueSkillPoints > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
       className: "mt-2 flex items-center justify-between text-[10px] font-black"
     }, React.createElement("span", {
       className: "text-slate-400"
@@ -163738,7 +164532,7 @@ function MonsterHeroGame() {
         }
       },
       className: "min-h-[42px] rounded-xl bg-amber-600 text-[11px] font-black disabled:opacity-30"
-    }, "強化を確定"))), React.createElement("div", {
+    }, "強化を確定")))), React.createElement("div", {
       className: "mt-2 border-t border-white/10 pt-2"
     }, React.createElement("button", {
       type: "button",
@@ -163759,11 +164553,11 @@ function MonsterHeroGame() {
     }, "スキルポイントリセット券"), React.createElement("span", {
       className: resetTicketCount > 0 ? 'text-cyan-300' : 'text-slate-500'
     }, "所持 ", resetTicketCount, "枚")), React.createElement("button", {
-      disabled: resetTicketCount <= 0 || resetPointCount <= 0,
+      disabled: resetTicketCount <= 0 || resetPointCount + boostPointCount <= 0,
       onClick: async () => {
         if (!(await askConfirm({
           title: '配分済み固有技Pをリセットしますか？',
-          message: `このマスモンの固有技に配分した${resetPointCount}ポイントをリセットし、未使用の固有技Pへ戻します。スキルポイントリセット券を1枚消費します。`,
+          message: boostPointCount > 0 ? `固有技Lv とオリジナル強化をすべて戻し、使った固有技P(Lv ${resetPointCount.toLocaleString()}P・オリジナル強化 ${boostPointCount.toLocaleString()}P)をすべて返します。スキルポイントリセット券を1枚消費します。` : `このマスモンの固有技に配分した${resetPointCount}ポイントをリセットし、未使用の固有技Pへ戻します。スキルポイントリセット券を1枚消費します。`,
           confirmLabel: 'リセットする'
         }))) return;
         const result = useUniqueSkillResetTicket(masu.id);
@@ -163773,7 +164567,7 @@ function MonsterHeroGame() {
         }
       },
       className: "w-full min-h-[42px] px-2 rounded-xl bg-cyan-700 text-[10px] font-black leading-tight disabled:opacity-30 disabled:bg-slate-700"
-    }, "配分済み固有技Pをリセット"), resetPointCount <= 0 && React.createElement("div", {
+    }, "配分済み固有技Pをリセット"), resetPointCount + boostPointCount <= 0 && React.createElement("div", {
       className: "text-[8px] text-slate-500 font-bold text-center"
     }, "配分済み固有技Pがないため使用できません")));
   };
@@ -163930,7 +164724,38 @@ function MonsterHeroGame() {
       className: "mh-hit-expand relative p-2 -m-1 bg-white/5 rounded-full active:scale-90 shrink-0"
     }, React.createElement(X, {
       size: 16
-    }))), renderPowerBadge(power, {
+    }))), masu && powerOverride === undefined ? (() => {
+      const open = String(powerBreakdownMasuId) === String(masu.id);
+      const parts = monsterPowerParts(mon);
+      const row = (label, value, extra = null) => React.createElement("div", {
+        className: `flex items-start justify-between gap-2 text-[11px] font-black ${extra ? 'rounded-lg bg-amber-900/40 px-1.5 py-1 text-amber-200' : 'text-slate-200'}`
+      }, React.createElement("span", {
+        className: "min-w-0"
+      }, label, extra), React.createElement("span", {
+        className: "shrink-0 font-mono tabular-nums"
+      }, Math.round(value) < 0 ? '' : '+', formatMonsterPower(Math.round(value))));
+      return React.createElement(React.Fragment, null, React.createElement("button", {
+        type: "button",
+        "data-power-breakdown-toggle": true,
+        "aria-expanded": open,
+        "aria-label": "総合力の内わけを開く",
+        onClick: () => setPowerBreakdownMasuId(open ? null : masu.id),
+        className: "block w-full text-left active:scale-[0.99]"
+      }, renderPowerBadge(power, {
+        note: powerNote
+      })), open && React.createElement("div", {
+        "data-power-breakdown": true,
+        className: "rounded-xl border border-amber-400/40 bg-black/40 px-2.5 py-2 space-y-1"
+      }, React.createElement("div", {
+        className: "text-[10px] font-black text-amber-300"
+      }, "総合力の内わけ"), row('能力', parts.stat), row('適性', parts.aptitude), row('固有技', parts.unique), row('魂格特性', parts.soul), parts.boostSpent > 0 && row('✨ オリジナル強化', parts.boost, React.createElement("span", {
+        className: "block text-[10px] font-bold"
+      }, "使った固有技P ", parts.boostSpent.toLocaleString())), React.createElement("div", {
+        className: "flex items-center justify-between gap-2 border-t border-white/15 pt-1 text-[12px] font-black text-white"
+      }, React.createElement("span", null, "合計"), React.createElement("span", {
+        className: "font-mono tabular-nums"
+      }, formatMonsterPower(power)))));
+    })() : renderPowerBadge(power, {
       note: powerNote
     }), extraLine, masu && !compact && React.createElement(React.Fragment, null, React.createElement("div", {
       className: "flex items-center justify-between gap-2 text-[10px] font-black"
@@ -172968,6 +173793,8 @@ function MonsterHeroGame() {
       resetFusionFlow: resetFusionFlow,
       setFusionInheritSoulRank: setFusionInheritSoulRank,
       setFusionInheritUniqueIds: setFusionInheritUniqueIds,
+      fusionInheritSkillKeys: fusionInheritSkillKeys,
+      setFusionInheritSkillKeys: setFusionInheritSkillKeys,
       setFusionMainId: setFusionMainId,
       setFusionResultData: setFusionResultData,
       setFusionSortDir: setFusionSortDir,
@@ -173719,6 +174546,16 @@ function MonsterHeroGame() {
         onClick: () => setUniqueSettingMasuId(null),
         className: "w-full min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase active:scale-95"
       }, "閉じる"))));
+    })(), uniqueBoostTarget && (() => {
+      const masu = getMasuMon(uniqueBoostTarget.masuId);
+      if (!masu) return null;
+      return React.createElement(UniqueBoostSheet, {
+        key: `${uniqueBoostTarget.masuId}:${uniqueBoostTarget.skillKey}`,
+        masu: masu,
+        skillKey: uniqueBoostTarget.skillKey,
+        onClose: () => setUniqueBoostTarget(null),
+        onCommit: plan => !!commitUniqueBoostPlan(uniqueBoostTarget.masuId, uniqueBoostTarget.skillKey, plan)
+      });
     })(), gameState === 'MASU_TRANSCEND_ENHANCE' && masuMonDetail && React.createElement(MasuTranscendEnhanceScreen, {
       commitTranscendExchange: commitTranscendExchange,
       commitTranscendFruit: commitTranscendFruit,
@@ -177870,7 +178707,14 @@ function MonsterHeroGame() {
           }, current?.name || skill.name), React.createElement("span", {
             className: "text-amber-300 shrink-0"
           }, "Lv.", skill.level));
-        }))),
+        }), masu.uniqueBoostSpentSnapshot > 0 && React.createElement("div", {
+          "data-ranking-unique-boost": true,
+          className: "mt-1 pt-1 border-t border-white/10 w-full flex items-center justify-between text-[10px] font-black"
+        }, React.createElement("span", {
+          className: "text-amber-200"
+        }, "✨ オリジナル強化に使った固有技P"), React.createElement("span", {
+          className: "text-amber-300 shrink-0"
+        }, masu.uniqueBoostSpentSnapshot.toLocaleString())))),
         footer: React.createElement("div", {
           className: "shrink-0"
         }, React.createElement(ModalCloseButton, {
