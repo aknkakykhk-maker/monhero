@@ -1,0 +1,159 @@
+# 助手ライフ 段階2(二歩目)遊び場の台本(コトバ 2026-11-08)。注文: docs/progress/assistant-peer/LIFE-STAGE2-LINES-ORDER.md
+# solo: 8人 × 遊び場5か所 × 3(line=scene と feel を混ぜる)。visit: 8人 × 4({name} が券なしで会いに来たとき。遊び場5か所から、その助手に合う4か所)
+# 時間帯の言葉(朝の・寝る前・昼寝・夕方・夜)と、ほかの場所の名前は入れない
+
+## solo
+solo mua place=studio line=scene | mua happy モンビー、今日もあたしが一番乗り♪
+solo mua place=studio line=feel | mua excited 叩いてると、もやもやぜんぶ飛んでくぢゃん！
+solo mua place=studio line=scene | mua wink この曲、あと1回だけ…って何回目だっけｗ
+solo mua place=cardroom line=scene | mua happy カード並べるの、ちょっと楽しくなってきたかも♪
+solo mua place=cardroom line=feel | mua excited 勝ち負けより、引くときのドキドキが好き！
+solo mua place=cardroom line=scene | mua troubled あれ、このカードどこ入れるんだっけ？ｗ
+solo mua place=ranch line=scene | mua happy モッチー、ブラッシングしてあげるね〜♪
+solo mua place=ranch line=feel | mua happy ふわふわ触ってると、まぢで癒されるぅ
+solo mua place=ranch line=scene | mua wink ごはん、ちょっと多めにしとこっかｗ
+solo mua place=temple line=scene | mua normal 神殿って、しーんとしてて背すじのびるね
+solo mua place=temple line=feel | mua wink お願いごと、3つまでならいいよね？ｗ
+solo mua place=temple line=scene | mua happy 手、ちゃんと合わせて…よし、お参り完了♪
+solo mua place=market line=scene | mua excited 見て、このリボン！ まぢかわいいぢゃん！
+solo mua place=market line=feel | mua excited 見てるだけでテンション上がる〜！
+solo mua place=market line=scene | mua surprise あ、新しい品が並んでる！ チェックしなきゃ♪
+solo kiki place=studio line=scene | kiki wink モンヒロビート、ちから全開で叩きまつ♪
+solo kiki place=studio line=feel | kiki happy リズムに合わせると、心が落ち着きまつ
+solo kiki place=studio line=scene | kiki normal 譜面を、ひとつずつ覚えていきましょう
+solo kiki place=cardroom line=scene | kiki wink 攻撃のカードを、全部入れてみました♪
+solo kiki place=cardroom line=feel | kiki happy 守りより、攻めるほうが性に合っていまつ
+solo kiki place=cardroom line=scene | kiki normal このデッキで、どこまでいけるでしょうか
+solo kiki place=ranch line=scene | kiki happy ゴーレムさん、今日もかたくて立派でつね
+solo kiki place=ranch line=feel | kiki happy お世話をしていると、時間を忘れまつ
+solo kiki place=ranch line=scene | kiki normal ごはんの量、きちんと量っておきましょう
+solo kiki place=temple line=scene | kiki normal 静かにお参りいたしましょう
+solo kiki place=temple line=feel | kiki happy ここに来ると、気持ちがすっと整いまつ
+solo kiki place=temple line=scene | kiki wink お願いごとは…ふふ、大きな火力を♪
+solo kiki place=market line=scene | kiki happy このお茶の葉、香りがとてもいいでつ
+solo kiki place=market line=feel | kiki happy 品物を見ているだけで、楽しくなりまつね
+solo kiki place=market line=scene | kiki normal ゴーレムさんに似合いそうな飾り、ありまつか？
+solo momosuke place=studio line=scene | momosuke excited モンビート、今日もフルコンいくよ！！
+solo momosuke place=studio line=feel | momosuke wink 叩いてるとき、ももがいちばん輝いてるの♡
+solo momosuke place=studio line=scene | momosuke angry HELLの曲、もう1回！！ 今度こそw
+solo momosuke place=cardroom line=scene | momosuke excited メタルナーのカード、いちばん前に入れよ！！
+solo momosuke place=cardroom line=feel | momosuke wink カードも、かわいいのが強いんだから♡
+solo momosuke place=cardroom line=scene | momosuke happy このデッキの名前、「ももスペシャル」ね！！
+solo momosuke place=ranch line=scene | momosuke excited メタルナー、ぴかぴかにみがいてあげる！！
+solo momosuke place=ranch line=feel | momosuke happy なでると喜ぶの、かわいすぎ♡
+solo momosuke place=ranch line=scene | momosuke surprise ごはん、もものおやつより豪華じゃんw
+solo momosuke place=temple line=scene | momosuke excited 神様、ももをセンターにしてください！！
+solo momosuke place=temple line=feel | momosuke troubled 静かなとこ、ちょっと落ち着かないかもw
+solo momosuke place=temple line=scene | momosuke wink ちゃんとお参りできたよ！！ えらいでしょ♡
+solo momosuke place=market line=scene | momosuke excited このヘアピン、絶対ももに似合う！！
+solo momosuke place=market line=feel | momosuke happy お買い物って、なんでこんなに楽しいの♡
+solo momosuke place=market line=scene | momosuke troubled あれもこれもほしい…！！ どうしよw
+solo dra place=studio line=scene | dra happy モンビー、おでの膝でリズムきざむぞ
+solo dra place=studio line=feel | dra happy 叩くと、膝が元気になる気がするな
+solo dra place=studio line=scene | dra troubled この曲、思ったよりむずかしいな、えへへ
+solo dra place=cardroom line=scene | dra normal 山札、1枚ずつ確かめるか
+solo dra place=cardroom line=feel | dra happy カードを並べてると、落ち着くんだよな
+solo dra place=cardroom line=scene | dra normal この組み方、だれかに教えてやりたいな
+solo dra place=ranch line=scene | dra happy グジラ、でっかくなったな
+solo dra place=ranch line=feel | dra happy グジラのとなりにいると、安心するぞ
+solo dra place=ranch line=scene | dra normal ごはん、山もりにしてやるか
+solo dra place=temple line=scene | dra normal 膝がよくなりますように…っと
+solo dra place=temple line=feel | dra happy ここは静かで、いいとこくさ
+solo dra place=temple line=scene | dra troubled お参りしたら、なんか腹へったな
+solo dra place=market line=scene | dra happy この干し肉、うまそうだな
+solo dra place=market line=feel | dra happy 見てまわるだけで、楽しいもんだな
+solo dra place=market line=scene | dra wink おまけしてくれるか、聞いてみるか、えへへ
+solo atsu place=studio line=scene | atsu happy とりあえず1曲、全力でいくか笑
+solo atsu place=studio line=feel | atsu happy 叩いてると、頭がすっきりするんだよな！
+solo atsu place=studio line=scene | atsu surprise てか、このテンポ速すぎだろ笑
+solo atsu place=cardroom line=scene | atsu excited 攻めのデッキ、もう1段階強くするか！
+solo atsu place=cardroom line=feel | atsu happy 勝つまでやるのが、俺のやり方だ笑
+solo atsu place=cardroom line=scene | atsu troubled この1枚、入れるか迷うな…
+solo atsu place=ranch line=scene | atsu happy ドラゴン、今日も調子よさそうだな！
+solo atsu place=ranch line=feel | atsu happy ドラゴンと一緒に強くなるの、楽しいんだよな笑
+solo atsu place=ranch line=scene | atsu normal とりあえず、ごはん多めな！
+solo atsu place=temple line=scene | atsu wink 勝てますように…ってのは、ずるいか笑
+solo atsu place=temple line=feel | atsu normal たまには静かなとこも、悪くないな…
+solo atsu place=temple line=scene | atsu happy お参り完了！ さ、次いくか！
+solo atsu place=market line=scene | atsu excited このグッズ、ドラゴン柄じゃん！
+solo atsu place=market line=feel | atsu happy 見てるだけで、ほしくなるんだよな笑
+solo atsu place=market line=scene | atsu normal とりあえず、全部見てから決める！
+solo kyuko place=studio line=scene | kyuko happy ほい、譜面のくせ、だいたいつかめたかもぉ
+solo kyuko place=studio line=feel | kyuko normal リズムって、計算しがいあるんだよねぇ
+solo kyuko place=studio line=scene | kyuko troubled ぐぬぬぬ…あと1つでフルコンだったぁ
+solo kyuko place=cardroom line=scene | kyuko wink この組み方なら、だいたい勝てるっしょ笑
+solo kyuko place=cardroom line=feel | kyuko happy デッキ考えてるときが、いちばん楽しいかも
+solo kyuko place=cardroom line=scene | kyuko normal ニャーのカード、やっぱり入れとこっかぁ
+solo kyuko place=ranch line=scene | kyuko happy ニャー、ふかふかだねぇ
+solo kyuko place=ranch line=feel | kyuko happy イルミネが光ると、なんか落ち着くんだよねぇ
+solo kyuko place=ranch line=scene | kyuko wink ドリーミィ、きょうもごきげんだねぇ笑
+solo kyuko place=temple line=scene | kyuko normal お参りって、なに頼むか迷うよねぇ
+solo kyuko place=temple line=feel | kyuko happy ここ、静かで考えごとにちょうどいいなぁ
+solo kyuko place=temple line=scene | kyuko happy ほい、お参りおしまい〜
+solo kyuko place=market line=scene | kyuko surprise この本、掘り出し物かもぉ
+solo kyuko place=market line=feel | kyuko happy 安くていいもの見つけると、うれしいよねぇw
+solo kyuko place=market line=scene | kyuko troubled ほしいの3つ…ぐぬぬぬ、1つに決めよ
+solo sorashido place=studio line=scene | sorashido excited うぉぉぉ！ 今のスコア、表に書いとくぜ
+solo sorashido place=studio line=feel | sorashido normal リズムも結局、計算なのさ
+solo sorashido place=studio line=scene | sorashido normal ミスした場所、全部メモしとくぜ・・・！
+solo sorashido place=cardroom line=scene | sorashido normal この組み合わせ、勝率を計算してみるさ
+solo sorashido place=cardroom line=feel | sorashido happy カードを考えてると、時間を忘れるんだぜ
+solo sorashido place=cardroom line=scene | sorashido excited 表にしたら、この1枚がでーじ強いさ
+solo sorashido place=ranch line=scene | sorashido happy オリヒメ、今日も元気だな！
+solo sorashido place=ranch line=feel | sorashido happy モンスターの世話は、計算じゃないところが好きさ
+solo sorashido place=ranch line=scene | sorashido normal ごはんの量、きっちり量るさ
+solo sorashido place=temple line=scene | sorashido normal 勝率が上がりますように…っと
+solo sorashido place=temple line=feel | sorashido happy ここは静かで、頭がすっきりするさ
+solo sorashido place=temple line=scene | sorashido wink お参りの回数も、表にしとくか笑
+solo sorashido place=market line=scene | sorashido excited この値段なら、まとめ買いがお得だぜ
+solo sorashido place=market line=feel | sorashido happy 安いのを見つけると、計算したくなるのさ
+solo sorashido place=market line=scene | sorashido wink ちばりよー、俺の財布！ 笑
+solo erubin place=studio line=scene | erubin normal ゆっくりした曲から、叩いてみようかな
+solo erubin place=studio line=feel | erubin happy うまくいかなくても、楽しいからいいね
+solo erubin place=studio line=scene | erubin happy おけ、次はもう少し速い曲にしよう
+solo erubin place=cardroom line=scene | erubin happy デュラハン、今日もいちばん前ね
+solo erubin place=cardroom line=feel | erubin happy カードを並べてると、気持ちが静かになるね
+solo erubin place=cardroom line=scene | erubin normal この組み方、いいね。試してみよう
+solo erubin place=ranch line=scene | erubin happy デュラハン、よろいをみがいてあげるね
+solo erubin place=ranch line=feel | erubin happy 世話をしてると、こっちまでうれしくなるね
+solo erubin place=ranch line=scene | erubin normal みんな元気そうでよかった
+solo erubin place=temple line=scene | erubin normal みんなが元気でいられますように
+solo erubin place=temple line=feel | erubin happy ここに来ると、気持ちがやわらかくなるね
+solo erubin place=temple line=scene | erubin happy お参り、おけ。静かでいいところだね
+solo erubin place=market line=scene | erubin normal みんなへの差し入れ、何がいいかな
+solo erubin place=market line=feel | erubin happy 品物を見てまわるの、楽しいね
+solo erubin place=market line=scene | erubin happy この品、いいね。さすがの品ぞろえだ
+
+## visit({name} が券なしで会いに来たとき)
+visit mua place=studio | mua excited あ、{name}！ 会いに来てくれたの！？ まぢうれしい♪
+visit mua place=cardroom | mua happy {name}！ ちょうどカード見てほしかったの！
+visit mua place=ranch | mua wink {name}、モッチー見にきたの？ それとも、あたしに会いにきた？ｗ
+visit mua place=market | mua excited {name}！ いっしょにお買い物しよ♪
+visit kiki place=studio | kiki happy まあ、{name}。来てくださったんでつね♪
+visit kiki place=cardroom | kiki wink {name}、ちょうど火力のお話がしたかったんでつ
+visit kiki place=ranch | kiki happy {name}。ゴーレムさんも、喜んでいまつよ
+visit kiki place=temple | kiki normal {name}も、お参りでつか？ いっしょにいたしましょう
+visit momosuke place=studio | momosuke excited {name}！！ ももの練習、見にきてくれたの！？♡
+visit momosuke place=ranch | momosuke wink {name}、メタルナーなでていいよ！！ 特別ねw
+visit momosuke place=temple | momosuke happy {name}も、お願いごと？ ももとおそろいね♡
+visit momosuke place=market | momosuke excited {name}！！ これ、ももに似合うと思う？
+visit dra place=studio | dra happy お、{name}か。おでの膝リズム、見ていけ
+visit dra place=cardroom | dra normal {name}、ちょうどいい。山札を見てくれるか
+visit dra place=ranch | dra happy {name}、グジラが会いたがってたぞ
+visit dra place=market | dra wink {name}、この干し肉、半分こするか、えへへ
+visit atsu place=studio | atsu excited {name}じゃん！ 1曲勝負するか笑
+visit atsu place=cardroom | atsu happy お、{name}！ 俺の新デッキ、見ていけよ！
+visit atsu place=ranch | atsu surprise {name}、ドラゴン見にきたのか！？
+visit atsu place=temple | atsu wink {name}もお参りか笑 なに頼むんだ？
+visit kyuko place=cardroom | kyuko happy あ、{name}。ほい、こっち空いてるよぉ
+visit kyuko place=ranch | kyuko happy {name}、ニャーなでてく？ ふかふかだよぉ
+visit kyuko place=temple | kyuko normal {name}も来たんだぁ。ここ、落ち着くよねぇ
+visit kyuko place=market | kyuko excited {name}、いいとこに！ どっちがいいか、選んでぇ
+visit sorashido place=studio | sorashido excited うぉぉぉ、{name}！ 今のスコア、見てくれたか！？
+visit sorashido place=cardroom | sorashido happy {name}！ 新しい表、ちょうどできたところだぜ
+visit sorashido place=temple | sorashido wink {name}もお参りか。勝率アップを祈るさ笑
+visit sorashido place=market | sorashido normal {name}、まとめ買いの計算、手伝ってくれよ
+visit erubin place=studio | erubin happy あ、{name}。来てくれたんだ、うれしいな
+visit erubin place=cardroom | erubin happy {name}、1戦どう？ デュラハン、待ってたよ
+visit erubin place=ranch | erubin happy {name}も世話しにきたの？ いいね、いっしょにやろう
+visit erubin place=temple | erubin normal {name}。来てくれてありがとう。静かでいいところだよ
