@@ -1033,7 +1033,7 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
   // ★固有技は「そのモンスターの技」なので、使った子だけに入る(スエゾー)。
   //   ここまで全体にすると、単体へ効く技が1つも無くなる
   check('固有技のガッツは使った子だけのまま',
-    has("else if(card.monId==='Suezo'){const gRec=gainGutsByRate(slotIdx,0.5*effMul);"));
+    has("else if(card.monId==='Suezo'){const gRec=gainGutsByRate(slotIdx,0.5*effMul);") || has("else if(card.monId==='Suezo'){const gRec=gainGutsByRate(slotIdx,0.5*healMul);"));
   // ★絶氷の楔は立っている子を1体ずつ回すループなので、そのまま
   check('絶氷の楔は1体ずつ回す形のまま',
     has('if (extra>0) gutsRegen+=gainGutsByRate(slotIdx,extra);'));
@@ -1406,7 +1406,8 @@ check('アーク/イブリースの贖罪は、利点と欠点をまとめて使
   has("if(isTacticsMode(runMode)){ setTacticsNextSlotBuff(slotIdx,'takenDamageMult',0.5); setTacticsNextSlotBuff(slotIdx,'gutsCostMult',1.15); }")
     && has("else { setNextTurnBuff('takenDamageMult',0.5); setNextTurnBuff('gutsCostMult',1.15); }"));
 check('パンドラの共鳴は使った子だけ',
-  has("if(isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx,'pandoraResonanceTurns',2);"));
+  // 2026-11-07: オリジナル強化「効果の長さ」で 2+N ターン(resonanceTurns)
+  has("if(isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx,'pandoraResonanceTurns',2);") || has("if(isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx,'pandoraResonanceTurns',resonanceTurns);"));
 check('モノリスの反射は味方全体のまま',
   has("setNextTurnBuff('reflect',true)") && !has("setTacticsNextSlotBuff(slotIdx,'reflect'"));
 check('メロソの被ダメ減も味方全体のまま',

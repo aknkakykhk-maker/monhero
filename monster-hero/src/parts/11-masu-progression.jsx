@@ -846,6 +846,222 @@ const moveUniqueOrderKey = (order, key, delta) => {
   list.splice(to, 0, list.splice(from, 1)[0]);
   return list;
 };
+// ==================== 固有技のオリジナル強化(2026-11-07 社長) ====================
+// 固有技Lv.8(MAX)になった技に、余った固有技Pで強化を積む。効くのは強化を積んだその技だけ。
+// 保存は個体の uniqueSkillBoosts だけ: { '<技のキー>': { '<種類id>': 目盛りの数 } }。
+//   技のキーは固有技Lvと同じ安定キー(自前='own' / 引き継いだ技='inhId:<id>')。
+//   持っていない項目・壊れた値は読むときに 0 として扱い、保存の一括書き換えはしない。
+//   固有技P(uniqueSkillPoints)・固有技Lv(uniqueSkillLevels)の意味は変えない(強化に使ったぶんだけ uniqueSkillPoints が減る)。
+// 種類の「どの技に効くか」は技の出自(unique.monId)で決める。効かない種類は画面で灰色にし、確定でも弾く。
+const UNIQUE_BOOST_STEP_COST = 100;
+// 連撃を持つ技(連撃ダメージ・連撃数が効く)
+const UNIQUE_BOOST_COMBO_IDS = Object.freeze(['Zan', 'Eiki', 'KenshiMocchi', 'Ark', 'Iblis', 'Ghost', 'Spooky', 'Illumine']);
+// 効果の数字を持つ技(効果の強さが効く。バトルの effMul に掛ける)
+const UNIQUE_BOOST_EFFECT_IDS = Object.freeze(['Mocchi', 'Mitarashi', 'Golem', 'Tiger', 'Monol', 'Zan', 'Eiki', 'KenshiMocchi',
+  'Illumine', 'Dreamy', 'Yggdrasil', 'MelWhip', 'Melody', 'Kuromy']);
+// 回復する技(回復の量が効く)
+const UNIQUE_BOOST_HEAL_IDS = Object.freeze(['Suezo', 'Oboro', 'Plant', 'Yggdrasil', 'MelWhip', 'Melody', 'Kuromy']);
+// 2ターン以上続く効果を持つ技(効果の長さが効く)。大樹の加護など「使ったターンと次のターン」の形の技は入れない
+const UNIQUE_BOOST_DURATION_IDS = Object.freeze(['Pandora', 'Dreamy', 'Kyubi', 'Orihime', 'Spooky', 'Snegurochka', 'Undine', 'Yaobikuni']);
+// 確率で当たりが出る技(効果の確率が効く)
+const UNIQUE_BOOST_CHANCE_IDS = Object.freeze(['Ghost', 'Spooky']);
+const UNIQUE_BOOST_TABS = Object.freeze([
+  Object.freeze({ id:'attack', label:'攻撃' }),
+  Object.freeze({ id:'slayer', label:'特攻' }),
+  Object.freeze({ id:'support', label:'補助' }),
+]);
+// stepCost … 1目盛りの固有技P / perStep … 1目盛りで上がる値 / maxValue … 上限(値で。null は上限なし) / only … 効く技の一覧(無ければ全部の技)
+const UNIQUE_BOOST_DEFINITIONS = Object.freeze([
+  Object.freeze({ id:'power', tab:'attack', name:'威力', unit:'%', perStep:0.1, stepCost:100, maxValue:null, desc:'この技のダメージが上がります。' }),
+  Object.freeze({ id:'critDamage', tab:'attack', name:'会心ダメージ', unit:'%', perStep:0.13, stepCost:100, maxValue:null, desc:'この技が会心になったときのダメージが上がります。' }),
+  Object.freeze({ id:'critRate', tab:'attack', name:'会心率', unit:'pt', perStep:0.1, stepCost:100, maxValue:50, desc:'この技の会心率が上がります。' }),
+  Object.freeze({ id:'comboDamage', tab:'attack', name:'連撃ダメージ', unit:'%', perStep:0.1, stepCost:100, maxValue:null, only:UNIQUE_BOOST_COMBO_IDS, desc:'この技で出る連撃1本1本のダメージが上がります。' }),
+  Object.freeze({ id:'comboCount', tab:'attack', name:'連撃数', unit:'本', perStep:1, stepCost:10000, maxValue:3, only:UNIQUE_BOOST_COMBO_IDS, desc:'この技で攻撃するたびに、元のダメージの10%の連撃が1本増えます。' }),
+  Object.freeze({ id:'mooSlayer', tab:'slayer', name:'ムー特攻', unit:'%', perStep:0.2, stepCost:100, maxValue:null, desc:'相手がムー・覚醒ムーのとき、この技のダメージが上がります。' }),
+  Object.freeze({ id:'eventBossSlayer', tab:'slayer', name:'イベボス特攻', unit:'%', perStep:0.2, stepCost:100, maxValue:null, desc:'相手が期間イベントのボス(ジャックなど)のとき、この技のダメージが上がります。' }),
+  Object.freeze({ id:'chargeBreak', tab:'slayer', name:'溜めくずし', unit:'%', perStep:0.2, stepCost:100, maxValue:null, desc:'相手が必殺技を溜めているとき、この技のダメージが上がります。' }),
+  Object.freeze({ id:'immobileSlayer', tab:'slayer', name:'動けない敵へ', unit:'%', perStep:0.2, stepCost:100, maxValue:null, desc:'相手がスタン・絶氷の楔で動けないとき、この技のダメージが上がります。' }),
+  Object.freeze({ id:'finisher', tab:'slayer', name:'とどめ', unit:'%', perStep:0.2, stepCost:100, maxValue:null, desc:'相手のライフが3割以下のとき、この技のダメージが上がります。' }),
+  Object.freeze({ id:'rangeMatch', tab:'slayer', name:'間合いの極意', unit:'%', perStep:0.15, stepCost:100, maxValue:null, desc:'相手と同じ距離から撃ったとき、この技のダメージが上がります。' }),
+  Object.freeze({ id:'heroPride', tab:'slayer', name:'勇者の誇り', unit:'%', perStep:0.15, stepCost:100, maxValue:null, desc:'この技を使ったのが勇者モンのとき、この技のダメージが上がります。' }),
+  Object.freeze({ id:'extremeChallenge', tab:'slayer', name:'極限への挑戦', unit:'%', perStep:0.15, stepCost:100, maxValue:null, desc:'極限チャレンジで戦うとき、この技のダメージが上がります。' }),
+  Object.freeze({ id:'gutsSave', tab:'support', name:'省気', unit:'%', sign:-1, perStep:0.04, stepCost:100, maxValue:50, desc:'この技の消費ガッツが減ります。' }),
+  Object.freeze({ id:'effectPower', tab:'support', name:'効果の強さ', unit:'%', perStep:0.1, stepCost:100, maxValue:100, only:UNIQUE_BOOST_EFFECT_IDS, desc:'この技の効果の数字(被ダメ軽減・ちから・連撃ダメージなど)が、元の数字に対して強くなります。' }),
+  Object.freeze({ id:'healAmount', tab:'support', name:'回復の量', unit:'%', perStep:0.1, stepCost:100, maxValue:100, only:UNIQUE_BOOST_HEAL_IDS, desc:'この技で回復するライフ・ガッツの量が、元の量に対して増えます。' }),
+  Object.freeze({ id:'effectDuration', tab:'support', name:'効果の長さ', unit:'ターン', perStep:1, stepCost:5000, maxValue:1, only:UNIQUE_BOOST_DURATION_IDS, desc:'この技の効果が続くターンが長くなります。' }),
+  Object.freeze({ id:'effectChance', tab:'support', name:'効果の確率', unit:'pt', perStep:0.05, stepCost:100, maxValue:25, only:UNIQUE_BOOST_CHANCE_IDS, desc:'この技の当たり(コインの表・運命の輪のダメージ3倍)が出やすくなります。' }),
+  Object.freeze({ id:'evade', tab:'support', name:'見切り', unit:'pt', perStep:0.05, stepCost:100, maxValue:20, desc:'この技を使ったターン、敵の攻撃をよける率が上がります。' }),
+]);
+const UNIQUE_BOOST_BY_ID = Object.freeze(Object.fromEntries(UNIQUE_BOOST_DEFINITIONS.map(def => [def.id, def])));
+// 目盛りの上限(上限なしは Infinity)。小数の誤差で1目盛り落ちないよう、少しだけ余らせて切り捨てる
+const uniqueBoostMaxSteps = (def) => (def && def.maxValue != null && Number.isFinite(Number(def.maxValue))
+  ? Math.floor(Number(def.maxValue) / def.perStep + 1e-9) : Infinity);
+const uniqueBoostAppliesTo = (def, monId) => !!def && (!Array.isArray(def.only) || def.only.includes(String(monId || '')));
+const normalizeUniqueBoostSteps = (raw) => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  UNIQUE_BOOST_DEFINITIONS.forEach(def => {
+    const n = Math.floor(Number(raw[def.id]));
+    if (!Number.isFinite(n) || n <= 0) return;
+    out[def.id] = Math.min(n, uniqueBoostMaxSteps(def));
+  });
+  return out;
+};
+// 個体の強化を読む。技のキーごとに、知っている種類・正の整数だけを残す
+const normalizeUniqueSkillBoosts = (masuOrBoosts) => {
+  const raw = masuOrBoosts && typeof masuOrBoosts === 'object' && !Array.isArray(masuOrBoosts)
+    && Object.prototype.hasOwnProperty.call(masuOrBoosts, 'uniqueSkillBoosts') ? masuOrBoosts.uniqueSkillBoosts : masuOrBoosts;
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  Object.entries(raw).forEach(([key, steps]) => {
+    if (typeof key !== 'string' || !key) return;
+    const normalized = normalizeUniqueBoostSteps(steps);
+    if (Object.keys(normalized).length) out[key] = normalized;
+  });
+  return out;
+};
+const uniqueBoostStepsOf = (masu, key) => normalizeUniqueSkillBoosts(masu)[String(key || '')] || {};
+// 1つの技に使った固有技P
+const uniqueBoostSpentOfSteps = (steps) => Object.entries(normalizeUniqueBoostSteps(steps))
+  .reduce((sum, [id, n]) => sum + n * (UNIQUE_BOOST_BY_ID[id]?.stepCost || UNIQUE_BOOST_STEP_COST), 0);
+// いま持っている技(自前+引き継いだ技)に使った固有技Pの合計。総合力・ランキングの詳細はこの値を見る
+const uniqueSkillBoostSpentPoints = (masu) => {
+  const all = normalizeUniqueSkillBoosts(masu);
+  const owned = new Set([OWN_UNIQUE_KEY, ...(Array.isArray(masu?.inheritedUniques) ? masu.inheritedUniques : [])
+    .map(unique => inheritedUniqueLevelKey(unique)).filter(Boolean)]);
+  return Object.entries(all).reduce((sum, [key, steps]) => sum + (owned.has(key) ? uniqueBoostSpentOfSteps(steps) : 0), 0);
+};
+const uniqueBoostValue = (def, steps) => Math.max(0, Math.floor(Number(steps) || 0)) * (def?.perStep || 0);
+// 値の見せ方(+0.8% / −2.0% / +1本 / +1ターン)。上げ幅の小さい種類は小数2けた
+const formatUniqueBoostValue = (def, steps) => {
+  if (!def) return '';
+  const value = uniqueBoostValue(def, steps);
+  const sign = def.sign === -1 ? '−' : '+';
+  if (def.unit === '本' || def.unit === 'ターン') return `${sign}${Math.round(value)}${def.unit}`;
+  const digits = Math.round(def.perStep * 100) % 10 === 0 ? 1 : 2;
+  return `${sign}${value.toFixed(digits)}${def.unit}`;
+};
+// 技の行に小さく出す要約(「威力+0.8%・ムー特攻+1.2% ほか」)。積んでいなければ空文字
+const uniqueBoostSummaryText = (steps, max = 2) => {
+  const normalized = normalizeUniqueBoostSteps(steps);
+  const parts = UNIQUE_BOOST_DEFINITIONS.filter(def => normalized[def.id] > 0)
+    .map(def => `${def.name}${formatUniqueBoostValue(def, normalized[def.id])}`);
+  if (!parts.length) return '';
+  return parts.length > max ? `${parts.slice(0, max).join('・')} ほか` : parts.join('・');
+};
+// 技のキーから、その技の出自(効く種類を決める monId)を出す
+const uniqueBoostMonIdOfKey = (masu, key) => {
+  if (key === OWN_UNIQUE_KEY) {
+    const base = (typeof ALL_PLAYER_MONSTERS !== 'undefined') ? ALL_PLAYER_MONSTERS[masu?.baseId] : null;
+    return base?.unique?.monId || masu?.baseId || null;
+  }
+  const found = (Array.isArray(masu?.inheritedUniques) ? masu.inheritedUniques : []).find(unique => inheritedUniqueLevelKey(unique) === key);
+  return found?.monId || null;
+};
+const uniqueBoostSkillLevelOf = (masu, key) => {
+  if (key === OWN_UNIQUE_KEY) return Math.max(0, Math.min(MAX_UNIQUE_SKILL_LEVEL, Math.floor(Number(masu?.uniqueSkillLevels?.own) || 0)));
+  const list = Array.isArray(masu?.inheritedUniques) ? masu.inheritedUniques : [];
+  const index = list.findIndex(unique => inheritedUniqueLevelKey(unique) === key);
+  return index < 0 ? 0 : resolveInheritedUniqueLevel(masu, list[index], index);
+};
+// 強化の確定。plan は { 種類id: 確定後の目盛り数 }。今より下げることはできない(戻すのはスキルポイントリセット券だけ)。
+// 固有技Lv.8の技・その技に効く種類・上限・固有技Pの残りをすべて確かめ、だめなら null(保存しない)
+const applyUniqueBoostPlan = (masu, key, plan) => {
+  if (!masu || typeof key !== 'string' || !plan || typeof plan !== 'object') return null;
+  const normalized = normalizeMasuProgression(masu);
+  const monId = uniqueBoostMonIdOfKey(normalized, key);
+  if (!monId || uniqueBoostSkillLevelOf(normalized, key) < MAX_UNIQUE_SKILL_LEVEL) return null;
+  const all = normalizeUniqueSkillBoosts(normalized);
+  const current = all[key] || {};
+  const next = { ...current };
+  let cost = 0;
+  for (const [id, rawTarget] of Object.entries(plan)) {
+    const def = UNIQUE_BOOST_BY_ID[id];
+    const target = Math.floor(Number(rawTarget));
+    if (!def || !Number.isFinite(target)) return null;
+    const have = current[id] || 0;
+    if (target === have) continue;
+    if (target < have || target > uniqueBoostMaxSteps(def) || !uniqueBoostAppliesTo(def, monId)) return null;
+    cost += (target - have) * def.stepCost;
+    next[id] = target;
+  }
+  if (cost <= 0 || cost > normalized.uniqueSkillPoints) return null;
+  return {
+    cost,
+    nextMasu: { ...normalized, uniqueSkillBoosts: { ...all, [key]: next }, uniqueSkillPoints: normalized.uniqueSkillPoints - cost },
+  };
+};
+// 合体で引き継ぐとき: 副のその技の強化を、主に新しく付いた技のキーへ写す(強化が無ければ何もしない)
+const withInheritedUniqueBoosts = (masu, newKey, steps) => {
+  const normalized = normalizeUniqueBoostSteps(steps);
+  if (!masu || !newKey || !Object.keys(normalized).length) return masu;
+  return { ...masu, uniqueSkillBoosts: { ...normalizeUniqueSkillBoosts(masu), [newKey]: normalized } };
+};
+// バトルで固有技カードがどの技か(自前 'own' / 引き継いだ技 'inhId:<id>')。固有技でなければ null
+const uniqueBoostKeyOfCard = (card) => {
+  if (!card || card.type !== 'unique') return null;
+  const id = typeof card.inheritedUniqueId === 'string' ? card.inheritedUniqueId.trim() : '';
+  return id ? `${INHERITED_UNIQUE_LEVEL_KEY_PREFIX}${id}` : OWN_UNIQUE_KEY;
+};
+const UNIQUE_BOOST_EMPTY_PROFILE = Object.freeze({
+  damagePct:0, comboFinalPct:0, comboExtra:0, critRatePoints:0, critDamagePct:0, gutsSavePct:0,
+  effectPct:0, healPct:0, durationTurns:0, chancePoints:0, evadePoints:0,
+});
+// 期間イベントのボスか(ジャックなど)。一覧は敵のデータ側(EVENT_BOSS_IDS)に置く
+const uniqueBoostIsEventBoss = (enemyId) => typeof EVENT_BOSS_IDS !== 'undefined' && EVENT_BOSS_IDS.includes(String(enemyId || ''));
+// その攻撃でオリジナル強化がいくつ効くか。予測ダメージと実際のダメージの両方がここを通る。
+// ctx … { enemyId, enemyHpRatio, enemyCharging, enemyImmobile, sameDistance, isHero, extreme, eventBattle }
+const uniqueBoostProfile = (masu, card, ctx = {}) => {
+  const key = uniqueBoostKeyOfCard(card);
+  if (!masu || !key) return UNIQUE_BOOST_EMPTY_PROFILE;
+  const steps = uniqueBoostStepsOf(masu, key);
+  if (!Object.keys(steps).length) return UNIQUE_BOOST_EMPTY_PROFILE;
+  const monId = card.monId || uniqueBoostMonIdOfKey(masu, key);
+  const v = (id) => (uniqueBoostAppliesTo(UNIQUE_BOOST_BY_ID[id], monId) ? uniqueBoostValue(UNIQUE_BOOST_BY_ID[id], steps[id]) : 0);
+  const c = ctx && typeof ctx === 'object' ? ctx : {};
+  const eventBoss = !!c.eventBattle || uniqueBoostIsEventBoss(c.enemyId);
+  const moo = !eventBoss && ['Moo', 'AwakenedMoo'].includes(String(c.enemyId || ''));
+  const ratio = Number(c.enemyHpRatio);
+  let damagePct = v('power');
+  if (moo) damagePct += v('mooSlayer');
+  if (eventBoss) damagePct += v('eventBossSlayer');
+  if (c.enemyCharging) damagePct += v('chargeBreak');
+  if (c.enemyImmobile) damagePct += v('immobileSlayer');
+  if (Number.isFinite(ratio) && ratio > 0 && ratio <= 0.3) damagePct += v('finisher');
+  if (c.sameDistance) damagePct += v('rangeMatch');
+  if (c.isHero) damagePct += v('heroPride');
+  if (c.extreme) damagePct += v('extremeChallenge');
+  return {
+    damagePct,
+    comboFinalPct:v('comboDamage'),
+    comboExtra:Math.round(v('comboCount')),
+    critRatePoints:v('critRate'),
+    critDamagePct:v('critDamage'),
+    gutsSavePct:Math.min(50, v('gutsSave')),
+    effectPct:v('effectPower'),
+    healPct:v('healAmount'),
+    durationTurns:Math.round(v('effectDuration')),
+    chancePoints:v('effectChance'),
+    evadePoints:v('evade'),
+  };
+};
+// 魂格特性の攻撃の補正(soulTraitAttackProfile)に、その技のオリジナル強化を重ねた物。
+// 予測・実処理・消費ガッツの全部が soulTraitAttackProfile の代わりにこれを呼ぶ(同じ所を通すため)
+const attackBoostProfile = (masu, card, slotIdx = null, ctx = {}) => {
+  const soul = soulTraitAttackProfile(masu, card, slotIdx);
+  const ub = uniqueBoostProfile(masu, card, ctx);
+  return {
+    ...soul,
+    soulDamagePct:soul.damagePct,
+    damagePct:soul.damagePct + ub.damagePct,
+    damageMultiplier:soul.damageMultiplier * (1 + ub.damagePct / 100),
+    comboFinalMultiplier:soul.comboFinalMultiplier * (1 + ub.comboFinalPct / 100),
+    critRateBonus:soul.critRateBonus + ub.critRatePoints / 100,
+    critDamageBonus:soul.critDamageBonus + ub.critDamagePct / 100,
+    gutsCostMultiplier:soul.gutsCostMultiplier * Math.max(0, 1 - ub.gutsSavePct / 100),
+    uniqueBoost:ub,
+  };
+};
 // 構造ベースの冪等移行。旧inh:Nは互換用に残し、現在の配列対応を一度だけ安定ID側へ写す。
 const migrateInheritedUniqueLevelIds = (masuMons, makeId = createInheritedUniqueId) => {
   let changed = false;
@@ -1500,15 +1716,19 @@ const buildUniqueSkillPointReset = (masu) => {
         && Object.prototype.hasOwnProperty.call(normalized.uniqueSkillLevels, inheritedUniqueLevelKey(normalized.inheritedUniques[Number(legacyMatch[1])]));
       return sum + (stableShadowExists ? 0 : Math.max(0, Math.floor(Number(level) || 0)));
     }, 0);
-  if (refundedPoints <= 0) return null;
-  return {
-    refundedPoints,
-    nextMasu: {
-      ...normalized,
-      uniqueSkillLevels: Object.fromEntries(Object.keys(normalized.uniqueSkillLevels).map(key => [key, 0])),
-      uniqueSkillPoints: normalized.uniqueSkillPoints + refundedPoints,
-    },
+  // オリジナル強化もすべて戻し、使った固有技Pを返す(2026-11-07 社長)。保存にある強化は全部返す
+  const boosts = normalizeUniqueSkillBoosts(normalized);
+  const refundedBoostPoints = Object.values(boosts).reduce((sum, steps) => sum + uniqueBoostSpentOfSteps(steps), 0);
+  const levelPoints = refundedPoints;
+  const total = levelPoints + refundedBoostPoints;
+  if (total <= 0) return null;
+  const nextMasu = {
+    ...normalized,
+    uniqueSkillLevels: Object.fromEntries(Object.keys(normalized.uniqueSkillLevels).map(key => [key, 0])),
+    uniqueSkillPoints: normalized.uniqueSkillPoints + total,
   };
+  if (Object.prototype.hasOwnProperty.call(normalized, 'uniqueSkillBoosts')) nextMasu.uniqueSkillBoosts = {};
+  return { refundedPoints:total, refundedLevelPoints:levelPoints, refundedBoostPoints, nextMasu };
 };
 // 転生では個体の識別情報・外見・固有技・履歴だけを残し、振った強化は白紙に戻す。
 // オブジェクトスプレッドで旧育成値を残さないよう、維持対象を明示して新しい保存形を組み立てる。
@@ -1558,6 +1778,8 @@ const resetMasuForRebirth = (masu, { rebirthCount, reincarnateCount, reincarnate
   //   保存されているときだけ、そのまま持ち越す(読むときに normalizeUniqueOrder / normalizeInitialUniqueKey が今の技に合わせる)
   if (Array.isArray(masu?.uniqueOrder)) reset.uniqueOrder = masu.uniqueOrder.filter(key => typeof key === 'string');
   if (typeof masu?.initialUniqueKey === 'string' && masu.initialUniqueKey) reset.initialUniqueKey = masu.initialUniqueKey;
+  // 固有技のオリジナル強化も転生で失われない(固有技Lvと同じ)。積んでいる個体だけ持ち越す(積んでいない個体に項目を足さない)
+  { const boosts = normalizeUniqueSkillBoosts(masu); if (Object.keys(boosts).length) reset.uniqueSkillBoosts = boosts; }
   if (masu?.individualStats && typeof masu.individualStats === 'object') reset.individualStats = { ...masu.individualStats };
   if (masu?.individualStatOffsets && typeof masu.individualStatOffsets === 'object') reset.individualStatOffsets = { ...masu.individualStatOffsets };
   if (Array.isArray(masu?.distAptBoosts)) reset.distAptBoosts = [0,0,0,0];
@@ -1752,6 +1974,8 @@ const mergeMasuIntoMon = (masu) => {
     soulRankStage: normalizeSoulRankStage(masu?.soulRankStage),
     soulPointMaxReachedLevel: normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel),
     soulTraitLevels: normalizeSoulTraitLevels(masu?.soulTraitLevels),
+    // 固有技のオリジナル強化。総合力(使った固有技P)と詳細の表示が読む
+    uniqueSkillBoosts: normalizeUniqueSkillBoosts(masu),
   };
 };
 // マスモン詳細で「元の値 ＋ 基礎UP(超越) ＋ 通常強化 ＝ 現在」を出すための内訳。★重要
@@ -1970,7 +2194,7 @@ const monsterPowerUniques = (mon) => [mon?.unique, ...((mon?.inheritedUniques) |
   .filter(u => u && typeof u === 'object' && typeof u.name === 'string' && Number.isFinite(Number(u.baseMult)));
 // 総合力の内訳。合計を出す前の各項目を返すので、検査や画面の説明にも使える
 const monsterPowerParts = (mon) => {
-  if (!mon) return { stat:0, aptitude:0, unique:0, soul:0, total:0 };
+  if (!mon) return { stat:0, aptitude:0, unique:0, soul:0, boost:0, boostSpent:0, total:0 };
   const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
   const stat = num(mon.baseHp) * MONSTER_POWER_STAT_WEIGHT.hp
     + num(mon.baseAtk) * MONSTER_POWER_STAT_WEIGHT.atk
@@ -1984,7 +2208,10 @@ const monsterPowerParts = (mon) => {
     + uniques.reduce((sum, u) => sum + Math.max(0, Math.floor(num(u.evoLevel))), 0) * MONSTER_POWER_UNIQUE_PER_LEVEL;
   // 魂格特性は効果ごとに換算せず「使用済み魂格P×10」を一度だけ加える。
   const soulPower = soulTraitSpentPoints(mon) * 10;
-  return { stat, aptitude:apt, unique:uniquePower, soul:soulPower, total:stat + apt + uniquePower + soulPower };
+  // 固有技のオリジナル強化も「使った固有技P 100Pごとに +1000」(=1Pあたり10)で一度だけ加える(2026-11-07 社長)
+  const boostSpent = uniqueSkillBoostSpentPoints(mon);
+  const boostPower = boostSpent * 10;
+  return { stat, aptitude:apt, unique:uniquePower, soul:soulPower, boost:boostPower, boostSpent, total:stat + apt + uniquePower + soulPower + boostPower };
 };
 // 総合力の正本。解決済みのモンスター(ベースモンの定義、または mergeMasuIntoMon の結果)を渡す。
 // 端数は最後にまとめて四捨五入する(項目ごとに丸めない)
@@ -2737,8 +2964,11 @@ const buildFusionDiamondSummary = ({ masu, fusionXp = 0, gold = 0, psycheOwned =
 };
 // 選択順に継承可否を確定する。確認画面と保存直前の再検証で同じ判定を使い、
 // 主が所持済み・同じ一括合体内で先に追加済みの同系統には費用を付けない。
-const buildFusionInheritancePlan = ({ main, subs, selectedSubIds }) => {
+// choiceBySubId … 副ごとに引き継ぐ技のキー(自前 'own' / 副が前に引き継いだ技 'inhId:<id>')。無ければ自前(これまでどおり)。
+//   副の技(自前+引き継いだ技)から1つだけ選べ、Lv とオリジナル強化も一緒に移る(2026-11-07 社長)
+const buildFusionInheritancePlan = ({ main, subs, selectedSubIds, choiceBySubId = null }) => {
   const selected = new Set(Array.isArray(selectedSubIds) ? selectedSubIds : []);
+  const choices = choiceBySubId && typeof choiceBySubId === 'object' ? choiceBySubId : {};
   const mainBase = main ? ALL_PLAYER_MONSTERS[main.baseId] : null;
   const ownedLineageIds = new Set([
     uniqueLineageId(mainBase?.unique, mainBase?.id),
@@ -2746,13 +2976,25 @@ const buildFusionInheritancePlan = ({ main, subs, selectedSubIds }) => {
   ].filter(Boolean));
   const entries = (Array.isArray(subs) ? subs : []).map(sub => {
     const subBase = sub ? ALL_PLAYER_MONSTERS[sub.baseId] : null;
-    const lineageId = uniqueLineageId(subBase?.unique, subBase?.id);
-    const eligible = !!sub && masuBondLevelInfo(sub).level >= FUSION_INHERIT_MIN_SUB_LEVEL && !!subBase?.unique;
+    // 副の技の一覧(自前 → 引き継いだ技)。どれも Lv と強化の要約つき
+    const options = !sub ? [] : [
+      ...(subBase?.unique ? [{ key:OWN_UNIQUE_KEY, unique:subBase.unique, monId:subBase.id, lineageId:uniqueLineageId(subBase.unique, subBase.id), own:true,
+        level:Math.max(0, Math.min(MAX_UNIQUE_SKILL_LEVEL, Math.floor(Number(sub.uniqueSkillLevels?.own) || Number(subBase.unique.evoLevel) || 0))) }] : []),
+      ...(Array.isArray(sub.inheritedUniques) ? sub.inheritedUniques : []).map((unique, index) => {
+        const key = inheritedUniqueLevelKey(unique);
+        if (!key || !isValidInheritedUnique(unique)) return null;
+        return { key, unique, monId:unique.monId || null, lineageId:uniqueLineageId(unique), own:false, level:resolveInheritedUniqueLevel(sub, unique, index) };
+      }).filter(Boolean),
+    ].map(option => ({ ...option, boosts:uniqueBoostStepsOf(sub, option.key), duplicate:!!option.lineageId && ownedLineageIds.has(option.lineageId) }));
+    const chosenKey = typeof choices[sub?.id] === 'string' && options.some(o => o.key === choices[sub?.id]) ? choices[sub?.id] : OWN_UNIQUE_KEY;
+    const chosen = options.find(o => o.key === chosenKey) || null;
+    const lineageId = chosen ? chosen.lineageId : uniqueLineageId(subBase?.unique, subBase?.id);
+    const eligible = !!sub && masuBondLevelInfo(sub).level >= FUSION_INHERIT_MIN_SUB_LEVEL && options.length > 0;
     const requested = !!sub && selected.has(sub.id);
     const duplicate = !!lineageId && ownedLineageIds.has(lineageId);
-    const inherited = requested && eligible && !!lineageId && !duplicate;
+    const inherited = requested && eligible && !!chosen && !!lineageId && !duplicate;
     if (inherited) ownedLineageIds.add(lineageId);
-    return { sub, subBase, lineageId, eligible, requested, duplicate, inherited };
+    return { sub, subBase, lineageId, eligible, requested, duplicate, inherited, options, chosenKey, chosen };
   });
   const inheritedEntries = entries.filter(entry=>entry.inherited);
   return { entries, inheritedEntries, inheritCount:inheritedEntries.length, inheritCost:inheritedEntries.length * FUSION_INHERIT_COST };

@@ -14,6 +14,12 @@ const difficultyStyle = (setting, selected) => (selected
 // ジャック(イベント・レイドボス)もラスボスの置き方(丸枠の外へ大きく出す)にする(2026-10-04・ユーザー指示「ムーと同じラスボスの置き方」)
 const MOO_BOSS_IDS = ['Moo', 'AwakenedMoo', 'Jack'];
 const isMooBoss = (id) => MOO_BOSS_IDS.includes(String(id || ''));
+// 期間イベントのボス(2026-11-07 社長「ジャック特攻 → イベボス特攻」)。固有技のオリジナル強化「イベボス特攻」はこの一覧で見る
+// (レイドバトル・グランドスラムでの戦いも、相手に関係なくイベントのボス戦として数える)。
+// ★新しい期間イベントのボスを足すときは、ここに1行足す。足し忘れは tools/battle/event-boss-list-check.js が止める
+//   (ボスの置き方 MOO_BOSS_IDS に入っているのに、ムーでもこの一覧にも無い敵があると落ちる)
+const EVENT_BOSS_IDS = Object.freeze(['Jack']);
+const isEventBossId = (id) => EVENT_BOSS_IDS.includes(String(id || ''));
 
 const ENEMY_ART_LAYOUT = {
   default: { scanScale:1, waveDetailScale:1, objectPosition:'center' },
@@ -759,9 +765,15 @@ const FATE_WHEEL_OUTCOMES = Object.freeze([
   Object.freeze({ id: 'atk', label: 'ちから+15%' }),
 ]);
 // rnd は 0〜1 の乱数を返す関数(検査から決め打ちできるように渡す)
-const rollFateCoin = (rnd = Math.random) => (rnd() < 0.5 ? 'heads' : 'tails');
+// bonusPoints … 固有技のオリジナル強化「効果の確率」(pt)。表の出る確率に足す(最大+25pt)
+const rollFateCoin = (rnd = Math.random, bonusPoints = 0) => (rnd() < 0.5 + Math.max(0, Math.min(25, Number(bonusPoints) || 0)) / 100 ? 'heads' : 'tails');
 const fateCoinDmgMult = (side) => (side === 'heads' ? FATE_COIN_HEADS_MULT : FATE_COIN_TAILS_MULT);
-const rollFateWheel = (rnd = Math.random) => FATE_WHEEL_OUTCOMES[Math.min(FATE_WHEEL_OUTCOMES.length - 1, Math.max(0, Math.floor(rnd() * FATE_WHEEL_OUTCOMES.length)))];
+// bonusPoints … 固有技のオリジナル強化「効果の確率」(pt)。その確率で大当たり(ダメージ3倍)が出て、外れたら今までどおり6つから1つ
+const rollFateWheel = (rnd = Math.random, bonusPoints = 0) => {
+  const bonus = Math.max(0, Math.min(25, Number(bonusPoints) || 0)) / 100;
+  if (bonus > 0 && rnd() < bonus) return FATE_WHEEL_OUTCOMES.find(o => o.id === 'dmg3');
+  return FATE_WHEEL_OUTCOMES[Math.min(FATE_WHEEL_OUTCOMES.length - 1, Math.max(0, Math.floor(rnd() * FATE_WHEEL_OUTCOMES.length)))];
+};
 const fateCount = (v) => Math.max(0, Math.floor(Number(v) || 0));
 const fateSlotStacksOf = (fateStacks, slotIdx) => {
   const raw = fateStacks && typeof fateStacks === 'object' && fateStacks.bySlot && typeof fateStacks.bySlot === 'object'
@@ -962,13 +974,15 @@ const ATTACK_COMBO_RULES = Object.freeze({
 });
 // ソードスキルの「連撃パワー」が満タンになる数。ここに達するたびに永久10%連撃が1本増え、0へ戻る
 const KENSHI_COMBO_POWER_MAX = 3;
+// 固有技のオリジナル強化「連撃数」で増える連撃1本の率(元のダメージの10%)
+const UNIQUE_BOOST_EXTRA_COMBO_RATE = 0.1;
 // mainCanCrit:false は「メインヒットには会心が乗らない」種類(あつの挑発)。連撃・全体連撃の会心判定は変わらない
 // ★heroId … 勇者モンのid。traitOwnerId … 特性の「持ち主」(タクティクスでは札を出した子、
 //   既存5モードは勇者モンと同じ)。渡さなければ heroId と同じに倒れるので、今までの呼び出しは変わらない。
 //   連撃系はここで分かれる(2026-09-22 ユーザー判断)。
 //     ザンの連斬だけ traitOwnerId … 供モンでも本人が殴れば出る
 //     エイキ・パンドラ・剣士モッチー … heroId。**勇者モンにしたからこそ強い**設定なので出さない
-const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true, hitRepeat = 1, exCombos = null, critDmgMult = 1 }) => {
+const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true, hitRepeat = 1, exCombos = null, critDmgMult = 1, boostExtraCombos = 0 }) => {
   const hits = [];
   // ★critDmgMult … タクティクスのEX「堕天の烙印」の会心ダメージ(2026-10-02 ユーザー指示「乗算」)。足し算の補正のあとにかける
   const critMult = 1.5 + critDmgBonus;
@@ -1016,6 +1030,12 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
   // 本数に上限は設けない。率にも連撃ダメージ補正(comboDmgBonus)が乗る
   if (attackerId === 'KenshiMocchi') {
     for (let i = 0; i < kenshiExtraCombos; i++) combo(ATTACK_COMBO_RULES.kenshiExtraCombo + comboDmgBonus);
+  }
+  // ★boostExtraCombos … 固有技のオリジナル強化「連撃数」(2026-11-07 社長)。連撃を持つ技に、元のダメージの10%の連撃を本数ぶん足す。
+  //   10%はどの技も同じ(連撃ダメージ補正 comboDmgBonus は足さない)。最終の倍率(連撃強化・連撃ダメージ)は combo が掛ける
+  if (card.type === 'unique') {
+    const n = Math.max(0, Math.min(10, Math.floor(Number(boostExtraCombos) || 0)));
+    for (let i = 0; i < n; i++) combo(UNIQUE_BOOST_EXTRA_COMBO_RATE);
   }
   // ★exCombos … タクティクスのEX「スイーツパラダイス」(2026-09-29 ユーザー指示「連撃30%×4」)。
   //   使ったターンのその子の攻撃へ { rate } の連撃を count 回足す。連撃ダメージ補正も乗る。
