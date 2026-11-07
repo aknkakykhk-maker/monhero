@@ -35,6 +35,18 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-11-07 社長「この強さで出す」。ZUTOMAYO。HELL は空中20(フリック0)。★社長の「この文で」をもらってから公開する
+    date: "2026-11-07 11:52", type:'update', group:'rhythm', title:'新曲「ヒューマノイド」を追加しました', status:'new',
+    image:'images/song-art/humanoid.jpg?v=d70e83d99553',
+    items:[
+      'モンヒロビートに「ヒューマノイド」（1分39秒）を追加しました。曲えらびからすぐ遊べます。HELL もあります。',
+      'レベルは EASY Lv.12 ／ NORMAL Lv.19 ／ HARD Lv.25 ／ EXPERT Lv.31 ／ MASTER Lv.50 ／ HELL Lv.77 です。',
+      'ノーツ数は 247 ／ 317 ／ 358 ／ 444 ／ 606 ／ 615 です。',
+      '押さえるノーツを少なめにして、たくさんのノーツを叩いていく譜面です。MASTER と HELL は、いままででいちばんノーツが詰まった譜面になりました。',
+    ],
+    assistantNotice:{ id:'update_notice_humanoid_v1', type:'content' },
+  },
+  {
     date: "2026-11-07 10:49", type:'update', group:'other', title:'1日の切り替わりを、すべて朝4時にそろえました', status:'new',
     items:[
       'バトルカードの毎日の分(助手と対戦のごほうび・オートのごほうび・その日はじめての勝ち)が、朝4時に切り替わるようになりました(前は夜0時)',
