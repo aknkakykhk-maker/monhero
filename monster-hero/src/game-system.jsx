@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d68f9faad1271f8d
+// generated-sha256: 85faccc7afe0d8d2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92874,13 +92874,18 @@ function MonsterHeroGame() {
     if (saved && grant.granted) setGifts(grant.gifts);
     return saved;
   };
-  const claimGiftIds = async (ids, { baseGifts = null, title = 'ギフトを受け取りました' } = {}) => {
+  // ★ギフトの受け取りも、ほかのギフトの書き足し(仲良し度のごほうび・おみやげなど)と同じ列で順番に走らせる(runGiftWrite)。
+  //   2026-11-07: 「すべて受け取る」で仲良し度が上がると、ごほうびの書き足しが受け取る前の一覧を読み、受け取ったあとで書き戻していた。
+  //   ダイヤは入ったのにギフトが受け取り待ちへ戻り、もう一度受け取れた(二重取り)。inGiftWrite … すでに列の中から呼ぶとき(ミッションの受け取り)
+  const claimGiftIds = async (ids, { baseGifts = null, title = 'ギフトを受け取りました', inGiftWrite = false } = {}) => {
     // ミッションの受け取り中は動かない(古いギフト一覧で保存し直さないため)。ミッションの中から呼ぶときは baseGifts を渡す
     if (giftClaimingRef.current || (!baseGifts && missionClaimingRef.current)) return null;
     giftClaimingRef.current = true;
-    try {
+    const run = async () => { try {
       const wanted = new Set(ids);
-      const sourceGifts = Array.isArray(baseGifts) ? baseGifts : gifts;
+      // 列の順番が来てから、保存から読み直す(画面の控えは、ほかの書き足しのぶんが入る前の古い一覧のことがある)
+      const storedGifts = Array.isArray(baseGifts) ? null : await storeGet('mh_gifts', null, false);
+      const sourceGifts = Array.isArray(baseGifts) ? baseGifts : Array.isArray(storedGifts) ? storedGifts : gifts;
       const claimedGifts = [];
       // ブリーダー経験値の報酬もあるので、経験値も一緒に持って回る。
       // プロフィールフレームの報酬(2026-10-20・ハロウィン・妖)もあるので、持っている枠も一緒に持って回る(保存から読み直した値)
@@ -92944,7 +92949,8 @@ function MonsterHeroGame() {
       setRewardReceipt({ title, rewards, count:claimedCount });
       try { Audio_.se.levelUp(); } catch {}
       return { count:claimedCount, rewards };
-    } finally { giftClaimingRef.current = false; }
+    } finally { giftClaimingRef.current = false; } };
+    return inGiftWrite ? run() : runGiftWrite(run);
   };
   // タブに出す赤い丸バッジ。0件なら何も出さない。
   // Tailwindの動的クラス生成に頼らず色と形はinline styleで指定する(生成に失敗して透明になるのを避ける)
@@ -93021,7 +93027,9 @@ function MonsterHeroGame() {
   const sendMissionGroupsToGiftBox = async (groups) => {
     {
       const state=normalizeMissions(missionsRef.current);
-      let nextGifts=Array.isArray(gifts)?[...gifts]:[];
+      // ギフト一覧は保存から読み直す(画面の控えは、ほかの書き足しのぶんが入る前の古い一覧のことがある。runGiftWrite の列の中で呼ぶ)
+      const storedGifts=await storeGet('mh_gifts',null,false);
+      let nextGifts=Array.isArray(storedGifts)?[...storedGifts]:Array.isArray(gifts)?[...gifts]:[];
       const giftIds=[];
       let count=0;
       ['daily','weekly','monthly'].forEach(type=>{
@@ -93066,15 +93074,19 @@ function MonsterHeroGame() {
     if (missionClaimingRef.current || giftClaimingRef.current) return null;
     missionClaimingRef.current = true;
     try {
-      const sent = await sendMissionGroupsToGiftBox(groups);
-      const baseGifts = sent ? sent.gifts : (Array.isArray(gifts) ? gifts : []);
-      const ids = sent ? [...sent.giftIds] : [];
-      if (includeBacklog) {
-        const now = Date.now();
-        baseGifts.forEach(g => { if (g?.source === 'mission' && !g.claimedAt && giftIsClaimable(g, now) && !ids.includes(g.id)) ids.push(g.id); });
-      }
-      if (!ids.length) return null;
-      return await claimGiftIds(ids, { baseGifts, title:'ミッション報酬を受け取りました' });
+      // 送る → 受け取るを、ほかのギフトの書き足しと同じ列で1つの順番として走らせる(あいだに書き戻されない)
+      return await runGiftWrite(async () => {
+        const sent = await sendMissionGroupsToGiftBox(groups);
+        const stored = sent ? null : await storeGet('mh_gifts', null, false);
+        const baseGifts = sent ? sent.gifts : (Array.isArray(stored) ? stored : Array.isArray(gifts) ? gifts : []);
+        const ids = sent ? [...sent.giftIds] : [];
+        if (includeBacklog) {
+          const now = Date.now();
+          baseGifts.forEach(g => { if (g?.source === 'mission' && !g.claimedAt && giftIsClaimable(g, now) && !ids.includes(g.id)) ids.push(g.id); });
+        }
+        if (!ids.length) return null;
+        return await claimGiftIds(ids, { baseGifts, title:'ミッション報酬を受け取りました', inGiftWrite:true });
+      });
     } finally { missionClaimingRef.current = false; }
   };
   const claimMission = (type,mission) => claimMissionRewards({ [type]:[mission] });
