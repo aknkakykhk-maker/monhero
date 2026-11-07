@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5a24d658f3c1ed78
+// source-sha256: 9fb7091952dd5136
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -50561,6 +50561,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', 'あたしたち、もうセッションLv.50ぢゃん！まぢ最強コンビかも♪'], ['wink', '{name}とならどんな曲でも楽しいの、ほんとだよ♪']],
     'sp80': [['excited', 'Lv.80！ここまで来たら、もう息ぴったりぢゃん♪'], ['happy', 'あたしの一番のセッション相手は、{name}だよｗ']],
     'sp100': [['excited', 'セッションLv.100！あたしたち、セッションマスターぢゃん！'], ['happy', 'ここまで一緒に叩いてくれて、まぢありがと♪']],
+    woke: [['troubled', 'ふぁ…{name}？ 起こされたけど、行く〜'], ['happy', 'ん〜…目、半分閉じてるけど叩くｗ'], ['wink', '寝ぐせのままだけど、来ちゃった♪']],
+    refuse: [['normal', 'むにゃ…あと5曲…ぢゃなくて5分…'], ['normal', '…ん…あしたなら、まぢで行く…'], ['happy', 'すぅ…{name}…またあとでね…']],
     'listen:mf_ichika_mix': [['excited', 'サビは1:48から！ そこからテンションまぢ上がるやつ♪']],
     'listen:monster_hero': [['excited', '1:50からずーっといちばん強いの！ 最後までアゲてこ♪']],
     'listen:monster_hero_another': [['excited', 'こっちもサビは1:49から！ 最後までずっと盛り上がるの♪']],
@@ -50632,6 +50634,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', '{name}とのセッション、Lv.50になりました♪'], ['wink', '指が覚えてくれている気がしまつ♪']],
     'sp80': [['happy', 'Lv.80でつ。目を閉じても合わせられそうです♪'], ['normal', '{name}の音、ちゃんと聞こえていますよ']],
     'sp100': [['excited', 'Lv.100でつ！セッションマスターですね♪'], ['happy', 'たくさん一緒に演奏してくれて、ありがとうございまつ♪']],
+    woke: [['troubled', '…ふぁ。起きまつ。お供しまつね'], ['wink', '眠いでつが、ちから全開でいきまつ♪'], ['happy', '早寝の私を呼ぶなんて、大胆でつね']],
+    refuse: [['normal', '…すぅ…明日の朝なら、ぜひ…'], ['normal', '…むにゃ…お茶は…あとで…'], ['troubled', '…ごめんなさい…もう、夢の中でつ…']],
     'listen:mf_ichika_mix': [['normal', '2分25秒の曲でつ。終わりの手前の盛り上がりまで、ていねいにいきましょう']],
     'listen:monster_hero': [['normal', '最初の45秒くらいは静かなんでつ。そこから少しずつ強くなっていきます']],
     'listen:monster_hero_another': [['normal', '0:48までは、静かな時間が長いんでつ。そこが好きです']],
@@ -50703,6 +50707,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['excited', 'Lv.50！！ももと{name}、もう名コンビだね♡'], ['wink', 'ここまで来たら、ももの専属だよw']],
     'sp80': [['excited', 'Lv.80！！ステージの上で一番息が合うの、{name}かも♡'], ['happy', 'ももについてこれるの、{name}くらいだよ！！']],
     'sp100': [['excited', 'Lv.100！！セッションマスターはもものおかげだよね♡'], ['happy', 'ずっと一緒にステージ立ってくれて、ありがと！！']],
+    woke: [['angry', 'ふぁ…ももを起こすなんて！ でも行く！！'], ['excited', '寝起きでもセンターは、もも！！'], ['wink', '目こすりながら叩くねw']],
+    refuse: [['normal', '…むにゃ…アンコールは…あした…'], ['happy', '…もも、いま夢でライブ中…♡'], ['normal', '…すぅ…起こさないで…w']],
     'listen:mf_ichika_mix': [['excited', '1:48からがいちばん盛り上がるとこ！！ そこでももが決めるね♡']],
     'listen:monster_hero': [['excited', '1:50からいちばん強いとこが続くの！！ 最高に盛り上がるやつ♡']],
     'listen:monster_hero_another': [['excited', '1:49からの盛り上がり、もとの曲に負けてないよ！！']],
@@ -50774,6 +50780,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', 'セッションLv.50だな。おで、うれしいくさ'], ['normal', 'ここまで来たの、ちょっとした冒険だったな']],
     'sp80': [['happy', 'Lv.80だな。もう目をつぶっても合わせられるからな'], ['happy', '{name}と叩くの、おで好きなんだな、えへへ']],
     'sp100': [['excited', 'Lv.100だな！セッションマスターだからな！'], ['happy', '長い冒険だったな。ありがとうな、えへへ']],
+    woke: [['troubled', '…ぐぅ…はっ、起きたぞ。行くからな'], ['normal', '寝ぼけてるが、叩くのはできるぞ'], ['happy', 'おでを起こすとは…しょうがないな']],
+    refuse: [['normal', '…ぐぅ…あと10時間…'], ['happy', '…むにゃ…グジラ…でっかい…'], ['troubled', '…すまん…膝が、まだ寝てる…']],
     'listen:mf_ichika_mix': [['happy', 'サビは1:48から2:14までだな。そこまでは体力をとっとけよ']],
     'listen:monster_hero': [['happy', '静かに始まって、だんだん強くなる。冒険の始まりみたいな曲だな']],
     'listen:monster_hero_another': [['normal', '0:48で急に強くなるからな。そこで置いていかれるなよ']],
@@ -50845,6 +50853,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', 'とりあえずLv.50だな笑'], ['wink', 'てか、だいぶ息合ってきたな！']],
     'sp80': [['happy', 'Lv.80か。普通にいいコンビだろ笑'], ['normal', 'ここまで来たら、締めも任せていいよな！']],
     'sp100': [['excited', 'Lv.100！セッションマスターだな笑'], ['happy', 'ここまで付き合ってくれて、ありがとな！']],
+    woke: [['surprise', '…ん！？ 起きた起きた！ 行くぞ笑'], ['happy', '寝起きだけど、とりあえずやる！'], ['happy', '眠いけど、{name}の頼みなら！']],
+    refuse: [['normal', '…朝練…6時…だから…！'], ['troubled', '…わり…明日な…笑'], ['normal', '…すぅ…ノーカン…だろ…']],
     'listen:mf_ichika_mix': [['wink', '自分の大会の曲はちょっと照れる笑 でも1:48からのサビは全力でいくよ！']],
     'listen:monster_hero': [['happy', '最後の2:30でいきなり静かになるから、きれいに締めよ笑']],
     'listen:monster_hero_another': [['happy', 'サビは2:34まで続くから、最後の1秒までちゃんと締めよ！']],
@@ -50916,6 +50926,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', 'Lv.50だね〜。合わせ方が分かってきたよ'], ['wink', '{name}の癖、だいたい読めるようになったよ〜笑']],
     'sp80': [['happy', 'Lv.80〜。構成を読まなくても合うね〜'], ['normal', 'ここまでの記録、きれいに積み上がってるよ〜']],
     'sp100': [['excited', 'Lv.100〜！セッションマスターだね、ありがとん笑'], ['happy', 'ここまでの全部、いい流れだったよ〜']],
+    woke: [['troubled', 'ぇ…起こされたぁ。ほい、行くよぉ'], ['happy', 'ふぁ…ありがとん。目、さめたかも笑'], ['normal', '寝ぼけてても、だいたい叩けるっしょ笑']],
+    refuse: [['normal', '…むにゃ…あと1章…だけぇ…'], ['troubled', '…ぐぬぬぬ…眠い…またあとでぇ…'], ['happy', '…すぅ…{name}…おやすみぃ…']],
     'listen:mf_ichika_mix': [['normal', 'サビは1:48から2:14。終わりの近くに山があるから、前半はためていこ']],
     'listen:monster_hero': [['normal', '0:46でふつう、0:57で強め、1:50でいちばん強い。段の上がり方がきれいなんだよねぇ']],
     'listen:monster_hero_another': [['normal', '0:48で強くなって、1:14で一回ふつうに戻るんだよねぇ。そこが休みどころ']],
@@ -50987,6 +50999,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['excited', 'セッションLv.50だぜ！表に太字で書いとくぜ笑'], ['happy', 'ここまでの演奏回数、ちゃんと数えてあるぜ・・・！']],
     'sp80': [['excited', 'Lv.80！誤差がほとんど無くなってきたぜ！'], ['happy', 'この伸び方、グラフにしたらきれいだぜ笑']],
     'sp100': [['excited', 'うぉぉぉ！Lv.100、セッションマスターだぜ・・・！'], ['happy', 'ここまでの記録、全部宝物だぜ笑']],
+    woke: [['surprise', '…うぉっ！？ 起きたぜ、行くさ！'], ['normal', '寝起きの指でも、計算どおり叩くぜ'], ['happy', 'ふぁ…目ざましより効いたさ笑']],
+    refuse: [['normal', '…表の…3行目…むにゃ…'], ['troubled', '…すまん…朝は弱いのさ…'], ['happy', '…なんくるないさ…すぅ…']],
     'listen:mf_ichika_mix': [['excited', 'いちばん上はLv.23で434ノーツだぜ・・・！ サビは1:48からな笑']],
     'listen:monster_hero': [['excited', '強く打つ音が62%、軽い音は3%だぜ・・・！ 553ノーツ、全部数えたい笑']],
     'listen:monster_hero_another': [['happy', 'BPMはおよそ171。もとの曲より少しだけゆっくりだぜ笑']],
@@ -51058,6 +51072,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', 'セッションLv.50になったね。ありがとね'], ['normal', '一緒に演奏する時間、落ち着くんだよね']],
     'sp80': [['happy', 'Lv.80か。ずいぶん合うようになったね'], ['normal', '無理しないで、これからもゆっくりいこうね']],
     'sp100': [['excited', 'Lv.100だね。セッションマスター、すごいよ'], ['happy', 'ここまで一緒にいてくれて、ありがとね']],
+    woke: [['surprise', '…あ、呼ばれた？ うん、行くよ'], ['happy', 'ふぁ…起こされちゃった笑 いいよ'], ['happy', '眠いけど、{name}と叩きたいしね']],
+    refuse: [['troubled', '…ごめんね…今日はもう寝るね…'], ['normal', '…すぅ…また明日、いっしょにね…'], ['happy', '…むにゃ…デュラハン…いけ…']],
     'listen:mf_ichika_mix': [['happy', '2分半くらいの曲だね。サビの1:48までは、落ち着いて合わせようか']],
     'listen:monster_hero': [['normal', 'はじめの静かなところで、気持ちを落ち着けておくといいよ']],
     'listen:monster_hero_another': [['happy', '1:14から少し落ち着く所があるね。そこでひと息つこうか']],
@@ -90744,6 +90760,7 @@ function RhythmMultiScreen({
     void RHYTHM_BUDDY_STORE.update(st => rhythmBuddyMarkStarted(st, callId));
   };
   const [buddyBumped, setBuddyBumped] = React.useState(false);
+  const [buddyRefused, setBuddyRefused] = React.useState(null);
   React.useEffect(() => {
     RHYTHM_MULTI.setCpuBrain({
       ...rhythmAssistSessionWrapBrain(rhythmBuddyMakeBrain(songs), songs),
@@ -90812,6 +90829,17 @@ function RhythmMultiScreen({
       assistantId: who.id
     };
     let paid = rhythmAssistSessionVisitFree(who.id) ? 'visit' : '';
+    if (!paid && rhythmAssistSessionAsleep(who.id)) {
+      const woke = rhythmAssistSessionTryWake(who.id);
+      if (!woke.came) {
+        setBuddyRefused({
+          id: who.id,
+          line: woke.line,
+          at: Date.now()
+        });
+        return 'refused';
+      }
+    }
     if (!paid) paid = (await RHYTHM_BUDDY_STORE.update(st => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
     if (!paid && onUseBuddyTicket) {
       try {
@@ -90879,6 +90907,9 @@ function RhythmMultiScreen({
   React.useEffect(() => {
     if (buddyInfoPhase === 'playing') setBuddyInfoId('');
   }, [buddyInfoPhase]);
+  React.useEffect(() => {
+    if (buddyRefused && !buddySheet) setBuddySheet('pick');
+  }, [buddyRefused, buddySheet]);
   const buddySheetLayer = buddySheet === 'pick' ? React.createElement(RhythmBuddySheet, {
     masuMons: masuMons,
     masuPicker: masuPicker,
@@ -90890,7 +90921,11 @@ function RhythmMultiScreen({
     songName: buddySongName,
     tickets: buddyTickets,
     pick: callBuddy,
-    onClose: () => setBuddySheet(''),
+    onClose: () => {
+      setBuddySheet('');
+      setBuddyRefused(null);
+    },
+    refused: buddyRefused,
     calledIds: (view && view.myCpus ? view.myCpus : []).map(c => c.masuId)
   }) : null;
   const buddyCallButton = (extra = '') => view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? React.createElement("button", {
@@ -94193,7 +94228,8 @@ function RhythmBuddySheet({
   assistants = [],
   pickAssistant = null,
   guideAssistantId = '',
-  freeSeats = 4
+  freeSeats = 4,
+  refused = null
 }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
@@ -94225,12 +94261,13 @@ function RhythmBuddySheet({
     setPickNote('');
   };
   const assistOn = rhythmAssistSessionEnabled() && typeof pickAssistant === 'function' && (assistants || []).length > 0;
-  const [tab, setTab] = React.useState(() => (masuMons || []).length ? 'masu' : 'assistant');
+  const [tab, setTab] = React.useState(() => (masuMons || []).length && !refused ? 'masu' : 'assistant');
   const tabNow = assistOn ? tab : 'masu';
   const masuPicks = picks.filter(p => p.kind === 'masu');
   const singleMasu = masuPicks.length === 1 && picks.length === 1 ? (masuMons || []).find(x => x && x.id === masuPicks[0].id) : null;
   const visitPicks = picks.filter(p => p.kind === 'assistant' && rhythmAssistSessionVisitFree(p.id)).length;
   const paidPicks = picks.length - visitPicks;
+  const asleepPicks = picks.filter(p => p.kind === 'assistant' && !rhythmAssistSessionVisitFree(p.id) && rhythmAssistSessionAsleep(p.id)).length;
   const useFree = Math.min(freeLeft, paidPicks);
   const useTickets = paidPicks - useFree;
   const shortTickets = Math.max(0, useTickets - tickets);
@@ -94287,7 +94324,11 @@ function RhythmBuddySheet({
     "data-rhythm-buddy-multi-cost": true,
     className: "text-[10px] font-bold leading-snug text-slate-300",
     style: JA_WRAP_STYLE
-  }, jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。${paidPicks ? `無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います` : '回数は使いません'}${visitPicks ? `(モンビーにいる助手 ${visitPicks}人は回数なし)` : ''}`)), shortTickets > 0 && React.createElement("p", {
+  }, jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。${paidPicks ? `無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います` : '回数は使いません'}${visitPicks ? `(モンビーにいる助手 ${visitPicks}人は回数なし)` : ''}`)), asleepPicks > 0 && React.createElement("p", {
+    "data-rhythm-buddy-multi-asleep": true,
+    className: "text-[10px] font-bold text-indigo-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap('💤 寝ている助手は、来ないこともあります(来なければ回数は使いません)')), shortTickets > 0 && React.createElement("p", {
     "data-rhythm-buddy-multi-short": true,
     className: "text-[10px] font-black text-rose-300",
     style: JA_WRAP_STYLE
@@ -94361,7 +94402,11 @@ function RhythmBuddySheet({
     className: "hidden landscape:block"
   }, multiBar)), tabNow === 'assistant' ? React.createElement("div", {
     className: "flex min-h-0 flex-1 flex-col"
-  }, React.createElement(RhythmAssistSessionPicker, {
+  }, refused && refused.id && React.createElement("p", {
+    "data-rhythm-assist-refused": refused.id,
+    className: "mb-2 shrink-0 rounded-xl border border-indigo-300/50 bg-indigo-950/70 px-2 py-1 text-[11px] font-black leading-snug text-indigo-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`💤 ${rhythmAssistSessionName(refused.id)}${refused.line ? `「${refused.line}」……来てくれませんでした` : 'は起きませんでした'}(回数は使っていません)。もう一度呼ぶと、起きやすくなります`)), React.createElement(RhythmAssistSessionPicker, {
     assistants: assistants,
     calledIds: calledIds,
     guideAssistantId: guideAssistantId,
@@ -94981,7 +95026,13 @@ const rhythmAssistSessionTalk = ({
     const open = [[100, 'sp100'], [80, 'sp80'], [50, 'sp50']].filter(([n]) => lv >= n).map(([, sc]) => sc);
     return open.length && rand() < 0.3 ? say(open[Math.floor(rand() * open.length)]) : '';
   };
-  if (kind === 'join') return special() || say('join');
+  if (kind === 'join') {
+    if (RHYTHM_ASSIST_SESSION_WAKE.woke.delete(assistantId)) {
+      const w = say('woke');
+      if (w) return w;
+    }
+    return special() || say('join');
+  }
   if (kind === 'combo' || kind === 'miss' || kind === 'climax' || kind === 'last') return say(kind);
   if (kind === 'lvUp') return say('levelup');
   if (kind === 'likeUp') return say('likeup');
@@ -95129,7 +95180,10 @@ function RhythmAssistSessionPicker({
       className: "w-full truncate text-center text-[9px] font-bold text-slate-300"
     }, "♡ ", rhythmAssistSessionLikedNames(who.id).join('・')), calledOf(who.id) && React.createElement("span", {
       className: "rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950"
-    }, "呼んでいる"), !calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && React.createElement("span", {
+    }, "呼んでいる"), !calledOf(who.id) && !rhythmAssistSessionVisitFree(who.id) && rhythmAssistSessionAsleep(who.id) && React.createElement("span", {
+      "data-rhythm-assist-asleep": true,
+      className: "w-full rounded-xl bg-indigo-300/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"
+    }, "💤 寝ている"), !calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && React.createElement("span", {
       "data-rhythm-assist-visit": true,
       "aria-label": "🎵 いまモンビーにいる・回数なし",
       className: "flex w-full flex-wrap justify-center rounded-xl bg-sky-400/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"
@@ -95220,6 +95274,74 @@ const rhythmAssistSessionVisitFree = id => {
   } catch (_) {
     return false;
   }
+};
+const RHYTHM_ASSIST_SESSION_WAKE = {
+  refused: {},
+  woke: new Set()
+};
+const rhythmAssistSessionAsleep = id => {
+  if (!rhythmAssistSessionEnabled() || typeof assistantLifeCurrent !== 'function' || typeof assistantLifeWhereOf !== 'function') return false;
+  try {
+    const w = assistantLifeWhereOf(assistantLifeCurrent(), id);
+    return !!(w && w.doing === 'sleep');
+  } catch (_) {
+    return false;
+  }
+};
+const rhythmAssistSessionWakeChance = ({
+  nightOwl = false,
+  bondLevel = 1,
+  bondMax = 1,
+  retries = 0
+} = {}) => {
+  const bond = bondMax > 1 ? Math.max(0, Math.min(1, (Number(bondLevel) - 1) / (bondMax - 1))) : 0;
+  const p = 0.5 + (nightOwl ? 0.2 : 0) + 0.2 * bond + 0.2 * Math.max(0, Math.floor(Number(retries) || 0));
+  return Math.min(0.9, Math.round(p * 100) / 100);
+};
+const rhythmAssistSessionWakeKey = id => {
+  let slot = '';
+  try {
+    slot = typeof assistantLifeSlotAt === 'function' ? String(assistantLifeSlotAt().abs) : '';
+  } catch (_) {
+    slot = '';
+  }
+  return `${slot}:${id}`;
+};
+const rhythmAssistSessionWakeChanceOf = id => {
+  const rhythm = typeof ASSISTANT_LIFE_RHYTHM !== 'undefined' ? ASSISTANT_LIFE_RHYTHM[id] : null;
+  const bed = rhythm && Number.isFinite(rhythm.bed) ? rhythm.bed : 22;
+  const c = RHYTHM_ASSIST_SESSION_CALL;
+  let lv = 1;
+  try {
+    lv = typeof c.levelOf === 'function' ? Number(c.levelOf(id)) || 1 : 1;
+  } catch (_) {
+    lv = 1;
+  }
+  const max = typeof ASSISTANT_BOND_LEVELS !== 'undefined' && Array.isArray(ASSISTANT_BOND_LEVELS) ? ASSISTANT_BOND_LEVELS.length : 1;
+  return rhythmAssistSessionWakeChance({
+    nightOwl: bed < 12,
+    bondLevel: lv,
+    bondMax: max,
+    retries: RHYTHM_ASSIST_SESSION_WAKE.refused[rhythmAssistSessionWakeKey(id)] || 0
+  });
+};
+const rhythmAssistSessionTryWake = (id, rand = Math.random) => {
+  const came = rand() < rhythmAssistSessionWakeChanceOf(id);
+  const key = rhythmAssistSessionWakeKey(id);
+  if (came) {
+    delete RHYTHM_ASSIST_SESSION_WAKE.refused[key];
+    RHYTHM_ASSIST_SESSION_WAKE.woke.add(id);
+    return {
+      came: true,
+      line: ''
+    };
+  }
+  RHYTHM_ASSIST_SESSION_WAKE.refused[key] = (RHYTHM_ASSIST_SESSION_WAKE.refused[key] || 0) + 1;
+  const hit = rhythmAssistSessionPickLine(id, 'refuse', rand);
+  return {
+    came: false,
+    line: hit ? hit[1] : ''
+  };
 };
 const rhythmAssistSessionCanPayNow = () => {
   const app = RHYTHM_ASSIST_SESSION_INVITE.app;
