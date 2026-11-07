@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1f3316a46f3801c0
+// source-sha256: 1f460415f6242ed7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -95990,6 +95990,7 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
         sleep: 2
       }
     },
+    clingy: true,
     note: '昼寝が好き。だれか来てほしいのに家でごろごろしがち(さみしくなりやすい)'
   },
   atsu: {
@@ -96312,6 +96313,11 @@ const assistantLifeDecide = ({
   };
   const invited = new Set((nudges.invite || []).filter(n => n && n.abs === slot.abs).map(n => n.id));
   const introduced = (nudges.introduce || []).filter(n => n && n.abs === slot.abs).map(n => n.pair);
+  const prevPairs = new Set(gap === 1 && prev && Array.isArray(prev.groups) ? prev.groups.flatMap(g => {
+    const o = [];
+    for (let i = 0; i < g.ids.length; i++) for (let j = i + 1; j < g.ids.length; j++) o.push(assistantLifePairKey(g.ids[i], g.ids[j]));
+    return o;
+  }) : []);
   const wasLonely = new Set(prev && Array.isArray(prev.lonely) && gap >= 1 && gap <= 2 ? prev.lonely : []);
   const moods = {};
   for (const id of ids) {
@@ -96357,14 +96363,15 @@ const assistantLifeDecide = ({
     let x = p.social * ASSISTANT_LIFE_MOOD_MOD[moods[id]].social;
     if ((p.solo || []).includes(slot.id)) x *= 0.3;
     if (slot.id === 'late') x *= 0.3;
-    if (!ASSISTANT_LIFE_DOINGS[doing[id]].group) x *= 0.4;
+    if (!ASSISTANT_LIFE_DOINGS[doing[id]].group && !p.clingy) x *= 0.4;
     x *= 1 + 0.08 * tierI;
     wants[id] = invited.has(id) || introduced.some(k => k.split('-').includes(id)) || rand() < Math.min(0.95, x);
   }
   const lvOf = (a, b) => typeof assistantPeerBondLevel === 'function' ? assistantPeerBondLevel(bond[assistantLifePairKey(a, b)] || 0) : 1;
   const score = (a, b) => {
     if (quarrelNow(a, b)) return -10;
-    let s = 1 + lvOf(a, b) * 0.4;
+    let s = 1 + lvOf(a, b) * 0.25;
+    if (prevPairs.has(assistantLifePairKey(a, b))) s -= 1;
     if (doing[a] === doing[b] && ASSISTANT_LIFE_DOINGS[doing[a]].group) s += 1.5;
     if (recentOf('gift', r => hasPair(r, a, b), 6) || recentOf('play', r => hasPair(r, a, b), 6) || recentOf('makeup', r => hasPair(r, a, b), 6)) s += 1.5;
     if (introduced.includes(assistantLifePairKey(a, b))) s += 6;

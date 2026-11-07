@@ -201,6 +201,20 @@ if (process.argv.includes('--stats')) {
   }
   const sum = (a) => a.reduce((s, v) => s + v, 0);
   check('③ 友情Lv の高いペアほど一緒にいやすい', sum(hi) > sum(lo) * 1.3, `高い ${sum(hi)} / 低い ${sum(lo)}`);
+  // ペアの差(コトバ 2026-11-07「同じ2人ばかりに見えそう」)。点をそろえたら最多/最少が5倍まで、点をまぜても12倍まで
+  const spread = (bond) => {
+    const cnt = {};
+    for (let i = 0; i < IDS.length; i++) for (let j = i + 1; j < IDS.length; j++) cnt[pairKey(IDS[i], IDS[j])] = 0;
+    for (const salt of ['a', 'b', 'c', 'd', 'e']) for (const l of simulate({ salt, bond })) for (const g of l.groups) for (let i = 0; i < g.ids.length; i++) for (let j = i + 1; j < g.ids.length; j++) cnt[pairKey(g.ids[i], g.ids[j])]++;
+    const v = Object.values(cnt);
+    return Math.max(...v) / Math.max(1, Math.min(...v));
+  };
+  const mixed = {};
+  { let n = 0; for (let i = 0; i < IDS.length; i++) for (let j = i + 1; j < IDS.length; j++) mixed[pairKey(IDS[i], IDS[j])] = [0, 40, 120, 250, 450, 700][(n++) % 6]; }
+  const sp0 = spread({}), sp1 = spread(mixed);
+  check('③ 同じ2人ばかりにならない(ペアの出る数の差: 点をそろえて5倍まで・点をまぜて12倍まで)', sp0 <= 5 && sp1 <= 12, `${sp0.toFixed(1)}倍 / ${sp1.toFixed(1)}倍`);
+  const draHome = runs.filter(l => l.solo.dra && l.solo.dra.place === 'home' && l.solo.dra.reason === 'lonely').length / (runs.length / 6);
+  check('③ ドラが家でさみしそうなのは1日0.5〜2回くらい(社長の例)', draHome >= 0.5 && draHome <= 2, `${draHome.toFixed(2)}回/日`);
   const quiet = simulate({ salt: 'g', tier: 'quiet' }).reduce((s, l) => s + l.groups.length, 0);
   const fest = simulate({ salt: 'g', tier: 'festival' }).reduce((s, l) => s + l.groups.length, 0);
   check('③ にぎわうほど集まる組が増える', fest > quiet, `静か ${quiet} / お祭り ${fest}`);

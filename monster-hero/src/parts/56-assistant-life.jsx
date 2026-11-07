@@ -41,6 +41,7 @@ const ASSISTANT_LIFE_PLACES = Object.freeze({
 // 1人ずつの好み(したいことの好みの表。コトバの気持ちの紙・3人組の案もこの表を元にする)
 //   social … だれかといたい気持ちの強さ(0〜1)/ fav … 好きな場所(ひとりごとの場所の型「好きな場所」)
 //   w … したいことの重み / slot … 時間ごとに重みへ掛ける数 / solo … ひとりが好きな時間 / caring … さみしそうな助手のそばへ行きやすい
+//   clingy … ごろごろ・昼寝をしていても、だれかに来てほしい(来ないとさみしくなる)
 const ASSISTANT_LIFE_PREFS = Object.freeze({
   mua:       { social: 0.85, fav: 'plaza',   w: { snack: 4, practice: 2, training: 2, cards: 1, walk: 3, idle: 1, sleep: 1, read: 0 },
                slot: { noon: { snack: 1.5 }, evening: { walk: 1.5 } }, note: 'にぎやかなのが好き。人が集まる広場。おやつと散歩、マーケットをのぞくのも好き' },
@@ -49,7 +50,7 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
   momosuke:  { social: 0.8,  fav: 'studio',   w: { snack: 2, practice: 4, training: 2, cards: 1, walk: 2, idle: 1, sleep: 1, read: 0 },
                slot: { evening: { practice: 2 }, night: { practice: 1.3 } }, note: '夕方から夜は練習スタジオでレッスン。見てほしいのでだれかと' },
   dra:       { social: 0.6,  fav: 'home',     w: { snack: 3, practice: 1, training: 1, cards: 1, walk: 1, idle: 2, sleep: 4, read: 0 },
-               slot: { noon: { sleep: 2 }, afternoon: { sleep: 2 } }, note: '昼寝が好き。だれか来てほしいのに家でごろごろしがち(さみしくなりやすい)' },
+               slot: { noon: { sleep: 2 }, afternoon: { sleep: 2 } }, clingy: true, note: '昼寝が好き。だれか来てほしいのに家でごろごろしがち(さみしくなりやすい)' },
   atsu:      { social: 0.6,  fav: 'studio',    w: { snack: 1, practice: 3, training: 4, cards: 2, walk: 1, idle: 1, sleep: 1, read: 0 },
                slot: { morning: { training: 1.5 }, afternoon: { practice: 1.3 } }, note: 'ビートの練習(HELL)とドラゴンの育成。カードも強い' },
   kyuko:     { social: 0.5,  fav: 'library',  w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 1, idle: 1, sleep: 1, read: 3 },
@@ -168,6 +169,7 @@ const assistantLifeDecide = ({ abs, members, bond = {}, prev = null, recent = []
   };
   const invited = new Set((nudges.invite || []).filter(n => n && n.abs === slot.abs).map(n => n.id));
   const introduced = (nudges.introduce || []).filter(n => n && n.abs === slot.abs).map(n => n.pair);
+  const prevPairs = new Set(gap === 1 && prev && Array.isArray(prev.groups) ? prev.groups.flatMap(g => { const o = []; for (let i = 0; i < g.ids.length; i++) for (let j = i + 1; j < g.ids.length; j++) o.push(assistantLifePairKey(g.ids[i], g.ids[j])); return o; }) : []);
   const wasLonely = new Set(prev && Array.isArray(prev.lonely) && gap >= 1 && gap <= 2 ? prev.lonely : []);
 
   // 1. 気分
@@ -206,7 +208,7 @@ const assistantLifeDecide = ({ abs, members, bond = {}, prev = null, recent = []
     let x = p.social * ASSISTANT_LIFE_MOOD_MOD[moods[id]].social;
     if ((p.solo || []).includes(slot.id)) x *= 0.3;
     if (slot.id === 'late') x *= 0.3;
-    if (!ASSISTANT_LIFE_DOINGS[doing[id]].group) x *= 0.4;
+    if (!ASSISTANT_LIFE_DOINGS[doing[id]].group && !p.clingy) x *= 0.4;
     x *= 1 + 0.08 * tierI; // にぎわうほど集まりやすい
     // 誘われた・引き合わせられた助手は、だれかといたい
     wants[id] = invited.has(id) || introduced.some(k => k.split('-').includes(id)) || rand() < Math.min(0.95, x);
@@ -215,7 +217,9 @@ const assistantLifeDecide = ({ abs, members, bond = {}, prev = null, recent = []
   const lvOf = (a, b) => (typeof assistantPeerBondLevel === 'function') ? assistantPeerBondLevel(bond[assistantLifePairKey(a, b)] || 0) : 1;
   const score = (a, b) => {
     if (quarrelNow(a, b)) return -10;
-    let s = 1 + lvOf(a, b) * 0.4;
+    // 友情Lv は効きすぎないように(同じ2人ばかりにならない)。前の時間も一緒だった2人は、ほかの相手とも過ごしたくなる
+    let s = 1 + lvOf(a, b) * 0.25;
+    if (prevPairs.has(assistantLifePairKey(a, b))) s -= 1;
     if (doing[a] === doing[b] && ASSISTANT_LIFE_DOINGS[doing[a]].group) s += 1.5;
     if (recentOf('gift', r => hasPair(r, a, b), 6) || recentOf('play', r => hasPair(r, a, b), 6) || recentOf('makeup', r => hasPair(r, a, b), 6)) s += 1.5;
     if (introduced.includes(assistantLifePairKey(a, b))) s += 6;
