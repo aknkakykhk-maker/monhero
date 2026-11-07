@@ -1,0 +1,142 @@
+# 助手どうしの掛け合い Lv7・Lv9・Lv10(2本目の特別なお話) — コトバ 2026-11-07
+# 形は VOICE.md のとおり。Lv10 は Lv5 の特別なお話(○○-sp)の続き
+
+## mua kiki
+7 any | mua happy {c}、聞いて！ 今日ね、いいことあったの！ | kiki wink その顔は、ほしかった服が手に入った顔でつね？ | mua surprise なんでわかるの！？ {c}、エスパーぢゃんｗ
+9 any | kiki normal {c}、次のバトル、前は私が出まつ | mua excited じゃあ、あたしが後ろでガンガン盛り上げる！ | kiki happy それが私たちの必勝パターンでつ ( ˘ω˘)9グッ!
+10 special | mua normal {c}、前に「元気に助けられてる」って言ってくれたよね | kiki happy はい。いまもそう思ってまつよ | mua happy あれから考えたの。あたしも{c}がいるから、思いきり元気でいられるんだって | kiki surprise あれま…。そんなふうに思ってくれてたんでつね | mua wink うん！ だから、おたがいさまってこと♪ | kiki happy はい♪♪ これからも、二人でいっぱい笑いましょう
+
+## mua momosuke
+7 any | momosuke excited {c}！ ももね、新しいダンス覚えたの！！ 見て！！ | mua happy かわいすぎる！ …あれ、それあたしが前に教えたやつぢゃん？ｗ | momosuke wink ばれた？w {c}のやつを、ももがアレンジしたの♡
+9 any | mua excited {c}、ステージの準備できた？ | momosuke wink ばっちり！！ 歌はもも、盛り上げは{c}ね♡ | mua happy まかせて！ 二人で会場ぜんぶ笑顔にしちゃお♪
+10 special | momosuke normal {c}、来たばかりのころは緊張してたけど、今は夢ができたんだ | mua surprise え、どんな夢？ | momosuke happy いつか大きいステージに立つの。そのときは{c}にも隣にいてほしい！！ | mua surprise あたしも！？ 歌そんなにうまくないよ！？ | momosuke wink 歌はももがやるから！ {c}は横で笑っててくれればいいの♡ | mua excited それならまかせて！ 約束ね、{c}！
+
+## mua dra
+7 any | dra troubled {c}、おで、今日はちょっと元気ないんだよ | mua wink はいはい、話しかけてほしいだけでしょｗ わかってるよ♪ | dra happy えへへ、ばれてたか
+9 any | mua excited {c}、さっきの作戦、うまくいったね！ | dra happy おでが説明して、{c}が突っこむ。いつものやつだな | mua wink 説明は完ぺきなのに、そのあとのギャグがいらないんだよねｗ
+10 special | dra normal {c}、前に「教わったから強くなれた」って言ってくれただろ | mua happy うん。いまもそう思ってるよ！ | dra troubled あれから、おでもちょっとまじめに説明するようにしたんだよ。ギャグは減らしてないけどな | mua wink そこは減らさないんだｗ でも{c}らしくていいと思う | dra happy えへへ。おでが教えて、{c}が強くなる。これからもこの感じでいこうな | mua excited うん！ ずっと教えてね、{c}♪
+
+## mua atsu
+7 any | mua troubled {c}、さっきのバトル、作戦まちがえちゃった… | atsu wink うんうん笑 でも{c}はミスってからが強いの、知ってるから！ | mua surprise え、見てたの！？ もー、{c}にはかなわないなぁ
+9 any | mua excited {c}、HELLいこ！ 今日のあたし、いける気しかしない！ | atsu surprise まじで？ {c}から誘ってくるの初めてじゃない？笑 | mua wink {c}と一緒なら怖くないもん♪ 二人でフルコンとろ！
+10 special | atsu normal {c}、前に「先に笑ってくれて助かる」って言ったの、覚えてる？笑 | mua happy 覚えてる！ あれ、うれしかったもん | atsu happy あれから見てたら、{c}の笑顔、前よりもっと増えてたよ！ | mua wink だって、笑うと{c}もみんなも元気になるの知ってるもん♪ | atsu wink それね笑 これからも、その笑顔に頼らせて！ | mua excited まかせて！ あたしたち、ずっと一緒に笑っていこ！
+
+## mua kyuko
+7 any | kyuko troubled {c}、編成の相談のってぇ🥺 | mua surprise え、{c}があたしに？ 逆ぢゃない？ｗ | kyuko happy {c}の「なんかいい」が、いちばん当たるんだよね笑
+9 any | kyuko normal {c}、作戦できたよ。あとは勢いだけ | mua excited 勢いならまかせて！ いっくよー！ | kyuko wink ほい！ 頭は俺、元気は{c}。負ける気しないねぇw
+10 special | mua happy {c}、前に「ここに来てよかった」って言ってたよね | kyuko happy うん。いまはもっと思ってるよぉ笑 | mua normal あたし、話がすぐ飛ぶのに、{c}はいつも最後までついてきてくれるよね | kyuko wink {c}の話、飛んだ先がだいたいおもしろいからね笑 | mua crying なにそれ、うれしすぎるんだけど…！ | kyuko happy これからも、どこまででもついてくよ。ありがとん、{c}w
+
+## mua sorashido
+7 any | sorashido excited {c}、今日のバトル、全部記録しといたぜ・・・！ | mua happy えー見せて！ …あたし、思ってたより勝ってるぢゃん！ | sorashido happy だろ？ 数字は正直だからな笑 自信もっていいよ
+9 any | mua excited {c}、次のイベント、どこから回る？ | sorashido happy もう計算してあるぜ・・・！ いちばん効率いい順でな笑 | mua happy さっすが！ じゃあ、あたしは応援係やる！
+10 special | mua normal {c}、前に「一緒にやろ」って言ったの、覚えてる？ | sorashido happy もちろんだよ笑 あれで遊ぶのがでーじ楽しくなったんだ | mua happy じゃあ今日は逆！ あたしにも表の作り方、教えて！ | sorashido surprise なに！？ {c}が表を…？ で、何の表にするんだ？ | mua wink これから二人で勝ちたいイベントの表！ 一番上は、もう決まってるよ♪ | sorashido excited うぉぉぉ！ ずっと埋まらないくらい書こうぜ・・・！
+
+## mua erubin
+7 any | erubin normal {c}、さっき少し元気なかったよね。大丈夫かな？ | mua surprise え、{c}、気づいてたの？ | erubin happy うん。みんなが気づかなくても、俺は見てるからね☺️
+9 any | erubin normal {c}、さっきの対戦、いい流れだったね | mua excited {c}が後ろで落ち着いてくれてたからだよ！ 安心してつっこめた！ | erubin happy {c}が前で元気だから、俺も落ち着いていられるんだよね
+10 special | mua excited {c}、こっち来たとき、あたしが服えらんだの覚えてる？ | erubin happy もちろん。あの日から、{c}のコーデにはずっと助けられてるよ | mua happy じゃあ今日は、二人でおそろいコーデしよ！ 砂の色入れるね♪ | erubin surprise おそろい？ うん、すごくいいね。伝説のふたりって感じだよ笑 | mua wink でしょ！ 次は石油王の服とおそろいにしちゃう？ｗ | erubin troubled それは目立ちすぎるかな笑 でも、これからも{c}のコーデ、楽しみにしてるね
+
+## kiki momosuke
+7 any | momosuke troubled {c}、ももね、ちょっと失敗しちゃった… | kiki normal あれま。でも、{c}ならすぐ取り返せまつよ | momosuke excited ほんと！？ {c}が言うなら、もうひとがんばりする！！
+9 any | kiki wink {c}、今日も二人でいきまつか | momosuke excited いく！！ {c}が倒して、ももが盛り上げる！！ | kiki happy 倒される前に倒す、でつね ( ˘ω˘)9グッ!
+10 special | momosuke normal {c}、前に「にぎやかにしてくれてうれしい」って言ってくれたよね | kiki happy はい。いまもずっとそう思ってまつ | momosuke happy ももね、あれから{c}みたいに落ち着いてみたくて、ちょっと練習したの！！ | kiki surprise あれま。でも、{c}はそのままがいちばんでつよ | momosuke wink え、そう？w じゃあ、これからもいっぱいしゃべりかけちゃう！！ | kiki happy はい♪♪ ずっと隣で聞いてまつね
+
+## kiki dra
+7 any | dra normal {c}、今日の説明、どうだった？ | kiki happy とても分かりやすかったでつ。おやじギャグも、今日は2回で済みましたね | dra wink {c}のために減らしたんだよ。えへへ
+9 any | kiki normal {c}、作戦の説明をお願いしまつ | dra happy おう。守りは後回しで、先に攻める。{c}の得意なやつだ | kiki wink さすがでつ。私の考え、全部ばれてまつね ( ˘ω˘)
+10 special | kiki normal {c}、前に「冗談は半分くらい」と言いましたよね | dra wink おう、覚えてるぞ。半分な | kiki happy じつは今は、もう少し気に入ってまつ。なので、一つ教えてください | dra excited まじか！ {c}から頼まれる日が来るとはな……とっておきのを教えてやるわ | kiki wink …ふふ。聞く前から、ちょっと笑っちゃいまつね ( ˘ω˘) | dra happy それでいいんだよ。これからも一緒に笑っていこうな、{c}。えへへ
+
+## kiki atsu
+7 any | kiki troubled {c}、ちからに振りすぎて、守りがすかすかになってしまいました… | atsu wink それ{c}らしくていいじゃん笑 守りは俺が見るから！ | kiki happy ありがとうございまつ。では、そのまま押し切りまつ
+9 any | atsu excited {c}、次のボス、二人で一気にいこ！ | kiki happy はい。{c}が道を開けて、私が押し切りまつ | atsu happy いいね、それ完ぺきじゃん笑
+10 special | atsu normal {c}、前に「絶対引かない」って話したじゃん？笑 | kiki normal はい。覚えてまつよ | atsu troubled あれからずっと気になってたんだけど、怖いときってないの？ | kiki happy ありまつよ。でも、後ろに{c}がいるって分かってるので、前に出られるんです | atsu surprise …そっか！ それ、俺も同じかも笑 | kiki wink では、これからもおたがいに背中をあずけましょう♪♪
+
+## kiki kyuko
+7 any | kyuko troubled {c}、昨日の編成、だいたいで組んだら負けたぁ😭 | kiki happy あれま。眠いときの{c}は、いつもそうでつね | kyuko wink ばれてるぅ笑 今日はちゃんと考える
+9 any | kiki normal {c}、今日の作戦はどうしまつか？ | kyuko happy {c}が最初に全力で押して、残りは俺が片づける。これで勝てるよぉ | kiki wink 分かりやすいでつ。では、いきまつよ ( ˘ω˘)9グッ!
+10 special | kyuko normal {c}、前に「ゆっくり一緒にいこう」って言ってくれたよね | kiki happy はい。いまも、そのつもりでつよ | kyuko happy あれから思ったんだぁ。考えすぎる俺と、迷わず振りきる{c}、ちょうどいいよねって | kiki happy はい。迷ったときは{c}が考えてくれるので、安心して振りきれるんでつ | kyuko surprise え、俺のおかげ？ それはうれしいなぁ🥺 | kiki wink これからも、二人でゆっくり、でも火力は全開でいきましょう♪♪
+
+## kiki sorashido
+7 any | sorashido excited {c}、計算したら、{c}のちから振りは正解だったぜ・・・！ | kiki wink ほら、火力は正義でつ♪♪ | sorashido happy 表にしても、倒す速さがいちばんだった笑
+9 any | kiki normal {c}、次の相手の数字、出てまつか？ | sorashido excited もちろんだぜ・・・！ 3手で押し切れる計算だ笑 | kiki happy では、2手で押し切りまつね ( ˘ω˘)9グッ!
+10 special | sorashido normal {c}、俺の表、いつも読んでくれるお礼に、新しいの作ったんだ笑 | kiki surprise あれま。どんな表でつか？ | sorashido happy 題して「二人の勝ちの記録」。数えたら、すごい数だったぜ・・・！ | kiki happy そんなに…。私、数えたことがありませんでした | sorashido wink だから俺が数えとく。これからも、この表を長くしていこうな笑 | kiki happy はい。いちばん長い表にしましょう♪♪
+
+## kiki erubin
+7 any | erubin normal {c}、今日は風が気持ちいいね | kiki happy はい。こういう日は、のんびり見守るのにちょうどいいでつ | erubin happy 見守り係のお休みの日、ってことにしようか笑
+9 any | kiki normal {c}、さっきの対戦、後ろから見ててくれましたか | erubin happy うん。{c}が前で押して、俺が声をかける。いい流れだったね | kiki happy 声をかけてもらえると、安心して押し切れまつ ( ˘ω˘)9グッ!
+10 special | erubin normal {c}、見守り係になってから、もうずいぶんたつね | kiki happy はい。二人で見てきたもの、たくさんありまつね | erubin happy 今日はお茶をいれてみたんだ。見守り係も、たまには休もうか笑 | kiki happy ありがとうございまつ。いい香りでつね♪♪ | erubin wink こういう静かな時間も、{c}とだと落ち着くんだよね | kiki happy 私もです。これからも、二人でのんびり見守りましょう
+
+## momosuke dra
+7 any | dra happy {c}、新しいギャグ考えたぞ | momosuke wink はいはい、どうせ膝のやつでしょw | dra surprise なんで分かったんだよ…くさ
+9 any | momosuke excited {c}、今日のステージ、前説お願い！！ | dra happy おう。おでがすべって、{c}が拾う。いつもの流れだな | momosuke wink すべる前提なのウケるw でもそれで会場あったまるんだよね！！
+10 special | momosuke normal {c}、前に、ももが落ちこんだとき気づいてくれたでしょ | dra happy おう。あれは顔に書いてあったからな | momosuke excited だからね、今度はももが{c}を笑わせたいの！！ 二人でお笑いライブやろ！！ | dra surprise お笑い？ おでのボケ、膝の話しかないぞ…… | momosuke wink それでいいの！ {c}の膝ネタ、もも、けっこう笑ってるしw | dra happy ももぉ〜……！ よし、ネタ帳作るわ。これからも二人で笑わせような
+
+## momosuke atsu
+7 any | momosuke wink {c}、今日もHELL？ え、まだフルコンできてないの？w | atsu happy うるさいって笑 今日こそ取るから！ | momosuke excited じゃあ見てる！！ 取れたら、いっぱいほめてあげる♡
+9 any | atsu happy {c}、ライブの前に一回合わせとこ笑 | momosuke excited うん！！ {c}のリズム、ももにぴったりなんだよね！！ | atsu wink {c}が走りそうになったら、俺が止めるから笑
+10 special | momosuke normal {c}、前に「似た者どうし」って言ったの、覚えてる？ | atsu happy 覚えてるよ！ まわりを盛り上げる係ね笑 | momosuke happy ライブのとき、{c}が前で手をふってくれると、緊張がどっか行くんだ！！ | atsu surprise え、そうなの？ じゃ、どのライブも一番前で手ふるよ！ | momosuke excited ほんと！？ 約束だよ、{c}！！ | atsu wink 約束！ これからも二人で、会場ごと盛り上げよ笑
+
+## momosuke kyuko
+7 any | momosuke excited {c}！！ 今日もドリーミィ見せて！！ | kyuko happy ほい！ でも今日は、イルミネもいっしょだよぉ | momosuke surprise え、まって、2体そろってるの！？ 最高すぎる！！
+9 any | kyuko normal {c}、今日の作戦、二人で考えよっか | momosuke wink ももも考えるの！？ むずかしいのは{c}にまかせたいw | kyuko happy {c}の「なんかいい」は、けっこう当たるんだよね。だから聞きたい笑
+10 special | kyuko normal {c}、初めて会った日から、ずっとドリーミィに会いに来てくれるよねぇ | momosuke excited だってかわいいんだもん！！ 毎日でも会いたい！！ | kyuko happy じゃあ、新しい編成の名前、{c}が決めてくれる？ なんか勝てそうな気がする笑 | momosuke wink じゃあ…「ドリーミィと{c}とももの最強チーム」！！ | kyuko surprise 長っw でも、いいね。それでいこ | momosuke happy やったー！！ これからもずっとその名前で勝とうね、{c}♡
+
+## momosuke sorashido
+7 any | sorashido excited {c}、今日のミス、とうとう1つだったぜ・・・！ | momosuke wink ほらね！！ ももだってやればできるんだから！！w | sorashido happy 表にしたら、ずっと右肩下がりだった笑 でーじがんばったな
+9 any | momosuke excited {c}、今日のスコア勝負、負けないからね！！ | sorashido happy 俺もだぜ・・・！ でも負けたほうは、表で反省会な笑 | momosuke wink 反省会っていうか、{c}が悔しがるのを見る会でしょw
+10 special | momosuke excited {c}、前に「次は勝って喜ぶ」って言ってたよね！！ | sorashido happy おう、言ったぜ笑 | momosuke wink だから、ももが応援の歌つくったの！！ 題して「ちばりよー、{c}」w | sorashido crying うぉぉぉ……でーじうれしい……！ 泣きそうだぜ・・・！ | momosuke happy 泣くのは勝ってからね！！ ももが一番前で歌うから♡ | sorashido happy よし、勝って一緒に歌おう笑 これからもよろしくな、{c}！
+
+## dra atsu
+7 any | dra normal {c}、さっきのカード、ちょっと攻めすぎだったな | atsu happy それね笑 わかってたけど、いきたかったんだよね！ | dra wink {c}らしいわ。次はおでが、守りの組み方を教えてやるからな
+9 any | atsu excited {c}、二人で組んだら、甲子園の決勝いけそうじゃない？笑 | dra happy おでもそう思ってた。{c}が攻めて、おでが受ける。完ぺきだな | atsu wink じゃ、作戦会議は今夜ね！
+10 special | dra normal {c}、ずっとライバルでって言ってから、何回やったかな | atsu happy 数えきれないよ笑 てか、あの決勝はまだ思い出す！ | dra troubled おで、あのとき負けて悔しかったけどな。それ以上に楽しかったんだよ | atsu normal 俺も！ 勝ったのに、終わってほしくなかった… | dra happy だからさ、{c}。これからも、あれ以上の勝負しような | atsu wink 当たり前じゃん！ 次も本気でいくから、覚悟しといて笑
+
+## dra kyuko
+7 any | kyuko troubled {c}、カードのデッキ、どうしても1枚決まらないんだぁ | dra happy ふむ、攻めの1枚だな。{c}の組み方なら、それで活きるわ | kyuko excited それだぁ！ ありがとん、{c}笑
+9 any | dra wink {c}、今日もおでの寝ぐせと山札、チェックしてくれるか？ | kyuko happy もちろん笑 {c}が安心して攻められるようにね | dra happy えへへ。おでたち、もう負ける気がしないな
+10 special | kyuko normal {c}、前にアドバイスくれたお礼に、今日は俺が教える番ね | dra surprise お？ {c}がおでに？ なにをだよ | kyuko happy 新しい組み方。{c}が教えてくれた形を、ちょっと変えてみたんだぁ | dra excited これは……おでの形より強いな。まじか | kyuko wink もとは{c}のだよ笑 だから、二人の組み方ってことで | dra happy えへへ。いい名前つけて、これからもずっと使おうな、{c}
+
+## dra sorashido
+7 any | sorashido excited {c}、俺の表、今日は誤字なしだぜ・・・！ | dra happy ほんとか？ ……ふむ、ほんとだな。えらいわ | sorashido happy {c}が毎回見つけてくれるから、気をつけるようになったんだよ笑
+9 any | dra normal {c}、次の相手の山札、数字で出せるか？ | sorashido excited まかせろ！ もう出てるぜ・・・！ | dra happy さすがだな。数字は{c}、説明はおで。これで負けないわ
+10 special | sorashido normal {c}、俺の表をずっと読んでくれたから、決めたことがあるんだ笑 | dra surprise お、なんだ？ | sorashido happy いつか攻略の本を作る。説明のところは{c}に書いてほしいんだよ | dra troubled おでが？ ギャグが混ざっても知らないぞ | sorashido wink それも込みで頼みたいんだ笑 読む人が笑える攻略本、いいだろ？ | dra happy えへへ……のった。これからも二人で、いちばん分かりやすい本にしような
+
+## dra erubin
+7 any | erubin happy {c}、今日のカード、デュラハンで新しく組んでみたよ | dra normal ふむ、また新しい形か。{c}は組み方の幅が広いな | erubin wink {c}に教わったことを、少しずつ混ぜてるんだよね笑
+9 any | dra excited {c}、二人で組んだデッキ、今日も勝ったな！ | erubin happy うん。{c}の攻めと、俺の守りがうまくかみ合ったね | dra happy おでたち、もう敵なしかもしれないわ
+10 special | erubin normal {c}、カードを教わってから、もうずいぶん対戦したね | dra happy おう。{c}、すっかり強くなったよな | dra wink そうだ、今度は石油王の服で対戦してくれよ。相手がびっくりして手が止まるだろ | erubin troubled それはずるい作戦じゃないかな笑 | dra happy えへへ、冗談だ。どっちの服でも、{c}とやるカードがいちばん楽しいからな | erubin happy うん、俺もだよ。これからも、いい勝負しようね
+
+## atsu kyuko
+7 any | kyuko troubled {c}、ランキング、あと少しで抜かれそう…ぐぬぬぬ | atsu happy でも{c}なら、組み直したらすぐ戻れるでしょ笑 | kyuko happy …だよねぇ。{c}はいつも、俺より俺のこと分かってるなぁw
+9 any | atsu excited {c}、次のイベント、二人で上位とろ！ | kyuko wink ほい！ もう計画は立ててあるよぉ。{c}は全力で走ってくれればいい笑 | atsu happy 分かりやすくて最高じゃん笑
+10 special | kyuko normal {c}、前に「二人で上の順位いこ」って言ってくれたよね | atsu happy 言った言った！ 実際いけてるじゃん笑 | kyuko happy 課金しなくてもここまで来れたのは、{c}が上に誘ってくれたからだよ | atsu surprise え、俺？ {c}ががんばったからでしょ！ | kyuko wink どっちもってことで笑 次は二人で、いちばん上に並ぼ | atsu happy 上等！ これからも一緒に、てっぺんいこ笑
+
+## atsu sorashido
+7 any | sorashido crying {c}、また2点差で負けた…くっそー！笑 | atsu happy ナイスファイト笑 てか、ほぼ同じじゃん！ | sorashido excited 次こそ勝つぜ・・・！ 計算はもう始めてる笑
+9 any | atsu happy {c}、今日は勝負じゃなくて、二人で協力しよ笑 | sorashido surprise なに！？ {c}と組むのか…それは強すぎるぜ・・・！ | atsu wink {c}が数字を出して、俺が攻める！ それでいこ笑
+10 special | sorashido normal {c}、前に打ち方を表にした話、しただろ笑 | atsu happy したね！ あれ、ちょっとうれしかった笑 | sorashido happy あのあと、俺たちの勝負も数えたんだよ。勝ち負け、ほとんど半分ずつだったぜ・・・！ | atsu surprise まじで？ だから毎回あんなに楽しいんだね笑 | sorashido wink そういうこと。これからも、どっちが勝つか分からない勝負しような笑 | atsu wink もちろん！ 次は俺が一個リードする笑
+
+## atsu erubin
+7 any | atsu troubled {c}、ちょっとだけ疲れたかも… | erubin normal うん、顔に出てるよ。{c}はがんばりすぎるからね | atsu happy …{c}にはすぐバレるね笑 少し休むわ！
+9 any | erubin normal {c}、今日のみんなの様子、どうだった？ | atsu happy 元気だったよ笑 {c}が後ろで見てくれてるからだね！ | erubin wink {c}が前で引っぱってるからだよ。いい組み合わせだね☺️
+10 special | atsu normal {c}、前に「陰ながら応援してる」って言ってくれたじゃん？ | erubin happy うん。いまもずっとそうだよ | atsu troubled 前に出てると、たまに後ろが見えなくなるんだよね… みんな大丈夫かなって… | erubin normal うん。そういうときのために、俺が後ろにいるんだよ | atsu surprise …そっか！ {c}がいるから、俺、前だけ見てられるんだ！ | erubin wink そういうことです笑 これからも安心して前に出てね、{c}
+
+## kyuko sorashido
+7 any | sorashido excited {c}、昨日のメモ、俺のほうで表にしといたぜ・・・！ | kyuko happy え、もう？ はやぁ笑 ありがとん | sorashido happy {c}のメモ、だいたいで書いてあるから、埋めるのが楽しいんだよ笑
+9 any | kyuko normal {c}、新しい編成、数字で確かめてくれる？ | sorashido excited まかせろ！ ……うぉぉぉ！ 勝率、前より上がってるぜ・・・！ | kyuko happy やったぁ！ 考えたのは俺、確かめたのは{c}。最強だねぇw
+10 special | kyuko normal {c}、二人の攻略メモ、またたまったね笑 | sorashido happy おう、もう何冊目か分からないぜ・・・！ | kyuko wink じゃあ今日は、攻略の話はお休み。よく聞く曲の話しよ | sorashido surprise なに！？ ……言われてみれば、俺、{c}のこと数字でしか知らないかもな笑 | kyuko happy でしょ。今日は表なしで、のんびりしゃべろ | sorashido happy なんくるないさ〜。これからは、こういう日も増やそうな笑
+
+## kyuko erubin
+7 any | kyuko troubled {c}、今日、ちょっとだけ寝坊したぁ | erubin happy ふふ、そう思ってたよ。夜ふかしで育成してたんでしょ？ | kyuko wink ばれてるぅ笑 {c}にはかなわないなぁ
+9 any | erubin normal {c}、さっきの対戦、どこで勝ちが決まったと思う？ | kyuko happy {c}が4ターン目で守りに入ったとこ。あれで流れが変わったんだぁ | erubin surprise やっぱり、そこだよね。{c}にはかなわないね笑
+10 special | kyuko normal {c}、二人でみんなを支えるって約束してから、だいぶたったね | erubin happy うん。{c}のおかげで、この世界にもだいぶ慣れたよ | kyuko happy じゃあ今日は、俺のお気に入りの場所に連れてくよぉ。音がきれいに聞こえるとこ | erubin surprise そんな場所があるんだね。楽しみだな☺️ | kyuko wink 最初は{c}に教えたかったんだ笑 あとでみんなも連れてこよ | erubin happy いいね。これからも、二人でみんなの居場所を増やしていこうね
+
+## sorashido erubin
+7 any | sorashido excited {c}、デュラハンの使われ方、新しく表にしたぜ・・・！ | erubin happy ありがとう、{c}。また人気が上がってるといいな | sorashido happy 上がってたよ笑 {c}が使うから、みんなまねしてるんじゃないか？
+9 any | erubin normal {c}、次の対戦、どの形でいこうか | sorashido excited 計算だと、{c}の守りの形がいちばんだぜ・・・！ | erubin happy おけ！ じゃあ、細かいところは{c}に任せるね
+10 special | sorashido normal {c}、こっち来たころ読んでもらった表、あれから倍に増えたぜ・・・！ | erubin happy すごいね。{c}の表には、ずっと助けられてるよ | sorashido troubled でもさ、{c}の「見守り」の効き目だけは、どうやっても数字にならないんだよ笑 | erubin happy ふふ、数字にならないこともあるよね | sorashido happy けど、{c}がいる日は、みんなの勝ちが増えてる。それは分かったんだ笑 | erubin wink それなら十分かな笑 これからもよろしくね、{c}
+
+## momosuke erubin
+7 any | momosuke excited {c}、聞いて聞いて！！ 今日ね、3回もほめられたの！！ | erubin happy すごいね。{c}ががんばってるの、みんな分かってるんだよ | momosuke wink やった！！ {c}にほめられたから、これで4回目だね♡
+9 any | erubin normal {c}、今日もステージ、見に行っていいかな | momosuke excited もちろん！！ {c}が見てると、ももいつもより声が出るの！！ | erubin happy ふふ、じゃあいちばんいい席で応援するね☺️
+10 special | momosuke normal {c}、来たばっかのころから、ももいっぱい話しかけてきたよね | erubin happy うん。おかげで、毎日にぎやかで楽しいよ | momosuke happy じゃあね、お願い！！ 次のライブの衣装、{c}にえらんでほしいんだ！！ | erubin troubled 俺に？ センスに自信はないけど、大丈夫かな笑 | momosuke excited 大丈夫！！ {c}がえらんでくれたら、それだけで最強だもん！！ | erubin happy おけ！ これからも、{c}がいちばん輝けるように手伝うね
