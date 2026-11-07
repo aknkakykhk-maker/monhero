@@ -27,7 +27,7 @@ climax | mua excited いっくよ〜♪
 last | mua normal あとちょっと！ラストまで一緒に♪
 last | mua normal 最後まで笑顔でいこ！
 mvp | mua wink MVPとっちゃった！？あたしすごくない？ｗ
-mvp | mua wink えへへ、今日のあたし、ノッてたかも♪
+mvp | mua wink 今日のあたし、まぢノッてたかもｗ
 high | mua happy まぢいい感じぢゃん！楽しかったぁ♪
 high | mua happy 今の、めっちゃそろってたよね♪
 mid | mua happy いい感じだったよ！次はもっといけるかも♪
@@ -41,7 +41,7 @@ levelup | mua happy もっと一緒に叩きたくなってきた♪
 likeup | mua wink この曲、ちょっと好きになってきたかも♪
 overcome | mua happy 苦手な曲だったけど、乗りこえたよ！
 overcome | mua happy 目は回ったけど、楽しかったかもｗ
-song:toriko | mua happy トリコはあたしの杯の曲だし、テンションまぢ上がるの♪
+song:toriko | mua happy トリコはあたしの個人杯の曲だし、テンションまぢ上がるの♪
 song:haruka | mua happy ハルカ、聞くたびにキュンとしちゃう♪
 song:crazy_party_night | mua happy パーティーの曲って、それだけで楽しいぢゃん♪
 song:grievous_lady | mua happy Grievous Lady、最後までついていけた！あたしえらいｗ
@@ -59,16 +59,16 @@ first | kiki excited はじめての曲ですね。どきどきしまつ♪
 first | kiki excited 知らない曲も、ブリーダーさんとなら平気です
 like | kiki happy この曲、私とても好きなんです♪
 dislike | kiki troubled この曲は大きい音でどなられるので、少しびっくりしちゃいます
-combo | kiki excited いい流れでつね♪ このまま全部いきましょう
+combo | kiki excited いい流れでつね♪ このまま全部いけそうです
 combo | kiki excited とってもきれいにつながっていますよ♪
 combo | kiki excited ブリーダーさん、さすがでつ
 miss | kiki normal 大丈夫でつ、落ち着いていきましょう♪
-miss | kiki normal ひと呼吸おいて、また合わせましょうね
+miss | kiki normal ひと呼吸おけば、また合わせられまつよ
 climax | kiki excited ここが一番きれいなところでつ♪
-climax | kiki excited ここは思いきっていきましょう♪
-climax | kiki excited 雪が舞うみたいな気持ちでまつ♪
+climax | kiki excited ここは押し切りまつ ( ˘ω˘)9グッ!
+climax | kiki excited 雪が舞うみたいな気持ちになりまつ♪
 last | kiki normal あと少しでつ。最後までていねいに♪
-last | kiki normal 最後のひと押し、いきましょう
+last | kiki normal 最後のひと押しでつ
 mvp | kiki wink 私がMVPですか？ちょっと照れちゃいまつ♪
 mvp | kiki wink 今日は指がよく動きました♪
 high | kiki happy とってもいい演奏でした♪
@@ -141,39 +141,39 @@ sp100 | momosuke happy ずっと一緒にステージ立ってくれて、あり
 ## dra
 join | dra happy おでも混ぜてくれよな、えへへ
 join | dra happy ブリーダー、今日もよろしくな
-first | dra excited はじめての曲だな。冒険って感じでいいくさ
+first | dra excited はじめての曲か。冒険って感じでいいな
 first | dra excited 知らない道を行くのは、わくわくするからな
-like | dra happy この曲、おで好きなんだな
+like | dra happy この曲、おで好きなんだよ
 dislike | dra troubled しんみりした曲は、おで照れくさいんだな、えへへ
-combo | dra excited すごいな、ずっとつながってるくさ
+combo | dra excited すごいな、ずっとつながってるぞ
 combo | dra excited いいぞ、その調子だからな
-combo | dra excited おでもびっくりの長さだな
+combo | dra excited おでの膝もびっくりの長さだな
 miss | dra normal どんまいだな、次でとりかえすからな
-miss | dra normal あわてなくていいんだな、えへへ
+miss | dra normal あわてなくていいからな
 climax | dra excited ここからが本番だな、えへへ
 climax | dra excited 山場だな、いくぞ
-climax | dra excited ワイもここは気合い入れるくさ
+climax | dra excited ワイもここは気合い入れるぞ
 last | dra normal あと少しだな、最後まで行くからな
-last | dra normal ゴールが見えてきたな
+last | dra normal ゴールが見えてきたな。膝もまだもってるぞ
 mvp | dra wink おでがMVPか、えへへ、照れくさいな
-mvp | dra wink 今日はおで、調子よかったんだな
-high | dra happy いい演奏だったくさ。おで楽しかったな
+mvp | dra wink 今日はおで、調子よかったな
+high | dra happy いい演奏だったな。おで楽しかったよ
 high | dra happy ぴったりだったな、えへへ
 mid | dra happy なかなかよかったな。次も行くからな
 mid | dra happy 楽しかったな。もう一回いいか？
 low | dra troubled どんまいだな、次でとりかえすからな
-low | dra troubled おでも練習するからな、一緒にがんばるくさ
+low | dra troubled おでも練習するからな。一緒にがんばろう
 fc | dra surprise 全部つながったな！？すごいな、ブリーダー
 fc | dra surprise フルコンだな、おで鼻が高いからな
 levelup | dra happy セッションLvが上がったな、えへへ
 levelup | dra happy おでも少しは上手になってきたかな
-likeup | dra wink この曲、だんだん好きになってきたんだな
+likeup | dra wink この曲、だんだん好きになってきたわ
 overcome | dra happy 苦手な曲だったけど、最後まで行けたな
 overcome | dra happy 照れくさかったけど、いい曲だったな
-song:mou_hitotsu_no_sekai_e | dra happy もう一つの世界へは、おでの曲だからな。冒険って感じでいいくさ
+song:mou_hitotsu_no_sekai_e | dra happy もう一つの世界へは、おでの曲だからな。冒険って感じでいいだろ
 song:big_bridge_no_shitou | dra happy ビッグブリッヂの死闘、橋を渡りきった気分だな
 song:senjou_no_shippuu | dra happy 戦場の疾風、風みたいに駆け抜けたな
-song:stay_with_me | dra happy Stay With Me、しんみりしたけど、悪くなかったんだな
+song:stay_with_me | dra happy Stay With Me、しんみりしたけど、悪くなかったよ
 sp50 | dra happy セッションLv.50だな。おで、うれしいくさ
 sp50 | dra normal ここまで来たの、ちょっとした冒険だったな
 sp80 | dra happy Lv.80だな。もう目をつぶっても合わせられるからな
@@ -183,15 +183,15 @@ sp100 | dra happy 長い冒険だったな。ありがとうな、えへへ
 
 ## atsu
 join | atsu happy とりあえず一曲いくか笑
-join | atsu happy 来たぞ。今日もやるか！
-first | atsu excited てか初見の曲か。燃えるな笑
+join | atsu happy 来たよ！ 今日もやろ笑
+first | atsu excited てか初見の曲？ 燃えるじゃん笑
 first | atsu excited 知らない曲こそ、とりあえずやってみるか笑
 like | atsu happy これ俺の好きなやつだな笑
 dislike | atsu troubled てか自分の大会の曲って、なんか照れるだろ笑
 combo | atsu excited とりあえずいい感じだな笑
-combo | atsu excited まだつながってるのかよ！すげえな笑
+combo | atsu excited まだつながってるの！？ すごいじゃん笑
 combo | atsu excited そのまま行け！
-miss | atsu normal てか焦らなくていいぞ！
+miss | atsu normal てか、焦らなくていいよ！
 miss | atsu normal 切り替えていこう笑
 climax | atsu excited ここ決めるぞ笑
 climax | atsu excited 山場だ、いくぞ！
@@ -207,7 +207,7 @@ mid | atsu happy とりあえずもう一曲いくか笑
 low | atsu troubled まあ次だな、切り替えていこう！
 low | atsu troubled 練習あるのみだな笑
 fc | atsu surprise フルコンかよ！やるな笑
-fc | atsu surprise 全部つないだのか。すげえな！
+fc | atsu surprise 全部つないだの！？ まじですごいじゃん！
 levelup | atsu happy セッションLv上がったな笑
 levelup | atsu happy 俺もまだまだ伸びるな！
 likeup | atsu wink この曲、ちょっと好きになってきたかもな笑
@@ -230,33 +230,33 @@ join | kyuko happy よろしく〜、今日は何いく？
 first | kyuko excited はじめての曲だね〜。構成見ながらいくよ
 first | kyuko excited 初見かぁ、サビの場所を探しながらいこ〜
 like | kyuko happy この曲は構成がきれいなんだよね〜
-dislike | kyuko troubled トリコはノリが良すぎて、俺だけ置いていかれるんだよぇ
-combo | kyuko excited ほい！いい流れだね〜
+dislike | kyuko troubled トリコはノリが良すぎて、俺だけ置いていかれるんだよねぇ
+combo | kyuko excited ほい！ いい流れだねぇ
 combo | kyuko excited リズムが安定してるからつながるんだよね〜
-combo | kyuko excited このままいけるよ〜、ありがとん笑
+combo | kyuko excited このままいけるよぉ。ありがとん笑
 miss | kyuko normal ぐぬぬぬ、でもリズムは合ってるよ〜
 miss | kyuko normal 一回深呼吸ね〜、次の小節から戻そ
-climax | kyuko excited サビ前で一回引いて…ここだね〜
-climax | kyuko excited ここが一番盛り上がる所だよ〜
+climax | kyuko excited 一回ためて…ここだねぇ
+climax | kyuko excited ここが一番盛り上がるとこだよぉ
 climax | kyuko excited ここから音が増えるよ〜、おけ〜？
 last | kyuko normal 最後まで、ていねいにね〜
-last | kyuko normal あと少し〜、おけ〜？
+last | kyuko normal あと少しだぁ。おけ？
 mvp | kyuko wink MVPいただきました〜笑
 mvp | kyuko wink 曲を読んだのが効いたかも〜
 high | kyuko happy いい流れだったね〜、ありがとん笑
-high | kyuko happy 今のは理想の形だったよ〜
+high | kyuko happy 今のは理想の形だったなぁ笑
 mid | kyuko happy いい感じ〜。サビ前をもう少しそろえたら上がるよ
-mid | kyuko happy おけ〜、次いこ〜
+mid | kyuko happy おけ〜、次いこw
 low | kyuko troubled ぐぬぬぬ、次はサビ前を意識してみよ〜
 low | kyuko troubled 難しい所は分かったから、次はいけるよ〜
 fc | kyuko surprise フルコンだね〜！すごいね、ありがとん笑
-fc | kyuko surprise 全部つながった〜！理由は練習量だね〜
+fc | kyuko surprise 全部つながった〜！理由は練習量だねぇ
 levelup | kyuko happy セッションLv上がったね〜、ほい！
-levelup | kyuko happy だんだん合わせ方が分かってきたよ〜
+levelup | kyuko happy だんだん合わせ方が分かってきたよぉ
 likeup | kyuko wink この曲、構成がおもしろく見えてきたかも〜
 overcome | kyuko happy 置いていかれなかった〜、ありがとん笑
 overcome | kyuko happy 苦手な曲だったけど、ノリ方が分かったよ〜
-song:toward_the_stars_short | kyuko happy Toward the Stars は、サビ前で一回引くのがいいの笑
+song:toward_the_stars_short | kyuko happy Toward the Stars は、サビ前でためるとこが好きなんだよねぇ笑
 song:six_eternel_beat | kyuko happy SIX ÉTERNEL、展開がきれいでいいよね〜
 song:evans | kyuko happy Evans は、音の重ね方が気持ちいいんだよね〜
 song:toriko | kyuko happy トリコ、最後までノリについていけた〜！
@@ -269,34 +269,34 @@ sp100 | kyuko happy ここまでの全部、いい流れだったよ〜
 
 ## sorashido
 join | sorashido happy うぉぉぉ！俺も参戦するぜ・・・！
-join | sorashido happy 今日も計算どおりにいくぜ笑
+join | sorashido happy 今日はオリヒメの曲あるかな！？ 楽しみだぜ笑
 first | sorashido excited はじめての曲か。今から計算するぜ・・・！
-first | sorashido excited 初見でも、俺の計算に死角はないぜ笑
+first | sorashido excited 初見は燃えるな！ ちばりよー、俺！
 like | sorashido happy この曲は全ノーツ計算済みだぜ笑
 dislike | sorashido troubled ゆっくりの曲は、計算が合わなくてそわそわするぜ笑
 combo | sorashido excited うぉぉぉ！計算どおりだぜ・・・！
-combo | sorashido excited つながり方が表のとおりだぜ笑
+combo | sorashido excited うまい！ 今の、でーじきれいだった笑
 combo | sorashido excited このまま最後まで行く計算だぜ・・・！
 miss | sorashido normal ここから巻き返す計算だぜ笑
-miss | sorashido normal 誤差の範囲だぜ、気にすんな！
+miss | sorashido normal 俺もさっき1個落とした笑 気にすんな！
 climax | sorashido excited うぉぉぉ！ここだぜ！
 climax | sorashido excited サビの密度、計算済みだぜ笑
 climax | sorashido excited なんくるないさ〜、ここは楽しむところだぜ！
 last | sorashido normal 残り10秒、計算どおりに締めるぜ笑
-last | sorashido normal ラストは全部拾う計算だぜ笑
+last | sorashido normal ラストまで全部拾うぞ！
 mvp | sorashido wink MVPは計算済みだったぜ・・・！
-mvp | sorashido wink 表にしたら俺が一番だったぜ笑
+mvp | sorashido wink まじか、俺がMVP！？ 表に太字で書いとく笑
 high | sorashido happy 計算どおりの名演だぜ・・・！
 high | sorashido happy 今の数字、表に残しておきたいぜ笑
 mid | sorashido happy 悪くない数字だぜ。次はもっと上がる計算だ
-mid | sorashido happy もう一曲いくぜ！
+mid | sorashido happy もう一曲いこう！ 次は勝つ笑
 low | sorashido troubled 次は全ノーツ計算して挑むぜ笑
-low | sorashido troubled データは取れたぜ。次は上がるぜ！
+low | sorashido crying くっそー！ 悔しい……次は上がるぜ・・・！
 fc | sorashido surprise うぉぉぉ！フルコンだぜ笑
 fc | sorashido surprise 計算を超えてきたぜ笑
 levelup | sorashido happy セッションLvアップだぜ・・・！
 levelup | sorashido happy 伸び方、グラフにしたら右肩上がりだぜ笑
-likeup | sorashido wink この曲、計算してたら好きになってきたぜ笑
+likeup | sorashido wink この曲、何回もやってたら好きになってきた笑
 overcome | sorashido happy ゆっくりの曲も、計算が合ったぜ！
 overcome | sorashido happy そわそわしたけど、乗りこえたぜ笑
 song:monster_hero | sorashido happy Monster Hero は全ノーツ計算済みだぜ！
@@ -317,7 +317,7 @@ first | erubin excited はじめての曲だね。ゆっくり覚えていこう
 first | erubin excited 知らない曲でも、一緒なら大丈夫だよ
 like | erubin happy この曲、好きなんだよね
 dislike | erubin troubled にぎやかすぎるのは、ちょっと疲れちゃうかな
-combo | erubin excited いい感じだね、そのままで大丈夫
+combo | erubin excited いいね、さすが。そのままで大丈夫
 combo | erubin excited きれいにつながってるね
 combo | erubin excited すごいね、落ち着いてるのが分かるよ
 miss | erubin normal 大丈夫、ゆっくりいこうね
@@ -327,7 +327,7 @@ climax | erubin excited 一緒に盛り上がろうか
 climax | erubin excited ここは思いきっていこうね
 last | erubin normal あと少しだね、最後まで一緒に
 last | erubin normal 最後まで楽しもうね
-mvp | erubin wink 俺がMVP？ありがとね
+mvp | erubin wink 俺がMVP？ おけ、ありがとね笑
 mvp | erubin wink 今日はたまたま調子がよかったかな
 high | erubin happy いい演奏だったね、おつかれさま
 high | erubin happy 息が合ってたね、うれしいな
@@ -335,7 +335,7 @@ mid | erubin happy いい演奏だったよ。少し休んでもいいからね
 mid | erubin happy 楽しかったね、もう一曲どうかな
 low | erubin troubled 大丈夫、次はきっと合うよ
 low | erubin troubled 疲れてないかな？無理しないでね
-fc | erubin surprise フルコンかな？すごいね、おつかれさま
+fc | erubin surprise フルコンかな？ すごいね☺️
 fc | erubin surprise 全部つながったね、見ててうれしかったよ
 levelup | erubin happy セッションLvが上がったね。ありがとね
 levelup | erubin happy 少しずつ合ってきたかな
