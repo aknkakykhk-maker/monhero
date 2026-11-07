@@ -35,7 +35,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
-<<<<<<< HEAD
+    date: "2026-11-07 20:35", type:'update', group:'rhythm', title:'モンヒロビートのフリーマッチで、抜けた部屋へ戻れるようになりました', status:'new',
+    items:[
+      '部屋を出たあと10分のあいだは、フリーマッチを押すと「↩ さっきの部屋に戻る」が出ます。演奏中の部屋でも、次の曲から一緒に遊べます。',
+      'フリーマッチを押したときに、いま人を待っている部屋の数と部屋主の顔が出るようになりました。部屋が無いときは「部屋を作る」が目立ちます。',
+    ],
+  },
+  {
     // 2026-11-07 助手ライフ「助手たちの家」段階1(社長「この文で公開」・docs/progress/assistant-peer/LIFE-HOUSE-RELEASE.md)
     date: "2026-11-07 20:32", type:'content', group:'assistant', title:'助手ライフが「助手たちの家」になりました', status:'new', releaseFlag:'assistantLife',
     items:[
@@ -49,13 +55,6 @@ const CHANGELOG = [
       '言い合いのあとの2人は、部屋に「💢」の印が出ます。声をかけたり引き合わせたりすると、仲直りのきっかけになります。',
     ],
     assistantNotice:{ id:'update_notice_assistant_life_house_v1', type:'content' },
-=======
-    date: "2026-11-07 20:35", type:'update', group:'rhythm', title:'モンヒロビートのフリーマッチで、抜けた部屋へ戻れるようになりました', status:'new',
-    items:[
-      '部屋を出たあと10分のあいだは、フリーマッチを押すと「↩ さっきの部屋に戻る」が出ます。演奏中の部屋でも、次の曲から一緒に遊べます。',
-      'フリーマッチを押したときに、いま人を待っている部屋の数と部屋主の顔が出るようになりました。部屋が無いときは「部屋を作る」が目立ちます。',
-    ],
->>>>>>> origin/main
   },
   {
     date: "2026-11-07 20:10", type:'update', title:'時間帯で、ホームの雰囲気が変わるようになりました', status:'new', group:'ui',
