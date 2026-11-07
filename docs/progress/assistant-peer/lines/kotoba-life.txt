@@ -802,7 +802,7 @@ invite mua erubin answer=shy | erubin happy {c}、さっきはごめんね。お
 invite momosuke kiki answer=glad | kiki happy {c}、おやつ屋さんの新作、いっしょにどうですか？ | momosuke excited 行く！！ {c}から誘ってくれるの、うれしい♡
 invite kiki momosuke answer=glad | momosuke excited {c}！ 練習見に来て！！ | kiki happy はい。いちばん後ろの席で、静かに見ていますね
 invite momosuke kiki answer=decline | kiki normal {c}、図書室で本を読みませんか？ | momosuke troubled ごめん、静かにしてると眠くなっちゃうの！！ また誘って！！
-invite kiki momosuke answer=decline | momosuke wink {c}、いっしょに踊ろ！！ | kiki troubled 踊るのは、少し…。見ているほうが好きです
+invite kiki momosuke answer=decline | momosuke wink {c}も、ももといっしょに踊ってみない！？ | kiki troubled 踊るのは、少し…。見ているほうが好きです
 invite momosuke kiki answer=shy | kiki normal {c}、さっきは少し言いすぎました。お茶にしませんか | momosuke troubled …べつに、ももは気にしてないし | momosuke happy …いちごのケーキもあるなら行く！！
 invite kiki momosuke answer=shy | momosuke happy {c}のこと、ももが案内してあげる！！ 新しいお店見つけたの！！ | kiki surprise 私でいいんですか？ | kiki happy …では、お願いしまつ
 invite dra kiki answer=glad | kiki normal {c}、カードの説明をお願いしてもいいですか？ | dra happy おう、まかせとけ。今日はギャグ少なめでいくわ
@@ -851,7 +851,7 @@ invite atsu momosuke answer=shy | momosuke normal {c}、さっきは煽りすぎ
 invite momosuke atsu answer=shy | atsu wink {c}の歌、聞きたいんだけど笑 | momosuke surprise え、ももの！？ | momosuke wink …しょうがないなぁ。ちゃんと手ふってね♡
 invite kyuko momosuke answer=glad | momosuke excited {c}！！ ドリーミィに会いに行っていい！？ | kyuko happy ほい！ 待ってるよぉ
 invite momosuke kyuko answer=glad | kyuko normal {c}、新しい編成の名前、決めてくれない？ | momosuke excited 決める決める！！ 最強の名前つけてあげる！！
-invite kyuko momosuke answer=decline | momosuke wink {c}、いっしょに踊ろ！！ | kyuko troubled 踊るのはちょっと…見てるほうにするねぇ笑
+invite kyuko momosuke answer=decline | momosuke wink {c}、ドリーミィといっしょにダンスしよ！！ | kyuko troubled 踊るのはちょっと…見てるほうにするねぇ笑
 invite momosuke kyuko answer=decline | kyuko happy {c}、図書室で作戦考えよ | momosuke troubled 静かなとこ、もも苦手なの！！ また今度ね！！
 invite kyuko momosuke answer=shy | momosuke happy {c}の作戦、ももにも分かるように教えて！！ | kyuko surprise え、俺の作戦に興味あるの？ | kyuko happy …うれしいなぁ。ゆっくり説明するね
 invite momosuke kyuko answer=shy | kyuko normal {c}、さっきドリーミィをひとり占めしてたの、べつにいいよ笑 | momosuke troubled …ごめん。かわいすぎて | momosuke wink …じゃあ今日は、いっしょにかわいがろ！！
@@ -872,7 +872,7 @@ invite momosuke erubin answer=shy | erubin happy {c}の歌、聞きに行って�
 invite atsu dra answer=glad | dra normal {c}、暇なら一戦どうだ | atsu excited いいね、待ってた！ 今日は勝つから笑
 invite dra atsu answer=glad | atsu happy {c}、決勝の続きやろ笑 | dra excited おう！ 膝の準備はできてるぞ
 invite atsu dra answer=decline | dra happy {c}、ひなたで昼寝しないか？ | atsu troubled 寝てる場合じゃないんだよね笑 練習してくる！
-invite dra atsu answer=decline | atsu excited {c}、HELLいこ！ | dra troubled HELLは膝が泣くんだよ…カードなら行くぞ
+invite dra atsu answer=decline | atsu excited {c}、たまには上の難易度いこうよ！ | dra troubled HELLは膝が泣くんだよ…カードなら行くぞ
 invite atsu dra answer=shy | dra normal {c}、さっきの勝負、ノーカンでいいぞ | atsu surprise え、いいの？笑 | atsu happy じゃあもう1戦！ 今度はちゃんと数えて！
 invite dra atsu answer=shy | atsu wink {c}の説明、また聞きたいんだけど笑 | dra surprise お、おでの？ | dra happy ……えへへ。しょうがないな、教えてやるわ
 invite kyuko dra answer=glad | dra normal {c}、山札見てやろうか | kyuko happy ほい！ お願いしまーす
@@ -907,7 +907,7 @@ invite sorashido atsu answer=shy | atsu happy {c}、さっきの数え方、俺�
 invite atsu sorashido answer=shy | sorashido happy {c}の打ち方、表にしてずっと見てるんだ | atsu surprise え、まじで？笑 | atsu happy …照れるな！ じゃ、見本見せに行く！
 invite erubin atsu answer=glad | atsu happy {c}、ベンチで少し休まない？笑 | erubin happy いいね。{c}もがんばりすぎだしね
 invite atsu erubin answer=glad | erubin normal {c}、みんなの様子、いっしょに見に行かない？ | atsu happy いいね！ 前は俺、後ろは{c}で笑
-invite erubin atsu answer=decline | atsu excited {c}、HELLいこ！ | erubin troubled 俺には速すぎるかな💦 見てるだけでもいい？
+invite erubin atsu answer=decline | atsu excited {c}、いっしょに一曲どう？ | erubin troubled 俺には速すぎるかな💦 見てるだけでもいい？
 invite atsu erubin answer=decline | erubin normal {c}、今日は早めに休まない？ | atsu troubled まだやれるって笑 あと1曲だけ！
 invite erubin atsu answer=shy | atsu normal {c}、さっきは止めてくれてありがと！ | erubin surprise 俺、強く言いすぎたかなって思ってたんだ | erubin happy じゃあ、いっしょにお茶にしようか
 invite atsu erubin answer=shy | erubin happy {c}が前にいてくれるから、安心して見ていられるんだよね | atsu surprise え、急にどうしたの？ | atsu happy …照れるじゃん笑 じゃ、いっしょに行こ！
@@ -929,3 +929,66 @@ invite kyuko erubin answer=decline | erubin happy {c}、朝の散歩に行かな
 invite erubin kyuko answer=decline | kyuko happy {c}、夜中まで育成しよ | erubin troubled 夜中までは心配だな💦 夕方までならいっしょにやるよ
 invite kyuko erubin answer=shy | erubin normal {c}、さっきは心配しすぎたかな。ごめんね | kyuko troubled …べつにいいよぉ | kyuko happy …心配してくれるの、ちょっとうれしいし
 invite erubin kyuko answer=shy | kyuko happy {c}、いつも見守ってくれてありがとん | erubin surprise 気づいてたんだね笑 | erubin happy じゃあ今日も、そばで見てるね
+
+## 3人(よく集まる20組)
+trio dra erubin momosuke doing=walk | momosuke happy {c:dra}、膝だいじょぶ？ ゆっくり歩こ！！ | dra happy おう、ありがとな。おでの膝は今日も元気だ。……たぶん | erubin happy 疲れたら、あそこのベンチで休もうね
+trio dra erubin momosuke doing=snack | dra normal プリン3つ買ってきたぞ | momosuke excited さすが{c:dra}！！ ももは2つね！！ | erubin troubled それだと{c:dra}の分がなくなっちゃうよ笑
+trio dra erubin momosuke doing=cards | erubin normal {c:dra}に教わった形、{c:momosuke}にも見せたいな | momosuke excited 見たい見たい！！ ピカピカのカード入ってる？ | dra wink 入れといてやるか。えへへ
+trio dra erubin momosuke | momosuke wink 今日のおしゃべり、ももが司会ね！！ | erubin happy おけ！ 聞き役は俺がするね | dra happy じゃあおでは、合いの手係だな
+trio atsu mua sorashido doing=practice | atsu happy 今日はHELLいこ笑 | mua excited のった！ {c:sorashido}、記録お願い！ | sorashido excited まかせろ、全部数えるぜ・・・！
+trio atsu mua sorashido doing=snack | mua excited 3人でおやつって、めずらしいね！ | sorashido normal 計算したら、この3人がそろうのは週に2回くらいだ笑 | atsu wink 数えてたの？笑 じゃあ今日は特別だね！
+trio atsu mua sorashido | sorashido crying また{c:atsu}に2点差で負けた… | mua happy 2点なら、ほぼ勝ちぢゃん！ | atsu happy それね笑 次は3人で協力しよ！
+trio atsu kiki sorashido doing=training | kiki normal 今日も、ちからに振りまつ | sorashido troubled {c:kiki}、ほかの数字がずっと止まってるぞ… | atsu happy でも強いからいいじゃん笑
+trio atsu kiki sorashido doing=cards | atsu excited {c:kiki}が攻めて、俺が続く！ | kiki wink 押し切りましょう ( ˘ω˘)9グッ! | sorashido happy 勝率、計算しなくても分かるわ笑
+trio atsu kiki sorashido | sorashido normal 3人の勝ち数、表にしてもいいか？ | kiki happy はい。いちばん上は、私たちですね | atsu wink 上の段は俺らのものだね笑
+trio kiki kyuko mua doing=snack | mua excited ねぇねぇ、今日はなに食べる？ | kiki happy 私はお茶だけで。{c:kyuko}は？ | kyuko happy 甘いのと辛いの両方笑 {c:mua}と半分こする
+trio kiki kyuko mua | mua excited 図書室、3人だとちょっと楽しいね！ | kiki normal {c:mua}、声が少し大きいですよ | kyuko happy 小声のつもりなんだよね笑 分かる分かる
+trio kiki kyuko mua doing=training | kyuko normal {c:mua}のモッチー、{c:kiki}のゴーレムと練習させよっか | kiki happy いいですね。押し切りの練習でつ | mua surprise え、モッチー押し切られちゃう！？ｗ
+trio momosuke mua sorashido doing=practice | momosuke excited 今のポーズ、おそろいにしよ！！ | mua wink いいね！ {c:sorashido}、写真お願い！ | sorashido happy 角度、計算して撮るわ笑
+trio momosuke mua sorashido | sorashido normal {c:momosuke}、今日のミス2つだったぞ | momosuke wink 大きい声で言わないでw | mua happy でも減ったぢゃん！ えらいえらい！
+trio momosuke mua sorashido doing=snack | mua excited いちごタルト、最後の1個！ | momosuke excited ももの！！ | sorashido normal ……あみだくじ、作っといたぜ・・・！
+trio kiki mua sorashido doing=snack | sorashido excited おやつ屋さんの新作、全部で6つだ！ | mua happy ぢゃあ2個ずつ分けよ♪ | kiki wink では、甘さの表も作っていただけますか？
+trio kiki mua sorashido doing=walk | mua happy {place}、気持ちいいね！ | kiki normal {c:sorashido}、今日は歩数を数えないでくださいね | sorashido troubled ……もう1,000歩数えちゃった笑
+trio kiki mua sorashido | kiki happy 3人そろうと、にぎやかでいいですね | mua excited {c:kiki}が笑ってると、あたしもうれしい！ | sorashido happy 今日の笑った回数、表に…いや、やめとく笑
+trio dra kiki sorashido doing=cards | dra normal この組み方、勝率はどうだ？ | sorashido excited 6割だ！ でも{c:kiki}が使うと8割になる | kiki wink 攻撃の枚数を増やしましたので
+trio dra kiki sorashido | kiki normal {c:dra}のギャグ、今日は何回目ですか？ | sorashido happy 数えたら7回目だぜ笑 | dra troubled 2人して数えるなよ……
+trio dra kiki sorashido doing=snack | dra happy せんべい、3枚あるぞ | kiki happy ありがとうございます。お茶もいれまつね | sorashido normal 割れ方、表にしていいか？笑
+trio dra erubin sorashido doing=cards | erubin normal デュラハンの新しい形、2人に見てほしいんだ | dra happy おう、説明はおでがする | sorashido excited 数字はまかせろ！
+trio dra erubin sorashido doing=walk | dra troubled ちょっと休けいだ。膝が限界だ | sorashido normal 計算どおり、ちょうどベンチの前だ笑 | erubin happy じゃあ、3人で少し休もうね
+trio dra erubin sorashido | sorashido happy {c:dra}と{c:erubin}がいると、表が人に届く気がするんだよな | erubin happy 俺はいつも読むだけだけどね | dra wink 読む人がいないと、表もさみしいからな
+trio atsu momosuke sorashido doing=practice | momosuke wink {c:atsu}、今日こそフルコン？w | atsu happy うるさいって笑 | sorashido excited 2人のスコア、全部記録するぜ・・・！
+trio atsu momosuke sorashido | sorashido normal 今日の煽り合い、{c:momosuke}が3回多かったぞ | momosuke surprise 数えないで！！w | atsu happy それね笑 数えるとこじゃないって！
+trio atsu momosuke sorashido doing=snack | atsu happy 勝負のあとのおやつ、最高笑 | momosuke excited 勝ったのはもも！！ | sorashido troubled 判定、まだ出てないんだけどな笑
+trio erubin kyuko momosuke doing=training | momosuke excited ドリーミィ、今日もかわいすぎる！！ | kyuko happy {c:momosuke}が来ると、ドリーミィもうれしそうだねぇ | erubin happy 見てるだけで、やさしい気持ちになるね☺️
+trio erubin kyuko momosuke | erubin normal 2人とも、少し休もうか | kyuko happy ほい。{c:erubin}がいると、ちゃんと休めるよぉ | momosuke wink もも、休みながらしゃべる！！
+trio erubin kyuko momosuke doing=snack | kyuko normal ここのお茶、{c:erubin}のおすすめなんだって | erubin happy うん。ゆっくりできる味なんだよね | momosuke excited ももはケーキも！！
+trio dra mua sorashido doing=cards | dra normal みゅあ、この3つだけ覚えとけ | mua happy 3つならいける！ | sorashido excited その3つで勝率5割は超えるぜ笑
+trio dra mua sorashido | mua angry {c:dra}のギャグ、10点中2点！ | sorashido normal 今週の平均は3点だな | dra crying 平均まで出すなよ……
+trio dra mua sorashido doing=walk | mua excited {place}までお散歩しよ！ | dra troubled おでの膝のぶん、ゆっくりな | sorashido happy 膝のぶん、2割増しで計算しとく笑
+trio erubin kiki sorashido doing=walk | erubin happy 今日はどこで見守ろうか | kiki normal いつものベンチにしましょう | sorashido normal 2人とも、歩数ぴったり同じだったぞ笑
+trio erubin kiki sorashido doing=snack | kiki happy お茶、3人分いれました | erubin happy ありがとう。いい香りだね | sorashido troubled ……表、こぼさないように端に置いとく
+trio erubin kiki sorashido | sorashido normal 「見守り」の効き目、2人分だと倍になるのか？ | kiki wink 計算では、どうでしょう | erubin happy 数字にならないのが、いいところかもね笑
+trio kiki momosuke sorashido doing=snack | momosuke excited {c:kiki}、いちごのせて！！ | kiki happy はい、{c:momosuke}のぶんは多めに | sorashido normal いちごの数、ちゃんと表にしとくな笑
+trio kiki momosuke sorashido doing=practice | sorashido excited {c:momosuke}のミス、今日は1つだ！ | momosuke wink でしょ！！ | kiki happy よくがんばりましたね
+trio kiki momosuke sorashido | momosuke normal ねぇ、3人で何か作らない？ | kiki happy では、ゴーレムのしおりを | sorashido excited 俺は3人の表を作る！
+trio erubin momosuke sorashido doing=cards | sorashido normal {c:erubin}のデッキ、表にしたら守り9割だ笑 | momosuke wink ももがピカピカのカード足してあげる！！ | erubin happy ありがとう。守りと光、いい組み合わせだね
+trio erubin momosuke sorashido | momosuke excited 今日はね、話したいこと3つあるの！！ | sorashido normal 1つ目から順番に表にするか？ | erubin happy 表はあとでいいよ笑 まずは聞こう
+trio erubin momosuke sorashido doing=walk | erubin normal {place}、3人で来るのは初めてだね | momosuke excited 記念写真とろ！！ | sorashido happy タイマー10秒にしとく笑
+trio dra erubin kyuko doing=cards | kyuko normal {c:dra}が教えた形、{c:erubin}が変えて、俺がまた変えた笑 | erubin happy 3人の組み方になったね | dra wink 名前は「三人寄れば」でどうだ
+trio dra erubin kyuko | dra troubled ふぁ〜……3人とも眠そうだな | kyuko troubled 俺は夜ふかしぃ… | erubin happy じゃあ今日は、ゆっくりしようね
+trio dra erubin kyuko doing=snack | erubin normal お茶、いれたよ | dra happy せんべいも出すぞ | kyuko happy のんびり組のおやつだねぇ笑
+trio dra erubin mua doing=snack | mua excited 3人でおやつ〜！ | dra normal みゅあ、ほっぺにクリームついてるぞ | erubin happy 写真撮っておこうか笑
+trio dra erubin mua | mua wink {c:erubin}、今日の服もあたしが選んだの！ | erubin happy うん。とっても好評なんだよね | dra wink 石油王の服より似合ってるな。えへへ
+trio dra erubin mua doing=walk | dra troubled ちょっと休けいだ | mua happy {c:dra}、またぁ？ｗ | erubin normal ゆっくりでいいよ。急ぐ理由もないしね
+trio atsu kyuko mua doing=cards | mua excited このデッキの名前、「キラキラ作戦」！ | kyuko happy 中身は俺が考えた笑 | atsu happy じゃ、攻めるのは俺ね！
+trio atsu kyuko mua | atsu happy 3人で上位とろ笑 | kyuko normal 作戦はもうある。{c:mua}は勢い担当ね | mua excited まかせて！ いっくよー！
+trio atsu kyuko mua doing=practice | kyuko normal {c:mua}、そこは手を入れかえて | mua surprise ほんとだ、楽！ | atsu wink いいね、次は上の難易度いこ笑
+trio erubin mua sorashido doing=walk | mua excited {c:erubin}のコーデ、表にしたら何になる？ｗ | sorashido normal 色の数なら出せるぞ。5色だ | erubin troubled 数えられると、ちょっと照れるね笑
+trio erubin mua sorashido | sorashido happy 今日の3人、勝率も笑顔も高いな笑 | mua excited 笑顔も数えたの！？ | erubin happy それは数えなくていいかな笑
+trio erubin mua sorashido doing=snack | mua happy {c:sorashido}、計算はお休み！ | sorashido troubled ……頭の中で少しだけ | erubin wink 少しだけ、ならいいかな笑
+trio dra momosuke sorashido doing=practice | momosuke excited {c:dra}、前説お願い！！ | dra happy おう。すべる準備はできてる | sorashido normal すべった回数、記録しとく笑
+trio dra momosuke sorashido | sorashido normal {c:dra}のギャグ、{c:momosuke}の笑った回数は3回だ | momosuke wink 4回だったよw | dra excited 1回増えた！ えへへ
+trio dra momosuke sorashido doing=snack | dra happy プリン、3つあるぞ | momosuke excited 2つちょうだい！！ | sorashido troubled 計算が合わなくなるだろ笑
+trio atsu kiki kyuko doing=training | kiki normal ゴーレム、今日もちからを上げまつ | kyuko happy じゃあ俺は、ほかの数字を見とくねぇ | atsu happy 役割分担、ばっちりじゃん笑
+trio atsu kiki kyuko doing=cards | atsu excited 攻めは{c:kiki}と俺！ | kyuko normal 守りは俺が考える。それでいいよね | kiki wink 守りは、おまかせしまつ
+trio atsu kiki kyuko | kyuko happy この3人、気づくといつも勝ってるよねぇ | kiki happy 迷わないので、強いんでしょうか | atsu wink それね笑 次もいこ！
