@@ -63,7 +63,7 @@ module.exports = {
             path.join(ROOT, 'monster-hero', 'data', '*.js')],
   theme: { extend: {} },
   // landscape: は Tailwind が最初から持っている(@media (orientation: landscape))。
-  // 自前で回したとき用の写しは build-tailwind.js の withRotationCopy が足す(rotation-copy v1)
+  // 自前で回したとき用の写しは build-tailwind.js の withRotationCopy が足す(rotation-copy v2)
   // 画面テーマ「ハロウィン」の色の置き換えは tools/theme/halloween-theme-css.js が足す(halloween-theme v1)
   plugins: [],
 };
@@ -119,16 +119,34 @@ function splitSelectors(text) {
   out.push(text.slice(from));
   return out.map((sel) => sel.trim()).filter(Boolean);
 }
-// 中身を「セレクタ{宣言}」の並びとして読む。入れ子の @ 規則が来たら null(写さない)
+// 中身を「セレクタ{宣言}」の並びとして読み、[data-mh-view-rotation=true] の下へ写す。
+// 入れ子の @ 規則(例: landscape:[@media(max-height:440px)]:… が作る @media)は、その中身を同じように写して、同じ @ 規則で包む。
+// ★2026-11-07 まで、入れ子が1つでもあると、そのかたまり全部を写さずに捨てていた(return null)。
+//   横画面のクラスに入れ子の @media が1つ足されただけで、回したとき用の規則が数百件まとめて消え、
+//   iPhone の「🔄 横」で画面がいっせいに崩れた(社長「モンビーの画面ひどくなってる」)。
+function blockEnd(text, open) {
+  let depth = 1, j = open + 1;
+  for (; j < text.length && depth > 0; j++) {
+    if (text[j] === '{') depth++;
+    else if (text[j] === '}') depth--;
+  }
+  return j; // 閉じかっこの次
+}
 function rotatedRules(body) {
   const rules = []; let i = 0;
   while (i < body.length) {
     const open = body.indexOf('{', i);
     if (open < 0) break;
     const selector = body.slice(i, open);
-    if (selector.trim().startsWith('@')) return null;
+    if (selector.trim().startsWith('@')) {
+      const end = blockEnd(body, open);
+      const inner = rotatedRules(body.slice(open + 1, end - 1));
+      if (inner) rules.push(`${selector.trim()}{${inner}}`);
+      i = end;
+      continue;
+    }
     const close = body.indexOf('}', open);
-    if (close < 0) return null;
+    if (close < 0) break;
     const decls = body.slice(open + 1, close);
     rules.push(`${splitSelectors(selector).map((sel) => `${ROTATION_SCOPE} ${sel}`).join(',')}{${decls}}`);
     i = close + 1;

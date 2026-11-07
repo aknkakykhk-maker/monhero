@@ -315,8 +315,12 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
         await C.waitForTimeout(700);
         const opened = await C.evaluate(() => ({ layer: !!document.querySelector('[data-rhythm-multi-options-layer] [data-rhythm-options]'), room: typeof RHYTHM_MULTI !== 'undefined' && !!RHYTHM_MULTI.view(), calib: !!document.querySelector('[data-rhythm-multi-options-layer] [data-rhythm-line-adjust-open]') }));
         check(`オプション(${label}): ソロと同じオプションが部屋の上に開き、部屋は抜けない(演奏を始める項目は出さない)`, opened.layer && opened.room && !opened.calib, JSON.stringify(opened));
-        const out = await overflowing(C, '[data-rhythm-multi-options-layer]');
-        check(`オプション(${label}): ボタンが画面の外へはみ出さない`, out.length === 0, out.join(' / '));
+        // オプションは中を上下にすべらせる作りなので、左右のはみ出しと、文字の切れだけを見る
+        const out = await C.evaluate(() => [...document.querySelectorAll('[data-rhythm-multi-options-layer] button')].filter((el) => {
+          const r = el.getBoundingClientRect();
+          return r.width > 0 && (r.right > innerWidth + 1 || r.left < -1 || el.scrollWidth > el.clientWidth + 1);
+        }).map((el) => (el.innerText || el.getAttribute('aria-label') || '').trim().slice(0, 12)));
+        check(`オプション(${label}): ボタンが左右へはみ出さず、字が切れない`, out.length === 0, out.slice(0, 8).join(' / '));
         await C.evaluate(() => document.querySelector('[data-rhythm-multi-options-layer] button[aria-label="戻る"]')?.click());
         await C.waitForTimeout(500);
         check(`オプション(${label}): 戻ると部屋の画面へ戻る`, await C.evaluate(() => !document.querySelector('[data-rhythm-multi-options-layer]') && !!document.querySelector('[data-rhythm-multi]')));
