@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ef598e54dfdda47e
+// source-sha256: 02e2cf701883c6a8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -35519,6 +35519,27 @@ const RhythmSongSelect = ({
     const head = rhythmSongVersionHead(entry.songId);
     return playable.filter(item => rhythmSongVersionHead(item.songId) === head).sort((a, b) => rhythmSongVersionIndex(a.songId) - rhythmSongVersionIndex(b.songId));
   };
+  const firstSongId = (() => {
+    const recs = bestRecords && typeof bestRecords === 'object' ? bestRecords : {};
+    const playedAny = Object.keys(recs).some(id => recs[id] && typeof recs[id] === 'object' && Object.keys(recs[id]).some(d => {
+      const r = rhythmBestRecord(recs, id, d);
+      return !!(r && r.played);
+    }));
+    if (playedAny) return null;
+    let pick = null;
+    for (const entry of playable) {
+      if (!entry || rhythmSongVersionHead(entry.songId) !== entry.songId || !rhythmChartPlayable(entry, 'EASY')) continue;
+      const lv = Number(entry.difficulties.EASY.level);
+      const ms = rhythmSongDurationMs(entry, difficulties);
+      if (!Number.isFinite(lv) || lv <= 0) continue;
+      if (!pick || lv < pick.lv || lv === pick.lv && ms < pick.ms) pick = {
+        id: entry.songId,
+        lv,
+        ms
+      };
+    }
+    return pick ? pick.id : null;
+  })();
   const rows = (() => {
     const out = [],
       at = new Map();
@@ -35829,7 +35850,11 @@ const RhythmSongSelect = ({
     } : {}, {
       "aria-label": "お気に入り",
       className: "ml-auto shrink-0 text-[12px] leading-none text-rose-300"
-    }), "♥"), eventSong && React.createElement("small", _extends({}, main ? {
+    }), "♥"), firstSongId && row.members.some(item => item.songId === firstSongId) && React.createElement("small", _extends({}, main ? {
+      'data-rhythm-song-first': firstSongId
+    } : {}, {
+      className: "ml-auto shrink-0 rounded-md border border-emerald-300/60 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-black text-emerald-200"
+    }), "🔰 はじめての1曲"), eventSong && React.createElement("small", _extends({}, main ? {
       'data-rhythm-song-event': entry.songId
     } : {}, {
       className: "ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200"

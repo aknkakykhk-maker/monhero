@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1bcb703a452078de
+// generated-sha256: 3de3e8729c86f5c3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -22279,6 +22279,24 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
     return playable.filter(item=>rhythmSongVersionHead(item.songId)===head)
       .sort((a,b)=>rhythmSongVersionIndex(a.songId)-rhythmSongVersionIndex(b.songId));
   };
+  // 「はじめての1曲」(2026-11-07 本オープン案 A5・社長)。まだ1曲も遊んでいない人にだけ、短くてやさしい曲の行に札を出す。
+  //   選び方: EASY を遊べる原曲(押すと原曲が選ばれるので、ショート版などは候補にしない)の中で、EASY の Lv. がいちばん低い曲
+  //   → 同じなら短い曲 → それも同じなら一覧の順。曲の id は書き写さない(曲が増えても自動で選び直す)。1曲でも遊んだら出さない
+  const firstSongId=(()=>{
+    const recs=bestRecords&&typeof bestRecords==='object'?bestRecords:{};
+    const playedAny=Object.keys(recs).some(id=>recs[id]&&typeof recs[id]==='object'
+      &&Object.keys(recs[id]).some(d=>{const r=rhythmBestRecord(recs,id,d);return !!(r&&r.played);}));
+    if(playedAny)return null;
+    let pick=null;
+    for(const entry of playable){
+      if(!entry||rhythmSongVersionHead(entry.songId)!==entry.songId||!rhythmChartPlayable(entry,'EASY'))continue;
+      const lv=Number(entry.difficulties.EASY.level);
+      const ms=rhythmSongDurationMs(entry,difficulties);
+      if(!Number.isFinite(lv)||lv<=0)continue;
+      if(!pick||lv<pick.lv||(lv===pick.lv&&ms<pick.ms))pick={id:entry.songId,lv,ms};
+    }
+    return pick?pick.id:null;
+  })();
   const rows=(()=>{
     const out=[],at=new Map();
     for(const entry of playable.filter(genreMatches)){
@@ -22522,6 +22540,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                   {row.versions>1&&<small {...(main?{'data-rhythm-song-row-version-count':row.versions}:{})}
                     className="ml-1 shrink-0 rounded-md border border-sky-300/40 bg-sky-500/10 px-1 py-0.5 text-[10px] font-black leading-none text-sky-200">{row.versions}つの版</small>}
                   {favoriteIds.has(entry.songId)&&<small {...(main?{'data-rhythm-song-row-favorite':''}:{})} aria-label="お気に入り" className="ml-auto shrink-0 text-[12px] leading-none text-rose-300">♥</small>}
+                  {firstSongId&&row.members.some(item=>item.songId===firstSongId)&&<small {...(main?{'data-rhythm-song-first':firstSongId}:{})}
+                    className="ml-auto shrink-0 rounded-md border border-emerald-300/60 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-black text-emerald-200">🔰 はじめての1曲</small>}
                   {eventSong&&<small {...(main?{'data-rhythm-song-event':entry.songId}:{})}
                     className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200">🏆<span className="[@container(max-width:380px)]:hidden"> イベント対象</span></small>}
                 </span>
