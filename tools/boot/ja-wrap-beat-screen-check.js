@@ -230,7 +230,17 @@ const runMulti = async (browser, W, H) => {
   try {
     // フリーマッチの待ち(ほかの部屋が見つからないので、自分で部屋を作って待つ)
     { const P = await open('は');
+      // 2026-11-07 から、フリーマッチを押すとシート(部屋を作る/部屋に入る/おまかせで入る)が開く。シートと部屋の一覧も数える
       await P.locator('[data-rhythm-multi-free]').click();
+      await P.waitForSelector('[data-rhythm-mode-free-sheet]', { timeout: 5000 });
+      await scan('フリーマッチ(シート)', P);
+      await P.locator('[data-rhythm-multi-free-list-open]').click();
+      await P.waitForSelector('[data-rhythm-multi-room-list-empty],[data-rhythm-multi-room-row]', { timeout: 10000 });
+      await scan('フリーマッチ(部屋の一覧)', P);
+      // 一覧の「もどる」はシートの3つの選択肢へ戻る
+      await P.locator('[data-rhythm-multi-room-list-back]').click();
+      await P.waitForSelector('[data-rhythm-multi-free-auto]', { timeout: 5000 });
+      await P.locator('[data-rhythm-multi-free-auto]').click();
       await P.waitForFunction(() => !!document.querySelector('[data-rhythm-multi]'), null, { timeout: 20000 });
       await scan('フリーマッチの待ち', P); await P.close(); }
     const A = await open('あ', true), B = await open('い');

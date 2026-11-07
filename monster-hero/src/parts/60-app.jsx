@@ -20605,6 +20605,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             key で分けて、画面が変わったら部品の中の状態を作り直す */}
         {/* 招待の部屋を開いたまま、ほかの画面にいるあいだの帯(2026-10-29・案A)。部屋が見えている所(対戦の画面・モードえらび・演奏中)では出さない。
             バトルの最中は画面を移ると途中のものが宙に浮くので、人が来たときだけ知らせる */}
+        {/* フレンドから招待が届いたら、HOME の上に帯で知らせる(2026-11-07 社長)。入るを押すと、モンヒロビートのマルチを開いてその部屋へ */}
+        <RhythmInviteHomeBar show={gameState==='HOME'} onAccept={()=>{void openRhythmDemo({to:'RHYTHM_MULTI'});}} />
         <RhythmMultiAwayBar hidden={gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT'||!!rhythmPlay}
           busy={['BATTLE','WAVE_RESULT','CHAMPION','BATTLE_TUTORIAL','CARD_BATTLE','RPG_DEBUG_BATTLE','DEBUG_BATTLE_SETUP'].includes(gameState)}
           onReturn={()=>{void openRhythmDemo({to:'RHYTHM_MULTI'});}} />
