@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e3e698ffdddaa340
+// source-sha256: cc083e9d1992f118
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -162711,7 +162711,8 @@ function MonsterHeroGame() {
       "aria-modal": "true",
       "aria-label": label || `${mon.name}の詳細`
     }, React.createElement("div", {
-      className: `bg-slate-900 border-2 ${accentClass} rounded-3xl p-4 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto overflow-hidden`,
+      "data-monster-detail-box": true,
+      className: `bg-slate-900 border-2 ${accentClass} rounded-3xl p-4 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto [[data-mh-view-rotation=true]_&]:overflow-y-auto [[data-mh-view-rotation=true]_&]:!max-h-full`,
       style: {
         maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)'
       }
@@ -162723,7 +162724,8 @@ function MonsterHeroGame() {
       power,
       powerNote
     }), React.createElement("div", {
-      className: "flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2"
+      "data-monster-detail-body": true,
+      className: "flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2 [@media(orientation:landscape)_and_(max-height:520px)]:flex-none [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible [[data-mh-view-rotation=true]_&]:flex-none [[data-mh-view-rotation=true]_&]:overflow-visible"
     }, detailOpts.marketDiscIcon && React.createElement("section", {
       className: "rounded-xl border border-amber-500/40 bg-amber-950/30 p-2 flex items-center gap-3"
     }, React.createElement("img", {
