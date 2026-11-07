@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 61a1147c6e7f8f7a
+// source-sha256: 88b327b3ee8240d8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -116371,9 +116371,21 @@ const CardBattleScreen = ({
   const [shareQuick, setShareQuick] = useState(false);
   const [autoLeft, setAutoLeft] = useState(null);
   const [autoExtraLeft, setAutoExtraLeft] = useState(null);
+  const [autoExtra, setAutoExtra] = useState(0);
   const [autoTicketAsk, setAutoTicketAsk] = useState(false);
   const [autoTicketBusy, setAutoTicketBusy] = useState(false);
   const [autoTicketNote, setAutoTicketNote] = useState('');
+  const applyAutoLoaded = r => {
+    if (!r) return;
+    setAutoLeft(r.left);
+    setAutoExtraLeft(Number.isInteger(r.extraLeft) ? r.extraLeft : null);
+    setAutoExtra(Number.isInteger(r.extra) ? r.extra : 0);
+  };
+  const autoInfo = Number.isInteger(autoLeft) ? {
+    left: autoLeft,
+    extra: autoExtra,
+    extraLeft: autoExtraLeft
+  } : null;
   useEffect(() => {
     if (view !== 'deckPick' || !(deckPick && deckPick.pick && deckPick.pick.share) || typeof cardAutoRewardLoad !== 'function') return undefined;
     let alive = true;
@@ -116381,29 +116393,33 @@ const CardBattleScreen = ({
     setAutoExtraLeft(null);
     setAutoTicketNote('');
     void cardAutoRewardLoad().then(r => {
-      if (alive) {
-        setAutoLeft(r.left);
-        setAutoExtraLeft(Number.isInteger(r.extraLeft) ? r.extraLeft : null);
-      }
+      if (alive) applyAutoLoaded(r);
     }).catch(() => {});
     return () => {
       alive = false;
     };
   }, [view, deckPick]);
-  const useAutoTicket = async () => {
+  const autoTicketSheet = autoTicketAsk && typeof CardAutoTicketSheet === 'function' ? React.createElement(CardAutoTicketSheet, {
+    info: autoInfo,
+    tickets: Number.isInteger(sessionTickets) ? sessionTickets : 0,
+    busy: autoTicketBusy,
+    onUse: k => {
+      void useAutoTicket(k);
+    },
+    onClose: () => setAutoTicketAsk(false)
+  }) : null;
+  const useAutoTicket = async (count = 1) => {
     if (autoTicketBusy || typeof cardAutoRewardAddExtra !== 'function') return;
     setAutoTicketBusy(true);
     try {
       const res = await cardAutoRewardAddExtra({
         consume: onUseSessionTicket,
-        refund: onRefundSessionTicket
+        refund: onRefundSessionTicket,
+        count
       });
       const l = res && res.loaded;
-      if (l) {
-        setAutoLeft(l.left);
-        setAutoExtraLeft(l.extraLeft);
-      }
-      setAutoTicketNote(res && res.ok ? 'ごほうびが1回ぶん戻りました' : res && res.why === 'limit' ? '今日はこれ以上ふやせません' : res && res.why === 'noTicket' ? 'セッション券がありません' : res && res.why === 'notEmpty' ? 'まだ今日のごほうびが残っています' : '保存できなかったので、セッション券は戻しました');
+      if (l) applyAutoLoaded(l);
+      setAutoTicketNote(res && res.ok ? `ごほうびが${res.count}回ぶん戻りました` : res && res.why === 'limit' ? '今日はこれ以上ふやせません' : res && res.why === 'noTicket' ? 'セッション券が足りません' : res && res.why === 'notEmpty' ? 'まだ今日のごほうびが残っています' : '保存できなかったので、セッション券は戻しました');
     } finally {
       setAutoTicketBusy(false);
       setAutoTicketAsk(false);
@@ -116451,6 +116467,17 @@ const CardBattleScreen = ({
   }, [save]);
   const [game, setGame] = useState(null);
   const [result, setResult] = useState(null);
+  useEffect(() => {
+    if (view !== 'result' || !(result && result.auto) || typeof cardAutoRewardLoad !== 'function') return undefined;
+    let alive = true;
+    setAutoTicketNote('');
+    void cardAutoRewardLoad().then(r => {
+      if (alive) applyAutoLoaded(r);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [view, result]);
   const [notice, setNotice] = useState('');
   const [confirmReset, setConfirmReset] = useState(false);
   const [detail, setDetail] = useState(null);
@@ -118214,6 +118241,7 @@ const CardBattleScreen = ({
         on: shareAuto,
         onChange: setShareAuto,
         left: autoLeft,
+        info: autoInfo,
         quick: shareQuick,
         extraLeft: autoExtraLeft,
         tickets: Number.isInteger(sessionTickets) ? sessionTickets : null,
@@ -118265,55 +118293,7 @@ const CardBattleScreen = ({
           }
         } : {});
       }
-    }), autoTicketAsk && React.createElement(ModalFrame, {
-      label: "セッション券を使う確認",
-      onClose: autoTicketBusy ? undefined : () => setAutoTicketAsk(false),
-      zIndex: MODAL_Z.confirm
-    }, React.createElement("div", {
-      "data-card-auto-ticket-ask": true
-    }, React.createElement("h3", {
-      className: "text-center text-base font-black leading-snug text-amber-200",
-      style: JA_LABEL_STYLE
-    }, jaWrap('セッション券を1枚使いますか？')), React.createElement("p", {
-      className: "mt-3 text-[12px] font-bold leading-relaxed text-slate-200",
-      style: JA_WRAP_STYLE
-    }, jaWrap('オートで挑むの今日のごほうびが1回ぶん戻ります。')), React.createElement("div", {
-      className: "mt-3 grid grid-cols-2 gap-2 text-center"
-    }, React.createElement("div", {
-      className: "rounded-xl bg-slate-900 p-2"
-    }, React.createElement("small", {
-      className: "block text-[10px] font-bold text-slate-400"
-    }, "セッション券"), React.createElement("b", {
-      "data-card-auto-ticket-count": true,
-      className: "text-[16px] font-black tabular-nums"
-    }, Number.isInteger(sessionTickets) ? sessionTickets : 0, " → ", React.createElement("span", {
-      className: "text-amber-200"
-    }, Math.max(0, (Number.isInteger(sessionTickets) ? sessionTickets : 0) - 1)), "枚")), React.createElement("div", {
-      className: "rounded-xl bg-slate-900 p-2"
-    }, React.createElement("small", {
-      className: "block text-[10px] font-bold text-slate-400"
-    }, "今日のごほうび"), React.createElement("b", {
-      className: "text-[16px] font-black tabular-nums"
-    }, Number.isInteger(autoLeft) ? autoLeft : 0, " → ", React.createElement("span", {
-      className: "text-emerald-200"
-    }, (Number.isInteger(autoLeft) ? autoLeft : 0) + 1), "回"))), React.createElement("p", {
-      className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400",
-      style: JA_WRAP_STYLE
-    }, jaWrap(`ふやしたぶんは今日(朝4時まで)だけ使えます。今日ふやせるのはあと${Number.isInteger(autoExtraLeft) ? autoExtraLeft : 0}回です。`)), React.createElement("div", {
-      className: "mt-4 grid grid-cols-1 gap-2"
-    }, React.createElement("button", {
-      type: "button",
-      "data-card-auto-ticket-use": true,
-      disabled: autoTicketBusy,
-      onClick: () => {
-        void useAutoTicket();
-      },
-      className: "mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98] disabled:opacity-50"
-    }, "1枚使って1回ふやす"), React.createElement(ModalCloseButton, {
-      onClick: () => setAutoTicketAsk(false),
-      disabled: autoTicketBusy,
-      label: "やめる"
-    })))));
+    }), autoTicketSheet);
   }
   if (view === 'pvp') {
     const pvpReward = async r => {
@@ -118850,7 +118830,15 @@ const CardBattleScreen = ({
       "data-card-result-auto": result.auto.paid ? 'paid' : 'free',
       className: "mt-1 text-[12px] font-black text-sky-200",
       style: JA_LABEL_STYLE
-    }, jaWrap(result.auto.paid ? `🤖 オートで挑みました(ごほうびは自分で戦うときの半分)。今日のごほうびはあと${result.auto.left}回` : '🤖 オートで挑みました。今日のごほうびは終わっています(ごほうびなしで遊べます)')), React.createElement("div", {
+    }, jaWrap(result.auto.paid ? '🤖 オートで挑みました(ごほうびは自分で戦うときの半分)' : '🤖 オートで挑みました(今日のごほうびは終わっていたので、ごほうびなし)')), result.auto && !result.demo && typeof CardAutoRewardBar === 'function' && React.createElement(CardAutoRewardBar, {
+      info: autoInfo,
+      tickets: Number.isInteger(sessionTickets) ? sessionTickets : 0,
+      onAdd: typeof onUseSessionTicket === 'function' && typeof cardAutoRewardAddExtra === 'function' ? () => {
+        setAutoTicketNote('');
+        setAutoTicketAsk(true);
+      } : null,
+      note: autoTicketNote
+    }), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
     }, "いまのビートP: ", save.point), result.opened && React.createElement("div", {
       className: "mt-1 text-[13px] font-black text-emerald-300"
@@ -118909,7 +118897,7 @@ const CardBattleScreen = ({
       type: "button",
       className: `${btn} mh-button-secondary border border-white/20 bg-slate-800`,
       onClick: () => setView(result.share ? 'share' : 'foe')
-    }, "相手をえらぶ")));
+    }, "相手をえらぶ")), autoTicketSheet);
   }
   if (view === 'replays') return React.createElement(CardReplayList, {
     onOpen: id => {
@@ -122450,28 +122438,12 @@ const CardDeckPick = ({
   }, jaWrap('選んだデッキの戦術カードで、あなたの側も自動で戦います。試合の途中で「自分で」に切り替えられます'), React.createElement("span", {
     "data-card-deck-pick-auto-left": auto.left === null ? '' : auto.left,
     className: `mt-1 block ${auto.left ? 'text-emerald-200' : 'text-amber-200'}`
-  }, auto.left === null ? '' : auto.left > 0 ? `今日のごほうびはあと${auto.left}回(自分で戦うときの半分)` : '今日のごほうびは終わりました。ごほうびなしで遊べます'), auto.left === 0 && typeof auto.onExtra === 'function' && Number.isInteger(auto.extraLeft) && (auto.extraLeft > 0 ? React.createElement(React.Fragment, null, React.createElement("button", {
-    type: "button",
-    "data-card-auto-ticket": true,
-    disabled: !(auto.tickets > 0),
-    onClick: () => {
-      Audio_.fgSe.tap();
-      auto.onExtra();
-    },
-    className: "mt-2 flex min-h-[44px] w-full items-center justify-center gap-1 rounded-xl border border-emerald-300 bg-emerald-900/70 px-2 text-[12px] font-black text-emerald-100 shadow-[0_0_10px_rgba(52,211,153,.45)] active:scale-[.98] disabled:border-slate-600 disabled:bg-slate-800 disabled:text-slate-400 disabled:shadow-none",
-    style: JA_WRAP_STYLE
-  }, jaWrap('🎫 セッション券1枚でごほうびを1回ふやす')), React.createElement("span", {
-    "data-card-auto-ticket-left": auto.extraLeft,
-    className: "mt-1 block text-right text-[10px] text-slate-400",
-    style: JA_WRAP_STYLE
-  }, jaWrap(auto.tickets > 0 ? `持っているセッション券 ${auto.tickets}枚・今日ふやせるのはあと${auto.extraLeft}回` : 'セッション券がありません(モンヒロビートのランクが上がるともらえます)'))) : React.createElement("span", {
-    "data-card-auto-ticket-left": "0",
-    className: "mt-1 block text-[10px] text-slate-400"
-  }, "今日はこれ以上ふやせません")), auto.ticketNote && React.createElement("span", {
-    "data-card-auto-ticket-note": true,
-    className: "mt-1 block text-[11px] text-emerald-200",
-    style: JA_WRAP_STYLE
-  }, jaWrap(auto.ticketNote)))), note && tab === 'own' && React.createElement("p", {
+  }, auto.left === null ? '' : auto.left > 0 ? `今日のごほうびはあと${auto.left}回(自分で戦うときの半分)` : '今日のごほうびは終わりました。ごほうびなしで遊べます')), auto.on && auto.info && typeof auto.onExtra === 'function' && typeof CardAutoRewardBar === 'function' && React.createElement(CardAutoRewardBar, {
+    info: auto.info,
+    tickets: auto.tickets,
+    onAdd: auto.onExtra,
+    note: auto.ticketNote
+  })), note && tab === 'own' && React.createElement("p", {
     className: "text-[11px] font-bold text-slate-400",
     style: JA_WRAP_STYLE
   }, note), choices.map(c => {
@@ -132083,50 +132055,202 @@ const cardAutoRewardEntry = loaded => ({
 });
 const cardAutoRewardAddExtra = async ({
   consume,
-  refund
+  refund,
+  count = 1
 } = {}) => {
+  const k = Number.isInteger(count) && count > 0 ? count : 1;
   const loaded = await cardAutoRewardLoad();
-  if (loaded.extra >= CARD_AUTO_REWARD_EXTRA_MAX) return {
+  if (loaded.extra + k > CARD_AUTO_REWARD_EXTRA_MAX) return {
     ok: false,
     why: 'limit',
+    count: k,
     loaded
   };
   if (loaded.left > 0) return {
     ok: false,
     why: 'notEmpty',
+    count: k,
     loaded
   };
-  if (typeof consume !== 'function' || !(await consume())) return {
-    ok: false,
-    why: 'noTicket',
-    loaded
+  const giveBack = async n => {
+    for (let i = 0; i < n; i++) {
+      if (typeof refund !== 'function') return;
+      try {
+        await refund();
+      } catch (__) {}
+    }
   };
+  let used = 0;
+  if (typeof consume === 'function') {
+    while (used < k && (await consume())) used++;
+  }
+  if (used < k) {
+    await giveBack(used);
+    return {
+      ok: false,
+      why: 'noTicket',
+      count: k,
+      loaded
+    };
+  }
   let saved = false;
   try {
     saved = (await storeSet(CARD_AUTO_REWARD_KEY, cardAutoRewardValue(loaded, {
       n: loaded.n,
-      extra: loaded.extra + 1
+      extra: loaded.extra + k
     }))) !== false;
   } catch (_) {
     saved = false;
   }
   if (!saved) {
-    if (typeof refund === 'function') {
-      try {
-        await refund();
-      } catch (__) {}
-    }
+    await giveBack(k);
     return {
       ok: false,
       why: 'save',
+      count: k,
       loaded
     };
   }
   return {
     ok: true,
     why: '',
+    count: k,
     loaded: await cardAutoRewardLoad()
   };
+};
+const cardAutoTicketBlock = ({
+  left,
+  tickets,
+  extraLeft
+}) => Number.isInteger(left) && left > 0 ? 'ごほうびを使い切ると、ふやせます' : !(Number.isInteger(extraLeft) && extraLeft > 0) ? `今日はこれ以上ふやせません(1日${CARD_AUTO_REWARD_EXTRA_MAX}回まで)` : !(Number.isInteger(tickets) && tickets > 0) ? 'セッション券がありません(モンヒロビートのランクが上がるともらえます)' : '';
+const CardAutoRewardBar = ({
+  info,
+  tickets,
+  onAdd,
+  note = ''
+}) => {
+  if (!info || !Number.isInteger(info.left)) return null;
+  const total = CARD_AUTO_REWARD_DAY_MAX + (Number.isInteger(info.extra) ? info.extra : 0);
+  const empty = info.left <= 0;
+  const why = cardAutoTicketBlock({
+    left: info.left,
+    tickets,
+    extraLeft: info.extraLeft
+  });
+  return React.createElement("div", {
+    "data-card-auto-reward-bar": empty ? 'empty' : 'left',
+    className: "mt-2"
+  }, React.createElement("div", {
+    className: "flex items-stretch gap-1.5"
+  }, React.createElement("div", {
+    "data-card-auto-reward-left": info.left,
+    className: `flex min-w-0 flex-1 flex-col justify-center rounded-xl border px-2 py-1 ${empty ? 'border-rose-300 bg-rose-950/70 shadow-[0_0_12px_rgba(251,113,133,.45)]' : 'border-white/15 bg-slate-900/70'}`
+  }, React.createElement("small", {
+    className: `block text-[10px] font-black leading-tight ${empty ? 'text-rose-200' : 'text-slate-400'}`
+  }, "🤖 オートのごほうび"), React.createElement("b", {
+    className: `block whitespace-nowrap font-black leading-tight tabular-nums ${empty ? 'text-[17px] text-white' : 'text-[14px] text-slate-200'}`
+  }, "残り ", info.left, React.createElement("span", {
+    className: "text-[11px] text-slate-400"
+  }, " / ", total, "回"))), React.createElement("button", {
+    type: "button",
+    "data-card-auto-ticket": true,
+    disabled: !!why,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      if (typeof onAdd === 'function') onAdd();
+    },
+    className: `flex min-h-[44px] shrink-0 flex-col items-center justify-center rounded-xl border px-2 text-[12px] font-black leading-tight active:scale-[.98] disabled:opacity-45 ${empty ? 'border-emerald-300 bg-emerald-900/80 text-emerald-100 shadow-[0_0_10px_rgba(52,211,153,.45)]' : 'border-white/15 bg-slate-800 text-slate-300'}`
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "🎫 セッション券で"), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "ふやす"))), why && React.createElement("span", {
+    "data-card-auto-ticket-why": true,
+    className: "mt-1 block text-right text-[10px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap(why)), note && React.createElement("span", {
+    "data-card-auto-ticket-note": true,
+    className: "mt-1 block text-[11px] font-black text-emerald-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(note)));
+};
+const CardAutoTicketSheet = ({
+  info,
+  tickets,
+  busy = false,
+  onUse,
+  onClose
+}) => {
+  const have = Number.isInteger(tickets) && tickets > 0 ? tickets : 0;
+  const extraLeft = info && Number.isInteger(info.extraLeft) ? Math.max(0, info.extraLeft) : 0;
+  const left = info && Number.isInteger(info.left) ? info.left : 0;
+  const max = Math.min(have, extraLeft);
+  const [count, setCount] = React.useState(1);
+  const k = Math.min(Math.max(1, count), Math.max(1, max));
+  const why = cardAutoTicketBlock({
+    left,
+    tickets: have,
+    extraLeft
+  });
+  const wide = typeof orientationIsLandscape === 'function' && orientationIsLandscape();
+  return React.createElement(ModalFrame, {
+    label: "セッション券でごほうびをふやす",
+    onClose: busy ? undefined : onClose,
+    zIndex: MODAL_Z.confirm
+  }, React.createElement("div", {
+    "data-card-auto-ticket-ask": wide ? 'wide' : 'tall'
+  }, React.createElement("h3", {
+    className: "text-center text-base font-black leading-snug text-amber-200",
+    style: JA_LABEL_STYLE
+  }, jaWrap('セッション券でごほうびをふやす')), !wide && React.createElement("p", {
+    className: "mt-2 text-[12px] font-bold leading-relaxed text-slate-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap('1枚で、オートで挑むの今日のごほうびが1回ふえます。ふやしたぶんは今日(朝4時まで)だけ使えます。')), React.createElement("div", {
+    className: `${wide ? 'mt-1.5' : 'mt-3'} grid grid-cols-2 gap-2 text-center`
+  }, React.createElement("div", {
+    className: `rounded-xl bg-slate-900 ${wide ? 'px-2 py-1' : 'p-2'}`
+  }, React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, "持っているセッション券"), React.createElement("b", {
+    "data-card-auto-ticket-count": have,
+    className: `${wide ? 'text-[14px]' : 'text-[16px]'} font-black tabular-nums`
+  }, have, "枚")), React.createElement("div", {
+    className: `rounded-xl bg-slate-900 ${wide ? 'px-2 py-1' : 'p-2'}`
+  }, React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, "今日あとふやせる"), React.createElement("b", {
+    "data-card-auto-ticket-extra-left": extraLeft,
+    className: `${wide ? 'text-[14px]' : 'text-[16px]'} font-black tabular-nums`
+  }, extraLeft, "回"))), why ? React.createElement("p", {
+    "data-card-auto-ticket-why": true,
+    className: "mt-3 text-center text-[12px] font-black text-rose-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(why)) : React.createElement(React.Fragment, null, React.createElement("div", {
+    "data-card-auto-ticket-pick": k
+  }, React.createElement(QuantityStepper, {
+    value: k,
+    max: max,
+    onChange: setCount,
+    unit: "枚"
+  })), React.createElement("p", {
+    "data-card-auto-ticket-preview": true,
+    className: "mt-2 rounded-xl border border-emerald-300/40 bg-emerald-950/60 px-2 py-1.5 text-center text-[13px] font-black text-emerald-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`券 ${k}枚 → オートのごほうび +${k}回(残り ${left + k}回になります)`))), React.createElement("div", {
+    className: `${wide ? 'mt-2' : 'mt-3'} grid ${wide && !why ? 'grid-cols-2' : 'grid-cols-1'} gap-2`
+  }, !why && React.createElement("button", {
+    type: "button",
+    "data-card-auto-ticket-use": k,
+    disabled: busy,
+    onClick: () => {
+      if (typeof onUse === 'function') onUse(k);
+    },
+    className: "mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98] disabled:opacity-50"
+  }, `${k}枚使って+${k}回`), React.createElement(ModalCloseButton, {
+    onClick: onClose,
+    disabled: busy,
+    label: "やめる"
+  }))));
 };
 const cardLevelEntries = async ({
   kind,
