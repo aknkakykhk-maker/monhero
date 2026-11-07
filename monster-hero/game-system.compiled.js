@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 321c9ce885095cb0
+// source-sha256: d080459ea709aa32
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -89377,9 +89377,9 @@ function RhythmMultiChatBubble({
   if (!text) return null;
   return React.createElement("span", {
     "data-rhythm-multi-chat-bubble": true,
-    className: "pointer-events-none absolute inset-x-0.5 top-3 z-40 flex justify-center"
+    className: "pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden"
   }, React.createElement("span", {
-    className: "line-clamp-2 max-w-full break-words rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg landscape:text-xs"
+    className: "line-clamp-2 max-h-full max-w-full break-words rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg"
   }, text));
 }
 function RhythmMultiResultBubble({
@@ -95041,6 +95041,28 @@ const rhythmAssistSessionEmitLive = payload => {
       fn(payload);
     } catch (_) {}
   });
+  if (typeof assistantLifeOnSessionLive === 'function') {
+    const {
+      assistantId,
+      partnerIds,
+      songId,
+      levelUp,
+      level,
+      duo,
+      at
+    } = payload;
+    try {
+      assistantLifeOnSessionLive({
+        assistantId,
+        partnerIds,
+        songId,
+        levelUp,
+        level,
+        duo,
+        at
+      });
+    } catch (_) {}
+  }
 };
 const RHYTHM_ASSIST_SESSION_INVITE = {
   pending: null,
@@ -95056,6 +95078,7 @@ const rhythmAssistSessionOnInvite = fn => {
 const RHYTHM_ASSIST_SESSION_INVITE_TTL_MS = 5 * 60 * 1000;
 const rhythmAssistSessionSetApp = app => {
   RHYTHM_ASSIST_SESSION_INVITE.app = app && typeof app === 'object' ? app : null;
+  if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.beatInvite = id => rhythmAssistSessionInvite(id);
 };
 const rhythmAssistSessionCanPayNow = () => {
   const app = RHYTHM_ASSIST_SESSION_INVITE.app;
