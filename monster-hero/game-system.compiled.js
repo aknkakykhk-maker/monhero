@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 596eff85048058a3
+// source-sha256: 61a1147c6e7f8f7a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -61018,6 +61018,230 @@ function PlayerRankUpFx({
     "aria-hidden": "true"
   }));
 }
+const TIME_OF_DAY_STORAGE_KEY = 'mh_time_of_day_v1';
+const TIME_OF_DAY_SLOTS = Object.freeze([Object.freeze({
+  id: 'morning',
+  from: 5,
+  icon: '🌅',
+  label: '朝'
+}), Object.freeze({
+  id: 'day',
+  from: 10,
+  icon: '☀️',
+  label: '昼'
+}), Object.freeze({
+  id: 'evening',
+  from: 16,
+  icon: '🌇',
+  label: '夕'
+}), Object.freeze({
+  id: 'night',
+  from: 19,
+  icon: '🌙',
+  label: '夜'
+})]);
+const TIME_OF_DAY_JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+const timeOfDayJstParts = (now = Date.now()) => {
+  const d = new Date((Number.isFinite(Number(now)) ? Number(now) : Date.now()) + TIME_OF_DAY_JST_OFFSET_MS);
+  return {
+    h: d.getUTCHours(),
+    m: d.getUTCMinutes()
+  };
+};
+const timeOfDayAt = (now = Date.now()) => {
+  const {
+    h
+  } = timeOfDayJstParts(now);
+  let slot = TIME_OF_DAY_SLOTS[TIME_OF_DAY_SLOTS.length - 1];
+  for (const s of TIME_OF_DAY_SLOTS) if (h >= s.from) slot = s;
+  return slot;
+};
+const timeOfDayClockText = (now = Date.now()) => {
+  const {
+    h,
+    m
+  } = timeOfDayJstParts(now);
+  return `${h}:${String(m).padStart(2, '0')}`;
+};
+const normalizeTimeOfDaySettings = value => {
+  const v = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return {
+    mood: v.mood === 'off' ? 'off' : 'on',
+    clock: v.clock === 'off' ? 'off' : 'on'
+  };
+};
+const TIME_OF_DAY_STORE = {
+  settings: normalizeTimeOfDaySettings(null),
+  loaded: false,
+  slot: timeOfDayAt(),
+  minute: timeOfDayClockText(),
+  listeners: new Set(),
+  timer: null
+};
+const timeOfDayEmit = () => {
+  TIME_OF_DAY_STORE.listeners.forEach(fn => {
+    try {
+      fn();
+    } catch {}
+  });
+};
+const timeOfDayLoad = async () => {
+  if (TIME_OF_DAY_STORE.loaded) return;
+  TIME_OF_DAY_STORE.loaded = true;
+  try {
+    TIME_OF_DAY_STORE.settings = normalizeTimeOfDaySettings(await storeGet(TIME_OF_DAY_STORAGE_KEY, null));
+  } catch {}
+  timeOfDayEmit();
+};
+const timeOfDaySetSettings = patch => {
+  TIME_OF_DAY_STORE.settings = normalizeTimeOfDaySettings({
+    ...TIME_OF_DAY_STORE.settings,
+    ...(patch || {})
+  });
+  try {
+    storeSet(TIME_OF_DAY_STORAGE_KEY, TIME_OF_DAY_STORE.settings, false);
+  } catch {}
+  timeOfDayEmit();
+};
+const timeOfDayTick = () => {
+  const slot = timeOfDayAt(),
+    minute = timeOfDayClockText();
+  if (slot.id === TIME_OF_DAY_STORE.slot.id && minute === TIME_OF_DAY_STORE.minute) return;
+  TIME_OF_DAY_STORE.slot = slot;
+  TIME_OF_DAY_STORE.minute = minute;
+  timeOfDayEmit();
+};
+const useTimeOfDay = () => {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    void timeOfDayLoad();
+    const off = (() => {
+      const fn = () => setTick(t => t + 1);
+      TIME_OF_DAY_STORE.listeners.add(fn);
+      return () => TIME_OF_DAY_STORE.listeners.delete(fn);
+    })();
+    timeOfDayTick();
+    return off;
+  }, []);
+  return TIME_OF_DAY_STORE;
+};
+const TIME_OF_DAY_CSS = `
+.mh-home-background::after,.mh-home-background::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 2.4s ease}
+.mh-home-background::after{z-index:3}.mh-home-background::before{z-index:4}
+html[data-mh-tod="morning"] .mh-home-background::after{opacity:1;background:linear-gradient(180deg,rgba(186,214,255,.30) 0%,rgba(214,236,255,.16) 50%,rgba(255,236,214,.10) 100%)}
+html[data-mh-tod="evening"] .mh-home-background::after{opacity:1;background:linear-gradient(180deg,rgba(255,128,48,.34) 0%,rgba(255,110,64,.24) 45%,rgba(120,40,30,.34) 100%)}
+html[data-mh-tod="night"] .mh-home-background::after{opacity:1;background:linear-gradient(180deg,rgba(5,8,34,.84) 0%,rgba(10,16,52,.70) 50%,rgba(6,10,34,.76) 100%)}
+html[data-mh-tod="night"] .mh-home-background::before{opacity:1;background: radial-gradient(2.2px 2.2px at 12% 8%,#fff 60%,transparent),radial-gradient(1.6px 1.6px at 24% 15%,#fff 60%,transparent),radial-gradient(2.2px 2.2px at 41% 6%,#fff 60%,transparent), radial-gradient(1.6px 1.6px at 57% 12%,#fff 60%,transparent),radial-gradient(2.2px 2.2px at 69% 4%,#fff 60%,transparent),radial-gradient(1.6px 1.6px at 83% 14%,#fff 60%,transparent), radial-gradient(1.6px 1.6px at 92% 7%,#fff 60%,transparent),radial-gradient(1.6px 1.6px at 33% 20%,#fffbe8 60%,transparent),radial-gradient(2.2px 2.2px at 76% 21%,#fffbe8 60%,transparent), radial-gradient(40% 18% at 50% 100%,rgba(255,190,100,.38),transparent 70%), radial-gradient(14% 8% at 20% 62%,rgba(255,196,110,.50),transparent 70%),radial-gradient(14% 8% at 80% 58%,rgba(255,196,110,.50),transparent 70%), radial-gradient(10% 6% at 50% 46%,rgba(140,200,255,.42),transparent 70%)}
+.mh-title-gate img.mh-title-visual,.mh-title-gate img.mh-title-backdrop{transition:filter 2.4s ease}
+html[data-mh-tod="morning"] .mh-title-gate img.mh-title-visual{filter:brightness(1.04) saturate(.92) hue-rotate(-6deg)}
+html[data-mh-tod="evening"] .mh-title-gate img.mh-title-visual{filter:sepia(.32) saturate(1.2) brightness(.92)}
+html[data-mh-tod="night"] .mh-title-gate img.mh-title-visual{filter:brightness(.62) saturate(.85)}
+[data-mh-theme-category="menu"] .mh-screen-shell,[data-mh-theme-category="market"] .mh-screen-shell,[data-mh-theme-category="temple"] .mh-screen-shell,.mhms-stage{transition:box-shadow 2.4s ease}
+html[data-mh-tod="morning"] :is([data-mh-theme-category="menu"],[data-mh-theme-category="market"],[data-mh-theme-category="temple"]) .mh-screen-shell,html[data-mh-tod="morning"] .mhms-stage{box-shadow:inset 0 0 0 100vmax rgba(190,215,255,.05)}
+html[data-mh-tod="evening"] :is([data-mh-theme-category="menu"],[data-mh-theme-category="market"],[data-mh-theme-category="temple"]) .mh-screen-shell,html[data-mh-tod="evening"] .mhms-stage{box-shadow:inset 0 0 0 100vmax rgba(255,120,48,.07)}
+html[data-mh-tod="night"] :is([data-mh-theme-category="menu"],[data-mh-theme-category="market"],[data-mh-theme-category="temple"]) .mh-screen-shell,html[data-mh-tod="night"] .mhms-stage{box-shadow:inset 0 0 0 100vmax rgba(6,10,40,.24)}
+@media (prefers-reduced-motion:reduce){.mh-home-background::after,.mh-home-background::before,.mh-title-gate img,.mh-screen-shell,.mhms-stage{transition:none!important}}
+.mh-tod-clock{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border:1px solid #eed99566;border-radius:999px;background:#0f1d2ad9;color:#f9eac2;font-size:11px;font-weight:900;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;box-shadow:0 2px 6px #0007;pointer-events:none}
+.mh-tod-clock i{font-style:normal;font-size:12px}
+.mh-home-scene .mh-tod-clock{position:absolute;z-index:5;right:9px;top:calc(107px + env(safe-area-inset-top))}
+@media (orientation:landscape) and (max-height:600px){.mh-home-scene .mh-tod-clock{top:calc(69px + env(safe-area-inset-top));right:calc(9px + var(--mh-tod-upd,0px))}}
+[data-mh-view-rotation="true"] .mh-home-scene .mh-tod-clock{top:calc(69px + env(safe-area-inset-top));right:calc(9px + var(--mh-tod-upd,0px))}
+`;
+let timeOfDayCssDone = false;
+const ensureTimeOfDayCss = () => {
+  if (timeOfDayCssDone || typeof document === 'undefined') return;
+  timeOfDayCssDone = true;
+  const el = document.createElement('style');
+  el.setAttribute('data-time-of-day-css', '');
+  el.textContent = TIME_OF_DAY_CSS;
+  document.head.appendChild(el);
+};
+const TimeOfDayRoot = () => {
+  const st = useTimeOfDay();
+  useEffect(() => {
+    ensureTimeOfDayCss();
+    const t = setInterval(timeOfDayTick, 20000);
+    const onVis = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') timeOfDayTick();
+    };
+    try {
+      document.addEventListener('visibilitychange', onVis);
+    } catch {}
+    return () => {
+      clearInterval(t);
+      try {
+        document.removeEventListener('visibilitychange', onVis);
+      } catch {}
+    };
+  }, []);
+  const tod = st.settings.mood === 'on' ? st.slot.id : null;
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const html = document.documentElement;
+    if (tod) html.setAttribute('data-mh-tod', tod);else html.removeAttribute('data-mh-tod');
+  }, [tod]);
+  return null;
+};
+const TimeOfDayClock = ({
+  home = false
+}) => {
+  const st = useTimeOfDay();
+  const ref = useRef(null);
+  useEffect(() => {
+    ensureTimeOfDayCss();
+    if (!home || typeof window === 'undefined') return undefined;
+    const measure = () => {
+      const el = ref.current,
+        upd = el && el.parentElement && el.parentElement.querySelector('.mh-home-update');
+      if (el) el.style.setProperty('--mh-tod-upd', upd ? `${Math.round(upd.getBoundingClientRect().width + 6)}px` : '0px');
+    };
+    measure();
+    const t = setTimeout(measure, 600);
+    window.addEventListener('resize', measure);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('resize', measure);
+    };
+  }, [home]);
+  if (st.settings.clock !== 'on') return null;
+  return React.createElement("span", {
+    ref: ref,
+    className: "mh-tod-clock",
+    "data-time-of-day-clock": st.slot.id,
+    "aria-label": `いまの時刻 ${st.minute}(${st.slot.label})`
+  }, React.createElement("i", {
+    "aria-hidden": "true"
+  }, st.slot.icon), st.minute);
+};
+const TimeOfDaySettingsPanel = () => {
+  const st = useTimeOfDay();
+  const row = (key, title, desc) => React.createElement("div", {
+    className: "flex items-center gap-3 mt-2"
+  }, React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("b", {
+    className: "block text-[12px] font-black text-slate-200"
+  }, title), React.createElement("p", {
+    className: "text-[10px] font-bold leading-relaxed text-slate-400"
+  }, desc)), React.createElement("div", {
+    className: "flex shrink-0 gap-1"
+  }, ['on', 'off'].map(v => React.createElement("button", {
+    key: v,
+    type: "button",
+    "data-time-of-day-setting": `${key}-${v}`,
+    "aria-pressed": st.settings[key] === v,
+    onClick: () => timeOfDaySetSettings({
+      [key]: v
+    }),
+    className: `min-h-[36px] min-w-[44px] rounded-xl border px-2 text-[11px] font-black ${st.settings[key] === v ? 'border-amber-300 bg-amber-300 text-slate-950' : 'border-slate-600 bg-slate-800 text-slate-300'}`
+  }, v === 'on' ? '入' : '切'))));
+  return React.createElement("div", {
+    "data-time-of-day-settings": true,
+    className: `${SCREEN_PANEL_CLASS} w-full text-left`
+  }, React.createElement("b", {
+    className: "block text-[13px] font-black text-slate-200"
+  }, st.slot.icon, " 時間帯"), row('mood', '時間帯で雰囲気を変える', '日本時間に合わせて、朝・昼・夕・夜で背景の色が変わります。'), row('clock', 'いまの時刻を出す', 'ホームとプロフィールに、いまの時刻(日本時間)を小さく出します。'));
+};
 const GROWTH_FX_KINDS = Object.freeze({
   bond: {
     color: '#f472b6',
@@ -62475,7 +62699,7 @@ function SettingsScreen({
     desc: "画面の見た目(ハロウィン／クラシック)を選ぶ",
     onClick: onOpenScreenTheme,
     "data-open-screen-theme": true
-  }), React.createElement(SettingsMenuLink, {
+  }), typeof TimeOfDaySettingsPanel === 'function' && React.createElement(TimeOfDaySettingsPanel, null), React.createElement(SettingsMenuLink, {
     icon: "📥",
     label: "ダウンロード",
     desc: "曲や画像を前もって端末に入れておく",
@@ -64288,6 +64512,7 @@ function ProfileScreen({
   }, React.createElement(ScreenHead, {
     title: "プロフィール",
     accent: "text-indigo-400",
+    right: typeof TimeOfDayClock === 'function' ? React.createElement(TimeOfDayClock, null) : null,
     onBack: onboarded && !onboardingPreview ? onBack : null,
     backLabel: "ホームへ戻る"
   }), React.createElement("div", {
@@ -76152,7 +76377,9 @@ function HomeScreen({
     className: `mh-home-gift${spotClass('reward')}`
   }, React.createElement(Package, {
     size: 16
-  }), "ギフト", giftClaimableCount(gifts) > 0 && React.createElement("em", null, giftClaimableCount(gifts))), React.createElement("button", {
+  }), "ギフト", giftClaimableCount(gifts) > 0 && React.createElement("em", null, giftClaimableCount(gifts))), typeof TimeOfDayClock === 'function' && React.createElement(TimeOfDayClock, {
+    home: true
+  }), React.createElement("button", {
     onClick: openChangelog,
     className: "mh-home-update"
   }, React.createElement(RefreshCcw, {
@@ -90445,10 +90672,10 @@ function RhythmMultiScreen({
   const callAssistant = async who => {
     if (!who || !rhythmAssistSessionEnabled() || !RHYTHM_MULTI.canSummon()) {
       setBuddySheet('');
-      return;
+      return 'full';
     }
     const key = rhythmAssistSessionKey(who.id);
-    if ((view && view.myCpus ? view.myCpus : []).some(c => c.masuId === key)) return;
+    if ((view && view.myCpus ? view.myCpus : []).some(c => c.masuId === key)) return 'already';
     const day = rhythmBuddyDayKey(Date.now());
     const call = {
       id: rhythmBuddyCallId(),
@@ -90471,7 +90698,7 @@ function RhythmMultiScreen({
         day
       }));
     }
-    if (!paid) return;
+    if (!paid) return 'no_ticket';
     setBuddyBumped(false);
     const joined = RHYTHM_MULTI.summon({
       masuId: key,
@@ -90484,7 +90711,25 @@ function RhythmMultiScreen({
     });
     if (!joined) endBuddy(key, call.id);
     setBuddySheet('');
+    return joined ? 'ok' : 'full';
   };
+  const [inviteTick, setInviteTick] = React.useState(0);
+  React.useEffect(() => typeof rhythmAssistSessionOnInvite === 'function' ? rhythmAssistSessionOnInvite(() => setInviteTick(n => n + 1)) : undefined, []);
+  const inviteRoomReady = !!(view && view.status === 'open' && view.selfId);
+  React.useEffect(() => {
+    if (!inviteRoomReady || typeof rhythmAssistSessionTakeInvite !== 'function' || !rhythmAssistSessionPeekInvite()) return;
+    const p = rhythmAssistSessionTakeInvite();
+    const who = (sessionAssistants || []).find(x => x && x.id === p.id);
+    const done = (ok, reason) => rhythmAssistSessionInviteDone(p.onResult, {
+      ok,
+      reason
+    });
+    if (!who) {
+      done(false, 'locked');
+      return;
+    }
+    void callAssistant(who).then(r => done(r === 'ok' || r === 'already', r || 'full'));
+  }, [inviteRoomReady, inviteTick]);
   const sessionAssistantsOn = rhythmAssistSessionEnabled() && (sessionAssistants || []).length > 0;
   const buddySongName = id => {
     const song = songs.find(x => x.songId === id);
@@ -90707,6 +90952,10 @@ function RhythmMultiScreen({
     rhythmMultiPendingInvite = null;
     if (!RHYTHM_MULTI.view()) joinFromInvite(pending);
   }, []);
+  React.useEffect(() => {
+    if (typeof rhythmAssistSessionPeekInvite !== 'function' || !rhythmAssistSessionPeekInvite() || RHYTHM_MULTI.view()) return;
+    createPrivate();
+  }, [inviteTick]);
   const joinPrivate = () => {
     const code = rhythmMultiNormalizeCode(codeInput);
     if (!code) {
@@ -94765,6 +95014,108 @@ const rhythmAssistSessionQueueFx = item => {
     } catch (_) {}
   }, 500);
 };
+const RHYTHM_ASSIST_SESSION_LIVE_LISTENERS = new Set();
+const rhythmAssistSessionOnLive = fn => {
+  if (typeof fn !== 'function') return () => {};
+  RHYTHM_ASSIST_SESSION_LIVE_LISTENERS.add(fn);
+  return () => {
+    RHYTHM_ASSIST_SESSION_LIVE_LISTENERS.delete(fn);
+  };
+};
+const rhythmAssistSessionEmitLive = payload => {
+  RHYTHM_ASSIST_SESSION_LIVE_LISTENERS.forEach(fn => {
+    try {
+      fn(payload);
+    } catch (_) {}
+  });
+};
+const RHYTHM_ASSIST_SESSION_INVITE = {
+  pending: null,
+  app: null,
+  listeners: new Set()
+};
+const rhythmAssistSessionOnInvite = fn => {
+  RHYTHM_ASSIST_SESSION_INVITE.listeners.add(fn);
+  return () => {
+    RHYTHM_ASSIST_SESSION_INVITE.listeners.delete(fn);
+  };
+};
+const RHYTHM_ASSIST_SESSION_INVITE_TTL_MS = 5 * 60 * 1000;
+const rhythmAssistSessionSetApp = app => {
+  RHYTHM_ASSIST_SESSION_INVITE.app = app && typeof app === 'object' ? app : null;
+};
+const rhythmAssistSessionCanPayNow = () => {
+  const app = RHYTHM_ASSIST_SESSION_INVITE.app;
+  const free = typeof RHYTHM_BUDDY_STORE !== 'undefined' ? rhythmBuddyFreeLeft(RHYTHM_BUDDY_STORE.get(), rhythmBuddyDayKey(Date.now())) : 0;
+  const tickets = app && typeof app.tickets === 'function' ? Number(app.tickets()) || 0 : 0;
+  return free > 0 || tickets > 0;
+};
+const rhythmAssistSessionInviteDone = (onResult, r) => {
+  if (typeof onResult === 'function') {
+    try {
+      onResult(r);
+    } catch (_) {}
+  }
+  return r;
+};
+const rhythmAssistSessionInvite = (id, opts = {}) => {
+  const onResult = opts && opts.onResult;
+  const app = RHYTHM_ASSIST_SESSION_INVITE.app;
+  if (!rhythmAssistSessionEnabled() || !app || typeof app.open !== 'function') return rhythmAssistSessionInviteDone(onResult, {
+    ok: false,
+    reason: 'off'
+  });
+  if (!rhythmAssistSessionWho(id)) return rhythmAssistSessionInviteDone(onResult, {
+    ok: false,
+    reason: 'unknown'
+  });
+  if (!rhythmAssistSessionCanPayNow()) return rhythmAssistSessionInviteDone(onResult, {
+    ok: false,
+    reason: 'no_ticket'
+  });
+  const inRoom = typeof RHYTHM_MULTI !== 'undefined' && !!RHYTHM_MULTI.view();
+  RHYTHM_ASSIST_SESSION_INVITE.pending = {
+    id,
+    at: Date.now(),
+    onResult: typeof onResult === 'function' ? onResult : null
+  };
+  RHYTHM_ASSIST_SESSION_INVITE.listeners.forEach(fn => {
+    try {
+      fn();
+    } catch (_) {}
+  });
+  try {
+    void app.open(inRoom ? 'RHYTHM_MULTI' : 'RHYTHM_MODE_SELECT');
+  } catch (_) {
+    RHYTHM_ASSIST_SESSION_INVITE.pending = null;
+    return rhythmAssistSessionInviteDone(onResult, {
+      ok: false,
+      reason: 'off'
+    });
+  }
+  return {
+    ok: true,
+    reason: 'opening'
+  };
+};
+const rhythmAssistSessionPeekInvite = () => {
+  const p = RHYTHM_ASSIST_SESSION_INVITE.pending;
+  if (p && Date.now() - p.at > RHYTHM_ASSIST_SESSION_INVITE_TTL_MS) {
+    RHYTHM_ASSIST_SESSION_INVITE.pending = null;
+    return null;
+  }
+  return p;
+};
+const rhythmAssistSessionTakeInvite = () => {
+  const p = rhythmAssistSessionPeekInvite();
+  RHYTHM_ASSIST_SESSION_INVITE.pending = null;
+  return p;
+};
+const rhythmAssistSessionPeerGainText = (gained, level) => {
+  const stage = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' && Number.isFinite(level) ? ASSISTANT_PEER_BOND_LEVELS.find(x => x.level === level) : null;
+  const name = stage && typeof assistantPeerStageName === 'function' ? assistantPeerStageName(stage) : '';
+  return `+${gained}${name ? `(Lv${level} ${name})` : ''}`;
+};
 function RhythmAssistSessionGrowth({
   assistantId,
   round,
@@ -94847,6 +95198,22 @@ function RhythmAssistSessionGrowth({
         });
       }
       if (alive && outcome) setShown(outcome);
+      if (outcome && rhythmAssistSessionEnabled()) {
+        const called = rhythmAssistSessionCalledIds();
+        const level = rhythmBuddyLevelInfo((outcome.next.mons[assistantId] || {}).exp).level;
+        rhythmAssistSessionEmitLive({
+          assistantId,
+          partnerIds: called.filter(x => x !== assistantId),
+          songId,
+          round,
+          gain: outcome.gain || 0,
+          levelUp: outcome.levelUp || 0,
+          level,
+          likeUp: outcome.likeUp || 0,
+          duo: rhythmAssistSessionDuosNow(called).some(d => d.a === assistantId || d.b === assistantId),
+          at: Date.now()
+        });
+      }
     });
     return () => {
       alive = false;
@@ -95168,7 +95535,10 @@ function RhythmAssistSessionDuoResult({
         RHYTHM_ASSIST_SESSION_PEER_DONE.add(pk);
         try {
           const r = await assistantPeerGain(ids[i], ids[j], 'session');
-          if (r && r.gained > 0) gains[rhythmAssistSessionPairKey(ids[i], ids[j])] = r.gained;
+          if (r && r.gained > 0) gains[rhythmAssistSessionPairKey(ids[i], ids[j])] = {
+            gained: r.gained,
+            level: r.levelAfter
+          };
         } catch (_) {}
       }
       if (!alive) return;
@@ -95179,7 +95549,8 @@ function RhythmAssistSessionDuoResult({
         key: d.key,
         d,
         rows,
-        gained: gains[d.key] || 0
+        gained: gains[d.key] ? gains[d.key].gained : 0,
+        level: gains[d.key] ? gains[d.key].level : 0
       }));
       Object.keys(gains).filter(k => !out.some(x => x.key === k)).forEach(k => {
         const [a, b] = k.split('-');
@@ -95190,7 +95561,8 @@ function RhythmAssistSessionDuoResult({
             b
           },
           rows: null,
-          gained: gains[k]
+          gained: gains[k].gained,
+          level: gains[k].level
         });
       });
       setShown(out);
@@ -95206,7 +95578,8 @@ function RhythmAssistSessionDuoResult({
     key: k,
     d,
     rows,
-    gained
+    gained,
+    level
   }) => React.createElement("p", {
     key: k,
     "data-rhythm-assist-duo-result": k,
@@ -95219,7 +95592,7 @@ function RhythmAssistSessionDuoResult({
   }, rhythmAssistSessionName(who), "「", text, "」")), gained > 0 && React.createElement("span", {
     "data-rhythm-assist-peer-gain": true,
     className: "text-amber-200"
-  }, "友情Lv +", gained))), onlyGain.length > 0 && React.createElement("p", {
+  }, "友情Lv ", rhythmAssistSessionPeerGainText(gained, level)))), onlyGain.length > 0 && React.createElement("p", {
     "data-rhythm-assist-peer-gains": true,
     className: "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/40 bg-violet-950/50 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100 landscape:col-span-2 [[data-mh-view-rotation=true]_&]:col-span-2"
   }, React.createElement("span", {
@@ -95227,12 +95600,13 @@ function RhythmAssistSessionDuoResult({
   }, "🎤 友情Lv"), onlyGain.map(({
     key: k,
     d,
-    gained
+    gained,
+    level
   }) => React.createElement("span", {
     key: k,
     "data-rhythm-assist-peer-gain": true,
     className: "whitespace-nowrap text-amber-200"
-  }, rhythmAssistSessionName(d.a), "・", rhythmAssistSessionName(d.b), " +", gained))));
+  }, rhythmAssistSessionName(d.a), "・", rhythmAssistSessionName(d.b), " ", rhythmAssistSessionPeerGainText(gained, level)))));
 }
 const rhythmAssistSessionCardStyle = (m, isMvp = false) => {
   const who = m && m.cpu && m.as ? rhythmAssistSessionWho(m.as) : null;
@@ -147068,6 +147442,17 @@ function MonsterHeroGame() {
       styleOf: id => assistantCallStyles && assistantCallStyles[id] || null
     });
   }, [breederName, assistantBonds, assistantCallStyles]);
+  const rhythmAssistSessionTicketsRef = useRef(0);
+  rhythmAssistSessionTicketsRef.current = ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID);
+  useEffect(() => {
+    if (typeof rhythmAssistSessionSetApp !== 'function') return;
+    rhythmAssistSessionSetApp({
+      open: to => openRhythmDemo({
+        to
+      }),
+      tickets: () => rhythmAssistSessionTicketsRef.current
+    });
+  });
   const activeAssistant = assistantById(selectedAssistantId);
   const requestAssistantDailyLines = async (force = false) => {
     const a = activeAssistant;
@@ -161687,7 +162072,7 @@ function MonsterHeroGame() {
     }), React.createElement(GrowthFxLayer, {
       screen: gameState,
       load: battleFxSettings.load
-    }), updateNotice, storageTroubleNotice, showAutoBgmPicker && isRunStage(gameState) && React.createElement("div", {
+    }), React.createElement(TimeOfDayRoot, null), updateNotice, storageTroubleNotice, showAutoBgmPicker && isRunStage(gameState) && React.createElement("div", {
       "data-auto-bgm-picker": true,
       className: "fixed inset-0 flex items-end justify-center bg-black/55 p-3",
       style: {
